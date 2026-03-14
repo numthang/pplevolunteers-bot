@@ -251,7 +251,8 @@ async function handleRegisterConfirm(interaction) {
 
   // ส่งไป log channel/thread
   try {
-    const logChannel = await interaction.client.channels.fetch(process.env.LOG_CHANNEL_ID);
+    //const logChannel = await interaction.client.channels.fetch(process.env.LOG_CHANNEL_ID);
+    const logChannel = interaction.channel;
     if (logChannel.isThread()) await logChannel.join();
     await logChannel.send({
       embeds: [embed],
