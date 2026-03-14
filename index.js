@@ -1,7 +1,7 @@
 require('dotenv').config();
 const { Client, GatewayIntentBits, Collection } = require('discord.js');
 const { handleInterestSelect } = require('./handlers/interestSelect');
-const { handleModalSubmit, handleProvinceDropdown, handleRegisterConfirm, handleDeleteLog } = require('./handlers/registerHandler');
+const { handleModalSubmit, handleProvinceDropdown, handleRegisterConfirm, handleDeleteLog, handleOpenRegisterModal } = require('./handlers/registerHandler');
 const { handleProvinceBtn } = require('./handlers/provinceSelect');
 
 const fs = require('fs');
@@ -11,6 +11,7 @@ const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMembers, // ← เพิ่มบรรทัดนี้
+    GatewayIntentBits.GuildMessages, // ← เพิ่ม
   ]
 });
 
@@ -60,12 +61,44 @@ client.on('interactionCreate', async (interaction) => {
 
   // --- Buttons ---
   if (interaction.isButton()) {
+    await handleOpenRegisterModal(interaction); // ← เพิ่มบรรทัดนี้
     await handleRegisterConfirm(interaction);  // ปุ่มยืนยัน log
     await handleInterestSelect(interaction);   // ปุ่ม interest/skill toggle
     await handleDeleteLog(interaction);
     await handleProvinceBtn(interaction);
     return;
   }
+});
+
+// Sticky message logic
+client.on('messageCreate', async (message) => {
+  if (message.author.bot) return;
+  if (!client.stickyMessages) return;
+
+  const stickyId = client.stickyMessages.get(message.channelId);
+  if (!stickyId) return;
+
+  try {
+    const old = await message.channel.messages.fetch(stickyId);
+    await old.delete();
+  } catch {}
+
+  const {EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle} = require('discord.js');
+
+  const embed = new EmbedBuilder()
+    .setTitle('📋 ลงทะเบียนสมาชิก อาสาประชาชน')
+    .setDescription('กดปุ่มด้านล่างเพื่อลงทะเบียนหรืออัปเดตข้อมูลของคุณได้เลยครับ')
+    .setColor(0x5865f3);
+
+  const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId('btn_open_register_modal')
+      .setLabel('📋 ลงทะเบียน / แก้ไขข้อมูล')
+      .setStyle(ButtonStyle.Primary)
+  );
+
+  const sent = await message.channel.send({embeds: [embed], components: [row]});
+  client.stickyMessages.set(message.channelId, sent.id);
 });
 
 client.login(process.env.TOKEN);
