@@ -22,14 +22,14 @@ module.exports = {
     }
 
     const embed = new EmbedBuilder()
-      .setTitle('📋 ลงทะเบียนสมาชิก อาสาประชาชน')
-      .setDescription('กดปุ่มด้านล่างเพื่อลงทะเบียนหรืออัปเดตข้อมูลของคุณได้เลยครับ')
+      .setTitle('📋 แนะนำตัวสมาชิก อาสาประชาชน')
+      .setDescription('กดปุ่มด้านล่างเพื่อแนะนำตัวหรืออัปเดตข้อมูลของคุณได้เลย')
       .setColor(0x5865f3);
 
     const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId('btn_open_register_modal')
-        .setLabel('📋 ลงทะเบียน / แก้ไขข้อมูล')
+        .setLabel('👥 กดปุ่มนี้เพื่อเริ่มแนะนำตัว')
         .setStyle(ButtonStyle.Primary)
     );
 
