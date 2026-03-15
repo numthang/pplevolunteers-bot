@@ -297,7 +297,7 @@ async function handleRegisterConfirm(interaction) {
     console.error('❌ ส่ง log ไม่ได้:', err);
   }
 
-  await interaction.followUp({content: '✅ บันทึกข้อมูลเรียบร้อยแล้วครับ!', ephemeral: true});
+  //await interaction.followUp({content: '✅ บันทึกข้อมูลเรียบร้อยแล้วครับ!', ephemeral: true});
   pendingForms.delete(interaction.user.id);
 }
 
