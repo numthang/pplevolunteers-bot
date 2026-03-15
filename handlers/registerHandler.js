@@ -290,7 +290,9 @@ async function handleRegisterConfirm(interaction) {
     .setTimestamp();
 
   try {
-    const logChannel = interaction.channel;
+    //const logChannel = interaction.channel;
+    const logChannel = interaction.client.logChannel ?? interaction.channel;
+
     if (logChannel.isThread()) await logChannel.join();
     await logChannel.send({embeds: [embed]});
   } catch (err) {
