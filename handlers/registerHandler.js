@@ -209,7 +209,7 @@ async function handleModalSubmit(interaction) {
       new ActionRowBuilder().addComponents(
         new ButtonBuilder()
           .setCustomId('btn_register_confirm')
-          .setLabel('📋 ยืนยัน & บันทึกข้อมูล')
+          .setLabel('📋 ยืนยัน & ส่งข้อมูล')
           .setStyle(ButtonStyle.Success)
       ),
     ],
