@@ -24,7 +24,7 @@ module.exports = {
     const custom = interaction.options.getString('message');
 
     const text = custom
-      ? `สวัสดี ${interaction.user}! ${randomGreeting}\n${custom}`
+      ? `สวัสดี ${interaction.user}! ${custom}`
       : `สวัสดี ${interaction.user}! ${randomGreeting}`;
 
     await interaction.reply(text);
