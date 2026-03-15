@@ -58,10 +58,14 @@ function buildRows(buttons, roleMap, memberRoles, prefix) {
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('interest')
-    .setDescription('เลือกความสนใจและความถนัดของคุณ'),
+    .setDescription('เลือกความสนใจและความถนัดของคุณ')
+    .addBooleanOption(option =>
+      option.setName('ephemeral').setDescription('แสดงผลแบบส่วนตัว').setRequired(false)
+    ),
 
   async execute(interaction) {
     const memberRoles = interaction.member.roles;
+    const ephemeral = interaction.options.getBoolean('ephemeral') ?? true;
 
     const interestEmbed = new EmbedBuilder()
       .setTitle('🎯 ความสนใจของคุณคืออะไร?')
@@ -77,14 +81,14 @@ module.exports = {
     await interaction.reply({
       embeds: [interestEmbed],
       components: buildRows(INTEREST_BUTTONS, INTEREST_ROLES, memberRoles, 'interest'),
-      ephemeral: true,
+      ephemeral,
     });
 
     // Message 2: ความถนัด
     await interaction.followUp({
       embeds: [skillEmbed],
       components: buildRows(SKILL_BUTTONS, SKILL_ROLES, memberRoles, 'skill'),
-      ephemeral: true,
+      ephemeral,
     });
   },
 

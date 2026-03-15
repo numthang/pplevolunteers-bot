@@ -1,4 +1,4 @@
-// scripts/importMembers.js
+// scripts/importMembers.js import from intro_normalized only
 require('dotenv').config();
 const fs = require('fs');
 const path = require('path');

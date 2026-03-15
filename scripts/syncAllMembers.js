@@ -1,4 +1,4 @@
-// scripts/syncAllMembers.js
+// scripts/syncAllMembers.js ดึงข้อมูล Roles ทั้งหมดใน server มาอัพเดทฐานข้อมูล อาจจะ single use เหมือนกัน
 require('dotenv').config();
 const {Client, GatewayIntentBits} = require('discord.js');
 const pool = require('../db/index');

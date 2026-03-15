@@ -11,10 +11,22 @@ const greetings = [
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('hi')
-    .setDescription('ทักทายสมาชิก'),
+    .setDescription('ทักทายสมาชิก')
+    .addStringOption(option =>
+      option
+        .setName('message')
+        .setDescription('ข้อความเพิ่มเติม (ไม่บังคับ)')
+        .setRequired(false)
+    ),
 
   async execute(interaction) {
     const randomGreeting = greetings[Math.floor(Math.random() * greetings.length)];
-    await interaction.reply(`สวัสดี ${interaction.user}! ${randomGreeting}`);
+    const custom = interaction.options.getString('message');
+
+    const text = custom
+      ? `สวัสดี ${interaction.user}! ${randomGreeting}\n${custom}`
+      : `สวัสดี ${interaction.user}! ${randomGreeting}`;
+
+    await interaction.reply(text);
   },
 };

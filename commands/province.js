@@ -94,18 +94,22 @@ function buildRows(region, memberRoles) {
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('province')
-    .setDescription('เลือกจังหวัดของคุณ'),
-
+    .setDescription('เลือกจังหวัดของคุณ')
+    .addBooleanOption(option =>
+      option.setName('ephemeral').setDescription('แสดงผลแบบส่วนตัว').setRequired(false)
+    ),
+  
   async execute(interaction) {
     const memberRoles = interaction.member.roles;
-
+    const ephemeral = interaction.options.getBoolean('ephemeral') ?? true;
+    
     await interaction.reply({
       embeds: [new EmbedBuilder()
         .setTitle('🏙️ กรุงเทพฯ & ปริมณฑล')
         .setDescription(BKK_HINT)
         .setColor(0x3498db)],
       components: buildRows(PROVINCE_REGIONS[0], memberRoles),
-      ephemeral: true,
+      ephemeral,
     });
 
     for (let i = 1; i < PROVINCE_REGIONS.length; i++) {
@@ -113,7 +117,7 @@ module.exports = {
       await interaction.followUp({
         embeds: [new EmbedBuilder().setTitle(region.label).setColor(region.color)],
         components: buildRows(region, memberRoles),
-        ephemeral: true,
+        ephemeral,
       });
     }
   },

@@ -1,4 +1,4 @@
-// scripts/assignRoles.js
+// scripts/assignRoles.js assign role from db
 require('dotenv').config();
 const {Client, GatewayIntentBits} = require('discord.js');
 const pool = require('../db/index');
