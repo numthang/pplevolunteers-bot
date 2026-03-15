@@ -29,7 +29,7 @@ module.exports = {
     const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId('btn_open_register_modal')
-        .setLabel('👥 กดปุ่มนี้เพื่อเริ่มแนะนำตัว')
+        .setLabel('✍️ กดปุ่มนี้เพื่อเริ่มแนะนำตัว')
         .setStyle(ButtonStyle.Primary)
     );
 
