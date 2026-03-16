@@ -1,3 +1,4 @@
+// index.js 
 require('dotenv').config();
 const { Client, GatewayIntentBits, Collection } = require('discord.js');
 const { handleInterestSelect } = require('./handlers/interestSelect');
@@ -60,12 +61,13 @@ client.on('interactionCreate', async (interaction) => {
   }
 
   // --- Buttons ---
+  // index.js — แทนที่ block isButton() เดิม
   if (interaction.isButton()) {
-    await handleOpenRegisterModal(interaction); // ← เพิ่มบรรทัดนี้
-    await handleRegisterConfirm(interaction);  // ปุ่มยืนยัน log
-    await handleInterestSelect(interaction);   // ปุ่ม interest/skill toggle
-    await handleDeleteLog(interaction);
-    await handleProvinceBtn(interaction);
+    if (interaction.customId === 'btn_open_register_modal') return handleOpenRegisterModal(interaction);
+    if (interaction.customId === 'btn_register_confirm')    return handleRegisterConfirm(interaction);
+    if (interaction.customId === 'delete_log')              return handleDeleteLog(interaction);
+    if (interaction.customId.startsWith('prov_btn:'))       return handleProvinceBtn(interaction);
+    if (interaction.customId.startsWith('interest:') || interaction.customId.startsWith('skill:')) return handleInterestSelect(interaction);
     return;
   }
 });

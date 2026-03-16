@@ -9,9 +9,12 @@ const {
   TextInputBuilder,
   TextInputStyle,
 } = require('discord.js');
-const {PROVINCE_ROLES, SUB_REGION_ROLES, MAIN_REGION_ROLES} = require('../config/roles');
-const {BKK_HINT} = require('../config/hints');
-const {upsertMember, syncMemberRoles} = require('../db/members');
+// เพิ่ม import ด้านบนสุด (ถ้ายังไม่มี)
+const { INTEREST_BUTTONS, SKILL_BUTTONS, buildRows } = require('../commands/interest');
+const { INTEREST_ROLES, SKILL_ROLES } = require('../config/roles');
+const { PROVINCE_ROLES, SUB_REGION_ROLES, MAIN_REGION_ROLES } = require('../config/roles');
+const { BKK_HINT } = require('../config/hints');
+const { upsertMember, syncMemberRoles } = require('../db/members');
 
 const PROVINCE_REGIONS = [
   {
@@ -289,18 +292,54 @@ async function handleRegisterConfirm(interaction) {
     )
     .setTimestamp();
 
+  // ส่ง log แล้วเก็บ message ที่ส่งไว้
+  let logMessageUrl = null;
   try {
-    //const logChannel = interaction.channel;
     const logChannel = interaction.client.logChannel ?? interaction.channel;
-
     if (logChannel.isThread()) await logChannel.join();
-    await logChannel.send({embeds: [embed]});
+    const logMsg = await logChannel.send({ embeds: [embed] });
+    
+    // สร้าง link เฉพาะถ้า log ไปห้องอื่น (ห้องเดียวกันไม่ต้องมี)
+    if (logChannel.id !== interaction.channelId) {
+      logMessageUrl = logMsg.url;
+    }
   } catch (err) {
     console.error('❌ ส่ง log ไม่ได้:', err);
   }
 
   //await interaction.followUp({content: '✅ บันทึกข้อมูลเรียบร้อยแล้วครับ!', ephemeral: true});
   pendingForms.delete(interaction.user.id);
+  
+  // --- ต่อด้วย interest/skill ---
+  const memberRoles = interaction.member.roles;
+
+  await interaction.followUp({
+    embeds: [new EmbedBuilder()
+      .setTitle('✅ บันทึกข้อมูลเรียบร้อยแล้ว!')
+      .setDescription(
+        'ขั้นตอนสุดท้าย — เลือกความสนใจและความถนัดของคุณได้เลย\n' +
+        'กดซ้ำเพื่อถอด • 🔵 = มีอยู่แล้ว • ⬜ = ยังไม่มี' +
+        (logMessageUrl ? `\n\n[📋 ดูข้อมูลที่บันทึกไว้](${logMessageUrl})` : '')
+      )
+      .setColor(0x57f287)],
+    ephemeral: true,
+  });
+
+  await interaction.followUp({
+    embeds: [new EmbedBuilder()
+      .setTitle('🎯 ความสนใจของคุณคืออะไร?')
+      .setColor(0xf1c40f)],
+    components: buildRows(INTEREST_BUTTONS, INTEREST_ROLES, memberRoles, 'interest'),
+    ephemeral: true,
+  });
+
+  await interaction.followUp({
+    embeds: [new EmbedBuilder()
+      .setTitle('🛠️ ความถนัดของคุณคืออะไร?')
+      .setColor(0x3498db)],
+    components: buildRows(SKILL_BUTTONS, SKILL_ROLES, memberRoles, 'skill'),
+    ephemeral: true,
+  });
 }
 
 async function handleDeleteLog(interaction) {
