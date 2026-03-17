@@ -307,9 +307,9 @@ async function handleRegisterConfirm(interaction) {
       logMessageUrl = logMsg.url;
     }
     
-    // 2. 🔥 แก้ไขบรรทัดนี้: เปลี่ยนจาก interaction.channel เป็น logChannel
+    // ... หลังส่ง logMsg สำเร็จ ...
     if (interaction.client.refreshSticky) {
-        await interaction.client.refreshSticky(logChannel);
+      await interaction.client.refreshSticky(logChannel);
     }
   } catch (err) {
     console.error('❌ ส่ง log ไม่ได้:', err);

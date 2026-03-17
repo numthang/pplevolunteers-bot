@@ -16,4 +16,26 @@ async function getSetting(guildId, key) {
     return rows[0]?.setting_value || null;
 }
 
-module.exports = { setSetting, getSetting };
+// ฟังก์ชันสำหรับลบการตั้งค่า
+async function deleteSetting(guildId, key) {
+    const connection = await pool.getConnection();
+    try {
+        await connection.query(
+            'DELETE FROM server_settings WHERE guild_id = ? AND setting_key = ?',
+            [guildId, key]
+        );
+        return true;
+    } catch (error) {
+        console.error('Error in deleteSetting:', error);
+        throw error;
+    } finally {
+        connection.release();
+    }
+}
+
+// อย่าลืมเพิ่ม deleteSetting ลงใน module.exports ด้วยนะครับ
+module.exports = {
+    getSetting,
+    setSetting,
+    deleteSetting // เพิ่มตัวนี้เข้าไป
+};
