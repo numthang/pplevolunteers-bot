@@ -95,7 +95,7 @@ function buildDropdown(region) {
 function buildRegisterModal(existing = null) {
   const modal = new ModalBuilder()
     .setCustomId('modal_register')
-    .setTitle('แนะนำตัวให้เพื่อนรู้จักสักนิด');
+    .setTitle('แนะนำตัวให้เพื่อนรู้จัก');
 
   const nameInput = new TextInputBuilder()
     .setCustomId('field_name')
@@ -288,7 +288,7 @@ async function handleRegisterConfirm(interaction) {
       {name: 'จังหวัด',           value: allProvinces.join(', ') || '-', inline: false},
       {name: 'ความสนใจ/ความถนัด', value: interest || '-',         inline: false},
       {name: 'แนะนำโดย',         value: referredBy || '-',       inline: true},
-      {name: 'Discord',           value: `<@${interaction.user.id}> (${interaction.user.username})`, inline: false},
+      {name: 'Discord',           value: `<@${interaction.user.id}> (${interaction.user.id})`, inline: false},
     )
     .setTimestamp();
 
@@ -297,11 +297,19 @@ async function handleRegisterConfirm(interaction) {
   try {
     const logChannel = interaction.client.logChannel ?? interaction.channel;
     if (logChannel.isThread()) await logChannel.join();
-    const logMsg = await logChannel.send({ embeds: [embed] });
+    const logMsg = await logChannel.send({
+      content: `Sent by <@${interaction.user.id}> (${interaction.user.username})`,
+      embeds: [embed] 
+    });
     
     // สร้าง link เฉพาะถ้า log ไปห้องอื่น (ห้องเดียวกันไม่ต้องมี)
     if (logChannel.id !== interaction.channelId) {
       logMessageUrl = logMsg.url;
+    }
+    
+    // 2. 🔥 แก้ไขบรรทัดนี้: เปลี่ยนจาก interaction.channel เป็น logChannel
+    if (interaction.client.refreshSticky) {
+        await interaction.client.refreshSticky(logChannel);
     }
   } catch (err) {
     console.error('❌ ส่ง log ไม่ได้:', err);

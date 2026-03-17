@@ -24,8 +24,8 @@ ${lines}
 module.exports = { ROLES };
 `;
 
-  fs.writeFileSync('config/exports.js', output, 'utf8');
-  console.log(`✅ Export สำเร็จ! ${roles.size} roles → config/exports.js`);
+  fs.writeFileSync('config/export_roles.js', output, 'utf8');
+  console.log(`✅ Export สำเร็จ! ${roles.size} roles → config/export_roles.js`);
   process.exit(0);
 });
 

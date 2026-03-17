@@ -1,4 +1,4 @@
-// scripts/assignRoles.js assign role from db
+// scripts/assignRoles.js assign user role จาก ฐานข้อมูล
 require('dotenv').config();
 const {Client, GatewayIntentBits} = require('discord.js');
 const pool = require('../db/index');
