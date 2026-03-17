@@ -1,4 +1,4 @@
-// scripts/syncAllMembers.js ดึงข้อมูล Roles ทั้งหมดใน server มาอัพเดทฐานข้อมูล อาจจะ single use เหมือนกัน
+// scripts/syncAllMembers.js ดึงข้อมูล Roles ทั้งหมดใน server มาอัพเดทฐานข้อมูล อาจจะ single use เหมือนกัน ไม่ดิ ถ้าติดยศกันเอง จะไม่มีการอัพเดทฐานข้อมูล แต่ช่างเหอะ เราจะไปใช้ /backup แทนละหลังจากนี้
 require('dotenv').config();
 const {Client, GatewayIntentBits} = require('discord.js');
 const pool = require('../db/index');

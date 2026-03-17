@@ -1,9 +1,10 @@
 // index.js 
 require('dotenv').config();
-const { Client, GatewayIntentBits, Collection } = require('discord.js');
+const { Client, GatewayIntentBits, Collection, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { handleInterestSelect } = require('./handlers/interestSelect');
 const { handleModalSubmit, handleProvinceDropdown, handleRegisterConfirm, handleDeleteLog, handleOpenRegisterModal } = require('./handlers/registerHandler');
 const { handleProvinceBtn } = require('./handlers/provinceSelect');
+const { getSetting, setSetting } = require('./db/settings');
 
 const fs = require('fs');
 const path = require('path');
@@ -72,7 +73,8 @@ client.on('interactionCreate', async (interaction) => {
   }
 });
 
-// Sticky message logic
+
+/*// Sticky message logic
 client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
   if (!client.stickyMessages) return;
@@ -88,19 +90,60 @@ client.on('messageCreate', async (message) => {
   const {EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle} = require('discord.js');
 
   const embed = new EmbedBuilder()
-    .setTitle('📋 ลงทะเบียนสมาชิก อาสาประชาชน')
-    .setDescription('กดปุ่มด้านล่างเพื่อลงทะเบียนหรืออัปเดตข้อมูลของคุณได้เลยครับ')
+    .setTitle('📋 แนะนำตัวสมาชิก อาสาประชาชน')
+    .setDescription('กดปุ่มด้านล่างเพื่อแนะนำตัวหรืออัปเดตข้อมูลของคุณได้เลยครับ')
     .setColor(0x5865f3);
 
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId('btn_open_register_modal')
-      .setLabel('📋 ลงทะเบียน / แก้ไขข้อมูล')
+      .setLabel('📋 แนะนำตัว/แก้ไขข้อมูล')
       .setStyle(ButtonStyle.Primary)
   );
 
   const sent = await message.channel.send({embeds: [embed], components: [row]});
   client.stickyMessages.set(message.channelId, sent.id);
+});*/
+
+async function refreshStickyMessage(channel) {
+  const key = `sticky_${channel.id}`;
+  const config = await getSetting(channel.guildId, key);
+  
+  if (!config) return; // ถ้าห้องนี้ไม่มี Key ของตัวเอง ก็จบงาน
+
+  try {
+    // 1. ลบข้อความเก่า
+    const old = await channel.messages.fetch(config.message_id).catch(() => null);
+    if (old) await old.delete().catch(() => null);
+
+    // 2. ส่งใหม่ (ใช้ค่าเดิมจาก config)
+    const sent = await channel.send({ 
+        embeds: [new EmbedBuilder().setTitle(config.title).setDescription(config.description).setColor(config.color)],
+        components: [new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId('btn_open_register_modal').setLabel(config.button_label).setStyle(ButtonStyle.Primary)
+        )]
+    });
+
+    // 3. เซฟ ID ใหม่ทับที่เดิม (เพื่อให้รอบหน้าลบถูกตัว)
+    config.message_id = sent.id;
+    await setSetting(channel.guildId, key, config);
+  } catch (err) { console.error('Sticky Error:', err); }
+}
+// ทำให้ client เรียกฟังก์ชันนี้จากไฟล์อื่นได้
+client.refreshSticky = refreshStickyMessage;
+
+// ใน index.js ส่วน messageCreate
+client.on('messageCreate', async (message) => {
+  if (message.author.bot || !message.guild) return;
+
+  // เช็คก่อนว่าห้องนี้ "อนุญาต" ให้มี Sticky (มีข้อมูลใน DB) ไหม
+  const key = `sticky_${message.channel.id}`;
+  const config = await getSetting(message.guildId, key);
+
+  // ถ้ามี config (แปลว่าเคย /setup-register ไว้) ถึงจะสั่งทำงาน
+  if (config && client.refreshSticky) {
+      await client.refreshSticky(message.channel);
+  }
 });
 
 client.login(process.env.TOKEN);
