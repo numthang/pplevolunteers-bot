@@ -297,36 +297,18 @@ async function handleRegisterConfirm(interaction) {
   // ส่ง log แล้วเก็บ message ที่ส่งไว้
   let logMessageUrl = null;
   try {
-    /* const logChannel = interaction.client.logChannel ?? interaction.channel; */
-
     // --- โค้ดใหม่ ---
     let logChannel = interaction.channel; // ค่าเริ่มต้นคือห้องที่กดปุ่ม
     const { getSetting } = require('../db/settings'); // ดึงเครื่องมือ DB มาใช้
-    // const regConfig = await getSetting(interaction.guildId, 'config_register');
     let regConfig = await getSetting(interaction.guildId, 'config_register');
-
-  /*if (regConfigRaw) {
-        try {
-            const conf = JSON.parse(regConfigRaw);
-            if (conf.log_channel_id) {
-                // ถ้าเจอ ID ใน DB ให้พยายามดึงห้องนั้นมาใช้
-                logChannel = await interaction.guild.channels.fetch(conf.log_channel_id).catch(() => interaction.channel);
-            }
-        } catch (e) {
-            console.error('Parse register config error:', e);
-        }
-    } */
-    /* if (regConfig && regConfig.log_channel_id) {
-      logChannel = await interaction.guild.channels.fetch(regConfig.log_channel_id).catch(() => interaction.channel);
-    } */
 
     // 🔥 เพิ่มบรรทัดนี้เพื่อดักความต่างของ Driver บน Server
     if (typeof regConfig === 'string') {
-        try {
-            regConfig = JSON.parse(regConfig);
-        } catch (e) {
-            console.error('❌ Parse regConfig fail:', e);
-        }
+      try {
+          regConfig = JSON.parse(regConfig);
+      } catch (e) {
+          console.error('❌ Parse regConfig fail:', e);
+      }
     }
     if (regConfig && regConfig.log_channel_id) {
       logChannel = await interaction.guild.channels.fetch(regConfig.log_channel_id)

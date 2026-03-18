@@ -47,49 +47,6 @@ async function refreshSticky(channel) {
       }
     }
 
-    /* // สร้าง embed ใหม่
-    const embed = new EmbedBuilder()
-      .setTitle(title)
-      .setDescription(description)
-      .setColor(color);
-
-    const row = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId(buttonId)
-        .setLabel(buttonLabel)
-        .setStyle(ButtonStyle.Primary)
-    ); */
-
-    /* // 2. สร้าง Embed ดึงค่าจาก config ตรงๆ
-    const embed = new EmbedBuilder()
-      .setTitle(config.title)
-      .setDescription(config.description)
-      .setColor(Number(config.color) || 0x5865f2);
-
-    // 3. จัดการปุ่มแบบ Optional (ถ้ามีข้อมูลปุ่มค่อยสร้าง)
-    const components = [];
-    if (config.button_label && config.button_custom_id) {
-      components.push(new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setCustomId(config.button_custom_id)
-          .setLabel(config.button_label)
-          .setStyle(ButtonStyle.Primary)
-      ));
-    } */
-
-    /* // อัปเดต config ใน DB (เก็บเป็น object ธรรมดา)
-    const updatedConfig = {
-      ...config,
-      message_id: sent.id,
-      title,
-      description,
-      color,
-      button_label: buttonLabel,
-      button_custom_id: buttonId,
-    };
-
-    await setSetting(channel.guildId, key, updatedConfig); */
-
     // ประกอบร่างส่งข้อมูลดิบ
     const sendOptions = {};
     if (config.content) sendOptions.content = config.content;
