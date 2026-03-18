@@ -315,12 +315,12 @@ async function handleRegisterConfirm(interaction) {
             console.error('Parse register config error:', e);
         }
     } */
-    console.error('regConfig : ', logChannel);
-    console.error('Sent to Log Channel 1 : ', logChannel);
+    console.log('regConfig : ', logChannel);
+    console.log('Sent to Log Channel 1 : ', logChannel);
     if (regConfig && regConfig.log_channel_id) {
       logChannel = await interaction.guild.channels.fetch(regConfig.log_channel_id).catch(() => interaction.channel);
     }
-    console.error('Sent to Log Channel 2 : ', logChannel);
+    console.log('Sent to Log Channel 2 : ', logChannel);
 
     if (logChannel.isThread()) await logChannel.join();
     const logMsg = await logChannel.send({
