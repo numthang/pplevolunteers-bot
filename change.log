@@ -8,8 +8,6 @@ Greeting:
 
 /setup-register title:ยินดีต้อนรับสู่ อาสาประชาชน! :tangerine: description:Step  :one: : แนะนำตัว → กดปุ่มแนะนำตัวด้านล่าง\n\n Step :two: : อ่านตรงนี้ก่อน → #📕┆ข้อตกลง  log_channel:#👋┆แนะนำตัว
 
-/setup-register title:ยินดีต้อนรับสู่ อาสาประชาชน! :tangerine: description:Step  :one: : กดปุ่มแนะนำตัวด้านล่างหรือ #👋┆แนะนำตัว \n\n Step :two: : อ่านตรงนี้ก่อน → #📕┆ข้อตกลงร่วม  log_channel:#👋┆แนะนำตัว
-
 /setup-register title:แนะนำตัวเองให้เพื่อนรู้จัก description:กดปุ่มแล้วระบบจะพาทำไปทีละขั้นตอน ดังนี้ :point_down:\n\n:pencil: กรอกข้อมูล → :map: เลือกจังหวัด → :dart: เลือกทีม
 
 /setup-register title:แนะนำตัวทางนี้แล้วข้อมูลจะส่งไปยังห้องแนะนำตัว log_channel:#👋┆แนะนำตัว
