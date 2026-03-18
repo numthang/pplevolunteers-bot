@@ -304,7 +304,7 @@ async function handleRegisterConfirm(interaction) {
     const { getSetting } = require('../db/settings'); // ดึงเครื่องมือ DB มาใช้
     const regConfig = await getSetting(interaction.guildId, 'config_register');
 
-  /*   if (regConfigRaw) {
+  /*if (regConfigRaw) {
         try {
             const conf = JSON.parse(regConfigRaw);
             if (conf.log_channel_id) {
@@ -315,9 +315,12 @@ async function handleRegisterConfirm(interaction) {
             console.error('Parse register config error:', e);
         }
     } */
+    console.error('regConfig : ', logChannel);
+    console.error('Sent to Log Channel 1 : ', logChannel);
     if (regConfig && regConfig.log_channel_id) {
       logChannel = await interaction.guild.channels.fetch(regConfig.log_channel_id).catch(() => interaction.channel);
     }
+    console.error('Sent to Log Channel 2 : ', logChannel);
 
     if (logChannel.isThread()) await logChannel.join();
     const logMsg = await logChannel.send({
