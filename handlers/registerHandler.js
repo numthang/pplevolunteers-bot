@@ -315,7 +315,7 @@ async function handleRegisterConfirm(interaction) {
             console.error('Parse register config error:', e);
         }
     } */
-    console.log('regConfig : ', logChannel);
+    console.log('regConfig : ', regConfig);
     console.log('Sent to Log Channel 1 : ', logChannel);
     if (regConfig && regConfig.log_channel_id) {
       logChannel = await interaction.guild.channels.fetch(regConfig.log_channel_id).catch(() => interaction.channel);
