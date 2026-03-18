@@ -8,15 +8,17 @@ const {
   ModalBuilder,
   TextInputBuilder,
   TextInputStyle,
+  MessageFlags,
 } = require('discord.js');
 // เพิ่ม import ด้านบนสุด (ถ้ายังไม่มี)
-const { INTEREST_BUTTONS, SKILL_BUTTONS, buildRows } = require('../commands/interest');
+const { buildRows } = require('../commands/interest');
 const { INTEREST_ROLES, SKILL_ROLES } = require('../config/roles');
 const { PROVINCE_ROLES, SUB_REGION_ROLES, MAIN_REGION_ROLES } = require('../config/roles');
 const { BKK_HINT } = require('../config/hints');
 const { upsertMember, syncMemberRoles } = require('../db/members');
+const { INTEREST_BUTTONS, SKILL_BUTTONS, PROVINCE_REGIONS } = require('../config/constants');
 
-const PROVINCE_REGIONS = [
+/* const PROVINCE_REGIONS = [
   {
     id: 'central',
     label: '🌿 ภาคกลาง',
@@ -76,7 +78,7 @@ const PROVINCE_REGIONS = [
       'นนทบุรี', 'สมุทรปราการ', 'สมุทรสาคร', 'ปทุมธานี',
     ],
   },
-];
+]; */
 
 const pendingForms = new Map();
 
@@ -194,7 +196,7 @@ async function handleModalSubmit(interaction) {
   await interaction.reply({
     embeds: [embed],
     components: PROVINCE_REGIONS.slice(0, 5).map(buildDropdown),
-    ephemeral: true,
+    flags: MessageFlags.Ephemeral,
   });
 
   await interaction.followUp({
@@ -203,7 +205,7 @@ async function handleModalSubmit(interaction) {
       .setDescription(BKK_HINT)
       .setColor(0x3498db)],
     components: [buildDropdown(PROVINCE_REGIONS[5])],
-    ephemeral: true,
+    flags: MessageFlags.Ephemeral,
   });
 
   await interaction.followUp({
@@ -216,7 +218,7 @@ async function handleModalSubmit(interaction) {
           .setStyle(ButtonStyle.Success)
       ),
     ],
-    ephemeral: true,
+    flags: MessageFlags.Ephemeral,
   });
 }
 
@@ -266,7 +268,7 @@ async function handleRegisterConfirm(interaction) {
 
   const pending = pendingForms.get(interaction.user.id);
   if (!pending) {
-    return interaction.followUp({content: '❌ ไม่พบข้อมูล กรุณาใช้ /register ใหม่', ephemeral: true});
+    return interaction.followUp({content: '❌ ไม่พบข้อมูล กรุณาใช้ /register ใหม่', flags: MessageFlags.Ephemeral});
   }
 
   const {formData} = pending;
@@ -295,7 +297,28 @@ async function handleRegisterConfirm(interaction) {
   // ส่ง log แล้วเก็บ message ที่ส่งไว้
   let logMessageUrl = null;
   try {
-    const logChannel = interaction.client.logChannel ?? interaction.channel;
+    /* const logChannel = interaction.client.logChannel ?? interaction.channel; */
+
+    // --- โค้ดใหม่ ---
+    let logChannel = interaction.channel; // ค่าเริ่มต้นคือห้องที่กดปุ่ม
+    const { getSetting } = require('../db/settings'); // ดึงเครื่องมือ DB มาใช้
+    const regConfig = await getSetting(interaction.guildId, 'config_register');
+
+  /*   if (regConfigRaw) {
+        try {
+            const conf = JSON.parse(regConfigRaw);
+            if (conf.log_channel_id) {
+                // ถ้าเจอ ID ใน DB ให้พยายามดึงห้องนั้นมาใช้
+                logChannel = await interaction.guild.channels.fetch(conf.log_channel_id).catch(() => interaction.channel);
+            }
+        } catch (e) {
+            console.error('Parse register config error:', e);
+        }
+    } */
+    if (regConfig && regConfig.log_channel_id) {
+      logChannel = await interaction.guild.channels.fetch(regConfig.log_channel_id).catch(() => interaction.channel);
+    }
+
     if (logChannel.isThread()) await logChannel.join();
     const logMsg = await logChannel.send({
       content: `Sent by <@${interaction.user.id}> (${interaction.user.username})`,
@@ -315,7 +338,7 @@ async function handleRegisterConfirm(interaction) {
     console.error('❌ ส่ง log ไม่ได้:', err);
   }
 
-  //await interaction.followUp({content: '✅ บันทึกข้อมูลเรียบร้อยแล้วครับ!', ephemeral: true});
+  //await interaction.followUp({content: '✅ บันทึกข้อมูลเรียบร้อยแล้วครับ!', flags: MessageFlags.Ephemeral});
   pendingForms.delete(interaction.user.id);
   
   // --- ต่อด้วย interest/skill ---
@@ -330,7 +353,7 @@ async function handleRegisterConfirm(interaction) {
         (logMessageUrl ? `\n\n[📋 ดูข้อมูลที่บันทึกไว้](${logMessageUrl})` : '')
       )
       .setColor(0x57f287)],
-    ephemeral: true,
+    flags: MessageFlags.Ephemeral,
   });
 
   await interaction.followUp({
@@ -338,7 +361,7 @@ async function handleRegisterConfirm(interaction) {
       .setTitle('🎯 ความสนใจของคุณคืออะไร?')
       .setColor(0xf1c40f)],
     components: buildRows(INTEREST_BUTTONS, INTEREST_ROLES, memberRoles, 'interest'),
-    ephemeral: true,
+    flags: MessageFlags.Ephemeral,
   });
 
   await interaction.followUp({
@@ -346,7 +369,7 @@ async function handleRegisterConfirm(interaction) {
       .setTitle('🛠️ ความถนัดของคุณคืออะไร?')
       .setColor(0x3498db)],
     components: buildRows(SKILL_BUTTONS, SKILL_ROLES, memberRoles, 'skill'),
-    ephemeral: true,
+    flags: MessageFlags.Ephemeral,
   });
 }
 

@@ -16,7 +16,6 @@ async function refreshSticky(channel) {
     console.log(`[Sticky] Skipped refresh for ${channelId} - already in progress`);
     return;
   }
-
   refreshing.set(channelId, true);
 
   try {
@@ -36,34 +35,19 @@ async function refreshSticky(channel) {
       }
     }
 
-    // Fallback ค่าทั้งหมดเพื่อป้องกัน undefined ทำให้ EmbedBuilder error
-    const title       = config.title       ?? '📋 แนะนำตัวสมาชิก อาสาประชาชน';
-    const description = config.description ?? 'กดปุ่มด้านล่างเพื่อแนะนำตัวหรืออัปเดตข้อมูลของคุณได้เลย';
-    const color       = Number(config.color) || 0x5865f2; // แปลงเป็น number เผื่อเก็บเป็น string
-    const buttonLabel = config.button_label ?? '📋 แนะนำตัว/แก้ไขข้อมูล';
-    const buttonId    = config.button_custom_id ?? 'btn_open_register_modal';
-
     // ลบข้อความเก่า (ถ้ามี) + เช็คก่อนว่ายังเป็น sticky ของเราจริงไหม
-    let deleted = false;
     if (config.message_id) {
       try {
         const oldMsg = await channel.messages.fetch(config.message_id);
-        // ตรวจสอบคร่าว ๆ ว่าเป็น sticky ของเราจริง (ป้องกันลบผิด)
-        if (oldMsg.embeds?.[0]?.title?.includes('แนะนำตัวสมาชิก')) {
-          await oldMsg.delete();
-          deleted = true;
-          console.log(`[Sticky] Deleted old message ${config.message_id} in ${channelId}`);
-        } else {
-          console.log(`[Sticky] Skipped delete - message ${config.message_id} does not match title`);
-        }
+        await oldMsg.delete();
+        // 🔥 เพิ่มหน่วงเวลาเล็กน้อยหลังลบ เพื่อให้ Discord อัปเดตสถานะห้องทัน
+        await new Promise(resolve => setTimeout(resolve, 1000));
       } catch (fetchErr) {
         console.log(`[Sticky] Could not delete old message ${config.message_id}: ${fetchErr.message}`);
-        // ถ้า fetch ไม่ได้ (หายไปแล้ว) ถือว่า deleted แล้ว
-        deleted = true;
       }
     }
 
-    // สร้าง embed ใหม่
+    /* // สร้าง embed ใหม่
     const embed = new EmbedBuilder()
       .setTitle(title)
       .setDescription(description)
@@ -74,15 +58,26 @@ async function refreshSticky(channel) {
         .setCustomId(buttonId)
         .setLabel(buttonLabel)
         .setStyle(ButtonStyle.Primary)
-    );
+    ); */
 
-    // ส่งใหม่
-    const sent = await channel.send({
-      embeds: [embed],
-      components: [row],
-    });
+    /* // 2. สร้าง Embed ดึงค่าจาก config ตรงๆ
+    const embed = new EmbedBuilder()
+      .setTitle(config.title)
+      .setDescription(config.description)
+      .setColor(Number(config.color) || 0x5865f2);
 
-    // อัปเดต config ใน DB (เก็บเป็น object ธรรมดา)
+    // 3. จัดการปุ่มแบบ Optional (ถ้ามีข้อมูลปุ่มค่อยสร้าง)
+    const components = [];
+    if (config.button_label && config.button_custom_id) {
+      components.push(new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId(config.button_custom_id)
+          .setLabel(config.button_label)
+          .setStyle(ButtonStyle.Primary)
+      ));
+    } */
+
+    /* // อัปเดต config ใน DB (เก็บเป็น object ธรรมดา)
     const updatedConfig = {
       ...config,
       message_id: sent.id,
@@ -93,7 +88,31 @@ async function refreshSticky(channel) {
       button_custom_id: buttonId,
     };
 
-    await setSetting(channel.guildId, key, updatedConfig);
+    await setSetting(channel.guildId, key, updatedConfig); */
+
+    // ประกอบร่างส่งข้อมูลดิบ
+    const sendOptions = {};
+    if (config.content) sendOptions.content = config.content;
+    if (config.embeds && config.embeds.length > 0) sendOptions.embeds = config.embeds;
+    if (config.components && config.components.length > 0) sendOptions.components = config.components;
+
+    // ดักไว้เผื่อ Data ว่างเปล่าจะได้ไม่ error
+    if (!sendOptions.content && !sendOptions.embeds && !sendOptions.components) {
+       console.log(`[Sticky] Empty payload for ${channelId}, skipping.`);
+       return;
+    }
+    // โยนตู้มเดียวจบ
+    const sent = await channel.send(sendOptions);
+
+    /* // ส่งใหม่
+    const sent = await channel.send({
+      embeds: [embed],
+      components: components,
+    }); */
+
+    // 4. อัปเดตเฉพาะ message_id แล้วเซฟ config ก้อนเดิมกลับไป
+    config.message_id = sent.id;
+    await setSetting(channel.guildId, key, config);
 
     console.log(`[Sticky] Refreshed successfully in #${channel.name} (${channelId}) → new msg ${sent.id}`);
   } catch (err) {

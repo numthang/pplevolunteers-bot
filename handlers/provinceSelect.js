@@ -1,7 +1,8 @@
 // handlers/provinceSelect.js
 const { PROVINCE_ROLES, SUB_REGION_ROLES, MAIN_REGION_ROLES } = require('../config/roles');
-const { PROVINCE_REGIONS, buildRows } = require('../commands/province');
+const { buildRows } = require('../commands/province');
 const { syncMemberRoles } = require('../db/members');
+const { PROVINCE_REGIONS } = require('../config/constants');
 
 async function handleProvinceBtn(interaction) {
   if (!interaction.isButton()) return;

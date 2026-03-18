@@ -1,6 +1,6 @@
 // index.js 
 require('dotenv').config();
-const { Client, GatewayIntentBits, Collection, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { Client, GatewayIntentBits, Collection, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require('discord.js');
 const { handleInterestSelect } = require('./handlers/interestSelect');
 const { handleModalSubmit, handleProvinceDropdown, handleRegisterConfirm, handleDeleteLog, handleOpenRegisterModal } = require('./handlers/registerHandler');
 const { handleProvinceBtn } = require('./handlers/provinceSelect');
@@ -13,8 +13,9 @@ const path = require('path');
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMembers, // ← เพิ่มบรรทัดนี้
-    GatewayIntentBits.GuildMessages, // ← เพิ่ม
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent // 👈 ตัวนี้แหละที่น่าจะขาดไป!
   ]
 });
 
@@ -30,7 +31,7 @@ for (const file of commandFiles) {
   }
 }
 
-client.once('ready', () => {
+client.once('clientReady', () => {
   console.log(`🤖 Bot พร้อมแล้ว! ${client.user.tag}`);
 });
 
@@ -43,7 +44,7 @@ client.on('interactionCreate', async (interaction) => {
       await command.execute(interaction);
     } catch (err) {
       console.error(err);
-      const msg = { content: '❌ เกิดข้อผิดพลาด', ephemeral: true };
+      const msg = { content: '❌ เกิดข้อผิดพลาด', flags: MessageFlags.Ephemeral };
       interaction.replied ? interaction.followUp(msg) : interaction.reply(msg);
     }
     return;

@@ -1,7 +1,8 @@
 // handlers/interestSelect.js
 const { INTEREST_ROLES, SKILL_ROLES, MEDIA_TEAM_ROLE_ID, MEDIA_TEAM_TRIGGERS } = require('../config/roles');
-const { INTEREST_BUTTONS, SKILL_BUTTONS, buildRows } = require('../commands/interest');
+const { buildRows } = require('../commands/interest');
 const { syncMemberRoles } = require('../db/members');
+const { INTEREST_BUTTONS, SKILL_BUTTONS } = require('../config/constants');
 
 async function handleInterestSelect(interaction) {
   if (!interaction.isButton()) return;
