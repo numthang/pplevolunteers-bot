@@ -1,4 +1,8 @@
 TODO
+provinceSelect ไม่ควรลบ Sub ด้วย ถ้าบางจังหวัดใน sub ยังอยู่ ใน interestselect ทำงานได้ถูกต้องดี
+if (PROVINCE_ROLES[province]) await member.roles.remove(PROVINCE_ROLES[province]);
+if (SUB_REGION_ROLES[province]) await member.roles.remove(SUB_REGION_ROLES[province]);
+if (MAIN_REGION_ROLES[province]) await member.roles.remove(MAIN_REGION_ROLES[province]);
 
 Greeting:
 

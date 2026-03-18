@@ -5,9 +5,11 @@ const {
   ButtonBuilder,
   ButtonStyle,
   EmbedBuilder,
+  MessageFlags
 } = require('discord.js');
 const { INTEREST_ROLES, SKILL_ROLES } = require('../config/roles');
-
+const { INTEREST_BUTTONS, SKILL_BUTTONS } = require('../config/constants');
+/* 
 const INTEREST_BUTTONS = [
   { label: 'อาสาประชาชน', emoji: '🍊', key: 'อาสาประชาชน' },
   { label: 'ทีมตัวแทนสมาชิก', emoji: '👥', key: 'ทีมตัวแทนสมาชิก' },
@@ -33,7 +35,7 @@ const SKILL_BUTTONS = [
   { label: 'ทีม9geek', emoji: '💻', key: 'ทีม9geek' },
   { label: 'ทีมกฎหมาย', emoji: '⚖️', key: 'ทีมกฎหมาย' },
 ];
-
+ */
 function buildRows(buttons, roleMap, memberRoles, prefix) {
   const rows = [];
   for (let i = 0; i < buttons.length; i += 4) {
@@ -60,12 +62,15 @@ module.exports = {
     .setName('interest')
     .setDescription('เลือกความสนใจและความถนัดของคุณ')
     .addBooleanOption(option =>
-      option.setName('ephemeral').setDescription('แสดงผลแบบส่วนตัว').setRequired(false)
+      option
+      .setName('ephemeral')
+      .setDescription('แสดงผลแบบส่วนตัว')
+      .setRequired(false)
     ),
 
   async execute(interaction) {
     const memberRoles = interaction.member.roles;
-    const ephemeral = interaction.options.getBoolean('ephemeral') ?? true;
+    //const ephemeral = interaction.options.getBoolean('ephemeral') ?? true;
 
     const interestEmbed = new EmbedBuilder()
       .setTitle('🎯 ความสนใจของคุณคืออะไร?')
@@ -77,23 +82,25 @@ module.exports = {
       .setDescription('กดเพื่อเลือก • กดซ้ำเพื่อถอด\n🔵 = มี role อยู่แล้ว • ⬜ = ยังไม่มี')
       .setColor(0x3498db);
 
+    // ... ในบล็อก execute ...
+    const isEphemeral = interaction.options.getBoolean('ephemeral') ?? true;
+    const flags = isEphemeral ? MessageFlags.Ephemeral : undefined;
+
     // Message 1: ความสนใจ
     await interaction.reply({
       embeds: [interestEmbed],
       components: buildRows(INTEREST_BUTTONS, INTEREST_ROLES, memberRoles, 'interest'),
-      ephemeral,
+      flags,
     });
 
     // Message 2: ความถนัด
     await interaction.followUp({
       embeds: [skillEmbed],
       components: buildRows(SKILL_BUTTONS, SKILL_ROLES, memberRoles, 'skill'),
-      ephemeral,
+      flags,
     });
   },
 
   // export ไว้ให้ handler ใช้ rebuild rows หลัง toggle
-  INTEREST_BUTTONS,
-  SKILL_BUTTONS,
   buildRows,
 };

@@ -1,5 +1,5 @@
 // commands/register.js
-const {SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle} = require('discord.js');
+const {SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require('discord.js');
 const {getMember} = require('../db/members');
 const {buildRegisterModal} = require('../handlers/registerHandler');
 
@@ -35,7 +35,7 @@ module.exports = {
               .setStyle(ButtonStyle.Primary)
           ),
         ],
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
   },
