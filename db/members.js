@@ -69,7 +69,7 @@ async function syncMemberRoles(member) {
   const allRoles = member.roles.cache
     .filter(r => r.name !== '@everyone')
     .map(r => r.name)
-    .join(', ');
+    .join(',');
 
   const interestIds = new Set([
     ...Object.values(SKILL_ROLES),
@@ -79,11 +79,11 @@ async function syncMemberRoles(member) {
   const interestRoles = member.roles.cache
     .filter(r => interestIds.has(r.id))
     .map(r => r.name)
-    .join(', ');
+    .join(',');
 
   await pool.execute(
     'UPDATE members SET province = ?, roles = ?, interests = ?, updated_at = CURRENT_TIMESTAMP WHERE discord_id = ?',
-    [allProvinces.join(', ') || null, allRoles || null, interestRoles || null, member.id]
+    [allProvinces.join(',') || null, allRoles || null, interestRoles || null, member.id]
   );
 }
 
