@@ -63,17 +63,17 @@ module.exports = {
     // กรอง role ด้วย comma-separated column `roles`
     const [rows] = await pool.execute(
       `SELECT
-         m.discord_id,
-         m.display_name,
-         ROUND(AVG(r.stars), 1) AS avg_stars,
-         COUNT(r.id)            AS total
-       FROM members m
-       JOIN user_ratings r ON r.target_id = m.discord_id
-       WHERE FIND_IN_SET(?, m.roles) > 0
-       GROUP BY m.discord_id, m.display_name
-       HAVING total >= 1
-       ORDER BY avg_stars DESC, total DESC
-       LIMIT ${topN}`,
+        m.discord_id,
+        COALESCE(m.nickname, m.username) AS display_name,
+        ROUND(AVG(r.stars), 1) AS avg_stars,
+        COUNT(r.id)            AS total
+      FROM members m
+      JOIN user_ratings r ON r.target_id = m.discord_id
+      WHERE FIND_IN_SET(?, m.roles) > 0
+      GROUP BY m.discord_id, m.nickname, m.username
+      HAVING total >= 1
+      ORDER BY avg_stars DESC, total DESC
+      LIMIT ${topN}`,
       [roleName]
     );
 

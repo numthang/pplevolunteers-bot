@@ -50,7 +50,8 @@ async function buildRatingsEmbed(target, page) {
       const starsDisplay = starStr(r.stars);
       const commentText = r.comment ? `"${r.comment}"` : '_ไม่มีความคิดเห็น_';
       return {
-        name: `${starsDisplay}  •  <@${r.rater_id}> (${r.rater_name})  •  ${date}`,
+        // name: `${starsDisplay}  •  <@${r.rater_id}> (${r.rater_name})  •  ${date}`,
+        name: `${starsDisplay}  •  ${date}`,  // ← เอา rater ออก
         value: commentText,
       };
     });

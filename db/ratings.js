@@ -65,10 +65,16 @@ async function getRatingSummary(targetId) {
 async function getRatingList(targetId, page = 1, perPage = 5) {
   const offset = (page - 1) * perPage;
   const [rows] = await pool.execute(
-    `SELECT rater_id, rater_name, stars, comment, created_at
-     FROM user_ratings
-     WHERE target_id = ?
-     ORDER BY created_at DESC
+    `SELECT
+       r.rater_id,
+       COALESCE(m.nickname, m.username, r.rater_name) AS rater_name,
+       r.stars,
+       r.comment,
+       r.created_at
+     FROM user_ratings r
+     LEFT JOIN members m ON m.discord_id = r.rater_id
+     WHERE r.target_id = ?
+     ORDER BY r.created_at DESC
      LIMIT ${perPage} OFFSET ${offset}`,
     [targetId]
   );
