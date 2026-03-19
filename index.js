@@ -45,7 +45,7 @@ client.on('interactionCreate', async (interaction) => {
     return;
   }
   // --- Slash Commands ---
-  if (interaction.isChatInputCommand()) {
+  if (interaction.isChatInputCommand() || interaction.isUserContextMenuCommand()) {
     const command = client.commands.get(interaction.commandName);
     if (!command) return;
     try {
