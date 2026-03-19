@@ -38,6 +38,12 @@ client.once('clientReady', () => {
 });
 
 client.on('interactionCreate', async (interaction) => {
+  // --- Autocomplete ---
+  if (interaction.isAutocomplete()) {
+    const command = client.commands.get(interaction.commandName);
+    if (command?.autocomplete) await command.autocomplete(interaction);
+    return;
+  }
   // --- Slash Commands ---
   if (interaction.isChatInputCommand()) {
     const command = client.commands.get(interaction.commandName);
