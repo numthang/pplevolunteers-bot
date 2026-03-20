@@ -25,7 +25,9 @@ module.exports = {
       const parts = interaction.customId.split(':');
       const targetId   = parts[1];
       const encodedName = parts.slice(2).join(':');
-      const targetName = decodeURIComponent(encodedName);
+      //const targetName = decodeURIComponent(encodedName);
+      const member = await interaction.guild.members.fetch(targetId);
+      const targetName = member.displayName;
 
       const selectMenu = new StringSelectMenuBuilder()
         .setCustomId(`report_category:${targetId}:${encodedName}`)
@@ -60,8 +62,10 @@ module.exports = {
       const parts = interaction.customId.split(':');
       const targetId    = parts[1];
       const encodedName = parts.slice(2).join(':');
-      const targetName  = decodeURIComponent(encodedName);
+      //const targetName  = decodeURIComponent(encodedName);
       const category    = interaction.values[0];
+      const member = await interaction.guild.members.fetch(targetId);
+      const targetName = member.displayName;
 
       const modal = new ModalBuilder()
         .setCustomId(`report_submit:${category}:${targetId}:${encodedName}`)
