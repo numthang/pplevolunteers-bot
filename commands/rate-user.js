@@ -10,6 +10,11 @@ module.exports = {
       opt.setName('user')
         .setDescription('สมาชิกที่ต้องการให้คะแนนหรือร้องเรียน')
         .setRequired(true)
+    )
+    .addBooleanOption(opt =>
+      opt.setName('public')
+        .setDescription('แสดงให้ทุกคนในช่องเห็น (default: เฉพาะคุณ)')
+        .setRequired(false)
     ),
 
   async execute(interaction) {
@@ -32,11 +37,18 @@ module.exports = {
 
     const displayName = target?.displayName ?? targetUser.username;
     const { embed, components } = buildRateReportEmbed(targetUser, displayName);
-
+    const isPublic = interaction.options.getBoolean('public') ?? false;
+    
     await interaction.reply({
       embeds: [embed],
       components,
-      flags: MessageFlags.Ephemeral,
+      flags: isPublic ? undefined : MessageFlags.Ephemeral,
     });
+
+    /* await interaction.reply({
+      embeds: [embed],
+      components,
+      flags: MessageFlags.Ephemeral,
+    }); */
   },
 };

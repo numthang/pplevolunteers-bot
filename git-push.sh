@@ -19,3 +19,6 @@ git commit -m "$1"
 git push
 
 echo "✅ เรียบร้อย! โค้ดไปรออยู่บน Cloud แล้ว"
+
+node deploy-commands.js
+node index.js
