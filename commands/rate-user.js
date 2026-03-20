@@ -1,49 +1,42 @@
-const { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, MessageFlags } = require('discord.js');
+// commands/rate-user.js
+const { SlashCommandBuilder, MessageFlags } = require('discord.js');
+const { buildRateReportEmbed } = require('../components/rateReportEmbed');
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('rate-user')
-    .setDescription('ให้ดาวและความคิดเห็นแก่สมาชิก')
+    .setDescription('ให้คะแนนหรือร้องเรียนสมาชิก')
     .addUserOption(opt =>
       opt.setName('user')
-        .setDescription('สมาชิกที่ต้องการให้คะแนน')
+        .setDescription('สมาชิกที่ต้องการให้คะแนนหรือร้องเรียน')
         .setRequired(true)
     ),
 
   async execute(interaction) {
-    const target = interaction.options.getUser('user');
+    const target = interaction.options.getMember('user');
+    const targetUser = interaction.options.getUser('user');
 
-    if (target.id === interaction.user.id) {
+    if (targetUser.id === interaction.user.id) {
       return interaction.reply({
-        content: '❌ ไม่สามารถให้คะแนนตัวเองได้',
+        content: '❌ ไม่สามารถให้คะแนนหรือร้องเรียนตัวเองได้',
         flags: MessageFlags.Ephemeral,
       });
     }
 
-    if (target.bot) {
+    if (targetUser.bot) {
       return interaction.reply({
-        content: '❌ ไม่สามารถให้คะแนน Bot ได้',
+        content: '❌ ไม่สามารถให้คะแนนหรือร้องเรียน Bot ได้',
         flags: MessageFlags.Ephemeral,
       });
     }
 
-    const embed = new EmbedBuilder()
-      .setColor(0xf4c430)
-      .setTitle(`⭐ ให้คะแนน ${target.displayName}`)
-      .setDescription('เลือกระดับดาวที่ต้องการให้:')
-      .setThumbnail(target.displayAvatarURL());
+    const displayName = target?.displayName ?? targetUser.username;
+    const { embed, components } = buildRateReportEmbed(targetUser, displayName);
 
-    // ปุ่ม 1–5 ดาว — customId รูปแบบ: rate_stars:{stars}:{targetId}:{targetName}
-    const targetName = target.username;
-    const row = new ActionRowBuilder().addComponents(
-      ...[1, 2, 3, 4, 5].map(n =>
-        new ButtonBuilder()
-          .setCustomId(`rate_stars:${n}:${target.id}:${encodeURIComponent(targetName)}`)
-          .setLabel('⭐'.repeat(n))
-          .setStyle(ButtonStyle.Primary)
-      )
-    );
-
-    await interaction.reply({ embeds: [embed], components: [row], flags: MessageFlags.Ephemeral });
+    await interaction.reply({
+      embeds: [embed],
+      components,
+      flags: MessageFlags.Ephemeral,
+    });
   },
 };

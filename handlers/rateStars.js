@@ -5,33 +5,6 @@ const { addRating } = require('../db/ratings');
  * Handler สำหรับ customId ที่ขึ้นต้นด้วย "rate_stars:" และ "rate_submit:"
  */
 module.exports = {
-  // ---- ปุ่มดาว → เปิด Modal ----
-  /* async handleStarButton(interaction) {
-    console.log('handleStarButton triggered by:', interaction.user.id, interaction.customId);
-    
-    const parts = interaction.customId.split(':');
-    const stars = parts[1];
-    const targetId = parts[2];
-    const encodedName = parts.slice(3).join(':');
-    const targetName = decodeURIComponent(encodedName);
-
-    console.log('parsed:', { stars, targetId, targetName });
-
-    const modal = new ModalBuilder()
-      .setCustomId(`rate_submit:${stars}:${targetId}:${encodedName}`)
-      .setTitle(`ให้คะแนน ${'⭐'.repeat(Number(stars))} แก่ ${targetName}`);
-
-    const commentInput = new TextInputBuilder()
-      .setCustomId('comment')
-      .setLabel('ความคิดเห็น (ไม่บังคับ)')
-      .setStyle(TextInputStyle.Paragraph)
-      .setPlaceholder('เขียนความคิดเห็นสั้นๆ เกี่ยวกับสมาชิกคนนี้...')
-      .setMaxLength(300)
-      .setRequired(false);
-
-    modal.addComponents(new ActionRowBuilder().addComponents(commentInput));
-    await interaction.showModal(modal);
-  }, */
   async handleStarButton(interaction) {
     try {
       //console.log('handleStarButton triggered by:', interaction.user.id, interaction.customId);
@@ -39,14 +12,15 @@ module.exports = {
       const parts = interaction.customId.split(':');
       const stars = parts[1];
       const targetId = parts[2];
-      const encodedName = parts.slice(3).join(':');
-      const targetName = decodeURIComponent(encodedName);
-
+      // const encodedName = parts.slice(3).join(':');
+      // const targetName = decodeURIComponent(encodedName);
+      const member = await interaction.guild.members.fetch(targetId);
+      const resolvedTargetName = member.displayName;
       //console.log('parsed:', { stars, targetId, targetName });
 
       const modal = new ModalBuilder()
-        .setCustomId(`rate_submit:${stars}:${targetId}:${encodedName}`)
-        .setTitle(`ให้คะแนน ${'⭐'.repeat(Number(stars))} แก่ ${targetName}`);
+        .setCustomId(`rate_submit:${stars}:${targetId}`)
+        .setTitle(`ให้คะแนน ${'⭐'.repeat(Number(stars))} แก่ ${resolvedTargetName}`);
 
       const commentInput = new TextInputBuilder()
         .setCustomId('comment')
