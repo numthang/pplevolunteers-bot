@@ -8,6 +8,7 @@ const { handleStarButton, handleModalSubmit: handleRateModalSubmit } = require('
 const { handlePageButton } = require('./handlers/ratingsPage');
 const { getSetting, setSetting } = require('./db/settings');
 const { refreshSticky } = require('./handlers/stickyHandler');
+const { handleReportStart, handleReportCategory, handleReportSubmit } = require('./handlers/reportHandler');
 
 const fs = require('fs');
 const path = require('path');
@@ -62,6 +63,7 @@ client.on('interactionCreate', async (interaction) => {
   if (interaction.isModalSubmit()) {
     if (interaction.customId.startsWith('rate_submit:')) return handleRateModalSubmit(interaction);
     await handleModalSubmit(interaction);
+    if (interaction.customId.startsWith('report_submit:')) return handleReportSubmit(interaction);
     return;
   }
 
@@ -69,6 +71,7 @@ client.on('interactionCreate', async (interaction) => {
   if (interaction.isStringSelectMenu()) {
     await handleProvinceDropdown(interaction); // dropdown จังหวัด (register)
     await handleInterestSelect(interaction);   // interest/skill
+    if (interaction.customId.startsWith('report_category:')) return handleReportCategory(interaction);
     return;
   }
 
@@ -82,6 +85,7 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.customId.startsWith('rate_stars:'))      return handleStarButton(interaction);
     if (interaction.customId.startsWith('ratings_page:'))    return handlePageButton(interaction);
     if (interaction.customId.startsWith('interest:') || interaction.customId.startsWith('skill:')) return handleInterestSelect(interaction);
+    if (interaction.customId.startsWith('report_start:')) return handleReportStart(interaction);
     return;
   }
 });
