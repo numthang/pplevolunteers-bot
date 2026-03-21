@@ -1,6 +1,14 @@
 TODO
 - เชื่อมระบบ Discord กับของพรรค
 
+ALTER TABLE user_reports 
+  CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+ALTER TABLE user_ratings 
+  CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+ALTER TABLE members 
+  CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+  
 Greeting:
 
 /setup-register title:ยินดีต้อนรับสู่ อาสาประชาชน! :tangerine: description:Step  :one: : แนะนำตัว → กดปุ่มแนะนำตัวด้านล่าง\n\n Step :two: : อ่านตรงนี้ก่อน → #📕┆ข้อตกลง  log_channel:#👋┆แนะนำตัว
