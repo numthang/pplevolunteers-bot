@@ -19,7 +19,7 @@ module.exports = {
     .addStringOption(o => o.setName('color').setDescription('สี hex').setRequired(false)),
 
   async execute(interaction) {
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    //await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     const title       = interaction.options.getString('title') ?? '🎯 เลือกความสนใจและความถนัด';
     const description = (interaction.options.getString('description') ?? 'กดปุ่มด้านล่างเพื่อเลือกความสนใจและความถนัดของคุณ\nสามารถเพิ่มหรือถอดได้ตลอดเวลา').replace(/\\n/g, '\n');
@@ -35,6 +35,6 @@ module.exports = {
     );
 
     await interaction.reply({ embeds: [embed], components: [row] });
-    await interaction.followUp({ content: '✅ ติดตั้งปุ่มเลือกความสนใจเรียบร้อย!' });
+    await interaction.followUp({ content: '✅ ติดตั้งปุ่มเลือกความสนใจเรียบร้อย!', flags: MessageFlags.Ephemeral });
   },
 };
