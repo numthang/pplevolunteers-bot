@@ -61,10 +61,9 @@ client.on('interactionCreate', async (interaction) => {
 
   // --- Modal Submit ---
   if (interaction.isModalSubmit()) {
-    if (interaction.customId.startsWith('rate_submit:')) return handleRateModalSubmit(interaction);
-    await handleModalSubmit(interaction);
+    if (interaction.customId.startsWith('rate_submit:'))   return handleRateModalSubmit(interaction);
     if (interaction.customId.startsWith('report_submit:')) return handleReportSubmit(interaction);
-    return;
+    return handleModalSubmit(interaction); // register modal
   }
 
   // --- Select Menus ---

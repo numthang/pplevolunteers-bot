@@ -1,11 +1,11 @@
 const pool = require('./index');
 const { PROVINCE_ROLES, INTEREST_ROLES, SKILL_ROLES } = require('../config/roles');
 
-async function upsertMember(data) {
+async function upsertMember(guildId, data) {
   const sql = `
-  INSERT INTO members
-    (discord_id, username, nickname, firstname, lastname, member_id, specialty, province, region, roles, interests, referred_by)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  INSERT INTO dc_members
+    (guild_id, discord_id, username, nickname, firstname, lastname, member_id, specialty, province, region, roles, interests, referred_by)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   ON DUPLICATE KEY UPDATE
     username = VALUES(username),
     nickname = VALUES(nickname),
@@ -21,6 +21,7 @@ async function upsertMember(data) {
     updated_at = CURRENT_TIMESTAMP
   `;
   const values = [
+    guildId,
     data.discord_id,
     data.username,
     data.nickname ?? null,
@@ -37,30 +38,32 @@ async function upsertMember(data) {
   await pool.execute(sql, values);
 }
 
-async function getMember(discord_id) {
+async function getMember(guildId, discord_id) {
   const [rows] = await pool.execute(
-    'SELECT * FROM members WHERE discord_id = ?',
-    [discord_id]
+    'SELECT * FROM dc_members WHERE guild_id = ? AND discord_id = ?',
+    [guildId, discord_id]
   );
   return rows[0] ?? null;
 }
 
 /*async function updateProvince(discord_id, province) {
   await pool.execute(
-    'UPDATE members SET province = ?, updated_at = CURRENT_TIMESTAMP WHERE discord_id = ?',
+    'UPDATE dc_members SET province = ?, updated_at = CURRENT_TIMESTAMP WHERE discord_id = ?',
     [province, discord_id]
   );
 }
 
 async function updateInterests(discord_id, interests) {
   await pool.execute(
-    'UPDATE members SET interests = ?, updated_at = CURRENT_TIMESTAMP WHERE discord_id = ?',
+    'UPDATE dc_members SET interests = ?, updated_at = CURRENT_TIMESTAMP WHERE discord_id = ?',
     [interests, discord_id]
   );
 }*/
 
 async function syncMemberRoles(member) {
   await member.fetch();
+
+  const guildId = member.guild.id;
 
   const allProvinces = Object.entries(PROVINCE_ROLES)
     .filter(([, roleId]) => member.roles.cache.has(roleId))
@@ -82,8 +85,8 @@ async function syncMemberRoles(member) {
     .join(',');
 
   await pool.execute(
-    'UPDATE members SET province = ?, roles = ?, interests = ?, updated_at = CURRENT_TIMESTAMP WHERE discord_id = ?',
-    [allProvinces.join(',') || null, allRoles || null, interestRoles || null, member.id]
+    'UPDATE dc_members SET province = ?, roles = ?, interests = ?, updated_at = CURRENT_TIMESTAMP WHERE guild_id = ? AND discord_id = ?',
+    [allProvinces.join(',') || null, allRoles || null, interestRoles || null, guildId, member.id]
   );
 }
 

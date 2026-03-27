@@ -128,6 +128,7 @@ module.exports = {
       } catch { /* fallback */ }
 
       const reportId = await addReport({
+        guildId:      interaction.guildId,
         targetId,
         targetName:   resolvedTargetName,
         reporterId:   interaction.user.id,

@@ -84,8 +84,8 @@ module.exports = {
     if (sub === 'list') {
       const status = interaction.options.getString('status');
       const page   = 1;
-      const rows   = await getReportList(status, page, PER_PAGE);
-      const total  = await getReportCount(status);
+      const rows   = await getReportList(interaction.guildId, status, page, PER_PAGE);
+      const total  = await getReportCount(interaction.guildId, status);
       const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
 
       const lines = rows.length === 0
@@ -122,7 +122,7 @@ module.exports = {
     // ---- view ----
     if (sub === 'view') {
       const id     = interaction.options.getInteger('id');
-      const report = await getReportById(id);
+      const report = await getReportById(interaction.guildId, id);
 
       if (!report) return interaction.editReply({ content: `❌ ไม่พบเคส #${id}` });
 
@@ -148,10 +148,10 @@ module.exports = {
       const status = interaction.options.getString('status');
       const note   = interaction.options.getString('note');
 
-      const report = await getReportById(id);
+      const report = await getReportById(interaction.guildId, id);
       if (!report) return interaction.editReply({ content: `❌ ไม่พบเคส #${id}` });
 
-      await updateReport(id, { status, modNote: note });
+      await updateReport(interaction.guildId, id, { status, modNote: note });
 
       return interaction.editReply({
         content: `✅ อัพเดทเคส **#${id}** เป็น ${STATUS_LABEL[status]} แล้ว${note ? `\n📝 Note: ${note}` : ''}`,

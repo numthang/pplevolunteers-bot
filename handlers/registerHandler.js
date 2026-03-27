@@ -172,7 +172,7 @@ async function handleModalSubmit(interaction) {
   const firstname = parts[0] ?? null;
   const lastname = parts.slice(1).join(' ') || null;
 
-  await upsertMember({
+  await upsertMember(interaction.guildId, {
     discord_id: interaction.user.id,
     username: interaction.user.username,
     nickname,
@@ -385,7 +385,7 @@ async function handleOpenRegisterModal(interaction) {
   // mode button ไม่มี existing data เพราะยังไม่ได้ดึง DB
   // ถ้าต้องการ pre-fill ให้ดึงจาก DB ก่อน
   const {getMember} = require('../db/members');
-  const existing = await getMember(interaction.user.id);
+  const existing = await getMember(interaction.guildId, interaction.user.id);
   await interaction.showModal(buildRegisterModal(existing));
 }
 

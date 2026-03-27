@@ -34,3 +34,102 @@ Greeting:
 
 หากจนท.ตักเตือนและท่านไม่ทำตาม เราจะลงโทษตามความรุนแรง เช่น Time out หรือ  Ban กรณีที่ท่านต้องการอุธรณ์หรือต้องการร้องเรียนสามารถแจ้งที่ https://discord.com/channels/1340903354037178410/1397146590694871100
 
+
+==
+db big migration
+
+
+-- =============================================
+-- Migration: pplevolunteers → pple_dcbot
+-- - rename tables ใส่ prefix dc_
+-- - เพิ่ม guild_id ทุกตาราง (ยกเว้น server_settings มีอยู่แล้ว)
+-- =============================================
+-- เปลี่ยน '1340903354037178410' เป็น Guild ID จริงก่อนรัน
+-- =============================================
+
+CREATE DATABASE IF NOT EXISTS pple_dcbot
+  CHARACTER SET utf8mb4
+  COLLATE utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+-- dc_members  (จาก members)
+-- --------------------------------------------------------
+CREATE TABLE pple_dcbot.dc_members LIKE pplevolunteers.members;
+
+ALTER TABLE pple_dcbot.dc_members
+  DROP KEY `discord_id`,
+  ADD COLUMN `guild_id` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' AFTER `id`,
+  ADD UNIQUE KEY `uq_member_guild` (`guild_id`, `discord_id`);
+
+INSERT INTO pple_dcbot.dc_members
+  (guild_id, discord_id, username, nickname, firstname, lastname,
+   member_id, specialty, province, region, roles, interests,
+   referred_by, registered_at, updated_at, roles_assigned_at)
+SELECT
+  '1340903354037178410',
+  discord_id, username, nickname, firstname, lastname,
+  member_id, specialty, province, region, roles, interests,
+  referred_by, registered_at, updated_at, roles_assigned_at
+FROM pplevolunteers.members;
+
+-- --------------------------------------------------------
+-- dc_user_ratings  (จาก user_ratings)
+-- --------------------------------------------------------
+CREATE TABLE pple_dcbot.dc_user_ratings LIKE pplevolunteers.user_ratings;
+
+ALTER TABLE pple_dcbot.dc_user_ratings
+  ADD COLUMN `guild_id` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' AFTER `id`,
+  DROP KEY `idx_target`,
+  DROP KEY `idx_rater`,
+  DROP KEY `idx_created`,
+  ADD KEY `idx_guild`  (`guild_id`),
+  ADD KEY `idx_target` (`guild_id`, `target_id`),
+  ADD KEY `idx_rater`  (`guild_id`, `rater_id`);
+
+INSERT INTO pple_dcbot.dc_user_ratings
+  (guild_id, target_id, target_name, rater_id, rater_name, stars, comment, created_at)
+SELECT
+  '1340903354037178410',
+  target_id, target_name, rater_id, rater_name, stars, comment, created_at
+FROM pplevolunteers.user_ratings;
+
+-- --------------------------------------------------------
+-- dc_user_reports  (จาก user_reports)
+-- --------------------------------------------------------
+CREATE TABLE pple_dcbot.dc_user_reports LIKE pplevolunteers.user_reports;
+
+ALTER TABLE pple_dcbot.dc_user_reports
+  ADD COLUMN `guild_id` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' AFTER `id`,
+  DROP KEY `idx_target`,
+  DROP KEY `idx_status`,
+  ADD KEY `idx_target` (`guild_id`, `target_id`),
+  ADD KEY `idx_status` (`guild_id`, `status`);
+
+INSERT INTO pple_dcbot.dc_user_reports
+  (guild_id, target_id, target_name, reporter_id, reporter_name,
+   category, detail, evidence, is_anonymous, status, mod_note, created_at, updated_at)
+SELECT
+  '1340903354037178410',
+  target_id, target_name, reporter_id, reporter_name,
+  category, detail, evidence, is_anonymous, status, mod_note, created_at, updated_at
+FROM pplevolunteers.user_reports;
+
+-- --------------------------------------------------------
+-- dc_server_settings  (จาก server_settings — มี guild_id อยู่แล้ว)
+-- --------------------------------------------------------
+CREATE TABLE pple_dcbot.dc_server_settings LIKE pplevolunteers.server_settings;
+
+INSERT INTO pple_dcbot.dc_server_settings
+  (guild_id, setting_key, setting_value, updated_at)
+SELECT
+  guild_id, setting_key, setting_value, updated_at
+FROM pplevolunteers.server_settings;
+
+
+-- สร้าง user (ถ้ายังไม่มี)
+CREATE USER IF NOT EXISTS 'pple_dcbot'@'localhost' IDENTIFIED BY 'DFDACccd654';
+
+-- Grant เฉพาะ DB นี้อย่างเดียว
+GRANT ALL PRIVILEGES ON pple_dcbot.* TO 'pple_dcbot'@'localhost';
+
+FLUSH PRIVILEGES;
