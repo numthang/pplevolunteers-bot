@@ -19,7 +19,7 @@ module.exports = {
     .addStringOption(o => o.setName('color').setDescription('สี hex').setRequired(false)),
 
   async execute(interaction) {
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    //await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     const title       = interaction.options.getString('title') ?? '🗺️ เลือกจังหวัดของคุณ';
     const description = (interaction.options.getString('description') ?? 'กดปุ่มด้านล่างเพื่อเลือกจังหวัดของคุณ\nสามารถเปลี่ยนได้ตลอดเวลา').replace(/\\n/g, '\n');
@@ -34,7 +34,7 @@ module.exports = {
         .setStyle(ButtonStyle.Primary)
     );
 
-    await interaction.channel.send({ embeds: [embed], components: [row] });
-    await interaction.editReply({ content: '✅ ติดตั้งปุ่มเลือกจังหวัดเรียบร้อย!' });
+    await interaction.reply({ embeds: [embed], components: [row] });
+    await interaction.followUp({ content: '✅ ติดตั้งปุ่มเลือกจังหวัดเรียบร้อย!', flags: MessageFlags.Ephemeral });
   },
 };
