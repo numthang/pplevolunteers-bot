@@ -1,16 +1,17 @@
 // handlers/provinceSelect.js
-const { PROVINCE_ROLES, SUB_REGION_ROLES, MAIN_REGION_ROLES } = require('../config/roles');
+const { ROLES, PROVINCE_ROLES, SUB_REGION_ROLES, MAIN_REGION_ROLES } = require('../config/roles');
 const { buildRows } = require('../commands/province');
 const { syncMemberRoles } = require('../db/members');
 const { PROVINCE_REGIONS } = require('../config/constants');
-const { MessageFlags } = require('discord.js');
+
+// reverse lookup: role ID → ชื่อ role
+const ROLE_ID_TO_NAME = Object.fromEntries(Object.entries(ROLES).map(([name, id]) => [id, name]));
 
 async function handleProvinceBtn(interaction) {
   if (!interaction.isButton()) return;
   if (!interaction.customId.startsWith('prov_btn:')) return;
 
-  // *** deferUpdate ลบออก — ใช้ deferReply ephemeral แทน ***
-  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+  await interaction.deferUpdate();
 
   const parts = interaction.customId.split(':');
   const regionId = parts[1];
@@ -22,48 +23,59 @@ async function handleProvinceBtn(interaction) {
   const mainRegionRoleId = MAIN_REGION_ROLES[province];
 
   const hasRole = provinceRoleId && member.roles.cache.has(provinceRoleId);
+  const region = PROVINCE_REGIONS.find((r) => r.id === regionId);
 
   try {
+    // เก็บว่า role ไหนถูก add/remove จริงๆ
+    const rolesChanged = [];
+
     if (hasRole) {
       await member.roles.remove(provinceRoleId);
+      rolesChanged.push(ROLE_ID_TO_NAME[provinceRoleId] ?? province);
       await member.fetch();
 
       if (subRegionRoleId) {
         const stillHasSub = Object.keys(SUB_REGION_ROLES).some(p =>
           SUB_REGION_ROLES[p] === subRegionRoleId && member.roles.cache.has(PROVINCE_ROLES[p])
         );
-        if (!stillHasSub) await member.roles.remove(subRegionRoleId);
+        if (!stillHasSub) {
+          await member.roles.remove(subRegionRoleId);
+          rolesChanged.push(ROLE_ID_TO_NAME[subRegionRoleId]);
+        }
       }
 
-      if (mainRegionRoleId) {
+      if (mainRegionRoleId && mainRegionRoleId !== subRegionRoleId) {
         const stillHasMain = Object.keys(MAIN_REGION_ROLES).some(p =>
           MAIN_REGION_ROLES[p] === mainRegionRoleId && member.roles.cache.has(PROVINCE_ROLES[p])
         );
-        if (!stillHasMain) await member.roles.remove(mainRegionRoleId);
+        if (!stillHasMain) {
+          await member.roles.remove(mainRegionRoleId);
+          rolesChanged.push(ROLE_ID_TO_NAME[mainRegionRoleId]);
+        }
       }
 
     } else {
       const rolesToAdd = [provinceRoleId, subRegionRoleId, mainRegionRoleId].filter(id => id);
-      if (rolesToAdd.length > 0) await member.roles.add(rolesToAdd);
+      // กรองซ้ำ (กรณี sub === main เช่น กทม/ปริมณฑล)
+      const uniqueRoles = [...new Set(rolesToAdd)];
+      if (uniqueRoles.length > 0) await member.roles.add(uniqueRoles);
+      uniqueRoles.forEach(id => rolesChanged.push(ROLE_ID_TO_NAME[id] ?? id));
     }
 
-    // *** fetch member ใหม่เพื่อให้ cache อัปเดต ***
     await member.fetch();
     await syncMemberRoles(member);
 
-    const region = PROVINCE_REGIONS.find((r) => r.id === regionId);
-    const statusMsg = hasRole
-      ? `🔴 ถอด **${province}** ออกแล้ว`
-      : `🟢 เพิ่ม **${province}** แล้ว`;
+    const emoji = hasRole ? '🔴' : '🟢';
+    const action = hasRole ? 'ถอด' : 'เพิ่ม';
+    const roleList = rolesChanged.map(r => `• ${r}`).join('\n');
+    const statusMsg = `${emoji} ${action} roles แล้ว\n${roleList}`;
 
-    // *** ส่ง ephemeral reply กลับเฉพาะคนกด พร้อม state ของตัวเอง ***
     await interaction.editReply({
       embeds: [{
         title: region.label,
         description: statusMsg,
         color: region.color,
       }],
-      // *** member.roles ของคนที่กด — ถูกต้องเสมอ ***
       components: buildRows(region, member.roles),
     });
 
@@ -71,10 +83,11 @@ async function handleProvinceBtn(interaction) {
     console.error(`❌ toggle province ${province}:`, err);
     await interaction.editReply({
       embeds: [{
-        title: '❌ เกิดข้อผิดพลาด',
-        description: `ไม่สามารถแก้ไข role จังหวัด **${province}** ได้`,
-        color: 0xe74c3c,
+        title: region.label,
+        description: `❌ เกิดข้อผิดพลาดกับ **${province}**`,
+        color: region.color,
       }],
+      components: buildRows(region, member.roles),
     });
   }
 }
