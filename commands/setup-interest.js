@@ -34,7 +34,7 @@ module.exports = {
         .setStyle(ButtonStyle.Primary)
     );
 
-    await interaction.channel.reply({ embeds: [embed], components: [row] });
+    await interaction.reply({ embeds: [embed], components: [row] });
     await interaction.followUp({ content: '✅ ติดตั้งปุ่มเลือกความสนใจเรียบร้อย!' });
   },
 };
