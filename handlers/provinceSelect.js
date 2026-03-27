@@ -3,6 +3,7 @@ const { ROLES, PROVINCE_ROLES, SUB_REGION_ROLES, MAIN_REGION_ROLES } = require('
 const { buildRows } = require('../commands/province');
 const { syncMemberRoles } = require('../db/members');
 const { PROVINCE_REGIONS } = require('../config/constants');
+const { BKK_HINT } = require('../config/hints');
 
 // reverse lookup: role ID → ชื่อ role
 const ROLE_ID_TO_NAME = Object.fromEntries(Object.entries(ROLES).map(([name, id]) => [id, name]));
