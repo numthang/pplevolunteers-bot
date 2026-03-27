@@ -73,7 +73,9 @@ async function handleProvinceBtn(interaction) {
     await interaction.editReply({
       embeds: [{
         title: region.label,
-        description: statusMsg,
+        description: regionId === 'bkk' 
+          ? `${BKK_HINT}\n\n${statusMsg}` 
+          : statusMsg,
         color: region.color,
       }],
       components: buildRows(region, member.roles),
