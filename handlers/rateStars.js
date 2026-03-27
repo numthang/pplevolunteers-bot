@@ -59,6 +59,7 @@ module.exports = {
     } catch { /* ถ้า fetch ไม่ได้ใช้ชื่อจาก customId แทน */ }
 
     const result = await addRating({
+      guildId:   interaction.guildId,
       targetId,
       targetName: resolvedTargetName,
       raterId:   interaction.user.id,

@@ -16,13 +16,13 @@ function starStr(n) {
 }
 
 // ---- สร้าง embed หลัก ----
-async function buildRatingsEmbed(target, page) {
-  const summary = await getRatingSummary(target.id);
+async function buildRatingsEmbed(guildId, target, page) {
+  const summary = await getRatingSummary(guildId, target.id);
   const total   = Number(summary.total);
   const avg     = total > 0 ? summary.avg_stars : 0;
 
-  const list       = await getRatingList(target.id, page, PER_PAGE);
-  const totalCount = await getRatingCount(target.id);
+  const list       = await getRatingList(guildId, target.id, page, PER_PAGE);
+  const totalCount = await getRatingCount(guildId, target.id);
   const totalPages = Math.max(1, Math.ceil(totalCount / PER_PAGE));
 
   // --- Summary section ---
@@ -99,7 +99,7 @@ module.exports = {
     }
 
     const page = 1;
-    const { embed, totalPages } = await buildRatingsEmbed(target, page);
+    const { embed, totalPages } = await buildRatingsEmbed(interaction.guildId, target, page);
     const row = buildPageRow(target.id, page, totalPages);
 
     await interaction.editReply({ embeds: [embed], components: [row] });

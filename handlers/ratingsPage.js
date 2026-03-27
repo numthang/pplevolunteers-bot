@@ -17,7 +17,7 @@ module.exports = {
       return interaction.followUp({ content: '❌ ไม่พบสมาชิกคนนี้', flags: MessageFlags.Ephemeral });
     }
 
-    const { embed, totalPages } = await buildRatingsEmbed(target, page);
+    const { embed, totalPages } = await buildRatingsEmbed(interaction.guildId, target, page);
     const row = buildPageRow(targetId, page, totalPages);
 
     await interaction.editReply({ embeds: [embed], components: [row] });

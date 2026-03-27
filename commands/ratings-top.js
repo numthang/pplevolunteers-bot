@@ -67,14 +67,14 @@ module.exports = {
         COALESCE(m.nickname, m.username) AS display_name,
         ROUND(AVG(r.stars), 1) AS avg_stars,
         COUNT(r.id)            AS total
-      FROM members m
-      JOIN user_ratings r ON r.target_id = m.discord_id
-      WHERE FIND_IN_SET(?, m.roles) > 0
+      FROM dc_members m
+      JOIN dc_user_ratings r ON r.guild_id = m.guild_id AND r.target_id = m.discord_id
+      WHERE m.guild_id = ? AND FIND_IN_SET(?, m.roles) > 0
       GROUP BY m.discord_id, m.nickname, m.username
       HAVING total >= 1
       ORDER BY avg_stars DESC, total DESC
       LIMIT ${topN}`,
-      [roleName]
+      [interaction.guildId, roleName]
     );
 
     if (rows.length === 0) {

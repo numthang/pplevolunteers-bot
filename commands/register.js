@@ -19,7 +19,7 @@ module.exports = {
     ),
 
   async execute(interaction) {
-    const existing = await getMember(interaction.user.id);
+    const existing = await getMember(interaction.guildId, interaction.user.id);
     const mode = interaction.options.getString('mode') ?? 'modal';
 
     if (mode === 'modal') {

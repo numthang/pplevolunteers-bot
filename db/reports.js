@@ -3,12 +3,13 @@ const pool = require('./index');
 /**
  * เพิ่ม report ใหม่
  */
-async function addReport({ targetId, targetName, reporterId, reporterName, category, detail, evidence, isAnonymous }) {
+async function addReport({ guildId, targetId, targetName, reporterId, reporterName, category, detail, evidence, isAnonymous }) {
   const [result] = await pool.execute(
-    `INSERT INTO user_reports
-       (target_id, target_name, reporter_id, reporter_name, category, detail, evidence, is_anonymous)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO dc_user_reports
+       (guild_id, target_id, target_name, reporter_id, reporter_name, category, detail, evidence, is_anonymous)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
+      guildId,
       targetId,
       targetName,
       isAnonymous ? null : reporterId,
@@ -25,15 +26,22 @@ async function addReport({ targetId, targetName, reporterId, reporterName, categ
 /**
  * ดูรายการ report กรองตาม status (optional) + paginate
  */
-async function getReportList(status = null, page = 1, perPage = 5) {
+async function getReportList(guildId, status = null, page = 1, perPage = 5) {
   const offset = (page - 1) * perPage;
-  const where  = status ? 'WHERE status = ?' : '';
-  const params = status ? [status] : [];
+  const conditions = ['guild_id = ?'];
+  const params = [guildId];
+
+  if (status) {
+    conditions.push('status = ?');
+    params.push(status);
+  }
+
+  const where = 'WHERE ' + conditions.join(' AND ');
 
   const [rows] = await pool.execute(
     `SELECT id, target_id, target_name, category, is_anonymous,
             reporter_id, reporter_name, status, created_at
-     FROM user_reports
+     FROM dc_user_reports
      ${where}
      ORDER BY created_at DESC
      LIMIT ${perPage} OFFSET ${offset}`,
@@ -45,23 +53,31 @@ async function getReportList(status = null, page = 1, perPage = 5) {
 /**
  * จำนวน report ทั้งหมด (ใช้คำนวณ totalPages)
  */
-async function getReportCount(status = null) {
-  const where  = status ? 'WHERE status = ?' : '';
-  const params = status ? [status] : [];
+async function getReportCount(guildId, status = null) {
+  const conditions = ['guild_id = ?'];
+  const params = [guildId];
+
+  if (status) {
+    conditions.push('status = ?');
+    params.push(status);
+  }
+
+  const where = 'WHERE ' + conditions.join(' AND ');
+
   const [rows] = await pool.execute(
-    `SELECT COUNT(*) AS cnt FROM user_reports ${where}`,
+    `SELECT COUNT(*) AS cnt FROM dc_user_reports ${where}`,
     params
   );
   return rows[0].cnt;
 }
 
 /**
- * ดู report รายละเอียดตาม id
+ * ดู report รายละเอียดตาม id (scoped ตาม guild)
  */
-async function getReportById(id) {
+async function getReportById(guildId, id) {
   const [rows] = await pool.execute(
-    `SELECT * FROM user_reports WHERE id = ?`,
-    [id]
+    `SELECT * FROM dc_user_reports WHERE guild_id = ? AND id = ?`,
+    [guildId, id]
   );
   return rows[0] ?? null;
 }
@@ -69,10 +85,10 @@ async function getReportById(id) {
 /**
  * อัพเดท status + mod_note
  */
-async function updateReport(id, { status, modNote }) {
+async function updateReport(guildId, id, { status, modNote }) {
   await pool.execute(
-    `UPDATE user_reports SET status = ?, mod_note = ? WHERE id = ?`,
-    [status, modNote || null, id]
+    `UPDATE dc_user_reports SET status = ?, mod_note = ? WHERE guild_id = ? AND id = ?`,
+    [status, modNote || null, guildId, id]
   );
 }
 
