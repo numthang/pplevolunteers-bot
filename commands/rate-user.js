@@ -11,6 +11,18 @@ module.exports = {
         .setDescription('สมาชิกที่ต้องการให้คะแนนหรือร้องเรียน')
         .setRequired(true)
     )
+    .addStringOption(opt =>
+      opt.setName('title')
+        .setDescription('หัวข้อ embed (default: ⭐ ให้คะแนน / ร้องเรียน)')
+        .setRequired(false)
+        .setMaxLength(256)
+    )
+    .addStringOption(opt =>
+      opt.setName('description')
+        .setDescription('คำอธิบายเพิ่มเติมใน embed (default: แสดง mention ของสมาชิก)')
+        .setRequired(false)
+        .setMaxLength(4096)
+    )
     .addBooleanOption(opt =>
       opt.setName('public')
         .setDescription('แสดงให้ทุกคนในช่องเห็น (default: เฉพาะคุณ)')
@@ -36,19 +48,19 @@ module.exports = {
     }
 
     const displayName = target?.displayName ?? targetUser.username;
-    const { embed, components } = buildRateReportEmbed(targetUser, displayName);
+    const customTitle = interaction.options.getString('title') ?? null;
+    const customDescription = interaction.options.getString('description') ?? null;
     const isPublic = interaction.options.getBoolean('public') ?? false;
-    
+
+    const { embed, components } = buildRateReportEmbed(targetUser, displayName, {
+      title: customTitle,
+      description: customDescription,
+    });
+
     await interaction.reply({
       embeds: [embed],
       components,
       flags: isPublic ? undefined : MessageFlags.Ephemeral,
     });
-
-    /* await interaction.reply({
-      embeds: [embed],
-      components,
-      flags: MessageFlags.Ephemeral,
-    }); */
   },
 };
