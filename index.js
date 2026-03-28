@@ -11,6 +11,7 @@ const { refreshSticky } = require('./handlers/stickyHandler');
 const { handleReportStart, handleReportCategory, handleReportSubmit } = require('./handlers/reportHandler');
 const { handleOpenInterest } = require('./handlers/openInterest');
 const { handleOpenProvince } = require('./handlers/openProvince');
+const { onMessage, onVoiceStateUpdate } = require('./utils/activityTracker');
 
 const fs = require('fs');
 const path = require('path');
@@ -20,7 +21,8 @@ const client = new Client({
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent // 👈 ตัวนี้แหละที่น่าจะขาดไป!
+    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildVoiceStates,  // ← เพิ่มตรงนี้
   ]
 });
 
@@ -95,11 +97,15 @@ client.on('interactionCreate', async (interaction) => {
 
 // ผูกให้ทุกไฟล์เรียกได้
 client.refreshSticky = refreshSticky;
+client.on('voiceStateUpdate', onVoiceStateUpdate);
 
 // Cooldown map per channel
 const cooldowns = new Map();
 
 client.on('messageCreate', async (message) => {
+  // track activity (ไม่ block bot message เพราะ onMessage เช็คเองอยู่แล้ว)
+  onMessage(message).catch(err => console.error('[onMessage]', err));
+  
   if (!message.guild || (message.author.bot && message.channel.id !== client.logChannel?.id)) return;
   const key = `sticky_${message.channel.id}`;
   const config = await getSetting(message.guildId, key);

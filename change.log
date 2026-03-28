@@ -11,7 +11,7 @@ ALTER TABLE members
   
 Greeting:
 
-/setup-register title:ยินดีต้อนรับสู่ อาสาประชาชน! :tangerine: description:Step  :one: : แนะนำตัว → กดปุ่มแนะนำตัวด้านล่าง\n\n Step :two: : อ่านตรงนี้ก่อน → #📕┆ข้อตกลง  log_channel:#👋┆แนะนำตัว
+/setup-register title:ยินดีต้อนรับสู่ อาสาประชาชน! :tangerine: description:Step  :one: : แนะนำตัว → กดปุ่มแนะนำตัวด้านล่าง\n Step :two: : อ่านตรงนี้ก่อน → #📕┆ข้อตกลง  log_channel:#👋┆แนะนำตัว
 
 /setup-register title:แนะนำตัวเองให้เพื่อนรู้จัก description:กดปุ่มแล้วระบบจะพาทำไปทีละขั้นตอน ดังนี้ :point_down:\n\n:pencil: กรอกข้อมูล → :map: เลือกจังหวัด → :dart: เลือกทีม
 
@@ -36,100 +36,52 @@ Greeting:
 
 
 ==
-db big migration
+• ทีมบรรณาธิการ => สื่อ 
+• อาสาสู้ภัยพิบัติ => อาสาส้มสู้ไฟ อาสาส้มสู้น้ำ
+• ผู้สมัครเขตภาคกลาง => ผู้สมัคร
+• ทีมพื้นที่/ร้องเรียน => เรื่องร้องเรียน กระทู้เรื่องร้องเรียน
+• ทีมตัวแทนสมาชิก => ตัวแทนสมาชิก
+• ทีมData
+• ทีมระดมทุน
+• ผู้สมัครส.ก.
+• ฝ่ายเครือข่าย
+• อาสาประชาชน
+• กรรมการสรรหา
+• สส.พรรค
 
 
--- =============================================
--- Migration: pplevolunteers → pple_dcbot
--- - rename tables ใส่ prefix dc_
--- - เพิ่ม guild_id ทุกตาราง (ยกเว้น server_settings มีอยู่แล้ว)
--- =============================================
--- เปลี่ยน '1340903354037178410' เป็น Guild ID จริงก่อนรัน
--- =============================================
-
-CREATE DATABASE IF NOT EXISTS pple_dcbot
-  CHARACTER SET utf8mb4
-  COLLATE utf8mb4_unicode_ci;
-
--- --------------------------------------------------------
--- dc_members  (จาก members)
--- --------------------------------------------------------
-CREATE TABLE pple_dcbot.dc_members LIKE pplevolunteers.members;
-
-ALTER TABLE pple_dcbot.dc_members
-  DROP KEY `discord_id`,
-  ADD COLUMN `guild_id` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' AFTER `id`,
-  ADD UNIQUE KEY `uq_member_guild` (`guild_id`, `discord_id`);
-
-INSERT INTO pple_dcbot.dc_members
-  (guild_id, discord_id, username, nickname, firstname, lastname,
-   member_id, specialty, province, region, roles, interests,
-   referred_by, registered_at, updated_at, roles_assigned_at)
-SELECT
-  '1340903354037178410',
-  discord_id, username, nickname, firstname, lastname,
-  member_id, specialty, province, region, roles, interests,
-  referred_by, registered_at, updated_at, roles_assigned_at
-FROM pplevolunteers.members;
-
--- --------------------------------------------------------
--- dc_user_ratings  (จาก user_ratings)
--- --------------------------------------------------------
-CREATE TABLE pple_dcbot.dc_user_ratings LIKE pplevolunteers.user_ratings;
-
-ALTER TABLE pple_dcbot.dc_user_ratings
-  ADD COLUMN `guild_id` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' AFTER `id`,
-  DROP KEY `idx_target`,
-  DROP KEY `idx_rater`,
-  DROP KEY `idx_created`,
-  ADD KEY `idx_guild`  (`guild_id`),
-  ADD KEY `idx_target` (`guild_id`, `target_id`),
-  ADD KEY `idx_rater`  (`guild_id`, `rater_id`);
-
-INSERT INTO pple_dcbot.dc_user_ratings
-  (guild_id, target_id, target_name, rater_id, rater_name, stars, comment, created_at)
-SELECT
-  '1340903354037178410',
-  target_id, target_name, rater_id, rater_name, stars, comment, created_at
-FROM pplevolunteers.user_ratings;
-
--- --------------------------------------------------------
--- dc_user_reports  (จาก user_reports)
--- --------------------------------------------------------
-CREATE TABLE pple_dcbot.dc_user_reports LIKE pplevolunteers.user_reports;
-
-ALTER TABLE pple_dcbot.dc_user_reports
-  ADD COLUMN `guild_id` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' AFTER `id`,
-  DROP KEY `idx_target`,
-  DROP KEY `idx_status`,
-  ADD KEY `idx_target` (`guild_id`, `target_id`),
-  ADD KEY `idx_status` (`guild_id`, `status`);
-
-INSERT INTO pple_dcbot.dc_user_reports
-  (guild_id, target_id, target_name, reporter_id, reporter_name,
-   category, detail, evidence, is_anonymous, status, mod_note, created_at, updated_at)
-SELECT
-  '1340903354037178410',
-  target_id, target_name, reporter_id, reporter_name,
-  category, detail, evidence, is_anonymous, status, mod_note, created_at, updated_at
-FROM pplevolunteers.user_reports;
-
--- --------------------------------------------------------
--- dc_server_settings  (จาก server_settings — มี guild_id อยู่แล้ว)
--- --------------------------------------------------------
-CREATE TABLE pple_dcbot.dc_server_settings LIKE pplevolunteers.server_settings;
-
-INSERT INTO pple_dcbot.dc_server_settings
-  (guild_id, setting_key, setting_value, updated_at)
-SELECT
-  guild_id, setting_key, setting_value, updated_at
-FROM pplevolunteers.server_settings;
-
-
--- สร้าง user (ถ้ายังไม่มี)
-CREATE USER IF NOT EXISTS 'pple_dcbot'@'localhost' IDENTIFIED BY 'DFDACccd654';
-
--- Grant เฉพาะ DB นี้อย่างเดียว
-GRANT ALL PRIVILEGES ON pple_dcbot.* TO 'pple_dcbot'@'localhost';
-
-FLUSH PRIVILEGES;
+• PC101-กรุงเทพ-10
+• PC101-ภาคเหนือ-4
+• PC101-กรุงเทพ-1
+• PC101-ภาคใต้-3
+• MP101-รุ่น 2
+• MP101-LINE
+• MP101-รุ่น 4
+• PC101-กรุงเทพ-2
+• PC101-ตะวันออก-2
+• PC101-กรุงเทพ-3-2
+• PC101-กรุงเทพ-3-1
+• PC101-ภาคกลาง-4
+• PC101-กรุงเทพ-8
+• MP101-รุ่น 1
+• PC101-ภาคเหนือ-5
+• PC101-กรุงเทพ-7
+• PC101-ภาคกลาง-2
+• PC101-ภาคเหนือ-1
+• PC101-ตะวันออก-1
+• PC101-ภาคเหนือ-2
+• PC101-ภาคใต้-1
+• PC101-กรุงเทพ-9
+• PC101-ภาคกลาง-1
+• PC101-กรุงเทพ-6
+• PC101-ภาคกลาง-5
+• PC101-ภาคเหนือ-3
+• PC101-ภาคเหนือ-6
+• PC101-กรุงเทพ-4
+• PC101-ภาคใต้-2
+• PC101-กรุงเทพ-11
+• PC101-ตะวันออก-3
+• PC101-ภาคกลาง-3
+• PC101-กรุงเทพ-5-1
+• PC101-ภาคเหนือ-7
+• PC101-กรุงเทพ-5-2
