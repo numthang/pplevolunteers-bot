@@ -72,7 +72,8 @@ async function fetchWithRetry(channel, options, retries = 3) {
 
 // ── Backfill channel ──────────────────────────────────────────────────────────
 async function backfillChannel(channel, guildId, start, end) {
-  console.log(`  📥 #${channel.name}`);
+  const typeLabel = channel.isThread() ? '🧵 thread' : channel.type === 15 ? '📋 forum' : '💬 text';
+  console.log(`  📥 ${typeLabel} #${channel.name}`);
 
   let lastId  = null;
   let total   = 0;
@@ -125,7 +126,7 @@ async function backfillChannel(channel, guildId, start, end) {
 
     total  += messages.size;
     lastId  = messages.last()?.id;
-    console.log(`    → ${total} messages... (hasMore: ${hasMore}, lastId: ${lastId})`);
+    console.log(`    → ${total} messages...`);
     await sleep(DELAY_MS);
   }
 
@@ -154,6 +155,14 @@ async function main() {
         console.log(`\n🏠 Guild: ${guild.name}`);
         await guild.channels.fetch();
 
+        // fetch active threads ทั้งหมดด้วย
+        try {
+          const activeThreads = await guild.channels.fetchActiveThreads();
+          activeThreads.threads.forEach(t => guild.channels.cache.set(t.id, t));
+        } catch (err) {
+          console.warn('  ⚠️  fetch active threads ไม่ได้:', err.message);
+        }
+
         const config = await getConfig(guild.id);
         if (!config.size) {
           console.log('  ⚠️  ไม่มี config — รัน /orgchart-scan ก่อนนะครับ');
@@ -164,6 +173,27 @@ async function main() {
         const channelIds = new Set();
         for (const roleConfig of config.values()) {
           for (const ch of roleConfig.textChannels) channelIds.add(ch.id);
+        }
+
+        // fetch archived threads ของแต่ละ channel ใน config
+        for (const channelId of channelIds) {
+          const ch = guild.channels.cache.get(channelId);
+          if (!ch) continue;
+          if (!ch.threads) continue;
+          try {
+            let before = undefined;
+            while (true) {
+              const archived = await ch.threads.fetchArchived({ limit: 100, before });
+              archived.threads.forEach(t => {
+                guild.channels.cache.set(t.id, t);
+                channelIds.add(t.id);
+              });
+              if (!archived.hasMore) break;
+              before = archived.threads.last()?.id;
+            }
+          } catch (err) {
+            console.warn(`  ⚠️  fetch archived threads ของ #${ch.name} ไม่ได้:`, err.message);
+          }
         }
 
         console.log(`  📋 ${channelIds.size} channels จาก ${config.size} roles\n`);
@@ -177,7 +207,7 @@ async function main() {
             skippedChannels.push(`${channelId} (ไม่พบใน guild)`);
             continue;
           }
-          if (!channel.isTextBased()) continue;
+          if (!channel.isTextBased() && !channel.isThread()) continue;
 
           const skipped = await backfillChannel(channel, guild.id, start, end);
           if (skipped) skippedChannels.push(`#${channel.name} (${channelId})`);
