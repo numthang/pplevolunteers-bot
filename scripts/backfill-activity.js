@@ -10,14 +10,40 @@
 require('dotenv').config();
 
 const { Client, GatewayIntentBits } = require('discord.js');
+const fs   = require('fs');
+const path = require('path');
 const pool = require('../db/index');
 const { upsertDailyActivity, addMention } = require('../db/activity');
-const { getConfig } = require('../db/orgchartConfig');
 
 const BATCH_SIZE = 100;
 const DELAY_MS   = 1000;
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+// ── Logger ────────────────────────────────────────────────────────────────────
+const logDir = path.join(__dirname, '../logs');
+if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
+
+const logFile = path.join(logDir, `backfill-${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}.log`);
+const logStream = fs.createWriteStream(logFile, { flags: 'a' });
+
+function log(...args) {
+  const line = args.join(' ');
+  console.log(line);
+  logStream.write(line + '\n');
+}
+
+function logWarn(...args) {
+  const line = args.join(' ');
+  console.warn(line);
+  logStream.write(line + '\n');
+}
+
+function logError(...args) {
+  const line = args.join(' ');
+  console.error(line);
+  logStream.write(line + '\n');
+}
 
 // ── Parse arguments ───────────────────────────────────────────────────────────
 function parseArgs() {
@@ -43,7 +69,7 @@ function parseArgs() {
   end.setHours(23, 59, 59, 999);
 
   if (isNaN(start.getTime())) {
-    console.error('❌ รูปแบบวันที่ไม่ถูกต้อง ใช้ YYYY-MM-DD ครับ');
+    logError('❌ รูปแบบวันที่ไม่ถูกต้อง ใช้ YYYY-MM-DD ครับ');
     process.exit(1);
   }
 
@@ -58,10 +84,10 @@ async function fetchWithRetry(channel, options, retries = 3) {
     } catch (err) {
       if (err.status === 429) {
         const wait = (err.retryAfter ?? 5) * 1000;
-        console.warn(`  ⚠️  Rate limited — รอ ${wait}ms...`);
+        logWarn(`  ⚠️  Rate limited — รอ ${wait}ms...`);
         await sleep(wait);
       } else if (err.code === 50001) {
-        throw err; // re-throw เพื่อให้ backfillChannel จัดการ
+        throw err;
       } else {
         throw err;
       }
@@ -72,12 +98,14 @@ async function fetchWithRetry(channel, options, retries = 3) {
 
 // ── Backfill channel ──────────────────────────────────────────────────────────
 async function backfillChannel(channel, guildId, start, end) {
-  const typeLabel = channel.isThread() ? '🧵 thread' : channel.type === 15 ? '📋 forum' : '💬 text';
-  console.log(`  📥 ${typeLabel} #${channel.name}`);
+  const typeLabel  = channel.isThread() ? '🧵 thread' : channel.type === 15 ? '📋 forum' : '💬 text';
+  const parentName = channel.parent?.name ? ` (ใน #${channel.parent.name})` : '';
+  log(`  📥 ${typeLabel} #${channel.name}${parentName}`);
 
-  let lastId  = null;
-  let total   = 0;
-  let hasMore = true;
+  let lastId   = null;
+  let fetched  = 0;
+  let upserted = 0;
+  let hasMore  = true;
 
   while (hasMore) {
     const options = { limit: BATCH_SIZE };
@@ -88,8 +116,8 @@ async function backfillChannel(channel, guildId, start, end) {
       messages = await fetchWithRetry(channel, options);
     } catch (err) {
       if (err.code === 50001) {
-        console.log(`  ⛔ ไม่มีสิทธิ์อ่าน #${channel.name} — ข้ามครับ\n`);
-        return true; // บอก caller ว่า skipped
+        log(`  ⛔ ไม่มีสิทธิ์อ่าน #${channel.name} — ข้ามครับ\n`);
+        return true;
       }
       throw err;
     }
@@ -98,7 +126,6 @@ async function backfillChannel(channel, guildId, start, end) {
     const daily = new Map();
 
     for (const msg of messages.values()) {
-      // เช็ค date ก่อนเสมอ ไม่ว่าจะเป็น bot หรือไม่
       if (msg.createdAt < start) { hasMore = false; break; }
       if (msg.createdAt > end)   continue;
       if (msg.author.bot)        continue;
@@ -122,22 +149,24 @@ async function backfillChannel(channel, guildId, start, end) {
     for (const [key, count] of daily) {
       const [userId, date, channelId] = key.split(':');
       await upsertDailyActivity({ guildId, userId, channelId, date, messageDelta: count });
+      upserted += count;
     }
 
-    total  += messages.size;
-    lastId  = messages.last()?.id;
-    console.log(`    → ${total} messages...`);
+    fetched += messages.size;
+    lastId   = messages.last()?.id;
+    log(`    → fetch ${fetched} / upsert ${upserted} msgs... (hasMore: ${hasMore})`);
     await sleep(DELAY_MS);
   }
 
-  console.log(`  ✅ เสร็จ — ${total} messages\n`);
+  log(`  ✅ เสร็จ — fetch ${fetched}, upsert ${upserted} msgs\n`);
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 async function main() {
   const { start, end } = parseArgs();
 
-  console.log(`🔄 Backfill ตั้งแต่ ${start.toISOString().slice(0, 10)} ถึง ${end.toISOString().slice(0, 10)}\n`);
+  log(`📄 Log file: ${logFile}`);
+  log(`🔄 Backfill ตั้งแต่ ${start.toISOString().slice(0, 10)} ถึง ${end.toISOString().slice(0, 10)}\n`);
 
   const client = new Client({
     intents: [
@@ -148,37 +177,32 @@ async function main() {
   });
 
   client.once('ready', async () => {
-    console.log(`✅ Login as ${client.user.tag}\n`);
+    log(`✅ Login as ${client.user.tag}\n`);
 
     try {
       for (const guild of client.guilds.cache.values()) {
-        console.log(`\n🏠 Guild: ${guild.name}`);
+        log(`\n🏠 Guild: ${guild.name}`);
         await guild.channels.fetch();
 
         // fetch active threads ทั้งหมดด้วย
         try {
           const activeThreads = await guild.channels.fetchActiveThreads();
           activeThreads.threads.forEach(t => guild.channels.cache.set(t.id, t));
+          log(`  🧵 active threads: ${activeThreads.threads.size}`);
         } catch (err) {
-          console.warn('  ⚠️  fetch active threads ไม่ได้:', err.message);
+          logWarn('  ⚠️  fetch active threads ไม่ได้:', err.message);
         }
 
-        const config = await getConfig(guild.id);
-        if (!config.size) {
-          console.log('  ⚠️  ไม่มี config — รัน /orgchart-scan ก่อนนะครับ');
-          continue;
-        }
+        // รวม channel ids ทั้งหมดใน guild (ไม่จำกัดแค่ใน config)
+        const channelIds = new Set(
+          guild.channels.cache
+            .filter(ch => ch.isTextBased() || ch.isThread() || ch.type === 15)
+            .map(ch => ch.id)
+        );
 
-        // รวม text channel ids ทั้งหมดโดยไม่ซ้ำ
-        const channelIds = new Set();
-        for (const roleConfig of config.values()) {
-          for (const ch of roleConfig.textChannels) channelIds.add(ch.id);
-        }
-
-        // fetch archived threads ของแต่ละ channel ใน config
-        for (const channelId of channelIds) {
-          const ch = guild.channels.cache.get(channelId);
-          if (!ch) continue;
+        // fetch archived threads ของทุก text/forum channel ใน guild
+        let archivedCount = 0;
+        for (const ch of guild.channels.cache.values()) {
           if (!ch.threads) continue;
           try {
             let before = undefined;
@@ -187,23 +211,24 @@ async function main() {
               archived.threads.forEach(t => {
                 guild.channels.cache.set(t.id, t);
                 channelIds.add(t.id);
+                archivedCount++;
               });
               if (!archived.hasMore) break;
               before = archived.threads.last()?.id;
             }
           } catch (err) {
-            console.warn(`  ⚠️  fetch archived threads ของ #${ch.name} ไม่ได้:`, err.message);
+            logWarn(`  ⚠️  fetch archived threads ของ #${ch.name} ไม่ได้:`, err.message);
           }
         }
-
-        console.log(`  📋 ${channelIds.size} channels จาก ${config.size} roles\n`);
+        log(`  📦 archived threads: ${archivedCount}`);
+        log(`  📋 รวมทั้งหมด ${channelIds.size} channels/threads\n`);
 
         const skippedChannels = [];
 
         for (const channelId of channelIds) {
           const channel = guild.channels.cache.get(channelId);
           if (!channel) {
-            console.log(`  ⚠️  ไม่พบ channel ${channelId}`);
+            log(`  ⚠️  ไม่พบ channel ${channelId}`);
             skippedChannels.push(`${channelId} (ไม่พบใน guild)`);
             continue;
           }
@@ -214,15 +239,16 @@ async function main() {
         }
 
         if (skippedChannels.length) {
-          console.log(`\n⛔ ข้ามไป ${skippedChannels.length} channels (ไม่มีสิทธิ์):`);
-          skippedChannels.forEach(ch => console.log(`   • ${ch}`));
+          log(`\n⛔ ข้ามไป ${skippedChannels.length} channels (ไม่มีสิทธิ์):`);
+          skippedChannels.forEach(ch => log(`   • ${ch}`));
         }
       }
 
-      console.log('🎉 Backfill เสร็จสมบูรณ์ครับ!');
+      log('🎉 Backfill เสร็จสมบูรณ์ครับ!');
     } catch (err) {
-      console.error('❌ Error:', err);
+      logError('❌ Error:', err);
     } finally {
+      logStream.end();
       await pool.end();
       client.destroy();
       process.exit(0);
