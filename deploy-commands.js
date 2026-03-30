@@ -1,13 +1,16 @@
 // deploy-commands.js
-// node deploy-commands.js          → deploy guild (local dev)
-// node deploy-commands.js --global → deploy global (ทุก server)
+// node deploy-commands.js                          → deploy guild (GUILD_ID ใน .env)
+// node deploy-commands.js --guild <guildId>        → deploy guild (ระบุ server)
+// node deploy-commands.js --global                 → deploy global (ทุก server)
 
 require('dotenv').config();
 const { REST, Routes } = require('discord.js');
 const fs   = require('fs');
 const path = require('path');
 
-const isGlobal = process.argv.includes('--global');
+const isGlobal   = process.argv.includes('--global');
+const guildIndex = process.argv.indexOf('--guild');
+const guildId    = guildIndex !== -1 ? process.argv[guildIndex + 1] : process.env.GUILD_ID;
 
 const commands = [];
 const commandsPath = path.join(__dirname, 'commands');
@@ -25,17 +28,17 @@ const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
 
 (async () => {
   try {
-    console.log(`\n🚀 กำลัง deploy ${commands.length} commands (${isGlobal ? 'global' : 'guild'})...`);
-
     if (isGlobal) {
+      console.log(`\n🚀 กำลัง deploy ${commands.length} commands (global)...`);
       await rest.put(
         Routes.applicationCommands(process.env.CLIENT_ID),
         { body: commands }
       );
       console.log('✅ Deploy global สำเร็จ! (อาจใช้เวลาถึง 1 ชั่วโมงกว่าจะอัปเดตใน Discord)');
     } else {
+      console.log(`\n🚀 กำลัง deploy ${commands.length} commands (guild: ${guildId})...`);
       await rest.put(
-        Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID),
+        Routes.applicationGuildCommands(process.env.CLIENT_ID, guildId),
         { body: commands }
       );
       console.log('✅ Deploy guild สำเร็จ!');
