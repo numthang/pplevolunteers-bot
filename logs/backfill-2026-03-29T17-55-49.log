@@ -1,5 +1,5 @@
-📄 Log file: /home/tee/VSites/node/pple-dcbot/logs/backfill-2026-03-29T04-50-25.log
-🔄 Backfill ตั้งแต่ 2026-03-21 ถึง 2026-03-29
+📄 Log file: /home/tee/VSites/node/pple-dcbot/logs/backfill-2026-03-29T17-55-49.log
+🔄 Backfill ตั้งแต่ 2019-12-31 ถึง 2026-03-30
 
 ✅ Login as PPLE Test#9780
 
@@ -10,19 +10,24 @@
   📋 รวมทั้งหมด 820 channels/threads
 
   📥 💬 text #👫┆ทีมตัวแทนสมาชิก (ใน #🟢 | ทีมตัวแทนสมาชิก-101)
-    → fetch 100 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 0 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 200 / upsert 200 msgs... (hasMore: true)
+    → fetch 300 / upsert 300 msgs... (hasMore: true)
+    → fetch 321 / upsert 321 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 321, upsert 321 msgs
 
   📥 💬 text #💡┆ประชุม-นนทบุรี (ใน #ภาคปริมณฑล)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 💬 text #💠┆เชียงราย (ใน #ภาคเหนือตอนบน)
-    → fetch 12 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 12, upsert 0 msgs
+    → fetch 12 / upsert 12 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 12, upsert 12 msgs
 
   📥 💬 text #🤹┆ฟา-pc101 (ใน #Archives)
-    → fetch 100 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 0 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 200 / upsert 200 msgs... (hasMore: true)
+    → fetch 283 / upsert 283 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 283, upsert 283 msgs
 
   📥 💬 text #💠┆ยะลา (ใน #3 จังหวัด)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
@@ -31,84 +36,140 @@
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 💬 text #💠┆อ่างทอง (ใน #ภาคกลางตะวันออก)
-    → fetch 8 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 8, upsert 0 msgs
+    → fetch 8 / upsert 8 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 8, upsert 8 msgs
 
   📥 💬 text #💠┆ราชบุรี (ใน #ภาคกลางตะวันตก)
-    → fetch 5 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 5, upsert 0 msgs
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
 
   📥 💬 text #💠┆ปราจีนบุรี (ใน #ภาคตะวันออก)
-    → fetch 20 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 20, upsert 0 msgs
+    → fetch 20 / upsert 20 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 20, upsert 20 msgs
 
   📥 💬 text #💡┆ประชุม-ฟาภูมิภาค (ใน #🟣 | ทีมฟา)
-    → fetch 100 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 0 msgs
+    → fetch 100 / upsert 98 msgs... (hasMore: true)
+    → fetch 200 / upsert 197 msgs... (hasMore: true)
+    → fetch 300 / upsert 297 msgs... (hasMore: true)
+    → fetch 400 / upsert 397 msgs... (hasMore: true)
+    → fetch 500 / upsert 491 msgs... (hasMore: true)
+    → fetch 540 / upsert 531 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 540, upsert 531 msgs
 
   📥 💬 text #💠┆กาญจนบุรี (ใน #ภาคกลางตะวันตก)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 💬 text #🤹┆ฟาส่วนกลาง (ใน #🟣 | ทีมฟา)
-    → fetch 92 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 92, upsert 0 msgs
+    → fetch 92 / upsert 92 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 92, upsert 92 msgs
 
   📥 💬 text #💠┆บุรีรัมย์ (ใน #ภาคอีสานใต้)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 💬 text #💠┆นครราชสีมา (ใน #ภาคอีสานใต้)
-    → fetch 6 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 6, upsert 0 msgs
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
 
   📥 💬 text #👤┆ทีมผู้สมัครฯ-mp101 (ใน #🟢 | ทีมเลือกตั้ง)
-    → fetch 100 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 0 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 136 / upsert 136 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 136, upsert 136 msgs
 
   📥 💬 text #🍺┆สภาโซลบาร์ (ใน #🟢 | อาสาประชาชน)
-    → fetch 100 / upsert 61 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 61 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 200 / upsert 199 msgs... (hasMore: true)
+    → fetch 300 / upsert 298 msgs... (hasMore: true)
+    → fetch 400 / upsert 398 msgs... (hasMore: true)
+    → fetch 500 / upsert 498 msgs... (hasMore: true)
+    → fetch 600 / upsert 598 msgs... (hasMore: true)
+    → fetch 700 / upsert 698 msgs... (hasMore: true)
+    → fetch 800 / upsert 798 msgs... (hasMore: true)
+    → fetch 900 / upsert 897 msgs... (hasMore: true)
+    → fetch 1000 / upsert 993 msgs... (hasMore: true)
+    → fetch 1100 / upsert 1093 msgs... (hasMore: true)
+    → fetch 1200 / upsert 1193 msgs... (hasMore: true)
+    → fetch 1300 / upsert 1293 msgs... (hasMore: true)
+    → fetch 1400 / upsert 1392 msgs... (hasMore: true)
+    → fetch 1500 / upsert 1492 msgs... (hasMore: true)
+    → fetch 1600 / upsert 1592 msgs... (hasMore: true)
+    → fetch 1700 / upsert 1692 msgs... (hasMore: true)
+    → fetch 1800 / upsert 1792 msgs... (hasMore: true)
+    → fetch 1900 / upsert 1892 msgs... (hasMore: true)
+    → fetch 2000 / upsert 1992 msgs... (hasMore: true)
+    → fetch 2100 / upsert 2092 msgs... (hasMore: true)
+    → fetch 2200 / upsert 2192 msgs... (hasMore: true)
+    → fetch 2300 / upsert 2292 msgs... (hasMore: true)
+    → fetch 2400 / upsert 2392 msgs... (hasMore: true)
+    → fetch 2500 / upsert 2492 msgs... (hasMore: true)
+    → fetch 2600 / upsert 2592 msgs... (hasMore: true)
+    → fetch 2700 / upsert 2692 msgs... (hasMore: true)
+    → fetch 2800 / upsert 2792 msgs... (hasMore: true)
+    → fetch 2900 / upsert 2892 msgs... (hasMore: true)
+    → fetch 3000 / upsert 2992 msgs... (hasMore: true)
+    → fetch 3100 / upsert 3092 msgs... (hasMore: true)
+    → fetch 3200 / upsert 3192 msgs... (hasMore: true)
+    → fetch 3300 / upsert 3292 msgs... (hasMore: true)
+    → fetch 3400 / upsert 3392 msgs... (hasMore: true)
+    → fetch 3500 / upsert 3490 msgs... (hasMore: true)
+    → fetch 3600 / upsert 3590 msgs... (hasMore: true)
+    → fetch 3632 / upsert 3622 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3632, upsert 3622 msgs
 
   📥 💬 text #💠┆ลพบุรี (ใน #ภาคกลางตะวันออก)
-    → fetch 15 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 15, upsert 0 msgs
+    → fetch 15 / upsert 13 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 15, upsert 13 msgs
 
   📥 💬 text #📊┆ทีมนโยบาย (ใน #🔵 | ฝ่ายนโยบาย)
-    → fetch 100 / upsert 5 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 5 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 200 / upsert 200 msgs... (hasMore: true)
+    → fetch 300 / upsert 300 msgs... (hasMore: true)
+    → fetch 400 / upsert 400 msgs... (hasMore: true)
+    → fetch 494 / upsert 494 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 494, upsert 494 msgs
 
   📥 💬 text #💠┆นครศรีธรรมราช (ใน #ภาคใต้ตอนบน)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 💬 text #💠┆ลพบุรี (ใน #ภาคกลางตะวันออก)
-    → fetch 65 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 65, upsert 0 msgs
+    → fetch 65 / upsert 65 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 65, upsert 65 msgs
 
   📥 💬 text #💡┆ประชุม-ฟาตะวันออก (ใน #🟣 | ทีมฟา)
-    → fetch 10 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 10, upsert 0 msgs
+    → fetch 10 / upsert 10 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 10, upsert 10 msgs
 
   📥 💬 text #💡┆ประชุม-อุตรดิตถ์ (ใน #ภาคเหนือตอนล่าง)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 💬 text #💠┆พัทลุง (ใน #ภาคใต้ตอนล่าง)
-    → fetch 2 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 2, upsert 0 msgs
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
 
   📥 💬 text #💡┆ประชุม-หนองบัวลำภู (ใน #ภาคอีสานกลาง)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 💬 text #🎲┆เด็กติดเกม (ใน #🟢 | ฝ่ายสมาชิกสัมพันธ์)
-    → fetch 100 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 0 msgs
+    → fetch 100 / upsert 0 msgs... (hasMore: true)
+    → fetch 200 / upsert 5 msgs... (hasMore: true)
+    → fetch 300 / upsert 21 msgs... (hasMore: true)
+    → fetch 400 / upsert 25 msgs... (hasMore: true)
+    → fetch 500 / upsert 25 msgs... (hasMore: true)
+    → fetch 600 / upsert 31 msgs... (hasMore: true)
+    → fetch 700 / upsert 47 msgs... (hasMore: true)
+    → fetch 800 / upsert 51 msgs... (hasMore: true)
+    → fetch 900 / upsert 56 msgs... (hasMore: true)
+    → fetch 1000 / upsert 105 msgs... (hasMore: true)
+    → fetch 1076 / upsert 137 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1076, upsert 137 msgs
 
   📥 💬 text #💠┆สุรินทร์ (ใน #ภาคอีสานใต้)
-    → fetch 2 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 2, upsert 0 msgs
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
 
   📥 💬 text #📜┆ทีมงานสภา (ใน #🔵 | ทีมงานสภา)
-    → fetch 10 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 10, upsert 0 msgs
+    → fetch 10 / upsert 10 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 10, upsert 10 msgs
 
   📥 💬 text #💠┆อุทัยธานี (ใน #ภาคกลางตะวันออก)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
@@ -117,27 +178,27 @@
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 💬 text #💰┆กองทุนประชาชน (ใน #🟢 | ฝ่ายสมาชิกสัมพันธ์)
-    → fetch 69 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 69, upsert 0 msgs
+    → fetch 69 / upsert 69 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 69, upsert 69 msgs
 
   📥 💬 text #💡┆ประชุม-กรุงเทพ (ใน #กรุงเทพมหานคร)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 💬 text #🧭┆ภาคกลางตะวันออก (ใน #ภาคกลางตะวันออก)
-    → fetch 8 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 8, upsert 0 msgs
+    → fetch 8 / upsert 8 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 8, upsert 8 msgs
 
   📥 💬 text #💠┆มหาสารคาม (ใน #ภาคอีสานกลาง)
-    → fetch 8 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 8, upsert 0 msgs
+    → fetch 8 / upsert 8 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 8, upsert 8 msgs
 
   📥 💬 text #💠┆ชุมพร (ใน #ภาคใต้ตอนบน)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 💬 text #🎬┆ทีมตัดต่อ (ใน #🔵 | ฝ่ายสื่อ)
-    → fetch 19 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 19, upsert 0 msgs
+    → fetch 19 / upsert 19 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 19, upsert 19 msgs
 
   📥 💬 text #💠┆สุราษฎร์ธานี (ใน #ภาคใต้ตอนบน)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
@@ -161,34 +222,41 @@
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 💬 text #💡┆ประชุม-ฟากรุงเทพ (ใน #🟣 | ทีมฟา)
-    → fetch 100 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 0 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 200 / upsert 200 msgs... (hasMore: true)
+    → fetch 300 / upsert 300 msgs... (hasMore: true)
+    → fetch 367 / upsert 367 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 367, upsert 367 msgs
 
   📥 💬 text #💡┆ประชุม-ระยอง (ใน #ภาคตะวันออก)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 💬 text #💠┆สมุทรสงคราม (ใน #ภาคกลางตะวันตก)
-    → fetch 4 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 4, upsert 0 msgs
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
 
   📥 💬 text #💠┆อุตรดิตถ์ (ใน #ภาคเหนือตอนล่าง)
-    → fetch 5 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 5, upsert 0 msgs
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
 
   📥 💬 text #💡┆ประชุม-ฟาภาคใต้ (ใน #🟣 | ทีมฟา)
-    → fetch 19 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 19, upsert 0 msgs
+    → fetch 19 / upsert 19 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 19, upsert 19 msgs
 
   📥 💬 text #💠┆สระบุรี (ใน #ภาคกลางตะวันออก)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 💬 text #⚔️┆อาสาส้ม (ใน #🟢 | อาสาส้ม)
-    → fetch 100 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 0 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 200 / upsert 200 msgs... (hasMore: true)
+    → fetch 300 / upsert 300 msgs... (hasMore: true)
+    → fetch 400 / upsert 400 msgs... (hasMore: true)
+    → fetch 479 / upsert 479 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 479, upsert 479 msgs
 
   📥 💬 text #💠┆นนทบุรี (ใน #ภาคปริมณฑล)
-    → fetch 40 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 40, upsert 0 msgs
+    → fetch 40 / upsert 40 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 40, upsert 40 msgs
 
   📥 💬 text #💠┆ระยอง (ใน #ภาคตะวันออก)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
@@ -200,46 +268,56 @@
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 💬 text #💠┆อุบลราชธานี (ใน #ภาคอีสานใต้)
-    → fetch 4 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 4, upsert 0 msgs
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
 
   📥 💬 text #🧭┆ภาคอีสานกลาง (ใน #ภาคอีสานกลาง)
-    → fetch 8 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 8, upsert 0 msgs
+    → fetch 8 / upsert 8 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 8, upsert 8 msgs
 
   📥 💬 text #💡┆ประชุม-moderator (ใน #🟡 | Moderator)
-    → fetch 100 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 0 msgs
+    → fetch 100 / upsert 99 msgs... (hasMore: true)
+    → fetch 161 / upsert 159 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 161, upsert 159 msgs
 
   📥 💬 text #💠┆ชลบุรี (ใน #ภาคตะวันออก)
-    → fetch 7 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 7, upsert 0 msgs
+    → fetch 7 / upsert 7 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 7, upsert 7 msgs
 
   📥 💬 text #👤┆ทีมผู้สมัคร-บัญชีรายชื่อ (ใน #🟢 | ทีมเลือกตั้ง)
-    → fetch 100 / upsert 3 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 3 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 200 / upsert 200 msgs... (hasMore: true)
+    → fetch 300 / upsert 300 msgs... (hasMore: true)
+    → fetch 400 / upsert 400 msgs... (hasMore: true)
+    → fetch 500 / upsert 500 msgs... (hasMore: true)
+    → fetch 600 / upsert 600 msgs... (hasMore: true)
+    → fetch 692 / upsert 692 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 692, upsert 692 msgs
 
   📥 💬 text #💠┆ภูเก็ต (ใน #ภาคใต้ตอนบน)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 💬 text #📝┆ทีมคอนเทนต์ (ใน #🔵 | ฝ่ายสื่อ)
-    → fetch 18 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 18, upsert 0 msgs
+    → fetch 18 / upsert 18 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 18, upsert 18 msgs
 
   📥 💬 text #🤹┆ทีมกระบวนกร (ใน #🟣 | ทีมฟา)
-    → fetch 100 / upsert 3 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 3 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 200 / upsert 200 msgs... (hasMore: true)
+    → fetch 214 / upsert 214 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 214, upsert 214 msgs
 
   📥 💬 text #💠┆บุรีรัมย์ (ใน #ภาคอีสานใต้)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 💬 text #✊┆ทีมเครือข่ายแรงงาน (ใน #🟢 | ปีกงานอื่นๆ)
-    → fetch 30 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 30, upsert 0 msgs
+    → fetch 30 / upsert 30 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 30, upsert 30 msgs
 
   📥 💬 text #👤┆ทีมผู้สมัคร-ภาคกลาง (ใน #🟢 | ทีมเลือกตั้ง)
-    → fetch 100 / upsert 6 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 6 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 148 / upsert 148 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 148, upsert 148 msgs
 
   📥 💬 text #💠┆สตูล (ใน #ภาคใต้ตอนล่าง)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
@@ -248,45 +326,59 @@
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 💬 text #🧭┆ภาคอีสานใต้ (ใน #ภาคอีสานใต้)
-    → fetch 4 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 4, upsert 0 msgs
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
 
   📥 💬 text #📄┆secular-state (ใน #🔵 | ฝ่ายนโยบาย)
-    → fetch 42 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 42, upsert 0 msgs
+    → fetch 42 / upsert 42 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 42, upsert 42 msgs
 
   📥 💬 text #💡┆ประชุม-ปทุมธานี (ใน #ภาคปริมณฑล)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 💬 text #🧭┆ภาคใต้ตอนบน (ใน #ภาคใต้ตอนบน)
-    → fetch 3 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 3, upsert 0 msgs
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
 
   📥 💬 text #💠┆กระบี่ (ใน #ภาคใต้ตอนล่าง)
-    → fetch 3 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 3, upsert 0 msgs
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
 
   📥 💬 text #🫶┆พูดคุยการเมือง (ใน #Archives)
-    → fetch 100 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 0 msgs
+    → fetch 100 / upsert 98 msgs... (hasMore: true)
+    → fetch 200 / upsert 198 msgs... (hasMore: true)
+    → fetch 300 / upsert 298 msgs... (hasMore: true)
+    → fetch 400 / upsert 398 msgs... (hasMore: true)
+    → fetch 500 / upsert 498 msgs... (hasMore: true)
+    → fetch 600 / upsert 598 msgs... (hasMore: true)
+    → fetch 700 / upsert 698 msgs... (hasMore: true)
+    → fetch 800 / upsert 798 msgs... (hasMore: true)
+    → fetch 900 / upsert 898 msgs... (hasMore: true)
+    → fetch 1000 / upsert 998 msgs... (hasMore: true)
+    → fetch 1100 / upsert 1098 msgs... (hasMore: true)
+    → fetch 1200 / upsert 1198 msgs... (hasMore: true)
+    → fetch 1300 / upsert 1298 msgs... (hasMore: true)
+    → fetch 1400 / upsert 1398 msgs... (hasMore: true)
+    → fetch 1438 / upsert 1436 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1438, upsert 1436 msgs
 
   📥 💬 text #🛡┆เจ้าหน้าที่พรรค (ใน #🟡 | Moderator)
-    → fetch 18 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 18, upsert 0 msgs
+    → fetch 18 / upsert 18 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 18, upsert 18 msgs
 
   📥 💬 text #💡┆ประชุม-ขอนแก่น (ใน #ภาคอีสานกลาง)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 💬 text #💠┆กำแพงเพชร (ใน #ภาคเหนือตอนล่าง)
-    → fetch 3 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 3, upsert 0 msgs
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
 
   📥 💬 text #💡┆ประชุม-ฉะเชิงเทรา (ใน #ภาคตะวันออก)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 💬 text #💡┆ประชุม-9geek (ใน #🔵 | ทีม9geek)
-    → fetch 44 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 44, upsert 0 msgs
+    → fetch 44 / upsert 44 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 44, upsert 44 msgs
 
   📥 💬 text #💠┆กาญจนบุรี (ใน #ภาคกลางตะวันตก)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
@@ -295,8 +387,13 @@
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 💬 text #🔗┆ข่าวสารบ้านเมือง (ใน #🟢 | อาสาประชาชน)
-    → fetch 100 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 0 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 200 / upsert 200 msgs... (hasMore: true)
+    → fetch 300 / upsert 300 msgs... (hasMore: true)
+    → fetch 400 / upsert 400 msgs... (hasMore: true)
+    → fetch 500 / upsert 500 msgs... (hasMore: true)
+    → fetch 518 / upsert 518 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 518, upsert 518 msgs
 
   📥 💬 text #💡┆ประชุม-สระแก้ว (ใน #ภาคตะวันออก)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
@@ -305,20 +402,24 @@
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 💬 text #🎙┆เวที-ทีมผู้สมัคร (ใน #🟢 | ทีมเลือกตั้ง)
-    → fetch 38 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 38, upsert 0 msgs
+    → fetch 38 / upsert 38 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 38, upsert 38 msgs
 
   📥 💬 text #🧑┆กรรมการ-mp101 (ใน #🟡 | ทีมฝ่ายเครือข่าย)
-    → fetch 18 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 18, upsert 0 msgs
+    → fetch 18 / upsert 18 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 18, upsert 18 msgs
 
   📥 💬 text #🧭┆ภูมิภาค (ใน #ภูมิภาค)
-    → fetch 16 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 16, upsert 0 msgs
+    → fetch 16 / upsert 16 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 16, upsert 16 msgs
 
   📥 💬 text #📢┆ข่าวสารประชาชน (ใน #INFORMATION)
-    → fetch 100 / upsert 3 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 3 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 200 / upsert 200 msgs... (hasMore: true)
+    → fetch 300 / upsert 299 msgs... (hasMore: true)
+    → fetch 400 / upsert 399 msgs... (hasMore: true)
+    → fetch 401 / upsert 400 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 401, upsert 400 msgs
 
   📥 💬 text #💠┆สิงห์บุรี (ใน #ภาคกลางตะวันออก)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
@@ -333,35 +434,35 @@
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 💬 text #🧭┆ภาคใต้ตอนล่าง (ใน #ภาคใต้ตอนล่าง)
-    → fetch 3 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 3, upsert 0 msgs
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
 
   📥 💬 text #ห้องตาต้า (ใน #🟢 | ฝ่ายสมาชิกสัมพันธ์)
-    → fetch 3 / upsert 2 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 3, upsert 2 msgs
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
 
   📥 💬 text #💡┆ประชุม-ฟาเฉพาะกิจ (ใน #Archives)
-    → fetch 28 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 28, upsert 0 msgs
+    → fetch 28 / upsert 28 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 28, upsert 28 msgs
 
   📥 💬 text #📕┆วิธีใช้งาน (ใน #INFORMATION)
-    → fetch 4 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 4, upsert 0 msgs
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
 
   📥 💬 text #👤┆ทีมผู้สมัครฯ-สก102 (ใน #🟢 | ทีมเลือกตั้ง)
-    → fetch 22 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 22, upsert 0 msgs
+    → fetch 22 / upsert 22 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 22, upsert 22 msgs
 
   📥 💬 text #💡┆ประชุม-มหาสารคาม (ใน #ภาคอีสานกลาง)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 💬 text #🧺┆อีสานแอมบาสเดอร์ (ใน #Archives)
-    → fetch 35 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 35, upsert 0 msgs
+    → fetch 35 / upsert 35 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 35, upsert 35 msgs
 
   📥 💬 text #💡┆ประชุม-ทีมผู้สมัครฯ (ใน #🟢 | ทีมเลือกตั้ง)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 💬 text #💠┆กระบี่ (ใน #ภาคใต้ตอนล่าง)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
@@ -370,8 +471,9 @@
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 💬 text #📜┆ทีมกฏหมาย (ใน #🔵 | ฝ่ายกฏหมาย)
-    → fetch 100 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 0 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 187 / upsert 187 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 187, upsert 187 msgs
 
   📥 💬 text #💠┆พิจิตร (ใน #ภาคเหนือตอนล่าง)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
@@ -380,20 +482,22 @@
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 💬 text #🤹┆ฟากรุงเทพ (ใน #🟣 | ทีมฟา)
-    → fetch 92 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 92, upsert 0 msgs
+    → fetch 92 / upsert 92 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 92, upsert 92 msgs
 
   📥 💬 text #💡┆ห้องนั่งเล่น 👾 (ใน #🟢 | ฝ่ายสมาชิกสัมพันธ์)
-    → fetch 100 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 0 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 200 / upsert 200 msgs... (hasMore: true)
+    → fetch 221 / upsert 220 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 221, upsert 220 msgs
 
   📥 💬 text #💠┆สุราษฎร์ธานี (ใน #ภาคใต้ตอนบน)
-    → fetch 7 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 7, upsert 0 msgs
+    → fetch 7 / upsert 7 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 7, upsert 7 msgs
 
   📥 💬 text #🧭┆ภาคอีสานเหนือ (ใน #ภาคอีสานเหนือ)
-    → fetch 3 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 3, upsert 0 msgs
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
 
   📥 💬 text #💡┆ประชุม-จันทบุรี (ใน #ภาคตะวันออก)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
@@ -402,45 +506,197 @@
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 💬 text #🧑┆ผู้ประสานงานจังหวัด (ใน #🟡 | ทีมฝ่ายเครือข่าย)
-    → fetch 11 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 11, upsert 0 msgs
+    → fetch 11 / upsert 11 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 11, upsert 11 msgs
 
   📥 💬 text #💡┆ประชุม-บึงกาฬ (ใน #ภาคอีสานเหนือ)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 💬 text #🗞┆ทีมสื่อ (ใน #🔵 | ฝ่ายสื่อ)
-    → fetch 100 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 0 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 191 / upsert 191 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 191, upsert 191 msgs
 
   📥 💬 text #💡┆ประชุม-สมุทรปราการ (ใน #ภาคปริมณฑล)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 💬 text #💡┆ประชุม-ตัวแทนสมาชิก (ใน #🟢 | ทีมตัวแทนสมาชิก-101)
-    → fetch 7 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 7, upsert 0 msgs
+    → fetch 7 / upsert 7 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 7, upsert 7 msgs
 
   📥 💬 text #🛡┆moderator-logs (ใน #🟡 | Moderator)
-    → fetch 100 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 0 msgs
+    → fetch 100 / upsert 0 msgs... (hasMore: true)
+    → fetch 200 / upsert 0 msgs... (hasMore: true)
+    → fetch 300 / upsert 0 msgs... (hasMore: true)
+    → fetch 400 / upsert 0 msgs... (hasMore: true)
+    → fetch 500 / upsert 0 msgs... (hasMore: true)
+    → fetch 600 / upsert 0 msgs... (hasMore: true)
+    → fetch 700 / upsert 0 msgs... (hasMore: true)
+    → fetch 800 / upsert 0 msgs... (hasMore: true)
+    → fetch 900 / upsert 0 msgs... (hasMore: true)
+    → fetch 1000 / upsert 0 msgs... (hasMore: true)
+    → fetch 1100 / upsert 0 msgs... (hasMore: true)
+    → fetch 1200 / upsert 0 msgs... (hasMore: true)
+    → fetch 1300 / upsert 0 msgs... (hasMore: true)
+    → fetch 1400 / upsert 0 msgs... (hasMore: true)
+    → fetch 1500 / upsert 0 msgs... (hasMore: true)
+    → fetch 1600 / upsert 0 msgs... (hasMore: true)
+    → fetch 1700 / upsert 0 msgs... (hasMore: true)
+    → fetch 1800 / upsert 0 msgs... (hasMore: true)
+    → fetch 1900 / upsert 0 msgs... (hasMore: true)
+    → fetch 2000 / upsert 0 msgs... (hasMore: true)
+    → fetch 2100 / upsert 0 msgs... (hasMore: true)
+    → fetch 2200 / upsert 0 msgs... (hasMore: true)
+    → fetch 2300 / upsert 0 msgs... (hasMore: true)
+    → fetch 2400 / upsert 0 msgs... (hasMore: true)
+    → fetch 2500 / upsert 0 msgs... (hasMore: true)
+    → fetch 2600 / upsert 0 msgs... (hasMore: true)
+    → fetch 2700 / upsert 0 msgs... (hasMore: true)
+    → fetch 2800 / upsert 0 msgs... (hasMore: true)
+    → fetch 2900 / upsert 0 msgs... (hasMore: true)
+    → fetch 3000 / upsert 0 msgs... (hasMore: true)
+    → fetch 3100 / upsert 0 msgs... (hasMore: true)
+    → fetch 3200 / upsert 0 msgs... (hasMore: true)
+    → fetch 3300 / upsert 0 msgs... (hasMore: true)
+    → fetch 3400 / upsert 0 msgs... (hasMore: true)
+    → fetch 3500 / upsert 0 msgs... (hasMore: true)
+    → fetch 3600 / upsert 0 msgs... (hasMore: true)
+    → fetch 3700 / upsert 0 msgs... (hasMore: true)
+    → fetch 3800 / upsert 0 msgs... (hasMore: true)
+    → fetch 3900 / upsert 0 msgs... (hasMore: true)
+    → fetch 4000 / upsert 0 msgs... (hasMore: true)
+    → fetch 4100 / upsert 0 msgs... (hasMore: true)
+    → fetch 4200 / upsert 0 msgs... (hasMore: true)
+    → fetch 4300 / upsert 0 msgs... (hasMore: true)
+    → fetch 4400 / upsert 0 msgs... (hasMore: true)
+    → fetch 4500 / upsert 0 msgs... (hasMore: true)
+    → fetch 4600 / upsert 0 msgs... (hasMore: true)
+    → fetch 4700 / upsert 0 msgs... (hasMore: true)
+    → fetch 4800 / upsert 0 msgs... (hasMore: true)
+    → fetch 4900 / upsert 0 msgs... (hasMore: true)
+    → fetch 5000 / upsert 0 msgs... (hasMore: true)
+    → fetch 5100 / upsert 0 msgs... (hasMore: true)
+    → fetch 5200 / upsert 0 msgs... (hasMore: true)
+    → fetch 5300 / upsert 0 msgs... (hasMore: true)
+    → fetch 5400 / upsert 0 msgs... (hasMore: true)
+    → fetch 5500 / upsert 0 msgs... (hasMore: true)
+    → fetch 5600 / upsert 0 msgs... (hasMore: true)
+    → fetch 5700 / upsert 0 msgs... (hasMore: true)
+    → fetch 5800 / upsert 0 msgs... (hasMore: true)
+    → fetch 5900 / upsert 0 msgs... (hasMore: true)
+    → fetch 6000 / upsert 0 msgs... (hasMore: true)
+    → fetch 6100 / upsert 0 msgs... (hasMore: true)
+    → fetch 6200 / upsert 0 msgs... (hasMore: true)
+    → fetch 6300 / upsert 0 msgs... (hasMore: true)
+    → fetch 6400 / upsert 0 msgs... (hasMore: true)
+    → fetch 6500 / upsert 0 msgs... (hasMore: true)
+    → fetch 6600 / upsert 0 msgs... (hasMore: true)
+    → fetch 6700 / upsert 0 msgs... (hasMore: true)
+    → fetch 6800 / upsert 0 msgs... (hasMore: true)
+    → fetch 6900 / upsert 0 msgs... (hasMore: true)
+    → fetch 7000 / upsert 0 msgs... (hasMore: true)
+    → fetch 7100 / upsert 0 msgs... (hasMore: true)
+    → fetch 7200 / upsert 0 msgs... (hasMore: true)
+    → fetch 7300 / upsert 0 msgs... (hasMore: true)
+    → fetch 7400 / upsert 0 msgs... (hasMore: true)
+    → fetch 7500 / upsert 0 msgs... (hasMore: true)
+    → fetch 7600 / upsert 0 msgs... (hasMore: true)
+    → fetch 7700 / upsert 0 msgs... (hasMore: true)
+    → fetch 7800 / upsert 0 msgs... (hasMore: true)
+    → fetch 7900 / upsert 0 msgs... (hasMore: true)
+    → fetch 8000 / upsert 0 msgs... (hasMore: true)
+    → fetch 8100 / upsert 0 msgs... (hasMore: true)
+    → fetch 8200 / upsert 0 msgs... (hasMore: true)
+    → fetch 8300 / upsert 0 msgs... (hasMore: true)
+    → fetch 8400 / upsert 0 msgs... (hasMore: true)
+    → fetch 8500 / upsert 0 msgs... (hasMore: true)
+    → fetch 8600 / upsert 0 msgs... (hasMore: true)
+    → fetch 8700 / upsert 0 msgs... (hasMore: true)
+    → fetch 8800 / upsert 0 msgs... (hasMore: true)
+    → fetch 8900 / upsert 0 msgs... (hasMore: true)
+    → fetch 9000 / upsert 0 msgs... (hasMore: true)
+    → fetch 9100 / upsert 0 msgs... (hasMore: true)
+    → fetch 9200 / upsert 0 msgs... (hasMore: true)
+    → fetch 9300 / upsert 0 msgs... (hasMore: true)
+    → fetch 9400 / upsert 0 msgs... (hasMore: true)
+    → fetch 9500 / upsert 0 msgs... (hasMore: true)
+    → fetch 9600 / upsert 0 msgs... (hasMore: true)
+    → fetch 9700 / upsert 0 msgs... (hasMore: true)
+    → fetch 9800 / upsert 0 msgs... (hasMore: true)
+    → fetch 9900 / upsert 0 msgs... (hasMore: true)
+    → fetch 10000 / upsert 0 msgs... (hasMore: true)
+    → fetch 10100 / upsert 0 msgs... (hasMore: true)
+    → fetch 10200 / upsert 0 msgs... (hasMore: true)
+    → fetch 10300 / upsert 0 msgs... (hasMore: true)
+    → fetch 10400 / upsert 0 msgs... (hasMore: true)
+    → fetch 10500 / upsert 0 msgs... (hasMore: true)
+    → fetch 10600 / upsert 0 msgs... (hasMore: true)
+    → fetch 10700 / upsert 0 msgs... (hasMore: true)
+    → fetch 10800 / upsert 0 msgs... (hasMore: true)
+    → fetch 10900 / upsert 0 msgs... (hasMore: true)
+    → fetch 11000 / upsert 0 msgs... (hasMore: true)
+    → fetch 11100 / upsert 0 msgs... (hasMore: true)
+    → fetch 11200 / upsert 0 msgs... (hasMore: true)
+    → fetch 11300 / upsert 0 msgs... (hasMore: true)
+    → fetch 11400 / upsert 0 msgs... (hasMore: true)
+    → fetch 11500 / upsert 0 msgs... (hasMore: true)
+    → fetch 11600 / upsert 0 msgs... (hasMore: true)
+    → fetch 11700 / upsert 0 msgs... (hasMore: true)
+    → fetch 11800 / upsert 0 msgs... (hasMore: true)
+    → fetch 11900 / upsert 0 msgs... (hasMore: true)
+    → fetch 12000 / upsert 0 msgs... (hasMore: true)
+    → fetch 12100 / upsert 1 msgs... (hasMore: true)
+    → fetch 12200 / upsert 1 msgs... (hasMore: true)
+    → fetch 12300 / upsert 1 msgs... (hasMore: true)
+    → fetch 12400 / upsert 1 msgs... (hasMore: true)
+    → fetch 12500 / upsert 1 msgs... (hasMore: true)
+    → fetch 12579 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 12579, upsert 1 msgs
 
   📥 💬 text #🫶┆พูดคุยทั่วไป (ใน #🟢 | อาสาประชาชน)
-    → fetch 100 / upsert 29 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 29 msgs
+    → fetch 100 / upsert 99 msgs... (hasMore: true)
+    → fetch 200 / upsert 199 msgs... (hasMore: true)
+    → fetch 300 / upsert 299 msgs... (hasMore: true)
+    → fetch 400 / upsert 399 msgs... (hasMore: true)
+    → fetch 500 / upsert 499 msgs... (hasMore: true)
+    → fetch 600 / upsert 599 msgs... (hasMore: true)
+    → fetch 700 / upsert 699 msgs... (hasMore: true)
+    → fetch 800 / upsert 799 msgs... (hasMore: true)
+    → fetch 900 / upsert 899 msgs... (hasMore: true)
+    → fetch 1000 / upsert 999 msgs... (hasMore: true)
+    → fetch 1100 / upsert 1099 msgs... (hasMore: true)
+    → fetch 1200 / upsert 1199 msgs... (hasMore: true)
+    → fetch 1300 / upsert 1299 msgs... (hasMore: true)
+    → fetch 1400 / upsert 1399 msgs... (hasMore: true)
+    → fetch 1500 / upsert 1499 msgs... (hasMore: true)
+    → fetch 1600 / upsert 1599 msgs... (hasMore: true)
+    → fetch 1700 / upsert 1699 msgs... (hasMore: true)
+    → fetch 1800 / upsert 1799 msgs... (hasMore: true)
+    → fetch 1900 / upsert 1899 msgs... (hasMore: true)
+    → fetch 2000 / upsert 1999 msgs... (hasMore: true)
+    → fetch 2100 / upsert 2099 msgs... (hasMore: true)
+    → fetch 2200 / upsert 2199 msgs... (hasMore: true)
+    → fetch 2300 / upsert 2299 msgs... (hasMore: true)
+    → fetch 2400 / upsert 2399 msgs... (hasMore: true)
+    → fetch 2500 / upsert 2499 msgs... (hasMore: true)
+    → fetch 2600 / upsert 2599 msgs... (hasMore: true)
+    → fetch 2638 / upsert 2637 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2638, upsert 2637 msgs
 
   📥 💬 text #💠┆สุรินทร์ (ใน #ภาคอีสานใต้)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 💬 text #💡┆ประชุม-ฟา-PC101 (ใน #Archives)
-    → fetch 97 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 97, upsert 0 msgs
+    → fetch 97 / upsert 97 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 97, upsert 97 msgs
 
   📥 💬 text #🌾┆ประชาชนคนเกษตร (ใน #🟢 | ปีกงานอื่นๆ)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 💬 text #💠┆อยุธยา (ใน #ภาคกลางตะวันออก)
-    → fetch 5 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 5, upsert 0 msgs
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
 
   📥 💬 text #💠┆บึงกาฬ (ใน #ภาคอีสานเหนือ)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
@@ -449,16 +705,17 @@
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 💬 text #💠┆สิงห์บุรี (ใน #ภาคกลางตะวันออก)
-    → fetch 2 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 2, upsert 0 msgs
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
 
   📥 💬 text #🤹┆ฟาเฉพาะกิจ (ใน #Archives)
-    → fetch 100 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 0 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 188 / upsert 188 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 188, upsert 188 msgs
 
   📥 💬 text #💠┆นครปฐม (ใน #ภาคกลางตะวันตก)
-    → fetch 96 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 96, upsert 0 msgs
+    → fetch 96 / upsert 96 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 96, upsert 96 msgs
 
   📥 💬 text #💡┆ประชุม-เลย (ใน #ภาคอีสานกลาง)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
@@ -473,27 +730,41 @@
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 💬 text #🕉┆ทีมเครือข่ายชาติพันธุ์ (ใน #ภูมิภาค)
-    → fetch 41 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 41, upsert 0 msgs
+    → fetch 41 / upsert 41 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 41, upsert 41 msgs
 
   📥 💬 text #💧┆อาสาส้มสู้น้ำ (ใน #🟢 | อาสาส้ม)
-    → fetch 100 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 0 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 200 / upsert 200 msgs... (hasMore: true)
+    → fetch 300 / upsert 300 msgs... (hasMore: true)
+    → fetch 392 / upsert 392 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 392, upsert 392 msgs
 
   📥 💬 text #📩┆ทีมเรื่องร้องเรียน (ใน #🔵 | ฝ่ายเรื่องร้องเรียน)
-    → fetch 8 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 8, upsert 0 msgs
+    → fetch 8 / upsert 8 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 8, upsert 8 msgs
 
   📥 💬 text #💡┆ประชุม-พะเยา (ใน #ภาคเหนือตอนบน)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 💬 text #💠┆กาฬสินธุ์ (ใน #ภาคอีสานกลาง)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 💬 text #👤┆ทีมผู้สมัครฯ (ใน #🟢 | ทีมเลือกตั้ง)
-    → fetch 100 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 0 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 200 / upsert 200 msgs... (hasMore: true)
+    → fetch 300 / upsert 300 msgs... (hasMore: true)
+    → fetch 400 / upsert 400 msgs... (hasMore: true)
+    → fetch 500 / upsert 500 msgs... (hasMore: true)
+    → fetch 600 / upsert 600 msgs... (hasMore: true)
+    → fetch 700 / upsert 700 msgs... (hasMore: true)
+    → fetch 800 / upsert 800 msgs... (hasMore: true)
+    → fetch 900 / upsert 900 msgs... (hasMore: true)
+    → fetch 1000 / upsert 1000 msgs... (hasMore: true)
+    → fetch 1100 / upsert 1100 msgs... (hasMore: true)
+    → fetch 1175 / upsert 1175 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1175, upsert 1175 msgs
 
   📥 💬 text #💡┆ประชุม-เชียงราย (ใน #ภาคเหนือตอนบน)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
@@ -502,80 +773,151 @@
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 💬 text #💠┆มุกดาหาร (ใน #ภาคอีสานเหนือ)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 💬 text #💡┆ประชุม-อุดรธานี (ใน #ภาคอีสานเหนือ)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 💬 text #🏛┆กรุงเทพธนบุรี (ใน #กรุงเทพมหานคร)
-    → fetch 58 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 58, upsert 0 msgs
+    → fetch 58 / upsert 58 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 58, upsert 58 msgs
 
   📥 💬 text #🤗┆ทีมสมาชิกสัมพันธ์ (ใน #🟢 | ฝ่ายสมาชิกสัมพันธ์)
-    → fetch 31 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 31, upsert 0 msgs
+    → fetch 31 / upsert 31 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 31, upsert 31 msgs
 
   📥 💬 text #🤹┆ฟาอีสาน (ใน #🟣 | ทีมฟา)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 💬 text #🎙┆สภาประชาชน (ใน #🟢 | อาสาประชาชน)
-    → fetch 100 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 0 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 200 / upsert 200 msgs... (hasMore: true)
+    → fetch 300 / upsert 300 msgs... (hasMore: true)
+    → fetch 400 / upsert 400 msgs... (hasMore: true)
+    → fetch 500 / upsert 500 msgs... (hasMore: true)
+    → fetch 600 / upsert 600 msgs... (hasMore: true)
+    → fetch 700 / upsert 700 msgs... (hasMore: true)
+    → fetch 800 / upsert 800 msgs... (hasMore: true)
+    → fetch 900 / upsert 900 msgs... (hasMore: true)
+    → fetch 1000 / upsert 1000 msgs... (hasMore: true)
+    → fetch 1100 / upsert 1100 msgs... (hasMore: true)
+    → fetch 1200 / upsert 1200 msgs... (hasMore: true)
+    → fetch 1300 / upsert 1299 msgs... (hasMore: true)
+    → fetch 1400 / upsert 1399 msgs... (hasMore: true)
+    → fetch 1500 / upsert 1499 msgs... (hasMore: true)
+    → fetch 1600 / upsert 1599 msgs... (hasMore: true)
+    → fetch 1700 / upsert 1699 msgs... (hasMore: true)
+    → fetch 1800 / upsert 1799 msgs... (hasMore: true)
+    → fetch 1900 / upsert 1899 msgs... (hasMore: true)
+    → fetch 2000 / upsert 1999 msgs... (hasMore: true)
+    → fetch 2100 / upsert 2099 msgs... (hasMore: true)
+    → fetch 2200 / upsert 2199 msgs... (hasMore: true)
+    → fetch 2300 / upsert 2299 msgs... (hasMore: true)
+    → fetch 2400 / upsert 2399 msgs... (hasMore: true)
+    → fetch 2500 / upsert 2499 msgs... (hasMore: true)
+    → fetch 2600 / upsert 2599 msgs... (hasMore: true)
+    → fetch 2700 / upsert 2699 msgs... (hasMore: true)
+    → fetch 2800 / upsert 2797 msgs... (hasMore: true)
+    → fetch 2900 / upsert 2892 msgs... (hasMore: true)
+    → fetch 3000 / upsert 2990 msgs... (hasMore: true)
+    → fetch 3100 / upsert 3090 msgs... (hasMore: true)
+    → fetch 3200 / upsert 3186 msgs... (hasMore: true)
+    → fetch 3300 / upsert 3286 msgs... (hasMore: true)
+    → fetch 3400 / upsert 3386 msgs... (hasMore: true)
+    → fetch 3500 / upsert 3486 msgs... (hasMore: true)
+    → fetch 3600 / upsert 3586 msgs... (hasMore: true)
+    → fetch 3700 / upsert 3686 msgs... (hasMore: true)
+    → fetch 3800 / upsert 3786 msgs... (hasMore: true)
+    → fetch 3900 / upsert 3886 msgs... (hasMore: true)
+    → fetch 4000 / upsert 3986 msgs... (hasMore: true)
+    → fetch 4100 / upsert 4085 msgs... (hasMore: true)
+    → fetch 4200 / upsert 4185 msgs... (hasMore: true)
+    → fetch 4300 / upsert 4285 msgs... (hasMore: true)
+    → fetch 4400 / upsert 4384 msgs... (hasMore: true)
+    → fetch 4500 / upsert 4484 msgs... (hasMore: true)
+    → fetch 4600 / upsert 4584 msgs... (hasMore: true)
+    → fetch 4700 / upsert 4684 msgs... (hasMore: true)
+    → fetch 4800 / upsert 4784 msgs... (hasMore: true)
+    → fetch 4900 / upsert 4881 msgs... (hasMore: true)
+    → fetch 5000 / upsert 4981 msgs... (hasMore: true)
+    → fetch 5100 / upsert 5081 msgs... (hasMore: true)
+    → fetch 5200 / upsert 5180 msgs... (hasMore: true)
+    → fetch 5300 / upsert 5280 msgs... (hasMore: true)
+    → fetch 5400 / upsert 5377 msgs... (hasMore: true)
+    → fetch 5500 / upsert 5477 msgs... (hasMore: true)
+    → fetch 5600 / upsert 5577 msgs... (hasMore: true)
+    → fetch 5700 / upsert 5677 msgs... (hasMore: true)
+    → fetch 5800 / upsert 5776 msgs... (hasMore: true)
+    → fetch 5900 / upsert 5875 msgs... (hasMore: true)
+    → fetch 6000 / upsert 5975 msgs... (hasMore: true)
+    → fetch 6100 / upsert 6075 msgs... (hasMore: true)
+    → fetch 6200 / upsert 6175 msgs... (hasMore: true)
+    → fetch 6203 / upsert 6178 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6203, upsert 6178 msgs
 
   📥 💬 text #🏛┆กรุงเทพชั้นใน (ใน #กรุงเทพมหานคร)
-    → fetch 23 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 23, upsert 0 msgs
+    → fetch 23 / upsert 23 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 23, upsert 23 msgs
 
   📥 💬 text #🧭┆ภาคปริมณฑล (ใน #ภาคปริมณฑล)
-    → fetch 4 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 4, upsert 0 msgs
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
 
   📥 💬 text #💠┆นครนายก (ใน #ภาคกลางตะวันออก)
-    → fetch 7 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 7, upsert 0 msgs
+    → fetch 7 / upsert 7 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 7, upsert 7 msgs
 
   📥 💬 text #🤹┆ฟาภาคเหนือ (ใน #🟣 | ทีมฟา)
-    → fetch 85 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 85, upsert 0 msgs
+    → fetch 85 / upsert 85 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 85, upsert 85 msgs
 
   📥 💬 text #💠┆สุโขทัย (ใน #ภาคเหนือตอนล่าง)
-    → fetch 16 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 16, upsert 0 msgs
+    → fetch 16 / upsert 16 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 16, upsert 16 msgs
 
   📥 💬 text #💠┆สุพรรณบุรี (ใน #ภาคกลางตะวันตก)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 💬 text #👤┆ทีมผู้สมัครฯ-pc101 (ใน #🟢 | ทีมเลือกตั้ง)
-    → fetch 100 / upsert 2 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 2 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 200 / upsert 200 msgs... (hasMore: true)
+    → fetch 300 / upsert 300 msgs... (hasMore: true)
+    → fetch 400 / upsert 400 msgs... (hasMore: true)
+    → fetch 500 / upsert 500 msgs... (hasMore: true)
+    → fetch 600 / upsert 600 msgs... (hasMore: true)
+    → fetch 700 / upsert 700 msgs... (hasMore: true)
+    → fetch 800 / upsert 800 msgs... (hasMore: true)
+    → fetch 900 / upsert 900 msgs... (hasMore: true)
+    → fetch 987 / upsert 987 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 987, upsert 987 msgs
 
   📥 💬 text #💠┆สมุทรปราการ (ใน #ภาคปริมณฑล)
-    → fetch 38 / upsert 1 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 38, upsert 1 msgs
+    → fetch 38 / upsert 38 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 38, upsert 38 msgs
 
   📥 💬 text #💠┆นครศรีธรรมราช (ใน #ภาคใต้ตอนบน)
-    → fetch 16 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 16, upsert 0 msgs
+    → fetch 16 / upsert 16 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 16, upsert 16 msgs
 
   📥 💬 text #💠┆ชัยนาท (ใน #ภาคกลางตะวันออก)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 💬 text #💡┆ประชุม-ทีมสื่อ (ใน #🔵 | ฝ่ายสื่อ)
-    → fetch 3 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 3, upsert 0 msgs
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
 
   📥 💬 text #💠┆สกลนคร (ใน #ภาคอีสานเหนือ)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 💬 text #💠┆สงขลา (ใน #ภาคใต้ตอนล่าง)
-    → fetch 10 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 10, upsert 0 msgs
+    → fetch 10 / upsert 10 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 10, upsert 10 msgs
 
   📥 💬 text #🏛┆กรุงเทพตะวันออก (ใน #กรุงเทพมหานคร)
-    → fetch 17 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 17, upsert 0 msgs
+    → fetch 17 / upsert 17 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 17, upsert 17 msgs
 
   📥 💬 text #💡┆ประชุม-ลำปาง (ใน #ภาคเหนือตอนบน)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
@@ -590,30 +932,36 @@
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 💬 text #🤹┆ฟาภาคใต้ (ใน #🟣 | ทีมฟา)
-    → fetch 100 / upsert 3 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 3 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 200 / upsert 200 msgs... (hasMore: true)
+    → fetch 300 / upsert 300 msgs... (hasMore: true)
+    → fetch 400 / upsert 400 msgs... (hasMore: true)
+    → fetch 500 / upsert 500 msgs... (hasMore: true)
+    → fetch 600 / upsert 600 msgs... (hasMore: true)
+    → fetch 635 / upsert 635 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 635, upsert 635 msgs
 
   📥 💬 text #💡┆ประชุม-ลำพูน (ใน #ภาคเหนือตอนบน)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 💬 text #💡┆ประชุม-ฟาอีสาน (ใน #🟣 | ทีมฟา)
-    → fetch 10 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 10, upsert 0 msgs
+    → fetch 10 / upsert 10 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 10, upsert 10 msgs
 
   📥 💬 text #💠┆ศรีสะเกษ (ใน #ภาคอีสานใต้)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 💬 text #💠┆นครนายก (ใน #ภาคกลางตะวันออก)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 💬 text #💠┆หนองบัวลำภู (ใน #ภาคอีสานกลาง)
-    → fetch 3 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 3, upsert 0 msgs
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
 
   📥 💬 text #💠┆เพชรบูรณ์ (ใน #ภาคเหนือตอนล่าง)
-    → fetch 50 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 50, upsert 0 msgs
+    → fetch 50 / upsert 50 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 50, upsert 50 msgs
 
   📥 💬 text #💠┆สมุทรสงคราม (ใน #ภาคกลางตะวันตก)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
@@ -622,20 +970,20 @@
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 💬 text #🧑┆กรรมการจังหวัด (ใน #🟡 | ทีมฝ่ายเครือข่าย)
-    → fetch 4 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 4, upsert 0 msgs
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
 
   📥 💬 text #💠┆เชียงใหม่ (ใน #ภาคเหนือตอนบน)
-    → fetch 5 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 5, upsert 0 msgs
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
 
   📥 💬 text #💡┆ประชุม-ภูมิภาค (ใน #ภูมิภาค)
-    → fetch 4 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 4, upsert 0 msgs
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
 
   📥 💬 text #💠┆เลย (ใน #ภาคอีสานกลาง)
-    → fetch 37 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 37, upsert 0 msgs
+    → fetch 37 / upsert 37 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 37, upsert 37 msgs
 
   📥 💬 text #💠┆อุทัยธานี (ใน #ภาคกลางตะวันออก)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
@@ -647,93 +995,100 @@
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 💬 text #💠┆สระแก้ว (ใน #ภาคตะวันออก)
-    → fetch 5 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 5, upsert 0 msgs
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
 
   📥 💬 text #💡┆ประชุม-พิษณุโลก (ใน #ภาคเหนือตอนล่าง)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 💬 text #🧙┆ฟาภูมิภาค (ใน #🟣 | ทีมฟา)
-    → fetch 100 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 0 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 118 / upsert 118 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 118, upsert 118 msgs
 
   📥 💬 text #💠┆นครพนม (ใน #ภาคอีสานเหนือ)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 💬 text #💠┆ประจวบคีรีขันธ์ (ใน #ภาคกลางตะวันตก)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 💬 text #🧭┆3-จังหวัด (ใน #3 จังหวัด)
-    → fetch 12 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 12, upsert 0 msgs
+    → fetch 12 / upsert 12 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 12, upsert 12 msgs
 
   📥 💬 text #💠┆ตรัง (ใน #ภาคใต้ตอนล่าง)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 💬 text #💠┆แม่ฮ่องสอน (ใน #ภาคเหนือตอนบน)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 💬 text #💡┆ประชุม-มุกดาหาร (ใน #ภาคอีสานเหนือ)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 💬 text #💠┆นครสวรรค์ (ใน #ภาคเหนือตอนล่าง)
-    → fetch 2 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 2, upsert 0 msgs
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
 
   📥 💬 text #💡┆ประชุม-อำนาจเจริญ (ใน #ภาคอีสานเหนือ)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 💬 text #💡┆ประชุม-ฟาส่วนกลาง (ใน #🟣 | ทีมฟา)
-    → fetch 100 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 0 msgs
+    → fetch 100 / upsert 93 msgs... (hasMore: true)
+    → fetch 112 / upsert 105 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 112, upsert 105 msgs
 
   📥 💬 text #💠┆นครราชสีมา (ใน #ภาคอีสานใต้)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 💬 text #💠┆ตรัง (ใน #ภาคใต้ตอนล่าง)
-    → fetch 2 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 2, upsert 0 msgs
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
 
   📥 💬 text #💠┆พิษณุโลก (ใน #ภาคเหนือตอนล่าง)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 💬 text #💠┆ภูเก็ต (ใน #ภาคใต้ตอนบน)
-    → fetch 3 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 3, upsert 0 msgs
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
 
   📥 💬 text #💠┆สมุทรสาคร (ใน #ภาคปริมณฑล)
-    → fetch 49 / upsert 1 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 49, upsert 1 msgs
+    → fetch 49 / upsert 49 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 49, upsert 49 msgs
 
   📥 💬 text #💠┆นครปฐม (ใน #ภาคกลางตะวันตก)
-    → fetch 9 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 9, upsert 0 msgs
+    → fetch 9 / upsert 9 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 9, upsert 9 msgs
 
   📥 💬 text #🛡┆moderator (ใน #🟡 | Moderator)
-    → fetch 100 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 0 msgs
+    → fetch 100 / upsert 91 msgs... (hasMore: true)
+    → fetch 200 / upsert 189 msgs... (hasMore: true)
+    → fetch 300 / upsert 285 msgs... (hasMore: true)
+    → fetch 400 / upsert 382 msgs... (hasMore: true)
+    → fetch 500 / upsert 482 msgs... (hasMore: true)
+    → fetch 593 / upsert 575 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 593, upsert 575 msgs
 
   📥 💬 text #🔥┆อาสาส้มสู้ไฟ (ใน #🟢 | อาสาส้ม)
-    → fetch 14 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 14, upsert 0 msgs
+    → fetch 14 / upsert 14 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 14, upsert 14 msgs
 
   📥 💬 text #💻┆ทีม9geek (ใน #🔵 | ทีม9geek)
-    → fetch 67 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 67, upsert 0 msgs
+    → fetch 67 / upsert 67 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 67, upsert 67 msgs
 
   📥 💬 text #🧭┆ภาคเหนือตอนล่าง (ใน #ภาคเหนือตอนล่าง)
-    → fetch 3 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 3, upsert 0 msgs
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
 
   📥 💬 text #💠┆พัทลุง (ใน #ภาคใต้ตอนล่าง)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 💬 text #💠┆ลำปาง (ใน #ภาคเหนือตอนบน)
-    → fetch 2 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 2, upsert 0 msgs
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
 
   📥 💬 text #💡┆ประชุม-ยโสธร (ใน #ภาคอีสานกลาง)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
@@ -751,95 +1106,167 @@
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 💬 text #🐇┆follow-me
-    → fetch 100 / upsert 5 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 5 msgs
+    → fetch 100 / upsert 99 msgs... (hasMore: true)
+    → fetch 200 / upsert 199 msgs... (hasMore: true)
+    → fetch 300 / upsert 299 msgs... (hasMore: true)
+    → fetch 400 / upsert 399 msgs... (hasMore: true)
+    → fetch 500 / upsert 499 msgs... (hasMore: true)
+    → fetch 600 / upsert 599 msgs... (hasMore: true)
+    → fetch 700 / upsert 699 msgs... (hasMore: true)
+    → fetch 800 / upsert 799 msgs... (hasMore: true)
+    → fetch 900 / upsert 899 msgs... (hasMore: true)
+    → fetch 1000 / upsert 999 msgs... (hasMore: true)
+    → fetch 1100 / upsert 1099 msgs... (hasMore: true)
+    → fetch 1200 / upsert 1199 msgs... (hasMore: true)
+    → fetch 1300 / upsert 1299 msgs... (hasMore: true)
+    → fetch 1400 / upsert 1399 msgs... (hasMore: true)
+    → fetch 1500 / upsert 1499 msgs... (hasMore: true)
+    → fetch 1600 / upsert 1598 msgs... (hasMore: true)
+    → fetch 1700 / upsert 1698 msgs... (hasMore: true)
+    → fetch 1800 / upsert 1798 msgs... (hasMore: true)
+    → fetch 1900 / upsert 1898 msgs... (hasMore: true)
+    → fetch 2000 / upsert 1998 msgs... (hasMore: true)
+    → fetch 2100 / upsert 2098 msgs... (hasMore: true)
+    → fetch 2200 / upsert 2198 msgs... (hasMore: true)
+    → fetch 2300 / upsert 2298 msgs... (hasMore: true)
+    → fetch 2400 / upsert 2398 msgs... (hasMore: true)
+    → fetch 2500 / upsert 2498 msgs... (hasMore: true)
+    → fetch 2600 / upsert 2598 msgs... (hasMore: true)
+    → fetch 2700 / upsert 2698 msgs... (hasMore: true)
+    → fetch 2800 / upsert 2798 msgs... (hasMore: true)
+    → fetch 2900 / upsert 2897 msgs... (hasMore: true)
+    → fetch 3000 / upsert 2997 msgs... (hasMore: true)
+    → fetch 3100 / upsert 3097 msgs... (hasMore: true)
+    → fetch 3200 / upsert 3197 msgs... (hasMore: true)
+    → fetch 3300 / upsert 3296 msgs... (hasMore: true)
+    → fetch 3400 / upsert 3396 msgs... (hasMore: true)
+    → fetch 3500 / upsert 3496 msgs... (hasMore: true)
+    → fetch 3600 / upsert 3596 msgs... (hasMore: true)
+    → fetch 3700 / upsert 3696 msgs... (hasMore: true)
+    → fetch 3800 / upsert 3796 msgs... (hasMore: true)
+    → fetch 3900 / upsert 3896 msgs... (hasMore: true)
+    → fetch 4000 / upsert 3996 msgs... (hasMore: true)
+    → fetch 4100 / upsert 4096 msgs... (hasMore: true)
+    → fetch 4200 / upsert 4196 msgs... (hasMore: true)
+    → fetch 4300 / upsert 4296 msgs... (hasMore: true)
+    → fetch 4400 / upsert 4396 msgs... (hasMore: true)
+    → fetch 4500 / upsert 4496 msgs... (hasMore: true)
+    → fetch 4600 / upsert 4596 msgs... (hasMore: true)
+    → fetch 4700 / upsert 4696 msgs... (hasMore: true)
+    → fetch 4800 / upsert 4796 msgs... (hasMore: true)
+    → fetch 4900 / upsert 4896 msgs... (hasMore: true)
+    → fetch 5000 / upsert 4996 msgs... (hasMore: true)
+    → fetch 5100 / upsert 5096 msgs... (hasMore: true)
+    → fetch 5200 / upsert 5196 msgs... (hasMore: true)
+    → fetch 5300 / upsert 5296 msgs... (hasMore: true)
+    → fetch 5400 / upsert 5396 msgs... (hasMore: true)
+    → fetch 5500 / upsert 5496 msgs... (hasMore: true)
+    → fetch 5600 / upsert 5596 msgs... (hasMore: true)
+    → fetch 5700 / upsert 5696 msgs... (hasMore: true)
+    → fetch 5754 / upsert 5748 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5754, upsert 5748 msgs
 
   📥 💬 text #🎨┆ทีมกราฟิก (ใน #🔵 | ฝ่ายสื่อ)
-    → fetch 100 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 0 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 112 / upsert 112 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 112, upsert 112 msgs
 
   📥 💬 text #💠┆เพชรบุรี (ใน #ภาคกลางตะวันตก)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 💬 text #🏛┆กรุงเทพเหนือ (ใน #กรุงเทพมหานคร)
-    → fetch 23 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 23, upsert 0 msgs
+    → fetch 23 / upsert 23 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 23, upsert 23 msgs
 
   📥 💬 text #💡┆ประชุม-สมุทรสาคร (ใน #ภาคปริมณฑล)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 💬 text #🤹┆ฟาภาคกลาง (ใน #🟣 | ทีมฟา)
-    → fetch 100 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 0 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 200 / upsert 200 msgs... (hasMore: true)
+    → fetch 300 / upsert 300 msgs... (hasMore: true)
+    → fetch 400 / upsert 400 msgs... (hasMore: true)
+    → fetch 500 / upsert 500 msgs... (hasMore: true)
+    → fetch 600 / upsert 600 msgs... (hasMore: true)
+    → fetch 700 / upsert 700 msgs... (hasMore: true)
+    → fetch 800 / upsert 800 msgs... (hasMore: true)
+    → fetch 900 / upsert 900 msgs... (hasMore: true)
+    → fetch 1000 / upsert 1000 msgs... (hasMore: true)
+    → fetch 1100 / upsert 1100 msgs... (hasMore: true)
+    → fetch 1200 / upsert 1200 msgs... (hasMore: true)
+    → fetch 1300 / upsert 1300 msgs... (hasMore: true)
+    → fetch 1400 / upsert 1400 msgs... (hasMore: true)
+    → fetch 1454 / upsert 1454 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1454, upsert 1454 msgs
 
   📥 💬 text #💠┆ระนอง (ใน #ภาคใต้ตอนบน)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 💬 text #🧭┆ภาคตะวันออก (ใน #ภาคตะวันออก)
-    → fetch 3 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 3, upsert 0 msgs
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
 
   📥 💬 text #💠┆ขอนแก่น (ใน #ภาคอีสานกลาง)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 💬 text #💡┆ประชุม-สุโขทัย (ใน #ภาคเหนือตอนล่าง)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 💬 text #📞┆ทีมคอลเซนเตอร์ (ใน #🟢 | ฝ่ายสมาชิกสัมพันธ์)
-    → fetch 49 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 49, upsert 0 msgs
+    → fetch 49 / upsert 49 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 49, upsert 49 msgs
 
   📥 💬 text #💠┆ฉะเชิงเทรา (ใน #ภาคตะวันออก)
-    → fetch 7 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 7, upsert 0 msgs
+    → fetch 7 / upsert 7 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 7, upsert 7 msgs
 
   📥 💬 text #🏛┆กรุงเทพมหานคร (ใน #กรุงเทพมหานคร)
-    → fetch 66 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 66, upsert 0 msgs
+    → fetch 66 / upsert 66 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 66, upsert 66 msgs
 
   📥 💬 text #🧭┆ภาคกลางตะวันตก (ใน #ภาคกลางตะวันตก)
-    → fetch 7 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 7, upsert 0 msgs
+    → fetch 7 / upsert 7 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 7, upsert 7 msgs
 
   📥 💬 text #💠┆พะเยา (ใน #ภาคเหนือตอนบน)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 💬 text #🤹┆ฟา-mp101 (ใน #Archives)
-    → fetch 83 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 83, upsert 0 msgs
+    → fetch 83 / upsert 83 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 83, upsert 83 msgs
 
   📥 💬 text #💠┆ปัตตานี (ใน #3 จังหวัด)
-    → fetch 3 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 3, upsert 0 msgs
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
 
   📥 💬 text #💠┆จันทบุรี (ใน #ภาคตะวันออก)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 💬 text #📸┆ทีมช่างภาพ (ใน #🔵 | ฝ่ายสื่อ)
-    → fetch 22 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 22, upsert 0 msgs
+    → fetch 22 / upsert 22 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 22, upsert 22 msgs
 
   📥 💬 text #🎨┆ทีมภาคใต้-300 (ใน #Archives)
-    → fetch 18 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 18, upsert 0 msgs
+    → fetch 18 / upsert 18 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 18, upsert 18 msgs
 
   📥 💬 text #💠┆น่าน (ใน #ภาคเหนือตอนบน)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 💬 text #💠┆ปทุมธานี (ใน #ภาคปริมณฑล)
-    → fetch 46 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 46, upsert 0 msgs
+    → fetch 46 / upsert 46 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 46, upsert 46 msgs
 
   📥 💬 text #🤹┆ฟาตะวันออก (ใน #🟣 | ทีมฟา)
-    → fetch 76 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 76, upsert 0 msgs
+    → fetch 76 / upsert 76 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 76, upsert 76 msgs
 
   📥 💬 text #💠┆สุพรรณบุรี (ใน #ภาคกลางตะวันตก)
-    → fetch 13 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 13, upsert 0 msgs
+    → fetch 13 / upsert 13 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 13, upsert 13 msgs
 
   📥 💬 text #💠┆สงขลา (ใน #ภาคใต้ตอนล่าง)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
@@ -848,23 +1275,35 @@
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 💬 text #💠┆แพร่ (ใน #ภาคเหนือตอนบน)
-    → fetch 33 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 33, upsert 0 msgs
+    → fetch 33 / upsert 33 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 33, upsert 33 msgs
 
   📥 💬 text #💠┆อยุธยา (ใน #ภาคกลางตะวันออก)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 💬 text #💠┆ศรีสะเกษ (ใน #ภาคอีสานใต้)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 💬 text #💠┆สระบุรี (ใน #ภาคกลางตะวันออก)
-    → fetch 17 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 17, upsert 0 msgs
+    → fetch 17 / upsert 17 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 17, upsert 17 msgs
 
   📥 💬 text #👋┆แนะนำตัว (ใน #INFORMATION)
-    → fetch 100 / upsert 2 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 2 msgs
+    → fetch 100 / upsert 8 msgs... (hasMore: true)
+    → fetch 200 / upsert 19 msgs... (hasMore: true)
+    → fetch 300 / upsert 37 msgs... (hasMore: true)
+    → fetch 400 / upsert 62 msgs... (hasMore: true)
+    → fetch 500 / upsert 98 msgs... (hasMore: true)
+    → fetch 600 / upsert 140 msgs... (hasMore: true)
+    → fetch 700 / upsert 173 msgs... (hasMore: true)
+    → fetch 800 / upsert 203 msgs... (hasMore: true)
+    → fetch 900 / upsert 216 msgs... (hasMore: true)
+    → fetch 1000 / upsert 231 msgs... (hasMore: true)
+    → fetch 1100 / upsert 237 msgs... (hasMore: true)
+    → fetch 1200 / upsert 251 msgs... (hasMore: true)
+    → fetch 1282 / upsert 270 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1282, upsert 270 msgs
 
   📥 💬 text #💡┆ประชุม-กำแพงเพชร (ใน #ภาคเหนือตอนล่าง)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
@@ -879,106 +1318,109 @@
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 💬 text #💠┆ชัยภูมิ (ใน #ภาคอีสานกลาง)
-    → fetch 22 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 22, upsert 0 msgs
+    → fetch 22 / upsert 22 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 22, upsert 22 msgs
 
   📥 💬 text #💡┆ประชุม-ฟาภาคเหนือ (ใน #🟣 | ทีมฟา)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 💬 text #🧭┆ภาคเหนือตอนบน (ใน #ภาคเหนือตอนบน)
-    → fetch 13 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 13, upsert 0 msgs
+    → fetch 13 / upsert 13 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 13, upsert 13 msgs
 
   📥 💬 text #💡┆ประชุม-สกลนคร (ใน #ภาคอีสานเหนือ)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 💬 text #📕┆ข้อตกลง (ใน #INFORMATION)
-    → fetch 2 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 2, upsert 0 msgs
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
 
   📥 💬 text #💠┆ร้อยเอ็ด (ใน #ภาคอีสานใต้)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 💬 text #🧑┆ผู้ประสานงานภาค (ใน #🟡 | ทีมฝ่ายเครือข่าย)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 💬 text #🧑┆รองเลขาธิการ (ใน #🟡 | ทีมฝ่ายเครือข่าย)
-    → fetch 2 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 2, upsert 0 msgs
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
 
   📥 🧵 thread #อาสา มาร์เก็ตเพลส (ใน #🫶┆พูดคุยทั่วไป)
-    → fetch 40 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 40, upsert 0 msgs
+    → fetch 40 / upsert 40 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 40, upsert 40 msgs
 
   📥 🧵 thread #อัดคลิปอวยพร งานแต่ง เจ ประจวบฯ (ใน #🫶┆พูดคุยทั่วไป)
-    → fetch 25 / upsert 6 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 25, upsert 6 msgs
+    → fetch 25 / upsert 24 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 25, upsert 24 msgs
 
   📥 🧵 thread #เชื่อม discord กับฐานข้อมูล อาสาประชาชน (ใน #🛡┆moderator)
-    → fetch 55 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 55, upsert 0 msgs
+    → fetch 55 / upsert 55 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 55, upsert 55 msgs
 
   📥 🧵 thread #ราษฎร์กิจจา กกบห. (ใน #🛡┆moderator)
-    → fetch 100 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 0 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 200 / upsert 200 msgs... (hasMore: true)
+    → fetch 213 / upsert 213 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 213, upsert 213 msgs
 
   📥 🧵 thread #กองทุนอาสาประชาชน (ใน #🛡┆moderator)
-    → fetch 8 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 8, upsert 0 msgs
+    → fetch 8 / upsert 8 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 8, upsert 8 msgs
 
   📥 🧵 thread #Spammer (ใน #🛡┆moderator)
-    → fetch 22 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 22, upsert 0 msgs
+    → fetch 22 / upsert 22 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 22, upsert 22 msgs
 
   📥 🧵 thread #Bot OUTPUT (ใน #🛡┆moderator)
-    → fetch 5 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 5, upsert 0 msgs
+    → fetch 5 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 4 msgs
 
   📥 🧵 thread #Bot Testing (ใน #🛡┆moderator)
-    → fetch 22 / upsert 0 msgs... (hasMore: true)
-  ✅ เสร็จ — fetch 22, upsert 0 msgs
+    → fetch 5 / upsert 0 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 0 msgs
 
   📥 🧵 thread #สัมมนาชาวใต้ 4-5 เมษายน จ.นครศรีธรรมราช (ใน #🤹┆ฟาภาคใต้)
-    → fetch 12 / upsert 12 msgs... (hasMore: true)
-  ✅ เสร็จ — fetch 12, upsert 12 msgs
+    → fetch 19 / upsert 19 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 19, upsert 19 msgs
 
   📥 🧵 thread #ผู้สมัครตกมาตรฐาน อนาคตจะทำอย่างไร ให้ไม่เกิดปัญหาขึ้นอีก (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 17 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 17, upsert 0 msgs
+    → fetch 17 / upsert 17 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 17, upsert 17 msgs
 
   📥 🧵 thread #เสนอรายการ สภาประชาชน event (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 100 / upsert 1 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 1 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 169 / upsert 169 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 169, upsert 169 msgs
 
   📥 🧵 thread #วงอาสาพัฒนานโยบายเมือง เลือกตั้ง กทม. (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 6 / upsert 3 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 6, upsert 3 msgs
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
 
   📥 🧵 thread #ข้อเสนอแนะถึงพรรค หลังการเลือกตั่ง 69 (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 17 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 17, upsert 0 msgs
+    → fetch 17 / upsert 17 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 17, upsert 17 msgs
 
   📥 🧵 thread #ตามที่พรรคแจ้งเรื่องการละเมิดข้อมูลส่วนบุคคล (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 17 / upsert 1 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 17, upsert 1 msgs
+    → fetch 17 / upsert 17 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 17, upsert 17 msgs
 
   📥 🧵 thread #นายกรัฐมนตรีมีอำนาจล้นเกิน (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 2 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 2, upsert 0 msgs
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
 
   📥 🧵 thread #ประกาศ : New Feature และ ตั้งชื่อ Bot PPLE Volunteers (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 20 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 20, upsert 0 msgs
+    → fetch 20 / upsert 15 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 20, upsert 15 msgs
 
   📥 🧵 thread #👥 บทบาท (Role) ทั้งหมด (ใน #📕┆วิธีใช้งาน)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #💡 ทิปและเทคนิค (ใน #📕┆วิธีใช้งาน)
-    → fetch 7 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 7, upsert 0 msgs
+    → fetch 7 / upsert 7 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 7, upsert 7 msgs
 
   📥 🧵 thread #📍 ติดยศ-จังหวัด (ใน #📕┆วิธีใช้งาน)
     → fetch 1 / upsert 0 msgs... (hasMore: true)
@@ -989,212 +1431,231 @@
   ✅ เสร็จ — fetch 1, upsert 0 msgs
 
   📥 🧵 thread #⭐ ให้คะแนน/แจ้งปัญหา (ใน #📕┆วิธีใช้งาน)
-    → fetch 5 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 5, upsert 0 msgs
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
 
   📥 🧵 thread #📣 ร้องเรียน / แจ้งปัญหา (ใน #📕┆ข้อตกลง)
-    → fetch 3 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 3, upsert 0 msgs
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
 
   📥 🧵 thread #📋 ข้อตกลงร่วม (ใน #📕┆ข้อตกลง)
-    → fetch 2 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 2, upsert 0 msgs
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
 
   📥 🧵 thread #🗺️ ห้องทั้งหมดบน Discord (ใน #📕┆ข้อตกลง)
-    → fetch 6 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 6, upsert 0 msgs
+    → fetch 6 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 1 msgs
 
   📥 🧵 thread #สอบถามปัญหาการใช้งาน (ใน #📕┆ข้อตกลง)
     → fetch 1 / upsert 1 msgs... (hasMore: true)
   ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #ห้องหลักสูตรอบรมส.ก. 101 (เฉพาะผู้เข้าร่วมเท่านั้น) (ใน #👫┆ทีมตัวแทนสมาชิก)
-    → fetch 100 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 0 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 166 / upsert 166 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 166, upsert 166 msgs
 
   📥 🧵 thread #B2 ห้องหลักสูตรอบรมส.ก. 101 (เฉพาะผู้เข้าร่วมเท่านั้น) (ใน #👫┆ทีมตัวแทนสมาชิก)
-    → fetch 100 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 0 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 200 / upsert 200 msgs... (hasMore: true)
+    → fetch 292 / upsert 292 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 292, upsert 292 msgs
 
   📥 🧵 thread #B3 ห้องหลักสูตรอบรมส.ก. 101 (เฉพาะผู้เข้าร่วมเท่านั้น) (ใน #👫┆ทีมตัวแทนสมาชิก)
-    → fetch 100 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 0 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 109 / upsert 109 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 109, upsert 109 msgs
 
   📥 🧵 thread #(ราชบุรี) อบรมตัวแทนสมาชิกพรรค 19 เม.ย. 68 @โรงแรมริเวอร์ไซด์ไทยนำ อำเภอบ้านโป่ง (ใน #💬┆กระทู้-ทีมตัวแทนสมาชิก)
-    → fetch 75 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 75, upsert 0 msgs
+    → fetch 75 / upsert 75 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 75, upsert 75 msgs
 
   📥 🧵 thread #สไลด์ PP101 (สำหรับผู้เข้าอบรม) (ใน #💬┆กระทู้-ทีมตัวแทนสมาชิก)
-    → fetch 22 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 22, upsert 0 msgs
+    → fetch 22 / upsert 22 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 22, upsert 22 msgs
 
   📥 🧵 thread #EP.10 อาสานโยบายสงขลา (ใน #💬┆กระทู้-สื่อ)
-    → fetch 70 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 70, upsert 0 msgs
+    → fetch 70 / upsert 70 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 70, upsert 70 msgs
 
   📥 🧵 thread #EP.XX อ่าน "ทุนนิยมสอดแนม" (ใน #💬┆กระทู้-สื่อ)
-    → fetch 8 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 8, upsert 0 msgs
+    → fetch 8 / upsert 8 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 8, upsert 8 msgs
 
   📥 🧵 thread #ช่วยเหลือประชาชนสงขลา (ใน #💬┆กระทู้-สื่อ)
-    → fetch 27 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 27, upsert 0 msgs
+    → fetch 27 / upsert 27 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 27, upsert 27 msgs
 
   📥 🧵 thread #สื่อ : ช่วยเหลือทีมส้มสู้ไฟ 69 (ใน #💬┆กระทู้-สื่อ)
-    → fetch 100 / upsert 8 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 8 msgs
+    → fetch 100 / upsert 98 msgs... (hasMore: true)
+    → fetch 200 / upsert 198 msgs... (hasMore: true)
+    → fetch 225 / upsert 223 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 225, upsert 223 msgs
 
   📥 🧵 thread #อาสาประชาชน ไลฟ์สตรีม (ใน #💬┆กระทู้-สื่อ)
-    → fetch 22 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 22, upsert 0 msgs
+    → fetch 22 / upsert 22 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 22, upsert 22 msgs
 
   📥 🧵 thread #คัดกรองคนอย่างไร ไม่ให้เป็นงูเห่า (ใน #💬┆กระทู้-สื่อ)
-    → fetch 9 / upsert 1 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 9, upsert 1 msgs
+    → fetch 9 / upsert 9 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 9, upsert 9 msgs
 
   📥 🧵 thread #สิทธิเด็ก (ใน #💬┆กระทู้-สื่อ)
-    → fetch 3 / upsert 2 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 3, upsert 2 msgs
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
 
   📥 🧵 thread #นโยบายสาธารณสุขประชาชน (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 97 / upsert 3 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 97, upsert 3 msgs
+    → fetch 97 / upsert 97 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 97, upsert 97 msgs
 
   📥 🧵 thread #ยื่นรายได้และ ภงด. เพื่อยกเว้นเกณฑ์ทหาร (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 5 / upsert 1 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 5, upsert 1 msgs
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
 
   📥 🧵 thread #นโยบายสำหรับมุสลิม (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 6 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 6, upsert 0 msgs
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
 
   📥 🧵 thread #ทางออกเรื่องการเปลี่ยนคำนำหน้าช่ีอ : เริ่มที่อนุญาตให้ใช้ “นาง” แทน “นางสาว” (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 23 / upsert 19 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 23, upsert 19 msgs
+    → fetch 23 / upsert 22 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 23, upsert 22 msgs
 
   📥 🧵 thread #บำเหน็จคนมีลูก : แก้ปัญหาชนชั้นกลางมีบุตรน้อย (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #รัฐโลกวิสัย (Secular state) (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #การรวมกลุ่มของเกษตรกรอย่างมีประสิทธิภาพ (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 37 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 37, upsert 0 msgs
+    → fetch 37 / upsert 37 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 37, upsert 37 msgs
 
   📥 🧵 thread #ขอเสนอนโยบาย WFH/Hybrid ในพื้นที่ กทม. ครับ (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #ขจัดความรุนแรงต่อผู้หญิง (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #Mobile Clinic เพื่อประชาชน (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 2 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 2, upsert 0 msgs
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
 
   📥 🧵 thread #เกษตรลอยน้ำเพื่อความมั่นคงทางอาหาร (ใน #💬┆กระทู้-นโยบาย)
     → fetch 1 / upsert 1 msgs... (hasMore: true)
   ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #หลักสูตรสส.ใหม่ (ใน #🧙┆ฟาภูมิภาค)
-    → fetch 100 / upsert 71 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 71 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 167 / upsert 167 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 167, upsert 167 msgs
 
   📥 🧵 thread #บอร์ดเกม ประชาธิปไตย (ใน #🧙┆ฟาภูมิภาค)
-    → fetch 68 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 68, upsert 0 msgs
+    → fetch 68 / upsert 68 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 68, upsert 68 msgs
 
   📥 🧵 thread #อบรมสก. 10-11 มีนาคม (ใน #🧙┆ฟาภูมิภาค)
-    → fetch 88 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 88, upsert 0 msgs
+    → fetch 88 / upsert 88 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 88, upsert 88 msgs
 
   📥 🧵 thread #นโยบายพัทยา (ใน #🧙┆ฟาภูมิภาค)
-    → fetch 100 / upsert 43 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 43 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 152 / upsert 152 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 152, upsert 152 msgs
 
   📥 🧵 thread #อบรมส.ก. 10-11 มี.ค. 69 (ใน #🧙┆ฟาภูมิภาค)
-    → fetch 79 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 79, upsert 0 msgs
+    → fetch 79 / upsert 78 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 79, upsert 78 msgs
 
   📥 🧵 thread #ow (ใน #🧙┆ฟาภูมิภาค)
-    → fetch 13 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 13, upsert 0 msgs
+    → fetch 13 / upsert 13 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 13, upsert 13 msgs
 
   📥 🧵 thread #สัมมนาฟา 21-22 มีนา 69 (ใน #🧙┆ฟาภูมิภาค)
-    → fetch 100 / upsert 74 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 74 msgs
+    → fetch 100 / upsert 99 msgs... (hasMore: true)
+    → fetch 200 / upsert 199 msgs... (hasMore: true)
+    → fetch 300 / upsert 298 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 300, upsert 298 msgs
 
   📥 🧵 thread #ฟาสัมมนาสส. (21-22 ก.พ. 69) (ใน #🤹┆ฟาเฉพาะกิจ)
-    → fetch 100 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 0 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 200 / upsert 200 msgs... (hasMore: true)
+    → fetch 300 / upsert 300 msgs... (hasMore: true)
+    → fetch 364 / upsert 364 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 364, upsert 364 msgs
 
   📥 🧵 thread #หลักสูตร อาสาส้ม ??? (ใน #💬┆กระทู้-ทีมสมาชิกสัมพันธ์)
-    → fetch 4 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 4, upsert 0 msgs
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
 
   📥 🧵 thread #ขอเสนอให้ผู้สมัคร สส. ทีมจังหวัด  อาสาต่างๆในพื้นที่ เริ่มทำพื้นที่ หรือจัดกิจกรรมเข้าหาประชาชนค่ะ (ใน #💬┆กระทู้-ทีมสมาชิกสัมพันธ์)
     → fetch 1 / upsert 1 msgs... (hasMore: true)
   ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #อาสาเฝ้าสื่อผู้สมัคร (ใน #🤗┆ทีมสมาชิกสัมพันธ์)
-    → fetch 100 / upsert 6 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 6 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 157 / upsert 157 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 157, upsert 157 msgs
 
   📥 🧵 thread #บทบาทสมาชิกพรรค กับงาน กมธ. (ใน #💬┆กระทู้-ทีมงานสภา)
-    → fetch 63 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 63, upsert 0 msgs
+    → fetch 63 / upsert 63 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 63, upsert 63 msgs
 
   📥 🧵 thread #Admin ทีมล้างบ้านภาคใต้ (ใน #💧┆อาสาส้มสู้น้ำ)
-    → fetch 55 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 55, upsert 0 msgs
+    → fetch 55 / upsert 55 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 55, upsert 55 msgs
 
   📥 🧵 thread #รับอาสาอ่านนโยบายเพื่อผู้พิการทางสายตา (ใน #💬┆กระทู้-อาสาส้ม)
-    → fetch 100 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 0 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 200 / upsert 200 msgs... (hasMore: true)
+    → fetch 208 / upsert 208 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 208, upsert 208 msgs
 
   📥 🧵 thread #อาสาเฝ้าหน่วย 69 (ใน #💬┆กระทู้-อาสาส้ม)
-    → fetch 100 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 0 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 194 / upsert 194 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 194, upsert 194 msgs
 
   📥 🧵 thread #อสส. อาสาสัมพันธ์ #2 โซลบาร์ (ใน #💬┆กระทู้-อาสาส้ม)
-    → fetch 10 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 10, upsert 0 msgs
+    → fetch 10 / upsert 10 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 10, upsert 10 msgs
 
   📥 🧵 thread #เชิญมาร่วมบริจาคของและรับฟังปัญหาด้วยกันค่ะ (ใน #💬┆กระทู้-อาสาส้ม)
-    → fetch 7 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 7, upsert 0 msgs
+    → fetch 7 / upsert 7 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 7, upsert 7 msgs
 
   📥 🧵 thread #ภารกิจอาสาส้ม : ราคาหน้าตลาด (ใน #💬┆กระทู้-อาสาส้ม)
-    → fetch 2 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 2, upsert 0 msgs
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
 
   📥 🧵 thread #กิจกรรมพบปะพูดคุยกับครู นักเรียน ผู้ปกครอง โรงเรียนการศึกษาพิเศษปทุมธานี (ใน #💬┆กระทู้-อาสาส้ม)
     → fetch 5 / upsert 5 msgs... (hasMore: true)
   ✅ เสร็จ — fetch 5, upsert 5 msgs
 
   📥 🧵 thread #ค่าใช้จ่ายอาสาส้มสู้ไฟ ปี 2 (ใน #💰┆กองทุนประชาชน)
-    → fetch 100 / upsert 39 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 39 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 200 / upsert 200 msgs... (hasMore: true)
+    → fetch 247 / upsert 247 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 247, upsert 247 msgs
 
   📥 🧵 thread #แผ่นพับผู้สมัครสส. เขต ภาคกลาง (ใน #👤┆ทีมผู้สมัคร-ภาคกลาง)
-    → fetch 49 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 49, upsert 0 msgs
+    → fetch 49 / upsert 49 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 49, upsert 49 msgs
 
   📥 🧵 thread #เช็คป้ายขาด (ใน #👤┆ทีมผู้สมัคร-ภาคกลาง)
-    → fetch 13 / upsert 2 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 13, upsert 2 msgs
+    → fetch 13 / upsert 13 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 13, upsert 13 msgs
 
   📥 🧵 thread #ขายทุเรียนทอดจันทบุรีจ้าา (ใน #🛒┆pple-market)
-    → fetch 27 / upsert 26 msgs... (hasMore: true)
-  ✅ เสร็จ — fetch 27, upsert 26 msgs
+    → fetch 29 / upsert 28 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 29, upsert 28 msgs
 
   📥 🧵 thread #อาลัวอบควันเทียน (ใน #🛒┆pple-market)
-    → fetch 2 / upsert 2 msgs... (hasMore: true)
-  ✅ เสร็จ — fetch 2, upsert 2 msgs
+    → fetch 4 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 3 msgs
 
   📥 🧵 thread #ขายหนังสืองับ 2 ปกนี้ เล่มใหม่เอี่ยมอ่อง แต่ละปก ยังมีสินค้าอยู่หลายเล่ม (ใน #🛒┆pple-market)
     → fetch 2 / upsert 2 msgs... (hasMore: true)
@@ -1213,1542 +1674,1311 @@
   ✅ เสร็จ — fetch 2, upsert 2 msgs
 
   📥 🧵 thread #Check-In ทีมเชียงราย (ใน #💠┆เชียงราย)
-    → fetch 8 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 8, upsert 0 msgs
+    → fetch 8 / upsert 8 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 8, upsert 8 msgs
 
   📥 🧵 thread #รวมข่าวผู้สมัคร PC / MP (ใน #🤹┆ฟา-pc101)
-    → fetch 39 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 39, upsert 0 msgs
+    → fetch 39 / upsert 39 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 39, upsert 39 msgs
 
   📥 🧵 thread #Feedback PC101 + sharing best practice ✨ (ใน #🤹┆ฟา-pc101)
-    → fetch 40 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 40, upsert 0 msgs
+    → fetch 40 / upsert 40 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 40, upsert 40 msgs
 
   📥 🧵 thread #เสริมทัพ PC101 กรุงเทพด่วน!! (ใน #🤹┆ฟา-pc101)
-    → fetch 34 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 34, upsert 0 msgs
+    → fetch 34 / upsert 34 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 34, upsert 34 msgs
 
   📥 🧵 thread #ทีมฟา PC101 ลพบุรี ภาคกลาง รุ่น 3 (ใน #🤹┆ฟา-pc101)
-    → fetch 100 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 0 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 109 / upsert 109 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 109, upsert 109 msgs
 
   📥 🧵 thread #การคัดเลือกคนมาอบรม TOT (ใน #🤹┆ฟา-pc101)
-    → fetch 4 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 4, upsert 0 msgs
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
 
   📥 🧵 thread #Check-in @ฟา-pc101 (ใน #🤹┆ฟา-pc101)
-    → fetch 3 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 3, upsert 0 msgs
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
 
   📥 🧵 thread #เสนอชื่อ ฟาบรรยาย PC101 (ใน #🤹┆ฟา-pc101)
-    → fetch 24 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 24, upsert 0 msgs
+    → fetch 24 / upsert 24 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 24, upsert 24 msgs
 
   📥 🧵 thread #เทส (ใน #💠┆อ่างทอง)
-    → fetch 2 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 2, upsert 0 msgs
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
 
   📥 🧵 thread #ติดต่อผู้ประสานงาน-ราชบุรี (ใน #💠┆ราชบุรี)
-    → fetch 3 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 3, upsert 0 msgs
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
 
   📥 🧵 thread #Check-in ราชบุรี (ใน #💠┆ราชบุรี)
-    → fetch 10 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 10, upsert 0 msgs
+    → fetch 10 / upsert 10 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 10, upsert 10 msgs
 
   📥 🧵 thread #Kaitom Run (ใน #👤┆ทีมผู้สมัครฯ-mp101)
-    → fetch 3 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 3, upsert 0 msgs
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
 
   📥 🧵 thread #Election Intelligence - People's Party (ใน #👤┆ทีมผู้สมัครฯ-mp101)
-    → fetch 8 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 8, upsert 0 msgs
+    → fetch 8 / upsert 8 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 8, upsert 8 msgs
 
   📥 🧵 thread #อบรมทีมสื่อรอบเก็บตก (ใน #👤┆ทีมผู้สมัครฯ-mp101)
-    → fetch 2 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 2, upsert 0 msgs
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
 
   📥 🧵 thread #อบรมออนไลน์เตรียมดีเบต 13 ม.ค. โดย หมออ๋อง (ใน #👤┆ทีมผู้สมัครฯ-mp101)
-    → fetch 26 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 26, upsert 0 msgs
+    → fetch 26 / upsert 26 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 26, upsert 26 msgs
 
   📥 🧵 thread #ลิงก์เอกสารงานอบรมผู้สมัคร (ใน #👤┆ทีมผู้สมัครฯ-mp101)
-    → fetch 2 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 2, upsert 0 msgs
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
 
   📥 🧵 thread #กลุ่ม E (ใน #👤┆ทีมผู้สมัครฯ-mp101)
-    → fetch 16 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 16, upsert 0 msgs
+    → fetch 16 / upsert 16 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 16, upsert 16 msgs
 
   📥 🧵 thread #ท่องเที่ยวกรุงเทพ (ใน #📊┆ทีมนโยบาย)
-    → fetch 68 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 68, upsert 0 msgs
+    → fetch 68 / upsert 68 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 68, upsert 68 msgs
 
   📥 🧵 thread #รูปกิจกรรม สภากาแฟ 19-20 กรกฎาคม 2568 (ใน #💠┆ลพบุรี)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #เตรียมงาน PP101 ลพบุรี วันที่ 22 มิ.ย. (ใน #💠┆ลพบุรี)
-    → fetch 20 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 20, upsert 0 msgs
+    → fetch 20 / upsert 20 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 20, upsert 20 msgs
 
   📥 🧵 thread #ต้องการอาสาช่วยงานในอนุฯงบและงบ กทม. (ใน #💬┆กระทู้-ทีมงานสภา)
-    → fetch 17 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 17, upsert 0 msgs
+    → fetch 17 / upsert 17 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 17, upsert 17 msgs
 
   📥 🧵 thread #Workshop แก้ไขปัญหาที่ดินและทรัพยากรธรรมชาติ 1-2 พ.ย. 68 (ใน #💬┆กระทู้-ทีมงานสภา)
-    → fetch 23 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 23, upsert 0 msgs
+    → fetch 23 / upsert 23 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 23, upsert 23 msgs
 
   📥 🧵 thread #ข้อเสนอต่อ กระบวนการคัดสรรผู้สมัคร (ใน #💬┆กระทู้-ทีมผู้สมัครฯ)
-    → fetch 53 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 53, upsert 0 msgs
+    → fetch 53 / upsert 53 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 53, upsert 53 msgs
 
   📥 🧵 thread #รับสมัคร MP101 (รอบสอง) (ใน #💬┆กระทู้-ทีมผู้สมัครฯ)
-    → fetch 100 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 0 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 111 / upsert 111 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 111, upsert 111 msgs
 
   📥 🧵 thread #คลีนิกกฏหมาย (ใน #💬┆กระทู้-ทีมผู้สมัครฯ)
-    → fetch 5 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 5, upsert 0 msgs
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
 
   📥 🧵 thread #กำหนดการสัมภาษณ์บัญชีรายชื่อ (ใน #💬┆กระทู้-ทีมผู้สมัครฯ)
-    → fetch 100 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 0 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 200 / upsert 200 msgs... (hasMore: true)
+    → fetch 222 / upsert 222 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 222, upsert 222 msgs
 
   📥 🧵 thread #อยากเข้าอบรม PC101 (ใน #💬┆กระทู้-ทีมผู้สมัครฯ)
-    → fetch 12 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 12, upsert 0 msgs
+    → fetch 12 / upsert 12 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 12, upsert 12 msgs
 
   📥 🧵 thread #ลิงค์สำหรับส่งการบ้านหายไป? (ใน #💬┆กระทู้-ทีมผู้สมัครฯ)
-    → fetch 26 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 26, upsert 0 msgs
+    → fetch 26 / upsert 26 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 26, upsert 26 msgs
 
   📥 🧵 thread #สอบถามปัญหาไข่ต้ม (ใน #💬┆กระทู้-ทีมผู้สมัครฯ)
-    → fetch 100 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 0 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 146 / upsert 146 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 146, upsert 146 msgs
 
   📥 🧵 thread #Q&A ผู้สมัครลงเลือกตั้ง (ใน #💬┆กระทู้-ทีมผู้สมัครฯ)
-    → fetch 37 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 37, upsert 0 msgs
+    → fetch 37 / upsert 37 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 37, upsert 37 msgs
 
   📥 🧵 thread #สอบถามปัญหาระบบไข่ต้มโหวตเลือกนายกจากสมาชิกไม่ได้ครับ (ใน #💬┆กระทู้-ทีมผู้สมัครฯ)
-    → fetch 6 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 6, upsert 0 msgs
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
 
   📥 🧵 thread #วันศุกร์ที่ 18 กรกฏาคม 2568 ล้อมวงคุย นครชัยศรี-พุทธมณฑล (ใน #💬┆นครปฐม)
-    → fetch 3 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 3, upsert 0 msgs
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
 
   📥 🧵 thread #วันเสาร์ที่ 19 กรกฏาคม 68 สมาชิกสัมพันธ์ เดินไปคุยไป (ใน #💬┆นครปฐม)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #วันที่ 6 กรกฏาคมนี้ อ.เมือง จังหวัดนครปฐม มีการลงคะแนนเลือก ตทอ.กันนะคะ (ใน #💬┆นครปฐม)
-    → fetch 6 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 6, upsert 0 msgs
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
 
   📥 🧵 thread #ช่วยสำนักงานปชน.หาดใหญ่ (ใน #💰┆กองทุนประชาชน)
-    → fetch 3 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 3, upsert 0 msgs
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
 
   📥 🧵 thread #งบเครื่องจักรเคลียร์ขยะ (ใน #💰┆กองทุนประชาชน)
-    → fetch 49 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 49, upsert 0 msgs
+    → fetch 49 / upsert 49 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 49, upsert 49 msgs
 
   📥 🧵 thread #โครงการ "ทางม้าลายปลอดภัย" (ใน #🤹┆ทีมกระบวนกร)
-    → fetch 100 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 0 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 111 / upsert 111 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 111, upsert 111 msgs
 
   📥 🧵 thread #รับสมัครอาสาช่วยงานพื้นที่กรุงเทพมมหานคร เขต 1 (สส.บูม) ค่ะ (ใน #💬┆กระทู้-กรุงเทพ)
-    → fetch 5 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 5, upsert 0 msgs
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
 
   📥 🧵 thread #ติดต่อ ผู้ประสานงานกรุงเทพ (ใน #💬┆กระทู้-กรุงเทพ)
-    → fetch 4 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 4, upsert 0 msgs
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
 
   📥 🧵 thread #คาราวานประชาชน (ใน #👤┆ทีมผู้สมัคร-ภาคกลาง)
-    → fetch 8 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 8, upsert 0 msgs
+    → fetch 8 / upsert 8 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 8, upsert 8 msgs
 
   📥 🧵 thread #Discord ผอ. กองฯ ผู้ประสานงานแทนผู้สมัคร และทีมงาน (ใน #👤┆ทีมผู้สมัคร-ภาคกลาง)
-    → fetch 11 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 11, upsert 0 msgs
+    → fetch 11 / upsert 11 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 11, upsert 11 msgs
 
   📥 🧵 thread #บันทึกการประชุมกอล. ภาคกลาง (ใน #👤┆ทีมผู้สมัคร-ภาคกลาง)
-    → fetch 2 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 2, upsert 0 msgs
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
 
   📥 🧵 thread #ขอเช็คชื่ออ่านออกเสียง (ผู้สมัครบางท่าน) (ใน #👤┆ทีมผู้สมัคร-ภาคกลาง)
-    → fetch 5 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 5, upsert 0 msgs
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
 
   📥 🧵 thread #ส่งข้อมูลผลิตแผ่นพับหาเสียง (ใน #👤┆ทีมผู้สมัคร-ภาคกลาง)
   ✅ เสร็จ — fetch 0, upsert 0 msgs
 
   📥 🧵 thread #สส. พรรค กับจุดยืน secular state (ใน #📄┆secular-state)
-    → fetch 2 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 2, upsert 0 msgs
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
 
   📥 🧵 thread #ช่องทางการร้องเรียนพรรค (ใน #🛡┆เจ้าหน้าที่พรรค)
-    → fetch 4 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 4, upsert 0 msgs
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
 
   📥 🧵 thread #(ลพบุรี - สระบุรี) กรรมการ MP101 (ใน #🧑┆กรรมการ-mp101)
-    → fetch 17 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 17, upsert 0 msgs
+    → fetch 17 / upsert 17 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 17, upsert 17 msgs
 
   📥 🧵 thread #(ราชบุรี) กรรมการ MP101 (ใน #🧑┆กรรมการ-mp101)
-    → fetch 73 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 73, upsert 0 msgs
+    → fetch 73 / upsert 73 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 73, upsert 73 msgs
 
   📥 🧵 thread #Check-In กรรมการ-MP101 (ใน #🧑┆กรรมการ-mp101)
-    → fetch 9 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 9, upsert 0 msgs
+    → fetch 9 / upsert 9 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 9, upsert 9 msgs
 
   📥 🧵 thread #กฏหมายลาคลอด 180  วัน โอกาสผ่านมีแค่ไหน (ใน #💬┆กระทู้-ปีกงานอื่นๆ)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #รายชื่อผู้เข้าร่วม PP101 ที่น่าเชิญเข้า TOT 5 กทม (ใน #🤹┆ฟากรุงเทพ)
-    → fetch 8 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 8, upsert 0 msgs
+    → fetch 8 / upsert 8 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 8, upsert 8 msgs
 
   📥 🧵 thread #ถอดบทเรียนกระบวนภาพรวมกระบวนการทำงาน + Session Design PP101 (ใน #🤹┆ฟากรุงเทพ)
-    → fetch 10 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 10, upsert 0 msgs
+    → fetch 10 / upsert 10 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 10, upsert 10 msgs
 
   📥 🧵 thread #PPL101 1-2 มี.ค. 68 (ใน #🤹┆ฟากรุงเทพ)
-    → fetch 30 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 30, upsert 0 msgs
+    → fetch 30 / upsert 30 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 30, upsert 30 msgs
 
   📥 🧵 thread #เตรียมงาน 22-23 ก.พ. (ใน #🤹┆ฟากรุงเทพ)
-    → fetch 11 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 11, upsert 0 msgs
+    → fetch 11 / upsert 11 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 11, upsert 11 msgs
 
   📥 🧵 thread #เสนอภารกิจอาสาสู้ศึกเลือกตั้ง (ใน #💬┆กระทู้-อาสาส้ม)
-    → fetch 22 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 22, upsert 0 msgs
+    → fetch 22 / upsert 22 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 22, upsert 22 msgs
 
   📥 🧵 thread #หาอาสาสมัครช่วยงาน Vote right now (ใน #💬┆กระทู้-อาสาส้ม)
-    → fetch 12 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 12, upsert 0 msgs
+    → fetch 12 / upsert 12 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 12, upsert 12 msgs
 
   📥 🧵 thread #โทรหาสมาชิกอำเภอหาดใหญ่ (ใน #💬┆กระทู้-อาสาส้ม)
-    → fetch 10 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 10, upsert 0 msgs
+    → fetch 10 / upsert 10 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 10, upsert 10 msgs
 
   📥 🧵 thread #อาสาล้างบ้านประชาชนภาคใต้ (ใน #💬┆กระทู้-อาสาส้ม)
-    → fetch 100 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 0 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 200 / upsert 200 msgs... (hasMore: true)
+    → fetch 300 / upsert 300 msgs... (hasMore: true)
+    → fetch 327 / upsert 327 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 327, upsert 327 msgs
 
   📥 🧵 thread #ประสานงาน #น้ำท่วมหาดใหญ่68 (ใน #💬┆กระทู้-อาสาส้ม)
-    → fetch 100 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 0 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 200 / upsert 200 msgs... (hasMore: true)
+    → fetch 300 / upsert 300 msgs... (hasMore: true)
+    → fetch 400 / upsert 400 msgs... (hasMore: true)
+    → fetch 500 / upsert 500 msgs... (hasMore: true)
+    → fetch 600 / upsert 600 msgs... (hasMore: true)
+    → fetch 700 / upsert 700 msgs... (hasMore: true)
+    → fetch 800 / upsert 800 msgs... (hasMore: true)
+    → fetch 900 / upsert 900 msgs... (hasMore: true)
+    → fetch 973 / upsert 973 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 973, upsert 973 msgs
 
   📥 🧵 thread #ส่งต่อเคสดำให้หน้างาน (ใน #💬┆กระทู้-อาสาส้ม)
-    → fetch 13 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 13, upsert 0 msgs
+    → fetch 13 / upsert 13 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 13, upsert 13 msgs
 
   📥 🧵 thread #คอลเซนเตอร์ กรณีคน/สัตว์สูญหาย (ใน #💬┆กระทู้-อาสาส้ม)
-    → fetch 100 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 0 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 138 / upsert 138 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 138, upsert 138 msgs
 
   📥 🧵 thread #ห้องปรึกษาหมอ/ฮีลใจ (ใน #💬┆กระทู้-อาสาส้ม)
-    → fetch 29 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 29, upsert 0 msgs
+    → fetch 29 / upsert 29 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 29, upsert 29 msgs
 
   📥 🧵 thread #คอลเซนเตอร์รีเช็คเคส‼️ (ใน #💬┆กระทู้-อาสาส้ม)
-    → fetch 100 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 0 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 126 / upsert 126 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 126, upsert 126 msgs
 
   📥 🧵 thread #ระบบตามหาคนหายหรือสัตว์หาย (ใน #💬┆กระทู้-อาสาส้ม)
-    → fetch 100 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 0 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 200 / upsert 200 msgs... (hasMore: true)
+    → fetch 300 / upsert 300 msgs... (hasMore: true)
+    → fetch 355 / upsert 355 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 355, upsert 355 msgs
 
   📥 🧵 thread #เคส "คน-สัตว์" หาย (ใน #💬┆กระทู้-อาสาส้ม)
-    → fetch 16 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 16, upsert 0 msgs
+    → fetch 16 / upsert 16 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 16, upsert 16 msgs
 
   📥 🧵 thread #รวมแหล่งรับบริจาคของ (ใน #💬┆กระทู้-อาสาส้ม)
-    → fetch 57 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 57, upsert 0 msgs
+    → fetch 57 / upsert 57 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 57, upsert 57 msgs
 
   📥 🧵 thread #รวบรวมเคสน้ำท่วม (ใน #💬┆กระทู้-อาสาส้ม)
-    → fetch 100 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 0 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 200 / upsert 200 msgs... (hasMore: true)
+    → fetch 300 / upsert 300 msgs... (hasMore: true)
+    → fetch 400 / upsert 400 msgs... (hasMore: true)
+    → fetch 500 / upsert 500 msgs... (hasMore: true)
+    → fetch 600 / upsert 600 msgs... (hasMore: true)
+    → fetch 700 / upsert 700 msgs... (hasMore: true)
+    → fetch 800 / upsert 800 msgs... (hasMore: true)
+    → fetch 900 / upsert 900 msgs... (hasMore: true)
+    → fetch 1000 / upsert 1000 msgs... (hasMore: true)
+    → fetch 1100 / upsert 1100 msgs... (hasMore: true)
+    → fetch 1200 / upsert 1200 msgs... (hasMore: true)
+    → fetch 1300 / upsert 1300 msgs... (hasMore: true)
+    → fetch 1400 / upsert 1400 msgs... (hasMore: true)
+    → fetch 1500 / upsert 1500 msgs... (hasMore: true)
+    → fetch 1600 / upsert 1600 msgs... (hasMore: true)
+    → fetch 1700 / upsert 1700 msgs... (hasMore: true)
+    → fetch 1758 / upsert 1758 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1758, upsert 1758 msgs
 
   📥 🧵 thread #High impact scale | ขอน้ำหรืออาหารด่วน (ใน #💬┆กระทู้-อาสาส้ม)
-    → fetch 100 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 0 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 113 / upsert 113 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 113, upsert 113 msgs
 
   📥 🧵 thread #อาสาปชน. ให้ที่พักฟรี (ใน #💬┆กระทู้-อาสาส้ม)
-    → fetch 8 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 8, upsert 0 msgs
+    → fetch 8 / upsert 8 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 8, upsert 8 msgs
 
   📥 🧵 thread #คอนแทคผู้ประสานจังหวัด (ใน #🧑┆ผู้ประสานงานจังหวัด)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #การส่งคะแนนเข้าระบบพรรค (ใน #🧑┆ผู้ประสานงานจังหวัด)
-    → fetch 5 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 5, upsert 0 msgs
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
 
   📥 🧵 thread #เป็นไปได้ไหมถ้าเราจะตั้งทีมท้องถิ่น (ใน #💬┆กระทู้-ทีมสมาชิกสัมพันธ์)
-    → fetch 12 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 12, upsert 0 msgs
+    → fetch 12 / upsert 12 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 12, upsert 12 msgs
 
   📥 🧵 thread #คำแนะนำในการทำสื่อ Social (ใน #💬┆กระทู้-ทีมสมาชิกสัมพันธ์)
-    → fetch 30 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 30, upsert 0 msgs
+    → fetch 30 / upsert 30 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 30, upsert 30 msgs
 
   📥 🧵 thread #วิธีผูกมิตรและชนะใจคน (ใน #💬┆กระทู้-ทีมสมาชิกสัมพันธ์)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #สวัสดีครับทีมฟา (ภาคตะวันออก) (ใน #💬┆กระทู้-ทีมสมาชิกสัมพันธ์)
-    → fetch 26 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 26, upsert 0 msgs
+    → fetch 26 / upsert 26 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 26, upsert 26 msgs
 
   📥 🧵 thread #ผู้เข้าร่วม TOT ตะวันออก (ใน #💬┆กระทู้-ทีมสมาชิกสัมพันธ์)
-    → fetch 21 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 21, upsert 0 msgs
+    → fetch 21 / upsert 21 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 21, upsert 21 msgs
 
   📥 🧵 thread #การลง ADS บน Facebook (ใน #🗞┆ทีมสื่อ)
-    → fetch 4 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 4, upsert 0 msgs
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
 
   📥 🧵 thread #รวม LINK สำหรับทำสื่อ (ใน #🗞┆ทีมสื่อ)
-    → fetch 13 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 13, upsert 0 msgs
+    → fetch 13 / upsert 13 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 13, upsert 13 msgs
 
   📥 🧵 thread #สิ่งที่ควรระวังหลังเจอวิกฤตน้ำท่วม (ใน #🗞┆ทีมสื่อ)
-    → fetch 13 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 13, upsert 0 msgs
+    → fetch 13 / upsert 13 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 13, upsert 13 msgs
 
   📥 🧵 thread #ทีมสื่อ น้ำท่วมภาคใต้ 68 (ใน #🗞┆ทีมสื่อ)
-    → fetch 84 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 84, upsert 0 msgs
+    → fetch 84 / upsert 84 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 84, upsert 84 msgs
 
   📥 🧵 thread #ชวนคิด motto ทำโลโก้สำหรับเครือข่าย (ใน #🗞┆ทีมสื่อ)
-    → fetch 18 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 18, upsert 0 msgs
+    → fetch 18 / upsert 18 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 18, upsert 18 msgs
 
   📥 🧵 thread #ห้องลงมีม + ทำอีโมจิ/สติกเกอร์ (ใน #🫶┆พูดคุยทั่วไป)
-    → fetch 53 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 53, upsert 0 msgs
+    → fetch 53 / upsert 53 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 53, upsert 53 msgs
 
   📥 🧵 thread #ว่าที่ผู้สมัคร สก.เขตบางกะปิครับ (ใน #🫶┆พูดคุยทั่วไป)
-    → fetch 2 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 2, upsert 0 msgs
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
 
   📥 🧵 thread #หาอาสาที่สนใจเรื่องการทำระบบศูนย์กลางบริการภาครัฐค่ะ (ใน #🫶┆พูดคุยทั่วไป)
-    → fetch 14 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 14, upsert 0 msgs
+    → fetch 14 / upsert 14 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 14, upsert 14 msgs
 
   📥 🧵 thread #หาผู้เชี่ยวชาญระบบคมนาคมขนส่งทางราง (ใน #🫶┆พูดคุยทั่วไป)
-    → fetch 3 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 3, upsert 0 msgs
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
 
   📥 🧵 thread #ออกเกียรติบัตรในนามพรรค (ใน #🫶┆พูดคุยทั่วไป)
-    → fetch 13 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 13, upsert 0 msgs
+    → fetch 13 / upsert 13 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 13, upsert 13 msgs
 
   📥 🧵 thread #มีจังหวัดไหนจัดกิจกรรมสงกรานต์บ้าง (ใน #🫶┆พูดคุยทั่วไป)
-    → fetch 11 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 11, upsert 0 msgs
+    → fetch 11 / upsert 11 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 11, upsert 11 msgs
 
   📥 🧵 thread #การสร้างเรือนจำที่ดีขึ้น (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #นโยบายสวัสดิการแห่งรัฐสำหรับโรคหายาก SMA (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #นโยบายระบบป้องกันประเทศจากการโจมตีทางอากาศของพรรคประชาชน (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 3 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 3, upsert 0 msgs
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
 
   📥 🧵 thread #การใช้ประโยชน์อย่างยั่งยืนในพื้นที่คุ้มครองทางทะเล (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #ถึงเวลาเปลี่ยนจากประชานิยม → เศรษฐกิจที่ยืนบนขาของตัวเอง (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #พ.ร.ก.เบอร์แสดงป้องกันและ ปราบปรามสแกมเมอร์ (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #"ขนาดของหน่วยการปกครองท้องถิ่น" กับ "ประสิทธิภาพในการจัดสรรบริการสาธารณะ" (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #การฝึกอบรมเป็นเครื่องมือในการเปลี่ยนแปลงวิธีคิดและการกระทำของเจ้าหน้าที่ตำรวจ (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #เจรจาหยุดยิง v.2 681221 (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #ความรู้สึกไม่เป็นธรรมมีผลต่อการจ่ายภาษี (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #บราซิลพลิกโฉมจากผู้รับความช่วยเหลือด้านอาหาร มาเป็นมหาอำนาจด้านการส่งออกสินค้าเกษตรอย่างไร (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #Travel Demand Management เพื่อแก้ไขปัญหาการเดินทางภายในเมือง (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 4 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 4, upsert 0 msgs
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
 
   📥 🧵 thread #ฝากนโยบายส่งเสริมและกำกับ AI กับว่าที่รัฐมนตรี DE พรรคเราด้วยครับ (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #เน้นย้ำ: การให้คำปรึกษาสามารถเพิ่มโอกาสสำเร็จการศึกษาสำหรับนักเรียนที่มีรายได้น้อย กรณีศึกษา US (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #การขึ้นค่าแรงขั้นต่ำมีผลต่อแรงงานนอกระบบอย่างไรในประเทศกำลังพัฒนา กรณีศึกษาประเทศบราซิล (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #การเข้าถึงตลาดสินค้าของเกษตรกรจากหลักฐานวิจัย (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #อยากฝากนโยบายด้านเศรษฐกิจนี้ไปถึงทีมทำนโยบายพรรคครับ (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #ทางออกที่คาดไม่ถึง: โครงการบำนาญสำหรับชนบทรูปแบบใหม่ กรณีศึกษาประเทศจีน (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #สร้างสถาบันสันติภาพ (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #"ให้ข้อมูล" VS "ให้เงิน" แบบไหนให้ผลสัมฤทธิ์ทางการเรียนและผลตอบแทนระยะยาวของนักเรียนดีกว่ากัน (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #หลักฐานเชิงประจักษ์: การลดมลพิษทางอากาศด้วยเครื่องมือทางเศรษฐศาสตร์ กรณีศึกษาประเทศอินเดีย (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 2 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 2, upsert 0 msgs
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
 
   📥 🧵 thread #เมื่อครอบครัวผู้มีรายได้น้อยได้รับเงินสดโดยไม่มีเงื่อนไขใดๆ ชีวิตของพวกเขาก็จะดีขึ้นอย่างเห็นได้ชัด (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #การขึ้นค่าจ้างขั้นต่ำจะช่วยลดหรือเพิ่มความยากจนขึ้นอยู่กับลักษณะของตลาดแรงงานและครัวเรือน (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #การโอนเงินอย่างรวดเร็วเพื่อรับมือหลังเกิดน้ำท่วม (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #เทคโนโลยีการศึกษา (EdTech) มุมมองจากหลักฐานวิจัย (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #การอพยพ ช่วงวิกฤตธรรมชาติ (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 6 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 6, upsert 0 msgs
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
 
   📥 🧵 thread #นโยบายด้านการท่องเที่ยว ท่องเที่ยวชุมชนยั่งยืน ท่องเที่ยวดึงชาวต่างชาติ (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 22 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 22, upsert 0 msgs
+    → fetch 22 / upsert 22 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 22, upsert 22 msgs
 
   📥 🧵 thread #การป้องกันการผูกขาดการแก้ รธน. จากเสียงข้างมาก (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #นโยบายด้านคนพิการ (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 4 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 4, upsert 0 msgs
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
 
   📥 🧵 thread #ทีมนโยบายจังหวัดบน KM (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 31 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 31, upsert 0 msgs
+    → fetch 31 / upsert 31 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 31, upsert 31 msgs
 
   📥 🧵 thread #ทดลองใส่ Idea สอน AI ทำนโยบายผลักดันธุรกิจสร้างสรรค์ (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 18 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 18, upsert 0 msgs
+    → fetch 18 / upsert 18 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 18, upsert 18 msgs
 
   📥 🧵 thread #รัฐสวัสดิการทางดิจิทัล (Digital Welfare Stage) (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 2 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 2, upsert 0 msgs
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
 
   📥 🧵 thread #ปฎิรูปและยกร่าง พรบ. การวางแผนของประเทศ (National Planning Act.) (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 3 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 3, upsert 0 msgs
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
 
   📥 🧵 thread #ที่ปรึกษากฎหมายอัจฉริยะแห่งชาติ (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 8 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 8, upsert 0 msgs
+    → fetch 8 / upsert 8 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 8, upsert 8 msgs
 
   📥 🧵 thread #เกี่ยวกับพรรค นโยบายพรรค ? (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 9 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 9, upsert 0 msgs
+    → fetch 9 / upsert 9 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 9, upsert 9 msgs
 
   📥 🧵 thread #แก้ไขปัญหาที่ดินทำกิน คืนกรรมสิทธิ์ให้ประชาชน (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 6 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 6, upsert 0 msgs
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
 
   📥 🧵 thread #ถ้าทำนโยบายลดคอรัปชั่นกันจริงจัง จะเปลี่ยนกลับเป็นงบประมาณได้แค่ไหน (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 10 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 10, upsert 0 msgs
+    → fetch 10 / upsert 10 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 10, upsert 10 msgs
 
   📥 🧵 thread #ปราบคอรัปชั่น (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 5 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 5, upsert 0 msgs
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
 
   📥 🧵 thread #สิทธิรัฐ -รางวัล ของแจก หรือควรเท่าเทียม (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #ข้อเสนอนโยบายกองทุนความมั่งคั่งแห่งชาติ (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 7 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 7, upsert 0 msgs
+    → fetch 7 / upsert 7 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 7, upsert 7 msgs
 
   📥 🧵 thread #นโยบายการค้าออนไลน์แพลตฟอร์มต่างประเทศ (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 13 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 13, upsert 0 msgs
+    → fetch 13 / upsert 13 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 13, upsert 13 msgs
 
   📥 🧵 thread #ตกผลึกประเทศไทย อุดมการณ์ทางการเมืองและเศรษฐกิจ (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 2 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 2, upsert 0 msgs
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
 
   📥 🧵 thread #นโยบายครอบครัวเข้มแข็ง (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 15 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 15, upsert 0 msgs
+    → fetch 15 / upsert 15 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 15, upsert 15 msgs
 
   📥 🧵 thread #ปฎิรูป สหกรณ์ไทย จากเจ้าหนี้ชุมชน สู่พลังเศรษฐกิจใหม่ของประเทศ (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #ปฏิรูปที่ดินครั้งสุดท้าย ทางรอดเดียวของประเทศ เปลี่ยน สปก เป็น โฉนด (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #การปฏิรูปที่ดินครั้งนี้คือ โอกาสครั้งสุดท้าย ในการสร้างความเสมอภาคทางเศรษฐกิจในประเทศไทย (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 6 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 6, upsert 0 msgs
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
 
   📥 🧵 thread #ชวนแลกเปลี่ยนไอเดียกาว ๆ เสนอวิธีใหม่ในการสู้กันเพื่อตัดสินความขัดแย้งระหว่างประเทศแทนการรบแบบเดิม (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 10 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 10, upsert 0 msgs
+    → fetch 10 / upsert 10 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 10, upsert 10 msgs
 
   📥 🧵 thread #Secularism (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 13 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 13, upsert 0 msgs
+    → fetch 13 / upsert 13 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 13, upsert 13 msgs
 
   📥 🧵 thread #🇹🇭 ถึงเวลาชาวนาไทยส่งออกข้าวเอง! 🌾 (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #รัฐบาล “โกหก” ตัวเลขการนำเข้า “ข้าวโพดเลี้ยงสัตว์” (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #ทำไม สหกรณ์ไทย ถึง ล้มเหลว? และ มีข้อเสนอ อย่างไร? (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #สหกรณ์เป็นของสมาชิกจริงหรือ (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #ชาวนาไทย จะพึ่งพาตัวเองได้อย่างไร? เริ่มต้นจาก “สหกรณ์ชาวนาไทย”ส่งออกข้าว สร้างแบรนด์ข้าวของตัว (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #นโยบาย ปรับสัดส่วน ลดหย่อยภาษีในกลุ่ม ประกันชีวิต (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 22 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 22, upsert 0 msgs
+    → fetch 22 / upsert 22 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 22, upsert 22 msgs
 
   📥 🧵 thread #นำเสนอ นโยบาย เกษตรและ ชนบท ครับ (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 3 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 3, upsert 0 msgs
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
 
   📥 🧵 thread #งบซ่อมบำรุง (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 6 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 6, upsert 0 msgs
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
 
   📥 🧵 thread #บทเรียน ความขัดแย้ง ไทย - กัมพูชา 2568 (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #หนังสือ: #อันตรายของชาตินิยมดาบสองคม ที่ต้องใช้อย่างมีเหตุผล (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #ร่าง พระราชบัญญัติ ส่งเสริมการใช้พลังงานแสงอาทิตย์ พ.ศ. ....(เพื่อ พิจารณา ประกบ ร่าง ครม.) (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 2 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 2, upsert 0 msgs
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
 
   📥 🧵 thread #เสนอ รวม 3 กองทุน สุขภาพไทย ประกันสังคม ข้าราชการ และ บัตรทอง เพื่อความเท่าเทียม (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 9 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 9, upsert 0 msgs
+    → fetch 9 / upsert 9 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 9, upsert 9 msgs
 
   📥 🧵 thread #นโยบายรณรงค์ตรวจคัดกรองมะเร็งปากมดลูกใน พื้นที่กทม. (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 2 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 2, upsert 0 msgs
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
 
   📥 🧵 thread #แบบสอบถามเรื่องภาระหนี้และดอกเบี้ย (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 3 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 3, upsert 0 msgs
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
 
   📥 🧵 thread #ข้อเสนอ ปฏิรูป การศึกษา และ กระทรวงศึกษาธิการ (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 11 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 11, upsert 0 msgs
+    → fetch 11 / upsert 11 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 11, upsert 11 msgs
 
   📥 🧵 thread #อุดมการณ์สหกรณ์สร้างชาติ : ให้ขบวนการสหกรณ์เป็นกลไกขับเคลื่อนเศรษฐกิจฐานราก (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 9 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 9, upsert 0 msgs
+    → fetch 9 / upsert 9 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 9, upsert 9 msgs
 
   📥 🧵 thread #ข้อเสนอนโยบายกองทุนบำนาญเพื่อประชาชน (People’s Pension Fund) (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 8 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 8, upsert 0 msgs
+    → fetch 8 / upsert 8 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 8, upsert 8 msgs
 
   📥 🧵 thread #อายัดบัญชีคนโกง บัญชีม้า (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 3 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 3, upsert 0 msgs
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
 
   📥 🧵 thread #มะพร้าวเผา🥥ไม่เผา (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 29 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 29, upsert 0 msgs
+    → fetch 29 / upsert 29 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 29, upsert 29 msgs
 
   📥 🧵 thread #นโยบายความยั่งยืนของมะพร้าวน้ำหอม (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 2 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 2, upsert 0 msgs
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
 
   📥 🧵 thread #เสนอให้มีการจัดตั้งบริษัทเพื่อสนับสนุนพรรคประชาชน (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 9 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 9, upsert 0 msgs
+    → fetch 9 / upsert 9 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 9, upsert 9 msgs
 
   📥 🧵 thread #ปรับปรุงพรบ.คณะสงฆ์2505และกฏมหาเถรสมาคม (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 15 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 15, upsert 0 msgs
+    → fetch 15 / upsert 15 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 15, upsert 15 msgs
 
   📥 🧵 thread #ไร่มันสำปะหลัง ที่ถูกทอดทิ้ง จาก รัฐไทย (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 11 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 11, upsert 0 msgs
+    → fetch 11 / upsert 11 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 11, upsert 11 msgs
 
   📥 🧵 thread #ชาวสวนปาล์ม ถูกทิ้งไว้กลางทาง และ ข้อเสนอ แก้ปัญหาชาวสวนปาล์ม (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 3 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 3, upsert 0 msgs
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
 
   📥 🧵 thread #นำเสนอ ร่าง พระราชบัญญัติหลักประกันคุณภาพการศึกษาแห่งชาติ พ.ศ. ...... (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #พรบ.บำนาญประชาชน (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 8 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 8, upsert 0 msgs
+    → fetch 8 / upsert 8 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 8, upsert 8 msgs
 
   📥 🧵 thread #นโยบายลดอัตราดอกเบี้ยอย่างสูง และปิดช่องว่างการคิดดอกเบี้ยทบต้น (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #ปัญหา ม.112 และ ข้อเสนอแก้ไข อย่างมี รูปธรรม (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #ปาล์มน้ำมัน-สวนปาล์ม (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 12 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 12, upsert 0 msgs
+    → fetch 12 / upsert 12 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 12, upsert 12 msgs
 
   📥 🧵 thread #ยางพารา - สวนยางพารา (ใน #💬┆กระทู้-นโยบาย)
-    → fetch 8 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 8, upsert 0 msgs
+    → fetch 8 / upsert 8 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 8, upsert 8 msgs
 
   📥 🧵 thread #ติดต่อ ผู้ประสานงานอยุธยา (ใน #💠┆อยุธยา)
-    → fetch 7 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 7, upsert 0 msgs
+    → fetch 7 / upsert 7 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 7, upsert 7 msgs
 
   📥 🧵 thread #Check-In ทีมอยุธยา (ใน #💠┆อยุธยา)
-    → fetch 2 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 2, upsert 0 msgs
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
 
   📥 🧵 thread #EP.XX GBV (ใน #💬┆กระทู้-สื่อ)
-    → fetch 9 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 9, upsert 0 msgs
+    → fetch 9 / upsert 9 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 9, upsert 9 msgs
 
   📥 🧵 thread #แชร์ สื่อหาเสียง 69 บน Canva (ใน #💬┆กระทู้-สื่อ)
-    → fetch 100 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 0 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 161 / upsert 161 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 161, upsert 161 msgs
 
   📥 🧵 thread #คู่มืออาสาเฝ้าสื่อหน่วย (ใน #💬┆กระทู้-สื่อ)
-    → fetch 7 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 7, upsert 0 msgs
+    → fetch 7 / upsert 7 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 7, upsert 7 msgs
 
   📥 🧵 thread #ภารกิจอาสาสู้ศึกเลือกตั้ง 69 (ใน #💬┆กระทู้-สื่อ)
-    → fetch 42 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 42, upsert 0 msgs
+    → fetch 42 / upsert 42 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 42, upsert 42 msgs
 
   📥 🧵 thread #คู่มือเฝ้าหน่วยเลือกตั้ง (ใน #💬┆กระทู้-สื่อ)
-    → fetch 7 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 7, upsert 0 msgs
+    → fetch 7 / upsert 7 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 7, upsert 7 msgs
 
   📥 🧵 thread #ใครมีไฟล์ภาพสำหรับทำ backdrop สำหรับงานปราศรัยบ้างครับ (ใน #💬┆กระทู้-สื่อ)
-    → fetch 2 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 2, upsert 0 msgs
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
 
   📥 🧵 thread #สื่อโปรโมทอาสาอ่านนโยบายพรรค เลือกตั้ง 69 (ใน #💬┆กระทู้-สื่อ)
-    → fetch 10 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 10, upsert 0 msgs
+    → fetch 10 / upsert 10 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 10, upsert 10 msgs
 
   📥 🧵 thread #ทีมสื่อพรรคช่วยทำคู่มือการโพสต์ภาพลงสื่อต่าง ๆ ให้ผู้สมัครมือใหม่ได้ไหมครับ (ใน #💬┆กระทู้-สื่อ)
-    → fetch 3 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 3, upsert 0 msgs
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
 
   📥 🧵 thread #Series : BEHIND THE VOTE : กองหลังเลือกตั้ง (ใน #💬┆กระทู้-สื่อ)
-    → fetch 99 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 99, upsert 0 msgs
+    → fetch 99 / upsert 99 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 99, upsert 99 msgs
 
   📥 🧵 thread #คู่มืออยู่กับภัยพิบัติน้ำท่วม (ใน #💬┆กระทู้-สื่อ)
-    → fetch 48 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 48, upsert 0 msgs
+    → fetch 48 / upsert 48 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 48, upsert 48 msgs
 
   📥 🧵 thread #หาอาสาออกแบบวาดรูปมาสคอตประจำแคมเปญยุทธศาสตร์เลือกตั้งพรรค (ใน #💬┆กระทู้-สื่อ)
-    → fetch 35 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 35, upsert 0 msgs
+    → fetch 35 / upsert 35 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 35, upsert 35 msgs
 
   📥 🧵 thread #EP.XX Public Lecture ข้อความคิดทางการเมืองของ อันโตนิโย กรัมชี่ (ใน #💬┆กระทู้-สื่อ)
-    → fetch 2 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 2, upsert 0 msgs
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
 
   📥 🧵 thread #หาอาสาทำ infographic 4 มาตรการจัดซื้อจัดจ้าง เป้าหมายประหยัดงบแสนล้าน จากภาษีประชาชน ครับ (ใน #💬┆กระทู้-สื่อ)
-    → fetch 5 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 5, upsert 0 msgs
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
 
   📥 🧵 thread #ประเทศไทยตอนนี้ไม่ได้ต้องการคนมีประสบการณ์ แต่ต้องการคนมาเปลี่ยนแปลงขั้วอำนาจ (ใน #💬┆กระทู้-สื่อ)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #ขอช่วยทำกราฟิก ปชสพ (ใน #💬┆กระทู้-สื่อ)
-    → fetch 10 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 10, upsert 0 msgs
+    → fetch 10 / upsert 10 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 10, upsert 10 msgs
 
   📥 🧵 thread #งานสื่อ : อาสาล้างบ้าน (ใน #💬┆กระทู้-สื่อ)
-    → fetch 56 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 56, upsert 0 msgs
+    → fetch 56 / upsert 56 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 56, upsert 56 msgs
 
   📥 🧵 thread #งานสื่อ : ระดมทุนรถขนขยะ (ใน #💬┆กระทู้-สื่อ)
-    → fetch 86 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 86, upsert 0 msgs
+    → fetch 86 / upsert 86 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 86, upsert 86 msgs
 
   📥 🧵 thread #งานสื่อ : อัพเดทเงินระดมทุน (ใน #💬┆กระทู้-สื่อ)
-    → fetch 4 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 4, upsert 0 msgs
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
 
   📥 🧵 thread #ไวนิลรถอาสาประชาชน (ใน #💬┆กระทู้-สื่อ)
-    → fetch 23 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 23, upsert 0 msgs
+    → fetch 23 / upsert 23 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 23, upsert 23 msgs
 
   📥 🧵 thread #รับกราฟิก ช่วยลำพูน ❕ (ใน #💬┆กระทู้-สื่อ)
-    → fetch 21 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 21, upsert 0 msgs
+    → fetch 21 / upsert 21 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 21, upsert 21 msgs
 
   📥 🧵 thread #รับบริจาค กระสอบปุ๋ย กระสอบป่าน (ใน #💬┆กระทู้-สื่อ)
-    → fetch 22 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 22, upsert 0 msgs
+    → fetch 22 / upsert 22 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 22, upsert 22 msgs
 
   📥 🧵 thread #ประสานขอรับเงินเยียวยา #น้ำท่วมภาคใต้68 (ใน #💬┆กระทู้-สื่อ)
-    → fetch 55 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 55, upsert 0 msgs
+    → fetch 55 / upsert 55 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 55, upsert 55 msgs
 
   📥 🧵 thread #ระดมทุนส่งอาสาประชาชนไปล้างบ้าน (ใน #💬┆กระทู้-สื่อ)
-    → fetch 33 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 33, upsert 0 msgs
+    → fetch 33 / upsert 33 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 33, upsert 33 msgs
 
   📥 🧵 thread #ปชสพ. ระบบตามหาคนหาย (ใน #💬┆กระทู้-สื่อ)
-    → fetch 10 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 10, upsert 0 msgs
+    → fetch 10 / upsert 10 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 10, upsert 10 msgs
 
   📥 🧵 thread #จุดอพยพ #น้ำท่วมภาคใต้68 (ใน #💬┆กระทู้-สื่อ)
-    → fetch 83 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 83, upsert 0 msgs
+    → fetch 83 / upsert 83 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 83, upsert 83 msgs
 
   📥 🧵 thread #เปิดบัญชีกลาง “อาสาประชาชน” (ใน #💬┆กระทู้-สื่อ)
-    → fetch 4 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 4, upsert 0 msgs
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
 
   📥 🧵 thread #ทำไมต้อง Jitasa.Care (ใน #💬┆กระทู้-สื่อ)
-    → fetch 16 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 16, upsert 0 msgs
+    → fetch 16 / upsert 16 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 16, upsert 16 msgs
 
   📥 🧵 thread #Epx สนามท้องถิ่น กทม. (ใน #💬┆กระทู้-สื่อ)
-    → fetch 9 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 9, upsert 0 msgs
+    → fetch 9 / upsert 9 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 9, upsert 9 msgs
 
   📥 🧵 thread #สันติภาพชายแดนใต้ (ใน #💬┆กระทู้-สื่อ)
-    → fetch 4 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 4, upsert 0 msgs
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
 
   📥 🧵 thread #EP.09 แนวโน้มการจ้างงานที่ส่งผลต่อคุณภาพชีวิตแรงงาน (ใน #💬┆กระทู้-สื่อ)
-    → fetch 59 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 59, upsert 0 msgs
+    → fetch 59 / upsert 59 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 59, upsert 59 msgs
 
   📥 🧵 thread #EP.??  ความหลากหลายไม่ใช่ความผิดปกติ : เมื่อโลกยังไม่ยอมรับความเป็นมนุษย์ในทุกรูปแบบ (ใน #💬┆กระทู้-สื่อ)
-    → fetch 7 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 7, upsert 0 msgs
+    → fetch 7 / upsert 7 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 7, upsert 7 msgs
 
   📥 🧵 thread #สภาประชาชน : ปลุกช้างหลับ ความหวังเศรษฐกิจไทย ในวันที่เราตกขบวน (ใน #💬┆กระทู้-สื่อ)
-    → fetch 56 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 56, upsert 0 msgs
+    → fetch 56 / upsert 56 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 56, upsert 56 msgs
 
   📥 🧵 thread #EP.08 ประชาธิปไตยใส่ชฏา สภาประชาชน (ใน #💬┆กระทู้-สื่อ)
-    → fetch 18 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 18, upsert 0 msgs
+    → fetch 18 / upsert 18 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 18, upsert 18 msgs
 
   📥 🧵 thread #EP.??  เหตุใดจึง “อาเพศ” ? 🧐 (ใน #💬┆กระทู้-สื่อ)
-    → fetch 12 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 12, upsert 0 msgs
+    → fetch 12 / upsert 12 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 12, upsert 12 msgs
 
   📥 🧵 thread #EP.?? ความคาดหวังของอาสาสมัครที่มีต่อพรรค (ใน #💬┆กระทู้-สื่อ)
-    → fetch 2 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 2, upsert 0 msgs
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
 
   📥 🧵 thread #EP.พิเศษ เหตุการณ์ 6 ตุลา ลืมไม่ได้ จำไม่ลง (ใน #💬┆กระทู้-สื่อ)
-    → fetch 23 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 23, upsert 0 msgs
+    → fetch 23 / upsert 23 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 23, upsert 23 msgs
 
   📥 🧵 thread #EP.XX suicidal event การลอกเลียนแบบ มีจริงไหม ? (ใน #💬┆กระทู้-สื่อ)
-    → fetch 3 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 3, upsert 0 msgs
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
 
   📥 🧵 thread #ep.07 : เมื่อธงโจรสลัดกลายเป็นสัญญะทางการเมือง (ใน #💬┆กระทู้-สื่อ)
-    → fetch 75 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 75, upsert 0 msgs
+    → fetch 75 / upsert 75 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 75, upsert 75 msgs
 
   📥 🧵 thread #อะไรก็ส้ม (ใน #💬┆กระทู้-สื่อ)
-    → fetch 26 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 26, upsert 0 msgs
+    → fetch 26 / upsert 26 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 26, upsert 26 msgs
 
   📥 🧵 thread #Parenting policy (ใน #💬┆กระทู้-สื่อ)
-    → fetch 9 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 9, upsert 0 msgs
+    → fetch 9 / upsert 9 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 9, upsert 9 msgs
 
   📥 🧵 thread #อาวุธของส้ม (ใน #💬┆กระทู้-สื่อ)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #เด็กมันยังรู้ (ใน #💬┆กระทู้-สื่อ)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #เสนอทำรายการเพิ่ม 2 รายการ (ใน #💬┆กระทู้-สื่อ)
-    → fetch 37 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 37, upsert 0 msgs
+    → fetch 37 / upsert 37 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 37, upsert 37 msgs
 
   📥 🧵 thread #รถไฟฟ้า 20 บาท (ใน #💬┆กระทู้-สื่อ)
-    → fetch 10 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 10, upsert 0 msgs
+    → fetch 10 / upsert 10 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 10, upsert 10 msgs
 
   📥 🧵 thread #สภาประชาชน ประเด็น secularism (ใน #💬┆กระทู้-สื่อ)
-    → fetch 60 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 60, upsert 0 msgs
+    → fetch 60 / upsert 60 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 60, upsert 60 msgs
 
   📥 🧵 thread #ปฏิรูประบบสุขภาพ: ทบทวนเพื่อไปต่อ (ใน #💬┆กระทู้-สื่อ)
-    → fetch 27 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 27, upsert 0 msgs
+    → fetch 27 / upsert 27 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 27, upsert 27 msgs
 
   📥 🧵 thread #1 ปี รีชาร์จ ทีมงานพรรค (ใน #💬┆กระทู้-สื่อ)
-    → fetch 2 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 2, upsert 0 msgs
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
 
   📥 🧵 thread #เสียจุดยืน vs เสียคะแนน (ใน #💬┆กระทู้-สื่อ)
-    → fetch 62 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 62, upsert 0 msgs
+    → fetch 62 / upsert 62 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 62, upsert 62 msgs
 
   📥 🧵 thread #ช่องทางการสื่อสารไปยังสมาชิก (ใน #💬┆กระทู้-สื่อ)
-    → fetch 4 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 4, upsert 0 msgs
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
 
   📥 🧵 thread #สภาประชาชน EP.?? การเตรียมพร้อมกับสถานการณ์ทางการเมือง สมการรัฐบาลประชาชน (ใน #💬┆กระทู้-สื่อ)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #สภาประชาชน EP. 2 "ฝ่ายประชาธิปไตย สามัคคี?“ (ใน #💬┆กระทู้-สื่อ)
-    → fetch 100 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 0 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 120 / upsert 120 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 120, upsert 120 msgs
 
   📥 🧵 thread #สภาประชาชน EP. X "บทบาทของ ตทอ. แบบเจาะลึก" (ใน #💬┆กระทู้-สื่อ)
-    → fetch 2 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 2, upsert 0 msgs
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
 
   📥 🧵 thread #หนังสือพิมพ์ พรรคประชาชน ฉบับที่ 2 (ใน #💬┆กระทู้-สื่อ)
-    → fetch 17 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 17, upsert 0 msgs
+    → fetch 17 / upsert 17 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 17, upsert 17 msgs
 
   📥 🧵 thread #เทคนิคการใช้ Discord 101 (ใน #💬┆กระทู้-สื่อ)
-    → fetch 8 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 8, upsert 0 msgs
+    → fetch 8 / upsert 8 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 8, upsert 8 msgs
 
   📥 🧵 thread #สภาประชาชน EP. 0 "Discord 101" (ใน #💬┆กระทู้-สื่อ)
-    → fetch 63 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 63, upsert 0 msgs
+    → fetch 63 / upsert 63 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 63, upsert 63 msgs
 
   📥 🧵 thread #ลงทะเบียนเข้าร่วม Discord อาสาประชาชน (ใน #💬┆กระทู้-สื่อ)
-    → fetch 2 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 2, upsert 0 msgs
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
 
   📥 🧵 thread #ตัวแทนสมาชิกพรรคคืออะไร (ใน #💬┆กระทู้-สื่อ)
-    → fetch 15 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 15, upsert 0 msgs
+    → fetch 15 / upsert 15 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 15, upsert 15 msgs
 
   📥 🧵 thread #อยากเป็นผู้สมัคร สส ของพรรคต้องทำอย่างไร (ใน #💬┆กระทู้-สื่อ)
-    → fetch 18 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 18, upsert 0 msgs
+    → fetch 18 / upsert 18 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 18, upsert 18 msgs
 
   📥 🧵 thread #เอกสารเฝ้าหน่วยเลือกตั้ง (ใน #💬┆กระทู้-กฏหมาย)
-    → fetch 14 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 14, upsert 0 msgs
+    → fetch 14 / upsert 14 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 14, upsert 14 msgs
 
   📥 🧵 thread #โยนหินถามทาง : ชวนคิด หาหนทางในการช่วย 44 ส.ส.ในทางกฎหมาย "กรณีถูกสอบมาตรฐานจริยธรรม" (ใน #💬┆กระทู้-กฏหมาย)
-    → fetch 6 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 6, upsert 0 msgs
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
 
   📥 🧵 thread #Room 1 ประชุมสามัญ (ใน #🤹┆ฟาเฉพาะกิจ)
-    → fetch 85 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 85, upsert 0 msgs
+    → fetch 85 / upsert 85 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 85, upsert 85 msgs
 
   📥 🧵 thread #Room 7 ประชุมสามัญ (ใน #🤹┆ฟาเฉพาะกิจ)
-    → fetch 67 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 67, upsert 0 msgs
+    → fetch 67 / upsert 67 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 67, upsert 67 msgs
 
   📥 🧵 thread #(Room 5) ฟาประชุมสามัญ (ใน #🤹┆ฟาเฉพาะกิจ)
-    → fetch 79 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 79, upsert 0 msgs
+    → fetch 79 / upsert 79 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 79, upsert 79 msgs
 
   📥 🧵 thread #Room2 ประชุมสามัญ (ใน #🤹┆ฟาเฉพาะกิจ)
-    → fetch 13 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 13, upsert 0 msgs
+    → fetch 13 / upsert 13 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 13, upsert 13 msgs
 
   📥 🧵 thread #(Room 8) ฟาประชุมสามัญ (ใน #🤹┆ฟาเฉพาะกิจ)
-    → fetch 24 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 24, upsert 0 msgs
+    → fetch 24 / upsert 24 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 24, upsert 24 msgs
 
   📥 🧵 thread #(Room 4) ฟาประชุมสามัญ (ใน #🤹┆ฟาเฉพาะกิจ)
-    → fetch 38 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 38, upsert 0 msgs
+    → fetch 38 / upsert 38 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 38, upsert 38 msgs
 
   📥 🧵 thread #Room 3 ประชุมสามัญ (ใน #🤹┆ฟาเฉพาะกิจ)
-    → fetch 32 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 32, upsert 0 msgs
+    → fetch 32 / upsert 32 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 32, upsert 32 msgs
 
   📥 🧵 thread #เตรียมงาน ฟาประชุมสามัญ 25-27 (ใน #🤹┆ฟาเฉพาะกิจ)
-    → fetch 15 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 15, upsert 0 msgs
+    → fetch 15 / upsert 15 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 15, upsert 15 msgs
 
   📥 🧵 thread #เครื่องจักรเคลียร์ขยะ (ใน #💧┆อาสาส้มสู้น้ำ)
-    → fetch 36 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 36, upsert 0 msgs
+    → fetch 36 / upsert 36 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 36, upsert 36 msgs
 
   📥 🧵 thread #War Room ภาคประชาชน TPBS + กระจกเงา (ใน #💧┆อาสาส้มสู้น้ำ)
-    → fetch 10 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 10, upsert 0 msgs
+    → fetch 10 / upsert 10 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 10, upsert 10 msgs
 
   📥 🧵 thread #Offline Communication (ใน #💧┆อาสาส้มสู้น้ำ)
-    → fetch 17 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 17, upsert 0 msgs
+    → fetch 17 / upsert 17 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 17, upsert 17 msgs
 
   📥 🧵 thread #แนะนำตัว 🙏🏻 (ใน #💧┆อาสาส้มสู้น้ำ)
-    → fetch 26 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 26, upsert 0 msgs
+    → fetch 26 / upsert 26 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 26, upsert 26 msgs
 
   📥 🧵 thread #กล่องงาน (ใน #💧┆อาสาส้มสู้น้ำ)
-    → fetch 19 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 19, upsert 0 msgs
+    → fetch 19 / upsert 19 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 19, upsert 19 msgs
 
   📥 🧵 thread #ประชุมเสียง (ใน #💧┆อาสาส้มสู้น้ำ)
-    → fetch 35 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 35, upsert 0 msgs
+    → fetch 35 / upsert 35 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 35, upsert 35 msgs
 
   📥 🧵 thread #To Do List โน้ตก่อนลืม (ใน #💧┆อาสาส้มสู้น้ำ)
-    → fetch 8 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 8, upsert 0 msgs
+    → fetch 8 / upsert 8 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 8, upsert 8 msgs
 
   📥 🧵 thread #Transformative Mindset (ใน #💧┆อาสาส้มสู้น้ำ)
-    → fetch 2 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 2, upsert 0 msgs
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
 
   📥 🧵 thread #Appreciation ✨ (ใน #💧┆อาสาส้มสู้น้ำ)
-    → fetch 21 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 21, upsert 0 msgs
+    → fetch 21 / upsert 21 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 21, upsert 21 msgs
 
   📥 🧵 thread #ขออีเมลแอดเข้า Miro Board (ใน #💧┆อาสาส้มสู้น้ำ)
-    → fetch 32 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 32, upsert 0 msgs
+    → fetch 32 / upsert 32 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 32, upsert 32 msgs
 
   📥 🧵 thread #ต่อเนื่องไปเกษตรหรือไม่ (ใน #💧┆อาสาส้มสู้น้ำ)
-    → fetch 7 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 7, upsert 0 msgs
+    → fetch 7 / upsert 7 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 7, upsert 7 msgs
 
   📥 🧵 thread #ตึกร้างเป็นที่อาศัยของนกแจ้งฟองดูว์สำนักอนามัยถามกลับเฉยว่าจะให้ทำยังไง (ใน #💬┆กระทู้-เรื่องร้องเรียน)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #มอเตอร์ไซค์ขับบนฟุตบาท ฟองดูว์ผักชีโรยหน้า (ใน #💬┆กระทู้-เรื่องร้องเรียน)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #กรณีร้องเรียน อบต. ตัดไม้ในที่สาธารณะไปขาย (ใน #💬┆กระทู้-เรื่องร้องเรียน)
-    → fetch 15 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 15, upsert 0 msgs
+    → fetch 15 / upsert 15 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 15, upsert 15 msgs
 
   📥 🧵 thread #นับถอยหลัง MP101 (ใน #👤┆ทีมผู้สมัครฯ)
-    → fetch 90 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 90, upsert 0 msgs
+    → fetch 90 / upsert 90 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 90, upsert 90 msgs
 
   📥 🧵 thread #ยืนยันตัวตนผู้สมัคร PC101 บน Discord (ใน #👤┆ทีมผู้สมัครฯ)
-    → fetch 31 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 31, upsert 0 msgs
+    → fetch 31 / upsert 31 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 31, upsert 31 msgs
 
   📥 🧵 thread #วิธีเปลี่ยนชื่อของคุณบน zoom ระหว่างการประชุม และชื่อ Discord สำหรับเซิร์ฟเวอร์นี้ (ใน #👤┆ทีมผู้สมัครฯ)
-    → fetch 9 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 9, upsert 0 msgs
+    → fetch 9 / upsert 9 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 9, upsert 9 msgs
 
   📥 🧵 thread #เสนอหัวข้อ การจัดกระบวนการ ,จัดอบรม (ใน #💬┆กระทู้-ฟาภูมิภาค)
-    → fetch 9 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 9, upsert 0 msgs
+    → fetch 9 / upsert 9 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 9, upsert 9 msgs
 
   📥 🧵 thread #Feedback การสื่อสารเรื่องผู้สมัคร MP ยังไงดี? (ใน #💬┆กระทู้-ฟาภูมิภาค)
-    → fetch 20 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 20, upsert 0 msgs
+    → fetch 20 / upsert 20 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 20, upsert 20 msgs
 
   📥 🧵 thread #เทคนิคการเบรคอย่างมีอารยะ (ใน #💬┆กระทู้-ฟาภูมิภาค)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #แสดงความเห็นเรื่องการปรับลดฟา สำหรับกิจกรรม PC101 (ใน #💬┆กระทู้-ฟาภูมิภาค)
-    → fetch 45 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 45, upsert 0 msgs
+    → fetch 45 / upsert 45 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 45, upsert 45 msgs
 
   📥 🧵 thread #ไอเดียกิจกรรมสมาชิกสัมพันธ์ (ใน #💬┆กระทู้-ฟาภูมิภาค)
-    → fetch 40 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 40, upsert 0 msgs
+    → fetch 40 / upsert 40 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 40, upsert 40 msgs
 
   📥 🧵 thread #เอกสารสำหรับฟา (งดเผยแพร่) (ใน #💬┆กระทู้-ฟาภูมิภาค)
-    → fetch 9 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 9, upsert 0 msgs
+    → fetch 9 / upsert 9 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 9, upsert 9 msgs
 
   📥 🧵 thread #การนำผู้อบรม PC101 เข้าร่วม Discord (ใน #💬┆กระทู้-ฟาภูมิภาค)
-    → fetch 2 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 2, upsert 0 msgs
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
 
   📥 🧵 thread #จัดกระบวนการ 1 วันเป็นยังไงกันบ้างครับ Reflection กันหน่อย (ใน #💬┆กระทู้-ฟาภูมิภาค)
-    → fetch 32 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 32, upsert 0 msgs
+    → fetch 32 / upsert 32 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 32, upsert 32 msgs
 
   📥 🧵 thread #เทคนิค/ ปัญหา จากประสบการณ์เป็นฟาใน PP101 (ใน #💬┆กระทู้-ฟาภูมิภาค)
-    → fetch 9 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 9, upsert 0 msgs
+    → fetch 9 / upsert 9 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 9, upsert 9 msgs
 
   📥 🧵 thread #เสนอคำถาม Spectrum (ใน #💬┆กระทู้-ฟาภูมิภาค)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #แบ่งปัน วิธีชวนผู้เข้าร่วมใช้ discord ในกิจกรรมหน่อย (ใน #💬┆กระทู้-ฟาภูมิภาค)
-    → fetch 12 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 12, upsert 0 msgs
+    → fetch 12 / upsert 12 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 12, upsert 12 msgs
 
   📥 🧵 thread #แบ่งปันอุปกรณ์ช่วยฟาหน่อย (ใน #💬┆กระทู้-ฟาภูมิภาค)
-    → fetch 8 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 8, upsert 0 msgs
+    → fetch 8 / upsert 8 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 8, upsert 8 msgs
 
   📥 🧵 thread #ติดต่อผู้ประสานงาน กทม. ธนบุรี (ใน #🏛┆กรุงเทพธนบุรี)
-    → fetch 16 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 16, upsert 0 msgs
+    → fetch 16 / upsert 16 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 16, upsert 16 msgs
 
   📥 🧵 thread #ทีม consult อาสาเฝ้าสื่อ (ใน #🤗┆ทีมสมาชิกสัมพันธ์)
-    → fetch 87 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 87, upsert 0 msgs
+    → fetch 87 / upsert 87 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 87, upsert 87 msgs
 
   📥 🧵 thread #ติดต่อผู้ประสานงาน กทม. ชั้นใน (ใน #🏛┆กรุงเทพชั้นใน)
-    → fetch 13 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 13, upsert 0 msgs
+    → fetch 13 / upsert 13 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 13, upsert 13 msgs
 
   📥 🧵 thread #Check-In ฟาภาคเหนือ (ใน #🤹┆ฟาภาคเหนือ)
-    → fetch 19 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 19, upsert 0 msgs
+    → fetch 19 / upsert 19 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 19, upsert 19 msgs
 
   📥 🧵 thread #ผ่านเข้าสัมภาษณ์บัญชีรายชื่อ แต่หาห้องไม่เจอ (ใน #👤┆ทีมผู้สมัครฯ-pc101)
-    → fetch 38 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 38, upsert 0 msgs
+    → fetch 38 / upsert 38 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 38, upsert 38 msgs
 
   📥 🧵 thread #รับสมัคร MP101 (ใน #👤┆ทีมผู้สมัครฯ-pc101)
-    → fetch 2 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 2, upsert 0 msgs
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
 
   📥 🧵 thread #การบ้าน ส.ส.เขต จาก PC101 (ใน #👤┆ทีมผู้สมัครฯ-pc101)
-    → fetch 14 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 14, upsert 0 msgs
+    → fetch 14 / upsert 14 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 14, upsert 14 msgs
 
   📥 🧵 thread #ติดต่อผู้ประสานงาน กทม. ตะวันออก (ใน #🏛┆กรุงเทพตะวันออก)
-    → fetch 6 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 6, upsert 0 msgs
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
 
   📥 🧵 thread #เตรียมงาน pc101 ครั้งที่ 4 ภาคใต้ 8 (ใน #🤹┆ฟาภาคใต้)
-    → fetch 100 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 0 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 192 / upsert 192 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 192, upsert 192 msgs
 
   📥 🧵 thread #เตรียมงาน pp101 กระบี่ 2 พฤศจิกายน (ใน #🤹┆ฟาภาคใต้)
-    → fetch 35 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 35, upsert 0 msgs
+    → fetch 35 / upsert 35 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 35, upsert 35 msgs
 
   📥 🧵 thread #เตรียม PP101 สงขลา 2 พฤศจิกายน (ใน #🤹┆ฟาภาคใต้)
-    → fetch 58 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 58, upsert 0 msgs
+    → fetch 58 / upsert 58 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 58, upsert 58 msgs
 
   📥 🧵 thread #PC101 สงขลา 8-9 พย (ใน #🤹┆ฟาภาคใต้)
-    → fetch 15 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 15, upsert 0 msgs
+    → fetch 15 / upsert 15 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 15, upsert 15 msgs
 
   📥 🧵 thread #เตรียมงาน pp101 นคร วันที่27/9/68 (ใน #🤹┆ฟาภาคใต้)
-    → fetch 46 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 46, upsert 0 msgs
+    → fetch 46 / upsert 46 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 46, upsert 46 msgs
 
   📥 🧵 thread #เตรียมงาน  PC101 จ.กระบี่ 16 สค. 68 (ใน #🤹┆ฟาภาคใต้)
-    → fetch 55 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 55, upsert 0 msgs
+    → fetch 55 / upsert 55 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 55, upsert 55 msgs
 
   📥 🧵 thread #เตรียมงาน PP101 20/6/68 นครศรี (ใน #🤹┆ฟาภาคใต้)
-    → fetch 100 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 0 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 200 / upsert 200 msgs... (hasMore: true)
+    → fetch 224 / upsert 224 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 224, upsert 224 msgs
 
   📥 🧵 thread #สงขลา 31/5/68 เตรียมงาน PP 101 (ใน #🤹┆ฟาภาคใต้)
-    → fetch 100 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 0 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 129 / upsert 129 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 129, upsert 129 msgs
 
   📥 🧵 thread #นครศรี 24/5/68 เตรียมงาน PP 101 (ใน #🤹┆ฟาภาคใต้)
-    → fetch 100 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 0 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 122 / upsert 122 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 122, upsert 122 msgs
 
   📥 🧵 thread #พัทลุง 17/5/68 เตรียมงาน PP 101 (ใน #🤹┆ฟาภาคใต้)
-    → fetch 100 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 0 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 129 / upsert 129 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 129, upsert 129 msgs
 
   📥 🧵 thread #สุราษฎร์ธานี 25/5/68 เตรียมงาน PP 101 (ใน #🤹┆ฟาภาคใต้)
-    → fetch 8 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 8, upsert 0 msgs
+    → fetch 8 / upsert 8 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 8, upsert 8 msgs
 
   📥 🧵 thread #ปัตตานี 19/4/68 เตรียมงานอบรมตัวแทนสมาชิกพรรค (ใน #🤹┆ฟาภาคใต้)
-    → fetch 100 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 0 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 106 / upsert 106 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 106, upsert 106 msgs
 
   📥 🧵 thread #ชุมพร 5/4/68 เตรียมงานอบรมตัวแทน (ใน #🤹┆ฟาภาคใต้)
-    → fetch 100 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 0 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 162 / upsert 162 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 162, upsert 162 msgs
 
   📥 🧵 thread #ตรัง 23/3 เตรียมงาน หลักสูตรตัวแทนสมาชิกพรรค (ใน #🤹┆ฟาภาคใต้)
-    → fetch 100 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 0 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 131 / upsert 131 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 131, upsert 131 msgs
 
   📥 🧵 thread #สุราษฎร์ 30/3 เตรียมงาน หลักสูตรตัวแทนสมาชิกพรรค (ใน #🤹┆ฟาภาคใต้)
-    → fetch 19 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 19, upsert 0 msgs
+    → fetch 19 / upsert 19 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 19, upsert 19 msgs
 
   📥 🧵 thread #สงขลา 2/36/68 (ใน #🤹┆ฟาภาคใต้)
-    → fetch 60 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 60, upsert 0 msgs
+    → fetch 60 / upsert 60 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 60, upsert 60 msgs
 
   📥 🧵 thread #21 กพ งานแต่ง เจ ประจวบ ณ บางสะพาน (ใน #🧙┆ฟาภูมิภาค)
-    → fetch 100 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 0 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 185 / upsert 185 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 185, upsert 185 msgs
 
   📥 🧵 thread #ฟาสัมนาสส. (21-22 ก.พ. 69) (ใน #🧙┆ฟาภูมิภาค)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #ถอดบทเรียนฟาออนไลน์ ระดมไอเดียสำหรับปีหน้า (ใน #🧙┆ฟาภูมิภาค)
-    → fetch 87 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 87, upsert 0 msgs
+    → fetch 87 / upsert 87 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 87, upsert 87 msgs
 
   📥 🧵 thread #Break out room Project (ใน #🧙┆ฟาภูมิภาค)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #หาฟากลุ่มทางม้าลายปลอดภัย 4 ท่าน (ใน #🧙┆ฟาภูมิภาค)
-    → fetch 11 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 11, upsert 0 msgs
+    → fetch 11 / upsert 11 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 11, upsert 11 msgs
 
   📥 🧵 thread #เตรียมงานอบรม ตทอ. 19-21กย (ใน #🧙┆ฟาภูมิภาค)
-    → fetch 17 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 17, upsert 0 msgs
+    → fetch 17 / upsert 17 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 17, upsert 17 msgs
 
   📥 🧵 thread #คู่มือสมาชิกสัมพันธ์ (ใน #🧙┆ฟาภูมิภาค)
-    → fetch 28 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 28, upsert 0 msgs
+    → fetch 28 / upsert 28 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 28, upsert 28 msgs
 
   📥 🧵 thread #ชวนกันเสนอคำถามสเปคตรัม (ใน #🧙┆ฟาภูมิภาค)
-    → fetch 62 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 62, upsert 0 msgs
+    → fetch 62 / upsert 62 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 62, upsert 62 msgs
 
   📥 🧵 thread #รับสมัครอาสาออกแบบเกียรติบัตร Knowledge Center ครั้งที่ 1-4 (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 6 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 6, upsert 0 msgs
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
 
   📥 🧵 thread #เสนอให้มีการทำระบบรวบรวม "นักการเมืองที่สนใจหรือสะดวกออกรายการ" (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 8 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 8, upsert 0 msgs
+    → fetch 8 / upsert 8 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 8, upsert 8 msgs
 
   📥 🧵 thread #เสนอหัวข้อคุย สภากาแฟ☕ (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 100 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 0 msgs
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 104 / upsert 104 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 104, upsert 104 msgs
 
   📥 🧵 thread #กลยุทธ์ Clipper Agency (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #เงินฌาปนกิจธกส. (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 3 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 3, upsert 0 msgs
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
 
   📥 🧵 thread #ข้อเสนอถึงพรรคประชาชน ต่อการทุจริตในการเลือกตั้ง (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #อบต 2000 คะแนน เทศบาล 4000 คะแนน อยากชนะ สส ต้องคุม ท้องถิ่นให้ได้ นี่คือ กลยุทธ ของ เขียวน้ำเงิน (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #สอบถามผูรู้ครับ เราดูพิกัดของหน่วยเลือกตั้งของแต่ละจวได้จากที่ไหนครับ หรือมีใน google mapมั้ยครับ? (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 3 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 3, upsert 0 msgs
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
 
   📥 🧵 thread #ถ้า ท้องถิ่นไม่ใช่คนของพรรคประชาชน สส ในพื้นที่จะมีวิธีการทำงานยังไง ให้ประชาชนได้รับประโยชน์สูงสุด (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 4 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 4, upsert 0 msgs
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
 
   📥 🧵 thread #หากคุณเป็น Deep state ในไทย ที่กำลังวางแผนล้มพรรคประชาชน อยู่ คุณจะวางหมาก อย่างไร? (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #ประชุมวิสามัญ 24-26 ตุลาคม 2568 (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 54 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 54, upsert 0 msgs
+    → fetch 54 / upsert 54 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 54, upsert 54 msgs
 
   📥 🧵 thread #รับอาสาเฝ้าสื่อเลือกตั้ง 69 (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 59 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 59, upsert 0 msgs
+    → fetch 59 / upsert 59 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 59, upsert 59 msgs
 
   📥 🧵 thread #สรุปยอด Social listening พรรคการเมือง ปีที่ผ่านมา 2568 (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 13 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 13, upsert 0 msgs
+    → fetch 13 / upsert 13 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 13, upsert 13 msgs
 
   📥 🧵 thread #เช็คลิสต์เลือกตั้งอบต. (สำหรับอาสาสมัคร / ประชาชนทั่วไป) - We Watch (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 2 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 2, upsert 0 msgs
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
 
   📥 🧵 thread #หากพิศาล มาณวพัฒน์ได้เป็นรัฐมนตรีในนามรัฐบาลประชาชน (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 5 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 5, upsert 0 msgs
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
 
   📥 🧵 thread #พรรคจะสร้างความเชื่อมั่นให้กับประชาชนได้อย่างไรเพื่อที่จะบอกว่าเราพร้อมแล้วที่จะบริหารประเทศ (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 5 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 5, upsert 0 msgs
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
 
   📥 🧵 thread #กกต บอกให้ พรรค หาเสียง + รณรงค์ ประชามติได้แล้ว (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
 
   📥 🧵 thread #จะทำยังไงกับผู้กู้ กยศ ค่ะ ทั้งๆที่ควรเรียนฟรี (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 3 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 3, upsert 0 msgs
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
 
-  📥 🧵 thread #ประกาศหาอาสาสมัคร-ทำกราฟฟิคและโซเชี่ยลมิเดี่ย (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 3 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 3, upsert 0 msgs
-
-  📥 🧵 thread #Forecast ผลเลือกตั้ง By Deep think Gemini AI ultra Enterprises (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 3 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 3, upsert 0 msgs
-
-  📥 🧵 thread #ความเหลื่อมล้ำและการเสื่อมถอยของประชาธิปไตยมีความเชื่อมโยง (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
-
-  📥 🧵 thread #รวมข่าวสาร/ข้อเสนอ - รัฐธรรมนูญใหม่ (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 100 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 0 msgs
-
-  📥 🧵 thread #ไม่มีใครดีไปกว่าใคร เลิกถามหาซักทีว่าใครดีกว่า (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 2 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 2, upsert 0 msgs
-
-  📥 🧵 thread #ขอความรู้ วิธี set Google Earth เพื่อใช้เป็นเครื่องมือคุยกับทีมงานเดินพื้นที่ (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 3 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 3, upsert 0 msgs
-
-  📥 🧵 thread #อาสาสมัคร “ช่วยศึกษาข้อมูลและการทำระบบรวมบริการดิจิทัลของหน่วยงานภาครัฐ” 💻 (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 6 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 6, upsert 0 msgs
-
-  📥 🧵 thread #ขอทราบผลประเมิน ส.ส. และ ส.ก. (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
-
-  📥 🧵 thread #รับสมัครอาสาช่วยตรวจสอบข้อมูลคะแนนการเลือกตั้ง (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 12 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 12, upsert 0 msgs
-
-  📥 🧵 thread #รับสมัครอาสาช่วยกรอกข้อมูลค่ะ (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 4 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 4, upsert 0 msgs
-
-  📥 🧵 thread #(ฟังย้อนหลัง) สภาประชาชน (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 13 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 13, upsert 0 msgs
-
-  📥 🧵 thread #รายชื่อ แอพป้องกัน การแคป ตอนแชท (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 7 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 7, upsert 0 msgs
-
-  📥 🧵 thread #ว่าด้วยทฤษฎีเกม (Game theory) ในการคัดเลือกผู้สมัคร (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
-
-  📥 🧵 thread #รับอาสาสมัครเขตบางเขน (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
-
-  📥 🧵 thread #เสนอหนังสือเพื่อทำ reading group สภาประชาชน (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 9 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 9, upsert 0 msgs
-
-  📥 🧵 thread #เปิดรับที่ปรึกษาด้านเศรษฐศาสตร์และการพาณิชย์ กมธ.พาณิชย์และทรัพย์สินทางปัญญา กับ สส.โบ้ภูริวรรธ์ (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 4 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 4, upsert 0 msgs
-
-  📥 🧵 thread #ประกาศรับสมัครอาสาช่วยงานทีม สส.ไอซ์ รักชนก (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 6 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 6, upsert 0 msgs
-
-  📥 🧵 thread #ขอเสนอและสอบถามค่ะความคิดของคณะทำงานของจังหวัดต่างๆ เกี่ยวกับงานอาสาของพรรคในพื้นที่จังหวัดต่างๆค่ะ (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 7 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 7, upsert 0 msgs
-
-  📥 🧵 thread #รับบริจาคสิ่งของช่วยน้ำท่วม อยุธยา-อ่างทอง (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 4 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 4, upsert 0 msgs
-
-  📥 🧵 thread #อาสาพัฒนากรุงเทพมหานคร กับ สส. เติ้ล วรภพ (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 2 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 2, upsert 0 msgs
-
-  📥 🧵 thread #อยากให้พรรคช่วยทำฐานข้อมูล CRM ของสมาชิกสภาท้องถิ่นในนามพรรคครับ (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 4 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 4, upsert 0 msgs
-
-  📥 🧵 thread #ป้ายยาหนังสือน่าอ่าน (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 7 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 7, upsert 0 msgs
-
-  📥 🧵 thread #ทักษะการใช้เครื่องมือพัฒนาชุมชนกรุณาเพื่อการอยู่และตายดี (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
-
-  📥 🧵 thread #ชวนกันช่วยแชร์ไอเดียกับพรรค (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 63 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 63, upsert 0 msgs
-
-  📥 🧵 thread #ตามหา ร่างปลดล็อกท้องถิ่น (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
-
-  📥 🧵 thread #ระบบพิกัดหน่วยเลือกตั้งปี 2566 ใส่ข้อมูลแบบ bulk ได้ไหม (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
-
-  📥 🧵 thread #การเมืองแห่งความหวังความฝัน (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 3 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 3, upsert 0 msgs
-
-  📥 🧵 thread #รับสมัครคนทำ กราฟิก/ตัดต่อ (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
-
-  📥 🧵 thread #อนุทิน vs ชัยเกษม (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 100 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 0 msgs
-
-  📥 🧵 thread #ขอเสนอพรรคให้มีนโยบายสาธารณสุขเกี่ยวกับสุขภาพจิต (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 11 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 11, upsert 0 msgs
-
-  📥 🧵 thread #อยากชวนคุยเรื่อง “fake news” ช่วงเลือกตั้งค่ะ (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 7 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 7, upsert 0 msgs
-
-  📥 🧵 thread #ทักษิณไม่รอด เหยื่อ vs คนเห็นแก่ตัว (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 7 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 7, upsert 0 msgs
-
-  📥 🧵 thread #ทักษิณติดคุก -> เพื่อไทยแพแตก -> บ้านใหญ่ ย้ายก๊ก โดน ดูดกลับ -> เลือกตั้งครั้งหน้า เป็นอย่างไร ??? (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 3 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 3, upsert 0 msgs
-
-  📥 🧵 thread #เสนอให้ : จัดลงประชามติภายในพรรค เพื่อกำหนดทิศทางของพรรค (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 6 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 6, upsert 0 msgs
-
-  📥 🧵 thread #ประกาศหาอาสาสมัคร-ช่วยหาข้อมูล/วิเคราะห์ข้อมูล (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 18 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 18, upsert 0 msgs
-
-  📥 🧵 thread #16 มีนาคม ขอแรงอีกครั้ง อาสาสมัครสังเกตการณ์หน่วยเลือกตั้ง นายกเทศบาลพระประแดง (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 96 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 96, upsert 0 msgs
-
-  📥 🧵 thread #ชวนคุยเรื่องไทย-กัมพูชา (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 100 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 0 msgs
-
-  📥 🧵 thread #สภาประชาชน Ep. 1 : รู้จัก ตทอ. และ ตทจ. (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 27 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 27, upsert 0 msgs
-
-  📥 🧵 thread #ส.ส.มีไว้ทำไม (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 2 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 2, upsert 0 msgs
-
-  📥 🧵 thread #รับสมัครทีมผู้ช่วย สส.เขต 12 กทม. (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 14 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 14, upsert 0 msgs
-
-  📥 🧵 thread #รับสมัครอาสาช่วยงานพื้นที่ ทีม สส เขต 16 กทม. ( เขตคลองสามวา) (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 2 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 2, upsert 0 msgs
-
-  📥 🧵 thread #กระแสทัวร์ลงพรรคส้มไม่น้อยเรื่องรับรักษาคนกัมพูชาส่งผลคะแนนนิยมทำยังไงกันดี (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 9 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 9, upsert 0 msgs
-
-  📥 🧵 thread #ประเด็น การบ้าน (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 9 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 9, upsert 0 msgs
-
-  📥 🧵 thread #ตามหาอาสา และไอเดียในการช่วยพัฒนานโยบายการท่องเที่ยวของกทม.เพื่อใช้ในการเลือกตั้งกทม.สมัยหน้า (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 33 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 33, upsert 0 msgs
-
-  📥 🧵 thread #รีวิวการใช้งานแอปพลิเคชั่น Smart Vote ของ กกต. (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 2 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 2, upsert 0 msgs
-
-  📥 🧵 thread #ตามหาอาสา ตั้งทีม "ส้มสู้น้ำ" เชียงราย มิ.ย. 68 (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 96 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 96, upsert 0 msgs
-
-  📥 🧵 thread #เสนอเลื่อนการจัดงาน รีชารจ์ฯ (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 8 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 8, upsert 0 msgs
-
-  📥 🧵 thread #เอกสารการประมูลโครงการ ที่มีค่าใช้จ่ายราย item  ของทางส่วนกลาง และส่วนท้องถิ่น หาได้จากที่ไหนบ้าง (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 1 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 1, upsert 0 msgs
-
-  📥 🧵 thread #ชวนตั้งชื่อ อาสาประชาชน podcast (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 71 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 71, upsert 0 msgs
-
-  📥 🧵 thread #ประเด็น ชินๆและลุงวุ้นเส้น (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 5 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 5, upsert 0 msgs
-
-  📥 🧵 thread #สภาประชาชน EP. 2 : การเมืองไทยไปทางไหนดี (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 6 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 6, upsert 0 msgs
-
-  📥 🧵 thread #สภาประชาชน EP. 0 : Discord สำหรับทีมจังหวัด Part 1 (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 2 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 2, upsert 0 msgs
-
-  📥 🧵 thread #หลักสูตร pc101 (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 4 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 4, upsert 0 msgs
-
-  📥 🧵 thread #รับได้หรือไม่? ถ้าปชน.ไปจับมือกับภูมิใจไทย โดยมีเงื่อนไขคือเป็นนายกชั่วครู่เพื่อปูทางสู่การยุบสภา (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 45 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 45, upsert 0 msgs
-
-  📥 🧵 thread #ต้องการอาสาช่วยดู BOQค่ะ (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 35 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 35, upsert 0 msgs
-
-  📥 🧵 thread #เจอ TOR 20ล้าน ล็อกงาน ของสำนักงานคณะกรรมการการศึกษาขั้นพื้นฐาน (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 3 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 3, upsert 0 msgs
-
-  📥 🧵 thread #ฝากถึงจังหวัดต่างๆที่กำลังจะเลือก ตทอ.และ ตทจ. นะคะ (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 11 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 11, upsert 0 msgs
-
-  📥 🧵 thread #การตอบสนองและอธิบายเกี่ยวกับการแก้มาตรา 112 และเรื่องการล้มเจ้า (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 9 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 9, upsert 0 msgs
-
-  📥 🧵 thread #ชวนตามข่าวไทย-กัมพูชา (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 6 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 6, upsert 0 msgs
-
-  📥 🧵 thread #ผู้ใหญ่ของพรรค (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 11 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 11, upsert 0 msgs
-
-  📥 🧵 thread #พรรคจะจับมือกับใคร ? บนเงื่อนไขแบบไหน ? (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 37 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 37, upsert 0 msgs
-
-  📥 🧵 thread #Discord 101 สำหรับทีมจังหวัด (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 45 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 45, upsert 0 msgs
-
-  📥 🧵 thread #อยากให้เป็นLine Openchat อีกช่องทาง (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 3 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 3, upsert 0 msgs
-
-  📥 🧵 thread #แคมเปญล่ารายชื่อ "เสนอแก้รัฐธรรมนูญให้ประชาชนเข้าชื่อถอดถอนองค์กรอิสระ" (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 9 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 9, upsert 0 msgs
-
-  📥 🧵 thread #มาขอไอเดียกิจกรรมเดือน Pride (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 19 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 19, upsert 0 msgs
-
-  📥 🧵 thread #2 มีนาคม 2568 แคมเปญเปิดตัว ผู้สมัคร นานกเทศบาล พระประแดง (ใน #💬┆กระทู้-ทั่วไป)
-    → fetch 21 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 21, upsert 0 msgs
-
-  📥 🧵 thread #ติดต่อผู้ประสานงาน สมุทรสาคร (ใน #💠┆สมุทรสาคร)
-    → fetch 21 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 21, upsert 0 msgs
-
-  📥 🧵 thread #FAQ (ใน #🛡┆moderator)
-    → fetch 100 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 100, upsert 0 msgs
-
-  📥 🧵 thread #ชวนชุมชนพรรคประชาชนเข้า discord (ใน #🛡┆moderator)
-    → fetch 44 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 44, upsert 0 msgs
-
-  📥 🧵 thread #ห้องติดต่อเจ้าหน้าที่ (ใน #🛡┆moderator)
-    → fetch 21 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 21, upsert 0 msgs
-
-  📥 🧵 thread #Community online (ใน #🛡┆moderator)
-    → fetch 6 / upsert 0 msgs... (hasMore: false)
-  ✅ เสร็จ — fetch 6, upsert 0 msgs
-
-  📥 🧵 thread #Sequence สภาประชาชน (ใน #🛡┆moderator)
