@@ -1,14 +1,13 @@
 TODO
 - เชื่อมระบบ Discord กับของพรรค
 
-ALTER TABLE user_reports 
-  CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+Greeting ราชบุรี : 
+1. เข้า <#1124322819006791781> กดปุ่ม verify หลังจากนั้น ให้แก้ไขชื่อที่ทุกคนคุ้นเคย ใส่ Description สั้นๆ
+2. หากพบปัญหา <#1126535594684719285> เพื่อเจ้าหน้าที่เข้าตรวจสอบ
+3. หากต้องการเข้าร่วมทีมทำงาน อ่าน [โครงสร้าง Role (ยศ)](https://discord.com/channels/1111998833652678757/1296497029576396881/1296497229388976209) แล้วจำชื่อป้ายว่าต้องการอยู่ทีมไหนบ้าง หรือพิมพ์เครื่องหมาย @ จะขึ้นรายการ Role ทั้งหมด
+3. เข้าห้อง <#1112047965079617708> กรอกข้อมูลตามที่ <@628400349979344919> แนะนำ คนเก่าๆ สามารถแก้ไขข้อความของตัวเองได้ รอ <@&1112228528130367598> ติดยศที่ระบุ
+4. อ่าน <#1124322689499279490>
 
-ALTER TABLE user_ratings 
-  CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-ALTER TABLE members 
-  CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-  
 Greeting:
 
 /setup-register title:ยินดีต้อนรับสู่ อาสาประชาชน! :tangerine: description:Step  :one: : แนะนำตัว → กดปุ่มแนะนำตัวด้านล่าง\n Step :two: : อ่านตรงนี้ก่อน → #📕┆ข้อตกลง  log_channel:#👋┆แนะนำตัว
