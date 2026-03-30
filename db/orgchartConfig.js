@@ -3,7 +3,6 @@ const pool = require('./index');
 
 /**
  * Upsert channel mapping ของ role
- * ถ้ามีอยู่แล้วจะ update role_name และ role_color เท่านั้น
  */
 async function upsertChannel({ guildId, roleId, roleName, roleColor, channelId, channelName, channelType }) {
   await pool.execute(
@@ -35,17 +34,18 @@ async function getConfig(guildId) {
   for (const row of rows) {
     if (!config.has(row.role_id)) {
       config.set(row.role_id, {
-        roleId:       row.role_id,
-        roleName:     row.role_name,
-        roleColor:    row.role_color,
+        roleId:        row.role_id,
+        roleName:      row.role_name,
+        roleColor:     row.role_color,
         textChannels:  [],
         voiceChannels: [],
       });
     }
     const entry = config.get(row.role_id);
     const ch = { id: row.channel_id, name: row.channel_name };
-    if (row.channel_type === 'text') entry.textChannels.push(ch);
-    else entry.voiceChannels.push(ch);
+    // ✅ Bug fix: voice → voiceChannels, text+forum → textChannels
+    if (row.channel_type === 'voice') entry.voiceChannels.push(ch);
+    else entry.textChannels.push(ch);
   }
 
   return config;
@@ -78,16 +78,13 @@ async function getConfigByRoleIds(guildId, roleIds) {
     }
     const entry = config.get(row.role_id);
     const ch = { id: row.channel_id, name: row.channel_name };
-    if (row.channel_type === 'text') entry.textChannels.push(ch);
-    else entry.voiceChannels.push(ch);
+    if (row.channel_type === 'voice') entry.voiceChannels.push(ch);
+    else entry.textChannels.push(ch);
   }
 
   return config;
 }
 
-/**
- * ลบ role ออกจาก config
- */
 async function deleteRole(guildId, roleId) {
   await pool.execute(
     `DELETE FROM dc_orgchart_config WHERE guild_id = ? AND role_id = ?`,
@@ -95,9 +92,6 @@ async function deleteRole(guildId, roleId) {
   );
 }
 
-/**
- * ลบ channel ออกจาก role
- */
 async function deleteChannel(guildId, roleId, channelId) {
   await pool.execute(
     `DELETE FROM dc_orgchart_config WHERE guild_id = ? AND role_id = ? AND channel_id = ?`,
@@ -105,9 +99,6 @@ async function deleteChannel(guildId, roleId, channelId) {
   );
 }
 
-/**
- * เช็คว่า role นี้มีอยู่ใน config แล้วไหม
- */
 async function roleExists(guildId, roleId) {
   const [rows] = await pool.execute(
     `SELECT 1 FROM dc_orgchart_config WHERE guild_id = ? AND role_id = ? LIMIT 1`,
@@ -116,9 +107,6 @@ async function roleExists(guildId, roleId) {
   return rows.length > 0;
 }
 
-/**
- * exclude channel (ยังอยู่ใน config แต่ไม่ track)
- */
 async function excludeChannel(guildId, roleId, channelId) {
   await pool.execute(
     `UPDATE dc_orgchart_config SET excluded = 1
@@ -127,9 +115,6 @@ async function excludeChannel(guildId, roleId, channelId) {
   );
 }
 
-/**
- * unexclude channel (กลับมา track)
- */
 async function unexcludeChannel(guildId, roleId, channelId) {
   await pool.execute(
     `UPDATE dc_orgchart_config SET excluded = 0
@@ -138,4 +123,8 @@ async function unexcludeChannel(guildId, roleId, channelId) {
   );
 }
 
-module.exports = { upsertChannel, getConfig, getConfigByRoleIds, deleteRole, deleteChannel, roleExists, excludeChannel, unexcludeChannel };
+module.exports = {
+  upsertChannel, getConfig, getConfigByRoleIds,
+  deleteRole, deleteChannel, roleExists,
+  excludeChannel, unexcludeChannel,
+};

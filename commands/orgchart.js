@@ -1,83 +1,88 @@
 // commands/orgchart.js
-// แสดง Top 10 active members ต่อ role
-// /orgchart               → แสดงทุก role ใน DB
-// /orgchart roles:ทีมA ทีมB → แสดงเฉพาะ role ที่ระบุ
+// แสดง Top N active members ต่อ role
+// /orgchart                          → แสดงทุก role ใน config
+// /orgchart role1:@ทีมA role2:@ทีมB → แสดงเฉพาะ role ที่เลือก (สูงสุด 5)
 
-const {
-  SlashCommandBuilder,
-  EmbedBuilder,
-  AttachmentBuilder,
-  MessageFlags,
-} = require('discord.js');
+const { SlashCommandBuilder } = require('discord.js');
+const { getConfig }           = require('../db/orgchartConfig');
+const { getRoleStats, buildOrgChartEmbed, buildOrgChartAttachment } = require('../utils/orgchartEmbed');
 
-const { getConfig }                              = require('../db/orgchartConfig');
-const { getUserActivity, getLastActive, getMentionStats } = require('../db/activity');
-const { generateOrgChart }                       = require('../utils/generateOrgChart');
+const DEFAULT_TOP  = 10;
+const MAX_TOP      = 25;
+const DEFAULT_DAYS = 30;
 
-const TOP_N = 10;
-const DAYS  = 30;
-
-const MEDALS = ['🥇', '🥈', '🥉'];
-
-function formatVoice(seconds) {
-  if (!seconds) return '—';
-  if (seconds < 60)   return `${seconds}s`;
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
-  return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`;
+function addRoleOpt(builder, n) {
+  return builder.addRoleOption(opt =>
+    opt.setName(`role${n}`)
+      .setDescription(`Role ที่ ${n} ที่ต้องการดู`)
+      .setRequired(false)
+  );
 }
 
-function formatReplyRate(rate) {
-  if (rate == null) return '—';
-  return `${Math.round(rate * 100)}%`;
-}
+let cmd = new SlashCommandBuilder()
+  .setName('orgchart')
+  .setDescription('แสดง Top active members ต่อ role');
 
-function formatLastActive(dateStr) {
-  if (!dateStr) return '—';
-  const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
-  if (diff === 0) return 'วันนี้';
-  if (diff === 1) return 'เมื่อวาน';
-  return `${diff} วันที่แล้ว`;
-}
+for (let i = 1; i <= 5; i++) cmd = addRoleOpt(cmd, i);
+
+cmd
+  .addIntegerOption(opt =>
+    opt.setName('top')
+      .setDescription(`จำนวนสูงสุดที่แสดงต่อ role (default ${DEFAULT_TOP}, max ${MAX_TOP})`)
+      .setRequired(false)
+      .setMinValue(1)
+      .setMaxValue(MAX_TOP)
+  )
+  .addIntegerOption(opt =>
+    opt.setName('days')
+      .setDescription(`ย้อนหลังกี่วัน (default ${DEFAULT_DAYS})`)
+      .setRequired(false)
+      .setMinValue(1)
+      .setMaxValue(365)
+  )
+  .addStringOption(opt =>
+    opt.setName('output')
+      .setDescription('รูปแบบ output (default = embed เท่านั้น)')
+      .setRequired(false)
+      .addChoices(
+        { name: '📝 Embed เท่านั้น (default)', value: 'embed' },
+        { name: '🖼️ รูปภาพเท่านั้น',           value: 'image' },
+        { name: '📊 Embed + รูปภาพ',            value: 'both'  },
+      )
+  );
 
 module.exports = {
-  data: new SlashCommandBuilder()
-    .setName('orgchart')
-    .setDescription('แสดง Top 10 active members ต่อ role')
-    .addStringOption(opt =>
-      opt.setName('roles')
-        .setDescription('ชื่อ role ที่ต้องการ (เว้นวรรคคั่นหลาย role) ถ้าไม่ระบุ = ทุก role')
-        .setRequired(false)
-    )
-    .addStringOption(opt =>
-      opt.setName('output')
-        .setDescription('รูปแบบ output')
-        .setRequired(false)
-        .addChoices(
-          { name: '📊 Embed + รูปภาพ (default)', value: 'both'  },
-          { name: '📝 Embed เท่านั้น',            value: 'embed' },
-          { name: '🖼️ รูปภาพเท่านั้น',            value: 'image' },
-        )
-    ),
+  data: cmd,
 
   async execute(interaction) {
     await interaction.deferReply();
 
     const config     = await getConfig(interaction.guildId);
-    const outputMode = interaction.options.getString('output') ?? 'both';
-    const rolesInput = interaction.options.getString('roles');
+    const outputMode = interaction.options.getString('output') ?? 'embed';
+    const topN       = interaction.options.getInteger('top')   ?? DEFAULT_TOP;
+    const days       = interaction.options.getInteger('days')  ?? DEFAULT_DAYS;
 
     if (!config.size) {
       return interaction.editReply({ content: '❌ ยังไม่มี config ครับ ลองรัน `/orgchart-scan` ก่อนนะครับ' });
     }
 
-    // กรอง role ที่ต้องการ
+    // รวม role ที่เลือก (role1–role5) ถ้าไม่เลือกเลย = ทุก role
+    const selectedIds = [1, 2, 3, 4, 5]
+      .map(n => interaction.options.getRole(`role${n}`)?.id)
+      .filter(Boolean);
+
     let targets = [...config.values()];
-    if (rolesInput) {
-      const keywords = rolesInput.split(/\s+/).map(k => k.toLowerCase());
-      targets = targets.filter(r => keywords.some(k => r.roleName.toLowerCase().includes(k)));
-      if (!targets.length) {
-        return interaction.editReply({ content: `❌ ไม่พบ role ที่ตรงกับ "${rolesInput}" ใน config ครับ` });
+    if (selectedIds.length) {
+      targets = targets.filter(r => selectedIds.includes(r.roleId));
+      const notFound = selectedIds.filter(id => !config.has(id));
+      if (notFound.length) {
+        const mentions = notFound.map(id => `<@&${id}>`).join(', ');
+        await interaction.followUp({
+          content: `⚠️ Role ${mentions} ยังไม่มีใน config ครับ ลองรัน \`/orgchart-scan\` ก่อนนะครับ`,
+          ephemeral: true,
+        });
       }
+      if (!targets.length) return;
     }
 
     await interaction.guild.members.fetch().catch(() => {});
@@ -85,73 +90,17 @@ module.exports = {
     let isFirst = true;
 
     for (const roleConfig of targets) {
-      const guildRole = interaction.guild.roles.cache.get(roleConfig.roleId);
-      if (!guildRole) continue;
-
-      const channelIds = [
-        ...roleConfig.textChannels.map(c => c.id),
-        ...roleConfig.voiceChannels.map(c => c.id),
-      ];
-
-      if (!guildRole.members.size) continue;
-
-      // ดึง activity ทุก member ใน role
-      const memberStats = await Promise.all(
-        [...guildRole.members.values()].map(async member => {
-          const { messages, voiceSeconds } = await getUserActivity(
-            interaction.guildId, member.id, channelIds, DAYS
-          );
-          const lastActive   = await getLastActive(interaction.guildId, member.id);
-          const mentionStats = await getMentionStats(interaction.guildId, member.id, DAYS);
-          return {
-            userId:      member.id,
-            displayName: member.displayName,
-            avatarURL:   member.user.displayAvatarURL({ extension: 'png', size: 64 }),
-            messages,
-            voiceSeconds,
-            score:       messages * 10 + voiceSeconds,
-            replyRate:   mentionStats.replyRate,
-            lastActive,
-          };
-        })
-      );
-
-      const top = memberStats.sort((a, b) => b.score - a.score).slice(0, TOP_N);
+      const top = await getRoleStats(interaction.guildId, interaction.guild, roleConfig, { topN, days });
       if (!top.length || top[0].score === 0) continue;
 
-      // ── Embed ────────────────────────────────────────────────────────────────
-      const embed = new EmbedBuilder()
-        .setColor(roleConfig.roleColor ?? '#5865F2')
-        .setTitle(`📊 ${guildRole.name}`)
-        .setDescription(`Top ${top.length} Active — ย้อนหลัง ${DAYS} วัน\n*Score = Messages × 10 + Voice Seconds*`)
-        .setTimestamp();
+      const embed      = buildOrgChartEmbed(roleConfig, top, { days });
+      let   attachment = null;
 
-      top.forEach((m, i) => {
-        embed.addFields({
-          name: `${MEDALS[i] ?? `#${i + 1}`} ${m.displayName}`,
-          value: [
-            `💬 ${m.messages} msgs`,
-            `🔊 ${formatVoice(m.voiceSeconds)}`,
-            `↩️ ${formatReplyRate(m.replyRate)}`,
-            `🕐 ${formatLastActive(m.lastActive)}`,
-            `⭐ ${m.score.toLocaleString()} pts`,
-          ].join('  '),
-        });
-      });
-
-      // ── Image ────────────────────────────────────────────────────────────────
-      let attachment = null;
       if (outputMode !== 'embed') {
-        try {
-          const buf = await generateOrgChart(guildRole.name, roleConfig.roleColor, top);
-          attachment = new AttachmentBuilder(buf, { name: 'orgchart.png' });
-          if (outputMode !== 'image') embed.setImage('attachment://orgchart.png');
-        } catch (err) {
-          console.error('[orgchart] generateOrgChart error:', err);
-        }
+        attachment = await buildOrgChartAttachment(roleConfig, top);
+        if (attachment && outputMode !== 'image') embed.setImage('attachment://orgchart.png');
       }
 
-      // ── Send ─────────────────────────────────────────────────────────────────
       const payload = {};
       if (outputMode !== 'image') payload.embeds = [embed];
       if (attachment)             payload.files  = [attachment];
@@ -165,7 +114,7 @@ module.exports = {
     }
 
     if (isFirst) {
-      await interaction.editReply({ content: 'ℹ️ ไม่มีข้อมูล activity ในช่วง 30 วันที่ผ่านมาครับ' });
+      await interaction.editReply({ content: `ℹ️ ไม่มีข้อมูล activity ในช่วง ${days} วันที่ผ่านมาครับ` });
     }
   },
 };

@@ -1,5 +1,5 @@
 // scripts/backfill-activity.js
-// ดึง message history ย้อนหลังจาก channels ใน dc_orgchart_config
+// ดึง message history ย้อนหลังทุก channel+thread+forum ใน guild
 //
 // Usage:
 //   node scripts/backfill-activity.js                             → ย้อนหลัง 30 วัน
@@ -32,13 +32,11 @@ function log(...args) {
   console.log(line);
   logStream.write(line + '\n');
 }
-
 function logWarn(...args) {
   const line = args.join(' ');
   console.warn(line);
   logStream.write(line + '\n');
 }
-
 function logError(...args) {
   const line = args.join(' ');
   console.error(line);
@@ -55,14 +53,12 @@ function parseArgs() {
     return { start, end: new Date() };
   }
 
-  // ตัวเลข → ย้อนหลัง N วัน
   if (/^\d+$/.test(arg1)) {
     const start = new Date(Date.now() - parseInt(arg1, 10) * 86400000);
     start.setHours(0, 0, 0, 0);
     return { start, end: new Date() };
   }
 
-  // YYYY-MM-DD
   const start = new Date(arg1);
   start.setHours(0, 0, 0, 0);
   const end = arg2 ? new Date(arg2) : new Date();
@@ -98,9 +94,15 @@ async function fetchWithRetry(channel, options, retries = 3) {
 
 // ── Backfill channel ──────────────────────────────────────────────────────────
 async function backfillChannel(channel, guildId, start, end) {
-  const typeLabel  = channel.isThread() ? '🧵 thread' : channel.type === 15 ? '📋 forum' : '💬 text';
+  const isThread   = channel.isThread();
+  const typeLabel  = isThread ? '🧵 thread' : channel.type === 15 ? '📋 forum' : '💬 text';
   const parentName = channel.parent?.name ? ` (ใน #${channel.parent.name})` : '';
   log(`  📥 ${typeLabel} #${channel.name}${parentName}`);
+
+  // thread ใช้ parentId เพื่อให้ตรงกับ activityTracker และ orgchart config
+  const resolvedChannelId = isThread
+    ? (channel.parentId ?? channel.id)
+    : channel.id;
 
   let lastId   = null;
   let fetched  = 0;
@@ -130,17 +132,19 @@ async function backfillChannel(channel, guildId, start, end) {
       if (msg.createdAt > end)   continue;
       if (msg.author.bot)        continue;
 
+      // นับ message
       const date = msg.createdAt.toISOString().slice(0, 10);
-      const key  = `${msg.author.id}:${date}:${channel.id}`;
+      const key  = `${msg.author.id}:${date}:${resolvedChannelId}`;
       daily.set(key, (daily.get(key) ?? 0) + 1);
 
+      // บันทึก mentions
       for (const [mentionedId, mentionedUser] of msg.mentions.users) {
         if (mentionedUser.bot) continue;
         await addMention({
           guildId,
           userId:      mentionedId,
           mentionedBy: msg.author.id,
-          channelId:   channel.id,
+          channelId:   resolvedChannelId,
           timestamp:   msg.createdAt,
         }).catch(() => {});
       }
@@ -184,7 +188,6 @@ async function main() {
         log(`\n🏠 Guild: ${guild.name}`);
         await guild.channels.fetch();
 
-        // fetch active threads ทั้งหมดด้วย
         try {
           const activeThreads = await guild.channels.fetchActiveThreads();
           activeThreads.threads.forEach(t => guild.channels.cache.set(t.id, t));
@@ -193,14 +196,12 @@ async function main() {
           logWarn('  ⚠️  fetch active threads ไม่ได้:', err.message);
         }
 
-        // รวม channel ids ทั้งหมดใน guild (ไม่จำกัดแค่ใน config)
         const channelIds = new Set(
           guild.channels.cache
             .filter(ch => ch.isTextBased() || ch.isThread() || ch.type === 15)
             .map(ch => ch.id)
         );
 
-        // fetch archived threads ของทุก text/forum channel ใน guild
         let archivedCount = 0;
         for (const ch of guild.channels.cache.values()) {
           if (!ch.threads) continue;
