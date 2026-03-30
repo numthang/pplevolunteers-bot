@@ -1,6 +1,6 @@
 // commands/setup-register.js (ทำแค่ส่ง embed + save config)
 const { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, PermissionFlagsBits, MessageFlags } = require('discord.js');
-const { setSetting } = require('../db/settings');
+const { setSetting, getSetting } = require('../db/settings');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -11,7 +11,9 @@ module.exports = {
     .addStringOption(o => o.setName('description').setDescription('ข้อความ embed (ใช้ \\n)').setRequired(false))
     .addStringOption(o => o.setName('button_label').setDescription('ข้อความปุ่ม').setRequired(false))
     .addStringOption(o => o.setName('color').setDescription('สี hex').setRequired(false))
-    .addChannelOption(o => o.setName('log_channel').setDescription('channel ส่ง log').setRequired(false)),
+    .addChannelOption(o => o.setName('log_channel').setDescription('channel ส่ง log').setRequired(false))
+    .addBooleanOption(o => o.setName('province_select').setDescription('ให้เลือกจังหวัด (role) หลัง register').setRequired(false))
+    .addBooleanOption(o => o.setName('interest_select').setDescription('ให้เลือก interest/skill (role) หลัง register').setRequired(false)),
 
   async execute(interaction) {
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
@@ -21,11 +23,22 @@ module.exports = {
     const buttonLabel = interaction.options.getString('button_label') ?? '📋 แนะนำตัว/แก้ไขข้อมูล';
     const colorInput  = interaction.options.getString('color');
     const color       = colorInput ? parseInt(colorInput.replace('#', ''), 16) : 0x5865f3;
-    const logChannel  = interaction.options.getChannel('log_channel') ?? interaction.channel;
+    const logChannel     = interaction.options.getChannel('log_channel') ?? interaction.channel;
+    const provinceSelect = interaction.options.getBoolean('province_select');
+    const interestSelect = interaction.options.getBoolean('interest_select');
 
-    /* interaction.client.logChannel = logChannel; */
-    // เซฟตั้งค่าห้อง Log ของระบบ Register แยกต่างหาก
-    await setSetting(interaction.guildId, 'config_register', { log_channel_id: logChannel.id });
+    // โหลด config เดิม แล้ว merge
+    let regConfig = await getSetting(interaction.guildId, 'config_register');
+    if (typeof regConfig === 'string') {
+      try { regConfig = JSON.parse(regConfig); } catch { regConfig = {}; }
+    }
+    regConfig = regConfig ?? {};
+
+    regConfig.log_channel_id = logChannel.id;
+    if (provinceSelect !== null)  regConfig.province_select = provinceSelect;
+    if (interestSelect !== null)  regConfig.interest_select = interestSelect;
+
+    await setSetting(interaction.guildId, 'config_register', regConfig);
 
     const embed = new EmbedBuilder().setTitle(title).setDescription(description).setColor(color);
     const row = new ActionRowBuilder().addComponents(
@@ -34,7 +47,8 @@ module.exports = {
           .setLabel(buttonLabel)
           .setStyle(ButtonStyle.Primary)
       );
-    const sent = await interaction.channel.send({ embeds: [embed], components: [row] });
+    const channel = interaction.channel ?? await interaction.client.channels.fetch(interaction.channelId);
+    const sent = await channel.send({ embeds: [embed], components: [row] });
 
     /* // สร้าง Array มารองรับ Components
     const components = [];
@@ -67,6 +81,16 @@ module.exports = {
       log_channel_id: logChannel.id
     }); */
 
-    await interaction.editReply({ content: `✅ ติดตั้งระบบแนะนำตัวเรียบร้อย!\nLog → ${logChannel.id === interaction.channelId ? 'channel นี้' : `<#${logChannel.id}>`}` });
+    const logDisplay = regConfig.log_channel_id
+      ? (regConfig.log_channel_id === interaction.channelId ? 'channel นี้' : `<#${regConfig.log_channel_id}>`)
+      : 'ไม่ได้ตั้ง';
+    await interaction.editReply({
+      content: [
+        '✅ ติดตั้งระบบแนะนำตัวเรียบร้อย!',
+        `Log → ${logDisplay}`,
+        `Province select → ${regConfig.province_select ? '✅' : '❌'}`,
+        `Interest select → ${regConfig.interest_select ? '✅' : '❌'}`,
+      ].join('\n'),
+    });
   },
 };

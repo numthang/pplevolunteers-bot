@@ -109,14 +109,6 @@ function buildRegisterModal(existing = null) {
     nameInput.setValue([existing.firstname, existing.lastname].filter(Boolean).join(' '));
   }
 
-  const memberIdInput = new TextInputBuilder()
-    .setCustomId('field_member_id')
-    .setLabel('เลขสมาชิกพรรค (ถ้ามี)')
-    .setStyle(TextInputStyle.Short)
-    .setPlaceholder('เช่น 6000000001')
-    .setRequired(false);
-  if (existing?.member_id) memberIdInput.setValue(existing.member_id);
-
   const nicknameInput = new TextInputBuilder()
     .setCustomId('field_nickname')
     .setLabel('ชื่อเล่น')
@@ -133,6 +125,14 @@ function buildRegisterModal(existing = null) {
     .setRequired(true);
   if (existing?.specialty) interestInput.setValue(existing.specialty);
 
+  const amphoeInput = new TextInputBuilder()
+    .setCustomId('field_amphoe')
+    .setLabel('อำเภอ / จังหวัด')
+    .setStyle(TextInputStyle.Short)
+    .setPlaceholder('เช่น ลาดพร้าว กรุงเทพฯ')
+    .setRequired(false);
+  if (existing?.amphoe) amphoeInput.setValue(existing.amphoe);
+
   const referredByInput = new TextInputBuilder()
     .setCustomId('field_referred_by')
     .setLabel('แนะนำโดย (ถ้ามี)')
@@ -143,9 +143,9 @@ function buildRegisterModal(existing = null) {
 
   modal.addComponents(
     new ActionRowBuilder().addComponents(nameInput),
-    new ActionRowBuilder().addComponents(memberIdInput),
     new ActionRowBuilder().addComponents(nicknameInput),
     new ActionRowBuilder().addComponents(interestInput),
+    new ActionRowBuilder().addComponents(amphoeInput),
     new ActionRowBuilder().addComponents(referredByInput),
   );
 
@@ -159,15 +159,27 @@ async function handleModalSubmit(interaction) {
 
   const formData = {
     name:       interaction.fields.getTextInputValue('field_name'),
-    memberId:   interaction.fields.getTextInputValue('field_member_id'),
     nickname:   interaction.fields.getTextInputValue('field_nickname'),
     interest:   interaction.fields.getTextInputValue('field_interest'),
+    amphoe:     interaction.fields.getTextInputValue('field_amphoe'),
     referredBy: interaction.fields.getTextInputValue('field_referred_by'),
   };
 
-  pendingForms.set(interaction.user.id, {formData, selectedProvinces: {}});
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-  const {name, memberId, nickname, interest, referredBy} = formData;
+  // โหลด config_register
+  const { getSetting } = require('../db/settings');
+  let regConfig = await getSetting(interaction.guildId, 'config_register');
+  if (typeof regConfig === 'string') {
+    try { regConfig = JSON.parse(regConfig); } catch { regConfig = {}; }
+  }
+  regConfig = regConfig ?? {};
+  const provinceSelect = regConfig.province_select === true;
+  const interestSelect = regConfig.interest_select === true;
+
+  pendingForms.set(interaction.user.id, {formData, selectedProvinces: {}, interestSelect});
+
+  const {name, nickname, interest, amphoe, referredBy} = formData;
   const parts = name.trim().split(/\s+/);
   const firstname = parts[0] ?? null;
   const lastname = parts.slice(1).join(' ') || null;
@@ -178,8 +190,8 @@ async function handleModalSubmit(interaction) {
     nickname,
     firstname,
     lastname,
-    member_id: memberId,
     specialty: interest,
+    amphoe: amphoe || null,
     referred_by: referredBy,
     province: null,
     region: null,
@@ -188,23 +200,56 @@ async function handleModalSubmit(interaction) {
   });
   await syncMemberRoles(interaction.member);
 
-  const embed = new EmbedBuilder()
-    .setTitle('📍 เลือกจังหวัดของคุณ')
-    .setDescription('เลือกได้หลายจังหวัด หลายภาคตามความสนใจ')
-    .setColor(0x5865f3);
+  if (!provinceSelect) {
+    pendingForms.delete(interaction.user.id);
+    const logMessageUrl = await sendRegisterLog(interaction, formData, []);
+    const memberRoles = interaction.member.roles;
+    await interaction.editReply({
+      embeds: [new EmbedBuilder()
+        .setTitle('✅ บันทึกข้อมูลเรียบร้อยแล้ว!')
+        .setDescription(
+          (interestSelect
+            ? 'ขั้นตอนสุดท้าย — เลือกความสนใจและความถนัดของคุณได้เลย\n' +
+              'กดซ้ำเพื่อถอด • 🔵 = มีอยู่แล้ว • ⬜ = ยังไม่มี'
+            : 'ลงทะเบียนเสร็จสมบูรณ์แล้ว') +
+          (logMessageUrl ? `\n\n[📋 ดูข้อมูลที่บันทึกไว้](${logMessageUrl})` : '')
+        )
+        .setColor(0x57f287)],
+    });
+    if (interestSelect) {
+      await interaction.followUp({
+        embeds: [new EmbedBuilder().setTitle('🎯 ความสนใจของคุณคืออะไร?').setColor(0xf1c40f)],
+        components: buildRows(INTEREST_BUTTONS, INTEREST_ROLES, memberRoles, 'interest'),
+        flags: MessageFlags.Ephemeral,
+      });
+      await interaction.followUp({
+        embeds: [new EmbedBuilder().setTitle('🛠️ ความถนัดของคุณคืออะไร?').setColor(0x3498db)],
+        components: buildRows(SKILL_BUTTONS, SKILL_ROLES, memberRoles, 'skill'),
+        flags: MessageFlags.Ephemeral,
+      });
+    }
+    return;
+  }
 
-  await interaction.reply({
-    embeds: [embed],
-    components: PROVINCE_REGIONS.slice(0, 5).map(buildDropdown),
+  await interaction.editReply({
+    embeds: [
+      new EmbedBuilder()
+        .setTitle('🏙️ กรุงเทพฯ & ปริมณฑล')
+        .setDescription(BKK_HINT)
+        .setColor(0x3498db),
+    ],
+    components: [buildDropdown(PROVINCE_REGIONS[0])],
     flags: MessageFlags.Ephemeral,
   });
 
   await interaction.followUp({
-    embeds: [new EmbedBuilder()
-      .setTitle('🏙️ กรุงเทพฯ & ปริมณฑล')
-      .setDescription(BKK_HINT)
-      .setColor(0x3498db)],
-    components: [buildDropdown(PROVINCE_REGIONS[5])],
+    embeds: [
+      new EmbedBuilder()
+        .setTitle('📍 เลือกจังหวัดของคุณ')
+        .setDescription('เลือกได้หลายจังหวัด หลายภาคตามความสนใจ')
+        .setColor(0x5865f3),
+    ],
+    components: PROVINCE_REGIONS.slice(1).map(buildDropdown),
     flags: MessageFlags.Ephemeral,
   });
 
@@ -259,6 +304,59 @@ async function handleProvinceDropdown(interaction) {
   await syncMemberRoles(interaction.member);
 }
 
+// -------- Send Register Log --------
+async function sendRegisterLog(interaction, formData, allProvinces) {
+  const { getSetting } = require('../db/settings');
+  const {name, nickname, interest, amphoe, referredBy} = formData;
+
+  const embed = new EmbedBuilder()
+    .setColor(0x5865f3)
+    .setThumbnail(interaction.user.displayAvatarURL())
+    .addFields(
+      {name: 'ชื่อ-นามสกุล',     value: name,                                                    inline: true},
+      {name: 'ชื่อเล่น',          value: nickname,                                                inline: true},
+      {name: 'อำเภอ/จังหวัด (role)',     value: [amphoe, allProvinces.join(', ')].filter(Boolean).join(' · ') || '-', inline: false},
+      {name: 'ความสนใจ/ความถนัด', value: interest || '-',               inline: false},
+      {name: 'แนะนำโดย',         value: referredBy || '-',             inline: true},
+      {name: 'Discord',           value: `<@${interaction.user.id}> (${interaction.user.id})`, inline: false},
+    )
+    .setTimestamp();
+
+  let logMessageUrl = null;
+  try {
+    let logChannel = interaction.channel ?? await interaction.client.channels.fetch(interaction.channelId);
+    let regConfig = await getSetting(interaction.guildId, 'config_register');
+    if (typeof regConfig === 'string') {
+      try { regConfig = JSON.parse(regConfig); } catch { regConfig = {}; }
+    }
+    if (regConfig?.log_channel_id) {
+      logChannel = await interaction.guild.channels.fetch(regConfig.log_channel_id)
+        .catch((err) => {
+          console.error(`❌ Fetch Log Channel (${regConfig.log_channel_id}) Failed:`, err.message);
+          return logChannel;
+        });
+    }
+
+    if (logChannel.isThread()) await logChannel.join();
+    const logMsg = await logChannel.send({
+      content: `Sent by <@${interaction.user.id}> (${interaction.user.username})`,
+      embeds: [embed],
+    });
+
+    if (logChannel.id !== interaction.channelId) {
+      logMessageUrl = logMsg.url;
+    }
+
+    if (interaction.client.refreshSticky) {
+      await interaction.client.refreshSticky(logChannel);
+    }
+  } catch (err) {
+    console.error('❌ ส่ง log ไม่ได้:', err);
+  }
+
+  return logMessageUrl;
+}
+
 // -------- Confirm Button → log channel --------
 async function handleRegisterConfirm(interaction) {
   if (!interaction.isButton()) return;
@@ -271,8 +369,8 @@ async function handleRegisterConfirm(interaction) {
     return interaction.followUp({content: '❌ ไม่พบข้อมูล กรุณาใช้ /register ใหม่', flags: MessageFlags.Ephemeral});
   }
 
-  const {formData} = pending;
-  const {name, memberId, nickname, interest, referredBy} = formData;
+  const {formData, interestSelect} = pending;
+  const {name, nickname, interest, amphoe, referredBy} = formData;
 
   await interaction.member.fetch();
   const allProvinces = Object.entries(PROVINCE_ROLES)
@@ -280,62 +378,7 @@ async function handleRegisterConfirm(interaction) {
     .map(([province]) => province);
   await syncMemberRoles(interaction.member);
 
-  const embed = new EmbedBuilder()
-    .setColor(0x5865f3)
-    .setThumbnail(interaction.user.displayAvatarURL())
-    .addFields(
-      {name: 'ชื่อ-นามสกุล',     value: name,                    inline: true},
-      {name: 'ชื่อเล่น',          value: nickname,                inline: true},
-      {name: 'เลขสมาชิก',         value: memberId || '-',         inline: true},
-      {name: 'จังหวัด',           value: allProvinces.join(', ') || '-', inline: false},
-      {name: 'ความสนใจ/ความถนัด', value: interest || '-',         inline: false},
-      {name: 'แนะนำโดย',         value: referredBy || '-',       inline: true},
-      {name: 'Discord',           value: `<@${interaction.user.id}> (${interaction.user.id})`, inline: false},
-    )
-    .setTimestamp();
-
-  // ส่ง log แล้วเก็บ message ที่ส่งไว้
-  let logMessageUrl = null;
-  try {
-    // --- โค้ดใหม่ ---
-    let logChannel = interaction.channel; // ค่าเริ่มต้นคือห้องที่กดปุ่ม
-    const { getSetting } = require('../db/settings'); // ดึงเครื่องมือ DB มาใช้
-    let regConfig = await getSetting(interaction.guildId, 'config_register');
-
-    // 🔥 เพิ่มบรรทัดนี้เพื่อดักความต่างของ Driver บน Server
-    if (typeof regConfig === 'string') {
-      try {
-          regConfig = JSON.parse(regConfig);
-      } catch (e) {
-          console.error('❌ Parse regConfig fail:', e);
-      }
-    }
-    if (regConfig && regConfig.log_channel_id) {
-      logChannel = await interaction.guild.channels.fetch(regConfig.log_channel_id)
-        .catch((err) => {
-            console.error(`❌ Fetch Log Channel (${regConfig.log_channel_id}) Failed:`, err.message);
-            return interaction.channel;
-        });
-    }
-
-    if (logChannel.isThread()) await logChannel.join();
-    const logMsg = await logChannel.send({
-      content: `Sent by <@${interaction.user.id}> (${interaction.user.username})`,
-      embeds: [embed] 
-    });
-    
-    // สร้าง link เฉพาะถ้า log ไปห้องอื่น (ห้องเดียวกันไม่ต้องมี)
-    if (logChannel.id !== interaction.channelId) {
-      logMessageUrl = logMsg.url;
-    }
-    
-    // ... หลังส่ง logMsg สำเร็จ ...
-    if (interaction.client.refreshSticky) {
-      await interaction.client.refreshSticky(logChannel);
-    }
-  } catch (err) {
-    console.error('❌ ส่ง log ไม่ได้:', err);
-  }
+  const logMessageUrl = await sendRegisterLog(interaction, formData, allProvinces);
 
   //await interaction.followUp({content: '✅ บันทึกข้อมูลเรียบร้อยแล้วครับ!', flags: MessageFlags.Ephemeral});
   pendingForms.delete(interaction.user.id);
@@ -347,29 +390,33 @@ async function handleRegisterConfirm(interaction) {
     embeds: [new EmbedBuilder()
       .setTitle('✅ บันทึกข้อมูลเรียบร้อยแล้ว!')
       .setDescription(
-        'ขั้นตอนสุดท้าย — เลือกความสนใจและความถนัดของคุณได้เลย\n' +
-        'กดซ้ำเพื่อถอด • 🔵 = มีอยู่แล้ว • ⬜ = ยังไม่มี' +
+        (interestSelect
+          ? 'ขั้นตอนสุดท้าย — เลือกความสนใจและความถนัดของคุณได้เลย\n' +
+            'กดซ้ำเพื่อถอด • 🔵 = มีอยู่แล้ว • ⬜ = ยังไม่มี'
+          : 'ลงทะเบียนเสร็จสมบูรณ์แล้ว') +
         (logMessageUrl ? `\n\n[📋 ดูข้อมูลที่บันทึกไว้](${logMessageUrl})` : '')
       )
       .setColor(0x57f287)],
     flags: MessageFlags.Ephemeral,
   });
 
-  await interaction.followUp({
-    embeds: [new EmbedBuilder()
-      .setTitle('🎯 ความสนใจของคุณคืออะไร?')
-      .setColor(0xf1c40f)],
-    components: buildRows(INTEREST_BUTTONS, INTEREST_ROLES, memberRoles, 'interest'),
-    flags: MessageFlags.Ephemeral,
-  });
+  if (interestSelect) {
+    await interaction.followUp({
+      embeds: [new EmbedBuilder()
+        .setTitle('🎯 ความสนใจของคุณคืออะไร?')
+        .setColor(0xf1c40f)],
+      components: buildRows(INTEREST_BUTTONS, INTEREST_ROLES, memberRoles, 'interest'),
+      flags: MessageFlags.Ephemeral,
+    });
 
-  await interaction.followUp({
-    embeds: [new EmbedBuilder()
-      .setTitle('🛠️ ความถนัดของคุณคืออะไร?')
-      .setColor(0x3498db)],
-    components: buildRows(SKILL_BUTTONS, SKILL_ROLES, memberRoles, 'skill'),
-    flags: MessageFlags.Ephemeral,
-  });
+    await interaction.followUp({
+      embeds: [new EmbedBuilder()
+        .setTitle('🛠️ ความถนัดของคุณคืออะไร?')
+        .setColor(0x3498db)],
+      components: buildRows(SKILL_BUTTONS, SKILL_ROLES, memberRoles, 'skill'),
+      flags: MessageFlags.Ephemeral,
+    });
+  }
 }
 
 async function handleDeleteLog(interaction) {

@@ -4,8 +4,8 @@ const { PROVINCE_ROLES, INTEREST_ROLES, SKILL_ROLES } = require('../config/roles
 async function upsertMember(guildId, data) {
   const sql = `
   INSERT INTO dc_members
-    (guild_id, discord_id, username, nickname, firstname, lastname, member_id, specialty, province, region, roles, interests, referred_by)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    (guild_id, discord_id, username, nickname, firstname, lastname, member_id, specialty, amphoe, province, region, roles, interests, referred_by)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   ON DUPLICATE KEY UPDATE
     username = VALUES(username),
     nickname = VALUES(nickname),
@@ -13,6 +13,7 @@ async function upsertMember(guildId, data) {
     lastname = VALUES(lastname),
     member_id = VALUES(member_id),
     specialty = VALUES(specialty),
+    amphoe = VALUES(amphoe),
     province = VALUES(province),
     region = VALUES(region),
     roles = VALUES(roles),
@@ -29,6 +30,7 @@ async function upsertMember(guildId, data) {
     data.lastname ?? null,
     data.member_id ?? null,
     data.specialty ?? null,
+    data.amphoe ?? null,
     data.province ?? null,
     data.region ?? null,
     data.roles ?? null,
