@@ -202,7 +202,11 @@ async function handleModalSubmit(interaction) {
 
   if (!provinceSelect) {
     pendingForms.delete(interaction.user.id);
-    const logMessageUrl = await sendRegisterLog(interaction, formData, []);
+    await interaction.member.fetch();
+    const allProvinces = Object.entries(PROVINCE_ROLES)
+      .filter(([, roleId]) => interaction.member.roles.cache.has(roleId))
+      .map(([province]) => province);
+    const logMessageUrl = await sendRegisterLog(interaction, formData, allProvinces);
     const memberRoles = interaction.member.roles;
     await interaction.editReply({
       embeds: [new EmbedBuilder()
