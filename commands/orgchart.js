@@ -9,7 +9,7 @@ const { getRoleStats, buildOrgChartEmbed, buildOrgChartAttachment } = require('.
 
 const DEFAULT_TOP  = 10;
 const MAX_TOP      = 25;
-const DEFAULT_DAYS = 30;
+const DEFAULT_DAYS = 60;
 
 function addRoleOpt(builder, n) {
   return builder.addRoleOption(opt =>
@@ -49,13 +49,20 @@ cmd
         { name: '🖼️ รูปภาพเท่านั้น',           value: 'image' },
         { name: '📊 Embed + รูปภาพ',            value: 'both'  },
       )
+  )
+  .addBooleanOption(opt =>
+    opt.setName('public')
+      .setDescription('แสดงให้ทุกคนเห็น (default: เฉพาะคุณ)')
+      .setRequired(false)
   );
 
 module.exports = {
   data: cmd,
 
   async execute(interaction) {
-    await interaction.deferReply();
+    // await interaction.deferReply();
+    const isPublic = interaction.options.getBoolean('public') ?? false;
+    await interaction.deferReply({ ephemeral: !isPublic });
 
     const config     = await getConfig(interaction.guildId);
     const outputMode = interaction.options.getString('output') ?? 'embed';
