@@ -60,6 +60,7 @@ module.exports = {
     const memberRoles = [...members.values()].map(m => ({
       id: m.id,
       username: m.user.username,
+      nickname: m.nickname ?? null,
       roles: m.roles.cache
         .filter(r => r.id !== guild.id) // ตัด @everyone ออก
         .map(r => ({ id: r.id, name: r.name })),
