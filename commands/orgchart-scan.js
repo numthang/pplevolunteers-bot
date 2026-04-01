@@ -25,11 +25,11 @@ function matchChannels(guild, roleName) {
   for (const channel of guild.channels.cache.values()) {
     const chName = normalize(channel.name);
     if (!chName.includes(keyword) && !keyword.includes(chName)) continue;
-    if ((channel.isTextBased() && !channel.isThread()) || channel.type === ChannelType.GuildForum) {
+    if (channel.isVoiceBased()) {
+      voiceChs.push({ id: channel.id, name: channel.name, type: 'voice' });
+    } else if ((channel.isTextBased() && !channel.isThread()) || channel.type === ChannelType.GuildForum) {
       const type = channel.type === ChannelType.GuildForum ? 'forum' : 'text';
       textChs.push({ id: channel.id, name: channel.name, type });
-    } else if (channel.isVoiceBased()) {
-      voiceChs.push({ id: channel.id, name: channel.name, type: 'voice' });
     }
   }
 

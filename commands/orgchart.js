@@ -116,7 +116,7 @@ module.exports = {
         await interaction.editReply(payload);
         isFirst = false;
       } else {
-        await interaction.followUp(payload);
+        await interaction.followUp({ ...payload, ephemeral: !isPublic });
       }
     }
 

@@ -1,0 +1,4514 @@
+📄 Log file: /home/tee/VSites/node/pple-dcbot/logs/backfill-missing-2026-03-31T16-41-08.log
+🏠 Guild ID: 1111998833652678757
+📂 Input log: logs/backfill-missing-ratchaburi.log
+🔄 Backfill ตั้งแต่ 2019-12-31 ถึง 2026-03-31
+
+📄 อ่าน missing IDs จาก: /home/tee/VSites/node/pple-dcbot/logs/backfill-missing-ratchaburi.log
+🔍 พบ 1103 channels/threads ที่ต้อง retry
+
+✅ Login as PPLE Test#9780
+
+  📥 🧵 thread #แบบแผ่นพับ (ใน #สภาอบจ)
+    → fetch 96 / upsert 96 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 96, upsert 96 msgs
+
+  📥 🧵 thread #Motto นายก (ใน #สภาอบจ)
+    → fetch 28 / upsert 28 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 28, upsert 28 msgs
+
+  📥 🧵 thread #แคมเปญหาเสียง (ใน #สภาอบจ)
+    → fetch 22 / upsert 22 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 22, upsert 22 msgs
+
+  📥 🧵 thread #คู่มือผู้ประสานงานราชบุรี (ใน #👫┆เลขานุการ)
+    → fetch 7 / upsert 7 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 7, upsert 7 msgs
+
+  📥 🧵 thread #กลุ่มลับในกลุ่มลับในกลุ่มลับ (ใน #👫┆เลขานุการ)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #TODO (ใน #👫┆เลขานุการ)
+    → fetch 11 / upsert 11 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 11, upsert 11 msgs
+
+  📥 🧵 thread #ไม่ต้องไว้ใจใคร ในระบบที่โปร่งใส (ใน #👫┆เลขานุการ)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #ลดอำนาจกรรมการจังหวัด (ใน #👫┆เลขานุการ)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #เตรียมเรื่อง podcast อยุธยา 23 พ.ค. 19:00 น. (ใน #👫┆เลขานุการ)
+    → fetch 11 / upsert 11 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 11, upsert 11 msgs
+
+  📥 🧵 thread #เครื่องมือสื่อสารองค์กร (ใน #👫┆เลขานุการ)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #อำนาจสูงสุดเป็นของสมาชิกพรรค (ใน #👫┆เลขานุการ)
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
+
+  📥 🧵 thread #ไม่มีห้องแห่งความลับในการทำงาน (ใน #👫┆เลขานุการ)
+    → fetch 8 / upsert 8 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 8, upsert 8 msgs
+
+  📥 🧵 thread #ChatGPT (ใน #👫┆เลขานุการ)
+    → fetch 11 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 11, upsert 6 msgs
+
+  📥 🧵 thread #เลือกตั้ง ตทอ. ล่วงหน้า (ใน #👫┆เลขานุการ)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #Discord 101-102 (ใน #👫┆เลขานุการ)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #บันทึกการเยี่ยมจังหวัดภาคกลาง (ใน #👫┆เลขานุการ)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #House of KaoKlai Ratchaburi Ep.2 (ใน #👫┆เลขานุการ)
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
+
+  📥 🧵 thread #ประชุมเรื่องการให้ผู้สมัครทดลงงานกับจังหวัด8/7/68 (ใน #👫┆บันทึก-คณะกรรมการ)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #ประชุมพรรค 25 พ.ค. (ใน #👫┆บันทึก-คณะกรรมการ)
+    → fetch 10 / upsert 10 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 10, upsert 10 msgs
+
+  📥 🧵 thread #ข้อเสนอการรับเงินบริจาค ราชบุรี (ใน #👫┆บันทึก-คณะกรรมการ)
+    → fetch 13 / upsert 13 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 13, upsert 13 msgs
+
+  📥 🧵 thread #แบบฟอร์มทำรายงานการประชุม (ใน #👫┆บันทึก-คณะกรรมการ)
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
+
+  📥 🧵 thread #สรุปรายงานการประชุม 10 กันยายน 2567 (ใน #👫┆บันทึก-คณะกรรมการ)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #บันทึกการประชุม 6 กันยายน (ใน #👫┆บันทึก-คณะกรรมการ)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #บันทึกการประชุม 23 ต.ค. 67 (ใน #👫┆บันทึก-คณะกรรมการ)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #บันทึกการประชุมตัวแทนพรรค 15 ต.ค.67 (ใน #👫┆บันทึก-คณะกรรมการ)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #บันทึกการประชุม ณ วันที่ 2 พค 2567 (ใน #👫┆บันทึก-คณะกรรมการ)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #บันทึกประชุมกรรมการจังหวัด 24 เมษายน 67 (ใน #👫┆บันทึก-คณะกรรมการ)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #► รวมกฎหมายเลือกตั้ง - กกต. (ใน #💬┆กระทู้-กฎหมาย)
+    → fetch 63 / upsert 63 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 63, upsert 63 msgs
+
+  📥 🧵 thread #สถานที่ติดแผ่นป้ายเกี่ยวกับการเลือกตั้งสมาชิกสภาผู้แทนราษฎร เขตเลือกตั้งที่ 1 - 5 (ใน #💬┆กระทู้-กฎหมาย)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #ผมจะพาคนพิการ ไปแจ้งความโดนหลอกขายแทแเลตในเพจ (ใน #💬┆กระทู้-กฎหมาย)
+    → fetch 43 / upsert 43 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 43, upsert 43 msgs
+
+  📥 🧵 thread #เคลสเกิดขึ้นจริง ขอความรู้เพื่ออธิบายคนใช้เส้นทางครับ (ใน #💬┆กระทู้-กฎหมาย)
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
+
+  📥 🧵 thread #กรณีนักการเมืองท้องถิ่นศาลอาญาพิพากษาจำคุก แต่ยังสามารถอุทธณ์คดีได้ จะต้องพ้นจากตำแหน่งทันทีหรือไม่ (ใน #💬┆กระทู้-กฎหมาย)
+    → fetch 7 / upsert 7 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 7, upsert 7 msgs
+
+  📥 🧵 thread #ร่างกฎหมาย ให้มีกำนันผู้ใหญ่บ้านในเขตเทศบาล (ใน #💬┆กระทู้-กฎหมาย)
+    → fetch 7 / upsert 7 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 7, upsert 7 msgs
+
+  📥 🧵 thread #งานสื่อเขต 1 (ใน #🗨┆กองเลขา-เขต-1)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #แก้ไขป้ายเขต 1 (ใน #🗨┆กองเลขา-เขต-1)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #ประชุมประจำวัน (ใน #🗨┆กองเลขา-เขต-1)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #ยุทธศาสตร์พื้นที่ (ใน #🗨┆กองเลขา-เขต-1)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #พิกัดหน่วยเลือกตั้ง (ใน #🗨┆กองเลขา-เขต-1)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #เอกสารส่ง กกต. (ใน #🗨┆กองเลขา-เขต-1)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #บัญชีจังหวัด (ใน #👫┆ฝ่ายบัญชีและการเงิน)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #บัญชีเขต (ใน #👫┆ฝ่ายบัญชีและการเงิน)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #แจ้งตัดต้นไม้ เมืองราชบุรี ที่ดินราชพัสดุ ติดแฟลชตำรวจเก่าวงเวียนโอ่ง (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #บริษัทซิกม่า อโกรเคมีคอล (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 9 / upsert 9 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 9, upsert 9 msgs
+
+  📥 🧵 thread #ประสานเรื่องน้ำท่วมหน้าบ้าน ยาย (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #โครงการตั้งโรงงานไฟฟ้าจากขยะมูลฝอยชุมชนขนาด 7.0 เมกะวัตต์ หมู่ 2 บ้านไพรสะเดา ต.ดอนทราย อ.ปากท่อ (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 200 / upsert 200 msgs... (hasMore: true)
+    → fetch 202 / upsert 202 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 202, upsert 202 msgs
+
+  📥 🧵 thread #ตลาดน้ำดำเนิน ปัญหาสารพัดด้าน ที่ไม่มีการแก้ไขจริงจัง (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 114 / upsert 114 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 114, upsert 114 msgs
+
+  📥 🧵 thread #โรงเหล้านำกากสารมาทิ้งที่บ่อดิน ต.เกาะพลับพลา อ.เมือง (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 17 / upsert 17 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 17, upsert 17 msgs
+
+  📥 🧵 thread #การรับมือ การซื้อเสียง ควรเป็นอย่างไร (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 11 / upsert 11 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 11, upsert 11 msgs
+
+  📥 🧵 thread #หลอกไปเปิดบัญชีม้า ถูกส่งต่อไปทำงานเขมร (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 19 / upsert 19 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 19, upsert 19 msgs
+
+  📥 🧵 thread #ประปาภูมิภาคบางโตนด (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
+
+  📥 🧵 thread #จุดเสี่ยงอันตรายในการสัญจรบริเวณโรงเรียนบ้านห้วยยางโทน (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #สงสัยเรื่องการทุจริตในโรงเรียน (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #ที่ดินสปกทำไร่ไม่ได้-จอมบึง (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 103 / upsert 103 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 103, upsert 103 msgs
+
+  📥 🧵 thread #ชาวรางบัวร้องเรียน สนง ที่ดินไม่รับทำธุรกรรมที่ดินที่ติดกับธนาธร (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #ร้องเรียนให้ตรวจสอบ ที่ดิน นสล.5490 ชาวบ้านคาดมีการทุจริต ร้องขอมาหกปี ไม่มีการตรวจสอบ (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 40 / upsert 40 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 40, upsert 40 msgs
+
+  📥 🧵 thread #น้ำประปา ไม่มีคุณภาพ ดอนกรวย ดำเนิน (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 50 / upsert 50 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 50, upsert 50 msgs
+
+  📥 🧵 thread #ปากท่อ,วัดเพลง แจ้งหลายเรื่อง (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 37 / upsert 37 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 37, upsert 37 msgs
+
+  📥 🧵 thread #สำรวจหมู่บ้านท่าเคย หมู่ 6 วันที่ 15 ก.ย. (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #ถนนชำรุด 2 จุด ซอย1 พุพลับ หนองวัวดำ ต.ทุ่งหลวง อ.ปากท่อ (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 13 / upsert 13 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 13, upsert 13 msgs
+
+  📥 🧵 thread #ฟาร์มเป็ดปิดทางสัญจร อ.ปากท่อ (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 79 / upsert 79 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 79, upsert 79 msgs
+
+  📥 🧵 thread #การร้องเรียนปัญหาน้ำเสีย กลิ่น แมลงวัน จากการทำฟาร์มปศุสัตว์ จะแก้ปัญหาอย่างไรในภาพรวม (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 7 / upsert 7 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 7, upsert 7 msgs
+
+  📥 🧵 thread #สรุปเนื้อหาหนังสือสวัสดิการสังคม (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #ไฟฟ้าส่องสว่าง ถนน3273 โคกสูงหนองเป็ด  ดับ (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #รายงานการลงพื้นที่สำรวจปัญหาจราจร  บริเวณสี่แยกไฟแดงโพธิ์คู่ – สามแยกทางไปหนองเสือ (หนองแมว) ถนนสาย (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 35 / upsert 35 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 35, upsert 35 msgs
+
+  📥 🧵 thread #เสาไฟริมคลองไผ่สามเกาะเขาขลุงไม่ติด ร้องมาทางทราฟฟี่ฟองดูว์ (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 15 / upsert 15 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 15, upsert 15 msgs
+
+  📥 🧵 thread #บันทึก กระบวนการเรื่องร้องเรียน (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #เด็กอายุ 15 ขอความช่วยเหลือไม่อยากไปอยู่กับพ่อที่จอมบึง (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 22 / upsert 22 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 22, upsert 22 msgs
+
+  📥 🧵 thread #ตรวจสอบงบดิจิตัลที่เข้าท้องถิ่นราชบุรี (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #เทศบาลเมืองจอมพล  ร้องเรียน กมธ.พัฒนาเมือง (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #เสาไฟฟ้าในบ้าน,ขอใช้น้ำประปา (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 25 / upsert 25 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 25, upsert 25 msgs
+
+  📥 🧵 thread #กลิ่นเหม็น จอมบึง (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #ไฟทางริมคลองไม่ติด 1 ต้น ถนน 3123 หน้าร้าน บ้านม่า&พบป่ะ (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
+
+  📥 🧵 thread #ติดตามปัญหาต้นทุนและคุณภาพของมะพร้าวน้ำหอม @ดำเนินสะดวก (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 22 / upsert 22 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 22, upsert 22 msgs
+
+  📥 🧵 thread #บ่อน้ำเสียหน้าโรงงานแพล้นปูน ต.ธรรมเสน อ.โพธาราม จ.ราชบุรี (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 44 / upsert 44 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 44, upsert 44 msgs
+
+  📥 🧵 thread #แนวทางการแก้ไขปัญหาหนอนหัวดำระบาดในมะพร้าว (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #น้ำแล้ง หนองปลาหมอ (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #เผาถ่าน ควันส่งผลต่อสุขภาพชุมชน (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 12 / upsert 12 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 12, upsert 12 msgs
+
+  📥 🧵 thread #อยากได้วิธีการจัดการกับสุนัขที่ไม่มีเจ้าของ (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 51 / upsert 26 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 51, upsert 26 msgs
+
+  📥 🧵 thread #ถนนดอนกระเบื้อง กระจับ บ้านโป่ง (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 10 / upsert 10 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 10, upsert 10 msgs
+
+  📥 🧵 thread #นายกอบต.ปากแรต บ้านโป่ง ยิงปืนขู่ เอี่ยวพยายามฆ่า เมื่อ19/12/67 (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 23 / upsert 23 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 23, upsert 23 msgs
+
+  📥 🧵 thread #ขายยาสมุนไพร บางแพ (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 20 / upsert 20 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 20, upsert 20 msgs
+
+  📥 🧵 thread #โรงปูนพระอาทิตย์ หน้าวัดเตาอิฐ หมู่ 8 ต.บ้านเลือก (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 73 / upsert 73 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 73, upsert 73 msgs
+
+  📥 🧵 thread #ไฟไม่ติด เขาขลุง บ้านโป่ง (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 33 / upsert 33 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 33, upsert 33 msgs
+
+  📥 🧵 thread #คัดค้านฟาร์มไก่หนองกวาง (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 14 / upsert 14 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 14, upsert 14 msgs
+
+  📥 🧵 thread #อยากให้ลงพื้นที่หมู่ 4 ท่าผา ไร้หน่วยงานเลียวแล (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 39 / upsert 39 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 39, upsert 39 msgs
+
+  📥 🧵 thread #นางบุญชู เสลาหอม53 ม.5 ต.ท่าผา อ.บ้านโป่งจ.ราชบุรี บ้านชำรุดทรุดโทรมไม่มีรายได้ (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 20 / upsert 20 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 20, upsert 20 msgs
+
+  📥 🧵 thread #เตาหลอมระเบิด (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
+
+  📥 🧵 thread #ชาวบ้านขี่รถมอเตอร์ไซค์ชนท่อก่อสร้าง แจ้งผู้ใหญ่บ้านแล้วเรื่องเงียบ (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 37 / upsert 37 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 37, upsert 37 msgs
+
+  📥 🧵 thread #คุณป้ากับหลานพิการต้องการห้องน้ำใหม่ (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
+
+  📥 🧵 thread #แทงค์น้ำเก่าตั้งแต่พ.ศ.2539 ไม่ได้ใช้งานนาน ชาวบ้านหวั่นจะล้มทับบ้านเรือน (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 68 / upsert 68 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 68, upsert 68 msgs
+
+  📥 🧵 thread #ข้าราชการ+พนักงานจ้าง อบต.บ้านม่วง ขอความเป็นธรรม (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 83 / upsert 83 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 83, upsert 83 msgs
+
+  📥 🧵 thread #อัพเดต เรื่องโรงเรียนวัดห้วยปลาดุก (โรงเรียนอบจ.ราขบุรี) 4/11/67 (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
+
+  📥 🧵 thread #ธุรการและลูกจ้าง สพฐ. ทั้งเขต 1 และ เขต 2 ราชบุรี กำลังจะถูกจ้างแบบจ้างเหมาบริการประ (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
+
+  📥 🧵 thread #น้ำท่วมใหญ่ภาคเหนือ (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 62 / upsert 62 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 62, upsert 62 msgs
+
+  📥 🧵 thread #บ่อคัดแยกขยะ อ่างหิน (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #น้ำขุ่น หมู่ 9 ต.ท่าเคย อ.สวนผึ้ง (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 29 / upsert 29 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 29, upsert 29 msgs
+
+  📥 🧵 thread #เทศบาลเมืองไม่ตัดต้นไม้ ให้ พม ไปซ่อมบ้านให้คนพิการ (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 45 / upsert 45 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 45, upsert 45 msgs
+
+  📥 🧵 thread #แม่สูงอายุ อยู่กับลูกป่วย ธาลัสซีเมีย (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
+
+  📥 🧵 thread #ควันจากโรงงาน (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
+
+  📥 🧵 thread #ปัญหาก่อตั้งโรงงานปูนผสมเสร็จ ต.ธรรมเสน อ.โพธาราม (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 105 / upsert 105 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 105, upsert 105 msgs
+
+  📥 🧵 thread #บ้านผู้พิการยากไร้ ไม่มีที่อยู่อาศัย โดนไล่ที่ มีผู้พิการติดเตียง.ขอความช่วยเหลือด้านที่อยู่ (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 21 / upsert 21 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 21, upsert 21 msgs
+
+  📥 🧵 thread #20240607 มอบบ้าน พมจ.ราชบุรี (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #นักเรียน ยากจน ม1 ต ด่านทับตะโก จอมบึง (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 79 / upsert 79 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 79, upsert 79 msgs
+
+  📥 🧵 thread #ด่านช่างไม่ตรวจรถขนของ-บ้านโป่ง (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #ท้องถิ่นติดปัญหาที่ธนารักษ์ทำให้แก้ปัญหาน้ำแล้งไม่ได้ (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 142 / upsert 142 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 142, upsert 142 msgs
+
+  📥 🧵 thread #ถนนเส้นสร้างโคกสูงทำให้เกิดอุบัติเหตุ (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 12 / upsert 12 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 12, upsert 12 msgs
+
+  📥 🧵 thread #ประสาน พมจ เรื่อง ครอบครัวอุปถัมภ์ (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
+
+  📥 🧵 thread #สรุปความสำเร็จ หลักฐานการแก้ไขปัญหาของทีมร้องเรียน ย้อนหลัง 1 ปี (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #ที่ดิน น ส ล  ประมาณ 48 ไร่ ไม่มีโฉนด (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 31 / upsert 31 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 31, upsert 31 msgs
+
+  📥 🧵 thread #โรงงานเสียงดัง เมือง (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 16 / upsert 16 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 16, upsert 16 msgs
+
+  📥 🧵 thread #ชาวบ้านต.รางบัว อ.จอมบึงฝากเรื่องน้ำมาค่ะ แอบมีเรื่องที่ดินเกี่ยวข้องด้วย (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 40 / upsert 40 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 40, upsert 40 msgs
+
+  📥 🧵 thread #กลิ่นเหม็น จอมบึง (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #พื้นที่เสี่ยงต่อการเกิดอุบัติเหตุ (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 17 / upsert 17 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 17, upsert 17 msgs
+
+  📥 🧵 thread #รวมเลขลงรับเอกสารร้องเรียน (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #มีร้องเรียน ผ่าน ฟองดู ช่วยประสานเรื่องน้ำประปาหน่อย (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #ป้ายบอกทางบดบังทรรศนะวิสัย (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 7 / upsert 7 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 7, upsert 7 msgs
+
+  📥 🧵 thread #ทำหนังสือ ประสานซ่อม ถนน เกาะศาลพระให้หน่อย (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #ถนนไม่เทลาดยางหลายสัปดาห์แล้ว -วัดม่วง บ้านโป่ง (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #โดนคดีเปิดบัญชีม้า (สงสารน้อง ) (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 63 / upsert 63 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 63, upsert 63 msgs
+
+  📥 🧵 thread #ปัญหาเรื่องคิวรถตู้ รอนาน ราคาแพง และบริการแย่ (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 8 / upsert 8 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 8, upsert 8 msgs
+
+  📥 🧵 thread #ยกเลิกเกณฑ์ทหาร (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 51 / upsert 51 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 51, upsert 51 msgs
+
+  📥 🧵 thread #ขอความช่วยเหลือ (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 12 / upsert 12 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 12, upsert 12 msgs
+
+  📥 🧵 thread #ร้องเรียนเรื่องจุดไฟเผา (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 12 / upsert 12 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 12, upsert 12 msgs
+
+  📥 🧵 thread #ปัญหาที่ดิน ปากท่อ (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 23 / upsert 23 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 23, upsert 23 msgs
+
+  📥 🧵 thread #โรงหลอมตะกั่วของนายทุนชาวจีน คนงานพม่า (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 7 / upsert 7 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 7, upsert 7 msgs
+
+  📥 🧵 thread #ไฟดับ ถนนทรุด ถนนพัง -แพงพวย ดำเนินสะดวก (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 83 / upsert 83 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 83, upsert 83 msgs
+
+  📥 🧵 thread #ขอความช่วยเหลือ (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #สะพานชำรุด คลองข่อย (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 15 / upsert 15 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 15, upsert 15 msgs
+
+  📥 🧵 thread #ปัญหาการสอบใบประกอบวิชาชีพล่าสุด (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #สะพานค่ายหลวงจากรถนายทุน-บ้านโป่ง (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #ถนนหลวงแต่ยังใช้สัญจรไม่ได้ เขาขวาง โพธาราม (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
+
+  📥 🧵 thread #ความคืบหน้าตลาดไฟไหม้บ้านสิงห์ (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 25 / upsert 25 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 25, upsert 25 msgs
+
+  📥 🧵 thread #โรงไฟฟ้าหินกอง (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #สถานีแก๊สในชุมชนห้วยไผ่ (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #จนท.ธุรการร้อง สพป.ราชบุรี 2 (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #เลือกโรงเรียนใหม่ครูอัตราจ้าง-เมือง (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 13 / upsert 13 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 13, upsert 13 msgs
+
+  📥 🧵 thread #บ่อขยะส่งกลิ่นเหม็น ปากท่อ (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 16 / upsert 16 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 16, upsert 16 msgs
+
+  📥 🧵 thread #ยายวัย75 คนไร้บ้าน ข้างวีคอนเขางู-หลุมดิน (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 30 / upsert 30 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 30, upsert 30 msgs
+
+  📥 🧵 thread #โรงงานแอบปล่อยน้ำเสีย โพธาราม (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 7 / upsert 7 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 7, upsert 7 msgs
+
+  📥 🧵 thread #ค่าเช่าที่บ้านโป่ง (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 7 / upsert 7 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 7, upsert 7 msgs
+
+  📥 🧵 thread #กลั่นแกล้งบุกรุกตำรวจไม่ดำเนินคดี ท่าผา (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 9 / upsert 9 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 9, upsert 9 msgs
+
+  📥 🧵 thread #รอนานมาถึง 6 ปีถนนหน้าวัดหนองกบลาดยาง แล้ว แต่อาจจะใช้งานไม่ได้นานขนาดยังไม่เปิดใช้เป็นทางการนะ. (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #ผิวถนนเสียหาย บริเวณวัดหนองหูช้าง (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #ถนนพุพังไม่ได้พัฒนา (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 14 / upsert 14 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 14, upsert 14 msgs
+
+  📥 🧵 thread #ชาวบ้านร่องปิดโรงงานร่อนทราย ทำให้เกิดฝุ่นละออง ถูกสั่งปิดแต่ยังทำต่อ ม.8 ต.ดอนกระเบื้อง อ.บ้านโป่ง (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 52 / upsert 52 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 52, upsert 52 msgs
+
+  📥 🧵 thread #โจรที่บางโตนด (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 8 / upsert 8 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 8, upsert 8 msgs
+
+  📥 🧵 thread #ขับรถสวนเลนเพราะยูเทิร์นไกล (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #ยูเทิร์น ใต้สะพานข้ามแม่น้ำหลังค่ายทหาร (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #ยูเทิร์น ถนนเลี่ยงบายพาส (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
+
+  📥 🧵 thread #ยาบ้า และ ค้าประเวณี (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 43 / upsert 43 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 43, upsert 43 msgs
+
+  📥 🧵 thread #แสงสว่างไม่ติด (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #📌ปากท่อ ถนนไม่ลาดยาง10ปี (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 18 / upsert 18 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 18, upsert 18 msgs
+
+  📥 🧵 thread #ถนนหนองกบ บ้านโป่ง (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 106 / upsert 106 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 106, upsert 106 msgs
+
+  📥 🧵 thread #ถนนพังมาก ซ.หมู่ไทย ต.สี่หมื่น (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #ท่อประปาวางใหม่ (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 7 / upsert 7 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 7, upsert 7 msgs
+
+  📥 🧵 thread #ถนนมืด ไม่มีไฟฟ้า ทางเปลี่ยว ถนนแคบ หน้าอบต.เบิกไพร จอมบึง (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 14 / upsert 14 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 14, upsert 14 msgs
+
+  📥 🧵 thread #ชาวบ้านไม่ได้รับการบริการเก็บขยะจากเทศบาลตำบลด่านทับตะโก (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #คนสติไม่ดี ถือมีดออกมาขู่สร้างความเดือดร้อน (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 7 / upsert 7 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 7, upsert 7 msgs
+
+  📥 🧵 thread #แมลงวันเยอะมากมาหลายเดือนแล้ว (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 126 / upsert 126 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 126, upsert 126 msgs
+
+  📥 🧵 thread #สายไฟฟ้าแรงสูงพาดผ่าน เขตปากท่อ (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 55 / upsert 55 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 55, upsert 55 msgs
+
+  📥 🧵 thread #ไฟแดง ตรงแยกซันนี่ ไม่ตรงความเป็นจริง เป็นไฟแดงที่เดาใจ (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 10 / upsert 10 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 10, upsert 10 msgs
+
+  📥 🧵 thread #ไฟแดงหนองโพ วัดบ้านเลือก (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 7 / upsert 7 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 7, upsert 7 msgs
+
+  📥 🧵 thread #ช่วยเหลือคุณป้าดูแลหมาจรจัด-จอมบึง (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 8 / upsert 8 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 8, upsert 8 msgs
+
+  📥 🧵 thread #พาน้องกลับห้องเรียน ท่าผา บ้านโป่ง (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 39 / upsert 39 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 39, upsert 39 msgs
+
+  📥 🧵 thread #สร้างเขื่อนป้องกันริมแม่น้ำ คลองตาคต โพธาราม (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 32 / upsert 32 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 32, upsert 32 msgs
+
+  📥 🧵 thread #สะพานข้ามแยก(เขางู)แยกนิสสัน (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #Traffy Fondou (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #บ้านทรุดโทรม  โพธาราม (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 15 / upsert 15 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 15, upsert 15 msgs
+
+  📥 🧵 thread #มีเพื่อนอยู่ที่ต.เขาขลุงทำกิจกรรมจิตอาสาหิ้งห้อยน้อย (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
+
+  📥 🧵 thread #ไฟถนนดับสองจุด บ้านโป่ง (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #ไม่มีถนนตัดผ่าน ราชบุรี (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #หมาติดเชื้อในฟิชวิลเลจ บ้านโป่ง (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
+
+  📥 🧵 thread #PM 2.5 (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #กองทุนหมู่บ้าน หมู่ที่ 10 ตำบลดอนแร่ (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 24 / upsert 23 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 24, upsert 23 msgs
+
+  📥 🧵 thread #เครือข่ายคนรักษ์น้ำห้วยไผ่ (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #ตรวจสอบการติดตั้งเสาไฟคลองตาคต (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #ฝุ่น รถบรรทุก เขตคลองข่อย (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #น้ำประปาคลองข่อย (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
+
+  📥 🧵 thread #ไฟฟ้าเข้าไม่ถึง โพธาราม (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #ควันจากโรงงาน (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
+
+  📥 🧵 thread #ยิงกันในผับ-อิทธิพล (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 14 / upsert 14 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 14, upsert 14 msgs
+
+  📥 🧵 thread #เด็กไม่ได้เรียนหนังสือ ท่าผา บ้านโป่ง (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 11 / upsert 11 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 11, upsert 11 msgs
+
+  📥 🧵 thread #น้ำประปาดอนกระเบื้อง (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #น้ำประปารางบัว (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #IO ตำรวจ โพธาราม (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #ถนนคนเดินโพธาราม (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #น้ำประปาท่าเคยสกปรก (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #น้ำประปาเค็ม ต.สามเรือน ราชบุรี (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #เขางูซอย 10 โครงการวางท่อน้ำฝน (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #ถนนที่กำลังซ่อมบางแพ (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
+
+  📥 🧵 thread #หวยใต้ดิน (ใน #💬┆กระทู้-เรื่องร้องเรียน)
+    → fetch 17 / upsert 17 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 17, upsert 17 msgs
+
+  📥 🧵 thread #Photo สจ.ชำนาญ (ใน #🫶┆พูดคุย-สจชำนาญ)
+    → fetch 7 / upsert 7 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 7, upsert 7 msgs
+
+  📥 🧵 thread #Short Videos ประชุมสภา อบจ.ราชบุรี (ใน #🫶┆พูดคุย-สจชำนาญ)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #Live การประชุมสภาองค์การบริหารส่วนจังหวัดราชบุรี Full (ใน #🫶┆พูดคุย-สจชำนาญ)
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
+
+  📥 🧵 thread #ห้องสุดหล้า (ใน #📸┆ทีมช่างภาพ)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 106 / upsert 106 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 106, upsert 106 msgs
+
+  📥 🧵 thread #ห้องน้ำผึ้ง (ใน #📸┆ทีมช่างภาพ)
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
+
+  📥 🧵 thread #23 ธันวาคม ธนาธรพบสมาชิกราชบุรี (ใน #🗨┆พูดคุย-คณะทำงาน)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 179 / upsert 179 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 179, upsert 179 msgs
+
+  📥 🧵 thread #เลี้ยงส่งพจน์ (ใน #🗨┆พูดคุย-คณะทำงาน)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 200 / upsert 200 msgs... (hasMore: true)
+    → fetch 202 / upsert 202 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 202, upsert 202 msgs
+
+  📥 🧵 thread #ลงชื่อฟังบรรยายเรื่องทุนผูกขาด (ใน #🗨┆พูดคุย-คณะทำงาน)
+    → fetch 72 / upsert 72 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 72, upsert 72 msgs
+
+  📥 🧵 thread #สั่งเสื้อประชาชนราชบุรี (ใน #🗨┆พูดคุย-คณะทำงาน)
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
+
+  📥 🧵 thread #มาร่วมลุ้นเบอร์นายกอบจ.ที่ยิมเนเซี่ยม 30/7/67 (ใน #🗨┆พูดคุย-คณะทำงาน)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #🚩 พี่ต๋อมขอเจอทีมงานทั้งหมด 🚩 (ใน #🗨┆พูดคุย-คณะทำงาน)
+    → fetch 96 / upsert 96 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 96, upsert 96 msgs
+
+  📥 🧵 thread #ไปงานศพพ่ออ.โญ บางแค 20 เม.ย. (ใน #🗨┆พูดคุย-คณะทำงาน)
+    → fetch 20 / upsert 20 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 20, upsert 20 msgs
+
+  📥 🧵 thread #ลงชื่อคนไปสัมนาไม้แก้วรีสอร์ท 23 มีนาคม (ใน #🗨┆พูดคุย-คณะทำงาน)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 131 / upsert 131 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 131, upsert 131 msgs
+
+  📥 🧵 thread #แจ้งชื่อคนไปงานโจ้ (ใน #🗨┆พูดคุย-คณะทำงาน)
+    → fetch 43 / upsert 43 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 43, upsert 43 msgs
+
+  📥 🧵 thread #เบิกปฏิทิน (ใน #🗨┆พูดคุย-คณะทำงาน)
+    → fetch 53 / upsert 53 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 53, upsert 53 msgs
+
+  📥 🧵 thread #ค่าใช้จ่ายช่วงเตรียมงานวิโรจน์บ้านโป่ง (ใน #🗨┆พูดคุย-คณะทำงาน)
+    → fetch 8 / upsert 8 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 8, upsert 8 msgs
+
+  📥 🧵 thread #ต่ออายุสมาชิก ทีมงาน (ใน #🗨┆พูดคุย-คณะทำงาน)
+    → fetch 52 / upsert 52 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 52, upsert 52 msgs
+
+  📥 🧵 thread #ขอเสนอ ให้ตั้ง group ของเมล็ดส้ม ใน discord (ใน #🗨┆พูดคุย-คณะทำงาน)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #ใครสั่งเสื้อ แจ้งชื่อ size และสีหน่อยนะคะ เขต4ทำขายค่ะ (ใน #🗨┆พูดคุย-คณะทำงาน)
+    → fetch 7 / upsert 7 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 7, upsert 7 msgs
+
+  📥 🧵 thread #นัดประชุมกับทางพรรคก้าวไกล (ใน #🗨┆พูดคุย-คณะทำงาน)
+    → fetch 27 / upsert 27 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 27, upsert 27 msgs
+
+  📥 🧵 thread #ลงชื่อร่วมงาน “ก้าวต่อไป  ก้าวให้ไกล ก้าวไกลราชบุรี” (ใน #🗨┆พูดคุย-คณะทำงาน)
+    → fetch 33 / upsert 33 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 33, upsert 33 msgs
+
+  📥 🧵 thread #ไฟล์ดิบคลิปลงพื้นที่ (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 12 / upsert 12 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 12, upsert 12 msgs
+
+  📥 🧵 thread #รูปโปร (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #Cover facebook (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #พี่หวินแก้ fake news (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
+
+  📥 🧵 thread #ลงพื้นที่นครชุม 17/12/68 (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
+
+  📥 🧵 thread #เก็บรูป เขต4 (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
+
+  📥 🧵 thread #สปอต พี่ถวิน ของปิ๊ก (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 19 / upsert 19 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 19, upsert 19 msgs
+
+  📥 🧵 thread #4 พ.ย. 68 ท่าผาหมู่ 4, 5, 6 (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 25 / upsert 25 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 25, upsert 25 msgs
+
+  📥 🧵 thread #2 พฤศจิกายน 68 ลงพื้นตำบลหนองอ้อ หมู่ 3 หมู่ 2 (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 10 / upsert 10 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 10, upsert 10 msgs
+
+  📥 🧵 thread #ไฟล์ดิบลงพื้นที่ ถวิล เขาขลุง (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 21 / upsert 21 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 21, upsert 21 msgs
+
+  📥 🧵 thread #น้ำท่วมบ่อย (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #ปัญหาพื้นที่ท่าผา (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
+
+  📥 🧵 thread #Idea คลิปสั้นก่อนลงพื้นที่ (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 8 / upsert 8 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 8, upsert 8 msgs
+
+  📥 🧵 thread #ความทุกข์ของคนท่าผา (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #นโยบายพี่หวินpolicy: 11 นายกฯสัญจร (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
+
+  📥 🧵 thread #นโยบายพี่หวิน Policy 9. (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 15 / upsert 15 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 15, upsert 15 msgs
+
+  📥 🧵 thread #นโยบายพี่หวิน Policy 10. (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #สวัสดีคุ้งพยอมหมู่ 4 (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #คนคุ้งพยอมอยากได้นักการเมืองแบบไหน ? (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #สวัสดีคุ้งพยอมหมู่ 3 (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #สวัสดีคุ้งพยอมหมู่ 2 (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #สวัสดีคุ้งพยอมหมู่ 1 (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 11 / upsert 11 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 11, upsert 11 msgs
+
+  📥 🧵 thread #สวัสดีนครชุมน์หมู่ 4 (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #สวัสดีนครชุมน์หมู่ 3 (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 7 / upsert 7 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 7, upsert 7 msgs
+
+  📥 🧵 thread #สวัสดีนครชุมน์หมู่ 2 (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #สวัสดีนครชุมน์หมู่ 1 (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #พรรคประชาชนบ้านโป่งรับเรื่องร้องเรียนถนนพัง (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
+
+  📥 🧵 thread #Post เลือกตั้ง ตทอ.บ้านโป่ง (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #ความสุขของคนท่าผา (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #นักการเมืองที่คนท่าผาอยากได้ (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #คลิปสรุปลงพื้นที่ ท่าผาหมู่ 1, 2, 3 16 ต.ค. 68 (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
+
+  📥 🧵 thread #เตรียมตั้ง ตทอ.บ้านโป่ง Repost 20 Sep (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #สวัสดีบ้านม่วงหมู่ 3 (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #สวัสดีบ้านม่วงหมู่ 2 (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #สวัสดีบ้านม่วงหมู่ 1 (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #น้ำท่วมสวนกล้วย (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 12 / upsert 12 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 12, upsert 12 msgs
+
+  📥 🧵 thread #คนนครชุมน์อยากได้นักการเมืองแบบไหน ? (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 15 / upsert 15 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 15, upsert 15 msgs
+
+  📥 🧵 thread #สวัสดีดอนกระเบื้องหมู่ 3 (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #สวัสดีดอนกระเบื้องหมู่ 2 (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #สวัสดีดอนกระเบื้องหมู่ 1 (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
+
+  📥 🧵 thread #Profile Pic + Facebook cover (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #น้ำท่วมเขาขลุง (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 7 / upsert 7 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 7, upsert 7 msgs
+
+  📥 🧵 thread #อาชีพขายต้นไม้ตำบลหนองอ้อ (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #อาชีพขายนกหงส์หยกตำบลหนองอ้อ (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #รณรงค์รัฐธรรมนูญ (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #สวัสดีหนองปลาหมอหมู่ 3 (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #สวัสดีหนองปลาหมอหมู่ 2 (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #สวัสดีหนองปลาหมอหมู่ 1 (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 7 / upsert 7 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 7, upsert 7 msgs
+
+  📥 🧵 thread #อาชีพเพาะพันธุ์กระต่ายตำบลหนองอ้อ (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #อาชีพเพาะพันธุ์สุนัขตำบลหนองอ้อ (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #อาชีพขายปลาสวยงามตำบลหนองอ้อ (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
+
+  📥 🧵 thread #สวัสดีหนองกบ หมู่ 1, 2, 3 (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #งานแนะนำตัว ตทอ.บ้านโป่ง (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 9 / upsert 9 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 9, upsert 9 msgs
+
+  📥 🧵 thread #สวัสดีเขาขลุง หมู่ 10, 11, 12 (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #ข่าวเหตุการณ์ นักเรียนทำร้ายครู (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
+
+  📥 🧵 thread #สวัสดีปากแรตหมู่ 2, 3, 4 (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
+
+  📥 🧵 thread #Post วันแนะนำ ผู้สมัคร ตทอ. 20 ก.ค. 68 (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 23 / upsert 23 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 23, upsert 23 msgs
+
+  📥 🧵 thread #สวัสดีลาดบัวขาวหมู่ 1, 2, 3 (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #สวัสดีกรับใหญ่ หมู่ 9, 10, 11 (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #สวัสดีเบิกไพร หมู่ 1, 2, 3 (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 10 / upsert 10 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 10, upsert 10 msgs
+
+  📥 🧵 thread #รับสมัครอาสา ทีมบ้านโป่ง (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 35 / upsert 35 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 35, upsert 35 msgs
+
+  📥 🧵 thread #ประกันสังคม เด็กเล็ก 800สู่1,000บาท (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #ถึงกำหนดนัดรับซื้อค่าพลังงานหมุนเวียน (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #รับสมัครทีมงานเพิ่ม (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #สิ่งไหนสำคัญก่อน เก้าอี้ของท่านหรือความเดือดร้อนประชาชนสำคัญกว่า (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 11 / upsert 11 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 11, upsert 11 msgs
+
+  📥 🧵 thread #Mini podcast ถอดบทเรียน สจ. (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 14 / upsert 14 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 14, upsert 14 msgs
+
+  📥 🧵 thread #ตลาดห้วยกระบอก (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 18 / upsert 18 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 18, upsert 18 msgs
+
+  📥 🧵 thread #19/01/68 ลานวัฒนธรรม (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 20 / upsert 20 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 20, upsert 20 msgs
+
+  📥 🧵 thread #โพสยุติการหาเสียงวันที่ 31 ก.พ. (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #คลิปยิง Ad พี่ชา (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 35 / upsert 35 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 35, upsert 35 msgs
+
+  📥 🧵 thread #พี่ชา ลงพื้นที่ 17/01 (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 17 / upsert 17 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 17, upsert 17 msgs
+
+  📥 🧵 thread #19/01/68 ตั้งสุข1เย็น ภาพจะมัวๆหน่อย (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 7 / upsert 7 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 7, upsert 7 msgs
+
+  📥 🧵 thread #พี่กู๋ ลงพื้นที่ 16 มค (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #หลักสูตรตัวแทนสมาชิกพรรคประชาชน รอบภาคกลางครั้งที่ 1 (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
+
+  📥 🧵 thread #รูป พี่กู๋ลงพื้นที่ 5 มค (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 14 / upsert 14 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 14, upsert 14 msgs
+
+  📥 🧵 thread #พี่ชา ลงพื้นที่ 25/01 (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #23\1\68 ท่าเสา ซอย 1,2,3 ทุกหลัง (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 10 / upsert 10 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 10, upsert 10 msgs
+
+  📥 🧵 thread #พี่ชา ลงพื้นที่ 24/01 (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 10 / upsert 10 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 10, upsert 10 msgs
+
+  📥 🧵 thread #20/1/68 หลังวัดบางพัง (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 10 / upsert 10 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 10, upsert 10 msgs
+
+  📥 🧵 thread #พี่ชา ตลาดบ้านฆ้อง (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 22 / upsert 22 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 22, upsert 22 msgs
+
+  📥 🧵 thread #พี่กู๋รถแห่ 21 ม.ค. (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
+
+  📥 🧵 thread #Green Energy (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
+
+  📥 🧵 thread #AW งานนโยบายการศึกษา (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 69 / upsert 69 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 69, upsert 69 msgs
+
+  📥 🧵 thread #16 มกรา พี่กู๋ ดาวถ่าย (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 24 / upsert 24 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 24, upsert 24 msgs
+
+  📥 🧵 thread #หาอาสาเฝ้าหน่วย - วีดีโอ (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 28 / upsert 28 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 28, upsert 28 msgs
+
+  📥 🧵 thread #พี่ชา ลงพื้นที่ 12/01 (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 18 / upsert 18 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 18, upsert 18 msgs
+
+  📥 🧵 thread #พี่กู๋ ลงพื้นที่ 14/01/68 (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 24 / upsert 24 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 24, upsert 24 msgs
+
+  📥 🧵 thread #คลิบวัน พรก การศึกษา 16 ธค 67 (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #13 มค พี่กู๋ลงลาดบัวขาว (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 17 / upsert 17 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 17, upsert 17 msgs
+
+  📥 🧵 thread #การเมืองสำคัญแค่ไหน (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
+
+  📥 🧵 thread #พี่ชาลงพื้นที่ 11/01 (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 28 / upsert 28 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 28, upsert 28 msgs
+
+  📥 🧵 thread #พี่กู๋ 10 มค ฌรงงานต้ำตาล และเทศบาลเบิกไพร (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 16 / upsert 16 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 16, upsert 16 msgs
+
+  📥 🧵 thread #พี่ชา ลงพี่ที่ 10/01 (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 35 / upsert 35 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 35, upsert 35 msgs
+
+  📥 🧵 thread #การเมืองท้องถิ่น คืออะไร ? (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #คลิปแนะนำตัวผู้สมัครนายกเทศบาลเมืองบ้านโป่ง EP.1 (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 33 / upsert 33 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 33, upsert 33 msgs
+
+  📥 🧵 thread #พี่กู๋ 09/01/68 (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 9 / upsert 9 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 9, upsert 9 msgs
+
+  📥 🧵 thread #หาอาสาเฝ้าหน่วย (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 28 / upsert 28 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 28, upsert 28 msgs
+
+  📥 🧵 thread #ทางเท้ากับคุณภาพชีวิตที่ดี ? (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
+
+  📥 🧵 thread #ความรักและการเมือง (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #ส่วนหนึ่งบทพูดของพี่ไก่ (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #ดูแลผู้สูงอายุ ให้สุขภาพจิตเป็นบวก (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #ทำไมต้องเลือกพรรค ประชาชน (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 7 / upsert 7 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 7, upsert 7 msgs
+
+  📥 🧵 thread #บทความเปิดตัวพี่ไก่ (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 13 / upsert 13 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 13, upsert 13 msgs
+
+  📥 🧵 thread #ประชาธิปไตย คืออะไร (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 11 / upsert 11 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 11, upsert 11 msgs
+
+  📥 🧵 thread #ทำไมพรรคประชาชนถึงต้องแก้รัฐธรรมนูญ? (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #‘ศูนย์เด็กเล็ก’ พื้นที่ชีวิตผลิตคนคุณภาพ (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
+
+  📥 🧵 thread #เปิดบ้านพรรคประชาชน (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 12 / upsert 12 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 12, upsert 12 msgs
+
+  📥 🧵 thread #รู้หรือไม่ ภาษีจากประชาชน ทำหน้าที่อะไร (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #การพบแพทย์แบบ Telemedicine เรียกย่อๆว่า เทเลเมด ดียังไง? (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #เชิญชวนเข้ากิจกรรมสมาชิกสัมพันธ์ 7 ธ.ค. 67 บ้านโป่ง (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #รัฐสวัสดิการ คืออะไร ? (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #การเมืองท้องถิ่นแตกต่างจากการเมืองระดับชาติอย่างไร (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #ปลดล็อกท้องถิ่น คืออะไร? (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #ความเหลื่อมล้ำเพิ่มขึ้นทุกปี (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #ไอซ์ พูดเรื่องถ้าชนะสักอันหนึ่งคือ ทุกอย่างจะลงมาหาแบบรวดเร็ว (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #hydraulic ram pump (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #นโยบายซุปเปอร์ท้องถิ่น (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #ลอยกระทง (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #น้ำประปาดื่มได้ อาจสามารถ (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #ต้นไม้ฝอกอากาศ (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
+
+  📥 🧵 thread #เทศบาลของประชาชน (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #เทศบาลบ้านโป่ง ยิ่งมืดยิ่งสว่าง กับ เส้นจราจรเรืองแสง ? (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 11 / upsert 11 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 11, upsert 11 msgs
+
+  📥 🧵 thread #บทพูดพี่ไก่ รับสมัคร+เปิดตัวพลางๆ (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 16 / upsert 16 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 16, upsert 16 msgs
+
+  📥 🧵 thread #ต้องการอาสา หรือ ทีมงาน เพิ่มเติม (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 9 / upsert 9 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 9, upsert 9 msgs
+
+  📥 🧵 thread #เพชร กรุณพล (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #คลิป ติ้กต่อก ตัดต่อใส่เรื่อยๆ (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
+
+  📥 🧵 thread #คลิปตลาดหัวคลอง, สราญ 26/7/67 (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 10 / upsert 10 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 10, upsert 10 msgs
+
+  📥 🧵 thread #Ads 1/7/67 (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 17 / upsert 17 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 17, upsert 17 msgs
+
+  📥 🧵 thread #โปรเจคพัฒนาบ้านโป่งจาก น.ศ. หลายสถาบัน (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
+
+  📥 🧵 thread #11 ก.ค. 67 ผกามาศ (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #คลิปรวมทีมงาน (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #Rockstar content 28/6 (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
+
+  📥 🧵 thread #รับฟังเกี่ยวกับการย้ายอำเภอส่วนแยก (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #คนบ้านโป่งคิดว่าควรย้ายอำเภอมั้ย ? (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 14 / upsert 14 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 14, upsert 14 msgs
+
+  📥 🧵 thread #ลงพื้นที่30พค67 ซอยโรงธูป (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 29 / upsert 29 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 29, upsert 29 msgs
+
+  📥 🧵 thread #ลงพื้นที่ชุมชนโรงธูป 31/5/67 (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #Pre ลงพื้นที่ 30 พ.ค. (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 25 / upsert 25 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 25, upsert 25 msgs
+
+  📥 🧵 thread #การจัดสร้างอาคารส่วนแยก (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 8 / upsert 8 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 8, upsert 8 msgs
+
+  📥 🧵 thread #Ads 23/5/67 (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 16 / upsert 16 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 16, upsert 16 msgs
+
+  📥 🧵 thread #Ads 15/5/67 (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 11 / upsert 11 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 11, upsert 11 msgs
+
+  📥 🧵 thread #ทำไมต้องไปดึงนักลงทุนต่างประเทศมาขนกำไรออกจากประเทศไทย (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #เพิ่มค่าแรง400ทั่วประเทศหรือลดค่าครองชีพให้ประชาชนจะตอบโจทย์มากกว่ากัน (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
+
+  📥 🧵 thread #การขึ้นค่าเช่าแผงค้าขายของเทศบาลตอบโจทย์หรือ (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #ถ้าวันนี้ฝนไม่ตกอีก จะแห่แล้วนะ (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 9 / upsert 9 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 9, upsert 9 msgs
+
+  📥 🧵 thread #ร้อน (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #ลงพื้นที่วันที่ 9 พ.ค. 67 ถนน ร.9 (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 12 / upsert 12 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 12, upsert 12 msgs
+
+  📥 🧵 thread #ถ้าตื่นเช้ามาถนนในบ้านโป่งเปลี่ยนไป (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 9 / upsert 9 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 9, upsert 9 msgs
+
+  📥 🧵 thread #ทางม้าลาย (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 12 / upsert 12 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 12, upsert 12 msgs
+
+  📥 🧵 thread #เดี่ยว (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
+
+  📥 🧵 thread #จะดีแค่ไหนถ้าบ้านโป่งมีสนามกีฬามาตรฐานลู่วิ่งเปิดให้บริการ 24 ชม. (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
+
+  📥 🧵 thread #รับสมัครอาสาสมัคร, ทีมบริหาร (ใน #💬┆สื่อ-บ้านโป่ง)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #อ. เดชรัตน์แวะราชบุรี (ใน #🗨┆กองเลขาจังหวัด)
+    → fetch 65 / upsert 65 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 65, upsert 65 msgs
+
+  📥 🧵 thread #คะแนนบอร์ดประจำเขต (ใน #🗨┆กองเลขาจังหวัด)
+    → fetch 18 / upsert 18 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 18, upsert 18 msgs
+
+  📥 🧵 thread #ป้ายหาเสียง+นโยบาย (ใน #🗨┆กองเลขาจังหวัด)
+    → fetch 77 / upsert 77 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 77, upsert 77 msgs
+
+  📥 🧵 thread #ระบบอาสาเฝ้าหน่วยพรรค (ใน #🗨┆กองเลขาจังหวัด)
+    → fetch 16 / upsert 16 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 16, upsert 16 msgs
+
+  📥 🧵 thread #คาราวาน 4 ก.พ. (ใน #🗨┆กองเลขาจังหวัด)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 200 / upsert 200 msgs... (hasMore: true)
+    → fetch 230 / upsert 230 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 230, upsert 230 msgs
+
+  📥 🧵 thread #กาส้มสองใบ (ใน #🗨┆กองเลขาจังหวัด)
+    → fetch 9 / upsert 9 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 9, upsert 9 msgs
+
+  📥 🧵 thread #หมออ๋อง 5 ก.พ. (ใน #🗨┆กองเลขาจังหวัด)
+    → fetch 10 / upsert 10 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 10, upsert 10 msgs
+
+  📥 🧵 thread #ไอติม 29 มกราคม (ใน #🗨┆กองเลขาจังหวัด)
+    → fetch 47 / upsert 47 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 47, upsert 47 msgs
+
+  📥 🧵 thread #รายการ Local Voices + RunForAll (ใน #🗨┆กองเลขาจังหวัด)
+    → fetch 26 / upsert 26 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 26, upsert 26 msgs
+
+  📥 🧵 thread #ขอคิวแกนนำ (ใน #🗨┆กองเลขาจังหวัด)
+    → fetch 41 / upsert 41 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 41, upsert 41 msgs
+
+  📥 🧵 thread #ชุมนุมชาวสวนมะพร้าว+local voices (ใน #🗨┆กองเลขาจังหวัด)
+    → fetch 9 / upsert 9 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 9, upsert 9 msgs
+
+  📥 🧵 thread #คาราวานแรงงาน 26 ม.ค. และ 5 ก.พ. (ใน #🗨┆กองเลขาจังหวัด)
+    → fetch 18 / upsert 18 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 18, upsert 18 msgs
+
+  📥 🧵 thread #บันทึกประชุมประจำสัปดาห์ (ใน #🗨┆กองเลขาจังหวัด)
+    → fetch 19 / upsert 19 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 19, upsert 19 msgs
+
+  📥 🧵 thread #พิธีกรดีเบต (ใน #🗨┆กองเลขาจังหวัด)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #แห่ขอบคุณ (ใน #🗨┆กองเลขาจังหวัด)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #วิโรจน์ 21 มกรา (ใน #🗨┆กองเลขาจังหวัด)
+    → fetch 57 / upsert 57 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 57, upsert 57 msgs
+
+  📥 🧵 thread #ตาม ธิวัชร์ 19 ม.ค. (ใน #🗨┆กองเลขาจังหวัด)
+    → fetch 12 / upsert 12 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 12, upsert 12 msgs
+
+  📥 🧵 thread #เจี๊ยบอมรัตน์ 23 มกราตม (ใน #🗨┆กองเลขาจังหวัด)
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
+
+  📥 🧵 thread #สส.กาย 16 มกราคม (ใน #🗨┆กองเลขาจังหวัด)
+    → fetch 29 / upsert 29 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 29, upsert 29 msgs
+
+  📥 🧵 thread #หมอวาโยวันที่ 9 (ใน #🗨┆กองเลขาจังหวัด)
+    → fetch 50 / upsert 50 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 50, upsert 50 msgs
+
+  📥 🧵 thread #หลักเมืองขอสัมภาษณ์ (ใน #🗨┆กองเลขาจังหวัด)
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
+
+  📥 🧵 thread #แกนนำมา 12/01 (ใน #🗨┆กองเลขาจังหวัด)
+    → fetch 12 / upsert 12 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 12, upsert 12 msgs
+
+  📥 🧵 thread #ถอดบทเรียนการหาเสียง เลือกตั้ง 69 (ใน #🗨┆กองเลขาจังหวัด)
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
+
+  📥 🧵 thread #อ.เดชรัต ลงหาเสียงราชบุรี (ใน #🗨┆กองเลขาจังหวัด)
+    → fetch 56 / upsert 56 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 56, upsert 56 msgs
+
+  📥 🧵 thread #แผ่นพับ (ใน #🗨┆กองเลขาจังหวัด)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #ส่งคลิปสวัสดีปีใหม่ (ใน #🗨┆กองเลขาจังหวัด)
+    → fetch 16 / upsert 16 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 16, upsert 16 msgs
+
+  📥 🧵 thread #ชวนประเมินกระแสออนไลน์ และ พื้นที่จริง (ใน #🗨┆กองเลขาจังหวัด)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #เอกสารวันสมัคร สส (ใน #🗨┆กองเลขาจังหวัด)
+    → fetch 22 / upsert 22 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 22, upsert 22 msgs
+
+  📥 🧵 thread #รายละเอียด วันจับเบอร์ (ใน #🗨┆กองเลขาจังหวัด)
+    → fetch 12 / upsert 12 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 12, upsert 12 msgs
+
+  📥 🧵 thread #ส่งคลิปให้จังหวัดแชร์ (ใน #🗨┆กองเลขาจังหวัด)
+    → fetch 8 / upsert 8 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 8, upsert 8 msgs
+
+  📥 🧵 thread #ร่วมกันแจ้งข้อความหรือข่าวสารอันเป็นเท็จ (ใน #🗨┆กองเลขาจังหวัด)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #สรุปนโยบายหาเสียง 69 (ใน #🗨┆กองเลขาจังหวัด)
+  ✅ เสร็จ — fetch 0, upsert 0 msgs
+
+  📥 🧵 thread #รวมคำถามเพื่อฝึกฝน ผู้สมัคร  สส (ใน #🗨┆กองเลขาจังหวัด)
+    → fetch 19 / upsert 19 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 19, upsert 19 msgs
+
+  📥 🧵 thread #เช็คลิสต์เตรียมเลือกตั้ง (ใน #🗨┆กองเลขาจังหวัด)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #TO Do List (ใน #🗨┆กองเลขาจังหวัด)
+    → fetch 10 / upsert 10 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 10, upsert 10 msgs
+
+  📥 🧵 thread #สรุปประชุม 3/12/68-การให้ข่าว (ใน #🗨┆กองเลขาจังหวัด)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #สส-ป้ายก่อนวันรับสมัคร (ใน #🗨┆กองเลขาจังหวัด)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #รายละเอียดงานสรรหา อบต. (ใน #🗨┆กรรมการสรรหา)
+    → fetch 23 / upsert 23 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 23, upsert 23 msgs
+
+  📥 🧵 thread #ขั้นตอนกรรมการสรรหา (ใน #🗨┆กรรมการสรรหา)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #ขาดคะแนน (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 28 / upsert 28 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 28, upsert 28 msgs
+
+  📥 🧵 thread #🚗  รถหาเสียง (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 109 / upsert 109 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 109, upsert 109 msgs
+
+  📥 🧵 thread #เตรียมงานพูดคุยเรื่อง ประกันสังคมกับอาจารย์ ษัษฐรัมย์  ธรรมบุษดี (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #check list สท. (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 9 / upsert 9 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 9, upsert 9 msgs
+
+  📥 🧵 thread #เตรียมตัวก่อนเลือกตั้ง (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #งบเทศบาลปี 67 และแผนดำเนินงาน (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #ยุทธศาสตร์ (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #โหวตการใช้เงินเขต 4 - ในการหาเสียงเลือกตั้งอบต.และสส. (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 5 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 4 msgs
+
+  📥 🧵 thread #เกี่ยวกับกฎหมาย แจ้งทีมงานบ้านโป่ง (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #เรื่องร้องเรียนน้ำท่วมบ้าน (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #ยื่นเรื่องร้องเรียน เทศบาลท่าผา (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #ลงพื้นที่ ท่าผา ดอนเสลา หมู่ 4-5-6 (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 7 / upsert 7 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 7, upsert 7 msgs
+
+  📥 🧵 thread #สรุปประชุมวิสามัญ (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #เรื่องร้องเรียนโรงงาน (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #กิจกรรมหาเสียงล่วงหน้าจากสมาชิกพรรค (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 43 / upsert 43 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 43, upsert 43 msgs
+
+  📥 🧵 thread #List คำถามให้ผู้สมัคร ตทอ. วันแนะนำตัว (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 13 / upsert 13 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 13, upsert 13 msgs
+
+  📥 🧵 thread #ช่วยกันเสนอรายละเอียดนโยบายเมืองเศรษฐกิจ (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 8 / upsert 8 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 8, upsert 8 msgs
+
+  📥 🧵 thread #รายชื่อสมัคร ส.ท. (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #ทีมคอลเซ็นเตอร์ บ้านโป่ง (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 26 / upsert 26 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 26, upsert 26 msgs
+
+  📥 🧵 thread #เสนอวัน ทำกิจกรรมสมาชิกสัมพันธ์ แนะนำผู้สมัคร ตทอ.อ.บ้านโป่ง (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 58 / upsert 58 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 58, upsert 58 msgs
+
+  📥 🧵 thread #เลือกตั้ง ตทอ.บ้านโป่ง (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #Workshop สิทธิช่วงเลือกตั้งและการร้องเรียน (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #งานเปิดบ้านสมาชิกสัมพันธ์และรับสมัคร ตทอ. ของบ้านโป่ง (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 94 / upsert 94 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 94, upsert 94 msgs
+
+  📥 🧵 thread #To Do List ทีมบ้านโป่ง (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 71 / upsert 71 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 71, upsert 71 msgs
+
+  📥 🧵 thread #เฝ้าหน่วยนับคะแนน 1 ก.พ. (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 117 / upsert 117 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 117, upsert 117 msgs
+
+  📥 🧵 thread #ปักหมุด พิกัดหน่วยเลือกตั้งในตำบลท่าผา (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 45 / upsert 45 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 45, upsert 45 msgs
+
+  📥 🧵 thread #A7 Card 5,000 ใบ (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 9 / upsert 9 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 9, upsert 9 msgs
+
+  📥 🧵 thread #ตารางลงช่วยกู๋หาเสียง (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #รวม Art Work ต่างๆ บ้านโป่ง (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 35 / upsert 35 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 35, upsert 35 msgs
+
+  📥 🧵 thread #Facebook Cover สจ. (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 23 / upsert 23 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 23, upsert 23 msgs
+
+  📥 🧵 thread #ป้ายไวนิลติดข้างรถ ขนาด 2.00 x 1.40 เมตร (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #Brochure เปิดตัวนายกเทศบาลเมืองบ้านโป่ง (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 93 / upsert 93 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 93, upsert 93 msgs
+
+  📥 🧵 thread #ลงพื้นที่พี่กู๋ 09/01/68 (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 9 / upsert 9 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 9, upsert 9 msgs
+
+  📥 🧵 thread #แผนที่บันทึกการลงพื้นที่เทศบาลบ้านโป่ง (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
+
+  📥 🧵 thread #ช่วยกันเสนอนโยบายพัฒนาตลาดสราญ ตลาดสดเทศบาล และห้องสมุด (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 10 / upsert 10 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 10, upsert 10 msgs
+
+  📥 🧵 thread #ช่วยกันเสนอรายละเอียดนโยบายเด็กและผู้สูงอายุ (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
+
+  📥 🧵 thread #comment ลงพื้นที่โฆษิตวันที่ 30 พ.ค. 67 (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #สอบถามลงพื้นที่วันที่ 5 ตลาดสดเทศบาล (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #ตารางคะแนนแบบรวม อำเภอบ้านโป่ง อบจ.2567 (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #17/11/67 ฟีดแบคหรือสิ่งที่ควรพัฒนาการนัดทานข้าวในครั้งต่อไป (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #17/11/67 นัดทานข้าวกับผู้นำชุมชนหลวงสิทธิ์ (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #12/11/67 รายละเอียดนโยบายเทศบาลบ้านโป่ง (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #บันทึกการทานข้าวกับผู้นำชุมชนโต้รุ่ง 12/11/67 (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #12/11/67 สิ่งที่อยากให้ปรับปรุงในการนัดทานข้าวครั้งต่อไป (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #บันทึกประชุม 6/11/67 (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #ชวนทุกคนทีมบ้านโป่ง เปิดพูดคุยเกี่ยวกับนโยบายที่ควรจะเป็น แนวทางการกำหนดนโยบาย มีideaอะไรเสนอได้ตลอด (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #สอบถามโต้รุ่ง (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #เรื่อง แอดมินเพจ ประสานงานรับคนเข้าทีม (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #เรื่องร้องเรียน ข้าราชการของ อบต.บ้านม่วง (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
+
+  📥 🧵 thread #ฉบับสมบูรณ์ งานวิจัยเชิงสำรวจ ศูนย์กีฬาเทศบาลบ้านโป่ง (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #ตารางคะแนนแบบสรุป เทศบาลเมืองบ้านโป่ง (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #ลงเพจ ข้อเสนอค่าไฟแพง และที่มาโดยสรุป (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 7 / upsert 7 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 7, upsert 7 msgs
+
+  📥 🧵 thread #สิ่งที่ประธานชุมชนอยากได้ บางชุมชน (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
+
+  📥 🧵 thread #ความเห็นคนลงพื้นที่ (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #ลงพื้นที่ 13/09/2567 (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
+
+  📥 🧵 thread #สวนสาธารณะแห่งใหม่ (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #เอกสารสมัครสมาชิกพรรค-บ้านโป่ง (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 15 / upsert 15 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 15, upsert 15 msgs
+
+  📥 🧵 thread #โพสความรู้ในเพจ สรุปแถลงคดียุบพรรค 16/7/67 (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 15 / upsert 15 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 15, upsert 15 msgs
+
+  📥 🧵 thread #โพสเชิญชวน เพิ่มเติม (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #หัวข้อประชุมประจำสัปดาห์ (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 25 / upsert 25 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 25, upsert 25 msgs
+
+  📥 🧵 thread #โพสในเพจ ปัญหาศูนย์เยาวชนบ้านโป่ง (ใน #💬┆กระทู้-บ้านโป่ง)
+  ✅ เสร็จ — fetch 0, upsert 0 msgs
+
+  📥 🧵 thread #{วันนี้เราร่วมฟังประชาพิจารณ์  แล้วได้อะไรกันบ้าง} (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 28 / upsert 28 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 28, upsert 28 msgs
+
+  📥 🧵 thread #ขอกมธ.ติดตามงบ (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #ข้อมูลพื้นที่เขต เทศบาล (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #รายชื่ออาสาสมัคร (ใน #💬┆กระทู้-บ้านโป่ง)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #TikTok Channel (ใน #🎬┆ทีมตัดต่อ)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #YouTube Channel (ใน #🎬┆ทีมตัดต่อ)
+    → fetch 9 / upsert 9 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 9, upsert 9 msgs
+
+  📥 🧵 thread #พื้นขูดปรับปรุงผิวถนน (ใน #🗨┆ทีมเรื่องร้องเรียน)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #บันทึกการประชุมทีมรับเรื่องร้องเรียน (ใน #🗨┆ทีมเรื่องร้องเรียน)
+    → fetch 13 / upsert 13 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 13, upsert 13 msgs
+
+  📥 🧵 thread #น้ำไม่ไหลหลายวันแล้ว-อ.เมือง (ใน #🗨┆ทีมเรื่องร้องเรียน)
+    → fetch 19 / upsert 19 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 19, upsert 19 msgs
+
+  📥 🧵 thread #โรงปูนวงพิทักษ์โรจน์ (ใน #🗨┆ทีมเรื่องร้องเรียน)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #คู่มือ Traffy Fondou (ใน #🗨┆ทีมเรื่องร้องเรียน)
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
+
+  📥 🧵 thread #รวมลิงค์ผู้สมัคร (ใน #💬┆กระทู้-ผู้สมัคร-สจ)
+    → fetch 12 / upsert 12 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 12, upsert 12 msgs
+
+  📥 🧵 thread #อานนท์ บางลานศิริกุล (สจ.โพธาราม เขต 3) (ใน #💬┆กระทู้-ผู้สมัคร-สจ)
+    → fetch 17 / upsert 9 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 17, upsert 9 msgs
+
+  📥 🧵 thread #กุศล สุขชู (สจ.บ้านโป่ง หนองกบ) (ใน #💬┆กระทู้-ผู้สมัคร-สจ)
+    → fetch 15 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 15, upsert 6 msgs
+
+  📥 🧵 thread #จตุพลภูมิ์ จันทร (สจ.ปากท่อ เขต x) (ใน #💬┆กระทู้-ผู้สมัคร-สจ)
+    → fetch 15 / upsert 8 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 15, upsert 8 msgs
+
+  📥 🧵 thread #ชยุต  สิงห์ตาก้อง (สจ.บ้านโป่ง เขต x) (ใน #💬┆กระทู้-ผู้สมัคร-สจ)
+    → fetch 14 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 14, upsert 6 msgs
+
+  📥 🧵 thread #นายเดโชชัย ภูริเอกทัต (สจ.บ้านโป่ง เขต x) (ใน #💬┆กระทู้-ผู้สมัคร-สจ)
+    → fetch 12 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 12, upsert 3 msgs
+
+  📥 🧵 thread #ณัฏฐพงษ์ ลัทธาพลสกุล (สจ.บ้านโป่ง หนองกบ) (ใน #💬┆กระทู้-ผู้สมัคร-สจ)
+    → fetch 13 / upsert 7 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 13, upsert 7 msgs
+
+  📥 🧵 thread #ปรีชา  รอดคล้ำ (สจ.บ้านโป่ง ท่าผา) (ใน #💬┆กระทู้-ผู้สมัคร-สจ)
+    → fetch 14 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 14, upsert 6 msgs
+
+  📥 🧵 thread #ปัญญา อ่วมใจบุญ (สจ.จอมบึง เขต x) (ใน #💬┆กระทู้-ผู้สมัคร-สจ)
+    → fetch 13 / upsert 7 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 13, upsert 7 msgs
+
+  📥 🧵 thread #ดิษฐาร์ กวางคีรี (สจ.โพธาราม หนองโพ) (ใน #💬┆กระทู้-ผู้สมัคร-สจ)
+    → fetch 14 / upsert 7 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 14, upsert 7 msgs
+
+  📥 🧵 thread #ธนาพร ขำเจริญ (สจ.โพธาราม เขต 1) (ใน #💬┆กระทู้-ผู้สมัคร-สจ)
+    → fetch 17 / upsert 8 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 17, upsert 8 msgs
+
+  📥 🧵 thread #กุ๊ก นาขุนแสน (สจ.สวนผึ้ง เขต x) (ใน #💬┆กระทู้-ผู้สมัคร-สจ)
+    → fetch 14 / upsert 7 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 14, upsert 7 msgs
+
+  📥 🧵 thread #จักรภพ  เหรียญทอง (สจ.เมือง ดอนตะโก) (ใน #💬┆กระทู้-ผู้สมัคร-สจ)
+    → fetch 11 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 11, upsert 4 msgs
+
+  📥 🧵 thread #วสุ วีระตระกูล (สจ.ดำเนินสะดวก เขต x) (ใน #💬┆กระทู้-ผู้สมัคร-สจ)
+    → fetch 14 / upsert 7 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 14, upsert 7 msgs
+
+  📥 🧵 thread #พีรพงศ์ เชาว์ทัศน์ (สจ.โพธาราม บางโตนด) (ใน #💬┆กระทู้-ผู้สมัคร-สจ)
+    → fetch 15 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 15, upsert 6 msgs
+
+  📥 🧵 thread #นายชำนาญ  บุญณรงค์ (สจ จอมบึง เขต x) (ใน #💬┆กระทู้-ผู้สมัคร-สจ)
+    → fetch 15 / upsert 9 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 15, upsert 9 msgs
+
+  📥 🧵 thread #ชัยรัตน์  ศักดิ์อิสระพงศ์ (นายก อบจ.) (ใน #💬┆กระทู้-ผู้สมัคร-สจ)
+    → fetch 5 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 2 msgs
+
+  📥 🧵 thread #การแสดงความเห็นแบบไม่เปิดเผยตัวตน (ใน #💬┆กระทู้-ผู้สมัคร-สจ)
+    → fetch 2 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 1 msgs
+
+  📥 🧵 thread #แม็ค (นายกเทศบาล บ้านโป่ง) (ใน #💬┆กระทู้-ผู้สมัคร-สจ)
+    → fetch 3 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 1 msgs
+
+  📥 🧵 thread #ร่วมงานอภิธรรม (ใน #🫶┆พูดคุย-สมาชิกพรรค)
+    → fetch 7 / upsert 7 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 7, upsert 7 msgs
+
+  📥 🧵 thread #สรุป Live งานจัดการภัยพิบัติ (ใน #🫶┆พูดคุย-สมาชิกพรรค)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #📣 พบปะ เลขาธิการพรรคประชาชน (ใน #🫶┆พูดคุย-สมาชิกพรรค)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #ชวนสมาชิกพรรคร่วมงานสัมนา กับ กกค (ใน #🫶┆พูดคุย-สมาชิกพรรค)
+    → fetch 80 / upsert 80 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 80, upsert 80 msgs
+
+  📥 🧵 thread #ชวนคุยอภิปรายไม่ไว้วางใจ 24 มี.ค. (ใน #🫶┆พูดคุย-สมาชิกพรรค)
+    → fetch 14 / upsert 14 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 14, upsert 14 msgs
+
+  📥 🧵 thread #สังเกตการณ์หน่วยเลือกตั้ง สว ราชบุรี (ใน #🫶┆พูดคุย-สมาชิกพรรค)
+    → fetch 12 / upsert 12 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 12, upsert 12 msgs
+
+  📥 🧵 thread #ลงพื้นที่ หนองอ้อ 17 พ.ย. (ใน #🏡┆พูดคุย-บ้านโป่ง)
+    → fetch 23 / upsert 23 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 23, upsert 23 msgs
+
+  📥 🧵 thread #คลิปลง พท. (ใน #🏡┆พูดคุย-บ้านโป่ง)
+    → fetch 12 / upsert 12 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 12, upsert 12 msgs
+
+  📥 🧵 thread #ตำแหน่งหน้าที่ทีมอาสาจัดกิจกรรม (ใน #🏡┆พูดคุย-บ้านโป่ง)
+    → fetch 10 / upsert 10 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 10, upsert 10 msgs
+
+  📥 🧵 thread #เมื่อวานลงพื้นที่ ได้คุยกับ พตท.สมบูรณ์ (ใน #🏡┆พูดคุย-บ้านโป่ง)
+    → fetch 9 / upsert 9 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 9, upsert 9 msgs
+
+  📥 🧵 thread #5 ม.ค. 7.30 (ใน #🏡┆พูดคุย-บ้านโป่ง)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #โหวตคำขวัญ เทศบาล บ้านโป่ง (ใน #🏡┆พูดคุย-บ้านโป่ง)
+    → fetch 21 / upsert 21 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 21, upsert 21 msgs
+
+  📥 🧵 thread #โครงการในฝัน เพื่อคนบ้านโป่ง (ใน #🏡┆พูดคุย-บ้านโป่ง)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #ถาม - ตอบ, หัวข้อประชุมวันจันทร์ (ใน #🏡┆พูดคุย-บ้านโป่ง)
+    → fetch 11 / upsert 11 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 11, upsert 11 msgs
+
+  📥 🧵 thread #ส่งคำขวัญวันเด็ก (ใน #🏡┆พูดคุย-บ้านโป่ง)
+    → fetch 25 / upsert 25 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 25, upsert 25 msgs
+
+  📥 🧵 thread #ลงพื้นที่ตลาดบ้านโป่ง 19 มีนาคม (ใน #🏡┆พูดคุย-บ้านโป่ง)
+    → fetch 7 / upsert 7 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 7, upsert 7 msgs
+
+  📥 🧵 thread #รอการติดต่อ (ใน #🏡┆พูดคุย-บ้านโป่ง)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #แผนงานจังหวัดปี 68 (ใน #💬┆กระทู้-อำเภอ)
+    → fetch 96 / upsert 96 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 96, upsert 96 msgs
+
+  📥 🧵 thread #เสนอโครงการเดือน ม.ค-มี.ค 2569 (ใน #💬┆กระทู้-อำเภอ)
+    → fetch 60 / upsert 60 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 60, upsert 60 msgs
+
+  📥 🧵 thread #เตรียมงาน : คุยทีมจอมบึง 16/11/68 (ใน #💬┆กระทู้-อำเภอ)
+    → fetch 27 / upsert 27 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 27, upsert 27 msgs
+
+  📥 🧵 thread #เตรียมงาน : Update-ประกันสังคมเรื่องใกล้ตัวคนทำงาน (ใน #💬┆กระทู้-อำเภอ)
+    → fetch 11 / upsert 11 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 11, upsert 11 msgs
+
+  📥 🧵 thread #เตรียมงาน : การแปรรูปเครื่องสำอางสมุนไพร (ใน #💬┆กระทู้-อำเภอ)
+    → fetch 79 / upsert 79 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 79, upsert 79 msgs
+
+  📥 🧵 thread #เสนอโครงการเดือน ต.ค. - ธ.ค. 2568 (ใน #💬┆กระทู้-อำเภอ)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 105 / upsert 105 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 105, upsert 105 msgs
+
+  📥 🧵 thread #เตรียมงาน : ทบทวนการทำงานปี 2025 (ใน #💬┆กระทู้-อำเภอ)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 124 / upsert 124 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 124, upsert 124 msgs
+
+  📥 🧵 thread #เตรียมงาน : Workshop ทำ Poll (บางแพ) (ใน #💬┆กระทู้-อำเภอ)
+    → fetch 87 / upsert 87 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 87, upsert 87 msgs
+
+  📥 🧵 thread #การพลิกฟื้น OTOP อำเภอจอมบึง (ใน #💬┆กระทู้-อำเภอ)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 200 / upsert 200 msgs... (hasMore: true)
+    → fetch 300 / upsert 300 msgs... (hasMore: true)
+    → fetch 337 / upsert 337 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 337, upsert 337 msgs
+
+  📥 🧵 thread #เตรียมงาน : โพธาราม ลงพื้นที่เยี่ยมบ้านสมาชิกพรรค (ใน #💬┆กระทู้-อำเภอ)
+    → fetch 57 / upsert 57 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 57, upsert 57 msgs
+
+  📥 🧵 thread #Workshop แก้ไขปัญหาที่ดิน (ใน #💬┆กระทู้-อำเภอ)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 144 / upsert 144 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 144, upsert 144 msgs
+
+  📥 🧵 thread #เสนอความคิดเห็นต่อ (ร่าง) นโยบายการเกษตร (ใน #💬┆กระทู้-อำเภอ)
+    → fetch 38 / upsert 38 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 38, upsert 38 msgs
+
+  📥 🧵 thread #ประเด็นเรื่องการต่อยอด นมสด (ใน #💬┆กระทู้-อำเภอ)
+    → fetch 7 / upsert 7 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 7, upsert 7 msgs
+
+  📥 🧵 thread #วันที่ 9 กค. ประเพณีปลูกข้าวใหม่ชาวกะเหรี่ยง (ใน #💬┆กระทู้-อำเภอ)
+    → fetch 24 / upsert 24 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 24, upsert 24 msgs
+
+  📥 🧵 thread #สำรวจความต้องการ ความเห็น เกี่ยวกับพรรค และ สนามท้องถิ่น (ใน #💬┆กระทู้-อำเภอ)
+    → fetch 12 / upsert 12 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 12, upsert 12 msgs
+
+  📥 🧵 thread #เสนอโครงการเดือน ก.ค.-ก.ย. 68 (ใน #💬┆กระทู้-อำเภอ)
+    → fetch 91 / upsert 91 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 91, upsert 91 msgs
+
+  📥 🧵 thread #เสนอสัมนาเรื่องน้ำรางบัว (ใน #💬┆กระทู้-อำเภอ)
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
+
+  📥 🧵 thread #เตรียมงานโครงการเทคนิคเก็บข้อมูลชุมชน (ใน #💬┆กระทู้-อำเภอ)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 139 / upsert 139 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 139, upsert 139 msgs
+
+  📥 🧵 thread #เตรียมงาน เสวนารับฟังความคิดเห็น นโยบายเกษตร (ใน #💬┆กระทู้-อำเภอ)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 184 / upsert 184 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 184, upsert 184 msgs
+
+  📥 🧵 thread #เตรียมงานตั้งตทอ.บ้านโป่ง 21 กันยา (ใน #💬┆กระทู้-อำเภอ)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 139 / upsert 139 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 139, upsert 139 msgs
+
+  📥 🧵 thread #โครงการก่อสร้างทางหลวงพิเศษระหว่างเมือง  M8 นครปฐม - ปากท่อ - ชะอำ (ใน #💬┆กระทู้-อำเภอ)
+    → fetch 10 / upsert 10 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 10, upsert 10 msgs
+
+  📥 🧵 thread #กิจกรรมสมาชิกสัมพันธ์ แนะนำตัวผู้สมัคร ตทอ.บ้านโป่ง (ใน #💬┆กระทู้-อำเภอ)
+    → fetch 14 / upsert 14 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 14, upsert 14 msgs
+
+  📥 🧵 thread #งานดำเนินประเด็นมะพร้าวน้ำหอม วันที่ 8 สิงหา (ใน #💬┆กระทู้-อำเภอ)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 183 / upsert 183 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 183, upsert 183 msgs
+
+  📥 🧵 thread #รวบรวมปัญหาแต่ละอำเภอ (ใน #💬┆กระทู้-อำเภอ)
+    → fetch 32 / upsert 32 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 32, upsert 32 msgs
+
+  📥 🧵 thread #ไปดูชาวบ้านแวกกาเบจรับเงินชนะคดี (ใน #💬┆กระทู้-อำเภอ)
+    → fetch 62 / upsert 62 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 62, upsert 62 msgs
+
+  📥 🧵 thread #ชวนเสนอ “วาระจังหวัด” (ใน #💬┆กระทู้-อำเภอ)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 159 / upsert 159 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 159, upsert 159 msgs
+
+  📥 🧵 thread #ร่วมกันตั้งชื่อ รายการ podcast พรรคประชาชน ราชบุรี กันค่ะ (ใน #💬┆กระทู้-อำเภอ)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 138 / upsert 138 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 138, upsert 138 msgs
+
+  📥 🧵 thread #ปากท่อ Connect : เชื่อมใจ ไขปัญหา 29 ก.ค. 68 (ใน #💬┆กระทู้-อำเภอ)
+    → fetch 76 / upsert 76 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 76, upsert 76 msgs
+
+  📥 🧵 thread #ขอคำถามหรือความเห็น เกี่ยวกับ กกต หน่อยครับ (ใน #💬┆กระทู้-อำเภอ)
+    → fetch 69 / upsert 69 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 69, upsert 69 msgs
+
+  📥 🧵 thread #กสศ. เชิญเข้าร่วมประชุม วันที่ 6 มิ.ย. 68 (ใน #💬┆กระทู้-อำเภอ)
+    → fetch 46 / upsert 46 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 46, upsert 46 msgs
+
+  📥 🧵 thread #Pride month in Banpong 29 มิย 68 (ใน #💬┆กระทู้-อำเภอ)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 200 / upsert 200 msgs... (hasMore: true)
+    → fetch 300 / upsert 300 msgs... (hasMore: true)
+    → fetch 308 / upsert 308 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 308, upsert 308 msgs
+
+  📥 🧵 thread #ชวนทำกิจกรรม Pride Month เดือนหน้า (ใน #💬┆กระทู้-อำเภอ)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 200 / upsert 200 msgs... (hasMore: true)
+    → fetch 300 / upsert 300 msgs... (hasMore: true)
+    → fetch 307 / upsert 307 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 307, upsert 307 msgs
+
+  📥 🧵 thread #ชวนคุยปัญหายาเสพติดและพนันออนไลน์ (ใน #💬┆กระทู้-อำเภอ)
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
+
+  📥 🧵 thread #กมธ. ชุดไอติม จะมาลงราชบุรี 20 พ.ค. (ใน #💬┆กระทู้-อำเภอ)
+    → fetch 62 / upsert 62 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 62, upsert 62 msgs
+
+  📥 🧵 thread #ชวนผู้สมัครของพรรคลงทะเบียน PC101 (ใน #💬┆กระทู้-อำเภอ)
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
+
+  📥 🧵 thread #กิจกรรมเปิดบ้านพรรคประชาชน (ใน #💬┆กระทู้-อำเภอ)
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
+
+  📥 🧵 thread #ชวนลงพื้นที่หาเสียง สท. เมือง (ใน #💬┆กระทู้-อำเภอ)
+    → fetch 37 / upsert 37 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 37, upsert 37 msgs
+
+  📥 🧵 thread #ลงชื่ออาสาเฝ้าหน่วย อ.เมือง 16 หน่วย 16 คน (ใน #💬┆กระทู้-อำเภอ)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 177 / upsert 177 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 177, upsert 177 msgs
+
+  📥 🧵 thread #ฟังเสวนาแนวทางการแก้ไขปัญหาที่ดินรัฐสภา (ใน #💬┆กระทู้-อำเภอ)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 136 / upsert 136 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 136, upsert 136 msgs
+
+  📥 🧵 thread #หาสถานที่อบรมตัวแทนสมาชิกรอบราชบุรี วันที่ 22 มีนาคม (ใน #💬┆กระทู้-อำเภอ)
+    → fetch 54 / upsert 54 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 54, upsert 54 msgs
+
+  📥 🧵 thread #สารคดีโรงแว๊กกาเบจ (ใน #💬┆กระทู้-อำเภอ)
+    → fetch 35 / upsert 35 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 35, upsert 35 msgs
+
+  📥 🧵 thread #ถ้าเราไม่ต้องทำงานประจำที่ทำอยู่? (ใน #💬┆กระทู้-อำเภอ)
+    → fetch 8 / upsert 8 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 8, upsert 8 msgs
+
+  📥 🧵 thread #นัดสัมภาษณ์ผู้สมัคร Online ครั้งที่ 2 (ใน #💬┆กระทู้-อำเภอ)
+    → fetch 27 / upsert 27 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 27, upsert 27 msgs
+
+  📥 🧵 thread #แจ้งเรื่องการตั้งห้องทีม อบจ.ราชบุรี (ใน #💬┆กระทู้-อำเภอ)
+    → fetch 9 / upsert 9 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 9, upsert 9 msgs
+
+  📥 🧵 thread #เสนอโครงการไตรมาส 3 - 2567 (ก.ค.-ก.ย.) (ใน #💬┆กระทู้-อำเภอ)
+    → fetch 20 / upsert 20 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 20, upsert 20 msgs
+
+  📥 🧵 thread #เตรียมงานวันที่25 ของอำเภอสวนผึ้ง ก้าวไปด้วยกันกับก้าวไกลสวนผึ้ง (ใน #💬┆กระทู้-อำเภอ)
+    → fetch 10 / upsert 10 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 10, upsert 10 msgs
+
+  📥 🧵 thread #เตรียมงาน Breaking in ratchaburi (ใน #💬┆กระทู้-อำเภอ)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 141 / upsert 141 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 141, upsert 141 msgs
+
+  📥 🧵 thread #[ BREAKING THE CYCLE] (ใน #💬┆กระทู้-อำเภอ)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #ระดมคำถามถึงการทำงานของจังหวัด (ใน #💬┆กระทู้-อำเภอ)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 200 / upsert 200 msgs... (hasMore: true)
+    → fetch 300 / upsert 300 msgs... (hasMore: true)
+    → fetch 400 / upsert 400 msgs... (hasMore: true)
+    → fetch 432 / upsert 432 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 432, upsert 432 msgs
+
+  📥 🧵 thread #{นำเสนอหัวข้อการประชุมทีมรับเรื่องร้องเรียนและลงพื้นที่} (ใน #💬┆กระทู้-อำเภอ)
+    → fetch 91 / upsert 91 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 91, upsert 91 msgs
+
+  📥 🧵 thread #โครงการกับพี่น้องกลุ่มไร้สัญชาติ อ.สวนผึ้ง (ใน #💬┆กระทู้-อำเภอ)
+    → fetch 59 / upsert 59 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 59, upsert 59 msgs
+
+  📥 🧵 thread #โครงการประชุมนโยบาย อบจ 18 พ.ค. (ใน #💬┆กระทู้-อำเภอ)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 119 / upsert 119 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 119, upsert 119 msgs
+
+  📥 🧵 thread #โครงการนั่งรถขนส่งสาธารณะราชบุรี (ใน #💬┆กระทู้-อำเภอ)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 108 / upsert 108 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 108, upsert 108 msgs
+
+  📥 🧵 thread #ชวนสมาชิกไปดูหนัง Breaking the Cycle (ใน #💬┆กระทู้-อำเภอ)
+    → fetch 17 / upsert 17 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 17, upsert 17 msgs
+
+  📥 🧵 thread #นัดสัมภาษณ์ผู้สมัคร Online (ใน #💬┆กระทู้-อำเภอ)
+    → fetch 64 / upsert 64 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 64, upsert 64 msgs
+
+  📥 🧵 thread #1.  พล ใจจันทร์ (ใน #💬┆กระทู้-ผู้สมัคร-อบต)
+    → fetch 33 / upsert 25 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 33, upsert 25 msgs
+
+  📥 🧵 thread #4. พี่ก้อง (ใน #💬┆กระทู้-ผู้สมัคร-อบต)
+    → fetch 31 / upsert 24 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 31, upsert 24 msgs
+
+  📥 🧵 thread #2.พี่หวิล ถวิล อดิเรกลาภ (ใน #💬┆กระทู้-ผู้สมัคร-อบต)
+    → fetch 37 / upsert 29 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 37, upsert 29 msgs
+
+  📥 🧵 thread #6. เต้ สาธิต (สวนผึ้ง) (ใน #💬┆กระทู้-ผู้สมัคร-อบต)
+    → fetch 22 / upsert 15 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 22, upsert 15 msgs
+
+  📥 🧵 thread #3.พี่นุ (ใน #💬┆กระทู้-ผู้สมัคร-อบต)
+    → fetch 18 / upsert 11 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 18, upsert 11 msgs
+
+  📥 🧵 thread #5.พี่กบ มาโนช (ใน #💬┆กระทู้-ผู้สมัคร-อบต)
+    → fetch 24 / upsert 17 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 24, upsert 17 msgs
+
+  📥 🧵 thread #ขั้นตอนการสัมภาษณ์ (ใน #💬┆กระทู้-ผู้สมัคร-อบต)
+    → fetch 7 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 7, upsert 6 msgs
+
+  📥 🧵 thread #การบ้านให้ผู้สมัคร นายก อบต. เสนอนโยบายเรือธง 1 นโยบาย (ใน #💬┆กระทู้-ผู้สมัคร-อบต)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #แทงค์น้ำโยกหนองอ้อ (ใน #🫶┆พูดคุย-ไร้สาระ)
+    → fetch 40 / upsert 40 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 40, upsert 40 msgs
+
+  📥 🧵 thread #โปรไฟล์ผู้สมัคร (ใน #ทีมสื่อ-อบจ)
+    → fetch 9 / upsert 9 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 9, upsert 9 msgs
+
+  📥 🧵 thread #ห้องตะวัน (ใน #ทีมสื่อ-อบจ)
+    → fetch 25 / upsert 25 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 25, upsert 25 msgs
+
+  📥 🧵 thread #แผนงานสื่อ (ใน #ทีมสื่อ-อบจ)
+    → fetch 66 / upsert 66 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 66, upsert 66 msgs
+
+  📥 🧵 thread #ทีมไลฟ์ (ใน #ทีมสื่อ-อบจ)
+    → fetch 8 / upsert 8 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 8, upsert 8 msgs
+
+  📥 🧵 thread #รวมคลิปสั้นทำ ตต shorts reels (ใน #ทีมสื่อ-อบจ)
+    → fetch 80 / upsert 80 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 80, upsert 80 msgs
+
+  📥 🧵 thread #สรุปประชุมทีมสื่อ :dart: (ใน #ทีมสื่อ-อบจ)
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
+
+  📥 🧵 thread #Q&A จากชาวราชบุรี (ใน #ทีมสื่อ-อบจ)
+    → fetch 10 / upsert 10 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 10, upsert 10 msgs
+
+  📥 🧵 thread #QUOTE เด็ด (ใน #ทีมสื่อ-อบจ)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #Tiktok (ใน #ทีมสื่อ-อบจ)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #สมาชิกสัมพันธ์หลังเลือกตั้ง (ใน #💬┆กระทู้-สมาชิกพรรค)
+    → fetch 13 / upsert 13 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 13, upsert 13 msgs
+
+  📥 🧵 thread #ขอความคิดเห็นหรือข้อเสนอแนะในสนามเลือกตั้งที่ผ่านมา (ใน #💬┆กระทู้-สมาชิกพรรค)
+    → fetch 10 / upsert 10 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 10, upsert 10 msgs
+
+  📥 🧵 thread #งานเสวนา เกษตรกรรุ่นใหม่  ysf วันที่ 12 มกราคม 2569 เวลา 13.00 น. (ใน #💬┆กระทู้-สมาชิกพรรค)
+    → fetch 19 / upsert 19 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 19, upsert 19 msgs
+
+  📥 🧵 thread #ราชบุรีเอาจริง : สมาชิกสัมพันธ์ กับ ธนาธร จึงรุ่งเรืองกิจ (ใน #💬┆กระทู้-สมาชิกพรรค)
+    → fetch 25 / upsert 25 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 25, upsert 25 msgs
+
+  📥 🧵 thread #งานไพรมารี่โหวต+เปิดตัวผู้สมัคร (ใน #💬┆กระทู้-สมาชิกพรรค)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 138 / upsert 138 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 138, upsert 138 msgs
+
+  📥 🧵 thread #Next Step ประชาชนราชบุรี (ใน #💬┆กระทู้-สมาชิกพรรค)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #[ภาคกลาง] โครงการอบรม Facilitators หลักสูตรสิทธิมนุษยชน (ใน #💬┆กระทู้-สมาชิกพรรค)
+    → fetch 19 / upsert 19 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 19, upsert 19 msgs
+
+  📥 🧵 thread #ผู้เข้าร่วมอบรม PC101 (ใน #💬┆กระทู้-สมาชิกพรรค)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 101 / upsert 101 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 101, upsert 101 msgs
+
+  📥 🧵 thread #กีฬาสัมพันธ์รางบัว (ใน #💬┆กระทู้-สมาชิกพรรค)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 157 / upsert 157 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 157, upsert 157 msgs
+
+  📥 🧵 thread #ผลการเลือกอธิการบดี มรภ.หมู่บ้านจอมบึง (ใน #💬┆กระทู้-สมาชิกพรรค)
+    → fetch 21 / upsert 21 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 21, upsert 21 msgs
+
+  📥 🧵 thread #ชวนสมาชิกร่วมแสดงความคิดเห็นต่อผู้สมัครลงเลือกตั้ง ราชบุรี (ใน #💬┆กระทู้-สมาชิกพรรค)
+    → fetch 13 / upsert 13 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 13, upsert 13 msgs
+
+  📥 🧵 thread #รับสมัคร ทีม อพม.ประจำอำเภอ (พรรคประชาชน) (ใน #💬┆กระทู้-สมาชิกพรรค)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 124 / upsert 124 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 124, upsert 124 msgs
+
+  📥 🧵 thread #รวม Feedback จากกิจกรรมของจังหวัด (ใน #💬┆กระทู้-สมาชิกพรรค)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #หลักเกณฑ์ในการเบิกเงินจากกองทุนเพื่อการพัฒนาพรรคการเมือง (ใน #💬┆กระทู้-สมาชิกพรรค)
+    → fetch 7 / upsert 7 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 7, upsert 7 msgs
+
+  📥 🧵 thread #ชวนไปงาน Pride บ้านโป่งกันค่ะ (ใน #💬┆กระทู้-สมาชิกพรรค)
+    → fetch 21 / upsert 21 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 21, upsert 21 msgs
+
+  📥 🧵 thread #ร่วมจับตางบประมาณปี 69 ค่ะ (ใน #💬┆กระทู้-สมาชิกพรรค)
+    → fetch 40 / upsert 40 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 40, upsert 40 msgs
+
+  📥 🧵 thread #ตัวแทนสมาชิกพรรคระดับอำเภอที่อยากเห็น (ใน #💬┆กระทู้-สมาชิกพรรค)
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
+
+  📥 🧵 thread #คัดเลือกกรรมการสรรหา สนาม อบต. (ใน #💬┆กระทู้-สมาชิกพรรค)
+    → fetch 49 / upsert 48 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 49, upsert 48 msgs
+
+  📥 🧵 thread #บริจาคเงินภาษีให้พรรคการเมือง (ใน #💬┆กระทู้-สมาชิกพรรค)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #อยากสร้างเพจเพื่อการแนวร่วมการเมืองท้องถิ่น (ใน #💬┆กระทู้-สมาชิกพรรค)
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
+
+  📥 🧵 thread #เป็นสมาชิกพรรคแล้วได้อะไร? (ใน #💬┆กระทู้-สมาชิกพรรค)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #ทริปมอบแอร์ให้โรงเรียนล่ม‼ (ใน #💬┆กระทู้-สมาชิกพรรค)
+    → fetch 11 / upsert 11 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 11, upsert 11 msgs
+
+  📥 🧵 thread #เรื่องน้ำดื่มในรร. (ใน #💬┆กระทู้-สมาชิกพรรค)
+    → fetch 12 / upsert 12 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 12, upsert 12 msgs
+
+  📥 🧵 thread #สงสัยครับ ทำไมจึงไม่ตอกเสาเข็มก่อนเทพื้นครับ? (ใน #💬┆กระทู้-สมาชิกพรรค)
+    → fetch 7 / upsert 7 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 7, upsert 7 msgs
+
+  📥 🧵 thread #ตามหาสมาชิกพรรคที่อยู่ในเขต ต.ท่าผา อ.บ้านโป่ง (ใน #💬┆กระทู้-สมาชิกพรรค)
+    → fetch 8 / upsert 8 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 8, upsert 8 msgs
+
+  📥 🧵 thread #สอบถามเรื่องแอพบัตรประชาชน (ใน #💬┆กระทู้-สมาชิกพรรค)
+    → fetch 38 / upsert 38 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 38, upsert 38 msgs
+
+  📥 🧵 thread #ยุทธศาสตร์พื้นที่ (ใน #🗨┆กองเลขา-เขต-3)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 200 / upsert 200 msgs... (hasMore: true)
+    → fetch 208 / upsert 208 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 208, upsert 208 msgs
+
+  📥 🧵 thread #ข้อความจากเพจ Facebook ค่ะ (ใน #🗨┆กองเลขา-เขต-3)
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
+
+  📥 🧵 thread #ป้ายหาเสียง (ใน #🗨┆กองเลขา-เขต-3)
+    → fetch 20 / upsert 20 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 20, upsert 20 msgs
+
+  📥 🧵 thread #งานสื่อเขต 3 (ใน #🗨┆กองเลขา-เขต-3)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 128 / upsert 128 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 128, upsert 128 msgs
+
+  📥 🧵 thread #เอกสารส่งกกต. (ใน #🗨┆กองเลขา-เขต-3)
+    → fetch 9 / upsert 9 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 9, upsert 9 msgs
+
+  📥 🧵 thread #เสวนากับเดชรัต เขต 3 (ใน #🗨┆กองเลขา-เขต-3)
+    → fetch 61 / upsert 61 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 61, upsert 61 msgs
+
+  📥 🧵 thread #เสื้อแบบใหม่ ฟาง (ใน #🗨┆กองเลขา-เขต-3)
+    → fetch 13 / upsert 13 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 13, upsert 13 msgs
+
+  📥 🧵 thread #รถหาเสียง (ใน #🗨┆กองเลขา-เขต-3)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #รายงานการประชุม (ใน #🗨┆กองเลขา-เขต-3)
+    → fetch 8 / upsert 8 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 8, upsert 8 msgs
+
+  📥 🧵 thread #พิกัดหน่วยเลือกตั้ง (ใน #🗨┆กองเลขา-เขต-3)
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
+
+  📥 🧵 thread #ประชุมประจำวัน (ใน #🗨┆กองเลขา-เขต-3)
+    → fetch 7 / upsert 7 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 7, upsert 7 msgs
+
+  📥 🧵 thread #รวมม็อตโตทนายฟาง (ใน #🗨┆กองเลขา-เขต-3)
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
+
+  📥 🧵 thread #อบรม รามาการ์เด้น (ใน #🗨┆ทีมเลือกตั้ง)
+    → fetch 43 / upsert 43 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 43, upsert 43 msgs
+
+  📥 🧵 thread #รายงาน/เอกสาร/บันทึกการประชุม (ใน #🗨┆ทีมเลือกตั้ง)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #รวมความผิดปกติ และการโกงคะแนน (ใน #🗨┆ทีมเลือกตั้ง)
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
+
+  📥 🧵 thread #ลงชื่อคนเฝ้าหน่วย (ใน #🗨┆ทีมเลือกตั้ง)
+    → fetch 45 / upsert 45 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 45, upsert 45 msgs
+
+  📥 🧵 thread #แจ้งเตือนเพลงที่ผิดลิขสิทธิ์ (ใน #🗨┆ทีมเลือกตั้ง)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #ตกลงเบอร์เดียวทั้งจังหวัด (ใน #🗨┆ทีมเลือกตั้ง)
+    → fetch 13 / upsert 13 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 13, upsert 13 msgs
+
+  📥 🧵 thread #อยากได้โพสต์หาอาสาลงเพจจังหวัด (ใน #🗨┆ทีมเลือกตั้ง)
+    → fetch 27 / upsert 27 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 27, upsert 27 msgs
+
+  📥 🧵 thread #งานประชุมว่าที่ผู้สมัคร สส. 17-18 ธ.ค. (ใน #🗨┆ทีมเลือกตั้ง)
+    → fetch 30 / upsert 30 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 30, upsert 30 msgs
+
+  📥 🧵 thread #กรอกข้อมูลผู้สมัครทำสื่อสิ่งพิมพ์ (ใน #🗨┆ทีมเลือกตั้ง)
+    → fetch 19 / upsert 19 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 19, upsert 19 msgs
+
+  📥 🧵 thread #สั่งทำป้ายไวนิล ส.ส. ก่อน ป้ายพรรค (ใน #🗨┆ทีมเลือกตั้ง)
+    → fetch 12 / upsert 12 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 12, upsert 12 msgs
+
+  📥 🧵 thread #จับตาหน่วย-Daybreaker (ใน #🗨┆ทีมเลือกตั้ง)
+    → fetch 8 / upsert 8 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 8, upsert 8 msgs
+
+  📥 🧵 thread #เตรียมความพร้อม ผู้สังเกตการณ์เลือกตั้ง (ใน #🗨┆ทีมเลือกตั้ง)
+    → fetch 8 / upsert 8 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 8, upsert 8 msgs
+
+  📥 🧵 thread #ตั้งแชทบอทวันที่ 10 หลังยุติหาเสียง (ใน #🗨┆ทีมเลือกตั้ง)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #Political Strategy Task (ใน #🗨┆ทีมเลือกตั้ง)
+    → fetch 15 / upsert 15 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 15, upsert 15 msgs
+
+  📥 🧵 thread #ทดลองระบบเก็บคะแนน (ใน #🗨┆ทีมเลือกตั้ง)
+    → fetch 31 / upsert 31 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 31, upsert 31 msgs
+
+  📥 🧵 thread #คลิปสสชวนกลับบ้าน (ใน #🗨┆ทีมเลือกตั้ง)
+    → fetch 36 / upsert 36 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 36, upsert 36 msgs
+
+  📥 🧵 thread #ฝากเอกสารลงสมาชิก (ใน #👫┆นายทะเบียน)
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
+
+  📥 🧵 thread #สำหรับนายทะเบียน (ใน #👫┆นายทะเบียน)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #วิโรจน์มาปากท่อ-วัดเพลง (ใน #🏡┆ทีมวัดเพลง)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 134 / upsert 134 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 134, upsert 134 msgs
+
+  📥 🧵 thread #รายชื่อทีมปากท่อไปงานตั้งสาขาพรรค (ใน #🏡┆ทีมปากท่อ)
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
+
+  📥 🧵 thread #ชวนไลฟ์สดขายของดีประจำจังหวัด (ใน #💬┆กระทู้-นโยบาย)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #นโยบายการศึกษา (ใน #💬┆กระทู้-นโยบาย)
+    → fetch 86 / upsert 86 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 86, upsert 86 msgs
+
+  📥 🧵 thread #นับถอยหลังการล่มสลายเกษตรกรผู้เลี้ยงโคนม (ใน #💬┆กระทู้-นโยบาย)
+    → fetch 8 / upsert 8 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 8, upsert 8 msgs
+
+  📥 🧵 thread #น้ำขี้หมูลงแหล่งน้ำสาธารณะ (ใน #💬┆กระทู้-นโยบาย)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #นมกล่องค้างสต๊อก กระทบค่าน้ำนมดิบ (ใน #💬┆กระทู้-นโยบาย)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #การบริหารจัดการน้ำในคลองดำเนินสะดวกและสาขา (ใน #💬┆กระทู้-นโยบาย)
+    → fetch 23 / upsert 23 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 23, upsert 23 msgs
+
+  📥 🧵 thread #แนวทางช่วยลดการเผาชาวไร่อ้อยราชบุรี (ใน #💬┆กระทู้-นโยบาย)
+    → fetch 7 / upsert 7 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 7, upsert 7 msgs
+
+  📥 🧵 thread #นโยบาย แก้ปัญหาเรื่องข้าว (ใน #💬┆กระทู้-นโยบาย)
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
+
+  📥 🧵 thread #นโยบายเกษตรก้าวหน้า (ใน #💬┆กระทู้-นโยบาย)
+    → fetch 19 / upsert 19 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 19, upsert 19 msgs
+
+  📥 🧵 thread #นโยบายสมุนไพร (ใน #💬┆กระทู้-นโยบาย)
+    → fetch 21 / upsert 21 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 21, upsert 21 msgs
+
+  📥 🧵 thread #นโยบายสาธารณสุข (ใน #💬┆กระทู้-นโยบาย)
+    → fetch 86 / upsert 86 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 86, upsert 86 msgs
+
+  📥 🧵 thread #อยากเสนอนโยบายการปฏิรูปศาลรัฐธรรมนูน (ใน #💬┆กระทู้-นโยบาย)
+    → fetch 19 / upsert 19 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 19, upsert 19 msgs
+
+  📥 🧵 thread #นโยบาย ท่องเที่ยว (ใน #💬┆กระทู้-นโยบาย)
+    → fetch 54 / upsert 54 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 54, upsert 54 msgs
+
+  📥 🧵 thread #Hack งบราชบุรี ปี 69  ใครทำอะไรบ้าง (ใน #💬┆กระทู้-นโยบาย)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #งาน OTOP จอมบึง (ใน #💬┆กระทู้-นโยบาย)
+    → fetch 12 / upsert 12 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 12, upsert 12 msgs
+
+  📥 🧵 thread #นโยบายเปลี่ยนขยะให้เป็นเงิน (ใน #💬┆กระทู้-นโยบาย)
+    → fetch 47 / upsert 47 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 47, upsert 47 msgs
+
+  📥 🧵 thread #ถ้า อบจ.มีงบ 150 ล้านบาท ทุกคนช่วยเสนอไอเดียหน่อยครับ (ใน #💬┆กระทู้-นโยบาย)
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
+
+  📥 🧵 thread #ชวนออกแบบตลาดชุมชนเพื่อลดภาวะโลกร้อน (ใน #💬┆กระทู้-นโยบาย)
+    → fetch 11 / upsert 11 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 11, upsert 11 msgs
+
+  📥 🧵 thread #กลับจากพักร้อนมาทำนโยบายกัน อยากทำเรื่องไหนกันดีครับ (ใน #💬┆กระทู้-นโยบาย)
+    → fetch 8 / upsert 8 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 8, upsert 8 msgs
+
+  📥 🧵 thread #ถนนลาดยาง (ใน #💬┆กระทู้-นโยบาย)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #เรื่องขี้ๆ เอามูลสุกร สัตว์ มาทำแก็ช เพื่อผลิตไฟฟ้า หรือแก็ส ใช้ในครัวเรือน (ใน #💬┆กระทู้-นโยบาย)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #นโยบายเมืองโปร่งใส และภาครัฐเชิงรุก (ใน #💬┆กระทู้-นโยบาย)
+    → fetch 10 / upsert 10 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 10, upsert 10 msgs
+
+  📥 🧵 thread #นโยบายการศึกษา โรงเรียน อบจ.ราชบุรี (ห้วยปลาดุก) (ใน #💬┆กระทู้-นโยบาย)
+  ✅ เสร็จ — fetch 0, upsert 0 msgs
+
+  📥 🧵 thread #นโยบายด้านกีฬาและสันทนาการ (ใน #💬┆กระทู้-นโยบาย)
+    → fetch 7 / upsert 7 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 7, upsert 7 msgs
+
+  📥 🧵 thread #นโยบาย ศูนย์เด็กเล็ก 365 วัน (ใน #💬┆กระทู้-นโยบาย)
+    → fetch 18 / upsert 18 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 18, upsert 18 msgs
+
+  📥 🧵 thread #นโยบาย สร้างศูนย์ฝึกอาชีพ (ใน #💬┆กระทู้-นโยบาย)
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
+
+  📥 🧵 thread #นโยบายการพัฒนาคุณภาพน้ำดื่ม (ใน #💬┆กระทู้-นโยบาย)
+    → fetch 16 / upsert 16 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 16, upsert 16 msgs
+
+  📥 🧵 thread #นโยบาย การเป็นเมืองคาร์บอนเครดิต (ใน #💬┆กระทู้-นโยบาย)
+    → fetch 7 / upsert 7 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 7, upsert 7 msgs
+
+  📥 🧵 thread #นโยบายน้ำประปาสะอาด (ใน #💬┆กระทู้-นโยบาย)
+    → fetch 31 / upsert 31 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 31, upsert 31 msgs
+
+  📥 🧵 thread #บูรณาการความมั่นคงทางอาหารสู่นโยบายท้องถิ่น (ใน #💬┆กระทู้-นโยบาย)
+    → fetch 12 / upsert 12 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 12, upsert 12 msgs
+
+  📥 🧵 thread #นโยบายสิ่งแวดล้อม (ใน #💬┆กระทู้-นโยบาย)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #สถานที่พักและบำบัดรักษาผู้ติดยาเสพติด (ใน #💬┆กระทู้-นโยบาย)
+    → fetch 8 / upsert 8 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 8, upsert 8 msgs
+
+  📥 🧵 thread #นโยบายสวัสดิภาพหมาแมว (ใน #💬┆กระทู้-นโยบาย)
+    → fetch 18 / upsert 18 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 18, upsert 18 msgs
+
+  📥 🧵 thread #โครงการนำสายไฟฟ้าลงดิน (ใน #💬┆กระทู้-นโยบาย)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #ราชบุรี  ต้องเป็นเมืองแบบไหน???ต้องมีอะไรที่เป็นจุดเด่น??? ตามบทบาทของ อบจ. (ใน #💬┆กระทู้-นโยบาย)
+    → fetch 20 / upsert 20 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 20, upsert 20 msgs
+
+  📥 🧵 thread #นวัตกรรมโอ่ง (ใน #💬┆กระทู้-นโยบาย)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #นโยบายพัฒนาแหล่งน้ำเพื่อการเกษตรนอกเขตชลประทาน (ใน #💬┆กระทู้-นโยบาย)
+    → fetch 42 / upsert 42 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 42, upsert 42 msgs
+
+  📥 🧵 thread #นโยบาย การสร้างความปลอดภัยภายในจังหวัด (ใน #💬┆กระทู้-นโยบาย)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #นโยบายการใช้พลังงานสะอาด เพื่อลดต้นทุน (ใน #💬┆กระทู้-นโยบาย)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #ราชบุรีเมืองนว้ตกรรมทำได้จริง (ใน #💬┆กระทู้-นโยบาย)
+    → fetch 37 / upsert 37 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 37, upsert 37 msgs
+
+  📥 🧵 thread #โมเดลแก้หนี้นอกระบบ (ใน #💬┆กระทู้-นโยบาย)
+    → fetch 40 / upsert 40 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 40, upsert 40 msgs
+
+  📥 🧵 thread #นโยบายพัฒนาเมืองผ่านพื้นที่สาธารณะ และพื้นที่เศรษฐกิจสำหรับผู้ค้ารายย่อย (ใน #💬┆กระทู้-นโยบาย)
+    → fetch 9 / upsert 9 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 9, upsert 9 msgs
+
+  📥 🧵 thread #นโยบายสาธารณูปโภคพื้นฐานทุกตารางนิ้ว (ใน #💬┆กระทู้-นโยบาย)
+    → fetch 16 / upsert 16 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 16, upsert 16 msgs
+
+  📥 🧵 thread #ลดขยะอาหารนำมาใช้ให้เกิดประโยชน์ (ใน #💬┆กระทู้-นโยบาย)
+    → fetch 13 / upsert 13 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 13, upsert 13 msgs
+
+  📥 🧵 thread #จ้างครูโรงเรียนขาดแคลน (ใน #💬┆กระทู้-นโยบาย)
+    → fetch 20 / upsert 20 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 20, upsert 20 msgs
+
+  📥 🧵 thread #สนับสนุนให้โรงเรียนหรือหน่วยงาน ไม่มีถังขยะ (ใน #💬┆กระทู้-นโยบาย)
+    → fetch 8 / upsert 8 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 8, upsert 8 msgs
+
+  📥 🧵 thread #ของส่วนกลางพรรค (ใน #💬┆กระทู้-นโยบาย)
+    → fetch 9 / upsert 9 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 9, upsert 9 msgs
+
+  📥 🧵 thread #นโยบายเพื่อผู้พิการ (ใน #💬┆กระทู้-นโยบาย)
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
+
+  📥 🧵 thread #นโยบายจัดการขยะครบวงจร (ใน #💬┆กระทู้-นโยบาย)
+    → fetch 14 / upsert 14 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 14, upsert 14 msgs
+
+  📥 🧵 thread #นโยบายตายดี (ใน #💬┆กระทู้-นโยบาย)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #นโยบาย Telemedicine (ใน #💬┆กระทู้-นโยบาย)
+    → fetch 71 / upsert 71 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 71, upsert 71 msgs
+
+  📥 🧵 thread #LIVE🛑 “ธนาธร” เล่าประสบการณ์ ดูงานบริหารเมืองสไตล์เดนมาร์ก @Sol bar... (ใน #💬┆กระทู้-นโยบาย)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #นโยบายการพัฒนาเมืองด้วยข้อมูล (ใน #💬┆กระทู้-นโยบาย)
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
+
+  📥 🧵 thread #นโยบายอากาศสะอาด (ใน #💬┆กระทู้-นโยบาย)
+    → fetch 11 / upsert 11 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 11, upsert 11 msgs
+
+  📥 🧵 thread #นโยบายคนไร้บ้าน ไร้ที่พึ่ง กลุ่มเปาะบางที่ขาดโอกาศในชีวิต# (ใน #💬┆กระทู้-นโยบาย)
+    → fetch 10 / upsert 10 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 10, upsert 10 msgs
+
+  📥 🧵 thread #นโยบายระบบร้องเรียนอัฉริยะ (ใน #💬┆กระทู้-นโยบาย)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #นโยบายการเข้าถึงแหล่งเงินทุนถ้วนหน้า (ใน #💬┆กระทู้-นโยบาย)
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
+
+  📥 🧵 thread #นโยบายยกระดับการท่องเที่ยวท้องถิ่นด้วยคาเฟ่และ Gamification (ใน #💬┆กระทู้-นโยบาย)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #ระเบียบมาตรฐานจริยธรรม (ใน #👫┆กรรมการจังหวัด)
+    → fetch 8 / upsert 8 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 8, upsert 8 msgs
+
+  📥 🧵 thread #สรุปประชุม 30/1/69 เรื่องคาราวานวันที่ 4/2/69 (ใน #👫┆กรรมการจังหวัด)
+    → fetch 17 / upsert 17 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 17, upsert 17 msgs
+
+  📥 🧵 thread #คำถามดีเบต (ใน #👫┆กรรมการจังหวัด)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #พิจารณารายชื่อผู้สมัคร PC101 (ใน #👫┆กรรมการจังหวัด)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 168 / upsert 168 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 168, upsert 168 msgs
+
+  📥 🧵 thread #ประชุมวิสามัญ 24-26 ต.ค. 68 (ใน #👫┆กรรมการจังหวัด)
+    → fetch 54 / upsert 54 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 54, upsert 54 msgs
+
+  📥 🧵 thread #ทดลองงาน ว่าที่นายกอบต. (ใน #👫┆กรรมการจังหวัด)
+    → fetch 20 / upsert 20 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 20, upsert 20 msgs
+
+  📥 🧵 thread #การทำงานร่วมกับผู้สมัครท้องถิ่น (ใน #👫┆กรรมการจังหวัด)
+    → fetch 10 / upsert 10 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 10, upsert 10 msgs
+
+  📥 🧵 thread #อบรมตทอ 101 (ใน #👫┆กรรมการจังหวัด)
+    → fetch 40 / upsert 40 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 40, upsert 40 msgs
+
+  📥 🧵 thread #วาระประชุมกรรมการ 27 ส.ค. (ใน #👫┆กรรมการจังหวัด)
+    → fetch 17 / upsert 17 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 17, upsert 17 msgs
+
+  📥 🧵 thread #ประชุมเครือข่ายพรรค x ตทอ. พรรคประชาชน ทั่วประเทศ 23-07-2568 | 19:00 น. (ใน #👫┆กรรมการจังหวัด)
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
+
+  📥 🧵 thread #ทีมไข่ต้ม (ใน #👫┆กรรมการจังหวัด)
+    → fetch 8 / upsert 8 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 8, upsert 8 msgs
+
+  📥 🧵 thread #ประชุมกับหน.เท้ง ระบบดิจิตอลพรรค (ใน #👫┆กรรมการจังหวัด)
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
+
+  📥 🧵 thread #รายชื่อคนผ่าน PP101 (ใน #👫┆กรรมการจังหวัด)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #กระบวนการเปลี่ยนคนถือเงินเขต4 (ใน #👫┆กรรมการจังหวัด)
+    → fetch 27 / upsert 27 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 27, upsert 27 msgs
+
+  📥 🧵 thread #ประชุมอบรมแนวทางพัฒนาการเมือง (ใน #👫┆กรรมการจังหวัด)
+    → fetch 12 / upsert 12 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 12, upsert 12 msgs
+
+  📥 🧵 thread #งบช่วยเหลือสท (ใน #👫┆กรรมการจังหวัด)
+    → fetch 36 / upsert 36 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 36, upsert 36 msgs
+
+  📥 🧵 thread #วาระ 15 ก.พ. (ใน #👫┆กรรมการจังหวัด)
+    → fetch 28 / upsert 24 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 28, upsert 24 msgs
+
+  📥 🧵 thread #การหาสมาชิกในแต่ละจังหวัด (ใน #👫┆กรรมการจังหวัด)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #ปฏิทินพรรค 2567 (ใน #👫┆กรรมการจังหวัด)
+    → fetch 42 / upsert 42 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 42, upsert 42 msgs
+
+  📥 🧵 thread #งบสาขาก่อนสิ้นปี (ใน #👫┆กรรมการจังหวัด)
+    → fetch 8 / upsert 8 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 8, upsert 8 msgs
+
+  📥 🧵 thread #ลิงค์ที่ใช้บ่อย (ใน #👫┆กรรมการจังหวัด)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #ขั้นตอนและเกณฑ์การรับสมัคร สจ (ใน #👫┆กรรมการจังหวัด)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #เสนองบส่งคนไปเชียงราย (ใน #👫┆กรรมการจังหวัด)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #ประชุมแต่งตั้งกรรมการจังหวัด (ใน #👫┆กรรมการจังหวัด)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #เสนอหัวข้อประชุม 6 ก.ย.? (ใน #👫┆กรรมการจังหวัด)
+    → fetch 18 / upsert 18 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 18, upsert 18 msgs
+
+  📥 🧵 thread #กมธ.สวัสดิการลงพื้นที่ร้องเรียนเมืองราชบุรี (ใน #👫┆กรรมการจังหวัด)
+    → fetch 21 / upsert 21 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 21, upsert 21 msgs
+
+  📥 🧵 thread #ประชุมกรรมการ + สัมภาษนายก 15 มิ.ย. (ใน #👫┆กรรมการจังหวัด)
+    → fetch 15 / upsert 15 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 15, upsert 15 msgs
+
+  📥 🧵 thread #ธนาธรเยี่ยมทีมจังหวัด 13 มิ.ย. (ใน #👫┆กรรมการจังหวัด)
+    → fetch 72 / upsert 72 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 72, upsert 72 msgs
+
+  📥 🧵 thread #ประชุมเสนอปรับปรุงโครงสร้างพรรค 11-12 (ใน #👫┆กรรมการจังหวัด)
+    → fetch 93 / upsert 93 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 93, upsert 93 msgs
+
+  📥 🧵 thread #เสนอขั้นตอนการเคาะผู้สมัคร (ใน #👫┆กรรมการจังหวัด)
+    → fetch 42 / upsert 40 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 42, upsert 40 msgs
+
+  📥 🧵 thread #บันทึกประชุมกรรมการจังหวัด 24 เมษายน 67 (ใน #👫┆กรรมการจังหวัด)
+    → fetch 9 / upsert 9 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 9, upsert 9 msgs
+
+  📥 🧵 thread #บันทึกการประชุม 15มีนา67 ห้องเมล็ดส้ม (ใน #👫┆กรรมการจังหวัด)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #บันทึกการประชุม 17เมษา67 (ใน #👫┆กรรมการจังหวัด)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #บันทึกการประชุม 20เมษา67 (ใน #👫┆กรรมการจังหวัด)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #บันทึกการประชุม 26มีนา67 (ใน #👫┆กรรมการจังหวัด)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #รายชื่อคณะกรรมการจังหวัดราชบุรี (ใน #👫┆กรรมการจังหวัด)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #ขั้นตอนการส่งผู้สมัคร (ใน #👫┆กรรมการจังหวัด)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #ประชุมสามัญพรรค 5-6 เมย 2567 (ใน #👫┆กรรมการจังหวัด)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 139 / upsert 139 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 139, upsert 139 msgs
+
+  📥 🧵 thread #บันทึกการประชุม 7 เมษายน 67 (ใน #👫┆กรรมการจังหวัด)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #ข้อมูลนำเสนอผู้สมัคร ส.จ. จาก ตทอ. (ใน #👫┆กรรมการจังหวัด)
+    → fetch 9 / upsert 9 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 9, upsert 9 msgs
+
+  📥 🧵 thread #รวมลิงค์ผู้สมัครทุกระดับ (ใน #👫┆กรรมการจังหวัด)
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
+
+  📥 🧵 thread #รวมหัวข้อประชุมครั้งถัดไป (ใน #👫┆กรรมการจังหวัด)
+    → fetch 15 / upsert 15 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 15, upsert 15 msgs
+
+  📥 🧵 thread #บันทึกการประชุม 20 มี.ค. 67 (ใน #👫┆กรรมการจังหวัด)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #รายชื่ออาสาสมัคร  ที่เคยสมัครมาแล้ว (ใน #👫┆กรรมการจังหวัด)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #เลือกตั้งซ่อม สจ โพธารามเขต 3 (ใน #👫┆กรรมการจังหวัด)
+    → fetch 22 / upsert 22 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 22, upsert 22 msgs
+
+  📥 🧵 thread #บันทึกการประชุมพรรค 19 มี.ค. (ใน #👫┆กรรมการจังหวัด)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #กิจกรรมสัมภาษณ์กลุ่มผู้สมัคร สจ. 24 มีนาคม ช่วงบ่าย (ใน #👫┆กรรมการจังหวัด)
+    → fetch 28 / upsert 28 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 28, upsert 28 msgs
+
+  📥 🧵 thread #บันทึกการประชุม 11 มี.ค.67 (ใน #👫┆กรรมการจังหวัด)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #ลงชื่อร่วมกิจกรรม Outing จ้า (ใน #🏡┆พูดคุย-อำเภอ)
+    → fetch 77 / upsert 77 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 77, upsert 77 msgs
+
+  📥 🧵 thread #สรุปประชุมเสนอโครงการพ.ย.-ธ.ค.68 (ใน #🏡┆พูดคุย-อำเภอ)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #เสนอปัญหาสำหรับลงไข่ต้ม (ใน #🏡┆พูดคุย-อำเภอ)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #Feedback ผู้สมัครลงเลือกตั้ง (ใน #🏡┆พูดคุย-อำเภอ)
+    → fetch 40 / upsert 40 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 40, upsert 40 msgs
+
+  📥 🧵 thread #ประชุมร่วมกับเลขาธิการพรรค (ใน #🏡┆พูดคุย-อำเภอ)
+    → fetch 77 / upsert 77 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 77, upsert 77 msgs
+
+  📥 🧵 thread #เตรียมงาน+ลงชื่อไปงาน Pride อ.เมือง (ใน #🏡┆พูดคุย-อำเภอ)
+    → fetch 83 / upsert 83 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 83, upsert 83 msgs
+
+  📥 🧵 thread #เสียงเด็ก เยาวชนเพื่อขับเคลื่อนนโยบายสาธารณะ (ใน #🏡┆พูดคุย-อำเภอ)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #สะท้อนพรรค เรื่องการดึงพี่ตี๋ไปทำงานส่วนกลาง (ใน #💬┆กระทู้-กรรมการจังหวัด)
+    → fetch 16 / upsert 16 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 16, upsert 16 msgs
+
+  📥 🧵 thread #การบ้านของ สจ. (ใน #💬┆กระทู้-กรรมการจังหวัด)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #รายชื่อผู้ที่ได้รับรองสนามอบต. ส่งพรรค (ใน #💬┆กระทู้-กรรมการจังหวัด)
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
+
+  📥 🧵 thread #บันทึกการทำงานผู้สมัครร่วมกับจังหวัด (ใน #💬┆กระทู้-กรรมการจังหวัด)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #บันทึกกิจกรรมลงไข่ต้ม (ใน #💬┆กระทู้-กรรมการจังหวัด)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #กระบวนการทำโหวตตทอ.ออนไลน์ + ออฟไลน์ (ใน #💬┆กระทู้-กรรมการจังหวัด)
+    → fetch 24 / upsert 24 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 24, upsert 24 msgs
+
+  📥 🧵 thread #รับสมัคร สท. และ อบต. (ใน #💬┆กระทู้-กรรมการจังหวัด)
+    → fetch 11 / upsert 11 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 11, upsert 11 msgs
+
+  📥 🧵 thread #เสนอกรรมการสรรหาท้องถิ่น (ใน #💬┆กระทู้-กรรมการจังหวัด)
+    → fetch 37 / upsert 36 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 37, upsert 36 msgs
+
+  📥 🧵 thread #เกณท์การวัดผลผู้สมัคร (ใน #💬┆กระทู้-กรรมการจังหวัด)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #ประชุมทำความเข้าใจคณะทำงานวัดพระศรีอาริย์ (ใน #💬┆กระทู้-กรรมการจังหวัด)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #การกำหนดบทลงโทษจากการนำข้อมูลบัญชีจังหวัด รวมถึงรายละเอียดส่วนตัว ไปเผยแพร่/บิดเบือนต่อบุคคลภายนอก (ใน #💬┆กระทู้-กรรมการจังหวัด)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #Q&A ราชบุรี 30 พ.ค. 2567 (ใน #💬┆กระทู้-กรรมการจังหวัด)
+    → fetch 19 / upsert 19 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 19, upsert 19 msgs
+
+  📥 🧵 thread #ประชันวิสัยทัศน์ candidate นายก อบจ. (ใน #💬┆กระทู้-กรรมการจังหวัด)
+    → fetch 92 / upsert 92 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 92, upsert 92 msgs
+
+  📥 🧵 thread #รวมข้อเสนอพรรค 11-12 พ.ค. (ใน #💬┆กระทู้-กรรมการจังหวัด)
+    → fetch 37 / upsert 37 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 37, upsert 37 msgs
+
+  📥 🧵 thread #ขั้นตอนการเคาะผู้สมัคร (ใน #💬┆กระทู้-กรรมการจังหวัด)
+    → fetch 8 / upsert 8 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 8, upsert 8 msgs
+
+  📥 🧵 thread #รายชื่อทีมโพธารามไปงานตั้งสาขาพรรค (ใน #🏡┆ทีมโพธาราม)
+    → fetch 7 / upsert 7 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 7, upsert 7 msgs
+
+  📥 🧵 thread #สรุปประชุม สนามอบต 7/11/68 (ใน #📢┆รายงานและเอกสาร)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #คลิปสรุปงานประชุมวิสามัญ โดย @Cha https (ใน #📢┆รายงานและเอกสาร)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #รายงานประชุมโครงการเดือน พ.ย. 68 (ใน #📢┆รายงานและเอกสาร)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #สรุปเนื้อหาบรรยายทุนผูกขาด 18 ก.ค. 68 (ใน #📢┆รายงานและเอกสาร)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #บันทึกการประชุม 13 ก.ค. 68 (หลังพบเลขา) (ใน #📢┆รายงานและเอกสาร)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #บันทึกการประชุม 6 มิ.ย. 68 (ใน #📢┆รายงานและเอกสาร)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #บันทึกการประชุมพรรค 25 พ.ค (ใน #📢┆รายงานและเอกสาร)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #บันทึกการประชุม 14 ม.ค. 2025 (ใน #📢┆รายงานและเอกสาร)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #นโยบายนวัตกรรมเพื่อชาวราชบุรี 31/05/67 (ใน #📢┆รายงานและเอกสาร)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #คลิปดีเบตแคนดิเดทนายก อบจ. 25/05/67 (ใน #📢┆รายงานและเอกสาร)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #30/5/67 ประชุมนโยบายอื่นๆนอกจากเสาร์หลักที่ได้สรุปกันไปบ้างแล้ว (ใน #📢┆รายงานและเอกสาร)
+    → fetch 19 / upsert 19 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 19, upsert 19 msgs
+
+  📥 🧵 thread #9พ.ค.67 หลักเกณฑ์ในการปฏิบัติในช่วงเลือกตั้งท้องถิ่น (ใน #📢┆รายงานและเอกสาร)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #บันทึกการประชุมนโยบายการศึกษา อบจ 8 พ.ค. 67 (ใน #📢┆รายงานและเอกสาร)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #บันทึกการประชุม 26 เมษายน 67 นโยบายน้ำประปา ครั้งที่ 1 by craig (ใน #📢┆รายงานและเอกสาร)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #บันทึกการประชุม 24เมษา67 (ใน #📢┆รายงานและเอกสาร)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #บันทึกการประชุม 15เมษา6 (ใน #📢┆รายงานและเอกสาร)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #บันทึกการประชุม 17เมษา67 (ใน #📢┆รายงานและเอกสาร)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #บันทึกการประชุม 20เมษา67 (ใน #📢┆รายงานและเอกสาร)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #บันทึกการประชุม 26มีค67 (ใน #📢┆รายงานและเอกสาร)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #ประชุมทีมสื่อ 18เมษา67 (ใน #📢┆รายงานและเอกสาร)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #หนังสือขอเข้าพบผู้ว่าราชการจังหวัด (ใน #📢┆รายงานและเอกสาร)
+    → fetch 8 / upsert 8 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 8, upsert 8 msgs
+
+  📥 🧵 thread #ประชุมdiscord 2ก.ค.66 (ใน #📢┆รายงานและเอกสาร)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #ประชุมส่วนกลาง 27มิย66 (ใน #📢┆รายงานและเอกสาร)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #บันทึกการประชุม 28 พ.ค. 66 (ใน #📢┆รายงานและเอกสาร)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #เตรียมประชุมวิสามัญ 24-26 (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 183 / upsert 183 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 183, upsert 183 msgs
+
+  📥 🧵 thread #รีวิวธรรมนูญจังหวัด เพื่อออก Revision 2 (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 32 / upsert 32 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 32, upsert 32 msgs
+
+  📥 🧵 thread #Outing สวนผึ้ง 24-25 ธันวาคม (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 187 / upsert 187 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 187, upsert 187 msgs
+
+  📥 🧵 thread #Hbd (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 8 / upsert 8 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 8, upsert 8 msgs
+
+  📥 🧵 thread #คลินิกปรึกษาหนี้นอกระบบ (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 44 / upsert 44 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 44, upsert 44 msgs
+
+  📥 🧵 thread #ชื่อโผล่เป็น“สมาชิกพรรค” ทั้งที่ไม่เคยสมัคร ? (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #แคมเปญของi-Law เลือก สสร.ร่างรธน. (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 142 / upsert 142 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 142, upsert 142 msgs
+
+  📥 🧵 thread #เตรียมงานตั้ง ตทอ. จอมบึง (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 182 / upsert 182 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 182, upsert 182 msgs
+
+  📥 🧵 thread #ทดลองใช้งานระบบอาสาประชาชน (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 42 / upsert 42 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 42, upsert 42 msgs
+
+  📥 🧵 thread #People 360 (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #ลงชื่อไปร่วมงาน Crafting Policy วันที่ 2 สค 68 @อาคารอนาคตใหม่ (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #ศิลปะมูเตลูกับคนรุ่นใหม่ (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 111 / upsert 111 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 111, upsert 111 msgs
+
+  📥 🧵 thread #กิจกรรมสมาชิกสัมพันธ์ ดำเนินสะดวก 20 เมย 68 (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 56 / upsert 56 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 56, upsert 56 msgs
+
+  📥 🧵 thread #เตรียมงานตั้ง ตทอ บางแพ (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 18 / upsert 18 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 18, upsert 18 msgs
+
+  📥 🧵 thread #เสนอโครงการเดือน เม.ย.- มิ.ย. 68 (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 92 / upsert 92 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 92, upsert 92 msgs
+
+  📥 🧵 thread #เสนอโครงการเดือน ก.ค. - ก.ย. 68 (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #ดัน Global GAP ให้เกษตรกร ราชบุรี (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 18 / upsert 18 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 18, upsert 18 msgs
+
+  📥 🧵 thread #กระบวนการ คัดเลือก กรรมการสรรหา สนาม อบต. (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 160 / upsert 160 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 160, upsert 160 msgs
+
+  📥 🧵 thread #อบรมการใช้ Trello และประชุมแผนจังหวัด @ออฟฟิศบางแพ (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 54 / upsert 54 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 54, upsert 54 msgs
+
+  📥 🧵 thread #งานพรีเซนต์ประชุมใหญ่ 25 เมษายน (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 126 / upsert 126 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 126, upsert 126 msgs
+
+  📥 🧵 thread #คู่มือ Discord สำหรับทีมจังหวัด (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #กิจกรรมเปิดบ้านประชาชน (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 12 / upsert 12 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 12, upsert 12 msgs
+
+  📥 🧵 thread #TODO (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 17 / upsert 17 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 17, upsert 17 msgs
+
+  📥 🧵 thread #มี สจ.คนเดียวก็สร้างการเปลี่ยนแปลงได้ (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #เสนอโครงการเดือน ม.ค. - มี.ค. 68 (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 66 / upsert 66 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 66, upsert 66 msgs
+
+  📥 🧵 thread #โครงการทบทวนสนาม สจ (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 63 / upsert 63 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 63, upsert 63 msgs
+
+  📥 🧵 thread #ชวนเขียนหลักสูตร 102 สำหรับ ตทอ (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 30 / upsert 30 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 30, upsert 30 msgs
+
+  📥 🧵 thread #กิจกรรมสมาชิกสัมพันธ์  อ.จอมบึง 25 กพ 68 (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #Discord อาสาประชาชน (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 8 / upsert 8 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 8, upsert 8 msgs
+
+  📥 🧵 thread #ลงชื่อไปกับรถแห่ สจ. (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 71 / upsert 71 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 71, upsert 71 msgs
+
+  📥 🧵 thread #แคมเปญ รณรงค์ พรบ การศึกษา (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 8 / upsert 8 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 8, upsert 8 msgs
+
+  📥 🧵 thread #สมาชิกสัมพันธ์บ้านโป่ง+เปิดตัวนายก (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 63 / upsert 63 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 63, upsert 63 msgs
+
+  📥 🧵 thread #อบรมตัวแทนพรรค จ.ราชบุรี วันที่ 22-24 พ.ย. (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 51 / upsert 51 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 51, upsert 51 msgs
+
+  📥 🧵 thread #เสนอโครงการเดือนกันยายน - ธันวาคม (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 37 / upsert 37 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 37, upsert 37 msgs
+
+  📥 🧵 thread #ร่วมร่างธรรมนูญจังหวัด (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 43 / upsert 43 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 43, upsert 43 msgs
+
+  📥 🧵 thread #แผนรับมือกับน้ำท่วมภาคกลาง (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 13 / upsert 13 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 13, upsert 13 msgs
+
+  📥 🧵 thread #Feedback อบจ. (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 7 / upsert 7 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 7, upsert 7 msgs
+
+  📥 🧵 thread #เสนอโครงการไตรมาสสอง (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 119 / upsert 119 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 119, upsert 119 msgs
+
+  📥 🧵 thread #อาสาเฝ้าหน่วยเลือกตั้ง (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 13 / upsert 13 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 13, upsert 13 msgs
+
+  📥 🧵 thread #แจ้งเรื่องการตั้งห้องทีมงาน อบจ.ราชบุรี (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 45 / upsert 45 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 45, upsert 45 msgs
+
+  📥 🧵 thread #เสนอชื่อคณะทำงานประธานกรรมาธิการสวัสดิการสังคม (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 26 / upsert 26 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 26, upsert 26 msgs
+
+  📥 🧵 thread #งาน Debate 25 พ.ค.67 (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 47 / upsert 47 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 47, upsert 47 msgs
+
+  📥 🧵 thread #รวมลิ้งค์ที่น่าสนใจ ประชุมพรรค (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #เสนอชื่อบอร์ดประกันสังคม (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 149 / upsert 148 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 149, upsert 148 msgs
+
+  📥 🧵 thread #รับสภาสัญจร กับรอง1 หมออ๋องเยือนราชบุรี (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
+
+  📥 🧵 thread #ติดตามเคสหมิ่นประมาทด้วยการโฆษณา บ้านโป่ง (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
+
+  📥 🧵 thread #นัดสัมภาษณ์ผู้สมัคร Discord (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 33 / upsert 33 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 33, upsert 33 msgs
+
+  📥 🧵 thread #[เตรียมงาน] มนุษย์ผู้โง่เง่าซึมเศร้าเป็นสีสัน (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 25 / upsert 25 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 25, upsert 25 msgs
+
+  📥 🧵 thread #[เตรียมงาน] ราชบุรีสัญจร ครั้งที่ 1 อ.ดำเนินสะดวก (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 58 / upsert 58 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 58, upsert 58 msgs
+
+  📥 🧵 thread #เสนอโครงการปี 67 ไตรมาสแรก (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 111 / upsert 111 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 111, upsert 111 msgs
+
+  📥 🧵 thread #Hack งบประมาณท้องถิ่น (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 90 / upsert 90 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 90, upsert 90 msgs
+
+  📥 🧵 thread #เขตเลือกตั้งอบจ. ทั้ง 30 เขต (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 173 / upsert 173 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 173, upsert 173 msgs
+
+  📥 🧵 thread #ถ่ายรูปวันที่ 18 (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 22 / upsert 22 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 22, upsert 22 msgs
+
+  📥 🧵 thread #[ชวนคิด] ผู้สมัครควรดำรงตำแหน่งกรรมการสาขาหรือไม่ (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 11 / upsert 11 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 11, upsert 11 msgs
+
+  📥 🧵 thread #เสนอซื้อคอร์สเรียนออนไลน์สำหรับทีมงาน (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 11 / upsert 11 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 11, upsert 11 msgs
+
+  📥 🧵 thread #เตรียมงานประชุมสาขาพรรค (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 134 / upsert 134 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 134, upsert 134 msgs
+
+  📥 🧵 thread #ลงชื่อสจ.และอัพเดท รายชื่อผู้สมัคร 30 เขต (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 147 / upsert 147 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 147, upsert 147 msgs
+
+  📥 🧵 thread #ทัวร์ไฟไหม้ (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 9 / upsert 9 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 9, upsert 9 msgs
+
+  📥 🧵 thread #สั่งเสื้อ (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 38 / upsert 38 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 38, upsert 38 msgs
+
+  📥 🧵 thread #คณะทำงานประจำคณะกรรมาธิการการทหารว่าด้วยเรื่อง ... (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 47 / upsert 47 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 47, upsert 47 msgs
+
+  📥 🧵 thread #กิจกรรมเลือกตั้ง ตทอ ปากท่อ (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
+
+  📥 🧵 thread #🎊🧒🏻👦🏻งานวันเด็กกับก้าวไกลราชบุรี#1 (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 170 / upsert 170 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 170, upsert 170 msgs
+
+  📥 🧵 thread #โครงการเดือนธันวาคม (พิเศษ) (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
+
+  📥 🧵 thread #งานส่งท้ายปีเก่า (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 172 / upsert 172 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 172, upsert 172 msgs
+
+  📥 🧵 thread #วันที่ 6 โคตรเจ๋ง โคตรเฟี้ยว TMR (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 93 / upsert 93 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 93, upsert 93 msgs
+
+  📥 🧵 thread #ตกแต่งสถานที่ปีใหม่ (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 106 / upsert 106 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 106, upsert 106 msgs
+
+  📥 🧵 thread #เสนอโครงการประจำเดือนธันวาคม (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #ซื้อเตนท์เอาไว้ออกบูธ (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 97 / upsert 96 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 97, upsert 96 msgs
+
+  📥 🧵 thread #ก่อนถมดินต้องรู้กฎหมาย (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #โครงการเดือน.พย 66 (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #เสนอโครงการเดือนกันยายน - ธันวาคม (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 109 / upsert 109 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 109, upsert 109 msgs
+
+  📥 🧵 thread #ประชุมภาคกลาง 20-21 ต.ค. 2566 (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 80 / upsert 80 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 80, upsert 80 msgs
+
+  📥 🧵 thread #รายชื่อผู้ร่วมกิจกรรมแข่งฟุตบอล เมืองกาญ (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 54 / upsert 54 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 54, upsert 54 msgs
+
+  📥 🧵 thread #รับสมัคร ที่ปรึกษาประธานกรรมาธิการ (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 69 / upsert 69 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 69, upsert 69 msgs
+
+  📥 🧵 thread #Beef & Beer @ Banpong 30 Sep (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 66 / upsert 66 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 66, upsert 66 msgs
+
+  📥 🧵 thread #ราชบุรีเป็นเจ้าภาพจัดเวทีกระบวนกรภาคกลาง (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 12 / upsert 11 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 12, upsert 11 msgs
+
+  📥 🧵 thread #กาญจนบุรีเชิญทีมราชบุรีร่วมแข่งบอล8คน (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 15 / upsert 15 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 15, upsert 15 msgs
+
+  📥 🧵 thread #ลงชื่อประชุมสามัญพรรควันที่ 24 กันยายน (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 45 / upsert 45 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 45, upsert 45 msgs
+
+  📥 🧵 thread #ระดมสมอง ส่งราชบุรีเป็นตัวแทนประชุมสามัญและสรรหาพรรค (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 32 / upsert 32 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 32, upsert 32 msgs
+
+  📥 🧵 thread #ทีมจอมบึง ออกบูธรับสมัครสมาชิก วันที่ 16/9/66 10.00-12.00 น. (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 169 / upsert 169 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 169, upsert 169 msgs
+
+  📥 🧵 thread #ช่วยกันคิดฟอร์มรับสมัครเลือกตั้งทุกระดับ (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 49 / upsert 49 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 49, upsert 49 msgs
+
+  📥 🧵 thread #ไก่ย่างบางตาล หนองกบ (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 16 / upsert 16 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 16, upsert 16 msgs
+
+  📥 🧵 thread #โหวตอัตราส่วนเงินบริจาค (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 8 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 8, upsert 6 msgs
+
+  📥 🧵 thread #เสนอการทำเพจของแต่ละเขต by ปู (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 26 / upsert 26 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 26, upsert 26 msgs
+
+  📥 🧵 thread #วิโรจน์เยือน น้ำพุ-ปากท่อ-วัดเพลง-หนองโพ-บ้านโป่ง (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 72 / upsert 72 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 72, upsert 72 msgs
+
+  📥 🧵 thread #งานสุราตะวันตกที่ราชบุรี (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 67 / upsert 67 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 67, upsert 67 msgs
+
+  📥 🧵 thread #26/8 ไอติม พริษฐ์ | กำหนดการ และผู้ดำเนินการ (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 48 / upsert 48 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 48, upsert 48 msgs
+
+  📥 🧵 thread #ลงชื่อร่วมงานสุราตะวันตก (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 52 / upsert 52 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 52, upsert 52 msgs
+
+  📥 🧵 thread #ขอรวมรวบปัญหาเพื่อจัดทำนโยบายท้องถิ่นหน่อยครับ (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 59 / upsert 59 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 59, upsert 59 msgs
+
+  📥 🧵 thread #แจ้งกำหนดการประชุมการเมืองท้องถิ่นกับส่วนกลาง (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 43 / upsert 43 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 43, upsert 43 msgs
+
+  📥 🧵 thread #วิเคราะห์ข้อมูลและคะแนนผู้มีสิทธิ์เลือกตั้ง (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 38 / upsert 38 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 38, upsert 38 msgs
+
+  📥 🧵 thread #ขอ Idea ประเมินความรุนแรงของปัญหา และความเร่งด่วนในการแก้ไขปัญหา เพื่อนำไปใช้กับการพิจารณานโยบายครับ (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 7 / upsert 7 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 7, upsert 7 msgs
+
+  📥 🧵 thread #ขอ Idea การเพิ่มการรับรู้ปัญหา (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 13 / upsert 13 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 13, upsert 13 msgs
+
+  📥 🧵 thread #ชวนไปงาน ก้าว Camp (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #ประกวดแบบเสื้อเมล็ดส้ม (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 70 / upsert 70 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 70, upsert 70 msgs
+
+  📥 🧵 thread #ขอไอเดียการทำเพจ Somseed (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 46 / upsert 46 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 46, upsert 46 msgs
+
+  📥 🧵 thread #เปิดเพจปีกงานด้านความคิด (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 200 / upsert 200 msgs... (hasMore: true)
+    → fetch 221 / upsert 221 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 221, upsert 221 msgs
+
+  📥 🧵 thread #วิโรจน์เยือนราชบุรี (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 175 / upsert 175 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 175, upsert 175 msgs
+
+  📥 🧵 thread #ไอเดียกดดันสว. (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 136 / upsert 136 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 136, upsert 136 msgs
+
+  📥 🧵 thread #📌ด่วนเชิญผู้สนใจเทคโนโลยีเกษตรอบรม9ส.ค.(พรุ่งนี้) (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 30 / upsert 30 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 30, upsert 30 msgs
+
+  📥 🧵 thread #ป้ายพร้อบ A4 วันพรุ่งนี้ (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 30 / upsert 30 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 30, upsert 30 msgs
+
+  📥 🧵 thread #"ยึดฟุตบาทหากินส่วนตัวทั้งจังหวัด" (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #ChatGPT (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 17 / upsert 16 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 17, upsert 16 msgs
+
+  📥 🧵 thread #นัดประชุมทีมสื่อ (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 9 / upsert 9 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 9, upsert 9 msgs
+
+  📥 🧵 thread #สอบถามแอพติดลายน้ำบนภาพ (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
+
+  📥 🧵 thread #LINE OA (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 9 / upsert 9 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 9, upsert 9 msgs
+
+  📥 🧵 thread #ช่วยกันนำเสนอกฏการใช้งาน (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 17 / upsert 17 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 17, upsert 17 msgs
+
+  📥 🧵 thread #ระดมทุน (ใน #💬┆กระทู้-คณะทำงาน)
+    → fetch 11 / upsert 11 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 11, upsert 11 msgs
+
+  📥 🧵 thread #จดชื่อร้านที่เสนอให้ความช่วยเหลือ (ใน #🏡┆ทีมเมือง)
+    → fetch 17 / upsert 17 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 17, upsert 17 msgs
+
+  📥 🧵 thread #ขออนุญาติเรียนเชิญ คุนบุ๊งมางานบวชหลาน (ใน #🏡┆ทีมเมือง)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #ยุทธศาสตร์ลงพื้นที่ (ใน #🗨┆กองเลขา-เขต-5)
+    → fetch 53 / upsert 53 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 53, upsert 53 msgs
+
+  📥 🧵 thread #สื่อเขต 5 (ใน #🗨┆กองเลขา-เขต-5)
+    → fetch 74 / upsert 74 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 74, upsert 74 msgs
+
+  📥 🧵 thread #ห้องบน Discord (ใน #📌┆ข้อตกลงร่วม)
+    → fetch 7 / upsert 7 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 7, upsert 7 msgs
+
+  📥 🧵 thread #Google Drive จังหวัด (ใน #📌┆ข้อตกลงร่วม)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #รวมลิงค์ Social Media (ใน #📌┆ข้อตกลงร่วม)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #คณะทำงานราชบุรี (ใน #📌┆ข้อตกลงร่วม)
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
+
+  📥 🧵 thread #รวมมีมพี่ตี๋ (ใน #🔥┆ฟ้าร้อง-โยนงานมาก่อน)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #Sticker (ใน #🔥┆ฟ้าร้อง-โยนงานมาก่อน)
+    → fetch 44 / upsert 44 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 44, upsert 44 msgs
+
+  📥 🧵 thread #Account ใช้ร่วมกัน (ใน #👫┆ฝ่ายธุรการ)
+    → fetch 14 / upsert 14 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 14, upsert 14 msgs
+
+  📥 🧵 thread #ใบเสนอราคา (ใน #👫┆ฝ่ายธุรการ)
+    → fetch 7 / upsert 7 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 7, upsert 7 msgs
+
+  📥 🧵 thread #การตั้งตทอ. (ใน #👫┆ฝ่ายธุรการ)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #Google Form (ใน #👫┆ฝ่ายธุรการ)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #ประชุมกับส่วนกลาง22เมษา67 (ใน #👫┆ฝ่ายธุรการ)
+    → fetch 8 / upsert 8 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 8, upsert 8 msgs
+
+  📥 🧵 thread #นัดหมายพบปะ ประจำเดือน (ใน #💬┆กระทู้-ทีมเมือง)
+    → fetch 32 / upsert 32 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 32, upsert 32 msgs
+
+  📥 🧵 thread #วาระเยาวชนและการศึกษา (ใน #💬┆กระทู้-ทีมเมือง)
+    → fetch 12 / upsert 12 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 12, upsert 12 msgs
+
+  📥 🧵 thread #วาระการพัฒนาเมือง (ใน #💬┆กระทู้-ทีมเมือง)
+    → fetch 15 / upsert 15 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 15, upsert 15 msgs
+
+  📥 🧵 thread #ยกเครื่องทางเท้าทั้งหมดในเขตเทศบาลเมืองราชบุรี (ใน #💬┆กระทู้-ทีมเมือง)
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
+
+  📥 🧵 thread #วาระการบริหารจัดการขยะ (ใน #💬┆กระทู้-ทีมเมือง)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #โครงการอบรมตทอ.67 (ใน #👫┆ตัวแทนสมาชิกพรรค)
+    → fetch 54 / upsert 54 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 54, upsert 54 msgs
+
+  📥 🧵 thread #คำถามถึงผู้สมัคร (ใน #👫┆ตัวแทนสมาชิกพรรค)
+    → fetch 8 / upsert 8 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 8, upsert 8 msgs
+
+  📥 🧵 thread #ประชุมสามัญ 21-22 กันยายน (ใน #👫┆ตัวแทนสมาชิกพรรค)
+    → fetch 14 / upsert 14 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 14, upsert 14 msgs
+
+  📥 🧵 thread #ตัวแทนพรรคที่ยังไม่ได้สมัครสมาชิก (ใน #👫┆ตัวแทนสมาชิกพรรค)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #เกี่ยวกับการส่งนายก อบจ. ราชบุรี (ใน #👫┆ตัวแทนสมาชิกพรรค)
+    → fetch 22 / upsert 16 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 22, upsert 16 msgs
+
+  📥 🧵 thread #อบรมตทอ 3-4 ก.พ. 67 (ใน #👫┆ตัวแทนสมาชิกพรรค)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 138 / upsert 138 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 138, upsert 138 msgs
+
+  📥 🧵 thread #รายชื่อผู้ลงสมัครท้องถิ่น (ใน #👫┆ตัวแทนสมาชิกพรรค)
+    → fetch 11 / upsert 11 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 11, upsert 11 msgs
+
+  📥 🧵 thread #บันทึกการประชุมคกก. (ใน #👫┆ตัวแทนสมาชิกพรรค)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #ประชุม ตทอ. ราชบุรี ครั้งที่ 1 (ใน #👫┆ตัวแทนสมาชิกพรรค)
+    → fetch 39 / upsert 39 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 39, upsert 39 msgs
+
+  📥 🧵 thread #วาระประชุม ตทอ.ราชบุรี ครั้งที่ 1 (ใน #👫┆ตัวแทนสมาชิกพรรค)
+    → fetch 23 / upsert 23 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 23, upsert 23 msgs
+
+  📥 🧵 thread #รูปภาพ ประชุมใหญ่วิสามัญพรรค ครั้งที่ 2/66 (ใน #👫┆ตัวแทนสมาชิกพรรค)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #ทำหนังสือ ขอนัดพบผู้ว่าราชการจังหวัด (ใน #👫┆ตัวแทนสมาชิกพรรค)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #ลงทะเบียนประชุมพรรค (ใน #👫┆ตัวแทนสมาชิกพรรค)
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
+
+  📥 🧵 thread #โปรโมท คาราวาน มาวันที่ 4/02 (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 46 / upsert 46 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 46, upsert 46 msgs
+
+  📥 🧵 thread #8 กุมภา กาเห็นชอบ (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 123 / upsert 123 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 123, upsert 123 msgs
+
+  📥 🧵 thread #ยุทธศาสตร์สื่อเลือกตั้ง 69 (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 200 / upsert 200 msgs... (hasMore: true)
+    → fetch 250 / upsert 250 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 250, upsert 250 msgs
+
+  📥 🧵 thread #อาสาเฝ้าหน่วย/กลับบ้านมาเลือกตั้ง (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 41 / upsert 41 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 41, upsert 41 msgs
+
+  📥 🧵 thread #รณรงค์บัตรเลือกตั้งรวม 5 เขต (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 22 / upsert 22 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 22, upsert 22 msgs
+
+  📥 🧵 thread #คาราวาน 4/02 (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 29 / upsert 29 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 29, upsert 29 msgs
+
+  📥 🧵 thread #ชวนเปลี่ยนโปรไฟล์ (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #เปลี่ยนปกเพจ Cover (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 54 / upsert 54 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 54, upsert 54 msgs
+
+  📥 🧵 thread #แจ้งแชร์โพสต์ผู้สมัคร (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 91 / upsert 91 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 91, upsert 91 msgs
+
+  📥 🧵 thread #เลือกตั้งล่วงหน้า (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 74 / upsert 74 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 74, upsert 74 msgs
+
+  📥 🧵 thread #ไอติม 29.01.69 (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 42 / upsert 42 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 42, upsert 42 msgs
+
+  📥 🧵 thread #รณรงค์บัตรเลือกตั้ง (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 69 / upsert 69 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 69, upsert 69 msgs
+
+  📥 🧵 thread #8 กุมภา กา 3 ใบ (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 32 / upsert 32 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 32, upsert 32 msgs
+
+  📥 🧵 thread #อาสาสู้ศึกเลือกตั้ง (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 29 / upsert 29 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 29, upsert 29 msgs
+
+  📥 🧵 thread #วิโรจน์ 21/01 (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 37 / upsert 37 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 37, upsert 37 msgs
+
+  📥 🧵 thread #เช็คสิทธิเลือกตั้ง (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 25 / upsert 25 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 25, upsert 25 msgs
+
+  📥 🧵 thread #รวมภาพ สส.กาย 16/01 (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 13 / upsert 13 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 13, upsert 13 msgs
+
+  📥 🧵 thread #สสกาย 16 ม.ค. (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 31 / upsert 31 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 31, upsert 31 msgs
+
+  📥 🧵 thread #มัดรวมบริจาคผู้สมัครแต่ละเขต (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 45 / upsert 45 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 45, upsert 45 msgs
+
+  📥 🧵 thread #ระบบรายงานและเฝ้าระวังราคาสินค้า (Dashboard) (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 23 / upsert 23 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 23, upsert 23 msgs
+
+  📥 🧵 thread #แก้ปัญหาฝุ่นพิษ PM 2.5 (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #สส.หนุ่มพบ YSF (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 101 / upsert 101 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 101, upsert 101 msgs
+
+  📥 🧵 thread #ภาพบรรยากาศ พี่หนุ่ม+หมอเอ็กซ์  12/01 (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 9 / upsert 9 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 9, upsert 9 msgs
+
+  📥 🧵 thread #ปัญหาอะไรที่เป็นจุดผลักให้ผู้สมัครก้าวมาข้างหน้า (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 15 / upsert 15 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 15, upsert 15 msgs
+
+  📥 🧵 thread #ประมวลภาพ หมอวาโย  9/01 (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
+
+  📥 🧵 thread #วันเด็ก นโยบายเกี่ยวกับเด็ก (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 23 / upsert 23 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 23, upsert 23 msgs
+
+  📥 🧵 thread #คลิปเต้ (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 8 / upsert 8 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 8, upsert 8 msgs
+
+  📥 🧵 thread #ปลดป้าย ยุติการหาเสียง (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #แปะงาน reference (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #เชิญชวนกลับมาเลือกตั้ง อบต. (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 40 / upsert 40 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 40, upsert 40 msgs
+
+  📥 🧵 thread #ผู้สมัครในสายตาคณะทำงาน (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 7 / upsert 7 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 7, upsert 7 msgs
+
+  📥 🧵 thread #ปชสพ. อ.เดชรัตน์ มาราชบุรี 2/01 (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 56 / upsert 56 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 56, upsert 56 msgs
+
+  📥 🧵 thread #ปูพรมนโยบายพรรค (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #รณรงค์ประชามติเห็นด้วยแก้รัฐธรรมนูญ (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 9 / upsert 9 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 9, upsert 9 msgs
+
+  📥 🧵 thread #สคส.ส่งนโยบายให้คนราชบุรี (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 116 / upsert 116 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 116, upsert 116 msgs
+
+  📥 🧵 thread #20251227 วันรับสมัคร สส (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #จับเบอร์ ผู้สมัคร สส. (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 55 / upsert 55 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 55, upsert 55 msgs
+
+  📥 🧵 thread #รวมกราฟฟิกงานพิมพ์ (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 21 / upsert 21 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 21, upsert 21 msgs
+
+  📥 🧵 thread #สอบต เต้ (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
+
+  📥 🧵 thread #ห้องสื่อ พี่หวิน (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 26 / upsert 26 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 26, upsert 26 msgs
+
+  📥 🧵 thread #5 /12 /68 โพสต์เปิดตัว สส ราชบุรี ครั้งที่ 1 (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 192 / upsert 192 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 192, upsert 192 msgs
+
+  📥 🧵 thread #เปิดตัวผู้สมัคร  อบต. (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 15 / upsert 15 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 15, upsert 15 msgs
+
+  📥 🧵 thread #สอบต พิษณุ (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 8 / upsert 8 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 8, upsert 8 msgs
+
+  📥 🧵 thread #ขอหนึ่งโพสต์ สำหรับ นายกอบต. เขาขลุง พรุ่งนี้ (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 39 / upsert 39 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 39, upsert 39 msgs
+
+  📥 🧵 thread #ช่องทางการหาเสียงพรรคประชาชนราชบุรี (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #อบต.-ส่งปัญหาในพื้นที่ ทำนโยบาย (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 43 / upsert 43 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 43, upsert 43 msgs
+
+  📥 🧵 thread #คลังสื่อ (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #สื่อผู้สมัคร  สท.เมืองจอมพล (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 200 / upsert 200 msgs... (hasMore: true)
+    → fetch 212 / upsert 212 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 212, upsert 212 msgs
+
+  📥 🧵 thread #สื่อผู้สมัคร  สท.เมืองราชบุรี (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 200 / upsert 200 msgs... (hasMore: true)
+    → fetch 290 / upsert 290 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 290, upsert 290 msgs
+
+  📥 🧵 thread #สื่อโค้งสุดท้าย (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 7 / upsert 7 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 7, upsert 7 msgs
+
+  📥 🧵 thread #สื่อผู้สมัคร สท.เมืองบ้านโป่ง (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 97 / upsert 97 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 97, upsert 97 msgs
+
+  📥 🧵 thread #ทำคลิปอวยพรวันสงกรานต์ (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 24 / upsert 24 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 24, upsert 24 msgs
+
+  📥 🧵 thread #จุดรับสมัครสมาชิกดำเนินสะดวก (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 52 / upsert 52 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 52, upsert 52 msgs
+
+  📥 🧵 thread #ประชาชนราชบุรีเขยื้อนโอ่งมังกร (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 23 / upsert 23 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 23, upsert 23 msgs
+
+  📥 🧵 thread #บ้านใหญ่ หัวใจชินวัตร (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 10 / upsert 10 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 10, upsert 10 msgs
+
+  📥 🧵 thread #ประมวลความรู้สึกของประชาชนต่อพรรคประชาชน (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #ถ่ายรูปหน้าหน่วย (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #คลิปรอลง (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 14 / upsert 14 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 14, upsert 14 msgs
+
+  📥 🧵 thread #content 31/08/67 ยุติการหาเสียง (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 14 / upsert 14 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 14, upsert 14 msgs
+
+  📥 🧵 thread #เช็คลิส ข้อห้ามวันเลือกตั้ง (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 11 / upsert 11 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 11, upsert 11 msgs
+
+  📥 🧵 thread #คลิปเฝ้าหีบ และรณรงค์กลับบ้านมาเลือกตั้ง / ทีมคุณตู่ (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 41 / upsert 41 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 41, upsert 41 msgs
+
+  📥 🧵 thread #หลังนับคะแนน 1/9/67 (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 14 / upsert 14 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 14, upsert 14 msgs
+
+  📥 🧵 thread #คลิปนโยบาย 5 เสา (คุณออย) (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 76 / upsert 76 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 76, upsert 76 msgs
+
+  📥 🧵 thread #ขอvdo และภาพนิ่งเซลฟี้ทุกเวที ทุกอำเภอ (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 16 / upsert 16 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 16, upsert 16 msgs
+
+  📥 🧵 thread #สื่อ 2/9/67 (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 2 / upsert 2 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 2, upsert 2 msgs
+
+  📥 🧵 thread #งบประมาณอบจ.เราเอาประทำอะไรได้บ้าง (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #คลิปรอตัด (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 26 / upsert 26 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 26, upsert 26 msgs
+
+  📥 🧵 thread #ศุกร์ 23/8 พี่หวุน ห้วยไผ่ ดอนแร่ (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
+
+  📥 🧵 thread #22 ส.ค. พี่หวุน โพธาราม (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 7 / upsert 7 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 7, upsert 7 msgs
+
+  📥 🧵 thread #21/8 พี่หวุน แห่บางป่า+ตลาดนัดคูหาสวรรค์ (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #สวัสดีวันจันทร์ (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 61 / upsert 61 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 61, upsert 61 msgs
+
+  📥 🧵 thread #แคมเปญไม่เลือกคนซื้อเสียง (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 20 / upsert 20 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 20, upsert 20 msgs
+
+  📥 🧵 thread #พุธ 21/8 พี่หวุน ลงตลาดนัดเช้าโป่งกระทิงล่าง (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #ข่าวป้ายโดนทำลาย (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 22 / upsert 22 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 22, upsert 22 msgs
+
+  📥 🧵 thread #อังคาร 20/8 พี่หวุนร่วมประเพณี ผูกแขนเรียกขวัญกินข้าวห่อ บ้านคา (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 9 / upsert 9 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 9, upsert 9 msgs
+
+  📥 🧵 thread #ครูจวง แถลงเรื่อง ร.ร.ห้วยปลาดุก (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 9 / upsert 9 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 9, upsert 9 msgs
+
+  📥 🧵 thread #สส.ครูธัญ ลงพื้นที่บ้านโป่ง (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 20 / upsert 20 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 20, upsert 20 msgs
+
+  📥 🧵 thread ##ราชบุรีกลับบ้านเกิด EP.1 (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 41 / upsert 41 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 41, upsert 41 msgs
+
+  📥 🧵 thread #ขอระดมความคิด เรื่องการปชส นำเสนอนโยบายและวิสัยทัศน์ของผู้สมัครค่ะ (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
+
+  📥 🧵 thread #13/7/67 พี่หวุนลงพื้นที่ตลาดเช้า ตลาดเย็น (เฉพาะคนฟังยิ้ม+พูดคุย) (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
+
+  📥 🧵 thread #3-4 สิงหา วัดโขลง-ทุ่งปอ (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 47 / upsert 47 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 47, upsert 47 msgs
+
+  📥 🧵 thread #14/7/67 รพ.สต โพธาราม ขนส่งศรีเมือง แวะทานข้าว (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 4 / upsert 4 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 4, upsert 4 msgs
+
+  📥 🧵 thread #สร้างภาพพี่หวุน (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 27 / upsert 27 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 27, upsert 27 msgs
+
+  📥 🧵 thread #ภาพแคนดิตหาเสียง (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #12/8 พี่หวุนพบเกษตรกรมะพร้าวน้ำหอม (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
+
+  📥 🧵 thread #20240813 หัวหน้าเท้งมาบ้านโป่ง (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #ปราศรัยใหญ่ 30 สิงหา (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 60 / upsert 60 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 60, upsert 60 msgs
+
+  📥 🧵 thread #รวมส.ส.ลงพื้นที่ประจำสัปดาห์ (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 110 / upsert 110 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 110, upsert 110 msgs
+
+  📥 🧵 thread #12 สค เท้งมาบ้านโป่ง (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #คลิปพี่วิโรจน์ (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 10 / upsert 10 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 10, upsert 10 msgs
+
+  📥 🧵 thread #ต๋อมลงบ้านโป่ง (30 ก.ค.) (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 21 / upsert 21 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 21, upsert 21 msgs
+
+  📥 🧵 thread #เสนอทำซีรีย์โปรยนโยบายครับ (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 13 / upsert 13 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 13, upsert 13 msgs
+
+  📥 🧵 thread #แคมเปญแจกแผ่นพับ (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
+
+  📥 🧵 thread #คลิป ปิดป้ายชื่อพรรค (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 29 / upsert 29 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 29, upsert 29 msgs
+
+  📥 🧵 thread #7 สิงหา ยุบไม่ยุบ เราไม่ท้อ เราไปต่อในสนาม อบจ.ราชบุรี (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 31 / upsert 31 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 31, upsert 31 msgs
+
+  📥 🧵 thread #แคมเปญ 7/8/67 (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 14 / upsert 14 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 14, upsert 14 msgs
+
+  📥 🧵 thread #4 สิงหา ใกล้ที่ไหน ไปที่นั่น (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 91 / upsert 91 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 91, upsert 91 msgs
+
+  📥 🧵 thread #ข้อความสั้น (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 200 / upsert 200 msgs... (hasMore: true)
+    → fetch 229 / upsert 229 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 229, upsert 229 msgs
+
+  📥 🧵 thread #มาเฝ้าหีบกันเถอะ (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 53 / upsert 53 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 53, upsert 53 msgs
+
+  📥 🧵 thread #คลิปที่ตัดแล้ว (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 56 / upsert 56 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 56, upsert 56 msgs
+
+  📥 🧵 thread #รวม Quote หาเสียง (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 30 / upsert 30 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 30, upsert 30 msgs
+
+  📥 🧵 thread #ส่งท้ายอบจ (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 24 / upsert 24 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 24, upsert 24 msgs
+
+  📥 🧵 thread #นโยบายเพื่อผู้สูงวัย (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
+
+  📥 🧵 thread #หัวหน้าพรรคชวนกลับมาเลือกตั้ง (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #กินข้าวห่อสวนผึ้ง (11 ส.ค.) (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #จอมบึง 31-7 (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
+
+  📥 🧵 thread #20240728 คุยเฟื่องเรื่องนโยบายก้าวไกล (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #ลงพื้นที่ วันที่ 30 กค (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #คลิป คอนเท้น สำหรับรถLED (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 9 / upsert 9 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 9, upsert 9 msgs
+
+  📥 🧵 thread #คอนเทนต์ เบอร์ 1 ไม่ซื้อเสียง (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
+
+  📥 🧵 thread #เดินสายปราศรัย 27-29/08/67 (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 26 / upsert 26 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 26, upsert 26 msgs
+
+  📥 🧵 thread #สื่อ นโยบาย การศึกษา (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
+
+  📥 🧵 thread #สื่อนโยบาย_น้ำประปา น้ำเกษตร (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 50 / upsert 50 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 50, upsert 50 msgs
+
+  📥 🧵 thread #นโยบาย - ถนนเป็นหลุมดาวอังคาร (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 22 / upsert 22 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 22, upsert 22 msgs
+
+  📥 🧵 thread #นโยบายอาหารกลางวัน และเศรษฐกิจชุมชน (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 21 / upsert 21 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 21, upsert 21 msgs
+
+  📥 🧵 thread #จับเบอร์ (โพสต์ 27 ก.ค.) (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 24 / upsert 24 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 24, upsert 24 msgs
+
+  📥 🧵 thread #วันที่ 26 กค67 (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 21 / upsert 21 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 21, upsert 21 msgs
+
+  📥 🧵 thread #คนราชบุรีมีค่ามากกว่า 300 บาท (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 12 / upsert 12 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 12, upsert 12 msgs
+
+  📥 🧵 thread #โปรโมทเวที 24-25 สค (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 104 / upsert 104 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 104, upsert 104 msgs
+
+  📥 🧵 thread #วันที่ 24/7/67 (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 29 / upsert 29 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 29, upsert 29 msgs
+
+  📥 🧵 thread #นโยบายมีอะไรบ้าง (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #วันที่ 25/7/67 (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 14 / upsert 14 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 14, upsert 14 msgs
+
+  📥 🧵 thread #โครงสร้างพรรคและนโยบายท้องถิ่น (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
+
+  📥 🧵 thread #สื่อ นโยบาย สาธารณสุข (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 60 / upsert 60 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 60, upsert 60 msgs
+
+  📥 🧵 thread #เท้ง 24 ตลาดหนองโพ (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 31 / upsert 31 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 31, upsert 31 msgs
+
+  📥 🧵 thread #ทำไมมีเลือกตั้ง (นายกลาออกก่อน) (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 39 / upsert 39 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 39, upsert 39 msgs
+
+  📥 🧵 thread #แคมเปญระดมทุนขายเสื้อ ทำกราฟฟิค (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 15 / upsert 15 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 15, upsert 15 msgs
+
+  📥 🧵 thread #เลือกนายกได้ทั้งจังหวัด ไม่ว่าอยู่อำเภอไหนของราชบุรีก็เลือกตั้งได้ (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 17 / upsert 17 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 17, upsert 17 msgs
+
+  📥 🧵 thread #สื่อ นโยบาย อบจ.โปร่งใส (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 27 / upsert 27 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 27, upsert 27 msgs
+
+  📥 🧵 thread #กลอน 1 กันยา กาเบอร์ 1 (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 33 / upsert 33 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 33, upsert 33 msgs
+
+  📥 🧵 thread #นโยบายขนส่งสาธารณะ (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 35 / upsert 35 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 35, upsert 35 msgs
+
+  📥 🧵 thread #หยุดสร้างถนน (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 17 / upsert 17 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 17, upsert 17 msgs
+
+  📥 🧵 thread #คอนเทนต์ 16-18 / 08 / 67 (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 113 / upsert 113 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 113, upsert 113 msgs
+
+  📥 🧵 thread #คลิปนโยบาย 5 เสา 20/8 โอ่งโปร่งใส (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+  📥 🧵 thread #วิโรจน์ซาเล้ง อ.เมือง (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 14 / upsert 14 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 14, upsert 14 msgs
+
+  📥 🧵 thread #นโยบาย 5 เสา (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 73 / upsert 73 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 73, upsert 73 msgs
+
+  📥 🧵 thread #แผ่นปลิว A3 ส่งไปรษณีย์ (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 23 / upsert 23 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 23, upsert 23 msgs
+
+  📥 🧵 thread #ปชสพ 16-18 สส (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 23 / upsert 23 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 23, upsert 23 msgs
+
+  📥 🧵 thread #ประวัตินายก อบจ.🧡✨ (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 19 / upsert 19 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 19, upsert 19 msgs
+
+  📥 🧵 thread #ทิม ท๋อม เท้ง หวุน 17 ริมน้ำ (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 10 / upsert 10 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 10, upsert 10 msgs
+
+  📥 🧵 thread #ศุกร์ 16/7/67 พี่หวุนลงตลาดนัดวัดโรงช้าง และตลาดทรัพย์สิน อำเภอเมือง 6.00 น. - 10.00 น. (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
+
+  📥 🧵 thread #ป้าอยุธยา ปราศรัยหยาบคายที่บ้านโป่ง (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
+
+  📥 🧵 thread #คุยกับเกษตรกรหมู (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 7 / upsert 7 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 7, upsert 7 msgs
+
+  📥 🧵 thread #รับสมัครผู้ช่วยหาเสียงนายกอบจ. ราชบุรี (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 57 / upsert 57 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 57, upsert 57 msgs
+
+  📥 🧵 thread #ปชสพ 16-18 ส.ค. 67 (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 30 / upsert 30 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 30, upsert 30 msgs
+
+  📥 🧵 thread #Day 1 (20) intro spot (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #Day 0 (19) ทีเซอร์ 30 วิ (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 1 / upsert 1 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 1, upsert 1 msgs
+
+  📥 🧵 thread #ตลาดนัดหลัก 5 (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 8 / upsert 8 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 8, upsert 8 msgs
+
+  📥 🧵 thread #10-11 แกนนำและสส มาช่วยหาเสียง (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 67 / upsert 67 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 67, upsert 67 msgs
+
+  📥 🧵 thread #ท้องถิ่นที่ดี ทำให้คนได้กลับมาอยู่บ้าน (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 18 / upsert 18 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 18, upsert 18 msgs
+
+  📥 🧵 thread #ลิงก์ไฟล์ต้นฉบับสำหรับตัดต่อคอนเทนต์ (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 7 / upsert 7 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 7, upsert 7 msgs
+
+  📥 🧵 thread #ป้ายหาเสียง (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 15 / upsert 15 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 15, upsert 15 msgs
+
+  📥 🧵 thread #รับสมัครสมาชิกพรรคตลาดสราญ (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
+
+  📥 🧵 thread #การเมืองของ"คนธรรมดา" (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 6 / upsert 6 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 6, upsert 6 msgs
+
+  📥 🧵 thread #ล่องเรือดำเนินกับไอติม (โพสต์ 31 ก.ค.) (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 39 / upsert 39 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 39, upsert 39 msgs
+
+  📥 🧵 thread #นายกอบจ. คืออะไร (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 22 / upsert 22 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 22, upsert 22 msgs
+
+  📥 🧵 thread #เพชร กรุณพล ริมน้ำบ้านโป่ง (4 ส.ค.) (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 39 / upsert 39 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 39, upsert 39 msgs
+
+  📥 🧵 thread #วันรับสมัคร 30 ก.ค. (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 13 / upsert 13 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 13, upsert 13 msgs
+
+  📥 🧵 thread #พิธาเยี่ยมโพธาราม (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 100 / upsert 100 msgs... (hasMore: true)
+    → fetch 110 / upsert 110 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 110, upsert 110 msgs
+
+  📥 🧵 thread #20240727  หาเสียงนัดวันเสาร์ปากท่อ (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 9 / upsert 9 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 9, upsert 9 msgs
+
+  📥 🧵 thread #ทำไมราชบุรีส่งนายกอบจ (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
+
+  📥 🧵 thread #เวิร์คช็อปนโยบาย (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 16 / upsert 16 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 16, upsert 16 msgs
+
+  📥 🧵 thread #ซีทรูติดกระจก (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 5 / upsert 5 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 5, upsert 5 msgs
+
+  📥 🧵 thread #22กรกฎา พิธามาราชรี🍊💪🏻✨ (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 64 / upsert 64 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 64, upsert 64 msgs
+
+  📥 🧵 thread #ไวนิลติดรถ (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 43 / upsert 43 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 43, upsert 43 msgs
+
+  📥 🧵 thread #กาก้าวไกล... (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 16 / upsert 16 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 16, upsert 16 msgs
+
+  📥 🧵 thread #Day 0 (19) โปสเตอร์เงาดำผู้สมัคร (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 30 / upsert 30 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 30, upsert 30 msgs
+
+  📥 🧵 thread #Day 0 (19) ชวนทีมงานโพสต์ภาพ (ใน #💬┆กระทู้สื่อ-เลือกตั้ง)
+    → fetch 3 / upsert 3 msgs... (hasMore: true)
+  ✅ เสร็จ — fetch 3, upsert 3 msgs
+
+
+📊 สรุป:
