@@ -7,7 +7,7 @@ const { generateOrgChart } = require('./generateOrgChart');
 const MEDALS = ['🥇', '🥈', '🥉'];
 
 const SCORE_MSG     = 10;
-const SCORE_MENTION = 30;
+const SCORE_MENTION = 20;
 
 function formatVoice(seconds) {
   if (!seconds) return '—';
