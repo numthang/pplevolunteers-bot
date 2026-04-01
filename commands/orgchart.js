@@ -9,7 +9,7 @@ const { getRoleStats, buildOrgChartEmbed, buildOrgChartAttachment } = require('.
 
 const DEFAULT_TOP  = 10;
 const MAX_TOP      = 25;
-const DEFAULT_DAYS = 60;
+const DEFAULT_DAYS = 180;
 
 function addRoleOpt(builder, n) {
   return builder.addRoleOption(opt =>

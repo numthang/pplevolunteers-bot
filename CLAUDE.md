@@ -79,8 +79,9 @@ score = messages × 10 + voiceSeconds + mentions × 30
 | `/ratings` | `commands/ratings.js` | ดูคะแนน |
 | `/ratings-top` | `commands/ratings-top.js` | leaderboard |
 | `/reports` | `commands/reports.js` | รายงานสมาชิก |
-| `/orgchart` | `commands/orgchart.js` | top active members ต่อ role |
+| `/orgchart` | `commands/orgchart.js` | top active members ต่อ role (รับ `role` optional + `public`) |
 | `/orgchart-scan` | `commands/orgchart-scan.js` | สแกน role+channel แล้วบันทึก config (admin) |
+| `/setup-orgchart` | `commands/setup-orgchart.js` | วาง persistent select menu panel (admin) |
 | `/stat-server` | `commands/stat-server.js` | overview ของ server |
 | `/stat-top` | `commands/stat-top.js` | top 10 members ทั้ง server (filter role ได้) |
 | `/stat-channel` | `commands/stat-channel.js` | stats ของ channel |
@@ -100,6 +101,8 @@ score = messages × 10 + voiceSeconds + mentions × 30
 | `reportHandler.js` | report flow buttons |
 | `ratingsPage.js` | pagination buttons |
 | `stickyHandler.js` | sticky message logic |
+| `orgchartProvinceSelect.js` | customId: `orgchart_province_region` — เลือกภาคสำหรับ province flow |
+| `orgchartRoleSelect.js` | customId: `orgchart_role` — เลือก role แล้วแสดงผล |
 
 ## UX Pattern — Role Selection
 - `/setup-interest` และ `/setup-province` วาง **persistent public button** ใน channel
@@ -107,6 +110,105 @@ score = messages × 10 + voiceSeconds + mentions × 30
 - Handler ส่ง **ephemeral response** แสดง state ปัจจุบันของ user นั้นๆ
 - ใช้ `interaction.reply({ ephemeral: true })` (ไม่ใช่ `channel.send()` เพราะติด permission)
 - ใช้ `deferUpdate()` ใน handler ก่อน update ephemeral message
+
+## UX Pattern — Orgchart (UI/UX Friendly)
+
+### Overview
+Orgchart มี 2 entry point:
+1. **`/orgchart`** — slash command เดิม ใช้ได้ทันที ไม่ต้องแก้
+2. **`/setup-orgchart group:<group>`** — admin วาง persistent panel ต่อ 1 group ต่อ 1 channel
+
+### DB — column ใหม่
+```sql
+-- เพิ่ม group_name ใน dc_orgchart_config (รัน add_group_name.sql)
+group_name ENUM('main','skill','region','province','district','other') DEFAULT 'other'
+```
+- `main` — ทีมหลัก (อาสาประชาชน, ทีมเจ้าหน้าที่ ฯลฯ)
+- `skill` — ทีม skill (กราฟิก, คอนเทนต์, กฎหมาย ฯลฯ)
+- `region` — ทีมภาค (ภาคเหนือ, ภาคอีสาน ฯลฯ รวมถึง ฟา-)
+- `province` — ทีมจังหวัด (ทีมเชียงใหม่, ทีมขอนแก่น ฯลฯ)
+- `district` — ทีมอำเภอ (server ราชบุรีเท่านั้น)
+- `other` — ยังไม่จัดกลุ่ม (ไม่แสดงใน panel)
+
+### db/orgchartConfig.js — query ที่ต้องเพิ่ม
+```js
+// ดึง unique roles ของ group ที่ระบุ
+async function getRolesByGroup(guildId, groupName)
+// return: [{ roleId, roleName, roleColor }]
+// WHERE guild_id = ? AND excluded = 0 AND group_name = ?
+// GROUP BY role_id เพื่อ deduplicate (1 role มีหลาย channel)
+// ORDER BY role_name
+```
+
+### Flow — /setup-orgchart
+```
+/setup-orgchart group:main     → วาง panel ทีมหลัก
+/setup-orgchart group:skill    → วาง panel ทีม Skill
+/setup-orgchart group:region   → วาง panel ทีมภาค
+/setup-orgchart group:province → วาง panel ทีมจังหวัด (2 ชั้น)
+/setup-orgchart group:district → วาง panel ทีมอำเภอ
+```
+- bot reply ephemeral "วาง panel แล้วครับ" ให้ admin
+- panel วางใน channel ที่รัน command นั้น (public, persistent)
+- ถ้าต้องการ refresh → admin รัน /setup-orgchart ใหม่
+
+**Panel embed (group != province):**
+- Title: ตาม group เช่น `🌟 ทีมหลัก`, `🛠️ ทีม Skill`
+- Description: `เลือก role ที่ต้องการดู`
+- StringSelectMenu รายชื่อ role ใน group นั้น (label = roleName, value = roleId)
+- customId: `orgchart_role`
+
+**Panel embed (group == province):**
+- Title: `📍 ทีมจังหวัด`
+- Description: `เลือกภาคที่ต้องการดู`
+- StringSelectMenu ภาค 6 ภาค จาก `PROVINCE_REGIONS` ใน `config/constants.js`
+- customId: `orgchart_province_region`
+- value: region id เช่น `bkk`, `north`, `central`, `east`, `northeast`, `south`
+
+### Flow — handlers
+
+**`handlers/orgchartProvinceSelect.js`** (customId: `orgchart_province_region`)
+```
+user เลือกภาค
+  → deferUpdate
+  → ดึง roles ทั้งหมดที่ group = 'province' จาก getRolesByGroup
+  → filter เฉพาะ role ที่ roleName match จังหวัดในภาคนั้น
+    (เช่น ภาคเหนือ → PROVINCE_REGIONS.find(r => r.id === value).provinces
+     แล้ว filter role ที่ชื่อขึ้นต้นว่า "ทีม" + จังหวัด)
+  → editReply ด้วย StringSelectMenu รายชื่อจังหวัด
+    customId: orgchart_role
+```
+
+**`handlers/orgchartRoleSelect.js`** (customId: `orgchart_role`)
+```
+user เลือก role
+  → deferUpdate
+  → getConfigByRoleIds(guildId, [roleId])
+  → guild.members.fetch()
+  → getRoleStats → buildOrgChartEmbed
+  → editReply ด้วย embed (ephemeral เสมอ)
+```
+
+### Files ที่ต้องสร้าง/แก้
+| File | Action |
+|---|---|
+| `commands/setup-orgchart.js` | สร้างใหม่ |
+| `handlers/orgchartProvinceSelect.js` | สร้างใหม่ |
+| `handlers/orgchartRoleSelect.js` | สร้างใหม่ |
+| `db/orgchartConfig.js` | เพิ่ม `getRolesByGroup` |
+| `commands/orgchart.js` | **ไม่ต้องแก้** |
+
+### customId สรุป
+| customId | Handler | ความหมาย |
+|---|---|---|
+| `orgchart_province_region` | `orgchartProvinceSelect.js` | เลือกภาค (province flow) |
+| `orgchart_role` | `orgchartRoleSelect.js` | เลือก role แล้วแสดงผล |
+
+### Design Rules
+- **`getRoleStats` และ `buildOrgChartEmbed` จาก `utils/orgchartEmbed.js` เสมอ** — ห้าม duplicate
+- select menu value ใช้ `role_id` เสมอ ยกเว้น `orgchart_province_region` ใช้ region id
+- output จาก panel = ephemeral เสมอ ทุก step
+- ไม่เก็บ message_id ใน DB — ถ้า refresh ให้รัน /setup-orgchart ใหม่
 
 ## UX Pattern — Stat Commands
 - ทุก `/stat-*` และ `/orgchart` มี option `public` (Boolean, default = false = ephemeral)
@@ -139,6 +241,9 @@ score = messages × 10 + voiceSeconds + mentions × 30
 - [x] `provinceSelect.js` แสดง roles ที่ถูก add/remove จริงๆ
 - [x] `deploy-commands-global.js` สำหรับ multi-server deploy
 - [x] Org chart system (`/orgchart`, `/orgchart-scan`, `generateOrgChart.js`)
+- [ ] รัน `add_group_name.sql` บน DB (เพิ่ม `group_name` + fix `channel_type` voice)
+- [ ] `db/orgchartConfig.js` เพิ่ม `getRolesByGroup` + `refreshOrgchartPanel`
+- [ ] `commands/setup-orgchart.js` + handlers: `orgchartSelect.js`, `orgchartProvinceSelect.js`, `orgchartRoleSelect.js`
 - [x] Activity tracking (`activityTracker.js`, `db/activity.js`, `db/stat.js`)
 - [x] Backfill script (`scripts/backfill-activity.js`) — รองรับ date range
 - [x] Stat commands (`/stat-server`, `/stat-top`, `/stat-channel`, `/stat-user`)
