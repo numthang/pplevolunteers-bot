@@ -7,7 +7,7 @@ const { getTopMembers } = require('../db/stat');
 const DEFAULT_DAYS  = 60;
 const DEFAULT_TOP   = 10;
 const SCORE_MSG     = 10;
-const SCORE_MENTION = 30;
+const SCORE_MENTION = 20;
 
 function formatVoice(seconds) {
   if (!seconds) return '—';

@@ -74,7 +74,7 @@ async function getTopMembers(guildId, days, limit = 10, roleMembers = null) {
 
   sql += `
     GROUP BY d.user_id
-    ORDER BY (SUM(d.message_count) * 10 + SUM(d.voice_seconds) + mentions * 30) DESC
+    ORDER BY (SUM(d.message_count) * 10 + SUM(d.voice_seconds) + mentions * 20) DESC
     LIMIT ${limit}`;
 
   const [rows] = await pool.execute(sql, params);
