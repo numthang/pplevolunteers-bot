@@ -43,7 +43,6 @@ async function getConfig(guildId) {
     }
     const entry = config.get(row.role_id);
     const ch = { id: row.channel_id, name: row.channel_name };
-    // ✅ Bug fix: voice → voiceChannels, text+forum → textChannels
     if (row.channel_type === 'voice') entry.voiceChannels.push(ch);
     else entry.textChannels.push(ch);
   }
@@ -85,6 +84,35 @@ async function getConfigByRoleIds(guildId, roleIds) {
   return config;
 }
 
+/**
+ * ดึง unique roles ของ group ที่ระบุ
+ * คืนเป็น [{ roleId, roleName, roleColor }] เรียงตาม roleName
+ */
+async function getRolesByGroup(guildId, groupName) {
+  const [rows] = await pool.execute(
+    `SELECT role_id, role_name, role_color
+     FROM dc_orgchart_config
+     WHERE guild_id = ? AND excluded = 0 AND group_name = ?
+     GROUP BY role_id, role_name, role_color
+     ORDER BY role_name`,
+    [guildId, groupName]
+  );
+
+  return rows.map(row => ({
+    roleId:    row.role_id,
+    roleName:  row.role_name,
+    roleColor: row.role_color,
+  }));
+}
+
+async function setRoleGroup(guildId, roleId, groupName) {
+  await pool.execute(
+    `UPDATE dc_orgchart_config SET group_name = ?
+     WHERE guild_id = ? AND role_id = ?`,
+    [groupName, guildId, roleId]
+  );
+}
+
 async function deleteRole(guildId, roleId) {
   await pool.execute(
     `DELETE FROM dc_orgchart_config WHERE guild_id = ? AND role_id = ?`,
@@ -124,7 +152,7 @@ async function unexcludeChannel(guildId, roleId, channelId) {
 }
 
 module.exports = {
-  upsertChannel, getConfig, getConfigByRoleIds,
+  upsertChannel, getConfig, getConfigByRoleIds, getRolesByGroup, setRoleGroup,
   deleteRole, deleteChannel, roleExists,
   excludeChannel, unexcludeChannel,
 };

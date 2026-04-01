@@ -2,7 +2,7 @@
 // เพิ่ม channel เข้า role ใน config ได้สูงสุด 5 channels พร้อมกัน
 
 const { SlashCommandBuilder, MessageFlags, ChannelType } = require('discord.js');
-const { upsertChannel } = require('../db/orgchartConfig');
+const { upsertChannel, setRoleGroup } = require('../db/orgchartConfig');
 
 function resolveChannelType(channel) {
   if (channel.type === ChannelType.GuildForum) return 'forum';
@@ -32,6 +32,19 @@ module.exports = {
     )
     .addChannelOption(opt =>
       opt.setName('channel5').setDescription('Channel ที่ 5').setRequired(false)
+    )
+    .addStringOption(opt =>
+      opt.setName('group')
+        .setDescription('กลุ่มของ role นี้ (ถ้าไม่ระบุ จะไม่เปลี่ยนค่าเดิม)')
+        .setRequired(false)
+        .addChoices(
+          { name: '🌟 ทีมหลัก',       value: 'main'     },
+          { name: '🛠️ ทีม Skill',     value: 'skill'    },
+          { name: '🗺️ ทีมภาค',       value: 'region'   },
+          { name: '📍 ทีมจังหวัด',    value: 'province' },
+          { name: '🏘️ ทีมอำเภอ',     value: 'district' },
+          { name: '⬜ ยังไม่จัดกลุ่ม', value: 'other'    },
+        )
     ),
 
   async execute(interaction) {
@@ -60,9 +73,13 @@ module.exports = {
       });
     }
 
+    const group = interaction.options.getString('group');
+    if (group) await setRoleGroup(interaction.guildId, role.id, group);
+
     const names = channels.map(c => `**#${c.name}**`).join(', ');
+    const groupNote = group ? ` (group: ${group})` : '';
     await interaction.editReply({
-      content: `✅ เพิ่ม ${names} เข้า **${role.name}** แล้วครับ`,
+      content: `✅ เพิ่ม ${names} เข้า **${role.name}** แล้วครับ${groupNote}`,
     });
   },
 };
