@@ -32,7 +32,7 @@ if $IS_PRODUCTION; then
   sudo -u www bash << EOF
 export PATH=/www/server/nodejs/v24.14.0/bin:\$PATH
 cd /www/wwwroot/pplevolunteers-bot
-git stash
+git checkout -- package.json package-lock.json
 git pull
 node deploy-commands.js $GUILD_ARG
 pm2 restart pplevolunteers-bot
