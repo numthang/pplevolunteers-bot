@@ -10,7 +10,8 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@discordjs/voice": "^0.18.0",
+    "@discordjs/opus": "^0.10.0",
+    "@discordjs/voice": "^0.19.2",
     "@napi-rs/canvas": "^0.1.97",
     "@noble/ciphers": "^2.1.1",
     "csv-parse": "^6.1.0",

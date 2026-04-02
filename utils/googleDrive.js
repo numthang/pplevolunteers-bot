@@ -2,13 +2,22 @@ const { google } = require('googleapis');
 const fs = require('fs');
 const path = require('path');
 
-// โหลด Service Account credentials จาก env
-const auth = new google.auth.GoogleAuth({
-  keyFile: process.env.GOOGLE_SERVICE_ACCOUNT_KEY, // path to .json credentials
-  scopes: ['https://www.googleapis.com/auth/drive'],
-});
+const TOKEN_PATH = process.env.GOOGLE_OAUTH_TOKEN || path.join(require('os').homedir(), '.secrets/drive-token.json');
+const CREDENTIALS_PATH = process.env.GOOGLE_OAUTH_KEY;
 
-const drive = google.drive({ version: 'v3', auth });
+function getAuthClient() {
+  const { client_id, client_secret, redirect_uris } = JSON.parse(fs.readFileSync(CREDENTIALS_PATH)).installed;
+  const oAuth2Client = new google.auth.OAuth2(client_id, client_secret, redirect_uris[0]);
+  const token = JSON.parse(fs.readFileSync(TOKEN_PATH));
+  oAuth2Client.setCredentials(token);
+  oAuth2Client.on('tokens', (newTokens) => {
+    if (newTokens.refresh_token) token.refresh_token = newTokens.refresh_token;
+    fs.writeFileSync(TOKEN_PATH, JSON.stringify({ ...token, ...newTokens }));
+  });
+  return oAuth2Client;
+}
+
+const drive = google.drive({ version: 'v3', auth: getAuthClient() });
 
 /**
  * Upload ไฟล์ไปยัง Google Drive folder ที่กำหนด
