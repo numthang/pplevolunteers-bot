@@ -5,7 +5,7 @@ const {
 } = require('discord.js');
 const { INTEREST_ROLES, SKILL_ROLES } = require('../config/roles');
 const { INTEREST_BUTTONS, SKILL_BUTTONS } = require('../config/constants');
-const { buildRows } = require('../commands/interest');
+const { buildRows } = require('./interestSelect');
 
 async function handleOpenInterest(interaction) {
   if (!interaction.isButton()) return;

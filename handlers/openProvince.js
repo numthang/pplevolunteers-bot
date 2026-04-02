@@ -3,7 +3,7 @@ const {
   EmbedBuilder,
   MessageFlags
 } = require('discord.js');
-const { buildRows } = require('../commands/province');
+const { buildRows } = require('./provinceSelect');
 const { PROVINCE_REGIONS } = require('../config/constants');
 const { BKK_HINT } = require('../config/hints');
 

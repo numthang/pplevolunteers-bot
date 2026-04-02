@@ -59,7 +59,7 @@ async function getConfigByRoleIds(guildId, roleIds) {
   const [rows] = await pool.execute(
     `SELECT role_id, role_name, role_color, channel_id, channel_name, channel_type
      FROM dc_orgchart_config
-     WHERE guild_id = ? AND role_id IN (${placeholders})
+     WHERE guild_id = ? AND excluded = 0 AND role_id IN (${placeholders})
      ORDER BY role_name, channel_type, channel_name`,
     [guildId, ...roleIds]
   );
@@ -102,6 +102,41 @@ async function getRolesByGroup(guildId, groupName) {
     roleId:    row.role_id,
     roleName:  row.role_name,
     roleColor: row.role_color,
+  }));
+}
+
+async function saveSnapshot(guildId, roleId, days, topMembers) {
+  await pool.execute(
+    `INSERT INTO dc_orgchart_snapshot (guild_id, role_id, days, top_members, computed_at)
+     VALUES (?, ?, ?, ?, NOW())
+     ON DUPLICATE KEY UPDATE
+       days        = VALUES(days),
+       top_members = VALUES(top_members),
+       computed_at = NOW()`,
+    [guildId, roleId, days, JSON.stringify(topMembers)]
+  );
+}
+
+async function getSnapshotByGroup(guildId, groupName) {
+  const [rows] = await pool.execute(
+    `SELECT s.role_id, s.days, s.top_members, s.computed_at, c.role_name, c.role_color
+     FROM dc_orgchart_snapshot s
+     JOIN (
+       SELECT DISTINCT guild_id, role_id, role_name, role_color
+       FROM dc_orgchart_config
+       WHERE guild_id = ? AND group_name = ? AND excluded = 0
+     ) c ON s.guild_id = c.guild_id COLLATE utf8mb4_unicode_ci
+          AND s.role_id = c.role_id COLLATE utf8mb4_unicode_ci
+     ORDER BY c.role_name`,
+    [guildId, groupName]
+  );
+  return rows.map(r => ({
+    roleId:     r.role_id,
+    roleName:   r.role_name,
+    roleColor:  r.role_color,
+    days:       r.days,
+    topMembers: typeof r.top_members === 'string' ? JSON.parse(r.top_members) : r.top_members,
+    computedAt: r.computed_at,
   }));
 }
 
@@ -153,6 +188,7 @@ async function unexcludeChannel(guildId, roleId, channelId) {
 
 module.exports = {
   upsertChannel, getConfig, getConfigByRoleIds, getRolesByGroup, setRoleGroup,
+  saveSnapshot, getSnapshotByGroup,
   deleteRole, deleteChannel, roleExists,
   excludeChannel, unexcludeChannel,
 };
