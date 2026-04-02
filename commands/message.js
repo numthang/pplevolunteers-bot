@@ -1,24 +1,18 @@
 // commands/message.js
-const { SlashCommandBuilder, AttachmentBuilder, EmbedBuilder, PermissionFlagsBits, MessageFlags, ChannelType } = require('discord.js');
+const {
+  SlashCommandBuilder,
+  AttachmentBuilder,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle,
+  ActionRowBuilder,
+  MessageFlags,
+} = require('discord.js');
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('message')
-    .setDescription('จัดการข้อความใน channel')
-    .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
-
-    // --- cleanup ---
-    .addSubcommand(sub =>
-      sub.setName('cleanup')
-        .setDescription('กวาดล้างข้อความในช่องนี้')
-        .addIntegerOption(opt =>
-          opt.setName('amount')
-            .setDescription('จำนวนข้อความที่ต้องการลบ (1-100, default: 100)')
-            .setRequired(false)
-            .setMinValue(1)
-            .setMaxValue(100)
-        )
-    )
+    .setDescription('จัดการข้อความ')
 
     // --- fetch ---
     .addSubcommand(sub =>
@@ -44,32 +38,22 @@ module.exports = {
             .setDescription('ให้ทุกคนเห็นผลลัพธ์ (default: false)')
             .setRequired(false)
         )
+    )
+
+    // --- anon ---
+    .addSubcommand(sub =>
+      sub.setName('anon')
+        .setDescription('ส่งข้อความโดยไม่ระบุตัวตน')
+        .addStringOption(opt =>
+          opt.setName('message')
+            .setDescription('ข้อความสั้น (ถ้าไม่ใส่จะเปิด popup)')
+            .setRequired(false)
+            .setMaxLength(2000)
+        )
     ),
 
   async execute(interaction) {
     const sub = interaction.options.getSubcommand();
-
-    // ================================================================
-    if (sub === 'cleanup') {
-      const amount = interaction.options.getInteger('amount') ?? 100;
-
-      try {
-        const deleted = await interaction.channel.bulkDelete(amount, true);
-
-        const embed = new EmbedBuilder()
-          .setColor('#ff4444')
-          .setTitle('🧹 Cleanup Success')
-          .setDescription(`กวาดล้างไปทั้งหมด **${deleted.size}** ข้อความ`)
-          .setFooter({ text: `โดย: ${interaction.user.tag}` });
-
-        return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
-      } catch {
-        return interaction.reply({
-          content: 'ลบไม่ได้ครับ! อาจเพราะข้อความเก่าเกิน 14 วัน หรือบอทไม่มีสิทธิ์',
-          flags: MessageFlags.Ephemeral,
-        });
-      }
-    }
 
     // ================================================================
     if (sub === 'fetch') {
@@ -118,6 +102,34 @@ module.exports = {
       ].join('\n');
 
       return interaction.editReply({ content: summary, files: [attachment] });
+    }
+
+    // ================================================================
+    if (sub === 'anon') {
+      const quick = interaction.options.getString('message');
+
+      if (quick) {
+        await interaction.channel.send(quick);
+        return interaction.deferReply({ flags: MessageFlags.Ephemeral }).then(() => interaction.deleteReply());
+      }
+
+      const modal = new ModalBuilder()
+        .setCustomId(`anon_submit:${interaction.channelId}`)
+        .setTitle('ส่งข้อความแบบไม่ระบุตัวตน');
+
+      modal.addComponents(
+        new ActionRowBuilder().addComponents(
+          new TextInputBuilder()
+            .setCustomId('anon_text')
+            .setLabel('ข้อความ')
+            .setStyle(TextInputStyle.Paragraph)
+            .setPlaceholder('พิมพ์หรือ copy แปะข้อความที่นี่...')
+            .setRequired(true)
+            .setMaxLength(2000)
+        )
+      );
+
+      await interaction.showModal(modal);
     }
   },
 };
