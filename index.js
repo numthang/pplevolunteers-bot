@@ -69,6 +69,13 @@ client.on('interactionCreate', async (interaction) => {
   if (interaction.isModalSubmit()) {
     if (interaction.customId.startsWith('rate_submit:'))   return handleRateModalSubmit(interaction);
     if (interaction.customId.startsWith('report_submit:')) return handleReportSubmit(interaction);
+    if (interaction.customId.startsWith('anon_submit:')) {
+      const channelId = interaction.customId.split(':')[1];
+      const text      = interaction.fields.getTextInputValue('anon_text');
+      const channel   = interaction.guild.channels.cache.get(channelId);
+      if (channel) await channel.send(text);
+      await interaction.deferUpdate().catch(() => {});
+    }
     return handleModalSubmit(interaction); // register modal
   }
 
@@ -108,8 +115,9 @@ const cooldowns = new Map();
 client.on('messageCreate', async (message) => {
   // track activity (ไม่ block bot message เพราะ onMessage เช็คเองอยู่แล้ว)
   onMessage(message).catch(err => console.error('[onMessage]', err));
-  
+
   if (!message.guild || (message.author.bot && message.channel.id !== client.logChannel?.id)) return;
+
   const key = `sticky_${message.channel.id}`;
   const config = await getSetting(message.guildId, key);
   if (!config) return;
