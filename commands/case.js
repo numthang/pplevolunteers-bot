@@ -1,4 +1,4 @@
-// db/reports.js
+// commands/case.js
 const {
   SlashCommandBuilder,
   EmbedBuilder,
@@ -27,52 +27,48 @@ const CATEGORY_LABEL = {
   other:         '📝 อื่นๆ',
 };
 
+const STATUS_CHOICES = [
+  { name: '🟡 รอดำเนินการ', value: 'pending' },
+  { name: '🔵 กำลังตรวจสอบ', value: 'investigating' },
+  { name: '🟢 ปิดเคส',       value: 'closed' },
+];
+
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName('reports')
-    .setDescription('จัดการรายงานร้องเรียน (เฉพาะ Moderator)')
+    .setName('case')
+    .setDescription('จัดการเคสร้องเรียน (เฉพาะ Moderator)')
     .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
+
+    // --- list ---
     .addSubcommand(sub =>
       sub.setName('list')
-        .setDescription('ดูรายการร้องเรียนทั้งหมด')
+        .setDescription('ดูรายการเคสทั้งหมด')
         .addStringOption(opt =>
-          opt.setName('status')
-            .setDescription('กรองตาม status')
-            .setRequired(false)
-            .addChoices(
-              { name: '🟡 รอดำเนินการ', value: 'pending' },
-              { name: '🔵 กำลังตรวจสอบ', value: 'investigating' },
-              { name: '🟢 ปิดเคส',       value: 'closed' },
-            )
+          opt.setName('status').setDescription('กรองตาม status').setRequired(false).addChoices(...STATUS_CHOICES)
         )
     )
+
+    // --- view ---
     .addSubcommand(sub =>
       sub.setName('view')
         .setDescription('ดูรายละเอียดเคส')
         .addIntegerOption(opt =>
-          opt.setName('id').setDescription('Report ID').setRequired(true)
+          opt.setName('id').setDescription('Case ID').setRequired(true)
         )
     )
+
+    // --- update ---
     .addSubcommand(sub =>
       sub.setName('update')
         .setDescription('อัพเดท status และ note')
         .addIntegerOption(opt =>
-          opt.setName('id').setDescription('Report ID').setRequired(true)
+          opt.setName('id').setDescription('Case ID').setRequired(true)
         )
         .addStringOption(opt =>
-          opt.setName('status')
-            .setDescription('Status ใหม่')
-            .setRequired(true)
-            .addChoices(
-              { name: '🟡 รอดำเนินการ', value: 'pending' },
-              { name: '🔵 กำลังตรวจสอบ', value: 'investigating' },
-              { name: '🟢 ปิดเคส',       value: 'closed' },
-            )
+          opt.setName('status').setDescription('Status ใหม่').setRequired(true).addChoices(...STATUS_CHOICES)
         )
         .addStringOption(opt =>
-          opt.setName('note')
-            .setDescription('บันทึกของ Mod (optional)')
-            .setRequired(false)
+          opt.setName('note').setDescription('บันทึกของ Mod (optional)').setRequired(false)
         )
     ),
 
@@ -80,12 +76,12 @@ module.exports = {
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     const sub = interaction.options.getSubcommand();
 
-    // ---- list ----
+    // ================================================================
     if (sub === 'list') {
-      const status = interaction.options.getString('status');
-      const page   = 1;
-      const rows   = await getReportList(interaction.guildId, status, page, PER_PAGE);
-      const total  = await getReportCount(interaction.guildId, status);
+      const status     = interaction.options.getString('status');
+      const page       = 1;
+      const rows       = await getReportList(interaction.guildId, status, page, PER_PAGE);
+      const total      = await getReportCount(interaction.guildId, status);
       const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
 
       const lines = rows.length === 0
@@ -99,7 +95,7 @@ module.exports = {
 
       const embed = new EmbedBuilder()
         .setColor(0xff4444)
-        .setTitle(`🚨 รายการร้องเรียน${status ? ` — ${STATUS_LABEL[status]}` : ''}`)
+        .setTitle(`🚨 รายการเคสร้องเรียน${status ? ` — ${STATUS_LABEL[status]}` : ''}`)
         .setDescription(lines)
         .setFooter({ text: `หน้า ${page}/${totalPages} • ทั้งหมด ${total} รายการ` });
 
@@ -119,7 +115,7 @@ module.exports = {
       return interaction.editReply({ embeds: [embed], components: [row] });
     }
 
-    // ---- view ----
+    // ================================================================
     if (sub === 'view') {
       const id     = interaction.options.getInteger('id');
       const report = await getReportById(interaction.guildId, id);
@@ -142,7 +138,7 @@ module.exports = {
       return interaction.editReply({ embeds: [embed] });
     }
 
-    // ---- update ----
+    // ================================================================
     if (sub === 'update') {
       const id     = interaction.options.getInteger('id');
       const status = interaction.options.getString('status');

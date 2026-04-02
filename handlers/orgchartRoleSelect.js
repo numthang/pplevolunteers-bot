@@ -22,7 +22,7 @@ async function handleOrgchartRoleSelect(interaction) {
 
   if (!roleConfig) {
     return interaction.editReply({
-      content: '❌ ไม่พบข้อมูล config ของ role นี้ครับ ลองรัน `/orgchart-scan` ก่อนนะครับ',
+      content: '❌ ไม่พบข้อมูล config ของ role นี้ครับ ลองรัน `/orgchart scan` ก่อนนะครับ',
     });
   }
 

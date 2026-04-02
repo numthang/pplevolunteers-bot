@@ -1,8 +1,29 @@
 // handlers/interestSelect.js
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { INTEREST_ROLES, SKILL_ROLES, MEDIA_TEAM_ROLE_ID, MEDIA_TEAM_TRIGGERS } = require('../config/roles');
-const { buildRows } = require('../commands/interest');
 const { syncMemberRoles } = require('../db/members');
 const { INTEREST_BUTTONS, SKILL_BUTTONS } = require('../config/constants');
+
+function buildRows(buttons, roleMap, memberRoles, prefix) {
+  const rows = [];
+  for (let i = 0; i < buttons.length; i += 4) {
+    const chunk = buttons.slice(i, i + 4);
+    rows.push(
+      new ActionRowBuilder().addComponents(
+        chunk.map(b => {
+          const roleId  = roleMap[b.key];
+          const hasRole = roleId && memberRoles.cache.has(roleId);
+          return new ButtonBuilder()
+            .setCustomId(`${prefix}:${b.key}`)
+            .setLabel(b.label)
+            .setEmoji(b.emoji)
+            .setStyle(hasRole ? ButtonStyle.Primary : ButtonStyle.Secondary);
+        })
+      )
+    );
+  }
+  return rows;
+}
 
 async function handleInterestSelect(interaction) {
   if (!interaction.isButton()) return;
@@ -86,4 +107,4 @@ async function handleInterestSelect(interaction) {
   }
 }
 
-module.exports = { handleInterestSelect };
+module.exports = { handleInterestSelect, buildRows };

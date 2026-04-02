@@ -11,7 +11,7 @@ const {
   MessageFlags,
 } = require('discord.js');
 // เพิ่ม import ด้านบนสุด (ถ้ายังไม่มี)
-const { buildRows } = require('../commands/interest');
+const { buildRows } = require('./interestSelect');
 const { INTEREST_ROLES, SKILL_ROLES } = require('../config/roles');
 const { PROVINCE_ROLES, SUB_REGION_ROLES, MAIN_REGION_ROLES } = require('../config/roles');
 const { BKK_HINT } = require('../config/hints');

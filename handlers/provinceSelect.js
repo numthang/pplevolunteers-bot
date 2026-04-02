@@ -1,9 +1,29 @@
 // handlers/provinceSelect.js
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { ROLES, PROVINCE_ROLES, SUB_REGION_ROLES, MAIN_REGION_ROLES } = require('../config/roles');
-const { buildRows } = require('../commands/province');
 const { syncMemberRoles } = require('../db/members');
 const { PROVINCE_REGIONS } = require('../config/constants');
 const { BKK_HINT } = require('../config/hints');
+
+function buildRows(region, memberRoles) {
+  const rows = [];
+  for (let i = 0; i < region.provinces.length; i += 4) {
+    const chunk = region.provinces.slice(i, i + 4);
+    rows.push(
+      new ActionRowBuilder().addComponents(
+        chunk.map(p => {
+          const roleId  = PROVINCE_ROLES[p];
+          const hasRole = roleId && memberRoles.cache.has(roleId);
+          return new ButtonBuilder()
+            .setCustomId(`prov_btn:${region.id}:${p}`)
+            .setLabel(p)
+            .setStyle(hasRole ? ButtonStyle.Primary : ButtonStyle.Secondary);
+        })
+      )
+    );
+  }
+  return rows;
+}
 
 // reverse lookup: role ID → ชื่อ role
 const ROLE_ID_TO_NAME = Object.fromEntries(Object.entries(ROLES).map(([name, id]) => [id, name]));
