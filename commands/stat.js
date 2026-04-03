@@ -1,18 +1,17 @@
 // commands/stat.js
-const { SlashCommandBuilder, EmbedBuilder, MessageFlags, ChannelType } = require('discord.js');
-const {
-  getTopMembers, getChannelStats,
-  getUserStats, getInactiveMembers,
-} = require('../db/stat');
+const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
+const { getUserStats, getInactiveMembers } = require('../db/stat');
+const { buildTopEmbed, buildTopComponents, buildUserComponents } = require('../handlers/statHandler');
 
 const SCORE_MSG     = 10;
 const SCORE_MENTION = 20;
 
 function formatVoice(seconds) {
-  if (!seconds) return '—';
-  if (seconds < 60)   return `${seconds}s`;
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
-  return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`;
+  const s = Number(seconds);
+  if (!s)       return '—';
+  if (s < 60)   return `${s}s`;
+  if (s < 3600) return `${Math.floor(s / 60)}m`;
+  return `${Math.floor(s / 3600)}h ${Math.floor((s % 3600) / 60)}m`;
 }
 
 function formatLastActive(dateStr) {
@@ -36,37 +35,15 @@ module.exports = {
     .setName('stat')
     .setDescription('ดูสถิติต่างๆ')
 
-    // --- leaderboard ---
+    // --- top ---
     .addSubcommand(sub =>
-      sub.setName('leaderboard')
-        .setDescription('top active members ของ server')
+      sub.setName('top')
+        .setDescription('สถิติ top ของ server — เลือก view และช่วงเวลาได้ใน message')
+        .addIntegerOption(opt =>
+          opt.setName('top').setDescription('จำนวน members/channels ที่แสดง (default 10)').setRequired(false).setMinValue(1).setMaxValue(25)
+        )
         .addRoleOption(opt =>
-          opt.setName('role').setDescription('filter เฉพาะ role นี้').setRequired(false)
-        )
-        .addIntegerOption(opt =>
-          opt.setName('top').setDescription('จำนวน members ที่แสดง (default 10)').setRequired(false).setMinValue(1).setMaxValue(25)
-        )
-        .addIntegerOption(opt =>
-          opt.setName('days').setDescription('ย้อนหลังกี่วัน (default 60)').setRequired(false).setMinValue(1).setMaxValue(365)
-        )
-        .addBooleanOption(opt =>
-          opt.setName('public').setDescription('แสดงให้ทุกคนเห็น (default: เฉพาะคุณ)').setRequired(false)
-        )
-    )
-
-    // --- channel ---
-    .addSubcommand(sub =>
-      sub.setName('channel')
-        .setDescription('สถิติของ channel')
-        .addChannelOption(opt =>
-          opt.setName('channel').setDescription('channel ที่ต้องการดู (default: ปัจจุบัน)').setRequired(false)
-            .addChannelTypes(ChannelType.GuildText, ChannelType.GuildVoice, ChannelType.GuildForum, ChannelType.GuildStageVoice)
-        )
-        .addIntegerOption(opt =>
-          opt.setName('top').setDescription('จำนวน top members ที่แสดง (default 5)').setRequired(false).setMinValue(1).setMaxValue(25)
-        )
-        .addIntegerOption(opt =>
-          opt.setName('days').setDescription('ย้อนหลังกี่วัน (default 60)').setRequired(false).setMinValue(1).setMaxValue(365)
+          opt.setName('role').setDescription('filter เฉพาะ role นี้ (สำหรับ member views)').setRequired(false)
         )
         .addBooleanOption(opt =>
           opt.setName('public').setDescription('แสดงให้ทุกคนเห็น (default: เฉพาะคุณ)').setRequired(false)
@@ -79,12 +56,6 @@ module.exports = {
         .setDescription('สถิติของ member (default: ตัวเอง)')
         .addUserOption(opt =>
           opt.setName('user').setDescription('member ที่ต้องการดู').setRequired(false)
-        )
-        .addIntegerOption(opt =>
-          opt.setName('top').setDescription('จำนวน top channels ที่แสดง (default 5)').setRequired(false).setMinValue(1).setMaxValue(25)
-        )
-        .addIntegerOption(opt =>
-          opt.setName('days').setDescription('ย้อนหลังกี่วัน (default 60)').setRequired(false).setMinValue(1).setMaxValue(365)
         )
         .addBooleanOption(opt =>
           opt.setName('public').setDescription('แสดงให้ทุกคนเห็น (default: เฉพาะคุณ)').setRequired(false)
@@ -111,16 +82,18 @@ module.exports = {
 
   async execute(interaction) {
     const sub      = interaction.options.getSubcommand();
-    const days     = interaction.options.getInteger('days')   ?? (sub === 'inactive' ? 30 : 60);
-    const topN     = interaction.options.getInteger('top')    ?? (sub === 'inactive' ? 20 : sub === 'leaderboard' ? 10 : 5);
     const isPublic = interaction.options.getBoolean('public') ?? false;
     const { guildId, guild } = interaction;
 
-    await interaction.deferReply({ flags: isPublic ? undefined : MessageFlags.Ephemeral });
-
     // ================================================================
-    if (sub === 'leaderboard') {
-      const role = interaction.options.getRole('role');
+    if (sub === 'top') {
+      const role     = interaction.options.getRole('role');
+      const roleId   = role?.id ?? '_';
+      const topN     = interaction.options.getInteger('top') ?? 10;
+      const days     = 60;
+      const view     = 'overview';
+
+      await interaction.deferReply({ flags: isPublic ? undefined : MessageFlags.Ephemeral });
       await guild.members.fetch().catch(() => {});
 
       let roleMembers = null;
@@ -129,66 +102,20 @@ module.exports = {
         if (guildRole) roleMembers = new Set(guildRole.members.keys());
       }
 
-      const top = await getTopMembers(guildId, days, topN, roleMembers);
-
-      const embed = new EmbedBuilder()
-        .setColor(role?.hexColor ?? '#5865F2')
-        .setTitle(role ? `🏆 Top ${topN} Active — ${role.name}` : `🏆 Top ${topN} Active — ทั้ง Server`)
-        .setDescription(
-          `ย้อนหลัง ${days} วัน  •  Score = Messages × ${SCORE_MSG} + Voice Seconds + Mentions × ${SCORE_MENTION}\n` +
-          (top.length
-            ? top.map((m, i) => {
-                const score = Number(m.messages) * SCORE_MSG + Number(m.voice_seconds) + Number(m.mentions) * SCORE_MENTION;
-                return `**${i + 1}.** <@${m.user_id}>  💬 ${Number(m.messages).toLocaleString()}  🔊 ${formatVoice(Number(m.voice_seconds))}  📣 ${Number(m.mentions)}  ⭐ ${score.toLocaleString()} pts`;
-              }).join('\n')
-            : '\nไม่มีข้อมูล activity ในช่วงนี้ครับ')
-        )
-        .setTimestamp();
-
-      return interaction.editReply({ embeds: [embed] });
-    }
-
-    // ================================================================
-    if (sub === 'channel') {
-      let selectedChannel = interaction.options.getChannel('channel') ?? interaction.channel;
-      if (selectedChannel.isThread()) selectedChannel = selectedChannel.parent ?? selectedChannel;
-
-      const channelId = selectedChannel.id;
-      const { overview, topUsers } = await getChannelStats(guildId, channelId, days, topN);
-
-      const embed = new EmbedBuilder()
-        .setColor('#5865F2')
-        .setTitle(`📊 <#${channelId}>`)
-        .setDescription(`ย้อนหลัง ${days} วัน`)
-        .addFields(
-          {
-            name: '📈 Overview',
-            value: [
-              `👥 Contributors: **${Number(overview.contributors).toLocaleString()}**`,
-              `💬 Messages: **${Number(overview.total_msgs).toLocaleString()}**`,
-              `🔊 Voice: **${formatVoice(Number(overview.total_voice))}**`,
-              `🕐 Last active: **${formatLastActive(overview.last_active)}**`,
-            ].join('\n'),
-          },
-          {
-            name: `🏆 Top ${topN} Members`,
-            value: topUsers.length
-              ? topUsers.map((m, i) =>
-                  `**${i + 1}.** <@${m.user_id}>  💬 ${Number(m.messages).toLocaleString()}  🔊 ${formatVoice(Number(m.voice_seconds))}`
-                ).join('\n')
-              : '—',
-          }
-        )
-        .setTimestamp();
-
-      return interaction.editReply({ embeds: [embed] });
+      const embed      = await buildTopEmbed(guild, view, days, roleMembers, topN);
+      const components = buildTopComponents(view, days, roleId, topN);
+      return interaction.editReply({ embeds: [embed], components });
     }
 
     // ================================================================
     if (sub === 'user') {
       const target = interaction.options.getUser('user') ?? interaction.user;
       const member = await guild.members.fetch(target.id).catch(() => null);
-      const { activity, topChannels, mentions } = await getUserStats(guildId, target.id, days, topN);
+      const days   = 60;
+
+      await interaction.deferReply({ flags: isPublic ? undefined : MessageFlags.Ephemeral });
+
+      const { activity, topChannels, mentions } = await getUserStats(guildId, target.id, days, 5);
 
       const messages     = Number(activity.messages);
       const voiceSeconds = Number(activity.voice_seconds);
@@ -211,22 +138,27 @@ module.exports = {
             ].join('\n'),
           },
           {
-            name: `🏆 Top ${topN} Channels`,
+            name: '🏆 Top 5 Channels',
             value: topChannels.length
               ? topChannels.map((ch, i) =>
-                  `**${i + 1}.** <#${ch.channel_id}>  💬 ${Number(ch.messages).toLocaleString()}  🔊 ${formatVoice(Number(ch.voice_seconds))}`
+                  `\`${i + 1}\` <#${ch.channel_id}> — 💬 ${Number(ch.messages).toLocaleString()} · 🔊 ${formatVoice(ch.voice_seconds)}`
                 ).join('\n')
               : '—',
           }
         )
         .setTimestamp();
 
-      return interaction.editReply({ embeds: [embed] });
+      const components = buildUserComponents(target.id, days);
+      return interaction.editReply({ embeds: [embed], components });
     }
 
     // ================================================================
     if (sub === 'inactive') {
-      const role = interaction.options.getRole('role');
+      const role  = interaction.options.getRole('role');
+      const days  = interaction.options.getInteger('days') ?? 30;
+      const topN  = interaction.options.getInteger('top')  ?? 20;
+
+      await interaction.deferReply({ flags: isPublic ? undefined : MessageFlags.Ephemeral });
       await guild.members.fetch().catch(() => {});
 
       let targetMembers;
@@ -241,10 +173,9 @@ module.exports = {
         return interaction.editReply({ content: 'ไม่พบ members ครับ' });
       }
 
-      const memberIds = targetMembers.map(m => m.id);
-      const activeIds = await getInactiveMembers(guildId, memberIds, days);
-
-      const inactiveMembers = targetMembers
+      const memberIds    = targetMembers.map(m => m.id);
+      const activeIds    = await getInactiveMembers(guildId, memberIds, days);
+      const inactiveList = targetMembers
         .filter(m => !activeIds.has(m.id))
         .sort((a, b) => (a.joinedTimestamp ?? 0) - (b.joinedTimestamp ?? 0))
         .slice(0, topN);
@@ -256,10 +187,10 @@ module.exports = {
         .setTitle(role ? `👻 Inactive — ${role.name}` : '👻 Inactive — ทั้ง Server')
         .setDescription(
           `ไม่มี activity ใน ${days} วันที่ผ่านมา\n` +
-          `พบทั้งหมด **${totalInactive}** คน — แสดง ${inactiveMembers.length} คน (เรียงจาก join นานสุด)\n\n` +
-          (inactiveMembers.length
-            ? inactiveMembers.map((m, i) =>
-                `**${i + 1}.** <@${m.id}>  🗓 join ${formatJoined(m.joinedAt)}`
+          `พบทั้งหมด **${totalInactive}** คน — แสดง ${inactiveList.length} คน (เรียงจาก join นานสุด)\n\n` +
+          (inactiveList.length
+            ? inactiveList.map((m, i) =>
+                `\`${i + 1}\` <@${m.id}>  🗓 join ${formatJoined(m.joinedAt)}`
               ).join('\n')
             : 'ทุกคน active หมดเลยครับ 🎉')
         )

@@ -23,7 +23,11 @@ async function getServerOverview(guildId, days) {
 /**
  * Top channels ของ server
  */
-async function getTopChannels(guildId, days, limit = 5) {
+async function getTopChannels(guildId, days, limit = 5, sortBy = 'messages') {
+  const orderBy = sortBy === 'voice'
+    ? 'SUM(d.voice_seconds) DESC'
+    : 'SUM(d.message_count) DESC';
+
   const [rows] = await pool.execute(
     `SELECT
        d.channel_id,
@@ -37,7 +41,7 @@ async function getTopChannels(guildId, days, limit = 5) {
      WHERE d.guild_id = ?
        AND d.date >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
      GROUP BY d.channel_id, channel_name
-     ORDER BY (SUM(d.message_count) * 10 + SUM(d.voice_seconds)) DESC
+     ORDER BY ${orderBy}
      LIMIT ${limit}`,
     [guildId, days]
   );
@@ -48,7 +52,7 @@ async function getTopChannels(guildId, days, limit = 5) {
  * Top members ของ server (optional: filter by role)
  * score = messages × 10 + voiceSeconds + mentions × 30
  */
-async function getTopMembers(guildId, days, limit = 10, roleMembers = null) {
+async function getTopMembers(guildId, days, limit = 10, roleMembers = null, sortBy = 'score') {
   let sql = `
     SELECT
       d.user_id,
@@ -72,9 +76,13 @@ async function getTopMembers(guildId, days, limit = 10, roleMembers = null) {
     params.push(...roleMembers);
   }
 
+  const orderBy = sortBy === 'voice'    ? 'SUM(d.voice_seconds) DESC'
+    : sortBy === 'messages'             ? 'SUM(d.message_count) DESC'
+    : '(SUM(d.message_count) * 10 + SUM(d.voice_seconds) + mentions * 20) DESC';
+
   sql += `
     GROUP BY d.user_id
-    ORDER BY (SUM(d.message_count) * 10 + SUM(d.voice_seconds) + mentions * 20) DESC
+    ORDER BY ${orderBy}
     LIMIT ${limit}`;
 
   const [rows] = await pool.execute(sql, params);

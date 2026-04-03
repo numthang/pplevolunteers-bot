@@ -13,6 +13,7 @@ const { handleOpenInterest } = require('./handlers/openInterest');
 const { handleOpenProvince } = require('./handlers/openProvince');
 const { handleOrgchartProvinceSelect } = require('./handlers/orgchartProvinceSelect');
 const { handleOrgchartRoleSelect } = require('./handlers/orgchartRoleSelect');
+const { handleStatTopSelect, handleStatUserSelect } = require('./handlers/statHandler');
 const { onMessage, onVoiceStateUpdate } = require('./utils/activityTracker');
 
 const fs = require('fs');
@@ -81,11 +82,13 @@ client.on('interactionCreate', async (interaction) => {
 
   // --- Select Menus ---
   if (interaction.isStringSelectMenu()) {
-    if (interaction.customId === 'orgchart_province_region') return handleOrgchartProvinceSelect(interaction);
-    if (interaction.customId === 'orgchart_role')            return handleOrgchartRoleSelect(interaction);
+    if (interaction.customId === 'orgchart_province_region')   return handleOrgchartProvinceSelect(interaction);
+    if (interaction.customId === 'orgchart_role')              return handleOrgchartRoleSelect(interaction);
+    if (interaction.customId.startsWith('stat_top:'))          return handleStatTopSelect(interaction);
+    if (interaction.customId.startsWith('stat_user:'))         return handleStatUserSelect(interaction);
     await handleProvinceDropdown(interaction); // dropdown จังหวัด (register)
     await handleInterestSelect(interaction);   // interest/skill
-    if (interaction.customId.startsWith('report_category:')) return handleReportCategory(interaction);
+    if (interaction.customId.startsWith('report_category:'))   return handleReportCategory(interaction);
     return;
   }
 
