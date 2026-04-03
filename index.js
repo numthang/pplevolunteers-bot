@@ -1,18 +1,21 @@
 // index.js 
 require('dotenv').config();
-const { Client, GatewayIntentBits, Collection, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require('discord.js');
+const { Client, GatewayIntentBits, Collection, MessageFlags } = require('discord.js');
 const { handleInterestSelect } = require('./handlers/interestSelect');
-const { handleModalSubmit, handleProvinceDropdown, handleRegisterConfirm, handleDeleteLog, handleOpenRegisterModal } = require('./handlers/registerHandler');
-const { handleProvinceBtn } = require('./handlers/provinceSelect');
+const { handleModalSubmit, handleRegisterConfirm, handleDeleteLog, handleOpenRegisterModal } = require('./handlers/registerHandler');
+const { handleProvinceBtn, handleProvinceRegionSelect } = require('./handlers/provinceSelect');
 const { handleStarButton, handleModalSubmit: handleRateModalSubmit } = require('./handlers/rateStars');
 const { handlePageButton } = require('./handlers/ratingPage');
-const { getSetting, setSetting } = require('./db/settings');
+const { getSetting } = require('./db/settings');
 const { refreshSticky } = require('./handlers/stickyHandler');
 const { handleReportStart, handleReportCategory, handleReportSubmit } = require('./handlers/reportHandler');
 const { handleOpenInterest } = require('./handlers/openInterest');
-const { handleOpenProvince } = require('./handlers/openProvince');
-const { handleOrgchartProvinceSelect } = require('./handlers/orgchartProvinceSelect');
-const { handleOrgchartRoleSelect } = require('./handlers/orgchartRoleSelect');
+const {
+  handleOrgchartGroupSelect,
+  handleOrgchartProvinceSelect,
+  handleOrgchartRoleSelect,
+  handleOrgchartDaysSelect,
+} = require('./handlers/orgchartPanelHandler');
 const { handleStatTopSelect, handleStatUserSelect } = require('./handlers/statHandler');
 const { onMessage, onVoiceStateUpdate } = require('./utils/activityTracker');
 
@@ -82,11 +85,13 @@ client.on('interactionCreate', async (interaction) => {
 
   // --- Select Menus ---
   if (interaction.isStringSelectMenu()) {
-    if (interaction.customId === 'orgchart_province_region')   return handleOrgchartProvinceSelect(interaction);
-    if (interaction.customId === 'orgchart_role')              return handleOrgchartRoleSelect(interaction);
+    if (interaction.customId.startsWith('orgchart_group'))           return handleOrgchartGroupSelect(interaction);
+    if (interaction.customId.startsWith('orgchart_province_region')) return handleOrgchartProvinceSelect(interaction);
+    if (interaction.customId.startsWith('orgchart_role'))            return handleOrgchartRoleSelect(interaction);
+    if (interaction.customId.startsWith('orgchart_days'))            return handleOrgchartDaysSelect(interaction);
     if (interaction.customId.startsWith('stat_top:'))          return handleStatTopSelect(interaction);
     if (interaction.customId.startsWith('stat_user:'))         return handleStatUserSelect(interaction);
-    await handleProvinceDropdown(interaction); // dropdown จังหวัด (register)
+    if (interaction.customId === 'prov_region')                return handleProvinceRegionSelect(interaction);
     await handleInterestSelect(interaction);   // interest/skill
     if (interaction.customId.startsWith('report_category:'))   return handleReportCategory(interaction);
     return;
@@ -103,7 +108,6 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.customId.startsWith('interest:') || interaction.customId.startsWith('skill:')) return handleInterestSelect(interaction);
     if (interaction.customId.startsWith('report_start:')) return handleReportStart(interaction);
     if (interaction.customId === 'btn_open_interest') return handleOpenInterest(interaction);
-    if (interaction.customId === 'btn_open_province') return handleOpenProvince(interaction);
     return;
   }
 });

@@ -1,14 +1,25 @@
 // handlers/provinceSelect.js
-const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, EmbedBuilder } = require('discord.js');
 const { ROLES, PROVINCE_ROLES, SUB_REGION_ROLES, MAIN_REGION_ROLES } = require('../config/roles');
 const { syncMemberRoles } = require('../db/members');
 const { PROVINCE_REGIONS } = require('../config/constants');
 const { BKK_HINT } = require('../config/hints');
 
-function buildRows(region, memberRoles) {
+function buildRegionDropdown(selectedId = null) {
+  return new ActionRowBuilder().addComponents(
+    new StringSelectMenuBuilder()
+      .setCustomId('prov_region')
+      .setPlaceholder('เลือกภาค')
+      .addOptions(PROVINCE_REGIONS.map(r => ({
+        label: r.label, value: r.id, default: r.id === selectedId,
+      })))
+  );
+}
+
+function buildProvinceRows(region, memberRoles) {
   const rows = [];
-  for (let i = 0; i < region.provinces.length; i += 4) {
-    const chunk = region.provinces.slice(i, i + 4);
+  for (let i = 0; i < region.provinces.length; i += 5) {
+    const chunk = region.provinces.slice(i, i + 5);
     rows.push(
       new ActionRowBuilder().addComponents(
         chunk.map(p => {
@@ -25,6 +36,22 @@ function buildRows(region, memberRoles) {
   return rows;
 }
 
+async function handleProvinceRegionSelect(interaction) {
+  const regionId = interaction.values[0];
+  const region   = PROVINCE_REGIONS.find(r => r.id === regionId);
+  const member   = interaction.member;
+  await member.fetch();
+  await interaction.deferUpdate();
+
+  await interaction.editReply({
+    embeds: [new EmbedBuilder()
+      .setTitle(`🗺️ เลือกจังหวัด · ${interaction.guild.name}`)
+      .setDescription(regionId === 'bkk' ? BKK_HINT : region.label)
+      .setColor(region.color)],
+    components: [...buildProvinceRows(region, member.roles), buildRegionDropdown(regionId)],
+  });
+}
+
 // reverse lookup: role ID → ชื่อ role
 const ROLE_ID_TO_NAME = Object.fromEntries(Object.entries(ROLES).map(([name, id]) => [id, name]));
 
@@ -34,20 +61,19 @@ async function handleProvinceBtn(interaction) {
 
   await interaction.deferUpdate();
 
-  const parts = interaction.customId.split(':');
+  const parts    = interaction.customId.split(':');
   const regionId = parts[1];
   const province = parts.slice(2).join(':');
-  const member = interaction.member;
+  const member   = interaction.member;
 
-  const provinceRoleId = PROVINCE_ROLES[province];
-  const subRegionRoleId = SUB_REGION_ROLES[province];
-  const mainRegionRoleId = MAIN_REGION_ROLES[province];
+  const provinceRoleId    = PROVINCE_ROLES[province];
+  const subRegionRoleId   = SUB_REGION_ROLES[province];
+  const mainRegionRoleId  = MAIN_REGION_ROLES[province];
 
   const hasRole = provinceRoleId && member.roles.cache.has(provinceRoleId);
-  const region = PROVINCE_REGIONS.find((r) => r.id === regionId);
+  const region  = PROVINCE_REGIONS.find((r) => r.id === regionId);
 
   try {
-    // เก็บว่า role ไหนถูก add/remove จริงๆ
     const rolesChanged = [];
 
     if (hasRole) {
@@ -76,8 +102,7 @@ async function handleProvinceBtn(interaction) {
       }
 
     } else {
-      const rolesToAdd = [provinceRoleId, subRegionRoleId, mainRegionRoleId].filter(id => id);
-      // กรองซ้ำ (กรณี sub === main เช่น กทม/ปริมณฑล)
+      const rolesToAdd  = [provinceRoleId, subRegionRoleId, mainRegionRoleId].filter(id => id);
       const uniqueRoles = [...new Set(rolesToAdd)];
       if (uniqueRoles.length > 0) await member.roles.add(uniqueRoles);
       uniqueRoles.forEach(id => rolesChanged.push(ROLE_ID_TO_NAME[id] ?? id));
@@ -86,33 +111,30 @@ async function handleProvinceBtn(interaction) {
     await member.fetch();
     await syncMemberRoles(member);
 
-    const emoji = hasRole ? '🔴' : '🟢';
-    const action = hasRole ? 'ถอด' : 'เพิ่ม';
+    const userId   = interaction.user.id;
+    const emoji    = hasRole ? '🔴' : '🟢';
+    const action   = hasRole ? 'ถอด' : 'เพิ่ม';
     const roleList = rolesChanged.map(r => `• ${r}`).join('\n');
-    const statusMsg = `${emoji} ${action} roles แล้ว\n${roleList}`;
+    const statusMsg = `${emoji} <@${userId}> • ${action} roles แล้ว\n${roleList}`;
 
     await interaction.editReply({
-      embeds: [{
-        title: region.label,
-        description: regionId === 'bkk' 
-          ? `${BKK_HINT}\n\n${statusMsg}` 
-          : statusMsg,
-        color: region.color,
-      }],
-      components: buildRows(region, member.roles),
+      embeds: [new EmbedBuilder()
+        .setTitle(`🗺️ เลือกจังหวัด · ${interaction.guild.name}`)
+        .setDescription(regionId === 'bkk' ? `${BKK_HINT}\n\n${statusMsg}` : statusMsg)
+        .setColor(region.color)],
+      components: [...buildProvinceRows(region, member.roles), buildRegionDropdown(regionId)],
     });
 
   } catch (err) {
     console.error(`❌ toggle province ${province}:`, err);
     await interaction.editReply({
-      embeds: [{
-        title: region.label,
-        description: `❌ เกิดข้อผิดพลาดกับ **${province}**`,
-        color: region.color,
-      }],
-      components: buildRows(region, member.roles),
+      embeds: [new EmbedBuilder()
+        .setTitle(`🗺️ เลือกจังหวัด · ${interaction.guild.name}`)
+        .setDescription(`❌ เกิดข้อผิดพลาดกับ **${province}**`)
+        .setColor(region.color)],
+      components: [...buildProvinceRows(region, member.roles), buildRegionDropdown(regionId)],
     });
   }
 }
 
-module.exports = { handleProvinceBtn };
+module.exports = { buildRegionDropdown, buildProvinceRows, handleProvinceRegionSelect, handleProvinceBtn };

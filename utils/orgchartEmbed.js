@@ -66,26 +66,20 @@ async function getRoleStats(guildId, guild, roleConfig, { topN = 10, days = 30 }
 function buildOrgChartEmbed(roleConfig, top, { days = 30 } = {}) {
   const embed = new EmbedBuilder()
     .setColor(roleConfig.roleColor ?? '#5865F2')
-    .setTitle(`📊 ${roleConfig.roleName}`)
+    .setTitle(`🏢 Organization Chart · ${roleConfig.roleName}`)
     .setDescription(
       `<@&${roleConfig.roleId}> — Top ${top.length} Active — ย้อนหลัง ${days} วัน\n` +
       `*Score = Messages × ${SCORE_MSG} + Voice Seconds + Mentions × ${SCORE_MENTION}*`
     )
     .setTimestamp();
 
-  top.forEach((m, i) => {
-    embed.addFields({
-      name: `${MEDALS[i] ?? `#${i + 1}`} ${m.displayName}`,
-      value: [
-        `<@${m.userId}>`,
-        `💬 ${m.messages} msgs`,
-        `🔊 ${formatVoice(m.voiceSeconds)}`,
-        `📣 ${m.mentions} mentions`,
-        `🕐 ${formatLastActive(m.lastActive)}`,
-        `⭐ ${m.score.toLocaleString()} pts`,
-      ].join('  '),
-    });
-  });
+  const lines = top.map((m, i) =>
+    `${MEDALS[i] ?? `\`${i + 1}\``} <@${m.userId}> · 💬 ${m.messages.toLocaleString()} · 🔊 ${formatVoice(m.voiceSeconds)} · 📣 ${m.mentions} · 🕐 ${formatLastActive(m.lastActive)} · ⭐ ${m.score.toLocaleString()} pts`
+  ).join('\n');
+
+  embed.setDescription(
+    `<@&${roleConfig.roleId}> — Top ${top.length} Active — ย้อนหลัง ${days} วัน\n\n${lines}`
+  );
 
   return embed;
 }

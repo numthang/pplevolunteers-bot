@@ -1,38 +1,22 @@
 // handlers/openProvince.js
-const {
-  EmbedBuilder,
-  MessageFlags
-} = require('discord.js');
-const { buildRows } = require('./provinceSelect');
-const { PROVINCE_REGIONS } = require('../config/constants');
-const { BKK_HINT } = require('../config/hints');
+const { EmbedBuilder, MessageFlags } = require('discord.js');
+const { buildRegionDropdown } = require('./provinceSelect');
 
 async function handleOpenProvince(interaction) {
   if (!interaction.isButton()) return;
   if (interaction.customId !== 'btn_open_province') return;
 
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-
   const member = interaction.member;
   await member.fetch();
-  const memberRoles = member.roles;
 
   await interaction.editReply({
     embeds: [new EmbedBuilder()
-      .setTitle('🏙️ กรุงเทพฯ & ปริมณฑล')
-      .setDescription(BKK_HINT)
-      .setColor(0x3498db)],
-    components: buildRows(PROVINCE_REGIONS[0], memberRoles),
+      .setTitle(`🗺️ เลือกจังหวัด · ${interaction.guild.name}`)
+      .setDescription('เลือกภาคจาก dropdown · กดจังหวัดเพื่อเพิ่ม/ถอด role')
+      .setColor(0x5865F2)],
+    components: [buildRegionDropdown()],
   });
-
-  for (let i = 1; i < PROVINCE_REGIONS.length; i++) {
-    const region = PROVINCE_REGIONS[i];
-    await interaction.followUp({
-      flags: MessageFlags.Ephemeral,
-      embeds: [new EmbedBuilder().setTitle(region.label).setColor(region.color)],
-      components: buildRows(region, memberRoles),
-    });
-  }
 }
 
 module.exports = { handleOpenProvince };

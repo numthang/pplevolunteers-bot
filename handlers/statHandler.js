@@ -33,16 +33,16 @@ function formatVoice(seconds) {
 //   days dropdown: stat_top:d:{view}:{roleId}
 //   user days:     stat_user:{userId}
 
-function buildTopComponents(view, days, roleId = '_', topN = 10) {
+function buildTopComponents(view, days, topN = 10) {
   return [
     new ActionRowBuilder().addComponents(
       new StringSelectMenuBuilder()
-        .setCustomId(`stat_top:v:${days}:${roleId}:${topN}`)
+        .setCustomId(`stat_top:v:${days}:${topN}`)
         .addOptions(VIEW_OPTIONS.map(opt => ({ ...opt, default: opt.value === view })))
     ),
     new ActionRowBuilder().addComponents(
       new StringSelectMenuBuilder()
-        .setCustomId(`stat_top:d:${view}:${roleId}:${topN}`)
+        .setCustomId(`stat_top:d:${view}:${topN}`)
         .addOptions(DAYS_OPTIONS.map(opt => ({ ...opt, default: opt.value === String(days) })))
     ),
   ];
@@ -72,7 +72,7 @@ function formatMemberRows(rows) {
   }).join('\n');
 }
 
-async function buildTopEmbed(guild, view, days, roleMembers = null, topN = 10) {
+async function buildTopEmbed(guild, view, days, topN = 10) {
   const guildId = guild.id;
 
   // ── Overview ──────────────────────────────────────────────────────
@@ -80,8 +80,8 @@ async function buildTopEmbed(guild, view, days, roleMembers = null, topN = 10) {
     const overviewN = Math.max(3, Math.ceil(topN / 1));
     const [overview, msgMem, voiceMem] = await Promise.all([
       getServerOverview(guildId, days),
-      getTopMembers(guildId, days, overviewN, roleMembers, 'messages'),
-      getTopMembers(guildId, days, overviewN, roleMembers, 'voice'),
+      getTopMembers(guildId, days, overviewN, null, 'messages'),
+      getTopMembers(guildId, days, overviewN, null, 'voice'),
     ]);
 
     const fmtMsgMem = msgMem.length
@@ -94,7 +94,7 @@ async function buildTopEmbed(guild, view, days, roleMembers = null, topN = 10) {
 
     return new EmbedBuilder()
       .setColor('#5865F2')
-      .setTitle(`📊 ${guild.name}`)
+      .setTitle(`📊 Server Statistics · ${guild.name}`)
       .setDescription(
         `ย้อนหลัง ${days} วัน  •  ` +
         `👥 ${Number(overview.active_users).toLocaleString()} active  •  ` +
@@ -111,25 +111,25 @@ async function buildTopEmbed(guild, view, days, roleMembers = null, topN = 10) {
 
   // ── Top Message Members ───────────────────────────────────────────
   if (view === 'msg_mem') {
-    const rows = await getTopMembers(guildId, days, topN, roleMembers, 'messages');
+    const rows = await getTopMembers(guildId, days, topN, null, 'messages');
     const lines = formatMemberRows(rows);
 
     return new EmbedBuilder()
       .setColor('#5865F2')
-      .setTitle('💬 Top Message Members')
-      .setDescription(`ย้อนหลัง ${days} วัน\n\n${lines}`)
+      .setTitle(`📊 Server Statistics · ${guild.name}`)
+      .setDescription(`💬 Top Message Members  •  ย้อนหลัง ${days} วัน\n\n${lines}`)
       .setTimestamp();
   }
 
   // ── Top Voice Members ─────────────────────────────────────────────
   if (view === 'voice_mem') {
-    const rows = await getTopMembers(guildId, days, topN, roleMembers, 'voice');
+    const rows = await getTopMembers(guildId, days, topN, null, 'voice');
     const lines = formatMemberRows(rows);
 
     return new EmbedBuilder()
       .setColor('#5865F2')
-      .setTitle('🔊 Top Voice Members')
-      .setDescription(`ย้อนหลัง ${days} วัน\n\n${lines}`)
+      .setTitle(`📊 Server Statistics · ${guild.name}`)
+      .setDescription(`🔊 Top Voice Members  •  ย้อนหลัง ${days} วัน\n\n${lines}`)
       .setTimestamp();
   }
 
@@ -145,8 +145,8 @@ async function buildTopEmbed(guild, view, days, roleMembers = null, topN = 10) {
 
     return new EmbedBuilder()
       .setColor('#5865F2')
-      .setTitle('# Top Message Channels')
-      .setDescription(`ย้อนหลัง ${days} วัน\n\n${lines}`)
+      .setTitle(`📊 Server Statistics · ${guild.name}`)
+      .setDescription(`#️⃣ Top Message Channels  •  ย้อนหลัง ${days} วัน\n\n${lines}`)
       .setTimestamp();
   }
 
@@ -162,8 +162,8 @@ async function buildTopEmbed(guild, view, days, roleMembers = null, topN = 10) {
 
     return new EmbedBuilder()
       .setColor('#5865F2')
-      .setTitle('🔉 Top Voice Channels')
-      .setDescription(`ย้อนหลัง ${days} วัน\n\n${lines}`)
+      .setTitle(`📊 Server Statistics · ${guild.name}`)
+      .setDescription(`🔉 Top Voice Channels  •  ย้อนหลัง ${days} วัน\n\n${lines}`)
       .setTimestamp();
   }
 }
@@ -171,11 +171,10 @@ async function buildTopEmbed(guild, view, days, roleMembers = null, topN = 10) {
 // ── Interaction Handlers ──────────────────────────────────────────────
 
 async function handleStatTopSelect(interaction) {
-  const parts  = interaction.customId.split(':');
-  const type   = parts[1]; // 'v' or 'd'
-  const state  = parts[2];
-  const roleId = parts[3] ?? '_';
-  const topN   = parseInt(parts[4] ?? '10');
+  const parts = interaction.customId.split(':');
+  const type  = parts[1]; // 'v' or 'd'
+  const state = parts[2];
+  const topN  = parseInt(parts[3] ?? '10');
 
   let view, days;
   if (type === 'v') {
@@ -186,17 +185,10 @@ async function handleStatTopSelect(interaction) {
     days = parseInt(interaction.values[0]);
   }
 
-  let roleMembers = null;
-  if (roleId !== '_') {
-    await interaction.guild.members.fetch().catch(() => {});
-    const role = interaction.guild.roles.cache.get(roleId);
-    if (role) roleMembers = new Set(role.members.keys());
-  }
-
   await interaction.deferUpdate();
 
-  const embed      = await buildTopEmbed(interaction.guild, view, days, roleMembers, topN);
-  const components = buildTopComponents(view, days, roleId, topN);
+  const embed      = await buildTopEmbed(interaction.guild, view, days, topN);
+  const components = buildTopComponents(view, days, topN);
   await interaction.editReply({ embeds: [embed], components });
 }
 
@@ -227,7 +219,7 @@ async function handleStatUserSelect(interaction) {
 
   const embed = new EmbedBuilder()
     .setColor(member?.displayHexColor ?? '#5865F2')
-    .setTitle(`👤 ${member?.displayName ?? target?.username ?? userId}`)
+    .setTitle(`📊 Server Statistics · ${member?.displayName ?? target?.username ?? userId}`)
     .setDescription(`<@${userId}>  •  ย้อนหลัง ${days} วัน`)
     .setThumbnail(target?.displayAvatarURL({ extension: 'png', size: 64 }) ?? null)
     .addFields(

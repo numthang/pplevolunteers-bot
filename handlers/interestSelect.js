@@ -1,5 +1,5 @@
 // handlers/interestSelect.js
-const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
 const { INTEREST_ROLES, SKILL_ROLES, MEDIA_TEAM_ROLE_ID, MEDIA_TEAM_TRIGGERS } = require('../config/roles');
 const { syncMemberRoles } = require('../db/members');
 const { INTEREST_BUTTONS, SKILL_BUTTONS } = require('../config/constants');
@@ -33,77 +33,55 @@ async function handleInterestSelect(interaction) {
 
   await interaction.deferUpdate();
 
-  const name = keyParts.join(':');
-  const roleMap = prefix === 'interest' ? INTEREST_ROLES : SKILL_ROLES;
-  const buttons = prefix === 'interest' ? INTEREST_BUTTONS : SKILL_BUTTONS;
-  const embedTitle = prefix === 'interest' ? '🎯 ความสนใจของคุณคืออะไร?' : '🛠️ ความถนัดของคุณคืออะไร?';
+  const name       = keyParts.join(':');
+  const roleMap    = prefix === 'interest' ? INTEREST_ROLES : SKILL_ROLES;
+  const buttons    = prefix === 'interest' ? INTEREST_BUTTONS : SKILL_BUTTONS;
+  const dn         = interaction.member?.displayName ?? interaction.user?.username ?? '';
+  const embedTitle = prefix === 'interest' ? `🎯 ความสนใจ · ${dn}` : `🛠️ ความถนัด · ${dn}`;
   const embedColor = prefix === 'interest' ? 0xf1c40f : 0x3498db;
-  const roleId = roleMap[name];
-  const member = interaction.member;
+  const roleId     = roleMap[name];
+  const member     = interaction.member;
+  const userId     = interaction.user.id;
 
-  if (!roleId) {
+  function reply(description) {
     return interaction.editReply({
-      embeds: [{
-        title: embedTitle,
-        description: `⚠️ ไม่พบ Role ID สำหรับ \`${name}\``,
-        color: embedColor,
-      }],
+      embeds: [new EmbedBuilder().setTitle(embedTitle).setDescription(description).setColor(embedColor)],
       components: buildRows(buttons, roleMap, member.roles, prefix),
     });
   }
+
+  if (!roleId) return reply(`⚠️ ไม่พบ Role ID สำหรับ \`${name}\``);
 
   try {
     const hasRole = member.roles.cache.has(roleId);
 
     if (hasRole) {
       await member.roles.remove(roleId);
-
-      // ถ้าถอด role ที่เป็น trigger ออก → เช็กว่ายังมี trigger role อื่นอยู่ไหม
       if (MEDIA_TEAM_TRIGGERS.includes(name)) {
         await member.fetch();
-        const stillHasMediaTrigger = MEDIA_TEAM_TRIGGERS.some(
+        const stillHas = MEDIA_TEAM_TRIGGERS.some(
           t => t !== name && member.roles.cache.has(SKILL_ROLES[t])
         );
-        if (!stillHasMediaTrigger) {
-          await member.roles.remove(MEDIA_TEAM_ROLE_ID).catch(() => {});
-        }
+        if (!stillHas) await member.roles.remove(MEDIA_TEAM_ROLE_ID).catch(() => {});
       }
     } else {
       await member.roles.add(roleId);
-
-      // ถ้าเพิ่ม role ที่เป็น trigger → เพิ่ม ทีมสื่อ ด้วย
       if (MEDIA_TEAM_TRIGGERS.includes(name)) {
         await member.roles.add(MEDIA_TEAM_ROLE_ID).catch(() => {});
       }
     }
 
     await member.fetch();
-    //อัพเดททุก Roles ใหม่หมดหลังแก้ไข
-    await syncMemberRoles(interaction.member); 
+    await syncMemberRoles(interaction.member);
 
     const statusMsg = hasRole
-      ? `🔴 ถอด role **${name}** ออกแล้ว`
-      : `🟢 เพิ่ม role **${name}** แล้ว`;
-
-    await interaction.editReply({
-      embeds: [{
-        title: embedTitle,
-        description: `${statusMsg}`,
-        color: embedColor,
-      }],
-      components: buildRows(buttons, roleMap, member.roles, prefix),
-    });
+      ? `🔴 <@${userId}> • ถอด role **${name}** ออกแล้ว`
+      : `🟢 <@${userId}> • เพิ่ม role **${name}** แล้ว`;
+    return reply(statusMsg);
 
   } catch (err) {
     console.error(`❌ toggle role ${name}:`, err);
-    await interaction.editReply({
-      embeds: [{
-        title: embedTitle,
-        description: `❌ เกิดข้อผิดพลาดกับ role **${name}**`,
-        color: embedColor,
-      }],
-      components: buildRows(buttons, roleMap, member.roles, prefix),
-    });
+    return reply(`❌ <@${userId}> • เกิดข้อผิดพลาดกับ role **${name}**`);
   }
 }
 

@@ -42,9 +42,6 @@ module.exports = {
         .addIntegerOption(opt =>
           opt.setName('top').setDescription('จำนวน members/channels ที่แสดง (default 10)').setRequired(false).setMinValue(1).setMaxValue(25)
         )
-        .addRoleOption(opt =>
-          opt.setName('role').setDescription('filter เฉพาะ role นี้ (สำหรับ member views)').setRequired(false)
-        )
         .addBooleanOption(opt =>
           opt.setName('public').setDescription('แสดงให้ทุกคนเห็น (default: เฉพาะคุณ)').setRequired(false)
         )
@@ -87,23 +84,15 @@ module.exports = {
 
     // ================================================================
     if (sub === 'top') {
-      const role     = interaction.options.getRole('role');
-      const roleId   = role?.id ?? '_';
-      const topN     = interaction.options.getInteger('top') ?? 10;
-      const days     = 60;
-      const view     = 'overview';
+      const topN = interaction.options.getInteger('top') ?? 10;
+      const days = 60;
+      const view = 'overview';
 
       await interaction.deferReply({ flags: isPublic ? undefined : MessageFlags.Ephemeral });
       await guild.members.fetch().catch(() => {});
 
-      let roleMembers = null;
-      if (role) {
-        const guildRole = guild.roles.cache.get(role.id);
-        if (guildRole) roleMembers = new Set(guildRole.members.keys());
-      }
-
-      const embed      = await buildTopEmbed(guild, view, days, roleMembers, topN);
-      const components = buildTopComponents(view, days, roleId, topN);
+      const embed      = await buildTopEmbed(guild, view, days, topN);
+      const components = buildTopComponents(view, days, topN);
       return interaction.editReply({ embeds: [embed], components });
     }
 
@@ -123,7 +112,7 @@ module.exports = {
 
       const embed = new EmbedBuilder()
         .setColor(member?.displayHexColor ?? '#5865F2')
-        .setTitle(`👤 ${member?.displayName ?? target.username}`)
+        .setTitle(`📊 Server Statistics · ${member?.displayName ?? target.username}`)
         .setDescription(`<@${target.id}>  •  ย้อนหลัง ${days} วัน`)
         .setThumbnail(target.displayAvatarURL({ extension: 'png', size: 64 }))
         .addFields(

@@ -1,7 +1,6 @@
 // handlers/registerHandler.js
 const {
   ActionRowBuilder,
-  StringSelectMenuBuilder,
   ButtonBuilder,
   ButtonStyle,
   EmbedBuilder,
@@ -10,88 +9,13 @@ const {
   TextInputStyle,
   MessageFlags,
 } = require('discord.js');
-// เพิ่ม import ด้านบนสุด (ถ้ายังไม่มี)
 const { buildRows } = require('./interestSelect');
-const { INTEREST_ROLES, SKILL_ROLES } = require('../config/roles');
-const { PROVINCE_ROLES, SUB_REGION_ROLES, MAIN_REGION_ROLES } = require('../config/roles');
-const { BKK_HINT } = require('../config/hints');
+const { buildRegionDropdown } = require('./provinceSelect');
+const { INTEREST_ROLES, SKILL_ROLES, PROVINCE_ROLES } = require('../config/roles');
 const { upsertMember, syncMemberRoles } = require('../db/members');
-const { INTEREST_BUTTONS, SKILL_BUTTONS, PROVINCE_REGIONS } = require('../config/constants');
-
-/* const PROVINCE_REGIONS = [
-  {
-    id: 'central',
-    label: '🌿 ภาคกลาง',
-    color: 0x2ecc71,
-    provinces: [
-      'ราชบุรี', 'นครปฐม', 'กาญจนบุรี', 'เพชรบุรี', 'สุพรรณบุรี',
-      'สมุทรสงคราม', 'ประจวบคีรีขันธ์', 'อุทัยธานี', 'อ่างทอง', 'สระบุรี',
-      'อยุธยา', 'นครนายก', 'ลพบุรี', 'ชัยนาท', 'สิงห์บุรี',
-    ],
-  },
-  {
-    id: 'north',
-    label: '🌄 ภาคเหนือ',
-    color: 0xf39c12,
-    provinces: [
-      'แม่ฮ่องสอน', 'แพร่', 'ลำพูน', 'ลำปาง', 'พะเยา',
-      'เชียงใหม่', 'เชียงราย', 'น่าน', 'กำแพงเพชร', 'ตาก',
-      'นครสวรรค์', 'พิจิตร', 'พิษณุโลก', 'เพชรบูรณ์', 'สุโขทัย', 'อุตรดิตถ์',
-    ],
-  },
-  {
-    id: 'east',
-    label: '🌊 ภาคตะวันออก',
-    color: 0x1abc9c,
-    provinces: [
-      'สระแก้ว', 'ตราด', 'จันทบุรี', 'ระยอง',
-      'ชลบุรี', 'ฉะเชิงเทรา', 'ปราจีนบุรี',
-    ],
-  },
-  {
-    id: 'northeast',
-    label: '🌾 ภาคอีสาน',
-    color: 0xe67e22,
-    provinces: [
-      'อุดรธานี', 'หนองคาย', 'บึงกาฬ', 'สกลนคร', 'มุกดาหาร',
-      'นครพนม', 'อำนาจเจริญ', 'เลย', 'ชัยภูมิ', 'ขอนแก่น',
-      'กาฬสินธุ์', 'ยโสธร', 'หนองบัวลำภู', 'มหาสารคาม', 'ร้อยเอ็ด',
-      'อุบลราชธานี', 'ศรีสะเกษ', 'สุรินทร์', 'บุรีรัมย์', 'นครราชสีมา',
-    ],
-  },
-  {
-    id: 'south',
-    label: '🏖️ ภาคใต้',
-    color: 0x9b59b6,
-    provinces: [
-      'ชุมพร', 'พังงา', 'ระนอง', 'ภูเก็ต', 'สุราษฎร์ธานี',
-      'นครศรีธรรมราช', 'ตรัง', 'กระบี่', 'สงขลา', 'พัทลุง',
-      'สตูล', 'ปัตตานี', 'ยะลา', 'นราธิวาส',
-    ],
-  },
-  {
-    id: 'bkk',
-    label: '🏙️ กรุงเทพฯ & ปริมณฑล',
-    color: 0x3498db,
-    provinces: [
-      'กรุงเทพชั้นใน', 'กรุงเทพธนบุรี', 'กรุงเทพตะวันออก', 'กรุงเทพเหนือ',
-      'นนทบุรี', 'สมุทรปราการ', 'สมุทรสาคร', 'ปทุมธานี',
-    ],
-  },
-]; */
+const { INTEREST_BUTTONS, SKILL_BUTTONS } = require('../config/constants');
 
 const pendingForms = new Map();
-
-function buildDropdown(region) {
-  return new ActionRowBuilder().addComponents(
-    new StringSelectMenuBuilder()
-      .setCustomId(`province_dd:${region.id}`)
-      .setPlaceholder(`${region.label} — เลือกได้หลายจังหวัด`)
-      .setMinValues(0)
-      .setMaxValues(region.provinces.length)
-      .addOptions(region.provinces.map((p) => ({label: p, value: p})))
-  );
-}
 
 // -------- Build Modal (รับ existing data เพื่อ pre-fill) --------
 function buildRegisterModal(existing = null) {
@@ -221,13 +145,14 @@ async function handleModalSubmit(interaction) {
         .setColor(0x57f287)],
     });
     if (interestSelect) {
+      const dn = interaction.member?.displayName ?? interaction.user.username;
       await interaction.followUp({
-        embeds: [new EmbedBuilder().setTitle('🎯 ความสนใจของคุณคืออะไร?').setColor(0xf1c40f)],
+        embeds: [new EmbedBuilder().setTitle(`🎯 ความสนใจ · ${dn}`).setColor(0xf1c40f)],
         components: buildRows(INTEREST_BUTTONS, INTEREST_ROLES, memberRoles, 'interest'),
         flags: MessageFlags.Ephemeral,
       });
       await interaction.followUp({
-        embeds: [new EmbedBuilder().setTitle('🛠️ ความถนัดของคุณคืออะไร?').setColor(0x3498db)],
+        embeds: [new EmbedBuilder().setTitle(`🛠️ ความถนัด · ${dn}`).setColor(0x3498db)],
         components: buildRows(SKILL_BUTTONS, SKILL_ROLES, memberRoles, 'skill'),
         flags: MessageFlags.Ephemeral,
       });
@@ -235,26 +160,13 @@ async function handleModalSubmit(interaction) {
     return;
   }
 
+  const dn = interaction.member?.displayName ?? interaction.user.username;
   await interaction.editReply({
-    embeds: [
-      new EmbedBuilder()
-        .setTitle('🏙️ กรุงเทพฯ & ปริมณฑล')
-        .setDescription(BKK_HINT)
-        .setColor(0x3498db),
-    ],
-    components: [buildDropdown(PROVINCE_REGIONS[0])],
-    flags: MessageFlags.Ephemeral,
-  });
-
-  await interaction.followUp({
-    embeds: [
-      new EmbedBuilder()
-        .setTitle('📍 เลือกจังหวัดของคุณ')
-        .setDescription('เลือกได้หลายจังหวัด หลายภาคตามความสนใจ')
-        .setColor(0x5865f3),
-    ],
-    components: PROVINCE_REGIONS.slice(1).map(buildDropdown),
-    flags: MessageFlags.Ephemeral,
+    embeds: [new EmbedBuilder()
+      .setTitle(`🗺️ เลือกจังหวัด · ${dn}`)
+      .setDescription('เลือกภาคที่ต้องการ แล้วกดจังหวัดเพื่อเพิ่ม/ถอด role')
+      .setColor(0x5865F2)],
+    components: [buildRegionDropdown()],
   });
 
   await interaction.followUp({
@@ -269,43 +181,6 @@ async function handleModalSubmit(interaction) {
     ],
     flags: MessageFlags.Ephemeral,
   });
-}
-
-// -------- Dropdown Select → diff role --------
-async function handleProvinceDropdown(interaction) {
-  if (!interaction.isStringSelectMenu()) return;
-  if (!interaction.customId.startsWith('province_dd:')) return;
-
-  await interaction.deferUpdate();
-
-  const regionId = interaction.customId.split(':')[1];
-  let pending = pendingForms.get(interaction.user.id);
-  if (!pending) {
-    pending = {formData: {}, selectedProvinces: {}};
-    pendingForms.set(interaction.user.id, pending);
-  }
-
-  const prev = new Set(pending.selectedProvinces[regionId] || []);
-  const next = new Set(interaction.values);
-
-  for (const p of next) {
-    if (!prev.has(p)) {
-      if (PROVINCE_ROLES[p]) await interaction.member.roles.add(PROVINCE_ROLES[p]);
-      if (SUB_REGION_ROLES[p]) await interaction.member.roles.add(SUB_REGION_ROLES[p]);
-      if (MAIN_REGION_ROLES[p]) await interaction.member.roles.add(MAIN_REGION_ROLES[p]);
-    }
-  }
-
-  for (const p of prev) {
-    if (!next.has(p)) {
-      if (PROVINCE_ROLES[p]) await interaction.member.roles.remove(PROVINCE_ROLES[p]);
-      if (SUB_REGION_ROLES[p]) await interaction.member.roles.remove(SUB_REGION_ROLES[p]);
-      if (MAIN_REGION_ROLES[p]) await interaction.member.roles.remove(MAIN_REGION_ROLES[p]);
-    }
-  }
-
-  pending.selectedProvinces[regionId] = interaction.values;
-  await syncMemberRoles(interaction.member);
 }
 
 // -------- Send Register Log --------
@@ -405,9 +280,10 @@ async function handleRegisterConfirm(interaction) {
   });
 
   if (interestSelect) {
+    const dn = interaction.member?.displayName ?? interaction.user.username;
     await interaction.followUp({
       embeds: [new EmbedBuilder()
-        .setTitle('🎯 ความสนใจของคุณคืออะไร?')
+        .setTitle(`🎯 ความสนใจ · ${dn}`)
         .setColor(0xf1c40f)],
       components: buildRows(INTEREST_BUTTONS, INTEREST_ROLES, memberRoles, 'interest'),
       flags: MessageFlags.Ephemeral,
@@ -415,7 +291,7 @@ async function handleRegisterConfirm(interaction) {
 
     await interaction.followUp({
       embeds: [new EmbedBuilder()
-        .setTitle('🛠️ ความถนัดของคุณคืออะไร?')
+        .setTitle(`🛠️ ความถนัด · ${dn}`)
         .setColor(0x3498db)],
       components: buildRows(SKILL_BUTTONS, SKILL_ROLES, memberRoles, 'skill'),
       flags: MessageFlags.Ephemeral,
@@ -443,7 +319,6 @@ async function handleOpenRegisterModal(interaction) {
 module.exports = {
   buildRegisterModal,
   handleModalSubmit,
-  handleProvinceDropdown,
   handleRegisterConfirm,
   handleDeleteLog,
   handleOpenRegisterModal,

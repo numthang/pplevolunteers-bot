@@ -17,13 +17,15 @@ async function handleOpenInterest(interaction) {
   await member.fetch();
   const memberRoles = member.roles;
 
+  const displayName = member.displayName ?? interaction.user.username;
+
   const interestEmbed = new EmbedBuilder()
-    .setTitle('🎯 ความสนใจของคุณคืออะไร?')
+    .setTitle(`🎯 ความสนใจ · ${displayName}`)
     .setDescription('กดเพื่อเลือก • กดซ้ำเพื่อถอด\n🔵 = มี role อยู่แล้ว • ⬜ = ยังไม่มี')
     .setColor(0xf1c40f);
 
   const skillEmbed = new EmbedBuilder()
-    .setTitle('🛠️ ความถนัดของคุณคืออะไร?')
+    .setTitle(`🛠️ ความถนัด · ${displayName}`)
     .setDescription('กดเพื่อเลือก • กดซ้ำเพื่อถอด\n🔵 = มี role อยู่แล้ว • ⬜ = ยังไม่มี')
     .setColor(0x3498db);
 
