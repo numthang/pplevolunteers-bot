@@ -8,7 +8,6 @@ const {
   MessageFlags,
 } = require('discord.js');
 const { getSetting, setSetting } = require('../db/settings');
-const { buildRegionDropdown } = require('../handlers/provinceSelect');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -62,8 +61,8 @@ module.exports = {
 
   async execute(interaction) {
     const sub      = interaction.options.getSubcommand();
-    const isPublic = interaction.options.getBoolean('public') ?? false;
-    const ephemeral = isPublic ? undefined : MessageFlags.Ephemeral;
+    const isPublic  = interaction.options.getBoolean('public') ?? false;
+    const replyFlag = isPublic ? undefined : MessageFlags.Ephemeral;
 
     // ================================================================
     if (sub === 'interest') {
@@ -81,20 +80,28 @@ module.exports = {
           .setStyle(ButtonStyle.Primary)
       );
 
-      await interaction.reply({ embeds: [embed], components: [row] });
+      await interaction.reply({ embeds: [embed], components: [row], flags: replyFlag });
       return interaction.followUp({ content: '✅ วาง panel เลือกความสนใจเรียบร้อยครับ', flags: MessageFlags.Ephemeral });
     }
 
     // ================================================================
     if (sub === 'province') {
-      await interaction.deferReply({ flags: ephemeral });
-      return interaction.editReply({
-        embeds: [new EmbedBuilder()
-          .setTitle(`🗺️ เลือกจังหวัด · ${interaction.guild.name}`)
-          .setDescription('เลือกภาคจาก dropdown · กดจังหวัดเพื่อเพิ่ม/ถอด role')
-          .setColor(0x5865F2)],
-        components: [buildRegionDropdown()],
-      });
+      const title       = interaction.options.getString('title') ?? `🗺️ เลือกจังหวัด · ${interaction.guild.name}`;
+      const description = (interaction.options.getString('description') ?? 'กดปุ่มด้านล่างเพื่อเลือกจังหวัดของคุณ\nสามารถเปลี่ยนได้ตลอดเวลา').replace(/\\n/g, '\n');
+      const color       = interaction.options.getString('color')
+        ? parseInt(interaction.options.getString('color').replace('#', ''), 16)
+        : 0x3498db;
+
+      const embed = new EmbedBuilder().setTitle(title).setDescription(description).setColor(color);
+      const row   = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId('btn_open_province')
+          .setLabel('🗺️ เลือกจังหวัด')
+          .setStyle(ButtonStyle.Primary)
+      );
+
+      await interaction.reply({ embeds: [embed], components: [row], flags: replyFlag });
+      return interaction.followUp({ content: '✅ วาง panel เลือกจังหวัดเรียบร้อยครับ', flags: MessageFlags.Ephemeral });
     }
 
     // ================================================================

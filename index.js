@@ -10,6 +10,7 @@ const { getSetting } = require('./db/settings');
 const { refreshSticky } = require('./handlers/stickyHandler');
 const { handleReportStart, handleReportCategory, handleReportSubmit } = require('./handlers/reportHandler');
 const { handleOpenInterest } = require('./handlers/openInterest');
+const { handleOpenProvince } = require('./handlers/openProvince');
 const {
   handleOrgchartGroupSelect,
   handleOrgchartProvinceSelect,
@@ -108,6 +109,7 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.customId.startsWith('interest:') || interaction.customId.startsWith('skill:')) return handleInterestSelect(interaction);
     if (interaction.customId.startsWith('report_start:')) return handleReportStart(interaction);
     if (interaction.customId === 'btn_open_interest') return handleOpenInterest(interaction);
+    if (interaction.customId === 'btn_open_province') return handleOpenProvince(interaction);
     return;
   }
 });

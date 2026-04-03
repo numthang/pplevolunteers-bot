@@ -86,7 +86,7 @@ module.exports = {
     if (sub === 'top') {
       const topN = interaction.options.getInteger('top') ?? 10;
       const days = 60;
-      const view = 'overview';
+      const view = 'msg_mem';
 
       await interaction.deferReply({ flags: isPublic ? undefined : MessageFlags.Ephemeral });
       await guild.members.fetch().catch(() => {});

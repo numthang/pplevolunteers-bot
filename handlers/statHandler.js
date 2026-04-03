@@ -6,7 +6,6 @@ const SCORE_MSG     = 10;
 const SCORE_MENTION = 20;
 
 const VIEW_OPTIONS = [
-  { label: 'Overview',             value: 'overview',  emoji: '📊' },
   { label: 'Top Message Members',  value: 'msg_mem',   emoji: '💬' },
   { label: 'Top Voice Members',    value: 'voice_mem', emoji: '🔊' },
   { label: 'Top Message Channels', value: 'msg_ch',    emoji: '#️⃣' },
