@@ -138,6 +138,15 @@ module.exports = {
       const roleName = interaction.options.getString('role');
       const topN     = interaction.options.getInteger('top') ?? 5;
 
+      await interaction.guild.members.fetch().catch(() => {});
+      const guildRole = interaction.guild.roles.cache.find(r => r.name === roleName);
+      const memberIds = guildRole ? [...guildRole.members.keys()] : [];
+
+      if (!memberIds.length) {
+        return interaction.editReply({ content: `📭 ยังไม่มีสมาชิกใน **${roleName}** ที่มี rating ครับ` });
+      }
+
+      const placeholders = memberIds.map(() => '?').join(',');
       const [rows] = await pool.execute(
         `SELECT
           m.discord_id,
@@ -146,12 +155,12 @@ module.exports = {
           COUNT(r.id)            AS total
         FROM dc_members m
         JOIN dc_user_ratings r ON r.guild_id = m.guild_id AND r.target_id = m.discord_id
-        WHERE m.guild_id = ? AND FIND_IN_SET(?, m.roles) > 0
+        WHERE m.guild_id = ? AND m.discord_id IN (${placeholders})
         GROUP BY m.discord_id, m.nickname, m.username
         HAVING total >= 1
         ORDER BY avg_stars DESC, total DESC
         LIMIT ${topN}`,
-        [interaction.guildId, roleName]
+        [interaction.guildId, ...memberIds]
       );
 
       if (!rows.length) {
