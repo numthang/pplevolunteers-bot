@@ -2,3 +2,5 @@
 node_modules/
 backups/
 tmp/
+meilisearch
+data.ms/
