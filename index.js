@@ -19,6 +19,11 @@ const {
 } = require('./handlers/orgchartPanelHandler');
 const { handleStatTopSelect, handleStatUserSelect } = require('./handlers/statHandler');
 const { onMessage, onVoiceStateUpdate } = require('./utils/activityTracker');
+const { handleRefresh } = require('./handlers/forumDashboard');
+const { handleOpenSearch, handleSearchModal, handleResultPage } = require('./handlers/forumSearch');
+const { indexThread, indexMessage } = require('./services/forumIndexer');
+const { getAllForumConfigs } = require('./db/forum');
+const { initMeilisearch } = require('./services/meilisearch');
 
 const fs = require('fs');
 const path = require('path');
@@ -45,8 +50,9 @@ for (const file of commandFiles) {
   }
 }
 
-client.once('clientReady', () => {
+client.once('clientReady', async () => {
   console.log(`🤖 Bot พร้อมแล้ว! ${client.user.tag}`);
+  await initMeilisearch();
 });
 
 client.on('interactionCreate', async (interaction) => {
@@ -72,6 +78,7 @@ client.on('interactionCreate', async (interaction) => {
 
   // --- Modal Submit ---
   if (interaction.isModalSubmit()) {
+    if (interaction.customId === 'forum_search_modal')     return handleSearchModal(interaction);
     if (interaction.customId.startsWith('rate_submit:'))   return handleRateModalSubmit(interaction);
     if (interaction.customId.startsWith('report_submit:')) return handleReportSubmit(interaction);
     if (interaction.customId.startsWith('anon_submit:')) {
@@ -108,8 +115,11 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.customId.startsWith('ratings_page:'))    return handlePageButton(interaction);
     if (interaction.customId.startsWith('interest:') || interaction.customId.startsWith('skill:')) return handleInterestSelect(interaction);
     if (interaction.customId.startsWith('report_start:')) return handleReportStart(interaction);
-    if (interaction.customId === 'btn_open_interest') return handleOpenInterest(interaction);
-    if (interaction.customId === 'btn_open_province') return handleOpenProvince(interaction);
+    if (interaction.customId === 'btn_open_interest')         return handleOpenInterest(interaction);
+    if (interaction.customId === 'btn_open_province')         return handleOpenProvince(interaction);
+    if (interaction.customId === 'forum_search')              return handleOpenSearch(interaction);
+    if (interaction.customId.startsWith('forum_refresh_'))    return handleRefresh(interaction);
+    if (interaction.customId.startsWith('forum_result_'))     return handleResultPage(interaction);
     return;
   }
 });
@@ -118,12 +128,47 @@ client.on('interactionCreate', async (interaction) => {
 client.refreshSticky = refreshSticky;
 client.on('voiceStateUpdate', onVoiceStateUpdate);
 
+// ─── Forum indexing ──────────────────────────────────────────────────────────
+// cache ของ forum channel IDs ที่ setup ไว้ (reload เมื่อ bot start)
+const forumChannelCache = new Map(); // guildId → Set<channelId>
+
+client.once('clientReady', async () => {
+  // โหลด forum configs ทุก guild ที่ bot อยู่
+  for (const guild of client.guilds.cache.values()) {
+    const configs = await getAllForumConfigs(guild.id).catch(() => []);
+    if (configs.length) {
+      forumChannelCache.set(guild.id, new Set(configs.map(c => c.channel_id)));
+    }
+  }
+});
+
+client.on('threadCreate', async (thread) => {
+  if (!thread.parentId) return;
+  const forumIds = forumChannelCache.get(thread.guildId);
+  if (!forumIds?.has(thread.parentId)) return;
+  await indexThread(thread, thread.guildId, thread.parentId).catch(err =>
+    console.error('[forumIndex] threadCreate:', err)
+  );
+  // อัปเดต cache ถ้ามี config ใหม่
+  forumChannelCache.set(thread.guildId, new Set([...(forumIds ?? []), thread.parentId]));
+});
+
 // Cooldown map per channel
 const cooldowns = new Map();
 
 client.on('messageCreate', async (message) => {
   // track activity (ไม่ block bot message เพราะ onMessage เช็คเองอยู่แล้ว)
   onMessage(message).catch(err => console.error('[onMessage]', err));
+
+  // forum indexing — index message เข้า Meilisearch ถ้าอยู่ใน forum thread ที่ setup ไว้
+  if (message.channel.isThread() && message.channel.parentId && !message.author.bot) {
+    const forumIds = forumChannelCache.get(message.guildId);
+    if (forumIds?.has(message.channel.parentId)) {
+      indexMessage(message, message.channel.id).catch(err =>
+        console.error('[forumIndex] messageCreate:', err)
+      );
+    }
+  }
 
   if (!message.guild || (message.author.bot && message.channel.id !== client.logChannel?.id)) return;
 

@@ -45,6 +45,18 @@ module.exports = {
         .addBooleanOption(o => o.setName('public').setDescription('แสดงผลให้ทุกคนเห็น (default: false)').setRequired(false))
     )
 
+    // --- forum ---
+    .addSubcommand(sub =>
+      sub.setName('forum')
+        .setDescription('ตั้งค่า forum channel + สร้าง dashboard (Moderator)')
+        .addChannelOption(opt =>
+          opt.setName('channel').setDescription('forum channel ที่ต้องการ setup').setRequired(true)
+        )
+        .addIntegerOption(opt =>
+          opt.setName('items_per_page').setDescription('จำนวนผลต่อหน้าในการค้นหา (default: 10)').setRequired(false).setMinValue(5).setMaxValue(25)
+        )
+    )
+
     // --- register ---
     .addSubcommand(sub =>
       sub.setName('register')
@@ -118,6 +130,30 @@ module.exports = {
 
       await interaction.channel.send({ embeds: [embed], components });
       return interaction.editReply({ content: '✅ วาง orgchart panel แล้วครับ' });
+    }
+
+    // ================================================================
+    if (sub === 'forum') {
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+      const channel      = interaction.options.getChannel('channel');
+      const itemsPerPage = interaction.options.getInteger('items_per_page') ?? 10;
+
+      const { upsertForumConfig, setDashboardMsgId } = require('../db/forum');
+      const { buildDashboardEmbed } = require('../handlers/forumDashboard');
+
+      await upsertForumConfig(interaction.guildId, channel.id, { itemsPerPage });
+
+      const config = { items_per_page: itemsPerPage, dashboard_msg_id: null };
+      const { embed, components } = await buildDashboardEmbed(interaction.guild, channel.id, config);
+
+      const msg = await channel.send({ embeds: [embed], components });
+      await msg.pin().catch(() => {});
+      await setDashboardMsgId(interaction.guildId, channel.id, msg.id);
+
+      return interaction.editReply({
+        content: `✅ setup forum channel <#${channel.id}> แล้วครับ\nDashboard ถูกสร้างและปักหมุดไว้แล้ว`,
+      });
     }
 
     // ================================================================
