@@ -53,6 +53,13 @@ for (const file of commandFiles) {
 client.once('clientReady', async () => {
   console.log(`🤖 Bot พร้อมแล้ว! ${client.user.tag}`);
   await initMeilisearch();
+  // โหลด forum configs ทุก guild ที่ bot อยู่
+  for (const guild of client.guilds.cache.values()) {
+    const configs = await getAllForumConfigs(guild.id).catch(() => []);
+    if (configs.length) {
+      forumChannelCache.set(guild.id, new Set(configs.map(c => c.channel_id)));
+    }
+  }
 });
 
 client.on('interactionCreate', async (interaction) => {
@@ -131,16 +138,6 @@ client.on('voiceStateUpdate', onVoiceStateUpdate);
 // ─── Forum indexing ──────────────────────────────────────────────────────────
 // cache ของ forum channel IDs ที่ setup ไว้ (reload เมื่อ bot start)
 const forumChannelCache = new Map(); // guildId → Set<channelId>
-
-client.once('clientReady', async () => {
-  // โหลด forum configs ทุก guild ที่ bot อยู่
-  for (const guild of client.guilds.cache.values()) {
-    const configs = await getAllForumConfigs(guild.id).catch(() => []);
-    if (configs.length) {
-      forumChannelCache.set(guild.id, new Set(configs.map(c => c.channel_id)));
-    }
-  }
-});
 
 client.on('threadCreate', async (thread) => {
   if (!thread.parentId) return;

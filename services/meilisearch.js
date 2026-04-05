@@ -1,4 +1,4 @@
-const { MeiliSearch } = require('meilisearch');
+const { Meilisearch } = require('meilisearch');
 
 const INDEX_NAME = 'forum_posts';
 
@@ -7,7 +7,7 @@ let ready   = false;
 
 function getClient() {
   if (!client) {
-    client = new MeiliSearch({
+    client = new Meilisearch({
       host:   process.env.MEILISEARCH_HOST ?? 'http://localhost:7700',
       apiKey: process.env.MEILISEARCH_KEY  ?? '',
     });
