@@ -15,9 +15,10 @@ function buildSearchResultEmbed(slice, { keyword, page, totalPages, channelId, s
 
   const lines = slice.length
     ? slice.map((p, i) => {
-        const num  = (page - 1) * ITEMS_PER_PAGE + i + 1;
-        const name = p.post_name ?? '(ไม่ทราบชื่อ)';
-        return p.post_url ? `\`${num}\` [${name}](${p.post_url})` : `\`${num}\` ${name}`;
+        const num     = (page - 1) * ITEMS_PER_PAGE + i + 1;
+        const name    = p.post_name ?? '(ไม่ทราบชื่อ)';
+        const chanTag = p.channel_id ? ` <#${p.channel_id}>` : '';
+        return p.post_url ? `\`${num}\` [${name}](${p.post_url})${chanTag}` : `\`${num}\` ${name}${chanTag}`;
       }).join('\n')
     : '_ไม่พบโพสต์ที่ตรงกับคำค้นหา_';
 

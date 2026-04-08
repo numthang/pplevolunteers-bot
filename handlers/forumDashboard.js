@@ -9,7 +9,7 @@ async function buildDashboardEmbed(guild, channelId, config) {
   const perPage   = config.items_per_page ?? 10;
 
   const [posts, stats] = await Promise.all([
-    getLatestPosts(guildId, channelId, 5),
+    getLatestPosts(guildId, channelId, perPage),
     getForumStats(guildId, channelId),
   ]);
 
