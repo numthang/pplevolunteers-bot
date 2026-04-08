@@ -18,7 +18,66 @@ utils/          activity tracker, org chart generator
 scripts/        one-off scripts (import, sync, backfill)
 backups/        SQL backups
 logs/           log files
+services/       external services (meilisearch.js, forumIndexer.js)
 ```
+
+## Production VPS — Conventions สำคัญ
+- **Project path:** `/www/wwwroot/pple-dcbot/` (hyphen ไม่ใช่ underscore)
+- **Git branch:** `master` (ไม่ใช่ `main`)
+- **ทุก command ต้องรัน `sudo -u www` เสมอ** เพราะ `.env` และ project files เป็น owner `www`
+  ```bash
+  sudo -u www node scripts/backfill-forum.js --guild GUILD_ID
+  sudo -u www node deploy-commands.js
+  ```
+- **PM2:** รัน bot ด้วย `pm2` ภายใต้ user `www`
+  ```bash
+  pm2 show pple-dcbot          # ดูรายละเอียด
+  pm2 logs pple-dcbot --lines 20  # ดู log
+  ```
+
+## Production VPS — nohup cheatsheet
+รัน script แบบ background ไม่ตายตาม SSH:
+```bash
+sudo -u www bash -c 'nohup node scripts/xxx.js > /www/wwwroot/pple-dcbot/logs/xxx.log 2>&1 &'
+```
+- **ต้องใช้ `bash -c '...'`** เพื่อให้ redirect `>` รันด้วย `www` ไม่ใช่ user ที่ login อยู่
+- ดู log real-time: `tail -f /www/wwwroot/pple-dcbot/logs/xxx.log`
+- ดู process: `ps aux | grep node`
+
+## Production VPS — deploy.sh
+```bash
+./deploy.sh                          # deploy local
+./deploy.sh 'commit message'         # git push + deploy local
+./deploy.sh --production             # deploy production
+```
+- production block ใช้ `git fetch origin && git reset --hard origin/master` แทน `git pull`
+  (ป้องกัน divergent branch หลัง force push)
+
+## Production VPS — Meilisearch
+- Binary: `/usr/local/bin/meilisearch`
+- DB path: `/www/wwwroot/pple-dcbot/data.ms/` (อยู่ใน project, อยู่ใน `.gitignore`)
+- รันเป็น systemd service:
+  ```ini
+  [Unit]
+  Description=Meilisearch
+  After=network.target
+
+  [Service]
+  ExecStart=/usr/local/bin/meilisearch --master-key=YOUR_KEY --db-path /www/wwwroot/pple-dcbot/data.ms
+  Restart=always
+  User=www
+
+  [Install]
+  WantedBy=multi-user.target
+  ```
+  ```bash
+  sudo systemctl enable --now meilisearch
+  ```
+- env ใช้ชื่อ `MEILISEARCH_HOST` และ `MEILISEARCH_KEY` (ไม่ใช่ `MEILI_MASTER_KEY`)
+- bot ต้อง **fallback ไปใช้ MySQL LIKE อัตโนมัติ** ถ้า Meilisearch ไม่ได้รัน ไม่ crash
+- `initMeilisearch()` ต้อง ping health check ก่อน ถ้าไม่ตอบให้ throw error ทันที
+- ดูข้อมูลผ่าน Web UI: `http://localhost:7700`
+- data.ms บน production และ local **แยกกัน** ต้องรัน backfill แยกกัน
 
 ## Database Conventions
 - Database: `pple_volunteers`
@@ -128,7 +187,7 @@ score = messages × 10 + voiceSeconds + mentions × 30
 | `stickyHandler.js` | sticky message logic |
 | `orgchartProvinceSelect.js` | customId: `orgchart_province_region` — เลือกภาคสำหรับ province flow |
 | `orgchartRoleSelect.js` | customId: `orgchart_role` — เลือก role แล้วแสดงผล |
-| `forumDashboard.js` | customId: `forum_refresh_*`, `forum_list_*` — dashboard buttons |
+| `forumDashboard.js` | customId: `forum_refresh_*` — dashboard buttons |
 | `forumSearch.js` | customId: `forum_search`, `forum_result_*` — modal submit + pagination |
 
 ## UX Pattern — Role Selection
@@ -200,8 +259,6 @@ user เลือกภาค
   → deferUpdate
   → ดึง roles ทั้งหมดที่ group = 'province' จาก getRolesByGroup
   → filter เฉพาะ role ที่ roleName match จังหวัดในภาคนั้น
-    (เช่น ภาคเหนือ → PROVINCE_REGIONS.find(r => r.id === value).provinces
-     แล้ว filter role ที่ชื่อขึ้นต้นว่า "ทีม" + จังหวัด)
   → editReply ด้วย StringSelectMenu รายชื่อจังหวัด
     customId: orgchart_role
 ```
@@ -267,14 +324,13 @@ Forum search มี 2 entry point เสมอ (command-first principle):
 ```
 - `search` keyword ว่าง = ดูทั้งหมด (sort by newest)
 - `search` sort options: `relevant` (default ถ้ามี keyword) / `newest` (default ถ้าไม่มี keyword) / `oldest`
-- `search` ไม่ระบุ channel → ค้นทุก forum channel ใน server
+- `search` ไม่ระบุ channel → ค้นทุก forum channel ใน server (filter แค่ guild_id)
 - ตัด `list` ออก — ใช้ search keyword ว่างแทน
 
 ### Dashboard message (ปักหมุดใน forum channel)
 embed แสดง:
 - **Title:** `PPLE Forum — {ชื่อ channel}`
-- **Description:** `ค้นหาและเรียกดูโพสต์ในช่องนี้ได้เลย กดปุ่มด้านล่าง`
-- **โพสต์ล่าสุด** (inline field): bullet list สูงสุด 5 อัน แต่ละอันมี hyperlink ชื่อโพสต์ + tag ชื่อ channel
+- **โพสต์ล่าสุด** (inline field): bullet list สูงสุด 5 อัน แต่ละอันมี hyperlink + tag ชื่อ channel
 - **ภาพรวม** (3 inline fields): จำนวนโพสต์ทั้งหมด / เดือนนี้ / วันนี้
 - **Footer:** `อัปเดตล่าสุด: {วันที่ เวลา}`
 
@@ -284,24 +340,18 @@ buttons:
 | `forum_search` | เปิด modal ค้นหา (ทุกคน) | `/forum search` |
 | `forum_refresh_{channelId}` | รีเฟรช dashboard (ทุกคน) | `/forum refresh` |
 
-### Modal — ค้นหาโพสต์ (เปิดจากปุ่ม forum_search)
-- **Title:** `ค้นหาโพสต์`
-- **Field 1:** `คำค้นหา` (required) — placeholder: `เช่น น้ำท่วม, ไฟฟ้า...`
-- **Field 2:** `ช่อง (ไม่บังคับ)` (optional) — placeholder: `ทิ้งว่างไว้ = ค้นทุกช่อง` / hint: `พิมพ์ชื่อช่อง เช่น ร้องเรียน, ประกาศ`
-  - input เป็น text ธรรมดา (modal ไม่รองรับ channel selector) → match กับชื่อ channel แบบ partial
+### Modal — ค้นหาโพสต์
+- **Field 1:** `คำค้นหา` (required)
+- **Field 2:** `ช่อง (ไม่บังคับ)` — match กับชื่อ channel แบบ partial
 
-### Search flow
+### Search flow (Hybrid)
 ```
-1. กดปุ่ม "ค้นหา" หรือรัน /forum search
-2. (ถ้ากดปุ่ม) เปิด modal — กรอก keyword + channel (optional)
-3. Hybrid search (Promise.all):
-   - MySQL LIKE %keyword% บน post_name
-   - Meilisearch ค้น content ทุก message ใน thread
-   → merge + dedupe by post_id
-   → post ที่ match ทั้งสองแหล่งขึ้นก่อน, ที่เหลือเรียง newest
-   Fallback (Meilisearch ไม่พร้อม): ใช้แค่ MySQL LIKE
-4. ตอบกลับ ephemeral embed + pagination buttons
-5. กด next/prev → edit embed เดิม (ไม่ส่งใหม่)
+Promise.all():
+  - MySQL LIKE %keyword% บน post_name  ← ค้นชื่อโพสต์ (substring แม่น)
+  - Meilisearch ค้น content            ← ค้นเนื้อหา (เร็ว + typo tolerance)
+→ merge + dedupe by post_id
+→ post ที่ match ทั้งสองขึ้นก่อน, ที่เหลือเรียง newest
+Fallback (Meilisearch ไม่พร้อม): ใช้แค่ MySQL LIKE
 ```
 
 pagination button customId: `forum_result_{keyword}_{channelId}_{sort}_{page}`
@@ -314,20 +364,20 @@ document: { id, post_name, content, post_url, channel_id, guild_id, created_at }
 ```
 
 ### Events (real-time index)
-- `threadCreate` — ถ้า parent เป็น forum channel ที่มี config → insert `dc_forum_posts` + upsert Meilisearch (ชื่อ + OP message)
-- `messageCreate` — ถ้า channel เป็น thread ของ forum channel ที่ config ไว้ → append content เข้า Meilisearch doc (upsert)
+- `threadCreate` — ถ้า parent เป็น forum channel ที่มี config → insert `dc_forum_posts` + upsert Meilisearch
+- `messageCreate` — ถ้า channel เป็น thread ของ forum channel ที่ config ไว้ → append content เข้า Meilisearch doc
 
 ### Backfill script
 ```bash
-# backfill ทั้ง server (วน loop ทุก forum channel ที่มี config)
-node scripts/backfill-forum.js --guild GUILD_ID
+# ต้องรัน Meilisearch ก่อน แล้วค่อยรัน backfill
+sudo -u www bash -c 'nohup node scripts/backfill-forum.js --guild GUILD_ID > /www/wwwroot/pple-dcbot/logs/backfill-forum.log 2>&1 &'
+tail -f /www/wwwroot/pple-dcbot/logs/backfill-forum.log
 
 # หรือเลือก channel เดียว
-node scripts/backfill-forum.js --channel CHANNEL_ID
+sudo -u www node scripts/backfill-forum.js --channel CHANNEL_ID
 ```
-- รันครั้งเดียวตอน setup — ไม่มี slash command สำหรับ backfill
-- log progress เป็น channel/post
-- ทำ batch fetch รอบ Discord API rate limit
+- รันครั้งเดียวตอน setup บน production แยกต่างหาก (data.ms คนละชุดกับ local)
+- script เขียน log ไปที่ `logs/backfill-forum-{timestamp}.log` อัตโนมัติ
 
 ### Files ที่ต้องสร้าง/แก้
 | File | Action | Description |
@@ -337,9 +387,9 @@ node scripts/backfill-forum.js --channel CHANNEL_ID
 | `handlers/forumDashboard.js` | สร้างใหม่ | button: refresh |
 | `handlers/forumSearch.js` | สร้างใหม่ | modal submit + pagination |
 | `db/forum.js` | สร้างใหม่ | queries สำหรับ dc_forum_posts, dc_forum_config |
-| `services/meilisearch.js` | สร้างใหม่ | init client, upsert, search |
+| `services/meilisearch.js` | สร้างใหม่ | init client, upsert, search + health check |
 | `services/forumIndexer.js` | สร้างใหม่ | logic ดึง messages แล้ว push เข้า Meilisearch |
-| `scripts/backfill-forum.js` | สร้างใหม่ | one-off backfill script |
+| `scripts/backfill-forum.js` | สร้างใหม่ | one-off backfill script พร้อม logger |
 
 ### customId สรุป
 | customId | Handler | ความหมาย |
@@ -375,15 +425,14 @@ node scripts/backfill-forum.js --channel CHANNEL_ID
 - [x] Backfill script (`scripts/backfill-activity.js`) — รองรับ date range
 - [x] Stat commands (`/stat-server`, `/stat-top`, `/stat-channel`, `/stat-user`)
 - [x] Sticky message system
-- [ ] ติดตั้ง Meilisearch บน server (`curl -L https://install.meilisearch.com | sh`) + start service
-- [ ] รัน `scripts/migration-forum.sql` สร้าง table
-- [ ] deploy commands (`node deploy-commands.js`)
-- [ ] รัน `scripts/backfill-forum.js` หลัง setup forum channel แล้ว
+- [x] ติดตั้ง Meilisearch บน server + รัน backfill-forum สำเร็จแล้ว
+- [ ] ตั้ง Meilisearch เป็น systemd service (auto-start)
+- [ ] รัน `scripts/migration-forum.sql` สร้าง table (ถ้ายังไม่ได้รัน)
 - [x] `commands/panel.js` — เพิ่ม subcommand `forum`
 - [x] `commands/forum.js` (subcommands: search, refresh)
 - [x] `handlers/forumDashboard.js` + `handlers/forumSearch.js`
 - [x] `db/forum.js` + `services/meilisearch.js` + `services/forumIndexer.js`
-- [x] `scripts/backfill-forum.js`
+- [x] `scripts/backfill-forum.js` (พร้อม logger)
 - [x] เพิ่ม `threadCreate` + `messageCreate` + `clientReady` handlers ใน `index.js`
 
 ## Preferences

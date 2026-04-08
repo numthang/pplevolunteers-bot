@@ -28,18 +28,17 @@ function buildSearchResultEmbed(slice, { keyword, page, totalPages, channelId, s
     .setFooter({ text: `หน้า ${page} / ${totalPages}${channelId ? '' : ' • ค้นทุกช่อง'}` });
 }
 
-function buildSearchComponents({ keyword, channelId, sort, page, totalPages }) {
-  const ch   = channelId ?? 'all';
-  const kw   = encodeURIComponent(keyword.slice(0, 20));
+function buildSearchComponents({ channelId, sort, page, totalPages }) {
+  const ch = channelId ?? 'all';
   return [
     new ActionRowBuilder().addComponents(
       new ButtonBuilder()
-        .setCustomId(`forum_result_${kw}_${ch}_${sort}_${page - 1}`)
+        .setCustomId(`forum_result_${ch}_${sort}_${page - 1}`)
         .setLabel('◀ ก่อนหน้า')
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(page <= 1),
       new ButtonBuilder()
-        .setCustomId(`forum_result_${kw}_${ch}_${sort}_${page + 1}`)
+        .setCustomId(`forum_result_${ch}_${sort}_${page + 1}`)
         .setLabel('ถัดไป ▶')
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(page >= totalPages),
@@ -84,24 +83,25 @@ async function handleSearchModal(interaction) {
   const slice   = results.slice(0, ITEMS_PER_PAGE);
 
   const embed      = buildSearchResultEmbed(slice, { keyword, page, totalPages, channelId, sort });
-  const components = buildSearchComponents({ keyword, channelId, sort, page, totalPages });
+  const components = buildSearchComponents({ channelId, sort, page, totalPages });
 
   return interaction.editReply({ embeds: [embed], components });
 }
 
-// ─── Handle pagination (forum_result_{kw}_{ch}_{sort}_{page}) ───────────────
+// ─── Handle pagination (forum_result_{ch}_{sort}_{page}) ────────────────────
 
 async function handleResultPage(interaction) {
-  // customId: forum_result_{kw}_{ch}_{sort}_{page}
+  // customId: forum_result_{ch}_{sort}_{page}
   const parts     = interaction.customId.split('_');
-  // forum result {kw} {ch} {sort} {page}
-  // index: 0     1      2    3     4       5
   const page      = parseInt(parts.at(-1));
   const sort      = parts.at(-2);
   const ch        = parts.at(-3);
-  const kw        = parts.slice(2, -3).join('_');
-  const keyword   = decodeURIComponent(kw);
   const channelId = ch === 'all' ? null : ch;
+
+  // ดึง keyword จาก embed title เช่น `🔍 ผลค้นหา "น้ำท่วม"` หรือ `📋 โพสต์ทั้งหมด`
+  const embedTitle = interaction.message.embeds[0]?.title ?? '';
+  const kwMatch    = embedTitle.match(/ผลค้นหา "(.+)"/);
+  const keyword    = kwMatch ? kwMatch[1] : '';
 
   await interaction.deferUpdate();
 

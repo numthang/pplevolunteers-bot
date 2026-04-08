@@ -1,8 +1,8 @@
 // commands/forum.js
 const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 const { buildSearchResultEmbed, buildSearchComponents } = require('../handlers/forumSearch');
-const { buildDashboardEmbed, buildDashboardComponents } = require('../handlers/forumDashboard');
-const { getForumConfig, setDashboardMsgId } = require('../db/forum');
+const { buildDashboardEmbed } = require('../handlers/forumDashboard');
+const { getForumConfig } = require('../db/forum');
 const { hybridSearch } = require('../services/forumIndexer');
 
 const ITEMS_PER_PAGE = 10;
@@ -82,7 +82,7 @@ module.exports = {
       const slice      = results.slice(0, ITEMS_PER_PAGE);
 
       const embed      = buildSearchResultEmbed(slice, { keyword, page, totalPages, channelId, sort: sortOpt });
-      const components = buildSearchComponents({ keyword, channelId, sort: sortOpt, page, totalPages });
+      const components = buildSearchComponents({ channelId, sort: sortOpt, page, totalPages });
 
       return interaction.editReply({ embeds: [embed], components });
     }
