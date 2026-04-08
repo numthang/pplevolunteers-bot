@@ -52,6 +52,9 @@ module.exports = {
         .addChannelOption(opt =>
           opt.setName('channel').setDescription('forum channel ที่ต้องการ setup').setRequired(true)
         )
+        .addStringOption(opt =>
+          opt.setName('title').setDescription('หัวข้อ thread (default: 📋 ค้นหาโพสต์ ใน {ชื่อช่อง})').setRequired(false)
+        )
         .addIntegerOption(opt =>
           opt.setName('items_per_page').setDescription('จำนวนผลต่อหน้าในการค้นหา (default: 10)').setRequired(false).setMinValue(5).setMaxValue(25)
         )
@@ -136,24 +139,48 @@ module.exports = {
     if (sub === 'forum') {
       await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-      const channel      = interaction.options.getChannel('channel');
+      const channelOpt   = interaction.options.getChannel('channel');
       const itemsPerPage = interaction.options.getInteger('items_per_page') ?? 10;
+      const forumChannel = interaction.guild.channels.cache.get(channelOpt.id);
+      const threadTitle  = interaction.options.getString('title') ?? `📋 ค้นหาโพสต์ ใน ${forumChannel?.name ?? channelOpt.name}`;
 
-      const { upsertForumConfig, setDashboardMsgId } = require('../db/forum');
+      const { upsertForumConfig, setDashboardMsgId, getForumConfig } = require('../db/forum');
       const { buildDashboardEmbed } = require('../handlers/forumDashboard');
 
-      await upsertForumConfig(interaction.guildId, channel.id, { itemsPerPage });
+      await upsertForumConfig(interaction.guildId, channelOpt.id, { itemsPerPage });
 
+      const existingConfig = await getForumConfig(interaction.guildId, channelOpt.id);
       const config = { items_per_page: itemsPerPage, dashboard_msg_id: null };
-      const { embed, components } = await buildDashboardEmbed(interaction.guild, channel.id, config);
+      const { embed, components } = await buildDashboardEmbed(interaction.guild, channelOpt.id, config);
 
-      const msg = await channel.send({ embeds: [embed], components });
-      await msg.pin().catch(() => {});
-      await setDashboardMsgId(interaction.guildId, channel.id, msg.id);
+      // ถ้ามี thread เดิมอยู่แล้ว → edit starter message
+      if (existingConfig?.dashboard_msg_id) {
+        const existingThread = interaction.guild.channels.cache.get(existingConfig.dashboard_msg_id);
+        if (existingThread) {
+          const starterMsg = await existingThread.fetchStarterMessage().catch(() => null);
+          if (starterMsg) {
+            await starterMsg.edit({ embeds: [embed], components });
+            return interaction.editReply({ content: `✅ อัปเดต dashboard ใน <#${existingConfig.dashboard_msg_id}> แล้วครับ` });
+          }
+        }
+      }
 
-      return interaction.editReply({
-        content: `✅ setup forum channel <#${channel.id}> แล้วครับ\nDashboard ถูกสร้างและปักหมุดไว้แล้ว`,
+      // สร้าง thread ใหม่
+      const thread = await forumChannel.threads.create({
+        name:    threadTitle,
+        message: { embeds: [embed], components },
       });
+      // unpin thread เดิมก่อน (forum channel pin ได้แค่ 1 อัน)
+      const pinned = await forumChannel.threads.fetchActive();
+      for (const [, t] of pinned.threads) {
+        if (t.pinned && t.id !== thread.id) {
+          console.log('[panel forum] unpinning old thread:', t.name, t.id);
+          await t.unpin().catch(e => console.error('[panel forum] unpin error:', e.message));
+        }
+      }
+      await thread.pin().catch(e => console.error('[panel forum] pin error:', e.message));
+      await setDashboardMsgId(interaction.guildId, channelOpt.id, thread.id);
+      return interaction.editReply({ content: `✅ สร้าง dashboard thread ใน <#${channelOpt.id}> แล้วครับ` });
     }
 
     // ================================================================

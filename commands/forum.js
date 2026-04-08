@@ -100,19 +100,15 @@ module.exports = {
       const { embed, components } = await buildDashboardEmbed(interaction.guild, channel.id, config);
 
       if (config.dashboard_msg_id) {
-        try {
-          const msg = await channel.messages.fetch(config.dashboard_msg_id);
-          await msg.edit({ embeds: [embed], components });
+        const thread = interaction.guild.channels.cache.get(config.dashboard_msg_id);
+        const starterMsg = await thread?.fetchStarterMessage().catch(() => null);
+        if (starterMsg) {
+          await starterMsg.edit({ embeds: [embed], components });
           return interaction.editReply({ content: '✅ รีเฟรช dashboard แล้วครับ' });
-        } catch {
-          // message หายไป — ส่งใหม่
         }
       }
 
-      const newMsg = await channel.send({ embeds: [embed], components });
-      await newMsg.pin().catch(() => {});
-      await setDashboardMsgId(interaction.guildId, channel.id, newMsg.id);
-      return interaction.editReply({ content: '✅ สร้าง dashboard ใหม่และปักหมุดแล้วครับ' });
+      return interaction.editReply({ content: '❌ ไม่พบ dashboard thread ครับ ลองรัน `/panel forum` ใหม่' });
     }
   },
 };

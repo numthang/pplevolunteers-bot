@@ -22,7 +22,8 @@ const { onMessage, onVoiceStateUpdate } = require('./utils/activityTracker');
 const { handleRefresh } = require('./handlers/forumDashboard');
 const { handleOpenSearch, handleSearchModal, handleResultPage } = require('./handlers/forumSearch');
 const { indexThread, indexMessage } = require('./services/forumIndexer');
-const { getAllForumConfigs } = require('./db/forum');
+const { getAllForumConfigs, deleteForumPost } = require('./db/forum');
+const { deletePost } = require('./services/meilisearch');
 const { initMeilisearch } = require('./services/meilisearch');
 
 const fs = require('fs');
@@ -78,7 +79,11 @@ client.on('interactionCreate', async (interaction) => {
     } catch (err) {
       console.error(err);
       const msg = { content: '❌ เกิดข้อผิดพลาด', flags: MessageFlags.Ephemeral };
-      interaction.replied ? interaction.followUp(msg) : interaction.reply(msg);
+      if (interaction.replied || interaction.deferred) {
+        interaction.followUp(msg).catch(() => {});
+      } else {
+        interaction.reply(msg).catch(() => {});
+      }
     }
     return;
   }
@@ -138,6 +143,14 @@ client.on('voiceStateUpdate', onVoiceStateUpdate);
 // ─── Forum indexing ──────────────────────────────────────────────────────────
 // cache ของ forum channel IDs ที่ setup ไว้ (reload เมื่อ bot start)
 const forumChannelCache = new Map(); // guildId → Set<channelId>
+
+client.on('threadDelete', async (thread) => {
+  if (!thread.parentId) return;
+  const forumIds = forumChannelCache.get(thread.guildId);
+  if (!forumIds?.has(thread.parentId)) return;
+  await deleteForumPost(thread.id).catch(err => console.error('[forumIndex] threadDelete DB:', err));
+  await deletePost(thread.id).catch(err => console.error('[forumIndex] threadDelete meili:', err));
+});
 
 client.on('threadCreate', async (thread) => {
   if (!thread.parentId) return;

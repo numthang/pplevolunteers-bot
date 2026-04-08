@@ -4,7 +4,6 @@ const {
   ModalBuilder, TextInputBuilder, TextInputStyle,
 } = require('discord.js');
 const { hybridSearch } = require('../services/forumIndexer');
-const { getAllForumConfigs } = require('../db/forum');
 
 const ITEMS_PER_PAGE = 10;
 
@@ -31,7 +30,7 @@ function buildSearchResultEmbed(slice, { keyword, page, totalPages, channelId, s
 
 function buildSearchComponents({ keyword, channelId, sort, page, totalPages }) {
   const ch   = channelId ?? 'all';
-  const kw   = encodeURIComponent(keyword).slice(0, 50);
+  const kw   = encodeURIComponent(keyword.slice(0, 20));
   return [
     new ActionRowBuilder().addComponents(
       new ButtonBuilder()
@@ -63,17 +62,8 @@ async function handleOpenSearch(interaction) {
     .setRequired(true)
     .setMaxLength(100);
 
-  const channelInput = new TextInputBuilder()
-    .setCustomId('forum_channel_name')
-    .setLabel('ช่อง (ไม่บังคับ)')
-    .setStyle(TextInputStyle.Short)
-    .setPlaceholder('ทิ้งว่างไว้ = ค้นทุกช่อง')
-    .setRequired(false)
-    .setMaxLength(100);
-
   modal.addComponents(
     new ActionRowBuilder().addComponents(keywordInput),
-    new ActionRowBuilder().addComponents(channelInput),
   );
 
   await interaction.showModal(modal);
@@ -82,21 +72,10 @@ async function handleOpenSearch(interaction) {
 // ─── Handle modal submit (forum_search_modal) ────────────────────────────────
 
 async function handleSearchModal(interaction) {
-  const keyword   = interaction.fields.getTextInputValue('forum_keyword').trim();
-  const chanName  = interaction.fields.getTextInputValue('forum_channel_name').trim().toLowerCase();
-
+  const keyword = interaction.fields.getTextInputValue('forum_keyword').trim();
   await interaction.deferReply({ ephemeral: true });
 
-  // resolve channel_id จากชื่อที่พิมพ์ (partial match)
-  let channelId = null;
-  if (chanName) {
-    const configs  = await getAllForumConfigs(interaction.guildId);
-    const configIds = new Set(configs.map(c => c.channel_id));
-    const matched  = interaction.guild.channels.cache.find(
-      ch => configIds.has(ch.id) && ch.name.toLowerCase().includes(chanName)
-    );
-    channelId = matched?.id ?? null;
-  }
+  const channelId = null; // ค้นทุกช่อง — ถ้าอยากเจาะช่องให้ใช้ /forum search channel:
 
   const sort    = 'relevant';
   const results = await hybridSearch(keyword, { guildId: interaction.guildId, channelId });

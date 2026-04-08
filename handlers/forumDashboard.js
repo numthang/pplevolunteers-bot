@@ -59,10 +59,15 @@ async function handleRefresh(interaction) {
   await interaction.deferUpdate();
 
   const config = await getForumConfig(interaction.guildId, channelId);
-  if (!config) return;
+  if (!config?.dashboard_msg_id) return;
 
   const { embed, components } = await buildDashboardEmbed(interaction.guild, channelId, config);
-  await interaction.editReply({ embeds: [embed], components });
+
+  // dashboard_msg_id คือ thread ID — edit starter message
+  const thread = interaction.guild.channels.cache.get(config.dashboard_msg_id);
+  if (!thread) return;
+  const starterMsg = await thread.fetchStarterMessage().catch(() => null);
+  if (starterMsg) await starterMsg.edit({ embeds: [embed], components });
 }
 
 module.exports = { buildDashboardEmbed, handleRefresh };

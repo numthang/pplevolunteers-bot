@@ -94,4 +94,13 @@ async function searchPosts(keyword, { guildId, channelId } = {}) {
   }
 }
 
-module.exports = { initMeilisearch, isReady, upsertPost, appendContent, searchPosts };
+async function deletePost(postId) {
+  if (!ready) return;
+  try {
+    await getClient().index(INDEX_NAME).deleteDocument(postId);
+  } catch (e) {
+    console.warn('[meilisearch] deletePost error:', e.message);
+  }
+}
+
+module.exports = { initMeilisearch, isReady, upsertPost, appendContent, searchPosts, deletePost };

@@ -1,12 +1,8 @@
 TODO
 - เชื่อมระบบ Discord กับของพรรค
 
-Greeting ราชบุรี : 
-1. เข้า <#1124322819006791781> กดปุ่ม verify หลังจากนั้น ให้แก้ไขชื่อที่ทุกคนคุ้นเคย ใส่ Description สั้นๆ
-2. หากพบปัญหา <#1126535594684719285> เพื่อเจ้าหน้าที่เข้าตรวจสอบ
-3. หากต้องการเข้าร่วมทีมทำงาน อ่าน [โครงสร้าง Role (ยศ)](https://discord.com/channels/1111998833652678757/1296497029576396881/1296497229388976209) แล้วจำชื่อป้ายว่าต้องการอยู่ทีมไหนบ้าง หรือพิมพ์เครื่องหมาย @ จะขึ้นรายการ Role ทั้งหมด
-3. เข้าห้อง <#1112047965079617708> กรอกข้อมูลตามที่ <@628400349979344919> แนะนำ คนเก่าๆ สามารถแก้ไขข้อความของตัวเองได้ รอ <@&1112228528130367598> ติดยศที่ระบุ
-4. อ่าน <#1124322689499279490>
+Panel Forum: 
+/panel forum channel:#💬┆กระทู้-ทั่วไป
 
 Greeting:
 
@@ -50,39 +46,93 @@ Greeting:
 • อาสาประชาชน
 • กรรมการสรรหา
 • สส.พรรค
+== 
+สรุปขั้นตอนทั้งหมดครับ:
 
-• PC101-กรุงเทพ-10
-• PC101-ภาคเหนือ-4
-• PC101-กรุงเทพ-1
-• PC101-ภาคใต้-3
-• MP101-รุ่น 2
-• MP101-LINE
-• MP101-รุ่น 4
-• PC101-กรุงเทพ-2
-• PC101-ตะวันออก-2
-• PC101-กรุงเทพ-3-2
-• PC101-กรุงเทพ-3-1
-• PC101-ภาคกลาง-4
-• PC101-กรุงเทพ-8
-• MP101-รุ่น 1
-• PC101-ภาคเหนือ-5
-• PC101-กรุงเทพ-7
-• PC101-ภาคกลาง-2
-• PC101-ภาคเหนือ-1
-• PC101-ตะวันออก-1
-• PC101-ภาคเหนือ-2
-• PC101-ภาคใต้-1
-• PC101-กรุงเทพ-9
-• PC101-ภาคกลาง-1
-• PC101-กรุงเทพ-6
-• PC101-ภาคกลาง-5
-• PC101-ภาคเหนือ-3
-• PC101-ภาคเหนือ-6
-• PC101-กรุงเทพ-4
-• PC101-ภาคใต้-2
-• PC101-กรุงเทพ-11
-• PC101-ตะวันออก-3
-• PC101-ภาคกลาง-3
-• PC101-กรุงเทพ-5-1
-• PC101-ภาคเหนือ-7
-• PC101-กรุงเทพ-5-2
+1. ติดตั้ง Meilisearch
+
+
+curl -L https://install.meilisearch.com | sh
+sudo mv meilisearch /usr/local/bin/
+2. ตั้ง systemd service
+
+
+sudo nano /etc/systemd/system/meilisearch.service
+
+[Unit]
+Description=Meilisearch
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/meilisearch --master-key=YOUR_KEY --db-path /var/lib/meilisearch
+Restart=always
+User=root
+
+[Install]
+WantedBy=multi-user.target
+
+sudo systemctl enable --now meilisearch
+3. เพิ่มใน .env
+
+
+MEILISEARCH_HOST=http://localhost:7700
+MEILISEARCH_KEY=YOUR_KEY
+4. รัน SQL migration
+
+
+mysql -u pple_dcbot -p pple_volunteers < scripts/migration-forum.sql
+5. ติดตั้ง npm package
+
+
+npm install meilisearch
+6. Deploy commands
+
+
+node deploy-commands.js
+7. Restart bot
+
+
+pm2 restart bot  # หรือ process ที่ใช้อยู่
+8. Backfill
+
+
+node scripts/backfill-forum.js --guild GUILD_ID
+9. Setup dashboard (ทำใน Discord)
+
+/panel forum channel:#ช่องที่ต้องการ ทีละช่องที่อยากมี dashboard
+ข้อ 1-3 ทำแล้วในเครื่อง dev ใช่ไหมครับ? หรือ VPS production เป็นคนละเครื่องกัน?
+
+ตอนนี้ทำหมดแล้วบนเครื่อง dev เครื่องตัวเอง vps คือ production
+โอเคครับ งั้น deploy ขึ้น VPS:
+
+1. push code ขึ้น git
+
+
+git add .
+git commit -m "forum search system"
+git push
+2. บน VPS — pull + ติดตั้ง
+
+
+git pull
+npm install
+3. ติดตั้ง Meilisearch บน VPS
+
+
+curl -L https://install.meilisearch.com | sh
+sudo mv meilisearch /usr/local/bin/
+ตั้ง systemd + เพิ่ม .env เหมือนเดิม (key ใหม่สำหรับ production ได้เลย)
+
+4. รัน SQL บน VPS
+
+
+mysql -u pple_dcbot -p pple_volunteers < scripts/migration-forum.sql
+5. Deploy commands + restart bot
+
+
+node deploy-commands.js
+pm2 restart bot  # หรืออะไรที่ใช้รัน bot บน VPS
+6. Backfill
+
+
+node scripts/backfill-forum.js --guild GUILD_ID

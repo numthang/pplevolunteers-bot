@@ -6,14 +6,16 @@
 
 require('dotenv').config();
 
-const { Client, GatewayIntentBits } = require('discord.js');
-const { getAllForumConfigs, upsertForumPost } = require('../db/forum');
+const { Client, GatewayIntentBits, ChannelType } = require('discord.js');
+const { upsertForumConfig, upsertForumPost } = require('../db/forum');
 const { initMeilisearch, upsertPost, appendContent } = require('../services/meilisearch');
 const pool = require('../db/index');
 
 const args      = process.argv.slice(2);
-const guildArg  = args[args.indexOf('--guild')   + 1];
-const chanArg   = args[args.indexOf('--channel')  + 1] || null;
+const guildIdx  = args.indexOf('--guild');
+const chanIdx   = args.indexOf('--channel');
+const guildArg  = guildIdx  !== -1 ? args[guildIdx  + 1] : null;
+const chanArg   = chanIdx   !== -1 ? args[chanIdx   + 1] : null;
 
 if (!guildArg) {
   console.error('Usage: node scripts/backfill-forum.js --guild GUILD_ID [--channel CHANNEL_ID]');
@@ -38,14 +40,30 @@ async function backfillChannel(guild, channelId) {
     console.warn(`  ⚠️  channel ${channelId} ไม่พบใน guild`);
     return;
   }
+  if (channel.type !== ChannelType.GuildForum) {
+    console.warn(`  ⚠️  ${channel.name} ไม่ใช่ Forum channel (type: ${channel.type}) — ข้ามไป`);
+    return;
+  }
   console.log(`\n📂 ${channel.name} (${channelId})`);
 
+  // upsert config (ไม่สร้าง dashboard — แค่ให้ค้นหาได้)
+  await upsertForumConfig(guild.id, channelId, {});
+
   // ดึง threads ทั้งหมด (active + archived)
-  const [active, archived] = await Promise.all([
-    channel.threads.fetchActive(),
-    channel.threads.fetchArchived({ limit: 100 }),
-  ]);
-  const threads = [...active.threads.values(), ...archived.threads.values()];
+  const active = await channel.threads.fetchActive();
+  const allThreads = [...active.threads.values()];
+
+  // archived ดึงทีละ 100 วนจนหมด
+  let before = undefined;
+  while (true) {
+    const archived = await channel.threads.fetchArchived({ limit: 100, before });
+    allThreads.push(...archived.threads.values());
+    if (!archived.hasMore) break;
+    before = archived.threads.last()?.id;
+    await sleep(500);
+  }
+
+  const threads = allThreads;
   console.log(`   พบ ${threads.length} threads`);
 
   for (const thread of threads) {
@@ -110,14 +128,18 @@ client.once('ready', async () => {
   if (chanArg) {
     channelIds = [chanArg];
   } else {
-    const configs = await getAllForumConfigs(guildArg);
-    channelIds = configs.map(c => c.channel_id);
+    // auto-discover ทุก GuildForum channel ในกิลด์
+    channelIds = guild.channels.cache
+      .filter(ch => ch.type === ChannelType.GuildForum)
+      .map(ch => ch.id);
   }
 
   if (!channelIds.length) {
-    console.log('ไม่มี forum channel ที่ setup ไว้เลยครับ ใช้ /panel forum ก่อน');
+    console.log('ไม่พบ Forum channel ในกิลด์เลยครับ');
     process.exit(0);
   }
+
+  console.log(`พบ ${channelIds.length} forum channel(s)`);
 
   for (const channelId of channelIds) {
     await backfillChannel(guild, channelId);

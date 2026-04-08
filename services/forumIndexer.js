@@ -53,7 +53,7 @@ async function hybridSearch(keyword, { guildId, channelId } = {}) {
     }
   }
 
-  const results = [...allMap.values()].sort((a, b) => {
+  const results = [...allMap.values()].filter(p => p.post_name && p.post_url).sort((a, b) => {
     const aDouble = bothSet.has(a.post_id);
     const bDouble = bothSet.has(b.post_id);
     if (aDouble !== bDouble) return aDouble ? -1 : 1;

@@ -25,7 +25,7 @@ async function upsertForumConfig(guildId, channelId, { dashboardMsgId, itemsPerP
      ON DUPLICATE KEY UPDATE
        dashboard_msg_id = COALESCE(VALUES(dashboard_msg_id), dashboard_msg_id),
        items_per_page   = COALESCE(VALUES(items_per_page), items_per_page)`,
-    [guildId, channelId, dashboardMsgId ?? null, itemsPerPage ?? null]
+    [guildId, channelId, dashboardMsgId ?? null, itemsPerPage ?? 10]
   );
 }
 
@@ -65,16 +65,24 @@ async function searchPostsByName(guildId, keyword, channelId = null) {
   return rows;
 }
 
-// ดึง posts ล่าสุด (สำหรับ dashboard)
+async function deleteForumPost(postId) {
+  await pool.execute('DELETE FROM dc_forum_posts WHERE post_id = ?', [postId]);
+}
+
+// ดึง posts ล่าสุด (สำหรับ dashboard) — ไม่รวม dashboard thread เอง
 async function getLatestPosts(guildId, channelId, limit = 5) {
-  const [rows] = await pool.execute(
-    `SELECT post_id, post_name, post_url, created_at
-     FROM dc_forum_posts
-     WHERE guild_id = ? AND channel_id = ?
-     ORDER BY created_at DESC
-     LIMIT ${limit}`,
-    [guildId, channelId]
-  );
+  const config = await getForumConfig(guildId, channelId);
+  const excludeId = config?.dashboard_msg_id ?? null;
+  const params = [guildId, channelId];
+  let sql = `SELECT post_id, post_name, post_url, created_at
+             FROM dc_forum_posts
+             WHERE guild_id = ? AND channel_id = ?`;
+  if (excludeId) {
+    sql += ' AND post_id != ?';
+    params.push(excludeId);
+  }
+  sql += ` ORDER BY created_at DESC LIMIT ${limit}`;
+  const [rows] = await pool.execute(sql, params);
   return rows;
 }
 
@@ -102,6 +110,7 @@ module.exports = {
   upsertForumConfig,
   setDashboardMsgId,
   upsertForumPost,
+  deleteForumPost,
   searchPostsByName,
   getLatestPosts,
   getForumStats,
