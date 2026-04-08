@@ -31,7 +31,7 @@ if $IS_PRODUCTION; then
   echo "🚀 กำลัง deploy production... ${GUILD_ARG:+($GUILD_ARG)}"
   sudo -u www bash << EOF
 export PATH=/www/server/nodejs/v24.14.0/bin:\$PATH
-cd /www/wwwroot/pple_dcbot
+cd /www/wwwroot/pple-dcbot
 git checkout -- package.json package-lock.json
 git fetch origin
 git reset --hard origin/master
