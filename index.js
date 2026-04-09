@@ -20,6 +20,7 @@ const {
 const { handleStatTopSelect, handleStatUserSelect } = require('./handlers/statHandler');
 const { onMessage, onVoiceStateUpdate } = require('./utils/activityTracker');
 const { handleRefresh } = require('./handlers/forumDashboard');
+const { handleFinanceRefresh } = require('./handlers/financeDashboard');
 const { handleOpenSearch, handleSearchModal, handleResultPage } = require('./handlers/forumSearch');
 const { indexThread, indexMessage } = require('./services/forumIndexer');
 const { getAllForumConfigs, deleteForumPost } = require('./db/forum');
@@ -133,6 +134,7 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.customId === 'btn_open_province')         return handleOpenProvince(interaction);
     if (interaction.customId === 'forum_search')              return handleOpenSearch(interaction);
     if (interaction.customId.startsWith('forum_refresh_'))    return handleRefresh(interaction);
+    if (interaction.customId === 'fin_refresh_dashboard')      return handleFinanceRefresh(interaction);
     if (interaction.customId.startsWith('forum_result_'))     return handleResultPage(interaction);
     return;
   }

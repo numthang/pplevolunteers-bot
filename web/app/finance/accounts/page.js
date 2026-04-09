@@ -1,12 +1,29 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
+import { Pencil, Trash2, Archive, ArchiveRestore } from 'lucide-react'
+import BankBadge from '@/components/BankBadge'
 
 const BANKS = [
   'กสิกรไทย', 'ไทยพาณิชย์', 'กรุงเทพ', 'กรุงไทย', 'กรุงศรีอยุธยา',
   'ทหารไทยธนชาต', 'ออมสิน', 'ธ.ก.ส.',
 ]
 
-const EMPTY = { name: '', bank: '', account_no: '', visibility: 'private', notify_income: 1, notify_expense: 1, email_inbox: '' }
+const PROVINCES = [
+  'กรุงเทพชั้นใน','กรุงเทพธนบุรี','กรุงเทพตะวันออก','กรุงเทพเหนือ',
+  'นนทบุรี','สมุทรปราการ','สมุทรสาคร','ปทุมธานี','ราชบุรี','นครปฐม',
+  'กาญจนบุรี','เพชรบุรี','สุพรรณบุรี','สมุทรสงคราม','ประจวบคีรีขันธ์',
+  'อุทัยธานี','อ่างทอง','สระบุรี','อยุธยา','นครนายก','ลพบุรี','ชัยนาท','สิงห์บุรี',
+  'เชียงใหม่','เชียงราย','แม่ฮ่องสอน','ลำพูน','ลำปาง','แพร่','พะเยา','น่าน',
+  'กำแพงเพชร','ตาก','นครสวรรค์','พิจิตร','พิษณุโลก','เพชรบูรณ์','สุโขทัย','อุตรดิตถ์',
+  'ตราด','จันทบุรี','ระยอง','ชลบุรี','ฉะเชิงเทรา','ปราจีนบุรี','สระแก้ว',
+  'อุดรธานี','หนองคาย','บึงกาฬ','สกลนคร','มุกดาหาร','นครพนม','อำนาจเจริญ',
+  'เลย','ชัยภูมิ','ขอนแก่น','กาฬสินธุ์','ยโสธร','หนองบัวลำภู','มหาสารคาม',
+  'ร้อยเอ็ด','อุบลราชธานี','ศรีสะเกษ','สุรินทร์','บุรีรัมย์','นครราชสีมา',
+  'ชุมพร','พังงา','ระนอง','ภูเก็ต','สุราษฎร์ธานี','นครศรีธรรมราช',
+  'ตรัง','กระบี่','สงขลา','พัทลุง','สตูล','ปัตตานี','ยะลา','นราธิวาส',
+]
+
+const EMPTY = { name: '', bank: '', account_no: '', visibility: 'private', province: '', notify_income: 1, notify_expense: 1, email_inbox: '' }
 
 export default function AccountsPage() {
   const [accounts, setAccounts] = useState([])
@@ -14,8 +31,17 @@ export default function AccountsPage() {
   const [form, setForm] = useState(EMPTY)
 
   async function load() {
-    const res = await fetch('/api/finance/accounts')
+    const res = await fetch('/api/finance/accounts?all=1')
     if (res.ok) setAccounts(await res.json())
+  }
+
+  async function toggleArchive(a) {
+    await fetch(`/api/finance/accounts/${a.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ archived: !a.archived }),
+    })
+    load()
   }
 
   useEffect(() => { load() }, [])
@@ -51,14 +77,24 @@ export default function AccountsPage() {
 
       <div className="space-y-3">
         {accounts.map(a => (
-          <div key={a.id} className="bg-white dark:bg-gray-800 rounded-xl shadow px-5 py-4 flex items-center justify-between">
-            <div>
-              <p className="font-semibold text-gray-900 dark:text-gray-100">{a.name}</p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">{a.bank} · {a.account_no}</p>
+          <div key={a.id} className={`bg-white dark:bg-gray-800 rounded-xl shadow px-5 py-4 flex items-center justify-between gap-3 ${a.archived ? 'opacity-50' : ''}`}>
+            <BankBadge bank={a.bank} size={40} />
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                {a.name}
+                {!!a.archived && <span className="text-xs text-gray-400 font-normal">(ซ่อน)</span>}
+              </p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{[a.bank, a.account_no].filter(Boolean).join(' · ')}</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                {a.province || 'ส่วนกลาง'} · {a.visibility === 'private' ? '🔒 ส่วนตัว' : a.visibility === 'internal' ? '👥 ภายใน' : '🌐 สาธารณะ'}
+              </p>
             </div>
-            <div className="flex gap-2">
-              <button onClick={() => openEdit(a)} className="text-sm text-indigo-600 hover:underline">แก้ไข</button>
-              <button onClick={() => remove(a.id)} className="text-sm text-red-500 hover:underline">ลบ</button>
+            <div className="flex gap-1">
+              <button onClick={() => openEdit(a)} className="p-1.5 rounded text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/40"><Pencil size={16} /></button>
+              <button onClick={() => toggleArchive(a)} title={a.archived ? 'เลิกซ่อน' : 'ซ่อน'} className="p-1.5 rounded text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">
+                {a.archived ? <ArchiveRestore size={16} /> : <Archive size={16} />}
+              </button>
+              <button onClick={() => remove(a.id)} className="p-1.5 rounded text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/40"><Trash2 size={16} /></button>
             </div>
           </div>
         ))}
@@ -90,6 +126,13 @@ function AccountForm({ form, onChange }) {
         </select>
       </label>
       <Field label="เลขบัญชี" value={form.account_no} onChange={v => onChange({ account_no: v })} placeholder="ใส่ได้ทั้งมี - และไม่มี" />
+      <label className="block text-sm">
+        จังหวัด/ทีม <span className="text-gray-400 text-xs">(กำหนดสิทธิ์การเข้าถึง)</span>
+        <select className={selectCls} value={form.province || ''} onChange={e => onChange({ province: e.target.value })}>
+          <option value="">ส่วนกลาง (Admin เท่านั้น)</option>
+          {PROVINCES.map(p => <option key={p} value={p}>{p}</option>)}
+        </select>
+      </label>
       <label className="text-sm">
         การมองเห็น
         <select className={selectCls} value={form.visibility} onChange={e => onChange({ visibility: e.target.value })}>
@@ -128,13 +171,19 @@ function Field({ label, value, onChange, placeholder }) {
 }
 
 function Modal({ title, onClose, onSave, children }) {
+  useEffect(() => {
+    function onKey(e) { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onClose])
+
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md p-6">
-        <h2 className="text-lg font-bold mb-4">{title}</h2>
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
+        <h2 className="text-lg font-bold mb-4 text-gray-900 dark:text-gray-100">{title}</h2>
         {children}
         <div className="flex justify-end gap-2 mt-5">
-          <button onClick={onClose} className="px-4 py-1.5 rounded border text-sm">ยกเลิก</button>
+          <button onClick={onClose} className="px-4 py-1.5 rounded border dark:border-gray-600 text-sm text-gray-700 dark:text-gray-300">ยกเลิก</button>
           <button onClick={onSave} className="px-4 py-1.5 rounded bg-indigo-600 text-white text-sm hover:bg-indigo-700">บันทึก</button>
         </div>
       </div>

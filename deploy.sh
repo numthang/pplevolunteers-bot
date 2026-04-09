@@ -36,8 +36,18 @@ git checkout -- package.json package-lock.json
 git fetch origin
 git reset --hard origin/master
 #git pull
+
+# Bot
+npm install --omit=dev
 node deploy-commands.js $GUILD_ARG
 pm2 restart pple-dcbot
+
+# Web
+cd web
+npm install --omit=dev
+npm run build
+pm2 restart pple-web || pm2 start npm --name pple-web -- start
+
 echo "✅ Deploy production เสร็จแล้ว"
 EOF
 
@@ -52,5 +62,6 @@ else
 
   echo "🔄 กำลัง deploy local... ${GUILD_ARG:+($GUILD_ARG)}"
   node deploy-commands.js $GUILD_ARG
+  (cd web && npm run dev) &
   node index.js
 fi

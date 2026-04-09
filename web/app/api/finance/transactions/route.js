@@ -1,6 +1,8 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
 import { getTransactions, createTransaction } from '@/db/finance/transactions.js'
+import { incrementUsageCount as incrementAccount } from '@/db/finance/accounts.js'
+import { incrementUsageCount as incrementCategory } from '@/db/finance/categories.js'
 
 const GUILD_ID = process.env.GUILD_ID
 
@@ -27,5 +29,7 @@ export async function POST(req) {
 
   const data = await req.json()
   const id = await createTransaction(GUILD_ID, data, session.user.discordId)
+  if (data.account_id)  await incrementAccount(data.account_id)
+  if (data.category_id) await incrementCategory(data.category_id)
   return Response.json({ id }, { status: 201 })
 }

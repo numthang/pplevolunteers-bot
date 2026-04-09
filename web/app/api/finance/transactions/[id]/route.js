@@ -1,6 +1,7 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
 import { getTransactionById, updateTransaction, deleteTransaction } from '@/db/finance/transactions.js'
+import { incrementUsageCount as incrementCategory } from '@/db/finance/categories.js'
 
 export async function PUT(req, { params }) {
   const { id } = await params
@@ -12,6 +13,12 @@ export async function PUT(req, { params }) {
 
   const data = await req.json()
   await updateTransaction(id, data, session.user.discordId)
+
+  // increment category if changed
+  if (data.category_id && String(data.category_id) !== String(txn.category_id)) {
+    await incrementCategory(data.category_id)
+  }
+
   return Response.json({ ok: true })
 }
 

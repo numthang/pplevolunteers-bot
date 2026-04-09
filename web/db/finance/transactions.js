@@ -9,7 +9,7 @@ export async function getTransactions(guildId, { accountId, type, categoryId, li
   if (categoryId){ where += ' AND t.category_id = ?'; params.push(categoryId) }
 
   const [rows] = await pool.query(
-    `SELECT t.*, a.name AS account_name, c.name AS category_name
+    `SELECT t.*, a.name AS account_name, a.bank AS account_bank, c.name AS category_name, c.icon AS category_icon
      FROM finance_transactions t
      LEFT JOIN finance_accounts a ON a.id = t.account_id
      LEFT JOIN finance_categories c ON c.id = t.category_id

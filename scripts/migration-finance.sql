@@ -7,18 +7,7 @@ DROP TABLE IF EXISTS finance_transactions;
 DROP TABLE IF EXISTS finance_accounts;
 DROP TABLE IF EXISTS finance_categories;
 DROP TABLE IF EXISTS finance_config;
-DROP TABLE IF EXISTS finance_threads;
 SET FOREIGN_KEY_CHECKS = 1;
-
-CREATE TABLE IF NOT EXISTS finance_threads (
-  id         INT AUTO_INCREMENT PRIMARY KEY,
-  guild_id   VARCHAR(20)  NOT NULL,
-  thread_id  VARCHAR(20)  NOT NULL,
-  name       VARCHAR(100) NOT NULL,
-  created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  INDEX idx_guild (guild_id),
-  UNIQUE KEY uq_thread (thread_id)
-);
 
 CREATE TABLE IF NOT EXISTS finance_accounts (
   id              INT AUTO_INCREMENT PRIMARY KEY,
@@ -28,23 +17,24 @@ CREATE TABLE IF NOT EXISTS finance_accounts (
   bank            VARCHAR(50)  DEFAULT NULL,
   account_no      VARCHAR(50)  DEFAULT NULL,
   visibility      ENUM('private','internal','public') NOT NULL DEFAULT 'private',
+  province        VARCHAR(50)  DEFAULT NULL,
   notify_income   TINYINT      NOT NULL DEFAULT 1,
   notify_expense  TINYINT      NOT NULL DEFAULT 1,
   email_inbox     VARCHAR(100) DEFAULT NULL,
-  fin_thread_id   INT          DEFAULT NULL,  -- FK → finance_threads.id
   usage_count     INT          NOT NULL DEFAULT 0,
   updated_by      VARCHAR(20)  DEFAULT NULL,
   updated_at      DATETIME     DEFAULT NULL,
   created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_guild (guild_id),
-  INDEX idx_owner (owner_id),
-  FOREIGN KEY (fin_thread_id) REFERENCES finance_threads(id) ON DELETE SET NULL
+  INDEX idx_owner (owner_id)
 );
 
 CREATE TABLE IF NOT EXISTS finance_categories (
   id          INT AUTO_INCREMENT PRIMARY KEY,
   guild_id    VARCHAR(20)  DEFAULT NULL,
+  owner_id    VARCHAR(20)  DEFAULT NULL,
   name        VARCHAR(100) NOT NULL,
+  icon        VARCHAR(10)  DEFAULT NULL,
   is_global   TINYINT      NOT NULL DEFAULT 0,
   usage_count INT          NOT NULL DEFAULT 0,
   created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -57,7 +47,7 @@ CREATE TABLE IF NOT EXISTS finance_transactions (
   account_id     INT            NOT NULL,
   type           ENUM('income','expense') NOT NULL,
   amount         DECIMAL(12,2)  NOT NULL,
-  description    VARCHAR(255)   DEFAULT NULL,
+  description    TEXT           DEFAULT NULL,
   category_id    INT            DEFAULT NULL,
   counterpart_name    VARCHAR(100)   DEFAULT NULL,
   counterpart_account VARCHAR(50)    DEFAULT NULL,
@@ -94,6 +84,8 @@ CREATE TABLE IF NOT EXISTS finance_account_rules (
 CREATE TABLE IF NOT EXISTS finance_config (
   guild_id         VARCHAR(20) PRIMARY KEY,
   channel_id       VARCHAR(20) DEFAULT NULL,
+  thread_id        VARCHAR(20) DEFAULT NULL,
+  account_ids      TEXT        DEFAULT NULL,
   dashboard_msg_id VARCHAR(20) DEFAULT NULL,
   updated_at       DATETIME    DEFAULT NULL
 );

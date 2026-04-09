@@ -1,15 +1,18 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
-import { getAccountsForUser, createAccount } from '@/db/finance/accounts.js'
+import { getAccountsForUser, getAccountsAll, createAccount } from '@/db/finance/accounts.js'
 import { isAdmin } from '@/lib/roles.js'
 
 const GUILD_ID = process.env.GUILD_ID
 
-export async function GET() {
+export async function GET(req) {
   const session = await getServerSession(authOptions)
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const accounts = await getAccountsForUser(GUILD_ID, session.user.discordId)
+  const all = new URL(req.url).searchParams.get('all')
+  const accounts = all
+    ? await getAccountsAll(GUILD_ID, session.user.discordId, isAdmin(session.user.roles))
+    : await getAccountsForUser(GUILD_ID, session.user.discordId)
   return Response.json(accounts)
 }
 

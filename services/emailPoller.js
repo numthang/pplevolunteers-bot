@@ -25,6 +25,7 @@ function init(client) {
 
 async function poll() {
   if (!process.env.EMAIL_IMAP_HOST) return
+  console.log('[emailPoller] polling...')
 
   const client = new ImapFlow({
     host:   process.env.EMAIL_IMAP_HOST,
@@ -37,25 +38,41 @@ async function poll() {
     logger: false,
   })
 
+  client.on('error', (err) => {
+    console.error('[emailPoller] imap error:', err.message)
+  })
+
   try {
     await client.connect()
     const lock = await client.getMailboxLock('INBOX')
 
     try {
-      // ดึงเฉพาะ email ที่ยังไม่ได้อ่าน
-      for await (const msg of client.fetch('1:*', { envelope: true, bodyStructure: true }, { uid: false })) {
-        if (msg.flags.has('\\Seen')) continue
+      const uids = await client.search({ seen: false, from: 'kplus@kasikornbank.com' }, { uid: true })
+      console.log('[emailPoller] found uids:', uids.length)
 
-        const raw = await client.download(msg.seq)
-        const parsed = await simpleParser(raw.content)
-        const text = parsed.text || ''
+      if (uids.length) {
+        const seenUids = []
 
-        for (const parser of PARSERS) {
-          const txn = parser.parse(text)
-          if (!txn) continue
+        for await (const msg of client.fetch(uids, { flags: true, source: true }, { uid: true })) {
+          if (msg.flags?.has('\\Seen')) continue
 
-          await processTransaction(txn, msg.seq, client)
-          break
+          const parsed = await simpleParser(Buffer.from(msg.source))
+          const text = parsed.text || ''
+
+          for (const parser of PARSERS) {
+            const txn = parser.parse(text)
+            console.log('[emailPoller] parse result:', txn)
+            if (!txn) continue
+
+            await processTransaction(txn)
+            break
+          }
+          seenUids.push(msg.uid)
+        }
+
+        if (seenUids.length) {
+          console.log('[emailPoller] marking as seen:', seenUids.length, 'messages')
+          await client.messageFlagsAdd(seenUids, ['\\Seen'], { uid: true })
         }
       }
     } finally {
@@ -68,21 +85,16 @@ async function poll() {
   }
 }
 
-async function processTransaction(txn, msgSeq, imapClient) {
+async function processTransaction(txn) {
   try {
-    // หา finance_account ที่ตรงกับ transaction นี้
     const account = await matchAccount(txn)
     if (!account) {
       console.log('[emailPoller] no matching account for ref_id:', txn.ref_id)
       return
     }
 
-    // กำหนด type จากการ match
-    // ถ้า counterpart_account ตรงกับบัญชีเรา → income (คนอื่นโอนมาให้เรา)
-    // ถ้า from_acct_masked ตรงกับบัญชีเรา → expense (เราโอนออก)
     const type = account._matchType
 
-    // insert transaction (ถ้า ref_id ซ้ำจะ skip เพราะ UNIQUE constraint)
     const [result] = await pool.query(
       `INSERT IGNORE INTO finance_transactions
         (guild_id, account_id, type, amount, description, counterpart_name, counterpart_account, counterpart_bank, fee, balance_after, ref_id, txn_at, updated_by, updated_at)
@@ -104,18 +116,14 @@ async function processTransaction(txn, msgSeq, imapClient) {
     )
 
     if (result.affectedRows === 0) {
-      // ref_id ซ้ำ ข้ามไป
-      await imapClient.messageFlagsAdd(msgSeq, ['\\Seen'])
+      console.log('[emailPoller] duplicate ref_id, skipping:', txn.ref_id)
       return
     }
 
     console.log(`[emailPoller] inserted txn ref_id=${txn.ref_id} type=${type} amount=${txn.amount}`)
 
-    // mark email as read
-    await imapClient.messageFlagsAdd(msgSeq, ['\\Seen'])
-
-    // แจ้ง Discord
-    await notifyDiscord(account, type, txn)
+    const shouldNotify = type === 'income' ? account.notify_income : account.notify_expense
+    if (shouldNotify) await notifyDiscord(account, type, txn)
 
   } catch (err) {
     console.error('[emailPoller] processTransaction error:', err.message)
@@ -139,7 +147,7 @@ async function matchAccount(txn) {
     // expense: โอนจากบัญชีของเรา (masked: xxx-x-x8045-x → last digits)
     if (txn.from_acct_masked) {
       const lastDigits = txn.from_acct_masked.replace(/x|-/gi, '').trim()
-      if (lastDigits && accNo.endsWith(lastDigits)) {
+      if (lastDigits && accNo.includes(lastDigits)) {
         return { ...acc, _matchType: 'expense' }
       }
     }
@@ -153,13 +161,17 @@ async function notifyDiscord(account, type, txn) {
 
   try {
     const [cfg] = await pool.query(
-      `SELECT channel_id FROM finance_config WHERE guild_id = ?`,
+      `SELECT thread_id, account_ids FROM finance_config WHERE guild_id = ?`,
       [GUILD_ID]
     )
-    const channelId = cfg[0]?.channel_id
-    if (!channelId) return
+    const threadId  = cfg[0]?.thread_id
+    if (!threadId) return
 
-    const channel = await discordClient.channels.fetch(channelId)
+    // ถ้า thread กำหนด account_ids ไว้ → เช็คว่าบัญชีนี้อยู่ในนั้นด้วย
+    const accountIds = cfg[0]?.account_ids ? cfg[0].account_ids.split(',').map(Number) : []
+    if (accountIds.length && !accountIds.includes(account.id)) return
+
+    const channel = await discordClient.channels.fetch(threadId)
     if (!channel) return
 
     const sign  = type === 'income' ? '+' : '-'

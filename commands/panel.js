@@ -60,6 +60,27 @@ module.exports = {
         )
     )
 
+    // --- finance setup ---
+    .addSubcommand(sub =>
+      sub.setName('finance')
+        .setDescription('ตั้งค่า channel การเงิน + สร้าง thread dashboard')
+        .addChannelOption(opt =>
+          opt.setName('channel').setDescription('channel การเงินที่ต้องการ setup').setRequired(true)
+        )
+        .addStringOption(opt =>
+          opt.setName('accounts').setDescription('account ID คั่นด้วย comma เช่น 1,2,3 (ไม่ระบุ = ทุกบัญชี internal/public)').setRequired(false)
+        )
+        .addStringOption(opt =>
+          opt.setName('thread_name').setDescription('ชื่อ thread (default: 📊 รายรับ-รายจ่าย)').setRequired(false)
+        )
+    )
+
+    // --- finance list ---
+    .addSubcommand(sub =>
+      sub.setName('finance-list')
+        .setDescription('แสดงรายชื่อบัญชีการเงินทั้งหมด + ID')
+    )
+
     // --- register ---
     .addSubcommand(sub =>
       sub.setName('register')
@@ -181,6 +202,67 @@ module.exports = {
       await thread.pin().catch(e => console.error('[panel forum] pin error:', e.message));
       await setDashboardMsgId(interaction.guildId, channelOpt.id, thread.id);
       return interaction.editReply({ content: `✅ สร้าง dashboard thread ใน <#${channelOpt.id}> แล้วครับ` });
+    }
+
+    // ================================================================
+    if (sub === 'finance-list') {
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral })
+      const pool = require('../db/index')
+      const [accounts] = await pool.query(
+        `SELECT id, name, bank, account_no, visibility, owner_id FROM finance_accounts WHERE guild_id = ? ORDER BY visibility, name`,
+        [interaction.guildId]
+      )
+      if (!accounts.length) return interaction.editReply({ content: 'ยังไม่มีบัญชีในระบบครับ' })
+
+      const lines = accounts.map(a => {
+        const vis = a.visibility === 'private' ? '🔒' : a.visibility === 'internal' ? '🏢' : '🌐'
+        const acctNo = a.account_no ? ` \`${a.account_no}\`` : ''
+        return `\`${String(a.id).padStart(3)}\` ${vis} **${a.name}**${a.bank ? ` · ${a.bank}` : ''}${acctNo}`
+      })
+      return interaction.editReply({ content: `**บัญชีทั้งหมด**\n${lines.join('\n')}\n\nใช้ ID ด้านบนใน \`/panel finance accounts:\`` })
+    }
+
+    // ================================================================
+    if (sub === 'finance') {
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral })
+
+      const channelOpt  = interaction.options.getChannel('channel')
+      const accountsStr = interaction.options.getString('accounts') || ''
+      const threadName  = interaction.options.getString('thread_name') || '📊 รายรับ-รายจ่าย'
+      const accountIds  = accountsStr ? accountsStr.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n)) : []
+      const { upsertFinanceConfig, getFinanceConfig } = require('../db/finance')
+      const { sendDashboard, refreshDashboard } = require('../handlers/financeDashboard')
+
+      // ถ้ามี thread เดิมอยู่แล้ว → refresh แล้ว update account_ids
+      const existing = await getFinanceConfig(interaction.guildId)
+      if (existing?.thread_id && existing?.dashboard_msg_id) {
+        const thread = await interaction.guild.channels.fetch(existing.thread_id).catch(() => null)
+        if (thread) {
+          const ids = accountIds.length ? accountIds
+            : existing.account_ids ? existing.account_ids.split(',').map(Number) : []
+          await refreshDashboard(thread, interaction.guildId, ids, existing.dashboard_msg_id)
+          await upsertFinanceConfig(interaction.guildId, {
+            channel_id:   channelOpt?.id || existing.channel_id,
+            account_ids:  ids.length ? ids : null,
+          })
+          return interaction.editReply({ content: `✅ อัปเดต dashboard ใน <#${existing.thread_id}> แล้วครับ` })
+        }
+      }
+
+      // สร้าง thread ใหม่
+      const channel = interaction.guild.channels.cache.get(channelOpt.id)
+        || await interaction.guild.channels.fetch(channelOpt.id)
+      const thread = await channel.threads.create({ name: threadName })
+      const msgIds = await sendDashboard(thread, interaction.guildId, accountIds)
+
+      await upsertFinanceConfig(interaction.guildId, {
+        channel_id:       channelOpt.id,
+        thread_id:        thread.id,
+        account_ids:      accountIds.length ? accountIds : null,
+        dashboard_msg_id: JSON.stringify(msgIds),
+      })
+
+      return interaction.editReply({ content: `✅ สร้าง thread dashboard การเงินใน <#${channelOpt.id}> แล้วครับ` })
     }
 
     // ================================================================
