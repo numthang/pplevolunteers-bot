@@ -140,6 +140,12 @@ client.on('interactionCreate', async (interaction) => {
 client.refreshSticky = refreshSticky;
 client.on('voiceStateUpdate', onVoiceStateUpdate);
 
+client.on('guildMemberUpdate', async (oldMember, newMember) => {
+  if (oldMember.roles.cache.size === newMember.roles.cache.size) return;
+  const { syncMemberRoles } = require('./db/members');
+  await syncMemberRoles(newMember).catch(err => console.error('[memberUpdate] syncRoles:', err));
+});
+
 // ─── Forum indexing ──────────────────────────────────────────────────────────
 // cache ของ forum channel IDs ที่ setup ไว้ (reload เมื่อ bot start)
 const forumChannelCache = new Map(); // guildId → Set<channelId>
@@ -194,7 +200,7 @@ client.on('messageCreate', async (message) => {
   await refreshSticky(message.channel);
 });
 
-client.login(process.env.TOKEN);
+client.login(process.env.DISCORD_BOT_TOKEN);
 
 process.on('unhandledRejection', (err) => {
   console.error('Unhandled rejection:', err);

@@ -24,21 +24,21 @@ for (const file of commandFiles) {
   }
 }
 
-const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
+const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_BOT_TOKEN);
 
 (async () => {
   try {
     if (isGlobal) {
       console.log(`\n🚀 กำลัง deploy ${commands.length} commands (global)...`);
       await rest.put(
-        Routes.applicationCommands(process.env.CLIENT_ID),
+        Routes.applicationCommands(process.env.DISCORD_BOT_CLIENT_ID),
         { body: commands }
       );
       console.log('✅ Deploy global สำเร็จ! (อาจใช้เวลาถึง 1 ชั่วโมงกว่าจะอัปเดตใน Discord)');
     } else {
       console.log(`\n🚀 กำลัง deploy ${commands.length} commands (guild: ${guildId})...`);
       await rest.put(
-        Routes.applicationGuildCommands(process.env.CLIENT_ID, guildId),
+        Routes.applicationGuildCommands(process.env.DISCORD_BOT_CLIENT_ID, guildId),
         { body: commands }
       );
       console.log('✅ Deploy guild สำเร็จ!');
