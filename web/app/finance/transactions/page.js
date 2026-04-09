@@ -108,6 +108,11 @@ function TransactionsContent() {
           >
             {/* Bank badge */}
             <BankBadge bank={t.account_bank} size={32} />
+            {/* Evidence thumbnail */}
+            {t.evidence_url && (
+              <img src={t.evidence_url} alt="" onClick={e => { e.stopPropagation(); window.open(t.evidence_url, '_blank') }}
+                className="w-10 h-10 rounded object-cover flex-shrink-0 border dark:border-gray-600 cursor-zoom-in" />
+            )}
 
             {/* ข้อมูลหลัก */}
             <div className="flex-1 min-w-0">
@@ -235,11 +240,13 @@ function EvidenceUpload({ value, onChange }) {
   }
 
   return (
-    <div className="block text-sm text-gray-700 dark:text-gray-300">
+    <div className="block text-sm text-gray-700 dark:text-gray-300 mt-1">
       หลักฐาน
       {value ? (
         <div className="mt-1 relative inline-block">
-          <img src={value} alt="evidence" className="rounded-lg max-h-32 max-w-full object-contain border dark:border-gray-600" />
+          <img src={value} alt="evidence"
+            onClick={() => window.open(value, '_blank')}
+            className="rounded-lg max-h-32 max-w-full object-contain border dark:border-gray-600 cursor-zoom-in" />
           <button type="button" onClick={() => onChange('')}
             className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full p-0.5 hover:bg-red-600">
             <X size={12} />

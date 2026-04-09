@@ -5,6 +5,7 @@ const nextConfig = {
   outputFileTracingRoot: require('path').resolve(__dirname, '../'),
   images: {
     domains: ['cdn.discordapp.com'],
+    unoptimized: true,
   },
 }
 module.exports = nextConfig
