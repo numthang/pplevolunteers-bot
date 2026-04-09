@@ -4,6 +4,8 @@
     "paths": {
       "@/*": ["./*"]
     },
-    "plugins": [{ "name": "next" }]
-  }
+    "plugins": [{ "name": "next" }],
+    "checkJs": false
+  },
+  "exclude": ["node_modules", "next.config.js"]
 }
