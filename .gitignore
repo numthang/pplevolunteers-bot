@@ -4,3 +4,4 @@ backups/
 tmp/
 meilisearch
 data.ms/
+web/.next/
