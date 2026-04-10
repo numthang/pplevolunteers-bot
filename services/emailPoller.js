@@ -7,6 +7,7 @@ const { ImapFlow }  = require('imapflow')
 const { simpleParser } = require('mailparser')
 const pool          = require('../db/index')
 const kbank         = require('./parsers/kbank')
+const log           = require('../utils/logger')
 
 const POLL_INTERVAL = parseInt(process.env.EMAIL_POLL_INTERVAL || '60000')
 const GUILD_ID      = process.env.GUILD_ID
@@ -18,15 +19,13 @@ let discordClient = null
 
 function init(client) {
   discordClient = client
-  console.log('[emailPoller] init, polling every', POLL_INTERVAL / 1000, 's')
+  log.info('[emailPoller] init, polling every', POLL_INTERVAL / 1000, 's')
   poll()
   setInterval(poll, POLL_INTERVAL)
 }
 
 async function poll() {
   if (!process.env.EMAIL_IMAP_HOST) return
-  console.log('[emailPoller] polling...')
-
   const client = new ImapFlow({
     host:   process.env.EMAIL_IMAP_HOST,
     port:   parseInt(process.env.EMAIL_IMAP_PORT || '993'),
@@ -39,7 +38,7 @@ async function poll() {
   })
 
   client.on('error', (err) => {
-    console.error('[emailPoller] imap error:', err.message)
+    log.error('[emailPoller] imap error:', err.message)
   })
 
   try {
@@ -48,9 +47,9 @@ async function poll() {
 
     try {
       const uids = await client.search({ seen: false, from: 'kplus@kasikornbank.com' }, { uid: true })
-      console.log('[emailPoller] found uids:', uids.length)
 
       if (uids.length) {
+        log.info('[emailPoller] found uids:', uids.length)
         const seenUids = []
 
         for await (const msg of client.fetch(uids, { flags: true, source: true }, { uid: true })) {
@@ -61,17 +60,17 @@ async function poll() {
 
           for (const parser of PARSERS) {
             const txn = parser.parse(text)
-            console.log('[emailPoller] parse result:', txn)
+            log.info('[emailPoller] parse result:', txn)
             if (!txn) continue
 
-            await processTransaction(txn)
+            await processTransaction(txn, text)
             break
           }
           seenUids.push(msg.uid)
         }
 
         if (seenUids.length) {
-          console.log('[emailPoller] marking as seen:', seenUids.length, 'messages')
+          log.info('[emailPoller] marking as seen:', seenUids.length, 'messages')
           await client.messageFlagsAdd(seenUids, ['\\Seen'], { uid: true })
         }
       }
@@ -81,15 +80,19 @@ async function poll() {
 
     await client.logout()
   } catch (err) {
-    console.error('[emailPoller] error:', err.message)
+    log.error('[emailPoller] error:', err.message)
   }
 }
 
-async function processTransaction(txn) {
+async function processTransaction(txn, rawText) {
   try {
     const account = await matchAccount(txn)
     if (!account) {
-      console.log('[emailPoller] no matching account for ref_id:', txn.ref_id)
+      log.warn('[emailPoller] no matching account for ref_id:', txn.ref_id,
+        '\n  from_acct_masked:', txn.from_acct_masked,
+        '\n  counterpart_account:', txn.counterpart_account,
+        '\n  bank:', txn.bank,
+        '\n--- raw email ---\n' + (rawText || '').substring(0, 800) + '\n---')
       return
     }
 
@@ -116,17 +119,17 @@ async function processTransaction(txn) {
     )
 
     if (result.affectedRows === 0) {
-      console.log('[emailPoller] duplicate ref_id, skipping:', txn.ref_id)
+      log.warn('[emailPoller] duplicate ref_id, skipping:', txn.ref_id)
       return
     }
 
-    console.log(`[emailPoller] inserted txn ref_id=${txn.ref_id} type=${type} amount=${txn.amount}`)
+    log.info(`[emailPoller] inserted txn ref_id=${txn.ref_id} type=${type} amount=${txn.amount}`)
 
     const shouldNotify = type === 'income' ? account.notify_income : account.notify_expense
     if (shouldNotify) await notifyDiscord(account, type, txn)
 
   } catch (err) {
-    console.error('[emailPoller] processTransaction error:', err.message)
+    log.error('[emailPoller] processTransaction error:', err.message)
   }
 }
 
@@ -193,7 +196,7 @@ async function notifyDiscord(account, type, txn) {
       }]
     })
   } catch (err) {
-    console.error('[emailPoller] notifyDiscord error:', err.message)
+    log.error('[emailPoller] notifyDiscord error:', err.message)
   }
 }
 

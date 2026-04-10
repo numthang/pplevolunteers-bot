@@ -20,10 +20,12 @@ function parse(text) {
 
   const dateStr    = get('วันที่ทำรายการ')   // "08/04/2026  20:50:38"
   const refId      = get('เลขที่รายการ')
-  const fromAcct   = get('โอนเงินจากบัญชี') // masked: xxx-x-x8045-x
+  // transfer: "โอนเงินจากบัญชี", credit card payment: "ชำระเงินจากบัญชี"
+  const fromAcct   = get('โอนเงินจากบัญชี') || get('ชำระเงินจากบัญชี')
   const toBank     = get('ธนาคารผู้รับเงิน')
-  const toAcct     = get('เพื่อเข้าบัญชี')  // full: 339-2-17749-2
-  const toName     = get('ชื่อบัญชี')
+  const toAcct     = get('เพื่อเข้าบัญชี')
+  const toName     = get('ชื่อบัญชี') || get('เพื่อเข้าบัญชีบริษัท')
+  const creditCard = get('เลขบัตรเครดิต')
   const amountStr  = get('จำนวนเงิน \\(บาท\\)')
   const feeStr     = get('ค่าธรรมเนียม \\(บาท\\)')
   const balStr     = get('ยอดถอนได้ \\(บาท\\)')
