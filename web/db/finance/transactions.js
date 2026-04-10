@@ -45,7 +45,7 @@ export async function createTransaction(guildId, data, updatedBy) {
      counterpart_name || null, counterpart_account || null, counterpart_bank || null,
      fee || null, balance_after || null,
      evidence_url || null, ref_id || null, discord_msg_id || null,
-     txn_at || new Date(), updatedBy]
+     txn_at ? new Date(txn_at).toISOString().slice(0, 19).replace('T', ' ') : new Date().toISOString().slice(0, 19).replace('T', ' '), updatedBy]
   )
   return result.insertId
 }
@@ -61,7 +61,7 @@ export async function updateTransaction(id, data, updatedBy) {
     [account_id, type, amount, description, category_id || null,
      counterpart_name || null, counterpart_account || null, counterpart_bank || null,
      fee || null, balance_after || null,
-     evidence_url || null, txn_at, updatedBy, id]
+     evidence_url || null, txn_at ? new Date(txn_at).toISOString().slice(0, 19).replace('T', ' ') : null, updatedBy, id]
   )
 }
 

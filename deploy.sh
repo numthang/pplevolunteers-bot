@@ -53,6 +53,14 @@ echo "✅ Deploy production เสร็จแล้ว"
 EOF
 
 else
+  # ป้องกันรัน local mode บน production server
+  if [ -d "/www/wwwroot" ]; then
+    echo "⚠️  ดูเหมือนจะอยู่บน production server!"
+    echo "    ถ้าต้องการ deploy production ให้ใช้: ./deploy.sh --production"
+    read -p "    ยืนยันจะรัน local mode? (y/N) " confirm
+    [ "$confirm" != "y" ] && exit 1
+  fi
+
   if [ -n "$COMMIT_MSG" ]; then
     echo "🚀 กำลังดันโค้ดขึ้น Git..."
     git add .

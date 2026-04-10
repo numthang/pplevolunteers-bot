@@ -17,3 +17,270 @@
 [2026-04-10 03:41:09] [INFO] [emailPoller] init, polling every 120 s
 [2026-04-10 05:01:58] [INFO] [emailPoller] init, polling every 120 s
 [2026-04-10 06:21:46] [INFO] [emailPoller] init, polling every 120 s
+[2026-04-10 08:40:35] [INFO] [emailPoller] init, polling every 120 s
+[2026-04-10 08:58:44] [INFO] [emailPoller] init, polling every 120 s
+[2026-04-10 13:46:07] [ERROR] [emailPoller] error: getaddrinfo ENOTFOUND imap.gmail.com
+[2026-04-10 14:05:23] [INFO] [emailPoller] init, polling every 120 s
+[2026-04-10 14:06:23] [INFO] [emailPoller] init, polling every 1200 s
+[2026-04-10 14:47:39] [INFO] [emailPoller] init, polling every 1200 s
+[2026-04-10 14:59:46] [INFO] [emailPoller] init, polling every 1200 s
+[2026-04-10 15:00:06] [INFO] [financeOCR] OCR text:
+โอนเงินสําเร็จ
+| 9 เม.ย. 69 19:09 น.                      I<+
+นาย อรรณพ A
+(¥)   ธ.กสิกรไทย
+2๐๐<-%-%8045-%
+อาสาประชาชน โดย น.ส. ประภาวดี เอก
+วงศ์ และ นาย อรรณพ ศรีเจริญชัย แ...
+ธ.กสิกรไทย
+XXX-X-X4645-X
+เลขที่รายการ:
+0160991909418TF09657 [พิไจ[ต]
+จํานวน:
+1.00 บาท                         =
+ค่าธรรมเนียม:                   [=];   =
+0.00 บาท      สแกนตรวจสอบสลิป
+บันทึกช่วยจํา: ทดสอบ ครั้งที่ 1
+
+[2026-04-10 15:00:06] [INFO] [financeOCR] parsed slip: {"ref_id":"0160991909418TF09657 [พิไจ[ต]","amount":null,"memo":null,"txn_at":null,"to_acct_masked":null,"from_acct_masked":null,"counterpart_name":null,"counterpart_bank":null,"bank":"กสิกรไทย"}
+[2026-04-10 15:06:01] [INFO] [emailPoller] init, polling every 1200 s
+[2026-04-10 15:07:22] [INFO] [financeOCR] OCR text:
+โอนเงินสําเร็จ
+| 9 เม.ย. 69 19:09 น.                      I<+
+นาย อรรณพ A
+(¥)   ธ.กสิกรไทย
+2๐๐<-%-%8045-%
+อาสาประชาชน โดย น.ส. ประภาวดี เอก
+วงศ์ และ นาย อรรณพ ศรีเจริญชัย แ...
+ธ.กสิกรไทย
+XXX-X-X4645-X
+เลขที่รายการ:
+0160991909418TF09657 [พิไจ[ต]
+จํานวน:
+1.00 บาท                         =
+ค่าธรรมเนียม:                   [=];   =
+0.00 บาท      สแกนตรวจสอบสลิป
+บันทึกช่วยจํา: ทดสอบ ครั้งที่ 1
+
+[2026-04-10 15:07:22] [INFO] [financeOCR] parsed slip: {"ref_id":"0160991909418TF09657","amount":1,"fee":null,"memo":"ทดสอบ ครั้งที่ 1","txn_at":"2026-04-09T12:09:00.000Z","from_digits":"4645","to_digits":null,"from_acct_masked":"XXX-X-X4645-X","to_acct_masked":null,"counterpart_name":"นาย อรรณพ A","bank":"กสิกรไทย"}
+[2026-04-10 15:14:14] [INFO] [emailPoller] init, polling every 1200 s
+[2026-04-10 15:14:29] [INFO] [financeOCR] OCR text:
+โอนเงินสําเร็จ
+| 9 เม.ย. 69 19:09 น.                      I<+
+นาย อรรณพ A
+(¥)   ธ.กสิกรไทย
+2๐๐<-%-%8045-%
+อาสาประชาชน โดย น.ส. ประภาวดี เอก
+วงศ์ และ นาย อรรณพ ศรีเจริญชัย แ...
+ธ.กสิกรไทย
+XXX-X-X4645-X
+เลขที่รายการ:
+0160991909418TF09657 [พิไจ[ต]
+จํานวน:
+1.00 บาท                         =
+ค่าธรรมเนียม:                   [=];   =
+0.00 บาท      สแกนตรวจสอบสลิป
+บันทึกช่วยจํา: ทดสอบ ครั้งที่ 1
+
+[2026-04-10 15:14:29] [INFO] [financeOCR] parsed slip: {"ref_id":"0160991909418TF09657","amount":1,"fee":null,"memo":"ทดสอบ ครั้งที่ 1","txn_at":"2026-04-09T12:09:00.000Z","from_digits":"8045","to_digits":"4645","from_acct_masked":"2๐๐<-%-%8045-%","to_acct_masked":"XXX-X-X4645-X","counterpart_name":"นาย อรรณพ A","bank":"กสิกรไทย"}
+[2026-04-10 15:18:50] [INFO] [financeOCR] OCR text:
+โอนเงินสําเร็จ
+| 9 เม.ย. 69 19:09 น.                      I<+
+นาย อรรณพ A
+(¥)   ธ.กสิกรไทย
+2๐๐<-%-%8045-%
+อาสาประชาชน โดย น.ส. ประภาวดี เอก
+วงศ์ และ นาย อรรณพ ศรีเจริญชัย แ...
+ธ.กสิกรไทย
+XXX-X-X4645-X
+เลขที่รายการ:
+0160991909418TF09657 [พิไจ[ต]
+จํานวน:
+1.00 บาท                         =
+ค่าธรรมเนียม:                   [=];   =
+0.00 บาท      สแกนตรวจสอบสลิป
+บันทึกช่วยจํา: ทดสอบ ครั้งที่ 1
+
+[2026-04-10 15:18:50] [INFO] [financeOCR] parsed slip: {"ref_id":"0160991909418TF09657","amount":1,"fee":null,"memo":"ทดสอบ ครั้งที่ 1","txn_at":"2026-04-09T12:09:00.000Z","from_digits":"8045","to_digits":"4645","from_acct_masked":"2๐๐<-%-%8045-%","to_acct_masked":"XXX-X-X4645-X","counterpart_name":"นาย อรรณพ A","bank":"กสิกรไทย"}
+[2026-04-10 15:19:14] [INFO] [emailPoller] init, polling every 1200 s
+[2026-04-10 15:19:25] [INFO] [financeOCR] OCR text:
+โอนเงินสําเร็จ
+| 9 เม.ย. 69 19:09 น.                      I<+
+นาย อรรณพ A
+(¥)   ธ.กสิกรไทย
+2๐๐<-%-%8045-%
+อาสาประชาชน โดย น.ส. ประภาวดี เอก
+วงศ์ และ นาย อรรณพ ศรีเจริญชัย แ...
+ธ.กสิกรไทย
+XXX-X-X4645-X
+เลขที่รายการ:
+0160991909418TF09657 [พิไจ[ต]
+จํานวน:
+1.00 บาท                         =
+ค่าธรรมเนียม:                   [=];   =
+0.00 บาท      สแกนตรวจสอบสลิป
+บันทึกช่วยจํา: ทดสอบ ครั้งที่ 1
+
+[2026-04-10 15:19:25] [INFO] [financeOCR] parsed slip: {"ref_id":"0160991909418TF09657","amount":1,"fee":null,"memo":"ทดสอบ ครั้งที่ 1","txn_at":"2026-04-09T12:09:00.000Z","from_digits":"8045","to_digits":"4645","from_acct_masked":"2๐๐<-%-%8045-%","to_acct_masked":"XXX-X-X4645-X","counterpart_name":"นาย อรรณพ A","bank":"กสิกรไทย"}
+[2026-04-10 15:19:25] [INFO] [financeOCR] inserted txn id=32895 ref_id=0160991909418TF09657 type=expense
+[2026-04-10 15:19:25] [ERROR] [financeOCR] error: Duplicate entry '0160991909418TF09657' for key 'finance_transactions.uq_ref'
+[2026-04-10 15:21:35] [INFO] [financeOCR] OCR text:
+โอนเงินสําเร็จ
+| 9 เม.ย. 69 19:09 น.                      I<+
+นาย อรรณพ A
+(¥)   ธ.กสิกรไทย
+2๐๐<-%-%8045-%
+อาสาประชาชน โดย น.ส. ประภาวดี เอก
+วงศ์ และ นาย อรรณพ ศรีเจริญชัย แ...
+ธ.กสิกรไทย
+XXX-X-X4645-X
+เลขที่รายการ:
+0160991909418TF09657 [พิไจ[ต]
+จํานวน:
+1.00 บาท                         =
+ค่าธรรมเนียม:                   [=];   =
+0.00 บาท      สแกนตรวจสอบสลิป
+บันทึกช่วยจํา: ทดสอบ ครั้งที่ 1
+
+[2026-04-10 15:21:35] [INFO] [financeOCR] parsed slip: {"ref_id":"0160991909418TF09657","amount":1,"fee":null,"memo":"ทดสอบ ครั้งที่ 1","txn_at":"2026-04-09T12:09:00.000Z","from_digits":"8045","to_digits":"4645","from_acct_masked":"2๐๐<-%-%8045-%","to_acct_masked":"XXX-X-X4645-X","counterpart_name":"นาย อรรณพ A","bank":"กสิกรไทย"}
+[2026-04-10 15:21:35] [INFO] [financeOCR] merged txn id=32895 ref_id=0160991909418TF09657
+[2026-04-10 15:21:35] [ERROR] [financeOCR] error: Duplicate entry '0160991909418TF09657' for key 'finance_transactions.uq_ref'
+[2026-04-10 15:23:36] [INFO] [financeOCR] OCR text:
+โอนเงินสําเร็จ
+| 9 เม.ย. 69 19:09 น.                      I<+
+นาย อรรณพ A
+(¥)   ธ.กสิกรไทย
+2๐๐<-%-%8045-%
+อาสาประชาชน โดย น.ส. ประภาวดี เอก
+วงศ์ และ นาย อรรณพ ศรีเจริญชัย แ...
+ธ.กสิกรไทย
+XXX-X-X4645-X
+เลขที่รายการ:
+0160991909418TF09657 [พิไจ[ต]
+จํานวน:
+1.00 บาท                         =
+ค่าธรรมเนียม:                   [=];   =
+0.00 บาท      สแกนตรวจสอบสลิป
+บันทึกช่วยจํา: ทดสอบ ครั้งที่ 1
+
+[2026-04-10 15:23:36] [INFO] [financeOCR] parsed slip: {"ref_id":"0160991909418TF09657","amount":1,"fee":null,"memo":"ทดสอบ ครั้งที่ 1","txn_at":"2026-04-09T12:09:00.000Z","from_digits":"8045","to_digits":"4645","from_acct_masked":"2๐๐<-%-%8045-%","to_acct_masked":"XXX-X-X4645-X","counterpart_name":"นาย อรรณพ A","bank":"กสิกรไทย"}
+[2026-04-10 15:23:36] [INFO] [financeOCR] merged txn id=32895 ref_id=0160991909418TF09657
+[2026-04-10 15:23:36] [INFO] [financeOCR] inserted txn id=32898 ref_id=0160991909418TF09657 type=income
+[2026-04-10 15:25:11] [INFO] [financeOCR] OCR text:
+โอนเงินสําเร็จ
+| 9 เม.ย. 69 15:45 น.                       IK+
+นาย อรรณพ A
+(¥)   ธ.กสิกรไทย
+XXX-X-X8045-x
+นาย อรรณพ ยศโสภณ
+(¥)   ธ.กสิกรไทย
+XXX-X-X7749-x
+เลขที่รายการ:
+016099154505ATF00891 [พิไท [ต]
+จํานวน:
+2.00 บาท
+ค่าธรรมเนียม:                   [๒]'
+0.00 บาท      สแกนตรวจสอบสลิป
+
+[2026-04-10 15:25:11] [INFO] [financeOCR] parsed slip: {"ref_id":"016099154505ATF00891","amount":2,"fee":null,"memo":null,"txn_at":"2026-04-09T08:45:00.000Z","from_digits":"8045","to_digits":"7749","from_acct_masked":"XXX-X-X8045-x","to_acct_masked":"XXX-X-X7749-x","counterpart_name":"นาย อรรณพ A","bank":"กสิกรไทย"}
+[2026-04-10 15:25:11] [INFO] [financeOCR] merged txn id=1 ref_id=016099154505ATF00891
+[2026-04-10 15:25:41] [INFO] [financeOCR] OCR text:
+โอนเงินสําเร็จ
+| 9 เม.ย. 69 19:09 น.                      I<+
+นาย อรรณพ A
+(¥)   ธ.กสิกรไทย
+2๐๐<-%-%8045-%
+อาสาประชาชน โดย น.ส. ประภาวดี เอก
+วงศ์ และ นาย อรรณพ ศรีเจริญชัย แ...
+ธ.กสิกรไทย
+XXX-X-X4645-X
+เลขที่รายการ:
+0160991909418TF09657 [พิไจ[ต]
+จํานวน:
+1.00 บาท                         =
+ค่าธรรมเนียม:                   [=];   =
+0.00 บาท      สแกนตรวจสอบสลิป
+บันทึกช่วยจํา: ทดสอบ ครั้งที่ 1
+
+[2026-04-10 15:25:41] [INFO] [financeOCR] parsed slip: {"ref_id":"0160991909418TF09657","amount":1,"fee":null,"memo":"ทดสอบ ครั้งที่ 1","txn_at":"2026-04-09T12:09:00.000Z","from_digits":"8045","to_digits":"4645","from_acct_masked":"2๐๐<-%-%8045-%","to_acct_masked":"XXX-X-X4645-X","counterpart_name":"นาย อรรณพ A","bank":"กสิกรไทย"}
+[2026-04-10 15:25:41] [INFO] [financeOCR] merged txn id=32895 ref_id=0160991909418TF09657
+[2026-04-10 15:25:41] [INFO] [financeOCR] merged txn id=32898 ref_id=0160991909418TF09657
+[2026-04-10 15:25:57] [INFO] [financeOCR] OCR text:
+โอนเงินสําเร็จ
+| 9 เม.ย. 69 15:45 น.                       IK+
+นาย อรรณพ A
+(¥)   ธ.กสิกรไทย
+XXX-X-X8045-x
+นาย อรรณพ ยศโสภณ
+(¥)   ธ.กสิกรไทย
+XXX-X-X7749-x
+เลขที่รายการ:
+016099154505ATF00891 [พิไท [ต]
+จํานวน:
+2.00 บาท
+ค่าธรรมเนียม:                   [๒]'
+0.00 บาท      สแกนตรวจสอบสลิป
+
+[2026-04-10 15:25:57] [INFO] [financeOCR] parsed slip: {"ref_id":"016099154505ATF00891","amount":2,"fee":null,"memo":null,"txn_at":"2026-04-09T08:45:00.000Z","from_digits":"8045","to_digits":"7749","from_acct_masked":"XXX-X-X8045-x","to_acct_masked":"XXX-X-X7749-x","counterpart_name":"นาย อรรณพ A","bank":"กสิกรไทย"}
+[2026-04-10 15:25:57] [INFO] [financeOCR] merged txn id=1 ref_id=016099154505ATF00891
+[2026-04-10 15:25:59] [INFO] [financeOCR] OCR text:
+โอนเงินสําเร็จ
+| 9 เม.ย. 69 19:09 น.                      I<+
+นาย อรรณพ A
+(¥)   ธ.กสิกรไทย
+2๐๐<-%-%8045-%
+อาสาประชาชน โดย น.ส. ประภาวดี เอก
+วงศ์ และ นาย อรรณพ ศรีเจริญชัย แ...
+ธ.กสิกรไทย
+XXX-X-X4645-X
+เลขที่รายการ:
+0160991909418TF09657 [พิไจ[ต]
+จํานวน:
+1.00 บาท                         =
+ค่าธรรมเนียม:                   [=];   =
+0.00 บาท      สแกนตรวจสอบสลิป
+บันทึกช่วยจํา: ทดสอบ ครั้งที่ 1
+
+[2026-04-10 15:25:59] [INFO] [financeOCR] parsed slip: {"ref_id":"0160991909418TF09657","amount":1,"fee":null,"memo":"ทดสอบ ครั้งที่ 1","txn_at":"2026-04-09T12:09:00.000Z","from_digits":"8045","to_digits":"4645","from_acct_masked":"2๐๐<-%-%8045-%","to_acct_masked":"XXX-X-X4645-X","counterpart_name":"นาย อรรณพ A","bank":"กสิกรไทย"}
+[2026-04-10 15:25:59] [INFO] [financeOCR] merged txn id=32895 ref_id=0160991909418TF09657
+[2026-04-10 15:25:59] [INFO] [financeOCR] merged txn id=32898 ref_id=0160991909418TF09657
+[2026-04-10 15:27:34] [INFO] [emailPoller] init, polling every 1200 s
+[2026-04-10 15:27:46] [INFO] [financeOCR] OCR text:
+โอนเงินสําเร็จ
+| 9 เม.ย. 69 15:45 น.                       IK+
+นาย อรรณพ A
+(¥)   ธ.กสิกรไทย
+XXX-X-X8045-x
+นาย อรรณพ ยศโสภณ
+(¥)   ธ.กสิกรไทย
+XXX-X-X7749-x
+เลขที่รายการ:
+016099154505ATF00891 [พิไท [ต]
+จํานวน:
+2.00 บาท
+ค่าธรรมเนียม:                   [๒]'
+0.00 บาท      สแกนตรวจสอบสลิป
+
+[2026-04-10 15:27:46] [INFO] [financeOCR] parsed slip: {"ref_id":"016099154505ATF00891","amount":2,"fee":null,"memo":null,"txn_at":"2026-04-09T08:45:00.000Z","from_digits":"8045","to_digits":"7749","from_acct_masked":"XXX-X-X8045-x","to_acct_masked":"XXX-X-X7749-x","counterpart_name":"นาย อรรณพ A","bank":"กสิกรไทย"}
+[2026-04-10 15:27:46] [INFO] [financeOCR] merged txn id=1 ref_id=016099154505ATF00891
+[2026-04-10 15:27:48] [INFO] [financeOCR] OCR text:
+โอนเงินสําเร็จ
+| 9 เม.ย. 69 19:09 น.                      I<+
+นาย อรรณพ A
+(¥)   ธ.กสิกรไทย
+2๐๐<-%-%8045-%
+อาสาประชาชน โดย น.ส. ประภาวดี เอก
+วงศ์ และ นาย อรรณพ ศรีเจริญชัย แ...
+ธ.กสิกรไทย
+XXX-X-X4645-X
+เลขที่รายการ:
+0160991909418TF09657 [พิไจ[ต]
+จํานวน:
+1.00 บาท                         =
+ค่าธรรมเนียม:                   [=];   =
+0.00 บาท      สแกนตรวจสอบสลิป
+บันทึกช่วยจํา: ทดสอบ ครั้งที่ 1
+
+[2026-04-10 15:27:48] [INFO] [financeOCR] parsed slip: {"ref_id":"0160991909418TF09657","amount":1,"fee":null,"memo":"ทดสอบ ครั้งที่ 1","txn_at":"2026-04-09T12:09:00.000Z","from_digits":"8045","to_digits":"4645","from_acct_masked":"2๐๐<-%-%8045-%","to_acct_masked":"XXX-X-X4645-X","counterpart_name":"นาย อรรณพ A","bank":"กสิกรไทย"}
+[2026-04-10 15:27:48] [INFO] [financeOCR] merged txn id=32895 ref_id=0160991909418TF09657
+[2026-04-10 15:27:48] [INFO] [financeOCR] merged txn id=32898 ref_id=0160991909418TF09657

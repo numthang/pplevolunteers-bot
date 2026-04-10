@@ -27,6 +27,7 @@ const { getAllForumConfigs, deleteForumPost } = require('./db/forum');
 const { deletePost } = require('./services/meilisearch');
 const { initMeilisearch } = require('./services/meilisearch')
 const emailPoller = require('./services/emailPoller');
+const { handleSlipMessage } = require('./services/financeOCR');
 
 const fs = require('fs');
 const path = require('path');
@@ -179,6 +180,9 @@ const cooldowns = new Map();
 client.on('messageCreate', async (message) => {
   // track activity (ไม่ block bot message เพราะ onMessage เช็คเองอยู่แล้ว)
   onMessage(message).catch(err => console.error('[onMessage]', err));
+
+  // slip OCR — อ่านสลิปใน finance thread
+  handleSlipMessage(message).catch(err => console.error('[financeOCR]', err));
 
   // forum indexing — index message เข้า Meilisearch ถ้าอยู่ใน forum thread ที่ setup ไว้
   if (message.channel.isThread() && message.channel.parentId && !message.author.bot) {

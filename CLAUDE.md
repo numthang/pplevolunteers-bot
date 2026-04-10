@@ -5,26 +5,30 @@
 - **Web:** Node.js + Next.js (App Router) — `/home/tee/VSites/node/pple-volunteers/web/`
 - **Database:** MySQL `pple_volunteers` (host: localhost, user: pple_dcbot)
 - **Auth (web):** Discord OAuth via next-auth
+- **Search:** Meilisearch (binary: `/usr/local/bin/meilisearch`, data: `data.ms/`)
 
 ## Project Structure
 ```
 pple-volunteers/
   index.js          ← Discord Bot entry point
+  deploy-commands.js
+  deploy.sh
   commands/         slash commands
   handlers/         interaction handlers (buttons, selects, modals)
   components/       reusable embed builders
   db/               database access functions (index.js = pool)
   config/           constants, roles, hints, orgchart
   utils/            activity tracker, orgchart generator
-  services/         external services (meilisearch, emailPoller, financeOCR)
+  services/         external services (meilisearch, emailPoller, forumIndexer, parsers/)
   scripts/          one-off scripts (backfill, migration)
   logs/             log files
   backups/          SQL backups
+  memory/           Claude memory files
   web/              Next.js web app
     app/            App Router (pages + API routes)
     components/     React components
     db/             database access functions
-    lib/            auth, roles helpers
+    lib/            auth, roles, financeAccess helpers
 ```
 
 ---
@@ -37,27 +41,35 @@ pple-volunteers/
   sudo -u www npm run build
   ```
 - **Git branch:** `master` (ไม่ใช่ `main`)
+- **Production path:** `/www/wwwroot/pple-volunteers/`
 - **PM2:**
   ```bash
-  pm2 show pple-bot              # Discord Bot
+  pm2 show pple-dcbot            # Discord Bot
   pm2 show pple-web              # Next.js Web
+  pm2 logs pple-dcbot --lines 20
   pm2 logs pple-web --lines 20
   ```
 - **nohup (ถ้าจำเป็น):**
   ```bash
-  sudo -u www bash -c 'nohup node scripts/xxx.js > /home/tee/VSites/node/pple-volunteers/logs/xxx.log 2>&1 &'
+  sudo -u www bash -c 'nohup node scripts/xxx.js > /www/wwwroot/pple-volunteers/logs/xxx.log 2>&1 &'
   ```
   ต้องใช้ `bash -c '...'` เพื่อให้ redirect `>` รันด้วย `www`
 
 ## Deploy
 ```bash
-# Bot
-./deploy.sh                      # local
-./deploy.sh 'commit message'     # git push + local
-./deploy.sh --production         # production
-node deploy-commands.js          # deploy guild slash commands
+# Bot + Web (local)
+./deploy.sh                      # deploy commands local
+./deploy.sh 'commit message'     # git push + deploy commands local
 
-# Web
+# Bot + Web (production)
+./deploy.sh --production         # full production deploy
+./deploy.sh --production --guild <guildId>
+
+# Manual
+node deploy-commands.js          # deploy guild slash commands
+node deploy-commands.js --guild <guildId>
+
+# Web only
 cd web
 sudo -u www npm run build
 pm2 restart pple-web
@@ -87,6 +99,12 @@ dc_forum_posts, dc_forum_config
 ```
 
 Score formula: `score = messages × 10 + voiceSeconds + mentions × 30`
+
+### DB Tables — Finance
+```
+finance_accounts, finance_transactions, finance_categories
+finance_account_rules, finance_config
+```
 
 ---
 
@@ -124,23 +142,66 @@ private account       → เจ้าของคนเดียวเท่า
 - **Command names ใช้ hyphen เสมอ** เช่น `stat-server`, `panel-finance`
 - **Command-first principle** — ทุก GUI button ต้องมี slash command รองรับ
 - **ถามก่อนเสมอว่า default ephemeral หรือ public** แล้วใส่ `public` Boolean option
+- **`interaction.options.getChannel()` คืน partial object** → ต้องใช้ `guild.channels.cache.get(id)` เสมอ
+- **customId limit 100 chars** — อย่า encode Thai text ลง customId, ใช้ embed title แทน
 
 ## Key Commands
 | Command | File |
 |---|---|
 | `/panel` | `commands/panel.js` |
 | `/register` | `commands/register.js` |
-| `/stat-*` | `commands/stat-*.js` |
+| `/stat-*` / `/stat` | `commands/stat.js` |
+| `/user` | `commands/user.js` |
 | `/orgchart` | `commands/orgchart.js` |
 | `/forum` | `commands/forum.js` |
+| `/rate` | `commands/rate.js` |
+| `/record` | `commands/record.js` |
+| `/sticky` | `commands/sticky.js` |
 
 ## Key Handlers
 | File | Triggered by |
 |---|---|
-| `openInterest.js` | btn_open_interest |
-| `openProvince.js` | btn_open_province |
-| `forumSearch.js` | forum_search |
-| `forumDashboard.js` | forum_refresh |
+| `forumSearch.js` | `forum_search` button, modal submit, result pagination |
+| `forumDashboard.js` | `forum_refresh_{channelId}` button |
+| `financeDashboard.js` | finance buttons |
+| `openInterest.js` | `btn_open_interest` |
+| `openProvince.js` | `btn_open_province` |
+| `rateStars.js` | rate star buttons |
+| `ratingPage.js` | rating pagination |
+| `statHandler.js` | stat pagination |
+
+---
+
+## Forum System
+
+### Architecture
+- **`dc_forum_config`** — config per forum channel (guild_id, channel_id, dashboard_msg_id, items_per_page)
+- **`dc_forum_posts`** — index of posts (post_id = thread id, post_name, post_url, content snippets)
+- **dashboard_msg_id** = thread ID ของ pinned dashboard thread (ไม่ใช่ message id)
+- dashboard embed อยู่ใน starter message ของ thread นั้น
+
+### Search (Hybrid)
+```
+hybridSearch(keyword, guildId, channelId, sort)
+  → Promise.all([MySQL LIKE post_name, Meilisearch full-text])
+  → merge + dedupe by post_id
+  → filter null post_name
+  → sort: both-match first, then newest
+  → fallback to MySQL-only ถ้า Meilisearch ไม่พร้อม
+```
+
+### Setup
+```bash
+# Backfill existing threads
+node scripts/backfill-forum.js               # ทุก forum channel
+node scripts/backfill-forum.js --channel ID  # channel เดียว
+```
+
+### Meilisearch
+- Binary: `/usr/local/bin/meilisearch`
+- DB path: `data.ms/`
+- env: `MEILISEARCH_HOST`, `MEILISEARCH_KEY`
+- fallback ไป MySQL LIKE อัตโนมัติถ้าไม่ได้รัน
 
 ---
 
@@ -149,7 +210,7 @@ private account       → เจ้าของคนเดียวเท่า
 ### emailPoller (`services/emailPoller.js`)
 ```
 IMAP polling ทุก 1 นาที
-  → parse email ธนาคาร (Regex แยกต่อธนาคาร)
+  → parse email ธนาคาร (Regex แยกต่อธนาคาร, อยู่ใน services/parsers/)
   → match account จากเลขบัญชีใน email
   → บันทึกลง finance_transactions
   → เช็ก finance_account_rules
@@ -158,7 +219,7 @@ IMAP polling ทุก 1 นาที
   → update dashboard embed
 ```
 
-### financeOCR (`services/financeOCR.js`)
+### financeOCR (TBD)
 ```
 user ส่ง slip รูปใน Discord
   → Tesseract.js อ่าน
@@ -166,32 +227,6 @@ user ส่ง slip รูปใน Discord
   → match account จากเลขบัญชี
   → validate ref_id → update category/note
 ```
-
-### `/panel finance`
-```
-pattern เดียวกับ /panel forum
-  → สร้าง thread "บัญชีรายรับ-รายจ่าย"
-  → ส่ง starter message เป็น dashboard embed (ยอดคงเหลือ / รายรับ / รายจ่าย)
-  → บันทึกลง finance_config
-```
-
-### Files ที่ต้องสร้าง/แก้ (bot side)
-```
-commands/panel.js             แก้ → เพิ่ม subcommand 'finance'
-db/finance.js                 สร้างใหม่
-handlers/financeHandler.js    สร้างใหม่
-services/emailPoller.js       สร้างใหม่
-services/financeOCR.js        สร้างใหม่
-scripts/migration-finance.sql สร้างใหม่
-```
-
----
-
-## Meilisearch
-- Binary: `/usr/local/bin/meilisearch`
-- DB path: `/home/tee/VSites/node/pple-volunteers/data.ms/`
-- env: `MEILISEARCH_HOST`, `MEILISEARCH_KEY`
-- **fallback ไป MySQL LIKE อัตโนมัติ** ถ้าไม่ได้รัน
 
 ---
 

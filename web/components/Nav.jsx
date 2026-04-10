@@ -31,12 +31,12 @@ export default function Nav({ session }) {
   })
 
   return (
-    <nav className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shadow-sm">
+    <nav className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shadow-sm sticky top-0 z-40">
       <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
         {/* Logo */}
         <Link href="/dashboard" className="flex items-center gap-2 shrink-0 hover:opacity-80 transition">
           <Image src="/logo.png" alt="PPLE" width={28} height={28} />
-          <span className="font-bold text-indigo-700 dark:text-indigo-400">PPLE Finance</span>
+          <span className="font-bold text-base text-indigo-700 dark:text-indigo-400">PPLE Finance</span>
         </Link>
 
         {/* Desktop links */}
@@ -45,7 +45,7 @@ export default function Nav({ session }) {
             <Link
               key={l.href}
               href={l.href}
-              className={`px-3 py-1.5 rounded text-sm transition ${
+              className={`px-3 py-1 rounded-md text-base transition ${
                 pathname === l.href
                   ? 'bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-medium'
                   : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800'
@@ -72,22 +72,22 @@ export default function Nav({ session }) {
               {session.user.image && (
                 <Image src={session.user.image} alt="" width={28} height={28} className="rounded-full" />
               )}
-              <span className="hidden sm:block text-sm text-gray-600 dark:text-gray-400">
+              <span className="hidden sm:block text-base text-gray-600 dark:text-gray-400">
                 {session.user.nickname || session.user.name}
               </span>
             </a>
           ) : (
-            <Link href="/login" className="text-sm text-indigo-600 hover:underline">เข้าสู่ระบบ</Link>
+            <Link href="/login" className="text-base text-indigo-600 hover:underline">เข้าสู่ระบบ</Link>
           )}
 
           {session && (
-            <button onClick={() => signOut({ callbackUrl: '/' })} className="hidden sm:block text-sm text-gray-400 hover:text-red-500 transition">
+            <button onClick={() => signOut({ callbackUrl: '/' })} className="hidden sm:block text-base text-gray-400 hover:text-red-500 transition">
               ออก
             </button>
           )}
 
           {/* Hamburger */}
-          <button onClick={() => setOpen(o => !o)} className="md:hidden text-gray-500 dark:text-gray-400">
+          <button onClick={() => setOpen(o => !o)} className="md:hidden text-gray-500 dark:text-gray-400 text-2xl w-10 h-10 flex items-center justify-center">
             {open ? '✕' : '☰'}
           </button>
         </div>
@@ -101,7 +101,7 @@ export default function Nav({ session }) {
               key={l.href}
               href={l.href}
               onClick={() => setOpen(false)}
-              className={`px-3 py-2 rounded text-sm transition ${
+              className={`px-3 py-2 rounded text-base transition ${
                 pathname === l.href
                   ? 'bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-medium'
                   : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
@@ -111,7 +111,7 @@ export default function Nav({ session }) {
             </Link>
           ))}
           {session && (
-            <button onClick={() => signOut({ callbackUrl: '/' })} className="text-left px-3 py-2 text-sm text-red-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded">
+            <button onClick={() => signOut({ callbackUrl: '/' })} className="text-left px-3 py-2 text-base text-red-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded">
               ออกจากระบบ
             </button>
           )}

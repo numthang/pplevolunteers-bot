@@ -6,24 +6,61 @@
 - Runtime: Node.js
 - Framework: Next.js (App Router)
 - Database: MySQL (`pple_volunteers`)
-- Auth: Discord OAuth
-- Path: `/home/tee/VSites/node/pple-volunteers/web/`
+- Auth: Discord OAuth (next-auth)
+- Path (local): `/home/tee/VSites/node/pple-volunteers/web/`
+- Path (production): `/www/wwwroot/pple-volunteers/web/`
 - Domain: pplethai.org (subdomain TBD)
 
 ## Project Structure
 ```
-app/         Next.js App Router (pages + API routes)
-components/  React components
-db/          database access functions
-lib/         utilities, helpers
-public/      static assets
+app/
+  layout.js
+  page.js                ← root (redirect หรือ landing)
+  globals.css
+  login/                 ← Discord OAuth login page
+  dashboard/             ← overview หลัง login
+  finance/               ← Finance system
+    accounts/page.js
+    transactions/page.js
+    categories/page.js
+    report/page.js
+  admin/                 ← admin pages
+  api/
+    auth/                ← next-auth endpoints
+    finance/
+      accounts/
+      categories/
+      report/
+      transactions/
+      upload/
+    admin/
+      logs/
+components/
+  Nav.jsx
+  Providers.jsx
+  AccountSelect.jsx
+  BankBadge.jsx
+  CategorySelect.jsx
+db/
+  index.js               ← MySQL pool
+  finance/               ← finance DB functions
+lib/
+  auth.js                ← getServerSession helper
+  auth-options.js        ← next-auth config (Discord provider)
+  roles.js               ← role hierarchy helpers
+  financeAccess.js       ← finance permission check
+public/
+  static assets
 ```
 
 ## Deploy
 ```bash
-cd /home/tee/VSites/node/pple-volunteers/web
-sudo -u www npm run build
-pm2 restart pple-web
+# Production (from repo root)
+./deploy.sh --production
+
+# Manual (production)
+sudo -u www bash -c 'cd /www/wwwroot/pple-volunteers/web && npm install --omit=dev && npm run build'
+sudo -u www pm2 restart pple-web
 ```
 
 ---
@@ -32,8 +69,9 @@ pm2 restart pple-web
 
 - ใช้ **App Router** (ไม่ใช่ Pages Router)
 - API routes อยู่ใน `app/api/`
-- Auth ผ่าน Discord OAuth → `next-auth` หรือ custom OAuth flow
-- ไม่ต้องสร้าง user system ใหม่ → ใช้ `dc_members.discord_id` เป็น FK
+- Auth ผ่าน Discord OAuth → next-auth
+- ไม่สร้าง user system ใหม่ → ใช้ `dc_members.discord_id` เป็น FK
+- Server Components by default; ใส่ `'use client'` เฉพาะเมื่อจำเป็น
 
 ---
 
@@ -115,7 +153,7 @@ private account          → เจ้าของเท่านั้น
 เหรัญญิก + Admin        → แก้ไขได้ทั้งหมด
 ```
 
-สิทธิ์ตรวจจาก Discord role ผ่าน OAuth token
+สิทธิ์ตรวจจาก Discord role ผ่าน OAuth token → `lib/financeAccess.js`
 
 ### Account Visibility
 ```
@@ -129,20 +167,21 @@ public   → ทุกคนดูได้ ไม่ต้อง login
 - category มีทั้ง global และ per-guild
 - notification ตั้งค่าผ่านเว็บเท่านั้น (ไม่มี Discord command)
 
-### Pages
+### Pages (ปัจจุบัน)
 ```
-/                → public dashboard (ไม่ต้อง login)
-/login           → Discord OAuth
-/dashboard       → overview ทุก account ที่มีสิทธิ์
-/accounts        → CRUD accounts
-/transactions    → CRUD transactions + filter
-/categories      → จัดการ categories
-/settings        → notification, email forward config
+/                        → root
+/login                   → Discord OAuth
+/dashboard               → overview ทุก account ที่มีสิทธิ์
+/finance/accounts        → CRUD accounts
+/finance/transactions    → CRUD transactions + filter
+/finance/categories      → จัดการ categories
+/finance/report          → รายงาน
 ```
 
-### Deferred (คิดทีหลัง)
+### Pages (Deferred)
 ```
-- report / export Excel/PDF
+- /settings              → notification, email forward config
+- export Excel/PDF
 - budget / approval flow
 - donate button หน้า public
 - recurring transaction
