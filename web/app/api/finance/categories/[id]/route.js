@@ -14,7 +14,8 @@ export async function PUT(req, { params }) {
   const session = await getServerSession(authOptions)
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const id  = parseInt(params.id)
+  const { id: rawId } = await params
+  const id  = parseInt(rawId)
   const cat = await getCategoryById(id)
   if (!cat) return Response.json({ error: 'Not found' }, { status: 404 })
 
@@ -39,7 +40,8 @@ export async function DELETE(req, { params }) {
   const session = await getServerSession(authOptions)
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const id  = parseInt(params.id)
+  const { id: rawId } = await params
+  const id  = parseInt(rawId)
   const cat = await getCategoryById(id)
   if (!cat) return Response.json({ error: 'Not found' }, { status: 404 })
 

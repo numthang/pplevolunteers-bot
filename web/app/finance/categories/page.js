@@ -170,52 +170,59 @@ export default function CategoriesPage() {
         <button onClick={add} className="bg-indigo-600 text-white px-4 py-1.5 rounded text-sm hover:bg-indigo-700">เพิ่ม</button>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow divide-y dark:divide-gray-700">
-        {cats.map(c => (
-          <div key={c.id} className="flex items-center justify-between px-4 py-3 gap-3">
-            {editId === c.id ? (
-              <div className="flex items-center gap-2 flex-1">
-                <IconPicker value={editIcon} onChange={setEditIcon} />
-                <input
-                  className="border dark:border-gray-600 rounded px-2 py-0.5 text-sm flex-1 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                  value={editName}
-                  onChange={e => setEditName(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && save(c.id)}
-                  autoFocus
-                />
-                {canEditGlobal && (
-                  <label className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                    <input type="checkbox" checked={editGlobal} onChange={e => setEditGlobal(e.target.checked)} />
-                    global
-                  </label>
-                )}
-              </div>
-            ) : (
-              <div className="flex items-center gap-3 flex-1">
-                <span className="text-gray-500 dark:text-gray-400">
-                  <CatIcon name={c.icon} size={18} />
-                </span>
-                <span className="text-sm text-gray-900 dark:text-gray-100">{c.name}</span>
-                <span className="text-xs text-gray-400">{c.is_global ? '(global)' : '(ของฉัน)'}</span>
-              </div>
-            )}
-            <div className="flex gap-2 flex-shrink-0">
-              {editId === c.id ? (
-                <>
-                  <button onClick={() => save(c.id)} className="p-1.5 rounded text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/40"><Check size={16} /></button>
-                  <button onClick={() => setEditId(null)} className="p-1.5 rounded text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"><X size={16} /></button>
-                </>
-              ) : canEdit(c) ? (
-                <>
-                  <button onClick={() => { setEditId(c.id); setEditName(c.name); setEditIcon(c.icon || 'Folder'); setEditGlobal(!!c.is_global) }} className="p-1.5 rounded text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/40"><Pencil size={16} /></button>
-                  <button onClick={() => remove(c.id)} className="p-1.5 rounded text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/40"><Trash2 size={16} /></button>
-                </>
-              ) : null}
+      {[{ label: '🌐 Global', items: cats.filter(c => c.is_global) }, { label: '👤 ของฉัน', items: cats.filter(c => !c.is_global) }]
+        .filter(g => g.items.length > 0)
+        .map(group => (
+          <div key={group.label} className="mb-6">
+            <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-2">{group.label}</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+              {group.items.map(c => (
+                <div key={c.id} className="bg-white dark:bg-gray-800 rounded-xl shadow flex items-center justify-between px-4 py-3 gap-3">
+                  {editId === c.id ? (
+                    <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                      <IconPicker value={editIcon} onChange={setEditIcon} />
+                      <input
+                        className="border dark:border-gray-600 rounded px-2 py-0.5 text-sm w-0 flex-1 min-w-0 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        value={editName}
+                        onChange={e => setEditName(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && save(c.id)}
+                        autoFocus
+                      />
+                      {canEditGlobal && (
+                        <label className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                          <input type="checkbox" checked={editGlobal} onChange={e => setEditGlobal(e.target.checked)} />
+                          g
+                        </label>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-3 flex-1">
+                      <span className="text-gray-500 dark:text-gray-400">
+                        <CatIcon name={c.icon} size={18} />
+                      </span>
+                      <span className="text-sm text-gray-900 dark:text-gray-100">{c.name}</span>
+                      <span className="text-xs text-gray-400">{c.is_global ? '(global)' : '(ของฉัน)'}</span>
+                    </div>
+                  )}
+                  <div className="flex gap-2 flex-shrink-0">
+                    {editId === c.id ? (
+                      <>
+                        <button onClick={() => save(c.id)} className="p-1.5 rounded text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/40"><Check size={16} /></button>
+                        <button onClick={() => setEditId(null)} className="p-1.5 rounded text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"><X size={16} /></button>
+                      </>
+                    ) : canEdit(c) ? (
+                      <>
+                        <button onClick={() => { setEditId(c.id); setEditName(c.name); setEditIcon(c.icon || 'Folder'); setEditGlobal(!!c.is_global) }} className="p-1.5 rounded text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/40"><Pencil size={16} /></button>
+                        <button onClick={() => remove(c.id)} className="p-1.5 rounded text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/40"><Trash2 size={16} /></button>
+                      </>
+                    ) : null}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         ))}
-        {cats.length === 0 && <p className="px-4 py-6 text-center text-gray-400 text-sm">ยังไม่มีหมวดหมู่</p>}
-      </div>
+      {cats.length === 0 && <p className="px-4 py-6 text-center text-gray-400 text-sm">ยังไม่มีหมวดหมู่</p>}
     </div>
   )
 }

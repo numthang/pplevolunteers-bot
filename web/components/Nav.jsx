@@ -7,12 +7,10 @@ import { useState } from 'react'
 import { useTheme } from './Providers.jsx'
 
 const links = [
-  { href: '/',                     label: 'หน้าแรก', public: true },
   { href: '/dashboard',            label: 'ภาพรวม' },
   { href: '/finance/transactions', label: 'รายการ' },
   { href: '/finance/accounts',     label: 'บัญชี' },
   { href: '/finance/categories',   label: 'หมวดหมู่' },
-  { href: '/settings',             label: 'ตั้งค่า' },
 ]
 
 export default function Nav({ session }) {
@@ -26,10 +24,10 @@ export default function Nav({ session }) {
     <nav className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shadow-sm">
       <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
         {/* Logo */}
-        <div className="flex items-center gap-2 shrink-0">
+        <Link href="/dashboard" className="flex items-center gap-2 shrink-0 hover:opacity-80 transition">
           <Image src="/logo.png" alt="PPLE" width={28} height={28} />
           <span className="font-bold text-indigo-700 dark:text-indigo-400">PPLE Finance</span>
-        </div>
+        </Link>
 
         {/* Desktop links */}
         <div className="hidden md:flex items-center gap-1 ml-4">

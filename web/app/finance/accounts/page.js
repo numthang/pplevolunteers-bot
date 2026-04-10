@@ -75,7 +75,7 @@ export default function AccountsPage() {
         </button>
       </div>
 
-      <div className="space-y-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {accounts.map(a => (
           <div key={a.id} className={`bg-white dark:bg-gray-800 rounded-xl shadow px-5 py-4 flex items-center justify-between gap-3 ${a.archived ? 'opacity-50' : ''}`}>
             <BankBadge bank={a.bank} size={40} />

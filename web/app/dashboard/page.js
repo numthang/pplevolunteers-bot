@@ -13,7 +13,7 @@ const VISIBILITY_LABEL = {
 }
 
 function fmt(n) {
-  return '฿\u00A0' + Math.abs(n).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  return Math.abs(n).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '\u00A0฿'
 }
 
 export default async function DashboardPage() {
@@ -54,7 +54,7 @@ export default async function DashboardPage() {
             const total = group.reduce((s, a) => s + a.balance, 0)
             return (
               <div key={key}>
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2 mb-3">
                   <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">{label}</h2>
                   <span className={`text-sm font-mono font-semibold ${total >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
                     {total < 0 ? '-' : ''}{fmt(total)}

@@ -17,6 +17,12 @@ function TransactionsContent() {
   const [filter, setFilter]     = useState({ accountId: defaultAccountId, type: '', categoryId: '' })
   const [editing, setEditing]   = useState(null)
   const [form, setForm]         = useState({})
+  const [hasMore, setHasMore]   = useState(true)
+  const [loading, setLoading]   = useState(false)
+  const sentinelRef             = useRef(null)
+  const loadingRef              = useRef(false)
+  const offsetRef               = useRef(0)
+  const LIMIT = 50
 
   function toLocalDT(d = new Date()) {
     const pad = n => String(n).padStart(2, '0')
@@ -29,15 +35,57 @@ function TransactionsContent() {
     fetch('/api/finance/categories').then(r => r.json()).then(setCategories)
   }, [])
 
-  const load = useCallback(() => {
+  const fetchPage = useCallback(async (currentOffset, reset = false) => {
+    if (loadingRef.current) return
+    loadingRef.current = true
+    setLoading(true)
     const p = new URLSearchParams()
     if (filter.accountId)  p.set('accountId',  filter.accountId)
     if (filter.type)       p.set('type',        filter.type)
     if (filter.categoryId) p.set('categoryId',  filter.categoryId)
-    fetch('/api/finance/transactions?' + p).then(r => r.json()).then(setTxns)
+    p.set('limit',  LIMIT)
+    p.set('offset', currentOffset)
+    const rows = await fetch('/api/finance/transactions?' + p).then(r => r.json())
+    setTxns(prev => {
+      const merged = reset ? rows : [...prev, ...rows]
+      const seen = new Set()
+      return merged.filter(t => { if (seen.has(t.id)) return false; seen.add(t.id); return true })
+    })
+    setHasMore(rows.length === LIMIT)
+    setLoading(false)
+    loadingRef.current = false
   }, [filter])
 
-  useEffect(() => { load() }, [load])
+  // reset on filter change
+  useEffect(() => {
+    offsetRef.current = 0
+    loadingRef.current = false
+    setTxns([])
+    setHasMore(true)
+    fetchPage(0, true)
+  }, [filter])
+
+  // infinite scroll
+  useEffect(() => {
+    if (!sentinelRef.current) return
+    const obs = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && hasMore && !loadingRef.current) {
+        const next = offsetRef.current + LIMIT
+        offsetRef.current = next
+        fetchPage(next)
+      }
+    }, { threshold: 0.1 })
+    obs.observe(sentinelRef.current)
+    return () => obs.disconnect()
+  }, [hasMore, fetchPage])
+
+  const load = useCallback(() => {
+    offsetRef.current = 0
+    loadingRef.current = false
+    setTxns([])
+    setHasMore(true)
+    fetchPage(0, true)
+  }, [fetchPage])
 
   function openNew()  { setForm({ ...EMPTY_FORM }); setEditing({}) }
   function openEdit(t){ setForm({ ...t, txn_at: toLocalDT(new Date(t.txn_at)) }); setEditing(t) }
@@ -135,7 +183,7 @@ function TransactionsContent() {
             {/* จำนวน + delete */}
             <div className="text-right flex-shrink-0">
               <p className={`font-mono font-semibold ${t.type === 'income' ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
-                {t.type === 'income' ? '+' : '-'}฿{Number(t.amount).toLocaleString('th-TH')}
+                {t.type === 'income' ? '+' : '-'}{Number(t.amount).toLocaleString('th-TH')} ฿
               </p>
               <button
                 onClick={e => { e.stopPropagation(); remove(t.id) }}
@@ -144,6 +192,12 @@ function TransactionsContent() {
             </div>
           </div>
         ))}
+      </div>
+
+      {/* infinite scroll sentinel */}
+      <div ref={sentinelRef} className="py-2 text-center text-xs text-gray-400">
+        {loading && 'กำลังโหลด...'}
+        {!loading && !hasMore && txns.length > 0 && 'แสดงทั้งหมดแล้ว'}
       </div>
 
       {editing !== null && (
@@ -185,12 +239,12 @@ function TxnForm({ form, onChange, accounts, categories }) {
         </div>
         <label className="block">
           จำนวนเงิน
-          <input type="number" className={inputCls} value={form.amount} onChange={e => onChange({ amount: e.target.value })} />
+          <input type="number" name="amount" className={inputCls} value={form.amount} onChange={e => onChange({ amount: e.target.value })} />
         </label>
       </div>
       <label className="block">
         รายละเอียด
-        <textarea rows={3} className={inputCls} value={form.description || ''} onChange={e => onChange({ description: e.target.value })} />
+        <input name="description" className={inputCls} value={form.description || ''} onChange={e => onChange({ description: e.target.value })} />
       </label>
       <div className="block text-sm">
         หมวดหมู่
@@ -207,7 +261,7 @@ function TxnForm({ form, onChange, accounts, categories }) {
       </label>
       <label className="block">
         แหล่งที่มา
-        <input className={inputCls} value={form.source || ''} onChange={e => onChange({ source: e.target.value })} />
+        <input name="source" className={inputCls} value={form.source || ''} onChange={e => onChange({ source: e.target.value })} />
       </label>
       <EvidenceUpload value={form.evidence_url || ''} onChange={v => onChange({ evidence_url: v })} />
     </div>
@@ -240,8 +294,8 @@ function EvidenceUpload({ value, onChange }) {
   }
 
   return (
-    <div className="block text-sm text-gray-700 dark:text-gray-300 mt-1">
-      หลักฐาน
+    <div className="text-sm text-gray-700 dark:text-gray-300 mt-1">
+      <p className="mb-1">หลักฐาน</p>
       {value ? (
         <div className="mt-1 relative inline-block">
           <img src={value} alt="evidence"
