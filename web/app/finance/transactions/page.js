@@ -14,7 +14,8 @@ function TransactionsContent() {
   const [txns, setTxns]         = useState([])
   const [accounts, setAccounts] = useState([])
   const [categories, setCategories] = useState([])
-  const [filter, setFilter]     = useState({ accountId: defaultAccountId, type: '', categoryId: '' })
+  const [filter, setFilter]     = useState({ accountId: defaultAccountId, type: '', categoryId: '', search: '' })
+  const [searchInput, setSearchInput] = useState('')
   const [editing, setEditing]   = useState(null)
   const [form, setForm]         = useState({})
   const [hasMore, setHasMore]   = useState(true)
@@ -43,6 +44,7 @@ function TransactionsContent() {
     if (filter.accountId)  p.set('accountId',  filter.accountId)
     if (filter.type)       p.set('type',        filter.type)
     if (filter.categoryId) p.set('categoryId',  filter.categoryId)
+    if (filter.search)     p.set('search',      filter.search)
     p.set('limit',  LIMIT)
     p.set('offset', currentOffset)
     const rows = await fetch('/api/finance/transactions?' + p).then(r => r.json())
@@ -116,6 +118,18 @@ function TransactionsContent() {
         <button onClick={openNew} className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-indigo-700">
           + เพิ่มรายการ
         </button>
+      </div>
+
+      {/* Search */}
+      <div className="mb-3">
+        <input
+          className="w-full border dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400"
+          placeholder="ค้นหารายการ..."
+          value={searchInput}
+          onChange={e => setSearchInput(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && setFilter(f => ({ ...f, search: searchInput }))}
+          onBlur={() => setFilter(f => ({ ...f, search: searchInput }))}
+        />
       </div>
 
       {/* Filters */}

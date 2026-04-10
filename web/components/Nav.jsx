@@ -11,6 +11,8 @@ const links = [
   { href: '/finance/transactions', label: 'รายการ' },
   { href: '/finance/accounts',     label: 'บัญชี' },
   { href: '/finance/categories',   label: 'หมวดหมู่' },
+  { href: '/finance/report',       label: 'รายงาน' },
+  { href: '/admin/logs',           label: 'Logs', roles: ['Admin', 'Moderator'] },
 ]
 
 export default function Nav({ session }) {
@@ -18,7 +20,15 @@ export default function Nav({ session }) {
   const { dark, toggle } = useTheme()
   const [open, setOpen] = useState(false)
 
-  const visibleLinks = links.filter(l => l.public || session)
+  const roles = Array.isArray(session?.user?.roles)
+    ? session.user.roles
+    : (session?.user?.roles || '').split(',').map(r => r.trim())
+
+  const visibleLinks = links.filter(l => {
+    if (!session) return l.public
+    if (l.roles) return l.roles.some(r => roles.includes(r))
+    return true
+  })
 
   return (
     <nav className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shadow-sm">

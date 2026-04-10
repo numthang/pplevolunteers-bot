@@ -1,12 +1,18 @@
 import pool from '../index.js'
 
-export async function getTransactions(guildId, { accountId, type, categoryId, limit = 50, offset = 0 } = {}) {
+export async function getTransactions(guildId, { accountId, type, categoryId, noCategory, search, year, month, dateFrom, dateTo, limit = 50, offset = 0 } = {}) {
   let where = 'WHERE t.guild_id = ?'
   const params = [guildId]
 
-  if (accountId) { where += ' AND t.account_id = ?'; params.push(accountId) }
-  if (type)      { where += ' AND t.type = ?';       params.push(type) }
-  if (categoryId){ where += ' AND t.category_id = ?'; params.push(categoryId) }
+  if (accountId)  { where += ' AND t.account_id = ?';   params.push(accountId) }
+  if (type)       { where += ' AND t.type = ?';         params.push(type) }
+  if (categoryId) { where += ' AND t.category_id = ?';  params.push(categoryId) }
+  if (noCategory) { where += ' AND t.category_id IS NULL' }
+  if (search)     { where += ' AND (t.description LIKE ? OR t.counterpart_name LIKE ?)'; params.push(`%${search}%`, `%${search}%`) }
+  if (year)       { where += ' AND YEAR(t.txn_at) = ?';  params.push(year) }
+  if (month)      { where += ' AND MONTH(t.txn_at) = ?'; params.push(month) }
+  if (dateFrom)   { where += ' AND DATE(t.txn_at) >= ?'; params.push(dateFrom) }
+  if (dateTo)     { where += ' AND DATE(t.txn_at) <= ?'; params.push(dateTo) }
 
   const [rows] = await pool.query(
     `SELECT t.*, a.name AS account_name, a.bank AS account_bank, c.name AS category_name, c.icon AS category_icon
@@ -61,6 +67,59 @@ export async function updateTransaction(id, data, updatedBy) {
 
 export async function deleteTransaction(id) {
   await pool.query(`DELETE FROM finance_transactions WHERE id = ?`, [id])
+}
+
+export async function getCategorySummary(guildId, { accountId, type, year, month, dateFrom, dateTo } = {}) {
+  let where = 'WHERE t.guild_id = ?'
+  const params = [guildId]
+
+  if (accountId) { where += ' AND t.account_id = ?';  params.push(accountId) }
+  if (type)      { where += ' AND t.type = ?';         params.push(type) }
+  if (year)      { where += ' AND YEAR(t.txn_at) = ?'; params.push(year) }
+  if (month)     { where += ' AND MONTH(t.txn_at) = ?'; params.push(month) }
+  if (dateFrom)  { where += ' AND DATE(t.txn_at) >= ?'; params.push(dateFrom) }
+  if (dateTo)    { where += ' AND DATE(t.txn_at) <= ?'; params.push(dateTo) }
+
+  const [rows] = await pool.query(
+    `SELECT
+       c.id        AS category_id,
+       c.name      AS category_name,
+       c.icon      AS category_icon,
+       t.type,
+       SUM(t.amount) AS total,
+       COUNT(*)      AS count
+     FROM finance_transactions t
+     LEFT JOIN finance_categories c ON c.id = t.category_id
+     ${where}
+     GROUP BY c.id, c.name, c.icon, t.type
+     ORDER BY total DESC`,
+    params
+  )
+  return rows
+}
+
+export async function getMonthlyTrend(guildId, { accountId, type, year } = {}) {
+  let where = 'WHERE t.guild_id = ?'
+  const params = [guildId]
+
+  if (accountId) { where += ' AND t.account_id = ?';  params.push(accountId) }
+  if (type)      { where += ' AND t.type = ?';         params.push(type) }
+  if (year)      { where += ' AND YEAR(t.txn_at) = ?'; params.push(year) }
+
+  const [rows] = await pool.query(
+    `SELECT
+       YEAR(t.txn_at)  AS year,
+       MONTH(t.txn_at) AS month,
+       t.type,
+       SUM(t.amount)   AS total,
+       COUNT(*)        AS count
+     FROM finance_transactions t
+     ${where}
+     GROUP BY YEAR(t.txn_at), MONTH(t.txn_at), t.type
+     ORDER BY year DESC, month DESC`,
+    params
+  )
+  return rows
 }
 
 export async function getAccountSummary(guildId, accountId) {

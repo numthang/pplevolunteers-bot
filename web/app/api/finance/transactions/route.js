@@ -11,6 +11,12 @@ export async function GET(req) {
   const accountId  = searchParams.get('accountId')
   const type       = searchParams.get('type')
   const categoryId = searchParams.get('categoryId')
+  const noCategory = searchParams.get('noCategory')
+  const search     = searchParams.get('search')
+  const year       = searchParams.get('year')
+  const month      = searchParams.get('month')
+  const dateFrom   = searchParams.get('dateFrom')
+  const dateTo     = searchParams.get('dateTo')
   const limit      = parseInt(searchParams.get('limit') || '50')
   const offset     = parseInt(searchParams.get('offset') || '0')
 
@@ -19,7 +25,7 @@ export async function GET(req) {
   const session = await getServerSession(authOptions)
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const rows = await getTransactions(GUILD_ID, { accountId, type, categoryId, limit, offset })
+  const rows = await getTransactions(GUILD_ID, { accountId, type, categoryId, noCategory, search, year, month, dateFrom, dateTo, limit, offset })
   return Response.json(rows)
 }
 
