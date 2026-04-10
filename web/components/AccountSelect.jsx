@@ -30,7 +30,7 @@ export default function AccountSelect({ accounts = [], value, onChange, placehol
 
   const dropdown = open && rect && createPortal(
     <div ref={dropRef}
-      style={{ position: 'fixed', top: rect.bottom + 4, left: rect.left, width: rect.width, zIndex: 9999 }}
+      style={{ position: 'fixed', top: rect.bottom + 4, left: rect.left, minWidth: rect.width, zIndex: 9999 }}
       className="bg-white dark:bg-gray-800 border dark:border-gray-600 rounded-xl shadow-lg max-h-64 overflow-y-auto"
     >
       <button type="button" onClick={() => { onChange(''); setOpen(false) }}

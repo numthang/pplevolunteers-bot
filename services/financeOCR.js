@@ -1,14 +1,15 @@
 /**
  * financeOCR.js
- * รับรูปสลิปจาก Discord → OCR → match/merge transaction
+ * รับรูปสลิปจาก Discord → QR decode (primary) → OCR (fallback) → match/merge transaction
  */
 
 const { createWorker } = require('tesseract.js')
 const pool   = require('../db/index')
 const log    = require('../utils/logger')
+const { decodeQR, parseQRPayload } = require('./parsers/slipQR')
 
 const GUILD_ID  = process.env.GUILD_ID
-const SLIP_PARSERS = [require('./parsers/kbankSlip')]
+const SLIP_PARSERS = [require('./parsers/kbankSlip'), require('./parsers/scbSlip')]
 
 /**
  * เรียกเมื่อมี message ที่มีรูปแนบ — เช็คเองว่าเป็น finance thread หรือเปล่า
@@ -44,21 +45,56 @@ async function handleSlipMessage(message) {
 async function processSlipImage(imageUrl, message) {
   let worker
   try {
-    worker = await createWorker(['tha', 'eng'])
-    const { data: { text } } = await worker.recognize(imageUrl)
-    log.info('[financeOCR] OCR text:\n' + text.substring(0, 500))
-
+    // ── ขั้น 1: QR decode (เร็วกว่า, แม่นกว่า) ──────────────────────────────
     let slip = null
-    for (const parser of SLIP_PARSERS) {
-      slip = parser.parse(text)
-      if (slip) break
+    let method = 'ocr'
+
+    try {
+      const qrString = await decodeQR(imageUrl)
+      if (qrString) {
+        log.info('[financeOCR] QR raw:', qrString.substring(0, 200))
+        const qrData = parseQRPayload(qrString)
+        log.info('[financeOCR] QR parsed:', JSON.stringify(qrData))
+        if (qrData?.ref_id) {
+          slip = await enrichSlipFromOCR(imageUrl, qrData)
+          method = 'qr'
+        } else {
+          log.info('[financeOCR] QR decoded but no ref_id — fallback OCR')
+        }
+      } else {
+        log.info('[financeOCR] QR not found in image — fallback OCR')
+      }
+    } catch (qrErr) {
+      log.info('[financeOCR] QR decode error — fallback OCR:', qrErr.message)
     }
 
-    if (!slip) return '❌ ไม่สามารถอ่านข้อมูลสลิปได้ — ลองส่งรูปที่ชัดขึ้น'
+    // ── ขั้น 2: OCR fallback ถ้า QR ล้มเหลว ──────────────────────────────────
+    if (!slip) {
+      worker = await createWorker(['tha', 'eng'])
+      const { data: { text } } = await worker.recognize(imageUrl)
+      log.info('[financeOCR] OCR text:\n' + text.substring(0, 500))
 
-    log.info('[financeOCR] parsed slip:', JSON.stringify(slip))
+      for (const parser of SLIP_PARSERS) {
+        slip = parser.parse(text)
+        if (slip) break
+      }
+    }
+
+    if (!slip) {
+      log.info('[financeOCR] all parsers failed — no slip extracted')
+      return '❌ ไม่สามารถอ่านข้อมูลสลิปได้ — ลองส่งรูปที่ชัดขึ้น'
+    }
+
+    if (!slip.amount) {
+      log.info('[financeOCR] slip parsed but amount=null ref_id=' + slip.ref_id)
+      return `⚠️ อ่านจำนวนเงินไม่ได้ (OCR ไม่ชัด)\n` +
+             `ref: \`${slip.ref_id}\`\nกรุณาบันทึกรายการเองผ่านเว็บ`
+    }
+
+    log.info(`[financeOCR] parsed slip (${method}):`, JSON.stringify(slip))
 
     const accounts = await matchAccount(slip)
+    log.info(`[financeOCR] matchAccount from_digits=${slip.from_digits} to_digits=${slip.to_digits} matched=${accounts.map(a=>a.name+'('+a._matchType+')').join(', ')||'none'}`)
     if (!accounts.length) {
       return `❌ ไม่พบบัญชีที่ตรงกับสลิปนี้ในระบบ\n` +
              `from: \`${slip.from_acct_masked || '-'}\` · to: \`${slip.to_acct_masked || '-'}\``
@@ -115,12 +151,50 @@ async function processSlipImage(imageUrl, message) {
   }
 }
 
+/**
+ * มี QR data แล้ว แต่ยัง OCR เพิ่มเพื่อเอา from/to digits, memo, counterpart_name
+ * merge ข้อมูลเข้ากัน โดย QR data มี priority สูงกว่า
+ */
+async function enrichSlipFromOCR(imageUrl, qrData) {
+  let worker
+  try {
+    worker = await createWorker(['tha', 'eng'])
+    const { data: { text } } = await worker.recognize(imageUrl)
+
+    let ocrSlip = null
+    for (const parser of SLIP_PARSERS) {
+      ocrSlip = parser.parse(text)
+      if (ocrSlip) break
+    }
+
+    if (!ocrSlip) {
+      // OCR ล้มเหลว แต่ QR สำเร็จ — คืนข้อมูล QR ที่มี
+      return {
+        ref_id: qrData.ref_id,
+        amount: qrData.amount || null,
+        fee: null, memo: null, txn_at: null,
+        from_digits: null, to_digits: null,
+        from_acct_masked: null, to_acct_masked: null,
+        counterpart_name: null, bank: 'กสิกรไทย',
+      }
+    }
+
+    // merge: QR ref_id และ amount มี priority สูงกว่า OCR
+    return {
+      ...ocrSlip,
+      ref_id: qrData.ref_id,
+      amount: qrData.amount ?? ocrSlip.amount,
+    }
+  } finally {
+    await worker?.terminate()
+  }
+}
+
 async function matchAccount(slip) {
   const [accounts] = await pool.query(
     `SELECT * FROM finance_accounts WHERE guild_id = ?`, [GUILD_ID]
   )
 
-  // สลิปอาจ match ได้ 2 บัญชีพร้อมกัน (expense + income) คืน array
   const matches = []
 
   for (const acc of accounts) {
@@ -133,7 +207,7 @@ async function matchAccount(slip) {
     }
   }
 
-  return matches  // [] = ไม่พบ, [1] = พบ 1 บัญชี, [2] = transfer ภายใน
+  return matches
 }
 
 function buildReply(header, account, slip, txnId, merged) {
@@ -143,9 +217,9 @@ function buildReply(header, account, slip, txnId, merged) {
     `💳 **${account.name}** (${account._matchType === 'income' ? 'รายรับ' : 'รายจ่าย'})`,
     `💰 \`${sign}${slip.amount?.toLocaleString('th-TH')} ฿\``,
   ]
-  if (slip.memo)            lines.push(`📝 ${slip.memo}`)
+  if (slip.memo)             lines.push(`📝 ${slip.memo}`)
   if (slip.counterpart_name) lines.push(`👤 ${slip.counterpart_name}`)
-  if (!merged)              lines.push(`🔢 \`${slip.ref_id}\``)
+  if (!merged)               lines.push(`🔢 \`${slip.ref_id}\``)
   return lines.join('\n')
 }
 

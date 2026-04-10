@@ -65,12 +65,13 @@ else
     echo "🚀 กำลังดันโค้ดขึ้น Git..."
     git add .
     git commit -m "$COMMIT_MSG"
-    git push
+    git push origin master --tags
     echo "✅ โค้ดขึ้น Git แล้ว"
   fi
 
   echo "🔄 กำลัง deploy local... ${GUILD_ARG:+($GUILD_ARG)}"
+  npm install
   node deploy-commands.js $GUILD_ARG
-  (cd web && npm run dev) &
+  (cd web && npm install && npm run dev) &
   node index.js
 fi

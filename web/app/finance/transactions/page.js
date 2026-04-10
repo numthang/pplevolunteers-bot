@@ -239,7 +239,7 @@ function TransactionsContent() {
                   >ไม่มีหมวด</button>
 
                   {/* category icons — all, sorted by usage_count */}
-                  {[...categories].sort((a, b) => (b.usage_count || 0) - (a.usage_count || 0)).map(c => (
+                  {[...categories].sort((a, b) => (b.usage_count || 0) - (a.usage_count || 0)).slice(0, 10).map(c => (
                     <button
                       key={c.id}
                       onClick={() => changeCategory(t, c.id)}

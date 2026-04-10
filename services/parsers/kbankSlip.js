@@ -1,6 +1,6 @@
 /**
  * kbankSlip.js
- * Parse OCR text จากสลิป K-Plus
+ * Parse OCR text จากสลิป K-Plus (โอนเงิน + จ่ายบิล)
  */
 
 // normalize Thai ํา (combining) → ำ (precomposed)
@@ -14,10 +14,15 @@ function parse(rawText) {
 
   if (!text.includes('เลขที่รายการ')) return null
 
-  // ---- ref_id: บรรทัดหลัง "เลขที่รายการ:" เอาเฉพาะ alphanumeric ต่อเนื่อง ----
-  const refMatch = text.match(/เลขที่รายการ[:\s]*\n?\s*([A-Za-z0-9]+)/)
-  if (!refMatch) return null
-  const ref_id = refMatch[1].trim()
+  // ---- ref_id: หา alphanumeric ที่ยาวที่สุดในช่วง 200 ตัวอักษรหลัง "เลขที่รายการ" ----
+  // OCR อาจใส่ขยะ หรืออ่าน "จำนวน" ไม่ออกเลย (พื้นหลังสีหรือลายน้ำ)
+  const refIdx = text.indexOf('เลขที่รายการ')
+  if (refIdx < 0) return null
+  const refWindow = text.slice(refIdx, refIdx + 200)
+  const refCandidates = (refWindow.match(/[A-Za-z0-9]+/g) || [])
+    .filter(s => !/^เลขที่รายการ/.test(s))  // ตัด label ออก
+  const ref_id = refCandidates.sort((a, b) => b.length - a.length)[0]
+  if (!ref_id || ref_id.length < 8) return null
 
   // ---- account masked: หา pattern *-*-*????-* ทุกตัวในสลิป ----
   // OCR อาจ render x เป็น X, 2, <, %, ๐ ฯลฯ
@@ -32,9 +37,20 @@ function parse(rawText) {
   const fromDigits = acctMatches[0]?.[1] || null
   const toDigits   = acctMatches[1]?.[1] || null
 
-  // ---- amount: บรรทัดหลัง "จำนวน:" ----
-  const amtMatch = text.match(/จำนวน[:\s]*\n?\s*([\d,]+\.?\d*)\s*บาท/)
-  const amount = amtMatch ? parseFloat(amtMatch[1].replace(/,/g, '')) : null
+  // ---- amount: หา ตัวเลขในช่วงหลัง "จำนวน:" ----
+  // - รองรับ บท (OCR อ่าน บาท ผิด), dot-thousands (3.568.00 → 3568)
+  const amtMatch = text.match(/จำนวน[^\n]{0,30}\n[\s\S]{0,60}?([\d,.]+)\s*บ[าา]?ท/)
+  let amount = null
+  if (amtMatch) {
+    let raw = amtMatch[1]
+    // dot-thousands: ถ้ามีหลาย dot เช่น 3.568.00 หรือ 15.170.00 → dot แรกๆ คือ thousands
+    const dots = (raw.match(/\./g) || []).length
+    if (dots > 1) {
+      const lastDot = raw.lastIndexOf('.')
+      raw = raw.slice(0, lastDot).replace(/\./g, '') + raw.slice(lastDot)
+    }
+    amount = parseFloat(raw.replace(/,/g, '')) || null
+  }
 
   // ---- fee ----
   const feeMatch = text.match(/ค่าธรรมเนียม[:\s]*\n?\s*([\d,]+\.?\d*)\s*บาท/)
@@ -58,9 +74,21 @@ function parse(rawText) {
     txn_at = new Date(year, month - 1, day, hh, mm)
   }
 
-  // ---- counterpart name: บรรทัดแรกหลัง header ----
-  const nameMatch = text.match(/โอนเงินสำเร็จ[^\n]*\n[^\n]+\n([^\n]+)/)
-  const counterpart_name = nameMatch ? nameMatch[1].trim() : null
+  // ---- counterpart_name: ชื่อบรรทัดแรกหลัง from_acct ----
+  // (ไม่ใช้ header เพราะจะดึงชื่อบัญชีตัวเอง)
+  let counterpart_name = null
+  if (from_acct_masked) {
+    const idx = text.indexOf(from_acct_masked)
+    if (idx >= 0) {
+      const rest = text.slice(idx + from_acct_masked.length)
+      const nm = rest.match(/\n+([^\n]+)/)
+      if (nm) {
+        counterpart_name = nm[1].trim()
+          .replace(/\s+[A-Za-z]$/, '')  // ตัด OCR noise ท้าย เช่น "Payment to Shopee i" → "Payment to Shopee"
+          .trim() || null
+      }
+    }
+  }
 
   return {
     ref_id,
@@ -68,8 +96,8 @@ function parse(rawText) {
     fee,
     memo,
     txn_at,
-    from_digits:       fromDigits,   // 4 digits สุดท้ายของบัญชีผู้โอน
-    to_digits:         toDigits,     // 4 digits สุดท้ายของบัญชีผู้รับ
+    from_digits:       fromDigits,
+    to_digits:         toDigits,
     from_acct_masked,
     to_acct_masked,
     counterpart_name,
