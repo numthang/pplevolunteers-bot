@@ -65,7 +65,7 @@ else
     echo "🚀 กำลังดันโค้ดขึ้น Git..."
     git add .
     git commit -m "$COMMIT_MSG"
-    git push origin master --tags
+    git push origin master
     echo "✅ โค้ดขึ้น Git แล้ว"
   fi
 

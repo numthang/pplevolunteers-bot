@@ -812,3 +812,4 @@ XXX-X-X8348-x
 
 [2026-04-10 22:04:56] [INFO] [financeOCR] parsed slip (ocr): {"ref_id":"016086181932ATF03865","amount":1320,"fee":null,"memo":"ค่าเสาอากาศวิทยุสื่อสาร","txn_at":"2026-03-27T11:19:00.000Z","from_digits":"4645","to_digits":"8348","from_acct_masked":"XXX-X-X4645-X","to_acct_masked":"XXX-X-X8348-x","counterpart_name":"น.ส. อัจฉรา อิงคามระธร","bank":"กสิกรไทย"}
 [2026-04-10 22:04:56] [INFO] [financeOCR] merged txn id=32902 ref_id=016086181932ATF03865
+[2026-04-10 22:17:39] [INFO] [emailPoller] init, polling every 1200 s
