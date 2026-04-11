@@ -97,4 +97,4 @@ function parseQRPayload(qrString) {
   return result
 }
 
-module.exports = { decodeQR, parseQRPayload }
+module.exports = { decodeQR, parseQRPayload, fetchBuffer }

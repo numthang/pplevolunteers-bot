@@ -15,6 +15,7 @@ function TransactionsContent() {
   const [accounts, setAccounts] = useState([])
   const [categories, setCategories] = useState([])
   const [filter, setFilter]     = useState({ accountId: defaultAccountId, type: '', categoryId: '', search: '' })
+  const [balance, setBalance]   = useState(null)
   const [searchInput, setSearchInput] = useState('')
   const [editing, setEditing]   = useState(null)
   const [form, setForm]         = useState({})
@@ -36,6 +37,12 @@ function TransactionsContent() {
     fetch('/api/finance/accounts').then(r => r.json()).then(setAccounts)
     fetch('/api/finance/categories').then(r => r.json()).then(setCategories)
   }, [])
+
+  useEffect(() => {
+    if (!filter.accountId) { setBalance(null); return }
+    fetch(`/api/finance/transactions/balance?accountId=${filter.accountId}`)
+      .then(r => r.json()).then(setBalance)
+  }, [filter.accountId])
 
   const fetchPage = useCallback(async (currentOffset, reset = false) => {
     if (loadingRef.current) return
@@ -133,6 +140,30 @@ function TransactionsContent() {
           + เพิ่มรายการ
         </button>
       </div>
+
+      {/* Balance summary */}
+      {balance?.has_balance_after && (
+        <div className="mb-4 rounded-xl border dark:border-gray-700 bg-white dark:bg-gray-800 p-4 space-y-2">
+          <div className="flex justify-between text-sm">
+            <span className="text-gray-500 dark:text-gray-400">ยอดใน DB (SUM)</span>
+            <span className="font-semibold">{Number(balance.net).toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-gray-500 dark:text-gray-400">ยอดจริง (bank)</span>
+            <span className="font-semibold text-indigo-600 dark:text-indigo-400">{Number(balance.balance_after).toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท</span>
+          </div>
+          {Math.abs(Number(balance.net) - Number(balance.balance_after)) > 0.01 && (
+            <div className="text-xs text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 rounded px-2 py-1">
+              ⚠️ ยอดต่างกัน {Math.abs(Number(balance.net) - Number(balance.balance_after)).toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท
+            </div>
+          )}
+          {balance.gap_count > 0 && (
+            <div className="text-xs text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 rounded px-2 py-1">
+              ⚠️ พบความไม่ต่อเนื่อง {balance.gap_count} จุด (อาจมี transaction หายไป)
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Search */}
       <div className="mb-3">

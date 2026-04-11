@@ -4,12 +4,30 @@
  */
 
 const { createWorker } = require('tesseract.js')
+const { Jimp } = require('jimp')
 const pool   = require('../db/index')
 const log    = require('../utils/logger')
 const { decodeQR, parseQRPayload } = require('./parsers/slipQR')
 
 const GUILD_ID  = process.env.GUILD_ID
 const SLIP_PARSERS = [require('./parsers/kbankSlip'), require('./parsers/scbSlip')]
+
+/**
+ * Preprocess รูปก่อน OCR: greyscale + contrast boost
+ * ช่วยให้อ่านพื้นหลังสีเขียว/ลายน้ำได้ดีขึ้น
+ * คืน Buffer (PNG) สำหรับส่งให้ Tesseract
+ */
+async function preprocessForOCR(imageUrl) {
+  try {
+    const { fetchBuffer } = require('./parsers/slipQR')
+    const buf = await fetchBuffer(imageUrl)
+    const img = await Jimp.fromBuffer(buf)
+    img.greyscale().contrast(0.3)
+    return await img.getBuffer('image/png')
+  } catch {
+    return imageUrl  // fallback ใช้ URL ตรง
+  }
+}
 
 /**
  * เรียกเมื่อมี message ที่มีรูปแนบ — เช็คเองว่าเป็น finance thread หรือเปล่า
@@ -71,7 +89,8 @@ async function processSlipImage(imageUrl, message) {
     // ── ขั้น 2: OCR fallback ถ้า QR ล้มเหลว ──────────────────────────────────
     if (!slip) {
       worker = await createWorker(['tha', 'eng'])
-      const { data: { text } } = await worker.recognize(imageUrl)
+      const imgInput = await preprocessForOCR(imageUrl)
+      const { data: { text } } = await worker.recognize(imgInput)
       log.info('[financeOCR] OCR text:\n' + text.substring(0, 500))
 
       for (const parser of SLIP_PARSERS) {
@@ -103,19 +122,42 @@ async function processSlipImage(imageUrl, message) {
     const resultLines = []
 
     for (const account of accounts) {
-      const [existing] = await pool.query(
+      // 1) หาด้วย ref_id ก่อน
+      let [existing] = await pool.query(
         `SELECT id, description FROM finance_transactions WHERE ref_id = ? AND account_id = ? AND guild_id = ?`,
         [slip.ref_id, account.id, GUILD_ID]
       )
 
+      // 2) fallback: หาด้วย amount + txn_at ±5 นาที (สำหรับ statement rows ที่มี ref_id=NULL)
+      // ใช้ local time เพราะ statement เก็บ Bangkok time ไม่ใช่ UTC
+      if (!existing.length && slip.txn_at && slip.amount) {
+        const d = new Date(slip.txn_at)
+        const pad = n => String(n).padStart(2, '0')
+        const txnAtStr = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:00`
+        ;[existing] = await pool.query(
+          `SELECT id, description FROM finance_transactions
+           WHERE account_id = ? AND guild_id = ? AND amount = ?
+             AND ABS(TIMESTAMPDIFF(MINUTE, txn_at, ?)) <= 5
+             AND ref_id IS NULL`,
+          [account.id, GUILD_ID, slip.amount, txnAtStr]
+        )
+        if (existing.length) log.info(`[financeOCR] matched statement row id=${existing[0].id} by amount+txn_at`)
+      }
+
       if (existing.length) {
         const txn = existing[0]
-        const newDesc = slip.memo && !txn.description ? slip.memo : txn.description
+        const newDesc = slip.memo || txn.description
         await pool.query(
           `UPDATE finance_transactions
-           SET description = ?, discord_msg_id = ?, updated_by = ?, updated_at = NOW()
+           SET ref_id = ?, evidence_url = ?,
+               description = ?,
+               counterpart_name = COALESCE(counterpart_name, ?),
+               discord_msg_id = ?, updated_by = ?, updated_at = NOW()
            WHERE id = ?`,
-          [newDesc, message.id, message.author.id, txn.id]
+          [slip.ref_id, message.attachments.first()?.url || null,
+           newDesc,
+           slip.counterpart_name || null,
+           message.id, message.author.id, txn.id]
         )
         log.info(`[financeOCR] merged txn id=${txn.id} ref_id=${slip.ref_id}`)
         resultLines.push(buildReply('✅ รวมกับรายการเดิม', account, slip, txn.id, true))
@@ -159,7 +201,9 @@ async function enrichSlipFromOCR(imageUrl, qrData) {
   let worker
   try {
     worker = await createWorker(['tha', 'eng'])
-    const { data: { text } } = await worker.recognize(imageUrl)
+    const imgInput = await preprocessForOCR(imageUrl)
+    const { data: { text } } = await worker.recognize(imgInput)
+    log.info('[financeOCR] enrich OCR text:\n' + text.substring(0, 400))
 
     let ocrSlip = null
     for (const parser of SLIP_PARSERS) {

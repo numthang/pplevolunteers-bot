@@ -133,3 +133,54 @@ export async function getAccountSummary(guildId, accountId) {
   )
   return rows[0]
 }
+
+export async function getBalanceSummary(guildId, accountId) {
+  // SUM balance
+  const [sumRows] = await pool.query(
+    `SELECT
+       SUM(CASE WHEN type='income'  THEN amount ELSE 0 END) AS total_income,
+       SUM(CASE WHEN type='expense' THEN amount ELSE 0 END) AS total_expense,
+       SUM(CASE WHEN type='income'  THEN amount ELSE -amount END) AS net
+     FROM finance_transactions
+     WHERE guild_id = ? AND account_id = ?`,
+    [guildId, accountId]
+  )
+
+  // latest balance_after
+  const [balRows] = await pool.query(
+    `SELECT balance_after, txn_at
+     FROM finance_transactions
+     WHERE guild_id = ? AND account_id = ? AND balance_after IS NOT NULL
+     ORDER BY txn_at DESC LIMIT 1`,
+    [guildId, accountId]
+  )
+
+  // reconciliation gaps: consecutive rows with balance_after where diff ≠ amount
+  const [txnRows] = await pool.query(
+    `SELECT id, type, amount, balance_after, txn_at
+     FROM finance_transactions
+     WHERE guild_id = ? AND account_id = ? AND balance_after IS NOT NULL
+     ORDER BY txn_at ASC`,
+    [guildId, accountId]
+  )
+
+  const gaps = []
+  for (let i = 1; i < txnRows.length; i++) {
+    const prev = txnRows[i - 1]
+    const curr = txnRows[i]
+    const expectedDiff = curr.type === 'income' ? Number(curr.amount) : -Number(curr.amount)
+    const actualDiff   = Number(curr.balance_after) - Number(prev.balance_after)
+    if (Math.abs(actualDiff - expectedDiff) > 0.01) {
+      gaps.push({ from: prev.txn_at, to: curr.txn_at })
+    }
+  }
+
+  return {
+    ...sumRows[0],
+    balance_after: balRows[0]?.balance_after ?? null,
+    balance_after_at: balRows[0]?.txn_at ?? null,
+    has_balance_after: balRows.length > 0,
+    gap_count: gaps.length,
+    gaps: gaps.slice(0, 10),
+  }
+}

@@ -74,6 +74,9 @@ function escSQL(s) {
 function parseRows(text) {
   const rows = []
 
+  // merge wrapped lines: "ชื่อ+\n+\nรับโอนเงิน247.50" → "ชื่อ++รับโอนเงิน247.50"
+  text = text.replace(/\+\n\+\n/g, '++')
+
   // แต่ละ row เริ่มด้วย DD-MM-YY หรือ DD-MM-YYYY ตามด้วย HH:MM
   const rowPattern = /(\d{2}-\d{2}-\d{2,4})(\d{2}:\d{2})(.+?)(?=\d{2}-\d{2}-\d{2,4}\d{2}:\d{2}|$)/gs
 
@@ -83,14 +86,22 @@ function parseRows(text) {
     const timeStr = m[2]
     const rest    = m[3].trim()
 
-    // จำนวนเงินอยู่ท้ายสุดเสมอ เช่น "500.00" หรือ "2,475.00"
-    const amtMatch = rest.match(/([\d,]+\.\d{2})\s*$/)
-    if (!amtMatch) continue
+    // ตัด page footer ออกก่อน (KBPDF... หรือ "หน้าที่ (PAGE" หรือ "ชื่อบัญชี")
+    const restClean = rest.split(/\nKBPDF|\nหน้าที่|\nชื่อบัญชี/)[0].trim()
 
-    const amount = parseMoney(amtMatch[1])
+    // ข้าม page-break rows (ยอดยกมา / header ซ้ำ) — ใช้ restClean แทน rest
+    if (/ยอดยกมา|วันที่มีผล/.test(restClean)) continue
+
+    // จำนวนเงินอยู่ท้ายสุดก่อน trailing garbage (KBPDF, multiline branch ฯลฯ)
+    // หา last money pattern ในทั้ง rest
+    const allAmts = [...restClean.matchAll(/([\d,]+\.\d{2})/g)]
+    if (!allAmts.length) continue
+    const lastAmt = allAmts[allAmts.length - 1]
+
+    const amount = parseMoney(lastAmt[1])
     if (!amount || amount === 0) continue
 
-    const body = rest.slice(0, rest.lastIndexOf(amtMatch[0])).trim()
+    const body = restClean.slice(0, lastAmt.index).trim()
 
     // ยอดคงเหลืออยู่ก่อน description — หา pattern ตัวเลข ตามด้วย "จาก"|"รหัส"|"โอน"|"ชำระ"
     // ช่องทาง: K PLUS, EDC/K SHOP/MYQR, Internet/Mobile SCB, MAKE by KBank, สาขา...
@@ -100,7 +111,7 @@ function parseRows(text) {
     let counterpart_name = null
 
     // หาช่องทาง (alphanumeric/slash/space ก่อน ยอดคงเหลือ)
-    const chanMatch = body.match(/^(K PLUS|EDC\/K SHOP\/MYQR|Internet\/Mobile SCB|MAKE by KBank|สาขา\S+|PromptPay|SCB Easy)/i)
+    const chanMatch = body.match(/^(Internet\/Mobile [A-Za-zก-๙]+(?:\s+[A-Za-zก-๙]+)*|K-Cash Connect Plus|K BIZ|K PLUS|EDC\/K SHOP\/MYQR|MAKE by KBank|LINE BK|โอนเข้า\/หักบัญชีอัตโนมัติ|เคแบงก์เซอร์วิสที่ 7-11|สาขา[^\d]+?(?=\d)|PromptPay|SCB Easy|[A-Z]{2,6}(?=\d))/)
     if (chanMatch) {
       channel = chanMatch[1]
       description = body.slice(chanMatch[0].length).trim()
@@ -111,25 +122,41 @@ function parseRows(text) {
     const balance_after = balMatch ? parseMoney(balMatch[1]) : null
     description = description.replace(/^[\d,]+\.\d{2}/, '').trim()
 
-    // counterpart_account + counterpart_name จาก "จาก X0453 นาย อรรณพ++" หรือ "จาก SCB X7942 นางสาว กัญญา++"
+    // counterpart_account + counterpart_name
+    // income: "จาก X0453 นาย อรรณพ++" หรือ "จาก SCB X7942 นางสาว กัญญา++"
+    // expense: "โอนไป KTB X1577 นายธีรวุฒิ++" หรือ "โอนไป X3482 น.ส. อัจฉรา++"
     let counterpart_account = null
-    // รองรับ prefix ธนาคาร: "SCB X7942", "KTB X1234" ฯลฯ หรือแค่ "X0453"
-    const fromMatch = description.match(/จาก\s+(?:[A-Z]+\s+)?(X\S+)\s+(.+?)(?:\+\+|$)/)
-    if (fromMatch) {
-      counterpart_account = fromMatch[1].trim()
-      counterpart_name    = fromMatch[2].trim()
+    const cpMatch = description.match(/(?:จาก|โอนไป)\s+(?:[A-Za-zก-๙]+\s+)?(X\S+)\s+(.+?)(?:\+\+|$)/)
+    if (cpMatch) {
+      counterpart_account = cpMatch[1].trim()
+      counterpart_name    = cpMatch[2].trim()
     }
 
-    // ref_id: เอาแค่รหัส ตัด "รับโอนเงินผ่าน QR" ออก
-    const refMatch = description.match(/รหัสอ้างอิง\s+([A-Za-z0-9]+)/)
-    const ref_id = refMatch ? refMatch[1] : null
+    // ref_id: ไม่เก็บเป็น key เพราะ KPP ซ้ำได้ → ต่อท้าย description แทน
+    const ref_id = null
+    const kppMatch = description.match(/รหัสอ้างอิง\s+([A-Za-z0-9]+)/)
+    const kppCode = kppMatch ? kppMatch[1] : null
 
     // description: เอาเฉพาะประเภทรายการท้ายสุด (รับโอนเงิน, รับโอนเงินผ่าน QR, โอนเงิน ฯลฯ)
-    const txnTypeMatch = description.match(/(รับโอนเงินผ่าน QR|รับโอนเงิน|โอนเงิน|ชำระเงิน|เปิดบัญชี|ดอกเบี้ย\S*|ฝากเงินสด)/)
-    const txnType = txnTypeMatch ? txnTypeMatch[1] : description
+    // normalize สระอำ 2 แบบ (ชํา → ชำ)
+    const descNorm = description.replace(/ชํา/g, 'ชำ')
 
-    // type: expense ถ้ารายละเอียดมีคำว่า "โอนเงิน" (ออก) หรือ "ชำระเงิน" โดยไม่มี "รับ"
-    const isExpense = /โอนเงิน|ชำระเงิน/.test(description) && !/รับโอน/.test(description)
+    const txnTypeMatch = descNorm.match(/(รับโอนเงินผ่าน QR|รับโอนเงิน|โอนเงิน|ชำระเงิน|เปิดบัญชี|ดอกเบี้ย\S*|ฝากเงินสด)/)
+    const txnType = txnTypeMatch
+      ? (kppCode ? `${txnTypeMatch[1]} (${kppCode})` : txnTypeMatch[1])
+      : descNorm
+
+    // counterpart จาก "เพื่อชำระ Ref X9194 ชื่อบริษัท"
+    if (!counterpart_account) {
+      const payMatch = descNorm.match(/เพื่อชำระ\s+Ref\s+(\S+)\s+(.+?)(?:ชำระ|$)/)
+      if (payMatch) {
+        counterpart_account = payMatch[1].trim()
+        counterpart_name    = payMatch[2].trim() || null
+      }
+    }
+
+    // type: expense ถ้ามี "โอนเงิน" หรือ "ชำระเงิน" โดยไม่มี "รับโอน"
+    const isExpense = /โอนเงิน|ชำระเงิน/.test(descNorm) && !/รับโอน/.test(descNorm)
     const type = isExpense ? 'expense' : 'income'
 
     const txn_at = parseThaiDate(dateStr, timeStr)
@@ -165,7 +192,9 @@ function parseRows(text) {
   fs.writeFileSync(debugPath, data.text)
   console.log(`📝 Raw text saved: ${debugPath}`)
 
-  const rows = parseRows(data.text)
+  // อ่านจากไฟล์ที่ save ไว้แทน เพื่อให้ newline consistent
+  const rawText = fs.readFileSync(debugPath, 'utf8')
+  const rows = parseRows(rawText)
   console.log(`✅ Parsed rows: ${rows.length}`)
 
   if (rows.length === 0) {
@@ -175,16 +204,16 @@ function parseRows(text) {
 
   // ── Excel ──────────────────────────────────────────────────────────────────
   const xlsxData = rows.map((r, i) => ({
-    '#':                i + 1,
-    'วันที่':           r.txn_at_str,
-    'ประเภท':           r.type === 'income' ? 'รายรับ' : 'รายจ่าย',
-    'จำนวน':            r.amount,
-    'คงเหลือ':          r.balance_after ?? '',
-    'รายละเอียด':       r.description,
-    'ช่องทาง':          r.channel ?? '',
-    'บัญชีคู่โอน':      r.counterpart_account ?? '',
-    'ชื่อคู่โอน':       r.counterpart_name ?? '',
-    'ref_id':           r.ref_id ?? '',
+    '#':                    i + 1,
+    'txn_at':               r.txn_at_str,
+    'type':                 r.type,
+    'amount':               r.amount,
+    'balance_after':        r.balance_after ?? '',
+    'description':          r.description,
+    'counterpart_bank':     r.channel ?? '',
+    'counterpart_account':  r.counterpart_account ?? '',
+    'counterpart_name':     r.counterpart_name ?? '',
+    'ref_id':               r.ref_id ?? '',
   }))
 
   const wb = XLSX.utils.book_new()
@@ -200,6 +229,8 @@ function parseRows(text) {
     `-- account_id=${accountId} guild_id=${guildId}`,
     `-- Generated: ${new Date().toISOString()}`,
     `-- Rows: ${rows.length}`,
+    '',
+    `DELETE FROM finance_transactions WHERE account_id=${accountId};`,
     '',
   ]
 

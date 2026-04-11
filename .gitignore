@@ -1,6 +1,7 @@
 .env
 node_modules/
 #backups/
+logs/
 tmp/
 meilisearch
 data.ms/
