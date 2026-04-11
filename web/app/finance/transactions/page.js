@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
 import CategorySelect, { CatIcon } from '@/components/CategorySelect'
+import { formatThaiDateHeader, formatThaiDateShort } from '@/lib/dateFormat'
 import AccountSelect from '@/components/AccountSelect'
 import { Pencil, Trash2, ImagePlus, X, ChevronDown } from 'lucide-react'
 import BankBadge from '@/components/BankBadge'
@@ -214,7 +215,7 @@ function TransactionsContent() {
           <div className="text-center py-12 text-gray-400">ไม่มีรายการ</div>
         )}
         {txns.reduce((acc, t) => {
-          const dateKey = new Date(t.txn_at).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' })
+          const dateKey = formatThaiDateHeader(t.txn_at)
           if (!acc.length || acc[acc.length - 1].dateKey !== dateKey) {
             acc.push({ dateKey, items: [] })
           }
@@ -250,7 +251,7 @@ function TransactionsContent() {
                   {!t.category_name && <span className="text-gray-300 dark:text-gray-600">· ไม่มีหมวด</span>}
                 </p>
                 <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                  {new Date(t.txn_at).toLocaleDateString('th-TH')}
+                  {formatThaiDateShort(t.txn_at)}
                 </p>
               </div>
               <div className="text-right flex-shrink-0 flex flex-col items-end gap-1">

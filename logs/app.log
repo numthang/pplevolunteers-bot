@@ -1636,3 +1636,4 @@ I
 [2026-04-11 13:28:14] [INFO] [financeOCR] merged txn id=36507 ref_id=016064161430BTF06457
 [2026-04-11 13:41:07] [INFO] [emailPoller] init, polling every 1200 s
 [2026-04-11 14:05:07] [INFO] [emailPoller] init, polling every 1200 s
+[2026-04-11 14:16:22] [INFO] [emailPoller] init, polling every 1200 s

@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { Suspense } from 'react'
 import AccountSelect from '@/components/AccountSelect'
 import CategorySelect, { CatIcon } from '@/components/CategorySelect'
+import { formatThaiDateShort } from '@/lib/dateFormat'
 import { X } from 'lucide-react'
 
 const MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.']
@@ -132,7 +133,7 @@ function CategoryModal({ catRow, filter, categories, onClose, onUpdated }) {
                       <span className="text-xs text-gray-400 w-7 text-right flex-shrink-0">{idx + 1}</span>
                       <div className="flex-1 min-w-0">
                         <DescEdit txn={t} onSaved={desc => setTxns(prev => prev.map(x => x.id === t.id ? { ...x, description: desc } : x))} />
-                        <p className="text-xs text-gray-400">{new Date(t.txn_at).toLocaleDateString('th-TH')} · {t.account_name}</p>
+                        <p className="text-xs text-gray-400">{formatThaiDateShort(t.txn_at)} · {t.account_name}</p>
                       </div>
                       <p className={`font-mono text-sm font-semibold flex-shrink-0 ${t.type === 'income' ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
                         {t.type === 'income' ? '+' : '-'}{fmt(t.amount)} ฿
