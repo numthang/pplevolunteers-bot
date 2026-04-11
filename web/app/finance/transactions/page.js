@@ -147,29 +147,31 @@ function TransactionsContent() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-2 mb-5">
-        <AccountSelect
-          accounts={accounts}
-          value={filter.accountId}
-          onChange={v => setFilter(f => ({ ...f, accountId: v }))}
-          placeholder="ทุกบัญชี"
-          className="min-w-48"
-        />
+      <div className="flex flex-col gap-2 mb-5">
+        <div className="flex gap-2">
+          <AccountSelect
+            accounts={accounts}
+            value={filter.accountId}
+            onChange={v => setFilter(f => ({ ...f, accountId: v }))}
+            placeholder="ทุกบัญชี"
+            className="flex-1"
+          />
+          <CategorySelect
+            categories={categories}
+            value={filter.categoryId}
+            onChange={v => setFilter(f => ({ ...f, categoryId: v }))}
+            placeholder="ทุกหมวด"
+            className="flex-1"
+          />
+        </div>
         <div className="flex rounded border dark:border-gray-600 overflow-hidden text-sm">
           {[['', 'ทั้งหมด'], ['income', '📥 รายรับ'], ['expense', '📤 รายจ่าย']].map(([val, label]) => (
             <button key={val} type="button"
               onClick={() => setFilter(f => ({ ...f, type: val }))}
-              className={`px-3 py-1 ${filter.type === val ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
+              className={`flex-1 px-3 py-1.5 ${filter.type === val ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
             >{label}</button>
           ))}
         </div>
-        <CategorySelect
-          categories={categories}
-          value={filter.categoryId}
-          onChange={v => setFilter(f => ({ ...f, categoryId: v }))}
-          placeholder="ทุกหมวด"
-          className="min-w-36"
-        />
       </div>
 
       {/* List */}

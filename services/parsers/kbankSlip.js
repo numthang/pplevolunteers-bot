@@ -37,19 +37,28 @@ function parse(rawText) {
   const fromDigits = acctMatches[0]?.[1] || null
   const toDigits   = acctMatches[1]?.[1] || null
 
-  // ---- amount: หา ตัวเลขในช่วงหลัง "จำนวน:" ----
-  // - รองรับ บท (OCR อ่าน บาท ผิด), dot-thousands (3.568.00 → 3568)
-  const amtMatch = text.match(/จำนวน[^\n]{0,30}\n[\s\S]{0,60}?([\d,.]+)\s*บ[าา]?ท/)
-  let amount = null
-  if (amtMatch) {
-    let raw = amtMatch[1]
-    // dot-thousands: ถ้ามีหลาย dot เช่น 3.568.00 หรือ 15.170.00 → dot แรกๆ คือ thousands
+  // ---- amount ----
+  // primary: หลัง "จำนวน:" (รองรับ noise และ dot-thousands)
+  // fallback: หา x,xxx.xx บาท ทุกที่ใน text แล้วเอาค่าสูงสุดที่ > 0 (ตัด 0.00 ค่าธรรมเนียมออก)
+  function parseMoney(raw) {
     const dots = (raw.match(/\./g) || []).length
     if (dots > 1) {
       const lastDot = raw.lastIndexOf('.')
       raw = raw.slice(0, lastDot).replace(/\./g, '') + raw.slice(lastDot)
     }
-    amount = parseFloat(raw.replace(/,/g, '')) || null
+    return parseFloat(raw.replace(/,/g, '')) || null
+  }
+
+  let amount = null
+  const amtMatch = text.match(/จำนวน[^\n]{0,60}\n[\s\S]{0,80}?([\d,.]+)\s*บ[าา]?ท/)
+  if (amtMatch) amount = parseMoney(amtMatch[1])
+
+  if (!amount) {
+    // fallback: หาทุก "x,xxx.xx บาท" แล้วเอาค่าสูงสุด
+    const all = [...text.matchAll(/([\d,]+\.\d{2})\s*บ[าา]?ท/g)]
+      .map(m => parseMoney(m[1]))
+      .filter(n => n && n > 0)
+    if (all.length) amount = Math.max(...all)
   }
 
   // ---- fee ----

@@ -28,8 +28,8 @@ function parse(rawText) {
   const fromDigits = acctMatches[0]?.[1] || null
   const toDigits   = acctMatches[1]?.[1] || null
 
-  // ---- amount: "จำนวนเงิน" + ตัวเลข ----
-  const amtMatch = text.match(/จำนวนเงิน[^\n]*\n?\s*([\d,]+\.?\d*)/)
+  // ---- amount: "จำนวนเงิน" ตามด้วย spaces + ตัวเลข (อยู่บรรทัดเดียวกัน) ----
+  const amtMatch = text.match(/จำนวนเงิน\s+([\d,]+\.?\d*)/)
   const amount = amtMatch ? parseFloat(amtMatch[1].replace(/,/g, '')) : null
 
   // ---- memo ----

@@ -813,3 +813,50 @@ XXX-X-X8348-x
 [2026-04-10 22:04:56] [INFO] [financeOCR] parsed slip (ocr): {"ref_id":"016086181932ATF03865","amount":1320,"fee":null,"memo":"ค่าเสาอากาศวิทยุสื่อสาร","txn_at":"2026-03-27T11:19:00.000Z","from_digits":"4645","to_digits":"8348","from_acct_masked":"XXX-X-X4645-X","to_acct_masked":"XXX-X-X8348-x","counterpart_name":"น.ส. อัจฉรา อิงคามระธร","bank":"กสิกรไทย"}
 [2026-04-10 22:04:56] [INFO] [financeOCR] merged txn id=32902 ref_id=016086181932ATF03865
 [2026-04-10 22:17:39] [INFO] [emailPoller] init, polling every 1200 s
+[2026-04-10 22:18:13] [INFO] [emailPoller] init, polling every 1200 s
+[2026-04-11 06:57:43] [INFO] [emailPoller] init, polling every 1200 s
+[2026-04-11 06:59:15] [INFO] [financeOCR] QR raw: 0041000600000101030040220016066230727AQR027485102TH9104CE74
+[2026-04-11 06:59:15] [INFO] [financeOCR] QR parsed: {"_raw":"0041000600000101030040220016066230727AQR027485102TH9104CE74","ref_id":"016066230727AQR02748","_source":"qr_kbank"}
+[2026-04-11 06:59:18] [INFO] [financeOCR] slip parsed but amount=null ref_id=016066230727AQR02748
+[2026-04-11 06:59:19] [INFO] [financeOCR] QR raw: 0041000600000101030040220016069093022BPM138215102TH9104B1CE
+[2026-04-11 06:59:19] [INFO] [financeOCR] QR parsed: {"_raw":"0041000600000101030040220016069093022BPM138215102TH9104B1CE","ref_id":"016069093022BPM13821","_source":"qr_kbank"}
+[2026-04-11 06:59:21] [INFO] [financeOCR] slip parsed but amount=null ref_id=016069093022BPM13821
+[2026-04-11 06:59:23] [INFO] [financeOCR] QR raw: 0041000600000101030040220016073161833BTF023295102TH910469CB
+[2026-04-11 06:59:23] [INFO] [financeOCR] QR parsed: {"_raw":"0041000600000101030040220016073161833BTF023295102TH910469CB","ref_id":"016073161833BTF02329","_source":"qr_kbank"}
+[2026-04-11 06:59:25] [INFO] [financeOCR] parsed slip (qr): {"ref_id":"016073161833BTF02329","amount":524,"fee":null,"memo":"ค่าน้้าเกลือ๕ล|6๐๐| ทีมสัมสู่ไฟ","txn_at":"2026-03-14T09:18:00.000Z","from_digits":"4645","to_digits":"8748","from_acct_masked":"XXX-X-X4645-X","to_acct_masked":"XXX-X-X8748-x","counterpart_name":"นาย ภาวัต เป็งวันผูก","bank":"กสิกรไทย"}
+[2026-04-11 06:59:25] [INFO] [financeOCR] matchAccount from_digits=4645 to_digits=8748 matched=อาสาประชาชน(expense)
+[2026-04-11 06:59:25] [INFO] [financeOCR] merged txn id=32901 ref_id=016073161833BTF02329
+[2026-04-11 06:59:27] [INFO] [financeOCR] QR raw: 0041000600000101030040220016076205805BPM026445102TH9104FA34
+[2026-04-11 06:59:27] [INFO] [financeOCR] QR parsed: {"_raw":"0041000600000101030040220016076205805BPM026445102TH9104FA34","ref_id":"016076205805BPM02644","_source":"qr_kbank"}
+[2026-04-11 06:59:30] [INFO] [financeOCR] slip parsed but amount=null ref_id=016076205805BPM02644
+[2026-04-11 06:59:32] [INFO] [financeOCR] QR decode error — fallback OCR: Cannot read properties of undefined (reading 'height')
+[2026-04-11 06:59:35] [INFO] [financeOCR] OCR text:
+- BE a
+Ny      ล่
+y >   ny   CB 5            .
+.    =r    —   =ซซะ--   พระ:             | See
+@ โอนเงินสําเร็จ
+17 มี.ค. 2569 - 21:03
+รหัสอ้างอิง: 202603171dHTpopMyvVI4d2Jd
+จาก                    @ งางสาว ประภาวดี เอกวงศ์
+XXX-XXX245-5
+ไปยัง (9? อาสาประชาชน โดย น.ส. ประกาวดี เอกวงศ์ และ
+นาย อรรณ
+%-6459
+จํานวนเงิน                                                                         4,018.00
+ปันทึกช่วยจํา
+โอนคืนค่าเป้น้าที่ยกเลิก ทีมสัมสู้ไฟ
+ve               PR Bh 5 -ม        [=] rr) 310
+ผู้รับเง
+[2026-04-11 06:59:35] [INFO] [financeOCR] slip parsed but amount=null ref_id=202603171dHTpopMyvVI4d2Jd
+[2026-04-11 06:59:36] [INFO] [financeOCR] QR raw: 0041000600000101030040220016079143050DPP131075102TH9104542D
+[2026-04-11 06:59:36] [INFO] [financeOCR] QR parsed: {"_raw":"0041000600000101030040220016079143050DPP131075102TH9104542D","ref_id":"016079143050DPP13107","_source":"qr_kbank"}
+[2026-04-11 06:59:38] [INFO] [financeOCR] parsed slip (qr): {"ref_id":"016079143050DPP13107","amount":15170,"fee":null,"memo":"วิทยุสื่อสาร ทีมสัมสู้ไฟ 5 เครื่อง","txn_at":"2026-03-20T07:30:00.000Z","from_digits":"4645","to_digits":null,"from_acct_masked":"XXX-X-X4645-x","to_acct_masked":null,"counterpart_name":"NZ","bank":"กสิกรไทย"}
+[2026-04-11 06:59:38] [INFO] [financeOCR] matchAccount from_digits=4645 to_digits=null matched=อาสาประชาชน(expense)
+[2026-04-11 06:59:38] [INFO] [financeOCR] inserted txn id=32903 ref_id=016079143050DPP13107 type=expense
+[2026-04-11 06:59:39] [INFO] [financeOCR] QR raw: 0041000600000101030040220016086181932ATF038655102TH9104705F
+[2026-04-11 06:59:39] [INFO] [financeOCR] QR parsed: {"_raw":"0041000600000101030040220016086181932ATF038655102TH9104705F","ref_id":"016086181932ATF03865","_source":"qr_kbank"}
+[2026-04-11 06:59:41] [INFO] [financeOCR] parsed slip (qr): {"ref_id":"016086181932ATF03865","amount":1320,"fee":null,"memo":"ค่าเสาอากาศวิทยุสื่อสาร","txn_at":"2026-03-27T11:19:00.000Z","from_digits":"4645","to_digits":"8348","from_acct_masked":"XXX-X-X4645-X","to_acct_masked":"XXX-X-X8348-x","counterpart_name":"น.ส. อัจฉรา อิงคามระธร","bank":"กสิกรไทย"}
+[2026-04-11 06:59:41] [INFO] [financeOCR] matchAccount from_digits=4645 to_digits=8348 matched=อาสาประชาชน(expense)
+[2026-04-11 06:59:41] [INFO] [financeOCR] merged txn id=32902 ref_id=016086181932ATF03865
+[2026-04-11 07:29:54] [INFO] [emailPoller] init, polling every 1200 s

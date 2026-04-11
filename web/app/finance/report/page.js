@@ -209,36 +209,34 @@ function ReportContent() {
       <h1 className="text-2xl font-bold mb-6">รายงาน</h1>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-2 mb-6">
-        <AccountSelect accounts={accounts} value={filter.accountId} onChange={v => setFilter(f => ({ ...f, accountId: v }))} placeholder="ทุกบัญชี" className="min-w-44" />
-
+      <div className="flex flex-col gap-2 mb-6">
+        <AccountSelect accounts={accounts} value={filter.accountId} onChange={v => setFilter(f => ({ ...f, accountId: v }))} placeholder="ทุกบัญชี" className="w-full" />
         <div className="flex rounded border dark:border-gray-600 overflow-hidden text-sm">
           {[['', 'ทั้งหมด'], ['income', '📥 รายรับ'], ['expense', '📤 รายจ่าย']].map(([val, label]) => (
             <button key={val} type="button"
               onClick={() => setFilter(f => ({ ...f, type: val }))}
-              className={`px-3 py-1.5 ${filter.type === val ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
+              className={`flex-1 px-3 py-1.5 ${filter.type === val ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
             >{label}</button>
           ))}
         </div>
-
-        <select className="border dark:border-gray-600 rounded px-2 py-1.5 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-          value={filter.year} onChange={e => setFilter(f => ({ ...f, year: e.target.value, month: '', dateFrom: '', dateTo: '' }))}>
-          <option value="">ทุกปี</option>
-          {years.map(y => <option key={y} value={y}>{y + 543} ({y})</option>)}
-        </select>
-
-        <select className="border dark:border-gray-600 rounded px-2 py-1.5 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-          value={filter.month} onChange={e => setFilter(f => ({ ...f, month: e.target.value, dateFrom: '', dateTo: '' }))}>
-          <option value="">ทุกเดือน</option>
-          {MONTHS.map((m, i) => <option key={i+1} value={i+1}>{m}</option>)}
-        </select>
-
+        <div className="flex gap-2">
+          <select className="flex-1 border dark:border-gray-600 rounded px-2 py-1.5 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+            value={filter.year} onChange={e => setFilter(f => ({ ...f, year: e.target.value, month: '', dateFrom: '', dateTo: '' }))}>
+            <option value="">ทุกปี</option>
+            {years.map(y => <option key={y} value={y}>{y + 543} ({y})</option>)}
+          </select>
+          <select className="flex-1 border dark:border-gray-600 rounded px-2 py-1.5 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+            value={filter.month} onChange={e => setFilter(f => ({ ...f, month: e.target.value, dateFrom: '', dateTo: '' }))}>
+            <option value="">ทุกเดือน</option>
+            {MONTHS.map((m, i) => <option key={i+1} value={i+1}>{m}</option>)}
+          </select>
+        </div>
         <div className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
           <span>หรือ</span>
-          <input type="date" className="border dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm"
+          <input type="date" className="flex-1 min-w-0 border dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm"
             value={filter.dateFrom} onChange={e => setFilter(f => ({ ...f, dateFrom: e.target.value, year: '', month: '' }))} />
           <span>–</span>
-          <input type="date" className="border dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm"
+          <input type="date" className="flex-1 min-w-0 border dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm"
             value={filter.dateTo} onChange={e => setFilter(f => ({ ...f, dateTo: e.target.value, year: '', month: '' }))} />
         </div>
       </div>
@@ -247,17 +245,22 @@ function ReportContent() {
 
       {/* Summary bar */}
       {data && (
-        <div className="grid grid-cols-3 gap-3 mb-6">
-          {[
-            { label: 'รายรับ',  value: totalIncome,  cls: 'text-green-600 dark:text-green-400' },
-            { label: 'รายจ่าย', value: totalExpense, cls: 'text-red-500 dark:text-red-400' },
-            { label: 'สุทธิ',   value: net,          cls: net >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400' },
-          ].map(({ label, value, cls }) => (
-            <div key={label} className="bg-white dark:bg-gray-800 rounded-xl shadow px-4 py-3 text-center">
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{label}</p>
-              <p className={`font-mono font-bold text-lg ${cls}`}>{fmt(value)} ฿</p>
-            </div>
-          ))}
+        <div className="flex flex-col gap-3 mb-6">
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { label: 'รายรับ',  value: totalIncome,  cls: 'text-green-600 dark:text-green-400' },
+              { label: 'รายจ่าย', value: totalExpense, cls: 'text-red-500 dark:text-red-400' },
+            ].map(({ label, value, cls }) => (
+              <div key={label} className="bg-white dark:bg-gray-800 rounded-xl shadow px-3 py-3 text-center">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{label}</p>
+                <p className={`font-mono font-bold text-lg leading-tight ${cls}`}>{fmt(value)} ฿</p>
+              </div>
+            ))}
+          </div>
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow px-3 py-3 text-center">
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">สุทธิ</p>
+            <p className={`font-mono font-bold text-lg leading-tight ${net >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>{fmt(net)} ฿</p>
+          </div>
         </div>
       )}
 
