@@ -38,11 +38,7 @@ function TransactionsContent() {
     fetch('/api/finance/categories').then(r => r.json()).then(setCategories)
   }, [])
 
-  useEffect(() => {
-    if (!filter.accountId) { setBalance(null); return }
-    fetch(`/api/finance/transactions/balance?accountId=${filter.accountId}`)
-      .then(r => r.json()).then(setBalance)
-  }, [filter.accountId])
+  useEffect(() => { fetchBalance() }, [filter.accountId])
 
   const fetchPage = useCallback(async (currentOffset, reset = false) => {
     if (loadingRef.current) return
@@ -89,13 +85,20 @@ function TransactionsContent() {
     return () => obs.disconnect()
   }, [hasMore, fetchPage])
 
+  const fetchBalance = useCallback(() => {
+    if (!filter.accountId) { setBalance(null); return }
+    fetch(`/api/finance/transactions/balance?accountId=${filter.accountId}`)
+      .then(r => r.json()).then(setBalance)
+  }, [filter.accountId])
+
   const load = useCallback(() => {
     offsetRef.current = 0
     loadingRef.current = false
     setTxns([])
     setHasMore(true)
     fetchPage(0, true)
-  }, [fetchPage])
+    fetchBalance()
+  }, [fetchPage, fetchBalance])
 
   function openNew()  { setForm({ ...EMPTY_FORM }); setEditing({}) }
   function openEdit(t){ setForm({ ...t, txn_at: toLocalDT(new Date(t.txn_at)) }); setEditing(t) }
