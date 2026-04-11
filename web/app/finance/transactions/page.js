@@ -372,7 +372,7 @@ function TxnForm({ form, onChange, accounts, categories }) {
       </div>
       <label className="block">
         วันที่ / เวลา
-        <input type="datetime-local" className={inputCls} value={form.txn_at || ''} onChange={e => onChange({ txn_at: e.target.value })} />
+        <input type="datetime-local" lang="th" className={inputCls} value={form.txn_at || ''} onChange={e => onChange({ txn_at: e.target.value })} />
       </label>
       <label className="block">
         แหล่งที่มา
