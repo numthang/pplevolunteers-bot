@@ -241,29 +241,11 @@ module.exports = {
           const prevIds = existing.account_ids ? existing.account_ids.split(',').map(Number) : []
           const ids = accountIds.length ? accountIds : prevIds
 
-          const idsChanged = accountIds.length > 0 &&
-            JSON.stringify([...accountIds].sort()) !== JSON.stringify([...prevIds].sort())
-
-          if (idsChanged) {
-            // ลบ message เดิมทั้งหมด แล้ว send ใหม่
-            const oldMsgIds = JSON.parse(existing.dashboard_msg_id || '{}')
-            for (const msgId of Object.values(oldMsgIds)) {
-              const msg = await thread.messages.fetch(msgId).catch(() => null)
-              if (msg) await msg.delete().catch(() => null)
-            }
-            const msgIds = await sendDashboard(thread, interaction.guildId, ids)
-            await upsertFinanceConfig(interaction.guildId, {
-              channel_id:       channelOpt?.id || existing.channel_id,
-              account_ids:      ids.length ? ids : null,
-              dashboard_msg_id: JSON.stringify(msgIds),
-            })
-          } else {
-            await refreshDashboard(thread, interaction.guildId, ids, existing.dashboard_msg_id)
-            await upsertFinanceConfig(interaction.guildId, {
-              channel_id:  channelOpt?.id || existing.channel_id,
-              account_ids: ids.length ? ids : null,
-            })
-          }
+await refreshDashboard(thread, interaction.guildId, ids, existing.dashboard_msg_id)
+          await upsertFinanceConfig(interaction.guildId, {
+            channel_id:  channelOpt?.id || existing.channel_id,
+            account_ids: ids.length ? ids : null,
+          })
           return interaction.editReply({ content: `✅ อัปเดต dashboard ใน <#${existing.thread_id}> แล้วครับ` })
         }
       }

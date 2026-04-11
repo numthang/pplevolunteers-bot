@@ -1634,3 +1634,4 @@ I
 [2026-04-11 13:28:14] [INFO] [financeOCR] matchAccount from_digits=4645 to_digits=6445 matched=อาสาประชาชน(expense)
 [2026-04-11 13:28:14] [INFO] [financeOCR] matched statement row id=36507 by amount+txn_at
 [2026-04-11 13:28:14] [INFO] [financeOCR] merged txn id=36507 ref_id=016064161430BTF06457
+[2026-04-11 13:41:07] [INFO] [emailPoller] init, polling every 1200 s
