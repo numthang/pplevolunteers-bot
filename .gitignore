@@ -1,6 +1,6 @@
 .env
 node_modules/
-#backups/
+backups/
 logs/
 tmp/
 meilisearch
