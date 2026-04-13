@@ -107,7 +107,10 @@ async function processTransaction(txn, rawText) {
         account.id,
         type,
         txn.amount,
-        type === 'income' ? `รับโอนจาก ${txn.counterpart_name || ''}` : `โอนให้ ${txn.counterpart_name || ''}`,
+        (() => {
+          const base = type === 'income' ? `รับโอนจาก ${txn.counterpart_name || ''}` : `โอนให้ ${txn.counterpart_name || ''}`
+          return txn.merchant_ref ? `${base} · ${txn.merchant_ref}` : base
+        })(),
         txn.counterpart_name,
         txn.counterpart_account,
         txn.counterpart_bank,

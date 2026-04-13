@@ -20,13 +20,14 @@ function parse(text) {
 
   const dateStr    = get('วันที่ทำรายการ')   // "08/04/2026  20:50:38"
   const refId      = get('เลขที่รายการ')
-  // transfer: "โอนเงินจากบัญชี", credit card payment: "ชำระเงินจากบัญชี"
+  // transfer: "โอนเงินจากบัญชี", QR/credit: "ชำระเงินจากบัญชี"
   const fromAcct   = get('โอนเงินจากบัญชี') || get('ชำระเงินจากบัญชี')
   const toBank     = get('ธนาคารผู้รับเงิน')
   const toAcct     = get('เพื่อเข้าบัญชี')
-  const toName     = get('ชื่อบัญชี') || get('เพื่อเข้าบัญชีบริษัท')
-  const creditCard = get('เลขบัตรเครดิต')
-  const amountStr  = get('จำนวนเงิน \\(บาท\\)')
+  const promptPay  = get('ให้รหัสพร้อมเพย์')
+  const creditCard  = get('เลขบัตรเครดิต')
+  const merchantRef = get('รหัสร้านค้า')
+  const amountStr   = get('จำนวนเงิน \\(บาท\\)')
   const feeStr     = get('ค่าธรรมเนียม \\(บาท\\)')
   const balStr     = get('ยอดถอนได้ \\(บาท\\)')
 
@@ -41,16 +42,22 @@ function parse(text) {
     if (m) txnAt = new Date(`${m[3]}-${m[2]}-${m[1]}T${m[4]}`)
   }
 
+  // counterpart_name — รองรับ format:
+  // โอนธรรมดา/พร้อมเพย์: "ชื่อบัญชี" หรือ "ชื่อผู้รับเงิน"
+  // QR payment: "เพื่อเข้าบัญชีบริษัท" (เอาค่าทั้งหมดมาเลย)
+  const counterpartName = get('ชื่อบัญชี') || get('ชื่อผู้รับเงิน') || get('เพื่อเข้าบัญชีบริษัท')
+
   return {
-    ref_id:             refId,
-    txn_at:             txnAt,
-    amount:             parseNum(amountStr),
-    fee:                parseNum(feeStr),
-    balance_after:      parseNum(balStr),
-    from_acct_masked:   fromAcct,   // ใช้ match กับบัญชีใน DB (last digits)
-    counterpart_name:   toName,
-    counterpart_account: toAcct ? toAcct.replace(/-/g, '') : null,
-    counterpart_bank:   toBank,
+    ref_id:              refId,
+    txn_at:              txnAt,
+    amount:              parseNum(amountStr),
+    fee:                 parseNum(feeStr),
+    balance_after:       parseNum(balStr),
+    from_acct_masked:    fromAcct,   // ใช้ match กับบัญชีใน DB (last digits)
+    counterpart_name:    counterpartName,
+    counterpart_account: toAcct ? toAcct.replace(/-/g, '') : (creditCard || null),
+    counterpart_bank:    toBank,
+    merchant_ref:        merchantRef || null,
     bank: 'กสิกรไทย',
   }
 }

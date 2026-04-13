@@ -32,7 +32,7 @@ function TransactionsContent() {
     const pad = n => String(n).padStart(2, '0')
     return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
   }
-  const EMPTY_FORM = { account_id: defaultAccountId, type: 'income', amount: '', description: '', category_id: '', source: '', txn_at: toLocalDT() }
+  const EMPTY_FORM = { account_id: defaultAccountId, type: 'income', amount: '', description: '', category_id: '', counterpart_name: '', counterpart_bank: '', counterpart_account: '', txn_at: toLocalDT() }
 
   useEffect(() => {
     fetch('/api/finance/accounts').then(r => r.json()).then(setAccounts)
@@ -326,6 +326,9 @@ function TransactionsContent() {
 
 function TxnForm({ form, onChange, accounts, categories }) {
   const inputCls = "block w-full border dark:border-gray-600 rounded px-2 py-1 mt-1 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+  const hasDetails = !!(form.counterpart_name || form.counterpart_bank || form.counterpart_account || form.evidence_url)
+  const [showDetails, setShowDetails] = useState(hasDetails)
+
   return (
     <div className="space-y-3 text-sm text-gray-700 dark:text-gray-300">
       <label className="block">
@@ -374,11 +377,38 @@ function TxnForm({ form, onChange, accounts, categories }) {
         วันที่ / เวลา
         <input type="datetime-local" lang="th" className={inputCls} value={form.txn_at || ''} onChange={e => onChange({ txn_at: e.target.value })} />
       </label>
-      <label className="block">
-        แหล่งที่มา
-        <input name="source" className={inputCls} value={form.source || ''} onChange={e => onChange({ source: e.target.value })} />
-      </label>
-      <EvidenceUpload value={form.evidence_url || ''} onChange={v => onChange({ evidence_url: v })} />
+
+      {/* Collapsible: counterpart + evidence */}
+      <div className="border-t dark:border-gray-600 pt-2">
+        <button
+          type="button"
+          onClick={() => setShowDetails(v => !v)}
+          className="w-full flex items-center justify-between text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 py-0.5"
+        >
+          <span>{showDetails ? 'ซ่อนรายละเอียด' : 'แหล่งที่มา / หลักฐาน'}{!showDetails && hasDetails && <span className="ml-1 text-indigo-500">•</span>}</span>
+          <ChevronDown size={14} className={`transition-transform ${showDetails ? 'rotate-180' : ''}`} />
+        </button>
+
+        {showDetails && (
+          <div className="space-y-3 mt-2">
+            <label className="block">
+              แหล่งที่มา (ชื่อผู้โอน/รับ)
+              <input name="counterpart_name" className={inputCls} value={form.counterpart_name || ''} onChange={e => onChange({ counterpart_name: e.target.value })} />
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="block">
+                ธนาคารคู่โอน
+                <input name="counterpart_bank" className={inputCls} value={form.counterpart_bank || ''} onChange={e => onChange({ counterpart_bank: e.target.value })} />
+              </label>
+              <label className="block">
+                เลขบัญชีคู่โอน
+                <input name="counterpart_account" className={inputCls} value={form.counterpart_account || ''} onChange={e => onChange({ counterpart_account: e.target.value })} />
+              </label>
+            </div>
+            <EvidenceUpload value={form.evidence_url || ''} onChange={v => onChange({ evidence_url: v })} />
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -547,19 +577,24 @@ function Modal({ title, onClose, onSave, children }) {
     return () => document.removeEventListener('keydown', onKey)
   }, [onClose])
 
+  function handleSubmit(e) {
+    e.preventDefault()
+    onSave()
+  }
+
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md max-h-[90vh] flex flex-col">
+      <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between px-6 pt-6 pb-2 flex-shrink-0">
           <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">{title}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"><X size={18} /></button>
+          <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"><X size={18} /></button>
         </div>
         <div className="px-6 overflow-y-auto flex-1">{children}</div>
         <div className="flex justify-end gap-2 px-6 py-4 flex-shrink-0">
-          <button onClick={onClose} className="px-4 py-1.5 rounded border dark:border-gray-600 text-sm text-gray-700 dark:text-gray-300">ยกเลิก</button>
-          <button onClick={onSave}  className="px-4 py-1.5 rounded bg-indigo-600 text-white text-sm hover:bg-indigo-700">บันทึก</button>
+          <button type="button" onClick={onClose} className="px-4 py-1.5 rounded border dark:border-gray-600 text-sm text-gray-700 dark:text-gray-300">ยกเลิก</button>
+          <button type="submit" className="px-4 py-1.5 rounded bg-indigo-600 text-white text-sm hover:bg-indigo-700">บันทึก</button>
         </div>
-      </div>
+      </form>
     </div>
   )
 }

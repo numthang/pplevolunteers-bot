@@ -1640,3 +1640,6 @@ I
 [2026-04-11 14:26:05] [INFO] [emailPoller] init, polling every 1200 s
 [2026-04-11 14:27:32] [INFO] [emailPoller] init, polling every 1200 s
 [2026-04-12 06:04:52] [INFO] [emailPoller] init, polling every 1200 s
+[2026-04-12 16:27:45] [INFO] [emailPoller] init, polling every 120 s
+[2026-04-12 16:30:11] [INFO] [emailPoller] init, polling every 120 s
+[2026-04-12 16:52:59] [INFO] [emailPoller] init, polling every 120 s
