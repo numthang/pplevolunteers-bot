@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
 import CategorySelect, { CatIcon } from '@/components/CategorySelect'
-import { formatThaiDateHeader, formatThaiDateShort } from '@/lib/dateFormat'
+import { formatThaiDateHeader, formatThaiDateShort, formatThaiDateTime } from '@/lib/dateFormat'
 import AccountSelect from '@/components/AccountSelect'
 import { Pencil, Trash2, ImagePlus, X, ChevronDown } from 'lucide-react'
 import BankBadge from '@/components/BankBadge'
@@ -149,21 +149,16 @@ function TransactionsContent() {
       {balance?.has_balance_after && (
         <div className="mb-4 rounded-xl border dark:border-gray-700 bg-white dark:bg-gray-800 p-4 space-y-2">
           <div className="flex justify-between text-sm">
-            <span className="text-gray-500 dark:text-gray-400">ยอดใน DB (SUM)</span>
+            <span className="text-gray-500 dark:text-gray-400">ยอดรวมในระบบ</span>
             <span className="font-semibold">{Number(balance.net).toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท</span>
           </div>
           <div className="flex justify-between text-sm">
-            <span className="text-gray-500 dark:text-gray-400">ยอดจริง (bank)</span>
+            <span className="text-gray-500 dark:text-gray-400">ยอดคงเหลือจริง</span>
             <span className="font-semibold text-indigo-600 dark:text-indigo-400">{Number(balance.balance_after).toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท</span>
           </div>
           {Math.abs(Number(balance.net) - Number(balance.balance_after)) > 0.01 && (
             <div className="text-xs text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 rounded px-2 py-1">
               ⚠️ ยอดต่างกัน {Math.abs(Number(balance.net) - Number(balance.balance_after)).toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท
-            </div>
-          )}
-          {balance.gap_count > 0 && (
-            <div className="text-xs text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 rounded px-2 py-1">
-              ⚠️ พบความไม่ต่อเนื่อง {balance.gap_count} จุด (อาจมี transaction หายไป)
             </div>
           )}
         </div>
@@ -177,7 +172,6 @@ function TransactionsContent() {
           value={searchInput}
           onChange={e => setSearchInput(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && setFilter(f => ({ ...f, search: searchInput }))}
-          onBlur={() => setFilter(f => ({ ...f, search: searchInput }))}
         />
       </div>
 
@@ -251,7 +245,7 @@ function TransactionsContent() {
                   {!t.category_name && <span className="text-gray-300 dark:text-gray-600">· ไม่มีหมวด</span>}
                 </p>
                 <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                  {formatThaiDateShort(t.txn_at)}
+                  {formatThaiDateTime(t.txn_at)}
                 </p>
               </div>
               <div className="text-right flex-shrink-0 flex flex-col items-end gap-1">

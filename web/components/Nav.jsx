@@ -6,19 +6,33 @@ import { signOut } from 'next-auth/react'
 import { useState } from 'react'
 import { useTheme } from './Providers.jsx'
 
-const links = [
-  { href: '/dashboard',            label: 'ภาพรวม' },
-  { href: '/finance/transactions', label: 'รายการ' },
-  { href: '/finance/accounts',     label: 'บัญชี' },
-  { href: '/finance/categories',   label: 'หมวดหมู่' },
-  { href: '/finance/report',       label: 'รายงาน' },
-  { href: '/admin/logs',           label: 'Logs', roles: ['Admin', 'Moderator'] },
+const FINANCE_LINKS = [
+  { href: '/finance',               label: 'ภาพรวม' },
+  { href: '/finance/transactions',  label: 'รายการ' },
+  { href: '/finance/accounts',      label: 'บัญชี' },
+  { href: '/finance/categories',    label: 'หมวดหมู่' },
+  { href: '/finance/report',        label: 'รายงาน' },
+  { href: '/admin/logs',            label: 'Logs', roles: ['Admin', 'Moderator'] },
+]
+
+const CALLING_LINKS = [
+  { href: '/calling', label: 'ภาพรวม' },
+]
+
+const APPS = [
+  { key: 'finance', label: 'PPLE Finance', href: '/finance' },
+  { key: 'calling', label: 'PPLE Calling', href: '/calling' },
 ]
 
 export default function Nav({ session }) {
   const pathname = usePathname()
   const { dark, toggle } = useTheme()
-  const [open, setOpen] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [appOpen, setAppOpen] = useState(false)
+
+  const isCallingApp = pathname.startsWith('/calling')
+  const currentApp = isCallingApp ? APPS[1] : APPS[0]
+  const links = isCallingApp ? CALLING_LINKS : FINANCE_LINKS
 
   const roles = Array.isArray(session?.user?.roles)
     ? session.user.roles
@@ -33,11 +47,45 @@ export default function Nav({ session }) {
   return (
     <nav className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shadow-sm sticky top-0 z-40">
       <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
-        {/* Logo */}
-        <Link href="/dashboard" className="flex items-center gap-2 shrink-0 hover:opacity-80 transition">
-          <Image src="/logo.png" alt="PPLE" width={28} height={28} />
-          <span className="font-bold text-base text-indigo-700 dark:text-indigo-400">PPLE Finance</span>
-        </Link>
+
+        {/* App Switcher (Logo area) */}
+        <div className="relative shrink-0">
+          <button
+            onClick={() => setAppOpen(o => !o)}
+            className="flex items-center gap-2 hover:opacity-80 transition"
+          >
+            <Image src="/logo.png" alt="PPLE" width={28} height={28} />
+            <span className="font-bold text-base text-indigo-700 dark:text-indigo-400">
+              {currentApp.label}
+            </span>
+            <span className="text-gray-400 dark:text-gray-500 text-xs">▾</span>
+          </button>
+
+          {appOpen && (
+            <>
+              {/* Backdrop */}
+              <div className="fixed inset-0 z-10" onClick={() => setAppOpen(false)} />
+              {/* Dropdown */}
+              <div className="absolute left-0 top-full mt-1 z-20 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1 min-w-[160px]">
+                {APPS.map(app => (
+                  <Link
+                    key={app.key}
+                    href={app.href}
+                    onClick={() => setAppOpen(false)}
+                    className={`flex items-center gap-2 px-4 py-2 text-sm transition ${
+                      currentApp.key === app.key
+                        ? 'bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-medium'
+                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    {app.label}
+                    {currentApp.key === app.key && <span className="ml-auto text-indigo-500">✓</span>}
+                  </Link>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
 
         {/* Desktop links */}
         <div className="hidden md:flex items-center gap-1 ml-4">
@@ -58,7 +106,11 @@ export default function Nav({ session }) {
 
         {/* Right side */}
         <div className="flex items-center gap-3 ml-auto">
-          <button onClick={toggle} className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition" title={dark ? 'Light mode' : 'Dark mode'}>
+          <button
+            onClick={toggle}
+            className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition"
+            title={dark ? 'Light mode' : 'Dark mode'}
+          >
             {dark ? '☀️' : '🌙'}
           </button>
 
@@ -81,26 +133,32 @@ export default function Nav({ session }) {
           )}
 
           {session && (
-            <button onClick={() => signOut({ callbackUrl: '/' })} className="hidden sm:block text-base text-gray-400 hover:text-red-500 transition">
+            <button
+              onClick={() => signOut({ callbackUrl: '/' })}
+              className="hidden sm:block text-base text-gray-400 hover:text-red-500 transition"
+            >
               ออก
             </button>
           )}
 
           {/* Hamburger */}
-          <button onClick={() => setOpen(o => !o)} className="md:hidden text-gray-500 dark:text-gray-400 text-2xl w-10 h-10 flex items-center justify-center">
-            {open ? '✕' : '☰'}
+          <button
+            onClick={() => setMenuOpen(o => !o)}
+            className="md:hidden text-gray-500 dark:text-gray-400 text-2xl w-10 h-10 flex items-center justify-center"
+          >
+            {menuOpen ? '✕' : '☰'}
           </button>
         </div>
       </div>
 
       {/* Mobile menu */}
-      {open && (
+      {menuOpen && (
         <div className="md:hidden border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-3 flex flex-col gap-1">
           {visibleLinks.map(l => (
             <Link
               key={l.href}
               href={l.href}
-              onClick={() => setOpen(false)}
+              onClick={() => setMenuOpen(false)}
               className={`px-3 py-2 rounded text-base transition ${
                 pathname === l.href
                   ? 'bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-medium'
@@ -110,8 +168,29 @@ export default function Nav({ session }) {
               {l.label}
             </Link>
           ))}
+          {/* App switcher in mobile */}
+          <div className="border-t border-gray-200 dark:border-gray-700 mt-2 pt-2">
+            {APPS.map(app => (
+              <Link
+                key={app.key}
+                href={app.href}
+                onClick={() => setMenuOpen(false)}
+                className={`flex items-center gap-2 px-3 py-2 rounded text-sm transition ${
+                  currentApp.key === app.key
+                    ? 'text-indigo-700 dark:text-indigo-300 font-medium'
+                    : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+                }`}
+              >
+                {app.label}
+                {currentApp.key === app.key && <span className="text-indigo-500">✓</span>}
+              </Link>
+            ))}
+          </div>
           {session && (
-            <button onClick={() => signOut({ callbackUrl: '/' })} className="text-left px-3 py-2 text-base text-red-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded">
+            <button
+              onClick={() => signOut({ callbackUrl: '/' })}
+              className="text-left px-3 py-2 text-base text-red-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"
+            >
               ออกจากระบบ
             </button>
           )}

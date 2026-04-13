@@ -170,7 +170,7 @@ export async function getBalanceSummary(guildId, accountId) {
     const curr = txnRows[i]
     const expectedDiff = curr.type === 'income' ? Number(curr.amount) : -Number(curr.amount)
     const actualDiff   = Number(curr.balance_after) - Number(prev.balance_after)
-    if (Math.abs(actualDiff - expectedDiff) > 0.01) {
+    if (actualDiff < expectedDiff - 0.01) {
       gaps.push({ from: prev.txn_at, to: curr.txn_at })
     }
   }
