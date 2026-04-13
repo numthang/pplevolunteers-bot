@@ -39,7 +39,7 @@ function parse(text) {
   let txnAt = null
   if (dateStr) {
     const m = dateStr.trim().match(/(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}:\d{2}:\d{2})/)
-    if (m) txnAt = new Date(`${m[3]}-${m[2]}-${m[1]}T${m[4]}`)
+    if (m) txnAt = `${m[3]}-${m[2]}-${m[1]} ${m[4]}`
   }
 
   // counterpart_name — รองรับ format:

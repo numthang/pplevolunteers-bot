@@ -6,5 +6,5 @@ tmp/
 meilisearch
 data.ms/
 web/.next/
-web/public/uploads/
+#web/public/uploads/
 !web/public/uploads/**/.gitkeep
