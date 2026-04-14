@@ -1,0 +1,39 @@
+<div class="a4-page">
+  <header class="text-center">
+    <h2 class="font-bold">ใบสำคัญรับเงิน</h2>
+    <p>เขียนที่: พรรคประชาชน (สำนักงานระดมทุน)</p>
+    <p>วันที่: {activityDate}</p>
+  </header>
+
+  <section class="member-info mt-8">
+    <p>ข้าพเจ้า <strong>{prefix}{first_name} {last_name}</strong></p>
+    <p>เลขประจำตัวประชาชน: {citizen_id}</p>
+    <p>ที่อยู่: {address_full}</p>
+  </section>
+
+  <table class="w-full mt-4 border-collapse border border-black">
+    <thead>
+      <tr>
+        <th class="border border-black">รายการ</th>
+        <th class="border border-black">จำนวนเงิน</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="border border-black p-2">{item_description}</td>
+        <td class="border border-black p-2 text-right">{amount}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <footer class="mt-12 grid grid-cols-2 gap-8">
+    <div class="signature-box text-center">
+      <p>ลงชื่อ.........................................ผู้รับเงิน</p>
+      <p>( {prefix}{first_name} {last_name} )</p>
+    </div>
+    <div class="signature-box text-center">
+      <p>ลงชื่อ.........................................ผู้จ่ายเงิน</p>
+      <p>( ......................................... )</p>
+    </div>
+  </footer>
+</div>

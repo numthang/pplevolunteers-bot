@@ -1,0 +1,318 @@
+
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calling System v5 - Final Operations</title>
+    <style>
+        :root {
+            --primary: #0d9e94;
+            --primary-hover: #0a8a81;
+            --bg: #f9f8f6;
+            --text-main: #1a1a1a;
+            --text-sub: #888880;
+            --border: #e0ddd7;
+            --white: #ffffff;
+            --tier-a: #ead3ce; --tier-a-text: #714b2b;
+            --tier-b: #cce5f4; --tier-b-text: #0c447c;
+            --tier-c: #faeeda; --tier-c-text: #854f0b;
+            --tier-d: #fcebeb; --tier-d-text: #a32d2d;
+            --status-pending: #faeeda; --status-pending-text: #854f0b;
+            --status-called: #e1f5f4; --status-called-text: #0d9e94;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        body { background-color: var(--bg); color: var(--text-main); line-height: 1.6; padding-bottom: 80px; }
+
+        /* NAVBAR & SCOPE INDICATOR */
+        .navbar {
+            background: var(--white);
+            border-bottom: 1px solid var(--border);
+            padding: 0 2rem;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .nav-left { display: flex; align-items: center; gap: 10px; color: var(--primary); font-weight: bold; cursor: pointer; }
+        .nav-links { display: flex; gap: 2rem; list-style: none; margin: 0 auto; }
+        .nav-links a { text-decoration: none; color: var(--text-sub); font-size: 14px; transition: 0.2s; cursor: pointer; border-bottom: 2px solid transparent; padding: 20px 0; }
+        .nav-links a.active { color: var(--text-main); border-bottom-color: var(--primary); }
+        
+        /* Point 4: Scope Awareness UI */
+        .scope-banner {
+            background: #1a1a1a;
+            color: #d3d1c7;
+            font-size: 12px;
+            padding: 6px 2rem;
+            display: flex;
+            justify-content: space-between;
+        }
+        .scope-banner span { color: var(--primary); font-weight: 600; }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 2rem 1.5rem; }
+        .page { display: none; }
+        .page.active { display: block; }
+
+        /* CARDS & BOXES */
+        .info-box { background: var(--white); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; }
+        .info-box h2 { font-size: 18px; margin-bottom: 8px; }
+        
+        .list-container { background: var(--white); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+        
+        /* Point 2: Visual History & Count Tracker */
+        .list-row { display: grid; grid-template-columns: 1fr 100px 100px 100px 100px; align-items: center; padding: 1.2rem 1.5rem; border-bottom: 1px solid var(--border); transition: 0.2s; }
+        .list-row:hover { background: #fafaf9; }
+        .name-cell div:first-child { font-weight: 500; margin-bottom: 4px; }
+        .name-cell .latest-note { font-size: 12px; color: var(--text-sub); background: #f1f1f0; padding: 4px 8px; border-radius: 4px; display: inline-block; margin-top: 4px; border-left: 3px solid var(--warning); }
+        .count-tracker { font-size: 11px; color: var(--text-sub); text-align: center; }
+
+        /* BADGES */
+        .badge { padding: 4px 12px; border-radius: 6px; font-size: 12px; font-weight: 500; text-align: center; display: inline-block; }
+        .tier-a { background: var(--tier-a); color: var(--tier-a-text); }
+        .status-pending { background: var(--status-pending); color: var(--status-pending-text); }
+
+        /* Point 3: Filter Persistence (Floating Bar) */
+        .floating-bar {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1a1a1a;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 50px;
+            display: none;
+            align-items: center;
+            gap: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            z-index: 500;
+        }
+        .floating-bar.active { display: flex; }
+
+        /* Point 3: Assign Identity Task Count */
+        .assign-result-item { padding: 10px; cursor: pointer; border-bottom: 1px solid var(--border); }
+        .assign-result-item:hover { background: var(--bg); }
+        .task-count { color: var(--primary); font-size: 11px; font-weight: bold; }
+
+        /* MODAL */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 1rem; }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background: var(--white); border-radius: 16px; width: 100%; max-width: 900px; max-height: 90vh; overflow-y: auto; }
+        .modal-body { padding: 2rem; display: grid; grid-template-columns: 1fr 320px; gap: 2rem; }
+        
+        /* Point 2: Next Action Button */
+        .btn-save-next { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; flex: 2; }
+        .btn-outline { background: transparent; border: 1px solid var(--border); padding: 10px 20px; border-radius: 8px; cursor: pointer; flex: 1; }
+
+        .form-label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 8px; }
+        .radio-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+        .radio-btn { border: 1px solid var(--border); padding: 12px 8px; border-radius: 8px; text-align: center; cursor: pointer; font-size: 13px; }
+        .radio-btn.active { border-color: var(--primary); background: #e1f5f4; color: var(--primary); font-weight: 500; }
+        
+        /* MOBILE OVERRIDES */
+        @media (max-width: 768px) {
+            .nav-links { display: none; }
+            .list-row { grid-template-columns: 1fr auto; gap: 10px; }
+            .list-row .count-tracker, .list-row .badge { display: none; }
+            .modal-body { grid-template-columns: 1fr; }
+            .modal-sidebar { order: -1; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Point 4: Scope Awareness Banner -->
+<div class="scope-banner">
+    <div>Viewing Scope: <span>โพธาราม, ราชบุรี</span></div>
+    <div>Role: <span>ตทอ.</span></div>
+</div>
+
+<nav class="navbar">
+    <div class="nav-left" onclick="goPage('campaigns')">📞 Calling System</div>
+    <ul class="nav-links">
+        <li><a id="link-campaigns" class="active" onclick="goPage('campaigns')">Campaigns</a></li>
+        <li><a id="link-pending" onclick="goPage('pending')">Pending calls</a></li>
+        <li><a id="link-members" onclick="goPage('members')">Member list</a></li>
+    </ul>
+    <div class="nav-user">User: Tee</div>
+</nav>
+
+<div class="container">
+    
+    <!-- PAGE: PENDING CALLS -->
+    <div id="page-pending" class="page active">
+        <div class="info-box">
+            <h2>Campaign A - Ratchaburi (My Queue)</h2>
+            <p style="font-size: 13px; color: var(--text-sub);">First calling round for southern region members</p>
+        </div>
+        
+        <div class="list-container">
+            <!-- Point 2: Visual History & Call Count Implementation -->
+            <div class="list-row">
+                <div class="name-cell">
+                    <div>สมชาย ธรรมชาติ</div>
+                    <div class="latest-note">"ทำงานลาดกระบัง กลับเดือนละครั้ง"</div>
+                </div>
+                <div class="count-tracker">รับสาย<br><strong>2 / 3</strong></div>
+                <div><span class="badge tier-a">A</span></div>
+                <div><span class="badge status-pending">Pending</span></div>
+                <button style="background:var(--primary); color:white; border:none; padding:8px 16px; border-radius:6px; cursor:pointer;" onclick="openModal('สมชาย ธรรมชาติ', '2 / 3')">Call</button>
+            </div>
+            
+            <div class="list-row">
+                <div class="name-cell">
+                    <div>สมปอง ศรีสุข</div>
+                    <div class="latest-note">"เบอร์คนในบ้านรับแทนตลอด"</div>
+                </div>
+                <div class="count-tracker">รับสาย<br><strong>0 / 4</strong></div>
+                <div><span class="badge tier-d" style="background:var(--tier-d); color:var(--tier-d-text);">D</span></div>
+                <div><span class="badge status-pending">Pending</span></div>
+                <button style="background:var(--primary); color:white; border:none; padding:8px 16px; border-radius:6px; cursor:pointer;" onclick="openModal('สมปอง ศรีสุข', '0 / 4')">Call</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PAGE: MEMBER LIST (ADMIN) -->
+    <div id="page-members" class="page">
+        <h2>Member List (Admin)</h2>
+        <div class="list-container" style="margin-top: 1rem;">
+            <div style="padding: 1rem; border-bottom: 1px solid var(--border);">
+                <input type="checkbox" onchange="toggleBulk(this)"> <strong>Select all (24/320)</strong>
+            </div>
+            <div class="list-row" style="grid-template-columns: 40px 1fr 150px;">
+                <input type="checkbox" class="bulk-check" onchange="updateFloatingBar()">
+                <div>แอนนา วิทยา <span style="font-size:12px; color:var(--text-sub);">• Mueang</span></div>
+                <div style="color:var(--text-sub);">Assigned to: <strong>แอม</strong></div>
+            </div>
+            <div class="list-row" style="grid-template-columns: 40px 1fr 150px;">
+                <input type="checkbox" class="bulk-check" onchange="updateFloatingBar()">
+                <div>บัญชา รักษ์ <span style="font-size:12px; color:var(--text-sub);">• Ban Pong</span></div>
+                <div style="color:#ccc;">— Unassigned —</div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Point 3: Filter Persistence Floating Bar -->
+<div id="floating-bulk" class="floating-bar">
+    <span id="selected-text">0 members selected</span>
+    <button style="background:var(--primary); color:white; border:none; padding:6px 16px; border-radius:20px; cursor:pointer;" onclick="openAssignModal()">Assign to... ↗</button>
+</div>
+
+<!-- MODAL: CALL LOGGING -->
+<div class="modal-overlay" id="call-modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Record call</h2>
+            <button style="background:none; border:none; font-size: 24px; cursor:pointer;" onclick="closeModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="modal-main">
+                <div style="margin-bottom:1.5rem;">
+                    <label class="form-label">Status *</label>
+                    <div class="radio-grid">
+                        <div class="radio-btn" onclick="this.parentElement.querySelectorAll('.radio-btn').forEach(b=>b.classList.remove('active'));this.classList.add('active')">Answered</div>
+                        <div class="radio-btn" onclick="this.parentElement.querySelectorAll('.radio-btn').forEach(b=>b.classList.remove('active'));this.classList.add('active')">No answer</div>
+                    </div>
+                </div>
+                <textarea style="width:100%; border:1px solid var(--border); border-radius:8px; padding:12px; min-height:100px;" placeholder="Notes..."></textarea>
+                
+                <!-- Point 2: Next Action Integration -->
+                <div style="display:flex; gap:12px; margin-top:2rem;">
+                    <button class="btn-save-next" onclick="saveAndNext()">Save & Call Next Member ↘</button>
+                    <button class="btn-outline" onclick="closeModal()">Close</button>
+                </div>
+            </div>
+            <div class="modal-sidebar" style="background:#fdfdfc; border:1px solid var(--border); border-radius:12px; padding:1.5rem;">
+                <div style="text-align:center; margin-bottom:1rem;">
+                    <div style="width:50px; height:50px; background:var(--primary-light); color:var(--primary); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 10px; font-weight:bold; font-size:20px;">ส</div>
+                    <h3 id="modal-name">สมชาย ธรรมชาติ</h3>
+                    <div id="modal-count" style="font-size:12px; color:var(--text-sub);">รับสาย 2 / 3 ครั้ง</div>
+                </div>
+                <div style="font-size:12px;">
+                    <div style="color:var(--text-sub); font-size:10px; font-weight:bold;">PHONE</div>
+                    <div style="margin-bottom:10px;">062-123-4567</div>
+                    <div style="color:var(--text-sub); font-size:10px; font-weight:bold;">DISTRICT</div>
+                    <div>Photharam</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Point 3: Assign Identity Modal -->
+<div class="modal-overlay" id="assign-modal">
+    <div class="modal-content" style="max-width:400px;">
+        <div class="modal-header"><h3>Assign Tasks</h3></div>
+        <div style="padding:1.5rem;">
+            <label class="form-label">Search Person</label>
+            <input type="text" placeholder="Search name..." style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px; margin-bottom:1rem;">
+            <div style="border:1px solid var(--border); border-radius:8px;">
+                <!-- Identity with Task Count -->
+                <div class="assign-result-item">
+                    <div>Tee <span class="task-count">(มีอยู่ 15 งาน)</span></div>
+                </div>
+                <div class="assign-result-item">
+                    <div>แอม <span class="task-count">(มีอยู่ 4 งาน)</span></div>
+                </div>
+                <div class="assign-result-item">
+                    <div>บอย <span class="task-count">(ว่าง)</span></div>
+                </div>
+            </div>
+            <button class="btn-save-next" style="width:100%; margin-top:1rem;" onclick="document.getElementById('assign-modal').classList.remove('active')">Confirm Assign</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    function goPage(id) {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.getElementById('page-' + id).classList.add('active');
+        document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
+        document.getElementById('link-' + id).classList.add('active');
+    }
+
+    function openModal(name, count) {
+        document.getElementById('modal-name').innerText = name;
+        document.getElementById('modal-count').innerText = "รับสาย " + count + " ครั้ง";
+        document.getElementById('call-modal').classList.add('active');
+    }
+
+    function closeModal() {
+        document.getElementById('call-modal').classList.remove('active');
+    }
+
+    function saveAndNext() {
+        alert('บันทึกสำเร็จ! กำลังสลับไปสมาชิกคนถัดไป...');
+        openModal('สมปอง ศรีสุข', '0 / 4');
+    }
+
+    function updateFloatingBar() {
+        const count = document.querySelectorAll('.bulk-check:checked').length;
+        const bar = document.getElementById('floating-bulk');
+        if(count > 0) {
+            bar.classList.add('active');
+            document.getElementById('selected-text').innerText = count + ' members selected';
+        } else {
+            bar.classList.remove('active');
+        }
+    }
+
+    function toggleBulk(el) {
+        document.querySelectorAll('.bulk-check').forEach(c => c.checked = el.checked);
+        updateFloatingBar();
+    }
+
+    function openAssignModal() {
+        document.getElementById('assign-modal').classList.add('active');
+    }
+</script>
+
+</body>
+</html>
