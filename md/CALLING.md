@@ -17,7 +17,7 @@
 - **Backend:** Node.js API routes
 - **Database:** MySQL `pple_volunteers` — prefix `calling_`
 - **Auth:** Discord OAuth (next-auth เดิม)
-- **ข้อมูลสมาชิก:** ตอนนี้ดึงจาก `calling_members_bq` / อนาคตเชื่อม BigQuery จริง
+- **ข้อมูลสมาชิก:** ตอนนี้ดึงจาก `bq_members` / อนาคตเชื่อม BigQuery จริง
 
 ---
 
@@ -37,10 +37,10 @@ ALTER TABLE dc_members
 
 ---
 
-### 2. `calling_members_bq` — จำลอง BigQuery (import จาก XLS)
+### 2. `bq_members` — จำลอง BigQuery (import จาก XLS)
 
 ```sql
-CREATE TABLE calling_members_bq (
+CREATE TABLE bq_members (
   member_id     VARCHAR(20)   NOT NULL PRIMARY KEY,
   prefix        VARCHAR(20)   NULL,
   name          VARCHAR(200)  NOT NULL,
@@ -304,10 +304,10 @@ web/
       assignments.js
       logs.js
       tiers.js
-      members.js                    ← query calling_members_bq (จำลอง BigQuery)
+      members.js                    ← query bq_members (จำลอง BigQuery)
 scripts/
   calling/
-    import-members-xls.js          ← normalize + import XLS → calling_members_bq
+    import-members-xls.js          ← normalize + import XLS → bq_members
 ```
 
 ---
