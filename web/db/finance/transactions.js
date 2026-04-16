@@ -1,8 +1,12 @@
 import pool from '../index.js'
 
-export async function getTransactions(guildId, { accountId, type, categoryId, noCategory, search, year, month, dateFrom, dateTo, limit = 50, offset = 0 } = {}) {
+export async function getTransactions(guildId, { accountId, type, categoryId, noCategory, search, year, month, dateFrom, dateTo, limit = 50, offset = 0, discordId = null, admin = false } = {}) {
   let where = 'WHERE t.guild_id = ?'
   const params = [guildId]
+
+  // Private accounts: only owner can see — even admin cannot
+  where += ' AND (a.visibility != ? OR a.owner_id = ?)'
+  params.push('private', discordId)
 
   if (accountId)  { where += ' AND t.account_id = ?';   params.push(accountId) }
   if (type)       { where += ' AND t.type = ?';         params.push(type) }

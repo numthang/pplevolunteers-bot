@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { signOut } from 'next-auth/react'
 import { useState } from 'react'
 import { useTheme } from './Providers.jsx'
+import { DebugRoleButton, DebugRoleBanner } from './DebugRoleBanner.jsx'
 
 const FINANCE_LINKS = [
   { href: '/finance',               label: 'ภาพรวม' },
@@ -16,7 +17,8 @@ const FINANCE_LINKS = [
 ]
 
 const CALLING_LINKS = [
-  { href: '/calling', label: 'ภาพรวม' },
+  { href: '/calling',         label: 'แคมเปญ' },
+  { href: '/calling/members', label: 'รายชื่อสมาชิก' },
 ]
 
 const APPS = [
@@ -44,7 +46,10 @@ export default function Nav({ session }) {
     return true
   })
 
+  const userIsAdmin = roles.includes('Admin')
+
   return (
+    <>
     <nav className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shadow-sm sticky top-0 z-40">
       <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
 
@@ -106,6 +111,7 @@ export default function Nav({ session }) {
 
         {/* Right side */}
         <div className="flex items-center gap-3 ml-auto">
+          <DebugRoleButton isAdmin={userIsAdmin} />
           <button
             onClick={toggle}
             className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition"
@@ -197,5 +203,7 @@ export default function Nav({ session }) {
         </div>
       )}
     </nav>
+    <DebugRoleBanner isAdmin={userIsAdmin} />
+    </>
   )
 }

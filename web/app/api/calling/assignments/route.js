@@ -57,7 +57,7 @@ export async function POST(req) {
 
     // Check permission for each member
     const membersToCheck = await Promise.all(
-      member_ids.map(id => memberDB.getMemberById(id))
+      member_ids.map(id => memberDB.getMemberById(parseInt(id)))
     )
 
     const invalidMembers = []
@@ -67,8 +67,8 @@ export async function POST(req) {
         continue
       }
 
-      if (!canAssignInProvince(member.province, userRoles)) {
-        invalidMembers.push(`Cannot assign in ${member.province}`)
+      if (!canAssignInProvince(member.home_province, userRoles)) {
+        invalidMembers.push(`Cannot assign in ${member.home_province}`)
       }
     }
 
@@ -117,19 +117,19 @@ export async function PUT(req) {
     }
 
     // Check member
-    const member = await memberDB.getMemberById(member_id)
+    const member = await memberDB.getMemberById(parseInt(member_id))
     if (!member) {
       return Response.json({ error: 'Member not found' }, { status: 404 })
     }
 
     // Check permission
     const userRoles = session.user.roles || []
-    if (!canAssignInProvince(member.province, userRoles)) {
+    if (!canAssignInProvince(member.home_province, userRoles)) {
       return Response.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     // Upsert assignment
-    await assignmentDB.assignMember(campaign_id, member_id, assigned_to, session.user.discordId)
+    await assignmentDB.assignMember(campaign_id, parseInt(member_id), assigned_to, session.user.discordId)
 
     const assignment = await assignmentDB.getAssignment(campaign_id, member_id)
     return Response.json({ success: true, data: assignment })
@@ -161,18 +161,18 @@ export async function DELETE(req) {
     }
 
     // Check member
-    const member = await memberDB.getMemberById(member_id)
+    const member = await memberDB.getMemberById(parseInt(member_id))
     if (!member) {
       return Response.json({ error: 'Member not found' }, { status: 404 })
     }
 
     // Check permission
     const userRoles = session.user.roles || []
-    if (!canAssignInProvince(member.province, userRoles)) {
+    if (!canAssignInProvince(member.home_province, userRoles)) {
       return Response.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    await assignmentDB.unassignMember(campaign_id, member_id)
+    await assignmentDB.unassignMember(campaign_id, parseInt(member_id))
 
     return Response.json({ success: true, message: 'Member unassigned' })
   } catch (error) {

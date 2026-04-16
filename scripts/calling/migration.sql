@@ -11,22 +11,9 @@ ALTER TABLE dc_members
   ADD COLUMN google_id  VARCHAR(100) NULL AFTER line_id;
 
 -- ─────────────────────────────────────────────
--- 2. calling_members_bq — จำลอง BigQuery (import จาก XLS)
+-- 2. ngs_member_cache — แทน calling_members_bq
 -- ─────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS calling_members_bq (
-  member_id     VARCHAR(20)   NOT NULL,
-  prefix        VARCHAR(20)   NULL,
-  name          VARCHAR(200)  NOT NULL,
-  member_type   VARCHAR(50)   NULL COMMENT 'รายปี / ตลอดชีพ',
-  district      VARCHAR(100)  NULL COMMENT 'อำเภอ',
-  subdistrict   VARCHAR(100)  NULL COMMENT 'ตำบล',
-  province      VARCHAR(100)  NULL,
-  phone         VARCHAR(20)   NULL,
-  line_id       VARCHAR(100)  NULL COMMENT 'LINE Identity (ใช้ link)',
-  line_username VARCHAR(100)  NULL COMMENT 'LINE contact ที่สมาชิกให้มา',
-  created_at    DATETIME      DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (member_id)
-);
+-- See: scripts/calling/migration-ngs-member-cache.sql
 
 -- ─────────────────────────────────────────────
 -- 3. calling_campaigns — รอบ/กิจกรรมการโทร
@@ -47,7 +34,7 @@ CREATE TABLE IF NOT EXISTS calling_campaigns (
 CREATE TABLE IF NOT EXISTS calling_assignments (
   id            INT AUTO_INCREMENT PRIMARY KEY,
   campaign_id   INT          NOT NULL,
-  member_id     VARCHAR(20)  NOT NULL COMMENT 'รหัสสมาชิกพรรค',
+  member_id     INT          NOT NULL COMMENT 'source_id จาก ngs_member_cache',
   assigned_to   VARCHAR(20)  NOT NULL COMMENT 'discord_id ของคนรับผิดชอบ',
   assigned_by   VARCHAR(20)  NOT NULL COMMENT 'discord_id ของคนที่ assign',
   created_at    DATETIME     DEFAULT CURRENT_TIMESTAMP,
@@ -60,7 +47,7 @@ CREATE TABLE IF NOT EXISTS calling_assignments (
 CREATE TABLE IF NOT EXISTS calling_logs (
   id                 INT AUTO_INCREMENT PRIMARY KEY,
   campaign_id        INT          NOT NULL,
-  member_id          VARCHAR(20)  NOT NULL COMMENT 'รหัสสมาชิกพรรค',
+  member_id          INT          NOT NULL COMMENT 'source_id จาก ngs_member_cache',
   called_by          VARCHAR(20)  NULL     COMMENT 'discord_id คนที่โทร (NULL ถ้า import จาก XLS)',
   caller_name        VARCHAR(100) NULL     COMMENT 'display_name ตอนโทร',
   called_at          DATETIME     DEFAULT CURRENT_TIMESTAMP,
@@ -72,7 +59,9 @@ CREATE TABLE IF NOT EXISTS calling_logs (
   sig_reachable      TINYINT NULL COMMENT '1=ไม่ติดเลย 2=ติดยาก 3=ติดได้ 4=รับสายทันที',
   note               TEXT NULL,
   extra              JSON NULL COMMENT 'custom fields เพิ่มเติม',
-  created_at         DATETIME     DEFAULT CURRENT_TIMESTAMP
+  created_at         DATETIME     DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_campaign (campaign_id),
+  INDEX idx_member   (member_id)
 );
 
 -- ─────────────────────────────────────────────
@@ -80,7 +69,7 @@ CREATE TABLE IF NOT EXISTS calling_logs (
 -- ─────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS calling_member_tiers (
   id              INT AUTO_INCREMENT PRIMARY KEY,
-  member_id       VARCHAR(20)  NOT NULL,
+  member_id       INT          NOT NULL COMMENT 'source_id จาก ngs_member_cache',
   tier            ENUM('A','B','C','D') NOT NULL,
   tier_source     ENUM('auto','manual') NOT NULL DEFAULT 'auto',
   override_by     VARCHAR(20)  NULL COMMENT 'discord_id คนที่ override (manual เท่านั้น)',

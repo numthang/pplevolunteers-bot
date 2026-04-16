@@ -31,10 +31,10 @@ export async function getTiersByMembers(memberIds) {
 export async function getMembersByTier(tier) {
   const [rows] = await pool.query(
     `SELECT m.*, t.tier
-     FROM calling_members_bq m
-     LEFT JOIN calling_member_tiers t ON t.member_id = m.member_id
+     FROM ngs_member_cache m
+     LEFT JOIN calling_member_tiers t ON t.member_id = m.source_id
      WHERE COALESCE(t.tier, 'D') = ?
-     ORDER BY m.name ASC`,
+     ORDER BY m.first_name ASC`,
     [tier]
   )
   return rows
@@ -140,9 +140,9 @@ export async function getTierWithMemberInfo(memberId) {
        t.override_by,
        t.override_reason,
        t.updated_at AS tier_updated_at
-     FROM calling_members_bq m
-     LEFT JOIN calling_member_tiers t ON t.member_id = m.member_id
-     WHERE m.member_id = ?`,
+     FROM ngs_member_cache m
+     LEFT JOIN calling_member_tiers t ON t.member_id = m.source_id
+     WHERE m.source_id = ?`,
     [memberId]
   )
   return rows[0] || null

@@ -3,6 +3,8 @@ import { authOptions } from '@/lib/auth-options.js'
 import { getTransactions, createTransaction } from '@/db/finance/transactions.js'
 import { incrementUsageCount as incrementAccount } from '@/db/finance/accounts.js'
 import { incrementUsageCount as incrementCategory } from '@/db/finance/categories.js'
+import { isAdmin } from '@/lib/roles.js'
+import { getEffectiveRoles } from '@/lib/getEffectiveRoles.js'
 
 const GUILD_ID = process.env.GUILD_ID
 
@@ -25,7 +27,8 @@ export async function GET(req) {
   const session = await getServerSession(authOptions)
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const rows = await getTransactions(GUILD_ID, { accountId, type, categoryId, noCategory, search, year, month, dateFrom, dateTo, limit, offset })
+  const effectiveRoles = await getEffectiveRoles(session)
+  const rows = await getTransactions(GUILD_ID, { accountId, type, categoryId, noCategory, search, year, month, dateFrom, dateTo, limit, offset, discordId: session.user.discordId, admin: isAdmin(effectiveRoles) })
   return Response.json(rows)
 }
 

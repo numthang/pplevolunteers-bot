@@ -48,7 +48,7 @@ export async function GET(req) {
 
     // Filter by user scope (unless admin)
     if (!isUserAdmin && userScope) {
-      rows = rows.filter(m => userScope.includes(m.province))
+      rows = rows.filter(m => userScope.includes(m.home_province))
     }
 
     return Response.json({

@@ -68,7 +68,7 @@ export async function POST(req) {
     }
 
     // Check member access (optional, for audit trail)
-    const member = await memberDB.getMemberById(member_id)
+    const member = await memberDB.getMemberById(parseInt(member_id))
     if (!member) {
       return Response.json({ error: 'Member not found' }, { status: 404 })
     }
@@ -110,7 +110,7 @@ export async function DELETE(req) {
     }
 
     // Check member
-    const member = await memberDB.getMemberById(member_id)
+    const member = await memberDB.getMemberById(parseInt(member_id))
     if (!member) {
       return Response.json({ error: 'Member not found' }, { status: 404 })
     }

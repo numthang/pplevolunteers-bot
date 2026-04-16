@@ -5,3 +5,10 @@
 html {
   font-size: 15px;
 }
+
+@layer components {
+  .tier-a { @apply bg-[#ead3ce] text-[#714b2b] dark:bg-[#3d2318] dark:text-[#d4a48a]; }
+  .tier-b { @apply bg-[#cce5f4] text-[#0c447c] dark:bg-[#0c2640] dark:text-[#7bbfec]; }
+  .tier-c { @apply bg-[#faeeda] text-[#854f0b] dark:bg-[#3a2308] dark:text-[#d4953e]; }
+  .tier-d { @apply bg-[#fcebeb] text-[#a32d2d] dark:bg-[#3a1212] dark:text-[#d47373]; }
+}

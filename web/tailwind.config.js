@@ -2,6 +2,41 @@
 module.exports = {
   darkMode: 'class',
   content: ['./app/**/*.{js,jsx}', './components/**/*.{js,jsx}'],
-  theme: { extend: {} },
+  theme: {
+    extend: {
+      colors: {
+        warm: {
+          50:  '#f9f8f6',
+          100: '#f1ede4',
+          200: '#e0ddd7',
+          300: '#d3d1c7',
+          400: '#b4b2a9',
+          500: '#888880',
+          900: '#1a1a1a',
+          dark: {
+            50:  '#1e1d1b',
+            100: '#252320',
+            200: '#2e2c28',
+            300: '#3a3832',
+            400: '#4a4840',
+            500: '#6b6960',
+          },
+        },
+        teal: {
+          DEFAULT: '#6366f1',
+          light:   '#e0e7ff',
+          dark:    '#4f46e5',
+          dim:     '#312e81',
+          bright:  '#818cf8',
+        },
+        tier: {
+          a: { bg: '#ead3ce', text: '#714b2b', dark: { bg: '#3d2318', text: '#d4a48a' } },
+          b: { bg: '#cce5f4', text: '#0c447c', dark: { bg: '#0c2640', text: '#7bbfec' } },
+          c: { bg: '#faeeda', text: '#854f0b', dark: { bg: '#3a2308', text: '#d4953e' } },
+          d: { bg: '#fcebeb', text: '#a32d2d', dark: { bg: '#3a1212', text: '#d47373' } },
+        },
+      },
+    },
+  },
   plugins: [],
 }

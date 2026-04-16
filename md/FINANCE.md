@@ -1,4 +1,63 @@
-# Finance System — New UX Requirements
+# Finance System — RBAC, Schema & UX
+
+👉 See [md/DATABASE.md](DATABASE.md) for full table schemas
+
+---
+
+## Access Control (RBAC)
+
+### การดู (View Access) — Different by Account Visibility
+
+#### Public Account
+```
+ดูได้ทั้งหมด (ไม่ต้อง login)
+```
+
+#### Private Account
+```
+เจ้าของ || Admin
+```
+
+#### Internal Account
+```
+เจ้าของ 
+|| Admin 
+|| เลขาธิการ 
+|| เหรัญญิก 
+|| กรรมการจังหวัด (ของบัญชีนั้น)
+|| ผู้ประสานงาน (ของบัญชีจังหวัดนั้น)
+|| ผู้ประสานงานภาค (ของบัญชีจังหวัดนั้น)
+|| รองเลขาภาค (ของบัญชีจังหวัดนั้น)
+```
+
+### การแก้ไข (Edit Access)
+
+#### Public Account
+```
+เจ้าของ || Admin || เหรัญญิก
+```
+
+#### Private Account
+```
+เจ้าของ || Admin
+```
+
+#### Internal Account
+```
+เจ้าของ 
+|| Admin 
+|| เลขาธิการ 
+|| (เหรัญญิก && {
+    กรรมการจังหวัด (ของบัญชีนั้น)
+    || ผู้ประสานงาน (ของบัญชีจังหวัดนั้น)
+    || ผู้ประสานงานภาค (ของบัญชีจังหวัดนั้น)
+    || รองเลขาภาค (ของบัญชีจังหวัดนั้น)
+  })
+```
+
+---
+
+## UX Requirements
 
 ## 1. Category Picker แบบ Icon Grid
 

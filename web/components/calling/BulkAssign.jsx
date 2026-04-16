@@ -4,8 +4,15 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 
 const PAGE_SIZE = 50
 
-const selectCls = 'w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500'
-const inputCls = 'w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500'
+const TIER_CLS = {
+  A: 'bg-[#ead3ce] text-[#714b2b] dark:bg-[#3d2318] dark:text-[#d4a48a]',
+  B: 'bg-[#cce5f4] text-[#0c447c] dark:bg-[#0c2640] dark:text-[#7bbfec]',
+  C: 'bg-[#faeeda] text-[#854f0b] dark:bg-[#3a2308] dark:text-[#d4953e]',
+  D: 'bg-[#fcebeb] text-[#a32d2d] dark:bg-[#3a1212] dark:text-[#d47373]',
+}
+
+const selectCls = 'h-9 px-2.5 text-sm border border-warm-200 dark:border-warm-dark-300 bg-white dark:bg-warm-dark-100 text-warm-900 dark:text-warm-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal'
+const inputCls = 'h-9 px-2.5 text-sm w-full border border-warm-200 dark:border-warm-dark-300 bg-white dark:bg-warm-dark-100 text-warm-900 dark:text-warm-50 placeholder-warm-400 dark:placeholder-warm-dark-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal'
 
 export default function BulkAssign({ campaignId, members, districts = [], tiers = ['A', 'B', 'C', 'D'], onAssignComplete }) {
   const [selectedMembers, setSelectedMembers] = useState(new Set())
@@ -17,7 +24,7 @@ export default function BulkAssign({ campaignId, members, districts = [], tiers 
   const sentinelRef = useRef(null)
 
   const filteredMembers = members.filter(m => {
-    if (filterDistrict && m.district !== filterDistrict) return false
+    if (filterDistrict && m.home_amphure !== filterDistrict) return false
     if (filterTier && m.tier !== filterTier) return false
     return true
   })
@@ -25,12 +32,10 @@ export default function BulkAssign({ campaignId, members, districts = [], tiers 
   const visibleMembers = filteredMembers.slice(0, visibleCount)
   const hasMore = visibleCount < filteredMembers.length
 
-  // Reset visible count when filters change
   useEffect(() => {
     setVisibleCount(PAGE_SIZE)
   }, [filterDistrict, filterTier])
 
-  // IntersectionObserver to load more on scroll
   const handleObserver = useCallback((entries) => {
     if (entries[0].isIntersecting && hasMore) {
       setVisibleCount(c => c + PAGE_SIZE)
@@ -49,26 +54,22 @@ export default function BulkAssign({ campaignId, members, districts = [], tiers 
     if (selectedMembers.size === filteredMembers.length) {
       setSelectedMembers(new Set())
     } else {
-      setSelectedMembers(new Set(filteredMembers.map(m => m.member_id)))
+      setSelectedMembers(new Set(filteredMembers.map(m => m.source_id)))
     }
   }
 
   const handleSelectMember = (memberId) => {
     const newSet = new Set(selectedMembers)
-    if (newSet.has(memberId)) {
-      newSet.delete(memberId)
-    } else {
-      newSet.add(memberId)
-    }
+    if (newSet.has(memberId)) newSet.delete(memberId)
+    else newSet.add(memberId)
     setSelectedMembers(newSet)
   }
 
   const handleBulkAssign = async () => {
-    if (!assignTo) {
-      alert('กรุณาเลือกผู้รับผิดชอบ')
+    if (!assignTo.trim()) {
+      alert('กรุณาระบุผู้รับผิดชอบ')
       return
     }
-
     setIsLoading(true)
     try {
       const res = await fetch('/api/calling/assignments', {
@@ -77,12 +78,10 @@ export default function BulkAssign({ campaignId, members, districts = [], tiers 
         body: JSON.stringify({
           campaign_id: parseInt(campaignId),
           member_ids: Array.from(selectedMembers),
-          assigned_to: assignTo
+          assigned_to: assignTo.trim()
         })
       })
-
       if (!res.ok) throw new Error('Failed to assign')
-
       alert('มอบหมายสำเร็จ')
       setSelectedMembers(new Set())
       setAssignTo('')
@@ -97,89 +96,111 @@ export default function BulkAssign({ campaignId, members, districts = [], tiers 
   const isAllSelected = selectedMembers.size === filteredMembers.length && filteredMembers.length > 0
 
   return (
-    <div className="mb-8">
-      <div className="bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 rounded-xl p-4">
-        <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-4">มอบหมายเป็นชุด</h3>
+    <div>
+      {/* Filter row */}
+      <div className="flex flex-wrap items-end gap-3 mb-4">
+        <div>
+          <label className="block text-xs font-medium text-warm-500 dark:text-warm-dark-500 mb-1">อำเภอ</label>
+          <select value={filterDistrict} onChange={e => setFilterDistrict(e.target.value)} className={selectCls}>
+            <option value="">ทั้งหมด</option>
+            {districts.map(d => <option key={d} value={d}>{d}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-warm-500 dark:text-warm-dark-500 mb-1">ระดับ</label>
+          <select value={filterTier} onChange={e => setFilterTier(e.target.value)} className={selectCls}>
+            <option value="">ทั้งหมด</option>
+            {tiers.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </div>
+        <div className="flex-1 min-w-40">
+          <label className="block text-xs font-medium text-warm-500 dark:text-warm-dark-500 mb-1">มอบหมายให้</label>
+          <input
+            type="text"
+            value={assignTo}
+            onChange={e => setAssignTo(e.target.value)}
+            placeholder="ชื่อผู้รับผิดชอบ"
+            className={inputCls}
+          />
+        </div>
+        <button
+          onClick={handleBulkAssign}
+          disabled={selectedMembers.size === 0 || isLoading}
+          className="h-9 px-4 bg-teal hover:opacity-90 text-white text-sm font-medium rounded-lg disabled:opacity-40 transition whitespace-nowrap"
+        >
+          {isLoading ? 'กำลังมอบหมาย...' : `มอบหมาย ${selectedMembers.size > 0 ? `(${selectedMembers.size})` : ''}`}
+        </button>
+      </div>
 
-        {/* Filters */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-          <div>
-            <label className="block text-sm font-semibold mb-1.5 text-gray-700 dark:text-gray-300">อำเภอ</label>
-            <select value={filterDistrict} onChange={(e) => setFilterDistrict(e.target.value)} className={selectCls}>
-              <option value="">ทั้งหมด</option>
-              {districts.map(d => (
-                <option key={d} value={d}>{d}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold mb-1.5 text-gray-700 dark:text-gray-300">ระดับ</label>
-            <select value={filterTier} onChange={(e) => setFilterTier(e.target.value)} className={selectCls}>
-              <option value="">ทั้งหมด</option>
-              {tiers.map(t => (
-                <option key={t} value={t}>{t}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold mb-1.5 text-gray-700 dark:text-gray-300">มอบหมายให้</label>
-            <input
-              type="text"
-              value={assignTo}
-              onChange={(e) => setAssignTo(e.target.value)}
-              placeholder="ชื่อหรือ ID"
-              className={inputCls}
-            />
-          </div>
+      {/* Table */}
+      <div className="bg-white dark:bg-warm-dark-100 border border-warm-200 dark:border-warm-dark-300 rounded-xl overflow-hidden">
+        {/* Checkbox header */}
+        <div className="flex items-center gap-3 px-6 py-3 bg-warm-100 dark:bg-warm-dark-200 border-b border-warm-200 dark:border-warm-dark-300 text-sm">
+          <input
+            type="checkbox"
+            checked={isAllSelected}
+            onChange={handleSelectAll}
+            className="w-4 h-4 accent-teal cursor-pointer"
+          />
+          <span className="text-warm-700 dark:text-warm-50 font-medium">
+            {selectedMembers.size > 0
+              ? `เลือก ${selectedMembers.size} / ${filteredMembers.length} คน`
+              : `สมาชิกทั้งหมด ${filteredMembers.length} คน`}
+          </span>
         </div>
 
-        {/* Select All + Assign Button */}
-        <div className="flex items-center justify-between mb-3">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={isAllSelected}
-              onChange={handleSelectAll}
-              className="w-4 h-4 accent-indigo-600"
-            />
-            <span className="text-sm text-gray-700 dark:text-gray-300">
-              เลือกทั้งหมด ({selectedMembers.size}/{filteredMembers.length})
-            </span>
-          </label>
-
-          <button
-            onClick={handleBulkAssign}
-            disabled={selectedMembers.size === 0 || isLoading}
-            className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50 transition"
-          >
-            {isLoading ? 'กำลังมอบหมาย...' : 'มอบหมาย'}
-          </button>
+        {/* Member rows */}
+        <div className="divide-y divide-warm-200 dark:divide-warm-dark-300">
+          {visibleMembers.map(member => {
+            const tier = member.tier || 'D'
+            const tierCls = TIER_CLS[tier] || TIER_CLS.D
+            const isCalled = !!member.last_called_at
+            return (
+              <div
+                key={member.source_id}
+                className="flex items-center gap-4 px-6 py-3 hover:bg-warm-50 dark:hover:bg-warm-dark-200 transition-colors"
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedMembers.has(member.source_id)}
+                  onChange={() => handleSelectMember(member.source_id)}
+                  className="w-4 h-4 accent-teal cursor-pointer flex-shrink-0"
+                />
+                <span className="font-medium text-sm text-warm-900 dark:text-warm-50 flex-1 min-w-0 truncate">
+                  {member.full_name}
+                </span>
+                <span className="text-xs text-warm-500 dark:text-warm-dark-500 hidden sm:block w-28 truncate">
+                  {member.home_amphure}
+                </span>
+                {isCalled ? (
+                  <span className="text-xs font-medium px-2.5 py-1 rounded-md bg-teal-light text-teal dark:bg-teal-dim dark:text-teal-bright hidden md:block whitespace-nowrap">
+                    โทรแล้ว
+                  </span>
+                ) : (
+                  <span className="text-xs font-medium px-2.5 py-1 rounded-md bg-[#faeeda] text-[#854f0b] dark:bg-[#3a2308] dark:text-[#d4953e] hidden md:block whitespace-nowrap">
+                    รอโทร
+                  </span>
+                )}
+                <span className={`text-xs font-semibold px-2.5 py-1 rounded-md flex-shrink-0 ${tierCls}`}>
+                  {tier}
+                </span>
+                {member.assigned_to && (
+                  <span className="text-xs text-warm-400 dark:text-warm-dark-400 hidden lg:block truncate max-w-32">
+                    → {member.assigned_to}
+                  </span>
+                )}
+              </div>
+            )
+          })}
         </div>
 
-        {/* Member list */}
-        <div className="space-y-2">
-          {visibleMembers.map(member => (
-            <div key={member.member_id} className="flex items-center gap-3 p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
-              <input
-                type="checkbox"
-                checked={selectedMembers.has(member.member_id)}
-                onChange={() => handleSelectMember(member.member_id)}
-                className="w-4 h-4 accent-indigo-600"
-              />
-              <span className="font-semibold text-sm text-gray-900 dark:text-gray-100">{member.name}</span>
-              <span className="text-xs text-gray-500 dark:text-gray-400">{member.district}</span>
-              <span className="ml-auto text-xs font-bold px-2 py-0.5 rounded bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200">
-                {member.tier || 'D'}
-              </span>
-            </div>
-          ))}
-
-          {/* Sentinel for infinite scroll */}
-          <div ref={sentinelRef} className="py-1 text-center text-xs text-gray-400 dark:text-gray-500">
-            {hasMore ? 'กำลังโหลด...' : filteredMembers.length > 0 ? `แสดงทั้งหมด ${filteredMembers.length} คน` : ''}
-          </div>
+        {/* Sentinel / footer */}
+        <div ref={sentinelRef} className="px-6 py-3 text-center text-xs text-warm-400 dark:text-warm-dark-400 border-t border-warm-200 dark:border-warm-dark-300">
+          {hasMore
+            ? 'กำลังโหลดเพิ่มเติม...'
+            : filteredMembers.length > 0
+              ? `แสดงครบ ${filteredMembers.length} คน`
+              : 'ไม่พบสมาชิก'}
         </div>
       </div>
     </div>

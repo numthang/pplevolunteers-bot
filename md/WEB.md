@@ -88,6 +88,44 @@ public/                        Static assets
 
 ---
 
+## Subsystems
+
+This web app hosts multiple integrated systems:
+
+### 1. **PPLE Finance** (`/finance/*`)
+Transaction & account management with role-based access control.  
+📄 See [md/FINANCE.md](FINANCE.md)
+
+### 2. **PPLE Calling** (`/calling/*`)
+Member calling system with tier tracking and assignment management.  
+📄 See [md/CALLING.md](CALLING.md)
+
+### 3. **PPLE Docs** (`/docs/*`, planned)
+E-signature & document management for activity registration forms.  
+📄 See [md/DOCS.md](DOCS.md)
+
+---
+
+## Shared Infrastructure
+
+### Central Member Cache (`bq_members`)
+- ~100k party members synced from ACT system via API
+- Used by both **Calling** and **Docs** for member identity
+- Source: ACT party system (external)
+- Sync: Daily via adapter pattern
+
+### Role-Based Access Control (RBAC)
+All subsystems use the same role hierarchy from `config/roles.js`:
+- Admin / เลขาธิการ
+- รองเลขาธิการภาค / ผู้ประสานงานภาค
+- ผู้ประสานงานจังหวัด / กรรมการจังหวัด
+- ตทอ. (ผู้ประสานงานอำเภอ)
+
+Each subsystem defines its own permission rules based on this hierarchy.  
+See: [FINANCE.md - RBAC](FINANCE.md#access-control-rbac) | [CALLING.md - Permission](CALLING.md#permission--access-control)
+
+---
+
 ## Next.js Conventions
 
 - Use **App Router** (not Pages Router)

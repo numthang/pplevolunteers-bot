@@ -100,11 +100,11 @@ export async function unassignMember(campaignId, memberId) {
  */
 export async function getUnassignedMembers(campaignId, limit = 100, offset = 0) {
   const [rows] = await pool.query(
-    `SELECT m.* FROM calling_members_bq m
+    `SELECT m.* FROM ngs_member_cache m
      LEFT JOIN calling_assignments a
-       ON a.campaign_id = ? AND a.member_id = m.member_id
+       ON a.campaign_id = ? AND a.member_id = m.source_id
      WHERE a.id IS NULL
-     ORDER BY m.name ASC
+     ORDER BY m.first_name ASC
      LIMIT ? OFFSET ?`,
     [campaignId, limit, offset]
   )
@@ -116,9 +116,9 @@ export async function getUnassignedMembers(campaignId, limit = 100, offset = 0) 
  */
 export async function getUnassignedCount(campaignId) {
   const [rows] = await pool.query(
-    `SELECT COUNT(*) AS count FROM calling_members_bq m
+    `SELECT COUNT(*) AS count FROM ngs_member_cache m
      LEFT JOIN calling_assignments a
-       ON a.campaign_id = ? AND a.member_id = m.member_id
+       ON a.campaign_id = ? AND a.member_id = m.source_id
      WHERE a.id IS NULL`,
     [campaignId]
   )

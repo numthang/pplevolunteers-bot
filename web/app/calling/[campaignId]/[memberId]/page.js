@@ -4,9 +4,24 @@ import { useEffect, useState, use } from 'react'
 import Link from 'next/link'
 import CallLogger from '@/components/calling/CallLogger.jsx'
 
+const TIER_CLS = {
+  A: 'bg-[#ead3ce] text-[#714b2b] dark:bg-[#3d2318] dark:text-[#d4a48a]',
+  B: 'bg-[#cce5f4] text-[#0c447c] dark:bg-[#0c2640] dark:text-[#7bbfec]',
+  C: 'bg-[#faeeda] text-[#854f0b] dark:bg-[#3a2308] dark:text-[#d4953e]',
+  D: 'bg-[#fcebeb] text-[#a32d2d] dark:bg-[#3a1212] dark:text-[#d47373]',
+}
+
+const STATUS_LABEL = {
+  answered:     { label: 'รับสาย',        cls: 'bg-teal-light text-teal dark:bg-teal-dim dark:text-teal-bright' },
+  no_answer:    { label: 'ไม่รับสาย',     cls: 'bg-[#faeeda] text-[#854f0b] dark:bg-[#3a2308] dark:text-[#d4953e]' },
+  busy:         { label: 'สายไม่ว่าง',    cls: 'bg-warm-100 text-warm-500 dark:bg-warm-dark-200 dark:text-warm-dark-500' },
+  wrong_number: { label: 'เบอร์ผิด',       cls: 'bg-[#fcebeb] text-[#a32d2d] dark:bg-[#3a1212] dark:text-[#d47373]' },
+}
+
 export default function CallPage({ params }) {
   const { campaignId, memberId } = use(params)
   const [member, setMember] = useState(null)
+  const [campaign, setCampaign] = useState(null)
   const [logs, setLogs] = useState([])
   const [tier, setTier] = useState(null)
   const [stats, setStats] = useState(null)
@@ -18,12 +33,23 @@ export default function CallPage({ params }) {
 
   const fetchData = async () => {
     try {
-      const memberRes = await fetch(`/api/calling/members?search=${memberId}&limit=1`)
-      const memberData = await memberRes.json()
-      if (memberData.data?.[0]) setMember(memberData.data[0])
+      const [memberRes, logsRes, tierRes, campaignRes] = await Promise.all([
+        fetch(`/api/calling/members?search=${memberId}&limit=1`),
+        fetch(`/api/calling/logs?campaignId=${campaignId}&memberId=${memberId}`),
+        fetch(`/api/calling/tiers?memberId=${memberId}`),
+        fetch('/api/calling/campaigns'),
+      ])
 
-      const logsRes = await fetch(`/api/calling/logs?campaignId=${campaignId}&memberId=${memberId}`)
-      const logsData = await logsRes.json()
+      const [memberData, logsData, tierData, campaignData] = await Promise.all([
+        memberRes.json(), logsRes.json(), tierRes.json(), campaignRes.json()
+      ])
+
+      if (memberData.data?.[0]) setMember(memberData.data[0])
+      if (tierData.data) setTier(tierData.data)
+
+      const camp = campaignData.data?.find(c => c.id === parseInt(campaignId))
+      if (camp) setCampaign(camp)
+
       if (logsData.data) {
         setLogs(logsData.data)
         const answered = logsData.data.filter(l => l.status === 'answered')
@@ -35,10 +61,6 @@ export default function CallPage({ params }) {
             : null
         })
       }
-
-      const tierRes = await fetch(`/api/calling/tiers?memberId=${memberId}`)
-      const tierData = await tierRes.json()
-      if (tierData.data) setTier(tierData.data)
     } catch (error) {
       console.error('Error fetching data:', error)
     } finally {
@@ -47,113 +69,119 @@ export default function CallPage({ params }) {
   }
 
   if (loading) {
-    return <div className="p-8 text-center text-gray-500 dark:text-gray-400">กำลังโหลด...</div>
+    return <div className="py-20 text-center text-warm-400 dark:text-warm-dark-400 text-sm">กำลังโหลด...</div>
   }
 
   if (!member) {
-    return <div className="p-8 text-center text-red-600 dark:text-red-400">ไม่พบข้อมูลสมาชิก</div>
+    return <div className="py-20 text-center text-red-500 text-sm">ไม่พบข้อมูลสมาชิก</div>
   }
+
+  const currentTier = tier?.tier || member.tier || 'D'
+  const tierCls = TIER_CLS[currentTier] || TIER_CLS.D
 
   return (
     <div>
-      <Link href={`/calling/${campaignId}`} className="text-indigo-600 dark:text-indigo-400 hover:underline mb-4 block text-sm">
-        ← กลับไปหน้าแคมเปญ
-      </Link>
+      {/* Breadcrumb */}
+      <div className="mb-6 text-sm text-warm-500 dark:text-warm-dark-500">
+        <Link href="/calling" className="text-teal hover:underline">แคมเปญ</Link>
+        <span className="mx-2">›</span>
+        {campaign && (
+          <>
+            <Link href={`/calling/${campaignId}`} className="text-teal hover:underline">{campaign.name}</Link>
+            <span className="mx-2">›</span>
+          </>
+        )}
+        <span className="text-warm-900 dark:text-warm-50">{member.full_name}</span>
+      </div>
 
-      {/* Member Info */}
-      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6 mb-6">
-        <div className="flex justify-between items-start mb-4">
+      {/* Member Info Card */}
+      <div className="bg-white dark:bg-warm-dark-100 border border-warm-200 dark:border-warm-dark-300 rounded-xl p-6 mb-6">
+        <div className="flex items-start justify-between gap-4 mb-5">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{member.name}</h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400">{member.district}, {member.province}</p>
+            <h1 className="text-xl font-medium text-warm-900 dark:text-warm-50 mb-1">{member.full_name}</h1>
+            <p className="text-sm text-warm-500 dark:text-warm-dark-500">
+              {[member.home_amphure, member.home_province].filter(Boolean).join(', ')}
+            </p>
           </div>
-          <div className="text-right">
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">ระดับปัจจุบัน</p>
-            <p className="text-4xl font-bold text-indigo-600 dark:text-indigo-400">{tier?.tier || 'D'}</p>
-          </div>
+          <span className={`text-2xl font-bold px-4 py-2 rounded-xl ${tierCls}`}>{currentTier}</span>
         </div>
 
-        {/* Contact Info */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
-          {member.phone && (
+        {/* Contact */}
+        <div className="flex flex-wrap gap-6 mb-5">
+          {member.mobile_number && (
             <div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">เบอร์โทร</p>
-              <a href={`tel:${member.phone}`} className="text-indigo-600 dark:text-indigo-400 hover:underline text-sm">
-                {member.phone}
+              <p className="text-xs text-warm-500 dark:text-warm-dark-500 mb-0.5">เบอร์โทร</p>
+              <a href={`tel:${member.mobile_number}`} className="text-teal hover:underline text-sm font-medium">
+                {member.mobile_number}
               </a>
             </div>
           )}
           {member.line_username && (
             <div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">LINE</p>
-              <p className="text-sm text-gray-700 dark:text-gray-300">{member.line_username}</p>
+              <p className="text-xs text-warm-500 dark:text-warm-dark-500 mb-0.5">LINE</p>
+              <p className="text-sm text-warm-900 dark:text-warm-50">{member.line_username}</p>
             </div>
           )}
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-4">
-          <div className="bg-gray-100 dark:bg-gray-700 p-3 rounded-lg">
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">โทรทั้งหมด</p>
-            <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats?.total || 0}</p>
+        {/* Stats row */}
+        <div className="grid grid-cols-3 gap-3">
+          <div className="bg-warm-100 dark:bg-warm-dark-200 p-3 rounded-lg text-center">
+            <p className="text-xs text-warm-500 dark:text-warm-dark-500 mb-1">โทรทั้งหมด</p>
+            <p className="text-2xl font-semibold text-warm-900 dark:text-warm-50">{stats?.total || 0}</p>
           </div>
-          <div className="bg-green-100 dark:bg-green-900/40 p-3 rounded-lg">
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">รับสาย</p>
-            <p className="text-2xl font-bold text-green-700 dark:text-green-400">{stats?.answered || 0}</p>
+          <div className="bg-teal-light dark:bg-teal-dim p-3 rounded-lg text-center">
+            <p className="text-xs text-teal dark:text-teal-bright mb-1">รับสาย</p>
+            <p className="text-2xl font-semibold text-teal dark:text-teal-bright">{stats?.answered || 0}</p>
           </div>
-          <div className="bg-indigo-100 dark:bg-indigo-900/40 p-3 rounded-lg">
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">คะแนนเฉลี่ย</p>
-            <p className="text-2xl font-bold text-indigo-700 dark:text-indigo-400">{stats?.avgScore || '-'}</p>
+          <div className="bg-warm-100 dark:bg-warm-dark-200 p-3 rounded-lg text-center">
+            <p className="text-xs text-warm-500 dark:text-warm-dark-500 mb-1">คะแนนเฉลี่ย</p>
+            <p className="text-2xl font-semibold text-warm-900 dark:text-warm-50">{stats?.avgScore || '—'}</p>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Call Logger Form */}
-        <div className="lg:col-span-1">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        {/* Call Logger */}
+        <div className="lg:col-span-2">
           <CallLogger campaignId={campaignId} memberId={memberId} onLogComplete={fetchData} />
         </div>
 
         {/* Call History */}
-        <div className="lg:col-span-2">
-          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
-            <h3 className="text-lg font-bold mb-4 text-gray-900 dark:text-gray-100">ประวัติการโทร</h3>
+        <div className="lg:col-span-3">
+          <div className="bg-white dark:bg-warm-dark-100 border border-warm-200 dark:border-warm-dark-300 rounded-xl p-6">
+            <h3 className="text-base font-medium text-warm-900 dark:text-warm-50 mb-4">ประวัติการโทร</h3>
 
             {logs.length === 0 ? (
-              <p className="text-gray-500 dark:text-gray-400 text-center py-8">ยังไม่มีประวัติการโทร</p>
+              <p className="text-warm-400 dark:text-warm-dark-400 text-sm text-center py-8">ยังไม่มีประวัติการโทร</p>
             ) : (
-              <div className="space-y-4">
-                {logs.map(log => (
-                  <div key={log.id} className="border-b border-gray-100 dark:border-gray-700 pb-4 last:border-b-0">
-                    <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <p className="font-semibold text-gray-900 dark:text-gray-100 text-sm">
-                          {new Date(log.called_at).toLocaleString('th-TH')}
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">โดย: {log.caller_name}</p>
+              <div className="divide-y divide-warm-200 dark:divide-warm-dark-300">
+                {logs.map(log => {
+                  const s = STATUS_LABEL[log.status] || { label: log.status, cls: '' }
+                  return (
+                    <div key={log.id} className="py-4 first:pt-0 last:pb-0">
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <p className="text-sm font-medium text-warm-900 dark:text-warm-50">
+                            {new Date(log.called_at).toLocaleString('th-TH')}
+                          </p>
+                          <p className="text-xs text-warm-400 dark:text-warm-dark-400">โดย {log.caller_name}</p>
+                        </div>
+                        <span className={`text-xs font-medium px-2.5 py-1 rounded-md ${s.cls}`}>{s.label}</span>
                       </div>
-                      <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                        log.status === 'answered'
-                          ? 'bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300'
-                          : 'bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-300'
-                      }`}>
-                        {log.status === 'answered' ? 'รับสาย' : 'ไม่รับสาย'}
-                      </span>
+
+                      {log.sig_overall && (
+                        <p className="text-xs text-teal font-semibold mb-1">คะแนน: {log.sig_overall}</p>
+                      )}
+
+                      {log.note && (
+                        <p className="text-sm text-warm-700 dark:text-warm-200 bg-warm-50 dark:bg-warm-dark-200 px-3 py-2 rounded-lg">
+                          {log.note}
+                        </p>
+                      )}
                     </div>
-
-                    {log.sig_overall && (
-                      <p className="text-sm text-indigo-600 dark:text-indigo-400 font-semibold mb-2">
-                        คะแนน: {log.sig_overall}
-                      </p>
-                    )}
-
-                    {log.note && (
-                      <p className="text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 p-2 rounded">
-                        {log.note}
-                      </p>
-                    )}
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
           </div>
