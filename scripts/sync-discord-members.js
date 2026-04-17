@@ -17,22 +17,26 @@ client.once('ready', async () => {
   const guild = await client.guilds.fetch(guildId);
   const members = await guild.members.fetch();
 
-  console.log(`Fetched ${members.size} members, upserting...`);
+  const humans = [...members.values()].filter(m => !m.user.bot)
+  const total = humans.length
+  console.log(`Fetched ${members.size} members (${total} non-bot), upserting...`);
 
   let done = 0, errors = 0;
-  for (const [, member] of members) {
-    if (member.user.bot) continue;
+  for (const member of humans) {
     try {
       await upsertMemberFromDiscord(member);
       done++;
     } catch (err) {
-      console.error(`Error upserting ${member.user.username}:`, err.message);
+      console.error(`  ✗ ${member.user.username}: ${err.message}`);
       errors++;
+    }
+    if ((done + errors) % 10 === 0 || done + errors === total) {
+      process.stdout.write(`\r  ${done + errors}/${total} (${errors} errors)`)
     }
   }
 
-  console.log(`Done: ${done} upserted, ${errors} errors`);
+  console.log(`\nDone: ${done} upserted, ${errors} errors`);
   process.exit(0);
 });
 
-client.login(process.env.DISCORD_TOKEN);
+client.login(process.env.DISCORD_BOT_TOKEN);
