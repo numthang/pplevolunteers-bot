@@ -23,6 +23,7 @@ export default function CampaignPage({ params }) {
   const [filterTier, setFilterTier] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
   const [usersMap, setUsersMap] = useState({})
+  const [filterAssignee, setFilterAssignee] = useState('')
   const [splitModalOpen, setSplitModalOpen] = useState(false)
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
   const sentinelRef = useRef(null)
@@ -69,6 +70,7 @@ export default function CampaignPage({ params }) {
       const status = m.member_status || 'unassigned'
       if (filterStatus !== status) return false
     }
+    if (filterAssignee && m.assigned_to !== filterAssignee) return false
     return true
   })
 
@@ -78,7 +80,7 @@ export default function CampaignPage({ params }) {
   // Reset visible when filters change
   useEffect(() => {
     setVisibleCount(PAGE_SIZE)
-  }, [filterDistrict, filterTier, filterStatus])
+  }, [filterDistrict, filterTier, filterStatus, filterAssignee])
 
   // Infinite scroll
   const handleObserver = useCallback((entries) => {
@@ -113,11 +115,13 @@ export default function CampaignPage({ params }) {
 
   const handleSplit = async (assigneeIds) => {
     try {
-      const unassigned = members.filter(m => m.member_status === 'unassigned')
-      const perPerson = Math.ceil(unassigned.length / assigneeIds.length)
+      const targets = selectedMembers.size > 0
+        ? members.filter(m => selectedMembers.has(m.source_id))
+        : members.filter(m => m.member_status === 'unassigned')
+      const perPerson = Math.ceil(targets.length / assigneeIds.length)
       await Promise.all(
         assigneeIds.map((discordId, i) => {
-          const chunk = unassigned.slice(i * perPerson, (i + 1) * perPerson)
+          const chunk = targets.slice(i * perPerson, (i + 1) * perPerson)
           if (chunk.length === 0) return Promise.resolve()
           return fetch('/api/calling/assignments', {
             method: 'POST',
@@ -137,9 +141,30 @@ export default function CampaignPage({ params }) {
     }
   }
 
-  // Districts and tiers
+  const handleUnassign = async () => {
+    if (!confirm(\`ยกเลิกมอบหมาย \${selectedMembers.size} คน?\`)) return
+    try {
+      await Promise.all(
+        Array.from(selectedMembers).map(memberId =>
+          fetch('/api/calling/assignments', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ campaign_id: parseInt(campaignId), member_id: memberId })
+          })
+        )
+      )
+      await fetchData()
+    } catch (error) {
+      alert('เกิดข้อผิดพลาด: ' + error.message)
+    }
+  }
+
+  // Districts, tiers, assignees
   const districts = [...new Set(members.map(m => m.home_amphure).filter(Boolean))].sort()
   const tiers = ['A', 'B', 'C', 'D']
+  const assignees = [...new Set(members.filter(m => m.assigned_to).map(m => m.assigned_to))]
+    .map(id => ({ id, name: usersMap[id] || id }))
+    .sort((a, b) => a.name.localeCompare(b.name))
 
   // Stats
   const totalMembers = members.length
@@ -257,6 +282,17 @@ export default function CampaignPage({ params }) {
           <option value="unassigned">รอมอบหมาย</option>
           <option value="assigned">มอบหมายแล้ว</option>
           <option value="called">โทรแล้ว</option>
+        </select>
+
+        <select
+          value={filterAssignee}
+          onChange={e => setFilterAssignee(e.target.value)}
+          className="h-9 px-3 text-sm border border-warm-200 dark:border-warm-dark-300 bg-white dark:bg-warm-dark-100 text-warm-900 dark:text-warm-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal"
+        >
+          <option value="">ผู้รับผิดชอบ (ทั้งหมด)</option>
+          {assignees.map(a => (
+            <option key={a.id} value={a.id}>{a.name}</option>
+          ))}
         </select>
       </div>
 
@@ -379,7 +415,13 @@ export default function CampaignPage({ params }) {
             onClick={() => setSplitModalOpen(true)}
             className="px-4 py-1.5 bg-teal hover:opacity-90 text-white text-sm font-medium rounded-full transition"
           >
-            แบ่งงาน ↗
+            มอบหมาย ↗
+          </button>
+          <button
+            onClick={handleUnassign}
+            className="px-4 py-1.5 bg-white dark:bg-warm-dark-100 border border-warm-200 dark:border-warm-dark-300 text-warm-700 dark:text-warm-200 text-sm font-medium rounded-full hover:bg-warm-50 dark:hover:bg-warm-dark-200 transition"
+          >
+            ยกเลิกมอบหมาย
           </button>
         </div>
       )}
@@ -387,7 +429,7 @@ export default function CampaignPage({ params }) {
       {/* Assign Modal */}
       <SplitModal
         isOpen={splitModalOpen}
-        unassignedCount={unassignedCount}
+        unassignedCount={selectedMembers.size > 0 ? selectedMembers.size : unassignedCount}
         onClose={() => setSplitModalOpen(false)}
         onConfirm={handleSplit}
       />
