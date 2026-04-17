@@ -12,21 +12,22 @@ export async function getAssignmentById(id) {
 }
 
 /**
- * Get assignment for specific campaign + member
+ * Get assignment for a member (campaign defaults to 0 / Undefined)
  */
-export async function getAssignment(campaignId, memberId) {
+export async function getAssignment(memberId, campaignId = 0) {
   const [rows] = await pool.query(
     `SELECT * FROM calling_assignments
-     WHERE campaign_id = ? AND member_id = ?`,
-    [campaignId, memberId]
+     WHERE member_id = ?
+       AND campaign_id = ?`,
+    [memberId, campaignId]
   )
   return rows[0] || null
 }
 
 /**
- * Get all assignments in campaign
+ * Get all assignments in campaign (defaults to 0 / Undefined)
  */
-export async function getAssignmentsByCampaign(campaignId) {
+export async function getAssignmentsByCampaign(campaignId = 0) {
   const [rows] = await pool.query(
     `SELECT * FROM calling_assignments
      WHERE campaign_id = ?
@@ -37,22 +38,23 @@ export async function getAssignmentsByCampaign(campaignId) {
 }
 
 /**
- * Get assignments for specific person in campaign
+ * Get assignments for specific person (campaign defaults to 0 / Undefined)
  */
-export async function getAssignmentsForPerson(campaignId, discordId) {
+export async function getAssignmentsForPerson(discordId, campaignId = 0) {
   const [rows] = await pool.query(
     `SELECT * FROM calling_assignments
-     WHERE campaign_id = ? AND assigned_to = ?
+     WHERE assigned_to = ?
+       AND campaign_id = ?
      ORDER BY created_at DESC`,
-    [campaignId, discordId]
+    [discordId, campaignId]
   )
   return rows
 }
 
 /**
- * Assign member to person
+ * Assign member to person (campaign defaults to 0 / Undefined)
  */
-export async function assignMember(campaignId, memberId, assignedTo, assignedBy) {
+export async function assignMember(memberId, assignedTo, assignedBy, campaignId = 0) {
   const [result] = await pool.query(
     `INSERT INTO calling_assignments
       (campaign_id, member_id, assigned_to, assigned_by, created_at)
@@ -60,18 +62,18 @@ export async function assignMember(campaignId, memberId, assignedTo, assignedBy)
      ON DUPLICATE KEY UPDATE
       assigned_to = VALUES(assigned_to),
       assigned_by = VALUES(assigned_by)`,
-    [campaignId, memberId, assignedTo, assignedBy]
+    [campaignId || 0, memberId, assignedTo, assignedBy]
   )
   return result.insertId || result.affectedRows
 }
 
 /**
- * Bulk assign members (upsert)
+ * Bulk assign members (campaign defaults to 0 / Undefined)
  */
-export async function bulkAssignMembers(campaignId, memberIds, assignedTo, assignedBy) {
+export async function bulkAssignMembers(memberIds, assignedTo, assignedBy, campaignId = 0) {
   if (!memberIds || memberIds.length === 0) return 0
 
-  const values = memberIds.map(memberId => [campaignId, memberId, assignedTo, assignedBy])
+  const values = memberIds.map(memberId => [campaignId || 0, memberId, assignedTo, assignedBy])
   const [result] = await pool.query(
     `INSERT INTO calling_assignments
       (campaign_id, member_id, assigned_to, assigned_by, created_at)
@@ -85,26 +87,27 @@ export async function bulkAssignMembers(campaignId, memberIds, assignedTo, assig
 }
 
 /**
- * Unassign member
+ * Unassign member (campaign defaults to 0 / Undefined)
  */
-export async function unassignMember(campaignId, memberId) {
+export async function unassignMember(memberId, campaignId = 0) {
   await pool.query(
     `DELETE FROM calling_assignments
-     WHERE campaign_id = ? AND member_id = ?`,
-    [campaignId, memberId]
+     WHERE member_id = ?
+       AND campaign_id = ?`,
+    [memberId, campaignId]
   )
 }
 
 /**
- * Get unassigned members in campaign
+ * Get unassigned members (campaign defaults to 0 / Undefined)
  */
-export async function getUnassignedMembers(campaignId, limit = 100, offset = 0) {
+export async function getUnassignedMembers(campaignId = 0, limit = 100, offset = 0) {
   const [rows] = await pool.query(
     `SELECT m.* FROM ngs_member_cache m
      LEFT JOIN calling_assignments a
        ON a.campaign_id = ? AND a.member_id = m.source_id
      WHERE a.id IS NULL
-     ORDER BY m.first_name ASC
+     ORDER BY m.home_amphure ASC, m.first_name ASC
      LIMIT ? OFFSET ?`,
     [campaignId, limit, offset]
   )
@@ -112,9 +115,9 @@ export async function getUnassignedMembers(campaignId, limit = 100, offset = 0) 
 }
 
 /**
- * Get unassigned count in campaign
+ * Get unassigned count (campaign defaults to 0 / Undefined)
  */
-export async function getUnassignedCount(campaignId) {
+export async function getUnassignedCount(campaignId = 0) {
   const [rows] = await pool.query(
     `SELECT COUNT(*) AS count FROM ngs_member_cache m
      LEFT JOIN calling_assignments a

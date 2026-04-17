@@ -19,7 +19,7 @@ export async function GET(req) {
   const province = searchParams.get('province')
   const district = searchParams.get('district')
   const keyword = searchParams.get('search')
-  const limit = Math.min(parseInt(searchParams.get('limit') || '100'), 500)
+  const limit = Math.min(parseInt(searchParams.get('limit') || '100'), 10000)
   const offset = parseInt(searchParams.get('offset') || '0')
 
   try {

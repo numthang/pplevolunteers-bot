@@ -36,8 +36,10 @@ Optional
 
 ### แก้ไขก่อน 
 <!-- - calling_campaigns นี่เรามาทำเป็นตาราง act_event_cache จากระบบ act เดิม gemini บอกให้ทำ cache act_events แล้วตัด calling_campaigns ทิ้ง ใช้ act_event_id แทน campaign_id (ใช้ campaign_id ก็ได้ แต่ให้รู้ว่ามันคือ act_event_id) อันนี้โอเคไหม เดี๋ยวให้ดูตัวอย่างข้อมูล act_registers เป็นข้อมูลที่แสดงคนลงทะเบียน ต่อ 1 กิจกรรม โดย event_id ของกิจกรรมนี้คือ 146354 ดูจาก ref_id ของคนลงทะเบียนแล้ว เหมือนมัน run recursive แบบ wordpress style อ่ะ ผมว่าคุณคงเดา schema ออก ลองคาดเดาหน่อย เผลอๆ ตาราง act_registers ไม่มี แต่คือ ตาราง act_events เดียวกันนี่แหละแบบ wordpress style -->
-- แสดงสมาชิกทั้งหมดเลยที่ view permission ของ user คนนั้น จะอ่านได้ตามลำดับการเข้าถึงโดย role (ตรงนี้ทำหรือยังนะ)
-- มาดู แต่ละหน้ากันต่อ เราจะมีหน้า campaign, member list, pending call เอาไปอ่านก่อน แล้วก็อยากได้ UI/UX เหมือนที่ออกแบบมาใน md/calling/calling-system-v2.html ดูออกไหมแต่ละหน้าเป็นยังไง process เป็นไง
+<!-- - กลับมา calling ต่อ อาจจะต้องแก้ campaign_id เป็น id ของตาราง act_event_cache ไหม และ อาจจะใช้ชื่อ event_id หรือ act_event_id ไหม ใช้ชื่ออะไรดี -->
+<!-- - ตอนนี้อยากให้แสดงสมาชิกทั้งหมดเลย ตาม view permission ของ user คนนั้น จะอ่านได้ตามลำดับการเข้าถึงโดย role ตรงนี้ทำหรือยังนะ แล้วก็มี view as role ด้วยคล้ายๆ finance เลย
+- มาดู แต่ละหน้ากันต่อ เราจะมีหน้า campaign, member list, pending call เอาไปอ่านก่อน แล้วก็อยากได้ UI/UX เหมือนที่ออกแบบมาใน md/calling/calling-system-v2.html ดูออกไหมแต่ละหน้าเป็นยังไง process เป็นไง -->
+<!-- - ยังอยู่หน้า calling/[campaignId] ยังคงไม่เป็นระเบียบเลย, ตอนนี้แสดง member แค่ 100 คน, อำเภอแสดงไม่ครบ, ทำ campaign_id ให้แสดงเป็นรหัสจังหวัดไหมเช่นราชบุรี 70 บน act ก็เหมือนจะไม่มี id เลข 2 หลักพวกนี้เลย -->
 - หน้า pending list จิ้มไปที่ member แล้ว แสดงหน้า แบบ Record call ดู md/calling/calling-system-v2.html ให้ขึ้นแสดงข้อมูล current campaign (act event) ของการโทรครั้งนี้ก่อน อย่าลืมปุ่มกดโทร ดึงข้อมูลโทรศัพท์จาก ngs_member_cache แสดง history ของแต่ละการโทรของและแคมเปญแต่ละครั้ง
 - หน้า member list จิ้มไปที่ member แล้วแสดงหน้า คล้ายๆ แบบ Record call ดู md/calling/calling-system-v2.html อย่าลืมปุ่มกดโทร ดึงข้อมูลโทรศัพท์จาก ngs_member_cache แสดง history ของแต่ละการโทรของและแคมเปญแต่ละครั้ง
 - หลังจากโทรแล้ว จะหายไปจาก pending เมื่อไร ยังไง

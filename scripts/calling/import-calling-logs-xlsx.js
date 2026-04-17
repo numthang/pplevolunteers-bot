@@ -24,7 +24,6 @@ const XLS_FILE = process.argv[2]
   ?? path.join(__dirname, '../../md/calling/calling_log_ราชบุรี.xlsx');
 
 const CAMPAIGN_PROVINCE   = 'ราชบุรี';
-const CAMPAIGN_CREATED_BY = 'system';
 const IMPORT_DATE         = '2026-04-16 00:00:00';
 
 const SKIP_SHEETS = new Set(['อ่านก่อนโทร', 'latest']);
@@ -232,9 +231,9 @@ function generateSQL(logs, lastGrade, campaigns) {
   lines.push('-- ============================================================');
   lines.push('-- To re-run, clear old data first:');
   lines.push(`--   DELETE cl FROM calling_logs cl`);
-  lines.push(`--     JOIN calling_campaigns cc ON cl.campaign_id = cc.id`);
-  lines.push(`--     WHERE cc.created_by = '${CAMPAIGN_CREATED_BY}';`);
-  lines.push(`--   DELETE FROM calling_campaigns WHERE created_by = '${CAMPAIGN_CREATED_BY}';`);
+  lines.push(`--     JOIN act_event_cache cc ON cl.campaign_id = cc.id AND cc.type = 'campaign'`);
+  lines.push(`--     WHERE cc.name LIKE '%${CAMPAIGN_PROVINCE}%';`);
+  lines.push(`--   DELETE FROM act_event_cache WHERE type = 'campaign' AND name LIKE '%${CAMPAIGN_PROVINCE}%';`);
   lines.push(`--   DELETE FROM calling_member_tiers WHERE tier_source = 'auto';`);
   lines.push('-- ============================================================');
   lines.push('');
@@ -242,11 +241,11 @@ function generateSQL(logs, lastGrade, campaigns) {
   lines.push('SET foreign_key_checks = 0;');
   lines.push('');
 
-  // ── calling_campaigns ──
-  lines.push(`-- ─── calling_campaigns (${campaigns.length}) ─────────────────────────────`);
+  // ── act_event_cache (campaigns) ──
+  lines.push(`-- ─── act_event_cache campaigns (${campaigns.length}) ──────────────────────`);
   campaigns.forEach(({ name }, i) => {
-    lines.push(`INSERT INTO calling_campaigns (name, province, created_by)`);
-    lines.push(`  VALUES (${esc(name)}, ${esc(CAMPAIGN_PROVINCE)}, ${esc(CAMPAIGN_CREATED_BY)});`);
+    lines.push(`INSERT INTO act_event_cache (type, name, province, guild_id, synced_at)`);
+    lines.push(`  VALUES ('campaign', ${esc(name)}, ${esc(CAMPAIGN_PROVINCE)}, '1', NOW());`);
     lines.push(`SET @c${i} = LAST_INSERT_ID();`);
   });
   lines.push('');

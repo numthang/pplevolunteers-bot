@@ -93,6 +93,36 @@ export default function BulkAssign({ campaignId, members, districts = [], tiers 
     }
   }
 
+  const handleBulkUnassign = async () => {
+    if (selectedMembers.size === 0) {
+      alert('กรุณาเลือกสมาชิก')
+      return
+    }
+    if (!confirm(`ยกเลิกการมอบหมาย ${selectedMembers.size} คน?`)) return
+    setIsLoading(true)
+    try {
+      const promises = Array.from(selectedMembers).map(memberId =>
+        fetch('/api/calling/assignments', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            campaign_id: parseInt(campaignId),
+            member_id: memberId
+          })
+        })
+      )
+      const results = await Promise.all(promises)
+      if (!results.every(r => r.ok)) throw new Error('Some unassignments failed')
+      alert('ยกเลิกการมอบหมายสำเร็จ')
+      setSelectedMembers(new Set())
+      onAssignComplete?.()
+    } catch (error) {
+      alert('เกิดข้อผิดพลาด: ' + error.message)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const isAllSelected = selectedMembers.size === filteredMembers.length && filteredMembers.length > 0
 
   return (
@@ -130,6 +160,13 @@ export default function BulkAssign({ campaignId, members, districts = [], tiers 
         >
           {isLoading ? 'กำลังมอบหมาย...' : `มอบหมาย ${selectedMembers.size > 0 ? `(${selectedMembers.size})` : ''}`}
         </button>
+        <button
+          onClick={handleBulkUnassign}
+          disabled={selectedMembers.size === 0 || isLoading}
+          className="h-9 px-4 bg-red-500 hover:opacity-90 text-white text-sm font-medium rounded-lg disabled:opacity-40 transition whitespace-nowrap"
+        >
+          {isLoading ? 'กำลัง...' : `ยกเลิก ${selectedMembers.size > 0 ? `(${selectedMembers.size})` : ''}`}
+        </button>
       </div>
 
       {/* Table */}
@@ -154,7 +191,29 @@ export default function BulkAssign({ campaignId, members, districts = [], tiers 
           {visibleMembers.map(member => {
             const tier = member.tier || 'D'
             const tierCls = TIER_CLS[tier] || TIER_CLS.D
-            const isCalled = !!member.last_called_at
+            const status = member.member_status || 'unassigned'
+
+            let statusBadge
+            if (status === 'called') {
+              statusBadge = (
+                <span className="text-xs font-medium px-2.5 py-1 rounded-md bg-teal-light text-teal dark:bg-teal-dim dark:text-teal-bright hidden md:block whitespace-nowrap">
+                  โทรแล้ว
+                </span>
+              )
+            } else if (status === 'assigned') {
+              statusBadge = (
+                <span className="text-xs font-medium px-2.5 py-1 rounded-md bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300 hidden md:block whitespace-nowrap">
+                  มอบหมายแล้ว
+                </span>
+              )
+            } else {
+              statusBadge = (
+                <span className="text-xs font-medium px-2.5 py-1 rounded-md bg-[#faeeda] text-[#854f0b] dark:bg-[#3a2308] dark:text-[#d4953e] hidden md:block whitespace-nowrap">
+                  รอมอบหมาย
+                </span>
+              )
+            }
+
             return (
               <div
                 key={member.source_id}
@@ -172,15 +231,7 @@ export default function BulkAssign({ campaignId, members, districts = [], tiers 
                 <span className="text-xs text-warm-500 dark:text-warm-dark-500 hidden sm:block w-28 truncate">
                   {member.home_amphure}
                 </span>
-                {isCalled ? (
-                  <span className="text-xs font-medium px-2.5 py-1 rounded-md bg-teal-light text-teal dark:bg-teal-dim dark:text-teal-bright hidden md:block whitespace-nowrap">
-                    โทรแล้ว
-                  </span>
-                ) : (
-                  <span className="text-xs font-medium px-2.5 py-1 rounded-md bg-[#faeeda] text-[#854f0b] dark:bg-[#3a2308] dark:text-[#d4953e] hidden md:block whitespace-nowrap">
-                    รอโทร
-                  </span>
-                )}
+                {statusBadge}
                 <span className={`text-xs font-semibold px-2.5 py-1 rounded-md flex-shrink-0 ${tierCls}`}>
                   {tier}
                 </span>

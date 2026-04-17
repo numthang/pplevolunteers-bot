@@ -16,17 +16,11 @@ ALTER TABLE dc_members
 -- See: scripts/calling/migration-ngs-member-cache.sql
 
 -- ─────────────────────────────────────────────
--- 3. calling_campaigns — รอบ/กิจกรรมการโทร
+-- 3. calling_campaigns — ถูกแทนด้วย act_event_cache
 -- ─────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS calling_campaigns (
-  id           INT AUTO_INCREMENT PRIMARY KEY,
-  name         VARCHAR(200)  NOT NULL,
-  description  TEXT          NULL,
-  province     VARCHAR(100)  NULL COMMENT 'จังหวัดที่ campaign นี้ดูแล',
-  act_id       VARCHAR(100)  NULL COMMENT 'ref ไปยัง ACT activity (optional)',
-  created_by   VARCHAR(20)   NOT NULL COMMENT 'discord_id',
-  created_at   DATETIME      DEFAULT CURRENT_TIMESTAMP
-);
+-- See: scripts/calling/migration-act-event-cache.sql
+-- campaign_id ใน calling_* tables ชี้ไปที่ act_event_cache.id (type='campaign')
+DROP TABLE IF EXISTS calling_campaigns;
 
 -- ─────────────────────────────────────────────
 -- 4. calling_assignments — assign สมาชิกให้คนโทร

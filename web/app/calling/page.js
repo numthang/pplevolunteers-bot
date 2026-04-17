@@ -35,17 +35,11 @@ export default async function CallingPage() {
   return (
     <div>
       {/* Header */}
-      <div className="mb-8 flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-medium text-warm-900 dark:text-warm-50 mb-1">แคมเปญการโทร</h1>
-          <p className="text-sm text-warm-500 dark:text-warm-dark-500">เลือกรอบการโทรที่ต้องการ</p>
-        </div>
-        <Link
-          href="/calling/create"
-          className="bg-teal hover:opacity-90 text-white px-5 py-2.5 rounded-md text-sm font-medium transition"
-        >
-          + สร้างแคมเปญใหม่
-        </Link>
+      <div className="mb-8">
+        <h1 className="text-3xl font-medium text-warm-900 dark:text-warm-50 mb-2">Campaigns</h1>
+        <p className="text-sm text-warm-500 dark:text-warm-dark-500">
+          เลือกแคมเปญการโทรที่ต้องการจัดการ
+        </p>
       </div>
 
       {filteredCampaigns.length === 0 ? (
@@ -56,26 +50,28 @@ export default async function CallingPage() {
         <div className="space-y-8">
           {Object.entries(grouped).map(([province, list]) => (
             <section key={province}>
-              <h2 className="text-sm font-semibold text-warm-500 dark:text-warm-dark-500 uppercase tracking-wide mb-3">
+              <h2 className="text-xs font-semibold text-warm-500 dark:text-warm-dark-500 uppercase tracking-widest mb-4">
                 {province}
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {list.map(campaign => (
                   <Link key={campaign.id} href={`/calling/${campaign.id}`}>
-                    <div className="bg-white dark:bg-warm-dark-100 border border-warm-200 dark:border-warm-dark-300 rounded-xl p-6 hover:border-teal dark:hover:border-teal hover:shadow-sm transition cursor-pointer group">
-                      <h3 className="text-base font-medium text-warm-900 dark:text-warm-50 mb-1 group-hover:text-teal transition-colors">
+                    <div className="bg-white dark:bg-warm-dark-100 border border-warm-200 dark:border-warm-dark-300 rounded-lg p-6 hover:border-teal dark:hover:border-teal hover:shadow-md transition cursor-pointer group h-full">
+                      <h3 className="text-base font-medium text-warm-900 dark:text-warm-50 mb-2 group-hover:text-teal transition-colors line-clamp-2">
                         {campaign.name}
                       </h3>
                       {campaign.description && (
-                        <p className="text-sm text-warm-500 dark:text-warm-dark-500 mb-3 line-clamp-2">
+                        <p className="text-sm text-warm-500 dark:text-warm-dark-500 mb-4 line-clamp-2">
                           {campaign.description}
                         </p>
                       )}
-                      <div className="flex justify-between text-xs text-warm-400 dark:text-warm-dark-400 mt-3">
-                        <span>สร้าง {new Date(campaign.created_at).toLocaleDateString('th-TH')}</span>
-                        {campaign.member_count > 0 && (
-                          <span>{campaign.member_count} คน</span>
-                        )}
+                      <div className="flex justify-between items-center text-xs text-warm-400 dark:text-warm-dark-400 pt-2 border-t border-warm-200 dark:border-warm-dark-200">
+                        <span className="font-medium text-warm-900 dark:text-warm-50">
+                          {campaign.call_count || 0} การโทร
+                        </span>
+                        <span>
+                          {new Date(campaign.created_at).toLocaleDateString('th-TH')}
+                        </span>
                       </div>
                     </div>
                   </Link>

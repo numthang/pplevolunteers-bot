@@ -4,10 +4,11 @@ const { PROVINCE_ROLES, INTEREST_ROLES, SKILL_ROLES } = require('../config/roles
 async function upsertMember(guildId, data) {
   const sql = `
   INSERT INTO dc_members
-    (guild_id, discord_id, username, nickname, firstname, lastname, member_id, specialty, amphoe, province, region, roles, interests, referred_by)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    (guild_id, discord_id, username, display_name, nickname, firstname, lastname, member_id, specialty, amphoe, province, region, roles, interests, referred_by)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   ON DUPLICATE KEY UPDATE
     username = VALUES(username),
+    display_name = VALUES(display_name),
     nickname = VALUES(nickname),
     firstname = VALUES(firstname),
     lastname = VALUES(lastname),
@@ -25,6 +26,7 @@ async function upsertMember(guildId, data) {
     guildId,
     data.discord_id,
     data.username,
+    data.display_name ?? null,
     data.nickname ?? null,
     data.firstname ?? null,
     data.lastname ?? null,
@@ -38,6 +40,53 @@ async function upsertMember(guildId, data) {
     data.referred_by ?? null,
   ];
   await pool.execute(sql, values);
+}
+
+async function upsertMemberFromDiscord(member) {
+  const { PROVINCE_ROLES, INTEREST_ROLES, SKILL_ROLES } = require('../config/roles');
+
+  await member.fetch();
+
+  const allProvinces = Object.entries(PROVINCE_ROLES)
+    .filter(([, roleId]) => member.roles.cache.has(roleId))
+    .map(([province]) => province)
+    .join(',') || null;
+
+  const allRoles = member.roles.cache
+    .filter(r => r.name !== '@everyone')
+    .map(r => r.name)
+    .join(',') || null;
+
+  const interestIds = new Set([
+    ...Object.values(SKILL_ROLES),
+    ...Object.values(INTEREST_ROLES),
+  ]);
+  const interestRoles = member.roles.cache
+    .filter(r => interestIds.has(r.id))
+    .map(r => r.name)
+    .join(',') || null;
+
+  const sql = `
+  INSERT INTO dc_members
+    (guild_id, discord_id, username, display_name, province, roles, interests)
+  VALUES (?, ?, ?, ?, ?, ?, ?)
+  ON DUPLICATE KEY UPDATE
+    username = VALUES(username),
+    display_name = VALUES(display_name),
+    province = VALUES(province),
+    roles = VALUES(roles),
+    interests = VALUES(interests),
+    updated_at = CURRENT_TIMESTAMP
+  `;
+  await pool.execute(sql, [
+    member.guild.id,
+    member.id,
+    member.user.username,
+    member.displayName,
+    allProvinces,
+    allRoles,
+    interestRoles,
+  ]);
 }
 
 async function getMember(guildId, discord_id) {
@@ -92,4 +141,4 @@ async function syncMemberRoles(member) {
   );
 }
 
-module.exports = { upsertMember, getMember, syncMemberRoles };
+module.exports = { upsertMember, upsertMemberFromDiscord, getMember, syncMemberRoles };

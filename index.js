@@ -145,10 +145,14 @@ client.on('interactionCreate', async (interaction) => {
 client.refreshSticky = refreshSticky;
 client.on('voiceStateUpdate', onVoiceStateUpdate);
 
+client.on('guildMemberAdd', async (member) => {
+  const { upsertMemberFromDiscord } = require('./db/members');
+  await upsertMemberFromDiscord(member).catch(err => console.error('[memberAdd] upsert:', err));
+});
+
 client.on('guildMemberUpdate', async (oldMember, newMember) => {
-  if (oldMember.roles.cache.size === newMember.roles.cache.size) return;
-  const { syncMemberRoles } = require('./db/members');
-  await syncMemberRoles(newMember).catch(err => console.error('[memberUpdate] syncRoles:', err));
+  const { upsertMemberFromDiscord } = require('./db/members');
+  await upsertMemberFromDiscord(newMember).catch(err => console.error('[memberUpdate] upsert:', err));
 });
 
 // ─── Forum indexing ──────────────────────────────────────────────────────────

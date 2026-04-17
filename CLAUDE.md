@@ -69,6 +69,19 @@ pple-volunteers/
 - Code must be runnable / copy-paste friendly
 - No over-engineering
 
+## 📋 Import / Sync Scripts
+
+Scripts ที่ loop upsert ข้อมูลจำนวนมากต้องมี:
+- บอก total ก่อนเริ่ม เช่น `Fetched 500 members, upserting...`
+- progress inline ทุก N records เช่น `\r  120/500 (2 errors)` (ใช้ `process.stdout.write`)
+- สรุปตอนจบ เช่น `Done: 498 upserted, 2 errors`
+
+## 🔐 Environment Variables (key names)
+
+- `DISCORD_BOT_TOKEN` — bot login token
+- `DISCORD_CLIENT_ID` / `DISCORD_CLIENT_SECRET` — OAuth
+- `GUILD_ID` — Discord server ID (used by bot + web API)
+
 ## ⛔ Off-limits
 
 - `.env` — never read or display values

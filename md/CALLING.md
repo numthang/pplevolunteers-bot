@@ -27,13 +27,16 @@
 
 ```sql
 ALTER TABLE dc_members
-  ADD COLUMN phone      VARCHAR(20)  NULL,
-  ADD COLUMN line_id    VARCHAR(100) NULL,
-  ADD COLUMN google_id  VARCHAR(100) NULL;
+  ADD COLUMN display_name VARCHAR(100) NULL AFTER username,
+  ADD COLUMN phone        VARCHAR(20)  NULL,
+  ADD COLUMN line_id      VARCHAR(100) NULL,
+  ADD COLUMN google_id    VARCHAR(100) NULL;
 ```
 
-> `member_id` มีอยู่แล้วใน `dc_members` แต่ยังไม่มีข้อมูล  
-> ถ้า `phone IS NULL` → frontend random เบอร์ dummy แสดงบน UI ชั่วคราว **ไม่บันทึกลง DB**
+- `display_name` = `member.displayName` จาก Discord (server nickname → global name → username) sync อัตโนมัติเมื่อ join / update
+- sync ทุก guild member ครั้งแรกด้วย `node scripts/sync-discord-members.js`
+- `member_id` มีอยู่แล้วใน `dc_members` แต่ยังไม่มีข้อมูล  
+- ถ้า `phone IS NULL` → frontend random เบอร์ dummy แสดงบน UI ชั่วคราว **ไม่บันทึกลง DB**
 
 ---
 
@@ -236,21 +239,38 @@ D = 1.0 - 1.4
 
 ---
 
-### Bulk Assign
+### Auto-split (แบ่งงาน)
+
+ปุ่ม "แบ่งงาน" → modal:
+- multi-select autocomplete เลือกผู้รับผิดชอบหลายคน (ดึงจาก `dc_members.display_name`)
+- pool = unassigned เท่านั้น แสดง preview "Alice: 50 คน (#1–#50), Bob: 50 คน (#51–#100)"
+- confirm → bulk assign แบ่งเท่าๆ กัน
+- รองรับการเพิ่มคนโทรทีหลัง — เปิด modal แล้วระบบดึง unassigned ที่เหลือให้อัตโนมัติ
 
 ```
-filter: [ อำเภอ ▼ ] [ ระดับ ▼ ] [ ยังไม่ assign ▼ ]
-
-[ ✓ ] เลือกทั้งหมด (120/320)    [ assign ให้... ]
-
-[✓] ชื่อ A  ระดับ A  โพธาราม   Tee
-[✓] ชื่อ B  ระดับ B  เมือง     แอม
-[ ] ชื่อ C  ระดับ C  บ้านโป่ง  —
+[ Alice × ] [ Bob × ]  ค้นหาชื่อ...
+┌──────────────────────────────────┐
+│ Alice              50 คน (#1–#50)│
+│ Bob              50 คน (#51–#100)│
+└──────────────────────────────────┘
+[ ยืนยัน (2 คน) ]  [ ยกเลิก ]
 ```
 
-- check all → เลือกทุกแถวที่ filter อยู่ (ไม่ใช่ทั้งหมดใน campaign)
-- ตัวเลขบอกว่าเลือกอยู่กี่คนจากกี่คน
-- พอ filter เปลี่ยน → check all ปรับตามที่ filter เห็นอยู่
+### Member List Table
+
+```
+filter: [ อำเภอ ▼ ] [ ระดับ ▼ ] [ สถานะ ▼ ]
+
+[ ✓ ] ชื่อ (320)                  [ แบ่งงาน ↗ ]
+
+[✓] ชื่อ A  A  โพธาราม   Alice   โทรแล้ว
+[✓] ชื่อ B  B  เมือง      Bob    มอบหมายแล้ว
+[ ] ชื่อ C  C  บ้านโป่ง   —      รอมอบหมาย
+```
+
+- `assigned_to` เก็บ `discord_id` แสดงเป็น `display_name` client-side
+- mobile: 4 คอลัมน์ (checkbox | ชื่อ+subtitle | tier | status)
+- desktop: 7 คอลัมน์ เพิ่ม อำเภอ, มอบหมายให้, จำนวนโทร
 
 ---
 
@@ -291,14 +311,9 @@ filter: [ อำเภอ ▼ ] [ ระดับ ▼ ] [ ยังไม่ ass
 web/
   app/
     calling/
-      page.js                       ← รายการ campaigns
-      members/
-        [memberId]/
-          page.js                   ← profile สมาชิก + ประวัติโทรทุก campaign
+      page.js                       ← รายการ campaigns (card grid)
       [campaignId]/
-        page.js                     ← รายชื่อสมาชิกใน campaign + bulk assign
-        [memberId]/
-          page.js                   ← หน้าโทร + ประวัติใน campaign นี้ + บันทึก
+        page.js                     ← รายชื่อสมาชิกใน campaign + auto-split
     api/
       calling/
         campaigns/
@@ -306,23 +321,23 @@ web/
         logs/
         tiers/
         members/
+        users/                      ← dc_members for assignee combobox
   components/
     calling/
-      CampaignCard.jsx
-      MemberCallCard.jsx            ← summary card
-      CallLogger.jsx                ← form บันทึกหลังโทร
-      BulkAssign.jsx                ← checkbox + filter + assign
-      MemberProfile.jsx             ← profile + ประวัติโทรรวมทุก campaign
+      SplitModal.jsx                ← auto-split modal
+      UserCombobox.jsx              ← multi-select autocomplete (ดึง display_name)
   db/
     calling/
       campaigns.js
       assignments.js
       logs.js
       tiers.js
-      members.js                    ← query bq_members (จำลอง BigQuery)
+      members.js                    ← query ngs_member_cache (ACT sync)
 scripts/
   calling/
-    import-members-xls.js          ← normalize + import XLS → bq_members
+    import-calling-logs-xlsx.js    ← import call logs จาก XLS
+  sync-discord-members.js          ← one-time sync guild members → dc_members
+  migration-add-display-name.sql   ← ALTER TABLE dc_members ADD display_name
 ```
 
 ---

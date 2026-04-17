@@ -18,12 +18,8 @@ export async function GET(req) {
   const { searchParams } = new URL(req.url)
   const campaignId = searchParams.get('campaignId')
 
-  if (!campaignId) {
-    return Response.json({ error: 'campaignId is required' }, { status: 400 })
-  }
-
   try {
-    const assignments = await assignmentDB.getAssignmentsByCampaign(parseInt(campaignId))
+    const assignments = await assignmentDB.getAssignmentsByCampaign(campaignId ? parseInt(campaignId) : 0)
     return Response.json({ success: true, data: assignments })
   } catch (error) {
     console.error('[GET /api/calling/assignments]', error)
@@ -44,11 +40,11 @@ export async function POST(req) {
 
   try {
     const body = await req.json()
-    const { campaign_id, member_ids, assigned_to } = body
+    const { campaign_id = 0, member_ids, assigned_to } = body
 
-    if (!campaign_id || !member_ids || !Array.isArray(member_ids) || !assigned_to) {
+    if (!member_ids || !Array.isArray(member_ids) || !assigned_to) {
       return Response.json(
-        { error: 'campaign_id, member_ids (array), and assigned_to are required' },
+        { error: 'member_ids (array) and assigned_to are required' },
         { status: 400 }
       )
     }
@@ -78,10 +74,10 @@ export async function POST(req) {
 
     // Bulk assign
     const affectedRows = await assignmentDB.bulkAssignMembers(
-      campaign_id,
       member_ids,
       assigned_to,
-      session.user.discordId
+      session.user.discordId,
+      campaign_id || 0
     )
 
     return Response.json({
@@ -107,11 +103,11 @@ export async function PUT(req) {
 
   try {
     const body = await req.json()
-    const { campaign_id, member_id, assigned_to } = body
+    const { campaign_id = 0, member_id, assigned_to } = body
 
-    if (!campaign_id || !member_id || !assigned_to) {
+    if (!member_id || !assigned_to) {
       return Response.json(
-        { error: 'campaign_id, member_id, and assigned_to are required' },
+        { error: 'member_id and assigned_to are required' },
         { status: 400 }
       )
     }
@@ -129,9 +125,9 @@ export async function PUT(req) {
     }
 
     // Upsert assignment
-    await assignmentDB.assignMember(campaign_id, parseInt(member_id), assigned_to, session.user.discordId)
+    await assignmentDB.assignMember(parseInt(member_id), assigned_to, session.user.discordId, campaign_id || 0)
 
-    const assignment = await assignmentDB.getAssignment(campaign_id, member_id)
+    const assignment = await assignmentDB.getAssignment(parseInt(member_id), campaign_id || 0)
     return Response.json({ success: true, data: assignment })
   } catch (error) {
     console.error('[PUT /api/calling/assignments]', error)
@@ -151,11 +147,11 @@ export async function DELETE(req) {
 
   try {
     const body = await req.json()
-    const { campaign_id, member_id } = body
+    const { campaign_id = 0, member_id } = body
 
-    if (!campaign_id || !member_id) {
+    if (!member_id) {
       return Response.json(
-        { error: 'campaign_id and member_id are required' },
+        { error: 'member_id is required' },
         { status: 400 }
       )
     }
@@ -172,7 +168,7 @@ export async function DELETE(req) {
       return Response.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    await assignmentDB.unassignMember(campaign_id, parseInt(member_id))
+    await assignmentDB.unassignMember(parseInt(member_id), campaign_id || 0)
 
     return Response.json({ success: true, message: 'Member unassigned' })
   } catch (error) {

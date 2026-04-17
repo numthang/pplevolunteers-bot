@@ -54,12 +54,20 @@ export async function searchMembers(keyword, limit = 100, offset = 0) {
 }
 
 /**
- * Get all members with pagination (required)
+ * Get all members with pagination + call stats (required)
  */
 export async function getAllMembers(limit = 100, offset = 0) {
   const [rows] = await pool.query(
-    `SELECT * FROM ngs_member_cache
-     ORDER BY home_province ASC, home_amphure ASC, first_name ASC
+    `SELECT
+       m.*,
+       t.tier,
+       COUNT(DISTINCT l.id) AS total_calls,
+       MAX(l.called_at) AS last_called_at
+     FROM ngs_member_cache m
+     LEFT JOIN calling_member_tiers t ON t.member_id = m.source_id
+     LEFT JOIN calling_logs l ON l.member_id = m.source_id
+     GROUP BY m.source_id
+     ORDER BY m.home_province ASC, m.home_amphure ASC, m.first_name ASC
      LIMIT ? OFFSET ?`,
     [limit, offset]
   )
@@ -77,12 +85,14 @@ export async function getMembersCount() {
 }
 
 /**
- * Get members in a campaign with assignment + last log info
+ * Get members in a campaign with assignment + last log info + computed status
+ * Status: 'called' (has calls) | 'assigned' (assigned to someone) | 'unassigned'
  */
 export async function getMembersInCampaign(campaignId, limit = 100, offset = 0) {
   const [rows] = await pool.query(
     `SELECT
        m.*,
+       t.tier,
        COALESCE(a.assigned_to, '') AS assigned_to,
        COALESCE(a.assigned_by, '') AS assigned_by,
        COALESCE(a.created_at, NULL) AS assignment_date,
@@ -90,15 +100,21 @@ export async function getMembersInCampaign(campaignId, limit = 100, offset = 0) 
        l.status AS last_status,
        l.note AS last_note,
        COUNT(DISTINCT l.id) AS total_calls,
-       SUM(CASE WHEN l.status = 'answered' THEN 1 ELSE 0 END) AS answered_count
-     FROM calling_campaigns cc
+       SUM(CASE WHEN l.status = 'answered' THEN 1 ELSE 0 END) AS answered_count,
+       CASE
+         WHEN COUNT(DISTINCT l.id) > 0 THEN 'called'
+         WHEN a.id IS NOT NULL THEN 'assigned'
+         ELSE 'unassigned'
+       END AS member_status
+     FROM act_event_cache cc
      JOIN ngs_member_cache m
        ON (cc.province IS NULL OR m.home_province = cc.province)
+     LEFT JOIN calling_member_tiers t ON t.member_id = m.source_id
      LEFT JOIN calling_assignments a
        ON a.campaign_id = cc.id AND a.member_id = m.source_id
      LEFT JOIN calling_logs l
        ON l.campaign_id = cc.id AND l.member_id = m.source_id
-     WHERE cc.id = ?
+     WHERE cc.id = ? AND cc.type = 'campaign'
      GROUP BY m.source_id
      ORDER BY m.home_amphure ASC, m.first_name ASC
      LIMIT ? OFFSET ?`,
@@ -129,7 +145,7 @@ export async function getMemberGlobalCallHistory(memberId) {
        cl.*,
        cc.name AS campaign_name
      FROM calling_logs cl
-     JOIN calling_campaigns cc ON cc.id = cl.campaign_id
+     JOIN act_event_cache cc ON cc.id = cl.campaign_id AND cc.type = 'campaign'
      WHERE cl.member_id = ?
      ORDER BY cl.called_at DESC`,
     [memberId]
