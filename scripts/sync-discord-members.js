@@ -39,4 +39,5 @@ client.once('ready', async () => {
   process.exit(0);
 });
 
+console.log('TOKEN:', process.env.DISCORD_BOT_TOKEN ? '✓ loaded' : '✗ missing');
 client.login(process.env.DISCORD_BOT_TOKEN);
