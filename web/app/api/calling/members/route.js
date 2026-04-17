@@ -1,6 +1,7 @@
 import { getServerSession } from 'next-auth'
 import * as memberDB from '@/db/calling/members.js'
 import { canAccessMember, getUserScope, isAdmin } from '@/lib/callingAccess.js'
+import { getEffectiveRoles } from '@/lib/getEffectiveRoles.js'
 import { authOptions } from '@/lib/auth-options.js'
 
 /**
@@ -27,7 +28,7 @@ export async function GET(req) {
     let total = 0
 
     // Get user scope
-    const userRoles = session.user.roles || []
+    const userRoles = await getEffectiveRoles(session)
     const userScope = getUserScope(userRoles)
     const isUserAdmin = isAdmin(userRoles)
 

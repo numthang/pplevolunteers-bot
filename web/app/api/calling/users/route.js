@@ -19,6 +19,7 @@ export async function GET(req) {
 
   const { searchParams } = new URL(req.url)
   const q = searchParams.get('q') || ''
+  const all = searchParams.get('all') === 'true'
 
   try {
     const [rows] = await pool.query(
@@ -29,7 +30,7 @@ export async function GET(req) {
        WHERE guild_id = ?
          AND (? = '' OR display_name LIKE ? OR username LIKE ?)
        ORDER BY display_name ASC
-       LIMIT 50`,
+       ${all ? '' : 'LIMIT 50'}`,
       [guildId, q, `%${q}%`, `%${q}%`]
     )
     return Response.json({ success: true, data: rows })

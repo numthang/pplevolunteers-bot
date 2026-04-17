@@ -2,6 +2,7 @@ import { getServerSession } from 'next-auth'
 import * as assignmentDB from '@/db/calling/assignments.js'
 import * as memberDB from '@/db/calling/members.js'
 import { isAdmin, canAssignInProvince } from '@/lib/callingAccess.js'
+import { getEffectiveRoles } from '@/lib/getEffectiveRoles.js'
 import { authOptions } from '@/lib/auth-options.js'
 
 /**
@@ -49,7 +50,7 @@ export async function POST(req) {
       )
     }
 
-    const userRoles = session.user.roles || []
+    const userRoles = await getEffectiveRoles(session)
 
     // Check permission for each member
     const membersToCheck = await Promise.all(
@@ -119,7 +120,7 @@ export async function PUT(req) {
     }
 
     // Check permission
-    const userRoles = session.user.roles || []
+    const userRoles = await getEffectiveRoles(session)
     if (!canAssignInProvince(member.home_province, userRoles)) {
       return Response.json({ error: 'Forbidden' }, { status: 403 })
     }
@@ -163,7 +164,7 @@ export async function DELETE(req) {
     }
 
     // Check permission
-    const userRoles = session.user.roles || []
+    const userRoles = await getEffectiveRoles(session)
     if (!canAssignInProvince(member.home_province, userRoles)) {
       return Response.json({ error: 'Forbidden' }, { status: 403 })
     }

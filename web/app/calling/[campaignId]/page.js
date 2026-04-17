@@ -39,7 +39,7 @@ export default function CampaignPage({ params }) {
       const [campaignRes, memberRes, usersRes] = await Promise.all([
         fetch('/api/calling/campaigns'),
         fetch(`/api/calling/members?campaignId=${campaignId}&limit=5000`),
-        fetch('/api/calling/users')
+        fetch('/api/calling/users?all=true')
       ])
       const campaignData = await campaignRes.json()
       const camp = campaignData.data?.find(c => c.id === parseInt(campaignId))
@@ -131,6 +131,12 @@ export default function CampaignPage({ params }) {
               member_ids: chunk.map(m => m.source_id),
               assigned_to: discordId
             })
+          }).then(async res => {
+            if (!res.ok) {
+              const err = await res.json()
+              throw new Error(`${res.status}: ${err.error} ${JSON.stringify(err.details || '')}`)
+            }
+            return res
           })
         })
       )
@@ -142,7 +148,7 @@ export default function CampaignPage({ params }) {
   }
 
   const handleUnassign = async () => {
-    if (!confirm(\`ยกเลิกมอบหมาย \${selectedMembers.size} คน?\`)) return
+    if (!confirm(`ยกเลิกมอบหมาย ${selectedMembers.size} คน?`)) return
     try {
       await Promise.all(
         Array.from(selectedMembers).map(memberId =>

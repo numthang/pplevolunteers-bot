@@ -76,7 +76,7 @@ export async function bulkAssignMembers(memberIds, assignedTo, assignedBy, campa
   const values = memberIds.map(memberId => [campaignId || 0, memberId, assignedTo, assignedBy])
   const [result] = await pool.query(
     `INSERT INTO calling_assignments
-      (campaign_id, member_id, assigned_to, assigned_by, created_at)
+      (campaign_id, member_id, assigned_to, assigned_by)
      VALUES ?
      ON DUPLICATE KEY UPDATE
       assigned_to = VALUES(assigned_to),
