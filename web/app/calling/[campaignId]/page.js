@@ -4,120 +4,181 @@ import { useEffect, useState, useRef, useCallback, use } from 'react'
 import Link from 'next/link'
 import SplitModal from '@/components/calling/SplitModal.jsx'
 
-const PAGE_SIZE = 50
+const PAGE_SIZE = 100
 
 const TIER_COLORS = {
-  A: { bg: '#ead3ce', text: '#714b2b', darkBg: '#3d2318', darkText: '#d4a48a' },
-  B: { bg: '#cce5f4', text: '#0c447c', darkBg: '#0c2640', darkText: '#7bbfec' },
-  C: { bg: '#faeeda', text: '#854f0b', darkBg: '#3a2308', darkText: '#d4953e' },
-  D: { bg: '#fcebeb', text: '#a32d2d', darkBg: '#3a1212', darkText: '#d47373' },
+  A: { bg: '#ead3ce', text: '#714b2b' },
+  B: { bg: '#cce5f4', text: '#0c447c' },
+  C: { bg: '#faeeda', text: '#854f0b' },
+  D: { bg: '#fcebeb', text: '#a32d2d' },
+}
+
+function getStatusBadge(status) {
+  switch (status) {
+    case 'called':   return { bg: '#e1f5f4', text: '#0d9e94', label: 'โทรแล้ว' }
+    case 'assigned': return { bg: '#e0e7ff', text: '#4f46e5', label: 'มอบหมายแล้ว' }
+    default:         return { bg: '#faeeda', text: '#854f0b', label: 'รอมอบหมาย' }
+  }
 }
 
 export default function CampaignPage({ params }) {
   const { campaignId } = use(params)
+
   const [campaign, setCampaign] = useState(null)
+  const [stats, setStats] = useState({ total: 0, called: 0, assigned: 0, unassigned: 0, districts: [] })
   const [members, setMembers] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [hasMore, setHasMore] = useState(false)
+  const [loadingInitial, setLoadingInitial] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [usersMap, setUsersMap] = useState({})
+
   const [selectedMembers, setSelectedMembers] = useState(new Set())
   const [filterDistrict, setFilterDistrict] = useState('')
   const [filterTier, setFilterTier] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
-  const [usersMap, setUsersMap] = useState({})
   const [filterAssignee, setFilterAssignee] = useState('')
   const [splitModalOpen, setSplitModalOpen] = useState(false)
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
+
+  const offsetRef = useRef(0)
   const sentinelRef = useRef(null)
+  const loadingMoreRef = useRef(false)
+  const hasMoreRef = useRef(false)
 
-  // Fetch campaign + members
-  useEffect(() => {
-    fetchData()
-  }, [campaignId])
+  // Keep refs in sync for use inside IntersectionObserver closure
+  useEffect(() => { loadingMoreRef.current = loadingMore }, [loadingMore])
+  useEffect(() => { hasMoreRef.current = hasMore }, [hasMore])
 
-  const fetchData = async () => {
-    try {
-      setLoading(true)
-      const [campaignRes, memberRes, usersRes] = await Promise.all([
-        fetch('/api/calling/campaigns'),
-        fetch(`/api/calling/members?campaignId=${campaignId}&limit=5000`),
-        fetch('/api/calling/users?all=true')
-      ])
-      const campaignData = await campaignRes.json()
-      const camp = campaignData.data?.find(c => c.id === parseInt(campaignId))
-      if (camp) setCampaign(camp)
-
-      const memberData = await memberRes.json()
-      if (memberData.data) setMembers(memberData.data)
-      setSelectedMembers(new Set())
-
-      const usersData = await usersRes.json()
-      if (usersData.data) {
-        const map = {}
-        for (const u of usersData.data) map[u.discord_id] = u.display_name
-        setUsersMap(map)
-      }
-    } catch (error) {
-      console.error('Error fetching data:', error)
-    } finally {
-      setLoading(false)
-    }
+  const buildMembersUrl = (offset, district, tier, status, assignee) => {
+    const p = new URLSearchParams({ campaignId, limit: PAGE_SIZE, offset })
+    if (district) p.set('amphure', district)
+    if (tier)     p.set('tier', tier)
+    if (status)   p.set('status', status)
+    if (assignee) p.set('assignedTo', assignee)
+    return `/api/calling/members?${p}`
   }
 
-  // Filters
-  const filteredMembers = members.filter(m => {
-    if (filterDistrict && m.home_amphure !== filterDistrict) return false
-    if (filterTier && (m.tier || 'D') !== filterTier) return false
-    if (filterStatus) {
-      const status = m.member_status || 'unassigned'
-      if (filterStatus !== status) return false
+  const fetchStats = useCallback(async () => {
+    const res = await fetch(`/api/calling/members?campaignId=${campaignId}&stats=true`)
+    const data = await res.json()
+    if (data.data) setStats(data.data)
+  }, [campaignId])
+
+  // Load first page; reset member list
+  const loadFirst = useCallback(async (district, tier, status, assignee) => {
+    setLoadingInitial(true)
+    offsetRef.current = 0
+    try {
+      const [memberRes, statsRes] = await Promise.all([
+        fetch(buildMembersUrl(0, district, tier, status, assignee)),
+        fetch(`/api/calling/members?campaignId=${campaignId}&stats=true`)
+      ])
+      const memberData = await memberRes.json()
+      const newRows = memberData.data || []
+      setMembers(newRows)
+      setHasMore(memberData.hasMore || false)
+      hasMoreRef.current = memberData.hasMore || false
+      offsetRef.current = newRows.length
+      setSelectedMembers(new Set())
+
+      const statsData = await statsRes.json()
+      if (statsData.data) setStats(statsData.data)
+    } catch (err) {
+      console.error('loadFirst', err)
+    } finally {
+      setLoadingInitial(false)
     }
-    if (filterAssignee && m.assigned_to !== filterAssignee) return false
-    return true
-  })
+  }, [campaignId])
 
-  const visibleMembers = filteredMembers.slice(0, visibleCount)
-  const hasMore = visibleCount < filteredMembers.length
-
-  // Reset visible when filters change
-  useEffect(() => {
-    setVisibleCount(PAGE_SIZE)
+  // Load next page; append
+  const loadMore = useCallback(async () => {
+    if (loadingMoreRef.current || !hasMoreRef.current) return
+    setLoadingMore(true)
+    loadingMoreRef.current = true
+    try {
+      const res = await fetch(buildMembersUrl(
+        offsetRef.current, filterDistrict, filterTier, filterStatus, filterAssignee
+      ))
+      const data = await res.json()
+      const newRows = data.data || []
+      setMembers(prev => [...prev, ...newRows])
+      setHasMore(data.hasMore || false)
+      hasMoreRef.current = data.hasMore || false
+      offsetRef.current += newRows.length
+    } catch (err) {
+      console.error('loadMore', err)
+    } finally {
+      setLoadingMore(false)
+      loadingMoreRef.current = false
+    }
   }, [filterDistrict, filterTier, filterStatus, filterAssignee])
 
-  // Infinite scroll
-  const handleObserver = useCallback((entries) => {
-    if (entries[0].isIntersecting && hasMore) {
-      setVisibleCount(c => c + PAGE_SIZE)
-    }
-  }, [hasMore])
+  // Initial: fetch campaign + users (only once per campaignId)
+  useEffect(() => {
+    ;(async () => {
+      const [campaignRes, usersRes] = await Promise.all([
+        fetch('/api/calling/campaigns'),
+        fetch('/api/calling/users?all=true')
+      ])
+      const cData = await campaignRes.json()
+      const camp = cData.data?.find(c => c.id === parseInt(campaignId))
+      if (camp) setCampaign(camp)
+
+      const uData = await usersRes.json()
+      if (uData.data) {
+        const map = {}
+        for (const u of uData.data) map[u.discord_id] = u.display_name
+        setUsersMap(map)
+      }
+    })()
+  }, [campaignId])
+
+  // Re-fetch members when filters change (or on mount)
+  useEffect(() => {
+    loadFirst(filterDistrict, filterTier, filterStatus, filterAssignee)
+  }, [campaignId, filterDistrict, filterTier, filterStatus, filterAssignee])
+
+  // IntersectionObserver — stable ref so it doesn't re-register every render
+  const loadMoreRef = useRef(loadMore)
+  useEffect(() => { loadMoreRef.current = loadMore }, [loadMore])
 
   useEffect(() => {
     const sentinel = sentinelRef.current
     if (!sentinel) return
-    const observer = new IntersectionObserver(handleObserver, { threshold: 0.1 })
+    const observer = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting) loadMoreRef.current()
+    }, { threshold: 0.1 })
     observer.observe(sentinel)
     return () => observer.disconnect()
-  }, [handleObserver])
+  }, [])
 
-  // Handlers
+  // Selection handlers
   const handleSelectAll = () => {
-    if (selectedMembers.size === filteredMembers.length) {
+    if (selectedMembers.size === members.length && members.length > 0) {
       setSelectedMembers(new Set())
     } else {
-      setSelectedMembers(new Set(filteredMembers.map(m => m.source_id)))
+      setSelectedMembers(new Set(members.map(m => m.source_id)))
     }
   }
 
-  const handleSelectMember = (memberId) => {
-    const newSet = new Set(selectedMembers)
-    if (newSet.has(memberId)) newSet.delete(memberId)
-    else newSet.add(memberId)
-    setSelectedMembers(newSet)
+  const handleSelectMember = (id) => {
+    const s = new Set(selectedMembers)
+    s.has(id) ? s.delete(id) : s.add(id)
+    setSelectedMembers(s)
   }
 
+  // Assign (split) handler
   const handleSplit = async (assigneeIds) => {
     try {
-      const targets = selectedMembers.size > 0
-        ? members.filter(m => selectedMembers.has(m.source_id))
-        : members.filter(m => m.member_status === 'unassigned')
+      let targets
+      if (selectedMembers.size > 0) {
+        targets = members.filter(m => selectedMembers.has(m.source_id)).map(m => m.source_id)
+      } else {
+        // Fetch all unassigned IDs from server (not limited to loaded page)
+        const res = await fetch(`/api/calling/members?campaignId=${campaignId}&status=unassigned&limit=500&offset=0`)
+        const data = await res.json()
+        targets = (data.data || []).map(m => m.source_id)
+      }
+
       const perPerson = Math.ceil(targets.length / assigneeIds.length)
       await Promise.all(
         assigneeIds.map((discordId, i) => {
@@ -128,7 +189,7 @@ export default function CampaignPage({ params }) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               campaign_id: parseInt(campaignId),
-              member_ids: chunk.map(m => m.source_id),
+              member_ids: chunk,
               assigned_to: discordId
             })
           }).then(async res => {
@@ -136,175 +197,119 @@ export default function CampaignPage({ params }) {
               const err = await res.json()
               throw new Error(`${res.status}: ${err.error} ${JSON.stringify(err.details || '')}`)
             }
-            return res
           })
         })
       )
       setSplitModalOpen(false)
-      await fetchData()
-    } catch (error) {
-      alert('เกิดข้อผิดพลาด: ' + error.message)
+      await loadFirst(filterDistrict, filterTier, filterStatus, filterAssignee)
+    } catch (err) {
+      alert('เกิดข้อผิดพลาด: ' + err.message)
     }
   }
 
+  // Unassign handler
   const handleUnassign = async () => {
-    if (!confirm(`ยกเลิกมอบหมาย ${selectedMembers.size} คน?`)) return
+    const ids = Array.from(selectedMembers)
+    if (!confirm(`ยกเลิกมอบหมาย ${ids.length} คน?`)) return
     try {
       await Promise.all(
-        Array.from(selectedMembers).map(memberId =>
+        ids.map(memberId =>
           fetch('/api/calling/assignments', {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ campaign_id: parseInt(campaignId), member_id: memberId })
+          }).then(async res => {
+            if (!res.ok) throw new Error((await res.json()).error)
           })
         )
       )
-      await fetchData()
-    } catch (error) {
-      alert('เกิดข้อผิดพลาด: ' + error.message)
+      await loadFirst(filterDistrict, filterTier, filterStatus, filterAssignee)
+    } catch (err) {
+      alert('เกิดข้อผิดพลาด: ' + err.message)
     }
   }
 
-  // Districts, tiers, assignees
-  const districts = [...new Set(members.map(m => m.home_amphure).filter(Boolean))].sort()
-  const tiers = ['A', 'B', 'C', 'D']
-  const assignees = [...new Set(members.filter(m => m.assigned_to).map(m => m.assigned_to))]
-    .map(id => ({ id, name: usersMap[id] || id }))
-    .sort((a, b) => a.name.localeCompare(b.name))
+  // Assignees visible in current loaded set
+  const assignees = [...new Map(
+    members.filter(m => m.assigned_to).map(m => [m.assigned_to, usersMap[m.assigned_to] || m.assigned_to])
+  ).entries()].map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name))
 
-  // Stats
-  const totalMembers = members.length
-  const calledCount = members.filter(m => m.total_calls > 0).length
-  const assignedCount = members.filter(m => m.assigned_to).length
-  const unassignedCount = members.filter(m => m.member_status === 'unassigned').length
+  const isAllSelected = members.length > 0 && selectedMembers.size === members.length
 
-  // Status badge styles
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case 'called':
-        return { bg: '#e1f5f4', text: '#0d9e94', label: 'โทรแล้ว' }
-      case 'assigned':
-        return { bg: '#e0e7ff', text: '#4f46e5', label: 'มอบหมายแล้ว' }
-      default:
-        return { bg: '#faeeda', text: '#854f0b', label: 'รอมอบหมาย' }
-    }
+  if (loadingInitial && !campaign) {
+    return <div className="py-20 text-center text-warm-400 dark:text-warm-dark-400 text-sm">กำลังโหลด...</div>
   }
 
-  const isAllSelected = selectedMembers.size === filteredMembers.length && filteredMembers.length > 0
-
-  if (loading) {
-    return (
-      <div className="py-20 text-center text-warm-400 dark:text-warm-dark-400 text-sm">
-        กำลังโหลด...
-      </div>
-    )
-  }
-
-  if (!campaign) {
-    return (
-      <div className="py-20 text-center text-red-500">
-        ไม่พบแคมเปญ
-      </div>
-    )
+  if (!loadingInitial && !campaign) {
+    return <div className="py-20 text-center text-red-500">ไม่พบแคมเปญ</div>
   }
 
   return (
     <div>
       {/* Breadcrumb */}
       <div className="mb-6 text-sm text-warm-500 dark:text-warm-dark-500">
-        <Link href="/calling" className="text-teal hover:underline">
-          Campaigns
-        </Link>
+        <Link href="/calling" className="text-teal hover:underline">Campaigns</Link>
         <span className="mx-2">›</span>
-        <span className="text-warm-900 dark:text-warm-50">{campaign.name}</span>
+        <span className="text-warm-900 dark:text-warm-50">{campaign?.name}</span>
       </div>
 
-      {/* Campaign Header Card */}
+      {/* Campaign Header */}
       <div className="bg-white dark:bg-warm-dark-100 border border-warm-200 dark:border-warm-dark-300 rounded-lg p-6 mb-8">
-        <h1 className="text-2xl font-medium text-warm-900 dark:text-warm-50 mb-2">
-          {campaign.name}
-        </h1>
-        {campaign.description && (
-          <p className="text-sm text-warm-500 dark:text-warm-dark-500 mb-4">
-            {campaign.description}
-          </p>
+        <h1 className="text-2xl font-medium text-warm-900 dark:text-warm-50 mb-2">{campaign?.name}</h1>
+        {campaign?.description && (
+          <p className="text-sm text-warm-500 dark:text-warm-dark-500 mb-4">{campaign.description}</p>
         )}
         <div className="flex flex-wrap gap-8 text-sm">
           <div>
-            <span className="text-warm-500 dark:text-warm-dark-500">Total members:</span>
-            <span className="ml-2 font-semibold text-warm-900 dark:text-warm-50">
-              {totalMembers}
-            </span>
+            <span className="text-warm-500 dark:text-warm-dark-500">สมาชิกทั้งหมด:</span>
+            <span className="ml-2 font-semibold text-warm-900 dark:text-warm-50">{stats.total}</span>
           </div>
           <div>
-            <span className="text-warm-500 dark:text-warm-dark-500">Called:</span>
-            <span className="ml-2 font-semibold text-warm-900 dark:text-warm-50">
-              {calledCount} / {totalMembers}
-            </span>
+            <span className="text-warm-500 dark:text-warm-dark-500">โทรแล้ว:</span>
+            <span className="ml-2 font-semibold text-warm-900 dark:text-warm-50">{stats.called} / {stats.total}</span>
           </div>
           <div>
-            <span className="text-warm-500 dark:text-warm-dark-500">Assigned:</span>
-            <span className="ml-2 font-semibold text-warm-900 dark:text-warm-50">
-              {assignedCount}
-            </span>
+            <span className="text-warm-500 dark:text-warm-dark-500">มอบหมายแล้ว:</span>
+            <span className="ml-2 font-semibold text-warm-900 dark:text-warm-50">{stats.assigned}</span>
+          </div>
+          <div>
+            <span className="text-warm-500 dark:text-warm-dark-500">รอมอบหมาย:</span>
+            <span className="ml-2 font-semibold text-warm-900 dark:text-warm-50">{stats.unassigned}</span>
           </div>
         </div>
       </div>
 
-      {/* Filter Row */}
+      {/* Filters */}
       <div className="flex flex-wrap gap-3 mb-4">
-        <select
-          value={filterDistrict}
-          onChange={e => setFilterDistrict(e.target.value)}
-          className="h-9 px-3 text-sm border border-warm-200 dark:border-warm-dark-300 bg-white dark:bg-warm-dark-100 text-warm-900 dark:text-warm-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal"
-        >
+        <select value={filterDistrict} onChange={e => setFilterDistrict(e.target.value)}
+          className="h-9 px-3 text-sm border border-warm-200 dark:border-warm-dark-300 bg-white dark:bg-warm-dark-100 text-warm-900 dark:text-warm-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal">
           <option value="">อำเภอ (ทั้งหมด)</option>
-          {districts.map(d => (
-            <option key={d} value={d}>
-              {d}
-            </option>
-          ))}
+          {stats.districts.map(d => <option key={d} value={d}>{d}</option>)}
         </select>
 
-        <select
-          value={filterTier}
-          onChange={e => setFilterTier(e.target.value)}
-          className="h-9 px-3 text-sm border border-warm-200 dark:border-warm-dark-300 bg-white dark:bg-warm-dark-100 text-warm-900 dark:text-warm-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal"
-        >
+        <select value={filterTier} onChange={e => setFilterTier(e.target.value)}
+          className="h-9 px-3 text-sm border border-warm-200 dark:border-warm-dark-300 bg-white dark:bg-warm-dark-100 text-warm-900 dark:text-warm-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal">
           <option value="">ระดับ (ทั้งหมด)</option>
-          {tiers.map(t => (
-            <option key={t} value={t}>
-              {t}
-            </option>
-          ))}
+          {['A','B','C','D'].map(t => <option key={t} value={t}>{t}</option>)}
         </select>
 
-        <select
-          value={filterStatus}
-          onChange={e => setFilterStatus(e.target.value)}
-          className="h-9 px-3 text-sm border border-warm-200 dark:border-warm-dark-300 bg-white dark:bg-warm-dark-100 text-warm-900 dark:text-warm-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal"
-        >
+        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
+          className="h-9 px-3 text-sm border border-warm-200 dark:border-warm-dark-300 bg-white dark:bg-warm-dark-100 text-warm-900 dark:text-warm-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal">
           <option value="">สถานะ (ทั้งหมด)</option>
           <option value="unassigned">รอมอบหมาย</option>
           <option value="assigned">มอบหมายแล้ว</option>
           <option value="called">โทรแล้ว</option>
         </select>
 
-        <select
-          value={filterAssignee}
-          onChange={e => setFilterAssignee(e.target.value)}
-          className="h-9 px-3 text-sm border border-warm-200 dark:border-warm-dark-300 bg-white dark:bg-warm-dark-100 text-warm-900 dark:text-warm-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal"
-        >
+        <select value={filterAssignee} onChange={e => setFilterAssignee(e.target.value)}
+          className="h-9 px-3 text-sm border border-warm-200 dark:border-warm-dark-300 bg-white dark:bg-warm-dark-100 text-warm-900 dark:text-warm-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal">
           <option value="">ผู้รับผิดชอบ (ทั้งหมด)</option>
-          {assignees.map(a => (
-            <option key={a.id} value={a.id}>{a.name}</option>
-          ))}
+          {assignees.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
         </select>
       </div>
 
       {/* Table */}
       <div className="bg-white dark:bg-warm-dark-100 border border-warm-200 dark:border-warm-dark-300 rounded-lg overflow-hidden">
-
         {/* Header */}
         <div className="
           grid items-center px-3 py-2.5
@@ -318,8 +323,8 @@ export default function CampaignPage({ params }) {
             className="w-4 h-4 accent-teal cursor-pointer" />
           <span>
             {selectedMembers.size > 0
-              ? `เลือก ${selectedMembers.size} / ${filteredMembers.length}`
-              : `ชื่อ (${filteredMembers.length})`}
+              ? `เลือก ${selectedMembers.size} / ${members.length}`
+              : `ชื่อ (${loadingInitial ? '...' : members.length})`}
           </span>
           <span className="text-center">ระดับ</span>
           <span className="md:hidden">สถานะ</span>
@@ -330,58 +335,43 @@ export default function CampaignPage({ params }) {
         </div>
 
         {/* Rows */}
-        {filteredMembers.length === 0 ? (
-          <div className="px-6 py-8 text-center text-warm-400 dark:text-warm-dark-400 text-sm">
-            ไม่พบสมาชิก
-          </div>
+        {loadingInitial ? (
+          <div className="px-6 py-8 text-center text-warm-400 dark:text-warm-dark-400 text-sm">กำลังโหลด...</div>
+        ) : members.length === 0 ? (
+          <div className="px-6 py-8 text-center text-warm-400 dark:text-warm-dark-400 text-sm">ไม่พบสมาชิก</div>
         ) : (
           <div className="divide-y divide-warm-200 dark:divide-warm-dark-300">
-            {visibleMembers.map(member => {
+            {members.map(member => {
               const tier = member.tier || 'D'
               const tierColor = TIER_COLORS[tier]
               const status = member.member_status || 'unassigned'
-              const statusBadge = getStatusBadge(status)
-
+              const badge = getStatusBadge(status)
               return (
-                <div
-                  key={member.source_id}
+                <div key={member.source_id}
                   className="
                     grid items-center px-3 py-3
                     hover:bg-warm-50 dark:hover:bg-warm-dark-200 transition-colors
                     [grid-template-columns:32px_1fr_32px_80px]
                     md:[grid-template-columns:32px_1fr_36px_88px_100px_88px_32px]
-                  "
-                >
-                  <input
-                    type="checkbox"
+                  ">
+                  <input type="checkbox"
                     checked={selectedMembers.has(member.source_id)}
                     onChange={() => handleSelectMember(member.source_id)}
-                    className="w-4 h-4 accent-teal cursor-pointer"
-                  />
-                  {/* Name — 2 lines: name / district · assigned */}
+                    className="w-4 h-4 accent-teal cursor-pointer" />
                   <div className="min-w-0 pr-2">
-                    <div className="truncate text-sm font-medium text-warm-900 dark:text-warm-50">
-                      {member.full_name}
-                    </div>
+                    <div className="truncate text-sm font-medium text-warm-900 dark:text-warm-50">{member.full_name}</div>
                     <div className="truncate text-xs text-warm-400 dark:text-warm-dark-400">
                       {member.home_amphure || ''}{member.assigned_to ? ` · ${usersMap[member.assigned_to] || member.assigned_to}` : ''}
                     </div>
                   </div>
-                  {/* Tier — always visible */}
                   <div className="flex justify-center">
-                    <div className="px-1.5 py-0.5 rounded text-xs font-semibold text-center"
-                      style={{ backgroundColor: tierColor.bg, color: tierColor.text }}>
-                      {tier}
-                    </div>
+                    <span className="px-1.5 py-0.5 rounded text-xs font-semibold"
+                      style={{ backgroundColor: tierColor.bg, color: tierColor.text }}>{tier}</span>
                   </div>
-                  {/* Mobile: status only */}
                   <div className="md:hidden">
-                    <div className="px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap"
-                      style={{ backgroundColor: statusBadge.bg, color: statusBadge.text }}>
-                      {statusBadge.label}
-                    </div>
+                    <span className="px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap"
+                      style={{ backgroundColor: badge.bg, color: badge.text }}>{badge.label}</span>
                   </div>
-                  {/* Desktop extras */}
                   <div className="hidden md:block text-xs text-warm-500 dark:text-warm-dark-500 truncate pr-2">
                     {member.home_amphure || '—'}
                   </div>
@@ -390,10 +380,8 @@ export default function CampaignPage({ params }) {
                     {usersMap[member.assigned_to] || member.assigned_to || '—'}
                   </div>
                   <div className="hidden md:block">
-                    <div className="px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap"
-                      style={{ backgroundColor: statusBadge.bg, color: statusBadge.text }}>
-                      {statusBadge.label}
-                    </div>
+                    <span className="px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap"
+                      style={{ backgroundColor: badge.bg, color: badge.text }}>{badge.label}</span>
                   </div>
                   <div className="hidden md:block text-xs text-warm-500 dark:text-warm-dark-500 text-right">
                     {member.total_calls || 0}
@@ -404,38 +392,35 @@ export default function CampaignPage({ params }) {
           </div>
         )}
 
-        {/* Sentinel / Footer */}
+        {/* Scroll sentinel */}
         <div ref={sentinelRef}
           className="px-6 py-3 text-center text-xs text-warm-400 dark:text-warm-dark-400 border-t border-warm-200 dark:border-warm-dark-300">
-          {hasMore ? 'Loading more...' : filteredMembers.length > 0 ? `แสดงครบ ${filteredMembers.length} คน` : ''}
+          {loadingMore
+            ? 'กำลังโหลดเพิ่มเติม...'
+            : !loadingInitial && members.length > 0
+              ? hasMore ? '' : `แสดงครบ ${members.length} คน`
+              : ''}
         </div>
       </div>
 
-      {/* Assign To / Unassign buttons — bottom toolbar */}
+      {/* Floating toolbar */}
       {selectedMembers.size > 0 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-white dark:bg-warm-dark-100 border border-warm-200 dark:border-warm-dark-300 rounded-full shadow-lg px-5 py-2.5 z-40">
-          <span className="text-sm font-medium text-warm-900 dark:text-warm-50">
-            เลือก {selectedMembers.size} คน
-          </span>
-          <button
-            onClick={() => setSplitModalOpen(true)}
-            className="px-4 py-1.5 bg-teal hover:opacity-90 text-white text-sm font-medium rounded-full transition"
-          >
+          <span className="text-sm font-medium text-warm-900 dark:text-warm-50">เลือก {selectedMembers.size} คน</span>
+          <button onClick={() => setSplitModalOpen(true)}
+            className="px-4 py-1.5 bg-teal hover:opacity-90 text-white text-sm font-medium rounded-full transition">
             มอบหมาย ↗
           </button>
-          <button
-            onClick={handleUnassign}
-            className="px-4 py-1.5 bg-white dark:bg-warm-dark-100 border border-warm-200 dark:border-warm-dark-300 text-warm-700 dark:text-warm-200 text-sm font-medium rounded-full hover:bg-warm-50 dark:hover:bg-warm-dark-200 transition"
-          >
+          <button onClick={handleUnassign}
+            className="px-4 py-1.5 bg-white dark:bg-warm-dark-100 border border-warm-200 dark:border-warm-dark-300 text-warm-700 dark:text-warm-200 text-sm font-medium rounded-full hover:bg-warm-50 dark:hover:bg-warm-dark-200 transition">
             ยกเลิกมอบหมาย
           </button>
         </div>
       )}
 
-      {/* Assign Modal */}
       <SplitModal
         isOpen={splitModalOpen}
-        unassignedCount={selectedMembers.size > 0 ? selectedMembers.size : unassignedCount}
+        unassignedCount={selectedMembers.size > 0 ? selectedMembers.size : stats.unassigned}
         onClose={() => setSplitModalOpen(false)}
         onConfirm={handleSplit}
       />

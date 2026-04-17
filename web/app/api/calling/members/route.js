@@ -20,22 +20,33 @@ export async function GET(req) {
   const province = searchParams.get('province')
   const district = searchParams.get('district')
   const keyword = searchParams.get('search')
-  const limit = Math.min(parseInt(searchParams.get('limit') || '100'), 10000)
+  const statsOnly = searchParams.get('stats') === 'true'
+  const limit = Math.min(parseInt(searchParams.get('limit') || '100'), 500)
   const offset = parseInt(searchParams.get('offset') || '0')
 
-  try {
-    let rows = []
-    let total = 0
+  // Campaign-specific filters
+  const filterAmphure = searchParams.get('amphure') || null
+  const filterTier = searchParams.get('tier') || null
+  const filterStatus = searchParams.get('status') || null
+  const filterAssignedTo = searchParams.get('assignedTo') || null
 
-    // Get user scope
+  try {
     const userRoles = await getEffectiveRoles(session)
     const userScope = getUserScope(userRoles)
     const isUserAdmin = isAdmin(userRoles)
 
-    // Fetch members based on filter
+    // Stats-only request
+    if (campaignId && statsOnly) {
+      const stats = await memberDB.getMembersInCampaignStats(parseInt(campaignId))
+      return Response.json({ success: true, data: stats })
+    }
+
+    let rows = []
+    let total = 0
+
     if (campaignId) {
-      const numCampaignId = parseInt(campaignId)
-      rows = await memberDB.getMembersInCampaign(numCampaignId, limit, offset)
+      const filters = { amphure: filterAmphure, tier: filterTier, status: filterStatus, assignedTo: filterAssignedTo }
+      rows = await memberDB.getMembersInCampaign(parseInt(campaignId), filters, limit, offset)
     } else if (province) {
       rows = await memberDB.getMembersByProvince(province, limit, offset)
     } else if (district) {
@@ -55,7 +66,7 @@ export async function GET(req) {
     return Response.json({
       success: true,
       data: rows,
-      total: total || rows.length,
+      hasMore: rows.length === limit,
       limit,
       offset
     })
