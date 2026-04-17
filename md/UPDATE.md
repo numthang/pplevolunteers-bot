@@ -55,6 +55,7 @@ Optional
 - หลังจากสถานะ answered แล้วจะหายไปจาก pending ไหม (unassign) อะไร ยังไง แต่ผมว่าควรหายไปเมื่อ event นั้นผ่านไปแล้วมากกว่า เช็คจากวันที่ใน act_event_cache แล้วมันควรทำยังไงดีนะ ปรึกษาหน่อย
 
 หน้า Calling (calling/[campaignID])
+- ใน dropdown อำเภอ,  ใน dropdown ระดับ (tier) ให้วงเล็บจำนวนสมาชิก
 - จิ้มไปที่ member แล้วแสดงหน้า คล้ายๆ แบบ Record call ดู md/calling/calling-system-v2.html อย่าลืมปุ่มกดโทร ดึงข้อมูลโทรศัพท์จาก ngs_member_cache แสดง history ของแต่ละการโทรของและแคมเปญแต่ละครั้ง
 
 ชวนคิด

@@ -3,7 +3,7 @@
  * Run: node scripts/sync-discord-members.js
  */
 
-require('dotenv').config();
+require('dotenv').config({ path: '/www/wwwroot/pple-volunteers/.env' });
 const { Client, GatewayIntentBits } = require('discord.js');
 const { upsertMemberFromDiscord } = require('../db/members');
 
