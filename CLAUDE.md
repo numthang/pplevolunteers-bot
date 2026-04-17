@@ -71,6 +71,8 @@ pple-volunteers/
 
 ## 📋 Import / Sync Scripts
 
+**PRODUCTION: Always run with `sudo -u www bash -c 'cd /www/wwwroot/pple-volunteers && node scripts/...'`**
+
 Scripts ที่ loop upsert ข้อมูลจำนวนมากต้องมี:
 - บอก total ก่อนเริ่ม เช่น `Fetched 500 members, upserting...`
 - progress inline ทุก N records เช่น `\r  120/500 (2 errors)` (ใช้ `process.stdout.write`)
