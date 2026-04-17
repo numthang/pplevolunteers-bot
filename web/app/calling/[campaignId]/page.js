@@ -66,6 +66,8 @@ export default function CampaignPage({ params }) {
   // Load first page; reset member list
   const loadFirst = useCallback(async (district, tier, status, assignee) => {
     setLoadingInitial(true)
+    setHasMore(false)         // disconnect observer before resetting offset
+    hasMoreRef.current = false
     offsetRef.current = 0
     try {
       const [memberRes, statsRes] = await Promise.all([
@@ -137,19 +139,15 @@ export default function CampaignPage({ params }) {
     loadFirst(filterDistrict, filterTier, filterStatus, filterAssignee)
   }, [campaignId, filterDistrict, filterTier, filterStatus, filterAssignee])
 
-  // IntersectionObserver — stable ref so it doesn't re-register every render
-  const loadMoreRef = useRef(loadMore)
-  useEffect(() => { loadMoreRef.current = loadMore }, [loadMore])
-
   useEffect(() => {
     const sentinel = sentinelRef.current
-    if (!sentinel) return
+    if (!sentinel || !hasMore) return
     const observer = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting) loadMoreRef.current()
-    }, { threshold: 0.1 })
+      if (entries[0].isIntersecting) loadMore()
+    }, { rootMargin: '0px 0px 300px 0px' })
     observer.observe(sentinel)
     return () => observer.disconnect()
-  }, [])
+  }, [hasMore, loadMore])
 
   // Selection handlers
   const handleSelectAll = () => {

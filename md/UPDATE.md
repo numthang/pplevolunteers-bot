@@ -40,74 +40,26 @@ Optional
 <!-- - ตอนนี้อยากให้แสดงสมาชิกทั้งหมดเลย ตาม view permission ของ user คนนั้น จะอ่านได้ตามลำดับการเข้าถึงโดย role ตรงนี้ทำหรือยังนะ แล้วก็มี view as role ด้วยคล้ายๆ finance เลย
 - มาดู แต่ละหน้ากันต่อ เราจะมีหน้า campaign, member list, pending call เอาไปอ่านก่อน แล้วก็อยากได้ UI/UX เหมือนที่ออกแบบมาใน md/calling/calling-system-v2.html ดูออกไหมแต่ละหน้าเป็นยังไง process เป็นไง -->
 <!-- - ยังอยู่หน้า calling/[campaignId] ยังคงไม่เป็นระเบียบเลย, ตอนนี้แสดง member แค่ 100 คน, อำเภอแสดงไม่ครบ, ทำ campaign_id ให้แสดงเป็นรหัสจังหวัดไหมเช่นราชบุรี 70 บน act ก็เหมือนจะไม่มี id เลข 2 หลักพวกนี้เลย -->
-- หน้า pending list จิ้มไปที่ member แล้ว แสดงหน้า แบบ Record call ดู md/calling/calling-system-v2.html ให้ขึ้นแสดงข้อมูล current campaign (act event) ของการโทรครั้งนี้ก่อน อย่าลืมปุ่มกดโทร ดึงข้อมูลโทรศัพท์จาก ngs_member_cache แสดง history ของแต่ละการโทรของและแคมเปญแต่ละครั้ง
-- หน้า member list จิ้มไปที่ member แล้วแสดงหน้า คล้ายๆ แบบ Record call ดู md/calling/calling-system-v2.html อย่าลืมปุ่มกดโทร ดึงข้อมูลโทรศัพท์จาก ngs_member_cache แสดง history ของแต่ละการโทรของและแคมเปญแต่ละครั้ง
-- หลังจากโทรแล้ว จะหายไปจาก pending เมื่อไร ยังไง
 
-### **Scope & Assignments**
-มาตรฐานการออกแบบสำหรับอาสาและคนทำงาน (Mobile-First):
-* **Access Scope**: สิทธิ์การมองเห็นข้อมูลตามลำดับเขต (ระดับประเทศสำหรับ Admin/เลขา, ระดับภาค/จังหวัด/อำเภอ สำหรับ Local Roles)
-* **Assign Power**: Admin มอบหมายได้ทั่วประเทศ; Local Roles มอบหมายได้ภายในเขตพื้นที่ตนเอง
-* **Bypass Rule**: เมื่อสมาชิกถูก Assign ให้ใครแล้ว คนนั้นจะเข้าถึงข้อมูลสมาชิกได้ทันทีโดยไม่ต้องเช็คเขตพื้นที่ (Bypass Scope Check)
-* **Deny Priority**: สิทธิ์การปฏิเสธ (Deny) โดย Admin มีผลสูงสุดเหนือสิทธิ์อื่นเสมอ
-
-### UX design 
-* **Efficiency**: เพิ่มปุ่ม "Save & Call Next Member" เพื่อลดขั้นตอนการคลิกและทำคิวโทรให้ต่อเนื่อง
-* **Visual Context**: แสดง "บันทึกล่าสุด (Latest Note)" และ "สถิติการรับสาย (X/Y)" บนการ์ดสมาชิกในหน้า List ทันที
-* **Theme**: รองรับ Dark Mode และแบ่งระดับความสำคัญด้วยสี (Tier A=เขียว, B=น้ำเงิน, C=เหลือง, D=แดง)
-* **Admin Visibility**: Floating Bar แสดงจำนวนสมาชิกที่เลือก (Bulk Assign) และแสดงจำนวนงานในมือของคนรับงานแต่ละคน
-
-Member list + Bulk assign
-Call logging form (progressive disclosure)
-Member card (summary)
-
-Design highlights:
-Member list + Bulk assign:
-Filter by district, tier, status
-Checkbox select (count shows selected/total)
-Show last call, tier, assigned person, answered rate
-Sort: tier A first → unassigned → low reachability
-Assign button (bulk action)
-Filter ภาค, จังหวัด มองเห็นตาม Permission 
-Call logging (Progressive disclosure):
-Status field required (answered/no answer/busy/wrong)
-Signals show ONLY if "answered" selected
-4 signal types (location, availability, interest, reachability)
-Note field optional
-Save button at bottom
-Member profile:
-Avatar + basic info
-Call history with timestamps + notes
-Recent 2-3 calls shown
-
-Minimal + Functional:
-✅ No decorative elements
-✅ Dark mode ready (CSS variables)
-✅ One-column layout responsive
-✅ Forms radio group (4-button horizontal)
-✅ Color for tier (A=green, B=blue, C=amber, D=red)
-
-md/calling/calling-system-v2.html Included: 
+เพิ่มเมนูบน Nav หน้า Pending calls ทำตามรายละเอียดดังนี้
+- md/calling/calling-system-v2.html Included: 
 ✅ Page 1: Campaign selection (landing) ✅ Page 2: Member list + bulk assign modal ✅ Page 3: Call logging with sidebar (member info + campaign details) ✅ Page 4: Member profile + call history ✅ Page 5: Campaign management (CRUD) ✅ Modal: Assign to... (searchable dropdown) ✅ Status badges: Called/Pending ✅ Progressive disclosure: Signals show only when "Answered" selected ✅ Status indicator: Shows live when status clicked
+- เป็นหน้าของคนที่เราได้รับ assign มาให้โทร
+- จิ้มไปที่รายชื่อสมาชิกแล้ว จะเป็น model แสดงหน้า Record call ดูดีไซน์จาก md/calling/calling-system-v2.html
+- Modal Record Call (ใช้คำศัพท์อะไรก็ได้ถ้าช่วยคิด เช่น call recording, calling log) ให้ขึ้นแสดงข้อมูล campaign ของการโทร, มีปุ่มกดโทรจากหน้านี้, รายละเอียดสมาชิกเน้นช่องทางติดต่อ, ปุ่ม signal การโทร, ช่องบันทึกการโทร, sig status 4 ด้าน (location availability interest Reachable) ตอนกด answered, history ของการโทรหาสมาชิกพร้อมคะแนน signal (มี hint เขียนบอกว่าคะแนนแต่ละ signal คืออะไร), อย่าลืมทำให้ mobile friendly One-column layout responsive, Avatar, ข้อมูลสมาชิกดึงจาก ngs_member_cache
+- เพิ่มปุ่ม "Save & Call Next Member" เพื่อลดขั้นตอนการคลิกและทำคิวโทรให้ต่อเนื่อง
+- แสดง "บันทึกล่าสุด (Latest Note)" และ "สถิติการรับสาย (X/Y)" บนการ์ดสมาชิกในหน้า Pending calls
+- อย่าลืมคำนึงถึงเรื่อง เน้นให้คนโทร (Caller) ทำงานได้ไวและเตรียมตัวก่อนโทรได้ทันที
 
-เพิ่มเติม UI/UX calling system
-1. หน้า Pending Calls (Work Queue)
-เน้นให้คนโทร (Caller) ทำงานได้ไวและเตรียมตัวก่อนโทรได้ทันที:
-Visual History: แสดง "บันทึกล่าสุด" (Latest Note) สั้นๆ ใต้ชื่อสมาชิกในหน้าลิสต์เลย ไม่ต้องกดเข้าไปดูข้างใน
-Call Count Tracker: แสดงสถิติ "รับสาย X/Y ครั้ง" เพื่อให้ตัดสินใจได้ว่าสายนี้ควรโทรซ้ำหรือข้ามไปก่อน
-Next Action: ในหน้าบันทึกผล เพิ่มปุ่ม "Save & Call Next Member" เพื่อข้ามไปคนถัดไปในคิวทันที ลดขั้นตอนการคลิก
+คำถาม
+- หลังจากสถานะ answered แล้วจะหายไปจาก pending ไหม (unassign) อะไร ยังไง แต่ผมว่าควรหายไปเมื่อ event นั้นผ่านไปแล้วมากกว่า เช็คจากวันที่ใน act_event_cache แล้วมันควรทำยังไงดีนะ ปรึกษาหน่อย
 
-2. Bulk Assign (Admin Tools)
-ช่วยให้คนกระจายงาน (Admin) เห็นภาพรวมและไม่ทำงานซ้ำซ้อน:
-Filter Persistence: เพิ่ม Floating Bar ด้านล่างที่จะค้างอยู่เสมอเมื่อมีการเลือกสมาชิก บอกชัดเจนว่า "เลือกอยู่กี่คน" แม้จะเลื่อนหน้าจอลงไปไกล
-Assign Identity: ในช่องค้นหาคนรับงาน จะมีตัวเลขบอก "จำนวนงานที่ถืออยู่" (เช่น Tee - มีอยู่ 15 งาน) เพื่อให้กระจายงานได้เหมาะสม
-
-3. Hierarchy & Permissions (Scope Awareness)
-ลดความสับสนเวลาทำงานข้ามเขต:
-Scope Banner: เพิ่มแถบด้านบนสุดระบุชัดเจนว่าตอนนี้กำลังดูข้อมูลของ "เขตไหน" และใช้งานใน "Role อะไร" (เช่น ตทอ. โพธาราม)
+หน้า Calling (calling/[campaignID])
+- จิ้มไปที่ member แล้วแสดงหน้า คล้ายๆ แบบ Record call ดู md/calling/calling-system-v2.html อย่าลืมปุ่มกดโทร ดึงข้อมูลโทรศัพท์จาก ngs_member_cache แสดง history ของแต่ละการโทรของและแคมเปญแต่ละครั้ง
 
 ชวนคิด
 - เมื่อบันทึกว่าเป็น Wrong number ระบบควรมี Alert ถามว่าจะ "ลบเบอร์นี้/มาร์คว่าเบอร์เสีย" ในฐานข้อมูลหลักเลยหรือไม่ เพื่อไม่ให้คนอื่นเสียเวลาโทรซ้ำใน Campaign ถัดไป
+- Dark Mode ผมว่าตัวหนังสือกลืนไปเยอะเลย Header ของตาราง ขอสีม่วง discord ได้ไหม ช่วยแนะนำผมหน่อยว่าเวลาผมจะบอกตรงไหนควรเป็นสีอะไร จะบอกให้แก้ยังไง หรือคุณมีชุดธีมสีให้เลือกเป็น pattern เลยไหมอ่ะ
 ---
 <!-- 📌 ภาพรวมของ PPLE Docs
 PPLE Docs คือระบบบริหารจัดการเอกสารทางกฎหมายและลายเซ็นดิจิทัล (E-signature) ที่เป็นส่วนต่อขยายของโปรเจกต์ ACT เพื่อให้อาสาสมัครและสมาชิกพรรคสามารถทำธุรกรรมและเซ็นเอกสารประกอบกิจกรรม (เช่น เอกสารเบิกจ่ายของ กกต.) ได้อย่างรวดเร็วหน้างาน

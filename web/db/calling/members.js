@@ -121,7 +121,7 @@ export async function getMembersInCampaign(campaignId, filters = {}, limit = 100
        AND (? IS NULL OR a.assigned_to = ?)
      GROUP BY m.source_id
      HAVING (? IS NULL OR member_status = ?)
-     ORDER BY m.home_amphure ASC, m.first_name ASC
+     ORDER BY m.home_amphure ASC, m.first_name ASC, m.source_id ASC
      LIMIT ? OFFSET ?`,
     [
       campaignId,
@@ -194,6 +194,85 @@ export async function getMemberCallHistory(campaignId, memberId) {
      WHERE campaign_id = ? AND member_id = ?
      ORDER BY called_at DESC`,
     [campaignId, memberId]
+  )
+  return rows
+}
+
+/**
+ * Get campaigns that have assignments for a specific user
+ */
+export async function getMyCampaigns(discordId) {
+  const [rows] = await pool.query(
+    `SELECT
+       ec.id, ec.name, ec.province,
+       COUNT(a.member_id) AS assigned_count,
+       SUM(CASE WHEN camp_stats.camp_calls > 0 THEN 1 ELSE 0 END) AS called_count
+     FROM calling_assignments a
+     JOIN act_event_cache ec ON ec.id = a.campaign_id AND ec.type = 'campaign'
+     LEFT JOIN (
+       SELECT campaign_id, member_id, COUNT(*) AS camp_calls
+       FROM calling_logs GROUP BY campaign_id, member_id
+     ) camp_stats ON camp_stats.campaign_id = a.campaign_id AND camp_stats.member_id = a.member_id
+     WHERE a.assigned_to = ?
+     GROUP BY ec.id
+     ORDER BY ec.name ASC`,
+    [discordId]
+  )
+  return rows
+}
+
+/**
+ * Get members assigned to a specific caller with call status, latest note, and stats
+ * call_status: 'called' = has logs in assigned campaign | 'pending' = no logs yet
+ */
+export async function getMyAssignedMembers(discordId, { campaignId, status, limit = 200, offset = 0 } = {}) {
+  const [rows] = await pool.query(
+    `SELECT * FROM (
+       SELECT
+         m.*,
+         COALESCE(t.tier, 'D') AS tier,
+         a.campaign_id,
+         a.created_at AS assigned_at,
+         ec.name AS campaign_name,
+         COALESCE(all_stats.total_calls, 0) AS total_calls,
+         COALESCE(all_stats.answered_count, 0) AS answered_count,
+         COALESCE(camp_stats.camp_calls, 0) AS camp_calls,
+         CASE WHEN COALESCE(camp_stats.camp_calls, 0) > 0 THEN 'called' ELSE 'pending' END AS call_status,
+         latest_log.note AS latest_note,
+         latest_log.status AS latest_log_status,
+         latest_log.called_at AS latest_called_at
+       FROM calling_assignments a
+       JOIN ngs_member_cache m ON m.source_id = a.member_id
+       LEFT JOIN calling_member_tiers t ON t.member_id = a.member_id
+       LEFT JOIN act_event_cache ec ON ec.id = a.campaign_id AND ec.type = 'campaign'
+       LEFT JOIN (
+         SELECT member_id,
+           COUNT(*) AS total_calls,
+           SUM(status = 'answered') AS answered_count
+         FROM calling_logs GROUP BY member_id
+       ) all_stats ON all_stats.member_id = a.member_id
+       LEFT JOIN (
+         SELECT campaign_id, member_id, COUNT(*) AS camp_calls
+         FROM calling_logs GROUP BY campaign_id, member_id
+       ) camp_stats ON camp_stats.campaign_id = a.campaign_id AND camp_stats.member_id = a.member_id
+       LEFT JOIN (
+         SELECT l.*
+         FROM calling_logs l
+         INNER JOIN (
+           SELECT member_id, MAX(id) AS max_id FROM calling_logs GROUP BY member_id
+         ) lm ON lm.member_id = l.member_id AND lm.max_id = l.id
+       ) latest_log ON latest_log.member_id = a.member_id
+       WHERE a.assigned_to = ?
+         AND (? IS NULL OR a.campaign_id = ?)
+     ) sub
+     WHERE (? IS NULL OR call_status = ?)
+     ORDER BY
+       CASE WHEN call_status = 'pending' THEN 0 ELSE 1 END ASC,
+       CASE tier WHEN 'A' THEN 1 WHEN 'B' THEN 2 WHEN 'C' THEN 3 ELSE 4 END ASC,
+       home_amphure ASC,
+       first_name ASC
+     LIMIT ? OFFSET ?`,
+    [discordId, campaignId || null, campaignId || null, status || null, status || null, limit, offset]
   )
   return rows
 }
