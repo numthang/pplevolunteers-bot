@@ -130,14 +130,25 @@ export default function PendingCallsPage() {
       const err = await res.json()
       throw new Error(err.error || 'เกิดข้อผิดพลาด')
     }
+    if (payload.rsvp) {
+      await fetch('/api/calling/assignments', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          campaign_id: payload.campaign_id,
+          member_id: payload.member_id,
+          rsvp: payload.rsvp,
+        }),
+      })
+    }
     return res.json()
   }
 
   const handleSave = async (payload) => {
     try {
       await submitLog(payload)
-      markMemberCalled(modalMember.source_id, modalMember.campaign_id)
       closeModal()
+      fetchMembers(filterCampaign, filterStatus, filterRsvp)
     } catch (err) {
       alert(err.message)
       throw err
@@ -162,6 +173,7 @@ export default function PendingCallsPage() {
         setModalIndex(nextIdx)
       } else {
         closeModal()
+        fetchMembers(filterCampaign, filterStatus, filterRsvp)
       }
     } catch (err) {
       alert(err.message)

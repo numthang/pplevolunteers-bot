@@ -9,9 +9,9 @@ const CALL_STATUS_OPTIONS = [
 ]
 
 const RSVP_OPTIONS = [
-  { value: 'joined',     label: 'เข้าร่วม' },
-  { value: 'not_joined', label: 'ไม่เข้าร่วม' },
-  { value: 'maybe',      label: 'อาจจะ' },
+  { value: 'yes',   label: 'เข้าร่วม',    icon: '✓', activeClass: 'bg-teal border-teal text-white' },
+  { value: 'no',    label: 'ไม่เข้าร่วม', icon: '✗', activeClass: 'bg-[#fcebeb] border-[#a32d2d] text-[#a32d2d]' },
+  { value: 'maybe', label: 'อาจจะ',        icon: '?', activeClass: 'bg-[#faeeda] border-[#854f0b] text-[#854f0b]' },
 ]
 
 const SIGNALS = [
@@ -120,7 +120,7 @@ export default function RecordCallModal({ isOpen, member, onClose, onSave, onSav
     sig_interest:     status === 'answered' ? (signals.sig_interest || null) : null,
     sig_reachable:    null,
     note: note.trim() || null,
-    rsvp_status: status === 'answered' ? (rsvp || null) : null,
+    rsvp: status === 'answered' ? (rsvp || null) : null,
   }), [member, status, rsvp, signals, note, computeOverall])
 
   const handleSave = async (goNext = false) => {
@@ -142,7 +142,7 @@ export default function RecordCallModal({ isOpen, member, onClose, onSave, onSav
   const selectedStatus = CALL_STATUS_OPTIONS.find(s => s.value === status)
   const showSignals = status === 'answered'
   const signalsFilled = SIGNALS.some(s => signals[s.key])
-  const canSave = status && (status !== 'answered' || signalsFilled)
+  const canSave = status && (status !== 'answered' || (signalsFilled && rsvp))
 
   return (
     <div
@@ -363,13 +363,14 @@ export default function RecordCallModal({ isOpen, member, onClose, onSave, onSav
                       key={opt.value}
                       type="button"
                       onClick={() => setRsvp(opt.value)}
-                      className={`py-2 px-2 text-xs rounded-lg border transition font-medium ${
+                      className={`py-2 px-2 text-xs rounded-lg border transition font-medium flex items-center justify-center gap-1 ${
                         rsvp === opt.value
-                          ? 'bg-teal border-teal text-white'
+                          ? opt.activeClass
                           : 'border-warm-200 dark:border-warm-dark-300 text-warm-700 dark:text-warm-200 hover:border-teal hover:text-teal'
                       }`}
                     >
-                      {opt.label}
+                      <span>{opt.icon}</span>
+                      <span>{opt.label}</span>
                     </button>
                   ))}
                 </div>
