@@ -88,9 +88,8 @@ export async function calculateTierFromSignals(memberId, campaignId = null) {
     SELECT AVG(
       COALESCE(sig_location, 0) +
       COALESCE(sig_availability, 0) +
-      COALESCE(sig_interest, 0) +
-      COALESCE(sig_reachable, 0)
-    ) / 4.0 AS avg_signal
+      COALESCE(sig_interest, 0)
+    ) / 3.0 AS avg_signal
     FROM calling_logs
     WHERE member_id = ?
       AND status = 'answered'`

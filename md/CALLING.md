@@ -158,26 +158,36 @@ CREATE TABLE calling_member_tiers (
 
 ### Signals — บันทึกแต่ละครั้งที่โทร (เฉพาะ call ที่รับสาย)
 
-| Signal | 1 | 2 | 3 | 4 |
-|--------|---|---|---|---|
-| ที่อยู่ | ต่างประเทศ | ต่างจังหวัด | ในจังหวัด | ในอำเภอ |
-| เวลา | ไม่ว่างเลย | ไม่ค่อยว่าง | ว่างบ้าง | ว่างมาก |
-| ความสนใจ | ไม่สนใจ | สนใจนิดหน่อย | สนใจ | กระตือรือร้น |
-| ติดต่อได้ | ไม่ติดเลย | ติดยาก | ติดได้ | รับสายทันที |
+| Signal | field | 1 | 2 | 3 | 4 |
+|--------|-------|---|---|---|---|
+| ที่อยู่ | `sig_location` | ต่างประเทศ | ต่างจังหวัด | ในจังหวัด | ในอำเภอ |
+| เวลา | `sig_availability` | ไม่ว่างเลย | ไม่ค่อยว่าง | ว่างบ้าง | ว่างมาก |
+| ความสนใจ | `sig_interest` | ไม่สนใจ | สนใจนิดหน่อย | สนใจ | กระตือรือร้น |
+
+> `sig_reachable` ถูกเอาออกจาก UI แล้ว (column ยังอยู่ใน DB แต่ไม่ใช้)  
+> ถ้าเพิ่มหรือลด signal field ต้องแก้ตัวหาร (`/ 3.0`) ใน `web/db/calling/tiers.js` ด้วย
+
+### `sig_overall` — เกรดรวมต่อ call
+
+- คนโทรกด A/B/C/D (= 4/3/2/1) บน UI "เกรดรวม" → บันทึกใน `calling_logs.sig_overall`
+- **ไม่ได้ใช้คำนวณ tier** — เป็นแค่ข้อมูลเสริมต่อ call นั้น
+- tier คำนวณจาก signal fields เท่านั้น
 
 ### Formula คำนวณ tier อัตโนมัติ
 
-```
-score = เฉลี่ย signals ทุก call ที่รับสาย (ไม่รับสายไม่นับ)
+```sql
+score = AVG(sig_location + sig_availability + sig_interest) / 3.0
+        -- เฉลี่ยทุก call ที่รับสาย (status='answered')
+        -- NULL → COALESCE เป็น 0 ทำให้ลด score ถ้ากรอกไม่ครบ
 
-A = 3.5 - 4.0
-B = 2.5 - 3.4
-C = 1.5 - 2.4
-D = 1.0 - 1.4
+A = score >= 3.5
+B = score >= 2.5
+C = score >= 1.5
+D = score < 1.5
 ```
 
 - call ที่ไม่รับสาย → แสดงใน UI ว่า "รับสาย X/Y ครั้ง" แต่ไม่นับเข้า formula
-- ระบบ calculate tier อัตโนมัติหลังบันทึกทุกครั้ง
+- ระบบ calculate tier อัตโนมัติหลังบันทึกทุกครั้ง (`web/db/calling/tiers.js: calculateTierFromSignals`)
 - คนโทร override tier ได้เสมอ พร้อมใส่เหตุผล → บันทึกใน `calling_member_tiers`
 
 ---
@@ -320,7 +330,7 @@ web/
       calling/
         campaigns/                  ← GET รองรับ ?active=true&limit= และ pending_count ต่อ user
         assignments/
-        logs/                       ← POST บันทึก call log + auto-calculate tier
+        logs/                       ← GET ดึง logs ต่อ member+campaign, POST บันทึก + auto-calculate tier
         tiers/
         members/
         users/                      ← dc_members for assignee combobox

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback, useRef } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import RecordCallModal from '@/components/calling/RecordCallModal.jsx'
 
 const TIER_COLORS = {
@@ -32,18 +33,31 @@ const STATUS_OPTIONS = [
 ]
 
 export default function PendingCallsPage() {
+  const searchParams = useSearchParams()
+  const router = useRouter()
+
   const [campaigns, setCampaigns] = useState([])
   const [members, setMembers] = useState([])
   const [loading, setLoading] = useState(true)
-  const [filterCampaign, setFilterCampaign] = useState('')
-  const [filterStatus, setFilterStatus] = useState('pending')
-  const [filterRsvp, setFilterRsvp] = useState('')
+  const [filterCampaign, setFilterCampaign] = useState(() => searchParams.get('campaign') || '')
+  const [filterStatus, setFilterStatus] = useState(() => searchParams.get('status') ?? '')
+  const [filterRsvp, setFilterRsvp] = useState(() => searchParams.get('rsvp') || '')
 
   const [modalMember, setModalMember] = useState(null)
   const [modalIndex, setModalIndex] = useState(-1)
 
   const membersRef = useRef([])
   useEffect(() => { membersRef.current = members }, [members])
+
+  // Sync filters → URL
+  useEffect(() => {
+    const p = new URLSearchParams()
+    if (filterCampaign) p.set('campaign', filterCampaign)
+    if (filterStatus)   p.set('status', filterStatus)
+    if (filterRsvp)     p.set('rsvp', filterRsvp)
+    const qs = p.toString()
+    router.replace(qs ? `/calling/pending?${qs}` : '/calling/pending', { scroll: false })
+  }, [filterCampaign, filterStatus, filterRsvp])
 
   // Fetch my campaigns
   useEffect(() => {

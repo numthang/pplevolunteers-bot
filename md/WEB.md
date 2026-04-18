@@ -264,6 +264,44 @@ GET    /api/auth/[...nextauth]     next-auth handlers
 
 ## Common Patterns
 
+### URL-based Filter State (บังคับใช้ในทุกหน้าที่มี filter)
+
+Filter state ต้องอยู่ใน URL เสมอ — reload กลับมา state เดิม, share link ได้
+
+```js
+'use client'
+import { useSearchParams, useRouter } from 'next/navigation'
+
+export default function Page() {
+  const searchParams = useSearchParams()
+  const router = useRouter()
+
+  // อ่านค่าเริ่มต้นจาก URL
+  const [filterFoo, setFilterFoo] = useState(() => searchParams.get('foo') || '')
+  const [filterBar, setFilterBar] = useState(() => searchParams.get('bar') || '')
+
+  // Sync filter → URL ทุกครั้งที่เปลี่ยน
+  useEffect(() => {
+    const p = new URLSearchParams()
+    if (filterFoo) p.set('foo', filterFoo)
+    if (filterBar) p.set('bar', filterBar)
+    const qs = p.toString()
+    router.replace(qs ? `/path?${qs}` : '/path', { scroll: false })
+  }, [filterFoo, filterBar])
+}
+```
+
+**หน้าที่ใช้แล้ว:**
+- `/calling/[campaignId]` — district, tier, status, assignee, rsvp
+- `/calling/pending` — campaign, status, rsvp
+
+**กฎ:**
+- default filter = `''` (ทั้งหมด) ไม่ใช่ hardcode ค่าใดค่าหนึ่ง
+- ค่าว่าง → ไม่ append ใน URL (URL สะอาด)
+- ใช้ `router.replace` ไม่ใช่ `push` (ไม่สะสม history)
+
+
+
 ### Server Component with Database
 
 ```js

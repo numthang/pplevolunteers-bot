@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef, useCallback, use } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import SplitModal from '@/components/calling/SplitModal.jsx'
 
 const PAGE_SIZE = 100
@@ -25,6 +26,8 @@ function getStatusBadge(status) {
 
 export default function CampaignPage({ params }) {
   const { campaignId } = use(params)
+  const searchParams = useSearchParams()
+  const router = useRouter()
 
   const [campaign, setCampaign] = useState(null)
   const [stats, setStats] = useState({ total: 0, called: 0, assigned: 0, unassigned: 0, districts: [], districtCounts: {}, tierCounts: {}, assigneeCounts: [] })
@@ -35,12 +38,24 @@ export default function CampaignPage({ params }) {
   const [usersMap, setUsersMap] = useState({})
 
   const [selectedMembers, setSelectedMembers] = useState(new Set())
-  const [filterDistrict, setFilterDistrict] = useState('')
-  const [filterTier, setFilterTier] = useState('')
-  const [filterStatus, setFilterStatus] = useState('')
-  const [filterAssignee, setFilterAssignee] = useState('')
-  const [filterRsvp, setFilterRsvp] = useState('')
+  const [filterDistrict, setFilterDistrict] = useState(() => searchParams.get('district') || '')
+  const [filterTier, setFilterTier] = useState(() => searchParams.get('tier') || '')
+  const [filterStatus, setFilterStatus] = useState(() => searchParams.get('status') || '')
+  const [filterAssignee, setFilterAssignee] = useState(() => searchParams.get('assignee') || '')
+  const [filterRsvp, setFilterRsvp] = useState(() => searchParams.get('rsvp') || '')
   const [splitModalOpen, setSplitModalOpen] = useState(false)
+
+  // Sync filters → URL
+  useEffect(() => {
+    const p = new URLSearchParams()
+    if (filterDistrict) p.set('district', filterDistrict)
+    if (filterTier)     p.set('tier', filterTier)
+    if (filterStatus)   p.set('status', filterStatus)
+    if (filterAssignee) p.set('assignee', filterAssignee)
+    if (filterRsvp)     p.set('rsvp', filterRsvp)
+    const qs = p.toString()
+    router.replace(qs ? `/calling/${campaignId}?${qs}` : `/calling/${campaignId}`, { scroll: false })
+  }, [filterDistrict, filterTier, filterStatus, filterAssignee, filterRsvp])
 
   const offsetRef = useRef(0)
   const sentinelRef = useRef(null)
