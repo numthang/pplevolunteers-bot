@@ -183,6 +183,7 @@ export default function RecordCallModal({ isOpen, member, onClose, onSave, onSav
                 <div className="text-xs text-warm-400 dark:text-warm-dark-400 truncate mt-0.5">
                   {[member.home_province, member.home_amphure].filter(Boolean).join(' · ') || '—'}
                 </div>
+                <div className="text-xs text-warm-300 dark:text-warm-dark-500 mt-0.5">#{member.source_id}</div>
               </div>
             </div>
 
