@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState, useRef, useCallback, use } from 'react'
-import Link from 'next/link'
 import SplitModal from '@/components/calling/SplitModal.jsx'
 
 const PAGE_SIZE = 100
@@ -249,12 +248,6 @@ export default function CampaignPage({ params }) {
 
   return (
     <div>
-      {/* Breadcrumb */}
-      <div className="mb-6 text-sm text-warm-500 dark:text-warm-dark-500">
-        <Link href="/calling" className="text-teal hover:underline">Campaigns</Link>
-        <span className="mx-2">›</span>
-        <span className="text-warm-900 dark:text-warm-50">{campaign?.name}</span>
-      </div>
 
       {/* Campaign Header */}
       <div className="bg-white dark:bg-warm-dark-100 border border-warm-200 dark:border-warm-dark-300 rounded-lg p-6 mb-8">
@@ -285,7 +278,7 @@ export default function CampaignPage({ params }) {
       {/* Filters */}
       <div className="flex flex-wrap gap-3 mb-4">
         <select value={filterDistrict} onChange={e => setFilterDistrict(e.target.value)}
-          className="h-9 px-3 text-sm border border-warm-200 dark:border-warm-dark-300 bg-white dark:bg-warm-dark-100 text-warm-900 dark:text-warm-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal">
+          className="h-9 px-3 text-sm border border-warm-200 dark:border-warm-dark-300 bg-white dark:bg-warm-dark-100 text-warm-900 dark:text-warm-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal flex-1 sm:flex-none">
           <option value="">อำเภอ (ทั้งหมด)</option>
           {stats.districts.map(d => (
             <option key={d} value={d}>{d || '(ไม่ระบุ)'} ({stats.districtCounts[d] || 0})</option>
@@ -293,7 +286,7 @@ export default function CampaignPage({ params }) {
         </select>
 
         <select value={filterTier} onChange={e => setFilterTier(e.target.value)}
-          className="h-9 px-3 text-sm border border-warm-200 dark:border-warm-dark-300 bg-white dark:bg-warm-dark-100 text-warm-900 dark:text-warm-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal">
+          className="h-9 px-3 text-sm border border-warm-200 dark:border-warm-dark-300 bg-white dark:bg-warm-dark-100 text-warm-900 dark:text-warm-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal flex-1 sm:flex-none">
           <option value="">ระดับ (ทั้งหมด)</option>
           {['A','B','C','D'].map(t => (
             <option key={t} value={t}>{t} ({stats.tierCounts[t] || 0})</option>
@@ -301,14 +294,14 @@ export default function CampaignPage({ params }) {
         </select>
 
         <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
-          className="h-9 px-3 text-sm border border-warm-200 dark:border-warm-dark-300 bg-white dark:bg-warm-dark-100 text-warm-900 dark:text-warm-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal">
+          className="h-9 px-3 text-sm border border-warm-200 dark:border-warm-dark-300 bg-white dark:bg-warm-dark-100 text-warm-900 dark:text-warm-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal flex-1 sm:flex-none">
           <option value="">สถานะ (ทั้งหมด)</option>
           <option value="unassigned">รอมอบหมาย ({stats.unassigned})</option>
           <option value="assigned">มอบหมายแล้ว ({stats.assigned})</option>
         </select>
 
         <select value={filterAssignee} onChange={e => setFilterAssignee(e.target.value)}
-          className="h-9 px-3 text-sm border border-warm-200 dark:border-warm-dark-300 bg-white dark:bg-warm-dark-100 text-warm-900 dark:text-warm-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal">
+          className="h-9 px-3 text-sm border border-warm-200 dark:border-warm-dark-300 bg-white dark:bg-warm-dark-100 text-warm-900 dark:text-warm-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal flex-1 sm:flex-none">
           <option value="">ผู้รับผิดชอบ (ทั้งหมด)</option>
           {assignees.map(a => (
             <option key={a.id} value={a.id}>{a.name} ({a.count})</option>
@@ -316,7 +309,7 @@ export default function CampaignPage({ params }) {
         </select>
 
         <select value={filterRsvp} onChange={e => setFilterRsvp(e.target.value)}
-          className="h-9 px-3 text-sm border border-warm-200 dark:border-warm-dark-300 bg-white dark:bg-warm-dark-100 text-warm-900 dark:text-warm-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal">
+          className="h-9 px-3 text-sm border border-warm-200 dark:border-warm-dark-300 bg-white dark:bg-warm-dark-100 text-warm-900 dark:text-warm-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal flex-1 sm:flex-none">
           <option value="">RSVP (ทั้งหมด)</option>
           <option value="yes">✓ เข้าร่วม</option>
           <option value="no">✗ ไม่เข้าร่วม</option>

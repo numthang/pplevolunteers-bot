@@ -8,8 +8,3 @@ data.ms/
 web/.next/
 #web/public/uploads/
 !web/public/uploads/**/.gitkeep
-
-md/calling/calling_log_ราชบุรี.xlsx
-md/calling/ngs_member_cache.csv
-md/calling/image.png
-md/docs/act_event_register.xlsx

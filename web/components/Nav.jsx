@@ -1,9 +1,9 @@
 'use client'
 import Link from 'next/link'
 import Image from 'next/image'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { signOut } from 'next-auth/react'
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useTheme } from './Providers.jsx'
 import { DebugRoleButton, DebugRoleBanner } from './DebugRoleBanner.jsx'
 
@@ -17,9 +17,9 @@ const FINANCE_LINKS = [
 ]
 
 const CALLING_LINKS = [
-  { href: '/calling',         label: 'แคมเปญ' },
+  { href: '/calling',         label: 'Campaigns' },
   { href: '/calling/pending', label: 'Pending calls' },
-  { href: '/calling/members', label: 'รายชื่อสมาชิก' },
+  { href: '/calling/members', label: 'Member lists' },
 ]
 
 const APPS = [
@@ -29,13 +29,42 @@ const APPS = [
 
 export default function Nav({ session }) {
   const pathname = usePathname()
+  const router = useRouter()
   const { dark, toggle } = useTheme()
   const [menuOpen, setMenuOpen] = useState(false)
   const [appOpen, setAppOpen] = useState(false)
+  const [campaignOpen, setCampaignOpen] = useState(false)
+  const [campaigns, setCampaigns] = useState([])
+  const campaignRef = useRef(null)
 
   const isCallingApp = pathname.startsWith('/calling')
   const currentApp = isCallingApp ? APPS[1] : APPS[0]
   const links = isCallingApp ? CALLING_LINKS : FINANCE_LINKS
+
+  // Get current campaignId from URL if on campaign detail page
+  const campaignIdMatch = pathname.match(/^\/calling\/(\d+)/)
+  const activeCampaignId = campaignIdMatch ? parseInt(campaignIdMatch[1]) : null
+
+  useEffect(() => {
+    if (!isCallingApp) return
+    fetch('/api/calling/campaigns?active=true&limit=50')
+      .then(r => r.json())
+      .then(d => setCampaigns(d.data || []))
+      .catch(() => {})
+  }, [isCallingApp])
+
+  useEffect(() => {
+    if (!campaignOpen) return
+    const handleClickOutside = (e) => {
+      if (campaignRef.current && !campaignRef.current.contains(e.target)) {
+        setCampaignOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [campaignOpen])
+
+  const activeCampaign = campaigns.find(c => c.id === activeCampaignId)
 
   const roles = Array.isArray(session?.user?.roles)
     ? session.user.roles
@@ -95,19 +124,67 @@ export default function Nav({ session }) {
 
         {/* Desktop links */}
         <div className="hidden md:flex items-center gap-1 ml-4">
-          {visibleLinks.map(l => (
-            <Link
-              key={l.href}
-              href={l.href}
-              className={`px-3 py-1 rounded-md text-base transition ${
-                pathname === l.href
-                  ? 'bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-medium'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800'
-              }`}
-            >
-              {l.label}
-            </Link>
-          ))}
+          {visibleLinks.map(l => {
+            // Campaigns link → split button when in calling section
+            if (l.href === '/calling' && isCallingApp && campaigns.length > 0) {
+              const isActive = pathname === '/calling' || !!activeCampaignId
+              const activeClass = 'bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-medium'
+              const inactiveClass = 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800'
+              return (
+                <div key={l.href} className="relative flex items-center" ref={campaignRef}>
+                  {/* Text → navigate to /calling */}
+                  <Link
+                    href="/calling"
+                    className={`px-3 py-1 rounded-l-md text-base transition ${isActive ? activeClass : inactiveClass}`}
+                  >
+                    {l.label}
+                  </Link>
+                  {/* Arrow → open dropdown */}
+                  <button
+                    onClick={() => setCampaignOpen(o => !o)}
+                    className={`px-1 py-1 rounded-r-md text-base transition border-l border-gray-200 dark:border-gray-700 ${isActive ? activeClass : inactiveClass}`}
+                  >
+                    <svg className={`w-3 h-3 transition-transform ${campaignOpen ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.17l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+
+                  {campaignOpen && (
+                    <div className="absolute left-0 top-full mt-1 w-60 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 py-1 max-h-72 overflow-y-auto">
+                      {campaigns.map(c => (
+                        <button
+                          key={c.id}
+                          onClick={() => { setCampaignOpen(false); router.push(`/calling/${c.id}`) }}
+                          className={`w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition ${
+                            activeCampaignId === c.id ? 'text-indigo-600 dark:text-indigo-400 font-medium' : 'text-gray-700 dark:text-gray-300'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="truncate pr-2">{c.name}</span>
+                            {activeCampaignId === c.id && <span className="text-indigo-500 shrink-0">✓</span>}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            }
+
+            return (
+              <Link
+                key={l.href}
+                href={l.href}
+                className={`px-3 py-1 rounded-md text-base transition ${
+                  pathname === l.href
+                    ? 'bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-medium'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800'
+                }`}
+              >
+                {l.label}
+              </Link>
+            )
+          })}
         </div>
 
         {/* Right side */}
@@ -161,20 +238,59 @@ export default function Nav({ session }) {
       {/* Mobile menu */}
       {menuOpen && (
         <div className="md:hidden border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-3 flex flex-col gap-1">
-          {visibleLinks.map(l => (
-            <Link
-              key={l.href}
-              href={l.href}
-              onClick={() => setMenuOpen(false)}
-              className={`px-3 py-2 rounded text-base transition ${
-                pathname === l.href
-                  ? 'bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-medium'
-                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
-              }`}
-            >
-              {l.label}
-            </Link>
-          ))}
+          {visibleLinks.map(l => {
+            // Campaigns → tree expand in mobile
+            if (l.href === '/calling' && isCallingApp && campaigns.length > 0) {
+              return (
+                <div key={l.href}>
+                  <Link
+                    href="/calling"
+                    onClick={() => setMenuOpen(false)}
+                    className={`block px-3 py-2 rounded text-base transition ${
+                      pathname === '/calling'
+                        ? 'bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-medium'
+                        : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+                    }`}
+                  >
+                    {l.label}
+                  </Link>
+                  {/* Tree children */}
+                  <div className="ml-4 border-l-2 border-gray-200 dark:border-gray-700 pl-3 flex flex-col gap-0.5 mt-0.5 mb-1">
+                    {campaigns.map(c => (
+                      <button
+                        key={c.id}
+                        onClick={() => { setMenuOpen(false); router.push(`/calling/${c.id}`) }}
+                        className={`w-full text-left px-2 py-1.5 rounded text-sm transition ${
+                          activeCampaignId === c.id
+                            ? 'text-indigo-600 dark:text-indigo-400 font-medium'
+                            : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+                        }`}
+                      >
+                        {activeCampaignId === c.id && <span className="mr-1">›</span>}
+                        {c.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )
+            }
+
+            return (
+              <Link
+                key={l.href}
+                href={l.href}
+                onClick={() => setMenuOpen(false)}
+                className={`px-3 py-2 rounded text-base transition ${
+                  pathname === l.href
+                    ? 'bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-medium'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+                }`}
+              >
+                {l.label}
+              </Link>
+            )
+          })}
+
           {/* App switcher in mobile */}
           <div className="border-t border-gray-200 dark:border-gray-700 mt-2 pt-2">
             {APPS.map(app => (

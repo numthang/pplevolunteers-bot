@@ -173,7 +173,7 @@ export default function PendingCallsPage() {
         <select
           value={filterCampaign}
           onChange={e => setFilterCampaign(e.target.value)}
-          className="h-9 px-3 text-sm border border-warm-200 dark:border-warm-dark-300 bg-white dark:bg-warm-dark-100 text-warm-900 dark:text-warm-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal"
+          className="h-9 px-3 text-sm border border-warm-200 dark:border-warm-dark-300 bg-white dark:bg-warm-dark-100 text-warm-900 dark:text-warm-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal flex-1 sm:flex-none"
         >
           <option value="">Campaign (ทั้งหมด)</option>
           {campaigns.map(c => (
@@ -181,12 +181,12 @@ export default function PendingCallsPage() {
           ))}
         </select>
 
-        <div className="flex rounded-lg border border-warm-200 dark:border-warm-dark-300 overflow-hidden">
+        <div className="flex rounded-lg border border-warm-200 dark:border-warm-dark-300 overflow-hidden shrink-0">
           {STATUS_OPTIONS.map(opt => (
             <button
               key={opt.value}
               onClick={() => setFilterStatus(opt.value)}
-              className={`px-4 py-2 text-sm font-medium transition ${
+              className={`px-4 py-2 text-sm font-medium whitespace-nowrap transition ${
                 filterStatus === opt.value
                   ? 'bg-teal text-white'
                   : 'bg-white dark:bg-warm-dark-100 text-warm-700 dark:text-warm-200 hover:bg-warm-50 dark:hover:bg-warm-dark-200'
@@ -200,7 +200,7 @@ export default function PendingCallsPage() {
         <select
           value={filterRsvp}
           onChange={e => setFilterRsvp(e.target.value)}
-          className="h-9 px-3 text-sm border border-warm-200 dark:border-warm-dark-300 bg-white dark:bg-warm-dark-100 text-warm-900 dark:text-warm-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal"
+          className="h-9 px-3 text-sm border border-warm-200 dark:border-warm-dark-300 bg-white dark:bg-warm-dark-100 text-warm-900 dark:text-warm-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal flex-1 sm:flex-none"
         >
           <option value="">RSVP (ทั้งหมด)</option>
           <option value="yes">✓ เข้าร่วม</option>

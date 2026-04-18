@@ -2,10 +2,11 @@ import { getServerSession } from 'next-auth'
 import * as campaignDB from '@/db/calling/campaigns.js'
 import { isAdmin, getUserScope, canCreateCampaign } from '@/lib/callingAccess.js'
 import { authOptions } from '@/lib/auth-options.js'
+import pool from '@/db/index.js'
 
 /**
  * GET /api/calling/campaigns
- * Fetch campaigns, optionally filtered by province
+ * Fetch campaigns, optionally filtered by province, active status
  * Permission: authenticated users
  */
 export async function GET(req) {
@@ -16,6 +17,8 @@ export async function GET(req) {
 
   const { searchParams } = new URL(req.url)
   const province = searchParams.get('province')
+  const active = searchParams.get('active') === 'true'
+  const limit = parseInt(searchParams.get('limit') || '50')
 
   try {
     let rows = []
@@ -35,7 +38,36 @@ export async function GET(req) {
       rows = rows.filter(c => !c.province || userScope.includes(c.province))
     }
 
-    return Response.json({ success: true, data: rows })
+    // Filter active campaigns (not reached event_date yet)
+    if (active) {
+      const now = new Date()
+      rows = rows.filter(c => !c.event_date || new Date(c.event_date) > now)
+    }
+
+    // Limit results
+    rows = rows.slice(0, limit)
+
+    // Add pending_count for each campaign (members assigned to user with no calls yet)
+    const enriched = await Promise.all(
+      rows.map(async (campaign) => {
+        try {
+          const [[result]] = await pool.query(
+            `SELECT COUNT(*) as cnt FROM calling_assignments ca
+             WHERE ca.campaign_id = ? AND ca.assigned_to = ?
+             AND NOT EXISTS (
+               SELECT 1 FROM calling_logs cl
+               WHERE cl.campaign_id = ca.campaign_id AND cl.member_id = ca.member_id
+             )`,
+            [campaign.id, session.user.discordId]
+          )
+          return { ...campaign, pending_count: result?.cnt || 0 }
+        } catch (e) {
+          return { ...campaign, pending_count: 0 }
+        }
+      })
+    )
+
+    return Response.json({ success: true, data: enriched })
   } catch (error) {
     console.error('[GET /api/calling/campaigns]', error)
     return Response.json({ error: 'Internal Server Error' }, { status: 500 })

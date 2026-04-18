@@ -314,11 +314,13 @@ web/
       page.js                       ← รายการ campaigns (card grid)
       [campaignId]/
         page.js                     ← รายชื่อสมาชิกใน campaign + auto-split
+      pending/
+        page.js                     ← pending calls ที่ assign มาให้ user
     api/
       calling/
-        campaigns/
+        campaigns/                  ← GET รองรับ ?active=true&limit= และ pending_count ต่อ user
         assignments/
-        logs/
+        logs/                       ← POST บันทึก call log + auto-calculate tier
         tiers/
         members/
         users/                      ← dc_members for assignee combobox
@@ -326,6 +328,7 @@ web/
     calling/
       SplitModal.jsx                ← auto-split modal
       UserCombobox.jsx              ← multi-select autocomplete (ดึง display_name)
+      CallingBreadcrumb.jsx         ← สร้างแล้วแต่ไม่ได้ใช้ (ย้าย campaign selector ไป Nav แทน)
   db/
     calling/
       campaigns.js
@@ -339,6 +342,18 @@ scripts/
   sync-discord-members.js          ← one-time sync guild members → dc_members
   migration-add-display-name.sql   ← ALTER TABLE dc_members ADD display_name
 ```
+
+---
+
+## Nav — Campaign Selector
+
+`components/Nav.jsx` — "Campaigns" link ใน calling section เป็น split button:
+
+- **กดที่ "Campaigns"** → ไป `/calling` (all campaigns list)
+- **กดที่ลูกศร ▾** → dropdown รายชื่อ active campaigns → navigate ไป `/calling/[id]`
+- **Mobile hamburger** → Campaigns มี tree expand แสดงรายชื่อ campaigns ใต้
+- Fetch จาก `/api/calling/campaigns?active=true` เฉพาะตอนอยู่ใน `/calling/*`
+- Campaign ที่ active = ยังไม่ถึง `event_date` (หรือไม่มี event_date)
 
 ---
 
