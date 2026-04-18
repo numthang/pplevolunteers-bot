@@ -14,8 +14,8 @@ require('dotenv').config();
 const { Client, GatewayIntentBits } = require('discord.js');
 const fs   = require('fs');
 const path = require('path');
-const pool = require('../db/index');
-const { upsertDailyActivity, addMention } = require('../db/activity');
+const pool = require('../../db/index');
+const { upsertDailyActivity, addMention } = require('../../db/activity');
 
 const BATCH_SIZE = 100;
 const DELAY_MS   = 1500;

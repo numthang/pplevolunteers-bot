@@ -1,7 +1,7 @@
 // scripts/removeInnerBkkRole.js //ใช้ลบกรุงเทพชั้นในที่อนุมานผิดใน intro_normalize ใช้ครั้งเดียว
 require('dotenv').config();
 const {Client, GatewayIntentBits} = require('discord.js');
-const {ROLES} = require('../config/roles');
+const {ROLES} = require('../../config/roles');
 
 const GUILD_ID = process.env.GUILD_ID;
 const DELAY_MS = 500;
@@ -9,7 +9,7 @@ const DRY_RUN = process.argv.includes('--dry-run');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // discord_id ของคนที่พิมพ์ กรุงเทพ เฉยๆ
-const TARGET_IDS = new Set(require('./bkk_ids.json'));
+const TARGET_IDS = new Set(require('../bkk_ids.json'));
 
 const ROLE_TO_REMOVE = ROLES['ทีมกรุงเทพชั้นใน'];
 

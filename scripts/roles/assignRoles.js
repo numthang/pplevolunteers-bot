@@ -1,8 +1,8 @@
 // scripts/assignRoles.js assign user role จาก ฐานข้อมูล
 require('dotenv').config();
 const {Client, GatewayIntentBits} = require('discord.js');
-const pool = require('../db/index');
-const {ROLES} = require('../config/roles');
+const pool = require('../../db/index');
+const {ROLES} = require('../../config/roles');
 
 const GUILD_ID = process.env.GUILD_ID;
 const DELAY_MS = 500;

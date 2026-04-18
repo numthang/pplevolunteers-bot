@@ -9,9 +9,9 @@ require('dotenv').config();
 const { Client, GatewayIntentBits, ChannelType } = require('discord.js');
 const fs   = require('fs');
 const path = require('path');
-const { upsertForumConfig, upsertForumPost } = require('../db/forum');
-const { initMeilisearch, upsertPost } = require('../services/meilisearch');
-const pool = require('../db/index');
+const { upsertForumConfig, upsertForumPost } = require('../../db/forum');
+const { initMeilisearch, upsertPost } = require('../../services/meilisearch');
+const pool = require('../../db/index');
 
 // ── Args ──────────────────────────────────────────────────────────────────────
 const args     = process.argv.slice(2);

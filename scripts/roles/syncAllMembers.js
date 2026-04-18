@@ -1,8 +1,8 @@
 // scripts/syncAllMembers.js ดึงข้อมูล Roles ทั้งหมดใน server มาอัพเดทฐานข้อมูล อาจจะ single use เหมือนกัน ไม่ดิ ถ้าติดยศกันเอง จะไม่มีการอัพเดทฐานข้อมูล แต่ช่างเหอะ เราจะไปใช้ /backup แทนละหลังจากนี้
 require('dotenv').config();
 const {Client, GatewayIntentBits} = require('discord.js');
-const pool = require('../db/index');
-const {PROVINCE_ROLES, INTEREST_ROLES, SKILL_ROLES} = require('../config/roles');
+const pool = require('../../db/index');
+const {PROVINCE_ROLES, INTEREST_ROLES, SKILL_ROLES} = require('../../config/roles');
 
 const GUILD_ID = process.env.GUILD_ID;
 const DELAY_MS = 100;
