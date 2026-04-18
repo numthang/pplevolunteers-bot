@@ -103,7 +103,9 @@ export async function getMembersInCampaign(campaignId, filters = {}, limit = 100
        l.note AS last_note,
        COUNT(DISTINCT l.id) AS total_calls,
        SUM(CASE WHEN l.status = 'answered' THEN 1 ELSE 0 END) AS answered_count,
-       CASE WHEN a.id IS NOT NULL THEN 'assigned' ELSE 'unassigned' END AS member_status
+       CASE WHEN a.id IS NOT NULL THEN 'assigned' ELSE 'unassigned' END AS member_status,
+       dc.discord_id,
+       dc.username AS discord_username
      FROM act_event_cache cc
      JOIN ngs_member_cache m
        ON (cc.province IS NULL OR m.home_province = cc.province)
@@ -112,6 +114,7 @@ export async function getMembersInCampaign(campaignId, filters = {}, limit = 100
        ON a.campaign_id = cc.id AND a.member_id = m.source_id
      LEFT JOIN calling_logs l
        ON l.campaign_id = cc.id AND l.member_id = m.source_id
+     LEFT JOIN dc_members dc ON dc.serial = m.serial AND dc.guild_id = ?
      WHERE cc.id = ? AND cc.type = 'campaign'
        AND (? IS NULL OR m.home_amphure = ?)
        AND (? IS NULL OR COALESCE(t.tier, 'D') = ?)
@@ -122,6 +125,7 @@ export async function getMembersInCampaign(campaignId, filters = {}, limit = 100
      ORDER BY m.home_amphure ASC, m.first_name ASC, m.source_id ASC
      LIMIT ? OFFSET ?`,
     [
+      process.env.GUILD_ID,
       campaignId,
       amphure || null, amphure || null,
       tier || null, tier || null,
@@ -281,11 +285,14 @@ export async function getMyAssignedMembers(discordId, { campaignId, status, rsvp
          CASE WHEN COALESCE(camp_stats.camp_calls, 0) > 0 THEN 'called' ELSE 'pending' END AS call_status,
          latest_log.note AS latest_note,
          latest_log.status AS latest_log_status,
-         latest_log.called_at AS latest_called_at
+         latest_log.called_at AS latest_called_at,
+         dc.discord_id,
+         dc.username AS discord_username
        FROM calling_assignments a
        JOIN ngs_member_cache m ON m.source_id = a.member_id
        LEFT JOIN calling_member_tiers t ON t.member_id = a.member_id
        LEFT JOIN act_event_cache ec ON ec.id = a.campaign_id AND ec.type = 'campaign'
+       LEFT JOIN dc_members dc ON dc.serial = m.serial AND dc.guild_id = ?
        LEFT JOIN (
          SELECT member_id,
            COUNT(*) AS total_calls,
@@ -315,7 +322,7 @@ export async function getMyAssignedMembers(discordId, { campaignId, status, rsvp
        home_amphure ASC,
        first_name ASC
      LIMIT ? OFFSET ?`,
-    [discordId, campaignId || null, campaignId || null, rsvp || null, rsvp || null, status || null, status || null, limit, offset]
+    [process.env.GUILD_ID, discordId, campaignId || null, campaignId || null, rsvp || null, rsvp || null, status || null, status || null, limit, offset]
   )
   return rows
 }
