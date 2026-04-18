@@ -19,7 +19,13 @@ export async function GET(req) {
   const { searchParams } = new URL(req.url)
   const campaignId = searchParams.get('campaignId')
 
+  const memberId = searchParams.get('memberId')
+
   try {
+    if (memberId) {
+      const assignment = await assignmentDB.getAssignment(parseInt(memberId), campaignId ? parseInt(campaignId) : 0)
+      return Response.json({ success: true, data: assignment })
+    }
     const assignments = await assignmentDB.getAssignmentsByCampaign(campaignId ? parseInt(campaignId) : 0)
     return Response.json({ success: true, data: assignments })
   } catch (error) {
@@ -132,6 +138,36 @@ export async function PUT(req) {
     return Response.json({ success: true, data: assignment })
   } catch (error) {
     console.error('[PUT /api/calling/assignments]', error)
+    return Response.json({ error: 'Internal Server Error' }, { status: 500 })
+  }
+}
+
+/**
+ * PATCH /api/calling/assignments
+ * Update RSVP for an assignment
+ */
+export async function PATCH(req) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.discordId) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  try {
+    const body = await req.json()
+    const { campaign_id = 0, member_id, rsvp } = body
+
+    if (!member_id) {
+      return Response.json({ error: 'member_id is required' }, { status: 400 })
+    }
+    if (rsvp !== null && !['yes', 'no', 'maybe'].includes(rsvp)) {
+      return Response.json({ error: 'rsvp must be yes, no, maybe, or null' }, { status: 400 })
+    }
+
+    await assignmentDB.updateRsvp(parseInt(member_id), campaign_id || 0, rsvp)
+    const assignment = await assignmentDB.getAssignment(parseInt(member_id), campaign_id || 0)
+    return Response.json({ success: true, data: assignment })
+  } catch (error) {
+    console.error('[PATCH /api/calling/assignments]', error)
     return Response.json({ error: 'Internal Server Error' }, { status: 500 })
   }
 }

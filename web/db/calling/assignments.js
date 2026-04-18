@@ -87,6 +87,17 @@ export async function bulkAssignMembers(memberIds, assignedTo, assignedBy, campa
 }
 
 /**
+ * Update RSVP for an assignment
+ */
+export async function updateRsvp(memberId, campaignId = 0, rsvp) {
+  await pool.query(
+    `UPDATE calling_assignments SET rsvp = ?
+     WHERE member_id = ? AND campaign_id = ?`,
+    [rsvp || null, memberId, campaignId]
+  )
+}
+
+/**
  * Unassign member (campaign defaults to 0 / Undefined)
  */
 export async function unassignMember(memberId, campaignId = 0) {

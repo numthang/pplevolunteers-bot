@@ -1687,3 +1687,17 @@ I
 [2026-04-17 16:21:45] [INFO] [emailPoller] init, polling every 1200 s
 [2026-04-17 16:24:07] [INFO] [emailPoller] init, polling every 1200 s
 [2026-04-17 16:31:42] [INFO] [emailPoller] init, polling every 1200 s
+[2026-04-17 22:39:09] [INFO] [emailPoller] init, polling every 120 s
+[2026-04-17 22:42:03] [INFO] [emailPoller] init, polling every 120 s
+[2026-04-17 22:44:12] [INFO] [emailPoller] init, polling every 120 s
+[2026-04-17 22:46:39] [INFO] [emailPoller] init, polling every 120 s
+[2026-04-17 23:06:39] [ERROR] [emailPoller] error: getaddrinfo ENOTFOUND imap.gmail.com
+[2026-04-17 23:08:39] [ERROR] [emailPoller] error: getaddrinfo ENOTFOUND imap.gmail.com
+[2026-04-17 23:10:39] [ERROR] [emailPoller] error: getaddrinfo ENOTFOUND imap.gmail.com
+[2026-04-17 23:12:39] [ERROR] [emailPoller] error: getaddrinfo ENOTFOUND imap.gmail.com
+[2026-04-17 23:14:39] [ERROR] [emailPoller] error: getaddrinfo ENOTFOUND imap.gmail.com
+[2026-04-17 23:20:46] [ERROR] [emailPoller] error: getaddrinfo ENOTFOUND imap.gmail.com
+[2026-04-18 00:54:15] [ERROR] [emailPoller] error: getaddrinfo ENOTFOUND imap.gmail.com
+[2026-04-18 01:09:13] [ERROR] [emailPoller] error: getaddrinfo ENOTFOUND imap.gmail.com
+[2026-04-18 03:04:18] [ERROR] [emailPoller] imap error: read ECONNRESET
+[2026-04-18 03:04:18] [ERROR] [emailPoller] error: Connection not available

@@ -102,11 +102,7 @@ export async function getMembersInCampaign(campaignId, filters = {}, limit = 100
        l.note AS last_note,
        COUNT(DISTINCT l.id) AS total_calls,
        SUM(CASE WHEN l.status = 'answered' THEN 1 ELSE 0 END) AS answered_count,
-       CASE
-         WHEN COUNT(DISTINCT l.id) > 0 THEN 'called'
-         WHEN a.id IS NOT NULL THEN 'assigned'
-         ELSE 'unassigned'
-       END AS member_status
+       CASE WHEN a.id IS NOT NULL THEN 'assigned' ELSE 'unassigned' END AS member_status
      FROM act_event_cache cc
      JOIN ngs_member_cache m
        ON (cc.province IS NULL OR m.home_province = cc.province)
@@ -136,33 +132,73 @@ export async function getMembersInCampaign(campaignId, filters = {}, limit = 100
 }
 
 export async function getMembersInCampaignStats(campaignId) {
-  const [rows] = await pool.query(
-    `SELECT
-       COUNT(DISTINCT m.source_id) AS total,
-       SUM(CASE WHEN lc.log_count > 0 THEN 1 ELSE 0 END) AS called,
-       SUM(CASE WHEN a.id IS NOT NULL THEN 1 ELSE 0 END) AS assigned,
-       SUM(CASE WHEN lc.log_count = 0 AND a.id IS NULL THEN 1 ELSE 0 END) AS unassigned,
-       GROUP_CONCAT(DISTINCT m.home_amphure ORDER BY m.home_amphure SEPARATOR '|') AS districts_raw
-     FROM act_event_cache cc
-     JOIN ngs_member_cache m
-       ON (cc.province IS NULL OR m.home_province = cc.province)
-     LEFT JOIN calling_assignments a
-       ON a.campaign_id = cc.id AND a.member_id = m.source_id
-     LEFT JOIN (
-       SELECT member_id, COUNT(*) AS log_count
-       FROM calling_logs WHERE campaign_id = ?
-       GROUP BY member_id
-     ) lc ON lc.member_id = m.source_id
-     WHERE cc.id = ? AND cc.type = 'campaign'`,
-    [campaignId, campaignId]
-  )
-  const row = rows[0] || { total: 0, called: 0, assigned: 0, unassigned: 0 }
+  const BASE = `
+    FROM act_event_cache cc
+    JOIN ngs_member_cache m ON (cc.province IS NULL OR m.home_province = cc.province)
+    WHERE cc.id = ? AND cc.type = 'campaign'`
+
+  const [[mainRows], [districtRows], [tierRows], [assigneeRows]] = await Promise.all([
+    pool.query(
+      `SELECT
+         COUNT(DISTINCT m.source_id) AS total,
+         SUM(CASE WHEN lc.log_count > 0 THEN 1 ELSE 0 END) AS called,
+         SUM(CASE WHEN a.id IS NOT NULL THEN 1 ELSE 0 END) AS assigned,
+         SUM(CASE WHEN a.id IS NULL THEN 1 ELSE 0 END) AS unassigned
+       FROM act_event_cache cc
+       JOIN ngs_member_cache m ON (cc.province IS NULL OR m.home_province = cc.province)
+       LEFT JOIN calling_assignments a ON a.campaign_id = cc.id AND a.member_id = m.source_id
+       LEFT JOIN (
+         SELECT member_id, COUNT(*) AS log_count
+         FROM calling_logs WHERE campaign_id = ?
+         GROUP BY member_id
+       ) lc ON lc.member_id = m.source_id
+       WHERE cc.id = ? AND cc.type = 'campaign'`,
+      [campaignId, campaignId]
+    ),
+    pool.query(
+      `SELECT COALESCE(m.home_amphure, '') AS district, COUNT(DISTINCT m.source_id) AS count
+       ${BASE} GROUP BY district ORDER BY district`,
+      [campaignId]
+    ),
+    pool.query(
+      `SELECT COALESCE(t.tier, 'D') AS tier, COUNT(DISTINCT m.source_id) AS count
+       FROM act_event_cache cc
+       JOIN ngs_member_cache m ON (cc.province IS NULL OR m.home_province = cc.province)
+       LEFT JOIN calling_member_tiers t ON t.member_id = m.source_id
+       WHERE cc.id = ? AND cc.type = 'campaign'
+       GROUP BY tier`,
+      [campaignId]
+    ),
+    pool.query(
+      `SELECT a.assigned_to, COUNT(DISTINCT m.source_id) AS count
+       FROM act_event_cache cc
+       JOIN ngs_member_cache m ON (cc.province IS NULL OR m.home_province = cc.province)
+       JOIN calling_assignments a ON a.campaign_id = cc.id AND a.member_id = m.source_id
+       WHERE cc.id = ? AND cc.type = 'campaign'
+       GROUP BY a.assigned_to`,
+      [campaignId]
+    ),
+  ])
+
+  const row = mainRows[0] || {}
+
+  const districtCounts = {}
+  for (const r of districtRows) districtCounts[r.district] = Number(r.count)
+
+  const tierCounts = {}
+  for (const r of tierRows) tierCounts[r.tier] = Number(r.count)
+
+  const assigneeCounts = assigneeRows.map(r => ({ id: r.assigned_to, count: Number(r.count) }))
+
   return {
-    total: row.total || 0,
-    called: row.called || 0,
-    assigned: row.assigned || 0,
-    unassigned: row.unassigned || 0,
-    districts: row.districts_raw ? row.districts_raw.split('|') : []
+    total: Number(row.total) || 0,
+    called: Number(row.called) || 0,
+    assigned: Number(row.assigned) || 0,
+    unassigned: Number(row.unassigned) || 0,
+    districts: districtRows.map(r => r.district),
+    districtCounts,
+    tierCounts,
+    assigneeCounts,
   }
 }
 
@@ -234,6 +270,7 @@ export async function getMyAssignedMembers(discordId, { campaignId, status, limi
          a.campaign_id,
          a.created_at AS assigned_at,
          ec.name AS campaign_name,
+         ec.event_date,
          COALESCE(all_stats.total_calls, 0) AS total_calls,
          COALESCE(all_stats.answered_count, 0) AS answered_count,
          COALESCE(camp_stats.camp_calls, 0) AS camp_calls,
@@ -266,6 +303,7 @@ export async function getMyAssignedMembers(discordId, { campaignId, status, limi
          AND (? IS NULL OR a.campaign_id = ?)
      ) sub
      WHERE (? IS NULL OR call_status = ?)
+       AND (event_date IS NULL OR event_date >= CURDATE() OR call_status != 'pending')
      ORDER BY
        CASE WHEN call_status = 'pending' THEN 0 ELSE 1 END ASC,
        CASE tier WHEN 'A' THEN 1 WHEN 'B' THEN 2 WHEN 'C' THEN 3 ELSE 4 END ASC,

@@ -51,16 +51,45 @@ Optional
 - แสดง "บันทึกล่าสุด (Latest Note)" และ "สถิติการรับสาย (X/Y)" บนการ์ดสมาชิกในหน้า Pending calls
 - อย่าลืมคำนึงถึงเรื่อง เน้นให้คนโทร (Caller) ทำงานได้ไวและเตรียมตัวก่อนโทรได้ทันที
 
-คำถาม
-- หลังจากสถานะ answered แล้วจะหายไปจาก pending ไหม (unassign) อะไร ยังไง แต่ผมว่าควรหายไปเมื่อ event นั้นผ่านไปแล้วมากกว่า เช็คจากวันที่ใน act_event_cache แล้วมันควรทำยังไงดีนะ ปรึกษาหน่อย
+อัพเดท Calling (calling/pending)
+- ขอแก้ไขสถานะทั้งหมดใหม่ดังนี้
+answered => รับสาย    ✅ ชัด
+no_answer => ไม่รับ    ✅ ชัด
+wrong_number => เบอร์ผิด    ✅ ชัด
+pending => ยังไม่โทร (ถ้าไม่มี 3 สถานะ ด้านบน แสดงว่ายังไม่โทร)
+แล้วก็อยากเพิ่มสถานะว่าร่วมกิจกรรมได้ "เข้าร่วม/ไม่เข้าร่วม/อาจจะ" จะเป็นอีกสถานะ หรือเพิ่ม field ใหม่ดี ความเห็นผมน่าจะเพิ่ม field คิดว่าไง
+- เช็ค pending จากวันที่ใน act_event_cache ถ้าเลยกำหนดกิจกรรมแล้ว ให้หายไปจาก pending ซ่อน assignment ไว้ ไม่ต้องแสดง?
 
-หน้า Calling (calling/[campaignID])
-- ใน dropdown อำเภอ,  ใน dropdown ระดับ (tier) ให้วงเล็บจำนวนสมาชิก
+อัพเดท Calling (calling/[campaignId])
+- ใน dropdown filter ทุกตัว ให้วงเล็บจำนวนสมาชิกใน filter นั้นๆ 
+- ไม่เข้าใจในวงเล็บ ตรง (ไม่มี call log เลย)
+- หลังงานผ่านไปแล้ว แค่ให้ไม่ต้องแสดงในหน้า calling/pending เพราะไม่ต้องโทรแล้ว อย่างอื่นไม่ต้องแก้อะไร ดังนั้นแล้ว assignment ยังอยู่แค่ไม่แสดงเฉยๆ
+- ถ้าไม่มี calling log ในแคมเปญนั้นถือว่ายังไม่ไพ้มอบหมาย (รอมอบหมาย) ดังนั้น ฟิลเตอร์หน้านี้มีแค่มอบหมายแล้วกับยังไม่ได้มอบหมายก็พอ ลังเลว่าจะใช้คำว่า "ยังไม่มอบหมาย" หรือ "รอมอบหมายดี"
+
+หน้า Calling (calling/members)?
 - จิ้มไปที่ member แล้วแสดงหน้า คล้ายๆ แบบ Record call ดู md/calling/calling-system-v2.html อย่าลืมปุ่มกดโทร ดึงข้อมูลโทรศัพท์จาก ngs_member_cache แสดง history ของแต่ละการโทรของและแคมเปญแต่ละครั้ง
 
 ชวนคิด
 - เมื่อบันทึกว่าเป็น Wrong number ระบบควรมี Alert ถามว่าจะ "ลบเบอร์นี้/มาร์คว่าเบอร์เสีย" ในฐานข้อมูลหลักเลยหรือไม่ เพื่อไม่ให้คนอื่นเสียเวลาโทรซ้ำใน Campaign ถัดไป
+
+๊UI 
+- ตอนนี้ขนาดฟอนต์เท่าไร เพิ่มอีกหน่อย 
 - Dark Mode ผมว่าตัวหนังสือกลืนไปเยอะเลย Header ของตาราง ขอสีม่วง discord ได้ไหม ช่วยแนะนำผมหน่อยว่าเวลาผมจะบอกตรงไหนควรเป็นสีอะไร จะบอกให้แก้ยังไง หรือคุณมีชุดธีมสีให้เลือกเป็น pattern เลยไหมอ่ะ
+- ทำ element ให้ liquid 100% 
+
+- Migration
+ALTER TABLE act_event_cache ADD COLUMN event_date DATE NULL AFTER description;
+-- 1. migrate busy records
+UPDATE calling_logs SET status = 'no_answer' WHERE status = 'busy';
+
+-- 2. remove busy from ENUM
+ALTER TABLE calling_logs 
+  MODIFY COLUMN status ENUM('answered','no_answer','wrong_number') NOT NULL;
+
+-- 3. เพิ่ม rsvp column (ถ้ายังไม่ได้ทำ)
+ALTER TABLE calling_assignments
+  ADD COLUMN rsvp ENUM('yes','no','maybe') NULL AFTER assigned_by;
+
 ---
 <!-- 📌 ภาพรวมของ PPLE Docs
 PPLE Docs คือระบบบริหารจัดการเอกสารทางกฎหมายและลายเซ็นดิจิทัล (E-signature) ที่เป็นส่วนต่อขยายของโปรเจกต์ ACT เพื่อให้อาสาสมัครและสมาชิกพรรคสามารถทำธุรกรรมและเซ็นเอกสารประกอบกิจกรรม (เช่น เอกสารเบิกจ่ายของ กกต.) ได้อย่างรวดเร็วหน้างาน

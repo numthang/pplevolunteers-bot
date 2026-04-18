@@ -5,7 +5,7 @@
 
 require('dotenv').config();
 const { Client, GatewayIntentBits } = require('discord.js');
-const { upsertMemberFromDiscord } = require('../db/members');
+const { upsertMemberFromDiscord } = require('../../db/members');
 
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers],

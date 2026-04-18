@@ -12,10 +12,10 @@ const TIER_CLS = {
 }
 
 const STATUS_LABEL = {
-  answered:     { label: 'รับสาย',        cls: 'bg-teal-light text-teal dark:bg-teal-dim dark:text-teal-bright' },
-  no_answer:    { label: 'ไม่รับสาย',     cls: 'bg-[#faeeda] text-[#854f0b] dark:bg-[#3a2308] dark:text-[#d4953e]' },
-  busy:         { label: 'สายไม่ว่าง',    cls: 'bg-warm-100 text-warm-500 dark:bg-warm-dark-200 dark:text-warm-dark-500' },
-  wrong_number: { label: 'เบอร์ผิด',       cls: 'bg-[#fcebeb] text-[#a32d2d] dark:bg-[#3a1212] dark:text-[#d47373]' },
+  answered:     { label: 'รับสาย',   cls: 'bg-teal-light text-teal dark:bg-teal-dim dark:text-teal-bright' },
+  no_answer:    { label: 'ไม่รับ',   cls: 'bg-[#faeeda] text-[#854f0b] dark:bg-[#3a2308] dark:text-[#d4953e]' },
+  wrong_number: { label: 'เบอร์ผิด', cls: 'bg-[#fcebeb] text-[#a32d2d] dark:bg-[#3a1212] dark:text-[#d47373]' },
+  busy:         { label: 'สายไม่ว่าง (เก่า)', cls: 'bg-warm-100 text-warm-500 dark:bg-warm-dark-200 dark:text-warm-dark-500' },
 }
 
 export default function CallPage({ params }) {
@@ -25,6 +25,7 @@ export default function CallPage({ params }) {
   const [logs, setLogs] = useState([])
   const [tier, setTier] = useState(null)
   const [stats, setStats] = useState(null)
+  const [assignment, setAssignment] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -33,19 +34,21 @@ export default function CallPage({ params }) {
 
   const fetchData = async () => {
     try {
-      const [memberRes, logsRes, tierRes, campaignRes] = await Promise.all([
+      const [memberRes, logsRes, tierRes, campaignRes, assignmentRes] = await Promise.all([
         fetch(`/api/calling/members?search=${memberId}&limit=1`),
         fetch(`/api/calling/logs?campaignId=${campaignId}&memberId=${memberId}`),
         fetch(`/api/calling/tiers?memberId=${memberId}`),
         fetch('/api/calling/campaigns'),
+        fetch(`/api/calling/assignments?campaignId=${campaignId}&memberId=${memberId}`),
       ])
 
-      const [memberData, logsData, tierData, campaignData] = await Promise.all([
-        memberRes.json(), logsRes.json(), tierRes.json(), campaignRes.json()
+      const [memberData, logsData, tierData, campaignData, assignmentData] = await Promise.all([
+        memberRes.json(), logsRes.json(), tierRes.json(), campaignRes.json(), assignmentRes.json()
       ])
 
       if (memberData.data?.[0]) setMember(memberData.data[0])
       if (tierData.data) setTier(tierData.data)
+      if (assignmentData.data) setAssignment(assignmentData.data)
 
       const camp = campaignData.data?.find(c => c.id === parseInt(campaignId))
       if (camp) setCampaign(camp)
@@ -65,6 +68,22 @@ export default function CallPage({ params }) {
       console.error('Error fetching data:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleRsvp = async (value) => {
+    const newRsvp = assignment?.rsvp === value ? null : value
+    try {
+      const res = await fetch('/api/calling/assignments', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ campaign_id: parseInt(campaignId), member_id: parseInt(memberId), rsvp: newRsvp })
+      })
+      if (!res.ok) throw new Error((await res.json()).error)
+      const data = await res.json()
+      setAssignment(data.data)
+    } catch (err) {
+      alert('เกิดข้อผิดพลาด: ' + err.message)
     }
   }
 
@@ -125,7 +144,7 @@ export default function CallPage({ params }) {
         </div>
 
         {/* Stats row */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-3 mb-5">
           <div className="bg-warm-100 dark:bg-warm-dark-200 p-3 rounded-lg text-center">
             <p className="text-xs text-warm-500 dark:text-warm-dark-500 mb-1">โทรทั้งหมด</p>
             <p className="text-2xl font-semibold text-warm-900 dark:text-warm-50">{stats?.total || 0}</p>
@@ -139,6 +158,29 @@ export default function CallPage({ params }) {
             <p className="text-2xl font-semibold text-warm-900 dark:text-warm-50">{stats?.avgScore || '—'}</p>
           </div>
         </div>
+
+        {/* RSVP — only if assigned */}
+        {assignment && (
+          <div>
+            <p className="text-xs font-medium text-warm-500 dark:text-warm-dark-500 mb-2">ร่วมกิจกรรม</p>
+            <div className="flex gap-2">
+              {[
+                { value: 'yes',   label: 'เข้าร่วม',    active: 'bg-teal text-white border-teal' },
+                { value: 'no',    label: 'ไม่เข้าร่วม', active: 'bg-[#fcebeb] text-[#a32d2d] border-[#a32d2d]' },
+                { value: 'maybe', label: 'อาจจะ',        active: 'bg-[#faeeda] text-[#854f0b] border-[#854f0b]' },
+              ].map(opt => (
+                <button key={opt.value} type="button" onClick={() => handleRsvp(opt.value)}
+                  className={`px-3 py-1.5 rounded-lg border text-sm font-medium transition ${
+                    assignment.rsvp === opt.value
+                      ? opt.active
+                      : 'bg-white dark:bg-warm-dark-200 text-warm-500 dark:text-warm-dark-500 border-warm-200 dark:border-warm-dark-300 hover:border-teal'
+                  }`}>
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">

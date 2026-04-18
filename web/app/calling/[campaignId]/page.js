@@ -14,18 +14,15 @@ const TIER_COLORS = {
 }
 
 function getStatusBadge(status) {
-  switch (status) {
-    case 'called':   return { bg: '#e1f5f4', text: '#0d9e94', label: 'โทรแล้ว' }
-    case 'assigned': return { bg: '#e0e7ff', text: '#4f46e5', label: 'มอบหมายแล้ว' }
-    default:         return { bg: '#faeeda', text: '#854f0b', label: 'รอมอบหมาย' }
-  }
+  if (status === 'assigned') return { bg: '#e0e7ff', text: '#4f46e5', label: 'มอบหมายแล้ว' }
+  return { bg: '#faeeda', text: '#854f0b', label: 'รอมอบหมาย' }
 }
 
 export default function CampaignPage({ params }) {
   const { campaignId } = use(params)
 
   const [campaign, setCampaign] = useState(null)
-  const [stats, setStats] = useState({ total: 0, called: 0, assigned: 0, unassigned: 0, districts: [] })
+  const [stats, setStats] = useState({ total: 0, called: 0, assigned: 0, unassigned: 0, districts: [], districtCounts: {}, tierCounts: {}, assigneeCounts: [] })
   const [members, setMembers] = useState([])
   const [hasMore, setHasMore] = useState(false)
   const [loadingInitial, setLoadingInitial] = useState(true)
@@ -227,10 +224,10 @@ export default function CampaignPage({ params }) {
     }
   }
 
-  // Assignees visible in current loaded set
-  const assignees = [...new Map(
-    members.filter(m => m.assigned_to).map(m => [m.assigned_to, usersMap[m.assigned_to] || m.assigned_to])
-  ).entries()].map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name))
+  // Assignees from stats (all assigned members, not limited to loaded page)
+  const assignees = (stats.assigneeCounts || [])
+    .map(a => ({ id: a.id, name: usersMap[a.id] || a.id, count: a.count }))
+    .sort((a, b) => a.name.localeCompare(b.name))
 
   const isAllSelected = members.length > 0 && selectedMembers.size === members.length
 
@@ -282,27 +279,32 @@ export default function CampaignPage({ params }) {
         <select value={filterDistrict} onChange={e => setFilterDistrict(e.target.value)}
           className="h-9 px-3 text-sm border border-warm-200 dark:border-warm-dark-300 bg-white dark:bg-warm-dark-100 text-warm-900 dark:text-warm-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal">
           <option value="">อำเภอ (ทั้งหมด)</option>
-          {stats.districts.map(d => <option key={d} value={d}>{d}</option>)}
+          {stats.districts.map(d => (
+            <option key={d} value={d}>{d || '(ไม่ระบุ)'} ({stats.districtCounts[d] || 0})</option>
+          ))}
         </select>
 
         <select value={filterTier} onChange={e => setFilterTier(e.target.value)}
           className="h-9 px-3 text-sm border border-warm-200 dark:border-warm-dark-300 bg-white dark:bg-warm-dark-100 text-warm-900 dark:text-warm-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal">
           <option value="">ระดับ (ทั้งหมด)</option>
-          {['A','B','C','D'].map(t => <option key={t} value={t}>{t}</option>)}
+          {['A','B','C','D'].map(t => (
+            <option key={t} value={t}>{t} ({stats.tierCounts[t] || 0})</option>
+          ))}
         </select>
 
         <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
           className="h-9 px-3 text-sm border border-warm-200 dark:border-warm-dark-300 bg-white dark:bg-warm-dark-100 text-warm-900 dark:text-warm-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal">
           <option value="">สถานะ (ทั้งหมด)</option>
-          <option value="unassigned">รอมอบหมาย</option>
-          <option value="assigned">มอบหมายแล้ว</option>
-          <option value="called">โทรแล้ว</option>
+          <option value="unassigned">รอมอบหมาย ({stats.unassigned})</option>
+          <option value="assigned">มอบหมายแล้ว ({stats.assigned})</option>
         </select>
 
         <select value={filterAssignee} onChange={e => setFilterAssignee(e.target.value)}
           className="h-9 px-3 text-sm border border-warm-200 dark:border-warm-dark-300 bg-white dark:bg-warm-dark-100 text-warm-900 dark:text-warm-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal">
           <option value="">ผู้รับผิดชอบ (ทั้งหมด)</option>
-          {assignees.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+          {assignees.map(a => (
+            <option key={a.id} value={a.id}>{a.name} ({a.count})</option>
+          ))}
         </select>
       </div>
 
