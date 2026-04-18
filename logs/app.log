@@ -1701,3 +1701,6 @@ I
 [2026-04-18 01:09:13] [ERROR] [emailPoller] error: getaddrinfo ENOTFOUND imap.gmail.com
 [2026-04-18 03:04:18] [ERROR] [emailPoller] imap error: read ECONNRESET
 [2026-04-18 03:04:18] [ERROR] [emailPoller] error: Connection not available
+[2026-04-18 03:32:41] [INFO] [emailPoller] init, polling every 1200 s
+[2026-04-18 04:59:57] [INFO] [emailPoller] init, polling every 1200 s
+[2026-04-18 05:41:03] [INFO] [emailPoller] init, polling every 1200 s

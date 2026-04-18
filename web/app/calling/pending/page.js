@@ -10,6 +10,21 @@ const TIER_COLORS = {
   D: { bg: '#fcebeb', text: '#a32d2d' },
 }
 
+const RSVP_ICONS = {
+  yes:   { icon: '✓', color: '#0d9e94' },
+  no:    { icon: '✗', color: '#a32d2d' },
+  maybe: { icon: '?', color: '#854f0b' },
+}
+
+function getStatusBadge(logStatus) {
+  switch (logStatus) {
+    case 'answered':     return { bg: '#e1f5f4', text: '#0d9e94', label: 'รับสาย' }
+    case 'no_answer':    return { bg: '#faeeda', text: '#854f0b', label: 'ไม่รับ' }
+    case 'wrong_number': return { bg: '#fcebeb', text: '#a32d2d', label: 'เบอร์ผิด' }
+    default:             return { bg: '#f3f4f6', text: '#6b7280', label: 'รอโทร' }
+  }
+}
+
 const STATUS_OPTIONS = [
   { value: '',        label: 'ทั้งหมด' },
   { value: 'pending', label: 'รอโทร' },
@@ -22,6 +37,7 @@ export default function PendingCallsPage() {
   const [loading, setLoading] = useState(true)
   const [filterCampaign, setFilterCampaign] = useState('')
   const [filterStatus, setFilterStatus] = useState('pending')
+  const [filterRsvp, setFilterRsvp] = useState('')
 
   const [modalMember, setModalMember] = useState(null)
   const [modalIndex, setModalIndex] = useState(-1)
@@ -37,12 +53,13 @@ export default function PendingCallsPage() {
       .catch(() => {})
   }, [])
 
-  const fetchMembers = useCallback(async (campaignId, status) => {
+  const fetchMembers = useCallback(async (campaignId, status, rsvp) => {
     setLoading(true)
     try {
       const p = new URLSearchParams({ limit: '200' })
       if (campaignId) p.set('campaignId', campaignId)
       if (status) p.set('status', status)
+      if (rsvp) p.set('rsvp', rsvp)
       const res = await fetch(`/api/calling/pending?${p}`)
       const data = await res.json()
       setMembers(data.data || [])
@@ -54,8 +71,8 @@ export default function PendingCallsPage() {
   }, [])
 
   useEffect(() => {
-    fetchMembers(filterCampaign, filterStatus)
-  }, [filterCampaign, filterStatus, fetchMembers])
+    fetchMembers(filterCampaign, filterStatus, filterRsvp)
+  }, [filterCampaign, filterStatus, filterRsvp, fetchMembers])
 
   const openModal = (member) => {
     const idx = membersRef.current.findIndex(
@@ -179,6 +196,17 @@ export default function PendingCallsPage() {
             </button>
           ))}
         </div>
+
+        <select
+          value={filterRsvp}
+          onChange={e => setFilterRsvp(e.target.value)}
+          className="h-9 px-3 text-sm border border-warm-200 dark:border-warm-dark-300 bg-white dark:bg-warm-dark-100 text-warm-900 dark:text-warm-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal"
+        >
+          <option value="">RSVP (ทั้งหมด)</option>
+          <option value="yes">✓ เข้าร่วม</option>
+          <option value="no">✗ ไม่เข้าร่วม</option>
+          <option value="maybe">? อาจจะ</option>
+        </select>
       </div>
 
       {/* Stats bar */}
@@ -209,11 +237,11 @@ export default function PendingCallsPage() {
       ) : (
         <div className="bg-white dark:bg-warm-dark-100 border border-warm-200 dark:border-warm-dark-300 rounded-xl overflow-hidden">
           {/* Table header */}
-          <div className="hidden sm:grid items-center px-4 py-2.5 bg-warm-100 dark:bg-warm-dark-200 border-b border-warm-200 dark:border-warm-dark-300 text-xs font-medium text-warm-500 dark:text-warm-dark-500 [grid-template-columns:1fr_40px_80px_80px]">
+          <div className="hidden sm:grid items-center px-4 py-2.5 gap-2 bg-warm-100 dark:bg-warm-dark-200 border-b border-warm-200 dark:border-warm-dark-300 text-xs font-medium text-warm-500 dark:text-warm-dark-500 [grid-template-columns:1fr_40px_80px_100px]">
             <span>ชื่อสมาชิก</span>
             <span className="text-center">ระดับ</span>
             <span className="text-center">รับสาย</span>
-            <span className="text-center">สถานะ</span>
+            <span>สถานะ</span>
           </div>
 
           <div className="divide-y divide-warm-200 dark:divide-warm-dark-300">
@@ -256,15 +284,24 @@ export default function PendingCallsPage() {
                         )}
                       </div>
                       <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                        <span
-                          className="text-xs font-semibold px-2 py-0.5 rounded-full"
-                          style={isCalled
-                            ? { backgroundColor: '#e1f5f4', color: '#0d9e94' }
-                            : { backgroundColor: '#faeeda', color: '#854f0b' }
-                          }
-                        >
-                          {isCalled ? 'โทรแล้ว' : 'รอโทร'}
-                        </span>
+                        <div className="flex items-center gap-1">
+                          {(() => {
+                            const badge = getStatusBadge(member.latest_log_status)
+                            return (
+                              <>
+                                <span className="px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap"
+                                  style={{ backgroundColor: badge.bg, color: badge.text }}>
+                                  {badge.label}
+                                </span>
+                                {member.rsvp && (
+                                  <span className="text-sm font-bold" style={{ color: RSVP_ICONS[member.rsvp]?.color || '#666' }}>
+                                    {RSVP_ICONS[member.rsvp]?.icon || member.rsvp}
+                                  </span>
+                                )}
+                              </>
+                            )
+                          })()}
+                        </div>
                         <span className="text-xs text-warm-400 dark:text-warm-dark-400">
                           {member.answered_count}/{member.total_calls} รับ
                         </span>
@@ -273,7 +310,7 @@ export default function PendingCallsPage() {
                   </div>
 
                   {/* Desktop layout: grid */}
-                  <div className="hidden sm:grid items-center [grid-template-columns:1fr_40px_80px_80px] gap-2">
+                  <div className="hidden sm:grid items-center [grid-template-columns:1fr_40px_80px_100px] gap-2">
                     {/* Name + meta */}
                     <div className="flex items-center gap-3 min-w-0">
                       <div
@@ -310,17 +347,24 @@ export default function PendingCallsPage() {
                       <span>{member.total_calls}</span>
                     </div>
 
-                    {/* Status */}
-                    <div className="flex justify-center">
-                      <span
-                        className="text-xs font-semibold px-2 py-0.5 rounded-full whitespace-nowrap"
-                        style={isCalled
-                          ? { backgroundColor: '#e1f5f4', color: '#0d9e94' }
-                          : { backgroundColor: '#faeeda', color: '#854f0b' }
-                        }
-                      >
-                        {isCalled ? 'โทรแล้ว' : 'รอโทร'}
-                      </span>
+                    {/* Status + RSVP */}
+                    <div className="flex items-center gap-1 justify-start">
+                      {(() => {
+                        const badge = getStatusBadge(member.latest_log_status)
+                        return (
+                          <>
+                            <span className="px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap"
+                              style={{ backgroundColor: badge.bg, color: badge.text }}>
+                              {badge.label}
+                            </span>
+                            {member.rsvp && (
+                              <span className="text-sm font-bold" style={{ color: RSVP_ICONS[member.rsvp]?.color || '#666' }}>
+                                {RSVP_ICONS[member.rsvp]?.icon || member.rsvp}
+                              </span>
+                            )}
+                          </>
+                        )
+                      })()}
                     </div>
                   </div>
                 </button>

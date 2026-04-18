@@ -21,6 +21,7 @@ export async function GET(req) {
   const campaignsOnly = searchParams.get('campaigns') === 'true'
   const campaignId = searchParams.get('campaignId')
   const status = searchParams.get('status')
+  const rsvp = searchParams.get('rsvp')
   const limit = Math.min(parseInt(searchParams.get('limit') || '200'), 500)
   const offset = parseInt(searchParams.get('offset') || '0')
 
@@ -33,6 +34,7 @@ export async function GET(req) {
     const members = await memberDB.getMyAssignedMembers(session.user.discordId, {
       campaignId: campaignId ? parseInt(campaignId) : null,
       status: status || null,
+      rsvp: rsvp || null,
       limit,
       offset
     })

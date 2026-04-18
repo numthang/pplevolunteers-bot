@@ -13,6 +13,12 @@ const TIER_COLORS = {
   D: { bg: '#fcebeb', text: '#a32d2d' },
 }
 
+const RSVP_ICONS = {
+  yes:   { icon: '✓', color: '#0d9e94' },
+  no:    { icon: '✗', color: '#a32d2d' },
+  maybe: { icon: '?', color: '#854f0b' },
+}
+
 function getStatusBadge(status) {
   if (status === 'assigned') return { bg: '#e0e7ff', text: '#4f46e5', label: 'มอบหมายแล้ว' }
   return { bg: '#faeeda', text: '#854f0b', label: 'รอมอบหมาย' }
@@ -34,6 +40,7 @@ export default function CampaignPage({ params }) {
   const [filterTier, setFilterTier] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
   const [filterAssignee, setFilterAssignee] = useState('')
+  const [filterRsvp, setFilterRsvp] = useState('')
   const [splitModalOpen, setSplitModalOpen] = useState(false)
 
   const offsetRef = useRef(0)
@@ -45,12 +52,13 @@ export default function CampaignPage({ params }) {
   useEffect(() => { loadingMoreRef.current = loadingMore }, [loadingMore])
   useEffect(() => { hasMoreRef.current = hasMore }, [hasMore])
 
-  const buildMembersUrl = (offset, district, tier, status, assignee) => {
+  const buildMembersUrl = (offset, district, tier, status, assignee, rsvp) => {
     const p = new URLSearchParams({ campaignId, limit: PAGE_SIZE, offset })
     if (district) p.set('amphure', district)
     if (tier)     p.set('tier', tier)
     if (status)   p.set('status', status)
     if (assignee) p.set('assignedTo', assignee)
+    if (rsvp)     p.set('rsvp', rsvp)
     return `/api/calling/members?${p}`
   }
 
@@ -61,14 +69,14 @@ export default function CampaignPage({ params }) {
   }, [campaignId])
 
   // Load first page; reset member list
-  const loadFirst = useCallback(async (district, tier, status, assignee) => {
+  const loadFirst = useCallback(async (district, tier, status, assignee, rsvp) => {
     setLoadingInitial(true)
     setHasMore(false)         // disconnect observer before resetting offset
     hasMoreRef.current = false
     offsetRef.current = 0
     try {
       const [memberRes, statsRes] = await Promise.all([
-        fetch(buildMembersUrl(0, district, tier, status, assignee)),
+        fetch(buildMembersUrl(0, district, tier, status, assignee, rsvp)),
         fetch(`/api/calling/members?campaignId=${campaignId}&stats=true`)
       ])
       const memberData = await memberRes.json()
@@ -95,7 +103,7 @@ export default function CampaignPage({ params }) {
     loadingMoreRef.current = true
     try {
       const res = await fetch(buildMembersUrl(
-        offsetRef.current, filterDistrict, filterTier, filterStatus, filterAssignee
+        offsetRef.current, filterDistrict, filterTier, filterStatus, filterAssignee, filterRsvp
       ))
       const data = await res.json()
       const newRows = data.data || []
@@ -109,7 +117,7 @@ export default function CampaignPage({ params }) {
       setLoadingMore(false)
       loadingMoreRef.current = false
     }
-  }, [filterDistrict, filterTier, filterStatus, filterAssignee])
+  }, [filterDistrict, filterTier, filterStatus, filterAssignee, filterRsvp])
 
   // Initial: fetch campaign + users (only once per campaignId)
   useEffect(() => {
@@ -133,8 +141,8 @@ export default function CampaignPage({ params }) {
 
   // Re-fetch members when filters change (or on mount)
   useEffect(() => {
-    loadFirst(filterDistrict, filterTier, filterStatus, filterAssignee)
-  }, [campaignId, filterDistrict, filterTier, filterStatus, filterAssignee])
+    loadFirst(filterDistrict, filterTier, filterStatus, filterAssignee, filterRsvp)
+  }, [campaignId, filterDistrict, filterTier, filterStatus, filterAssignee, filterRsvp])
 
   useEffect(() => {
     const sentinel = sentinelRef.current
@@ -196,7 +204,7 @@ export default function CampaignPage({ params }) {
         })
       )
       setSplitModalOpen(false)
-      await loadFirst(filterDistrict, filterTier, filterStatus, filterAssignee)
+      await loadFirst(filterDistrict, filterTier, filterStatus, filterAssignee, filterRsvp)
     } catch (err) {
       alert('เกิดข้อผิดพลาด: ' + err.message)
     }
@@ -218,7 +226,7 @@ export default function CampaignPage({ params }) {
           })
         )
       )
-      await loadFirst(filterDistrict, filterTier, filterStatus, filterAssignee)
+      await loadFirst(filterDistrict, filterTier, filterStatus, filterAssignee, filterRsvp)
     } catch (err) {
       alert('เกิดข้อผิดพลาด: ' + err.message)
     }
@@ -306,6 +314,14 @@ export default function CampaignPage({ params }) {
             <option key={a.id} value={a.id}>{a.name} ({a.count})</option>
           ))}
         </select>
+
+        <select value={filterRsvp} onChange={e => setFilterRsvp(e.target.value)}
+          className="h-9 px-3 text-sm border border-warm-200 dark:border-warm-dark-300 bg-white dark:bg-warm-dark-100 text-warm-900 dark:text-warm-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal">
+          <option value="">RSVP (ทั้งหมด)</option>
+          <option value="yes">✓ เข้าร่วม</option>
+          <option value="no">✗ ไม่เข้าร่วม</option>
+          <option value="maybe">? อาจจะ</option>
+        </select>
       </div>
 
       {/* Table */}
@@ -368,9 +384,14 @@ export default function CampaignPage({ params }) {
                     <span className="px-1.5 py-0.5 rounded text-xs font-semibold"
                       style={{ backgroundColor: tierColor.bg, color: tierColor.text }}>{tier}</span>
                   </div>
-                  <div className="md:hidden">
+                  <div className="md:hidden flex items-center gap-1">
                     <span className="px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap"
                       style={{ backgroundColor: badge.bg, color: badge.text }}>{badge.label}</span>
+                    {member.rsvp && (
+                      <span className="text-sm font-bold" style={{ color: RSVP_ICONS[member.rsvp]?.color || '#666' }}>
+                        {RSVP_ICONS[member.rsvp]?.icon || member.rsvp}
+                      </span>
+                    )}
                   </div>
                   <div className="hidden md:block text-xs text-warm-500 dark:text-warm-dark-500 truncate pr-2">
                     {member.home_amphure || '—'}
@@ -379,9 +400,14 @@ export default function CampaignPage({ params }) {
                     title={usersMap[member.assigned_to] || member.assigned_to || '—'}>
                     {usersMap[member.assigned_to] || member.assigned_to || '—'}
                   </div>
-                  <div className="hidden md:block">
+                  <div className="hidden md:flex items-center gap-1">
                     <span className="px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap"
                       style={{ backgroundColor: badge.bg, color: badge.text }}>{badge.label}</span>
+                    {member.rsvp && (
+                      <span className="text-sm font-bold" style={{ color: RSVP_ICONS[member.rsvp]?.color || '#666' }}>
+                        {RSVP_ICONS[member.rsvp]?.icon || member.rsvp}
+                      </span>
+                    )}
                   </div>
                   <div className="hidden md:block text-xs text-warm-500 dark:text-warm-dark-500 text-right">
                     {member.total_calls || 0}

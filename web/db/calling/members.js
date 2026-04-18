@@ -89,7 +89,7 @@ export async function getMembersCount() {
  * Status: 'called' (has calls) | 'assigned' (assigned to someone) | 'unassigned'
  */
 export async function getMembersInCampaign(campaignId, filters = {}, limit = 100, offset = 0) {
-  const { amphure, tier, status, assignedTo } = filters
+  const { amphure, tier, status, assignedTo, rsvp } = filters
   const [rows] = await pool.query(
     `SELECT
        m.*,
@@ -97,6 +97,7 @@ export async function getMembersInCampaign(campaignId, filters = {}, limit = 100
        COALESCE(a.assigned_to, '') AS assigned_to,
        COALESCE(a.assigned_by, '') AS assigned_by,
        COALESCE(a.created_at, NULL) AS assignment_date,
+       a.rsvp,
        l.called_at AS last_called_at,
        l.status AS last_status,
        l.note AS last_note,
@@ -115,6 +116,7 @@ export async function getMembersInCampaign(campaignId, filters = {}, limit = 100
        AND (? IS NULL OR m.home_amphure = ?)
        AND (? IS NULL OR COALESCE(t.tier, 'D') = ?)
        AND (? IS NULL OR a.assigned_to = ?)
+       AND (? IS NULL OR a.rsvp = ?)
      GROUP BY m.source_id
      HAVING (? IS NULL OR member_status = ?)
      ORDER BY m.home_amphure ASC, m.first_name ASC, m.source_id ASC
@@ -124,6 +126,7 @@ export async function getMembersInCampaign(campaignId, filters = {}, limit = 100
       amphure || null, amphure || null,
       tier || null, tier || null,
       assignedTo || null, assignedTo || null,
+      rsvp || null, rsvp || null,
       status || null, status || null,
       limit, offset
     ]
@@ -261,7 +264,7 @@ export async function getMyCampaigns(discordId) {
  * Get members assigned to a specific caller with call status, latest note, and stats
  * call_status: 'called' = has logs in assigned campaign | 'pending' = no logs yet
  */
-export async function getMyAssignedMembers(discordId, { campaignId, status, limit = 200, offset = 0 } = {}) {
+export async function getMyAssignedMembers(discordId, { campaignId, status, rsvp, limit = 200, offset = 0 } = {}) {
   const [rows] = await pool.query(
     `SELECT * FROM (
        SELECT
@@ -269,6 +272,7 @@ export async function getMyAssignedMembers(discordId, { campaignId, status, limi
          COALESCE(t.tier, 'D') AS tier,
          a.campaign_id,
          a.created_at AS assigned_at,
+         a.rsvp,
          ec.name AS campaign_name,
          ec.event_date,
          COALESCE(all_stats.total_calls, 0) AS total_calls,
@@ -301,6 +305,7 @@ export async function getMyAssignedMembers(discordId, { campaignId, status, limi
        ) latest_log ON latest_log.member_id = a.member_id
        WHERE a.assigned_to = ?
          AND (? IS NULL OR a.campaign_id = ?)
+         AND (? IS NULL OR a.rsvp = ?)
      ) sub
      WHERE (? IS NULL OR call_status = ?)
        AND (event_date IS NULL OR event_date >= CURDATE() OR call_status != 'pending')
@@ -310,7 +315,7 @@ export async function getMyAssignedMembers(discordId, { campaignId, status, limi
        home_amphure ASC,
        first_name ASC
      LIMIT ? OFFSET ?`,
-    [discordId, campaignId || null, campaignId || null, status || null, status || null, limit, offset]
+    [discordId, campaignId || null, campaignId || null, rsvp || null, rsvp || null, status || null, status || null, limit, offset]
   )
   return rows
 }

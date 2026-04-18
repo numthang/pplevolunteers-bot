@@ -5,8 +5,13 @@ import { useState, useEffect, useCallback } from 'react'
 const CALL_STATUS_OPTIONS = [
   { value: 'answered',      label: 'รับสาย',   color: '#0d9e94', bg: '#e1f5f4' },
   { value: 'no_answer',     label: 'ไม่รับ',    color: '#854f0b', bg: '#faeeda' },
-  { value: 'busy',          label: 'ไม่ว่าง',   color: '#d4537e', bg: '#fbeaf0' },
   { value: 'wrong_number',  label: 'เบอร์ผิด',  color: '#a32d2d', bg: '#fcebeb' },
+]
+
+const RSVP_OPTIONS = [
+  { value: 'joined',     label: 'เข้าร่วม' },
+  { value: 'not_joined', label: 'ไม่เข้าร่วม' },
+  { value: 'maybe',      label: 'อาจจะ' },
 ]
 
 const SIGNALS = [
@@ -39,19 +44,8 @@ const SIGNALS = [
     options: [
       { value: 4, label: 'กระตือรือร้น' },
       { value: 3, label: 'สนใจ' },
-      { value: 2, label: 'สนใจนิดหน่อย' },
+      { value: 2, label: 'นิดหน่อย' },
       { value: 1, label: 'ไม่สนใจ' },
-    ],
-  },
-  {
-    key: 'sig_reachable',
-    label: 'การติดต่อ',
-    hint: 'ติดต่อได้ง่ายแค่ไหน',
-    options: [
-      { value: 4, label: 'รับสายทันที' },
-      { value: 3, label: 'ติดได้' },
-      { value: 2, label: 'ติดยาก' },
-      { value: 1, label: 'ไม่ติดเลย' },
     ],
   },
 ]
@@ -59,7 +53,6 @@ const SIGNALS = [
 const LOG_STATUS_LABEL = {
   answered:     { label: 'รับสาย',   color: '#0d9e94', bg: '#e1f5f4' },
   no_answer:    { label: 'ไม่รับ',    color: '#854f0b', bg: '#faeeda' },
-  busy:         { label: 'ไม่ว่าง',   color: '#d4537e', bg: '#fbeaf0' },
   wrong_number: { label: 'เบอร์ผิด',  color: '#a32d2d', bg: '#fcebeb' },
 }
 
@@ -87,6 +80,7 @@ function formatDate(val) {
 
 export default function RecordCallModal({ isOpen, member, onClose, onSave, onSaveAndNext, hasNext }) {
   const [status, setStatus] = useState('')
+  const [rsvp, setRsvp] = useState('')
   const [note, setNote] = useState('')
   const [signals, setSignals] = useState({})
   const [saving, setSaving] = useState(false)
@@ -96,6 +90,7 @@ export default function RecordCallModal({ isOpen, member, onClose, onSave, onSav
   // Reset form when member changes
   useEffect(() => {
     setStatus('')
+    setRsvp('')
     setNote('')
     setSignals({})
     setSaving(false)
@@ -123,9 +118,10 @@ export default function RecordCallModal({ isOpen, member, onClose, onSave, onSav
     sig_location:     status === 'answered' ? (signals.sig_location || null) : null,
     sig_availability: status === 'answered' ? (signals.sig_availability || null) : null,
     sig_interest:     status === 'answered' ? (signals.sig_interest || null) : null,
-    sig_reachable:    status === 'answered' ? (signals.sig_reachable || null) : null,
+    sig_reachable:    null,
     note: note.trim() || null,
-  }), [member, status, signals, note, computeOverall])
+    rsvp_status: status === 'answered' ? (rsvp || null) : null,
+  }), [member, status, rsvp, signals, note, computeOverall])
 
   const handleSave = async (goNext = false) => {
     if (!status) return
@@ -164,103 +160,115 @@ export default function RecordCallModal({ isOpen, member, onClose, onSave, onSav
           >×</button>
         </div>
 
-        {/* Body: sidebar first (mobile), form second — reversed on desktop via order */}
+        {/* Body: sidebar first (mobile), form second */}
         <div className="p-5 flex flex-col md:grid md:grid-cols-[1fr_280px] gap-5">
 
           {/* SIDEBAR — appears first on mobile, right column on desktop */}
-          <div className="md:order-2 bg-warm-50 dark:bg-warm-dark-200 rounded-lg p-5 flex flex-col gap-5">
+          <div className="md:order-2 bg-warm-50 dark:bg-warm-dark-200 rounded-lg p-3 flex flex-col gap-3">
 
-            {/* Avatar + Name — centered */}
-            <div className="text-center pb-4 border-b border-warm-200 dark:border-warm-dark-300">
+            {/* Avatar + Name row — compact like card */}
+            <div className="flex items-center gap-2.5 pb-3 border-b border-warm-200 dark:border-warm-dark-300">
               <div
-                className="w-14 h-14 rounded-full flex items-center justify-center text-xl font-semibold mx-auto mb-3"
+                className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0"
                 style={{ backgroundColor: tierColor.bg, color: tierColor.text }}
               >
                 {avatarChar}
               </div>
-              <div className="font-semibold text-sm text-warm-900 dark:text-warm-50">{member.full_name}</div>
-              <div className="text-xs text-warm-500 dark:text-warm-dark-500 mt-1">
-                Tier {tier} · {member.home_amphure || '—'}
-              </div>
-            </div>
-
-            {/* Contact section */}
-            <div>
-              <div className="text-xs font-semibold text-warm-400 dark:text-warm-dark-400 uppercase tracking-wider mb-2">Contact</div>
-              <div className="space-y-2 text-xs">
-                <div>
-                  <div className="text-warm-400 dark:text-warm-dark-400">Phone</div>
-                  {member.mobile_number ? (
-                    <a href={`tel:${member.mobile_number}`}
-                      className="font-semibold text-teal hover:underline mt-0.5 block">
-                      {member.mobile_number}
-                    </a>
-                  ) : (
-                    <div className="text-warm-400 dark:text-warm-dark-400 mt-0.5">ไม่มีเบอร์โทร</div>
-                  )}
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="font-semibold text-sm text-warm-900 dark:text-warm-50 truncate">{member.full_name}</span>
+                  <span className="text-xs font-semibold px-1.5 py-0.5 rounded flex-shrink-0"
+                    style={{ backgroundColor: tierColor.bg, color: tierColor.text }}>{tier}</span>
                 </div>
-                {member.line_id && (
-                  <div>
-                    <div className="text-warm-400 dark:text-warm-dark-400">LINE</div>
-                    <div className="font-semibold text-warm-900 dark:text-warm-50 mt-0.5">{member.line_id}</div>
-                  </div>
-                )}
+                <div className="text-xs text-warm-400 dark:text-warm-dark-400 truncate mt-0.5">
+                  {[member.home_province, member.home_amphure].filter(Boolean).join(' · ') || '—'}
+                </div>
               </div>
             </div>
 
-            {/* Location section */}
+            {/* Contact — compact, no headings */}
+            <div className="text-xs space-y-1">
+              {member.mobile_number ? (
+                <a href={`tel:${member.mobile_number}`} className="font-semibold text-teal hover:underline block">
+                  {member.mobile_number}
+                </a>
+              ) : (
+                <span className="text-warm-400 dark:text-warm-dark-400">ไม่มีเบอร์โทร</span>
+              )}
+              {member.line_id && (
+                <div className="text-warm-500 dark:text-warm-dark-400">LINE: {member.line_id}</div>
+              )}
+            </div>
+
+            {/* Call History — compact */}
             <div>
-              <div className="text-xs font-semibold text-warm-400 dark:text-warm-dark-400 uppercase tracking-wider mb-2">Location</div>
-              <div className="space-y-2 text-xs">
-                {member.home_province && (
-                  <div>
-                    <div className="text-warm-400 dark:text-warm-dark-400">จังหวัด</div>
-                    <div className="font-semibold text-warm-900 dark:text-warm-50 mt-0.5">{member.home_province}</div>
-                  </div>
-                )}
-                {member.home_amphure && (
-                  <div>
-                    <div className="text-warm-400 dark:text-warm-dark-400">อำเภอ</div>
-                    <div className="font-semibold text-warm-900 dark:text-warm-50 mt-0.5">{member.home_amphure}</div>
-                  </div>
+              <div className="text-xs font-semibold text-warm-500 dark:text-warm-dark-400 mb-1.5">
+                ประวัติ{history.length > 0 && (
+                  <span className="font-normal ml-1">
+                    ({history.filter(l => l.status === 'answered').length}/{history.length} รับ)
+                  </span>
                 )}
               </div>
-            </div>
+              {historyLoading ? (
+                <div className="text-xs text-warm-400 dark:text-warm-dark-400">โหลด...</div>
+              ) : history.length === 0 ? (
+                <div className="text-xs text-warm-400 dark:text-warm-dark-400">ยังไม่มี</div>
+              ) : (
+                <div className="space-y-1 max-h-40 overflow-y-auto pr-1 text-xs">
+                  {(() => {
+                    const grouped = {}
+                    history.forEach(log => {
+                      const date = new Date(log.called_at).toLocaleDateString('th-TH')
+                      if (!grouped[date]) grouped[date] = []
+                      grouped[date].push(log)
+                    })
 
-            {/* Campaign section */}
-            <div>
-              <div className="text-xs font-semibold text-warm-400 dark:text-warm-dark-400 uppercase tracking-wider mb-2">Campaign</div>
-              <div className="bg-white dark:bg-warm-dark-100 rounded-lg p-3 text-xs">
-                <div className="text-warm-400 dark:text-warm-dark-400">Campaign</div>
-                <div className="font-semibold text-warm-900 dark:text-warm-50 mt-0.5">{member.campaign_name || '—'}</div>
-              </div>
+                    return Object.entries(grouped).map(([date, logs]) => (
+                      <div key={date} className="border border-warm-200 dark:border-warm-dark-300 rounded p-2 bg-white dark:bg-warm-dark-100">
+                        {logs.map((log, idx) => {
+                          const s = LOG_STATUS_LABEL[log.status] || { label: log.status, color: '#888', bg: '#eee' }
+                          return (
+                            <div key={log.id} className={idx > 0 ? 'pt-2 border-t border-warm-100 dark:border-warm-dark-300' : ''}>
+                              <div className="flex items-center justify-between gap-1 mb-0.5">
+                                <span className="px-1.5 py-0.5 rounded font-semibold text-xs"
+                                  style={{ backgroundColor: s.bg, color: s.color }}>
+                                  {s.label}
+                                </span>
+                                <span className="text-warm-400 dark:text-warm-dark-400 text-xs">{formatDate(log.called_at)}</span>
+                              </div>
+                              {log.note && (
+                                <div className="text-warm-600 dark:text-warm-dark-300 text-xs leading-snug">{log.note}</div>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    ))
+                  })()}
+                </div>
+              )}
             </div>
-
-            {/* Call button */}
-            {member.mobile_number && (
-              <a
-                href={`tel:${member.mobile_number}`}
-                className="flex items-center justify-center gap-2 w-full py-2.5 bg-teal hover:opacity-90 text-white text-sm font-semibold rounded-lg transition"
-              >
-                <span>📞</span>
-                <span>โทร {member.mobile_number}</span>
-              </a>
-            )}
           </div>
 
-          {/* MAIN FORM — second on mobile, left column on desktop */}
+          {/* MAIN FORM */}
           <div className="md:order-1 flex flex-col gap-4">
 
-            {/* Call status */}
+            {/* 2️⃣ Campaign info */}
+            <div className="bg-white dark:bg-warm-dark-100 rounded-lg p-3 text-xs border border-warm-200 dark:border-warm-dark-300">
+              <div className="text-warm-400 dark:text-warm-dark-400 mb-1">Campaign</div>
+              <div className="font-semibold text-warm-900 dark:text-warm-50">{member.campaign_name || '—'}</div>
+            </div>
+
+            {/* 3️⃣ Status selector */}
             <div>
               <div className="text-xs font-semibold text-warm-700 dark:text-warm-200 mb-2">สถานะการโทร *</div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 {CALL_STATUS_OPTIONS.map(opt => (
                   <button
                     key={opt.value}
                     type="button"
                     onClick={() => setStatus(opt.value)}
-                    className={`py-2.5 px-2 text-sm rounded-lg border transition font-medium ${
+                    className={`py-2 px-2 text-xs rounded-lg border transition font-medium ${
                       status === opt.value
                         ? ''
                         : 'border-warm-200 dark:border-warm-dark-300 text-warm-700 dark:text-warm-200 hover:bg-warm-50 dark:hover:bg-warm-dark-200'
@@ -274,44 +282,59 @@ export default function RecordCallModal({ isOpen, member, onClose, onSave, onSav
                   </button>
                 ))}
               </div>
-              {/* Status indicator */}
-              {selectedStatus && (
-                <div
-                  className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold"
-                  style={{ backgroundColor: selectedStatus.bg, color: selectedStatus.color }}
-                >
-                  {status === 'answered' && '✓ '}
-                  {status === 'no_answer' && '⊘ '}
-                  {status === 'busy' && '≈ '}
-                  {status === 'wrong_number' && '✗ '}
-                  {selectedStatus.label}
-                </div>
-              )}
             </div>
 
-            {/* Note */}
+            {/* 4️⃣ Note */}
             <div>
-              <div className="text-xs font-semibold text-warm-700 dark:text-warm-200 mb-2">บันทึกการโทร</div>
+              <div className="text-xs font-semibold text-warm-700 dark:text-warm-200 mb-2">บันทึก</div>
               <textarea
                 value={note}
                 onChange={e => setNote(e.target.value)}
-                rows={3}
-                placeholder="เช่น ทำงานอยู่กรุงเทพ กลับบ้านเดือนละครั้ง สนใจร่วมกิจกรรมช่วงปลายปี"
-                className="w-full px-3 py-2 text-sm border border-warm-200 dark:border-warm-dark-300 bg-white dark:bg-warm-dark-100 text-warm-900 dark:text-warm-50 placeholder-warm-400 dark:placeholder-warm-dark-400 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-teal"
+                rows={2}
+                placeholder="เช่น ทำงานอยู่กรุงเทพ กลับบ้านเดือนละครั้ง"
+                className="w-full px-3 py-2 text-xs border border-warm-200 dark:border-warm-dark-300 bg-white dark:bg-warm-dark-100 text-warm-900 dark:text-warm-50 placeholder-warm-400 dark:placeholder-warm-dark-400 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-teal"
               />
             </div>
 
-            {/* Signals — show only when answered */}
+            {/* 1️⃣ RSVP — shown when answered */}
+            {status === 'answered' && (
+              <div>
+                <div className="text-xs font-semibold text-warm-700 dark:text-warm-200 mb-2">เข้าร่วมกิจกรรมได้ไหม *</div>
+                <div className="grid grid-cols-3 gap-2">
+                  {RSVP_OPTIONS.map(opt => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setRsvp(opt.value)}
+                      className={`py-2 px-2 text-xs rounded-lg border transition font-medium ${
+                        rsvp === opt.value
+                          ? 'bg-teal border-teal text-white'
+                          : 'border-warm-200 dark:border-warm-dark-300 text-warm-700 dark:text-warm-200 hover:border-teal hover:text-teal'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 5️⃣ Signals — show only when answered */}
             {showSignals && (
-              <div className="bg-warm-50 dark:bg-warm-dark-200 rounded-lg p-4 space-y-4">
-                <div className="text-xs font-semibold text-warm-700 dark:text-warm-200">Signal การโทร</div>
+              <div className="bg-warm-50 dark:bg-warm-dark-200 rounded-lg p-3 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-semibold text-warm-700 dark:text-warm-200">Signal การติดต่อ</div>
+                  {!signalsFilled && (
+                    <div className="text-xs text-orange-500 font-medium">เลือกอย่างน้อย 1 ด้าน</div>
+                  )}
+                </div>
                 {SIGNALS.map(sig => (
                   <div key={sig.key}>
                     <div className="flex items-baseline gap-2 mb-1.5">
                       <span className="text-xs font-semibold text-warm-700 dark:text-warm-200">{sig.label}</span>
                       <span className="text-xs text-warm-400 dark:text-warm-dark-400">{sig.hint}</span>
                     </div>
-                    <div className="grid grid-cols-4 gap-1.5">
+                    <div className="grid grid-cols-4 gap-1">
                       {sig.options.map(opt => (
                         <button
                           key={opt.value}
@@ -332,90 +355,32 @@ export default function RecordCallModal({ isOpen, member, onClose, onSave, onSav
               </div>
             )}
 
-            {/* Call History */}
-            <div>
-              <div className="text-xs font-semibold text-warm-700 dark:text-warm-200 mb-2">
-                ประวัติการโทร
-                {history.length > 0 && (
-                  <span className="ml-2 font-normal text-warm-400 dark:text-warm-dark-400">
-                    ({history.filter(l => l.status === 'answered').length}/{history.length} รับสาย)
-                  </span>
-                )}
-              </div>
-              {historyLoading ? (
-                <div className="text-xs text-warm-400 dark:text-warm-dark-400 py-2">กำลังโหลด...</div>
-              ) : history.length === 0 ? (
-                <div className="text-xs text-warm-400 dark:text-warm-dark-400 py-2">ยังไม่มีประวัติการโทร</div>
-              ) : (
-                <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
-                  {history.map(log => {
-                    const s = LOG_STATUS_LABEL[log.status] || { label: log.status, color: '#888', bg: '#eee' }
-                    return (
-                      <div
-                        key={log.id}
-                        className="text-xs border border-warm-200 dark:border-warm-dark-300 rounded-lg p-3 bg-white dark:bg-warm-dark-100"
-                      >
-                        <div className="flex items-center justify-between gap-2 mb-1">
-                          <span
-                            className="px-2 py-0.5 rounded font-semibold"
-                            style={{ backgroundColor: s.bg, color: s.color }}
-                          >{s.label}</span>
-                          <span className="text-warm-400 dark:text-warm-dark-400 whitespace-nowrap">{formatDate(log.called_at)}</span>
-                        </div>
-                        {log.note && (
-                          <div className="text-warm-600 dark:text-warm-dark-300 mt-1 leading-relaxed">{log.note}</div>
-                        )}
-                        {log.status === 'answered' && (log.sig_location || log.sig_availability || log.sig_interest || log.sig_reachable) && (
-                          <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-2 text-warm-500 dark:text-warm-dark-500">
-                            {log.sig_location && (
-                              <span>📍 <SignalScoreLabel signalKey="sig_location" value={log.sig_location} /></span>
-                            )}
-                            {log.sig_availability && (
-                              <span>🕐 <SignalScoreLabel signalKey="sig_availability" value={log.sig_availability} /></span>
-                            )}
-                            {log.sig_interest && (
-                              <span>⭐ <SignalScoreLabel signalKey="sig_interest" value={log.sig_interest} /></span>
-                            )}
-                            {log.sig_reachable && (
-                              <span>📶 <SignalScoreLabel signalKey="sig_reachable" value={log.sig_reachable} /></span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* Action buttons */}
+            {/* 6️⃣ Buttons — compact */}
             <div className="flex gap-2 pt-2 border-t border-warm-200 dark:border-warm-dark-300">
-              {showSignals && !signalsFilled && (
-                <p className="w-full text-xs text-orange-500 mb-1">กรุณาเลือก signal อย่างน้อย 1 ด้าน</p>
-              )}
               {hasNext && (
                 <button
                   onClick={() => handleSave(true)}
                   disabled={!canSave || saving}
-                  className="flex-1 py-2.5 bg-teal hover:opacity-90 disabled:opacity-40 text-white text-sm font-semibold rounded-lg transition"
+                  className="flex-1 py-2 bg-teal hover:opacity-90 disabled:opacity-40 text-white text-xs font-semibold rounded-lg transition"
+                  title="บันทึกและไปคนต่อไป"
                 >
-                  {saving ? 'กำลังบันทึก...' : 'บันทึก & โทรคนต่อไป →'}
+                  {saving ? '...' : 'บันทึก & ต่อ'}
                 </button>
               )}
               <button
                 onClick={() => handleSave(false)}
                 disabled={!canSave || saving}
-                className={`py-2.5 text-sm font-semibold rounded-lg border transition disabled:opacity-40 ${
+                className={`py-2 text-xs font-semibold rounded-lg border transition disabled:opacity-40 ${
                   hasNext
-                    ? 'px-4 border-warm-200 dark:border-warm-dark-300 text-warm-700 dark:text-warm-200 hover:bg-warm-50 dark:hover:bg-warm-dark-200'
+                    ? 'px-3 border-warm-200 dark:border-warm-dark-300 text-warm-700 dark:text-warm-200 hover:bg-warm-50 dark:hover:bg-warm-dark-200'
                     : 'flex-1 bg-teal hover:opacity-90 text-white border-teal'
                 }`}
               >
-                {saving ? 'กำลังบันทึก...' : hasNext ? 'บันทึก' : 'บันทึกการโทร'}
+                {saving ? '...' : 'บันทึก'}
               </button>
               <button
                 onClick={onClose}
-                className="px-4 py-2.5 text-sm text-warm-500 dark:text-warm-dark-500 hover:text-warm-700 dark:hover:text-warm-200 rounded-lg hover:bg-warm-100 dark:hover:bg-warm-dark-200 transition"
+                className="px-3 py-2 text-xs text-warm-500 dark:text-warm-dark-500 hover:text-warm-700 dark:hover:text-warm-200 rounded-lg hover:bg-warm-100 dark:hover:bg-warm-dark-200 transition"
               >
                 ยกเลิก
               </button>

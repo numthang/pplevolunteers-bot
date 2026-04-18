@@ -1,74 +1,11 @@
--- Calling System — Database Migration
--- รัน script นี้ครั้งเดียวก่อน import ข้อมูล
--- ตรวจ error แต่ละ statement ก่อน proceed ถัดไป
+ALTER TABLE act_event_cache ADD COLUMN event_date DATE NULL AFTER description;
+-- 1. migrate busy records
+UPDATE calling_logs SET status = 'no_answer' WHERE status = 'busy';
 
--- ─────────────────────────────────────────────
--- 1. dc_members — เพิ่ม identity fields
--- ─────────────────────────────────────────────
-ALTER TABLE dc_members
-  ADD COLUMN phone      VARCHAR(20)  NULL AFTER discord_id,
-  ADD COLUMN line_id    VARCHAR(100) NULL AFTER phone,
-  ADD COLUMN google_id  VARCHAR(100) NULL AFTER line_id;
+-- 2. remove busy from ENUM
+ALTER TABLE calling_logs 
+  MODIFY COLUMN status ENUM('answered','no_answer','wrong_number') NOT NULL;
 
--- ─────────────────────────────────────────────
--- 2. ngs_member_cache — แทน calling_members_bq
--- ─────────────────────────────────────────────
--- See: scripts/calling/migration-ngs-member-cache.sql
-
--- ─────────────────────────────────────────────
--- 3. calling_campaigns — ถูกแทนด้วย act_event_cache
--- ─────────────────────────────────────────────
--- See: scripts/calling/migration-act-event-cache.sql
--- campaign_id ใน calling_* tables ชี้ไปที่ act_event_cache.id (type='campaign')
-DROP TABLE IF EXISTS calling_campaigns;
-
--- ─────────────────────────────────────────────
--- 4. calling_assignments — assign สมาชิกให้คนโทร
--- ─────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS calling_assignments (
-  id            INT AUTO_INCREMENT PRIMARY KEY,
-  campaign_id   INT          NOT NULL,
-  member_id     INT          NOT NULL COMMENT 'source_id จาก ngs_member_cache',
-  assigned_to   VARCHAR(20)  NOT NULL COMMENT 'discord_id ของคนรับผิดชอบ',
-  assigned_by   VARCHAR(20)  NOT NULL COMMENT 'discord_id ของคนที่ assign',
-  created_at    DATETIME     DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE KEY uq_campaign_member (campaign_id, member_id)
-);
-
--- ─────────────────────────────────────────────
--- 5. calling_logs — บันทึกการโทรแต่ละครั้ง
--- ─────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS calling_logs (
-  id                 INT AUTO_INCREMENT PRIMARY KEY,
-  campaign_id        INT          NOT NULL,
-  member_id          INT          NOT NULL COMMENT 'source_id จาก ngs_member_cache',
-  called_by          VARCHAR(20)  NULL     COMMENT 'discord_id คนที่โทร (NULL ถ้า import จาก XLS)',
-  caller_name        VARCHAR(100) NULL     COMMENT 'display_name ตอนโทร',
-  called_at          DATETIME     DEFAULT CURRENT_TIMESTAMP,
-  status             ENUM('answered','no_answer','busy','wrong_number') NOT NULL,
-  sig_overall        TINYINT NULL COMMENT '1=D 2=C 3=B 4=A (caller overall grade per call)',
-  sig_location       TINYINT NULL COMMENT '1=ต่างประเทศ 2=ต่างจังหวัด 3=ในจังหวัด 4=ในอำเภอ',
-  sig_availability   TINYINT NULL COMMENT '1=ไม่ว่างเลย 2=ไม่ค่อยว่าง 3=ว่างบ้าง 4=ว่างมาก',
-  sig_interest       TINYINT NULL COMMENT '1=ไม่สนใจ 2=สนใจนิดหน่อย 3=สนใจ 4=กระตือรือร้น',
-  sig_reachable      TINYINT NULL COMMENT '1=ไม่ติดเลย 2=ติดยาก 3=ติดได้ 4=รับสายทันที',
-  note               TEXT NULL,
-  extra              JSON NULL COMMENT 'custom fields เพิ่มเติม',
-  created_at         DATETIME     DEFAULT CURRENT_TIMESTAMP,
-  INDEX idx_campaign (campaign_id),
-  INDEX idx_member   (member_id)
-);
-
--- ─────────────────────────────────────────────
--- 6. calling_member_tiers — tier ปัจจุบันของสมาชิก
--- ─────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS calling_member_tiers (
-  id              INT AUTO_INCREMENT PRIMARY KEY,
-  member_id       INT          NOT NULL COMMENT 'source_id จาก ngs_member_cache',
-  tier            ENUM('A','B','C','D') NOT NULL,
-  tier_source     ENUM('auto','manual') NOT NULL DEFAULT 'auto',
-  override_by     VARCHAR(20)  NULL COMMENT 'discord_id คนที่ override (manual เท่านั้น)',
-  override_reason TEXT         NULL,
-  custom_fields   JSON         NULL,
-  updated_at      DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  UNIQUE KEY uq_member (member_id)
-);
+-- 3. เพิ่ม rsvp column (ถ้ายังไม่ได้ทำ)
+ALTER TABLE calling_assignments
+  ADD COLUMN rsvp ENUM('yes','no','maybe') NULL AFTER assigned_by;
