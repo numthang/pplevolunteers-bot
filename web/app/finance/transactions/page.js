@@ -271,16 +271,6 @@ function TransactionsContent() {
         )
       })()}
 
-      {/* Search */}
-      <div className="mb-3">
-        <input
-          className="w-full border dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400"
-          placeholder="ค้นหารายการ..."
-          value={searchInput}
-          onChange={e => setSearchInput(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && setFilter(f => ({ ...f, search: searchInput }))}
-        />
-      </div>
 
       {/* Filters */}
       <div className="flex flex-col gap-2 mb-5">
@@ -296,7 +286,7 @@ function TransactionsContent() {
 
         {/* Date filter toggle */}
         {(() => {
-          const hasDate = filter.year || filter.month || filter.dateFrom || filter.dateTo
+          const hasDate = filter.year || filter.month || filter.dateFrom || filter.dateTo || filter.search
           const now = new Date()
           const years = Array.from({ length: 6 }, (_, i) => now.getFullYear() - 5 + i)
           const dateLabel = filter.dateFrom || filter.dateTo
@@ -311,7 +301,7 @@ function TransactionsContent() {
                 </span>
                 <div className="flex items-center gap-2">
                   {hasDate && (
-                    <span onClick={e => { e.stopPropagation(); setFilter(f => ({ ...f, year: '', month: '', dateFrom: '', dateTo: '' })) }}
+                    <span onClick={e => { e.stopPropagation(); setSearchInput(''); setFilter(f => ({ ...f, year: '', month: '', dateFrom: '', dateTo: '', search: '' })) }}
                       className="text-xs text-gray-400 hover:text-red-500 transition px-1">ล้าง</span>
                   )}
                   <ChevronDown size={14} className={`text-gray-400 transition-transform ${dateOpen ? 'rotate-180' : ''}`} />
@@ -319,6 +309,13 @@ function TransactionsContent() {
               </button>
               {dateOpen && (
                 <div className="border-t dark:border-gray-700 px-3 py-3 space-y-2">
+                  <input
+                    className="w-full border dark:border-gray-600 rounded px-2 py-1.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400"
+                    placeholder="ค้นหารายการ..."
+                    value={searchInput}
+                    onChange={e => setSearchInput(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && setFilter(f => ({ ...f, search: searchInput }))}
+                  />
                   <div className="flex gap-2">
                     <select className="flex-1 border dark:border-gray-600 rounded px-2 py-1.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                       value={filter.year} onChange={e => setFilter(f => ({ ...f, year: e.target.value, month: '', dateFrom: '', dateTo: '' }))}>
