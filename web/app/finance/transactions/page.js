@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { Suspense } from 'react'
 import CategorySelect, { CatIcon } from '@/components/CategorySelect'
 import { formatThaiDateHeader, formatThaiDateShort, formatThaiDateTime } from '@/lib/dateFormat'
@@ -12,14 +12,37 @@ const MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','�
 
 function TransactionsContent() {
   const searchParams = useSearchParams()
-  const defaultAccountId = searchParams.get('accountId') || ''
+  const router = useRouter()
 
   const [txns, setTxns]         = useState([])
   const [accounts, setAccounts] = useState([])
   const [categories, setCategories] = useState([])
-  const [filter, setFilter]     = useState({ accountId: defaultAccountId, type: '', categoryId: '', search: '', year: '', month: '', dateFrom: '', dateTo: '' })
+  const [filter, setFilter]     = useState({
+    accountId:  searchParams.get('accountId')  || '',
+    type:       searchParams.get('type')       || '',
+    categoryId: searchParams.get('categoryId') || '',
+    search:     searchParams.get('search')     || '',
+    year:       searchParams.get('year')       || '',
+    month:      searchParams.get('month')      || '',
+    dateFrom:   searchParams.get('dateFrom')   || '',
+    dateTo:     searchParams.get('dateTo')     || '',
+  })
   const [balance, setBalance]   = useState(null)
-  const [searchInput, setSearchInput] = useState('')
+  const [searchInput, setSearchInput] = useState(searchParams.get('search') || '')
+
+  // sync filter → URL
+  useEffect(() => {
+    const p = new URLSearchParams()
+    if (filter.accountId)  p.set('accountId',  filter.accountId)
+    if (filter.type)       p.set('type',        filter.type)
+    if (filter.categoryId) p.set('categoryId',  filter.categoryId)
+    if (filter.search)     p.set('search',      filter.search)
+    if (filter.year)       p.set('year',        filter.year)
+    if (filter.month)      p.set('month',       filter.month)
+    if (filter.dateFrom)   p.set('dateFrom',    filter.dateFrom)
+    if (filter.dateTo)     p.set('dateTo',      filter.dateTo)
+    router.replace('?' + p.toString(), { scroll: false })
+  }, [filter])
   const [editing, setEditing]   = useState(null)
   const [form, setForm]         = useState({})
   const [expandedId, setExpandedId] = useState(null)
@@ -35,7 +58,7 @@ function TransactionsContent() {
     const pad = n => String(n).padStart(2, '0')
     return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
   }
-  const EMPTY_FORM = { account_id: defaultAccountId, type: 'income', amount: '', description: '', category_id: '', counterpart_name: '', counterpart_bank: '', counterpart_account: '', txn_at: toLocalDT() }
+  const EMPTY_FORM = { account_id: filter.accountId, type: 'income', amount: '', description: '', category_id: '', counterpart_name: '', counterpart_bank: '', counterpart_account: '', txn_at: toLocalDT() }
 
   useEffect(() => {
     fetch('/api/finance/accounts').then(r => r.json()).then(setAccounts)
