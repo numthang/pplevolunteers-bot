@@ -20,7 +20,7 @@ async function downloadEvidence(url) {
     const buf = await fetchBuffer(url)
     const ext = url.match(/\.(png|jpg|jpeg|webp)/i)?.[1]?.toLowerCase() || 'jpg'
     const filename = `${randomUUID()}.${ext}`
-    const uploadDir = join(process.cwd(), 'public', 'uploads', 'evidence')
+    const uploadDir = join(process.cwd(), 'web', 'public', 'uploads', 'evidence')
     await mkdir(uploadDir, { recursive: true })
     await writeFile(join(uploadDir, filename), buf)
     return `/uploads/evidence/${filename}`
