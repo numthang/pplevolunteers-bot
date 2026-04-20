@@ -1,103 +1,62 @@
 # UPDATE.md - new Update document from owner to push in their project in md/*
+---
+## PPLE Finance
+ขั้นตอน Setup
+1. เพิ่มใน .env
+SMS_WEBHOOK_PORT=3099
+SMS_WEBHOOK_SECRET=ใส่รหัสลับอะไรก็ได้ยาวๆ
+2. เปิด Port ที่ server (ถ้า firewall)
 
-ช่วยบันทึกทุกอย่างที่รู้ ลง calling.md และ docs.md รวมถึง web.md ด้วยถ้ามีอะไรจะบันทึกอย่างเช่นในส่วนของ integration 3 ระบบ
+sudo ufw allow 3099/tcp
+3. ตั้งค่า SMS Forwarder app (Android)
+ใช้แอป SMS Forwarder (ฟรี บน Play Store) ตั้งค่า:
+
+Webhook URL: http://<server-ip>:3099/
+Method: POST
+Headers: Authorization: Bearer <SMS_WEBHOOK_SECRET>
+Body (JSON):
+
+{
+  "from": "%from%",
+  "message": "%message%",
+  "device": "Samsung-A03-Ratchaburi"
+}
+Filter: เฉพาะ SMS จาก sender KBANK
+4. ตั้งค่า Android ให้ระบบไม่ตาย
+Battery Optimization (สำคัญมาก):
+
+Settings → Apps → SMS Forwarder → Battery → Unrestricted
+Settings → Device Care → Battery → Background Usage Limits → ปิดสำหรับ SMS Forwarder
+Samsung-specific:
+
+Settings → Apps → SMS Forwarder → Allow background activity: ON
+ใช้ "Protect Battery" mode (85%) ได้เลย — ไม่กระทบ SMS รับ
+ห้าม Force Stop แอปหลัง reboot
+
+curl -X POST "https://discord.com/api/webhooks/1495485915655704676/dCZ_VYpBp6LSmR2ym_XyFv0sQb0PBo5Eubi0BWj2HF5pRs_-0lmEvJ8hwpyXowlEeVoD" \
+  -H "Content-Type: application/json" \
+  -d '{
+        "content": "รายการโอนเข้า 500.00บ. จาก นาย สมชาย เข้าบัญชี x-1234 เมื่อ 19/04/26 17:15น. ยอดเงินคงเหลือ 1,500.00บ."
+  }'
+
 ---
 ## 📞 PPLE Calling
-<!-- ## update calling permission ฝากเติมลง md/calling.md
-
-1. ดู/โทรสมาชิก (default scope):
-เห็นสมาชิกพื้นที่ Override โดย admin / เลขาธิการ → ดูได้ทั้งประเทศ
-รองเลขาธิการภาค → ดูได้ทุกจังหวัดในภาค (ขยายข้ามภาคได้)
-ผู้ประสานงานภาค → ทุกจังหวัดในภาค   (ขยายข้ามภาคได้)
-ผู้ประสานงานจังหวัด → ทุกอำเภอในจังหวัด (ขยายข้ามจังหวัดได้)
-กรรมการจังหวัด → ทุกอำเภอในจังหวัด    (ขยายข้ามจังหวัดได้)
-ตทอ. → อำเภอที่ admin กำหนด    เพิ่ม/ลด อำเภอได้
-
-2. Assign สมาชิก: Role ที่ assign ได้
-Admin →  ทุกคน ทุกพื้นที่
-รองเลขาธิการภาค / ผู้ประสานงานภาค → สมาชิกทุกจังหวัดในภาคตัวเอง
-ผู้ประสานงานจังหวัด / กรรมการจังหวัด → สมาชิกในจังหวัดตัวเอง
-ตทอ. → สมาชิกในอำเภอที่ได้รับมอบหมาย
-
-3. Special Rules:
-Assign แล้ว → คนที่ถูก assign เข้าถึงสมาชิกคนนั้นได้เลย (bypass scope check)
-Deny ชนะเสมอ — ถ้า admin ตั้ง deny สำหรับบุคคล ก็ไม่ได้เข้า
-Override ได้รายคน — admin สามารถให้สิทธิ์พิเศษหรือเพิก privilege ได้ -->
-
-Optional
-เพิ่ม audit logs -> สามารถดูได้ว่าแก้ไขหรือเพิ่มอะไร (เป็น History)
-(การขยายข้ามภาค) approval flow เช่น 
-เข้าถึงสมาชิกทั้งประเทศ+ทั้งหมด → ขอ approval ผ่านเลขาธิการ/แอดมิน
-เข้าถึงสมาชิกระดับภาค → ขอ approval ผ่านรองเลขาธิการภาค/ผู้ประสานงานภาค
-เข้าถึงสมาชิกระดับจังหวัด → ขอ approval ผู้ประสานงาน/กรรมการจังหวัด
-
-### แก้ bug finance ด่วน
-- กรณีบัญชี private ตอนนี้ ไม่ขึ้นให้คนทั่วไปดู แต่ขึ้น transaction หราเลย 
-
-### แก้ไขก่อน 
-<!-- - calling_campaigns นี่เรามาทำเป็นตาราง act_event_cache จากระบบ act เดิม gemini บอกให้ทำ cache act_events แล้วตัด calling_campaigns ทิ้ง ใช้ act_event_id แทน campaign_id (ใช้ campaign_id ก็ได้ แต่ให้รู้ว่ามันคือ act_event_id) อันนี้โอเคไหม เดี๋ยวให้ดูตัวอย่างข้อมูล act_registers เป็นข้อมูลที่แสดงคนลงทะเบียน ต่อ 1 กิจกรรม โดย event_id ของกิจกรรมนี้คือ 146354 ดูจาก ref_id ของคนลงทะเบียนแล้ว เหมือนมัน run recursive แบบ wordpress style อ่ะ ผมว่าคุณคงเดา schema ออก ลองคาดเดาหน่อย เผลอๆ ตาราง act_registers ไม่มี แต่คือ ตาราง act_events เดียวกันนี่แหละแบบ wordpress style -->
-<!-- - กลับมา calling ต่อ อาจจะต้องแก้ campaign_id เป็น id ของตาราง act_event_cache ไหม และ อาจจะใช้ชื่อ event_id หรือ act_event_id ไหม ใช้ชื่ออะไรดี -->
-<!-- - ตอนนี้อยากให้แสดงสมาชิกทั้งหมดเลย ตาม view permission ของ user คนนั้น จะอ่านได้ตามลำดับการเข้าถึงโดย role ตรงนี้ทำหรือยังนะ แล้วก็มี view as role ด้วยคล้ายๆ finance เลย
-- มาดู แต่ละหน้ากันต่อ เราจะมีหน้า campaign, member list, pending call เอาไปอ่านก่อน แล้วก็อยากได้ UI/UX เหมือนที่ออกแบบมาใน md/calling/calling-system-v2.html ดูออกไหมแต่ละหน้าเป็นยังไง process เป็นไง -->
-<!-- - ยังอยู่หน้า calling/[campaignId] ยังคงไม่เป็นระเบียบเลย, ตอนนี้แสดง member แค่ 100 คน, อำเภอแสดงไม่ครบ, ทำ campaign_id ให้แสดงเป็นรหัสจังหวัดไหมเช่นราชบุรี 70 บน act ก็เหมือนจะไม่มี id เลข 2 หลักพวกนี้เลย -->
-
-<!-- เพิ่มเมนูบน Nav หน้า Pending calls ทำตามรายละเอียดดังนี้
-- md/calling/calling-system-v2.html Included: 
-✅ Page 1: Campaign selection (landing) ✅ Page 2: Member list + bulk assign modal ✅ Page 3: Call logging with sidebar (member info + campaign details) ✅ Page 4: Member profile + call history ✅ Page 5: Campaign management (CRUD) ✅ Modal: Assign to... (searchable dropdown) ✅ Status badges: Called/Pending ✅ Progressive disclosure: Signals show only when "Answered" selected ✅ Status indicator: Shows live when status clicked
-- เป็นหน้าของคนที่เราได้รับ assign มาให้โทร
-- จิ้มไปที่รายชื่อสมาชิกแล้ว จะเป็น model แสดงหน้า Record call ดูดีไซน์จาก md/calling/calling-system-v2.html
-- Modal Record Call (ใช้คำศัพท์อะไรก็ได้ถ้าช่วยคิด เช่น call recording, calling log) ให้ขึ้นแสดงข้อมูล campaign ของการโทร, มีปุ่มกดโทรจากหน้านี้, รายละเอียดสมาชิกเน้นช่องทางติดต่อ, ปุ่ม signal การโทร, ช่องบันทึกการโทร, sig status 4 ด้าน (location availability interest Reachable) ตอนกด answered, history ของการโทรหาสมาชิกพร้อมคะแนน signal (มี hint เขียนบอกว่าคะแนนแต่ละ signal คืออะไร), อย่าลืมทำให้ mobile friendly One-column layout responsive, Avatar, ข้อมูลสมาชิกดึงจาก ngs_member_cache
-- เพิ่มปุ่ม "Save & Call Next Member" เพื่อลดขั้นตอนการคลิกและทำคิวโทรให้ต่อเนื่อง
-- แสดง "บันทึกล่าสุด (Latest Note)" และ "สถิติการรับสาย (X/Y)" บนการ์ดสมาชิกในหน้า Pending calls
-- อย่าลืมคำนึงถึงเรื่อง เน้นให้คนโทร (Caller) ทำงานได้ไวและเตรียมตัวก่อนโทรได้ทันที -->
-
-อัพเดท Calling (calling/pending)
-<!-- - ขอแก้ไขสถานะทั้งหมดใหม่ดังนี้
-answered => รับสาย    ✅ ชัด
-no_answer => ไม่รับ    ✅ ชัด
-wrong_number => เบอร์ผิด    ✅ ชัด
-pending => ยังไม่โทร (ถ้าไม่มี 3 สถานะ ด้านบน แสดงว่ายังไม่โทร)
-แล้วก็อยากเพิ่มสถานะว่าร่วมกิจกรรมได้ "เข้าร่วม/ไม่เข้าร่วม/อาจจะ" จะเป็นอีกสถานะ หรือเพิ่ม field ใหม่ดี ความเห็นผมน่าจะเพิ่ม field คิดว่าไง
-- เช็ค pending จากวันที่ใน act_event_cache ถ้าเลยกำหนดกิจกรรมแล้ว ให้หายไปจาก pending ซ่อน assignment ไว้ ไม่ต้องแสดง? -->
+### อัพเดท Calling (calling/pending)
 - wrong_number นี่เราจะรู้ใน layer log ไหมนะ อันนี้มันน่าจะ flag ระดับสมาชิก ไม่แน่ใจขอความเห็น
-- ทำได้ครับ แต่ก่อนอื่นผมอยากให้เปลี่ยน member_id ใน dc_members เป็น serial และ สร้างคอลัมน์ member_id ขึ้นมาใหม่ใน dc_members อนาคตจะพยายาม sync กับ ngs_member_cache.id อยู่ และ act ก็จะมีข้อมูล discord_id ให้ด้วย กำลัง sync แต่ตอนนี้ยัง ทำปุ่ม sync กับ serial หรือ member_id เตรียมไว้ก่อนได้เลยครับ สรุปมาอีกที เข้าใจว่าไง
+- เวลาเพิ่มโรลแล้วไม่ต้องล็อกอินล็อคเอาท์ใหม่ เพื่อ reload permission ได้ไหมจะได้ debug ง่ายขึ้น
 
-อัพเดท Calling (calling/[campaignId])
-<!-- - ใน dropdown filter ทุกตัว ให้วงเล็บจำนวนสมาชิกใน filter นั้นๆ 
-- ไม่เข้าใจในวงเล็บ ตรง (ไม่มี call log เลย)
-- หลังงานผ่านไปแล้ว แค่ให้ไม่ต้องแสดงในหน้า calling/pending เพราะไม่ต้องโทรแล้ว อย่างอื่นไม่ต้องแก้อะไร ดังนั้นแล้ว assignment ยังอยู่แค่ไม่แสดงเฉยๆ
-- ถ้าไม่มี calling log ในแคมเปญนั้นถือว่ายังไม่ไพ้มอบหมาย (รอมอบหมาย) ดังนั้น ฟิลเตอร์หน้านี้มีแค่มอบหมายแล้วกับยังไม่ได้มอบหมายก็พอ ลังเลว่าจะใช้คำว่า "ยังไม่มอบหมาย" หรือ "รอมอบหมายดี" -->
+### อัพเดท Calling (calling/[campaignId])
 - คุณตรวจดูหน่อยว่า ตอนนี้ calling system ผมมีหน้า แคมเปญแล้ว pending call แล้ว เวลาผมจะกลับไปหน้า campaign มันไม่ flow ผมไม่อยากต้องมาเลือก campaign ใหม่อ่ะ อยากเข้าไป last state ของหน้า campaign นั้น
 
-หน้า Calling (calling/members)?
-- จิ้มไปที่ member แล้วแสดงหน้า คล้ายๆ แบบ Record call ดู md/calling/calling-system-v2.html อย่าลืมปุ่มกดโทร ดึงข้อมูลโทรศัพท์จาก ngs_member_cache แสดง history ของแต่ละการโทรของและแคมเปญแต่ละครั้ง
-
-ชวนคิด
+### Optional
+- เพิ่ม audit logs -> สามารถดูได้ว่าแก้ไขหรือเพิ่มอะไร (เป็น History)
+(การขยายข้ามภาค) approval flow เช่น 
+- เข้าถึงสมาชิกทั้งประเทศ+ทั้งหมด → ขอ approval ผ่านเลขาธิการ/แอดมิน
+- เข้าถึงสมาชิกระดับภาค → ขอ approval ผ่านรองเลขาธิการภาค/ผู้ประสานงานภาค
+- เข้าถึงสมาชิกระดับจังหวัด → ขอ approval ผู้ประสานงาน/กรรมการจังหวัด
 - เมื่อบันทึกว่าเป็น Wrong number ระบบควรมี Alert ถามว่าจะ "ลบเบอร์นี้/มาร์คว่าเบอร์เสีย" ในฐานข้อมูลหลักเลยหรือไม่ เพื่อไม่ให้คนอื่นเสียเวลาโทรซ้ำใน Campaign ถัดไป
 
-ปัญหาที่เจอ
-มีคน test แล้วได้ 403 "cannot assign in ราชบุรี" ทั้งที่มี role กรรมการจังหวัด + ทีมราชบุรี ครบ
-
-สาเหตุ
-โค้ดใน POST /api/calling/assignments loop เช็ค home_province ของสมาชิกพรรคทุกคนที่จะถูก assign ให้โทรหา — ถ้าสมาชิกคนใดมีทะเบียนบ้านต่างจังหวัด → 403 ทันที
-
-ทำไมถึงผิด
-สมาชิกพรรคอาจมีทะเบียนบ้านอยู่ต่างจังหวัด แต่เป็น กก.จังหวัดอื่นได้ — home_province ไม่ควรเป็นตัวกำหนด permission ในการ assign
-
-ที่ควรเป็น
-เช็คแค่ว่า คนที่กด assign มี role ครอบคลุม province ของ campaign ไหม — ครั้งเดียว ไม่ต้อง loop
-
-สิ่งที่จะแก้ใน route.js
-
-POST — ลบ loop เช็ค member ทิ้ง เปลี่ยนเป็นดึง campaign แล้วเช็ค campaign.province ครั้งเดียว
-PUT / DELETE — เช็ค campaign.province แทน member.home_province
-Import — เพิ่ม campaignDB, ลบ memberDB และ isAdmin (unused)
-
-๊UI 
-- ตอนนี้ขนาดฟอนต์เท่าไร เพิ่มอีกหน่อย 
-- Dark Mode ผมว่าตัวหนังสือกลืนไปเยอะเลย Header ของตาราง ขอสีม่วง discord ได้ไหม ช่วยแนะนำผมหน่อยว่าเวลาผมจะบอกตรงไหนควรเป็นสีอะไร จะบอกให้แก้ยังไง หรือคุณมีชุดธีมสีให้เลือกเป็น pattern เลยไหมอ่ะ
-- ทำ element ให้ liquid 100% 
-
+### UI
 ---
 <!-- 📌 ภาพรวมของ PPLE Docs
 PPLE Docs คือระบบบริหารจัดการเอกสารทางกฎหมายและลายเซ็นดิจิทัล (E-signature) ที่เป็นส่วนต่อขยายของโปรเจกต์ ACT เพื่อให้อาสาสมัครและสมาชิกพรรคสามารถทำธุรกรรมและเซ็นเอกสารประกอบกิจกรรม (เช่น เอกสารเบิกจ่ายของ กกต.) ได้อย่างรวดเร็วหน้างาน
@@ -163,5 +122,4 @@ Private account → เจ้าของ || Admin
 Internal account → เจ้าของ || Admin || เลขาธิการ || เหรัญญิก && { กรรมการจังหวัด (ของบัญชีนั้น) || ผู้ประสานงาน (ของบัญชีจังหวัดนั้น) || ผู้ประสานงานภาค (ของบัญชีจังหวัดนั้น) || รองเลขาภาค (ของบัญชีจังหวัดนั้น) -->
 ---
 ## อื่นๆ สำหรับ finance และ calling
-- ทำระบบ view as role บนเว็บ มี เหรัญญิก กรรมการจังหวัด ผู้ประสานงานจังหวัด ผู้ประสานงานภาค รองเลขาภาค เลขาธิการ
-- Mobile Design คนส่วนใหญ่ใช้มือถือแหละ ไม่ค่อยใช้คอมกันแล้ว 
+- ทำระบบ view as role บนเว็บ มี เหรัญญิก กรรมการจังหวัด ผู้ประสานงานจังหวัด ผู้ประสานงานภาค รองเลขาธิการ 

@@ -27,6 +27,7 @@ const { getAllForumConfigs, deleteForumPost } = require('./db/forum');
 const { deletePost } = require('./services/meilisearch');
 const { initMeilisearch } = require('./services/meilisearch')
 const emailPoller = require('./services/emailPoller');
+const smsWebhook  = require('./services/smsWebhook');
 const { handleSlipMessage } = require('./services/financeOCR');
 
 const fs = require('fs');
@@ -58,6 +59,7 @@ client.once('clientReady', async () => {
   console.log(`🤖 Bot พร้อมแล้ว! ${client.user.tag}`);
   await initMeilisearch();
   emailPoller.init(client);
+  smsWebhook.init(client);
   // โหลด forum configs ทุก guild ที่ bot อยู่
   for (const guild of client.guilds.cache.values()) {
     const configs = await getAllForumConfigs(guild.id).catch(() => []);

@@ -19,7 +19,6 @@ const FINANCE_LINKS = [
 const CALLING_LINKS = [
   { href: '/calling',         label: 'Campaigns' },
   { href: '/calling/pending', label: 'Pending calls' },
-  { href: '/calling/members', label: 'Member lists' },
 ]
 
 const APPS = [

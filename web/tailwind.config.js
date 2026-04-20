@@ -22,6 +22,14 @@ module.exports = {
             500: '#6b6960',
           },
         },
+        disc: {
+          bg2:    '#1e1e1e',  // card / container  (VSCode editor bg)
+          header: '#252526',  // table header row  (VSCode sidebar)
+          hover:  '#2a2d2e',  // row hover + expanded panel
+          border: '#3e3e3e',  // dividers
+          text:   '#d4d4d4',  // primary text
+          muted:  '#858585',  // secondary / label text
+        },
         teal: {
           DEFAULT: '#6366f1',
           light:   '#e0e7ff',

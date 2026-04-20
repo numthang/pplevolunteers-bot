@@ -40,26 +40,11 @@ ALTER TABLE dc_members
 
 ---
 
-### 2. `bq_members` — จำลอง BigQuery (import จาก XLS)
+### 2. `ngs_member_cache` — ข้อมูลสมาชิกพรรค (sync จาก ACT)
 
-```sql
-CREATE TABLE bq_members (
-  member_id     VARCHAR(20)   NOT NULL PRIMARY KEY,
-  prefix        VARCHAR(20)   NULL,
-  name          VARCHAR(200)  NOT NULL,
-  member_type   VARCHAR(50)   NULL COMMENT 'รายปี / ตลอดชีพ',
-  district      VARCHAR(100)  NULL COMMENT 'อำเภอ',
-  subdistrict   VARCHAR(100)  NULL COMMENT 'ตำบล',
-  province      VARCHAR(100)  NULL,
-  phone         VARCHAR(20)   NULL,
-  line_id       VARCHAR(100)  NULL COMMENT 'LINE Identity (ใช้ link)',
-  line_username VARCHAR(100)  NULL COMMENT 'LINE contact ที่สมาชิกให้มา',
-  created_at    DATETIME      DEFAULT CURRENT_TIMESTAMP
-);
-```
-
-- import มาจาก XLS ราชบุรี (และจังหวัดอื่นๆ ในอนาคต) ผ่าน `scripts/calling/import-members-xls.js`
-- อนาคตเมื่อเชื่อม BigQuery จริง → เปลี่ยน query source ใน `db/calling/members.js` โดยไม่ต้องแตะ schema calling_ tables
+- ตาราง source หลักที่ `db/calling/members.js` และ `db/calling/tiers.js` query
+- key field: `source_id` (= member_id ที่ใช้ join กับ `calling_*` tables), `home_province`
+- sync มาจาก ACT ผ่าน script แยก — ไม่ต้องแตะ schema `calling_*` ถ้าเปลี่ยน source
 
 ---
 
@@ -194,41 +179,30 @@ D = score < 1.5
 
 ## Permission & Access Control
 
-ใช้ role hierarchy เดิมใน `config/roles.js` ไม่สร้างใหม่
+ใช้ฟังก์ชันใน `web/lib/callingAccess.js`
 
-### 1. ดู/โทรสมาชิก (View & Call Scope)
+### Role hierarchy (ตาม callingAccess.js)
 
-#### Default Scope ตามลำดับเขต:
+| กลุ่ม | Roles | Scope |
+|-------|-------|-------|
+| Admin | `Admin`, `เลขาธิการ` | ทั่วประเทศ |
+| ภาค | `ผู้ประสานงานภาค`, `รองเลขาธิการ` + `ทีมภาค...` | จังหวัดในภาคที่ตัวเองสังกัด (มีได้หลายภาค) |
+| จังหวัด | `ผู้ประสานงานจังหวัด`, `กรรมการจังหวัด` + `ทีมXXX` | จังหวัดตัวเอง |
 
-| Role | Default Scope | Extendable | Notes |
-|------|---|---|---|
-| Admin / เลขาธิการ | ทั้งประเทศ | — | Override โดย admin เห็นสมาชิกพื้นที่ทั่ว |
-| รองเลขาธิการภาค | ทุกจังหวัดในภาค | ขยายข้ามภาค | โดย admin อนุมัติ |
-| ผู้ประสานงานภาค | ทุกจังหวัดในภาค | ขยายข้ามภาค | โดย admin อนุมัติ |
-| ผู้ประสานงานจังหวัด | ทุกอำเภอในจังหวัด | ขยายข้ามจังหวัด | โดย admin อนุมัติ |
-| กรรมการจังหวัด | ทุกอำเภอในจังหวัด | ขยายข้ามจังหวัด | โดย admin อนุมัติ |
-| ตทอ. | อำเภอที่ admin กำหนด | เพิ่ม/ลด อำเภอ | โดย admin ผู้บังคับบัญชา |
+> `ตทอ.` = `กรรมการจังหวัด`  
+> `เลขาธิการ` ยังไม่มี Discord role — ทิ้งไว้ใน code สำหรับอนาคต
 
-### 2. Assign สมาชิก (Assignment Scope)
+### Assign Permission
 
-| Role | สามารถ Assign | Scope |
-|------|---|---|
-| Admin / เลขาธิการ | ทุกคน | ทั่วประเทศ |
-| รองเลขาธิการภาค / ผู้ประสานงานภาค | สมาชิก | ในภาคตัวเอง |
-| ผู้ประสานงานจังหวัด / กรรมการจังหวัด | สมาชิก | ในจังหวัดตัวเอง |
-| ตทอ. | สมาชิก | ในอำเภอที่ได้รับมอบหมาย |
+- เช็คที่ **assigner** คนเดียว — ดูว่า role ครอบ `campaign.province` ไหม
+- **ไม่เช็ค** home_province ของสมาชิกที่จะถูก assign (assignee)
+- assignee คือใครก็ได้ — เมื่อถูก assign แล้วเข้าถึงสมาชิกนั้นได้เลย (bypass scope)
 
-### 3. Special Rules
+### Special Rules
 
 ```
-✅ Assign แล้ว → คนที่ถูก assign เข้าถึงสมาชิกคนนั้นได้เลย
-   (Bypass default scope check)
-
-❌ Deny ชนะเสมอ → ถ้า admin ตั้ง deny สำหรับบุคคล
-   ไม่ได้เข้าถึงไม่ว่าจะมี assign หรือ scope อะไร
-
-⚙️ Override ได้รายคน → Admin สามารถให้สิทธิ์พิเศษ
-   หรือเพิก privilege ได้แบบ case-by-case
+✅ Assign แล้ว → assignee เข้าถึงสมาชิกคนนั้นได้เลย (bypass scope)
+⚙️ Override tier ได้รายคน → Admin หรือ เหรัญญิก เท่านั้น
 ```
 
 ---
@@ -298,8 +272,9 @@ filter: [ อำเภอ ▼ ] [ ระดับ ▼ ] [ สถานะ ▼ ]
 ที่อยู่:    [ ต่างประเทศ | ต่างจังหวัด | ในจังหวัด | ในอำเภอ ]
 เวลา:      [ ไม่ว่างเลย | ไม่ค่อยว่าง | ว่างบ้าง | ว่างมาก ]
 ความสนใจ:  [ ไม่สนใจ | สนใจนิดหน่อย | สนใจ | กระตือรือร้น ]
-ติดต่อได้: [ ไม่ติดเลย | ติดยาก | ติดได้ | รับสายทันที ]
 ```
+
+> `sig_reachable` column ยังอยู่ใน DB แต่ไม่แสดงใน UI และไม่นับเข้า formula tier
 
 **Toggle "ปรับระดับ manually":**
 ```
@@ -345,7 +320,7 @@ web/
       assignments.js
       logs.js
       tiers.js
-      members.js                    ← query ngs_member_cache (ACT sync)
+      members.js                    ← query ngs_member_cache
 scripts/
   calling/
     import-calling-logs-xlsx.js    ← import call logs จาก XLS

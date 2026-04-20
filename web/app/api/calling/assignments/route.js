@@ -1,9 +1,14 @@
 import { getServerSession } from 'next-auth'
 import * as assignmentDB from '@/db/calling/assignments.js'
-import * as memberDB from '@/db/calling/members.js'
-import { isAdmin, canAssignInProvince } from '@/lib/callingAccess.js'
+import * as campaignDB from '@/db/calling/campaigns.js'
+import { getUserScope } from '@/lib/callingAccess.js'
 import { getEffectiveRoles } from '@/lib/getEffectiveRoles.js'
 import { authOptions } from '@/lib/auth-options.js'
+
+function canSeeProvince(province, userRoles) {
+  const scope = getUserScope(userRoles)
+  return scope === null || scope.includes(province)
+}
 
 /**
  * GET /api/calling/assignments
@@ -37,7 +42,7 @@ export async function GET(req) {
 /**
  * POST /api/calling/assignments
  * Bulk assign members
- * Permission: admin + scope check
+ * Permission: can view campaign province
  */
 export async function POST(req) {
   const session = await getServerSession(authOptions)
@@ -56,30 +61,16 @@ export async function POST(req) {
       )
     }
 
+    const campaign = await campaignDB.getCampaignById(campaign_id || 0)
+    if (!campaign) {
+      return Response.json({ error: 'Campaign not found' }, { status: 404 })
+    }
+
     const userRoles = await getEffectiveRoles(session)
-
-    // Check permission for each member
-    const membersToCheck = await Promise.all(
-      member_ids.map(id => memberDB.getMemberById(parseInt(id)))
-    )
-
-    const invalidMembers = []
-    for (const member of membersToCheck) {
-      if (!member) {
-        invalidMembers.push('Member not found')
-        continue
-      }
-
-      if (!canAssignInProvince(member.home_province, userRoles)) {
-        invalidMembers.push(`Cannot assign in ${member.home_province}`)
-      }
+    if (!canSeeProvince(campaign.province, userRoles)) {
+      return Response.json({ error: `Forbidden: cannot assign in ${campaign.province}` }, { status: 403 })
     }
 
-    if (invalidMembers.length > 0) {
-      return Response.json({ error: 'Forbidden', details: invalidMembers }, { status: 403 })
-    }
-
-    // Bulk assign
     const affectedRows = await assignmentDB.bulkAssignMembers(
       member_ids,
       assigned_to,
@@ -119,19 +110,16 @@ export async function PUT(req) {
       )
     }
 
-    // Check member
-    const member = await memberDB.getMemberById(parseInt(member_id))
-    if (!member) {
-      return Response.json({ error: 'Member not found' }, { status: 404 })
+    const campaign = await campaignDB.getCampaignById(campaign_id || 0)
+    if (!campaign) {
+      return Response.json({ error: 'Campaign not found' }, { status: 404 })
     }
 
-    // Check permission
     const userRoles = await getEffectiveRoles(session)
-    if (!canAssignInProvince(member.home_province, userRoles)) {
+    if (!canSeeProvince(campaign.province, userRoles)) {
       return Response.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    // Upsert assignment
     await assignmentDB.assignMember(parseInt(member_id), assigned_to, session.user.discordId, campaign_id || 0)
 
     const assignment = await assignmentDB.getAssignment(parseInt(member_id), campaign_id || 0)
@@ -193,15 +181,13 @@ export async function DELETE(req) {
       )
     }
 
-    // Check member
-    const member = await memberDB.getMemberById(parseInt(member_id))
-    if (!member) {
-      return Response.json({ error: 'Member not found' }, { status: 404 })
+    const campaign = await campaignDB.getCampaignById(campaign_id || 0)
+    if (!campaign) {
+      return Response.json({ error: 'Campaign not found' }, { status: 404 })
     }
 
-    // Check permission
     const userRoles = await getEffectiveRoles(session)
-    if (!canAssignInProvince(member.home_province, userRoles)) {
+    if (!canSeeProvince(campaign.province, userRoles)) {
       return Response.json({ error: 'Forbidden' }, { status: 403 })
     }
 

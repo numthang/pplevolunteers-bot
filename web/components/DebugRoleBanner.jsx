@@ -1,15 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-
-const DEBUG_ROLES = [
-  'เหรัญญิก',
-  'กรรมการจังหวัด',
-  'ผู้ประสานงานจังหวัด',
-  'ผู้ประสานงานภาค',
-  'รองเลขาภาค',
-  'เลขาธิการ',
-]
+import { DEBUG_COMBOS } from '@/lib/debugCombos.js'
 
 function useDebugRole() {
   const [debugRole, setDebugRole] = useState(null)
@@ -19,11 +11,11 @@ function useDebugRole() {
     if (val) setDebugRole(decodeURIComponent(val))
   }, [])
 
-  async function setRole(role) {
+  async function setRole(label) {
     await fetch('/api/debug-role', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ role })
+      body: JSON.stringify({ role: label })
     })
     window.location.reload()
   }
@@ -60,19 +52,19 @@ export function DebugRoleButton({ isAdmin }) {
       {open && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full mt-1 z-20 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1 min-w-[180px]">
+          <div className="absolute right-0 top-full mt-1 z-20 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1 min-w-[220px]">
             <p className="px-3 py-1 text-xs text-gray-400 dark:text-gray-500 font-medium uppercase tracking-wide">จำลอง role</p>
-            {DEBUG_ROLES.map(role => (
+            {DEBUG_COMBOS.map(({ label }) => (
               <button
-                key={role}
-                onClick={() => { setRole(role); setOpen(false) }}
+                key={label}
+                onClick={() => { setRole(label); setOpen(false) }}
                 className={`w-full text-left px-3 py-2 text-sm transition ${
-                  debugRole === role
+                  debugRole === label
                     ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 font-medium'
                     : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                 }`}
               >
-                {debugRole === role && '✓ '}{role}
+                {debugRole === label && '✓ '}{label}
               </button>
             ))}
             {debugRole && (

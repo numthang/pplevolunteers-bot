@@ -6,8 +6,8 @@
 import { getOrganizationInfo } from '@/db/calling/members.js'
 
 // Role hierarchy levels
-const ADMIN_ROLES = ['Admin', 'รองเลขาธิการ']
-const REGIONAL_ROLES = ['ผู้ประสานงานภาค']
+const ADMIN_ROLES = ['Admin', 'เลขาธิการ']
+const REGIONAL_ROLES = ['ผู้ประสานงานภาค', 'รองเลขาธิการ']
 const PROVINCIAL_ROLES = ['ผู้ประสานงานจังหวัด', 'กรรมการจังหวัด']
 
 // Map discord role name to province
@@ -139,17 +139,21 @@ export function getUserScope(roles = []) {
 
   const provinces = new Set()
 
-  // Regional coordinator
-  for (const role of roles) {
-    if (REGION_PROVINCES[role]) {
-      REGION_PROVINCES[role].forEach(p => provinces.add(p))
+  // Regional coordinator + ทีมภาค → add region's provinces
+  if (isRegionalCoordinator(roles)) {
+    for (const role of roles) {
+      if (REGION_PROVINCES[role]) {
+        REGION_PROVINCES[role].forEach(p => provinces.add(p))
+      }
     }
   }
 
-  // Provincial coordinator → only their province
-  for (const role of roles) {
-    const province = PROVINCE_ROLE_MAP[role]
-    if (province) provinces.add(province)
+  // Provincial coordinator + ทีมXXX → add that province
+  if (isProvincialCoordinator(roles)) {
+    for (const role of roles) {
+      const province = PROVINCE_ROLE_MAP[role]
+      if (province) provinces.add(province)
+    }
   }
 
   return provinces.size > 0 ? Array.from(provinces) : []
@@ -172,34 +176,6 @@ export function canAccessMember(memberProvince, roles = [], isAssigned = false) 
   if (scope.length === 0) return false // no scope
 
   return scope.includes(memberProvince)
-}
-
-/**
- * Check if user can assign members in province
- */
-export function canAssignInProvince(province, roles = []) {
-  // Admin
-  if (isAdmin(roles)) return true
-
-  // Regional coordinator → assign within their region
-  if (isRegionalCoordinator(roles)) {
-    for (const role of roles) {
-      if (REGION_PROVINCES[role] && REGION_PROVINCES[role].includes(province)) {
-        return true
-      }
-    }
-  }
-
-  // Provincial coordinator → assign within their province
-  if (isProvincialCoordinator(roles)) {
-    for (const role of roles) {
-      if (PROVINCE_ROLE_MAP[role] === province) {
-        return true
-      }
-    }
-  }
-
-  return false
 }
 
 /**

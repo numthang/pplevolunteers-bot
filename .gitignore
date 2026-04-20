@@ -8,3 +8,4 @@ data.ms/
 web/.next/
 #web/public/uploads/
 !web/public/uploads/**/.gitkeep
+.DS_Store

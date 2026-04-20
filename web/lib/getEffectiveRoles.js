@@ -1,22 +1,12 @@
 import { cookies } from 'next/headers'
 import { isAdmin } from './roles.js'
+import { DEBUG_COMBOS } from './debugCombos.js'
 
-const DEBUG_ROLES = [
-  'เหรัญญิก',
-  'กรรมการจังหวัด',
-  'ผู้ประสานงานจังหวัด',
-  'ผู้ประสานงานภาค',
-  'รองเลขาภาค',
-  'เลขาธิการ',
-  'รองเลขาธิการ',
-  'ทีมราชบุรี',
-]
-
-export { DEBUG_ROLES }
+const DEBUG_LABELS = DEBUG_COMBOS.map(c => c.label)
 
 /**
  * Returns effective roles for the current request.
- * If user is Admin and has debug_role cookie set → override with that role.
+ * If user is Admin and has debug_role cookie set → override with combo roles.
  */
 export async function getEffectiveRoles(session) {
   const realRoles = session?.user?.roles || []
@@ -24,9 +14,9 @@ export async function getEffectiveRoles(session) {
   if (!isAdmin(realRoles)) return realRoles
 
   const cookieStore = await cookies()
-  const debugRole = cookieStore.get('debug_role')?.value
+  const debugLabel = cookieStore.get('debug_role')?.value
 
-  if (!debugRole || !DEBUG_ROLES.includes(debugRole)) return realRoles
+  if (!debugLabel || !DEBUG_LABELS.includes(debugLabel)) return realRoles
 
-  return [debugRole]
+  return DEBUG_COMBOS.find(c => c.label === debugLabel)?.roles ?? realRoles
 }

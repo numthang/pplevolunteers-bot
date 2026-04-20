@@ -89,7 +89,7 @@ export async function getMembersCount() {
  * Status: 'called' (has calls) | 'assigned' (assigned to someone) | 'unassigned'
  */
 export async function getMembersInCampaign(campaignId, filters = {}, limit = 100, offset = 0) {
-  const { amphure, tier, status, assignedTo, rsvp } = filters
+  const { amphure, tier, status, assignedTo, rsvp, name } = filters
   const [rows] = await pool.query(
     `SELECT
        m.*,
@@ -120,6 +120,7 @@ export async function getMembersInCampaign(campaignId, filters = {}, limit = 100
        AND (? IS NULL OR COALESCE(t.tier, 'D') = ?)
        AND (? IS NULL OR a.assigned_to = ?)
        AND (? IS NULL OR a.rsvp = ?)
+       AND (? IS NULL OR m.full_name LIKE ?)
      GROUP BY m.source_id
      HAVING (? IS NULL OR member_status = ?)
      ORDER BY m.home_amphure ASC, m.first_name ASC, m.source_id ASC
@@ -131,6 +132,7 @@ export async function getMembersInCampaign(campaignId, filters = {}, limit = 100
       tier || null, tier || null,
       assignedTo || null, assignedTo || null,
       rsvp || null, rsvp || null,
+      name || null, name ? `%${name}%` : null,
       status || null, status || null,
       limit, offset
     ]
