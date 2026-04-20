@@ -196,7 +196,7 @@ updated_by          VARCHAR(20)
 updated_at          DATETIME
 created_at          DATETIME DEFAULT CURRENT_TIMESTAMP
 
-UNIQUE KEY uq_ref (ref_id)
+UNIQUE KEY uq_ref (ref_id, account_id)
 INDEX idx_account (account_id)
 INDEX idx_date (txn_at DESC)
 ```

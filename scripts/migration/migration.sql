@@ -1,3 +1,8 @@
+ALTER TABLE finance_transactions
+  DROP INDEX uq_ref,
+  ADD UNIQUE KEY uq_ref (ref_id, account_id);
+
+
 -- 1. Rename member_id → serial
 ALTER TABLE dc_members CHANGE member_id serial VARCHAR(50) NULL;
 

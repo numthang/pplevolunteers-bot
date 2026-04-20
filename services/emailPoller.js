@@ -96,44 +96,56 @@ async function processTransaction(txn, rawText) {
       return
     }
 
-    const type = account._matchType
-
-    const [result] = await pool.query(
-      `INSERT IGNORE INTO finance_transactions
-        (guild_id, account_id, type, amount, description, counterpart_name, counterpart_account, counterpart_bank, fee, balance_after, ref_id, txn_at, updated_by, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'system', NOW())`,
-      [
-        GUILD_ID,
-        account.id,
-        type,
-        txn.amount,
-        (() => {
-          const base = type === 'income' ? `รับโอนจาก ${txn.counterpart_name || ''}` : `โอนให้ ${txn.counterpart_name || ''}`
-          return txn.merchant_ref ? `${base} · ${txn.merchant_ref}` : base
-        })(),
-        txn.counterpart_name,
-        txn.counterpart_account,
-        txn.counterpart_bank,
-        txn.fee,
-        txn.balance_after,
-        txn.ref_id,
-        txn.txn_at || new Date(),
-      ]
-    )
-
-    if (result.affectedRows === 0) {
-      log.warn('[emailPoller] duplicate ref_id, skipping:', txn.ref_id)
+    if (account._matchType === 'internal') {
+      await insertTransaction(txn, account.expenseAcc, 'expense', txn.balance_after)
+      await insertTransaction(txn, account.incomeAcc,  'income',  null)
       return
     }
 
-    log.info(`[emailPoller] inserted txn ref_id=${txn.ref_id} type=${type} amount=${txn.amount}`)
-
-    const shouldNotify = type === 'income' ? account.notify_income : account.notify_expense
-    if (shouldNotify) await notifyDiscord(account, type, txn)
+    // balance_after จาก KBank email คือยอดของบัญชีต้นทาง (FROM) เสมอ
+    const balanceAfter = account._matchType === 'expense' ? txn.balance_after : null
+    await insertTransaction(txn, account, account._matchType, balanceAfter)
 
   } catch (err) {
     log.error('[emailPoller] processTransaction error:', err.message)
   }
+}
+
+async function insertTransaction(txn, account, type, balanceAfter) {
+  const description = (() => {
+    const base = type === 'income' ? `รับโอนจาก ${txn.counterpart_name || ''}` : `โอนให้ ${txn.counterpart_name || ''}`
+    return txn.merchant_ref ? `${base} · ${txn.merchant_ref}` : base
+  })()
+
+  const [result] = await pool.query(
+    `INSERT IGNORE INTO finance_transactions
+      (guild_id, account_id, type, amount, description, counterpart_name, counterpart_account, counterpart_bank, fee, balance_after, ref_id, txn_at, updated_by, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'system', NOW())`,
+    [
+      GUILD_ID,
+      account.id,
+      type,
+      txn.amount,
+      description,
+      txn.counterpart_name,
+      txn.counterpart_account,
+      txn.counterpart_bank,
+      txn.fee,
+      balanceAfter,
+      txn.ref_id,
+      txn.txn_at || new Date(),
+    ]
+  )
+
+  if (result.affectedRows === 0) {
+    log.warn('[emailPoller] duplicate ref_id+account, skipping:', txn.ref_id, account.id)
+    return
+  }
+
+  log.info(`[emailPoller] inserted txn ref_id=${txn.ref_id} type=${type} amount=${txn.amount} account=${account.id}`)
+
+  const shouldNotify = type === 'income' ? account.notify_income : account.notify_expense
+  if (shouldNotify) await notifyDiscord(account, type, txn)
 }
 
 async function matchAccount(txn) {
@@ -142,22 +154,31 @@ async function matchAccount(txn) {
     [GUILD_ID]
   )
 
+  let incomeAcc = null
+  let expenseAcc = null
+
   for (const acc of accounts) {
     const accNo = (acc.account_no || '').replace(/-/g, '')
 
-    // income: เพื่อเข้าบัญชีของเรา
-    if (txn.counterpart_account && txn.counterpart_account === accNo) {
-      return { ...acc, _matchType: 'income' }
+    if (!incomeAcc && txn.counterpart_account && txn.counterpart_account === accNo) {
+      incomeAcc = acc
     }
 
-    // expense: โอนจากบัญชีของเรา (masked: xxx-x-x8045-x → last digits)
-    if (txn.from_acct_masked) {
+    if (!expenseAcc && txn.from_acct_masked) {
       const lastDigits = txn.from_acct_masked.replace(/x|-/gi, '').trim()
       if (lastDigits && accNo.includes(lastDigits)) {
-        return { ...acc, _matchType: 'expense' }
+        expenseAcc = acc
       }
     }
   }
+
+  // internal transfer: ทั้งต้นทางและปลายทางอยู่ในระบบ
+  if (incomeAcc && expenseAcc) {
+    return { _matchType: 'internal', incomeAcc, expenseAcc }
+  }
+
+  if (expenseAcc) return { ...expenseAcc, _matchType: 'expense' }
+  if (incomeAcc)  return { ...incomeAcc,  _matchType: 'income' }
 
   return null
 }

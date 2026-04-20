@@ -215,12 +215,12 @@ function TransactionsContent() {
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
                 {acc && (
-                  <button onClick={copyAll}
-                    className="flex items-center gap-1 text-[11px] text-gray-400 dark:text-gray-500 hover:text-indigo-500 dark:hover:text-indigo-400 transition px-1"
+                  <span onClick={copyAll}
+                    className="flex items-center gap-1 text-[11px] text-gray-400 dark:text-gray-500 hover:text-indigo-500 dark:hover:text-indigo-400 transition px-1 cursor-pointer"
                   >
                     {copiedAcc ? <Check size={12} className="text-green-500" /> : <Copy size={12} />}
                     {copiedAcc ? 'คัดลอกแล้ว' : 'คัดลอก'}
-                  </button>
+                  </span>
                 )}
                 <ChevronDown size={16} className={`text-gray-400 transition-transform ${accOpen ? 'rotate-180' : ''}`} />
               </div>
