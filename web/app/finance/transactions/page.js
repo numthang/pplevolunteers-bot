@@ -5,8 +5,10 @@ import { Suspense } from 'react'
 import CategorySelect, { CatIcon } from '@/components/CategorySelect'
 import { formatThaiDateHeader, formatThaiDateShort, formatThaiDateTime } from '@/lib/dateFormat'
 import AccountSelect from '@/components/AccountSelect'
-import { Pencil, Trash2, ImagePlus, X, ChevronDown } from 'lucide-react'
+import { Pencil, Trash2, ImagePlus, X, ChevronDown, Copy, Check } from 'lucide-react'
 import BankBadge from '@/components/BankBadge'
+
+const MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.']
 
 function TransactionsContent() {
   const searchParams = useSearchParams()
@@ -15,12 +17,13 @@ function TransactionsContent() {
   const [txns, setTxns]         = useState([])
   const [accounts, setAccounts] = useState([])
   const [categories, setCategories] = useState([])
-  const [filter, setFilter]     = useState({ accountId: defaultAccountId, type: '', categoryId: '', search: '' })
+  const [filter, setFilter]     = useState({ accountId: defaultAccountId, type: '', categoryId: '', search: '', year: '', month: '', dateFrom: '', dateTo: '' })
   const [balance, setBalance]   = useState(null)
   const [searchInput, setSearchInput] = useState('')
   const [editing, setEditing]   = useState(null)
   const [form, setForm]         = useState({})
   const [expandedId, setExpandedId] = useState(null)
+  const [copiedAcc, setCopiedAcc] = useState(false)
   const [hasMore, setHasMore]   = useState(true)
   const [loading, setLoading]   = useState(false)
   const sentinelRef             = useRef(null)
@@ -50,6 +53,10 @@ function TransactionsContent() {
     if (filter.type)       p.set('type',        filter.type)
     if (filter.categoryId) p.set('categoryId',  filter.categoryId)
     if (filter.search)     p.set('search',      filter.search)
+    if (filter.year)       p.set('year',        filter.year)
+    if (filter.month)      p.set('month',       filter.month)
+    if (filter.dateFrom)   p.set('dateFrom',    filter.dateFrom)
+    if (filter.dateTo)     p.set('dateTo',      filter.dateTo)
     p.set('limit',  LIMIT)
     p.set('offset', currentOffset)
     const rows = await fetch('/api/finance/transactions?' + p).then(r => r.json())
@@ -145,6 +152,39 @@ function TransactionsContent() {
         </button>
       </div>
 
+      {/* Account detail card */}
+      {filter.accountId && accounts.length > 0 && (() => {
+        const acc = accounts.find(a => String(a.id) === String(filter.accountId))
+        if (!acc) return null
+        const visLabel = acc.visibility === 'private' ? '🔒 ส่วนตัว' : acc.visibility === 'internal' ? '👥 ภายใน' : '🌐 สาธารณะ'
+        return (
+          <div className="mb-3 rounded-xl border dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3 flex items-center gap-3">
+            <BankBadge bank={acc.bank} size={36} />
+            <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed flex-1">
+              <span className="font-semibold text-gray-900 dark:text-gray-100">{acc.name}</span>
+              {acc.bank && <span className="text-gray-400 dark:text-gray-500"> · {acc.bank}</span>}
+              {acc.account_no && <span className="text-gray-400 dark:text-gray-500"> · {acc.account_no}</span>}
+              {acc.province && <span className="text-gray-400 dark:text-gray-500"> · {acc.province}</span>}
+              <span className="text-gray-400 dark:text-gray-500"> · {visLabel}</span>
+            </p>
+            <button
+              onClick={() => {
+                const parts = [acc.name, acc.bank, acc.account_no].filter(Boolean)
+                navigator.clipboard.writeText(parts.join(' ')).then(() => {
+                  setCopiedAcc(true)
+                  setTimeout(() => setCopiedAcc(false), 1500)
+                })
+              }}
+              className="flex items-center gap-1 text-[11px] text-gray-400 dark:text-gray-500 hover:text-indigo-500 dark:hover:text-indigo-400 transition flex-shrink-0"
+              title="คัดลอกชื่อ ธนาคาร เลขบัญชี"
+            >
+              {copiedAcc ? <Check size={11} className="text-green-500" /> : <Copy size={11} />}
+              {copiedAcc ? 'คัดลอกแล้ว' : 'คัดลอก'}
+            </button>
+          </div>
+        )
+      })()}
+
       {/* Balance summary */}
       {balance?.has_balance_after && (
         <div className="mb-4 rounded-xl border dark:border-gray-700 bg-white dark:bg-gray-800 p-4 space-y-2">
@@ -193,6 +233,32 @@ function TransactionsContent() {
             className="flex-1"
           />
         </div>
+        {/* Date filters */}
+        {(() => {
+          const now = new Date()
+          const years = Array.from({ length: 6 }, (_, i) => now.getFullYear() - 5 + i)
+          return (<>
+            <div className="flex gap-2">
+              <select className="flex-1 border dark:border-gray-600 rounded px-2 py-1.5 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                value={filter.year} onChange={e => setFilter(f => ({ ...f, year: e.target.value, month: '', dateFrom: '', dateTo: '' }))}>
+                <option value="">ทุกปี</option>
+                {years.map(y => <option key={y} value={y}>{y + 543} ({y})</option>)}
+              </select>
+              <select className="flex-1 border dark:border-gray-600 rounded px-2 py-1.5 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                value={filter.month} onChange={e => setFilter(f => ({ ...f, month: e.target.value, dateFrom: '', dateTo: '' }))}>
+                <option value="">ทุกเดือน</option>
+                {MONTHS.map((m, i) => <option key={i+1} value={i+1}>{m}</option>)}
+              </select>
+            </div>
+            <div className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
+              <input type="date" className="flex-1 min-w-0 border dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm"
+                value={filter.dateFrom} onChange={e => setFilter(f => ({ ...f, dateFrom: e.target.value, year: '', month: '' }))} />
+              <span className="flex-shrink-0">–</span>
+              <input type="date" className="flex-1 min-w-0 border dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm"
+                value={filter.dateTo} onChange={e => setFilter(f => ({ ...f, dateTo: e.target.value, year: '', month: '' }))} />
+            </div>
+          </>)
+        })()}
         <div className="flex rounded border dark:border-gray-600 overflow-hidden text-sm">
           {[['', 'ทั้งหมด'], ['income', '📥 รายรับ'], ['expense', '📤 รายจ่าย']].map(([val, label]) => (
             <button key={val} type="button"

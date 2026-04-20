@@ -2,7 +2,7 @@ import { requireAuth } from '@/lib/auth.js'
 import { getAccountsForUser } from '@/db/finance/accounts.js'
 import { getAccountSummary } from '@/db/finance/transactions.js'
 import Link from 'next/link'
-import BankBadge from '@/components/BankBadge'
+import AccountCard from '@/components/finance/AccountCard'
 
 const GUILD_ID = process.env.GUILD_ID
 
@@ -15,7 +15,6 @@ const VISIBILITY_LABEL = {
 function fmt(n) {
   return Math.abs(n).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '\u00A0฿'
 }
-
 export default async function FinancePage() {
   const session = await requireAuth()
   const accounts = await getAccountsForUser(GUILD_ID, session.user.discordId)
@@ -60,7 +59,7 @@ export default async function FinancePage() {
                   </span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {group.map(acc => <AccountCard key={acc.id} account={acc} />)}
+                  {group.map(acc => <AccountCard key={acc.id} account={{ ...acc, balance: acc.balance }} />)}
                 </div>
               </div>
             )
@@ -77,26 +76,3 @@ export default async function FinancePage() {
   )
 }
 
-function AccountCard({ account }) {
-  const { balance } = account
-
-  return (
-    <Link href={`/finance/transactions?accountId=${account.id}`}>
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-4 hover:shadow-md transition cursor-pointer flex items-center gap-3">
-        <BankBadge bank={account.bank} size={40} />
-        <div className="flex-1 min-w-0">
-          <p className="font-semibold text-gray-900 dark:text-gray-100 leading-snug">{account.name}</p>
-          <p className="text-xs text-gray-400 dark:text-gray-500">
-            {account.bank || 'เงินสด'}
-            {account.account_no && <span className="font-mono select-all ml-1">{account.account_no}</span>}
-          </p>
-        </div>
-        <div className="text-right flex-shrink-0">
-          <p className={`font-mono font-bold ${balance >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
-            {balance < 0 ? '-' : ''}{fmt(balance)}
-          </p>
-        </div>
-      </div>
-    </Link>
-  )
-}
