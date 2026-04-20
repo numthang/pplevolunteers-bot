@@ -47,6 +47,8 @@ function TransactionsContent() {
   const [form, setForm]         = useState({})
   const [expandedId, setExpandedId] = useState(null)
   const [copiedAcc, setCopiedAcc] = useState(false)
+  const [accOpen, setAccOpen] = useState(false)
+  const [dateOpen, setDateOpen] = useState(false)
   const [hasMore, setHasMore]   = useState(true)
   const [loading, setLoading]   = useState(false)
   const sentinelRef             = useRef(null)
@@ -175,57 +177,99 @@ function TransactionsContent() {
         </button>
       </div>
 
-      {/* Account detail card */}
-      {filter.accountId && accounts.length > 0 && (() => {
+      {/* Account selector card */}
+      {accounts.length > 0 && (() => {
         const acc = accounts.find(a => String(a.id) === String(filter.accountId))
-        if (!acc) return null
-        const visLabel = acc.visibility === 'private' ? '🔒 ส่วนตัว' : acc.visibility === 'internal' ? '👥 ภายใน' : '🌐 สาธารณะ'
+        const visLabel = acc?.visibility === 'private' ? '🔒 ส่วนตัว' : acc?.visibility === 'internal' ? '👥 ภายใน' : '🌐 สาธารณะ'
+        function copyAll(e) {
+          e.stopPropagation()
+          const text = [acc.name, acc.bank, acc.account_no].filter(Boolean).join(' ')
+          if (navigator.clipboard) {
+            navigator.clipboard.writeText(text).then(() => { setCopiedAcc(true); setTimeout(() => setCopiedAcc(false), 1500) })
+          } else {
+            const el = document.createElement('textarea')
+            el.value = text; document.body.appendChild(el); el.select()
+            document.execCommand('copy'); document.body.removeChild(el)
+            setCopiedAcc(true); setTimeout(() => setCopiedAcc(false), 1500)
+          }
+        }
         return (
-          <div className="mb-3 rounded-xl border dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3 flex items-center gap-3">
-            <BankBadge bank={acc.bank} size={36} />
-            <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed flex-1">
-              <span className="font-semibold text-gray-900 dark:text-gray-100">{acc.name}</span>
-              {acc.bank && <span className="text-gray-400 dark:text-gray-500"> · {acc.bank}</span>}
-              {acc.account_no && <span className="text-gray-400 dark:text-gray-500"> · {acc.account_no}</span>}
-              {acc.province && <span className="text-gray-400 dark:text-gray-500"> · {acc.province}</span>}
-              <span className="text-gray-400 dark:text-gray-500"> · {visLabel}</span>
-            </p>
-            <button
-              onClick={() => {
-                const parts = [acc.name, acc.bank, acc.account_no].filter(Boolean)
-                navigator.clipboard.writeText(parts.join(' ')).then(() => {
-                  setCopiedAcc(true)
-                  setTimeout(() => setCopiedAcc(false), 1500)
-                })
-              }}
-              className="flex items-center gap-1 text-[11px] text-gray-400 dark:text-gray-500 hover:text-indigo-500 dark:hover:text-indigo-400 transition flex-shrink-0"
-              title="คัดลอกชื่อ ธนาคาร เลขบัญชี"
-            >
-              {copiedAcc ? <Check size={11} className="text-green-500" /> : <Copy size={11} />}
-              {copiedAcc ? 'คัดลอกแล้ว' : 'คัดลอก'}
+          <div className="mb-4 rounded-xl border dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden">
+            {/* trigger */}
+            <button type="button" onClick={() => setAccOpen(o => !o)}
+              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition text-left">
+              <BankBadge bank={acc?.bank} size={40} />
+              <div className="flex-1 min-w-0">
+                {acc ? (
+                  <>
+                    <p className="font-semibold text-gray-900 dark:text-gray-100">{acc.name}</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                      {[acc.bank, acc.account_no].filter(Boolean).join(' · ')}
+                      {acc.province && <span> · {acc.province}</span>}
+                      <span> · {visLabel}</span>
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-gray-400 dark:text-gray-500">เลือกบัญชี</p>
+                )}
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {acc && (
+                  <button onClick={copyAll}
+                    className="flex items-center gap-1 text-[11px] text-gray-400 dark:text-gray-500 hover:text-indigo-500 dark:hover:text-indigo-400 transition px-1"
+                  >
+                    {copiedAcc ? <Check size={12} className="text-green-500" /> : <Copy size={12} />}
+                    {copiedAcc ? 'คัดลอกแล้ว' : 'คัดลอก'}
+                  </button>
+                )}
+                <ChevronDown size={16} className={`text-gray-400 transition-transform ${accOpen ? 'rotate-180' : ''}`} />
+              </div>
             </button>
+
+            {/* dropdown */}
+            {accOpen && (
+              <div className="border-t dark:border-gray-700 max-h-64 overflow-y-auto">
+                <button type="button"
+                  onClick={() => { setFilter(f => ({ ...f, accountId: '' })); setAccOpen(false) }}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                  ทุกบัญชี
+                </button>
+                {accounts.map(a => (
+                  <button key={a.id} type="button"
+                    onClick={() => { setFilter(f => ({ ...f, accountId: String(a.id) })); setAccOpen(false) }}
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition
+                      ${String(a.id) === String(filter.accountId) ? 'bg-indigo-50 dark:bg-indigo-900/30' : ''}`}>
+                    <BankBadge bank={a.bank} size={32} />
+                    <div className="text-left min-w-0">
+                      <p className={`text-sm font-medium truncate ${String(a.id) === String(filter.accountId) ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-900 dark:text-gray-100'}`}>{a.name}</p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500 truncate">{[a.bank, a.account_no].filter(Boolean).join(' · ')}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* balance */}
+            {acc && balance?.has_balance_after && (
+              <div className="border-t dark:border-gray-700 px-4 py-2.5 space-y-1.5">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500 dark:text-gray-400">ยอดรวมในระบบ</span>
+                  <span className="font-semibold">{Number(balance.net).toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500 dark:text-gray-400">ยอดคงเหลือจริง</span>
+                  <span className="font-semibold text-indigo-600 dark:text-indigo-400">{Number(balance.balance_after).toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท</span>
+                </div>
+                {Math.abs(Number(balance.net) - Number(balance.balance_after)) > 0.01 && (
+                  <div className="text-xs text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 rounded px-2 py-1">
+                    ⚠️ ยอดต่างกัน {Math.abs(Number(balance.net) - Number(balance.balance_after)).toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )
       })()}
-
-      {/* Balance summary */}
-      {balance?.has_balance_after && (
-        <div className="mb-4 rounded-xl border dark:border-gray-700 bg-white dark:bg-gray-800 p-4 space-y-2">
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-500 dark:text-gray-400">ยอดรวมในระบบ</span>
-            <span className="font-semibold">{Number(balance.net).toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-500 dark:text-gray-400">ยอดคงเหลือจริง</span>
-            <span className="font-semibold text-indigo-600 dark:text-indigo-400">{Number(balance.balance_after).toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท</span>
-          </div>
-          {Math.abs(Number(balance.net) - Number(balance.balance_after)) > 0.01 && (
-            <div className="text-xs text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 rounded px-2 py-1">
-              ⚠️ ยอดต่างกัน {Math.abs(Number(balance.net) - Number(balance.balance_after)).toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Search */}
       <div className="mb-3">
@@ -240,48 +284,7 @@ function TransactionsContent() {
 
       {/* Filters */}
       <div className="flex flex-col gap-2 mb-5">
-        <div className="flex gap-2">
-          <AccountSelect
-            accounts={accounts}
-            value={filter.accountId}
-            onChange={v => setFilter(f => ({ ...f, accountId: v }))}
-            placeholder="ทุกบัญชี"
-            className="flex-1"
-          />
-          <CategorySelect
-            categories={categories}
-            value={filter.categoryId}
-            onChange={v => setFilter(f => ({ ...f, categoryId: v }))}
-            placeholder="ทุกหมวด"
-            className="flex-1"
-          />
-        </div>
-        {/* Date filters */}
-        {(() => {
-          const now = new Date()
-          const years = Array.from({ length: 6 }, (_, i) => now.getFullYear() - 5 + i)
-          return (<>
-            <div className="flex gap-2">
-              <select className="flex-1 border dark:border-gray-600 rounded px-2 py-1.5 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                value={filter.year} onChange={e => setFilter(f => ({ ...f, year: e.target.value, month: '', dateFrom: '', dateTo: '' }))}>
-                <option value="">ทุกปี</option>
-                {years.map(y => <option key={y} value={y}>{y + 543} ({y})</option>)}
-              </select>
-              <select className="flex-1 border dark:border-gray-600 rounded px-2 py-1.5 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                value={filter.month} onChange={e => setFilter(f => ({ ...f, month: e.target.value, dateFrom: '', dateTo: '' }))}>
-                <option value="">ทุกเดือน</option>
-                {MONTHS.map((m, i) => <option key={i+1} value={i+1}>{m}</option>)}
-              </select>
-            </div>
-            <div className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
-              <input type="date" className="flex-1 min-w-0 border dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm"
-                value={filter.dateFrom} onChange={e => setFilter(f => ({ ...f, dateFrom: e.target.value, year: '', month: '' }))} />
-              <span className="flex-shrink-0">–</span>
-              <input type="date" className="flex-1 min-w-0 border dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm"
-                value={filter.dateTo} onChange={e => setFilter(f => ({ ...f, dateTo: e.target.value, year: '', month: '' }))} />
-            </div>
-          </>)
-        })()}
+        {/* Type */}
         <div className="flex rounded border dark:border-gray-600 overflow-hidden text-sm">
           {[['', 'ทั้งหมด'], ['income', '📥 รายรับ'], ['expense', '📤 รายจ่าย']].map(([val, label]) => (
             <button key={val} type="button"
@@ -290,6 +293,56 @@ function TransactionsContent() {
             >{label}</button>
           ))}
         </div>
+
+        {/* Date filter toggle */}
+        {(() => {
+          const hasDate = filter.year || filter.month || filter.dateFrom || filter.dateTo
+          const now = new Date()
+          const years = Array.from({ length: 6 }, (_, i) => now.getFullYear() - 5 + i)
+          const dateLabel = filter.dateFrom || filter.dateTo
+            ? `${filter.dateFrom || '…'} – ${filter.dateTo || '…'}`
+            : [filter.year ? `${Number(filter.year) + 543}` : '', MONTHS[Number(filter.month) - 1] || ''].filter(Boolean).join(' ') || null
+          return (
+            <div className="rounded border dark:border-gray-600 overflow-hidden bg-white dark:bg-gray-800 text-sm">
+              <button type="button" onClick={() => setDateOpen(o => !o)}
+                className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
+                <span className={hasDate ? 'text-indigo-600 dark:text-indigo-400 font-medium' : 'text-gray-400 dark:text-gray-500'}>
+                  {dateLabel || 'กรองตามวันที่'}
+                </span>
+                <div className="flex items-center gap-2">
+                  {hasDate && (
+                    <span onClick={e => { e.stopPropagation(); setFilter(f => ({ ...f, year: '', month: '', dateFrom: '', dateTo: '' })) }}
+                      className="text-xs text-gray-400 hover:text-red-500 transition px-1">ล้าง</span>
+                  )}
+                  <ChevronDown size={14} className={`text-gray-400 transition-transform ${dateOpen ? 'rotate-180' : ''}`} />
+                </div>
+              </button>
+              {dateOpen && (
+                <div className="border-t dark:border-gray-700 px-3 py-3 space-y-2">
+                  <div className="flex gap-2">
+                    <select className="flex-1 border dark:border-gray-600 rounded px-2 py-1.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                      value={filter.year} onChange={e => setFilter(f => ({ ...f, year: e.target.value, month: '', dateFrom: '', dateTo: '' }))}>
+                      <option value="">ทุกปี</option>
+                      {years.map(y => <option key={y} value={y}>{y + 543} ({y})</option>)}
+                    </select>
+                    <select className="flex-1 border dark:border-gray-600 rounded px-2 py-1.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                      value={filter.month} onChange={e => setFilter(f => ({ ...f, month: e.target.value, dateFrom: '', dateTo: '' }))}>
+                      <option value="">ทุกเดือน</option>
+                      {MONTHS.map((m, i) => <option key={i+1} value={i+1}>{m}</option>)}
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <input type="date" className="flex-1 min-w-0 border dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm"
+                      value={filter.dateFrom} onChange={e => setFilter(f => ({ ...f, dateFrom: e.target.value, year: '', month: '' }))} />
+                    <span className="text-gray-400 flex-shrink-0">–</span>
+                    <input type="date" className="flex-1 min-w-0 border dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm"
+                      value={filter.dateTo} onChange={e => setFilter(f => ({ ...f, dateTo: e.target.value, year: '', month: '' }))} />
+                  </div>
+                </div>
+              )}
+            </div>
+          )
+        })()}
       </div>
 
       {/* List */}
@@ -334,7 +387,7 @@ function TransactionsContent() {
                   {!t.category_name && <span className="text-gray-300 dark:text-gray-600">· ไม่มีหมวด</span>}
                 </p>
                 <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                  {formatThaiDateTime(t.txn_at)}
+                  {formatThaiDateTime(t.txn_at)} · <span className="text-gray-300 dark:text-gray-600">#{t.id}</span>
                 </p>
               </div>
               <div className="text-right flex-shrink-0 flex flex-col items-end gap-1">
@@ -399,7 +452,7 @@ function TransactionsContent() {
       </div>
 
       {editing !== null && (
-        <Modal title={editing.id ? 'แก้ไขรายการ' : 'เพิ่มรายการ'} onClose={close} onSave={save}>
+        <Modal title={editing.id ? `แก้ไขรายการ #${editing.id}` : 'เพิ่มรายการ'} onClose={close} onSave={save}>
           <TxnForm form={form} onChange={v => setForm(f => ({ ...f, ...v }))} accounts={accounts} categories={categories} />
         </Modal>
       )}
