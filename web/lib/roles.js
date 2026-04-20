@@ -1,7 +1,7 @@
 // roles มาจาก dc_members.roles เป็น array ของชื่อ role เช่น ['Admin', 'ทีมเชียงใหม่', 'เหรัญญิก']
 
 export function isAdmin(roles = []) {
-  return roles.includes('Admin')
+  return roles.includes('Admin') || roles.includes('เลขาธิการ')
 }
 
 export function isเหรัญญิก(roles = []) {

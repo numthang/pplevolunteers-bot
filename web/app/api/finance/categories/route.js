@@ -4,8 +4,8 @@ import { getCategories, getCategoriesAll, createCategory } from '@/db/finance/ca
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 
 const GUILD_ID = process.env.GUILD_ID
-const ADMIN_ROLES    = ['Admin', 'รองเลขาธิการ']
-const GLOBAL_EDITORS = ['Admin', 'รองเลขาธิการ', 'Moderator']
+const ADMIN_ROLES    = ['Admin', 'เลขาธิการ']
+const GLOBAL_EDITORS = ['Admin', 'เลขาธิการ', 'Moderator']
 
 export async function GET() {
   const session = await getServerSession(authOptions)

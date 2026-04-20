@@ -92,7 +92,7 @@ const MAIN_REGION_MAP = {
 }
 
 function isAdmin(roles) {
-  return roles.includes('Admin') || roles.includes('รองเลขาธิการ')
+  return roles.includes('Admin') || roles.includes('เลขาธิการ')
 }
 
 function hasProvinceScope(province, roles) {
@@ -115,9 +115,9 @@ export function canViewAccount(account, discordId, roles = []) {
   if (owner || isAdmin(roles)) return true
 
   if (account.province) {
-    // มี role เหรัญญิก/กรรมการ/ผู้ประสานงานจังหวัด และ scope จังหวัดตรง
-    const hasTitle = PROVINCE_EDITOR_ROLES.some(r => roles.includes(r))
-    return hasTitle && hasProvinceScope(account.province, roles)
+    // ORG_ROLES ดูได้ถ้า scope จังหวัดตรง (ภาค/ภาคย่อย/จังหวัด)
+    const hasOrgRole = ORG_ROLES.some(r => roles.includes(r))
+    return hasOrgRole && hasProvinceScope(account.province, roles)
   } else {
     // province = null → คนในองค์กรทุก role ที่กำหนดดูได้
     return ORG_ROLES.some(r => roles.includes(r))

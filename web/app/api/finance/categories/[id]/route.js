@@ -3,8 +3,8 @@ import { authOptions } from '@/lib/auth-options.js'
 import { getCategoryById, updateCategory, deleteCategory } from '@/db/finance/categories.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 
-const ADMIN_ROLES    = ['Admin', 'รองเลขาธิการ']
-const GLOBAL_EDITORS = ['Admin', 'รองเลขาธิการ', 'Moderator']
+const ADMIN_ROLES    = ['Admin', 'เลขาธิการ']
+const GLOBAL_EDITORS = ['Admin', 'เลขาธิการ', 'Moderator']
 
 export async function PUT(req, { params }) {
   const session = await getServerSession(authOptions)

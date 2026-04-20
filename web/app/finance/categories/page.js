@@ -12,7 +12,7 @@ import {
   Pencil, Trash2, Check, X,
 } from 'lucide-react'
 
-const GLOBAL_EDITORS = ['Admin', 'รองเลขาธิการ', 'Moderator']
+const GLOBAL_EDITORS = ['Admin', 'เลขาธิการ', 'Moderator']
 
 const ICONS = [
   { name: 'Utensils',       Icon: Utensils },
