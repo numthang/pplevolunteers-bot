@@ -33,12 +33,6 @@ Settings → Apps → SMS Forwarder → Allow background activity: ON
 ใช้ "Protect Battery" mode (85%) ได้เลย — ไม่กระทบ SMS รับ
 ห้าม Force Stop แอปหลัง reboot
 
-curl -X POST "https://discord.com/api/webhooks/1495485915655704676/dCZ_VYpBp6LSmR2ym_XyFv0sQb0PBo5Eubi0BWj2HF5pRs_-0lmEvJ8hwpyXowlEeVoD" \
-  -H "Content-Type: application/json" \
-  -d '{
-        "content": "รายการโอนเข้า 500.00บ. จาก นาย สมชาย เข้าบัญชี x-1234 เมื่อ 19/04/26 17:15น. ยอดเงินคงเหลือ 1,500.00บ."
-  }'
-
 ---
 ## 📞 PPLE Calling
 ### อัพเดท Calling (calling/pending)
