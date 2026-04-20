@@ -5,12 +5,30 @@
 
 const { createWorker } = require('tesseract.js')
 const { Jimp } = require('jimp')
+const { writeFile, mkdir } = require('fs/promises')
+const { join } = require('path')
+const { randomUUID } = require('crypto')
 const pool   = require('../db/index')
 const log    = require('../utils/logger')
-const { decodeQR, parseQRPayload } = require('./parsers/slipQR')
+const { decodeQR, parseQRPayload, fetchBuffer } = require('./parsers/slipQR')
 
 const GUILD_ID  = process.env.GUILD_ID
 const SLIP_PARSERS = [require('./parsers/kbankSlip'), require('./parsers/scbSlip')]
+
+async function downloadEvidence(url) {
+  try {
+    const buf = await fetchBuffer(url)
+    const ext = url.match(/\.(png|jpg|jpeg|webp)/i)?.[1]?.toLowerCase() || 'jpg'
+    const filename = `${randomUUID()}.${ext}`
+    const uploadDir = join(process.cwd(), 'public', 'uploads', 'evidence')
+    await mkdir(uploadDir, { recursive: true })
+    await writeFile(join(uploadDir, filename), buf)
+    return `/uploads/evidence/${filename}`
+  } catch (err) {
+    log.error('[financeOCR] downloadEvidence error:', err.message)
+    return url  // fallback ใช้ Discord URL เดิม
+  }
+}
 
 /**
  * Preprocess รูปก่อน OCR: greyscale + contrast boost
@@ -112,6 +130,8 @@ async function processSlipImage(imageUrl, message) {
 
     log.info(`[financeOCR] parsed slip (${method}):`, JSON.stringify(slip))
 
+    const evidenceUrl = await downloadEvidence(imageUrl)
+
     const accounts = await matchAccount(slip)
     log.info(`[financeOCR] matchAccount from_digits=${slip.from_digits} to_digits=${slip.to_digits} matched=${accounts.map(a=>a.name+'('+a._matchType+')').join(', ')||'none'}`)
     if (!accounts.length) {
@@ -146,7 +166,9 @@ async function processSlipImage(imageUrl, message) {
 
       if (existing.length) {
         const txn = existing[0]
-        const newDesc = slip.memo || txn.description
+        const newDesc = slip.memo && txn.description
+          ? `${txn.description} · ${slip.memo}`
+          : slip.memo || txn.description
         await pool.query(
           `UPDATE finance_transactions
            SET ref_id = ?, evidence_url = ?,
@@ -154,7 +176,7 @@ async function processSlipImage(imageUrl, message) {
                counterpart_name = COALESCE(counterpart_name, ?),
                discord_msg_id = ?, updated_by = ?, updated_at = NOW()
            WHERE id = ?`,
-          [slip.ref_id, message.attachments.first()?.url || null,
+          [slip.ref_id, evidenceUrl,
            newDesc,
            slip.counterpart_name || null,
            message.id, message.author.id, txn.id]
@@ -173,11 +195,11 @@ async function processSlipImage(imageUrl, message) {
         const [result] = await pool.query(
           `INSERT INTO finance_transactions
             (guild_id, account_id, type, amount, description, counterpart_name, counterpart_bank,
-             ref_id, discord_msg_id, txn_at, updated_by, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+             ref_id, evidence_url, discord_msg_id, txn_at, updated_by, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
           [GUILD_ID, account.id, type, slip.amount, description,
            slip.counterpart_name || null, slip.bank || null,
-           slip.ref_id, message.id, txnAtStr, message.author.id]
+           slip.ref_id, evidenceUrl, message.id, txnAtStr, message.author.id]
         )
         log.info(`[financeOCR] inserted txn id=${result.insertId} ref_id=${slip.ref_id} type=${type}`)
         resultLines.push(buildReply('✅ บันทึกรายการใหม่', account, slip, result.insertId, false))
