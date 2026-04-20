@@ -176,21 +176,25 @@ INDEX idx_usage (guild_id, usage_count DESC)
 ### finance_transactions
 
 ```sql
-id              INT AUTO_INCREMENT PRIMARY KEY
-guild_id        VARCHAR(20)
-account_id      INT               -- FK → finance_accounts
-type            ENUM('income','expense')
-amount          DECIMAL(12,2)
-description     VARCHAR(255)
-category_id     INT NULL          -- FK → finance_categories
-source          VARCHAR(255)      -- 'email','manual','slip'
-evidence_url    TEXT
-ref_id          VARCHAR(100)
-discord_msg_id  VARCHAR(20)
-txn_at          DATETIME
-updated_by      VARCHAR(20)
-updated_at      DATETIME
-created_at      DATETIME DEFAULT CURRENT_TIMESTAMP
+id                  INT AUTO_INCREMENT PRIMARY KEY
+guild_id            VARCHAR(20)
+account_id          INT               -- FK → finance_accounts
+type                ENUM('income','expense')
+amount              DECIMAL(12,2)
+description         VARCHAR(255)
+category_id         INT NULL          -- FK → finance_categories
+counterpart_name    VARCHAR(255)
+counterpart_account VARCHAR(100)
+counterpart_bank    VARCHAR(100)
+fee                 DECIMAL(12,2)
+balance_after       DECIMAL(12,2)
+evidence_url        TEXT
+ref_id              VARCHAR(100)
+discord_msg_id      VARCHAR(20)
+txn_at              DATETIME
+updated_by          VARCHAR(20)
+updated_at          DATETIME
+created_at          DATETIME DEFAULT CURRENT_TIMESTAMP
 
 UNIQUE KEY uq_ref (ref_id)
 INDEX idx_account (account_id)
