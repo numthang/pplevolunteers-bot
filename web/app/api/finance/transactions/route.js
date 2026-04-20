@@ -1,10 +1,11 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
 import { getTransactions, createTransaction } from '@/db/finance/transactions.js'
-import { incrementUsageCount as incrementAccount } from '@/db/finance/accounts.js'
+import { getAccountById, incrementUsageCount as incrementAccount } from '@/db/finance/accounts.js'
 import { incrementUsageCount as incrementCategory } from '@/db/finance/categories.js'
 import { isAdmin } from '@/lib/roles.js'
-import { getEffectiveRoles } from '@/lib/getEffectiveRoles.js'
+import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
+import { canViewAccount, canEditAccount } from '@/lib/financeAccess.js'
 
 const GUILD_ID = process.env.GUILD_ID
 
@@ -27,8 +28,16 @@ export async function GET(req) {
   const session = await getServerSession(authOptions)
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const effectiveRoles = await getEffectiveRoles(session)
-  const rows = await getTransactions(GUILD_ID, { accountId, type, categoryId, noCategory, search, year, month, dateFrom, dateTo, limit, offset, discordId: session.user.discordId, admin: isAdmin(effectiveRoles) })
+  const { roles: effectiveRoles, discordId: effectiveDiscordId } = await getEffectiveIdentity(session)
+
+  if (accountId) {
+    const account = await getAccountById(accountId)
+    if (!account || !canViewAccount(account, effectiveDiscordId, effectiveRoles)) {
+      return Response.json({ error: 'Forbidden' }, { status: 403 })
+    }
+  }
+
+  const rows = await getTransactions(GUILD_ID, { accountId, type, categoryId, noCategory, search, year, month, dateFrom, dateTo, limit, offset, discordId: effectiveDiscordId, admin: isAdmin(effectiveRoles) })
   return Response.json(rows)
 }
 
@@ -37,6 +46,15 @@ export async function POST(req) {
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
   const data = await req.json()
+
+  if (data.account_id) {
+    const account = await getAccountById(data.account_id)
+    const effectiveRoles = await getEffectiveRoles(session)
+    if (!account || !canEditAccount(account, session.user.discordId, effectiveRoles)) {
+      return Response.json({ error: 'Forbidden' }, { status: 403 })
+    }
+  }
+
   const id = await createTransaction(GUILD_ID, data, session.user.discordId)
   if (data.account_id)  await incrementAccount(data.account_id)
   if (data.category_id) await incrementCategory(data.category_id)

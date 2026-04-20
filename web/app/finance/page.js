@@ -1,6 +1,8 @@
 import { requireAuth } from '@/lib/auth.js'
 import { getAccountsForUser } from '@/db/finance/accounts.js'
 import { getAccountSummary } from '@/db/finance/transactions.js'
+import { canViewAccount } from '@/lib/financeAccess.js'
+import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import Link from 'next/link'
 import AccountCard from '@/components/finance/AccountCard'
 
@@ -17,7 +19,9 @@ function fmt(n) {
 }
 export default async function FinancePage() {
   const session = await requireAuth()
-  const accounts = await getAccountsForUser(GUILD_ID, session.user.discordId)
+  const { roles, discordId } = await getEffectiveIdentity(session)
+  const raw = await getAccountsForUser(GUILD_ID, discordId)
+  const accounts = raw.filter(a => canViewAccount(a, discordId, roles))
 
   const summaries = await Promise.all(
     accounts.map(async acc => {

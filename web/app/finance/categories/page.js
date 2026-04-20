@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
+import { useEffectiveRoles } from '@/lib/useEffectiveRoles.js'
 import {
   Utensils, Car, Package, Building2, Newspaper, Banknote, CreditCard,
   PartyPopper, BookOpen, Zap, Droplets, Smartphone, ShoppingCart,
@@ -96,6 +97,7 @@ function IconPicker({ value, onChange }) {
 
 export default function CategoriesPage() {
   const { data: session } = useSession()
+  const { roles: effectiveRoles, discordId: effectiveDiscordId } = useEffectiveRoles(session)
   const [cats, setCats]               = useState([])
   const [input, setInput]             = useState('')
   const [inputIcon, setInputIcon]     = useState('Folder')
@@ -105,14 +107,10 @@ export default function CategoriesPage() {
   const [editIcon, setEditIcon]       = useState('Folder')
   const [editGlobal, setEditGlobal]   = useState(false)
 
-  const roles     = Array.isArray(session?.user?.roles)
-    ? session.user.roles
-    : (session?.user?.roles || '').split(',').map(r => r.trim())
-  const discordId = session?.user?.discordId
-  const canEditGlobal = GLOBAL_EDITORS.some(r => roles.includes(r))
+  const canEditGlobal = GLOBAL_EDITORS.some(r => effectiveRoles.includes(r))
 
   function canEdit(c) {
-    return c.is_global ? canEditGlobal : c.owner_id === discordId
+    return c.is_global ? canEditGlobal : c.owner_id === effectiveDiscordId
   }
 
   async function load() {

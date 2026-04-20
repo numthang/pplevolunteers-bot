@@ -19,7 +19,7 @@ export async function getTransactions(guildId, { accountId, type, categoryId, no
   if (dateTo)     { where += ' AND DATE(t.txn_at) <= ?'; params.push(dateTo) }
 
   const [rows] = await pool.query(
-    `SELECT t.*, a.name AS account_name, a.bank AS account_bank, c.name AS category_name, c.icon AS category_icon
+    `SELECT t.*, a.name AS account_name, a.bank AS account_bank, a.owner_id AS account_owner_id, a.visibility AS account_visibility, a.province AS account_province, c.name AS category_name, c.icon AS category_icon
      FROM finance_transactions t
      LEFT JOIN finance_accounts a ON a.id = t.account_id
      LEFT JOIN finance_categories c ON c.id = t.category_id

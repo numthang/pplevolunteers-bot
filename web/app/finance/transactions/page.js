@@ -1,18 +1,23 @@
 'use client'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { Suspense } from 'react'
 import CategorySelect, { CatIcon } from '@/components/CategorySelect'
 import { formatThaiDateHeader, formatThaiDateShort, formatThaiDateTime } from '@/lib/dateFormat'
 import AccountSelect from '@/components/AccountSelect'
 import { Pencil, Trash2, ImagePlus, X, ChevronDown, Copy, Check } from 'lucide-react'
 import BankBadge from '@/components/BankBadge'
+import { canEditAccount } from '@/lib/financeAccess.js'
+import { useEffectiveRoles } from '@/lib/useEffectiveRoles.js'
 
 const MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.']
 
 function TransactionsContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
+  const { data: session } = useSession()
+  const { roles: effectiveRoles, discordId: effectiveDiscordId } = useEffectiveRoles(session)
 
   const [txns, setTxns]         = useState([])
   const [accounts, setAccounts] = useState([])
@@ -63,7 +68,13 @@ function TransactionsContent() {
   const EMPTY_FORM = { account_id: filter.accountId, type: 'income', amount: '', description: '', category_id: '', counterpart_name: '', counterpart_bank: '', counterpart_account: '', txn_at: toLocalDT() }
 
   useEffect(() => {
-    fetch('/api/finance/accounts').then(r => r.json()).then(setAccounts)
+    fetch('/api/finance/accounts').then(r => r.json()).then(list => {
+      setAccounts(list)
+      // ถ้า accountId ใน URL ไม่อยู่ในรายการที่เข้าถึงได้ → ล้างออก
+      if (filter.accountId && !list.some(a => String(a.id) === String(filter.accountId))) {
+        setFilter(f => ({ ...f, accountId: '' }))
+      }
+    })
     fetch('/api/finance/categories').then(r => r.json()).then(setCategories)
   }, [])
 
@@ -84,7 +95,8 @@ function TransactionsContent() {
     if (filter.dateTo)     p.set('dateTo',      filter.dateTo)
     p.set('limit',  LIMIT)
     p.set('offset', currentOffset)
-    const rows = await fetch('/api/finance/transactions?' + p).then(r => r.json())
+    const res = await fetch('/api/finance/transactions?' + p)
+    const rows = res.ok ? await res.json() : []
     setTxns(prev => {
       const merged = reset ? rows : [...prev, ...rows]
       const seen = new Set()
@@ -172,9 +184,15 @@ function TransactionsContent() {
     <div>
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-bold">รายการธุรกรรม</h1>
-        <button onClick={openNew} className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-indigo-700">
-          + เพิ่มรายการ
-        </button>
+        {accounts.some(a => canEditAccount(
+          { owner_id: a.owner_id, visibility: a.visibility, province: a.province },
+          effectiveDiscordId,
+          effectiveRoles
+        )) && (
+          <button onClick={openNew} className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-indigo-700">
+            + เพิ่มรายการ
+          </button>
+        )}
       </div>
 
       {/* Account selector card */}
@@ -423,16 +441,22 @@ function TransactionsContent() {
                     </button>
                   ))}
                 </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={e => { e.stopPropagation(); openEdit(t); setExpandedId(null) }}
-                    className="flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 hover:underline"
-                  ><Pencil size={12} /> แก้ไขทั้งหมด</button>
-                  <button
-                    onClick={e => { e.stopPropagation(); remove(t.id) }}
-                    className="flex items-center gap-1 text-xs text-red-500 dark:text-red-400 hover:underline ml-2"
-                  ><Trash2 size={12} /> ลบ</button>
-                </div>
+                {canEditAccount(
+                  { owner_id: t.account_owner_id, visibility: t.account_visibility, province: t.account_province },
+                  effectiveDiscordId,
+                  effectiveRoles
+                ) && (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={e => { e.stopPropagation(); openEdit(t); setExpandedId(null) }}
+                      className="flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 hover:underline"
+                    ><Pencil size={12} /> แก้ไขทั้งหมด</button>
+                    <button
+                      onClick={e => { e.stopPropagation(); remove(t.id) }}
+                      className="flex items-center gap-1 text-xs text-red-500 dark:text-red-400 hover:underline ml-2"
+                    ><Trash2 size={12} /> ลบ</button>
+                  </div>
+                )}
               </div>
             )}
           </div>

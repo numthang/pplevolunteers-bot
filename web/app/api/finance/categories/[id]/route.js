@@ -1,14 +1,10 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
 import { getCategoryById, updateCategory, deleteCategory } from '@/db/finance/categories.js'
+import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 
 const ADMIN_ROLES    = ['Admin', 'รองเลขาธิการ']
 const GLOBAL_EDITORS = ['Admin', 'รองเลขาธิการ', 'Moderator']
-
-function getRoles(session) {
-  const r = session.user.roles
-  return Array.isArray(r) ? r : (r || '').split(',').map(x => x.trim())
-}
 
 export async function PUT(req, { params }) {
   const session = await getServerSession(authOptions)
@@ -19,12 +15,12 @@ export async function PUT(req, { params }) {
   const cat = await getCategoryById(id)
   if (!cat) return Response.json({ error: 'Not found' }, { status: 404 })
 
-  const roles = getRoles(session)
+  const { roles, discordId } = await getEffectiveIdentity(session)
   const isAdmin = ADMIN_ROLES.some(r => roles.includes(r))
 
   if (cat.is_global && !GLOBAL_EDITORS.some(r => roles.includes(r)))
     return Response.json({ error: 'Forbidden' }, { status: 403 })
-  if (!cat.is_global && !isAdmin && cat.owner_id !== session.user.discordId)
+  if (!cat.is_global && !isAdmin && cat.owner_id !== discordId)
     return Response.json({ error: 'Forbidden' }, { status: 403 })
 
   const { name, icon, is_global } = await req.json()
@@ -45,12 +41,12 @@ export async function DELETE(req, { params }) {
   const cat = await getCategoryById(id)
   if (!cat) return Response.json({ error: 'Not found' }, { status: 404 })
 
-  const roles = getRoles(session)
+  const { roles, discordId } = await getEffectiveIdentity(session)
   const isAdmin = ADMIN_ROLES.some(r => roles.includes(r))
 
   if (cat.is_global && !GLOBAL_EDITORS.some(r => roles.includes(r)))
     return Response.json({ error: 'Forbidden' }, { status: 403 })
-  if (!cat.is_global && !isAdmin && cat.owner_id !== session.user.discordId)
+  if (!cat.is_global && !isAdmin && cat.owner_id !== discordId)
     return Response.json({ error: 'Forbidden' }, { status: 403 })
 
   await deleteCategory(id)
