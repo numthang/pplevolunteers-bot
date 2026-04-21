@@ -49,8 +49,8 @@ export async function POST(req) {
 
   if (data.account_id) {
     const account = await getAccountById(data.account_id)
-    const effectiveRoles = await getEffectiveRoles(session)
-    if (!account || !canEditAccount(account, session.user.discordId, effectiveRoles)) {
+    const { roles: effectiveRoles, discordId: effectiveDiscordId } = await getEffectiveIdentity(session)
+    if (!account || !canEditAccount(account, effectiveDiscordId, effectiveRoles)) {
       return Response.json({ error: 'Forbidden' }, { status: 403 })
     }
   }

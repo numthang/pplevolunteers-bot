@@ -153,11 +153,12 @@ function TransactionsContent() {
     if (!form.account_id) return alert('กรุณาเลือกบัญชี')
     if (!form.amount || Number(form.amount) <= 0) return alert('กรุณาใส่จำนวนเงิน')
     const isNew = !editing?.id
-    await fetch(isNew ? '/api/finance/transactions' : `/api/finance/transactions/${editing.id}`, {
+    const res = await fetch(isNew ? '/api/finance/transactions' : `/api/finance/transactions/${editing.id}`, {
       method: isNew ? 'POST' : 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form),
     })
+    if (!res.ok) return alert('ไม่มีสิทธิ์บันทึกรายการในบัญชีนี้')
     close(); load()
   }
 
@@ -184,11 +185,7 @@ function TransactionsContent() {
     <div>
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-bold">รายการธุรกรรม</h1>
-        {accounts.some(a => canEditAccount(
-          { owner_id: a.owner_id, visibility: a.visibility, province: a.province },
-          effectiveDiscordId,
-          effectiveRoles
-        )) && (
+        {['เหรัญญิก','กรรมการจังหวัด','ผู้ประสานงานจังหวัด','Admin','เลขาธิการ'].some(r => effectiveRoles.includes(r)) && (
           <button onClick={openNew} className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-indigo-700">
             + เพิ่มรายการ
           </button>
@@ -474,7 +471,12 @@ function TransactionsContent() {
 
       {editing !== null && (
         <Modal title={editing.id ? `แก้ไขรายการ #${editing.id}` : 'เพิ่มรายการ'} onClose={close} onSave={save}>
-          <TxnForm form={form} onChange={v => setForm(f => ({ ...f, ...v }))} accounts={accounts} categories={categories} />
+          <TxnForm form={form} onChange={v => setForm(f => ({ ...f, ...v }))}
+            accounts={accounts.filter(a => canEditAccount(
+              { owner_id: a.owner_id, visibility: a.visibility, province: a.province },
+              effectiveDiscordId, effectiveRoles
+            ))}
+            categories={categories} />
         </Modal>
       )}
     </div>
