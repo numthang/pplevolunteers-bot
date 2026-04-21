@@ -65,7 +65,7 @@ export async function updateTransaction(id, data, updatedBy) {
     [account_id, type, amount, description, category_id || null,
      counterpart_name || null, counterpart_account || null, counterpart_bank || null,
      fee || null, balance_after || null,
-     evidence_url || null, txn_at ? new Date(txn_at).toISOString().slice(0, 19).replace('T', ' ') : null, updatedBy, id]
+     evidence_url || null, txn_at || null, updatedBy, id]
   )
 }
 

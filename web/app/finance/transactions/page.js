@@ -172,7 +172,7 @@ function TransactionsContent() {
     await fetch(`/api/finance/transactions/${t.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...t, category_id: categoryId || null }),
+      body: JSON.stringify({ ...t, category_id: categoryId || null, txn_at: toLocalDT(new Date(t.txn_at)) }),
     })
     setTxns(prev => prev.map(x => x.id === t.id
       ? { ...x, category_id: categoryId, category_name: categories.find(c => c.id === Number(categoryId))?.name || null, category_icon: categories.find(c => c.id === Number(categoryId))?.icon || null }

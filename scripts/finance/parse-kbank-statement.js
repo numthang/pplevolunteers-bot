@@ -253,5 +253,5 @@ function parseRows(text) {
   console.log(`\n📊 Summary:`)
   console.log(`   income:  ${rows.filter(r => r.type === 'income').length} rows`)
   console.log(`   expense: ${rows.filter(r => r.type === 'expense').length} rows`)
-  console.log(`\nตรวจสอบ statement.xlsx ก่อน แล้วค่อย run statement.sql`)
+  console.log(`\nตรวจสอบ ${sqlPath}`)
 })()

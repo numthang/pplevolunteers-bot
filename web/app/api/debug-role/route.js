@@ -28,7 +28,7 @@ export async function DELETE() {
   }
 
   const cookieStore = await cookies()
-  cookieStore.delete('debug_role')
+  cookieStore.set('debug_role', '', { maxAge: 0, path: '/' })
 
   return Response.json({ ok: true })
 }
