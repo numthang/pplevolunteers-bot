@@ -38,13 +38,13 @@ git reset --hard origin/master
 #git pull
 
 # Bot
-npm install --omit=dev
+#npm install --omit=dev
 node deploy-commands.js $GUILD_ARG
 pm2 restart pple-dcbot
 
 # Web
 cd web
-npm install --omit=dev
+#npm install --omit=dev
 npm run build
 pm2 restart pple-web || pm2 start npm --name pple-web -- start
 pm2 save

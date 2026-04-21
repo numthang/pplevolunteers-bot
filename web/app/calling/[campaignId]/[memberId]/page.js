@@ -207,7 +207,19 @@ export default function CallPage({ params }) {
                           <p className="text-sm font-medium text-warm-900 dark:text-warm-50">
                             {new Date(log.called_at).toLocaleString('th-TH')}
                           </p>
-                          <p className="text-xs text-warm-400 dark:text-warm-dark-400">โดย {log.caller_name}</p>
+                          {log.caller_name && (
+                            <p className="text-xs text-warm-400 dark:text-warm-dark-400">
+                              โดย{' '}
+                              <a
+                                href={`https://discord.com/users/${log.called_by}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-teal hover:underline"
+                              >
+                                {log.caller_name}
+                              </a>
+                            </p>
+                          )}
                         </div>
                         <span className={`text-xs font-medium px-2.5 py-1 rounded-md ${s.cls}`}>{s.label}</span>
                       </div>

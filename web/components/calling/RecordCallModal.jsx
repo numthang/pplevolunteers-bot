@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { CALL_STATUS_COLORS } from '@/lib/callingStatusColors.js'
 
 const CALL_STATUS_OPTIONS = [
   { value: 'answered',      label: 'รับสาย',   color: '#0d9e94', bg: '#e1f5f4' },
@@ -50,10 +51,9 @@ const SIGNALS = [
   },
 ]
 
-const LOG_STATUS_CLS = {
-  answered:     { label: 'รับสาย',   cls: 'bg-teal-light text-teal dark:bg-teal-dim dark:text-teal-bright' },
-  no_answer:    { label: 'ไม่รับ',    cls: 'bg-[#faeeda] text-[#854f0b] dark:bg-[#3a2308] dark:text-[#d4953e]' },
-  wrong_number: { label: 'เบอร์ผิด',  cls: 'bg-[#fcebeb] text-[#a32d2d] dark:bg-[#3a1212] dark:text-[#d47373]' },
+const getLogStatusStyle = (status) => {
+  const color = CALL_STATUS_COLORS[status]
+  return color ? { bg: color.bg, text: color.text, label: color.label } : { bg: '#f3f4f6', text: '#6b7280', label: status }
 }
 
 const TIER_COLORS = {
@@ -274,11 +274,24 @@ export default function RecordCallModal({ isOpen, member, onClose, onSave, onSav
               ) : (
                 <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
                   {history.map(log => {
-                    const s = LOG_STATUS_CLS[log.status] || { label: log.status, cls: 'bg-warm-100 text-warm-500 dark:bg-warm-dark-200 dark:text-warm-dark-500' }
+                    const s = getLogStatusStyle(log.status)
                     return (
                       <div key={log.id} className="rounded-lg p-2 bg-white dark:bg-warm-dark-100 border border-warm-200 dark:border-warm-dark-300">
                         <div className="flex items-center justify-between gap-2 mb-1">
-                          <span className={`px-1.5 py-0.5 rounded text-xs font-semibold ${s.cls}`}>{s.label}</span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="px-1.5 py-0.5 rounded text-xs font-semibold" style={{ backgroundColor: s.bg, color: s.text }}>{s.label}</span>
+                            {log.caller_name && (
+                              <a
+                                href={`https://discord.com/users/${log.called_by}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-teal hover:underline"
+                                title={log.caller_name}
+                              >
+                                {log.caller_name}
+                              </a>
+                            )}
+                          </div>
                           <span className="text-warm-400 dark:text-warm-dark-500 text-xs tabular-nums">
                             {new Date(log.called_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}
                           </span>

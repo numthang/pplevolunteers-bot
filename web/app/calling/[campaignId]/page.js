@@ -490,7 +490,18 @@ export default function CampaignPage({ params }) {
                               <span className="shrink-0 font-semibold" style={{ color: LOG_STATUS_COLOR[log.status] }}>
                                 {LOG_STATUS_LABEL[log.status] || log.status}
                               </span>
-                              <span className="text-warm-600 dark:text-warm-200 shrink-0">{log.caller_name || '—'}</span>
+                              {log.caller_name ? (
+                                <a
+                                  href={`https://discord.com/users/${log.called_by}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-teal hover:underline shrink-0"
+                                >
+                                  {log.caller_name}
+                                </a>
+                              ) : (
+                                <span className="text-warm-600 dark:text-warm-200 shrink-0">—</span>
+                              )}
                               {log.note && <span className="text-warm-700 dark:text-disc-text truncate">"{log.note}"</span>}
                             </div>
                           ))}

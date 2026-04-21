@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import RecordCallModal from '@/components/calling/RecordCallModal.jsx'
+import { CALL_STATUS_COLORS } from '@/lib/callingStatusColors.js'
 
 const TIER_COLORS = {
   A: { bg: '#ead3ce', text: '#714b2b' },
@@ -17,13 +18,9 @@ const RSVP_ICONS = {
   maybe: { icon: '?', color: '#854f0b' },
 }
 
-function getStatusBadge(logStatus) {
-  switch (logStatus) {
-    case 'answered':     return { bg: '#e1f5f4', text: '#0d9e94', label: 'รับสาย' }
-    case 'no_answer':    return { bg: '#faeeda', text: '#854f0b', label: 'ไม่รับ' }
-    case 'wrong_number': return { bg: '#fcebeb', text: '#a32d2d', label: 'เบอร์ผิด' }
-    default:             return { bg: '#f3f4f6', text: '#6b7280', label: 'รอโทร' }
-  }
+function getStatusBadge(callStatus, logStatus) {
+  if (callStatus === 'pending') return CALL_STATUS_COLORS.pending
+  return CALL_STATUS_COLORS[logStatus] || CALL_STATUS_COLORS.pending
 }
 
 const STATUS_OPTIONS = [
@@ -100,6 +97,17 @@ export default function PendingCallsPage() {
     setModalMember(null)
     setModalIndex(-1)
   }
+
+  // ESC to close modal
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && modalMember) {
+        closeModal()
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [modalMember])
 
   // Next pending member after current index
   const findNextPendingIndex = useCallback((fromIndex) => {
@@ -319,7 +327,7 @@ export default function PendingCallsPage() {
                       <div className="flex flex-col items-end gap-1 flex-shrink-0">
                         <div className="flex items-center gap-1">
                           {(() => {
-                            const badge = getStatusBadge(member.latest_log_status)
+                            const badge = getStatusBadge(member.call_status, member.latest_log_status)
                             return (
                               <>
                                 <span className="px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap"
@@ -390,7 +398,7 @@ export default function PendingCallsPage() {
                     {/* Status + RSVP */}
                     <div className="flex items-center gap-1 justify-start">
                       {(() => {
-                        const badge = getStatusBadge(member.latest_log_status)
+                        const badge = getStatusBadge(member.call_status, member.latest_log_status)
                         return (
                           <>
                             <span className="px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap"
