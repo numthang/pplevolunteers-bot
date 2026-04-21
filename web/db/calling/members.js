@@ -317,7 +317,7 @@ export async function getMyAssignedMembers(discordId, { campaignId, status, rsvp
          AND (? IS NULL OR a.rsvp = ?)
      ) sub
      WHERE (? IS NULL OR call_status = ?)
-       AND (event_date IS NULL OR event_date >= CURDATE() OR call_status != 'pending')
+       AND (event_date IS NULL OR event_date >= CURDATE())
      ORDER BY
        CASE WHEN call_status = 'pending' THEN 0 ELSE 1 END ASC,
        CASE tier WHEN 'A' THEN 1 WHEN 'B' THEN 2 WHEN 'C' THEN 3 ELSE 4 END ASC,
