@@ -259,6 +259,7 @@ export async function getMyCampaigns(discordId) {
        FROM calling_logs GROUP BY campaign_id, member_id
      ) camp_stats ON camp_stats.campaign_id = a.campaign_id AND camp_stats.member_id = a.member_id
      WHERE a.assigned_to = ?
+       AND (ec.event_date IS NULL OR ec.event_date >= CURDATE())
      GROUP BY ec.id
      ORDER BY ec.name ASC`,
     [discordId]
