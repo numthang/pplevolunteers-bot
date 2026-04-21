@@ -12,7 +12,7 @@ export async function getCampaignById(id) {
 export async function getCampaigns(province = null) {
   let query = `
     SELECT
-      c.id, c.name, c.province, c.description, c.event_date, c.created_at,
+      c.id, c.name, c.province, c.description, DATE_FORMAT(c.event_date, '%Y-%m-%d') AS event_date, c.created_at,
       COUNT(DISTINCT cl.id) AS call_count
     FROM act_event_cache c
     LEFT JOIN calling_logs cl ON cl.campaign_id = c.id

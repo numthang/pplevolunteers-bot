@@ -72,14 +72,13 @@ export default async function CallingPage() {
                             {campaign.call_count || 0} การโทร
                           </span>
                           <span>
-                            สร้าง {new Date(campaign.created_at).toLocaleDateString('th-TH')}
+                            {campaign.event_date && (
+                              <div className="text-orange-600 dark:text-orange-400 font-medium">
+                                วันจัดกิจกรรม : {new Date(campaign.event_date).toLocaleDateString('th-TH')}
+                              </div>
+                            )}
                           </span>
                         </div>
-                        {campaign.event_date && (
-                          <div className="text-orange-600 dark:text-orange-400 font-medium">
-                            กิจกรรม {new Date(campaign.event_date).toLocaleDateString('th-TH')}
-                          </div>
-                        )}
                       </div>
                     </div>
                   </Link>
