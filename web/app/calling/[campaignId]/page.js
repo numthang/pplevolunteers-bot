@@ -35,6 +35,7 @@ export default function CampaignPage({ params }) {
   const [hasMore, setHasMore] = useState(false)
   const [loadingInitial, setLoadingInitial] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
+  const [noAccess, setNoAccess] = useState(false)
   const [usersMap, setUsersMap] = useState({})
 
   const [selectedMembers, setSelectedMembers] = useState(new Set())
@@ -120,6 +121,7 @@ export default function CampaignPage({ params }) {
         fetch(`/api/calling/members?campaignId=${campaignId}&stats=true`)
       ])
       const memberData = await memberRes.json()
+      if (memberData.noAccess) { setNoAccess(true); return }
       const newRows = memberData.data || []
       setMembers(newRows)
       setHasMore(memberData.hasMore || false)
@@ -390,6 +392,11 @@ export default function CampaignPage({ params }) {
         {/* Rows */}
         {loadingInitial ? (
           <div className="px-6 py-8 text-center text-warm-400 dark:text-disc-muted text-sm">กำลังโหลด...</div>
+        ) : noAccess ? (
+          <div className="px-6 py-10 text-center">
+            <p className="text-warm-700 dark:text-warm-100 font-medium mb-1">ยังไม่ได้รับสิทธิ์เข้าถึงส่วนนี้</p>
+            <p className="text-sm text-warm-400 dark:text-warm-dark-500">ต้องการเข้าใช้งาน? ติดต่อฝ่ายเครือข่ายได้เลยนะครับ</p>
+          </div>
         ) : members.length === 0 ? (
           <div className="px-6 py-8 text-center text-warm-400 dark:text-disc-muted text-sm">ไม่พบสมาชิก</div>
         ) : (

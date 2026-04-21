@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { authOptions } from '@/lib/auth-options.js'
 import { getUserScope, isAdmin } from '@/lib/callingAccess.js'
 import { getCampaigns } from '@/db/calling/campaigns.js'
+import { getEffectiveRoles } from '@/lib/getEffectiveRoles.js'
 
 export default async function CallingPage() {
   const session = await getServerSession(authOptions)
@@ -15,7 +16,7 @@ export default async function CallingPage() {
     )
   }
 
-  const userRoles = session.user.roles || []
+  const userRoles = await getEffectiveRoles(session)
   const userScope = getUserScope(userRoles)
   const isUserAdmin = isAdmin(userRoles)
 

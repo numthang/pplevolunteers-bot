@@ -2,6 +2,7 @@ import { getServerSession } from 'next-auth'
 import * as campaignDB from '@/db/calling/campaigns.js'
 import { isAdmin, getUserScope, canCreateCampaign } from '@/lib/callingAccess.js'
 import { authOptions } from '@/lib/auth-options.js'
+import { getEffectiveRoles } from '@/lib/getEffectiveRoles.js'
 import pool from '@/db/index.js'
 
 /**
@@ -30,7 +31,7 @@ export async function GET(req) {
     }
 
     // Filter by user scope (unless admin)
-    const userRoles = session.user.roles || []
+    const userRoles = await getEffectiveRoles(session)
     const isUserAdmin = isAdmin(userRoles)
     const userScope = getUserScope(userRoles)
 
@@ -85,7 +86,7 @@ export async function POST(req) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const userRoles = session.user.roles || []
+  const userRoles = await getEffectiveRoles(session)
   if (!canCreateCampaign(userRoles)) {
     return Response.json({ error: 'Forbidden' }, { status: 403 })
   }

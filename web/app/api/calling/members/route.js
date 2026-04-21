@@ -60,6 +60,11 @@ export async function GET(req) {
       total = await memberDB.getMembersCount()
     }
 
+    // No calling roles at all → return noAccess flag
+    if (!isUserAdmin && Array.isArray(userScope) && userScope.length === 0) {
+      return Response.json({ success: true, data: [], hasMore: false, noAccess: true, limit, offset })
+    }
+
     // Filter by user scope (unless admin)
     if (!isUserAdmin && userScope) {
       rows = rows.filter(m => userScope.includes(m.home_province))
