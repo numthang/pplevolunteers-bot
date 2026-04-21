@@ -66,13 +66,20 @@ export default async function CallingPage() {
                           {campaign.description}
                         </p>
                       )}
-                      <div className="flex justify-between items-center text-xs text-warm-400 dark:text-warm-dark-400 pt-2 border-t border-warm-200 dark:border-warm-dark-200">
-                        <span className="font-medium text-warm-900 dark:text-warm-50">
-                          {campaign.call_count || 0} การโทร
-                        </span>
-                        <span>
-                          {new Date(campaign.created_at).toLocaleDateString('th-TH')}
-                        </span>
+                      <div className="space-y-1.5 pt-2 border-t border-warm-200 dark:border-warm-dark-200 text-xs">
+                        <div className="flex justify-between items-center text-warm-400 dark:text-warm-dark-400">
+                          <span className="font-medium text-warm-900 dark:text-warm-50">
+                            {campaign.call_count || 0} การโทร
+                          </span>
+                          <span>
+                            สร้าง {new Date(campaign.created_at).toLocaleDateString('th-TH')}
+                          </span>
+                        </div>
+                        {campaign.event_date && (
+                          <div className="text-orange-600 dark:text-orange-400 font-medium">
+                            กิจกรรม {new Date(campaign.event_date).toLocaleDateString('th-TH')}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </Link>

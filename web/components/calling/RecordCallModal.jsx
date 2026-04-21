@@ -298,9 +298,25 @@ export default function RecordCallModal({ isOpen, member, onClose, onSave, onSav
           <div className="md:order-1 flex flex-col gap-4">
 
             {/* 2️⃣ Campaign info */}
-            <div className="bg-white dark:bg-warm-dark-100 rounded-lg p-3 text-xs border border-warm-200 dark:border-warm-dark-300">
-              <div className="text-warm-400 dark:text-warm-dark-400 mb-1">Campaign</div>
-              <div className="font-semibold text-warm-900 dark:text-warm-50">{member.campaign_name || '—'}</div>
+            <div className="bg-white dark:bg-warm-dark-100 rounded-lg p-3 text-xs border border-warm-200 dark:border-warm-dark-300 space-y-2">
+              <div>
+                <div className="text-warm-400 dark:text-warm-dark-400 mb-0.5">Campaign</div>
+                <div className="font-semibold text-warm-900 dark:text-warm-50">{member.campaign_name || '—'}</div>
+              </div>
+              {member.campaign_description && (
+                <div>
+                  <div className="text-warm-400 dark:text-warm-dark-400 mb-0.5">รายละเอียด</div>
+                  <div className="text-warm-700 dark:text-warm-200 line-clamp-2">{member.campaign_description}</div>
+                </div>
+              )}
+              {member.event_date && (
+                <div>
+                  <div className="text-warm-400 dark:text-warm-dark-400 mb-0.5">วันที่กิจกรรม</div>
+                  <div className="font-semibold text-orange-600 dark:text-orange-400">
+                    {new Date(member.event_date).toLocaleDateString('th-TH')}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* 3️⃣ Status selector */}
