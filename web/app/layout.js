@@ -4,8 +4,11 @@ import Providers from '@/components/Providers.jsx'
 import Nav from '@/components/Nav.jsx'
 
 export const metadata = {
-  title: 'PPLE Finance',
-  description: 'ระบบการเงิน PPLE Volunteers',
+  title: {
+    default: 'PPLE Volunteers',
+    template: '%s — PPLE Volunteers',
+  },
+  description: 'PPLE Volunteers',
   icons: { icon: '/logo.png' },
 }
 

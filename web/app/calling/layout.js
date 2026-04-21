@@ -1,3 +1,5 @@
+export const metadata = { title: 'Calling' }
+
 export default function CallingLayout({ children }) {
   return (
     <div className="-mx-4 -mt-6 min-h-screen bg-warm-50 dark:bg-warm-dark-50">
