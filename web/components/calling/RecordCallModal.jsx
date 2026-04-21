@@ -50,10 +50,10 @@ const SIGNALS = [
   },
 ]
 
-const LOG_STATUS_LABEL = {
-  answered:     { label: 'รับสาย',   color: '#0d9e94', bg: '#e1f5f4' },
-  no_answer:    { label: 'ไม่รับ',    color: '#854f0b', bg: '#faeeda' },
-  wrong_number: { label: 'เบอร์ผิด',  color: '#a32d2d', bg: '#fcebeb' },
+const LOG_STATUS_CLS = {
+  answered:     { label: 'รับสาย',   cls: 'bg-teal-light text-teal dark:bg-teal-dim dark:text-teal-bright' },
+  no_answer:    { label: 'ไม่รับ',    cls: 'bg-[#faeeda] text-[#854f0b] dark:bg-[#3a2308] dark:text-[#d4953e]' },
+  wrong_number: { label: 'เบอร์ผิด',  cls: 'bg-[#fcebeb] text-[#a32d2d] dark:bg-[#3a1212] dark:text-[#d47373]' },
 }
 
 const TIER_COLORS = {
@@ -272,37 +272,23 @@ export default function RecordCallModal({ isOpen, member, onClose, onSave, onSav
               ) : history.length === 0 ? (
                 <div className="text-xs text-warm-400 dark:text-warm-dark-400">ยังไม่มี</div>
               ) : (
-                <div className="space-y-1 max-h-40 overflow-y-auto pr-1 text-xs">
-                  {(() => {
-                    const grouped = {}
-                    history.forEach(log => {
-                      const date = new Date(log.called_at).toLocaleDateString('th-TH')
-                      if (!grouped[date]) grouped[date] = []
-                      grouped[date].push(log)
-                    })
-
-                    return Object.entries(grouped).map(([date, logs]) => (
-                      <div key={date} className="border border-warm-200 dark:border-warm-dark-300 rounded p-2 bg-white dark:bg-warm-dark-100">
-                        {logs.map((log, idx) => {
-                          const s = LOG_STATUS_LABEL[log.status] || { label: log.status, color: '#888', bg: '#eee' }
-                          return (
-                            <div key={log.id} className={idx > 0 ? 'pt-2 border-t border-warm-100 dark:border-warm-dark-300' : ''}>
-                              <div className="flex items-center justify-between gap-1 mb-0.5">
-                                <span className="px-1.5 py-0.5 rounded font-semibold text-xs"
-                                  style={{ backgroundColor: s.bg, color: s.color }}>
-                                  {s.label}
-                                </span>
-                                <span className="text-warm-400 dark:text-warm-dark-400 text-xs">{formatDate(log.called_at)}</span>
-                              </div>
-                              {log.note && (
-                                <div className="text-warm-600 dark:text-warm-dark-300 text-xs leading-snug">{log.note}</div>
-                              )}
-                            </div>
-                          )
-                        })}
+                <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                  {history.map(log => {
+                    const s = LOG_STATUS_CLS[log.status] || { label: log.status, cls: 'bg-warm-100 text-warm-500 dark:bg-warm-dark-200 dark:text-warm-dark-500' }
+                    return (
+                      <div key={log.id} className="rounded-lg p-2 bg-white dark:bg-warm-dark-100 border border-warm-200 dark:border-warm-dark-300">
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <span className={`px-1.5 py-0.5 rounded text-xs font-semibold ${s.cls}`}>{s.label}</span>
+                          <span className="text-warm-400 dark:text-warm-dark-500 text-xs tabular-nums">
+                            {new Date(log.called_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}
+                          </span>
+                        </div>
+                        {log.note && (
+                          <div className="text-xs text-warm-800 dark:text-warm-100 leading-snug">{log.note}</div>
+                        )}
                       </div>
-                    ))
-                  })()}
+                    )
+                  })}
                 </div>
               )}
             </div>

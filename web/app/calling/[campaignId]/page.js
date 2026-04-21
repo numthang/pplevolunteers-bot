@@ -423,7 +423,7 @@ export default function CampaignPage({ params }) {
                         {member.full_name}
                         {!hasPhone && <span className="ml-2 text-xs text-warm-400 dark:text-disc-muted font-normal">ไม่มีเบอร์</span>}
                       </div>
-                      <div className="flex items-center gap-1.5 text-sm text-warm-400 dark:text-disc-muted truncate">
+                      <div className="flex items-center gap-1.5 text-sm text-warm-500 dark:text-warm-200 truncate">
                         <span
                           className="shrink-0 w-1.5 h-1.5 rounded-full inline-block"
                           style={{ backgroundColor: badge.text }}
@@ -477,14 +477,14 @@ export default function CampaignPage({ params }) {
                         <div className="space-y-0.5">
                           {memberLogs.map(log => (
                             <div key={log.id} className="flex items-baseline gap-3 text-sm py-0.5">
-                              <span className="text-warm-400 dark:text-disc-muted tabular-nums shrink-0">
+                              <span className="text-warm-400 dark:text-disc-muted tabular-nums shrink-0 text-xs">
                                 {new Date(log.called_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}
                               </span>
-                              <span className="shrink-0 font-medium" style={{ color: LOG_STATUS_COLOR[log.status] }}>
+                              <span className="shrink-0 font-semibold" style={{ color: LOG_STATUS_COLOR[log.status] }}>
                                 {LOG_STATUS_LABEL[log.status] || log.status}
                               </span>
-                              <span className="text-warm-500 dark:text-disc-muted shrink-0">{log.caller_name || '—'}</span>
-                              {log.note && <span className="text-warm-400 dark:text-disc-muted truncate">"{log.note}"</span>}
+                              <span className="text-warm-600 dark:text-warm-200 shrink-0">{log.caller_name || '—'}</span>
+                              {log.note && <span className="text-warm-700 dark:text-disc-text truncate">"{log.note}"</span>}
                             </div>
                           ))}
                         </div>

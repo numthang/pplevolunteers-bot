@@ -300,11 +300,18 @@ export default function PendingCallsPage() {
                             style={{ backgroundColor: tierColor.bg, color: tierColor.text }}
                           >{tier}</span>
                         </div>
-                        <div className="text-xs text-warm-400 dark:text-warm-dark-400 truncate">
-                          {member.home_amphure || ''}{member.campaign_name ? ` · ${member.campaign_name}` : ''}
+                        <div className="flex items-center gap-1.5 text-xs truncate">
+                          {member.mobile_number && (
+                            <span className="text-teal font-medium shrink-0">{member.mobile_number}</span>
+                          )}
+                          {(member.home_amphure || member.campaign_name) && (
+                            <span className="text-warm-400 dark:text-warm-dark-400 truncate">
+                              {member.mobile_number ? '· ' : ''}{[member.home_amphure, member.campaign_name].filter(Boolean).join(' · ')}
+                            </span>
+                          )}
                         </div>
                         {member.latest_note && (
-                          <div className="text-xs text-warm-500 dark:text-warm-dark-500 mt-1 truncate italic">
+                          <div className="text-xs text-warm-600 dark:text-warm-200 mt-1 truncate italic">
                             "{member.latest_note}"
                           </div>
                         )}
@@ -347,11 +354,18 @@ export default function PendingCallsPage() {
                         <div className="text-sm font-medium text-warm-900 dark:text-warm-50 group-hover:text-teal transition-colors truncate">
                           {member.full_name}
                         </div>
-                        <div className="text-xs text-warm-400 dark:text-warm-dark-400 truncate">
-                          {[member.mobile_number, member.home_amphure, member.campaign_name].filter(Boolean).join(' · ')}
+                        <div className="flex items-center gap-1.5 text-xs truncate">
+                          {member.mobile_number && (
+                            <span className="text-teal font-medium shrink-0">{member.mobile_number}</span>
+                          )}
+                          {(member.home_amphure || member.campaign_name) && (
+                            <span className="text-warm-400 dark:text-warm-dark-400 truncate">
+                              {member.mobile_number ? '· ' : ''}{[member.home_amphure, member.campaign_name].filter(Boolean).join(' · ')}
+                            </span>
+                          )}
                         </div>
                         {member.latest_note && (
-                          <div className="text-xs text-warm-500 dark:text-warm-dark-500 mt-0.5 truncate italic">
+                          <div className="text-xs text-warm-600 dark:text-warm-200 mt-0.5 truncate italic">
                             "{member.latest_note}"
                           </div>
                         )}
