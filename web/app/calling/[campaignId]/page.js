@@ -57,7 +57,7 @@ export default function CampaignPage({ params }) {
     const next = expandedId === memberId ? null : memberId
     setExpandedId(next)
     if (next && !logsCache[next]) {
-      const res = await fetch(`/api/calling/logs?campaignId=${campaignId}&memberId=${next}`)
+      const res = await fetch(`/api/calling/logs?memberId=${next}`)
       const data = await res.json()
       setLogsCache(prev => ({ ...prev, [next]: data.data || [] }))
     }
@@ -444,6 +444,11 @@ export default function CampaignPage({ params }) {
                           </span>
                         )}
                       </div>
+                      {member.last_note && (
+                        <div className="text-xs text-warm-600 dark:text-warm-200 mt-0.5 truncate italic">
+                          "{member.last_note}"
+                        </div>
+                      )}
                     </div>
                     <div className={`flex justify-center ${dimmed}`}>
                       <span className="px-1.5 py-0.5 rounded text-xs font-semibold"
@@ -451,7 +456,7 @@ export default function CampaignPage({ params }) {
                     </div>
                     <div className={`hidden md:block text-sm truncate pr-2 ${dimmed}`}>
                       {member.assigned_to
-                        ? <span className="text-warm-900 dark:text-disc-text">{usersMap[member.assigned_to] || member.assigned_to}</span>
+                        ? <a href={`https://discord.com/users/${member.assigned_to}`} target="_blank" rel="noopener noreferrer" className="text-teal hover:underline">{usersMap[member.assigned_to] || member.assigned_to}</a>
                         : <span className="px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap" style={{ backgroundColor: badge.bg, color: badge.text }}>{badge.label}</span>}
                     </div>
                     <div className={`hidden md:block text-sm text-warm-500 dark:text-disc-muted truncate pr-2 ${dimmed}`}>
@@ -473,7 +478,6 @@ export default function CampaignPage({ params }) {
                             : <span className="text-warm-400 dark:text-disc-muted">ไม่มีเบอร์</span>}
                         </span>
                         {member.line_id && <span className="text-warm-500 dark:text-disc-muted">LINE: {member.line_id}</span>}
-                        {member.assigned_to && <span className="text-warm-500 dark:text-disc-muted">มอบหมาย: {usersMap[member.assigned_to] || member.assigned_to}</span>}
                       </div>
                       {/* Call history */}
                       {memberLogs === undefined ? (
@@ -482,15 +486,17 @@ export default function CampaignPage({ params }) {
                         <div className="text-sm text-warm-400 dark:text-disc-muted py-1">ยังไม่มีประวัติการโทร</div>
                       ) : (
                         <div className="space-y-0.5">
-                          {memberLogs.map(log => (
+                          {memberLogs.map(log => {
+                            const logColor = LOG_STATUS_COLOR[log.status] ? { bg: LOG_STATUS_COLOR[log.status], text: '#fff' } : { bg: '#f3f4f6', text: '#6b7280' }
+                            return (
                             <div key={log.id} className="flex items-baseline gap-3 text-sm py-0.5">
                               <span className="text-warm-400 dark:text-disc-muted tabular-nums shrink-0 text-xs">
                                 {new Date(log.called_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}
                               </span>
-                              <span className="shrink-0 font-semibold" style={{ color: LOG_STATUS_COLOR[log.status] }}>
+                              <span className="px-1.5 py-0.5 rounded text-xs font-semibold shrink-0" style={{ backgroundColor: logColor.bg, color: logColor.text }}>
                                 {LOG_STATUS_LABEL[log.status] || log.status}
                               </span>
-                              {log.caller_name ? (
+                              {log.caller_name && log.called_by ? (
                                 <a
                                   href={`https://discord.com/users/${log.called_by}`}
                                   target="_blank"
@@ -500,11 +506,12 @@ export default function CampaignPage({ params }) {
                                   {log.caller_name}
                                 </a>
                               ) : (
-                                <span className="text-warm-600 dark:text-warm-200 shrink-0">—</span>
+                                <span className="text-warm-600 dark:text-warm-200 shrink-0">{log.caller_name || '—'}</span>
                               )}
                               {log.note && <span className="text-warm-700 dark:text-disc-text truncate">"{log.note}"</span>}
                             </div>
-                          ))}
+                            )
+                          })}
                         </div>
                       )}
                     </div>
