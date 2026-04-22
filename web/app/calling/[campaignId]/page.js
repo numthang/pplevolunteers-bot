@@ -41,7 +41,15 @@ export default function CampaignPage({ params }) {
   const [selectedMembers, setSelectedMembers] = useState(new Set())
   const [filterName, setFilterName] = useState(() => searchParams.get('name') || '')
   const [debouncedName, setDebouncedName] = useState(() => searchParams.get('name') || '')
-  const [filterDistrict, setFilterDistrict] = useState(() => searchParams.get('district') || '')
+  const [filterAmphure, setFilterAmphure] = useState(() => searchParams.get('amphure') || '')
+  const [filterSubdistricts, setFilterSubdistricts] = useState(() => {
+    const s = searchParams.get('subdistricts')
+    return s ? new Set(s.split(',')) : new Set()
+  })
+  const [availableSubdistricts, setAvailableSubdistricts] = useState([])
+  const [loadingSubdistricts, setLoadingSubdistricts] = useState(false)
+  const [subdistrictsOpen, setSubdistrictsOpen] = useState(false)
+  const subdistrictsRef = useRef(null)
   const [filterTier, setFilterTier] = useState(() => searchParams.get('tier') || '')
   const [filterStatus, setFilterStatus] = useState(() => searchParams.get('status') || '')
   const [filterAssignee, setFilterAssignee] = useState(() => searchParams.get('assignee') || '')
@@ -69,18 +77,50 @@ export default function CampaignPage({ params }) {
     return () => clearTimeout(t)
   }, [filterName])
 
+  // Close dropdown on click outside
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (subdistrictsRef.current && !subdistrictsRef.current.contains(event.target)) {
+        setSubdistrictsOpen(false)
+      }
+    }
+    if (subdistrictsOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+      return () => document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [subdistrictsOpen])
+
+  // Fetch subdistricts when amphure changes
+  useEffect(() => {
+    if (!filterAmphure) {
+      setAvailableSubdistricts([])
+      setFilterSubdistricts(new Set())
+      return
+    }
+    setLoadingSubdistricts(true)
+    fetch(`/api/calling/districts?campaignId=${campaignId}&amphure=${encodeURIComponent(filterAmphure)}`)
+      .then(r => r.json())
+      .then(data => {
+        setAvailableSubdistricts(data.data || [])
+        setFilterSubdistricts(new Set())
+      })
+      .catch(err => console.error('Error fetching subdistricts:', err))
+      .finally(() => setLoadingSubdistricts(false))
+  }, [campaignId, filterAmphure])
+
   // Sync filters → URL
   useEffect(() => {
     const p = new URLSearchParams()
     if (debouncedName)  p.set('name', debouncedName)
-    if (filterDistrict) p.set('district', filterDistrict)
+    if (filterAmphure)  p.set('amphure', filterAmphure)
+    if (filterSubdistricts.size > 0) p.set('subdistricts', Array.from(filterSubdistricts).join(','))
     if (filterTier)     p.set('tier', filterTier)
     if (filterStatus)   p.set('status', filterStatus)
     if (filterAssignee) p.set('assignee', filterAssignee)
     if (filterRsvp)     p.set('rsvp', filterRsvp)
     const qs = p.toString()
     router.replace(qs ? `/calling/${campaignId}?${qs}` : `/calling/${campaignId}`, { scroll: false })
-  }, [debouncedName, filterDistrict, filterTier, filterStatus, filterAssignee, filterRsvp])
+  }, [debouncedName, filterAmphure, filterSubdistricts, filterTier, filterStatus, filterAssignee, filterRsvp])
 
   const offsetRef = useRef(0)
   const sentinelRef = useRef(null)
@@ -91,10 +131,11 @@ export default function CampaignPage({ params }) {
   useEffect(() => { loadingMoreRef.current = loadingMore }, [loadingMore])
   useEffect(() => { hasMoreRef.current = hasMore }, [hasMore])
 
-  const buildMembersUrl = (offset, district, tier, status, assignee, rsvp, name) => {
-    const limit = district ? 9999 : PAGE_SIZE
+  const buildMembersUrl = (offset, amphure, subdistricts, tier, status, assignee, rsvp, name) => {
+    const limit = amphure ? 9999 : PAGE_SIZE
     const p = new URLSearchParams({ campaignId, limit, offset })
-    if (district) p.set('amphure', district)
+    if (amphure) p.set('amphure', amphure)
+    if (subdistricts && subdistricts.size > 0) p.set('subdistricts', Array.from(subdistricts).join(','))
     if (tier)     p.set('tier', tier)
     if (status)   p.set('status', status)
     if (assignee) p.set('assignedTo', assignee)
@@ -110,14 +151,14 @@ export default function CampaignPage({ params }) {
   }, [campaignId])
 
   // Load first page; reset member list
-  const loadFirst = useCallback(async (district, tier, status, assignee, rsvp, name) => {
+  const loadFirst = useCallback(async (amphure, subdistricts, tier, status, assignee, rsvp, name) => {
     setLoadingInitial(true)
     setHasMore(false)         // disconnect observer before resetting offset
     hasMoreRef.current = false
     offsetRef.current = 0
     try {
       const [memberRes, statsRes] = await Promise.all([
-        fetch(buildMembersUrl(0, district, tier, status, assignee, rsvp, name)),
+        fetch(buildMembersUrl(0, amphure, subdistricts, tier, status, assignee, rsvp, name)),
         fetch(`/api/calling/members?campaignId=${campaignId}&stats=true`)
       ])
       const memberData = await memberRes.json()
@@ -145,7 +186,7 @@ export default function CampaignPage({ params }) {
     loadingMoreRef.current = true
     try {
       const res = await fetch(buildMembersUrl(
-        offsetRef.current, filterDistrict, filterTier, filterStatus, filterAssignee, filterRsvp, debouncedName
+        offsetRef.current, filterAmphure, filterSubdistricts, filterTier, filterStatus, filterAssignee, filterRsvp, debouncedName
       ))
       const data = await res.json()
       const newRows = data.data || []
@@ -159,7 +200,7 @@ export default function CampaignPage({ params }) {
       setLoadingMore(false)
       loadingMoreRef.current = false
     }
-  }, [filterDistrict, filterTier, filterStatus, filterAssignee, filterRsvp, debouncedName])
+  }, [filterAmphure, filterSubdistricts, filterTier, filterStatus, filterAssignee, filterRsvp, debouncedName])
 
   // Initial: fetch campaign + users (only once per campaignId)
   useEffect(() => {
@@ -183,8 +224,8 @@ export default function CampaignPage({ params }) {
 
   // Re-fetch members when filters change (or on mount)
   useEffect(() => {
-    loadFirst(filterDistrict, filterTier, filterStatus, filterAssignee, filterRsvp, debouncedName)
-  }, [campaignId, filterDistrict, filterTier, filterStatus, filterAssignee, filterRsvp, debouncedName])
+    loadFirst(filterAmphure, filterSubdistricts, filterTier, filterStatus, filterAssignee, filterRsvp, debouncedName)
+  }, [campaignId, filterAmphure, filterSubdistricts, filterTier, filterStatus, filterAssignee, filterRsvp, debouncedName])
 
   useEffect(() => {
     const sentinel = sentinelRef.current
@@ -243,7 +284,7 @@ export default function CampaignPage({ params }) {
         }
       }
       setSplitModalOpen(false)
-      await loadFirst(filterDistrict, filterTier, filterStatus, filterAssignee, filterRsvp, debouncedName)
+      await loadFirst(filterAmphure, filterSubdistricts, filterTier, filterStatus, filterAssignee, filterRsvp, debouncedName)
     } catch (err) {
       alert('เกิดข้อผิดพลาด: ' + err.message)
     }
@@ -265,7 +306,7 @@ export default function CampaignPage({ params }) {
           })
         )
       )
-      await loadFirst(filterDistrict, filterTier, filterStatus, filterAssignee, filterRsvp, debouncedName)
+      await loadFirst(filterAmphure, filterSubdistricts, filterTier, filterStatus, filterAssignee, filterRsvp, debouncedName)
     } catch (err) {
       alert('เกิดข้อผิดพลาด: ' + err.message)
     }
@@ -290,65 +331,97 @@ export default function CampaignPage({ params }) {
     <div>
 
       {/* Campaign Header */}
-      <div className="bg-white dark:bg-disc-bg2 border border-warm-200 dark:border-disc-border rounded-lg p-6 mb-8">
-        <h1 className="text-2xl font-medium text-warm-900 dark:text-disc-text mb-2">{campaign?.name}</h1>
-        {campaign?.description && (
-          <p className="text-sm text-warm-500 dark:text-disc-muted mb-4">{campaign.description}</p>
-        )}
-        <div className="flex flex-wrap gap-8 text-sm">
-          <div>
-            <span className="text-warm-500 dark:text-disc-muted">สมาชิกทั้งหมด:</span>
-            <span className="ml-2 font-semibold text-warm-900 dark:text-disc-text">{stats.total}</span>
-          </div>
-          <div>
-            <span className="text-warm-500 dark:text-disc-muted">โทรแล้ว:</span>
-            <span className="ml-2 font-semibold text-warm-900 dark:text-disc-text">{stats.called} / {stats.total}</span>
-          </div>
-          <div>
-            <span className="text-warm-500 dark:text-disc-muted">มอบหมายแล้ว:</span>
-            <span className="ml-2 font-semibold text-warm-900 dark:text-disc-text">{stats.assigned}</span>
-          </div>
-          <div>
-            <span className="text-warm-500 dark:text-disc-muted">รอมอบหมาย:</span>
-            <span className="ml-2 font-semibold text-warm-900 dark:text-disc-text">{stats.unassigned}</span>
+      <div className="bg-white dark:bg-disc-bg2 border border-warm-200 dark:border-disc-border border-l-4 border-l-violet-500 dark:border-l-violet-400 rounded-lg px-4 py-3 mb-4">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          <h1 className="text-base font-semibold text-warm-900 dark:text-disc-text">{campaign?.name}</h1>
+          <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-warm-500 dark:text-disc-muted">
+            <span>สมาชิก <span className="font-semibold text-warm-900 dark:text-disc-text">{stats.total}</span></span>
+            <span>โทรแล้ว <span className="font-semibold text-warm-900 dark:text-disc-text">{stats.called}/{stats.total}</span></span>
+            <span>มอบหมาย <span className="font-semibold text-warm-900 dark:text-disc-text">{stats.assigned}</span></span>
+            <span>รอ <span className="font-semibold text-warm-900 dark:text-disc-text">{stats.unassigned}</span></span>
           </div>
         </div>
+        {campaign?.description && (
+          <p className="text-xs text-warm-400 dark:text-disc-muted mt-1 line-clamp-1">{campaign.description}</p>
+        )}
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-3 mb-4">
+      <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 mb-4">
         <input
           type="text"
           value={filterName}
           onChange={e => setFilterName(e.target.value)}
           placeholder="ค้นหาชื่อ..."
-          className="h-9 px-3 text-sm border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-bg2 text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted rounded-lg focus:outline-none focus:ring-2 focus:ring-teal w-40"
+          className="h-9 px-3 text-sm border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-bg2 text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted rounded-lg focus:outline-none focus:ring-2 focus:ring-teal w-full sm:w-40"
         />
-        <select value={filterDistrict} onChange={e => setFilterDistrict(e.target.value)}
-          className="h-9 px-3 text-sm border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-bg2 text-warm-900 dark:text-disc-text rounded-lg focus:outline-none focus:ring-2 focus:ring-teal flex-1 sm:flex-none">
+        <select value={filterAmphure} onChange={e => setFilterAmphure(e.target.value)}
+          className="h-9 px-3 text-sm border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-bg2 text-warm-900 dark:text-disc-text rounded-lg focus:outline-none focus:ring-2 focus:ring-teal w-full sm:w-auto">
           <option value="">อำเภอ</option>
           {stats.districts.map(d => (
             <option key={d} value={d}>{d || '(ไม่ระบุ)'} ({stats.districtCounts[d] || 0})</option>
           ))}
         </select>
 
+        {filterAmphure && (
+          <div ref={subdistrictsRef} className="relative">
+            {loadingSubdistricts ? (
+              <div className="h-9 px-3 text-sm border border-warm-200 dark:border-disc-border bg-warm-50 dark:bg-disc-bg2 text-warm-900 dark:text-disc-text rounded-lg flex items-center text-xs">
+                กำลังโหลด...
+              </div>
+            ) : availableSubdistricts.length === 0 ? (
+              <div className="h-9 px-3 text-sm border border-warm-200 dark:border-disc-border bg-warm-50 dark:bg-disc-bg2 text-warm-400 dark:text-disc-muted rounded-lg flex items-center text-xs">
+                ไม่มีตำบล
+              </div>
+            ) : (
+              <>
+                <button
+                  onClick={() => setSubdistrictsOpen(!subdistrictsOpen)}
+                  className="h-9 px-3 text-sm border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-bg2 text-warm-900 dark:text-disc-text rounded-lg focus:outline-none focus:ring-2 focus:ring-teal w-full text-left flex justify-between items-center"
+                >
+                  ตำบล {filterSubdistricts.size > 0 && <span>({filterSubdistricts.size})</span>}
+                </button>
+                {subdistrictsOpen && (
+                  <div className="absolute top-full left-0 mt-1 bg-white dark:bg-disc-bg2 border border-warm-200 dark:border-disc-border rounded-lg shadow-lg z-20 w-56 max-h-60 overflow-y-auto">
+                    {availableSubdistricts.map(sub => (
+                      <label key={sub.name} className="flex items-center px-3 py-2 text-sm text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={filterSubdistricts.has(sub.name)}
+                          onChange={e => {
+                            const s = new Set(filterSubdistricts)
+                            e.target.checked ? s.add(sub.name) : s.delete(sub.name)
+                            setFilterSubdistricts(s)
+                          }}
+                          className="accent-teal"
+                        />
+                        <span className="ml-2">{sub.name || '(ไม่ระบุ)'} ({sub.count})</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
         <select value={filterTier} onChange={e => setFilterTier(e.target.value)}
-          className="h-9 px-3 text-sm border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-bg2 text-warm-900 dark:text-disc-text rounded-lg focus:outline-none focus:ring-2 focus:ring-teal flex-1 sm:flex-none">
-          <option value="">ระดับ</option>
+          className="h-9 px-3 text-sm border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-bg2 text-warm-900 dark:text-disc-text rounded-lg focus:outline-none focus:ring-2 focus:ring-teal w-full sm:w-auto">
+          <option value="">Tier</option>
           {['A','B','C','D'].map(t => (
-            <option key={t} value={t}>{t} ({stats.tierCounts[t] || 0})</option>
+            <option key={t} value={t}>{t}</option>
           ))}
         </select>
 
         <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
-          className="h-9 px-3 text-sm border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-bg2 text-warm-900 dark:text-disc-text rounded-lg focus:outline-none focus:ring-2 focus:ring-teal flex-1 sm:flex-none">
+          className="h-9 px-3 text-sm border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-bg2 text-warm-900 dark:text-disc-text rounded-lg focus:outline-none focus:ring-2 focus:ring-teal w-full sm:w-auto">
           <option value="">สถานะ</option>
-          <option value="unassigned">รอมอบหมาย ({stats.unassigned})</option>
-          <option value="assigned">มอบหมายแล้ว ({stats.assigned})</option>
+          <option value="unassigned">รอมอบหมาย</option>
+          <option value="assigned">มอบหมายแล้ว</option>
         </select>
 
         <select value={filterAssignee} onChange={e => setFilterAssignee(e.target.value)}
-          className="h-9 px-3 text-sm border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-bg2 text-warm-900 dark:text-disc-text rounded-lg focus:outline-none focus:ring-2 focus:ring-teal flex-1 sm:flex-none">
+          className="h-9 px-3 text-sm border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-bg2 text-warm-900 dark:text-disc-text rounded-lg focus:outline-none focus:ring-2 focus:ring-teal w-full sm:w-auto">
           <option value="">ผู้รับผิดชอบ</option>
           {assignees.map(a => (
             <option key={a.id} value={a.id}>{a.name} ({a.count})</option>
@@ -356,7 +429,7 @@ export default function CampaignPage({ params }) {
         </select>
 
         <select value={filterRsvp} onChange={e => setFilterRsvp(e.target.value)}
-          className="h-9 px-3 text-sm border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-bg2 text-warm-900 dark:text-disc-text rounded-lg focus:outline-none focus:ring-2 focus:ring-teal flex-1 sm:flex-none">
+          className="h-9 px-3 text-sm border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-bg2 text-warm-900 dark:text-disc-text rounded-lg focus:outline-none focus:ring-2 focus:ring-teal w-full sm:w-auto">
           <option value="">RSVP</option>
           <option value="yes">✓ เข้าร่วม</option>
           <option value="no">✗ ไม่เข้าร่วม</option>

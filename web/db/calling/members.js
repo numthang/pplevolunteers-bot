@@ -89,9 +89,9 @@ export async function getMembersCount() {
  * Status: 'called' (has calls) | 'assigned' (assigned to someone) | 'unassigned'
  */
 export async function getMembersInCampaign(campaignId, filters = {}, limit = 100, offset = 0) {
-  const { amphure, tier, status, assignedTo, rsvp, name } = filters
-  const [rows] = await pool.query(
-    `SELECT
+  const { amphure, subdistricts, tier, status, assignedTo, rsvp, name } = filters
+
+  let query = `SELECT
        m.*,
        COALESCE(t.tier, 'D') AS tier,
        COALESCE(a.assigned_to, '') AS assigned_to,
@@ -116,27 +116,39 @@ export async function getMembersInCampaign(campaignId, filters = {}, limit = 100
        ON l.campaign_id = cc.id AND l.member_id = m.source_id
      LEFT JOIN dc_members dc ON dc.serial = m.serial AND dc.guild_id = ?
      WHERE cc.id = ? AND cc.type = 'campaign'
-       AND (? IS NULL OR m.home_amphure = ?)
-       AND (? IS NULL OR COALESCE(t.tier, 'D') = ?)
+       AND m.mobile_number IS NOT NULL
+       AND (? IS NULL OR m.home_amphure = ?)`
+
+  const params = [
+    process.env.GUILD_ID,
+    campaignId,
+    amphure || null, amphure || null,
+  ]
+
+  if (subdistricts && subdistricts.length > 0) {
+    query += ` AND m.home_district IN (${subdistricts.map(() => '?').join(',')})`
+    params.push(...subdistricts)
+  }
+
+  query += ` AND (? IS NULL OR COALESCE(t.tier, 'D') = ?)
        AND (? IS NULL OR a.assigned_to = ?)
        AND (? IS NULL OR a.rsvp = ?)
        AND (? IS NULL OR m.full_name LIKE ?)
      GROUP BY m.source_id
      HAVING (? IS NULL OR member_status = ?)
      ORDER BY m.home_amphure ASC, m.first_name ASC, m.source_id ASC
-     LIMIT ? OFFSET ?`,
-    [
-      process.env.GUILD_ID,
-      campaignId,
-      amphure || null, amphure || null,
-      tier || null, tier || null,
-      assignedTo || null, assignedTo || null,
-      rsvp || null, rsvp || null,
-      name || null, name ? `%${name}%` : null,
-      status || null, status || null,
-      limit, offset
-    ]
+     LIMIT ? OFFSET ?`
+
+  params.push(
+    tier || null, tier || null,
+    assignedTo || null, assignedTo || null,
+    rsvp || null, rsvp || null,
+    name || null, name ? `%${name}%` : null,
+    status || null, status || null,
+    limit, offset
   )
+
+  const [rows] = await pool.query(query, params)
   return rows
 }
 
@@ -144,9 +156,9 @@ export async function getMembersInCampaignStats(campaignId) {
   const BASE = `
     FROM act_event_cache cc
     JOIN ngs_member_cache m ON (cc.province IS NULL OR m.home_province = cc.province)
-    WHERE cc.id = ? AND cc.type = 'campaign'`
+    WHERE cc.id = ? AND cc.type = 'campaign' AND m.mobile_number IS NOT NULL`
 
-  const [[mainRows], [districtRows], [tierRows], [assigneeRows]] = await Promise.all([
+  const [[mainRows], [amphureRows], [districtCountRows], [tierRows], [assigneeRows]] = await Promise.all([
     pool.query(
       `SELECT
          COUNT(DISTINCT m.source_id) AS total,
@@ -161,12 +173,17 @@ export async function getMembersInCampaignStats(campaignId) {
          FROM calling_logs WHERE campaign_id = ?
          GROUP BY member_id
        ) lc ON lc.member_id = m.source_id
-       WHERE cc.id = ? AND cc.type = 'campaign'`,
+       WHERE cc.id = ? AND cc.type = 'campaign' AND m.mobile_number IS NOT NULL`,
       [campaignId, campaignId]
     ),
     pool.query(
-      `SELECT COALESCE(m.home_amphure, '') AS district, COUNT(DISTINCT m.source_id) AS count
-       ${BASE} GROUP BY district ORDER BY district`,
+      `SELECT COALESCE(m.home_amphure, '') AS amphure, COUNT(DISTINCT m.source_id) AS count
+       ${BASE} GROUP BY m.home_amphure ORDER BY m.home_amphure`,
+      [campaignId]
+    ),
+    pool.query(
+      `SELECT COALESCE(m.home_amphure, '') AS amphure, COUNT(DISTINCT m.home_district) AS districtCount
+       ${BASE} GROUP BY m.home_amphure ORDER BY m.home_amphure`,
       [campaignId]
     ),
     pool.query(
@@ -174,7 +191,7 @@ export async function getMembersInCampaignStats(campaignId) {
        FROM act_event_cache cc
        JOIN ngs_member_cache m ON (cc.province IS NULL OR m.home_province = cc.province)
        LEFT JOIN calling_member_tiers t ON t.member_id = m.source_id
-       WHERE cc.id = ? AND cc.type = 'campaign'
+       WHERE cc.id = ? AND cc.type = 'campaign' AND m.mobile_number IS NOT NULL
        GROUP BY tier`,
       [campaignId]
     ),
@@ -183,7 +200,7 @@ export async function getMembersInCampaignStats(campaignId) {
        FROM act_event_cache cc
        JOIN ngs_member_cache m ON (cc.province IS NULL OR m.home_province = cc.province)
        JOIN calling_assignments a ON a.campaign_id = cc.id AND a.member_id = m.source_id
-       WHERE cc.id = ? AND cc.type = 'campaign'
+       WHERE cc.id = ? AND cc.type = 'campaign' AND m.mobile_number IS NOT NULL
        GROUP BY a.assigned_to`,
       [campaignId]
     ),
@@ -191,8 +208,15 @@ export async function getMembersInCampaignStats(campaignId) {
 
   const row = mainRows[0] || {}
 
-  const districtCounts = {}
-  for (const r of districtRows) districtCounts[r.district] = Number(r.count)
+  const amphureCounts = {}
+  for (const r of amphureRows) {
+    amphureCounts[r.amphure] = Number(r.count)
+  }
+
+  const amphureDistrictCounts = {}
+  for (const r of districtCountRows) {
+    amphureDistrictCounts[r.amphure] = Number(r.districtCount)
+  }
 
   const tierCounts = {}
   for (const r of tierRows) tierCounts[r.tier] = Number(r.count)
@@ -204,8 +228,8 @@ export async function getMembersInCampaignStats(campaignId) {
     called: Number(row.called) || 0,
     assigned: Number(row.assigned) || 0,
     unassigned: Number(row.unassigned) || 0,
-    districts: districtRows.map(r => r.district),
-    districtCounts,
+    districts: Object.keys(amphureCounts),
+    districtCounts: amphureCounts,
     tierCounts,
     assigneeCounts,
   }

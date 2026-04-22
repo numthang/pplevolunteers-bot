@@ -26,6 +26,8 @@ export async function GET(req) {
 
   // Campaign-specific filters
   const filterAmphure = searchParams.get('amphure') || null
+  const subdistricts = searchParams.get('subdistricts')
+  const filterSubdistricts = subdistricts ? subdistricts.split(',') : null
   const filterTier = searchParams.get('tier') || null
   const filterStatus = searchParams.get('status') || null
   const filterAssignedTo = searchParams.get('assignedTo') || null
@@ -47,7 +49,7 @@ export async function GET(req) {
     let total = 0
 
     if (campaignId) {
-      const filters = { amphure: filterAmphure, tier: filterTier, status: filterStatus, assignedTo: filterAssignedTo, rsvp: filterRsvp, name: filterName }
+      const filters = { amphure: filterAmphure, subdistricts: filterSubdistricts, tier: filterTier, status: filterStatus, assignedTo: filterAssignedTo, rsvp: filterRsvp, name: filterName }
       rows = await memberDB.getMembersInCampaign(parseInt(campaignId), filters, limit, offset)
     } else if (province) {
       rows = await memberDB.getMembersByProvince(province, limit, offset)
