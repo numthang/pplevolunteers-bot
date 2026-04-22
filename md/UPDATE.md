@@ -36,11 +36,8 @@ Settings → Apps → SMS Forwarder → Allow background activity: ON
 ---
 ## 📞 PPLE Calling
 ### อัพเดท Calling (calling/pending)
-- wrong_number นี่เราจะรู้ใน layer log ไหมนะ อันนี้มันน่าจะ flag ระดับสมาชิก ไม่แน่ใจขอความเห็น
-- เวลาเพิ่มโรลแล้วไม่ต้องล็อกอินล็อคเอาท์ใหม่ เพื่อ reload permission ได้ไหมจะได้ debug ง่ายขึ้น
 
 ### อัพเดท Calling (calling/[campaignId])
-- คุณตรวจดูหน่อยว่า ตอนนี้ calling system ผมมีหน้า แคมเปญแล้ว pending call แล้ว เวลาผมจะกลับไปหน้า campaign มันไม่ flow ผมไม่อยากต้องมาเลือก campaign ใหม่อ่ะ อยากเข้าไป last state ของหน้า campaign นั้น
 
 ### Optional
 - เพิ่ม audit logs -> สามารถดูได้ว่าแก้ไขหรือเพิ่มอะไร (เป็น History)
@@ -116,4 +113,3 @@ Private account → เจ้าของ || Admin
 Internal account → เจ้าของ || Admin || เลขาธิการ || เหรัญญิก && { กรรมการจังหวัด (ของบัญชีนั้น) || ผู้ประสานงาน (ของบัญชีจังหวัดนั้น) || ผู้ประสานงานภาค (ของบัญชีจังหวัดนั้น) || รองเลขาภาค (ของบัญชีจังหวัดนั้น) -->
 ---
 ## อื่นๆ สำหรับ finance และ calling
-- ทำระบบ view as role บนเว็บ มี เหรัญญิก กรรมการจังหวัด ผู้ประสานงานจังหวัด ผู้ประสานงานภาค รองเลขาธิการ 

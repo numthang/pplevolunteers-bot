@@ -34,6 +34,7 @@ export default function Nav({ session }) {
   const [appOpen, setAppOpen] = useState(false)
   const [campaignOpen, setCampaignOpen] = useState(false)
   const [campaigns, setCampaigns] = useState([])
+  const [pendingCount, setPendingCount] = useState(0)
   const campaignRef = useRef(null)
 
   const isCallingApp = pathname.startsWith('/calling')
@@ -50,7 +51,13 @@ export default function Nav({ session }) {
       .then(r => r.json())
       .then(d => setCampaigns(d.data || []))
       .catch(() => {})
-  }, [isCallingApp])
+    if (session) {
+      fetch('/api/calling/pending?count=true')
+        .then(r => r.json())
+        .then(d => setPendingCount(d.count || 0))
+        .catch(() => {})
+    }
+  }, [isCallingApp, session])
 
   useEffect(() => {
     if (!campaignOpen) return
@@ -134,9 +141,10 @@ export default function Nav({ session }) {
                   {/* Text → navigate to /calling */}
                   <Link
                     href="/calling"
-                    className={`px-3 py-1 rounded-l-md text-base transition ${isActive ? activeClass : inactiveClass}`}
+                    className={`px-3 py-1 rounded-l-md text-base transition flex items-center gap-1.5 ${isActive ? activeClass : inactiveClass}`}
                   >
                     {l.label}
+                    <span className="text-xs font-normal opacity-60">({campaigns.length})</span>
                   </Link>
                   {/* Arrow → open dropdown */}
                   <button
@@ -174,13 +182,18 @@ export default function Nav({ session }) {
               <Link
                 key={l.href}
                 href={l.href}
-                className={`px-3 py-1 rounded-md text-base transition ${
+                className={`px-3 py-1 rounded-md text-base transition flex items-center gap-1.5 ${
                   pathname === l.href
                     ? 'bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-medium'
                     : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800'
                 }`}
               >
                 {l.label}
+                {l.href === '/calling/pending' && pendingCount > 0 && (
+                  <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-400 leading-none">
+                    {pendingCount}
+                  </span>
+                )}
               </Link>
             )
           })}
@@ -245,13 +258,14 @@ export default function Nav({ session }) {
                   <Link
                     href="/calling"
                     onClick={() => setMenuOpen(false)}
-                    className={`block px-3 py-2 rounded text-base transition ${
+                    className={`flex items-center gap-2 px-3 py-2 rounded text-base transition ${
                       pathname === '/calling'
                         ? 'bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-medium'
                         : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
                     }`}
                   >
                     {l.label}
+                    <span className="text-xs font-normal opacity-60">({campaigns.length})</span>
                   </Link>
                   {/* Tree children */}
                   <div className="ml-4 border-l-2 border-gray-200 dark:border-gray-700 pl-3 flex flex-col gap-0.5 mt-0.5 mb-1">
@@ -279,13 +293,18 @@ export default function Nav({ session }) {
                 key={l.href}
                 href={l.href}
                 onClick={() => setMenuOpen(false)}
-                className={`px-3 py-2 rounded text-base transition ${
+                className={`px-3 py-2 rounded text-base transition flex items-center gap-2 ${
                   pathname === l.href
                     ? 'bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-medium'
                     : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
                 }`}
               >
                 {l.label}
+                {l.href === '/calling/pending' && pendingCount > 0 && (
+                  <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-400 leading-none">
+                    {pendingCount}
+                  </span>
+                )}
               </Link>
             )
           })}

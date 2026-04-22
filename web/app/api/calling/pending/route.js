@@ -18,6 +18,7 @@ export async function GET(req) {
   }
 
   const { searchParams } = new URL(req.url)
+  const countOnly = searchParams.get('count') === 'true'
   const campaignsOnly = searchParams.get('campaigns') === 'true'
   const campaignId = searchParams.get('campaignId')
   const status = searchParams.get('status')
@@ -26,6 +27,11 @@ export async function GET(req) {
   const offset = parseInt(searchParams.get('offset') || '0')
 
   try {
+    if (countOnly) {
+      const count = await memberDB.getPendingCallCount(session.user.discordId)
+      return Response.json({ success: true, count })
+    }
+
     if (campaignsOnly) {
       const campaigns = await memberDB.getMyCampaigns(session.user.discordId)
       return Response.json({ success: true, data: campaigns })

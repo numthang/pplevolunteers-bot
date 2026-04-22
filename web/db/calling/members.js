@@ -356,6 +356,26 @@ export async function getMyAssignedMembers(discordId, { campaignId, status, rsvp
 }
 
 /**
+ * Count pending (uncalled) assignments for a user
+ */
+export async function getPendingCallCount(discordId) {
+  const [rows] = await pool.query(
+    `SELECT COUNT(*) AS count
+     FROM calling_assignments a
+     LEFT JOIN act_event_cache ec ON ec.id = a.campaign_id AND ec.type = 'campaign'
+     LEFT JOIN (
+       SELECT campaign_id, member_id, COUNT(*) AS camp_calls
+       FROM calling_logs GROUP BY campaign_id, member_id
+     ) cs ON cs.campaign_id = a.campaign_id AND cs.member_id = a.member_id
+     WHERE a.assigned_to = ?
+       AND (ec.event_date IS NULL OR ec.event_date >= CURDATE())
+       AND COALESCE(cs.camp_calls, 0) = 0`,
+    [discordId]
+  )
+  return Number(rows[0]?.count) || 0
+}
+
+/**
  * Get member's total call history (all campaigns)
  */
 export async function getMemberGlobalCallHistory(memberId) {
