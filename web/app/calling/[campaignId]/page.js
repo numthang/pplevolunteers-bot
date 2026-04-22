@@ -24,6 +24,46 @@ function getStatusBadge(status) {
   return { bg: '#faeeda', text: '#854f0b', label: 'รอมอบหมาย' }
 }
 
+const URL_RE = /https?:\/\/[^\s]+/g
+
+function parseLinks(text) {
+  const parts = []
+  let last = 0
+  for (const m of text.matchAll(URL_RE)) {
+    if (m.index > last) parts.push(text.slice(last, m.index))
+    parts.push(<a key={m.index} href={m[0]} target="_blank" rel="noopener noreferrer" className="text-teal hover:underline break-all">{m[0]}</a>)
+    last = m.index + m[0].length
+  }
+  if (last < text.length) parts.push(text.slice(last))
+  return parts
+}
+
+function ExpandableDescription({ text }) {
+  const [expanded, setExpanded] = useState(false)
+  const [clamped, setClamped] = useState(false)
+  const ref = useRef(null)
+  useEffect(() => {
+    if (ref.current) {
+      setClamped(
+        ref.current.scrollHeight > ref.current.clientHeight ||
+        ref.current.scrollWidth > ref.current.clientWidth
+      )
+    }
+  }, [text])
+  return (
+    <div className="flex items-baseline gap-1 mt-1">
+      <p ref={ref} className={`text-xs text-warm-400 dark:text-disc-muted ${expanded ? '' : 'line-clamp-1'}`}>
+        {parseLinks(text)}
+      </p>
+      {(clamped || expanded) && (
+        <button onClick={() => setExpanded(!expanded)} className="text-xs text-teal hover:underline shrink-0">
+          {expanded ? 'ย่อ' : 'ดูเพิ่ม'}
+        </button>
+      )}
+    </div>
+  )
+}
+
 export default function CampaignPage({ params }) {
   const { campaignId } = use(params)
   const searchParams = useSearchParams()
@@ -342,7 +382,7 @@ export default function CampaignPage({ params }) {
           </div>
         </div>
         {campaign?.description && (
-          <p className="text-xs text-warm-400 dark:text-disc-muted mt-1 line-clamp-1">{campaign.description}</p>
+          <ExpandableDescription text={campaign.description} />
         )}
       </div>
 
