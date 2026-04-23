@@ -1,10 +1,12 @@
 import { requireAuth } from '@/lib/auth.js'
-import { getAccountsForUser } from '@/db/finance/accounts.js'
+import { getAccountsAll } from '@/db/finance/accounts.js'
 import { getAccountSummary } from '@/db/finance/transactions.js'
-import { canViewAccount } from '@/lib/financeAccess.js'
+import { canViewAccount, canEditAccount } from '@/lib/financeAccess.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
+import { isAdmin } from '@/lib/roles.js'
 import Link from 'next/link'
 import AccountCard from '@/components/finance/AccountCard'
+import AddAccountButton from '@/components/finance/AddAccountButton'
 
 const GUILD_ID = process.env.GUILD_ID
 
@@ -20,7 +22,7 @@ function fmt(n) {
 export default async function FinancePage() {
   const session = await requireAuth()
   const { roles, discordId } = await getEffectiveIdentity(session)
-  const raw = await getAccountsForUser(GUILD_ID, discordId)
+  const raw = await getAccountsAll(GUILD_ID, discordId, roles.includes('Admin'))
   const accounts = raw.filter(a => canViewAccount(a, discordId, roles))
 
   const summaries = await Promise.all(
@@ -40,7 +42,7 @@ export default async function FinancePage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">ภาพรวม</h1>
-        <span className="text-sm text-gray-500 dark:text-gray-400">สวัสดี {session.user.nickname}</span>
+        <AddAccountButton />
       </div>
 
       {summaries.length === 0 ? (
@@ -63,7 +65,7 @@ export default async function FinancePage() {
                   </span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {group.map(acc => <AccountCard key={acc.id} account={{ ...acc, balance: acc.balance }} />)}
+                  {group.map(acc => <AccountCard key={acc.id} account={{ ...acc, balance: acc.balance }} canEdit={canEditAccount(acc, discordId, roles)} />)}
                 </div>
               </div>
             )
@@ -73,7 +75,6 @@ export default async function FinancePage() {
 
       <div className="mt-8 flex gap-4 text-sm">
         <Link href="/finance/transactions" className="text-indigo-600 hover:underline">รายการทั้งหมด</Link>
-        <Link href="/finance/accounts" className="text-indigo-600 hover:underline">จัดการบัญชี</Link>
         <Link href="/finance/categories" className="text-indigo-600 hover:underline">หมวดหมู่</Link>
       </div>
     </div>

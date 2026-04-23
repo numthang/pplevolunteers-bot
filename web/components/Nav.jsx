@@ -7,18 +7,41 @@ import { useState, useEffect, useRef } from 'react'
 import { useTheme } from './Providers.jsx'
 import { DebugRoleButton, DebugRoleBanner } from './DebugRoleBanner.jsx'
 
+function Ic({ d, className = 'w-4 h-4 shrink-0' }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}
+         strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d={d} />
+    </svg>
+  )
+}
+
+const ICONS = {
+  overview:     'M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z',
+  transactions: 'M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z',
+  accounts:     'M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z',
+  categories:   'M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3zM6 6h.008v.008H6V6z',
+  report:       'M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z',
+  logs:         'M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10',
+  campaigns:    'M20.25 3.75v4.5m0-4.5h-4.5m4.5 0l-6 6m3 12c-8.284 0-15-6.716-15-15V4.5A2.25 2.25 0 014.5 2.25h1.372c.516 0 .966.351 1.091.852l1.106 4.423c.11.44-.054.902-.417 1.173l-1.293.97a1.062 1.062 0 00-.38 1.21 12.035 12.035 0 007.143 7.143c.441.162.928-.004 1.21-.38l.97-1.293a1.125 1.125 0 011.173-.417l4.423 1.106c.5.125.852.575.852 1.091V19.5a2.25 2.25 0 01-2.25 2.25h-2.25z',
+  pending:      'M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z',
+  profile:      'M17.982 18.725A7.488 7.488 0 0012 15.75a7.488 7.488 0 00-5.982 2.975m11.963 0a9 9 0 10-11.963 0m11.963 0A8.966 8.966 0 0112 21a8.966 8.966 0 01-5.982-2.275M15 9.75a3 3 0 11-6 0 3 3 0 016 0z',
+  moon:         'M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z',
+  sun:          'M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z',
+  logout:       'M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75',
+}
+
 const FINANCE_LINKS = [
-  { href: '/finance',               label: 'ภาพรวม' },
-  { href: '/finance/transactions',  label: 'รายการ' },
-  { href: '/finance/accounts',      label: 'บัญชี' },
-  { href: '/finance/categories',    label: 'หมวดหมู่' },
-  { href: '/finance/report',        label: 'รายงาน' },
-  { href: '/admin/logs',            label: 'Logs', roles: ['Admin', 'Moderator'] },
+  { href: '/finance',               label: 'ภาพรวม',    icon: 'overview' },
+  { href: '/finance/transactions',  label: 'รายการ',    icon: 'transactions' },
+  { href: '/finance/categories',    label: 'หมวดหมู่',  icon: 'categories' },
+  { href: '/finance/report',        label: 'รายงาน',    icon: 'report' },
+  { href: '/admin/logs',            label: 'Logs',       icon: 'logs', roles: ['Admin', 'Moderator'] },
 ]
 
 const CALLING_LINKS = [
-  { href: '/calling',         label: 'Campaigns' },
-  { href: '/calling/pending', label: 'Pending calls' },
+  { href: '/calling',         label: 'Campaigns',     icon: 'campaigns' },
+  { href: '/calling/pending', label: 'Pending calls',  icon: 'pending' },
 ]
 
 const APPS = [
@@ -30,18 +53,18 @@ export default function Nav({ session }) {
   const pathname = usePathname()
   const router = useRouter()
   const { dark, toggle } = useTheme()
-  const [menuOpen, setMenuOpen] = useState(false)
+  const [avatarOpen, setAvatarOpen] = useState(false)
   const [appOpen, setAppOpen] = useState(false)
   const [campaignOpen, setCampaignOpen] = useState(false)
   const [campaigns, setCampaigns] = useState([])
   const [pendingCount, setPendingCount] = useState(0)
   const campaignRef = useRef(null)
+  const avatarRef = useRef(null)
 
   const isCallingApp = pathname.startsWith('/calling')
   const currentApp = isCallingApp ? APPS[1] : APPS[0]
   const links = isCallingApp ? CALLING_LINKS : FINANCE_LINKS
 
-  // Get current campaignId from URL if on campaign detail page
   const campaignIdMatch = pathname.match(/^\/calling\/(\d+)/)
   const activeCampaignId = campaignIdMatch ? parseInt(campaignIdMatch[1]) : null
 
@@ -70,6 +93,17 @@ export default function Nav({ session }) {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [campaignOpen])
 
+  useEffect(() => {
+    if (!avatarOpen) return
+    const handleClickOutside = (e) => {
+      if (avatarRef.current && !avatarRef.current.contains(e.target)) {
+        setAvatarOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [avatarOpen])
+
   const activeCampaign = campaigns.find(c => c.id === activeCampaignId)
 
   const roles = Array.isArray(session?.user?.roles)
@@ -84,12 +118,15 @@ export default function Nav({ session }) {
 
   const userIsAdmin = roles.includes('Admin')
 
+  const activeClass = 'bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-medium'
+  const inactiveClass = 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800'
+
   return (
     <>
     <nav className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shadow-sm sticky top-0 z-40">
       <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
 
-        {/* App Switcher (Logo area) */}
+        {/* App Switcher */}
         <div className="relative shrink-0">
           <button
             onClick={() => setAppOpen(o => !o)}
@@ -104,9 +141,7 @@ export default function Nav({ session }) {
 
           {appOpen && (
             <>
-              {/* Backdrop */}
               <div className="fixed inset-0 z-10" onClick={() => setAppOpen(false)} />
-              {/* Dropdown */}
               <div className="absolute left-0 top-full mt-1 z-20 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1 min-w-[160px]">
                 {APPS.map(app => (
                   <Link
@@ -128,34 +163,30 @@ export default function Nav({ session }) {
           )}
         </div>
 
+
         {/* Desktop links */}
         <div className="hidden md:flex items-center gap-1 ml-4">
           {visibleLinks.map(l => {
-            // Campaigns link → split button when in calling section
             if (l.href === '/calling' && isCallingApp && campaigns.length > 0) {
               const isActive = pathname === '/calling' || !!activeCampaignId
-              const activeClass = 'bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-medium'
-              const inactiveClass = 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800'
               return (
                 <div key={l.href} className="relative flex items-center" ref={campaignRef}>
-                  {/* Text → navigate to /calling */}
                   <Link
                     href="/calling"
-                    className={`px-3 py-1 rounded-l-md text-base transition flex items-center gap-1.5 ${isActive ? activeClass : inactiveClass}`}
+                    className={`px-3 py-1 rounded-l-md text-sm transition flex items-center gap-1.5 ${isActive ? activeClass : inactiveClass}`}
                   >
+                    <Ic d={ICONS[l.icon]} />
                     {l.label}
                     <span className="text-xs font-normal opacity-60">({campaigns.length})</span>
                   </Link>
-                  {/* Arrow → open dropdown */}
                   <button
                     onClick={() => setCampaignOpen(o => !o)}
-                    className={`px-1 py-1 rounded-r-md text-base transition border-l border-gray-200 dark:border-gray-700 ${isActive ? activeClass : inactiveClass}`}
+                    className={`px-1 py-1 rounded-r-md text-sm transition border-l border-gray-200 dark:border-gray-700 ${isActive ? activeClass : inactiveClass}`}
                   >
                     <svg className={`w-3 h-3 transition-transform ${campaignOpen ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="currentColor">
                       <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.17l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
                     </svg>
                   </button>
-
                   {campaignOpen && (
                     <div className="absolute left-0 top-full mt-1 w-60 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 py-1 max-h-72 overflow-y-auto">
                       {campaigns.map(c => (
@@ -177,17 +208,15 @@ export default function Nav({ session }) {
                 </div>
               )
             }
-
             return (
               <Link
                 key={l.href}
                 href={l.href}
-                className={`px-3 py-1 rounded-md text-base transition flex items-center gap-1.5 ${
-                  pathname === l.href
-                    ? 'bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-medium'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800'
+                className={`px-3 py-1 rounded-md text-sm transition flex items-center gap-1.5 ${
+                  pathname === l.href ? activeClass : inactiveClass
                 }`}
               >
+                <Ic d={ICONS[l.icon]} />
                 {l.label}
                 {l.href === '/calling/pending' && pendingCount > 0 && (
                   <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-400 leading-none">
@@ -200,143 +229,151 @@ export default function Nav({ session }) {
         </div>
 
         {/* Right side */}
-        <div className="flex items-center gap-3 ml-auto">
+        <div className="flex items-center gap-2 ml-auto">
           <DebugRoleButton isAdmin={userIsAdmin} />
-          <button
-            onClick={toggle}
-            className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition"
-            title={dark ? 'Light mode' : 'Dark mode'}
-          >
-            {dark ? '☀️' : '🌙'}
-          </button>
 
           {session ? (
-            <a
-              href={`https://discord.com/users/${session.user.discordId}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 hover:opacity-80 transition"
-            >
-              {session.user.image && (
-                <Image src={session.user.image} alt="" width={28} height={28} className="rounded-full" />
+            <div className="relative" ref={avatarRef}>
+              <button
+                onClick={() => setAvatarOpen(o => !o)}
+                className="flex items-center gap-2 hover:opacity-80 transition rounded-full focus:outline-none"
+                title={session.user.nickname || session.user.name}
+              >
+                {session.user.image && (
+                  <Image
+                    src={session.user.image} alt="" width={32} height={32}
+                    className={`rounded-full ring-2 transition ${avatarOpen ? 'ring-indigo-500' : 'ring-transparent'}`}
+                  />
+                )}
+                <span className="hidden sm:block text-sm text-gray-600 dark:text-gray-400">
+                  {session.user.nickname || session.user.name}
+                </span>
+              </button>
+
+              {avatarOpen && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setAvatarOpen(false)} />
+                  <div className="absolute right-0 top-full mt-2 z-20 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg py-1 w-64 max-h-[80vh] overflow-y-auto">
+
+                    {/* Nav links */}
+                    <div>
+                      {visibleLinks.map(l => (
+                        <Link
+                          key={l.href}
+                          href={l.href}
+                          onClick={() => setAvatarOpen(false)}
+                          className={`flex items-center gap-2.5 px-4 py-2.5 text-sm transition ${
+                            pathname === l.href || (l.href === '/calling' && !!activeCampaignId)
+                              ? 'text-indigo-600 dark:text-indigo-400 font-medium bg-indigo-50 dark:bg-indigo-900/30'
+                              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                          }`}
+                        >
+                          <Ic d={ICONS[l.icon]} />
+                          {l.label}
+                          {l.href === '/calling/pending' && pendingCount > 0 && (
+                            <span className="ml-auto text-xs font-semibold px-1.5 py-0.5 rounded-full bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-400">
+                              {pendingCount}
+                            </span>
+                          )}
+                        </Link>
+                      ))}
+                      {/* Campaign list on mobile */}
+                      {isCallingApp && campaigns.length > 0 && (
+                        <div className="ml-4 border-l-2 border-gray-200 dark:border-gray-700 pl-3 py-1">
+                          {campaigns.map(c => (
+                            <button
+                              key={c.id}
+                              onClick={() => { setAvatarOpen(false); router.push(`/calling/${c.id}`) }}
+                              className={`w-full text-left px-2 py-1.5 rounded text-xs transition ${
+                                activeCampaignId === c.id
+                                  ? 'text-indigo-600 dark:text-indigo-400 font-medium'
+                                  : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+                              }`}
+                            >
+                              {activeCampaignId === c.id && '› '}{c.name}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {/* App switcher on mobile */}
+                      <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
+                      {APPS.map(app => (
+                        <Link
+                          key={app.key}
+                          href={app.href}
+                          onClick={() => setAvatarOpen(false)}
+                          className={`flex items-center gap-2 px-4 py-2.5 text-sm transition ${
+                            currentApp.key === app.key
+                              ? 'text-indigo-600 dark:text-indigo-400 font-medium'
+                              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                          }`}
+                        >
+                          {app.label}
+                          {currentApp.key === app.key && <span className="ml-auto text-indigo-500 text-xs">✓</span>}
+                        </Link>
+                      ))}
+                      <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
+                    </div>
+
+                    {/* User info header */}
+                    <a
+                      href={`https://discord.com/users/${session.user.discordId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => setAvatarOpen(false)}
+                      className="px-4 py-2.5 flex items-center gap-3 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                    >
+                      {session.user.image && (
+                        <Image src={session.user.image} alt="" width={36} height={36} className="rounded-full shrink-0" />
+                      )}
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                          {session.user.nickname || session.user.name}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{session.user.name}</p>
+                      </div>
+                    </a>
+
+                    <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
+
+                    {/* Dark mode toggle */}
+                    <button
+                      onClick={() => { toggle(); setAvatarOpen(false) }}
+                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                    >
+                      <Ic d={dark ? ICONS.sun : ICONS.moon} />
+                      {dark ? 'Light mode' : 'Dark mode'}
+                    </button>
+
+                    {/* Profile */}
+                    <Link
+                      href="/profile"
+                      onClick={() => setAvatarOpen(false)}
+                      className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                    >
+                      <Ic d={ICONS.profile} />
+                      แก้ไขโปรไฟล์
+                    </Link>
+
+                    <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
+
+                    {/* Sign out */}
+                    <button
+                      onClick={() => signOut({ callbackUrl: '/' })}
+                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-500 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                    >
+                      <Ic d={ICONS.logout} />
+                      ออกจากระบบ
+                    </button>
+                  </div>
+                </>
               )}
-              <span className="hidden sm:block text-base text-gray-600 dark:text-gray-400">
-                {session.user.nickname || session.user.name}
-              </span>
-            </a>
+            </div>
           ) : (
-            <Link href="/login" className="text-base text-indigo-600 hover:underline">เข้าสู่ระบบ</Link>
+            <Link href="/login" className="text-sm text-indigo-600 hover:underline">เข้าสู่ระบบ</Link>
           )}
-
-          {session && (
-            <button
-              onClick={() => signOut({ callbackUrl: '/' })}
-              className="hidden sm:block text-base text-gray-400 hover:text-red-500 transition"
-            >
-              ออก
-            </button>
-          )}
-
-          {/* Hamburger */}
-          <button
-            onClick={() => setMenuOpen(o => !o)}
-            className="md:hidden text-gray-500 dark:text-gray-400 text-2xl w-10 h-10 flex items-center justify-center"
-          >
-            {menuOpen ? '✕' : '☰'}
-          </button>
         </div>
       </div>
-
-      {/* Mobile menu */}
-      {menuOpen && (
-        <div className="md:hidden border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-3 flex flex-col gap-1">
-          {visibleLinks.map(l => {
-            // Campaigns → tree expand in mobile
-            if (l.href === '/calling' && isCallingApp && campaigns.length > 0) {
-              return (
-                <div key={l.href}>
-                  <Link
-                    href="/calling"
-                    onClick={() => setMenuOpen(false)}
-                    className={`flex items-center gap-2 px-3 py-2 rounded text-base transition ${
-                      pathname === '/calling'
-                        ? 'bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-medium'
-                        : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
-                    }`}
-                  >
-                    {l.label}
-                    <span className="text-xs font-normal opacity-60">({campaigns.length})</span>
-                  </Link>
-                  {/* Tree children */}
-                  <div className="ml-4 border-l-2 border-gray-200 dark:border-gray-700 pl-3 flex flex-col gap-0.5 mt-0.5 mb-1">
-                    {campaigns.map(c => (
-                      <button
-                        key={c.id}
-                        onClick={() => { setMenuOpen(false); router.push(`/calling/${c.id}`) }}
-                        className={`w-full text-left px-2 py-1.5 rounded text-sm transition ${
-                          activeCampaignId === c.id
-                            ? 'text-indigo-600 dark:text-indigo-400 font-medium'
-                            : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
-                        }`}
-                      >
-                        {activeCampaignId === c.id && <span className="mr-1">›</span>}
-                        {c.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )
-            }
-
-            return (
-              <Link
-                key={l.href}
-                href={l.href}
-                onClick={() => setMenuOpen(false)}
-                className={`px-3 py-2 rounded text-base transition flex items-center gap-2 ${
-                  pathname === l.href
-                    ? 'bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-medium'
-                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
-                }`}
-              >
-                {l.label}
-                {l.href === '/calling/pending' && pendingCount > 0 && (
-                  <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-400 leading-none">
-                    {pendingCount}
-                  </span>
-                )}
-              </Link>
-            )
-          })}
-
-          {/* App switcher in mobile */}
-          <div className="border-t border-gray-200 dark:border-gray-700 mt-2 pt-2">
-            {APPS.map(app => (
-              <Link
-                key={app.key}
-                href={app.href}
-                onClick={() => setMenuOpen(false)}
-                className={`flex items-center gap-2 px-3 py-2 rounded text-sm transition ${
-                  currentApp.key === app.key
-                    ? 'text-indigo-700 dark:text-indigo-300 font-medium'
-                    : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
-                }`}
-              >
-                {app.label}
-                {currentApp.key === app.key && <span className="text-indigo-500">✓</span>}
-              </Link>
-            ))}
-          </div>
-          {session && (
-            <button
-              onClick={() => signOut({ callbackUrl: '/' })}
-              className="text-left px-3 py-2 text-base text-red-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"
-            >
-              ออกจากระบบ
-            </button>
-          )}
-        </div>
-      )}
     </nav>
     <DebugRoleBanner isAdmin={userIsAdmin} />
     </>

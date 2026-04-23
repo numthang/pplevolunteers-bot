@@ -10,8 +10,7 @@ function ThemeProvider({ children }) {
 
   useEffect(() => {
     const saved = localStorage.getItem('theme')
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-    setDark(saved ? saved === 'dark' : prefersDark)
+    setDark(saved ? saved === 'dark' : true)
   }, [])
 
   useEffect(() => {

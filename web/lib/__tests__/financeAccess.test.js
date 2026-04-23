@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { canViewAccount, canEditAccount } from '../financeAccess.js'
+import { canViewAccount, canEditAccount, canCreateNonPrivateAccount } from '../financeAccess.js'
 
 // ---- helpers ----
 const acc = (overrides) => ({
@@ -14,16 +14,29 @@ const OWNER_ID    = 'owner123'
 const OTHER_ID    = 'other456'
 const RATCHABURI_MEMBER = 'ratchaburi789'
 
+// ---- canCreateNonPrivateAccount ----
+describe('canCreateNonPrivateAccount', () => {
+  it('Admin สร้าง internal/public ได้',               () => expect(canCreateNonPrivateAccount(['Admin'])).toBe(true))
+  it('เลขาธิการสร้าง internal/public ได้',            () => expect(canCreateNonPrivateAccount(['เลขาธิการ'])).toBe(true))
+  it('เหรัญญิกสร้าง internal/public ได้',             () => expect(canCreateNonPrivateAccount(['เหรัญญิก'])).toBe(true))
+  it('กรรมการจังหวัดสร้าง internal/public ได้',       () => expect(canCreateNonPrivateAccount(['กรรมการจังหวัด'])).toBe(true))
+  it('ผู้ประสานงานจังหวัดสร้าง internal/public ได้',  () => expect(canCreateNonPrivateAccount(['ผู้ประสานงานจังหวัด'])).toBe(true))
+  it('ผู้ประสานงานภาคสร้าง internal/public ได้',      () => expect(canCreateNonPrivateAccount(['ผู้ประสานงานภาค'])).toBe(true))
+  it('รองเลขาธิการสร้าง internal/public ได้',         () => expect(canCreateNonPrivateAccount(['รองเลขาธิการ'])).toBe(true))
+  it('Moderator สร้างแค่ private ได้',                () => expect(canCreateNonPrivateAccount(['Moderator'])).toBe(false))
+  it('ไม่มียศสร้างแค่ private ได้',                   () => expect(canCreateNonPrivateAccount([])).toBe(false))
+})
+
 // ---- canViewAccount ----
 
 describe('canViewAccount — private', () => {
   const a = acc({ visibility: 'private' })
 
   it('เจ้าของดูได้', () => expect(canViewAccount(a, OWNER_ID, [])).toBe(true))
-  it('Admin ดูได้',  () => expect(canViewAccount(a, OTHER_ID, ['Admin'])).toBe(true))
-  it('เลขาธิการดูได้', () => expect(canViewAccount(a, OTHER_ID, ['เลขาธิการ'])).toBe(true))
-  it('คนอื่นดูไม่ได้', () => expect(canViewAccount(a, OTHER_ID, [])).toBe(false))
-  it('มียศแต่ไม่ใช่เจ้าของ ดูไม่ได้', () => expect(canViewAccount(a, OTHER_ID, ['เหรัญญิก'])).toBe(false))
+  it('Admin ดูได้',                    () => expect(canViewAccount(a, OTHER_ID, ['Admin'])).toBe(true))
+  it('เลขาธิการดูไม่ได้ (ไม่ใช่เจ้าของ)', () => expect(canViewAccount(a, OTHER_ID, ['เลขาธิการ'])).toBe(false))
+  it('คนอื่นดูไม่ได้',                 () => expect(canViewAccount(a, OTHER_ID, [])).toBe(false))
+  it('มียศแต่ไม่ใช่เจ้าของ ดูไม่ได้',  () => expect(canViewAccount(a, OTHER_ID, ['เหรัญญิก'])).toBe(false))
 })
 
 describe('canViewAccount — public', () => {

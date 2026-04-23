@@ -108,7 +108,7 @@ function hasProvinceScope(province, roles) {
 export function canViewAccount(account, discordId, roles = []) {
   const owner = account.owner_id === discordId
 
-  if (account.visibility === 'private') return owner || isAdmin(roles)
+  if (account.visibility === 'private') return owner || roles.includes('Admin')
   if (account.visibility === 'public')  return true
 
   // internal
@@ -142,4 +142,11 @@ export function canEditAccount(account, discordId, roles = []) {
 
 export function filterAccessibleAccounts(accounts, discordId, roles = []) {
   return accounts.filter(a => canViewAccount(a, discordId, roles))
+}
+
+// role ที่สร้างบัญชี internal/public ได้ (private ทุกคนสร้างได้)
+const NON_PRIVATE_CREATOR_ROLES = ['Admin', 'เลขาธิการ', 'รองเลขาธิการ', 'ผู้ประสานงานภาค', 'เหรัญญิก', 'กรรมการจังหวัด', 'ผู้ประสานงานจังหวัด']
+
+export function canCreateNonPrivateAccount(roles = []) {
+  return NON_PRIVATE_CREATOR_ROLES.some(r => roles.includes(r))
 }

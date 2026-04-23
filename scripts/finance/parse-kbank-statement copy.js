@@ -155,8 +155,8 @@ function parseRows(text) {
       }
     }
 
-    // type: expense ถ้ามี "โอนเงิน", "ชำระเงิน", "เพื่อชำระ", หรือ "หักบัญชี" โดยไม่มี "รับโอน"
-    const isExpense = /โอนเงิน|ชำระเงิน|เพื่อชำระ|หักบัญชี/.test(descNorm) && !/รับโอน/.test(descNorm)
+    // type: expense ถ้ามี "โอนเงิน" หรือ "ชำระเงิน" โดยไม่มี "รับโอน"
+    const isExpense = /โอนเงิน|ชำระเงิน/.test(descNorm) && !/รับโอน/.test(descNorm)
     const type = isExpense ? 'expense' : 'income'
 
     const txn_at = parseThaiDate(dateStr, timeStr)
