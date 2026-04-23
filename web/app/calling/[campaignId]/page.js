@@ -24,6 +24,15 @@ function getStatusBadge(status) {
   return { bg: '#faeeda', text: '#854f0b', label: 'รอมอบหมาย' }
 }
 
+function getExpiryBadge(expiredAt) {
+  if (!expiredAt) return null
+  const now = Date.now()
+  const exp = new Date(expiredAt).getTime()
+  if (exp < now) return { label: 'หมดอายุ', cls: 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400' }
+  if (exp - now < 90 * 24 * 60 * 60 * 1000) return { label: 'ใกล้หมด', cls: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400' }
+  return null
+}
+
 const URL_RE = /https?:\/\/[^\s]+/g
 
 function parseLinks(text) {
@@ -94,6 +103,7 @@ export default function CampaignPage({ params }) {
   const [filterStatus, setFilterStatus] = useState(() => searchParams.get('status') || '')
   const [filterAssignee, setFilterAssignee] = useState(() => searchParams.get('assignee') || '')
   const [filterRsvp, setFilterRsvp] = useState(() => searchParams.get('rsvp') || '')
+  const [filterExpiry, setFilterExpiry] = useState(() => searchParams.get('expiry') || '')
   const [splitModalOpen, setSplitModalOpen] = useState(false)
   const [expandedId, setExpandedId] = useState(null)
   const [logsCache, setLogsCache] = useState({})
@@ -158,9 +168,10 @@ export default function CampaignPage({ params }) {
     if (filterStatus)   p.set('status', filterStatus)
     if (filterAssignee) p.set('assignee', filterAssignee)
     if (filterRsvp)     p.set('rsvp', filterRsvp)
+    if (filterExpiry)   p.set('expiry', filterExpiry)
     const qs = p.toString()
     router.replace(qs ? `/calling/${campaignId}?${qs}` : `/calling/${campaignId}`, { scroll: false })
-  }, [debouncedName, filterAmphure, filterSubdistricts, filterTier, filterStatus, filterAssignee, filterRsvp])
+  }, [debouncedName, filterAmphure, filterSubdistricts, filterTier, filterStatus, filterAssignee, filterRsvp, filterExpiry])
 
   const offsetRef = useRef(0)
   const sentinelRef = useRef(null)
@@ -171,7 +182,7 @@ export default function CampaignPage({ params }) {
   useEffect(() => { loadingMoreRef.current = loadingMore }, [loadingMore])
   useEffect(() => { hasMoreRef.current = hasMore }, [hasMore])
 
-  const buildMembersUrl = (offset, amphure, subdistricts, tier, status, assignee, rsvp, name) => {
+  const buildMembersUrl = (offset, amphure, subdistricts, tier, status, assignee, rsvp, name, expiry) => {
     const limit = amphure ? 9999 : PAGE_SIZE
     const p = new URLSearchParams({ campaignId, limit, offset })
     if (amphure) p.set('amphure', amphure)
@@ -181,6 +192,7 @@ export default function CampaignPage({ params }) {
     if (assignee) p.set('assignedTo', assignee)
     if (rsvp)     p.set('rsvp', rsvp)
     if (name)     p.set('name', name)
+    if (expiry)   p.set('expiry', expiry)
     return `/api/calling/members?${p}`
   }
 
@@ -191,14 +203,14 @@ export default function CampaignPage({ params }) {
   }, [campaignId])
 
   // Load first page; reset member list
-  const loadFirst = useCallback(async (amphure, subdistricts, tier, status, assignee, rsvp, name) => {
+  const loadFirst = useCallback(async (amphure, subdistricts, tier, status, assignee, rsvp, name, expiry) => {
     setLoadingInitial(true)
     setHasMore(false)         // disconnect observer before resetting offset
     hasMoreRef.current = false
     offsetRef.current = 0
     try {
       const [memberRes, statsRes] = await Promise.all([
-        fetch(buildMembersUrl(0, amphure, subdistricts, tier, status, assignee, rsvp, name)),
+        fetch(buildMembersUrl(0, amphure, subdistricts, tier, status, assignee, rsvp, name, expiry)),
         fetch(`/api/calling/members?campaignId=${campaignId}&stats=true`)
       ])
       const memberData = await memberRes.json()
@@ -226,7 +238,7 @@ export default function CampaignPage({ params }) {
     loadingMoreRef.current = true
     try {
       const res = await fetch(buildMembersUrl(
-        offsetRef.current, filterAmphure, filterSubdistricts, filterTier, filterStatus, filterAssignee, filterRsvp, debouncedName
+        offsetRef.current, filterAmphure, filterSubdistricts, filterTier, filterStatus, filterAssignee, filterRsvp, debouncedName, filterExpiry
       ))
       const data = await res.json()
       const newRows = data.data || []
@@ -240,7 +252,7 @@ export default function CampaignPage({ params }) {
       setLoadingMore(false)
       loadingMoreRef.current = false
     }
-  }, [filterAmphure, filterSubdistricts, filterTier, filterStatus, filterAssignee, filterRsvp, debouncedName])
+  }, [filterAmphure, filterSubdistricts, filterTier, filterStatus, filterAssignee, filterRsvp, debouncedName, filterExpiry])
 
   // Initial: fetch campaign + users (only once per campaignId)
   useEffect(() => {
@@ -264,8 +276,8 @@ export default function CampaignPage({ params }) {
 
   // Re-fetch members when filters change (or on mount)
   useEffect(() => {
-    loadFirst(filterAmphure, filterSubdistricts, filterTier, filterStatus, filterAssignee, filterRsvp, debouncedName)
-  }, [campaignId, filterAmphure, filterSubdistricts, filterTier, filterStatus, filterAssignee, filterRsvp, debouncedName])
+    loadFirst(filterAmphure, filterSubdistricts, filterTier, filterStatus, filterAssignee, filterRsvp, debouncedName, filterExpiry)
+  }, [campaignId, filterAmphure, filterSubdistricts, filterTier, filterStatus, filterAssignee, filterRsvp, debouncedName, filterExpiry])
 
   useEffect(() => {
     const sentinel = sentinelRef.current
@@ -475,6 +487,13 @@ export default function CampaignPage({ params }) {
           <option value="no">✗ ไม่เข้าร่วม</option>
           <option value="maybe">? อาจจะ</option>
         </select>
+
+        <select value={filterExpiry} onChange={e => setFilterExpiry(e.target.value)}
+          className="h-9 px-3 text-sm border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-bg2 text-warm-900 dark:text-disc-text rounded-lg focus:outline-none focus:ring-2 focus:ring-teal w-full sm:w-auto">
+          <option value="">สมาชิกภาพ</option>
+          <option value="expiring">ใกล้หมดอายุ (90 วัน)</option>
+          <option value="expired">หมดอายุแล้ว</option>
+        </select>
       </div>
 
       {/* Table */}
@@ -498,7 +517,7 @@ export default function CampaignPage({ params }) {
           </span>
           <span className="text-center">ระดับ</span>
           <span className="hidden md:block">มอบหมาย</span>
-          <span className="hidden md:block">อำเภอ</span>
+          <span className="hidden md:block">ตำบล</span>
           <span className="hidden md:block text-right">โทร</span>
         </div>
 
@@ -522,6 +541,7 @@ export default function CampaignPage({ params }) {
               const hasPhone = !!member.mobile_number
               const isExpanded = expandedId === member.source_id
               const dimmed = !hasPhone ? 'opacity-50' : ''
+              const expiryBadge = getExpiryBadge(member.expired_at)
               const memberLogs = logsCache[member.source_id]
               return (
                 <div key={member.source_id} className="border-b border-warm-200 dark:border-disc-border last:border-0">
@@ -539,9 +559,12 @@ export default function CampaignPage({ params }) {
                       className="w-6 h-6 accent-teal cursor-pointer" />
                     <span className={`hidden md:block text-xs tabular-nums text-warm-400 dark:text-disc-muted ${dimmed}`}>{idx + 1}</span>
                     <div className={`min-w-0 pr-2 cursor-pointer ${dimmed}`} onClick={() => handleExpand(member.source_id)}>
-                      <div className="truncate text-base font-medium text-warm-900 dark:text-disc-text">
-                        {member.full_name}
-                        {!hasPhone && <span className="ml-2 text-xs text-warm-400 dark:text-disc-muted font-normal">ไม่มีเบอร์</span>}
+                      <div className="flex items-center gap-1.5 truncate">
+                        <span className="truncate text-base font-medium text-warm-900 dark:text-disc-text">
+                          {member.full_name}
+                        </span>
+                        {expiryBadge && <span className={`shrink-0 text-xs font-medium px-1.5 py-0.5 rounded ${expiryBadge.cls}`}>{expiryBadge.label}</span>}
+                        {!hasPhone && <span className="shrink-0 text-xs text-warm-400 dark:text-disc-muted font-normal">ไม่มีเบอร์</span>}
                       </div>
                       <div className="flex items-center gap-1.5 text-sm text-warm-500 dark:text-warm-200 truncate">
                         <span
@@ -549,7 +572,11 @@ export default function CampaignPage({ params }) {
                           style={{ backgroundColor: badge.text }}
                         />
                         <span className="truncate">
-                          {member.home_amphure || ''}{member.assigned_to ? ` · ${usersMap[member.assigned_to] || member.assigned_to}` : ''}
+                          {[
+                            member.home_district || null,
+                            member.home_amphure  || null,
+                            member.assigned_to   ? usersMap[member.assigned_to] || member.assigned_to : null,
+                          ].filter(Boolean).join(' · ')}
                         </span>
                         {member.rsvp && (
                           <span className="shrink-0 font-bold" style={{ color: RSVP_ICONS[member.rsvp]?.color || '#666' }}>
@@ -573,7 +600,7 @@ export default function CampaignPage({ params }) {
                         : <span className="px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap" style={{ backgroundColor: badge.bg, color: badge.text }}>{badge.label}</span>}
                     </div>
                     <div className={`hidden md:block text-sm text-warm-500 dark:text-disc-muted truncate pr-2 ${dimmed}`}>
-                      {member.home_amphure || '—'}
+                      {member.home_district || '—'}
                     </div>
                     <div className={`hidden md:block text-sm text-warm-500 dark:text-disc-muted text-right ${dimmed}`}>
                       {member.total_calls || 0}

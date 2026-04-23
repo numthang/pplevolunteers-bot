@@ -89,7 +89,7 @@ export async function getMembersCount() {
  * Status: 'called' (has calls) | 'assigned' (assigned to someone) | 'unassigned'
  */
 export async function getMembersInCampaign(campaignId, filters = {}, limit = 100, offset = 0) {
-  const { amphure, subdistricts, tier, status, assignedTo, rsvp, name } = filters
+  const { amphure, subdistricts, tier, status, assignedTo, rsvp, name, expiry } = filters
 
   let query = `SELECT
        m.*,
@@ -133,7 +133,15 @@ export async function getMembersInCampaign(campaignId, filters = {}, limit = 100
   query += ` AND (? IS NULL OR COALESCE(t.tier, 'D') = ?)
        AND (? IS NULL OR a.assigned_to = ?)
        AND (? IS NULL OR a.rsvp = ?)
-       AND (? IS NULL OR m.full_name LIKE ?)
+       AND (? IS NULL OR m.full_name LIKE ?)`
+
+  if (expiry === 'expired') {
+    query += ` AND m.expired_at < NOW()`
+  } else if (expiry === 'expiring') {
+    query += ` AND m.expired_at BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 90 DAY)`
+  }
+
+  query += `
      GROUP BY m.source_id
      HAVING (? IS NULL OR member_status = ?)
      ORDER BY m.home_amphure ASC, m.first_name ASC, m.source_id ASC

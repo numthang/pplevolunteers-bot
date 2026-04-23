@@ -33,6 +33,7 @@ export async function GET(req) {
   const filterAssignedTo = searchParams.get('assignedTo') || null
   const filterRsvp = searchParams.get('rsvp') || null
   const filterName = searchParams.get('name') || null
+  const filterExpiry = searchParams.get('expiry') || null
 
   try {
     const userRoles = await getEffectiveRoles(session)
@@ -49,7 +50,7 @@ export async function GET(req) {
     let total = 0
 
     if (campaignId) {
-      const filters = { amphure: filterAmphure, subdistricts: filterSubdistricts, tier: filterTier, status: filterStatus, assignedTo: filterAssignedTo, rsvp: filterRsvp, name: filterName }
+      const filters = { amphure: filterAmphure, subdistricts: filterSubdistricts, tier: filterTier, status: filterStatus, assignedTo: filterAssignedTo, rsvp: filterRsvp, name: filterName, expiry: filterExpiry }
       rows = await memberDB.getMembersInCampaign(parseInt(campaignId), filters, limit, offset)
     } else if (province) {
       rows = await memberDB.getMembersByProvince(province, limit, offset)
