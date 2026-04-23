@@ -12,7 +12,26 @@ export async function GET() {
      FROM dc_members WHERE guild_id = ? AND discord_id = ?`,
     [process.env.GUILD_ID, session.user.discordId]
   )
-  return Response.json(rows[0] || {})
+
+  let guild = null
+  try {
+    const res = await fetch(`https://discord.com/api/v10/guilds/${process.env.GUILD_ID}?with_counts=true`, {
+      headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}` },
+      next: { revalidate: 300 },
+    })
+    if (res.ok) {
+      const g = await res.json()
+      guild = {
+        id:           g.id,
+        name:         g.name,
+        description:  g.description,
+        icon:         g.icon ? `https://cdn.discordapp.com/icons/${g.id}/${g.icon}.webp?size=64` : null,
+        member_count: g.approximate_member_count ?? null,
+      }
+    }
+  } catch {}
+
+  return Response.json({ ...(rows[0] || {}), guild_id: process.env.GUILD_ID, guild })
 }
 
 export async function PATCH(req) {
