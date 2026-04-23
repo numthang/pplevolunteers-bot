@@ -2,6 +2,10 @@ import DiscordProvider from 'next-auth/providers/discord'
 import pool from '@/db/index.js'
 
 export const authOptions = {
+  session: {
+    strategy: 'jwt',
+    maxAge: 90 * 24 * 60 * 60, // 90 days
+  },
   providers: [
     DiscordProvider({
       clientId: process.env.DISCORD_OAUTH_CLIENT_ID,
