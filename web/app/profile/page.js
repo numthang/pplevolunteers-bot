@@ -89,7 +89,7 @@ export default function ProfilePage() {
 
       {/* Discord info */}
       {session && (
-        <div className="flex items-center gap-3 mb-3 p-4 bg-white rounded-xl border border-gray-200 dark:border-gray-700">
+        <div className="flex items-center gap-3 mb-3 p-4 bg-card-bg rounded-xl border border-gray-200 dark:border-gray-700">
           {session.user.image && (
             <Image src={session.user.image} alt="" width={48} height={48} className="rounded-full shrink-0" />
           )}
@@ -136,7 +136,7 @@ export default function ProfilePage() {
               value={form[key]}
               onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
               placeholder={placeholder}
-              className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
+              className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-card-bg dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
             />
           </div>
         ))}

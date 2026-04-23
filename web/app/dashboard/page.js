@@ -47,7 +47,7 @@ export const metadata = { title: 'Dashboard' }
 
 function StatCard({ label, value, sub }) {
   return (
-    <div className="flex flex-col bg-white border border-brand-blue-light dark:border-gray-800 rounded-lg p-5">
+    <div className="flex flex-col bg-card-bg border border-brand-blue-light dark:border-gray-800 rounded-lg p-5">
       <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{label}</p>
       <p className="text-3xl font-bold text-gray-900 dark:text-white">{value}</p>
       {sub && <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{sub}</p>}
@@ -57,7 +57,7 @@ function StatCard({ label, value, sub }) {
 
 function Section({ title, children }) {
   return (
-    <div className="bg-white border border-brand-blue-light dark:border-gray-800 rounded-xl p-6">
+    <div className="bg-card-bg border border-brand-blue-light dark:border-gray-800 rounded-xl p-6">
       <p className="text-xs font-semibold uppercase tracking-widest text-brand-orange mb-4">{title}</p>
       <div className="grid grid-cols-2 gap-4">{children}</div>
     </div>
@@ -87,7 +87,7 @@ export default async function DashboardPage() {
     <div className="space-y-3">
 
       {/* Profile */}
-      <div className="flex items-center gap-3 p-4 bg-white rounded-xl border border-gray-200 dark:border-gray-700">
+      <div className="flex items-center gap-3 p-4 bg-card-bg rounded-xl border border-gray-200 dark:border-gray-700">
         {session.user.image && (
           <Image src={session.user.image} alt="" width={48} height={48} className="rounded-full shrink-0" />
         )}

@@ -5,7 +5,9 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        white: '#fafaf9',
+        card: {
+          bg: 'var(--card-bg)',
+        },
         brand: {
           orange:        'var(--brand-orange)',
           'orange-light':'var(--brand-orange-light)',

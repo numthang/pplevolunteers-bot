@@ -10,6 +10,11 @@
     --brand-navy:        #002b49;
     --brand-blue-light:  #b5d1dc;
 
+    --card-bg:           #fafaf9;  /* ← แก้ที่นี่ที่เดียว (light mode) */
+  }
+
+  .dark {
+    --card-bg:           #111827;  /* ← แก้ที่นี่ที่เดียว (dark mode) */
   }
 }
 
