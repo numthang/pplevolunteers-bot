@@ -18,6 +18,15 @@ const RSVP_ICONS = {
   maybe: { icon: '?', color: '#854f0b' },
 }
 
+function getExpiryBadge(expiredAt) {
+  if (!expiredAt) return null
+  const now = Date.now()
+  const exp = new Date(expiredAt).getTime()
+  if (exp < now) return { label: 'หมดอายุ', cls: 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400' }
+  if (exp - now < 90 * 24 * 60 * 60 * 1000) return { label: 'ใกล้หมด', cls: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400' }
+  return null
+}
+
 function getStatusBadge(callStatus, logStatus) {
   if (callStatus === 'pending') return CALL_STATUS_COLORS.pending
   return CALL_STATUS_COLORS[logStatus] || CALL_STATUS_COLORS.pending
@@ -284,6 +293,7 @@ export default function PendingCallsPage() {
               const tierColor = TIER_COLORS[tier]
               const isCalled = member.call_status === 'called'
               const avatarChar = member.first_name?.[0] || member.full_name?.[0] || '?'
+              const expiryBadge = getExpiryBadge(member.expired_at)
 
               return (
                 <button
@@ -307,6 +317,7 @@ export default function PendingCallsPage() {
                             className="text-xs font-semibold px-1.5 py-0.5 rounded flex-shrink-0"
                             style={{ backgroundColor: tierColor.bg, color: tierColor.text }}
                           >{tier}</span>
+                          {expiryBadge && <span className={`text-xs font-medium px-1.5 py-0.5 rounded flex-shrink-0 ${expiryBadge.cls}`}>{expiryBadge.label}</span>}
                         </div>
                         <div className="flex items-center gap-1.5 text-sm truncate">
                           {(member.home_amphure || member.campaign_name) && (
@@ -356,8 +367,11 @@ export default function PendingCallsPage() {
                         style={{ backgroundColor: tierColor.bg, color: tierColor.text }}
                       >{avatarChar}</div>
                       <div className="min-w-0">
-                        <div className="text-base font-medium text-warm-900 dark:text-warm-50 group-hover:text-teal transition-colors truncate">
-                          {member.full_name}
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-base font-medium text-warm-900 dark:text-warm-50 group-hover:text-teal transition-colors truncate">
+                            {member.full_name}
+                          </span>
+                          {expiryBadge && <span className={`text-xs font-medium px-1.5 py-0.5 rounded flex-shrink-0 ${expiryBadge.cls}`}>{expiryBadge.label}</span>}
                         </div>
                         <div className="flex items-center gap-1.5 text-sm truncate">
                           {(member.home_amphure || member.campaign_name) && (

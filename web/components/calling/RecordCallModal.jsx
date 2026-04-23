@@ -56,6 +56,15 @@ const getLogStatusStyle = (status) => {
   return color ? { bg: color.bg, text: color.text, label: color.label } : { bg: '#f3f4f6', text: '#6b7280', label: status }
 }
 
+function getExpiryBadge(expiredAt) {
+  if (!expiredAt) return null
+  const now = Date.now()
+  const exp = new Date(expiredAt).getTime()
+  if (exp < now) return { label: 'หมดอายุ', cls: 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400' }
+  if (exp - now < 90 * 24 * 60 * 60 * 1000) return { label: 'ใกล้หมด', cls: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400' }
+  return null
+}
+
 const TIER_COLORS = {
   A: { bg: '#ead3ce', text: '#714b2b' },
   B: { bg: '#cce5f4', text: '#0c447c' },
@@ -187,6 +196,7 @@ export default function RecordCallModal({ isOpen, member, onClose, onSave, onSav
   const tier = member.tier || 'D'
   const tierColor = TIER_COLORS[tier]
   const avatarChar = member.first_name?.[0] || member.full_name?.[0] || '?'
+  const expiryBadge = getExpiryBadge(member.expired_at)
   const selectedStatus = CALL_STATUS_OPTIONS.find(s => s.value === status)
   const showSignals = status === 'answered'
   const signalsFilled = SIGNALS.some(s => signals[s.key])
@@ -227,6 +237,7 @@ export default function RecordCallModal({ isOpen, member, onClose, onSave, onSav
                   <span className="font-semibold text-base text-warm-900 dark:text-warm-50 truncate">{member.full_name}</span>
                   <span className="text-xs font-semibold px-1.5 py-0.5 rounded flex-shrink-0"
                     style={{ backgroundColor: tierColor.bg, color: tierColor.text }}>{tier}</span>
+                  {expiryBadge && <span className={`text-xs font-medium px-1.5 py-0.5 rounded flex-shrink-0 ${expiryBadge.cls}`}>{expiryBadge.label}</span>}
                   {member.source_id && <span className="text-xs text-warm-300 dark:text-warm-dark-500 flex-shrink-0">#{member.source_id}</span>}
                 </div>
                 <div className="text-sm text-warm-400 dark:text-warm-dark-400 truncate mt-0.5">
