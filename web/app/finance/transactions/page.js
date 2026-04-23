@@ -209,7 +209,7 @@ function TransactionsContent() {
           }
         }
         return (
-          <div className="mb-4 rounded-xl border dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden">
+          <div className="mb-4 rounded-xl border dark:border-gray-700 bg-card-bg overflow-hidden">
             {/* trigger */}
             <button type="button" onClick={() => setAccOpen(o => !o)}
               className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition text-left">
@@ -294,7 +294,7 @@ function TransactionsContent() {
           {[['', 'ทั้งหมด'], ['income', '📥 รายรับ'], ['expense', '📤 รายจ่าย']].map(([val, label]) => (
             <button key={val} type="button"
               onClick={() => setFilter(f => ({ ...f, type: val }))}
-              className={`flex-1 px-3 py-1.5 ${filter.type === val ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
+              className={`flex-1 px-3 py-1.5 ${filter.type === val ? 'bg-indigo-600 text-white' : 'bg-card-bg text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
             >{label}</button>
           ))}
         </div>
@@ -308,7 +308,7 @@ function TransactionsContent() {
             ? `${filter.dateFrom || '…'} – ${filter.dateTo || '…'}`
             : [filter.year ? `${Number(filter.year) + 543}` : '', MONTHS[Number(filter.month) - 1] || ''].filter(Boolean).join(' ') || null
           return (
-            <div className="rounded border dark:border-gray-600 overflow-hidden bg-white dark:bg-gray-800 text-sm">
+            <div className="rounded border dark:border-gray-600 overflow-hidden bg-card-bg text-sm">
               <button type="button" onClick={() => setDateOpen(o => !o)}
                 className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
                 <span className={hasDate ? 'text-indigo-600 dark:text-indigo-400 font-medium' : 'text-gray-400 dark:text-gray-500'}>
@@ -374,7 +374,7 @@ function TransactionsContent() {
             <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 px-1 py-1.5 sticky top-0 bg-gray-50 dark:bg-gray-950 z-10">{dateKey}</p>
             <div className="space-y-1.5">
         {items.map(t => (
-          <div key={t.id} className="bg-white dark:bg-gray-800 rounded-xl shadow overflow-hidden">
+          <div key={t.id} className="bg-card-bg rounded-xl shadow overflow-hidden">
             {/* Main row */}
             <div
               className="px-4 py-3 flex items-center gap-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 select-none"
@@ -646,7 +646,7 @@ function CalcInput({ value, onChange }) {
       {open && (
         <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-gray-100 dark:bg-gray-900 border dark:border-gray-700 rounded-xl shadow-xl overflow-hidden">
           {/* display */}
-          <div className="px-3 py-2 text-right bg-white dark:bg-gray-800 border-b dark:border-gray-700">
+          <div className="px-3 py-2 text-right bg-card-bg border-b dark:border-gray-700">
             <p className="font-mono text-lg text-gray-900 dark:text-gray-100 min-h-6">{expr || '0'}</p>
             <p className="font-mono text-sm text-gray-400 min-h-5">{preview}</p>
           </div>
@@ -743,7 +743,7 @@ function Modal({ title, onClose, onSave, children }) {
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md max-h-[90vh] flex flex-col">
+      <form onSubmit={handleSubmit} className="bg-card-bg rounded-xl shadow-xl w-full max-w-md max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between px-6 pt-6 pb-2 flex-shrink-0">
           <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">{title}</h2>
           <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"><X size={18} /></button>

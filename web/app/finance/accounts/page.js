@@ -84,7 +84,7 @@ export default function AccountsPage() {
         {accounts.map(a => {
           const canEdit = canEditAccount({ owner_id: a.owner_id, visibility: a.visibility, province: a.province }, effectiveDiscordId, effectiveRoles)
           return (
-            <div key={a.id} className={`bg-white dark:bg-gray-800 rounded-xl shadow px-5 py-4 flex items-center justify-between gap-3 ${a.archived ? 'opacity-50' : ''}`}>
+            <div key={a.id} className={`bg-card-bg rounded-xl shadow px-5 py-4 flex items-center justify-between gap-3 ${a.archived ? 'opacity-50' : ''}`}>
               <BankBadge bank={a.bank} size={40} />
               <div className="min-w-0 flex-1">
                 <p className="font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
@@ -189,7 +189,7 @@ function Modal({ title, onClose, onSave, children }) {
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
+      <div className="bg-card-bg rounded-xl shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
         <h2 className="text-lg font-bold mb-4 text-gray-900 dark:text-gray-100">{title}</h2>
         {children}
         <div className="flex justify-end gap-2 mt-5">

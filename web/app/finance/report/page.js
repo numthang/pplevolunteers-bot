@@ -97,7 +97,7 @@ function CategoryModal({ catRow, filter, categories, onClose, onUpdated }) {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col">
+      <div className="bg-card-bg rounded-xl shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col">
         <div className="flex items-center justify-between px-5 pt-5 pb-3 flex-shrink-0 gap-3 flex-wrap">
           <div className="flex items-center gap-2">
             <CatIcon name={catRow.category_icon} size={16} />
@@ -216,17 +216,17 @@ function ReportContent() {
           {[['', 'ทั้งหมด'], ['income', '📥 รายรับ'], ['expense', '📤 รายจ่าย']].map(([val, label]) => (
             <button key={val} type="button"
               onClick={() => setFilter(f => ({ ...f, type: val }))}
-              className={`flex-1 px-3 py-1.5 ${filter.type === val ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
+              className={`flex-1 px-3 py-1.5 ${filter.type === val ? 'bg-indigo-600 text-white' : 'bg-card-bg text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
             >{label}</button>
           ))}
         </div>
         <div className="flex gap-2">
-          <select className="flex-1 border dark:border-gray-600 rounded px-2 py-1.5 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+          <select className="flex-1 border dark:border-gray-600 rounded px-2 py-1.5 text-sm bg-card-bg text-gray-900 dark:text-gray-100"
             value={filter.year} onChange={e => setFilter(f => ({ ...f, year: e.target.value, month: '', dateFrom: '', dateTo: '' }))}>
             <option value="">ทุกปี</option>
             {years.map(y => <option key={y} value={y}>{y + 543} ({y})</option>)}
           </select>
-          <select className="flex-1 border dark:border-gray-600 rounded px-2 py-1.5 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+          <select className="flex-1 border dark:border-gray-600 rounded px-2 py-1.5 text-sm bg-card-bg text-gray-900 dark:text-gray-100"
             value={filter.month} onChange={e => setFilter(f => ({ ...f, month: e.target.value, dateFrom: '', dateTo: '' }))}>
             <option value="">ทุกเดือน</option>
             {MONTHS.map((m, i) => <option key={i+1} value={i+1}>{m}</option>)}
@@ -234,10 +234,10 @@ function ReportContent() {
         </div>
         <div className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
           <span>หรือ</span>
-          <input type="date" className="flex-1 min-w-0 border dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm"
+          <input type="date" className="flex-1 min-w-0 border dark:border-gray-600 rounded px-2 py-1 bg-card-bg text-gray-900 dark:text-gray-100 text-sm"
             value={filter.dateFrom} onChange={e => setFilter(f => ({ ...f, dateFrom: e.target.value, year: '', month: '' }))} />
           <span>–</span>
-          <input type="date" className="flex-1 min-w-0 border dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm"
+          <input type="date" className="flex-1 min-w-0 border dark:border-gray-600 rounded px-2 py-1 bg-card-bg text-gray-900 dark:text-gray-100 text-sm"
             value={filter.dateTo} onChange={e => setFilter(f => ({ ...f, dateTo: e.target.value, year: '', month: '' }))} />
         </div>
       </div>
@@ -252,13 +252,13 @@ function ReportContent() {
               { label: 'รายรับ',  value: totalIncome,  cls: 'text-green-600 dark:text-green-400' },
               { label: 'รายจ่าย', value: totalExpense, cls: 'text-red-500 dark:text-red-400' },
             ].map(({ label, value, cls }) => (
-              <div key={label} className="bg-white dark:bg-gray-800 rounded-xl shadow px-3 py-3 text-center">
+              <div key={label} className="bg-card-bg rounded-xl shadow px-3 py-3 text-center">
                 <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{label}</p>
                 <p className={`font-mono font-bold text-lg leading-tight ${cls}`}>{fmt(value)} ฿</p>
               </div>
             ))}
           </div>
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow px-3 py-3 text-center">
+          <div className="bg-card-bg rounded-xl shadow px-3 py-3 text-center">
             <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">สุทธิ</p>
             <p className={`font-mono font-bold text-lg leading-tight ${net >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>{fmt(net)} ฿</p>
           </div>
@@ -272,7 +272,7 @@ function ReportContent() {
             { label: '📤 รายจ่ายตามหมวด', rows: expenseRows, total: totalExpense, barCls: 'bg-red-500' }]
             .filter(g => g.rows.length > 0 || !filter.type)
             .map(({ label, rows, total, barCls }) => (
-            <div key={label} className="bg-white dark:bg-gray-800 rounded-xl shadow p-4">
+            <div key={label} className="bg-card-bg rounded-xl shadow p-4">
               <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-3">{label}</h2>
               {rows.length === 0
                 ? <p className="text-gray-400 text-sm text-center py-4">ไม่มีข้อมูล</p>
@@ -306,7 +306,7 @@ function ReportContent() {
 
       {/* Monthly trend */}
       {data && trendMonths.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-4">
+        <div className="bg-card-bg rounded-xl shadow p-4">
           <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-3">แนวโน้มรายเดือน</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

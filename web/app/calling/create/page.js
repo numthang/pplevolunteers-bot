@@ -60,7 +60,7 @@ export default function CreateCampaignPage() {
         ← กลับ
       </Link>
 
-      <div className="max-w-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+      <div className="max-w-2xl bg-card-bg border border-gray-200 dark:border-gray-700 rounded-xl p-6">
         <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-gray-100">สร้างแคมเปญการโทรใหม่</h1>
 
         <form onSubmit={handleSubmit} className="space-y-5">

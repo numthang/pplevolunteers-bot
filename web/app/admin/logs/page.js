@@ -75,7 +75,7 @@ export default function LogsPage() {
         <div className="flex items-center gap-2 flex-wrap text-sm">
           {/* Lines */}
           <select
-            className="border dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200"
+            className="border dark:border-gray-600 rounded px-2 py-1 bg-card-bg text-gray-700 dark:text-gray-200"
             value={maxLines}
             onChange={e => setMaxLines(Number(e.target.value))}
           >

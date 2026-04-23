@@ -383,7 +383,7 @@ export default function CampaignPage({ params }) {
     <div>
 
       {/* Campaign Header */}
-      <div className="bg-white dark:bg-disc-bg2 border border-warm-200 dark:border-disc-border border-l-4 border-l-violet-500 dark:border-l-violet-400 rounded-lg px-4 py-3 mb-4">
+      <div className="bg-card-bg border border-warm-200 dark:border-disc-border border-l-4 border-l-violet-500 dark:border-l-violet-400 rounded-lg px-4 py-3 mb-4">
         <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
           <h1 className="text-base font-semibold text-warm-900 dark:text-disc-text">{campaign?.name}</h1>
           <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-warm-500 dark:text-disc-muted">
@@ -405,10 +405,10 @@ export default function CampaignPage({ params }) {
           value={filterName}
           onChange={e => setFilterName(e.target.value)}
           placeholder="ค้นหาชื่อ..."
-          className="h-9 px-3 text-sm border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-bg2 text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted rounded-lg focus:outline-none focus:ring-2 focus:ring-teal w-full sm:w-40"
+          className="h-9 px-3 text-sm border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted rounded-lg focus:outline-none focus:ring-2 focus:ring-teal w-full sm:w-40"
         />
         <select value={filterAmphure} onChange={e => setFilterAmphure(e.target.value)}
-          className="h-9 px-3 text-sm border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-bg2 text-warm-900 dark:text-disc-text rounded-lg focus:outline-none focus:ring-2 focus:ring-teal w-full sm:w-auto">
+          className="h-9 px-3 text-sm border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text rounded-lg focus:outline-none focus:ring-2 focus:ring-teal w-full sm:w-auto">
           <option value="">อำเภอ</option>
           {stats.districts.map(d => (
             <option key={d} value={d}>{d || '(ไม่ระบุ)'} ({stats.districtCounts[d] || 0})</option>
@@ -429,12 +429,12 @@ export default function CampaignPage({ params }) {
               <>
                 <button
                   onClick={() => setSubdistrictsOpen(!subdistrictsOpen)}
-                  className="h-9 px-3 text-sm border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-bg2 text-warm-900 dark:text-disc-text rounded-lg focus:outline-none focus:ring-2 focus:ring-teal w-full text-left flex justify-between items-center"
+                  className="h-9 px-3 text-sm border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text rounded-lg focus:outline-none focus:ring-2 focus:ring-teal w-full text-left flex justify-between items-center"
                 >
                   ตำบล {filterSubdistricts.size > 0 && <span>({filterSubdistricts.size})</span>}
                 </button>
                 {subdistrictsOpen && (
-                  <div className="absolute top-full left-0 mt-1 bg-white dark:bg-disc-bg2 border border-warm-200 dark:border-disc-border rounded-lg shadow-lg z-20 w-56 max-h-60 overflow-y-auto">
+                  <div className="absolute top-full left-0 mt-1 bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg shadow-lg z-20 w-56 max-h-60 overflow-y-auto">
                     {availableSubdistricts.map(sub => (
                       <label key={sub.name} className="flex items-center px-3 py-2 text-sm text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover cursor-pointer">
                         <input
@@ -458,7 +458,7 @@ export default function CampaignPage({ params }) {
         )}
 
         <select value={filterTier} onChange={e => setFilterTier(e.target.value)}
-          className="h-9 px-3 text-sm border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-bg2 text-warm-900 dark:text-disc-text rounded-lg focus:outline-none focus:ring-2 focus:ring-teal w-full sm:w-auto">
+          className="h-9 px-3 text-sm border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text rounded-lg focus:outline-none focus:ring-2 focus:ring-teal w-full sm:w-auto">
           <option value="">Tier</option>
           {['A','B','C','D'].map(t => (
             <option key={t} value={t}>{t}</option>
@@ -466,14 +466,14 @@ export default function CampaignPage({ params }) {
         </select>
 
         <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
-          className="h-9 px-3 text-sm border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-bg2 text-warm-900 dark:text-disc-text rounded-lg focus:outline-none focus:ring-2 focus:ring-teal w-full sm:w-auto">
+          className="h-9 px-3 text-sm border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text rounded-lg focus:outline-none focus:ring-2 focus:ring-teal w-full sm:w-auto">
           <option value="">สถานะ</option>
           <option value="unassigned">รอมอบหมาย</option>
           <option value="assigned">มอบหมายแล้ว</option>
         </select>
 
         <select value={filterAssignee} onChange={e => setFilterAssignee(e.target.value)}
-          className="h-9 px-3 text-sm border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-bg2 text-warm-900 dark:text-disc-text rounded-lg focus:outline-none focus:ring-2 focus:ring-teal w-full sm:w-auto">
+          className="h-9 px-3 text-sm border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text rounded-lg focus:outline-none focus:ring-2 focus:ring-teal w-full sm:w-auto">
           <option value="">ผู้รับผิดชอบ</option>
           {assignees.map(a => (
             <option key={a.id} value={a.id}>{a.name} ({a.count})</option>
@@ -481,7 +481,7 @@ export default function CampaignPage({ params }) {
         </select>
 
         <select value={filterRsvp} onChange={e => setFilterRsvp(e.target.value)}
-          className="h-9 px-3 text-sm border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-bg2 text-warm-900 dark:text-disc-text rounded-lg focus:outline-none focus:ring-2 focus:ring-teal w-full sm:w-auto">
+          className="h-9 px-3 text-sm border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text rounded-lg focus:outline-none focus:ring-2 focus:ring-teal w-full sm:w-auto">
           <option value="">RSVP</option>
           <option value="yes">✓ เข้าร่วม</option>
           <option value="no">✗ ไม่เข้าร่วม</option>
@@ -489,7 +489,7 @@ export default function CampaignPage({ params }) {
         </select>
 
         <select value={filterExpiry} onChange={e => setFilterExpiry(e.target.value)}
-          className="h-9 px-3 text-sm border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-bg2 text-warm-900 dark:text-disc-text rounded-lg focus:outline-none focus:ring-2 focus:ring-teal w-full sm:w-auto">
+          className="h-9 px-3 text-sm border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text rounded-lg focus:outline-none focus:ring-2 focus:ring-teal w-full sm:w-auto">
           <option value="">สมาชิกภาพ</option>
           <option value="expiring">ใกล้หมดอายุ (90 วัน)</option>
           <option value="expired">หมดอายุแล้ว</option>
@@ -497,7 +497,7 @@ export default function CampaignPage({ params }) {
       </div>
 
       {/* Table */}
-      <div className="bg-white dark:bg-disc-bg2 border border-warm-200 dark:border-disc-border rounded-lg overflow-hidden">
+      <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg overflow-hidden">
         {/* Header */}
         <div className="
           grid items-center px-3 py-2.5
@@ -675,14 +675,14 @@ export default function CampaignPage({ params }) {
 
       {/* Floating toolbar */}
       {selectedMembers.size > 0 && (
-        <div className="fixed bottom-4 left-4 right-4 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 sm:w-auto flex items-center gap-3 bg-white dark:bg-disc-bg2 border border-warm-200 dark:border-disc-border rounded-2xl sm:rounded-full shadow-lg px-5 py-2.5 z-40">
+        <div className="fixed bottom-4 left-4 right-4 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 sm:w-auto flex items-center gap-3 bg-card-bg border border-warm-200 dark:border-disc-border rounded-2xl sm:rounded-full shadow-lg px-5 py-2.5 z-40">
           <span className="text-sm font-medium text-warm-900 dark:text-disc-text shrink-0">เลือก {selectedMembers.size} คน</span>
           <button onClick={() => setSplitModalOpen(true)}
             className="flex-1 sm:flex-none px-4 py-1.5 bg-teal hover:opacity-90 text-white text-sm font-medium rounded-full transition text-center">
             มอบหมาย ↗
           </button>
           <button onClick={handleUnassign}
-            className="flex-1 sm:flex-none px-4 py-1.5 bg-white dark:bg-disc-bg2 border border-warm-200 dark:border-disc-border text-warm-700 dark:text-disc-text text-sm font-medium rounded-full hover:bg-warm-50 dark:hover:bg-disc-hover transition text-center">
+            className="flex-1 sm:flex-none px-4 py-1.5 bg-card-bg border border-warm-200 dark:border-disc-border text-warm-700 dark:text-disc-text text-sm font-medium rounded-full hover:bg-warm-50 dark:hover:bg-disc-hover transition text-center">
             ยกเลิก
           </button>
         </div>

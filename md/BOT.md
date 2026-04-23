@@ -86,14 +86,42 @@ backups/                   SQL backups
 
 ## Discord.js Conventions
 
-👉 See [md/DISCORD.md](DISCORD.md) for detailed conventions
+- **`MessageFlags.Ephemeral`** instead of `{ ephemeral: true }`
+  ```js
+  await interaction.reply({ content: 'text', flags: MessageFlags.Ephemeral });
+  ```
+- **Threads:** always use `parentId`
+  ```js
+  const channelId = channel.isThread() ? (channel.parentId ?? channel.id) : channel.id
+  ```
+- **Command names** use hyphens: `stat-server`, `panel-finance`
+- **Command-first principle** — every button must have a backing slash command
+- **`customId` max 100 chars** — don't encode Thai text; use embed title instead
+- **`interaction.options.getChannel()`** returns partial → use `guild.channels.cache.get(id)`
 
-Key points:
-- `MessageFlags.Ephemeral` not `{ ephemeral: true }`
-- Threads: always use `parentId`
-- Commands use hyphens (`stat-server`)
-- Command-first principle (buttons need slash command)
-- `customId` max 100 chars — don't encode Thai text
+### Discord mention syntax
+```
+<#CHANNEL_ID>   channel
+<@USER_ID>      user
+<@&ROLE_ID>     role
+```
+
+### Role Hierarchy
+```
+Admin / เลขาธิการ          → Full permissions
+รองเลขาธิการ               → Central-level
+ผู้ประสานงานภาค            → Regional-level
+ผู้ประสานงานจังหวัด        → Province-level
+กรรมการจังหวัด             → Province-level
+เหรัญญิก                   → Finance permissions (scoped by role)
+```
+
+Role maps: `PROVINCE_ROLES`, `SUB_REGION_ROLES`, `MAIN_REGION_ROLES` in `config/roles.js`
+
+### Score Formula
+```
+score = messages × 10 + voiceSeconds + mentions × 30
+```
 
 ---
 

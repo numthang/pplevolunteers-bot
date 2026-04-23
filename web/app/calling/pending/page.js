@@ -216,7 +216,7 @@ export default function PendingCallsPage() {
         <select
           value={filterCampaign}
           onChange={e => setFilterCampaign(e.target.value)}
-          className="h-9 px-3 text-sm border border-warm-200 dark:border-warm-dark-300 bg-white dark:bg-warm-dark-100 text-warm-900 dark:text-warm-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal flex-1 sm:flex-none"
+          className="h-9 px-3 text-sm border border-warm-200 dark:border-warm-dark-300 bg-card-bg text-warm-900 dark:text-warm-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal flex-1 sm:flex-none"
         >
           <option value="">Campaign (ทั้งหมด)</option>
           {campaigns.map(c => (
@@ -232,7 +232,7 @@ export default function PendingCallsPage() {
               className={`px-4 py-2 text-sm font-medium whitespace-nowrap transition ${
                 filterStatus === opt.value
                   ? 'bg-teal text-white'
-                  : 'bg-white dark:bg-warm-dark-100 text-warm-700 dark:text-warm-200 hover:bg-warm-50 dark:hover:bg-warm-dark-200'
+                  : 'bg-card-bg text-warm-700 dark:text-warm-200 hover:bg-warm-50 dark:hover:bg-warm-dark-200'
               }`}
             >
               {opt.label}
@@ -243,7 +243,7 @@ export default function PendingCallsPage() {
         <select
           value={filterRsvp}
           onChange={e => setFilterRsvp(e.target.value)}
-          className="h-9 px-3 text-sm border border-warm-200 dark:border-warm-dark-300 bg-white dark:bg-warm-dark-100 text-warm-900 dark:text-warm-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal flex-1 sm:flex-none"
+          className="h-9 px-3 text-sm border border-warm-200 dark:border-warm-dark-300 bg-card-bg text-warm-900 dark:text-warm-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal flex-1 sm:flex-none"
         >
           <option value="">RSVP (ทั้งหมด)</option>
           <option value="yes">✓ เข้าร่วม</option>
@@ -274,11 +274,11 @@ export default function PendingCallsPage() {
       {loading ? (
         <div className="py-20 text-center text-warm-400 dark:text-warm-dark-400 text-sm">กำลังโหลด...</div>
       ) : members.length === 0 ? (
-        <div className="bg-white dark:bg-warm-dark-100 border border-warm-200 dark:border-warm-dark-300 rounded-xl py-16 text-center text-warm-400 dark:text-warm-dark-400 text-sm">
+        <div className="bg-card-bg border border-warm-200 dark:border-warm-dark-300 rounded-xl py-16 text-center text-warm-400 dark:text-warm-dark-400 text-sm">
           {filterStatus === 'pending' ? 'โทรครบทุกคนแล้ว 🎉' : 'ไม่มีรายการ'}
         </div>
       ) : (
-        <div className="bg-white dark:bg-warm-dark-100 border border-warm-200 dark:border-warm-dark-300 rounded-xl overflow-hidden">
+        <div className="bg-card-bg border border-warm-200 dark:border-warm-dark-300 rounded-xl overflow-hidden">
           {/* Table header */}
           <div className="hidden sm:grid items-center px-4 py-2.5 gap-2 bg-warm-100 dark:bg-warm-dark-200 border-b border-warm-200 dark:border-warm-dark-300 text-xs font-medium text-warm-500 dark:text-warm-dark-500 [grid-template-columns:1fr_40px_80px_100px]">
             <span>ชื่อสมาชิก</span>

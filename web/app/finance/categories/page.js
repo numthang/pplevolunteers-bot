@@ -77,7 +77,7 @@ function IconPicker({ value, onChange }) {
         <Current size={18} />
       </button>
       {open && (
-        <div className="absolute z-20 top-10 left-0 bg-white dark:bg-gray-800 border dark:border-gray-600 rounded-xl shadow-xl p-2 grid grid-cols-6 gap-1 w-52">
+        <div className="absolute z-20 top-10 left-0 bg-card-bg border dark:border-gray-600 rounded-xl shadow-xl p-2 grid grid-cols-6 gap-1 w-52">
           {ICONS.map(({ name, Icon }) => (
             <button
               key={name}
@@ -153,7 +153,7 @@ export default function CategoriesPage() {
       <div className="flex flex-wrap gap-2 mb-6">
         <IconPicker value={inputIcon} onChange={setInputIcon} />
         <input
-          className="border dark:border-gray-600 rounded px-3 py-1.5 text-sm flex-1 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+          className="border dark:border-gray-600 rounded px-3 py-1.5 text-sm flex-1 bg-card-bg text-gray-900 dark:text-gray-100"
           placeholder="ชื่อหมวดหมู่ใหม่"
           value={input}
           onChange={e => setInput(e.target.value)}
@@ -175,7 +175,7 @@ export default function CategoriesPage() {
             <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-2">{group.label}</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
               {group.items.map(c => (
-                <div key={c.id} className="bg-white dark:bg-gray-800 rounded-xl shadow flex items-center justify-between px-4 py-3 gap-3">
+                <div key={c.id} className="bg-card-bg rounded-xl shadow flex items-center justify-between px-4 py-3 gap-3">
                   {editId === c.id ? (
                     <div className="flex items-center gap-1.5 flex-1 min-w-0">
                       <IconPicker value={editIcon} onChange={setEditIcon} />

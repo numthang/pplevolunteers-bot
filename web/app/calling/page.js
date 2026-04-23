@@ -44,7 +44,7 @@ export default async function CallingPage() {
       </div>
 
       {filteredCampaigns.length === 0 ? (
-        <div className="bg-white dark:bg-warm-dark-100 border border-warm-200 dark:border-warm-dark-300 rounded-xl p-12 text-center text-warm-500 dark:text-warm-dark-500">
+        <div className="bg-card-bg border border-warm-200 dark:border-warm-dark-300 rounded-xl p-12 text-center text-warm-500 dark:text-warm-dark-500">
           ไม่มีแคมเปญ
         </div>
       ) : (
@@ -57,7 +57,7 @@ export default async function CallingPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {list.map(campaign => (
                   <Link key={campaign.id} href={`/calling/${campaign.id}`}>
-                    <div className="bg-white dark:bg-warm-dark-100 border border-warm-200 dark:border-warm-dark-300 rounded-lg p-6 hover:border-teal dark:hover:border-teal hover:shadow-md transition cursor-pointer group h-full">
+                    <div className="bg-card-bg border border-warm-200 dark:border-warm-dark-300 rounded-lg p-6 hover:border-teal dark:hover:border-teal hover:shadow-md transition cursor-pointer group h-full">
                       <h3 className="text-base font-medium text-warm-900 dark:text-warm-50 mb-2 group-hover:text-teal transition-colors line-clamp-2">
                         {campaign.name}
                       </h3>

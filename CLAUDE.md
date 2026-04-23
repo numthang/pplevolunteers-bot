@@ -6,13 +6,12 @@ Quick navigation to detailed docs for the entire pple-volunteers project (Bot + 
 
 | Topic | File |
 |---|---|
-| **Bot Deployment & Setup** | [md/BOT.md](md/BOT.md) |
+| **Discord Bot** | [md/BOT.md](md/BOT.md) |
 | **Web App (Next.js)** | [md/WEB.md](md/WEB.md) |
-| **Discord.js Conventions** | [md/DISCORD.md](md/DISCORD.md) |
-| **Database Schema** | [md/DATABASE.md](md/DATABASE.md) |
 | **Finance System** | [md/FINANCE.md](md/FINANCE.md) |
-| **Production Deployment** | [md/DEPLOYMENT.md](md/DEPLOYMENT.md) |
 | **Calling System** | [md/CALLING.md](md/CALLING.md) |
+| **Database Schema** | [md/DATABASE.md](md/DATABASE.md) |
+| **Production Deployment** | [md/DEPLOYMENT.md](md/DEPLOYMENT.md) |
 
 ---
 

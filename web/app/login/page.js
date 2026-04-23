@@ -9,7 +9,7 @@ function LoginForm() {
 
   return (
     <div className="min-h-[60vh] flex items-center justify-center">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-8 text-center w-80">
+      <div className="bg-card-bg rounded-xl shadow p-8 text-center w-80">
         <h1 className="text-xl font-bold mb-2 text-gray-900 dark:text-gray-100">เข้าสู่ระบบ</h1>
         <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">ใช้บัญชี Discord ของคุณ</p>
         <button

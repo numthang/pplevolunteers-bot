@@ -126,6 +126,27 @@ See: [FINANCE.md - RBAC](FINANCE.md#access-control-rbac) | [CALLING.md - Permiss
 
 ---
 
+## Theming & Card Colors
+
+Card background colors are controlled via CSS variables in `web/app/globals.css`:
+
+```css
+:root {
+  --card-bg: #fafaf9;   /* light mode card bg — แก้ที่นี่ */
+}
+.dark {
+  --card-bg: #111827;   /* dark mode card bg — แก้ที่นี่ */
+}
+```
+
+ทุก card/container ทั้งระบบ (finance, calling, dashboard, profile) ใช้ class `bg-card-bg` ซึ่งอ่านจาก variable นี้  
+→ **แก้สีที่เดียวใน `globals.css` เปลี่ยนทุกหน้า**
+
+**ไม่ใช้:** `bg-white dark:bg-gray-800` สำหรับ card containers  
+**ยกเว้น:** form inputs / selects ยังใช้ `bg-white dark:bg-gray-700` ได้ (ไม่ต้องใช้ token)
+
+---
+
 ## Next.js Conventions
 
 - Use **App Router** (not Pages Router)
