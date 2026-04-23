@@ -62,6 +62,20 @@ pple-volunteers/
 
 ---
 
+## 🎨 Brand Colors
+
+| Token | Hex | ใช้งาน |
+|---|---|---|
+| `orange` | `#ff6a13` | Primary / CTA |
+| `orange-light` | `#f37a2c` | Hover / Secondary orange |
+| `navy` | `#002b49` | Background dark / Hero |
+| `red-accent` | `#df492e` | Accent / Danger |
+| `blue-light` | `#b5d1dc` | Muted / Border / Subtle |
+| `white` | `#ffffff` | — |
+| `black` | `#000000` | — |
+
+---
+
 ## ℹ️ Preferences
 
 - Confirm Q&A before writing code

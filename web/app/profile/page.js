@@ -86,49 +86,24 @@ export default function ProfilePage() {
     <div className="max-w-lg mx-auto py-8 px-4">
       <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-gray-100">แก้ไขโปรไฟล์</h1>
 
+
       {/* Discord info */}
       {session && (
-        <div className="flex items-center gap-3 mb-3 p-4 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+        <div className="flex items-center gap-3 mb-3 p-4 bg-white rounded-xl border border-gray-200 dark:border-gray-700">
           {session.user.image && (
             <Image src={session.user.image} alt="" width={48} height={48} className="rounded-full shrink-0" />
           )}
           <div className="min-w-0 flex-1">
-            <p className="font-semibold text-gray-900 dark:text-gray-100 truncate">{session.user.name}</p>
+            <p className="font-semibold text-gray-900 dark:text-gray-100 truncate">@{session.user.name}</p>
             <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
               ID: {session.user.discordId}
             </p>
             {readOnly.display_name && readOnly.display_name !== session.user.name && (
-              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">Nickname: {readOnly.display_name}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">Display name: {readOnly.display_name}</p>
             )}
             <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">ข้อมูล Discord — แก้ไขได้ใน Discord โดยตรง</p>
           </div>
         </div>
-      )}
-
-      {/* Guild info */}
-      {guildId && (
-        <a
-          href={`https://discord.com/channels/${guildId}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mb-3 flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition"
-        >
-          {guild?.icon && (
-            <Image src={guild.icon} alt="" width={40} height={40} className="rounded-xl shrink-0" />
-          )}
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-blue-800 dark:text-blue-200 truncate">
-              {guild?.name || guildId}
-            </p>
-            {guild?.description && (
-              <p className="text-xs text-blue-600 dark:text-blue-400 truncate">{guild.description}</p>
-            )}
-            {guild?.member_count && (
-              <p className="text-xs text-blue-500 dark:text-blue-500">{guild.member_count.toLocaleString()} สมาชิก</p>
-            )}
-          </div>
-          <span className="text-blue-400 text-xs shrink-0">↗</span>
-        </a>
       )}
 
       {/* Read-only info */}

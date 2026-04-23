@@ -5,6 +5,14 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        white: '#fafaf9',
+        brand: {
+          orange:        'var(--brand-orange)',
+          'orange-light':'var(--brand-orange-light)',
+          'orange-dark': 'var(--brand-orange-dark)',
+          navy:          'var(--brand-navy)',
+          'blue-light':  'var(--brand-blue-light)',
+        },
         warm: {
           50:  '#f9f8f6',
           100: '#f1ede4',

@@ -45,8 +45,9 @@ const CALLING_LINKS = [
 ]
 
 const APPS = [
-  { key: 'finance', label: 'PPLE Finance', href: '/finance' },
-  { key: 'calling', label: 'PPLE Calling', href: '/calling' },
+  { key: 'home',    label: 'Dashboard',       href: '/dashboard' },
+  { key: 'finance', label: 'PPLE Finance',    href: '/finance' },
+  { key: 'calling', label: 'PPLE Calling',    href: '/calling' },
 ]
 
 export default function Nav({ session }) {
@@ -62,8 +63,9 @@ export default function Nav({ session }) {
   const avatarRef = useRef(null)
 
   const isCallingApp = pathname.startsWith('/calling')
-  const currentApp = isCallingApp ? APPS[1] : APPS[0]
-  const links = isCallingApp ? CALLING_LINKS : FINANCE_LINKS
+  const isFinanceApp = pathname.startsWith('/finance') || pathname.startsWith('/admin')
+  const currentApp = isCallingApp ? APPS[2] : isFinanceApp ? APPS[1] : APPS[0]
+  const links = isCallingApp ? CALLING_LINKS : isFinanceApp ? FINANCE_LINKS : []
 
   const campaignIdMatch = pathname.match(/^\/calling\/(\d+)/)
   const activeCampaignId = campaignIdMatch ? parseInt(campaignIdMatch[1]) : null
@@ -128,16 +130,20 @@ export default function Nav({ session }) {
 
         {/* App Switcher */}
         <div className="relative shrink-0">
-          <button
-            onClick={() => setAppOpen(o => !o)}
-            className="flex items-center gap-2 hover:opacity-80 transition"
-          >
-            <Image src="/logo.png" alt="PPLE" width={28} height={28} />
-            <span className="font-bold text-base text-indigo-700 dark:text-indigo-400">
-              {currentApp.label}
-            </span>
-            <span className="text-gray-400 dark:text-gray-500 text-xs">▾</span>
-          </button>
+          <div className="flex items-center gap-1">
+            <Link href="/" className="hover:opacity-80 transition shrink-0">
+              <Image src="/logo.png" alt="PPLE" width={28} height={28} />
+            </Link>
+            <button
+              onClick={() => setAppOpen(o => !o)}
+              className="flex items-center gap-1.5 hover:opacity-80 transition"
+            >
+              <span className="font-bold text-base text-indigo-700 dark:text-indigo-400">
+                {currentApp.label}
+              </span>
+              <span className="text-gray-400 dark:text-gray-500 text-xs">▾</span>
+            </button>
+          </div>
 
           {appOpen && (
             <>
@@ -149,13 +155,13 @@ export default function Nav({ session }) {
                     href={app.href}
                     onClick={() => setAppOpen(false)}
                     className={`flex items-center gap-2 px-4 py-2 text-sm transition ${
-                      currentApp.key === app.key
+                      currentApp?.key === app.key
                         ? 'bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-medium'
                         : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                     }`}
                   >
                     {app.label}
-                    {currentApp.key === app.key && <span className="ml-auto text-indigo-500">✓</span>}
+                    {currentApp?.key === app.key && <span className="ml-auto text-indigo-500">✓</span>}
                   </Link>
                 ))}
               </div>
@@ -303,13 +309,13 @@ export default function Nav({ session }) {
                           href={app.href}
                           onClick={() => setAvatarOpen(false)}
                           className={`flex items-center gap-2 px-4 py-2.5 text-sm transition ${
-                            currentApp.key === app.key
+                            currentApp?.key === app.key
                               ? 'text-indigo-600 dark:text-indigo-400 font-medium'
                               : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                           }`}
                         >
                           {app.label}
-                          {currentApp.key === app.key && <span className="ml-auto text-indigo-500 text-xs">✓</span>}
+                          {currentApp?.key === app.key && <span className="ml-auto text-indigo-500 text-xs">✓</span>}
                         </Link>
                       ))}
                       <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
@@ -370,7 +376,16 @@ export default function Nav({ session }) {
               )}
             </div>
           ) : (
-            <Link href="/login" className="text-sm text-indigo-600 hover:underline">เข้าสู่ระบบ</Link>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={toggle}
+                className="p-1.5 rounded-md text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+                title={dark ? 'Light mode' : 'Dark mode'}
+              >
+                <Ic d={dark ? ICONS.sun : ICONS.moon} />
+              </button>
+              <Link href="/login" className="text-sm text-indigo-600 hover:underline">เข้าสู่ระบบ</Link>
+            </div>
           )}
         </div>
       </div>
