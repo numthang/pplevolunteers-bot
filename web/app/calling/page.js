@@ -1,7 +1,7 @@
 import { getServerSession } from 'next-auth'
 import Link from 'next/link'
 import { authOptions } from '@/lib/auth-options.js'
-import { getUserScope, isAdmin } from '@/lib/callingAccess.js'
+import { getUserScope, isAdmin, canCreateCampaign } from '@/lib/callingAccess.js'
 import { getCampaigns } from '@/db/calling/campaigns.js'
 import { getEffectiveRoles } from '@/lib/getEffectiveRoles.js'
 
@@ -19,6 +19,7 @@ export default async function CallingPage() {
   const userRoles = await getEffectiveRoles(session)
   const userScope = getUserScope(userRoles)
   const isUserAdmin = isAdmin(userRoles)
+  const canCreate = canCreateCampaign(userRoles)
 
   const campaigns = await getCampaigns()
   const filteredCampaigns = campaigns.filter(
@@ -36,11 +37,21 @@ export default async function CallingPage() {
   return (
     <div>
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-medium text-warm-900 dark:text-warm-50 mb-2">Campaigns</h1>
-        <p className="text-sm text-warm-500 dark:text-warm-dark-500">
-          เลือกแคมเปญการโทรที่ต้องการจัดการ
-        </p>
+      <div className="mb-8 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-medium text-warm-900 dark:text-warm-50 mb-2">Campaigns</h1>
+          <p className="text-sm text-warm-500 dark:text-warm-dark-500">
+            เลือกแคมเปญการโทรที่ต้องการจัดการ
+          </p>
+        </div>
+        {canCreate && (
+          <Link
+            href="/calling/create"
+            className="shrink-0 inline-flex items-center gap-2 px-4 py-2 bg-orange text-white text-sm font-medium rounded-lg hover:bg-orange-light transition"
+          >
+            <span>+</span> สร้างแคมเปญ
+          </Link>
+        )}
       </div>
 
       {filteredCampaigns.length === 0 ? (

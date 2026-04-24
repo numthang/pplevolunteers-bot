@@ -27,10 +27,10 @@ const inputCls = 'w-full border border-gray-300 dark:border-gray-600 bg-white da
 
 export default function CreateCampaignPage() {
   const router = useRouter()
+  const [campaignId, setCampaignId] = useState('')
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [province, setProvince] = useState('')
-  const [actId, setActId] = useState('')
   const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (e) => {
@@ -42,7 +42,7 @@ export default function CreateCampaignPage() {
       const res = await fetch('/api/calling/campaigns', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, description, province: province || null, act_id: actId || null })
+        body: JSON.stringify({ id: campaignId ? Number(campaignId) : null, name, description, province: province || null })
       })
       if (!res.ok) throw new Error('Failed to create campaign')
       const data = await res.json()
@@ -65,6 +65,14 @@ export default function CreateCampaignPage() {
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
+            <label className="block text-sm font-semibold mb-1.5 text-gray-700 dark:text-gray-300">
+              Campaign ID <span className="font-normal text-gray-400">(ไม่ระบุ = อัตโนมัติ)</span>
+            </label>
+            <input type="number" value={campaignId} onChange={e => setCampaignId(e.target.value)}
+              placeholder="เช่น 1234" className={inputCls} min="1" />
+          </div>
+
+          <div>
             <label className="block text-sm font-semibold mb-1.5 text-gray-700 dark:text-gray-300">ชื่อแคมเปญ *</label>
             <input type="text" value={name} onChange={e => setName(e.target.value)}
               placeholder="เช่น บ้านโป่ง ราชบุรี ครั้งที่ 1" className={inputCls} required />
@@ -82,12 +90,6 @@ export default function CreateCampaignPage() {
               <option value="">-- ไม่ระบุ --</option>
               {PROVINCES.map(p => <option key={p} value={p}>{p}</option>)}
             </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold mb-1.5 text-gray-700 dark:text-gray-300">ACT Activity ID (ตัวเลือก)</label>
-            <input type="text" value={actId} onChange={e => setActId(e.target.value)}
-              placeholder="ป้อนหมายเลขกิจกรรม" className={inputCls} />
           </div>
 
           <button type="submit" disabled={loading}

@@ -180,10 +180,10 @@ export function canAccessMember(memberProvince, roles = [], isAssigned = false) 
 
 /**
  * Check if user can create campaign
- * (Any authenticated user can create, but scope is checked when assigning)
+ * Provincial level and above
  */
 export function canCreateCampaign(roles = []) {
-  return roles.length > 0
+  return isAdmin(roles) || isRegionalCoordinator(roles) || isProvincialCoordinator(roles)
 }
 
 /**

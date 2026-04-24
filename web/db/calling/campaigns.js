@@ -41,7 +41,15 @@ export async function getCampaignsByProvince(province) {
 }
 
 export async function createCampaign(data, createdBy) {
-  const { name, description, province } = data
+  const { id, name, description, province } = data
+  if (id) {
+    await pool.query(
+      `INSERT INTO act_event_cache (id, type, name, description, province, guild_id, synced_at)
+       VALUES (?, 'campaign', ?, ?, ?, ?, NOW())`,
+      [id, name, description || null, province || null, process.env.GUILD_ID || '1']
+    )
+    return id
+  }
   const [result] = await pool.query(
     `INSERT INTO act_event_cache (type, name, description, province, guild_id, synced_at)
      VALUES ('campaign', ?, ?, ?, ?, NOW())`,
