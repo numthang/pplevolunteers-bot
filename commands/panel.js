@@ -292,7 +292,7 @@ await refreshDashboard(thread, interaction.guildId, ids, existing.dashboard_msg_
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
           .setCustomId('btn_gogo_signup')
-          .setLabel('🙋 ลงชื่อ GoGo!')
+          .setLabel(`🙋 เข้าร่วม ${title}`.slice(0, 80))
           .setStyle(ButtonStyle.Success),
         new ButtonBuilder()
           .setCustomId('btn_gogo_withdraw')

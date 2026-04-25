@@ -106,6 +106,9 @@ node deploy-commands.js
 node deploy-commands.js --guild <guildId>
 ```
 
+> ⚠️ **ถ้ามีหลาย server / ทดสอบ server เฉพาะ** ต้องใส่ `--guild <guildId>` ด้วย ไม่งั้น command ลงแบบ global (ช้า ~1 ชม.)  
+> **อย่าลืม `pm2 restart pple-dcbot` หลัง pull code ใหม่** ไม่งั้น bot ยังรัน code เก่าอยู่
+
 ### Web Only
 
 ```bash
