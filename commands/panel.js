@@ -81,6 +81,15 @@ module.exports = {
         .setDescription('แสดงรายชื่อบัญชีการเงินทั้งหมด + ID')
     )
 
+    // --- gogo ---
+    .addSubcommand(sub =>
+      sub.setName('gogo')
+        .setDescription('สร้าง panel ลงชื่อสนใจเข้าร่วมกิจกรรม')
+        .addStringOption(o => o.setName('title').setDescription('ชื่อกิจกรรม').setRequired(true))
+        .addStringOption(o => o.setName('description').setDescription('รายละเอียด (ใช้ \\n)').setRequired(false))
+        .addStringOption(o => o.setName('color').setDescription('สี hex').setRequired(false))
+    )
+
     // --- register ---
     .addSubcommand(sub =>
       sub.setName('register')
@@ -264,6 +273,35 @@ await refreshDashboard(thread, interaction.guildId, ids, existing.dashboard_msg_
       })
 
       return interaction.editReply({ content: `✅ สร้าง thread dashboard การเงินใน <#${channelOpt.id}> แล้วครับ` })
+    }
+
+    // ================================================================
+    if (sub === 'gogo') {
+      const title       = interaction.options.getString('title');
+      const description = (interaction.options.getString('description') ?? 'กดปุ่มด้านล่างเพื่อแจ้งความสนใจเข้าร่วมกิจกรรม').replace(/\\n/g, '\n');
+      const color       = interaction.options.getString('color')
+        ? parseInt(interaction.options.getString('color').replace('#', ''), 16)
+        : 0xff6a13;
+
+      const embed = new EmbedBuilder()
+        .setTitle(`📣 ${title}`)
+        .setDescription(description)
+        .setColor(color)
+        .addFields({ name: '👥 รายชื่อผู้สนใจ (0 คน)', value: '-', inline: false });
+
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId('btn_gogo_signup')
+          .setLabel('🙋 ลงชื่อ GoGo!')
+          .setStyle(ButtonStyle.Success),
+        new ButtonBuilder()
+          .setCustomId('btn_gogo_withdraw')
+          .setLabel('ถอนชื่อ')
+          .setStyle(ButtonStyle.Secondary),
+      );
+
+      await interaction.channel.send({ embeds: [embed], components: [row] });
+      return interaction.reply({ content: '✅ วาง panel ลงชื่อกิจกรรมเรียบร้อย', flags: MessageFlags.Ephemeral });
     }
 
     // ================================================================

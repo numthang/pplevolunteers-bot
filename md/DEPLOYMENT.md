@@ -221,22 +221,68 @@ sudo -u www mysql -u pple_dcbot -p pple_volunteers < /www/wwwroot/pple-volunteer
 
 ## Meilisearch
 
+### Initial Setup (First Time Only)
+
+```bash
+# 1. Install Meilisearch binary
+curl -L https://install.meilisearch.com | sh
+sudo mv meilisearch /usr/local/bin/
+
+# 2. Set up systemd service
+sudo nano /etc/systemd/system/meilisearch.service
+```
+
+Paste:
+```ini
+[Unit]
+Description=Meilisearch
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/meilisearch --master-key=YOUR_KEY --db-path /www/wwwroot/pple-volunteers/data.ms/
+Restart=always
+User=www
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Then:
+```bash
+sudo systemctl enable --now meilisearch
+```
+
+### Add Environment Variables
+
+On VPS `.env`:
+```
+MEILISEARCH_HOST=http://localhost:7700
+MEILISEARCH_KEY=YOUR_KEY
+```
+
+### Run SQL Migration
+
+```bash
+sudo -u www mysql -u pple_dcbot -p pple_volunteers < scripts/migration-forum.sql
+```
+
 ### Status
 
 ```bash
 ps aux | grep meilisearch
+sudo systemctl status meilisearch
 ```
 
-### Start
+### Restart
 
 ```bash
-sudo /usr/local/bin/meilisearch --data-path /www/wwwroot/pple-volunteers/data.ms/
+sudo systemctl restart meilisearch
 ```
 
 ### Stop
 
 ```bash
-sudo pkill -f meilisearch
+sudo systemctl stop meilisearch
 ```
 
 ---

@@ -44,28 +44,32 @@ const CALLING_LINKS = [
   { href: '/calling/pending', label: 'Pending calls',  icon: 'pending' },
 ]
 
+const DASHBOARD_LINKS = [
+  { href: '/finance', label: 'PPLE Finance', icon: 'transactions' },
+  { href: '/calling', label: 'PPLE Calling', icon: 'campaigns' },
+]
+
 const APPS = [
-  { key: 'home',    label: 'Dashboard',       href: '/dashboard' },
-  { key: 'finance', label: 'PPLE Finance',    href: '/finance' },
-  { key: 'calling', label: 'PPLE Calling',    href: '/calling' },
+  { key: 'home',    label: 'Dashboard',    href: '/dashboard', icon: 'overview' },
+  { key: 'finance', label: 'PPLE Finance', href: '/finance',   icon: 'transactions' },
+  { key: 'calling', label: 'PPLE Calling', href: '/calling',   icon: 'campaigns' },
 ]
 
 export default function Nav({ session }) {
   const pathname = usePathname()
   const router = useRouter()
   const { dark, toggle } = useTheme()
-  const [avatarOpen, setAvatarOpen] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
   const [appOpen, setAppOpen] = useState(false)
   const [campaignOpen, setCampaignOpen] = useState(false)
   const [campaigns, setCampaigns] = useState([])
   const [pendingCount, setPendingCount] = useState(0)
   const campaignRef = useRef(null)
-  const avatarRef = useRef(null)
 
   const isCallingApp = pathname.startsWith('/calling')
   const isFinanceApp = pathname.startsWith('/finance') || pathname.startsWith('/admin')
   const currentApp = isCallingApp ? APPS[2] : isFinanceApp ? APPS[1] : APPS[0]
-  const links = isCallingApp ? CALLING_LINKS : isFinanceApp ? FINANCE_LINKS : []
+  const links = isCallingApp ? CALLING_LINKS : isFinanceApp ? FINANCE_LINKS : DASHBOARD_LINKS
 
   const campaignIdMatch = pathname.match(/^\/calling\/(\d+)/)
   const activeCampaignId = campaignIdMatch ? parseInt(campaignIdMatch[1]) : null
@@ -94,17 +98,6 @@ export default function Nav({ session }) {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [campaignOpen])
-
-  useEffect(() => {
-    if (!avatarOpen) return
-    const handleClickOutside = (e) => {
-      if (avatarRef.current && !avatarRef.current.contains(e.target)) {
-        setAvatarOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [avatarOpen])
 
   const activeCampaign = campaigns.find(c => c.id === activeCampaignId)
 
@@ -239,37 +232,70 @@ export default function Nav({ session }) {
           <DebugRoleButton isAdmin={userIsAdmin} />
 
           {session ? (
-            <div className="relative" ref={avatarRef}>
+            <div className="relative">
               <button
-                onClick={() => setAvatarOpen(o => !o)}
-                className="flex items-center gap-2 hover:opacity-80 transition rounded-full focus:outline-none"
-                title={session.user.nickname || session.user.name}
+                onClick={() => setMenuOpen(o => !o)}
+                className="rounded-md text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition w-12 h-12 flex items-center justify-center"
               >
-                {session.user.image && (
-                  <Image
-                    src={session.user.image} alt="" width={32} height={32}
-                    className={`rounded-full ring-2 transition ${avatarOpen ? 'ring-indigo-500' : 'ring-transparent'}`}
-                  />
+                {menuOpen ? (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" className="w-7 h-7">
+                    <path d="M6 6l12 12M6 18L18 6" />
+                  </svg>
+                ) : (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" className="w-7 h-7">
+                    <path d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
                 )}
-                <span className="hidden sm:block text-sm text-gray-600 dark:text-gray-400">
-                  {session.user.nickname || session.user.name}
-                </span>
               </button>
 
-              {avatarOpen && (
+              {menuOpen && (
                 <>
-                  <div className="fixed inset-0 z-10" onClick={() => setAvatarOpen(false)} />
-                  <div className="absolute right-0 top-full mt-2 z-20 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg py-1 w-64 max-h-[80vh] overflow-y-auto">
+                  <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+                  <div className="absolute right-0 top-full mt-2 z-20 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg py-2 w-64 max-h-[80vh] overflow-y-auto flex flex-col gap-0.5">
 
-                    {/* Nav links */}
-                    <div>
-                      {visibleLinks.map(l => (
+                    {/* Nav links for current app */}
+                    {visibleLinks.map(l => {
+                      if (l.href === '/calling' && isCallingApp && campaigns.length > 0) {
+                        return (
+                          <div key={l.href}>
+                            <Link
+                              href="/calling"
+                              onClick={() => setMenuOpen(false)}
+                              className={`flex items-center gap-2 px-4 py-2.5 text-sm transition ${
+                                pathname === '/calling' || !!activeCampaignId
+                                  ? 'text-indigo-600 dark:text-indigo-400 font-medium bg-indigo-50 dark:bg-indigo-900/30'
+                                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                              }`}
+                            >
+                              <Ic d={ICONS[l.icon]} />
+                              {l.label}
+                              <span className="text-xs font-normal opacity-60">({campaigns.length})</span>
+                            </Link>
+                            <div className="ml-4 border-l-2 border-gray-200 dark:border-gray-700 pl-3 flex flex-col gap-0.5 mb-1">
+                              {campaigns.map(c => (
+                                <button
+                                  key={c.id}
+                                  onClick={() => { setMenuOpen(false); router.push(`/calling/${c.id}`) }}
+                                  className={`w-full text-left px-2 py-1.5 rounded text-xs transition ${
+                                    activeCampaignId === c.id
+                                      ? 'text-indigo-600 dark:text-indigo-400 font-medium'
+                                      : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+                                  }`}
+                                >
+                                  {activeCampaignId === c.id && '› '}{c.name}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )
+                      }
+                      return (
                         <Link
                           key={l.href}
                           href={l.href}
-                          onClick={() => setAvatarOpen(false)}
-                          className={`flex items-center gap-2.5 px-4 py-2.5 text-sm transition ${
-                            pathname === l.href || (l.href === '/calling' && !!activeCampaignId)
+                          onClick={() => setMenuOpen(false)}
+                          className={`flex items-center gap-2 px-4 py-2.5 text-sm transition ${
+                            pathname === l.href
                               ? 'text-indigo-600 dark:text-indigo-400 font-medium bg-indigo-50 dark:bg-indigo-900/30'
                               : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                           }`}
@@ -282,55 +308,20 @@ export default function Nav({ session }) {
                             </span>
                           )}
                         </Link>
-                      ))}
-                      {/* Campaign list on mobile */}
-                      {isCallingApp && campaigns.length > 0 && (
-                        <div className="ml-4 border-l-2 border-gray-200 dark:border-gray-700 pl-3 py-1">
-                          {campaigns.map(c => (
-                            <button
-                              key={c.id}
-                              onClick={() => { setAvatarOpen(false); router.push(`/calling/${c.id}`) }}
-                              className={`w-full text-left px-2 py-1.5 rounded text-xs transition ${
-                                activeCampaignId === c.id
-                                  ? 'text-indigo-600 dark:text-indigo-400 font-medium'
-                                  : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
-                              }`}
-                            >
-                              {activeCampaignId === c.id && '› '}{c.name}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                      {/* App switcher on mobile */}
-                      <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
-                      {APPS.map(app => (
-                        <Link
-                          key={app.key}
-                          href={app.href}
-                          onClick={() => setAvatarOpen(false)}
-                          className={`flex items-center gap-2 px-4 py-2.5 text-sm transition ${
-                            currentApp?.key === app.key
-                              ? 'text-indigo-600 dark:text-indigo-400 font-medium'
-                              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                          }`}
-                        >
-                          {app.label}
-                          {currentApp?.key === app.key && <span className="ml-auto text-indigo-500 text-xs">✓</span>}
-                        </Link>
-                      ))}
-                      <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
-                    </div>
+                      )
+                    })}
 
-                    {/* User info header */}
+                    {/* User info — above app switcher */}
+                    <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
                     <a
                       href={`https://discord.com/users/${session.user.discordId}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      onClick={() => setAvatarOpen(false)}
-                      className="px-4 py-2.5 flex items-center gap-3 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                      onClick={() => setMenuOpen(false)}
+                      className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
                     >
                       {session.user.image && (
-                        <Image src={session.user.image} alt="" width={36} height={36} className="rounded-full shrink-0" />
+                        <Image src={session.user.image} alt="" width={32} height={32} className="rounded-full shrink-0" />
                       )}
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
@@ -340,33 +331,50 @@ export default function Nav({ session }) {
                       </div>
                     </a>
 
+                    {/* App switcher — only when not on dashboard */}
+                    {currentApp?.key !== 'home' && (
+                      <>
+                        <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
+                        {APPS.filter(a => a.key !== currentApp?.key).map(app => (
+                          <Link
+                            key={app.key}
+                            href={app.href}
+                            onClick={() => setMenuOpen(false)}
+                            className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                          >
+                            <Ic d={ICONS[app.icon]} />
+                            {app.label}
+                          </Link>
+                        ))}
+                      </>
+                    )}
+
+                    {/* Actions */}
                     <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
-
-                    {/* Dark mode toggle */}
                     <button
-                      onClick={() => { toggle(); setAvatarOpen(false) }}
-                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                      onClick={() => { toggle(); setMenuOpen(false) }}
+                      className="w-full flex items-center justify-between px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
                     >
-                      <Ic d={dark ? ICONS.sun : ICONS.moon} />
-                      {dark ? 'Light mode' : 'Dark mode'}
+                      <span className="flex items-center gap-2">
+                        <Ic d={dark ? ICONS.sun : ICONS.moon} />
+                        {dark ? 'Light mode' : 'Dark mode'}
+                      </span>
+                      <span className={`shrink-0 w-9 h-5 rounded-full transition-colors duration-200 relative inline-block ${dark ? 'bg-indigo-500' : 'bg-gray-300 dark:bg-gray-600'}`}>
+                        <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200 ${dark ? 'translate-x-4' : 'translate-x-0'}`} />
+                      </span>
                     </button>
-
-                    {/* Profile */}
                     <Link
                       href="/profile"
-                      onClick={() => setAvatarOpen(false)}
-                      className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                      onClick={() => setMenuOpen(false)}
+                      className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
                     >
                       <Ic d={ICONS.profile} />
                       แก้ไขโปรไฟล์
                     </Link>
-
                     <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
-
-                    {/* Sign out */}
                     <button
                       onClick={() => signOut({ callbackUrl: '/' })}
-                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-500 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                      className="w-full text-left flex items-center gap-2 px-4 py-2.5 text-sm text-red-500 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
                     >
                       <Ic d={ICONS.logout} />
                       ออกจากระบบ
@@ -376,16 +384,7 @@ export default function Nav({ session }) {
               )}
             </div>
           ) : (
-            <div className="flex items-center gap-2">
-              <button
-                onClick={toggle}
-                className="p-1.5 rounded-md text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
-                title={dark ? 'Light mode' : 'Dark mode'}
-              >
-                <Ic d={dark ? ICONS.sun : ICONS.moon} />
-              </button>
-              <Link href="/login" className="text-sm text-indigo-600 hover:underline">เข้าสู่ระบบ</Link>
-            </div>
+            <Link href="/login" className="text-sm text-indigo-600 hover:underline">เข้าสู่ระบบ</Link>
           )}
         </div>
       </div>
