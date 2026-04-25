@@ -85,8 +85,6 @@ module.exports = {
     .addSubcommand(sub =>
       sub.setName('gogo')
         .setDescription('สร้าง panel ลงชื่อสนใจเข้าร่วมกิจกรรม')
-        .addStringOption(o => o.setName('title').setDescription('ชื่อกิจกรรม').setRequired(true))
-        .addStringOption(o => o.setName('description').setDescription('รายละเอียด (ใช้ \\n)').setRequired(false))
         .addStringOption(o => o.setName('color').setDescription('สี hex').setRequired(false))
     )
 
@@ -277,22 +275,18 @@ await refreshDashboard(thread, interaction.guildId, ids, existing.dashboard_msg_
 
     // ================================================================
     if (sub === 'gogo') {
-      // const title       = interaction.options.getString('title');
-      // const description = (interaction.options.getString('description') ?? 'กดปุ่มด้านล่างเพื่อแจ้งความสนใจเข้าร่วมกิจกรรม').replace(/\\n/g, '\n');
-      const color       = interaction.options.getString('color')
+      const color = interaction.options.getString('color')
         ? parseInt(interaction.options.getString('color').replace('#', ''), 16)
         : 0xff6a13;
 
       const embed = new EmbedBuilder()
-        .setTitle(`📣 ${title}`)
-        .setDescription(description)
         .setColor(color)
         .addFields({ name: '👥 รายชื่อผู้สนใจ (0 คน)', value: '-', inline: false });
 
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
           .setCustomId('btn_gogo_signup')
-          .setLabel(`🙋 เข้าร่วม ${title}`.slice(0, 80))
+          .setLabel('🙋 GoGo!')
           .setStyle(ButtonStyle.Success),
         new ButtonBuilder()
           .setCustomId('btn_gogo_edit')
