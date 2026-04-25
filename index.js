@@ -22,7 +22,7 @@ const { onMessage, onVoiceStateUpdate } = require('./utils/activityTracker');
 const { handleRefresh } = require('./handlers/forumDashboard');
 const { handleFinanceRefresh } = require('./handlers/financeDashboard');
 const { handleOpenSearch, handleSearchModal, handleResultPage } = require('./handlers/forumSearch');
-const { handleGogoSignup, handleGogoModal, handleGogoWithdraw } = require('./handlers/gogoHandler');
+const { handleGogoSignup, handleGogoEdit, handleGogoModal } = require('./handlers/gogoHandler');
 const { indexThread, indexMessage } = require('./services/forumIndexer');
 const { getAllForumConfigs, deleteForumPost } = require('./db/forum');
 const { deletePost } = require('./services/meilisearch');
@@ -136,7 +136,7 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.customId.startsWith('interest:') || interaction.customId.startsWith('skill:')) return handleInterestSelect(interaction);
     if (interaction.customId.startsWith('report_start:')) return handleReportStart(interaction);
     if (interaction.customId === 'btn_gogo_signup')            return handleGogoSignup(interaction);
-    if (interaction.customId === 'btn_gogo_withdraw')          return handleGogoWithdraw(interaction);
+    if (interaction.customId === 'btn_gogo_edit')              return handleGogoEdit(interaction);
     if (interaction.customId === 'btn_open_interest')         return handleOpenInterest(interaction);
     if (interaction.customId === 'btn_open_province')         return handleOpenProvince(interaction);
     if (interaction.customId === 'forum_search')              return handleOpenSearch(interaction);

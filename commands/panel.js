@@ -277,8 +277,8 @@ await refreshDashboard(thread, interaction.guildId, ids, existing.dashboard_msg_
 
     // ================================================================
     if (sub === 'gogo') {
-      const title       = interaction.options.getString('title');
-      const description = (interaction.options.getString('description') ?? 'กดปุ่มด้านล่างเพื่อแจ้งความสนใจเข้าร่วมกิจกรรม').replace(/\\n/g, '\n');
+      // const title       = interaction.options.getString('title');
+      // const description = (interaction.options.getString('description') ?? 'กดปุ่มด้านล่างเพื่อแจ้งความสนใจเข้าร่วมกิจกรรม').replace(/\\n/g, '\n');
       const color       = interaction.options.getString('color')
         ? parseInt(interaction.options.getString('color').replace('#', ''), 16)
         : 0xff6a13;
@@ -295,8 +295,8 @@ await refreshDashboard(thread, interaction.guildId, ids, existing.dashboard_msg_
           .setLabel(`🙋 เข้าร่วม ${title}`.slice(0, 80))
           .setStyle(ButtonStyle.Success),
         new ButtonBuilder()
-          .setCustomId('btn_gogo_withdraw')
-          .setLabel('ถอนชื่อ')
+          .setCustomId('btn_gogo_edit')
+          .setLabel('✏️ แก้ไขรายชื่อ')
           .setStyle(ButtonStyle.Secondary),
       );
 

@@ -23,33 +23,54 @@ function buildFieldValue(entries) {
   return entries.map((e, i) => `${i + 1}. ${e.name} (<@${e.userId}>)`).join('\n');
 }
 
-async function handleGogoSignup(interaction) {
-  if (!interaction.isButton()) return;
-  const displayName = interaction.member?.displayName ?? interaction.user.username;
-  const messageId = interaction.message.id;
-
+async function openModal(interaction, messageId, prefill) {
   const modal = new ModalBuilder()
     .setCustomId(`modal_gogo:${messageId}`)
-    .setTitle('🙋 ลงชื่อสนใจเข้าร่วม');
+    .setTitle('🙋 รายชื่อผู้เข้าร่วม');
 
   modal.addComponents(
     new ActionRowBuilder().addComponents(
       new TextInputBuilder()
-        .setCustomId('field_gogo_name')
-        .setLabel('ชื่อที่จะแสดงในรายชื่อ')
-        .setStyle(TextInputStyle.Short)
-        .setValue(displayName)
-        .setRequired(true)
+        .setCustomId('field_gogo_names')
+        .setLabel('ชื่อผู้เข้าร่วม (หลายคนได้ ขึ้นบรรทัดใหม่)')
+        .setStyle(TextInputStyle.Paragraph)
+        .setValue(prefill)
+        .setPlaceholder('เช่น\nตั้ม\nพี่โอ๊ต\nฝน')
+        .setRequired(false)
     )
   );
 
   await interaction.showModal(modal);
 }
 
+async function handleGogoSignup(interaction) {
+  if (!interaction.isButton()) return;
+  const displayName = interaction.member?.displayName ?? interaction.user.username;
+  await openModal(interaction, interaction.message.id, displayName);
+}
+
+async function handleGogoEdit(interaction) {
+  if (!interaction.isButton()) return;
+  const fields = interaction.message.embeds[0]?.fields ?? [];
+  const fieldIdx = fields.findIndex(f => f.name.startsWith(FIELD_PREFIX));
+
+  const userNames = fieldIdx >= 0
+    ? parseEntries(fields[fieldIdx].value)
+        .filter(e => e.userId === interaction.user.id)
+        .map(e => e.name)
+    : [];
+
+  if (!userNames.length) {
+    return interaction.reply({ content: '❌ คุณยังไม่มีชื่อในรายชื่อ', flags: MessageFlags.Ephemeral });
+  }
+
+  await openModal(interaction, interaction.message.id, userNames.join('\n'));
+}
+
 async function handleGogoModal(interaction) {
   if (!interaction.isModalSubmit()) return;
   const messageId = interaction.customId.split(':')[1];
-  const name = interaction.fields.getTextInputValue('field_gogo_name').trim();
+  const rawInput = interaction.fields.getTextInputValue('field_gogo_names').trim();
   const userId = interaction.user.id;
 
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
@@ -62,13 +83,10 @@ async function handleGogoModal(interaction) {
   const fieldIdx = fields.findIndex(f => f.name.startsWith(FIELD_PREFIX));
 
   let entries = fieldIdx >= 0 ? parseEntries(fields[fieldIdx].value) : [];
-  const existingIdx = entries.findIndex(e => e.userId === userId);
+  entries = entries.filter(e => e.userId !== userId);
 
-  if (existingIdx >= 0) {
-    entries[existingIdx].name = name;
-  } else {
-    entries.push({ name, userId });
-  }
+  const newNames = rawInput ? rawInput.split('\n').map(n => n.trim()).filter(Boolean) : [];
+  for (const name of newNames) entries.push({ name, userId });
 
   const newField = {
     name: `${FIELD_PREFIX} (${entries.length} คน)`,
@@ -76,50 +94,16 @@ async function handleGogoModal(interaction) {
     inline: false,
   };
 
-  if (fieldIdx >= 0) {
-    fields[fieldIdx] = newField;
-  } else {
-    fields.push(newField);
-  }
+  if (fieldIdx >= 0) fields[fieldIdx] = newField;
+  else fields.push(newField);
 
   embed.setFields(fields);
   await msg.edit({ embeds: [embed] });
 
-  const action = existingIdx >= 0 ? 'อัปเดตชื่อ' : 'ลงชื่อ';
-  await interaction.editReply({ content: `✅ ${action}เรียบร้อย — **${name}**` });
+  const reply = newNames.length === 0
+    ? '✅ ถอนชื่อทั้งหมดเรียบร้อย'
+    : `✅ บันทึกแล้ว — **${newNames.join(', ')}**`;
+  await interaction.editReply({ content: reply });
 }
 
-async function handleGogoWithdraw(interaction) {
-  if (!interaction.isButton()) return;
-  const userId = interaction.user.id;
-  const msg = interaction.message;
-
-  const embed = EmbedBuilder.from(msg.embeds[0]);
-  const fields = [...(embed.data.fields ?? [])];
-  const fieldIdx = fields.findIndex(f => f.name.startsWith(FIELD_PREFIX));
-
-  if (fieldIdx < 0) {
-    return interaction.reply({ content: '❌ ยังไม่มีรายชื่อ', flags: MessageFlags.Ephemeral });
-  }
-
-  let entries = parseEntries(fields[fieldIdx].value);
-  const before = entries.length;
-  entries = entries.filter(e => e.userId !== userId);
-
-  if (entries.length === before) {
-    return interaction.reply({ content: '❌ ไม่พบชื่อของคุณในรายชื่อ', flags: MessageFlags.Ephemeral });
-  }
-
-  fields[fieldIdx] = {
-    name: `${FIELD_PREFIX} (${entries.length} คน)`,
-    value: buildFieldValue(entries),
-    inline: false,
-  };
-
-  embed.setFields(fields);
-  await interaction.deferUpdate();
-  await msg.edit({ embeds: [embed] });
-  await interaction.followUp({ content: '✅ ถอนชื่อเรียบร้อย', flags: MessageFlags.Ephemeral });
-}
-
-module.exports = { handleGogoSignup, handleGogoModal, handleGogoWithdraw };
+module.exports = { handleGogoSignup, handleGogoEdit, handleGogoModal };
