@@ -7,13 +7,13 @@ Panel Forum:
 
 Greeting:
 
-/setup-register title:ยินดีต้อนรับสู่ อาสาประชาชน! :tangerine: description:Step  :one: : แนะนำตัว → กดปุ่มแนะนำตัวด้านล่าง\n Step :two: : อ่านตรงนี้ก่อน → #📕┆ข้อตกลง  log_channel:#👋┆แนะนำตัว
+/panel register title:ยินดีต้อนรับสู่ อาสาประชาชน! :tangerine: description:Step  :one: : แนะนำตัว → กดปุ่มแนะนำตัวด้านล่าง\n Step :two: : อ่านตรงนี้ก่อน → #📕┆ข้อตกลง \n Step :three:  : ติดยศ → #📕┆ติดยศ  log_channel:#👋┆แนะนำตัว
 
-/setup-register title:แนะนำตัวเองให้เพื่อนรู้จัก description:กดปุ่มแล้วระบบจะพาทำไปทีละขั้นตอน ดังนี้ :point_down:\n\n:pencil: กรอกข้อมูล → :map: เลือกจังหวัด → :dart: เลือกทีม
+/panel register title:แนะนำตัวเองให้เพื่อนรู้จัก description:กดปุ่มแล้วระบบจะพาทำไปทีละขั้นตอน ดังนี้ :point_down:\n\n:pencil: กรอกข้อมูล → :map: เลือกจังหวัด → :dart: เลือกทีม
 
-/setup-register title:แนะนำตัวทางนี้แล้วข้อมูลจะส่งไปยังห้องแนะนำตัว log_channel:#👋┆แนะนำตัว
+/panel register title:แนะนำตัวทางนี้แล้วข้อมูลจะส่งไปยังห้องแนะนำตัว log_channel:#👋┆แนะนำตัว
 
-/setup-register title:ยินดีต้อนรับสู่ ประชาชนราชบุรี! :tangerine: description:Step  :one: : แนะนำตัว → กดปุ่มแนะนำตัวด้านล่าง\n Step :two: : อ่านตรงนี้ก่อน → #📕┆ข้อตกลง  log_channel:#👋｜แนะนำตัว
+/panel register title:ยินดีต้อนรับสู่ ประชาชนราชบุรี! :tangerine: description:Step  :one: : แนะนำตัว → กดปุ่มแนะนำตัวด้านล่าง\n Step :two: : อ่านตรงนี้ก่อน → #📕┆ข้อตกลง  log_channel:#👋｜แนะนำตัว
 
 /orgchart-add role:@ฟาภาคเหนือ channel1:#🧙┆ฟาภูมิภาค channel2:#🧙┆ฟาภูมิภาค channel3:#"💡┆ประชุม-ฟาภูมิภาค" group:⬜ ยังไม่จัดกลุ่ม
 

@@ -1,7 +1,11 @@
 # UPDATE.md - new Update document from owner to push in their project in md/*
 ---
-## PPLE Sandbox Project
+## PPLE Bot Project
 
+- ทำ welcome message inbox แล้วมีให้กดไปติดยศ ตอนนี้เป็น sapph อยู่
+- ยกเลิก role อาสาประชาชน ใช้ everyone แทน หรือเปิดห้อง default ในอาสาประชาชนเป็น public view
+- SMS Gateway
+- ใน app กด rate แล้ว ไม่ปิดหน้าต่าง
 ---
 ## PPLE Finance
 ขั้นตอน Setup
