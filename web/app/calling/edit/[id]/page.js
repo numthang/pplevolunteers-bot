@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, use } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
@@ -25,35 +25,54 @@ const PROVINCES = [
 
 const inputCls = 'w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-3 rounded-lg placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500'
 
-export default function CreateCampaignPage() {
+export default function EditCampaignPage({ params }) {
+  const { id } = use(params)
   const router = useRouter()
-  const [campaignId, setCampaignId] = useState('')
+
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [province, setProvince] = useState('')
   const [eventDate, setEventDate] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [notFound, setNotFound] = useState(false)
+
+  useEffect(() => {
+    fetch(`/api/calling/campaigns/${id}`)
+      .then(r => r.json())
+      .then(data => {
+        if (!data.data) { setNotFound(true); setLoading(false); return }
+        const c = data.data
+        setName(c.name || '')
+        setDescription(c.description || '')
+        setProvince(c.province || '')
+        setEventDate(c.event_date || '')
+        setLoading(false)
+      })
+      .catch(() => { setNotFound(true); setLoading(false) })
+  }, [id])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!name) { alert('กรุณาใส่ชื่อแคมเปญ'); return }
-
-    setLoading(true)
+    setSaving(true)
     try {
-      const res = await fetch('/api/calling/campaigns', {
-        method: 'POST',
+      const res = await fetch(`/api/calling/campaigns/${id}`, {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: campaignId ? Number(campaignId) : null, name, description, province: province || null, event_date: eventDate || null })
+        body: JSON.stringify({ name, description, province: province || null, event_date: eventDate || null })
       })
-      if (!res.ok) throw new Error('Failed to create campaign')
-      const data = await res.json()
-      router.push(`/calling/${data.data.id}`)
+      if (!res.ok) throw new Error((await res.json()).error || 'Failed')
+      router.push('/calling')
     } catch (error) {
       alert('เกิดข้อผิดพลาด: ' + error.message)
     } finally {
-      setLoading(false)
+      setSaving(false)
     }
   }
+
+  if (loading) return <div className="py-20 text-center text-warm-400 dark:text-disc-muted text-sm">กำลังโหลด...</div>
+  if (notFound) return <div className="py-20 text-center text-red-500">ไม่พบแคมเปญ</div>
 
   return (
     <div>
@@ -62,17 +81,9 @@ export default function CreateCampaignPage() {
       </Link>
 
       <div className="max-w-2xl bg-card-bg border border-gray-200 dark:border-gray-700 rounded-xl p-6">
-        <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-gray-100">สร้างแคมเปญการโทรใหม่</h1>
+        <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-gray-100">แก้ไขแคมเปญ</h1>
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label className="block text-sm font-semibold mb-1.5 text-gray-700 dark:text-gray-300">
-              Campaign ID <span className="font-normal text-gray-400">(ไม่ระบุ = อัตโนมัติ)</span>
-            </label>
-            <input type="number" value={campaignId} onChange={e => setCampaignId(e.target.value)}
-              placeholder="เช่น 1234" className={inputCls} min="1" />
-          </div>
-
           <div>
             <label className="block text-sm font-semibold mb-1.5 text-gray-700 dark:text-gray-300">ชื่อแคมเปญ *</label>
             <input type="text" value={name} onChange={e => setName(e.target.value)}
@@ -83,6 +94,7 @@ export default function CreateCampaignPage() {
             <label className="block text-sm font-semibold mb-1.5 text-gray-700 dark:text-gray-300">รายละเอียด</label>
             <textarea value={description}
               onChange={e => { setDescription(e.target.value); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px' }}
+              ref={el => { if (el && !el._init) { el._init = true; el.style.height = el.scrollHeight + 'px' } }}
               placeholder="บรรยายเพิ่มเติม..." className={inputCls} rows="4" style={{ resize: 'none', overflow: 'hidden' }} />
           </div>
 
@@ -99,10 +111,16 @@ export default function CreateCampaignPage() {
             <input type="date" value={eventDate} onChange={e => setEventDate(e.target.value)} className={inputCls} />
           </div>
 
-          <button type="submit" disabled={loading}
-            className="w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 disabled:opacity-50 transition">
-            {loading ? 'กำลังสร้าง...' : 'สร้างแคมเปญ'}
-          </button>
+          <div className="flex gap-3 pt-1">
+            <button type="submit" disabled={saving}
+              className="flex-1 bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 disabled:opacity-50 transition">
+              {saving ? 'กำลังบันทึก...' : 'บันทึก'}
+            </button>
+            <Link href="/calling"
+              className="px-6 py-3 rounded-lg font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition text-center">
+              ยกเลิก
+            </Link>
+          </div>
         </form>
       </div>
     </div>

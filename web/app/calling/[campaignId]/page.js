@@ -364,6 +364,20 @@ export default function CampaignPage({ params }) {
     }
   }
 
+  const hasActiveFilters = !!(filterName || filterAmphure || filterSubdistricts.size > 0 || filterTier || filterStatus || filterAssignee || filterRsvp || filterExpiry)
+
+  const clearFilters = () => {
+    setFilterName('')
+    setDebouncedName('')
+    setFilterAmphure('')
+    setFilterSubdistricts(new Set())
+    setFilterTier('')
+    setFilterStatus('')
+    setFilterAssignee('')
+    setFilterRsvp('')
+    setFilterExpiry('')
+  }
+
   // Assignees from stats (all assigned members, not limited to loaded page)
   const assignees = (stats.assigneeCounts || [])
     .map(a => ({ id: a.id, name: usersMap[a.id] || a.id, count: a.count }))
@@ -494,6 +508,15 @@ export default function CampaignPage({ params }) {
           <option value="expiring">ใกล้หมดอายุ (90 วัน)</option>
           <option value="expired">หมดอายุแล้ว</option>
         </select>
+
+        {hasActiveFilters && (
+          <button
+            onClick={clearFilters}
+            className="h-9 px-3 text-sm border border-warm-200 dark:border-disc-border bg-card-bg text-warm-500 dark:text-disc-muted hover:text-red-500 dark:hover:text-red-400 hover:border-red-300 dark:hover:border-red-700 rounded-lg transition-colors whitespace-nowrap"
+          >
+            ล้าง filter ×
+          </button>
+        )}
       </div>
 
       {/* Table */}

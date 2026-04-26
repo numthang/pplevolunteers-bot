@@ -2,7 +2,7 @@ import pool from '../index.js'
 
 export async function getCampaignById(id) {
   const [rows] = await pool.query(
-    `SELECT id, name AS name, province, description, created_at
+    `SELECT id, name, province, description, DATE_FORMAT(event_date, '%Y-%m-%d') AS event_date, created_at
      FROM act_event_cache WHERE id = ? AND type = 'campaign'`,
     [id]
   )
@@ -41,30 +41,30 @@ export async function getCampaignsByProvince(province) {
 }
 
 export async function createCampaign(data, createdBy) {
-  const { id, name, description, province } = data
+  const { id, name, description, province, event_date } = data
   if (id) {
     await pool.query(
-      `INSERT INTO act_event_cache (id, type, name, description, province, guild_id, synced_at)
-       VALUES (?, 'campaign', ?, ?, ?, ?, NOW())`,
-      [id, name, description || null, province || null, process.env.GUILD_ID || '1']
+      `INSERT INTO act_event_cache (id, type, name, description, province, event_date, guild_id, synced_at)
+       VALUES (?, 'campaign', ?, ?, ?, ?, ?, NOW())`,
+      [id, name, description || null, province || null, event_date || null, process.env.GUILD_ID || '1']
     )
     return id
   }
   const [result] = await pool.query(
-    `INSERT INTO act_event_cache (type, name, description, province, guild_id, synced_at)
-     VALUES ('campaign', ?, ?, ?, ?, NOW())`,
-    [name, description || null, province || null, process.env.GUILD_ID || '1']
+    `INSERT INTO act_event_cache (type, name, description, province, event_date, guild_id, synced_at)
+     VALUES ('campaign', ?, ?, ?, ?, ?, NOW())`,
+    [name, description || null, province || null, event_date || null, process.env.GUILD_ID || '1']
   )
   return result.insertId
 }
 
 export async function updateCampaign(id, data) {
-  const { name, description, province } = data
+  const { name, description, province, event_date } = data
   await pool.query(
     `UPDATE act_event_cache
-     SET name = ?, description = ?, province = ?, updated_at = NOW()
+     SET name = ?, description = ?, province = ?, event_date = ?, updated_at = NOW()
      WHERE id = ? AND type = 'campaign'`,
-    [name, description || null, province || null, id]
+    [name, description || null, province || null, event_date || null, id]
   )
 }
 
