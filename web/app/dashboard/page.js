@@ -55,10 +55,37 @@ function StatCard({ label, value, sub }) {
   )
 }
 
-function Section({ title, children }) {
+function SectionIcon({ icon }) {
+  const svgPath = {
+    campaigns: 'M20.25 3.75v4.5m0-4.5h-4.5m4.5 0l-6 6m3 12c-8.284 0-15-6.716-15-15V4.5A2.25 2.25 0 014.5 2.25h1.372c.516 0 .966.351 1.091.852l1.106 4.423c.11.44-.054.902-.417 1.173l-1.293.97a1.062 1.062 0 00-.38 1.21 12.035 12.035 0 007.143 7.143c.441.162.928-.004 1.21-.38l.97-1.293a1.125 1.125 0 011.173-.417l4.423 1.106c.5.125.852.575.852 1.091V19.5a2.25 2.25 0 01-2.25 2.25h-2.25z',
+    transactions: 'M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z',
+    bot: 'M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z',
+  }
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}
+         strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+      <path d={svgPath[icon]} />
+    </svg>
+  )
+}
+
+function Section({ title, href, icon, children }) {
+  const titleContent = (
+    <span className="inline-flex items-center gap-2">
+      {icon && <SectionIcon icon={icon} />}
+      {title}
+    </span>
+  )
+
   return (
     <div className="bg-card-bg border border-brand-blue-light dark:border-gray-800 rounded-xl p-6">
-      <p className="text-xs font-semibold uppercase tracking-widest text-brand-orange mb-4">{title}</p>
+      {href ? (
+        <Link href={href} className="text-xl font-bold text-brand-orange mb-4 hover:text-brand-orange-light transition inline-flex items-center gap-2">
+          {titleContent}
+        </Link>
+      ) : (
+        <p className="text-xl font-bold text-brand-orange mb-4">{titleContent}</p>
+      )}
       <div className="grid grid-cols-2 gap-4">{children}</div>
     </div>
   )
@@ -114,13 +141,13 @@ export default async function DashboardPage() {
       </div>
 
       {/* Discord Bot */}
-      <Section title="Discord Bot">
+      <Section title="Discord Bot" icon="bot">
         <StatCard label="สมาชิก Discord" value={fmt(dcMemberCount)} sub="ใน server" />
         <StatCard label="QR Login" value="—" sub="coming soon" />
       </Section>
 
       {/* Calling */}
-      <Section title="PPLE Calling">
+      <Section title="PPLE Calling" href="/calling" icon="campaigns">
         <StatCard label="สมาชิกทั้งหมด" value={fmt(memberCount)} sub="ในระบบ" />
         <StatCard label="Campaigns" value={fmt(campaigns.length)} sub="ทั้งหมด" />
         <StatCard label="Calls วันนี้" value={fmt(todayCalls)} sub="ทั้งระบบ" />
@@ -128,7 +155,7 @@ export default async function DashboardPage() {
       </Section>
 
       {/* Finance */}
-      <Section title="PPLE Finance">
+      <Section title="PPLE Finance" href="/finance" icon="transactions">
         <StatCard label="รายรับเดือนนี้" value={fmtBaht(finance?.total_income)} sub="รายรับ" />
         <StatCard label="รายจ่ายเดือนนี้" value={fmtBaht(finance?.total_expense)} sub="รายจ่าย" />
       </Section>

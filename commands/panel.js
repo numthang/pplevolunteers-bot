@@ -81,6 +81,13 @@ module.exports = {
         .setDescription('แสดงรายชื่อบัญชีการเงินทั้งหมด + ID')
     )
 
+    // --- gogo ---
+    .addSubcommand(sub =>
+      sub.setName('gogo')
+        .setDescription('สร้าง panel ลงชื่อสนใจเข้าร่วมกิจกรรม')
+        .addStringOption(o => o.setName('color').setDescription('สี hex').setRequired(false))
+    )
+
     // --- register ---
     .addSubcommand(sub =>
       sub.setName('register')
@@ -264,6 +271,31 @@ await refreshDashboard(thread, interaction.guildId, ids, existing.dashboard_msg_
       })
 
       return interaction.editReply({ content: `✅ สร้าง thread dashboard การเงินใน <#${channelOpt.id}> แล้วครับ` })
+    }
+
+    // ================================================================
+    if (sub === 'gogo') {
+      const color = interaction.options.getString('color')
+        ? parseInt(interaction.options.getString('color').replace('#', ''), 16)
+        : 0xff6a13;
+
+      const embed = new EmbedBuilder()
+        .setColor(color)
+        .addFields({ name: '👥 รายชื่อผู้สนใจ (0 คน)', value: '-', inline: false });
+
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId('btn_gogo_signup')
+          .setLabel('🙋 GoGo!')
+          .setStyle(ButtonStyle.Success),
+        new ButtonBuilder()
+          .setCustomId('btn_gogo_edit')
+          .setLabel('✏️ แก้ไขรายชื่อ')
+          .setStyle(ButtonStyle.Secondary),
+      );
+
+      await interaction.channel.send({ embeds: [embed], components: [row] });
+      return interaction.reply({ content: '✅ วาง panel ลงชื่อกิจกรรมเรียบร้อย', flags: MessageFlags.Ephemeral });
     }
 
     // ================================================================
