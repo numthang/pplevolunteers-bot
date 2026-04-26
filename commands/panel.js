@@ -85,7 +85,9 @@ module.exports = {
     .addSubcommand(sub =>
       sub.setName('gogo')
         .setDescription('สร้าง panel ลงชื่อสนใจเข้าร่วมกิจกรรม')
+        .addStringOption(o => o.setName('title').setDescription('ชื่อกิจกรรม (default: ชื่อ channel/thread)').setRequired(false))
         .addStringOption(o => o.setName('color').setDescription('สี hex').setRequired(false))
+        .addBooleanOption(o => o.setName('sticky').setDescription('ให้ panel เลื่อนลงอัตโนมัติเมื่อมีคนลงชื่อ (default: true)').setRequired(false))
     )
 
     // --- register ---
@@ -275,18 +277,20 @@ await refreshDashboard(thread, interaction.guildId, ids, existing.dashboard_msg_
 
     // ================================================================
     if (sub === 'gogo') {
-      const color = interaction.options.getString('color')
+      const color    = interaction.options.getString('color')
         ? parseInt(interaction.options.getString('color').replace('#', ''), 16)
         : 0xff6a13;
+      const isSticky = interaction.options.getBoolean('sticky') ?? true;
+      const title    = interaction.options.getString('title') ?? interaction.channel.name;
 
       const embed = new EmbedBuilder()
         .setColor(color)
-        .addFields({ name: '👥 รายชื่อผู้สนใจ (0 คน)', value: '-', inline: false });
+        .addFields({ name: `👥 ผู้เข้าร่วม ${title} (0 คน)`, value: '-', inline: false });
 
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
           .setCustomId('btn_gogo_signup')
-          .setLabel('🙋 GoGo!')
+          .setLabel('🙋 เข้าร่วม')
           .setStyle(ButtonStyle.Success),
         new ButtonBuilder()
           .setCustomId('btn_gogo_edit')
@@ -294,8 +298,33 @@ await refreshDashboard(thread, interaction.guildId, ids, existing.dashboard_msg_
           .setStyle(ButtonStyle.Secondary),
       );
 
-      await interaction.channel.send({ embeds: [embed], components: [row] });
-      return interaction.reply({ content: '✅ วาง panel ลงชื่อกิจกรรมเรียบร้อย', flags: MessageFlags.Ephemeral });
+      if (isSticky) {
+        // clean up old sticky message ก่อนวางใหม่
+        let existingSticky = await getSetting(interaction.guildId, `sticky_${interaction.channelId}`);
+        if (typeof existingSticky === 'string') {
+          try { existingSticky = JSON.parse(existingSticky); } catch { existingSticky = null; }
+        }
+        if (existingSticky?.message_id) {
+          const oldMsg = await interaction.channel.messages.fetch(existingSticky.message_id).catch(() => null);
+          if (oldMsg) await oldMsg.delete().catch(() => {});
+        }
+      }
+
+      const sent = await interaction.channel.send({ embeds: [embed], components: [row] });
+
+      if (isSticky) {
+        await setSetting(interaction.guildId, `sticky_${interaction.channelId}`, {
+          content:    null,
+          embeds:     [embed.toJSON()],
+          components: [row.toJSON()],
+          message_id: sent.id,
+        });
+      }
+
+      return interaction.reply({
+        content: `✅ วาง panel ลงชื่อกิจกรรมเรียบร้อย${isSticky ? ' (sticky ✅)' : ''}`,
+        flags: MessageFlags.Ephemeral,
+      });
     }
 
     // ================================================================

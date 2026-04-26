@@ -7,8 +7,10 @@ const {
   EmbedBuilder,
   MessageFlags,
 } = require('discord.js');
+const { getSetting, setSetting } = require('../db/settings');
+const { refreshSticky } = require('./stickyHandler');
 
-const FIELD_PREFIX = '👥 รายชื่อผู้สนใจ';
+const FIELD_PREFIX = '👥 ผู้เข้าร่วม';
 
 function parseEntries(fieldValue) {
   if (!fieldValue || fieldValue === '-') return [];
@@ -88,8 +90,11 @@ async function handleGogoModal(interaction) {
   const newNames = rawInput ? rawInput.split('\n').map(n => n.trim()).filter(Boolean) : [];
   for (const name of newNames) entries.push({ name, userId });
 
+  const baseName = fieldIdx >= 0
+    ? fields[fieldIdx].name.replace(/ \(\d+ คน\)$/, '')
+    : FIELD_PREFIX;
   const newField = {
-    name: `${FIELD_PREFIX} (${entries.length} คน)`,
+    name: `${baseName} (${entries.length} คน)`,
     value: buildFieldValue(entries),
     inline: false,
   };
@@ -98,7 +103,20 @@ async function handleGogoModal(interaction) {
   else fields.push(newField);
 
   embed.setFields(fields);
-  await msg.edit({ embeds: [embed] });
+
+  const stickyKey = `sticky_${interaction.channelId}`;
+  let stickyConfig = await getSetting(interaction.guildId, stickyKey);
+  if (typeof stickyConfig === 'string') {
+    try { stickyConfig = JSON.parse(stickyConfig); } catch { stickyConfig = null; }
+  }
+
+  if (stickyConfig && stickyConfig.message_id === messageId) {
+    stickyConfig.embeds = [embed.toJSON()];
+    await setSetting(interaction.guildId, stickyKey, stickyConfig);
+    await refreshSticky(interaction.channel);
+  } else {
+    await msg.edit({ embeds: [embed] });
+  }
 
   const reply = newNames.length === 0
     ? '✅ ถอนชื่อทั้งหมดเรียบร้อย'
