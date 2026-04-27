@@ -101,6 +101,27 @@ module.exports = {
         .addIntegerOption(opt =>
           opt.setName('top').setDescription('จำนวนอันดับที่แสดง (default: 5, max: 20)').setRequired(false).setMinValue(1).setMaxValue(20)
         )
+    )
+
+    // --- dm ---
+    .addSubcommand(sub =>
+      sub.setName('dm')
+        .setDescription('ส่ง DM broadcast ไปยังสมาชิก')
+        .addStringOption(opt =>
+          opt.setName('message').setDescription('ข้อความที่ต้องการส่ง').setRequired(true).setMaxLength(2000)
+        )
+        .addStringOption(opt =>
+          opt.setName('target')
+            .setDescription('กลุ่มเป้าหมาย')
+            .setRequired(true)
+            .addChoices(
+              { name: 'ทุกคน (ยกเว้น bot)', value: 'all' },
+              { name: 'ตาม Role', value: 'role' },
+            )
+        )
+        .addRoleOption(opt =>
+          opt.setName('role').setDescription('Role ที่ต้องการส่ง (ใช้เมื่อ target = role)').setRequired(false)
+        )
     ),
 
   async autocomplete(interaction) {
@@ -181,6 +202,43 @@ module.exports = {
         .setTimestamp();
 
       return interaction.editReply({ embeds: [embed] });
+    }
+
+    // ================================================================
+    if (sub === 'dm') {
+      const message = interaction.options.getString('message');
+      const target  = interaction.options.getString('target');
+      const role    = interaction.options.getRole('role');
+
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+      if (target === 'role' && !role) {
+        return interaction.editReply({ content: '❌ กรุณาเลือก Role ที่ต้องการส่งด้วยครับ' });
+      }
+
+      await interaction.guild.members.fetch();
+      const targets = target === 'all'
+        ? [...interaction.guild.members.cache.filter(m => !m.user.bot).values()]
+        : [...role.members.filter(m => !m.user.bot).values()];
+
+      const estMin = Math.ceil(targets.length * 0.3 / 60);
+      await interaction.editReply({
+        content: `📤 กำลังส่ง DM ไปยัง **${targets.length}** คน... (ประมาณ ${estMin} นาที)`,
+      });
+
+      let ok = 0, fail = 0;
+      for (const m of targets) {
+        await m.send(message).then(() => ok++).catch(() => fail++);
+        await new Promise(r => setTimeout(r, 300));
+      }
+
+      return interaction.editReply({
+        content: [
+          `✅ ส่ง DM เสร็จแล้วครับ`,
+          `✓ สำเร็จ: **${ok}** คน`,
+          `✗ ล้มเหลว: **${fail}** คน *(DM ปิด หรือ bot ถูก block)*`,
+        ].join('\n'),
+      });
     }
   },
 

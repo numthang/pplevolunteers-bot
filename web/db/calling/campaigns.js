@@ -58,6 +58,22 @@ export async function createCampaign(data, createdBy) {
   return result.insertId
 }
 
+export async function renameCampaignId(oldId, newId) {
+  const conn = await pool.getConnection()
+  try {
+    await conn.beginTransaction()
+    await conn.query(`UPDATE act_event_cache SET id = ? WHERE id = ? AND type = 'campaign'`, [newId, oldId])
+    await conn.query(`UPDATE calling_assignments SET campaign_id = ? WHERE campaign_id = ?`, [newId, oldId])
+    await conn.query(`UPDATE calling_logs SET campaign_id = ? WHERE campaign_id = ?`, [newId, oldId])
+    await conn.commit()
+  } catch (err) {
+    await conn.rollback()
+    throw err
+  } finally {
+    conn.release()
+  }
+}
+
 export async function updateCampaign(id, data) {
   const { name, description, province, event_date } = data
   await pool.query(

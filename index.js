@@ -154,6 +154,25 @@ client.on('voiceStateUpdate', onVoiceStateUpdate);
 client.on('guildMemberAdd', async (member) => {
   const { upsertMemberFromDiscord } = require('./db/members');
   await upsertMemberFromDiscord(member).catch(err => console.error('[memberAdd] upsert:', err));
+
+  const { getSetting } = require('./db/settings');
+
+  const [autoroleRaw, welcomeRaw] = await Promise.all([
+    getSetting(member.guild.id, 'autorole_id').catch(() => null),
+    getSetting(member.guild.id, 'welcome_dm').catch(() => null),
+  ]);
+
+  if (autoroleRaw) {
+    const roleId = autoroleRaw.replace(/^"|"$/g, '');
+    member.roles.add(roleId).catch(err => console.error('[memberAdd] autorole failed:', err));
+  }
+
+  if (welcomeRaw) {
+    const text = (() => { try { return JSON.parse(welcomeRaw); } catch { return welcomeRaw; } })()
+      .replace(/\\n/g, '\n')
+      .replace(/\{user\}/g, `<@${member.id}>`);
+    member.send(text).catch(err => console.error('[memberAdd] welcome DM failed:', err));
+  }
 });
 
 client.on('guildMemberUpdate', async (oldMember, newMember) => {

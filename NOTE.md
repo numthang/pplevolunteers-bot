@@ -7,6 +7,17 @@ Panel Forum:
 
 Greeting:
 
+/panel register title:ยินดีต้อนรับสู่ อาสาประชาชน! description:กดปุ่มด้านล่างเพื่อแนะนำตัวและ #🎖️┆ติดยศ ได้เลยครับ log_channel:#👋┆แนะนำตัว
+
+Welcome DM
+ยินดีต้อนรับสู่ อาสาประชาชน!
+- [แนะนำตัว](https://discord.com/channels/1340903354037178410/1340903354871582756) — บอกให้ทีมรู้ว่าคุณคือใคร  \n
+- [ติดยศ](https://discord.com/channels/1340903354037178410/1341436765533372489) — เลือกบทบาทเพื่อเข้าถึงห้องที่เกี่ยวข้อง  \n
+- [สอบถามปัญหาการใช้งาน](https://discord.com/channels/1340903354037178410/1486026453974909010) — ติดปัญหาอะไรถามได้เลย
+
+https://discord.com/invite/CjheHjvPVS
+---
+
 /panel register title:ยินดีต้อนรับสู่ อาสาประชาชน! :tangerine: description:Step  :one: : แนะนำตัว → กดปุ่มแนะนำตัวด้านล่าง\n Step :two: : อ่านตรงนี้ก่อน → #📕┆ข้อตกลง \n Step :three:  : ติดยศ → #📕┆ติดยศ  log_channel:#👋┆แนะนำตัว
 
 /panel register title:แนะนำตัวเองให้เพื่อนรู้จัก description:กดปุ่มแล้วระบบจะพาทำไปทีละขั้นตอน ดังนี้ :point_down:\n\n:pencil: กรอกข้อมูล → :map: เลือกจังหวัด → :dart: เลือกทีม

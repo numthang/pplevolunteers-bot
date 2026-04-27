@@ -29,6 +29,7 @@ export default function EditCampaignPage({ params }) {
   const { id } = use(params)
   const router = useRouter()
 
+  const [newId, setNewId] = useState('')
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [province, setProvince] = useState('')
@@ -43,6 +44,7 @@ export default function EditCampaignPage({ params }) {
       .then(data => {
         if (!data.data) { setNotFound(true); setLoading(false); return }
         const c = data.data
+        setNewId(String(c.id))
         setName(c.name || '')
         setDescription(c.description || '')
         setProvince(c.province || '')
@@ -60,7 +62,7 @@ export default function EditCampaignPage({ params }) {
       const res = await fetch(`/api/calling/campaigns/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, description, province: province || null, event_date: eventDate || null })
+        body: JSON.stringify({ newId: newId || null, name, description, province: province || null, event_date: eventDate || null })
       })
       if (!res.ok) throw new Error((await res.json()).error || 'Failed')
       router.push('/calling')
@@ -84,6 +86,15 @@ export default function EditCampaignPage({ params }) {
         <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-gray-100">แก้ไขแคมเปญ</h1>
 
         <form onSubmit={handleSubmit} className="space-y-5">
+          <div>
+            <label className="block text-sm font-semibold mb-1.5 text-gray-700 dark:text-gray-300">
+              Campaign ID
+              {newId !== String(id) && <span className="ml-2 text-xs font-normal text-amber-500">จะ rename cascade ทุก assignment + log</span>}
+            </label>
+            <input type="number" value={newId} onChange={e => setNewId(e.target.value)}
+              min="1" className={inputCls} />
+          </div>
+
           <div>
             <label className="block text-sm font-semibold mb-1.5 text-gray-700 dark:text-gray-300">ชื่อแคมเปญ *</label>
             <input type="text" value={name} onChange={e => setName(e.target.value)}

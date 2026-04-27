@@ -29,11 +29,18 @@ export async function PATCH(req, { params }) {
   const { id } = await params
   try {
     const body = await req.json()
-    const { name, description, province, event_date } = body
+    const { newId, name, description, province, event_date } = body
     if (!name) return Response.json({ error: 'name is required' }, { status: 400 })
 
-    await campaignDB.updateCampaign(parseInt(id), { name, description, province, event_date })
-    const campaign = await campaignDB.getCampaignById(parseInt(id))
+    const oldId = parseInt(id)
+    const targetId = newId ? parseInt(newId) : oldId
+
+    if (newId && targetId !== oldId) {
+      await campaignDB.renameCampaignId(oldId, targetId)
+    }
+
+    await campaignDB.updateCampaign(targetId, { name, description, province, event_date })
+    const campaign = await campaignDB.getCampaignById(targetId)
     return Response.json({ success: true, data: campaign })
   } catch (error) {
     console.error('[PATCH /api/calling/campaigns/[id]]', error)

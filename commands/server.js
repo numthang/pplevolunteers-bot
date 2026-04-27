@@ -9,6 +9,11 @@ const {
 const fs   = require('fs');
 const path = require('path');
 const { getServerOverview, getTopChannels } = require('../db/stat');
+const { getSetting, setSetting, deleteSetting } = require('../db/settings');
+
+function parseSetting(raw) {
+  try { return JSON.parse(raw); } catch { return raw; }
+}
 
 const BACKUPS_DIR = path.join(__dirname, '../backups');
 
@@ -53,12 +58,100 @@ module.exports = {
         .addBooleanOption(opt =>
           opt.setName('public').setDescription('แสดงให้ทุกคนเห็น (default: false)').setRequired(false)
         )
+    )
+
+    // --- autorole ---
+    .addSubcommandGroup(group =>
+      group.setName('autorole')
+        .setDescription('ตั้งค่า role ที่ได้รับอัตโนมัติเมื่อเข้า server')
+        .addSubcommand(sub =>
+          sub.setName('set')
+            .setDescription('ตั้งค่า auto role')
+            .addRoleOption(opt =>
+              opt.setName('role').setDescription('Role ที่ต้องการ assign').setRequired(true)
+            )
+        )
+        .addSubcommand(sub =>
+          sub.setName('view')
+            .setDescription('ดู auto role ปัจจุบัน')
+        )
+        .addSubcommand(sub =>
+          sub.setName('clear')
+            .setDescription('ยกเลิก auto role')
+        )
+    )
+
+    // --- welcome ---
+    .addSubcommandGroup(group =>
+      group.setName('welcome')
+        .setDescription('ตั้งค่าข้อความ welcome DM ส่งให้สมาชิกใหม่')
+        .addSubcommand(sub =>
+          sub.setName('set')
+            .setDescription('ตั้งค่าข้อความ (ใช้ {user} เพื่อ mention สมาชิก)')
+            .addStringOption(opt =>
+              opt.setName('message').setDescription('ข้อความ welcome').setRequired(true).setMaxLength(2000)
+            )
+        )
+        .addSubcommand(sub =>
+          sub.setName('view')
+            .setDescription('ดูข้อความ welcome ปัจจุบัน')
+        )
+        .addSubcommand(sub =>
+          sub.setName('clear')
+            .setDescription('ลบข้อความ welcome')
+        )
     ),
 
   async execute(interaction) {
+    const group    = interaction.options.getSubcommandGroup(false);
     const sub      = interaction.options.getSubcommand();
     const isPublic = interaction.options.getBoolean('public') ?? false;
     const { guildId, guild } = interaction;
+
+    // ================================================================
+    if (group === 'autorole') {
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+      if (sub === 'set') {
+        const role = interaction.options.getRole('role');
+        await setSetting(guildId, 'autorole_id', role.id);
+        return interaction.editReply({ content: `✅ ตั้งค่า auto role เป็น <@&${role.id}> แล้วครับ` });
+      }
+
+      if (sub === 'view') {
+        const raw = await getSetting(guildId, 'autorole_id');
+        if (!raw) return interaction.editReply({ content: '❌ ยังไม่ได้ตั้งค่า auto role ครับ' });
+        return interaction.editReply({ content: `🎭 **Auto Role ปัจจุบัน:** <@&${parseSetting(raw)}>` });
+      }
+
+      if (sub === 'clear') {
+        await deleteSetting(guildId, 'autorole_id');
+        return interaction.editReply({ content: '✅ ยกเลิก auto role แล้วครับ' });
+      }
+    }
+
+    // ================================================================
+    if (group === 'welcome') {
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+      if (sub === 'set') {
+        const message = interaction.options.getString('message');
+        await setSetting(guildId, 'welcome_dm', message);
+        return interaction.editReply({ content: `✅ ตั้งค่า welcome message แล้วครับ\n\n> ${message}` });
+      }
+
+      if (sub === 'view') {
+        const raw = await getSetting(guildId, 'welcome_dm');
+        if (!raw) return interaction.editReply({ content: '❌ ยังไม่ได้ตั้งค่า welcome message ครับ\nลองใช้ `/server welcome set` ก่อนนะครับ' });
+        const text = parseSetting(raw);
+        return interaction.editReply({ content: `📝 **Welcome Message ปัจจุบัน:**\n\n> ${text}` });
+      }
+
+      if (sub === 'clear') {
+        await deleteSetting(guildId, 'welcome_dm');
+        return interaction.editReply({ content: '✅ ลบ welcome message แล้วครับ' });
+      }
+    }
 
     // ================================================================
     if (sub === 'stat') {
