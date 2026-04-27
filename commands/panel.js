@@ -292,10 +292,6 @@ await refreshDashboard(thread, interaction.guildId, ids, existing.dashboard_msg_
           .setCustomId('btn_gogo_signup')
           .setLabel('🙋 เข้าร่วม')
           .setStyle(ButtonStyle.Success),
-        new ButtonBuilder()
-          .setCustomId('btn_gogo_edit')
-          .setLabel('✏️ แก้ไขรายชื่อ')
-          .setStyle(ButtonStyle.Secondary),
       );
 
       if (isSticky) {

@@ -47,26 +47,20 @@ async function openModal(interaction, messageId, prefill) {
 
 async function handleGogoSignup(interaction) {
   if (!interaction.isButton()) return;
-  const displayName = interaction.member?.displayName ?? interaction.user.username;
-  await openModal(interaction, interaction.message.id, displayName);
-}
-
-async function handleGogoEdit(interaction) {
-  if (!interaction.isButton()) return;
   const fields = interaction.message.embeds[0]?.fields ?? [];
   const fieldIdx = fields.findIndex(f => f.name.startsWith(FIELD_PREFIX));
 
-  const userNames = fieldIdx >= 0
+  const existingNames = fieldIdx >= 0
     ? parseEntries(fields[fieldIdx].value)
         .filter(e => e.userId === interaction.user.id)
         .map(e => e.name)
     : [];
 
-  if (!userNames.length) {
-    return interaction.reply({ content: '❌ คุณยังไม่มีชื่อในรายชื่อ', flags: MessageFlags.Ephemeral });
-  }
+  const prefill = existingNames.length
+    ? existingNames.join('\n')
+    : (interaction.member?.displayName ?? interaction.user.username);
 
-  await openModal(interaction, interaction.message.id, userNames.join('\n'));
+  await openModal(interaction, interaction.message.id, prefill);
 }
 
 async function handleGogoModal(interaction) {
@@ -118,10 +112,14 @@ async function handleGogoModal(interaction) {
     await msg.edit({ embeds: [embed] });
   }
 
+  if (newNames.length > 0 && interaction.channel.isThread()) {
+    await interaction.channel.members.add(interaction.user.id).catch(() => {});
+  }
+
   const reply = newNames.length === 0
     ? '✅ ถอนชื่อทั้งหมดเรียบร้อย'
     : `✅ บันทึกแล้ว — **${newNames.join(', ')}**`;
   await interaction.editReply({ content: reply });
 }
 
-module.exports = { handleGogoSignup, handleGogoEdit, handleGogoModal };
+module.exports = { handleGogoSignup, handleGogoModal };
