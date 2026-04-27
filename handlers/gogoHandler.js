@@ -116,10 +116,7 @@ async function handleGogoModal(interaction) {
     await interaction.channel.members.add(interaction.user.id).catch(() => {});
   }
 
-  const reply = newNames.length === 0
-    ? '✅ ถอนชื่อทั้งหมดเรียบร้อย'
-    : `✅ บันทึกแล้ว — **${newNames.join(', ')}**`;
-  await interaction.editReply({ content: reply });
+  await interaction.deleteReply();
 }
 
 module.exports = { handleGogoSignup, handleGogoModal };
