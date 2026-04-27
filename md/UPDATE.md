@@ -2,8 +2,6 @@
 ---
 ## PPLE Bot Project
 
-- ทำ welcome message inbox แล้วมีให้กดไปติดยศ ตอนนี้เป็น sapph อยู่
-- ยกเลิก role อาสาประชาชน ใช้ everyone แทน หรือเปิดห้อง default ในอาสาประชาชนเป็น public view
 - SMS Gateway
 ---
 ## PPLE Finance
