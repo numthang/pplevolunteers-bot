@@ -1,33 +1,33 @@
 /**
  * KBank SMS alert parser — รายการโอนเข้า (income only)
- * Format: "รายการโอนเข้า 500.00บ. จาก นาย สมชาย เข้าบัญชี x-1234 เมื่อ 19/04/26 17:15น. ยอดเงินคงเหลือ 1,500.00บ."
+ * Format: "28/04/69 23:26 บช X-4882 รับโอนจาก X-0453 0.10 คงเหลือ 9,692.18 บ."
  */
 
 function parse(text) {
 	if (!text) return null
-	if (!text.includes('รายการโอนเข้า')) return null
+	if (!text.includes('รับโอนจาก')) return null
 
 	const parseNum = (s) => s ? parseFloat(s.replace(/,/g, '')) : null
 
-	const amountMatch = text.match(/รายการโอนเข้า\s*([\d,]+\.?\d*)บ\./)
-	const nameMatch   = text.match(/จาก\s+(.+?)\s+เข้าบัญชี/)
-	const acctMatch   = text.match(/เข้าบัญชี\s+([x\d-]+)/)
-	const timeMatch   = text.match(/เมื่อ\s+(\d{2})\/(\d{2})\/(\d{2})\s+(\d{2}:\d{2})น\./)
-	const balMatch    = text.match(/ยอดเงินคงเหลือ\s*([\d,]+\.?\d*)บ\./)
+	// "28/04/69 23:26 บช X-4882 รับโอนจาก X-0453 0.10 คงเหลือ 9,692.18 บ."
+	const timeMatch   = text.match(/(\d{2})\/(\d{2})\/(\d{2})\s+(\d{2}:\d{2})/)
+	const acctMatch   = text.match(/บช\s+([A-Z\d-]+)/)
+	const fromMatch   = text.match(/รับโอนจาก\s+([A-Z\d-]+)\s+([\d,]+\.?\d*)/)
+	const balMatch    = text.match(/คงเหลือ\s*([\d,]+\.?\d*)\s*บ\./)
 
-	if (!amountMatch || !acctMatch) return null
+	if (!fromMatch || !acctMatch) return null
 
 	let txnAt = null
 	if (timeMatch) {
 		const [, dd, mm, yy, hhmm] = timeMatch
-		txnAt = `20${yy}-${mm}-${dd} ${hhmm}:00`
+		// yy คือ 2 หลักท้ายของปี พ.ศ. → แปลงเป็น ค.ศ.
+		const adYear = 1957 + parseInt(yy)
+		txnAt = `${adYear}-${mm}-${dd} ${hhmm}:00`
 	}
 
-	// "x-1234" → "1234" สำหรับ match กับ account_no ใน DB
-	const acctMasked = acctMatch[1]
-	const lastDigits = acctMasked.replace(/x|-/gi, '').trim()
+	const acctMasked = acctMatch[1]       // "X-4882"
+	const lastDigits = acctMasked.replace(/[A-Z]-?/gi, '').trim()  // "4882"
 
-	// ref_id สำหรับ dedup — ไม่มี ref จาก KBank ใน SMS เลยใช้ composite key
 	const refDate = txnAt ? txnAt.replace(/[-: ]/g, '').substring(0, 12) : Date.now().toString()
 	const refId = `SMS-${lastDigits}-${refDate}`
 
@@ -35,9 +35,9 @@ function parse(text) {
 		raw:              text.trim(),
 		ref_id:           refId,
 		txn_at:           txnAt,
-		amount:           parseNum(amountMatch[1]),
+		amount:           parseNum(fromMatch[2]),
 		balance_after:    parseNum(balMatch?.[1]),
-		counterpart_name: nameMatch?.[1]?.trim() || null,
+		counterpart_name: fromMatch[1] || null,   // "X-0453" (ไม่มีชื่อจริงใน SMS)
 		acct_masked:      acctMasked,
 		last_digits:      lastDigits,
 		fee:              null,

@@ -144,7 +144,7 @@ export async function getMembersInCampaign(campaignId, filters = {}, limit = 100
   query += `
      GROUP BY m.source_id
      HAVING (? IS NULL OR member_status = ?)
-       AND (? IS NULL OR (? = 'called' AND total_calls > 0) OR (? = 'uncalled' AND total_calls = 0))
+       AND (? IS NULL OR (? = 'called' AND total_calls > 0) OR (? = 'uncalled' AND total_calls = 0 AND member_status = 'assigned'))
      ORDER BY m.home_amphure ASC, m.first_name ASC, m.source_id ASC
      LIMIT ? OFFSET ?`
 

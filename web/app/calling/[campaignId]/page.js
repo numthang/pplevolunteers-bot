@@ -593,10 +593,11 @@ export default function CampaignPage({ params }) {
                       {member.home_district || '—'}
                     </div>
                     <div className={`hidden md:block text-center ${dimmed}`}>
-                      {(() => {
-                        const c = member.total_calls > 0 ? CALL_STATUS_COLORS.called : CALL_STATUS_COLORS.pending
-                        return <span className="px-2 py-0.5 rounded text-sm font-medium whitespace-nowrap" style={{ backgroundColor: c.bg, color: c.text }}>{c.label}</span>
-                      })()}
+                      {member.total_calls > 0
+                        ? <span className="px-2 py-0.5 rounded text-sm font-medium whitespace-nowrap" style={{ backgroundColor: CALL_STATUS_COLORS.called.bg, color: CALL_STATUS_COLORS.called.text }}>{CALL_STATUS_COLORS.called.label}</span>
+                        : member.assigned_to
+                          ? <span className="px-2 py-0.5 rounded text-sm font-medium whitespace-nowrap" style={{ backgroundColor: CALL_STATUS_COLORS.pending.bg, color: CALL_STATUS_COLORS.pending.text }}>{CALL_STATUS_COLORS.pending.label}</span>
+                          : <span className="text-warm-300 dark:text-disc-muted text-sm">—</span>}
                     </div>
                   </div>
 
