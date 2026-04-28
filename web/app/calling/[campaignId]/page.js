@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useCallback, use } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import SplitModal from '@/components/calling/SplitModal.jsx'
+import { CALL_STATUS_COLORS } from '@/lib/callingStatusColors.js'
 
 const PAGE_SIZE = 100
 
@@ -592,9 +593,10 @@ export default function CampaignPage({ params }) {
                       {member.home_district || '—'}
                     </div>
                     <div className={`hidden md:block text-center ${dimmed}`}>
-                      {member.total_calls > 0
-                        ? <span className="px-2 py-0.5 rounded text-sm font-medium bg-teal-light text-teal dark:bg-teal-dim dark:text-teal-bright whitespace-nowrap">โทรแล้ว</span>
-                        : <span className="px-2 py-0.5 rounded text-sm font-medium bg-warm-100 text-warm-400 dark:bg-disc-bg2 dark:text-disc-muted whitespace-nowrap">รอโทร</span>}
+                      {(() => {
+                        const c = member.total_calls > 0 ? CALL_STATUS_COLORS.called : CALL_STATUS_COLORS.pending
+                        return <span className="px-2 py-0.5 rounded text-sm font-medium whitespace-nowrap" style={{ backgroundColor: c.bg, color: c.text }}>{c.label}</span>
+                      })()}
                     </div>
                   </div>
 

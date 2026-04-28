@@ -281,7 +281,6 @@ export default function PendingCallsPage() {
             {members.map(member => {
               const tier = member.tier || 'D'
               const tierColor = TIER_COLORS[tier]
-              const avatarChar = member.first_name?.[0] || member.full_name?.[0] || '?'
               const expiryBadge = getExpiryBadge(member.expired_at)
 
               return (
@@ -293,19 +292,15 @@ export default function PendingCallsPage() {
                   {/* Mobile layout */}
                   <div className="sm:hidden">
                     <div className="flex items-center gap-3">
-                      <div
-                        className="w-11 h-11 rounded-full flex items-center justify-center text-base font-semibold flex-shrink-0"
-                        style={{ backgroundColor: tierColor.bg, color: tierColor.text }}
-                      >{avatarChar}</div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-base font-medium text-warm-900 dark:text-warm-50 group-hover:text-teal transition-colors truncate">
-                            {member.full_name}
-                          </span>
                           <span
                             className="text-base font-semibold px-1.5 py-0.5 rounded flex-shrink-0"
                             style={{ backgroundColor: tierColor.bg, color: tierColor.text }}
                           >{tier}</span>
+                          <span className="text-base font-medium text-warm-900 dark:text-warm-50 group-hover:text-teal transition-colors truncate">
+                            {member.full_name}
+                          </span>
                           {expiryBadge && <span className={`text-base font-medium px-1.5 py-0.5 rounded flex-shrink-0 ${expiryBadge.cls}`}>{expiryBadge.label}</span>}
                         </div>
                         <div className="flex items-center gap-1.5 text-base truncate mt-0.5">
@@ -348,10 +343,6 @@ export default function PendingCallsPage() {
                   {/* Desktop layout */}
                   <div className="hidden sm:grid items-center [grid-template-columns:1fr_40px_80px_100px] gap-2">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div
-                        className="w-10 h-10 rounded-full flex items-center justify-center text-base font-semibold flex-shrink-0"
-                        style={{ backgroundColor: tierColor.bg, color: tierColor.text }}
-                      >{avatarChar}</div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="text-base font-medium text-warm-900 dark:text-warm-50 group-hover:text-teal transition-colors truncate">
