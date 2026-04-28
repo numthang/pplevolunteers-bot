@@ -134,11 +134,14 @@ async function notifyDiscord(account, txn) {
 
 	try {
 		const [cfg] = await pool.query(
-			`SELECT thread_id FROM finance_config WHERE guild_id = ?`,
+			`SELECT thread_id, account_ids FROM finance_config WHERE guild_id = ?`,
 			[GUILD_ID]
 		)
 		const threadId = cfg[0]?.thread_id
 		if (!threadId) return
+
+		const accountIds = cfg[0]?.account_ids ? cfg[0].account_ids.split(',').map(Number) : []
+		if (accountIds.length && !accountIds.includes(account.id)) return
 
 		const channel = await discordClient.channels.fetch(threadId)
 		if (!channel) return
