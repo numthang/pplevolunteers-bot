@@ -18,10 +18,12 @@ async function getTodayCallCount() {
 async function getFinanceSummary() {
   const [rows] = await pool.query(
     `SELECT
-       SUM(CASE WHEN type='income'  THEN amount ELSE 0 END) AS total_income,
-       SUM(CASE WHEN type='expense' THEN amount ELSE 0 END) AS total_expense
-     FROM finance_transactions
-     WHERE guild_id = ? AND MONTH(txn_at) = MONTH(CURDATE()) AND YEAR(txn_at) = YEAR(CURDATE())`,
+       SUM(CASE WHEN t.type='income'  THEN t.amount ELSE 0 END) AS total_income,
+       SUM(CASE WHEN t.type='expense' THEN t.amount ELSE 0 END) AS total_expense
+     FROM finance_transactions t
+     JOIN finance_accounts a ON a.id = t.account_id
+     WHERE t.guild_id = ? AND a.visibility = 'public'
+       AND MONTH(t.txn_at) = MONTH(CURDATE()) AND YEAR(t.txn_at) = YEAR(CURDATE())`,
     [GUILD_ID]
   )
   return rows[0]

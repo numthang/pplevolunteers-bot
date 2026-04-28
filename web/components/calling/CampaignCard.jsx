@@ -24,7 +24,7 @@ export default function CampaignCard({ campaign, canCreate }) {
             {campaign.description}
           </p>
         )}
-        <div className="space-y-1.5 pt-2 border-t border-warm-200 dark:border-warm-dark-200 text-xs">
+        <div className="space-y-1.5 pt-2 border-t border-warm-200 dark:border-warm-dark-200 text-sm">
           <div className="flex justify-between items-center text-warm-400 dark:text-warm-dark-400">
             <span className="font-medium text-warm-900 dark:text-warm-50">
               {campaign.call_count || 0} การโทร
@@ -42,13 +42,13 @@ export default function CampaignCard({ campaign, canCreate }) {
         <div className="px-4 py-2 border-t border-warm-200 dark:border-warm-dark-200 flex gap-3">
           <Link
             href={`/calling/edit/${campaign.id}`}
-            className="text-xs text-teal hover:underline"
+            className="text-sm text-teal hover:underline"
           >
             แก้ไข
           </Link>
           <button
             onClick={handleDelete}
-            className="text-xs text-red-500 dark:text-red-400 hover:underline"
+            className="text-sm text-red-500 dark:text-red-400 hover:underline"
           >
             ลบ
           </button>

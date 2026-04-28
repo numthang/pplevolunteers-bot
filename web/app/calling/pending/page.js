@@ -314,10 +314,10 @@ export default function PendingCallsPage() {
                             {member.full_name}
                           </span>
                           <span
-                            className="text-xs font-semibold px-1.5 py-0.5 rounded flex-shrink-0"
+                            className="text-sm font-semibold px-1.5 py-0.5 rounded flex-shrink-0"
                             style={{ backgroundColor: tierColor.bg, color: tierColor.text }}
                           >{tier}</span>
-                          {expiryBadge && <span className={`text-xs font-medium px-1.5 py-0.5 rounded flex-shrink-0 ${expiryBadge.cls}`}>{expiryBadge.label}</span>}
+                          {expiryBadge && <span className={`text-sm font-medium px-1.5 py-0.5 rounded flex-shrink-0 ${expiryBadge.cls}`}>{expiryBadge.label}</span>}
                         </div>
                         <div className="flex items-center gap-1.5 text-sm truncate">
                           {(member.home_amphure || member.campaign_name) && (
@@ -327,7 +327,7 @@ export default function PendingCallsPage() {
                           )}
                         </div>
                         {member.latest_note && (
-                          <div className="text-xs text-warm-600 dark:text-warm-200 mt-1 truncate italic">
+                          <div className="text-sm text-warm-600 dark:text-warm-200 mt-1 truncate italic">
                             "{member.latest_note}"
                           </div>
                         )}
@@ -338,7 +338,7 @@ export default function PendingCallsPage() {
                             const badge = getStatusBadge(member.call_status, member.latest_log_status)
                             return (
                               <>
-                                <span className="px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap"
+                                <span className="px-2 py-0.5 rounded text-sm font-medium whitespace-nowrap"
                                   style={{ backgroundColor: badge.bg, color: badge.text }}>
                                   {badge.label}
                                 </span>
@@ -351,7 +351,7 @@ export default function PendingCallsPage() {
                             )
                           })()}
                         </div>
-                        <span className="text-xs text-warm-400 dark:text-warm-dark-400">
+                        <span className="text-sm text-warm-400 dark:text-warm-dark-400">
                           {member.answered_count}/{member.total_calls} รับ
                         </span>
                       </div>
@@ -371,7 +371,7 @@ export default function PendingCallsPage() {
                           <span className="text-base font-medium text-warm-900 dark:text-warm-50 group-hover:text-teal transition-colors truncate">
                             {member.full_name}
                           </span>
-                          {expiryBadge && <span className={`text-xs font-medium px-1.5 py-0.5 rounded flex-shrink-0 ${expiryBadge.cls}`}>{expiryBadge.label}</span>}
+                          {expiryBadge && <span className={`text-sm font-medium px-1.5 py-0.5 rounded flex-shrink-0 ${expiryBadge.cls}`}>{expiryBadge.label}</span>}
                         </div>
                         <div className="flex items-center gap-1.5 text-sm truncate">
                           {(member.home_amphure || member.campaign_name) && (
@@ -381,7 +381,7 @@ export default function PendingCallsPage() {
                           )}
                         </div>
                         {member.latest_note && (
-                          <div className="text-xs text-warm-600 dark:text-warm-200 mt-0.5 truncate italic">
+                          <div className="text-sm text-warm-600 dark:text-warm-200 mt-0.5 truncate italic">
                             "{member.latest_note}"
                           </div>
                         )}
@@ -391,13 +391,13 @@ export default function PendingCallsPage() {
                     {/* Tier */}
                     <div className="flex justify-center">
                       <span
-                        className="text-xs font-semibold px-1.5 py-0.5 rounded"
+                        className="text-sm font-semibold px-1.5 py-0.5 rounded"
                         style={{ backgroundColor: tierColor.bg, color: tierColor.text }}
                       >{tier}</span>
                     </div>
 
                     {/* Answered/Total */}
-                    <div className="text-center text-xs text-warm-500 dark:text-warm-dark-500">
+                    <div className="text-center text-sm text-warm-500 dark:text-warm-dark-500">
                       <span className="font-semibold text-warm-900 dark:text-warm-50">{member.answered_count}</span>
                       <span className="text-warm-300 dark:text-warm-dark-500">/</span>
                       <span>{member.total_calls}</span>
@@ -409,7 +409,7 @@ export default function PendingCallsPage() {
                         const badge = getStatusBadge(member.call_status, member.latest_log_status)
                         return (
                           <>
-                            <span className="px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap"
+                            <span className="px-2 py-0.5 rounded text-sm font-medium whitespace-nowrap"
                               style={{ backgroundColor: badge.bg, color: badge.text }}>
                               {badge.label}
                             </span>

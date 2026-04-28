@@ -61,11 +61,11 @@ function ExpandableDescription({ text }) {
   }, [text])
   return (
     <div className="flex items-baseline gap-1 mt-1">
-      <p ref={ref} className={`text-xs text-warm-400 dark:text-disc-muted ${expanded ? '' : 'line-clamp-1'}`}>
+      <p ref={ref} className={`text-sm text-warm-400 dark:text-disc-muted ${expanded ? '' : 'line-clamp-1'}`}>
         {parseLinks(text)}
       </p>
       {(clamped || expanded) && (
-        <button onClick={() => setExpanded(!expanded)} className="text-xs text-teal hover:underline shrink-0">
+        <button onClick={() => setExpanded(!expanded)} className="text-sm text-teal hover:underline shrink-0">
           {expanded ? 'ย่อ' : 'ดูเพิ่ม'}
         </button>
       )}
@@ -400,7 +400,7 @@ export default function CampaignPage({ params }) {
       <div className="bg-card-bg border border-warm-200 dark:border-disc-border border-l-4 border-l-violet-500 dark:border-l-violet-400 rounded-lg px-4 py-3 mb-4">
         <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
           <h1 className="text-base font-semibold text-warm-900 dark:text-disc-text">{campaign?.name}</h1>
-          <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-warm-500 dark:text-disc-muted">
+          <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-sm text-warm-500 dark:text-disc-muted">
             <span>สมาชิก <span className="font-semibold text-warm-900 dark:text-disc-text">{stats.total}</span></span>
             <span>โทรแล้ว <span className="font-semibold text-warm-900 dark:text-disc-text">{stats.called}/{stats.total}</span></span>
             <span>มอบหมาย <span className="font-semibold text-warm-900 dark:text-disc-text">{stats.assigned}</span></span>
@@ -526,7 +526,7 @@ export default function CampaignPage({ params }) {
           grid items-center px-3 py-2.5
           bg-warm-100 dark:bg-disc-header
           border-b border-warm-200 dark:border-disc-border
-          text-xs font-medium text-warm-500 dark:text-disc-muted
+          text-sm font-medium text-warm-500 dark:text-disc-muted
           [grid-template-columns:40px_1fr_36px]
           md:[grid-template-columns:40px_40px_1fr_36px_120px_88px_32px]
         ">
@@ -586,8 +586,8 @@ export default function CampaignPage({ params }) {
                         <span className="truncate text-base font-medium text-warm-900 dark:text-disc-text">
                           {member.full_name}
                         </span>
-                        {expiryBadge && <span className={`shrink-0 text-xs font-medium px-1.5 py-0.5 rounded ${expiryBadge.cls}`}>{expiryBadge.label}</span>}
-                        {!hasPhone && <span className="shrink-0 text-xs text-warm-400 dark:text-disc-muted font-normal">ไม่มีเบอร์</span>}
+                        {expiryBadge && <span className={`shrink-0 text-sm font-medium px-1.5 py-0.5 rounded ${expiryBadge.cls}`}>{expiryBadge.label}</span>}
+                        {!hasPhone && <span className="shrink-0 text-sm text-warm-400 dark:text-disc-muted font-normal">ไม่มีเบอร์</span>}
                       </div>
                       <div className="flex items-center gap-1.5 text-sm text-warm-500 dark:text-warm-200 truncate">
                         <span
@@ -608,19 +608,19 @@ export default function CampaignPage({ params }) {
                         )}
                       </div>
                       {member.last_note && (
-                        <div className="text-xs text-warm-600 dark:text-warm-200 mt-0.5 truncate italic">
+                        <div className="text-sm text-warm-600 dark:text-warm-200 mt-0.5 truncate italic">
                           "{member.last_note}"
                         </div>
                       )}
                     </div>
                     <div className={`flex justify-center ${dimmed}`}>
-                      <span className="px-1.5 py-0.5 rounded text-xs font-semibold"
+                      <span className="px-1.5 py-0.5 rounded text-sm font-semibold"
                         style={{ backgroundColor: tierColor.bg, color: tierColor.text }}>{tier}</span>
                     </div>
                     <div className={`hidden md:block text-sm truncate pr-2 ${dimmed}`}>
                       {member.assigned_to
                         ? <a href={`https://discord.com/users/${member.assigned_to}`} target="_blank" rel="noopener noreferrer" className="text-teal hover:underline">{usersMap[member.assigned_to] || member.assigned_to}</a>
-                        : <span className="px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap" style={{ backgroundColor: badge.bg, color: badge.text }}>{badge.label}</span>}
+                        : <span className="px-2 py-0.5 rounded text-sm font-medium whitespace-nowrap" style={{ backgroundColor: badge.bg, color: badge.text }}>{badge.label}</span>}
                     </div>
                     <div className={`hidden md:block text-sm text-warm-500 dark:text-disc-muted truncate pr-2 ${dimmed}`}>
                       {member.home_district || '—'}
@@ -653,10 +653,10 @@ export default function CampaignPage({ params }) {
                             const logColor = LOG_STATUS_COLOR[log.status] ? { bg: LOG_STATUS_COLOR[log.status], text: '#fff' } : { bg: '#f3f4f6', text: '#6b7280' }
                             return (
                             <div key={log.id} className="flex items-baseline gap-3 text-sm py-0.5">
-                              <span className="text-warm-400 dark:text-disc-muted tabular-nums shrink-0 text-xs">
+                              <span className="text-warm-400 dark:text-disc-muted tabular-nums shrink-0 text-sm">
                                 {new Date(log.called_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}
                               </span>
-                              <span className="px-1.5 py-0.5 rounded text-xs font-semibold shrink-0" style={{ backgroundColor: logColor.bg, color: logColor.text }}>
+                              <span className="px-1.5 py-0.5 rounded text-sm font-semibold shrink-0" style={{ backgroundColor: logColor.bg, color: logColor.text }}>
                                 {LOG_STATUS_LABEL[log.status] || log.status}
                               </span>
                               {log.caller_name && log.called_by ? (
@@ -687,7 +687,7 @@ export default function CampaignPage({ params }) {
 
         {/* Scroll sentinel */}
         <div ref={sentinelRef}
-          className="px-6 py-3 text-center text-xs text-warm-400 dark:text-disc-muted border-t border-warm-200 dark:border-disc-border">
+          className="px-6 py-3 text-center text-sm text-warm-400 dark:text-disc-muted border-t border-warm-200 dark:border-disc-border">
           {loadingMore
             ? 'กำลังโหลดเพิ่มเติม...'
             : !loadingInitial && members.length > 0

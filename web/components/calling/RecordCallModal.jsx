@@ -104,7 +104,7 @@ function ExpandableText({ text, clamp = 'line-clamp-2', className = '' }) {
         {parseLinks(text)}
       </p>
       {(clamped || expanded) && (
-        <button onClick={() => setExpanded(!expanded)} className="text-xs text-teal hover:underline shrink-0">
+        <button onClick={() => setExpanded(!expanded)} className="text-sm text-teal hover:underline shrink-0">
           {expanded ? 'ย่อ' : 'ดูเพิ่ม'}
         </button>
       )}
@@ -235,10 +235,10 @@ export default function RecordCallModal({ isOpen, member, onClose, onSave, onSav
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <span className="font-semibold text-base text-warm-900 dark:text-warm-50 truncate">{member.full_name}</span>
-                  <span className="text-xs font-semibold px-1.5 py-0.5 rounded flex-shrink-0"
+                  <span className="text-sm font-semibold px-1.5 py-0.5 rounded flex-shrink-0"
                     style={{ backgroundColor: tierColor.bg, color: tierColor.text }}>{tier}</span>
-                  {expiryBadge && <span className={`text-xs font-medium px-1.5 py-0.5 rounded flex-shrink-0 ${expiryBadge.cls}`}>{expiryBadge.label}</span>}
-                  {member.source_id && <span className="text-xs text-warm-300 dark:text-warm-dark-500 flex-shrink-0">#{member.source_id}</span>}
+                  {expiryBadge && <span className={`text-sm font-medium px-1.5 py-0.5 rounded flex-shrink-0 ${expiryBadge.cls}`}>{expiryBadge.label}</span>}
+                  {member.source_id && <span className="text-sm text-warm-300 dark:text-warm-dark-500 flex-shrink-0">#{member.source_id}</span>}
                 </div>
                 <div className="text-sm text-warm-400 dark:text-warm-dark-400 truncate mt-0.5">
                   {[member.home_district, member.home_amphure, member.home_province].filter(Boolean).join(' · ') || '—'}
@@ -295,7 +295,7 @@ export default function RecordCallModal({ isOpen, member, onClose, onSave, onSav
               </div>
 
               {(member.email || member.facebook_id) && (
-                <div className="text-xs space-y-1 pt-1">
+                <div className="text-sm space-y-1 pt-1">
                   {member.email && (
                     <a href={`mailto:${member.email}`} className="flex items-center gap-1.5 text-warm-500 dark:text-warm-dark-400 hover:text-teal truncate">
                       <span>✉️</span>
@@ -319,7 +319,7 @@ export default function RecordCallModal({ isOpen, member, onClose, onSave, onSav
 
             {/* Call History — compact */}
             <div>
-              <div className="text-xs font-semibold text-warm-500 dark:text-warm-dark-400 mb-1.5">
+              <div className="text-sm font-semibold text-warm-500 dark:text-warm-dark-400 mb-1.5">
                 ประวัติ{history.length > 0 && (
                   <span className="font-normal ml-1">
                     ({history.filter(l => l.status === 'answered').length}/{history.length} รับ)
@@ -327,9 +327,9 @@ export default function RecordCallModal({ isOpen, member, onClose, onSave, onSav
                 )}
               </div>
               {historyLoading ? (
-                <div className="text-xs text-warm-400 dark:text-warm-dark-400">โหลด...</div>
+                <div className="text-sm text-warm-400 dark:text-warm-dark-400">โหลด...</div>
               ) : history.length === 0 ? (
-                <div className="text-xs text-warm-400 dark:text-warm-dark-400">ยังไม่มี</div>
+                <div className="text-sm text-warm-400 dark:text-warm-dark-400">ยังไม่มี</div>
               ) : (
                 <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
                   {history.map(log => {
@@ -338,27 +338,27 @@ export default function RecordCallModal({ isOpen, member, onClose, onSave, onSav
                       <div key={log.id} className="rounded-lg p-2 bg-white dark:bg-warm-dark-100 border border-warm-200 dark:border-warm-dark-300">
                         <div className="flex items-center justify-between gap-2 mb-1">
                           <div className="flex items-center gap-1.5">
-                            <span className="px-1.5 py-0.5 rounded text-xs font-semibold" style={{ backgroundColor: s.bg, color: s.text }}>{s.label}</span>
+                            <span className="px-1.5 py-0.5 rounded text-sm font-semibold" style={{ backgroundColor: s.bg, color: s.text }}>{s.label}</span>
                             {log.caller_name && (
                               <a
                                 href={`https://discord.com/users/${log.called_by}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-xs text-teal hover:underline"
+                                className="text-sm text-teal hover:underline"
                                 title={log.caller_name}
                               >
                                 {log.caller_name}
                               </a>
                             )}
                           </div>
-                          <span className="text-warm-400 dark:text-warm-dark-500 text-xs tabular-nums">
+                          <span className="text-warm-400 dark:text-warm-dark-500 text-sm tabular-nums">
                             {new Date(log.called_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}
                           </span>
                         </div>
                         {log.note && (
                           <ExpandableText
                             text={log.note}
-                            className="text-xs text-warm-800 dark:text-warm-100 leading-snug"
+                            className="text-sm text-warm-800 dark:text-warm-100 leading-snug"
                           />
                         )}
                       </div>
@@ -375,21 +375,21 @@ export default function RecordCallModal({ isOpen, member, onClose, onSave, onSav
             {/* 2️⃣ Campaign info */}
             <div className="bg-white dark:bg-warm-dark-100 rounded-lg p-3 border border-warm-200 dark:border-warm-dark-300 space-y-2">
               <div>
-                <div className="text-xs text-warm-400 dark:text-warm-dark-400 mb-0.5">Campaign</div>
+                <div className="text-sm text-warm-400 dark:text-warm-dark-400 mb-0.5">Campaign</div>
                 <div className="text-sm font-semibold text-warm-900 dark:text-warm-50">{member.campaign_name || '—'}</div>
               </div>
               {member.campaign_description && (
                 <div>
-                  <div className="text-xs text-warm-400 dark:text-warm-dark-400 mb-0.5">รายละเอียด</div>
+                  <div className="text-sm text-warm-400 dark:text-warm-dark-400 mb-0.5">รายละเอียด</div>
                   <ExpandableText
                     text={member.campaign_description}
-                    className="text-xs text-warm-700 dark:text-warm-200"
+                    className="text-sm text-warm-700 dark:text-warm-200"
                   />
                 </div>
               )}
               {member.event_date && (
                 <div>
-                  <div className="text-xs text-warm-400 dark:text-warm-dark-400 mb-0.5">วันที่กิจกรรม</div>
+                  <div className="text-sm text-warm-400 dark:text-warm-dark-400 mb-0.5">วันที่กิจกรรม</div>
                   <div className="text-sm font-semibold text-orange-600 dark:text-orange-400">
                     {formatEventDate(member.event_date)}
                   </div>
@@ -464,22 +464,22 @@ export default function RecordCallModal({ isOpen, member, onClose, onSave, onSav
                 <div className="flex items-center justify-between">
                   <div className="text-sm font-semibold text-warm-700 dark:text-warm-200">Signal การติดต่อ</div>
                   {!signalsFilled && (
-                    <div className="text-xs text-orange-500 font-medium">เลือกอย่างน้อย 1 ด้าน</div>
+                    <div className="text-sm text-orange-500 font-medium">เลือกอย่างน้อย 1 ด้าน</div>
                   )}
                 </div>
                 {SIGNALS.map(sig => (
                   <div key={sig.key}>
                     <div className="flex items-baseline gap-2 mb-1.5">
                       <span className="text-sm font-semibold text-warm-700 dark:text-warm-200">{sig.label}</span>
-                      <span className="text-xs text-warm-400 dark:text-warm-dark-400">{sig.hint}</span>
+                      <span className="text-sm text-warm-400 dark:text-warm-dark-400">{sig.hint}</span>
                     </div>
-                    <div className="grid grid-cols-4 gap-1">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-1">
                       {sig.options.map(opt => (
                         <button
                           key={opt.value}
                           type="button"
                           onClick={() => setSignals(prev => ({ ...prev, [sig.key]: opt.value }))}
-                          className={`py-1.5 px-1 text-xs rounded-md border transition text-center font-medium ${
+                          className={`py-1.5 px-1 text-sm rounded-md border transition text-center font-medium ${
                             signals[sig.key] === opt.value
                               ? 'bg-teal border-teal text-white'
                               : 'border-warm-200 dark:border-warm-dark-300 text-warm-700 dark:text-warm-200 bg-white dark:bg-warm-dark-100 hover:border-teal hover:text-teal'

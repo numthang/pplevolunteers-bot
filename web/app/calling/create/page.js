@@ -90,7 +90,7 @@ export default function CreateCampaignPage() {
             <label className="block text-sm font-semibold mb-1.5 text-gray-700 dark:text-gray-300">จังหวัด</label>
             <select value={province} onChange={e => setProvince(e.target.value)} className={inputCls}>
               <option value="">-- ไม่ระบุ --</option>
-              {PROVINCES.map(p => <option key={p} value={p}>{p}</option>)}
+              {[...PROVINCES].sort((a, b) => a.localeCompare(b, 'th')).map(p => <option key={p} value={p}>{p}</option>)}
             </select>
           </div>
 
