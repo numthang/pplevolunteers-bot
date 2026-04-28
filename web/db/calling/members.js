@@ -89,7 +89,7 @@ export async function getMembersCount() {
  * Status: 'called' (has calls) | 'assigned' (assigned to someone) | 'unassigned'
  */
 export async function getMembersInCampaign(campaignId, filters = {}, limit = 100, offset = 0) {
-  const { amphure, subdistricts, tier, status, assignedTo, rsvp, name, expiry } = filters
+  const { amphure, subdistricts, tier, status, assignedTo, rsvp, name, expiry, called } = filters
 
   let query = `SELECT
        m.*,
@@ -144,6 +144,7 @@ export async function getMembersInCampaign(campaignId, filters = {}, limit = 100
   query += `
      GROUP BY m.source_id
      HAVING (? IS NULL OR member_status = ?)
+       AND (? IS NULL OR (? = 'called' AND total_calls > 0) OR (? = 'uncalled' AND total_calls = 0))
      ORDER BY m.home_amphure ASC, m.first_name ASC, m.source_id ASC
      LIMIT ? OFFSET ?`
 
@@ -153,6 +154,7 @@ export async function getMembersInCampaign(campaignId, filters = {}, limit = 100
     rsvp || null, rsvp || null,
     name || null, name ? `%${name}%` : null,
     status || null, status || null,
+    called || null, called || null, called || null,
     limit, offset
   )
 

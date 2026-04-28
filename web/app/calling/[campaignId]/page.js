@@ -102,10 +102,10 @@ export default function CampaignPage({ params }) {
   const [subdistrictsOpen, setSubdistrictsOpen] = useState(false)
   const subdistrictsRef = useRef(null)
   const [filterTier, setFilterTier] = useState(() => searchParams.get('tier') || '')
-  const [filterStatus, setFilterStatus] = useState(() => searchParams.get('status') || '')
   const [filterAssignee, setFilterAssignee] = useState(() => searchParams.get('assignee') || '')
   const [filterRsvp, setFilterRsvp] = useState(() => searchParams.get('rsvp') || '')
   const [filterExpiry, setFilterExpiry] = useState(() => searchParams.get('expiry') || '')
+  const [filterCalled, setFilterCalled] = useState(() => searchParams.get('called') || '')
   const [splitModalOpen, setSplitModalOpen] = useState(false)
   const [expandedId, setExpandedId] = useState(null)
   const [logsCache, setLogsCache] = useState({})
@@ -163,13 +163,13 @@ export default function CampaignPage({ params }) {
     if (filterAmphure)  p.set('amphure', filterAmphure)
     if (filterSubdistricts.size > 0) p.set('subdistricts', Array.from(filterSubdistricts).join(','))
     if (filterTier)     p.set('tier', filterTier)
-    if (filterStatus)   p.set('status', filterStatus)
     if (filterAssignee) p.set('assignee', filterAssignee)
     if (filterRsvp)     p.set('rsvp', filterRsvp)
     if (filterExpiry)   p.set('expiry', filterExpiry)
+    if (filterCalled)   p.set('called', filterCalled)
     const qs = p.toString()
     router.replace(qs ? `/calling/${campaignId}?${qs}` : `/calling/${campaignId}`, { scroll: false })
-  }, [debouncedName, filterAmphure, filterSubdistricts, filterTier, filterStatus, filterAssignee, filterRsvp, filterExpiry])
+  }, [debouncedName, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, filterExpiry, filterCalled])
 
   const offsetRef = useRef(0)
   const sentinelRef = useRef(null)
@@ -179,28 +179,28 @@ export default function CampaignPage({ params }) {
   useEffect(() => { loadingMoreRef.current = loadingMore }, [loadingMore])
   useEffect(() => { hasMoreRef.current = hasMore }, [hasMore])
 
-  const buildMembersUrl = (offset, amphure, subdistricts, tier, status, assignee, rsvp, name, expiry) => {
+  const buildMembersUrl = (offset, amphure, subdistricts, tier, assignee, rsvp, name, expiry, called) => {
     const limit = amphure ? 9999 : PAGE_SIZE
     const p = new URLSearchParams({ campaignId, limit, offset })
     if (amphure) p.set('amphure', amphure)
     if (subdistricts && subdistricts.size > 0) p.set('subdistricts', Array.from(subdistricts).join(','))
     if (tier)     p.set('tier', tier)
-    if (status)   p.set('status', status)
     if (assignee) p.set('assignedTo', assignee)
     if (rsvp)     p.set('rsvp', rsvp)
     if (name)     p.set('name', name)
     if (expiry)   p.set('expiry', expiry)
+    if (called)   p.set('called', called)
     return `/api/calling/members?${p}`
   }
 
-  const loadFirst = useCallback(async (amphure, subdistricts, tier, status, assignee, rsvp, name, expiry) => {
+  const loadFirst = useCallback(async (amphure, subdistricts, tier, assignee, rsvp, name, expiry, called) => {
     setLoadingInitial(true)
     setHasMore(false)
     hasMoreRef.current = false
     offsetRef.current = 0
     try {
       const [memberRes, statsRes] = await Promise.all([
-        fetch(buildMembersUrl(0, amphure, subdistricts, tier, status, assignee, rsvp, name, expiry)),
+        fetch(buildMembersUrl(0, amphure, subdistricts, tier, assignee, rsvp, name, expiry, called)),
         fetch(`/api/calling/members?campaignId=${campaignId}&stats=true`)
       ])
       const memberData = await memberRes.json()
@@ -226,7 +226,7 @@ export default function CampaignPage({ params }) {
     loadingMoreRef.current = true
     try {
       const res = await fetch(buildMembersUrl(
-        offsetRef.current, filterAmphure, filterSubdistricts, filterTier, filterStatus, filterAssignee, filterRsvp, debouncedName, filterExpiry
+        offsetRef.current, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled
       ))
       const data = await res.json()
       const newRows = data.data || []
@@ -240,7 +240,7 @@ export default function CampaignPage({ params }) {
       setLoadingMore(false)
       loadingMoreRef.current = false
     }
-  }, [filterAmphure, filterSubdistricts, filterTier, filterStatus, filterAssignee, filterRsvp, debouncedName, filterExpiry])
+  }, [filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled])
 
   useEffect(() => {
     ;(async () => {
@@ -261,8 +261,8 @@ export default function CampaignPage({ params }) {
   }, [campaignId])
 
   useEffect(() => {
-    loadFirst(filterAmphure, filterSubdistricts, filterTier, filterStatus, filterAssignee, filterRsvp, debouncedName, filterExpiry)
-  }, [campaignId, filterAmphure, filterSubdistricts, filterTier, filterStatus, filterAssignee, filterRsvp, debouncedName, filterExpiry])
+    loadFirst(filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled)
+  }, [campaignId, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled])
 
   useEffect(() => {
     const sentinel = sentinelRef.current
@@ -313,7 +313,7 @@ export default function CampaignPage({ params }) {
         }
       }
       setSplitModalOpen(false)
-      await loadFirst(filterAmphure, filterSubdistricts, filterTier, filterStatus, filterAssignee, filterRsvp, debouncedName)
+      await loadFirst(filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName)
     } catch (err) {
       alert('เกิดข้อผิดพลาด: ' + err.message)
     }
@@ -334,13 +334,13 @@ export default function CampaignPage({ params }) {
           })
         )
       )
-      await loadFirst(filterAmphure, filterSubdistricts, filterTier, filterStatus, filterAssignee, filterRsvp, debouncedName)
+      await loadFirst(filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName)
     } catch (err) {
       alert('เกิดข้อผิดพลาด: ' + err.message)
     }
   }
 
-  const hasActiveFilters = !!(filterName || filterAmphure || filterSubdistricts.size > 0 || filterTier || filterStatus || filterAssignee || filterRsvp || filterExpiry)
+  const hasActiveFilters = !!(filterName || filterAmphure || filterSubdistricts.size > 0 || filterTier || filterAssignee || filterRsvp || filterExpiry || filterCalled)
 
   const clearFilters = () => {
     setFilterName('')
@@ -348,10 +348,10 @@ export default function CampaignPage({ params }) {
     setFilterAmphure('')
     setFilterSubdistricts(new Set())
     setFilterTier('')
-    setFilterStatus('')
     setFilterAssignee('')
     setFilterRsvp('')
     setFilterExpiry('')
+    setFilterCalled('')
   }
 
   const assignees = (stats.assigneeCounts || [])
@@ -449,17 +449,17 @@ export default function CampaignPage({ params }) {
           {['A','B','C','D'].map(t => <option key={t} value={t}>{t}</option>)}
         </select>
 
-        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className={FILTER_CLS}>
-          <option value="">สถานะ</option>
-          <option value="unassigned">รอมอบหมาย</option>
-          <option value="assigned">มอบหมายแล้ว</option>
-        </select>
-
         <select value={filterAssignee} onChange={e => setFilterAssignee(e.target.value)} className={FILTER_CLS}>
           <option value="">ผู้รับผิดชอบ</option>
           {assignees.map(a => (
             <option key={a.id} value={a.id}>{a.name} ({a.count})</option>
           ))}
+        </select>
+
+        <select value={filterCalled} onChange={e => setFilterCalled(e.target.value)} className={FILTER_CLS}>
+          <option value="">สถานะ</option>
+          <option value="called">โทรแล้ว</option>
+          <option value="uncalled">รอโทร</option>
         </select>
 
         <select value={filterRsvp} onChange={e => setFilterRsvp(e.target.value)} className={FILTER_CLS}>
@@ -494,7 +494,7 @@ export default function CampaignPage({ params }) {
           border-b border-warm-200 dark:border-disc-border
           text-base font-medium text-warm-500 dark:text-disc-muted
           [grid-template-columns:40px_1fr_44px]
-          md:[grid-template-columns:40px_40px_1fr_44px_120px_88px_40px]
+          md:[grid-template-columns:40px_40px_1fr_44px_120px_88px_80px]
         ">
           <input type="checkbox" checked={isAllSelected} onChange={handleSelectAll}
             className="w-6 h-6 accent-teal cursor-pointer" />
@@ -507,7 +507,7 @@ export default function CampaignPage({ params }) {
           <span className="text-center">ระดับ</span>
           <span className="hidden md:block">มอบหมาย</span>
           <span className="hidden md:block">ตำบล</span>
-          <span className="hidden md:block text-right">โทร</span>
+          <span className="hidden md:block text-center">โทร</span>
         </div>
 
         {/* Rows */}
@@ -539,7 +539,7 @@ export default function CampaignPage({ params }) {
                     grid items-center px-3 py-3
                     hover:bg-warm-50 dark:hover:bg-disc-hover transition-colors
                     [grid-template-columns:40px_1fr_44px]
-                    md:[grid-template-columns:40px_40px_1fr_44px_120px_88px_40px]
+                    md:[grid-template-columns:40px_40px_1fr_44px_120px_88px_80px]
                     ${isExpanded ? 'bg-warm-50 dark:bg-disc-hover' : ''}
                   `}>
                     <input type="checkbox"
@@ -591,8 +591,10 @@ export default function CampaignPage({ params }) {
                     <div className={`hidden md:block text-base text-warm-500 dark:text-disc-muted truncate pr-2 ${dimmed}`}>
                       {member.home_district || '—'}
                     </div>
-                    <div className={`hidden md:block text-base text-warm-500 dark:text-disc-muted text-right ${dimmed}`}>
-                      {member.total_calls || 0}
+                    <div className={`hidden md:block text-center ${dimmed}`}>
+                      {member.total_calls > 0
+                        ? <span className="px-2 py-0.5 rounded text-sm font-medium bg-teal-light text-teal dark:bg-teal-dim dark:text-teal-bright whitespace-nowrap">โทรแล้ว</span>
+                        : <span className="px-2 py-0.5 rounded text-sm font-medium bg-warm-100 text-warm-400 dark:bg-disc-bg2 dark:text-disc-muted whitespace-nowrap">รอโทร</span>}
                     </div>
                   </div>
 
