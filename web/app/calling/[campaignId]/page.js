@@ -61,17 +61,19 @@ function ExpandableDescription({ text }) {
   }, [text])
   return (
     <div className="flex items-baseline gap-1 mt-1">
-      <p ref={ref} className={`text-sm text-warm-400 dark:text-disc-muted ${expanded ? '' : 'line-clamp-1'}`}>
+      <p ref={ref} className={`text-base text-warm-400 dark:text-disc-muted ${expanded ? '' : 'line-clamp-1'}`}>
         {parseLinks(text)}
       </p>
       {(clamped || expanded) && (
-        <button onClick={() => setExpanded(!expanded)} className="text-sm text-teal hover:underline shrink-0">
+        <button onClick={() => setExpanded(!expanded)} className="text-base text-teal hover:underline shrink-0">
           {expanded ? 'ย่อ' : 'ดูเพิ่ม'}
         </button>
       )}
     </div>
   )
 }
+
+const FILTER_CLS = 'h-11 px-3 text-base border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text rounded-lg focus:outline-none focus:ring-2 focus:ring-teal w-full sm:w-auto'
 
 export default function CampaignPage({ params }) {
   const { campaignId } = use(params)
@@ -121,13 +123,11 @@ export default function CampaignPage({ params }) {
     }
   }
 
-  // Debounce name input 400ms
   useEffect(() => {
     const t = setTimeout(() => setDebouncedName(filterName), 400)
     return () => clearTimeout(t)
   }, [filterName])
 
-  // Close dropdown on click outside
   useEffect(() => {
     function handleClickOutside(event) {
       if (subdistrictsRef.current && !subdistrictsRef.current.contains(event.target)) {
@@ -140,7 +140,6 @@ export default function CampaignPage({ params }) {
     }
   }, [subdistrictsOpen])
 
-  // Fetch subdistricts when amphure changes
   useEffect(() => {
     if (!filterAmphure) {
       setAvailableSubdistricts([])
@@ -158,7 +157,6 @@ export default function CampaignPage({ params }) {
       .finally(() => setLoadingSubdistricts(false))
   }, [campaignId, filterAmphure])
 
-  // Sync filters → URL
   useEffect(() => {
     const p = new URLSearchParams()
     if (debouncedName)  p.set('name', debouncedName)
@@ -178,7 +176,6 @@ export default function CampaignPage({ params }) {
   const loadingMoreRef = useRef(false)
   const hasMoreRef = useRef(false)
 
-  // Keep refs in sync for use inside IntersectionObserver closure
   useEffect(() => { loadingMoreRef.current = loadingMore }, [loadingMore])
   useEffect(() => { hasMoreRef.current = hasMore }, [hasMore])
 
@@ -196,16 +193,9 @@ export default function CampaignPage({ params }) {
     return `/api/calling/members?${p}`
   }
 
-  const fetchStats = useCallback(async () => {
-    const res = await fetch(`/api/calling/members?campaignId=${campaignId}&stats=true`)
-    const data = await res.json()
-    if (data.data) setStats(data.data)
-  }, [campaignId])
-
-  // Load first page; reset member list
   const loadFirst = useCallback(async (amphure, subdistricts, tier, status, assignee, rsvp, name, expiry) => {
     setLoadingInitial(true)
-    setHasMore(false)         // disconnect observer before resetting offset
+    setHasMore(false)
     hasMoreRef.current = false
     offsetRef.current = 0
     try {
@@ -221,7 +211,6 @@ export default function CampaignPage({ params }) {
       hasMoreRef.current = memberData.hasMore || false
       offsetRef.current = newRows.length
       setSelectedMembers(new Set())
-
       const statsData = await statsRes.json()
       if (statsData.data) setStats(statsData.data)
     } catch (err) {
@@ -231,7 +220,6 @@ export default function CampaignPage({ params }) {
     }
   }, [campaignId])
 
-  // Load next page; append
   const loadMore = useCallback(async () => {
     if (loadingMoreRef.current || !hasMoreRef.current) return
     setLoadingMore(true)
@@ -254,7 +242,6 @@ export default function CampaignPage({ params }) {
     }
   }, [filterAmphure, filterSubdistricts, filterTier, filterStatus, filterAssignee, filterRsvp, debouncedName, filterExpiry])
 
-  // Initial: fetch campaign + users (only once per campaignId)
   useEffect(() => {
     ;(async () => {
       const [campaignRes, usersRes] = await Promise.all([
@@ -264,7 +251,6 @@ export default function CampaignPage({ params }) {
       const cData = await campaignRes.json()
       const camp = cData.data?.find(c => c.id === parseInt(campaignId))
       if (camp) setCampaign(camp)
-
       const uData = await usersRes.json()
       if (uData.data) {
         const map = {}
@@ -274,7 +260,6 @@ export default function CampaignPage({ params }) {
     })()
   }, [campaignId])
 
-  // Re-fetch members when filters change (or on mount)
   useEffect(() => {
     loadFirst(filterAmphure, filterSubdistricts, filterTier, filterStatus, filterAssignee, filterRsvp, debouncedName, filterExpiry)
   }, [campaignId, filterAmphure, filterSubdistricts, filterTier, filterStatus, filterAssignee, filterRsvp, debouncedName, filterExpiry])
@@ -289,7 +274,6 @@ export default function CampaignPage({ params }) {
     return () => observer.disconnect()
   }, [hasMore, loadMore])
 
-  // Selection handlers
   const handleSelectAll = () => {
     if (selectedMembers.size === members.length && members.length > 0) {
       setSelectedMembers(new Set())
@@ -304,19 +288,16 @@ export default function CampaignPage({ params }) {
     setSelectedMembers(s)
   }
 
-  // Assign (split) handler
   const handleSplit = async (assigneeIds) => {
     try {
       let targets
       if (selectedMembers.size > 0) {
         targets = members.filter(m => selectedMembers.has(m.source_id)).map(m => m.source_id)
       } else {
-        // Fetch all unassigned IDs from server (not limited to loaded page)
         const res = await fetch(`/api/calling/members?campaignId=${campaignId}&status=unassigned&limit=500&offset=0`)
         const data = await res.json()
         targets = (data.data || []).map(m => m.source_id)
       }
-
       const perPerson = Math.ceil(targets.length / assigneeIds.length)
       for (let i = 0; i < assigneeIds.length; i++) {
         const chunk = targets.slice(i * perPerson, (i + 1) * perPerson)
@@ -324,11 +305,7 @@ export default function CampaignPage({ params }) {
         const res = await fetch('/api/calling/assignments', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            campaign_id: parseInt(campaignId),
-            member_ids: chunk,
-            assigned_to: assigneeIds[i]
-          })
+          body: JSON.stringify({ campaign_id: parseInt(campaignId), member_ids: chunk, assigned_to: assigneeIds[i] })
         })
         if (!res.ok) {
           const err = await res.json()
@@ -342,7 +319,6 @@ export default function CampaignPage({ params }) {
     }
   }
 
-  // Unassign handler
   const handleUnassign = async () => {
     const ids = Array.from(selectedMembers)
     if (!confirm(`ยกเลิกมอบหมาย ${ids.length} คน?`)) return
@@ -378,7 +354,6 @@ export default function CampaignPage({ params }) {
     setFilterExpiry('')
   }
 
-  // Assignees from stats (all assigned members, not limited to loaded page)
   const assignees = (stats.assigneeCounts || [])
     .map(a => ({ id: a.id, name: usersMap[a.id] || a.id, count: a.count }))
     .sort((a, b) => a.name.localeCompare(b.name))
@@ -386,11 +361,10 @@ export default function CampaignPage({ params }) {
   const isAllSelected = members.length > 0 && selectedMembers.size === members.length
 
   if (loadingInitial && !campaign) {
-    return <div className="py-20 text-center text-warm-400 dark:text-disc-muted text-sm">กำลังโหลด...</div>
+    return <div className="py-20 text-center text-warm-400 dark:text-disc-muted text-base">กำลังโหลด...</div>
   }
-
   if (!loadingInitial && !campaign) {
-    return <div className="py-20 text-center text-red-500">ไม่พบแคมเปญ</div>
+    return <div className="py-20 text-center text-red-500 text-base">ไม่พบแคมเปญ</div>
   }
 
   return (
@@ -399,8 +373,8 @@ export default function CampaignPage({ params }) {
       {/* Campaign Header */}
       <div className="bg-card-bg border border-warm-200 dark:border-disc-border border-l-4 border-l-violet-500 dark:border-l-violet-400 rounded-lg px-4 py-3 mb-4">
         <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-          <h1 className="text-base font-semibold text-warm-900 dark:text-disc-text">{campaign?.name}</h1>
-          <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-sm text-warm-500 dark:text-disc-muted">
+          <h1 className="text-lg font-semibold text-warm-900 dark:text-disc-text">{campaign?.name}</h1>
+          <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-base text-warm-500 dark:text-disc-muted">
             <span>สมาชิก <span className="font-semibold text-warm-900 dark:text-disc-text">{stats.total}</span></span>
             <span>โทรแล้ว <span className="font-semibold text-warm-900 dark:text-disc-text">{stats.called}/{stats.total}</span></span>
             <span>มอบหมาย <span className="font-semibold text-warm-900 dark:text-disc-text">{stats.assigned}</span></span>
@@ -419,10 +393,9 @@ export default function CampaignPage({ params }) {
           value={filterName}
           onChange={e => setFilterName(e.target.value)}
           placeholder="ค้นหาชื่อ..."
-          className="h-9 px-3 text-sm border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted rounded-lg focus:outline-none focus:ring-2 focus:ring-teal w-full sm:w-40"
+          className="h-11 px-3 text-base border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted rounded-lg focus:outline-none focus:ring-2 focus:ring-teal w-full sm:w-40"
         />
-        <select value={filterAmphure} onChange={e => setFilterAmphure(e.target.value)}
-          className="h-9 px-3 text-sm border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text rounded-lg focus:outline-none focus:ring-2 focus:ring-teal w-full sm:w-auto">
+        <select value={filterAmphure} onChange={e => setFilterAmphure(e.target.value)} className={FILTER_CLS}>
           <option value="">อำเภอ</option>
           {stats.districts.map(d => (
             <option key={d} value={d}>{d || '(ไม่ระบุ)'} ({stats.districtCounts[d] || 0})</option>
@@ -432,25 +405,25 @@ export default function CampaignPage({ params }) {
         {filterAmphure && (
           <div ref={subdistrictsRef} className="relative">
             {loadingSubdistricts ? (
-              <div className="h-9 px-3 text-sm border border-warm-200 dark:border-disc-border bg-warm-50 dark:bg-disc-bg2 text-warm-900 dark:text-disc-text rounded-lg flex items-center text-xs">
+              <div className="h-11 px-3 text-base border border-warm-200 dark:border-disc-border bg-warm-50 dark:bg-disc-bg2 text-warm-900 dark:text-disc-text rounded-lg flex items-center">
                 กำลังโหลด...
               </div>
             ) : availableSubdistricts.length === 0 ? (
-              <div className="h-9 px-3 text-sm border border-warm-200 dark:border-disc-border bg-warm-50 dark:bg-disc-bg2 text-warm-400 dark:text-disc-muted rounded-lg flex items-center text-xs">
+              <div className="h-11 px-3 text-base border border-warm-200 dark:border-disc-border bg-warm-50 dark:bg-disc-bg2 text-warm-400 dark:text-disc-muted rounded-lg flex items-center">
                 ไม่มีตำบล
               </div>
             ) : (
               <>
                 <button
                   onClick={() => setSubdistrictsOpen(!subdistrictsOpen)}
-                  className="h-9 px-3 text-sm border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text rounded-lg focus:outline-none focus:ring-2 focus:ring-teal w-full text-left flex justify-between items-center"
+                  className="h-11 px-3 text-base border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text rounded-lg focus:outline-none focus:ring-2 focus:ring-teal w-full text-left flex justify-between items-center"
                 >
                   ตำบล {filterSubdistricts.size > 0 && <span>({filterSubdistricts.size})</span>}
                 </button>
                 {subdistrictsOpen && (
                   <div className="absolute top-full left-0 mt-1 bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg shadow-lg z-20 w-56 max-h-60 overflow-y-auto">
                     {availableSubdistricts.map(sub => (
-                      <label key={sub.name} className="flex items-center px-3 py-2 text-sm text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover cursor-pointer">
+                      <label key={sub.name} className="flex items-center px-3 py-2.5 text-base text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover cursor-pointer">
                         <input
                           type="checkbox"
                           checked={filterSubdistricts.has(sub.name)}
@@ -471,39 +444,32 @@ export default function CampaignPage({ params }) {
           </div>
         )}
 
-        <select value={filterTier} onChange={e => setFilterTier(e.target.value)}
-          className="h-9 px-3 text-sm border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text rounded-lg focus:outline-none focus:ring-2 focus:ring-teal w-full sm:w-auto">
+        <select value={filterTier} onChange={e => setFilterTier(e.target.value)} className={FILTER_CLS}>
           <option value="">Tier</option>
-          {['A','B','C','D'].map(t => (
-            <option key={t} value={t}>{t}</option>
-          ))}
+          {['A','B','C','D'].map(t => <option key={t} value={t}>{t}</option>)}
         </select>
 
-        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
-          className="h-9 px-3 text-sm border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text rounded-lg focus:outline-none focus:ring-2 focus:ring-teal w-full sm:w-auto">
+        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className={FILTER_CLS}>
           <option value="">สถานะ</option>
           <option value="unassigned">รอมอบหมาย</option>
           <option value="assigned">มอบหมายแล้ว</option>
         </select>
 
-        <select value={filterAssignee} onChange={e => setFilterAssignee(e.target.value)}
-          className="h-9 px-3 text-sm border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text rounded-lg focus:outline-none focus:ring-2 focus:ring-teal w-full sm:w-auto">
+        <select value={filterAssignee} onChange={e => setFilterAssignee(e.target.value)} className={FILTER_CLS}>
           <option value="">ผู้รับผิดชอบ</option>
           {assignees.map(a => (
             <option key={a.id} value={a.id}>{a.name} ({a.count})</option>
           ))}
         </select>
 
-        <select value={filterRsvp} onChange={e => setFilterRsvp(e.target.value)}
-          className="h-9 px-3 text-sm border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text rounded-lg focus:outline-none focus:ring-2 focus:ring-teal w-full sm:w-auto">
+        <select value={filterRsvp} onChange={e => setFilterRsvp(e.target.value)} className={FILTER_CLS}>
           <option value="">RSVP</option>
           <option value="yes">✓ เข้าร่วม</option>
           <option value="no">✗ ไม่เข้าร่วม</option>
           <option value="maybe">? อาจจะ</option>
         </select>
 
-        <select value={filterExpiry} onChange={e => setFilterExpiry(e.target.value)}
-          className="h-9 px-3 text-sm border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text rounded-lg focus:outline-none focus:ring-2 focus:ring-teal w-full sm:w-auto">
+        <select value={filterExpiry} onChange={e => setFilterExpiry(e.target.value)} className={FILTER_CLS}>
           <option value="">สมาชิกภาพ</option>
           <option value="expiring">ใกล้หมดอายุ (90 วัน)</option>
           <option value="expired">หมดอายุแล้ว</option>
@@ -512,7 +478,7 @@ export default function CampaignPage({ params }) {
         {hasActiveFilters && (
           <button
             onClick={clearFilters}
-            className="h-9 px-3 text-sm border border-warm-200 dark:border-disc-border bg-card-bg text-warm-500 dark:text-disc-muted hover:text-red-500 dark:hover:text-red-400 hover:border-red-300 dark:hover:border-red-700 rounded-lg transition-colors whitespace-nowrap"
+            className="h-11 px-3 text-base border border-warm-200 dark:border-disc-border bg-card-bg text-warm-500 dark:text-disc-muted hover:text-red-500 dark:hover:text-red-400 hover:border-red-300 dark:hover:border-red-700 rounded-lg transition-colors whitespace-nowrap"
           >
             ล้าง filter ×
           </button>
@@ -526,9 +492,9 @@ export default function CampaignPage({ params }) {
           grid items-center px-3 py-2.5
           bg-warm-100 dark:bg-disc-header
           border-b border-warm-200 dark:border-disc-border
-          text-sm font-medium text-warm-500 dark:text-disc-muted
-          [grid-template-columns:40px_1fr_36px]
-          md:[grid-template-columns:40px_40px_1fr_36px_120px_88px_32px]
+          text-base font-medium text-warm-500 dark:text-disc-muted
+          [grid-template-columns:40px_1fr_44px]
+          md:[grid-template-columns:40px_40px_1fr_44px_120px_88px_40px]
         ">
           <input type="checkbox" checked={isAllSelected} onChange={handleSelectAll}
             className="w-6 h-6 accent-teal cursor-pointer" />
@@ -546,14 +512,14 @@ export default function CampaignPage({ params }) {
 
         {/* Rows */}
         {loadingInitial ? (
-          <div className="px-6 py-8 text-center text-warm-400 dark:text-disc-muted text-sm">กำลังโหลด...</div>
+          <div className="px-6 py-8 text-center text-warm-400 dark:text-disc-muted text-base">กำลังโหลด...</div>
         ) : noAccess ? (
           <div className="px-6 py-10 text-center">
-            <p className="text-warm-700 dark:text-warm-100 font-medium mb-1">ยังไม่ได้รับสิทธิ์เข้าถึงส่วนนี้</p>
-            <p className="text-sm text-warm-400 dark:text-warm-dark-500">ต้องการเข้าใช้งาน? ติดต่อฝ่ายเครือข่ายได้เลยนะครับ</p>
+            <p className="text-base text-warm-700 dark:text-warm-100 font-medium mb-1">ยังไม่ได้รับสิทธิ์เข้าถึงส่วนนี้</p>
+            <p className="text-base text-warm-400 dark:text-warm-dark-500">ต้องการเข้าใช้งาน? ติดต่อฝ่ายเครือข่ายได้เลยนะครับ</p>
           </div>
         ) : members.length === 0 ? (
-          <div className="px-6 py-8 text-center text-warm-400 dark:text-disc-muted text-sm">ไม่พบสมาชิก</div>
+          <div className="px-6 py-8 text-center text-warm-400 dark:text-disc-muted text-base">ไม่พบสมาชิก</div>
         ) : (
           <div>
             {members.map((member, idx) => {
@@ -572,24 +538,24 @@ export default function CampaignPage({ params }) {
                   <div className={`
                     grid items-center px-3 py-3
                     hover:bg-warm-50 dark:hover:bg-disc-hover transition-colors
-                    [grid-template-columns:40px_1fr_36px]
-                    md:[grid-template-columns:40px_40px_1fr_36px_120px_88px_32px]
+                    [grid-template-columns:40px_1fr_44px]
+                    md:[grid-template-columns:40px_40px_1fr_44px_120px_88px_40px]
                     ${isExpanded ? 'bg-warm-50 dark:bg-disc-hover' : ''}
                   `}>
                     <input type="checkbox"
                       checked={selectedMembers.has(member.source_id)}
                       onChange={() => handleSelectMember(member.source_id)}
                       className="w-6 h-6 accent-teal cursor-pointer" />
-                    <span className={`hidden md:block text-xs tabular-nums text-warm-400 dark:text-disc-muted ${dimmed}`}>{idx + 1}</span>
+                    <span className={`hidden md:block text-sm tabular-nums text-warm-400 dark:text-disc-muted ${dimmed}`}>{idx + 1}</span>
                     <div className={`min-w-0 pr-2 cursor-pointer ${dimmed}`} onClick={() => handleExpand(member.source_id)}>
                       <div className="flex items-center gap-1.5 truncate">
                         <span className="truncate text-base font-medium text-warm-900 dark:text-disc-text">
                           {member.full_name}
                         </span>
-                        {expiryBadge && <span className={`shrink-0 text-sm font-medium px-1.5 py-0.5 rounded ${expiryBadge.cls}`}>{expiryBadge.label}</span>}
-                        {!hasPhone && <span className="shrink-0 text-sm text-warm-400 dark:text-disc-muted font-normal">ไม่มีเบอร์</span>}
+                        {expiryBadge && <span className={`shrink-0 text-base font-medium px-1.5 py-0.5 rounded ${expiryBadge.cls}`}>{expiryBadge.label}</span>}
+                        {!hasPhone && <span className="shrink-0 text-base text-warm-400 dark:text-disc-muted font-normal">ไม่มีเบอร์</span>}
                       </div>
-                      <div className="flex items-center gap-1.5 text-sm text-warm-500 dark:text-warm-200 truncate">
+                      <div className="flex items-center gap-1.5 text-base text-warm-500 dark:text-warm-200 truncate">
                         <span
                           className="shrink-0 w-1.5 h-1.5 rounded-full inline-block"
                           style={{ backgroundColor: badge.text }}
@@ -608,33 +574,32 @@ export default function CampaignPage({ params }) {
                         )}
                       </div>
                       {member.last_note && (
-                        <div className="text-sm text-warm-600 dark:text-warm-200 mt-0.5 truncate italic">
+                        <div className="text-base text-warm-600 dark:text-warm-200 mt-0.5 truncate italic">
                           "{member.last_note}"
                         </div>
                       )}
                     </div>
                     <div className={`flex justify-center ${dimmed}`}>
-                      <span className="px-1.5 py-0.5 rounded text-sm font-semibold"
+                      <span className="px-1.5 py-0.5 rounded text-base font-semibold"
                         style={{ backgroundColor: tierColor.bg, color: tierColor.text }}>{tier}</span>
                     </div>
-                    <div className={`hidden md:block text-sm truncate pr-2 ${dimmed}`}>
+                    <div className={`hidden md:block text-base truncate pr-2 ${dimmed}`}>
                       {member.assigned_to
                         ? <a href={`https://discord.com/users/${member.assigned_to}`} target="_blank" rel="noopener noreferrer" className="text-teal hover:underline">{usersMap[member.assigned_to] || member.assigned_to}</a>
-                        : <span className="px-2 py-0.5 rounded text-sm font-medium whitespace-nowrap" style={{ backgroundColor: badge.bg, color: badge.text }}>{badge.label}</span>}
+                        : <span className="px-2 py-0.5 rounded text-base font-medium whitespace-nowrap" style={{ backgroundColor: badge.bg, color: badge.text }}>{badge.label}</span>}
                     </div>
-                    <div className={`hidden md:block text-sm text-warm-500 dark:text-disc-muted truncate pr-2 ${dimmed}`}>
+                    <div className={`hidden md:block text-base text-warm-500 dark:text-disc-muted truncate pr-2 ${dimmed}`}>
                       {member.home_district || '—'}
                     </div>
-                    <div className={`hidden md:block text-sm text-warm-500 dark:text-disc-muted text-right ${dimmed}`}>
+                    <div className={`hidden md:block text-base text-warm-500 dark:text-disc-muted text-right ${dimmed}`}>
                       {member.total_calls || 0}
                     </div>
                   </div>
 
                   {/* Expanded info panel */}
                   {isExpanded && (
-                    <div className="px-4 py-2 bg-warm-50 dark:bg-disc-hover border-t border-warm-200 dark:border-disc-border">
-                      {/* Info strip */}
-                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm mb-2">
+                    <div className="px-4 py-3 bg-warm-50 dark:bg-disc-hover border-t border-warm-200 dark:border-disc-border">
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-base mb-2">
                         <span>
                           {member.mobile_number
                             ? <a href={`tel:${member.mobile_number}`} className="text-teal font-medium">{member.mobile_number}</a>
@@ -642,37 +607,33 @@ export default function CampaignPage({ params }) {
                         </span>
                         {member.line_id && <span className="text-warm-500 dark:text-disc-muted">LINE: {member.line_id}</span>}
                       </div>
-                      {/* Call history */}
                       {memberLogs === undefined ? (
-                        <div className="text-sm text-warm-400 dark:text-disc-muted py-1">กำลังโหลด...</div>
+                        <div className="text-base text-warm-400 dark:text-disc-muted py-1">กำลังโหลด...</div>
                       ) : memberLogs.length === 0 ? (
-                        <div className="text-sm text-warm-400 dark:text-disc-muted py-1">ยังไม่มีประวัติการโทร</div>
+                        <div className="text-base text-warm-400 dark:text-disc-muted py-1">ยังไม่มีประวัติการโทร</div>
                       ) : (
-                        <div className="space-y-0.5">
+                        <div className="space-y-1">
                           {memberLogs.map(log => {
                             const logColor = LOG_STATUS_COLOR[log.status] ? { bg: LOG_STATUS_COLOR[log.status], text: '#fff' } : { bg: '#f3f4f6', text: '#6b7280' }
                             return (
-                            <div key={log.id} className="flex items-baseline gap-3 text-sm py-0.5">
-                              <span className="text-warm-400 dark:text-disc-muted tabular-nums shrink-0 text-sm">
-                                {new Date(log.called_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}
-                              </span>
-                              <span className="px-1.5 py-0.5 rounded text-sm font-semibold shrink-0" style={{ backgroundColor: logColor.bg, color: logColor.text }}>
-                                {LOG_STATUS_LABEL[log.status] || log.status}
-                              </span>
-                              {log.caller_name && log.called_by ? (
-                                <a
-                                  href={`https://discord.com/users/${log.called_by}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-teal hover:underline shrink-0"
-                                >
-                                  {log.caller_name}
-                                </a>
-                              ) : (
-                                <span className="text-warm-600 dark:text-warm-200 shrink-0">{log.caller_name || '—'}</span>
-                              )}
-                              {log.note && <span className="text-warm-700 dark:text-disc-text truncate">"{log.note}"</span>}
-                            </div>
+                              <div key={log.id} className="text-base py-0.5">
+                                <div className="flex items-center gap-3">
+                                  <span className="text-warm-400 dark:text-disc-muted tabular-nums shrink-0">
+                                    {new Date(log.called_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}
+                                  </span>
+                                  <span className="px-1.5 py-0.5 rounded text-base font-semibold shrink-0" style={{ backgroundColor: logColor.bg, color: logColor.text }}>
+                                    {LOG_STATUS_LABEL[log.status] || log.status}
+                                  </span>
+                                  {log.caller_name && log.called_by ? (
+                                    <a href={`https://discord.com/users/${log.called_by}`} target="_blank" rel="noopener noreferrer" className="text-teal hover:underline shrink-0">
+                                      {log.caller_name}
+                                    </a>
+                                  ) : (
+                                    <span className="text-warm-600 dark:text-warm-200 shrink-0">{log.caller_name || '—'}</span>
+                                  )}
+                                </div>
+                                {log.note && <div className="text-warm-700 dark:text-disc-text mt-0.5">"{log.note}"</div>}
+                              </div>
                             )
                           })}
                         </div>
@@ -687,7 +648,7 @@ export default function CampaignPage({ params }) {
 
         {/* Scroll sentinel */}
         <div ref={sentinelRef}
-          className="px-6 py-3 text-center text-sm text-warm-400 dark:text-disc-muted border-t border-warm-200 dark:border-disc-border">
+          className="px-6 py-3 text-center text-base text-warm-400 dark:text-disc-muted border-t border-warm-200 dark:border-disc-border">
           {loadingMore
             ? 'กำลังโหลดเพิ่มเติม...'
             : !loadingInitial && members.length > 0
@@ -698,14 +659,14 @@ export default function CampaignPage({ params }) {
 
       {/* Floating toolbar */}
       {selectedMembers.size > 0 && (
-        <div className="fixed bottom-4 left-4 right-4 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 sm:w-auto flex items-center gap-3 bg-card-bg border border-warm-200 dark:border-disc-border rounded-2xl sm:rounded-full shadow-lg px-5 py-2.5 z-40">
-          <span className="text-sm font-medium text-warm-900 dark:text-disc-text shrink-0">เลือก {selectedMembers.size} คน</span>
+        <div className="fixed bottom-4 left-4 right-4 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 sm:w-auto flex items-center gap-3 bg-card-bg border border-warm-200 dark:border-disc-border rounded-2xl sm:rounded-full shadow-lg px-5 py-3 z-40">
+          <span className="text-base font-medium text-warm-900 dark:text-disc-text shrink-0">เลือก {selectedMembers.size} คน</span>
           <button onClick={() => setSplitModalOpen(true)}
-            className="flex-1 sm:flex-none px-4 py-1.5 bg-teal hover:opacity-90 text-white text-sm font-medium rounded-full transition text-center">
+            className="flex-1 sm:flex-none px-4 py-2 bg-teal hover:opacity-90 text-white text-base font-medium rounded-full transition text-center">
             มอบหมาย ↗
           </button>
           <button onClick={handleUnassign}
-            className="flex-1 sm:flex-none px-4 py-1.5 bg-card-bg border border-warm-200 dark:border-disc-border text-warm-700 dark:text-disc-text text-sm font-medium rounded-full hover:bg-warm-50 dark:hover:bg-disc-hover transition text-center">
+            className="flex-1 sm:flex-none px-4 py-2 bg-card-bg border border-warm-200 dark:border-disc-border text-warm-700 dark:text-disc-text text-base font-medium rounded-full hover:bg-warm-50 dark:hover:bg-disc-hover transition text-center">
             ยกเลิก
           </button>
         </div>

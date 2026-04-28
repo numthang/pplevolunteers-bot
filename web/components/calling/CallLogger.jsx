@@ -86,14 +86,14 @@ export default function CallLogger({ campaignId, memberId, onLogComplete }) {
 
       {/* Status buttons */}
       <div className="mb-4">
-        <label className="block text-xs font-medium text-warm-500 dark:text-warm-dark-500 mb-2">สถานะ *</label>
+        <label className="block text-base font-medium text-warm-500 dark:text-warm-dark-500 mb-2">สถานะ *</label>
         <div className="grid grid-cols-2 gap-2">
           {STATUSES.map(s => (
             <button
               key={s.value}
               type="button"
               onClick={() => setStatus(s.value)}
-              className={`py-2 px-3 rounded-lg border text-sm font-medium transition ${
+              className={`py-2.5 px-3 rounded-lg border text-base font-medium transition ${
                 status === s.value
                   ? 'bg-teal text-white border-teal'
                   : 'bg-white dark:bg-warm-dark-200 text-warm-700 dark:text-warm-200 border-warm-200 dark:border-warm-dark-300 hover:border-teal dark:hover:border-teal'
@@ -108,15 +108,15 @@ export default function CallLogger({ campaignId, memberId, onLogComplete }) {
       {/* Signals — only when answered */}
       {isAnswered && (
         <div className="mb-4 p-4 bg-warm-100 dark:bg-warm-dark-200 rounded-lg border border-warm-200 dark:border-warm-dark-300">
-          <h4 className="text-xs font-medium text-warm-500 dark:text-warm-dark-500 mb-3 uppercase tracking-wide">ข้อมูลการสนทนา</h4>
+          <h4 className="text-sm font-medium text-warm-500 dark:text-warm-dark-500 mb-3 uppercase tracking-wide">ข้อมูลการสนทนา</h4>
           <div className="space-y-3 mb-4">
             {Object.entries(SIGNALS).map(([key, config]) => (
               <div key={key}>
-                <label className="block text-xs font-medium text-warm-700 dark:text-warm-200 mb-1">{config.label}</label>
+                <label className="block text-base font-medium text-warm-700 dark:text-warm-200 mb-1">{config.label}</label>
                 <select
                   value={signals[key] ?? ''}
                   onChange={e => setSignals(prev => ({ ...prev, [key]: e.target.value }))}
-                  className="w-full h-8 px-2 text-sm border border-warm-200 dark:border-warm-dark-300 bg-white dark:bg-warm-dark-100 text-warm-900 dark:text-warm-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal"
+                  className="w-full h-11 px-3 text-base border border-warm-200 dark:border-warm-dark-300 bg-white dark:bg-warm-dark-100 text-warm-900 dark:text-warm-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal"
                 >
                   <option value="">—</option>
                   {config.options.map((opt, idx) => (
@@ -128,14 +128,14 @@ export default function CallLogger({ campaignId, memberId, onLogComplete }) {
           </div>
 
           {/* Grade */}
-          <label className="block text-xs font-medium text-warm-700 dark:text-warm-200 mb-2">เกรดรวม *</label>
+          <label className="block text-base font-medium text-warm-700 dark:text-warm-200 mb-2">เกรดรวม *</label>
           <div className="grid grid-cols-4 gap-2">
             {GRADES.map(g => (
               <button
                 key={g.value}
                 type="button"
                 onClick={() => setSigOverall(g.value)}
-                className={`py-2 rounded-lg text-sm font-bold border transition ${
+                className={`py-2.5 rounded-lg text-base font-bold border transition ${
                   sigOverall === g.value
                     ? GRADE_CLS[g.value] + ' border-transparent'
                     : 'bg-white dark:bg-warm-dark-100 text-warm-500 dark:text-warm-dark-500 border-warm-200 dark:border-warm-dark-300 hover:border-teal'
@@ -150,20 +150,20 @@ export default function CallLogger({ campaignId, memberId, onLogComplete }) {
 
       {/* Note */}
       <div className="mb-4">
-        <label className="block text-xs font-medium text-warm-500 dark:text-warm-dark-500 mb-2">หมายเหตุ</label>
+        <label className="block text-base font-medium text-warm-500 dark:text-warm-dark-500 mb-2">หมายเหตุ</label>
         <textarea
           value={note}
           onChange={e => setNote(e.target.value)}
           placeholder="บันทึกเพิ่มเติม..."
           rows={3}
-          className="w-full border border-warm-200 dark:border-warm-dark-300 bg-white dark:bg-warm-dark-100 text-warm-900 dark:text-warm-50 placeholder-warm-400 dark:placeholder-warm-dark-400 p-2.5 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-teal resize-none"
+          className="w-full border border-warm-200 dark:border-warm-dark-300 bg-white dark:bg-warm-dark-100 text-warm-900 dark:text-warm-50 placeholder-warm-400 dark:placeholder-warm-dark-400 p-3 text-base rounded-lg focus:outline-none focus:ring-2 focus:ring-teal resize-none"
         />
       </div>
 
       <button
         type="submit"
         disabled={isLoading || !status}
-        className="w-full bg-teal hover:opacity-90 text-white py-2.5 rounded-lg text-sm font-medium disabled:opacity-40 transition"
+        className="w-full bg-teal hover:opacity-90 text-white py-3 rounded-lg text-base font-medium disabled:opacity-40 transition"
       >
         {isLoading ? 'กำลังบันทึก...' : 'บันทึก'}
       </button>

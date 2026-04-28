@@ -46,7 +46,7 @@ export default function AssignModal({ isOpen, selectedCount, onClose, onConfirm 
         {/* Body */}
         <div className="p-6 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-warm-700 dark:text-warm-50 mb-2">
+            <label className="block text-base font-medium text-warm-700 dark:text-warm-50 mb-2">
               ชื่อผู้รับผิดชอบ *
             </label>
             <input
@@ -54,14 +54,14 @@ export default function AssignModal({ isOpen, selectedCount, onClose, onConfirm 
               value={assignTo}
               onChange={e => setAssignTo(e.target.value)}
               placeholder="Discord display name หรือชื่อ"
-              className="w-full px-3 py-2 border border-warm-200 dark:border-warm-dark-300 bg-white dark:bg-warm-dark-100 text-warm-900 dark:text-warm-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal placeholder-warm-400 dark:placeholder-warm-dark-400"
+              className="w-full h-11 px-3 text-base border border-warm-200 dark:border-warm-dark-300 bg-white dark:bg-warm-dark-100 text-warm-900 dark:text-warm-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal placeholder-warm-400 dark:placeholder-warm-dark-400"
               autoFocus
               onKeyDown={e => e.key === 'Enter' && handleConfirm()}
             />
           </div>
 
           {selectedCount > 0 && (
-            <p className="text-sm text-warm-600 dark:text-warm-dark-400 bg-warm-50 dark:bg-warm-dark-200 p-3 rounded">
+            <p className="text-base text-warm-600 dark:text-warm-dark-400 bg-warm-50 dark:bg-warm-dark-200 p-3 rounded">
               กำลังมอบหมาย <strong>{selectedCount}</strong> คน ให้ <strong>{assignTo || 'ผู้รับผิดชอบ'}</strong>
             </p>
           )}
@@ -71,13 +71,13 @@ export default function AssignModal({ isOpen, selectedCount, onClose, onConfirm 
             <button
               onClick={handleConfirm}
               disabled={!assignTo.trim() || isLoading}
-              className="flex-1 px-4 py-2.5 bg-teal hover:opacity-90 text-white font-medium rounded-lg disabled:opacity-40 transition"
+              className="flex-1 px-4 py-3 bg-teal hover:opacity-90 text-white text-base font-medium rounded-lg disabled:opacity-40 transition"
             >
               {isLoading ? 'กำลังมอบหมาย...' : 'ยืนยัน'}
             </button>
             <button
               onClick={handleClose}
-              className="px-4 py-2.5 border border-warm-200 dark:border-warm-dark-300 text-warm-900 dark:text-warm-50 font-medium rounded-lg hover:bg-warm-50 dark:hover:bg-warm-dark-200 transition"
+              className="px-4 py-3 border border-warm-200 dark:border-warm-dark-300 text-warm-900 dark:text-warm-50 text-base font-medium rounded-lg hover:bg-warm-50 dark:hover:bg-warm-dark-200 transition"
             >
               ยกเลิก
             </button>

@@ -49,18 +49,18 @@ export default function UserCombobox({ value = [], onChange, placeholder = 'ค�
   return (
     <div ref={containerRef} className="relative">
       <div
-        className="flex flex-wrap items-center gap-1.5 min-h-[42px] px-2 py-1.5 border border-warm-200 dark:border-warm-dark-300 bg-white dark:bg-warm-dark-100 rounded-lg focus-within:ring-2 focus-within:ring-teal cursor-text"
+        className="flex flex-wrap items-center gap-1.5 min-h-[46px] px-2 py-1.5 border border-warm-200 dark:border-warm-dark-300 bg-white dark:bg-warm-dark-100 rounded-lg focus-within:ring-2 focus-within:ring-teal cursor-text"
         onClick={() => inputRef.current?.focus()}
       >
         {value.map(user => (
           <span
             key={user.discord_id}
-            className="inline-flex items-center gap-1 px-2 py-0.5 bg-teal/10 text-teal rounded text-sm font-medium"
+            className="inline-flex items-center gap-1 px-2 py-0.5 bg-teal/10 text-teal rounded text-base font-medium"
           >
             {user.display_name}
             <button
               onMouseDown={e => { e.preventDefault(); handleRemove(user.discord_id) }}
-              className="hover:text-red-400 leading-none text-base"
+              className="hover:text-red-400 leading-none text-lg"
             >×</button>
           </span>
         ))}
@@ -71,16 +71,16 @@ export default function UserCombobox({ value = [], onChange, placeholder = 'ค�
           onChange={e => { setQuery(e.target.value); setOpen(true) }}
           onFocus={() => setOpen(true)}
           placeholder={value.length === 0 ? placeholder : ''}
-          className="flex-1 min-w-[120px] bg-transparent text-sm text-warm-900 dark:text-warm-50 placeholder-warm-400 outline-none py-0.5"
+          className="flex-1 min-w-[120px] bg-transparent text-base text-warm-900 dark:text-warm-50 placeholder-warm-400 outline-none py-0.5"
         />
       </div>
 
       {open && (
         <div className="absolute z-50 top-full mt-1 w-full bg-white dark:bg-warm-dark-100 border border-warm-200 dark:border-warm-dark-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
           {loading ? (
-            <div className="px-3 py-2 text-xs text-warm-400">กำลังโหลด...</div>
+            <div className="px-3 py-2 text-sm text-warm-400">กำลังโหลด...</div>
           ) : options.length === 0 ? (
-            <div className="px-3 py-2 text-xs text-warm-400">
+            <div className="px-3 py-2 text-sm text-warm-400">
               {query ? 'ไม่พบผู้ใช้' : 'พิมพ์เพื่อค้นหา'}
             </div>
           ) : (
@@ -88,11 +88,11 @@ export default function UserCombobox({ value = [], onChange, placeholder = 'ค�
               <button
                 key={user.discord_id}
                 onMouseDown={() => handleSelect(user)}
-                className="w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-warm-50 dark:hover:bg-warm-dark-200 text-left"
+                className="w-full flex items-center justify-between px-3 py-2.5 text-base hover:bg-warm-50 dark:hover:bg-warm-dark-200 text-left"
               >
                 <span className="font-medium text-warm-900 dark:text-warm-50">{user.display_name}</span>
                 {user.province && (
-                  <span className="text-xs text-warm-400 dark:text-warm-dark-400">{user.province}</span>
+                  <span className="text-sm text-warm-400 dark:text-warm-dark-400">{user.province}</span>
                 )}
               </button>
             ))

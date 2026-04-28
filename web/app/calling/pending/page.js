@@ -55,7 +55,6 @@ export default function PendingCallsPage() {
   const membersRef = useRef([])
   useEffect(() => { membersRef.current = members }, [members])
 
-  // Sync filters → URL
   useEffect(() => {
     const p = new URLSearchParams()
     if (filterCampaign) p.set('campaign', filterCampaign)
@@ -65,7 +64,6 @@ export default function PendingCallsPage() {
     router.replace(qs ? `/calling/pending?${qs}` : '/calling/pending', { scroll: false })
   }, [filterCampaign, filterStatus, filterRsvp])
 
-  // Fetch my campaigns
   useEffect(() => {
     fetch('/api/calling/pending?campaigns=true')
       .then(r => r.json())
@@ -107,18 +105,14 @@ export default function PendingCallsPage() {
     setModalIndex(-1)
   }
 
-  // ESC to close modal
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && modalMember) {
-        closeModal()
-      }
+      if (e.key === 'Escape' && modalMember) closeModal()
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [modalMember])
 
-  // Next pending member after current index
   const findNextPendingIndex = useCallback((fromIndex) => {
     const list = membersRef.current
     for (let i = fromIndex + 1; i < list.length; i++) {
@@ -176,14 +170,11 @@ export default function PendingCallsPage() {
     try {
       await submitLog(payload)
       markMemberCalled(modalMember.source_id, modalMember.campaign_id)
-
-      // Re-read updated list from ref (state update is async)
       const updatedList = membersRef.current.map(m =>
         m.source_id === modalMember.source_id && m.campaign_id === modalMember.campaign_id
           ? { ...m, call_status: 'called' }
           : m
       )
-      // Find next pending in updated list
       const nextIdx = updatedList.findIndex((m, i) => i > modalIndex && m.call_status === 'pending')
       if (nextIdx >= 0) {
         setModalMember(updatedList[nextIdx])
@@ -198,7 +189,6 @@ export default function PendingCallsPage() {
     }
   }
 
-  // Stats
   const totalPending = members.filter(m => m.call_status === 'pending').length
   const totalCalled  = members.filter(m => m.call_status === 'called').length
   const total = members.length
@@ -208,7 +198,7 @@ export default function PendingCallsPage() {
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-medium text-warm-900 dark:text-warm-50 mb-1">Pending calls</h1>
-        <p className="text-sm text-warm-500 dark:text-warm-dark-500">รายชื่อสมาชิกที่ได้รับ assign มาให้คุณโทร</p>
+        <p className="text-base text-warm-500 dark:text-warm-dark-500">รายชื่อสมาชิกที่ได้รับ assign มาให้คุณโทร</p>
       </div>
 
       {/* Filters */}
@@ -216,7 +206,7 @@ export default function PendingCallsPage() {
         <select
           value={filterCampaign}
           onChange={e => setFilterCampaign(e.target.value)}
-          className="h-9 px-3 text-sm border border-warm-200 dark:border-warm-dark-300 bg-card-bg text-warm-900 dark:text-warm-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal flex-1 sm:flex-none"
+          className="h-11 px-3 text-base border border-warm-200 dark:border-warm-dark-300 bg-card-bg text-warm-900 dark:text-warm-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal flex-1 sm:flex-none"
         >
           <option value="">Campaign (ทั้งหมด)</option>
           {campaigns.map(c => (
@@ -229,7 +219,7 @@ export default function PendingCallsPage() {
             <button
               key={opt.value}
               onClick={() => setFilterStatus(opt.value)}
-              className={`px-4 py-2 text-sm font-medium whitespace-nowrap transition ${
+              className={`px-4 py-2.5 text-base font-medium whitespace-nowrap transition ${
                 filterStatus === opt.value
                   ? 'bg-teal text-white'
                   : 'bg-card-bg text-warm-700 dark:text-warm-200 hover:bg-warm-50 dark:hover:bg-warm-dark-200'
@@ -243,7 +233,7 @@ export default function PendingCallsPage() {
         <select
           value={filterRsvp}
           onChange={e => setFilterRsvp(e.target.value)}
-          className="h-9 px-3 text-sm border border-warm-200 dark:border-warm-dark-300 bg-card-bg text-warm-900 dark:text-warm-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal flex-1 sm:flex-none"
+          className="h-11 px-3 text-base border border-warm-200 dark:border-warm-dark-300 bg-card-bg text-warm-900 dark:text-warm-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal flex-1 sm:flex-none"
         >
           <option value="">RSVP (ทั้งหมด)</option>
           <option value="yes">✓ เข้าร่วม</option>
@@ -254,7 +244,7 @@ export default function PendingCallsPage() {
 
       {/* Stats bar */}
       {!loading && total > 0 && (
-        <div className="flex gap-6 mb-5 text-sm">
+        <div className="flex gap-6 mb-5 text-base">
           <div>
             <span className="text-warm-500 dark:text-warm-dark-500">ทั้งหมด:</span>
             <span className="ml-1.5 font-semibold text-warm-900 dark:text-warm-50">{total}</span>
@@ -272,15 +262,15 @@ export default function PendingCallsPage() {
 
       {/* List */}
       {loading ? (
-        <div className="py-20 text-center text-warm-400 dark:text-warm-dark-400 text-sm">กำลังโหลด...</div>
+        <div className="py-20 text-center text-warm-400 dark:text-warm-dark-400 text-base">กำลังโหลด...</div>
       ) : members.length === 0 ? (
-        <div className="bg-card-bg border border-warm-200 dark:border-warm-dark-300 rounded-xl py-16 text-center text-warm-400 dark:text-warm-dark-400 text-sm">
+        <div className="bg-card-bg border border-warm-200 dark:border-warm-dark-300 rounded-xl py-16 text-center text-warm-400 dark:text-warm-dark-400 text-base">
           {filterStatus === 'pending' ? 'โทรครบทุกคนแล้ว 🎉' : 'ไม่มีรายการ'}
         </div>
       ) : (
         <div className="bg-card-bg border border-warm-200 dark:border-warm-dark-300 rounded-xl overflow-hidden">
-          {/* Table header */}
-          <div className="hidden sm:grid items-center px-4 py-2.5 gap-2 bg-warm-100 dark:bg-warm-dark-200 border-b border-warm-200 dark:border-warm-dark-300 text-xs font-medium text-warm-500 dark:text-warm-dark-500 [grid-template-columns:1fr_40px_80px_100px]">
+          {/* Table header — desktop only */}
+          <div className="hidden sm:grid items-center px-4 py-2.5 gap-2 bg-warm-100 dark:bg-warm-dark-200 border-b border-warm-200 dark:border-warm-dark-300 text-sm font-medium text-warm-500 dark:text-warm-dark-500 [grid-template-columns:1fr_40px_80px_100px]">
             <span>ชื่อสมาชิก</span>
             <span className="text-center">ระดับ</span>
             <span className="text-center">รับสาย</span>
@@ -291,7 +281,6 @@ export default function PendingCallsPage() {
             {members.map(member => {
               const tier = member.tier || 'D'
               const tierColor = TIER_COLORS[tier]
-              const isCalled = member.call_status === 'called'
               const avatarChar = member.first_name?.[0] || member.full_name?.[0] || '?'
               const expiryBadge = getExpiryBadge(member.expired_at)
 
@@ -299,27 +288,27 @@ export default function PendingCallsPage() {
                 <button
                   key={`${member.source_id}-${member.campaign_id}`}
                   onClick={() => openModal(member)}
-                  className="w-full text-left px-4 py-3.5 hover:bg-warm-50 dark:hover:bg-warm-dark-200 transition group"
+                  className="w-full text-left px-4 py-4 hover:bg-warm-50 dark:hover:bg-warm-dark-200 transition group"
                 >
-                  {/* Mobile layout: single column */}
+                  {/* Mobile layout */}
                   <div className="sm:hidden">
                     <div className="flex items-center gap-3">
                       <div
-                        className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0"
+                        className="w-11 h-11 rounded-full flex items-center justify-center text-base font-semibold flex-shrink-0"
                         style={{ backgroundColor: tierColor.bg, color: tierColor.text }}
                       >{avatarChar}</div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-base font-medium text-warm-900 dark:text-warm-50 group-hover:text-teal transition-colors truncate">
                             {member.full_name}
                           </span>
                           <span
-                            className="text-sm font-semibold px-1.5 py-0.5 rounded flex-shrink-0"
+                            className="text-base font-semibold px-1.5 py-0.5 rounded flex-shrink-0"
                             style={{ backgroundColor: tierColor.bg, color: tierColor.text }}
                           >{tier}</span>
-                          {expiryBadge && <span className={`text-sm font-medium px-1.5 py-0.5 rounded flex-shrink-0 ${expiryBadge.cls}`}>{expiryBadge.label}</span>}
+                          {expiryBadge && <span className={`text-base font-medium px-1.5 py-0.5 rounded flex-shrink-0 ${expiryBadge.cls}`}>{expiryBadge.label}</span>}
                         </div>
-                        <div className="flex items-center gap-1.5 text-sm truncate">
+                        <div className="flex items-center gap-1.5 text-base truncate mt-0.5">
                           {(member.home_amphure || member.campaign_name) && (
                             <span className="text-warm-400 dark:text-warm-dark-400 truncate">
                               {[member.home_amphure, member.campaign_name].filter(Boolean).join(' · ')}
@@ -327,53 +316,50 @@ export default function PendingCallsPage() {
                           )}
                         </div>
                         {member.latest_note && (
-                          <div className="text-sm text-warm-600 dark:text-warm-200 mt-1 truncate italic">
+                          <div className="text-base text-warm-600 dark:text-warm-200 mt-1 truncate italic">
                             "{member.latest_note}"
                           </div>
                         )}
                       </div>
-                      <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                        <div className="flex items-center gap-1">
-                          {(() => {
-                            const badge = getStatusBadge(member.call_status, member.latest_log_status)
-                            return (
-                              <>
-                                <span className="px-2 py-0.5 rounded text-sm font-medium whitespace-nowrap"
-                                  style={{ backgroundColor: badge.bg, color: badge.text }}>
-                                  {badge.label}
+                      <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+                        {(() => {
+                          const badge = getStatusBadge(member.call_status, member.latest_log_status)
+                          return (
+                            <div className="flex items-center gap-1">
+                              <span className="px-2 py-0.5 rounded text-base font-medium whitespace-nowrap"
+                                style={{ backgroundColor: badge.bg, color: badge.text }}>
+                                {badge.label}
+                              </span>
+                              {member.rsvp && (
+                                <span className="text-base font-bold" style={{ color: RSVP_ICONS[member.rsvp]?.color || '#666' }}>
+                                  {RSVP_ICONS[member.rsvp]?.icon || member.rsvp}
                                 </span>
-                                {member.rsvp && (
-                                  <span className="text-sm font-bold" style={{ color: RSVP_ICONS[member.rsvp]?.color || '#666' }}>
-                                    {RSVP_ICONS[member.rsvp]?.icon || member.rsvp}
-                                  </span>
-                                )}
-                              </>
-                            )
-                          })()}
-                        </div>
-                        <span className="text-sm text-warm-400 dark:text-warm-dark-400">
+                              )}
+                            </div>
+                          )
+                        })()}
+                        <span className="text-base text-warm-400 dark:text-warm-dark-400">
                           {member.answered_count}/{member.total_calls} รับ
                         </span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Desktop layout: grid */}
+                  {/* Desktop layout */}
                   <div className="hidden sm:grid items-center [grid-template-columns:1fr_40px_80px_100px] gap-2">
-                    {/* Name + meta */}
                     <div className="flex items-center gap-3 min-w-0">
                       <div
-                        className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0"
+                        className="w-10 h-10 rounded-full flex items-center justify-center text-base font-semibold flex-shrink-0"
                         style={{ backgroundColor: tierColor.bg, color: tierColor.text }}
                       >{avatarChar}</div>
                       <div className="min-w-0">
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="text-base font-medium text-warm-900 dark:text-warm-50 group-hover:text-teal transition-colors truncate">
                             {member.full_name}
                           </span>
-                          {expiryBadge && <span className={`text-sm font-medium px-1.5 py-0.5 rounded flex-shrink-0 ${expiryBadge.cls}`}>{expiryBadge.label}</span>}
+                          {expiryBadge && <span className={`text-base font-medium px-1.5 py-0.5 rounded flex-shrink-0 ${expiryBadge.cls}`}>{expiryBadge.label}</span>}
                         </div>
-                        <div className="flex items-center gap-1.5 text-sm truncate">
+                        <div className="flex items-center gap-1.5 text-base truncate">
                           {(member.home_amphure || member.campaign_name) && (
                             <span className="text-warm-400 dark:text-warm-dark-400 truncate">
                               {[member.home_amphure, member.campaign_name].filter(Boolean).join(' · ')}
@@ -381,40 +367,37 @@ export default function PendingCallsPage() {
                           )}
                         </div>
                         {member.latest_note && (
-                          <div className="text-sm text-warm-600 dark:text-warm-200 mt-0.5 truncate italic">
+                          <div className="text-base text-warm-600 dark:text-warm-200 mt-0.5 truncate italic">
                             "{member.latest_note}"
                           </div>
                         )}
                       </div>
                     </div>
 
-                    {/* Tier */}
                     <div className="flex justify-center">
                       <span
-                        className="text-sm font-semibold px-1.5 py-0.5 rounded"
+                        className="text-base font-semibold px-1.5 py-0.5 rounded"
                         style={{ backgroundColor: tierColor.bg, color: tierColor.text }}
                       >{tier}</span>
                     </div>
 
-                    {/* Answered/Total */}
-                    <div className="text-center text-sm text-warm-500 dark:text-warm-dark-500">
+                    <div className="text-center text-base text-warm-500 dark:text-warm-dark-500">
                       <span className="font-semibold text-warm-900 dark:text-warm-50">{member.answered_count}</span>
                       <span className="text-warm-300 dark:text-warm-dark-500">/</span>
                       <span>{member.total_calls}</span>
                     </div>
 
-                    {/* Status + RSVP */}
                     <div className="flex items-center gap-1 justify-start">
                       {(() => {
                         const badge = getStatusBadge(member.call_status, member.latest_log_status)
                         return (
                           <>
-                            <span className="px-2 py-0.5 rounded text-sm font-medium whitespace-nowrap"
+                            <span className="px-2 py-0.5 rounded text-base font-medium whitespace-nowrap"
                               style={{ backgroundColor: badge.bg, color: badge.text }}>
                               {badge.label}
                             </span>
                             {member.rsvp && (
-                              <span className="text-sm font-bold" style={{ color: RSVP_ICONS[member.rsvp]?.color || '#666' }}>
+                              <span className="text-base font-bold" style={{ color: RSVP_ICONS[member.rsvp]?.color || '#666' }}>
                                 {RSVP_ICONS[member.rsvp]?.icon || member.rsvp}
                               </span>
                             )}

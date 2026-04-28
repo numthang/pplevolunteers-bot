@@ -41,14 +41,14 @@ export default async function CallingPage() {
       <div className="mb-8 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-3xl font-medium text-warm-900 dark:text-warm-50 mb-2">Campaigns</h1>
-          <p className="text-sm text-warm-500 dark:text-warm-dark-500">
+          <p className="text-base text-warm-500 dark:text-warm-dark-500">
             เลือกแคมเปญการโทรที่ต้องการจัดการ
           </p>
         </div>
         {canCreate && (
           <Link
             href="/calling/create"
-            className="shrink-0 inline-flex items-center gap-2 px-4 py-2 bg-orange text-white text-sm font-medium rounded-lg hover:bg-orange-light transition"
+            className="shrink-0 inline-flex items-center gap-2 px-4 py-2.5 bg-orange text-white text-base font-medium rounded-lg hover:bg-orange-light transition"
           >
             <span>+</span> สร้างแคมเปญ
           </Link>

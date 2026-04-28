@@ -23,7 +23,7 @@ const PROVINCES = [
   'ยะลา', 'นราธิวาส'
 ]
 
-const inputCls = 'w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-3 rounded-lg placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500'
+const inputCls = 'w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-3 text-base rounded-lg placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500'
 
 export default function CreateCampaignPage() {
   const router = useRouter()
@@ -57,7 +57,7 @@ export default function CreateCampaignPage() {
 
   return (
     <div>
-      <Link href="/calling" className="text-indigo-600 dark:text-indigo-400 hover:underline mb-6 block text-sm">
+      <Link href="/calling" className="text-teal hover:underline mb-6 block text-base">
         ← กลับ
       </Link>
 
@@ -66,7 +66,7 @@ export default function CreateCampaignPage() {
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-sm font-semibold mb-1.5 text-gray-700 dark:text-gray-300">
+            <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-gray-300">
               Campaign ID <span className="font-normal text-gray-400">(ไม่ระบุ = อัตโนมัติ)</span>
             </label>
             <input type="number" value={campaignId} onChange={e => setCampaignId(e.target.value)}
@@ -74,20 +74,20 @@ export default function CreateCampaignPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-semibold mb-1.5 text-gray-700 dark:text-gray-300">ชื่อแคมเปญ *</label>
+            <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-gray-300">ชื่อแคมเปญ *</label>
             <input type="text" value={name} onChange={e => setName(e.target.value)}
               placeholder="เช่น บ้านโป่ง ราชบุรี ครั้งที่ 1" className={inputCls} required />
           </div>
 
           <div>
-            <label className="block text-sm font-semibold mb-1.5 text-gray-700 dark:text-gray-300">รายละเอียด</label>
+            <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-gray-300">รายละเอียด</label>
             <textarea value={description}
               onChange={e => { setDescription(e.target.value); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px' }}
               placeholder="บรรยายเพิ่มเติม..." className={inputCls} rows="4" style={{ resize: 'none', overflow: 'hidden' }} />
           </div>
 
           <div>
-            <label className="block text-sm font-semibold mb-1.5 text-gray-700 dark:text-gray-300">จังหวัด</label>
+            <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-gray-300">จังหวัด</label>
             <select value={province} onChange={e => setProvince(e.target.value)} className={inputCls}>
               <option value="">-- ไม่ระบุ --</option>
               {[...PROVINCES].sort((a, b) => a.localeCompare(b, 'th')).map(p => <option key={p} value={p}>{p}</option>)}
@@ -95,12 +95,12 @@ export default function CreateCampaignPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-semibold mb-1.5 text-gray-700 dark:text-gray-300">วันจัดกิจกรรม</label>
+            <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-gray-300">วันจัดกิจกรรม</label>
             <input type="date" value={eventDate} onChange={e => setEventDate(e.target.value)} className={inputCls} />
           </div>
 
           <button type="submit" disabled={loading}
-            className="w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 disabled:opacity-50 transition">
+            className="w-full bg-indigo-600 text-white py-3 rounded-lg text-base font-semibold hover:bg-indigo-700 disabled:opacity-50 transition">
             {loading ? 'กำลังสร้าง...' : 'สร้างแคมเปญ'}
           </button>
         </form>

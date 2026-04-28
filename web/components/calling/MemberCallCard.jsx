@@ -26,35 +26,35 @@ export default function MemberCallCard({ campaignId, member, assignment, stats }
       <div className="bg-white dark:bg-warm-dark-100 border border-warm-200 dark:border-warm-dark-300 rounded-xl p-4 hover:border-teal dark:hover:border-teal hover:shadow-sm transition cursor-pointer group">
         <div className="flex items-start justify-between gap-3 mb-3">
           <div className="min-w-0 flex-1">
-            <h3 className="font-medium text-sm text-warm-900 dark:text-warm-50 truncate group-hover:text-teal transition-colors">
+            <h3 className="font-medium text-base text-warm-900 dark:text-warm-50 truncate group-hover:text-teal transition-colors">
               {member.full_name}
             </h3>
-            <p className="text-xs text-warm-400 dark:text-warm-dark-400 mt-0.5">{member.home_amphure}</p>
+            <p className="text-sm text-warm-400 dark:text-warm-dark-400 mt-0.5">{member.home_amphure}</p>
           </div>
-          <span className={`text-xs font-semibold px-2 py-0.5 rounded-md flex-shrink-0 ${tierCls}`}>
+          <span className={`text-sm font-semibold px-2 py-0.5 rounded-md flex-shrink-0 ${tierCls}`}>
             {tier}
           </span>
         </div>
 
         {lastCallDate ? (
-          <p className="text-xs text-warm-500 dark:text-warm-dark-500 mb-2">
+          <p className="text-sm text-warm-500 dark:text-warm-dark-500 mb-2">
             โทรล่าสุด: {lastCallDate}
             {stats?.last_note && ` — "${stats.last_note}"`}
           </p>
         ) : (
-          <p className="text-xs text-warm-400 dark:text-warm-dark-400 mb-2">ยังไม่มีประวัติการโทร</p>
+          <p className="text-sm text-warm-400 dark:text-warm-dark-400 mb-2">ยังไม่มีประวัติการโทร</p>
         )}
 
         {answeredRate && (
-          <p className="text-xs text-warm-400 dark:text-warm-dark-400 mb-3">รับสาย {answeredRate} ครั้ง</p>
+          <p className="text-sm text-warm-400 dark:text-warm-dark-400 mb-3">รับสาย {answeredRate} ครั้ง</p>
         )}
 
         {assignment?.assigned_to ? (
-          <p className="text-xs text-teal bg-teal-light dark:bg-teal-dim dark:text-teal-bright px-2 py-1 rounded-md truncate">
+          <p className="text-sm text-teal bg-teal-light dark:bg-teal-dim dark:text-teal-bright px-2 py-1 rounded-md truncate">
             → {assignment.assigned_to}
           </p>
         ) : (
-          <p className="text-xs text-warm-400 dark:text-warm-dark-400 bg-warm-100 dark:bg-warm-dark-200 px-2 py-1 rounded-md">
+          <p className="text-sm text-warm-400 dark:text-warm-dark-400 bg-warm-100 dark:bg-warm-dark-200 px-2 py-1 rounded-md">
             ยังไม่มอบหมาย
           </p>
         )}

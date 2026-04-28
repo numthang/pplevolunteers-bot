@@ -46,7 +46,7 @@ export default function CallingBreadcrumb({ currentCampaignId, title = 'Pending 
   }
 
   return (
-    <div className="mb-6 text-sm text-warm-500 dark:text-warm-dark-500 flex items-center gap-0">
+    <div className="mb-6 text-base text-warm-500 dark:text-warm-dark-500 flex items-center gap-0">
       {/* Root: Campaigns or page title */}
       <Link href="/calling" className="text-teal hover:underline shrink-0">
         Campaigns
@@ -76,15 +76,15 @@ export default function CallingBreadcrumb({ currentCampaignId, title = 'Pending 
             {isPending && (
               <button
                 onClick={() => handleSelectCampaign(null)}
-                className={`w-full text-left px-4 py-2.5 hover:bg-warm-50 dark:hover:bg-warm-dark-200 transition text-sm ${
+                className={`w-full text-left px-4 py-2.5 hover:bg-warm-50 dark:hover:bg-warm-dark-200 transition text-base ${
                   !currentCampaignId ? 'text-teal font-medium' : 'text-warm-700 dark:text-warm-200'
                 }`}
               >
                 <div className="flex items-center justify-between">
                   <span>All Campaigns</span>
-                  {!currentCampaignId && <span className="text-teal text-xs">✓</span>}
+                  {!currentCampaignId && <span className="text-teal text-sm">✓</span>}
                 </div>
-                <div className="text-xs text-warm-400 dark:text-warm-dark-400 mt-0.5">Show all assigned members</div>
+                <div className="text-sm text-warm-400 dark:text-warm-dark-400 mt-0.5">Show all assigned members</div>
               </button>
             )}
 
@@ -99,16 +99,16 @@ export default function CallingBreadcrumb({ currentCampaignId, title = 'Pending 
                 <button
                   key={c.id}
                   onClick={() => handleSelectCampaign(c.id)}
-                  className={`w-full text-left px-4 py-2.5 hover:bg-warm-50 dark:hover:bg-warm-dark-200 transition text-sm ${
+                  className={`w-full text-left px-4 py-2.5 hover:bg-warm-50 dark:hover:bg-warm-dark-200 transition text-base ${
                     isActive ? 'text-teal font-medium' : 'text-warm-700 dark:text-warm-200'
                   }`}
                 >
                   <div className="flex items-center justify-between">
                     <span className="truncate pr-2">{c.name}</span>
-                    {isActive && <span className="text-teal text-xs shrink-0">✓</span>}
+                    {isActive && <span className="text-teal text-sm shrink-0">✓</span>}
                   </div>
                   {isPending && c.pending_count !== undefined && (
-                    <div className="text-xs text-warm-400 dark:text-warm-dark-400 mt-0.5">
+                    <div className="text-sm text-warm-400 dark:text-warm-dark-400 mt-0.5">
                       {c.pending_count} pending
                     </div>
                   )}

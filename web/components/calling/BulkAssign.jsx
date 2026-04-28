@@ -11,8 +11,8 @@ const TIER_CLS = {
   D: 'bg-[#fcebeb] text-[#a32d2d] dark:bg-[#3a1212] dark:text-[#d47373]',
 }
 
-const selectCls = 'h-9 px-2.5 text-sm border border-warm-200 dark:border-warm-dark-300 bg-white dark:bg-warm-dark-100 text-warm-900 dark:text-warm-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal'
-const inputCls = 'h-9 px-2.5 text-sm w-full border border-warm-200 dark:border-warm-dark-300 bg-white dark:bg-warm-dark-100 text-warm-900 dark:text-warm-50 placeholder-warm-400 dark:placeholder-warm-dark-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal'
+const selectCls = 'h-11 px-3 text-base border border-warm-200 dark:border-warm-dark-300 bg-white dark:bg-warm-dark-100 text-warm-900 dark:text-warm-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal'
+const inputCls = 'h-11 px-3 text-base w-full border border-warm-200 dark:border-warm-dark-300 bg-white dark:bg-warm-dark-100 text-warm-900 dark:text-warm-50 placeholder-warm-400 dark:placeholder-warm-dark-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal'
 
 export default function BulkAssign({ campaignId, members, districts = [], tiers = ['A', 'B', 'C', 'D'], onAssignComplete }) {
   const [selectedMembers, setSelectedMembers] = useState(new Set())
@@ -130,21 +130,21 @@ export default function BulkAssign({ campaignId, members, districts = [], tiers 
       {/* Filter row */}
       <div className="flex flex-wrap items-end gap-3 mb-4">
         <div>
-          <label className="block text-xs font-medium text-warm-500 dark:text-warm-dark-500 mb-1">อำเภอ</label>
+          <label className="block text-base font-medium text-warm-500 dark:text-warm-dark-500 mb-1">อำเภอ</label>
           <select value={filterDistrict} onChange={e => setFilterDistrict(e.target.value)} className={selectCls}>
             <option value="">ทั้งหมด</option>
             {districts.map(d => <option key={d} value={d}>{d}</option>)}
           </select>
         </div>
         <div>
-          <label className="block text-xs font-medium text-warm-500 dark:text-warm-dark-500 mb-1">ระดับ</label>
+          <label className="block text-base font-medium text-warm-500 dark:text-warm-dark-500 mb-1">ระดับ</label>
           <select value={filterTier} onChange={e => setFilterTier(e.target.value)} className={selectCls}>
             <option value="">ทั้งหมด</option>
             {tiers.map(t => <option key={t} value={t}>{t}</option>)}
           </select>
         </div>
         <div className="flex-1 min-w-40">
-          <label className="block text-xs font-medium text-warm-500 dark:text-warm-dark-500 mb-1">มอบหมายให้</label>
+          <label className="block text-base font-medium text-warm-500 dark:text-warm-dark-500 mb-1">มอบหมายให้</label>
           <input
             type="text"
             value={assignTo}
@@ -156,14 +156,14 @@ export default function BulkAssign({ campaignId, members, districts = [], tiers 
         <button
           onClick={handleBulkAssign}
           disabled={selectedMembers.size === 0 || isLoading}
-          className="h-9 px-4 bg-teal hover:opacity-90 text-white text-sm font-medium rounded-lg disabled:opacity-40 transition whitespace-nowrap"
+          className="h-11 px-4 bg-teal hover:opacity-90 text-white text-base font-medium rounded-lg disabled:opacity-40 transition whitespace-nowrap"
         >
           {isLoading ? 'กำลังมอบหมาย...' : `มอบหมาย ${selectedMembers.size > 0 ? `(${selectedMembers.size})` : ''}`}
         </button>
         <button
           onClick={handleBulkUnassign}
           disabled={selectedMembers.size === 0 || isLoading}
-          className="h-9 px-4 bg-red-500 hover:opacity-90 text-white text-sm font-medium rounded-lg disabled:opacity-40 transition whitespace-nowrap"
+          className="h-11 px-4 bg-red-500 hover:opacity-90 text-white text-base font-medium rounded-lg disabled:opacity-40 transition whitespace-nowrap"
         >
           {isLoading ? 'กำลัง...' : `ยกเลิก ${selectedMembers.size > 0 ? `(${selectedMembers.size})` : ''}`}
         </button>
@@ -172,7 +172,7 @@ export default function BulkAssign({ campaignId, members, districts = [], tiers 
       {/* Table */}
       <div className="bg-white dark:bg-warm-dark-100 border border-warm-200 dark:border-warm-dark-300 rounded-xl overflow-hidden">
         {/* Checkbox header */}
-        <div className="flex items-center gap-3 px-6 py-3 bg-warm-100 dark:bg-warm-dark-200 border-b border-warm-200 dark:border-warm-dark-300 text-sm">
+        <div className="flex items-center gap-3 px-6 py-3 bg-warm-100 dark:bg-warm-dark-200 border-b border-warm-200 dark:border-warm-dark-300 text-base">
           <input
             type="checkbox"
             checked={isAllSelected}
@@ -196,19 +196,19 @@ export default function BulkAssign({ campaignId, members, districts = [], tiers 
             let statusBadge
             if (status === 'called') {
               statusBadge = (
-                <span className="text-xs font-medium px-2.5 py-1 rounded-md bg-teal-light text-teal dark:bg-teal-dim dark:text-teal-bright hidden md:block whitespace-nowrap">
+                <span className="text-sm font-medium px-2.5 py-1 rounded-md bg-teal-light text-teal dark:bg-teal-dim dark:text-teal-bright hidden md:block whitespace-nowrap">
                   โทรแล้ว
                 </span>
               )
             } else if (status === 'assigned') {
               statusBadge = (
-                <span className="text-xs font-medium px-2.5 py-1 rounded-md bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300 hidden md:block whitespace-nowrap">
+                <span className="text-sm font-medium px-2.5 py-1 rounded-md bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300 hidden md:block whitespace-nowrap">
                   มอบหมายแล้ว
                 </span>
               )
             } else {
               statusBadge = (
-                <span className="text-xs font-medium px-2.5 py-1 rounded-md bg-[#faeeda] text-[#854f0b] dark:bg-[#3a2308] dark:text-[#d4953e] hidden md:block whitespace-nowrap">
+                <span className="text-sm font-medium px-2.5 py-1 rounded-md bg-[#faeeda] text-[#854f0b] dark:bg-[#3a2308] dark:text-[#d4953e] hidden md:block whitespace-nowrap">
                   รอมอบหมาย
                 </span>
               )
@@ -225,18 +225,18 @@ export default function BulkAssign({ campaignId, members, districts = [], tiers 
                   onChange={() => handleSelectMember(member.source_id)}
                   className="w-4 h-4 accent-teal cursor-pointer flex-shrink-0"
                 />
-                <span className="font-medium text-sm text-warm-900 dark:text-warm-50 flex-1 min-w-0 truncate">
+                <span className="font-medium text-base text-warm-900 dark:text-warm-50 flex-1 min-w-0 truncate">
                   {member.full_name}
                 </span>
-                <span className="text-xs text-warm-500 dark:text-warm-dark-500 hidden sm:block w-28 truncate">
+                <span className="text-sm text-warm-500 dark:text-warm-dark-500 hidden sm:block w-28 truncate">
                   {member.home_amphure}
                 </span>
                 {statusBadge}
-                <span className={`text-xs font-semibold px-2.5 py-1 rounded-md flex-shrink-0 ${tierCls}`}>
+                <span className={`text-sm font-semibold px-2.5 py-1 rounded-md flex-shrink-0 ${tierCls}`}>
                   {tier}
                 </span>
                 {member.assigned_to && (
-                  <span className="text-xs text-warm-400 dark:text-warm-dark-400 hidden lg:block truncate max-w-32">
+                  <span className="text-sm text-warm-400 dark:text-warm-dark-400 hidden lg:block truncate max-w-32">
                     → {member.assigned_to}
                   </span>
                 )}
@@ -246,7 +246,7 @@ export default function BulkAssign({ campaignId, members, districts = [], tiers 
         </div>
 
         {/* Sentinel / footer */}
-        <div ref={sentinelRef} className="px-6 py-3 text-center text-xs text-warm-400 dark:text-warm-dark-400 border-t border-warm-200 dark:border-warm-dark-300">
+        <div ref={sentinelRef} className="px-6 py-3 text-center text-sm text-warm-400 dark:text-warm-dark-400 border-t border-warm-200 dark:border-warm-dark-300">
           {hasMore
             ? 'กำลังโหลดเพิ่มเติม...'
             : filteredMembers.length > 0
