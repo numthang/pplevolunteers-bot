@@ -47,15 +47,17 @@ export async function POST(req) {
 
   const data = await req.json()
 
+  let account = null
   if (data.account_id) {
-    const account = await getAccountById(data.account_id)
+    account = await getAccountById(data.account_id)
     const { roles: effectiveRoles, discordId: effectiveDiscordId } = await getEffectiveIdentity(session)
     if (!account || !canEditAccount(account, effectiveDiscordId, effectiveRoles)) {
       return Response.json({ error: 'Forbidden' }, { status: 403 })
     }
   }
 
-  const id = await createTransaction(GUILD_ID, data, session.user.discordId)
+  const guildId = account?.guild_id || GUILD_ID
+  const id = await createTransaction(guildId, data, session.user.discordId)
   if (data.account_id)  await incrementAccount(data.account_id)
   if (data.category_id) await incrementCategory(data.category_id)
   return Response.json({ id }, { status: 201 })

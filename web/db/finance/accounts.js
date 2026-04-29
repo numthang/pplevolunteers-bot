@@ -23,10 +23,9 @@ export async function getAccountsForUser(guildId, discordId) {
 export async function getAccountsAll(guildId, discordId, admin = false) {
   const [rows] = await pool.query(
     `SELECT * FROM finance_accounts
-     WHERE guild_id = ?
-       AND (? = 1 OR owner_id = ? OR visibility != 'private')
+     WHERE (? = 1 OR owner_id = ? OR visibility != 'private')
      ORDER BY archived ASC, usage_count DESC, name ASC`,
-    [guildId, admin ? 1 : 0, discordId]
+    [admin ? 1 : 0, discordId]
   )
   return rows
 }
@@ -66,6 +65,10 @@ export async function updateAccount(id, data, updatedBy, allowGuildChange = fals
        WHERE id=?`,
       [guild_id, name, bank || null, cleanAccountNo || null, visibility, province || null,
        notify_income, notify_expense, email_inbox || null, updatedBy, id]
+    )
+    await pool.query(
+      `UPDATE finance_transactions SET guild_id=? WHERE account_id=?`,
+      [guild_id, id]
     )
   } else {
     await pool.query(

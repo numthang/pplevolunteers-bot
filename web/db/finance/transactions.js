@@ -1,8 +1,8 @@
 import pool from '../index.js'
 
 export async function getTransactions(guildId, { accountId, type, categoryId, noCategory, search, year, month, dateFrom, dateTo, limit = 50, offset = 0, discordId = null, admin = false } = {}) {
-  let where = 'WHERE t.guild_id = ?'
-  const params = [guildId]
+  let where = 'WHERE 1=1'
+  const params = []
 
   // Private accounts: only owner can see — even admin cannot
   where += ' AND (a.visibility != ? OR a.owner_id = ?)'
@@ -74,8 +74,8 @@ export async function deleteTransaction(id) {
 }
 
 export async function getCategorySummary(guildId, { accountId, type, year, month, dateFrom, dateTo } = {}) {
-  let where = 'WHERE t.guild_id = ?'
-  const params = [guildId]
+  let where = 'WHERE 1=1'
+  const params = []
 
   if (accountId) { where += ' AND t.account_id = ?';  params.push(accountId) }
   if (type)      { where += ' AND t.type = ?';         params.push(type) }
@@ -103,8 +103,8 @@ export async function getCategorySummary(guildId, { accountId, type, year, month
 }
 
 export async function getMonthlyTrend(guildId, { accountId, type, year } = {}) {
-  let where = 'WHERE t.guild_id = ?'
-  const params = [guildId]
+  let where = 'WHERE 1=1'
+  const params = []
 
   if (accountId) { where += ' AND t.account_id = ?';  params.push(accountId) }
   if (type)      { where += ' AND t.type = ?';         params.push(type) }
@@ -132,8 +132,8 @@ export async function getAccountSummary(guildId, accountId) {
        SUM(CASE WHEN type='income'  THEN amount ELSE 0 END) AS total_income,
        SUM(CASE WHEN type='expense' THEN amount ELSE 0 END) AS total_expense
      FROM finance_transactions
-     WHERE guild_id = ? AND account_id = ?`,
-    [guildId, accountId]
+     WHERE account_id = ?`,
+    [accountId]
   )
   return rows[0]
 }
@@ -146,26 +146,26 @@ export async function getBalanceSummary(guildId, accountId) {
        SUM(CASE WHEN type='expense' THEN amount ELSE 0 END) AS total_expense,
        SUM(CASE WHEN type='income'  THEN amount ELSE -amount END) AS net
      FROM finance_transactions
-     WHERE guild_id = ? AND account_id = ?`,
-    [guildId, accountId]
+     WHERE account_id = ?`,
+    [accountId]
   )
 
   // latest balance_after
   const [balRows] = await pool.query(
     `SELECT balance_after, txn_at
      FROM finance_transactions
-     WHERE guild_id = ? AND account_id = ? AND balance_after IS NOT NULL
+     WHERE account_id = ? AND balance_after IS NOT NULL
      ORDER BY txn_at DESC LIMIT 1`,
-    [guildId, accountId]
+    [accountId]
   )
 
   // reconciliation gaps: consecutive rows with balance_after where diff ≠ amount
   const [txnRows] = await pool.query(
     `SELECT id, type, amount, balance_after, txn_at
      FROM finance_transactions
-     WHERE guild_id = ? AND account_id = ? AND balance_after IS NOT NULL
+     WHERE account_id = ? AND balance_after IS NOT NULL
      ORDER BY txn_at ASC`,
-    [guildId, accountId]
+    [accountId]
   )
 
   const gaps = []
