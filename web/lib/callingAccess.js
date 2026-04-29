@@ -148,12 +148,10 @@ export function getUserScope(roles = []) {
     }
   }
 
-  // Provincial coordinator + ทีมXXX → add that province
-  if (isProvincialCoordinator(roles)) {
-    for (const role of roles) {
-      const province = PROVINCE_ROLE_MAP[role]
-      if (province) provinces.add(province)
-    }
+  // ทีมXXX → scope for that province (with or without กรรมการจังหวัด)
+  for (const role of roles) {
+    const province = PROVINCE_ROLE_MAP[role]
+    if (province) provinces.add(province)
   }
 
   return provinces.size > 0 ? Array.from(provinces) : []
@@ -176,6 +174,14 @@ export function canAccessMember(memberProvince, roles = [], isAssigned = false) 
   if (scope.length === 0) return false // no scope
 
   return scope.includes(memberProvince)
+}
+
+/**
+ * Check if user can see member contact fields (phone, LINE) — PDPA-sensitive
+ * Requires provincial coordinator level or above
+ */
+export function canSeeContacts(roles = []) {
+  return isAdmin(roles) || isRegionalCoordinator(roles) || isProvincialCoordinator(roles)
 }
 
 /**

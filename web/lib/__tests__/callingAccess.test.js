@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { isAdmin, isRegionalCoordinator, isProvincialCoordinator, getUserScope, canAccessMember, canCreateCampaign, canOverrideTier } from '../callingAccess.js'
+import { isAdmin, isRegionalCoordinator, isProvincialCoordinator, getUserScope, canAccessMember, canCreateCampaign, canOverrideTier, canSeeContacts } from '../callingAccess.js'
 
 // ---- isAdmin ----
 describe('isAdmin', () => {
@@ -53,9 +53,15 @@ describe('getUserScope', () => {
     expect(scope).toEqual([])
   })
 
-  it('มีทีมแต่ไม่มียศ → scope ว่าง (ทีมอย่างเดียวไม่พอ)', () => {
+  it('ทีมXXX อย่างเดียว (ไม่มีกรรมการจังหวัด) → ได้ scope จังหวัดนั้น', () => {
     const scope = getUserScope(['ทีมราชบุรี'])
-    expect(scope).toEqual([])
+    expect(scope).toEqual(['ราชบุรี'])
+  })
+
+  it('ทีมXXX อย่างเดียว หลายจังหวัด → ได้ scope ทุกจังหวัด', () => {
+    const scope = getUserScope(['ทีมราชบุรี', 'ทีมเชียงใหม่'])
+    expect(scope).toContain('ราชบุรี')
+    expect(scope).toContain('เชียงใหม่')
   })
 })
 
@@ -68,6 +74,9 @@ describe('canAccessMember', () => {
   it('กรรมการจังหวัด + ทีมราชบุรี เข้าราชบุรีได้',    () => expect(canAccessMember('ราชบุรี', ['กรรมการจังหวัด', 'ทีมราชบุรี'])).toBe(true))
   it('กรรมการจังหวัด + ทีมราชบุรี เข้าเชียงใหม่ไม่ได้', () => expect(canAccessMember('เชียงใหม่', ['กรรมการจังหวัด', 'ทีมราชบุรี'])).toBe(false))
 
+  it('ทีมราชบุรี อย่างเดียว เข้าราชบุรีได้',    () => expect(canAccessMember('ราชบุรี', ['ทีมราชบุรี'])).toBe(true))
+  it('ทีมราชบุรี อย่างเดียว เข้าเชียงใหม่ไม่ได้', () => expect(canAccessMember('เชียงใหม่', ['ทีมราชบุรี'])).toBe(false))
+
   it('ผู้ประสานงานภาค + ทีมภาคกลางตะวันตก เข้าราชบุรีได้',  () => expect(canAccessMember('ราชบุรี', ['ผู้ประสานงานภาค', 'ทีมภาคกลางตะวันตก'])).toBe(true))
   it('ผู้ประสานงานภาค + ทีมภาคกลางตะวันตก เข้าเชียงใหม่ไม่ได้', () => expect(canAccessMember('เชียงใหม่', ['ผู้ประสานงานภาค', 'ทีมภาคกลางตะวันตก'])).toBe(false))
 
@@ -77,9 +86,12 @@ describe('canAccessMember', () => {
 
 // ---- canCreateCampaign ----
 describe('canCreateCampaign', () => {
-  it('มียศอะไรก็ได้ สร้างได้', () => expect(canCreateCampaign(['Moderator'])).toBe(true))
-  it('Admin สร้างได้',         () => expect(canCreateCampaign(['Admin'])).toBe(true))
-  it('ไม่มียศ สร้างไม่ได้',   () => expect(canCreateCampaign([])).toBe(false))
+  it('Admin สร้างได้',                 () => expect(canCreateCampaign(['Admin'])).toBe(true))
+  it('ผู้ประสานงานภาค สร้างได้',       () => expect(canCreateCampaign(['ผู้ประสานงานภาค'])).toBe(true))
+  it('กรรมการจังหวัด สร้างได้',        () => expect(canCreateCampaign(['กรรมการจังหวัด'])).toBe(true))
+  it('ผู้ประสานงานจังหวัด สร้างได้',   () => expect(canCreateCampaign(['ผู้ประสานงานจังหวัด'])).toBe(true))
+  it('ทีมXXX อย่างเดียว สร้างไม่ได้', () => expect(canCreateCampaign(['ทีมราชบุรี'])).toBe(false))
+  it('ไม่มียศ สร้างไม่ได้',            () => expect(canCreateCampaign([])).toBe(false))
 })
 
 // ---- canOverrideTier ----
@@ -89,4 +101,16 @@ describe('canOverrideTier', () => {
   it('เหรัญญิก override ได้',   () => expect(canOverrideTier(['เหรัญญิก'])).toBe(true))
   it('กรรมการจังหวัด override ไม่ได้', () => expect(canOverrideTier(['กรรมการจังหวัด'])).toBe(false))
   it('ไม่มียศ override ไม่ได้', () => expect(canOverrideTier([])).toBe(false))
+})
+
+// ---- canSeeContacts ----
+describe('canSeeContacts', () => {
+  it('Admin เห็น contact ได้',                    () => expect(canSeeContacts(['Admin'])).toBe(true))
+  it('เลขาธิการเห็น contact ได้',                 () => expect(canSeeContacts(['เลขาธิการ'])).toBe(true))
+  it('ผู้ประสานงานภาค เห็น contact ได้',          () => expect(canSeeContacts(['ผู้ประสานงานภาค'])).toBe(true))
+  it('กรรมการจังหวัด เห็น contact ได้',           () => expect(canSeeContacts(['กรรมการจังหวัด'])).toBe(true))
+  it('ผู้ประสานงานจังหวัด เห็น contact ได้',      () => expect(canSeeContacts(['ผู้ประสานงานจังหวัด'])).toBe(true))
+  it('ทีมXXX อย่างเดียว เห็น contact ไม่ได้',    () => expect(canSeeContacts(['ทีมราชบุรี'])).toBe(false))
+  it('ทีมXXX อย่างเดียว เห็น contact ไม่ได้ (เชียงใหม่)', () => expect(canSeeContacts(['ทีมเชียงใหม่'])).toBe(false))
+  it('ไม่มียศ เห็น contact ไม่ได้',               () => expect(canSeeContacts([])).toBe(false))
 })

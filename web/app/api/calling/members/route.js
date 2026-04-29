@@ -1,6 +1,6 @@
 import { getServerSession } from 'next-auth'
 import * as memberDB from '@/db/calling/members.js'
-import { canAccessMember, getUserScope, isAdmin } from '@/lib/callingAccess.js'
+import { canAccessMember, getUserScope, isAdmin, canSeeContacts } from '@/lib/callingAccess.js'
 import { getEffectiveRoles } from '@/lib/getEffectiveRoles.js'
 import { authOptions } from '@/lib/auth-options.js'
 
@@ -74,9 +74,15 @@ export async function GET(req) {
       rows = rows.filter(m => userScope.includes(m.home_province))
     }
 
+    const showContacts = canSeeContacts(userRoles)
+    if (!showContacts) {
+      rows = rows.map(({ mobile_number, line_id, ...rest }) => rest)
+    }
+
     return Response.json({
       success: true,
       data: rows,
+      contacts_hidden: !showContacts,
       hasMore: rows.length === limit,
       limit,
       offset

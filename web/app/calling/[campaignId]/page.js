@@ -88,6 +88,7 @@ export default function CampaignPage({ params }) {
   const [loadingInitial, setLoadingInitial] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
   const [noAccess, setNoAccess] = useState(false)
+  const [contactsHidden, setContactsHidden] = useState(false)
   const [usersMap, setUsersMap] = useState({})
 
   const [selectedMembers, setSelectedMembers] = useState(new Set())
@@ -206,6 +207,7 @@ export default function CampaignPage({ params }) {
       ])
       const memberData = await memberRes.json()
       if (memberData.noAccess) { setNoAccess(true); return }
+      setContactsHidden(memberData.contacts_hidden || false)
       const newRows = memberData.data || []
       setMembers(newRows)
       setHasMore(memberData.hasMore || false)
@@ -528,7 +530,7 @@ export default function CampaignPage({ params }) {
               const tierColor = TIER_COLORS[tier]
               const status = member.member_status || 'unassigned'
               const badge = getStatusBadge(status)
-              const hasPhone = !!member.mobile_number
+              const hasPhone = contactsHidden || !!member.mobile_number
               const isExpanded = expandedId === member.source_id
               const dimmed = !hasPhone ? 'opacity-50' : ''
               const expiryBadge = getExpiryBadge(member.expired_at)
@@ -605,12 +607,14 @@ export default function CampaignPage({ params }) {
                   {isExpanded && (
                     <div className="px-4 py-3 bg-warm-50 dark:bg-disc-hover border-t border-warm-200 dark:border-disc-border">
                       <div className="flex flex-wrap gap-x-4 gap-y-1 text-base mb-2">
-                        <span>
-                          {member.mobile_number
-                            ? <a href={`tel:${member.mobile_number}`} className="text-teal font-medium">{member.mobile_number}</a>
-                            : <span className="text-warm-400 dark:text-disc-muted">ไม่มีเบอร์</span>}
-                        </span>
-                        {member.line_id && <span className="text-warm-500 dark:text-disc-muted">LINE: {member.line_id}</span>}
+                        {!contactsHidden && (
+                          <span>
+                            {member.mobile_number
+                              ? <a href={`tel:${member.mobile_number}`} className="text-teal font-medium">{member.mobile_number}</a>
+                              : <span className="text-warm-400 dark:text-disc-muted">ไม่มีเบอร์</span>}
+                          </span>
+                        )}
+                        {!contactsHidden && member.line_id && <span className="text-warm-500 dark:text-disc-muted">LINE: {member.line_id}</span>}
                       </div>
                       {memberLogs === undefined ? (
                         <div className="text-base text-warm-400 dark:text-disc-muted py-1">กำลังโหลด...</div>

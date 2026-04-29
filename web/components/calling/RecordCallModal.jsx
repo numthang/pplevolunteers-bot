@@ -387,6 +387,16 @@ export default function RecordCallModal({ isOpen, member, onClose, onSave, onSav
               )}
             </div>
 
+            {/* Call guide */}
+            <div className="rounded-lg border border-orange/30 bg-orange/5 px-4 py-3 text-base text-warm-500 dark:text-warm-400 leading-snug">
+              <b  className="text-base font-semibold text-orange-600 dark:text-orange-400">หัวข้อสนทนา</b> {' · '}
+              <span className="font-semibold text-orange">อยู่ในพื้นที่ไหม</span>
+              {' · '}
+              <span className="font-semibold text-orange">วันสะดวกร่วมกิจกรรม</span>
+              {' · '}
+              <span className="font-semibold text-orange">สนใจเข้าร่วมขนาดไหน</span>
+            </div>
+
             {/* Status */}
             <div>
               <div className="text-base font-semibold text-warm-700 dark:text-warm-200 mb-2">สถานะการโทร *</div>
