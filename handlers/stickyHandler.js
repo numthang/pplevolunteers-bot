@@ -35,6 +35,17 @@ async function refreshSticky(channel) {
       }
     }
 
+    // ถ้า sticky message อยู่ล่างสุดอยู่แล้ว ไม่ต้องทำอะไร
+    if (config.message_id) {
+      try {
+        const latest = await channel.messages.fetch({ limit: 1 });
+        if (latest.first()?.id === config.message_id) {
+          console.log(`[Sticky] Already at bottom in #${channel.name}, skipping`);
+          return;
+        }
+      } catch {}
+    }
+
     // ลบข้อความเก่า (ถ้ามี) + เช็คก่อนว่ายังเป็น sticky ของเราจริงไหม
     if (config.message_id) {
       try {
