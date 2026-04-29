@@ -108,6 +108,7 @@ export default function CampaignPage({ params }) {
   const [filterRsvp, setFilterRsvp] = useState(() => searchParams.get('rsvp') || '')
   const [filterExpiry, setFilterExpiry] = useState(() => searchParams.get('expiry') || '')
   const [filterCalled, setFilterCalled] = useState(() => searchParams.get('called') || '')
+  const [filterSort, setFilterSort] = useState(() => searchParams.get('sort') || '')
   const [splitModalOpen, setSplitModalOpen] = useState(false)
   const [expandedId, setExpandedId] = useState(null)
   const [logsCache, setLogsCache] = useState({})
@@ -169,9 +170,10 @@ export default function CampaignPage({ params }) {
     if (filterRsvp)     p.set('rsvp', filterRsvp)
     if (filterExpiry)   p.set('expiry', filterExpiry)
     if (filterCalled)   p.set('called', filterCalled)
+    if (filterSort)     p.set('sort', filterSort)
     const qs = p.toString()
     router.replace(qs ? `/calling/${campaignId}?${qs}` : `/calling/${campaignId}`, { scroll: false })
-  }, [debouncedName, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, filterExpiry, filterCalled])
+  }, [debouncedName, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, filterExpiry, filterCalled, filterSort])
 
   const offsetRef = useRef(0)
   const sentinelRef = useRef(null)
@@ -181,7 +183,7 @@ export default function CampaignPage({ params }) {
   useEffect(() => { loadingMoreRef.current = loadingMore }, [loadingMore])
   useEffect(() => { hasMoreRef.current = hasMore }, [hasMore])
 
-  const buildMembersUrl = (offset, amphure, subdistricts, tier, assignee, rsvp, name, expiry, called) => {
+  const buildMembersUrl = (offset, amphure, subdistricts, tier, assignee, rsvp, name, expiry, called, sort) => {
     const limit = amphure ? 9999 : PAGE_SIZE
     const p = new URLSearchParams({ campaignId, limit, offset })
     if (amphure) p.set('amphure', amphure)
@@ -192,17 +194,18 @@ export default function CampaignPage({ params }) {
     if (name)     p.set('name', name)
     if (expiry)   p.set('expiry', expiry)
     if (called)   p.set('called', called)
+    if (sort)     p.set('sort', sort)
     return `/api/calling/members?${p}`
   }
 
-  const loadFirst = useCallback(async (amphure, subdistricts, tier, assignee, rsvp, name, expiry, called) => {
+  const loadFirst = useCallback(async (amphure, subdistricts, tier, assignee, rsvp, name, expiry, called, sort) => {
     setLoadingInitial(true)
     setHasMore(false)
     hasMoreRef.current = false
     offsetRef.current = 0
     try {
       const [memberRes, statsRes] = await Promise.all([
-        fetch(buildMembersUrl(0, amphure, subdistricts, tier, assignee, rsvp, name, expiry, called)),
+        fetch(buildMembersUrl(0, amphure, subdistricts, tier, assignee, rsvp, name, expiry, called, sort)),
         fetch(`/api/calling/members?campaignId=${campaignId}&stats=true`)
       ])
       const memberData = await memberRes.json()
@@ -229,7 +232,7 @@ export default function CampaignPage({ params }) {
     loadingMoreRef.current = true
     try {
       const res = await fetch(buildMembersUrl(
-        offsetRef.current, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled
+        offsetRef.current, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled, filterSort
       ))
       const data = await res.json()
       const newRows = data.data || []
@@ -243,7 +246,7 @@ export default function CampaignPage({ params }) {
       setLoadingMore(false)
       loadingMoreRef.current = false
     }
-  }, [filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled])
+  }, [filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled, filterSort])
 
   useEffect(() => {
     ;(async () => {
@@ -264,8 +267,8 @@ export default function CampaignPage({ params }) {
   }, [campaignId])
 
   useEffect(() => {
-    loadFirst(filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled)
-  }, [campaignId, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled])
+    loadFirst(filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled, filterSort)
+  }, [campaignId, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled, filterSort])
 
   useEffect(() => {
     const sentinel = sentinelRef.current
@@ -343,7 +346,7 @@ export default function CampaignPage({ params }) {
     }
   }
 
-  const hasActiveFilters = !!(filterName || filterAmphure || filterSubdistricts.size > 0 || filterTier || filterAssignee || filterRsvp || filterExpiry || filterCalled)
+  const hasActiveFilters = !!(filterName || filterAmphure || filterSubdistricts.size > 0 || filterTier || filterAssignee || filterRsvp || filterExpiry || filterCalled || filterSort)
 
   const clearFilters = () => {
     setFilterName('')
@@ -355,6 +358,7 @@ export default function CampaignPage({ params }) {
     setFilterRsvp('')
     setFilterExpiry('')
     setFilterCalled('')
+    setFilterSort('')
   }
 
   const assignees = (stats.assigneeCounts || [])
@@ -476,6 +480,13 @@ export default function CampaignPage({ params }) {
           <option value="">สมาชิกภาพ</option>
           <option value="expiring">ใกล้หมดอายุ (90 วัน)</option>
           <option value="expired">หมดอายุแล้ว</option>
+        </select>
+
+        <select value={filterSort} onChange={e => setFilterSort(e.target.value)} className={FILTER_CLS}>
+          <option value="">เรียงตาม: ที่อยู่/ชื่อ</option>
+          <option value="least_called">โทรน้อยสุด (ทุกแคมเปญ)</option>
+          <option value="uncalled">ยังไม่โทร (แคมเปญนี้)</option>
+          <option value="tier">Tier</option>
         </select>
 
         {hasActiveFilters && (

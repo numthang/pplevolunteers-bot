@@ -89,7 +89,9 @@ export async function getMembersCount() {
  * Status: 'called' (has calls) | 'assigned' (assigned to someone) | 'unassigned'
  */
 export async function getMembersInCampaign(campaignId, filters = {}, limit = 100, offset = 0) {
-  const { amphure, subdistricts, tier, status, assignedTo, rsvp, name, expiry, called } = filters
+  const { amphure, subdistricts, tier, status, assignedTo, rsvp, name, expiry, called, sort } = filters
+
+  const needAllTimeCalls = sort === 'least_called'
 
   let query = `SELECT
        m.*,
@@ -105,7 +107,8 @@ export async function getMembersInCampaign(campaignId, filters = {}, limit = 100
        SUM(CASE WHEN l.status = 'answered' THEN 1 ELSE 0 END) AS answered_count,
        CASE WHEN a.id IS NOT NULL THEN 'assigned' ELSE 'unassigned' END AS member_status,
        dc.discord_id,
-       dc.username AS discord_username
+       dc.username AS discord_username${needAllTimeCalls ? `,
+       COALESCE(atl.all_time_calls, 0) AS all_time_calls` : ''}
      FROM act_event_cache cc
      JOIN ngs_member_cache m
        ON (cc.province IS NULL OR m.home_province = cc.province)
@@ -114,7 +117,9 @@ export async function getMembersInCampaign(campaignId, filters = {}, limit = 100
        ON a.campaign_id = cc.id AND a.member_id = m.source_id
      LEFT JOIN calling_logs l
        ON l.campaign_id = cc.id AND l.member_id = m.source_id
-     LEFT JOIN dc_members dc ON dc.serial = m.serial AND dc.guild_id = ?
+     LEFT JOIN dc_members dc ON dc.serial = m.serial AND dc.guild_id = ?${needAllTimeCalls ? `
+     LEFT JOIN (SELECT member_id, COUNT(*) AS all_time_calls FROM calling_logs GROUP BY member_id) atl
+       ON atl.member_id = m.source_id` : ''}
      WHERE cc.id = ? AND cc.type = 'campaign'
        AND m.mobile_number IS NOT NULL
        AND (? IS NULL OR m.home_amphure = ?)`
@@ -145,7 +150,12 @@ export async function getMembersInCampaign(campaignId, filters = {}, limit = 100
      GROUP BY m.source_id
      HAVING (? IS NULL OR member_status = ?)
        AND (? IS NULL OR (? = 'called' AND total_calls > 0) OR (? = 'uncalled' AND total_calls = 0 AND member_status = 'assigned'))
-     ORDER BY m.home_amphure ASC, m.first_name ASC, m.source_id ASC
+     ORDER BY ${
+       sort === 'least_called' ? `all_time_calls ASC, m.home_amphure ASC, m.home_district ASC, m.first_name ASC` :
+       sort === 'uncalled'     ? `total_calls ASC, m.home_amphure ASC, m.home_district ASC, m.first_name ASC` :
+       sort === 'tier'         ? `CASE COALESCE(t.tier, 'D') WHEN 'A' THEN 1 WHEN 'B' THEN 2 WHEN 'C' THEN 3 ELSE 4 END ASC, total_calls ASC, m.home_amphure ASC, m.home_district ASC, m.first_name ASC` :
+                                 `m.home_amphure ASC, m.home_district ASC, m.first_name ASC`
+     }, m.source_id ASC
      LIMIT ? OFFSET ?`
 
   params.push(

@@ -2,58 +2,9 @@
 ---
 ## PPLE Bot Project
 
-- SMS Gateway
-- หน้า calling/campaignId น่ะ ผมไม่อยากให้ล็อคไว้สำหรับ กรรมการจังหวัด ละ ใครก็ควรเข้าได้ เช็คแค่ทีมจังหวัด แต่เฉพาะ กรรมการจังหวัดเท่านั้นที่จะขึ้น show contact เพื่อให้ใครๆ ก็สามารถมาตามงานได้ คิดว่าไง และหรือปกปิดข้อมูลบางส่วนอีกเช่น นามสกุลขึ้น xxxxx
-- อีกประเด็น ตอนนี้ กิจกรรมไหน ผ่านไปแล้วจะ ซ่อนใช่ไหม แต่ผมก็ไม่อยากให้ซ่อนว่ะ อยากเอาตามดูย้อนหลังเหมือนกัน หรือให้มีวิธีไหนที่ event ที่ผ่านไปแล้ว ต้องเจาะจงเข้าไปดูยากขึ้นอะไรแบบนี้ นึกไม่ออกนะ ฝากเสนอหน่อย
-- ทำ instruction การโทรให้พร้อมกว่านี้ ในหน้า record call สั้นๆ ให้คนโทรไม่ลืมการพูดคุยมีบทสนทนา เช่น อยู่ในพื้นที่ เวลาสะดวก ความกระตือรือร้น
-
-
-curl -s -X POST http://localhost:3099 \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer fsC542UnnOCE" \
-  -d '{"message":"29/04/69 14:30 บช X-4882 รับโอนจาก X-0453 0.3 คงเหลือ 9,999.50 บ."}'
-
-curl -s -X POST http://202.183.141.78:3099 \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer fsC542UnnOCE" \
-  -d '{"message":"29/04/69 14:30 บช X-4882 รับโอนจาก X-0453 0.4 คงเหลือ 9,999.50 บ."}'
-
-{"ok":true,"ref_id":"SMS-4882-202604291430"}
-
-
 ---
 ## PPLE Finance
-ขั้นตอน Setup
-1. เพิ่มใน .env
-SMS_WEBHOOK_PORT=3099
-SMS_WEBHOOK_SECRET=ใส่รหัสลับอะไรก็ได้ยาวๆ
-2. เปิด Port ที่ server (ถ้า firewall)
 
-sudo ufw allow 3099/tcp
-3. ตั้งค่า SMS Forwarder app (Android)
-ใช้แอป SMS Forwarder (ฟรี บน Play Store) ตั้งค่า:
-
-Webhook URL: http://<server-ip>:3099/
-Method: POST
-Headers: Authorization: Bearer <SMS_WEBHOOK_SECRET>
-Body (JSON):
-
-{
-  "from": "%from%",
-  "message": "%message%",
-  "device": "Samsung-A03-Ratchaburi"
-}
-Filter: เฉพาะ SMS จาก sender KBANK
-4. ตั้งค่า Android ให้ระบบไม่ตาย
-Battery Optimization (สำคัญมาก):
-
-Settings → Apps → SMS Forwarder → Battery → Unrestricted
-Settings → Device Care → Battery → Background Usage Limits → ปิดสำหรับ SMS Forwarder
-Samsung-specific:
-
-Settings → Apps → SMS Forwarder → Allow background activity: ON
-ใช้ "Protect Battery" mode (85%) ได้เลย — ไม่กระทบ SMS รับ
-ห้าม Force Stop แอปหลัง reboot
 
 ---
 
@@ -61,6 +12,7 @@ Settings → Apps → SMS Forwarder → Allow background activity: ON
 ### อัพเดท Calling (calling/pending)
 
 ### อัพเดท Calling (calling/[campaignId])
+- สมมติว่ารอบนี้กิจกรรมนี้โทรไม่หมด แต่กิจกรรมหน้าอยากจะให้ priority โทรหาคนกลุ่มนี้ก่อน จะทำไง ทำให้หน้านี้ sort by จำนวนการโทรน้อยๆ ก่อน หรือยังไงดีนะ
 
 ### Optional
 - เพิ่ม audit logs -> สามารถดูได้ว่าแก้ไขหรือเพิ่มอะไร (เป็น History)
