@@ -1,85 +1,13 @@
 'use client'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Copy, Check, Pencil, Archive, ArchiveRestore, Trash2, X } from 'lucide-react'
 import BankBadge from '@/components/BankBadge'
-
-const BANKS = [
-  'กสิกรไทย', 'ไทยพาณิชย์', 'กรุงเทพ', 'กรุงไทย', 'กรุงศรีอยุธยา',
-  'ทหารไทยธนชาต', 'ออมสิน', 'ธ.ก.ส.',
-]
-
-const PROVINCES = [
-  'กรุงเทพชั้นใน','กรุงเทพธนบุรี','กรุงเทพตะวันออก','กรุงเทพเหนือ',
-  'นนทบุรี','สมุทรปราการ','สมุทรสาคร','ปทุมธานี','ราชบุรี','นครปฐม',
-  'กาญจนบุรี','เพชรบุรี','สุพรรณบุรี','สมุทรสงคราม','ประจวบคีรีขันธ์',
-  'อุทัยธานี','อ่างทอง','สระบุรี','อยุธยา','นครนายก','ลพบุรี','ชัยนาท','สิงห์บุรี',
-  'เชียงใหม่','เชียงราย','แม่ฮ่องสอน','ลำพูน','ลำปาง','แพร่','พะเยา','น่าน',
-  'กำแพงเพชร','ตาก','นครสวรรค์','พิจิตร','พิษณุโลก','เพชรบูรณ์','สุโขทัย','อุตรดิตถ์',
-  'ตราด','จันทบุรี','ระยอง','ชลบุรี','ฉะเชิงเทรา','ปราจีนบุรี','สระแก้ว',
-  'อุดรธานี','หนองคาย','บึงกาฬ','สกลนคร','มุกดาหาร','นครพนม','อำนาจเจริญ',
-  'เลย','ชัยภูมิ','ขอนแก่น','กาฬสินธุ์','ยโสธร','หนองบัวลำภู','มหาสารคาม',
-  'ร้อยเอ็ด','อุบลราชธานี','ศรีสะเกษ','สุรินทร์','บุรีรัมย์','นครราชสีมา',
-  'ชุมพร','พังงา','ระนอง','ภูเก็ต','สุราษฎร์ธานี','นครศรีธรรมราช',
-  'ตรัง','กระบี่','สงขลา','พัทลุง','สตูล','ปัตตานี','ยะลา','นราธิวาส',
-]
+import AccountFormFields from './AccountFormFields'
 
 function fmt(n) {
-  return Math.abs(n).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '\u00A0฿'
-}
-
-const selectCls = "block w-full border dark:border-gray-600 rounded px-2 py-1 mt-1 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm"
-
-function AccountForm({ form, onChange }) {
-  return (
-    <div className="space-y-3 text-sm text-gray-700 dark:text-gray-300">
-      <label className="block">
-        ชื่อบัญชี
-        <input className={selectCls} value={form.name || ''} onChange={e => onChange({ name: e.target.value })} />
-      </label>
-      <label className="block">
-        ธนาคาร
-        <select className={selectCls} value={form.bank || ''} onChange={e => onChange({ bank: e.target.value })}>
-          <option value="">-- เลือกธนาคาร --</option>
-          {BANKS.map(b => <option key={b} value={b}>{b}</option>)}
-        </select>
-      </label>
-      <label className="block">
-        เลขบัญชี
-        <input className={selectCls} value={form.account_no || ''} onChange={e => onChange({ account_no: e.target.value })} />
-      </label>
-      <label className="block">
-        จังหวัด/ทีม <span className="text-gray-400 text-xs">(กำหนดสิทธิ์การเข้าถึง)</span>
-        <select className={selectCls} value={form.province || ''} onChange={e => onChange({ province: e.target.value })}>
-          <option value="">ส่วนกลาง (Admin เท่านั้น)</option>
-          {PROVINCES.map(p => <option key={p} value={p}>{p}</option>)}
-        </select>
-      </label>
-      <label className="block">
-        การมองเห็น
-        <select className={selectCls} value={form.visibility || 'private'} onChange={e => onChange({ visibility: e.target.value })}>
-          <option value="private">ส่วนตัว — เห็นแค่เจ้าของ</option>
-          <option value="internal">ภายใน — เห็นทุกคนในองค์กร</option>
-          <option value="public">สาธารณะ — เห็นได้จากภายนอก</option>
-        </select>
-      </label>
-      <label className="block">
-        Email Inbox (optional)
-        <input className={selectCls} value={form.email_inbox || ''} onChange={e => onChange({ email_inbox: e.target.value })} />
-      </label>
-      <div className="flex gap-4">
-        <label className="flex items-center gap-2">
-          <input type="checkbox" checked={!!form.notify_income} onChange={e => onChange({ notify_income: e.target.checked ? 1 : 0 })} />
-          แจ้งรายรับ
-        </label>
-        <label className="flex items-center gap-2">
-          <input type="checkbox" checked={!!form.notify_expense} onChange={e => onChange({ notify_expense: e.target.checked ? 1 : 0 })} />
-          แจ้งรายจ่าย
-        </label>
-      </div>
-    </div>
-  )
+  return Math.abs(n).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ฿'
 }
 
 export default function AccountCard({ account, canEdit = false }) {
@@ -88,6 +16,11 @@ export default function AccountCard({ account, canEdit = false }) {
   const [copied, setCopied] = useState(false)
   const [showModal, setShowModal] = useState(false)
   const [form, setForm] = useState({})
+  const [guilds, setGuilds] = useState([])
+
+  useEffect(() => {
+    fetch('/api/admin/guilds').then(r => r.ok ? r.json() : []).then(setGuilds)
+  }, [])
 
   function copyAll(e) {
     e.preventDefault()
@@ -179,7 +112,7 @@ export default function AccountCard({ account, canEdit = false }) {
               <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">แก้ไขบัญชี</h2>
               <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"><X size={18} /></button>
             </div>
-            <AccountForm form={form} onChange={v => setForm(f => ({ ...f, ...v }))} />
+            <AccountFormFields form={form} onChange={v => setForm(f => ({ ...f, ...v }))} guilds={guilds} />
             <div className="flex items-center justify-between mt-5 gap-2">
               <div className="flex gap-1">
                 <button onClick={toggleArchive}

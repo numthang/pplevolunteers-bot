@@ -1,6 +1,6 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
-import { getAccountsForUser, getAccountsAll, createAccount } from '@/db/finance/accounts.js'
+import { getAccountsAll, createAccount } from '@/db/finance/accounts.js'
 import { isAdmin } from '@/lib/roles.js'
 import { canViewAccount, canCreateNonPrivateAccount } from '@/lib/financeAccess.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
@@ -26,6 +26,7 @@ export async function POST(req) {
   const data = await req.json()
   if (!canCreateNonPrivateAccount(roles)) data.visibility = 'private'
 
-  const id = await createAccount(GUILD_ID, data, session.user.discordId)
+  const guildId = (isAdmin(roles) && data.guild_id) ? data.guild_id : GUILD_ID
+  const id = await createAccount(guildId, data, session.user.discordId)
   return Response.json({ id }, { status: 201 })
 }

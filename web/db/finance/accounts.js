@@ -54,17 +54,29 @@ export async function createAccount(guildId, data, updatedBy) {
   return result.insertId
 }
 
-export async function updateAccount(id, data, updatedBy) {
-  const { name, bank, account_no, visibility, province, notify_income, notify_expense, email_inbox } = data
+export async function updateAccount(id, data, updatedBy, allowGuildChange = false) {
+  const { name, bank, account_no, visibility, province, notify_income, notify_expense, email_inbox, guild_id } = data
   const cleanAccountNo = (account_no || '').replace(/-/g, '')
-  await pool.query(
-    `UPDATE finance_accounts
-     SET name=?, bank=?, account_no=?, visibility=?, province=?, notify_income=?, notify_expense=?,
-         email_inbox=?, updated_by=?, updated_at=NOW()
-     WHERE id=?`,
-    [name, bank || null, cleanAccountNo || null, visibility, province || null,
-     notify_income, notify_expense, email_inbox || null, updatedBy, id]
-  )
+
+  if (allowGuildChange && guild_id) {
+    await pool.query(
+      `UPDATE finance_accounts
+       SET guild_id=?, name=?, bank=?, account_no=?, visibility=?, province=?, notify_income=?, notify_expense=?,
+           email_inbox=?, updated_by=?, updated_at=NOW()
+       WHERE id=?`,
+      [guild_id, name, bank || null, cleanAccountNo || null, visibility, province || null,
+       notify_income, notify_expense, email_inbox || null, updatedBy, id]
+    )
+  } else {
+    await pool.query(
+      `UPDATE finance_accounts
+       SET name=?, bank=?, account_no=?, visibility=?, province=?, notify_income=?, notify_expense=?,
+           email_inbox=?, updated_by=?, updated_at=NOW()
+       WHERE id=?`,
+      [name, bank || null, cleanAccountNo || null, visibility, province || null,
+       notify_income, notify_expense, email_inbox || null, updatedBy, id]
+    )
+  }
 }
 
 export async function deleteAccount(id) {

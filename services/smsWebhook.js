@@ -14,7 +14,6 @@ const log    = require('../utils/logger')
 
 const PORT   = parseInt(process.env.SMS_WEBHOOK_PORT || '3099')
 const SECRET = process.env.SMS_WEBHOOK_SECRET
-const GUILD_ID = process.env.GUILD_ID
 
 let discordClient = null
 
@@ -91,7 +90,7 @@ async function processSmsIncome(txn) {
 		   ref_id, source, txn_at, updated_by, updated_at)
 		 VALUES (?, ?, 'income', ?, ?, ?, ?, ?, ?, 'sms', ?, 'system', NOW())`,
 		[
-			GUILD_ID,
+			account.guild_id,
 			account.id,
 			txn.amount,
 			description,
@@ -117,8 +116,7 @@ async function matchAccount(lastDigits) {
 	if (!lastDigits) return null
 
 	const [accounts] = await pool.query(
-		`SELECT * FROM finance_accounts WHERE guild_id = ? AND bank = 'กสิกรไทย'`,
-		[GUILD_ID]
+		`SELECT * FROM finance_accounts WHERE bank = 'กสิกรไทย' AND archived = 0`
 	)
 
 	for (const acc of accounts) {
@@ -135,7 +133,7 @@ async function notifyDiscord(account, txn) {
 	try {
 		const [cfg] = await pool.query(
 			`SELECT thread_id, account_ids FROM finance_config WHERE guild_id = ?`,
-			[GUILD_ID]
+			[account.guild_id]
 		)
 		const threadId = cfg[0]?.thread_id
 		if (!threadId) return

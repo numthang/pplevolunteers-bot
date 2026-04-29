@@ -3,6 +3,18 @@
 ## PPLE Bot Project
 
 - SMS Gateway
+- หน้า calling/campaignId น่ะ ผมไม่อยากให้ล็อคไว้สำหรับ กรรมการจังหวัด ละ ใครก็ควรเข้าได้ เช็คแค่ทีมจังหวัด แต่เฉพาะ กรรมการจังหวัดเท่านั้นที่จะขึ้น show contact เพื่อให้ใครๆ ก็สามารถมาตามงานได้ คิดว่าไง และหรือปกปิดข้อมูลบางส่วนอีกเช่น นามสกุลขึ้น xxxxx
+- ทำ instruction การโทรให้พร้อม กว่านี้ โดยเฉพาะสิ่งที่ต้องการจะถาม
+
+
+curl -s -X POST http://localhost:3099 \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer fsC542UnnOCE" \
+  -d '{"message":"29/04/69 14:30 บช X-4882 รับโอนจาก X-0453 0.3 คงเหลือ 9,999.50 บ."}'
+
+{"ok":true,"ref_id":"SMS-4882-202604291430"}
+
+
 ---
 ## PPLE Finance
 ขั้นตอน Setup

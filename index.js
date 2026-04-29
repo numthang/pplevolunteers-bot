@@ -29,6 +29,7 @@ const { deletePost } = require('./services/meilisearch');
 const { initMeilisearch } = require('./services/meilisearch')
 const emailPoller = require('./services/emailPoller');
 const smsWebhook  = require('./services/smsWebhook');
+const { upsertGuilds } = require('./db/guilds');
 const { handleSlipMessage } = require('./services/financeOCR');
 
 const fs = require('fs');
@@ -59,6 +60,7 @@ for (const file of commandFiles) {
 client.once('clientReady', async () => {
   console.log(`🤖 Bot พร้อมแล้ว! ${client.user.tag}`);
   await initMeilisearch();
+  await upsertGuilds(client.guilds.cache);
   emailPoller.init(client);
   smsWebhook.init(client);
   // โหลด forum configs ทุก guild ที่ bot อยู่

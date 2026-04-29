@@ -2,6 +2,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
 import { getAccountById, updateAccount, deleteAccount, archiveAccount } from '@/db/finance/accounts.js'
 import { canEditAccount } from '@/lib/financeAccess.js'
+import { isAdmin } from '@/lib/roles.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 
 async function checkEditPermission(session, id) {
@@ -9,7 +10,7 @@ async function checkEditPermission(session, id) {
   if (!account) return { error: 'Not found', status: 404 }
   const { roles, discordId } = await getEffectiveIdentity(session)
   if (!canEditAccount(account, discordId, roles)) return { error: 'Forbidden', status: 403 }
-  return { account }
+  return { account, roles }
 }
 
 export async function PUT(req, { params }) {
@@ -17,11 +18,11 @@ export async function PUT(req, { params }) {
   const session = await getServerSession(authOptions)
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { error, status, account } = await checkEditPermission(session, id)
+  const { error, status, roles } = await checkEditPermission(session, id)
   if (error) return Response.json({ error }, { status })
 
   const data = await req.json()
-  await updateAccount(id, data, session.user.discordId)
+  await updateAccount(id, data, session.user.discordId, isAdmin(roles))
   return Response.json({ ok: true })
 }
 

@@ -10,7 +10,6 @@ const kbank         = require('./parsers/kbank')
 const log           = require('../utils/logger')
 
 const POLL_INTERVAL = parseInt(process.env.EMAIL_POLL_INTERVAL || '60000')
-const GUILD_ID      = process.env.GUILD_ID
 
 // parsers ที่รองรับ — เพิ่ม parser ใหม่ตรงนี้
 const PARSERS = [kbank]
@@ -98,7 +97,11 @@ async function processTransaction(txn, rawText) {
 
     if (account._matchType === 'internal') {
       await insertTransaction(txn, account.expenseAcc, 'expense', txn.balance_after)
-      await insertTransaction(txn, account.incomeAcc,  'income',  null)
+      // ref_id ของ income ตั้งให้ตรงกับ smsWebhook format → INSERT IGNORE dedup อัตโนมัติ
+      const last4    = account.incomeAcc.account_no.slice(-4)
+      const refDate  = (txn.txn_at || '').replace(/[-: ]/g, '').substring(0, 12) || Date.now().toString()
+      const smsRefId = `SMS-${last4}-${refDate}`
+      await insertTransaction({ ...txn, ref_id: smsRefId }, account.incomeAcc, 'income', null)
       return
     }
 
@@ -122,7 +125,7 @@ async function insertTransaction(txn, account, type, balanceAfter) {
       (guild_id, account_id, type, amount, description, counterpart_name, counterpart_account, counterpart_bank, fee, balance_after, ref_id, txn_at, updated_by, updated_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'system', NOW())`,
     [
-      GUILD_ID,
+      account.guild_id,
       account.id,
       type,
       txn.amount,
@@ -150,8 +153,7 @@ async function insertTransaction(txn, account, type, balanceAfter) {
 
 async function matchAccount(txn) {
   const [accounts] = await pool.query(
-    `SELECT * FROM finance_accounts WHERE guild_id = ?`,
-    [GUILD_ID]
+    `SELECT * FROM finance_accounts WHERE archived = 0`
   )
 
   let incomeAcc = null
@@ -189,7 +191,7 @@ async function notifyDiscord(account, type, txn) {
   try {
     const [cfg] = await pool.query(
       `SELECT thread_id, account_ids FROM finance_config WHERE guild_id = ?`,
-      [GUILD_ID]
+      [account.guild_id]
     )
     const threadId  = cfg[0]?.thread_id
     if (!threadId) return

@@ -106,8 +106,16 @@ async function handleGogoModal(interaction) {
 
   if (stickyConfig && stickyConfig.message_id === messageId) {
     stickyConfig.embeds = [embed.toJSON()];
-    await setSetting(interaction.guildId, stickyKey, stickyConfig);
-    await refreshSticky(interaction.channel);
+    const now = Date.now();
+    const cooldownMs = 30 * 60 * 1000;
+    if (now - (stickyConfig.last_refreshed_at || 0) >= cooldownMs) {
+      stickyConfig.last_refreshed_at = now;
+      await setSetting(interaction.guildId, stickyKey, stickyConfig);
+      await refreshSticky(interaction.channel);
+    } else {
+      await setSetting(interaction.guildId, stickyKey, stickyConfig);
+      await msg.edit({ embeds: [embed] });
+    }
   } else {
     await msg.edit({ embeds: [embed] });
   }
