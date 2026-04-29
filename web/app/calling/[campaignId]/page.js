@@ -507,7 +507,8 @@ export default function CampaignPage({ params }) {
               ? `เลือก ${selectedMembers.size} / ${members.length}`
               : `ชื่อ (${loadingInitial ? '...' : members.length})`}
           </span>
-          <span className="text-center">ระดับ</span>
+          <span className="md:hidden text-center">โทร</span>
+          <span className="hidden md:block text-center">ระดับ</span>
           <span className="hidden md:block">มอบหมาย</span>
           <span className="hidden md:block">ตำบล</span>
           <span className="hidden md:block text-center">โทร</span>
@@ -541,7 +542,7 @@ export default function CampaignPage({ params }) {
                   <div className={`
                     grid items-center px-3 py-3
                     hover:bg-warm-50 dark:hover:bg-disc-hover transition-colors
-                    [grid-template-columns:40px_1fr_44px]
+                    [grid-template-columns:40px_1fr_auto]
                     md:[grid-template-columns:40px_40px_1fr_44px_120px_88px_80px]
                     ${isExpanded ? 'bg-warm-50 dark:bg-disc-hover' : ''}
                   `}>
@@ -552,6 +553,8 @@ export default function CampaignPage({ params }) {
                     <span className={`hidden md:block text-sm tabular-nums text-warm-400 dark:text-disc-muted ${dimmed}`}>{idx + 1}</span>
                     <div className={`min-w-0 pr-2 cursor-pointer ${dimmed}`} onClick={() => handleExpand(member.source_id)}>
                       <div className="flex items-center gap-1.5 truncate">
+                        <span className="md:hidden shrink-0 px-1.5 py-0.5 rounded text-sm font-semibold"
+                          style={{ backgroundColor: tierColor.bg, color: tierColor.text }}>{tier}</span>
                         <span className="truncate text-base font-medium text-warm-900 dark:text-disc-text">
                           {member.full_name}
                         </span>
@@ -582,8 +585,15 @@ export default function CampaignPage({ params }) {
                         </div>
                       )}
                     </div>
-                    <div className={`flex justify-center ${dimmed}`}>
-                      <span className="px-1.5 py-0.5 rounded text-base font-semibold"
+                    <div className={`flex justify-center items-center pl-2 ${dimmed}`}>
+                      <div className="md:hidden">
+                        {member.total_calls > 0
+                          ? <span className="px-1.5 py-0.5 rounded text-sm font-medium whitespace-nowrap" style={{ backgroundColor: CALL_STATUS_COLORS.called.bg, color: CALL_STATUS_COLORS.called.text }}>{CALL_STATUS_COLORS.called.label}</span>
+                          : member.assigned_to
+                            ? <span className="px-1.5 py-0.5 rounded text-sm font-medium whitespace-nowrap" style={{ backgroundColor: CALL_STATUS_COLORS.pending.bg, color: CALL_STATUS_COLORS.pending.text }}>{CALL_STATUS_COLORS.pending.label}</span>
+                            : <span className="text-warm-300 dark:text-disc-muted text-sm">—</span>}
+                      </div>
+                      <span className="hidden md:inline-block px-1.5 py-0.5 rounded text-base font-semibold"
                         style={{ backgroundColor: tierColor.bg, color: tierColor.text }}>{tier}</span>
                     </div>
                     <div className={`hidden md:block text-base truncate pr-2 ${dimmed}`}>
