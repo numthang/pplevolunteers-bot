@@ -12,7 +12,7 @@ const CALL_STATUS_OPTIONS = [
 const NOTE_PLACEHOLDER = {
   answered:   'เช่น ทำงานอยู่กรุงเทพ กลับบ้านเดือนละครั้ง',
   no_answer:  'เช่น สายไม่ว่าง / ปิดเครื่อง / เบอร์ผิด / ฝากข้อความ',
-  not_called: 'เช่น คาดว่าไม่สะดวก / ไม่มีเบอร์ / ติดต่อ LINE แล้ว',
+  not_called: 'เช่น เบอร์ผิด / คาดว่าไม่สะดวก / ไม่กลับบ้านเลย / ติดต่อ LINE แล้ว',
 }
 
 const RSVP_OPTIONS = [

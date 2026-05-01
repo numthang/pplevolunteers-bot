@@ -311,7 +311,7 @@ export default function PendingCallsPage() {
                           )}
                         </div>
                         {member.latest_note && (
-                          <div className="text-base text-warm-600 dark:text-warm-200 mt-1 truncate italic">
+                          <div className="text-base text-warm-600 dark:text-warm-200 mt-1 italic whitespace-pre-wrap break-words">
                             "{member.latest_note}"
                           </div>
                         )}
@@ -358,7 +358,7 @@ export default function PendingCallsPage() {
                           )}
                         </div>
                         {member.latest_note && (
-                          <div className="text-base text-warm-600 dark:text-warm-200 mt-0.5 truncate italic">
+                          <div className="text-base text-warm-600 dark:text-warm-200 mt-0.5 italic whitespace-pre-wrap break-words">
                             "{member.latest_note}"
                           </div>
                         )}
