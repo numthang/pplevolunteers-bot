@@ -113,8 +113,8 @@ export default function CampaignPage({ params }) {
   const [expandedId, setExpandedId] = useState(null)
   const [logsCache, setLogsCache] = useState({})
 
-  const LOG_STATUS_LABEL = { answered: 'รับสาย', no_answer: 'ไม่รับ', busy: 'สายไม่ว่าง', wrong_number: 'เบอร์ผิด' }
-  const LOG_STATUS_COLOR = { answered: '#0d9e94', no_answer: '#a32d2d', busy: '#854f0b', wrong_number: '#6b7280' }
+  const LOG_STATUS_LABEL = { answered: 'รับสาย', no_answer: 'ไม่รับ', busy: 'สายไม่ว่าง', not_called: 'ข้าม' }
+  const LOG_STATUS_COLOR = { answered: '#0d9e94', no_answer: '#a32d2d', busy: '#854f0b', not_called: '#6b7280' }
 
   const handleExpand = async (memberId) => {
     const next = expandedId === memberId ? null : memberId

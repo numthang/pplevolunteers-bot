@@ -5,7 +5,7 @@ import { useState } from 'react'
 const STATUSES = [
   { value: 'answered',     label: 'รับสาย' },
   { value: 'no_answer',   label: 'ไม่รับ' },
-  { value: 'wrong_number', label: 'เบอร์ผิด' },
+  { value: 'not_called', label: 'ข้าม' },
 ]
 
 const SIGNALS = {

@@ -4,10 +4,16 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { CALL_STATUS_COLORS } from '@/lib/callingStatusColors.js'
 
 const CALL_STATUS_OPTIONS = [
-  { value: 'answered',      label: 'รับสาย',   icon: '📞', color: '#0d9e94', bg: '#e1f5f4' },
-  { value: 'no_answer',     label: 'ไม่รับ',    icon: '📵', color: '#854f0b', bg: '#faeeda' },
-  { value: 'wrong_number',  label: 'เบอร์ผิด',  icon: '❌', color: '#a32d2d', bg: '#fcebeb' },
+  { value: 'answered',   label: 'รับสาย', icon: '📞', color: '#0d9e94', bg: '#e1f5f4' },
+  { value: 'no_answer',  label: 'ไม่รับ',  icon: '📵', color: '#854f0b', bg: '#faeeda' },
+  { value: 'not_called', label: 'ข้าม',  icon: '🚫', color: '#6b7280', bg: '#f3f4f6' },
 ]
+
+const NOTE_PLACEHOLDER = {
+  answered:   'เช่น ทำงานอยู่กรุงเทพ กลับบ้านเดือนละครั้ง',
+  no_answer:  'เช่น สายไม่ว่าง / ปิดเครื่อง / เบอร์ผิด / ฝากข้อความ',
+  not_called: 'เช่น คาดว่าไม่สะดวก / ไม่มีเบอร์ / ติดต่อ LINE แล้ว',
+}
 
 const RSVP_OPTIONS = [
   { value: 'yes',   label: 'ร่วม',    icon: '✓', activeClass: 'bg-teal border-teal text-white' },
@@ -190,7 +196,7 @@ export default function RecordCallModal({ isOpen, member, onClose, onSave, onSav
   const expiryBadge = getExpiryBadge(member.expired_at)
   const showSignals = status === 'answered'
   const signalsFilled = SIGNALS.some(s => signals[s.key])
-  const canSave = status && (status !== 'answered' || (signalsFilled && rsvp))
+  const canSave = status && note.trim() && (status !== 'answered' || (signalsFilled && rsvp))
 
   return (
     <div
@@ -388,13 +394,12 @@ export default function RecordCallModal({ isOpen, member, onClose, onSave, onSav
             </div>
 
             {/* Call guide */}
-            <div className="rounded-lg border border-orange/30 bg-orange/5 px-4 py-3 text-base text-warm-500 dark:text-warm-400 leading-snug">
-              <b  className="text-base font-semibold text-orange-600 dark:text-orange-400">หัวข้อสนทนา</b> {' · '}
-              <span className="font-semibold text-orange">อยู่ในพื้นที่ไหม</span>
-              {' · '}
-              <span className="font-semibold text-orange">วันสะดวกร่วมกิจกรรม</span>
-              {' · '}
-              <span className="font-semibold text-orange">สนใจเข้าร่วมขนาดไหน</span>
+            <div className="px-1 text-base text-warm-600 dark:text-warm-300 leading-snug">
+              <span className="font-semibold text-orange-600 dark:text-orange-400">หัวข้อสนทนา</span>
+              {' · '}อยู่ในพื้นที่ไหม
+              {' · '}วันสะดวกร่วมกิจกรรม
+              {' · '}สนใจเข้าร่วมขนาดไหน
+              {' · '}ส่งลิงก์ ACT ทาง SMS หรือไลน์
             </div>
 
             {/* Status */}
@@ -405,7 +410,7 @@ export default function RecordCallModal({ isOpen, member, onClose, onSave, onSav
                   <button
                     key={opt.value}
                     type="button"
-                    onClick={() => setStatus(opt.value)}
+                    onClick={() => { setStatus(opt.value); setNote('') }}
                     className={`py-4 px-2 text-xl rounded-xl border-2 transition font-medium flex flex-col items-center gap-1.5 ${
                       status === opt.value
                         ? ''
@@ -425,13 +430,13 @@ export default function RecordCallModal({ isOpen, member, onClose, onSave, onSav
 
             {/* Note */}
             <div>
-              <div className="text-base font-semibold text-warm-700 dark:text-warm-200 mb-2">บันทึก</div>
+              <div className="text-base font-semibold text-warm-700 dark:text-warm-200 mb-2">บันทึก *</div>
               <textarea
                 value={note}
                 onChange={e => setNote(e.target.value)}
-                rows={2}
-                placeholder="เช่น ทำงานอยู่กรุงเทพ กลับบ้านเดือนละครั้ง"
-                className="w-full px-3 py-2.5 text-base border border-warm-200 dark:border-warm-dark-300 bg-white dark:bg-warm-dark-100 text-warm-900 dark:text-warm-50 placeholder-warm-400 dark:placeholder-warm-dark-400 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-teal"
+                rows={3}
+                placeholder={NOTE_PLACEHOLDER[status] || 'บันทึกเพิ่มเติม'}
+                className="w-full px-3 py-2.5 text-base border-2 border-teal bg-white dark:bg-warm-dark-100 text-warm-900 dark:text-warm-50 placeholder-warm-400 dark:placeholder-warm-dark-400 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-teal"
               />
             </div>
 

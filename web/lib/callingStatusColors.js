@@ -3,5 +3,5 @@ export const CALL_STATUS_COLORS = {
   called:       { bg: '#e1f5f4', text: '#0d9e94', label: 'โทรแล้ว' },
   answered:     { bg: '#e1f5f4', text: '#0d9e94', label: 'รับสาย' },
   no_answer:    { bg: '#faeeda', text: '#854f0b', label: 'ไม่รับ' },
-  wrong_number: { bg: '#fcebeb', text: '#a32d2d', label: 'เบอร์ผิด' },
+  not_called:   { bg: '#f3f4f6', text: '#6b7280', label: 'ข้าม' },
 }

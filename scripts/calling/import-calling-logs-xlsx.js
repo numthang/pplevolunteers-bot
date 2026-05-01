@@ -3,12 +3,11 @@
  * Parse calling log XLSX → generate SQL for review before import
  *
  * Usage:
- *   node scripts/calling/import-calling-logs-xlsx.js [path/to/file.xlsx]
+ *   node scripts/calling/import-calling-logs-xlsx.js <file.xlsx> <province> [--date YYYY-MM-DD]
  *
  * Output:
  *   backups/calling-import-<timestamp>.sql
  *
- * Source:  md/calling/calling_log_ราชบุรี.xlsx
  * Prereq:  migration.sql + migration-ngs-member-cache.sql must be run first
  */
 
@@ -18,24 +17,26 @@ const XLSX = require('xlsx');
 const fs   = require('fs');
 const path = require('path');
 
-// ─── Config ────────────────────────────────────────────────────────────────
+// ─── Args ──────────────────────────────────────────────────────────────────
 
-const XLS_FILE = process.argv[2]
-  ?? path.join(__dirname, '../../md/calling/calling_log_ราชบุรี.xlsx');
+const XLS_FILE        = process.argv[2];
+const CAMPAIGN_PROVINCE = process.argv[3];
 
-const CAMPAIGN_PROVINCE   = 'ราชบุรี';
-const IMPORT_DATE         = '2026-04-16 00:00:00';
+const dateFlag = process.argv.indexOf('--date');
+const IMPORT_DATE = dateFlag >= 0 && process.argv[dateFlag + 1]
+  ? `${process.argv[dateFlag + 1]} 00:00:00`
+  : `${new Date().toISOString().slice(0, 10)} 00:00:00`;
+
+if (!XLS_FILE || !CAMPAIGN_PROVINCE) {
+  console.error('Usage: node import-calling-logs-xlsx.js <file.xlsx> <province> [--date YYYY-MM-DD]');
+  process.exit(1);
+}
 
 const SKIP_SHEETS = new Set(['อ่านก่อนโทร', 'latest']);
 
 // Labels in row2 that indicate "caller name" sub-column
 const CALLER_LABELS = new Set(['CALLER_NAME', 'ผู้รับผิดชอบ', 'โทรโดย', 'โดย']);
 
-// Extract district name from sheet name
-// "บ้านโป่ง ครั้งที่ 1-2" → "บ้านโป่ง", "จอมบึง" → "จอมบึง"
-function getDistrictName(sheetName) {
-  return sheetName.replace(/\s*ครั้งที่\s*[\d\-]+\s*$/, '').trim();
-}
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
@@ -126,10 +127,8 @@ function detectSheetStructure(h1, h2) {
 // ─── Parse all district sheets ─────────────────────────────────────────────
 
 function parseLogs(wb) {
-  const logs       = [];
-  const lastGrade  = new Map();   // source_id (INT) → 'A'|'B'|'C'|'D'
-  const campaigns  = [];          // ordered unique { key, name } for SQL output
-  const campaignSet = new Set();  // keys seen so far
+  const logs      = [];
+  const lastGrade = new Map();   // source_id (INT) → 'A'|'B'|'C'|'D'
 
   for (const sheetName of wb.SheetNames) {
     if (SKIP_SHEETS.has(sheetName)) continue;
@@ -137,7 +136,6 @@ function parseLogs(wb) {
     const ws   = wb.Sheets[sheetName];
     const data = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
 
-    // Normalize headers to strings
     const h1 = (data[0] ?? []).map(v => (v == null ? null : String(v).trim()));
     const h2 = (data[1] ?? []).map(v => (v == null ? null : String(v).trim()));
 
@@ -152,28 +150,14 @@ function parseLogs(wb) {
       continue;
     }
 
-    const districtName = getDistrictName(sheetName);
-
-    // Register campaigns for this sheet's rounds (deduplicated by key)
-    const roundCampaignKey = rounds.map(r => {
-      const key  = `${districtName} ${CAMPAIGN_PROVINCE} ครั้งที่ ${r.roundNum}`;
-      if (!campaignSet.has(key)) {
-        campaignSet.add(key);
-        campaigns.push({ key, name: key });
-      }
-      return key;
-    });
-
     process.stderr.write(
-      `  ${sheetName} (${districtName}): rounds=[${rounds.map(r => r.roundNum).join(',')}]` +
+      `  ${sheetName}: rounds=[${rounds.map(r => r.roundNum).join(',')}]` +
       ` detailCol=${detailCol} tierCol=${tierCol >= 0 ? tierCol : '-'}\n`
     );
 
-    // Data starts at row index 2 (row 3 in Excel) — always, after filter removal
     for (let ri = 2; ri < data.length; ri++) {
       const row = data[ri];
 
-      // Get source_id from the HYPERLINK cell
       const cellRef  = XLSX.utils.encode_cell({ r: ri, c: detailCol });
       const sourceId = extractSourceId(ws[cellRef]);
       if (!sourceId) continue;
@@ -182,58 +166,50 @@ function parseLogs(wb) {
         ? (String(row[globalCallerCol] ?? '').trim() || null)
         : null;
 
-      // TIER column (โพธาราม): applies to this member across all rounds
       let memberTier = null;
       if (tierCol >= 0 && row[tierCol]) {
         memberTier = extractGrade(String(row[tierCol]));
         if (memberTier) lastGrade.set(sourceId, memberTier);
       }
 
-      rounds.forEach((round, ri2) => {
+      rounds.forEach(round => {
         const note = round.noteCol >= 0
           ? (String(row[round.noteCol] ?? '').trim() || null)
           : null;
 
-        // No note = not recorded, skip
         if (!note) return;
 
         const callerName = round.callerCol >= 0
           ? (String(row[round.callerCol] ?? '').trim() || globalCaller)
           : globalCaller;
 
-        const status = 'answered';
-
-        // Grade: from TIER col (โพธาราม) or extract from note (others)
         const grade      = tierCol >= 0 ? memberTier : extractGrade(note);
         const sigOverall = grade ? GRADE_TO_SIG[grade] : null;
         if (tierCol < 0 && grade) lastGrade.set(sourceId, grade);
 
-        logs.push({ campaignKey: roundCampaignKey[ri2], sourceId, callerName, note, status, sigOverall });
+        logs.push({ sourceId, callerName, note, status: 'answered', sigOverall });
       });
     }
   }
 
-  return { logs, lastGrade, campaigns };
+  return { logs, lastGrade };
 }
 
 // ─── Generate SQL ───────────────────────────────────────────────────────────
 
-function generateSQL(logs, lastGrade, campaigns) {
+function generateSQL(logs, lastGrade, campaignName) {
   const lines = [];
 
-  // campaign key → SQL variable name (@c0, @c1, ...)
-  const campaignVar = new Map(campaigns.map(({ key }, i) => [key, `@c${i}`]));
-
   lines.push('-- ============================================================');
-  lines.push('-- Calling Logs Import — ราชบุรี');
+  lines.push(`-- Calling Logs Import — ${campaignName}`);
   lines.push(`-- Generated: ${new Date().toISOString()}`);
-  lines.push(`-- Campaigns: ${campaigns.length}  |  Logs: ${logs.length}  |  Tiers: ${lastGrade.size}`);
+  lines.push(`-- Logs: ${logs.length}  |  Tiers: ${lastGrade.size}`);
   lines.push('-- ============================================================');
   lines.push('-- To re-run, clear old data first:');
   lines.push(`--   DELETE cl FROM calling_logs cl`);
   lines.push(`--     JOIN act_event_cache cc ON cl.campaign_id = cc.id AND cc.type = 'campaign'`);
-  lines.push(`--     WHERE cc.name LIKE '%${CAMPAIGN_PROVINCE}%';`);
-  lines.push(`--   DELETE FROM act_event_cache WHERE type = 'campaign' AND name LIKE '%${CAMPAIGN_PROVINCE}%';`);
+  lines.push(`--     WHERE cc.name = ${esc(campaignName)};`);
+  lines.push(`--   DELETE FROM act_event_cache WHERE type = 'campaign' AND name = ${esc(campaignName)};`);
   lines.push(`--   DELETE FROM calling_member_tiers WHERE tier_source = 'auto';`);
   lines.push('-- ============================================================');
   lines.push('');
@@ -241,13 +217,11 @@ function generateSQL(logs, lastGrade, campaigns) {
   lines.push('SET foreign_key_checks = 0;');
   lines.push('');
 
-  // ── act_event_cache (campaigns) ──
-  lines.push(`-- ─── act_event_cache campaigns (${campaigns.length}) ──────────────────────`);
-  campaigns.forEach(({ name }, i) => {
-    lines.push(`INSERT INTO act_event_cache (type, name, province, guild_id, synced_at)`);
-    lines.push(`  VALUES ('campaign', ${esc(name)}, ${esc(CAMPAIGN_PROVINCE)}, '1', NOW());`);
-    lines.push(`SET @c${i} = LAST_INSERT_ID();`);
-  });
+  // ── act_event_cache (campaign) ──
+  lines.push(`-- ─── act_event_cache campaign ──────────────────────────────────`);
+  lines.push(`INSERT INTO act_event_cache (type, name, province, guild_id, synced_at)`);
+  lines.push(`  VALUES ('campaign', ${esc(campaignName)}, ${esc(CAMPAIGN_PROVINCE)}, '1', NOW());`);
+  lines.push(`SET @campaign_id = LAST_INSERT_ID();`);
   lines.push('');
 
   // ── calling_logs ──
@@ -257,7 +231,7 @@ function generateSQL(logs, lastGrade, campaigns) {
     lines.push('  (campaign_id, member_id, caller_name, called_at, status, sig_overall, note)');
     lines.push('VALUES');
     lines.push(logs.map(l =>
-      `  (${campaignVar.get(l.campaignKey)}, ${l.sourceId}, ${esc(l.callerName)}, ` +
+      `  (@campaign_id, ${l.sourceId}, ${esc(l.callerName)}, ` +
       `${esc(IMPORT_DATE)}, '${l.status}', ${l.sigOverall ?? 'NULL'}, ${esc(l.note)})`
     ).join(',\n') + ';');
   }
@@ -290,16 +264,18 @@ function main() {
     process.exit(1);
   }
 
+  const campaignName = path.basename(XLS_FILE).replace(/\.xlsx?$/i, '');
+
   process.stderr.write(`Reading: ${XLS_FILE}\n`);
+  process.stderr.write(`Campaign: ${campaignName}\n`);
   const wb = XLSX.readFile(XLS_FILE);
 
-  process.stderr.write('Parsing district sheets...\n');
-  const { logs, lastGrade, campaigns } = parseLogs(wb);
-  process.stderr.write(`  → ${campaigns.length} campaigns\n`);
+  process.stderr.write('Parsing sheets...\n');
+  const { logs, lastGrade } = parseLogs(wb);
   process.stderr.write(`  → ${logs.length} log entries\n`);
   process.stderr.write(`  → ${lastGrade.size} members with grade\n`);
 
-  const sql = generateSQL(logs, lastGrade, campaigns);
+  const sql = generateSQL(logs, lastGrade, campaignName);
 
   const ts  = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
   const out = path.join(__dirname, `../../backups/calling-import-${ts}.sql`);

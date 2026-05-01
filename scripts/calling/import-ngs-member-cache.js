@@ -2,20 +2,22 @@
  * Import ngs_member_cache from CSV (ngs_member source data)
  *
  * Usage:
- *   node scripts/calling/import-ngs-member-cache.js
- *   node scripts/calling/import-ngs-member-cache.js /path/to/custom.csv
+ *   node scripts/calling/import-ngs-member-cache.js <file.csv>
  *
- * Source:  md/calling/ngs_member_cache.csv
  * Target:  ngs_member_cache table
  * Note:    All 91 columns are imported. Do NOT edit rows directly.
  */
 
 const fs = require('fs');
-const path = require('path');
 const { parse } = require('csv-parse');
 const pool = require('../../db');
 
-const DEFAULT_CSV = path.join(__dirname, '../../md/calling/ngs_member_cache.csv');
+const CSV_FILE = process.argv[2];
+if (!CSV_FILE) {
+  console.error('Usage: node import-ngs-member-cache.js <file.csv>');
+  process.exit(1);
+}
+
 const BATCH_SIZE = 100;
 
 // CSV column index map (0-based, from ngs_member_cache.csv header)
@@ -292,15 +294,14 @@ async function insertBatch(rows) {
 }
 
 async function importMembers(csvPath) {
-  console.log(`📂 Source: ${csvPath}`);
-  console.log(`📋 Table:  ngs_member_cache\n`);
-
   if (!fs.existsSync(csvPath)) {
-    console.error(`❌ File not found: ${csvPath}`);
+    console.error(`File not found: ${csvPath}`);
     process.exit(1);
   }
 
-  const stats = { total: 0, inserted: 0, invalid: 0, errors: [] };
+  process.stderr.write(`Reading: ${csvPath}\n`);
+
+  const stats = { total: 0, upserted: 0, invalid: 0, errors: [] };
   let batch = [];
 
   async function flushBatch() {
@@ -308,22 +309,22 @@ async function importMembers(csvPath) {
     const toFlush = batch;
     batch = [];
     try {
-      stats.inserted += await insertBatch(toFlush);
+      stats.upserted += await insertBatch(toFlush);
     } catch (err) {
       stats.errors.push(err.message);
-      console.error(`  ⚠️  Batch error: ${err.message}`);
+      process.stderr.write(`\nBatch error: ${err.message}\n`);
     }
   }
 
   return new Promise((resolve, reject) => {
     const parser = fs.createReadStream(csvPath).pipe(
       parse({
-        columns: false,      // use index-based access
+        columns: false,
         skip_empty_lines: true,
-        bom: true,           // strip BOM if present
-        from_line: 2,        // skip header row
+        bom: true,
+        from_line: 2,
         relax_quotes: true,
-        trim: false,         // we trim manually per-field
+        trim: false,
       })
     );
 
@@ -347,6 +348,7 @@ async function importMembers(csvPath) {
       if (batch.length >= BATCH_SIZE) {
         parser.pause();
         await flushBatch();
+        process.stdout.write(`\r  ${stats.upserted} upserted (${stats.errors.length} errors)`);
         parser.resume();
       }
     });
@@ -361,28 +363,20 @@ async function importMembers(csvPath) {
 }
 
 (async () => {
-  const csvPath = process.argv[2] || DEFAULT_CSV;
-
   try {
-    const stats = await importMembers(csvPath);
+    const stats = await importMembers(CSV_FILE);
 
-    console.log('📊 Import Summary:');
-    console.log(`  Rows processed:   ${stats.total}`);
-    console.log(`  Inserted/Updated: ${stats.inserted}`);
-    console.log(`  Invalid (skipped):${stats.invalid}`);
+    process.stdout.write('\n');
+    console.log(`Done: ${stats.upserted} upserted, ${stats.invalid} invalid, ${stats.errors.length} errors`);
 
     if (stats.errors.length > 0) {
-      console.log(`\n⚠️  Errors (first 10):`);
-      stats.errors.slice(0, 10).forEach(e => console.log(`  - ${e}`));
-      if (stats.errors.length > 10) {
-        console.log(`  ... and ${stats.errors.length - 10} more`);
-      }
+      stats.errors.slice(0, 10).forEach(e => console.error(`  - ${e}`));
+      if (stats.errors.length > 10) console.error(`  ... and ${stats.errors.length - 10} more`);
     }
 
-    console.log('\n✅ Done!');
     process.exit(0);
   } catch (err) {
-    console.error('❌ Fatal:', err.message);
+    console.error('Fatal:', err.message);
     process.exit(1);
   }
 })();

@@ -48,23 +48,15 @@ ALTER TABLE dc_members
 
 ---
 
-### 3. `calling_campaigns` — รอบ/กิจกรรมการโทร
+### 3. Campaigns — ใช้ `act_event_cache` (`type = 'campaign'`)
 
-```sql
-CREATE TABLE calling_campaigns (
-  id           INT AUTO_INCREMENT PRIMARY KEY,
-  name         VARCHAR(200)  NOT NULL,
-  description  TEXT          NULL,
-  province     VARCHAR(100)  NULL COMMENT 'จังหวัดที่ campaign นี้ดูแล',
-  act_id       VARCHAR(100)  NULL COMMENT 'ref ไปยัง ACT activity (optional)',
-  created_by   VARCHAR(20)   NOT NULL COMMENT 'discord_id',
-  created_at   DATETIME      DEFAULT CURRENT_TIMESTAMP
-);
-```
+ไม่มีตาราง `calling_campaigns` แยก — campaign เก็บใน `act_event_cache` เดียวกับ activity ทั่วไป โดยใช้ `type = 'campaign'` เพื่อแยกประเภท
 
+- สร้างผ่าน Web UI: `/calling/create`
+- Import จาก XLSX: 1 ไฟล์ = 1 campaign ชื่อ campaign มาจาก filename (เช่น `กิจกรรมโทรหาสมาชิกราชบุรี.xlsx` → campaign name = `กิจกรรมโทรหาสมาชิกราชบุรี`)
 - **ทุก role สร้างได้** รวมถึง ตทอ. และผู้ประสานงานทุกระดับ
-- ไม่ผูก guild_id เพราะสมาชิกเป็นชุดเดียวใช้ร่วมกันทุก guild
-- `act_id` กรอกเองก่อน อนาคตเชื่อม ACT API ดึง dropdown มาให้เลือกได้เลยโดยไม่ต้องเปลี่ยน schema
+
+Key fields: `id`, `name`, `province`, `description`, `event_date`, `guild_id`
 
 ---
 
@@ -323,7 +315,8 @@ web/
       members.js                    ← query ngs_member_cache
 scripts/
   calling/
-    import-calling-logs-xlsx.js    ← import call logs จาก XLS
+    import-calling-logs-xlsx.js    ← parse XLSX → SQL file (1 ไฟล์ = 1 campaign, ชื่อจาก filename)
+    import-ngs-member-cache.js     ← upsert สมาชิกจาก CSV → ngs_member_cache
   sync-discord-members.js          ← one-time sync guild members → dc_members
   migration-add-display-name.sql   ← ALTER TABLE dc_members ADD display_name
 ```

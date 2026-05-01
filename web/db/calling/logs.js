@@ -111,7 +111,7 @@ export async function getMemberCallStats(memberId, campaignId = null) {
        SUM(CASE WHEN status = 'answered' THEN 1 ELSE 0 END) AS answered_count,
        SUM(CASE WHEN status = 'no_answer' THEN 1 ELSE 0 END) AS no_answer_count,
        SUM(CASE WHEN status = 'busy' THEN 1 ELSE 0 END) AS busy_count,
-       SUM(CASE WHEN status = 'wrong_number' THEN 1 ELSE 0 END) AS wrong_number_count,
+       SUM(CASE WHEN status = 'not_called' THEN 1 ELSE 0 END) AS not_called_count,
        AVG(sig_overall) AS avg_sig_overall,
        MAX(called_at) AS last_called_at
      FROM calling_logs
@@ -121,7 +121,7 @@ export async function getMemberCallStats(memberId, campaignId = null) {
   )
   return rows[0] || {
     total_calls: 0, answered_count: 0, no_answer_count: 0,
-    busy_count: 0, wrong_number_count: 0, avg_sig_overall: null, last_called_at: null
+    busy_count: 0, not_called_count: 0, avg_sig_overall: null, last_called_at: null
   }
 }
 
