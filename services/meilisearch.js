@@ -85,9 +85,18 @@ async function searchPosts(keyword, { guildId, channelId } = {}) {
     const result = await index.search(keyword, {
       filter: filters.join(' AND '),
       limit:  100,
-      attributesToRetrieve: ['id'],
+      attributesToRetrieve:  ['id'],
+      attributesToHighlight: ['content'],
+      attributesToCrop:      ['content'],
+      cropLength:            15,
+      highlightPreTag:       '**',
+      highlightPostTag:      '**',
+      cropMarker:            '…',
     });
-    return result.hits.map(h => h.id);
+    return result.hits.map(h => ({
+      id:      h.id,
+      snippet: h._formatted?.content ?? '',
+    }));
   } catch (e) {
     console.warn('[meilisearch] searchPosts error:', e.message);
     return [];

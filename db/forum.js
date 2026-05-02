@@ -65,6 +65,16 @@ async function searchPostsByName(guildId, keyword, channelId = null) {
   return rows;
 }
 
+async function getPostsByIds(postIds) {
+  if (!postIds.length) return [];
+  const placeholders = postIds.map(() => '?').join(',');
+  const [rows] = await pool.execute(
+    `SELECT post_id, post_name, post_url, channel_id, created_at FROM dc_forum_posts WHERE post_id IN (${placeholders})`,
+    postIds
+  );
+  return rows;
+}
+
 async function deleteForumPost(postId) {
   await pool.execute('DELETE FROM dc_forum_posts WHERE post_id = ?', [postId]);
 }
@@ -112,6 +122,7 @@ module.exports = {
   upsertForumPost,
   deleteForumPost,
   searchPostsByName,
+  getPostsByIds,
   getLatestPosts,
   getForumStats,
 };

@@ -176,6 +176,7 @@ module.exports = {
 
       const { upsertForumConfig, setDashboardMsgId, getForumConfig } = require('../db/forum');
       const { buildDashboardEmbed } = require('../handlers/forumDashboard');
+      const { addForumChannel, addDashboardThread } = require('../services/forumCache');
 
       await upsertForumConfig(interaction.guildId, channelOpt.id, { itemsPerPage });
 
@@ -210,6 +211,8 @@ module.exports = {
       }
       await thread.pin().catch(e => console.error('[panel forum] pin error:', e.message));
       await setDashboardMsgId(interaction.guildId, channelOpt.id, thread.id);
+      addForumChannel(interaction.guildId, channelOpt.id);
+      addDashboardThread(interaction.guildId, thread.id);
       return interaction.editReply({ content: `✅ สร้าง dashboard thread ใน <#${channelOpt.id}> แล้วครับ` });
     }
 

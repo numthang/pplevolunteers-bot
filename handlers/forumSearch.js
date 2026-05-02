@@ -15,10 +15,13 @@ function buildSearchResultEmbed(slice, { keyword, page, totalPages, channelId, s
 
   const lines = slice.length
     ? slice.map((p, i) => {
-        const num     = (page - 1) * ITEMS_PER_PAGE + i + 1;
-        const name    = p.post_name ?? '(ไม่ทราบชื่อ)';
-        const chanTag = p.channel_id ? `<#${p.channel_id}> · ` : '';
-        return p.post_url ? `\`${num}\` ${chanTag}[${name}](${p.post_url})` : `\`${num}\` ${chanTag}${name}`;
+        const num      = (page - 1) * ITEMS_PER_PAGE + i + 1;
+        const name     = p.post_name ?? '(ไม่ทราบชื่อ)';
+        const chanTag  = p.channel_id ? `<#${p.channel_id}> · ` : '';
+        const titleLine = p.post_url ? `\`${num}\` ${chanTag}[${name}](${p.post_url})` : `\`${num}\` ${chanTag}${name}`;
+        // แสดง snippet เฉพาะเมื่อ Meilisearch เจอ keyword ใน content (มี ** highlight)
+        const snippet  = p.snippet?.includes('**') ? `> ${p.snippet.slice(0, 120)}` : '';
+        return snippet ? `${titleLine}\n${snippet}` : titleLine;
       }).join('\n')
     : '_ไม่พบโพสต์ที่ตรงกับคำค้นหา_';
 

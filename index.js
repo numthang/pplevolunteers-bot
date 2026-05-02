@@ -23,7 +23,9 @@ const { handleRefresh } = require('./handlers/forumDashboard');
 const { handleFinanceRefresh } = require('./handlers/financeDashboard');
 const { handleOpenSearch, handleSearchModal, handleResultPage } = require('./handlers/forumSearch');
 const { handleGogoSignup, handleGogoModal } = require('./handlers/gogoHandler');
-const { indexThread, indexMessage } = require('./services/forumIndexer');
+const { indexThread, indexMessage, hybridSearch } = require('./services/forumIndexer');
+const { buildSearchResultEmbed, buildSearchComponents } = require('./handlers/forumSearch');
+const { forumChannelCache, dashboardThreadCache, addForumChannel, addDashboardThread } = require('./services/forumCache');
 const { getAllForumConfigs, deleteForumPost } = require('./db/forum');
 const { deletePost } = require('./services/meilisearch');
 const { initMeilisearch } = require('./services/meilisearch')
@@ -68,6 +70,8 @@ client.once('clientReady', async () => {
     const configs = await getAllForumConfigs(guild.id).catch(() => []);
     if (configs.length) {
       forumChannelCache.set(guild.id, new Set(configs.map(c => c.channel_id)));
+      const dashboardIds = configs.map(c => c.dashboard_msg_id).filter(Boolean);
+      if (dashboardIds.length) dashboardThreadCache.set(guild.id, new Set(dashboardIds));
     }
   }
 });
@@ -182,8 +186,7 @@ client.on('guildMemberUpdate', async (oldMember, newMember) => {
 });
 
 // ─── Forum indexing ──────────────────────────────────────────────────────────
-// cache ของ forum channel IDs ที่ setup ไว้ (reload เมื่อ bot start)
-const forumChannelCache = new Map(); // guildId → Set<channelId>
+// forumChannelCache และ dashboardThreadCache import มาจาก services/forumCache.js
 
 client.on('threadDelete', async (thread) => {
   if (!thread.parentId) return;
@@ -200,8 +203,7 @@ client.on('threadCreate', async (thread) => {
   await indexThread(thread, thread.guildId, thread.parentId).catch(err =>
     console.error('[forumIndex] threadCreate:', err)
   );
-  // อัปเดต cache ถ้ามี config ใหม่
-  forumChannelCache.set(thread.guildId, new Set([...(forumIds ?? []), thread.parentId]));
+  addForumChannel(thread.guildId, thread.parentId);
 });
 
 // Cooldown map per channel
@@ -214,10 +216,27 @@ client.on('messageCreate', async (message) => {
   // slip OCR — อ่านสลิปใน finance thread
   handleSlipMessage(message).catch(err => console.error('[financeOCR]', err));
 
-  // forum indexing — index message เข้า Meilisearch ถ้าอยู่ใน forum thread ที่ setup ไว้
+  // forum — จัดการ message ใน forum threads ที่ setup ไว้
   if (message.channel.isThread() && message.channel.parentId && !message.author.bot) {
+    const isDashboard = dashboardThreadCache.get(message.guildId)?.has(message.channel.id);
+
+    if (isDashboard && message.content?.trim()) {
+      // auto-search: ลบ message ของ user แล้วแสดงผลการค้นหา
+      const keyword    = message.content.trim();
+      const channelId  = message.channel.parentId;
+      await message.delete().catch(() => {});
+      const results    = await hybridSearch(keyword, { guildId: message.guildId, channelId });
+      const totalPages = Math.max(1, Math.ceil(results.length / 10));
+      const embed      = buildSearchResultEmbed(results.slice(0, 10), { keyword, page: 1, totalPages, channelId, sort: 'relevant' });
+      const components = buildSearchComponents({ channelId, sort: 'relevant', page: 1, totalPages });
+      await message.channel.send({ embeds: [embed], components }).catch(err =>
+        console.error('[forumSearch] auto-search send:', err)
+      );
+      return;
+    }
+
     const forumIds = forumChannelCache.get(message.guildId);
-    if (forumIds?.has(message.channel.parentId)) {
+    if (forumIds?.has(message.channel.parentId) && !isDashboard) {
       indexMessage(message, message.channel.id).catch(err =>
         console.error('[forumIndex] messageCreate:', err)
       );

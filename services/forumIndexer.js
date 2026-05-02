@@ -1,4 +1,4 @@
-const { upsertForumPost, searchPostsByName } = require('../db/forum');
+const { upsertForumPost, searchPostsByName, getPostsByIds } = require('../db/forum');
 const meili = require('./meilisearch');
 
 // index thread ใหม่ (threadCreate event)
@@ -34,26 +34,30 @@ async function indexMessage(message, postId) {
 // Hybrid search — merge MySQL + Meilisearch, dedupe by post_id
 // โพสต์ที่ match ทั้งสองแหล่งขึ้นก่อน, ที่เหลือเรียง newest
 async function hybridSearch(keyword, { guildId, channelId } = {}) {
-  const [mysqlRows, meiliIds] = await Promise.all([
+  const [mysqlRows, meiliResults] = await Promise.all([
     searchPostsByName(guildId, keyword, channelId),
     meili.searchPosts(keyword, { guildId, channelId }),
   ]);
 
-  const meiliSet   = new Set(meiliIds);
+  const meiliIds   = meiliResults.map(r => r.id);
+  const snippetMap = new Map(meiliResults.map(r => [r.id, r.snippet]));
   const mysqlMap   = new Map(mysqlRows.map(r => [r.post_id, r]));
-  const bothSet    = new Set([...meiliIds].filter(id => mysqlMap.has(id)));
+
+  // fetch metadata สำหรับ ID ที่ Meilisearch เจอแต่ไม่อยู่ใน MySQL name-search
+  const meiliOnlyIds = meiliIds.filter(id => !mysqlMap.has(id));
+  const meiliOnlyRows = meiliOnlyIds.length ? await getPostsByIds(meiliOnlyIds) : [];
+
+  const bothSet = new Set(meiliIds.filter(id => mysqlMap.has(id)));
 
   // รวม post จากทั้งสองแหล่ง (dedupe)
   const allMap = new Map();
   for (const row of mysqlRows) allMap.set(row.post_id, row);
-  for (const id of meiliIds) {
-    if (!allMap.has(id)) {
-      // Meilisearch มีแต่ MySQL ไม่มี — ใส่ placeholder (ไม่มี created_at)
-      allMap.set(id, { post_id: id, post_name: null, post_url: null, channel_id: channelId, created_at: null });
-    }
-  }
+  for (const row of meiliOnlyRows) allMap.set(row.post_id, row);
 
-  const results = [...allMap.values()].filter(p => p.post_name && p.post_url).sort((a, b) => {
+  const results = [...allMap.values()].filter(p => p.post_name && p.post_url).map(p => ({
+    ...p,
+    snippet: snippetMap.get(p.post_id) ?? null,
+  })).sort((a, b) => {
     const aDouble = bothSet.has(a.post_id);
     const bDouble = bothSet.has(b.post_id);
     if (aDouble !== bDouble) return aDouble ? -1 : 1;
