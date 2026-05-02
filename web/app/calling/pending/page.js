@@ -123,10 +123,10 @@ export default function PendingCallsPage() {
 
   const hasNext = modalIndex >= 0 && findNextPendingIndex(modalIndex) >= 0
 
-  const markMemberCalled = (sourceId, campaignId) => {
+  const markMemberCalled = (sourceId, campaignId, payload) => {
     setMembers(prev => prev.map(m =>
       m.source_id === sourceId && m.campaign_id === campaignId
-        ? { ...m, call_status: 'called', camp_calls: (m.camp_calls || 0) + 1 }
+        ? { ...m, call_status: 'called', camp_calls: (m.camp_calls || 0) + 1, latest_log_status: payload.status, latest_note: payload.note ?? m.latest_note }
         : m
     ))
   }
@@ -169,10 +169,10 @@ export default function PendingCallsPage() {
   const handleSaveAndNext = async (payload) => {
     try {
       await submitLog(payload)
-      markMemberCalled(modalMember.source_id, modalMember.campaign_id)
+      markMemberCalled(modalMember.source_id, modalMember.campaign_id, payload)
       const updatedList = membersRef.current.map(m =>
         m.source_id === modalMember.source_id && m.campaign_id === modalMember.campaign_id
-          ? { ...m, call_status: 'called' }
+          ? { ...m, call_status: 'called', latest_log_status: payload.status }
           : m
       )
       const nextIdx = updatedList.findIndex((m, i) => i > modalIndex && m.call_status === 'pending')
@@ -197,7 +197,7 @@ export default function PendingCallsPage() {
     <div>
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-medium text-warm-900 dark:text-warm-50 mb-1">Pending calls</h1>
+        <h1 className="text-2xl font-medium text-warm-900 dark:text-warm-50 mb-1">Pending calls <span className="text-warm-400 dark:text-warm-dark-500 font-normal">(assignee)</span></h1>
         <p className="text-base text-warm-500 dark:text-warm-dark-500">รายชื่อสมาชิกที่ได้รับ assign มาให้คุณโทร</p>
       </div>
 
@@ -304,10 +304,14 @@ export default function PendingCallsPage() {
                           {expiryBadge && <span className={`text-base font-medium px-1.5 py-0.5 rounded flex-shrink-0 ${expiryBadge.cls}`}>{expiryBadge.label}</span>}
                         </div>
                         <div className="flex items-center gap-1.5 text-base truncate mt-0.5">
-                          {(member.home_amphure || member.campaign_name) && (
-                            <span className="text-warm-400 dark:text-warm-dark-400 truncate">
-                              {[member.home_amphure, member.campaign_name].filter(Boolean).join(' · ')}
-                            </span>
+                          {member.mobile_number && (
+                            <span className="text-teal font-medium">{member.mobile_number}</span>
+                          )}
+                          {member.mobile_number && member.home_amphure && (
+                            <span className="text-warm-300 dark:text-warm-dark-500">·</span>
+                          )}
+                          {member.home_amphure && (
+                            <span className="text-warm-400 dark:text-warm-dark-400 truncate">{member.home_amphure}</span>
                           )}
                         </div>
                         {member.latest_note && (
@@ -321,15 +325,15 @@ export default function PendingCallsPage() {
                           const badge = getStatusBadge(member.call_status, member.latest_log_status)
                           return (
                             <div className="flex items-center gap-1">
-                              <span className="px-2 py-0.5 rounded text-base font-medium whitespace-nowrap"
-                                style={{ backgroundColor: badge.bg, color: badge.text }}>
-                                {badge.label}
-                              </span>
                               {member.rsvp && (
                                 <span className="text-base font-bold" style={{ color: RSVP_ICONS[member.rsvp]?.color || '#666' }}>
                                   {RSVP_ICONS[member.rsvp]?.icon || member.rsvp}
                                 </span>
                               )}
+                              <span className="px-2 py-0.5 rounded text-base font-medium whitespace-nowrap"
+                                style={{ backgroundColor: badge.bg, color: badge.text }}>
+                                {badge.label}
+                              </span>
                             </div>
                           )
                         })()}
@@ -351,10 +355,14 @@ export default function PendingCallsPage() {
                           {expiryBadge && <span className={`text-base font-medium px-1.5 py-0.5 rounded flex-shrink-0 ${expiryBadge.cls}`}>{expiryBadge.label}</span>}
                         </div>
                         <div className="flex items-center gap-1.5 text-base truncate">
-                          {(member.home_amphure || member.campaign_name) && (
-                            <span className="text-warm-400 dark:text-warm-dark-400 truncate">
-                              {[member.home_amphure, member.campaign_name].filter(Boolean).join(' · ')}
-                            </span>
+                          {member.mobile_number && (
+                            <span className="text-teal font-medium">{member.mobile_number}</span>
+                          )}
+                          {member.mobile_number && member.home_amphure && (
+                            <span className="text-warm-300 dark:text-warm-dark-500">·</span>
+                          )}
+                          {member.home_amphure && (
+                            <span className="text-warm-400 dark:text-warm-dark-400 truncate">{member.home_amphure}</span>
                           )}
                         </div>
                         {member.latest_note && (
@@ -383,15 +391,15 @@ export default function PendingCallsPage() {
                         const badge = getStatusBadge(member.call_status, member.latest_log_status)
                         return (
                           <>
-                            <span className="px-2 py-0.5 rounded text-base font-medium whitespace-nowrap"
-                              style={{ backgroundColor: badge.bg, color: badge.text }}>
-                              {badge.label}
-                            </span>
                             {member.rsvp && (
                               <span className="text-base font-bold" style={{ color: RSVP_ICONS[member.rsvp]?.color || '#666' }}>
                                 {RSVP_ICONS[member.rsvp]?.icon || member.rsvp}
                               </span>
                             )}
+                            <span className="px-2 py-0.5 rounded text-base font-medium whitespace-nowrap"
+                              style={{ backgroundColor: badge.bg, color: badge.text }}>
+                              {badge.label}
+                            </span>
                           </>
                         )
                       })()}

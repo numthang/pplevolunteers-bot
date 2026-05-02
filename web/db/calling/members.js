@@ -366,9 +366,10 @@ export async function getMyAssignedMembers(discordId, { campaignId, status, rsvp
        AND (event_date IS NULL OR event_date >= CURDATE())
      ORDER BY
        CASE WHEN call_status = 'pending' THEN 0 ELSE 1 END ASC,
-       CASE tier WHEN 'A' THEN 1 WHEN 'B' THEN 2 WHEN 'C' THEN 3 ELSE 4 END ASC,
-       home_amphure ASC,
-       first_name ASC
+       CASE WHEN call_status = 'pending' THEN CASE tier WHEN 'A' THEN 1 WHEN 'B' THEN 2 WHEN 'C' THEN 3 ELSE 4 END ELSE NULL END ASC,
+       CASE WHEN call_status = 'pending' THEN home_amphure ELSE NULL END ASC,
+       CASE WHEN call_status = 'pending' THEN first_name ELSE NULL END ASC,
+       latest_called_at ASC
      LIMIT ? OFFSET ?`,
     [process.env.GUILD_ID, discordId, campaignId || null, campaignId || null, rsvp || null, rsvp || null, status || null, status || null, limit, offset]
   )

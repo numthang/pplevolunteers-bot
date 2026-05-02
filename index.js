@@ -232,7 +232,7 @@ client.on('messageCreate', async (message) => {
 
   const now = Date.now();
   const last = cooldowns.get(message.channel.id) || 0;
-  if (now - last < 30 * 60 * 1000) return; // 30 นาที debounce
+  if (now - last < 2 * 60 * 60 * 1000) return; // 2 ชั่วโมง debounce
 
   cooldowns.set(message.channel.id, now);
   await refreshSticky(message.channel);

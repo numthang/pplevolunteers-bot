@@ -8,7 +8,6 @@ const {
   MessageFlags,
 } = require('discord.js');
 const { getSetting, setSetting } = require('../db/settings');
-const { refreshSticky } = require('./stickyHandler');
 
 const FIELD_PREFIX = '👥 ผู้เข้าร่วม';
 
@@ -106,19 +105,9 @@ async function handleGogoModal(interaction) {
 
   if (stickyConfig && stickyConfig.message_id === messageId) {
     stickyConfig.embeds = [embed.toJSON()];
-    const now = Date.now();
-    const cooldownMs = 30 * 60 * 1000;
-    if (now - (stickyConfig.last_refreshed_at || 0) >= cooldownMs) {
-      stickyConfig.last_refreshed_at = now;
-      await setSetting(interaction.guildId, stickyKey, stickyConfig);
-      await refreshSticky(interaction.channel);
-    } else {
-      await setSetting(interaction.guildId, stickyKey, stickyConfig);
-      await msg.edit({ embeds: [embed] });
-    }
-  } else {
-    await msg.edit({ embeds: [embed] });
+    await setSetting(interaction.guildId, stickyKey, stickyConfig);
   }
+  await msg.edit({ embeds: [embed] });
 
   if (newNames.length > 0 && interaction.channel.isThread()) {
     await interaction.channel.members.add(interaction.user.id).catch(() => {});
