@@ -64,8 +64,8 @@ export async function getAllMembers(limit = 100, offset = 0) {
        COUNT(DISTINCT l.id) AS total_calls,
        MAX(l.called_at) AS last_called_at
      FROM ngs_member_cache m
-     LEFT JOIN calling_member_tiers t ON t.member_id = m.source_id
-     LEFT JOIN calling_logs l ON l.member_id = m.source_id
+     LEFT JOIN calling_member_tiers t ON t.member_id = m.source_id AND t.contact_type = 'member'
+     LEFT JOIN calling_logs l ON l.member_id = m.source_id AND l.contact_type = 'member'
      GROUP BY m.source_id
      ORDER BY m.home_province ASC, m.home_amphure ASC, m.first_name ASC
      LIMIT ? OFFSET ?`,
@@ -112,13 +112,13 @@ export async function getMembersInCampaign(campaignId, filters = {}, limit = 100
      FROM act_event_cache cc
      JOIN ngs_member_cache m
        ON (cc.province IS NULL OR m.home_province = cc.province)
-     LEFT JOIN calling_member_tiers t ON t.member_id = m.source_id
+     LEFT JOIN calling_member_tiers t ON t.member_id = m.source_id AND t.contact_type = 'member'
      LEFT JOIN calling_assignments a
-       ON a.campaign_id = cc.id AND a.member_id = m.source_id
+       ON a.campaign_id = cc.id AND a.member_id = m.source_id AND a.contact_type = 'member'
      LEFT JOIN calling_logs l
-       ON l.campaign_id = cc.id AND l.member_id = m.source_id
+       ON l.campaign_id = cc.id AND l.member_id = m.source_id AND l.contact_type = 'member'
      LEFT JOIN dc_members dc ON dc.serial = m.serial AND dc.guild_id = ?${needAllTimeCalls ? `
-     LEFT JOIN (SELECT member_id, COUNT(*) AS all_time_calls FROM calling_logs GROUP BY member_id) atl
+     LEFT JOIN (SELECT member_id, COUNT(*) AS all_time_calls FROM calling_logs WHERE contact_type = 'member' GROUP BY member_id) atl
        ON atl.member_id = m.source_id` : ''}
      WHERE cc.id = ? AND cc.type = 'campaign'
        AND m.mobile_number IS NOT NULL
@@ -187,10 +187,10 @@ export async function getMembersInCampaignStats(campaignId) {
          SUM(CASE WHEN a.id IS NULL THEN 1 ELSE 0 END) AS unassigned
        FROM act_event_cache cc
        JOIN ngs_member_cache m ON (cc.province IS NULL OR m.home_province = cc.province)
-       LEFT JOIN calling_assignments a ON a.campaign_id = cc.id AND a.member_id = m.source_id
+       LEFT JOIN calling_assignments a ON a.campaign_id = cc.id AND a.member_id = m.source_id AND a.contact_type = 'member'
        LEFT JOIN (
          SELECT member_id, COUNT(*) AS log_count
-         FROM calling_logs WHERE campaign_id = ?
+         FROM calling_logs WHERE campaign_id = ? AND contact_type = 'member'
          GROUP BY member_id
        ) lc ON lc.member_id = m.source_id
        WHERE cc.id = ? AND cc.type = 'campaign' AND m.mobile_number IS NOT NULL`,
@@ -210,7 +210,7 @@ export async function getMembersInCampaignStats(campaignId) {
       `SELECT COALESCE(t.tier, 'D') AS tier, COUNT(DISTINCT m.source_id) AS count
        FROM act_event_cache cc
        JOIN ngs_member_cache m ON (cc.province IS NULL OR m.home_province = cc.province)
-       LEFT JOIN calling_member_tiers t ON t.member_id = m.source_id
+       LEFT JOIN calling_member_tiers t ON t.member_id = m.source_id AND t.contact_type = 'member'
        WHERE cc.id = ? AND cc.type = 'campaign' AND m.mobile_number IS NOT NULL
        GROUP BY tier`,
       [campaignId]
@@ -219,7 +219,7 @@ export async function getMembersInCampaignStats(campaignId) {
       `SELECT a.assigned_to, COUNT(DISTINCT m.source_id) AS count
        FROM act_event_cache cc
        JOIN ngs_member_cache m ON (cc.province IS NULL OR m.home_province = cc.province)
-       JOIN calling_assignments a ON a.campaign_id = cc.id AND a.member_id = m.source_id
+       JOIN calling_assignments a ON a.campaign_id = cc.id AND a.member_id = m.source_id AND a.contact_type = 'member'
        WHERE cc.id = ? AND cc.type = 'campaign' AND m.mobile_number IS NOT NULL
        GROUP BY a.assigned_to`,
       [campaignId]
@@ -262,9 +262,9 @@ export async function getUnassignedMemberIds(campaignId) {
      JOIN ngs_member_cache m
        ON (cc.province IS NULL OR m.home_province = cc.province)
      LEFT JOIN calling_assignments a
-       ON a.campaign_id = cc.id AND a.member_id = m.source_id
+       ON a.campaign_id = cc.id AND a.member_id = m.source_id AND a.contact_type = 'member'
      LEFT JOIN calling_logs l
-       ON l.campaign_id = cc.id AND l.member_id = m.source_id
+       ON l.campaign_id = cc.id AND l.member_id = m.source_id AND l.contact_type = 'member'
      WHERE cc.id = ? AND cc.type = 'campaign'
      GROUP BY m.source_id
      HAVING COUNT(DISTINCT l.id) = 0 AND MAX(a.id) IS NULL
@@ -280,7 +280,7 @@ export async function getUnassignedMemberIds(campaignId) {
 export async function getMemberCallHistory(campaignId, memberId) {
   const [rows] = await pool.query(
     `SELECT * FROM calling_logs
-     WHERE campaign_id = ? AND member_id = ?
+     WHERE campaign_id = ? AND member_id = ? AND contact_type = 'member'
      ORDER BY called_at DESC`,
     [campaignId, memberId]
   )
@@ -300,9 +300,9 @@ export async function getMyCampaigns(discordId) {
      JOIN act_event_cache ec ON ec.id = a.campaign_id AND ec.type = 'campaign'
      LEFT JOIN (
        SELECT campaign_id, member_id, COUNT(*) AS camp_calls
-       FROM calling_logs GROUP BY campaign_id, member_id
+       FROM calling_logs WHERE contact_type = 'member' GROUP BY campaign_id, member_id
      ) camp_stats ON camp_stats.campaign_id = a.campaign_id AND camp_stats.member_id = a.member_id
-     WHERE a.assigned_to = ?
+     WHERE a.assigned_to = ? AND a.contact_type = 'member'
        AND (ec.event_date IS NULL OR ec.event_date >= CURDATE())
      GROUP BY ec.id
      ORDER BY ec.name ASC`,
@@ -338,27 +338,27 @@ export async function getMyAssignedMembers(discordId, { campaignId, status, rsvp
          dc.username AS discord_username
        FROM calling_assignments a
        JOIN ngs_member_cache m ON m.source_id = a.member_id
-       LEFT JOIN calling_member_tiers t ON t.member_id = a.member_id
+       LEFT JOIN calling_member_tiers t ON t.member_id = a.member_id AND t.contact_type = 'member'
        LEFT JOIN act_event_cache ec ON ec.id = a.campaign_id AND ec.type = 'campaign'
        LEFT JOIN dc_members dc ON dc.serial = m.serial AND dc.guild_id = ?
        LEFT JOIN (
          SELECT member_id,
            COUNT(*) AS total_calls,
            SUM(status = 'answered') AS answered_count
-         FROM calling_logs GROUP BY member_id
+         FROM calling_logs WHERE contact_type = 'member' GROUP BY member_id
        ) all_stats ON all_stats.member_id = a.member_id
        LEFT JOIN (
          SELECT campaign_id, member_id, COUNT(*) AS camp_calls
-         FROM calling_logs GROUP BY campaign_id, member_id
+         FROM calling_logs WHERE contact_type = 'member' GROUP BY campaign_id, member_id
        ) camp_stats ON camp_stats.campaign_id = a.campaign_id AND camp_stats.member_id = a.member_id
        LEFT JOIN (
          SELECT l.*
          FROM calling_logs l
          INNER JOIN (
-           SELECT member_id, MAX(id) AS max_id FROM calling_logs GROUP BY member_id
+           SELECT member_id, MAX(id) AS max_id FROM calling_logs WHERE contact_type = 'member' GROUP BY member_id
          ) lm ON lm.member_id = l.member_id AND lm.max_id = l.id
        ) latest_log ON latest_log.member_id = a.member_id
-       WHERE a.assigned_to = ?
+       WHERE a.assigned_to = ? AND a.contact_type = 'member'
          AND (? IS NULL OR a.campaign_id = ?)
          AND (? IS NULL OR a.rsvp = ?)
      ) sub
@@ -386,9 +386,9 @@ export async function getPendingCallCount(discordId) {
      LEFT JOIN act_event_cache ec ON ec.id = a.campaign_id AND ec.type = 'campaign'
      LEFT JOIN (
        SELECT campaign_id, member_id, COUNT(*) AS camp_calls
-       FROM calling_logs GROUP BY campaign_id, member_id
+       FROM calling_logs WHERE contact_type = 'member' GROUP BY campaign_id, member_id
      ) cs ON cs.campaign_id = a.campaign_id AND cs.member_id = a.member_id
-     WHERE a.assigned_to = ?
+     WHERE a.assigned_to = ? AND a.contact_type = 'member'
        AND (ec.event_date IS NULL OR ec.event_date >= CURDATE())
        AND COALESCE(cs.camp_calls, 0) = 0`,
     [discordId]

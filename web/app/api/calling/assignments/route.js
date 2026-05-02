@@ -52,7 +52,7 @@ export async function POST(req) {
 
   try {
     const body = await req.json()
-    const { campaign_id = 0, member_ids, assigned_to } = body
+    const { campaign_id = 0, member_ids, assigned_to, contact_type = 'member' } = body
 
     if (!member_ids || !Array.isArray(member_ids) || !assigned_to) {
       return Response.json(
@@ -75,7 +75,8 @@ export async function POST(req) {
       member_ids,
       assigned_to,
       session.user.discordId,
-      campaign_id || 0
+      campaign_id || 0,
+      contact_type
     )
 
     return Response.json({
@@ -172,7 +173,7 @@ export async function DELETE(req) {
 
   try {
     const body = await req.json()
-    const { campaign_id = 0, member_id } = body
+    const { campaign_id = 0, member_id, contact_type = 'member' } = body
 
     if (!member_id) {
       return Response.json(
@@ -191,7 +192,7 @@ export async function DELETE(req) {
       return Response.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    await assignmentDB.unassignMember(parseInt(member_id), campaign_id || 0)
+    await assignmentDB.unassignMember(parseInt(member_id), campaign_id || 0, contact_type)
 
     return Response.json({ success: true, message: 'Member unassigned' })
   } catch (error) {

@@ -18,13 +18,13 @@ export async function getLogsByMember(memberId, { limit = 100, offset = 0 } = {}
   return rows
 }
 
-export async function getLogsByCampaignMember(campaignId, memberId) {
+export async function getLogsByCampaignMember(campaignId, memberId, contactType = 'member') {
   const [rows] = await pool.query(
     `SELECT * FROM calling_logs
-     WHERE member_id = ?
+     WHERE member_id = ? AND contact_type = ?
        AND (? IS NULL OR campaign_id = ?)
      ORDER BY called_at DESC`,
-    [memberId, campaignId, campaignId]
+    [memberId, contactType, campaignId, campaignId]
   )
   return rows
 }
@@ -44,6 +44,7 @@ export async function createLog(data) {
   const {
     campaign_id = 0,
     member_id,
+    contact_type = 'member',
     called_by,
     caller_name,
     status,
@@ -59,12 +60,13 @@ export async function createLog(data) {
 
   const [result] = await pool.query(
     `INSERT INTO calling_logs
-      (campaign_id, member_id, called_by, caller_name, called_at, status,
+      (campaign_id, contact_type, member_id, called_by, caller_name, called_at, status,
        sig_overall, sig_location, sig_availability, sig_interest, sig_reachable,
        note, extra, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
     [
       campaign_id || 0,
+      contact_type,
       member_id,
       called_by || null,
       caller_name || null,
@@ -104,7 +106,7 @@ export async function deleteLog(id) {
   await pool.query(`DELETE FROM calling_logs WHERE id = ?`, [id])
 }
 
-export async function getMemberCallStats(memberId, campaignId = null) {
+export async function getMemberCallStats(memberId, campaignId = null, contactType = 'member') {
   const [rows] = await pool.query(
     `SELECT
        COUNT(*) AS total_calls,
@@ -115,9 +117,9 @@ export async function getMemberCallStats(memberId, campaignId = null) {
        AVG(sig_overall) AS avg_sig_overall,
        MAX(called_at) AS last_called_at
      FROM calling_logs
-     WHERE member_id = ?
+     WHERE member_id = ? AND contact_type = ?
        AND (? IS NULL OR campaign_id = ?)`,
-    [memberId, campaignId, campaignId]
+    [memberId, contactType, campaignId, campaignId]
   )
   return rows[0] || {
     total_calls: 0, answered_count: 0, no_answer_count: 0,
@@ -125,8 +127,8 @@ export async function getMemberCallStats(memberId, campaignId = null) {
   }
 }
 
-export async function calculateTierFromSignals(memberId, campaignId = null) {
-  const stats = await getMemberCallStats(memberId, campaignId)
+export async function calculateTierFromSignals(memberId, campaignId = null, contactType = 'member') {
+  const stats = await getMemberCallStats(memberId, campaignId, contactType)
   if (!stats.answered_count) return null
   const avg = parseFloat(stats.avg_sig_overall) || 0
   if (avg >= 3.5) return 'A'

@@ -3,10 +3,10 @@ import pool from '../index.js'
 /**
  * Get tier for member
  */
-export async function getTier(memberId) {
+export async function getTier(memberId, contactType = 'member') {
   const [rows] = await pool.query(
-    `SELECT * FROM calling_member_tiers WHERE member_id = ?`,
-    [memberId]
+    `SELECT * FROM calling_member_tiers WHERE member_id = ? AND contact_type = ?`,
+    [memberId, contactType]
   )
   return rows[0] || null
 }
@@ -43,34 +43,34 @@ export async function getMembersByTier(tier) {
 /**
  * Upsert tier (auto-calculated)
  */
-export async function upsertTier(memberId, tier, source = 'auto') {
+export async function upsertTier(memberId, tier, source = 'auto', contactType = 'member') {
   await pool.query(
     `INSERT INTO calling_member_tiers
-      (member_id, tier, tier_source, updated_at)
-     VALUES (?, ?, ?, NOW())
+      (member_id, contact_type, tier, tier_source, updated_at)
+     VALUES (?, ?, ?, ?, NOW())
      ON DUPLICATE KEY UPDATE
       tier = VALUES(tier),
       tier_source = VALUES(tier_source),
       updated_at = NOW()`,
-    [memberId, tier, source]
+    [memberId, contactType, tier, source]
   )
 }
 
 /**
  * Manually override tier
  */
-export async function overrideTier(memberId, tier, overrideBy, reason) {
+export async function overrideTier(memberId, tier, overrideBy, reason, contactType = 'member') {
   await pool.query(
     `INSERT INTO calling_member_tiers
-      (member_id, tier, tier_source, override_by, override_reason, updated_at)
-     VALUES (?, ?, 'manual', ?, ?, NOW())
+      (member_id, contact_type, tier, tier_source, override_by, override_reason, updated_at)
+     VALUES (?, ?, ?, 'manual', ?, ?, NOW())
      ON DUPLICATE KEY UPDATE
       tier = VALUES(tier),
       tier_source = 'manual',
       override_by = VALUES(override_by),
       override_reason = VALUES(override_reason),
       updated_at = NOW()`,
-    [memberId, tier, overrideBy, reason || null]
+    [memberId, contactType, tier, overrideBy, reason || null]
   )
 }
 
@@ -83,7 +83,7 @@ export async function overrideTier(memberId, tier, overrideBy, reason) {
  * C = 1.5 - 2.4
  * D = 1.0 - 1.4
  */
-export async function calculateTierFromSignals(memberId, campaignId = null) {
+export async function calculateTierFromSignals(memberId, campaignId = null, contactType = 'member') {
   let query = `
     SELECT AVG(
       COALESCE(sig_location, 0) +
@@ -91,11 +91,11 @@ export async function calculateTierFromSignals(memberId, campaignId = null) {
       COALESCE(sig_interest, 0)
     ) / 3.0 AS avg_signal
     FROM calling_logs
-    WHERE member_id = ?
+    WHERE member_id = ? AND contact_type = ?
       AND status = 'answered'
       AND (sig_location IS NOT NULL OR sig_availability IS NOT NULL OR sig_interest IS NOT NULL)`
 
-  const params = [memberId]
+  const params = [memberId, contactType]
 
   if (campaignId) {
     query += ` AND campaign_id = ?`

@@ -133,7 +133,7 @@ function formatEventDate(dateStr) {
   return `${day} ${THAI_MONTHS[month - 1]} ${year + 543}`
 }
 
-export default function RecordCallModal({ isOpen, member, onClose, onSave, onSaveAndNext, hasNext }) {
+export default function RecordCallModal({ isOpen, member, contact_type = 'member', onClose, onSave, onSaveAndNext, hasNext }) {
   const [status, setStatus] = useState('')
   const [rsvp, setRsvp] = useState('')
   const [note, setNote] = useState('')
@@ -142,21 +142,25 @@ export default function RecordCallModal({ isOpen, member, onClose, onSave, onSav
   const [history, setHistory] = useState([])
   const [historyLoading, setHistoryLoading] = useState(false)
 
+  const memberId = member?.source_id || member?.id
+  const isContact = contact_type === 'contact'
+
   useEffect(() => {
     setStatus('')
     setRsvp('')
     setNote('')
     setSignals({})
     setSaving(false)
-    if (isOpen && member?.source_id) {
+    if (isOpen && memberId) {
       setHistoryLoading(true)
-      fetch(`/api/calling/logs?memberId=${member.source_id}`)
+      const ctParam = isContact ? '&contactType=contact' : ''
+      fetch(`/api/calling/logs?memberId=${memberId}${ctParam}`)
         .then(r => r.json())
         .then(d => setHistory(d.data || []))
         .catch(() => setHistory([]))
         .finally(() => setHistoryLoading(false))
     }
-  }, [member?.source_id, isOpen])
+  }, [memberId, isOpen])
 
   const computeOverall = useCallback(() => {
     const vals = SIGNALS.map(s => signals[s.key]).filter(Boolean)
@@ -166,7 +170,8 @@ export default function RecordCallModal({ isOpen, member, onClose, onSave, onSav
 
   const buildPayload = useCallback(() => ({
     campaign_id: member?.campaign_id || 0,
-    member_id: member?.source_id,
+    member_id: memberId,
+    contact_type,
     status,
     sig_overall: status === 'answered' ? computeOverall() : null,
     sig_location:     status === 'answered' ? (signals.sig_location || null) : null,
@@ -174,8 +179,8 @@ export default function RecordCallModal({ isOpen, member, onClose, onSave, onSav
     sig_interest:     status === 'answered' ? (signals.sig_interest || null) : null,
     sig_reachable:    null,
     note: note.trim() || null,
-    rsvp: status === 'answered' ? (rsvp || null) : null,
-  }), [member, status, rsvp, signals, note, computeOverall])
+    rsvp: (!isContact && status === 'answered') ? (rsvp || null) : null,
+  }), [member, memberId, contact_type, isContact, status, rsvp, signals, note, computeOverall])
 
   const handleSave = async (goNext = false) => {
     if (!status) return
@@ -192,11 +197,18 @@ export default function RecordCallModal({ isOpen, member, onClose, onSave, onSav
 
   const tier = member.tier || 'D'
   const tierColor = TIER_COLORS[tier]
-  const avatarChar = member.first_name?.[0] || member.full_name?.[0] || '?'
-  const expiryBadge = getExpiryBadge(member.expired_at)
+  const displayName = member.full_name || [member.first_name, member.last_name].filter(Boolean).join(' ') || '?'
+  const avatarChar = displayName[0] || '?'
+  const phone = member.mobile_number || member.phone
+  const locationStr = [
+    member.home_district || member.tambon,
+    member.home_amphure || member.amphoe,
+    member.home_province || member.province,
+  ].filter(Boolean).join(' · ')
+  const expiryBadge = isContact ? null : getExpiryBadge(member.expired_at)
   const showSignals = status === 'answered'
   const signalsFilled = SIGNALS.some(s => signals[s.key])
-  const canSave = status && note.trim() && (status !== 'answered' || (signalsFilled && rsvp))
+  const canSave = status && note.trim() && (status !== 'answered' || (signalsFilled && (isContact || rsvp)))
 
   return (
     <div
@@ -231,14 +243,14 @@ export default function RecordCallModal({ isOpen, member, onClose, onSave, onSav
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="font-semibold text-lg text-warm-900 dark:text-warm-50 truncate">{member.full_name}</span>
+                  <span className="font-semibold text-lg text-warm-900 dark:text-warm-50 truncate">{displayName}</span>
                   <span className="text-base font-semibold px-1.5 py-0.5 rounded flex-shrink-0"
                     style={{ backgroundColor: tierColor.bg, color: tierColor.text }}>{tier}</span>
                   {expiryBadge && <span className={`text-base font-medium px-1.5 py-0.5 rounded flex-shrink-0 ${expiryBadge.cls}`}>{expiryBadge.label}</span>}
                   {member.source_id && <span className="text-base text-warm-300 dark:text-warm-dark-500 flex-shrink-0">#{member.source_id}</span>}
                 </div>
                 <div className="text-base text-warm-400 dark:text-warm-dark-400 truncate mt-0.5">
-                  {[member.home_district, member.home_amphure, member.home_province].filter(Boolean).join(' · ') || '—'}
+                  {locationStr || '—'}
                 </div>
               </div>
             </div>
@@ -246,14 +258,14 @@ export default function RecordCallModal({ isOpen, member, onClose, onSave, onSav
             {/* Contact */}
             <div className="space-y-2">
               <div className="flex gap-2">
-                {member.mobile_number ? (
+                {phone ? (
                   <a
-                    href={`tel:${member.mobile_number}`}
+                    href={`tel:${phone}`}
                     className="flex items-center justify-center gap-2 flex-1 py-3 rounded-lg font-semibold text-base transition hover:opacity-90"
                     style={{ backgroundColor: '#0d9e94', color: '#fff' }}
                   >
                     <span>📞</span>
-                    <span>{member.mobile_number}</span>
+                    <span>{phone}</span>
                   </a>
                 ) : (
                   <div className="flex items-center justify-center flex-1 py-3 rounded-lg text-base border border-dashed border-warm-300 dark:border-warm-dark-300 text-warm-400 dark:text-warm-dark-400">
@@ -440,8 +452,8 @@ export default function RecordCallModal({ isOpen, member, onClose, onSave, onSav
               />
             </div>
 
-            {/* RSVP */}
-            {status === 'answered' && (
+            {/* RSVP — members only */}
+            {!isContact && status === 'answered' && (
               <div>
                 <div className="text-base font-semibold text-warm-700 dark:text-warm-200 mb-2">เข้าร่วมกิจกรรมได้ไหม *</div>
                 <div className="grid grid-cols-3 gap-2">

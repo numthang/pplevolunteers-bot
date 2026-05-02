@@ -1,14 +1,18 @@
 import { getServerSession } from 'next-auth'
 import * as memberDB from '@/db/calling/members.js'
+import * as contactDB from '@/db/calling/contacts.js'
 import { authOptions } from '@/lib/auth-options.js'
 
 /**
  * GET /api/calling/pending
- * Returns members assigned to the current user, with call status, latest note, stats
+ * Returns assignments for the current user
  * Query params:
- *   campaigns=true  → return only campaigns that have assignments for me
+ *   type            → 'member' (default) | 'contact'
+ *   campaigns=true  → return campaigns that have assignments for me
+ *   count=true      → return total pending count (members + contacts)
  *   campaignId      → filter by campaign
  *   status          → 'pending' | 'called'
+ *   rsvp            → (members only) yes | no | maybe
  *   limit / offset
  */
 export async function GET(req) {
@@ -20,6 +24,7 @@ export async function GET(req) {
   const { searchParams } = new URL(req.url)
   const countOnly = searchParams.get('count') === 'true'
   const campaignsOnly = searchParams.get('campaigns') === 'true'
+  const type = searchParams.get('type') || 'member'
   const campaignId = searchParams.get('campaignId')
   const status = searchParams.get('status')
   const rsvp = searchParams.get('rsvp')
@@ -35,6 +40,22 @@ export async function GET(req) {
     if (campaignsOnly) {
       const campaigns = await memberDB.getMyCampaigns(session.user.discordId)
       return Response.json({ success: true, data: campaigns })
+    }
+
+    if (type === 'contact') {
+      const contacts = await contactDB.getMyAssignedContacts(session.user.discordId, {
+        campaignId: campaignId ? parseInt(campaignId) : null,
+        status: status || null,
+        limit,
+        offset,
+      })
+      return Response.json({
+        success: true,
+        data: contacts,
+        hasMore: contacts.length === limit,
+        limit,
+        offset,
+      })
     }
 
     const members = await memberDB.getMyAssignedMembers(session.user.discordId, {

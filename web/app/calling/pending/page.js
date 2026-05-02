@@ -18,6 +18,16 @@ const RSVP_ICONS = {
   maybe: { icon: '?', color: '#854f0b' },
 }
 
+const CATEGORY_LABELS = {
+  donor: 'ผู้บริจาค', prospect: 'คนสนใจ', volunteer: 'อาสาสมัคร', other: 'อื่นๆ',
+}
+const CATEGORY_COLORS = {
+  donor:     { bg: '#cce5f4', text: '#0c447c' },
+  prospect:  { bg: '#ead3ce', text: '#714b2b' },
+  volunteer: { bg: '#d4edda', text: '#1a5e2d' },
+  other:     { bg: '#f3f4f6', text: '#374151' },
+}
+
 function getExpiryBadge(expiredAt) {
   if (!expiredAt) return null
   const now = Date.now()
@@ -38,31 +48,42 @@ const STATUS_OPTIONS = [
   { value: 'called',  label: 'โทรแล้ว' },
 ]
 
+function getItemKey(item) {
+  return item.source_id != null ? `m-${item.source_id}-${item.campaign_id}` : `c-${item.id}-${item.campaign_id}`
+}
+
+function getItemId(item) {
+  return item.source_id ?? item.id
+}
+
 export default function PendingCallsPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
 
+  const [activeTab, setActiveTab] = useState(() => searchParams.get('tab') || 'member')
   const [campaigns, setCampaigns] = useState([])
-  const [members, setMembers] = useState([])
+  const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [filterCampaign, setFilterCampaign] = useState(() => searchParams.get('campaign') || '')
   const [filterStatus, setFilterStatus] = useState(() => searchParams.get('status') ?? '')
   const [filterRsvp, setFilterRsvp] = useState(() => searchParams.get('rsvp') || '')
 
-  const [modalMember, setModalMember] = useState(null)
+  const [modalItem, setModalItem] = useState(null)
   const [modalIndex, setModalIndex] = useState(-1)
 
-  const membersRef = useRef([])
-  useEffect(() => { membersRef.current = members }, [members])
+  const itemsRef = useRef([])
+  useEffect(() => { itemsRef.current = items }, [items])
 
+  // sync URL
   useEffect(() => {
     const p = new URLSearchParams()
+    if (activeTab !== 'member') p.set('tab', activeTab)
     if (filterCampaign) p.set('campaign', filterCampaign)
     if (filterStatus)   p.set('status', filterStatus)
-    if (filterRsvp)     p.set('rsvp', filterRsvp)
+    if (activeTab === 'member' && filterRsvp) p.set('rsvp', filterRsvp)
     const qs = p.toString()
     router.replace(qs ? `/calling/pending?${qs}` : '/calling/pending', { scroll: false })
-  }, [filterCampaign, filterStatus, filterRsvp])
+  }, [activeTab, filterCampaign, filterStatus, filterRsvp])
 
   useEffect(() => {
     fetch('/api/calling/pending?campaigns=true')
@@ -71,50 +92,60 @@ export default function PendingCallsPage() {
       .catch(() => {})
   }, [])
 
-  const fetchMembers = useCallback(async (campaignId, status, rsvp) => {
+  const fetchItems = useCallback(async (tab, campaignId, status, rsvp) => {
     setLoading(true)
     try {
-      const p = new URLSearchParams({ limit: '200' })
+      const p = new URLSearchParams({ limit: '200', type: tab })
       if (campaignId) p.set('campaignId', campaignId)
       if (status) p.set('status', status)
-      if (rsvp) p.set('rsvp', rsvp)
+      if (tab === 'member' && rsvp) p.set('rsvp', rsvp)
       const res = await fetch(`/api/calling/pending?${p}`)
       const data = await res.json()
-      setMembers(data.data || [])
+      setItems(data.data || [])
     } catch (err) {
-      console.error('fetchMembers', err)
+      console.error('fetchItems', err)
     } finally {
       setLoading(false)
     }
   }, [])
 
   useEffect(() => {
-    fetchMembers(filterCampaign, filterStatus, filterRsvp)
-  }, [filterCampaign, filterStatus, filterRsvp, fetchMembers])
+    fetchItems(activeTab, filterCampaign, filterStatus, filterRsvp)
+  }, [activeTab, filterCampaign, filterStatus, filterRsvp, fetchItems])
 
-  const openModal = (member) => {
-    const idx = membersRef.current.findIndex(
-      m => m.source_id === member.source_id && m.campaign_id === member.campaign_id
-    )
-    setModalMember(member)
+  const switchTab = (tab) => {
+    if (tab === activeTab) return
+    setActiveTab(tab)
+    setFilterCampaign('')
+    setFilterStatus('')
+    setFilterRsvp('')
+    setItems([])
+    setModalItem(null)
+    setModalIndex(-1)
+  }
+
+  const openModal = (item) => {
+    const key = getItemKey(item)
+    const idx = itemsRef.current.findIndex(m => getItemKey(m) === key)
+    setModalItem(item)
     setModalIndex(idx)
   }
 
   const closeModal = () => {
-    setModalMember(null)
+    setModalItem(null)
     setModalIndex(-1)
   }
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && modalMember) closeModal()
+      if (e.key === 'Escape' && modalItem) closeModal()
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [modalMember])
+  }, [modalItem])
 
   const findNextPendingIndex = useCallback((fromIndex) => {
-    const list = membersRef.current
+    const list = itemsRef.current
     for (let i = fromIndex + 1; i < list.length; i++) {
       if (list[i].call_status === 'pending') return i
     }
@@ -123,9 +154,10 @@ export default function PendingCallsPage() {
 
   const hasNext = modalIndex >= 0 && findNextPendingIndex(modalIndex) >= 0
 
-  const markMemberCalled = (sourceId, campaignId, payload) => {
-    setMembers(prev => prev.map(m =>
-      m.source_id === sourceId && m.campaign_id === campaignId
+  const markItemCalled = (item, payload) => {
+    const key = getItemKey(item)
+    setItems(prev => prev.map(m =>
+      getItemKey(m) === key
         ? { ...m, call_status: 'called', camp_calls: (m.camp_calls || 0) + 1, latest_log_status: payload.status, latest_note: payload.note ?? m.latest_note }
         : m
     ))
@@ -141,7 +173,7 @@ export default function PendingCallsPage() {
       const err = await res.json()
       throw new Error(err.error || 'เกิดข้อผิดพลาด')
     }
-    if (payload.rsvp) {
+    if (payload.rsvp && activeTab === 'member') {
       await fetch('/api/calling/assignments', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -159,7 +191,7 @@ export default function PendingCallsPage() {
     try {
       await submitLog(payload)
       closeModal()
-      fetchMembers(filterCampaign, filterStatus, filterRsvp)
+      fetchItems(activeTab, filterCampaign, filterStatus, filterRsvp)
     } catch (err) {
       alert(err.message)
       throw err
@@ -169,19 +201,19 @@ export default function PendingCallsPage() {
   const handleSaveAndNext = async (payload) => {
     try {
       await submitLog(payload)
-      markMemberCalled(modalMember.source_id, modalMember.campaign_id, payload)
-      const updatedList = membersRef.current.map(m =>
-        m.source_id === modalMember.source_id && m.campaign_id === modalMember.campaign_id
+      markItemCalled(modalItem, payload)
+      const updatedList = itemsRef.current.map(m =>
+        getItemKey(m) === getItemKey(modalItem)
           ? { ...m, call_status: 'called', latest_log_status: payload.status }
           : m
       )
       const nextIdx = updatedList.findIndex((m, i) => i > modalIndex && m.call_status === 'pending')
       if (nextIdx >= 0) {
-        setModalMember(updatedList[nextIdx])
+        setModalItem(updatedList[nextIdx])
         setModalIndex(nextIdx)
       } else {
         closeModal()
-        fetchMembers(filterCampaign, filterStatus, filterRsvp)
+        fetchItems(activeTab, filterCampaign, filterStatus, filterRsvp)
       }
     } catch (err) {
       alert(err.message)
@@ -189,16 +221,30 @@ export default function PendingCallsPage() {
     }
   }
 
-  const totalPending = members.filter(m => m.call_status === 'pending').length
-  const totalCalled  = members.filter(m => m.call_status === 'called').length
-  const total = members.length
+  const totalPending = items.filter(m => m.call_status === 'pending').length
+  const totalCalled  = items.filter(m => m.call_status === 'called').length
+  const total = items.length
 
   return (
     <div>
       {/* Header */}
-      <div className="mb-6">
+      <div className="mb-5">
         <h1 className="text-2xl font-medium text-warm-900 dark:text-warm-50 mb-1">Pending calls <span className="text-warm-400 dark:text-warm-dark-500 font-normal">(assignee)</span></h1>
-        <p className="text-base text-warm-500 dark:text-warm-dark-500">รายชื่อสมาชิกที่ได้รับ assign มาให้คุณโทร</p>
+        <p className="text-base text-warm-500 dark:text-warm-dark-500">รายชื่อที่ได้รับ assign มาให้คุณโทร</p>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-1 mb-4 border-b border-warm-200 dark:border-warm-dark-300">
+        {['member', 'contact'].map(tab => (
+          <button key={tab} onClick={() => switchTab(tab)}
+            className={`px-4 py-2 text-base font-medium border-b-2 -mb-px transition-colors ${
+              activeTab === tab
+                ? 'border-teal text-teal'
+                : 'border-transparent text-warm-500 dark:text-warm-dark-500 hover:text-warm-900 dark:hover:text-warm-50'
+            }`}>
+            {tab === 'member' ? 'Member' : 'Contact'}
+          </button>
+        ))}
       </div>
 
       {/* Filters */}
@@ -230,16 +276,18 @@ export default function PendingCallsPage() {
           ))}
         </div>
 
-        <select
-          value={filterRsvp}
-          onChange={e => setFilterRsvp(e.target.value)}
-          className="h-11 px-3 text-base border border-warm-200 dark:border-warm-dark-300 bg-card-bg text-warm-900 dark:text-warm-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal flex-1 sm:flex-none"
-        >
-          <option value="">RSVP (ทั้งหมด)</option>
-          <option value="yes">✓ เข้าร่วม</option>
-          <option value="no">✗ ไม่เข้าร่วม</option>
-          <option value="maybe">? อาจจะ</option>
-        </select>
+        {activeTab === 'member' && (
+          <select
+            value={filterRsvp}
+            onChange={e => setFilterRsvp(e.target.value)}
+            className="h-11 px-3 text-base border border-warm-200 dark:border-warm-dark-300 bg-card-bg text-warm-900 dark:text-warm-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal flex-1 sm:flex-none"
+          >
+            <option value="">RSVP (ทั้งหมด)</option>
+            <option value="yes">✓ เข้าร่วม</option>
+            <option value="no">✗ ไม่เข้าร่วม</option>
+            <option value="maybe">? อาจจะ</option>
+          </select>
+        )}
       </div>
 
       {/* Stats bar */}
@@ -263,30 +311,35 @@ export default function PendingCallsPage() {
       {/* List */}
       {loading ? (
         <div className="py-20 text-center text-warm-400 dark:text-warm-dark-400 text-base">กำลังโหลด...</div>
-      ) : members.length === 0 ? (
+      ) : items.length === 0 ? (
         <div className="bg-card-bg border border-warm-200 dark:border-warm-dark-300 rounded-xl py-16 text-center text-warm-400 dark:text-warm-dark-400 text-base">
           {filterStatus === 'pending' ? 'โทรครบทุกคนแล้ว 🎉' : 'ไม่มีรายการ'}
         </div>
       ) : (
         <div className="bg-card-bg border border-warm-200 dark:border-warm-dark-300 rounded-xl overflow-hidden">
           {/* Table header — desktop only */}
-          <div className="hidden sm:grid items-center px-4 py-2.5 gap-2 bg-warm-100 dark:bg-warm-dark-200 border-b border-warm-200 dark:border-warm-dark-300 text-sm font-medium text-warm-500 dark:text-warm-dark-500 [grid-template-columns:1fr_40px_80px_100px]">
-            <span>ชื่อสมาชิก</span>
+          <div className="hidden sm:grid items-center px-4 py-2.5 gap-2 bg-warm-100 dark:bg-warm-dark-200 border-b border-warm-200 dark:border-warm-dark-300 text-sm font-medium text-warm-500 dark:text-warm-dark-500 [grid-template-columns:1fr_40px_64px_88px]">
+            <span>ชื่อ</span>
             <span className="text-center">ระดับ</span>
             <span className="text-center">รับสาย</span>
-            <span>สถานะ</span>
+            <span className="text-right">สถานะ</span>
           </div>
 
           <div className="divide-y divide-warm-200 dark:divide-warm-dark-300">
-            {members.map(member => {
-              const tier = member.tier || 'D'
+            {items.map(item => {
+              const isContact = activeTab === 'contact'
+              const tier = item.tier || 'D'
               const tierColor = TIER_COLORS[tier]
-              const expiryBadge = getExpiryBadge(member.expired_at)
+              const displayName = item.full_name || [item.first_name, item.last_name].filter(Boolean).join(' ')
+              const phone = item.mobile_number || item.phone
+              const amphoe = item.home_amphure || item.amphoe
+              const expiryBadge = isContact ? null : getExpiryBadge(item.expired_at)
+              const catColor = isContact && item.category ? (CATEGORY_COLORS[item.category] || CATEGORY_COLORS.other) : null
 
               return (
                 <button
-                  key={`${member.source_id}-${member.campaign_id}`}
-                  onClick={() => openModal(member)}
+                  key={getItemKey(item)}
+                  onClick={() => openModal(item)}
                   className="w-full text-left px-4 py-4 hover:bg-warm-50 dark:hover:bg-warm-dark-200 transition group"
                 >
                   {/* Mobile layout */}
@@ -299,35 +352,30 @@ export default function PendingCallsPage() {
                             style={{ backgroundColor: tierColor.bg, color: tierColor.text }}
                           >{tier}</span>
                           <span className="text-base font-medium text-warm-900 dark:text-warm-50 group-hover:text-teal transition-colors truncate">
-                            {member.full_name}
+                            {displayName}
                           </span>
                           {expiryBadge && <span className={`text-base font-medium px-1.5 py-0.5 rounded flex-shrink-0 ${expiryBadge.cls}`}>{expiryBadge.label}</span>}
+                          {catColor && <span className="text-sm px-1.5 py-0.5 rounded font-medium flex-shrink-0" style={{ background: catColor.bg, color: catColor.text }}>{CATEGORY_LABELS[item.category] || item.category}</span>}
                         </div>
                         <div className="flex items-center gap-1.5 text-base truncate mt-0.5">
-                          {member.mobile_number && (
-                            <span className="text-teal font-medium">{member.mobile_number}</span>
-                          )}
-                          {member.mobile_number && member.home_amphure && (
-                            <span className="text-warm-300 dark:text-warm-dark-500">·</span>
-                          )}
-                          {member.home_amphure && (
-                            <span className="text-warm-400 dark:text-warm-dark-400 truncate">{member.home_amphure}</span>
-                          )}
+                          {phone && <span className="text-teal font-medium">{phone}</span>}
+                          {phone && amphoe && <span className="text-warm-300 dark:text-warm-dark-500">·</span>}
+                          {amphoe && <span className="text-warm-400 dark:text-warm-dark-400 truncate">{amphoe}</span>}
                         </div>
-                        {member.latest_note && (
+                        {item.latest_note && (
                           <div className="text-base text-warm-600 dark:text-warm-200 mt-1 italic whitespace-pre-wrap break-words">
-                            "{member.latest_note}"
+                            "{item.latest_note}"
                           </div>
                         )}
                       </div>
                       <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
                         {(() => {
-                          const badge = getStatusBadge(member.call_status, member.latest_log_status)
+                          const badge = getStatusBadge(item.call_status, item.latest_log_status)
                           return (
                             <div className="flex items-center gap-1">
-                              {member.rsvp && (
-                                <span className="text-base font-bold" style={{ color: RSVP_ICONS[member.rsvp]?.color || '#666' }}>
-                                  {RSVP_ICONS[member.rsvp]?.icon || member.rsvp}
+                              {!isContact && item.rsvp && (
+                                <span className="text-base font-bold" style={{ color: RSVP_ICONS[item.rsvp]?.color || '#666' }}>
+                                  {RSVP_ICONS[item.rsvp]?.icon || item.rsvp}
                                 </span>
                               )}
                               <span className="px-2 py-0.5 rounded text-base font-medium whitespace-nowrap"
@@ -338,36 +386,31 @@ export default function PendingCallsPage() {
                           )
                         })()}
                         <span className="text-base text-warm-400 dark:text-warm-dark-400">
-                          {member.answered_count}/{member.total_calls} รับ
+                          {item.answered_count}/{item.total_calls} รับ
                         </span>
                       </div>
                     </div>
                   </div>
 
                   {/* Desktop layout */}
-                  <div className="hidden sm:grid items-center [grid-template-columns:1fr_40px_80px_100px] gap-2">
+                  <div className="hidden sm:grid items-center [grid-template-columns:1fr_40px_64px_88px] gap-2">
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="text-base font-medium text-warm-900 dark:text-warm-50 group-hover:text-teal transition-colors truncate">
-                            {member.full_name}
+                            {displayName}
                           </span>
                           {expiryBadge && <span className={`text-base font-medium px-1.5 py-0.5 rounded flex-shrink-0 ${expiryBadge.cls}`}>{expiryBadge.label}</span>}
+                          {catColor && <span className="text-sm px-1.5 py-0.5 rounded font-medium flex-shrink-0" style={{ background: catColor.bg, color: catColor.text }}>{CATEGORY_LABELS[item.category] || item.category}</span>}
                         </div>
                         <div className="flex items-center gap-1.5 text-base truncate">
-                          {member.mobile_number && (
-                            <span className="text-teal font-medium">{member.mobile_number}</span>
-                          )}
-                          {member.mobile_number && member.home_amphure && (
-                            <span className="text-warm-300 dark:text-warm-dark-500">·</span>
-                          )}
-                          {member.home_amphure && (
-                            <span className="text-warm-400 dark:text-warm-dark-400 truncate">{member.home_amphure}</span>
-                          )}
+                          {phone && <span className="text-teal font-medium">{phone}</span>}
+                          {phone && amphoe && <span className="text-warm-300 dark:text-warm-dark-500">·</span>}
+                          {amphoe && <span className="text-warm-400 dark:text-warm-dark-400 truncate">{amphoe}</span>}
                         </div>
-                        {member.latest_note && (
+                        {item.latest_note && (
                           <div className="text-base text-warm-600 dark:text-warm-200 mt-0.5 italic whitespace-pre-wrap break-words">
-                            "{member.latest_note}"
+                            "{item.latest_note}"
                           </div>
                         )}
                       </div>
@@ -381,19 +424,19 @@ export default function PendingCallsPage() {
                     </div>
 
                     <div className="text-center text-base text-warm-500 dark:text-warm-dark-500">
-                      <span className="font-semibold text-warm-900 dark:text-warm-50">{member.answered_count}</span>
+                      <span className="font-semibold text-warm-900 dark:text-warm-50">{item.answered_count}</span>
                       <span className="text-warm-300 dark:text-warm-dark-500">/</span>
-                      <span>{member.total_calls}</span>
+                      <span>{item.total_calls}</span>
                     </div>
 
-                    <div className="flex items-center gap-1 justify-start">
+                    <div className="flex items-center gap-1 justify-end">
                       {(() => {
-                        const badge = getStatusBadge(member.call_status, member.latest_log_status)
+                        const badge = getStatusBadge(item.call_status, item.latest_log_status)
                         return (
                           <>
-                            {member.rsvp && (
-                              <span className="text-base font-bold" style={{ color: RSVP_ICONS[member.rsvp]?.color || '#666' }}>
-                                {RSVP_ICONS[member.rsvp]?.icon || member.rsvp}
+                            {!isContact && item.rsvp && (
+                              <span className="text-base font-bold" style={{ color: RSVP_ICONS[item.rsvp]?.color || '#666' }}>
+                                {RSVP_ICONS[item.rsvp]?.icon || item.rsvp}
                               </span>
                             )}
                             <span className="px-2 py-0.5 rounded text-base font-medium whitespace-nowrap"
@@ -413,8 +456,9 @@ export default function PendingCallsPage() {
       )}
 
       <RecordCallModal
-        isOpen={!!modalMember}
-        member={modalMember}
+        isOpen={!!modalItem}
+        member={modalItem}
+        contact_type={activeTab === 'contact' ? 'contact' : 'member'}
         onClose={closeModal}
         onSave={handleSave}
         onSaveAndNext={handleSaveAndNext}

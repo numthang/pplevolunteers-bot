@@ -20,6 +20,16 @@ const RSVP_ICONS = {
   maybe: { icon: '?', color: '#854f0b' },
 }
 
+const CATEGORY_LABELS = {
+  donor: 'ผู้บริจาค', prospect: 'คนสนใจ', volunteer: 'อาสาสมัคร', other: 'อื่นๆ',
+}
+const CATEGORY_COLORS = {
+  donor:     { bg: '#cce5f4', text: '#0c447c' },
+  prospect:  { bg: '#ead3ce', text: '#714b2b' },
+  volunteer: { bg: '#d4edda', text: '#1a5e2d' },
+  other:     { bg: '#f3f4f6', text: '#374151' },
+}
+
 function getStatusBadge(status) {
   if (status === 'assigned') return { bg: '#e0e7ff', text: '#4f46e5', label: 'มอบหมายแล้ว' }
   return { bg: '#faeeda', text: '#854f0b', label: 'รอมอบหมาย' }
@@ -81,6 +91,8 @@ export default function CampaignPage({ params }) {
   const searchParams = useSearchParams()
   const router = useRouter()
 
+  const [activeTab, setActiveTab] = useState('member') // 'member' | 'contact'
+
   const [campaign, setCampaign] = useState(null)
   const [stats, setStats] = useState({ total: 0, called: 0, assigned: 0, unassigned: 0, districts: [], districtCounts: {}, tierCounts: {}, assigneeCounts: [] })
   const [members, setMembers] = useState([])
@@ -116,11 +128,15 @@ export default function CampaignPage({ params }) {
   const LOG_STATUS_LABEL = { answered: 'รับสาย', no_answer: 'ไม่รับ', busy: 'สายไม่ว่าง', not_called: 'ข้าม' }
   const LOG_STATUS_COLOR = { answered: '#0d9e94', no_answer: '#a32d2d', busy: '#854f0b', not_called: '#6b7280' }
 
-  const handleExpand = async (memberId) => {
-    const next = expandedId === memberId ? null : memberId
+  // id ของแต่ละ row ตาม tab
+  const getItemId = useCallback((item) => activeTab === 'contact' ? item.id : item.source_id, [activeTab])
+
+  const handleExpand = async (itemId) => {
+    const next = expandedId === itemId ? null : itemId
     setExpandedId(next)
     if (next && !logsCache[next]) {
-      const res = await fetch(`/api/calling/logs?memberId=${next}`)
+      const contactType = activeTab === 'contact' ? '&contactType=contact' : ''
+      const res = await fetch(`/api/calling/logs?memberId=${next}${contactType}`)
       const data = await res.json()
       setLogsCache(prev => ({ ...prev, [next]: data.data || [] }))
     }
@@ -143,8 +159,9 @@ export default function CampaignPage({ params }) {
     }
   }, [subdistrictsOpen])
 
+  // subdistricts only for member tab (data from ngs_member_cache)
   useEffect(() => {
-    if (!filterAmphure) {
+    if (activeTab !== 'member' || !filterAmphure) {
       setAvailableSubdistricts([])
       setFilterSubdistricts(new Set())
       return
@@ -158,22 +175,24 @@ export default function CampaignPage({ params }) {
       })
       .catch(err => console.error('Error fetching subdistricts:', err))
       .finally(() => setLoadingSubdistricts(false))
-  }, [campaignId, filterAmphure])
+  }, [campaignId, filterAmphure, activeTab])
 
   useEffect(() => {
     const p = new URLSearchParams()
     if (debouncedName)  p.set('name', debouncedName)
     if (filterAmphure)  p.set('amphure', filterAmphure)
-    if (filterSubdistricts.size > 0) p.set('subdistricts', Array.from(filterSubdistricts).join(','))
+    if (activeTab === 'member') {
+      if (filterSubdistricts.size > 0) p.set('subdistricts', Array.from(filterSubdistricts).join(','))
+      if (filterRsvp)   p.set('rsvp', filterRsvp)
+      if (filterExpiry) p.set('expiry', filterExpiry)
+      if (filterSort)   p.set('sort', filterSort)
+    }
     if (filterTier)     p.set('tier', filterTier)
     if (filterAssignee) p.set('assignee', filterAssignee)
-    if (filterRsvp)     p.set('rsvp', filterRsvp)
-    if (filterExpiry)   p.set('expiry', filterExpiry)
     if (filterCalled)   p.set('called', filterCalled)
-    if (filterSort)     p.set('sort', filterSort)
     const qs = p.toString()
     router.replace(qs ? `/calling/${campaignId}?${qs}` : `/calling/${campaignId}`, { scroll: false })
-  }, [debouncedName, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, filterExpiry, filterCalled, filterSort])
+  }, [debouncedName, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, filterExpiry, filterCalled, filterSort, activeTab])
 
   const offsetRef = useRef(0)
   const sentinelRef = useRef(null)
@@ -198,27 +217,43 @@ export default function CampaignPage({ params }) {
     return `/api/calling/members?${p}`
   }
 
-  const loadFirst = useCallback(async (amphure, subdistricts, tier, assignee, rsvp, name, expiry, called, sort) => {
+  const buildContactsUrl = (offset, amphure, tier, assignee, name, called) => {
+    const p = new URLSearchParams({ campaignId, limit: PAGE_SIZE, offset })
+    if (amphure)  p.set('amphoe', amphure)
+    if (tier)     p.set('tier', tier)
+    if (assignee) p.set('assignedTo', assignee)
+    if (name)     p.set('name', name)
+    if (called)   p.set('called', called)
+    return `/api/calling/contacts/campaign?${p}`
+  }
+
+  const loadFirst = useCallback(async (tab, amphure, subdistricts, tier, assignee, rsvp, name, expiry, called, sort) => {
     setLoadingInitial(true)
     setHasMore(false)
     hasMoreRef.current = false
     offsetRef.current = 0
+    setExpandedId(null)
+    setLogsCache({})
     try {
-      const [memberRes, statsRes] = await Promise.all([
-        fetch(buildMembersUrl(0, amphure, subdistricts, tier, assignee, rsvp, name, expiry, called, sort)),
-        fetch(`/api/calling/members?campaignId=${campaignId}&stats=true`)
-      ])
-      const memberData = await memberRes.json()
-      if (memberData.noAccess) { setNoAccess(true); return }
-      setContactsHidden(memberData.contacts_hidden || false)
-      const newRows = memberData.data || []
+      const dataUrl = tab === 'contact'
+        ? buildContactsUrl(0, amphure, tier, assignee, name, called)
+        : buildMembersUrl(0, amphure, subdistricts, tier, assignee, rsvp, name, expiry, called, sort)
+      const statsUrl = tab === 'contact'
+        ? `/api/calling/contacts/campaign?campaignId=${campaignId}&stats=true`
+        : `/api/calling/members?campaignId=${campaignId}&stats=true`
+
+      const [dataRes, statsRes] = await Promise.all([fetch(dataUrl), fetch(statsUrl)])
+      const dataJson = await dataRes.json()
+      if (dataJson.noAccess) { setNoAccess(true); return }
+      setContactsHidden(dataJson.contacts_hidden || false)
+      const newRows = dataJson.data || []
       setMembers(newRows)
-      setHasMore(memberData.hasMore || false)
-      hasMoreRef.current = memberData.hasMore || false
+      setHasMore(dataJson.hasMore || false)
+      hasMoreRef.current = dataJson.hasMore || false
       offsetRef.current = newRows.length
       setSelectedMembers(new Set())
-      const statsData = await statsRes.json()
-      if (statsData.data) setStats(statsData.data)
+      const statsJson = await statsRes.json()
+      if (statsJson.data) setStats(statsJson.data)
     } catch (err) {
       console.error('loadFirst', err)
     } finally {
@@ -231,9 +266,10 @@ export default function CampaignPage({ params }) {
     setLoadingMore(true)
     loadingMoreRef.current = true
     try {
-      const res = await fetch(buildMembersUrl(
-        offsetRef.current, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled, filterSort
-      ))
+      const url = activeTab === 'contact'
+        ? buildContactsUrl(offsetRef.current, filterAmphure, filterTier, filterAssignee, debouncedName, filterCalled)
+        : buildMembersUrl(offsetRef.current, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled, filterSort)
+      const res = await fetch(url)
       const data = await res.json()
       const newRows = data.data || []
       setMembers(prev => [...prev, ...newRows])
@@ -246,7 +282,7 @@ export default function CampaignPage({ params }) {
       setLoadingMore(false)
       loadingMoreRef.current = false
     }
-  }, [filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled, filterSort])
+  }, [activeTab, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled, filterSort])
 
   useEffect(() => {
     ;(async () => {
@@ -267,8 +303,8 @@ export default function CampaignPage({ params }) {
   }, [campaignId])
 
   useEffect(() => {
-    loadFirst(filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled, filterSort)
-  }, [campaignId, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled, filterSort])
+    loadFirst(activeTab, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled, filterSort)
+  }, [campaignId, activeTab, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled, filterSort])
 
   useEffect(() => {
     const sentinel = sentinelRef.current
@@ -284,7 +320,7 @@ export default function CampaignPage({ params }) {
     if (selectedMembers.size === members.length && members.length > 0) {
       setSelectedMembers(new Set())
     } else {
-      setSelectedMembers(new Set(members.map(m => m.source_id)))
+      setSelectedMembers(new Set(members.map(m => getItemId(m))))
     }
   }
 
@@ -298,11 +334,14 @@ export default function CampaignPage({ params }) {
     try {
       let targets
       if (selectedMembers.size > 0) {
-        targets = members.filter(m => selectedMembers.has(m.source_id)).map(m => m.source_id)
+        targets = members.filter(m => selectedMembers.has(getItemId(m))).map(m => getItemId(m))
       } else {
-        const res = await fetch(`/api/calling/members?campaignId=${campaignId}&status=unassigned&limit=500&offset=0`)
+        const url = activeTab === 'contact'
+          ? `/api/calling/contacts/campaign?campaignId=${campaignId}&status=unassigned&limit=500&offset=0`
+          : `/api/calling/members?campaignId=${campaignId}&status=unassigned&limit=500&offset=0`
+        const res = await fetch(url)
         const data = await res.json()
-        targets = (data.data || []).map(m => m.source_id)
+        targets = (data.data || []).map(m => getItemId(m))
       }
       const perPerson = Math.ceil(targets.length / assigneeIds.length)
       for (let i = 0; i < assigneeIds.length; i++) {
@@ -311,7 +350,12 @@ export default function CampaignPage({ params }) {
         const res = await fetch('/api/calling/assignments', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ campaign_id: parseInt(campaignId), member_ids: chunk, assigned_to: assigneeIds[i] })
+          body: JSON.stringify({
+            campaign_id: parseInt(campaignId),
+            member_ids: chunk,
+            assigned_to: assigneeIds[i],
+            contact_type: activeTab === 'contact' ? 'contact' : 'member',
+          })
         })
         if (!res.ok) {
           const err = await res.json()
@@ -319,7 +363,7 @@ export default function CampaignPage({ params }) {
         }
       }
       setSplitModalOpen(false)
-      await loadFirst(filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName)
+      await loadFirst(activeTab, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName)
     } catch (err) {
       alert('เกิดข้อผิดพลาด: ' + err.message)
     }
@@ -330,20 +374,42 @@ export default function CampaignPage({ params }) {
     if (!confirm(`ยกเลิกมอบหมาย ${ids.length} คน?`)) return
     try {
       await Promise.all(
-        ids.map(memberId =>
+        ids.map(itemId =>
           fetch('/api/calling/assignments', {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ campaign_id: parseInt(campaignId), member_id: memberId })
+            body: JSON.stringify({
+              campaign_id: parseInt(campaignId),
+              member_id: itemId,
+              contact_type: activeTab === 'contact' ? 'contact' : 'member',
+            })
           }).then(async res => {
             if (!res.ok) throw new Error((await res.json()).error)
           })
         )
       )
-      await loadFirst(filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName)
+      await loadFirst(activeTab, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName)
     } catch (err) {
       alert('เกิดข้อผิดพลาด: ' + err.message)
     }
+  }
+
+  // switch tab — reset filters
+  const switchTab = (tab) => {
+    if (tab === activeTab) return
+    setActiveTab(tab)
+    setFilterName('')
+    setDebouncedName('')
+    setFilterAmphure('')
+    setFilterSubdistricts(new Set())
+    setFilterTier('')
+    setFilterAssignee('')
+    setFilterRsvp('')
+    setFilterExpiry('')
+    setFilterCalled('')
+    setFilterSort('')
+    setSelectedMembers(new Set())
+    setExpandedId(null)
   }
 
   const hasActiveFilters = !!(filterName || filterAmphure || filterSubdistricts.size > 0 || filterTier || filterAssignee || filterRsvp || filterExpiry || filterCalled || filterSort)
@@ -384,13 +450,27 @@ export default function CampaignPage({ params }) {
             {campaign?.name} <span className="text-warm-400 dark:text-warm-dark-500 font-normal text-base">(assignor)</span>
           </h1>
           <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-base text-warm-500 dark:text-disc-muted">
-            <span>สมาชิก <span className="font-semibold text-warm-900 dark:text-disc-text">{stats.total}</span></span>
+            <span>{activeTab === 'contact' ? 'Contact' : 'Member'} <span className="font-semibold text-warm-900 dark:text-disc-text">{stats.total}</span></span>
             <span>โทรแล้ว <span className="font-semibold text-warm-900 dark:text-disc-text">{stats.called}/{stats.assigned}</span></span>
           </div>
         </div>
         {campaign?.description && (
           <ExpandableDescription text={campaign.description} />
         )}
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-1 mb-4 border-b border-warm-200 dark:border-disc-border">
+        {['member', 'contact'].map(tab => (
+          <button key={tab} onClick={() => switchTab(tab)}
+            className={`px-4 py-2 text-base font-medium border-b-2 -mb-px transition-colors ${
+              activeTab === tab
+                ? 'border-teal text-teal'
+                : 'border-transparent text-warm-500 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text'
+            }`}>
+            {tab === 'member' ? 'Member' : 'Contact'}
+          </button>
+        ))}
       </div>
 
       {/* Filters */}
@@ -409,7 +489,8 @@ export default function CampaignPage({ params }) {
           ))}
         </select>
 
-        {filterAmphure && (
+        {/* subdistricts — member tab only */}
+        {activeTab === 'member' && filterAmphure && (
           <div ref={subdistrictsRef} className="relative">
             {loadingSubdistricts ? (
               <div className="h-11 px-3 text-base border border-warm-200 dark:border-disc-border bg-warm-50 dark:bg-disc-bg2 text-warm-900 dark:text-disc-text rounded-lg flex items-center">
@@ -469,25 +550,28 @@ export default function CampaignPage({ params }) {
           <option value="uncalled">รอโทร</option>
         </select>
 
-        <select value={filterRsvp} onChange={e => setFilterRsvp(e.target.value)} className={FILTER_CLS}>
-          <option value="">RSVP</option>
-          <option value="yes">✓ เข้าร่วม</option>
-          <option value="no">✗ ไม่เข้าร่วม</option>
-          <option value="maybe">? อาจจะ</option>
-        </select>
+        {/* member-only filters */}
+        {activeTab === 'member' && <>
+          <select value={filterRsvp} onChange={e => setFilterRsvp(e.target.value)} className={FILTER_CLS}>
+            <option value="">RSVP</option>
+            <option value="yes">✓ เข้าร่วม</option>
+            <option value="no">✗ ไม่เข้าร่วม</option>
+            <option value="maybe">? อาจจะ</option>
+          </select>
 
-        <select value={filterExpiry} onChange={e => setFilterExpiry(e.target.value)} className={FILTER_CLS}>
-          <option value="">สมาชิกภาพ</option>
-          <option value="expiring">ใกล้หมดอายุ (90 วัน)</option>
-          <option value="expired">หมดอายุแล้ว</option>
-        </select>
+          <select value={filterExpiry} onChange={e => setFilterExpiry(e.target.value)} className={FILTER_CLS}>
+            <option value="">สมาชิกภาพ</option>
+            <option value="expiring">ใกล้หมดอายุ (90 วัน)</option>
+            <option value="expired">หมดอายุแล้ว</option>
+          </select>
 
-        <select value={filterSort} onChange={e => setFilterSort(e.target.value)} className={FILTER_CLS}>
-          <option value="">เรียงตาม: ที่อยู่/ชื่อ</option>
-          <option value="least_called">โทรน้อยสุด (ทุกแคมเปญ)</option>
-          <option value="uncalled">ยังไม่โทร (แคมเปญนี้)</option>
-          <option value="tier">Tier</option>
-        </select>
+          <select value={filterSort} onChange={e => setFilterSort(e.target.value)} className={FILTER_CLS}>
+            <option value="">เรียงตาม: ที่อยู่/ชื่อ</option>
+            <option value="least_called">โทรน้อยสุด (ทุกแคมเปญ)</option>
+            <option value="uncalled">ยังไม่โทร (แคมเปญนี้)</option>
+            <option value="tier">Tier</option>
+          </select>
+        </>}
 
         {hasActiveFilters && (
           <button
@@ -521,7 +605,7 @@ export default function CampaignPage({ params }) {
           <span className="md:hidden text-center">โทร</span>
           <span className="hidden md:block text-center">ระดับ</span>
           <span className="hidden md:block">มอบหมาย</span>
-          <span className="hidden md:block">ตำบล</span>
+          <span className="hidden md:block">{activeTab === 'contact' ? 'ตำบล' : 'ตำบล'}</span>
           <span className="hidden md:block text-center">โทร</span>
         </div>
 
@@ -534,21 +618,35 @@ export default function CampaignPage({ params }) {
             <p className="text-base text-warm-400 dark:text-warm-dark-500">ต้องการเข้าใช้งาน? ติดต่อฝ่ายเครือข่ายได้เลยนะครับ</p>
           </div>
         ) : members.length === 0 ? (
-          <div className="px-6 py-8 text-center text-warm-400 dark:text-disc-muted text-base">ไม่พบสมาชิก</div>
+          <div className="px-6 py-8 text-center text-warm-400 dark:text-disc-muted text-base">
+            {activeTab === 'contact' ? 'ไม่พบ contact' : 'ไม่พบสมาชิก'}
+          </div>
         ) : (
           <div>
-            {members.map((member, idx) => {
-              const tier = member.tier || 'D'
+            {members.map((item, idx) => {
+              const itemId  = getItemId(item)
+              const tier    = item.tier || 'D'
               const tierColor = TIER_COLORS[tier]
-              const status = member.member_status || 'unassigned'
-              const badge = getStatusBadge(status)
-              const hasPhone = contactsHidden || !!member.mobile_number
-              const isExpanded = expandedId === member.source_id
-              const dimmed = !hasPhone ? 'opacity-50' : ''
-              const expiryBadge = getExpiryBadge(member.expired_at)
-              const memberLogs = logsCache[member.source_id]
+              const status  = item.member_status || 'unassigned'
+              const badge   = getStatusBadge(status)
+              const isExpanded = expandedId === itemId
+              const itemLogs   = logsCache[itemId]
+
+              // member-specific
+              const isMember  = activeTab === 'member'
+              const hasPhone  = contactsHidden || !!(isMember ? item.mobile_number : item.phone)
+              const dimmed    = !hasPhone ? 'opacity-50' : ''
+              const expiryBadge = isMember ? getExpiryBadge(item.expired_at) : null
+              const catColor  = !isMember && item.category ? (CATEGORY_COLORS[item.category] || CATEGORY_COLORS.other) : null
+
+              const displayName = isMember ? item.full_name : `${item.first_name} ${item.last_name}`
+              const amphoe  = isMember ? item.home_amphure  : item.amphoe
+              const tambon  = isMember ? item.home_district : item.tambon
+              const phone   = isMember ? item.mobile_number : item.phone
+              const lineId  = item.line_id
+
               return (
-                <div key={member.source_id} className="border-b border-warm-200 dark:border-disc-border last:border-0">
+                <div key={itemId} className="border-b border-warm-200 dark:border-disc-border last:border-0">
                   {/* Main row */}
                   <div className={`
                     grid items-center px-3 py-3
@@ -558,49 +656,44 @@ export default function CampaignPage({ params }) {
                     ${isExpanded ? 'bg-warm-50 dark:bg-disc-hover' : ''}
                   `}>
                     <input type="checkbox"
-                      checked={selectedMembers.has(member.source_id)}
-                      onChange={() => handleSelectMember(member.source_id)}
+                      checked={selectedMembers.has(itemId)}
+                      onChange={() => handleSelectMember(itemId)}
                       className="w-6 h-6 accent-teal cursor-pointer" />
                     <span className={`hidden md:block text-sm tabular-nums text-warm-400 dark:text-disc-muted ${dimmed}`}>{idx + 1}</span>
-                    <div className={`min-w-0 pr-2 cursor-pointer ${dimmed}`} onClick={() => handleExpand(member.source_id)}>
+                    <div className={`min-w-0 pr-2 cursor-pointer ${dimmed}`} onClick={() => handleExpand(itemId)}>
                       <div className="flex items-center gap-1.5 truncate">
                         <span className="md:hidden shrink-0 px-1.5 py-0.5 rounded text-sm font-semibold"
                           style={{ backgroundColor: tierColor.bg, color: tierColor.text }}>{tier}</span>
                         <span className="truncate text-base font-medium text-warm-900 dark:text-disc-text">
-                          {member.full_name}
+                          {displayName}
                         </span>
                         {expiryBadge && <span className={`shrink-0 text-base font-medium px-1.5 py-0.5 rounded ${expiryBadge.cls}`}>{expiryBadge.label}</span>}
+                        {catColor && <span className="shrink-0 text-sm px-1.5 py-0.5 rounded font-medium" style={{ background: catColor.bg, color: catColor.text }}>{CATEGORY_LABELS[item.category] || item.category}</span>}
                         {!hasPhone && <span className="shrink-0 text-base text-warm-400 dark:text-disc-muted font-normal">ไม่มีเบอร์</span>}
                       </div>
                       <div className="flex items-center gap-1.5 text-base text-warm-500 dark:text-warm-200 truncate">
-                        <span
-                          className="shrink-0 w-1.5 h-1.5 rounded-full inline-block"
-                          style={{ backgroundColor: badge.text }}
-                        />
+                        <span className="shrink-0 w-1.5 h-1.5 rounded-full inline-block" style={{ backgroundColor: badge.text }} />
                         <span className="truncate">
-                          {[
-                            member.home_district || null,
-                            member.home_amphure  || null,
-                            member.assigned_to   ? usersMap[member.assigned_to] || member.assigned_to : null,
-                          ].filter(Boolean).join(' · ')}
+                          {[tambon, amphoe, item.assigned_to ? usersMap[item.assigned_to] || item.assigned_to : null]
+                            .filter(Boolean).join(' · ')}
                         </span>
-                        {member.rsvp && (
-                          <span className="shrink-0 font-bold" style={{ color: RSVP_ICONS[member.rsvp]?.color || '#666' }}>
-                            {RSVP_ICONS[member.rsvp]?.icon}
+                        {isMember && item.rsvp && (
+                          <span className="shrink-0 font-bold" style={{ color: RSVP_ICONS[item.rsvp]?.color || '#666' }}>
+                            {RSVP_ICONS[item.rsvp]?.icon}
                           </span>
                         )}
                       </div>
-                      {member.last_note && (
+                      {item.last_note && (
                         <div className="text-base text-warm-600 dark:text-warm-200 mt-0.5 truncate italic">
-                          "{member.last_note}"
+                          "{item.last_note}"
                         </div>
                       )}
                     </div>
                     <div className={`flex justify-center items-center pl-2 ${dimmed}`}>
                       <div className="md:hidden">
-                        {member.total_calls > 0
+                        {item.total_calls > 0
                           ? <span className="px-1.5 py-0.5 rounded text-sm font-medium whitespace-nowrap" style={{ backgroundColor: CALL_STATUS_COLORS.called.bg, color: CALL_STATUS_COLORS.called.text }}>{CALL_STATUS_COLORS.called.label}</span>
-                          : member.assigned_to
+                          : item.assigned_to
                             ? <span className="px-1.5 py-0.5 rounded text-sm font-medium whitespace-nowrap" style={{ backgroundColor: CALL_STATUS_COLORS.pending.bg, color: CALL_STATUS_COLORS.pending.text }}>{CALL_STATUS_COLORS.pending.label}</span>
                             : <span className="text-warm-300 dark:text-disc-muted text-sm">—</span>}
                       </div>
@@ -608,17 +701,17 @@ export default function CampaignPage({ params }) {
                         style={{ backgroundColor: tierColor.bg, color: tierColor.text }}>{tier}</span>
                     </div>
                     <div className={`hidden md:block text-base truncate pr-2 ${dimmed}`}>
-                      {member.assigned_to
-                        ? <a href={`https://discord.com/users/${member.assigned_to}`} target="_blank" rel="noopener noreferrer" className="text-teal hover:underline">{usersMap[member.assigned_to] || member.assigned_to}</a>
+                      {item.assigned_to
+                        ? <a href={`https://discord.com/users/${item.assigned_to}`} target="_blank" rel="noopener noreferrer" className="text-teal hover:underline">{usersMap[item.assigned_to] || item.assigned_to}</a>
                         : <span className="px-2 py-0.5 rounded text-base font-medium whitespace-nowrap" style={{ backgroundColor: badge.bg, color: badge.text }}>{badge.label}</span>}
                     </div>
                     <div className={`hidden md:block text-base text-warm-500 dark:text-disc-muted truncate pr-2 ${dimmed}`}>
-                      {member.home_district || '—'}
+                      {tambon || '—'}
                     </div>
                     <div className={`hidden md:block text-center ${dimmed}`}>
-                      {member.total_calls > 0
+                      {item.total_calls > 0
                         ? <span className="px-2 py-0.5 rounded text-sm font-medium whitespace-nowrap" style={{ backgroundColor: CALL_STATUS_COLORS.called.bg, color: CALL_STATUS_COLORS.called.text }}>{CALL_STATUS_COLORS.called.label}</span>
-                        : member.assigned_to
+                        : item.assigned_to
                           ? <span className="px-2 py-0.5 rounded text-sm font-medium whitespace-nowrap" style={{ backgroundColor: CALL_STATUS_COLORS.pending.bg, color: CALL_STATUS_COLORS.pending.text }}>{CALL_STATUS_COLORS.pending.label}</span>
                           : <span className="text-warm-300 dark:text-disc-muted text-sm">—</span>}
                     </div>
@@ -630,20 +723,22 @@ export default function CampaignPage({ params }) {
                       <div className="flex flex-wrap gap-x-4 gap-y-1 text-base mb-2">
                         {!contactsHidden && (
                           <span>
-                            {member.mobile_number
-                              ? <a href={`tel:${member.mobile_number}`} className="text-teal font-medium">{member.mobile_number}</a>
+                            {phone
+                              ? <a href={`tel:${phone}`} className="text-teal font-medium">{phone}</a>
                               : <span className="text-warm-400 dark:text-disc-muted">ไม่มีเบอร์</span>}
                           </span>
                         )}
-                        {!contactsHidden && member.line_id && <span className="text-warm-500 dark:text-disc-muted">LINE: {member.line_id}</span>}
+                        {lineId && <span className="text-warm-500 dark:text-disc-muted">LINE: {lineId}</span>}
+                        {!isMember && item.email && <span className="text-warm-500 dark:text-disc-muted">{item.email}</span>}
+                        {!isMember && item.note && <span className="text-warm-600 dark:text-disc-text italic">"{item.note}"</span>}
                       </div>
-                      {memberLogs === undefined ? (
+                      {itemLogs === undefined ? (
                         <div className="text-base text-warm-400 dark:text-disc-muted py-1">กำลังโหลด...</div>
-                      ) : memberLogs.length === 0 ? (
+                      ) : itemLogs.length === 0 ? (
                         <div className="text-base text-warm-400 dark:text-disc-muted py-1">ยังไม่มีประวัติการโทร</div>
                       ) : (
                         <div className="space-y-1">
-                          {memberLogs.map(log => {
+                          {itemLogs.map(log => {
                             const logColor = LOG_STATUS_COLOR[log.status] ? { bg: LOG_STATUS_COLOR[log.status], text: '#fff' } : { bg: '#f3f4f6', text: '#6b7280' }
                             return (
                               <div key={log.id} className="text-base py-0.5">
@@ -682,7 +777,7 @@ export default function CampaignPage({ params }) {
           {loadingMore
             ? 'กำลังโหลดเพิ่มเติม...'
             : !loadingInitial && members.length > 0
-              ? hasMore ? '' : `แสดงครบ ${members.length} คน`
+              ? hasMore ? '' : `แสดงครบ ${members.length} ${activeTab === 'contact' ? 'contact' : 'คน'}`
               : ''}
         </div>
       </div>
@@ -690,7 +785,7 @@ export default function CampaignPage({ params }) {
       {/* Floating toolbar */}
       {selectedMembers.size > 0 && (
         <div className="fixed bottom-4 left-4 right-4 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 sm:w-auto flex items-center gap-3 bg-card-bg border border-warm-200 dark:border-disc-border rounded-2xl sm:rounded-full shadow-lg px-5 py-3 z-40">
-          <span className="text-base font-medium text-warm-900 dark:text-disc-text shrink-0">เลือก {selectedMembers.size} คน</span>
+          <span className="text-base font-medium text-warm-900 dark:text-disc-text shrink-0">เลือก {selectedMembers.size} {activeTab === 'contact' ? 'contact' : 'คน'}</span>
           <button onClick={() => setSplitModalOpen(true)}
             className="flex-1 sm:flex-none px-4 py-2 bg-teal hover:opacity-90 text-white text-base font-medium rounded-full transition text-center">
             มอบหมาย ↗

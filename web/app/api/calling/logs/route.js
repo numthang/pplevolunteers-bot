@@ -18,9 +18,11 @@ export async function GET(req) {
       return Response.json({ error: 'memberId is required' }, { status: 400 })
     }
 
+    const contactType = searchParams.get('contactType') || 'member'
     const logs = await getLogsByCampaignMember(
       campaignId ? parseInt(campaignId) : null,
-      parseInt(memberId)
+      parseInt(memberId),
+      contactType
     )
     return Response.json({ data: logs })
   } catch (error) {
@@ -37,7 +39,7 @@ export async function POST(req) {
 
   try {
     const body = await req.json()
-    const { campaign_id, member_id, status, sig_overall, sig_location, sig_availability, sig_interest, sig_reachable, note, extra } = body
+    const { campaign_id, member_id, contact_type = 'member', status, sig_overall, sig_location, sig_availability, sig_interest, sig_reachable, note, extra } = body
 
     if (!member_id || !status) {
       return Response.json({ error: 'member_id and status are required' }, { status: 400 })
@@ -46,6 +48,7 @@ export async function POST(req) {
     const logId = await createLog({
       campaign_id: campaign_id || 0,
       member_id,
+      contact_type,
       called_by: session.user.discordId,
       caller_name: session.user.nickname || session.user.name || null,
       status,
@@ -60,8 +63,8 @@ export async function POST(req) {
 
     // Auto-calculate and update tier if signals are present
     if (status === 'answered') {
-      const tier = await calculateTierFromSignals(member_id)
-      if (tier) await upsertTier(member_id, tier, 'auto')
+      const tier = await calculateTierFromSignals(member_id, null, contact_type)
+      if (tier) await upsertTier(member_id, tier, 'auto', contact_type)
     }
 
     return Response.json({ success: true, data: { id: logId } }, { status: 201 })

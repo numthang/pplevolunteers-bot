@@ -14,12 +14,12 @@ export async function getAssignmentById(id) {
 /**
  * Get assignment for a member (campaign defaults to 0 / Undefined)
  */
-export async function getAssignment(memberId, campaignId = 0) {
+export async function getAssignment(memberId, campaignId = 0, contactType = 'member') {
   const [rows] = await pool.query(
     `SELECT * FROM calling_assignments
-     WHERE member_id = ?
+     WHERE member_id = ? AND contact_type = ?
        AND campaign_id = ?`,
-    [memberId, campaignId]
+    [memberId, contactType, campaignId]
   )
   return rows[0] || null
 }
@@ -54,15 +54,15 @@ export async function getAssignmentsForPerson(discordId, campaignId = 0) {
 /**
  * Assign member to person (campaign defaults to 0 / Undefined)
  */
-export async function assignMember(memberId, assignedTo, assignedBy, campaignId = 0) {
+export async function assignMember(memberId, assignedTo, assignedBy, campaignId = 0, contactType = 'member') {
   const [result] = await pool.query(
     `INSERT INTO calling_assignments
-      (campaign_id, member_id, assigned_to, assigned_by, created_at)
-     VALUES (?, ?, ?, ?, NOW())
+      (campaign_id, contact_type, member_id, assigned_to, assigned_by, created_at)
+     VALUES (?, ?, ?, ?, ?, NOW())
      ON DUPLICATE KEY UPDATE
       assigned_to = VALUES(assigned_to),
       assigned_by = VALUES(assigned_by)`,
-    [campaignId || 0, memberId, assignedTo, assignedBy]
+    [campaignId || 0, contactType, memberId, assignedTo, assignedBy]
   )
   return result.insertId || result.affectedRows
 }
@@ -70,13 +70,13 @@ export async function assignMember(memberId, assignedTo, assignedBy, campaignId 
 /**
  * Bulk assign members (campaign defaults to 0 / Undefined)
  */
-export async function bulkAssignMembers(memberIds, assignedTo, assignedBy, campaignId = 0) {
+export async function bulkAssignMembers(memberIds, assignedTo, assignedBy, campaignId = 0, contactType = 'member') {
   if (!memberIds || memberIds.length === 0) return 0
 
-  const values = memberIds.map(memberId => [campaignId || 0, memberId, assignedTo, assignedBy])
+  const values = memberIds.map(memberId => [campaignId || 0, contactType, memberId, assignedTo, assignedBy])
   const [result] = await pool.query(
     `INSERT INTO calling_assignments
-      (campaign_id, member_id, assigned_to, assigned_by)
+      (campaign_id, contact_type, member_id, assigned_to, assigned_by)
      VALUES ?
      ON DUPLICATE KEY UPDATE
       assigned_to = VALUES(assigned_to),
@@ -89,23 +89,22 @@ export async function bulkAssignMembers(memberIds, assignedTo, assignedBy, campa
 /**
  * Update RSVP for an assignment
  */
-export async function updateRsvp(memberId, campaignId = 0, rsvp) {
+export async function updateRsvp(memberId, campaignId = 0, rsvp, contactType = 'member') {
   await pool.query(
     `UPDATE calling_assignments SET rsvp = ?
-     WHERE member_id = ? AND campaign_id = ?`,
-    [rsvp || null, memberId, campaignId]
+     WHERE member_id = ? AND contact_type = ? AND campaign_id = ?`,
+    [rsvp || null, memberId, contactType, campaignId]
   )
 }
 
 /**
  * Unassign member (campaign defaults to 0 / Undefined)
  */
-export async function unassignMember(memberId, campaignId = 0) {
+export async function unassignMember(memberId, campaignId = 0, contactType = 'member') {
   await pool.query(
     `DELETE FROM calling_assignments
-     WHERE member_id = ?
-       AND campaign_id = ?`,
-    [memberId, campaignId]
+     WHERE member_id = ? AND contact_type = ? AND campaign_id = ?`,
+    [memberId, contactType, campaignId]
   )
 }
 
