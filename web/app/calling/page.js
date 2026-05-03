@@ -5,7 +5,6 @@ import { getUserScope, isAdmin, canCreateCampaign } from '@/lib/callingAccess.js
 import { getCampaigns } from '@/db/calling/campaigns.js'
 import { getEffectiveRoles } from '@/lib/getEffectiveRoles.js'
 import CampaignCard from '@/components/calling/CampaignCard.jsx'
-import pool from '@/db/index.js'
 
 export default async function CallingPage() {
   const session = await getServerSession(authOptions)
@@ -18,14 +17,7 @@ export default async function CallingPage() {
     )
   }
 
-  const [roleRows] = await pool.query(
-    'SELECT roles FROM dc_members WHERE guild_id = ? AND discord_id = ?',
-    [process.env.GUILD_ID, session.user.discordId]
-  )
-  const freshRoles = roleRows[0]?.roles ? roleRows[0].roles.split(',').map(r => r.trim()).filter(Boolean) : []
-  const sessionWithFreshRoles = { ...session, user: { ...session.user, roles: freshRoles } }
-
-  const userRoles = await getEffectiveRoles(sessionWithFreshRoles)
+  const userRoles = await getEffectiveRoles(session)
   const userScope = getUserScope(userRoles)
   const isUserAdmin = isAdmin(userRoles)
   const canCreate = canCreateCampaign(userRoles)

@@ -70,10 +70,10 @@ else
   fi
 
   echo "🔄 กำลัง deploy local... ${GUILD_ARG:+($GUILD_ARG)}"
-  #npm install
+  npm install
   git pull
   node deploy-commands.js $GUILD_ARG
-  #(cd web && npm install && npm run dev) &
-  (cd web && npm run dev) &
+  (cd web && npm install && npm run dev) &
+  #(cd web && npm run dev) &
   node index.js
 fi
