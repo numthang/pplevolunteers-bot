@@ -26,3 +26,6 @@ ALTER TABLE calling_logs
 ALTER TABLE calling_assignments
   ADD COLUMN rsvp ENUM('yes','no','maybe') NULL AFTER assigned_by;
 
+-- 2026-05-03: เพิ่ม primary_province ใน dc_members สำหรับ user ที่ถือหลายจังหวัด ใช้เป็น default province ตอนเพิ่ม Contact ใหม่
+ALTER TABLE dc_members ADD COLUMN primary_province VARCHAR(100) NULL AFTER province;
+

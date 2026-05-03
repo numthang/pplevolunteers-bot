@@ -318,50 +318,85 @@ INDEX idx_type   (type)
 > `id = 0` = "Undefined" campaign (catch-all สำหรับ log ที่ไม่ผูก campaign)  
 > `calling_*.campaign_id` → FK ชี้ที่ `act_event_cache.id` WHERE `type = 'campaign'`
 
+### calling_contacts
+
+Manual contacts (non-members) — ผู้บริจาค, คนสนใจ, อาสาสมัคร, อื่นๆ  
+สร้าง/แก้ไข/ลบได้ (ต่างจาก `ngs_member_cache` ที่ sync-only)
+
+```sql
+id          INT AUTO_INCREMENT PRIMARY KEY
+guild_id    VARCHAR(20) NOT NULL
+first_name  VARCHAR(100) NOT NULL
+last_name   VARCHAR(100) NOT NULL
+phone       VARCHAR(20) NULL
+email       VARCHAR(150) NULL
+line_id     VARCHAR(100) NULL
+category    VARCHAR(50) NULL          -- 'donor' | 'prospect' | 'volunteer' | 'other'
+province    VARCHAR(100) NULL
+amphoe      VARCHAR(100) NULL
+tambon      VARCHAR(100) NULL
+note        TEXT NULL
+created_by  VARCHAR(20) NULL          -- discord_id
+updated_by  VARCHAR(20) NULL          -- discord_id
+created_at  DATETIME DEFAULT CURRENT_TIMESTAMP
+updated_at  DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+
+INDEX idx_guild    (guild_id)
+INDEX idx_province (province)
+INDEX idx_phone    (phone)
+```
+
+> id เริ่มจาก 1 (auto_increment) — **ระวัง overlap กับ `ngs_member_cache.source_id`** ที่เริ่มจาก 55  
+> ทุก SQL query ที่ JOIN ตาราง shared ต้องใส่ `AND contact_type = 'member'` หรือ `'contact'` เสมอ
+
 ### calling_assignments
 
 ```sql
 id            INT AUTO_INCREMENT PRIMARY KEY
-campaign_id   INT NOT NULL              -- act_event_cache.id (0 = Undefined)
-member_id     INT NOT NULL              -- ngs_member_cache.source_id
-assigned_to   VARCHAR(20) NOT NULL      -- discord_id
-assigned_by   VARCHAR(20) NOT NULL      -- discord_id
+campaign_id   INT          NULL              -- act_event_cache.id (0 = Undefined)
+contact_type  ENUM('member','contact') NOT NULL DEFAULT 'member'
+member_id     VARCHAR(20)  NOT NULL          -- source_id (member) หรือ id (contact)
+assigned_to   VARCHAR(20)  NOT NULL          -- discord_id
+assigned_by   VARCHAR(20)  NOT NULL          -- discord_id
+rsvp          ENUM('yes','no','maybe') NULL  -- สำหรับ member เท่านั้น
 created_at    DATETIME DEFAULT CURRENT_TIMESTAMP
 
-UNIQUE KEY uq_campaign_member (campaign_id, member_id)
+UNIQUE KEY uq_member_contact (member_id, contact_type)
 ```
+
+> unique key คือ `(member_id, contact_type)` — 1 member/contact assign ได้ครั้งเดียว (ข้ามทุก campaign)  
+> ไม่มี campaign ใน unique key — reassign เปลี่ยน assigned_to ได้เลย
 
 ### calling_logs
 
 ```sql
 id               INT AUTO_INCREMENT PRIMARY KEY
-campaign_id      INT NOT NULL              -- act_event_cache.id (0 = Undefined)
-member_id        INT NOT NULL              -- ngs_member_cache.source_id
+campaign_id      INT NULL                  -- act_event_cache.id (0 = Undefined)
+contact_type     ENUM('member','contact') NOT NULL DEFAULT 'member'
+member_id        VARCHAR(20) NOT NULL      -- source_id (member) หรือ id (contact)
 called_by        VARCHAR(20) NULL          -- discord_id (NULL ถ้า import จาก XLS)
 caller_name      VARCHAR(100) NULL         -- display_name ขณะโทร
 called_at        DATETIME DEFAULT CURRENT_TIMESTAMP
-status           ENUM('answered','no_answer','busy','wrong_number') NOT NULL
+status           ENUM('answered','no_answer','not_called') NOT NULL
 sig_overall      TINYINT NULL              -- 1=D 2=C 3=B 4=A
 sig_location     TINYINT NULL              -- 1=ต่างประเทศ … 4=ในอำเภอ
 sig_availability TINYINT NULL              -- 1=ไม่ว่างเลย … 4=ว่างมาก
 sig_interest     TINYINT NULL              -- 1=ไม่สนใจ … 4=กระตือรือร้น
-sig_reachable    TINYINT NULL              -- 1=ไม่ติดเลย … 4=รับสายทันที
+sig_reachable    TINYINT NULL              -- (ไม่ใช้ใน UI แต่ column ยังอยู่)
 note             TEXT NULL
 extra            JSON NULL
 created_at       DATETIME DEFAULT CURRENT_TIMESTAMP
-
-INDEX idx_campaign (campaign_id)
-INDEX idx_member   (member_id)
 ```
 
 > signals กรอกเฉพาะ `status = 'answered'`  
-> `sig_overall` required เมื่อ answered, ที่เหลือ optional
+> status enum จริงคือ `answered | no_answer | not_called` (ไม่มี `busy`, `wrong_number`)
 
 ### calling_member_tiers
 
 ```sql
 id              INT AUTO_INCREMENT PRIMARY KEY
-member_id       INT NOT NULL              -- ngs_member_cache.source_id
+contact_type    ENUM('member','contact') NOT NULL DEFAULT 'member'
+member_id       VARCHAR(20) NOT NULL      -- source_id (member) หรือ id (contact)
 tier            ENUM('A','B','C','D') NOT NULL
 tier_source     ENUM('auto','manual') NOT NULL DEFAULT 'auto'
 override_by     VARCHAR(20) NULL          -- discord_id (manual เท่านั้น)
@@ -369,10 +404,10 @@ override_reason TEXT NULL
 custom_fields   JSON NULL
 updated_at      DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 
-UNIQUE KEY uq_member (member_id)
+UNIQUE KEY uq_member_contact (member_id, contact_type)
 ```
 
-> คำนวณ tier อัตโนมัติจาก `sig_overall` เฉลี่ยทุก answered call  
+> คำนวณ tier อัตโนมัติจาก avg signal ทุก answered call (ดูสูตรใน CALLING.md)  
 > A ≥ 3.5 / B ≥ 2.5 / C ≥ 1.5 / D < 1.5
 
 ---

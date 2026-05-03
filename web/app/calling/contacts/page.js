@@ -1,7 +1,17 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
+import { useSession } from 'next-auth/react'
+import { useEffectiveRoles } from '@/lib/useEffectiveRoles.js'
 import ContactForm from '@/components/calling/ContactForm.jsx'
+import geographyData from '@/lib/thailand-geography.json'
+
+const PROVINCE_LIST = geographyData.map(p => p.province)
+
+function getProvinceFromRoles(roles = []) {
+  const matches = roles.map(r => r.startsWith('ทีม') ? r.slice(3) : '').filter(p => PROVINCE_LIST.includes(p))
+  return matches.length === 1 ? matches[0] : ''
+}
 
 const CATEGORY_LABELS = {
   donor:     'ผู้บริจาค',
@@ -18,6 +28,10 @@ const CATEGORY_COLORS = {
 }
 
 export default function ContactsPage() {
+  const { data: session } = useSession()
+  const { roles } = useEffectiveRoles(session)
+  const defaultProvince = session?.user?.primary_province || getProvinceFromRoles(roles)
+
   const [contacts, setContacts]   = useState([])
   const [loading, setLoading]     = useState(true)
   const [keyword, setKeyword]     = useState('')
@@ -25,6 +39,13 @@ export default function ContactsPage() {
   const [saving, setSaving]       = useState(false)
   const [deleting, setDeleting]   = useState(null)
   const [error, setError]         = useState('')
+
+  useEffect(() => {
+    if (!modal) return
+    function onKey(e) { if (e.key === 'Escape') setModal(null) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [modal])
 
   const fetchContacts = useCallback(async () => {
     setLoading(true)
@@ -71,7 +92,7 @@ export default function ContactsPage() {
   }
 
   async function handleDelete(contact) {
-    if (!confirm(`ลบ ${contact.first_name} ${contact.last_name} ใช่ไหม?`)) return
+    if (!confirm(`ลบ ${contact.first_name} ใช่ไหม?`)) return
     setDeleting(contact.id)
     try {
       const res = await fetch(`/api/calling/contacts/${contact.id}`, { method: 'DELETE' })
@@ -123,7 +144,7 @@ export default function ContactsPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-medium text-gray-900 dark:text-white text-sm">
-                      {c.first_name} {c.last_name}
+                      {c.first_name}
                     </span>
                     {c.category && (
                       <span className="text-xs px-2 py-0.5 rounded-full font-medium"
@@ -157,13 +178,21 @@ export default function ContactsPage() {
 
       {/* Modal */}
       {modal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-          <div className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-xl shadow-xl p-6 max-h-[90vh] overflow-y-auto">
-            <h2 className="text-base font-semibold mb-4 text-gray-900 dark:text-white">
-              {modal === 'new' ? 'เพิ่ม Contact' : `แก้ไข — ${modal.contact.first_name} ${modal.contact.last_name}`}
-            </h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
+          onClick={() => setModal(null)}>
+          <div className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-xl shadow-xl p-6 max-h-[90vh] overflow-y-auto"
+            onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base font-semibold text-gray-900 dark:text-white">
+                {modal === 'new' ? 'เพิ่ม Contact' : `แก้ไข — ${modal.contact.first_name}`}
+              </h2>
+              <button onClick={() => setModal(null)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xl leading-none">
+                ×
+              </button>
+            </div>
             <ContactForm
-              initial={modal === 'new' ? {} : modal.contact}
+              initial={modal === 'new' ? { province: defaultProvince, category: 'prospect' } : modal.contact}
               onSubmit={modal === 'new' ? handleCreate : handleUpdate}
               onCancel={() => setModal(null)}
               loading={saving}

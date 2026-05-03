@@ -60,74 +60,92 @@ Key fields: `id`, `name`, `province`, `description`, `event_date`, `guild_id`
 
 ---
 
-### 4. `calling_assignments` — assign สมาชิกให้คนโทร
+### 4. `calling_contacts` — ผู้ติดต่อ manual (ไม่ใช่สมาชิกพรรค)
 
-```sql
-CREATE TABLE calling_assignments (
-  id            INT AUTO_INCREMENT PRIMARY KEY,
-  campaign_id   INT          NOT NULL,
-  member_id     VARCHAR(20)  NOT NULL COMMENT 'รหัสสมาชิกพรรค',
-  assigned_to   VARCHAR(20)  NOT NULL COMMENT 'discord_id ของคนรับผิดชอบ',
-  assigned_by   VARCHAR(20)  NOT NULL COMMENT 'discord_id ของคนที่ assign',
-  created_at    DATETIME     DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE KEY uq_campaign_member (campaign_id, member_id)
-);
-```
+ตารางนี้เพิ่มใหม่สำหรับ non-member contacts: ผู้บริจาค, คนสนใจ, อาสาสมัคร
 
-- 1 สมาชิก : 1 คนรับผิดชอบ ต่อ campaign (unique constraint)
-- แก้ไข `assigned_to` ได้เสมอ รองรับ bulk reassign
-- `assigned_by` คือใครก็ได้ (admin assign หรือรับงานเอง)
-- **assign แล้ว → คนที่ถูก assign เข้าถึงสมาชิกคนนั้นได้เลย ไม่เช็ค scope เพิ่ม**
+- CRUD ได้ (ต่างจาก `ngs_member_cache` ที่ sync-only)
+- key fields: `id`, `first_name`, `last_name`, `phone`, `province`, `amphoe`, `tambon`, `category`, `created_by`
+- `category`: `donor` | `prospect` | `volunteer` | `other`
+- province กรอกจาก dropdown Thailand geography (JSON static ที่ `web/lib/thailand-geography.json`)
+
+**⚠️ ID Overlap:** `calling_contacts.id` เป็น auto_increment เริ่มจาก 1 แต่ `ngs_member_cache.source_id` เริ่มจาก 55  
+→ ทุก SQL query ที่ JOIN ตาราง shared (`calling_logs`, `calling_assignments`, `calling_member_tiers`) **ต้องใส่ `AND contact_type = 'member'` หรือ `'contact'` เสมอ** ไม่งั้น ID จะปนกันเมื่อมี contact ≥ 55 ตัว
 
 ---
 
-### 5. `calling_logs` — บันทึกการโทรแต่ละครั้ง
+### 5. `calling_assignments` — assign สมาชิก/contact ให้คนโทร
+
+Schema ปัจจุบัน (หลัง migration):
 
 ```sql
-CREATE TABLE calling_logs (
-  id                 INT AUTO_INCREMENT PRIMARY KEY,
-  campaign_id        INT          NOT NULL,
-  member_id          VARCHAR(20)  NOT NULL COMMENT 'รหัสสมาชิกพรรค',
-  called_by          VARCHAR(20)  NULL     COMMENT 'discord_id คนที่โทร (NULL ถ้า import จาก XLS)',
-  caller_name        VARCHAR(100) NULL     COMMENT 'display_name ตอนโทร (sync จาก Discord หรือชื่อเล่นจาก XLS)',
-  called_at          DATETIME     DEFAULT CURRENT_TIMESTAMP,
-  status             ENUM('answered', 'no_answer', 'busy', 'wrong_number') NOT NULL,
-  -- signals (กรอกเฉพาะตอน status = answered)
-  sig_location       TINYINT NULL COMMENT '1=ต่างประเทศ 2=ต่างจังหวัด 3=ในจังหวัด 4=ในอำเภอ',
-  sig_availability   TINYINT NULL COMMENT '1=ไม่ว่างเลย 2=ไม่ค่อยว่าง 3=ว่างบ้าง 4=ว่างมาก',
-  sig_interest       TINYINT NULL COMMENT '1=ไม่สนใจ 2=สนใจนิดหน่อย 3=สนใจ 4=กระตือรือร้น',
-  sig_reachable      TINYINT NULL COMMENT '1=ไม่ติดเลย 2=ติดยาก 3=ติดได้ 4=รับสายทันที',
-  note               TEXT NULL,
-  extra              JSON NULL COMMENT 'custom fields เพิ่มเติม (progressive disclosure)',
-  created_at         DATETIME     DEFAULT CURRENT_TIMESTAMP
-);
+id            INT AUTO_INCREMENT PRIMARY KEY
+campaign_id   INT          NULL              -- 0 = Undefined
+contact_type  ENUM('member','contact') NOT NULL DEFAULT 'member'
+member_id     VARCHAR(20)  NOT NULL          -- source_id หรือ calling_contacts.id
+assigned_to   VARCHAR(20)  NOT NULL          -- discord_id
+assigned_by   VARCHAR(20)  NOT NULL          -- discord_id
+rsvp          ENUM('yes','no','maybe') NULL  -- member เท่านั้น
+created_at    DATETIME DEFAULT CURRENT_TIMESTAMP
+
+UNIQUE KEY uq_member_contact (member_id, contact_type)
 ```
 
-- call จากระบบจริง → มีทั้ง `called_by` (discord_id) และ `caller_name` (display_name ขณะโทร)
-- call จาก XLS import → มีแค่ `caller_name` (ชื่อเล่น เช่น "Tee", "แอม")
-- signals กรอกเฉพาะตอนรับสาย ไม่รับสายไม่นับเข้า formula
+- unique key คือ `(member_id, contact_type)` — 1 คน/contact assign ได้ครั้งเดียวทุก campaign
+- แก้ไข `assigned_to` ได้เสมอ (ON DUPLICATE KEY UPDATE)
+- **assign แล้ว → assignee เข้าถึงคนนั้นได้เลย ไม่เช็ค scope เพิ่ม**
 
 ---
 
-### 6. `calling_member_tiers` — tier ปัจจุบันของสมาชิก
+### 6. `calling_logs` — บันทึกการโทรแต่ละครั้ง
+
+Schema ปัจจุบัน:
 
 ```sql
-CREATE TABLE calling_member_tiers (
-  id              INT AUTO_INCREMENT PRIMARY KEY,
-  member_id       VARCHAR(20)  NOT NULL,
-  tier            ENUM('A','B','C','D') NOT NULL,
-  tier_source     ENUM('auto','manual') NOT NULL DEFAULT 'auto',
-  override_by     VARCHAR(20)  NULL COMMENT 'discord_id คนที่ override (manual เท่านั้น)',
-  override_reason TEXT         NULL,
-  custom_fields   JSON         NULL COMMENT 'field พิเศษที่แต่ละแผนกเพิ่มเองได้',
-  updated_at      DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  UNIQUE KEY uq_member (member_id)
-);
+id               INT AUTO_INCREMENT PRIMARY KEY
+campaign_id      INT NULL                  -- 0 = Undefined
+contact_type     ENUM('member','contact') NOT NULL DEFAULT 'member'
+member_id        VARCHAR(20) NOT NULL
+called_by        VARCHAR(20) NULL          -- discord_id (NULL = import จาก XLS)
+caller_name      VARCHAR(100) NULL
+called_at        DATETIME DEFAULT CURRENT_TIMESTAMP
+status           ENUM('answered','no_answer','not_called') NOT NULL
+sig_overall      TINYINT NULL
+sig_location     TINYINT NULL              -- 1=ต่างประเทศ … 4=ในอำเภอ
+sig_availability TINYINT NULL              -- 1=ไม่ว่างเลย … 4=ว่างมาก
+sig_interest     TINYINT NULL              -- 1=ไม่สนใจ … 4=กระตือรือร้น
+sig_reachable    TINYINT NULL              -- ไม่ใช้ใน UI แต่ column ยังอยู่
+note             TEXT NULL
+extra            JSON NULL
+created_at       DATETIME DEFAULT CURRENT_TIMESTAMP
 ```
 
-- 1 สมาชิก = 1 record (upsert)
-- `tier_source` บอกว่ามาจาก auto หรือ manual override
-- audit trail ดูได้จาก signals ใน `calling_logs`
+- status enum จริง: `answered | no_answer | not_called` (ไม่มี `busy`, `wrong_number`)
+- signals กรอกเฉพาะ `status = 'answered'`
+- contact ไม่มี RSVP — `RecordCallModal` ซ่อน RSVP section อัตโนมัติเมื่อ `contact_type = 'contact'`
+
+---
+
+### 7. `calling_member_tiers` — tier ปัจจุบัน (ใช้ร่วมกัน)
+
+Schema ปัจจุบัน:
+
+```sql
+id              INT AUTO_INCREMENT PRIMARY KEY
+contact_type    ENUM('member','contact') NOT NULL DEFAULT 'member'
+member_id       VARCHAR(20) NOT NULL
+tier            ENUM('A','B','C','D') NOT NULL
+tier_source     ENUM('auto','manual') NOT NULL DEFAULT 'auto'
+override_by     VARCHAR(20) NULL
+override_reason TEXT NULL
+custom_fields   JSON NULL
+updated_at      DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+
+UNIQUE KEY uq_member_contact (member_id, contact_type)
+```
+
+- 1 member/contact = 1 record (upsert)
+- tier คำนวณอัตโนมัติหลัง log answered ทุกครั้ง
 
 ---
 
@@ -190,11 +208,20 @@ D = score < 1.5
 - **ไม่เช็ค** home_province ของสมาชิกที่จะถูก assign (assignee)
 - assignee คือใครก็ได้ — เมื่อถูก assign แล้วเข้าถึงสมาชิกนั้นได้เลย (bypass scope)
 
+### Contact Permission
+
+| Action | ใครทำได้ |
+|--------|---------|
+| สร้าง contact | ทุกคนที่มี calling access (scope ใดก็ได้) |
+| แก้ไข / ลบ | `created_by` คนเดียวกัน **หรือ** กรรมการจังหวัด+ |
+| assign contact | เหมือน assign member — เช็ค scope ที่ assigner |
+
 ### Special Rules
 
 ```
-✅ Assign แล้ว → assignee เข้าถึงสมาชิกคนนั้นได้เลย (bypass scope)
+✅ Assign แล้ว → assignee เข้าถึงคนนั้นได้เลย (bypass scope)
 ⚙️ Override tier ได้รายคน → Admin หรือ เหรัญญิก เท่านั้น
+⚠️ Contact ไม่มี RSVP — UI ซ่อน section นั้นอัตโนมัติ
 ```
 
 ---
@@ -289,36 +316,45 @@ web/
   app/
     calling/
       page.js                       ← รายการ campaigns (card grid)
+      contacts/
+        page.js                     ← จัดการ contacts (list, create, edit, delete)
       [campaignId]/
-        page.js                     ← รายชื่อสมาชิกใน campaign + auto-split
+        page.js                     ← รายชื่อ member/contact ใน campaign — tab Member | Contact
       pending/
-        page.js                     ← pending calls ที่ assign มาให้ user
+        page.js                     ← pending calls — tab Member | Contact
     api/
       calling/
-        campaigns/                  ← GET รองรับ ?active=true&limit= และ pending_count ต่อ user
-        assignments/
-        logs/                       ← GET ดึง logs ต่อ member+campaign, POST บันทึก + auto-calculate tier
+        campaigns/
+        assignments/                ← POST/DELETE รองรับ contact_type ใน body
+        logs/                       ← GET รองรับ ?contactType=, POST รองรับ contact_type ใน body
         tiers/
         members/
-        users/                      ← dc_members for assignee combobox
+        contacts/
+          route.js                  ← GET list, POST create
+          [id]/route.js             ← GET/PUT/DELETE single contact
+          campaign/route.js         ← GET contacts ใน campaign (province match)
+        users/
   components/
     calling/
-      SplitModal.jsx                ← auto-split modal
-      UserCombobox.jsx              ← multi-select autocomplete (ดึง display_name)
-      CallingBreadcrumb.jsx         ← สร้างแล้วแต่ไม่ได้ใช้ (ย้าย campaign selector ไป Nav แทน)
+      SplitModal.jsx
+      UserCombobox.jsx
+      ContactForm.jsx               ← form create/edit contact + cascading province→amphoe→tambon
+      RecordCallModal.jsx           ← รองรับทั้ง member และ contact (normalized fields)
   db/
     calling/
       campaigns.js
-      assignments.js
-      logs.js
-      tiers.js
-      members.js                    ← query ngs_member_cache
+      assignments.js                ← ทุกฟังก์ชัน default contactType = 'member'
+      logs.js                       ← ทุกฟังก์ชัน default contactType = 'member'
+      tiers.js                      ← ทุกฟังก์ชัน default contactType = 'member'
+      members.js                    ← ทุก SQL JOIN ใส่ AND contact_type = 'member'
+      contacts.js                   ← CRUD + campaign queries สำหรับ contacts
+  lib/
+    thailand-geography.json         ← 77 จังหวัด, 928 อำเภอ, 7436 ตำบล (static import ใน ContactForm)
 scripts/
   calling/
-    import-calling-logs-xlsx.js    ← parse XLSX → SQL file (1 ไฟล์ = 1 campaign, ชื่อจาก filename)
-    import-ngs-member-cache.js     ← upsert สมาชิกจาก CSV → ngs_member_cache
-  sync-discord-members.js          ← one-time sync guild members → dc_members
-  migration-add-display-name.sql   ← ALTER TABLE dc_members ADD display_name
+    import-calling-logs-xlsx.js
+    import-ngs-member-cache.js
+    migration-calling-contacts.sql  ← สร้าง calling_contacts + เพิ่ม contact_type ใน 3 ตาราง
 ```
 
 ---

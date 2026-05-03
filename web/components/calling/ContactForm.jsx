@@ -15,9 +15,7 @@ const PROVINCE_LIST = geographyData.map(p => p.province)
 export default function ContactForm({ initial = {}, onSubmit, onCancel, loading }) {
   const [form, setForm] = useState({
     first_name: initial.first_name || '',
-    last_name:  initial.last_name  || '',
     phone:      initial.phone      || '',
-    email:      initial.email      || '',
     line_id:    initial.line_id    || '',
     category:   initial.category   || '',
     province:   initial.province   || '',
@@ -61,18 +59,11 @@ export default function ContactForm({ initial = {}, onSubmit, onCancel, loading 
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {/* ชื่อ-นามสกุล */}
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className={labelCls}>ชื่อ <span className="text-red-500">*</span></label>
-          <input className={inputCls} value={form.first_name}
-            onChange={e => set('first_name', e.target.value)} required placeholder="ชื่อ" />
-        </div>
-        <div>
-          <label className={labelCls}>นามสกุล <span className="text-red-500">*</span></label>
-          <input className={inputCls} value={form.last_name}
-            onChange={e => set('last_name', e.target.value)} required placeholder="นามสกุล" />
-        </div>
+      {/* ชื่อ */}
+      <div>
+        <label className={labelCls}>ชื่อ <span className="text-red-500">*</span></label>
+        <input className={inputCls} value={form.first_name}
+          onChange={e => set('first_name', e.target.value)} required placeholder="ชื่อ" />
       </div>
 
       {/* ประเภท */}
@@ -84,17 +75,12 @@ export default function ContactForm({ initial = {}, onSubmit, onCancel, loading 
         </select>
       </div>
 
-      {/* เบอร์โทร / Email / LINE */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      {/* เบอร์โทร / LINE */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
           <label className={labelCls}>เบอร์โทร</label>
           <input className={inputCls} value={form.phone}
             onChange={e => set('phone', e.target.value)} placeholder="0812345678" />
-        </div>
-        <div>
-          <label className={labelCls}>Email</label>
-          <input className={inputCls} type="email" value={form.email}
-            onChange={e => set('email', e.target.value)} placeholder="example@mail.com" />
         </div>
         <div>
           <label className={labelCls}>LINE ID</label>

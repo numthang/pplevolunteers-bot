@@ -6,13 +6,13 @@ import { CALL_STATUS_COLORS } from '@/lib/callingStatusColors.js'
 const CALL_STATUS_OPTIONS = [
   { value: 'answered',   label: 'รับสาย', icon: '📞', color: '#0d9e94', bg: '#e1f5f4' },
   { value: 'no_answer',  label: 'ไม่รับ',  icon: '📵', color: '#854f0b', bg: '#faeeda' },
-  { value: 'not_called', label: 'ข้าม',  icon: '🚫', color: '#6b7280', bg: '#f3f4f6' },
+  { value: 'not_called', label: 'ไม่ได้โทร', icon: '📝', color: '#6b7280', bg: '#f3f4f6' },
 ]
 
 const NOTE_PLACEHOLDER = {
   answered:   'เช่น ทำงานอยู่กรุงเทพ กลับบ้านเดือนละครั้ง',
   no_answer:  'เช่น สายไม่ว่าง / ปิดเครื่อง / เบอร์ผิด / ฝากข้อความ',
-  not_called: 'เช่น เบอร์ผิด / คาดว่าไม่สะดวก / ไม่กลับบ้านเลย / ติดต่อ LINE แล้ว',
+  not_called: 'เช่น บันทึกข้อมูลสมาชิก / ติดต่อ LINE แล้ว / เบอร์ผิด / คาดว่าไม่สะดวก',
 }
 
 const RSVP_OPTIONS = [

@@ -19,10 +19,12 @@ const FIELDS = [
 const EMPTY = Object.fromEntries(FIELDS.map(f => [f.key, '']))
 
 export default function ProfilePage() {
-  const { data: session, status } = useSession()
+  const { data: session, status, update } = useSession()
   const router = useRouter()
   const [form, setForm] = useState(EMPTY)
   const [readOnly, setReadOnly] = useState({})
+  const [primaryProvince, setPrimaryProvince] = useState('')
+  const [provinceOptions, setProvinceOptions] = useState([])
   const [guildId, setGuildId] = useState('')
   const [guild, setGuild] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -52,6 +54,8 @@ export default function ProfilePage() {
           roles:        data.roles || '',
           interests:    data.interests || '',
         })
+        setPrimaryProvince(data.primary_province || '')
+        setProvinceOptions(data.province_options || [])
         setGuildId(data.guild_id || '')
         setGuild(data.guild || null)
         setLoading(false)
@@ -67,9 +71,10 @@ export default function ProfilePage() {
       const res = await fetch('/api/profile', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, primary_province: primaryProvince || null }),
       })
       if (!res.ok) throw new Error()
+      await update()
       setSaved(true)
       setTimeout(() => setSaved(false), 3000)
     } catch {
@@ -140,6 +145,23 @@ export default function ProfilePage() {
             />
           </div>
         ))}
+
+        {provinceOptions.length > 1 && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              จังหวัดหลัก (Primary Province)
+            </label>
+            <select
+              value={primaryProvince}
+              onChange={e => setPrimaryProvince(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-card-bg dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
+            >
+              <option value="">— ไม่ระบุ —</option>
+              {provinceOptions.map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">ใช้เป็นค่า default เมื่อเพิ่ม Contact ใหม่</p>
+          </div>
+        )}
 
         {error && <p className="text-sm text-red-500">{error}</p>}
 

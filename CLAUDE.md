@@ -117,6 +117,12 @@ cd web && npm run test:watch  # watch mode
 **ห้ามแปลงผ่าน `new Date(txn_at).toISOString()`** — Node.js server ทำงานใน UTC จะทำให้เวลา +7 ชั่วโมงทุกครั้งที่ save  
 ให้ pass `txn_at || null` ตรงๆ ให้ mysql2 จัดการเอง
 
+### Calling — `contact_type` ใน SQL ต้องใส่เสมอ
+`calling_logs`, `calling_assignments`, `calling_member_tiers` ใช้ `member_id` ร่วมกันทั้ง member และ contact  
+`ngs_member_cache.source_id` เริ่มจาก **55** แต่ `calling_contacts.id` เริ่มจาก **1** → overlap เมื่อมี contact ≥ 55 ตัว  
+→ ทุก JOIN หรือ WHERE บนตาราง shared ต้องใส่ `AND contact_type = 'member'` หรือ `'contact'` เสมอ  
+→ DB functions ทุกตัวใน `db/calling/` มี default `contactType = 'member'` แล้ว ไม่ต้องส่งถ้าเป็น member flow
+
 ### Debug mode — `discordId` เป็น null
 เมื่อ Admin เปิด "View as role" cookie `debug_role` จะทำให้ทั้ง server (`getEffectiveIdentity`) และ client (`useEffectiveRoles`) คืน `discordId: null`  
 → ป้องกัน ownership bypass ใน debug mode  
