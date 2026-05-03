@@ -1,22 +1,15 @@
 import { cookies } from 'next/headers'
 import { isAdmin } from './roles.js'
 import { DEBUG_COMBOS } from './debugCombos.js'
+import pool from '@/db/index.js'
 
 const DEBUG_LABELS = DEBUG_COMBOS.map(c => c.label)
 
-/**
- * Returns effective roles for the current request.
- * If user is Admin and has debug_role cookie set → override with combo roles.
- */
 export async function getEffectiveRoles(session) {
   const { roles } = await getEffectiveIdentity(session)
   return roles
 }
 
-/**
- * Returns { roles, discordId } adjusted for debug mode.
- * In debug mode, discordId is null so private-account ownership checks don't bypass role restrictions.
- */
 export async function getEffectiveIdentity(session) {
   const realRoles = session?.user?.roles || []
   const realDiscordId = session?.user?.discordId || null
@@ -24,8 +17,24 @@ export async function getEffectiveIdentity(session) {
   if (!isAdmin(realRoles)) return { roles: realRoles, discordId: realDiscordId }
 
   const cookieStore = await cookies()
-  const debugLabel = cookieStore.get('debug_role')?.value
 
+  // Mode 1: impersonate specific member — ใช้ roles จริงจาก DB
+  const debugDiscordId = cookieStore.get('debug_discord_id')?.value
+  if (debugDiscordId) {
+    try {
+      const [rows] = await pool.query(
+        'SELECT roles FROM dc_members WHERE guild_id = ? AND discord_id = ?',
+        [process.env.GUILD_ID, debugDiscordId]
+      )
+      const roles = rows[0]?.roles ? rows[0].roles.split(',').map(r => r.trim()).filter(Boolean) : []
+      return { roles, discordId: null }
+    } catch {
+      return { roles: realRoles, discordId: realDiscordId }
+    }
+  }
+
+  // Mode 2: predefined combo
+  const debugLabel = cookieStore.get('debug_role')?.value
   if (!debugLabel || !DEBUG_LABELS.includes(debugLabel)) return { roles: realRoles, discordId: realDiscordId }
 
   const combo = DEBUG_COMBOS.find(c => c.label === debugLabel)

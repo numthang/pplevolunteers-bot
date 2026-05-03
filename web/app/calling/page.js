@@ -51,10 +51,6 @@ export default async function CallingPage() {
 
   return (
     <div>
-      {/* DEBUG — ลบออกหลัง diagnose */}
-      <pre className="mb-4 p-3 bg-yellow-50 border border-yellow-300 rounded text-xs text-yellow-900 dark:bg-yellow-900/20 dark:text-yellow-200 dark:border-yellow-700 overflow-auto">
-        {JSON.stringify({ freshRoles, userScope, isUserAdmin, totalCampaigns: campaigns.length, filteredCount: filteredCampaigns.length, campaignProvinces: campaigns.map(c => c.province) }, null, 2)}
-      </pre>
       {/* Header */}
       <div className="mb-8 flex items-start justify-between gap-4">
         <div>
