@@ -5,6 +5,7 @@ import { getUserScope, isAdmin, canCreateCampaign } from '@/lib/callingAccess.js
 import { getCampaigns } from '@/db/calling/campaigns.js'
 import { getEffectiveRoles } from '@/lib/getEffectiveRoles.js'
 import CampaignCard from '@/components/calling/CampaignCard.jsx'
+import pool from '@/db/index.js'
 
 export default async function CallingPage() {
   const session = await getServerSession(authOptions)
@@ -17,7 +18,14 @@ export default async function CallingPage() {
     )
   }
 
-  const userRoles = await getEffectiveRoles(session)
+  const [roleRows] = await pool.query(
+    'SELECT roles FROM dc_members WHERE guild_id = ? AND discord_id = ?',
+    [process.env.GUILD_ID, session.user.discordId]
+  )
+  const freshRoles = roleRows[0]?.roles ? roleRows[0].roles.split(',').map(r => r.trim()).filter(Boolean) : []
+  const sessionWithFreshRoles = { ...session, user: { ...session.user, roles: freshRoles } }
+
+  const userRoles = await getEffectiveRoles(sessionWithFreshRoles)
   const userScope = getUserScope(userRoles)
   const isUserAdmin = isAdmin(userRoles)
   const canCreate = canCreateCampaign(userRoles)
@@ -43,6 +51,10 @@ export default async function CallingPage() {
 
   return (
     <div>
+      {/* DEBUG — ลบออกหลัง diagnose */}
+      <pre className="mb-4 p-3 bg-yellow-50 border border-yellow-300 rounded text-xs text-yellow-900 dark:bg-yellow-900/20 dark:text-yellow-200 dark:border-yellow-700 overflow-auto">
+        {JSON.stringify({ freshRoles, userScope, isUserAdmin, totalCampaigns: campaigns.length, filteredCount: filteredCampaigns.length, campaignProvinces: campaigns.map(c => c.province) }, null, 2)}
+      </pre>
       {/* Header */}
       <div className="mb-8 flex items-start justify-between gap-4">
         <div>
