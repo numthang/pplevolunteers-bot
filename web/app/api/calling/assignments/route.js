@@ -5,8 +5,8 @@ import { getUserScope } from '@/lib/callingAccess.js'
 import { getEffectiveRoles } from '@/lib/getEffectiveRoles.js'
 import { authOptions } from '@/lib/auth-options.js'
 
-function canSeeProvince(province, userRoles) {
-  const scope = getUserScope(userRoles)
+function canSeeProvince(province, userRoles, primaryProvince) {
+  const scope = getUserScope(userRoles, primaryProvince)
   return scope === null || scope.includes(province)
 }
 
@@ -67,7 +67,7 @@ export async function POST(req) {
     }
 
     const userRoles = await getEffectiveRoles(session)
-    if (!canSeeProvince(campaign.province, userRoles)) {
+    if (!canSeeProvince(campaign.province, userRoles, session.user.primary_province)) {
       return Response.json({ error: `Forbidden: cannot assign in ${campaign.province}` }, { status: 403 })
     }
 
@@ -117,7 +117,7 @@ export async function PUT(req) {
     }
 
     const userRoles = await getEffectiveRoles(session)
-    if (!canSeeProvince(campaign.province, userRoles)) {
+    if (!canSeeProvince(campaign.province, userRoles, session.user.primary_province)) {
       return Response.json({ error: 'Forbidden' }, { status: 403 })
     }
 
@@ -188,7 +188,7 @@ export async function DELETE(req) {
     }
 
     const userRoles = await getEffectiveRoles(session)
-    if (!canSeeProvince(campaign.province, userRoles)) {
+    if (!canSeeProvince(campaign.province, userRoles, session.user.primary_province)) {
       return Response.json({ error: 'Forbidden' }, { status: 403 })
     }
 

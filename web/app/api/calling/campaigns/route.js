@@ -33,7 +33,7 @@ export async function GET(req) {
     // Filter by user scope (unless admin)
     const userRoles = await getEffectiveRoles(session)
     const isUserAdmin = isAdmin(userRoles)
-    const userScope = getUserScope(userRoles)
+    const userScope = getUserScope(userRoles, session.user.primary_province)
 
     if (!isUserAdmin && userScope) {
       rows = rows.filter(c => !c.province || userScope.includes(c.province))

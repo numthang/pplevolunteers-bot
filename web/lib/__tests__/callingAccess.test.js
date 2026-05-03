@@ -58,10 +58,14 @@ describe('getUserScope', () => {
     expect(scope).toEqual(['ราชบุรี'])
   })
 
-  it('ทีมXXX อย่างเดียว หลายจังหวัด → ได้ scope ทุกจังหวัด', () => {
+  it('ทีมXXX อย่างเดียว หลายจังหวัด ไม่มี primaryProvince → ได้แค่จังหวัดแรก', () => {
     const scope = getUserScope(['ทีมราชบุรี', 'ทีมเชียงใหม่'])
-    expect(scope).toContain('ราชบุรี')
-    expect(scope).toContain('เชียงใหม่')
+    expect(scope).toEqual(['ราชบุรี'])
+  })
+
+  it('ทีมXXX หลายจังหวัด มี primaryProvince → ได้ primaryProvince เท่านั้น', () => {
+    const scope = getUserScope(['ทีมราชบุรี', 'ทีมเชียงใหม่'], 'เชียงใหม่')
+    expect(scope).toEqual(['เชียงใหม่'])
   })
 })
 

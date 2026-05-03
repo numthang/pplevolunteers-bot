@@ -36,7 +36,7 @@ export default function ContactForm({ initial = {}, onSubmit, onCancel, loading 
 
   useEffect(() => {
     if (!form.amphoe || !amphoeList.length) { setTambonList([]); return }
-    const amp = amphoeList.find(a => a.amphoe === form.amphoe)
+    const amp = amphoeList.find(a => a.amphoe.replace(/^อำเภอ/, '') === form.amphoe)
     setTambonList(amp ? amp.tambons : [])
   }, [form.amphoe, amphoeList])
 
@@ -103,7 +103,7 @@ export default function ContactForm({ initial = {}, onSubmit, onCancel, loading 
           <select className={inputCls} value={form.amphoe} onChange={e => set('amphoe', e.target.value)}
             disabled={!amphoeList.length}>
             <option value="">— อำเภอ —</option>
-            {amphoeList.map(a => <option key={a.amphoe} value={a.amphoe}>{a.amphoe}</option>)}
+            {amphoeList.map(a => { const n = a.amphoe.replace(/^อำเภอ/, ''); return <option key={n} value={n}>{n}</option> })}
           </select>
         </div>
         <div>

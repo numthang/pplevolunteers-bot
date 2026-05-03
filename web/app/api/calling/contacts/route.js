@@ -9,7 +9,7 @@ export async function GET(req) {
   if (!session?.user?.discordId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { roles } = await getEffectiveIdentity(session)
-  const scope = getUserScope(roles)
+  const scope = getUserScope(roles, session.user.primary_province)
 
   const { searchParams } = new URL(req.url)
   const province = searchParams.get('province') || null
@@ -22,17 +22,32 @@ export async function GET(req) {
     return Response.json({ error: 'Forbidden' }, { status: 403 })
   }
 
+  const showContacts = isAdmin(roles) || isRegionalCoordinator(roles) || isProvincialCoordinator(roles)
+
   // Scope-limit province filter
-  const effectiveProvince = scope === null ? (province || null) : (province && scope.includes(province) ? province : null)
+  // scope === null → admin, no filter; scope = array → restrict to those provinces
+  const effectiveProvinces = scope === null
+    ? null
+    : province
+      ? (scope.includes(province) ? [province] : [])
+      : scope
+
+  // Province requested is outside scope → return empty
+  if (Array.isArray(effectiveProvinces) && effectiveProvinces.length === 0) {
+    return Response.json({ data: [], contacts_hidden: !showContacts })
+  }
 
   try {
-    const contacts = await getContactsList(process.env.GUILD_ID, {
-      province: effectiveProvince,
+    let contacts = await getContactsList(process.env.GUILD_ID, {
+      provinces: effectiveProvinces,
       keyword,
       limit,
       offset,
     })
-    return Response.json({ data: contacts })
+    if (!showContacts) {
+      contacts = contacts.map(({ phone, line_id, email, ...rest }) => rest)
+    }
+    return Response.json({ data: contacts, contacts_hidden: !showContacts })
   } catch (err) {
     console.error('[GET /api/calling/contacts]', err)
     return Response.json({ error: 'Internal Server Error' }, { status: 500 })
@@ -44,7 +59,7 @@ export async function POST(req) {
   if (!session?.user?.discordId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { roles } = await getEffectiveIdentity(session)
-  const scope = getUserScope(roles)
+  const scope = getUserScope(roles, session.user.primary_province)
 
   if (scope !== null && scope.length === 0) {
     return Response.json({ error: 'Forbidden' }, { status: 403 })

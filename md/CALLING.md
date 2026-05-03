@@ -54,7 +54,7 @@ ALTER TABLE dc_members
 
 - สร้างผ่าน Web UI: `/calling/create`
 - Import จาก XLSX: 1 ไฟล์ = 1 campaign ชื่อ campaign มาจาก filename (เช่น `กิจกรรมโทรหาสมาชิกราชบุรี.xlsx` → campaign name = `กิจกรรมโทรหาสมาชิกราชบุรี`)
-- **ทุก role สร้างได้** รวมถึง ตทอ. และผู้ประสานงานทุกระดับ
+- **สร้างได้เฉพาะ** Admin, ระดับภาค, ระดับจังหวัด (กรรมการจังหวัด / ผู้ประสานงานจังหวัด) — ทีมปฏิบัติการสร้างไม่ได้
 
 Key fields: `id`, `name`, `province`, `description`, `event_date`, `guild_id`
 
@@ -191,36 +191,54 @@ D = score < 1.5
 
 ใช้ฟังก์ชันใน `web/lib/callingAccess.js`
 
-### Role hierarchy (ตาม callingAccess.js)
+### Role Hierarchy
 
-| กลุ่ม | Roles | Scope |
-|-------|-------|-------|
-| Admin | `Admin`, `เลขาธิการ` | ทั่วประเทศ |
-| ภาค | `ผู้ประสานงานภาค`, `รองเลขาธิการ` + `ทีมภาค...` | จังหวัดในภาคที่ตัวเองสังกัด (มีได้หลายภาค) |
-| จังหวัด | `ผู้ประสานงานจังหวัด`, `กรรมการจังหวัด` + `ทีมXXX` | จังหวัดตัวเอง |
+| ระดับ | Discord Roles (ต้องมีครบ) | Scope | เห็น phone/LINE | สร้าง campaign | Override tier |
+|-------|--------------------------|-------|-----------------|----------------|---------------|
+| **Admin** | `Admin` หรือ `เลขาธิการ` | ทุกจังหวัด | ✓ | ✓ | ✓ |
+| **ภาค** | `ผู้ประสานงานภาค` หรือ `รองเลขาธิการ` **+** `ทีมภาค...` | จังหวัดทั้งหมดในภาคที่ถือ | ✓ | ✓ | ✗ |
+| **จังหวัด** | `กรรมการจังหวัด` หรือ `ผู้ประสานงานจังหวัด` **+** `ทีม{จังหวัด}` | `primary_province` เดียว | ✓ | ✓ | ✗ |
+| **ทีม** | `ทีม{จังหวัด}` อย่างเดียว | `primary_province` เดียว | ✗ | ✗ | ✗ |
 
 > `ตทอ.` = `กรรมการจังหวัด`  
-> `เลขาธิการ` ยังไม่มี Discord role — ทิ้งไว้ใน code สำหรับอนาคต
+> `เลขาธิการ` ยังไม่มี Discord role จริง — ทิ้งไว้ใน code สำหรับอนาคต  
+> `เหรัญญิก` — override tier ได้เท่านั้น ไม่มี calling scope
 
-### Assign Permission
+### Scope Resolution (`getUserScope`)
 
-- เช็คที่ **assigner** คนเดียว — ดูว่า role ครอบ `campaign.province` ไหม
-- **ไม่เช็ค** home_province ของสมาชิกที่จะถูก assign (assignee)
-- assignee คือใครก็ได้ — เมื่อถูก assign แล้วเข้าถึงสมาชิกนั้นได้เลย (bypass scope)
+scope คือรายการจังหวัดที่ user เข้าถึงได้ — คำนวณใน `lib/callingAccess.js: getUserScope(roles, primaryProvince)`
+
+```
+Admin                        → null (ทุกจังหวัด)
+ระดับภาค                     → จังหวัดทั้งหมดจาก REGION_PROVINCES[ทีมภาค...]
+ระดับจังหวัด / ทีม           → [primaryProvince]  (ถ้าตั้งไว้)
+ระดับจังหวัด / ทีม (fallback) → [ทีม{จังหวัด} แรกที่เจอใน roles]  (ถ้าไม่มี primaryProvince)
+ไม่มี team role เลย          → [] (ห้ามเข้า)
+```
+
+`primaryProvince` มาจาก `session.user.primary_province` ซึ่ง user ตั้งได้ใน Edit Profile  
+API routes ทุกตัวส่ง `session.user.primary_province` ให้ `getUserScope` เสมอ
 
 ### Contact Permission
 
-| Action | ใครทำได้ |
-|--------|---------|
-| สร้าง contact | ทุกคนที่มี calling access (scope ใดก็ได้) |
-| แก้ไข / ลบ | `created_by` คนเดียวกัน **หรือ** กรรมการจังหวัด+ |
-| assign contact | เหมือน assign member — เช็ค scope ที่ assigner |
+| Action | ทีม | จังหวัด+ |
+|--------|-----|---------|
+| สร้าง contact | ✓ | ✓ |
+| เห็น phone / LINE / email | ✗ | ✓ |
+| แก้ไข / ลบ contact | เฉพาะที่ตัวเองสร้าง (`created_by`) | ทุก contact |
+| assign contact ใน campaign | ✓ (เช็ค scope) | ✓ |
+
+### Assign Permission
+
+- เช็คที่ **assigner** คนเดียว — ดูว่า scope ครอบ `campaign.province` ไหม
+- ไม่เช็ค `home_province` ของสมาชิกที่จะถูก assign
+- **assign แล้ว → assignee เข้าถึงคนนั้นได้เลย (bypass scope)**
 
 ### Special Rules
 
 ```
 ✅ Assign แล้ว → assignee เข้าถึงคนนั้นได้เลย (bypass scope)
-⚙️ Override tier ได้รายคน → Admin หรือ เหรัญญิก เท่านั้น
+✅ Override tier → Admin และ เหรัญญิก เท่านั้น
 ⚠️ Contact ไม่มี RSVP — UI ซ่อน section นั้นอัตโนมัติ
 ```
 

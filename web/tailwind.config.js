@@ -40,12 +40,17 @@ module.exports = {
           text:   '#d4d4d4',  // primary text
           muted:  '#858585',  // secondary / label text
         },
+        orange: {
+          DEFAULT: 'var(--brand-orange)',
+          light:   'var(--brand-orange-light)',
+          dark:    'var(--brand-orange-dark)',
+        },
         teal: {
-          DEFAULT: '#6366f1',
-          light:   '#e0e7ff',
-          dark:    '#4f46e5',
-          dim:     '#312e81',
-          bright:  '#818cf8',
+          DEFAULT: 'var(--brand-orange)',
+          light:   '#fff0e6',
+          dark:    'var(--brand-orange-dark)',
+          dim:     '#7c2d12',
+          bright:  '#fdba74',
         },
         tier: {
           a: { bg: '#ead3ce', text: '#714b2b', dark: { bg: '#3d2318', text: '#d4a48a' } },

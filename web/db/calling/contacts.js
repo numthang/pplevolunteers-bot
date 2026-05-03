@@ -56,11 +56,16 @@ export async function getContactsByProvince(province, guildId, { limit = 200, of
   return rows
 }
 
-export async function getContactsList(guildId, { province, keyword, limit = 100, offset = 0 } = {}) {
+export async function getContactsList(guildId, { province, provinces, keyword, limit = 100, offset = 0 } = {}) {
   let query = `SELECT * FROM calling_contacts WHERE guild_id = ?`
   const params = [guildId]
 
-  if (province) { query += ` AND province = ?`; params.push(province) }
+  if (province) {
+    query += ` AND province = ?`; params.push(province)
+  } else if (provinces && provinces.length > 0) {
+    query += ` AND province IN (${provinces.map(() => '?').join(',')})`
+    params.push(...provinces)
+  }
   if (keyword) {
     query += ` AND (CONCAT(first_name,' ',last_name) LIKE ? OR phone LIKE ?)`
     params.push(`%${keyword}%`, `%${keyword}%`)

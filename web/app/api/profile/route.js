@@ -35,9 +35,17 @@ export async function GET() {
   } catch {}
 
   const row = rows[0] || {}
-  const provinceOptions = (row.roles || '').split(',')
-    .map(r => r.trim().startsWith('ทีม') ? r.trim().slice(3) : '')
-    .filter(p => PROVINCE_LIST.includes(p))
+  const provinceOptions = [...new Set(
+    (row.roles || '').split(',')
+      .map(r => {
+        r = r.trim()
+        if (!r.startsWith('ทีม')) return ''
+        const name = r.slice(3)
+        if (name.startsWith('กรุงเทพ')) return 'กรุงเทพมหานคร'
+        return name
+      })
+      .filter(p => PROVINCE_LIST.includes(p))
+  )]
 
   return Response.json({ ...row, guild_id: process.env.GUILD_ID, guild, province_options: provinceOptions })
 }

@@ -11,7 +11,7 @@ const REGIONAL_ROLES = ['ผู้ประสานงานภาค', 'รอ
 const PROVINCIAL_ROLES = ['ผู้ประสานงานจังหวัด', 'กรรมการจังหวัด']
 
 // Map discord role name to province
-const PROVINCE_ROLE_MAP = {
+export const PROVINCE_ROLE_MAP = {
   'ทีมกรุงเทพชั้นใน': 'กรุงเทพชั้นใน',
   'ทีมกรุงเทพธนบุรี': 'กรุงเทพธนบุรี',
   'ทีมกรุงเทพตะวันออก': 'กรุงเทพตะวันออก',
@@ -93,7 +93,7 @@ const PROVINCE_ROLE_MAP = {
 }
 
 // Map region role to provinces
-const REGION_PROVINCES = {
+export const REGION_PROVINCES = {
   'ทีมกรุงเทพ': ['กรุงเทพชั้นใน', 'กรุงเทพธนบุรี', 'กรุงเทพตะวันออก', 'กรุงเทพเหนือ'],
   'ทีมปริมณฑล': ['นนทบุรี', 'สมุทรปราการ', 'สมุทรสาคร', 'ปทุมธานี'],
   'ทีมภาคกลางตะวันตก': ['ราชบุรี', 'นครปฐม', 'กาญจนบุรี', 'เพชรบุรี', 'สุพรรณบุรี', 'สมุทรสงคราม', 'ประจวบคีรีขันธ์'],
@@ -133,7 +133,7 @@ export function isProvincialCoordinator(roles = []) {
  * Get user's scope (provinces they can access)
  * Returns: ['ราชบุรี', 'นครปฐม', ...] or null if admin (all provinces)
  */
-export function getUserScope(roles = []) {
+export function getUserScope(roles = [], primaryProvince = null) {
   // Admin → all provinces
   if (isAdmin(roles)) return null
 
@@ -146,15 +146,19 @@ export function getUserScope(roles = []) {
         REGION_PROVINCES[role].forEach(p => provinces.add(p))
       }
     }
+    return provinces.size > 0 ? Array.from(provinces) : []
   }
 
-  // ทีมXXX → scope for that province (with or without กรรมการจังหวัด)
-  for (const role of roles) {
-    const province = PROVINCE_ROLE_MAP[role]
-    if (province) provinces.add(province)
-  }
+  // Collect team provinces from roles
+  const teamProvinces = roles.map(r => PROVINCE_ROLE_MAP[r]).filter(Boolean)
+  if (teamProvinces.length === 0) return []
 
-  return provinces.size > 0 ? Array.from(provinces) : []
+  // Use primaryProvince only if it's actually one of this user's team provinces
+  // (guards against debug/view-as-role where session.user.primary_province belongs to the real admin)
+  if (primaryProvince && teamProvinces.includes(primaryProvince)) return [primaryProvince]
+
+  // Fallback: first team province found
+  return [teamProvinces[0]]
 }
 
 /**

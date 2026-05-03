@@ -39,7 +39,7 @@ export async function GET(req) {
 
   try {
     const userRoles = await getEffectiveRoles(session)
-    const userScope = getUserScope(userRoles)
+    const userScope = getUserScope(userRoles, session.user.primary_province)
     const isUserAdmin = isAdmin(userRoles)
 
     // Stats-only request

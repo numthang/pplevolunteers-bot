@@ -32,13 +32,14 @@ export default function ContactsPage() {
   const { roles } = useEffectiveRoles(session)
   const defaultProvince = session?.user?.primary_province || getProvinceFromRoles(roles)
 
-  const [contacts, setContacts]   = useState([])
-  const [loading, setLoading]     = useState(true)
-  const [keyword, setKeyword]     = useState('')
-  const [modal, setModal]         = useState(null)  // null | 'new' | { contact }
-  const [saving, setSaving]       = useState(false)
-  const [deleting, setDeleting]   = useState(null)
-  const [error, setError]         = useState('')
+  const [contacts, setContacts]         = useState([])
+  const [contactsHidden, setContactsHidden] = useState(false)
+  const [loading, setLoading]           = useState(true)
+  const [keyword, setKeyword]           = useState('')
+  const [modal, setModal]               = useState(null)  // null | 'new' | { contact }
+  const [saving, setSaving]             = useState(false)
+  const [deleting, setDeleting]         = useState(null)
+  const [error, setError]               = useState('')
 
   useEffect(() => {
     if (!modal) return
@@ -55,6 +56,7 @@ export default function ContactsPage() {
       const res = await fetch(`/api/calling/contacts?${params}`)
       const json = await res.json()
       setContacts(json.data || [])
+      setContactsHidden(json.contacts_hidden || false)
     } catch { setError('โหลดข้อมูลไม่สำเร็จ') }
     finally { setLoading(false) }
   }, [keyword])
@@ -107,7 +109,7 @@ export default function ContactsPage() {
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Contacts</h1>
         <button onClick={() => setModal('new')}
-          className="px-4 py-2 text-sm rounded-lg bg-orange-500 hover:bg-orange-600 text-white">
+          className="px-4 py-2 text-sm rounded-lg bg-teal hover:bg-teal-dark text-white">
           + เพิ่ม Contact
         </button>
       </div>
@@ -154,9 +156,9 @@ export default function ContactsPage() {
                     )}
                   </div>
                   <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 flex flex-wrap gap-x-3">
-                    {c.province && <span>{[c.province, c.amphoe, c.tambon].filter(Boolean).join(' › ')}</span>}
-                    {c.phone    && <span>📞 {c.phone}</span>}
-                    {c.line_id  && <span>LINE: {c.line_id}</span>}
+                    {c.province && <span>{[c.province, c.amphoe?.replace(/^อำเภอ/, ''), c.tambon].filter(Boolean).join(' › ')}</span>}
+                    {!contactsHidden && c.phone   && <span>📞 {c.phone}</span>}
+                    {!contactsHidden && c.line_id && <span>LINE: {c.line_id}</span>}
                   </div>
                   {c.note && <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 line-clamp-1">{c.note}</p>}
                 </div>
