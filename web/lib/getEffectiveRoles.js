@@ -11,8 +11,21 @@ export async function getEffectiveRoles(session) {
 }
 
 export async function getEffectiveIdentity(session) {
-  const realRoles = session?.user?.roles || []
   const realDiscordId = session?.user?.discordId || null
+
+  // Always read fresh roles from DB (bypass JWT cache)
+  let realRoles = session?.user?.roles || []
+  if (realDiscordId) {
+    try {
+      const [rows] = await pool.query(
+        'SELECT roles FROM dc_members WHERE guild_id = ? AND discord_id = ?',
+        [process.env.GUILD_ID, realDiscordId]
+      )
+      if (rows[0]?.roles) {
+        realRoles = rows[0].roles.split(',').map(r => r.trim()).filter(Boolean)
+      }
+    } catch {}
+  }
 
   if (!isAdmin(realRoles)) return { roles: realRoles, discordId: realDiscordId }
 

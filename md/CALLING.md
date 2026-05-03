@@ -327,6 +327,12 @@ filter: [ อำเภอ ▼ ] [ ระดับ ▼ ] [ สถานะ ▼ ]
 
 ---
 
+### CSS Conventions
+
+→ ดู [md/WEB.md — Theming & CSS Conventions](WEB.md#theming--css-conventions) (ใช้ทั้งโปรเจกต์)
+
+---
+
 ## Folder Structure
 
 ```

@@ -126,24 +126,80 @@ See: [FINANCE.md - RBAC](FINANCE.md#access-control-rbac) | [CALLING.md - Permiss
 
 ---
 
-## Theming & Card Colors
+## Theming & CSS Conventions
 
-Card background colors are controlled via CSS variables in `web/app/globals.css`:
+### CSS Variables (`web/app/globals.css`)
 
 ```css
 :root {
-  --card-bg: #fafaf9;   /* light mode card bg — แก้ที่นี่ */
+  --card-bg: #fafaf9;   /* light mode */
 }
 .dark {
-  --card-bg: #111827;   /* dark mode card bg — แก้ที่นี่ */
+  --card-bg: #111827;   /* dark mode */
 }
 ```
 
-ทุก card/container ทั้งระบบ (finance, calling, dashboard, profile) ใช้ class `bg-card-bg` ซึ่งอ่านจาก variable นี้  
 → **แก้สีที่เดียวใน `globals.css` เปลี่ยนทุกหน้า**
 
-**ไม่ใช้:** `bg-white dark:bg-gray-800` สำหรับ card containers  
-**ยกเว้น:** form inputs / selects ยังใช้ `bg-white dark:bg-gray-700` ได้ (ไม่ต้องใช้ token)
+---
+
+### Dark Mode Classes — ใช้ชุดนี้เท่านั้นทั้งโปรเจกต์
+
+| Element | ✅ ใช้ | ❌ ห้ามใช้ |
+|---|---|---|
+| Background (card/container/input) | `bg-card-bg` | `bg-white dark:bg-gray-800`, `dark:bg-warm-dark-*` |
+| Border | `border-warm-200 dark:border-disc-border` | `dark:border-gray-*`, `dark:border-warm-dark-*` |
+| Primary text | `text-warm-900 dark:text-disc-text` | `dark:text-white`, `dark:text-warm-50` |
+| Secondary/muted text | `text-warm-500 dark:text-disc-muted` | `dark:text-gray-400`, `dark:text-warm-dark-400` |
+| Hover background | `hover:bg-warm-50 dark:hover:bg-disc-hover` | `dark:hover:bg-gray-700`, `dark:hover:bg-warm-dark-200` |
+| Placeholder | `placeholder-warm-400 dark:placeholder-disc-muted` | `dark:placeholder-gray-*` |
+
+---
+
+### Component Patterns
+
+#### Input / Select
+```
+h-11 px-3 text-base rounded-lg
+border border-warm-200 dark:border-disc-border
+bg-card-bg text-warm-900 dark:text-disc-text
+placeholder-warm-400 dark:placeholder-disc-muted
+focus:outline-none focus:ring-2 focus:ring-teal
+```
+
+#### Label
+```
+text-sm font-medium text-warm-700 dark:text-disc-muted mb-1
+```
+
+#### Card / Row item
+```
+border border-warm-200 dark:border-disc-border bg-card-bg
+hover:bg-warm-50 dark:hover:bg-disc-hover
+```
+
+#### Primary button
+```
+bg-teal hover:opacity-90 text-white rounded-lg text-base font-medium px-4 py-2
+```
+
+#### Secondary / Cancel button
+```
+border border-warm-200 dark:border-disc-border
+text-warm-900 dark:text-disc-text
+hover:bg-warm-50 dark:hover:bg-disc-hover
+rounded-lg text-base font-medium px-4 py-2
+```
+
+#### Phone number — ต้องเป็น link เสมอ
+```jsx
+<a href={`tel:${phone}`} className="text-teal font-medium">{phone}</a>
+```
+
+#### Note / remark text — italic + quote marks
+```jsx
+<p className="text-base text-warm-500 dark:text-disc-muted italic">"{note}"</p>
+```
 
 ---
 

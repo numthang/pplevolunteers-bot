@@ -107,9 +107,9 @@ export default function ContactsPage() {
   return (
     <div className="max-w-4xl mx-auto px-4 py-6">
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Contacts</h1>
+        <h1 className="text-xl font-semibold text-warm-900 dark:text-warm-50">Contacts</h1>
         <button onClick={() => setModal('new')}
-          className="px-4 py-2 text-sm rounded-lg bg-teal hover:bg-teal-dark text-white">
+          className="px-4 py-2 text-base font-medium rounded-lg bg-teal hover:opacity-90 text-white">
           + เพิ่ม Contact
         </button>
       </div>
@@ -124,7 +124,7 @@ export default function ContactsPage() {
       {/* Search */}
       <div className="mb-4">
         <input
-          className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800"
+          className="w-full h-11 px-3 text-base border border-warm-200 dark:border-disc-border bg-card-bg dark:bg-card-bg text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted rounded-lg focus:outline-none focus:ring-2 focus:ring-teal"
           placeholder="ค้นหาชื่อ เบอร์โทร หรือ email…"
           value={keyword}
           onChange={e => setKeyword(e.target.value)}
@@ -133,42 +133,42 @@ export default function ContactsPage() {
 
       {/* List */}
       {loading ? (
-        <div className="text-center py-12 text-gray-400 text-sm">กำลังโหลด…</div>
+        <div className="text-center py-12 text-warm-400 dark:text-disc-muted text-base">กำลังโหลด…</div>
       ) : contacts.length === 0 ? (
-        <div className="text-center py-12 text-gray-400 text-sm">ยังไม่มี contact</div>
+        <div className="text-center py-12 text-warm-400 dark:text-disc-muted text-base">ยังไม่มี contact</div>
       ) : (
         <div className="space-y-2">
           {contacts.map(c => {
             const cat = CATEGORY_COLORS[c.category] || CATEGORY_COLORS.other
             return (
               <div key={c.id}
-                className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                className="flex items-center gap-3 p-4 rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-medium text-gray-900 dark:text-white text-sm">
-                      {c.first_name}
+                    <span className="font-medium text-warm-900 dark:text-disc-text text-base">
+                      {c.first_name}{c.last_name ? ` ${c.last_name}` : ''}
                     </span>
                     {c.category && (
-                      <span className="text-xs px-2 py-0.5 rounded-full font-medium"
+                      <span className="text-xs px-2 py-0.5 rounded font-medium"
                         style={{ background: cat.bg, color: cat.text }}>
                         {CATEGORY_LABELS[c.category] || c.category}
                       </span>
                     )}
                   </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 flex flex-wrap gap-x-3">
+                  <div className="text-base text-warm-500 dark:text-disc-muted mt-0.5 flex flex-wrap gap-x-3">
                     {c.province && <span>{[c.province, c.amphoe?.replace(/^อำเภอ/, ''), c.tambon].filter(Boolean).join(' › ')}</span>}
-                    {!contactsHidden && c.phone   && <span>📞 {c.phone}</span>}
+                    {!contactsHidden && c.phone   && <a href={`tel:${c.phone}`} className="text-teal font-medium">{c.phone}</a>}
                     {!contactsHidden && c.line_id && <span>LINE: {c.line_id}</span>}
                   </div>
-                  {c.note && <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 line-clamp-1">{c.note}</p>}
+                  {c.note && <p className="text-base text-warm-500 dark:text-disc-muted mt-0.5 line-clamp-1 italic">"{c.note}"</p>}
                 </div>
                 <div className="flex gap-2 shrink-0">
                   <button onClick={() => setModal({ contact: c })}
-                    className="text-xs px-3 py-1.5 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">
+                    className="text-sm px-3 py-1.5 rounded-lg border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover">
                     แก้ไข
                   </button>
                   <button onClick={() => handleDelete(c)} disabled={deleting === c.id}
-                    className="text-xs px-3 py-1.5 rounded border border-red-300 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50">
+                    className="text-sm px-3 py-1.5 rounded-lg border border-red-300 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50">
                     {deleting === c.id ? '…' : 'ลบ'}
                   </button>
                 </div>
@@ -182,23 +182,25 @@ export default function ContactsPage() {
       {modal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
           onClick={() => setModal(null)}>
-          <div className="w-full max-w-lg bg-white dark:bg-gray-900 rounded-xl shadow-xl p-6 max-h-[90vh] overflow-y-auto"
+          <div className="w-full max-w-lg bg-card-bg rounded-xl shadow-xl max-h-[90vh] overflow-y-auto"
             onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-base font-semibold text-gray-900 dark:text-white">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-warm-200 dark:border-disc-border">
+              <h2 className="text-lg font-semibold text-warm-900 dark:text-disc-text">
                 {modal === 'new' ? 'เพิ่ม Contact' : `แก้ไข — ${modal.contact.first_name}`}
               </h2>
               <button onClick={() => setModal(null)}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xl leading-none">
+                className="text-warm-400 hover:text-warm-700 dark:hover:text-disc-text text-2xl leading-none">
                 ×
               </button>
             </div>
-            <ContactForm
-              initial={modal === 'new' ? { province: defaultProvince, category: 'prospect' } : modal.contact}
-              onSubmit={modal === 'new' ? handleCreate : handleUpdate}
-              onCancel={() => setModal(null)}
-              loading={saving}
-            />
+            <div className="p-6">
+              <ContactForm
+                initial={modal === 'new' ? { province: defaultProvince, category: 'prospect' } : modal.contact}
+                onSubmit={modal === 'new' ? handleCreate : handleUpdate}
+                onCancel={() => setModal(null)}
+                loading={saving}
+              />
+            </div>
           </div>
         </div>
       )}

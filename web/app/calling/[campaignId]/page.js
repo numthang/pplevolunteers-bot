@@ -91,7 +91,7 @@ export default function CampaignPage({ params }) {
   const searchParams = useSearchParams()
   const router = useRouter()
 
-  const [activeTab, setActiveTab] = useState('member') // 'member' | 'contact'
+  const [activeTab, setActiveTab] = useState(() => searchParams.get('tab') === 'contact' ? 'contact' : 'member')
 
   const [campaign, setCampaign] = useState(null)
   const [stats, setStats] = useState({ total: 0, called: 0, assigned: 0, unassigned: 0, districts: [], districtCounts: {}, tierCounts: {}, assigneeCounts: [] })
@@ -179,6 +179,7 @@ export default function CampaignPage({ params }) {
 
   useEffect(() => {
     const p = new URLSearchParams()
+    if (activeTab === 'contact') p.set('tab', 'contact')
     if (debouncedName)  p.set('name', debouncedName)
     if (filterAmphure)  p.set('amphure', filterAmphure)
     if (activeTab === 'member') {
@@ -646,7 +647,7 @@ export default function CampaignPage({ params }) {
               const lineId  = item.line_id
 
               return (
-                <div key={itemId} className="border-b border-warm-200 dark:border-disc-border last:border-0">
+                <div key={itemId ?? idx} className="border-b border-warm-200 dark:border-disc-border last:border-0">
                   {/* Main row */}
                   <div className={`
                     grid items-center px-3 py-3

@@ -26,7 +26,8 @@ export async function GET(req) {
     }
 
     if (statsOnly) {
-      const stats = await getContactsInCampaignStats(campaignId)
+      const provinces = (!isUserAdmin && Array.isArray(userScope)) ? userScope : null
+      const stats = await getContactsInCampaignStats(campaignId, provinces)
       return Response.json({ success: true, data: stats })
     }
 
@@ -36,6 +37,7 @@ export async function GET(req) {
       status:     searchParams.get('status')     || null,
       assignedTo: searchParams.get('assignedTo') || null,
       name:       searchParams.get('name')       || null,
+      called:     searchParams.get('called')     || null,
       sort:       searchParams.get('sort')       || null,
     }
 

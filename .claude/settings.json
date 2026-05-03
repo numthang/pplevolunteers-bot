@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -c \"\nimport json, sys\ndata = json.load(sys.stdin)\nfp = data.get('tool_input', {}).get('file_path', '')\nif '/web/' in fp or fp.endswith('/web'):\n    try:\n        with open('md/WEB.md') as f:\n            content = f.read()\n        print(json.dumps({'hookSpecificOutput': {'hookEventName': 'PreToolUse', 'additionalContext': 'REMINDER: Read md/WEB.md conventions before editing web/ files.\\n\\n' + content}}))\n    except:\n        pass\n\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

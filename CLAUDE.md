@@ -82,6 +82,14 @@ pple-volunteers/
 - Code must be runnable / copy-paste friendly
 - No over-engineering
 
+## 📖 Required Reading Before Coding
+
+**ทุกครั้งก่อนเขียนหรือแก้ code ใน `web/` ต้องอ่านก่อนเสมอ:**
+1. `md/WEB.md` — CSS conventions, dark mode classes, component patterns
+2. ไฟล์ sibling ในโฟลเดอร์เดียวกัน — เพื่อ match pattern ที่ใช้จริง
+
+**ถ้าแก้ไฟล์ที่มี stats/query — ต้องอ่าน query เทียบกับ tab/type อื่นด้วยว่า return field ครบไหม**
+
 ## 📋 Import / Sync Scripts
 
 **PRODUCTION: Always run with `sudo -u www bash -c 'cd /www/wwwroot/pple-volunteers && node scripts/...'`**

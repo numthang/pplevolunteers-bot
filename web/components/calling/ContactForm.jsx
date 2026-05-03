@@ -54,8 +54,9 @@ export default function ContactForm({ initial = {}, onSubmit, onCancel, loading 
     onSubmit(form)
   }
 
-  const inputCls = 'w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-400'
-  const labelCls = 'block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1'
+  const inputCls = 'w-full h-11 px-3 text-base border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted rounded-lg focus:outline-none focus:ring-2 focus:ring-teal'
+  const textareaCls = 'w-full px-3 py-2 text-base border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted rounded-lg focus:outline-none focus:ring-2 focus:ring-teal'
+  const labelCls = 'block text-sm font-medium text-warm-700 dark:text-disc-muted mb-1'
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -119,7 +120,7 @@ export default function ContactForm({ initial = {}, onSubmit, onCancel, loading 
       {/* หมายเหตุ */}
       <div>
         <label className={labelCls}>หมายเหตุ</label>
-        <textarea className={inputCls} rows={3} value={form.note}
+        <textarea className={textareaCls} rows={3} value={form.note}
           onChange={e => set('note', e.target.value)}
           placeholder="ข้อมูลเพิ่มเติม เช่น รู้จักกันผ่านอะไร ความสัมพันธ์กับพรรค" />
       </div>
@@ -128,12 +129,12 @@ export default function ContactForm({ initial = {}, onSubmit, onCancel, loading 
       <div className="flex gap-2 justify-end pt-1">
         {onCancel && (
           <button type="button" onClick={onCancel}
-            className="px-4 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">
+            className="px-4 py-3 text-base font-medium rounded-lg border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover">
             ยกเลิก
           </button>
         )}
         <button type="submit" disabled={loading}
-          className="px-4 py-2 text-sm rounded-lg bg-orange-500 hover:bg-orange-600 text-white disabled:opacity-50">
+          className="px-4 py-3 text-base font-medium rounded-lg bg-teal hover:opacity-90 text-white disabled:opacity-40">
           {loading ? 'กำลังบันทึก…' : 'บันทึก'}
         </button>
       </div>
