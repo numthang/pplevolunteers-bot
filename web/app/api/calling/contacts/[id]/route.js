@@ -13,8 +13,9 @@ export async function GET(req, { params }) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.discordId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
+  const { id } = await params
   try {
-    const contact = await getContactById(parseInt(params.id))
+    const contact = await getContactById(parseInt(id))
     if (!contact) return Response.json({ error: 'Not found' }, { status: 404 })
     return Response.json({ data: contact })
   } catch (err) {
@@ -28,9 +29,10 @@ export async function PUT(req, { params }) {
   if (!session?.user?.discordId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { roles, discordId } = await getEffectiveIdentity(session)
+  const { id } = await params
 
   try {
-    const contact = await getContactById(parseInt(params.id))
+    const contact = await getContactById(parseInt(id))
     if (!contact) return Response.json({ error: 'Not found' }, { status: 404 })
 
     if (!canEdit(contact, roles, discordId)) {
@@ -44,7 +46,7 @@ export async function PUT(req, { params }) {
       return Response.json({ error: 'first_name is required' }, { status: 400 })
     }
 
-    await updateContact(parseInt(params.id), {
+    await updateContact(parseInt(id), {
       first_name, last_name, phone, email, line_id, category, province, amphoe, tambon, note, specialty,
       updated_by: session.user.discordId,
     })
@@ -61,16 +63,17 @@ export async function DELETE(req, { params }) {
   if (!session?.user?.discordId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { roles, discordId } = await getEffectiveIdentity(session)
+  const { id } = await params
 
   try {
-    const contact = await getContactById(parseInt(params.id))
+    const contact = await getContactById(parseInt(id))
     if (!contact) return Response.json({ error: 'Not found' }, { status: 404 })
 
     if (!canEdit(contact, roles, discordId)) {
       return Response.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    await deleteContact(parseInt(params.id))
+    await deleteContact(parseInt(id))
     return Response.json({ success: true })
   } catch (err) {
     console.error('[DELETE /api/calling/contacts/[id]]', err)

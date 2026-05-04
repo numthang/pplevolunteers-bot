@@ -6,8 +6,9 @@ export async function GET(req, { params }) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.discordId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
+  const { id } = await params
   try {
-    const contactId = parseInt(params.id)
+    const contactId = parseInt(id)
     const contact = await getContactById(contactId)
     if (!contact) return Response.json({ error: 'Not found' }, { status: 404 })
 
