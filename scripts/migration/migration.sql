@@ -40,3 +40,8 @@ ALTER TABLE calling_logs
   MODIFY COLUMN status ENUM('answered','no_answer','not_called','met')
   COLLATE utf8mb4_unicode_ci NOT NULL;
 
+-- 2026-05-04: calling_assignments — เปลี่ยน unique key ให้รวม campaign_id เพื่อให้แต่ละกิจกรรม assign คนชุดเดิมได้อิสระ
+ALTER TABLE calling_assignments
+  DROP INDEX uq_member_contact,
+  ADD UNIQUE KEY uq_campaign_member_contact (campaign_id, member_id, contact_type);
+

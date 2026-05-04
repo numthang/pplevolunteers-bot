@@ -121,6 +121,7 @@ export default function CampaignPage({ params }) {
   const [filterExpiry, setFilterExpiry] = useState(() => searchParams.get('expiry') || '')
   const [filterCalled, setFilterCalled] = useState(() => searchParams.get('called') || '')
   const [filterSort, setFilterSort] = useState(() => searchParams.get('sort') || '')
+  const [filterStatus, setFilterStatus] = useState(() => searchParams.get('status') || '')
   const [splitModalOpen, setSplitModalOpen] = useState(false)
   const [expandedId, setExpandedId] = useState(null)
   const [logsCache, setLogsCache] = useState({})
@@ -191,9 +192,10 @@ export default function CampaignPage({ params }) {
     if (filterTier)     p.set('tier', filterTier)
     if (filterAssignee) p.set('assignee', filterAssignee)
     if (filterCalled)   p.set('called', filterCalled)
+    if (filterStatus)   p.set('status', filterStatus)
     const qs = p.toString()
     router.replace(qs ? `/calling/${campaignId}?${qs}` : `/calling/${campaignId}`, { scroll: false })
-  }, [debouncedName, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, filterExpiry, filterCalled, filterSort, activeTab])
+  }, [debouncedName, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, filterExpiry, filterCalled, filterSort, filterStatus, activeTab])
 
   const offsetRef = useRef(0)
   const sentinelRef = useRef(null)
@@ -203,7 +205,7 @@ export default function CampaignPage({ params }) {
   useEffect(() => { loadingMoreRef.current = loadingMore }, [loadingMore])
   useEffect(() => { hasMoreRef.current = hasMore }, [hasMore])
 
-  const buildMembersUrl = (offset, amphure, subdistricts, tier, assignee, rsvp, name, expiry, called, sort) => {
+  const buildMembersUrl = (offset, amphure, subdistricts, tier, assignee, rsvp, name, expiry, called, sort, status) => {
     const limit = amphure ? 9999 : PAGE_SIZE
     const p = new URLSearchParams({ campaignId, limit, offset })
     if (amphure) p.set('amphure', amphure)
@@ -215,20 +217,22 @@ export default function CampaignPage({ params }) {
     if (expiry)   p.set('expiry', expiry)
     if (called)   p.set('called', called)
     if (sort)     p.set('sort', sort)
+    if (status)   p.set('status', status)
     return `/api/calling/members?${p}`
   }
 
-  const buildContactsUrl = (offset, amphure, tier, assignee, name, called) => {
+  const buildContactsUrl = (offset, amphure, tier, assignee, name, called, status) => {
     const p = new URLSearchParams({ campaignId, limit: PAGE_SIZE, offset })
     if (amphure)  p.set('amphoe', amphure)
     if (tier)     p.set('tier', tier)
     if (assignee) p.set('assignedTo', assignee)
     if (name)     p.set('name', name)
     if (called)   p.set('called', called)
+    if (status)   p.set('status', status)
     return `/api/calling/contacts/campaign?${p}`
   }
 
-  const loadFirst = useCallback(async (tab, amphure, subdistricts, tier, assignee, rsvp, name, expiry, called, sort) => {
+  const loadFirst = useCallback(async (tab, amphure, subdistricts, tier, assignee, rsvp, name, expiry, called, sort, status) => {
     setLoadingInitial(true)
     setHasMore(false)
     hasMoreRef.current = false
@@ -237,8 +241,8 @@ export default function CampaignPage({ params }) {
     setLogsCache({})
     try {
       const dataUrl = tab === 'contact'
-        ? buildContactsUrl(0, amphure, tier, assignee, name, called)
-        : buildMembersUrl(0, amphure, subdistricts, tier, assignee, rsvp, name, expiry, called, sort)
+        ? buildContactsUrl(0, amphure, tier, assignee, name, called, status)
+        : buildMembersUrl(0, amphure, subdistricts, tier, assignee, rsvp, name, expiry, called, sort, status)
       const statsUrl = tab === 'contact'
         ? `/api/calling/contacts/campaign?campaignId=${campaignId}&stats=true`
         : `/api/calling/members?campaignId=${campaignId}&stats=true`
@@ -268,8 +272,8 @@ export default function CampaignPage({ params }) {
     loadingMoreRef.current = true
     try {
       const url = activeTab === 'contact'
-        ? buildContactsUrl(offsetRef.current, filterAmphure, filterTier, filterAssignee, debouncedName, filterCalled)
-        : buildMembersUrl(offsetRef.current, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled, filterSort)
+        ? buildContactsUrl(offsetRef.current, filterAmphure, filterTier, filterAssignee, debouncedName, filterCalled, filterStatus)
+        : buildMembersUrl(offsetRef.current, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled, filterSort, filterStatus)
       const res = await fetch(url)
       const data = await res.json()
       const newRows = data.data || []
@@ -283,7 +287,7 @@ export default function CampaignPage({ params }) {
       setLoadingMore(false)
       loadingMoreRef.current = false
     }
-  }, [activeTab, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled, filterSort])
+  }, [activeTab, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled, filterSort, filterStatus])
 
   useEffect(() => {
     ;(async () => {
@@ -304,8 +308,8 @@ export default function CampaignPage({ params }) {
   }, [campaignId])
 
   useEffect(() => {
-    loadFirst(activeTab, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled, filterSort)
-  }, [campaignId, activeTab, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled, filterSort])
+    loadFirst(activeTab, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled, filterSort, filterStatus)
+  }, [campaignId, activeTab, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled, filterSort, filterStatus])
 
   useEffect(() => {
     const sentinel = sentinelRef.current
@@ -364,7 +368,7 @@ export default function CampaignPage({ params }) {
         }
       }
       setSplitModalOpen(false)
-      await loadFirst(activeTab, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName)
+      await loadFirst(activeTab, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled, filterSort, filterStatus)
     } catch (err) {
       alert('เกิดข้อผิดพลาด: ' + err.message)
     }
@@ -389,7 +393,7 @@ export default function CampaignPage({ params }) {
           })
         )
       )
-      await loadFirst(activeTab, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName)
+      await loadFirst(activeTab, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled, filterSort, filterStatus)
     } catch (err) {
       alert('เกิดข้อผิดพลาด: ' + err.message)
     }
@@ -409,11 +413,12 @@ export default function CampaignPage({ params }) {
     setFilterExpiry('')
     setFilterCalled('')
     setFilterSort('')
+    setFilterStatus('')
     setSelectedMembers(new Set())
     setExpandedId(null)
   }
 
-  const hasActiveFilters = !!(filterName || filterAmphure || filterSubdistricts.size > 0 || filterTier || filterAssignee || filterRsvp || filterExpiry || filterCalled || filterSort)
+  const hasActiveFilters = !!(filterName || filterAmphure || filterSubdistricts.size > 0 || filterTier || filterAssignee || filterRsvp || filterExpiry || filterCalled || filterSort || filterStatus)
 
   const clearFilters = () => {
     setFilterName('')
@@ -426,6 +431,7 @@ export default function CampaignPage({ params }) {
     setFilterExpiry('')
     setFilterCalled('')
     setFilterSort('')
+    setFilterStatus('')
   }
 
   const assignees = (stats.assigneeCounts || [])
@@ -550,6 +556,17 @@ export default function CampaignPage({ params }) {
           <option value="called">โทรแล้ว</option>
           <option value="uncalled">รอโทร</option>
         </select>
+
+        <button
+          onClick={() => setFilterStatus(filterStatus === 'unassigned' ? '' : 'unassigned')}
+          className={`h-11 px-3 text-base border rounded-lg transition-colors whitespace-nowrap ${
+            filterStatus === 'unassigned'
+              ? 'border-amber-400 dark:border-amber-600 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 font-medium'
+              : 'border-warm-200 dark:border-disc-border bg-card-bg text-warm-500 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text'
+          }`}
+        >
+          รอมอบหมาย
+        </button>
 
         {/* member-only filters */}
         {activeTab === 'member' && <>

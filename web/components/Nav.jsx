@@ -349,7 +349,7 @@ export default function Nav({ session }) {
                             key={app.key}
                             href={app.href}
                             onClick={() => setMenuOpen(false)}
-                            className="flex items-center gap-2 px-4 py-2.5 text-sm text-warm-500 dark:text-warm-dark-400 hover:bg-warm-100 dark:hover:bg-warm-dark-200 transition"
+                            className="flex items-center gap-2 px-4 py-2.5 text-sm text-warm-900 dark:text-disc-text hover:bg-warm-100 dark:hover:bg-warm-dark-200 transition"
                           >
                             <Ic d={ICONS[app.icon]} />
                             {app.label}

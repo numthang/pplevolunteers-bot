@@ -361,11 +361,11 @@ assigned_by   VARCHAR(20)  NOT NULL          -- discord_id
 rsvp          ENUM('yes','no','maybe') NULL  -- สำหรับ member เท่านั้น
 created_at    DATETIME DEFAULT CURRENT_TIMESTAMP
 
-UNIQUE KEY uq_member_contact (member_id, contact_type)
+UNIQUE KEY uq_campaign_member_contact (campaign_id, member_id, contact_type)
 ```
 
-> unique key คือ `(member_id, contact_type)` — 1 member/contact assign ได้ครั้งเดียว (ข้ามทุก campaign)  
-> ไม่มี campaign ใน unique key — reassign เปลี่ยน assigned_to ได้เลย
+> unique key คือ `(campaign_id, member_id, contact_type)` — แต่ละกิจกรรม assign คนชุดเดิมได้อิสระ  
+> reassign ภายใน campaign เดิม → `ON DUPLICATE KEY UPDATE` เปลี่ยน assigned_to ได้เลย
 
 ### calling_logs
 

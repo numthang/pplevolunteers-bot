@@ -2,16 +2,16 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
-import Link from 'next/link'
 import { useEffectiveRoles } from '@/lib/useEffectiveRoles.js'
 import ContactForm from '@/components/calling/ContactForm.jsx'
+import ContactModal from '@/components/calling/ContactModal.jsx'
 import geographyData from '@/lib/thailand-geography.json'
 
 const PROVINCE_LIST = geographyData.map(p => p.province)
 
 function getProvinceFromRoles(roles = []) {
   const matches = roles.map(r => r.startsWith('ทีม') ? r.slice(3) : '').filter(p => PROVINCE_LIST.includes(p))
-  return matches.length === 1 ? matches[0] : ''
+  return matches[0] || ''
 }
 
 const CATEGORY_LABELS = {
@@ -28,16 +28,19 @@ const CATEGORY_COLORS = {
   other:     { bg: '#f3f4f6', text: '#374151' },
 }
 
+const MANAGE_ROLES = ['Admin', 'เลขาธิการ', 'ผู้ประสานงานภาค', 'รองเลขาธิการ', 'ผู้ประสานงานจังหวัด', 'กรรมการจังหวัด']
+
 export default function ContactsPage() {
   const { data: session } = useSession()
-  const { roles } = useEffectiveRoles(session)
+  const { roles, discordId } = useEffectiveRoles(session)
   const defaultProvince = session?.user?.primary_province || getProvinceFromRoles(roles)
+  const canManageAll = roles.some(r => MANAGE_ROLES.includes(r))
 
   const [contacts, setContacts]             = useState([])
   const [contactsHidden, setContactsHidden] = useState(false)
   const [loading, setLoading]               = useState(true)
   const [keyword, setKeyword]               = useState('')
-  const [modal, setModal]                   = useState(null)  // null | 'new'
+  const [modal, setModal]                   = useState(null)  // null | 'new' | { id: number }
   const [saving, setSaving]                 = useState(false)
   const [error, setError]                   = useState('')
 
@@ -79,7 +82,7 @@ export default function ContactsPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6">
+    <div>
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-semibold text-warm-900 dark:text-warm-50">Contacts</h1>
         <button onClick={() => setModal('new')}
@@ -114,8 +117,8 @@ export default function ContactsPage() {
             const cat = CATEGORY_COLORS[c.category] || CATEGORY_COLORS.other
             const location = [c.province, c.amphoe?.replace(/^อำเภอ/, ''), c.tambon].filter(Boolean).join(' › ')
             return (
-              <Link key={c.id} href={`/contacts/${c.id}`}
-                className="block p-4 rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg hover:bg-warm-50 dark:hover:bg-disc-hover transition">
+              <button key={c.id} onClick={() => setModal({ id: c.id })}
+                className="block w-full text-left p-4 rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg hover:bg-warm-50 dark:hover:bg-disc-hover transition">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-medium text-warm-900 dark:text-disc-text text-base">
                     {c.first_name}{c.last_name ? ` ${c.last_name}` : ''}
@@ -136,12 +139,24 @@ export default function ContactsPage() {
                   {!contactsHidden && c.line_id && <span>LINE: {c.line_id}</span>}
                 </div>
                 {c.note && <p className="text-base text-warm-500 dark:text-disc-muted mt-0.5 line-clamp-1 italic">"{c.note}"</p>}
-              </Link>
+              </button>
             )
           })}
         </div>
       )}
 
+      {/* Contact edit/view modal */}
+      {modal && modal !== 'new' && (
+        <ContactModal
+          contactId={modal.id}
+          discordId={discordId}
+          canManageAll={canManageAll}
+          onClose={() => setModal(null)}
+          onDeleted={() => { setModal(null); fetchContacts() }}
+        />
+      )}
+
+      {/* New contact modal */}
       {modal === 'new' && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
           onClick={() => setModal(null)}>

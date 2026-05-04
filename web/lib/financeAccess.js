@@ -5,6 +5,12 @@
 // role ที่ถือว่าเป็น "คนในองค์กร" (internal visibility)
 const ORG_ROLES = ['เหรัญญิก', 'กรรมการจังหวัด', 'ผู้ประสานงานจังหวัด', 'ผู้ประสานงานภาค', 'รองเลขาธิการ']
 
+// role ระดับจังหวัด → ดู/แก้ได้เฉพาะจังหวัดตัวเอง (ทีม{จังหวัด} ตรงๆ)
+const PROVINCE_LEVEL_ORG_ROLES = ['เหรัญญิก', 'กรรมการจังหวัด', 'ผู้ประสานงานจังหวัด']
+
+// role ระดับภาค → ดูได้ทั้ง province + sub-region + main-region
+const REGION_LEVEL_ORG_ROLES = ['ผู้ประสานงานภาค', 'รองเลขาธิการ']
+
 // role ที่มีสิทธิ์จัดการบัญชีจังหวัด (ต้องมี + ทีมจังหวัดตรงกัน)
 const PROVINCE_EDITOR_ROLES = ['เหรัญญิก', 'กรรมการจังหวัด', 'ผู้ประสานงานจังหวัด']
 
@@ -115,9 +121,15 @@ export function canViewAccount(account, discordId, roles = []) {
   if (owner || isAdmin(roles)) return true
 
   if (account.province) {
-    // ORG_ROLES ดูได้ถ้า scope จังหวัดตรง (ภาค/ภาคย่อย/จังหวัด)
-    const hasOrgRole = ORG_ROLES.some(r => roles.includes(r))
-    return hasOrgRole && hasProvinceScope(account.province, roles)
+    // ผู้ประสานงานภาค / รองเลขาธิการ → scope ภาค/ภาคย่อย/จังหวัด
+    if (REGION_LEVEL_ORG_ROLES.some(r => roles.includes(r))) {
+      return hasProvinceScope(account.province, roles)
+    }
+    // เหรัญญิก / กรรมการจังหวัด / ผู้ประสานงานจังหวัด → ต้องมี ทีม{จังหวัด} ตรงๆ เท่านั้น
+    if (PROVINCE_LEVEL_ORG_ROLES.some(r => roles.includes(r))) {
+      return roles.includes(PROVINCE_ROLES[account.province])
+    }
+    return false
   } else {
     // province = null → คนในองค์กรทุก role ที่กำหนดดูได้
     return ORG_ROLES.some(r => roles.includes(r))
@@ -133,7 +145,7 @@ export function canEditAccount(account, discordId, roles = []) {
 
   if (account.province) {
     const hasTitle = PROVINCE_EDITOR_ROLES.some(r => roles.includes(r))
-    return hasTitle && hasProvinceScope(account.province, roles)
+    return hasTitle && roles.includes(PROVINCE_ROLES[account.province])
   } else {
     // province = null → เหรัญญิกแก้ไขได้
     return roles.includes('เหรัญญิก')

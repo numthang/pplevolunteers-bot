@@ -446,12 +446,9 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
             {/* Signals */}
             {showSignals && (
               <div className="bg-warm-50 dark:bg-warm-dark-200 rounded-lg p-4 space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="text-base font-semibold text-warm-700 dark:text-warm-200">Signal การติดต่อ</div>
-                  {!signalsFilled && (
-                    <div className="text-base text-orange-500 font-medium">เลือกอย่างน้อย 1 ด้าน</div>
-                  )}
-                </div>
+                {!signalsFilled && (
+                  <div className="text-base text-orange-500 font-medium">เลือกอย่างน้อย 1 ด้าน</div>
+                )}
                 {SIGNALS.map(sig => (
                   <div key={sig.key}>
                     <div className="mb-2 text-base font-semibold text-warm-700 dark:text-warm-200">{sig.label}</div>
@@ -469,8 +466,7 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
                                 : 'border-warm-200 dark:border-warm-dark-300 text-warm-700 dark:text-warm-200 bg-white dark:bg-warm-dark-100 hover:border-teal hover:text-teal'
                             }`}
                           >
-                            <span className="text-base font-medium">{opt.label}</span>
-                            <span className={`text-xs ${active ? 'text-white/80' : 'text-warm-400 dark:text-warm-dark-400'}`}>{sig.hints[opt.value]}</span>
+                            <span className="text-base font-medium">{sig.hints[opt.value]}</span>
                           </button>
                         )
                       })}

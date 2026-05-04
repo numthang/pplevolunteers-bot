@@ -37,10 +37,11 @@ export default function ContactDetailPage({ params }) {
   const [contact, setContact] = useState(null)
   const [logs, setLogs]       = useState([])
   const [loading, setLoading] = useState(true)
-  const [editing, setEditing] = useState(false)
-  const [saving, setSaving]   = useState(false)
-  const [deleting, setDeleting] = useState(false)
-  const [error, setError]     = useState('')
+  const [editing, setEditing]       = useState(false)
+  const [saving, setSaving]         = useState(false)
+  const [deleting, setDeleting]     = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState(false)
+  const [error, setError]           = useState('')
 
   const fetchAll = useCallback(async () => {
     setLoading(true)
@@ -83,7 +84,6 @@ export default function ContactDetailPage({ params }) {
   }
 
   async function handleDelete() {
-    if (!confirm(`ลบ ${contact.first_name} ใช่ไหม?`)) return
     setDeleting(true)
     try {
       const res = await fetch(`/api/calling/contacts/${id}`, { method: 'DELETE' })
@@ -93,10 +93,10 @@ export default function ContactDetailPage({ params }) {
   }
 
   if (loading) {
-    return <div className="max-w-4xl mx-auto px-4 py-12 text-center text-warm-400 dark:text-disc-muted">กำลังโหลด…</div>
+    return <div className="py-12 text-center text-warm-400 dark:text-disc-muted">กำลังโหลด…</div>
   }
   if (!contact) {
-    return <div className="max-w-4xl mx-auto px-4 py-12 text-center text-warm-400 dark:text-disc-muted">ไม่พบ contact</div>
+    return <div className="py-12 text-center text-warm-400 dark:text-disc-muted">ไม่พบ contact</div>
   }
 
   const cat = CATEGORY_COLORS[contact.category] || CATEGORY_COLORS.other
@@ -104,7 +104,7 @@ export default function ContactDetailPage({ params }) {
   const fullName = `${contact.first_name}${contact.last_name ? ` ${contact.last_name}` : ''}`
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6">
+    <div>
       <div className="mb-4">
         <Link href="/contacts" className="text-base text-teal hover:underline">← กลับไปรายการ</Link>
       </div>
@@ -131,15 +131,29 @@ export default function ContactDetailPage({ params }) {
             </div>
             {location && <div className="text-base text-warm-500 dark:text-disc-muted mt-1">{location}</div>}
           </div>
-          <div className="flex gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0 flex-wrap">
             <button onClick={() => setEditing(true)}
               className="text-sm px-3 py-1.5 rounded-lg border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover">
               แก้ไข
             </button>
-            <button onClick={handleDelete} disabled={deleting}
-              className="text-sm px-3 py-1.5 rounded-lg border border-red-300 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50">
-              {deleting ? '…' : 'ลบ'}
-            </button>
+            {!deleteConfirm ? (
+              <button onClick={() => setDeleteConfirm(true)}
+                className="text-sm px-3 py-1.5 rounded-lg border border-red-300 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">
+                ลบ
+              </button>
+            ) : (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-warm-700 dark:text-disc-text">ยืนยัน?</span>
+                <button onClick={handleDelete} disabled={deleting}
+                  className="text-sm px-3 py-1.5 rounded-lg bg-red-500 hover:bg-red-600 text-white disabled:opacity-50">
+                  {deleting ? '…' : 'ลบเลย'}
+                </button>
+                <button onClick={() => setDeleteConfirm(false)}
+                  className="text-sm text-warm-500 dark:text-disc-muted hover:text-warm-700 dark:hover:text-disc-text">
+                  ยกเลิก
+                </button>
+              </div>
+            )}
           </div>
         </div>
 

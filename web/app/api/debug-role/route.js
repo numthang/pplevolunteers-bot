@@ -18,12 +18,14 @@ export async function POST(req) {
     // impersonate mode
     cookieStore.set('debug_discord_id', body.discordId, COOKIE_OPTS)
     cookieStore.set('debug_discord_name', body.displayName || body.discordId, COOKIE_OPTS)
+    cookieStore.set('debug_discord_roles', body.roles || '', COOKIE_OPTS)
     cookieStore.set('debug_role', '', { maxAge: 0, path: '/' })
   } else {
     // combo mode
     cookieStore.set('debug_role', body.role, COOKIE_OPTS)
     cookieStore.set('debug_discord_id', '', { maxAge: 0, path: '/' })
     cookieStore.set('debug_discord_name', '', { maxAge: 0, path: '/' })
+    cookieStore.set('debug_discord_roles', '', { maxAge: 0, path: '/' })
   }
 
   return Response.json({ ok: true })
@@ -39,6 +41,7 @@ export async function DELETE() {
   cookieStore.set('debug_role', '', { maxAge: 0, path: '/' })
   cookieStore.set('debug_discord_id', '', { maxAge: 0, path: '/' })
   cookieStore.set('debug_discord_name', '', { maxAge: 0, path: '/' })
+  cookieStore.set('debug_discord_roles', '', { maxAge: 0, path: '/' })
 
   return Response.json({ ok: true })
 }

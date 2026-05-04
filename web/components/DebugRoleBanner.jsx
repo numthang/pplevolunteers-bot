@@ -6,12 +6,19 @@ import { DEBUG_COMBOS } from '@/lib/debugCombos.js'
 function useDebugState() {
   const [debugRole, setDebugRole] = useState(null)
   const [debugName, setDebugName] = useState(null)
+  const [debugDiscordId, setDebugDiscordId] = useState(null)
+  const [debugDiscordRoles, setDebugDiscordRoles] = useState(null)
 
   useEffect(() => {
-    const role = document.cookie.split('; ').find(r => r.startsWith('debug_role='))?.split('=')[1]
-    const name = document.cookie.split('; ').find(r => r.startsWith('debug_discord_name='))?.split('=')[1]
-    if (role) setDebugRole(decodeURIComponent(role))
-    if (name) setDebugName(decodeURIComponent(name))
+    const getCookie = (name) => document.cookie.split('; ').find(r => r.startsWith(`${name}=`))?.split('=')[1]
+    const role = getCookie('debug_role')
+    const name = getCookie('debug_discord_name')
+    const id   = getCookie('debug_discord_id')
+    const roles = getCookie('debug_discord_roles')
+    if (role)  setDebugRole(decodeURIComponent(role))
+    if (name)  setDebugName(decodeURIComponent(name))
+    if (id)    setDebugDiscordId(decodeURIComponent(id))
+    if (roles) setDebugDiscordRoles(decodeURIComponent(roles))
   }, [])
 
   async function setCombo(label) {
@@ -23,11 +30,11 @@ function useDebugState() {
     window.location.reload()
   }
 
-  async function setMember(discordId, displayName) {
+  async function setMember(discordId, displayName, roles) {
     await fetch('/api/debug-role', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ discordId, displayName }),
+      body: JSON.stringify({ discordId, displayName, roles }),
     })
     window.location.reload()
   }
@@ -40,7 +47,7 @@ function useDebugState() {
   const label = debugName ? `@${debugName}` : debugRole
   const active = !!debugRole || !!debugName
 
-  return { label, active, setCombo, setMember, clear }
+  return { label, active, setCombo, setMember, clear, debugDiscordId, debugDiscordRoles, debugRole }
 }
 
 function MemberSearch({ onSelect }) {
@@ -114,7 +121,7 @@ export function DebugRoleButton({ isAdmin }) {
 
             {/* Member search */}
             <p className="px-3 py-1 text-xs text-gray-400 dark:text-gray-500 font-medium uppercase tracking-wide">จำลองจาก member จริง</p>
-            <MemberSearch onSelect={m => { setMember(m.discordId, m.displayName); setOpen(false) }} />
+            <MemberSearch onSelect={m => { setMember(m.discordId, m.displayName, m.roles); setOpen(false) }} />
 
             <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
 
@@ -153,14 +160,26 @@ export function DebugRoleButton({ isAdmin }) {
 }
 
 export function DebugRoleBanner({ isAdmin }) {
-  const { label, active, clear } = useDebugState()
+  const { label, active, clear, debugDiscordId, debugDiscordRoles, debugRole } = useDebugState()
 
   if (!isAdmin || !active) return null
 
+  // roles string: impersonate mode → from cookie, combo mode → from DEBUG_COMBOS
+  const rolesDisplay = debugDiscordRoles
+    || (debugRole ? (DEBUG_COMBOS.find(c => c.label === debugRole)?.roles || []).join(', ') : '')
+
   return (
-    <div className="bg-amber-400 dark:bg-amber-500 text-amber-900 dark:text-amber-950 text-xs font-medium px-4 py-1.5 flex items-center justify-between">
-      <span>🎭 Debug: กำลัง view as <strong>{label}</strong></span>
-      <button onClick={clear} className="underline hover:no-underline ml-4">
+    <div className="bg-amber-400 dark:bg-amber-500 text-amber-900 dark:text-amber-950 text-xs font-medium px-4 py-1.5 flex items-center justify-between gap-2 flex-wrap">
+      <span className="flex items-center gap-2 flex-wrap">
+        <span>🎭 Debug: กำลัง view as <strong>{label}</strong></span>
+        {debugDiscordId && (
+          <span className="opacity-70 font-mono select-all">{debugDiscordId}</span>
+        )}
+        {rolesDisplay && (
+          <span className="opacity-80">— {rolesDisplay}</span>
+        )}
+      </span>
+      <button onClick={clear} className="underline hover:no-underline shrink-0">
         กลับ Admin
       </button>
     </div>
