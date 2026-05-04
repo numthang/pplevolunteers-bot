@@ -29,3 +29,14 @@ ALTER TABLE calling_assignments
 -- 2026-05-03: เพิ่ม primary_province ใน dc_members สำหรับ user ที่ถือหลายจังหวัด ใช้เป็น default province ตอนเพิ่ม Contact ใหม่
 ALTER TABLE dc_members ADD COLUMN primary_province VARCHAR(100) NULL AFTER province;
 
+-- 2026-05-04: Contacts module — เพิ่ม specialty (รวม อาชีพ/ตำแหน่ง/ความสามารถ ใน field เดียว, ชื่อตาม dc_members.specialty)
+ALTER TABLE calling_contacts ADD COLUMN specialty TEXT NULL AFTER note;
+
+-- 2026-05-04: Contacts module — last_name optional (ฟอร์มไม่ใช้แล้ว แต่ column เก็บไว้ใน DB)
+ALTER TABLE calling_contacts MODIFY COLUMN last_name VARCHAR(100) NULL;
+
+-- 2026-05-04: Contacts module — เพิ่ม status 'met' ใน calling_logs (ใช้บันทึกการพบปะ in-person, signals + tier นับเหมือน answered)
+ALTER TABLE calling_logs
+  MODIFY COLUMN status ENUM('answered','no_answer','not_called','met')
+  COLLATE utf8mb4_unicode_ci NOT NULL;
+

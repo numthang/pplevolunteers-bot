@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { CALL_STATUS_COLORS } from '@/lib/callingStatusColors.js'
+import { SIGNALS, SIGNAL_OPTIONS, findSignalLabel } from '@/lib/callingSignals.js'
 
 const CALL_STATUS_OPTIONS = [
   { value: 'answered',   label: 'รับสาย', icon: '📞', color: '#0d9e94', bg: '#e1f5f4' },
@@ -13,48 +14,13 @@ const NOTE_PLACEHOLDER = {
   answered:   'เช่น ทำงานอยู่กรุงเทพ กลับบ้านเดือนละครั้ง',
   no_answer:  'เช่น สายไม่ว่าง / ปิดเครื่อง / เบอร์ผิด / ฝากข้อความ',
   not_called: 'เช่น บันทึกข้อมูลสมาชิก / ติดต่อ LINE แล้ว / เบอร์ผิด / คาดว่าไม่สะดวก',
+  met:        'เช่น เจอที่งาน event ราชบุรี / นัดเจอที่ร้านกาแฟ',
 }
 
 const RSVP_OPTIONS = [
   { value: 'yes',   label: 'ร่วม',    icon: '✓', activeClass: 'bg-teal border-teal text-white' },
   { value: 'no',    label: 'ไม่ร่วม', icon: '✗', activeClass: 'bg-[#fcebeb] border-[#a32d2d] text-[#a32d2d]' },
   { value: 'maybe', label: 'อาจจะ',   icon: '?', activeClass: 'bg-[#faeeda] border-[#854f0b] text-[#854f0b]' },
-]
-
-const SIGNALS = [
-  {
-    key: 'sig_location',
-    label: 'ที่อยู่',
-    hint: 'สมาชิกอยู่ที่ไหนในช่วงนี้',
-    options: [
-      { value: 4, label: 'ในอำเภอ' },
-      { value: 3, label: 'ในจังหวัด' },
-      { value: 2, label: 'ต่างจังหวัด' },
-      { value: 1, label: 'ต่างประเทศ' },
-    ],
-  },
-  {
-    key: 'sig_availability',
-    label: 'ความว่าง',
-    hint: 'มีเวลาร่วมกิจกรรมได้มากแค่ไหน',
-    options: [
-      { value: 4, label: 'ว่างมาก' },
-      { value: 3, label: 'ว่างบ้าง' },
-      { value: 2, label: 'ไม่ค่อยว่าง' },
-      { value: 1, label: 'ไม่ว่างเลย' },
-    ],
-  },
-  {
-    key: 'sig_interest',
-    label: 'ความสนใจ',
-    hint: 'สนใจเข้าร่วมกิจกรรมของพรรคมากแค่ไหน',
-    options: [
-      { value: 4, label: 'กระตือรือร้น' },
-      { value: 3, label: 'สนใจ' },
-      { value: 2, label: 'นิดหน่อย' },
-      { value: 1, label: 'ไม่สนใจ' },
-    ],
-  },
 ]
 
 const getLogStatusStyle = (status) => {
@@ -119,10 +85,9 @@ function ExpandableText({ text, clamp = 'line-clamp-2', className = '' }) {
 }
 
 function SignalScoreLabel({ signalKey, value }) {
-  const sig = SIGNALS.find(s => s.key === signalKey)
-  if (!sig || !value) return <span className="text-warm-400">—</span>
-  const opt = sig.options.find(o => o.value === value)
-  return <span>{opt?.label || value}</span>
+  const label = findSignalLabel(signalKey, value)
+  if (!label) return <span className="text-warm-400">—</span>
+  return <span>{label}</span>
 }
 
 const THAI_MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.']
@@ -168,19 +133,21 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
     return Math.round(vals.reduce((a, b) => a + b, 0) / vals.length)
   }, [signals])
 
+  const signalsApply = status === 'answered' || status === 'met'
+
   const buildPayload = useCallback(() => ({
     campaign_id: member?.campaign_id || 0,
     member_id: memberId,
     contact_type,
     status,
-    sig_overall: status === 'answered' ? computeOverall() : null,
-    sig_location:     status === 'answered' ? (signals.sig_location || null) : null,
-    sig_availability: status === 'answered' ? (signals.sig_availability || null) : null,
-    sig_interest:     status === 'answered' ? (signals.sig_interest || null) : null,
+    sig_overall: signalsApply ? computeOverall() : null,
+    sig_location:     signalsApply ? (signals.sig_location || null) : null,
+    sig_availability: signalsApply ? (signals.sig_availability || null) : null,
+    sig_interest:     signalsApply ? (signals.sig_interest || null) : null,
     sig_reachable:    null,
     note: note.trim() || null,
     rsvp: (!isContact && status === 'answered') ? (rsvp || null) : null,
-  }), [member, memberId, contact_type, isContact, status, rsvp, signals, note, computeOverall])
+  }), [member, memberId, contact_type, isContact, status, rsvp, signals, note, computeOverall, signalsApply])
 
   const handleSave = async (goNext = false) => {
     if (!status) return
@@ -206,9 +173,9 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
     member.home_province || member.province,
   ].filter(Boolean).join(' · ')
   const expiryBadge = isContact ? null : getExpiryBadge(member.expired_at)
-  const showSignals = status === 'answered'
+  const showSignals = signalsApply
   const signalsFilled = SIGNALS.some(s => signals[s.key])
-  const canSave = status && note.trim() && (status !== 'answered' || (signalsFilled && (isContact || rsvp)))
+  const canSave = status && note.trim() && (!signalsApply || signalsFilled) && (status !== 'answered' || isContact || rsvp)
 
   return (
     <div
@@ -487,25 +454,26 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
                 </div>
                 {SIGNALS.map(sig => (
                   <div key={sig.key}>
-                    <div className="mb-2">
-                      <span className="text-base font-semibold text-warm-700 dark:text-warm-200">{sig.label}</span>
-                      <span className="block text-base text-warm-400 dark:text-warm-dark-400">{sig.hint}</span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-1.5">
-                      {sig.options.map(opt => (
-                        <button
-                          key={opt.value}
-                          type="button"
-                          onClick={() => setSignals(prev => ({ ...prev, [sig.key]: opt.value }))}
-                          className={`py-2.5 px-1 text-lg rounded-md border transition text-center font-medium ${
-                            signals[sig.key] === opt.value
-                              ? 'bg-teal border-teal text-white'
-                              : 'border-warm-200 dark:border-warm-dark-300 text-warm-700 dark:text-warm-200 bg-white dark:bg-warm-dark-100 hover:border-teal hover:text-teal'
-                          }`}
-                        >
-                          {opt.label}
-                        </button>
-                      ))}
+                    <div className="mb-2 text-base font-semibold text-warm-700 dark:text-warm-200">{sig.label}</div>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {SIGNAL_OPTIONS.map(opt => {
+                        const active = signals[sig.key] === opt.value
+                        return (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() => setSignals(prev => ({ ...prev, [sig.key]: opt.value }))}
+                            className={`py-2 px-1 rounded-md border transition text-center flex flex-col items-center gap-0.5 ${
+                              active
+                                ? 'bg-teal border-teal text-white'
+                                : 'border-warm-200 dark:border-warm-dark-300 text-warm-700 dark:text-warm-200 bg-white dark:bg-warm-dark-100 hover:border-teal hover:text-teal'
+                            }`}
+                          >
+                            <span className="text-base font-medium">{opt.label}</span>
+                            <span className={`text-xs ${active ? 'text-white/80' : 'text-warm-400 dark:text-warm-dark-400'}`}>{sig.hints[opt.value]}</span>
+                          </button>
+                        )
+                      })}
                     </div>
                   </div>
                 ))}

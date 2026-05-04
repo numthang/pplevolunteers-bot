@@ -61,8 +61,8 @@ export async function POST(req) {
       extra: extra || null,
     })
 
-    // Auto-calculate and update tier if signals are present
-    if (status === 'answered') {
+    // Auto-calculate and update tier if signals are present (answered call หรือ พบปะ)
+    if (status === 'answered' || status === 'met') {
       const tier = await calculateTierFromSignals(member_id, null, contact_type)
       if (tier) await upsertTier(member_id, tier, 'auto', contact_type)
     }

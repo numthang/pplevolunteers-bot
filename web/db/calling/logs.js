@@ -112,8 +112,8 @@ export async function getMemberCallStats(memberId, campaignId = null, contactTyp
        COUNT(*) AS total_calls,
        SUM(CASE WHEN status = 'answered' THEN 1 ELSE 0 END) AS answered_count,
        SUM(CASE WHEN status = 'no_answer' THEN 1 ELSE 0 END) AS no_answer_count,
-       SUM(CASE WHEN status = 'busy' THEN 1 ELSE 0 END) AS busy_count,
        SUM(CASE WHEN status = 'not_called' THEN 1 ELSE 0 END) AS not_called_count,
+       SUM(CASE WHEN status = 'met' THEN 1 ELSE 0 END) AS met_count,
        AVG(sig_overall) AS avg_sig_overall,
        MAX(called_at) AS last_called_at
      FROM calling_logs
@@ -123,13 +123,14 @@ export async function getMemberCallStats(memberId, campaignId = null, contactTyp
   )
   return rows[0] || {
     total_calls: 0, answered_count: 0, no_answer_count: 0,
-    busy_count: 0, not_called_count: 0, avg_sig_overall: null, last_called_at: null
+    not_called_count: 0, met_count: 0, avg_sig_overall: null, last_called_at: null
   }
 }
 
 export async function calculateTierFromSignals(memberId, campaignId = null, contactType = 'member') {
   const stats = await getMemberCallStats(memberId, campaignId, contactType)
-  if (!stats.answered_count) return null
+  const contactedCount = (stats.answered_count || 0) + (stats.met_count || 0)
+  if (!contactedCount) return null
   const avg = parseFloat(stats.avg_sig_overall) || 0
   if (avg >= 3.5) return 'A'
   if (avg >= 2.5) return 'B'

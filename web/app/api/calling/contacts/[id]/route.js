@@ -38,14 +38,14 @@ export async function PUT(req, { params }) {
     }
 
     const body = await req.json()
-    const { first_name, last_name, phone, email, line_id, category, province, amphoe, tambon, note } = body
+    const { first_name, last_name, phone, email, line_id, category, province, amphoe, tambon, note, specialty } = body
 
-    if (!first_name || !last_name) {
-      return Response.json({ error: 'first_name and last_name are required' }, { status: 400 })
+    if (!first_name) {
+      return Response.json({ error: 'first_name is required' }, { status: 400 })
     }
 
     await updateContact(parseInt(params.id), {
-      first_name, last_name, phone, email, line_id, category, province, amphoe, tambon, note,
+      first_name, last_name, phone, email, line_id, category, province, amphoe, tambon, note, specialty,
       updated_by: session.user.discordId,
     })
 

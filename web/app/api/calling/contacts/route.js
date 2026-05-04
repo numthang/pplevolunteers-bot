@@ -67,10 +67,10 @@ export async function POST(req) {
 
   try {
     const body = await req.json()
-    const { first_name, last_name, phone, email, line_id, category, province, amphoe, tambon, note } = body
+    const { first_name, last_name, phone, email, line_id, category, province, amphoe, tambon, note, specialty } = body
 
-    if (!first_name || !last_name) {
-      return Response.json({ error: 'first_name and last_name are required' }, { status: 400 })
+    if (!first_name) {
+      return Response.json({ error: 'first_name is required' }, { status: 400 })
     }
 
     // Province must be within caller's scope
@@ -90,6 +90,7 @@ export async function POST(req) {
       amphoe,
       tambon,
       note,
+      specialty,
       created_by: session.user.discordId,
     })
 

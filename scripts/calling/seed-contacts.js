@@ -1,4 +1,4 @@
-import pool from '../web/db/index.js'
+import pool from '../../web/db/index.js'
 
 const GUILD_ID = '1340903354037178410'
 

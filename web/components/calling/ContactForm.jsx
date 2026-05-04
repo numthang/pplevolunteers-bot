@@ -18,6 +18,7 @@ export default function ContactForm({ initial = {}, onSubmit, onCancel, loading 
     phone:      initial.phone      || '',
     line_id:    initial.line_id    || '',
     category:   initial.category   || '',
+    specialty:  initial.specialty  || '',
     province:   initial.province   || '',
     amphoe:     initial.amphoe     || '',
     tambon:     initial.tambon     || '',
@@ -88,6 +89,14 @@ export default function ContactForm({ initial = {}, onSubmit, onCancel, loading 
           <input className={inputCls} value={form.line_id}
             onChange={e => set('line_id', e.target.value)} placeholder="@lineId" />
         </div>
+      </div>
+
+      {/* อาชีพ / ตำแหน่ง / ความสามารถ */}
+      <div>
+        <label className={labelCls}>อาชีพ / ตำแหน่ง / ความสามารถ</label>
+        <textarea className={textareaCls} rows={2} value={form.specialty}
+          onChange={e => set('specialty', e.target.value)}
+          placeholder="เช่น ครู / นักธุรกิจ / ออกแบบกราฟิก / พูดอังกฤษได้" />
       </div>
 
       {/* Cascading dropdown: จังหวัด → อำเภอ → ตำบล */}

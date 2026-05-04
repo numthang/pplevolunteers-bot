@@ -72,7 +72,7 @@ function ExpandableDescription({ text }) {
   }, [text])
   return (
     <div className="flex items-baseline gap-1 mt-1">
-      <p ref={ref} className={`text-base text-warm-400 dark:text-disc-muted ${expanded ? '' : 'line-clamp-1'}`}>
+      <p ref={ref} className={`text-base text-warm-500 dark:text-disc-text ${expanded ? '' : 'line-clamp-1'}`}>
         {parseLinks(text)}
       </p>
       {(clamped || expanded) && (
@@ -448,7 +448,7 @@ export default function CampaignPage({ params }) {
       <div className="bg-card-bg border border-warm-200 dark:border-disc-border border-l-4 border-l-violet-500 dark:border-l-violet-400 rounded-lg px-4 py-3 mb-4">
         <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
           <h1 className="text-lg font-semibold text-warm-900 dark:text-disc-text">
-            {campaign?.name} <span className="text-warm-400 dark:text-warm-dark-500 font-normal text-base">(assignor)</span>
+            {campaign?.name} <span className="text-warm-500 dark:text-warm-dark-400 font-normal text-base">(assignor)</span>
           </h1>
           <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-base text-warm-500 dark:text-disc-muted">
             <span>{activeTab === 'contact' ? 'Contact' : 'Member'} <span className="font-semibold text-warm-900 dark:text-disc-text">{stats.total}</span></span>

@@ -10,6 +10,7 @@ Quick navigation to detailed docs for the entire pple-volunteers project (Bot + 
 | **Web App (Next.js)** | [md/WEB.md](md/WEB.md) |
 | **Finance System** | [md/FINANCE.md](md/FINANCE.md) |
 | **Calling System** | [md/CALLING.md](md/CALLING.md) |
+| **Contacts (CRM)** | [md/CONTACT.md](md/CONTACT.md) |
 | **Database Schema** | [md/DATABASE.md](md/DATABASE.md) |
 | **Production Deployment** | [md/DEPLOYMENT.md](md/DEPLOYMENT.md) |
 

@@ -6,26 +6,26 @@ export async function getContactById(id) {
 }
 
 export async function createContact(data) {
-  const { guild_id, first_name, last_name, phone, email, line_id, category, province, amphoe, tambon, note, created_by } = data
+  const { guild_id, first_name, last_name, phone, email, line_id, category, province, amphoe, tambon, note, specialty, created_by } = data
   const [result] = await pool.query(
     `INSERT INTO calling_contacts
-      (guild_id, first_name, last_name, phone, email, line_id, category, province, amphoe, tambon, note, created_by)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [guild_id, first_name, last_name, phone || null, email || null, line_id || null,
-     category || null, province || null, amphoe || null, tambon || null, note || null, created_by || null]
+      (guild_id, first_name, last_name, phone, email, line_id, category, province, amphoe, tambon, note, specialty, created_by)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [guild_id, first_name, last_name || null, phone || null, email || null, line_id || null,
+     category || null, province || null, amphoe || null, tambon || null, note || null, specialty || null, created_by || null]
   )
   return result.insertId
 }
 
 export async function updateContact(id, data) {
-  const { first_name, last_name, phone, email, line_id, category, province, amphoe, tambon, note, updated_by } = data
+  const { first_name, last_name, phone, email, line_id, category, province, amphoe, tambon, note, specialty, updated_by } = data
   await pool.query(
     `UPDATE calling_contacts
      SET first_name=?, last_name=?, phone=?, email=?, line_id=?, category=?,
-         province=?, amphoe=?, tambon=?, note=?, updated_by=?
+         province=?, amphoe=?, tambon=?, note=?, specialty=?, updated_by=?
      WHERE id = ?`,
-    [first_name, last_name, phone || null, email || null, line_id || null, category || null,
-     province || null, amphoe || null, tambon || null, note || null, updated_by || null, id]
+    [first_name, last_name || null, phone || null, email || null, line_id || null, category || null,
+     province || null, amphoe || null, tambon || null, note || null, specialty || null, updated_by || null, id]
   )
 }
 
@@ -67,8 +67,8 @@ export async function getContactsList(guildId, { province, provinces, keyword, l
     params.push(...provinces)
   }
   if (keyword) {
-    query += ` AND (CONCAT(first_name,' ',last_name) LIKE ? OR phone LIKE ?)`
-    params.push(`%${keyword}%`, `%${keyword}%`)
+    query += ` AND (CONCAT(first_name,' ',COALESCE(last_name,'')) LIKE ? OR phone LIKE ? OR line_id LIKE ?)`
+    params.push(`%${keyword}%`, `%${keyword}%`, `%${keyword}%`)
   }
 
   query += ` ORDER BY province ASC, amphoe ASC, first_name ASC LIMIT ? OFFSET ?`
@@ -262,6 +262,20 @@ export async function getMyAssignedContacts(discordId, { campaignId, status, lim
        latest_called_at ASC
      LIMIT ? OFFSET ?`,
     [discordId, campaignId || null, campaignId || null, status || null, status || null, limit, offset]
+  )
+  return rows
+}
+
+export async function getContactLogs(contactId) {
+  const [rows] = await pool.query(
+    `SELECT
+       l.*,
+       ec.name AS campaign_name
+     FROM calling_logs l
+     LEFT JOIN act_event_cache ec ON ec.id = l.campaign_id AND ec.type = 'campaign'
+     WHERE l.member_id = ? AND l.contact_type = 'contact'
+     ORDER BY l.called_at DESC`,
+    [contactId]
   )
   return rows
 }

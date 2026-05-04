@@ -43,18 +43,23 @@ const FINANCE_LINKS = [
 const CALLING_LINKS = [
   { href: '/calling',          label: 'Campaigns',    icon: 'campaigns' },
   { href: '/calling/pending',  label: 'Pending calls', icon: 'pending' },
-  { href: '/calling/contacts', label: 'Contacts',      icon: 'contacts' },
+]
+
+const CONTACTS_LINKS = [
+  { href: '/contacts', label: 'Contacts', icon: 'contacts' },
 ]
 
 const DASHBOARD_LINKS = [
-  { href: '/finance', label: 'PPLE Finance', icon: 'transactions' },
-  { href: '/calling', label: 'PPLE Calling', icon: 'campaigns' },
+  { href: '/finance',   label: 'PPLE Finance',   icon: 'transactions' },
+  { href: '/calling',   label: 'PPLE Calling',   icon: 'campaigns' },
+  { href: '/contacts',  label: 'PPLE Contacts',  icon: 'contacts' },
 ]
 
 const APPS = [
-  { key: 'home',    label: 'Dashboard',    href: '/dashboard', icon: 'overview' },
-  { key: 'finance', label: 'PPLE Finance', href: '/finance',   icon: 'transactions' },
-  { key: 'calling', label: 'PPLE Calling', href: '/calling',   icon: 'campaigns' },
+  { key: 'home',     label: 'Dashboard',      href: '/dashboard', icon: 'overview' },
+  { key: 'finance',  label: 'PPLE Finance',   href: '/finance',   icon: 'transactions' },
+  { key: 'calling',  label: 'PPLE Calling',   href: '/calling',   icon: 'campaigns' },
+  { key: 'contacts', label: 'PPLE Contacts',  href: '/contacts',  icon: 'contacts' },
 ]
 
 export default function Nav({ session }) {
@@ -68,10 +73,12 @@ export default function Nav({ session }) {
   const [pendingCount, setPendingCount] = useState(0)
   const campaignRef = useRef(null)
 
-  const isCallingApp = pathname.startsWith('/calling')
-  const isFinanceApp = pathname.startsWith('/finance') || pathname.startsWith('/admin')
-  const currentApp = isCallingApp ? APPS[2] : isFinanceApp ? APPS[1] : APPS[0]
-  const links = isCallingApp ? CALLING_LINKS : isFinanceApp ? FINANCE_LINKS : DASHBOARD_LINKS
+  const isCallingApp  = pathname.startsWith('/calling')
+  const isFinanceApp  = pathname.startsWith('/finance') || pathname.startsWith('/admin')
+  const isContactsApp = pathname.startsWith('/contacts')
+  const isLinkActive = (href) => pathname === href || (href === '/contacts' && pathname.startsWith('/contacts/'))
+  const currentApp = isContactsApp ? APPS[3] : isCallingApp ? APPS[2] : isFinanceApp ? APPS[1] : APPS[0]
+  const links = isContactsApp ? CONTACTS_LINKS : isCallingApp ? CALLING_LINKS : isFinanceApp ? FINANCE_LINKS : DASHBOARD_LINKS
 
   const campaignIdMatch = pathname.match(/^\/calling\/(\d+)/)
   const activeCampaignId = campaignIdMatch ? parseInt(campaignIdMatch[1]) : null
@@ -214,7 +221,7 @@ export default function Nav({ session }) {
                 key={l.href}
                 href={l.href}
                 className={`px-3 py-1 rounded-md text-sm transition flex items-center gap-1.5 ${
-                  pathname === l.href ? activeClass : inactiveClass
+                  isLinkActive(l.href) ? activeClass : inactiveClass
                 }`}
               >
                 <Ic d={ICONS[l.icon]} />
@@ -297,7 +304,7 @@ export default function Nav({ session }) {
                           href={l.href}
                           onClick={() => setMenuOpen(false)}
                           className={`flex items-center gap-2 px-4 py-2.5 text-sm transition ${
-                            pathname === l.href
+                            isLinkActive(l.href)
                               ? 'text-teal dark:text-teal font-medium bg-teal/10 dark:bg-teal/10'
                               : 'text-warm-900 dark:text-warm-dark-500 hover:bg-warm-100 dark:hover:bg-warm-dark-200'
                           }`}

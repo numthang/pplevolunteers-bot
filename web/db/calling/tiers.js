@@ -92,7 +92,7 @@ export async function calculateTierFromSignals(memberId, campaignId = null, cont
     ) / 3.0 AS avg_signal
     FROM calling_logs
     WHERE member_id = ? AND contact_type = ?
-      AND status = 'answered'
+      AND status IN ('answered','met')
       AND (sig_location IS NOT NULL OR sig_availability IS NOT NULL OR sig_interest IS NOT NULL)`
 
   const params = [memberId, contactType]
