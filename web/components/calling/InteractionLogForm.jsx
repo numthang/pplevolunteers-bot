@@ -79,8 +79,7 @@ export default function InteractionLogForm({ contactId, onSaved }) {
                         : 'border-warm-200 dark:border-disc-border text-warm-700 dark:text-disc-text bg-card-bg hover:border-teal hover:text-teal'
                     }`}
                   >
-                    <span className="text-base font-medium">{opt.label}</span>
-                    <span className={`text-xs ${active ? 'text-white/80' : 'text-warm-400 dark:text-disc-muted'}`}>{sig.hints[opt.value]}</span>
+                    <span className="text-base font-medium">{sig.hints[opt.value]}</span>
                   </button>
                 )
               })}

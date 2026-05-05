@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import RecordCallModal from '@/components/calling/RecordCallModal.jsx'
+import PdpaAgreementModal from '@/components/calling/PdpaAgreementModal.jsx'
 import { CALL_STATUS_COLORS } from '@/lib/callingStatusColors.js'
 
 const TIER_COLORS = {
@@ -220,6 +221,8 @@ export default function PendingCallsPage() {
       throw err
     }
   }
+
+  const pdpaKey = `pdpa_calling_${searchParams.get('campaign') || 'all'}`
 
   const totalPending = items.filter(m => m.call_status === 'pending').length
   const totalCalled  = items.filter(m => m.call_status === 'called').length
@@ -464,6 +467,8 @@ export default function PendingCallsPage() {
         onSaveAndNext={handleSaveAndNext}
         hasNext={hasNext}
       />
+
+      <PdpaAgreementModal storageKey={pdpaKey} />
     </div>
   )
 }

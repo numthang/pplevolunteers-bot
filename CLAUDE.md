@@ -89,6 +89,10 @@ pple-volunteers/
 1. `md/WEB.md` — CSS conventions, dark mode classes, component patterns
 2. ไฟล์ sibling ในโฟลเดอร์เดียวกัน — เพื่อ match pattern ที่ใช้จริง
 
+**⚠️ สร้าง component ใหม่ใน `web/` — ห้าม write โดยไม่อ่าน sibling ก่อน:**
+- อ่านไฟล์อื่นในโฟลเดอร์เดียวกันอย่างน้อย 1 ไฟล์เพื่อ copy CSS class pattern ที่ถูกต้อง
+- dark mode ต้องใช้ `dark:text-disc-text`, `dark:border-disc-border`, `dark:text-disc-muted`, `bg-card-bg` เท่านั้น — ห้ามใช้ `dark:bg-warm-dark-*` หรือ `dark:text-warm-*`
+
 **ถ้าแก้ไฟล์ที่มี stats/query — ต้องอ่าน query เทียบกับ tab/type อื่นด้วยว่า return field ครบไหม**
 
 ## 📋 Import / Sync Scripts

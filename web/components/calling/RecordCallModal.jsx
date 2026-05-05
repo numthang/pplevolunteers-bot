@@ -389,7 +389,7 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
                   <button
                     key={opt.value}
                     type="button"
-                    onClick={() => { setStatus(opt.value); setNote('') }}
+                    onClick={() => { setStatus(opt.value); setNote(opt.value === 'no_answer' ? 'ไม่รับสาย' : '') }}
                     className={`py-4 px-2 text-xl rounded-xl border-2 transition font-medium flex flex-col items-center gap-1.5 ${
                       status === opt.value
                         ? ''

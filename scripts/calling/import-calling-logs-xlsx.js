@@ -3,10 +3,14 @@
  * Parse calling log XLSX → generate SQL for review before import
  *
  * Usage:
- *   node scripts/calling/import-calling-logs-xlsx.js <file.xlsx> <province> [--date YYYY-MM-DD]
+ *   node scripts/calling/import-calling-logs-xlsx.js <file.xlsx> <province> <campaign_id> [--date YYYY-MM-DD]
+ *
+ * Example:
+ *   node scripts/calling/import-calling-logs-xlsx.js calling_log_นครปฐม.xlsx "นครปฐม" 73
+ *   node scripts/calling/import-calling-logs-xlsx.js calling_log_ราชบุรี.xlsx "ราชบุรี" 70 --date 2026-04-20
  *
  * Output:
- *   backups/calling-import-<timestamp>.sql
+ *   backups/calling/calling-import-<province>-<timestamp>.sql
  *
  * Prereq:  migration.sql + migration-ngs-member-cache.sql must be run first
  */
@@ -21,14 +25,16 @@ const path = require('path');
 
 const XLS_FILE        = process.argv[2];
 const CAMPAIGN_PROVINCE = process.argv[3];
+const CAMPAIGN_ID     = parseInt(process.argv[4], 10);
 
 const dateFlag = process.argv.indexOf('--date');
 const IMPORT_DATE = dateFlag >= 0 && process.argv[dateFlag + 1]
   ? `${process.argv[dateFlag + 1]} 00:00:00`
   : `${new Date().toISOString().slice(0, 10)} 00:00:00`;
 
-if (!XLS_FILE || !CAMPAIGN_PROVINCE) {
-  console.error('Usage: node import-calling-logs-xlsx.js <file.xlsx> <province> [--date YYYY-MM-DD]');
+if (!XLS_FILE || !CAMPAIGN_PROVINCE || !CAMPAIGN_ID || isNaN(CAMPAIGN_ID)) {
+  console.error('Usage: node import-calling-logs-xlsx.js <file.xlsx> <province> <campaign_id> [--date YYYY-MM-DD]');
+  console.error('Example: node import-calling-logs-xlsx.js calling_log_นครปฐม.xlsx "นครปฐม" 73');
   process.exit(1);
 }
 
@@ -206,10 +212,8 @@ function generateSQL(logs, lastGrade, campaignName) {
   lines.push(`-- Logs: ${logs.length}  |  Tiers: ${lastGrade.size}`);
   lines.push('-- ============================================================');
   lines.push('-- To re-run, clear old data first:');
-  lines.push(`--   DELETE cl FROM calling_logs cl`);
-  lines.push(`--     JOIN act_event_cache cc ON cl.campaign_id = cc.id AND cc.type = 'campaign'`);
-  lines.push(`--     WHERE cc.name = ${esc(campaignName)};`);
-  lines.push(`--   DELETE FROM act_event_cache WHERE type = 'campaign' AND name = ${esc(campaignName)};`);
+  lines.push(`--   DELETE FROM calling_logs WHERE campaign_id = ${CAMPAIGN_ID};`);
+  lines.push(`--   DELETE FROM act_event_cache WHERE id = ${CAMPAIGN_ID} AND type = 'campaign';`);
   lines.push(`--   DELETE FROM calling_member_tiers WHERE tier_source = 'auto';`);
   lines.push('-- ============================================================');
   lines.push('');
@@ -219,9 +223,10 @@ function generateSQL(logs, lastGrade, campaignName) {
 
   // ── act_event_cache (campaign) ──
   lines.push(`-- ─── act_event_cache campaign ──────────────────────────────────`);
-  lines.push(`INSERT INTO act_event_cache (type, name, province, guild_id, synced_at)`);
-  lines.push(`  VALUES ('campaign', ${esc(campaignName)}, ${esc(CAMPAIGN_PROVINCE)}, '1', NOW());`);
-  lines.push(`SET @campaign_id = LAST_INSERT_ID();`);
+  lines.push(`INSERT INTO act_event_cache (id, type, name, province, guild_id, synced_at)`);
+  lines.push(`  VALUES (${CAMPAIGN_ID}, 'campaign', ${esc(campaignName)}, ${esc(CAMPAIGN_PROVINCE)}, '1', NOW())`);
+  lines.push(`  ON DUPLICATE KEY UPDATE name = VALUES(name), synced_at = NOW();`);
+  lines.push(`SET @campaign_id = ${CAMPAIGN_ID};`);
   lines.push('');
 
   // ── calling_logs ──
@@ -264,7 +269,7 @@ function main() {
     process.exit(1);
   }
 
-  const campaignName = path.basename(XLS_FILE).replace(/\.xlsx?$/i, '');
+  const campaignName = `${CAMPAIGN_PROVINCE}.xlsx`;
 
   process.stderr.write(`Reading: ${XLS_FILE}\n`);
   process.stderr.write(`Campaign: ${campaignName}\n`);
@@ -278,7 +283,7 @@ function main() {
   const sql = generateSQL(logs, lastGrade, campaignName);
 
   const ts  = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-  const out = path.join(__dirname, `../../backups/calling-import-${ts}.sql`);
+  const out = path.join(__dirname, `../../backups/calling/calling-import-${CAMPAIGN_PROVINCE}-${ts}.sql`);
   fs.mkdirSync(path.dirname(out), { recursive: true });
   fs.writeFileSync(out, sql, 'utf8');
 
