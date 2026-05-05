@@ -77,12 +77,12 @@ function parseMembers(wb) {
 
     // Column indices (from header row 1)
     const colMap = {
-      prefix:  h1.findIndex(v => v === 'คำนำหน้า'),      // col B
-      fname:   h1.findIndex(v => v === 'ชื่อ'),           // col C
-      lname:   h1.findIndex(v => v === 'สมาชิก'),         // col D (actually membership type, use as last name)
-      amphure: h1.findIndex(v => v === 'อำเภอ'),          // col E
-      tambon:  h1.findIndex(v => v === 'ตำบล'),           // col F
-      phone:   h1.findIndex(v => v === 'เบอร์ติดต่อ'),    // col H
+      serial:       h1.findIndex(v => v === 'รหัสสมาชิก') >= 0 ? h1.findIndex(v => v === 'รหัสสมาชิก') : 0,
+      fullname:     h1.findIndex(v => v === 'ชื่อ'),           // ชื่อ + นามสกุล รวมกัน
+      membership:   h1.findIndex(v => v === 'สมาชิก'),         // รายปี / ตลอดชีพ
+      amphure:      h1.findIndex(v => v === 'อำเภอ'),
+      tambon:       h1.findIndex(v => v === 'ตำบล'),
+      phone:        h1.findIndex(v => v === 'เบอร์ติดต่อ'),
     };
 
     for (let ri = 2; ri < data.length; ri++) {
@@ -97,26 +97,30 @@ function parseMembers(wb) {
       if (members.has(sourceId)) continue;
 
       // Extract basic fields
-      const firstName = colMap.fname >= 0 ? String(row[colMap.fname] ?? '').trim() : '';
-      const lastName  = colMap.lname >= 0 ? String(row[colMap.lname] ?? '').trim() : '';
+      const serial    = colMap.serial >= 0 ? String(row[colMap.serial] ?? '').trim() : '';
+      const fullName  = colMap.fullname >= 0 ? String(row[colMap.fullname] ?? '').trim() : '';
+      const parts     = fullName.split(/\s+/);
+      const firstName = parts[0] || '';
+      const lastName  = parts.slice(1).join(' ') || '';
+      const membership = colMap.membership >= 0 ? String(row[colMap.membership] ?? '').trim() : '';
       const amphure   = colMap.amphure >= 0 ? String(row[colMap.amphure] ?? '').trim() : '';
       const tambon    = colMap.tambon >= 0 ? String(row[colMap.tambon] ?? '').trim() : '';
       const phone     = colMap.phone >= 0 ? String(row[colMap.phone] ?? '').trim() : '';
 
-      // Province is always the sheet name
-      const province = sheetName;
-
-      // Ensure first_name and last_name are not empty (required fields)
-      if (!firstName && !lastName) continue;
+      // Ensure first_name is not empty (required field)
+      if (!firstName) continue;
 
       members.set(sourceId, {
-        source_id: sourceId,
-        first_name: firstName || 'N/A',
-        last_name:  lastName || 'N/A',
-        home_province: province,
-        home_amphure: amphure || null,
-        home_district: tambon || null,
-        mobile_number: phone || null,
+        source_id:       sourceId,
+        serial:          serial || null,
+        first_name:      firstName,
+        last_name:       lastName || '-',
+        full_name:       fullName || null,
+        membership_type: membership || null,
+        home_province:   PROVINCE_NAME,
+        home_amphure:    amphure || null,
+        home_district:   tambon || null,
+        mobile_number:   phone || null,
       });
     }
   }
@@ -163,20 +167,24 @@ function main() {
   const memberArray = Array.from(members.values());
   lines.push(`-- ─── ngs_member_cache (${memberArray.length}) ─────────────────────────────────────`);
   lines.push('INSERT INTO ngs_member_cache (');
-  lines.push('  source_id, first_name, last_name, home_province, home_amphure, home_district, mobile_number');
+  lines.push('  source_id, serial, first_name, last_name, full_name, membership_type,');
+  lines.push('  home_province, home_amphure, home_district, mobile_number');
   lines.push(')');
   lines.push('VALUES');
 
   const valueLines = memberArray.map(m =>
-    `  (${m.source_id}, ${esc(m.first_name)}, ${esc(m.last_name)}, ` +
+    `  (${m.source_id}, ${esc(m.serial)}, ${esc(m.first_name)}, ${esc(m.last_name)}, ${esc(m.full_name)}, ${esc(m.membership_type)}, ` +
     `${esc(m.home_province)}, ${esc(m.home_amphure)}, ${esc(m.home_district)}, ` +
     `${esc(m.mobile_number)})`
   );
 
   lines.push(valueLines.join(',\n'));
   lines.push('ON DUPLICATE KEY UPDATE');
+  lines.push('  serial = VALUES(serial),');
   lines.push('  first_name = VALUES(first_name),');
   lines.push('  last_name = VALUES(last_name),');
+  lines.push('  full_name = VALUES(full_name),');
+  lines.push('  membership_type = VALUES(membership_type),');
   lines.push('  home_province = VALUES(home_province),');
   lines.push('  home_amphure = VALUES(home_amphure),');
   lines.push('  home_district = VALUES(home_district),');
