@@ -46,7 +46,9 @@ async function poll() {
     const lock = await client.getMailboxLock('INBOX')
 
     try {
-      const uids = await client.search({ seen: false, from: 'kplus@kasikornbank.com' }, { uid: true })
+      const kbankUids  = await client.search({ seen: false, from: 'kplus@kasikornbank.com' }, { uid: true })
+      const taskerUids = await client.search({ seen: false, subject: '[Tasker]' }, { uid: true })
+      const uids = [...new Set([...kbankUids, ...taskerUids])]
 
       if (uids.length) {
         log.info('[emailPoller] found uids:', uids.length)
@@ -224,7 +226,7 @@ async function notifyDiscord(account, type, txn) {
           { name: 'เลขที่',    value: txn.ref_id             || '—', inline: false },
           ...(txn.balance_after != null ? [{ name: 'ยอดคงเหลือ', value: `${txn.balance_after.toLocaleString('th-TH')} ฿`, inline: true }] : []),
         ],
-        timestamp: txn.txn_at ? txn.txn_at.toISOString() : new Date().toISOString(),
+        timestamp: txn.txn_at ? new Date(txn.txn_at).toISOString() : new Date().toISOString(),
       }]
     })
   } catch (err) {
