@@ -7,12 +7,13 @@ const { ImapFlow }  = require('imapflow')
 const { simpleParser } = require('mailparser')
 const pool          = require('../db/index')
 const kbank         = require('./parsers/kbank')
+const kbankSms      = require('./parsers/kbankSms')
 const log           = require('../utils/logger')
 
 const POLL_INTERVAL = parseInt(process.env.EMAIL_POLL_INTERVAL || '60000')
 
 // parsers ที่รองรับ — เพิ่ม parser ใหม่ตรงนี้
-const PARSERS = [kbank]
+const PARSERS = [kbank, kbankSms]
 
 let discordClient = null
 
@@ -163,6 +164,11 @@ async function matchAccount(txn) {
     const accNo = (acc.account_no || '').replace(/-/g, '')
 
     if (!incomeAcc && txn.counterpart_account && txn.counterpart_account === accNo) {
+      incomeAcc = acc
+    }
+
+    // SMS transaction: last_digits = ผู้รับเงิน (income) เช่น "4882"
+    if (!incomeAcc && txn.last_digits && accNo.endsWith(txn.last_digits)) {
       incomeAcc = acc
     }
 

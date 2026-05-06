@@ -31,21 +31,20 @@ async function handleRequest(req, res) {
 		return
 	}
 
-	// auth
-	if (SECRET) {
-		const auth = req.headers['authorization'] || ''
-		const token = auth.startsWith('Bearer ') ? auth.slice(7) : ''
-		if (token !== SECRET) {
-			res.writeHead(401).end('Unauthorized')
-			return
-		}
-	}
-
 	let body = ''
 	req.on('data', (chunk) => { body += chunk })
 	req.on('end', async () => {
 		try {
 			const payload = JSON.parse(body)
+
+			// auth — รับจาก body (สำหรับ Tasker ที่ไม่มี headers field)
+			if (SECRET) {
+				const token = payload.token || ''
+				if (token !== SECRET) {
+					res.writeHead(401).end('Unauthorized')
+					return
+				}
+			}
 
 			// รองรับหลาย field name ที่ SMS Forwarder แต่ละตัวส่งมา
 			const smsText = payload.message || payload.body || payload.sms_body
