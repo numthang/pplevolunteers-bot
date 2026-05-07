@@ -153,7 +153,7 @@ export default function CategoriesPage() {
       <div className="flex flex-wrap gap-2 mb-6">
         <IconPicker value={inputIcon} onChange={setInputIcon} />
         <input
-          className="border dark:border-gray-600 rounded px-3 py-1.5 text-sm flex-1 bg-card-bg text-gray-900 dark:text-gray-100"
+          className="border dark:border-gray-600 rounded px-3 py-1.5 text-base flex-1 bg-card-bg text-gray-900 dark:text-gray-100"
           placeholder="ชื่อหมวดหมู่ใหม่"
           value={input}
           onChange={e => setInput(e.target.value)}
@@ -165,7 +165,7 @@ export default function CategoriesPage() {
             global
           </label>
         )}
-        <button onClick={add} className="bg-indigo-600 text-white px-4 py-1.5 rounded text-sm hover:bg-indigo-700">เพิ่ม</button>
+        <button onClick={add} className="bg-indigo-600 text-white px-4 py-1.5 rounded text-base hover:bg-indigo-700">เพิ่ม</button>
       </div>
 
       {[{ label: '🌐 Global', items: cats.filter(c => c.is_global) }, { label: '👤 ของฉัน', items: cats.filter(c => !c.is_global) }]
@@ -180,7 +180,7 @@ export default function CategoriesPage() {
                     <div className="flex items-center gap-1.5 flex-1 min-w-0">
                       <IconPicker value={editIcon} onChange={setEditIcon} />
                       <input
-                        className="border dark:border-gray-600 rounded px-2 py-0.5 text-sm w-0 flex-1 min-w-0 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        className="border dark:border-gray-600 rounded px-2 py-0.5 text-base w-0 flex-1 min-w-0 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                         value={editName}
                         onChange={e => setEditName(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && save(c.id)}
@@ -198,7 +198,7 @@ export default function CategoriesPage() {
                       <span className="text-gray-500 dark:text-gray-400">
                         <CatIcon name={c.icon} size={18} />
                       </span>
-                      <span className="text-sm text-gray-900 dark:text-gray-100">{c.name}</span>
+                      <span className="text-base text-gray-900 dark:text-gray-100">{c.name}</span>
                       <span className="text-xs text-gray-400">{c.is_global ? '(global)' : '(ของฉัน)'}</span>
                     </div>
                   )}

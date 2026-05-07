@@ -37,7 +37,6 @@ const FINANCE_LINKS = [
   { href: '/finance/transactions',  label: 'รายการ',    icon: 'transactions' },
   { href: '/finance/categories',    label: 'หมวดหมู่',  icon: 'categories' },
   { href: '/finance/report',        label: 'รายงาน',    icon: 'report' },
-  { href: '/admin/logs',            label: 'Logs',       icon: 'logs', roles: ['Admin', 'Moderator'] },
 ]
 
 const CALLING_LINKS = [
@@ -50,9 +49,10 @@ const CONTACTS_LINKS = [
 ]
 
 const DASHBOARD_LINKS = [
-  { href: '/finance',   label: 'PPLE Finance',   icon: 'transactions' },
-  { href: '/calling',   label: 'PPLE Calling',   icon: 'campaigns' },
-  { href: '/contacts',  label: 'PPLE Contacts',  icon: 'contacts' },
+  { href: '/finance',    label: 'PPLE Finance',  icon: 'transactions' },
+  { href: '/calling',    label: 'PPLE Calling',  icon: 'campaigns' },
+  { href: '/contacts',   label: 'PPLE Contacts', icon: 'contacts' },
+  { href: '/admin/logs', label: 'Logs',           icon: 'logs', roles: ['Admin', 'Moderator'] },
 ]
 
 const APPS = [
@@ -74,7 +74,7 @@ export default function Nav({ session }) {
   const campaignRef = useRef(null)
 
   const isCallingApp  = pathname.startsWith('/calling')
-  const isFinanceApp  = pathname.startsWith('/finance') || pathname.startsWith('/admin')
+  const isFinanceApp  = pathname.startsWith('/finance')
   const isContactsApp = pathname.startsWith('/contacts')
   const isLinkActive = (href) => pathname === href || (href === '/contacts' && pathname.startsWith('/contacts/'))
   const currentApp = isContactsApp ? APPS[3] : isCallingApp ? APPS[2] : isFinanceApp ? APPS[1] : APPS[0]
@@ -138,7 +138,7 @@ export default function Nav({ session }) {
             </Link>
             <button
               onClick={() => setAppOpen(o => !o)}
-              className="flex items-center gap-1.5 hover:opacity-80 transition"
+              className="hidden md:flex items-center gap-1.5 hover:opacity-80 transition"
             >
               <span className="font-bold text-base text-teal dark:text-teal">
                 {currentApp.label}
@@ -172,8 +172,8 @@ export default function Nav({ session }) {
         </div>
 
 
-        {/* Desktop links */}
-        <div className="hidden md:flex items-center gap-1 ml-4">
+        {/* Nav links */}
+        <div className="flex items-center gap-1 ml-4">
           {visibleLinks.map(l => {
             if (l.href === '/calling' && isCallingApp && campaigns.length > 0) {
               const isActive = pathname === '/calling' || !!activeCampaignId
@@ -181,9 +181,9 @@ export default function Nav({ session }) {
                 <div key={l.href} className="relative flex items-center" ref={campaignRef}>
                   <Link
                     href="/calling"
-                    className={`px-3 py-1 rounded-l-md text-sm transition flex items-center gap-1.5 ${isActive ? activeClass : inactiveClass}`}
+                    className={`px-3 py-1 rounded-l-md text-base transition flex items-center gap-1.5 ${isActive ? activeClass : inactiveClass}`}
                   >
-                    <Ic d={ICONS[l.icon]} />
+                    <Ic d={ICONS[l.icon]} className="w-7 h-7 shrink-0" />
                     {l.label}
                     <span className="text-xs font-normal opacity-60">({campaigns.length})</span>
                   </Link>
@@ -220,11 +220,11 @@ export default function Nav({ session }) {
               <Link
                 key={l.href}
                 href={l.href}
-                className={`px-3 py-1 rounded-md text-sm transition flex items-center gap-1.5 ${
+                className={`flex px-3 py-1 rounded-md text-base transition items-center gap-1.5 ${
                   isLinkActive(l.href) ? activeClass : inactiveClass
                 }`}
               >
-                <Ic d={ICONS[l.icon]} />
+                <Ic d={ICONS[l.icon]} className="w-7 h-7 shrink-0" />
                 {l.label}
                 {l.href === '/calling/pending' && pendingCount > 0 && (
                   <span className="text-xs font-semibold px-2 py-1 rounded-full bg-orange text-white leading-none">
@@ -270,13 +270,13 @@ export default function Nav({ session }) {
                             <Link
                               href="/calling"
                               onClick={() => setMenuOpen(false)}
-                              className={`flex items-center gap-2 px-4 py-2.5 text-sm transition ${
+                              className={`flex items-center gap-2 px-4 py-2.5 text-base transition ${
                                 pathname === '/calling' || !!activeCampaignId
                                   ? 'text-teal dark:text-teal font-medium bg-teal/10 dark:bg-teal/10'
                                   : 'text-warm-900 dark:text-warm-dark-500 hover:bg-warm-100 dark:hover:bg-warm-dark-200'
                               }`}
                             >
-                              <Ic d={ICONS[l.icon]} />
+                              <Ic d={ICONS[l.icon]} className="w-7 h-7 shrink-0" />
                               {l.label}
                               <span className="text-xs font-normal opacity-60">({campaigns.length})</span>
                             </Link>
@@ -285,7 +285,7 @@ export default function Nav({ session }) {
                                 <button
                                   key={c.id}
                                   onClick={() => { setMenuOpen(false); router.push(`/calling/${c.id}`) }}
-                                  className={`w-full text-left px-2 py-1.5 rounded text-xs transition ${
+                                  className={`w-full text-left px-2 py-1.5 rounded text-base transition ${
                                     activeCampaignId === c.id
                                       ? 'text-teal dark:text-teal font-medium'
                                       : 'text-warm-500 dark:text-warm-dark-400 hover:bg-warm-100 dark:hover:bg-warm-dark-200'
@@ -303,13 +303,13 @@ export default function Nav({ session }) {
                           key={l.href}
                           href={l.href}
                           onClick={() => setMenuOpen(false)}
-                          className={`flex items-center gap-2 px-4 py-2.5 text-sm transition ${
+                          className={`flex items-center gap-2 px-4 py-2.5 text-base transition ${
                             isLinkActive(l.href)
                               ? 'text-teal dark:text-teal font-medium bg-teal/10 dark:bg-teal/10'
                               : 'text-warm-900 dark:text-warm-dark-500 hover:bg-warm-100 dark:hover:bg-warm-dark-200'
                           }`}
                         >
-                          <Ic d={ICONS[l.icon]} />
+                          <Ic d={ICONS[l.icon]} className="w-7 h-7 shrink-0" />
                           {l.label}
                           {l.href === '/calling/pending' && pendingCount > 0 && (
                             <span className="ml-auto text-xs font-semibold px-2 py-1 rounded-full bg-orange text-white">
@@ -333,7 +333,7 @@ export default function Nav({ session }) {
                         <Image src={session.user.image} alt="" width={32} height={32} className="rounded-full shrink-0" />
                       )}
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-warm-900 dark:text-warm-50 truncate">
+                        <p className="text-base font-medium text-warm-900 dark:text-warm-50 truncate">
                           {session.user.nickname || session.user.name}
                         </p>
                         <p className="text-xs text-warm-500 dark:text-warm-dark-400 truncate">{session.user.name}</p>
@@ -349,9 +349,9 @@ export default function Nav({ session }) {
                             key={app.key}
                             href={app.href}
                             onClick={() => setMenuOpen(false)}
-                            className="flex items-center gap-2 px-4 py-2.5 text-sm text-warm-900 dark:text-disc-text hover:bg-warm-100 dark:hover:bg-warm-dark-200 transition"
+                            className="flex items-center gap-2 px-4 py-2.5 text-base text-warm-900 dark:text-disc-text hover:bg-warm-100 dark:hover:bg-warm-dark-200 transition"
                           >
-                            <Ic d={ICONS[app.icon]} />
+                            <Ic d={ICONS[app.icon]} className="w-7 h-7 shrink-0" />
                             {app.label}
                           </Link>
                         ))}
@@ -362,10 +362,10 @@ export default function Nav({ session }) {
                     <div className="border-t border-warm-200 dark:border-warm-dark-300 my-1" />
                     <button
                       onClick={() => { toggle(); setMenuOpen(false) }}
-                      className="w-full flex items-center justify-between px-4 py-2.5 text-sm text-warm-900 dark:text-warm-dark-500 hover:bg-warm-100 dark:hover:bg-warm-dark-200 transition"
+                      className="w-full flex items-center justify-between px-4 py-2.5 text-base text-warm-900 dark:text-warm-dark-500 hover:bg-warm-100 dark:hover:bg-warm-dark-200 transition"
                     >
                       <span className="flex items-center gap-2">
-                        <Ic d={dark ? ICONS.sun : ICONS.moon} />
+                        <Ic d={dark ? ICONS.sun : ICONS.moon} className="w-7 h-7 shrink-0" />
                         {dark ? 'Light mode' : 'Dark mode'}
                       </span>
                       <span className={`shrink-0 w-9 h-5 rounded-full transition-colors duration-200 relative inline-block ${dark ? 'bg-teal' : 'bg-warm-300 dark:bg-warm-dark-300'}`}>
@@ -375,17 +375,17 @@ export default function Nav({ session }) {
                     <Link
                       href="/profile"
                       onClick={() => setMenuOpen(false)}
-                      className="flex items-center gap-2 px-4 py-2.5 text-sm text-warm-900 dark:text-warm-dark-500 hover:bg-warm-100 dark:hover:bg-warm-dark-200 transition"
+                      className="flex items-center gap-2 px-4 py-2.5 text-base text-warm-900 dark:text-warm-dark-500 hover:bg-warm-100 dark:hover:bg-warm-dark-200 transition"
                     >
-                      <Ic d={ICONS.profile} />
+                      <Ic d={ICONS.profile} className="w-7 h-7 shrink-0" />
                       แก้ไขโปรไฟล์
                     </Link>
                     <div className="border-t border-warm-200 dark:border-warm-dark-300 my-1" />
                     <button
                       onClick={() => signOut({ callbackUrl: '/' })}
-                      className="w-full text-left flex items-center gap-2 px-4 py-2.5 text-sm text-red-500 dark:text-red-400 hover:bg-warm-100 dark:hover:bg-warm-dark-200 transition"
+                      className="w-full text-left flex items-center gap-2 px-4 py-2.5 text-base text-red-500 dark:text-red-400 hover:bg-warm-100 dark:hover:bg-warm-dark-200 transition"
                     >
-                      <Ic d={ICONS.logout} />
+                      <Ic d={ICONS.logout} className="w-7 h-7 shrink-0" />
                       ออกจากระบบ
                     </button>
                   </div>

@@ -1,8 +1,12 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { useSession } from 'next-auth/react'
+import { useEffectiveRoles } from '@/lib/useEffectiveRoles.js'
 import { CALL_STATUS_COLORS } from '@/lib/callingStatusColors.js'
 import { SIGNALS, SIGNAL_OPTIONS, findSignalLabel } from '@/lib/callingSignals.js'
+
+const MODERATOR_ROLES = ['Admin', 'เลขาธิการ', 'Moderator']
 
 const CALL_STATUS_OPTIONS = [
   { value: 'answered',   label: 'รับสาย', icon: '📞', color: '#0d9e94', bg: '#e1f5f4' },
@@ -84,6 +88,38 @@ function ExpandableText({ text, clamp = 'line-clamp-2', className = '' }) {
   )
 }
 
+function CampaignActions({ campaignName, description, phone }) {
+  const [copied, setCopied] = useState(false)
+  const copyText = [campaignName, description].filter(Boolean).join('\n')
+
+  async function copy() {
+    await navigator.clipboard.writeText(copyText)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  return (
+    <div className="flex items-center gap-3 shrink-0">
+      <button onClick={copy} className="flex items-center gap-1 text-base text-teal hover:underline" title="คัดลอก">
+        {copied ? (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><polyline points="20 6 9 17 4 12" /></svg>
+        ) : (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
+        )}
+        {copied ? 'คัดลอกแล้ว' : 'คัดลอก'}
+      </button>
+      <a href={`sms:${phone || ''}?body=${encodeURIComponent(copyText)}`} className="flex items-center gap-1 text-base text-teal hover:underline" title="ส่ง SMS">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+        SMS
+      </a>
+      <a href={`https://line.me/R/share?text=${encodeURIComponent(copyText)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-base text-teal hover:underline" title="ส่ง LINE">
+        <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5"><path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63h2.386c.349 0 .63.285.63.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63.349 0 .631.285.631.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.281.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314" /></svg>
+        LINE
+      </a>
+    </div>
+  )
+}
+
 function SignalScoreLabel({ signalKey, value }) {
   const label = findSignalLabel(signalKey, value)
   if (!label) return <span className="text-warm-400">—</span>
@@ -99,6 +135,10 @@ function formatEventDate(dateStr) {
 }
 
 export default function RecordCallModal({ isOpen, member, contact_type = 'member', onClose, onSave, onSaveAndNext, hasNext }) {
+  const { data: session } = useSession()
+  const { roles: effectiveRoles, discordId: effectiveDiscordId } = useEffectiveRoles(session)
+  const isModerator = MODERATOR_ROLES.some(r => effectiveRoles.includes(r))
+
   const [status, setStatus] = useState('')
   const [rsvp, setRsvp] = useState('')
   const [note, setNote] = useState('')
@@ -106,9 +146,23 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
   const [saving, setSaving] = useState(false)
   const [history, setHistory] = useState([])
   const [historyLoading, setHistoryLoading] = useState(false)
+  const [editingLogId, setEditingLogId] = useState(null)
+  const [editStatus, setEditStatus] = useState('')
+  const [editNote, setEditNote] = useState('')
 
   const memberId = member?.source_id || member?.id
   const isContact = contact_type === 'contact'
+
+  const loadHistory = useCallback(() => {
+    if (!memberId) return
+    setHistoryLoading(true)
+    const ctParam = isContact ? '&contactType=contact' : ''
+    fetch(`/api/calling/logs?memberId=${memberId}${ctParam}`)
+      .then(r => r.json())
+      .then(d => setHistory(d.data || []))
+      .catch(() => setHistory([]))
+      .finally(() => setHistoryLoading(false))
+  }, [memberId, isContact])
 
   useEffect(() => {
     setStatus('')
@@ -116,15 +170,8 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
     setNote('')
     setSignals({})
     setSaving(false)
-    if (isOpen && memberId) {
-      setHistoryLoading(true)
-      const ctParam = isContact ? '&contactType=contact' : ''
-      fetch(`/api/calling/logs?memberId=${memberId}${ctParam}`)
-        .then(r => r.json())
-        .then(d => setHistory(d.data || []))
-        .catch(() => setHistory([]))
-        .finally(() => setHistoryLoading(false))
-    }
+    setEditingLogId(null)
+    if (isOpen && memberId) loadHistory()
   }, [memberId, isOpen])
 
   const computeOverall = useCallback(() => {
@@ -309,33 +356,71 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
                 <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
                   {history.map(log => {
                     const s = getLogStatusStyle(log.status)
+                    const canEdit = log.called_by === effectiveDiscordId || isModerator
+                    const isEditing = editingLogId === log.id
                     return (
                       <div key={log.id} className="rounded-lg p-3 bg-white dark:bg-warm-dark-100 border border-warm-200 dark:border-warm-dark-300">
-                        <div className="flex items-center justify-between gap-2 mb-1.5">
-                          <div className="flex items-center gap-2">
-                            <span className="px-2 py-0.5 rounded text-base font-semibold" style={{ backgroundColor: s.bg, color: s.text }}>{s.label}</span>
-                            {log.caller_name && (
-                              <a
-                                href={`https://discord.com/users/${log.called_by}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-base text-teal hover:underline"
-                                title={log.caller_name}
-                              >
-                                {log.caller_name}
-                              </a>
-                            )}
+                        {!isEditing && (
+                          <div className="flex items-start gap-2">
+                            <div className="flex-1 flex flex-wrap items-baseline gap-x-1.5">
+                              <span className="px-2 py-0.5 rounded text-base font-semibold shrink-0" style={{ backgroundColor: s.bg, color: s.text }}>{s.label}</span>
+                              <span className="text-base text-warm-800 dark:text-warm-100 break-words">
+                                {log.note ? parseLinks(log.note) : null}
+                                <span className="italic text-warm-400 dark:text-warm-dark-500">
+                                  {(log.note && (log.caller_name || log.called_at)) ? ' — ' : ''}
+                                  {log.caller_name && (
+                                    <a href={`https://discord.com/users/${log.called_by}`} target="_blank" rel="noopener noreferrer" className="hover:underline">{log.caller_name}</a>
+                                  )}
+                                  {log.caller_name && log.called_at ? ' ' : ''}
+                                  {log.called_at ? new Date(log.called_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' }) : null}
+                                </span>
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0">
+                              {canEdit && (
+                                <button onClick={() => { setEditingLogId(log.id); setEditStatus(log.status); setEditNote(log.note || '') }}
+                                  className="p-1 rounded text-warm-400 hover:text-teal hover:bg-warm-100 dark:hover:bg-warm-dark-200 transition">
+                                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                </button>
+                              )}
+                              {isModerator && (
+                                <button onClick={async () => {
+                                  if (!confirm('ลบ log นี้?')) return
+                                  await fetch(`/api/calling/logs?id=${log.id}`, { method: 'DELETE' })
+                                  loadHistory()
+                                }} className="p-1 rounded text-warm-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition">
+                                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                                </button>
+                              )}
+                            </div>
                           </div>
-                          <span className="text-base text-warm-400 dark:text-warm-dark-500 tabular-nums">
-                            {new Date(log.called_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}
-                          </span>
-                        </div>
-                        {log.note && (
-                          <ExpandableText
-                            text={log.note}
-                            className="text-base text-warm-800 dark:text-warm-100 leading-snug"
-                          />
                         )}
+                        {isEditing ? (
+                          <div className="mt-2 space-y-2">
+                            <div className="flex flex-wrap gap-1.5">
+                              {CALL_STATUS_OPTIONS.map(opt => (
+                                <button key={opt.value} type="button" onClick={() => setEditStatus(opt.value)}
+                                  className="px-2.5 py-1 rounded text-base border transition"
+                                  style={editStatus === opt.value
+                                    ? { backgroundColor: CALL_STATUS_COLORS[opt.value]?.bg, color: CALL_STATUS_COLORS[opt.value]?.text, borderColor: CALL_STATUS_COLORS[opt.value]?.text }
+                                    : {}}>
+                                  {opt.label}
+                                </button>
+                              ))}
+                            </div>
+                            <textarea rows={2} value={editNote} onChange={e => setEditNote(e.target.value)}
+                              className="w-full border dark:border-disc-border rounded px-2 py-1.5 text-base bg-card-bg text-warm-900 dark:text-disc-text resize-none" />
+                            <div className="flex gap-2">
+                              <button onClick={async () => {
+                                await fetch('/api/calling/logs', { method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ id: log.id, status: editStatus, note: editNote }) })
+                                setEditingLogId(null)
+                                loadHistory()
+                              }} className="px-3 py-1 rounded text-base bg-teal text-white hover:bg-teal/90 transition">บันทึก</button>
+                              <button onClick={() => setEditingLogId(null)} className="px-3 py-1 rounded text-base text-warm-500 hover:bg-warm-100 dark:hover:bg-warm-dark-200 transition">ยกเลิก</button>
+                            </div>
+                          </div>
+                        ) : null}
                       </div>
                     )
                   })}
@@ -348,26 +433,15 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
           <div className="md:order-1 flex flex-col gap-4">
 
             {/* Campaign info */}
-            <div className="bg-white dark:bg-warm-dark-100 rounded-lg p-3 border border-warm-200 dark:border-warm-dark-300 space-y-2">
-              <div>
-                <div className="text-base text-warm-400 dark:text-warm-dark-400 mb-0.5">Campaign</div>
-                <div className="text-base font-semibold text-warm-900 dark:text-warm-50">{member.campaign_name || '—'}</div>
-              </div>
+            <div className="bg-white dark:bg-warm-dark-100 rounded-lg p-3 border border-warm-200 dark:border-warm-dark-300 space-y-2 overflow-hidden">
+              <CampaignActions campaignName={member.campaign_name} description={member.campaign_description} phone={member.mobile_number || member.phone} />
+              <div className="text-base font-semibold text-warm-900 dark:text-warm-50">{member.campaign_name || '—'}</div>
               {member.campaign_description && (
-                <div>
-                  <div className="text-base text-warm-400 dark:text-warm-dark-400 mb-0.5">รายละเอียด</div>
-                  <ExpandableText
-                    text={member.campaign_description}
-                    className="text-base text-warm-700 dark:text-warm-200"
-                  />
-                </div>
+                <p className="text-base text-warm-700 dark:text-warm-200 whitespace-pre-wrap break-all">{parseLinks(member.campaign_description)}</p>
               )}
               {member.event_date && (
-                <div>
-                  <div className="text-base text-warm-400 dark:text-warm-dark-400 mb-0.5">วันที่กิจกรรม</div>
-                  <div className="text-base font-semibold text-orange-600 dark:text-orange-400">
-                    {formatEventDate(member.event_date)}
-                  </div>
+                <div className="text-base text-warm-700 dark:text-warm-200">
+                  วันที่กิจกรรม : <span className="font-semibold text-orange-600 dark:text-orange-400">{formatEventDate(member.event_date)}</span>
                 </div>
               )}
             </div>
@@ -389,7 +463,7 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
                   <button
                     key={opt.value}
                     type="button"
-                    onClick={() => { setStatus(opt.value); setNote(opt.value === 'no_answer' ? 'ไม่รับสาย' : '') }}
+                    onClick={() => { setStatus(opt.value); if (opt.value === 'no_answer' && !note.trim()) setNote('ไม่รับสาย') }}
                     className={`py-4 px-2 text-xl rounded-xl border-2 transition font-medium flex flex-col items-center gap-1.5 ${
                       status === opt.value
                         ? ''
@@ -446,9 +520,6 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
             {/* Signals */}
             {showSignals && (
               <div className="bg-warm-50 dark:bg-warm-dark-200 rounded-lg p-4 space-y-4">
-                {!signalsFilled && (
-                  <div className="text-base text-orange-500 font-medium">เลือกอย่างน้อย 1 ด้าน</div>
-                )}
                 {SIGNALS.map(sig => (
                   <div key={sig.key}>
                     <div className="mb-2 text-base font-semibold text-warm-700 dark:text-warm-200">{sig.label}</div>

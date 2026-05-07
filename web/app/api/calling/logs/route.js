@@ -1,6 +1,6 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
-import { createLog, getLogsByCampaignMember } from '@/db/calling/logs.js'
+import { createLog, getLogsByCampaignMember, getLogById, updateLog, deleteLog } from '@/db/calling/logs.js'
 import { calculateTierFromSignals, upsertTier } from '@/db/calling/tiers.js'
 
 export async function GET(req) {
@@ -70,6 +70,61 @@ export async function POST(req) {
     return Response.json({ success: true, data: { id: logId } }, { status: 201 })
   } catch (error) {
     console.error('[POST /api/calling/logs]', error)
+    return Response.json({ error: 'Internal Server Error' }, { status: 500 })
+  }
+}
+
+const MODERATOR_ROLES = ['Admin', 'เลขาธิการ', 'Moderator']
+
+export async function PATCH(req) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.discordId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+
+  try {
+    const body = await req.json()
+    const { id, status, note, sig_overall, sig_location, sig_availability, sig_interest, sig_reachable } = body
+    if (!id) return Response.json({ error: 'id is required' }, { status: 400 })
+
+    const log = await getLogById(id)
+    if (!log) return Response.json({ error: 'Not found' }, { status: 404 })
+
+    const userRoles = session.user.roles || []
+    const isModerator = MODERATOR_ROLES.some(r => userRoles.includes(r))
+    if (log.called_by !== session.user.discordId && !isModerator) {
+      return Response.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
+    await updateLog(id, { status, note, sig_overall, sig_location, sig_availability, sig_interest, sig_reachable })
+
+    if (status === 'answered' || status === 'met' || log.status === 'answered' || log.status === 'met') {
+      const tier = await calculateTierFromSignals(log.member_id, null, log.contact_type)
+      if (tier) await upsertTier(log.member_id, tier, 'auto', log.contact_type)
+    }
+
+    return Response.json({ success: true })
+  } catch (error) {
+    console.error('[PATCH /api/calling/logs]', error)
+    return Response.json({ error: 'Internal Server Error' }, { status: 500 })
+  }
+}
+
+export async function DELETE(req) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.discordId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+
+  try {
+    const { searchParams } = new URL(req.url)
+    const id = parseInt(searchParams.get('id'))
+    if (!id) return Response.json({ error: 'id is required' }, { status: 400 })
+
+    const userRoles = session.user.roles || []
+    const isModerator = MODERATOR_ROLES.some(r => userRoles.includes(r))
+    if (!isModerator) return Response.json({ error: 'Forbidden' }, { status: 403 })
+
+    await deleteLog(id)
+    return Response.json({ success: true })
+  } catch (error) {
+    console.error('[DELETE /api/calling/logs]', error)
     return Response.json({ error: 'Internal Server Error' }, { status: 500 })
   }
 }

@@ -41,7 +41,7 @@ function DescEdit({ txn, onSaved }) {
 
   return (
     <div className="flex items-center gap-1 group/desc">
-      <p className="text-sm text-gray-900 dark:text-gray-100 truncate">{txn.description || '—'}</p>
+      <p className="text-base text-gray-900 dark:text-gray-100 truncate">{txn.description || '—'}</p>
       <button onClick={() => setEditing(true)} className="opacity-0 group-hover/desc:opacity-100 text-gray-400 hover:text-indigo-500 flex-shrink-0 transition-opacity">
         <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
       </button>
@@ -135,7 +135,7 @@ function CategoryModal({ catRow, filter, categories, onClose, onUpdated }) {
                         <DescEdit txn={t} onSaved={desc => setTxns(prev => prev.map(x => x.id === t.id ? { ...x, description: desc } : x))} />
                         <p className="text-xs text-gray-400">{formatThaiDateShort(t.txn_at)} · {t.account_name}</p>
                       </div>
-                      <p className={`font-mono text-sm font-semibold flex-shrink-0 ${t.type === 'income' ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
+                      <p className={`font-mono text-base font-semibold flex-shrink-0 ${t.type === 'income' ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
                         {t.type === 'income' ? '+' : '-'}{fmt(t.amount)} ฿
                       </p>
                       <div className="flex-shrink-0 w-36">
@@ -154,7 +154,7 @@ function CategoryModal({ catRow, filter, categories, onClose, onUpdated }) {
         </div>
 
         <div className="px-5 py-3 flex-shrink-0 border-t dark:border-gray-700">
-          <button onClick={onClose} className="px-4 py-1.5 rounded border dark:border-gray-600 text-sm text-gray-700 dark:text-gray-300">ปิด</button>
+          <button onClick={onClose} className="px-4 py-1.5 rounded border dark:border-gray-600 text-base text-gray-700 dark:text-gray-300">ปิด</button>
         </div>
       </div>
     </div>
@@ -212,7 +212,7 @@ function ReportContent() {
       {/* Filters */}
       <div className="flex flex-col gap-2 mb-6">
         <AccountSelect accounts={accounts} value={filter.accountId} onChange={v => setFilter(f => ({ ...f, accountId: v }))} placeholder="ทุกบัญชี" className="w-full" />
-        <div className="flex rounded border dark:border-gray-600 overflow-hidden text-sm">
+        <div className="flex rounded border dark:border-gray-600 overflow-hidden text-base">
           {[['', 'ทั้งหมด'], ['income', '📥 รายรับ'], ['expense', '📤 รายจ่าย']].map(([val, label]) => (
             <button key={val} type="button"
               onClick={() => setFilter(f => ({ ...f, type: val }))}
@@ -221,12 +221,12 @@ function ReportContent() {
           ))}
         </div>
         <div className="flex gap-2">
-          <select className="flex-1 border dark:border-gray-600 rounded px-2 py-1.5 text-sm bg-card-bg text-gray-900 dark:text-gray-100"
+          <select className="flex-1 border dark:border-gray-600 rounded px-2 py-1.5 text-base bg-card-bg text-gray-900 dark:text-gray-100"
             value={filter.year} onChange={e => setFilter(f => ({ ...f, year: e.target.value, month: '', dateFrom: '', dateTo: '' }))}>
             <option value="">ทุกปี</option>
             {years.map(y => <option key={y} value={y}>{y + 543} ({y})</option>)}
           </select>
-          <select className="flex-1 border dark:border-gray-600 rounded px-2 py-1.5 text-sm bg-card-bg text-gray-900 dark:text-gray-100"
+          <select className="flex-1 border dark:border-gray-600 rounded px-2 py-1.5 text-base bg-card-bg text-gray-900 dark:text-gray-100"
             value={filter.month} onChange={e => setFilter(f => ({ ...f, month: e.target.value, dateFrom: '', dateTo: '' }))}>
             <option value="">ทุกเดือน</option>
             {MONTHS.map((m, i) => <option key={i+1} value={i+1}>{m}</option>)}
@@ -234,10 +234,10 @@ function ReportContent() {
         </div>
         <div className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
           <span>หรือ</span>
-          <input type="date" className="flex-1 min-w-0 border dark:border-gray-600 rounded px-2 py-1 bg-card-bg text-gray-900 dark:text-gray-100 text-sm"
+          <input type="date" className="flex-1 min-w-0 border dark:border-gray-600 rounded px-2 py-1 bg-card-bg text-gray-900 dark:text-gray-100 text-base"
             value={filter.dateFrom} onChange={e => setFilter(f => ({ ...f, dateFrom: e.target.value, year: '', month: '' }))} />
           <span>–</span>
-          <input type="date" className="flex-1 min-w-0 border dark:border-gray-600 rounded px-2 py-1 bg-card-bg text-gray-900 dark:text-gray-100 text-sm"
+          <input type="date" className="flex-1 min-w-0 border dark:border-gray-600 rounded px-2 py-1 bg-card-bg text-gray-900 dark:text-gray-100 text-base"
             value={filter.dateTo} onChange={e => setFilter(f => ({ ...f, dateTo: e.target.value, year: '', month: '' }))} />
         </div>
       </div>
@@ -283,7 +283,7 @@ function ReportContent() {
                         <button key={`${r.category_id}-${r.type}`} type="button"
                           onClick={() => setModalCat(r)}
                           className="w-full text-left group hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded px-1 -mx-1 transition">
-                          <div className="flex items-center justify-between text-sm mb-0.5">
+                          <div className="flex items-center justify-between text-base mb-0.5">
                             <span className="flex items-center gap-1.5 text-gray-700 dark:text-gray-300 group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
                               <CatIcon name={r.category_icon} size={13} />
                               {r.category_name || 'ไม่มีหมวด'}
@@ -309,7 +309,7 @@ function ReportContent() {
         <div className="bg-card-bg rounded-xl shadow p-4">
           <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-3">แนวโน้มรายเดือน</h2>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-base">
               <thead>
                 <tr className="text-xs text-gray-400 border-b dark:border-gray-700">
                   <th className="text-left pb-2">เดือน</th>
