@@ -184,7 +184,7 @@ export default function Nav({ session }) {
                     className={`px-3 py-1 rounded-l-md text-base transition flex items-center gap-1.5 ${isActive ? activeClass : inactiveClass}`}
                   >
                     <Ic d={ICONS[l.icon]} className="w-7 h-7 shrink-0" />
-                    {l.label}
+                    <span className="hidden md:inline">{l.label}</span>
                     <span className="text-xs font-normal opacity-60">({campaigns.length})</span>
                   </Link>
                   <button
@@ -225,7 +225,7 @@ export default function Nav({ session }) {
                 }`}
               >
                 <Ic d={ICONS[l.icon]} className="w-7 h-7 shrink-0" />
-                {l.label}
+                <span className="hidden md:inline">{l.label}</span>
                 {l.href === '/calling/pending' && pendingCount > 0 && (
                   <span className="text-xs font-semibold px-2 py-1 rounded-full bg-orange text-white leading-none">
                     {pendingCount}

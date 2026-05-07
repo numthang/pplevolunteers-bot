@@ -230,7 +230,7 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
       style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
     >
-      <div className="bg-white dark:bg-warm-dark-100 rounded-xl w-full max-w-2xl shadow-xl">
+      <div className="bg-white dark:bg-warm-dark-100 rounded-xl w-full max-w-3xl shadow-xl">
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-warm-200 dark:border-warm-dark-300">
@@ -242,7 +242,7 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
         </div>
 
         {/* Body */}
-        <div className="p-5 flex flex-col md:grid md:grid-cols-[1fr_280px] gap-5">
+        <div className="p-5 flex flex-col md:grid md:grid-cols-2 gap-5">
 
           {/* SIDEBAR */}
           <div className="md:order-2 bg-warm-50 dark:bg-warm-dark-200 rounded-lg p-4 flex flex-col gap-4">
