@@ -227,7 +227,7 @@ export default function Nav({ session }) {
                 <Ic d={ICONS[l.icon]} />
                 {l.label}
                 {l.href === '/calling/pending' && pendingCount > 0 && (
-                  <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full bg-teal/10 dark:bg-teal/10 text-teal leading-none">
+                  <span className="text-xs font-semibold px-2 py-1 rounded-full bg-orange text-white leading-none">
                     {pendingCount}
                   </span>
                 )}
@@ -312,7 +312,7 @@ export default function Nav({ session }) {
                           <Ic d={ICONS[l.icon]} />
                           {l.label}
                           {l.href === '/calling/pending' && pendingCount > 0 && (
-                            <span className="ml-auto text-xs font-semibold px-1.5 py-0.5 rounded-full bg-teal/10 dark:bg-teal/10 text-teal">
+                            <span className="ml-auto text-xs font-semibold px-2 py-1 rounded-full bg-orange text-white">
                               {pendingCount}
                             </span>
                           )}

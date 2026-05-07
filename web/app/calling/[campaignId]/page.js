@@ -803,15 +803,16 @@ export default function CampaignPage({ params }) {
       {/* Floating toolbar */}
       {selectedMembers.size > 0 && (
         <div className="fixed bottom-4 left-4 right-4 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 sm:w-auto flex items-center gap-3 bg-card-bg border border-warm-200 dark:border-disc-border rounded-2xl sm:rounded-full shadow-lg px-5 py-3 z-40">
-          <span className="text-base font-medium text-warm-900 dark:text-disc-text shrink-0">เลือก {selectedMembers.size} {activeTab === 'contact' ? 'contact' : 'คน'}</span>
           <button onClick={() => setSplitModalOpen(true)}
             className="flex-1 sm:flex-none px-4 py-2 bg-teal hover:opacity-90 text-white text-base font-medium rounded-full transition text-center">
-            มอบหมาย ↗
+            Assign ({selectedMembers.size})
           </button>
           <button onClick={handleUnassign}
-            className="flex-1 sm:flex-none px-4 py-2 bg-card-bg border border-warm-200 dark:border-disc-border text-warm-700 dark:text-disc-text text-base font-medium rounded-full hover:bg-warm-50 dark:hover:bg-disc-hover transition text-center">
-            ยกเลิก
+            className="flex-1 sm:flex-none px-4 py-2 bg-red-500 hover:opacity-90 text-white text-base font-medium rounded-full transition text-center">
+            Unassign ({selectedMembers.size})
           </button>
+          <button onClick={() => setSelectedMembers(new Set())}
+            className="px-3 py-2 text-warm-600 dark:text-warm-300 hover:text-warm-900 dark:hover:text-warm-50 text-xl w-10 h-10 flex items-center justify-center rounded-lg hover:bg-warm-100 dark:hover:bg-warm-dark-200 transition">×</button>
         </div>
       )}
 

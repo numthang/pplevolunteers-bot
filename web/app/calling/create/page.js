@@ -1,8 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { useSession } from 'next-auth/react'
+import { useEffectiveRoles } from '@/lib/useEffectiveRoles.js'
 
 const PROVINCES = [
   'กรุงเทพ', 'นนทบุรี', 'สมุทรปราการ', 'สมุทรสาคร', 'ปทุมธานี',
@@ -23,15 +25,28 @@ const PROVINCES = [
   'ยะลา', 'นราธิวาส'
 ]
 
+function getProvinceFromRoles(roles = []) {
+  const matches = roles.map(r => r.startsWith('ทีม') ? r.slice(3) : '').filter(p => PROVINCES.includes(p))
+  return matches[0] || ''
+}
+
 const inputCls = 'w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-3 text-base rounded-lg placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500'
 
 export default function CreateCampaignPage() {
   const router = useRouter()
+  const { data: session } = useSession()
+  const { roles } = useEffectiveRoles(session)
+  const defaultProvince = session?.user?.primary_province || getProvinceFromRoles(roles)
+
   const [campaignId, setCampaignId] = useState('')
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [province, setProvince] = useState('')
   const [eventDate, setEventDate] = useState('')
+
+  useEffect(() => {
+    if (defaultProvince && !province) setProvince(defaultProvince)
+  }, [defaultProvince])
   const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (e) => {

@@ -222,7 +222,7 @@ export default function PendingCallsPage() {
     }
   }
 
-  const pdpaKey = `pdpa_calling_${searchParams.get('campaign') || 'all'}`
+  const pdpaKey = filterCampaign ? `pdpa_calling_${filterCampaign}` : null
 
   const totalPending = items.filter(m => m.call_status === 'pending').length
   const totalCalled  = items.filter(m => m.call_status === 'called').length
@@ -468,7 +468,7 @@ export default function PendingCallsPage() {
         hasNext={hasNext}
       />
 
-      <PdpaAgreementModal storageKey={pdpaKey} />
+      {pdpaKey && <PdpaAgreementModal storageKey={pdpaKey} />}
     </div>
   )
 }
