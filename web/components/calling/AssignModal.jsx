@@ -29,7 +29,7 @@ export default function AssignModal({ isOpen, selectedCount, onClose, onConfirm 
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-warm-dark-100 rounded-lg shadow-lg max-w-md w-full">
+      <div className="bg-white dark:bg-warm-dark-100 rounded-lg shadow-lg max-w-lg w-full">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-warm-200 dark:border-warm-dark-200">
           <h2 className="text-lg font-medium text-warm-900 dark:text-warm-50">
@@ -73,13 +73,13 @@ export default function AssignModal({ isOpen, selectedCount, onClose, onConfirm 
               disabled={!assignTo.trim() || isLoading}
               className="flex-1 px-4 py-3 bg-teal hover:opacity-90 text-white text-base font-medium rounded-lg disabled:opacity-40 transition"
             >
-              {isLoading ? 'กำลังมอบหมาย...' : 'ยืนยัน'}
+              {isLoading ? 'กำลังมอบหมาย...' : `มอบหมาย ${selectedCount} คน`}
             </button>
             <button
               onClick={handleClose}
               className="px-4 py-3 border border-warm-200 dark:border-warm-dark-300 text-warm-900 dark:text-warm-50 text-base font-medium rounded-lg hover:bg-warm-50 dark:hover:bg-warm-dark-200 transition"
             >
-              ยกเลิก
+              ปิด
             </button>
           </div>
         </div>

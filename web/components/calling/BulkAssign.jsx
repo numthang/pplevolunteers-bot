@@ -180,9 +180,7 @@ export default function BulkAssign({ campaignId, members, districts = [], tiers 
             className="w-4 h-4 accent-teal cursor-pointer"
           />
           <span className="text-warm-700 dark:text-warm-50 font-medium">
-            {selectedMembers.size > 0
-              ? `เลือก ${selectedMembers.size} / ${filteredMembers.length} คน`
-              : `สมาชิกทั้งหมด ${filteredMembers.length} คน`}
+            สมาชิก {filteredMembers.length} คน
           </span>
         </div>
 

@@ -45,3 +45,9 @@ ALTER TABLE calling_assignments
   DROP INDEX uq_member_contact,
   ADD UNIQUE KEY uq_campaign_member_contact (campaign_id, member_id, contact_type);
 
+-- 2026-05-07: dc_members — เพิ่มข้อมูลบัญชีธนาคาร สำหรับโอนเบี้ยเลี้ยง/เงินอุดหนุน
+ALTER TABLE dc_members
+  ADD COLUMN bank_name VARCHAR(50) NULL AFTER primary_province,
+  ADD COLUMN account_no VARCHAR(50) NULL AFTER bank_name,
+  ADD COLUMN account_holder VARCHAR(100) NULL AFTER account_no;
+
