@@ -4,6 +4,10 @@ import { getSession } from '@/lib/auth.js'
 import { redirect } from 'next/navigation'
 import { getMembersCount, getPendingCallCount } from '@/db/calling/members.js'
 import { getCampaigns } from '@/db/calling/campaigns.js'
+import { getAccountsAll } from '@/db/finance/accounts.js'
+import { canViewAccount } from '@/lib/financeAccess.js'
+import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
+import { isAdmin } from '@/lib/roles.js'
 import pool from '@/db/index.js'
 
 const GUILD_ID = process.env.GUILD_ID
@@ -15,18 +19,30 @@ async function getTodayCallCount() {
   return Number(rows[0]?.count) || 0
 }
 
-async function getFinanceSummary() {
-  const [rows] = await pool.query(
-    `SELECT
-       SUM(CASE WHEN t.type='income'  THEN t.amount ELSE 0 END) AS total_income,
-       SUM(CASE WHEN t.type='expense' THEN t.amount ELSE 0 END) AS total_expense
-     FROM finance_transactions t
-     JOIN finance_accounts a ON a.id = t.account_id
-     WHERE t.guild_id = ? AND a.visibility = 'public'
-       AND MONTH(t.txn_at) = MONTH(CURDATE()) AND YEAR(t.txn_at) = YEAR(CURDATE())`,
-    [GUILD_ID]
-  )
-  return rows[0]
+async function getFinanceSummary(session) {
+  const { roles, discordId } = await getEffectiveIdentity(session)
+  const raw = await getAccountsAll(GUILD_ID, discordId, isAdmin(roles))
+  const accessibleAccounts = raw.filter(a => canViewAccount(a, discordId, roles))
+
+  const results = { public: null, internal: null, private: null }
+
+  for (const visibility of ['public', 'internal', 'private']) {
+    const visibleAccounts = accessibleAccounts.filter(a => a.visibility === visibility)
+    if (visibleAccounts.length === 0) continue
+
+    const accountIds = visibleAccounts.map(a => a.id)
+    const [rows] = await pool.query(
+      `SELECT
+         SUM(CASE WHEN t.type='income'  THEN t.amount ELSE 0 END) AS total_income,
+         SUM(CASE WHEN t.type='expense' THEN t.amount ELSE 0 END) AS total_expense
+       FROM finance_transactions t
+       WHERE t.account_id IN (${accountIds.join(',')})
+         AND MONTH(t.txn_at) = MONTH(CURDATE()) AND YEAR(t.txn_at) = YEAR(CURDATE())`
+    )
+    results[visibility] = rows[0]
+  }
+
+  return results
 }
 
 async function getDcMemberCount() {
@@ -105,7 +121,7 @@ export default async function DashboardPage() {
     getCampaigns(),
     getTodayCallCount(),
     discordId ? getPendingCallCount(discordId) : Promise.resolve(0),
-    getFinanceSummary(),
+    getFinanceSummary(session),
     discordId ? getDisplayName(discordId) : Promise.resolve(null),
   ])
 
@@ -158,8 +174,30 @@ export default async function DashboardPage() {
 
       {/* Finance */}
       <Section title="PPLE Finance" href="/finance" icon="transactions">
-        <StatCard label="รายรับเดือนนี้" value={fmtBaht(finance?.total_income)} sub="รายรับ" />
-        <StatCard label="รายจ่ายเดือนนี้" value={fmtBaht(finance?.total_expense)} sub="รายจ่าย" />
+        {finance?.public ? (
+          <>
+            <div className="col-span-2 text-xs font-semibold text-green-600 dark:text-green-400 mb-2">🌐 สาธารณะ</div>
+            <StatCard label="รายรับ" value={fmtBaht(finance.public.total_income)} />
+            <StatCard label="รายจ่าย" value={fmtBaht(finance.public.total_expense)} />
+          </>
+        ) : null}
+        {finance?.internal ? (
+          <>
+            <div className="col-span-2 text-xs font-semibold text-yellow-600 dark:text-yellow-400 mb-2">👥 ภายใน</div>
+            <StatCard label="รายรับ" value={fmtBaht(finance.internal.total_income)} />
+            <StatCard label="รายจ่าย" value={fmtBaht(finance.internal.total_expense)} />
+          </>
+        ) : null}
+        {finance?.private ? (
+          <>
+            <div className="col-span-2 text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">🔒 ส่วนตัว</div>
+            <StatCard label="รายรับ" value={fmtBaht(finance.private.total_income)} />
+            <StatCard label="รายจ่าย" value={fmtBaht(finance.private.total_expense)} />
+          </>
+        ) : null}
+        {!finance?.public && !finance?.internal && !finance?.private ? (
+          <div className="col-span-2 text-xs text-gray-400 text-center py-4">ยังไม่มีข้อมูล</div>
+        ) : null}
       </Section>
 
     </div>

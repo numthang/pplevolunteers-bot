@@ -16,6 +16,12 @@ const FIELDS = [
   { key: 'google_id',  label: 'Google Email',           placeholder: '' },
 ]
 
+const BANK_FIELDS = [
+  { key: 'bank_name',     label: 'ธนาคาร',              placeholder: 'เช่น กรุงไทย, กสิกร' },
+  { key: 'account_no',    label: 'เลขบัญชี',            placeholder: '1234567890' },
+  { key: 'account_holder', label: 'ชื่อบัญชี',          placeholder: '' },
+]
+
 const EMPTY = Object.fromEntries(FIELDS.map(f => [f.key, '']))
 
 export default function ProfilePage() {
@@ -130,21 +136,48 @@ export default function ProfilePage() {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        {FIELDS.map(({ key, label, placeholder }) => (
-          <div key={key}>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {label}
-            </label>
-            <input
-              type="text"
-              value={form[key]}
-              onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
-              placeholder={placeholder}
-              className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-card-bg dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
-            />
+      <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+        {/* Contact Info */}
+        <div>
+          <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">ข้อมูลส่วนตัว</h2>
+          <div className="flex flex-col gap-4">
+            {FIELDS.map(({ key, label, placeholder }) => (
+              <div key={key}>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {label}
+                </label>
+                <input
+                  type="text"
+                  value={form[key]}
+                  onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
+                  placeholder={placeholder}
+                  className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-card-bg dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
+                />
+              </div>
+            ))}
           </div>
-        ))}
+        </div>
+
+        {/* Bank Account Info */}
+        <div>
+          <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">ข้อมูลการเงิน (สำหรับโอนเบี้ยเลี้ยง)</h2>
+          <div className="flex flex-col gap-4">
+            {BANK_FIELDS.map(({ key, label, placeholder }) => (
+              <div key={key}>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {label}
+                </label>
+                <input
+                  type="text"
+                  value={form[key] || ''}
+                  onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
+                  placeholder={placeholder}
+                  className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-card-bg dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
+                />
+              </div>
+            ))}
+          </div>
+        </div>
 
         {provinceOptions.length > 1 && (
           <div>

@@ -11,7 +11,8 @@ export async function GET() {
 
   const [rows] = await pool.query(
     `SELECT nickname, firstname, lastname, member_id, specialty, amphoe, province, region,
-            phone, line_id, google_id, roles, interests, username, display_name, primary_province
+            phone, line_id, google_id, roles, interests, username, display_name, primary_province,
+            bank_name, account_no, account_holder
      FROM dc_members WHERE guild_id = ? AND discord_id = ?`,
     [process.env.GUILD_ID, session.user.discordId]
   )
@@ -55,7 +56,7 @@ export async function PATCH(req) {
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
-  const allowed = ['nickname', 'firstname', 'lastname', 'member_id', 'specialty', 'amphoe', 'phone', 'line_id', 'google_id', 'primary_province']
+  const allowed = ['nickname', 'firstname', 'lastname', 'member_id', 'specialty', 'amphoe', 'phone', 'line_id', 'google_id', 'primary_province', 'bank_name', 'account_no', 'account_holder']
   const updates = {}
   for (const key of allowed) {
     if (key in body) updates[key] = body[key] || null
