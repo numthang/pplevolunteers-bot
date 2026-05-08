@@ -9,6 +9,7 @@ import SmsModal from '@/components/calling/SmsModal.jsx'
 import { CALL_STATUS_COLORS } from '@/lib/callingStatusColors.js'
 
 const MODERATOR_ROLES = ['Admin', 'เลขาธิการ', 'Moderator']
+const SMS_ROLES = ['Admin', 'เลขาธิการ', 'ผู้ประสานงานภาค', 'รองเลขาธิการ', 'ผู้ประสานงานจังหวัด']
 const EDIT_STATUS_OPTIONS = [
   { value: 'answered',   label: 'รับสาย' },
   { value: 'no_answer',  label: 'ไม่รับ' },
@@ -146,6 +147,7 @@ export default function CampaignPage({ params }) {
   const { data: session } = useSession()
   const { roles: effectiveRoles, discordId: effectiveDiscordId } = useEffectiveRoles(session)
   const isModerator = MODERATOR_ROLES.some(r => effectiveRoles.includes(r))
+  const canSendBulkSms = SMS_ROLES.some(r => effectiveRoles.includes(r))
 
   const [splitModalOpen, setSplitModalOpen] = useState(false)
   const [smsModalOpen, setSmsModalOpen] = useState(false)
@@ -886,10 +888,12 @@ export default function CampaignPage({ params }) {
             className="flex-1 sm:flex-none px-4 py-2 bg-red-500 hover:opacity-90 text-white text-base font-medium rounded-full transition text-center">
             Unassign ({selectedMembers.size})
           </button>
-          <button onClick={() => setSmsModalOpen(true)}
-            className="flex-1 sm:flex-none px-4 py-2 bg-indigo-600 hover:opacity-90 text-white text-base font-medium rounded-full transition text-center">
-            SMS ({selectedMembers.size})
-          </button>
+          {canSendBulkSms && (
+            <button onClick={() => setSmsModalOpen(true)}
+              className="flex-1 sm:flex-none px-4 py-2 bg-indigo-600 hover:opacity-90 text-white text-base font-medium rounded-full transition text-center">
+              SMS ({selectedMembers.size})
+            </button>
+          )}
           <button onClick={() => setSelectedMembers(new Set())}
             className="px-3 py-2 text-warm-600 dark:text-warm-300 hover:text-warm-900 dark:hover:text-warm-50 text-xl w-10 h-10 flex items-center justify-center rounded-lg hover:bg-warm-100 dark:hover:bg-warm-dark-200 transition">×</button>
         </div>

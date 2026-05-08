@@ -3,14 +3,19 @@
 import { useState, useEffect } from 'react'
 
 const MAX_THAI_PER_SMS = 70
+const CONFIRM_THRESHOLD = 50
 
 export default function SmsModal({ isOpen, count, campaignId, contactType, memberIds, defaultMessage = '', onClose, onDone }) {
   const [message, setMessage] = useState(defaultMessage)
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState(null)
+  const [confirmInput, setConfirmInput] = useState('')
+
+  const needsConfirm = count > CONFIRM_THRESHOLD
+  const confirmOk = !needsConfirm || confirmInput === String(count)
 
   useEffect(() => {
-    if (!isOpen) { setMessage(defaultMessage); setResult(null) }
+    if (!isOpen) { setMessage(defaultMessage); setResult(null); setConfirmInput('') }
   }, [isOpen, defaultMessage])
 
   const charCount = message.length
@@ -57,10 +62,13 @@ export default function SmsModal({ isOpen, count, campaignId, contactType, membe
         <div className="p-6 space-y-4">
           {!result ? (
             <>
-              <div className="text-base text-warm-600 dark:text-disc-muted bg-warm-50 dark:bg-warm-dark-200 px-4 py-3 rounded-lg">
-                ส่งให้ <strong className="text-warm-900 dark:text-disc-text">{count} คน</strong>
-                {' · '}ประมาณ <strong className="text-warm-900 dark:text-disc-text">{creditEst} เครดิต</strong>
-                {smsCount > 1 && <span className="text-amber-600 dark:text-amber-400"> ({smsCount} SMS/คน)</span>}
+              <div className="text-base text-warm-600 dark:text-disc-muted bg-warm-50 dark:bg-warm-dark-200 px-4 py-3 rounded-lg space-y-1">
+                <div>
+                  ส่งให้ <strong className="text-warm-900 dark:text-disc-text">{count} คน</strong>
+                  {' · '}ประมาณ <strong className="text-warm-900 dark:text-disc-text">{creditEst} SMS</strong>
+                  {smsCount > 1 && <span className="text-amber-600 dark:text-amber-400"> ({smsCount} SMS/คน)</span>}
+                </div>
+                <div className="text-amber-600 dark:text-amber-400">⚠️ 1 SMS = ฿0.50 · ข้อความยาวขึ้น = SMSเพิ่ม</div>
               </div>
 
               <div>
@@ -79,14 +87,30 @@ export default function SmsModal({ isOpen, count, campaignId, contactType, membe
                   className="w-full px-3 py-2.5 text-base border border-warm-200 dark:border-disc-border bg-white dark:bg-warm-dark-200 text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-teal"
                 />
                 <p className="text-base text-warm-400 dark:text-disc-muted mt-1">
-                  ภาษาไทย {MAX_THAI_PER_SMS} ตัว = 1 SMS · URL ยาวกว่า 25 ตัวจะถูกย่ออัตโนมัติ
+                  ภาษาไทย {MAX_THAI_PER_SMS} ตัว = 1 SMS · URL ยาวกว่า 40 ตัวจะถูกย่ออัตโนมัติ
                 </p>
               </div>
+
+              {needsConfirm && (
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-4 py-3 space-y-2">
+                  <p className="text-base text-red-700 dark:text-red-400 font-medium">
+                    จะส่ง SMS ให้ <strong>{count} คน</strong> ใช้ประมาณ <strong>{creditEst} SMS</strong> — พิมพ์จำนวนคนเพื่อยืนยัน
+                  </p>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={confirmInput}
+                    onChange={e => setConfirmInput(e.target.value)}
+                    placeholder={`พิมพ์ ${count}`}
+                    className="w-full h-11 px-3 text-base border border-red-300 dark:border-red-700 bg-white dark:bg-warm-dark-200 text-warm-900 dark:text-disc-text rounded-lg focus:outline-none focus:ring-2 focus:ring-red-400"
+                  />
+                </div>
+              )}
 
               <div className="flex gap-3 pt-2 border-t border-warm-200 dark:border-disc-border">
                 <button
                   onClick={handleSend}
-                  disabled={!message.trim() || loading}
+                  disabled={!message.trim() || loading || !confirmOk}
                   className="flex-1 px-4 py-3 bg-teal hover:opacity-90 text-white text-base font-medium rounded-lg disabled:opacity-40 transition"
                 >
                   {loading ? 'กำลังส่ง...' : `ส่ง SMS (${count} คน)`}

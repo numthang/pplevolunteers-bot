@@ -93,10 +93,13 @@ export async function POST(req) {
       const batch  = validIds.slice(i, i + BATCH)
       const msisdn = batch.map(id => phoneMap[id]).join(',')
 
+      const urlsInMsg = message.match(/https?:\/\/[^\s]+/g) || []
+      const shortenUrl = urlsInMsg.some(u => u.length > 40)
+
       const apiRes = await fetch('https://api-v2.thaibulksms.com/sms', {
         method: 'POST',
         headers: { 'Authorization': `Basic ${auth}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ msisdn, message, sender: SENDER, force: FORCE, Shorten_url: false }),
+        body: JSON.stringify({ msisdn, message, sender: SENDER, force: FORCE, Shorten_url: shortenUrl }),
       })
 
       const apiData = await apiRes.json()
