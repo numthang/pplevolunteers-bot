@@ -692,7 +692,7 @@ export default function CampaignPage({ params }) {
               const expiryBadge = isMember ? getExpiryBadge(item.expired_at) : null
               const catColor  = !isMember && item.category ? (CATEGORY_COLORS[item.category] || CATEGORY_COLORS.other) : null
 
-              const displayName = isMember ? item.full_name : `${item.first_name} ${item.last_name}`
+              const displayName = isMember ? item.full_name : [item.first_name, item.last_name].filter(Boolean).join(' ')
               const amphoe  = isMember ? item.home_amphure  : item.amphoe
               const tambon  = isMember ? item.home_district : item.tambon
               const phone   = isMember ? item.mobile_number : item.phone

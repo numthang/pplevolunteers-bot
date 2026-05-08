@@ -106,7 +106,7 @@ export async function getContactsInCampaign(campaignId, filters = {}, limit = 10
   const params = [process.env.GUILD_ID, campaignId]
 
   if (amphoe) { query += ` AND c.amphoe = ?`; params.push(amphoe) }
-  if (name)   { query += ` AND CONCAT(c.first_name,' ',c.last_name) LIKE ?`; params.push(`%${name}%`) }
+  if (name)   { query += ` AND CONCAT(c.first_name,' ',COALESCE(c.last_name,'')) LIKE ?`; params.push(`%${name}%`) }
 
   query += `
    GROUP BY c.id
