@@ -62,13 +62,10 @@ export default function SmsModal({ isOpen, count, campaignId, contactType, membe
         <div className="p-6 space-y-4">
           {!result ? (
             <>
-              <div className="text-base text-warm-600 dark:text-disc-muted bg-warm-50 dark:bg-warm-dark-200 px-4 py-3 rounded-lg space-y-1">
-                <div>
-                  ส่งให้ <strong className="text-warm-900 dark:text-disc-text">{count} คน</strong>
-                  {' · '}ประมาณ <strong className="text-warm-900 dark:text-disc-text">{creditEst} SMS</strong>
-                  {smsCount > 1 && <span className="text-amber-600 dark:text-amber-400"> ({smsCount} SMS/คน)</span>}
-                </div>
-                <div className="text-amber-600 dark:text-amber-400">⚠️ 1 SMS = ฿0.50 · ข้อความยาวขึ้น = SMSเพิ่ม</div>
+              <div className="text-base text-warm-600 dark:text-disc-muted bg-warm-50 dark:bg-warm-dark-200 px-4 py-3 rounded-lg">
+                ส่งให้ <strong className="text-warm-900 dark:text-disc-text">{count} คน</strong>
+                {' · '}ประมาณ <strong className="text-warm-900 dark:text-disc-text">{creditEst} SMS</strong>
+                {smsCount > 1 && <span className="text-amber-600 dark:text-amber-400"> ({smsCount} SMS/คน)</span>}
               </div>
 
               <div>
@@ -86,8 +83,8 @@ export default function SmsModal({ isOpen, count, campaignId, contactType, membe
                   autoFocus
                   className="w-full px-3 py-2.5 text-base border border-warm-200 dark:border-disc-border bg-white dark:bg-warm-dark-200 text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-teal"
                 />
-                <p className="text-base text-warm-400 dark:text-disc-muted mt-1">
-                  ภาษาไทย {MAX_THAI_PER_SMS} ตัว = 1 SMS · URL ยาวกว่า 40 ตัวจะถูกย่ออัตโนมัติ
+                <p className="text-base text-amber-600 dark:text-amber-400 mt-1">
+                  ⚠️ ข้อความ 70 ตัว = 1 sms การส่ง SMS มีค่าใช้จ่าย 1 sms ต่อ 0.58 สตางค์
                 </p>
               </div>
 
