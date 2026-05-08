@@ -27,19 +27,22 @@ export async function POST(req) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  if (!canSendSms(session.user.roles || [])) {
-    return Response.json({ error: 'Forbidden' }, { status: 403 })
-  }
-
   if (!API_KEY || !API_SECRET) {
     return Response.json({ error: 'SMS gateway not configured' }, { status: 503 })
   }
+
+  const hasSmsRole = canSendSms(session.user.roles || [])
 
   try {
     const { campaign_id, contact_type = 'member', member_ids, message } = await req.json()
 
     if (!member_ids?.length || !message?.trim()) {
       return Response.json({ error: 'member_ids and message are required' }, { status: 400 })
+    }
+
+    // bulk → role required; single → anyone with page access can send
+    if (member_ids.length > 1 && !hasSmsRole) {
+      return Response.json({ error: 'ไม่มีสิทธิ์ส่ง SMS — เฉพาะ Admin, เลขาธิการ, ผู้ประสานงานภาค, รองเลขาธิการ, ผู้ประสานงานจังหวัด' }, { status: 403 })
     }
 
     // Fetch phones for all member_ids

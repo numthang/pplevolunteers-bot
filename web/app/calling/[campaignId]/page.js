@@ -149,6 +149,7 @@ export default function CampaignPage({ params }) {
 
   const [splitModalOpen, setSplitModalOpen] = useState(false)
   const [smsModalOpen, setSmsModalOpen] = useState(false)
+  const [singleSmsTarget, setSingleSmsTarget] = useState(null)
   const [expandedId, setExpandedId] = useState(null)
   const [logsCache, setLogsCache] = useState({})
   const [editingLogId, setEditingLogId] = useState(null)
@@ -784,6 +785,14 @@ export default function CampaignPage({ params }) {
                         {!isMember && item.email && <span className="text-warm-500 dark:text-disc-muted">{item.email}</span>}
                         {!isMember && item.note && <span className="text-warm-600 dark:text-disc-text italic">"{item.note}"</span>}
                       </div>
+                      {hasPhone && (
+                        <button
+                          onClick={() => setSingleSmsTarget([itemId])}
+                          className="mb-1.5 px-3 py-1 text-base bg-indigo-600 hover:opacity-90 text-white rounded-lg transition"
+                        >
+                          ส่ง SMS
+                        </button>
+                      )}
                       {itemLogs === undefined ? (
                         <div className="text-base text-warm-400 dark:text-disc-muted py-1">กำลังโหลด...</div>
                       ) : itemLogs.length === 0 ? (
@@ -913,6 +922,19 @@ export default function CampaignPage({ params }) {
           setSmsModalOpen(false)
           setSelectedMembers(new Set())
           loadFirst(activeTab, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled, filterSort, filterStatus)
+        }}
+      />
+
+      <SmsModal
+        isOpen={!!singleSmsTarget}
+        count={1}
+        campaignId={parseInt(campaignId)}
+        contactType={activeTab === 'contact' ? 'contact' : 'member'}
+        memberIds={singleSmsTarget || []}
+        onClose={() => setSingleSmsTarget(null)}
+        onDone={() => {
+          setSingleSmsTarget(null)
+          if (expandedId) reloadLogs(expandedId)
         }}
       />
     </div>
