@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react'
 import { useEffectiveRoles } from '@/lib/useEffectiveRoles.js'
 import { CALL_STATUS_COLORS } from '@/lib/callingStatusColors.js'
 import { SIGNALS, SIGNAL_OPTIONS, findSignalLabel } from '@/lib/callingSignals.js'
+import SmsModal from '@/components/calling/SmsModal.jsx'
 
 const MODERATOR_ROLES = ['Admin', 'เลขาธิการ', 'Moderator']
 
@@ -88,9 +89,9 @@ function ExpandableText({ text, clamp = 'line-clamp-2', className = '' }) {
   )
 }
 
-function CampaignActions({ campaignName, description, phone }) {
+function CampaignActions({ campaignName, description, onSmsClick }) {
   const [copied, setCopied] = useState(false)
-  const copyText = [campaignName, description].filter(Boolean).join('\n')
+  const copyText = description || campaignName || ''
 
   async function copy() {
     await navigator.clipboard.writeText(copyText)
@@ -108,10 +109,10 @@ function CampaignActions({ campaignName, description, phone }) {
         )}
         {copied ? 'คัดลอกแล้ว' : 'คัดลอก'}
       </button>
-      <a href={`sms:${phone || ''}?body=${encodeURIComponent(copyText)}`} className="flex items-center gap-1 text-base text-teal hover:underline" title="ส่ง SMS">
+      <button onClick={onSmsClick} className="flex items-center gap-1 text-base text-teal hover:underline" title="ส่ง SMS">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
         SMS
-      </a>
+      </button>
       <a href={`https://line.me/R/share?text=${encodeURIComponent(copyText)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-base text-teal hover:underline" title="ส่ง LINE">
         <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5"><path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63h2.386c.349 0 .63.285.63.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63.349 0 .631.285.631.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.281.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314" /></svg>
         LINE
@@ -139,6 +140,7 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
   const { roles: effectiveRoles, discordId: effectiveDiscordId } = useEffectiveRoles(session)
   const isModerator = MODERATOR_ROLES.some(r => effectiveRoles.includes(r))
 
+  const [smsModalOpen, setSmsModalOpen] = useState(false)
   const [status, setStatus] = useState('')
   const [rsvp, setRsvp] = useState('')
   const [note, setNote] = useState('')
@@ -209,6 +211,19 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
 
   if (!isOpen || !member) return null
 
+  const smsModal = (
+    <SmsModal
+      isOpen={smsModalOpen}
+      count={1}
+      campaignId={member.campaign_id || 0}
+      contactType={contact_type}
+      memberIds={[memberId]}
+      defaultMessage={member.campaign_description || ''}
+      onClose={() => setSmsModalOpen(false)}
+      onDone={() => { setSmsModalOpen(false); loadHistory() }}
+    />
+  )
+
   const tier = member.tier || 'D'
   const tierColor = TIER_COLORS[tier]
   const displayName = member.full_name || [member.first_name, member.last_name].filter(Boolean).join(' ') || '?'
@@ -225,6 +240,7 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
   const canSave = status && note.trim() && (!signalsApply || signalsFilled) && (status !== 'answered' || isContact || rsvp)
 
   return (
+    <>
     <div
       className="fixed inset-0 z-50 overflow-y-auto flex items-start sm:items-center justify-center p-3 sm:p-6"
       style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
@@ -434,7 +450,7 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
 
             {/* Campaign info */}
             <div className="bg-white dark:bg-warm-dark-100 rounded-lg p-3 border border-warm-200 dark:border-warm-dark-300 space-y-2 overflow-hidden">
-              <CampaignActions campaignName={member.campaign_name} description={member.campaign_description} phone={member.mobile_number || member.phone} />
+              <CampaignActions campaignName={member.campaign_name} description={member.campaign_description} onSmsClick={() => setSmsModalOpen(true)} />
               <div className="text-base font-semibold text-warm-900 dark:text-warm-50">{member.campaign_name || '—'}</div>
               {member.campaign_description && (
                 <p className="text-base text-warm-700 dark:text-warm-200 whitespace-pre-wrap break-all">{parseLinks(member.campaign_description)}</p>
@@ -503,13 +519,13 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
                       key={opt.value}
                       type="button"
                       onClick={() => setRsvp(opt.value)}
-                      className={`py-4 px-2 text-xl rounded-xl border-2 transition font-medium flex flex-col items-center justify-center gap-1.5 ${
+                      className={`py-2.5 px-2 text-base rounded-lg border-2 transition font-medium flex items-center justify-center gap-1.5 ${
                         rsvp === opt.value
                           ? opt.activeClass
-                          : 'border-warm-200 dark:border-warm-dark-300 text-warm-700 dark:text-warm-200 hover:border-teal hover:text-teal'
+                          : 'bg-warm-100 dark:bg-warm-dark-200 border-warm-300 dark:border-warm-dark-300 text-warm-700 dark:text-warm-200 hover:border-teal hover:text-teal'
                       }`}
                     >
-                      <span className="text-2xl leading-none">{opt.icon}</span>
+                      <span>{opt.icon}</span>
                       <span>{opt.label}</span>
                     </button>
                   ))}
@@ -580,5 +596,7 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
         </div>
       </div>
     </div>
+    {smsModal}
+    </>
   )
 }

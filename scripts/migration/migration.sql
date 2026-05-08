@@ -51,3 +51,8 @@ ALTER TABLE dc_members
   ADD COLUMN account_no VARCHAR(50) NULL AFTER bank_name,
   ADD COLUMN account_holder VARCHAR(100) NULL AFTER account_no;
 
+-- 2026-05-08: calling_logs — เพิ่ม SMS statuses สำหรับ bulk SMS ผ่าน ThaiBulkSMS
+ALTER TABLE calling_logs
+  MODIFY COLUMN status ENUM('answered','no_answer','not_called','met','sms_sent','sms_delivered','sms_failed')
+  COLLATE utf8mb4_unicode_ci NOT NULL;
+

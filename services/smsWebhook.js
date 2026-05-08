@@ -25,7 +25,39 @@ function init(client) {
 	})
 }
 
+async function handleSmsBulkCallback(req, res) {
+	try {
+		const url = new URL(req.url, 'http://localhost')
+		const transaction = url.searchParams.get('Transaction')
+		const status = url.searchParams.get('Status')
+
+		if (!transaction || !status) {
+			res.writeHead(400).end(JSON.stringify({ ok: false, reason: 'missing params' }))
+			return
+		}
+
+		const logStatus = status === 'delivery' ? 'sms_delivered' : 'sms_failed'
+
+		const [result] = await pool.query(
+			`UPDATE calling_logs SET status = ? WHERE JSON_UNQUOTE(JSON_EXTRACT(extra, '$.message_id')) = ?`,
+			[logStatus, transaction]
+		)
+
+		log.info(`[smsWebhook] /sms-bulk: ${transaction} → ${logStatus} (${result.affectedRows} rows)`)
+		res.writeHead(200).end(JSON.stringify({ ok: true }))
+	} catch (err) {
+		log.error('[smsWebhook] /sms-bulk error:', err.message)
+		res.writeHead(500).end(JSON.stringify({ ok: false, error: err.message }))
+	}
+}
+
 async function handleRequest(req, res) {
+	const urlPath = (req.url || '/').split('?')[0]
+
+	if (req.method === 'GET' && urlPath === '/thaibulksms') {
+		return handleSmsBulkCallback(req, res)
+	}
+
 	if (req.method !== 'POST') {
 		res.writeHead(405).end('Method Not Allowed')
 		return

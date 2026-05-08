@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { useEffectiveRoles } from '@/lib/useEffectiveRoles.js'
 import SplitModal from '@/components/calling/SplitModal.jsx'
+import SmsModal from '@/components/calling/SmsModal.jsx'
 import { CALL_STATUS_COLORS } from '@/lib/callingStatusColors.js'
 
 const MODERATOR_ROLES = ['Admin', 'เลขาธิการ', 'Moderator']
@@ -147,14 +148,13 @@ export default function CampaignPage({ params }) {
   const isModerator = MODERATOR_ROLES.some(r => effectiveRoles.includes(r))
 
   const [splitModalOpen, setSplitModalOpen] = useState(false)
+  const [smsModalOpen, setSmsModalOpen] = useState(false)
   const [expandedId, setExpandedId] = useState(null)
   const [logsCache, setLogsCache] = useState({})
   const [editingLogId, setEditingLogId] = useState(null)
   const [editStatus, setEditStatus] = useState('')
   const [editNote, setEditNote] = useState('')
 
-  const LOG_STATUS_LABEL = { answered: 'รับสาย', no_answer: 'ไม่รับ', busy: 'สายไม่ว่าง', not_called: 'ข้าม' }
-  const LOG_STATUS_COLOR = { answered: '#0d9e94', no_answer: '#a32d2d', busy: '#854f0b', not_called: '#6b7280' }
 
   const reloadLogs = useCallback(async (itemId) => {
     const contactType = activeTab === 'contact' ? '&contactType=contact' : ''
@@ -791,42 +791,38 @@ export default function CampaignPage({ params }) {
                       ) : (
                         <div className="space-y-1">
                           {itemLogs.map(log => {
-                            const logColor = LOG_STATUS_COLOR[log.status] ? { bg: LOG_STATUS_COLOR[log.status], text: '#fff' } : { bg: '#f3f4f6', text: '#6b7280' }
+                            const logColor = CALL_STATUS_COLORS[log.status] || { bg: '#f3f4f6', text: '#6b7280', label: log.status }
                             const canEdit = log.called_by === effectiveDiscordId || isModerator
                             const isEditing = editingLogId === log.id
                             return (
                               <div key={log.id} className="py-0.5">
                                 {!isEditing && (
-                                  <div className="flex items-start gap-2">
-                                    <div className="flex-1 flex flex-wrap items-baseline gap-x-1.5">
-                                      <span className="px-2 py-0.5 rounded text-base font-semibold shrink-0" style={{ backgroundColor: logColor.bg, color: logColor.text }}>{LOG_STATUS_LABEL[log.status] || log.status}</span>
-                                      <span className="text-base text-warm-800 dark:text-warm-100 break-words">
-                                        {log.note ? parseLinksPage(log.note) : null}
-                                        <span className="italic text-warm-400 dark:text-disc-muted">
-                                          {(log.note && (log.caller_name || log.called_at)) ? ' — ' : ''}
-                                          {log.caller_name && <a href={`https://discord.com/users/${log.called_by}`} target="_blank" rel="noopener noreferrer" className="hover:underline">{log.caller_name}</a>}
-                                          {log.caller_name && log.called_at ? ' ' : ''}
-                                          {log.called_at ? new Date(log.called_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' }) : null}
-                                        </span>
+                                  <div className="flex flex-wrap items-baseline gap-x-1.5">
+                                    <span className="px-2 py-0.5 rounded text-base font-semibold shrink-0" style={{ backgroundColor: logColor.bg, color: logColor.text }}>{logColor.label}</span>
+                                    <span className="text-base text-warm-800 dark:text-warm-100 break-words">
+                                      {log.note ? parseLinksPage(log.note) : null}
+                                      <span className="italic text-warm-400 dark:text-disc-muted">
+                                        {(log.note && (log.caller_name || log.called_at)) ? ' — ' : ''}
+                                        {log.caller_name && <a href={`https://discord.com/users/${log.called_by}`} target="_blank" rel="noopener noreferrer" className="hover:underline">{log.caller_name}</a>}
+                                        {log.caller_name && log.called_at ? ' ' : ''}
+                                        {log.called_at ? new Date(log.called_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' }) : null}
                                       </span>
-                                    </div>
-                                    <div className="flex items-center gap-1 shrink-0">
-                                      {canEdit && (
-                                        <button onClick={() => { setEditingLogId(log.id); setEditStatus(log.status); setEditNote(log.note || '') }}
-                                          className="p-1 rounded text-warm-400 hover:text-teal hover:bg-warm-100 dark:hover:bg-warm-dark-200 transition">
-                                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                                        </button>
-                                      )}
-                                      {isModerator && (
-                                        <button onClick={async () => {
-                                          if (!confirm('ลบ log นี้?')) return
-                                          await fetch(`/api/calling/logs?id=${log.id}`, { method: 'DELETE' })
-                                          reloadLogs(itemId)
-                                        }} className="p-1 rounded text-warm-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition">
-                                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
-                                        </button>
-                                      )}
-                                    </div>
+                                    </span>
+                                    {canEdit && (
+                                      <button onClick={() => { setEditingLogId(log.id); setEditStatus(log.status); setEditNote(log.note || '') }}
+                                        className="p-0.5 rounded text-warm-400 hover:text-teal transition shrink-0">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                      </button>
+                                    )}
+                                    {isModerator && (
+                                      <button onClick={async () => {
+                                        if (!confirm('ลบ log นี้?')) return
+                                        await fetch(`/api/calling/logs?id=${log.id}`, { method: 'DELETE' })
+                                        reloadLogs(itemId)
+                                      }} className="p-0.5 rounded text-warm-400 hover:text-red-500 transition shrink-0">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                                      </button>
+                                    )}
                                   </div>
                                 )}
                                 {isEditing ? (
@@ -890,6 +886,10 @@ export default function CampaignPage({ params }) {
             className="flex-1 sm:flex-none px-4 py-2 bg-red-500 hover:opacity-90 text-white text-base font-medium rounded-full transition text-center">
             Unassign ({selectedMembers.size})
           </button>
+          <button onClick={() => setSmsModalOpen(true)}
+            className="flex-1 sm:flex-none px-4 py-2 bg-indigo-600 hover:opacity-90 text-white text-base font-medium rounded-full transition text-center">
+            SMS ({selectedMembers.size})
+          </button>
           <button onClick={() => setSelectedMembers(new Set())}
             className="px-3 py-2 text-warm-600 dark:text-warm-300 hover:text-warm-900 dark:hover:text-warm-50 text-xl w-10 h-10 flex items-center justify-center rounded-lg hover:bg-warm-100 dark:hover:bg-warm-dark-200 transition">×</button>
         </div>
@@ -900,6 +900,20 @@ export default function CampaignPage({ params }) {
         unassignedCount={selectedMembers.size > 0 ? selectedMembers.size : stats.unassigned}
         onClose={() => setSplitModalOpen(false)}
         onConfirm={handleSplit}
+      />
+
+      <SmsModal
+        isOpen={smsModalOpen}
+        count={selectedMembers.size}
+        campaignId={parseInt(campaignId)}
+        contactType={activeTab === 'contact' ? 'contact' : 'member'}
+        memberIds={Array.from(selectedMembers)}
+        onClose={() => setSmsModalOpen(false)}
+        onDone={() => {
+          setSmsModalOpen(false)
+          setSelectedMembers(new Set())
+          loadFirst(activeTab, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled, filterSort, filterStatus)
+        }}
       />
     </div>
   )

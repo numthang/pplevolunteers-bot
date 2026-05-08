@@ -24,17 +24,15 @@ export default function CampaignCard({ campaign, canCreate }) {
             {campaign.description}
           </p>
         )}
-        <div className="space-y-1.5 pt-2 border-t border-warm-200 dark:border-warm-dark-200 text-base">
-          <div className="flex justify-between items-center text-warm-400 dark:text-warm-dark-400">
-            <span className="font-medium text-warm-900 dark:text-warm-50">
-              {campaign.call_count || 0} การโทร
+        <div className="space-y-1 pt-2 border-t border-warm-200 dark:border-warm-dark-200 text-base">
+          <span className="font-medium text-warm-900 dark:text-warm-50 block">
+            {campaign.call_count || 0} การโทร
+          </span>
+          {campaign.event_date && (
+            <span className="text-orange-600 dark:text-orange-400 font-medium block">
+              วันจัดกิจกรรม: {new Date(campaign.event_date).toLocaleDateString('th-TH')}
             </span>
-            {campaign.event_date && (
-              <span className="text-orange-600 dark:text-orange-400 font-medium">
-                วันจัดกิจกรรม: {new Date(campaign.event_date).toLocaleDateString('th-TH')}
-              </span>
-            )}
-          </div>
+          )}
         </div>
       </Link>
 
