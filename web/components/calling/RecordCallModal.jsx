@@ -6,6 +6,7 @@ import { useEffectiveRoles } from '@/lib/useEffectiveRoles.js'
 import { CALL_STATUS_COLORS } from '@/lib/callingStatusColors.js'
 import { SIGNALS, SIGNAL_OPTIONS, findSignalLabel } from '@/lib/callingSignals.js'
 import SmsModal from '@/components/calling/SmsModal.jsx'
+import { buildSmsTemplate } from '@/lib/buildSmsTemplate.js'
 
 const MODERATOR_ROLES = ['Admin', 'เลขาธิการ', 'Moderator']
 
@@ -131,8 +132,11 @@ const THAI_MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.
 
 function formatEventDate(dateStr) {
   if (!dateStr) return '—'
-  const [year, month, day] = dateStr.split('-').map(Number)
-  return `${day} ${THAI_MONTHS[month - 1]} ${year + 543}`
+  const [datePart, timePart] = dateStr.split('T')
+  const [year, month, day] = datePart.split('-').map(Number)
+  let result = `${day} ${THAI_MONTHS[month - 1]} ${year + 543}`
+  if (timePart && timePart !== '00:00') result += ` ${timePart} น.`
+  return result
 }
 
 export default function RecordCallModal({ isOpen, member, contact_type = 'member', onClose, onSave, onSaveAndNext, hasNext }) {
@@ -218,7 +222,7 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
       campaignId={member.campaign_id || 0}
       contactType={contact_type}
       memberIds={[memberId]}
-      defaultMessage={member.campaign_description || ''}
+      defaultMessage={buildSmsTemplate(member.campaign_name, member.event_date, member.campaign_id)}
       onClose={() => setSmsModalOpen(false)}
       onDone={() => { setSmsModalOpen(false); loadHistory() }}
     />

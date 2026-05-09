@@ -2,7 +2,7 @@ import pool from '../index.js'
 
 export async function getCampaignById(id) {
   const [rows] = await pool.query(
-    `SELECT id, name, province, description, DATE_FORMAT(event_date, '%Y-%m-%d') AS event_date, created_at
+    `SELECT id, name, province, description, DATE_FORMAT(event_date, '%Y-%m-%dT%H:%i') AS event_date, created_at
      FROM act_event_cache WHERE id = ? AND type = 'campaign'`,
     [id]
   )

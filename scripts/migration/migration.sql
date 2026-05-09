@@ -56,3 +56,6 @@ ALTER TABLE calling_logs
   MODIFY COLUMN status ENUM('answered','no_answer','not_called','met','sms_sent','sms_delivered','sms_failed')
   COLLATE utf8mb4_unicode_ci NOT NULL;
 
+-- 2026-05-09: act_event_cache — เปลี่ยน event_date เป็น DATETIME เพื่อเก็บเวลาจัดกิจกรรมด้วย
+ALTER TABLE act_event_cache MODIFY COLUMN event_date DATETIME NULL;
+

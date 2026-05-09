@@ -3,6 +3,17 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
+const THAI_MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.']
+
+function formatEventDate(dateStr) {
+  if (!dateStr) return ''
+  const [datePart, timePart] = dateStr.split('T')
+  const [year, month, day] = datePart.split('-').map(Number)
+  let result = `${day} ${THAI_MONTHS[month - 1]} ${year + 543}`
+  if (timePart && timePart !== '00:00') result += ` ${timePart} น.`
+  return result
+}
+
 export default function CampaignCard({ campaign, canCreate }) {
   const router = useRouter()
 
@@ -30,7 +41,7 @@ export default function CampaignCard({ campaign, canCreate }) {
           </span>
           {campaign.event_date && (
             <span className="text-orange-600 dark:text-orange-400 font-medium block">
-              วันจัดกิจกรรม: {new Date(campaign.event_date).toLocaleDateString('th-TH')}
+              วันจัดกิจกรรม: {formatEventDate(campaign.event_date)}
             </span>
           )}
         </div>

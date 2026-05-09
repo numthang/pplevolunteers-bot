@@ -111,7 +111,7 @@ export default function CreateCampaignPage() {
 
           <div>
             <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-gray-300">วันจัดกิจกรรม</label>
-            <input type="date" value={eventDate} onChange={e => setEventDate(e.target.value)} className={inputCls} />
+            <input type="datetime-local" value={eventDate} onChange={e => setEventDate(e.target.value)} className={inputCls} />
           </div>
 
           <button type="submit" disabled={loading}

@@ -326,7 +326,7 @@ export async function getMyAssignedMembers(discordId, { campaignId, status, rsvp
          a.rsvp,
          ec.name AS campaign_name,
          ec.description AS campaign_description,
-         DATE_FORMAT(ec.event_date, '%Y-%m-%d') AS event_date,
+         DATE_FORMAT(ec.event_date, '%Y-%m-%dT%H:%i') AS event_date,
          COALESCE(all_stats.total_calls, 0) AS total_calls,
          COALESCE(all_stats.answered_count, 0) AS answered_count,
          COALESCE(camp_stats.camp_calls, 0) AS camp_calls,

@@ -7,6 +7,7 @@ import { useEffectiveRoles } from '@/lib/useEffectiveRoles.js'
 import SplitModal from '@/components/calling/SplitModal.jsx'
 import SmsModal from '@/components/calling/SmsModal.jsx'
 import { CALL_STATUS_COLORS } from '@/lib/callingStatusColors.js'
+import { buildSmsTemplate } from '@/lib/buildSmsTemplate.js'
 
 const MODERATOR_ROLES = ['Admin', 'เลขาธิการ', 'Moderator']
 const SMS_ROLES = ['Admin', 'เลขาธิการ', 'ผู้ประสานงานภาค', 'รองเลขาธิการ', 'ผู้ประสานงานจังหวัด']
@@ -912,6 +913,7 @@ export default function CampaignPage({ params }) {
         campaignId={parseInt(campaignId)}
         contactType={activeTab === 'contact' ? 'contact' : 'member'}
         memberIds={Array.from(selectedMembers)}
+        defaultMessage={buildSmsTemplate(campaign?.name, campaign?.event_date, campaignId)}
         onClose={() => setSmsModalOpen(false)}
         onDone={() => {
           setSmsModalOpen(false)
