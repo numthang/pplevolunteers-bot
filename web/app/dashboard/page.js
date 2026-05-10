@@ -65,10 +65,10 @@ export const metadata = { title: 'Dashboard' }
 
 function StatCard({ label, value, sub }) {
   return (
-    <div className="flex flex-col bg-card-bg border border-brand-blue-light dark:border-gray-800 rounded-lg p-5">
-      <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{label}</p>
-      <p className="text-3xl font-bold text-gray-900 dark:text-white">{value}</p>
-      {sub && <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{sub}</p>}
+    <div className="flex flex-col bg-card-bg border border-brand-blue-light dark:border-disc-border rounded-lg p-5">
+      <p className="text-sm text-warm-500 dark:text-disc-muted mb-1">{label}</p>
+      <p className="text-3xl font-bold text-warm-900 dark:text-disc-text">{value}</p>
+      {sub && <p className="text-xs text-warm-400 dark:text-disc-muted mt-1">{sub}</p>}
     </div>
   )
 }
@@ -96,7 +96,7 @@ function Section({ title, href, icon, children }) {
   )
 
   return (
-    <div className="bg-card-bg border border-brand-blue-light dark:border-gray-800 rounded-xl p-6">
+    <div className="bg-card-bg border border-brand-blue-light dark:border-disc-border rounded-xl p-6">
       {href ? (
         <Link href={href} className="text-xl font-bold text-brand-orange mb-4 hover:text-brand-orange-light transition inline-flex items-center gap-2">
           {titleContent}
@@ -132,7 +132,7 @@ export default async function DashboardPage() {
     <div className="space-y-3">
 
       {/* Profile */}
-      <div className="flex items-center gap-3 p-4 bg-card-bg rounded-xl border border-gray-200 dark:border-gray-700">
+      <div className="flex items-center gap-3 p-4 bg-card-bg rounded-xl border border-warm-200 dark:border-disc-border">
         {session.user.image && (
           <Image src={session.user.image} alt="" width={48} height={48} className="rounded-full shrink-0" />
         )}
@@ -141,13 +141,13 @@ export default async function DashboardPage() {
             href={`https://discord.com/users/${session.user.discordId}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="font-semibold text-gray-900 dark:text-gray-100 hover:underline truncate block"
+            className="font-semibold text-warm-900 dark:text-disc-text hover:underline truncate block"
           >
             @{session.user.name}
           </a>
-          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">ID: {session.user.discordId}</p>
+          <p className="text-xs text-warm-500 dark:text-disc-muted truncate">ID: {session.user.discordId}</p>
           {displayName && displayName !== session.user.name && (
-            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">Display name: {displayName}</p>
+            <p className="text-xs text-warm-500 dark:text-disc-muted truncate">Display name: {displayName}</p>
           )}
         </div>
         <Link
@@ -190,13 +190,13 @@ export default async function DashboardPage() {
         ) : null}
         {finance?.private ? (
           <>
-            <div className="col-span-2 text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">🔒 ส่วนตัว</div>
+            <div className="col-span-2 text-xs font-semibold text-warm-500 dark:text-disc-muted mb-2">🔒 ส่วนตัว</div>
             <StatCard label="รายรับ" value={fmtBaht(finance.private.total_income)} />
             <StatCard label="รายจ่าย" value={fmtBaht(finance.private.total_expense)} />
           </>
         ) : null}
         {!finance?.public && !finance?.internal && !finance?.private ? (
-          <div className="col-span-2 text-xs text-gray-400 text-center py-4">ยังไม่มีข้อมูล</div>
+          <div className="col-span-2 text-xs text-warm-400 dark:text-disc-muted text-center py-4">ยังไม่มีข้อมูล</div>
         ) : null}
       </Section>
 

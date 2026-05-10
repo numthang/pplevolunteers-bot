@@ -232,18 +232,18 @@ export default function PendingCallsPage() {
     <div>
       {/* Header */}
       <div className="mb-5">
-        <h1 className="text-2xl font-medium text-warm-900 dark:text-warm-50 mb-1">Pending calls <span className="text-warm-400 dark:text-warm-dark-500 font-normal">(assignee)</span></h1>
-        <p className="text-base text-warm-500 dark:text-warm-dark-500">รายชื่อที่ได้รับ assign มาให้คุณโทร</p>
+        <h1 className="text-2xl font-medium text-warm-900 dark:text-disc-text mb-1">Pending calls <span className="text-warm-400 dark:text-disc-muted font-normal">(assignee)</span></h1>
+        <p className="text-base text-warm-500 dark:text-disc-muted">รายชื่อที่ได้รับ assign มาให้คุณโทร</p>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-4 border-b border-warm-200 dark:border-warm-dark-300">
+      <div className="flex gap-1 mb-4 border-b border-warm-200 dark:border-disc-border">
         {['member', 'contact'].map(tab => (
           <button key={tab} onClick={() => switchTab(tab)}
             className={`px-4 py-2 text-base font-medium border-b-2 -mb-px transition-colors ${
               activeTab === tab
                 ? 'border-teal text-teal'
-                : 'border-transparent text-warm-500 dark:text-warm-dark-500 hover:text-warm-900 dark:hover:text-warm-50'
+                : 'border-transparent text-warm-500 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text'
             }`}>
             {tab === 'member' ? 'Member' : 'Contact'}
           </button>
@@ -255,7 +255,7 @@ export default function PendingCallsPage() {
         <select
           value={filterCampaign}
           onChange={e => setFilterCampaign(e.target.value)}
-          className="h-11 px-3 text-base border border-warm-200 dark:border-warm-dark-300 bg-card-bg text-warm-900 dark:text-warm-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal flex-1 sm:flex-none"
+          className="h-11 px-3 text-base border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text rounded-lg focus:outline-none focus:ring-2 focus:ring-teal flex-1 sm:flex-none"
         >
           <option value="">Campaign (ทั้งหมด)</option>
           {campaigns.map(c => (
@@ -263,7 +263,7 @@ export default function PendingCallsPage() {
           ))}
         </select>
 
-        <div className="flex rounded-lg border border-warm-200 dark:border-warm-dark-300 overflow-hidden shrink-0">
+        <div className="flex rounded-lg border border-warm-200 dark:border-disc-border overflow-hidden shrink-0">
           {STATUS_OPTIONS.map(opt => (
             <button
               key={opt.value}
@@ -271,7 +271,7 @@ export default function PendingCallsPage() {
               className={`px-4 py-2.5 text-base font-medium whitespace-nowrap transition ${
                 filterStatus === opt.value
                   ? 'bg-teal text-white'
-                  : 'bg-card-bg text-warm-700 dark:text-warm-200 hover:bg-warm-50 dark:hover:bg-warm-dark-200'
+                  : 'bg-card-bg text-warm-700 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover'
               }`}
             >
               {opt.label}
@@ -283,7 +283,7 @@ export default function PendingCallsPage() {
           <select
             value={filterRsvp}
             onChange={e => setFilterRsvp(e.target.value)}
-            className="h-11 px-3 text-base border border-warm-200 dark:border-warm-dark-300 bg-card-bg text-warm-900 dark:text-warm-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal flex-1 sm:flex-none"
+            className="h-11 px-3 text-base border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text rounded-lg focus:outline-none focus:ring-2 focus:ring-teal flex-1 sm:flex-none"
           >
             <option value="">RSVP (ทั้งหมด)</option>
             <option value="yes">✓ เข้าร่วม</option>
@@ -297,15 +297,15 @@ export default function PendingCallsPage() {
       {!loading && total > 0 && (
         <div className="flex gap-6 mb-5 text-base">
           <div>
-            <span className="text-warm-500 dark:text-warm-dark-500">ทั้งหมด:</span>
-            <span className="ml-1.5 font-semibold text-warm-900 dark:text-warm-50">{total}</span>
+            <span className="text-warm-500 dark:text-disc-muted">ทั้งหมด:</span>
+            <span className="ml-1.5 font-semibold text-warm-900 dark:text-disc-text">{total}</span>
           </div>
           <div>
-            <span className="text-warm-500 dark:text-warm-dark-500">รอโทร:</span>
+            <span className="text-warm-500 dark:text-disc-muted">รอโทร:</span>
             <span className="ml-1.5 font-semibold text-orange-600">{totalPending}</span>
           </div>
           <div>
-            <span className="text-warm-500 dark:text-warm-dark-500">โทรแล้ว:</span>
+            <span className="text-warm-500 dark:text-disc-muted">โทรแล้ว:</span>
             <span className="ml-1.5 font-semibold text-teal">{totalCalled}</span>
           </div>
         </div>
@@ -313,22 +313,22 @@ export default function PendingCallsPage() {
 
       {/* List */}
       {loading ? (
-        <div className="py-20 text-center text-warm-400 dark:text-warm-dark-400 text-base">กำลังโหลด...</div>
+        <div className="py-20 text-center text-warm-400 dark:text-disc-muted text-base">กำลังโหลด...</div>
       ) : items.length === 0 ? (
-        <div className="bg-card-bg border border-warm-200 dark:border-warm-dark-300 rounded-xl py-16 text-center text-warm-400 dark:text-warm-dark-400 text-base">
+        <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl py-16 text-center text-warm-400 dark:text-disc-muted text-base">
           {filterStatus === 'pending' ? 'โทรครบทุกคนแล้ว 🎉' : 'ไม่มีรายการ'}
         </div>
       ) : (
-        <div className="bg-card-bg border border-warm-200 dark:border-warm-dark-300 rounded-xl overflow-hidden">
+        <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl overflow-hidden">
           {/* Table header — desktop only */}
-          <div className="hidden sm:grid items-center px-4 py-2.5 gap-2 bg-warm-100 dark:bg-warm-dark-200 border-b border-warm-200 dark:border-warm-dark-300 text-sm font-medium text-warm-500 dark:text-warm-dark-500 [grid-template-columns:1fr_40px_64px_88px]">
+          <div className="hidden sm:grid items-center px-4 py-2.5 gap-2 bg-warm-100 dark:bg-disc-header border-b border-warm-200 dark:border-disc-border text-sm font-medium text-warm-500 dark:text-disc-muted [grid-template-columns:1fr_40px_64px_88px]">
             <span>ชื่อ</span>
             <span className="text-center">ระดับ</span>
             <span className="text-center">รับสาย</span>
             <span className="text-right">สถานะ</span>
           </div>
 
-          <div className="divide-y divide-warm-200 dark:divide-warm-dark-300">
+          <div className="divide-y divide-warm-200 dark:divide-disc-border">
             {items.map(item => {
               const isContact = activeTab === 'contact'
               const tier = item.tier || 'D'
@@ -343,7 +343,7 @@ export default function PendingCallsPage() {
                 <button
                   key={getItemKey(item)}
                   onClick={() => openModal(item)}
-                  className="w-full text-left px-4 py-4 hover:bg-warm-50 dark:hover:bg-warm-dark-200 transition group"
+                  className="w-full text-left px-4 py-4 hover:bg-warm-50 dark:hover:bg-disc-hover transition group"
                 >
                   {/* Mobile layout */}
                   <div className="sm:hidden">
@@ -354,7 +354,7 @@ export default function PendingCallsPage() {
                             className="text-base font-semibold px-1.5 py-0.5 rounded flex-shrink-0"
                             style={{ backgroundColor: tierColor.bg, color: tierColor.text }}
                           >{tier}</span>
-                          <span className="text-base font-medium text-warm-900 dark:text-warm-50 group-hover:text-teal transition-colors truncate">
+                          <span className="text-base font-medium text-warm-900 dark:text-disc-text group-hover:text-teal transition-colors truncate">
                             {displayName}
                           </span>
                           {expiryBadge && <span className={`text-base font-medium px-1.5 py-0.5 rounded flex-shrink-0 ${expiryBadge.cls}`}>{expiryBadge.label}</span>}
@@ -362,11 +362,11 @@ export default function PendingCallsPage() {
                         </div>
                         <div className="flex items-center gap-1.5 text-base truncate mt-0.5">
                           {phone && <span className="text-teal font-medium">{phone}</span>}
-                          {phone && amphoe && <span className="text-warm-300 dark:text-warm-dark-500">·</span>}
-                          {amphoe && <span className="text-warm-400 dark:text-warm-dark-400 truncate">{amphoe}</span>}
+                          {phone && amphoe && <span className="text-warm-300 dark:text-disc-muted/40">·</span>}
+                          {amphoe && <span className="text-warm-400 dark:text-disc-muted truncate">{amphoe}</span>}
                         </div>
                         {item.latest_note && (
-                          <div className="text-base text-warm-600 dark:text-warm-200 mt-1 italic whitespace-pre-wrap break-words">
+                          <div className="text-base text-warm-600 dark:text-disc-text mt-1 italic whitespace-pre-wrap break-words">
                             "{item.latest_note}"
                           </div>
                         )}
@@ -388,7 +388,7 @@ export default function PendingCallsPage() {
                             </div>
                           )
                         })()}
-                        <span className="text-base text-warm-400 dark:text-warm-dark-400">
+                        <span className="text-base text-warm-400 dark:text-disc-muted">
                           {item.answered_count}/{item.total_calls} รับ
                         </span>
                       </div>
@@ -400,7 +400,7 @@ export default function PendingCallsPage() {
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="text-base font-medium text-warm-900 dark:text-warm-50 group-hover:text-teal transition-colors truncate">
+                          <span className="text-base font-medium text-warm-900 dark:text-disc-text group-hover:text-teal transition-colors truncate">
                             {displayName}
                           </span>
                           {expiryBadge && <span className={`text-base font-medium px-1.5 py-0.5 rounded flex-shrink-0 ${expiryBadge.cls}`}>{expiryBadge.label}</span>}
@@ -408,11 +408,11 @@ export default function PendingCallsPage() {
                         </div>
                         <div className="flex items-center gap-1.5 text-base truncate">
                           {phone && <span className="text-teal font-medium">{phone}</span>}
-                          {phone && amphoe && <span className="text-warm-300 dark:text-warm-dark-500">·</span>}
-                          {amphoe && <span className="text-warm-400 dark:text-warm-dark-400 truncate">{amphoe}</span>}
+                          {phone && amphoe && <span className="text-warm-300 dark:text-disc-muted/40">·</span>}
+                          {amphoe && <span className="text-warm-400 dark:text-disc-muted truncate">{amphoe}</span>}
                         </div>
                         {item.latest_note && (
-                          <div className="text-base text-warm-600 dark:text-warm-200 mt-0.5 italic whitespace-pre-wrap break-words">
+                          <div className="text-base text-warm-600 dark:text-disc-text mt-0.5 italic whitespace-pre-wrap break-words">
                             "{item.latest_note}"
                           </div>
                         )}
@@ -426,9 +426,9 @@ export default function PendingCallsPage() {
                       >{tier}</span>
                     </div>
 
-                    <div className="text-center text-base text-warm-500 dark:text-warm-dark-500">
-                      <span className="font-semibold text-warm-900 dark:text-warm-50">{item.answered_count}</span>
-                      <span className="text-warm-300 dark:text-warm-dark-500">/</span>
+                    <div className="text-center text-base text-warm-500 dark:text-disc-muted">
+                      <span className="font-semibold text-warm-900 dark:text-disc-text">{item.answered_count}</span>
+                      <span className="text-warm-300 dark:text-disc-muted/40">/</span>
                       <span>{item.total_calls}</span>
                     </div>
 

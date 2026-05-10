@@ -490,8 +490,8 @@ export default function CampaignPage({ params }) {
       {/* Campaign Header */}
       <div className="bg-card-bg border border-warm-200 dark:border-disc-border border-l-4 border-l-violet-500 dark:border-l-violet-400 rounded-lg px-4 py-3 mb-4">
         <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-          <h1 className="text-lg font-semibold text-warm-900 dark:text-disc-text">
-            {campaign?.name} <span className="text-warm-500 dark:text-warm-dark-400 font-normal text-base">(assignor)</span>
+          <h1 className="text-2xl font-bold text-warm-900 dark:text-disc-text">
+            {campaign?.name} <span className="text-warm-500 dark:text-disc-muted font-normal text-base">(assignor)</span>
           </h1>
           <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-base text-warm-500 dark:text-disc-muted">
             <span>{activeTab === 'contact' ? 'Contact' : 'Member'} <span className="font-semibold text-warm-900 dark:text-disc-text">{stats.total}</span></span>
@@ -669,8 +669,8 @@ export default function CampaignPage({ params }) {
           <div className="px-6 py-8 text-center text-warm-400 dark:text-disc-muted text-base">กำลังโหลด...</div>
         ) : noAccess ? (
           <div className="px-6 py-10 text-center">
-            <p className="text-base text-warm-700 dark:text-warm-100 font-medium mb-1">ยังไม่ได้รับสิทธิ์เข้าถึงส่วนนี้</p>
-            <p className="text-base text-warm-400 dark:text-warm-dark-500">ต้องการเข้าใช้งาน? ติดต่อฝ่ายเครือข่ายได้เลยนะครับ</p>
+            <p className="text-base text-warm-700 dark:text-disc-text font-medium mb-1">ยังไม่ได้รับสิทธิ์เข้าถึงส่วนนี้</p>
+            <p className="text-base text-warm-400 dark:text-disc-muted">ต้องการเข้าใช้งาน? ติดต่อฝ่ายเครือข่ายได้เลยนะครับ</p>
           </div>
         ) : members.length === 0 ? (
           <div className="px-6 py-8 text-center text-warm-400 dark:text-disc-muted text-base">
@@ -726,7 +726,7 @@ export default function CampaignPage({ params }) {
                         {catColor && <span className="shrink-0 text-sm px-1.5 py-0.5 rounded font-medium" style={{ background: catColor.bg, color: catColor.text }}>{CATEGORY_LABELS[item.category] || item.category}</span>}
                         {!hasPhone && <span className="shrink-0 text-base text-warm-400 dark:text-disc-muted font-normal">ไม่มีเบอร์</span>}
                       </div>
-                      <div className="flex items-center gap-1.5 text-base text-warm-500 dark:text-warm-200 truncate">
+                      <div className="flex items-center gap-1.5 text-base text-warm-500 dark:text-disc-text truncate">
                         <span className="shrink-0 w-1.5 h-1.5 rounded-full inline-block" style={{ backgroundColor: badge.text }} />
                         <span className="truncate">
                           {[tambon, amphoe, item.assigned_to ? usersMap[item.assigned_to] || item.assigned_to : null]
@@ -739,7 +739,7 @@ export default function CampaignPage({ params }) {
                         )}
                       </div>
                       {item.last_note && (
-                        <div className="text-base text-warm-600 dark:text-warm-200 mt-0.5 truncate italic">
+                        <div className="text-base text-warm-600 dark:text-disc-text mt-0.5 truncate italic">
                           "{item.last_note}"
                         </div>
                       )}
@@ -802,7 +802,7 @@ export default function CampaignPage({ params }) {
                                 {!isEditing && (
                                   <div className="flex flex-wrap items-baseline gap-x-1.5">
                                     <span className="px-2 py-0.5 rounded text-base font-semibold shrink-0" style={{ backgroundColor: logColor.bg, color: logColor.text }}>{logColor.label}</span>
-                                    <span className="text-base text-warm-800 dark:text-warm-100 break-words">
+                                    <span className="text-base text-warm-800 dark:text-disc-text break-words">
                                       {log.note ? parseLinksPage(log.note) : null}
                                       <span className="italic text-warm-400 dark:text-disc-muted">
                                         {(log.note && (log.caller_name || log.called_at)) ? ' — ' : ''}
@@ -850,7 +850,7 @@ export default function CampaignPage({ params }) {
                                         setEditingLogId(null)
                                         reloadLogs(itemId)
                                       }} className="px-3 py-1 rounded text-base bg-teal text-white hover:bg-teal/90 transition">บันทึก</button>
-                                      <button onClick={() => setEditingLogId(null)} className="px-3 py-1 rounded text-base text-warm-500 hover:bg-warm-100 dark:hover:bg-warm-dark-200 transition">ยกเลิก</button>
+                                      <button onClick={() => setEditingLogId(null)} className="px-3 py-1 rounded text-base text-warm-500 hover:bg-warm-100 dark:hover:bg-disc-hover transition">ยกเลิก</button>
                                     </div>
                                   </div>
                                 ) : null}
@@ -896,7 +896,7 @@ export default function CampaignPage({ params }) {
             </button>
           )}
           <button onClick={() => setSelectedMembers(new Set())}
-            className="px-3 py-2 text-warm-600 dark:text-warm-300 hover:text-warm-900 dark:hover:text-warm-50 text-xl w-10 h-10 flex items-center justify-center rounded-lg hover:bg-warm-100 dark:hover:bg-warm-dark-200 transition">×</button>
+            className="px-3 py-2 text-warm-600 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text text-xl w-10 h-10 flex items-center justify-center rounded-lg hover:bg-warm-100 dark:hover:bg-disc-hover transition">×</button>
         </div>
       )}
 

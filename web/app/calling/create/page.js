@@ -30,7 +30,7 @@ function getProvinceFromRoles(roles = []) {
   return matches[0] || ''
 }
 
-const inputCls = 'w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-3 text-base rounded-lg placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500'
+const inputCls = 'w-full border border-gray-300 dark:border-disc-border bg-white dark:bg-disc-hover text-gray-900 dark:text-disc-text p-3 text-base rounded-lg placeholder-gray-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-indigo-500'
 
 export default function CreateCampaignPage() {
   const router = useRouter()
@@ -76,12 +76,12 @@ export default function CreateCampaignPage() {
         ← กลับ
       </Link>
 
-      <div className="max-w-2xl bg-card-bg border border-gray-200 dark:border-gray-700 rounded-xl p-6">
-        <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-gray-100">สร้างแคมเปญการโทรใหม่</h1>
+      <div className="max-w-2xl bg-card-bg border border-gray-200 dark:border-disc-border rounded-xl p-6">
+        <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-disc-text">สร้างแคมเปญการโทรใหม่</h1>
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-gray-300">
+            <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-disc-text">
               Campaign ID <span className="font-normal text-gray-400">(ไม่ระบุ = อัตโนมัติ)</span>
             </label>
             <input type="number" value={campaignId} onChange={e => setCampaignId(e.target.value)}
@@ -89,20 +89,20 @@ export default function CreateCampaignPage() {
           </div>
 
           <div>
-            <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-gray-300">ชื่อแคมเปญ *</label>
+            <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-disc-text">ชื่อแคมเปญ *</label>
             <input type="text" value={name} onChange={e => setName(e.target.value)}
               placeholder="เช่น บ้านโป่ง ราชบุรี ครั้งที่ 1" className={inputCls} required />
           </div>
 
           <div>
-            <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-gray-300">รายละเอียด</label>
+            <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-disc-text">รายละเอียด</label>
             <textarea value={description}
               onChange={e => { setDescription(e.target.value); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px' }}
               placeholder="บรรยายเพิ่มเติม..." className={inputCls} rows="4" style={{ resize: 'none', overflow: 'hidden' }} />
           </div>
 
           <div>
-            <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-gray-300">จังหวัด</label>
+            <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-disc-text">จังหวัด</label>
             <select value={province} onChange={e => setProvince(e.target.value)} className={inputCls}>
               <option value="">-- ไม่ระบุ --</option>
               {[...PROVINCES].sort((a, b) => a.localeCompare(b, 'th')).map(p => <option key={p} value={p}>{p}</option>)}
@@ -110,7 +110,7 @@ export default function CreateCampaignPage() {
           </div>
 
           <div>
-            <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-gray-300">วันจัดกิจกรรม</label>
+            <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-disc-text">วันจัดกิจกรรม</label>
             <input type="datetime-local" value={eventDate} onChange={e => setEventDate(e.target.value)} className={inputCls} />
           </div>
 

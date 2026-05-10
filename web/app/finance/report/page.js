@@ -31,7 +31,7 @@ function DescEdit({ txn, onSaved }) {
 
   if (editing) return (
     <div className="flex items-center gap-1">
-      <input autoFocus className="text-sm border dark:border-gray-600 rounded px-2 py-0.5 flex-1 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+      <input autoFocus className="text-sm border dark:border-disc-border rounded px-2 py-0.5 flex-1 bg-white dark:bg-disc-hover text-gray-900 dark:text-disc-text"
         value={val} onChange={e => setVal(e.target.value)}
         onKeyDown={e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') setEditing(false) }} />
       <button onClick={save} disabled={saving} className="text-xs text-indigo-600 dark:text-indigo-400 px-1">บันทึก</button>
@@ -41,7 +41,7 @@ function DescEdit({ txn, onSaved }) {
 
   return (
     <div className="flex items-center gap-1 group/desc">
-      <p className="text-base text-gray-900 dark:text-gray-100 truncate">{txn.description || '—'}</p>
+      <p className="text-base text-gray-900 dark:text-disc-text truncate">{txn.description || '—'}</p>
       <button onClick={() => setEditing(true)} className="opacity-0 group-hover/desc:opacity-100 text-gray-400 hover:text-indigo-500 flex-shrink-0 transition-opacity">
         <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
       </button>
@@ -101,18 +101,18 @@ function CategoryModal({ catRow, filter, categories, onClose, onUpdated }) {
         <div className="flex items-center justify-between px-5 pt-5 pb-3 flex-shrink-0 gap-3 flex-wrap">
           <div className="flex items-center gap-2">
             <CatIcon name={catRow.category_icon} size={16} />
-            <h2 className="font-bold text-gray-900 dark:text-gray-100">{catRow.category_name || 'ไม่มีหมวด'}</h2>
+            <h2 className="font-bold text-gray-900 dark:text-disc-text">{catRow.category_name || 'ไม่มีหมวด'}</h2>
             <span className="text-sm text-gray-400">{catRow.type === 'income' ? '📥' : '📤'} {catRow.count} รายการ</span>
           </div>
           <div className="flex items-center gap-2">
             <select value={sort} onChange={e => setSort(e.target.value)}
-              className="border dark:border-gray-600 rounded px-2 py-1 text-xs bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200">
+              className="border dark:border-disc-border rounded px-2 py-1 text-xs bg-white dark:bg-disc-hover text-gray-700 dark:text-disc-text">
               <option value="date_desc">วันที่ ใหม่→เก่า</option>
               <option value="date_asc">วันที่ เก่า→ใหม่</option>
               <option value="amount_desc">ยอด มาก→น้อย</option>
               <option value="amount_asc">ยอด น้อย→มาก</option>
             </select>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"><X size={18} /></button>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-disc-text"><X size={18} /></button>
           </div>
         </div>
 
@@ -129,7 +129,7 @@ function CategoryModal({ catRow, filter, categories, onClose, onUpdated }) {
                     if (sort === 'amount_asc')  return Number(a.amount) - Number(b.amount)
                     return 0
                   }).map((t, idx) => (
-                    <div key={t.id} className="flex items-center gap-3 py-2 border-b dark:border-gray-700 last:border-0">
+                    <div key={t.id} className="flex items-center gap-3 py-2 border-b dark:border-disc-border last:border-0">
                       <span className="text-xs text-gray-400 w-7 text-right flex-shrink-0">{idx + 1}</span>
                       <div className="flex-1 min-w-0">
                         <DescEdit txn={t} onSaved={desc => setTxns(prev => prev.map(x => x.id === t.id ? { ...x, description: desc } : x))} />
@@ -153,8 +153,8 @@ function CategoryModal({ catRow, filter, categories, onClose, onUpdated }) {
           }
         </div>
 
-        <div className="px-5 py-3 flex-shrink-0 border-t dark:border-gray-700">
-          <button onClick={onClose} className="px-4 py-1.5 rounded border dark:border-gray-600 text-base text-gray-700 dark:text-gray-300">ปิด</button>
+        <div className="px-5 py-3 flex-shrink-0 border-t dark:border-disc-border">
+          <button onClick={onClose} className="px-4 py-1.5 rounded border dark:border-disc-border text-base text-gray-700 dark:text-disc-text">ปิด</button>
         </div>
       </div>
     </div>
@@ -212,32 +212,32 @@ function ReportContent() {
       {/* Filters */}
       <div className="flex flex-col gap-2 mb-6">
         <AccountSelect accounts={accounts} value={filter.accountId} onChange={v => setFilter(f => ({ ...f, accountId: v }))} placeholder="ทุกบัญชี" className="w-full" />
-        <div className="flex rounded border dark:border-gray-600 overflow-hidden text-base">
+        <div className="flex rounded border dark:border-disc-border overflow-hidden text-base">
           {[['', 'ทั้งหมด'], ['income', '📥 รายรับ'], ['expense', '📤 รายจ่าย']].map(([val, label]) => (
             <button key={val} type="button"
               onClick={() => setFilter(f => ({ ...f, type: val }))}
-              className={`flex-1 px-3 py-1.5 ${filter.type === val ? 'bg-indigo-600 text-white' : 'bg-card-bg text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
+              className={`flex-1 px-3 py-1.5 ${filter.type === val ? 'bg-indigo-600 text-white' : 'bg-card-bg text-gray-700 dark:text-disc-text hover:bg-gray-50 dark:hover:bg-disc-hover'}`}
             >{label}</button>
           ))}
         </div>
         <div className="flex gap-2">
-          <select className="flex-1 border dark:border-gray-600 rounded px-2 py-1.5 text-base bg-card-bg text-gray-900 dark:text-gray-100"
+          <select className="flex-1 border dark:border-disc-border rounded px-2 py-1.5 text-base bg-card-bg text-gray-900 dark:text-disc-text"
             value={filter.year} onChange={e => setFilter(f => ({ ...f, year: e.target.value, month: '', dateFrom: '', dateTo: '' }))}>
             <option value="">ทุกปี</option>
             {years.map(y => <option key={y} value={y}>{y + 543} ({y})</option>)}
           </select>
-          <select className="flex-1 border dark:border-gray-600 rounded px-2 py-1.5 text-base bg-card-bg text-gray-900 dark:text-gray-100"
+          <select className="flex-1 border dark:border-disc-border rounded px-2 py-1.5 text-base bg-card-bg text-gray-900 dark:text-disc-text"
             value={filter.month} onChange={e => setFilter(f => ({ ...f, month: e.target.value, dateFrom: '', dateTo: '' }))}>
             <option value="">ทุกเดือน</option>
             {MONTHS.map((m, i) => <option key={i+1} value={i+1}>{m}</option>)}
           </select>
         </div>
-        <div className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
+        <div className="flex items-center gap-1 text-sm text-gray-500 dark:text-disc-muted">
           <span>หรือ</span>
-          <input type="date" className="flex-1 min-w-0 border dark:border-gray-600 rounded px-2 py-1 bg-card-bg text-gray-900 dark:text-gray-100 text-base"
+          <input type="date" className="flex-1 min-w-0 border dark:border-disc-border rounded px-2 py-1 bg-card-bg text-gray-900 dark:text-disc-text text-base"
             value={filter.dateFrom} onChange={e => setFilter(f => ({ ...f, dateFrom: e.target.value, year: '', month: '' }))} />
           <span>–</span>
-          <input type="date" className="flex-1 min-w-0 border dark:border-gray-600 rounded px-2 py-1 bg-card-bg text-gray-900 dark:text-gray-100 text-base"
+          <input type="date" className="flex-1 min-w-0 border dark:border-disc-border rounded px-2 py-1 bg-card-bg text-gray-900 dark:text-disc-text text-base"
             value={filter.dateTo} onChange={e => setFilter(f => ({ ...f, dateTo: e.target.value, year: '', month: '' }))} />
         </div>
       </div>
@@ -253,13 +253,13 @@ function ReportContent() {
               { label: 'รายจ่าย', value: totalExpense, cls: 'text-red-500 dark:text-red-400' },
             ].map(({ label, value, cls }) => (
               <div key={label} className="bg-card-bg rounded-xl shadow px-3 py-3 text-center">
-                <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{label}</p>
+                <p className="text-xs text-gray-500 dark:text-disc-muted mb-1">{label}</p>
                 <p className={`font-mono font-bold text-lg leading-tight ${cls}`}>{fmt(value)} ฿</p>
               </div>
             ))}
           </div>
           <div className="bg-card-bg rounded-xl shadow px-3 py-3 text-center">
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">สุทธิ</p>
+            <p className="text-xs text-gray-500 dark:text-disc-muted mb-1">สุทธิ</p>
             <p className={`font-mono font-bold text-lg leading-tight ${net >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>{fmt(net)} ฿</p>
           </div>
         </div>
@@ -273,7 +273,7 @@ function ReportContent() {
             .filter(g => g.rows.length > 0 || !filter.type)
             .map(({ label, rows, total, barCls }) => (
             <div key={label} className="bg-card-bg rounded-xl shadow p-4">
-              <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-3">{label}</h2>
+              <h2 className="text-sm font-semibold text-gray-500 dark:text-disc-muted mb-3">{label}</h2>
               {rows.length === 0
                 ? <p className="text-gray-400 text-sm text-center py-4">ไม่มีข้อมูล</p>
                 : <div className="space-y-2">
@@ -282,16 +282,16 @@ function ReportContent() {
                       return (
                         <button key={`${r.category_id}-${r.type}`} type="button"
                           onClick={() => setModalCat(r)}
-                          className="w-full text-left group hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded px-1 -mx-1 transition">
+                          className="w-full text-left group hover:bg-gray-50 dark:hover:bg-disc-hover rounded px-1 -mx-1 transition">
                           <div className="flex items-center justify-between text-base mb-0.5">
-                            <span className="flex items-center gap-1.5 text-gray-700 dark:text-gray-300 group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
+                            <span className="flex items-center gap-1.5 text-gray-700 dark:text-disc-text group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
                               <CatIcon name={r.category_icon} size={13} />
                               {r.category_name || 'ไม่มีหมวด'}
                               <span className="text-xs text-gray-400">({r.count})</span>
                             </span>
-                            <span className="font-mono text-gray-900 dark:text-gray-100 text-xs">{fmt(r.total)} ฿</span>
+                            <span className="font-mono text-gray-900 dark:text-disc-text text-xs">{fmt(r.total)} ฿</span>
                           </div>
-                          <div className="h-1.5 rounded bg-gray-100 dark:bg-gray-700">
+                          <div className="h-1.5 rounded bg-gray-100 dark:bg-disc-hover">
                             <div className={`h-1.5 rounded ${barCls}`} style={{ width: `${pct.toFixed(1)}%` }} />
                           </div>
                         </button>
@@ -307,11 +307,11 @@ function ReportContent() {
       {/* Monthly trend */}
       {data && trendMonths.length > 0 && (
         <div className="bg-card-bg rounded-xl shadow p-4">
-          <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-3">แนวโน้มรายเดือน</h2>
+          <h2 className="text-sm font-semibold text-gray-500 dark:text-disc-muted mb-3">แนวโน้มรายเดือน</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-base">
               <thead>
-                <tr className="text-xs text-gray-400 border-b dark:border-gray-700">
+                <tr className="text-xs text-gray-400 border-b dark:border-disc-border">
                   <th className="text-left pb-2">เดือน</th>
                   <th className="text-right pb-2 text-green-600 dark:text-green-400">รายรับ</th>
                   <th className="text-right pb-2 text-red-500 dark:text-red-400">รายจ่าย</th>
@@ -327,8 +327,8 @@ function ReportContent() {
                   const e = Number(exp?.total || 0)
                   const n = i - e
                   return (
-                    <tr key={key} className="border-b dark:border-gray-700 last:border-0">
-                      <td className="py-2 text-gray-700 dark:text-gray-300">{MONTHS[m-1]} {y + 543}</td>
+                    <tr key={key} className="border-b dark:border-disc-border last:border-0">
+                      <td className="py-2 text-gray-700 dark:text-disc-text">{MONTHS[m-1]} {y + 543}</td>
                       <td className="py-2 text-right font-mono text-green-600 dark:text-green-400">{i > 0 ? fmt(i) : '—'}</td>
                       <td className="py-2 text-right font-mono text-red-500 dark:text-red-400">{e > 0 ? fmt(e) : '—'}</td>
                       <td className={`py-2 text-right font-mono font-semibold ${n >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>

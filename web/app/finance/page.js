@@ -13,7 +13,7 @@ const GUILD_ID = process.env.GUILD_ID
 const VISIBILITY_LABEL = {
   public:   { label: 'สาธารณะ', cls: 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400' },
   internal: { label: 'ภายใน',   cls: 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-400' },
-  private:  { label: 'ส่วนตัว', cls: 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400' },
+  private:  { label: 'ส่วนตัว', cls: 'bg-gray-100 dark:bg-disc-hover text-gray-500 dark:text-disc-muted' },
 }
 
 function fmt(n) {
@@ -59,7 +59,7 @@ export default async function FinancePage() {
             return (
               <div key={key}>
                 <div className="flex items-center gap-2 mb-3">
-                  <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">{label}</h2>
+                  <h2 className="text-sm font-semibold text-gray-500 dark:text-disc-muted uppercase tracking-wide">{label}</h2>
                   <span className={`text-sm font-mono font-semibold ${total >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
                     {total < 0 ? '-' : ''}{fmt(total)}
                   </span>

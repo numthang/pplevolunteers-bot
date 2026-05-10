@@ -31,16 +31,16 @@ export default function AccountSelect({ accounts = [], value, onChange, placehol
   const dropdown = open && rect && createPortal(
     <div ref={dropRef}
       style={{ position: 'fixed', top: rect.bottom + 4, left: rect.left, minWidth: rect.width, zIndex: 9999 }}
-      className="bg-white dark:bg-gray-800 border dark:border-gray-600 rounded-xl shadow-lg max-h-64 overflow-y-auto"
+      className="bg-white dark:bg-disc-hover border dark:border-disc-border rounded-xl shadow-lg max-h-64 overflow-y-auto"
     >
       <button type="button" onClick={() => { onChange(''); setOpen(false) }}
-        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700">
+        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-400 hover:bg-gray-50 dark:hover:bg-disc-header">
         {placeholder}
       </button>
       {accounts.map(a => (
         <button key={a.id} type="button" onClick={() => { onChange(String(a.id)); setOpen(false) }}
           className={`w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-indigo-50 dark:hover:bg-indigo-900/40
-            ${String(a.id) === String(value) ? 'bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400' : 'text-gray-900 dark:text-gray-100'}`}>
+            ${String(a.id) === String(value) ? 'bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400' : 'text-gray-900 dark:text-disc-text'}`}>
           <BankBadge bank={a.bank} size={20} />
           <span className="truncate">{a.name}</span>
         </button>
@@ -52,7 +52,7 @@ export default function AccountSelect({ accounts = [], value, onChange, placehol
   return (
     <div className={className}>
       <button ref={btnRef} type="button" onClick={handleOpen}
-        className="w-full flex items-center gap-2 border dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm text-left hover:bg-gray-50 dark:hover:bg-gray-600"
+        className="w-full flex items-center gap-2 border dark:border-disc-border rounded px-2 py-1 bg-white dark:bg-disc-hover text-gray-900 dark:text-disc-text text-sm text-left hover:bg-gray-50 dark:hover:bg-disc-header"
       >
         {selected ? (
           <>

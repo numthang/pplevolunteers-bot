@@ -72,19 +72,19 @@ export default function AccountsPage() {
             <div key={a.id} className={`bg-card-bg rounded-xl shadow px-5 py-4 flex items-center justify-between gap-3 ${a.archived ? 'opacity-50' : ''}`}>
               <BankBadge bank={a.bank} size={40} />
               <div className="min-w-0 flex-1">
-                <p className="font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                <p className="font-semibold text-gray-900 dark:text-disc-text flex items-center gap-2">
                   {a.name}
                   {!!a.archived && <span className="text-xs text-gray-400 font-normal">(ซ่อน)</span>}
                 </p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">{[a.bank, a.account_no].filter(Boolean).join(' · ')}</p>
-                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                <p className="text-sm text-gray-500 dark:text-disc-muted">{[a.bank, a.account_no].filter(Boolean).join(' · ')}</p>
+                <p className="text-xs text-gray-400 dark:text-disc-muted mt-0.5">
                   {a.province || 'ส่วนกลาง'} · {a.visibility === 'private' ? '🔒 ส่วนตัว' : a.visibility === 'internal' ? '👥 ภายใน' : '🌐 สาธารณะ'}
                 </p>
               </div>
               {canEdit && (
                 <div className="flex gap-1">
                   <button onClick={() => openEdit(a)} className="p-1.5 rounded text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/40"><Pencil size={16} /></button>
-                  <button onClick={() => toggleArchive(a)} title={a.archived ? 'เลิกซ่อน' : 'ซ่อน'} className="p-1.5 rounded text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">
+                  <button onClick={() => toggleArchive(a)} title={a.archived ? 'เลิกซ่อน' : 'ซ่อน'} className="p-1.5 rounded text-gray-400 hover:bg-gray-100 dark:hover:bg-disc-hover">
                     {a.archived ? <ArchiveRestore size={16} /> : <Archive size={16} />}
                   </button>
                   <button onClick={() => remove(a.id)} className="p-1.5 rounded text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/40"><Trash2 size={16} /></button>
@@ -114,10 +114,10 @@ function Modal({ title, onClose, onSave, children }) {
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
       <div className="bg-card-bg rounded-xl shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
-        <h2 className="text-lg font-bold mb-4 text-gray-900 dark:text-gray-100">{title}</h2>
+        <h2 className="text-lg font-bold mb-4 text-gray-900 dark:text-disc-text">{title}</h2>
         {children}
         <div className="flex justify-end gap-2 mt-5">
-          <button onClick={onClose} className="px-4 py-1.5 rounded border dark:border-gray-600 text-sm text-gray-700 dark:text-gray-300">ยกเลิก</button>
+          <button onClick={onClose} className="px-4 py-1.5 rounded border dark:border-disc-border text-sm text-gray-700 dark:text-disc-text">ยกเลิก</button>
           <button onClick={onSave} className="px-4 py-1.5 rounded bg-indigo-600 text-white text-sm hover:bg-indigo-700">บันทึก</button>
         </div>
       </div>

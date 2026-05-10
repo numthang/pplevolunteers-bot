@@ -75,19 +75,19 @@ export default function LogsPage() {
         <div className="flex items-center gap-2 flex-wrap text-sm">
           {/* Lines */}
           <select
-            className="border dark:border-gray-600 rounded px-2 py-1 bg-card-bg text-gray-700 dark:text-gray-200"
+            className="border dark:border-disc-border rounded px-2 py-1 bg-card-bg text-gray-700 dark:text-disc-text"
             value={maxLines}
             onChange={e => setMaxLines(Number(e.target.value))}
           >
             {[100, 300, 500, 1000].map(n => <option key={n} value={n}>last {n} lines</option>)}
           </select>
 
-          <label className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400">
+          <label className="flex items-center gap-1.5 text-gray-500 dark:text-disc-muted">
             <input type="checkbox" checked={autoRefresh} onChange={e => setAutoRefresh(e.target.checked)} />
             auto (5s)
           </label>
 
-          <label className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400">
+          <label className="flex items-center gap-1.5 text-gray-500 dark:text-disc-muted">
             <input type="checkbox" checked={autoScroll} onChange={e => setAutoScroll(e.target.checked)} />
             scroll
           </label>

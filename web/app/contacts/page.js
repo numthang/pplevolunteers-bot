@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 import { useEffectiveRoles } from '@/lib/useEffectiveRoles.js'
 import ContactForm from '@/components/calling/ContactForm.jsx'
 import ContactModal from '@/components/calling/ContactModal.jsx'
@@ -31,8 +32,13 @@ const CATEGORY_COLORS = {
 const MANAGE_ROLES = ['Admin', 'เลขาธิการ', 'ผู้ประสานงานภาค', 'รองเลขาธิการ', 'ผู้ประสานงานจังหวัด', 'กรรมการจังหวัด']
 
 export default function ContactsPage() {
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
+  const router = useRouter()
   const { roles, discordId } = useEffectiveRoles(session)
+
+  useEffect(() => {
+    if (status === 'unauthenticated') router.replace('/')
+  }, [status, router])
   const defaultProvince = session?.user?.primary_province || getProvinceFromRoles(roles)
   const canManageAll = roles.some(r => MANAGE_ROLES.includes(r))
 
@@ -84,7 +90,7 @@ export default function ContactsPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-xl font-semibold text-warm-900 dark:text-warm-50">Contacts</h1>
+        <h1 className="text-xl font-semibold text-warm-900 dark:text-disc-text">Contacts</h1>
         <button onClick={() => setModal('new')}
           className="px-4 py-2 text-base font-medium rounded-lg bg-teal hover:opacity-90 text-white">
           + เพิ่ม Contact
@@ -131,7 +137,7 @@ export default function ContactsPage() {
                   )}
                 </div>
                 {c.specialty && (
-                  <div className="text-base text-warm-700 dark:text-warm-200 mt-0.5 line-clamp-1">{c.specialty}</div>
+                  <div className="text-base text-warm-700 dark:text-disc-text mt-0.5 line-clamp-1">{c.specialty}</div>
                 )}
                 <div className="text-base text-warm-500 dark:text-disc-muted mt-0.5 flex flex-wrap gap-x-3">
                   {location && <span>{location}</span>}

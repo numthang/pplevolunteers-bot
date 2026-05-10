@@ -6,9 +6,9 @@ export async function getSession() {
   return getServerSession(authOptions)
 }
 
-// Use in server components — redirects to /login if not authenticated
+// Use in server components — redirects to / if not authenticated
 export async function requireAuth() {
   const session = await getSession()
-  if (!session) redirect('/login')
+  if (!session) redirect('/')
   return session
 }

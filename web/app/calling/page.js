@@ -1,21 +1,14 @@
-import { getServerSession } from 'next-auth'
+import { getSession } from '@/lib/auth.js'
+import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { authOptions } from '@/lib/auth-options.js'
 import { getUserScope, isAdmin, canCreateCampaign } from '@/lib/callingAccess.js'
 import { getCampaigns } from '@/db/calling/campaigns.js'
 import { getEffectiveRoles } from '@/lib/getEffectiveRoles.js'
 import CampaignCard from '@/components/calling/CampaignCard.jsx'
 
 export default async function CallingPage() {
-  const session = await getServerSession(authOptions)
-
-  if (!session?.user?.discordId) {
-    return (
-      <div className="p-8 text-center text-red-600 dark:text-red-400">
-        กรุณาเข้าสู่ระบบก่อนใช้งาน
-      </div>
-    )
-  }
+  const session = await getSession()
+  if (!session) redirect('/')
 
   const userRoles = await getEffectiveRoles(session)
   const userScope = getUserScope(userRoles)
@@ -46,8 +39,8 @@ export default async function CallingPage() {
       {/* Header */}
       <div className="mb-8 flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-medium text-warm-900 dark:text-warm-50 mb-2">Campaigns</h1>
-          <p className="text-base text-warm-500 dark:text-warm-dark-500">
+          <h1 className="text-2xl font-bold text-warm-900 dark:text-disc-text mb-2">Campaigns</h1>
+          <p className="text-base text-warm-500 dark:text-disc-muted">
             เลือกแคมเปญการโทรที่ต้องการจัดการ
           </p>
         </div>
@@ -62,19 +55,19 @@ export default async function CallingPage() {
       </div>
 
       {filteredCampaigns.length === 0 ? (
-        <div className="bg-card-bg border border-warm-200 dark:border-warm-dark-300 rounded-xl p-12 text-center text-warm-500 dark:text-warm-dark-500">
+        <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-12 text-center text-warm-500 dark:text-disc-muted">
           ไม่มีแคมเปญ
         </div>
       ) : (
         <div className="space-y-8">
           {active.length === 0 && (
-            <div className="bg-card-bg border border-warm-200 dark:border-warm-dark-300 rounded-xl p-12 text-center text-warm-500 dark:text-warm-dark-500">
+            <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-12 text-center text-warm-500 dark:text-disc-muted">
               ไม่มีแคมเปญที่กำลังดำเนินการ
             </div>
           )}
           {Object.entries(grouped).map(([province, list]) => (
             <section key={province}>
-              <h2 className="text-sm font-semibold text-warm-500 dark:text-warm-dark-500 uppercase tracking-widest mb-4">
+              <h2 className="text-sm font-semibold text-warm-500 dark:text-disc-muted uppercase tracking-widest mb-4">
                 {province}
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -87,14 +80,14 @@ export default async function CallingPage() {
 
           {past.length > 0 && (
             <details className="group">
-              <summary className="cursor-pointer list-none flex items-center gap-2 text-xs font-semibold text-warm-400 dark:text-warm-dark-500 uppercase tracking-widest select-none w-fit">
+              <summary className="cursor-pointer list-none flex items-center gap-2 text-xs font-semibold text-warm-400 dark:text-disc-muted uppercase tracking-widest select-none w-fit">
                 <span className="transition-transform group-open:rotate-90">▶</span>
                 กิจกรรมที่ผ่านแล้ว ({past.length})
               </summary>
               <div className="mt-4 space-y-8 opacity-60">
                 {Object.entries(groupedPast).map(([province, list]) => (
                   <section key={province}>
-                    <h2 className="text-xs font-semibold text-warm-400 dark:text-warm-dark-500 uppercase tracking-widest mb-4">
+                    <h2 className="text-xs font-semibold text-warm-400 dark:text-disc-muted uppercase tracking-widest mb-4">
                       {province}
                     </h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

@@ -49,7 +49,7 @@ export default function UserCombobox({ value = [], onChange, placeholder = 'ค�
   return (
     <div ref={containerRef} className="relative">
       <div
-        className="flex flex-wrap items-center gap-1.5 min-h-[46px] px-2 py-1.5 border border-warm-200 dark:border-warm-dark-300 bg-white dark:bg-warm-dark-100 rounded-lg focus-within:ring-2 focus-within:ring-teal cursor-text"
+        className="flex flex-wrap items-center gap-1.5 min-h-[46px] px-2 py-1.5 border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover rounded-lg focus-within:ring-2 focus-within:ring-teal cursor-text"
         onClick={() => inputRef.current?.focus()}
       >
         {value.map(user => (
@@ -71,12 +71,12 @@ export default function UserCombobox({ value = [], onChange, placeholder = 'ค�
           onChange={e => { setQuery(e.target.value); setOpen(true) }}
           onFocus={() => setOpen(true)}
           placeholder={value.length === 0 ? placeholder : ''}
-          className="flex-1 min-w-[120px] bg-transparent text-base text-warm-900 dark:text-warm-50 placeholder-warm-400 outline-none py-0.5"
+          className="flex-1 min-w-[120px] bg-transparent text-base text-warm-900 dark:text-disc-text placeholder-warm-400 outline-none py-0.5"
         />
       </div>
 
       {open && (
-        <div className="absolute z-50 top-full mt-1 w-full bg-white dark:bg-warm-dark-100 border border-warm-200 dark:border-warm-dark-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+        <div className="absolute z-50 top-full mt-1 w-full bg-white dark:bg-disc-hover border border-warm-200 dark:border-disc-border rounded-lg shadow-lg max-h-48 overflow-y-auto">
           {loading ? (
             <div className="px-3 py-2 text-sm text-warm-400">กำลังโหลด...</div>
           ) : options.length === 0 ? (
@@ -88,11 +88,11 @@ export default function UserCombobox({ value = [], onChange, placeholder = 'ค�
               <button
                 key={user.discord_id}
                 onMouseDown={() => handleSelect(user)}
-                className="w-full flex items-center justify-between px-3 py-2.5 text-base hover:bg-warm-50 dark:hover:bg-warm-dark-200 text-left"
+                className="w-full flex items-center justify-between px-3 py-2.5 text-base hover:bg-warm-50 dark:hover:bg-disc-hover text-left"
               >
-                <span className="font-medium text-warm-900 dark:text-warm-50">{user.display_name}</span>
+                <span className="font-medium text-warm-900 dark:text-disc-text">{user.display_name}</span>
                 {user.province && (
-                  <span className="text-sm text-warm-400 dark:text-warm-dark-400">{user.province}</span>
+                  <span className="text-sm text-warm-400 dark:text-disc-muted">{user.province}</span>
                 )}
               </button>
             ))

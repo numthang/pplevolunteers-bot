@@ -250,14 +250,14 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
       style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
     >
-      <div className="bg-white dark:bg-warm-dark-100 rounded-xl w-full max-w-3xl shadow-xl">
+      <div className="bg-white dark:bg-disc-hover rounded-xl w-full max-w-3xl shadow-xl">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-warm-200 dark:border-warm-dark-300">
-          <h2 className="text-lg font-semibold text-warm-900 dark:text-warm-50">บันทึกการโทร</h2>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-warm-200 dark:border-disc-border">
+          <h2 className="text-lg font-semibold text-warm-900 dark:text-disc-text">บันทึกการโทร</h2>
           <button
             onClick={onClose}
-            className="text-warm-400 hover:text-warm-700 dark:hover:text-warm-200 text-2xl leading-none w-10 h-10 flex items-center justify-center rounded-lg hover:bg-warm-100 dark:hover:bg-warm-dark-200 transition"
+            className="text-warm-400 hover:text-warm-700 dark:hover:text-disc-text text-2xl leading-none w-10 h-10 flex items-center justify-center rounded-lg hover:bg-warm-100 dark:hover:bg-disc-hover transition"
           >×</button>
         </div>
 
@@ -265,10 +265,10 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
         <div className="p-5 flex flex-col md:grid md:grid-cols-2 gap-5">
 
           {/* SIDEBAR */}
-          <div className="md:order-2 bg-warm-50 dark:bg-warm-dark-200 rounded-lg p-4 flex flex-col gap-4">
+          <div className="md:order-2 bg-warm-50 dark:bg-disc-header rounded-lg p-4 flex flex-col gap-4">
 
             {/* Name + tier */}
-            <div className="flex items-center gap-3 pb-4 border-b border-warm-200 dark:border-warm-dark-300">
+            <div className="flex items-center gap-3 pb-4 border-b border-warm-200 dark:border-disc-border">
               <div
                 className="w-11 h-11 rounded-full flex items-center justify-center text-base font-semibold flex-shrink-0"
                 style={{ backgroundColor: tierColor.bg, color: tierColor.text }}
@@ -277,13 +277,13 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="font-semibold text-lg text-warm-900 dark:text-warm-50 truncate">{displayName}</span>
+                  <span className="font-semibold text-lg text-warm-900 dark:text-disc-text truncate">{displayName}</span>
                   <span className="text-base font-semibold px-1.5 py-0.5 rounded flex-shrink-0"
                     style={{ backgroundColor: tierColor.bg, color: tierColor.text }}>{tier}</span>
                   {expiryBadge && <span className={`text-base font-medium px-1.5 py-0.5 rounded flex-shrink-0 ${expiryBadge.cls}`}>{expiryBadge.label}</span>}
-                  {member.source_id && <span className="text-base text-warm-300 dark:text-warm-dark-500 flex-shrink-0">#{member.source_id}</span>}
+                  {member.source_id && <span className="text-base text-warm-300 dark:text-disc-muted flex-shrink-0">#{member.source_id}</span>}
                 </div>
-                <div className="text-base text-warm-400 dark:text-warm-dark-400 truncate mt-0.5">
+                <div className="text-base text-warm-400 dark:text-disc-muted truncate mt-0.5">
                   {locationStr || '—'}
                 </div>
               </div>
@@ -302,7 +302,7 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
                     <span>{phone}</span>
                   </a>
                 ) : (
-                  <div className="flex items-center justify-center flex-1 py-3 rounded-lg text-base border border-dashed border-warm-300 dark:border-warm-dark-300 text-warm-400 dark:text-warm-dark-400">
+                  <div className="flex items-center justify-center flex-1 py-3 rounded-lg text-base border border-dashed border-warm-300 dark:border-disc-border text-warm-400 dark:text-disc-muted">
                     ไม่มีเบอร์โทร
                   </div>
                 )}
@@ -339,7 +339,7 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
               {(member.email || member.facebook_id) && (
                 <div className="text-base space-y-1.5 pt-1">
                   {member.email && (
-                    <a href={`mailto:${member.email}`} className="flex items-center gap-2 text-warm-500 dark:text-warm-dark-400 hover:text-teal truncate">
+                    <a href={`mailto:${member.email}`} className="flex items-center gap-2 text-warm-500 dark:text-disc-muted hover:text-teal truncate">
                       <span>✉️</span>
                       <span className="truncate">{member.email}</span>
                     </a>
@@ -349,7 +349,7 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
                       href={`https://facebook.com/${member.facebook_id}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-2 text-warm-500 dark:text-warm-dark-400 hover:text-blue-500 truncate"
+                      className="flex items-center gap-2 text-warm-500 dark:text-disc-muted hover:text-blue-500 truncate"
                     >
                       <span>📘</span>
                       <span className="truncate">{member.facebook_id}</span>
@@ -361,7 +361,7 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
 
             {/* Call History */}
             <div>
-              <div className="text-base font-semibold text-warm-500 dark:text-warm-dark-400 mb-2">
+              <div className="text-base font-semibold text-warm-500 dark:text-disc-muted mb-2">
                 ประวัติ{history.length > 0 && (
                   <span className="font-normal ml-1">
                     ({history.filter(l => l.status === 'answered').length}/{history.length} รับ)
@@ -369,9 +369,9 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
                 )}
               </div>
               {historyLoading ? (
-                <div className="text-base text-warm-400 dark:text-warm-dark-400">โหลด...</div>
+                <div className="text-base text-warm-400 dark:text-disc-muted">โหลด...</div>
               ) : history.length === 0 ? (
-                <div className="text-base text-warm-400 dark:text-warm-dark-400">ยังไม่มี</div>
+                <div className="text-base text-warm-400 dark:text-disc-muted">ยังไม่มี</div>
               ) : (
                 <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
                   {history.map(log => {
@@ -379,14 +379,14 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
                     const canEdit = log.called_by === effectiveDiscordId || isModerator
                     const isEditing = editingLogId === log.id
                     return (
-                      <div key={log.id} className="rounded-lg p-3 bg-white dark:bg-warm-dark-100 border border-warm-200 dark:border-warm-dark-300">
+                      <div key={log.id} className="rounded-lg p-3 bg-white dark:bg-disc-hover border border-warm-200 dark:border-disc-border">
                         {!isEditing && (
                           <div className="flex items-start gap-2">
                             <div className="flex-1 flex flex-wrap items-baseline gap-x-1.5">
                               <span className="px-2 py-0.5 rounded text-base font-semibold shrink-0" style={{ backgroundColor: s.bg, color: s.text }}>{s.label}</span>
-                              <span className="text-base text-warm-800 dark:text-warm-100 break-words">
+                              <span className="text-base text-warm-800 dark:text-disc-text break-words">
                                 {log.note ? parseLinks(log.note) : null}
-                                <span className="italic text-warm-400 dark:text-warm-dark-500">
+                                <span className="italic text-warm-400 dark:text-disc-muted">
                                   {(log.note && (log.caller_name || log.called_at)) ? ' — ' : ''}
                                   {log.caller_name && (
                                     <a href={`https://discord.com/users/${log.called_by}`} target="_blank" rel="noopener noreferrer" className="hover:underline">{log.caller_name}</a>
@@ -399,7 +399,7 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
                             <div className="flex items-center gap-1 shrink-0">
                               {canEdit && (
                                 <button onClick={() => { setEditingLogId(log.id); setEditStatus(log.status); setEditNote(log.note || '') }}
-                                  className="p-1 rounded text-warm-400 hover:text-teal hover:bg-warm-100 dark:hover:bg-warm-dark-200 transition">
+                                  className="p-1 rounded text-warm-400 hover:text-teal hover:bg-warm-100 dark:hover:bg-disc-hover transition">
                                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                                 </button>
                               )}
@@ -437,7 +437,7 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
                                 setEditingLogId(null)
                                 loadHistory()
                               }} className="px-3 py-1 rounded text-base bg-teal text-white hover:bg-teal/90 transition">บันทึก</button>
-                              <button onClick={() => setEditingLogId(null)} className="px-3 py-1 rounded text-base text-warm-500 hover:bg-warm-100 dark:hover:bg-warm-dark-200 transition">ยกเลิก</button>
+                              <button onClick={() => setEditingLogId(null)} className="px-3 py-1 rounded text-base text-warm-500 hover:bg-warm-100 dark:hover:bg-disc-hover transition">ยกเลิก</button>
                             </div>
                           </div>
                         ) : null}
@@ -453,21 +453,21 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
           <div className="md:order-1 flex flex-col gap-4">
 
             {/* Campaign info */}
-            <div className="bg-white dark:bg-warm-dark-100 rounded-lg p-3 border border-warm-200 dark:border-warm-dark-300 space-y-2 overflow-hidden">
+            <div className="bg-white dark:bg-disc-hover rounded-lg p-3 border border-warm-200 dark:border-disc-border space-y-2 overflow-hidden">
               <CampaignActions campaignName={member.campaign_name} description={member.campaign_description} onSmsClick={() => setSmsModalOpen(true)} />
-              <div className="text-base font-semibold text-warm-900 dark:text-warm-50">{member.campaign_name || '—'}</div>
+              <div className="text-base font-semibold text-warm-900 dark:text-disc-text">{member.campaign_name || '—'}</div>
               {member.campaign_description && (
-                <p className="text-base text-warm-700 dark:text-warm-200 whitespace-pre-wrap break-all">{parseLinks(member.campaign_description)}</p>
+                <p className="text-base text-warm-700 dark:text-disc-text whitespace-pre-wrap break-all">{parseLinks(member.campaign_description)}</p>
               )}
               {member.event_date && (
-                <div className="text-base text-warm-700 dark:text-warm-200">
+                <div className="text-base text-warm-700 dark:text-disc-text">
                   วันที่กิจกรรม : <span className="font-semibold text-orange-600 dark:text-orange-400">{formatEventDate(member.event_date)}</span>
                 </div>
               )}
             </div>
 
             {/* Call guide */}
-            <div className="px-1 text-base text-warm-600 dark:text-warm-300 leading-snug">
+            <div className="px-1 text-base text-warm-600 dark:text-disc-text leading-snug">
               <span className="font-semibold text-orange-600 dark:text-orange-400">หัวข้อสนทนา</span>
               {' · '}อยู่ในพื้นที่ไหม
               {' · '}วันสะดวกร่วมกิจกรรม
@@ -477,7 +477,7 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
 
             {/* Status */}
             <div>
-              <div className="text-base font-semibold text-warm-700 dark:text-warm-200 mb-2">สถานะการโทร *</div>
+              <div className="text-base font-semibold text-warm-700 dark:text-disc-text mb-2">สถานะการโทร *</div>
               <div className="grid grid-cols-3 gap-2">
                 {CALL_STATUS_OPTIONS.map(opt => (
                   <button
@@ -487,7 +487,7 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
                     className={`py-4 px-2 text-xl rounded-xl border-2 transition font-medium flex flex-col items-center gap-1.5 ${
                       status === opt.value
                         ? ''
-                        : 'border-warm-200 dark:border-warm-dark-300 text-warm-700 dark:text-warm-200 hover:bg-warm-50 dark:hover:bg-warm-dark-200'
+                        : 'border-warm-200 dark:border-disc-border text-warm-700 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover'
                     }`}
                     style={status === opt.value
                       ? { backgroundColor: opt.bg, borderColor: opt.color, color: opt.color }
@@ -503,20 +503,20 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
 
             {/* Note */}
             <div>
-              <div className="text-base font-semibold text-warm-700 dark:text-warm-200 mb-2">บันทึก *</div>
+              <div className="text-base font-semibold text-warm-700 dark:text-disc-text mb-2">บันทึก *</div>
               <textarea
                 value={note}
                 onChange={e => setNote(e.target.value)}
                 rows={3}
                 placeholder={NOTE_PLACEHOLDER[status] || 'บันทึกเพิ่มเติม'}
-                className="w-full px-3 py-2.5 text-base border-2 border-teal bg-white dark:bg-warm-dark-100 text-warm-900 dark:text-warm-50 placeholder-warm-400 dark:placeholder-warm-dark-400 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-teal"
+                className="w-full px-3 py-2.5 text-base border-2 border-teal bg-white dark:bg-disc-hover text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-teal"
               />
             </div>
 
             {/* RSVP — members only */}
             {!isContact && status === 'answered' && (
               <div>
-                <div className="text-base font-semibold text-warm-700 dark:text-warm-200 mb-2">เข้าร่วมกิจกรรมได้ไหม *</div>
+                <div className="text-base font-semibold text-warm-700 dark:text-disc-text mb-2">เข้าร่วมกิจกรรมได้ไหม *</div>
                 <div className="grid grid-cols-3 gap-2">
                   {RSVP_OPTIONS.map(opt => (
                     <button
@@ -526,7 +526,7 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
                       className={`py-2.5 px-2 text-base rounded-lg border-2 transition font-medium flex items-center justify-center gap-1.5 ${
                         rsvp === opt.value
                           ? opt.activeClass
-                          : 'bg-warm-100 dark:bg-warm-dark-200 border-warm-300 dark:border-warm-dark-300 text-warm-700 dark:text-warm-200 hover:border-teal hover:text-teal'
+                          : 'bg-warm-100 dark:bg-disc-header border-warm-300 dark:border-disc-border text-warm-700 dark:text-disc-text hover:border-teal hover:text-teal'
                       }`}
                     >
                       <span>{opt.icon}</span>
@@ -539,10 +539,10 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
 
             {/* Signals */}
             {showSignals && (
-              <div className="bg-warm-50 dark:bg-warm-dark-200 rounded-lg p-4 space-y-4">
+              <div className="bg-warm-50 dark:bg-disc-header rounded-lg p-4 space-y-4">
                 {SIGNALS.map(sig => (
                   <div key={sig.key}>
-                    <div className="mb-2 text-base font-semibold text-warm-700 dark:text-warm-200">{sig.label}</div>
+                    <div className="mb-2 text-base font-semibold text-warm-700 dark:text-disc-text">{sig.label}</div>
                     <div className="grid grid-cols-3 gap-1.5">
                       {SIGNAL_OPTIONS.map(opt => {
                         const active = signals[sig.key] === opt.value
@@ -554,7 +554,7 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
                             className={`py-2 px-1 rounded-md border transition text-center flex flex-col items-center gap-0.5 ${
                               active
                                 ? 'bg-teal border-teal text-white'
-                                : 'border-warm-200 dark:border-warm-dark-300 text-warm-700 dark:text-warm-200 bg-white dark:bg-warm-dark-100 hover:border-teal hover:text-teal'
+                                : 'border-warm-200 dark:border-disc-border text-warm-700 dark:text-disc-text bg-white dark:bg-disc-hover hover:border-teal hover:text-teal'
                             }`}
                           >
                             <span className="text-base font-medium">{sig.hints[opt.value]}</span>
@@ -568,7 +568,7 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
             )}
 
             {/* Action buttons */}
-            <div className="flex gap-2 pt-2 border-t border-warm-200 dark:border-warm-dark-300">
+            <div className="flex gap-2 pt-2 border-t border-warm-200 dark:border-disc-border">
               {hasNext && (
                 <button
                   onClick={() => handleSave(true)}
@@ -583,7 +583,7 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
                 disabled={!canSave || saving}
                 className={`py-3 text-base font-semibold rounded-lg border transition disabled:opacity-40 ${
                   hasNext
-                    ? 'px-4 border-warm-200 dark:border-warm-dark-300 text-warm-700 dark:text-warm-200 hover:bg-warm-50 dark:hover:bg-warm-dark-200'
+                    ? 'px-4 border-warm-200 dark:border-disc-border text-warm-700 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover'
                     : 'flex-1 bg-teal hover:opacity-90 text-white border-teal'
                 }`}
               >
@@ -591,7 +591,7 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
               </button>
               <button
                 onClick={onClose}
-                className="px-4 py-3 text-base text-warm-500 dark:text-warm-dark-500 hover:text-warm-700 dark:hover:text-warm-200 rounded-lg hover:bg-warm-100 dark:hover:bg-warm-dark-200 transition"
+                className="px-4 py-3 text-base text-warm-500 dark:text-disc-muted hover:text-warm-700 dark:hover:text-disc-text rounded-lg hover:bg-warm-100 dark:hover:bg-disc-hover transition"
               >
                 ยกเลิก
               </button>

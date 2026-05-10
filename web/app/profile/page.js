@@ -32,8 +32,6 @@ export default function ProfilePage() {
   const [readOnly, setReadOnly] = useState({})
   const [primaryProvince, setPrimaryProvince] = useState('')
   const [provinceOptions, setProvinceOptions] = useState([])
-  const [guildId, setGuildId] = useState('')
-  const [guild, setGuild] = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -43,7 +41,7 @@ export default function ProfilePage() {
   const [copied, setCopied] = useState(false)
 
   useEffect(() => {
-    if (status === 'unauthenticated') router.replace('/login')
+    if (status === 'unauthenticated') router.replace('/')
   }, [status, router])
 
   useEffect(() => {
@@ -66,8 +64,6 @@ export default function ProfilePage() {
         })
         setPrimaryProvince(data.primary_province || '')
         setProvinceOptions(data.province_options || [])
-        setGuildId(data.guild_id || '')
-        setGuild(data.guild || null)
         setLoading(false)
       })
       .catch(() => setLoading(false))
@@ -94,13 +90,12 @@ export default function ProfilePage() {
   }
 
   if (status === 'loading' || loading) {
-    return <div className="py-16 text-center text-gray-400 text-sm">กำลังโหลด...</div>
+    return <div className="py-16 text-center text-warm-400 dark:text-disc-muted text-base">กำลังโหลด...</div>
   }
 
   return (
     <div className="max-w-lg mx-auto py-8 px-4">
-      <h1 className="text-3xl font-bold mb-6 text-gray-900 dark:text-gray-100">แก้ไขโปรไฟล์</h1>
-
+      <h1 className="text-3xl font-bold mb-6 text-warm-900 dark:text-disc-text">แก้ไขโปรไฟล์</h1>
 
       {/* Discord info */}
       {session && (
@@ -109,14 +104,14 @@ export default function ProfilePage() {
             <Image src={session.user.image} alt="" width={48} height={48} className="rounded-full shrink-0 mt-1" />
           )}
           <div className="min-w-0 flex-1">
-            <p className="font-semibold text-gray-900 dark:text-gray-100 text-sm truncate">
+            <p className="font-semibold text-warm-900 dark:text-disc-text text-base truncate">
               {readOnly.display_name && readOnly.display_name !== session.user.name
                 ? readOnly.display_name
                 : session.user.name}
-              <span className="text-gray-500 ml-2">ID: {session.user.discordId}</span>
+              <span className="text-warm-500 dark:text-disc-muted ml-2">ID: {session.user.discordId}</span>
             </p>
             <div className="flex items-center gap-2 mt-1">
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <p className="text-base text-warm-500 dark:text-disc-muted">
                 @{session.user.name}
               </p>
               <button
@@ -126,7 +121,7 @@ export default function ProfilePage() {
                   setCopied(true)
                   setTimeout(() => setCopied(false), 2000)
                 }}
-                className="shrink-0 inline-flex items-center gap-1 text-xs px-2 py-1 rounded border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 transition"
+                className="shrink-0 inline-flex items-center gap-1 text-xs px-2 py-1 rounded border border-warm-200 dark:border-disc-border text-warm-500 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text transition"
               >
                 {copied ? (
                   <>
@@ -143,14 +138,14 @@ export default function ProfilePage() {
             </div>
             {readOnly.roles && (
               <div className="flex items-center gap-2">
-                <p className={`text-sm text-gray-600 dark:text-gray-300 ${expandRoles ? '' : 'truncate'}`}>
+                <p className={`text-base text-warm-500 dark:text-disc-text ${expandRoles ? '' : 'truncate'}`}>
                   <span className="font-medium">ยศ:</span>{' '}
                   {readOnly.roles.split(',').map(r => r.trim()).filter(Boolean).join(' · ')}
                 </p>
                 <button
                   type="button"
                   onClick={() => setExpandRoles(!expandRoles)}
-                  className="shrink-0 text-sm text-brand-orange hover:text-brand-orange-light transition"
+                  className="shrink-0 text-base text-brand-orange hover:text-brand-orange-light transition"
                 >
                   {expandRoles ? '▼' : '▶'}
                 </button>
@@ -160,25 +155,24 @@ export default function ProfilePage() {
         </div>
       )}
 
-
       {/* Tabs */}
-      <div className="flex gap-2 mb-6 border-b border-gray-200 dark:border-gray-700">
+      <div className="flex gap-2 mb-6 border-b border-warm-200 dark:border-disc-border">
         <button
           onClick={() => setActiveTab('personal')}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition ${
+          className={`px-4 py-2 text-base font-medium border-b-2 transition ${
             activeTab === 'personal'
               ? 'border-brand-orange text-brand-orange'
-              : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+              : 'border-transparent text-warm-500 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text'
           }`}
         >
           ข้อมูลส่วนตัว
         </button>
         <button
           onClick={() => setActiveTab('bank')}
-          className={`px-4 py-2 text-sm font-medium border-b-2 transition ${
+          className={`px-4 py-2 text-base font-medium border-b-2 transition ${
             activeTab === 'bank'
               ? 'border-brand-orange text-brand-orange'
-              : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+              : 'border-transparent text-warm-500 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text'
           }`}
         >
           ข้อมูลการเงิน
@@ -191,7 +185,7 @@ export default function ProfilePage() {
           <div className="flex flex-col gap-4">
             {FIELDS.map(({ key, label, placeholder }) => (
               <div key={key}>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-base font-medium text-warm-500 dark:text-disc-text mb-1">
                   {label}
                 </label>
                 <input
@@ -199,25 +193,25 @@ export default function ProfilePage() {
                   value={form[key]}
                   onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
                   placeholder={placeholder}
-                  className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-card-bg dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
+                  className="w-full px-3 py-2 rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text text-base placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-brand-orange transition"
                 />
               </div>
             ))}
 
             {provinceOptions.length > 1 && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-base font-medium text-warm-500 dark:text-disc-text mb-1">
                   จังหวัดหลัก (Primary Province)
                 </label>
                 <select
                   value={primaryProvince}
                   onChange={e => setPrimaryProvince(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-card-bg dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
+                  className="w-full px-3 py-2 rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text text-base focus:outline-none focus:ring-2 focus:ring-brand-orange transition"
                 >
                   <option value="">— ไม่ระบุ —</option>
                   {provinceOptions.map(p => <option key={p} value={p}>{p}</option>)}
                 </select>
-                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">ใช้เป็นค่า default เมื่อเพิ่ม Contact ใหม่</p>
+                <p className="text-xs text-warm-400 dark:text-disc-muted mt-1">ใช้เป็นค่า default เมื่อเพิ่ม Contact ใหม่</p>
               </div>
             )}
           </div>
@@ -228,7 +222,7 @@ export default function ProfilePage() {
           <div className="flex flex-col gap-4">
             {BANK_FIELDS.map(({ key, label, placeholder }) => (
               <div key={key}>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-base font-medium text-warm-500 dark:text-disc-text mb-1">
                   {label}
                 </label>
                 <input
@@ -236,14 +230,14 @@ export default function ProfilePage() {
                   value={form[key] || ''}
                   onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
                   placeholder={placeholder}
-                  className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-card-bg dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
+                  className="w-full px-3 py-2 rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text text-base placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-brand-orange transition"
                 />
               </div>
             ))}
           </div>
         )}
 
-        {error && <p className="text-sm text-red-500">{error}</p>}
+        {error && <p className="text-base text-red-500">{error}</p>}
 
         <button
           type="submit"

@@ -74,14 +74,14 @@ function MemberSearch({ onSelect }) {
         value={q}
         onChange={e => setQ(e.target.value)}
         placeholder="ค้นหา member..."
-        className="w-full px-2 py-1.5 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-amber-400"
+        className="w-full px-2 py-1.5 text-xs rounded border border-gray-300 dark:border-disc-border bg-white dark:bg-disc-bg2 text-gray-800 dark:text-disc-text placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-amber-400"
       />
       {loading && <p className="text-xs text-gray-400 px-1 pt-1">กำลังค้นหา...</p>}
       {results.map(m => (
         <button
           key={m.discordId}
           onClick={() => onSelect(m)}
-          className="w-full text-left px-2 py-1.5 mt-0.5 rounded text-xs text-gray-700 dark:text-gray-300 hover:bg-amber-50 dark:hover:bg-amber-900/30 transition"
+          className="w-full text-left px-2 py-1.5 mt-0.5 rounded text-xs text-gray-700 dark:text-disc-text hover:bg-amber-50 dark:hover:bg-amber-900/30 transition"
         >
           <span className="font-medium">{m.displayName}</span>
           {m.nickname && m.nickname !== m.displayName && (
@@ -108,7 +108,7 @@ export function DebugRoleButton({ isAdmin }) {
         className={`text-xs px-2.5 py-1 rounded border transition ${
           active
             ? 'bg-amber-100 dark:bg-amber-900/40 border-amber-400 text-amber-700 dark:text-amber-300'
-            : 'border-gray-300 dark:border-gray-600 text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-200'
+            : 'border-gray-300 dark:border-disc-border text-gray-400 dark:text-disc-muted hover:text-gray-700 dark:hover:text-disc-text'
         }`}
       >
         {active ? `🎭 ${label}` : '🎭'}
@@ -117,16 +117,16 @@ export function DebugRoleButton({ isAdmin }) {
       {open && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full mt-1 z-20 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1 min-w-[240px] max-h-[420px] overflow-y-auto">
+          <div className="absolute right-0 top-full mt-1 z-20 bg-white dark:bg-disc-hover border border-gray-200 dark:border-disc-border rounded-lg shadow-lg py-1 min-w-[240px] max-h-[420px] overflow-y-auto">
 
             {/* Member search */}
-            <p className="px-3 py-1 text-xs text-gray-400 dark:text-gray-500 font-medium uppercase tracking-wide">จำลองจาก member จริง</p>
+            <p className="px-3 py-1 text-xs text-gray-400 dark:text-disc-muted font-medium uppercase tracking-wide">จำลองจาก member จริง</p>
             <MemberSearch onSelect={m => { setMember(m.discordId, m.displayName, m.roles); setOpen(false) }} />
 
-            <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
+            <div className="border-t border-gray-200 dark:border-disc-border my-1" />
 
             {/* Predefined combos */}
-            <p className="px-3 py-1 text-xs text-gray-400 dark:text-gray-500 font-medium uppercase tracking-wide">role combo</p>
+            <p className="px-3 py-1 text-xs text-gray-400 dark:text-disc-muted font-medium uppercase tracking-wide">role combo</p>
             {DEBUG_COMBOS.map(({ label: comboLabel }) => (
               <button
                 key={comboLabel}
@@ -134,7 +134,7 @@ export function DebugRoleButton({ isAdmin }) {
                 className={`w-full text-left px-3 py-2 text-sm transition ${
                   label === comboLabel
                     ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 font-medium'
-                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    : 'text-gray-700 dark:text-disc-text hover:bg-gray-100 dark:hover:bg-disc-header'
                 }`}
               >
                 {label === comboLabel && '✓ '}{comboLabel}
@@ -143,10 +143,10 @@ export function DebugRoleButton({ isAdmin }) {
 
             {active && (
               <>
-                <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
+                <div className="border-t border-gray-200 dark:border-disc-border my-1" />
                 <button
                   onClick={() => { clear(); setOpen(false) }}
-                  className="w-full text-left px-3 py-2 text-sm text-red-500 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                  className="w-full text-left px-3 py-2 text-sm text-red-500 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-disc-header"
                 >
                   ยกเลิก / กลับ Admin
                 </button>

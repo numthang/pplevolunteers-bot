@@ -18,11 +18,11 @@ const PROVINCES = [
   'ตรัง','กระบี่','สงขลา','พัทลุง','สตูล','ปัตตานี','ยะลา','นราธิวาส',
 ]
 
-const cls = "block w-full border dark:border-gray-600 rounded px-2 py-1 mt-1 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm"
+const cls = "block w-full border dark:border-disc-border rounded px-2 py-1 mt-1 bg-white dark:bg-disc-hover text-gray-900 dark:text-disc-text text-sm"
 
 export default function AccountFormFields({ form, onChange, guilds = [] }) {
   return (
-    <div className="space-y-3 text-sm text-gray-700 dark:text-gray-300">
+    <div className="space-y-3 text-sm text-gray-700 dark:text-disc-text">
       <label className="block">
         ชื่อบัญชี
         <input className={cls} value={form.name || ''} onChange={e => onChange({ name: e.target.value })} />

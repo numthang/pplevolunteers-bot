@@ -23,7 +23,7 @@ const PROVINCES = [
   'ยะลา', 'นราธิวาส'
 ]
 
-const inputCls = 'w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-3 text-base rounded-lg placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500'
+const inputCls = 'w-full border border-gray-300 dark:border-disc-border bg-white dark:bg-disc-hover text-gray-900 dark:text-disc-text p-3 text-base rounded-lg placeholder-gray-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-indigo-500'
 
 export default function EditCampaignPage({ params }) {
   const { id } = use(params)
@@ -82,12 +82,12 @@ export default function EditCampaignPage({ params }) {
         ← กลับ
       </Link>
 
-      <div className="max-w-2xl bg-card-bg border border-gray-200 dark:border-gray-700 rounded-xl p-6">
-        <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-gray-100">แก้ไขแคมเปญ</h1>
+      <div className="max-w-2xl bg-card-bg border border-gray-200 dark:border-disc-border rounded-xl p-6">
+        <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-disc-text">แก้ไขแคมเปญ</h1>
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-gray-300">
+            <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-disc-text">
               Campaign ID
               {newId !== String(id) && <span className="ml-2 text-sm font-normal text-amber-500">จะ rename cascade ทุก assignment + log</span>}
             </label>
@@ -96,13 +96,13 @@ export default function EditCampaignPage({ params }) {
           </div>
 
           <div>
-            <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-gray-300">ชื่อแคมเปญ *</label>
+            <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-disc-text">ชื่อแคมเปญ *</label>
             <input type="text" value={name} onChange={e => setName(e.target.value)}
               placeholder="เช่น บ้านโป่ง ราชบุรี ครั้งที่ 1" className={inputCls} required />
           </div>
 
           <div>
-            <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-gray-300">รายละเอียด</label>
+            <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-disc-text">รายละเอียด</label>
             <textarea value={description}
               onChange={e => { setDescription(e.target.value); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px' }}
               ref={el => { if (el && !el._init) { el._init = true; el.style.height = el.scrollHeight + 'px' } }}
@@ -110,7 +110,7 @@ export default function EditCampaignPage({ params }) {
           </div>
 
           <div>
-            <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-gray-300">จังหวัด</label>
+            <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-disc-text">จังหวัด</label>
             <select value={province} onChange={e => setProvince(e.target.value)} className={inputCls}>
               <option value="">-- ไม่ระบุ --</option>
               {[...PROVINCES].sort((a, b) => a.localeCompare(b, 'th')).map(p => <option key={p} value={p}>{p}</option>)}
@@ -118,7 +118,7 @@ export default function EditCampaignPage({ params }) {
           </div>
 
           <div>
-            <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-gray-300">วันจัดกิจกรรม</label>
+            <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-disc-text">วันจัดกิจกรรม</label>
             <input type="datetime-local" value={eventDate} onChange={e => setEventDate(e.target.value)} className={inputCls} />
           </div>
 
@@ -128,7 +128,7 @@ export default function EditCampaignPage({ params }) {
               {saving ? 'กำลังบันทึก...' : 'บันทึก'}
             </button>
             <Link href="/calling"
-              className="px-6 py-3 rounded-lg text-base font-semibold border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition text-center">
+              className="px-6 py-3 rounded-lg text-base font-semibold border border-gray-300 dark:border-disc-border text-gray-700 dark:text-disc-text hover:bg-gray-50 dark:hover:bg-disc-hover transition text-center">
               ยกเลิก
             </Link>
           </div>

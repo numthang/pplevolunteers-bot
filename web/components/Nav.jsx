@@ -123,11 +123,11 @@ export default function Nav({ session }) {
   const userIsAdmin = roles.includes('Admin')
 
   const activeClass = 'bg-teal/10 dark:bg-teal/10 text-teal dark:text-teal font-medium'
-  const inactiveClass = 'text-warm-500 dark:text-warm-dark-400 hover:text-warm-900 dark:hover:text-warm-50 hover:bg-warm-100 dark:hover:bg-warm-dark-200'
+  const inactiveClass = 'text-warm-500 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text hover:bg-warm-100 dark:hover:bg-disc-hover'
 
   return (
     <>
-    <nav className="bg-white dark:bg-warm-dark-50 border-b border-warm-200 dark:border-warm-dark-300 shadow-sm sticky top-0 z-40">
+    <nav className="bg-white dark:bg-disc-bg2 border-b border-warm-200 dark:border-disc-border shadow-sm sticky top-0 z-40">
       <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
 
         {/* App Switcher */}
@@ -143,14 +143,14 @@ export default function Nav({ session }) {
               <span className="font-bold text-base text-teal dark:text-teal">
                 {currentApp.label}
               </span>
-              <span className="text-warm-400 dark:text-warm-dark-400 text-xs">▾</span>
+              <span className="text-warm-400 dark:text-disc-muted text-xs">▾</span>
             </button>
           </div>
 
           {appOpen && (
             <>
               <div className="fixed inset-0 z-10" onClick={() => setAppOpen(false)} />
-              <div className="absolute left-0 top-full mt-1 z-20 bg-white dark:bg-warm-dark-100 border border-warm-200 dark:border-warm-dark-300 rounded-lg shadow-lg py-1 min-w-[160px]">
+              <div className="absolute left-0 top-full mt-1 z-20 bg-white dark:bg-disc-hover border border-warm-200 dark:border-disc-border rounded-lg shadow-lg py-1 min-w-[160px]">
                 {APPS.map(app => (
                   <Link
                     key={app.key}
@@ -159,7 +159,7 @@ export default function Nav({ session }) {
                     className={`flex items-center gap-2 px-4 py-2 text-sm transition ${
                       currentApp?.key === app.key
                         ? 'bg-teal/10 dark:bg-teal/10 text-teal dark:text-teal font-medium'
-                        : 'text-warm-900 dark:text-warm-dark-500 hover:bg-warm-100 dark:hover:bg-warm-dark-200'
+                        : 'text-warm-900 dark:text-disc-muted hover:bg-warm-100 dark:hover:bg-disc-hover'
                     }`}
                   >
                     {app.label}
@@ -189,20 +189,20 @@ export default function Nav({ session }) {
                   </Link>
                   <button
                     onClick={() => setCampaignOpen(o => !o)}
-                    className={`px-1 py-1 rounded-r-md text-sm transition border-l border-warm-200 dark:border-warm-dark-300 ${isActive ? activeClass : inactiveClass}`}
+                    className={`px-1 py-1 rounded-r-md text-sm transition border-l border-warm-200 dark:border-disc-border ${isActive ? activeClass : inactiveClass}`}
                   >
                     <svg className={`w-3 h-3 transition-transform ${campaignOpen ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="currentColor">
                       <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.17l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
                     </svg>
                   </button>
                   {campaignOpen && (
-                    <div className="absolute left-0 top-full mt-1 w-60 bg-white dark:bg-warm-dark-100 border border-warm-200 dark:border-warm-dark-300 rounded-lg shadow-lg z-50 py-1 max-h-72 overflow-y-auto">
+                    <div className="absolute left-0 top-full mt-1 w-60 bg-white dark:bg-disc-hover border border-warm-200 dark:border-disc-border rounded-lg shadow-lg z-50 py-1 max-h-72 overflow-y-auto">
                       {campaigns.map(c => (
                         <button
                           key={c.id}
                           onClick={() => { setCampaignOpen(false); router.push(`/calling/${c.id}`) }}
-                          className={`w-full text-left px-4 py-2.5 text-sm hover:bg-warm-50 dark:hover:bg-warm-dark-200 transition ${
-                            activeCampaignId === c.id ? 'text-teal dark:text-teal font-medium' : 'text-warm-900 dark:text-warm-dark-500'
+                          className={`w-full text-left px-4 py-2.5 text-sm hover:bg-warm-50 dark:hover:bg-disc-hover transition ${
+                            activeCampaignId === c.id ? 'text-teal dark:text-teal font-medium' : 'text-warm-900 dark:text-disc-muted'
                           }`}
                         >
                           <div className="flex items-center justify-between">
@@ -244,7 +244,7 @@ export default function Nav({ session }) {
             <div className="relative">
               <button
                 onClick={() => setMenuOpen(o => !o)}
-                className="rounded-md text-warm-500 dark:text-warm-dark-400 hover:bg-warm-100 dark:hover:bg-warm-dark-200 transition w-12 h-12 flex items-center justify-center"
+                className="rounded-md text-warm-500 dark:text-disc-muted hover:bg-warm-100 dark:hover:bg-disc-hover transition w-12 h-12 flex items-center justify-center"
               >
                 {menuOpen ? (
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" className="w-7 h-7">
@@ -260,7 +260,7 @@ export default function Nav({ session }) {
               {menuOpen && (
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-                  <div className="absolute right-0 top-full mt-2 z-20 bg-white dark:bg-warm-dark-100 border border-warm-200 dark:border-warm-dark-300 rounded-xl shadow-lg py-2 w-64 max-h-[80vh] overflow-y-auto flex flex-col gap-0.5">
+                  <div className="absolute right-0 top-full mt-2 z-20 bg-white dark:bg-disc-hover border border-warm-200 dark:border-disc-border rounded-xl shadow-lg py-2 w-64 max-h-[80vh] overflow-y-auto flex flex-col gap-0.5">
 
                     {/* Nav links for current app */}
                     {visibleLinks.map(l => {
@@ -273,14 +273,14 @@ export default function Nav({ session }) {
                               className={`flex items-center gap-2 px-4 py-2.5 text-base transition ${
                                 pathname === '/calling' || !!activeCampaignId
                                   ? 'text-teal dark:text-teal font-medium bg-teal/10 dark:bg-teal/10'
-                                  : 'text-warm-900 dark:text-warm-dark-500 hover:bg-warm-100 dark:hover:bg-warm-dark-200'
+                                  : 'text-warm-900 dark:text-disc-muted hover:bg-warm-100 dark:hover:bg-disc-hover'
                               }`}
                             >
                               <Ic d={ICONS[l.icon]} className="w-7 h-7 shrink-0" />
                               {l.label}
                               <span className="text-xs font-normal opacity-60">({campaigns.length})</span>
                             </Link>
-                            <div className="ml-4 border-l-2 border-warm-200 dark:border-warm-dark-300 pl-3 flex flex-col gap-0.5 mb-1">
+                            <div className="ml-4 border-l-2 border-warm-200 dark:border-disc-border pl-3 flex flex-col gap-0.5 mb-1">
                               {campaigns.map(c => (
                                 <button
                                   key={c.id}
@@ -288,7 +288,7 @@ export default function Nav({ session }) {
                                   className={`w-full text-left px-2 py-1.5 rounded text-base transition ${
                                     activeCampaignId === c.id
                                       ? 'text-teal dark:text-teal font-medium'
-                                      : 'text-warm-500 dark:text-warm-dark-400 hover:bg-warm-100 dark:hover:bg-warm-dark-200'
+                                      : 'text-warm-500 dark:text-disc-muted hover:bg-warm-100 dark:hover:bg-disc-hover'
                                   }`}
                                 >
                                   {activeCampaignId === c.id && '› '}{c.name}
@@ -306,7 +306,7 @@ export default function Nav({ session }) {
                           className={`flex items-center gap-2 px-4 py-2.5 text-base transition ${
                             isLinkActive(l.href)
                               ? 'text-teal dark:text-teal font-medium bg-teal/10 dark:bg-teal/10'
-                              : 'text-warm-900 dark:text-warm-dark-500 hover:bg-warm-100 dark:hover:bg-warm-dark-200'
+                              : 'text-warm-900 dark:text-disc-muted hover:bg-warm-100 dark:hover:bg-disc-hover'
                           }`}
                         >
                           <Ic d={ICONS[l.icon]} className="w-7 h-7 shrink-0" />
@@ -321,35 +321,35 @@ export default function Nav({ session }) {
                     })}
 
                     {/* User info */}
-                    <div className="border-t border-warm-200 dark:border-warm-dark-300 my-1" />
+                    <div className="border-t border-warm-200 dark:border-disc-border my-1" />
                     <a
                       href={`https://discord.com/users/${session.user.discordId}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={() => setMenuOpen(false)}
-                      className="flex items-center gap-3 px-4 py-2.5 hover:bg-warm-100 dark:hover:bg-warm-dark-200 transition"
+                      className="flex items-center gap-3 px-4 py-2.5 hover:bg-warm-100 dark:hover:bg-disc-hover transition"
                     >
                       {session.user.image && (
                         <Image src={session.user.image} alt="" width={32} height={32} className="rounded-full shrink-0" />
                       )}
                       <div className="min-w-0">
-                        <p className="text-base font-medium text-warm-900 dark:text-warm-50 truncate">
+                        <p className="text-base font-medium text-warm-900 dark:text-disc-text truncate">
                           {session.user.nickname || session.user.name}
                         </p>
-                        <p className="text-xs text-warm-500 dark:text-warm-dark-400 truncate">{session.user.name}</p>
+                        <p className="text-xs text-warm-500 dark:text-disc-muted truncate">{session.user.name}</p>
                       </div>
                     </a>
 
                     {/* App switcher — only when not on dashboard */}
                     {currentApp?.key !== 'home' && (
                       <>
-                        <div className="border-t border-warm-200 dark:border-warm-dark-300 my-1" />
+                        <div className="border-t border-warm-200 dark:border-disc-border my-1" />
                         {APPS.filter(a => a.key !== currentApp?.key).map(app => (
                           <Link
                             key={app.key}
                             href={app.href}
                             onClick={() => setMenuOpen(false)}
-                            className="flex items-center gap-2 px-4 py-2.5 text-base text-warm-900 dark:text-disc-text hover:bg-warm-100 dark:hover:bg-warm-dark-200 transition"
+                            className="flex items-center gap-2 px-4 py-2.5 text-base text-warm-900 dark:text-disc-text hover:bg-warm-100 dark:hover:bg-disc-hover transition"
                           >
                             <Ic d={ICONS[app.icon]} className="w-7 h-7 shrink-0" />
                             {app.label}
@@ -359,31 +359,31 @@ export default function Nav({ session }) {
                     )}
 
                     {/* Actions */}
-                    <div className="border-t border-warm-200 dark:border-warm-dark-300 my-1" />
+                    <div className="border-t border-warm-200 dark:border-disc-border my-1" />
                     <button
                       onClick={() => { toggle(); setMenuOpen(false) }}
-                      className="w-full flex items-center justify-between px-4 py-2.5 text-base text-warm-900 dark:text-warm-dark-500 hover:bg-warm-100 dark:hover:bg-warm-dark-200 transition"
+                      className="w-full flex items-center justify-between px-4 py-2.5 text-base text-warm-900 dark:text-disc-muted hover:bg-warm-100 dark:hover:bg-disc-hover transition"
                     >
                       <span className="flex items-center gap-2">
                         <Ic d={dark ? ICONS.sun : ICONS.moon} className="w-7 h-7 shrink-0" />
                         {dark ? 'Light mode' : 'Dark mode'}
                       </span>
-                      <span className={`shrink-0 w-9 h-5 rounded-full transition-colors duration-200 relative inline-block ${dark ? 'bg-teal' : 'bg-warm-300 dark:bg-warm-dark-300'}`}>
+                      <span className={`shrink-0 w-9 h-5 rounded-full transition-colors duration-200 relative inline-block ${dark ? 'bg-teal' : 'bg-warm-300 dark:bg-disc-border'}`}>
                         <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200 ${dark ? 'translate-x-4' : 'translate-x-0'}`} />
                       </span>
                     </button>
                     <Link
                       href="/profile"
                       onClick={() => setMenuOpen(false)}
-                      className="flex items-center gap-2 px-4 py-2.5 text-base text-warm-900 dark:text-warm-dark-500 hover:bg-warm-100 dark:hover:bg-warm-dark-200 transition"
+                      className="flex items-center gap-2 px-4 py-2.5 text-base text-warm-900 dark:text-disc-muted hover:bg-warm-100 dark:hover:bg-disc-hover transition"
                     >
                       <Ic d={ICONS.profile} className="w-7 h-7 shrink-0" />
                       แก้ไขโปรไฟล์
                     </Link>
-                    <div className="border-t border-warm-200 dark:border-warm-dark-300 my-1" />
+                    <div className="border-t border-warm-200 dark:border-disc-border my-1" />
                     <button
                       onClick={() => signOut({ callbackUrl: '/' })}
-                      className="w-full text-left flex items-center gap-2 px-4 py-2.5 text-base text-red-500 dark:text-red-400 hover:bg-warm-100 dark:hover:bg-warm-dark-200 transition"
+                      className="w-full text-left flex items-center gap-2 px-4 py-2.5 text-base text-red-500 dark:text-red-400 hover:bg-warm-100 dark:hover:bg-disc-hover transition"
                     >
                       <Ic d={ICONS.logout} className="w-7 h-7 shrink-0" />
                       ออกจากระบบ

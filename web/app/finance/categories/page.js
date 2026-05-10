@@ -72,18 +72,18 @@ function IconPicker({ value, onChange }) {
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
-        className="w-9 h-9 flex items-center justify-center border dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600"
+        className="w-9 h-9 flex items-center justify-center border dark:border-disc-border rounded bg-white dark:bg-disc-hover text-gray-600 dark:text-disc-text hover:bg-gray-50 dark:hover:bg-disc-header"
       >
         <Current size={18} />
       </button>
       {open && (
-        <div className="absolute z-20 top-10 left-0 bg-card-bg border dark:border-gray-600 rounded-xl shadow-xl p-2 grid grid-cols-6 gap-1 w-52">
+        <div className="absolute z-20 top-10 left-0 bg-card-bg border dark:border-disc-border rounded-xl shadow-xl p-2 grid grid-cols-6 gap-1 w-52">
           {ICONS.map(({ name, Icon }) => (
             <button
               key={name}
               type="button"
               onClick={() => { onChange(name); setOpen(false) }}
-              className={`p-1.5 rounded flex items-center justify-center hover:bg-indigo-50 dark:hover:bg-indigo-900/40 text-gray-600 dark:text-gray-300
+              className={`p-1.5 rounded flex items-center justify-center hover:bg-indigo-50 dark:hover:bg-indigo-900/40 text-gray-600 dark:text-disc-text
                 ${value === name ? 'bg-indigo-100 dark:bg-indigo-900/60 text-indigo-600 dark:text-indigo-400' : ''}`}
             >
               <Icon size={18} />
@@ -153,14 +153,14 @@ export default function CategoriesPage() {
       <div className="flex flex-wrap gap-2 mb-6">
         <IconPicker value={inputIcon} onChange={setInputIcon} />
         <input
-          className="border dark:border-gray-600 rounded px-3 py-1.5 text-base flex-1 bg-card-bg text-gray-900 dark:text-gray-100"
+          className="border dark:border-disc-border rounded px-3 py-1.5 text-base flex-1 bg-card-bg text-gray-900 dark:text-disc-text"
           placeholder="ชื่อหมวดหมู่ใหม่"
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && add()}
         />
         {canEditGlobal && (
-          <label className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-300">
+          <label className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-disc-text">
             <input type="checkbox" checked={inputGlobal} onChange={e => setInputGlobal(e.target.checked)} />
             global
           </label>
@@ -172,7 +172,7 @@ export default function CategoriesPage() {
         .filter(g => g.items.length > 0)
         .map(group => (
           <div key={group.label} className="mb-6">
-            <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-2">{group.label}</h2>
+            <h2 className="text-sm font-semibold text-gray-500 dark:text-disc-muted mb-2">{group.label}</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
               {group.items.map(c => (
                 <div key={c.id} className="bg-card-bg rounded-xl shadow flex items-center justify-between px-4 py-3 gap-3">
@@ -180,14 +180,14 @@ export default function CategoriesPage() {
                     <div className="flex items-center gap-1.5 flex-1 min-w-0">
                       <IconPicker value={editIcon} onChange={setEditIcon} />
                       <input
-                        className="border dark:border-gray-600 rounded px-2 py-0.5 text-base w-0 flex-1 min-w-0 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        className="border dark:border-disc-border rounded px-2 py-0.5 text-base w-0 flex-1 min-w-0 bg-white dark:bg-disc-hover text-gray-900 dark:text-disc-text"
                         value={editName}
                         onChange={e => setEditName(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && save(c.id)}
                         autoFocus
                       />
                       {canEditGlobal && (
-                        <label className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                        <label className="flex items-center gap-1 text-xs text-gray-500 dark:text-disc-muted whitespace-nowrap">
                           <input type="checkbox" checked={editGlobal} onChange={e => setEditGlobal(e.target.checked)} />
                           g
                         </label>
@@ -195,10 +195,10 @@ export default function CategoriesPage() {
                     </div>
                   ) : (
                     <div className="flex items-center gap-3 flex-1">
-                      <span className="text-gray-500 dark:text-gray-400">
+                      <span className="text-gray-500 dark:text-disc-muted">
                         <CatIcon name={c.icon} size={18} />
                       </span>
-                      <span className="text-base text-gray-900 dark:text-gray-100">{c.name}</span>
+                      <span className="text-base text-gray-900 dark:text-disc-text">{c.name}</span>
                       <span className="text-xs text-gray-400">{c.is_global ? '(global)' : '(ของฉัน)'}</span>
                     </div>
                   )}
@@ -206,7 +206,7 @@ export default function CategoriesPage() {
                     {editId === c.id ? (
                       <>
                         <button onClick={() => save(c.id)} className="p-1.5 rounded text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/40"><Check size={16} /></button>
-                        <button onClick={() => setEditId(null)} className="p-1.5 rounded text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"><X size={16} /></button>
+                        <button onClick={() => setEditId(null)} className="p-1.5 rounded text-gray-400 hover:bg-gray-100 dark:hover:bg-disc-hover"><X size={16} /></button>
                       </>
                     ) : canEdit(c) ? (
                       <>
