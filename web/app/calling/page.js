@@ -74,7 +74,7 @@ export default async function CallingPage() {
           )}
           {Object.entries(grouped).map(([province, list]) => (
             <section key={province}>
-              <h2 className="text-xs font-semibold text-warm-500 dark:text-warm-dark-500 uppercase tracking-widest mb-4">
+              <h2 className="text-sm font-semibold text-warm-500 dark:text-warm-dark-500 uppercase tracking-widest mb-4">
                 {province}
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
