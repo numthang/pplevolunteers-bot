@@ -4,10 +4,24 @@ import { useState, useEffect } from 'react'
 import geographyData from '@/lib/thailand-geography.json'
 
 const CATEGORIES = [
-  { value: 'donor',     label: 'ผู้บริจาค' },
-  { value: 'prospect',  label: 'คนสนใจ' },
-  { value: 'volunteer', label: 'อาสาสมัคร' },
-  { value: 'other',     label: 'อื่นๆ' },
+  { group: 'กลุ่มคน', options: [
+    { value: 'donor',            label: 'ผู้บริจาค' },
+    { value: 'prospect',         label: 'คนสนใจ' },
+    { value: 'volunteer',        label: 'อาสาสมัคร' },
+    { value: 'leader',           label: 'แกนนำ' },
+    { value: 'community_leader', label: 'ผู้นำชุมชน' },
+    { value: 'civil',            label: 'ประชาสังคม' },
+    { value: 'media',            label: 'สื่อมวลชน' },
+    { value: 'politician',       label: 'นักการเมือง/อปท.' },
+  ]},
+  { group: 'ผู้ให้บริการ', options: [
+    { value: 'venue',          label: 'สถานที่' },
+    { value: 'print',          label: 'งานพิมพ์/ป้าย' },
+    { value: 'event_service',  label: 'บริการอีเวนต์' },
+  ]},
+  { group: 'อื่นๆ', options: [
+    { value: 'other', label: 'อื่นๆ' },
+  ]},
 ]
 
 const PROVINCE_LIST = geographyData.map(p => p.province)
@@ -73,7 +87,11 @@ export default function ContactForm({ initial = {}, onSubmit, onCancel, loading 
         <label className={labelCls}>ประเภท</label>
         <select className={inputCls} value={form.category} onChange={e => set('category', e.target.value)}>
           <option value="">— เลือกประเภท —</option>
-          {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+          {CATEGORIES.map(g => (
+            <optgroup key={g.group} label={g.group}>
+              {g.options.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+            </optgroup>
+          ))}
         </select>
       </div>
 

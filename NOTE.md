@@ -46,3 +46,27 @@ https://discord.com/invite/CjheHjvPVS
 หากจนท.ตักเตือนและท่านไม่ทำตาม เราจะลงโทษตามความรุนแรง เช่น Time out หรือ  Ban กรณีที่ท่านต้องการอุธรณ์หรือต้องการร้องเรียนสามารถแจ้งที่ https://discord.com/channels/1340903354037178410/1397146590694871100
 
 ====
+
+กลุ่ม: Activity & Stats
+Slogan: รู้ทันทุกความเคลื่อนไหวในทีม
+Description: ติดตามกิจกรรมของสมาชิกแบบ real-time ผ่าน Activity Score ที่คำนวณจากข้อความ เวลาใน voice และ mentions ดู ranking รายสัปดาห์หรือรายเดือน ระบุสมาชิกที่ inactive เพื่อ follow-up ได้ทันที
+
+กลุ่ม: Rating & Reports
+Slogan: Feedback ที่ปลอดภัยและโปร่งใส
+Description: สมาชิกให้คะแนน 1–5 ดาวพร้อมความคิดเห็นได้โดยตรงจาก right-click menu รองรับการร้องเรียนแบบ anonymous เพื่อให้ทุกคนกล้าพูดความจริง Moderator ดูประวัติคะแนนและ top rating แยกตาม role ได้
+
+กลุ่ม: Case Management
+Slogan: จัดการปัญหาอย่างเป็นระบบ
+Description: ทุกการร้องเรียนถูกบันทึกเป็นเคสพร้อม workflow ชัดเจนตั้งแต่รอดำเนินการ กำลังตรวจสอบ จนถึงปิดเคส Moderator บันทึก note แต่ละขั้นตอนได้ ตรวจสอบย้อนหลังได้ทุกเคส
+กลุ่ม: Forum Search
+Slogan: ค้นหาทุกโพสต์ใน Discord ได้ในวินาที
+Description: ค้นหาโพสต์ใน forum channel ด้วย Hybrid Search ที่รวม MySQL และ Meilisearch เข้าด้วยกัน รองรับการค้นข้ามหลาย channel พร้อมกัน เรียงผลตาม relevance หรือเวลาได้ตามต้องการ
+กลุ่ม: Finance Dashboard
+Slogan: ยอดบัญชีพรรคอัปเดตทันทีใน Discord
+Description: Bot อ่าน email จากธนาคารแล้วแปลงเป็น transaction อัตโนมัติ หมวดหมู่ที่รู้จักบันทึกเองได้เลย หมวดที่ไม่รู้จัก bot mention เหรัญญิกทันที Dashboard embed ในห้องอัปเดตแบบ real-time ตลอดเวลา
+กลุ่ม: Org Structure
+Slogan: โครงสร้างองค์กรที่สมาชิกจัดการได้เอง
+Description: สมาชิกเลือก role ความสนใจและจังหวัดได้เองผ่านปุ่ม interactive โดยไม่ต้องรอ Admin Admin ดูรายงาน activity แยกตามทีมและจังหวัด พร้อม snapshot สถิติย้อนหลังได้ทุกเมื่อ
+กลุ่ม: Admin Tools
+Slogan: เครื่องมือจัดการ server ครบในที่เดียว
+Description: ตั้งแต่ Broadcast DM ถึงสมาชิกหลาย role พร้อมกัน ส่งข้อความ anonymous ผ่าน bot ตั้ง Sticky Message ล้าง channel ไปจนถึง Backup ข้อมูล server ทั้งหมด ทุก action ทำได้จาก slash command โดยตรง
