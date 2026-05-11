@@ -6,22 +6,40 @@ const { INTEREST_BUTTONS, SKILL_BUTTONS } = require('../config/constants');
 
 function buildRows(buttons, roleMap, memberRoles, prefix) {
   const rows = [];
-  for (let i = 0; i < buttons.length; i += 4) {
-    const chunk = buttons.slice(i, i + 4);
-    rows.push(
-      new ActionRowBuilder().addComponents(
-        chunk.map(b => {
-          const roleId  = roleMap[b.key];
-          const hasRole = roleId && memberRoles.cache.has(roleId);
-          return new ButtonBuilder()
-            .setCustomId(`${prefix}:${b.key}`)
-            .setLabel(b.label)
-            .setEmoji(b.emoji)
-            .setStyle(hasRole ? ButtonStyle.Primary : ButtonStyle.Secondary);
-        })
-      )
-    );
+  let chunk = [];
+
+  function flushChunk() {
+    if (chunk.length === 0) return;
+    rows.push(new ActionRowBuilder().addComponents(chunk));
+    chunk = [];
   }
+
+  for (const b of buttons) {
+    if (b.divider) {
+      flushChunk();
+      rows.push(
+        new ActionRowBuilder().addComponents(
+          new ButtonBuilder()
+            .setCustomId(`${prefix}:divider:${rows.length}`)
+            .setLabel(b.label)
+            .setStyle(ButtonStyle.Secondary)
+            .setDisabled(true)
+        )
+      );
+      continue;
+    }
+    const roleId  = roleMap[b.key];
+    const hasRole = roleId && memberRoles.cache.has(roleId);
+    chunk.push(
+      new ButtonBuilder()
+        .setCustomId(`${prefix}:${b.key}`)
+        .setLabel(b.label)
+        .setEmoji(b.emoji)
+        .setStyle(hasRole ? ButtonStyle.Primary : ButtonStyle.Secondary)
+    );
+    if (chunk.length === 4) flushChunk();
+  }
+  flushChunk();
   return rows;
 }
 
