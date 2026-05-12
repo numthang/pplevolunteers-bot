@@ -59,3 +59,15 @@ ALTER TABLE calling_logs
 -- 2026-05-09: act_event_cache — เปลี่ยน event_date เป็น DATETIME เพื่อเก็บเวลาจัดกิจกรรมด้วย
 ALTER TABLE act_event_cache MODIFY COLUMN event_date DATETIME NULL;
 
+-- 2026-05-13: dc_gogo_entries — เก็บรายชื่อผู้เข้าร่วม GoGo panel แทนการ parse embed field
+CREATE TABLE IF NOT EXISTS dc_gogo_entries (
+  id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  guild_id   VARCHAR(20)  NOT NULL,
+  message_id VARCHAR(20)  NOT NULL,
+  user_id    VARCHAR(20)  NOT NULL,
+  name       VARCHAR(200) NOT NULL DEFAULT '',
+  joined_at  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_panel (guild_id, message_id),
+  INDEX idx_user  (guild_id, message_id, user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+

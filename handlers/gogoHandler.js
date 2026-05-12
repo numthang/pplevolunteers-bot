@@ -17,6 +17,7 @@ const {
 const { getSetting, setSetting } = require('../db/settings');
 const { ROLES } = require('../config/roles');
 const { getMember } = require('../db/members');
+const { getEntries, hasPanel, upsertEntries, seedEntries } = require('../db/gogo');
 
 const FIELD_PREFIX = 'ผู้เข้าร่วม';
 const isEntryField = f => f.name.startsWith(FIELD_PREFIX) || f.name.startsWith('👥 ' + FIELD_PREFIX);
@@ -86,15 +87,22 @@ function buildFieldValue(entries) {
 
 async function handleGogoSignup(interaction) {
   if (!interaction.isButton()) return;
-  const fields = interaction.message.embeds[0]?.fields ?? [];
-  const fieldIdx = fields.findIndex(f => isEntryField(f));
+  const { guildId } = interaction;
+  const messageId = interaction.message.id;
+  const userId = interaction.user.id;
 
-  const myEntries = fieldIdx >= 0
-    ? parseEntries(fields[fieldIdx].value).filter(e => e.userId === interaction.user.id)
-    : [];
+  // lazy migrate entries เก่าจาก embed field เข้า DB
+  if (!(await hasPanel(guildId, messageId))) {
+    const fields = interaction.message.embeds[0]?.fields ?? [];
+    const fieldIdx = fields.findIndex(f => isEntryField(f));
+    if (fieldIdx >= 0) await seedEntries(guildId, messageId, parseEntries(fields[fieldIdx].value));
+  }
+
+  const allEntries = await getEntries(guildId, messageId);
+  const myEntries  = allEntries.filter(e => e.user_id === userId);
   const alreadyIn  = myEntries.length > 0;
-  const extraNames = myEntries.filter(e => e.name).map(e => e.name);
   const displayName = interaction.member?.displayName ?? interaction.user.username;
+  const extraNames = myEntries.slice(1).map(e => e.name).filter(Boolean);
   const prefill = alreadyIn ? [displayName, ...extraNames].join('\n') : displayName;
 
   const modal = new ModalBuilder()
@@ -131,17 +139,24 @@ async function handleGogoModal(interaction) {
   const fields   = [...(embed.data.fields ?? [])];
   const fieldIdx = fields.findIndex(f => isEntryField(f));
 
-  let entries = fieldIdx >= 0 ? parseEntries(fields[fieldIdx].value) : [];
-  entries = entries.filter(e => e.userId !== userId);
-  const newNames = rawInput ? rawInput.split('\n').map(n => n.trim()).filter(Boolean) : [];
-  if (newNames.length > 0) {
-    for (const name of newNames) entries.push({ name, userId });
+  // lazy migrate
+  if (!(await hasPanel(interaction.guildId, messageId))) {
+    if (fieldIdx >= 0) await seedEntries(interaction.guildId, messageId, parseEntries(fields[fieldIdx].value));
   }
+
+  // เขียน DB
+  const newNames = rawInput ? rawInput.split('\n').map(n => n.trim()).filter(Boolean) : [];
+  await upsertEntries(interaction.guildId, messageId, userId, newNames);
+
+  // อ่าน DB เพื่อ render embed
+  const allEntries = await getEntries(interaction.guildId, messageId);
+  const uniqueUsers = [...new Set(allEntries.map(e => e.user_id))];
+  const dbEntries = allEntries.map(({ user_id: u, name: n }) => ({ userId: u, name: n }));
 
   const baseName = fieldIdx >= 0
     ? fields[fieldIdx].name.replace(/ \(\d+ คน\)$/, '').replace(/^👥 /, '')
     : FIELD_PREFIX;
-  const newField = { name: `${baseName} (${entries.length} คน)`, value: buildFieldValue(entries), inline: false };
+  const newField = { name: `${baseName} (${uniqueUsers.length} คน)`, value: buildFieldValue(dbEntries), inline: false };
 
   if (fieldIdx >= 0) fields[fieldIdx] = newField;
   else fields.push(newField);
@@ -213,10 +228,9 @@ async function handleGogoDMButton(interaction) {
 
   const defaultText = ch.name ?? '';
 
-  const embedFields = interaction.message.embeds[0]?.fields ?? [];
-  const entryField  = embedFields.findIndex(f => isEntryField(f));
-  const entries     = entryField >= 0 ? parseEntries(embedFields[entryField].value) : [];
-  const names       = [...new Set(entries.map(e => e.name))];
+  const messageId = interaction.message.id;
+  const entries   = await getEntries(interaction.guildId, messageId);
+  const names     = [...new Set(entries.map(e => e.name).filter(Boolean))];
   const modalTitle  = `📢 DM: ${names.join(', ')}`.length <= 45
     ? `📢 DM: ${names.join(', ')}`
     : `📢 DM ผู้ลงชื่อ (${entries.length} คน)`;
@@ -249,14 +263,13 @@ async function handleGogoDMModal(interaction) {
   const msg = await interaction.channel.messages.fetch(messageId).catch(() => null);
   if (!msg) return interaction.editReply({ content: '❌ ไม่พบข้อความต้นทาง' });
 
-  const fields   = msg.embeds[0]?.fields ?? [];
-  const fieldIdx = fields.findIndex(f => isEntryField(f));
-  const entries  = fieldIdx >= 0 ? parseEntries(fields[fieldIdx].value) : [];
+  const entries = await getEntries(interaction.guildId, messageId);
+  const uniqueUserIds = [...new Set(entries.map(e => e.user_id))];
 
-  if (!entries.length) return interaction.editReply({ content: '❌ ยังไม่มีผู้ลงชื่อ' });
+  if (!uniqueUserIds.length) return interaction.editReply({ content: '❌ ยังไม่มีผู้ลงชื่อ' });
 
   let success = 0, fail = 0;
-  for (const { userId } of entries) {
+  for (const userId of uniqueUserIds) {
     try {
       const user = await interaction.client.users.fetch(userId);
       await user.send(`${body} — <@${interaction.user.id}>`);
