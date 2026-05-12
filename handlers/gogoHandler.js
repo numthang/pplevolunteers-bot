@@ -46,16 +46,21 @@ function parseEntries(fieldValue) {
     }).filter(Boolean);
   }
   const entries = [];
-  // format ใหม่: "<@id> ([ชื่อ](url))" — จับเป็นชุดก่อน แล้วตัดออกจาก string
   let rest = fieldValue;
-  for (const m of fieldValue.matchAll(/<@(\d+)> \[[^\]]+\]\(https:\/\/discord\.com\/users\/\d+\)/g)) {
+  // "<@id> ([text](url))" — format กลาง มีวงเล็บ
+  for (const m of fieldValue.matchAll(/<@(\d+)> \(\[[^\]]+\]\(https:\/\/discord\.com\/users\/\d+\)\)/g)) {
     entries.push({ name: '', userId: m[1] });
     rest = rest.replace(m[0], '');
   }
-  // format เก่า: standalone "<@id>" ที่ยังเหลือ
+  // "<@id> [text](url)" — format ปัจจุบัน ไม่มีวงเล็บ
+  for (const m of rest.matchAll(/<@(\d+)> \[[^\]]+\]\(https:\/\/discord\.com\/users\/\d+\)/g)) {
+    entries.push({ name: '', userId: m[1] });
+    rest = rest.replace(m[0], '');
+  }
+  // standalone "<@id>" — format เก่าสุด
   for (const m of rest.matchAll(/<@(\d+)>/g))
     entries.push({ name: '', userId: m[1] });
-  // extra names: "[ชื่อ](url)" ที่ยังเหลือ
+  // extra names: "[ชื่อ](url)"
   for (const m of rest.matchAll(/\[([^\]]+)\]\(https:\/\/discord\.com\/users\/(\d+)\)/g))
     entries.push({ name: m[1], userId: m[2] });
   return entries;
