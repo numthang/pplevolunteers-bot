@@ -19,6 +19,7 @@ const { ROLES } = require('../config/roles');
 const { getMember } = require('../db/members');
 
 const FIELD_PREFIX = 'ผู้เข้าร่วม';
+const isEntryField = f => isEntryField(f) || f.name.startsWith('👥 ' + FIELD_PREFIX);
 
 const DM_ALLOWED_ROLE_IDS = new Set([
   ROLES['Admin'],
@@ -76,10 +77,8 @@ function buildFieldValue(entries) {
   return [...groups.entries()]
     .map(([userId, names]) => {
       const valid = names.filter(Boolean);
-      if (!valid.length) return `<@${userId}>`;
-      const [first, ...rest] = valid;
       const primary = `<@${userId}> [🔗](https://discord.com/users/${userId})`;
-      const extras = rest.map(n => `[${n}](https://discord.com/users/${userId})`);
+      const extras = valid.slice(1).map(n => `[${n}](https://discord.com/users/${userId})`);
       return [primary, ...extras].join(' · ');
     })
     .join(' · ');
@@ -88,7 +87,7 @@ function buildFieldValue(entries) {
 async function handleGogoSignup(interaction) {
   if (!interaction.isButton()) return;
   const fields = interaction.message.embeds[0]?.fields ?? [];
-  const fieldIdx = fields.findIndex(f => f.name.startsWith(FIELD_PREFIX));
+  const fieldIdx = fields.findIndex(f => isEntryField(f));
 
   const myEntries = fieldIdx >= 0
     ? parseEntries(fields[fieldIdx].value).filter(e => e.userId === interaction.user.id)
@@ -130,7 +129,7 @@ async function handleGogoModal(interaction) {
 
   const embed    = EmbedBuilder.from(msg.embeds[0]);
   const fields   = [...(embed.data.fields ?? [])];
-  const fieldIdx = fields.findIndex(f => f.name.startsWith(FIELD_PREFIX));
+  const fieldIdx = fields.findIndex(f => isEntryField(f));
 
   let entries = fieldIdx >= 0 ? parseEntries(fields[fieldIdx].value) : [];
   entries = entries.filter(e => e.userId !== userId);
@@ -139,7 +138,9 @@ async function handleGogoModal(interaction) {
     for (const name of newNames) entries.push({ name, userId });
   }
 
-  const baseName = fieldIdx >= 0 ? fields[fieldIdx].name.replace(/ \(\d+ คน\)$/, '') : FIELD_PREFIX;
+  const baseName = fieldIdx >= 0
+    ? fields[fieldIdx].name.replace(/ \(\d+ คน\)$/, '').replace(/^👥 /, '')
+    : FIELD_PREFIX;
   const newField = { name: `${baseName} (${entries.length} คน)`, value: buildFieldValue(entries), inline: false };
 
   if (fieldIdx >= 0) fields[fieldIdx] = newField;
@@ -213,7 +214,7 @@ async function handleGogoDMButton(interaction) {
   const defaultText = ch.name ?? '';
 
   const embedFields = interaction.message.embeds[0]?.fields ?? [];
-  const entryField  = embedFields.findIndex(f => f.name.startsWith(FIELD_PREFIX));
+  const entryField  = embedFields.findIndex(f => isEntryField(f));
   const entries     = entryField >= 0 ? parseEntries(embedFields[entryField].value) : [];
   const names       = [...new Set(entries.map(e => e.name))];
   const modalTitle  = `📢 DM: ${names.join(', ')}`.length <= 45
@@ -249,7 +250,7 @@ async function handleGogoDMModal(interaction) {
   if (!msg) return interaction.editReply({ content: '❌ ไม่พบข้อความต้นทาง' });
 
   const fields   = msg.embeds[0]?.fields ?? [];
-  const fieldIdx = fields.findIndex(f => f.name.startsWith(FIELD_PREFIX));
+  const fieldIdx = fields.findIndex(f => isEntryField(f));
   const entries  = fieldIdx >= 0 ? parseEntries(fields[fieldIdx].value) : [];
 
   if (!entries.length) return interaction.editReply({ content: '❌ ยังไม่มีผู้ลงชื่อ' });
