@@ -66,7 +66,10 @@ function buildFieldValue(entries) {
     groups.get(userId).push(name);
   }
   return [...groups.entries()]
-    .map(([userId, names]) => `${names.join(', ')} <@${userId}>`)
+    .map(([userId, names]) => {
+      const extras = names.slice(1).map(n => `[${n}](https://discord.com/users/${userId})`);
+      return [`<@${userId}>`, ...extras].join(', ');
+    })
     .join(' · ');
 }
 
