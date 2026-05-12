@@ -292,7 +292,7 @@ await refreshDashboard(thread, interaction.guildId, ids, existing.dashboard_msg_
       const creatorName = interaction.member?.displayName ?? interaction.user.username;
       const embed = new EmbedBuilder()
         .setColor(color)
-        .addFields({ name: `👥 ผู้เข้าร่วม ${title} (0 คน)`, value: '-', inline: false })
+        .addFields({ name: `ผู้เข้าร่วม ${title} (0 คน)`, value: '-', inline: false })
         .setFooter({ text: `สร้างโดย ${creatorName}` });
 
       const row = new ActionRowBuilder().addComponents(

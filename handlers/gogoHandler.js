@@ -18,7 +18,7 @@ const { getSetting, setSetting } = require('../db/settings');
 const { ROLES } = require('../config/roles');
 const { getMember } = require('../db/members');
 
-const FIELD_PREFIX = '👥 ผู้เข้าร่วม';
+const FIELD_PREFIX = 'ผู้เข้าร่วม';
 
 const DM_ALLOWED_ROLE_IDS = new Set([
   ROLES['Admin'],
@@ -63,8 +63,12 @@ function buildFieldValue(entries) {
   }
   return [...groups.entries()]
     .map(([userId, names]) => {
-      const extras = names.slice(1).map(n => `[${n}](https://discord.com/users/${userId})`);
-      return [`<@${userId}>`, ...extras].join(' · ');
+      const valid = names.filter(Boolean);
+      if (!valid.length) return `<@${userId}>`;
+      const [first, ...rest] = valid;
+      const primary = `<@${userId}> ([${first}](https://discord.com/users/${userId}))`;
+      const extras = rest.map(n => `[${n}](https://discord.com/users/${userId})`);
+      return [primary, ...extras].join(' · ');
     })
     .join(' · ');
 }
@@ -120,8 +124,7 @@ async function handleGogoModal(interaction) {
   entries = entries.filter(e => e.userId !== userId);
   const newNames = rawInput ? rawInput.split('\n').map(n => n.trim()).filter(Boolean) : [];
   if (newNames.length > 0) {
-    entries.push({ name: '', userId });
-    for (const name of newNames.slice(1)) entries.push({ name, userId });
+    for (const name of newNames) entries.push({ name, userId });
   }
 
   const baseName = fieldIdx >= 0 ? fields[fieldIdx].name.replace(/ \(\d+ คน\)$/, '') : FIELD_PREFIX;
