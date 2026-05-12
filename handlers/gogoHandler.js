@@ -35,26 +35,22 @@ const DM_ALLOWED_ROLE_NAMES = new Set([
   'ผู้ประสานงานภาค', 'ผู้ประสานงานจังหวัด', 'กรรมการจังหวัด',
 ]);
 
-// รองรับทั้ง format เก่า "1. ชื่อ (<@id>)" และ format ใหม่ "ชื่อ1, ชื่อ2 <@id> · ชื่อ3 <@id2>"
+// รองรับทุก format เก่า/ใหม่
 function parseEntries(fieldValue) {
   if (!fieldValue || fieldValue === '-') return [];
+  // format เก่า: "1. ชื่อ (<@id>)"
   if (fieldValue.startsWith('1.')) {
-    // format เก่า
     return fieldValue.split('\n').filter(Boolean).map(line => {
       const match = line.match(/^\d+\. (.+?) \(<@(\d+)>\)$/);
       return match ? { name: match[1], userId: match[2] } : null;
     }).filter(Boolean);
   }
-  // format ใหม่: "ชื่อ1, ชื่อ2 <@id> · ชื่อ3 <@id2>"
+  // format ปัจจุบัน: "<@id> · [ชื่อ](link) · <@id2>"
   const entries = [];
-  for (const group of fieldValue.split(' · ')) {
-    const match = group.trim().match(/^(.+)\s<@(\d+)>$/);
-    if (!match) continue;
-    const userId = match[2];
-    for (const name of match[1].split(',').map(n => n.trim()).filter(Boolean)) {
-      entries.push({ name, userId });
-    }
-  }
+  for (const m of fieldValue.matchAll(/<@(\d+)>/g))
+    entries.push({ name: '', userId: m[1] });
+  for (const m of fieldValue.matchAll(/\[([^\]]+)\]\(https:\/\/discord\.com\/users\/(\d+)\)/g))
+    entries.push({ name: m[1], userId: m[2] });
   return entries;
 }
 
@@ -68,7 +64,7 @@ function buildFieldValue(entries) {
   return [...groups.entries()]
     .map(([userId, names]) => {
       const extras = names.slice(1).map(n => `[${n}](https://discord.com/users/${userId})`);
-      return [`<@${userId}>`, ...extras].join(', ');
+      return [`<@${userId}>`, ...extras].join(' · ');
     })
     .join(' · ');
 }
@@ -78,13 +74,13 @@ async function handleGogoSignup(interaction) {
   const fields = interaction.message.embeds[0]?.fields ?? [];
   const fieldIdx = fields.findIndex(f => f.name.startsWith(FIELD_PREFIX));
 
-  const existingNames = fieldIdx >= 0
-    ? parseEntries(fields[fieldIdx].value).filter(e => e.userId === interaction.user.id).map(e => e.name)
+  const myEntries = fieldIdx >= 0
+    ? parseEntries(fields[fieldIdx].value).filter(e => e.userId === interaction.user.id)
     : [];
-
-  const prefill = existingNames.length
-    ? existingNames.join('\n')
-    : (interaction.member?.displayName ?? interaction.user.username);
+  const alreadyIn  = myEntries.length > 0;
+  const extraNames = myEntries.filter(e => e.name).map(e => e.name);
+  const displayName = interaction.member?.displayName ?? interaction.user.username;
+  const prefill = alreadyIn ? [displayName, ...extraNames].join('\n') : displayName;
 
   const modal = new ModalBuilder()
     .setCustomId(`modal_gogo:${interaction.message.id}`)
@@ -123,7 +119,10 @@ async function handleGogoModal(interaction) {
   let entries = fieldIdx >= 0 ? parseEntries(fields[fieldIdx].value) : [];
   entries = entries.filter(e => e.userId !== userId);
   const newNames = rawInput ? rawInput.split('\n').map(n => n.trim()).filter(Boolean) : [];
-  for (const name of newNames) entries.push({ name, userId });
+  if (newNames.length > 0) {
+    entries.push({ name: '', userId });
+    for (const name of newNames.slice(1)) entries.push({ name, userId });
+  }
 
   const baseName = fieldIdx >= 0 ? fields[fieldIdx].name.replace(/ \(\d+ คน\)$/, '') : FIELD_PREFIX;
   const newField = { name: `${baseName} (${entries.length} คน)`, value: buildFieldValue(entries), inline: false };
@@ -140,8 +139,8 @@ async function handleGogoModal(interaction) {
   }
   const latestRow = new ActionRowBuilder().addComponents(
     new ButtonBuilder().setCustomId('btn_gogo_signup').setLabel('🙋 เข้าร่วม').setStyle(ButtonStyle.Success),
-    new ButtonBuilder().setCustomId('btn_gogo_dm').setEmoji('📢').setStyle(ButtonStyle.Secondary),
     new ButtonBuilder().setCustomId('btn_gogo_event').setEmoji('🗓️').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('btn_gogo_dm').setEmoji('📢').setStyle(ButtonStyle.Secondary),
   );
 
   if (stickyConfig && stickyConfig.message_id === messageId) {
