@@ -19,7 +19,7 @@ export default async function RootLayout({ children }) {
       <body className="bg-gray-100 dark:bg-disc-bg2 text-gray-900 dark:text-disc-text min-h-screen">
         <Providers session={session}>
           <Nav session={session} />
-          <main className="max-w-5xl mx-auto px-4 pt-3 pb-6">{children}</main>
+          <main className="max-w-5xl mx-auto px-3 sm:px-4 pt-3 pb-6">{children}</main>
         </Providers>
       </body>
     </html>

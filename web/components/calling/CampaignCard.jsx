@@ -14,6 +14,29 @@ function formatEventDate(dateStr) {
   return result
 }
 
+function buildGoogleCalendarUrl(campaign) {
+  if (!campaign.event_date) return null
+  const pad = n => String(n).padStart(2, '0')
+  const [datePart, timePart] = campaign.event_date.split('T')
+  const [y, m, d] = datePart.split('-').map(Number)
+  const hasTime = timePart && timePart !== '00:00'
+  let dates
+  if (hasTime) {
+    const [h, mi] = timePart.split(':').map(Number)
+    const start = `${y}${pad(m)}${pad(d)}T${pad(h)}${pad(mi)}00`
+    const endDt = new Date(y, m - 1, d, h + 4, mi)
+    const end = `${endDt.getFullYear()}${pad(endDt.getMonth() + 1)}${pad(endDt.getDate())}T${pad(endDt.getHours())}${pad(endDt.getMinutes())}00`
+    dates = `${start}/${end}`
+  } else {
+    const next = new Date(y, m - 1, d + 1)
+    dates = `${y}${pad(m)}${pad(d)}/${next.getFullYear()}${pad(next.getMonth() + 1)}${pad(next.getDate())}`
+  }
+  const params = new URLSearchParams({ action: 'TEMPLATE', text: campaign.name, dates })
+  if (campaign.description) params.set('details', campaign.description)
+  if (campaign.province) params.set('location', campaign.province)
+  return `https://calendar.google.com/calendar/render?${params}`
+}
+
 export default function CampaignCard({ campaign, canCreate }) {
   const router = useRouter()
 
@@ -47,20 +70,28 @@ export default function CampaignCard({ campaign, canCreate }) {
         </div>
       </Link>
 
-      {canCreate && (
-        <div className="px-4 py-2 border-t border-warm-200 dark:border-disc-border flex gap-3">
-          <Link
-            href={`/calling/edit/${campaign.id}`}
-            className="text-base text-teal hover:underline"
-          >
-            แก้ไข
-          </Link>
-          <button
-            onClick={handleDelete}
-            className="text-base text-red-500 dark:text-red-400 hover:underline"
-          >
-            ลบ
-          </button>
+      {(canCreate || campaign.event_date) && (
+        <div className="px-4 py-2 border-t border-warm-200 dark:border-disc-border flex gap-3 items-center">
+          {campaign.event_date && (
+            <a
+              href={buildGoogleCalendarUrl(campaign)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-base text-teal hover:underline"
+            >
+              + Google Calendar
+            </a>
+          )}
+          {canCreate && (
+            <>
+              <Link href={`/calling/edit/${campaign.id}`} className="text-base text-teal hover:underline">
+                แก้ไข
+              </Link>
+              <button onClick={handleDelete} className="text-base text-red-500 dark:text-red-400 hover:underline">
+                ลบ
+              </button>
+            </>
+          )}
         </div>
       )}
     </div>

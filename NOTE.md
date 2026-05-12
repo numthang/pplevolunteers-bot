@@ -1,7 +1,72 @@
 TODO
 - เชื่อมระบบ Discord กับของพรรค
-- Modal edit หรือ message edit by anyone
+- อื่นๆ ที่คาดหวังในอนาคต project management แบบ notion และ appflowy ให้ simple และ easy
+==
+แนะนำแบ่งเป็น 2 session:
+Session A: อ่าน PDF + verify/correct CSV (source_page, benefit_amount, eligibility)
+Session B: เพิ่ม benefit_detail และ normalize ที่เหลือ
 
+ฉันมี CSV ข้อมูลสวัสดิการขั้นพื้นฐานของประเทศไทย 86 รายการ (W001-W086) ที่ได้จากการอ่าน PDF "สวัสดิการขั้นพื้นฐานของประเทศไทย" 120 หน้า แต่ข้อมูลบางส่วนอาจผิดพลาด
+งานที่ต้องการ:
+อ่าน PDF แนบ ทีละหน้า แล้ว verify และแก้ไข CSV แนบ โดยเฉพาะ column: source_page, benefit_amount, eligibility, contact_phone, contact_website, contact_hotline
+กติกา:
+
+อ่านภาพทีละ batch แล้วแจ้งว่า row ไหนต้องแก้อะไร ก่อน commit ลง CSV
+ถ้าหน้าไหนข้อมูลตรงกับ CSV แล้ว บอกสั้นๆ ว่า "ผ่าน" ไม่ต้อง retype
+เมื่อ verify ครบแล้ว export CSV ที่แก้ไขแล้วออกมา
+
+PDF: [แนบไฟล์]
+CSV: [แนบไฟล์] 
+
+ทำทีละ session 
+Session B:
+
+ฉันมี CSV ข้อมูลสวัสดิการขั้นพื้นฐานของประเทศไทย 86 รายการ (W001-W086) ที่ผ่านการ verify กับ PDF แล้ว
+งานที่ต้องการ:
+เพิ่ม 2 column ลงใน CSV:
+
+benefit_detail — อธิบายสวัสดิการแบบ 1-2 ประโยค ว่าใช้ทำอะไร ได้อะไร
+eligibility — เงื่อนไขการรับสิทธิ์แบบ bullet คั่นด้วย |
+
+โดยอ่านข้อมูลจาก PDF แนบ ทีละหน้าตาม source_page ใน CSV
+กติกา:
+
+ทำทีละ batch 10 rows แล้วแสดงให้ confirm ก่อน ไม่ต้อง commit ทั้งหมดในครั้งเดียว
+ถ้า eligibility ใน CSV มีข้อมูลอยู่แล้ว ให้ verify กับ PDF ก่อน แก้ถ้าผิด
+export CSV ที่สมบูรณ์เมื่อทำครบทุก row
+
+PDF: [แนบไฟล์]
+CSV: [แนบไฟล์ที่ผ่าน Session A แล้ว]
+
+==
+ถ้าผมอยาก normalize ทุกหน้า ผมดูแล้ว ต้องการมนุษย์มาช่วยกันแก้ไขเพิ่มข้อมูลเยอะอยุ่นะ ผมจะเตรียมการบ้านให้ทีมงานจัดเตรียมข้อมูลให้พร้อมและถูกต้องได้ยังไงถ้าผมอยาก normalize ทุกหน้า ผมดูแล้ว ต้องการมนุษย์มาช่วยกันแก้ไขเพิ่มข้อมูลเยอะอยุ่นะ ผมจะเตรียมการบ้านให้ทีมงานจัดเตรียมข้อมูลให้พร้อมและถูกต้องได้ยังไง11:22 AMClaude responded: ดีมากเลยครับ นี่คือแนวทางที่ practical ที่สุดดีมากเลยครับ นี่คือแนวทางที่ practical ที่สุด
+
+ขั้นตอนแนะนำ:
+1. แจก PDF + CSV ให้ทีม
+
+CSV ที่มีคือ template แล้ว — แต่ละคนรับผิดชอบ row ที่ตัวเองได้รับ
+PDF เปิดควบคู่ไปด้วย ดู source_page เพื่อหาหน้าที่ถูกต้อง
+
+2. สร้าง Data Entry Guide
+อธิบายว่าแต่ละ column หมายถึงอะไร เช่น:
+
+eligibility — คัดลอกจาก section "คุณสมบัติ" คั่นด้วย |
+benefit_amount — ตัวเลขเงิน/สิทธิ์จาก section "สิทธิประโยชน์"
+is_universal — True ถ้าไม่ต้องพิสูจน์ความจน
+situation — tag เองตาม taxonomy ที่กำหนด
+
+3. แบ่งงาน
+ทีมละ ~10 rows ต่อคน ใช้ Google Sheets ร่วมกัน แบ่ง tab ตามกระทรวง เช่น:
+
+Tab พม. (W001-W035)
+Tab มหาดไทย (W036-W043)
+Tab แรงงาน (W044-W054)
+ฯลฯ
+
+4. QA รอบสุดท้าย
+คนที่ไม่ได้ทำ row นั้น cross-check กับ PDF อีกรอบ
+
+==
 Panel Forum: 
 /panel forum channel:#💬┆กระทู้-ทั่วไป
 
@@ -46,27 +111,3 @@ https://discord.com/invite/CjheHjvPVS
 หากจนท.ตักเตือนและท่านไม่ทำตาม เราจะลงโทษตามความรุนแรง เช่น Time out หรือ  Ban กรณีที่ท่านต้องการอุธรณ์หรือต้องการร้องเรียนสามารถแจ้งที่ https://discord.com/channels/1340903354037178410/1397146590694871100
 
 ====
-
-กลุ่ม: Activity & Stats
-Slogan: รู้ทันทุกความเคลื่อนไหวในทีม
-Description: ติดตามกิจกรรมของสมาชิกแบบ real-time ผ่าน Activity Score ที่คำนวณจากข้อความ เวลาใน voice และ mentions ดู ranking รายสัปดาห์หรือรายเดือน ระบุสมาชิกที่ inactive เพื่อ follow-up ได้ทันที
-
-กลุ่ม: Rating & Reports
-Slogan: Feedback ที่ปลอดภัยและโปร่งใส
-Description: สมาชิกให้คะแนน 1–5 ดาวพร้อมความคิดเห็นได้โดยตรงจาก right-click menu รองรับการร้องเรียนแบบ anonymous เพื่อให้ทุกคนกล้าพูดความจริง Moderator ดูประวัติคะแนนและ top rating แยกตาม role ได้
-
-กลุ่ม: Case Management
-Slogan: จัดการปัญหาอย่างเป็นระบบ
-Description: ทุกการร้องเรียนถูกบันทึกเป็นเคสพร้อม workflow ชัดเจนตั้งแต่รอดำเนินการ กำลังตรวจสอบ จนถึงปิดเคส Moderator บันทึก note แต่ละขั้นตอนได้ ตรวจสอบย้อนหลังได้ทุกเคส
-กลุ่ม: Forum Search
-Slogan: ค้นหาทุกโพสต์ใน Discord ได้ในวินาที
-Description: ค้นหาโพสต์ใน forum channel ด้วย Hybrid Search ที่รวม MySQL และ Meilisearch เข้าด้วยกัน รองรับการค้นข้ามหลาย channel พร้อมกัน เรียงผลตาม relevance หรือเวลาได้ตามต้องการ
-กลุ่ม: Finance Dashboard
-Slogan: ยอดบัญชีพรรคอัปเดตทันทีใน Discord
-Description: Bot อ่าน email จากธนาคารแล้วแปลงเป็น transaction อัตโนมัติ หมวดหมู่ที่รู้จักบันทึกเองได้เลย หมวดที่ไม่รู้จัก bot mention เหรัญญิกทันที Dashboard embed ในห้องอัปเดตแบบ real-time ตลอดเวลา
-กลุ่ม: Org Structure
-Slogan: โครงสร้างองค์กรที่สมาชิกจัดการได้เอง
-Description: สมาชิกเลือก role ความสนใจและจังหวัดได้เองผ่านปุ่ม interactive โดยไม่ต้องรอ Admin Admin ดูรายงาน activity แยกตามทีมและจังหวัด พร้อม snapshot สถิติย้อนหลังได้ทุกเมื่อ
-กลุ่ม: Admin Tools
-Slogan: เครื่องมือจัดการ server ครบในที่เดียว
-Description: ตั้งแต่ Broadcast DM ถึงสมาชิกหลาย role พร้อมกัน ส่งข้อความ anonymous ผ่าน bot ตั้ง Sticky Message ล้าง channel ไปจนถึง Backup ข้อมูล server ทั้งหมด ทุก action ทำได้จาก slash command โดยตรง

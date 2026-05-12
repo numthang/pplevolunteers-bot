@@ -22,7 +22,7 @@ const { onMessage, onVoiceStateUpdate } = require('./utils/activityTracker');
 const { handleRefresh } = require('./handlers/forumDashboard');
 const { handleFinanceRefresh } = require('./handlers/financeDashboard');
 const { handleOpenSearch, handleSearchModal, handleResultPage } = require('./handlers/forumSearch');
-const { handleGogoSignup, handleGogoModal } = require('./handlers/gogoHandler');
+const { handleGogoSignup, handleGogoModal, handleGogoDMButton, handleGogoDMModal, handleGogoEventButton, handleGogoEventSelect, handleGogoEventModal } = require('./handlers/gogoHandler');
 const { indexThread, indexMessage, hybridSearch } = require('./services/forumIndexer');
 const { buildSearchResultEmbed, buildSearchComponents } = require('./handlers/forumSearch');
 const { forumChannelCache, dashboardThreadCache, addForumChannel, addDashboardThread } = require('./services/forumCache');
@@ -104,7 +104,9 @@ client.on('interactionCreate', async (interaction) => {
   // --- Modal Submit ---
   if (interaction.isModalSubmit()) {
     if (interaction.customId === 'forum_search_modal')     return handleSearchModal(interaction);
-    if (interaction.customId.startsWith('modal_gogo:'))    return handleGogoModal(interaction);
+    if (interaction.customId.startsWith('modal_gogo:'))      return handleGogoModal(interaction);
+    if (interaction.customId.startsWith('modal_gogo_dm:'))  return handleGogoDMModal(interaction);
+    if (interaction.customId.startsWith('modal_gogo_event:')) return handleGogoEventModal(interaction);
     if (interaction.customId.startsWith('rate_submit:'))   return handleRateModalSubmit(interaction);
     if (interaction.customId.startsWith('report_submit:')) return handleReportSubmit(interaction);
     if (interaction.customId.startsWith('anon_submit:')) {
@@ -123,6 +125,7 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.customId.startsWith('orgchart_province_region')) return handleOrgchartProvinceSelect(interaction);
     if (interaction.customId.startsWith('orgchart_role'))            return handleOrgchartRoleSelect(interaction);
     if (interaction.customId.startsWith('orgchart_days'))            return handleOrgchartDaysSelect(interaction);
+    if (interaction.customId === 'select_gogo_event')           return handleGogoEventSelect(interaction);
     if (interaction.customId.startsWith('stat_top:'))          return handleStatTopSelect(interaction);
     if (interaction.customId.startsWith('stat_user:'))         return handleStatUserSelect(interaction);
     if (interaction.customId === 'prov_region')                return handleProvinceRegionSelect(interaction);
@@ -141,7 +144,9 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.customId.startsWith('ratings_page:'))    return handlePageButton(interaction);
     if (interaction.customId.startsWith('interest:') || interaction.customId.startsWith('skill:')) return handleInterestSelect(interaction);
     if (interaction.customId.startsWith('report_start:')) return handleReportStart(interaction);
-    if (interaction.customId === 'btn_gogo_signup')            return handleGogoSignup(interaction);
+    if (interaction.customId === 'btn_gogo_signup')  return handleGogoSignup(interaction);
+    if (interaction.customId === 'btn_gogo_dm')      return handleGogoDMButton(interaction);
+    if (interaction.customId === 'btn_gogo_event')   return handleGogoEventButton(interaction);
     if (interaction.customId === 'btn_open_interest')         return handleOpenInterest(interaction);
     if (interaction.customId === 'btn_open_province')         return handleOpenProvince(interaction);
     if (interaction.customId === 'forum_search')              return handleOpenSearch(interaction);
@@ -251,7 +256,7 @@ client.on('messageCreate', async (message) => {
 
   const now = Date.now();
   const last = cooldowns.get(message.channel.id) || 0;
-  if (now - last < 2 * 60 * 60 * 1000) return; // 2 ชั่วโมง debounce
+  if (now - last < 24 * 60 * 60 * 1000) return; // 24 ชั่วโมง debounce
 
   cooldowns.set(message.channel.id, now);
   await refreshSticky(message.channel);

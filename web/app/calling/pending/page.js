@@ -62,6 +62,7 @@ export default function PendingCallsPage() {
   const router = useRouter()
 
   const [activeTab, setActiveTab] = useState(() => searchParams.get('tab') || 'member')
+  const [tabCounts, setTabCounts] = useState({ member: null, contact: null })
   const [campaigns, setCampaigns] = useState([])
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
@@ -90,6 +91,11 @@ export default function PendingCallsPage() {
     fetch('/api/calling/pending?campaigns=true')
       .then(r => r.json())
       .then(d => setCampaigns(d.data || []))
+      .catch(() => {})
+    Promise.all([
+      fetch('/api/calling/pending?count=true&type=member').then(r => r.json()),
+      fetch('/api/calling/pending?count=true&type=contact').then(r => r.json()),
+    ]).then(([m, c]) => setTabCounts({ member: m.count ?? null, contact: c.count ?? null }))
       .catch(() => {})
   }, [])
 
@@ -238,16 +244,26 @@ export default function PendingCallsPage() {
 
       {/* Tabs */}
       <div className="flex gap-1 mb-4 border-b border-warm-200 dark:border-disc-border">
-        {['member', 'contact'].map(tab => (
-          <button key={tab} onClick={() => switchTab(tab)}
-            className={`px-4 py-2 text-base font-medium border-b-2 -mb-px transition-colors ${
-              activeTab === tab
-                ? 'border-teal text-teal'
-                : 'border-transparent text-warm-500 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text'
-            }`}>
-            {tab === 'member' ? 'Member' : 'Contact'}
-          </button>
-        ))}
+        {['member', 'contact'].map(tab => {
+          const count = tabCounts[tab]
+          return (
+            <button key={tab} onClick={() => switchTab(tab)}
+              className={`px-4 py-2 text-base font-medium border-b-2 -mb-px transition-colors flex items-center gap-1.5 ${
+                activeTab === tab
+                  ? 'border-teal text-teal'
+                  : 'border-transparent text-warm-500 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text'
+              }`}>
+              {tab === 'member' ? 'Member' : 'Contact'}
+              {count !== null && (
+                <span className={`text-sm px-1.5 py-0.5 rounded-full font-normal ${
+                  activeTab === tab
+                    ? 'bg-teal/10 text-teal'
+                    : 'bg-warm-100 dark:bg-disc-header text-warm-500 dark:text-disc-muted'
+                }`}>{count}</span>
+              )}
+            </button>
+          )
+        })}
       </div>
 
       {/* Filters */}

@@ -24,7 +24,7 @@ const CATEGORIES = [
   ]},
 ]
 
-const PROVINCE_LIST = geographyData.map(p => p.province)
+const PROVINCE_LIST = geographyData.map(p => p.province).sort((a, b) => a.localeCompare(b, 'th'))
 
 export default function ContactForm({ initial = {}, onSubmit, onCancel, loading }) {
   const [form, setForm] = useState({
@@ -45,14 +45,14 @@ export default function ContactForm({ initial = {}, onSubmit, onCancel, loading 
   useEffect(() => {
     if (!form.province) { setAmphoeList([]); setTambonList([]); return }
     const prov = geographyData.find(p => p.province === form.province)
-    setAmphoeList(prov ? prov.amphoes : [])
+    setAmphoeList(prov ? prov.amphoes.slice().sort((a, b) => a.amphoe.localeCompare(b.amphoe, 'th')) : [])
     setTambonList([])
   }, [form.province])
 
   useEffect(() => {
     if (!form.amphoe || !amphoeList.length) { setTambonList([]); return }
     const amp = amphoeList.find(a => a.amphoe.replace(/^อำเภอ/, '') === form.amphoe)
-    setTambonList(amp ? amp.tambons : [])
+    setTambonList(amp ? amp.tambons.slice().sort((a, b) => a.localeCompare(b, 'th')) : [])
   }, [form.amphoe, amphoeList])
 
   function set(field, value) {

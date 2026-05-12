@@ -117,6 +117,7 @@ export default function CampaignPage({ params }) {
   const [activeTab, setActiveTab] = useState(() => searchParams.get('tab') === 'contact' ? 'contact' : 'member')
 
   const [campaign, setCampaign] = useState(null)
+  const [tabTotals, setTabTotals] = useState({ member: null, contact: null })
   const [stats, setStats] = useState({ total: 0, called: 0, assigned: 0, unassigned: 0, districts: [], districtCounts: {}, tierCounts: {}, assigneeCounts: [] })
   const [members, setMembers] = useState([])
   const [hasMore, setHasMore] = useState(false)
@@ -328,9 +329,11 @@ export default function CampaignPage({ params }) {
 
   useEffect(() => {
     ;(async () => {
-      const [campaignRes, usersRes] = await Promise.all([
+      const [campaignRes, usersRes, memberStatsRes, contactStatsRes] = await Promise.all([
         fetch('/api/calling/campaigns'),
-        fetch('/api/calling/users?all=true')
+        fetch('/api/calling/users?all=true'),
+        fetch(`/api/calling/members?campaignId=${campaignId}&stats=true`),
+        fetch(`/api/calling/contacts/campaign?campaignId=${campaignId}&stats=true`),
       ])
       const cData = await campaignRes.json()
       const camp = cData.data?.find(c => c.id === parseInt(campaignId))
@@ -341,6 +344,12 @@ export default function CampaignPage({ params }) {
         for (const u of uData.data) map[u.discord_id] = u.display_name
         setUsersMap(map)
       }
+      const mStats = await memberStatsRes.json()
+      const cStats = await contactStatsRes.json()
+      setTabTotals({
+        member: mStats.data?.total ?? null,
+        contact: cStats.data?.total ?? null,
+      })
     })()
   }, [campaignId])
 
@@ -505,16 +514,26 @@ export default function CampaignPage({ params }) {
 
       {/* Tabs */}
       <div className="flex gap-1 mb-4 border-b border-warm-200 dark:border-disc-border">
-        {['member', 'contact'].map(tab => (
-          <button key={tab} onClick={() => switchTab(tab)}
-            className={`px-4 py-2 text-base font-medium border-b-2 -mb-px transition-colors ${
-              activeTab === tab
-                ? 'border-teal text-teal'
-                : 'border-transparent text-warm-500 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text'
-            }`}>
-            {tab === 'member' ? 'Member' : 'Contact'}
-          </button>
-        ))}
+        {['member', 'contact'].map(tab => {
+          const total = tabTotals[tab]
+          return (
+            <button key={tab} onClick={() => switchTab(tab)}
+              className={`px-4 py-2 text-base font-medium border-b-2 -mb-px transition-colors flex items-center gap-1.5 ${
+                activeTab === tab
+                  ? 'border-teal text-teal'
+                  : 'border-transparent text-warm-500 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text'
+              }`}>
+              {tab === 'member' ? 'Member' : 'Contact'}
+              {total !== null && (
+                <span className={`text-sm px-1.5 py-0.5 rounded-full font-normal ${
+                  activeTab === tab
+                    ? 'bg-teal/10 text-teal'
+                    : 'bg-warm-100 dark:bg-disc-header text-warm-500 dark:text-disc-muted'
+                }`}>{total}</span>
+              )}
+            </button>
+          )
+        })}
       </div>
 
       {/* Filters */}
@@ -616,6 +635,7 @@ export default function CampaignPage({ params }) {
 
           <select value={filterExpiry} onChange={e => setFilterExpiry(e.target.value)} className={FILTER_CLS}>
             <option value="">สมาชิกภาพ</option>
+            <option value="lifetime">ตลอดชีพ</option>
             <option value="expiring">ใกล้หมดอายุ (90 วัน)</option>
             <option value="expired">หมดอายุแล้ว</option>
           </select>
@@ -722,6 +742,9 @@ export default function CampaignPage({ params }) {
                         <span className="truncate text-base font-medium text-warm-900 dark:text-disc-text">
                           {displayName}
                         </span>
+                        {isMember && (item.membership_type === 'ตลอดชีพ' || item.membership_type === 'สมาชิกตลอดชีพ') && (
+                          <span className="shrink-0 text-base font-medium px-1.5 py-0.5 rounded bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400">ตลอดชีพ</span>
+                        )}
                         {expiryBadge && <span className={`shrink-0 text-base font-medium px-1.5 py-0.5 rounded ${expiryBadge.cls}`}>{expiryBadge.label}</span>}
                         {catColor && <span className="shrink-0 text-sm px-1.5 py-0.5 rounded font-medium" style={{ background: catColor.bg, color: catColor.text }}>{CATEGORY_LABELS[item.category] || item.category}</span>}
                         {!hasPhone && <span className="shrink-0 text-base text-warm-400 dark:text-disc-muted font-normal">ไม่มีเบอร์</span>}

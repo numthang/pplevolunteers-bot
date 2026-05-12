@@ -88,6 +88,7 @@ module.exports = {
         .addStringOption(o => o.setName('title').setDescription('ชื่อกิจกรรม (default: ชื่อ channel/thread)').setRequired(false))
         .addStringOption(o => o.setName('color').setDescription('สี hex').setRequired(false))
         .addBooleanOption(o => o.setName('sticky').setDescription('ให้ panel เลื่อนลงอัตโนมัติเมื่อมีคนลงชื่อ (default: true)').setRequired(false))
+        .addStringOption(o => o.setName('calendar_id').setDescription('Google Calendar ID สำหรับปุ่ม Add to Calendar (บันทึกต่อ server)').setRequired(false))
     )
 
     // --- register ---
@@ -280,21 +281,33 @@ await refreshDashboard(thread, interaction.guildId, ids, existing.dashboard_msg_
 
     // ================================================================
     if (sub === 'gogo') {
-      const color    = interaction.options.getString('color')
+      const color      = interaction.options.getString('color')
         ? parseInt(interaction.options.getString('color').replace('#', ''), 16)
         : 0xff6a13;
-      const isSticky = interaction.options.getBoolean('sticky') ?? true;
-      const title    = interaction.options.getString('title') ?? interaction.channel.name;
+      const isSticky   = interaction.options.getBoolean('sticky') ?? true;
+      const title      = interaction.options.getString('title') ?? interaction.channel.name;
+      const calendarId = interaction.options.getString('calendar_id');
+      if (calendarId) await setSetting(interaction.guildId, 'gogo_calendar_id', calendarId);
 
+      const creatorName = interaction.member?.displayName ?? interaction.user.username;
       const embed = new EmbedBuilder()
         .setColor(color)
-        .addFields({ name: `👥 ผู้เข้าร่วม ${title} (0 คน)`, value: '-', inline: false });
+        .addFields({ name: `👥 ผู้เข้าร่วม ${title} (0 คน)`, value: '-', inline: false })
+        .setFooter({ text: `สร้างโดย ${creatorName}` });
 
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
           .setCustomId('btn_gogo_signup')
           .setLabel('🙋 เข้าร่วม')
           .setStyle(ButtonStyle.Success),
+        new ButtonBuilder()
+          .setCustomId('btn_gogo_event')
+          .setEmoji('🗓️')
+          .setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder()
+          .setCustomId('btn_gogo_dm')
+          .setEmoji('📢')
+          .setStyle(ButtonStyle.Secondary),
       );
 
       if (isSticky) {
@@ -310,6 +323,8 @@ await refreshDashboard(thread, interaction.guildId, ids, existing.dashboard_msg_
       }
 
       const sent = await interaction.channel.send({ embeds: [embed], components: [row] });
+
+      await setSetting(interaction.guildId, `gogo_creator:${sent.id}`, interaction.user.id);
 
       if (isSticky) {
         await setSetting(interaction.guildId, `sticky_${interaction.channelId}`, {

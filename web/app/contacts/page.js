@@ -16,17 +16,33 @@ function getProvinceFromRoles(roles = []) {
 }
 
 const CATEGORY_LABELS = {
-  donor:     'ผู้บริจาค',
-  prospect:  'คนสนใจ',
-  volunteer: 'อาสาสมัคร',
-  other:     'อื่นๆ',
+  donor:            'ผู้บริจาค',
+  prospect:         'คนสนใจ',
+  volunteer:        'อาสาสมัคร',
+  leader:           'แกนนำ',
+  community_leader: 'ผู้นำชุมชน',
+  civil:            'ประชาสังคม',
+  media:            'สื่อมวลชน',
+  politician:       'นักการเมือง/อปท.',
+  venue:            'สถานที่',
+  print:            'งานพิมพ์/ป้าย',
+  event_service:    'บริการอีเวนต์',
+  other:            'อื่นๆ',
 }
 
 const CATEGORY_COLORS = {
-  donor:     { bg: '#cce5f4', text: '#0c447c' },
-  prospect:  { bg: '#ead3ce', text: '#714b2b' },
-  volunteer: { bg: '#d4edda', text: '#1a5e2d' },
-  other:     { bg: '#f3f4f6', text: '#374151' },
+  donor:            { bg: '#cce5f4', text: '#0c447c' },
+  prospect:         { bg: '#ead3ce', text: '#714b2b' },
+  volunteer:        { bg: '#d4edda', text: '#1a5e2d' },
+  leader:           { bg: '#fde8c8', text: '#7c4a00' },
+  community_leader: { bg: '#fde8c8', text: '#7c4a00' },
+  civil:            { bg: '#e8d5f5', text: '#5b2d8e' },
+  media:            { bg: '#dbeafe', text: '#1e40af' },
+  politician:       { bg: '#fee2e2', text: '#991b1b' },
+  venue:            { bg: '#f3f4f6', text: '#374151' },
+  print:            { bg: '#f3f4f6', text: '#374151' },
+  event_service:    { bg: '#f3f4f6', text: '#374151' },
+  other:            { bg: '#f3f4f6', text: '#374151' },
 }
 
 const MANAGE_ROLES = ['Admin', 'เลขาธิการ', 'ผู้ประสานงานภาค', 'รองเลขาธิการ', 'ผู้ประสานงานจังหวัด', 'กรรมการจังหวัด']

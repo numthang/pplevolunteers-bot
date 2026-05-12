@@ -144,6 +144,8 @@ export async function getMembersInCampaign(campaignId, filters = {}, limit = 100
     query += ` AND m.expired_at < NOW()`
   } else if (expiry === 'expiring') {
     query += ` AND m.expired_at BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 90 DAY)`
+  } else if (expiry === 'lifetime') {
+    query += ` AND m.membership_type IN ('ตลอดชีพ', 'สมาชิกตลอดชีพ')`
   }
 
   query += `

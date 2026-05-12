@@ -246,14 +246,14 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
   return (
     <>
     <div
-      className="fixed inset-0 z-50 overflow-y-auto flex items-start sm:items-center justify-center p-3 sm:p-6"
+      className="fixed inset-0 z-50 overflow-y-auto flex items-start sm:items-center justify-center px-1.5 py-3 sm:p-6"
       style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
     >
       <div className="bg-white dark:bg-disc-hover rounded-xl w-full max-w-3xl shadow-xl">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-warm-200 dark:border-disc-border">
+        <div className="flex items-center justify-between px-4 py-4 border-b border-warm-200 dark:border-disc-border">
           <h2 className="text-lg font-semibold text-warm-900 dark:text-disc-text">บันทึกการโทร</h2>
           <button
             onClick={onClose}
@@ -262,7 +262,7 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
         </div>
 
         {/* Body */}
-        <div className="p-5 flex flex-col md:grid md:grid-cols-2 gap-5">
+        <div className="p-3 sm:p-5 flex flex-col md:grid md:grid-cols-2 gap-4 sm:gap-5">
 
           {/* SIDEBAR */}
           <div className="md:order-2 bg-warm-50 dark:bg-disc-header rounded-lg p-4 flex flex-col gap-4">

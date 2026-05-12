@@ -134,7 +134,7 @@ export default function Nav({ session }) {
         <div className="relative shrink-0">
           <div className="flex items-center gap-1">
             <Link href="/" className="hover:opacity-80 transition shrink-0">
-              <Image src="/logo.png" alt="PPLE" width={28} height={28} />
+              <Image src="/logo.png" alt="PPLE" width={40} height={40} />
             </Link>
             <button
               onClick={() => setAppOpen(o => !o)}

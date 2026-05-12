@@ -33,8 +33,19 @@ export async function GET(req) {
 
   try {
     if (countOnly) {
-      const count = await memberDB.getPendingCallCount(session.user.discordId)
-      return Response.json({ success: true, count })
+      if (type === 'member') {
+        const count = await memberDB.getPendingCallCount(session.user.discordId)
+        return Response.json({ success: true, count })
+      }
+      if (type === 'contact') {
+        const count = await contactDB.getContactPendingCount(session.user.discordId)
+        return Response.json({ success: true, count })
+      }
+      const [memberCount, contactCount] = await Promise.all([
+        memberDB.getPendingCallCount(session.user.discordId),
+        contactDB.getContactPendingCount(session.user.discordId),
+      ])
+      return Response.json({ success: true, count: memberCount + contactCount })
     }
 
     if (campaignsOnly) {
