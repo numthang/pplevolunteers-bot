@@ -45,10 +45,15 @@ function parseEntries(fieldValue) {
       return match ? { name: match[1], userId: match[2] } : null;
     }).filter(Boolean);
   }
-  // format ใหม่: "[ชื่อ](https://discord.com/users/id), [ชื่อ2](...) · [ชื่อ3](...)"
+  // format ใหม่: "ชื่อ1, ชื่อ2 <@id> · ชื่อ3 <@id2>"
   const entries = [];
-  for (const match of fieldValue.matchAll(/\[([^\]]+)\]\(https:\/\/discord\.com\/users\/(\d+)\)/g)) {
-    entries.push({ name: match[1], userId: match[2] });
+  for (const group of fieldValue.split(' · ')) {
+    const match = group.trim().match(/^(.+)\s<@(\d+)>$/);
+    if (!match) continue;
+    const userId = match[2];
+    for (const name of match[1].split(',').map(n => n.trim()).filter(Boolean)) {
+      entries.push({ name, userId });
+    }
   }
   return entries;
 }
@@ -61,7 +66,7 @@ function buildFieldValue(entries) {
     groups.get(userId).push(name);
   }
   return [...groups.entries()]
-    .map(([userId, names]) => names.map(n => `[${n}](https://discord.com/users/${userId})`).join(', '))
+    .map(([userId, names]) => `${names.join(', ')} <@${userId}>`)
     .join(' · ');
 }
 
