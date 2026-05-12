@@ -29,7 +29,8 @@ const ICONS = {
   profile:      'M17.982 18.725A7.488 7.488 0 0012 15.75a7.488 7.488 0 00-5.982 2.975m11.963 0a9 9 0 10-11.963 0m11.963 0A8.966 8.966 0 0112 21a8.966 8.966 0 01-5.982-2.275M15 9.75a3 3 0 11-6 0 3 3 0 016 0z',
   moon:         'M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z',
   sun:          'M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z',
-  logout:       'M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75',
+  logout:         'M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75',
+  integrations:   'M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437l1.745-1.437m6.615 8.206L15.75 15.75M4.867 19.125h.008v.008h-.008v-.008z',
 }
 
 const FINANCE_LINKS = [
@@ -49,17 +50,17 @@ const CONTACTS_LINKS = [
 ]
 
 const DASHBOARD_LINKS = [
-  { href: '/finance',    label: 'PPLE Finance',  icon: 'transactions' },
-  { href: '/calling',    label: 'PPLE Calling',  icon: 'campaigns' },
-  { href: '/contacts',   label: 'PPLE Contacts', icon: 'contacts' },
-  { href: '/admin/logs', label: 'Logs',           icon: 'logs', roles: ['Admin', 'Moderator'] },
+  { href: '/finance',       label: 'FINANCE',   icon: 'transactions' },
+  { href: '/calling',       label: 'CALLING',   icon: 'campaigns' },
+  { href: '/contacts',      label: 'CONTACTS',  icon: 'contacts' },
+  { href: '/admin/logs',    label: 'Logs',           icon: 'logs', roles: ['Admin', 'Moderator'] },
 ]
 
 const APPS = [
-  { key: 'home',     label: 'Dashboard',      href: '/dashboard', icon: 'overview' },
-  { key: 'finance',  label: 'PPLE Finance',   href: '/finance',   icon: 'transactions' },
-  { key: 'calling',  label: 'PPLE Calling',   href: '/calling',   icon: 'campaigns' },
-  { key: 'contacts', label: 'PPLE Contacts',  href: '/contacts',  icon: 'contacts' },
+  { key: 'home',     label: 'DASHBOARD',      href: '/', icon: 'overview' },
+  { key: 'finance',  label: 'FINANCE',   href: '/finance',   icon: 'transactions' },
+  { key: 'calling',  label: 'CALLING',   href: '/calling',   icon: 'campaigns' },
+  { key: 'contacts', label: 'CONTACTS',  href: '/contacts',  icon: 'contacts' },
 ]
 
 export default function Nav({ session }) {

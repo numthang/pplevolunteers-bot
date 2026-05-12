@@ -4,7 +4,7 @@ import { signIn } from 'next-auth/react'
 export default function LoginButton() {
   return (
     <button
-      onClick={() => signIn('discord', { callbackUrl: '/dashboard' })}
+      onClick={() => signIn('discord', { callbackUrl: '/' })}
       className="inline-flex items-center gap-2.5 bg-brand-orange hover:bg-brand-orange-light active:bg-brand-orange-dark text-white font-semibold px-7 py-3.5 rounded-xl transition-colors text-base shadow-lg"
     >
       <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
