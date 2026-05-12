@@ -19,7 +19,7 @@ const { ROLES } = require('../config/roles');
 const { getMember } = require('../db/members');
 
 const FIELD_PREFIX = 'ผู้เข้าร่วม';
-const isEntryField = f => isEntryField(f) || f.name.startsWith('👥 ' + FIELD_PREFIX);
+const isEntryField = f => f.name.startsWith(FIELD_PREFIX) || f.name.startsWith('👥 ' + FIELD_PREFIX);
 
 const DM_ALLOWED_ROLE_IDS = new Set([
   ROLES['Admin'],
