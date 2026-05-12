@@ -147,6 +147,7 @@ const ROLES = {
   'อาสาสู้ภัยพิบัติ' : '1389216660505886943',
   'ทีมสาธารณสุข': '1503315580822880307',
   'เยาวชนก้าวหน้า': '1503275711958618163',
+  'ก้าวเลิร์น': '1503692553646637106',
 };
 
 // ----------------------------------------------------------------
@@ -171,6 +172,8 @@ const INTEREST_CONFIG = [
   { label: 'ทีมจังหวัด/สมาชิกสัมพันธ์',       emoji: '🤝', key: 'ทีมจังหวัด/สมาชิกสัมพันธ์',       roleId: ROLES['ทีมสมาชิกสัมพันธ์'] },
   { label: 'ทีมเจ้าหน้าที่/สตาฟ',             emoji: '👷', key: 'ทีมเจ้าหน้าที่/สตาฟ',             roleId: ROLES['ทีมเจ้าหน้าที่'] },
   { label: 'เด็กติดเกม',                        emoji: '🎲', key: 'เด็กติดเกม',                        roleId: ROLES['เด็กติดเกม'] },
+  { divider: true, label: '── การศึกษา ──' },
+  { label: 'ก้าวเลิร์น',  emoji: '🎓', key: 'ก้าวเลิร์น',  roleId: ROLES['ก้าวเลิร์น'] },
 ];
 const INTEREST_ROLES   = Object.fromEntries(INTEREST_CONFIG.filter(c => !c.divider).map(c => [c.key, c.roleId]));
 const INTEREST_BUTTONS = INTEREST_CONFIG.map(({ label, emoji, key, divider }) => ({ label, emoji, key, divider }));
