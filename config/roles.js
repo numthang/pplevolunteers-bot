@@ -163,7 +163,8 @@ const INTEREST_CONFIG = [
   { label: 'ทีมเครือข่ายชาติพันธุ์',   emoji: '🧣', key: 'ทีมเครือข่ายชาติพันธุ์',   roleId: ROLES['ทีมเครือข่ายชาติพันธุ์'] },
   { label: 'ประชาชนคนเกษตร',            emoji: '🌾', key: 'ประชาชนคนเกษตร',            roleId: ROLES['ทีมประชาชนคนเกษตร'] },
   { label: 'ทีมเครือข่ายผู้ใช้แรงงาน', emoji: '✊', key: 'ทีมเครือข่ายผู้ใช้แรงงาน', roleId: ROLES['ทีมเครือข่ายแรงงาน'] },
-  { divider: true, label: '── การเมือง & องค์กร ──' },
+  { label: 'ก้าวเลิร์น',               emoji: '🎓', key: 'ก้าวเลิร์น',               roleId: ROLES['ก้าวเลิร์น'] },
+  { divider: true, label: '── การเมือง & อื่นๆ ──' },
   { label: 'ทีมงานสภา',                         emoji: '🏛️', key: 'ทีมงานสภา',                         roleId: ROLES['ทีมงานสภา'] },
   { label: 'ทีมผู้สมัครรับเลือกตั้ง',          emoji: '🪪', key: 'ทีมผู้สมัครรับเลือกตั้ง',          roleId: ROLES['ทีมผู้สมัครฯ'] },
   { label: 'ทีมผู้ช่วยหาเสียง/เรื่องร้องเรียน', emoji: '📣', key: 'ทีมผู้ช่วยหาเสียง/เรื่องร้องเรียน', roleId: ROLES['ทีมพื้นที่/ร้องเรียน'] },
@@ -172,8 +173,6 @@ const INTEREST_CONFIG = [
   { label: 'ทีมจังหวัด/สมาชิกสัมพันธ์',       emoji: '🤝', key: 'ทีมจังหวัด/สมาชิกสัมพันธ์',       roleId: ROLES['ทีมสมาชิกสัมพันธ์'] },
   { label: 'ทีมเจ้าหน้าที่/สตาฟ',             emoji: '👷', key: 'ทีมเจ้าหน้าที่/สตาฟ',             roleId: ROLES['ทีมเจ้าหน้าที่'] },
   { label: 'เด็กติดเกม',                        emoji: '🎲', key: 'เด็กติดเกม',                        roleId: ROLES['เด็กติดเกม'] },
-  { divider: true, label: '── การศึกษา ──' },
-  { label: 'ก้าวเลิร์น',  emoji: '🎓', key: 'ก้าวเลิร์น',  roleId: ROLES['ก้าวเลิร์น'] },
 ];
 const INTEREST_ROLES   = Object.fromEntries(INTEREST_CONFIG.filter(c => !c.divider).map(c => [c.key, c.roleId]));
 const INTEREST_BUTTONS = INTEREST_CONFIG.map(({ label, emoji, key, divider }) => ({ label, emoji, key, divider }));
