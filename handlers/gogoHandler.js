@@ -45,11 +45,18 @@ function parseEntries(fieldValue) {
       return match ? { name: match[1], userId: match[2] } : null;
     }).filter(Boolean);
   }
-  // format ปัจจุบัน: "<@id> · [ชื่อ](link) · <@id2>"
   const entries = [];
-  for (const m of fieldValue.matchAll(/<@(\d+)>/g))
+  // format ใหม่: "<@id> ([ชื่อ](url))" — จับเป็นชุดก่อน แล้วตัดออกจาก string
+  let rest = fieldValue;
+  for (const m of fieldValue.matchAll(/<@(\d+)> \(\[([^\]]+)\]\(https:\/\/discord\.com\/users\/\d+\)\)/g)) {
+    entries.push({ name: m[2], userId: m[1] });
+    rest = rest.replace(m[0], '');
+  }
+  // format เก่า: standalone "<@id>" ที่ยังเหลือ
+  for (const m of rest.matchAll(/<@(\d+)>/g))
     entries.push({ name: '', userId: m[1] });
-  for (const m of fieldValue.matchAll(/\[([^\]]+)\]\(https:\/\/discord\.com\/users\/(\d+)\)/g))
+  // extra names: "[ชื่อ](url)" ที่ยังเหลือ
+  for (const m of rest.matchAll(/\[([^\]]+)\]\(https:\/\/discord\.com\/users\/(\d+)\)/g))
     entries.push({ name: m[1], userId: m[2] });
   return entries;
 }
@@ -66,7 +73,7 @@ function buildFieldValue(entries) {
       const valid = names.filter(Boolean);
       if (!valid.length) return `<@${userId}>`;
       const [first, ...rest] = valid;
-      const primary = `<@${userId}> ([${first}](https://discord.com/users/${userId}))`;
+      const primary = `<@${userId}> ([i](https://discord.com/users/${userId}))`;
       const extras = rest.map(n => `[${n}](https://discord.com/users/${userId})`);
       return [primary, ...extras].join(' · ');
     })
