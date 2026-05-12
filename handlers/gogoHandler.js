@@ -130,12 +130,19 @@ async function handleGogoModal(interaction) {
   if (typeof stickyConfig === 'string') {
     try { stickyConfig = JSON.parse(stickyConfig); } catch { stickyConfig = null; }
   }
+  const latestRow = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId('btn_gogo_signup').setLabel('🙋 เข้าร่วม').setStyle(ButtonStyle.Success),
+    new ButtonBuilder().setCustomId('btn_gogo_dm').setEmoji('📢').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('btn_gogo_event').setEmoji('🗓️').setStyle(ButtonStyle.Secondary),
+  );
+
   if (stickyConfig && stickyConfig.message_id === messageId) {
     stickyConfig.embeds = [embed.toJSON()];
+    stickyConfig.components = [latestRow.toJSON()];
     await setSetting(interaction.guildId, stickyKey, stickyConfig);
   }
 
-  await msg.edit({ embeds: [embed] });
+  await msg.edit({ embeds: [embed], components: [latestRow] });
 
   if (rawInput && interaction.channel.isThread()) {
     await interaction.channel.members.add(userId).catch(() => {});
