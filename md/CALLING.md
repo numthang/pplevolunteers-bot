@@ -62,11 +62,11 @@ Key fields: `id`, `name`, `province`, `description`, `event_date`, `guild_id`
 
 ### 4. `calling_contacts` — ผู้ติดต่อ manual (ไม่ใช่สมาชิกพรรค)
 
-ตารางนี้เพิ่มใหม่สำหรับ non-member contacts: ผู้บริจาค, คนสนใจ, อาสาสมัคร
+ตารางนี้เพิ่มใหม่สำหรับ non-member contacts: ผู้บริจาค, คนสนใจ, อาสาสมัคร, อาสาส้ม, แกนนำ, ผู้นำชุมชน, ประชาสังคม, สื่อมวลชน, นักการเมือง/อปท., สถานที่, งานพิมพ์/ป้าย, บริการอีเวนต์
 
 - CRUD ได้ (ต่างจาก `ngs_member_cache` ที่ sync-only)
 - key fields: `id`, `first_name`, `last_name`, `phone`, `province`, `amphoe`, `tambon`, `category`, `created_by`
-- `category`: `donor` | `prospect` | `volunteer` | `other`
+- `category`: `donor` | `prospect` | `volunteer` | `oranger` | `leader` | `community_leader` | `civil` | `media` | `politician` | `venue` | `print` | `event_service` | `other`
 - province กรอกจาก dropdown Thailand geography (JSON static ที่ `web/lib/thailand-geography.json`)
 
 **⚠️ ID Overlap:** `calling_contacts.id` เป็น auto_increment เริ่มจาก 1 แต่ `ngs_member_cache.source_id` เริ่มจาก 55  

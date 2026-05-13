@@ -2,27 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import geographyData from '@/lib/thailand-geography.json'
-
-const CATEGORIES = [
-  { group: 'กลุ่มคน', options: [
-    { value: 'donor',            label: 'ผู้บริจาค' },
-    { value: 'prospect',         label: 'คนสนใจ' },
-    { value: 'volunteer',        label: 'อาสาสมัคร' },
-    { value: 'leader',           label: 'แกนนำ' },
-    { value: 'community_leader', label: 'ผู้นำชุมชน' },
-    { value: 'civil',            label: 'ประชาสังคม' },
-    { value: 'media',            label: 'สื่อมวลชน' },
-    { value: 'politician',       label: 'นักการเมือง/อปท.' },
-  ]},
-  { group: 'ผู้ให้บริการ', options: [
-    { value: 'venue',          label: 'สถานที่' },
-    { value: 'print',          label: 'งานพิมพ์/ป้าย' },
-    { value: 'event_service',  label: 'บริการอีเวนต์' },
-  ]},
-  { group: 'อื่นๆ', options: [
-    { value: 'other', label: 'อื่นๆ' },
-  ]},
-]
+import { CATEGORIES } from '@/../config/callingCategories.js'
 
 const PROVINCE_LIST = geographyData.map(p => p.province).sort((a, b) => a.localeCompare(b, 'th'))
 

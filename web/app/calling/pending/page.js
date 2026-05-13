@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import RecordCallModal from '@/components/calling/RecordCallModal.jsx'
 import PdpaAgreementModal from '@/components/calling/PdpaAgreementModal.jsx'
 import { CALL_STATUS_COLORS } from '@/lib/callingStatusColors.js'
+import { CATEGORY_LABELS, CATEGORY_COLORS } from '@/../config/callingCategories.js'
 
 const TIER_COLORS = {
   A: { bg: '#ead3ce', text: '#714b2b' },
@@ -19,15 +20,6 @@ const RSVP_ICONS = {
   maybe: { icon: '?', color: '#854f0b' },
 }
 
-const CATEGORY_LABELS = {
-  donor: 'ผู้บริจาค', prospect: 'คนสนใจ', volunteer: 'อาสาสมัคร', other: 'อื่นๆ',
-}
-const CATEGORY_COLORS = {
-  donor:     { bg: '#cce5f4', text: '#0c447c' },
-  prospect:  { bg: '#ead3ce', text: '#714b2b' },
-  volunteer: { bg: '#d4edda', text: '#1a5e2d' },
-  other:     { bg: '#f3f4f6', text: '#374151' },
-}
 
 function getExpiryBadge(expiredAt) {
   if (!expiredAt) return null

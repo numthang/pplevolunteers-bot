@@ -6,20 +6,7 @@ import ContactForm from './ContactForm.jsx'
 import InteractionLogForm from './InteractionLogForm.jsx'
 import { CALL_STATUS_COLORS } from '@/lib/callingStatusColors.js'
 import { findSignalLabel } from '@/lib/callingSignals.js'
-
-const CATEGORY_LABELS = {
-  donor:     'ผู้บริจาค',
-  prospect:  'คนสนใจ',
-  volunteer: 'อาสาสมัคร',
-  other:     'อื่นๆ',
-}
-
-const CATEGORY_COLORS = {
-  donor:     { bg: '#cce5f4', text: '#0c447c' },
-  prospect:  { bg: '#ead3ce', text: '#714b2b' },
-  volunteer: { bg: '#d4edda', text: '#1a5e2d' },
-  other:     { bg: '#f3f4f6', text: '#374151' },
-}
+import { CATEGORY_LABELS, CATEGORY_COLORS } from '@/../config/callingCategories.js'
 
 const THAI_MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.']
 
@@ -29,7 +16,7 @@ function formatThaiDate(dateStr) {
   return `${d.getDate()} ${THAI_MONTHS[d.getMonth()]} ${(d.getFullYear() + 543).toString().slice(-2)}`
 }
 
-export default function ContactModal({ contactId, discordId, canManageAll, onClose, onDeleted }) {
+export default function ContactModal({ contactId, discordId, canManageAll, onClose, onDeleted, onSaved }) {
   const [contact, setContact] = useState(null)
   const [logs, setLogs] = useState([])
   const [loading, setLoading] = useState(true)
@@ -72,9 +59,9 @@ export default function ContactModal({ contactId, discordId, canManageAll, onClo
         body: JSON.stringify(form),
       })
       if (!res.ok) { const j = await res.json(); throw new Error(j.error || 'บันทึกไม่สำเร็จ') }
-      await fetchAll()
-    } catch (e) { setError(e.message) }
-    finally { setSaving(false) }
+      onSaved?.()
+      onClose()
+    } catch (e) { setError(e.message); setSaving(false) }
   }
 
   async function handleDelete() {
@@ -163,6 +150,7 @@ export default function ContactModal({ contactId, discordId, canManageAll, onClo
               <ContactForm
                 initial={contact}
                 onSubmit={handleUpdate}
+                onCancel={onClose}
                 loading={saving}
               />
               {canDelete && (

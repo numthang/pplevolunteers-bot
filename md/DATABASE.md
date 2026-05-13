@@ -331,7 +331,7 @@ last_name   VARCHAR(100) NOT NULL
 phone       VARCHAR(20) NULL
 email       VARCHAR(150) NULL
 line_id     VARCHAR(100) NULL
-category    VARCHAR(50) NULL          -- 'donor' | 'prospect' | 'volunteer' | 'other'
+category    VARCHAR(50) NULL          -- 'donor' | 'prospect' | 'volunteer' | 'oranger' | 'leader' | 'community_leader' | 'civil' | 'media' | 'politician' | 'venue' | 'print' | 'event_service' | 'other'
 province    VARCHAR(100) NULL
 amphoe      VARCHAR(100) NULL
 tambon      VARCHAR(100) NULL

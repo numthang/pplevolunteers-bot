@@ -8,6 +8,7 @@ import SplitModal from '@/components/calling/SplitModal.jsx'
 import SmsModal from '@/components/calling/SmsModal.jsx'
 import { CALL_STATUS_COLORS } from '@/lib/callingStatusColors.js'
 import { buildSmsTemplate } from '@/lib/buildSmsTemplate.js'
+import { CATEGORY_LABELS, CATEGORY_COLORS } from '@/../config/callingCategories.js'
 
 const MODERATOR_ROLES = ['Admin', 'เลขาธิการ', 'Moderator']
 const SMS_ROLES = ['Admin', 'เลขาธิการ', 'ผู้ประสานงานภาค', 'รองเลขาธิการ', 'ผู้ประสานงานจังหวัด']
@@ -43,15 +44,6 @@ const RSVP_ICONS = {
   maybe: { icon: '?', color: '#854f0b' },
 }
 
-const CATEGORY_LABELS = {
-  donor: 'ผู้บริจาค', prospect: 'คนสนใจ', volunteer: 'อาสาสมัคร', other: 'อื่นๆ',
-}
-const CATEGORY_COLORS = {
-  donor:     { bg: '#cce5f4', text: '#0c447c' },
-  prospect:  { bg: '#ead3ce', text: '#714b2b' },
-  volunteer: { bg: '#d4edda', text: '#1a5e2d' },
-  other:     { bg: '#f3f4f6', text: '#374151' },
-}
 
 function getStatusBadge(status) {
   if (status === 'assigned') return { bg: '#e0e7ff', text: '#4f46e5', label: 'มอบหมายแล้ว' }
