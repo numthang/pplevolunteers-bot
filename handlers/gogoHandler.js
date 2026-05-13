@@ -75,14 +75,24 @@ function buildFieldValue(entries) {
     if (!groups.has(userId)) groups.set(userId, []);
     groups.get(userId).push(name);
   }
-  return [...groups.entries()]
-    .map(([userId, names]) => {
-      const valid = names.filter(Boolean);
-      const primary = `<@${userId}> [🔗](https://discord.com/users/${userId})`;
-      const extras = valid.slice(1).map(n => `[${n}](https://discord.com/users/${userId})`);
-      return [primary, ...extras].join(' · ');
-    })
-    .join(' · ');
+  const MAX_LEN = 1024;
+  let result = '';
+
+  for (const [userId, names] of groups.entries()) {
+    const valid = names.filter(Boolean);
+    const primary = `<@${userId}> [🔗](https://discord.com/users/${userId})`;
+    const extras = valid.slice(1).map(n => `[${n}](https://discord.com/users/${userId})`);
+    const userPart = [primary, ...extras].join(' · ');
+    const candidate = result ? result + ' · ' + userPart : userPart;
+
+    if (candidate.length <= MAX_LEN) {
+      result = candidate;
+    } else {
+      break;
+    }
+  }
+
+  return result || '-';
 }
 
 async function handleGogoSignup(interaction) {
