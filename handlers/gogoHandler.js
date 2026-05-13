@@ -76,19 +76,25 @@ function buildFieldValue(entries) {
     groups.get(userId).push(name);
   }
   const MAX_LEN = 1024;
-  let result = '';
 
-  for (const [userId, names] of groups.entries()) {
-    const valid = names.filter(Boolean);
-    const primary = `<@${userId}> [🔗](https://discord.com/users/${userId})`;
-    const extras = valid.slice(1).map(n => `[${n}](https://discord.com/users/${userId})`);
-    const userPart = [primary, ...extras].join(' · ');
-    const candidate = result ? result + ' · ' + userPart : userPart;
+  // 1. Build all primary mentions first
+  const mentions = [];
+  for (const userId of groups.keys()) {
+    mentions.push(`<@${userId}> [🔗](https://discord.com/users/${userId})`);
+  }
+  let result = mentions.join(' · ');
 
-    if (candidate.length <= MAX_LEN) {
-      result = candidate;
-    } else {
-      break;
+  // 2. Add extras only if there's space
+  if (result.length < MAX_LEN) {
+    for (const [userId, names] of groups.entries()) {
+      const valid = names.filter(Boolean);
+      const extras = valid.slice(1).map(n => `[${n}](https://discord.com/users/${userId})`);
+      for (const extra of extras) {
+        const candidate = result + ' · ' + extra;
+        if (candidate.length <= MAX_LEN) {
+          result = candidate;
+        }
+      }
     }
   }
 
