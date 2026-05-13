@@ -23,6 +23,7 @@ const { handleRefresh } = require('./handlers/forumDashboard');
 const { handleFinanceRefresh } = require('./handlers/financeDashboard');
 const { handleOpenSearch, handleSearchModal, handleResultPage } = require('./handlers/forumSearch');
 const { handleGogoSignup, handleGogoModal, handleGogoDMButton, handleGogoDMModal, handleGogoEventButton, handleGogoEventSelect, handleGogoEventModal } = require('./handlers/gogoHandler');
+const { handleWatermarkSelect, handleWatermarkConfirm, handleWatermarkModal } = require('./handlers/watermarkHandler');
 const { indexThread, indexMessage, hybridSearch } = require('./services/forumIndexer');
 const { buildSearchResultEmbed, buildSearchComponents } = require('./handlers/forumSearch');
 const { forumChannelCache, dashboardThreadCache, addForumChannel, addDashboardThread } = require('./services/forumCache');
@@ -84,7 +85,7 @@ client.on('interactionCreate', async (interaction) => {
     return;
   }
   // --- Slash Commands ---
-  if (interaction.isChatInputCommand() || interaction.isUserContextMenuCommand()) {
+  if (interaction.isChatInputCommand() || interaction.isUserContextMenuCommand() || interaction.isMessageContextMenuCommand()) {
     const command = client.commands.get(interaction.commandName);
     if (!command) return;
     try {
@@ -109,6 +110,7 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.customId.startsWith('modal_gogo_event:')) return handleGogoEventModal(interaction);
     if (interaction.customId.startsWith('rate_submit:'))   return handleRateModalSubmit(interaction);
     if (interaction.customId.startsWith('report_submit:')) return handleReportSubmit(interaction);
+    if (interaction.customId === 'wm_custom_text')         return handleWatermarkModal(interaction);
     if (interaction.customId.startsWith('anon_submit:')) {
       const channelId = interaction.customId.split(':')[1];
       const text      = interaction.fields.getTextInputValue('anon_text');
@@ -125,6 +127,7 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.customId.startsWith('orgchart_province_region')) return handleOrgchartProvinceSelect(interaction);
     if (interaction.customId.startsWith('orgchart_role'))            return handleOrgchartRoleSelect(interaction);
     if (interaction.customId.startsWith('orgchart_days'))            return handleOrgchartDaysSelect(interaction);
+    if (interaction.customId.startsWith('wm_'))                 return handleWatermarkSelect(interaction);
     if (interaction.customId === 'select_gogo_event')           return handleGogoEventSelect(interaction);
     if (interaction.customId.startsWith('stat_top:'))          return handleStatTopSelect(interaction);
     if (interaction.customId.startsWith('stat_user:'))         return handleStatUserSelect(interaction);
@@ -136,6 +139,7 @@ client.on('interactionCreate', async (interaction) => {
 
   // --- Buttons ---
   if (interaction.isButton()) {
+    if (interaction.customId === 'wm_confirm')              return handleWatermarkConfirm(interaction);
     if (interaction.customId === 'btn_open_register_modal') return handleOpenRegisterModal(interaction);
     if (interaction.customId === 'btn_register_confirm')    return handleRegisterConfirm(interaction);
     if (interaction.customId === 'delete_log')              return handleDeleteLog(interaction);
