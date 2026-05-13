@@ -13,11 +13,11 @@ export async function GET(req) {
   }
 
   try {
-    // 1. Call Success Rate (answered / total)
+    // 1. Call Success Rate (answered contacts / all contacts)
     const [[callStats]] = await pool.query(
       `SELECT
         COUNT(DISTINCT member_id) as total_contacts,
-        SUM(CASE WHEN status = 'answered' THEN 1 ELSE 0 END) as answered
+        COUNT(DISTINCT CASE WHEN status = 'answered' THEN member_id END) as answered
        FROM calling_logs
        WHERE contact_type = 'member'`
     )
