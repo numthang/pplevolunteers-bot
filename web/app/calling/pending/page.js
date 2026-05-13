@@ -220,7 +220,7 @@ export default function PendingCallsPage() {
     }
   }
 
-  const pdpaKey = filterCampaign ? `pdpa_calling_${filterCampaign}` : null
+  const pdpaKey = 'pdpa_calling'
 
   const totalPending = items.filter(m => m.call_status === 'pending').length
   const totalCalled  = items.filter(m => m.call_status === 'called').length
