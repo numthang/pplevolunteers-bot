@@ -7,8 +7,8 @@ import { useTheme } from '@/components/Providers'
 import 'react-circular-progressbar/dist/styles.css'
 
 const COLORS = {
-  tier: ['#ff8c42', '#ffb380', '#ff6b54', '#80b4e8'],
-  status: ['#66bb6a', '#ffb74d', '#ef5350']
+  tier: ['#ff9d5c', '#ffb574', '#ff8080', '#80bce8'],
+  status: ['#66bb6a', '#ffb84d', '#ff7070']
 }
 
 const GAUGE_DESCRIPTIONS = {

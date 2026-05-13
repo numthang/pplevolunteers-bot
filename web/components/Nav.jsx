@@ -223,6 +223,8 @@ export default function Nav({ session }) {
                 key={l.href}
                 href={l.href}
                 className={`flex px-3 py-1 rounded-md text-base transition items-center gap-1.5 ${
+                  l.href === '/calling/stats' ? 'hidden md:flex' : 'flex'
+                } ${
                   isLinkActive(l.href) ? activeClass : inactiveClass
                 }`}
               >
