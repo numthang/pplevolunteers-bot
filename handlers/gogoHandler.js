@@ -169,13 +169,12 @@ async function handleGogoModal(interaction) {
 
   // อ่าน DB เพื่อ render embed
   const allEntries = await getEntries(interaction.guildId, messageId);
-  const uniqueUsers = [...new Set(allEntries.map(e => e.user_id))];
   const dbEntries = allEntries.map(({ user_id: u, name: n }) => ({ userId: u, name: n }));
 
   const baseName = fieldIdx >= 0
     ? fields[fieldIdx].name.replace(/ \(\d+ คน\)$/, '').replace(/^👥 /, '')
     : FIELD_PREFIX;
-  const newField = { name: `${baseName} (${uniqueUsers.length} คน)`, value: buildFieldValue(dbEntries), inline: false };
+  const newField = { name: `${baseName} (${allEntries.length} คน)`, value: buildFieldValue(dbEntries), inline: false };
 
   if (fieldIdx >= 0) fields[fieldIdx] = newField;
   else fields.push(newField);
