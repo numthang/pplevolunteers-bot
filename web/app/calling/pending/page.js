@@ -259,11 +259,11 @@ export default function PendingCallsPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-3 mb-5">
+      <div className="space-y-2 mb-5">
         <select
           value={filterCampaign}
           onChange={e => setFilterCampaign(e.target.value)}
-          className="h-11 px-3 text-base border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text rounded-lg focus:outline-none focus:ring-2 focus:ring-teal flex-1 sm:flex-none"
+          className="w-full h-11 px-3 text-base border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text rounded-lg focus:outline-none focus:ring-2 focus:ring-teal"
         >
           <option value="">Campaign (ทั้งหมด)</option>
           {campaigns.map(c => (
@@ -271,12 +271,12 @@ export default function PendingCallsPage() {
           ))}
         </select>
 
-        <div className="flex rounded-lg border border-warm-200 dark:border-disc-border overflow-hidden shrink-0">
+        <div className="flex rounded-lg border border-warm-200 dark:border-disc-border overflow-hidden">
           {STATUS_OPTIONS.map(opt => (
             <button
               key={opt.value}
               onClick={() => setFilterStatus(opt.value)}
-              className={`px-4 py-2.5 text-base font-medium whitespace-nowrap transition ${
+              className={`flex-1 sm:flex-none px-4 py-2.5 text-sm sm:text-base font-medium whitespace-nowrap transition ${
                 filterStatus === opt.value
                   ? 'bg-teal text-white'
                   : 'bg-card-bg text-warm-700 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover'
@@ -291,7 +291,7 @@ export default function PendingCallsPage() {
           <select
             value={filterRsvp}
             onChange={e => setFilterRsvp(e.target.value)}
-            className="h-11 px-3 text-base border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text rounded-lg focus:outline-none focus:ring-2 focus:ring-teal flex-1 sm:flex-none"
+            className="w-full h-11 px-3 text-base border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text rounded-lg focus:outline-none focus:ring-2 focus:ring-teal"
           >
             <option value="">RSVP (ทั้งหมด)</option>
             <option value="yes">✓ เข้าร่วม</option>
