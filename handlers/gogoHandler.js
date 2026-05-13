@@ -146,6 +146,9 @@ async function handleGogoModal(interaction) {
 
   // เขียน DB
   const newNames = rawInput ? rawInput.split('\n').map(n => n.trim()).filter(Boolean) : [];
+  if (newNames.length > 20) {
+    return interaction.editReply({ content: '❌ ชื่อได้สูงสุด 20 คนต่อ 1 ครั้ง' });
+  }
   await upsertEntries(interaction.guildId, messageId, userId, newNames);
 
   // อ่าน DB เพื่อ render embed
