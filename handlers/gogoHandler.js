@@ -115,11 +115,9 @@ async function handleGogoSignup(interaction) {
   }
 
   const allEntries = await getEntries(guildId, messageId);
-  const myEntries  = allEntries.filter(e => e.user_id === userId);
-  const alreadyIn  = myEntries.length > 0;
+  const myEntries = allEntries.filter(e => e.user_id === userId);
   const displayName = interaction.member?.displayName ?? interaction.user.username;
-  const extraNames = myEntries.slice(1).map(e => e.name).filter(Boolean);
-  const prefill = alreadyIn ? [displayName, ...extraNames].join('\n') : displayName;
+  const prefill = myEntries.length > 0 ? myEntries.map(e => e.name).join('\n') : displayName;
 
   const modal = new ModalBuilder()
     .setCustomId(`modal_gogo:${interaction.message.id}`)
@@ -162,14 +160,19 @@ async function handleGogoModal(interaction) {
 
   // เขียน DB
   const newNames = rawInput ? rawInput.split('\n').map(n => n.trim()).filter(Boolean) : [];
-  if (newNames.length > 20) {
-    return interaction.editReply({ content: '❌ ชื่อได้สูงสุด 20 คนต่อ 1 ครั้ง' });
+  if (newNames.length > 10) {
+    return interaction.editReply({ content: '❌ ชื่อได้สูงสุด 10 คนต่อ 1 ครั้ง' });
   }
   await upsertEntries(interaction.guildId, messageId, userId, newNames);
 
   // อ่าน DB เพื่อ render embed
   const allEntries = await getEntries(interaction.guildId, messageId);
-  const dbEntries = allEntries.map(({ user_id: u, name: n }) => ({ userId: u, name: n }));
+  const displayName = interaction.member?.displayName ?? interaction.user.username;
+  const dbEntries = allEntries.map(({ user_id: u, name: n }) => {
+    // ถ้า name ตรงกับ displayName ของผู้ใช้ → self-entry (name = '')
+    if (u === userId && n === displayName) return { userId: u, name: '' };
+    return { userId: u, name: n };
+  });
 
   const baseName = fieldIdx >= 0
     ? fields[fieldIdx].name.replace(/ \(\d+ คน\)$/, '').replace(/^👥 /, '')
