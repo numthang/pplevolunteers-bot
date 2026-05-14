@@ -1,6 +1,8 @@
 TODO
 - เชื่อมระบบ Discord กับของพรรค
 - อื่นๆ ที่คาดหวังในอนาคต project management แบบ notion และ appflowy ให้ simple และ easy
+ลอง check หน่อยครับว่าอันไหนคือ script ที่ re-index แล้วยังทำงานถูกต้องกับปัจจุบันไหม เพราะว่าไม่ได้ใช้นานแล้ว
+ตอนสั่ง ./deploy.sh --production ทำไมไม่ขึ้น meilisearch status เหมือนตอ deploy local
 ==
 แนะนำแบ่งเป็น 2 session:
 Session A: อ่าน PDF + verify/correct CSV (source_page, benefit_amount, eligibility)

@@ -34,10 +34,10 @@ function calcPos(imgW, imgH, wmW, wmH, position) {
 }
 
 // ── Image watermark (sharp — Lanczos3) ────────────────────────────────────────
-async function applyImageWatermark(sourceBuffer, { imagePath, position, opacity }) {
+async function applyImageWatermark(sourceBuffer, { imagePath, position, opacity, size = 0.13 }) {
   const { width: W, height: H } = await sharp(sourceBuffer).metadata();
 
-  const wmW = Math.round(Math.max(W, H) * 0.15);
+  const wmW = Math.round(Math.max(W, H) * size);
 
   // scale ด้วย Lanczos3 แล้ว multiply alpha ตาม opacity
   const wmResized = await sharp(imagePath)
@@ -95,9 +95,9 @@ async function applyTextWatermark(sourceBuffer, { text, position, opacity }) {
 }
 
 // ── Public API ─────────────────────────────────────────────────────────────────
-async function applyWatermark(sourceBuffer, { text, imagePath, position, opacity }) {
+async function applyWatermark(sourceBuffer, { text, imagePath, position, opacity, size = 0.13 }) {
   if (imagePath) {
-    return applyImageWatermark(sourceBuffer, { imagePath, position, opacity });
+    return applyImageWatermark(sourceBuffer, { imagePath, position, opacity, size });
   }
   return applyTextWatermark(sourceBuffer, { text, position, opacity });
 }

@@ -80,6 +80,18 @@ function buildComponents(files) {
         ])
     ),
     new ActionRowBuilder().addComponents(
+      new StringSelectMenuBuilder()
+        .setCustomId('wm_size')
+        .setPlaceholder('ขนาดลายน้ำ (default: 13%)')
+        .addOptions([
+          new StringSelectMenuOptionBuilder().setLabel('8%  — เล็ก').setValue('0.08'),
+          new StringSelectMenuOptionBuilder().setLabel('10% — เล็กกลาง').setValue('0.10'),
+          new StringSelectMenuOptionBuilder().setLabel('13% — ปกติ').setValue('0.13'),
+          new StringSelectMenuOptionBuilder().setLabel('15% — ใหญ่กลาง').setValue('0.15'),
+          new StringSelectMenuOptionBuilder().setLabel('20% — ใหญ่').setValue('0.20'),
+        ])
+    ),
+    new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId('wm_confirm')
         .setLabel('✅ ติดลายน้ำ')
@@ -113,6 +125,7 @@ async function handleWatermarkCommand(interaction) {
     type: null,
     pos: 'bottom-right',
     opacity: 0.8,
+    size: 0.13,
   });
 
   await interaction.reply({
@@ -131,6 +144,7 @@ async function handleWatermarkSelect(interaction) {
   if (interaction.customId === 'wm_type')    state.type    = val;
   if (interaction.customId === 'wm_pos')     state.pos     = val;
   if (interaction.customId === 'wm_opacity') state.opacity = parseFloat(val);
+  if (interaction.customId === 'wm_size')    state.size    = parseFloat(val);
 
   await interaction.deferUpdate();
 }
@@ -219,6 +233,7 @@ async function processWatermark(interaction, state, customText) {
         imagePath,
         position: state.pos,
         opacity: state.opacity,
+        size: state.size,
       });
       const baseName = att.name.replace(/\.[^.]+$/, '');
       results.push({ attachment: new AttachmentBuilder(outBuf, { name: `${baseName}_watermark.${ext}` }), size: outBuf.length });
