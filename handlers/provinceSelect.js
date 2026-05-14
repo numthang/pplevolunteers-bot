@@ -16,7 +16,9 @@ function buildRegionDropdown(selectedId = null) {
   );
 }
 
-function buildProvinceRows(region, memberRoles) {
+// opts: { disableAll, overrideProvince, overrideHasRole } — ใช้สำหรับ optimistic UI
+function buildProvinceRows(region, memberRoles, opts = {}) {
+  const { disableAll = false, overrideProvince = null, overrideHasRole = false } = opts;
   const rows = [];
   for (let i = 0; i < region.provinces.length; i += 5) {
     const chunk = region.provinces.slice(i, i + 5);
@@ -24,11 +26,13 @@ function buildProvinceRows(region, memberRoles) {
       new ActionRowBuilder().addComponents(
         chunk.map(p => {
           const roleId  = PROVINCE_ROLES[p];
-          const hasRole = roleId && memberRoles.cache.has(roleId);
+          let hasRole   = roleId && memberRoles.cache.has(roleId);
+          if (overrideProvince === p) hasRole = overrideHasRole;
           return new ButtonBuilder()
             .setCustomId(`prov_btn:${region.id}:${p}`)
             .setLabel(p)
-            .setStyle(hasRole ? ButtonStyle.Primary : ButtonStyle.Secondary);
+            .setStyle(hasRole ? ButtonStyle.Primary : ButtonStyle.Secondary)
+            .setDisabled(disableAll);
         })
       )
     );
@@ -72,6 +76,18 @@ async function handleProvinceBtn(interaction) {
 
   const hasRole = provinceRoleId && member.roles.cache.has(provinceRoleId);
   const region  = PROVINCE_REGIONS.find((r) => r.id === regionId);
+
+  // Optimistic: flip สีปุ่มทันที + disable ทั้ง panel ป้องกัน double-click
+  await interaction.editReply({
+    embeds: [new EmbedBuilder()
+      .setTitle(`🗺️ เลือกจังหวัด · ${interaction.guild.name}`)
+      .setDescription('⏳ กำลังดำเนินการ...')
+      .setColor(region.color)],
+    components: [
+      ...buildProvinceRows(region, member.roles, { disableAll: true, overrideProvince: province, overrideHasRole: !hasRole }),
+      buildRegionDropdown(regionId),
+    ],
+  });
 
   try {
     const rolesChanged = [];

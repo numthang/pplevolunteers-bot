@@ -1,8 +1,7 @@
 TODO
 - เชื่อมระบบ Discord กับของพรรค
 - อื่นๆ ที่คาดหวังในอนาคต project management แบบ notion และ appflowy ให้ simple และ easy
-ลอง check หน่อยครับว่าอันไหนคือ script ที่ re-index แล้วยังทำงานถูกต้องกับปัจจุบันไหม เพราะว่าไม่ได้ใช้นานแล้ว
-ตอนสั่ง ./deploy.sh --production ทำไมไม่ขึ้น meilisearch status เหมือนตอ deploy local
+- ทำ context menu add to calendar เข้า discord event และ google calendar โดยที่ parse url discord event หรือ google meet ได้ และเอา content มาทำ description ได้ พร้อม parse วันที่เวลา จาก ข้อความนั้นได้ด้วย ทำแบบว่าให้รวมถึงไปการนำเข้าปฏิทิน "ทีมสื่อราชบุรี" ได้ด้วยอ่ะ มีให้เลือก ปฏิทิน เรามี 2 - 3 ปฏิทิน ตอนนี้
 ==
 แนะนำแบ่งเป็น 2 session:
 Session A: อ่าน PDF + verify/correct CSV (source_page, benefit_amount, eligibility)

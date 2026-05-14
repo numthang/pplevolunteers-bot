@@ -20,18 +20,22 @@ function parseGroups(config) {
 }
 
 // สร้าง rows สำหรับ items กลุ่มเดียว (ไม่มี divider)
-function buildGroupedRows(items, roleMap, memberRoles, prefix) {
+// opts: { disableAll, overrideKey, overrideHasRole } — ใช้สำหรับ optimistic UI
+function buildGroupedRows(items, roleMap, memberRoles, prefix, opts = {}) {
+  const { disableAll = false, overrideKey = null, overrideHasRole = false } = opts;
   const rows = [];
   let chunk = [];
   for (const b of items) {
     const roleId  = roleMap[b.key];
-    const hasRole = roleId && memberRoles.cache.has(roleId);
+    let hasRole   = roleId && memberRoles.cache.has(roleId);
+    if (overrideKey === b.key) hasRole = overrideHasRole;
     chunk.push(
       new ButtonBuilder()
         .setCustomId(`${prefix}:${b.key}`)
         .setLabel(b.label)
         .setEmoji(b.emoji)
         .setStyle(hasRole ? ButtonStyle.Primary : ButtonStyle.Secondary)
+        .setDisabled(disableAll)
     );
     if (chunk.length === 4) {
       rows.push(new ActionRowBuilder().addComponents(chunk));
@@ -43,8 +47,8 @@ function buildGroupedRows(items, roleMap, memberRoles, prefix) {
 }
 
 // backward compat — flat list ไม่มี group (ใช้ใน registerHandler)
-function buildRows(buttons, roleMap, memberRoles, prefix) {
-  return buildGroupedRows(buttons.filter(b => !b.divider), roleMap, memberRoles, prefix);
+function buildRows(buttons, roleMap, memberRoles, prefix, opts = {}) {
+  return buildGroupedRows(buttons.filter(b => !b.divider), roleMap, memberRoles, prefix, opts);
 }
 
 async function handleInterestSelect(interaction) {
@@ -64,15 +68,19 @@ async function handleInterestSelect(interaction) {
   const userId     = interaction.user.id;
 
   // หา group ที่ปุ่มนี้อยู่ เพื่อ update เฉพาะ group นั้น
-  let embedTitle, groupComponents;
+  let embedTitle, groupComponents, optimisticComponents;
   if (prefix === 'interest') {
     const groups = parseGroups(INTEREST_CONFIG);
     const group  = groups.find(g => g.items.some(item => item.key === name));
-    embedTitle       = `🎯 ${group?.title ?? 'ความสนใจ'} · ${dn}`;
-    groupComponents  = group ? () => buildGroupedRows(group.items, INTEREST_ROLES, member.roles, 'interest') : () => [];
+    embedTitle          = `🎯 ${group?.title ?? 'ความสนใจ'} · ${dn}`;
+    groupComponents     = group ? () => buildGroupedRows(group.items, INTEREST_ROLES, member.roles, 'interest') : () => [];
+    optimisticComponents = group
+      ? (flip) => buildGroupedRows(group.items, INTEREST_ROLES, member.roles, 'interest', { disableAll: true, overrideKey: name, overrideHasRole: flip })
+      : () => [];
   } else {
-    embedTitle       = `🛠️ ความถนัด · ${dn}`;
-    groupComponents  = () => buildRows(SKILL_BUTTONS, SKILL_ROLES, member.roles, 'skill');
+    embedTitle          = `🛠️ ความถนัด · ${dn}`;
+    groupComponents     = () => buildRows(SKILL_BUTTONS, SKILL_ROLES, member.roles, 'skill');
+    optimisticComponents = (flip) => buildRows(SKILL_BUTTONS, SKILL_ROLES, member.roles, 'skill', { disableAll: true, overrideKey: name, overrideHasRole: flip });
   }
 
   function reply(description) {
@@ -84,9 +92,15 @@ async function handleInterestSelect(interaction) {
 
   if (!roleId) return reply(`⚠️ ไม่พบ Role ID สำหรับ \`${name}\``);
 
-  try {
-    const hasRole = member.roles.cache.has(roleId);
+  const hasRole = member.roles.cache.has(roleId);
 
+  // Optimistic: flip สีปุ่มทันที + disable ทั้ง group ป้องกัน double-click
+  await interaction.editReply({
+    embeds: [new EmbedBuilder().setTitle(embedTitle).setDescription('⏳ กำลังดำเนินการ...').setColor(embedColor)],
+    components: optimisticComponents(!hasRole),
+  });
+
+  try {
     if (hasRole) {
       await member.roles.remove(roleId);
       if (MEDIA_TEAM_TRIGGERS.includes(name)) {
