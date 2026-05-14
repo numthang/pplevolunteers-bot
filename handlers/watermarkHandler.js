@@ -29,7 +29,7 @@ function getWatermarkFiles() {
 }
 
 function stripExt(filename) {
-  return filename.replace(/\.[^.]+$/, '');
+  return filename.replace(/\.[^.]+$/, '').replace(/^\d+-/, '');
 }
 
 function getImages(msg) {
@@ -66,6 +66,7 @@ function buildComponents(files) {
           new StringSelectMenuOptionBuilder().setLabel('ล่างซ้าย').setValue('bottom-left').setEmoji('↙️'),
           new StringSelectMenuOptionBuilder().setLabel('กลาง').setValue('center').setEmoji('⏺️'),
           new StringSelectMenuOptionBuilder().setLabel('บนขวา').setValue('top-right').setEmoji('↗️'),
+          new StringSelectMenuOptionBuilder().setLabel('สุ่มตำแหน่ง').setValue('random').setEmoji('🎲'),
         ])
     ),
     new ActionRowBuilder().addComponents(
@@ -205,38 +206,55 @@ async function processWatermark(interaction, state, customText) {
 
   await interaction.editReply({ content: `⏳ กำลังประมวลผล 0/${total} รูป...`, components: [] });
 
-  const resultFiles = [];
+  const results = []; // { attachment, size }
   const errors = [];
+  const MAX_BATCH = 7 * 1024 * 1024; // 7MB ต่อ message
 
   for (let i = 0; i < images.length; i++) {
     const att = images[i];
     try {
       const srcBuf = await fetchBuffer(att.url);
-      const outBuf = await applyWatermark(srcBuf, {
+      const { buffer: outBuf, ext } = await applyWatermark(srcBuf, {
         text: customText || null,
         imagePath,
         position: state.pos,
         opacity: state.opacity,
       });
       const baseName = att.name.replace(/\.[^.]+$/, '');
-      resultFiles.push(new AttachmentBuilder(outBuf, { name: `${baseName}_watermark.png` }));
+      results.push({ attachment: new AttachmentBuilder(outBuf, { name: `${baseName}_watermark.${ext}` }), size: outBuf.length });
     } catch (err) {
       errors.push(`❌ ${att.name}: ${err.message}`);
     }
     interaction.editReply({ content: `⏳ กำลังประมวลผล ${i + 1}/${total} รูป...` }).catch(() => {});
   }
 
-  if (resultFiles.length === 0) {
+  if (results.length === 0) {
     return interaction.editReply({ content: `❌ ประมวลผลไม่สำเร็จ\n${errors.join('\n')}` }).catch(() => {});
   }
 
-  await msg.reply({
-    content: `💧 ติดลายน้ำโดย <@${interaction.user.id}>`,
-    files: resultFiles,
-  });
+  // แบ่ง batch ตามขนาดไฟล์รวม
+  const batches = [];
+  let batch = [], batchSize = 0;
+  for (const r of results) {
+    if (batchSize + r.size > MAX_BATCH && batch.length > 0) {
+      batches.push(batch);
+      batch = [];
+      batchSize = 0;
+    }
+    batch.push(r.attachment);
+    batchSize += r.size;
+  }
+  if (batch.length > 0) batches.push(batch);
+
+  for (let i = 0; i < batches.length; i++) {
+    const payload = { files: batches[i] };
+    if (i === 0) payload.content = `💧 ติดลายน้ำโดย <@${interaction.user.id}>`;
+    if (i === 0) await msg.reply(payload);
+    else await msg.channel.send(payload);
+  }
 
   interaction.editReply({
-    content: `✅ ส่งแล้ว ${resultFiles.length} รูป` + (errors.length ? '\n' + errors.join('\n') : ''),
+    content: `✅ ส่งแล้ว ${results.length} รูป` + (errors.length ? '\n' + errors.join('\n') : ''),
   }).catch(() => {});
 }
 

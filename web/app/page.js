@@ -2,6 +2,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { getSession } from '@/lib/auth.js'
 import LoginButton from '@/components/LoginButton.jsx'
+import CopyButton from '@/components/CopyButton.jsx'
 import { getMembersCount, getPendingCallCount } from '@/db/calling/members.js'
 import { getContactPendingCount } from '@/db/calling/contacts.js'
 import { getCampaigns } from '@/db/calling/campaigns.js'
@@ -222,10 +223,10 @@ export default async function HomePage() {
           <Image src={session.user.image} alt="" width={48} height={48} className="rounded-full shrink-0" />
         )}
         <div className="min-w-0 flex-1">
-          <a href={`https://discord.com/users/${session.user.discordId}`} target="_blank" rel="noopener noreferrer"
-             className="font-semibold text-base text-warm-900 dark:text-disc-text hover:underline truncate block">
-            @{session.user.name}
-          </a>
+          <div className="flex items-center gap-1 min-w-0">
+            <span className="font-semibold text-base text-warm-900 dark:text-disc-text truncate">@{session.user.name}</span>
+            <CopyButton text={session.user.name} />
+          </div>
           <p className="text-sm text-warm-500 dark:text-disc-muted truncate">ID: {session.user.discordId}</p>
           {displayName && displayName !== session.user.name && (
             <p className="text-sm text-warm-500 dark:text-disc-muted truncate">Display name: {displayName}</p>

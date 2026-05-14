@@ -19,6 +19,12 @@ async function fetchBuffer(url) {
 
 function calcPos(imgW, imgH, wmW, wmH, position) {
   const pad = Math.max(10, Math.round(Math.min(imgW, imgH) * 0.025));
+  if (position === 'random') {
+    return {
+      x: Math.round(pad + Math.random() * (imgW - wmW - pad * 2)),
+      y: Math.round(pad + Math.random() * (imgH - wmH - pad * 2)),
+    };
+  }
   switch (position) {
     case 'bottom-left': return { x: pad,              y: imgH - wmH - pad };
     case 'center':      return { x: (imgW - wmW) / 2, y: (imgH - wmH) / 2 };
@@ -50,10 +56,10 @@ async function applyImageWatermark(sourceBuffer, { imagePath, position, opacity 
   const wmMeta = await sharp(wmFinal).metadata();
   const { x, y } = calcPos(W, H, wmMeta.width, wmMeta.height, position);
 
-  return sharp(sourceBuffer)
-    .composite([{ input: wmFinal, left: Math.round(x), top: Math.round(y) }])
-    .png()
-    .toBuffer();
+  const { format } = await sharp(sourceBuffer).metadata();
+  const out = sharp(sourceBuffer).composite([{ input: wmFinal, left: Math.round(x), top: Math.round(y) }]);
+  const buf = await (format === 'png' ? out.png() : out.jpeg({ quality: 92 })).toBuffer();
+  return { buffer: buf, ext: format === 'png' ? 'png' : 'jpg' };
 }
 
 // ── Text watermark (canvas — Thai font support) ───────────────────────────────
@@ -81,7 +87,11 @@ async function applyTextWatermark(sourceBuffer, { text, position, opacity }) {
   ctx.fillText(text, x, y);
   ctx.globalAlpha = 1;
 
-  return canvas.toBuffer('image/png');
+  const canvasBuf = canvas.toBuffer('image/png');
+  const { format } = await sharp(sourceBuffer).metadata();
+  const out = sharp(canvasBuf);
+  const buf = await (format === 'png' ? out.png() : out.jpeg({ quality: 92 })).toBuffer();
+  return { buffer: buf, ext: format === 'png' ? 'png' : 'jpg' };
 }
 
 // ── Public API ─────────────────────────────────────────────────────────────────
