@@ -119,14 +119,49 @@ async function processTransaction(txn, rawText) {
 
 async function insertTransaction(txn, account, type, balanceAfter) {
   const description = (() => {
-    const base = type === 'income' ? `รับโอนจาก ${txn.counterpart_name || ''}` : `โอนให้ ${txn.counterpart_name || ''}`
+    const base = type === 'income'
+      ? `รับโอนจาก ${txn.counterpart_name || ''}`.trim()
+      : `โอนให้ ${txn.counterpart_name || ''}`.trim()
     return txn.merchant_ref ? `${base} · ${txn.merchant_ref}` : base
   })()
 
+  // dedup: expense อาจถูก insert จาก SMS แล้ว → UPDATE แทน INSERT
+  if (type === 'expense' && balanceAfter != null) {
+    const txnAt = txn.txn_at ? new Date(txn.txn_at) : new Date()
+    const [dup] = await pool.query(
+      `SELECT id FROM finance_transactions
+       WHERE account_id = ? AND amount = ? AND balance_after = ? AND balance_after IS NOT NULL
+         AND txn_at BETWEEN DATE_SUB(?, INTERVAL 5 MINUTE) AND DATE_ADD(?, INTERVAL 5 MINUTE)
+       LIMIT 1`,
+      [account.id, txn.amount, balanceAfter, txnAt, txnAt]
+    )
+
+    if (dup[0]) {
+      await pool.query(
+        `UPDATE finance_transactions SET
+           ref_id              = ?,
+           counterpart_name    = COALESCE(counterpart_name, ?),
+           counterpart_account = COALESCE(counterpart_account, ?),
+           counterpart_bank    = COALESCE(counterpart_bank, ?),
+           fee                 = COALESCE(fee, ?),
+           description         = ?,
+           source              = 'email',
+           updated_by          = 'system',
+           updated_at          = NOW()
+         WHERE id = ?`,
+        [txn.ref_id, txn.counterpart_name, txn.counterpart_account,
+         txn.counterpart_bank, txn.fee, description, dup[0].id]
+      )
+      log.info(`[emailPoller] enriched SMS expense id=${dup[0].id} ref_id=${txn.ref_id}`)
+      await logIncoming(txn.ref_id, dup[0].id)
+      return
+    }
+  }
+
   const [result] = await pool.query(
     `INSERT IGNORE INTO finance_transactions
-      (guild_id, account_id, type, amount, description, counterpart_name, counterpart_account, counterpart_bank, fee, balance_after, ref_id, txn_at, updated_by, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'system', NOW())`,
+      (guild_id, account_id, type, amount, description, counterpart_name, counterpart_account, counterpart_bank, fee, balance_after, ref_id, source, txn_at, updated_by, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'email', ?, 'system', NOW())`,
     [
       account.guild_id,
       account.id,
@@ -149,9 +184,22 @@ async function insertTransaction(txn, account, type, balanceAfter) {
   }
 
   log.info(`[emailPoller] inserted txn ref_id=${txn.ref_id} type=${type} amount=${txn.amount} account=${account.id}`)
+  await logIncoming(txn.ref_id, result.insertId)
 
   const shouldNotify = type === 'income' ? account.notify_income : account.notify_expense
   if (shouldNotify) await notifyDiscord(account, type, txn)
+}
+
+async function logIncoming(refId, transactionId) {
+  try {
+    await pool.query(
+      `INSERT INTO finance_incoming_log (source, raw_text, parsed, transaction_id)
+       VALUES ('email', ?, 1, ?)`,
+      [refId || '', transactionId]
+    )
+  } catch (err) {
+    log.error('[emailPoller] logIncoming error:', err.message)
+  }
 }
 
 async function matchAccount(txn) {

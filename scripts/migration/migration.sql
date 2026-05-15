@@ -71,3 +71,45 @@ CREATE TABLE IF NOT EXISTS dc_gogo_entries (
   INDEX idx_user  (guild_id, message_id, user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- 2026-05-14: media_baskets — ตะกร้าสื่อ บก. รวมรูป+caption จากหลาย message ก่อนโพสต์ FB/IG
+CREATE TABLE IF NOT EXISTS dc_media_baskets (
+  id         INT AUTO_INCREMENT PRIMARY KEY,
+  guild_id   VARCHAR(20)  NOT NULL,
+  channel_id VARCHAR(20)  NOT NULL,
+  added_by   VARCHAR(20)  NOT NULL,
+  type       ENUM('image','caption') NOT NULL DEFAULT 'image',
+  image_url  TEXT         NULL,
+  caption    TEXT         NULL,
+  message_id VARCHAR(20)  NULL,
+  added_at   TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_guild_channel (guild_id, channel_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 2026-05-15: finance_incoming_log — เก็บ raw SMS และ email ทุกตัวที่เข้าระบบการเงิน
+CREATE TABLE IF NOT EXISTS finance_incoming_log (
+  id             INT AUTO_INCREMENT PRIMARY KEY,
+  guild_id       VARCHAR(20)          NULL,
+  source         ENUM('sms','email')  NOT NULL,
+  raw_text       TEXT                 NOT NULL,
+  parsed         TINYINT              NOT NULL DEFAULT 0,
+  transaction_id INT                  NULL,
+  created_at     DATETIME             NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_created (created_at DESC),
+  INDEX idx_txn (transaction_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 2026-05-14: dc_guild_config — key-value config ต่อ guild (Meta social, bot config, feature flags ฯลฯ)
+CREATE TABLE IF NOT EXISTS dc_guild_config (
+  guild_id  VARCHAR(20)   NOT NULL,
+  `key`     VARCHAR(100)  NOT NULL,
+  value     TEXT          NULL,
+  PRIMARY KEY (guild_id, `key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 2026-05-14: meta social config per guild — รัน scripts/meta-setup.js แทนการใส่เองตรงนี้
+-- INSERT INTO dc_guild_config (guild_id, `key`, value) VALUES
+--   ('GUILD_ID', 'meta_page_id',    'FB_PAGE_ID'),
+--   ('GUILD_ID', 'meta_ig_id',      'IG_BUSINESS_ID'),
+--   ('GUILD_ID', 'meta_page_token', 'PAGE_ACCESS_TOKEN')
+-- ON DUPLICATE KEY UPDATE value = VALUES(value);
+

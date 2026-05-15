@@ -140,6 +140,32 @@ user ส่ง slip รูปใน Discord thread
 
 ---
 
+## SMS Webhook vs Email — ทำไม reject expense SMS
+
+KBank แจ้งเตือนทั้งสองช่องทาง แต่ละช่องทางให้ข้อมูลต่างกัน:
+
+| ทิศทาง | ช่องทาง | ข้อมูลที่ได้ |
+|---|---|---|
+| รายรับ (income) | SMS → smsWebhook | จำนวน, ยอดคงเหลือ, ชื่อผู้โอน |
+| รายจ่าย (expense) | Email → emailPoller | ref_id, ชื่อผู้รับ, ธนาคาร, ค่าธรรมเนียม, ยอดคงเหลือ |
+
+**ดังนั้น `kbankSms.js` parser reject SMS รายจ่ายโดยตั้งใจ** — ใช้ email แทนเพราะให้รายละเอียดมากกว่า
+
+**ข้อควรระวัง:** บัญชีที่ไม่ทำ email forward (forward แค่ SMS) จะบันทึกได้เฉพาะรายรับเท่านั้น รายจ่ายจะหายไป
+
+### Format เลขบัญชี KBank ที่ mask ต่างกัน
+
+KBank account format: `XXX-X-XXXXX-X` (3-1-5-1 หลัก รวม 10 หลัก)
+
+| ช่องทาง | ตัวอย่าง | ตัวเลขที่เห็น | วิธี match |
+|---|---|---|---|
+| SMS | `บช X-4882` | 4 ตัวท้ายของกลุ่ม 5 หลัก | `accNo.endsWith('4882')` |
+| Email | `xxx-x-x6488-x` | 4 ตัวรองสุดท้าย (กลุ่ม 5 หลัก, ไม่รวม check digit) | `accNo.includes('6488')` |
+
+SMS และ email ของบัญชีเดียวกันให้ตัวเลขคนละชุด → ใช้ logic match ต่างกัน
+
+---
+
 ## หมายเหตุ
 - Category icon ให้ใช้ emoji ก่อน ไม่ต้องทำ custom icon
 - Calculator ทำเป็น React component แยก reuse ได้

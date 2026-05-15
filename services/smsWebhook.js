@@ -89,14 +89,20 @@ async function handleRequest(req, res) {
 			}
 
 			const txn = kbankSms.parse(smsText)
+			await logIncoming(smsText, !!txn)
+
 			if (!txn) {
-				log.warn('[smsWebhook] SMS ไม่ใช่รายการโอนเข้า KBank:', smsText.substring(0, 80))
-				res.writeHead(200).end(JSON.stringify({ ok: false, reason: 'not income SMS' }))
+				log.warn('[smsWebhook] SMS ไม่ใช่รายการที่รองรับ:', smsText.substring(0, 80))
+				res.writeHead(200).end(JSON.stringify({ ok: false, reason: 'unrecognized SMS' }))
 				return
 			}
 
 			log.info('[smsWebhook] parsed txn:', txn)
-			await processSmsIncome(txn)
+			if (txn.type === 'expense') {
+				await processSmsExpense(txn)
+			} else {
+				await processSmsIncome(txn)
+			}
 
 			res.writeHead(200).end(JSON.stringify({ ok: true, ref_id: txn.ref_id }))
 		} catch (err) {
@@ -141,6 +147,72 @@ async function processSmsIncome(txn) {
 	log.info(`[smsWebhook] inserted income ref_id=${txn.ref_id} amount=${txn.amount}`)
 
 	if (account.notify_income) await notifyDiscord(account, txn)
+}
+
+async function processSmsExpense(txn) {
+	const account = await matchAccount(txn.last_digits)
+	if (!account) {
+		log.warn('[smsWebhook] expense: ไม่พบบัญชีที่ตรงกับ last_digits:', txn.last_digits)
+		return
+	}
+
+	const txnAt = new Date(txn.txn_at || new Date())
+	const [dup] = await pool.query(
+		`SELECT id FROM finance_transactions
+		 WHERE account_id = ? AND amount = ? AND balance_after = ? AND balance_after IS NOT NULL
+		   AND txn_at BETWEEN DATE_SUB(?, INTERVAL 5 MINUTE) AND DATE_ADD(?, INTERVAL 5 MINUTE)
+		 LIMIT 1`,
+		[account.id, txn.amount, txn.balance_after, txnAt, txnAt]
+	)
+
+	if (dup[0]) {
+		log.info(`[smsWebhook] expense dup id=${dup[0].id} (email record exists), skipping`)
+		await updateIncomingLog(txn.raw, dup[0].id)
+		return
+	}
+
+	const [result] = await pool.query(
+		`INSERT IGNORE INTO finance_transactions
+		  (guild_id, account_id, type, amount, description, balance_after,
+		   ref_id, source, txn_at, updated_by, updated_at)
+		 VALUES (?, ?, 'expense', ?, 'เงินออก', ?, ?, 'sms', ?, 'system', NOW())`,
+		[account.guild_id, account.id, txn.amount, txn.balance_after,
+		 txn.ref_id, txn.txn_at || new Date()]
+	)
+
+	if (result.affectedRows === 0) {
+		log.warn('[smsWebhook] expense duplicate ref_id, skipping:', txn.ref_id)
+		return
+	}
+
+	log.info(`[smsWebhook] inserted expense id=${result.insertId} amount=${txn.amount}`)
+	await updateIncomingLog(txn.raw, result.insertId)
+
+	if (account.notify_expense) await notifyDiscord(account, txn)
+}
+
+async function logIncoming(rawText, parsed) {
+	try {
+		await pool.query(
+			`INSERT INTO finance_incoming_log (source, raw_text, parsed) VALUES ('sms', ?, ?)`,
+			[rawText, parsed ? 1 : 0]
+		)
+	} catch (err) {
+		log.error('[smsWebhook] logIncoming error:', err.message)
+	}
+}
+
+async function updateIncomingLog(rawText, transactionId) {
+	try {
+		await pool.query(
+			`UPDATE finance_incoming_log SET transaction_id = ?
+			 WHERE source = 'sms' AND raw_text = ? AND transaction_id IS NULL
+			 ORDER BY created_at DESC LIMIT 1`,
+			[transactionId, rawText]
+		)
+	} catch (err) {
+		log.error('[smsWebhook] updateIncomingLog error:', err.message)
+	}
 }
 
 async function matchAccount(lastDigits) {

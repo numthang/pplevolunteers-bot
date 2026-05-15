@@ -357,6 +357,60 @@ ps aux | grep meilisearch
 
 ---
 
+## Social Auto-Post (Media Basket + Meta)
+
+### ครั้งแรก (One-time Setup)
+
+**1. เพิ่ม Redirect URI ใน Meta App**
+- ไป [developers.facebook.com](https://developers.facebook.com) → App "Peoples' Volunteers"
+- Facebook Login → Settings → Valid OAuth Redirect URIs
+- เพิ่ม `https://pplevolunteers.org/api/meta/oauth/callback`
+
+**2. รัน meta-setup.js เพื่อ link guild ↔ page**
+```bash
+# ขอ short-lived token จาก https://developers.facebook.com/tools/explorer
+# Permissions: pages_manage_posts, pages_show_list, pages_manage_metadata, instagram_content_publish, business_management
+sudo -u www bash -c 'cd /www/wwwroot/pple-volunteers && node scripts/meta-setup.js SHORT_LIVED_TOKEN'
+```
+Script จะ print SQL → copy ใส่ guild_id จริง แล้วรัน
+
+**3. Deploy context menu command**
+```bash
+node deploy-commands.js --guild <guildId>
+pm2 restart pple-dcbot
+```
+
+**4. เพิ่ม watermark file**
+- วางไฟล์ `.png`/`.jpg` ลง `assets/watermark/`
+- ชื่อไฟล์ขึ้นต้นด้วยตัวเลขได้ เช่น `01-logo.png` (จะแสดงเป็น "logo" ใน dropdown)
+
+---
+
+### ต้องรัน OAuth ใหม่เมื่อ
+
+Page Access Token **ไม่มีวันหมดอายุ** ปกติ แต่ต้องรันใหม่ถ้า:
+- เจ้าของ Facebook account เปลี่ยน password
+- มีการ revoke permission ใน Facebook Settings
+- เพิ่ม guild/page ใหม่
+
+วิธีรัน: เปิดใน browser ในฐานะ Admin
+```
+https://pplevolunteers.org/api/meta/oauth/start?guild_id=GUILD_ID
+```
+login Facebook → token อัพเดทอัตโนมัติ ทุก guild ที่มี `meta_page_id` ใน DB
+
+---
+
+### .env ที่เกี่ยวข้อง
+
+```
+META_APP_ID=...
+META_APP_SECRET=...
+WEB_BASE_URL=https://pplevolunteers.org   # ใช้สร้าง public URL สำหรับ IG temp files
+```
+
+---
+
 ## Git Workflow
 
 ```bash
