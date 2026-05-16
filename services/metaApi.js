@@ -174,7 +174,7 @@ async function igPost(urlPath, fields) {
 
 async function _igPostFromUrls(cfg, imageUrls, caption, scheduleTime = null) {
   const scheduleFields = scheduleTime
-    ? { scheduled_publish_time: String(scheduleTime) }
+    ? { scheduled_publish_time: String(scheduleTime), published: 'false' }
     : {};
 
   async function publishAndGetUrl(containerId) {
