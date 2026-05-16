@@ -396,12 +396,13 @@ async function processAndPost(interaction, state) {
         const parts = res.id.split('_');
         if (parts.length === 2) {
           fbUrl = `https://www.facebook.com/permalink.php?story_fbid=${parts[1]}&id=${parts[0]}`;
-          results.push(`✅ Facebook ตั้งเวลาแล้ว\n🔗 [ดูโพสต์](${fbUrl}) · [จัดการโพสต์ทั้งหมด](https://www.facebook.com/professional_dashboard/content_calendar/)`);
+          const fbLabel = scheduleTime ? 'ตั้งเวลาแล้ว' : 'โพสต์แล้ว';
+          results.push(`✅ Facebook ${fbLabel}\n🔗 [ดูโพสต์](${fbUrl}) · [จัดการโพสต์ทั้งหมด](https://www.facebook.com/professional_dashboard/content_calendar/)`);
         } else {
-          results.push('✅ Facebook ตั้งเวลาแล้ว');
+          results.push(scheduleTime ? '✅ Facebook ตั้งเวลาแล้ว' : '✅ Facebook โพสต์แล้ว');
         }
       } else {
-        results.push('✅ Facebook ตั้งเวลาแล้ว');
+        results.push(scheduleTime ? '✅ Facebook ตั้งเวลาแล้ว' : '✅ Facebook โพสต์แล้ว');
       }
     } catch (err) {
       results.push(`❌ Facebook: ${err.message}`);
@@ -409,8 +410,11 @@ async function processAndPost(interaction, state) {
   }
   if (state.platform === 'ig' || state.platform === 'both') {
     try {
-      await postToInstagram(state.guildId, processed, state.caption, scheduleTime);
-      results.push('✅ Instagram ตั้งเวลาแล้ว\n🔗 [จัดการใน Meta Business Suite](https://business.facebook.com/content/posts/scheduled)');
+      const igRes = await postToInstagram(state.guildId, processed, state.caption, scheduleTime);
+      const igLink = igRes?.permalink ? ` · [ดูโพสต์](${igRes.permalink})` : '';
+      results.push(scheduleTime
+        ? `✅ Instagram ตั้งเวลาแล้ว${igLink}`
+        : `✅ Instagram โพสต์แล้ว${igLink}`);
     } catch (err) {
       results.push(`❌ Instagram: ${err.message}`);
     }

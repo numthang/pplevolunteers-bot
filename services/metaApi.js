@@ -177,14 +177,20 @@ async function _igPostFromUrls(cfg, imageUrls, caption, scheduleTime = null) {
     ? { scheduled_publish_time: String(scheduleTime) }
     : {};
 
+  async function publishAndGetUrl(containerId) {
+    const { id: mediaId } = await igPost(`/v22.0/${cfg.igId}/media_publish`, {
+      creation_id: containerId, access_token: cfg.token,
+    });
+    const info = await httpsGet(`/v22.0/${mediaId}?fields=permalink&access_token=${cfg.token}`);
+    return { id: mediaId, permalink: info.permalink || null };
+  }
+
   if (imageUrls.length === 1) {
     const { id } = await igPost(`/v22.0/${cfg.igId}/media`, {
       image_url: imageUrls[0], caption, access_token: cfg.token, ...scheduleFields,
     });
     await waitForIgContainer(id, cfg.token);
-    return igPost(`/v22.0/${cfg.igId}/media_publish`, {
-      creation_id: id, access_token: cfg.token,
-    });
+    return publishAndGetUrl(id);
   }
 
   // carousel — children ไม่ใส่ scheduled_publish_time, ใส่แค่ parent
@@ -203,9 +209,7 @@ async function _igPostFromUrls(cfg, imageUrls, caption, scheduleTime = null) {
     ...scheduleFields,
   });
   await waitForIgContainer(carouselId, cfg.token);
-  return igPost(`/v22.0/${cfg.igId}/media_publish`, {
-    creation_id: carouselId, access_token: cfg.token,
-  });
+  return publishAndGetUrl(carouselId);
 }
 
 // บันทึก buffer ลง temp dir แล้วคืน public URLs (ไม่ลบอัตโนมัติ — cleanup รายเดือน)
