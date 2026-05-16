@@ -22,6 +22,36 @@ async function getConfig(guildId) {
 
 // ─── HTTP helper ──────────────────────────────────────────────────────────────
 
+function httpsGet(urlPath) {
+  return new Promise((resolve, reject) => {
+    const req = https.request({
+      hostname: 'graph.facebook.com',
+      path: urlPath,
+      method: 'GET',
+    }, res => {
+      let data = '';
+      res.on('data', c => data += c);
+      res.on('end', () => {
+        try { resolve(JSON.parse(data)); }
+        catch { resolve({ raw: data }); }
+      });
+    });
+    req.on('error', reject);
+    req.end();
+  });
+}
+
+async function waitForIgContainer(id, token, maxWaitMs = 30000) {
+  const start = Date.now();
+  while (Date.now() - start < maxWaitMs) {
+    const res = await httpsGet(`/v22.0/${id}?fields=status_code,status&access_token=${token}`);
+    if (res.status_code === 'FINISHED') return;
+    if (res.status_code === 'ERROR') throw new Error(`IG container error: ${res.status || 'unknown'}`);
+    await new Promise(r => setTimeout(r, 2000));
+  }
+  throw new Error('IG container timeout — รูปใช้เวลา process นานเกิน 30s');
+}
+
 function httpsPost(urlPath, body, contentType) {
   return new Promise((resolve, reject) => {
     const req = https.request({
@@ -151,6 +181,7 @@ async function _igPostFromUrls(cfg, imageUrls, caption, scheduleTime = null) {
     const { id } = await igPost(`/v22.0/${cfg.igId}/media`, {
       image_url: imageUrls[0], caption, access_token: cfg.token, ...scheduleFields,
     });
+    await waitForIgContainer(id, cfg.token);
     return igPost(`/v22.0/${cfg.igId}/media_publish`, {
       creation_id: id, access_token: cfg.token,
     });
@@ -162,6 +193,7 @@ async function _igPostFromUrls(cfg, imageUrls, caption, scheduleTime = null) {
     const { id } = await igPost(`/v22.0/${cfg.igId}/media`, {
       image_url: url, is_carousel_item: 'true', access_token: cfg.token,
     });
+    await waitForIgContainer(id, cfg.token);
     childIds.push(id);
   }
   const { id: carouselId } = await igPost(`/v22.0/${cfg.igId}/media`, {
@@ -170,6 +202,7 @@ async function _igPostFromUrls(cfg, imageUrls, caption, scheduleTime = null) {
     access_token: cfg.token,
     ...scheduleFields,
   });
+  await waitForIgContainer(carouselId, cfg.token);
   return igPost(`/v22.0/${cfg.igId}/media_publish`, {
     creation_id: carouselId, access_token: cfg.token,
   });
