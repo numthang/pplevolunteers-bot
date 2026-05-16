@@ -2,6 +2,7 @@ const pool = require('./index')
 
 async function upsertGuilds(guildsCache) {
   for (const guild of guildsCache.values()) {
+    if (!guild.name) continue;
     await pool.query(
       `INSERT INTO dc_guilds (guild_id, name, icon_url, updated_at)
        VALUES (?, ?, ?, NOW())

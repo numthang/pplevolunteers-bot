@@ -37,4 +37,20 @@ async function clearBasket(guildId, channelId) {
   );
 }
 
-module.exports = { addImages, setCaption, getBasket, clearBasket };
+async function addHistory(guildId, channelId, postedBy, { platform, imageCount, wmType, caption, scheduleTime, fbUrl, status }) {
+  await pool.execute(
+    `INSERT INTO dc_basket_history (guild_id, channel_id, posted_by, platform, image_count, wm_type, caption, schedule_time, fb_url, status)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [guildId, channelId, postedBy, platform, imageCount, wmType || null, caption || null, scheduleTime || null, fbUrl || null, status]
+  );
+}
+
+async function getHistory(guildId, channelId) {
+  const [rows] = await pool.execute(
+    `SELECT * FROM dc_basket_history WHERE guild_id = ? AND channel_id = ? ORDER BY created_at DESC`,
+    [guildId, channelId]
+  );
+  return rows;
+}
+
+module.exports = { addImages, setCaption, getBasket, clearBasket, addHistory, getHistory };

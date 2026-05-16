@@ -13,7 +13,7 @@ const {
 const path = require('path');
 const fs = require('fs');
 const sharp = require('sharp');
-const { addImages, setCaption, getBasket, clearBasket } = require('../db/mediaBasket');
+const { addImages, setCaption, getBasket, clearBasket, addHistory, getHistory } = require('../db/mediaBasket');
 const { fetchBuffer, applyWatermark } = require('../utils/watermarkImage');
 const { postToFacebook, postToInstagram, getConfig } = require('../services/metaApi');
 const { getSetting, setSetting, deleteSetting } = require('../db/settings');
@@ -99,6 +99,22 @@ async function buildBasketPayload(basket, guildId, channelId, userId) {
 
   const cfg = await getConfig(guildId);
   const defaultPlatform = (imgCount > 0 && cfg?.igId) ? 'both' : 'fb';
+
+  const history = await getHistory(guildId, channelId);
+  if (history.length) {
+    const platformIcon = { fb: '📘', ig: '📷', both: '📲' };
+    const lines = history.map(h => {
+      const icon  = platformIcon[h.platform] || '📤';
+      const date  = new Date((h.schedule_time ? h.schedule_time * 1000 : h.created_at));
+      const thaiDate = new Date(date.getTime() + 7 * 60 * 60 * 1000);
+      const d = `${String(thaiDate.getUTCDate()).padStart(2,'0')}/${String(thaiDate.getUTCMonth()+1).padStart(2,'0')} ${String(thaiDate.getUTCHours()).padStart(2,'0')}:${String(thaiDate.getUTCMinutes()).padStart(2,'0')}`;
+      const imgs  = h.image_count > 0 ? ` · ${h.image_count} รูป` : '';
+      const link  = h.fb_url ? ` · [ดูโพสต์](${h.fb_url})` : '';
+      const fail  = h.status !== 'success' ? ' ⚠️' : '';
+      return `${icon} ${d}${imgs}${link}${fail}`;
+    });
+    embed.addFields({ name: '📋 ประวัติการโพสต์', value: lines.join('\n'), inline: false });
+  }
 
   pendingPost.set(userId, {
     guildId, channelId,
@@ -234,9 +250,9 @@ function openScheduleModal(interaction, existingCaption) {
 
   const timeInput = new TextInputBuilder()
     .setCustomId('basket_schedule_time')
-    .setLabel('วันเวลาโพสต์ (วัน/เดือน/ปี ชั่วโมง:นาที)')
+    .setLabel('วันเวลาโพสต์ (เว้นว่าง = โพสต์เดี๋ยวนี้)')
     .setStyle(TextInputStyle.Short)
-    .setRequired(true)
+    .setRequired(false)
     .setMaxLength(20)
     .setValue(defaultScheduleTime());
 
@@ -291,24 +307,29 @@ async function handleBasketModal(interaction) {
   if (!state) return interaction.editReply({ content: '❌ Session หมดอายุ' });
 
   const caption = captionInput || state.caption || '';
-  const scheduleDate = parseThaiDateTime(timeStr);
-  if (!scheduleDate || isNaN(scheduleDate.getTime())) {
-    state.caption = caption;
-    return interaction.editReply({
-      content: '❌ รูปแบบวันที่ไม่ถูกต้อง\nรองรับ: `16/05/2026 15:00` · `16/05 15:00` · `16 15:00` · `15:00`',
-      components: [retryRow],
-    });
-  }
-  if (scheduleDate.getTime() < Date.now() + 20 * 60 * 1000) {
-    state.caption = caption;
-    return interaction.editReply({
-      content: '❌ ต้องตั้งเวลาล่วงหน้าอย่างน้อย 20 นาที',
-      components: [retryRow],
-    });
+  let scheduleTime = null;
+
+  if (timeStr) {
+    const scheduleDate = parseThaiDateTime(timeStr);
+    if (!scheduleDate || isNaN(scheduleDate.getTime())) {
+      state.caption = caption;
+      return interaction.editReply({
+        content: '❌ รูปแบบวันที่ไม่ถูกต้อง\nรองรับ: `16/05/2026 15:00` · `16/05 15:00` · `16 15:00` · `15:00`',
+        components: [retryRow],
+      });
+    }
+    if (scheduleDate.getTime() < Date.now() + 20 * 60 * 1000) {
+      state.caption = caption;
+      return interaction.editReply({
+        content: '❌ ต้องตั้งเวลาล่วงหน้าอย่างน้อย 20 นาที',
+        components: [retryRow],
+      });
+    }
+    scheduleTime = Math.floor(scheduleDate.getTime() / 1000);
   }
 
   state.caption      = caption;
-  state.scheduleTime = Math.floor(scheduleDate.getTime() / 1000);
+  state.scheduleTime = scheduleTime;
   pendingPost.delete(interaction.user.id);
   await processAndPost(interaction, state);
 }
@@ -375,7 +396,7 @@ async function processAndPost(interaction, state) {
         const parts = res.id.split('_');
         if (parts.length === 2) {
           fbUrl = `https://www.facebook.com/permalink.php?story_fbid=${parts[1]}&id=${parts[0]}`;
-          results.push(`✅ Facebook ตั้งเวลาแล้ว\n🔗 [ดูโพสต์](${fbUrl})`);
+          results.push(`✅ Facebook ตั้งเวลาแล้ว\n🔗 [ดูโพสต์](${fbUrl}) · [จัดการโพสต์ทั้งหมด](https://www.facebook.com/professional_dashboard/content_calendar/)`);
         } else {
           results.push('✅ Facebook ตั้งเวลาแล้ว');
         }
@@ -396,6 +417,19 @@ async function processAndPost(interaction, state) {
   }
 
   await clearBasket(state.guildId, state.channelId);
+
+  const overallStatus = results.every(r => r.startsWith('✅')) ? 'success'
+    : results.every(r => r.startsWith('❌')) ? 'failed' : 'partial';
+  await addHistory(state.guildId, state.channelId, interaction.user.id, {
+    platform:    state.platform,
+    imageCount:  imageItems.length,
+    wmType:      state.wmType !== 'none' ? state.wmType : null,
+    caption:     state.caption || null,
+    scheduleTime: state.scheduleTime || null,
+    fbUrl,
+    status:      overallStatus,
+  }).catch(() => {});
+
   await setSetting(state.guildId, `last_post_${state.channelId}`, { fbUrl, postedAt: new Date() }).catch(() => {});
   await deleteSetting(state.guildId, `pending_ig_${state.channelId}`).catch(() => {});
 

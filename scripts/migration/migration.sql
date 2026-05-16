@@ -113,3 +113,21 @@ CREATE TABLE IF NOT EXISTS dc_guild_config (
 --   ('GUILD_ID', 'meta_page_token', 'PAGE_ACCESS_TOKEN')
 -- ON DUPLICATE KEY UPDATE value = VALUES(value);
 
+-- 2026-05-16: dc_basket_history — ประวัติการโพสต์ผ่าน basket
+CREATE TABLE IF NOT EXISTS dc_basket_history (
+  id            INT UNSIGNED     NOT NULL AUTO_INCREMENT,
+  guild_id      VARCHAR(20)      NOT NULL,
+  channel_id    VARCHAR(20)      NOT NULL,
+  posted_by     VARCHAR(20)      NOT NULL,
+  platform      VARCHAR(10)      NOT NULL COMMENT 'fb / ig / both',
+  image_count   TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  wm_type       VARCHAR(100)     NULL,
+  caption       TEXT             NULL,
+  schedule_time INT UNSIGNED     NULL COMMENT 'unix timestamp, null = โพสต์ทันที',
+  fb_url        VARCHAR(500)     NULL,
+  status        VARCHAR(20)      NOT NULL DEFAULT 'success' COMMENT 'success / partial / failed',
+  created_at    DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  INDEX idx_channel (guild_id, channel_id, created_at DESC)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
