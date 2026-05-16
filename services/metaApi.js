@@ -99,23 +99,23 @@ async function fbUploadPhoto(pageId, token, buffer, ext, published, caption = ''
   return res;
 }
 
-async function postToFacebook(guildId, images, caption) {
+async function postToFacebook(guildId, images, caption, scheduleTime = null) {
   const cfg = await getConfig(guildId);
   if (!cfg) throw new Error('ไม่พบ config สำหรับ guild นี้');
 
+  const scheduleFields = scheduleTime
+    ? { published: 'false', scheduled_publish_time: String(scheduleTime) }
+    : {};
+
   // caption-only post
   if (!images.length) {
-    const { body, contentType } = buildMultipart({ message: caption, access_token: cfg.token });
+    const { body, contentType } = buildMultipart({ message: caption, access_token: cfg.token, ...scheduleFields });
     const res = await httpsPost(`/v22.0/${cfg.pageId}/feed`, body, contentType);
     if (res.error) throw new Error(`FB feed post: ${res.error.message}`);
     return res;
   }
 
-  if (images.length === 1) {
-    return fbUploadPhoto(cfg.pageId, cfg.token, images[0].buffer, images[0].ext, true, caption);
-  }
-
-  // multi-photo: upload unpublished → create feed post
+  // upload each photo as unpublished → create feed post (ให้ได้ pageId_postId เสมอ)
   const photoIds = [];
   for (const img of images) {
     const res = await fbUploadPhoto(cfg.pageId, cfg.token, img.buffer, img.ext, false);
@@ -126,6 +126,7 @@ async function postToFacebook(guildId, images, caption) {
     message: caption,
     attached_media: JSON.stringify(photoIds),
     access_token: cfg.token,
+    ...scheduleFields,
   });
   const res = await httpsPost(`/v22.0/${cfg.pageId}/feed`, body, contentType);
   if (res.error) throw new Error(`FB feed post: ${res.error.message}`);
@@ -141,49 +142,58 @@ async function igPost(urlPath, fields) {
   return res;
 }
 
-async function postToInstagram(guildId, images, caption) {
+async function _igPostFromUrls(cfg, imageUrls, caption, scheduleTime = null) {
+  const scheduleFields = scheduleTime
+    ? { scheduled_publish_time: String(scheduleTime) }
+    : {};
+
+  if (imageUrls.length === 1) {
+    const { id } = await igPost(`/v22.0/${cfg.igId}/media`, {
+      image_url: imageUrls[0], caption, access_token: cfg.token, ...scheduleFields,
+    });
+    return igPost(`/v22.0/${cfg.igId}/media_publish`, {
+      creation_id: id, access_token: cfg.token,
+    });
+  }
+
+  // carousel — children ไม่ใส่ scheduled_publish_time, ใส่แค่ parent
+  const childIds = [];
+  for (const url of imageUrls) {
+    const { id } = await igPost(`/v22.0/${cfg.igId}/media`, {
+      image_url: url, is_carousel_item: 'true', access_token: cfg.token,
+    });
+    childIds.push(id);
+  }
+  const { id: carouselId } = await igPost(`/v22.0/${cfg.igId}/media`, {
+    media_type: 'CAROUSEL', caption,
+    children: childIds.join(','),
+    access_token: cfg.token,
+    ...scheduleFields,
+  });
+  return igPost(`/v22.0/${cfg.igId}/media_publish`, {
+    creation_id: carouselId, access_token: cfg.token,
+  });
+}
+
+// บันทึก buffer ลง temp dir แล้วคืน public URLs (ไม่ลบอัตโนมัติ — cleanup รายเดือน)
+function saveProcessedToTemp(images) {
+  fs.mkdirSync(TEMP_DIR, { recursive: true });
+  return images.map(img => {
+    const name = `${crypto.randomBytes(12).toString('hex')}.${img.ext}`;
+    fs.writeFileSync(path.join(TEMP_DIR, name), img.buffer);
+    return `${TEMP_URL}/${name}`;
+  });
+}
+
+async function postToInstagram(guildId, images, caption, scheduleTime = null) {
   const cfg = await getConfig(guildId);
   if (!cfg?.igId) throw new Error('ไม่พบ Instagram config');
-
-  const tempFiles = [];
-  try {
-    const urls = images.map(img => {
-      const temp = saveTempFile(img.buffer, img.ext);
-      tempFiles.push(temp.cleanup);
-      return temp.url;
-    });
-
-    if (urls.length === 1) {
-      const { id } = await igPost(`/v22.0/${cfg.igId}/media`, {
-        image_url: urls[0], caption, access_token: cfg.token,
-      });
-      return igPost(`/v22.0/${cfg.igId}/media_publish`, {
-        creation_id: id, access_token: cfg.token,
-      });
-    }
-
-    // carousel
-    const childIds = [];
-    for (const url of urls) {
-      const { id } = await igPost(`/v22.0/${cfg.igId}/media`, {
-        image_url: url, is_carousel_item: 'true', access_token: cfg.token,
-      });
-      childIds.push(id);
-    }
-
-    const { id: carouselId } = await igPost(`/v22.0/${cfg.igId}/media`, {
-      media_type: 'CAROUSEL', caption,
-      children: childIds.join(','),
-      access_token: cfg.token,
-    });
-
-    return igPost(`/v22.0/${cfg.igId}/media_publish`, {
-      creation_id: carouselId, access_token: cfg.token,
-    });
-
-  } finally {
-    setTimeout(() => tempFiles.forEach(fn => fn()), 60_000);
+  if (!TEMP_URL.startsWith('http')) {
+    throw new Error(`META_TEMP_URL หรือ WEB_BASE_URL ไม่ได้ set — ตอนนี้ TEMP_URL="${TEMP_URL}" ซึ่ง Instagram เข้าไม่ได้`);
   }
+  const urls = saveProcessedToTemp(images);
+  console.log('[IG] temp URLs:', urls);
+  return _igPostFromUrls(cfg, urls, caption, scheduleTime);
 }
 
 module.exports = { getConfig, postToFacebook, postToInstagram };

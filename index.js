@@ -25,8 +25,9 @@ const { handleOpenSearch, handleSearchModal, handleResultPage } = require('./han
 const { handleGogoSignup, handleGogoModal, handleGogoDMButton, handleGogoDMModal, handleGogoEventButton, handleGogoEventSelect, handleGogoEventModal } = require('./handlers/gogoHandler');
 const { handleWatermarkSelect, handleWatermarkConfirm, handleWatermarkModal } = require('./handlers/watermarkHandler');
 const {
-  handleBasketView, handleBasketClear, handleBasketPost,
-  handleBasketPostModal, handleBasketSelect, handleBasketConfirm,
+  handleBasketView, handleBasketClear,
+  handleBasketPost, handleBasketRetry,
+  handleBasketSelect, handleBasketModal,
 } = require('./handlers/basketHandler');
 const { indexThread, indexMessage, hybridSearch } = require('./services/forumIndexer');
 const { buildSearchResultEmbed, buildSearchComponents } = require('./handlers/forumSearch');
@@ -114,8 +115,8 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.customId.startsWith('modal_gogo_event:')) return handleGogoEventModal(interaction);
     if (interaction.customId.startsWith('rate_submit:'))   return handleRateModalSubmit(interaction);
     if (interaction.customId.startsWith('report_submit:')) return handleReportSubmit(interaction);
-    if (interaction.customId === 'wm_custom_text')         return handleWatermarkModal(interaction);
-    if (interaction.customId === 'basket_post_modal')      return handleBasketPostModal(interaction);
+    if (interaction.customId === 'wm_custom_text')          return handleWatermarkModal(interaction);
+    if (interaction.customId.startsWith('basket_schedule_modal'))   return handleBasketModal(interaction);
     if (interaction.customId.startsWith('anon_submit:')) {
       const channelId = interaction.customId.split(':')[1];
       const text      = interaction.fields.getTextInputValue('anon_text');
@@ -133,7 +134,7 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.customId.startsWith('orgchart_role'))            return handleOrgchartRoleSelect(interaction);
     if (interaction.customId.startsWith('orgchart_days'))            return handleOrgchartDaysSelect(interaction);
     if (interaction.customId.startsWith('wm_'))                 return handleWatermarkSelect(interaction);
-    if (interaction.customId.startsWith('basket_wm_') || interaction.customId === 'basket_platform') return handleBasketSelect(interaction);
+    if (interaction.customId.startsWith('basket_wm_') || interaction.customId === 'basket_platform') { handleBasketSelect(interaction); return; }
     if (interaction.customId === 'select_gogo_event')           return handleGogoEventSelect(interaction);
     if (interaction.customId.startsWith('stat_top:'))          return handleStatTopSelect(interaction);
     if (interaction.customId.startsWith('stat_user:'))         return handleStatUserSelect(interaction);
@@ -146,10 +147,21 @@ client.on('interactionCreate', async (interaction) => {
   // --- Buttons ---
   if (interaction.isButton()) {
     if (interaction.customId === 'wm_confirm')              return handleWatermarkConfirm(interaction);
-    if (interaction.customId === 'basket_view')             return handleBasketView(interaction);
-    if (interaction.customId === 'basket_post')             return handleBasketPost(interaction);
-    if (interaction.customId === 'basket_clear')            return handleBasketClear(interaction);
-    if (interaction.customId === 'basket_confirm')          return handleBasketConfirm(interaction);
+    if (interaction.customId.startsWith('basket_')) {
+      return (async () => {
+        try {
+          if (interaction.customId === 'basket_view')     return await handleBasketView(interaction);
+          if (interaction.customId === 'basket_post')     return await handleBasketPost(interaction);
+          if (interaction.customId === 'basket_retry')    return await handleBasketRetry(interaction);
+          if (interaction.customId === 'basket_clear')    return await handleBasketClear(interaction);
+        } catch (err) {
+          console.error('[basket button]', err);
+          const msg = { content: `❌ ${err.message}`, flags: MessageFlags.Ephemeral };
+          if (interaction.replied || interaction.deferred) interaction.followUp(msg).catch(() => {});
+          else interaction.reply(msg).catch(() => {});
+        }
+      })();
+    }
     if (interaction.customId === 'btn_open_register_modal') return handleOpenRegisterModal(interaction);
     if (interaction.customId === 'btn_register_confirm')    return handleRegisterConfirm(interaction);
     if (interaction.customId === 'delete_log')              return handleDeleteLog(interaction);
