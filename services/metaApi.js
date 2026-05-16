@@ -6,7 +6,7 @@ const crypto = require('crypto');
 const TEMP_DIR = process.env.META_TEMP_DIR
   || path.join(__dirname, '..', 'web', 'public', 'media-temp');
 const TEMP_URL = process.env.META_TEMP_URL
-  || `${process.env.WEB_BASE_URL || ''}/media-temp`;
+  || `${process.env.WEB_BASE_URL || ''}/api/media-temp`;
 
 const pool = require('../db/index');
 
