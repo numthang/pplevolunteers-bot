@@ -28,6 +28,8 @@ const {
   handleBasketView, handleBasketClear,
   handleBasketPost, handleBasketRetry,
   handleBasketSelect, handleBasketModal,
+  handleBasketEditCaption, handleBasketCaptionEditModal,
+  handleBasketViewPublic,
 } = require('./handlers/basketHandler');
 const { indexThread, indexMessage, hybridSearch } = require('./services/forumIndexer');
 const { buildSearchResultEmbed, buildSearchComponents } = require('./handlers/forumSearch');
@@ -116,7 +118,8 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.customId.startsWith('rate_submit:'))   return handleRateModalSubmit(interaction);
     if (interaction.customId.startsWith('report_submit:')) return handleReportSubmit(interaction);
     if (interaction.customId === 'wm_custom_text')          return handleWatermarkModal(interaction);
-    if (interaction.customId.startsWith('basket_schedule_modal'))   return handleBasketModal(interaction);
+    if (interaction.customId.startsWith('basket_schedule_modal'))    return handleBasketModal(interaction);
+    if (interaction.customId.startsWith('basket_caption_edit_modal')) return handleBasketCaptionEditModal(interaction);
     if (interaction.customId.startsWith('anon_submit:')) {
       const channelId = interaction.customId.split(':')[1];
       const text      = interaction.fields.getTextInputValue('anon_text');
@@ -150,10 +153,12 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.customId.startsWith('basket_')) {
       return (async () => {
         try {
-          if (interaction.customId === 'basket_view')     return await handleBasketView(interaction);
-          if (interaction.customId === 'basket_post')     return await handleBasketPost(interaction);
-          if (interaction.customId === 'basket_retry')    return await handleBasketRetry(interaction);
-          if (interaction.customId === 'basket_clear')    return await handleBasketClear(interaction);
+          if (interaction.customId === 'basket_view')         return await handleBasketView(interaction);
+          if (interaction.customId === 'basket_post')         return await handleBasketPost(interaction);
+          if (interaction.customId === 'basket_retry')        return await handleBasketRetry(interaction);
+          if (interaction.customId === 'basket_clear')        return await handleBasketClear(interaction);
+          if (interaction.customId === 'basket_edit_caption') return await handleBasketEditCaption(interaction);
+          if (interaction.customId === 'basket_view_public')  return await handleBasketViewPublic(interaction);
         } catch (err) {
           console.error('[basket button]', err);
           const msg = { content: `❌ ${err.message}`, flags: MessageFlags.Ephemeral };

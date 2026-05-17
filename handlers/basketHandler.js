@@ -57,6 +57,14 @@ function buildBasketButtons(imgCount, hasCaption = false) {
       .setStyle(ButtonStyle.Primary)
       .setDisabled(empty),
     new ButtonBuilder()
+      .setCustomId('basket_edit_caption')
+      .setLabel('✏️ แก้ Caption')
+      .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId('basket_view_public')
+      .setLabel('📢')
+      .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
       .setCustomId('basket_clear')
       .setLabel('🗑️ ล้าง')
       .setStyle(ButtonStyle.Danger),
@@ -69,14 +77,14 @@ function buildPlatformRow(cfg, threadsCfg, defaultPlatform) {
   const opts = [];
 
   if (hasIg && hasThreads)
-    opts.push(new StringSelectMenuOptionBuilder().setLabel('FB + IG + Threads').setValue('all').setEmoji('📲').setDefault(defaultPlatform === 'all'));
+    opts.push(new StringSelectMenuOptionBuilder().setLabel('FB + IG + @ Threads').setValue('all').setEmoji('📲').setDefault(defaultPlatform === 'all'));
   if (hasIg)
     opts.push(new StringSelectMenuOptionBuilder().setLabel('FB + IG').setValue('both').setEmoji('📲').setDefault(defaultPlatform === 'both'));
   opts.push(new StringSelectMenuOptionBuilder().setLabel('Facebook').setValue('fb').setEmoji('📘').setDefault(defaultPlatform === 'fb'));
   if (hasIg)
     opts.push(new StringSelectMenuOptionBuilder().setLabel('Instagram').setValue('ig').setEmoji('📷').setDefault(defaultPlatform === 'ig'));
   if (hasThreads)
-    opts.push(new StringSelectMenuOptionBuilder().setLabel('Threads').setValue('threads').setEmoji('🧵').setDefault(defaultPlatform === 'threads'));
+    opts.push(new StringSelectMenuOptionBuilder().setLabel('@ Threads').setValue('threads').setEmoji('🧵').setDefault(defaultPlatform === 'threads'));
 
   return new ActionRowBuilder().addComponents(
     new StringSelectMenuBuilder().setCustomId('basket_platform').setPlaceholder('โพสต์ที่ไหน').addOptions(opts)
@@ -237,7 +245,7 @@ function defaultScheduleTime() {
   return `${d}/${m}/${tomorrow.getUTCFullYear()} 17:00`;
 }
 
-const PLATFORM_LABEL = { fb: 'Facebook', ig: 'Instagram', both: 'FB + IG', threads: 'Threads', all: 'FB + IG + Threads' };
+const PLATFORM_LABEL = { fb: 'Facebook', ig: 'Instagram', both: 'FB + IG', threads: '@ Threads', all: 'FB + IG + @ Threads' };
 
 function openScheduleModal(interaction, existingCaption, platform) {
   // unique customId to bypass Discord client modal cache (forces fresh render)
@@ -470,6 +478,49 @@ async function processAndPost(interaction, state) {
   await interaction.followUp({ content: lines.join('\n') }).catch(() => {});
 }
 
+// ─── View basket public ───────────────────────────────────────────────────────
+async function handleBasketViewPublic(interaction) {
+  const { guildId, channelId } = interaction;
+  const basket = await getBasket(guildId, channelId);
+  if (!basket.length) {
+    return interaction.reply({ content: '🧺 ตะกร้าสื่อว่างเปล่า', flags: MessageFlags.Ephemeral });
+  }
+  await interaction.deferUpdate();
+  const payload = await buildBasketPayload(basket, guildId, channelId, interaction.user.id);
+  await interaction.followUp({ ...payload });
+}
+
+// ─── Edit caption button ──────────────────────────────────────────────────────
+async function handleBasketEditCaption(interaction) {
+  const { guildId, channelId } = interaction;
+  const basket = await getBasket(guildId, channelId);
+  const existing = basket.find(r => r.type === 'caption')?.caption || '';
+
+  const cid = `basket_caption_edit_modal:${Date.now()}`;
+  const modal = new ModalBuilder().setCustomId(cid).setTitle('แก้ Caption');
+  const input = new TextInputBuilder()
+    .setCustomId('basket_caption_edit')
+    .setLabel('Caption')
+    .setStyle(TextInputStyle.Paragraph)
+    .setRequired(false)
+    .setMaxLength(2200);
+  if (existing) input.setValue(existing.slice(0, 2200));
+  modal.addComponents(new ActionRowBuilder().addComponents(input));
+  return interaction.showModal(modal);
+}
+
+async function handleBasketCaptionEditModal(interaction) {
+  const caption = interaction.fields.getTextInputValue('basket_caption_edit').trim();
+  const { guildId, channelId } = interaction;
+
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+  await setCaption(guildId, channelId, interaction.user.id, caption, null);
+
+  const basket = await getBasket(guildId, channelId);
+  const payload = await buildBasketPayload(basket, guildId, channelId, interaction.user.id);
+  await interaction.editReply({ content: '✅ แก้ caption แล้ว', ...payload });
+}
+
 module.exports = {
   handleBasketAdd,
   handleBasketView,
@@ -478,4 +529,7 @@ module.exports = {
   handleBasketRetry,
   handleBasketSelect,
   handleBasketModal,
+  handleBasketEditCaption,
+  handleBasketCaptionEditModal,
+  handleBasketViewPublic,
 };

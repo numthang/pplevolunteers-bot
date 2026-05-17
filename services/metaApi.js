@@ -183,6 +183,7 @@ async function igPost(urlPath, fields) {
 }
 
 async function _igPostFromUrls(cfg, imageUrls, caption, scheduleTime = null) {
+  if (imageUrls.length > 10) imageUrls = imageUrls.slice(0, 10);
   const scheduleFields = scheduleTime
     ? { scheduled_publish_time: String(scheduleTime), published: 'false' }
     : {};
