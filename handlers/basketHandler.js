@@ -15,7 +15,7 @@ const fs = require('fs');
 const sharp = require('sharp');
 const { addImages, setCaption, getBasket, clearBasket, addHistory, getHistory } = require('../db/mediaBasket');
 const { fetchBuffer, applyWatermark } = require('../utils/watermarkImage');
-const { postToFacebook, postToInstagram, getConfig } = require('../services/metaApi');
+const { postToFacebook, postToInstagram, postToThreads, getConfig, getThreadsConfig } = require('../services/metaApi');
 const { getSetting, setSetting, deleteSetting } = require('../db/settings');
 
 const ASSETS_DIR = path.join(__dirname, '..', 'assets', 'watermark');
@@ -23,9 +23,14 @@ const SUPPORTED_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp']);
 
 const pendingPost = new Map(); // userId → { guildId, channelId, wmType, platform, caption?, scheduleTime? }
 
-function getWatermarkFiles() {
+function getWatermarkDir(guildId) {
+  const guildDir = path.join(ASSETS_DIR, guildId);
+  return fs.existsSync(guildDir) ? guildDir : ASSETS_DIR;
+}
+
+function getWatermarkFiles(guildId) {
   try {
-    return fs.readdirSync(ASSETS_DIR).filter(f => /\.(png|jpg|jpeg|webp)$/i.test(f));
+    return fs.readdirSync(getWatermarkDir(guildId)).filter(f => /\.(png|jpg|jpeg|webp)$/i.test(f));
   } catch { return []; }
 }
 
@@ -58,25 +63,23 @@ function buildBasketButtons(imgCount, hasCaption = false) {
   );
 }
 
-function buildPlatformRow(cfg, defaultPlatform) {
-  const platformOptions = [
-    new StringSelectMenuOptionBuilder()
-      .setLabel('FB + IG').setValue('both').setEmoji('📲')
-      .setDefault(defaultPlatform === 'both'),
-    new StringSelectMenuOptionBuilder()
-      .setLabel('Facebook เท่านั้น').setValue('fb').setEmoji('📘')
-      .setDefault(defaultPlatform === 'fb'),
-  ];
-  if (cfg?.igId) {
-    platformOptions.push(
-      new StringSelectMenuOptionBuilder().setLabel('Instagram เท่านั้น').setValue('ig').setEmoji('📷')
-    );
-  }
+function buildPlatformRow(cfg, threadsCfg, defaultPlatform) {
+  const hasIg = !!cfg?.igId;
+  const hasThreads = !!threadsCfg;
+  const opts = [];
+
+  if (hasIg && hasThreads)
+    opts.push(new StringSelectMenuOptionBuilder().setLabel('FB + IG + Threads').setValue('all').setEmoji('📲').setDefault(defaultPlatform === 'all'));
+  if (hasIg)
+    opts.push(new StringSelectMenuOptionBuilder().setLabel('FB + IG').setValue('both').setEmoji('📲').setDefault(defaultPlatform === 'both'));
+  opts.push(new StringSelectMenuOptionBuilder().setLabel('Facebook').setValue('fb').setEmoji('📘').setDefault(defaultPlatform === 'fb'));
+  if (hasIg)
+    opts.push(new StringSelectMenuOptionBuilder().setLabel('Instagram').setValue('ig').setEmoji('📷').setDefault(defaultPlatform === 'ig'));
+  if (hasThreads)
+    opts.push(new StringSelectMenuOptionBuilder().setLabel('Threads').setValue('threads').setEmoji('🧵').setDefault(defaultPlatform === 'threads'));
+
   return new ActionRowBuilder().addComponents(
-    new StringSelectMenuBuilder()
-      .setCustomId('basket_platform')
-      .setPlaceholder('โพสต์ที่ไหน')
-      .addOptions(platformOptions)
+    new StringSelectMenuBuilder().setCustomId('basket_platform').setPlaceholder('โพสต์ที่ไหน').addOptions(opts)
   );
 }
 
@@ -98,7 +101,10 @@ async function buildBasketPayload(basket, guildId, channelId, userId) {
   if (links.length) embed.addFields({ name: '🖼️ ต้นทาง', value: links.join('\n'), inline: false });
 
   const cfg = await getConfig(guildId);
-  const defaultPlatform = (imgCount > 0 && cfg?.igId) ? 'both' : 'fb';
+  const threadsCfg = await getThreadsConfig(guildId);
+  const defaultPlatform = cfg?.igId && threadsCfg ? 'all'
+    : cfg?.igId ? 'both'
+    : 'fb';
 
   const history = await getHistory(guildId, channelId);
   if (history.length) {
@@ -125,7 +131,7 @@ async function buildBasketPayload(basket, guildId, channelId, userId) {
 
   const components = [];
   if (imgCount > 0) {
-    const files = getWatermarkFiles();
+    const files = getWatermarkFiles(guildId);
     if (files.length) {
       components.push(new ActionRowBuilder().addComponents(
         new StringSelectMenuBuilder()
@@ -138,7 +144,7 @@ async function buildBasketPayload(basket, guildId, channelId, userId) {
       ));
     }
   }
-  components.push(buildPlatformRow(cfg, defaultPlatform));
+  components.push(buildPlatformRow(cfg, threadsCfg, defaultPlatform));
   components.push(buildBasketButtons(imgCount, !!caption));
 
   return { embeds: [embed], components };
@@ -199,14 +205,14 @@ async function handleBasketClear(interaction) {
 function handleBasketPost(interaction) {
   const state = pendingPost.get(interaction.user.id);
   if (!state) return interaction.reply({ content: '❌ Session หมดอายุ กรุณาดูตะกร้าใหม่', flags: MessageFlags.Ephemeral });
-  return openScheduleModal(interaction, state.caption || '');
+  return openScheduleModal(interaction, state.caption || '', state.platform);
 }
 
 // ─── Retry button (after date parse error) ────────────────────────────────────
 async function handleBasketRetry(interaction) {
   const state = pendingPost.get(interaction.user.id);
   if (!state) return interaction.reply({ content: '❌ Session หมดอายุ', flags: MessageFlags.Ephemeral });
-  return openScheduleModal(interaction, state.caption || '');
+  return openScheduleModal(interaction, state.caption || '', state.platform);
 }
 
 // ─── Select menus ─────────────────────────────────────────────────────────────
@@ -231,10 +237,14 @@ function defaultScheduleTime() {
   return `${d}/${m}/${tomorrow.getUTCFullYear()} 17:00`;
 }
 
-function openScheduleModal(interaction, existingCaption) {
+const PLATFORM_LABEL = { fb: 'Facebook', ig: 'Instagram', both: 'FB + IG', threads: 'Threads', all: 'FB + IG + Threads' };
+
+function openScheduleModal(interaction, existingCaption, platform) {
   // unique customId to bypass Discord client modal cache (forces fresh render)
   const cid = `basket_schedule_modal:${Date.now()}`;
-  const modal = new ModalBuilder().setCustomId(cid).setTitle('สร้างโพสต์');
+  const label = PLATFORM_LABEL[platform];
+  const title = label ? `โพสต์ลง ${label}` : 'สร้างโพสต์';
+  const modal = new ModalBuilder().setCustomId(cid).setTitle(title);
 
   const captionInput = new TextInputBuilder()
     .setCustomId('basket_caption')
@@ -345,7 +355,7 @@ async function processAndPost(interaction, state) {
     if (state.wmType !== 'none') {
       const total = imageItems.length;
       await interaction.editReply({ content: `⏳ ติดลายน้ำ 0/${total} รูป...` });
-      const imagePath = path.join(ASSETS_DIR, state.wmType);
+      const imagePath = path.join(getWatermarkDir(state.guildId), state.wmType);
       for (let i = 0; i < imageItems.length; i++) {
         try {
           const srcBuf = await fetchBuffer(imageItems[i].image_url);
@@ -388,35 +398,46 @@ async function processAndPost(interaction, state) {
   const { scheduleTime } = state;
   const results = [];
   let fbUrl = null;
+  const postFb      = ['fb', 'both', 'all'].includes(state.platform);
+  const postIg      = ['ig', 'both', 'all'].includes(state.platform);
+  const postThreads = ['threads', 'all'].includes(state.platform);
 
-  if (state.platform === 'fb' || state.platform === 'both') {
+  if (postFb) {
     try {
       const res = await postToFacebook(state.guildId, processed, state.caption, scheduleTime);
       if (res.id) {
         const parts = res.id.split('_');
         if (parts.length === 2) {
           fbUrl = `https://www.facebook.com/permalink.php?story_fbid=${parts[1]}&id=${parts[0]}`;
-          const fbLabel = scheduleTime ? 'ตั้งเวลาแล้ว' : 'โพสต์แล้ว';
-          results.push(`✅ Facebook ${fbLabel}\n🔗 [ดูโพสต์](${fbUrl}) · [จัดการโพสต์ทั้งหมด](https://www.facebook.com/professional_dashboard/content_calendar/)`);
-        } else {
-          results.push(scheduleTime ? '✅ Facebook ตั้งเวลาแล้ว' : '✅ Facebook โพสต์แล้ว');
         }
-      } else {
-        results.push(scheduleTime ? '✅ Facebook ตั้งเวลาแล้ว' : '✅ Facebook โพสต์แล้ว');
       }
+      const fbLabel = scheduleTime ? 'ตั้งเวลาแล้ว' : 'โพสต์แล้ว';
+      const fbLinks = fbUrl
+        ? ` · 🔗 [ดูโพสต์](${fbUrl}) · [จัดการโพสต์ทั้งหมด](https://www.facebook.com/professional_dashboard/content_calendar/)`
+        : '';
+      results.push(`✅ Facebook ${fbLabel}${fbLinks}`);
     } catch (err) {
       results.push(`❌ Facebook: ${err.message}`);
     }
   }
-  if (state.platform === 'ig' || state.platform === 'both') {
+  if (postIg) {
     try {
       const igRes = await postToInstagram(state.guildId, processed, state.caption, scheduleTime);
-      const igLink = igRes?.permalink ? ` · [ดูโพสต์](${igRes.permalink})` : '';
-      results.push(scheduleTime
-        ? `✅ Instagram ตั้งเวลาแล้ว${igLink}`
-        : `✅ Instagram โพสต์แล้ว${igLink}`);
+      const igLabel = scheduleTime ? 'ตั้งเวลาแล้ว' : 'โพสต์แล้ว';
+      const igLink = igRes?.permalink ? ` · 🔗 [ดูโพสต์](${igRes.permalink})` : '';
+      results.push(`✅ Instagram ${igLabel}${igLink}`);
     } catch (err) {
       results.push(`❌ Instagram: ${err.message}`);
+    }
+  }
+
+  if (postThreads) {
+    try {
+      const thRes = await postToThreads(state.guildId, processed, state.caption);
+      const thLink = thRes?.permalink ? ` · 🔗 [ดูโพสต์](${thRes.permalink})` : '';
+      results.push(`✅ Threads โพสต์แล้ว${thLink}`);
+    } catch (err) {
+      results.push(`❌ Threads: ${err.message}`);
     }
   }
 
@@ -437,14 +458,16 @@ async function processAndPost(interaction, state) {
   await setSetting(state.guildId, `last_post_${state.channelId}`, { fbUrl, postedAt: new Date() }).catch(() => {});
   await deleteSetting(state.guildId, `pending_ig_${state.channelId}`).catch(() => {});
 
-  const total   = imageItems.length;
-  const summary = [
-    state.wmType !== 'none' && total > 0 ? `📊 ติดลายน้ำ ${processed.length}/${total} รูป` : null,
+  const total = imageItems.length;
+  const lines = [
+    '✅ โพสต์เสร็จแล้ว',
+    state.wmType !== 'none' && total > 0 ? `✅ ติดลายน้ำ ${processed.length}/${total} รูป` : null,
     ...results,
     ...(wmErrors.length ? [`⚠️ ${wmErrors.join(', ')}`] : []),
-  ].filter(Boolean).join('\n');
+  ].filter(Boolean);
 
-  await interaction.editReply({ content: `✅ โพสต์เสร็จแล้ว\n${summary}` }).catch(() => {});
+  await interaction.editReply({ content: '✅' }).catch(() => {});
+  await interaction.followUp({ content: lines.join('\n') }).catch(() => {});
 }
 
 module.exports = {

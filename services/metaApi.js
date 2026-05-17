@@ -20,6 +20,16 @@ async function getConfig(guildId) {
   return { pageId: cfg.meta_page_id, igId: cfg.meta_ig_id || null, token: cfg.meta_page_token };
 }
 
+async function getThreadsConfig(guildId) {
+  const [rows] = await pool.execute(
+    `SELECT \`key\`, value FROM dc_guild_config WHERE guild_id = ? AND \`key\` IN ('meta_threads_id','meta_threads_token')`,
+    [guildId]
+  );
+  const cfg = Object.fromEntries(rows.map(r => [r.key, r.value]));
+  if (!cfg.meta_threads_id || !cfg.meta_threads_token) return null;
+  return { userId: cfg.meta_threads_id, token: cfg.meta_threads_token };
+}
+
 // ─── HTTP helper ──────────────────────────────────────────────────────────────
 
 function httpsGet(urlPath) {
@@ -233,4 +243,105 @@ async function postToInstagram(guildId, images, caption, scheduleTime = null) {
   return _igPostFromUrls(cfg, urls, caption, scheduleTime);
 }
 
-module.exports = { getConfig, postToFacebook, postToInstagram };
+// ─── Threads ──────────────────────────────────────────────────────────────────
+
+function threadsGet(urlPath) {
+  return new Promise((resolve, reject) => {
+    const req = https.request({ hostname: 'graph.threads.net', path: urlPath, method: 'GET' }, res => {
+      let data = '';
+      res.on('data', c => data += c);
+      res.on('end', () => { try { resolve(JSON.parse(data)); } catch { resolve({ raw: data }); } });
+    });
+    req.on('error', reject);
+    req.end();
+  });
+}
+
+function threadsPost(urlPath, fields) {
+  const { body, contentType } = buildMultipart(fields);
+  return new Promise((resolve, reject) => {
+    const req = https.request({
+      hostname: 'graph.threads.net', path: urlPath, method: 'POST',
+      headers: { 'Content-Type': contentType, 'Content-Length': Buffer.byteLength(body) },
+    }, res => {
+      let data = '';
+      res.on('data', c => data += c);
+      res.on('end', () => {
+        try {
+          const json = JSON.parse(data);
+          if (json.error) reject(new Error(`Threads API: ${json.error.message}`));
+          else resolve(json);
+        } catch { resolve({ raw: data }); }
+      });
+    });
+    req.on('error', reject);
+    req.write(body);
+    req.end();
+  });
+}
+
+async function waitForThreadsContainer(id, token, maxWaitMs = 30000) {
+  const start = Date.now();
+  while (Date.now() - start < maxWaitMs) {
+    const res = await threadsGet(`/v1.0/${id}?fields=status&access_token=${token}`);
+    if (res.status === 'FINISHED') return;
+    if (res.status === 'ERROR') throw new Error('Threads container error');
+    await new Promise(r => setTimeout(r, 2000));
+  }
+  throw new Error('Threads container timeout — รูปใช้เวลา process นานเกิน 30s');
+}
+
+async function postToThreads(guildId, images, caption) {
+  const cfg = await getThreadsConfig(guildId);
+  if (!cfg) throw new Error('ไม่พบ Threads config');
+  if (images.length && !TEMP_URL.startsWith('http')) {
+    throw new Error(`WEB_BASE_URL ไม่ได้ set — Threads เข้า URL ไม่ได้`);
+  }
+
+  const imageUrls = images.length ? saveProcessedToTemp(images) : [];
+
+  async function publishAndGetUrl(containerId) {
+    const { id: mediaId } = await threadsPost(`/v1.0/${cfg.userId}/threads_publish`, {
+      creation_id: containerId, access_token: cfg.token,
+    });
+    const info = await threadsGet(`/v1.0/${mediaId}?fields=permalink&access_token=${cfg.token}`);
+    return { id: mediaId, permalink: info.permalink || null };
+  }
+
+  // text only
+  if (!imageUrls.length) {
+    const { id } = await threadsPost(`/v1.0/${cfg.userId}/threads`, {
+      media_type: 'TEXT', text: caption || '', access_token: cfg.token,
+    });
+    await waitForThreadsContainer(id, cfg.token);
+    return publishAndGetUrl(id);
+  }
+
+  // single image
+  if (imageUrls.length === 1) {
+    const { id } = await threadsPost(`/v1.0/${cfg.userId}/threads`, {
+      media_type: 'IMAGE', image_url: imageUrls[0], text: caption || '', access_token: cfg.token,
+    });
+    await waitForThreadsContainer(id, cfg.token);
+    return publishAndGetUrl(id);
+  }
+
+  // carousel
+  const childIds = [];
+  for (const url of imageUrls) {
+    const { id } = await threadsPost(`/v1.0/${cfg.userId}/threads`, {
+      media_type: 'IMAGE', image_url: url, is_carousel_item: 'true', access_token: cfg.token,
+    });
+    await waitForThreadsContainer(id, cfg.token);
+    childIds.push(id);
+  }
+  const { id: carouselId } = await threadsPost(`/v1.0/${cfg.userId}/threads`, {
+    media_type: 'CAROUSEL', text: caption || '',
+    children: childIds.join(','),
+    access_token: cfg.token,
+  });
+  await waitForThreadsContainer(carouselId, cfg.token);
+  return publishAndGetUrl(carouselId);
+}
+
+module.exports = { getConfig, getThreadsConfig, postToFacebook, postToInstagram, postToThreads };
