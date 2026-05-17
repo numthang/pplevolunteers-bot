@@ -131,3 +131,8 @@ CREATE TABLE IF NOT EXISTS dc_basket_history (
   INDEX idx_channel (guild_id, channel_id, created_at DESC)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- 2026-05-17: dc_basket_history — เพิ่ม ig_url, threads_url
+ALTER TABLE dc_basket_history
+  ADD COLUMN ig_url      VARCHAR(500) NULL AFTER fb_url,
+  ADD COLUMN threads_url VARCHAR(500) NULL AFTER ig_url;
+

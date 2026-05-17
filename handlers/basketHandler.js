@@ -61,13 +61,13 @@ function buildBasketButtons(imgCount, hasCaption = false) {
       .setLabel('✏️ แก้ Caption')
       .setStyle(ButtonStyle.Secondary),
     new ButtonBuilder()
-      .setCustomId('basket_view_public')
-      .setLabel('📢')
-      .setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder()
       .setCustomId('basket_clear')
       .setLabel('🗑️ ล้าง')
       .setStyle(ButtonStyle.Danger),
+    new ButtonBuilder()
+      .setCustomId('basket_view_public')
+      .setLabel('📢')
+      .setStyle(ButtonStyle.Secondary),
   );
 }
 
@@ -123,7 +123,8 @@ async function buildBasketPayload(basket, guildId, channelId, userId) {
       const thaiDate = new Date(date.getTime() + 7 * 60 * 60 * 1000);
       const d = `${String(thaiDate.getUTCDate()).padStart(2,'0')}/${String(thaiDate.getUTCMonth()+1).padStart(2,'0')} ${String(thaiDate.getUTCHours()).padStart(2,'0')}:${String(thaiDate.getUTCMinutes()).padStart(2,'0')}`;
       const imgs  = h.image_count > 0 ? ` · ${h.image_count} รูป` : '';
-      const link  = h.fb_url ? ` · [ดูโพสต์](${h.fb_url})` : '';
+      const links = [h.fb_url && '[FB]('+h.fb_url+')', h.ig_url && '[IG]('+h.ig_url+')', h.threads_url && '[@]('+h.threads_url+')'].filter(Boolean);
+      const link  = links.length ? ` · ${links.join(' · ')}` : '';
       const fail  = h.status !== 'success' ? ' ⚠️' : '';
       return `${icon} ${d}${imgs}${link}${fail}`;
     });
@@ -405,7 +406,7 @@ async function processAndPost(interaction, state) {
 
   const { scheduleTime } = state;
   const results = [];
-  let fbUrl = null;
+  let fbUrl = null, igUrl = null, threadsUrl = null;
   const postFb      = ['fb', 'both', 'all'].includes(state.platform);
   const postIg      = ['ig', 'both', 'all'].includes(state.platform);
   const postThreads = ['threads', 'all'].includes(state.platform);
@@ -431,8 +432,9 @@ async function processAndPost(interaction, state) {
   if (postIg) {
     try {
       const igRes = await postToInstagram(state.guildId, processed, state.caption, scheduleTime);
+      igUrl = igRes?.permalink || null;
       const igLabel = scheduleTime ? 'ตั้งเวลาแล้ว' : 'โพสต์แล้ว';
-      const igLink = igRes?.permalink ? ` · 🔗 [ดูโพสต์](${igRes.permalink})` : '';
+      const igLink = igUrl ? ` · 🔗 [ดูโพสต์](${igUrl})` : '';
       results.push(`✅ Instagram ${igLabel}${igLink}`);
     } catch (err) {
       results.push(`❌ Instagram: ${err.message}`);
@@ -442,8 +444,9 @@ async function processAndPost(interaction, state) {
   if (postThreads) {
     try {
       const thRes = await postToThreads(state.guildId, processed, state.caption);
-      const thLink = thRes?.permalink ? ` · 🔗 [ดูโพสต์](${thRes.permalink})` : '';
-      results.push(`✅ Threads โพสต์แล้ว${thLink}`);
+      threadsUrl = thRes?.permalink || null;
+      const thLink = threadsUrl ? ` · 🔗 [ดูโพสต์](${threadsUrl})` : '';
+      results.push(`✅ @ Threads โพสต์แล้ว${thLink}`);
     } catch (err) {
       results.push(`❌ Threads: ${err.message}`);
     }
@@ -459,7 +462,7 @@ async function processAndPost(interaction, state) {
     wmType:      state.wmType !== 'none' ? state.wmType : null,
     caption:     state.caption || null,
     scheduleTime: state.scheduleTime || null,
-    fbUrl,
+    fbUrl, igUrl, threadsUrl,
     status:      overallStatus,
   }).catch(() => {});
 
