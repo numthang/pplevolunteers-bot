@@ -59,7 +59,7 @@ function buildBasketButtons(imgCount, hasCaption = false) {
     new ButtonBuilder()
       .setCustomId('basket_edit_caption')
       .setLabel('✏️ แก้ Caption')
-      .setStyle(ButtonStyle.Secondary),
+      .setStyle(ButtonStyle.Primary),
     new ButtonBuilder()
       .setCustomId('basket_clear')
       .setLabel('🗑️ ล้าง')
