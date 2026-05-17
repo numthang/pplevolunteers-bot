@@ -399,6 +399,46 @@ export async function getPendingCallCount(discordId) {
 }
 
 /**
+ * Get my call history — 1 row per member, search across name/phone/any note I wrote
+ */
+export async function getMyCallHistory(discordId, { name, limit = 50, offset = 0 } = {}) {
+  const keyword = name || null
+  const like = keyword ? `%${keyword}%` : null
+  const [rows] = await pool.query(
+    `SELECT
+       m.*,
+       COALESCE(t.tier, 'D') AS tier,
+       COUNT(DISTINCT l.id) AS total_calls,
+       MAX(l.called_at) AS latest_called_at,
+       llatest.note AS latest_note,
+       llatest.status AS latest_status,
+       llatest.campaign_id AS latest_campaign_id,
+       ec.name AS latest_campaign_name
+     FROM calling_logs l
+     JOIN ngs_member_cache m ON m.source_id = l.member_id
+     LEFT JOIN calling_member_tiers t ON t.member_id = l.member_id AND t.contact_type = 'member'
+     LEFT JOIN (
+       SELECT l2.member_id, l2.note, l2.status, l2.campaign_id
+       FROM calling_logs l2
+       INNER JOIN (
+         SELECT member_id, MAX(id) AS max_id
+         FROM calling_logs
+         WHERE called_by = ? AND contact_type = 'member'
+         GROUP BY member_id
+       ) lm ON lm.member_id = l2.member_id AND lm.max_id = l2.id
+     ) llatest ON llatest.member_id = l.member_id
+     LEFT JOIN act_event_cache ec ON ec.id = llatest.campaign_id AND ec.type = 'campaign'
+     WHERE l.called_by = ? AND l.contact_type = 'member'
+       AND (? IS NULL OR m.full_name LIKE ? OR m.mobile_number LIKE ? OR l.note LIKE ?)
+     GROUP BY l.member_id
+     ORDER BY latest_called_at DESC
+     LIMIT ? OFFSET ?`,
+    [discordId, discordId, keyword, like, like, like, limit, offset]
+  )
+  return rows
+}
+
+/**
  * Get member's total call history (all campaigns)
  */
 export async function getMemberGlobalCallHistory(memberId) {

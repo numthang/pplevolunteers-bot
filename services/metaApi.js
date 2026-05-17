@@ -51,12 +51,14 @@ function httpsGet(urlPath) {
   });
 }
 
-async function waitForIgContainer(id, token, maxWaitMs = 30000) {
+async function waitForIgContainer(id, token, maxWaitMs = 30000, onProgress = null) {
   const start = Date.now();
   while (Date.now() - start < maxWaitMs) {
     const res = await httpsGet(`/v22.0/${id}?fields=status_code,status&access_token=${token}`);
     if (res.status_code === 'FINISHED') return;
     if (res.status_code === 'ERROR') throw new Error(`IG container error: ${res.status || 'unknown'}`);
+    const elapsed = Math.floor((Date.now() - start) / 1000);
+    if (onProgress) onProgress(elapsed);
     await new Promise(r => setTimeout(r, 2000));
   }
   throw new Error('IG container timeout — รูปใช้เวลา process นานเกิน 30s');
@@ -182,7 +184,7 @@ async function igPost(urlPath, fields) {
   return res;
 }
 
-async function _igPostFromUrls(cfg, imageUrls, caption, scheduleTime = null) {
+async function _igPostFromUrls(cfg, imageUrls, caption, scheduleTime = null, onProgress = null) {
   if (imageUrls.length > 10) imageUrls = imageUrls.slice(0, 10);
   const scheduleFields = scheduleTime
     ? { scheduled_publish_time: String(scheduleTime), published: 'false' }
@@ -196,21 +198,27 @@ async function _igPostFromUrls(cfg, imageUrls, caption, scheduleTime = null) {
     return { id: mediaId, permalink: info.permalink || null };
   }
 
-  if (imageUrls.length === 1) {
+  const total = imageUrls.length;
+
+  if (total === 1) {
     const { id } = await igPost(`/v22.0/${cfg.igId}/media`, {
       image_url: imageUrls[0], caption, access_token: cfg.token, ...scheduleFields,
     });
-    await waitForIgContainer(id, cfg.token);
+    await waitForIgContainer(id, cfg.token, 30000,
+      s => onProgress && onProgress(`📤 Instagram: กำลัง process รูป... (${s}s)`)
+    );
     return publishAndGetUrl(id);
   }
 
   // carousel — children ไม่ใส่ scheduled_publish_time, ใส่แค่ parent
   const childIds = [];
-  for (const url of imageUrls) {
+  for (let i = 0; i < imageUrls.length; i++) {
     const { id } = await igPost(`/v22.0/${cfg.igId}/media`, {
-      image_url: url, is_carousel_item: 'true', access_token: cfg.token,
+      image_url: imageUrls[i], is_carousel_item: 'true', access_token: cfg.token,
     });
-    await waitForIgContainer(id, cfg.token);
+    await waitForIgContainer(id, cfg.token, 30000,
+      s => onProgress && onProgress(`📤 Instagram: กำลัง process รูป ${i + 1}/${total}... (${s}s)`)
+    );
     childIds.push(id);
   }
   const { id: carouselId } = await igPost(`/v22.0/${cfg.igId}/media`, {
@@ -219,7 +227,9 @@ async function _igPostFromUrls(cfg, imageUrls, caption, scheduleTime = null) {
     access_token: cfg.token,
     ...scheduleFields,
   });
-  await waitForIgContainer(carouselId, cfg.token);
+  await waitForIgContainer(carouselId, cfg.token, 30000,
+    s => onProgress && onProgress(`📤 Instagram: กำลัง publish carousel... (${s}s)`)
+  );
   return publishAndGetUrl(carouselId);
 }
 
@@ -233,15 +243,14 @@ function saveProcessedToTemp(images) {
   });
 }
 
-async function postToInstagram(guildId, images, caption, scheduleTime = null) {
+async function postToInstagram(guildId, images, caption, scheduleTime = null, onProgress = null) {
   const cfg = await getConfig(guildId);
   if (!cfg?.igId) throw new Error('ไม่พบ Instagram config');
   if (!TEMP_URL.startsWith('http')) {
     throw new Error(`META_TEMP_URL หรือ WEB_BASE_URL ไม่ได้ set — ตอนนี้ TEMP_URL="${TEMP_URL}" ซึ่ง Instagram เข้าไม่ได้`);
   }
   const urls = saveProcessedToTemp(images);
-  console.log('[IG] temp URLs:', urls);
-  return _igPostFromUrls(cfg, urls, caption, scheduleTime);
+  return _igPostFromUrls(cfg, urls, caption, scheduleTime, onProgress);
 }
 
 // ─── Threads ──────────────────────────────────────────────────────────────────
@@ -281,18 +290,21 @@ function threadsPost(urlPath, fields) {
   });
 }
 
-async function waitForThreadsContainer(id, token, maxWaitMs = 30000) {
+async function waitForThreadsContainer(id, token, maxWaitMs = 30000, onProgress = null) {
   const start = Date.now();
   while (Date.now() - start < maxWaitMs) {
     const res = await threadsGet(`/v1.0/${id}?fields=status&access_token=${token}`);
     if (res.status === 'FINISHED') return;
     if (res.status === 'ERROR') throw new Error('Threads container error');
+    const elapsed = Math.floor((Date.now() - start) / 1000);
+    if (onProgress) onProgress(elapsed);
     await new Promise(r => setTimeout(r, 2000));
   }
   throw new Error('Threads container timeout — รูปใช้เวลา process นานเกิน 30s');
 }
 
-async function postToThreads(guildId, images, caption) {
+async function postToThreads(guildId, images, caption, onProgress = null) {
+  if (caption && caption.length > 500) caption = caption.slice(0, 497) + '...';
   const cfg = await getThreadsConfig(guildId);
   if (!cfg) throw new Error('ไม่พบ Threads config');
   if (images.length && !TEMP_URL.startsWith('http')) {
@@ -300,6 +312,7 @@ async function postToThreads(guildId, images, caption) {
   }
 
   const imageUrls = images.length ? saveProcessedToTemp(images) : [];
+  const total = imageUrls.length;
 
   async function publishAndGetUrl(containerId) {
     const { id: mediaId } = await threadsPost(`/v1.0/${cfg.userId}/threads_publish`, {
@@ -314,26 +327,32 @@ async function postToThreads(guildId, images, caption) {
     const { id } = await threadsPost(`/v1.0/${cfg.userId}/threads`, {
       media_type: 'TEXT', text: caption || '', access_token: cfg.token,
     });
-    await waitForThreadsContainer(id, cfg.token);
+    await waitForThreadsContainer(id, cfg.token, 30000,
+      s => onProgress && onProgress(`📤 @ Threads: กำลัง process... (${s}s)`)
+    );
     return publishAndGetUrl(id);
   }
 
   // single image
-  if (imageUrls.length === 1) {
+  if (total === 1) {
     const { id } = await threadsPost(`/v1.0/${cfg.userId}/threads`, {
       media_type: 'IMAGE', image_url: imageUrls[0], text: caption || '', access_token: cfg.token,
     });
-    await waitForThreadsContainer(id, cfg.token);
+    await waitForThreadsContainer(id, cfg.token, 30000,
+      s => onProgress && onProgress(`📤 @ Threads: กำลัง process รูป... (${s}s)`)
+    );
     return publishAndGetUrl(id);
   }
 
   // carousel
   const childIds = [];
-  for (const url of imageUrls) {
+  for (let i = 0; i < imageUrls.length; i++) {
     const { id } = await threadsPost(`/v1.0/${cfg.userId}/threads`, {
-      media_type: 'IMAGE', image_url: url, is_carousel_item: 'true', access_token: cfg.token,
+      media_type: 'IMAGE', image_url: imageUrls[i], is_carousel_item: 'true', access_token: cfg.token,
     });
-    await waitForThreadsContainer(id, cfg.token);
+    await waitForThreadsContainer(id, cfg.token, 30000,
+      s => onProgress && onProgress(`📤 @ Threads: กำลัง process รูป ${i + 1}/${total}... (${s}s)`)
+    );
     childIds.push(id);
   }
   const { id: carouselId } = await threadsPost(`/v1.0/${cfg.userId}/threads`, {
@@ -341,7 +360,9 @@ async function postToThreads(guildId, images, caption) {
     children: childIds.join(','),
     access_token: cfg.token,
   });
-  await waitForThreadsContainer(carouselId, cfg.token);
+  await waitForThreadsContainer(carouselId, cfg.token, 30000,
+    s => onProgress && onProgress(`📤 @ Threads: กำลัง publish carousel... (${s}s)`)
+  );
   return publishAndGetUrl(carouselId);
 }
 

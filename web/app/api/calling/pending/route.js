@@ -2,19 +2,6 @@ import { getServerSession } from 'next-auth'
 import * as memberDB from '@/db/calling/members.js'
 import * as contactDB from '@/db/calling/contacts.js'
 import { authOptions } from '@/lib/auth-options.js'
-
-/**
- * GET /api/calling/pending
- * Returns assignments for the current user
- * Query params:
- *   type            → 'member' (default) | 'contact'
- *   campaigns=true  → return campaigns that have assignments for me
- *   count=true      → return total pending count (members + contacts)
- *   campaignId      → filter by campaign
- *   status          → 'pending' | 'called'
- *   rsvp            → (members only) yes | no | maybe
- *   limit / offset
- */
 export async function GET(req) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.discordId) {
@@ -31,7 +18,17 @@ export async function GET(req) {
   const limit = Math.min(parseInt(searchParams.get('limit') || '200'), 500)
   const offset = parseInt(searchParams.get('offset') || '0')
 
+  const historyMode = searchParams.get('history') === 'true'
+  const name = searchParams.get('name') || ''
+
   try {
+    if (historyMode) {
+      const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 200)
+      const offset = parseInt(searchParams.get('offset') || '0')
+      const rows = await memberDB.getMyCallHistory(session.user.discordId, { name, limit, offset })
+      return Response.json({ success: true, data: rows, hasMore: rows.length === limit })
+    }
+
     if (countOnly) {
       if (type === 'member') {
         const count = await memberDB.getPendingCallCount(session.user.discordId)

@@ -402,8 +402,6 @@ async function processAndPost(interaction, state) {
     }
   }
 
-  await interaction.editReply({ content: `📤 กำลังโพสต์...` });
-
   const { scheduleTime } = state;
   const results = [];
   let fbUrl = null, igUrl = null, threadsUrl = null;
@@ -412,6 +410,7 @@ async function processAndPost(interaction, state) {
   const postThreads = ['threads', 'all'].includes(state.platform);
 
   if (postFb) {
+    await interaction.editReply({ content: '📤 กำลังโพสต์ไปยัง Facebook...' }).catch(() => {});
     try {
       const res = await postToFacebook(state.guildId, processed, state.caption, scheduleTime);
       if (res.id) {
@@ -430,8 +429,10 @@ async function processAndPost(interaction, state) {
     }
   }
   if (postIg) {
+    await interaction.editReply({ content: '📤 กำลังโพสต์ไปยัง Instagram...' }).catch(() => {});
     try {
-      const igRes = await postToInstagram(state.guildId, processed, state.caption, scheduleTime);
+      const igProgress = msg => interaction.editReply({ content: msg }).catch(() => {});
+      const igRes = await postToInstagram(state.guildId, processed, state.caption, scheduleTime, igProgress);
       igUrl = igRes?.permalink || null;
       const igLabel = scheduleTime ? 'ตั้งเวลาแล้ว' : 'โพสต์แล้ว';
       const igLink = igUrl ? ` · 🔗 [ดูโพสต์](${igUrl})` : '';
@@ -442,8 +443,10 @@ async function processAndPost(interaction, state) {
   }
 
   if (postThreads) {
+    await interaction.editReply({ content: '📤 กำลังโพสต์ไปยัง @ Threads...' }).catch(() => {});
     try {
-      const thRes = await postToThreads(state.guildId, processed, state.caption);
+      const thProgress = msg => interaction.editReply({ content: msg }).catch(() => {});
+      const thRes = await postToThreads(state.guildId, processed, state.caption, thProgress);
       threadsUrl = thRes?.permalink || null;
       const thLink = threadsUrl ? ` · 🔗 [ดูโพสต์](${threadsUrl})` : '';
       results.push(`✅ @ Threads โพสต์แล้ว${thLink}`);
@@ -451,8 +454,6 @@ async function processAndPost(interaction, state) {
       results.push(`❌ Threads: ${err.message}`);
     }
   }
-
-  await clearBasket(state.guildId, state.channelId);
 
   const overallStatus = results.every(r => r.startsWith('✅')) ? 'success'
     : results.every(r => r.startsWith('❌')) ? 'failed' : 'partial';
@@ -477,7 +478,6 @@ async function processAndPost(interaction, state) {
     ...(wmErrors.length ? [`⚠️ ${wmErrors.join(', ')}`] : []),
   ].filter(Boolean);
 
-  await interaction.editReply({ content: '✅' }).catch(() => {});
   await interaction.followUp({ content: lines.join('\n') }).catch(() => {});
 }
 
