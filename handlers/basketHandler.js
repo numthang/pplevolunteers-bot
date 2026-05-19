@@ -198,6 +198,7 @@ async function buildBasketPayload(basket, guildId, channelId, userId) {
 async function handleBasketAdd(interaction) {
   const msg = interaction.targetMessage;
   const snapshot = msg.messageSnapshots?.first()?.message;
+  console.log('[basketAdd] attachments:', msg.attachments.size, '| snapshot:', !!snapshot, '| snapshotAttach:', snapshot?.attachments?.size, '| flags:', msg.flags?.toArray());
   const attachments = msg.attachments.size > 0 ? msg.attachments : (snapshot?.attachments ?? new Map());
   const images = [...attachments.values()].filter(a => {
     const ct = a.contentType?.split(';')[0].trim();
