@@ -137,7 +137,7 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.customId.startsWith('orgchart_role'))            return handleOrgchartRoleSelect(interaction);
     if (interaction.customId.startsWith('orgchart_days'))            return handleOrgchartDaysSelect(interaction);
     if (interaction.customId.startsWith('wm_'))                 return handleWatermarkSelect(interaction);
-    if (interaction.customId.startsWith('basket_wm_') || interaction.customId === 'basket_platform') { handleBasketSelect(interaction); return; }
+    if (interaction.customId.startsWith('basket_wm_') || interaction.customId === 'basket_platform' || interaction.customId === 'basket_enhance') { handleBasketSelect(interaction); return; }
     if (interaction.customId === 'select_gogo_event')           return handleGogoEventSelect(interaction);
     if (interaction.customId.startsWith('stat_top:'))          return handleStatTopSelect(interaction);
     if (interaction.customId.startsWith('stat_user:'))         return handleStatUserSelect(interaction);

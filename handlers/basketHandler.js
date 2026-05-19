@@ -197,11 +197,14 @@ async function buildBasketPayload(basket, guildId, channelId, userId) {
 // ─── Add to basket ────────────────────────────────────────────────────────────
 async function handleBasketAdd(interaction) {
   const msg = interaction.targetMessage;
-  const images = [...msg.attachments.values()].filter(a => {
+  const snapshot = msg.messageSnapshots?.first()?.message;
+  const attachments = msg.attachments.size > 0 ? msg.attachments : (snapshot?.attachments ?? new Map());
+  const images = [...attachments.values()].filter(a => {
     const ct = a.contentType?.split(';')[0].trim();
     return SUPPORTED_TYPES.has(ct);
   });
-  const text = msg.content ? stripDiscordMarkdown(msg.content) : '';
+  const rawContent = msg.content || snapshot?.content || '';
+  const text = rawContent ? stripDiscordMarkdown(rawContent) : '';
 
   if (!images.length && !text) {
     return interaction.reply({ content: '❌ ข้อความนี้ไม่มีรูปหรือข้อความ', flags: MessageFlags.Ephemeral });
