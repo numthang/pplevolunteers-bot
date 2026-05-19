@@ -38,6 +38,14 @@ function stripExt(f) {
   return f.replace(/\.[^.]+$/, '').replace(/^\d+-/, '');
 }
 
+async function autoEnhance(buffer) {
+  return sharp(buffer)
+    .clahe({ width: 3, height: 3, maxSlope: 3 })
+    .modulate({ saturation: 1.15, brightness: 1.03 })
+    .sharpen({ sigma: 0.6 })
+    .toBuffer();
+}
+
 function stripDiscordMarkdown(text) {
   return text
     .replace(/```[\s\S]*?```/g, '')
@@ -58,7 +66,7 @@ function buildBasketEmbed(imgCount, caption, previewUrl = null) {
   const embed = new EmbedBuilder()
     .setColor(0xff6a13)
     .setTitle(`🧺 ตะกร้าสื่อ — ${imgCount} รูป`);
-  if (caption) embed.setDescription(caption.length > 150 ? caption.slice(0, 150) + '…' : caption);
+  if (caption) embed.setDescription(caption.length > 280 ? caption.slice(0, 280) + '…' : caption);
   else embed.setDescription('*ยังไม่มี caption*');
   if (previewUrl) embed.setImage(previewUrl);
   return embed;
@@ -82,7 +90,7 @@ function buildBasketButtons(imgCount, hasCaption = false) {
       .setStyle(ButtonStyle.Danger),
     new ButtonBuilder()
       .setCustomId('basket_view_public')
-      .setLabel('📢')
+      .setLabel('👁️')
       .setStyle(ButtonStyle.Secondary),
   );
 }
@@ -158,16 +166,27 @@ async function buildBasketPayload(basket, guildId, channelId, userId) {
   if (imgCount > 0) {
     const files = getWatermarkFiles(guildId);
     if (files.length) {
+      const currentWm = pendingPost.get(userId)?.wmType || 'none';
       components.push(new ActionRowBuilder().addComponents(
         new StringSelectMenuBuilder()
           .setCustomId('basket_wm_type')
           .setPlaceholder('ลายน้ำ (default: ไม่มี)')
           .addOptions([
-            new StringSelectMenuOptionBuilder().setLabel('ไม่มีลายน้ำ').setValue('none').setDefault(true),
-            ...files.map(f => new StringSelectMenuOptionBuilder().setLabel(stripExt(f)).setValue(f)),
+            new StringSelectMenuOptionBuilder().setLabel('ไม่มีลายน้ำ').setValue('none').setDefault(currentWm === 'none'),
+            ...files.map(f => new StringSelectMenuOptionBuilder().setLabel(stripExt(f)).setValue(f).setDefault(currentWm === f)),
           ])
       ));
     }
+    const currentEnhance = pendingPost.get(userId)?.enhance || false;
+    components.push(new ActionRowBuilder().addComponents(
+      new StringSelectMenuBuilder()
+        .setCustomId('basket_enhance')
+        .setPlaceholder('Auto Enhance (default: ปิด)')
+        .addOptions([
+          new StringSelectMenuOptionBuilder().setLabel('ไม่ Enhance').setValue('off').setEmoji('🖼️').setDefault(!currentEnhance),
+          new StringSelectMenuOptionBuilder().setLabel('✨ Auto Enhance').setValue('on').setEmoji('✨').setDefault(currentEnhance),
+        ])
+    ));
   }
   components.push(buildPlatformRow(cfg, threadsCfg, defaultPlatform));
   components.push(buildBasketButtons(imgCount, !!caption));
@@ -267,6 +286,7 @@ async function handleBasketSelect(interaction) {
     const state = pendingPost.get(interaction.user.id);
     if (interaction.customId === 'basket_wm_type' && state) state.wmType   = interaction.values[0];
     if (interaction.customId === 'basket_platform' && state) state.platform = interaction.values[0];
+    if (interaction.customId === 'basket_enhance'  && state) state.enhance  = interaction.values[0] === 'on';
     await interaction.deferUpdate();
   } catch (err) {
     console.error('[basketSelect]', err);
@@ -408,7 +428,8 @@ async function processAndPost(interaction, state) {
       const imagePath = path.join(getWatermarkDir(state.guildId), state.wmType);
       for (let i = 0; i < imageItems.length; i++) {
         try {
-          const srcBuf = await fetchBuffer(imageItems[i].image_url);
+          let srcBuf = await fetchBuffer(imageItems[i].image_url);
+          if (state.enhance) srcBuf = await autoEnhance(srcBuf);
           const { buffer, ext } = await applyWatermark(srcBuf, {
             imagePath, position: 'random', opacity: 0.8, size: 0.13,
           });
@@ -426,6 +447,7 @@ async function processAndPost(interaction, state) {
       for (let i = 0; i < imageItems.length; i++) {
         try {
           let buffer     = await fetchBuffer(imageItems[i].image_url);
+          if (state.enhance) buffer = await autoEnhance(buffer);
           const extMatch = imageItems[i].image_url.match(/\.(png|jpe?g|webp)/i);
           let ext        = extMatch ? extMatch[1].replace('jpeg', 'jpg') : 'jpg';
           if (ext === 'webp') {
