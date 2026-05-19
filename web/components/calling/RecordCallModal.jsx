@@ -101,20 +101,29 @@ function CollapsibleDescription({ text }) {
   }, [text])
 
   return (
-    <div>
+    <div className="relative">
       <p
         ref={ref}
         className={`text-base text-warm-700 dark:text-disc-text whitespace-pre-wrap break-all ${expanded ? '' : 'line-clamp-3'}`}
       >
         {parseLinks(text)}
+        {expanded && isOverflowing && (
+          <button
+            type="button"
+            onClick={() => setExpanded(false)}
+            className="ml-2 inline-flex items-center gap-1 text-sm font-semibold text-teal hover:underline align-baseline"
+          >
+            ▲ ย่อ
+          </button>
+        )}
       </p>
-      {(isOverflowing || expanded) && (
+      {!expanded && isOverflowing && (
         <button
           type="button"
-          onClick={() => setExpanded(e => !e)}
-          className="mt-1 text-sm text-teal hover:underline"
+          onClick={() => setExpanded(true)}
+          className="absolute right-0 bottom-0 pl-8 pr-1 text-sm font-semibold text-teal hover:underline bg-gradient-to-l from-white dark:from-disc-hover from-60% to-transparent"
         >
-          {expanded ? 'ย่อ' : 'ดูเพิ่ม'}
+          ▼ ดูเพิ่ม
         </button>
       )}
     </div>
