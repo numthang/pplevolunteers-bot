@@ -38,6 +38,22 @@ function stripExt(f) {
   return f.replace(/\.[^.]+$/, '').replace(/^\d+-/, '');
 }
 
+function stripDiscordMarkdown(text) {
+  return text
+    .replace(/```[\s\S]*?```/g, '')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/\*([^*]+)\*/g, '$1')
+    .replace(/__([^_]+)__/g, '$1')
+    .replace(/_([^_]+)_/g, '$1')
+    .replace(/~~([^~]+)~~/g, '$1')
+    .replace(/\|\|([^|]+)\|\|/g, '$1')
+    .replace(/^#{1,3}\s+/gm, '')
+    .replace(/^>\s*/gm, '')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .trim();
+}
+
 function buildBasketEmbed(imgCount, caption, previewUrl = null) {
   const embed = new EmbedBuilder()
     .setColor(0xff6a13)
@@ -166,7 +182,7 @@ async function handleBasketAdd(interaction) {
     const ct = a.contentType?.split(';')[0].trim();
     return SUPPORTED_TYPES.has(ct);
   });
-  const text = msg.content?.trim();
+  const text = msg.content ? stripDiscordMarkdown(msg.content) : '';
 
   if (!images.length && !text) {
     return interaction.reply({ content: '❌ ข้อความนี้ไม่มีรูปหรือข้อความ', flags: MessageFlags.Ephemeral });
@@ -179,12 +195,12 @@ async function handleBasketAdd(interaction) {
   const isBot = msg.author?.bot ?? false;
 
   if (images.length) await addImages(guildId, channelId, addedBy, images.map(a => ({ url: a.url })), msg.id);
-  if (text && !isBot) await setCaption(guildId, channelId, addedBy, text, msg.id);
+  if (text && !isBot && !images.length) await setCaption(guildId, channelId, addedBy, text, msg.id);
 
   const basket = await getBasket(guildId, channelId);
   const added = [
     images.length ? `🖼️ ${images.length} รูป` : null,
-    text && !isBot ? `📝 caption (แทนอันเก่า)` : null,
+    text && !isBot && !images.length ? `📝 caption (แทนอันเก่า)` : null,
   ].filter(Boolean).join(' + ');
 
   const payload = await buildBasketPayload(basket, guildId, channelId, interaction.user.id);
@@ -211,16 +227,37 @@ async function handleBasketClear(interaction) {
 }
 
 // ─── สร้างโพสต์: open modal ───────────────────────────────────────────────────
-function handleBasketPost(interaction) {
-  const state = pendingPost.get(interaction.user.id);
-  if (!state) return interaction.reply({ content: '❌ Session หมดอายุ กรุณาดูตะกร้าใหม่', flags: MessageFlags.Ephemeral });
+async function handleBasketPost(interaction) {
+  let state = pendingPost.get(interaction.user.id);
+  if (state?.posting) {
+    return interaction.reply({ content: '⏳ กำลังโพสต์อยู่ กรุณารอสักครู่', flags: MessageFlags.Ephemeral });
+  }
+  if (!state) {
+    const { guildId, channelId } = interaction;
+    const cfg = await getConfig(guildId);
+    const threadsCfg = await getThreadsConfig(guildId);
+    const defaultPlatform = cfg?.igId && threadsCfg ? 'all' : cfg?.igId ? 'both' : 'fb';
+    const basket = await getBasket(guildId, channelId);
+    const caption = basket.find(r => r.type === 'caption')?.caption || '';
+    state = { guildId, channelId, wmType: 'none', platform: defaultPlatform, caption };
+    pendingPost.set(interaction.user.id, state);
+  }
   return openScheduleModal(interaction, state.caption || '', state.platform);
 }
 
 // ─── Retry button (after date parse error) ────────────────────────────────────
 async function handleBasketRetry(interaction) {
-  const state = pendingPost.get(interaction.user.id);
-  if (!state) return interaction.reply({ content: '❌ Session หมดอายุ', flags: MessageFlags.Ephemeral });
+  let state = pendingPost.get(interaction.user.id);
+  if (!state) {
+    const { guildId, channelId } = interaction;
+    const cfg = await getConfig(guildId);
+    const threadsCfg = await getThreadsConfig(guildId);
+    const defaultPlatform = cfg?.igId && threadsCfg ? 'all' : cfg?.igId ? 'both' : 'fb';
+    const basket = await getBasket(guildId, channelId);
+    const caption = basket.find(r => r.type === 'caption')?.caption || '';
+    state = { guildId, channelId, wmType: 'none', platform: defaultPlatform, caption };
+    pendingPost.set(interaction.user.id, state);
+  }
   return openScheduleModal(interaction, state.caption || '', state.platform);
 }
 
@@ -276,8 +313,8 @@ function openScheduleModal(interaction, existingCaption, platform) {
     .setValue(defaultScheduleTime());
 
   modal.addComponents(
-    new ActionRowBuilder().addComponents(captionInput),
     new ActionRowBuilder().addComponents(timeInput),
+    new ActionRowBuilder().addComponents(captionInput),
   );
   return interaction.showModal(modal);
 }
@@ -349,8 +386,12 @@ async function handleBasketModal(interaction) {
 
   state.caption      = caption;
   state.scheduleTime = scheduleTime;
-  pendingPost.delete(interaction.user.id);
-  await processAndPost(interaction, state);
+  state.posting      = true;
+  try {
+    await processAndPost(interaction, state);
+  } finally {
+    state.posting = false;
+  }
 }
 
 // ─── Core: watermark + post ───────────────────────────────────────────────────
@@ -369,7 +410,7 @@ async function processAndPost(interaction, state) {
         try {
           const srcBuf = await fetchBuffer(imageItems[i].image_url);
           const { buffer, ext } = await applyWatermark(srcBuf, {
-            imagePath, position: 'bottom-right', opacity: 0.8, size: 0.13,
+            imagePath, position: 'random', opacity: 0.8, size: 0.13,
           });
           processed.push({ buffer, ext });
         } catch (err) {
@@ -432,9 +473,9 @@ async function processAndPost(interaction, state) {
     await interaction.editReply({ content: '📤 กำลังโพสต์ไปยัง Instagram...' }).catch(() => {});
     try {
       const igProgress = msg => interaction.editReply({ content: msg }).catch(() => {});
-      const igRes = await postToInstagram(state.guildId, processed, state.caption, scheduleTime, igProgress);
+      const igRes = await postToInstagram(state.guildId, processed, state.caption, null, igProgress);
       igUrl = igRes?.permalink || null;
-      const igLabel = scheduleTime ? 'ตั้งเวลาแล้ว' : 'โพสต์แล้ว';
+      const igLabel = 'โพสต์แล้ว';
       const igLink = igUrl ? ` · 🔗 [ดูโพสต์](${igUrl})` : '';
       results.push(`✅ Instagram ${igLabel}${igLink}`);
     } catch (err) {

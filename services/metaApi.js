@@ -149,9 +149,11 @@ async function postToFacebook(guildId, images, caption, scheduleTime = null) {
     ? { published: 'false', scheduled_publish_time: String(scheduleTime) }
     : {};
 
+  const noButtonCta = JSON.stringify({ type: 'NO_BUTTON' });
+
   // caption-only post
   if (!images.length) {
-    const { body, contentType } = buildMultipart({ message: caption, access_token: cfg.token, ...scheduleFields });
+    const { body, contentType } = buildMultipart({ message: caption, access_token: cfg.token, call_to_action: noButtonCta, ...scheduleFields });
     const res = await httpsPost(`/v22.0/${cfg.pageId}/feed`, body, contentType);
     if (res.error) throw new Error(`FB feed post: ${res.error.message}`);
     return res;
@@ -168,6 +170,7 @@ async function postToFacebook(guildId, images, caption, scheduleTime = null) {
     message: caption,
     attached_media: JSON.stringify(photoIds),
     access_token: cfg.token,
+    call_to_action: noButtonCta,
     ...scheduleFields,
   });
   const res = await httpsPost(`/v22.0/${cfg.pageId}/feed`, body, contentType);
