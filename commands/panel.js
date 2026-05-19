@@ -88,6 +88,7 @@ module.exports = {
         .addStringOption(o => o.setName('title').setDescription('ชื่อกิจกรรม (default: ชื่อ channel/thread)').setRequired(false))
         .addStringOption(o => o.setName('color').setDescription('สี hex').setRequired(false))
         .addBooleanOption(o => o.setName('sticky').setDescription('ให้ panel เลื่อนลงอัตโนมัติเมื่อมีคนลงชื่อ (default: true)').setRequired(false))
+        .addIntegerOption(o => o.setName('refresh').setDescription('ความถี่ refresh sticky (นาที, default: 1440 = 24 ชม.)').setRequired(false).setMinValue(1))
         .addStringOption(o => o.setName('calendar_id').setDescription('Google Calendar ID สำหรับปุ่ม Add to Calendar (บันทึกต่อ server)').setRequired(false))
     )
 
@@ -284,9 +285,10 @@ await refreshDashboard(thread, interaction.guildId, ids, existing.dashboard_msg_
       const color      = interaction.options.getString('color')
         ? parseInt(interaction.options.getString('color').replace('#', ''), 16)
         : 0xff6a13;
-      const isSticky   = interaction.options.getBoolean('sticky') ?? true;
-      const title      = interaction.options.getString('title') ?? interaction.channel.name;
-      const calendarId = interaction.options.getString('calendar_id');
+      const isSticky        = interaction.options.getBoolean('sticky') ?? true;
+      const refreshMinutes  = interaction.options.getInteger('refresh') ?? 1440;
+      const title           = interaction.options.getString('title') ?? interaction.channel.name;
+      const calendarId      = interaction.options.getString('calendar_id');
       if (calendarId) await setSetting(interaction.guildId, 'gogo_calendar_id', calendarId);
 
       const creatorName = interaction.member?.displayName ?? interaction.user.username;
@@ -328,10 +330,11 @@ await refreshDashboard(thread, interaction.guildId, ids, existing.dashboard_msg_
 
       if (isSticky) {
         await setSetting(interaction.guildId, `sticky_${interaction.channelId}`, {
-          content:    null,
-          embeds:     [embed.toJSON()],
-          components: [row.toJSON()],
-          message_id: sent.id,
+          content:         null,
+          embeds:          [embed.toJSON()],
+          components:      [row.toJSON()],
+          message_id:      sent.id,
+          refresh_minutes: refreshMinutes,
         });
       }
 

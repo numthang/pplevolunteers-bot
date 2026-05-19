@@ -136,4 +136,23 @@ ALTER TABLE dc_basket_history
   ADD COLUMN ig_url      VARCHAR(500) NULL AFTER fb_url,
   ADD COLUMN threads_url VARCHAR(500) NULL AFTER ig_url;
 
+-- 2026-05-20: calling_favorites — bookmark สมาชิก/contact ส่วนตัวต่อ user
+CREATE TABLE IF NOT EXISTS calling_favorites (
+  id              INT AUTO_INCREMENT PRIMARY KEY,
+  guild_id        VARCHAR(20) NOT NULL,
+  user_discord_id VARCHAR(20) NOT NULL,
+  member_id       VARCHAR(20) NOT NULL COMMENT 'source_id หรือ calling_contacts.id',
+  contact_type    ENUM('member','contact') NOT NULL DEFAULT 'member',
+  note            TEXT NULL COMMENT 'บันทึกส่วนตัวว่าทำไมติดดาว',
+  created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_user_target (guild_id, user_discord_id, member_id, contact_type),
+  INDEX idx_user (guild_id, user_discord_id, created_at DESC)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 2026-05-20: calling_logs — เพิ่ม caller_image เก็บ Discord CDN URL ของคนโทร
+ALTER TABLE calling_logs ADD COLUMN IF NOT EXISTS caller_image TEXT NULL AFTER caller_name;
+
+-- 2026-05-20: dc_members — เพิ่ม avatar เก็บ Discord CDN URL ของ member (update ทุกครั้งที่ login)
+ALTER TABLE dc_members ADD COLUMN IF NOT EXISTS avatar TEXT NULL AFTER display_name;
+
 

@@ -51,6 +51,7 @@ export async function POST(req) {
       contact_type,
       called_by: session.user.discordId,
       caller_name: session.user.nickname || session.user.name || null,
+      caller_image: session.user.image || null,
       status,
       sig_overall: sig_overall || null,
       sig_location: sig_location || null,

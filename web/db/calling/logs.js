@@ -47,6 +47,7 @@ export async function createLog(data) {
     contact_type = 'member',
     called_by,
     caller_name,
+    caller_image,
     status,
     sig_overall,
     sig_location,
@@ -60,16 +61,17 @@ export async function createLog(data) {
 
   const [result] = await pool.query(
     `INSERT INTO calling_logs
-      (campaign_id, contact_type, member_id, called_by, caller_name, called_at, status,
+      (campaign_id, contact_type, member_id, called_by, caller_name, caller_image, called_at, status,
        sig_overall, sig_location, sig_availability, sig_interest, sig_reachable,
        note, extra, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
     [
       campaign_id || 0,
       contact_type,
       member_id,
       called_by || null,
       caller_name || null,
+      caller_image || null,
       called_at,
       status,
       sig_overall || null,

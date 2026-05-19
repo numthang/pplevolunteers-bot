@@ -5,6 +5,19 @@ import Link from 'next/link'
 import ContactForm from './ContactForm.jsx'
 import InteractionLogForm from './InteractionLogForm.jsx'
 import { CALL_STATUS_COLORS } from '@/lib/callingStatusColors.js'
+import { PhoneCall, PhoneOff, Clock, Minus, Users, MessageSquare, AlertTriangle } from 'lucide-react'
+
+const STATUS_ICONS = {
+  pending:       { Icon: Clock,         color: '#ff9800' },
+  called:        { Icon: PhoneCall,     color: '#0d9e94' },
+  answered:      { Icon: PhoneCall,     color: '#0d9e94' },
+  no_answer:     { Icon: PhoneOff,      color: '#854f0b' },
+  not_called:    { Icon: Minus,         color: '#9ca3af' },
+  met:           { Icon: Users,         color: '#1a5e2d' },
+  sms_sent:      { Icon: MessageSquare, color: '#4338ca' },
+  sms_delivered: { Icon: MessageSquare, color: '#1d4ed8' },
+  sms_failed:    { Icon: AlertTriangle, color: '#a32d2d' },
+}
 import { findSignalLabel } from '@/lib/callingSignals.js'
 import { CATEGORY_LABELS, CATEGORY_COLORS } from '@/../config/callingCategories.js'
 
@@ -191,10 +204,7 @@ export default function ContactModal({ contactId, discordId, canManageAll, onClo
                       <div key={log.id} className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg p-3">
                         <div className="flex items-center justify-between gap-2 mb-1.5 flex-wrap">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-xs px-2 py-0.5 rounded font-semibold"
-                              style={{ background: s.bg, color: s.text }}>
-                              {s.label}
-                            </span>
+                            {(() => { const si = STATUS_ICONS[log.status]; return si ? <span className="inline-flex items-center gap-1 shrink-0" style={{ color: si.color }}><si.Icon className="w-4 h-4" /><span className="text-sm font-medium">{s.label}</span></span> : null })()}
                             <span className="text-base text-warm-500 dark:text-disc-muted">
                               {formatThaiDate(log.called_at)}
                             </span>

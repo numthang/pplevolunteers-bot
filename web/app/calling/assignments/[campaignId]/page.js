@@ -7,6 +7,19 @@ import { useEffectiveRoles } from '@/lib/useEffectiveRoles.js'
 import SplitModal from '@/components/calling/SplitModal.jsx'
 import SmsModal from '@/components/calling/SmsModal.jsx'
 import { CALL_STATUS_COLORS } from '@/lib/callingStatusColors.js'
+import { PhoneCall, PhoneOff, Clock, Minus, Users, MessageSquare, AlertTriangle, Timer, UserMinus } from 'lucide-react'
+
+const STATUS_ICONS = {
+  pending:       { Icon: Clock,         color: '#ff9800' },
+  called:        { Icon: PhoneCall,     color: '#0d9e94' },
+  answered:      { Icon: PhoneCall,     color: '#0d9e94' },
+  no_answer:     { Icon: PhoneOff,      color: '#854f0b' },
+  not_called:    { Icon: Minus,         color: '#9ca3af' },
+  met:           { Icon: Users,         color: '#1a5e2d' },
+  sms_sent:      { Icon: MessageSquare, color: '#4338ca' },
+  sms_delivered: { Icon: MessageSquare, color: '#1d4ed8' },
+  sms_failed:    { Icon: AlertTriangle, color: '#a32d2d' },
+}
 import { buildSmsTemplate } from '@/lib/buildSmsTemplate.js'
 import { CATEGORY_LABELS, CATEGORY_COLORS } from '@/../config/callingCategories.js'
 
@@ -50,12 +63,12 @@ function getStatusBadge(status) {
   return { bg: '#faeeda', text: '#854f0b', label: 'รอมอบหมาย' }
 }
 
-function getExpiryBadge(expiredAt) {
+function getExpiryIcon(expiredAt) {
   if (!expiredAt) return null
   const now = Date.now()
   const exp = new Date(expiredAt).getTime()
-  if (exp < now) return { label: 'หมดอายุ', cls: 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400' }
-  if (exp - now < 90 * 24 * 60 * 60 * 1000) return { label: 'ใกล้หมด', cls: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400' }
+  if (exp < now) return { Icon: AlertTriangle, color: '#ef4444', title: 'หมดอายุ' }
+  if (exp - now < 90 * 24 * 60 * 60 * 1000) return { Icon: Timer, color: '#d97706', title: 'ใกล้หมดอายุ' }
   return null
 }
 
@@ -703,7 +716,7 @@ export default function CampaignPage({ params }) {
               const isMember  = activeTab === 'member'
               const hasPhone  = contactsHidden || !!(isMember ? item.mobile_number : item.phone)
               const dimmed    = !hasPhone ? 'opacity-50' : ''
-              const expiryBadge = isMember ? getExpiryBadge(item.expired_at) : null
+              const expiryIcon = isMember ? getExpiryIcon(item.expired_at) : null
               const catColor  = !isMember && item.category ? (CATEGORY_COLORS[item.category] || CATEGORY_COLORS.other) : null
 
               const displayName = isMember ? item.full_name : [item.first_name, item.last_name].filter(Boolean).join(' ')
@@ -737,7 +750,7 @@ export default function CampaignPage({ params }) {
                         {isMember && (item.membership_type === 'ตลอดชีพ' || item.membership_type === 'สมาชิกตลอดชีพ') && (
                           <span className="shrink-0 text-base font-medium px-1.5 py-0.5 rounded bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400">ตลอดชีพ</span>
                         )}
-                        {expiryBadge && <span className={`shrink-0 text-base font-medium px-1.5 py-0.5 rounded ${expiryBadge.cls}`}>{expiryBadge.label}</span>}
+                        {expiryIcon && <expiryIcon.Icon title={expiryIcon.title} style={{ color: expiryIcon.color }} className="w-4 h-4 shrink-0 inline-block" />}
                         {catColor && <span className="shrink-0 text-sm px-1.5 py-0.5 rounded font-medium" style={{ background: catColor.bg, color: catColor.text }}>{CATEGORY_LABELS[item.category] || item.category}</span>}
                         {!hasPhone && <span className="shrink-0 text-base text-warm-400 dark:text-disc-muted font-normal">ไม่มีเบอร์</span>}
                       </div>
@@ -762,9 +775,9 @@ export default function CampaignPage({ params }) {
                     <div className={`flex justify-center items-center pl-2 ${dimmed}`}>
                       <div className="md:hidden">
                         {item.total_calls > 0
-                          ? <span className="px-1.5 py-0.5 rounded text-sm font-medium whitespace-nowrap" style={{ backgroundColor: CALL_STATUS_COLORS.called.bg, color: CALL_STATUS_COLORS.called.text }}>{CALL_STATUS_COLORS.called.label}</span>
+                          ? <span className="inline-flex items-center gap-1" style={{ color: STATUS_ICONS.called.color }}><PhoneCall className="w-4 h-4" /><span className="text-sm font-medium">โทรแล้ว</span></span>
                           : item.assigned_to
-                            ? <span className="px-1.5 py-0.5 rounded text-sm font-medium whitespace-nowrap" style={{ backgroundColor: CALL_STATUS_COLORS.pending.bg, color: CALL_STATUS_COLORS.pending.text }}>{CALL_STATUS_COLORS.pending.label}</span>
+                            ? <span className="inline-flex items-center gap-1" style={{ color: STATUS_ICONS.pending.color }}><Clock className="w-4 h-4" /><span className="text-sm font-medium">รอโทร</span></span>
                             : <span className="text-warm-300 dark:text-disc-muted text-sm">—</span>}
                       </div>
                       <span className="hidden md:inline-block px-1.5 py-0.5 rounded text-base font-semibold"
@@ -773,16 +786,16 @@ export default function CampaignPage({ params }) {
                     <div className={`hidden md:block text-base truncate pr-2 ${dimmed}`}>
                       {item.assigned_to
                         ? <a href={`https://discord.com/users/${item.assigned_to}`} target="_blank" rel="noopener noreferrer" className="text-teal hover:underline">{usersMap[item.assigned_to] || item.assigned_to}</a>
-                        : <span className="px-2 py-0.5 rounded text-base font-medium whitespace-nowrap" style={{ backgroundColor: badge.bg, color: badge.text }}>{badge.label}</span>}
+                        : <span className="inline-flex items-center gap-1" style={{ color: badge.text }}><UserMinus className="w-4 h-4" /><span className="text-sm font-medium">{badge.label}</span></span>}
                     </div>
                     <div className={`hidden md:block text-base text-warm-500 dark:text-disc-muted truncate pr-2 ${dimmed}`}>
                       {tambon || '—'}
                     </div>
                     <div className={`hidden md:block text-center ${dimmed}`}>
                       {item.total_calls > 0
-                        ? <span className="px-2 py-0.5 rounded text-sm font-medium whitespace-nowrap" style={{ backgroundColor: CALL_STATUS_COLORS.called.bg, color: CALL_STATUS_COLORS.called.text }}>{CALL_STATUS_COLORS.called.label}</span>
+                        ? <span className="inline-flex items-center gap-1" style={{ color: STATUS_ICONS.called.color }}><PhoneCall className="w-4 h-4" /><span className="text-sm font-medium">โทรแล้ว</span></span>
                         : item.assigned_to
-                          ? <span className="px-2 py-0.5 rounded text-sm font-medium whitespace-nowrap" style={{ backgroundColor: CALL_STATUS_COLORS.pending.bg, color: CALL_STATUS_COLORS.pending.text }}>{CALL_STATUS_COLORS.pending.label}</span>
+                          ? <span className="inline-flex items-center gap-1" style={{ color: STATUS_ICONS.pending.color }}><Clock className="w-4 h-4" /><span className="text-sm font-medium">รอโทร</span></span>
                           : <span className="text-warm-300 dark:text-disc-muted text-sm">—</span>}
                     </div>
                   </div>
@@ -815,8 +828,25 @@ export default function CampaignPage({ params }) {
                             return (
                               <div key={log.id} className="py-0.5">
                                 {!isEditing && (
-                                  <div className="flex flex-wrap items-baseline gap-x-1.5">
-                                    <span className="px-2 py-0.5 rounded text-base font-semibold shrink-0" style={{ backgroundColor: logColor.bg, color: logColor.text }}>{logColor.label}</span>
+                                  <div className="flex flex-col gap-0.5">
+                                    <div className="flex items-center gap-1">
+                                      {(() => { const si = STATUS_ICONS[log.status]; return si ? <span className="inline-flex items-center gap-1 flex-1" style={{ color: si.color }}><si.Icon className="w-4 h-4" /><span className="text-sm font-medium">{logColor.label}</span></span> : <span className="flex-1" /> })()}
+                                      {canEdit && (
+                                        <button onClick={() => { setEditingLogId(log.id); setEditStatus(log.status); setEditNote(log.note || '') }}
+                                          className="p-0.5 rounded text-warm-400 hover:text-teal transition shrink-0">
+                                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                        </button>
+                                      )}
+                                      {isModerator && (
+                                        <button onClick={async () => {
+                                          if (!confirm('ลบ log นี้?')) return
+                                          await fetch(`/api/calling/logs?id=${log.id}`, { method: 'DELETE' })
+                                          reloadLogs(itemId)
+                                        }} className="p-0.5 rounded text-warm-400 hover:text-red-500 transition shrink-0">
+                                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                                        </button>
+                                      )}
+                                    </div>
                                     <span className="text-base text-warm-800 dark:text-disc-text break-words">
                                       {log.note ? parseLinksPage(log.note) : null}
                                       <span className="italic text-warm-400 dark:text-disc-muted">
@@ -826,21 +856,6 @@ export default function CampaignPage({ params }) {
                                         {log.called_at ? new Date(log.called_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' }) : null}
                                       </span>
                                     </span>
-                                    {canEdit && (
-                                      <button onClick={() => { setEditingLogId(log.id); setEditStatus(log.status); setEditNote(log.note || '') }}
-                                        className="p-0.5 rounded text-warm-400 hover:text-teal transition shrink-0">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                                      </button>
-                                    )}
-                                    {isModerator && (
-                                      <button onClick={async () => {
-                                        if (!confirm('ลบ log นี้?')) return
-                                        await fetch(`/api/calling/logs?id=${log.id}`, { method: 'DELETE' })
-                                        reloadLogs(itemId)
-                                      }} className="p-0.5 rounded text-warm-400 hover:text-red-500 transition shrink-0">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
-                                      </button>
-                                    )}
                                   </div>
                                 )}
                                 {isEditing ? (

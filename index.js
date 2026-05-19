@@ -283,12 +283,14 @@ client.on('messageCreate', async (message) => {
   if (!message.guild || (message.author.bot && message.channel.id !== client.logChannel?.id)) return;
 
   const key = `sticky_${message.channel.id}`;
-  const config = await getSetting(message.guildId, key);
+  let config = await getSetting(message.guildId, key);
   if (!config) return;
+  if (typeof config === 'string') { try { config = JSON.parse(config); } catch { return; } }
 
+  const refreshMs = (config.refresh_minutes ?? 1440) * 60 * 1000;
   const now = Date.now();
   const last = cooldowns.get(message.channel.id) || 0;
-  if (now - last < 24 * 60 * 60 * 1000) return; // 24 ชั่วโมง debounce
+  if (now - last < refreshMs) return;
 
   cooldowns.set(message.channel.id, now);
   await refreshSticky(message.channel);

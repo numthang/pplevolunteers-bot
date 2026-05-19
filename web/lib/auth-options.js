@@ -17,6 +17,15 @@ export const authOptions = {
     async jwt({ token, account, profile, trigger }) {
       if (account && profile) {
         token.discordId = profile.id
+        const avatarUrl = profile.avatar
+          ? `https://cdn.discordapp.com/avatars/${profile.id}/${profile.avatar}.webp`
+          : null
+        if (avatarUrl) {
+          pool.query(
+            'UPDATE dc_members SET avatar = ? WHERE guild_id = ? AND discord_id = ?',
+            [avatarUrl, process.env.GUILD_ID, profile.id]
+          ).catch(() => {})
+        }
       }
       if (account && profile || trigger === 'update') {
         const id = token.discordId

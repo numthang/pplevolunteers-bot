@@ -107,7 +107,8 @@ export async function getMembersInCampaign(campaignId, filters = {}, limit = 100
        SUM(CASE WHEN l.status = 'answered' THEN 1 ELSE 0 END) AS answered_count,
        CASE WHEN a.id IS NOT NULL THEN 'assigned' ELSE 'unassigned' END AS member_status,
        dc.discord_id,
-       dc.username AS discord_username${needAllTimeCalls ? `,
+       dc.username AS discord_username,
+       dc.avatar AS discord_avatar${needAllTimeCalls ? `,
        COALESCE(atl.all_time_calls, 0) AS all_time_calls` : ''}
      FROM act_event_cache cc
      JOIN ngs_member_cache m
@@ -337,7 +338,8 @@ export async function getMyAssignedMembers(discordId, { campaignId, status, rsvp
          latest_log.status AS latest_log_status,
          latest_log.called_at AS latest_called_at,
          dc.discord_id,
-         dc.username AS discord_username
+         dc.username AS discord_username,
+         dc.avatar AS discord_avatar
        FROM calling_assignments a
        JOIN ngs_member_cache m ON m.source_id = a.member_id
        LEFT JOIN calling_member_tiers t ON t.member_id = a.member_id AND t.contact_type = 'member'

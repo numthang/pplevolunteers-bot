@@ -6,7 +6,21 @@ import { useEffectiveRoles } from '@/lib/useEffectiveRoles.js'
 import { CALL_STATUS_COLORS } from '@/lib/callingStatusColors.js'
 import { SIGNALS, SIGNAL_OPTIONS, findSignalLabel } from '@/lib/callingSignals.js'
 import SmsModal from '@/components/calling/SmsModal.jsx'
+import FavoriteStar from '@/components/calling/FavoriteStar.jsx'
 import { buildSmsTemplate } from '@/lib/buildSmsTemplate.js'
+import { PhoneCall, PhoneOff, Clock, Minus, Users, MessageSquare, AlertTriangle, Timer } from 'lucide-react'
+
+const STATUS_ICONS = {
+  pending:       { Icon: Clock,         color: '#ff9800' },
+  called:        { Icon: PhoneCall,     color: '#0d9e94' },
+  answered:      { Icon: PhoneCall,     color: '#0d9e94' },
+  no_answer:     { Icon: PhoneOff,      color: '#854f0b' },
+  not_called:    { Icon: Minus,         color: '#9ca3af' },
+  met:           { Icon: Users,         color: '#1a5e2d' },
+  sms_sent:      { Icon: MessageSquare, color: '#4338ca' },
+  sms_delivered: { Icon: MessageSquare, color: '#1d4ed8' },
+  sms_failed:    { Icon: AlertTriangle, color: '#a32d2d' },
+}
 
 const MODERATOR_ROLES = ['Admin', 'เลขาธิการ', 'Moderator']
 
@@ -34,12 +48,12 @@ const getLogStatusStyle = (status) => {
   return color ? { bg: color.bg, text: color.text, label: color.label } : { bg: '#f3f4f6', text: '#6b7280', label: status }
 }
 
-function getExpiryBadge(expiredAt) {
+function getExpiryIcon(expiredAt) {
   if (!expiredAt) return null
   const now = Date.now()
   const exp = new Date(expiredAt).getTime()
-  if (exp < now) return { label: 'หมดอายุ', cls: 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400' }
-  if (exp - now < 90 * 24 * 60 * 60 * 1000) return { label: 'ใกล้หมด', cls: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400' }
+  if (exp < now) return { Icon: AlertTriangle, color: '#ef4444', title: 'หมดอายุ' }
+  if (exp - now < 90 * 24 * 60 * 60 * 1000) return { Icon: Timer, color: '#d97706', title: 'ใกล้หมดอายุ' }
   return null
 }
 
@@ -195,9 +209,19 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
   const [editingLogId, setEditingLogId] = useState(null)
   const [editStatus, setEditStatus] = useState('')
   const [editNote, setEditNote] = useState('')
+  const [isFavorite, setIsFavorite] = useState(false)
 
   const memberId = member?.source_id || member?.id
   const isContact = contact_type === 'contact'
+
+  useEffect(() => {
+    if (!isOpen || !memberId) return
+    const params = new URLSearchParams({ idsOnly: 'true', contactType: isContact ? 'contact' : 'member' })
+    fetch(`/api/calling/favorites?${params}`)
+      .then(r => r.json())
+      .then(d => setIsFavorite((d.data || []).includes(String(memberId))))
+      .catch(() => setIsFavorite(false))
+  }, [memberId, isOpen, isContact])
 
   const loadHistory = useCallback(() => {
     if (!memberId) return
@@ -278,7 +302,7 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
     member.home_amphure || member.amphoe,
     member.home_province || member.province,
   ].filter(Boolean).join(' · ')
-  const expiryBadge = isContact ? null : getExpiryBadge(member.expired_at)
+  const expiryIcon = isContact ? null : getExpiryIcon(member.expired_at)
   const showSignals = signalsApply
   const signalsFilled = SIGNALS.some(s => signals[s.key])
   const canSave = status && note.trim() && (!signalsApply || signalsFilled) && (status !== 'answered' || isContact || rsvp)
@@ -320,8 +344,17 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
                   <span className="font-semibold text-lg text-warm-900 dark:text-disc-text truncate">{displayName}</span>
                   <span className="text-base font-semibold px-1.5 py-0.5 rounded flex-shrink-0"
                     style={{ backgroundColor: tierColor.bg, color: tierColor.text }}>{tier}</span>
-                  {expiryBadge && <span className={`text-base font-medium px-1.5 py-0.5 rounded flex-shrink-0 ${expiryBadge.cls}`}>{expiryBadge.label}</span>}
+                  {expiryIcon && <expiryIcon.Icon title={expiryIcon.title} style={{ color: expiryIcon.color }} className="w-4 h-4 flex-shrink-0 inline-block" />}
                   {member.source_id && <span className="text-base text-warm-300 dark:text-disc-muted flex-shrink-0">#{member.source_id}</span>}
+                  {memberId && (
+                    <FavoriteStar
+                      key={`${memberId}-${isContact}`}
+                      memberId={memberId}
+                      contactType={isContact ? 'contact' : 'member'}
+                      initialActive={isFavorite}
+                      size="lg"
+                    />
+                  )}
                 </div>
                 <div className="text-base text-warm-400 dark:text-disc-muted truncate mt-0.5">
                   {locationStr || '—'}
@@ -422,8 +455,8 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
                       <div key={log.id} className="rounded-lg p-3 bg-white dark:bg-disc-hover border border-warm-200 dark:border-disc-border">
                         {!isEditing && (
                           <div className="flex items-start gap-2">
-                            <div className="flex-1 flex flex-wrap items-baseline gap-x-1.5">
-                              <span className="px-2 py-0.5 rounded text-base font-semibold shrink-0" style={{ backgroundColor: s.bg, color: s.text }}>{s.label}</span>
+                            <div className="flex-1 flex flex-col gap-0.5">
+                              {(() => { const si = STATUS_ICONS[log.status]; return si ? <span className="inline-flex items-center gap-1" style={{ color: si.color }}><si.Icon className="w-4 h-4" /><span className="text-sm font-medium">{s.label}</span></span> : null })()}
                               <span className="text-base text-warm-800 dark:text-disc-text break-words">
                                 {log.note ? parseLinks(log.note) : null}
                                 <span className="italic text-warm-400 dark:text-disc-muted">
@@ -495,14 +528,14 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
             {/* Campaign info */}
             <div className="bg-white dark:bg-disc-hover rounded-lg p-3 border border-warm-200 dark:border-disc-border space-y-2 overflow-hidden">
               <CampaignActions campaignName={member.campaign_name} description={member.campaign_description} onSmsClick={() => setSmsModalOpen(true)} />
-              <div className="text-base font-semibold text-warm-900 dark:text-disc-text">{member.campaign_name || '—'}</div>
+              <div className="text-base font-semibold text-warm-900 dark:text-disc-text">
+                {member.campaign_name || '—'}
+                {member.event_date && (
+                  <span className="font-normal text-orange-600 dark:text-orange-400 ml-1.5">({formatEventDate(member.event_date)})</span>
+                )}
+              </div>
               {member.campaign_description && (
                 <CollapsibleDescription text={member.campaign_description} />
-              )}
-              {member.event_date && (
-                <div className="text-base text-warm-700 dark:text-disc-text">
-                  วันที่กิจกรรม : <span className="font-semibold text-orange-600 dark:text-orange-400">{formatEventDate(member.event_date)}</span>
-                </div>
               )}
             </div>
 

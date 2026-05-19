@@ -8,6 +8,7 @@ import { useSession } from 'next-auth/react'
 import { useEffectiveRoles } from '@/lib/useEffectiveRoles.js'
 import { CALL_STATUS_COLORS } from '@/lib/callingStatusColors.js'
 import { CATEGORY_LABELS, CATEGORY_COLORS } from '@/../config/callingCategories.js'
+import { PhoneCall, PhoneOff, Clock, Minus, Users, MessageSquare, AlertTriangle, Timer } from 'lucide-react'
 
 const MODERATOR_ROLES = ['Admin', 'เลขาธิการ', 'Moderator']
 const EDIT_STATUS_OPTIONS = [
@@ -30,18 +31,30 @@ const RSVP_ICONS = {
 }
 
 
-function getExpiryBadge(expiredAt) {
+function getExpiryIcon(expiredAt) {
   if (!expiredAt) return null
   const now = Date.now()
   const exp = new Date(expiredAt).getTime()
-  if (exp < now) return { label: 'หมดอายุ', cls: 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400' }
-  if (exp - now < 90 * 24 * 60 * 60 * 1000) return { label: 'ใกล้หมด', cls: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400' }
+  if (exp < now) return { Icon: AlertTriangle, color: '#ef4444', title: 'หมดอายุ' }
+  if (exp - now < 90 * 24 * 60 * 60 * 1000) return { Icon: Timer, color: '#d97706', title: 'ใกล้หมดอายุ' }
   return null
 }
 
-function getStatusBadge(callStatus, logStatus) {
-  if (callStatus === 'pending') return CALL_STATUS_COLORS.pending
-  return CALL_STATUS_COLORS[logStatus] || CALL_STATUS_COLORS.pending
+const STATUS_ICONS = {
+  pending:       { Icon: Clock,         color: '#ff9800',  title: 'รอโทร' },
+  called:        { Icon: PhoneCall,     color: '#0d9e94',  title: 'โทรแล้ว' },
+  answered:      { Icon: PhoneCall,     color: '#0d9e94',  title: 'รับสาย' },
+  no_answer:     { Icon: PhoneOff,      color: '#854f0b',  title: 'ไม่รับ' },
+  not_called:    { Icon: Minus,         color: '#9ca3af',  title: 'ข้าม' },
+  met:           { Icon: Users,         color: '#1a5e2d',  title: 'พบปะ' },
+  sms_sent:      { Icon: MessageSquare, color: '#4338ca',  title: 'ส่ง SMS' },
+  sms_delivered: { Icon: MessageSquare, color: '#1d4ed8',  title: 'SMS ถึง' },
+  sms_failed:    { Icon: AlertTriangle, color: '#a32d2d',  title: 'SMS ล้มเหลว' },
+}
+
+function getStatusIcon(callStatus, logStatus) {
+  if (callStatus === 'pending') return STATUS_ICONS.pending
+  return STATUS_ICONS[logStatus] || STATUS_ICONS.pending
 }
 
 const STATUS_OPTIONS = [
@@ -56,6 +69,29 @@ function getItemKey(item) {
 
 function getItemId(item) {
   return item.source_id ?? item.id
+}
+
+function MemberAvatar({ item, size = 36 }) {
+  const tier = item.tier || 'D'
+  const tc = TIER_COLORS[tier] || { bg: '#f3f4f6', text: '#6b7280' }
+  const name = item.full_name || [item.first_name, item.last_name].filter(Boolean).join(' ')
+  const parts = (name || '').trim().split(/\s+/).filter(Boolean)
+  const initials = parts.length >= 2
+    ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+    : (parts[0] || '?').slice(0, 2).toUpperCase()
+  if (item.discord_avatar) {
+    return (
+      <img src={item.discord_avatar} alt={name} title={name}
+        className="rounded-full object-cover flex-shrink-0"
+        style={{ width: size, height: size }} />
+    )
+  }
+  return (
+    <div className="rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 select-none"
+      style={{ width: size, height: size, backgroundColor: tc.bg, color: tc.text }}>
+      {initials}
+    </div>
+  )
 }
 
 export default function PendingCallsPage() {
@@ -396,31 +432,42 @@ export default function PendingCallsPage() {
                                 return (
                                   <div key={log.id} className="py-0.5">
                                     {!isEditing && (
-                                      <div className="flex flex-wrap items-baseline gap-x-1.5">
-                                        <span className="px-2 py-0.5 rounded text-sm font-semibold shrink-0" style={{ backgroundColor: logColor.bg, color: logColor.text }}>{logColor.label}</span>
+                                      <div className="flex flex-col gap-0.5">
+                                        <div className="flex items-center gap-1">
+                                          {(() => { const si = STATUS_ICONS[log.status]; return si ? <span className="inline-flex items-center gap-1 flex-1" style={{ color: si.color }}><si.Icon className="w-4 h-4" /><span className="text-sm font-medium">{logColor.label}</span></span> : <span className="flex-1" /> })()}
+                                          {canEdit && (
+                                            <button onClick={() => { setEditingLogId(log.id); setEditStatus(log.status); setEditNote(log.note || '') }}
+                                              className="p-0.5 rounded text-warm-400 hover:text-teal transition shrink-0">
+                                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                            </button>
+                                          )}
+                                          {isModerator && (
+                                            <button onClick={async () => {
+                                              if (!confirm('ลบ log นี้?')) return
+                                              await fetch(`/api/calling/logs?id=${log.id}`, { method: 'DELETE' })
+                                              reloadHistoryLogs(item.source_id)
+                                            }} className="p-0.5 rounded text-warm-400 hover:text-red-500 transition shrink-0">
+                                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                                            </button>
+                                          )}
+                                        </div>
                                         <span className="text-sm text-warm-800 dark:text-disc-text break-words">
                                           {log.note || ''}
                                           <span className="italic text-warm-400 dark:text-disc-muted">
                                             {(log.note && log.called_at) ? ' — ' : ''}
-                                            {log.caller_name && <span>{log.caller_name} </span>}
+                                            {(log.caller_image || log.caller_name) && (
+                                          <span className="inline-flex items-center gap-1 align-middle mr-0.5">
+                                            {log.caller_image
+                                              ? <img src={log.caller_image} alt="" title={log.caller_name || ''} className="w-4 h-4 rounded-full object-cover inline-block" />
+                                              : <span title={log.caller_name || ''} className="inline-flex w-4 h-4 rounded-full bg-warm-200 dark:bg-disc-border items-center justify-center text-[9px] font-bold">{(log.caller_name || '?')[0].toUpperCase()}</span>
+                                            }
+                                            <span>{log.caller_name}</span>
+                                          </span>
+                                        )}
                                             {log.called_at ? new Date(log.called_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' }) : ''}
                                           </span>
                                         </span>
-                                        {canEdit && (
-                                          <button onClick={() => { setEditingLogId(log.id); setEditStatus(log.status); setEditNote(log.note || '') }}
-                                            className="p-0.5 rounded text-warm-400 hover:text-teal transition shrink-0">
-                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                                          </button>
-                                        )}
-                                        {isModerator && (
-                                          <button onClick={async () => {
-                                            if (!confirm('ลบ log นี้?')) return
-                                            await fetch(`/api/calling/logs?id=${log.id}`, { method: 'DELETE' })
-                                            reloadHistoryLogs(item.source_id)
-                                          }} className="p-0.5 rounded text-warm-400 hover:text-red-500 transition shrink-0">
-                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
-                                          </button>
-                                        )}
+
                                       </div>
                                     )}
                                     {isEditing && (
@@ -535,10 +582,8 @@ export default function PendingCallsPage() {
       ) : (
         <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl overflow-hidden">
           {/* Table header — desktop only */}
-          <div className="hidden sm:grid items-center px-4 py-2.5 gap-2 bg-warm-100 dark:bg-disc-header border-b border-warm-200 dark:border-disc-border text-sm font-medium text-warm-500 dark:text-disc-muted [grid-template-columns:1fr_40px_64px_88px]">
+          <div className="hidden sm:grid items-center px-4 py-2.5 gap-2 bg-warm-100 dark:bg-disc-header border-b border-warm-200 dark:border-disc-border text-sm font-medium text-warm-500 dark:text-disc-muted [grid-template-columns:1fr_88px]">
             <span>ชื่อ</span>
-            <span className="text-center">ระดับ</span>
-            <span className="text-center">รับสาย</span>
             <span className="text-right">สถานะ</span>
           </div>
 
@@ -550,7 +595,7 @@ export default function PendingCallsPage() {
               const displayName = item.full_name || [item.first_name, item.last_name].filter(Boolean).join(' ')
               const phone = item.mobile_number || item.phone
               const amphoe = item.home_amphure || item.amphoe
-              const expiryBadge = isContact ? null : getExpiryBadge(item.expired_at)
+              const expiryIcon = isContact ? null : getExpiryIcon(item.expired_at)
               const catColor = isContact && item.category ? (CATEGORY_COLORS[item.category] || CATEGORY_COLORS.other) : null
 
               return (
@@ -562,16 +607,17 @@ export default function PendingCallsPage() {
                   {/* Mobile layout */}
                   <div className="sm:hidden">
                     <div className="flex items-center gap-3">
+                      <MemberAvatar item={item} size={36} />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span
-                            className="text-base font-semibold px-1.5 py-0.5 rounded flex-shrink-0"
-                            style={{ backgroundColor: tierColor.bg, color: tierColor.text }}
-                          >{tier}</span>
                           <span className="text-base font-medium text-warm-900 dark:text-disc-text group-hover:text-teal transition-colors truncate">
                             {displayName}
                           </span>
-                          {expiryBadge && <span className={`text-base font-medium px-1.5 py-0.5 rounded flex-shrink-0 ${expiryBadge.cls}`}>{expiryBadge.label}</span>}
+                          <span
+                            className="text-xs font-semibold px-1 py-0.5 rounded flex-shrink-0"
+                            style={{ backgroundColor: tierColor.bg, color: tierColor.text }}
+                          >{tier}</span>
+                          {expiryIcon && <expiryIcon.Icon title={expiryIcon.title} style={{ color: expiryIcon.color }} className="w-4 h-4 flex-shrink-0 inline-block" />}
                           {catColor && <span className="text-sm px-1.5 py-0.5 rounded font-medium flex-shrink-0" style={{ background: catColor.bg, color: catColor.text }}>{CATEGORY_LABELS[item.category] || item.category}</span>}
                         </div>
                         <div className="flex items-center gap-1.5 text-base truncate mt-0.5">
@@ -587,7 +633,7 @@ export default function PendingCallsPage() {
                       </div>
                       <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
                         {(() => {
-                          const badge = getStatusBadge(item.call_status, item.latest_log_status)
+                          const si = getStatusIcon(item.call_status, item.latest_log_status)
                           return (
                             <div className="flex items-center gap-1">
                               {!isContact && item.rsvp && (
@@ -595,10 +641,7 @@ export default function PendingCallsPage() {
                                   {RSVP_ICONS[item.rsvp]?.icon || item.rsvp}
                                 </span>
                               )}
-                              <span className="px-2 py-0.5 rounded text-base font-medium whitespace-nowrap"
-                                style={{ backgroundColor: badge.bg, color: badge.text }}>
-                                {badge.label}
-                              </span>
+                              {si && <span className="inline-flex items-center gap-1" style={{ color: si.color }}><si.Icon className="w-4 h-4 flex-shrink-0" /><span className="text-sm font-medium whitespace-nowrap">{si.title}</span></span>}
                             </div>
                           )
                         })()}
@@ -610,14 +653,17 @@ export default function PendingCallsPage() {
                   </div>
 
                   {/* Desktop layout */}
-                  <div className="hidden sm:grid items-center [grid-template-columns:1fr_40px_64px_88px] gap-2">
+                  <div className="hidden sm:grid items-center [grid-template-columns:1fr_88px] gap-2">
                     <div className="flex items-center gap-3 min-w-0">
+                      <MemberAvatar item={item} size={36} />
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="text-base font-medium text-warm-900 dark:text-disc-text group-hover:text-teal transition-colors truncate">
                             {displayName}
                           </span>
-                          {expiryBadge && <span className={`text-base font-medium px-1.5 py-0.5 rounded flex-shrink-0 ${expiryBadge.cls}`}>{expiryBadge.label}</span>}
+                          <span className="text-xs font-semibold px-1 py-0.5 rounded flex-shrink-0"
+                            style={{ backgroundColor: tierColor.bg, color: tierColor.text }}>{tier}</span>
+                          {expiryIcon && <expiryIcon.Icon title={expiryIcon.title} style={{ color: expiryIcon.color }} className="w-4 h-4 flex-shrink-0 inline-block" />}
                           {catColor && <span className="text-sm px-1.5 py-0.5 rounded font-medium flex-shrink-0" style={{ background: catColor.bg, color: catColor.text }}>{CATEGORY_LABELS[item.category] || item.category}</span>}
                         </div>
                         <div className="flex items-center gap-1.5 text-base truncate">
@@ -633,22 +679,9 @@ export default function PendingCallsPage() {
                       </div>
                     </div>
 
-                    <div className="flex justify-center">
-                      <span
-                        className="text-base font-semibold px-1.5 py-0.5 rounded"
-                        style={{ backgroundColor: tierColor.bg, color: tierColor.text }}
-                      >{tier}</span>
-                    </div>
-
-                    <div className="text-center text-base text-warm-500 dark:text-disc-muted">
-                      <span className="font-semibold text-warm-900 dark:text-disc-text">{item.answered_count}</span>
-                      <span className="text-warm-300 dark:text-disc-muted/40">/</span>
-                      <span>{item.total_calls}</span>
-                    </div>
-
                     <div className="flex items-center gap-1 justify-end">
                       {(() => {
-                        const badge = getStatusBadge(item.call_status, item.latest_log_status)
+                        const si = getStatusIcon(item.call_status, item.latest_log_status)
                         return (
                           <>
                             {!isContact && item.rsvp && (
@@ -656,10 +689,7 @@ export default function PendingCallsPage() {
                                 {RSVP_ICONS[item.rsvp]?.icon || item.rsvp}
                               </span>
                             )}
-                            <span className="px-2 py-0.5 rounded text-base font-medium whitespace-nowrap"
-                              style={{ backgroundColor: badge.bg, color: badge.text }}>
-                              {badge.label}
-                            </span>
+                            {si && <span className="inline-flex items-center gap-1" style={{ color: si.color }}><si.Icon className="w-4 h-4 flex-shrink-0" /><span className="text-sm font-medium whitespace-nowrap">{si.title}</span></span>}
                           </>
                         )
                       })()}
