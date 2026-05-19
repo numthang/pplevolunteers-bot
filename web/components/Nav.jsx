@@ -41,8 +41,8 @@ const FINANCE_LINKS = [
 ]
 
 const CALLING_LINKS = [
-  { href: '/calling',          label: 'Campaigns',    icon: 'campaigns' },
-  { href: '/calling/pending',  label: 'Pending calls', icon: 'pending' },
+  { href: '/calling',          label: 'Assignor',  icon: 'campaigns' },
+  { href: '/calling/pending',  label: 'Assignee',  icon: 'pending' },
   { href: '/calling/stats',    label: 'Statistics',   icon: 'report' },
 ]
 
