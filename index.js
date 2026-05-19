@@ -23,7 +23,7 @@ const { handleRefresh } = require('./handlers/forumDashboard');
 const { handleFinanceRefresh } = require('./handlers/financeDashboard');
 const { handleOpenSearch, handleSearchModal, handleResultPage } = require('./handlers/forumSearch');
 const { handleGogoSignup, handleGogoModal, handleGogoDMButton, handleGogoDMModal, handleGogoEventButton, handleGogoEventSelect, handleGogoEventModal } = require('./handlers/gogoHandler');
-const { handleWatermarkSelect, handleWatermarkConfirm, handleWatermarkModal } = require('./handlers/watermarkHandler');
+const { handleWatermarkSelect, handleWatermarkEnhance, handleWatermarkConfirm, handleWatermarkModal } = require('./handlers/watermarkHandler');
 const {
   handleBasketView, handleBasketClear,
   handleBasketPost, handleBasketRetry,
@@ -150,6 +150,7 @@ client.on('interactionCreate', async (interaction) => {
   // --- Buttons ---
   if (interaction.isButton()) {
     if (interaction.customId === 'wm_confirm')              return handleWatermarkConfirm(interaction);
+    if (interaction.customId === 'wm_enhance')              return handleWatermarkEnhance(interaction);
     if (interaction.customId.startsWith('basket_')) {
       return (async () => {
         try {

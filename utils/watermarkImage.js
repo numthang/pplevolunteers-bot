@@ -20,10 +20,13 @@ async function fetchBuffer(url) {
 function calcPos(imgW, imgH, wmW, wmH, position) {
   const pad = Math.max(10, Math.round(Math.min(imgW, imgH) * 0.025));
   if (position === 'random') {
-    return {
-      x: Math.round(pad + Math.random() * (imgW - wmW - pad * 2)),
-      y: Math.round(pad + Math.random() * (imgH - wmH - pad * 2)),
-    };
+    const corners = [
+      { x: pad,              y: pad },
+      { x: imgW - wmW - pad, y: pad },
+      { x: pad,              y: imgH - wmH - pad },
+      { x: imgW - wmW - pad, y: imgH - wmH - pad },
+    ];
+    return corners[Math.floor(Math.random() * 4)];
   }
   switch (position) {
     case 'bottom-left': return { x: pad,              y: imgH - wmH - pad };
@@ -102,4 +105,12 @@ async function applyWatermark(sourceBuffer, { text, imagePath, position, opacity
   return applyTextWatermark(sourceBuffer, { text, position, opacity });
 }
 
-module.exports = { fetchBuffer, applyWatermark };
+async function autoEnhance(buffer) {
+  return sharp(buffer)
+    .normalise({ lower: 2, upper: 98 })
+    .modulate({ saturation: 1.2, brightness: 1.05 })
+    .sharpen({ sigma: 0.5 })
+    .toBuffer();
+}
+
+module.exports = { fetchBuffer, applyWatermark, autoEnhance };

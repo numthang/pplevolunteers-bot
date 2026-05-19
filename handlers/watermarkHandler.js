@@ -13,7 +13,7 @@ const {
 } = require('discord.js');
 const path = require('path');
 const fs = require('fs');
-const { fetchBuffer, applyWatermark } = require('../utils/watermarkImage');
+const { fetchBuffer, applyWatermark, autoEnhance } = require('../utils/watermarkImage');
 
 const ASSETS_DIR = path.join(__dirname, '..', 'assets', 'watermark');
 const SUPPORTED_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif']);
@@ -39,7 +39,7 @@ function getImages(msg) {
   });
 }
 
-function buildComponents(files) {
+function buildComponents(files, enhance = false) {
   const typeOptions = [
     ...files.map(f =>
       new StringSelectMenuOptionBuilder().setLabel(stripExt(f)).setValue(f)
@@ -93,9 +93,13 @@ function buildComponents(files) {
     ),
     new ActionRowBuilder().addComponents(
       new ButtonBuilder()
+        .setCustomId('wm_enhance')
+        .setLabel(enhance ? '✨ Enhance: เปิด' : '✨ Enhance: ปิด')
+        .setStyle(enhance ? ButtonStyle.Success : ButtonStyle.Secondary),
+      new ButtonBuilder()
         .setCustomId('wm_confirm')
         .setLabel('✅ ติดลายน้ำ')
-        .setStyle(ButtonStyle.Primary)
+        .setStyle(ButtonStyle.Primary),
     ),
   ];
 }
@@ -126,6 +130,7 @@ async function handleWatermarkCommand(interaction) {
     pos: 'bottom-right',
     opacity: 0.8,
     size: 0.13,
+    enhance: false,
   });
 
   await interaction.reply({
@@ -147,6 +152,15 @@ async function handleWatermarkSelect(interaction) {
   if (interaction.customId === 'wm_size')    state.size    = parseFloat(val);
 
   await interaction.deferUpdate();
+}
+
+// ─── Enhance toggle button ────────────────────────────────────────────────────
+async function handleWatermarkEnhance(interaction) {
+  const state = pending.get(interaction.user.id);
+  if (!state) return interaction.deferUpdate();
+  state.enhance = !state.enhance;
+  const files = getWatermarkFiles();
+  await interaction.update({ components: buildComponents(files, state.enhance) });
 }
 
 // ─── Confirm button ────────────────────────────────────────────────────────────
@@ -227,7 +241,8 @@ async function processWatermark(interaction, state, customText) {
   for (let i = 0; i < images.length; i++) {
     const att = images[i];
     try {
-      const srcBuf = await fetchBuffer(att.url);
+      let srcBuf = await fetchBuffer(att.url);
+      if (state.enhance) srcBuf = await autoEnhance(srcBuf);
       const { buffer: outBuf, ext } = await applyWatermark(srcBuf, {
         text: customText || null,
         imagePath,
@@ -276,6 +291,7 @@ async function processWatermark(interaction, state, customText) {
 module.exports = {
   handleWatermarkCommand,
   handleWatermarkSelect,
+  handleWatermarkEnhance,
   handleWatermarkConfirm,
   handleWatermarkModal,
 };

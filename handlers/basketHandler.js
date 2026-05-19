@@ -14,7 +14,7 @@ const path = require('path');
 const fs = require('fs');
 const sharp = require('sharp');
 const { addImages, setCaption, getBasket, clearBasket, addHistory, getHistory } = require('../db/mediaBasket');
-const { fetchBuffer, applyWatermark } = require('../utils/watermarkImage');
+const { fetchBuffer, applyWatermark, autoEnhance } = require('../utils/watermarkImage');
 const { postToFacebook, postToInstagram, postToThreads, getConfig, getThreadsConfig } = require('../services/metaApi');
 const { getSetting, setSetting, deleteSetting } = require('../db/settings');
 
@@ -36,14 +36,6 @@ function getWatermarkFiles(guildId) {
 
 function stripExt(f) {
   return f.replace(/\.[^.]+$/, '').replace(/^\d+-/, '');
-}
-
-async function autoEnhance(buffer) {
-  return sharp(buffer)
-    .clahe({ width: 3, height: 3, maxSlope: 3 })
-    .modulate({ saturation: 1.15, brightness: 1.03 })
-    .sharpen({ sigma: 0.6 })
-    .toBuffer();
 }
 
 function stripDiscordMarkdown(text) {
@@ -184,7 +176,7 @@ async function buildBasketPayload(basket, guildId, channelId, userId) {
         .setPlaceholder('Auto Enhance (default: ปิด)')
         .addOptions([
           new StringSelectMenuOptionBuilder().setLabel('ไม่ Enhance').setValue('off').setEmoji('🖼️').setDefault(!currentEnhance),
-          new StringSelectMenuOptionBuilder().setLabel('✨ Auto Enhance').setValue('on').setEmoji('✨').setDefault(currentEnhance),
+          new StringSelectMenuOptionBuilder().setLabel('Auto Enhance').setValue('on').setEmoji('✨').setDefault(currentEnhance),
         ])
     ));
   }
@@ -197,15 +189,21 @@ async function buildBasketPayload(basket, guildId, channelId, userId) {
 // ─── Add to basket ────────────────────────────────────────────────────────────
 async function handleBasketAdd(interaction) {
   const msg = interaction.targetMessage;
-  const snapshot = msg.messageSnapshots?.first()?.message;
-  console.log('[basketAdd] attachments:', msg.attachments.size, '| snapshot:', !!snapshot, '| snapshotAttach:', snapshot?.attachments?.size, '| flags:', msg.flags?.toArray());
-  const attachments = msg.attachments.size > 0 ? msg.attachments : (snapshot?.attachments ?? new Map());
-  const images = [...attachments.values()].filter(a => {
+  let sourceMsg = msg;
+  if (msg.attachments.size === 0 && msg.flags?.has('HasSnapshot')) {
+    const snap = msg.messageSnapshots?.[0] ?? msg.messageSnapshots?.first?.();
+    if (snap?.channelId && snap?.id) {
+      try {
+        const srcChannel = interaction.guild.channels.cache.get(snap.channelId);
+        if (srcChannel) sourceMsg = await srcChannel.messages.fetch(snap.id);
+      } catch { /* ถ้า fetch ไม่ได้ใช้ msg เดิม */ }
+    }
+  }
+  const images = [...sourceMsg.attachments.values()].filter(a => {
     const ct = a.contentType?.split(';')[0].trim();
     return SUPPORTED_TYPES.has(ct);
   });
-  const rawContent = msg.content || snapshot?.content || '';
-  const text = rawContent ? stripDiscordMarkdown(rawContent) : '';
+  const text = sourceMsg.content ? stripDiscordMarkdown(sourceMsg.content) : '';
 
   if (!images.length && !text) {
     return interaction.reply({ content: '❌ ข้อความนี้ไม่มีรูปหรือข้อความ', flags: MessageFlags.Ephemeral });
