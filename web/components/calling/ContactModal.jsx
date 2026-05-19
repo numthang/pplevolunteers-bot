@@ -203,7 +203,7 @@ export default function ContactModal({ contactId, discordId, canManageAll, onClo
                             )}
                           </div>
                           {log.campaign_name && (
-                            <Link href={`/calling/${log.campaign_id}`} onClick={onClose}
+                            <Link href={`/calling/assignments/${log.campaign_id}`} onClick={onClose}
                               className="text-sm text-teal hover:underline truncate max-w-[60%]">
                               {log.campaign_name}
                             </Link>

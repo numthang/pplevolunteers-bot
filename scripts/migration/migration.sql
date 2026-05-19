@@ -136,3 +136,4 @@ ALTER TABLE dc_basket_history
   ADD COLUMN ig_url      VARCHAR(500) NULL AFTER fb_url,
   ADD COLUMN threads_url VARCHAR(500) NULL AFTER ig_url;
 
+

@@ -90,6 +90,37 @@ function ExpandableText({ text, clamp = 'line-clamp-2', className = '' }) {
   )
 }
 
+function CollapsibleDescription({ text }) {
+  const [expanded, setExpanded] = useState(false)
+  const [isOverflowing, setIsOverflowing] = useState(false)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    if (!ref.current) return
+    setIsOverflowing(ref.current.scrollHeight > ref.current.clientHeight + 2)
+  }, [text])
+
+  return (
+    <div>
+      <p
+        ref={ref}
+        className={`text-base text-warm-700 dark:text-disc-text whitespace-pre-wrap break-all ${expanded ? '' : 'line-clamp-3'}`}
+      >
+        {parseLinks(text)}
+      </p>
+      {(isOverflowing || expanded) && (
+        <button
+          type="button"
+          onClick={() => setExpanded(e => !e)}
+          className="mt-1 text-sm text-teal hover:underline"
+        >
+          {expanded ? 'ย่อ' : 'ดูเพิ่ม'}
+        </button>
+      )}
+    </div>
+  )
+}
+
 function CampaignActions({ campaignName, description, onSmsClick }) {
   const [copied, setCopied] = useState(false)
   const copyText = description || campaignName || ''
@@ -457,7 +488,7 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
               <CampaignActions campaignName={member.campaign_name} description={member.campaign_description} onSmsClick={() => setSmsModalOpen(true)} />
               <div className="text-base font-semibold text-warm-900 dark:text-disc-text">{member.campaign_name || '—'}</div>
               {member.campaign_description && (
-                <p className="text-base text-warm-700 dark:text-disc-text whitespace-pre-wrap break-all">{parseLinks(member.campaign_description)}</p>
+                <CollapsibleDescription text={member.campaign_description} />
               )}
               {member.event_date && (
                 <div className="text-base text-warm-700 dark:text-disc-text">

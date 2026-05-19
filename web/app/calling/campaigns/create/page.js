@@ -62,7 +62,7 @@ export default function CreateCampaignPage() {
       })
       if (!res.ok) throw new Error('Failed to create campaign')
       const data = await res.json()
-      router.push(`/calling/${data.data.id}`)
+      router.push(`/calling/assignments/${data.data.id}`)
     } catch (error) {
       alert('เกิดข้อผิดพลาด: ' + error.message)
     } finally {
@@ -72,7 +72,7 @@ export default function CreateCampaignPage() {
 
   return (
     <div>
-      <Link href="/calling" className="text-teal hover:underline mb-6 block text-base">
+      <Link href="/calling/campaigns" className="text-teal hover:underline mb-6 block text-base">
         ← กลับ
       </Link>
 

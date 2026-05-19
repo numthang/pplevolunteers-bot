@@ -46,7 +46,7 @@ export default async function CallingPage() {
         </div>
         {canCreate && (
           <Link
-            href="/calling/create"
+            href="/calling/campaigns/create"
             className="shrink-0 inline-flex items-center gap-2 px-4 py-2.5 bg-orange text-white text-base font-medium rounded-lg hover:bg-orange-light transition"
           >
             <span>+</span> สร้างแคมเปญ

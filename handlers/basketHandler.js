@@ -18,6 +18,19 @@ const { fetchBuffer, applyWatermark, autoEnhance } = require('../utils/watermark
 const { postToFacebook, postToInstagram, postToThreads, getConfig, getThreadsConfig } = require('../services/metaApi');
 const { getSetting, setSetting, deleteSetting } = require('../db/settings');
 
+const stateKey = channelId => `basket_state_${channelId}`;
+async function getBasketState(guildId, channelId) {
+  const v = await getSetting(guildId, stateKey(channelId));
+  return v || null;
+}
+async function setBasketStatePartial(guildId, channelId, patch) {
+  const cur = (await getSetting(guildId, stateKey(channelId))) || {};
+  await setSetting(guildId, stateKey(channelId), { ...cur, ...patch });
+}
+async function clearBasketState(guildId, channelId) {
+  await deleteSetting(guildId, stateKey(channelId));
+}
+
 const ASSETS_DIR = path.join(__dirname, '..', 'assets', 'watermark');
 const SUPPORTED_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp']);
 
@@ -126,9 +139,12 @@ async function buildBasketPayload(basket, guildId, channelId, userId) {
 
   const cfg = await getConfig(guildId);
   const threadsCfg = await getThreadsConfig(guildId);
-  const defaultPlatform = cfg?.igId && threadsCfg ? 'all'
+  const saved = await getBasketState(guildId, channelId);
+  const fallbackPlatform = cfg?.igId && threadsCfg ? 'all'
     : cfg?.igId ? 'both'
     : 'fb';
+  const currentWmType   = saved?.wmType   ?? 'none';
+  const currentPlatform = saved?.platform ?? fallbackPlatform;
 
   const history = await getHistory(guildId, channelId);
   if (history.length) {
@@ -149,8 +165,8 @@ async function buildBasketPayload(basket, guildId, channelId, userId) {
 
   pendingPost.set(userId, {
     guildId, channelId,
-    wmType: 'none',
-    platform: defaultPlatform,
+    wmType:   currentWmType,
+    platform: currentPlatform,
     caption: caption || '',
   });
 
@@ -180,7 +196,7 @@ async function buildBasketPayload(basket, guildId, channelId, userId) {
         ])
     ));
   }
-  components.push(buildPlatformRow(cfg, threadsCfg, defaultPlatform));
+  components.push(buildPlatformRow(cfg, threadsCfg, currentPlatform));
   components.push(buildBasketButtons(imgCount, !!caption));
 
   return { embeds: [embed], components };
@@ -244,41 +260,42 @@ async function handleBasketView(interaction) {
 // ─── Clear basket ─────────────────────────────────────────────────────────────
 async function handleBasketClear(interaction) {
   await clearBasket(interaction.guildId, interaction.channelId);
+  await clearBasketState(interaction.guildId, interaction.channelId).catch(() => {});
   await interaction.reply({ content: '🗑️ ล้างตะกร้าสื่อแล้ว', flags: MessageFlags.Ephemeral });
 }
 
 // ─── สร้างโพสต์: open modal ───────────────────────────────────────────────────
+async function rehydrateState(interaction) {
+  const { guildId, channelId } = interaction;
+  const cfg = await getConfig(guildId);
+  const threadsCfg = await getThreadsConfig(guildId);
+  const fallbackPlatform = cfg?.igId && threadsCfg ? 'all' : cfg?.igId ? 'both' : 'fb';
+  const saved = await getBasketState(guildId, channelId);
+  const basket = await getBasket(guildId, channelId);
+  const caption = basket.find(r => r.type === 'caption')?.caption || '';
+  const state = {
+    guildId, channelId,
+    wmType:   saved?.wmType   ?? 'none',
+    platform: saved?.platform ?? fallbackPlatform,
+    caption,
+  };
+  pendingPost.set(interaction.user.id, state);
+  return state;
+}
+
 async function handleBasketPost(interaction) {
   let state = pendingPost.get(interaction.user.id);
   if (state?.posting) {
     return interaction.reply({ content: '⏳ กำลังโพสต์อยู่ กรุณารอสักครู่', flags: MessageFlags.Ephemeral });
   }
-  if (!state) {
-    const { guildId, channelId } = interaction;
-    const cfg = await getConfig(guildId);
-    const threadsCfg = await getThreadsConfig(guildId);
-    const defaultPlatform = cfg?.igId && threadsCfg ? 'all' : cfg?.igId ? 'both' : 'fb';
-    const basket = await getBasket(guildId, channelId);
-    const caption = basket.find(r => r.type === 'caption')?.caption || '';
-    state = { guildId, channelId, wmType: 'none', platform: defaultPlatform, caption };
-    pendingPost.set(interaction.user.id, state);
-  }
+  if (!state) state = await rehydrateState(interaction);
   return openScheduleModal(interaction, state.caption || '', state.platform);
 }
 
 // ─── Retry button (after date parse error) ────────────────────────────────────
 async function handleBasketRetry(interaction) {
   let state = pendingPost.get(interaction.user.id);
-  if (!state) {
-    const { guildId, channelId } = interaction;
-    const cfg = await getConfig(guildId);
-    const threadsCfg = await getThreadsConfig(guildId);
-    const defaultPlatform = cfg?.igId && threadsCfg ? 'all' : cfg?.igId ? 'both' : 'fb';
-    const basket = await getBasket(guildId, channelId);
-    const caption = basket.find(r => r.type === 'caption')?.caption || '';
-    state = { guildId, channelId, wmType: 'none', platform: defaultPlatform, caption };
-    pendingPost.set(interaction.user.id, state);
-  }
+  if (!state) state = await rehydrateState(interaction);
   return openScheduleModal(interaction, state.caption || '', state.platform);
 }
 
@@ -286,9 +303,16 @@ async function handleBasketRetry(interaction) {
 async function handleBasketSelect(interaction) {
   try {
     const state = pendingPost.get(interaction.user.id);
-    if (interaction.customId === 'basket_wm_type' && state) state.wmType   = interaction.values[0];
-    if (interaction.customId === 'basket_platform' && state) state.platform = interaction.values[0];
-    if (interaction.customId === 'basket_enhance'  && state) state.enhance  = interaction.values[0] === 'on';
+    const { guildId, channelId } = interaction;
+    if (interaction.customId === 'basket_wm_type') {
+      if (state) state.wmType = interaction.values[0];
+      await setBasketStatePartial(guildId, channelId, { wmType: interaction.values[0] }).catch(() => {});
+    }
+    if (interaction.customId === 'basket_platform') {
+      if (state) state.platform = interaction.values[0];
+      await setBasketStatePartial(guildId, channelId, { platform: interaction.values[0] }).catch(() => {});
+    }
+    if (interaction.customId === 'basket_enhance' && state) state.enhance = interaction.values[0] === 'on';
     await interaction.deferUpdate();
   } catch (err) {
     console.error('[basketSelect]', err);

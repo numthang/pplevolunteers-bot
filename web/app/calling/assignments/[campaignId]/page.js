@@ -224,7 +224,7 @@ export default function CampaignPage({ params }) {
     if (filterCalled)   p.set('called', filterCalled)
     if (filterStatus)   p.set('status', filterStatus)
     const qs = p.toString()
-    router.replace(qs ? `/calling/${campaignId}?${qs}` : `/calling/${campaignId}`, { scroll: false })
+    router.replace(qs ? `/calling/assignments/${campaignId}?${qs}` : `/calling/assignments/${campaignId}`, { scroll: false })
   }, [debouncedName, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, filterExpiry, filterCalled, filterSort, filterStatus, activeTab])
 
   const offsetRef = useRef(0)

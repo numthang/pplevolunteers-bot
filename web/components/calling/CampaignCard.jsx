@@ -49,7 +49,7 @@ export default function CampaignCard({ campaign, canCreate }) {
 
   return (
     <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg hover:border-teal dark:hover:border-teal hover:shadow-md transition h-full flex flex-col">
-      <Link href={`/calling/${campaign.id}`} className="flex-1 block p-6 group">
+      <Link href={`/calling/assignments/${campaign.id}`} className="flex-1 block p-6 group">
         <h3 className="text-base font-medium text-warm-900 dark:text-disc-text mb-2 group-hover:text-teal transition-colors line-clamp-2">
           {campaign.name}
         </h3>
@@ -84,7 +84,7 @@ export default function CampaignCard({ campaign, canCreate }) {
           )}
           {canCreate && (
             <>
-              <Link href={`/calling/edit/${campaign.id}`} className="text-base text-teal hover:underline">
+              <Link href={`/calling/campaigns/${campaign.id}/edit`} className="text-base text-teal hover:underline">
                 แก้ไข
               </Link>
               <button onClick={handleDelete} className="text-base text-red-500 dark:text-red-400 hover:underline">

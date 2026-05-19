@@ -132,7 +132,7 @@ export default function PendingCallsPage() {
     if (filterStatus)   p.set('status', filterStatus)
     if (activeTab === 'member' && filterRsvp) p.set('rsvp', filterRsvp)
     const qs = p.toString()
-    router.replace(qs ? `/calling/pending?${qs}` : '/calling/pending', { scroll: false })
+    router.replace(qs ? `/calling/assignee?${qs}` : '/calling/assignee', { scroll: false })
   }, [activeTab, filterCampaign, filterStatus, filterRsvp])
 
   useEffect(() => {

@@ -41,9 +41,9 @@ const FINANCE_LINKS = [
 ]
 
 const CALLING_LINKS = [
-  { href: '/calling',          label: 'Assignor',  icon: 'campaigns' },
-  { href: '/calling/pending',  label: 'Assignee',  icon: 'pending' },
-  { href: '/calling/stats',    label: 'Statistics',   icon: 'report' },
+  { href: '/calling/campaigns', label: 'Campaigns',  icon: 'campaigns' },
+  { href: '/calling/assignee',  label: 'Assignee',   icon: 'pending' },
+  { href: '/calling/stats',     label: 'Statistics', icon: 'report' },
 ]
 
 const CONTACTS_LINKS = [
@@ -82,7 +82,7 @@ export default function Nav({ session }) {
   const currentApp = isContactsApp ? APPS[3] : isCallingApp ? APPS[2] : isFinanceApp ? APPS[1] : APPS[0]
   const links = isContactsApp ? CONTACTS_LINKS : isCallingApp ? CALLING_LINKS : isFinanceApp ? FINANCE_LINKS : DASHBOARD_LINKS
 
-  const campaignIdMatch = pathname.match(/^\/calling\/(\d+)/)
+  const campaignIdMatch = pathname.match(/^\/calling\/assignments\/(\d+)/)
   const activeCampaignId = campaignIdMatch ? parseInt(campaignIdMatch[1]) : null
 
   useEffect(() => {
@@ -177,12 +177,12 @@ export default function Nav({ session }) {
         {/* Nav links */}
         <div className="flex items-center gap-1 ml-4">
           {visibleLinks.map(l => {
-            if (l.href === '/calling' && isCallingApp && campaigns.length > 0) {
-              const isActive = pathname === '/calling' || !!activeCampaignId
+            if (l.href === '/calling/campaigns' && isCallingApp && campaigns.length > 0) {
+              const isActive = pathname === '/calling/campaigns' || !!activeCampaignId
               return (
                 <div key={l.href} className="relative flex items-center" ref={campaignRef}>
                   <Link
-                    href="/calling"
+                    href="/calling/campaigns"
                     className={`px-3 py-1 rounded-l-md text-base transition flex items-center gap-1.5 ${isActive ? activeClass : inactiveClass}`}
                   >
                     <Ic d={ICONS[l.icon]} className="w-7 h-7 shrink-0" />
@@ -202,7 +202,7 @@ export default function Nav({ session }) {
                       {campaigns.map(c => (
                         <button
                           key={c.id}
-                          onClick={() => { setCampaignOpen(false); router.push(`/calling/${c.id}`) }}
+                          onClick={() => { setCampaignOpen(false); router.push(`/calling/assignments/${c.id}`) }}
                           className={`w-full text-left px-4 py-2.5 text-sm hover:bg-warm-50 dark:hover:bg-disc-hover transition ${
                             activeCampaignId === c.id ? 'text-teal dark:text-teal font-medium' : 'text-warm-900 dark:text-disc-muted'
                           }`}
@@ -230,7 +230,7 @@ export default function Nav({ session }) {
               >
                 <Ic d={ICONS[l.icon]} className="w-7 h-7 shrink-0" />
                 <span className="hidden md:inline">{l.label}</span>
-                {l.href === '/calling/pending' && pendingCount > 0 && (
+                {l.href === '/calling/assignee' && pendingCount > 0 && (
                   <span className="text-xs font-semibold px-2 py-1 rounded-full bg-orange text-white leading-none">
                     {pendingCount}
                   </span>
@@ -270,14 +270,14 @@ export default function Nav({ session }) {
 
                     {/* Nav links for current app */}
                     {visibleLinks.map(l => {
-                      if (l.href === '/calling' && isCallingApp && campaigns.length > 0) {
+                      if (l.href === '/calling/campaigns' && isCallingApp && campaigns.length > 0) {
                         return (
                           <div key={l.href}>
                             <Link
-                              href="/calling"
+                              href="/calling/campaigns"
                               onClick={() => setMenuOpen(false)}
                               className={`flex items-center gap-2 px-4 py-2.5 text-base transition ${
-                                pathname === '/calling' || !!activeCampaignId
+                                pathname === '/calling/campaigns' || !!activeCampaignId
                                   ? 'text-teal dark:text-teal font-medium bg-teal/10 dark:bg-teal/10'
                                   : 'text-warm-900 dark:text-disc-muted hover:bg-warm-100 dark:hover:bg-disc-hover'
                               }`}
@@ -290,7 +290,7 @@ export default function Nav({ session }) {
                               {campaigns.map(c => (
                                 <button
                                   key={c.id}
-                                  onClick={() => { setMenuOpen(false); router.push(`/calling/${c.id}`) }}
+                                  onClick={() => { setMenuOpen(false); router.push(`/calling/assignments/${c.id}`) }}
                                   className={`w-full text-left px-2 py-1.5 rounded text-base transition ${
                                     activeCampaignId === c.id
                                       ? 'text-teal dark:text-teal font-medium'
@@ -317,7 +317,7 @@ export default function Nav({ session }) {
                         >
                           <Ic d={ICONS[l.icon]} className="w-7 h-7 shrink-0" />
                           {l.label}
-                          {l.href === '/calling/pending' && pendingCount > 0 && (
+                          {l.href === '/calling/assignee' && pendingCount > 0 && (
                             <span className="ml-auto text-xs font-semibold px-2 py-1 rounded-full bg-orange text-white">
                               {pendingCount}
                             </span>

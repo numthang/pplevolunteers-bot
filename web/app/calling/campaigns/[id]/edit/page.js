@@ -65,7 +65,7 @@ export default function EditCampaignPage({ params }) {
         body: JSON.stringify({ newId: newId || null, name, description, province: province || null, event_date: eventDate || null })
       })
       if (!res.ok) throw new Error((await res.json()).error || 'Failed')
-      router.push('/calling')
+      router.push('/calling/campaigns')
     } catch (error) {
       alert('เกิดข้อผิดพลาด: ' + error.message)
     } finally {
@@ -78,7 +78,7 @@ export default function EditCampaignPage({ params }) {
 
   return (
     <div>
-      <Link href="/calling" className="text-teal hover:underline mb-6 block text-base">
+      <Link href="/calling/campaigns" className="text-teal hover:underline mb-6 block text-base">
         ← กลับ
       </Link>
 
@@ -127,7 +127,7 @@ export default function EditCampaignPage({ params }) {
               className="flex-1 bg-indigo-600 text-white py-3 rounded-lg text-base font-semibold hover:bg-indigo-700 disabled:opacity-50 transition">
               {saving ? 'กำลังบันทึก...' : 'บันทึก'}
             </button>
-            <Link href="/calling"
+            <Link href="/calling/campaigns"
               className="px-6 py-3 rounded-lg text-base font-semibold border border-gray-300 dark:border-disc-border text-gray-700 dark:text-disc-text hover:bg-gray-50 dark:hover:bg-disc-hover transition text-center">
               ยกเลิก
             </Link>

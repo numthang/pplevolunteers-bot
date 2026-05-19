@@ -193,7 +193,7 @@ export default function ContactDetailPage({ params }) {
                       {log.caller_name && <span className="text-base text-warm-500 dark:text-disc-muted">โดย {log.caller_name}</span>}
                     </div>
                     {log.campaign_name && (
-                      <Link href={`/calling/${log.campaign_id}`} className="text-sm text-teal hover:underline truncate max-w-[60%]">
+                      <Link href={`/calling/assignments/${log.campaign_id}`} className="text-sm text-teal hover:underline truncate max-w-[60%]">
                         {log.campaign_name}
                       </Link>
                     )}
