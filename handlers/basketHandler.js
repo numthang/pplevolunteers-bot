@@ -58,7 +58,7 @@ function buildBasketEmbed(imgCount, caption, previewUrl = null) {
   const embed = new EmbedBuilder()
     .setColor(0xff6a13)
     .setTitle(`🧺 ตะกร้าสื่อ — ${imgCount} รูป`);
-  if (caption) embed.setDescription(caption);
+  if (caption) embed.setDescription(caption.length > 150 ? caption.slice(0, 150) + '…' : caption);
   else embed.setDescription('*ยังไม่มี caption*');
   if (previewUrl) embed.setImage(previewUrl);
   return embed;
