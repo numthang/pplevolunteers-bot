@@ -9,7 +9,6 @@ export const metadata = {
     template: '%s — PPLE Volunteers',
   },
   description: 'PPLE Volunteers',
-  icons: { icon: '/logo.png' },
 }
 
 export default async function RootLayout({ children }) {
