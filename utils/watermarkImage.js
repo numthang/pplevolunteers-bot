@@ -107,9 +107,9 @@ async function applyWatermark(sourceBuffer, { text, imagePath, position, opacity
 
 async function autoEnhance(buffer) {
   return sharp(buffer)
-    .normalise({ lower: 2, upper: 98 })
-    .modulate({ saturation: 1.2, brightness: 1.05 })
-    .sharpen({ sigma: 0.5 })
+    .linear(1.0, 30)                  // exposure lift +30
+    .modulate({ saturation: 1.2 })
+    .sharpen({ sigma: 0.6 })
     .toBuffer();
 }
 

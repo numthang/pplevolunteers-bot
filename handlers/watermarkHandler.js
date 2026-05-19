@@ -20,9 +20,14 @@ const SUPPORTED_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp', 'image
 
 const pending = new Map(); // userId → { type, pos, opacity, messageId }
 
-function getWatermarkFiles() {
+function getWatermarkDir(guildId) {
+  const guildDir = path.join(ASSETS_DIR, guildId);
+  return fs.existsSync(guildDir) ? guildDir : ASSETS_DIR;
+}
+
+function getWatermarkFiles(guildId) {
   try {
-    return fs.readdirSync(ASSETS_DIR).filter(f => /\.(png|jpg|jpeg|webp)$/i.test(f));
+    return fs.readdirSync(getWatermarkDir(guildId)).filter(f => /\.(png|jpg|jpeg|webp)$/i.test(f));
   } catch {
     return [];
   }
@@ -116,7 +121,8 @@ async function handleWatermarkCommand(interaction) {
     });
   }
 
-  const files = getWatermarkFiles();
+  const { guildId } = interaction;
+  const files = getWatermarkFiles(guildId);
   if (files.length === 0) {
     return interaction.reply({
       content: '❌ ยังไม่มีไฟล์ลายน้ำใน `assets/watermark/` กรุณาเพิ่มไฟล์ก่อน',
@@ -126,6 +132,7 @@ async function handleWatermarkCommand(interaction) {
 
   pending.set(interaction.user.id, {
     messageId: msg.id,
+    guildId,
     type: null,
     pos: 'bottom-right',
     opacity: 0.8,
@@ -135,7 +142,7 @@ async function handleWatermarkCommand(interaction) {
 
   await interaction.reply({
     content: `🖼️ พบ **${images.length}** รูป — เลือกแบบแล้วกด ✅`,
-    components: buildComponents(files),
+    components: buildComponents(files, false),
     flags: MessageFlags.Ephemeral,
   });
 }
@@ -159,7 +166,7 @@ async function handleWatermarkEnhance(interaction) {
   const state = pending.get(interaction.user.id);
   if (!state) return interaction.deferUpdate();
   state.enhance = !state.enhance;
-  const files = getWatermarkFiles();
+  const files = getWatermarkFiles(state.guildId);
   await interaction.update({ components: buildComponents(files, state.enhance) });
 }
 
@@ -229,7 +236,7 @@ async function processWatermark(interaction, state, customText) {
   const images = getImages(msg);
   const total = images.length;
   const imagePath = state.type !== 'custom'
-    ? path.join(ASSETS_DIR, state.type)
+    ? path.join(getWatermarkDir(state.guildId), state.type)
     : null;
 
   await interaction.editReply({ content: `⏳ กำลังประมวลผล 0/${total} รูป...`, components: [] });
