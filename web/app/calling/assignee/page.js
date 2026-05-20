@@ -613,10 +613,7 @@ export default function PendingCallsPage() {
                           <span className="text-base font-medium text-warm-900 dark:text-disc-text group-hover:text-teal transition-colors truncate">
                             {displayName}
                           </span>
-                          <span
-                            className="text-xs font-semibold px-1 py-0.5 rounded flex-shrink-0"
-                            style={{ backgroundColor: tierColor.bg, color: tierColor.text }}
-                          >{tier}</span>
+                          <span className="text-xs font-bold flex-shrink-0" style={{ color: tierColor.text }}>{tier}</span>
                           {expiryIcon && <expiryIcon.Icon title={expiryIcon.title} style={{ color: expiryIcon.color }} className="w-4 h-4 flex-shrink-0 inline-block" />}
                           {catColor && <span className="text-sm px-1.5 py-0.5 rounded font-medium flex-shrink-0" style={{ background: catColor.bg, color: catColor.text }}>{CATEGORY_LABELS[item.category] || item.category}</span>}
                         </div>

@@ -352,7 +352,7 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
                       memberId={memberId}
                       contactType={isContact ? 'contact' : 'member'}
                       initialActive={isFavorite}
-                      size="lg"
+                      size="md"
                     />
                   )}
                 </div>
