@@ -666,14 +666,14 @@ export default function CampaignPage({ params }) {
       {/* Table */}
       <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg overflow-hidden">
         {/* Header */}
-        <div className="
+        <div className={`
           grid items-center px-3 py-2.5
           bg-warm-100 dark:bg-disc-header
           border-b border-warm-200 dark:border-disc-border
           text-base font-medium text-warm-500 dark:text-disc-muted
           [grid-template-columns:40px_1fr_44px]
-          md:[grid-template-columns:40px_40px_1fr_44px_120px_88px_80px]
-        ">
+          md:[grid-template-columns:40px_40px_1fr_120px_88px_80px]
+        `}>
           <input type="checkbox" checked={isAllSelected} onChange={handleSelectAll}
             className="w-6 h-6 accent-teal cursor-pointer" />
           <span className="hidden md:block">#</span>
@@ -683,9 +683,8 @@ export default function CampaignPage({ params }) {
               : `ชื่อ (${loadingInitial ? '...' : members.length})`}
           </span>
           <span className="md:hidden text-center">โทร</span>
-          <span className="hidden md:block text-center">ระดับ</span>
           <span className="hidden md:block">มอบหมาย</span>
-          <span className="hidden md:block">{activeTab === 'contact' ? 'ตำบล' : 'ตำบล'}</span>
+          <span className="hidden md:block">{activeTab === 'contact' ? 'ประเภท' : 'ตำบล'}</span>
           <span className="hidden md:block text-center">โทร</span>
         </div>
 
@@ -732,7 +731,7 @@ export default function CampaignPage({ params }) {
                     grid items-center px-3 py-3
                     hover:bg-warm-50 dark:hover:bg-disc-hover transition-colors
                     [grid-template-columns:40px_1fr_auto]
-                    md:[grid-template-columns:40px_40px_1fr_44px_120px_88px_80px]
+                    md:[grid-template-columns:40px_40px_1fr_120px_88px_80px]
                     ${isExpanded ? 'bg-warm-50 dark:bg-disc-hover' : ''}
                   `}>
                     <input type="checkbox"
@@ -745,13 +744,13 @@ export default function CampaignPage({ params }) {
                         <span className="truncate text-base font-medium text-warm-900 dark:text-disc-text">
                           {displayName}
                         </span>
-                        <span className="md:hidden shrink-0 px-1 py-px rounded text-xs font-bold"
+                        <span className="shrink-0 px-1 py-px rounded text-xs font-bold"
                           style={{ backgroundColor: tierColor.bg, color: tierColor.text }}>{tier}</span>
                         {isMember && (item.membership_type === 'ตลอดชีพ' || item.membership_type === 'สมาชิกตลอดชีพ') && (
                           <Infinity title="สมาชิกตลอดชีพ" className="w-4 h-4 shrink-0 text-green-600 dark:text-green-400" />
                         )}
                         {expiryIcon && <expiryIcon.Icon title={expiryIcon.title} style={{ color: expiryIcon.color }} className="w-4 h-4 shrink-0 inline-block" />}
-                        {catColor && <span className="shrink-0 text-sm px-1.5 py-0.5 rounded font-medium" style={{ background: catColor.bg, color: catColor.text }}>{CATEGORY_LABELS[item.category] || item.category}</span>}
+                        {catColor && <span className="md:hidden shrink-0 text-sm px-1.5 py-0.5 rounded font-medium" style={{ background: catColor.bg, color: catColor.text }}>{CATEGORY_LABELS[item.category] || item.category}</span>}
                         {!hasPhone && <span className="shrink-0 text-base text-warm-400 dark:text-disc-muted font-normal">ไม่มีเบอร์</span>}
                       </div>
                       <div className="flex items-center gap-1.5 text-base text-warm-500 dark:text-disc-text truncate">
@@ -772,24 +771,24 @@ export default function CampaignPage({ params }) {
                         </div>
                       )}
                     </div>
-                    <div className={`flex justify-center items-center pl-2 ${dimmed}`}>
-                      <div className="md:hidden">
-                        {item.total_calls > 0
-                          ? <span className="inline-flex items-center gap-1" style={{ color: STATUS_ICONS.called.color }}><PhoneCall className="w-4 h-4" /><span className="text-sm font-medium">โทรแล้ว</span></span>
-                          : item.assigned_to
-                            ? <span className="inline-flex items-center gap-1" style={{ color: STATUS_ICONS.pending.color }}><Clock className="w-4 h-4" /><span className="text-sm font-medium">รอโทร</span></span>
-                            : <span className="text-warm-300 dark:text-disc-muted text-sm">—</span>}
-                      </div>
-                      <span className="hidden md:inline-block px-1 py-px rounded text-xs font-bold"
-                        style={{ backgroundColor: tierColor.bg, color: tierColor.text }}>{tier}</span>
+                    <div className={`md:hidden flex justify-center items-center pl-2 ${dimmed}`}>
+                      {item.total_calls > 0
+                        ? <span className="inline-flex items-center gap-1" style={{ color: STATUS_ICONS.called.color }}><PhoneCall className="w-4 h-4" /><span className="text-sm font-medium">โทรแล้ว</span></span>
+                        : item.assigned_to
+                          ? <span className="inline-flex items-center gap-1" style={{ color: STATUS_ICONS.pending.color }}><Clock className="w-4 h-4" /><span className="text-sm font-medium">รอโทร</span></span>
+                          : <span className="text-warm-300 dark:text-disc-muted text-sm">—</span>}
                     </div>
                     <div className={`hidden md:block text-base truncate pr-2 ${dimmed}`}>
                       {item.assigned_to
                         ? <a href={`https://discord.com/users/${item.assigned_to}`} target="_blank" rel="noopener noreferrer" className="text-teal hover:underline">{usersMap[item.assigned_to] || item.assigned_to}</a>
                         : <span className="inline-flex items-center gap-1" style={{ color: badge.text }}><UserMinus className="w-4 h-4" /><span className="text-sm font-medium">{badge.label}</span></span>}
                     </div>
-                    <div className={`hidden md:block text-base text-warm-500 dark:text-disc-muted truncate pr-2 ${dimmed}`}>
-                      {tambon || '—'}
+                    <div className={`hidden md:block truncate pr-2 ${dimmed}`}>
+                      {activeTab === 'contact'
+                        ? (catColor
+                            ? <span className="text-sm px-1 py-px rounded font-medium" style={{ background: catColor.bg, color: catColor.text }}>{CATEGORY_LABELS[item.category] || item.category}</span>
+                            : <span className="text-warm-400 dark:text-disc-muted text-sm">—</span>)
+                        : <span className="text-base text-warm-500 dark:text-disc-muted">{tambon || '—'}</span>}
                     </div>
                     <div className={`hidden md:block text-center ${dimmed}`}>
                       {item.total_calls > 0

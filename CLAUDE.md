@@ -82,6 +82,7 @@ pple-volunteers/
 - Ask directly (casual is fine)
 - Code must be runnable / copy-paste friendly
 - No over-engineering
+- **ก่อน implement ฟีเจอร์ใหม่หรือ refactor ทุกครั้ง — ให้รัน `/scrutinize` ก่อนเสมอ** อย่าลงมือเขียน code จนกว่าจะผ่านขั้นตอนนี้
 
 ## 📖 Required Reading Before Coding
 

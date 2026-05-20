@@ -454,8 +454,12 @@ export default function PendingCallsPage() {
                   const tierColor = TIER_COLORS[tier]
                   const si = STATUS_ICONS[log.status]
                   const statusColor = CALL_STATUS_COLORS[log.status]
+                  const logMemberId = log.member_id
+                  const logContactType = log.contact_type || 'member'
+                  const isLogFav = favoriteSet.has(`${logMemberId}:${logContactType}`)
                   return (
-                    <button key={log.log_id} onClick={() => {
+                    <div key={log.log_id} className="relative group hover:bg-warm-50 dark:hover:bg-disc-hover transition">
+                    <div onClick={() => {
                       setModalItem({
                         source_id: log.contact_type === 'member' ? log.member_id : undefined,
                         id: log.contact_type === 'contact' ? log.member_id : undefined,
@@ -472,12 +476,15 @@ export default function PendingCallsPage() {
                         contact_type: log.contact_type,
                       })
                       setModalIndex(-1)
-                    }} className="w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-warm-50 dark:hover:bg-disc-hover transition">
+                    }} className="w-full text-left px-4 py-3 flex items-start gap-3 cursor-pointer">
                       <MemberAvatar item={log} size={60} />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="text-base font-medium text-warm-900 dark:text-disc-text">{log.full_name}</span>
                           <span className="text-xs font-bold shrink-0 px-1 py-px rounded" style={{ color: tierColor.text, backgroundColor: tierColor.bg }}>{tier}</span>
+                          <button onClick={e => toggleFavorite(e, logMemberId, logContactType)} className="p-0.5 flex-shrink-0" title={isLogFav ? 'ยกเลิก starred' : 'เพิ่ม starred'}>
+                            <Star className={`w-5 h-5 transition ${isLogFav ? 'fill-yellow-400 text-yellow-400' : 'text-warm-300 dark:text-disc-border'}`} />
+                          </button>
                           {si && <span className="inline-flex items-center gap-1 shrink-0" style={{ color: si.color }}><si.Icon className="w-3.5 h-3.5" /><span className="text-sm font-medium">{statusColor?.label || log.status}</span></span>}
                         </div>
                         {log.note && (
@@ -489,7 +496,8 @@ export default function PendingCallsPage() {
                           {log.called_at && <span>{new Date(log.called_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })}</span>}
                         </div>
                       </div>
-                    </button>
+                    </div>
+                    </div>
                   )
                 })}
               </div>
@@ -673,9 +681,9 @@ export default function PendingCallsPage() {
                   key={getItemKey(item)}
                   className="relative group hover:bg-warm-50 dark:hover:bg-disc-hover transition"
                 >
-                <button
+                <div
                   onClick={() => openModal(item)}
-                  className="w-full text-left px-4 py-4 pr-10"
+                  className="w-full text-left px-4 py-4 cursor-pointer"
                 >
                   {/* Mobile layout */}
                   <div className="sm:hidden">
@@ -688,7 +696,7 @@ export default function PendingCallsPage() {
                           </span>
                           <span className="text-xs font-bold flex-shrink-0 px-1 py-px rounded" style={{ color: tierColor.text, backgroundColor: tierColor.bg }}>{tier}</span>
                           <button onClick={e => toggleFavorite(e, itemMemberId, itemContactType)} className="p-0.5 flex-shrink-0" title={isFav ? 'ยกเลิก starred' : 'เพิ่ม starred'}>
-                            <Star className={`w-3.5 h-3.5 transition ${isFav ? 'fill-yellow-400 text-yellow-400' : 'text-warm-300 dark:text-disc-border'}`} />
+                            <Star className={`w-5 h-5 transition ${isFav ? 'fill-yellow-400 text-yellow-400' : 'text-warm-300 dark:text-disc-border'}`} />
                           </button>
                           {expiryIcon && <expiryIcon.Icon title={expiryIcon.title} style={{ color: expiryIcon.color }} className="w-4 h-4 flex-shrink-0 inline-block" />}
                           {catColor && <span className="text-sm px-1 py-px rounded font-medium flex-shrink-0" style={{ background: catColor.bg, color: catColor.text }}>{CATEGORY_LABELS[item.category] || item.category}</span>}
@@ -736,7 +744,7 @@ export default function PendingCallsPage() {
                           </span>
                           <span className="text-xs font-bold flex-shrink-0 px-1 py-px rounded" style={{ color: tierColor.text, backgroundColor: tierColor.bg }}>{tier}</span>
                           <button onClick={e => toggleFavorite(e, itemMemberId, itemContactType)} className="p-0.5 flex-shrink-0" title={isFav ? 'ยกเลิก starred' : 'เพิ่ม starred'}>
-                            <Star className={`w-3.5 h-3.5 transition ${isFav ? 'fill-yellow-400 text-yellow-400' : 'text-warm-300 dark:text-disc-border'}`} />
+                            <Star className={`w-5 h-5 transition ${isFav ? 'fill-yellow-400 text-yellow-400' : 'text-warm-300 dark:text-disc-border'}`} />
                           </button>
                           {expiryIcon && <expiryIcon.Icon title={expiryIcon.title} style={{ color: expiryIcon.color }} className="w-4 h-4 flex-shrink-0 inline-block" />}
                         </div>
@@ -777,7 +785,7 @@ export default function PendingCallsPage() {
                       })()}
                     </div>
                   </div>
-                </button>
+                </div>
                 </div>
               )
             })}
@@ -793,6 +801,15 @@ export default function PendingCallsPage() {
         onSave={handleSave}
         onSaveAndNext={handleSaveAndNext}
         hasNext={hasNext}
+        onStarChange={(memberId, contactType, isActive) => {
+          const key = `${memberId}:${contactType}`
+          setFavoriteSet(prev => {
+            const next = new Set(prev)
+            isActive ? next.add(key) : next.delete(key)
+            return next
+          })
+          setStarredVersion(v => v + 1)
+        }}
       />
 
       {pdpaKey && <PdpaAgreementModal storageKey={pdpaKey} />}

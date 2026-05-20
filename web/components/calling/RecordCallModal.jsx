@@ -193,7 +193,7 @@ function formatEventDate(dateStr) {
   return result
 }
 
-export default function RecordCallModal({ isOpen, member, contact_type = 'member', onClose, onSave, onSaveAndNext, hasNext }) {
+export default function RecordCallModal({ isOpen, member, contact_type = 'member', onClose, onSave, onSaveAndNext, hasNext, onStarChange }) {
   const { data: session } = useSession()
   const { roles: effectiveRoles, discordId: effectiveDiscordId } = useEffectiveRoles(session)
   const isModerator = MODERATOR_ROLES.some(r => effectiveRoles.includes(r))
@@ -366,6 +366,7 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
                       contactType={isContact ? 'contact' : 'member'}
                       initialActive={isFavorite}
                       size="md"
+                      onChange={(isActive) => onStarChange?.(memberId, isContact ? 'contact' : 'member', isActive)}
                     />
                   )}
                 </div>
