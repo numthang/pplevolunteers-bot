@@ -7,7 +7,7 @@ import { useEffectiveRoles } from '@/lib/useEffectiveRoles.js'
 import SplitModal from '@/components/calling/SplitModal.jsx'
 import SmsModal from '@/components/calling/SmsModal.jsx'
 import { CALL_STATUS_COLORS } from '@/lib/callingStatusColors.js'
-import { PhoneCall, PhoneOff, Clock, Minus, Users, MessageSquare, AlertTriangle, Timer, UserMinus } from 'lucide-react'
+import { PhoneCall, PhoneOff, Clock, Minus, Users, MessageSquare, AlertTriangle, Timer, UserMinus, Infinity } from 'lucide-react'
 
 const STATUS_ICONS = {
   pending:       { Icon: Clock,         color: '#ff9800' },
@@ -28,7 +28,7 @@ const SMS_ROLES = ['Admin', 'เลขาธิการ', 'ผู้ประ�
 const EDIT_STATUS_OPTIONS = [
   { value: 'answered',   label: 'รับสาย' },
   { value: 'no_answer',  label: 'ไม่รับ' },
-  { value: 'not_called', label: 'ไม่ได้โทร' },
+  { value: 'not_called', label: 'ไม่โทร' },
 ]
 const URL_RE_PAGE = /https?:\/\/[^\s]+/g
 function parseLinksPage(text) {
@@ -742,13 +742,13 @@ export default function CampaignPage({ params }) {
                     <span className={`hidden md:block text-sm tabular-nums text-warm-400 dark:text-disc-muted ${dimmed}`}>{idx + 1}</span>
                     <div className={`min-w-0 pr-2 cursor-pointer ${dimmed}`} onClick={() => handleExpand(itemId)}>
                       <div className="flex items-center gap-1.5 truncate">
-                        <span className="md:hidden shrink-0 px-1.5 py-0.5 rounded text-sm font-semibold"
-                          style={{ backgroundColor: tierColor.bg, color: tierColor.text }}>{tier}</span>
                         <span className="truncate text-base font-medium text-warm-900 dark:text-disc-text">
                           {displayName}
                         </span>
+                        <span className="md:hidden shrink-0 px-1 py-px rounded text-xs font-bold"
+                          style={{ backgroundColor: tierColor.bg, color: tierColor.text }}>{tier}</span>
                         {isMember && (item.membership_type === 'ตลอดชีพ' || item.membership_type === 'สมาชิกตลอดชีพ') && (
-                          <span className="shrink-0 text-base font-medium px-1.5 py-0.5 rounded bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400">ตลอดชีพ</span>
+                          <Infinity title="สมาชิกตลอดชีพ" className="w-4 h-4 shrink-0 text-green-600 dark:text-green-400" />
                         )}
                         {expiryIcon && <expiryIcon.Icon title={expiryIcon.title} style={{ color: expiryIcon.color }} className="w-4 h-4 shrink-0 inline-block" />}
                         {catColor && <span className="shrink-0 text-sm px-1.5 py-0.5 rounded font-medium" style={{ background: catColor.bg, color: catColor.text }}>{CATEGORY_LABELS[item.category] || item.category}</span>}
@@ -780,7 +780,7 @@ export default function CampaignPage({ params }) {
                             ? <span className="inline-flex items-center gap-1" style={{ color: STATUS_ICONS.pending.color }}><Clock className="w-4 h-4" /><span className="text-sm font-medium">รอโทร</span></span>
                             : <span className="text-warm-300 dark:text-disc-muted text-sm">—</span>}
                       </div>
-                      <span className="hidden md:inline-block px-1.5 py-0.5 rounded text-base font-semibold"
+                      <span className="hidden md:inline-block px-1 py-px rounded text-xs font-bold"
                         style={{ backgroundColor: tierColor.bg, color: tierColor.text }}>{tier}</span>
                     </div>
                     <div className={`hidden md:block text-base truncate pr-2 ${dimmed}`}>
@@ -861,15 +861,19 @@ export default function CampaignPage({ params }) {
                                 {isEditing ? (
                                   <div className="space-y-2">
                                     <div className="flex flex-wrap gap-1.5">
-                                      {EDIT_STATUS_OPTIONS.map(opt => (
+                                      {EDIT_STATUS_OPTIONS.map(opt => {
+                                        const si = STATUS_ICONS[opt.value]
+                                        return (
                                         <button key={opt.value} type="button" onClick={() => setEditStatus(opt.value)}
-                                          className="px-2.5 py-1 rounded text-base border transition"
+                                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-sm border transition"
                                           style={editStatus === opt.value
                                             ? { backgroundColor: CALL_STATUS_COLORS[opt.value]?.bg, color: CALL_STATUS_COLORS[opt.value]?.text, borderColor: CALL_STATUS_COLORS[opt.value]?.text }
                                             : {}}>
+                                          {si && <si.Icon className="w-3.5 h-3.5 shrink-0" />}
                                           {opt.label}
                                         </button>
-                                      ))}
+                                        )
+                                      })}
                                     </div>
                                     <textarea rows={2} value={editNote} onChange={e => setEditNote(e.target.value)}
                                       className="w-full border dark:border-disc-border rounded px-2 py-1.5 text-base bg-card-bg text-warm-900 dark:text-disc-text resize-none" />

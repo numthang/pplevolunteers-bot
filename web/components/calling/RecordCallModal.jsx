@@ -6,7 +6,7 @@ import { useEffectiveRoles } from '@/lib/useEffectiveRoles.js'
 import { CALL_STATUS_COLORS } from '@/lib/callingStatusColors.js'
 import { SIGNALS, SIGNAL_OPTIONS, findSignalLabel } from '@/lib/callingSignals.js'
 import SmsModal from '@/components/calling/SmsModal.jsx'
-import FavoriteStar from '@/components/calling/FavoriteStar.jsx'
+import StarredStar from '@/components/calling/StarredStar.jsx'
 import { buildSmsTemplate } from '@/lib/buildSmsTemplate.js'
 import { PhoneCall, PhoneOff, Clock, Minus, Users, MessageSquare, AlertTriangle, Timer } from 'lucide-react'
 
@@ -27,7 +27,7 @@ const MODERATOR_ROLES = ['Admin', 'เลขาธิการ', 'Moderator']
 const CALL_STATUS_OPTIONS = [
   { value: 'answered',   label: 'รับสาย', icon: '📞', color: '#0d9e94', bg: '#e1f5f4' },
   { value: 'no_answer',  label: 'ไม่รับ',  icon: '📵', color: '#854f0b', bg: '#faeeda' },
-  { value: 'not_called', label: 'ไม่ได้โทร', icon: '📝', color: '#6b7280', bg: '#f3f4f6' },
+  { value: 'not_called', label: 'ไม่โทร', icon: '📝', color: '#6b7280', bg: '#f3f4f6' },
 ]
 
 const NOTE_PLACEHOLDER = {
@@ -210,17 +210,20 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
   const [editStatus, setEditStatus] = useState('')
   const [editNote, setEditNote] = useState('')
   const [isFavorite, setIsFavorite] = useState(false)
+  const [isFavLoaded, setIsFavLoaded] = useState(false)
 
   const memberId = member?.source_id || member?.id
   const isContact = contact_type === 'contact'
 
   useEffect(() => {
-    if (!isOpen || !memberId) return
+    if (!isOpen || !memberId) { setIsFavorite(false); setIsFavLoaded(false); return }
+    setIsFavorite(false)
+    setIsFavLoaded(false)
     const params = new URLSearchParams({ idsOnly: 'true', contactType: isContact ? 'contact' : 'member' })
-    fetch(`/api/calling/favorites?${params}`)
+    fetch(`/api/calling/starred?${params}`)
       .then(r => r.json())
-      .then(d => setIsFavorite((d.data || []).includes(String(memberId))))
-      .catch(() => setIsFavorite(false))
+      .then(d => { setIsFavorite((d.data || []).includes(String(memberId))); setIsFavLoaded(true) })
+      .catch(() => { setIsFavorite(false); setIsFavLoaded(true) })
   }, [memberId, isOpen, isContact])
 
   const loadHistory = useCallback(() => {
@@ -295,7 +298,11 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
   const tier = member.tier || 'D'
   const tierColor = TIER_COLORS[tier]
   const displayName = member.full_name || [member.first_name, member.last_name].filter(Boolean).join(' ') || '?'
-  const avatarChar = displayName[0] || '?'
+  const avatarSize = 60
+  const avatarParts = displayName.trim().split(/\s+/).filter(Boolean)
+  const avatarInitials = avatarParts.length >= 2
+    ? (avatarParts[0][0] + avatarParts[avatarParts.length - 1][0]).toUpperCase()
+    : (avatarParts[0] || '?').slice(0, 2).toUpperCase()
   const phone = member.mobile_number || member.phone
   const locationStr = [
     member.home_district || member.tambon,
@@ -333,12 +340,18 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
 
             {/* Name + tier */}
             <div className="flex items-center gap-3 pb-4 border-b border-warm-200 dark:border-disc-border">
-              <div
-                className="w-11 h-11 rounded-full flex items-center justify-center text-base font-semibold flex-shrink-0"
-                style={{ backgroundColor: tierColor.bg, color: tierColor.text }}
-              >
-                {avatarChar}
-              </div>
+              {member.discord_avatar ? (
+                <img src={member.discord_avatar} alt={displayName}
+                  className="rounded-full object-cover flex-shrink-0"
+                  style={{ width: avatarSize, height: avatarSize }} />
+              ) : (
+                <div
+                  className="rounded-full flex items-center justify-center font-bold flex-shrink-0 select-none"
+                  style={{ width: avatarSize, height: avatarSize, fontSize: Math.round(avatarSize * 0.36), backgroundColor: tierColor.bg, color: tierColor.text }}
+                >
+                  {avatarInitials}
+                </div>
+              )}
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <span className="font-semibold text-lg text-warm-900 dark:text-disc-text truncate">{displayName}</span>
@@ -346,8 +359,8 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
                     style={{ backgroundColor: tierColor.bg, color: tierColor.text }}>{tier}</span>
                   {expiryIcon && <expiryIcon.Icon title={expiryIcon.title} style={{ color: expiryIcon.color }} className="w-4 h-4 flex-shrink-0 inline-block" />}
                   {member.source_id && <span className="text-base text-warm-300 dark:text-disc-muted flex-shrink-0">#{member.source_id}</span>}
-                  {memberId && (
-                    <FavoriteStar
+                  {memberId && isFavLoaded && (
+                    <StarredStar
                       key={`${memberId}-${isContact}`}
                       memberId={memberId}
                       contactType={isContact ? 'contact' : 'member'}
@@ -491,15 +504,20 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
                         {isEditing ? (
                           <div className="mt-2 space-y-2">
                             <div className="flex flex-wrap gap-1.5">
-                              {CALL_STATUS_OPTIONS.map(opt => (
+                              {CALL_STATUS_OPTIONS.map(opt => {
+                                const si = STATUS_ICONS[opt.value]
+                                return (
                                 <button key={opt.value} type="button" onClick={() => setEditStatus(opt.value)}
-                                  className="px-2.5 py-1 rounded text-base border transition"
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-sm border transition"
                                   style={editStatus === opt.value
                                     ? { backgroundColor: CALL_STATUS_COLORS[opt.value]?.bg, color: CALL_STATUS_COLORS[opt.value]?.text, borderColor: CALL_STATUS_COLORS[opt.value]?.text }
                                     : {}}>
+                                  {si && <si.Icon className="w-4 h-4 shrink-0" />}
                                   {opt.label}
                                 </button>
-                              ))}
+                              )
+                              })}
+
                             </div>
                             <textarea rows={2} value={editNote} onChange={e => setEditNote(e.target.value)}
                               className="w-full border dark:border-disc-border rounded px-2 py-1.5 text-base bg-card-bg text-warm-900 dark:text-disc-text resize-none" />

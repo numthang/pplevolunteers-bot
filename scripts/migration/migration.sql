@@ -155,4 +155,7 @@ ALTER TABLE calling_logs ADD COLUMN IF NOT EXISTS caller_image TEXT NULL AFTER c
 -- 2026-05-20: dc_members — เพิ่ม avatar เก็บ Discord CDN URL ของ member (update ทุกครั้งที่ login)
 ALTER TABLE dc_members ADD COLUMN IF NOT EXISTS avatar TEXT NULL AFTER display_name;
 
+-- 2026-05-20: เปลี่ยนชื่อ calling_favorites → calling_starred
+RENAME TABLE calling_favorites TO calling_starred;
+
 

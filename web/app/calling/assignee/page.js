@@ -8,13 +8,13 @@ import { useSession } from 'next-auth/react'
 import { useEffectiveRoles } from '@/lib/useEffectiveRoles.js'
 import { CALL_STATUS_COLORS } from '@/lib/callingStatusColors.js'
 import { CATEGORY_LABELS, CATEGORY_COLORS } from '@/../config/callingCategories.js'
-import { PhoneCall, PhoneOff, Clock, Minus, Users, MessageSquare, AlertTriangle, Timer } from 'lucide-react'
+import { PhoneCall, PhoneOff, Clock, Minus, Users, MessageSquare, AlertTriangle, Timer, Star, IdCard, BookUser, History } from 'lucide-react'
 
 const MODERATOR_ROLES = ['Admin', 'เลขาธิการ', 'Moderator']
 const EDIT_STATUS_OPTIONS = [
   { value: 'answered',   label: 'รับสาย' },
   { value: 'no_answer',  label: 'ไม่รับ' },
-  { value: 'not_called', label: 'ไม่ได้โทร' },
+  { value: 'not_called', label: 'ไม่โทร' },
 ]
 
 const TIER_COLORS = {
@@ -45,7 +45,7 @@ const STATUS_ICONS = {
   called:        { Icon: PhoneCall,     color: '#0d9e94',  title: 'โทรแล้ว' },
   answered:      { Icon: PhoneCall,     color: '#0d9e94',  title: 'รับสาย' },
   no_answer:     { Icon: PhoneOff,      color: '#854f0b',  title: 'ไม่รับ' },
-  not_called:    { Icon: Minus,         color: '#9ca3af',  title: 'ข้าม' },
+  not_called:    { Icon: Minus,         color: '#9ca3af',  title: 'ไม่โทร' },
   met:           { Icon: Users,         color: '#1a5e2d',  title: 'พบปะ' },
   sms_sent:      { Icon: MessageSquare, color: '#4338ca',  title: 'ส่ง SMS' },
   sms_delivered: { Icon: MessageSquare, color: '#1d4ed8',  title: 'SMS ถึง' },
@@ -87,8 +87,8 @@ function MemberAvatar({ item, size = 36 }) {
     )
   }
   return (
-    <div className="rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 select-none"
-      style={{ width: size, height: size, backgroundColor: tc.bg, color: tc.text }}>
+    <div className="rounded-full flex items-center justify-center font-bold flex-shrink-0 select-none"
+      style={{ width: size, height: size, fontSize: Math.round(size * 0.36), backgroundColor: tc.bg, color: tc.text }}>
       {initials}
     </div>
   )
@@ -114,11 +114,14 @@ export default function PendingCallsPage() {
   const [historyLoading, setHistoryLoading] = useState(false)
   const [historySearch, setHistorySearch] = useState('')
   const [debouncedHistorySearch, setDebouncedHistorySearch] = useState('')
-  const [expandedHistoryId, setExpandedHistoryId] = useState(null)
-  const [historyLogsCache, setHistoryLogsCache] = useState({})
-  const [editingLogId, setEditingLogId] = useState(null)
-  const [editStatus, setEditStatus] = useState('')
-  const [editNote, setEditNote] = useState('')
+  const [historyVersion, setHistoryVersion] = useState(0)
+
+  const [starredItems, setStarredItems] = useState([])
+  const [starredLoading, setStarredLoading] = useState(false)
+  const [starredSearch, setStarredSearch] = useState('')
+  const [debouncedStarredSearch, setDebouncedStarredSearch] = useState('')
+  const [starredVersion, setStarredVersion] = useState(0)
+  const [favoriteSet, setFavoriteSet] = useState(new Set())
 
   const { data: session } = useSession()
   const { roles: effectiveRoles, discordId: effectiveDiscordId } = useEffectiveRoles(session)
@@ -133,32 +136,45 @@ export default function PendingCallsPage() {
   }, [historySearch])
 
   useEffect(() => {
+    const t = setTimeout(() => setDebouncedStarredSearch(starredSearch), 400)
+    return () => clearTimeout(t)
+  }, [starredSearch])
+
+  useEffect(() => {
     if (activeTab !== 'history') return
     setHistoryLoading(true)
-    const p = new URLSearchParams({ history: 'true', limit: '50' })
+    const p = new URLSearchParams({ history: 'true', flat: 'true', limit: '60' })
     if (debouncedHistorySearch) p.set('name', debouncedHistorySearch)
     fetch(`/api/calling/pending?${p}`)
       .then(r => r.json())
       .then(d => setHistoryItems(d.data || []))
       .catch(() => {})
       .finally(() => setHistoryLoading(false))
-  }, [activeTab, debouncedHistorySearch])
+  }, [activeTab, debouncedHistorySearch, historyVersion])
 
-  const handleHistoryExpand = async (memberId) => {
-    const next = expandedHistoryId === memberId ? null : memberId
-    setExpandedHistoryId(next)
-    if (next && !historyLogsCache[next]) {
-      const res = await fetch(`/api/calling/logs?memberId=${next}`)
-      const data = await res.json()
-      setHistoryLogsCache(prev => ({ ...prev, [next]: data.data || [] }))
-    }
-  }
+  useEffect(() => {
+    if (activeTab !== 'starred') return
+    setStarredLoading(true)
+    const p = new URLSearchParams({ display: 'true', limit: '100' })
+    if (debouncedStarredSearch) p.set('name', debouncedStarredSearch)
+    fetch(`/api/calling/starred?${p}`)
+      .then(r => r.json())
+      .then(d => setStarredItems(d.data || []))
+      .catch(() => {})
+      .finally(() => setStarredLoading(false))
+  }, [activeTab, debouncedStarredSearch, starredVersion])
 
-  const reloadHistoryLogs = async (memberId) => {
-    const res = await fetch(`/api/calling/logs?memberId=${memberId}`)
-    const data = await res.json()
-    setHistoryLogsCache(prev => ({ ...prev, [memberId]: data.data || [] }))
-  }
+  useEffect(() => {
+    Promise.all([
+      fetch('/api/calling/starred?idsOnly=true&contactType=member').then(r => r.json()),
+      fetch('/api/calling/starred?idsOnly=true&contactType=contact').then(r => r.json()),
+    ]).then(([m, c]) => {
+      const s = new Set()
+      ;(m.data || []).forEach(id => s.add(`${id}:member`))
+      ;(c.data || []).forEach(id => s.add(`${id}:contact`))
+      setFavoriteSet(s)
+    }).catch(() => {})
+  }, [starredVersion])
 
   // sync URL
   useEffect(() => {
@@ -204,6 +220,35 @@ export default function PendingCallsPage() {
     fetchItems(activeTab, filterCampaign, filterStatus, filterRsvp)
   }, [activeTab, filterCampaign, filterStatus, filterRsvp, fetchItems])
 
+  const toggleFavorite = useCallback(async (e, memberId, contactType) => {
+    e.stopPropagation()
+    const key = `${memberId}:${contactType}`
+    const isFav = favoriteSet.has(key)
+    setFavoriteSet(prev => {
+      const next = new Set(prev)
+      isFav ? next.delete(key) : next.add(key)
+      return next
+    })
+    try {
+      if (isFav) {
+        await fetch(`/api/calling/starred?memberId=${memberId}&contactType=${contactType}`, { method: 'DELETE' })
+      } else {
+        await fetch('/api/calling/starred', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ memberId: String(memberId), contactType }),
+        })
+      }
+      setStarredVersion(v => v + 1)
+    } catch {
+      setFavoriteSet(prev => {
+        const next = new Set(prev)
+        isFav ? next.add(key) : next.delete(key)
+        return next
+      })
+    }
+  }, [favoriteSet])
+
   const switchTab = (tab) => {
     if (tab === activeTab) return
     setActiveTab(tab)
@@ -215,9 +260,10 @@ export default function PendingCallsPage() {
     setModalIndex(-1)
     setHistorySearch('')
     setDebouncedHistorySearch('')
-    setExpandedHistoryId(null)
-    setHistoryLogsCache({})
     setHistoryItems([])
+    setStarredSearch('')
+    setDebouncedStarredSearch('')
+    setStarredItems([])
   }
 
   const openModal = (item) => {
@@ -287,7 +333,9 @@ export default function PendingCallsPage() {
     try {
       await submitLog(payload)
       closeModal()
-      fetchItems(activeTab, filterCampaign, filterStatus, filterRsvp)
+      if (activeTab === 'history') setHistoryVersion(v => v + 1)
+      else if (activeTab === 'starred') setStarredVersion(v => v + 1)
+      else fetchItems(activeTab, filterCampaign, filterStatus, filterRsvp)
     } catch (err) {
       alert(err.message)
       throw err
@@ -335,6 +383,7 @@ export default function PendingCallsPage() {
       <div className="flex gap-1 mb-4 border-b border-warm-200 dark:border-disc-border">
         {['member', 'contact'].map(tab => {
           const count = tabCounts[tab]
+          const TabIcon = tab === 'member' ? IdCard : BookUser
           return (
             <button key={tab} onClick={() => switchTab(tab)}
               className={`px-4 py-2 text-base font-medium border-b-2 -mb-px transition-colors flex items-center gap-1.5 ${
@@ -342,7 +391,8 @@ export default function PendingCallsPage() {
                   ? 'border-teal text-teal'
                   : 'border-transparent text-warm-500 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text'
               }`}>
-              {tab === 'member' ? 'Member' : 'Contact'}
+              <TabIcon className="w-4 h-4 shrink-0" />
+              <span className="hidden sm:inline">{tab === 'member' ? 'Member' : 'Contact'}</span>
               {count !== null && (
                 <span className={`text-sm px-1.5 py-0.5 rounded-full font-normal ${
                   activeTab === tab
@@ -354,12 +404,29 @@ export default function PendingCallsPage() {
           )
         })}
         <button onClick={() => switchTab('history')}
-          className={`px-4 py-2 text-base font-medium border-b-2 -mb-px transition-colors ${
+          className={`px-4 py-2 text-base font-medium border-b-2 -mb-px transition-colors flex items-center gap-1.5 ${
             activeTab === 'history'
               ? 'border-teal text-teal'
               : 'border-transparent text-warm-500 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text'
           }`}>
-          History
+          <History className="w-4 h-4 shrink-0" />
+          <span className="hidden sm:inline">History</span>
+        </button>
+        <button onClick={() => switchTab('starred')}
+          className={`px-4 py-2 text-base font-medium border-b-2 -mb-px transition-colors flex items-center gap-1.5 ${
+            activeTab === 'starred'
+              ? 'border-teal text-teal'
+              : 'border-transparent text-warm-500 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text'
+          }`}>
+          <Star className="w-4 h-4 shrink-0" />
+          <span className="hidden sm:inline">Starred</span>
+          {favoriteSet.size > 0 && (
+            <span className={`text-sm px-1.5 py-0.5 rounded-full font-normal ${
+              activeTab === 'starred'
+                ? 'bg-teal/10 text-teal'
+                : 'bg-warm-100 dark:bg-disc-header text-warm-500 dark:text-disc-muted'
+            }`}>{favoriteSet.size}</span>
+          )}
         </button>
       </div>
 
@@ -382,127 +449,126 @@ export default function PendingCallsPage() {
           ) : (
             <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl overflow-hidden">
               <div className="divide-y divide-warm-200 dark:divide-disc-border">
-                {historyItems.map(item => {
+                {historyItems.map(log => {
+                  const tier = log.tier || 'D'
+                  const tierColor = TIER_COLORS[tier]
+                  const si = STATUS_ICONS[log.status]
+                  const statusColor = CALL_STATUS_COLORS[log.status]
+                  return (
+                    <button key={log.log_id} onClick={() => {
+                      setModalItem({
+                        source_id: log.contact_type === 'member' ? log.member_id : undefined,
+                        id: log.contact_type === 'contact' ? log.member_id : undefined,
+                        full_name: log.full_name,
+                        mobile_number: log.mobile_number,
+                        home_district: log.home_district,
+                        home_amphure: log.home_amphure,
+                        home_province: log.home_province,
+                        discord_avatar: log.discord_avatar,
+                        discord_id: log.discord_id,
+                        tier: log.tier,
+                        campaign_id: log.campaign_id || 0,
+                        campaign_name: log.campaign_name,
+                        contact_type: log.contact_type,
+                      })
+                      setModalIndex(-1)
+                    }} className="w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-warm-50 dark:hover:bg-disc-hover transition">
+                      <MemberAvatar item={log} size={60} />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-base font-medium text-warm-900 dark:text-disc-text">{log.full_name}</span>
+                          <span className="text-xs font-bold shrink-0 px-1 py-px rounded" style={{ color: tierColor.text, backgroundColor: tierColor.bg }}>{tier}</span>
+                          {si && <span className="inline-flex items-center gap-1 shrink-0" style={{ color: si.color }}><si.Icon className="w-3.5 h-3.5" /><span className="text-sm font-medium">{statusColor?.label || log.status}</span></span>}
+                        </div>
+                        {log.note && (
+                          <div className="text-sm text-warm-800 dark:text-disc-text mt-0.5 italic">"{log.note}"</div>
+                        )}
+                        <div className="text-sm text-warm-400 dark:text-disc-muted mt-0.5 flex items-center gap-1.5 flex-wrap">
+                          {log.campaign_name && <span>{log.campaign_name}</span>}
+                          {log.campaign_name && log.called_at && <span>·</span>}
+                          {log.called_at && <span>{new Date(log.called_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })}</span>}
+                        </div>
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Starred tab */}
+      {activeTab === 'starred' && (
+        <div>
+          <input
+            type="text"
+            value={starredSearch}
+            onChange={e => setStarredSearch(e.target.value)}
+            placeholder="ค้นหาชื่อหรือเบอร์..."
+            className="w-full h-11 px-3 text-base border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted rounded-lg focus:outline-none focus:ring-2 focus:ring-teal mb-4"
+          />
+          {starredLoading ? (
+            <div className="py-20 text-center text-warm-400 dark:text-disc-muted text-base">กำลังโหลด...</div>
+          ) : starredItems.length === 0 ? (
+            <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl py-16 text-center text-warm-400 dark:text-disc-muted text-base">
+              {starredSearch ? 'ไม่พบผลลัพธ์' : 'ยังไม่มีรายการที่ starred'}
+            </div>
+          ) : (
+            <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl overflow-hidden">
+              <div className="divide-y divide-warm-200 dark:divide-disc-border">
+                {starredItems.map(item => {
                   const tier = item.tier || 'D'
                   const tierColor = TIER_COLORS[tier]
-                  const isExpanded = expandedHistoryId === item.source_id
-                  const logs = historyLogsCache[item.source_id]
+                  const isContact = item.contact_type === 'contact'
+                  const catColor = isContact && item.category ? (CATEGORY_COLORS[item.category] || CATEGORY_COLORS.other) : null
                   return (
-                    <div key={item.source_id}>
+                    <div key={`${item.contact_type}-${item.member_id}`} className="flex items-center hover:bg-warm-50 dark:hover:bg-disc-hover transition">
                       <button
-                        onClick={() => handleHistoryExpand(item.source_id)}
-                        className={`w-full text-left px-4 py-3 hover:bg-warm-50 dark:hover:bg-disc-hover transition ${isExpanded ? 'bg-warm-50 dark:bg-disc-hover' : ''}`}
+                        onClick={() => {
+                          setModalItem({
+                            source_id: !isContact ? item.member_id : undefined,
+                            id: isContact ? item.member_id : undefined,
+                            full_name: item.full_name,
+                            mobile_number: item.mobile_number,
+                            home_district: item.home_district,
+                            home_amphure: item.home_amphure,
+                            home_province: item.home_province,
+                            discord_avatar: item.discord_avatar,
+                            discord_id: item.discord_id,
+                            tier: item.tier,
+                            membership_type: item.membership_type,
+                            campaign_id: 0,
+                            contact_type: item.contact_type,
+                          })
+                          setModalIndex(-1)
+                        }}
+                        className="flex-1 text-left px-4 py-3 flex items-start gap-3 min-w-0"
                       >
-                        <div className="flex items-start gap-3">
-                          <span className="mt-0.5 text-sm font-semibold px-1.5 py-0.5 rounded flex-shrink-0"
-                            style={{ backgroundColor: tierColor.bg, color: tierColor.text }}>{tier}</span>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="text-base font-medium text-warm-900 dark:text-disc-text">{item.full_name}</span>
-                            </div>
-                            <div className="text-sm text-warm-400 dark:text-disc-muted mt-0.5">
-                              {item.latest_campaign_name && <span>{item.latest_campaign_name} · </span>}
-                              {item.latest_called_at && new Date(item.latest_called_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })}
-                              <span className="ml-1">({item.total_calls} ครั้ง)</span>
-                            </div>
-                            {item.latest_note && (
-                              <div className="text-sm text-warm-600 dark:text-disc-text mt-0.5 italic truncate">"{item.latest_note}"</div>
-                            )}
+                        <MemberAvatar item={item} size={60} />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-base font-medium text-warm-900 dark:text-disc-text">{item.full_name}</span>
+                            <span className="text-xs font-bold shrink-0 px-1 py-px rounded" style={{ color: tierColor.text, backgroundColor: tierColor.bg }}>{tier}</span>
+                            {catColor && <span className="text-sm px-1 py-px rounded font-medium shrink-0" style={{ background: catColor.bg, color: catColor.text }}>{CATEGORY_LABELS[item.category] || item.category}</span>}
                           </div>
-                          <span className="text-warm-400 dark:text-disc-muted text-lg flex-shrink-0">{isExpanded ? '▲' : '▼'}</span>
+                          <div className="flex items-center gap-1.5 text-base truncate mt-0.5">
+                            {item.mobile_number && <span className="text-teal font-medium">{item.mobile_number}</span>}
+                            {item.mobile_number && item.home_amphure && <span className="text-warm-300 dark:text-disc-muted/40">·</span>}
+                            {item.home_amphure && <span className="text-warm-400 dark:text-disc-muted truncate">{item.home_amphure}</span>}
+                          </div>
+                          {item.fav_note && (
+                            <div className="text-sm text-warm-500 dark:text-disc-muted mt-0.5 italic">"{item.fav_note}"</div>
+                          )}
                         </div>
                       </button>
-                      {isExpanded && (
-                        <div className="px-4 py-2 bg-warm-50 dark:bg-disc-hover border-t border-warm-200 dark:border-disc-border">
-                          {item.mobile_number && (
-                            <div className="mb-2">
-                              <a href={`tel:${item.mobile_number}`} className="text-base text-teal font-medium">{item.mobile_number}</a>
-                            </div>
-                          )}
-                          {logs === undefined ? (
-                            <div className="text-sm text-warm-400 dark:text-disc-muted py-1">กำลังโหลด...</div>
-                          ) : logs.length === 0 ? (
-                            <div className="text-sm text-warm-400 dark:text-disc-muted py-1">ไม่มีประวัติ</div>
-                          ) : (
-                            <div className="space-y-1">
-                              {logs.map(log => {
-                                const logColor = CALL_STATUS_COLORS[log.status] || { bg: '#f3f4f6', text: '#6b7280', label: log.status }
-                                const canEdit = log.called_by === effectiveDiscordId || isModerator
-                                const isEditing = editingLogId === log.id
-                                return (
-                                  <div key={log.id} className="py-0.5">
-                                    {!isEditing && (
-                                      <div className="flex flex-col gap-0.5">
-                                        <div className="flex items-center gap-1">
-                                          {(() => { const si = STATUS_ICONS[log.status]; return si ? <span className="inline-flex items-center gap-1 flex-1" style={{ color: si.color }}><si.Icon className="w-4 h-4" /><span className="text-sm font-medium">{logColor.label}</span></span> : <span className="flex-1" /> })()}
-                                          {canEdit && (
-                                            <button onClick={() => { setEditingLogId(log.id); setEditStatus(log.status); setEditNote(log.note || '') }}
-                                              className="p-0.5 rounded text-warm-400 hover:text-teal transition shrink-0">
-                                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                                            </button>
-                                          )}
-                                          {isModerator && (
-                                            <button onClick={async () => {
-                                              if (!confirm('ลบ log นี้?')) return
-                                              await fetch(`/api/calling/logs?id=${log.id}`, { method: 'DELETE' })
-                                              reloadHistoryLogs(item.source_id)
-                                            }} className="p-0.5 rounded text-warm-400 hover:text-red-500 transition shrink-0">
-                                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
-                                            </button>
-                                          )}
-                                        </div>
-                                        <span className="text-sm text-warm-800 dark:text-disc-text break-words">
-                                          {log.note || ''}
-                                          <span className="italic text-warm-400 dark:text-disc-muted">
-                                            {(log.note && log.called_at) ? ' — ' : ''}
-                                            {(log.caller_image || log.caller_name) && (
-                                          <span className="inline-flex items-center gap-1 align-middle mr-0.5">
-                                            {log.caller_image
-                                              ? <img src={log.caller_image} alt="" title={log.caller_name || ''} className="w-4 h-4 rounded-full object-cover inline-block" />
-                                              : <span title={log.caller_name || ''} className="inline-flex w-4 h-4 rounded-full bg-warm-200 dark:bg-disc-border items-center justify-center text-[9px] font-bold">{(log.caller_name || '?')[0].toUpperCase()}</span>
-                                            }
-                                            <span>{log.caller_name}</span>
-                                          </span>
-                                        )}
-                                            {log.called_at ? new Date(log.called_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' }) : ''}
-                                          </span>
-                                        </span>
-
-                                      </div>
-                                    )}
-                                    {isEditing && (
-                                      <div className="space-y-2">
-                                        <div className="flex flex-wrap gap-1.5">
-                                          {EDIT_STATUS_OPTIONS.map(opt => (
-                                            <button key={opt.value} type="button" onClick={() => setEditStatus(opt.value)}
-                                              className="px-2.5 py-1 rounded text-sm border transition"
-                                              style={editStatus === opt.value
-                                                ? { backgroundColor: CALL_STATUS_COLORS[opt.value]?.bg, color: CALL_STATUS_COLORS[opt.value]?.text, borderColor: CALL_STATUS_COLORS[opt.value]?.text }
-                                                : {}}>
-                                              {opt.label}
-                                            </button>
-                                          ))}
-                                        </div>
-                                        <textarea rows={2} value={editNote} onChange={e => setEditNote(e.target.value)}
-                                          className="w-full border dark:border-disc-border rounded px-2 py-1.5 text-sm bg-card-bg text-warm-900 dark:text-disc-text resize-none" />
-                                        <div className="flex gap-2">
-                                          <button onClick={async () => {
-                                            await fetch('/api/calling/logs', { method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-                                              body: JSON.stringify({ id: log.id, status: editStatus, note: editNote }) })
-                                            setEditingLogId(null)
-                                            reloadHistoryLogs(item.source_id)
-                                          }} className="px-3 py-1 rounded text-sm bg-teal text-white hover:bg-teal/90 transition">บันทึก</button>
-                                          <button onClick={() => setEditingLogId(null)} className="px-3 py-1 rounded text-sm text-warm-500 hover:bg-warm-100 dark:hover:bg-disc-hover transition">ยกเลิก</button>
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
-                                )
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      )}
+                      <button
+                        onClick={e => toggleFavorite(e, item.member_id, item.contact_type)}
+                        className="px-4 py-3 shrink-0 text-yellow-400 hover:text-yellow-500 transition"
+                        title="ยกเลิก starred"
+                      >
+                        <Star className="w-5 h-5 fill-yellow-400" />
+                      </button>
                     </div>
                   )
                 })}
@@ -513,7 +579,7 @@ export default function PendingCallsPage() {
       )}
 
       {/* Filters */}
-      {activeTab !== 'history' && <div className="space-y-2 mb-5">
+      {activeTab !== 'history' && activeTab !== 'starred' && <div className="space-y-2 mb-5">
         <select
           value={filterCampaign}
           onChange={e => setFilterCampaign(e.target.value)}
@@ -555,7 +621,7 @@ export default function PendingCallsPage() {
         )}
       </div>}
 
-      {activeTab !== 'history' && !loading && total > 0 && (
+      {activeTab !== 'history' && activeTab !== 'starred' && !loading && total > 0 && (
         <div className="flex gap-6 mb-5 text-base">
           <div>
             <span className="text-warm-500 dark:text-disc-muted">ทั้งหมด:</span>
@@ -573,7 +639,7 @@ export default function PendingCallsPage() {
       )}
 
       {/* List */}
-      {activeTab !== 'history' && (loading ? (
+      {activeTab !== 'history' && activeTab !== 'starred' && (loading ? (
         <div className="py-20 text-center text-warm-400 dark:text-disc-muted text-base">กำลังโหลด...</div>
       ) : items.length === 0 ? (
         <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl py-16 text-center text-warm-400 dark:text-disc-muted text-base">
@@ -582,8 +648,9 @@ export default function PendingCallsPage() {
       ) : (
         <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl overflow-hidden">
           {/* Table header — desktop only */}
-          <div className="hidden sm:grid items-center px-4 py-2.5 gap-2 bg-warm-100 dark:bg-disc-header border-b border-warm-200 dark:border-disc-border text-sm font-medium text-warm-500 dark:text-disc-muted [grid-template-columns:1fr_88px]">
+          <div className={`hidden sm:grid items-center px-4 py-2.5 gap-2 bg-warm-100 dark:bg-disc-header border-b border-warm-200 dark:border-disc-border text-sm font-medium text-warm-500 dark:text-disc-muted ${activeTab === 'contact' ? '[grid-template-columns:1fr_80px_88px]' : '[grid-template-columns:1fr_88px]'}`}>
             <span>ชื่อ</span>
+            {activeTab === 'contact' && <span className="text-center">ประเภท</span>}
             <span className="text-right">สถานะ</span>
           </div>
 
@@ -597,25 +664,34 @@ export default function PendingCallsPage() {
               const amphoe = item.home_amphure || item.amphoe
               const expiryIcon = isContact ? null : getExpiryIcon(item.expired_at)
               const catColor = isContact && item.category ? (CATEGORY_COLORS[item.category] || CATEGORY_COLORS.other) : null
+              const itemMemberId = isContact ? item.id : item.source_id
+              const itemContactType = isContact ? 'contact' : 'member'
+              const isFav = favoriteSet.has(`${itemMemberId}:${itemContactType}`)
 
               return (
-                <button
+                <div
                   key={getItemKey(item)}
+                  className="relative group hover:bg-warm-50 dark:hover:bg-disc-hover transition"
+                >
+                <button
                   onClick={() => openModal(item)}
-                  className="w-full text-left px-4 py-4 hover:bg-warm-50 dark:hover:bg-disc-hover transition group"
+                  className="w-full text-left px-4 py-4 pr-10"
                 >
                   {/* Mobile layout */}
                   <div className="sm:hidden">
                     <div className="flex items-center gap-3">
-                      <MemberAvatar item={item} size={36} />
+                      <MemberAvatar item={item} size={60} />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-base font-medium text-warm-900 dark:text-disc-text group-hover:text-teal transition-colors truncate">
                             {displayName}
                           </span>
-                          <span className="text-xs font-bold flex-shrink-0" style={{ color: tierColor.text }}>{tier}</span>
+                          <span className="text-xs font-bold flex-shrink-0 px-1 py-px rounded" style={{ color: tierColor.text, backgroundColor: tierColor.bg }}>{tier}</span>
+                          <button onClick={e => toggleFavorite(e, itemMemberId, itemContactType)} className="p-0.5 flex-shrink-0" title={isFav ? 'ยกเลิก starred' : 'เพิ่ม starred'}>
+                            <Star className={`w-3.5 h-3.5 transition ${isFav ? 'fill-yellow-400 text-yellow-400' : 'text-warm-300 dark:text-disc-border'}`} />
+                          </button>
                           {expiryIcon && <expiryIcon.Icon title={expiryIcon.title} style={{ color: expiryIcon.color }} className="w-4 h-4 flex-shrink-0 inline-block" />}
-                          {catColor && <span className="text-sm px-1.5 py-0.5 rounded font-medium flex-shrink-0" style={{ background: catColor.bg, color: catColor.text }}>{CATEGORY_LABELS[item.category] || item.category}</span>}
+                          {catColor && <span className="text-sm px-1 py-px rounded font-medium flex-shrink-0" style={{ background: catColor.bg, color: catColor.text }}>{CATEGORY_LABELS[item.category] || item.category}</span>}
                         </div>
                         <div className="flex items-center gap-1.5 text-base truncate mt-0.5">
                           {phone && <span className="text-teal font-medium">{phone}</span>}
@@ -650,18 +726,19 @@ export default function PendingCallsPage() {
                   </div>
 
                   {/* Desktop layout */}
-                  <div className="hidden sm:grid items-center [grid-template-columns:1fr_88px] gap-2">
+                  <div className={`hidden sm:grid items-center gap-2 ${isContact ? '[grid-template-columns:1fr_80px_88px]' : '[grid-template-columns:1fr_88px]'}`}>
                     <div className="flex items-center gap-3 min-w-0">
-                      <MemberAvatar item={item} size={36} />
+                      <MemberAvatar item={item} size={60} />
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="text-base font-medium text-warm-900 dark:text-disc-text group-hover:text-teal transition-colors truncate">
                             {displayName}
                           </span>
-                          <span className="text-xs font-semibold px-1 py-0.5 rounded flex-shrink-0"
-                            style={{ backgroundColor: tierColor.bg, color: tierColor.text }}>{tier}</span>
+                          <span className="text-xs font-bold flex-shrink-0 px-1 py-px rounded" style={{ color: tierColor.text, backgroundColor: tierColor.bg }}>{tier}</span>
+                          <button onClick={e => toggleFavorite(e, itemMemberId, itemContactType)} className="p-0.5 flex-shrink-0" title={isFav ? 'ยกเลิก starred' : 'เพิ่ม starred'}>
+                            <Star className={`w-3.5 h-3.5 transition ${isFav ? 'fill-yellow-400 text-yellow-400' : 'text-warm-300 dark:text-disc-border'}`} />
+                          </button>
                           {expiryIcon && <expiryIcon.Icon title={expiryIcon.title} style={{ color: expiryIcon.color }} className="w-4 h-4 flex-shrink-0 inline-block" />}
-                          {catColor && <span className="text-sm px-1.5 py-0.5 rounded font-medium flex-shrink-0" style={{ background: catColor.bg, color: catColor.text }}>{CATEGORY_LABELS[item.category] || item.category}</span>}
                         </div>
                         <div className="flex items-center gap-1.5 text-base truncate">
                           {phone && <span className="text-teal font-medium">{phone}</span>}
@@ -675,6 +752,14 @@ export default function PendingCallsPage() {
                         )}
                       </div>
                     </div>
+
+                    {isContact && (
+                      <div className="flex justify-center">
+                        {catColor
+                          ? <span className="text-sm px-1 py-px rounded font-medium" style={{ background: catColor.bg, color: catColor.text }}>{CATEGORY_LABELS[item.category] || item.category}</span>
+                          : <span className="text-warm-300 dark:text-disc-muted text-sm">—</span>}
+                      </div>
+                    )}
 
                     <div className="flex items-center gap-1 justify-end">
                       {(() => {
@@ -693,6 +778,7 @@ export default function PendingCallsPage() {
                     </div>
                   </div>
                 </button>
+                </div>
               )
             })}
           </div>
@@ -702,7 +788,7 @@ export default function PendingCallsPage() {
       <RecordCallModal
         isOpen={!!modalItem}
         member={modalItem}
-        contact_type={activeTab === 'contact' ? 'contact' : 'member'}
+        contact_type={modalItem?.contact_type || (activeTab === 'contact' ? 'contact' : 'member')}
         onClose={closeModal}
         onSave={handleSave}
         onSaveAndNext={handleSaveAndNext}

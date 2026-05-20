@@ -441,6 +441,51 @@ export async function getMyCallHistory(discordId, { name, limit = 50, offset = 0
 }
 
 /**
+ * Get my call history — flat, 1 row per log, members + contacts, sorted by date
+ */
+export async function getMyCallHistoryFlat(discordId, { name, limit = 60, offset = 0 } = {}) {
+  const keyword = name || null
+  const like = keyword ? `%${keyword}%` : null
+  const [rows] = await pool.query(
+    `(SELECT
+       l.id AS log_id, l.status, l.note, l.called_at, l.campaign_id,
+       'member' AS contact_type, l.member_id,
+       m.full_name, m.mobile_number,
+       m.home_district, m.home_amphure, m.home_province,
+       dc.avatar AS discord_avatar, dc.discord_id,
+       COALESCE(t.tier, 'D') AS tier,
+       ec.name AS campaign_name
+     FROM calling_logs l
+     JOIN ngs_member_cache m ON m.source_id = l.member_id
+     LEFT JOIN dc_members dc ON dc.serial = m.serial AND dc.guild_id = ?
+     LEFT JOIN calling_member_tiers t ON t.member_id = l.member_id AND t.contact_type = 'member'
+     LEFT JOIN act_event_cache ec ON ec.id = l.campaign_id AND ec.type = 'campaign'
+     WHERE l.called_by = ? AND l.contact_type = 'member'
+       AND (? IS NULL OR m.full_name LIKE ? OR m.mobile_number LIKE ? OR l.note LIKE ?))
+    UNION ALL
+    (SELECT
+       l.id AS log_id, l.status, l.note, l.called_at, l.campaign_id,
+       'contact' AS contact_type, l.member_id,
+       CONCAT(c.first_name, IF(c.last_name IS NOT NULL AND c.last_name != '', CONCAT(' ', c.last_name), '')) AS full_name,
+       c.phone AS mobile_number,
+       c.tambon AS home_district, c.amphoe AS home_amphure, c.province AS home_province,
+       NULL AS discord_avatar, NULL AS discord_id,
+       'D' AS tier,
+       NULL AS campaign_name
+     FROM calling_logs l
+     JOIN calling_contacts c ON c.id = l.member_id
+     WHERE l.called_by = ? AND l.contact_type = 'contact'
+       AND (? IS NULL OR CONCAT(c.first_name, ' ', COALESCE(c.last_name, '')) LIKE ? OR c.phone LIKE ? OR l.note LIKE ?))
+    ORDER BY called_at DESC
+    LIMIT ? OFFSET ?`,
+    [process.env.GUILD_ID, discordId, keyword, like, like, like,
+     discordId, keyword, like, like, like,
+     limit, offset]
+  )
+  return rows
+}
+
+/**
  * Get member's total call history (all campaigns)
  */
 export async function getMemberGlobalCallHistory(memberId) {

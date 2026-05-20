@@ -23,9 +23,12 @@ export async function GET(req) {
 
   try {
     if (historyMode) {
-      const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 200)
+      const limit = Math.min(parseInt(searchParams.get('limit') || '60'), 200)
       const offset = parseInt(searchParams.get('offset') || '0')
-      const rows = await memberDB.getMyCallHistory(session.user.discordId, { name, limit, offset })
+      const flat = searchParams.get('flat') === 'true'
+      const rows = flat
+        ? await memberDB.getMyCallHistoryFlat(session.user.discordId, { name, limit, offset })
+        : await memberDB.getMyCallHistory(session.user.discordId, { name, limit, offset })
       return Response.json({ success: true, data: rows, hasMore: rows.length === limit })
     }
 
