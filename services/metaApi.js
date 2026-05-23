@@ -197,8 +197,11 @@ async function _igPostFromUrls(cfg, imageUrls, caption, scheduleTime = null, onP
     const { id: mediaId } = await igPost(`/v22.0/${cfg.igId}/media_publish`, {
       creation_id: containerId, access_token: cfg.token,
     });
-    const info = await httpsGet(`/v22.0/${mediaId}?fields=permalink&access_token=${cfg.token}`);
-    return { id: mediaId, permalink: info.permalink || null };
+    const info = await httpsGet(`/v22.0/${mediaId}?fields=permalink,shortcode&access_token=${cfg.token}`);
+    console.log('[IG permalink raw]', JSON.stringify(info));
+    const permalink = info.permalink
+      || (info.shortcode ? `https://www.instagram.com/p/${info.shortcode}/` : null);
+    return { id: mediaId, permalink };
   }
 
   const total = imageUrls.length;

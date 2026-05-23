@@ -158,4 +158,16 @@ ALTER TABLE dc_members ADD COLUMN IF NOT EXISTS avatar TEXT NULL AFTER display_n
 -- 2026-05-20: เปลี่ยนชื่อ calling_favorites → calling_starred
 RENAME TABLE calling_favorites TO calling_starred;
 
+-- 2026-05-21: finance_funds — แยกเงินหลายก้อนในบัญชีเดียว (เช่น ทุนทั่วไป vs เงินบริจาคส้มสู้ไฟ)
+CREATE TABLE IF NOT EXISTS finance_funds (
+  id         INT AUTO_INCREMENT PRIMARY KEY,
+  account_id INT NOT NULL,
+  name       VARCHAR(100) NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_account (account_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+ALTER TABLE finance_transactions
+  ADD COLUMN fund_id INT NULL AFTER category_id;
+
 

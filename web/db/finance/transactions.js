@@ -1,6 +1,6 @@
 import pool from '../index.js'
 
-export async function getTransactions(guildId, { accountId, type, categoryId, noCategory, search, year, month, dateFrom, dateTo, limit = 50, offset = 0, discordId = null, admin = false } = {}) {
+export async function getTransactions(guildId, { accountId, type, categoryId, noCategory, fundId, noFund, search, year, month, dateFrom, dateTo, limit = 50, offset = 0, discordId = null, admin = false } = {}) {
   let where = 'WHERE 1=1'
   const params = []
 
@@ -12,6 +12,8 @@ export async function getTransactions(guildId, { accountId, type, categoryId, no
   if (type)       { where += ' AND t.type = ?';         params.push(type) }
   if (categoryId) { where += ' AND t.category_id = ?';  params.push(categoryId) }
   if (noCategory) { where += ' AND t.category_id IS NULL' }
+  if (fundId)     { where += ' AND t.fund_id = ?';      params.push(fundId) }
+  if (noFund)     { where += ' AND t.fund_id IS NULL' }
   if (search)     { where += ' AND (t.description LIKE ? OR t.counterpart_name LIKE ?)'; params.push(`%${search}%`, `%${search}%`) }
   if (year)       { where += ' AND YEAR(t.txn_at) = ?';  params.push(year) }
   if (month)      { where += ' AND MONTH(t.txn_at) = ?'; params.push(month) }
@@ -19,10 +21,11 @@ export async function getTransactions(guildId, { accountId, type, categoryId, no
   if (dateTo)     { where += ' AND DATE(t.txn_at) <= ?'; params.push(dateTo) }
 
   const [rows] = await pool.query(
-    `SELECT t.*, a.name AS account_name, a.bank AS account_bank, a.owner_id AS account_owner_id, a.visibility AS account_visibility, a.province AS account_province, c.name AS category_name, c.icon AS category_icon
+    `SELECT t.*, a.name AS account_name, a.bank AS account_bank, a.owner_id AS account_owner_id, a.visibility AS account_visibility, a.province AS account_province, c.name AS category_name, c.icon AS category_icon, f.name AS fund_name
      FROM finance_transactions t
      LEFT JOIN finance_accounts a ON a.id = t.account_id
      LEFT JOIN finance_categories c ON c.id = t.category_id
+     LEFT JOIN finance_funds f ON f.id = t.fund_id
      ${where}
      ORDER BY t.txn_at DESC
      LIMIT ${limit} OFFSET ${offset}`,
@@ -40,29 +43,29 @@ export async function getTransactionById(id) {
 }
 
 export async function createTransaction(guildId, data, updatedBy) {
-  const { account_id, type, amount, description, category_id, counterpart_name, counterpart_account, counterpart_bank, fee, balance_after, evidence_url, ref_id, discord_msg_id, txn_at } = data
+  const { account_id, type, amount, description, category_id, fund_id, counterpart_name, counterpart_account, counterpart_bank, fee, balance_after, evidence_url, ref_id, discord_msg_id, txn_at } = data
   const [result] = await pool.query(
     `INSERT INTO finance_transactions
-      (guild_id, account_id, type, amount, description, category_id, counterpart_name, counterpart_account, counterpart_bank, fee, balance_after, evidence_url, ref_id, discord_msg_id, txn_at, updated_by, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-    [guildId, account_id, type, amount, description, category_id || null,
+      (guild_id, account_id, type, amount, description, category_id, fund_id, counterpart_name, counterpart_account, counterpart_bank, fee, balance_after, evidence_url, ref_id, discord_msg_id, txn_at, updated_by, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+    [guildId, account_id, type, amount, description, category_id || null, fund_id || null,
      counterpart_name || null, counterpart_account || null, counterpart_bank || null,
      fee || null, balance_after || null,
      evidence_url || null, ref_id || null, discord_msg_id || null,
-     txn_at ? new Date(txn_at).toISOString().slice(0, 19).replace('T', ' ') : new Date().toISOString().slice(0, 19).replace('T', ' '), updatedBy]
+     txn_at || null, updatedBy]
   )
   return result.insertId
 }
 
 export async function updateTransaction(id, data, updatedBy) {
-  const { account_id, type, amount, description, category_id, counterpart_name, counterpart_account, counterpart_bank, fee, balance_after, evidence_url, txn_at } = data
+  const { account_id, type, amount, description, category_id, fund_id, counterpart_name, counterpart_account, counterpart_bank, fee, balance_after, evidence_url, txn_at } = data
   await pool.query(
     `UPDATE finance_transactions
-     SET account_id=?, type=?, amount=?, description=?, category_id=?,
+     SET account_id=?, type=?, amount=?, description=?, category_id=?, fund_id=?,
          counterpart_name=?, counterpart_account=?, counterpart_bank=?,
          fee=?, balance_after=?, evidence_url=?, txn_at=?, updated_by=?, updated_at=NOW()
      WHERE id=?`,
-    [account_id, type, amount, description, category_id || null,
+    [account_id, type, amount, description, category_id || null, fund_id || null,
      counterpart_name || null, counterpart_account || null, counterpart_bank || null,
      fee || null, balance_after || null,
      evidence_url || null, txn_at || null, updatedBy, id]

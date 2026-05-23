@@ -15,6 +15,8 @@ export async function GET(req) {
   const type       = searchParams.get('type')
   const categoryId = searchParams.get('categoryId')
   const noCategory = searchParams.get('noCategory')
+  const fundId     = searchParams.get('fundId')
+  const noFund     = searchParams.get('noFund')
   const search     = searchParams.get('search')
   const year       = searchParams.get('year')
   const month      = searchParams.get('month')
@@ -37,7 +39,7 @@ export async function GET(req) {
     }
   }
 
-  const rows = await getTransactions(GUILD_ID, { accountId, type, categoryId, noCategory, search, year, month, dateFrom, dateTo, limit, offset, discordId: effectiveDiscordId, admin: isAdmin(effectiveRoles) })
+  const rows = await getTransactions(GUILD_ID, { accountId, type, categoryId, noCategory, fundId, noFund, search, year, month, dateFrom, dateTo, limit, offset, discordId: effectiveDiscordId, admin: isAdmin(effectiveRoles) })
   return Response.json(rows)
 }
 

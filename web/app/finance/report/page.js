@@ -4,7 +4,7 @@ import { Suspense } from 'react'
 import AccountSelect from '@/components/AccountSelect'
 import CategorySelect, { CatIcon } from '@/components/CategorySelect'
 import { formatThaiDateShort } from '@/lib/dateFormat'
-import { X } from 'lucide-react'
+import { X, ChevronDown } from 'lucide-react'
 
 const MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.']
 
@@ -101,12 +101,12 @@ function CategoryModal({ catRow, filter, categories, onClose, onUpdated }) {
         <div className="flex items-center justify-between px-5 pt-5 pb-3 flex-shrink-0 gap-3 flex-wrap">
           <div className="flex items-center gap-2">
             <CatIcon name={catRow.category_icon} size={16} />
-            <h2 className="font-bold text-gray-900 dark:text-disc-text">{catRow.category_name || 'ไม่มีหมวด'}</h2>
+            <h2 className="text-base font-bold text-gray-900 dark:text-disc-text">{catRow.category_name || 'ไม่มีหมวด'}</h2>
             <span className="text-sm text-gray-400">{catRow.type === 'income' ? '📥' : '📤'} {catRow.count} รายการ</span>
           </div>
           <div className="flex items-center gap-2">
             <select value={sort} onChange={e => setSort(e.target.value)}
-              className="border dark:border-disc-border rounded px-2 py-1 text-xs bg-white dark:bg-disc-hover text-gray-700 dark:text-disc-text">
+              className="border dark:border-disc-border rounded px-2 py-1 text-sm bg-white dark:bg-disc-hover text-gray-700 dark:text-disc-text">
               <option value="date_desc">วันที่ ใหม่→เก่า</option>
               <option value="date_asc">วันที่ เก่า→ใหม่</option>
               <option value="amount_desc">ยอด มาก→น้อย</option>
@@ -176,6 +176,7 @@ function ReportContent() {
   const [data, setData]       = useState(null)
   const [loading, setLoading] = useState(false)
   const [modalCat, setModalCat] = useState(null)
+  const [dateOpen, setDateOpen] = useState(false)
 
   useEffect(() => {
     fetch('/api/finance/accounts').then(r => r.json()).then(setAccounts)
@@ -220,26 +221,52 @@ function ReportContent() {
             >{label}</button>
           ))}
         </div>
-        <div className="flex gap-2">
-          <select className="flex-1 border dark:border-disc-border rounded px-2 py-1.5 text-base bg-card-bg text-gray-900 dark:text-disc-text"
-            value={filter.year} onChange={e => setFilter(f => ({ ...f, year: e.target.value, month: '', dateFrom: '', dateTo: '' }))}>
-            <option value="">ทุกปี</option>
-            {years.map(y => <option key={y} value={y}>{y + 543} ({y})</option>)}
-          </select>
-          <select className="flex-1 border dark:border-disc-border rounded px-2 py-1.5 text-base bg-card-bg text-gray-900 dark:text-disc-text"
-            value={filter.month} onChange={e => setFilter(f => ({ ...f, month: e.target.value, dateFrom: '', dateTo: '' }))}>
-            <option value="">ทุกเดือน</option>
-            {MONTHS.map((m, i) => <option key={i+1} value={i+1}>{m}</option>)}
-          </select>
-        </div>
-        <div className="flex items-center gap-1 text-sm text-gray-500 dark:text-disc-muted">
-          <span>หรือ</span>
-          <input type="date" className="flex-1 min-w-0 border dark:border-disc-border rounded px-2 py-1 bg-card-bg text-gray-900 dark:text-disc-text text-base"
-            value={filter.dateFrom} onChange={e => setFilter(f => ({ ...f, dateFrom: e.target.value, year: '', month: '' }))} />
-          <span>–</span>
-          <input type="date" className="flex-1 min-w-0 border dark:border-disc-border rounded px-2 py-1 bg-card-bg text-gray-900 dark:text-disc-text text-base"
-            value={filter.dateTo} onChange={e => setFilter(f => ({ ...f, dateTo: e.target.value, year: '', month: '' }))} />
-        </div>
+        {(() => {
+          const hasDate = filter.year || filter.month || filter.dateFrom || filter.dateTo
+          const dateLabel = filter.dateFrom || filter.dateTo
+            ? `${filter.dateFrom || '…'} – ${filter.dateTo || '…'}`
+            : [filter.year ? `${Number(filter.year) + 543}` : '', MONTHS[Number(filter.month) - 1] || ''].filter(Boolean).join(' ') || null
+          return (
+            <div className="rounded border dark:border-disc-border overflow-hidden bg-card-bg text-sm">
+              <button type="button" onClick={() => setDateOpen(o => !o)}
+                className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-disc-hover/50 transition">
+                <span className={hasDate ? 'text-indigo-600 dark:text-indigo-400 font-medium' : 'text-gray-400 dark:text-disc-muted'}>
+                  {dateLabel || 'กรองตามวันที่'}
+                </span>
+                <div className="flex items-center gap-2">
+                  {hasDate && (
+                    <span onClick={e => { e.stopPropagation(); setFilter(f => ({ ...f, year: '', month: '', dateFrom: '', dateTo: '' })) }}
+                      className="text-xs text-gray-400 hover:text-red-500 transition px-1">ล้าง</span>
+                  )}
+                  <ChevronDown size={14} className={`text-gray-400 transition-transform ${dateOpen ? 'rotate-180' : ''}`} />
+                </div>
+              </button>
+              {dateOpen && (
+                <div className="border-t dark:border-disc-border px-3 py-3 space-y-2">
+                  <div className="flex gap-2">
+                    <select className="flex-1 border dark:border-disc-border rounded px-2 py-1.5 text-sm bg-white dark:bg-disc-hover text-gray-900 dark:text-disc-text"
+                      value={filter.year} onChange={e => setFilter(f => ({ ...f, year: e.target.value, month: '', dateFrom: '', dateTo: '' }))}>
+                      <option value="">ทุกปี</option>
+                      {years.map(y => <option key={y} value={y}>{y + 543} ({y})</option>)}
+                    </select>
+                    <select className="flex-1 border dark:border-disc-border rounded px-2 py-1.5 text-sm bg-white dark:bg-disc-hover text-gray-900 dark:text-disc-text"
+                      value={filter.month} onChange={e => setFilter(f => ({ ...f, month: e.target.value, dateFrom: '', dateTo: '' }))}>
+                      <option value="">ทุกเดือน</option>
+                      {MONTHS.map((m, i) => <option key={i+1} value={i+1}>{m}</option>)}
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <input type="date" className="flex-1 min-w-0 border dark:border-disc-border rounded px-2 py-1 bg-white dark:bg-disc-hover text-gray-900 dark:text-disc-text text-sm"
+                      value={filter.dateFrom} onChange={e => setFilter(f => ({ ...f, dateFrom: e.target.value, year: '', month: '' }))} />
+                    <span className="text-gray-400 flex-shrink-0">–</span>
+                    <input type="date" className="flex-1 min-w-0 border dark:border-disc-border rounded px-2 py-1 bg-white dark:bg-disc-hover text-gray-900 dark:text-disc-text text-sm"
+                      value={filter.dateTo} onChange={e => setFilter(f => ({ ...f, dateTo: e.target.value, year: '', month: '' }))} />
+                  </div>
+                </div>
+              )}
+            </div>
+          )
+        })()}
       </div>
 
       {loading && <p className="text-gray-400 text-sm mb-4">กำลังโหลด...</p>}
@@ -253,7 +280,7 @@ function ReportContent() {
               { label: 'รายจ่าย', value: totalExpense, cls: 'text-red-500 dark:text-red-400' },
             ].map(({ label, value, cls }) => (
               <div key={label} className="bg-card-bg rounded-xl shadow px-3 py-3 text-center">
-                <p className="text-xs text-gray-500 dark:text-disc-muted mb-1">{label}</p>
+                <p className="text-sm text-gray-500 dark:text-disc-muted mb-1">{label}</p>
                 <p className={`font-mono font-bold text-lg leading-tight ${cls}`}>{fmt(value)} ฿</p>
               </div>
             ))}
@@ -289,7 +316,7 @@ function ReportContent() {
                               {r.category_name || 'ไม่มีหมวด'}
                               <span className="text-xs text-gray-400">({r.count})</span>
                             </span>
-                            <span className="font-mono text-gray-900 dark:text-disc-text text-xs">{fmt(r.total)} ฿</span>
+                            <span className="font-mono text-gray-900 dark:text-disc-text text-sm">{fmt(r.total)} ฿</span>
                           </div>
                           <div className="h-1.5 rounded bg-gray-100 dark:bg-disc-hover">
                             <div className={`h-1.5 rounded ${barCls}`} style={{ width: `${pct.toFixed(1)}%` }} />
@@ -311,7 +338,7 @@ function ReportContent() {
           <div className="overflow-x-auto">
             <table className="w-full text-base">
               <thead>
-                <tr className="text-xs text-gray-400 border-b dark:border-disc-border">
+                <tr className="text-sm text-gray-400 border-b dark:border-disc-border">
                   <th className="text-left pb-2">เดือน</th>
                   <th className="text-right pb-2 text-green-600 dark:text-green-400">รายรับ</th>
                   <th className="text-right pb-2 text-red-500 dark:text-red-400">รายจ่าย</th>

@@ -39,10 +39,10 @@ export async function GET(req) {
       rows = rows.filter(c => !c.province || userScope.includes(c.province))
     }
 
-    // Filter active campaigns (not reached event_date yet)
+    // Filter active campaigns (within 7 days after event_date)
     if (active) {
-      const now = new Date()
-      rows = rows.filter(c => !c.event_date || new Date(c.event_date) > now)
+      const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 7)
+      rows = rows.filter(c => !c.event_date || new Date(c.event_date) >= cutoff)
     }
 
     // Limit results

@@ -1,0 +1,45 @@
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth-options.js'
+import { getFunds, createFund, getFundBalances } from '@/db/finance/funds.js'
+import { getAccountById } from '@/db/finance/accounts.js'
+import { canViewAccount, canEditAccount } from '@/lib/financeAccess.js'
+import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
+
+export async function GET(req) {
+  const session = await getServerSession(authOptions)
+  if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { searchParams } = new URL(req.url)
+  const accountId = searchParams.get('accountId')
+  if (!accountId) return Response.json({ error: 'accountId required' }, { status: 400 })
+
+  const { roles, discordId } = await getEffectiveIdentity(session)
+  const account = await getAccountById(accountId)
+  if (!account || !canViewAccount(account, discordId, roles)) {
+    return Response.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
+  if (searchParams.get('balances') === '1') {
+    return Response.json(await getFundBalances(accountId))
+  }
+  return Response.json(await getFunds(accountId))
+}
+
+export async function POST(req) {
+  const session = await getServerSession(authOptions)
+  if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { accountId, name } = await req.json()
+  if (!accountId || !name?.trim()) {
+    return Response.json({ error: 'accountId and name required' }, { status: 400 })
+  }
+
+  const { roles, discordId } = await getEffectiveIdentity(session)
+  const account = await getAccountById(accountId)
+  if (!account || !canEditAccount(account, discordId, roles)) {
+    return Response.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
+  const id = await createFund(accountId, name.trim())
+  return Response.json({ id }, { status: 201 })
+}

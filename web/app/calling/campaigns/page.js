@@ -20,9 +20,10 @@ export default async function CallingPage() {
     c => !c.province || isUserAdmin || userScope.includes(c.province)
   )
 
-  const today = new Date().toISOString().slice(0, 10)
-  const active = filteredCampaigns.filter(c => !c.event_date || c.event_date >= today)
-  const past   = filteredCampaigns.filter(c => c.event_date && c.event_date < today)
+  const cutoffDate = new Date(); cutoffDate.setDate(cutoffDate.getDate() - 7)
+  const cutoff = cutoffDate.toISOString().slice(0, 10)
+  const active = filteredCampaigns.filter(c => !c.event_date || c.event_date >= cutoff)
+  const past   = filteredCampaigns.filter(c => c.event_date && c.event_date < cutoff)
 
   const groupBy = list => list.reduce((acc, c) => {
     const key = c.province || 'ทั่วไป'

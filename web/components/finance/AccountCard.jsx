@@ -71,17 +71,17 @@ export default function AccountCard({ account, canEdit = false }) {
         <div className={`bg-card-bg rounded-xl shadow p-4 hover:shadow-md transition cursor-pointer flex items-center gap-3 ${account.archived ? 'opacity-50' : ''}`}>
           <BankBadge bank={account.bank} size={40} />
           <div className="flex-1 min-w-0">
-            <p className="font-semibold text-gray-900 dark:text-disc-text leading-snug">
+            <p className="text-base font-semibold text-gray-900 dark:text-disc-text leading-snug">
               {account.name}
               {!!account.archived && <span className="text-xs text-gray-400 font-normal ml-1">(ซ่อน)</span>}
             </p>
-            <p className="text-xs text-gray-400 dark:text-disc-muted">
+            <p className="text-sm text-gray-400 dark:text-disc-muted">
               {account.bank || 'เงินสด'}
               {account.account_no && <span className="font-mono ml-1">{account.account_no}</span>}
             </p>
           </div>
           <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-            <p className={`font-mono font-bold ${balance >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
+            <p className={`text-base font-mono font-bold ${balance >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
               {balance < 0 ? '-' : ''}{fmt(balance)}
             </p>
             <div className="flex items-center gap-2">

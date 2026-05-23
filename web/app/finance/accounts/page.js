@@ -72,7 +72,7 @@ export default function AccountsPage() {
             <div key={a.id} className={`bg-card-bg rounded-xl shadow px-5 py-4 flex items-center justify-between gap-3 ${a.archived ? 'opacity-50' : ''}`}>
               <BankBadge bank={a.bank} size={40} />
               <div className="min-w-0 flex-1">
-                <p className="font-semibold text-gray-900 dark:text-disc-text flex items-center gap-2">
+                <p className="text-base font-semibold text-gray-900 dark:text-disc-text flex items-center gap-2">
                   {a.name}
                   {!!a.archived && <span className="text-xs text-gray-400 font-normal">(ซ่อน)</span>}
                 </p>

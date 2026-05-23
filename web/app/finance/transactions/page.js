@@ -26,13 +26,18 @@ function TransactionsContent() {
     accountId:  searchParams.get('accountId')  || '',
     type:       searchParams.get('type')       || '',
     categoryId: searchParams.get('categoryId') || '',
+    fundId:     searchParams.get('fundId')     || '',
     search:     searchParams.get('search')     || '',
     year:       searchParams.get('year')       || '',
     month:      searchParams.get('month')      || '',
     dateFrom:   searchParams.get('dateFrom')   || '',
     dateTo:     searchParams.get('dateTo')     || '',
   })
-  const [balance, setBalance]   = useState(null)
+  const [balance, setBalance]       = useState(null)
+  const [funds, setFunds]           = useState([])
+  const [fundBalances, setFundBalances] = useState(null)
+  const [newFundName, setNewFundName]   = useState('')
+  const [addingFund, setAddingFund]     = useState(false)
   const [searchInput, setSearchInput] = useState(searchParams.get('search') || '')
 
   // sync filter → URL
@@ -41,6 +46,7 @@ function TransactionsContent() {
     if (filter.accountId)  p.set('accountId',  filter.accountId)
     if (filter.type)       p.set('type',        filter.type)
     if (filter.categoryId) p.set('categoryId',  filter.categoryId)
+    if (filter.fundId)     p.set('fundId',      filter.fundId)
     if (filter.search)     p.set('search',      filter.search)
     if (filter.year)       p.set('year',        filter.year)
     if (filter.month)      p.set('month',       filter.month)
@@ -78,8 +84,6 @@ function TransactionsContent() {
     fetch('/api/finance/categories').then(r => r.json()).then(setCategories)
   }, [])
 
-  useEffect(() => { fetchBalance() }, [filter.accountId])
-
   const fetchPage = useCallback(async (currentOffset, reset = false) => {
     if (loadingRef.current) return
     loadingRef.current = true
@@ -88,6 +92,8 @@ function TransactionsContent() {
     if (filter.accountId)  p.set('accountId',  filter.accountId)
     if (filter.type)       p.set('type',        filter.type)
     if (filter.categoryId) p.set('categoryId',  filter.categoryId)
+    if (filter.fundId === '0') p.set('noFund', '1')
+    else if (filter.fundId) p.set('fundId', filter.fundId)
     if (filter.search)     p.set('search',      filter.search)
     if (filter.year)       p.set('year',        filter.year)
     if (filter.month)      p.set('month',       filter.month)
@@ -136,6 +142,16 @@ function TransactionsContent() {
       .then(r => r.json()).then(setBalance)
   }, [filter.accountId])
 
+  const fetchFunds = useCallback(() => {
+    if (!filter.accountId) { setFunds([]); setFundBalances(null); return }
+    fetch(`/api/finance/funds?accountId=${filter.accountId}`)
+      .then(r => r.json()).then(d => { if (Array.isArray(d)) setFunds(d) })
+    fetch(`/api/finance/funds?accountId=${filter.accountId}&balances=1`)
+      .then(r => r.json()).then(d => { if (d?.funds) setFundBalances(d) })
+  }, [filter.accountId])
+
+  useEffect(() => { fetchBalance(); fetchFunds() }, [filter.accountId])
+
   const load = useCallback(() => {
     offsetRef.current = 0
     loadingRef.current = false
@@ -143,11 +159,50 @@ function TransactionsContent() {
     setHasMore(true)
     fetchPage(0, true)
     fetchBalance()
-  }, [fetchPage, fetchBalance])
+    fetchFunds()
+  }, [fetchPage, fetchBalance, fetchFunds])
+
+  const canEditAcc = (() => {
+    const acc = accounts.find(a => String(a.id) === String(filter.accountId))
+    return acc ? canEditAccount({ owner_id: acc.owner_id, visibility: acc.visibility, province: acc.province }, effectiveDiscordId, effectiveRoles) : false
+  })()
 
   function openNew()  { setForm({ ...EMPTY_FORM }); setEditing({}) }
   function openEdit(t){ setForm({ ...t, txn_at: toLocalDT(new Date(t.txn_at)) }); setEditing(t) }
   function close()    { setEditing(null) }
+
+  async function changeFund(t, fundId) {
+    await fetch(`/api/finance/transactions/${t.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...t, fund_id: fundId ? Number(fundId) : null, txn_at: toLocalDT(new Date(t.txn_at)) }),
+    })
+    const fund = funds.find(f => f.id === Number(fundId))
+    setTxns(prev => prev.map(x => x.id === t.id
+      ? { ...x, fund_id: fundId ? Number(fundId) : null, fund_name: fund?.name || null }
+      : x
+    ))
+    setExpandedId(null)
+    fetchFunds()
+  }
+
+  async function saveFund() {
+    if (!newFundName.trim() || !filter.accountId) return
+    await fetch('/api/finance/funds', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accountId: filter.accountId, name: newFundName.trim() }),
+    })
+    setNewFundName(''); setAddingFund(false)
+    fetchFunds()
+  }
+
+  async function removeFund(id) {
+    if (!confirm('ลบกองเงินนี้? transaction ที่ผูกไว้จะถูกเปลี่ยนเป็น "ไม่ระบุ"')) return
+    await fetch(`/api/finance/funds/${id}`, { method: 'DELETE' })
+    if (String(filter.fundId) === String(id)) setFilter(f => ({ ...f, fundId: '' }))
+    fetchFunds()
+  }
 
   async function save() {
     if (!form.account_id) return alert('กรุณาเลือกบัญชี')
@@ -267,11 +322,11 @@ function TransactionsContent() {
             {/* balance */}
             {acc && balance?.has_balance_after && (
               <div className="border-t dark:border-disc-border px-4 py-2.5 space-y-1.5">
-                <div className="flex justify-between text-sm">
+                <div className="flex justify-between text-base">
                   <span className="text-gray-500 dark:text-disc-muted">ยอดรวมในระบบ</span>
                   <span className="font-semibold">{Number(balance.net).toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท</span>
                 </div>
-                <div className="flex justify-between text-sm">
+                <div className="flex justify-between text-base">
                   <span className="text-gray-500 dark:text-disc-muted">ยอดคงเหลือจริง</span>
                   <span className="font-semibold text-indigo-600 dark:text-indigo-400">{Number(balance.balance_after).toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท</span>
                 </div>
@@ -279,6 +334,56 @@ function TransactionsContent() {
                   <div className="text-xs text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 rounded px-2 py-1">
                     ⚠️ ยอดต่างกัน {Math.abs(Number(balance.net) - Number(balance.balance_after)).toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท
                   </div>
+                )}
+              </div>
+            )}
+
+            {/* fund breakdown */}
+            {acc && fundBalances && (fundBalances.funds?.length > 0 || Number(fundBalances.untagged?.count) > 0 || canEditAcc) && (
+              <div className="border-t dark:border-disc-border px-4 py-2.5">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs font-semibold text-gray-500 dark:text-disc-muted uppercase tracking-wide">กองเงิน</span>
+                  {canEditAcc && (
+                    addingFund ? (
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          autoFocus
+                          className="text-xs border dark:border-disc-border rounded px-2 py-0.5 bg-white dark:bg-disc-hover text-gray-900 dark:text-disc-text w-28 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                          placeholder="ชื่อกองเงิน"
+                          value={newFundName}
+                          onChange={e => setNewFundName(e.target.value)}
+                          onKeyDown={e => { if (e.key === 'Enter') saveFund(); if (e.key === 'Escape') { setAddingFund(false); setNewFundName('') } }}
+                        />
+                        <button onClick={saveFund} className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">บันทึก</button>
+                        <button onClick={() => { setAddingFund(false); setNewFundName('') }} className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-disc-text">ยกเลิก</button>
+                      </div>
+                    ) : (
+                      <button onClick={() => setAddingFund(true)} className="text-xs text-indigo-500 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300">+ เพิ่มกอง</button>
+                    )
+                  )}
+                </div>
+                {(fundBalances.funds || []).map(fund => (
+                  <div key={fund.id} className="flex items-center gap-1 group">
+                    <button
+                      onClick={() => { setFilter(f => ({ ...f, fundId: String(filter.fundId) === String(fund.id) ? '' : String(fund.id) })); setAccOpen(false) }}
+                      className={`flex-1 flex justify-between text-sm rounded px-1.5 py-1 transition ${String(filter.fundId) === String(fund.id) ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium' : 'text-gray-700 dark:text-disc-text hover:bg-gray-50 dark:hover:bg-disc-hover'}`}
+                    >
+                      <span>{fund.name}</span>
+                      <span className="font-mono tabular-nums">{Number(fund.net || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿</span>
+                    </button>
+                    {canEditAcc && (
+                      <button onClick={() => removeFund(fund.id)} className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 transition text-xs px-1 flex-shrink-0">✕</button>
+                    )}
+                  </div>
+                ))}
+                {Number(fundBalances.untagged?.count) > 0 && (
+                  <button
+                    onClick={() => { setFilter(f => ({ ...f, fundId: filter.fundId === '0' ? '' : '0' })); setAccOpen(false) }}
+                    className={`w-full flex justify-between text-sm rounded px-1.5 py-1 transition ${filter.fundId === '0' ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 font-medium' : 'text-gray-400 dark:text-disc-muted hover:bg-gray-50 dark:hover:bg-disc-hover'}`}
+                  >
+                    <span>ไม่ระบุกอง ({fundBalances.untagged.count} รายการ)</span>
+                    <span className="font-mono tabular-nums">{Number(fundBalances.untagged?.net || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿</span>
+                  </button>
                 )}
               </div>
             )}
@@ -290,7 +395,7 @@ function TransactionsContent() {
       {/* Filters */}
       <div className="flex flex-col gap-2 mb-5">
         {/* Type */}
-        <div className="flex rounded border dark:border-disc-border overflow-hidden text-sm">
+        <div className="flex rounded border dark:border-disc-border overflow-hidden text-base">
           {[['', 'ทั้งหมด'], ['income', '📥 รายรับ'], ['expense', '📤 รายจ่าย']].map(([val, label]) => (
             <button key={val} type="button"
               onClick={() => setFilter(f => ({ ...f, type: val }))}
@@ -371,7 +476,7 @@ function TransactionsContent() {
           return acc
         }, []).map(({ dateKey, items }) => (
           <div key={dateKey}>
-            <p className="text-xs font-semibold text-gray-400 dark:text-disc-muted px-1 py-1.5 sticky top-0 bg-gray-50 dark:bg-disc-bg2 z-10">{dateKey}</p>
+            <p className="text-sm font-semibold text-gray-400 dark:text-disc-muted px-1 py-1.5 sticky top-0 bg-gray-50 dark:bg-disc-bg2 z-10">{dateKey}</p>
             <div className="space-y-1.5">
         {items.map(t => (
           <div key={t.id} className="bg-card-bg rounded-xl shadow overflow-hidden">
@@ -397,13 +502,16 @@ function TransactionsContent() {
                     </>
                   )}
                   {!t.category_name && <span className="text-gray-300 dark:text-disc-muted/50">· ไม่มีหมวด</span>}
+                  {t.fund_name && (
+                    <span className="ml-1 px-1.5 py-0.5 rounded text-[10px] bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 flex-shrink-0">{t.fund_name}</span>
+                  )}
                 </p>
                 <p className="text-xs text-gray-400 dark:text-disc-muted mt-0.5">
                   {formatThaiDateTime(t.txn_at)} · <span className="text-gray-300 dark:text-disc-muted/50">#{t.id}</span>
                 </p>
               </div>
               <div className="text-right flex-shrink-0 flex flex-col items-end gap-1">
-                <p className={`font-mono font-semibold ${t.type === 'income' ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
+                <p className={`text-base font-mono font-semibold ${t.type === 'income' ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
                   {t.type === 'income' ? '+' : '-'}{Number(t.amount).toLocaleString('th-TH')} ฿
                 </p>
                 <ChevronDown size={14} className={`text-gray-400 transition-transform ${expandedId === t.id ? 'rotate-180' : ''}`} />
@@ -438,6 +546,28 @@ function TransactionsContent() {
                     </button>
                   ))}
                 </div>
+                {funds.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-3">
+                    <p className="w-full text-xs text-gray-400 dark:text-disc-muted mb-0.5">กองเงิน</p>
+                    <button
+                      onClick={() => changeFund(t, null)}
+                      className={`px-3 py-1.5 rounded-full text-[15px] border transition
+                        ${!t.fund_id
+                          ? 'bg-gray-200 dark:bg-disc-hover border-gray-400 dark:border-disc-border text-gray-800 dark:text-disc-text font-medium'
+                          : 'border-gray-200 dark:border-disc-border text-gray-400 hover:bg-gray-100 dark:hover:bg-disc-hover'}`}
+                    >ไม่ระบุ</button>
+                    {funds.map(fund => (
+                      <button
+                        key={fund.id}
+                        onClick={() => changeFund(t, fund.id)}
+                        className={`px-3 py-1.5 rounded-full text-[15px] border transition
+                          ${t.fund_id === fund.id
+                            ? 'bg-indigo-100 dark:bg-indigo-900/60 border-indigo-400 dark:border-indigo-500 text-indigo-700 dark:text-indigo-300 font-medium'
+                            : 'border-gray-200 dark:border-disc-border text-gray-600 dark:text-disc-text hover:bg-gray-100 dark:hover:bg-disc-hover'}`}
+                      >{fund.name}</button>
+                    ))}
+                  </div>
+                )}
                 {canEditAccount(
                   { owner_id: t.account_owner_id, visibility: t.account_visibility, province: t.account_province },
                   effectiveDiscordId,
@@ -464,7 +594,7 @@ function TransactionsContent() {
       </div>
 
       {/* infinite scroll sentinel */}
-      <div ref={sentinelRef} className="py-2 text-center text-xs text-gray-400">
+      <div ref={sentinelRef} className="py-2 text-center text-sm text-gray-400">
         {loading && 'กำลังโหลด...'}
         {!loading && !hasMore && txns.length > 0 && 'แสดงทั้งหมดแล้ว'}
       </div>

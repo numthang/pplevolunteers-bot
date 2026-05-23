@@ -22,7 +22,7 @@ const { onMessage, onVoiceStateUpdate } = require('./utils/activityTracker');
 const { handleRefresh } = require('./handlers/forumDashboard');
 const { handleFinanceRefresh } = require('./handlers/financeDashboard');
 const { handleOpenSearch, handleSearchModal, handleResultPage } = require('./handlers/forumSearch');
-const { handleGogoSignup, handleGogoModal, handleGogoDMButton, handleGogoDMModal, handleGogoEventButton, handleGogoEventSelect, handleGogoEventModal } = require('./handlers/gogoHandler');
+const { handleGogoSignup, handleGogoModal, handleGogoDMButton, handleGogoDMModal, handleGogoEventButton, handleGogoEventSelect, handleGogoEventModal, handleGogoListButton } = require('./handlers/gogoHandler');
 const { handleWatermarkSelect, handleWatermarkEnhance, handleWatermarkConfirm, handleWatermarkModal } = require('./handlers/watermarkHandler');
 const {
   handleBasketView, handleBasketClear,
@@ -179,6 +179,7 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.customId === 'btn_gogo_signup')  return handleGogoSignup(interaction);
     if (interaction.customId === 'btn_gogo_dm')      return handleGogoDMButton(interaction);
     if (interaction.customId === 'btn_gogo_event')   return handleGogoEventButton(interaction);
+    if (interaction.customId === 'btn_gogo_list')    return handleGogoListButton(interaction);
     if (interaction.customId === 'btn_open_interest')         return handleOpenInterest(interaction);
     if (interaction.customId === 'btn_open_province')         return handleOpenProvince(interaction);
     if (interaction.customId === 'forum_search')              return handleOpenSearch(interaction);

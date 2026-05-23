@@ -76,22 +76,45 @@ function buildFieldValue(entries) {
     groups.get(userId).push(name);
   }
   const MAX_LEN = 1024;
+  const total = entries.length;
   let result = '';
+  let shownCount = 0;
 
-  // 1. Add mentions one by one with length check
-  for (const userId of groups.keys()) {
-    const part = `<@${userId}> [🔗](https://discord.com/users/${userId})`;
+  function tryAppend(part, partCount) {
+    const remaining = total - shownCount - partCount;
+    const suffix = remaining > 0 ? ` · +${remaining} คน` : '';
     const candidate = result ? result + ' · ' + part : part;
-    if (candidate.length <= MAX_LEN) result = candidate;
-    else break;
+    if ((candidate + suffix).length <= MAX_LEN) {
+      result = candidate;
+      shownCount += partCount;
+      return true;
+    }
+    return false;
   }
 
-  // 2. Add extras only if there's space
+  // 1. compact mention for self-only users, full link for users with extras
+  for (const [userId, names] of groups.entries()) {
+    const hasExtras = names.some(Boolean);
+    const emptyCount = names.filter(n => !n).length;
+    const partCount = hasExtras ? emptyCount : (emptyCount || 1);
+    const part = hasExtras
+      ? `<@${userId}> [🔗](https://discord.com/users/${userId})`
+      : `<@${userId}>`;
+    if (!tryAppend(part, partCount)) {
+      const hidden = total - shownCount;
+      if (hidden > 0 && result) result += ` · +${hidden} คน`;
+      return result || '-';
+    }
+  }
+
+  // 2. extra names
   for (const [userId, names] of groups.entries()) {
     for (const n of names.filter(Boolean)) {
-      const extra = `[${n}](https://discord.com/users/${userId})`;
-      const candidate = result + ' · ' + extra;
-      if (candidate.length <= MAX_LEN) result = candidate;
+      if (!tryAppend(`[${n}](https://discord.com/users/${userId})`, 1)) {
+        const hidden = total - shownCount;
+        if (hidden > 0 && result) result += ` · +${hidden} คน`;
+        return result || '-';
+      }
     }
   }
 
@@ -190,6 +213,7 @@ async function handleGogoModal(interaction) {
     new ButtonBuilder().setCustomId('btn_gogo_signup').setLabel('🙋 เข้าร่วม').setStyle(ButtonStyle.Success),
     new ButtonBuilder().setCustomId('btn_gogo_event').setEmoji('🗓️').setStyle(ButtonStyle.Secondary),
     new ButtonBuilder().setCustomId('btn_gogo_dm').setEmoji('📢').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('btn_gogo_list').setEmoji('📋').setStyle(ButtonStyle.Secondary),
   );
 
   if (stickyConfig && stickyConfig.message_id === messageId) {
@@ -436,4 +460,34 @@ async function handleGogoEventModal(interaction) {
   await interaction.editReply({ content: '✅ สร้าง event เรียบร้อยแล้ว' });
 }
 
-module.exports = { handleGogoSignup, handleGogoModal, handleGogoDMButton, handleGogoDMModal, handleGogoEventButton, handleGogoEventSelect, handleGogoEventModal };
+async function handleGogoListButton(interaction) {
+  if (!interaction.isButton()) return;
+  const entries = await getEntries(interaction.guildId, interaction.message.id);
+
+  if (!entries.length) {
+    return interaction.reply({ content: '📋 ยังไม่มีผู้เข้าร่วม', flags: MessageFlags.Ephemeral });
+  }
+
+  const groups = new Map();
+  for (const { user_id, name } of entries) {
+    if (!groups.has(user_id)) groups.set(user_id, []);
+    groups.get(user_id).push(name);
+  }
+
+  const lines = [];
+  let i = 1;
+  for (const [userId, names] of groups.entries()) {
+    const extras = names.filter(Boolean);
+    lines.push(extras.length
+      ? `${i++}. <@${userId}> — ${extras.join(', ')}`
+      : `${i++}. <@${userId}>`);
+  }
+
+  const embed = new EmbedBuilder()
+    .setTitle(`📋 รายชื่อผู้เข้าร่วม (${entries.length} คน)`)
+    .setDescription(lines.join('\n').slice(0, 4096));
+
+  await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
+}
+
+module.exports = { handleGogoSignup, handleGogoModal, handleGogoDMButton, handleGogoDMModal, handleGogoEventButton, handleGogoEventSelect, handleGogoEventModal, handleGogoListButton };

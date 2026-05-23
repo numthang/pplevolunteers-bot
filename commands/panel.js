@@ -310,6 +310,10 @@ await refreshDashboard(thread, interaction.guildId, ids, existing.dashboard_msg_
           .setCustomId('btn_gogo_dm')
           .setEmoji('📢')
           .setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder()
+          .setCustomId('btn_gogo_list')
+          .setEmoji('📋')
+          .setStyle(ButtonStyle.Secondary),
       );
 
       if (isSticky) {
