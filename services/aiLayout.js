@@ -56,10 +56,21 @@ const PROVIDERS = {
     return JSON.parse(text);
   },
 
-  // gemini: async (imageBase64, mimeType) => {
-  //   // TODO: implement when needed
-  //   // const { GoogleGenerativeAI } = require('@google/generative-ai');
-  // },
+  gemini: async (imageBase64, mimeType) => {
+    const { GoogleGenerativeAI } = require('@google/generative-ai');
+    const client = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    const model  = client.getGenerativeModel({ model: 'gemini-2.0-flash' });
+
+    const result = await model.generateContent([
+      { text: LAYOUT_PROMPT },
+      { inlineData: { mimeType, data: imageBase64 } },
+      { text: 'Analyze this image for quote overlay placement.' },
+    ]);
+
+    const raw  = result.response.text();
+    const text = raw.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '').trim();
+    return JSON.parse(text);
+  },
 };
 
 /**
@@ -69,7 +80,7 @@ const PROVIDERS = {
  * @param {string} provider - 'claude' (default)
  * @returns {{ quotePosition, namePosition, textColor, accentColor, applyBW, reasoning }}
  */
-async function analyzeLayout(imageBuffer, mimeType, provider = 'claude') {
+async function analyzeLayout(imageBuffer, mimeType, provider = 'gemini') {
   const fn = PROVIDERS[provider];
   if (!fn) throw new Error(`Unknown AI provider: ${provider}`);
 
