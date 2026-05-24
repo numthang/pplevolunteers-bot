@@ -24,6 +24,7 @@ const { handleFinanceRefresh } = require('./handlers/financeDashboard');
 const { handleOpenSearch, handleSearchModal, handleResultPage } = require('./handlers/forumSearch');
 const { handleGogoSignup, handleGogoModal, handleGogoDMButton, handleGogoDMModal, handleGogoEventButton, handleGogoEventSelect, handleGogoEventModal, handleGogoListButton } = require('./handlers/gogoHandler');
 const { handleWatermarkSelect, handleWatermarkEnhance, handleWatermarkConfirm, handleWatermarkModal } = require('./handlers/watermarkHandler');
+const { handleQuoteModal } = require('./handlers/quoteHandler');
 const {
   handleBasketView, handleBasketClear,
   handleBasketPost, handleBasketRetry,
@@ -118,6 +119,7 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.customId.startsWith('rate_submit:'))   return handleRateModalSubmit(interaction);
     if (interaction.customId.startsWith('report_submit:')) return handleReportSubmit(interaction);
     if (interaction.customId === 'wm_custom_text')          return handleWatermarkModal(interaction);
+    if (interaction.customId === 'quote_modal')             return handleQuoteModal(interaction);
     if (interaction.customId.startsWith('basket_schedule_modal'))    return handleBasketModal(interaction);
     if (interaction.customId.startsWith('basket_caption_edit_modal')) return handleBasketCaptionEditModal(interaction);
     if (interaction.customId.startsWith('anon_submit:')) {

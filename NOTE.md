@@ -3,6 +3,8 @@ TODO
 - อื่นๆ ที่คาดหวังในอนาคต project management แบบ notion และ appflowy ให้ simple และ easy
 - ทำ context menu add to calendar เข้า discord event และ google calendar โดยที่ parse url discord event หรือ google meet ได้ และเอา content มาทำ description ได้ พร้อม parse วันที่เวลา จาก ข้อความนั้นได้ด้วย ทำแบบว่าให้รวมถึงไปการนำเข้าปฏิทิน "ทีมสื่อราชบุรี" ได้ด้วยอ่ะ มีให้เลือก ปฏิทิน ตอนนี้เรามี 2 - 3 ปฏิทิน
 - อ่านที่แก้ไข แล้วเอาขึ้น git พร้อมข้อความแก้ไข พร้อมเลข version
+ผมยกเลิก LINE Subscription หมดเลยหันมาใช้ Discord
+นรพนธ์ พลายศรีนิล คณะทำงานพรรคประชาชนราชบุรี เขต 1
 ==
 แนะนำแบ่งเป็น 2 session:
 Session A: อ่าน PDF + verify/correct CSV (source_page, benefit_amount, eligibility)

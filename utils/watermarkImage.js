@@ -1,8 +1,14 @@
 // utils/watermarkImage.js
 const sharp = require('sharp');
-const { createCanvas, loadImage } = require('@napi-rs/canvas');
+const { createCanvas, loadImage, GlobalFonts } = require('@napi-rs/canvas');
 const https = require('https');
 const http = require('http');
+const path = require('path');
+
+GlobalFonts.registerFromPath(
+  path.join(__dirname, '..', 'assets', 'fonts', 'Kanit-Bold.ttf'),
+  'Kanit'
+);
 
 async function fetchBuffer(url) {
   return new Promise((resolve, reject) => {
@@ -113,4 +119,123 @@ async function autoEnhance(buffer) {
     .toBuffer();
 }
 
-module.exports = { fetchBuffer, applyWatermark, autoEnhance };
+// ── Quote overlay (AI-positioned) ─────────────────────────────────────────────
+function wrapText(ctx, text, maxWidth) {
+  const words = text.split(' ');
+  const lines = [];
+  let current = '';
+  for (const word of words) {
+    const test = current ? `${current} ${word}` : word;
+    if (ctx.measureText(test).width > maxWidth && current) {
+      lines.push(current);
+      current = word;
+    } else {
+      current = test;
+    }
+  }
+  if (current) lines.push(current);
+  return lines.length ? lines : [text];
+}
+
+async function applyQuoteOverlay(sourceBuffer, { quoteText, authorName, layout }) {
+  let workBuf = sourceBuffer;
+  if (layout.applyBW) {
+    workBuf = await sharp(workBuf).grayscale().toColourspace('srgb').toBuffer();
+  }
+
+  const srcImg = await loadImage(workBuf);
+  const W = srcImg.width;
+  const H = srcImg.height;
+  const canvas = createCanvas(W, H);
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(srcImg, 0, 0, W, H);
+
+  const pad          = Math.max(24, Math.round(Math.min(W, H) * 0.045));
+  const quoteFontSz  = Math.max(28, Math.round(W * 0.048));
+  const bigMarkSz    = Math.max(90, Math.round(W * 0.13));
+  const nameFontSz   = Math.max(18, Math.round(W * 0.032));
+  const maxWidth     = W * 0.46;
+  const lineH        = quoteFontSz * 1.55;
+
+  ctx.font = `bold ${quoteFontSz}px Kanit`;
+  const lines      = wrapText(ctx, quoteText, maxWidth);
+  const textBlockH = bigMarkSz * 0.65 + lines.length * lineH;
+
+  // Determine block position
+  const pos = layout.quotePosition || 'center-left';
+  let bx = pos.includes('right') ? W - maxWidth - pad : pad;
+  let by;
+  if (pos.startsWith('top'))         by = pad;
+  else if (pos.startsWith('center')) by = Math.max(pad, (H - textBlockH) / 2);
+  else                               by = H - textBlockH - pad * 4;
+
+  // Semi-transparent background strip behind quote block
+  const bgPadX = pad * 0.6;
+  const bgPadY = pad * 0.5;
+  ctx.save();
+  ctx.globalAlpha = 0.45;
+  ctx.fillStyle   = '#000000';
+  ctx.beginPath();
+  const rx = bx - bgPadX;
+  const ry = by - bgPadY;
+  const rw = maxWidth + bgPadX * 2;
+  const rh = textBlockH + bgPadY * 2;
+  const r  = 12;
+  ctx.moveTo(rx + r, ry);
+  ctx.lineTo(rx + rw - r, ry);
+  ctx.arcTo(rx + rw, ry, rx + rw, ry + r, r);
+  ctx.lineTo(rx + rw, ry + rh - r);
+  ctx.arcTo(rx + rw, ry + rh, rx + rw - r, ry + rh, r);
+  ctx.lineTo(rx + r, ry + rh);
+  ctx.arcTo(rx, ry + rh, rx, ry + rh - r, r);
+  ctx.lineTo(rx, ry + r);
+  ctx.arcTo(rx, ry, rx + r, ry, r);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+
+  // Big opening quote mark
+  ctx.font          = `bold ${bigMarkSz}px Kanit`;
+  ctx.fillStyle     = layout.accentColor || '#ff6a13';
+  ctx.globalAlpha   = 0.95;
+  ctx.textBaseline  = 'top';
+  ctx.shadowColor   = 'rgba(0,0,0,0.55)';
+  ctx.shadowBlur    = 10;
+  ctx.shadowOffsetX = 1;
+  ctx.shadowOffsetY = 1;
+  ctx.fillText('”', bx, by);
+
+  // Quote lines
+  ctx.font      = `bold ${quoteFontSz}px Kanit`;
+  ctx.fillStyle = layout.textColor || '#FFFFFF';
+  ctx.shadowBlur = 6;
+  let ty = by + bigMarkSz * 0.65;
+  for (const line of lines) {
+    ctx.fillText(line, bx, ty);
+    ty += lineH;
+  }
+
+  // Author name
+  ctx.font      = `${nameFontSz}px Kanit`;
+  ctx.fillStyle = layout.accentColor || '#ff6a13';
+  ctx.shadowBlur = 4;
+  const nameText = `— ${authorName}`;
+  const nameW    = ctx.measureText(nameText).width;
+  const namePos  = layout.namePosition || 'bottom-left';
+  let nx = namePos === 'bottom-right'  ? W - nameW - pad
+         : namePos === 'bottom-center' ? (W - nameW) / 2
+         : pad;
+  ctx.fillText(nameText, nx, H - nameFontSz * 2 - pad);
+
+  ctx.globalAlpha  = 1;
+  ctx.shadowColor  = 'transparent';
+  ctx.shadowBlur   = 0;
+
+  const canvasBuf = canvas.toBuffer('image/png');
+  const { format } = await sharp(sourceBuffer).metadata();
+  const out = sharp(canvasBuf);
+  const buf = await (format === 'png' ? out.png() : out.jpeg({ quality: 92 })).toBuffer();
+  return { buffer: buf, ext: format === 'png' ? 'png' : 'jpg' };
+}
+
+module.exports = { fetchBuffer, applyWatermark, autoEnhance, applyQuoteOverlay };
