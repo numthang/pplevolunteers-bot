@@ -6,43 +6,7 @@ TODO
 ผมยกเลิก LINE Subscription หมดเลยหันมาใช้ Discord
 นรพนธ์ พลายศรีนิล คณะทำงานพรรคประชาชนราชบุรี เขต 1
 
-Context: pple-volunteers Discord Bot — Quote Image Feature
 
-โปรเจกต์ที่ /Users/tee/VSites/node/pple-volunteers (Node.js + discord.js v14)
-
-สิ่งที่ทำไปแล้วใน session นี้:
-
-ไฟล์ใหม่:
-
-services/aiLayout.js — วิเคราะห์รูปด้วย AI คืน JSON layout spec (provider-agnostic รองรับ claude/gemini, default = gemini) ติดตั้ง @google/generative-ai แล้ว ต้องใส่ GEMINI_API_KEY ใน .env
-commands/quote-context-menu.js — context menu "💬 Quote Image" (right-click บน message)
-handlers/quoteHandler.js — รับ context menu → modal (quote text + ชื่อ pre-filled) → AI วิเคราะห์ → render → ส่ง
-scripts/testQuoteOverlay.js — test script รับ image path เป็น argument
-ไฟล์ที่แก้:
-
-utils/watermarkImage.js — เพิ่ม applyQuoteOverlay() + wrapText() export ใหม่ (font string ต้องใช้ Kanit ไม่มี sans-serif fallback ไม่งั้น Thai จะเป็นกล่อง)
-index.js — import handleQuoteModal + route quote_modal
-assets/fonts/Kanit-Bold.ttf — font ไทยที่ลงไว้แล้ว
-ปัญหาที่ยังค้างอยู่ (งานต่อ):
-
-Visual design ยังไม่สวย — background box opacity 45% ต่ำเกิน, ไม่มี text stroke, ทำให้ font จมกับ background อ่านยาก
-ต้องปรับ rendering ใน applyQuoteOverlay() ใน utils/watermarkImage.js:
-เพิ่ม opacity เป็น 0.75+
-เพิ่ม text stroke/outline
-ใช้สี CI: orange #ff6a13, navy #002b49
-Deploy command ยังไม่ได้รัน node deploy-commands.js --guild <guild_id>
-CI Brand Colors:
-
-Orange: #ff6a13
-Navy: #002b49
-Red-accent: #df492e
-Blue-light: #b5d1dc
-Flow การทำงาน:
-
-
-right-click รูปใน Discord → "💬 Quote Image"
-→ modal: quote text (pre-filled) + ชื่อ (pre-filled)
-→ fetch รูป → Gemini วิเคราะห์ layout → applyQuoteOverlay → ติด watermark logo → ส่งรูป
 ==
 แนะนำแบ่งเป็น 2 session:
 Session A: อ่าน PDF + verify/correct CSV (source_page, benefit_amount, eligibility)

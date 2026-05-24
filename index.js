@@ -119,7 +119,7 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.customId.startsWith('rate_submit:'))   return handleRateModalSubmit(interaction);
     if (interaction.customId.startsWith('report_submit:')) return handleReportSubmit(interaction);
     if (interaction.customId === 'wm_custom_text')          return handleWatermarkModal(interaction);
-    if (interaction.customId === 'quote_modal')             return handleQuoteModal(interaction);
+    if (interaction.customId.startsWith('quote_modal:'))    return handleQuoteModal(interaction);
     if (interaction.customId.startsWith('basket_schedule_modal'))    return handleBasketModal(interaction);
     if (interaction.customId.startsWith('basket_caption_edit_modal')) return handleBasketCaptionEditModal(interaction);
     if (interaction.customId.startsWith('anon_submit:')) {

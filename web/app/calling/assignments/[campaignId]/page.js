@@ -151,6 +151,7 @@ export default function CampaignPage({ params }) {
   const [filterCalled, setFilterCalled] = useState(() => searchParams.get('called') || '')
   const [filterSort, setFilterSort] = useState(() => searchParams.get('sort') || '')
   const [filterStatus, setFilterStatus] = useState(() => searchParams.get('status') || '')
+  const [filterSms, setFilterSms] = useState(() => searchParams.get('sms') || '')
   const { data: session } = useSession()
   const { roles: effectiveRoles, discordId: effectiveDiscordId } = useEffectiveRoles(session)
   const isModerator = MODERATOR_ROLES.some(r => effectiveRoles.includes(r))
@@ -236,9 +237,10 @@ export default function CampaignPage({ params }) {
     if (filterAssignee) p.set('assignee', filterAssignee)
     if (filterCalled)   p.set('called', filterCalled)
     if (filterStatus)   p.set('status', filterStatus)
+    if (filterSms)      p.set('sms', filterSms)
     const qs = p.toString()
     router.replace(qs ? `/calling/assignments/${campaignId}?${qs}` : `/calling/assignments/${campaignId}`, { scroll: false })
-  }, [debouncedName, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, filterExpiry, filterCalled, filterSort, filterStatus, activeTab])
+  }, [debouncedName, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, filterExpiry, filterCalled, filterSort, filterStatus, filterSms, activeTab])
 
   const offsetRef = useRef(0)
   const sentinelRef = useRef(null)
@@ -248,7 +250,7 @@ export default function CampaignPage({ params }) {
   useEffect(() => { loadingMoreRef.current = loadingMore }, [loadingMore])
   useEffect(() => { hasMoreRef.current = hasMore }, [hasMore])
 
-  const buildMembersUrl = (offset, amphure, subdistricts, tier, assignee, rsvp, name, expiry, called, sort, status) => {
+  const buildMembersUrl = (offset, amphure, subdistricts, tier, assignee, rsvp, name, expiry, called, sort, status, sms) => {
     const limit = amphure ? 9999 : PAGE_SIZE
     const p = new URLSearchParams({ campaignId, limit, offset })
     if (amphure) p.set('amphure', amphure)
@@ -261,10 +263,11 @@ export default function CampaignPage({ params }) {
     if (called)   p.set('called', called)
     if (sort)     p.set('sort', sort)
     if (status)   p.set('status', status)
+    if (sms)      p.set('sms', sms)
     return `/api/calling/members?${p}`
   }
 
-  const buildContactsUrl = (offset, amphure, tier, assignee, name, called, status) => {
+  const buildContactsUrl = (offset, amphure, tier, assignee, name, called, status, sms) => {
     const p = new URLSearchParams({ campaignId, limit: PAGE_SIZE, offset })
     if (amphure)  p.set('amphoe', amphure)
     if (tier)     p.set('tier', tier)
@@ -272,10 +275,11 @@ export default function CampaignPage({ params }) {
     if (name)     p.set('name', name)
     if (called)   p.set('called', called)
     if (status)   p.set('status', status)
+    if (sms)      p.set('sms', sms)
     return `/api/calling/contacts/campaign?${p}`
   }
 
-  const loadFirst = useCallback(async (tab, amphure, subdistricts, tier, assignee, rsvp, name, expiry, called, sort, status) => {
+  const loadFirst = useCallback(async (tab, amphure, subdistricts, tier, assignee, rsvp, name, expiry, called, sort, status, sms) => {
     setLoadingInitial(true)
     setHasMore(false)
     hasMoreRef.current = false
@@ -284,8 +288,8 @@ export default function CampaignPage({ params }) {
     setLogsCache({})
     try {
       const dataUrl = tab === 'contact'
-        ? buildContactsUrl(0, amphure, tier, assignee, name, called, status)
-        : buildMembersUrl(0, amphure, subdistricts, tier, assignee, rsvp, name, expiry, called, sort, status)
+        ? buildContactsUrl(0, amphure, tier, assignee, name, called, status, sms)
+        : buildMembersUrl(0, amphure, subdistricts, tier, assignee, rsvp, name, expiry, called, sort, status, sms)
       const statsUrl = tab === 'contact'
         ? `/api/calling/contacts/campaign?campaignId=${campaignId}&stats=true`
         : `/api/calling/members?campaignId=${campaignId}&stats=true`
@@ -315,8 +319,8 @@ export default function CampaignPage({ params }) {
     loadingMoreRef.current = true
     try {
       const url = activeTab === 'contact'
-        ? buildContactsUrl(offsetRef.current, filterAmphure, filterTier, filterAssignee, debouncedName, filterCalled, filterStatus)
-        : buildMembersUrl(offsetRef.current, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled, filterSort, filterStatus)
+        ? buildContactsUrl(offsetRef.current, filterAmphure, filterTier, filterAssignee, debouncedName, filterCalled, filterStatus, filterSms)
+        : buildMembersUrl(offsetRef.current, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled, filterSort, filterStatus, filterSms)
       const res = await fetch(url)
       const data = await res.json()
       const newRows = data.data || []
@@ -330,7 +334,7 @@ export default function CampaignPage({ params }) {
       setLoadingMore(false)
       loadingMoreRef.current = false
     }
-  }, [activeTab, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled, filterSort, filterStatus])
+  }, [activeTab, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled, filterSort, filterStatus, filterSms])
 
   useEffect(() => {
     ;(async () => {
@@ -359,8 +363,8 @@ export default function CampaignPage({ params }) {
   }, [campaignId])
 
   useEffect(() => {
-    loadFirst(activeTab, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled, filterSort, filterStatus)
-  }, [campaignId, activeTab, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled, filterSort, filterStatus])
+    loadFirst(activeTab, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled, filterSort, filterStatus, filterSms)
+  }, [campaignId, activeTab, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled, filterSort, filterStatus, filterSms])
 
   useEffect(() => {
     const sentinel = sentinelRef.current
@@ -419,7 +423,7 @@ export default function CampaignPage({ params }) {
         }
       }
       setSplitModalOpen(false)
-      await loadFirst(activeTab, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled, filterSort, filterStatus)
+      await loadFirst(activeTab, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled, filterSort, filterStatus, filterSms)
     } catch (err) {
       alert('เกิดข้อผิดพลาด: ' + err.message)
     }
@@ -444,7 +448,7 @@ export default function CampaignPage({ params }) {
           })
         )
       )
-      await loadFirst(activeTab, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled, filterSort, filterStatus)
+      await loadFirst(activeTab, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled, filterSort, filterStatus, filterSms)
     } catch (err) {
       alert('เกิดข้อผิดพลาด: ' + err.message)
     }
@@ -465,11 +469,12 @@ export default function CampaignPage({ params }) {
     setFilterCalled('')
     setFilterSort('')
     setFilterStatus('')
+    setFilterSms('')
     setSelectedMembers(new Set())
     setExpandedId(null)
   }
 
-  const hasActiveFilters = !!(filterName || filterAmphure || filterSubdistricts.size > 0 || filterTier || filterAssignee || filterRsvp || filterExpiry || filterCalled || filterSort || filterStatus)
+  const hasActiveFilters = !!(filterName || filterAmphure || filterSubdistricts.size > 0 || filterTier || filterAssignee || filterRsvp || filterExpiry || filterCalled || filterSort || filterStatus || filterSms)
 
   const clearFilters = () => {
     setFilterName('')
@@ -483,6 +488,7 @@ export default function CampaignPage({ params }) {
     setFilterCalled('')
     setFilterSort('')
     setFilterStatus('')
+    setFilterSms('')
   }
 
   const assignees = (stats.assigneeCounts || [])
@@ -616,6 +622,12 @@ export default function CampaignPage({ params }) {
           <option value="">สถานะ</option>
           <option value="called">โทรแล้ว</option>
           <option value="uncalled">รอโทร</option>
+        </select>
+
+        <select value={filterSms} onChange={e => setFilterSms(e.target.value)} className={FILTER_CLS}>
+          <option value="">SMS</option>
+          <option value="sms_sent">ส่ง SMS แล้ว</option>
+          <option value="no_sms">ยังไม่ส่ง SMS</option>
         </select>
 
         <button
@@ -951,7 +963,7 @@ export default function CampaignPage({ params }) {
         onDone={() => {
           setSmsModalOpen(false)
           setSelectedMembers(new Set())
-          loadFirst(activeTab, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled, filterSort, filterStatus)
+          loadFirst(activeTab, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled, filterSort, filterStatus, filterSms)
         }}
       />
 

@@ -39,6 +39,7 @@ export async function GET(req) {
       name:       searchParams.get('name')       || null,
       called:     searchParams.get('called')     || null,
       sort:       searchParams.get('sort')       || null,
+      sms:        searchParams.get('sms')        || null,
     }
 
     const rows = await getContactsInCampaign(campaignId, filters, limit, offset)

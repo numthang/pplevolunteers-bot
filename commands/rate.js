@@ -40,13 +40,6 @@ module.exports = {
       const target     = interaction.options.getMember('user');
       const targetUser = interaction.options.getUser('user');
 
-      if (targetUser.id === interaction.user.id) {
-        return interaction.reply({
-          content: '❌ ไม่สามารถให้คะแนนหรือร้องเรียนตัวเองได้',
-          flags: MessageFlags.Ephemeral,
-        });
-      }
-
       if (targetUser.bot) {
         return interaction.reply({
           content: '❌ ไม่สามารถให้คะแนนหรือร้องเรียน Bot ได้',

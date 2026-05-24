@@ -89,7 +89,7 @@ export async function getMembersCount() {
  * Status: 'called' (has calls) | 'assigned' (assigned to someone) | 'unassigned'
  */
 export async function getMembersInCampaign(campaignId, filters = {}, limit = 100, offset = 0) {
-  const { amphure, subdistricts, tier, status, assignedTo, rsvp, name, expiry, called, sort } = filters
+  const { amphure, subdistricts, tier, status, assignedTo, rsvp, name, expiry, called, sort, sms } = filters
 
   const needAllTimeCalls = sort === 'least_called'
 
@@ -105,6 +105,7 @@ export async function getMembersInCampaign(campaignId, filters = {}, limit = 100
        l.note AS last_note,
        COUNT(DISTINCT l.id) AS total_calls,
        SUM(CASE WHEN l.status = 'answered' THEN 1 ELSE 0 END) AS answered_count,
+       SUM(CASE WHEN l.status IN ('sms_sent', 'sms_delivered') THEN 1 ELSE 0 END) AS sms_count,
        CASE WHEN a.id IS NOT NULL THEN 'assigned' ELSE 'unassigned' END AS member_status,
        dc.discord_id,
        dc.username AS discord_username,
@@ -153,6 +154,7 @@ export async function getMembersInCampaign(campaignId, filters = {}, limit = 100
      GROUP BY m.source_id
      HAVING (? IS NULL OR member_status = ?)
        AND (? IS NULL OR (? = 'called' AND total_calls > 0) OR (? = 'uncalled' AND total_calls = 0 AND member_status = 'assigned'))
+       AND (? IS NULL OR (? = 'sms_sent' AND sms_count > 0) OR (? = 'no_sms' AND sms_count = 0))
      ORDER BY ${
        sort === 'least_called' ? `all_time_calls ASC, m.home_amphure ASC, m.home_district ASC, m.first_name ASC` :
        sort === 'uncalled'     ? `total_calls ASC, m.home_amphure ASC, m.home_district ASC, m.first_name ASC` :
@@ -168,6 +170,7 @@ export async function getMembersInCampaign(campaignId, filters = {}, limit = 100
     name || null, name ? `%${name}%` : null,
     status || null, status || null,
     called || null, called || null, called || null,
+    sms || null, sms || null, sms || null,
     limit, offset
   )
 

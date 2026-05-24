@@ -9,8 +9,9 @@ const {
 } = require('discord.js');
 const path = require('path');
 const fs   = require('fs');
-const { fetchBuffer, applyQuoteOverlay, applyWatermark } = require('../utils/watermarkImage');
-const { analyzeLayout } = require('../services/aiLayout');
+const { fetchBuffer, applyWatermark } = require('../utils/watermarkImage');
+const { analyzeLayout }               = require('../services/aiLayout');
+const { renderQuoteStyle }            = require('../utils/quoteStyles');
 
 const ASSETS_DIR = path.join(__dirname, '..', 'assets', 'watermark');
 
@@ -35,6 +36,14 @@ function getFirstImage(msg) {
   });
 }
 
+function parseStyle(raw) {
+  const s = (raw || '').trim().toLowerCase();
+  if (!s || s === 'สุ่ม' || s === 'สุ่ม') return Math.floor(Math.random() * 6) + 1;
+  const n = parseInt(s, 10);
+  if (n >= 1 && n <= 6) return n;
+  return null; // invalid
+}
+
 async function handleQuoteCommand(interaction) {
   const msg = interaction.targetMessage;
   const att = getFirstImage(msg);
@@ -53,7 +62,7 @@ async function handleQuoteCommand(interaction) {
   });
 
   const modal = new ModalBuilder()
-    .setCustomId('quote_modal')
+    .setCustomId(`quote_modal:${Date.now()}`)
     .setTitle('💬 Quote Overlay');
 
   modal.addComponents(
@@ -63,19 +72,26 @@ async function handleQuoteCommand(interaction) {
         .setLabel('ข้อความ Quote')
         .setStyle(TextInputStyle.Paragraph)
         .setPlaceholder('การเป็นอาสาสมัครคือการให้โดยไม่หวังสิ่งตอบแทน')
-        .setValue('ผมยกเลิก LINE Subscription หมดเลยหันมาใช้ Discord')
         .setRequired(true)
         .setMaxLength(300)
     ),
     new ActionRowBuilder().addComponents(
       new TextInputBuilder()
         .setCustomId('quote_author')
-        .setLabel('ชื่อ / @handle')
+        .setLabel('ชื่อ / ตำแหน่ง')
         .setStyle(TextInputStyle.Short)
-        .setPlaceholder('นรพนธ์ พลายศรีนิล คณะทำงานพรรคประชาชนราชบุรี เขต 1')
-        .setValue('นรพนธ์ พลายศรีนิล คณะทำงานพรรคประชาชนราชบุรี เขต 1')
+        .setPlaceholder('ชื่อ คณะทำงานพรรคประชาชนราชบุรี เขต 1')
         .setRequired(true)
-        .setMaxLength(60)
+        .setMaxLength(80)
+    ),
+    new ActionRowBuilder().addComponents(
+      new TextInputBuilder()
+        .setCustomId('quote_style')
+        .setLabel('สไตล์ (1-6 หรือ สุ่ม)')
+        .setStyle(TextInputStyle.Short)
+        .setValue('สุ่ม')
+        .setRequired(false)
+        .setMaxLength(4)
     ),
   );
 
@@ -90,25 +106,38 @@ async function handleQuoteModal(interaction) {
       flags: MessageFlags.Ephemeral,
     });
   }
-  pending.delete(interaction.user.id);
 
   const quoteText  = interaction.fields.getTextInputValue('quote_text');
   const authorName = interaction.fields.getTextInputValue('quote_author');
+  const styleRaw   = interaction.fields.getTextInputValue('quote_style');
+  const styleNum   = parseStyle(styleRaw);
 
+  if (styleNum === null) {
+    return interaction.reply({
+      content: '❌ สไตล์ไม่ถูกต้อง — พิมพ์ตัวเลข 1-6 หรือ "สุ่ม"',
+      flags: MessageFlags.Ephemeral,
+    });
+  }
+
+  pending.delete(interaction.user.id);
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
   try {
     await interaction.editReply({ content: '⏳ กำลังโหลดรูป...' });
     const buf = await fetchBuffer(state.url);
 
-    await interaction.editReply({ content: '🤖 AI กำลังวิเคราะห์รูป...' });
-    const layout = await analyzeLayout(buf, state.mimeType);
-    console.log('[quoteHandler] layout:', JSON.stringify(layout));
+    // วิเคราะห์ layout เฉพาะ style 3 (Editorial Focus — dynamic placement)
+    let layout = {};
+    if (styleNum === 3) {
+      await interaction.editReply({ content: '🤖 AI กำลังวิเคราะห์รูป...' });
+      layout = await analyzeLayout(buf, state.mimeType);
+      console.log('[quoteHandler] layout:', JSON.stringify(layout));
+    }
 
-    await interaction.editReply({ content: `🎨 กำลัง render... _${layout.reasoning}_` });
-    let { buffer: outBuf, ext } = await applyQuoteOverlay(buf, { quoteText, authorName, layout });
+    await interaction.editReply({ content: `🎨 กำลัง render สไตล์ ${styleNum}...` });
+    let { buffer: outBuf, ext } = await renderQuoteStyle(styleNum, buf, { quoteText, authorName, layout });
 
-    // ติดโลโก้ guild ด้วยเสมอ (ถ้ามี)
+    // ติดโลโก้ guild
     const wmPath = getDefaultWatermark(interaction.guildId);
     if (wmPath) {
       const result = await applyWatermark(outBuf, {
@@ -129,7 +158,7 @@ async function handleQuoteModal(interaction) {
       files:   [file],
     });
 
-    await interaction.editReply({ content: '✅ ส่งแล้ว!' });
+    await interaction.editReply({ content: `✅ ส่งแล้ว! (สไตล์ ${styleNum})` });
   } catch (err) {
     console.error('[quoteHandler]', err);
     await interaction.editReply({ content: `❌ เกิดข้อผิดพลาด: ${err.message}` });

@@ -12,10 +12,15 @@ module.exports = {
       const parts = interaction.customId.split(':');
       const stars = parts[1];
       const targetId = parts[2];
-      // const encodedName = parts.slice(3).join(':');
-      // const targetName = decodeURIComponent(encodedName);
       const member = await interaction.guild.members.fetch(targetId);
       const resolvedTargetName = member.displayName;
+
+      if (targetId === interaction.user.id) {
+        return interaction.reply({
+          content: '❌ ไม่สามารถให้คะแนนหรือร้องเรียนตัวเองได้',
+          flags: MessageFlags.Ephemeral,
+        });
+      }
       //console.log('parsed:', { stars, targetId, targetName });
 
       const modal = new ModalBuilder()

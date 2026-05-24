@@ -79,7 +79,7 @@ export async function getContactsList(guildId, { province, provinces, keyword, l
 }
 
 export async function getContactsInCampaign(campaignId, filters = {}, limit = 100, offset = 0) {
-  const { amphoe, tier, status, assignedTo, name, called, sort } = filters
+  const { amphoe, tier, status, assignedTo, name, called, sort, sms } = filters
 
   let query = `SELECT
      c.*,
@@ -92,6 +92,7 @@ export async function getContactsInCampaign(campaignId, filters = {}, limit = 10
      l.note AS last_note,
      COUNT(DISTINCT l.id) AS total_calls,
      SUM(CASE WHEN l.status = 'answered' THEN 1 ELSE 0 END) AS answered_count,
+     SUM(CASE WHEN l.status IN ('sms_sent', 'sms_delivered') THEN 1 ELSE 0 END) AS sms_count,
      CASE WHEN a.id IS NOT NULL THEN 'assigned' ELSE 'unassigned' END AS member_status
    FROM act_event_cache cc
    JOIN calling_contacts c ON c.guild_id = ?
@@ -114,6 +115,7 @@ export async function getContactsInCampaign(campaignId, filters = {}, limit = 10
      AND (? IS NULL OR (? = 'assigned' AND member_status = 'assigned') OR (? = 'unassigned' AND member_status = 'unassigned'))
      AND (? IS NULL OR assigned_to = ?)
      AND (? IS NULL OR (? = 'called' AND total_calls > 0) OR (? = 'uncalled' AND total_calls = 0 AND member_status = 'assigned'))
+     AND (? IS NULL OR (? = 'sms_sent' AND sms_count > 0) OR (? = 'no_sms' AND sms_count = 0))
    ORDER BY ${
      sort === 'tier' ? `CASE COALESCE(t.tier,'D') WHEN 'A' THEN 1 WHEN 'B' THEN 2 WHEN 'C' THEN 3 ELSE 4 END ASC, COUNT(DISTINCT l.id) ASC, c.amphoe ASC, c.first_name ASC` :
                        `c.amphoe ASC, c.first_name ASC`
@@ -125,6 +127,7 @@ export async function getContactsInCampaign(campaignId, filters = {}, limit = 10
     status || null, status || null, status || null,
     assignedTo || null, assignedTo || null,
     called || null, called || null, called || null,
+    sms || null, sms || null, sms || null,
     limit, offset
   )
 
