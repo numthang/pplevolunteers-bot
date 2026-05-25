@@ -55,13 +55,14 @@ async function waitForIgContainer(id, token, maxWaitMs = 30000, onProgress = nul
   const start = Date.now();
   while (Date.now() - start < maxWaitMs) {
     const res = await httpsGet(`/v22.0/${id}?fields=status_code,status&access_token=${token}`);
+    console.log('[IG container]', id, JSON.stringify(res));
     if (res.status_code === 'FINISHED') return;
     if (res.status_code === 'ERROR') throw new Error(`IG container error: ${res.status || 'unknown'}`);
     const elapsed = Math.floor((Date.now() - start) / 1000);
     if (onProgress) onProgress(elapsed);
     await new Promise(r => setTimeout(r, 2000));
   }
-  throw new Error('IG container timeout — รูปใช้เวลา process นานเกิน 30s');
+  throw new Error('IG container timeout — รูปใช้เวลา process นานเกิน 120s');
 }
 
 function httpsPost(urlPath, body, contentType) {
@@ -210,7 +211,7 @@ async function _igPostFromUrls(cfg, imageUrls, caption, scheduleTime = null, onP
     const { id } = await igPost(`/v22.0/${cfg.igId}/media`, {
       image_url: imageUrls[0], caption, access_token: cfg.token, ...scheduleFields,
     });
-    await waitForIgContainer(id, cfg.token, 60000,
+    await waitForIgContainer(id, cfg.token, 120000,
       s => onProgress && onProgress(`📤 Instagram: กำลัง process รูป... (${s}s)`)
     );
     return publishAndGetUrl(id);
@@ -222,7 +223,7 @@ async function _igPostFromUrls(cfg, imageUrls, caption, scheduleTime = null, onP
     const { id } = await igPost(`/v22.0/${cfg.igId}/media`, {
       image_url: imageUrls[i], is_carousel_item: 'true', access_token: cfg.token,
     });
-    await waitForIgContainer(id, cfg.token, 60000,
+    await waitForIgContainer(id, cfg.token, 120000,
       s => onProgress && onProgress(`📤 Instagram: กำลัง process รูป ${i + 1}/${total}... (${s}s)`)
     );
     childIds.push(id);
@@ -233,7 +234,7 @@ async function _igPostFromUrls(cfg, imageUrls, caption, scheduleTime = null, onP
     access_token: cfg.token,
     ...scheduleFields,
   });
-  await waitForIgContainer(carouselId, cfg.token, 60000,
+  await waitForIgContainer(carouselId, cfg.token, 120000,
     s => onProgress && onProgress(`📤 Instagram: กำลัง publish carousel... (${s}s)`)
   );
   return publishAndGetUrl(carouselId);
