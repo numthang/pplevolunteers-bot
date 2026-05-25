@@ -210,7 +210,7 @@ async function _igPostFromUrls(cfg, imageUrls, caption, scheduleTime = null, onP
     const { id } = await igPost(`/v22.0/${cfg.igId}/media`, {
       image_url: imageUrls[0], caption, access_token: cfg.token, ...scheduleFields,
     });
-    await waitForIgContainer(id, cfg.token, 30000,
+    await waitForIgContainer(id, cfg.token, 60000,
       s => onProgress && onProgress(`📤 Instagram: กำลัง process รูป... (${s}s)`)
     );
     return publishAndGetUrl(id);
@@ -222,7 +222,7 @@ async function _igPostFromUrls(cfg, imageUrls, caption, scheduleTime = null, onP
     const { id } = await igPost(`/v22.0/${cfg.igId}/media`, {
       image_url: imageUrls[i], is_carousel_item: 'true', access_token: cfg.token,
     });
-    await waitForIgContainer(id, cfg.token, 30000,
+    await waitForIgContainer(id, cfg.token, 60000,
       s => onProgress && onProgress(`📤 Instagram: กำลัง process รูป ${i + 1}/${total}... (${s}s)`)
     );
     childIds.push(id);
@@ -233,7 +233,7 @@ async function _igPostFromUrls(cfg, imageUrls, caption, scheduleTime = null, onP
     access_token: cfg.token,
     ...scheduleFields,
   });
-  await waitForIgContainer(carouselId, cfg.token, 30000,
+  await waitForIgContainer(carouselId, cfg.token, 60000,
     s => onProgress && onProgress(`📤 Instagram: กำลัง publish carousel... (${s}s)`)
   );
   return publishAndGetUrl(carouselId);
