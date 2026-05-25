@@ -1,20 +1,33 @@
-// utils/quoteStyles.js — 6 quote image styles
+// utils/quoteStyles.js — Quote image styles
 const sharp  = require('sharp');
 const { createCanvas, loadImage, GlobalFonts } = require('@napi-rs/canvas');
 const path   = require('path');
 
 GlobalFonts.registerFromPath(
-  path.join(__dirname, '..', 'assets', 'fonts', 'Kanit-Bold.ttf'),
-  'Kanit'
+  path.join(__dirname, '..', 'assets', 'fonts', 'Anakotmai-Bold.ttf'),
+  'Anakotmai'
+);
+GlobalFonts.registerFromPath(
+  path.join(__dirname, '..', 'assets', 'fonts', 'Anakotmai-Light.ttf'),
+  'AnakotmaiLight'
 );
 
+const QUOTE_DIR = path.join(__dirname, '..', 'assets', 'quote');
+const markCache = {};
+async function loadMark(name) {
+  if (!markCache[name]) markCache[name] = await loadImage(path.join(QUOTE_DIR, `${name}.png`));
+  return markCache[name];
+}
+
 const ORANGE = '#ff6a13';
-const NAVY   = '#002b49';
 const WHITE  = '#ffffff';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function wrapText(ctx, text, maxWidth) {
+const _segmenter = new Intl.Segmenter('th', { granularity: 'grapheme' });
+function graphemes(text) { return [..._segmenter.segment(text)].map(s => s.segment); }
+
+function _wrapGreedy(ctx, text, maxWidth) {
   const lines = [];
   for (const para of text.split('\n')) {
     const words = para.trim().split(' ').filter(Boolean);
@@ -30,326 +43,320 @@ function wrapText(ctx, text, maxWidth) {
   return lines.length ? lines : [''];
 }
 
+function wrapText(ctx, text, maxWidth) {
+  const greedy = _wrapGreedy(ctx, text, maxWidth);
+  if (greedy.length <= 1) return greedy;
+  // binary search: tightest width giving same line count → balanced lines
+  const n = greedy.length;
+  let lo = 1, hi = maxWidth;
+  while (hi - lo > 2) {
+    const mid = Math.floor((lo + hi) / 2);
+    if (_wrapGreedy(ctx, text, mid).length <= n) hi = mid;
+    else lo = mid;
+  }
+  return _wrapGreedy(ctx, text, hi);
+}
+
 function lsDraw(ctx, text, x, y, sp = 1.5) {
   let cx = x;
-  for (const ch of text) { ctx.fillText(ch, cx, y); cx += ctx.measureText(ch).width + sp; }
+  for (const g of graphemes(text)) { ctx.fillText(g, cx, y); cx += ctx.measureText(g).width + sp; }
   return cx - x;
 }
 
 function lsWidth(ctx, text, sp = 1.5) {
   let w = 0;
-  for (const ch of text) w += ctx.measureText(ch).width + sp;
+  for (const g of graphemes(text)) w += ctx.measureText(g).width + sp;
   return w;
 }
 
-// Custom round quotation mark (two circles + tails)
-function drawMark(ctx, x, y, size, color) {
-  const r = size * 0.28, gap = size * 0.62;
-  ctx.save();
-  ctx.fillStyle = ctx.strokeStyle = color;
-  ctx.shadowBlur = 0;
-  for (let i = 0; i < 2; i++) {
-    const cx = x + i * gap;
-    ctx.beginPath(); ctx.arc(cx, y + r, r, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath();
-    ctx.moveTo(cx - r * 0.3, y + r * 1.6);
-    ctx.quadraticCurveTo(cx + r * 1.0, y + r * 2.5, cx - r * 0.2, y + r * 3.3);
-    ctx.lineWidth = r * 0.9; ctx.lineCap = 'round'; ctx.stroke();
+function fitFont(ctx, text, maxWidth, startSz, maxLines = 4) {
+  // ถ้า user ใส่ \n เอง — respect ทุกบรรทัด ไม่ wrap เพิ่ม แค่ shrink font ให้ fit
+  if (text.includes('\n')) {
+    const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+    const minSz = Math.round(startSz * 0.30);
+    let sz = startSz;
+    while (sz > minSz) {
+      ctx.font = `bold ${sz}px Anakotmai`;
+      if (lines.every(l => lsWidth(ctx, l) <= maxWidth)) return { fontSize: sz, lines };
+      sz = Math.max(minSz, Math.round(sz * 0.9));
+    }
+    ctx.font = `bold ${minSz}px Anakotmai`;
+    return { fontSize: minSz, lines };
   }
-  ctx.restore();
+
+  const minSz = Math.round(startSz * 0.65);
+  let sz = startSz;
+  while (sz > minSz) {
+    ctx.font = `bold ${sz}px Anakotmai`;
+    const lines = wrapText(ctx, text, maxWidth);
+    const allFit = lines.every(l => lsWidth(ctx, l) <= maxWidth);
+    if (lines.length <= maxLines && allFit) return { fontSize: sz, lines };
+    sz = Math.max(minSz, Math.round(sz * 0.9));
+  }
+  ctx.font = `bold ${minSz}px Anakotmai`;
+  return { fontSize: minSz, lines: wrapText(ctx, text, maxWidth) };
+}
+
+
+function drawMark(ctx, img, x, y, h) {
+  const w = (img.width / img.height) * h;
+  ctx.drawImage(img, x, y, w, h);
+  return w;
 }
 
 function roundRect(ctx, x, y, w, h, r) {
   ctx.beginPath();
   ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y); ctx.arcTo(x + w, y, x + w, y + r, r);
-  ctx.lineTo(x + w, y + h - r); ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
-  ctx.lineTo(x + r, y + h); ctx.arcTo(x, y + h, x, y + h - r, r);
-  ctx.lineTo(x, y + r); ctx.arcTo(x, y, x + r, y, r);
+  ctx.lineTo(x + w - r, y);
+  ctx.arcTo(x + w, y,     x + w, y + r,     r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+  ctx.lineTo(x + r, y + h);
+  ctx.arcTo(x,     y + h, x,     y + h - r, r);
+  ctx.lineTo(x,     y + r);
+  ctx.arcTo(x,     y,     x + r, y,         r);
   ctx.closePath();
 }
 
-async function toJpeg(canvas) {
-  return sharp(canvas.toBuffer('image/png')).jpeg({ quality: 93 }).toBuffer();
+function drawTinted(ctx, img, x, y, w, h, color) {
+  const tmp = createCanvas(w, h);
+  const tc  = tmp.getContext('2d');
+  tc.drawImage(img, 0, 0, w, h);
+  tc.globalCompositeOperation = 'source-in';
+  tc.fillStyle = color;
+  tc.fillRect(0, 0, w, h);
+  ctx.drawImage(tmp, x, y, w, h);
 }
 
-// ── Style 1: Modern & Impact — bottom-left + orange trim ─────────────────────
-async function style1(buf, { quoteText, authorName }) {
-  const work = await sharp(buf).modulate({ saturation: 0.25 }).toBuffer();
+async function toPng(canvas) {
+  return canvas.toBuffer('image/png');
+}
+
+// ── Core render ───────────────────────────────────────────────────────────────
+// markScale: relative size of mark (1.0 = default)
+// gradDark:  0.0–1.0 how dark the bottom gradient is
+async function renderVariant(buf, { quoteText, authorName, side = 'left', markScale = 1.0, gradDark = 0.95, saturation = 0.15 }) {
+  const isRight = side === 'right';
+
+  const work = await sharp(buf).modulate({ saturation }).toBuffer();
   const img  = await loadImage(work);
   const W = img.width, H = img.height;
-  const cv = createCanvas(W, H), ctx = cv.getContext('2d');
+  const cv  = createCanvas(W, H);
+  const ctx = cv.getContext('2d');
   ctx.drawImage(img, 0, 0, W, H);
 
-  const pad  = Math.round(Math.min(W, H) * 0.055);
-  const barW = Math.max(4, Math.round(W * 0.006));
-  const maxW = W * 0.44;
-  const qsz  = Math.max(26, Math.round(W * 0.04));
-  const nsz  = Math.max(14, Math.round(W * 0.025));
-  const msz  = Math.max(20, Math.round(W * 0.032));
-  const lh   = qsz * 1.18;
+  const pad    = Math.round(Math.min(W, H) * 0.055);
+  const barW   = Math.max(2, Math.round(W * 0.0024));
+  const barGap = Math.round(pad * 0.5);
+  const qsz    = Math.max(36, Math.round(W * 0.065));
+  const nsz    = Math.max(16, Math.round(W * 0.030));
+  const markH  = Math.max(54, Math.round(W * 0.090 * markScale));
+  const markGap = Math.round(pad * 0.25);
 
-  ctx.font = `bold ${qsz}px Kanit`;
-  const lines = wrapText(ctx, quoteText, maxW - barW - 14);
-  const totH  = msz * 0.5 + lines.length * lh + nsz * 2.2;
+  const maxW  = W * 0.80;
+  const { fontSize: qszFit, lines } = fitFont(ctx, quoteText, maxW - barW - barGap - 4, qsz, 4);
+  const lh    = qszFit * 1.2;
+  const textH = lines.length * lh + nsz * 1.8;
 
-  // gradient bottom-left
-  const gw = maxW + pad * 3.2, gh = totH + pad * 3.5;
-  const g = ctx.createLinearGradient(0, H - gh, gw, H);
-  g.addColorStop(0, 'rgba(0,8,18,0.86)'); g.addColorStop(0.65, 'rgba(0,8,18,0.7)'); g.addColorStop(1, 'rgba(0,8,18,0)');
-  ctx.fillStyle = g; ctx.fillRect(0, H - gh, gw, gh);
+  const textX        = isRight ? W - maxW - pad - barW - barGap - 4 : pad + barW + barGap + 4;
+  const barX         = isRight ? W - pad - barW : pad;
+  const textBlockTop = H - pad - textH;
+  const markY        = textBlockTop - markGap - markH;
 
-  const bx = pad + barW + 14;
-  const by = H - totH - pad;
+  const OPEN_MARKS  = ['double_open', 'classic_open', 'block_open', 'outline_open', 'big_open'];
+  const CLOSE_MARKS = ['double_close', 'classic_close', 'block_close', 'outline_close'];
+  const pool    = isRight ? CLOSE_MARKS : OPEN_MARKS;
+  const markImg = await loadMark(pool[Math.floor(Math.random() * pool.length)]);
+  const markW   = (markImg.width / markImg.height) * markH;
+  // left: mark ซ้าย align กับ bar edge, right: mark ขวา align กับ text ขวา
+  const markX   = isRight ? textX + maxW - markW : pad;
 
-  ctx.fillStyle = ORANGE; ctx.fillRect(pad, by, barW, totH);
-  drawMark(ctx, bx + maxW - msz * 1.3, by, msz, ORANGE);
+  const gV = ctx.createLinearGradient(0, H, 0, markY - H * 0.2);
+  gV.addColorStop(0,   `rgba(0,5,12,${gradDark})`);
+  gV.addColorStop(0.4, `rgba(0,5,12,${Math.round(gradDark * 0.84 * 100) / 100})`);
+  gV.addColorStop(1,   'rgba(0,5,12,0)');
+  ctx.fillStyle = gV;
+  ctx.fillRect(0, 0, W, H);
 
-  ctx.textBaseline = 'top'; ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 6;
-  ctx.font = `bold ${qsz}px Kanit`; ctx.fillStyle = WHITE;
-  let ty = by;
-  for (const l of lines) { lsDraw(ctx, l, bx, ty, 1.5); ty += lh; }
+  drawMark(ctx, markImg, markX, markY, markH);
 
-  ty += nsz * 0.4;
-  ctx.font = `${nsz}px Kanit`; ctx.fillStyle = ORANGE; ctx.shadowBlur = 3;
-  lsDraw(ctx, `— ${authorName}`, bx, ty, 0.8);
-
-  return { buffer: await toJpeg(cv), ext: 'jpg' };
-}
-
-// ── Style 2: Sophisticated Overlay — orange tint + white box bottom-right ─────
-async function style2(buf, { quoteText, authorName }) {
-  const img = await loadImage(buf);
-  const W = img.width, H = img.height;
-  const cv = createCanvas(W, H), ctx = cv.getContext('2d');
-  ctx.drawImage(img, 0, 0, W, H);
-
-  ctx.fillStyle = 'rgba(255,106,19,0.20)'; ctx.fillRect(0, 0, W, H);
-
-  const pad  = Math.round(Math.min(W, H) * 0.055);
-  const maxW = W * 0.41;
-  const qsz  = Math.max(24, Math.round(W * 0.037));
-  const nsz  = Math.max(13, Math.round(W * 0.023));
-  const msz  = Math.max(18, Math.round(W * 0.03));
-  const lh   = qsz * 1.18;
-  const bp   = Math.round(Math.min(W, H) * 0.03);
-
-  ctx.font = `bold ${qsz}px Kanit`;
-  const lines = wrapText(ctx, quoteText, maxW);
-  const textH = msz * 3.6 + lines.length * lh + nsz * 2.2;
-  const bw = maxW + bp * 2, bh = textH + bp * 2;
-  const bx = W - bw - pad, by = H - bh - pad;
-
-  ctx.save();
-  ctx.shadowColor = 'rgba(0,0,0,0.28)'; ctx.shadowBlur = 20; ctx.shadowOffsetY = 4;
-  ctx.fillStyle = 'rgba(255,255,255,0.93)';
-  roundRect(ctx, bx, by, bw, bh, 12); ctx.fill();
-  ctx.restore();
-
-  const tx = bx + bp; let ty = by + bp;
-  ctx.shadowBlur = 0;
-  drawMark(ctx, tx, ty, msz, ORANGE);
-
-  ty += msz * 3.6;
-  ctx.font = `bold ${qsz}px Kanit`; ctx.fillStyle = NAVY; ctx.textBaseline = 'top';
-  for (const l of lines) { lsDraw(ctx, l, tx, ty, 1.5); ty += lh; }
-
-  ty += nsz * 0.4;
-  ctx.font = `${nsz}px Kanit`; ctx.fillStyle = ORANGE;
-  lsDraw(ctx, `— ${authorName}`, tx, ty, 0.8);
-
-  return { buffer: await toJpeg(cv), ext: 'jpg' };
-}
-
-// ── Style 3: Editorial Focus — vignette + quote mark centered (AI placement) ──
-async function style3(buf, { quoteText, authorName, layout = {} }) {
-  const img = await loadImage(buf);
-  const W = img.width, H = img.height;
-  const cv = createCanvas(W, H), ctx = cv.getContext('2d');
-  ctx.drawImage(img, 0, 0, W, H);
-
-  const pos     = (layout.quotePosition || 'center-left');
-  const isRight = pos.includes('right');
-  const pad  = Math.round(Math.min(W, H) * 0.055);
-  const maxW = W * 0.44;
-  const qsz  = Math.max(26, Math.round(W * 0.042));
-  const nsz  = Math.max(14, Math.round(W * 0.025));
-  const msz  = Math.max(28, Math.round(W * 0.048));
-  const lh   = qsz * 1.18;
-
-  ctx.font = `bold ${qsz}px Kanit`;
-  const lines = wrapText(ctx, quoteText, maxW);
-  const totH  = msz * 3.6 + lines.length * lh + nsz * 2.5;
-
-  // radial vignette from bottom corner
-  const vigX = isRight ? W : 0;
-  const vg = ctx.createRadialGradient(vigX, H, Math.max(W, H) * 0.05, vigX, H, Math.max(W, H) * 0.9);
-  vg.addColorStop(0, 'rgba(0,12,25,0.80)'); vg.addColorStop(0.5, 'rgba(0,12,25,0.45)'); vg.addColorStop(1, 'rgba(0,12,25,0)');
-  ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
-
-  const bx = isRight ? W - maxW - pad : pad;
-  const by = H - totH - pad;
-
-  drawMark(ctx, bx + (maxW - msz * 1.2) / 2, by, msz, ORANGE);
-
-  ctx.textBaseline = 'top'; ctx.shadowColor = 'rgba(0,0,0,0.55)'; ctx.shadowBlur = 7;
-  ctx.font = `bold ${qsz}px Kanit`; ctx.fillStyle = layout.textColor || WHITE;
-  let ty = by + msz * 3.6;
-  for (const l of lines) { lsDraw(ctx, l, bx, ty, 1.5); ty += lh; }
-
-  ty += nsz * 0.4;
-  ctx.font = `${nsz}px Kanit`; ctx.fillStyle = ORANGE; ctx.shadowBlur = 3;
-  lsDraw(ctx, `— ${authorName}`, bx, ty, 0.8);
-
-  return { buffer: await toJpeg(cv), ext: 'jpg' };
-}
-
-// ── Style 4: Bold Clean — dim bottom-right, floating text, no box ─────────────
-async function style4(buf, { quoteText, authorName }) {
-  const img = await loadImage(buf);
-  const W = img.width, H = img.height;
-  const cv = createCanvas(W, H), ctx = cv.getContext('2d');
-  ctx.drawImage(img, 0, 0, W, H);
-
-  const pad  = Math.round(Math.min(W, H) * 0.055);
-  const maxW = W * 0.44;
-  const qsz  = Math.max(28, Math.round(W * 0.046));
-  const nsz  = Math.max(14, Math.round(W * 0.025));
-  const lh   = qsz * 1.18;
-
-  ctx.font = `bold ${qsz}px Kanit`;
-  const lines = wrapText(ctx, quoteText, maxW);
-  const totH  = lines.length * lh + nsz * 2.8;
-
-  // radial dim bottom-right
-  const gr = Math.max(maxW, totH) * 1.5;
-  const g = ctx.createRadialGradient(W, H, gr * 0.05, W, H, gr * 1.15);
-  g.addColorStop(0, 'rgba(0,8,18,0.84)'); g.addColorStop(0.55, 'rgba(0,8,18,0.62)'); g.addColorStop(1, 'rgba(0,8,18,0)');
-  ctx.fillStyle = g; ctx.fillRect(W - maxW - pad * 3, H - totH - pad * 3, maxW + pad * 3, totH + pad * 3);
-
-  const bx = W - maxW - pad;
-  const by = H - totH - pad;
+  ctx.fillStyle = ORANGE;
+  ctx.fillRect(barX, textBlockTop, barW, textH);
 
   ctx.textBaseline = 'top';
-  ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 10;
+  ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 10;
   ctx.shadowOffsetX = 1; ctx.shadowOffsetY = 1;
-  ctx.font = `bold ${qsz}px Kanit`; ctx.fillStyle = WHITE;
-  let ty = by;
-  for (const l of lines) { lsDraw(ctx, l, bx, ty, 1.8); ty += lh; }
-
-  ty += nsz * 0.5;
-  ctx.font = `${nsz}px Kanit`; ctx.fillStyle = ORANGE;
-  ctx.shadowBlur = 4; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
-  lsDraw(ctx, `— ${authorName}`, bx, ty, 0.8);
-
-  return { buffer: await toJpeg(cv), ext: 'jpg' };
-}
-
-// ── Style 5: Elegant Frame — white glassmorphism box bottom-right ─────────────
-async function style5(buf, { quoteText, authorName }) {
-  const img = await loadImage(buf);
-  const W = img.width, H = img.height;
-  const cv = createCanvas(W, H), ctx = cv.getContext('2d');
-  ctx.drawImage(img, 0, 0, W, H);
-
-  ctx.fillStyle = 'rgba(0,0,0,0.16)'; ctx.fillRect(0, 0, W, H);
-
-  const pad  = Math.round(Math.min(W, H) * 0.05);
-  const maxW = W * 0.40;
-  const qsz  = Math.max(22, Math.round(W * 0.035));
-  const nsz  = Math.max(13, Math.round(W * 0.022));
-  const msz  = Math.max(16, Math.round(W * 0.026));
-  const lh   = qsz * 1.18;
-  const bp   = Math.round(Math.min(W, H) * 0.032);
-
-  ctx.font = `bold ${qsz}px Kanit`;
-  const lines = wrapText(ctx, quoteText, maxW);
-  const textH = msz * 3.4 + lines.length * lh + nsz * 2.2;
-  const bw = maxW + bp * 2, bh = textH + bp * 2;
-  const bx = W - bw - pad, by = H - bh - pad;
-
-  ctx.save();
-  ctx.shadowColor = 'rgba(0,0,0,0.3)'; ctx.shadowBlur = 24; ctx.shadowOffsetY = 6;
-  ctx.fillStyle = 'rgba(255,255,255,0.86)';
-  roundRect(ctx, bx, by, bw, bh, 14); ctx.fill();
-  ctx.restore();
-
-  // orange top accent bar
-  ctx.fillStyle = ORANGE;
-  ctx.fillRect(bx, by, bw, Math.max(3, Math.round(H * 0.004)));
-
-  const tx = bx + bp; let ty = by + bp;
-  ctx.shadowBlur = 0;
-  drawMark(ctx, tx, ty, msz, ORANGE);
-
-  ty += msz * 3.4;
-  ctx.font = `bold ${qsz}px Kanit`; ctx.fillStyle = '#1a1a1a'; ctx.textBaseline = 'top';
-  for (const l of lines) { lsDraw(ctx, l, tx, ty, 1.5); ty += lh; }
-
-  ty += nsz * 0.4;
-  ctx.font = `${nsz}px Kanit`; ctx.fillStyle = ORANGE;
-  lsDraw(ctx, `— ${authorName}`, tx, ty, 0.8);
-
-  return { buffer: await toJpeg(cv), ext: 'jpg' };
-}
-
-// ── Style 6: Orange Accent right — bottom-right + right-aligned ──────────────
-async function style6(buf, { quoteText, authorName }) {
-  const work = await sharp(buf).modulate({ saturation: 0.25 }).toBuffer();
-  const img  = await loadImage(work);
-  const W = img.width, H = img.height;
-  const cv = createCanvas(W, H), ctx = cv.getContext('2d');
-  ctx.drawImage(img, 0, 0, W, H);
-
-  const pad  = Math.round(Math.min(W, H) * 0.055);
-  const barW = Math.max(4, Math.round(W * 0.006));
-  const maxW = W * 0.44;
-  const qsz  = Math.max(26, Math.round(W * 0.04));
-  const nsz  = Math.max(14, Math.round(W * 0.025));
-  const msz  = Math.max(20, Math.round(W * 0.032));
-  const lh   = qsz * 1.18;
-
-  ctx.font = `bold ${qsz}px Kanit`;
-  const lines = wrapText(ctx, quoteText, maxW - barW - 14);
-  const totH  = msz * 0.5 + lines.length * lh + nsz * 2.2;
-
-  // gradient bottom-right
-  const gw = maxW + pad * 3.5, gh = totH + pad * 3.5;
-  const g = ctx.createLinearGradient(W, H - gh, W - gw, H);
-  g.addColorStop(0, 'rgba(0,8,18,0.86)'); g.addColorStop(0.65, 'rgba(0,8,18,0.7)'); g.addColorStop(1, 'rgba(0,8,18,0)');
-  ctx.fillStyle = g; ctx.fillRect(W - gw, H - gh, gw, gh);
-
-  const barX = W - pad - barW;
-  const bx   = barX - maxW - 14;
-  const by   = H - totH - pad;
-
-  ctx.fillStyle = ORANGE; ctx.fillRect(barX, by, barW, totH);
-  drawMark(ctx, bx, by, msz, ORANGE);
-
-  ctx.textBaseline = 'top'; ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 6;
-  ctx.font = `bold ${qsz}px Kanit`; ctx.fillStyle = WHITE;
-  let ty = by;
+  let ty = textBlockTop;
   for (const l of lines) {
-    const lw = lsWidth(ctx, l, 1.5);
-    lsDraw(ctx, l, bx + (maxW - lw), ty, 1.5);
+    const drawX = isRight ? textX + (maxW - lsWidth(ctx, l, 1.0)) : textX;
+    ctx.fillStyle = WHITE; lsDraw(ctx, l, drawX, ty, 1.0);
     ty += lh;
   }
 
-  ty += nsz * 0.4;
-  ctx.font = `${nsz}px Kanit`; ctx.fillStyle = ORANGE; ctx.shadowBlur = 3;
-  const at = `${authorName} —`;
-  lsDraw(ctx, at, bx + (maxW - lsWidth(ctx, at, 0.8)), ty, 0.8);
+  ty += nsz * 0.5;
+  ctx.font = `${nsz}px AnakotmaiLight`; ctx.fillStyle = ORANGE;
+  ctx.shadowBlur = 4; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
+  if (isRight) {
+    const aw = lsWidth(ctx, `— ${authorName}`, 0.8);
+    lsDraw(ctx, `— ${authorName}`, textX + (maxW - aw), ty, 0.8);
+  } else {
+    lsDraw(ctx, `— ${authorName}`, textX, ty, 0.8);
+  }
 
-  return { buffer: await toJpeg(cv), ext: 'jpg' };
+  ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
+  return { buffer: await toPng(cv), ext: 'png' };
 }
 
-// ── Dispatcher ────────────────────────────────────────────────────────────────
-const STYLES = { 1: style1, 2: style2, 3: style3, 4: style4, 5: style5, 6: style6 };
+// ── Style 7: quote_border (mark + H-bar + V-bar เป็นชิ้นเดียว) ───────────────
+// PNG 822x714 — V-bar spans y 32%–95%, text area starts at x 24%, y 32%
+async function renderBorder(buf, { quoteText, authorName, saturation = 0.15 }) {
+  const work = await sharp(buf).modulate({ saturation }).toBuffer();
+  const img  = await loadImage(work);
+  const W = img.width, H = img.height;
+  const cv  = createCanvas(W, H);
+  const ctx = cv.getContext('2d');
+  ctx.drawImage(img, 0, 0, W, H);
 
-async function renderQuoteStyle(styleNum, sourceBuffer, opts) {
-  const fn = STYLES[styleNum];
-  if (!fn) throw new Error(`Unknown style: ${styleNum}`);
-  return fn(sourceBuffer, opts);
+  const pad  = Math.round(Math.min(W, H) * 0.055);
+  const qsz  = Math.max(36, Math.round(W * 0.065));
+  const nsz  = Math.max(16, Math.round(W * 0.030));
+
+  // quote_border.png 698x591 — V-bar spans y 25%–100%, text area x ≈ 24%
+  const borderImg = await loadMark('frame_left');
+
+  const maxW7   = W * 0.80;
+  const { fontSize: qszFit, lines } = fitFont(ctx, quoteText, maxW7, qsz, 4);
+  const lh      = qszFit * 1.2;
+  const textH   = lines.length * lh + nsz * 1.8;
+  const maxTextW = maxW7;
+
+  // scale PNG 50% — V-bar = 75% of height
+  const pngH    = (textH / 0.75) * 0.5;
+  const pngW    = pngH * (698 / 591);
+  const borderX = Math.round(pad * 0.6);
+  const textBlockTop = H - pad - textH;
+  const borderY      = textBlockTop - pngH * 0.25;
+
+  // text starts right of V-bar (24%) + double gap
+  const vBarRight = borderX + pngW * 0.24;
+  const textGap   = pngW * 0.08;   // double the original 0.04
+  const textX     = vBarRight + textGap;
+
+  const gV = ctx.createLinearGradient(0, H, 0, borderY - H * 0.2);
+  gV.addColorStop(0,   'rgba(0,5,12,0.95)');
+  gV.addColorStop(0.4, 'rgba(0,5,12,0.80)');
+  gV.addColorStop(1,   'rgba(0,5,12,0)');
+  ctx.fillStyle = gV; ctx.fillRect(0, 0, W, H);
+
+  // draw border PNG
+  ctx.drawImage(borderImg, borderX, borderY, pngW, pngH);
+
+  // quote text
+  ctx.textBaseline = 'top';
+  ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 10;
+  ctx.shadowOffsetX = 1; ctx.shadowOffsetY = 1;
+  let ty = textBlockTop;
+  for (const l of lines) {
+    ctx.fillStyle = WHITE; lsDraw(ctx, l, textX, ty, 1.0);
+    ty += lh;
+  }
+
+  ty += nsz * 0.5;
+  ctx.font = `${nsz}px AnakotmaiLight`; ctx.fillStyle = ORANGE;
+  ctx.shadowBlur = 4; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
+  lsDraw(ctx, `— ${authorName}`, textX, ty, 0.8);
+
+  ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
+  return { buffer: await toPng(cv), ext: 'png' };
 }
 
-module.exports = { renderQuoteStyle };
+// ── Style 8: quote_border_2 (top H + right V + bottom H — right frame) ───────
+// PNG 865x400 — C-shape: H-bar top y≈5%, V-bar right x≈97%, H-bar bottom y≈94%
+// content area height = 89% of pngH, aspect ratio = 865/400 = 2.1625
+async function renderBorder2(buf, { quoteText, authorName, saturation = 0.15 }) {
+  const work = await sharp(buf).modulate({ saturation }).toBuffer();
+  const img  = await loadImage(work);
+  const W = img.width, H = img.height;
+  const cv  = createCanvas(W, H);
+  const ctx = cv.getContext('2d');
+  ctx.drawImage(img, 0, 0, W, H);
+
+  const pad  = Math.round(Math.min(W, H) * 0.055);
+  const qsz  = Math.max(36, Math.round(W * 0.065));
+  const nsz  = Math.max(16, Math.round(W * 0.030));
+
+  const borderImg = await loadMark('frame_right');
+
+  const maxW8   = W * 0.80;
+  const { fontSize: qszFit, lines } = fitFont(ctx, quoteText, maxW8, qsz, 4);
+  const lh      = qszFit * 1.2;
+  const maxTextW = maxW8;
+  const textH = lines.length * lh + nsz * 1.8;
+
+  // scale PNG so content area (89%) = textH
+  const pngH    = textH / 0.89;
+  const pngW    = pngH * (865 / 400);
+  const textBlockTop = H - pad - textH;
+  // content top (5%) aligns with textBlockTop, + small internal padding gap
+  const innerGap = pngH * 0.075;  // gap between frame line and text
+  const borderY  = textBlockTop - pngH * 0.05 - innerGap;
+  // right-align: right edge at W - pad
+  const borderX = W - pad - pngW;
+
+  // text inside: left of V-bar (97%), right-aligned
+  const contentX    = borderX + pngW * 0.02;
+  const contentMaxW = pngW * 0.93;
+  const authorMaxW  = pngW * 0.75;
+
+  const gV = ctx.createLinearGradient(0, H, 0, borderY - H * 0.2);
+  gV.addColorStop(0,   'rgba(0,5,12,0.95)');
+  gV.addColorStop(0.4, 'rgba(0,5,12,0.80)');
+  gV.addColorStop(1,   'rgba(0,5,12,0)');
+  ctx.fillStyle = gV; ctx.fillRect(0, 0, W, H);
+
+  ctx.drawImage(borderImg, borderX, borderY, pngW, pngH);
+
+  ctx.textBaseline = 'top';
+  ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 10;
+  ctx.shadowOffsetX = 1; ctx.shadowOffsetY = 1;
+  let ty = textBlockTop;
+  for (const l of lines) {
+    const drawX = contentX + (contentMaxW - lsWidth(ctx, l, 1.0));
+    ctx.fillStyle = WHITE; lsDraw(ctx, l, drawX, ty, 1.0);
+    ty += lh;
+  }
+
+  ty += nsz * 0.5;
+  ctx.font = `${nsz}px AnakotmaiLight`; ctx.fillStyle = ORANGE;
+  ctx.shadowBlur = 4; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
+  const aw = lsWidth(ctx, `— ${authorName}`, 0.8);
+  lsDraw(ctx, `— ${authorName}`, contentX + (authorMaxW - aw), ty, 0.8);
+
+  ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
+  return { buffer: await toPng(cv), ext: 'png' };
+}
+
+// ── Styles ───────────────────────────────────────────────────────────────────
+const STYLES = {
+  'quote-1-ember-left':  (buf, opts) => renderVariant(buf, { ...opts, side: 'left',  markScale: 0.7, gradDark: 0.98 }),
+  'quote-1-ember-right': (buf, opts) => renderVariant(buf, { ...opts, side: 'right', markScale: 0.7, gradDark: 0.98 }),
+  'quote-1-pillar-left': (buf, opts) => renderBorder(buf, opts),
+  'quote-1-frame-right': (buf, opts) => renderBorder2(buf, opts),
+};
+const STYLE_KEYS = Object.keys(STYLES);
+
+async function renderQuoteStyle(styleKey, sourceBuffer, opts) {
+  const fn = STYLES[styleKey];
+  if (!fn) throw new Error(`Unknown style: ${styleKey}`);
+  return fn(sourceBuffer, { ...opts, authorName: opts.authorName || '' });
+}
+
+function parseStyle(input) {
+  const s = (input || '').trim();
+  if (!s || s === 'สุ่ม' || s === 'สุม' || s === 'random')
+    return STYLE_KEYS[Math.floor(Math.random() * STYLE_KEYS.length)];
+  const match = STYLE_KEYS.find(k => k.toLowerCase() === s.toLowerCase());
+  return match || null;
+}
+
+module.exports = { renderQuoteStyle, parseStyle };

@@ -1,5 +1,5 @@
 // index.js 
-require('dotenv').config();
+require('dotenv').config({ override: true });
 const { Client, GatewayIntentBits, Collection, MessageFlags } = require('discord.js');
 const { handleInterestSelect } = require('./handlers/interestSelect');
 const { handleModalSubmit, handleRegisterConfirm, handleDeleteLog, handleOpenRegisterModal } = require('./handlers/registerHandler');
@@ -24,11 +24,10 @@ const { handleFinanceRefresh } = require('./handlers/financeDashboard');
 const { handleOpenSearch, handleSearchModal, handleResultPage } = require('./handlers/forumSearch');
 const { handleGogoSignup, handleGogoModal, handleGogoDMButton, handleGogoDMModal, handleGogoEventButton, handleGogoEventSelect, handleGogoEventModal, handleGogoListButton } = require('./handlers/gogoHandler');
 const { handleWatermarkSelect, handleWatermarkEnhance, handleWatermarkConfirm, handleWatermarkModal } = require('./handlers/watermarkHandler');
-const { handleQuoteModal } = require('./handlers/quoteHandler');
+const { handleQuoteModal, handleQuoteStyleSelect, handleQuoteColorSelect, handleQuoteConfirm } = require('./handlers/quoteHandler');
 const {
   handleBasketView, handleBasketClear,
-  handleBasketPost, handleBasketRetry,
-  handleBasketSelect, handleBasketModal,
+  handleBasketPost, handleBasketRetry, handleBasketSelect, handleBasketModal,
   handleBasketEditCaption, handleBasketCaptionEditModal,
   handleBasketViewPublic,
 } = require('./handlers/basketHandler');
@@ -120,7 +119,7 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.customId.startsWith('report_submit:')) return handleReportSubmit(interaction);
     if (interaction.customId === 'wm_custom_text')          return handleWatermarkModal(interaction);
     if (interaction.customId.startsWith('quote_modal:'))    return handleQuoteModal(interaction);
-    if (interaction.customId.startsWith('basket_schedule_modal'))    return handleBasketModal(interaction);
+    if (interaction.customId.startsWith('basket_schedule_modal'))      return handleBasketModal(interaction);
     if (interaction.customId.startsWith('basket_caption_edit_modal')) return handleBasketCaptionEditModal(interaction);
     if (interaction.customId.startsWith('anon_submit:')) {
       const channelId = interaction.customId.split(':')[1];
@@ -134,6 +133,8 @@ client.on('interactionCreate', async (interaction) => {
 
   // --- Select Menus ---
   if (interaction.isStringSelectMenu()) {
+    if (interaction.customId === 'quote_style_select')            return handleQuoteStyleSelect(interaction);
+    if (interaction.customId === 'quote_color_select')            return handleQuoteColorSelect(interaction);
     if (interaction.customId.startsWith('orgchart_group'))           return handleOrgchartGroupSelect(interaction);
     if (interaction.customId.startsWith('orgchart_province_region')) return handleOrgchartProvinceSelect(interaction);
     if (interaction.customId.startsWith('orgchart_role'))            return handleOrgchartRoleSelect(interaction);
@@ -151,6 +152,7 @@ client.on('interactionCreate', async (interaction) => {
 
   // --- Buttons ---
   if (interaction.isButton()) {
+    if (interaction.customId.startsWith('quote_confirm:'))      return handleQuoteConfirm(interaction);
     if (interaction.customId === 'wm_confirm')              return handleWatermarkConfirm(interaction);
     if (interaction.customId === 'wm_enhance')              return handleWatermarkEnhance(interaction);
     if (interaction.customId.startsWith('basket_')) {

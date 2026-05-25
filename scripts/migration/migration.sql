@@ -171,3 +171,50 @@ ALTER TABLE finance_transactions
   ADD COLUMN fund_id INT NULL AFTER category_id;
 
 
+
+
+-- 2026-05-26: dc_basket_history — เพิ่ม x_url สำหรับ X (Twitter) platform + ลบ schedule_time (ใช้ post now เท่านั้น)
+ALTER TABLE dc_basket_history ADD COLUMN x_url VARCHAR(512) NULL AFTER threads_url;
+
+-- 2026-05-26: dc_social_accounts — รวม guild และ personal social accounts ในตารางเดียว (แทน dc_guild_config)
+CREATE TABLE IF NOT EXISTS dc_social_accounts (
+  id           INT AUTO_INCREMENT PRIMARY KEY,
+  owner_type   VARCHAR(10)  NOT NULL,
+  owner_id     VARCHAR(20)  NOT NULL,
+  name         VARCHAR(100) NOT NULL,
+  platform     VARCHAR(20)  NOT NULL,
+  page_id      VARCHAR(50)  NOT NULL,
+  access_token TEXT         NOT NULL,
+  ig_id        VARCHAR(50)  NULL,
+  created_at   DATETIME     DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_account (owner_type, owner_id, platform, page_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Migrate FB accounts (รวม IG ไว้ใน row เดียวกัน)
+INSERT INTO dc_social_accounts (owner_type, owner_id, name, platform, page_id, access_token, ig_id)
+SELECT
+  'guild', guild_id, 'เพจหลัก', 'fb',
+  MAX(CASE WHEN `key` = 'meta_page_id'    THEN value END),
+  MAX(CASE WHEN `key` = 'meta_page_token' THEN value END),
+  MAX(CASE WHEN `key` = 'meta_ig_id'      THEN value END)
+FROM dc_guild_config
+WHERE `key` IN ('meta_page_id', 'meta_page_token', 'meta_ig_id')
+GROUP BY guild_id
+HAVING MAX(CASE WHEN `key` = 'meta_page_id' THEN value END) IS NOT NULL
+   AND MAX(CASE WHEN `key` = 'meta_page_token' THEN value END) IS NOT NULL;
+
+-- Migrate Threads accounts
+INSERT INTO dc_social_accounts (owner_type, owner_id, name, platform, page_id, access_token)
+SELECT
+  'guild', guild_id, 'Threads', 'threads',
+  MAX(CASE WHEN `key` = 'meta_threads_id'    THEN value END),
+  MAX(CASE WHEN `key` = 'meta_threads_token' THEN value END)
+FROM dc_guild_config
+WHERE `key` IN ('meta_threads_id', 'meta_threads_token')
+GROUP BY guild_id
+HAVING MAX(CASE WHEN `key` = 'meta_threads_id' THEN value END) IS NOT NULL
+   AND MAX(CASE WHEN `key` = 'meta_threads_token' THEN value END) IS NOT NULL;
+
+-- ตรวจสอบข้อมูลก่อน DROP:
+-- SELECT * FROM dc_social_accounts;
+-- DROP TABLE dc_guild_config;

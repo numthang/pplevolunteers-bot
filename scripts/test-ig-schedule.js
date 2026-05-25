@@ -34,14 +34,14 @@ function post(urlPath, fields) {
 
 async function main() {
   const [rows] = await pool.execute(
-    `SELECT \`key\`, value FROM dc_guild_config WHERE guild_id = ? AND \`key\` IN ('meta_ig_id','meta_page_token')`,
+    `SELECT page_id, access_token, ig_id FROM dc_social_accounts WHERE owner_type = 'guild' AND owner_id = ? AND platform = 'fb' LIMIT 1`,
     [GUILD_ID]
   );
-  const cfg = Object.fromEntries(rows.map(r => [r.key, r.value]));
-  if (!cfg.meta_ig_id || !cfg.meta_page_token) {
-    console.error('❌ ไม่พบ meta_ig_id หรือ meta_page_token ใน dc_guild_config');
+  if (!rows.length || !rows[0].ig_id || !rows[0].access_token) {
+    console.error('❌ ไม่พบ ig_id หรือ access_token ใน dc_social_accounts');
     process.exit(1);
   }
+  const cfg = { meta_ig_id: rows[0].ig_id, meta_page_token: rows[0].access_token };
 
   const scheduleTime = Math.floor(Date.now() / 1000) + 3600; // 1 ชั่วโมงข้างหน้า
   console.log(`📷 IG ID: ${cfg.meta_ig_id}`);

@@ -9,11 +9,12 @@ async function fbGet(url) {
   return res.json()
 }
 
-async function upsert(guildId, key, value) {
+async function upsertSocialAccount(guildId, name, pageId, accessToken, igId) {
   await pool.execute(
-    `INSERT INTO dc_guild_config (guild_id, \`key\`, value) VALUES (?, ?, ?)
-     ON DUPLICATE KEY UPDATE value = VALUES(value)`,
-    [guildId, key, value]
+    `INSERT INTO dc_social_accounts (owner_type, owner_id, name, platform, page_id, access_token, ig_id)
+     VALUES ('guild', ?, ?, 'fb', ?, ?, ?)
+     ON DUPLICATE KEY UPDATE name = VALUES(name), access_token = VALUES(access_token), ig_id = VALUES(ig_id)`,
+    [guildId, name, pageId, accessToken, igId || null]
   )
 }
 
@@ -90,7 +91,6 @@ export async function GET(req) {
     const results = []
 
     for (const page of pages) {
-      // Get Instagram Business Account ID
       let igId = null
       const igRes = await fbGet(
         `https://graph.facebook.com/v22.0/${page.id}` +
@@ -98,34 +98,14 @@ export async function GET(req) {
       )
       if (igRes.instagram_business_account?.id) igId = igRes.instagram_business_account.id
 
-      // Find guilds already linked to this page
-      const [rows] = await pool.execute(
-        `SELECT guild_id FROM dc_guild_config WHERE \`key\` = 'meta_page_id' AND value = ?`,
-        [page.id]
-      )
-
-      if (rows.length) {
-        for (const row of rows) {
-          await upsert(row.guild_id, 'meta_page_token', page.access_token)
-          if (igId) await upsert(row.guild_id, 'meta_ig_id', igId)
-          results.push(`✅ <b>${page.name}</b> → guild ${row.guild_id}${igId ? ` (IG: ${igId})` : ''}`)
-        }
-      } else {
-        results.push(
-          `⚠️ <b>${page.name}</b> (${page.id}) — ยังไม่มี guild ผูกอยู่<br>` +
-          `<code style="font-size:12px">INSERT INTO dc_guild_config (guild_id, \`key\`, value) VALUES<br>` +
-          `&nbsp;&nbsp;('YOUR_GUILD_ID', 'meta_page_id', '${page.id}'),<br>` +
-          (igId ? `&nbsp;&nbsp;('YOUR_GUILD_ID', 'meta_ig_id', '${igId}'),<br>` : '') +
-          `&nbsp;&nbsp;('YOUR_GUILD_ID', 'meta_page_token', '...')<br>` +
-          `ON DUPLICATE KEY UPDATE value = VALUES(value);</code>`
-        )
-      }
+      await upsertSocialAccount(state.guildId, page.name, page.id, page.access_token, igId)
+      results.push(`✅ <b>${page.name}</b>${igId ? ` + Instagram` : ''}`)
     }
 
     const summary = results.map(r => `<li style="margin-bottom:8px">${r}</li>`).join('')
     return html('✅ Meta OAuth สำเร็จ', `
       <h1>✅ เชื่อมต่อ Meta สำเร็จ</h1>
-      <p>พบ ${pages.length} Page — อัพเดท token ใน DB แล้ว:</p>
+      <p>เชื่อมต่อ ${pages.length} Page กับ guild ${state.guildId} แล้ว:</p>
       <ul>${summary}</ul>
       <p><a href="/">← กลับหน้าหลัก</a></p>
     `)

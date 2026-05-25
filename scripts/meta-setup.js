@@ -51,11 +51,21 @@ function get(url) {
   });
 }
 
-async function upsert(guildId, key, value) {
+async function upsertFb(guildId, name, pageId, token, igId) {
   await pool.execute(
-    `INSERT INTO dc_guild_config (guild_id, \`key\`, value) VALUES (?, ?, ?)
-     ON DUPLICATE KEY UPDATE value = VALUES(value)`,
-    [guildId, key, value]
+    `INSERT INTO dc_social_accounts (owner_type, owner_id, name, platform, page_id, access_token, ig_id)
+     VALUES ('guild', ?, ?, 'fb', ?, ?, ?)
+     ON DUPLICATE KEY UPDATE name = VALUES(name), access_token = VALUES(access_token), ig_id = VALUES(ig_id)`,
+    [guildId, name, pageId, token, igId || null]
+  );
+}
+
+async function upsertThreads(guildId, threadsId, token) {
+  await pool.execute(
+    `INSERT INTO dc_social_accounts (owner_type, owner_id, name, platform, page_id, access_token)
+     VALUES ('guild', ?, 'Threads', 'threads', ?, ?)
+     ON DUPLICATE KEY UPDATE access_token = VALUES(access_token)`,
+    [guildId, threadsId, token]
   );
 }
 
@@ -79,21 +89,16 @@ async function handleThreads(shortToken) {
 
   const [rows] = await pool.execute(
     targetGuildId
-      ? `SELECT DISTINCT guild_id FROM dc_guild_config WHERE \`key\` = 'meta_page_id' AND guild_id = ?`
-      : `SELECT DISTINCT guild_id FROM dc_guild_config WHERE \`key\` = 'meta_page_id'`,
+      ? `SELECT DISTINCT owner_id FROM dc_social_accounts WHERE owner_type = 'guild' AND platform = 'fb' AND owner_id = ?`
+      : `SELECT DISTINCT owner_id FROM dc_social_accounts WHERE owner_type = 'guild' AND platform = 'fb'`,
     targetGuildId ? [targetGuildId] : []
   );
   if (!rows.length) {
-    console.log('⚠️  ยังไม่มี guild ผูก meta — insert เองด้วย SQL:');
-    console.log(`   INSERT INTO dc_guild_config (guild_id, \`key\`, value) VALUES`);
-    console.log(`     ('YOUR_GUILD_ID', 'meta_threads_id',    '${threadsId}'),`);
-    console.log(`     ('YOUR_GUILD_ID', 'meta_threads_token', '${longToken}')`);
-    console.log(`   ON DUPLICATE KEY UPDATE value = VALUES(value);`);
+    console.log('⚠️  ยังไม่มี guild ผูก FB — รัน FB OAuth ก่อนแล้วค่อย Threads');
   } else {
     for (const row of rows) {
-      await upsert(row.guild_id, 'meta_threads_id', threadsId);
-      await upsert(row.guild_id, 'meta_threads_token', longToken);
-      console.log(`✅ อัพเดท Threads config สำหรับ guild ${row.guild_id}`);
+      await upsertThreads(row.owner_id, threadsId, longToken);
+      console.log(`✅ อัพเดท Threads config สำหรับ guild ${row.owner_id}`);
     }
   }
 }
@@ -150,28 +155,12 @@ async function main() {
       console.log(`  📷 Instagram: ${igId}`);
     }
 
-    // 4. ดึง guild_id ที่ผูกกับ Page นี้จาก dc_guild_config
-    const [rows] = await pool.execute(
-      `SELECT guild_id FROM dc_guild_config WHERE \`key\` = 'meta_page_id' AND value = ?`,
-      [page.id]
-    );
-
-    if (rows.length) {
-      // มี guild ผูกอยู่แล้ว → update token + ig id
-      for (const row of rows) {
-        await upsert(row.guild_id, 'meta_page_token', page.access_token);
-        if (igId) await upsert(row.guild_id, 'meta_ig_id', igId);
-        console.log(`  ✅ อัพเดท token สำหรับ guild ${row.guild_id}`);
-      }
-    } else {
-      // ยังไม่มี guild ผูก → แสดงค่าให้ insert เอง
-      console.log(`  ⚠️  ยังไม่มี guild ผูกกับ Page นี้ — insert เองด้วย SQL:`);
-      console.log(`     INSERT INTO dc_guild_config (guild_id, \`key\`, value) VALUES`);
-      console.log(`       ('YOUR_GUILD_ID', 'meta_page_id',    '${page.id}'),`);
-      if (igId) console.log(`       ('YOUR_GUILD_ID', 'meta_ig_id',      '${igId}'),`);
-      console.log(`       ('YOUR_GUILD_ID', 'meta_page_token', '${page.access_token}')`);
-      console.log(`     ON DUPLICATE KEY UPDATE value = VALUES(value);`);
+    if (!targetGuildId) {
+      console.log(`  ⚠️  ระบุ GUILD_ID ด้วย: node scripts/meta-setup.js TOKEN GUILD_ID`);
+      continue;
     }
+    await upsertFb(targetGuildId, page.name, page.id, page.access_token, igId);
+    console.log(`  ✅ บันทึก ${page.name} → guild ${targetGuildId}${igId ? ` (IG: ${igId})` : ''}`);
     console.log('');
   }
 

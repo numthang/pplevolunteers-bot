@@ -12,22 +12,22 @@ const pool = require('../db/index');
 
 async function getConfig(guildId) {
   const [rows] = await pool.execute(
-    `SELECT \`key\`, value FROM dc_guild_config WHERE guild_id = ? AND \`key\` IN ('meta_page_id','meta_ig_id','meta_page_token')`,
+    `SELECT page_id, access_token, ig_id FROM dc_social_accounts WHERE owner_type = 'guild' AND owner_id = ? AND platform = 'fb' LIMIT 1`,
     [guildId]
   );
-  const cfg = Object.fromEntries(rows.map(r => [r.key, r.value]));
-  if (!cfg.meta_page_id || !cfg.meta_page_token) return null;
-  return { pageId: cfg.meta_page_id, igId: cfg.meta_ig_id || null, token: cfg.meta_page_token };
+  if (!rows.length) return null;
+  const r = rows[0];
+  return { pageId: r.page_id, igId: r.ig_id || null, token: r.access_token };
 }
 
 async function getThreadsConfig(guildId) {
   const [rows] = await pool.execute(
-    `SELECT \`key\`, value FROM dc_guild_config WHERE guild_id = ? AND \`key\` IN ('meta_threads_id','meta_threads_token')`,
+    `SELECT page_id, access_token FROM dc_social_accounts WHERE owner_type = 'guild' AND owner_id = ? AND platform = 'threads' LIMIT 1`,
     [guildId]
   );
-  const cfg = Object.fromEntries(rows.map(r => [r.key, r.value]));
-  if (!cfg.meta_threads_id || !cfg.meta_threads_token) return null;
-  return { userId: cfg.meta_threads_id, token: cfg.meta_threads_token };
+  if (!rows.length) return null;
+  const r = rows[0];
+  return { userId: r.page_id, token: r.access_token };
 }
 
 // ─── HTTP helper ──────────────────────────────────────────────────────────────
