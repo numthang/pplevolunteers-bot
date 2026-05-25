@@ -55,7 +55,7 @@ function httpsGet(urlPath) {
 async function waitForIgContainer(id, token, maxWaitMs = 30000, onProgress = null) {
   const start = Date.now();
   while (Date.now() - start < maxWaitMs) {
-    const res = await httpsGet(`/v22.0/${id}?fields=status_code,status&access_token=${token}`);
+    const res = await httpsGet(`/v22.0/${id}?fields=status_code,status&access_token=${encodeURIComponent(token)}`);
     console.log('[IG container]', id, JSON.stringify(res));
     if (res.status_code === 'FINISHED') return;
     if (res.status_code === 'ERROR') throw new Error(`IG container error: ${res.status || 'unknown'}`);
@@ -199,7 +199,7 @@ async function _igPostFromUrls(cfg, imageUrls, caption, scheduleTime = null, onP
     const { id: mediaId } = await igPost(`/v22.0/${cfg.igId}/media_publish`, {
       creation_id: containerId, access_token: cfg.token,
     });
-    const info = await httpsGet(`/v22.0/${mediaId}?fields=permalink,shortcode&access_token=${cfg.token}`);
+    const info = await httpsGet(`/v22.0/${mediaId}?fields=permalink,shortcode&access_token=${encodeURIComponent(cfg.token)}`);
     console.log('[IG permalink raw]', JSON.stringify(info));
     const permalink = info.permalink
       || (info.shortcode ? `https://www.instagram.com/p/${info.shortcode}/` : null);
@@ -209,9 +209,11 @@ async function _igPostFromUrls(cfg, imageUrls, caption, scheduleTime = null, onP
   const total = imageUrls.length;
 
   if (total === 1) {
+    console.log('[IG create container] igId:', cfg.igId, 'url:', imageUrls[0]);
     const { id } = await igPost(`/v22.0/${cfg.igId}/media`, {
       image_url: imageUrls[0], caption, access_token: cfg.token, ...scheduleFields,
     });
+    console.log('[IG container created] id:', id);
     await waitForIgContainer(id, cfg.token, 120000,
       s => onProgress && onProgress(`📤 Instagram: กำลัง process รูป... (${s}s)`)
     );
