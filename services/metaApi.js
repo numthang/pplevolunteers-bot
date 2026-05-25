@@ -12,12 +12,13 @@ const pool = require('../db/index');
 
 async function getConfig(guildId) {
   const [rows] = await pool.execute(
-    `SELECT page_id, access_token, ig_id FROM dc_social_accounts WHERE owner_type = 'guild' AND owner_id = ? AND platform = 'fb' LIMIT 1`,
+    `SELECT page_id, access_token, ig_id, name FROM dc_social_accounts WHERE owner_type = 'guild' AND owner_id = ? AND platform = 'fb' ORDER BY id ASC LIMIT 1`,
     [guildId]
   );
   if (!rows.length) return null;
   const r = rows[0];
-  return { pageId: r.page_id, igId: r.ig_id || null, token: r.access_token };
+  console.log('[getConfig]', guildId, 'page:', r.name, 'ig_id:', r.ig_id);
+  return { pageId: r.page_id, igId: r.ig_id || null, token: r.access_token, name: r.name };
 }
 
 async function getThreadsConfig(guildId) {
