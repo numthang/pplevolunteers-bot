@@ -21,10 +21,11 @@ const { getSetting, setSetting, deleteSetting } = require('../db/settings');
 const stateKey = channelId => `basket_state_${channelId}`;
 async function getBasketState(guildId, channelId) {
   const v = await getSetting(guildId, stateKey(channelId));
-  return v || null;
+  try { return v ? JSON.parse(v) : null; } catch { return null; }
 }
 async function setBasketStatePartial(guildId, channelId, patch) {
-  const cur = (await getSetting(guildId, stateKey(channelId))) || {};
+  const raw = await getSetting(guildId, stateKey(channelId));
+  const cur = raw ? (JSON.parse(raw) || {}) : {};
   await setSetting(guildId, stateKey(channelId), { ...cur, ...patch });
 }
 async function clearBasketState(guildId, channelId) {

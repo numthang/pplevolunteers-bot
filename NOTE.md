@@ -5,6 +5,8 @@ TODO
 - ทำ context menu add to calendar เข้า discord event และ google calendar โดยที่ parse url discord event หรือ google meet ได้ และเอา content มาทำ description ได้ พร้อม parse วันที่เวลา จาก ข้อความนั้นได้ด้วย ทำแบบว่าให้รวมถึงไปการนำเข้าปฏิทิน "ทีมสื่อราชบุรี" ได้ด้วยอ่ะ มีให้เลือก ปฏิทิน ตอนนี้เรามี 2 - 3 ปฏิทิน
 - อ่านที่แก้ไข แล้วเอาขึ้น git พร้อมข้อความแก้ไข พร้อมเลข version
 
+พวก gogopanel มีปัญหาไหมเนี่ย ช่วยทำ prompt อธิบายบันทึกไว้หน่อย จะเอาไปหาทางแก้ bug session หน้า
+
 ผมยกเลิก LINE
 Subcription หมดเลย
 หันมาใช้ Discord ทั้งหมด
