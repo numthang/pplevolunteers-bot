@@ -302,20 +302,20 @@ async function handleBasketRetry(interaction) {
 // ─── Select menus ─────────────────────────────────────────────────────────────
 async function handleBasketSelect(interaction) {
   try {
+    await interaction.deferUpdate();
     const state = pendingPost.get(interaction.user.id);
     const { guildId, channelId } = interaction;
     if (interaction.customId === 'basket_wm_type') {
       if (state) state.wmType = interaction.values[0];
-      await setBasketStatePartial(guildId, channelId, { wmType: interaction.values[0] }).catch(() => {});
+      setBasketStatePartial(guildId, channelId, { wmType: interaction.values[0] }).catch(() => {});
     }
     if (interaction.customId === 'basket_platform') {
       if (state) state.platform = interaction.values[0];
-      await setBasketStatePartial(guildId, channelId, { platform: interaction.values[0] }).catch(() => {});
+      setBasketStatePartial(guildId, channelId, { platform: interaction.values[0] }).catch(() => {});
     }
     if (interaction.customId === 'basket_enhance' && state) state.enhance = interaction.values[0] === 'on';
-    await interaction.deferUpdate();
   } catch (err) {
-    console.error('[basketSelect]', err);
+    if (err.code !== 10062) console.error('[basketSelect]', err);
   }
 }
 
