@@ -9,12 +9,12 @@ async function fbGet(url) {
   return res.json()
 }
 
-async function upsertSocialAccount(guildId, name, pageId, accessToken, userToken, igId) {
+async function upsertSocialRow(userDiscordId, guildId, name, platform, socialId, accessToken, userToken, userTokenExpiresAt, visibility = 'public') {
   await pool.execute(
-    `INSERT INTO dc_social_accounts (owner_type, owner_id, name, platform, page_id, access_token, user_token, ig_id)
-     VALUES ('guild', ?, ?, 'fb', ?, ?, ?, ?)
-     ON DUPLICATE KEY UPDATE name = VALUES(name), access_token = VALUES(access_token), user_token = VALUES(user_token), ig_id = VALUES(ig_id)`,
-    [guildId, name, pageId, accessToken, userToken, igId || null]
+    `INSERT INTO dc_social_accounts (user_discord_id, guild_id, name, platform, social_id, access_token, user_token, user_token_expires_at, visibility)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE name = VALUES(name), access_token = VALUES(access_token), user_token = VALUES(user_token), user_token_expires_at = VALUES(user_token_expires_at), visibility = VALUES(visibility)`,
+    [userDiscordId, guildId, name, platform, socialId, accessToken, userToken, userTokenExpiresAt, visibility]
   )
 }
 
@@ -80,6 +80,10 @@ export async function GET(req) {
     )
     if (longRes.error) throw new Error(`Long-lived exchange: ${longRes.error.message}`)
 
+    const expiresInSec = longRes.expires_in || 60 * 24 * 60 * 60 // default 60 days
+    const userTokenExpiresAt = new Date(Date.now() + expiresInSec * 1000)
+      .toISOString().slice(0, 19).replace('T', ' ')
+
     // 3. Get all page accounts + their tokens
     const accountsRes = await fbGet(
       `https://graph.facebook.com/v22.0/me/accounts` +
@@ -90,15 +94,22 @@ export async function GET(req) {
     const pages = accountsRes.data || []
     const results = []
 
+    const userDiscordId = state.userId || null
+
     for (const page of pages) {
-      let igId = null
+      // FB row: ใช้ page token, ไม่ต้องเก็บ user_token
+      await upsertSocialRow(userDiscordId, state.guildId, page.name, 'fb', page.id, page.access_token, null, null, 'public')
+
+      // IG row (ถ้ามี): ใช้ user_token, access_token ใส่ null
       const igRes = await fbGet(
         `https://graph.facebook.com/v22.0/${page.id}` +
         `?fields=instagram_business_account&access_token=${page.access_token}`
       )
-      if (igRes.instagram_business_account?.id) igId = igRes.instagram_business_account.id
+      const igId = igRes.instagram_business_account?.id || null
+      if (igId) {
+        await upsertSocialRow(userDiscordId, state.guildId, page.name, 'ig', igId, null, longRes.access_token, userTokenExpiresAt, 'public')
+      }
 
-      await upsertSocialAccount(state.guildId, page.name, page.id, page.access_token, longRes.access_token, igId)
       results.push(`✅ <b>${page.name}</b>${igId ? ` + Instagram` : ''}`)
     }
 

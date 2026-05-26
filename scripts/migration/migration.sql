@@ -222,3 +222,41 @@ HAVING MAX(CASE WHEN `key` = 'meta_threads_id' THEN value END) IS NOT NULL
 ALTER TABLE dc_social_accounts
   ADD COLUMN user_token TEXT NULL AFTER access_token;
 -- DROP TABLE dc_guild_config;
+
+-- 2026-05-26 — Auto-refresh User Token: เก็บ expiry ของ long-lived user token
+ALTER TABLE dc_social_accounts
+  ADD COLUMN user_token_expires_at DATETIME NULL AFTER user_token;
+
+-- 2026-05-26 — Redesign: user-owned accounts, 1 row per platform, visibility public/private
+-- Step 1: เพิ่ม columns ใหม่
+ALTER TABLE dc_social_accounts
+  ADD COLUMN user_discord_id VARCHAR(20) NULL AFTER owner_id,
+  ADD COLUMN guild_id        VARCHAR(20) NULL AFTER user_discord_id,
+  ADD COLUMN platform_id       VARCHAR(50) NULL AFTER page_id,
+  ADD COLUMN visibility      ENUM('public','private') NOT NULL DEFAULT 'public' AFTER ig_id,
+  ADD COLUMN user_key        VARCHAR(20) GENERATED ALWAYS AS (IFNULL(user_discord_id, '')) STORED;
+
+-- Step 2: migrate guild_id + platform_id จาก rows เดิม
+UPDATE dc_social_accounts SET guild_id = owner_id, platform_id = page_id
+  WHERE owner_type = 'guild';
+
+-- Step 3: insert IG rows แยกจาก FB rows ที่มี ig_id
+INSERT INTO dc_social_accounts (guild_id, name, platform, platform_id, access_token, user_token, user_token_expires_at, visibility)
+SELECT guild_id, CONCAT(name, ' (IG)'), 'ig', ig_id, access_token, user_token, user_token_expires_at, 'public'
+FROM dc_social_accounts
+WHERE platform = 'fb' AND ig_id IS NOT NULL AND guild_id IS NOT NULL;
+
+-- Step 4: drop unique key เดิม, เพิ่มอันใหม่ที่รองรับ NULL user_discord_id
+ALTER TABLE dc_social_accounts DROP INDEX uq_account;
+ALTER TABLE dc_social_accounts
+  ADD UNIQUE KEY uq_account (user_key, guild_id, platform, platform_id);
+
+-- Step 5: drop columns เดิม
+ALTER TABLE dc_social_accounts
+  DROP COLUMN owner_type,
+  DROP COLUMN owner_id,
+  DROP COLUMN page_id,
+  DROP COLUMN ig_id;
+
+-- 2026-05-26: dc_social_accounts — rename platform_id → social_id (ชื่อกลางๆ ครอบทุก platform)
+ALTER TABLE dc_social_accounts CHANGE platform_id social_id VARCHAR(50) NULL;

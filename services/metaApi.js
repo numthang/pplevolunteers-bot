@@ -10,25 +10,87 @@ const TEMP_URL = process.env.META_TEMP_URL
 
 const pool = require('../db/index');
 
-async function getConfig(guildId) {
-  const [rows] = await pool.execute(
-    `SELECT page_id, access_token, user_token, ig_id, name FROM dc_social_accounts WHERE owner_type = 'guild' AND owner_id = ? AND platform = 'fb' ORDER BY id ASC LIMIT 1`,
-    [guildId]
+const META_APP_ID     = process.env.META_APP_ID;
+const META_APP_SECRET = process.env.META_APP_SECRET;
+const REFRESH_THRESHOLD_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+async function refreshUserToken(rowId, userDiscordId, currentUserToken) {
+  const res = await httpsGet(
+    `/oauth/access_token?grant_type=fb_exchange_token` +
+    `&client_id=${META_APP_ID}&client_secret=${META_APP_SECRET}` +
+    `&fb_exchange_token=${encodeURIComponent(currentUserToken)}`
   );
-  if (!rows.length) return null;
-  const r = rows[0];
-  console.log('[getConfig]', guildId, 'page:', r.name, 'ig_id:', r.ig_id, 'user_token:', r.user_token ? 'yes' : 'no');
-  return { pageId: r.page_id, igId: r.ig_id || null, token: r.access_token, userToken: r.user_token || null, name: r.name };
+  if (res.error) throw new Error(`Token refresh ล้มเหลว: ${res.error.message} — กรุณา reconnect OAuth ใหม่`);
+
+  const expiresInSec = res.expires_in || 60 * 24 * 60 * 60;
+  const expiresAt = new Date(Date.now() + expiresInSec * 1000)
+    .toISOString().slice(0, 19).replace('T', ' ');
+
+  // ถ้ามี user_discord_id → update ทุก row ของ user คนนั้น (1 user_token ใช้กับหลาย platform)
+  // ถ้าไม่มี (rows migrated เดิม) → update เฉพาะ row นั้น
+  if (userDiscordId) {
+    await pool.execute(
+      `UPDATE dc_social_accounts SET user_token = ?, user_token_expires_at = ? WHERE user_discord_id = ? AND user_token IS NOT NULL`,
+      [res.access_token, expiresAt, userDiscordId]
+    );
+  } else {
+    await pool.execute(
+      `UPDATE dc_social_accounts SET user_token = ?, user_token_expires_at = ? WHERE id = ?`,
+      [res.access_token, expiresAt, rowId]
+    );
+  }
+  console.log('[refreshUserToken] row:', rowId, 'user:', userDiscordId || '(legacy)', 'expires_at:', expiresAt);
+  return res.access_token;
 }
 
-async function getThreadsConfig(guildId) {
+// คืนค่า config ของ platform หนึ่งใน guild หนึ่ง
+// userId = Discord user id ของคนที่กำลังโพสต์ (เพื่อ filter private accounts)
+async function getConfig(guildId, platform, userId = null) {
   const [rows] = await pool.execute(
-    `SELECT page_id, access_token FROM dc_social_accounts WHERE owner_type = 'guild' AND owner_id = ? AND platform = 'threads' LIMIT 1`,
-    [guildId]
+    `SELECT id, user_discord_id, social_id, access_token, user_token, user_token_expires_at, name, visibility
+     FROM dc_social_accounts
+     WHERE guild_id = ? AND platform = ?
+       AND (visibility = 'public' OR (visibility = 'private' AND user_discord_id = ?))
+     ORDER BY CASE WHEN user_discord_id = ? THEN 0 ELSE 1 END, id ASC
+     LIMIT 1`,
+    [guildId, platform, userId, userId]
   );
   if (!rows.length) return null;
   const r = rows[0];
-  return { userId: r.page_id, token: r.access_token };
+
+  let userToken = r.user_token || null;
+  if (userToken && r.user_token_expires_at) {
+    const msLeft = new Date(r.user_token_expires_at).getTime() - Date.now();
+    if (msLeft < REFRESH_THRESHOLD_MS) {
+      console.log('[getConfig]', guildId, platform, 'user_token expires in', Math.round(msLeft / 86400000), 'days — refreshing');
+      try {
+        userToken = await refreshUserToken(r.id, r.user_discord_id, userToken) || userToken;
+      } catch (err) {
+        console.error('[getConfig] refresh failed:', err.message);
+      }
+    }
+  }
+
+  console.log('[getConfig]', guildId, platform, 'name:', r.name, 'visibility:', r.visibility);
+  return {
+    rowId: r.id,
+    name: r.name,
+    socialId: r.social_id,
+    token: r.access_token,
+    userToken,
+    userDiscordId: r.user_discord_id,
+  };
+}
+
+// คืน array ของ platforms ที่ user คนนี้สามารถใช้ใน guild นี้
+async function getAvailablePlatforms(guildId, userId = null) {
+  const [rows] = await pool.execute(
+    `SELECT DISTINCT platform FROM dc_social_accounts
+     WHERE guild_id = ?
+       AND (visibility = 'public' OR (visibility = 'private' AND user_discord_id = ?))`,
+    [guildId, userId]
+  );
+  return rows.map(r => r.platform);
 }
 
 // ─── HTTP helper ──────────────────────────────────────────────────────────────
@@ -143,9 +205,9 @@ async function fbUploadPhoto(pageId, token, buffer, ext, published, caption = ''
   return res;
 }
 
-async function postToFacebook(guildId, images, caption, scheduleTime = null) {
-  const cfg = await getConfig(guildId);
-  if (!cfg) throw new Error('ไม่พบ config สำหรับ guild นี้');
+async function postToFacebook(guildId, userId, images, caption, scheduleTime = null) {
+  const cfg = await getConfig(guildId, 'fb', userId);
+  if (!cfg) throw new Error('ไม่พบ Facebook config สำหรับ guild นี้');
 
   const scheduleFields = scheduleTime
     ? { published: 'false', scheduled_publish_time: String(scheduleTime) }
@@ -156,7 +218,7 @@ async function postToFacebook(guildId, images, caption, scheduleTime = null) {
   // caption-only post
   if (!images.length) {
     const { body, contentType } = buildMultipart({ message: caption, access_token: cfg.token, call_to_action: noButtonCta, ...scheduleFields });
-    const res = await httpsPost(`/v22.0/${cfg.pageId}/feed`, body, contentType);
+    const res = await httpsPost(`/v22.0/${cfg.socialId}/feed`, body, contentType);
     if (res.error) throw new Error(`FB feed post: ${res.error.message}`);
     return res;
   }
@@ -164,7 +226,7 @@ async function postToFacebook(guildId, images, caption, scheduleTime = null) {
   // upload each photo as unpublished → create feed post (ให้ได้ pageId_postId เสมอ)
   const photoIds = [];
   for (const img of images) {
-    const res = await fbUploadPhoto(cfg.pageId, cfg.token, img.buffer, img.ext, false);
+    const res = await fbUploadPhoto(cfg.socialId, cfg.token, img.buffer, img.ext, false);
     photoIds.push({ media_fbid: res.id });
   }
 
@@ -175,7 +237,7 @@ async function postToFacebook(guildId, images, caption, scheduleTime = null) {
     call_to_action: noButtonCta,
     ...scheduleFields,
   });
-  const res = await httpsPost(`/v22.0/${cfg.pageId}/feed`, body, contentType);
+  const res = await httpsPost(`/v22.0/${cfg.socialId}/feed`, body, contentType);
   if (res.error) throw new Error(`FB feed post: ${res.error.message}`);
   return res;
 }
@@ -200,7 +262,7 @@ async function _igPostFromUrls(cfg, imageUrls, caption, scheduleTime = null, onP
     : {};
 
   async function publishAndGetUrl(containerId) {
-    const { id: mediaId } = await igPost(`/v22.0/${cfg.igId}/media_publish`, {
+    const { id: mediaId } = await igPost(`/v22.0/${cfg.socialId}/media_publish`, {
       creation_id: containerId, access_token: igToken,
     });
     const info = await httpsGet(`/v22.0/${mediaId}?fields=permalink,shortcode&access_token=${encodeURIComponent(igToken)}`);
@@ -213,8 +275,8 @@ async function _igPostFromUrls(cfg, imageUrls, caption, scheduleTime = null, onP
   const total = imageUrls.length;
 
   if (total === 1) {
-    console.log('[IG create container] igId:', cfg.igId, 'url:', imageUrls[0]);
-    const { id } = await igPost(`/v22.0/${cfg.igId}/media`, {
+    console.log('[IG create container] igId:', cfg.socialId, 'url:', imageUrls[0]);
+    const { id } = await igPost(`/v22.0/${cfg.socialId}/media`, {
       image_url: imageUrls[0], caption, access_token: igToken, ...scheduleFields,
     });
     console.log('[IG container created] id:', id);
@@ -227,7 +289,7 @@ async function _igPostFromUrls(cfg, imageUrls, caption, scheduleTime = null, onP
   // carousel — children ไม่ใส่ scheduled_publish_time, ใส่แค่ parent
   const childIds = [];
   for (let i = 0; i < imageUrls.length; i++) {
-    const { id } = await igPost(`/v22.0/${cfg.igId}/media`, {
+    const { id } = await igPost(`/v22.0/${cfg.socialId}/media`, {
       image_url: imageUrls[i], is_carousel_item: 'true', access_token: igToken,
     });
     await waitForIgContainer(id, igToken, 30000,
@@ -235,7 +297,7 @@ async function _igPostFromUrls(cfg, imageUrls, caption, scheduleTime = null, onP
     );
     childIds.push(id);
   }
-  const { id: carouselId } = await igPost(`/v22.0/${cfg.igId}/media`, {
+  const { id: carouselId } = await igPost(`/v22.0/${cfg.socialId}/media`, {
     media_type: 'CAROUSEL', caption,
     children: childIds.join(','),
     access_token: igToken,
@@ -257,9 +319,9 @@ function saveProcessedToTemp(images) {
   });
 }
 
-async function postToInstagram(guildId, images, caption, scheduleTime = null, onProgress = null) {
-  const cfg = await getConfig(guildId);
-  if (!cfg?.igId) throw new Error('ไม่พบ Instagram config');
+async function postToInstagram(guildId, userId, images, caption, scheduleTime = null, onProgress = null) {
+  const cfg = await getConfig(guildId, 'ig', userId);
+  if (!cfg) throw new Error('ไม่พบ Instagram config สำหรับ guild นี้');
   if (!TEMP_URL.startsWith('http')) {
     throw new Error(`META_TEMP_URL หรือ WEB_BASE_URL ไม่ได้ set — ตอนนี้ TEMP_URL="${TEMP_URL}" ซึ่ง Instagram เข้าไม่ได้`);
   }
@@ -317,10 +379,10 @@ async function waitForThreadsContainer(id, token, maxWaitMs = 30000, onProgress 
   throw new Error('Threads container timeout — รูปใช้เวลา process นานเกิน 30s');
 }
 
-async function postToThreads(guildId, images, caption, onProgress = null) {
+async function postToThreads(guildId, userId, images, caption, onProgress = null) {
   if (caption && caption.length > 500) caption = caption.slice(0, 497) + '...';
-  const cfg = await getThreadsConfig(guildId);
-  if (!cfg) throw new Error('ไม่พบ Threads config');
+  const cfg = await getConfig(guildId, 'threads', userId);
+  if (!cfg) throw new Error('ไม่พบ Threads config สำหรับ guild นี้');
   if (images.length && !TEMP_URL.startsWith('http')) {
     throw new Error(`WEB_BASE_URL ไม่ได้ set — Threads เข้า URL ไม่ได้`);
   }
@@ -329,7 +391,7 @@ async function postToThreads(guildId, images, caption, onProgress = null) {
   const total = imageUrls.length;
 
   async function publishAndGetUrl(containerId) {
-    const { id: mediaId } = await threadsPost(`/v1.0/${cfg.userId}/threads_publish`, {
+    const { id: mediaId } = await threadsPost(`/v1.0/${cfg.socialId}/threads_publish`, {
       creation_id: containerId, access_token: cfg.token,
     });
     const info = await threadsGet(`/v1.0/${mediaId}?fields=permalink&access_token=${cfg.token}`);
@@ -338,7 +400,7 @@ async function postToThreads(guildId, images, caption, onProgress = null) {
 
   // text only
   if (!imageUrls.length) {
-    const { id } = await threadsPost(`/v1.0/${cfg.userId}/threads`, {
+    const { id } = await threadsPost(`/v1.0/${cfg.socialId}/threads`, {
       media_type: 'TEXT', text: caption || '', access_token: cfg.token,
     });
     await waitForThreadsContainer(id, cfg.token, 30000,
@@ -349,7 +411,7 @@ async function postToThreads(guildId, images, caption, onProgress = null) {
 
   // single image
   if (total === 1) {
-    const { id } = await threadsPost(`/v1.0/${cfg.userId}/threads`, {
+    const { id } = await threadsPost(`/v1.0/${cfg.socialId}/threads`, {
       media_type: 'IMAGE', image_url: imageUrls[0], text: caption || '', access_token: cfg.token,
     });
     await waitForThreadsContainer(id, cfg.token, 30000,
@@ -361,7 +423,7 @@ async function postToThreads(guildId, images, caption, onProgress = null) {
   // carousel
   const childIds = [];
   for (let i = 0; i < imageUrls.length; i++) {
-    const { id } = await threadsPost(`/v1.0/${cfg.userId}/threads`, {
+    const { id } = await threadsPost(`/v1.0/${cfg.socialId}/threads`, {
       media_type: 'IMAGE', image_url: imageUrls[i], is_carousel_item: 'true', access_token: cfg.token,
     });
     await waitForThreadsContainer(id, cfg.token, 30000,
@@ -369,7 +431,7 @@ async function postToThreads(guildId, images, caption, onProgress = null) {
     );
     childIds.push(id);
   }
-  const { id: carouselId } = await threadsPost(`/v1.0/${cfg.userId}/threads`, {
+  const { id: carouselId } = await threadsPost(`/v1.0/${cfg.socialId}/threads`, {
     media_type: 'CAROUSEL', text: caption || '',
     children: childIds.join(','),
     access_token: cfg.token,
@@ -380,4 +442,4 @@ async function postToThreads(guildId, images, caption, onProgress = null) {
   return publishAndGetUrl(carouselId);
 }
 
-module.exports = { getConfig, getThreadsConfig, postToFacebook, postToInstagram, postToThreads };
+module.exports = { getConfig, getAvailablePlatforms, postToFacebook, postToInstagram, postToThreads };

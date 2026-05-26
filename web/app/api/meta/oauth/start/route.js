@@ -24,7 +24,7 @@ export async function GET(req) {
 
   if (!APP_ID) return Response.json({ error: 'META_APP_ID not configured' }, { status: 500 })
 
-  const state = Buffer.from(JSON.stringify({ guildId, ts: Date.now() })).toString('base64url')
+  const state = Buffer.from(JSON.stringify({ guildId, userId: session.user.discordId, ts: Date.now() })).toString('base64url')
 
   const oauthUrl = new URL('https://www.facebook.com/v22.0/dialog/oauth')
   oauthUrl.searchParams.set('client_id', APP_ID)

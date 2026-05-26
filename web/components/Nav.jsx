@@ -31,6 +31,7 @@ const ICONS = {
   sun:          'M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z',
   logout:         'M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75',
   integrations:   'M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437l1.745-1.437m6.615 8.206L15.75 15.75M4.867 19.125h.008v.008h-.008v-.008z',
+  social:         'M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z',
 }
 
 const FINANCE_LINKS = [
@@ -50,6 +51,10 @@ const CONTACTS_LINKS = [
   { href: '/contacts', label: 'Contacts', icon: 'contacts' },
 ]
 
+const BOT_LINKS = [
+  { href: '/bot/social/accounts', label: 'Social Accounts', icon: 'social' },
+]
+
 const DASHBOARD_LINKS = [
   { href: '/finance',       label: 'FINANCE',   icon: 'transactions' },
   { href: '/calling',       label: 'CALLING',   icon: 'campaigns' },
@@ -58,10 +63,11 @@ const DASHBOARD_LINKS = [
 ]
 
 const APPS = [
-  { key: 'home',     label: 'DASHBOARD',      href: '/', icon: 'overview' },
-  { key: 'finance',  label: 'FINANCE',   href: '/finance',   icon: 'transactions' },
-  { key: 'calling',  label: 'CALLING',   href: '/calling',   icon: 'campaigns' },
-  { key: 'contacts', label: 'CONTACTS',  href: '/contacts',  icon: 'contacts' },
+  { key: 'home',     label: 'DASHBOARD', href: '/',               icon: 'overview' },
+  { key: 'finance',  label: 'FINANCE',   href: '/finance',        icon: 'transactions' },
+  { key: 'calling',  label: 'CALLING',   href: '/calling',        icon: 'campaigns' },
+  { key: 'contacts', label: 'CONTACTS',  href: '/contacts',       icon: 'contacts' },
+  { key: 'bot',      label: 'BOT',       href: '/bot/social/accounts', icon: 'social', roles: ['Admin'] },
 ]
 
 export default function Nav({ session }) {
@@ -78,9 +84,10 @@ export default function Nav({ session }) {
   const isCallingApp  = pathname.startsWith('/calling')
   const isFinanceApp  = pathname.startsWith('/finance')
   const isContactsApp = pathname.startsWith('/contacts')
-  const isLinkActive = (href) => pathname === href || (href === '/contacts' && pathname.startsWith('/contacts/'))
-  const currentApp = isContactsApp ? APPS[3] : isCallingApp ? APPS[2] : isFinanceApp ? APPS[1] : APPS[0]
-  const links = isContactsApp ? CONTACTS_LINKS : isCallingApp ? CALLING_LINKS : isFinanceApp ? FINANCE_LINKS : DASHBOARD_LINKS
+  const isBotApp      = pathname.startsWith('/bot')
+  const isLinkActive = (href) => pathname === href || (href !== '/' && pathname.startsWith(href))
+  const currentApp = isBotApp ? APPS[4] : isContactsApp ? APPS[3] : isCallingApp ? APPS[2] : isFinanceApp ? APPS[1] : APPS[0]
+  const links = isBotApp ? BOT_LINKS : isContactsApp ? CONTACTS_LINKS : isCallingApp ? CALLING_LINKS : isFinanceApp ? FINANCE_LINKS : DASHBOARD_LINKS
 
   const campaignIdMatch = pathname.match(/^\/calling\/assignments\/(\d+)/)
   const activeCampaignId = campaignIdMatch ? parseInt(campaignIdMatch[1]) : null
@@ -124,6 +131,8 @@ export default function Nav({ session }) {
 
   const userIsAdmin = roles.includes('Admin')
 
+  const visibleApps = APPS.filter(a => !a.roles || a.roles.some(r => roles.includes(r)))
+
   const activeClass = 'bg-teal/10 dark:bg-teal/10 text-teal dark:text-teal font-medium'
   const inactiveClass = 'text-warm-500 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text hover:bg-warm-100 dark:hover:bg-disc-hover'
 
@@ -153,7 +162,7 @@ export default function Nav({ session }) {
             <>
               <div className="fixed inset-0 z-10" onClick={() => setAppOpen(false)} />
               <div className="absolute left-0 top-full mt-1 z-20 bg-white dark:bg-disc-hover border border-warm-200 dark:border-disc-border rounded-lg shadow-lg py-1 min-w-[160px]">
-                {APPS.map(app => (
+                {visibleApps.map(app => (
                   <Link
                     key={app.key}
                     href={app.href}
@@ -350,7 +359,7 @@ export default function Nav({ session }) {
                     {currentApp?.key !== 'home' && (
                       <>
                         <div className="border-t border-warm-200 dark:border-disc-border my-1" />
-                        {APPS.filter(a => a.key !== currentApp?.key).map(app => (
+                        {visibleApps.filter(a => a.key !== currentApp?.key).map(app => (
                           <Link
                             key={app.key}
                             href={app.href}

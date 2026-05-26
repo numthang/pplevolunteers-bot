@@ -15,7 +15,7 @@ const fs = require('fs');
 const sharp = require('sharp');
 const { addImages, setCaption, getBasket, clearBasket, addHistory, getHistory } = require('../db/mediaBasket');
 const { fetchBuffer, applyWatermark, autoEnhance } = require('../utils/watermarkImage');
-const { postToFacebook, postToInstagram, postToThreads, getConfig, getThreadsConfig } = require('../services/metaApi');
+const { postToFacebook, postToInstagram, postToThreads, getAvailablePlatforms } = require('../services/metaApi');
 const { getSetting, setSetting, deleteSetting } = require('../db/settings');
 
 const stateKey = channelId => `basket_state_${channelId}`;
@@ -101,9 +101,7 @@ function buildBasketButtons(imgCount, hasCaption = false) {
   );
 }
 
-function buildPlatformRow(cfg, threadsCfg, defaultPlatform) {
-  const hasIg = !!cfg?.igId;
-  const hasThreads = !!threadsCfg;
+function buildPlatformRow(hasIg, hasThreads, defaultPlatform) {
   const opts = [];
 
   if (hasIg && hasThreads)
@@ -138,11 +136,12 @@ async function buildBasketPayload(basket, guildId, channelId, userId) {
   const embed = buildBasketEmbed(imgCount, caption, previewUrl);
   if (links.length) embed.addFields({ name: '🖼️ ต้นทาง', value: links.join('\n'), inline: false });
 
-  const cfg = await getConfig(guildId);
-  const threadsCfg = await getThreadsConfig(guildId);
+  const platforms = await getAvailablePlatforms(guildId, userId);
+  const hasIg = platforms.includes('ig');
+  const hasThreads = platforms.includes('threads');
   const saved = await getBasketState(guildId, channelId);
-  const fallbackPlatform = cfg?.igId && threadsCfg ? 'all'
-    : cfg?.igId ? 'both'
+  const fallbackPlatform = hasIg && hasThreads ? 'all'
+    : hasIg ? 'both'
     : 'fb';
   const currentWmType   = saved?.wmType   ?? 'none';
   const currentPlatform = saved?.platform ?? fallbackPlatform;
@@ -197,7 +196,7 @@ async function buildBasketPayload(basket, guildId, channelId, userId) {
         ])
     ));
   }
-  components.push(buildPlatformRow(cfg, threadsCfg, currentPlatform));
+  components.push(buildPlatformRow(hasIg, hasThreads, currentPlatform));
   components.push(buildBasketButtons(imgCount, !!caption));
 
   return { embeds: [embed], components };
@@ -268,9 +267,10 @@ async function handleBasketClear(interaction) {
 // ─── สร้างโพสต์: open modal ───────────────────────────────────────────────────
 async function rehydrateState(interaction) {
   const { guildId, channelId } = interaction;
-  const cfg = await getConfig(guildId);
-  const threadsCfg = await getThreadsConfig(guildId);
-  const fallbackPlatform = cfg?.igId && threadsCfg ? 'all' : cfg?.igId ? 'both' : 'fb';
+  const platforms = await getAvailablePlatforms(guildId, interaction.user.id);
+  const hasIg = platforms.includes('ig');
+  const hasThreads = platforms.includes('threads');
+  const fallbackPlatform = hasIg && hasThreads ? 'all' : hasIg ? 'both' : 'fb';
   const saved = await getBasketState(guildId, channelId);
   const basket = await getBasket(guildId, channelId);
   const caption = basket.find(r => r.type === 'caption')?.caption || '';
@@ -502,7 +502,7 @@ async function processAndPost(interaction, state) {
   if (postFb) {
     await interaction.editReply({ content: '📤 กำลังโพสต์ไปยัง Facebook...' }).catch(() => {});
     try {
-      const res = await postToFacebook(state.guildId, processed, state.caption, scheduleTime);
+      const res = await postToFacebook(state.guildId, interaction.user.id, processed, state.caption, scheduleTime);
       if (res.id) {
         const parts = res.id.split('_');
         if (parts.length === 2) {
@@ -522,7 +522,7 @@ async function processAndPost(interaction, state) {
     await interaction.editReply({ content: '📤 กำลังโพสต์ไปยัง Instagram...' }).catch(() => {});
     try {
       const igProgress = msg => interaction.editReply({ content: msg }).catch(() => {});
-      const igRes = await postToInstagram(state.guildId, processed, state.caption, null, igProgress);
+      const igRes = await postToInstagram(state.guildId, interaction.user.id, processed, state.caption, null, igProgress);
       igUrl = igRes?.permalink || null;
       const igLabel = 'โพสต์แล้ว';
       const igLink = igUrl ? ` · 🔗 [ดูโพสต์](${igUrl})` : '';
@@ -536,7 +536,7 @@ async function processAndPost(interaction, state) {
     await interaction.editReply({ content: '📤 กำลังโพสต์ไปยัง @ Threads...' }).catch(() => {});
     try {
       const thProgress = msg => interaction.editReply({ content: msg }).catch(() => {});
-      const thRes = await postToThreads(state.guildId, processed, state.caption, thProgress);
+      const thRes = await postToThreads(state.guildId, interaction.user.id, processed, state.caption, thProgress);
       threadsUrl = thRes?.permalink || null;
       const thLink = threadsUrl ? ` · 🔗 [ดูโพสต์](${threadsUrl})` : '';
       results.push(`✅ @ Threads โพสต์แล้ว${thLink}`);
