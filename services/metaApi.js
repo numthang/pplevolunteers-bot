@@ -55,10 +55,10 @@ function httpsGet(urlPath) {
 async function waitForIgContainer(id, token, maxWaitMs = 30000, onProgress = null) {
   const start = Date.now();
   while (Date.now() - start < maxWaitMs) {
-    const res = await httpsGet(`/v22.0/${id}?fields=status_code,status&access_token=${encodeURIComponent(token)}`);
+    const res = await httpsGet(`/v22.0/${id}?fields=status_code&access_token=${token}`);
     console.log('[IG container]', id, JSON.stringify(res));
     if (res.status_code === 'FINISHED') return;
-    if (res.status_code === 'ERROR') throw new Error(`IG container error: ${res.status || 'unknown'}`);
+    if (res.status_code === 'ERROR') throw new Error(`IG container error`);
     const elapsed = Math.floor((Date.now() - start) / 1000);
     if (onProgress) onProgress(elapsed);
     await new Promise(r => setTimeout(r, 2000));
