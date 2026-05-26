@@ -12,13 +12,13 @@ const pool = require('../db/index');
 
 async function getConfig(guildId) {
   const [rows] = await pool.execute(
-    `SELECT page_id, access_token, ig_id, name FROM dc_social_accounts WHERE owner_type = 'guild' AND owner_id = ? AND platform = 'fb' ORDER BY id ASC LIMIT 1`,
+    `SELECT page_id, access_token, user_token, ig_id, name FROM dc_social_accounts WHERE owner_type = 'guild' AND owner_id = ? AND platform = 'fb' ORDER BY id ASC LIMIT 1`,
     [guildId]
   );
   if (!rows.length) return null;
   const r = rows[0];
-  console.log('[getConfig]', guildId, 'page:', r.name, 'ig_id:', r.ig_id);
-  return { pageId: r.page_id, igId: r.ig_id || null, token: r.access_token, name: r.name };
+  console.log('[getConfig]', guildId, 'page:', r.name, 'ig_id:', r.ig_id, 'user_token:', r.user_token ? 'yes' : 'no');
+  return { pageId: r.page_id, igId: r.ig_id || null, token: r.access_token, userToken: r.user_token || null, name: r.name };
 }
 
 async function getThreadsConfig(guildId) {
@@ -191,15 +191,19 @@ async function igPost(urlPath, fields) {
 
 async function _igPostFromUrls(cfg, imageUrls, caption, scheduleTime = null, onProgress = null) {
   if (imageUrls.length > 10) imageUrls = imageUrls.slice(0, 10);
+  // IG ใช้ User Token เท่านั้น — Page Token โดน Meta ปิด gate แล้ว
+  const igToken = cfg.userToken;
+  if (!igToken) throw new Error('ไม่พบ User Token สำหรับ IG — กรุณาเข้าไป reconnect Meta OAuth ใหม่');
+
   const scheduleFields = scheduleTime
     ? { scheduled_publish_time: String(scheduleTime), published: 'false' }
     : {};
 
   async function publishAndGetUrl(containerId) {
     const { id: mediaId } = await igPost(`/v22.0/${cfg.igId}/media_publish`, {
-      creation_id: containerId, access_token: cfg.token,
+      creation_id: containerId, access_token: igToken,
     });
-    const info = await httpsGet(`/v22.0/${mediaId}?fields=permalink,shortcode&access_token=${encodeURIComponent(cfg.token)}`);
+    const info = await httpsGet(`/v22.0/${mediaId}?fields=permalink,shortcode&access_token=${encodeURIComponent(igToken)}`);
     console.log('[IG permalink raw]', JSON.stringify(info));
     const permalink = info.permalink
       || (info.shortcode ? `https://www.instagram.com/p/${info.shortcode}/` : null);
@@ -211,10 +215,10 @@ async function _igPostFromUrls(cfg, imageUrls, caption, scheduleTime = null, onP
   if (total === 1) {
     console.log('[IG create container] igId:', cfg.igId, 'url:', imageUrls[0]);
     const { id } = await igPost(`/v22.0/${cfg.igId}/media`, {
-      image_url: imageUrls[0], caption, access_token: cfg.token, ...scheduleFields,
+      image_url: imageUrls[0], caption, access_token: igToken, ...scheduleFields,
     });
     console.log('[IG container created] id:', id);
-    await waitForIgContainer(id, cfg.token, 30000,
+    await waitForIgContainer(id, igToken, 30000,
       s => onProgress && onProgress(`📤 Instagram: กำลัง process รูป... (${s}s)`)
     );
     return publishAndGetUrl(id);
@@ -224,9 +228,9 @@ async function _igPostFromUrls(cfg, imageUrls, caption, scheduleTime = null, onP
   const childIds = [];
   for (let i = 0; i < imageUrls.length; i++) {
     const { id } = await igPost(`/v22.0/${cfg.igId}/media`, {
-      image_url: imageUrls[i], is_carousel_item: 'true', access_token: cfg.token,
+      image_url: imageUrls[i], is_carousel_item: 'true', access_token: igToken,
     });
-    await waitForIgContainer(id, cfg.token, 30000,
+    await waitForIgContainer(id, igToken, 30000,
       s => onProgress && onProgress(`📤 Instagram: กำลัง process รูป ${i + 1}/${total}... (${s}s)`)
     );
     childIds.push(id);
@@ -234,10 +238,10 @@ async function _igPostFromUrls(cfg, imageUrls, caption, scheduleTime = null, onP
   const { id: carouselId } = await igPost(`/v22.0/${cfg.igId}/media`, {
     media_type: 'CAROUSEL', caption,
     children: childIds.join(','),
-    access_token: cfg.token,
+    access_token: igToken,
     ...scheduleFields,
   });
-  await waitForIgContainer(carouselId, cfg.token, 30000,
+  await waitForIgContainer(carouselId, igToken, 30000,
     s => onProgress && onProgress(`📤 Instagram: กำลัง publish carousel... (${s}s)`)
   );
   return publishAndGetUrl(carouselId);

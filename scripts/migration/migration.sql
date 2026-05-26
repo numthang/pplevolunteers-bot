@@ -217,4 +217,8 @@ HAVING MAX(CASE WHEN `key` = 'meta_threads_id' THEN value END) IS NOT NULL
 
 -- ตรวจสอบข้อมูลก่อน DROP:
 -- SELECT * FROM dc_social_accounts;
+
+-- 2026-05-26 — IG ใช้ Page Token ไม่ได้แล้ว ต้องเก็บ User Token (long-lived) แยกไว้
+ALTER TABLE dc_social_accounts
+  ADD COLUMN user_token TEXT NULL AFTER access_token;
 -- DROP TABLE dc_guild_config;

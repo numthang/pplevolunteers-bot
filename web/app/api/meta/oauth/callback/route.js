@@ -9,12 +9,12 @@ async function fbGet(url) {
   return res.json()
 }
 
-async function upsertSocialAccount(guildId, name, pageId, accessToken, igId) {
+async function upsertSocialAccount(guildId, name, pageId, accessToken, userToken, igId) {
   await pool.execute(
-    `INSERT INTO dc_social_accounts (owner_type, owner_id, name, platform, page_id, access_token, ig_id)
-     VALUES ('guild', ?, ?, 'fb', ?, ?, ?)
-     ON DUPLICATE KEY UPDATE name = VALUES(name), access_token = VALUES(access_token), ig_id = VALUES(ig_id)`,
-    [guildId, name, pageId, accessToken, igId || null]
+    `INSERT INTO dc_social_accounts (owner_type, owner_id, name, platform, page_id, access_token, user_token, ig_id)
+     VALUES ('guild', ?, ?, 'fb', ?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE name = VALUES(name), access_token = VALUES(access_token), user_token = VALUES(user_token), ig_id = VALUES(ig_id)`,
+    [guildId, name, pageId, accessToken, userToken, igId || null]
   )
 }
 
@@ -98,7 +98,7 @@ export async function GET(req) {
       )
       if (igRes.instagram_business_account?.id) igId = igRes.instagram_business_account.id
 
-      await upsertSocialAccount(state.guildId, page.name, page.id, page.access_token, igId)
+      await upsertSocialAccount(state.guildId, page.name, page.id, page.access_token, longRes.access_token, igId)
       results.push(`✅ <b>${page.name}</b>${igId ? ` + Instagram` : ''}`)
     }
 
