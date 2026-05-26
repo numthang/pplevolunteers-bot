@@ -302,6 +302,7 @@ async function handleBasketRetry(interaction) {
 // ─── Select menus ─────────────────────────────────────────────────────────────
 async function handleBasketSelect(interaction) {
   try {
+    await interaction.deferUpdate();
     const state = pendingPost.get(interaction.user.id);
     const { guildId, channelId } = interaction;
     if (interaction.customId === 'basket_wm_type') {
@@ -313,7 +314,6 @@ async function handleBasketSelect(interaction) {
       await setBasketStatePartial(guildId, channelId, { platform: interaction.values[0] }).catch(() => {});
     }
     if (interaction.customId === 'basket_enhance' && state) state.enhance = interaction.values[0] === 'on';
-    await interaction.deferUpdate();
   } catch (err) {
     console.error('[basketSelect]', err);
   }
