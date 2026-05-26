@@ -301,20 +301,22 @@ async function handleBasketRetry(interaction) {
 
 // ─── Select menus ─────────────────────────────────────────────────────────────
 async function handleBasketSelect(interaction) {
-  // Save state first — independent of Discord ack so 10062 doesn't lose the selection
-  const state = pendingPost.get(interaction.user.id);
-  const { guildId, channelId } = interaction;
-  if (interaction.customId === 'basket_wm_type') {
-    if (state) state.wmType = interaction.values[0];
-    setBasketStatePartial(guildId, channelId, { wmType: interaction.values[0] }).catch(() => {});
+  try {
+    const state = pendingPost.get(interaction.user.id);
+    const { guildId, channelId } = interaction;
+    if (interaction.customId === 'basket_wm_type') {
+      if (state) state.wmType = interaction.values[0];
+      await setBasketStatePartial(guildId, channelId, { wmType: interaction.values[0] }).catch(() => {});
+    }
+    if (interaction.customId === 'basket_platform') {
+      if (state) state.platform = interaction.values[0];
+      await setBasketStatePartial(guildId, channelId, { platform: interaction.values[0] }).catch(() => {});
+    }
+    if (interaction.customId === 'basket_enhance' && state) state.enhance = interaction.values[0] === 'on';
+    await interaction.deferUpdate();
+  } catch (err) {
+    console.error('[basketSelect]', err);
   }
-  if (interaction.customId === 'basket_platform') {
-    if (state) state.platform = interaction.values[0];
-    setBasketStatePartial(guildId, channelId, { platform: interaction.values[0] }).catch(() => {});
-  }
-  if (interaction.customId === 'basket_enhance' && state) state.enhance = interaction.values[0] === 'on';
-
-  interaction.deferUpdate().catch(() => {});
 }
 
 // ─── Schedule modal ───────────────────────────────────────────────────────────
