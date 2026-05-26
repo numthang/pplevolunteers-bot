@@ -84,14 +84,7 @@ else
 
   echo "🔄 กำลัง deploy local... ${GUILD_ARG:+($GUILD_ARG)}"
   git pull
-  # Bot
-  npm install --omit=dev
   node deploy-commands.js $GUILD_ARG
-  pm2 restart pple-dcbot || pm2 start node --name pple-dcbot -- index.js
-  # Web
-  cd web
-  npm install --omit=dev
-  npm run build
-  pm2 restart pple-web || pm2 start npm --name pple-web -- start
-  pm2 save
+  (cd web && npm run dev) &
+  node index.js
 fi
