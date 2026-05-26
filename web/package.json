@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "nice -n 19 ionice -c 2 -n 7 next build",
     "start": "next start",
     "test": "vitest run",
     "test:watch": "vitest"

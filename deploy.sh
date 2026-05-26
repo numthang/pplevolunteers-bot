@@ -5,6 +5,7 @@
 # ./deploy.sh 'commit message' --guild <guildId>     → git push + deploy local ไป guild ที่ระบุ
 # ./deploy.sh --production                           → deploy production (GUILD_ID ใน .env)
 # ./deploy.sh --production --guild <guildId>         → deploy production ไป guild ที่ระบุ
+# ./deploy.sh --production --bot-only                → deploy production เฉพาะ bot (ไม่ build web)
 #
 # Known Guild IDs:
 #   อาสาประชาชน  : 1340903354037178410  (ค่า default ใน .env)
@@ -13,10 +14,13 @@
 GUILD_ARG=""
 COMMIT_MSG=""
 IS_PRODUCTION=false
+BOT_ONLY=false
 
 for arg in "$@"; do
   if [ "$arg" = "--production" ]; then
     IS_PRODUCTION=true
+  elif [ "$arg" = "--bot-only" ]; then
+    BOT_ONLY=true
   elif [ "$arg" = "--guild" ]; then
     : # จะรับ value ใน loop ถัดไป
   elif [ -n "$PREV" ] && [ "$PREV" = "--guild" ]; then
@@ -28,9 +32,15 @@ for arg in "$@"; do
 done
 
 if $IS_PRODUCTION; then
-  echo "🚀 กำลัง deploy production... ${GUILD_ARG:+($GUILD_ARG)}"
-  sudo -u www bash << EOF
-export PATH=/www/server/nodejs/v24.14.0/bin:\$PATH
+  if $BOT_ONLY; then
+    echo "🚀 กำลัง deploy production (bot only)... ${GUILD_ARG:+($GUILD_ARG)}"
+  else
+    echo "🚀 กำลัง deploy production... ${GUILD_ARG:+($GUILD_ARG)}"
+  fi
+  sudo -u www bash -s -- "$GUILD_ARG" "$BOT_ONLY" << 'EOF'
+GUILD_ARG=$1
+BOT_ONLY=$2
+export PATH=/www/server/nodejs/v24.14.0/bin:$PATH
 cd /www/wwwroot/pple-volunteers
 git checkout -- package.json package-lock.json
 git fetch origin
@@ -42,12 +52,15 @@ npm install --omit=dev
 node deploy-commands.js $GUILD_ARG
 pm2 restart pple-dcbot
 
-# Web
-cd web
-npm install --omit=dev
-npm run build
-pm2 restart pple-web || pm2 start npm --name pple-web -- start
-pm2 save
+if [ "$BOT_ONLY" = "false" ]; then
+  # Web — หยุด web ก่อน build เพื่อคืน RAM
+  pm2 stop pple-web 2>/dev/null || true
+  cd web
+  npm install --omit=dev
+  npm run build
+  pm2 restart pple-web || pm2 start npm --name pple-web -- start
+  pm2 save
+fi
 
 echo "✅ Deploy production เสร็จแล้ว"
 EOF
@@ -70,10 +83,15 @@ else
   fi
 
   echo "🔄 กำลัง deploy local... ${GUILD_ARG:+($GUILD_ARG)}"
-  #npm install
   git pull
+  # Bot
+  npm install --omit=dev
   node deploy-commands.js $GUILD_ARG
-  #(cd web && npm install && npm run dev) &
-  (cd web && npm run dev) &
-  node index.js
+  pm2 restart pple-dcbot || pm2 start node --name pple-dcbot -- index.js
+  # Web
+  cd web
+  npm install --omit=dev
+  npm run build
+  pm2 restart pple-web || pm2 start npm --name pple-web -- start
+  pm2 save
 fi
