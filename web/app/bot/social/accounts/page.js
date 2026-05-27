@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Trash2, RefreshCw, Globe, Lock, AlertTriangle, X, Plus } from 'lucide-react'
 import { isAdmin } from '@/lib/roles.js'
 
@@ -37,6 +37,7 @@ const EMPTY_X_FORM = { name: '', handle: '', api_key: '', api_secret: '', access
 export default function SocialAccountsPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [accounts, setAccounts] = useState([])
   const [guilds, setGuilds] = useState([])
   const [loading, setLoading] = useState(true)
@@ -44,6 +45,7 @@ export default function SocialAccountsPage() {
   const [xModal, setXModal] = useState(null) // { guildId }
   const [xForm, setXForm] = useState(EMPTY_X_FORM)
   const [xSaving, setXSaving] = useState(false)
+  const [banner, setBanner] = useState(null)
 
   const roles = Array.isArray(session?.user?.roles) ? session.user.roles : []
   const admin = isAdmin(roles)
@@ -113,6 +115,15 @@ export default function SocialAccountsPage() {
     return () => window.removeEventListener('keydown', onKey)
   }, [xModal])
 
+  useEffect(() => {
+    const connected = searchParams.get('connected')
+    const account   = searchParams.get('account')
+    const error     = searchParams.get('error')
+    if (connected) setBanner({ type: 'success', msg: `เชื่อมต่อ @${account} สำเร็จแล้ว` })
+    if (error === 'denied') setBanner({ type: 'error', msg: 'ยกเลิก OAuth' })
+    if (error && error !== 'denied') setBanner({ type: 'error', msg: `เชื่อมต่อไม่สำเร็จ (${error})` })
+  }, [searchParams])
+
   if (status === 'loading' || loading) {
     return <p className="text-warm-500 dark:text-disc-muted text-sm">กำลังโหลด...</p>
   }
@@ -140,6 +151,13 @@ export default function SocialAccountsPage() {
         </div>
       </div>
 
+      {banner && (
+        <div className={`mb-4 px-4 py-3 rounded-xl text-sm font-medium ${banner.type === 'success' ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400' : 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'}`}>
+          {banner.msg}
+          <button onClick={() => setBanner(null)} className="ml-3 opacity-60 hover:opacity-100">✕</button>
+        </div>
+      )}
+
       {guilds.length === 0 && accounts.length === 0 && (
         <p className="text-warm-500 dark:text-disc-muted text-sm">ยังไม่มี account ที่เชื่อมต่อ</p>
       )}
@@ -159,8 +177,15 @@ export default function SocialAccountsPage() {
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black text-white text-sm hover:opacity-80 transition"
                   >
                     <Plus size={14} />
-                    Add X Account
+                    X (Guild)
                   </button>
+                  <a
+                    href={`/api/x/oauth/start?guild_id=${guild.guild_id}&visibility=private`}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-700 text-white text-sm hover:opacity-80 transition"
+                  >
+                    <Lock size={14} />
+                    X (ส่วนตัว)
+                  </a>
                   <a
                     href={`/api/meta/oauth/start?guild_id=${guild.guild_id}`}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange text-white text-sm hover:opacity-90 transition"

@@ -71,7 +71,6 @@ const APPS = [
   { key: 'finance',  label: 'FINANCE',   href: '/finance',        icon: 'transactions' },
   { key: 'calling',  label: 'CALLING',   href: '/calling',        icon: 'campaigns' },
   { key: 'contacts', label: 'CONTACTS',  href: '/contacts',       icon: 'contacts' },
-  { key: 'social',   label: 'SOCIAL',    href: '/social',         icon: 'social' },
   { key: 'bot',      label: 'BOT',       href: '/bot/social/accounts', icon: 'social', roles: ['Admin'] },
 ]
 
@@ -92,7 +91,7 @@ export default function Nav({ session }) {
   const isSocialApp   = pathname.startsWith('/social')
   const isBotApp      = pathname.startsWith('/bot')
   const isLinkActive = (href) => pathname === href || (href !== '/' && pathname.startsWith(href))
-  const currentApp = isBotApp ? APPS[5] : isSocialApp ? APPS[4] : isContactsApp ? APPS[3] : isCallingApp ? APPS[2] : isFinanceApp ? APPS[1] : APPS[0]
+  const currentApp = isBotApp ? APPS[4] : isContactsApp ? APPS[3] : isCallingApp ? APPS[2] : isFinanceApp ? APPS[1] : APPS[0]
   const links = isBotApp ? BOT_LINKS : isSocialApp ? SOCIAL_LINKS : isContactsApp ? CONTACTS_LINKS : isCallingApp ? CALLING_LINKS : isFinanceApp ? FINANCE_LINKS : DASHBOARD_LINKS
 
   const campaignIdMatch = pathname.match(/^\/calling\/assignments\/(\d+)/)
