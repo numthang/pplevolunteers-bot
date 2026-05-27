@@ -574,14 +574,15 @@ async function processAndPost(interaction, state) {
     }
   }
   if (postIg) {
-    await interaction.editReply({ content: '📤 กำลังโพสต์ไปยัง Instagram...' }).catch(() => {});
+    const igMsg = scheduleTime ? '📤 IG ไม่รองรับตั้งเวลา — โพสต์ทันที...' : '📤 กำลังโพสต์ไปยัง Instagram...';
+    await interaction.editReply({ content: igMsg }).catch(() => {});
     try {
       const igProgress = msg => interaction.editReply({ content: msg }).catch(() => {});
-      const igRes = await postToInstagram(state.guildId, interaction.user.id, processed, state.caption, scheduleTime, igProgress, state.group);
+      const igRes = await postToInstagram(state.guildId, interaction.user.id, processed, state.caption, null, igProgress, state.group);
       igUrl = igRes?.permalink || null;
-      const igLabel = scheduleTime ? 'ตั้งเวลาแล้ว' : 'โพสต์แล้ว';
       const igLink = igUrl ? ` · 🔗 [ดูโพสต์](${igUrl})` : '';
-      results.push(`✅ Instagram ${igLabel}${igLink}`);
+      const igNote = scheduleTime ? ' (IG ไม่รองรับตั้งเวลา)' : '';
+      results.push(`✅ Instagram โพสต์แล้ว${igLink}${igNote}`);
     } catch (err) {
       results.push(`❌ Instagram: ${err.message}`);
     }
