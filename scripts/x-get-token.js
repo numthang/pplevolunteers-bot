@@ -8,8 +8,8 @@ const crypto   = require('crypto');
 const readline = require('readline');
 const pool     = require('../db/index');
 
-const API_KEY    = process.env.X_API_KEY    || process.argv[2];
-const API_SECRET = process.env.X_API_SECRET || process.argv[3];
+const API_KEY    = process.env.X_CONSUMER_KEY    || process.argv[2];
+const API_SECRET = process.env.X_CONSUMER_SECRET || process.argv[3];
 const GUILD_ID   = process.env.GUILD_ID     || process.argv[4];
 const VISIBILITY = process.argv[5] || 'private';
 

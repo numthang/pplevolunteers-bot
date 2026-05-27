@@ -6,8 +6,8 @@ import { cookies } from 'next/headers'
 import https from 'https'
 import crypto from 'crypto'
 
-const API_KEY    = process.env.X_API_KEY
-const API_SECRET = process.env.X_API_SECRET
+const API_KEY    = process.env.X_CONSUMER_KEY
+const API_SECRET = process.env.X_CONSUMER_SECRET
 const BASE_URL   = process.env.NEXTAUTH_URL || 'https://pplethai.org'
 const CALLBACK   = `${BASE_URL}/api/x/oauth/callback`
 

@@ -14,7 +14,7 @@ export async function GET() {
        FROM dc_guild_config WHERE \`key\` = 'guild_name'
        GROUP BY guild_id
      ) g ON g.guild_id = m.guild_id
-     WHERE m.user_id = ?`,
+     WHERE m.discord_id = ?`,
     [session.user.discordId]
   )
 
