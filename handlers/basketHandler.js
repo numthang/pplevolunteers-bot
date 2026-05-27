@@ -607,8 +607,9 @@ async function processAndPost(interaction, state) {
       const xRes = await postToX(state.guildId, interaction.user.id, processed, state.caption, state.group);
       xUrl = xRes?.url || null;
       const xLink = xUrl ? ` · 🔗 [ดูโพสต์](${xUrl})` : '';
-      const xNote = xRes?.truncated ? ' (caption ถูกตัดให้ ≤280 ตัว)' : '';
-      results.push(`✅ X (Twitter) โพสต์แล้ว${xLink}${xNote}`);
+      const xThread = xRes?.threadCount > 1 ? ` (thread ${xRes.threadCount} tweets${xRes.urlCount ? `, ${xRes.urlCount} link ใน reply` : ''})` : '';
+      const xNote = xRes?.truncated ? ' ⚠️ caption เกิน limit — ตัดส่วนเกินทิ้ง' : '';
+      results.push(`✅ X (Twitter) โพสต์แล้ว${xThread}${xLink}${xNote}`);
     } catch (err) {
       results.push(`❌ X: ${err.message}`);
     }

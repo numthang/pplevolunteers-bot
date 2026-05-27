@@ -99,36 +99,41 @@ async function uploadMedia(cfg, buffer, ext) {
   return res.body.media_id_string;
 }
 
-const X_LIMIT = 280;
+const X_LIMIT       = 280;
+const MAX_THREAD    = 4;        // max tweets per thread
+const INDICATOR_BUF = 6;        // "10/10 " worst case
 
-async function postToX(guildId, userId, images, caption, groupName = null) {
-  const cfg = await getXConfig(guildId, userId, groupName);
-  if (!cfg) throw new Error('ไม่พบ X account — เพิ่ม X account ที่ /bot/social/accounts ก่อน');
-
-  let text      = caption || '';
-  const truncated = text.length > X_LIMIT;
-  if (truncated) text = text.slice(0, X_LIMIT - 1) + '…';
-
-  // X รองรับสูงสุด 4 รูปต่อ tweet
-  const imgSlice = images.slice(0, 4);
-  const mediaIds = [];
-  for (const img of imgSlice) {
-    mediaIds.push(await uploadMedia(cfg, img.buffer, img.ext));
+// split text into chunks ≤ chunkLen, breaking on whitespace when possible
+function splitCaption(text, chunkLen) {
+  const chunks = [];
+  let rest = text.trim();
+  while (rest.length > chunkLen) {
+    let cut = rest.slice(0, chunkLen);
+    const lastSpace = cut.lastIndexOf(' ');
+    const lastNewline = cut.lastIndexOf('\n');
+    const breakAt = Math.max(lastSpace, lastNewline);
+    if (breakAt > chunkLen * 0.5) cut = rest.slice(0, breakAt);
+    chunks.push(cut.trim());
+    rest = rest.slice(cut.length).trim();
   }
+  if (rest) chunks.push(rest);
+  return chunks;
+}
 
+async function postSingleTweet(cfg, text, mediaIds, replyTo) {
   const tweetBody = { text };
-  if (mediaIds.length) tweetBody.media = { media_ids: mediaIds };
+  if (mediaIds && mediaIds.length) tweetBody.media = { media_ids: mediaIds };
+  if (replyTo) tweetBody.reply = { in_reply_to_tweet_id: replyTo };
 
-  const bodyStr  = JSON.stringify(tweetBody);
-  const tweetUrl = 'https://api.twitter.com/2/tweets';
-  const auth     = buildAuthHeader('POST', tweetUrl, cfg);
-  const res      = await xReq('api.twitter.com', '/2/tweets', 'POST', {
+  const bodyStr = JSON.stringify(tweetBody);
+  const auth    = buildAuthHeader('POST', 'https://api.twitter.com/2/tweets', cfg);
+  const res     = await xReq('api.twitter.com', '/2/tweets', 'POST', {
     Authorization:    auth,
     'Content-Type':   'application/json',
     'Content-Length': Buffer.byteLength(bodyStr),
   }, bodyStr);
 
-  if (res.status === 429) throw new Error('X API: Rate limit — กรุณารอสักครู่แล้วลองใหม่');
+  if (res.status === 429) throw new Error('X API: Rate limit — รอแล้วลองใหม่');
   if (res.status === 403) {
     const detail = res.body?.errors?.[0]?.message || res.body?.detail || 'ไม่มีสิทธิ์หรือเครดิต X หมด';
     throw new Error(`X API 403: ${detail}`);
@@ -137,13 +142,71 @@ async function postToX(guildId, userId, images, caption, groupName = null) {
     const detail = res.body?.errors?.[0]?.message || res.body?.title || JSON.stringify(res.body);
     throw new Error(`X API: ${detail}`);
   }
+  return res.body.data.id;
+}
 
-  const tweetId = res.body.data.id;
-  const url = cfg.username ? `https://x.com/${cfg.username}/status/${tweetId}` : null;
+const URL_RE = /https?:\/\/\S+/g;
+
+async function postToX(guildId, userId, images, caption, groupName = null) {
+  const cfg = await getXConfig(guildId, userId, groupName);
+  if (!cfg) throw new Error('ไม่พบ X account — เพิ่ม X account ที่ /bot/social/accounts ก่อน');
+
+  const fullText = (caption || '').trim();
+
+  // 1) extract URLs (move to reply tweet → avoid X URL tax + reach penalty)
+  const urls = fullText.match(URL_RE) || [];
+  const mainText = urls.length
+    ? fullText.replace(URL_RE, '').replace(/\s{2,}/g, ' ').trim()
+    : fullText;
+
+  // 2) reserve 1 slot for link tweet if URLs exist
+  const maxMainChunks = urls.length ? MAX_THREAD - 1 : MAX_THREAD;
+
+  // 3) split main text into chunks
+  let chunks = mainText.length > X_LIMIT
+    ? splitCaption(mainText, X_LIMIT - INDICATOR_BUF)
+    : (mainText ? [mainText] : []);
+
+  const truncated = chunks.length > maxMainChunks;
+  if (truncated) chunks = chunks.slice(0, maxMainChunks);
+
+  // 4) upload media (max 4 imgs, all on first tweet)
+  const imgSlice = images.slice(0, 4);
+  const mediaIds = [];
+  for (const img of imgSlice) {
+    mediaIds.push(await uploadMedia(cfg, img.buffer, img.ext));
+  }
+
+  // 5) post tweets sequentially as thread (main content + optional link tweet)
+  const total = chunks.length + (urls.length ? 1 : 0);
+  let firstId = null;
+  let prevId  = null;
+
+  for (let i = 0; i < chunks.length; i++) {
+    let text = chunks[i];
+    if (total > 1) text = `${text} ${i + 1}/${total}`;
+    const media = i === 0 ? mediaIds : [];
+    const id = await postSingleTweet(cfg, text, media, prevId);
+    if (i === 0) firstId = id;
+    prevId = id;
+  }
+
+  if (urls.length) {
+    let linkText = '🔗 ลิงก์:\n' + urls.join('\n');
+    if (total > 1) linkText += `\n${total}/${total}`;
+    if (linkText.length > X_LIMIT) linkText = linkText.slice(0, X_LIMIT - 1) + '…';
+    const media = chunks.length === 0 ? mediaIds : []; // caption is only URLs → attach media here
+    const id = await postSingleTweet(cfg, linkText, media, prevId);
+    if (firstId === null) firstId = id;
+  }
+
+  const url = cfg.username && firstId ? `https://x.com/${cfg.username}/status/${firstId}` : null;
   return {
-    id: tweetId,
+    id: firstId,
     url,
     truncated,
+    threadCount: total,
+    urlCount:    urls.length,
     imageCount:  imgSlice.length,
     totalImages: images.length,
   };
