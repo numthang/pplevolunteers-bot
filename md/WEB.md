@@ -104,6 +104,44 @@ Member calling system with tier tracking and assignment management.
 E-signature & document management for activity registration forms.  
 📄 See [md/DOCS.md](DOCS.md)
 
+### 4. **Social Accounts** (`/bot/social/accounts`)
+Manage Meta (FB/IG/Threads) + X (Twitter) accounts ต่อ guild สำหรับ basket posting
+
+**Architecture (multi-tenant):**
+- **App credentials per guild** เก็บใน `dc_guild_config` (ไม่ใช่ `.env`)
+  - `meta_app_id`, `meta_app_secret` — ใช้กับ FB + IG + Threads (Meta App เดียว)
+  - `x_consumer_key`, `x_consumer_secret` — ใช้กับ X OAuth
+  - ทุก guild ต้อง set ทั้ง 4 keys ก่อนใช้ — ปุ่ม Connect/Add จะ disabled ถ้ายังไม่ set
+- **Accounts** เก็บใน `dc_social_accounts`
+  - `user_discord_id` + `guild_id` + `platform` + `social_id` (unique)
+  - `visibility`: `public` (guild-wide) / `private` (เฉพาะ user เจ้าของ)
+  - `group_name`: ชื่อกลุ่มสำหรับ basket Row 1 (เช่น "ปชช.ราชบุรี", "Unnop ส่วนตัว")
+  - X stores creds เป็น JSON `{access_token, access_token_secret}` ใน `access_token` column (consumer key/secret มาจาก guild_config)
+  - IG/Threads ใช้ `user_token` (Meta ปิด Page Token สำหรับ IG)
+
+**Token storage by platform:**
+| Platform | `access_token` | `user_token` |
+|---|---|---|
+| fb | Page Access Token | — |
+| ig | — | IG User Token (+ expires_at, auto-refresh เมื่อ < 7 วัน) |
+| threads | — | Threads User Token |
+| x | JSON `{access_token, access_token_secret}` | — |
+
+**Web routes:**
+- `GET/POST /api/social/accounts` — list / create
+- `PATCH/DELETE /api/social/accounts/[id]` — update (visibility, group_name) / delete
+- `GET/PATCH /api/social/guild-configs` — admin only, จัดการ app credentials
+- `GET /api/meta/oauth/start` + `/api/meta/oauth/callback` — Meta OAuth (อ่าน app credentials จาก guild_config)
+- `GET /api/x/oauth/start` + `/api/x/oauth/callback` — X OAuth 1.0a (PIN-less flow)
+
+**UI features (`/bot/social/accounts`):**
+- กล่อง App Credentials per guild (mask secrets, edit modal มี ESC/click-outside/X-button)
+- รายการ accounts แยกตาม guild พร้อม group dropdown + visibility toggle + delete
+- ปุ่ม Connect Meta OAuth + X (Guild form) + X (ส่วนตัว OAuth)
+- Banner แสดงผลหลัง OAuth callback (success/error from query params)
+
+📄 See [md/BOT.md](BOT.md) สำหรับ basket posting + X thread split + scheduling rules
+
 ---
 
 ## Shared Infrastructure

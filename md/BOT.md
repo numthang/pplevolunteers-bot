@@ -271,6 +271,56 @@ pm2 restart pple-dcbot
 
 ---
 
+## Social Posting (Basket → FB/IG/Threads/X)
+
+### Architecture
+- Basket UI ผูกกับ Discord context menu ("🧺 หยิบลงตะกร้าสื่อ", "ดูตะกร้า")
+- State เก็บใน `dc_server_settings` key `basket_state_<channelId>` (column `setting_value` เป็น **JSON type** — ดู Known Gotcha)
+- ประวัติเก็บใน `dc_basket_history`
+
+### Group System (multi-account ต่อ guild)
+- `dc_social_accounts.group_name VARCHAR(100)` — แต่ละ account ใส่ชื่อกลุ่ม เช่น "ปชช.ราชบุรี" / "Unnop ส่วนตัว"
+- Basket Row 1 (group select) ดึงจาก `getAvailableGroups(guildId, userId)` filter visibility + user_discord_id
+- Default = กลุ่มแรกที่ user เห็น
+- Row 2 multi-select platform → state.platforms `[]`
+- ตอนโพสต์: `getConfig(guildId, platform, userId, group)` filter ตามกลุ่ม → ได้ account ที่ถูกต้อง
+
+### X (Twitter) Posting Rules
+- **Thread split** — caption > 280 → ตัดที่ขอบคำ (word boundary) เป็น thread max 4 tweets, ใส่ `i/n` indicator
+- **URL strip** — `https?://\S+` ใน caption → ย้ายไป reply tweet สุดท้ายเป็น `🔗 ลิงก์:\n<urls>` (กัน reach penalty + URL tax)
+- รูปสูงสุด 4 ต่อ tweet, ติด **tweet แรกของ thread เท่านั้น**
+- ถ้า caption เป็น URL ล้วน → tweet เดียวพร้อมรูป + URLs ในเดียวกัน
+- X Premium account โพสต์ยาว 25k chars ก็จริง — แต่ algorithm ยัง collapse "Show more" → thread ดีกว่า
+
+### Platform Scheduling Support
+| Platform | API รองรับตั้งเวลา |
+|---|---|
+| FB | ✅ ส่ง `scheduled_publish_time` + `published=false` |
+| IG | ❌ Meta whitelist only — ระบบโพสต์ทันที + แจ้ง user |
+| Threads | ❌ ยังไม่มีใน Threads API |
+| X | ❌ Free/Basic tier ไม่มี — ต้อง custom scheduler ฝั่งเรา |
+
+### Discord Component Routing
+- ต้องเพิ่ม customId ใหม่ใน `index.js` (whitelist routing) เช่น `basket_group`, `basket_platform`
+- ถ้าลืม → interaction fail แบบเงียบ (ไม่มี handler ตอบใน 3 วินาที)
+
+---
+
+## Known Gotcha
+
+### `dc_server_settings.setting_value` เป็น JSON column type
+- mysql2 driver **auto-parse JSON column เป็น JS object** ไม่ใช่ string
+- **ห้าม `JSON.parse()` ซ้ำ** กับค่าที่ getSetting คืน — จะ throw `"[object Object]" is not valid JSON`
+- ในตอน setSetting ปัจจุบันยังทำ `JSON.stringify` ก่อนเก็บ (redundant แต่ไม่เสียหาย)
+- ระยะยาวควรเลิก stringify ใน `db/settings.js` — แต่ต้องตามแก้ caller ทุกที่ที่อาจ parse ซ้ำ
+
+### Silent error suppression ใน basketHandler
+- เก่ามี `.catch(() => {})` หลายจุด → error เงียบ debug ยาก
+- ใหม่ใช้ `.catch(e => console.error('[label]', e))` แทน
+- ถ้าจะเพิ่ม async ใน basket flow ให้ log error เสมอ
+
+---
+
 ## Deployment
 
 👉 See [md/DEPLOYMENT.md](DEPLOYMENT.md) for production VPS setup
