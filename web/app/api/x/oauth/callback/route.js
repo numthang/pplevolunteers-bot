@@ -3,17 +3,25 @@ import pool from '@/db/index.js'
 import https from 'https'
 import crypto from 'crypto'
 
-const API_KEY    = process.env.X_CONSUMER_KEY
-const API_SECRET = process.env.X_CONSUMER_SECRET
-const BASE_URL   = process.env.NEXTAUTH_URL || 'https://pplethai.org'
+const BASE_URL = process.env.NEXTAUTH_URL || 'https://pplethai.org'
 
 function pct(str) {
   return encodeURIComponent(String(str)).replace(/[!'()*]/g, c => '%' + c.charCodeAt(0).toString(16).toUpperCase())
 }
 
-function buildAuthHeader(oauthToken, oauthVerifier, tokenSecret) {
+async function getGuildXApp(guildId) {
+  const [rows] = await pool.execute(
+    "SELECT `key`, value FROM dc_guild_config WHERE guild_id = ? AND `key` IN ('x_consumer_key', 'x_consumer_secret')",
+    [guildId]
+  )
+  const m = Object.fromEntries(rows.map(r => [r.key, r.value]))
+  if (!m.x_consumer_key || !m.x_consumer_secret) return null
+  return { api_key: m.x_consumer_key, api_secret: m.x_consumer_secret }
+}
+
+function buildAuthHeader(apiKey, apiSecret, oauthToken, oauthVerifier, tokenSecret) {
   const o = {
-    oauth_consumer_key:     API_KEY,
+    oauth_consumer_key:     apiKey,
     oauth_nonce:            crypto.randomBytes(16).toString('hex'),
     oauth_signature_method: 'HMAC-SHA1',
     oauth_timestamp:        Math.floor(Date.now() / 1000).toString(),
@@ -22,7 +30,7 @@ function buildAuthHeader(oauthToken, oauthVerifier, tokenSecret) {
     oauth_version:          '1.0',
   }
   const base   = `POST&${pct('https://api.twitter.com/oauth/access_token')}&${pct(Object.keys(o).sort().map(k => `${pct(k)}=${pct(o[k])}`).join('&'))}`
-  const sigKey = `${pct(API_SECRET)}&${pct(tokenSecret)}`
+  const sigKey = `${pct(apiSecret)}&${pct(tokenSecret)}`
   o.oauth_signature = crypto.createHmac('sha1', sigKey).update(base).digest('base64')
   return 'OAuth ' + Object.keys(o).sort().map(k => `${pct(k)}="${pct(o[k])}"`).join(', ')
 }
@@ -61,8 +69,12 @@ export async function GET(req) {
 
   const { token_secret, guild_id, discord_id, visibility } = state
 
+  if (!guild_id) return Response.redirect(`${BASE_URL}/social?error=no_guild`)
+  const app = await getGuildXApp(guild_id)
+  if (!app) return Response.redirect(`${BASE_URL}/social?error=app_not_configured`)
+
   // แลก verifier เป็น access token
-  const auth = buildAuthHeader(oauthToken, oauthVerifier, token_secret)
+  const auth = buildAuthHeader(app.api_key, app.api_secret, oauthToken, oauthVerifier, token_secret)
   const body = `oauth_token=${oauthToken}&oauth_verifier=${oauthVerifier}`
   const res  = await xPost('/oauth/access_token', auth, body)
 
@@ -72,8 +84,6 @@ export async function GET(req) {
   const { oauth_token: accessToken, oauth_token_secret: accessTokenSecret, screen_name: screenName } = result
 
   const creds = JSON.stringify({
-    api_key:              API_KEY,
-    api_secret:           API_SECRET,
     access_token:         accessToken,
     access_token_secret:  accessTokenSecret,
   })

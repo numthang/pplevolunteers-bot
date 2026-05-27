@@ -2,7 +2,20 @@ const https  = require('https');
 const crypto = require('crypto');
 const pool   = require('../db/index');
 
+async function getGuildXApp(guildId) {
+  const [rows] = await pool.execute(
+    "SELECT `key`, value FROM dc_guild_config WHERE guild_id = ? AND `key` IN ('x_consumer_key', 'x_consumer_secret')",
+    [guildId]
+  );
+  const m = Object.fromEntries(rows.map(r => [r.key, r.value]));
+  if (!m.x_consumer_key || !m.x_consumer_secret) return null;
+  return { api_key: m.x_consumer_key, api_secret: m.x_consumer_secret };
+}
+
 async function getXConfig(guildId, userId = null) {
+  const app = await getGuildXApp(guildId);
+  if (!app) return null;
+
   const [rows] = await pool.execute(
     `SELECT social_id, access_token FROM dc_social_accounts
      WHERE guild_id = ? AND platform = 'x'
@@ -13,10 +26,10 @@ async function getXConfig(guildId, userId = null) {
   if (!rows.length) return null;
   let creds;
   try { creds = JSON.parse(rows[0].access_token); } catch { return null; }
-  if (!creds.api_key || !creds.api_secret || !creds.access_token || !creds.access_token_secret) return null;
+  if (!creds.access_token || !creds.access_token_secret) return null;
   return {
-    x_api_key:             creds.api_key,
-    x_api_secret:          creds.api_secret,
+    x_api_key:             app.api_key,
+    x_api_secret:          app.api_secret,
     x_access_token:        creds.access_token,
     x_access_token_secret: creds.access_token_secret,
     username:              rows[0].social_id,
@@ -134,4 +147,4 @@ async function postToX(guildId, userId, images, caption) {
   };
 }
 
-module.exports = { getXConfig, postToX };
+module.exports = { getXConfig, getGuildXApp, postToX };

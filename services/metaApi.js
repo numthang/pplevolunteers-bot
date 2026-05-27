@@ -10,14 +10,25 @@ const TEMP_URL = process.env.META_TEMP_URL
 
 const pool = require('../db/index');
 
-const META_APP_ID     = process.env.META_APP_ID;
-const META_APP_SECRET = process.env.META_APP_SECRET;
 const REFRESH_THRESHOLD_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
-async function refreshUserToken(rowId, userDiscordId, currentUserToken) {
+async function getGuildMetaApp(guildId) {
+  const [rows] = await pool.execute(
+    "SELECT `key`, value FROM dc_guild_config WHERE guild_id = ? AND `key` IN ('meta_app_id', 'meta_app_secret')",
+    [guildId]
+  );
+  const m = Object.fromEntries(rows.map(r => [r.key, r.value]));
+  if (!m.meta_app_id || !m.meta_app_secret) return null;
+  return { app_id: m.meta_app_id, app_secret: m.meta_app_secret };
+}
+
+async function refreshUserToken(guildId, rowId, userDiscordId, currentUserToken) {
+  const app = await getGuildMetaApp(guildId);
+  if (!app) throw new Error(`Token refresh ล้มเหลว: guild ${guildId} ยังไม่ได้ set meta_app_id/secret ใน dc_guild_config`);
+
   const res = await httpsGet(
     `/oauth/access_token?grant_type=fb_exchange_token` +
-    `&client_id=${META_APP_ID}&client_secret=${META_APP_SECRET}` +
+    `&client_id=${app.app_id}&client_secret=${app.app_secret}` +
     `&fb_exchange_token=${encodeURIComponent(currentUserToken)}`
   );
   if (res.error) throw new Error(`Token refresh ล้มเหลว: ${res.error.message} — กรุณา reconnect OAuth ใหม่`);
@@ -64,7 +75,7 @@ async function getConfig(guildId, platform, userId = null) {
     if (msLeft < REFRESH_THRESHOLD_MS) {
       console.log('[getConfig]', guildId, platform, 'user_token expires in', Math.round(msLeft / 86400000), 'days — refreshing');
       try {
-        userToken = await refreshUserToken(r.id, r.user_discord_id, userToken) || userToken;
+        userToken = await refreshUserToken(guildId, r.id, r.user_discord_id, userToken) || userToken;
       } catch (err) {
         console.error('[getConfig] refresh failed:', err.message);
       }
@@ -442,4 +453,4 @@ async function postToThreads(guildId, userId, images, caption, onProgress = null
   return publishAndGetUrl(carouselId);
 }
 
-module.exports = { getConfig, getAvailablePlatforms, postToFacebook, postToInstagram, postToThreads };
+module.exports = { getConfig, getAvailablePlatforms, getGuildMetaApp, postToFacebook, postToInstagram, postToThreads };

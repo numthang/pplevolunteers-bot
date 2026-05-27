@@ -1,23 +1,22 @@
 // ⚠️  อัปเดต Callback URI ใน X Developer Portal ให้ชี้มาที่:
-//     https://pplethai.org/api/x/oauth/callback
+//     https://pplevolunteers.org/api/x/oauth/callback
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
 import { cookies } from 'next/headers'
+import pool from '@/db/index.js'
 import https from 'https'
 import crypto from 'crypto'
 
-const API_KEY    = process.env.X_CONSUMER_KEY
-const API_SECRET = process.env.X_CONSUMER_SECRET
-const BASE_URL   = process.env.NEXTAUTH_URL || 'https://pplethai.org'
-const CALLBACK   = `${BASE_URL}/api/x/oauth/callback`
+const BASE_URL = process.env.NEXTAUTH_URL || 'https://pplevolunteers.org'
+const CALLBACK = `${BASE_URL}/api/x/oauth/callback`
 
 function pct(str) {
   return encodeURIComponent(String(str)).replace(/[!'()*]/g, c => '%' + c.charCodeAt(0).toString(16).toUpperCase())
 }
 
-function buildAuthHeader(params) {
+function buildAuthHeader(apiKey, apiSecret, params) {
   const o = {
-    oauth_consumer_key:     API_KEY,
+    oauth_consumer_key:     apiKey,
     oauth_nonce:            crypto.randomBytes(16).toString('hex'),
     oauth_signature_method: 'HMAC-SHA1',
     oauth_timestamp:        Math.floor(Date.now() / 1000).toString(),
@@ -25,7 +24,7 @@ function buildAuthHeader(params) {
     ...params,
   }
   const base    = `POST&${pct('https://api.twitter.com/oauth/request_token')}&${pct(Object.keys(o).sort().map(k => `${pct(k)}=${pct(o[k])}`).join('&'))}`
-  const sigKey  = `${pct(API_SECRET)}&`
+  const sigKey  = `${pct(apiSecret)}&`
   o.oauth_signature = crypto.createHmac('sha1', sigKey).update(base).digest('base64')
   return 'OAuth ' + Object.keys(o).sort().map(k => `${pct(k)}="${pct(o[k])}"`).join(', ')
 }
@@ -46,20 +45,35 @@ function xPost(path, authHeader, body) {
   })
 }
 
+async function getGuildXApp(guildId) {
+  const [rows] = await pool.execute(
+    "SELECT `key`, value FROM dc_guild_config WHERE guild_id = ? AND `key` IN ('x_consumer_key', 'x_consumer_secret')",
+    [guildId]
+  )
+  const m = Object.fromEntries(rows.map(r => [r.key, r.value]))
+  if (!m.x_consumer_key || !m.x_consumer_secret) return null
+  return { api_key: m.x_consumer_key, api_secret: m.x_consumer_secret }
+}
+
 export async function GET(req) {
   const session = await getServerSession(authOptions)
   if (!session) return Response.redirect(`${BASE_URL}/login`)
-
-  if (!API_KEY || !API_SECRET) {
-    return Response.json({ error: 'X_API_KEY / X_API_SECRET ยังไม่ได้ตั้งค่าใน .env' }, { status: 500 })
-  }
 
   const { searchParams } = new URL(req.url)
   const guildId    = searchParams.get('guild_id') || ''
   const visibility = searchParams.get('visibility') || 'private'
 
+  if (!guildId) {
+    return Response.json({ error: 'guild_id required' }, { status: 400 })
+  }
+
+  const app = await getGuildXApp(guildId)
+  if (!app) {
+    return Response.json({ error: `Guild นี้ยังไม่ได้ตั้งค่า X App — ตั้งค่า x_consumer_key/x_consumer_secret ใน /bot/social/accounts ก่อน` }, { status: 400 })
+  }
+
   const callbackEncoded = encodeURIComponent(CALLBACK)
-  const auth = buildAuthHeader({ oauth_callback: CALLBACK })
+  const auth = buildAuthHeader(app.api_key, app.api_secret, { oauth_callback: CALLBACK })
   const res  = await xPost('/oauth/request_token', auth, `oauth_callback=${callbackEncoded}`)
 
   if (res.status !== 200) {

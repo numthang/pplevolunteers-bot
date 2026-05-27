@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Trash2, RefreshCw, Globe, Lock, AlertTriangle, X, Plus } from 'lucide-react'
+import { Trash2, RefreshCw, Globe, Lock, AlertTriangle, X, Plus, Settings, Check } from 'lucide-react'
 import { isAdmin } from '@/lib/roles.js'
 
 const PLATFORM_LABEL = { fb: 'Facebook', ig: 'Instagram', threads: 'Threads', x: 'X (Twitter)' }
@@ -32,7 +32,7 @@ function TokenExpiry({ expiresAt }) {
   )
 }
 
-const EMPTY_X_FORM = { name: '', handle: '', api_key: '', api_secret: '', access_token: '', access_token_secret: '' }
+const EMPTY_X_FORM = { name: '', handle: '', access_token: '', access_token_secret: '' }
 
 export default function SocialAccountsPage() {
   const { data: session, status } = useSession()
@@ -40,6 +40,9 @@ export default function SocialAccountsPage() {
   const searchParams = useSearchParams()
   const [accounts, setAccounts] = useState([])
   const [guilds, setGuilds] = useState([])
+  const [configs, setConfigs] = useState({}) // { [guild_id]: { meta_app_id, meta_app_secret, x_consumer_key, x_consumer_secret } }
+  const [editConfig, setEditConfig] = useState(null) // { guildId, key, value }
+  const [savingConfig, setSavingConfig] = useState(false)
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState(null)
   const [xModal, setXModal] = useState(null) // { guildId }
@@ -51,14 +54,41 @@ export default function SocialAccountsPage() {
   const admin = isAdmin(roles)
 
   const load = useCallback(async () => {
-    const [accRes, gRes] = await Promise.all([
+    const [accRes, gRes, cfgRes] = await Promise.all([
       fetch('/api/social/accounts'),
       fetch('/api/admin/guilds'),
+      fetch('/api/social/guild-configs'),
     ])
     if (accRes.ok) setAccounts(await accRes.json())
     if (gRes.ok) setGuilds(await gRes.json())
+    if (cfgRes.ok) setConfigs(await cfgRes.json())
     setLoading(false)
   }, [])
+
+  async function saveConfig() {
+    if (!editConfig) return
+    setSavingConfig(true)
+    const res = await fetch('/api/social/guild-configs', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ guild_id: editConfig.guildId, key: editConfig.key, value: editConfig.value }),
+    })
+    if (res.ok) {
+      setConfigs(prev => ({
+        ...prev,
+        [editConfig.guildId]: { ...(prev[editConfig.guildId] || {}), [editConfig.key]: editConfig.value || undefined }
+      }))
+      setEditConfig(null)
+    }
+    setSavingConfig(false)
+  }
+
+  useEffect(() => {
+    if (!editConfig) return
+    const onKey = e => { if (e.key === 'Escape') setEditConfig(null) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [editConfig])
 
   useEffect(() => {
     if (status === 'unauthenticated') { router.push('/login'); return }
@@ -85,10 +115,10 @@ export default function SocialAccountsPage() {
 
   async function saveX(e) {
     e.preventDefault()
-    const { name, handle, api_key, api_secret, access_token, access_token_secret } = xForm
-    if (!handle || !api_key || !api_secret || !access_token || !access_token_secret) return
+    const { name, handle, access_token, access_token_secret } = xForm
+    if (!handle || !access_token || !access_token_secret) return
     setXSaving(true)
-    const creds = JSON.stringify({ api_key, api_secret, access_token, access_token_secret })
+    const creds = JSON.stringify({ access_token, access_token_secret })
     const res = await fetch('/api/social/accounts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -165,6 +195,9 @@ export default function SocialAccountsPage() {
       <div className="flex flex-col gap-8">
         {guilds.map(guild => {
           const gAccounts = byGuild[guild.guild_id] || []
+          const cfg = configs[guild.guild_id] || {}
+          const hasMeta = !!cfg.meta_app_id && !!cfg.meta_app_secret
+          const hasX    = !!cfg.x_consumer_key && !!cfg.x_consumer_secret
           return (
             <div key={guild.guild_id}>
               <div className="flex items-center justify-between mb-3">
@@ -174,25 +207,72 @@ export default function SocialAccountsPage() {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => { setXModal({ guildId: guild.guild_id }); setXForm(EMPTY_X_FORM) }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black text-white text-sm hover:opacity-80 transition"
+                    disabled={!hasX}
+                    title={hasX ? '' : 'ตั้งค่า X Consumer Key/Secret ก่อน'}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black text-white text-sm hover:opacity-80 transition disabled:opacity-30 disabled:cursor-not-allowed"
                   >
                     <Plus size={14} />
                     X (Guild)
                   </button>
-                  <a
-                    href={`/api/x/oauth/start?guild_id=${guild.guild_id}&visibility=private`}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-700 text-white text-sm hover:opacity-80 transition"
-                  >
-                    <Lock size={14} />
-                    X (ส่วนตัว)
-                  </a>
-                  <a
-                    href={`/api/meta/oauth/start?guild_id=${guild.guild_id}`}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange text-white text-sm hover:opacity-90 transition"
-                  >
-                    <RefreshCw size={14} />
-                    Connect Meta OAuth
-                  </a>
+                  {hasX ? (
+                    <a
+                      href={`/api/x/oauth/start?guild_id=${guild.guild_id}&visibility=private`}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-700 text-white text-sm hover:opacity-80 transition"
+                    >
+                      <Lock size={14} />
+                      X (ส่วนตัว)
+                    </a>
+                  ) : (
+                    <button disabled title="ตั้งค่า X Consumer Key/Secret ก่อน" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-700 text-white text-sm opacity-30 cursor-not-allowed">
+                      <Lock size={14} />
+                      X (ส่วนตัว)
+                    </button>
+                  )}
+                  {hasMeta ? (
+                    <a
+                      href={`/api/meta/oauth/start?guild_id=${guild.guild_id}`}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange text-white text-sm hover:opacity-90 transition"
+                    >
+                      <RefreshCw size={14} />
+                      Connect Meta OAuth
+                    </a>
+                  ) : (
+                    <button disabled title="ตั้งค่า Meta App ID/Secret ก่อน" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange text-white text-sm opacity-30 cursor-not-allowed">
+                      <RefreshCw size={14} />
+                      Connect Meta OAuth
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* App Credentials */}
+              <div className="bg-card-bg rounded-xl border border-warm-200 dark:border-disc-border p-4 mb-3">
+                <div className="flex items-center gap-2 mb-3">
+                  <Settings size={14} className="text-gray-500 dark:text-disc-muted" />
+                  <span className="text-xs font-semibold text-gray-700 dark:text-disc-text uppercase tracking-wide">App Credentials</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {[
+                    { key: 'meta_app_id',       label: 'Meta App ID',       secret: false },
+                    { key: 'meta_app_secret',   label: 'Meta App Secret',   secret: true  },
+                    { key: 'x_consumer_key',    label: 'X Consumer Key',    secret: false },
+                    { key: 'x_consumer_secret', label: 'X Consumer Secret', secret: true  },
+                  ].map(({ key, label, secret }) => {
+                    const val = cfg[key]
+                    const display = !val ? '—' : secret ? '••••••••' : (val.length > 24 ? val.slice(0, 12) + '…' + val.slice(-6) : val)
+                    return (
+                      <div key={key} className="flex items-center gap-2 text-sm">
+                        <span className="text-xs text-gray-500 dark:text-disc-muted w-36 shrink-0">{label}</span>
+                        <span className={`flex-1 font-mono text-xs ${val ? 'text-gray-700 dark:text-disc-text' : 'text-gray-400 dark:text-disc-muted'}`}>{display}</span>
+                        <button
+                          onClick={() => setEditConfig({ guildId: guild.guild_id, key, value: val || '' })}
+                          className="text-xs text-orange hover:underline shrink-0"
+                        >
+                          {val ? 'แก้ไข' : 'ตั้งค่า'}
+                        </button>
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
 
@@ -251,6 +331,49 @@ export default function SocialAccountsPage() {
         })}
       </div>
 
+      {editConfig && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4" onClick={() => setEditConfig(null)}>
+          <div className="bg-white dark:bg-disc-bg2 rounded-2xl shadow-xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-base font-bold text-gray-900 dark:text-disc-text">
+                {{
+                  meta_app_id:       'Meta App ID',
+                  meta_app_secret:   'Meta App Secret',
+                  x_consumer_key:    'X Consumer Key',
+                  x_consumer_secret: 'X Consumer Secret',
+                }[editConfig.key]}
+              </h2>
+              <button onClick={() => setEditConfig(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-disc-text">
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={e => { e.preventDefault(); saveConfig() }} className="flex flex-col gap-3">
+              <input
+                type={editConfig.key.endsWith('_secret') ? 'password' : 'text'}
+                value={editConfig.value}
+                onChange={e => setEditConfig(prev => ({ ...prev, value: e.target.value }))}
+                placeholder="ใส่ค่าที่นี่ (ปล่อยว่างเพื่อลบ)"
+                autoFocus
+                className="w-full px-3 py-2 text-sm rounded-lg border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-gray-900 dark:text-disc-text placeholder-gray-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-orange/40"
+              />
+              <p className="text-xs text-gray-400 dark:text-disc-muted">
+                ดูค่าได้จาก {editConfig.key.startsWith('meta_') ? 'Meta Developer Portal → My Apps' : 'X Developer Portal → Keys and Tokens'}
+              </p>
+              <div className="flex justify-end gap-2 mt-2">
+                <button type="button" onClick={() => setEditConfig(null)} className="px-4 py-2 text-sm rounded-lg text-gray-500 dark:text-disc-muted hover:bg-gray-100 dark:hover:bg-disc-hover transition">
+                  ยกเลิก
+                </button>
+                <button type="submit" disabled={savingConfig} className="flex items-center gap-1.5 px-4 py-2 text-sm rounded-lg bg-orange text-white hover:opacity-90 transition disabled:opacity-40">
+                  <Check size={14} />
+                  {savingConfig ? 'กำลังบันทึก...' : 'บันทึก'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {xModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4" onClick={() => setXModal(null)}>
           <div className="bg-white dark:bg-disc-bg2 rounded-2xl shadow-xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
@@ -265,15 +388,13 @@ export default function SocialAccountsPage() {
               {[
                 { key: 'name',                 label: 'ชื่อที่แสดง',             placeholder: 'เช่น Peoples Volunteers X', required: false },
                 { key: 'handle',               label: 'X Handle',               placeholder: '@pple_volunteers', required: true },
-                { key: 'api_key',              label: 'API Key (Consumer Key)',  placeholder: '', required: true },
-                { key: 'api_secret',           label: 'API Secret',              placeholder: '', required: true },
                 { key: 'access_token',         label: 'Access Token',            placeholder: '', required: true },
                 { key: 'access_token_secret',  label: 'Access Token Secret',     placeholder: '', required: true },
               ].map(({ key, label, placeholder, required }) => (
                 <div key={key}>
                   <label className="block text-xs font-medium text-gray-700 dark:text-disc-text mb-1">{label}{required && <span className="text-red-500 ml-0.5">*</span>}</label>
                   <input
-                    type={['api_key','api_secret','access_token','access_token_secret'].includes(key) ? 'password' : 'text'}
+                    type={['access_token','access_token_secret'].includes(key) ? 'password' : 'text'}
                     value={xForm[key]}
                     onChange={e => setXForm(prev => ({ ...prev, [key]: e.target.value }))}
                     placeholder={placeholder}

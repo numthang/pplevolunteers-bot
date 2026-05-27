@@ -1,8 +1,16 @@
 import pool from '@/db/index.js'
 
-const APP_ID       = process.env.META_APP_ID
-const APP_SECRET   = process.env.META_APP_SECRET
 const REDIRECT_URI = `${process.env.NEXTAUTH_URL || 'https://pplevolunteers.org'}/api/meta/oauth/callback`
+
+async function getGuildMetaApp(guildId) {
+  const [rows] = await pool.execute(
+    "SELECT `key`, value FROM dc_guild_config WHERE guild_id = ? AND `key` IN ('meta_app_id', 'meta_app_secret')",
+    [guildId]
+  )
+  const m = Object.fromEntries(rows.map(r => [r.key, r.value]))
+  if (!m.meta_app_id || !m.meta_app_secret) return null
+  return { app_id: m.meta_app_id, app_secret: m.meta_app_secret }
+}
 
 async function fbGet(url) {
   const res = await fetch(url)
@@ -59,24 +67,25 @@ export async function GET(req) {
     return html('❌ หมดเวลา', '<h1>❌ OAuth session หมดอายุ กรุณาลองใหม่</h1>')
   }
 
-  if (!APP_ID || !APP_SECRET) {
-    return html('❌ Config ไม่ครบ', '<h1>❌ META_APP_ID / META_APP_SECRET ไม่ได้ตั้งค่าใน .env</h1>')
+  const app = await getGuildMetaApp(state.guildId)
+  if (!app) {
+    return html('❌ Config ไม่ครบ', `<h1>❌ Guild ${state.guildId} ยังไม่ได้ตั้งค่า meta_app_id / meta_app_secret ใน dc_guild_config</h1>`)
   }
 
   try {
     // 1. Exchange code → short-lived user token
     const tokenRes = await fbGet(
       `https://graph.facebook.com/v22.0/oauth/access_token` +
-      `?client_id=${APP_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}` +
-      `&client_secret=${APP_SECRET}&code=${code}`
+      `?client_id=${app.app_id}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}` +
+      `&client_secret=${app.app_secret}&code=${code}`
     )
     if (tokenRes.error) throw new Error(`Token exchange: ${tokenRes.error.message}`)
 
     // 2. Exchange short-lived → long-lived user token
     const longRes = await fbGet(
       `https://graph.facebook.com/oauth/access_token` +
-      `?grant_type=fb_exchange_token&client_id=${APP_ID}` +
-      `&client_secret=${APP_SECRET}&fb_exchange_token=${tokenRes.access_token}`
+      `?grant_type=fb_exchange_token&client_id=${app.app_id}` +
+      `&client_secret=${app.app_secret}&fb_exchange_token=${tokenRes.access_token}`
     )
     if (longRes.error) throw new Error(`Long-lived exchange: ${longRes.error.message}`)
 
