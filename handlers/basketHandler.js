@@ -185,7 +185,15 @@ async function buildBasketPayload(basket, guildId, channelId, userId) {
       const fail  = h.status !== 'success' ? ' ⚠️' : '';
       return `${icon} ${d}${imgs}${link}${fail}`;
     });
-    embed.addFields({ name: '📋 ประวัติการโพสต์', value: lines.join('\n'), inline: false });
+    // Discord field value limit: 1024 chars — keep newest entries that fit
+    let totalLen = 0;
+    const fitted = [];
+    for (const line of lines) {
+      if (totalLen + line.length + 1 > 1024) break;
+      fitted.push(line);
+      totalLen += line.length + 1;
+    }
+    embed.addFields({ name: '📋 ประวัติการโพสต์', value: fitted.join('\n') || '—', inline: false });
   }
 
   pendingPost.set(userId, {
@@ -569,9 +577,9 @@ async function processAndPost(interaction, state) {
     await interaction.editReply({ content: '📤 กำลังโพสต์ไปยัง Instagram...' }).catch(() => {});
     try {
       const igProgress = msg => interaction.editReply({ content: msg }).catch(() => {});
-      const igRes = await postToInstagram(state.guildId, interaction.user.id, processed, state.caption, null, igProgress, state.group);
+      const igRes = await postToInstagram(state.guildId, interaction.user.id, processed, state.caption, scheduleTime, igProgress, state.group);
       igUrl = igRes?.permalink || null;
-      const igLabel = 'โพสต์แล้ว';
+      const igLabel = scheduleTime ? 'ตั้งเวลาแล้ว' : 'โพสต์แล้ว';
       const igLink = igUrl ? ` · 🔗 [ดูโพสต์](${igUrl})` : '';
       results.push(`✅ Instagram ${igLabel}${igLink}`);
     } catch (err) {
