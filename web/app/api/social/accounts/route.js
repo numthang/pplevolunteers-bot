@@ -5,22 +5,32 @@ import pool from '@/db/index.js'
 
 export async function GET(req) {
   const session = await getServerSession(authOptions)
-  if (!session || !isAdmin(session.user.roles)) {
-    return Response.json({ error: 'Forbidden' }, { status: 403 })
-  }
+  if (!session) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
   const { searchParams } = new URL(req.url)
   const guildId = searchParams.get('guild_id')
+  const admin   = isAdmin(session.user.roles)
 
-  const [rows] = await pool.execute(
-    `SELECT id, user_discord_id, guild_id, name, platform, social_id,
-            access_token IS NOT NULL AS has_access_token,
-            user_token IS NOT NULL AS has_user_token,
-            user_token_expires_at, visibility, created_at
-     FROM dc_social_accounts
-     ${guildId ? 'WHERE guild_id = ?' : 'ORDER BY guild_id, platform, id'}`,
-    guildId ? [guildId] : []
-  )
+  const SELECT = `SELECT id, user_discord_id, guild_id, name, platform, social_id,
+                         access_token IS NOT NULL AS has_access_token,
+                         user_token IS NOT NULL AS has_user_token,
+                         user_token_expires_at, visibility, created_at
+                  FROM dc_social_accounts`
+
+  let rows
+  if (admin) {
+    const [r] = await pool.execute(
+      `${SELECT} ${guildId ? 'WHERE guild_id = ?' : 'ORDER BY guild_id, platform, id'}`,
+      guildId ? [guildId] : []
+    )
+    rows = r
+  } else {
+    const [r] = await pool.execute(
+      `${SELECT} WHERE user_discord_id = ? ${guildId ? 'AND guild_id = ?' : ''} ORDER BY platform, id`,
+      guildId ? [session.user.discordId, guildId] : [session.user.discordId]
+    )
+    rows = r
+  }
 
   return Response.json(rows)
 }

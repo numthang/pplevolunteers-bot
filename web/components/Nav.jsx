@@ -55,6 +55,10 @@ const BOT_LINKS = [
   { href: '/bot/social/accounts', label: 'Social Accounts', icon: 'social' },
 ]
 
+const SOCIAL_LINKS = [
+  { href: '/social', label: 'My Accounts', icon: 'social' },
+]
+
 const DASHBOARD_LINKS = [
   { href: '/finance',       label: 'FINANCE',   icon: 'transactions' },
   { href: '/calling',       label: 'CALLING',   icon: 'campaigns' },
@@ -67,6 +71,7 @@ const APPS = [
   { key: 'finance',  label: 'FINANCE',   href: '/finance',        icon: 'transactions' },
   { key: 'calling',  label: 'CALLING',   href: '/calling',        icon: 'campaigns' },
   { key: 'contacts', label: 'CONTACTS',  href: '/contacts',       icon: 'contacts' },
+  { key: 'social',   label: 'SOCIAL',    href: '/social',         icon: 'social' },
   { key: 'bot',      label: 'BOT',       href: '/bot/social/accounts', icon: 'social', roles: ['Admin'] },
 ]
 
@@ -84,10 +89,11 @@ export default function Nav({ session }) {
   const isCallingApp  = pathname.startsWith('/calling')
   const isFinanceApp  = pathname.startsWith('/finance')
   const isContactsApp = pathname.startsWith('/contacts')
+  const isSocialApp   = pathname.startsWith('/social')
   const isBotApp      = pathname.startsWith('/bot')
   const isLinkActive = (href) => pathname === href || (href !== '/' && pathname.startsWith(href))
-  const currentApp = isBotApp ? APPS[4] : isContactsApp ? APPS[3] : isCallingApp ? APPS[2] : isFinanceApp ? APPS[1] : APPS[0]
-  const links = isBotApp ? BOT_LINKS : isContactsApp ? CONTACTS_LINKS : isCallingApp ? CALLING_LINKS : isFinanceApp ? FINANCE_LINKS : DASHBOARD_LINKS
+  const currentApp = isBotApp ? APPS[5] : isSocialApp ? APPS[4] : isContactsApp ? APPS[3] : isCallingApp ? APPS[2] : isFinanceApp ? APPS[1] : APPS[0]
+  const links = isBotApp ? BOT_LINKS : isSocialApp ? SOCIAL_LINKS : isContactsApp ? CONTACTS_LINKS : isCallingApp ? CALLING_LINKS : isFinanceApp ? FINANCE_LINKS : DASHBOARD_LINKS
 
   const campaignIdMatch = pathname.match(/^\/calling\/assignments\/(\d+)/)
   const activeCampaignId = campaignIdMatch ? parseInt(campaignIdMatch[1]) : null

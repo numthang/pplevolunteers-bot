@@ -27,12 +27,19 @@ export async function PATCH(req, { params }) {
 
 export async function DELETE(req, { params }) {
   const session = await getServerSession(authOptions)
-  if (!session || !isAdmin(session.user.roles)) {
-    return Response.json({ error: 'Forbidden' }, { status: 403 })
-  }
+  if (!session) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
   const { id } = await params
-  await pool.execute(`DELETE FROM dc_social_accounts WHERE id = ?`, [id])
 
+  if (!isAdmin(session.user.roles)) {
+    const [rows] = await pool.execute(
+      `SELECT user_discord_id FROM dc_social_accounts WHERE id = ?`, [id]
+    )
+    if (!rows.length || rows[0].user_discord_id !== session.user.discordId) {
+      return Response.json({ error: 'Forbidden' }, { status: 403 })
+    }
+  }
+
+  await pool.execute(`DELETE FROM dc_social_accounts WHERE id = ?`, [id])
   return Response.json({ ok: true })
 }
