@@ -11,7 +11,7 @@ export async function GET(req) {
   const guildId = searchParams.get('guild_id')
   const admin   = isAdmin(session.user.roles)
 
-  const SELECT = `SELECT id, user_discord_id, guild_id, name, platform, social_id,
+  const SELECT = `SELECT id, user_discord_id, guild_id, name, group_name, platform, social_id,
                          access_token IS NOT NULL AS has_access_token,
                          user_token IS NOT NULL AS has_user_token,
                          user_token_expires_at, visibility, created_at

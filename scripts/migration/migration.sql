@@ -263,3 +263,6 @@ ALTER TABLE dc_social_accounts CHANGE platform_id social_id VARCHAR(50) NULL;
 
 -- 2026-05-27: dc_social_accounts — access_token เป็น NULL ได้ (IG row ใช้ user_token แทน)
 ALTER TABLE dc_social_accounts MODIFY COLUMN access_token TEXT NULL;
+
+-- 2026-05-27: dc_social_accounts — เพิ่ม group_name สำหรับจัดกลุ่ม (ปชช.ราชบุรี, Unnop ส่วนตัว, ฯลฯ)
+ALTER TABLE dc_social_accounts ADD COLUMN group_name VARCHAR(100) NULL AFTER name;

@@ -11,12 +11,13 @@ export async function PATCH(req, { params }) {
 
   const { id } = await params
   const body = await req.json()
-  const { name, visibility } = body
+  const { name, visibility, group_name } = body
 
   const fields = []
   const values = []
   if (name !== undefined)       { fields.push('name = ?');       values.push(name) }
   if (visibility !== undefined) { fields.push('visibility = ?'); values.push(visibility) }
+  if (group_name !== undefined) { fields.push('group_name = ?'); values.push(group_name || null) }
   if (!fields.length) return Response.json({ error: 'nothing to update' }, { status: 400 })
 
   values.push(id)

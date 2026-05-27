@@ -56,15 +56,16 @@ async function refreshUserToken(guildId, rowId, userDiscordId, currentUserToken)
 
 // คืนค่า config ของ platform หนึ่งใน guild หนึ่ง
 // userId = Discord user id ของคนที่กำลังโพสต์ (เพื่อ filter private accounts)
-async function getConfig(guildId, platform, userId = null) {
+async function getConfig(guildId, platform, userId = null, groupName = null) {
   const [rows] = await pool.execute(
     `SELECT id, user_discord_id, social_id, access_token, user_token, user_token_expires_at, name, visibility
      FROM dc_social_accounts
      WHERE guild_id = ? AND platform = ?
        AND (visibility = 'public' OR (visibility = 'private' AND user_discord_id = ?))
+       ${groupName ? 'AND group_name = ?' : ''}
      ORDER BY CASE WHEN user_discord_id = ? THEN 0 ELSE 1 END, id ASC
      LIMIT 1`,
-    [guildId, platform, userId, userId]
+    groupName ? [guildId, platform, userId, groupName, userId] : [guildId, platform, userId, userId]
   );
   if (!rows.length) return null;
   const r = rows[0];
@@ -94,14 +95,27 @@ async function getConfig(guildId, platform, userId = null) {
 }
 
 // คืน array ของ platforms ที่ user คนนี้สามารถใช้ใน guild นี้
-async function getAvailablePlatforms(guildId, userId = null) {
+async function getAvailablePlatforms(guildId, userId = null, groupName = null) {
   const [rows] = await pool.execute(
     `SELECT DISTINCT platform FROM dc_social_accounts
      WHERE guild_id = ?
-       AND (visibility = 'public' OR (visibility = 'private' AND user_discord_id = ?))`,
-    [guildId, userId]
+       AND (visibility = 'public' OR (visibility = 'private' AND user_discord_id = ?))
+       ${groupName ? 'AND group_name = ?' : ''}`,
+    groupName ? [guildId, userId, groupName] : [guildId, userId]
   );
   return rows.map(r => r.platform);
+}
+
+// คืน list ของ group_name (เฉพาะที่ user เห็น) สำหรับ guild นี้
+async function getAvailableGroups(guildId, userId = null) {
+  const [rows] = await pool.execute(
+    `SELECT DISTINCT group_name FROM dc_social_accounts
+     WHERE guild_id = ? AND group_name IS NOT NULL
+       AND (visibility = 'public' OR (visibility = 'private' AND user_discord_id = ?))
+     ORDER BY group_name`,
+    [guildId, userId]
+  );
+  return rows.map(r => r.group_name);
 }
 
 // ─── HTTP helper ──────────────────────────────────────────────────────────────
@@ -216,8 +230,8 @@ async function fbUploadPhoto(pageId, token, buffer, ext, published, caption = ''
   return res;
 }
 
-async function postToFacebook(guildId, userId, images, caption, scheduleTime = null) {
-  const cfg = await getConfig(guildId, 'fb', userId);
+async function postToFacebook(guildId, userId, images, caption, scheduleTime = null, groupName = null) {
+  const cfg = await getConfig(guildId, 'fb', userId, groupName);
   if (!cfg) throw new Error('ไม่พบ Facebook config สำหรับ guild นี้');
 
   const scheduleFields = scheduleTime
@@ -330,8 +344,8 @@ function saveProcessedToTemp(images) {
   });
 }
 
-async function postToInstagram(guildId, userId, images, caption, scheduleTime = null, onProgress = null) {
-  const cfg = await getConfig(guildId, 'ig', userId);
+async function postToInstagram(guildId, userId, images, caption, scheduleTime = null, onProgress = null, groupName = null) {
+  const cfg = await getConfig(guildId, 'ig', userId, groupName);
   if (!cfg) throw new Error('ไม่พบ Instagram config สำหรับ guild นี้');
   if (!TEMP_URL.startsWith('http')) {
     throw new Error(`META_TEMP_URL หรือ WEB_BASE_URL ไม่ได้ set — ตอนนี้ TEMP_URL="${TEMP_URL}" ซึ่ง Instagram เข้าไม่ได้`);
@@ -390,9 +404,9 @@ async function waitForThreadsContainer(id, token, maxWaitMs = 30000, onProgress 
   throw new Error('Threads container timeout — รูปใช้เวลา process นานเกิน 30s');
 }
 
-async function postToThreads(guildId, userId, images, caption, onProgress = null) {
+async function postToThreads(guildId, userId, images, caption, onProgress = null, groupName = null) {
   if (caption && caption.length > 500) caption = caption.slice(0, 497) + '...';
-  const cfg = await getConfig(guildId, 'threads', userId);
+  const cfg = await getConfig(guildId, 'threads', userId, groupName);
   if (!cfg) throw new Error('ไม่พบ Threads config สำหรับ guild นี้');
   if (images.length && !TEMP_URL.startsWith('http')) {
     throw new Error(`WEB_BASE_URL ไม่ได้ set — Threads เข้า URL ไม่ได้`);
@@ -453,4 +467,4 @@ async function postToThreads(guildId, userId, images, caption, onProgress = null
   return publishAndGetUrl(carouselId);
 }
 
-module.exports = { getConfig, getAvailablePlatforms, getGuildMetaApp, postToFacebook, postToInstagram, postToThreads };
+module.exports = { getConfig, getAvailablePlatforms, getAvailableGroups, getGuildMetaApp, postToFacebook, postToInstagram, postToThreads };

@@ -15,18 +15,19 @@ const fs = require('fs');
 const sharp = require('sharp');
 const { addImages, setCaption, getBasket, clearBasket, addHistory, getHistory } = require('../db/mediaBasket');
 const { fetchBuffer, applyWatermark, autoEnhance } = require('../utils/watermarkImage');
-const { postToFacebook, postToInstagram, postToThreads, getAvailablePlatforms } = require('../services/metaApi');
+const { postToFacebook, postToInstagram, postToThreads, getAvailablePlatforms, getAvailableGroups } = require('../services/metaApi');
 const { postToX } = require('../services/xApi');
 const { getSetting, setSetting, deleteSetting } = require('../db/settings');
 
 const stateKey = channelId => `basket_state_${channelId}`;
 async function getBasketState(guildId, channelId) {
   const v = await getSetting(guildId, stateKey(channelId));
-  try { return v ? JSON.parse(v) : null; } catch { return null; }
+  if (!v) return null;
+  if (typeof v === 'object') return v;
+  try { return JSON.parse(v); } catch { return null; }
 }
 async function setBasketStatePartial(guildId, channelId, patch) {
-  const raw = await getSetting(guildId, stateKey(channelId));
-  const cur = raw ? (JSON.parse(raw) || {}) : {};
+  const cur = (await getBasketState(guildId, channelId)) || {};
   await setSetting(guildId, stateKey(channelId), { ...cur, ...patch });
 }
 async function clearBasketState(guildId, channelId) {
@@ -102,23 +103,43 @@ function buildBasketButtons(imgCount, hasCaption = false) {
   );
 }
 
-function buildPlatformRow(hasIg, hasThreads, hasX, defaultPlatform) {
-  const opts = [];
+function buildGroupRow(groups, currentGroup) {
+  const opts = groups.map(g =>
+    new StringSelectMenuOptionBuilder().setLabel(g).setValue(g).setEmoji('📦').setDefault(g === currentGroup)
+  );
+  if (!opts.length) return null;
+  return new ActionRowBuilder().addComponents(
+    new StringSelectMenuBuilder().setCustomId('basket_group').setPlaceholder('เลือกกลุ่มโพสต์').addOptions(opts)
+  );
+}
 
-  if (hasIg && hasThreads)
-    opts.push(new StringSelectMenuOptionBuilder().setLabel('FB + IG + @ Threads').setValue('all').setEmoji('📲').setDefault(defaultPlatform === 'all'));
-  if (hasIg)
-    opts.push(new StringSelectMenuOptionBuilder().setLabel('FB + IG').setValue('both').setEmoji('📲').setDefault(defaultPlatform === 'both'));
-  opts.push(new StringSelectMenuOptionBuilder().setLabel('Facebook').setValue('fb').setEmoji('📘').setDefault(defaultPlatform === 'fb'));
-  if (hasIg)
-    opts.push(new StringSelectMenuOptionBuilder().setLabel('Instagram').setValue('ig').setEmoji('📷').setDefault(defaultPlatform === 'ig'));
-  if (hasThreads)
-    opts.push(new StringSelectMenuOptionBuilder().setLabel('@ Threads').setValue('threads').setEmoji('🧵').setDefault(defaultPlatform === 'threads'));
-  if (hasX)
-    opts.push(new StringSelectMenuOptionBuilder().setLabel('X (Twitter)').setValue('x').setDefault(defaultPlatform === 'x'));
+function buildPlatformRow(availablePlatforms, selectedPlatforms) {
+  const meta = {
+    fb:      { label: 'Facebook',    emoji: '📘' },
+    ig:      { label: 'Instagram',   emoji: '📷' },
+    threads: { label: '@ Threads',   emoji: '🧵' },
+    x:       { label: 'X (Twitter)' },
+  };
+  const order = ['fb', 'ig', 'threads', 'x'];
+  const opts = order
+    .filter(p => availablePlatforms.includes(p))
+    .map(p => {
+      const o = new StringSelectMenuOptionBuilder()
+        .setLabel(meta[p].label)
+        .setValue(p)
+        .setDefault(selectedPlatforms.includes(p));
+      if (meta[p].emoji) o.setEmoji(meta[p].emoji);
+      return o;
+    });
+  if (!opts.length) return null;
 
   return new ActionRowBuilder().addComponents(
-    new StringSelectMenuBuilder().setCustomId('basket_platform').setPlaceholder('โพสต์ที่ไหน').addOptions(opts)
+    new StringSelectMenuBuilder()
+      .setCustomId('basket_platform')
+      .setPlaceholder('เลือก platform (กดได้หลายอัน)')
+      .setMinValues(1)
+      .setMaxValues(opts.length)
+      .addOptions(opts)
   );
 }
 
@@ -139,22 +160,22 @@ async function buildBasketPayload(basket, guildId, channelId, userId) {
   const embed = buildBasketEmbed(imgCount, caption, previewUrl);
   if (links.length) embed.addFields({ name: '🖼️ ต้นทาง', value: links.join('\n'), inline: false });
 
-  const platforms = await getAvailablePlatforms(guildId, userId);
-  const hasIg = platforms.includes('ig');
-  const hasThreads = platforms.includes('threads');
-  const hasX = platforms.includes('x');
   const saved = await getBasketState(guildId, channelId);
-  const fallbackPlatform = hasIg && hasThreads ? 'all'
-    : hasIg ? 'both'
-    : 'fb';
-  const currentWmType   = saved?.wmType   ?? 'none';
-  const currentPlatform = saved?.platform ?? fallbackPlatform;
+  const groups = await getAvailableGroups(guildId, userId);
+  const currentGroup = saved?.group && groups.includes(saved.group) ? saved.group : (groups[0] || null);
+
+  const availablePlatforms = await getAvailablePlatforms(guildId, userId, currentGroup);
+  // saved.platforms must be subset of available; otherwise default = all available
+  const savedPlatforms = Array.isArray(saved?.platforms) ? saved.platforms.filter(p => availablePlatforms.includes(p)) : [];
+  const selectedPlatforms = savedPlatforms.length ? savedPlatforms : [...availablePlatforms];
+  const currentWmType = saved?.wmType ?? 'none';
 
   const history = await getHistory(guildId, channelId);
   if (history.length) {
-    const platformIcon = { fb: '📘', ig: '📷', both: '📲' };
+    const platformIcon = { fb: '📘', ig: '📷', threads: '🧵', x: '𝕏' };
     const lines = history.map(h => {
-      const icon  = platformIcon[h.platform] || '📤';
+      const hPlats = (h.platform || '').split(',').filter(Boolean);
+      const icon = hPlats.length > 1 ? '📲' : (platformIcon[hPlats[0]] || '📤');
       const date  = new Date((h.schedule_time ? h.schedule_time * 1000 : h.created_at));
       const thaiDate = new Date(date.getTime() + 7 * 60 * 60 * 1000);
       const d = `${String(thaiDate.getUTCDate()).padStart(2,'0')}/${String(thaiDate.getUTCMonth()+1).padStart(2,'0')} ${String(thaiDate.getUTCHours()).padStart(2,'0')}:${String(thaiDate.getUTCMinutes()).padStart(2,'0')}`;
@@ -169,9 +190,10 @@ async function buildBasketPayload(basket, guildId, channelId, userId) {
 
   pendingPost.set(userId, {
     guildId, channelId,
-    wmType:   currentWmType,
-    platform: currentPlatform,
-    caption: caption || '',
+    wmType:    currentWmType,
+    platforms: selectedPlatforms,
+    group:     currentGroup,
+    caption:   caption || '',
   });
 
   const components = [];
@@ -200,7 +222,10 @@ async function buildBasketPayload(basket, guildId, channelId, userId) {
         ])
     ));
   }
-  components.push(buildPlatformRow(hasIg, hasThreads, hasX, currentPlatform));
+  const groupRow = buildGroupRow(groups, currentGroup);
+  if (groupRow) components.push(groupRow);
+  const platformRow = buildPlatformRow(availablePlatforms, selectedPlatforms);
+  if (platformRow) components.push(platformRow);
   components.push(buildBasketButtons(imgCount, !!caption));
 
   return { embeds: [embed], components };
@@ -271,20 +296,23 @@ async function handleBasketClear(interaction) {
 // ─── สร้างโพสต์: open modal ───────────────────────────────────────────────────
 async function rehydrateState(interaction) {
   const { guildId, channelId } = interaction;
-  const platforms = await getAvailablePlatforms(guildId, interaction.user.id);
-  const hasIg = platforms.includes('ig');
-  const hasThreads = platforms.includes('threads');
-  const fallbackPlatform = hasIg && hasThreads ? 'all' : hasIg ? 'both' : hasThreads ? 'threads' : 'fb';
+  const userId = interaction.user.id;
   const saved = await getBasketState(guildId, channelId);
+  const groups = await getAvailableGroups(guildId, userId);
+  const group = saved?.group && groups.includes(saved.group) ? saved.group : (groups[0] || null);
+  const availablePlatforms = await getAvailablePlatforms(guildId, userId, group);
+  const savedPlatforms = Array.isArray(saved?.platforms) ? saved.platforms.filter(p => availablePlatforms.includes(p)) : [];
+  const platforms = savedPlatforms.length ? savedPlatforms : [...availablePlatforms];
   const basket = await getBasket(guildId, channelId);
   const caption = basket.find(r => r.type === 'caption')?.caption || '';
   const state = {
     guildId, channelId,
-    wmType:   saved?.wmType   ?? 'none',
-    platform: saved?.platform ?? fallbackPlatform,
+    wmType: saved?.wmType ?? 'none',
+    platforms,
+    group,
     caption,
   };
-  pendingPost.set(interaction.user.id, state);
+  pendingPost.set(userId, state);
   return state;
 }
 
@@ -294,14 +322,14 @@ async function handleBasketPost(interaction) {
     return interaction.reply({ content: '⏳ กำลังโพสต์อยู่ กรุณารอสักครู่', flags: MessageFlags.Ephemeral });
   }
   if (!state) state = await rehydrateState(interaction);
-  return openScheduleModal(interaction, state.caption || '', state.platform);
+  return openScheduleModal(interaction, state.caption || '', state.platforms || []);
 }
 
 // ─── Retry button (after date parse error) ────────────────────────────────────
 async function handleBasketRetry(interaction) {
   let state = pendingPost.get(interaction.user.id);
   if (!state) state = await rehydrateState(interaction);
-  return openScheduleModal(interaction, state.caption || '', state.platform);
+  return openScheduleModal(interaction, state.caption || '', state.platforms || []);
 }
 
 // ─── Select menus ─────────────────────────────────────────────────────────────
@@ -315,8 +343,16 @@ async function handleBasketSelect(interaction) {
       setBasketStatePartial(guildId, channelId, { wmType: interaction.values[0] }).catch(() => {});
     }
     if (interaction.customId === 'basket_platform') {
-      if (state) state.platform = interaction.values[0];
-      setBasketStatePartial(guildId, channelId, { platform: interaction.values[0] }).catch(() => {});
+      if (state) state.platforms = interaction.values;
+      setBasketStatePartial(guildId, channelId, { platforms: interaction.values }).catch(e => console.error('[basket_platform setState]', e));
+    }
+    if (interaction.customId === 'basket_group') {
+      if (state) state.group = interaction.values[0];
+      // ต้อง await ก่อน re-render — ไม่งั้น buildBasketPayload จะอ่าน group เก่าจาก DB
+      await setBasketStatePartial(guildId, channelId, { group: interaction.values[0] }).catch(e => console.error('[basket_group setState]', e));
+      const basket = await getBasket(guildId, channelId);
+      const payload = await buildBasketPayload(basket, guildId, channelId, interaction.user.id);
+      await interaction.editReply(payload).catch(e => console.error('[basket_group editReply]', e));
     }
     if (interaction.customId === 'basket_enhance' && state) state.enhance = interaction.values[0] === 'on';
   } catch (err) {
@@ -334,12 +370,17 @@ function defaultScheduleTime() {
   return `${d}/${m}/${tomorrow.getUTCFullYear()} 17:00`;
 }
 
-const PLATFORM_LABEL = { fb: 'Facebook', ig: 'Instagram', both: 'FB + IG', threads: '@ Threads', all: 'FB + IG + @ Threads', x: 'X (Twitter)' };
+const PLATFORM_LABEL = { fb: 'Facebook', ig: 'Instagram', threads: '@ Threads', x: 'X' };
+const PLATFORM_SHORT = { fb: 'FB', ig: 'IG', threads: '@', x: 'X' };
 
-function openScheduleModal(interaction, existingCaption, platform) {
+function formatPlatforms(platforms) {
+  return (platforms || []).map(p => PLATFORM_SHORT[p] || p).join(' + ');
+}
+
+function openScheduleModal(interaction, existingCaption, platforms) {
   // unique customId to bypass Discord client modal cache (forces fresh render)
   const cid = `basket_schedule_modal:${Date.now()}`;
-  const label = PLATFORM_LABEL[platform];
+  const label = formatPlatforms(platforms);
   const title = label ? `โพสต์ลง ${label}` : 'สร้างโพสต์';
   const modal = new ModalBuilder().setCustomId(cid).setTitle(title);
 
@@ -499,15 +540,16 @@ async function processAndPost(interaction, state) {
   const { scheduleTime } = state;
   const results = [];
   let fbUrl = null, igUrl = null, threadsUrl = null, xUrl = null;
-  const postFb      = ['fb', 'both', 'all'].includes(state.platform);
-  const postIg      = ['ig', 'both', 'all'].includes(state.platform);
-  const postThreads = ['threads', 'all'].includes(state.platform);
-  const postX       = state.platform === 'x';
+  const platforms = state.platforms || [];
+  const postFb      = platforms.includes('fb');
+  const postIg      = platforms.includes('ig');
+  const postThreads = platforms.includes('threads');
+  const postX       = platforms.includes('x');
 
   if (postFb) {
     await interaction.editReply({ content: '📤 กำลังโพสต์ไปยัง Facebook...' }).catch(() => {});
     try {
-      const res = await postToFacebook(state.guildId, interaction.user.id, processed, state.caption, scheduleTime);
+      const res = await postToFacebook(state.guildId, interaction.user.id, processed, state.caption, scheduleTime, state.group);
       if (res.id) {
         const parts = res.id.split('_');
         if (parts.length === 2) {
@@ -527,7 +569,7 @@ async function processAndPost(interaction, state) {
     await interaction.editReply({ content: '📤 กำลังโพสต์ไปยัง Instagram...' }).catch(() => {});
     try {
       const igProgress = msg => interaction.editReply({ content: msg }).catch(() => {});
-      const igRes = await postToInstagram(state.guildId, interaction.user.id, processed, state.caption, null, igProgress);
+      const igRes = await postToInstagram(state.guildId, interaction.user.id, processed, state.caption, null, igProgress, state.group);
       igUrl = igRes?.permalink || null;
       const igLabel = 'โพสต์แล้ว';
       const igLink = igUrl ? ` · 🔗 [ดูโพสต์](${igUrl})` : '';
@@ -541,7 +583,7 @@ async function processAndPost(interaction, state) {
     await interaction.editReply({ content: '📤 กำลังโพสต์ไปยัง @ Threads...' }).catch(() => {});
     try {
       const thProgress = msg => interaction.editReply({ content: msg }).catch(() => {});
-      const thRes = await postToThreads(state.guildId, interaction.user.id, processed, state.caption, thProgress);
+      const thRes = await postToThreads(state.guildId, interaction.user.id, processed, state.caption, thProgress, state.group);
       threadsUrl = thRes?.permalink || null;
       const thLink = threadsUrl ? ` · 🔗 [ดูโพสต์](${threadsUrl})` : '';
       results.push(`✅ @ Threads โพสต์แล้ว${thLink}`);
@@ -553,7 +595,7 @@ async function processAndPost(interaction, state) {
   if (postX) {
     await interaction.editReply({ content: '📤 กำลังโพสต์ไปยัง X...' }).catch(() => {});
     try {
-      const xRes = await postToX(state.guildId, interaction.user.id, processed, state.caption);
+      const xRes = await postToX(state.guildId, interaction.user.id, processed, state.caption, state.group);
       xUrl = xRes?.url || null;
       const xLink = xUrl ? ` · 🔗 [ดูโพสต์](${xUrl})` : '';
       const xNote = xRes?.truncated ? ' (caption ถูกตัดให้ ≤280 ตัว)' : '';
@@ -566,7 +608,7 @@ async function processAndPost(interaction, state) {
   const overallStatus = results.every(r => r.startsWith('✅')) ? 'success'
     : results.every(r => r.startsWith('❌')) ? 'failed' : 'partial';
   await addHistory(state.guildId, state.channelId, interaction.user.id, {
-    platform:    state.platform,
+    platform:    platforms.join(','),
     imageCount:  imageItems.length,
     wmType:      state.wmType !== 'none' ? state.wmType : null,
     caption:     state.caption || null,

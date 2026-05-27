@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { Trash2, RefreshCw, Globe, Lock, AlertTriangle, X, Plus, Settings, Check } from 'lucide-react'
 import { isAdmin } from '@/lib/roles.js'
 
-const PLATFORM_LABEL = { fb: 'Facebook', ig: 'Instagram', threads: 'Threads', x: 'X (Twitter)' }
+const PLATFORM_LABEL = { fb: 'Facebook', ig: 'Instagram', threads: '@ (Threads)', x: 'X (Twitter)' }
 const PLATFORM_COLOR = {
   fb:      'bg-blue-600 text-white',
   ig:      'bg-gradient-to-r from-purple-500 to-orange-400 text-white',
@@ -94,6 +94,15 @@ export default function SocialAccountsPage() {
     if (status === 'unauthenticated') { router.push('/login'); return }
     if (status === 'authenticated') load()
   }, [status, load, router])
+
+  async function setGroup(acc, newGroup) {
+    await fetch(`/api/social/accounts/${acc.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ group_name: newGroup }),
+    })
+    setAccounts(prev => prev.map(a => a.id === acc.id ? { ...a, group_name: newGroup || null } : a))
+  }
 
   async function toggleVisibility(acc) {
     const next = acc.visibility === 'public' ? 'private' : 'public'
@@ -301,6 +310,26 @@ export default function SocialAccountsPage() {
                           </span>
                         )}
                       </div>
+
+                      <select
+                        value={acc.group_name || ''}
+                        onChange={async e => {
+                          if (e.target.value === '__new__') {
+                            const name = prompt('ชื่อกลุ่มใหม่:')?.trim()
+                            if (name) await setGroup(acc, name)
+                          } else {
+                            await setGroup(acc, e.target.value || null)
+                          }
+                        }}
+                        title="กลุ่มโพสต์"
+                        className="shrink-0 text-xs px-2 py-1 rounded-md bg-gray-100 dark:bg-disc-hover text-gray-700 dark:text-disc-text border border-warm-200 dark:border-disc-border focus:outline-none focus:ring-2 focus:ring-orange/40"
+                      >
+                        <option value="">(ไม่มีกลุ่ม)</option>
+                        {[...new Set(accounts.map(a => a.group_name).filter(Boolean))].map(g => (
+                          <option key={g} value={g}>{g}</option>
+                        ))}
+                        <option value="__new__">+ สร้างกลุ่มใหม่</option>
+                      </select>
 
                       <button
                         onClick={() => toggleVisibility(acc)}

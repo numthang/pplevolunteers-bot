@@ -12,7 +12,7 @@ async function getGuildXApp(guildId) {
   return { api_key: m.x_consumer_key, api_secret: m.x_consumer_secret };
 }
 
-async function getXConfig(guildId, userId = null) {
+async function getXConfig(guildId, userId = null, groupName = null) {
   const app = await getGuildXApp(guildId);
   if (!app) return null;
 
@@ -20,8 +20,10 @@ async function getXConfig(guildId, userId = null) {
     `SELECT social_id, access_token FROM dc_social_accounts
      WHERE guild_id = ? AND platform = 'x'
        AND (visibility = 'public' OR (visibility = 'private' AND user_discord_id = ?))
-     ORDER BY id ASC LIMIT 1`,
-    [guildId, userId]
+       ${groupName ? 'AND group_name = ?' : ''}
+     ORDER BY CASE WHEN user_discord_id = ? THEN 0 ELSE 1 END, id ASC
+     LIMIT 1`,
+    groupName ? [guildId, userId, groupName, userId] : [guildId, userId, userId]
   );
   if (!rows.length) return null;
   let creds;
@@ -99,8 +101,8 @@ async function uploadMedia(cfg, buffer, ext) {
 
 const X_LIMIT = 280;
 
-async function postToX(guildId, userId, images, caption) {
-  const cfg = await getXConfig(guildId, userId);
+async function postToX(guildId, userId, images, caption, groupName = null) {
+  const cfg = await getXConfig(guildId, userId, groupName);
   if (!cfg) throw new Error('ไม่พบ X account — เพิ่ม X account ที่ /bot/social/accounts ก่อน');
 
   let text      = caption || '';
