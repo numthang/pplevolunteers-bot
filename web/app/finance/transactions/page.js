@@ -366,10 +366,10 @@ function TransactionsContent() {
                   <div key={fund.id} className="flex items-center gap-1 group">
                     <button
                       onClick={() => { setFilter(f => ({ ...f, fundId: String(filter.fundId) === String(fund.id) ? '' : String(fund.id) })); setAccOpen(false) }}
-                      className={`flex-1 flex justify-between text-sm rounded px-1.5 py-1 transition ${String(filter.fundId) === String(fund.id) ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium' : 'text-gray-700 dark:text-disc-text hover:bg-gray-50 dark:hover:bg-disc-hover'}`}
+                      className={`flex-1 flex justify-between text-sm rounded px-1.5 py-1 transition ${String(filter.fundId) === String(fund.id) ? 'bg-indigo-100 dark:bg-indigo-800/50 text-indigo-700 dark:text-indigo-300 font-semibold ring-1 ring-inset ring-indigo-300 dark:ring-indigo-600' : 'text-gray-700 dark:text-disc-text hover:bg-gray-50 dark:hover:bg-disc-hover'}`}
                     >
                       <span>{fund.name}</span>
-                      <span className="font-mono tabular-nums">{Number(fund.net || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿</span>
+                      <span className="font-mono tabular-nums select-text">{Number(fund.net || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿</span>
                     </button>
                     {canEditAcc && (
                       <button onClick={() => removeFund(fund.id)} className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 transition text-xs px-1 flex-shrink-0">✕</button>
@@ -379,10 +379,10 @@ function TransactionsContent() {
                 {Number(fundBalances.untagged?.count) > 0 && (
                   <button
                     onClick={() => { setFilter(f => ({ ...f, fundId: filter.fundId === '0' ? '' : '0' })); setAccOpen(false) }}
-                    className={`w-full flex justify-between text-sm rounded px-1.5 py-1 transition ${filter.fundId === '0' ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 font-medium' : 'text-gray-400 dark:text-disc-muted hover:bg-gray-50 dark:hover:bg-disc-hover'}`}
+                    className={`w-full flex justify-between text-sm rounded px-1.5 py-1 transition ${filter.fundId === '0' ? 'bg-orange-100 dark:bg-orange-800/40 text-orange-700 dark:text-orange-300 font-semibold ring-1 ring-inset ring-orange-300 dark:ring-orange-600' : 'text-gray-400 dark:text-disc-muted hover:bg-gray-50 dark:hover:bg-disc-hover'}`}
                   >
                     <span>ไม่ระบุกอง ({fundBalances.untagged.count} รายการ)</span>
-                    <span className="font-mono tabular-nums">{Number(fundBalances.untagged?.net || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿</span>
+                    <span className="font-mono tabular-nums select-text">{Number(fundBalances.untagged?.net || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿</span>
                   </button>
                 )}
               </div>

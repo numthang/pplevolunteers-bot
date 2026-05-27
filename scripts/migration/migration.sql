@@ -260,3 +260,6 @@ ALTER TABLE dc_social_accounts
 
 -- 2026-05-26: dc_social_accounts — rename platform_id → social_id (ชื่อกลางๆ ครอบทุก platform)
 ALTER TABLE dc_social_accounts CHANGE platform_id social_id VARCHAR(50) NULL;
+
+-- 2026-05-27: dc_social_accounts — access_token เป็น NULL ได้ (IG row ใช้ user_token แทน)
+ALTER TABLE dc_social_accounts MODIFY COLUMN access_token TEXT NULL;

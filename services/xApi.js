@@ -2,15 +2,25 @@ const https  = require('https');
 const crypto = require('crypto');
 const pool   = require('../db/index');
 
-async function getXConfig(guildId) {
+async function getXConfig(guildId, userId = null) {
   const [rows] = await pool.execute(
-    `SELECT \`key\`, value FROM dc_guild_config
-     WHERE guild_id = ? AND \`key\` IN ('x_api_key','x_api_secret','x_access_token','x_access_token_secret')`,
-    [guildId]
+    `SELECT social_id, access_token FROM dc_social_accounts
+     WHERE guild_id = ? AND platform = 'x'
+       AND (visibility = 'public' OR (visibility = 'private' AND user_discord_id = ?))
+     ORDER BY id ASC LIMIT 1`,
+    [guildId, userId]
   );
-  const cfg = Object.fromEntries(rows.map(r => [r.key, r.value]));
-  if (!cfg.x_api_key || !cfg.x_api_secret || !cfg.x_access_token || !cfg.x_access_token_secret) return null;
-  return cfg;
+  if (!rows.length) return null;
+  let creds;
+  try { creds = JSON.parse(rows[0].access_token); } catch { return null; }
+  if (!creds.api_key || !creds.api_secret || !creds.access_token || !creds.access_token_secret) return null;
+  return {
+    x_api_key:             creds.api_key,
+    x_api_secret:          creds.api_secret,
+    x_access_token:        creds.access_token,
+    x_access_token_secret: creds.access_token_secret,
+    username:              rows[0].social_id,
+  };
 }
 
 // RFC 3986 percent-encode (encodeURIComponent ไม่ encode ! ' ( ) *)
@@ -76,9 +86,9 @@ async function uploadMedia(cfg, buffer, ext) {
 
 const X_LIMIT = 280;
 
-async function postToX(guildId, images, caption) {
-  const cfg = await getXConfig(guildId);
-  if (!cfg) throw new Error('ไม่พบ X config — ตั้งค่า x_api_key / x_api_secret / x_access_token / x_access_token_secret ก่อน');
+async function postToX(guildId, userId, images, caption) {
+  const cfg = await getXConfig(guildId, userId);
+  if (!cfg) throw new Error('ไม่พบ X account — เพิ่ม X account ที่ /bot/social/accounts ก่อน');
 
   let text      = caption || '';
   const truncated = text.length > X_LIMIT;
@@ -113,8 +123,11 @@ async function postToX(guildId, images, caption) {
     throw new Error(`X API: ${detail}`);
   }
 
+  const tweetId = res.body.data.id;
+  const url = cfg.username ? `https://x.com/${cfg.username}/status/${tweetId}` : null;
   return {
-    id:          res.body.data.id,
+    id: tweetId,
+    url,
     truncated,
     imageCount:  imgSlice.length,
     totalImages: images.length,

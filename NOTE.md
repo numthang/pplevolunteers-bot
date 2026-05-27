@@ -3,7 +3,7 @@ TODO
 - อื่นๆ ที่คาดหวังในอนาคต project management แบบ notion และ appflowy ให้ simple และ easy
 - ระบบชำระเงินค่าเบี้ยเลี้ยงผูกเบอร์บัญชี
 - ทำ context menu add to calendar เข้า discord event และ google calendar โดยที่ parse url discord event หรือ google meet ได้ และเอา content มาทำ description ได้ พร้อม parse วันที่เวลา จาก ข้อความนั้นได้ด้วย ทำแบบว่าให้รวมถึงไปการนำเข้าปฏิทิน "ทีมสื่อราชบุรี" ได้ด้วยอ่ะ มีให้เลือก ปฏิทิน ตอนนี้เรามี 2 - 3 ปฏิทิน
-- อ่านที่แก้ไข แล้วเอาขึ้น git พร้อมข้อความแก้ไข พร้อมเลข version
+- อ่านที่แก้ไข แล้วเอาขึ้น git พร้อมข้อความแก้ไข พร้อมเลข version และ push ด้วย
 
 พวก gogopanel มีปัญหาไหมเนี่ย ช่วยทำ prompt อธิบายบันทึกไว้หน่อย จะเอาไปหาทางแก้ bug session หน้า
 
@@ -134,3 +134,13 @@ https://discord.com/invite/CjheHjvPVS
 
 ====
 
+# [Memo] แก้ปัญหาเพจใหม่ไม่ขึ้นใน Meta Graph API (`/me/accounts`) บน APP
+
+**💡 สาเหตุ:** ใน Business Settings ไม่ต้องกด Connect Assets (เพราะผูกแอปกับเพจตรงๆ ไม่ได้) ปัญหาเกิดจาก Token ตัวเดิมยังไม่ได้อัปเดตสิทธิ์ให้เข้าถึงเพจใหม่ที่เพิ่งเพิ่มเข้ามา
+
+**🛠️ วิธีแก้ (ทำที่หน้า Graph API Explorer):**
+1. เลือก **Meta App** ให้ตรงกับแอปที่จะใช้ (เช่น People's Volunteers)
+2. ตรงช่อง **User or Page** (ฝั่งขวา) ให้กดดรอปดาวน์แล้วเลือก **"Uninstall the app"** เพื่อล้าง Token เก่า
+3. กดปุ่มสีฟ้า **"Generate Access Token"** ใหม่
+4. เมื่อหน้าต่าง Pop-up สีฟ้าเด้งขึ้นมา **ต้องติ๊กถูกหน้าชื่อเพจใหม่** เพื่ออนุญาตสิทธิ์
+5. กด **Submit** เรียก `/me/accounts` อีกครั้ง เพจใหม่จะขึ้นใน JSON ทันที

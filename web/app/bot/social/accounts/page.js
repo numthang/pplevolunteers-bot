@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { Trash2, RefreshCw, Globe, Lock, AlertTriangle } from 'lucide-react'
+import { Trash2, RefreshCw, Globe, Lock, AlertTriangle, X, Plus } from 'lucide-react'
 import { isAdmin } from '@/lib/roles.js'
 
 const PLATFORM_LABEL = { fb: 'Facebook', ig: 'Instagram', threads: 'Threads', x: 'X (Twitter)' }
@@ -32,6 +32,8 @@ function TokenExpiry({ expiresAt }) {
   )
 }
 
+const EMPTY_X_FORM = { name: '', handle: '', api_key: '', api_secret: '', access_token: '', access_token_secret: '' }
+
 export default function SocialAccountsPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
@@ -39,6 +41,9 @@ export default function SocialAccountsPage() {
   const [guilds, setGuilds] = useState([])
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState(null)
+  const [xModal, setXModal] = useState(null) // { guildId }
+  const [xForm, setXForm] = useState(EMPTY_X_FORM)
+  const [xSaving, setXSaving] = useState(false)
 
   const roles = Array.isArray(session?.user?.roles) ? session.user.roles : []
   const admin = isAdmin(roles)
@@ -75,6 +80,38 @@ export default function SocialAccountsPage() {
     setAccounts(prev => prev.filter(a => a.id !== id))
     setDeleting(null)
   }
+
+  async function saveX(e) {
+    e.preventDefault()
+    const { name, handle, api_key, api_secret, access_token, access_token_secret } = xForm
+    if (!handle || !api_key || !api_secret || !access_token || !access_token_secret) return
+    setXSaving(true)
+    const creds = JSON.stringify({ api_key, api_secret, access_token, access_token_secret })
+    const res = await fetch('/api/social/accounts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        guild_id: xModal.guildId,
+        platform: 'x',
+        social_id: handle.replace(/^@/, ''),
+        name: name || handle,
+        access_token: creds,
+      }),
+    })
+    if (res.ok) {
+      await load()
+      setXModal(null)
+      setXForm(EMPTY_X_FORM)
+    }
+    setXSaving(false)
+  }
+
+  useEffect(() => {
+    if (!xModal) return
+    const onKey = e => { if (e.key === 'Escape') setXModal(null) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [xModal])
 
   if (status === 'loading' || loading) {
     return <p className="text-warm-500 dark:text-disc-muted text-sm">กำลังโหลด...</p>
@@ -116,13 +153,22 @@ export default function SocialAccountsPage() {
                 <h2 className="text-base font-semibold text-gray-700 dark:text-disc-muted uppercase tracking-wide">
                   {guild.name}
                 </h2>
-                <a
-                  href={`/api/meta/oauth/start?guild_id=${guild.guild_id}`}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange text-white text-sm hover:opacity-90 transition"
-                >
-                  <RefreshCw size={14} />
-                  Connect Meta OAuth
-                </a>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => { setXModal({ guildId: guild.guild_id }); setXForm(EMPTY_X_FORM) }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black text-white text-sm hover:opacity-80 transition"
+                  >
+                    <Plus size={14} />
+                    Add X Account
+                  </button>
+                  <a
+                    href={`/api/meta/oauth/start?guild_id=${guild.guild_id}`}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange text-white text-sm hover:opacity-90 transition"
+                  >
+                    <RefreshCw size={14} />
+                    Connect Meta OAuth
+                  </a>
+                </div>
               </div>
 
               {gAccounts.length === 0 ? (
@@ -179,6 +225,55 @@ export default function SocialAccountsPage() {
           )
         })}
       </div>
+
+      {xModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4" onClick={() => setXModal(null)}>
+          <div className="bg-white dark:bg-disc-bg2 rounded-2xl shadow-xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-base font-bold text-gray-900 dark:text-disc-text">เพิ่ม X (Twitter) Account</h2>
+              <button onClick={() => setXModal(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-disc-text">
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={saveX} className="flex flex-col gap-3">
+              {[
+                { key: 'name',                 label: 'ชื่อที่แสดง',             placeholder: 'เช่น People's Volunteers X', required: false },
+                { key: 'handle',               label: 'X Handle',               placeholder: '@pple_volunteers', required: true },
+                { key: 'api_key',              label: 'API Key (Consumer Key)',  placeholder: '', required: true },
+                { key: 'api_secret',           label: 'API Secret',              placeholder: '', required: true },
+                { key: 'access_token',         label: 'Access Token',            placeholder: '', required: true },
+                { key: 'access_token_secret',  label: 'Access Token Secret',     placeholder: '', required: true },
+              ].map(({ key, label, placeholder, required }) => (
+                <div key={key}>
+                  <label className="block text-xs font-medium text-gray-500 dark:text-disc-muted mb-1">{label}{required && <span className="text-red-500 ml-0.5">*</span>}</label>
+                  <input
+                    type={['api_key','api_secret','access_token','access_token_secret'].includes(key) ? 'password' : 'text'}
+                    value={xForm[key]}
+                    onChange={e => setXForm(prev => ({ ...prev, [key]: e.target.value }))}
+                    placeholder={placeholder}
+                    required={required}
+                    className="w-full px-3 py-2 text-sm rounded-lg border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-bg text-gray-900 dark:text-disc-text placeholder-gray-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-black"
+                  />
+                </div>
+              ))}
+
+              <p className="text-xs text-gray-400 dark:text-disc-muted mt-1">
+                ดู credentials ได้ที่ X Developer Portal → Your App → Keys and Tokens
+              </p>
+
+              <div className="flex justify-end gap-2 mt-2">
+                <button type="button" onClick={() => setXModal(null)} className="px-4 py-2 text-sm rounded-lg text-gray-500 dark:text-disc-muted hover:bg-gray-100 dark:hover:bg-disc-hover transition">
+                  ยกเลิก
+                </button>
+                <button type="submit" disabled={xSaving} className="px-4 py-2 text-sm rounded-lg bg-black text-white hover:opacity-80 transition disabled:opacity-40">
+                  {xSaving ? 'กำลังบันทึก...' : 'บันทึก'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

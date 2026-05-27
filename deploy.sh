@@ -54,7 +54,7 @@ pm2 restart pple-dcbot
 
 if [ "$BOT_ONLY" = "false" ]; then
   # Web — หยุด web ก่อน build เพื่อคืน RAM
-  pm2 stop pple-web 2>/dev/null || true
+  #pm2 stop pple-web 2>/dev/null || true
   cd web
   npm install --omit=dev
   npm run build

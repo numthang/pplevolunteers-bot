@@ -16,6 +16,7 @@ const sharp = require('sharp');
 const { addImages, setCaption, getBasket, clearBasket, addHistory, getHistory } = require('../db/mediaBasket');
 const { fetchBuffer, applyWatermark, autoEnhance } = require('../utils/watermarkImage');
 const { postToFacebook, postToInstagram, postToThreads, getAvailablePlatforms } = require('../services/metaApi');
+const { postToX } = require('../services/xApi');
 const { getSetting, setSetting, deleteSetting } = require('../db/settings');
 
 const stateKey = channelId => `basket_state_${channelId}`;
@@ -101,7 +102,7 @@ function buildBasketButtons(imgCount, hasCaption = false) {
   );
 }
 
-function buildPlatformRow(hasIg, hasThreads, defaultPlatform) {
+function buildPlatformRow(hasIg, hasThreads, hasX, defaultPlatform) {
   const opts = [];
 
   if (hasIg && hasThreads)
@@ -113,6 +114,8 @@ function buildPlatformRow(hasIg, hasThreads, defaultPlatform) {
     opts.push(new StringSelectMenuOptionBuilder().setLabel('Instagram').setValue('ig').setEmoji('📷').setDefault(defaultPlatform === 'ig'));
   if (hasThreads)
     opts.push(new StringSelectMenuOptionBuilder().setLabel('@ Threads').setValue('threads').setEmoji('🧵').setDefault(defaultPlatform === 'threads'));
+  if (hasX)
+    opts.push(new StringSelectMenuOptionBuilder().setLabel('X (Twitter)').setValue('x').setDefault(defaultPlatform === 'x'));
 
   return new ActionRowBuilder().addComponents(
     new StringSelectMenuBuilder().setCustomId('basket_platform').setPlaceholder('โพสต์ที่ไหน').addOptions(opts)
@@ -139,6 +142,7 @@ async function buildBasketPayload(basket, guildId, channelId, userId) {
   const platforms = await getAvailablePlatforms(guildId, userId);
   const hasIg = platforms.includes('ig');
   const hasThreads = platforms.includes('threads');
+  const hasX = platforms.includes('x');
   const saved = await getBasketState(guildId, channelId);
   const fallbackPlatform = hasIg && hasThreads ? 'all'
     : hasIg ? 'both'
@@ -155,7 +159,7 @@ async function buildBasketPayload(basket, guildId, channelId, userId) {
       const thaiDate = new Date(date.getTime() + 7 * 60 * 60 * 1000);
       const d = `${String(thaiDate.getUTCDate()).padStart(2,'0')}/${String(thaiDate.getUTCMonth()+1).padStart(2,'0')} ${String(thaiDate.getUTCHours()).padStart(2,'0')}:${String(thaiDate.getUTCMinutes()).padStart(2,'0')}`;
       const imgs  = h.image_count > 0 ? ` · ${h.image_count} รูป` : '';
-      const links = [h.fb_url && '[FB]('+h.fb_url+')', h.ig_url && '[IG]('+h.ig_url+')', h.threads_url && '[@]('+h.threads_url+')'].filter(Boolean);
+      const links = [h.fb_url && '[FB]('+h.fb_url+')', h.ig_url && '[IG]('+h.ig_url+')', h.threads_url && '[@]('+h.threads_url+')', h.x_url && '[𝕏]('+h.x_url+')'].filter(Boolean);
       const link  = links.length ? ` · ${links.join(' · ')}` : '';
       const fail  = h.status !== 'success' ? ' ⚠️' : '';
       return `${icon} ${d}${imgs}${link}${fail}`;
@@ -196,7 +200,7 @@ async function buildBasketPayload(basket, guildId, channelId, userId) {
         ])
     ));
   }
-  components.push(buildPlatformRow(hasIg, hasThreads, currentPlatform));
+  components.push(buildPlatformRow(hasIg, hasThreads, hasX, currentPlatform));
   components.push(buildBasketButtons(imgCount, !!caption));
 
   return { embeds: [embed], components };
@@ -270,7 +274,7 @@ async function rehydrateState(interaction) {
   const platforms = await getAvailablePlatforms(guildId, interaction.user.id);
   const hasIg = platforms.includes('ig');
   const hasThreads = platforms.includes('threads');
-  const fallbackPlatform = hasIg && hasThreads ? 'all' : hasIg ? 'both' : 'fb';
+  const fallbackPlatform = hasIg && hasThreads ? 'all' : hasIg ? 'both' : hasThreads ? 'threads' : 'fb';
   const saved = await getBasketState(guildId, channelId);
   const basket = await getBasket(guildId, channelId);
   const caption = basket.find(r => r.type === 'caption')?.caption || '';
@@ -330,7 +334,7 @@ function defaultScheduleTime() {
   return `${d}/${m}/${tomorrow.getUTCFullYear()} 17:00`;
 }
 
-const PLATFORM_LABEL = { fb: 'Facebook', ig: 'Instagram', both: 'FB + IG', threads: '@ Threads', all: 'FB + IG + @ Threads' };
+const PLATFORM_LABEL = { fb: 'Facebook', ig: 'Instagram', both: 'FB + IG', threads: '@ Threads', all: 'FB + IG + @ Threads', x: 'X (Twitter)' };
 
 function openScheduleModal(interaction, existingCaption, platform) {
   // unique customId to bypass Discord client modal cache (forces fresh render)
@@ -494,10 +498,11 @@ async function processAndPost(interaction, state) {
 
   const { scheduleTime } = state;
   const results = [];
-  let fbUrl = null, igUrl = null, threadsUrl = null;
+  let fbUrl = null, igUrl = null, threadsUrl = null, xUrl = null;
   const postFb      = ['fb', 'both', 'all'].includes(state.platform);
   const postIg      = ['ig', 'both', 'all'].includes(state.platform);
   const postThreads = ['threads', 'all'].includes(state.platform);
+  const postX       = state.platform === 'x';
 
   if (postFb) {
     await interaction.editReply({ content: '📤 กำลังโพสต์ไปยัง Facebook...' }).catch(() => {});
@@ -545,6 +550,19 @@ async function processAndPost(interaction, state) {
     }
   }
 
+  if (postX) {
+    await interaction.editReply({ content: '📤 กำลังโพสต์ไปยัง X...' }).catch(() => {});
+    try {
+      const xRes = await postToX(state.guildId, interaction.user.id, processed, state.caption);
+      xUrl = xRes?.url || null;
+      const xLink = xUrl ? ` · 🔗 [ดูโพสต์](${xUrl})` : '';
+      const xNote = xRes?.truncated ? ' (caption ถูกตัดให้ ≤280 ตัว)' : '';
+      results.push(`✅ X (Twitter) โพสต์แล้ว${xLink}${xNote}`);
+    } catch (err) {
+      results.push(`❌ X: ${err.message}`);
+    }
+  }
+
   const overallStatus = results.every(r => r.startsWith('✅')) ? 'success'
     : results.every(r => r.startsWith('❌')) ? 'failed' : 'partial';
   await addHistory(state.guildId, state.channelId, interaction.user.id, {
@@ -553,7 +571,7 @@ async function processAndPost(interaction, state) {
     wmType:      state.wmType !== 'none' ? state.wmType : null,
     caption:     state.caption || null,
     scheduleTime: state.scheduleTime || null,
-    fbUrl, igUrl, threadsUrl,
+    fbUrl, igUrl, threadsUrl, xUrl,
     status:      overallStatus,
   }).catch(() => {});
 
