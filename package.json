@@ -1,6 +1,6 @@
 {
   "name": "my-discord-bot",
-  "version": "2.6.0",
+  "version": "2.7.0-pgsql-unstable",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
