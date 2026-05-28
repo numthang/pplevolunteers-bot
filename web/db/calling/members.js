@@ -107,12 +107,12 @@ export async function getMembersInCampaign(campaignId, filters = {}, limit = 100
        COALESCE(a.assigned_by, '') AS assigned_by,
        COALESCE(a.created_at, NULL) AS assignment_date,
        a.rsvp,
-       l.called_at AS last_called_at,
-       l.status AS last_status,
-       l.note AS last_note,
-       COUNT(DISTINCT l.id) AS total_calls,
-       SUM(CASE WHEN l.status = 'answered' THEN 1 ELSE 0 END) AS answered_count,
-       SUM(CASE WHEN l.status IN ('sms_sent', 'sms_delivered') THEN 1 ELSE 0 END) AS sms_count,
+       ll.called_at AS last_called_at,
+       ll.status AS last_status,
+       ll.note AS last_note,
+       COALESCE(ls.total_calls, 0) AS total_calls,
+       COALESCE(ls.answered_count, 0) AS answered_count,
+       COALESCE(ls.sms_count, 0) AS sms_count,
        CASE WHEN a.id IS NOT NULL THEN 'assigned' ELSE 'unassigned' END AS member_status,
        dc.discord_id,
        dc.username AS discord_username,
@@ -124,8 +124,20 @@ export async function getMembersInCampaign(campaignId, filters = {}, limit = 100
      LEFT JOIN calling_member_tiers t ON t.member_id = m.source_id::text AND t.contact_type = 'member'
      LEFT JOIN calling_assignments a
        ON a.campaign_id = cc.id AND a.member_id = m.source_id::text AND a.contact_type = 'member'
-     LEFT JOIN calling_logs l
-       ON l.campaign_id = cc.id AND l.member_id = m.source_id::text AND l.contact_type = 'member'
+     LEFT JOIN LATERAL (
+       SELECT called_at, status, note
+       FROM calling_logs
+       WHERE campaign_id = cc.id AND member_id = m.source_id::text AND contact_type = 'member'
+       ORDER BY called_at DESC LIMIT 1
+     ) ll ON TRUE
+     LEFT JOIN (
+       SELECT campaign_id, member_id,
+         COUNT(*) AS total_calls,
+         SUM(CASE WHEN status = 'answered' THEN 1 ELSE 0 END) AS answered_count,
+         SUM(CASE WHEN status IN ('sms_sent','sms_delivered') THEN 1 ELSE 0 END) AS sms_count
+       FROM calling_logs WHERE contact_type = 'member'
+       GROUP BY campaign_id, member_id
+     ) ls ON ls.campaign_id = cc.id AND ls.member_id = m.source_id::text
      LEFT JOIN dc_members dc ON dc.serial = m.serial AND dc.guild_id = $1${needAllTimeCalls ? `
      LEFT JOIN (SELECT member_id, COUNT(*) AS all_time_calls FROM calling_logs WHERE contact_type = 'member' GROUP BY member_id) atl
        ON atl.member_id = m.source_id::text` : ''}
@@ -169,23 +181,22 @@ export async function getMembersInCampaign(campaignId, filters = {}, limit = 100
   params.push(sms || null)
   const smsIdx = params.length
 
-  // HAVING: cannot reference SELECT aliases in PG — repeat the expressions
+  // ไม่ต้อง GROUP BY แล้ว — ใช้ LATERAL + subquery แทน aggregation
+  // filter ด้วย WHERE ปกติ (ไม่ใช่ HAVING)
   query += `
-     GROUP BY m.source_id, t.tier, a.assigned_to, a.assigned_by, a.created_at, a.rsvp, a.id,
-              l.called_at, l.status, l.note, dc.discord_id, dc.username, dc.avatar${needAllTimeCalls ? ', atl.all_time_calls' : ''}
-     HAVING ($${statusIdx}::text IS NULL
+       AND ($${statusIdx}::text IS NULL
              OR ($${statusIdx} = 'assigned' AND a.id IS NOT NULL)
              OR ($${statusIdx} = 'unassigned' AND a.id IS NULL))
        AND ($${calledIdx}::text IS NULL
-             OR ($${calledIdx} = 'called' AND COUNT(DISTINCT l.id) > 0)
-             OR ($${calledIdx} = 'uncalled' AND COUNT(DISTINCT l.id) = 0 AND a.id IS NOT NULL))
+             OR ($${calledIdx} = 'called' AND COALESCE(ls.total_calls, 0) > 0)
+             OR ($${calledIdx} = 'uncalled' AND COALESCE(ls.total_calls, 0) = 0 AND a.id IS NOT NULL))
        AND ($${smsIdx}::text IS NULL
-             OR ($${smsIdx} = 'sms_sent' AND SUM(CASE WHEN l.status IN ('sms_sent', 'sms_delivered') THEN 1 ELSE 0 END) > 0)
-             OR ($${smsIdx} = 'no_sms'   AND SUM(CASE WHEN l.status IN ('sms_sent', 'sms_delivered') THEN 1 ELSE 0 END) = 0))
+             OR ($${smsIdx} = 'sms_sent' AND COALESCE(ls.sms_count, 0) > 0)
+             OR ($${smsIdx} = 'no_sms'   AND COALESCE(ls.sms_count, 0) = 0))
      ORDER BY ${
-       sort === 'least_called' ? `all_time_calls ASC, m.home_amphure ASC, m.home_district ASC, m.first_name ASC` :
-       sort === 'uncalled'     ? `total_calls ASC, m.home_amphure ASC, m.home_district ASC, m.first_name ASC` :
-       sort === 'tier'         ? `CASE COALESCE(t.tier::text, 'D') WHEN 'A' THEN 1 WHEN 'B' THEN 2 WHEN 'C' THEN 3 ELSE 4 END ASC, total_calls ASC, m.home_amphure ASC, m.home_district ASC, m.first_name ASC` :
+       sort === 'least_called' ? `COALESCE(atl.all_time_calls, 0) ASC, m.home_amphure ASC, m.home_district ASC, m.first_name ASC` :
+       sort === 'uncalled'     ? `COALESCE(ls.total_calls, 0) ASC, m.home_amphure ASC, m.home_district ASC, m.first_name ASC` :
+       sort === 'tier'         ? `CASE COALESCE(t.tier::text, 'D') WHEN 'A' THEN 1 WHEN 'B' THEN 2 WHEN 'C' THEN 3 ELSE 4 END ASC, COALESCE(ls.total_calls, 0) ASC, m.home_amphure ASC, m.home_district ASC, m.first_name ASC` :
                                  `m.home_amphure ASC, m.home_district ASC, m.first_name ASC`
      }, m.source_id ASC
      LIMIT $${params.length + 1} OFFSET $${params.length + 2}`

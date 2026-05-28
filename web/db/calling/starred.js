@@ -123,7 +123,7 @@ export async function getFavoritesDisplay(guildId, userDiscordId, { name, limit 
        c.category
      FROM calling_starred f
      LEFT JOIN ngs_member_cache m
-       ON f.contact_type = 'member' AND m.source_id = f.member_id
+       ON f.contact_type = 'member' AND m.source_id::text = f.member_id
      LEFT JOIN calling_member_tiers t
        ON f.contact_type = 'member' AND t.member_id = f.member_id AND t.contact_type = 'member'
      LEFT JOIN dc_members dc
