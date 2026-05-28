@@ -7,9 +7,6 @@ TODO
 
 พวก gogopanel มีปัญหาไหมเนี่ย ช่วยทำ prompt อธิบายบันทึกไว้หน่อย จะเอาไปหาทางแก้ bug session หน้า
 
-sudo -u postgres psql -c "CREATE USER pple_dcbot WITH PASSWORD '<DB_PASS from .env>';"
-sudo -u postgres psql -c "CREATE DATABASE pple_volunteers OWNER pple_dcbot;"
-sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE pple_volunteers TO pple_dcbot;"
 
 ==
 แนะนำแบ่งเป็น 2 session:
