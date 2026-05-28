@@ -1,40 +1,40 @@
 import pool from '../index.js'
 
 export async function getLogById(id) {
-  const [rows] = await pool.query(
-    `SELECT * FROM calling_logs WHERE id = ?`, [id]
+  const { rows } = await pool.query(
+    `SELECT * FROM calling_logs WHERE id = $1`, [id]
   )
   return rows[0] || null
 }
 
 export async function getLogsByMember(memberId, { limit = 100, offset = 0 } = {}) {
-  const [rows] = await pool.query(
+  const { rows } = await pool.query(
     `SELECT * FROM calling_logs
-     WHERE member_id = ?
+     WHERE member_id = $1
      ORDER BY called_at DESC
-     LIMIT ? OFFSET ?`,
+     LIMIT $2 OFFSET $3`,
     [memberId, limit, offset]
   )
   return rows
 }
 
 export async function getLogsByCampaignMember(campaignId, memberId, contactType = 'member') {
-  const [rows] = await pool.query(
+  const { rows } = await pool.query(
     `SELECT * FROM calling_logs
-     WHERE member_id = ? AND contact_type = ?
-       AND (? IS NULL OR campaign_id = ?)
+     WHERE member_id = $1 AND contact_type = $2
+       AND ($3::int IS NULL OR campaign_id = $3)
      ORDER BY called_at DESC`,
-    [memberId, contactType, campaignId, campaignId]
+    [memberId, contactType, campaignId]
   )
   return rows
 }
 
 export async function getLogsByCampaign(campaignId, { limit = 100, offset = 0 } = {}) {
-  const [rows] = await pool.query(
+  const { rows } = await pool.query(
     `SELECT * FROM calling_logs
-     WHERE campaign_id = ?
+     WHERE campaign_id = $1
      ORDER BY called_at DESC
-     LIMIT ? OFFSET ?`,
+     LIMIT $2 OFFSET $3`,
     [campaignId, limit, offset]
   )
   return rows
@@ -59,12 +59,13 @@ export async function createLog(data) {
     called_at = new Date().toISOString().slice(0, 19).replace('T', ' ')
   } = data
 
-  const [result] = await pool.query(
+  const { rows } = await pool.query(
     `INSERT INTO calling_logs
       (campaign_id, contact_type, member_id, called_by, caller_name, caller_image, called_at, status,
        sig_overall, sig_location, sig_availability, sig_interest, sig_reachable,
        note, extra, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, NOW())
+     RETURNING id`,
     [
       campaign_id || 0,
       contact_type,
@@ -83,16 +84,16 @@ export async function createLog(data) {
       extra ? JSON.stringify(extra) : null
     ]
   )
-  return result.insertId
+  return rows[0].id
 }
 
 export async function updateLog(id, data) {
   const { status, sig_overall, sig_location, sig_availability, sig_interest, sig_reachable, note, extra } = data
   await pool.query(
     `UPDATE calling_logs
-     SET status = ?, sig_overall = ?, sig_location = ?, sig_availability = ?,
-         sig_interest = ?, sig_reachable = ?, note = ?, extra = ?
-     WHERE id = ?`,
+     SET status = $1, sig_overall = $2, sig_location = $3, sig_availability = $4,
+         sig_interest = $5, sig_reachable = $6, note = $7, extra = $8
+     WHERE id = $9`,
     [
       status,
       sig_overall || null, sig_location || null, sig_availability || null,
@@ -105,11 +106,11 @@ export async function updateLog(id, data) {
 }
 
 export async function deleteLog(id) {
-  await pool.query(`DELETE FROM calling_logs WHERE id = ?`, [id])
+  await pool.query(`DELETE FROM calling_logs WHERE id = $1`, [id])
 }
 
 export async function getMemberCallStats(memberId, campaignId = null, contactType = 'member') {
-  const [rows] = await pool.query(
+  const { rows } = await pool.query(
     `SELECT
        COUNT(*) AS total_calls,
        SUM(CASE WHEN status = 'answered' THEN 1 ELSE 0 END) AS answered_count,
@@ -119,9 +120,9 @@ export async function getMemberCallStats(memberId, campaignId = null, contactTyp
        AVG(sig_overall) AS avg_sig_overall,
        MAX(called_at) AS last_called_at
      FROM calling_logs
-     WHERE member_id = ? AND contact_type = ?
-       AND (? IS NULL OR campaign_id = ?)`,
-    [memberId, contactType, campaignId, campaignId]
+     WHERE member_id = $1 AND contact_type = $2
+       AND ($3::int IS NULL OR campaign_id = $3)`,
+    [memberId, contactType, campaignId]
   )
   return rows[0] || {
     total_calls: 0, answered_count: 0, no_answer_count: 0,
@@ -131,7 +132,7 @@ export async function getMemberCallStats(memberId, campaignId = null, contactTyp
 
 export async function calculateTierFromSignals(memberId, campaignId = null, contactType = 'member') {
   const stats = await getMemberCallStats(memberId, campaignId, contactType)
-  const contactedCount = (stats.answered_count || 0) + (stats.met_count || 0)
+  const contactedCount = Number(stats.answered_count || 0) + Number(stats.met_count || 0)
   if (!contactedCount) return null
   const avg = parseFloat(stats.avg_sig_overall) || 0
   if (avg >= 3.5) return 'A'

@@ -4,8 +4,8 @@ import pool from '../index.js'
  * Get tier for member
  */
 export async function getTier(memberId, contactType = 'member') {
-  const [rows] = await pool.query(
-    `SELECT * FROM calling_member_tiers WHERE member_id = ? AND contact_type = ?`,
+  const { rows } = await pool.query(
+    `SELECT * FROM calling_member_tiers WHERE member_id = $1 AND contact_type = $2`,
     [memberId, contactType]
   )
   return rows[0] || null
@@ -17,10 +17,9 @@ export async function getTier(memberId, contactType = 'member') {
 export async function getTiersByMembers(memberIds) {
   if (!memberIds || memberIds.length === 0) return []
 
-  const placeholders = memberIds.map(() => '?').join(',')
-  const [rows] = await pool.query(
-    `SELECT * FROM calling_member_tiers WHERE member_id IN (${placeholders})`,
-    memberIds
+  const { rows } = await pool.query(
+    `SELECT * FROM calling_member_tiers WHERE member_id = ANY($1)`,
+    [memberIds]
   )
   return rows
 }
@@ -29,11 +28,11 @@ export async function getTiersByMembers(memberIds) {
  * Get all members grouped by tier
  */
 export async function getMembersByTier(tier) {
-  const [rows] = await pool.query(
+  const { rows } = await pool.query(
     `SELECT m.*, t.tier
      FROM ngs_member_cache m
-     LEFT JOIN calling_member_tiers t ON t.member_id = m.source_id
-     WHERE COALESCE(t.tier, 'D') = ?
+     LEFT JOIN calling_member_tiers t ON t.member_id = m.source_id::text
+     WHERE COALESCE(t.tier::text, 'D') = $1
      ORDER BY m.first_name ASC`,
     [tier]
   )
@@ -47,10 +46,10 @@ export async function upsertTier(memberId, tier, source = 'auto', contactType = 
   await pool.query(
     `INSERT INTO calling_member_tiers
       (member_id, contact_type, tier, tier_source, updated_at)
-     VALUES (?, ?, ?, ?, NOW())
-     ON DUPLICATE KEY UPDATE
-      tier = VALUES(tier),
-      tier_source = VALUES(tier_source),
+     VALUES ($1, $2, $3, $4, NOW())
+     ON CONFLICT (member_id, contact_type) DO UPDATE SET
+      tier = EXCLUDED.tier,
+      tier_source = EXCLUDED.tier_source,
       updated_at = NOW()`,
     [memberId, contactType, tier, source]
   )
@@ -63,12 +62,12 @@ export async function overrideTier(memberId, tier, overrideBy, reason, contactTy
   await pool.query(
     `INSERT INTO calling_member_tiers
       (member_id, contact_type, tier, tier_source, override_by, override_reason, updated_at)
-     VALUES (?, ?, ?, 'manual', ?, ?, NOW())
-     ON DUPLICATE KEY UPDATE
-      tier = VALUES(tier),
+     VALUES ($1, $2, $3, 'manual', $4, $5, NOW())
+     ON CONFLICT (member_id, contact_type) DO UPDATE SET
+      tier = EXCLUDED.tier,
       tier_source = 'manual',
-      override_by = VALUES(override_by),
-      override_reason = VALUES(override_reason),
+      override_by = EXCLUDED.override_by,
+      override_reason = EXCLUDED.override_reason,
       updated_at = NOW()`,
     [memberId, contactType, tier, overrideBy, reason || null]
   )
@@ -76,14 +75,9 @@ export async function overrideTier(memberId, tier, overrideBy, reason, contactTy
 
 /**
  * Calculate tier from signals (average of answered calls)
- * Returns A/B/C/D
- * score = average of signals
- * A = 3.5 - 4.0
- * B = 2.5 - 3.4
- * C = 1.5 - 2.4
- * D = 1.0 - 1.4
  */
 export async function calculateTierFromSignals(memberId, campaignId = null, contactType = 'member') {
+  const params = [memberId, contactType]
   let query = `
     SELECT AVG(
       COALESCE(sig_location, 0) +
@@ -91,18 +85,16 @@ export async function calculateTierFromSignals(memberId, campaignId = null, cont
       COALESCE(sig_interest, 0)
     ) / 3.0 AS avg_signal
     FROM calling_logs
-    WHERE member_id = ? AND contact_type = ?
+    WHERE member_id = $1 AND contact_type = $2
       AND status IN ('answered','met')
       AND (sig_location IS NOT NULL OR sig_availability IS NOT NULL OR sig_interest IS NOT NULL)`
 
-  const params = [memberId, contactType]
-
   if (campaignId) {
-    query += ` AND campaign_id = ?`
     params.push(campaignId)
+    query += ` AND campaign_id = $${params.length}`
   }
 
-  const [rows] = await pool.query(query, params)
+  const { rows } = await pool.query(query, params)
   const avgScore = rows[0]?.avg_signal || null
 
   if (!avgScore) return null
@@ -117,7 +109,7 @@ export async function calculateTierFromSignals(memberId, campaignId = null, cont
  * Get tier distribution (count by tier)
  */
 export async function getTierDistribution() {
-  const [rows] = await pool.query(
+  const { rows } = await pool.query(
     `SELECT
        tier,
        COUNT(*) AS count
@@ -132,7 +124,7 @@ export async function getTierDistribution() {
  * Get tier with full member info
  */
 export async function getTierWithMemberInfo(memberId) {
-  const [rows] = await pool.query(
+  const { rows } = await pool.query(
     `SELECT
        m.*,
        t.tier,
@@ -141,8 +133,8 @@ export async function getTierWithMemberInfo(memberId) {
        t.override_reason,
        t.updated_at AS tier_updated_at
      FROM ngs_member_cache m
-     LEFT JOIN calling_member_tiers t ON t.member_id = m.source_id
-     WHERE m.source_id = ?`,
+     LEFT JOIN calling_member_tiers t ON t.member_id = m.source_id::text
+     WHERE m.source_id = $1`,
     [memberId]
   )
   return rows[0] || null
@@ -158,7 +150,7 @@ export async function clearOverride(memberId) {
          override_by = NULL,
          override_reason = NULL,
          updated_at = NOW()
-     WHERE member_id = ?`,
+     WHERE member_id = $1`,
     [memberId]
   )
 }

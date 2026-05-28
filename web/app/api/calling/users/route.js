@@ -22,16 +22,16 @@ export async function GET(req) {
   const all = searchParams.get('all') === 'true'
 
   try {
-    const [rows] = await pool.query(
+    const { rows } = await pool.query(
       `SELECT discord_id,
               COALESCE(NULLIF(display_name, ''), username) AS display_name,
               province
        FROM dc_members
-       WHERE guild_id = ?
-         AND (? = '' OR display_name LIKE ? OR username LIKE ?)
+       WHERE guild_id = $1
+         AND ($2 = '' OR display_name ILIKE $3 OR username ILIKE $3)
        ORDER BY display_name ASC
        ${all ? '' : 'LIMIT 50'}`,
-      [guildId, q, `%${q}%`, `%${q}%`]
+      [guildId, q, `%${q}%`]
     )
     return Response.json({ success: true, data: rows })
   } catch (error) {

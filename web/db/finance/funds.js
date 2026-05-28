@@ -1,28 +1,28 @@
 import pool from '../index.js'
 
 export async function getFunds(accountId) {
-  const [rows] = await pool.query(
-    `SELECT * FROM finance_funds WHERE account_id = ? ORDER BY id ASC`,
+  const { rows } = await pool.query(
+    `SELECT * FROM finance_funds WHERE account_id = $1 ORDER BY id ASC`,
     [accountId]
   )
   return rows
 }
 
 export async function createFund(accountId, name) {
-  const [result] = await pool.query(
-    `INSERT INTO finance_funds (account_id, name) VALUES (?, ?)`,
+  const { rows } = await pool.query(
+    `INSERT INTO finance_funds (account_id, name) VALUES ($1, $2) RETURNING id`,
     [accountId, name]
   )
-  return result.insertId
+  return rows[0].id
 }
 
 export async function deleteFund(id) {
-  await pool.query(`UPDATE finance_transactions SET fund_id = NULL WHERE fund_id = ?`, [id])
-  await pool.query(`DELETE FROM finance_funds WHERE id = ?`, [id])
+  await pool.query(`UPDATE finance_transactions SET fund_id = NULL WHERE fund_id = $1`, [id])
+  await pool.query(`DELETE FROM finance_funds WHERE id = $1`, [id])
 }
 
 export async function getFundBalances(accountId) {
-  const [funds] = await pool.query(
+  const { rows: funds } = await pool.query(
     `SELECT
        f.id,
        f.name,
@@ -31,21 +31,21 @@ export async function getFundBalances(accountId) {
        SUM(CASE WHEN t.type='income'  THEN t.amount ELSE -t.amount END) AS net,
        COUNT(t.id) AS count
      FROM finance_funds f
-     LEFT JOIN finance_transactions t ON t.fund_id = f.id AND t.account_id = ?
-     WHERE f.account_id = ?
+     LEFT JOIN finance_transactions t ON t.fund_id = f.id AND t.account_id = $1
+     WHERE f.account_id = $2
      GROUP BY f.id, f.name
      ORDER BY f.id ASC`,
     [accountId, accountId]
   )
-  const [[untagged]] = await pool.query(
+  const { rows: untaggedRows } = await pool.query(
     `SELECT
        SUM(CASE WHEN type='income'  THEN amount ELSE 0 END) AS total_income,
        SUM(CASE WHEN type='expense' THEN amount ELSE 0 END) AS total_expense,
        SUM(CASE WHEN type='income'  THEN amount ELSE -amount END) AS net,
        COUNT(*) AS count
      FROM finance_transactions
-     WHERE account_id = ? AND fund_id IS NULL`,
+     WHERE account_id = $1 AND fund_id IS NULL`,
     [accountId]
   )
-  return { funds, untagged }
+  return { funds, untagged: untaggedRows[0] }
 }

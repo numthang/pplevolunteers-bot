@@ -53,14 +53,14 @@ export async function GET(req) {
       return Response.json({ success: true, data: cached, cached: true })
     }
 
-    const [rows] = await pool.query(
-      `SELECT DISTINCT COALESCE(m.home_district, '') AS district, COUNT(DISTINCT m.source_id) AS count
+    const { rows } = await pool.query(
+      `SELECT COALESCE(m.home_district, '') AS district, COUNT(DISTINCT m.source_id) AS count
        FROM act_event_cache cc
        JOIN ngs_member_cache m ON (cc.province IS NULL OR m.home_province = cc.province)
-       WHERE cc.id = ? AND cc.type = 'campaign'
-         AND m.home_amphure = ?
+       WHERE cc.id = $1 AND cc.type = 'campaign'
+         AND m.home_amphure = $2
          AND m.mobile_number IS NOT NULL
-       GROUP BY district
+       GROUP BY COALESCE(m.home_district, '')
        ORDER BY district`,
       [campaignId, amphure]
     )

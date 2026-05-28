@@ -46,8 +46,8 @@ function xPost(path, authHeader, body) {
 }
 
 async function getGuildXApp(guildId) {
-  const [rows] = await pool.execute(
-    "SELECT `key`, value FROM dc_guild_config WHERE guild_id = ? AND `key` IN ('x_consumer_key', 'x_consumer_secret')",
+  const { rows } = await pool.query(
+    `SELECT "key", value FROM dc_guild_config WHERE guild_id = $1 AND "key" IN ('x_consumer_key', 'x_consumer_secret')`,
     [guildId]
   )
   const m = Object.fromEntries(rows.map(r => [r.key, r.value]))

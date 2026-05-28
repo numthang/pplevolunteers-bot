@@ -17,8 +17,8 @@ const GUILD_ID = process.env.GUILD_ID
 const BOT_INVITE_URL = `https://discord.com/oauth2/authorize?client_id=${process.env.DISCORD_BOT_CLIENT_ID}&permissions=1394003710544&scope=bot+applications.commands`
 
 async function getTodayCallCount() {
-  const [rows] = await pool.query(
-    `SELECT COUNT(*) AS count FROM calling_logs WHERE DATE(created_at) = CURDATE()`
+  const { rows } = await pool.query(
+    `SELECT COUNT(*) AS count FROM calling_logs WHERE created_at::date = CURRENT_DATE`
   )
   return Number(rows[0]?.count) || 0
 }
@@ -35,13 +35,15 @@ async function getFINANCESummary(session) {
     if (visibleAccounts.length === 0) continue
 
     const accountIds = visibleAccounts.map(a => a.id)
-    const [rows] = await pool.query(
+    const { rows } = await pool.query(
       `SELECT
          SUM(CASE WHEN t.type='income'  THEN t.amount ELSE 0 END) AS total_income,
          SUM(CASE WHEN t.type='expense' THEN t.amount ELSE 0 END) AS total_expense
        FROM finance_transactions t
-       WHERE t.account_id IN (${accountIds.join(',')})
-         AND MONTH(t.txn_at) = MONTH(CURDATE()) AND YEAR(t.txn_at) = YEAR(CURDATE())`
+       WHERE t.account_id = ANY($1)
+         AND EXTRACT(MONTH FROM t.txn_at) = EXTRACT(MONTH FROM CURRENT_DATE)
+         AND EXTRACT(YEAR  FROM t.txn_at) = EXTRACT(YEAR  FROM CURRENT_DATE)`,
+      [accountIds]
     )
     results[visibility] = rows[0]
   }
@@ -51,10 +53,10 @@ async function getFINANCESummary(session) {
 
 
 async function getGuildMemberCounts() {
-  const [rows] = await pool.query(
+  const { rows } = await pool.query(
     `SELECT g.guild_id, g.name, COUNT(m.discord_id) AS member_count
      FROM dc_guilds g
-     LEFT JOIN dc_members m ON m.guild_id = g.guild_id COLLATE utf8mb4_unicode_ci
+     LEFT JOIN dc_members m ON m.guild_id = g.guild_id
      GROUP BY g.guild_id, g.name
      ORDER BY member_count DESC`
   )
@@ -62,16 +64,16 @@ async function getGuildMemberCounts() {
 }
 
 async function getCONTACTSCount() {
-  const [rows] = await pool.query(
-    `SELECT COUNT(*) AS count FROM calling_contacts WHERE guild_id = ?`,
+  const { rows } = await pool.query(
+    `SELECT COUNT(*) AS count FROM calling_contacts WHERE guild_id = $1`,
     [GUILD_ID]
   )
   return Number(rows[0]?.count) || 0
 }
 
 async function getDisplayName(discordId) {
-  const [rows] = await pool.query(
-    `SELECT display_name FROM dc_members WHERE guild_id = ? AND discord_id = ?`,
+  const { rows } = await pool.query(
+    `SELECT display_name FROM dc_members WHERE guild_id = $1 AND discord_id = $2`,
     [GUILD_ID, discordId]
   )
   return rows[0]?.display_name || null

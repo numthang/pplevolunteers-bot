@@ -52,16 +52,16 @@ export async function GET(req) {
     const enriched = await Promise.all(
       rows.map(async (campaign) => {
         try {
-          const [[result]] = await pool.query(
+          const { rows: r } = await pool.query(
             `SELECT COUNT(*) as cnt FROM calling_assignments ca
-             WHERE ca.campaign_id = ? AND ca.assigned_to = ?
+             WHERE ca.campaign_id = $1 AND ca.assigned_to = $2
              AND NOT EXISTS (
                SELECT 1 FROM calling_logs cl
                WHERE cl.campaign_id = ca.campaign_id AND cl.member_id = ca.member_id
              )`,
             [campaign.id, session.user.discordId]
           )
-          return { ...campaign, pending_count: result?.cnt || 0 }
+          return { ...campaign, pending_count: Number(r[0]?.cnt) || 0 }
         } catch (e) {
           return { ...campaign, pending_count: 0 }
         }

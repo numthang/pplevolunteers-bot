@@ -1,10 +1,6 @@
 /**
  * smsWebhook.js
  * รับ HTTP POST จาก SMS Forwarder app (Android) → parse KBank SMS → insert income → แจ้ง Discord
- *
- * ENV:
- *   SMS_WEBHOOK_PORT   = 3099   (default)
- *   SMS_WEBHOOK_SECRET = <token>  (required — ใส่ใน Authorization: Bearer <token>)
  */
 
 const http   = require('http')
@@ -38,12 +34,12 @@ async function handleSmsBulkCallback(req, res) {
 
 		const logStatus = status === 'delivery' ? 'sms_delivered' : 'sms_failed'
 
-		const [result] = await pool.query(
-			`UPDATE calling_logs SET status = ? WHERE JSON_UNQUOTE(JSON_EXTRACT(extra, '$.message_id')) = ?`,
+		const result = await pool.query(
+			`UPDATE calling_logs SET status = $1 WHERE extra->>'message_id' = $2`,
 			[logStatus, transaction]
 		)
 
-		log.info(`[smsWebhook] /sms-bulk: ${transaction} → ${logStatus} (${result.affectedRows} rows)`)
+		log.info(`[smsWebhook] /sms-bulk: ${transaction} → ${logStatus} (${result.rowCount} rows)`)
 		res.writeHead(200).end(JSON.stringify({ ok: true }))
 	} catch (err) {
 		log.error('[smsWebhook] /sms-bulk error:', err.message)
@@ -69,7 +65,6 @@ async function handleRequest(req, res) {
 		try {
 			const payload = JSON.parse(body)
 
-			// auth — รับจาก body (สำหรับ Tasker ที่ไม่มี headers field)
 			if (SECRET) {
 				const token = payload.token || ''
 				if (token !== SECRET) {
@@ -78,7 +73,6 @@ async function handleRequest(req, res) {
 				}
 			}
 
-			// รองรับหลาย field name ที่ SMS Forwarder แต่ละตัวส่งมา
 			const smsText = payload.message || payload.body || payload.sms_body
 				|| payload.text || payload.amount || ''
 
@@ -121,11 +115,13 @@ async function processSmsIncome(txn) {
 
 	const description = `รับโอนจาก ${txn.counterpart_name || ''}`.trim()
 
-	const [result] = await pool.query(
-		`INSERT IGNORE INTO finance_transactions
+	const result = await pool.query(
+		`INSERT INTO finance_transactions
 		  (guild_id, account_id, type, amount, description, counterpart_name, fee, balance_after,
 		   ref_id, source, txn_at, updated_by, updated_at)
-		 VALUES (?, ?, 'income', ?, ?, ?, ?, ?, ?, 'sms', ?, 'system', NOW())`,
+		 VALUES ($1, $2, 'income', $3, $4, $5, $6, $7, $8, 'sms', $9, 'system', NOW())
+		 ON CONFLICT DO NOTHING
+		 RETURNING id`,
 		[
 			account.guild_id,
 			account.id,
@@ -139,7 +135,7 @@ async function processSmsIncome(txn) {
 		]
 	)
 
-	if (result.affectedRows === 0) {
+	if (result.rowCount === 0) {
 		log.warn('[smsWebhook] duplicate ref_id, skipping:', txn.ref_id)
 		return
 	}
@@ -157,12 +153,12 @@ async function processSmsExpense(txn) {
 	}
 
 	const txnAt = new Date(txn.txn_at || new Date())
-	const [dup] = await pool.query(
+	const { rows: dup } = await pool.query(
 		`SELECT id FROM finance_transactions
-		 WHERE account_id = ? AND amount = ? AND balance_after = ? AND balance_after IS NOT NULL
-		   AND txn_at BETWEEN DATE_SUB(?, INTERVAL 5 MINUTE) AND DATE_ADD(?, INTERVAL 5 MINUTE)
+		 WHERE account_id = $1 AND amount = $2 AND balance_after = $3 AND balance_after IS NOT NULL
+		   AND txn_at BETWEEN $4::timestamp - INTERVAL '5 minutes' AND $4::timestamp + INTERVAL '5 minutes'
 		 LIMIT 1`,
-		[account.id, txn.amount, txn.balance_after, txnAt, txnAt]
+		[account.id, txn.amount, txn.balance_after, txnAt]
 	)
 
 	if (dup[0]) {
@@ -171,22 +167,24 @@ async function processSmsExpense(txn) {
 		return
 	}
 
-	const [result] = await pool.query(
-		`INSERT IGNORE INTO finance_transactions
+	const result = await pool.query(
+		`INSERT INTO finance_transactions
 		  (guild_id, account_id, type, amount, description, balance_after,
 		   ref_id, source, txn_at, updated_by, updated_at)
-		 VALUES (?, ?, 'expense', ?, 'เงินออก', ?, ?, 'sms', ?, 'system', NOW())`,
+		 VALUES ($1, $2, 'expense', $3, 'เงินออก', $4, $5, 'sms', $6, 'system', NOW())
+		 ON CONFLICT DO NOTHING
+		 RETURNING id`,
 		[account.guild_id, account.id, txn.amount, txn.balance_after,
 		 txn.ref_id, txn.txn_at || new Date()]
 	)
 
-	if (result.affectedRows === 0) {
+	if (result.rowCount === 0) {
 		log.warn('[smsWebhook] expense duplicate ref_id, skipping:', txn.ref_id)
 		return
 	}
 
-	log.info(`[smsWebhook] inserted expense id=${result.insertId} amount=${txn.amount}`)
-	await updateIncomingLog(txn.raw, result.insertId)
+	log.info(`[smsWebhook] inserted expense id=${result.rows[0].id} amount=${txn.amount}`)
+	await updateIncomingLog(txn.raw, result.rows[0].id)
 
 	if (account.notify_expense) await notifyDiscord(account, txn)
 }
@@ -194,7 +192,7 @@ async function processSmsExpense(txn) {
 async function logIncoming(rawText, parsed) {
 	try {
 		await pool.query(
-			`INSERT INTO finance_incoming_log (source, raw_text, parsed) VALUES ('sms', ?, ?)`,
+			`INSERT INTO finance_incoming_log (source, raw_text, parsed) VALUES ('sms', $1, $2)`,
 			[rawText, parsed ? 1 : 0]
 		)
 	} catch (err) {
@@ -205,9 +203,10 @@ async function logIncoming(rawText, parsed) {
 async function updateIncomingLog(rawText, transactionId) {
 	try {
 		await pool.query(
-			`UPDATE finance_incoming_log SET transaction_id = ?
-			 WHERE source = 'sms' AND raw_text = ? AND transaction_id IS NULL
-			 ORDER BY created_at DESC LIMIT 1`,
+			`UPDATE finance_incoming_log SET transaction_id = $1
+			 WHERE id = (SELECT id FROM finance_incoming_log
+			             WHERE source = 'sms' AND raw_text = $2 AND transaction_id IS NULL
+			             ORDER BY created_at DESC LIMIT 1)`,
 			[transactionId, rawText]
 		)
 	} catch (err) {
@@ -218,7 +217,7 @@ async function updateIncomingLog(rawText, transactionId) {
 async function matchAccount(lastDigits) {
 	if (!lastDigits) return null
 
-	const [accounts] = await pool.query(
+	const { rows: accounts } = await pool.query(
 		`SELECT * FROM finance_accounts WHERE bank = 'กสิกรไทย' AND archived = 0`
 	)
 
@@ -234,8 +233,8 @@ async function notifyDiscord(account, txn) {
 	if (!discordClient) return
 
 	try {
-		const [cfg] = await pool.query(
-			`SELECT thread_id, account_ids FROM finance_config WHERE guild_id = ?`,
+		const { rows: cfg } = await pool.query(
+			`SELECT thread_id, account_ids FROM finance_config WHERE guild_id = $1`,
 			[account.guild_id]
 		)
 		const threadId = cfg[0]?.thread_id

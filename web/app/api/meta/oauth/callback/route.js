@@ -3,8 +3,8 @@ import pool from '@/db/index.js'
 const REDIRECT_URI = `${process.env.NEXTAUTH_URL || 'https://pplevolunteers.org'}/api/meta/oauth/callback`
 
 async function getGuildMetaApp(guildId) {
-  const [rows] = await pool.execute(
-    "SELECT `key`, value FROM dc_guild_config WHERE guild_id = ? AND `key` IN ('meta_app_id', 'meta_app_secret')",
+  const { rows } = await pool.query(
+    `SELECT "key", value FROM dc_guild_config WHERE guild_id = $1 AND "key" IN ('meta_app_id', 'meta_app_secret')`,
     [guildId]
   )
   const m = Object.fromEntries(rows.map(r => [r.key, r.value]))
@@ -18,10 +18,13 @@ async function fbGet(url) {
 }
 
 async function upsertSocialRow(userDiscordId, guildId, name, platform, socialId, accessToken, userToken, userTokenExpiresAt, visibility = 'public') {
-  await pool.execute(
+  await pool.query(
     `INSERT INTO dc_social_accounts (user_discord_id, guild_id, name, platform, social_id, access_token, user_token, user_token_expires_at, visibility)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-     ON DUPLICATE KEY UPDATE name = VALUES(name), access_token = VALUES(access_token), user_token = VALUES(user_token), user_token_expires_at = VALUES(user_token_expires_at), visibility = VALUES(visibility)`,
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+     ON CONFLICT (user_key, guild_id, platform, social_id) DO UPDATE SET
+       name = EXCLUDED.name, access_token = EXCLUDED.access_token,
+       user_token = EXCLUDED.user_token, user_token_expires_at = EXCLUDED.user_token_expires_at,
+       visibility = EXCLUDED.visibility`,
     [userDiscordId, guildId, name, platform, socialId, accessToken, userToken, userTokenExpiresAt, visibility]
   )
 }

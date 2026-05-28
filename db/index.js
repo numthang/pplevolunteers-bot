@@ -1,13 +1,17 @@
 require('dotenv').config();
-const mysql = require('mysql2/promise');
+const { Pool } = require('pg');
 
-const pool = mysql.createPool({
+const pool = new Pool({
   host: process.env.DB_HOST || 'localhost',
+  port: Number(process.env.DB_PORT) || 5432,
   user: process.env.DB_USER,
   password: process.env.DB_PASS,
   database: process.env.DB_NAME,
-  waitForConnections: true,
-  connectionLimit: 10,
+  max: 10,
+});
+
+pool.on('connect', (client) => {
+  client.query("SET TIME ZONE 'Asia/Bangkok'");
 });
 
 module.exports = pool;

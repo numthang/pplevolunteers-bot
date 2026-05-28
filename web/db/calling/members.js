@@ -4,8 +4,8 @@ import pool from '../index.js'
  * Get member by source_id
  */
 export async function getMemberById(sourceId) {
-  const [rows] = await pool.query(
-    `SELECT * FROM ngs_member_cache WHERE source_id = ?`,
+  const { rows } = await pool.query(
+    `SELECT * FROM ngs_member_cache WHERE source_id = $1`,
     [sourceId]
   )
   return rows[0] || null
@@ -15,11 +15,11 @@ export async function getMemberById(sourceId) {
  * Get members by district (home_amphure) with pagination
  */
 export async function getMembersByDistrict(district, limit = 100, offset = 0) {
-  const [rows] = await pool.query(
+  const { rows } = await pool.query(
     `SELECT * FROM ngs_member_cache
-     WHERE home_amphure = ?
+     WHERE home_amphure = $1
      ORDER BY first_name ASC
-     LIMIT ? OFFSET ?`,
+     LIMIT $2 OFFSET $3`,
     [district, limit, offset]
   )
   return rows
@@ -29,11 +29,11 @@ export async function getMembersByDistrict(district, limit = 100, offset = 0) {
  * Get members by province with pagination
  */
 export async function getMembersByProvince(province, limit = 100, offset = 0) {
-  const [rows] = await pool.query(
+  const { rows } = await pool.query(
     `SELECT * FROM ngs_member_cache
-     WHERE home_province = ?
+     WHERE home_province = $1
      ORDER BY home_amphure ASC, first_name ASC
-     LIMIT ? OFFSET ?`,
+     LIMIT $2 OFFSET $3`,
     [province, limit, offset]
   )
   return rows
@@ -43,11 +43,11 @@ export async function getMembersByProvince(province, limit = 100, offset = 0) {
  * Search members by keyword (full_name, source_id, mobile_number)
  */
 export async function searchMembers(keyword, limit = 100, offset = 0) {
-  const [rows] = await pool.query(
+  const { rows } = await pool.query(
     `SELECT * FROM ngs_member_cache
-     WHERE full_name LIKE ? OR mobile_number LIKE ? OR serial LIKE ?
+     WHERE full_name ILIKE $1 OR mobile_number ILIKE $2 OR serial ILIKE $3
      ORDER BY first_name ASC
-     LIMIT ? OFFSET ?`,
+     LIMIT $4 OFFSET $5`,
     [`%${keyword}%`, `%${keyword}%`, `%${keyword}%`, limit, offset]
   )
   return rows
@@ -57,18 +57,18 @@ export async function searchMembers(keyword, limit = 100, offset = 0) {
  * Get all members with pagination + call stats (required)
  */
 export async function getAllMembers(limit = 100, offset = 0) {
-  const [rows] = await pool.query(
+  const { rows } = await pool.query(
     `SELECT
        m.*,
        t.tier,
        COUNT(DISTINCT l.id) AS total_calls,
        MAX(l.called_at) AS last_called_at
      FROM ngs_member_cache m
-     LEFT JOIN calling_member_tiers t ON t.member_id = m.source_id AND t.contact_type = 'member'
-     LEFT JOIN calling_logs l ON l.member_id = m.source_id AND l.contact_type = 'member'
-     GROUP BY m.source_id
+     LEFT JOIN calling_member_tiers t ON t.member_id = m.source_id::text AND t.contact_type = 'member'
+     LEFT JOIN calling_logs l ON l.member_id = m.source_id::text AND l.contact_type = 'member'
+     GROUP BY m.source_id, t.tier
      ORDER BY m.home_province ASC, m.home_amphure ASC, m.first_name ASC
-     LIMIT ? OFFSET ?`,
+     LIMIT $1 OFFSET $2`,
     [limit, offset]
   )
   return rows
@@ -78,24 +78,31 @@ export async function getAllMembers(limit = 100, offset = 0) {
  * Get total count of members
  */
 export async function getMembersCount() {
-  const [rows] = await pool.query(
+  const { rows } = await pool.query(
     `SELECT COUNT(*) AS count FROM ngs_member_cache`
   )
-  return rows[0]?.count || 0
+  return Number(rows[0]?.count) || 0
 }
 
 /**
  * Get members in a campaign with assignment + last log info + computed status
- * Status: 'called' (has calls) | 'assigned' (assigned to someone) | 'unassigned'
  */
 export async function getMembersInCampaign(campaignId, filters = {}, limit = 100, offset = 0) {
   const { amphure, subdistricts, tier, status, assignedTo, rsvp, name, expiry, called, sort, sms } = filters
 
   const needAllTimeCalls = sort === 'least_called'
 
+  const params = [process.env.GUILD_ID, campaignId]
+  // $1: guild_id, $2: campaign_id
+
+  // amphure filter — used twice with ($n IS NULL OR ...) trick
+  params.push(amphure || null)
+  const amphureIdx = params.length
+  // $3: amphure (used in both NULL check and equality)
+
   let query = `SELECT
        m.*,
-       COALESCE(t.tier, 'D') AS tier,
+       COALESCE(t.tier::text, 'D') AS tier,
        COALESCE(a.assigned_to, '') AS assigned_to,
        COALESCE(a.assigned_by, '') AS assigned_by,
        COALESCE(a.created_at, NULL) AS assignment_date,
@@ -114,67 +121,78 @@ export async function getMembersInCampaign(campaignId, filters = {}, limit = 100
      FROM act_event_cache cc
      JOIN ngs_member_cache m
        ON (cc.province IS NULL OR m.home_province = cc.province)
-     LEFT JOIN calling_member_tiers t ON t.member_id = m.source_id AND t.contact_type = 'member'
+     LEFT JOIN calling_member_tiers t ON t.member_id = m.source_id::text AND t.contact_type = 'member'
      LEFT JOIN calling_assignments a
-       ON a.campaign_id = cc.id AND a.member_id = m.source_id AND a.contact_type = 'member'
+       ON a.campaign_id = cc.id AND a.member_id = m.source_id::text AND a.contact_type = 'member'
      LEFT JOIN calling_logs l
-       ON l.campaign_id = cc.id AND l.member_id = m.source_id AND l.contact_type = 'member'
-     LEFT JOIN dc_members dc ON dc.serial = m.serial AND dc.guild_id = ?${needAllTimeCalls ? `
+       ON l.campaign_id = cc.id AND l.member_id = m.source_id::text AND l.contact_type = 'member'
+     LEFT JOIN dc_members dc ON dc.serial = m.serial AND dc.guild_id = $1${needAllTimeCalls ? `
      LEFT JOIN (SELECT member_id, COUNT(*) AS all_time_calls FROM calling_logs WHERE contact_type = 'member' GROUP BY member_id) atl
-       ON atl.member_id = m.source_id` : ''}
-     WHERE cc.id = ? AND cc.type = 'campaign'
+       ON atl.member_id = m.source_id::text` : ''}
+     WHERE cc.id = $2 AND cc.type = 'campaign'
        AND m.mobile_number IS NOT NULL
-       AND (? IS NULL OR m.home_amphure = ?)`
-
-  const params = [
-    process.env.GUILD_ID,
-    campaignId,
-    amphure || null, amphure || null,
-  ]
+       AND ($${amphureIdx}::text IS NULL OR m.home_amphure = $${amphureIdx})`
 
   if (subdistricts && subdistricts.length > 0) {
-    query += ` AND m.home_district IN (${subdistricts.map(() => '?').join(',')})`
-    params.push(...subdistricts)
+    params.push(subdistricts)
+    query += ` AND m.home_district = ANY($${params.length})`
   }
 
-  query += ` AND (? IS NULL OR COALESCE(t.tier, 'D') = ?)
-       AND (? IS NULL OR a.assigned_to = ?)
-       AND (? IS NULL OR a.rsvp = ?)
-       AND (? IS NULL OR m.full_name LIKE ?)`
+  params.push(tier || null)
+  const tierIdx = params.length
+  params.push(assignedTo || null)
+  const assignedToIdx = params.length
+  params.push(rsvp || null)
+  const rsvpIdx = params.length
+  params.push(name || null)
+  const nameIdx = params.length
+  params.push(name ? `%${name}%` : null)
+  const nameLikeIdx = params.length
+
+  query += ` AND ($${tierIdx}::text IS NULL OR COALESCE(t.tier::text, 'D') = $${tierIdx})
+       AND ($${assignedToIdx}::text IS NULL OR a.assigned_to = $${assignedToIdx})
+       AND ($${rsvpIdx}::text IS NULL OR a.rsvp::text = $${rsvpIdx})
+       AND ($${nameIdx}::text IS NULL OR m.full_name ILIKE $${nameLikeIdx})`
 
   if (expiry === 'expired') {
     query += ` AND m.expired_at < NOW()`
   } else if (expiry === 'expiring') {
-    query += ` AND m.expired_at BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 90 DAY)`
+    query += ` AND m.expired_at BETWEEN NOW() AND NOW() + INTERVAL '90 days'`
   } else if (expiry === 'lifetime') {
     query += ` AND m.membership_type IN ('ตลอดชีพ', 'สมาชิกตลอดชีพ')`
   }
 
+  params.push(status || null)
+  const statusIdx = params.length
+  params.push(called || null)
+  const calledIdx = params.length
+  params.push(sms || null)
+  const smsIdx = params.length
+
+  // HAVING: cannot reference SELECT aliases in PG — repeat the expressions
   query += `
-     GROUP BY m.source_id
-     HAVING (? IS NULL OR member_status = ?)
-       AND (? IS NULL OR (? = 'called' AND total_calls > 0) OR (? = 'uncalled' AND total_calls = 0 AND member_status = 'assigned'))
-       AND (? IS NULL OR (? = 'sms_sent' AND sms_count > 0) OR (? = 'no_sms' AND sms_count = 0))
+     GROUP BY m.source_id, t.tier, a.assigned_to, a.assigned_by, a.created_at, a.rsvp, a.id,
+              l.called_at, l.status, l.note, dc.discord_id, dc.username, dc.avatar${needAllTimeCalls ? ', atl.all_time_calls' : ''}
+     HAVING ($${statusIdx}::text IS NULL
+             OR ($${statusIdx} = 'assigned' AND a.id IS NOT NULL)
+             OR ($${statusIdx} = 'unassigned' AND a.id IS NULL))
+       AND ($${calledIdx}::text IS NULL
+             OR ($${calledIdx} = 'called' AND COUNT(DISTINCT l.id) > 0)
+             OR ($${calledIdx} = 'uncalled' AND COUNT(DISTINCT l.id) = 0 AND a.id IS NOT NULL))
+       AND ($${smsIdx}::text IS NULL
+             OR ($${smsIdx} = 'sms_sent' AND SUM(CASE WHEN l.status IN ('sms_sent', 'sms_delivered') THEN 1 ELSE 0 END) > 0)
+             OR ($${smsIdx} = 'no_sms'   AND SUM(CASE WHEN l.status IN ('sms_sent', 'sms_delivered') THEN 1 ELSE 0 END) = 0))
      ORDER BY ${
        sort === 'least_called' ? `all_time_calls ASC, m.home_amphure ASC, m.home_district ASC, m.first_name ASC` :
        sort === 'uncalled'     ? `total_calls ASC, m.home_amphure ASC, m.home_district ASC, m.first_name ASC` :
-       sort === 'tier'         ? `CASE COALESCE(t.tier, 'D') WHEN 'A' THEN 1 WHEN 'B' THEN 2 WHEN 'C' THEN 3 ELSE 4 END ASC, total_calls ASC, m.home_amphure ASC, m.home_district ASC, m.first_name ASC` :
+       sort === 'tier'         ? `CASE COALESCE(t.tier::text, 'D') WHEN 'A' THEN 1 WHEN 'B' THEN 2 WHEN 'C' THEN 3 ELSE 4 END ASC, total_calls ASC, m.home_amphure ASC, m.home_district ASC, m.first_name ASC` :
                                  `m.home_amphure ASC, m.home_district ASC, m.first_name ASC`
      }, m.source_id ASC
-     LIMIT ? OFFSET ?`
+     LIMIT $${params.length + 1} OFFSET $${params.length + 2}`
 
-  params.push(
-    tier || null, tier || null,
-    assignedTo || null, assignedTo || null,
-    rsvp || null, rsvp || null,
-    name || null, name ? `%${name}%` : null,
-    status || null, status || null,
-    called || null, called || null, called || null,
-    sms || null, sms || null, sms || null,
-    limit, offset
-  )
+  params.push(limit, offset)
 
-  const [rows] = await pool.query(query, params)
+  const { rows } = await pool.query(query, params)
   return rows
 }
 
@@ -182,9 +200,9 @@ export async function getMembersInCampaignStats(campaignId) {
   const BASE = `
     FROM act_event_cache cc
     JOIN ngs_member_cache m ON (cc.province IS NULL OR m.home_province = cc.province)
-    WHERE cc.id = ? AND cc.type = 'campaign' AND m.mobile_number IS NOT NULL`
+    WHERE cc.id = $1 AND cc.type = 'campaign' AND m.mobile_number IS NOT NULL`
 
-  const [[mainRows], [amphureRows], [districtCountRows], [tierRows], [assigneeRows]] = await Promise.all([
+  const [mainRes, amphureRes, districtCountRes, tierRes, assigneeRes] = await Promise.all([
     pool.query(
       `SELECT
          COUNT(DISTINCT m.source_id) AS total,
@@ -193,13 +211,13 @@ export async function getMembersInCampaignStats(campaignId) {
          SUM(CASE WHEN a.id IS NULL THEN 1 ELSE 0 END) AS unassigned
        FROM act_event_cache cc
        JOIN ngs_member_cache m ON (cc.province IS NULL OR m.home_province = cc.province)
-       LEFT JOIN calling_assignments a ON a.campaign_id = cc.id AND a.member_id = m.source_id AND a.contact_type = 'member'
+       LEFT JOIN calling_assignments a ON a.campaign_id = cc.id AND a.member_id = m.source_id::text AND a.contact_type = 'member'
        LEFT JOIN (
          SELECT member_id, COUNT(*) AS log_count
-         FROM calling_logs WHERE campaign_id = ? AND contact_type = 'member'
+         FROM calling_logs WHERE campaign_id = $1 AND contact_type = 'member'
          GROUP BY member_id
-       ) lc ON lc.member_id = m.source_id
-       WHERE cc.id = ? AND cc.type = 'campaign' AND m.mobile_number IS NOT NULL`,
+       ) lc ON lc.member_id = m.source_id::text
+       WHERE cc.id = $2 AND cc.type = 'campaign' AND m.mobile_number IS NOT NULL`,
       [campaignId, campaignId]
     ),
     pool.query(
@@ -208,46 +226,46 @@ export async function getMembersInCampaignStats(campaignId) {
       [campaignId]
     ),
     pool.query(
-      `SELECT COALESCE(m.home_amphure, '') AS amphure, COUNT(DISTINCT m.home_district) AS districtCount
+      `SELECT COALESCE(m.home_amphure, '') AS amphure, COUNT(DISTINCT m.home_district) AS "districtCount"
        ${BASE} GROUP BY m.home_amphure ORDER BY m.home_amphure`,
       [campaignId]
     ),
     pool.query(
-      `SELECT COALESCE(t.tier, 'D') AS tier, COUNT(DISTINCT m.source_id) AS count
+      `SELECT COALESCE(t.tier::text, 'D') AS tier, COUNT(DISTINCT m.source_id) AS count
        FROM act_event_cache cc
        JOIN ngs_member_cache m ON (cc.province IS NULL OR m.home_province = cc.province)
-       LEFT JOIN calling_member_tiers t ON t.member_id = m.source_id AND t.contact_type = 'member'
-       WHERE cc.id = ? AND cc.type = 'campaign' AND m.mobile_number IS NOT NULL
-       GROUP BY tier`,
+       LEFT JOIN calling_member_tiers t ON t.member_id = m.source_id::text AND t.contact_type = 'member'
+       WHERE cc.id = $1 AND cc.type = 'campaign' AND m.mobile_number IS NOT NULL
+       GROUP BY COALESCE(t.tier::text, 'D')`,
       [campaignId]
     ),
     pool.query(
       `SELECT a.assigned_to, COUNT(DISTINCT m.source_id) AS count
        FROM act_event_cache cc
        JOIN ngs_member_cache m ON (cc.province IS NULL OR m.home_province = cc.province)
-       JOIN calling_assignments a ON a.campaign_id = cc.id AND a.member_id = m.source_id AND a.contact_type = 'member'
-       WHERE cc.id = ? AND cc.type = 'campaign' AND m.mobile_number IS NOT NULL
+       JOIN calling_assignments a ON a.campaign_id = cc.id AND a.member_id = m.source_id::text AND a.contact_type = 'member'
+       WHERE cc.id = $1 AND cc.type = 'campaign' AND m.mobile_number IS NOT NULL
        GROUP BY a.assigned_to`,
       [campaignId]
     ),
   ])
 
-  const row = mainRows[0] || {}
+  const row = mainRes.rows[0] || {}
 
   const amphureCounts = {}
-  for (const r of amphureRows) {
+  for (const r of amphureRes.rows) {
     amphureCounts[r.amphure] = Number(r.count)
   }
 
   const amphureDistrictCounts = {}
-  for (const r of districtCountRows) {
+  for (const r of districtCountRes.rows) {
     amphureDistrictCounts[r.amphure] = Number(r.districtCount)
   }
 
   const tierCounts = {}
-  for (const r of tierRows) tierCounts[r.tier] = Number(r.count)
+  for (const r of tierRes.rows) tierCounts[r.tier] = Number(r.count)
 
-  const assigneeCounts = assigneeRows.map(r => ({ id: r.assigned_to, count: Number(r.count) }))
+  const assigneeCounts = assigneeRes.rows.map(r => ({ id: r.assigned_to, count: Number(r.count) }))
 
   return {
     total: Number(row.total) || 0,
@@ -262,17 +280,17 @@ export async function getMembersInCampaignStats(campaignId) {
 }
 
 export async function getUnassignedMemberIds(campaignId) {
-  const [rows] = await pool.query(
+  const { rows } = await pool.query(
     `SELECT m.source_id
      FROM act_event_cache cc
      JOIN ngs_member_cache m
        ON (cc.province IS NULL OR m.home_province = cc.province)
      LEFT JOIN calling_assignments a
-       ON a.campaign_id = cc.id AND a.member_id = m.source_id AND a.contact_type = 'member'
+       ON a.campaign_id = cc.id AND a.member_id = m.source_id::text AND a.contact_type = 'member'
      LEFT JOIN calling_logs l
-       ON l.campaign_id = cc.id AND l.member_id = m.source_id AND l.contact_type = 'member'
-     WHERE cc.id = ? AND cc.type = 'campaign'
-     GROUP BY m.source_id
+       ON l.campaign_id = cc.id AND l.member_id = m.source_id::text AND l.contact_type = 'member'
+     WHERE cc.id = $1 AND cc.type = 'campaign'
+     GROUP BY m.source_id, m.home_amphure, m.first_name
      HAVING COUNT(DISTINCT l.id) = 0 AND MAX(a.id) IS NULL
      ORDER BY m.home_amphure ASC, m.first_name ASC`,
     [campaignId]
@@ -284,9 +302,9 @@ export async function getUnassignedMemberIds(campaignId) {
  * Get member call history in campaign
  */
 export async function getMemberCallHistory(campaignId, memberId) {
-  const [rows] = await pool.query(
+  const { rows } = await pool.query(
     `SELECT * FROM calling_logs
-     WHERE campaign_id = ? AND member_id = ? AND contact_type = 'member'
+     WHERE campaign_id = $1 AND member_id = $2 AND contact_type = 'member'
      ORDER BY called_at DESC`,
     [campaignId, memberId]
   )
@@ -297,7 +315,7 @@ export async function getMemberCallHistory(campaignId, memberId) {
  * Get campaigns that have assignments for a specific user
  */
 export async function getMyCampaigns(discordId) {
-  const [rows] = await pool.query(
+  const { rows } = await pool.query(
     `SELECT
        ec.id, ec.name, ec.province,
        COUNT(a.member_id) AS assigned_count,
@@ -308,8 +326,8 @@ export async function getMyCampaigns(discordId) {
        SELECT campaign_id, member_id, COUNT(*) AS camp_calls
        FROM calling_logs WHERE contact_type = 'member' GROUP BY campaign_id, member_id
      ) camp_stats ON camp_stats.campaign_id = a.campaign_id AND camp_stats.member_id = a.member_id
-     WHERE a.assigned_to = ? AND a.contact_type = 'member'
-       AND (ec.event_date IS NULL OR ec.event_date >= CURDATE())
+     WHERE a.assigned_to = $1 AND a.contact_type = 'member'
+       AND (ec.event_date IS NULL OR ec.event_date >= CURRENT_DATE)
      GROUP BY ec.id
      ORDER BY ec.name ASC`,
     [discordId]
@@ -319,20 +337,19 @@ export async function getMyCampaigns(discordId) {
 
 /**
  * Get members assigned to a specific caller with call status, latest note, and stats
- * call_status: 'called' = has logs in assigned campaign | 'pending' = no logs yet
  */
 export async function getMyAssignedMembers(discordId, { campaignId, status, rsvp, limit = 200, offset = 0 } = {}) {
-  const [rows] = await pool.query(
+  const { rows } = await pool.query(
     `SELECT * FROM (
        SELECT
          m.*,
-         COALESCE(t.tier, 'D') AS tier,
+         COALESCE(t.tier::text, 'D') AS tier,
          a.campaign_id,
          a.created_at AS assigned_at,
          a.rsvp,
          ec.name AS campaign_name,
          ec.description AS campaign_description,
-         DATE_FORMAT(ec.event_date, '%Y-%m-%dT%H:%i') AS event_date,
+         TO_CHAR(ec.event_date, 'YYYY-MM-DD"T"HH24:MI') AS event_date,
          COALESCE(all_stats.total_calls, 0) AS total_calls,
          COALESCE(all_stats.answered_count, 0) AS answered_count,
          COALESCE(camp_stats.camp_calls, 0) AS camp_calls,
@@ -344,14 +361,14 @@ export async function getMyAssignedMembers(discordId, { campaignId, status, rsvp
          dc.username AS discord_username,
          dc.avatar AS discord_avatar
        FROM calling_assignments a
-       JOIN ngs_member_cache m ON m.source_id = a.member_id
+       JOIN ngs_member_cache m ON m.source_id::text = a.member_id
        LEFT JOIN calling_member_tiers t ON t.member_id = a.member_id AND t.contact_type = 'member'
        LEFT JOIN act_event_cache ec ON ec.id = a.campaign_id AND ec.type = 'campaign'
-       LEFT JOIN dc_members dc ON dc.serial = m.serial AND dc.guild_id = ?
+       LEFT JOIN dc_members dc ON dc.serial = m.serial AND dc.guild_id = $1
        LEFT JOIN (
          SELECT member_id,
            COUNT(*) AS total_calls,
-           SUM(status = 'answered') AS answered_count
+           SUM(CASE WHEN status = 'answered' THEN 1 ELSE 0 END) AS answered_count
          FROM calling_logs WHERE contact_type = 'member' GROUP BY member_id
        ) all_stats ON all_stats.member_id = a.member_id
        LEFT JOIN (
@@ -365,20 +382,20 @@ export async function getMyAssignedMembers(discordId, { campaignId, status, rsvp
            SELECT member_id, MAX(id) AS max_id FROM calling_logs WHERE contact_type = 'member' GROUP BY member_id
          ) lm ON lm.member_id = l.member_id AND lm.max_id = l.id
        ) latest_log ON latest_log.member_id = a.member_id
-       WHERE a.assigned_to = ? AND a.contact_type = 'member'
-         AND (? IS NULL OR a.campaign_id = ?)
-         AND (? IS NULL OR a.rsvp = ?)
+       WHERE a.assigned_to = $2 AND a.contact_type = 'member'
+         AND ($3::int IS NULL OR a.campaign_id = $3)
+         AND ($4::text IS NULL OR a.rsvp::text = $4)
      ) sub
-     WHERE (? IS NULL OR call_status = ?)
-       AND (event_date IS NULL OR event_date >= CURDATE())
+     WHERE ($5::text IS NULL OR call_status = $5)
+       AND (event_date IS NULL OR event_date >= TO_CHAR(CURRENT_DATE, 'YYYY-MM-DD'))
      ORDER BY
        CASE WHEN call_status = 'pending' THEN 0 ELSE 1 END ASC,
        CASE WHEN call_status = 'pending' THEN CASE tier WHEN 'A' THEN 1 WHEN 'B' THEN 2 WHEN 'C' THEN 3 ELSE 4 END ELSE NULL END ASC,
        CASE WHEN call_status = 'pending' THEN home_amphure ELSE NULL END ASC,
        CASE WHEN call_status = 'pending' THEN first_name ELSE NULL END ASC,
        latest_called_at ASC
-     LIMIT ? OFFSET ?`,
-    [process.env.GUILD_ID, discordId, campaignId || null, campaignId || null, rsvp || null, rsvp || null, status || null, status || null, limit, offset]
+     LIMIT $6 OFFSET $7`,
+    [process.env.GUILD_ID, discordId, campaignId || null, rsvp || null, status || null, limit, offset]
   )
   return rows
 }
@@ -387,7 +404,7 @@ export async function getMyAssignedMembers(discordId, { campaignId, status, rsvp
  * Count pending (uncalled) assignments for a user
  */
 export async function getPendingCallCount(discordId) {
-  const [rows] = await pool.query(
+  const { rows } = await pool.query(
     `SELECT COUNT(*) AS count
      FROM calling_assignments a
      LEFT JOIN act_event_cache ec ON ec.id = a.campaign_id AND ec.type = 'campaign'
@@ -395,8 +412,8 @@ export async function getPendingCallCount(discordId) {
        SELECT campaign_id, member_id, COUNT(*) AS camp_calls
        FROM calling_logs WHERE contact_type = 'member' GROUP BY campaign_id, member_id
      ) cs ON cs.campaign_id = a.campaign_id AND cs.member_id = a.member_id
-     WHERE a.assigned_to = ? AND a.contact_type = 'member'
-       AND (ec.event_date IS NULL OR ec.event_date >= CURDATE())
+     WHERE a.assigned_to = $1 AND a.contact_type = 'member'
+       AND (ec.event_date IS NULL OR ec.event_date >= CURRENT_DATE)
        AND COALESCE(cs.camp_calls, 0) = 0`,
     [discordId]
   )
@@ -409,10 +426,10 @@ export async function getPendingCallCount(discordId) {
 export async function getMyCallHistory(discordId, { name, limit = 50, offset = 0 } = {}) {
   const keyword = name || null
   const like = keyword ? `%${keyword}%` : null
-  const [rows] = await pool.query(
+  const { rows } = await pool.query(
     `SELECT
        m.*,
-       COALESCE(t.tier, 'D') AS tier,
+       COALESCE(t.tier::text, 'D') AS tier,
        COUNT(DISTINCT l.id) AS total_calls,
        MAX(l.called_at) AS latest_called_at,
        llatest.note AS latest_note,
@@ -420,7 +437,7 @@ export async function getMyCallHistory(discordId, { name, limit = 50, offset = 0
        llatest.campaign_id AS latest_campaign_id,
        ec.name AS latest_campaign_name
      FROM calling_logs l
-     JOIN ngs_member_cache m ON m.source_id = l.member_id
+     JOIN ngs_member_cache m ON m.source_id::text = l.member_id
      LEFT JOIN calling_member_tiers t ON t.member_id = l.member_id AND t.contact_type = 'member'
      LEFT JOIN (
        SELECT l2.member_id, l2.note, l2.status, l2.campaign_id
@@ -428,17 +445,17 @@ export async function getMyCallHistory(discordId, { name, limit = 50, offset = 0
        INNER JOIN (
          SELECT member_id, MAX(id) AS max_id
          FROM calling_logs
-         WHERE called_by = ? AND contact_type = 'member'
+         WHERE called_by = $1 AND contact_type = 'member'
          GROUP BY member_id
        ) lm ON lm.member_id = l2.member_id AND lm.max_id = l2.id
      ) llatest ON llatest.member_id = l.member_id
      LEFT JOIN act_event_cache ec ON ec.id = llatest.campaign_id AND ec.type = 'campaign'
-     WHERE l.called_by = ? AND l.contact_type = 'member'
-       AND (? IS NULL OR m.full_name LIKE ? OR m.mobile_number LIKE ? OR l.note LIKE ?)
-     GROUP BY l.member_id
+     WHERE l.called_by = $2 AND l.contact_type = 'member'
+       AND ($3::text IS NULL OR m.full_name ILIKE $4 OR m.mobile_number ILIKE $4 OR l.note ILIKE $4)
+     GROUP BY l.member_id, m.source_id, t.tier, llatest.note, llatest.status, llatest.campaign_id, ec.name
      ORDER BY latest_called_at DESC
-     LIMIT ? OFFSET ?`,
-    [discordId, discordId, keyword, like, like, like, limit, offset]
+     LIMIT $5 OFFSET $6`,
+    [discordId, discordId, keyword, like, limit, offset]
   )
   return rows
 }
@@ -449,40 +466,40 @@ export async function getMyCallHistory(discordId, { name, limit = 50, offset = 0
 export async function getMyCallHistoryFlat(discordId, { name, limit = 60, offset = 0 } = {}) {
   const keyword = name || null
   const like = keyword ? `%${keyword}%` : null
-  const [rows] = await pool.query(
+  const { rows } = await pool.query(
     `(SELECT
-       l.id AS log_id, l.status, l.note, l.called_at, l.campaign_id,
+       l.id AS log_id, l.status::text AS status, l.note, l.called_at, l.campaign_id,
        'member' AS contact_type, l.member_id,
        m.full_name, m.mobile_number,
        m.home_district, m.home_amphure, m.home_province,
        dc.avatar AS discord_avatar, dc.discord_id,
-       COALESCE(t.tier, 'D') AS tier,
+       COALESCE(t.tier::text, 'D') AS tier,
        ec.name AS campaign_name
      FROM calling_logs l
-     JOIN ngs_member_cache m ON m.source_id = l.member_id
-     LEFT JOIN dc_members dc ON dc.serial = m.serial AND dc.guild_id = ?
+     JOIN ngs_member_cache m ON m.source_id::text = l.member_id
+     LEFT JOIN dc_members dc ON dc.serial = m.serial AND dc.guild_id = $1
      LEFT JOIN calling_member_tiers t ON t.member_id = l.member_id AND t.contact_type = 'member'
      LEFT JOIN act_event_cache ec ON ec.id = l.campaign_id AND ec.type = 'campaign'
-     WHERE l.called_by = ? AND l.contact_type = 'member'
-       AND (? IS NULL OR m.full_name LIKE ? OR m.mobile_number LIKE ? OR l.note LIKE ?))
+     WHERE l.called_by = $2 AND l.contact_type = 'member'
+       AND ($3::text IS NULL OR m.full_name ILIKE $4 OR m.mobile_number ILIKE $4 OR l.note ILIKE $4))
     UNION ALL
     (SELECT
-       l.id AS log_id, l.status, l.note, l.called_at, l.campaign_id,
+       l.id AS log_id, l.status::text AS status, l.note, l.called_at, l.campaign_id,
        'contact' AS contact_type, l.member_id,
-       CONCAT(c.first_name, IF(c.last_name IS NOT NULL AND c.last_name != '', CONCAT(' ', c.last_name), '')) AS full_name,
+       c.first_name || CASE WHEN c.last_name IS NOT NULL AND c.last_name != '' THEN ' ' || c.last_name ELSE '' END AS full_name,
        c.phone AS mobile_number,
        c.tambon AS home_district, c.amphoe AS home_amphure, c.province AS home_province,
        NULL AS discord_avatar, NULL AS discord_id,
        'D' AS tier,
        NULL AS campaign_name
      FROM calling_logs l
-     JOIN calling_contacts c ON c.id = l.member_id
-     WHERE l.called_by = ? AND l.contact_type = 'contact'
-       AND (? IS NULL OR CONCAT(c.first_name, ' ', COALESCE(c.last_name, '')) LIKE ? OR c.phone LIKE ? OR l.note LIKE ?))
+     JOIN calling_contacts c ON c.id::text = l.member_id
+     WHERE l.called_by = $5 AND l.contact_type = 'contact'
+       AND ($6::text IS NULL OR (c.first_name || ' ' || COALESCE(c.last_name, '')) ILIKE $7 OR c.phone ILIKE $7 OR l.note ILIKE $7))
     ORDER BY called_at DESC
-    LIMIT ? OFFSET ?`,
-    [process.env.GUILD_ID, discordId, keyword, like, like, like,
-     discordId, keyword, like, like, like,
+    LIMIT $8 OFFSET $9`,
+    [process.env.GUILD_ID, discordId, keyword, like,
+     discordId, keyword, like,
      limit, offset]
   )
   return rows
@@ -492,13 +509,13 @@ export async function getMyCallHistoryFlat(discordId, { name, limit = 60, offset
  * Get member's total call history (all campaigns)
  */
 export async function getMemberGlobalCallHistory(memberId) {
-  const [rows] = await pool.query(
+  const { rows } = await pool.query(
     `SELECT
        cl.*,
        cc.name AS campaign_name
      FROM calling_logs cl
      JOIN act_event_cache cc ON cc.id = cl.campaign_id AND cc.type = 'campaign'
-     WHERE cl.member_id = ?
+     WHERE cl.member_id = $1
      ORDER BY cl.called_at DESC`,
     [memberId]
   )

@@ -15,13 +15,13 @@ export async function PATCH(req, { params }) {
 
   const fields = []
   const values = []
-  if (name !== undefined)       { fields.push('name = ?');       values.push(name) }
-  if (visibility !== undefined) { fields.push('visibility = ?'); values.push(visibility) }
-  if (group_name !== undefined) { fields.push('group_name = ?'); values.push(group_name || null) }
+  if (name !== undefined)       { values.push(name);              fields.push(`name = $${values.length}`) }
+  if (visibility !== undefined) { values.push(visibility);        fields.push(`visibility = $${values.length}`) }
+  if (group_name !== undefined) { values.push(group_name || null); fields.push(`group_name = $${values.length}`) }
   if (!fields.length) return Response.json({ error: 'nothing to update' }, { status: 400 })
 
   values.push(id)
-  await pool.execute(`UPDATE dc_social_accounts SET ${fields.join(', ')} WHERE id = ?`, values)
+  await pool.query(`UPDATE dc_social_accounts SET ${fields.join(', ')} WHERE id = $${values.length}`, values)
 
   return Response.json({ ok: true })
 }
@@ -33,14 +33,14 @@ export async function DELETE(req, { params }) {
   const { id } = await params
 
   if (!isAdmin(session.user.roles)) {
-    const [rows] = await pool.execute(
-      `SELECT user_discord_id FROM dc_social_accounts WHERE id = ?`, [id]
+    const { rows } = await pool.query(
+      `SELECT user_discord_id FROM dc_social_accounts WHERE id = $1`, [id]
     )
     if (!rows.length || rows[0].user_discord_id !== session.user.discordId) {
       return Response.json({ error: 'Forbidden' }, { status: 403 })
     }
   }
 
-  await pool.execute(`DELETE FROM dc_social_accounts WHERE id = ?`, [id])
+  await pool.query(`DELETE FROM dc_social_accounts WHERE id = $1`, [id])
   return Response.json({ ok: true })
 }

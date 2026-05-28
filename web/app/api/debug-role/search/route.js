@@ -12,13 +12,13 @@ export async function GET(req) {
   const q = new URL(req.url).searchParams.get('q')?.trim()
   if (!q || q.length < 2) return Response.json([])
 
-  const [rows] = await pool.query(
+  const { rows } = await pool.query(
     `SELECT discord_id, username, display_name, nickname, province, roles
      FROM dc_members
-     WHERE guild_id = ? AND (username LIKE ? OR display_name LIKE ? OR nickname LIKE ?)
+     WHERE guild_id = $1 AND (username ILIKE $2 OR display_name ILIKE $2 OR nickname ILIKE $2)
      ORDER BY display_name, username
      LIMIT 10`,
-    [process.env.GUILD_ID, `%${q}%`, `%${q}%`, `%${q}%`]
+    [process.env.GUILD_ID, `%${q}%`]
   )
 
   return Response.json(rows.map(r => ({

@@ -11,12 +11,11 @@ export async function GET() {
     return Response.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  const [rows] = await pool.execute(
-    `SELECT guild_id, \`key\`, value FROM dc_guild_config WHERE \`key\` IN (?, ?, ?, ?)`,
-    ALLOWED_KEYS
+  const { rows } = await pool.query(
+    `SELECT guild_id, "key", value FROM dc_guild_config WHERE "key" = ANY($1)`,
+    [ALLOWED_KEYS]
   )
 
-  // group by guild_id → { [guild_id]: { meta_app_id, meta_app_secret, x_consumer_key, x_consumer_secret } }
   const configs = {}
   for (const r of rows) {
     if (!configs[r.guild_id]) configs[r.guild_id] = {}
@@ -38,13 +37,14 @@ export async function PATCH(req) {
   if (!ALLOWED_KEYS.includes(key)) return Response.json({ error: 'invalid key' }, { status: 400 })
 
   if (value === null || value === '') {
-    await pool.execute(
-      'DELETE FROM dc_guild_config WHERE guild_id = ? AND `key` = ?',
+    await pool.query(
+      `DELETE FROM dc_guild_config WHERE guild_id = $1 AND "key" = $2`,
       [guild_id, key]
     )
   } else {
-    await pool.execute(
-      'INSERT INTO dc_guild_config (guild_id, `key`, value) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+    await pool.query(
+      `INSERT INTO dc_guild_config (guild_id, "key", value) VALUES ($1, $2, $3)
+       ON CONFLICT (guild_id, "key") DO UPDATE SET value = EXCLUDED.value`,
       [guild_id, key, value]
     )
   }

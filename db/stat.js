@@ -7,14 +7,14 @@ const pool = require('./index');
  * Overview ของ server
  */
 async function getServerOverview(guildId, days) {
-  const [rows] = await pool.execute(
+  const { rows } = await pool.query(
     `SELECT
        COUNT(DISTINCT user_id)            AS active_users,
        COALESCE(SUM(message_count), 0)    AS total_msgs,
        COALESCE(SUM(voice_seconds), 0)    AS total_voice
      FROM dc_activity_daily
-     WHERE guild_id = ?
-       AND date >= DATE_SUB(CURDATE(), INTERVAL ? DAY)`,
+     WHERE guild_id = $1
+       AND date >= CURRENT_DATE - $2 * INTERVAL '1 day'`,
     [guildId, days]
   );
   return rows[0];
@@ -28,7 +28,7 @@ async function getTopChannels(guildId, days, limit = 5, sortBy = 'messages') {
     ? 'SUM(d.voice_seconds) DESC'
     : 'SUM(d.message_count) DESC';
 
-  const [rows] = await pool.execute(
+  const { rows } = await pool.query(
     `SELECT
        d.channel_id,
        COALESCE(c.channel_name, d.channel_id) AS channel_name,
@@ -38,12 +38,12 @@ async function getTopChannels(guildId, days, limit = 5, sortBy = 'messages') {
      FROM dc_activity_daily d
      LEFT JOIN dc_orgchart_config c
        ON d.channel_id = c.channel_id AND d.guild_id = c.guild_id
-     WHERE d.guild_id = ?
-       AND d.date >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
-     GROUP BY d.channel_id, channel_name
+     WHERE d.guild_id = $1
+       AND d.date >= CURRENT_DATE - $2 * INTERVAL '1 day'
+     GROUP BY d.channel_id, c.channel_name
      ORDER BY ${orderBy}
-     LIMIT ${limit}`,
-    [guildId, days]
+     LIMIT $3`,
+    [guildId, days, limit]
   );
   return rows;
 }
@@ -53,6 +53,8 @@ async function getTopChannels(guildId, days, limit = 5, sortBy = 'messages') {
  * score = messages × 10 + voiceSeconds + mentions × 30
  */
 async function getTopMembers(guildId, days, limit = 10, roleMembers = null, sortBy = 'score') {
+  const params = [days, guildId, days];
+
   let sql = `
     SELECT
       d.user_id,
@@ -60,32 +62,32 @@ async function getTopMembers(guildId, days, limit = 10, roleMembers = null, sort
       COALESCE(SUM(d.voice_seconds), 0) AS voice_seconds,
       COALESCE((
         SELECT COUNT(*) FROM dc_activity_mentions m
-        WHERE m.guild_id = d.guild_id
+        WHERE m.guild_id = $2
           AND m.user_id = d.user_id
-          AND m.timestamp >= DATE_SUB(NOW(), INTERVAL ? DAY)
+          AND m.timestamp >= NOW() - $1 * INTERVAL '1 day'
       ), 0) AS mentions
     FROM dc_activity_daily d
-    WHERE d.guild_id = ?
-      AND d.date >= DATE_SUB(CURDATE(), INTERVAL ? DAY)`;
-
-  const params = [days, guildId, days];
+    WHERE d.guild_id = $2
+      AND d.date >= CURRENT_DATE - $3 * INTERVAL '1 day'`;
 
   if (roleMembers && roleMembers.size > 0) {
-    const placeholders = [...roleMembers].map(() => '?').join(',');
-    sql += ` AND d.user_id IN (${placeholders})`;
-    params.push(...roleMembers);
+    params.push([...roleMembers]);
+    sql += ` AND d.user_id = ANY($${params.length})`;
   }
 
-  const orderBy = sortBy === 'voice'    ? 'SUM(d.voice_seconds) DESC'
-    : sortBy === 'messages'             ? 'SUM(d.message_count) DESC'
-    : '(SUM(d.message_count) * 10 + SUM(d.voice_seconds) + mentions * 20) DESC';
+  // PG doesn't allow referencing SELECT aliases inside ORDER BY expressions
+  // Wrap with subquery to enable that
+  const orderBy = sortBy === 'voice'    ? 'voice_seconds DESC'
+    : sortBy === 'messages'             ? 'messages DESC'
+    : '(messages * 10 + voice_seconds + mentions * 20) DESC';
 
-  sql += `
-    GROUP BY d.user_id
+  params.push(limit);
+  sql = `SELECT * FROM (${sql}
+    GROUP BY d.user_id) sub
     ORDER BY ${orderBy}
-    LIMIT ${limit}`;
+    LIMIT $${params.length}`;
 
-  const [rows] = await pool.execute(sql, params);
+  const { rows } = await pool.query(sql, params);
   return rows;
 }
 
@@ -93,30 +95,30 @@ async function getTopMembers(guildId, days, limit = 10, roleMembers = null, sort
  * Stats ของ channel
  */
 async function getChannelStats(guildId, channelId, days, topN = 5) {
-  const [overview] = await pool.execute(
+  const { rows: overview } = await pool.query(
     `SELECT
        COUNT(DISTINCT user_id)         AS contributors,
        COALESCE(SUM(message_count), 0) AS total_msgs,
        COALESCE(SUM(voice_seconds), 0) AS total_voice,
        MAX(date)                       AS last_active
      FROM dc_activity_daily
-     WHERE guild_id = ? AND channel_id = ?
-       AND date >= DATE_SUB(CURDATE(), INTERVAL ? DAY)`,
+     WHERE guild_id = $1 AND channel_id = $2
+       AND date >= CURRENT_DATE - $3 * INTERVAL '1 day'`,
     [guildId, channelId, days]
   );
 
-  const [topUsers] = await pool.execute(
+  const { rows: topUsers } = await pool.query(
     `SELECT
        user_id,
        COALESCE(SUM(message_count), 0) AS messages,
        COALESCE(SUM(voice_seconds), 0) AS voice_seconds
      FROM dc_activity_daily
-     WHERE guild_id = ? AND channel_id = ?
-       AND date >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
+     WHERE guild_id = $1 AND channel_id = $2
+       AND date >= CURRENT_DATE - $3 * INTERVAL '1 day'
      GROUP BY user_id
      ORDER BY (SUM(message_count) * 10 + SUM(voice_seconds)) DESC
-     LIMIT ${topN}`,
-    [guildId, channelId, days]
+     LIMIT $4`,
+    [guildId, channelId, days, topN]
   );
 
   return { overview: overview[0], topUsers };
@@ -126,18 +128,18 @@ async function getChannelStats(guildId, channelId, days, topN = 5) {
  * Stats ของ user
  */
 async function getUserStats(guildId, userId, days, topN = 5) {
-  const [activity] = await pool.execute(
+  const { rows: activity } = await pool.query(
     `SELECT
        COALESCE(SUM(message_count), 0) AS messages,
        COALESCE(SUM(voice_seconds), 0) AS voice_seconds,
        MAX(date)                       AS last_active
      FROM dc_activity_daily
-     WHERE guild_id = ? AND user_id = ?
-       AND date >= DATE_SUB(CURDATE(), INTERVAL ? DAY)`,
+     WHERE guild_id = $1 AND user_id = $2
+       AND date >= CURRENT_DATE - $3 * INTERVAL '1 day'`,
     [guildId, userId, days]
   );
 
-  const [topChannels] = await pool.execute(
+  const { rows: topChannels } = await pool.query(
     `SELECT
        d.channel_id,
        COALESCE(c.channel_name, d.channel_id) AS channel_name,
@@ -146,19 +148,19 @@ async function getUserStats(guildId, userId, days, topN = 5) {
      FROM dc_activity_daily d
      LEFT JOIN dc_orgchart_config c
        ON d.channel_id = c.channel_id AND d.guild_id = c.guild_id
-     WHERE d.guild_id = ? AND d.user_id = ?
-       AND d.date >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
-     GROUP BY d.channel_id, channel_name
+     WHERE d.guild_id = $1 AND d.user_id = $2
+       AND d.date >= CURRENT_DATE - $3 * INTERVAL '1 day'
+     GROUP BY d.channel_id, c.channel_name
      ORDER BY (SUM(d.message_count) * 10 + SUM(d.voice_seconds)) DESC
-     LIMIT ${topN}`,
-    [guildId, userId, days]
+     LIMIT $4`,
+    [guildId, userId, days, topN]
   );
 
-  const [mentionRow] = await pool.execute(
+  const { rows: mentionRow } = await pool.query(
     `SELECT COUNT(*) AS total_mentions
      FROM dc_activity_mentions
-     WHERE guild_id = ? AND user_id = ?
-       AND timestamp >= DATE_SUB(NOW(), INTERVAL ? DAY)`,
+     WHERE guild_id = $1 AND user_id = $2
+       AND timestamp >= NOW() - $3 * INTERVAL '1 day'`,
     [guildId, userId, days]
   );
 
@@ -176,15 +178,14 @@ async function getUserStats(guildId, userId, days, topN = 5) {
 async function getInactiveMembers(guildId, memberIds, days) {
   if (!memberIds.length) return new Set();
 
-  const placeholders = memberIds.map(() => '?').join(',');
-  const [rows] = await pool.execute(
+  const { rows } = await pool.query(
     `SELECT DISTINCT user_id
      FROM dc_activity_daily
-     WHERE guild_id = ?
-       AND user_id IN (${placeholders})
-       AND date >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
+     WHERE guild_id = $1
+       AND user_id = ANY($2)
+       AND date >= CURRENT_DATE - $3 * INTERVAL '1 day'
        AND (message_count > 0 OR voice_seconds > 0)`,
-    [guildId, ...memberIds, days]
+    [guildId, memberIds, days]
   );
   return new Set(rows.map(r => r.user_id));
 }

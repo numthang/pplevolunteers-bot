@@ -13,8 +13,8 @@ const pool = require('../db/index');
 const REFRESH_THRESHOLD_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 async function getGuildMetaApp(guildId) {
-  const [rows] = await pool.execute(
-    "SELECT `key`, value FROM dc_guild_config WHERE guild_id = ? AND `key` IN ('meta_app_id', 'meta_app_secret')",
+  const { rows } = await pool.query(
+    `SELECT "key", value FROM dc_guild_config WHERE guild_id = $1 AND "key" IN ('meta_app_id', 'meta_app_secret')`,
     [guildId]
   );
   const m = Object.fromEntries(rows.map(r => [r.key, r.value]));
@@ -40,13 +40,13 @@ async function refreshUserToken(guildId, rowId, userDiscordId, currentUserToken)
   // ถ้ามี user_discord_id → update ทุก row ของ user คนนั้น (1 user_token ใช้กับหลาย platform)
   // ถ้าไม่มี (rows migrated เดิม) → update เฉพาะ row นั้น
   if (userDiscordId) {
-    await pool.execute(
-      `UPDATE dc_social_accounts SET user_token = ?, user_token_expires_at = ? WHERE user_discord_id = ? AND user_token IS NOT NULL`,
+    await pool.query(
+      `UPDATE dc_social_accounts SET user_token = $1, user_token_expires_at = $2 WHERE user_discord_id = $3 AND user_token IS NOT NULL`,
       [res.access_token, expiresAt, userDiscordId]
     );
   } else {
-    await pool.execute(
-      `UPDATE dc_social_accounts SET user_token = ?, user_token_expires_at = ? WHERE id = ?`,
+    await pool.query(
+      `UPDATE dc_social_accounts SET user_token = $1, user_token_expires_at = $2 WHERE id = $3`,
       [res.access_token, expiresAt, rowId]
     );
   }
@@ -57,15 +57,18 @@ async function refreshUserToken(guildId, rowId, userDiscordId, currentUserToken)
 // คืนค่า config ของ platform หนึ่งใน guild หนึ่ง
 // userId = Discord user id ของคนที่กำลังโพสต์ (เพื่อ filter private accounts)
 async function getConfig(guildId, platform, userId = null, groupName = null) {
-  const [rows] = await pool.execute(
+  const params = groupName ? [guildId, platform, userId, groupName, userId] : [guildId, platform, userId, userId];
+  const groupClause = groupName ? 'AND group_name = $4' : '';
+  const orderIdx = groupName ? '$5' : '$4';
+  const { rows } = await pool.query(
     `SELECT id, user_discord_id, social_id, access_token, user_token, user_token_expires_at, name, visibility
      FROM dc_social_accounts
-     WHERE guild_id = ? AND platform = ?
-       AND (visibility = 'public' OR (visibility = 'private' AND user_discord_id = ?))
-       ${groupName ? 'AND group_name = ?' : ''}
-     ORDER BY CASE WHEN user_discord_id = ? THEN 0 ELSE 1 END, id ASC
+     WHERE guild_id = $1 AND platform = $2
+       AND (visibility = 'public' OR (visibility = 'private' AND user_discord_id = $3))
+       ${groupClause}
+     ORDER BY CASE WHEN user_discord_id = ${orderIdx} THEN 0 ELSE 1 END, id ASC
      LIMIT 1`,
-    groupName ? [guildId, platform, userId, groupName, userId] : [guildId, platform, userId, userId]
+    params
   );
   if (!rows.length) return null;
   const r = rows[0];
@@ -96,22 +99,24 @@ async function getConfig(guildId, platform, userId = null, groupName = null) {
 
 // คืน array ของ platforms ที่ user คนนี้สามารถใช้ใน guild นี้
 async function getAvailablePlatforms(guildId, userId = null, groupName = null) {
-  const [rows] = await pool.execute(
+  const params = groupName ? [guildId, userId, groupName] : [guildId, userId];
+  const groupClause = groupName ? 'AND group_name = $3' : '';
+  const { rows } = await pool.query(
     `SELECT DISTINCT platform FROM dc_social_accounts
-     WHERE guild_id = ?
-       AND (visibility = 'public' OR (visibility = 'private' AND user_discord_id = ?))
-       ${groupName ? 'AND group_name = ?' : ''}`,
-    groupName ? [guildId, userId, groupName] : [guildId, userId]
+     WHERE guild_id = $1
+       AND (visibility = 'public' OR (visibility = 'private' AND user_discord_id = $2))
+       ${groupClause}`,
+    params
   );
   return rows.map(r => r.platform);
 }
 
 // คืน list ของ group_name (เฉพาะที่ user เห็น) สำหรับ guild นี้
 async function getAvailableGroups(guildId, userId = null) {
-  const [rows] = await pool.execute(
+  const { rows } = await pool.query(
     `SELECT DISTINCT group_name FROM dc_social_accounts
-     WHERE guild_id = ? AND group_name IS NOT NULL
-       AND (visibility = 'public' OR (visibility = 'private' AND user_discord_id = ?))
+     WHERE guild_id = $1 AND group_name IS NOT NULL
+       AND (visibility = 'public' OR (visibility = 'private' AND user_discord_id = $2))
      ORDER BY group_name`,
     [guildId, userId]
   );

@@ -13,8 +13,8 @@ const SCOPES      = [
 ].join(',')
 
 async function getGuildMetaApp(guildId) {
-  const [rows] = await pool.execute(
-    "SELECT `key`, value FROM dc_guild_config WHERE guild_id = ? AND `key` = 'meta_app_id'",
+  const { rows } = await pool.query(
+    `SELECT "key", value FROM dc_guild_config WHERE guild_id = $1 AND "key" = 'meta_app_id'`,
     [guildId]
   )
   return rows[0]?.value || null

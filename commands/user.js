@@ -170,21 +170,20 @@ module.exports = {
         return interaction.editReply({ content: `📭 ยังไม่มีสมาชิกใน **${roleName}** ที่มี rating ครับ` });
       }
 
-      const placeholders = memberIds.map(() => '?').join(',');
-      const [rows] = await pool.execute(
+      const { rows } = await pool.query(
         `SELECT
           m.discord_id,
           COALESCE(m.nickname, m.username) AS display_name,
-          ROUND(AVG(r.stars), 1) AS avg_stars,
+          ROUND(AVG(r.stars)::numeric, 1) AS avg_stars,
           COUNT(r.id)            AS total
         FROM dc_members m
         JOIN dc_user_ratings r ON r.guild_id = m.guild_id AND r.target_id = m.discord_id
-        WHERE m.guild_id = ? AND m.discord_id IN (${placeholders})
+        WHERE m.guild_id = $1 AND m.discord_id = ANY($2)
         GROUP BY m.discord_id, m.nickname, m.username
-        HAVING total >= 1
+        HAVING COUNT(r.id) >= 1
         ORDER BY avg_stars DESC, total DESC
-        LIMIT ${topN}`,
-        [interaction.guildId, ...memberIds]
+        LIMIT $3`,
+        [interaction.guildId, memberIds, topN]
       );
 
       if (!rows.length) {

@@ -5,21 +5,21 @@ async function upsertMember(guildId, data) {
   const sql = `
   INSERT INTO dc_members
     (guild_id, discord_id, username, display_name, nickname, firstname, lastname, member_id, specialty, amphoe, province, region, roles, interests, referred_by)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  ON DUPLICATE KEY UPDATE
-    username = VALUES(username),
-    display_name = VALUES(display_name),
-    nickname = VALUES(nickname),
-    firstname = VALUES(firstname),
-    lastname = VALUES(lastname),
-    member_id = VALUES(member_id),
-    specialty = VALUES(specialty),
-    amphoe = VALUES(amphoe),
-    province = VALUES(province),
-    region = VALUES(region),
-    roles = VALUES(roles),
-    interests = VALUES(interests),
-    referred_by = VALUES(referred_by),
+  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+  ON CONFLICT (guild_id, discord_id) DO UPDATE SET
+    username = EXCLUDED.username,
+    display_name = EXCLUDED.display_name,
+    nickname = EXCLUDED.nickname,
+    firstname = EXCLUDED.firstname,
+    lastname = EXCLUDED.lastname,
+    member_id = EXCLUDED.member_id,
+    specialty = EXCLUDED.specialty,
+    amphoe = EXCLUDED.amphoe,
+    province = EXCLUDED.province,
+    region = EXCLUDED.region,
+    roles = EXCLUDED.roles,
+    interests = EXCLUDED.interests,
+    referred_by = EXCLUDED.referred_by,
     updated_at = CURRENT_TIMESTAMP
   `;
   const values = [
@@ -39,7 +39,7 @@ async function upsertMember(guildId, data) {
     data.interests ?? null,
     data.referred_by ?? null,
   ];
-  await pool.execute(sql, values);
+  await pool.query(sql, values);
 }
 
 async function upsertMemberFromDiscord(member) {
@@ -69,16 +69,16 @@ async function upsertMemberFromDiscord(member) {
   const sql = `
   INSERT INTO dc_members
     (guild_id, discord_id, username, display_name, province, roles, interests)
-  VALUES (?, ?, ?, ?, ?, ?, ?)
-  ON DUPLICATE KEY UPDATE
-    username = VALUES(username),
-    display_name = VALUES(display_name),
-    province = VALUES(province),
-    roles = VALUES(roles),
-    interests = VALUES(interests),
+  VALUES ($1, $2, $3, $4, $5, $6, $7)
+  ON CONFLICT (guild_id, discord_id) DO UPDATE SET
+    username = EXCLUDED.username,
+    display_name = EXCLUDED.display_name,
+    province = EXCLUDED.province,
+    roles = EXCLUDED.roles,
+    interests = EXCLUDED.interests,
     updated_at = CURRENT_TIMESTAMP
   `;
-  await pool.execute(sql, [
+  await pool.query(sql, [
     member.guild.id,
     member.id,
     member.user.username,
@@ -90,26 +90,12 @@ async function upsertMemberFromDiscord(member) {
 }
 
 async function getMember(guildId, discord_id) {
-  const [rows] = await pool.execute(
-    'SELECT * FROM dc_members WHERE guild_id = ? AND discord_id = ?',
+  const { rows } = await pool.query(
+    'SELECT * FROM dc_members WHERE guild_id = $1 AND discord_id = $2',
     [guildId, discord_id]
   );
   return rows[0] ?? null;
 }
-
-/*async function updateProvince(discord_id, province) {
-  await pool.execute(
-    'UPDATE dc_members SET province = ?, updated_at = CURRENT_TIMESTAMP WHERE discord_id = ?',
-    [province, discord_id]
-  );
-}
-
-async function updateInterests(discord_id, interests) {
-  await pool.execute(
-    'UPDATE dc_members SET interests = ?, updated_at = CURRENT_TIMESTAMP WHERE discord_id = ?',
-    [interests, discord_id]
-  );
-}*/
 
 async function syncMemberRoles(member) {
   await member.fetch();
@@ -129,14 +115,14 @@ async function syncMemberRoles(member) {
     ...Object.values(SKILL_ROLES),
     ...Object.values(INTEREST_ROLES),
   ]);
-  
+
   const interestRoles = member.roles.cache
     .filter(r => interestIds.has(r.id))
     .map(r => r.name)
     .join(',');
 
-  await pool.execute(
-    'UPDATE dc_members SET province = ?, roles = ?, interests = ?, updated_at = CURRENT_TIMESTAMP WHERE guild_id = ? AND discord_id = ?',
+  await pool.query(
+    'UPDATE dc_members SET province = $1, roles = $2, interests = $3, updated_at = CURRENT_TIMESTAMP WHERE guild_id = $4 AND discord_id = $5',
     [allProvinces.join(',') || null, allRoles || null, interestRoles || null, guildId, member.id]
   );
 }

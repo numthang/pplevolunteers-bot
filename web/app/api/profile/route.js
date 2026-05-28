@@ -9,11 +9,11 @@ export async function GET() {
   const session = await getServerSession(authOptions)
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const [rows] = await pool.query(
+  const { rows } = await pool.query(
     `SELECT nickname, firstname, lastname, member_id, specialty, amphoe, province, region,
             phone, line_id, google_id, roles, interests, username, display_name, primary_province,
             bank_name, account_no, account_holder
-     FROM dc_members WHERE guild_id = ? AND discord_id = ?`,
+     FROM dc_members WHERE guild_id = $1 AND discord_id = $2`,
     [process.env.GUILD_ID, session.user.discordId]
   )
 
@@ -68,9 +68,14 @@ export async function PATCH(req) {
 
   updates.updated_at = new Date()
 
+  const keys = Object.keys(updates)
+  const values = Object.values(updates)
+  const setClause = keys.map((k, i) => `${k} = $${i + 1}`).join(', ')
+  values.push(process.env.GUILD_ID, session.user.discordId)
+
   await pool.query(
-    'UPDATE dc_members SET ? WHERE guild_id = ? AND discord_id = ?',
-    [updates, process.env.GUILD_ID, session.user.discordId]
+    `UPDATE dc_members SET ${setClause} WHERE guild_id = $${values.length - 1} AND discord_id = $${values.length}`,
+    values
   )
 
   return Response.json({ ok: true })

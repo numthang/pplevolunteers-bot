@@ -128,27 +128,27 @@ async function insertTransaction(txn, account, type, balanceAfter) {
   // dedup: expense อาจถูก insert จาก SMS แล้ว → UPDATE แทน INSERT
   if (type === 'expense' && balanceAfter != null) {
     const txnAt = txn.txn_at ? new Date(txn.txn_at) : new Date()
-    const [dup] = await pool.query(
+    const { rows: dup } = await pool.query(
       `SELECT id FROM finance_transactions
-       WHERE account_id = ? AND amount = ? AND balance_after = ? AND balance_after IS NOT NULL
-         AND txn_at BETWEEN DATE_SUB(?, INTERVAL 5 MINUTE) AND DATE_ADD(?, INTERVAL 5 MINUTE)
+       WHERE account_id = $1 AND amount = $2 AND balance_after = $3 AND balance_after IS NOT NULL
+         AND txn_at BETWEEN $4::timestamp - INTERVAL '5 minutes' AND $4::timestamp + INTERVAL '5 minutes'
        LIMIT 1`,
-      [account.id, txn.amount, balanceAfter, txnAt, txnAt]
+      [account.id, txn.amount, balanceAfter, txnAt]
     )
 
     if (dup[0]) {
       await pool.query(
         `UPDATE finance_transactions SET
-           ref_id              = ?,
-           counterpart_name    = COALESCE(counterpart_name, ?),
-           counterpart_account = COALESCE(counterpart_account, ?),
-           counterpart_bank    = COALESCE(counterpart_bank, ?),
-           fee                 = COALESCE(fee, ?),
-           description         = ?,
+           ref_id              = $1,
+           counterpart_name    = COALESCE(counterpart_name, $2),
+           counterpart_account = COALESCE(counterpart_account, $3),
+           counterpart_bank    = COALESCE(counterpart_bank, $4),
+           fee                 = COALESCE(fee, $5),
+           description         = $6,
            source              = 'email',
            updated_by          = 'system',
            updated_at          = NOW()
-         WHERE id = ?`,
+         WHERE id = $7`,
         [txn.ref_id, txn.counterpart_name, txn.counterpart_account,
          txn.counterpart_bank, txn.fee, description, dup[0].id]
       )
@@ -158,10 +158,12 @@ async function insertTransaction(txn, account, type, balanceAfter) {
     }
   }
 
-  const [result] = await pool.query(
-    `INSERT IGNORE INTO finance_transactions
+  const result = await pool.query(
+    `INSERT INTO finance_transactions
       (guild_id, account_id, type, amount, description, counterpart_name, counterpart_account, counterpart_bank, fee, balance_after, ref_id, source, txn_at, updated_by, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'email', ?, 'system', NOW())`,
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'email', $12, 'system', NOW())
+     ON CONFLICT DO NOTHING
+     RETURNING id`,
     [
       account.guild_id,
       account.id,
@@ -178,13 +180,13 @@ async function insertTransaction(txn, account, type, balanceAfter) {
     ]
   )
 
-  if (result.affectedRows === 0) {
+  if (result.rowCount === 0) {
     log.warn('[emailPoller] duplicate ref_id+account, skipping:', txn.ref_id, account.id)
     return
   }
 
   log.info(`[emailPoller] inserted txn ref_id=${txn.ref_id} type=${type} amount=${txn.amount} account=${account.id}`)
-  await logIncoming(txn.ref_id, result.insertId)
+  await logIncoming(txn.ref_id, result.rows[0].id)
 
   const shouldNotify = type === 'income' ? account.notify_income : account.notify_expense
   if (shouldNotify) await notifyDiscord(account, type, txn)
@@ -194,7 +196,7 @@ async function logIncoming(refId, transactionId) {
   try {
     await pool.query(
       `INSERT INTO finance_incoming_log (source, raw_text, parsed, transaction_id)
-       VALUES ('email', ?, 1, ?)`,
+       VALUES ('email', $1, 1, $2)`,
       [refId || '', transactionId]
     )
   } catch (err) {
@@ -203,7 +205,7 @@ async function logIncoming(refId, transactionId) {
 }
 
 async function matchAccount(txn) {
-  const [accounts] = await pool.query(
+  const { rows: accounts } = await pool.query(
     `SELECT * FROM finance_accounts WHERE archived = 0`
   )
 
@@ -245,8 +247,8 @@ async function notifyDiscord(account, type, txn) {
   if (!discordClient) return
 
   try {
-    const [cfg] = await pool.query(
-      `SELECT thread_id, account_ids FROM finance_config WHERE guild_id = ?`,
+    const { rows: cfg } = await pool.query(
+      `SELECT thread_id, account_ids FROM finance_config WHERE guild_id = $1`,
       [account.guild_id]
     )
     const threadId  = cfg[0]?.thread_id

@@ -7,21 +7,9 @@ TODO
 
 พวก gogopanel มีปัญหาไหมเนี่ย ช่วยทำ prompt อธิบายบันทึกไว้หน่อย จะเอาไปหาทางแก้ bug session หน้า
 
-ผมยกเลิก LINE
-Subcription หมดเลย
-หันมาใช้ Discord ทั้งหมด
-
-ตั้งแต่ได้รู้จัก Discord ผมแทบไม่ได้กลับ
-ไปใช้ Line อีกเลย ตอนนี้ ถึงขั้นเปลี่ยนระบบ
-การสื่อสารภายในองค์กรทุกสาขามาใช้ Discord
-
-ตั้งแต่ได้รู้จัก Discord ผมแทบไม่ได้
-กลับไปใช้ Line อีกเลย ตอนนี้ ถึงขั้น
-เปลี่ยนระบบ การสื่อสารภายในองค์กร
-ทุกสาขามาใช้ Discord ทั้งหมดแล้ว
-
-นรพนธ์ คณะทำงานพรรคประชาชนราชบุรี
-
+sudo -u postgres psql -c "CREATE USER pple_dcbot WITH PASSWORD '<DB_PASS from .env>';"
+sudo -u postgres psql -c "CREATE DATABASE pple_volunteers OWNER pple_dcbot;"
+sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE pple_volunteers TO pple_dcbot;"
 
 ==
 แนะนำแบ่งเป็น 2 session:

@@ -5,14 +5,14 @@ const pool = require('./index');
  * Upsert channel mapping ของ role
  */
 async function upsertChannel({ guildId, roleId, roleName, roleColor, channelId, channelName, channelType }) {
-  await pool.execute(
+  await pool.query(
     `INSERT INTO dc_orgchart_config
        (guild_id, role_id, role_name, role_color, channel_id, channel_name, channel_type)
-     VALUES (?, ?, ?, ?, ?, ?, ?)
-     ON DUPLICATE KEY UPDATE
-       role_name    = VALUES(role_name),
-       role_color   = VALUES(role_color),
-       channel_name = VALUES(channel_name)`,
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
+     ON CONFLICT (guild_id, role_id, channel_id) DO UPDATE SET
+       role_name    = EXCLUDED.role_name,
+       role_color   = EXCLUDED.role_color,
+       channel_name = EXCLUDED.channel_name`,
     [guildId, roleId, roleName, roleColor ?? null, channelId, channelName, channelType]
   );
 }
@@ -22,10 +22,10 @@ async function upsertChannel({ guildId, roleId, roleName, roleColor, channelId, 
  * คืนเป็น Map: roleId → { roleName, roleColor, textChannels, voiceChannels }
  */
 async function getConfig(guildId) {
-  const [rows] = await pool.execute(
+  const { rows } = await pool.query(
     `SELECT role_id, role_name, role_color, channel_id, channel_name, channel_type
      FROM dc_orgchart_config
-     WHERE guild_id = ? AND excluded = 0
+     WHERE guild_id = $1 AND excluded = FALSE
      ORDER BY role_name, channel_type, channel_name`,
     [guildId]
   );
@@ -55,13 +55,12 @@ async function getConfig(guildId) {
  */
 async function getConfigByRoleIds(guildId, roleIds) {
   if (!roleIds.length) return new Map();
-  const placeholders = roleIds.map(() => '?').join(',');
-  const [rows] = await pool.execute(
+  const { rows } = await pool.query(
     `SELECT role_id, role_name, role_color, channel_id, channel_name, channel_type
      FROM dc_orgchart_config
-     WHERE guild_id = ? AND excluded = 0 AND role_id IN (${placeholders})
+     WHERE guild_id = $1 AND excluded = FALSE AND role_id = ANY($2)
      ORDER BY role_name, channel_type, channel_name`,
-    [guildId, ...roleIds]
+    [guildId, roleIds]
   );
 
   const config = new Map();
@@ -89,10 +88,10 @@ async function getConfigByRoleIds(guildId, roleIds) {
  * คืนเป็น [{ roleId, roleName, roleColor }] เรียงตาม roleName
  */
 async function getRolesByGroup(guildId, groupName) {
-  const [rows] = await pool.execute(
+  const { rows } = await pool.query(
     `SELECT role_id, role_name, role_color
      FROM dc_orgchart_config
-     WHERE guild_id = ? AND excluded = 0 AND group_name = ?
+     WHERE guild_id = $1 AND excluded = FALSE AND group_name = $2
      GROUP BY role_id, role_name, role_color
      ORDER BY role_name`,
     [guildId, groupName]
@@ -106,27 +105,27 @@ async function getRolesByGroup(guildId, groupName) {
 }
 
 async function saveSnapshot(guildId, roleId, days, topMembers) {
-  await pool.execute(
+  await pool.query(
     `INSERT INTO dc_orgchart_snapshot (guild_id, role_id, days, top_members, computed_at)
-     VALUES (?, ?, ?, ?, NOW())
-     ON DUPLICATE KEY UPDATE
-       days        = VALUES(days),
-       top_members = VALUES(top_members),
+     VALUES ($1, $2, $3, $4, NOW())
+     ON CONFLICT (guild_id, role_id) DO UPDATE SET
+       days        = EXCLUDED.days,
+       top_members = EXCLUDED.top_members,
        computed_at = NOW()`,
     [guildId, roleId, days, JSON.stringify(topMembers)]
   );
 }
 
 async function getSnapshotByGroup(guildId, groupName) {
-  const [rows] = await pool.execute(
+  const { rows } = await pool.query(
     `SELECT s.role_id, s.days, s.top_members, s.computed_at, c.role_name, c.role_color
      FROM dc_orgchart_snapshot s
      JOIN (
        SELECT DISTINCT guild_id, role_id, role_name, role_color
        FROM dc_orgchart_config
-       WHERE guild_id = ? AND group_name = ? AND excluded = 0
-     ) c ON s.guild_id = c.guild_id COLLATE utf8mb4_unicode_ci
-          AND s.role_id = c.role_id COLLATE utf8mb4_unicode_ci
+       WHERE guild_id = $1 AND group_name = $2 AND excluded = FALSE
+     ) c ON s.guild_id = c.guild_id
+          AND s.role_id = c.role_id
      ORDER BY c.role_name`,
     [guildId, groupName]
   );
@@ -141,47 +140,47 @@ async function getSnapshotByGroup(guildId, groupName) {
 }
 
 async function setRoleGroup(guildId, roleId, groupName) {
-  await pool.execute(
-    `UPDATE dc_orgchart_config SET group_name = ?
-     WHERE guild_id = ? AND role_id = ?`,
+  await pool.query(
+    `UPDATE dc_orgchart_config SET group_name = $1
+     WHERE guild_id = $2 AND role_id = $3`,
     [groupName, guildId, roleId]
   );
 }
 
 async function deleteRole(guildId, roleId) {
-  await pool.execute(
-    `DELETE FROM dc_orgchart_config WHERE guild_id = ? AND role_id = ?`,
+  await pool.query(
+    `DELETE FROM dc_orgchart_config WHERE guild_id = $1 AND role_id = $2`,
     [guildId, roleId]
   );
 }
 
 async function deleteChannel(guildId, roleId, channelId) {
-  await pool.execute(
-    `DELETE FROM dc_orgchart_config WHERE guild_id = ? AND role_id = ? AND channel_id = ?`,
+  await pool.query(
+    `DELETE FROM dc_orgchart_config WHERE guild_id = $1 AND role_id = $2 AND channel_id = $3`,
     [guildId, roleId, channelId]
   );
 }
 
 async function roleExists(guildId, roleId) {
-  const [rows] = await pool.execute(
-    `SELECT 1 FROM dc_orgchart_config WHERE guild_id = ? AND role_id = ? LIMIT 1`,
+  const { rows } = await pool.query(
+    `SELECT 1 FROM dc_orgchart_config WHERE guild_id = $1 AND role_id = $2 LIMIT 1`,
     [guildId, roleId]
   );
   return rows.length > 0;
 }
 
 async function excludeChannel(guildId, roleId, channelId) {
-  await pool.execute(
-    `UPDATE dc_orgchart_config SET excluded = 1
-     WHERE guild_id = ? AND role_id = ? AND channel_id = ?`,
+  await pool.query(
+    `UPDATE dc_orgchart_config SET excluded = TRUE
+     WHERE guild_id = $1 AND role_id = $2 AND channel_id = $3`,
     [guildId, roleId, channelId]
   );
 }
 
 async function unexcludeChannel(guildId, roleId, channelId) {
-  await pool.execute(
-    `UPDATE dc_orgchart_config SET excluded = 0
-     WHERE guild_id = ? AND role_id = ? AND channel_id = ?`,
+  await pool.query(
+    `UPDATE dc_orgchart_config SET excluded = FALSE
+     WHERE guild_id = $1 AND role_id = $2 AND channel_id = $3`,
     [guildId, roleId, channelId]
   );
 }

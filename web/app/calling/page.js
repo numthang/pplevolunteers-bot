@@ -10,36 +10,37 @@ import { getContactPendingCount } from '@/db/calling/contacts.js'
 import { getCampaigns } from '@/db/calling/campaigns.js'
 
 async function getTodayCallCount() {
-  const [rows] = await pool.query(
-    `SELECT COUNT(*) AS count FROM calling_logs WHERE DATE(called_at + INTERVAL 7 HOUR) = DATE(NOW() + INTERVAL 7 HOUR)`
+  // Session timezone is 'Asia/Bangkok' (set in pool config), so timestamps render as Bangkok local
+  const { rows } = await pool.query(
+    `SELECT COUNT(*) AS count FROM calling_logs WHERE called_at::date = CURRENT_DATE`
   )
   return Number(rows[0]?.count) || 0
 }
 
 async function getWeekCallCount() {
-  const [rows] = await pool.query(
-    `SELECT COUNT(*) AS count FROM calling_logs WHERE called_at >= DATE_SUB(DATE(NOW() + INTERVAL 7 HOUR), INTERVAL 7 DAY)`
+  const { rows } = await pool.query(
+    `SELECT COUNT(*) AS count FROM calling_logs WHERE called_at >= CURRENT_DATE - INTERVAL '7 days'`
   )
   return Number(rows[0]?.count) || 0
 }
 
 async function getMyTodayCallCount(discordId) {
   if (!discordId) return 0
-  const [rows] = await pool.query(
+  const { rows } = await pool.query(
     `SELECT COUNT(*) AS count FROM calling_logs
-     WHERE called_by = ? AND DATE(called_at + INTERVAL 7 HOUR) = DATE(NOW() + INTERVAL 7 HOUR)`,
+     WHERE called_by = $1 AND called_at::date = CURRENT_DATE`,
     [discordId]
   )
   return Number(rows[0]?.count) || 0
 }
 
 async function getAnswerRateThisWeek() {
-  const [rows] = await pool.query(
+  const { rows } = await pool.query(
     `SELECT
        SUM(CASE WHEN status = 'answered' THEN 1 ELSE 0 END) AS answered,
        COUNT(*) AS total
      FROM calling_logs
-     WHERE called_at >= DATE_SUB(DATE(NOW() + INTERVAL 7 HOUR), INTERVAL 7 DAY)`
+     WHERE called_at >= CURRENT_DATE - INTERVAL '7 days'`
   )
   const answered = Number(rows[0]?.answered) || 0
   const total = Number(rows[0]?.total) || 0

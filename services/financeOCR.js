@@ -54,8 +54,8 @@ async function handleSlipMessage(message) {
   if (!message.guild || message.author.bot) return
 
   // เช็คว่าอยู่ใน finance thread
-  const [cfgRows] = await pool.query(
-    `SELECT thread_id FROM finance_config WHERE guild_id = ?`, [GUILD_ID]
+  const { rows: cfgRows } = await pool.query(
+    `SELECT thread_id FROM finance_config WHERE guild_id = $1`, [GUILD_ID]
   )
   const threadId = cfgRows[0]?.thread_id
   if (!threadId || message.channel.id !== threadId) return
@@ -143,24 +143,23 @@ async function processSlipImage(imageUrl, message) {
 
     for (const account of accounts) {
       // 1) หาด้วย ref_id ก่อน
-      let [existing] = await pool.query(
-        `SELECT id, description FROM finance_transactions WHERE ref_id = ? AND account_id = ? AND guild_id = ?`,
+      let existing = (await pool.query(
+        `SELECT id, description FROM finance_transactions WHERE ref_id = $1 AND account_id = $2 AND guild_id = $3`,
         [slip.ref_id, account.id, GUILD_ID]
-      )
+      )).rows
 
-      // 2) fallback: หาด้วย amount + txn_at ±5 นาที (สำหรับ statement rows ที่มี ref_id=NULL)
-      // ใช้ local time เพราะ statement เก็บ Bangkok time ไม่ใช่ UTC
+      // 2) fallback: หาด้วย amount + txn_at ±5 นาที
       if (!existing.length && slip.txn_at && slip.amount) {
         const d = new Date(slip.txn_at)
         const pad = n => String(n).padStart(2, '0')
         const txnAtStr = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:00`
-        ;[existing] = await pool.query(
+        existing = (await pool.query(
           `SELECT id, description FROM finance_transactions
-           WHERE account_id = ? AND guild_id = ? AND amount = ?
-             AND ABS(TIMESTAMPDIFF(MINUTE, txn_at, ?)) <= 5
+           WHERE account_id = $1 AND guild_id = $2 AND amount = $3
+             AND ABS(EXTRACT(EPOCH FROM (txn_at - $4::timestamp)) / 60) <= 5
              AND ref_id IS NULL`,
           [account.id, GUILD_ID, slip.amount, txnAtStr]
-        )
+        )).rows
         if (existing.length) log.info(`[financeOCR] matched statement row id=${existing[0].id} by amount+txn_at`)
       }
 
@@ -171,11 +170,11 @@ async function processSlipImage(imageUrl, message) {
           : slip.memo || txn.description
         await pool.query(
           `UPDATE finance_transactions
-           SET ref_id = ?, evidence_url = ?,
-               description = ?,
-               counterpart_name = COALESCE(counterpart_name, ?),
-               discord_msg_id = ?, updated_by = ?, updated_at = NOW()
-           WHERE id = ?`,
+           SET ref_id = $1, evidence_url = $2,
+               description = $3,
+               counterpart_name = COALESCE(counterpart_name, $4),
+               discord_msg_id = $5, updated_by = $6, updated_at = NOW()
+           WHERE id = $7`,
           [slip.ref_id, evidenceUrl,
            newDesc,
            slip.counterpart_name || null,
@@ -192,17 +191,18 @@ async function processSlipImage(imageUrl, message) {
           ? new Date(slip.txn_at).toISOString().slice(0, 19).replace('T', ' ')
           : new Date().toISOString().slice(0, 19).replace('T', ' ')
 
-        const [result] = await pool.query(
+        const { rows } = await pool.query(
           `INSERT INTO finance_transactions
             (guild_id, account_id, type, amount, description, counterpart_name, counterpart_bank,
              ref_id, evidence_url, discord_msg_id, txn_at, updated_by, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW())
+           RETURNING id`,
           [GUILD_ID, account.id, type, slip.amount, description,
            slip.counterpart_name || null, slip.bank || null,
            slip.ref_id, evidenceUrl, message.id, txnAtStr, message.author.id]
         )
-        log.info(`[financeOCR] inserted txn id=${result.insertId} ref_id=${slip.ref_id} type=${type}`)
-        resultLines.push(buildReply('✅ บันทึกรายการใหม่', account, slip, result.insertId, false))
+        log.info(`[financeOCR] inserted txn id=${rows[0].id} ref_id=${slip.ref_id} type=${type}`)
+        resultLines.push(buildReply('✅ บันทึกรายการใหม่', account, slip, rows[0].id, false))
       }
     }
 
@@ -257,8 +257,8 @@ async function enrichSlipFromOCR(imageUrl, qrData) {
 }
 
 async function matchAccount(slip) {
-  const [accounts] = await pool.query(
-    `SELECT * FROM finance_accounts WHERE guild_id = ?`, [GUILD_ID]
+  const { rows: accounts } = await pool.query(
+    `SELECT * FROM finance_accounts WHERE guild_id = $1`, [GUILD_ID]
   )
 
   const matches = []

@@ -17,8 +17,8 @@ export async function getEffectiveIdentity(session) {
   let realRoles = session?.user?.roles || []
   if (realDiscordId) {
     try {
-      const [rows] = await pool.query(
-        'SELECT roles FROM dc_members WHERE guild_id = ? AND discord_id = ?',
+      const { rows } = await pool.query(
+        'SELECT roles FROM dc_members WHERE guild_id = $1 AND discord_id = $2',
         [process.env.GUILD_ID, realDiscordId]
       )
       if (rows[0]?.roles) {
@@ -35,8 +35,8 @@ export async function getEffectiveIdentity(session) {
   const debugDiscordId = cookieStore.get('debug_discord_id')?.value
   if (debugDiscordId) {
     try {
-      const [rows] = await pool.query(
-        'SELECT roles FROM dc_members WHERE guild_id = ? AND discord_id = ?',
+      const { rows } = await pool.query(
+        'SELECT roles FROM dc_members WHERE guild_id = $1 AND discord_id = $2',
         [process.env.GUILD_ID, debugDiscordId]
       )
       const roles = rows[0]?.roles ? rows[0].roles.split(',').map(r => r.trim()).filter(Boolean) : []

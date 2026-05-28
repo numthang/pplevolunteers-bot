@@ -19,17 +19,23 @@ export async function GET(req) {
 
   let rows
   if (admin) {
-    const [r] = await pool.execute(
-      `${SELECT} ${guildId ? 'WHERE guild_id = ?' : 'ORDER BY guild_id, platform, id'}`,
-      guildId ? [guildId] : []
-    )
-    rows = r
+    if (guildId) {
+      const r = await pool.query(`${SELECT} WHERE guild_id = $1`, [guildId])
+      rows = r.rows
+    } else {
+      const r = await pool.query(`${SELECT} ORDER BY guild_id, platform, id`)
+      rows = r.rows
+    }
   } else {
-    const [r] = await pool.execute(
-      `${SELECT} WHERE user_discord_id = ? ${guildId ? 'AND guild_id = ?' : ''} ORDER BY platform, id`,
-      guildId ? [session.user.discordId, guildId] : [session.user.discordId]
-    )
-    rows = r
+    if (guildId) {
+      const r = await pool.query(`${SELECT} WHERE user_discord_id = $1 AND guild_id = $2 ORDER BY platform, id`,
+        [session.user.discordId, guildId])
+      rows = r.rows
+    } else {
+      const r = await pool.query(`${SELECT} WHERE user_discord_id = $1 ORDER BY platform, id`,
+        [session.user.discordId])
+      rows = r.rows
+    }
   }
 
   return Response.json(rows)
@@ -48,11 +54,12 @@ export async function POST(req) {
     return Response.json({ error: 'guild_id, platform, social_id required' }, { status: 400 })
   }
 
-  await pool.execute(
+  await pool.query(
     `INSERT INTO dc_social_accounts (user_discord_id, guild_id, name, platform, social_id, access_token, user_token, visibility)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-     ON DUPLICATE KEY UPDATE name = VALUES(name), access_token = VALUES(access_token),
-       user_token = VALUES(user_token), visibility = VALUES(visibility)`,
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+     ON CONFLICT (user_key, guild_id, platform, social_id) DO UPDATE SET
+       name = EXCLUDED.name, access_token = EXCLUDED.access_token,
+       user_token = EXCLUDED.user_token, visibility = EXCLUDED.visibility`,
     [session.user.discordId, guild_id, name || platform, platform, social_id, access_token || null, user_token || null, visibility]
   )
 

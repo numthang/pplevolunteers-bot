@@ -11,7 +11,8 @@ export async function DELETE(req, { params }) {
   const session = await getServerSession(authOptions)
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const [[fund]] = await pool.query(`SELECT account_id FROM finance_funds WHERE id = ?`, [id])
+  const { rows: fundRows } = await pool.query(`SELECT account_id FROM finance_funds WHERE id = $1`, [id])
+  const fund = fundRows[0]
   if (!fund) return Response.json({ error: 'Not found' }, { status: 404 })
 
   const { roles, discordId } = await getEffectiveIdentity(session)

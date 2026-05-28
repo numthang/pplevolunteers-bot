@@ -22,7 +22,7 @@ export const authOptions = {
           : null
         if (avatarUrl) {
           pool.query(
-            'UPDATE dc_members SET avatar = ? WHERE guild_id = ? AND discord_id = ?',
+            'UPDATE dc_members SET avatar = $1 WHERE guild_id = $2 AND discord_id = $3',
             [avatarUrl, process.env.GUILD_ID, profile.id]
           ).catch(() => {})
         }
@@ -30,8 +30,8 @@ export const authOptions = {
       if (account && profile || trigger === 'update') {
         const id = token.discordId
         try {
-          const [rows] = await pool.query(
-            'SELECT nickname, roles, primary_province FROM dc_members WHERE guild_id = ? AND discord_id = ?',
+          const { rows } = await pool.query(
+            'SELECT nickname, roles, primary_province FROM dc_members WHERE guild_id = $1 AND discord_id = $2',
             [process.env.GUILD_ID, id]
           )
           if (rows[0]) {

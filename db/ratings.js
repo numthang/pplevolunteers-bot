@@ -8,17 +8,17 @@ async function addRating({ guildId, targetId, targetName, raterId, raterName, st
   if (targetId === raterId) return { success: false, error: 'self' };
 
   // เช็ค daily limit ใน app layer
-  const [existing] = await pool.execute(
+  const { rows: existing } = await pool.query(
     `SELECT id FROM dc_user_ratings
-     WHERE guild_id = ? AND rater_id = ? AND target_id = ? AND DATE(created_at) = CURDATE()
+     WHERE guild_id = $1 AND rater_id = $2 AND target_id = $3 AND created_at::date = CURRENT_DATE
      LIMIT 1`,
     [guildId, raterId, targetId]
   );
   if (existing.length > 0) return { success: false, error: 'daily_limit' };
 
-  await pool.execute(
+  await pool.query(
     `INSERT INTO dc_user_ratings (guild_id, target_id, target_name, rater_id, rater_name, stars, comment)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
     [guildId, targetId, targetName, raterId, raterName, stars, comment || null]
   );
   return { success: true };
@@ -28,17 +28,17 @@ async function addRating({ guildId, targetId, targetName, raterId, raterName, st
  * Summary: avg, count, การกระจายดาว
  */
 async function getRatingSummary(guildId, targetId) {
-  const [rows] = await pool.execute(
+  const { rows } = await pool.query(
     `SELECT
-       COUNT(*)             AS total,
-       ROUND(AVG(stars), 1) AS avg_stars,
-       SUM(stars = 5)       AS s5,
-       SUM(stars = 4)       AS s4,
-       SUM(stars = 3)       AS s3,
-       SUM(stars = 2)       AS s2,
-       SUM(stars = 1)       AS s1
+       COUNT(*)                                            AS total,
+       ROUND(AVG(stars)::numeric, 1)                       AS avg_stars,
+       SUM(CASE WHEN stars = 5 THEN 1 ELSE 0 END)          AS s5,
+       SUM(CASE WHEN stars = 4 THEN 1 ELSE 0 END)          AS s4,
+       SUM(CASE WHEN stars = 3 THEN 1 ELSE 0 END)          AS s3,
+       SUM(CASE WHEN stars = 2 THEN 1 ELSE 0 END)          AS s2,
+       SUM(CASE WHEN stars = 1 THEN 1 ELSE 0 END)          AS s1
      FROM dc_user_ratings
-     WHERE guild_id = ? AND target_id = ?`,
+     WHERE guild_id = $1 AND target_id = $2`,
     [guildId, targetId]
   );
   return rows[0];
@@ -49,7 +49,7 @@ async function getRatingSummary(guildId, targetId) {
  */
 async function getRatingList(guildId, targetId, page = 1, perPage = 5) {
   const offset = (page - 1) * perPage;
-  const [rows] = await pool.execute(
+  const { rows } = await pool.query(
     `SELECT
        r.rater_id,
        COALESCE(m.nickname, m.username, r.rater_name) AS rater_name,
@@ -58,10 +58,10 @@ async function getRatingList(guildId, targetId, page = 1, perPage = 5) {
        r.created_at
      FROM dc_user_ratings r
      LEFT JOIN dc_members m ON m.guild_id = r.guild_id AND m.discord_id = r.rater_id
-     WHERE r.guild_id = ? AND r.target_id = ?
+     WHERE r.guild_id = $1 AND r.target_id = $2
      ORDER BY r.created_at DESC
-     LIMIT ${perPage} OFFSET ${offset}`,
-    [guildId, targetId]
+     LIMIT $3 OFFSET $4`,
+    [guildId, targetId, perPage, offset]
   );
   return rows;
 }
@@ -70,11 +70,11 @@ async function getRatingList(guildId, targetId, page = 1, perPage = 5) {
  * จำนวน rating ทั้งหมดของ target (ใช้คำนวณ totalPages)
  */
 async function getRatingCount(guildId, targetId) {
-  const [rows] = await pool.execute(
-    `SELECT COUNT(*) AS cnt FROM dc_user_ratings WHERE guild_id = ? AND target_id = ?`,
+  const { rows } = await pool.query(
+    `SELECT COUNT(*) AS cnt FROM dc_user_ratings WHERE guild_id = $1 AND target_id = $2`,
     [guildId, targetId]
   );
-  return rows[0].cnt;
+  return Number(rows[0].cnt);
 }
 
 module.exports = { addRating, getRatingSummary, getRatingList, getRatingCount };

@@ -3,8 +3,8 @@ const crypto = require('crypto');
 const pool   = require('../db/index');
 
 async function getGuildXApp(guildId) {
-  const [rows] = await pool.execute(
-    "SELECT `key`, value FROM dc_guild_config WHERE guild_id = ? AND `key` IN ('x_consumer_key', 'x_consumer_secret')",
+  const { rows } = await pool.query(
+    `SELECT "key", value FROM dc_guild_config WHERE guild_id = $1 AND "key" IN ('x_consumer_key', 'x_consumer_secret')`,
     [guildId]
   );
   const m = Object.fromEntries(rows.map(r => [r.key, r.value]));
@@ -16,14 +16,18 @@ async function getXConfig(guildId, userId = null, groupName = null) {
   const app = await getGuildXApp(guildId);
   if (!app) return null;
 
-  const [rows] = await pool.execute(
+  const params = groupName ? [guildId, userId, groupName, userId] : [guildId, userId, userId];
+  const groupClause = groupName ? 'AND group_name = $3' : '';
+  const orderUserIdx = groupName ? '$4' : '$3';
+
+  const { rows } = await pool.query(
     `SELECT social_id, access_token FROM dc_social_accounts
-     WHERE guild_id = ? AND platform = 'x'
-       AND (visibility = 'public' OR (visibility = 'private' AND user_discord_id = ?))
-       ${groupName ? 'AND group_name = ?' : ''}
-     ORDER BY CASE WHEN user_discord_id = ? THEN 0 ELSE 1 END, id ASC
+     WHERE guild_id = $1 AND platform = 'x'
+       AND (visibility = 'public' OR (visibility = 'private' AND user_discord_id = $2))
+       ${groupClause}
+     ORDER BY CASE WHEN user_discord_id = ${orderUserIdx} THEN 0 ELSE 1 END, id ASC
      LIMIT 1`,
-    groupName ? [guildId, userId, groupName, userId] : [guildId, userId, userId]
+    params
   );
   if (!rows.length) return null;
   let creds;

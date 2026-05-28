@@ -46,21 +46,20 @@ export async function POST(req) {
     }
 
     // Fetch phones for all member_ids
-    const placeholders = member_ids.map(() => '?').join(',')
     let phoneMap = {}
 
     if (contact_type === 'contact') {
-      const [rows] = await pool.query(
-        `SELECT id, phone FROM calling_contacts WHERE id IN (${placeholders})`,
-        member_ids
+      const { rows } = await pool.query(
+        `SELECT id, phone FROM calling_contacts WHERE id = ANY($1)`,
+        [member_ids.map(Number)]
       )
       for (const r of rows) {
         if (r.phone) phoneMap[r.id] = r.phone
       }
     } else {
-      const [rows] = await pool.query(
-        `SELECT source_id, mobile_number FROM ngs_member_cache WHERE source_id IN (${placeholders})`,
-        member_ids
+      const { rows } = await pool.query(
+        `SELECT source_id, mobile_number FROM ngs_member_cache WHERE source_id = ANY($1)`,
+        [member_ids]
       )
       for (const r of rows) {
         if (r.mobile_number) phoneMap[r.source_id] = r.mobile_number
