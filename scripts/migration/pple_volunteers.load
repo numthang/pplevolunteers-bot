@@ -40,6 +40,7 @@ CAST
 
      column finance_transactions.txn_at to "timestamp",
 
+     type int       to integer  drop typemod,
      type tinyint   to smallint drop typemod,
      type smallint  to smallint drop typemod,
      type mediumint to integer  drop typemod,
