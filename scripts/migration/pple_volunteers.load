@@ -1,0 +1,110 @@
+#!/bin/bash
+# Migration: MySQL → PostgreSQL
+# Usage: ./scripts/migration/pple_volunteers.load <mysql_pass> <pg_pass> [host]
+#
+# ตัวอย่าง:
+#   ./scripts/migration/pple_volunteers.load secretMysql secretPG
+#   ./scripts/migration/pple_volunteers.load secretMysql "" 127.0.0.1
+#
+# หลังรันเสร็จ sequences จะถูก fix ให้อัตโนมัติ
+
+set -e
+
+MYSQL_PASS="${1:?Usage: $0 <mysql_pass> <pg_pass> [host]}"
+PG_PASS="${2}"
+DB_HOST="${3:-127.0.0.1}"
+DIR="$(cd "$(dirname "$0")" && pwd)"
+TMP=$(mktemp /tmp/pple_load_XXXXXX.load)
+trap "rm -f $TMP" EXIT
+
+cat > "$TMP" << EOF
+LOAD DATABASE
+     FROM      mysql://pple_dcbot:${MYSQL_PASS}@${DB_HOST}/pple_volunteers
+     INTO      postgresql://pple_dcbot:${PG_PASS}@${DB_HOST}/pple_volunteers
+
+WITH include drop, create tables, create indexes, reset sequences,
+     workers = 4, concurrency = 1,
+     multiple readers per thread, rows per range = 50000
+
+SET PostgreSQL PARAMETERS
+     maintenance_work_mem to '128MB',
+     work_mem to '12MB'
+
+CAST
+     type datetime to timestamptz
+          drop default drop not null
+          using zero-dates-to-null,
+     type date to date
+          drop default drop not null
+          using zero-dates-to-null,
+
+     column finance_transactions.txn_at to "timestamp",
+
+     type tinyint   to smallint drop typemod,
+     type smallint  to smallint drop typemod,
+     type mediumint to integer  drop typemod,
+     type bigint    to bigint   drop typemod,
+     column dc_orgchart_config.excluded  to boolean using non-zero-to-boolean,
+     column dc_user_reports.is_anonymous to boolean using non-zero-to-boolean
+
+BEFORE LOAD DO
+     \$\$ SET client_encoding TO 'UTF8'; \$\$;
+EOF
+
+echo "→ Cleaning up existing tables..."
+PGPASSWORD="$PG_PASS" psql -h "$DB_HOST" -U pple_dcbot -d pple_volunteers << 'SQL'
+DO $$
+DECLARE r record;
+BEGIN
+  FOR r IN (SELECT typname FROM pg_type t JOIN pg_namespace n ON t.typnamespace = n.oid WHERE n.nspname = 'public' AND t.typtype = 'e')
+  LOOP EXECUTE format('DROP TYPE IF EXISTS public.%I CASCADE', r.typname); END LOOP;
+  FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public')
+  LOOP EXECUTE format('DROP TABLE IF EXISTS public.%I CASCADE', r.tablename); END LOOP;
+  FOR r IN (SELECT sequencename FROM pg_sequences WHERE schemaname = 'public')
+  LOOP EXECUTE format('DROP SEQUENCE IF EXISTS public.%I CASCADE', r.sequencename); END LOOP;
+  FOR r IN (SELECT p.proname, pg_get_function_identity_arguments(p.oid) AS args FROM pg_proc p JOIN pg_namespace n ON p.pronamespace = n.oid WHERE n.nspname = 'public')
+  LOOP EXECUTE format('DROP FUNCTION IF EXISTS public.%I(%s) CASCADE', r.proname, r.args); END LOOP;
+  DROP SCHEMA IF EXISTS pple_volunteers CASCADE;
+END $$;
+SQL
+
+echo "→ Running pgloader..."
+if ! pgloader "$TMP"; then
+  echo "✗ pgloader failed — aborting"
+  exit 1
+fi
+
+echo "→ Moving tables to public schema..."
+PGPASSWORD="$PG_PASS" psql -h "$DB_HOST" -U pple_dcbot -d pple_volunteers << 'SQL'
+DO $$
+DECLARE r record;
+BEGIN
+  FOR r IN (SELECT typname FROM pg_type t JOIN pg_namespace n ON t.typnamespace = n.oid WHERE n.nspname = 'pple_volunteers' AND t.typtype = 'e')
+  LOOP
+    EXECUTE format('ALTER TYPE pple_volunteers.%I SET SCHEMA public', r.typname);
+  END LOOP;
+  FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'pple_volunteers')
+  LOOP
+    EXECUTE format('ALTER TABLE pple_volunteers.%I SET SCHEMA public', r.tablename);
+  END LOOP;
+  FOR r IN (SELECT sequencename FROM pg_sequences WHERE schemaname = 'pple_volunteers')
+  LOOP
+    EXECUTE format('ALTER SEQUENCE pple_volunteers.%I SET SCHEMA public', r.sequencename);
+  END LOOP;
+  FOR r IN (
+    SELECT p.proname, pg_get_function_identity_arguments(p.oid) AS args
+    FROM pg_proc p JOIN pg_namespace n ON p.pronamespace = n.oid
+    WHERE n.nspname = 'pple_volunteers'
+  )
+  LOOP
+    EXECUTE format('ALTER FUNCTION pple_volunteers.%I(%s) SET SCHEMA public', r.proname, r.args);
+  END LOOP;
+  DROP SCHEMA IF EXISTS pple_volunteers;
+END $$;
+SQL
+
+echo "→ Fixing sequences..."
+PGPASSWORD="$PG_PASS" psql -h "$DB_HOST" -U pple_dcbot -d pple_volunteers \
+  -f "$DIR/postgres_fix_sequences.sql"
+
+echo "✓ Done"
