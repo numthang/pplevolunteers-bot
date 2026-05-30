@@ -177,7 +177,7 @@ function TransactionsContent() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...t, fund_id: fundId ? Number(fundId) : null, txn_at: toLocalDT(new Date(t.txn_at)) }),
     })
-    const fund = funds.find(f => f.id === Number(fundId))
+    const fund = funds.find(f => String(f.id) === String(fundId))
     setTxns(prev => prev.map(x => x.id === t.id
       ? { ...x, fund_id: fundId ? Number(fundId) : null, fund_name: fund?.name || null }
       : x
