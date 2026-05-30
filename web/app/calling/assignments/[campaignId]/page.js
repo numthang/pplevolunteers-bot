@@ -345,7 +345,7 @@ export default function CampaignPage({ params }) {
         fetch(`/api/calling/contacts/campaign?campaignId=${campaignId}&stats=true`),
       ])
       const cData = await campaignRes.json()
-      const camp = cData.data?.find(c => c.id === parseInt(campaignId))
+      const camp = cData.data?.find(c => String(c.id) === String(campaignId))
       if (camp) setCampaign(camp)
       const uData = await usersRes.json()
       if (uData.data) {
