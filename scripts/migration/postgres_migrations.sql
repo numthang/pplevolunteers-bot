@@ -1,9 +1,8 @@
--- หลังรัน pgloader migrate ทุกครั้ง: pgloader ไม่ได้สร้าง sequence ให้ทุก table
--- ที่มี id integer NOT NULL (เฉพาะบาง table) — script นี้ scan แล้วสร้าง + ตั้งค่า
--- เริ่มต้นให้เป็น MAX(id)+1
+-- PostgreSQL migrations — ใช้แทน migration.sql (MySQL) หลังจาก migrate มา PostgreSQL แล้ว
+-- schema changes ทุกอย่างหลังจากนี้ให้เพิ่มที่นี่แทน
 --
 -- รัน:
---   PGPASSWORD=xxx psql -h localhost -U pple_dcbot -d pple_volunteers -f scripts/migration/postgres_fix_sequences.sql
+--   PGPASSWORD=xxx psql -h localhost -U pple_dcbot -d pple_volunteers -f scripts/migration/postgres_migrations.sql
 
 DO $$
 DECLARE
@@ -56,3 +55,4 @@ ALTER TABLE dc_user_reports
   ALTER COLUMN is_anonymous DROP DEFAULT,
   ALTER COLUMN is_anonymous TYPE boolean USING is_anonymous != 0,
   ALTER COLUMN is_anonymous SET DEFAULT FALSE;
+

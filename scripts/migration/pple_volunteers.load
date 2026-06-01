@@ -121,6 +121,6 @@ SQL
 
 echo "→ Fixing sequences..."
 PGPASSWORD="$PG_PASS" psql -h "$DB_HOST" -U pple_dcbot -d pple_volunteers \
-  -f "$DIR/postgres_fix_sequences.sql"
+  -f "$DIR/postgres_migrations.sql"
 
 echo "✓ Done"
