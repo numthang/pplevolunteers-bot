@@ -450,14 +450,20 @@ async function postToThreads(guildId, userId, images, caption, onProgress = null
     return publishAndGetUrl(id);
   }
 
-  // carousel
+  // carousel — Threads carousel max is 20 images
+  const THREADS_CAROUSEL_MAX = 20;
+  const carouselUrls = imageUrls.slice(0, THREADS_CAROUSEL_MAX);
+  if (imageUrls.length > THREADS_CAROUSEL_MAX) {
+    console.warn(`[Threads] carousel truncated: ${imageUrls.length} → ${THREADS_CAROUSEL_MAX} images`);
+    if (onProgress) onProgress(`⚠️ Threads: รูปเกิน ${THREADS_CAROUSEL_MAX} รูป — จะโพสต์แค่ ${THREADS_CAROUSEL_MAX} รูปแรก`);
+  }
   const childIds = [];
-  for (let i = 0; i < imageUrls.length; i++) {
+  for (let i = 0; i < carouselUrls.length; i++) {
     const { id } = await threadsPost(`/v1.0/${cfg.socialId}/threads`, {
-      media_type: 'IMAGE', image_url: imageUrls[i], is_carousel_item: 'true', access_token: cfg.token,
+      media_type: 'IMAGE', image_url: carouselUrls[i], is_carousel_item: 'true', access_token: cfg.token,
     });
     await waitForThreadsContainer(id, cfg.token, 30000,
-      s => onProgress && onProgress(`📤 @ Threads: กำลัง process รูป ${i + 1}/${total}... (${s}s)`)
+      s => onProgress && onProgress(`📤 @ Threads: กำลัง process รูป ${i + 1}/${carouselUrls.length}... (${s}s)`)
     );
     childIds.push(id);
   }
