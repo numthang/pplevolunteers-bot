@@ -22,6 +22,37 @@ BEGIN
         EXECUTE format('ALTER SEQUENCE %I OWNED BY %I.id', t || '_id_seq', t);
         EXECUTE format('SELECT COALESCE(MAX(id), 0) FROM %I', t) INTO max_id;
         EXECUTE format('SELECT setval(%L, %s)', t || '_id_seq', GREATEST(max_id, 1));
-        RAISE NOTICE 'fixed: % (max_id=%)', t, max_id;
+        RAISE NOTICE 'fixed sequence: % (max_id=%)', t, max_id;
     END LOOP;
 END $$;
+
+-- Restore DEFAULT NOW() for created_at / updated_at columns dropped by pgloader
+DO $$
+DECLARE
+    r record;
+BEGIN
+    FOR r IN
+        SELECT table_name, column_name
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND column_name IN ('created_at', 'updated_at', 'registered_at', 'added_at', 'joined_at', 'indexed_at')
+          AND column_default IS NULL
+          AND data_type IN ('timestamp with time zone', 'timestamp without time zone')
+    LOOP
+        EXECUTE format(
+            'ALTER TABLE public.%I ALTER COLUMN %I SET DEFAULT NOW()',
+            r.table_name, r.column_name
+        );
+        RAISE NOTICE 'fixed default: %.%', r.table_name, r.column_name;
+    END LOOP;
+END $$;
+
+-- 2026-06-01: Fix boolean columns left as smallint by pgloader
+ALTER TABLE dc_orgchart_config
+  ALTER COLUMN excluded DROP DEFAULT,
+  ALTER COLUMN excluded TYPE boolean USING excluded != 0;
+
+ALTER TABLE dc_user_reports
+  ALTER COLUMN is_anonymous DROP DEFAULT,
+  ALTER COLUMN is_anonymous TYPE boolean USING is_anonymous != 0,
+  ALTER COLUMN is_anonymous SET DEFAULT FALSE;

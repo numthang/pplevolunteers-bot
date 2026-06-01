@@ -91,7 +91,7 @@ async function getRolesByGroup(guildId, groupName) {
   const { rows } = await pool.query(
     `SELECT role_id, role_name, role_color
      FROM dc_orgchart_config
-     WHERE guild_id = $1 AND excluded = FALSE AND group_name = $2
+     WHERE guild_id = $1 AND excluded::boolean = FALSE AND group_name = $2
      GROUP BY role_id, role_name, role_color
      ORDER BY role_name`,
     [guildId, groupName]

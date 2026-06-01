@@ -18,7 +18,7 @@ async function addReport({ guildId, targetId, targetName, reporterId, reporterNa
       category,
       detail,
       evidence || null,
-      isAnonymous ? 1 : 0,
+      isAnonymous ? true : false,
     ]
   );
   return rows[0].id;
