@@ -409,18 +409,36 @@ async function waitForThreadsContainer(id, token, maxWaitMs = 30000, onProgress 
   throw new Error('Threads container timeout — รูปใช้เวลา process นานเกิน 30s');
 }
 
+function splitCaption(caption, maxLen = 500) {
+  if (!caption || caption.length <= maxLen) return [caption || ''];
+  const chunks = [];
+  let remaining = caption;
+  while (remaining.length > maxLen) {
+    let cut = remaining.lastIndexOf('\n', maxLen);
+    if (cut <= 0) cut = remaining.lastIndexOf(' ', maxLen);
+    if (cut <= 0) cut = maxLen;
+    chunks.push(remaining.slice(0, cut).trimEnd());
+    remaining = remaining.slice(cut).trimStart();
+  }
+  if (remaining) chunks.push(remaining);
+  return chunks;
+}
+
 async function postToThreads(guildId, userId, images, caption, onProgress = null, groupName = null) {
-  if (caption && caption.length > 500) caption = caption.slice(0, 497) + '...';
   const cfg = await getConfig(guildId, 'threads', userId, groupName);
   if (!cfg) throw new Error('ไม่พบ Threads config สำหรับ guild นี้');
   if (images.length && !TEMP_URL.startsWith('http')) {
     throw new Error(`WEB_BASE_URL ไม่ได้ set — Threads เข้า URL ไม่ได้`);
   }
 
+  const chunks = splitCaption(caption);
+  const firstChunk = chunks[0];
+  const extraChunks = chunks.slice(1);
+
   const imageUrls = images.length ? saveProcessedToTemp(images) : [];
   const total = imageUrls.length;
 
-  async function publishAndGetUrl(containerId) {
+  async function publishContainer(containerId) {
     const { id: mediaId } = await threadsPost(`/v1.0/${cfg.socialId}/threads_publish`, {
       creation_id: containerId, access_token: cfg.token,
     });
@@ -428,26 +446,48 @@ async function postToThreads(guildId, userId, images, caption, onProgress = null
     return { id: mediaId, permalink: info.permalink || null };
   }
 
+  async function postReplyChain(firstPostId) {
+    if (!extraChunks.length) return;
+    let replyToId = firstPostId;
+    for (let i = 0; i < extraChunks.length; i++) {
+      if (onProgress) onProgress(`📤 @ Threads: โพสต์ thread ${i + 2}/${chunks.length}...`);
+      const { id: containerId } = await threadsPost(`/v1.0/${cfg.socialId}/threads`, {
+        media_type: 'TEXT', text: extraChunks[i], reply_to_id: replyToId, access_token: cfg.token,
+      });
+      await waitForThreadsContainer(containerId, cfg.token, 30000,
+        s => onProgress && onProgress(`📤 @ Threads: thread ${i + 2}/${chunks.length} กำลัง process... (${s}s)`)
+      );
+      const { id: publishedId } = await threadsPost(`/v1.0/${cfg.socialId}/threads_publish`, {
+        creation_id: containerId, access_token: cfg.token,
+      });
+      replyToId = publishedId;
+    }
+  }
+
   // text only
   if (!imageUrls.length) {
     const { id } = await threadsPost(`/v1.0/${cfg.socialId}/threads`, {
-      media_type: 'TEXT', text: caption || '', access_token: cfg.token,
+      media_type: 'TEXT', text: firstChunk, access_token: cfg.token,
     });
     await waitForThreadsContainer(id, cfg.token, 30000,
       s => onProgress && onProgress(`📤 @ Threads: กำลัง process... (${s}s)`)
     );
-    return publishAndGetUrl(id);
+    const result = await publishContainer(id);
+    await postReplyChain(result.id);
+    return result;
   }
 
   // single image
   if (total === 1) {
     const { id } = await threadsPost(`/v1.0/${cfg.socialId}/threads`, {
-      media_type: 'IMAGE', image_url: imageUrls[0], text: caption || '', access_token: cfg.token,
+      media_type: 'IMAGE', image_url: imageUrls[0], text: firstChunk, access_token: cfg.token,
     });
     await waitForThreadsContainer(id, cfg.token, 30000,
       s => onProgress && onProgress(`📤 @ Threads: กำลัง process รูป... (${s}s)`)
     );
-    return publishAndGetUrl(id);
+    const result = await publishContainer(id);
+    await postReplyChain(result.id);
+    return result;
   }
 
   // carousel — Threads carousel max is 20 images
@@ -468,14 +508,16 @@ async function postToThreads(guildId, userId, images, caption, onProgress = null
     childIds.push(id);
   }
   const { id: carouselId } = await threadsPost(`/v1.0/${cfg.socialId}/threads`, {
-    media_type: 'CAROUSEL', text: caption || '',
+    media_type: 'CAROUSEL', text: firstChunk,
     children: childIds.join(','),
     access_token: cfg.token,
   });
   await waitForThreadsContainer(carouselId, cfg.token, 30000,
     s => onProgress && onProgress(`📤 @ Threads: กำลัง publish carousel... (${s}s)`)
   );
-  return publishAndGetUrl(carouselId);
+  const result = await publishContainer(carouselId);
+  await postReplyChain(result.id);
+  return result;
 }
 
 module.exports = { getConfig, getAvailablePlatforms, getAvailableGroups, getGuildMetaApp, postToFacebook, postToInstagram, postToThreads };
