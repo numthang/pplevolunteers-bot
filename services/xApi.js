@@ -103,9 +103,9 @@ async function uploadMedia(cfg, buffer, ext) {
   return res.body.media_id_string;
 }
 
-const X_LIMIT       = 280;
-const MAX_THREAD    = 4;        // max tweets per thread
-const INDICATOR_BUF = 6;        // "10/10 " worst case
+const X_LIMIT           = 280;
+const MAX_IMGS_PER_TWEET = 4;
+const INDICATOR_BUF      = 6;   // "10/10 " worst case
 
 // split text into chunks ≤ chunkLen, breaking on whitespace when possible
 function splitCaption(text, chunkLen) {
@@ -125,7 +125,8 @@ function splitCaption(text, chunkLen) {
 }
 
 async function postSingleTweet(cfg, text, mediaIds, replyTo) {
-  const tweetBody = { text };
+  const tweetBody = {};
+  if (text) tweetBody.text = text;
   if (mediaIds && mediaIds.length) tweetBody.media = { media_ids: mediaIds };
   if (replyTo) tweetBody.reply = { in_reply_to_tweet_id: replyTo };
 
@@ -163,44 +164,51 @@ async function postToX(guildId, userId, images, caption, groupName = null) {
     ? fullText.replace(URL_RE, '').replace(/\s{2,}/g, ' ').trim()
     : fullText;
 
-  // 2) reserve 1 slot for link tweet if URLs exist
-  const maxMainChunks = urls.length ? MAX_THREAD - 1 : MAX_THREAD;
-
-  // 3) split main text into chunks
-  let chunks = mainText.length > X_LIMIT
+  // 2) split main text into chunks
+  const textChunks = mainText.length > X_LIMIT
     ? splitCaption(mainText, X_LIMIT - INDICATOR_BUF)
     : (mainText ? [mainText] : []);
 
-  const truncated = chunks.length > maxMainChunks;
-  if (truncated) chunks = chunks.slice(0, maxMainChunks);
-
-  // 4) upload media (max 4 imgs, all on first tweet)
-  const imgSlice = images.slice(0, 4);
-  const mediaIds = [];
-  for (const img of imgSlice) {
-    mediaIds.push(await uploadMedia(cfg, img.buffer, img.ext));
+  // 3) group all images into chunks of MAX_IMGS_PER_TWEET
+  const imageGroups = [];
+  for (let i = 0; i < images.length; i += MAX_IMGS_PER_TWEET) {
+    imageGroups.push(images.slice(i, i + MAX_IMGS_PER_TWEET));
   }
 
-  // 5) post tweets sequentially as thread (main content + optional link tweet)
-  const total = chunks.length + (urls.length ? 1 : 0);
+  // 4) upload all media, grouped
+  const uploadedGroups = [];
+  for (const group of imageGroups) {
+    const ids = [];
+    for (const img of group) ids.push(await uploadMedia(cfg, img.buffer, img.ext));
+    uploadedGroups.push(ids);
+  }
+
+  // 5) post tweets — one slot per text chunk or image group, whichever is more
+  const mainCount = Math.max(textChunks.length, imageGroups.length);
+  const total     = mainCount + (urls.length ? 1 : 0);
+  const needsIndicator = total > 1;
   let firstId = null;
   let prevId  = null;
 
-  for (let i = 0; i < chunks.length; i++) {
-    let text = chunks[i];
-    if (total > 1) text = `${text} ${i + 1}/${total}`;
-    const media = i === 0 ? mediaIds : [];
-    const id = await postSingleTweet(cfg, text, media, prevId);
+  for (let i = 0; i < mainCount; i++) {
+    let text          = textChunks[i] || '';
+    const mediaIds    = uploadedGroups[i] || [];
+    if (needsIndicator) {
+      const indicator = `${i + 1}/${total}`;
+      text = text ? `${text} ${indicator}` : indicator;
+    }
+    const id = await postSingleTweet(cfg, text, mediaIds, prevId);
     if (i === 0) firstId = id;
     prevId = id;
   }
 
   if (urls.length) {
     let linkText = '🔗 ลิงก์:\n' + urls.join('\n');
-    if (total > 1) linkText += `\n${total}/${total}`;
+    if (needsIndicator) linkText += `\n${total}/${total}`;
     if (linkText.length > X_LIMIT) linkText = linkText.slice(0, X_LIMIT - 1) + '…';
-    const media = chunks.length === 0 ? mediaIds : []; // caption is only URLs → attach media here
-    const id = await postSingleTweet(cfg, linkText, media, prevId);
+    // if no main tweets (caption = URLs only, no images), first image group goes here
+    const mediaIds = mainCount === 0 ? (uploadedGroups[0] || []) : [];
+    const id = await postSingleTweet(cfg, linkText, mediaIds, prevId);
     if (firstId === null) firstId = id;
   }
 
@@ -208,10 +216,9 @@ async function postToX(guildId, userId, images, caption, groupName = null) {
   return {
     id: firstId,
     url,
-    truncated,
     threadCount: total,
     urlCount:    urls.length,
-    imageCount:  imgSlice.length,
+    imageCount:  images.length,
     totalImages: images.length,
   };
 }
