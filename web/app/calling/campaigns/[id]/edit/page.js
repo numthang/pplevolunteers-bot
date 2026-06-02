@@ -104,7 +104,14 @@ export default function EditCampaignPage({ params }) {
           <div>
             <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-disc-text">รายละเอียด</label>
             <textarea value={description}
-              onChange={e => { setDescription(e.target.value); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px' }}
+              onChange={e => {
+                setDescription(e.target.value)
+                const el = e.target
+                const scrollY = window.scrollY
+                el.style.height = 'auto'
+                el.style.height = el.scrollHeight + 'px'
+                window.scrollTo({ top: scrollY, behavior: 'instant' })
+              }}
               ref={el => { if (el && !el._init) { el._init = true; el.style.height = el.scrollHeight + 'px' } }}
               placeholder="บรรยายเพิ่มเติม..." className={inputCls} rows="4" style={{ resize: 'none', overflow: 'hidden' }} />
           </div>

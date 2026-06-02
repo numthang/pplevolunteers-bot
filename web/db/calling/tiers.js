@@ -141,6 +141,20 @@ export async function getTierWithMemberInfo(memberId) {
 }
 
 /**
+ * Set or clear member flag (green/yellow/red)
+ */
+export async function updateFlag(memberId, flag, contactType = 'member') {
+  await pool.query(
+    `INSERT INTO calling_member_tiers (member_id, contact_type, tier, flag, updated_at)
+     VALUES ($1, $2, 'D', $3, NOW())
+     ON CONFLICT (member_id, contact_type) DO UPDATE SET
+       flag = EXCLUDED.flag,
+       updated_at = NOW()`,
+    [memberId, contactType, flag || null]
+  )
+}
+
+/**
  * Clear manual override (revert to auto)
  */
 export async function clearOverride(memberId) {

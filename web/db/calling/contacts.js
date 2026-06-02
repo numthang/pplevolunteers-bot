@@ -88,6 +88,7 @@ export async function getContactsInCampaign(campaignId, filters = {}, limit = 10
   let query = `SELECT
      c.*,
      COALESCE(t.tier::text, 'D') AS tier,
+     t.flag,
      COALESCE(a.assigned_to, '') AS assigned_to,
      COALESCE(a.assigned_by, '') AS assigned_by,
      a.created_at AS assignment_date,
@@ -123,7 +124,7 @@ export async function getContactsInCampaign(campaignId, filters = {}, limit = 10
   const smsIdx = params.length
 
   query += `
-   GROUP BY c.id, t.tier, a.id, a.assigned_to, a.assigned_by, a.created_at,
+   GROUP BY c.id, t.tier, t.flag, a.id, a.assigned_to, a.assigned_by, a.created_at,
             l.called_at, l.status, l.note
    HAVING ($${tierIdx}::text IS NULL OR COALESCE(t.tier::text, 'D') = $${tierIdx})
      AND ($${statusIdx}::text IS NULL

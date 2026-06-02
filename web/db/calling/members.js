@@ -61,12 +61,13 @@ export async function getAllMembers(limit = 100, offset = 0) {
     `SELECT
        m.*,
        t.tier,
+       t.flag,
        COUNT(DISTINCT l.id) AS total_calls,
        MAX(l.called_at) AS last_called_at
      FROM ngs_member_cache m
      LEFT JOIN calling_member_tiers t ON t.member_id = m.source_id::text AND t.contact_type = 'member'
      LEFT JOIN calling_logs l ON l.member_id = m.source_id::text AND l.contact_type = 'member'
-     GROUP BY m.source_id, t.tier
+     GROUP BY m.source_id, t.tier, t.flag
      ORDER BY m.home_province ASC, m.home_amphure ASC, m.first_name ASC
      LIMIT $1 OFFSET $2`,
     [limit, offset]
@@ -103,6 +104,7 @@ export async function getMembersInCampaign(campaignId, filters = {}, limit = 100
   let query = `SELECT
        m.*,
        COALESCE(t.tier::text, 'D') AS tier,
+       t.flag,
        COALESCE(a.assigned_to, '') AS assigned_to,
        COALESCE(a.assigned_by, '') AS assigned_by,
        COALESCE(a.created_at, NULL) AS assignment_date,
@@ -338,7 +340,7 @@ export async function getMyCampaigns(discordId) {
        FROM calling_logs WHERE contact_type = 'member' GROUP BY campaign_id, member_id
      ) camp_stats ON camp_stats.campaign_id = a.campaign_id AND camp_stats.member_id = a.member_id
      WHERE a.assigned_to = $1 AND a.contact_type = 'member'
-       AND (ec.event_date IS NULL OR ec.event_date >= CURRENT_DATE)
+       AND (ec.event_date IS NULL OR ec.event_date >= CURRENT_DATE - INTERVAL '7 days')
      GROUP BY ec.id
      ORDER BY ec.name ASC`,
     [discordId]
@@ -398,7 +400,7 @@ export async function getMyAssignedMembers(discordId, { campaignId, status, rsvp
          AND ($4::text IS NULL OR a.rsvp::text = $4)
      ) sub
      WHERE ($5::text IS NULL OR call_status = $5)
-       AND (event_date IS NULL OR event_date >= TO_CHAR(CURRENT_DATE, 'YYYY-MM-DD'))
+       AND (event_date IS NULL OR event_date >= TO_CHAR(CURRENT_DATE - INTERVAL '7 days', 'YYYY-MM-DD'))
      ORDER BY
        CASE WHEN call_status = 'pending' THEN 0 ELSE 1 END ASC,
        CASE WHEN call_status = 'pending' THEN CASE tier WHEN 'A' THEN 1 WHEN 'B' THEN 2 WHEN 'C' THEN 3 ELSE 4 END ELSE NULL END ASC,

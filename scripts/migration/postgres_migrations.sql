@@ -56,3 +56,8 @@ ALTER TABLE dc_user_reports
   ALTER COLUMN is_anonymous TYPE boolean USING is_anonymous != 0,
   ALTER COLUMN is_anonymous SET DEFAULT FALSE;
 
+
+
+-- 2026-06-02: Add member flag (green/yellow/red) to calling_member_tiers
+ALTER TABLE calling_member_tiers
+  ADD COLUMN IF NOT EXISTS flag VARCHAR(10) NULL CHECK (flag IN ('green', 'yellow', 'red'));

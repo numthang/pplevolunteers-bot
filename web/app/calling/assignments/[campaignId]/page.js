@@ -113,6 +113,8 @@ function ExpandableDescription({ text }) {
 }
 
 const FILTER_CLS = 'h-11 px-3 text-base border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text rounded-lg focus:outline-none focus:ring-2 focus:ring-teal w-full sm:w-auto'
+const FILTER_CLS_ACTIVE = 'h-11 px-3 text-base border border-teal bg-teal/10 text-teal dark:text-teal font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-teal w-full sm:w-auto'
+const filterCls = (val) => val ? FILTER_CLS_ACTIVE : FILTER_CLS
 
 export default function CampaignPage({ params }) {
   const { campaignId } = use(params)
@@ -556,7 +558,7 @@ export default function CampaignPage({ params }) {
           placeholder="ค้นหาชื่อ..."
           className="h-11 px-3 text-base border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted rounded-lg focus:outline-none focus:ring-2 focus:ring-teal w-full sm:w-40"
         />
-        <select value={filterAmphure} onChange={e => setFilterAmphure(e.target.value)} className={FILTER_CLS}>
+        <select value={filterAmphure} onChange={e => setFilterAmphure(e.target.value)} className={filterCls(filterAmphure)}>
           <option value="">อำเภอ</option>
           {stats.districts.map(d => (
             <option key={d} value={d}>{d || '(ไม่ระบุ)'} ({stats.districtCounts[d] || 0})</option>
@@ -606,25 +608,25 @@ export default function CampaignPage({ params }) {
           </div>
         )}
 
-        <select value={filterTier} onChange={e => setFilterTier(e.target.value)} className={FILTER_CLS}>
+        <select value={filterTier} onChange={e => setFilterTier(e.target.value)} className={filterCls(filterTier)}>
           <option value="">Tier</option>
           {['A','B','C','D'].map(t => <option key={t} value={t}>{t}</option>)}
         </select>
 
-        <select value={filterAssignee} onChange={e => setFilterAssignee(e.target.value)} className={FILTER_CLS}>
+        <select value={filterAssignee} onChange={e => setFilterAssignee(e.target.value)} className={filterCls(filterAssignee)}>
           <option value="">ผู้รับผิดชอบ</option>
           {assignees.map(a => (
             <option key={a.id} value={a.id}>{a.name} ({a.count})</option>
           ))}
         </select>
 
-        <select value={filterCalled} onChange={e => setFilterCalled(e.target.value)} className={FILTER_CLS}>
+        <select value={filterCalled} onChange={e => setFilterCalled(e.target.value)} className={filterCls(filterCalled)}>
           <option value="">สถานะ</option>
           <option value="called">โทรแล้ว</option>
           <option value="uncalled">รอโทร</option>
         </select>
 
-        <select value={filterSms} onChange={e => setFilterSms(e.target.value)} className={FILTER_CLS}>
+        <select value={filterSms} onChange={e => setFilterSms(e.target.value)} className={filterCls(filterSms)}>
           <option value="">SMS</option>
           <option value="sms_sent">ส่ง SMS แล้ว</option>
           <option value="no_sms">ยังไม่ส่ง SMS</option>
@@ -643,21 +645,21 @@ export default function CampaignPage({ params }) {
 
         {/* member-only filters */}
         {activeTab === 'member' && <>
-          <select value={filterRsvp} onChange={e => setFilterRsvp(e.target.value)} className={FILTER_CLS}>
+          <select value={filterRsvp} onChange={e => setFilterRsvp(e.target.value)} className={filterCls(filterRsvp)}>
             <option value="">RSVP</option>
             <option value="yes">✓ เข้าร่วม</option>
             <option value="no">✗ ไม่เข้าร่วม</option>
             <option value="maybe">? อาจจะ</option>
           </select>
 
-          <select value={filterExpiry} onChange={e => setFilterExpiry(e.target.value)} className={FILTER_CLS}>
+          <select value={filterExpiry} onChange={e => setFilterExpiry(e.target.value)} className={filterCls(filterExpiry)}>
             <option value="">สมาชิกภาพ</option>
             <option value="lifetime">ตลอดชีพ</option>
             <option value="expiring">ใกล้หมดอายุ (90 วัน)</option>
             <option value="expired">หมดอายุแล้ว</option>
           </select>
 
-          <select value={filterSort} onChange={e => setFilterSort(e.target.value)} className={FILTER_CLS}>
+          <select value={filterSort} onChange={e => setFilterSort(e.target.value)} className={filterCls(filterSort)}>
             <option value="">เรียงตาม: ที่อยู่/ชื่อ</option>
             <option value="least_called">โทรน้อยสุด (ทุกแคมเปญ)</option>
             <option value="uncalled">ยังไม่โทร (แคมเปญนี้)</option>
@@ -758,6 +760,11 @@ export default function CampaignPage({ params }) {
                         </span>
                         <span className="shrink-0 px-1 py-px rounded text-xs font-bold"
                           style={{ backgroundColor: tierColor.bg, color: tierColor.text }}>{tier}</span>
+                        {item.flag && (
+                          <span className="shrink-0 text-sm leading-none" title={item.flag === 'green' ? 'ตอบรับดี' : item.flag === 'yellow' ? 'ระวัง' : 'อย่าโทร'}>
+                            {item.flag === 'green' ? '🟢' : item.flag === 'yellow' ? '🟡' : '🔴'}
+                          </span>
+                        )}
                         {isMember && (item.membership_type === 'ตลอดชีพ' || item.membership_type === 'สมาชิกตลอดชีพ') && (
                           <Infinity title="สมาชิกตลอดชีพ" className="w-4 h-4 shrink-0 text-green-600 dark:text-green-400" />
                         )}

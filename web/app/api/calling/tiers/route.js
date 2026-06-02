@@ -86,6 +86,31 @@ export async function POST(req) {
 }
 
 /**
+ * PATCH /api/calling/tiers
+ * Set or clear member flag (green/yellow/red)
+ * Permission: authenticated users
+ */
+export async function PATCH(req) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.discordId) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  try {
+    const { member_id, flag, contact_type = 'member' } = await req.json()
+    if (!member_id) return Response.json({ error: 'member_id required' }, { status: 400 })
+    if (flag && !['green', 'yellow', 'red'].includes(flag)) {
+      return Response.json({ error: 'Invalid flag' }, { status: 400 })
+    }
+    await tierDB.updateFlag(member_id, flag || null, contact_type)
+    return Response.json({ success: true })
+  } catch (error) {
+    console.error('[PATCH /api/calling/tiers]', error)
+    return Response.json({ error: 'Internal Server Error' }, { status: 500 })
+  }
+}
+
+/**
  * DELETE /api/calling/tiers/:memberId
  * Clear manual override (revert to auto)
  * Permission: admin

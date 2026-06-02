@@ -810,6 +810,13 @@ export default function PendingCallsPage() {
           })
           setStarredVersion(v => v + 1)
         }}
+        onFlagChange={(memberId, contactType, flag) => {
+          setItems(prev => prev.map(m =>
+            (String(m.source_id || m.id) === String(memberId) && (m.contact_type || 'member') === contactType)
+              ? { ...m, flag }
+              : m
+          ))
+        }}
       />
 
       {pdpaKey && <PdpaAgreementModal storageKey={pdpaKey} />}

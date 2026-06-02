@@ -38,9 +38,9 @@ const NOTE_PLACEHOLDER = {
 }
 
 const RSVP_OPTIONS = [
-  { value: 'yes',   label: 'ร่วม',    icon: '✓', activeClass: 'bg-teal border-teal text-white' },
-  { value: 'no',    label: 'ไม่ร่วม', icon: '✗', activeClass: 'bg-[#fcebeb] border-[#a32d2d] text-[#a32d2d]' },
-  { value: 'maybe', label: 'อาจจะ',   icon: '?', activeClass: 'bg-[#faeeda] border-[#854f0b] text-[#854f0b]' },
+  { value: 'yes',   label: 'ตอบรับ',    icon: '✓', activeClass: 'bg-teal border-teal text-white' },
+  { value: 'no',    label: 'ไม่ตอบรับ', icon: '✗', activeClass: 'bg-[#fcebeb] border-[#a32d2d] text-[#a32d2d]' },
+  { value: 'maybe', label: 'อาจจะ',     icon: '?', activeClass: 'bg-[#faeeda] border-[#854f0b] text-[#854f0b]' },
 ]
 
 const getLogStatusStyle = (status) => {
@@ -144,37 +144,11 @@ function CollapsibleDescription({ text }) {
   )
 }
 
-function CampaignActions({ campaignName, description, onSmsClick }) {
-  const [copied, setCopied] = useState(false)
-  const copyText = description || campaignName || ''
-
-  async function copy() {
-    await navigator.clipboard.writeText(copyText)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
-
-  return (
-    <div className="flex items-center gap-3 shrink-0">
-      <button onClick={copy} className="flex items-center gap-1 text-base text-teal hover:underline" title="คัดลอก">
-        {copied ? (
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><polyline points="20 6 9 17 4 12" /></svg>
-        ) : (
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
-        )}
-        {copied ? 'คัดลอกแล้ว' : 'คัดลอก'}
-      </button>
-      <button onClick={onSmsClick} className="flex items-center gap-1 text-base text-teal hover:underline" title="ส่ง SMS">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
-        SMS
-      </button>
-      <a href={`https://line.me/R/share?text=${encodeURIComponent(copyText)}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-base text-teal hover:underline" title="ส่ง LINE">
-        <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5"><path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63h2.386c.349 0 .63.285.63.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63.349 0 .631.285.631.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.281.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314" /></svg>
-        LINE
-      </a>
-    </div>
-  )
-}
+const FLAG_OPTIONS = [
+  { value: 'green',  emoji: '🟢', title: 'ตอบรับดี' },
+  { value: 'yellow', emoji: '🟡', title: 'ระวัง' },
+  { value: 'red',    emoji: '🔴', title: 'อย่าโทร' },
+]
 
 function SignalScoreLabel({ signalKey, value }) {
   const label = findSignalLabel(signalKey, value)
@@ -193,7 +167,7 @@ function formatEventDate(dateStr) {
   return result
 }
 
-export default function RecordCallModal({ isOpen, member, contact_type = 'member', onClose, onSave, onSaveAndNext, hasNext, onStarChange }) {
+export default function RecordCallModal({ isOpen, member, contact_type = 'member', onClose, onSave, onSaveAndNext, hasNext, onStarChange, onFlagChange }) {
   const { data: session } = useSession()
   const { roles: effectiveRoles, discordId: effectiveDiscordId } = useEffectiveRoles(session)
   const isModerator = MODERATOR_ROLES.some(r => effectiveRoles.includes(r))
@@ -211,6 +185,8 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
   const [editNote, setEditNote] = useState('')
   const [isFavorite, setIsFavorite] = useState(false)
   const [isFavLoaded, setIsFavLoaded] = useState(false)
+  const [memberFlag, setMemberFlag] = useState(null)
+  const [copiedCampaign, setCopiedCampaign] = useState(false)
 
   const memberId = member?.source_id || member?.id
   const isContact = contact_type === 'contact'
@@ -244,8 +220,27 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
     setSignals({})
     setSaving(false)
     setEditingLogId(null)
+    setMemberFlag(member?.flag || null)
     if (isOpen && memberId) loadHistory()
-  }, [memberId, isOpen])
+  }, [memberId, isOpen, member?.flag])
+
+  const saveFlag = async (val) => {
+    const next = val === memberFlag ? null : val
+    setMemberFlag(next)
+    await fetch('/api/calling/tiers', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ member_id: memberId, flag: next, contact_type: isContact ? 'contact' : 'member' }),
+    })
+    onFlagChange?.(memberId, isContact ? 'contact' : 'member', next)
+  }
+
+  const copyCampaignText = async () => {
+    const text = member?.campaign_description || member?.campaign_name || ''
+    await navigator.clipboard.writeText(text)
+    setCopiedCampaign(true)
+    setTimeout(() => setCopiedCampaign(false), 2000)
+  }
 
   const computeOverall = useCallback(() => {
     const vals = SIGNALS.map(s => signals[s.key]).filter(Boolean)
@@ -321,7 +316,7 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
       style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
     >
-      <div className="bg-white dark:bg-disc-hover rounded-xl w-full max-w-3xl shadow-xl">
+      <div className="bg-white dark:bg-disc-hover rounded-xl w-full max-w-3xl shadow-xl flex flex-col max-h-[90vh]">
 
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-4 border-b border-warm-200 dark:border-disc-border">
@@ -333,7 +328,7 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
         </div>
 
         {/* Body */}
-        <div className="p-3 sm:p-5 flex flex-col md:grid md:grid-cols-2 gap-4 sm:gap-5">
+        <div className="p-3 sm:p-5 flex flex-col md:grid md:grid-cols-2 gap-4 sm:gap-5 overflow-y-auto">
 
           {/* SIDEBAR */}
           <div className="md:order-2 bg-warm-50 dark:bg-disc-header rounded-lg p-4 flex flex-col gap-4">
@@ -373,6 +368,15 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
                 <div className="text-base text-warm-400 dark:text-disc-muted truncate mt-0.5">
                   {locationStr || '—'}
                 </div>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-xs text-warm-400 dark:text-disc-muted">ประเมินสมาชิก</span>
+                  {FLAG_OPTIONS.map(f => (
+                    <button key={f.value} type="button" onClick={() => saveFlag(f.value)} title={f.title}
+                      className={`text-base leading-none transition ${memberFlag === f.value ? 'opacity-100' : 'opacity-25 hover:opacity-60'}`}>
+                      {f.emoji}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 
@@ -393,6 +397,14 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
                     ไม่มีเบอร์โทร
                   </div>
                 )}
+                <button
+                  onClick={() => setSmsModalOpen(true)}
+                  className="flex items-center justify-center px-3 py-3 rounded-lg transition hover:opacity-90"
+                  style={{ backgroundColor: '#4338ca', color: '#fff' }}
+                  title="ส่ง SMS"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+                </button>
 
                 {member.discord_id && (
                   <a
@@ -546,12 +558,20 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
 
             {/* Campaign info */}
             <div className="bg-white dark:bg-disc-hover rounded-lg p-3 border border-warm-200 dark:border-disc-border space-y-2 overflow-hidden">
-              <CampaignActions campaignName={member.campaign_name} description={member.campaign_description} onSmsClick={() => setSmsModalOpen(true)} />
-              <div className="text-base font-semibold text-warm-900 dark:text-disc-text">
-                {member.campaign_name || '—'}
-                {member.event_date && (
-                  <span className="font-normal text-orange-600 dark:text-orange-400 ml-1.5">({formatEventDate(member.event_date)})</span>
-                )}
+              <div className="flex items-start gap-1.5">
+                <div className="flex-1 text-base font-semibold text-warm-900 dark:text-disc-text">
+                  {member.campaign_name || '—'}
+                  {member.event_date && (
+                    <span className="font-normal text-orange-600 dark:text-orange-400 ml-1.5">({formatEventDate(member.event_date)})</span>
+                  )}
+                </div>
+                <button onClick={copyCampaignText} title="คัดลอก"
+                  className="shrink-0 p-1 rounded text-warm-400 hover:text-teal dark:text-disc-muted dark:hover:text-teal transition">
+                  {copiedCampaign
+                    ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><polyline points="20 6 9 17 4 12" /></svg>
+                    : <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
+                  }
+                </button>
               </div>
               {member.campaign_description && (
                 <CollapsibleDescription text={member.campaign_description} />
@@ -608,7 +628,7 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
             {/* RSVP — members only */}
             {!isContact && status === 'answered' && (
               <div>
-                <div className="text-base font-semibold text-warm-700 dark:text-disc-text mb-2">เข้าร่วมกิจกรรมได้ไหม *</div>
+                <div className="text-base font-semibold text-warm-700 dark:text-disc-text mb-2">ตอบรับแคมเปญ *</div>
                 <div className="grid grid-cols-3 gap-2">
                   {RSVP_OPTIONS.map(opt => (
                     <button

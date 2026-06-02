@@ -9,42 +9,28 @@ import { getMembersCount, getPendingCallCount } from '@/db/calling/members.js'
 import { getContactPendingCount } from '@/db/calling/contacts.js'
 import { getCampaigns } from '@/db/calling/campaigns.js'
 
-async function getTodayCallCount() {
-  // Session timezone is 'Asia/Bangkok' (set in pool config), so timestamps render as Bangkok local
+async function getTotalCallStats() {
   const { rows } = await pool.query(
-    `SELECT COUNT(*) AS count FROM calling_logs WHERE called_at::date = CURRENT_DATE`
+    `SELECT
+       COUNT(*) FILTER (WHERE l.status IN ('answered','no_answer','met')) AS total,
+       COUNT(*) FILTER (WHERE l.status IN ('answered','met')) AS answered
+     FROM calling_logs l
+     JOIN act_event_cache ec ON ec.id = l.campaign_id
+     WHERE ec.event_date IS NULL OR ec.event_date >= CURRENT_DATE - INTERVAL '7 days'`
   )
-  return Number(rows[0]?.count) || 0
+  const total = Number(rows[0]?.total) || 0
+  const answered = Number(rows[0]?.answered) || 0
+  return { total, answered, rate: total > 0 ? Math.round((answered / total) * 100) : 0 }
 }
 
-async function getWeekCallCount() {
-  const { rows } = await pool.query(
-    `SELECT COUNT(*) AS count FROM calling_logs WHERE called_at >= CURRENT_DATE - INTERVAL '7 days'`
-  )
-  return Number(rows[0]?.count) || 0
-}
-
-async function getMyTodayCallCount(discordId) {
+async function getMyTotalCallCount(discordId) {
   if (!discordId) return 0
   const { rows } = await pool.query(
     `SELECT COUNT(*) AS count FROM calling_logs
-     WHERE called_by = $1 AND called_at::date = CURRENT_DATE`,
+     WHERE called_by = $1 AND status IN ('answered','no_answer','met')`,
     [discordId]
   )
   return Number(rows[0]?.count) || 0
-}
-
-async function getAnswerRateThisWeek() {
-  const { rows } = await pool.query(
-    `SELECT
-       SUM(CASE WHEN status = 'answered' THEN 1 ELSE 0 END) AS answered,
-       COUNT(*) AS total
-     FROM calling_logs
-     WHERE called_at >= CURRENT_DATE - INTERVAL '7 days'`
-  )
-  const answered = Number(rows[0]?.answered) || 0
-  const total = Number(rows[0]?.total) || 0
-  return total > 0 ? Math.round((answered / total) * 100) : 0
 }
 
 const fmt = (n) => Number(n || 0).toLocaleString('th-TH')
@@ -101,19 +87,15 @@ export default async function CallingDashboard() {
   const [
     memberCount,
     campaigns,
-    todayCalls,
-    weekCalls,
-    myToday,
-    answerRate,
+    callStats,
+    myTotal,
     pendingMember,
     pendingContact,
   ] = await Promise.all([
     getMembersCount(),
     getCampaigns(),
-    getTodayCallCount(),
-    getWeekCallCount(),
-    getMyTodayCallCount(discordId),
-    getAnswerRateThisWeek(),
+    getTotalCallStats(),
+    getMyTotalCallCount(discordId),
     discordId ? getPendingCallCount(discordId) : Promise.resolve(0),
     discordId ? getContactPendingCount(discordId) : Promise.resolve(0),
   ])
@@ -141,9 +123,9 @@ export default async function CallingDashboard() {
             href="/calling/assignee?status=pending"
           />
           <StatCard
-            label="โทรวันนี้"
-            value={fmt(myToday)}
-            sub={myToday > 0 ? 'นับเฉพาะที่โทรด้วยตัวเอง' : 'ยังไม่ได้โทรวันนี้'}
+            label="โทรทั้งหมด"
+            value={fmt(myTotal)}
+            sub="ตลอดกาล · นับเฉพาะที่โทรเอง"
             accent="teal"
           />
         </div>
@@ -153,10 +135,10 @@ export default async function CallingDashboard() {
       <div>
         <h2 className="text-sm font-semibold text-warm-500 dark:text-disc-muted uppercase tracking-wider mb-3">ภาพรวมระบบ</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <StatCard label="โทรวันนี้" value={fmt(todayCalls)} accent="teal" />
-          <StatCard label="โทร 7 วัน" value={fmt(weekCalls)} accent="blue" />
-          <StatCard label="อัตรารับสาย 7 วัน" value={`${answerRate}%`} accent="purple" />
-          <StatCard label="Campaign ที่ active" value={fmt(activeCampaigns.length)} sub={`รวม ${fmt(campaigns.length)} campaigns`} accent="orange" />
+          <StatCard label="โทรทั้งหมด" value={fmt(callStats.total)} sub="ตลอดกาล" accent="teal" />
+          <StatCard label="รับสาย" value={fmt(callStats.answered)} sub={`จาก ${fmt(callStats.total)} ครั้ง`} accent="blue" />
+          <StatCard label="อัตรารับสาย" value={`${callStats.rate}%`} sub="ตลอดกาล" accent="purple" />
+          <StatCard label="Campaign active" value={fmt(activeCampaigns.length)} sub={`รวม ${fmt(campaigns.length)} campaigns`} accent="orange" />
         </div>
       </div>
 
@@ -165,7 +147,7 @@ export default async function CallingDashboard() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <NavCard href="/calling/campaigns" title="Campaigns" desc={`จัดการ ${fmt(activeCampaigns.length)} campaign ที่ active · มอบหมายงาน`} Icon={Target} />
           <NavCard href="/calling/assignee" title="Assignee" desc={myPending > 0 ? `งานของคุณ ${fmt(myPending)} รายการ` : 'ดูรายการที่ได้รับมอบหมาย'} Icon={Phone} />
-          <NavCard href="/calling/stats" title="Statistics" desc={`สถิติเชิงลึก · ${fmt(weekCalls)} calls ใน 7 วัน`} Icon={BarChart3} />
+          <NavCard href="/calling/stats" title="Statistics" desc={`สถิติเชิงลึก · รับสาย ${fmt(callStats.answered)} จาก ${fmt(callStats.total)} ครั้ง`} Icon={BarChart3} />
           <NavCard href="/calling/contacts" title="Contacts" desc={`จัดการผู้ติดต่อนอกฐานสมาชิก · สมาชิก ${fmt(memberCount)} ในระบบ`} Icon={Users} />
         </div>
       </div>
