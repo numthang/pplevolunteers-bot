@@ -50,6 +50,23 @@ function getWatermarkFiles(guildId) {
   } catch { return []; }
 }
 
+function getPersonalDir(userId) {
+  return path.join(ASSETS_DIR, `user_${userId}`);
+}
+
+function getPersonalFiles(userId) {
+  try {
+    return fs.readdirSync(getPersonalDir(userId)).filter(f => /\.(png|jpg|jpeg|webp)$/i.test(f));
+  } catch { return []; }
+}
+
+function resolveWatermarkPath(wmType, guildId, userId) {
+  if (!wmType || wmType === 'none') return null;
+  if (wmType.startsWith('personal:')) return path.join(getPersonalDir(userId), wmType.slice('personal:'.length));
+  const filename = wmType.startsWith('guild:') ? wmType.slice('guild:'.length) : wmType;
+  return path.join(getWatermarkDir(guildId), filename);
+}
+
 function stripExt(f) {
   return f.replace(/\.[^.]+$/, '').replace(/^\d+-/, '');
 }
@@ -197,7 +214,7 @@ async function buildBasketPayload(basket, guildId, channelId, userId) {
   }
 
   pendingPost.set(userId, {
-    guildId, channelId,
+    guildId, channelId, userId,
     wmType:    currentWmType,
     platforms: selectedPlatforms,
     group:     currentGroup,
@@ -206,8 +223,9 @@ async function buildBasketPayload(basket, guildId, channelId, userId) {
 
   const components = [];
   if (imgCount > 0) {
-    const files = getWatermarkFiles(guildId);
-    if (files.length) {
+    const personalFiles = getPersonalFiles(userId);
+    const guildFiles = getWatermarkFiles(guildId);
+    if (personalFiles.length || guildFiles.length) {
       const currentWm = pendingPost.get(userId)?.wmType || 'none';
       components.push(new ActionRowBuilder().addComponents(
         new StringSelectMenuBuilder()
@@ -215,7 +233,8 @@ async function buildBasketPayload(basket, guildId, channelId, userId) {
           .setPlaceholder('ลายน้ำ (default: ไม่มี)')
           .addOptions([
             new StringSelectMenuOptionBuilder().setLabel('ไม่มีลายน้ำ').setValue('none').setDefault(currentWm === 'none'),
-            ...files.map(f => new StringSelectMenuOptionBuilder().setLabel(stripExt(f)).setValue(f).setDefault(currentWm === f)),
+            ...personalFiles.map(f => new StringSelectMenuOptionBuilder().setLabel(stripExt(f)).setValue(`personal:${f}`).setEmoji('🔒').setDefault(currentWm === `personal:${f}`)),
+            ...guildFiles.map(f => new StringSelectMenuOptionBuilder().setLabel(stripExt(f)).setValue(`guild:${f}`).setDefault(currentWm === `guild:${f}`)),
           ])
       ));
     }
@@ -314,7 +333,7 @@ async function rehydrateState(interaction) {
   const basket = await getBasket(guildId, channelId);
   const caption = basket.find(r => r.type === 'caption')?.caption || '';
   const state = {
-    guildId, channelId,
+    guildId, channelId, userId,
     wmType: saved?.wmType ?? 'none',
     platforms,
     group,
@@ -505,7 +524,7 @@ async function processAndPost(interaction, state) {
     if (state.wmType !== 'none') {
       const total = imageItems.length;
       await interaction.editReply({ content: `⏳ ติดลายน้ำ 0/${total} รูป...` });
-      const imagePath = path.join(getWatermarkDir(state.guildId), state.wmType);
+      const imagePath = resolveWatermarkPath(state.wmType, state.guildId, state.userId);
       for (let i = 0; i < imageItems.length; i++) {
         try {
           let srcBuf = await fetchBuffer(imageItems[i].image_url);
