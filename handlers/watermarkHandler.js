@@ -25,9 +25,21 @@ function getWatermarkDir(guildId) {
   return fs.existsSync(guildDir) ? guildDir : ASSETS_DIR;
 }
 
+function getPersonalDir(userId) {
+  return path.join(ASSETS_DIR, `user_${userId}`);
+}
+
 function getWatermarkFiles(guildId) {
   try {
     return fs.readdirSync(getWatermarkDir(guildId)).filter(f => /\.(png|jpg|jpeg|webp)$/i.test(f));
+  } catch {
+    return [];
+  }
+}
+
+function getPersonalFiles(userId) {
+  try {
+    return fs.readdirSync(getPersonalDir(userId)).filter(f => /\.(png|jpg|jpeg|webp)$/i.test(f));
   } catch {
     return [];
   }
@@ -44,10 +56,16 @@ function getImages(msg) {
   });
 }
 
-function buildComponents(files, enhance = false) {
+function buildComponents(personalFiles, guildFiles, enhance = false) {
   const typeOptions = [
-    ...files.map(f =>
-      new StringSelectMenuOptionBuilder().setLabel(stripExt(f)).setValue(f)
+    ...personalFiles.map(f =>
+      new StringSelectMenuOptionBuilder()
+        .setLabel(stripExt(f))
+        .setValue(`personal:${f}`)
+        .setEmoji('🔒')
+    ),
+    ...guildFiles.map(f =>
+      new StringSelectMenuOptionBuilder().setLabel(stripExt(f)).setValue(`guild:${f}`)
     ),
     new StringSelectMenuOptionBuilder()
       .setLabel('Custom text...')
@@ -122,17 +140,21 @@ async function handleWatermarkCommand(interaction) {
   }
 
   const { guildId } = interaction;
-  const files = getWatermarkFiles(guildId);
-  if (files.length === 0) {
+  const userId = interaction.user.id;
+  const personalFiles = getPersonalFiles(userId);
+  const guildFiles = getWatermarkFiles(guildId);
+
+  if (personalFiles.length === 0 && guildFiles.length === 0) {
     return interaction.reply({
-      content: '❌ ยังไม่มีไฟล์ลายน้ำใน `assets/watermark/` กรุณาเพิ่มไฟล์ก่อน',
+      content: '❌ ยังไม่มีไฟล์ลายน้ำ กรุณาเพิ่มไฟล์ใน `assets/watermark/` ก่อน',
       flags: MessageFlags.Ephemeral,
     });
   }
 
-  pending.set(interaction.user.id, {
+  pending.set(userId, {
     messageId: msg.id,
     guildId,
+    userId,
     type: null,
     pos: 'bottom-right',
     opacity: 0.8,
@@ -142,7 +164,7 @@ async function handleWatermarkCommand(interaction) {
 
   await interaction.reply({
     content: `🖼️ พบ **${images.length}** รูป — เลือกแบบแล้วกด ✅`,
-    components: buildComponents(files, false),
+    components: buildComponents(personalFiles, guildFiles, false),
     flags: MessageFlags.Ephemeral,
   });
 }
@@ -166,8 +188,9 @@ async function handleWatermarkEnhance(interaction) {
   const state = pending.get(interaction.user.id);
   if (!state) return interaction.deferUpdate();
   state.enhance = !state.enhance;
-  const files = getWatermarkFiles(state.guildId);
-  await interaction.update({ components: buildComponents(files, state.enhance) });
+  const personalFiles = getPersonalFiles(state.userId);
+  const guildFiles = getWatermarkFiles(state.guildId);
+  await interaction.update({ components: buildComponents(personalFiles, guildFiles, state.enhance) });
 }
 
 // ─── Confirm button ────────────────────────────────────────────────────────────
@@ -235,9 +258,15 @@ async function processWatermark(interaction, state, customText) {
 
   const images = getImages(msg);
   const total = images.length;
-  const imagePath = state.type !== 'custom'
-    ? path.join(getWatermarkDir(state.guildId), state.type)
-    : null;
+  let imagePath = null;
+  if (state.type && state.type !== 'custom') {
+    if (state.type.startsWith('personal:')) {
+      imagePath = path.join(getPersonalDir(state.userId), state.type.slice('personal:'.length));
+    } else {
+      const filename = state.type.startsWith('guild:') ? state.type.slice('guild:'.length) : state.type;
+      imagePath = path.join(getWatermarkDir(state.guildId), filename);
+    }
+  }
 
   await interaction.editReply({ content: `⏳ กำลังประมวลผล 0/${total} รูป...`, components: [] });
 
