@@ -266,3 +266,17 @@ ALTER TABLE dc_social_accounts MODIFY COLUMN access_token TEXT NULL;
 
 -- 2026-05-27: dc_social_accounts — เพิ่ม group_name สำหรับจัดกลุ่ม (ปชช.ราชบุรี, Unnop ส่วนตัว, ฯลฯ)
 ALTER TABLE dc_social_accounts ADD COLUMN group_name VARCHAR(100) NULL AFTER name;
+
+-- 2026-06-04: รวม dc_server_settings เข้า dc_guild_config (สอง key-value table หน้าตาเหมือนกัน → เหลือตารางเดียว)
+-- dc_server_settings.setting_value เป็น json อยู่แล้ว, dc_guild_config.value เป็น text (plain string)
+-- Step 1: value TEXT → json (wrap plain string เดิมให้เป็น json string เช่น abc123 → "abc123")
+ALTER TABLE dc_guild_config ALTER COLUMN value TYPE json USING to_jsonb(value);
+-- Step 2: เพิ่ม updated_at (เก็บ timestamp ที่ย้ายมาจาก dc_server_settings)
+ALTER TABLE dc_guild_config ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT CURRENT_TIMESTAMP;
+-- Step 3: ย้าย rows (setting_value json → value json copy ตรง ๆ, key ไม่ชนกัน)
+INSERT INTO dc_guild_config (guild_id, "key", value, updated_at)
+SELECT guild_id, setting_key, setting_value, updated_at
+FROM dc_server_settings
+ON CONFLICT (guild_id, "key") DO NOTHING;
+-- Step 4: ตรวจสอบ (SELECT * FROM dc_guild_config ORDER BY guild_id, "key";) แล้วค่อย DROP
+DROP TABLE dc_server_settings;

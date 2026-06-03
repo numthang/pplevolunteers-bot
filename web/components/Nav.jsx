@@ -52,8 +52,9 @@ const CONTACTS_LINKS = [
   { href: '/contacts', label: 'Contacts', icon: 'contacts' },
 ]
 
-const BOT_LINKS = [
-  { href: '/bot/social/accounts', label: 'Social Accounts', icon: 'social' },
+const DISCORD_LINKS = [
+  { href: '/discord/social/accounts', label: 'Social Accounts', icon: 'social' },
+  { href: '/discord/watermark', label: 'Watermark', icon: 'logs' },
 ]
 
 const SOCIAL_LINKS = [
@@ -72,7 +73,7 @@ const APPS = [
   { key: 'finance',  label: 'FINANCE',   href: '/finance',        icon: 'transactions' },
   { key: 'calling',  label: 'CALLING',   href: '/calling',        icon: 'campaigns' },
   { key: 'contacts', label: 'CONTACTS',  href: '/contacts',       icon: 'contacts' },
-  { key: 'bot',      label: 'BOT',       href: '/bot/social/accounts', icon: 'social', roles: ['Admin'] },
+  { key: 'discord',  label: 'DISCORD',   href: '/discord/social/accounts', icon: 'social' },
 ]
 
 export default function Nav({ session }) {
@@ -86,14 +87,14 @@ export default function Nav({ session }) {
   const [pendingCount, setPendingCount] = useState(0)
   const campaignRef = useRef(null)
 
-  const isCallingApp  = pathname.startsWith('/calling')
-  const isFinanceApp  = pathname.startsWith('/finance')
-  const isContactsApp = pathname.startsWith('/contacts')
-  const isSocialApp   = pathname.startsWith('/social')
-  const isBotApp      = pathname.startsWith('/bot')
+  const isCallingApp   = pathname.startsWith('/calling')
+  const isFinanceApp   = pathname.startsWith('/finance')
+  const isContactsApp  = pathname.startsWith('/contacts')
+  const isSocialApp    = pathname.startsWith('/social')
+  const isDiscordApp   = pathname.startsWith('/discord') || pathname.startsWith('/bot')
   const isLinkActive = (href) => pathname === href || (href !== '/' && pathname.startsWith(href))
-  const currentApp = isBotApp ? APPS[4] : isContactsApp ? APPS[3] : isCallingApp ? APPS[2] : isFinanceApp ? APPS[1] : APPS[0]
-  const links = isBotApp ? BOT_LINKS : isSocialApp ? SOCIAL_LINKS : isContactsApp ? CONTACTS_LINKS : isCallingApp ? CALLING_LINKS : isFinanceApp ? FINANCE_LINKS : DASHBOARD_LINKS
+  const currentApp = isDiscordApp ? APPS[4] : isContactsApp ? APPS[3] : isCallingApp ? APPS[2] : isFinanceApp ? APPS[1] : APPS[0]
+  const links = isDiscordApp ? DISCORD_LINKS : isSocialApp ? SOCIAL_LINKS : isContactsApp ? CONTACTS_LINKS : isCallingApp ? CALLING_LINKS : isFinanceApp ? FINANCE_LINKS : DASHBOARD_LINKS
 
   const campaignIdMatch = pathname.match(/^\/calling\/assignments\/(\d+)/)
   const activeCampaignId = campaignIdMatch ? parseInt(campaignIdMatch[1]) : null

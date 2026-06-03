@@ -1,5 +1,6 @@
 import DiscordProvider from 'next-auth/providers/discord'
 import pool from '@/db/index.js'
+import { isSuperAdmin } from '@/lib/roles.js'
 
 export const authOptions = {
   session: {
@@ -48,6 +49,7 @@ export const authOptions = {
       session.user.roles            = token.roles || []
       session.user.nickname         = token.nickname || session.user.name
       session.user.primary_province = token.primary_province || null
+      session.user.isSuperAdmin     = isSuperAdmin(token.discordId)
       return session
     },
   },

@@ -1,5 +1,10 @@
 // roles มาจาก dc_members.roles เป็น array ของชื่อ role เช่น ['Admin', 'ทีมเชียงใหม่', 'เหรัญญิก']
 
+export function isSuperAdmin(discordId) {
+  const ids = (process.env.DEV_DISCORD_IDS || '').split(',').map(s => s.trim()).filter(Boolean)
+  return ids.includes(String(discordId))
+}
+
 export function isAdmin(roles = []) {
   return roles.includes('Admin') || roles.includes('เลขาธิการ')
 }

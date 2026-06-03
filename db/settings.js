@@ -2,25 +2,26 @@
 const pool = require('./index');
 
 async function setSetting(guildId, key, value) {
-    const sql = `INSERT INTO dc_server_settings (guild_id, setting_key, setting_value)
+    const sql = `INSERT INTO dc_guild_config (guild_id, "key", value)
                  VALUES ($1, $2, $3)
-                 ON CONFLICT (guild_id, setting_key) DO UPDATE SET
-                   setting_value = EXCLUDED.setting_value`;
+                 ON CONFLICT (guild_id, "key") DO UPDATE SET
+                   value = EXCLUDED.value,
+                   updated_at = CURRENT_TIMESTAMP`;
     await pool.query(sql, [guildId, key, JSON.stringify(value)]);
 }
 
 async function getSetting(guildId, key) {
     const { rows } = await pool.query(
-        'SELECT setting_value FROM dc_server_settings WHERE guild_id = $1 AND setting_key = $2',
+        'SELECT value FROM dc_guild_config WHERE guild_id = $1 AND "key" = $2',
         [guildId, key]
     );
-    return rows[0]?.setting_value || null;
+    return rows[0]?.value ?? null;
 }
 
 async function deleteSetting(guildId, key) {
     try {
         await pool.query(
-            'DELETE FROM dc_server_settings WHERE guild_id = $1 AND setting_key = $2',
+            'DELETE FROM dc_guild_config WHERE guild_id = $1 AND "key" = $2',
             [guildId, key]
         );
         return true;

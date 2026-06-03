@@ -10,7 +10,7 @@ export async function GET() {
     `SELECT DISTINCT m.guild_id, g.name
      FROM dc_members m
      LEFT JOIN (
-       SELECT guild_id, MAX(value) AS name
+       SELECT guild_id, MAX(value #>> '{}') AS name
        FROM dc_guild_config WHERE "key" = 'guild_name'
        GROUP BY guild_id
      ) g ON g.guild_id = m.guild_id

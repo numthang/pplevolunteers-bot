@@ -1,6 +1,7 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
-import { isAdmin } from '@/lib/roles.js'
+import { isAdmin, isSuperAdmin } from '@/lib/roles.js'
+import { getAdminGuildIds } from '@/db/guilds.js'
 import pool from '@/db/index.js'
 
 export async function GET(req) {
@@ -10,6 +11,7 @@ export async function GET(req) {
   const { searchParams } = new URL(req.url)
   const guildId = searchParams.get('guild_id')
   const admin   = isAdmin(session.user.roles)
+  const superAdmin = isSuperAdmin(session.user.discordId)
 
   const SELECT = `SELECT id, user_discord_id, guild_id, name, group_name, platform, social_id,
                          access_token IS NOT NULL AS has_access_token,
@@ -18,22 +20,43 @@ export async function GET(req) {
                   FROM dc_social_accounts`
 
   let rows
-  if (admin) {
+  if (superAdmin) {
     if (guildId) {
-      const r = await pool.query(`${SELECT} WHERE guild_id = $1`, [guildId])
+      const r = await pool.query(`${SELECT} WHERE guild_id = $1 ORDER BY platform, id`, [guildId])
       rows = r.rows
     } else {
       const r = await pool.query(`${SELECT} ORDER BY guild_id, platform, id`)
       rows = r.rows
     }
-  } else {
+  } else if (admin) {
+    const adminGuildIds = await getAdminGuildIds(session.user.discordId)
     if (guildId) {
-      const r = await pool.query(`${SELECT} WHERE user_discord_id = $1 AND guild_id = $2 ORDER BY platform, id`,
-        [session.user.discordId, guildId])
+      if (!adminGuildIds.includes(guildId)) return Response.json([], { status: 200 })
+      const r = await pool.query(`${SELECT} WHERE guild_id = $1 ORDER BY platform, id`, [guildId])
       rows = r.rows
     } else {
-      const r = await pool.query(`${SELECT} WHERE user_discord_id = $1 ORDER BY platform, id`,
-        [session.user.discordId])
+      if (adminGuildIds.length === 0) {
+        rows = []
+      } else {
+        const r = await pool.query(
+          `${SELECT} WHERE guild_id = ANY($1) ORDER BY guild_id, platform, id`,
+          [adminGuildIds]
+        )
+        rows = r.rows
+      }
+    }
+  } else {
+    if (guildId) {
+      const r = await pool.query(
+        `${SELECT} WHERE user_discord_id = $1 AND guild_id = $2 ORDER BY platform, id`,
+        [session.user.discordId, guildId]
+      )
+      rows = r.rows
+    } else {
+      const r = await pool.query(
+        `${SELECT} WHERE user_discord_id = $1 ORDER BY platform, id`,
+        [session.user.discordId]
+      )
       rows = r.rows
     }
   }
@@ -43,15 +66,27 @@ export async function GET(req) {
 
 export async function POST(req) {
   const session = await getServerSession(authOptions)
-  if (!session || !isAdmin(session.user.roles)) {
-    return Response.json({ error: 'Forbidden' }, { status: 403 })
-  }
+  if (!session) return Response.json({ error: 'Forbidden' }, { status: 403 })
+
+  const admin = isAdmin(session.user.roles)
+  const superAdmin = isSuperAdmin(session.user.discordId)
 
   const body = await req.json()
   const { guild_id, name, platform, social_id, access_token, user_token, visibility = 'public' } = body
 
   if (!guild_id || !platform || !social_id) {
     return Response.json({ error: 'guild_id, platform, social_id required' }, { status: 400 })
+  }
+
+  if (!superAdmin && admin) {
+    const adminGuildIds = await getAdminGuildIds(session.user.discordId)
+    if (!adminGuildIds.includes(guild_id)) {
+      return Response.json({ error: 'Forbidden' }, { status: 403 })
+    }
+  }
+
+  if (!superAdmin && !admin) {
+    return Response.json({ error: 'Forbidden' }, { status: 403 })
   }
 
   await pool.query(

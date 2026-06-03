@@ -6,3 +6,13 @@ export async function getGuilds() {
   )
   return rows
 }
+
+export async function getAdminGuildIds(discordId) {
+  const { rows } = await pool.query(
+    `SELECT guild_id FROM dc_members
+     WHERE discord_id = $1
+       AND (',' || roles || ',' LIKE '%,Admin,%' OR ',' || roles || ',' LIKE '%,เลขาธิการ,%')`,
+    [discordId]
+  )
+  return rows.map(r => r.guild_id)
+}
