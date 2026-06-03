@@ -18,6 +18,7 @@ const { fetchBuffer, applyWatermark, autoEnhance } = require('../utils/watermark
 const { postToFacebook, postToInstagram, postToThreads, getAvailablePlatforms, getAvailableGroups } = require('../services/metaApi');
 const { postToX } = require('../services/xApi');
 const { getSetting, setSetting, deleteSetting } = require('../db/settings');
+const pool = require('../db/index');
 
 const stateKey = channelId => `basket_state_${channelId}`;
 async function getBasketState(guildId, channelId) {
@@ -39,14 +40,23 @@ const SUPPORTED_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp']);
 
 const pendingPost = new Map(); // userId → { guildId, channelId, wmType, platform, caption?, scheduleTime? }
 
-function getWatermarkDir(guildId) {
-  const guildDir = path.join(ASSETS_DIR, guildId);
-  return fs.existsSync(guildDir) ? guildDir : ASSETS_DIR;
+function getGroupWatermarkDir(guildId, groupName) {
+  return path.join(ASSETS_DIR, guildId, groupName);
 }
 
-function getWatermarkFiles(guildId) {
+function getGroupWatermarkFiles(guildId, groupName) {
   try {
-    return fs.readdirSync(getWatermarkDir(guildId)).filter(f => /\.(png|jpg|jpeg|webp)$/i.test(f));
+    return fs.readdirSync(getGroupWatermarkDir(guildId, groupName)).filter(f => /\.(png|jpg|jpeg|webp)$/i.test(f));
+  } catch { return []; }
+}
+
+function getGuildRootFiles(guildId) {
+  try {
+    const dir = path.join(ASSETS_DIR, guildId);
+    return fs.readdirSync(dir).filter(f => {
+      if (!/\.(png|jpg|jpeg|webp)$/i.test(f)) return false;
+      return fs.statSync(path.join(dir, f)).isFile();
+    });
   } catch { return []; }
 }
 
@@ -60,11 +70,22 @@ function getPersonalFiles(userId) {
   } catch { return []; }
 }
 
-function resolveWatermarkPath(wmType, guildId, userId) {
+async function isPersonalGroup(guildId, groupName) {
+  const { rows } = await pool.query(
+    `SELECT COUNT(*) as cnt FROM dc_social_accounts
+     WHERE guild_id = $1 AND group_name = $2 AND visibility = 'public'`,
+    [guildId, groupName]
+  );
+  return parseInt(rows[0].cnt) === 0;
+}
+
+function resolveWatermarkPath(wmType, guildId, groupName, userId) {
   if (!wmType || wmType === 'none') return null;
   if (wmType.startsWith('personal:')) return path.join(getPersonalDir(userId), wmType.slice('personal:'.length));
   const filename = wmType.startsWith('guild:') ? wmType.slice('guild:'.length) : wmType;
-  return path.join(getWatermarkDir(guildId), filename);
+  return groupName
+    ? path.join(getGroupWatermarkDir(guildId, groupName), filename)
+    : path.join(ASSETS_DIR, guildId, filename);
 }
 
 function stripExt(f) {
@@ -222,19 +243,34 @@ async function buildBasketPayload(basket, guildId, channelId, userId) {
   });
 
   const components = [];
-  if (imgCount > 0) {
-    const personalFiles = getPersonalFiles(userId);
-    const guildFiles = getWatermarkFiles(guildId);
-    if (personalFiles.length || guildFiles.length) {
+  const groupRow = buildGroupRow(groups, currentGroup);
+  if (groupRow) components.push(groupRow);
+  const platformRow = buildPlatformRow(availablePlatforms, selectedPlatforms);
+  if (platformRow) components.push(platformRow);
+
+  const canShowWatermark = currentGroup || groups.length === 0;
+  if (imgCount > 0 && canShowWatermark) {
+    const isPersonal = currentGroup ? await isPersonalGroup(guildId, currentGroup) : false;
+    const wmFiles = currentGroup
+      ? (isPersonal ? getPersonalFiles(userId) : getGroupWatermarkFiles(guildId, currentGroup))
+      : getGuildRootFiles(guildId);
+    if (wmFiles.length) {
       const currentWm = pendingPost.get(userId)?.wmType || 'none';
+      const prefix = isPersonal ? 'personal' : 'guild';
       components.push(new ActionRowBuilder().addComponents(
         new StringSelectMenuBuilder()
           .setCustomId('basket_wm_type')
           .setPlaceholder('ลายน้ำ (default: ไม่มี)')
           .addOptions([
             new StringSelectMenuOptionBuilder().setLabel('ไม่มีลายน้ำ').setValue('none').setDefault(currentWm === 'none'),
-            ...personalFiles.map(f => new StringSelectMenuOptionBuilder().setLabel(stripExt(f)).setValue(`personal:${f}`).setEmoji('🔒').setDefault(currentWm === `personal:${f}`)),
-            ...guildFiles.map(f => new StringSelectMenuOptionBuilder().setLabel(stripExt(f)).setValue(`guild:${f}`).setDefault(currentWm === `guild:${f}`)),
+            ...wmFiles.map(f => {
+              const opt = new StringSelectMenuOptionBuilder()
+                .setLabel(stripExt(f))
+                .setValue(`${prefix}:${f}`)
+                .setDefault(currentWm === `${prefix}:${f}`);
+              if (isPersonal) opt.setEmoji('🔒');
+              return opt;
+            }),
           ])
       ));
     }
@@ -249,10 +285,6 @@ async function buildBasketPayload(basket, guildId, channelId, userId) {
         ])
     ));
   }
-  const groupRow = buildGroupRow(groups, currentGroup);
-  if (groupRow) components.push(groupRow);
-  const platformRow = buildPlatformRow(availablePlatforms, selectedPlatforms);
-  if (platformRow) components.push(platformRow);
   components.push(buildBasketButtons(imgCount, !!caption));
 
   return { embeds: [embed], components };
@@ -374,9 +406,9 @@ async function handleBasketSelect(interaction) {
       setBasketStatePartial(guildId, channelId, { platforms: interaction.values }).catch(e => console.error('[basket_platform setState]', e));
     }
     if (interaction.customId === 'basket_group') {
-      if (state) state.group = interaction.values[0];
+      if (state) { state.group = interaction.values[0]; state.wmType = 'none'; }
       // ต้อง await ก่อน re-render — ไม่งั้น buildBasketPayload จะอ่าน group เก่าจาก DB
-      await setBasketStatePartial(guildId, channelId, { group: interaction.values[0] }).catch(e => console.error('[basket_group setState]', e));
+      await setBasketStatePartial(guildId, channelId, { group: interaction.values[0], wmType: 'none' }).catch(e => console.error('[basket_group setState]', e));
       const basket = await getBasket(guildId, channelId);
       const payload = await buildBasketPayload(basket, guildId, channelId, interaction.user.id);
       await interaction.editReply(payload).catch(e => console.error('[basket_group editReply]', e));
@@ -524,7 +556,7 @@ async function processAndPost(interaction, state) {
     if (state.wmType !== 'none') {
       const total = imageItems.length;
       await interaction.editReply({ content: `⏳ ติดลายน้ำ 0/${total} รูป...` });
-      const imagePath = resolveWatermarkPath(state.wmType, state.guildId, state.userId);
+      const imagePath = resolveWatermarkPath(state.wmType, state.guildId, state.group, state.userId);
       for (let i = 0; i < imageItems.length; i++) {
         try {
           let srcBuf = await fetchBuffer(imageItems[i].image_url);
