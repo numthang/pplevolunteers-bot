@@ -2,6 +2,7 @@
 const sharp  = require('sharp');
 const { createCanvas, loadImage, GlobalFonts } = require('@napi-rs/canvas');
 const path   = require('path');
+const { analyzeLayout } = require('../services/aiLayout');
 
 GlobalFonts.registerFromPath(
   path.join(__dirname, '..', 'assets', 'fonts', 'Anakotmai-Bold.ttf'),
@@ -21,6 +22,7 @@ async function loadMark(name) {
 
 const ORANGE = '#ff6a13';
 const WHITE  = '#ffffff';
+const BLACK  = '#000000';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -135,8 +137,9 @@ async function toPng(canvas) {
 // ── Core render ───────────────────────────────────────────────────────────────
 // markScale: relative size of mark (1.0 = default)
 // gradDark:  0.0–1.0 how dark the bottom gradient is
-async function renderVariant(buf, { quoteText, authorName, side = 'left', markScale = 1.0, gradDark = 0.95, saturation = 0.15 }) {
+async function renderVariant(buf, { quoteText, authorName, side = 'left', vertical = 'bottom', markScale = 1.0, gradDark = 0.95, saturation = 0.15 }) {
   const isRight = side === 'right';
+  const isTop   = vertical === 'top';
 
   const work = await sharp(buf).modulate({ saturation }).toBuffer();
   const img  = await loadImage(work);
@@ -160,8 +163,9 @@ async function renderVariant(buf, { quoteText, authorName, side = 'left', markSc
 
   const textX        = isRight ? W - maxW - pad - barW - barGap - 4 : pad + barW + barGap + 4;
   const barX         = isRight ? W - pad - barW : pad;
-  const textBlockTop = H - pad - textH;
-  const markY        = textBlockTop - markGap - markH;
+  // top: mark ↓ pad, then text block below it. bottom: text block ↑ pad, mark above it.
+  const markY        = isTop ? pad : H - pad - textH - markGap - markH;
+  const textBlockTop = isTop ? pad + markH + markGap : H - pad - textH;
 
   const OPEN_MARKS  = ['double_open', 'classic_open', 'block_open', 'outline_open', 'big_open'];
   const CLOSE_MARKS = ['double_close', 'classic_close', 'block_close', 'outline_close'];
@@ -171,7 +175,10 @@ async function renderVariant(buf, { quoteText, authorName, side = 'left', markSc
   // left: mark ซ้าย align กับ bar edge, right: mark ขวา align กับ text ขวา
   const markX   = isRight ? textX + maxW - markW : pad;
 
-  const gV = ctx.createLinearGradient(0, H, 0, markY - H * 0.2);
+  // gradient ไล่จากด้านที่มี text → จางไปอีกฝั่ง
+  const gV = isTop
+    ? ctx.createLinearGradient(0, 0, 0, (textBlockTop + textH) + H * 0.2)
+    : ctx.createLinearGradient(0, H, 0, markY - H * 0.2);
   gV.addColorStop(0,   `rgba(0,5,12,${gradDark})`);
   gV.addColorStop(0.4, `rgba(0,5,12,${Math.round(gradDark * 0.84 * 100) / 100})`);
   gV.addColorStop(1,   'rgba(0,5,12,0)');
@@ -184,8 +191,7 @@ async function renderVariant(buf, { quoteText, authorName, side = 'left', markSc
   ctx.fillRect(barX, textBlockTop, barW, textH);
 
   ctx.textBaseline = 'top';
-  ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 10;
-  ctx.shadowOffsetX = 1; ctx.shadowOffsetY = 1;
+  ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
   let ty = textBlockTop;
   for (const l of lines) {
     const drawX = isRight ? textX + (maxW - lsWidth(ctx, l, 1.0)) : textX;
@@ -194,17 +200,25 @@ async function renderVariant(buf, { quoteText, authorName, side = 'left', markSc
   }
 
   ty += nsz * 0.5;
-  ctx.font = `${nsz}px AnakotmaiLight`; ctx.fillStyle = ORANGE;
-  ctx.shadowBlur = 4; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
-  if (isRight) {
-    const aw = lsWidth(ctx, `— ${authorName}`, 0.8);
-    lsDraw(ctx, `— ${authorName}`, textX + (maxW - aw), ty, 0.8);
-  } else {
-    lsDraw(ctx, `— ${authorName}`, textX, ty, 0.8);
+  ctx.font = `${nsz}px AnakotmaiLight`;
+  const authorStr = `— ${authorName}`;
+  const aw = lsWidth(ctx, authorStr, 0.8);
+  const ax = isRight ? textX + (maxW - aw) : textX;
+
+  // top mode: author หลุดโซน gradient เข้ม → fill bg ขาวหลังตัวอักษร (author สีดำบนขาว)
+  if (isTop) {
+    const padX = Math.round(nsz * 0.5), padY = Math.round(nsz * 0.35);
+    ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    ctx.fillRect(ax - padX, ty - padY, aw + padX * 2, nsz + padY * 2);
   }
 
+  ctx.fillStyle = isTop ? BLACK : ORANGE;
+  if (!isTop) { ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 4; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0; }
+  lsDraw(ctx, authorStr, ax, ty, 0.8);
+
   ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
-  return { buffer: await toPng(cv), ext: 'png' };
+  return { buffer: await toPng(cv), ext: 'png', vertical, side };
 }
 
 // ── Style 7: quote_border (mark + H-bar + V-bar เป็นชิ้นเดียว) ───────────────
@@ -253,8 +267,7 @@ async function renderBorder(buf, { quoteText, authorName, saturation = 0.15 }) {
 
   // quote text
   ctx.textBaseline = 'top';
-  ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 10;
-  ctx.shadowOffsetX = 1; ctx.shadowOffsetY = 1;
+  ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
   let ty = textBlockTop;
   for (const l of lines) {
     ctx.fillStyle = WHITE; lsDraw(ctx, l, textX, ty, 1.0);
@@ -267,7 +280,7 @@ async function renderBorder(buf, { quoteText, authorName, saturation = 0.15 }) {
   lsDraw(ctx, `— ${authorName}`, textX, ty, 0.8);
 
   ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
-  return { buffer: await toPng(cv), ext: 'png' };
+  return { buffer: await toPng(cv), ext: 'png', vertical: 'bottom', side: 'left' };
 }
 
 // ── Style 8: quote_border_2 (top H + right V + bottom H — right frame) ───────
@@ -317,8 +330,7 @@ async function renderBorder2(buf, { quoteText, authorName, saturation = 0.15 }) 
   ctx.drawImage(borderImg, borderX, borderY, pngW, pngH);
 
   ctx.textBaseline = 'top';
-  ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 10;
-  ctx.shadowOffsetX = 1; ctx.shadowOffsetY = 1;
+  ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
   let ty = textBlockTop;
   for (const l of lines) {
     const drawX = contentX + (contentMaxW - lsWidth(ctx, l, 1.0));
@@ -333,17 +345,43 @@ async function renderBorder2(buf, { quoteText, authorName, saturation = 0.15 }) 
   lsDraw(ctx, `— ${authorName}`, contentX + (authorMaxW - aw), ty, 0.8);
 
   ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
-  return { buffer: await toPng(cv), ext: 'png' };
+  return { buffer: await toPng(cv), ext: 'png', vertical: 'bottom', side: 'right' };
 }
 
 // ── Styles ───────────────────────────────────────────────────────────────────
+// โหมด AI: Claude ตัดสิน band (บน/ล่าง) = แถบโล่งคน + align + สี (3 ระดับ) — ล่ม → random
+// honor การเลือกสีเองจาก opts.saturation (ถ้าไม่ null = user เลือกเอง)
+const SATS = [1.0, 0.55, 0.15];
+const SAT_LEVEL = { full: 1.0, mid: 0.55, bw: 0.15 };
+async function renderEmberAI(buf, opts) {
+  const layout   = await analyzeLayout(buf, opts.mimeType || 'image/jpeg', 'claude');
+  const fallback = layout.reasoning === 'fallback defaults';
+  // AI ตัดสินแค่ band (บน/ล่าง) = แถบที่โล่งคนสุด + align (ซ้าย/ขวา) = ฝั่งที่ว่าง
+  const side     = fallback ? (Math.random() < 0.5 ? 'left' : 'right') : layout.align;
+  const vertical = fallback ? (Math.random() < 0.5 ? 'top' : 'bottom') : layout.band;
+  // สี: เลือกเอง > AI > random (ตอน fallback)
+  const saturation = opts.saturation != null ? opts.saturation
+                   : fallback ? SATS[Math.floor(Math.random() * SATS.length)]
+                   : SAT_LEVEL[layout.saturationLevel];
+  console.log('[ember-ai]', fallback ? 'AI ล่ม→random' : `band=${layout.band} align=${layout.align}`, '→', side, vertical, 'sat', saturation, '|', layout.reasoning);
+  return renderVariant(buf, { ...opts, side, vertical, saturation, markScale: 0.7, gradDark: 0.98 });
+}
+
+const ember = (side, vertical) => (buf, opts) =>
+  renderVariant(buf, { ...opts, side, vertical, markScale: 0.7, gradDark: 0.98 });
+
 const STYLES = {
-  'quote-1-ember-left':  (buf, opts) => renderVariant(buf, { ...opts, side: 'left',  markScale: 0.7, gradDark: 0.98 }),
-  'quote-1-ember-right': (buf, opts) => renderVariant(buf, { ...opts, side: 'right', markScale: 0.7, gradDark: 0.98 }),
-  'quote-1-pillar-left': (buf, opts) => renderBorder(buf, opts),
-  'quote-1-frame-right': (buf, opts) => renderBorder2(buf, opts),
+  'quote-1-ember-bottom-left':  ember('left',  'bottom'),
+  'quote-1-ember-bottom-right': ember('right', 'bottom'),
+  'quote-1-ember-top-left':     ember('left',  'top'),
+  'quote-1-ember-top-right':    ember('right', 'top'),
+  'quote-1-pillar-left':        (buf, opts) => renderBorder(buf, opts),
+  'quote-1-frame-right':        (buf, opts) => renderBorder2(buf, opts),
+  'quote-1-ember-ai':           (buf, opts) => renderEmberAI(buf, opts),
 };
-const STYLE_KEYS = Object.keys(STYLES);
+// random pool ไม่รวม ember-ai — สุ่มจะได้ไม่เผลอยิง API
+const RANDOM_KEYS = Object.keys(STYLES).filter(k => k !== 'quote-1-ember-ai');
+const STYLE_KEYS  = Object.keys(STYLES);
 
 async function renderQuoteStyle(styleKey, sourceBuffer, opts) {
   const fn = STYLES[styleKey];
@@ -354,7 +392,7 @@ async function renderQuoteStyle(styleKey, sourceBuffer, opts) {
 function parseStyle(input) {
   const s = (input || '').trim();
   if (!s || s === 'สุ่ม' || s === 'สุม' || s === 'random')
-    return STYLE_KEYS[Math.floor(Math.random() * STYLE_KEYS.length)];
+    return RANDOM_KEYS[Math.floor(Math.random() * RANDOM_KEYS.length)];
   const match = STYLE_KEYS.find(k => k.toLowerCase() === s.toLowerCase());
   return match || null;
 }

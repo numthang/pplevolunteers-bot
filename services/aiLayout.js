@@ -2,25 +2,20 @@
 // AI-powered image layout analysis — provider-agnostic
 // Supported providers: claude (default), gemini (future)
 
-const LAYOUT_PROMPT = `Analyze this image to determine the best placement for a quote text overlay.
+const LAYOUT_PROMPT = `A quote caption will be overlaid on this image as a FULL-WIDTH BAR covering roughly the TOP third OR the BOTTOM third (a dark gradient sits behind the text across the entire width). Decide where it goes.
+
 Return ONLY valid JSON, no markdown, no explanation:
 {
-  "quotePosition": "top-left|top-right|center-left|center-right|bottom-left|bottom-right",
-  "namePosition": "bottom-left|bottom-right|bottom-center",
-  "textColor": "#FFFFFF or #000000",
-  "accentColor": "#FFFFFF or #000000 or #ff6a13",
-  "applyBW": true or false,
+  "band": "top|bottom",
+  "align": "left|right",
+  "saturationLevel": "full|mid|bw",
   "reasoning": "one sentence"
 }
 
 Rules:
-- quotePosition: find the area that is GENUINELY empty — uniform color, plain wall, sky, floor, or out-of-focus background. STRICTLY AVOID: any area containing a person, face, or body — even partially. Also avoid: text, slides, screens, logos, busy patterns
-- Scan all 6 zones. Rank them by: (1) no people at all, (2) uniform/plain background, (3) low visual complexity. Pick the highest-ranked zone
-- If the image has a person on the left, choose a right-side zone. If person is centered, choose top or bottom corner with no person
-- textColor: must contrast with background at chosen position (#FFFFFF on dark, #000000 on light)
-- accentColor: #ff6a13 if there's orange/warm color in image, else match textColor
-- applyBW: true only if the image has very strong/clashing colors that hurt readability — default false
-- namePosition: bottom corner opposite from the main subject`;
+- band: choose the horizontal third (TOP or BOTTOM) whose FULL-WIDTH strip contains the FEWEST people's faces and bodies. The bar spans the entire width — judge the whole horizontal strip, NOT a single corner. If people/faces sit in the lower half → "top". If they sit in the upper half → "bottom". If both ends have faces, pick the side where faces are smaller or fewer.
+- align: within that band, the side (left or right) that has more empty / plain background — put the text there.
+- saturationLevel: "full" = keep vivid color (default, good photo); "mid" = slightly muted when colors are busy/clashing; "bw" = black & white, only when strong colors badly hurt text readability.`;
 
 const PROVIDERS = {
   claude: async (imageBase64, mimeType) => {
@@ -80,7 +75,7 @@ const PROVIDERS = {
  * @param {string} provider - 'claude' (default)
  * @returns {{ quotePosition, namePosition, textColor, accentColor, applyBW, reasoning }}
  */
-async function analyzeLayout(imageBuffer, mimeType, provider = 'gemini') {
+async function analyzeLayout(imageBuffer, mimeType, provider = 'claude') {
   const fn = PROVIDERS[provider];
   if (!fn) throw new Error(`Unknown AI provider: ${provider}`);
 
@@ -88,24 +83,23 @@ async function analyzeLayout(imageBuffer, mimeType, provider = 'gemini') {
 
   try {
     const result = await fn(base64, mimeType);
-    // Validate & fallback defaults
+    const band  = result.band === 'top' ? 'top' : 'bottom';
+    const align = result.align === 'right' ? 'right' : 'left';
     return {
-      quotePosition: result.quotePosition || 'center-left',
-      namePosition:  result.namePosition  || 'bottom-left',
-      textColor:     result.textColor     || '#FFFFFF',
-      accentColor:   result.accentColor   || '#FFFFFF',
-      applyBW:       result.applyBW       ?? false,
-      reasoning:     result.reasoning     || '',
+      band,
+      align,
+      saturationLevel: ['full', 'mid', 'bw'].includes(result.saturationLevel) ? result.saturationLevel : 'full',
+      quotePosition:   `${band}-${align}`,   // backward compat (test scripts)
+      reasoning:       result.reasoning || '',
     };
   } catch (err) {
     console.error('[aiLayout] parse error, using defaults:', err.message);
     return {
-      quotePosition: 'center-left',
-      namePosition:  'bottom-left',
-      textColor:     '#FFFFFF',
-      accentColor:   '#ff6a13',
-      applyBW:       false,
-      reasoning:     'fallback defaults',
+      band:            'bottom',
+      align:           'left',
+      saturationLevel: 'full',
+      quotePosition:   'bottom-left',
+      reasoning:       'fallback defaults',
     };
   }
 }

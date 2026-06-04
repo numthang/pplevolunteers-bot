@@ -43,7 +43,7 @@ const TEST_CASES = [
 const satFilter = process.argv.find(a => ['--bw','--mid','--color'].includes(a))?.replace('--','');
 const activeSats = satFilter ? SAT_MODES.filter(s => s.tag === satFilter) : SAT_MODES;
 
-const ALL_STYLES = ['Quote-1-ember-left', 'Quote-1-ember-right', 'Quote-1-pillar-left', 'Quote-1-frame-right'];
+const ALL_STYLES = ['quote-1-ember-bottom-left', 'quote-1-ember-bottom-right', 'quote-1-ember-top-left', 'quote-1-ember-top-right', 'quote-1-pillar-left', 'quote-1-frame-right'];
 
 // filter: --style Quote-1-ember-left (ถ้าไม่ระบุ = ทุก style)
 const styleArg = process.argv.indexOf('--style');

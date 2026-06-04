@@ -24,7 +24,7 @@ const { handleFinanceRefresh } = require('./handlers/financeDashboard');
 const { handleOpenSearch, handleSearchModal, handleResultPage } = require('./handlers/forumSearch');
 const { handleGogoSignup, handleGogoModal, handleGogoDMButton, handleGogoDMModal, handleGogoEventButton, handleGogoEventSelect, handleGogoEventModal, handleGogoListButton } = require('./handlers/gogoHandler');
 const { handleWatermarkSelect, handleWatermarkEnhance, handleWatermarkConfirm, handleWatermarkModal } = require('./handlers/watermarkHandler');
-const { handleQuoteModal, handleQuoteStyleSelect, handleQuoteColorSelect, handleQuoteConfirm } = require('./handlers/quoteHandler');
+const { handleQuoteModal, handleQuoteStyleSelect, handleQuoteColorSelect, handleQuoteCropSelect, handleQuoteWatermarkSelect, handleQuoteConfirm } = require('./handlers/quoteHandler');
 const {
   handleBasketView, handleBasketClear,
   handleBasketPost, handleBasketRetry, handleBasketSelect, handleBasketModal,
@@ -135,6 +135,8 @@ client.on('interactionCreate', async (interaction) => {
   if (interaction.isStringSelectMenu()) {
     if (interaction.customId === 'quote_style_select')            return handleQuoteStyleSelect(interaction);
     if (interaction.customId === 'quote_color_select')            return handleQuoteColorSelect(interaction);
+    if (interaction.customId === 'quote_crop_select')             return handleQuoteCropSelect(interaction);
+    if (interaction.customId === 'quote_wm_select')               return handleQuoteWatermarkSelect(interaction);
     if (interaction.customId.startsWith('orgchart_group'))           return handleOrgchartGroupSelect(interaction);
     if (interaction.customId.startsWith('orgchart_province_region')) return handleOrgchartProvinceSelect(interaction);
     if (interaction.customId.startsWith('orgchart_role'))            return handleOrgchartRoleSelect(interaction);

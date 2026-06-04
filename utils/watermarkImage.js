@@ -35,6 +35,7 @@ function calcPos(imgW, imgH, wmW, wmH, position) {
     return corners[Math.floor(Math.random() * 4)];
   }
   switch (position) {
+    case 'top-left':    return { x: pad,              y: pad };
     case 'bottom-left': return { x: pad,              y: imgH - wmH - pad };
     case 'center':      return { x: (imgW - wmW) / 2, y: (imgH - wmH) / 2 };
     case 'top-right':   return { x: imgW - wmW - pad, y: pad };

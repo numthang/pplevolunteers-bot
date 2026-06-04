@@ -2,6 +2,7 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { fetchBuffer } = require('../utils/watermarkImage');
 
 const TEMP_DIR = process.env.META_TEMP_DIR
   || path.join(__dirname, '..', 'web', 'public', 'media-temp');
@@ -520,4 +521,40 @@ async function postToThreads(guildId, userId, images, caption, onProgress = null
   return result;
 }
 
-module.exports = { getConfig, getAvailablePlatforms, getAvailableGroups, getGuildMetaApp, postToFacebook, postToInstagram, postToThreads };
+async function postReelsToInstagram(guildId, userId, videoDiscordUrl, caption, onProgress = null, groupName = null) {
+  const cfg = await getConfig(guildId, 'ig', userId, groupName);
+  if (!cfg) throw new Error('ไม่พบ Instagram config สำหรับ guild นี้');
+  if (!TEMP_URL.startsWith('http')) {
+    throw new Error(`META_TEMP_URL หรือ WEB_BASE_URL ไม่ได้ set — Instagram เข้าถึง URL ไม่ได้`);
+  }
+  const igToken = cfg.userToken;
+  if (!igToken) throw new Error('ไม่พบ User Token สำหรับ IG — กรุณาเข้าไป reconnect Meta OAuth ใหม่');
+
+  if (onProgress) onProgress('📤 Instagram Reels: กำลังดาวน์โหลดวิดีโอ...');
+  const buffer = await fetchBuffer(videoDiscordUrl);
+  fs.mkdirSync(TEMP_DIR, { recursive: true });
+  const filename = `${crypto.randomBytes(12).toString('hex')}.mp4`;
+  fs.writeFileSync(path.join(TEMP_DIR, filename), buffer);
+  const videoUrl = `${TEMP_URL}/${filename}`;
+
+  if (onProgress) onProgress('📤 Instagram Reels: กำลังสร้าง container...');
+  const { id: containerId, error: containerErr } = await igPost(`/v22.0/${cfg.socialId}/media`, {
+    media_type: 'REELS', video_url: videoUrl, caption, access_token: igToken,
+  });
+  if (containerErr) throw new Error(`IG Reels container: ${containerErr.message}`);
+  console.log('[IG Reels container created] id:', containerId);
+
+  await waitForIgContainer(containerId, igToken, 300_000,
+    s => onProgress && onProgress(`📤 Instagram Reels: กำลัง process วิดีโอ... (${s}s)`)
+  );
+
+  const { id: mediaId } = await igPost(`/v22.0/${cfg.socialId}/media_publish`, {
+    creation_id: containerId, access_token: igToken,
+  });
+  const info = await httpsGet(`/v22.0/${mediaId}?fields=permalink,shortcode&access_token=${encodeURIComponent(igToken)}`);
+  const permalink = info.permalink
+    || (info.shortcode ? `https://www.instagram.com/reel/${info.shortcode}/` : null);
+  return { id: mediaId, permalink };
+}
+
+module.exports = { getConfig, getAvailablePlatforms, getAvailableGroups, getGuildMetaApp, postToFacebook, postToInstagram, postToThreads, postReelsToInstagram };

@@ -13,9 +13,9 @@ const {
 const path = require('path');
 const fs = require('fs');
 const sharp = require('sharp');
-const { addImages, setCaption, getBasket, clearBasket, addHistory, getHistory } = require('../db/mediaBasket');
+const { addImages, addVideo, setCaption, getBasket, clearBasket, addHistory, getHistory } = require('../db/mediaBasket');
 const { fetchBuffer, applyWatermark, autoEnhance } = require('../utils/watermarkImage');
-const { postToFacebook, postToInstagram, postToThreads, getAvailablePlatforms, getAvailableGroups } = require('../services/metaApi');
+const { postToFacebook, postToInstagram, postToThreads, postReelsToInstagram, getAvailablePlatforms, getAvailableGroups } = require('../services/metaApi');
 const { postToX } = require('../services/xApi');
 const { getSetting, setSetting, deleteSetting } = require('../db/settings');
 const pool = require('../db/index');
@@ -37,6 +37,7 @@ async function clearBasketState(guildId, channelId) {
 
 const ASSETS_DIR = path.join(__dirname, '..', 'assets', 'watermark');
 const SUPPORTED_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp']);
+const VIDEO_TYPES = new Set(['video/mp4']);
 
 const pendingPost = new Map(); // userId → { guildId, channelId, wmType, platform, caption?, scheduleTime? }
 
@@ -108,18 +109,21 @@ function stripDiscordMarkdown(text) {
     .trim();
 }
 
-function buildBasketEmbed(imgCount, caption, previewUrl = null) {
+function buildBasketEmbed(imgCount, videoCount, caption, previewUrl = null) {
+  const mediaLabel = videoCount > 0
+    ? (imgCount > 0 ? `${imgCount} รูป + ${videoCount} วิดีโอ` : `${videoCount} วิดีโอ 🎬`)
+    : `${imgCount} รูป`;
   const embed = new EmbedBuilder()
     .setColor(0xff6a13)
-    .setTitle(`🧺 ตะกร้าสื่อ — ${imgCount} รูป`);
+    .setTitle(`🧺 ตะกร้าสื่อ — ${mediaLabel}`);
   if (caption) embed.setDescription(caption.length > 280 ? caption.slice(0, 280) + '…' : caption);
   else embed.setDescription('*ยังไม่มี caption*');
   if (previewUrl) embed.setImage(previewUrl);
   return embed;
 }
 
-function buildBasketButtons(imgCount, hasCaption = false) {
-  const empty = imgCount === 0 && !hasCaption;
+function buildBasketButtons(imgCount, videoCount, hasCaption = false) {
+  const empty = imgCount === 0 && videoCount === 0 && !hasCaption;
   return new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId('basket_post')
@@ -184,8 +188,10 @@ function buildPlatformRow(availablePlatforms, selectedPlatforms) {
 // ─── shared: build full basket reply payload ──────────────────────────────────
 async function buildBasketPayload(basket, guildId, channelId, userId) {
   const images  = basket.filter(r => r.type === 'image');
+  const videos  = basket.filter(r => r.type === 'video');
   const caption = basket.find(r => r.type === 'caption')?.caption || null;
-  const imgCount = images.length;
+  const imgCount   = images.length;
+  const videoCount = videos.length;
 
   const msgIds = [...new Set(images.map(r => r.message_id).filter(Boolean))];
   const links  = msgIds.map((id, i) =>
@@ -195,7 +201,7 @@ async function buildBasketPayload(basket, guildId, channelId, userId) {
     ? images[Math.floor(Math.random() * images.length)].image_url
     : null;
 
-  const embed = buildBasketEmbed(imgCount, caption, previewUrl);
+  const embed = buildBasketEmbed(imgCount, videoCount, caption, previewUrl);
   if (links.length) embed.addFields({ name: '🖼️ ต้นทาง', value: links.join('\n'), inline: false });
 
   const saved = await getBasketState(guildId, channelId);
@@ -285,7 +291,7 @@ async function buildBasketPayload(basket, guildId, channelId, userId) {
         ])
     ));
   }
-  components.push(buildBasketButtons(imgCount, !!caption));
+  components.push(buildBasketButtons(imgCount, videoCount, !!caption));
 
   return { embeds: [embed], components };
 }
@@ -307,10 +313,14 @@ async function handleBasketAdd(interaction) {
     const ct = a.contentType?.split(';')[0].trim();
     return SUPPORTED_TYPES.has(ct);
   });
+  const videos = [...sourceMsg.attachments.values()].filter(a => {
+    const ct = a.contentType?.split(';')[0].trim();
+    return VIDEO_TYPES.has(ct);
+  });
   const text = sourceMsg.content ? stripDiscordMarkdown(sourceMsg.content) : '';
 
-  if (!images.length && !text) {
-    return interaction.reply({ content: '❌ ข้อความนี้ไม่มีรูปหรือข้อความ', flags: MessageFlags.Ephemeral });
+  if (!images.length && !videos.length && !text) {
+    return interaction.reply({ content: '❌ ข้อความนี้ไม่มีรูป วิดีโอ (.mp4) หรือข้อความ', flags: MessageFlags.Ephemeral });
   }
 
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
@@ -319,13 +329,25 @@ async function handleBasketAdd(interaction) {
   const addedBy = interaction.user.id;
   const isBot = msg.author?.bot ?? false;
 
+  if (images.length || videos.length) {
+    const existingBasket = await getBasket(guildId, channelId);
+    const hasImages = existingBasket.some(r => r.type === 'image');
+    const hasVideo  = existingBasket.some(r => r.type === 'video');
+    if (videos.length && hasImages)  return interaction.editReply({ content: '❌ ตะกร้ามีรูปอยู่แล้ว — ล้างก่อนแล้วค่อยเพิ่มวิดีโอ' });
+    if (images.length && hasVideo)   return interaction.editReply({ content: '❌ ตะกร้ามีวิดีโออยู่แล้ว — ล้างก่อนแล้วค่อยเพิ่มรูป' });
+    if (videos.length && hasVideo)   return interaction.editReply({ content: '❌ รองรับได้แค่ 1 วิดีโอต่อโพสต์ — ล้างก่อนแล้วค่อยเพิ่มอันใหม่' });
+    if (videos.length > 1)           return interaction.editReply({ content: '❌ เพิ่มได้แค่ 1 วิดีโอต่อครั้ง' });
+  }
+
   if (images.length) await addImages(guildId, channelId, addedBy, images.map(a => ({ url: a.url })), msg.id);
-  if (text && !isBot && !images.length) await setCaption(guildId, channelId, addedBy, text, msg.id);
+  if (videos.length) await addVideo(guildId, channelId, addedBy, videos.map(a => ({ url: a.url })), msg.id);
+  if (text && !isBot && !images.length && !videos.length) await setCaption(guildId, channelId, addedBy, text, msg.id);
 
   const basket = await getBasket(guildId, channelId);
   const added = [
     images.length ? `🖼️ ${images.length} รูป` : null,
-    text && !isBot && !images.length ? `📝 caption (แทนอันเก่า)` : null,
+    videos.length ? `🎬 1 วิดีโอ` : null,
+    text && !isBot && !images.length && !videos.length ? `📝 caption (แทนอันเก่า)` : null,
   ].filter(Boolean).join(' + ');
 
   const payload = await buildBasketPayload(basket, guildId, channelId, interaction.user.id);
@@ -549,8 +571,48 @@ async function handleBasketModal(interaction) {
 async function processAndPost(interaction, state) {
   const basket     = await getBasket(state.guildId, state.channelId);
   const imageItems = basket.filter(r => r.type === 'image');
+  const videoItems = basket.filter(r => r.type === 'video');
   const processed  = [];
   const wmErrors   = [];
+
+  // ─── Video (Reels) path ──────────────────────────────────────────────────────
+  if (videoItems.length > 0) {
+    if (imageItems.length > 0) {
+      return interaction.editReply({ content: '❌ ตะกร้ามีทั้งรูปและวิดีโอ — ล้างแล้วโพสต์ทีละประเภท' });
+    }
+    const platforms   = state.platforms || [];
+    const { scheduleTime } = state;
+    const results = [];
+    let igUrl = null;
+
+    if (platforms.includes('ig')) {
+      const igMsg = scheduleTime ? '📤 IG Reels ไม่รองรับตั้งเวลา — โพสต์ทันที...' : '📤 กำลังโพสต์ Reels ไปยัง Instagram...';
+      await interaction.editReply({ content: igMsg }).catch(() => {});
+      try {
+        const igProgress = msg => interaction.editReply({ content: msg }).catch(() => {});
+        const igRes = await postReelsToInstagram(state.guildId, interaction.user.id, videoItems[0].image_url, state.caption, igProgress, state.group);
+        igUrl = igRes?.permalink || null;
+        const igLink = igUrl ? ` · 🔗 [ดูโพสต์](${igUrl})` : '';
+        const igNote = scheduleTime ? ' (IG Reels ไม่รองรับตั้งเวลา)' : '';
+        results.push(`✅ Instagram Reels โพสต์แล้ว${igLink}${igNote}`);
+      } catch (err) {
+        results.push(`❌ Instagram Reels: ${err.message}`);
+      }
+    }
+    if (platforms.includes('fb'))      results.push('⚠️ Facebook Reels: ยังไม่รองรับใน v1');
+    if (platforms.includes('threads')) results.push('⚠️ Threads: ไม่รองรับ video');
+    if (platforms.includes('x'))       results.push('⚠️ X video: ยังไม่รองรับใน v1');
+
+    const overallStatus = results.every(r => r.startsWith('✅')) ? 'success'
+      : results.every(r => r.startsWith('❌')) ? 'failed' : 'partial';
+    await addHistory(state.guildId, state.channelId, interaction.user.id, {
+      platform: platforms.join(','), imageCount: 0, videoCount: 1,
+      wmType: null, caption: state.caption || null, scheduleTime: null,
+      fbUrl: null, igUrl, threadsUrl: null, xUrl: null, status: overallStatus,
+    }).catch(() => {});
+    await interaction.followUp({ content: ['✅ โพสต์เสร็จแล้ว', ...results].join('\n') }).catch(() => {});
+    return;
+  }
 
   if (imageItems.length > 0) {
     if (state.wmType !== 'none') {
@@ -671,6 +733,7 @@ async function processAndPost(interaction, state) {
   await addHistory(state.guildId, state.channelId, interaction.user.id, {
     platform:    platforms.join(','),
     imageCount:  imageItems.length,
+    videoCount:  0,
     wmType:      state.wmType !== 'none' ? state.wmType : null,
     caption:     state.caption || null,
     scheduleTime: state.scheduleTime || null,

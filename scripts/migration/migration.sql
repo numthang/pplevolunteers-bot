@@ -280,3 +280,8 @@ FROM dc_server_settings
 ON CONFLICT (guild_id, "key") DO NOTHING;
 -- Step 4: ตรวจสอบ (SELECT * FROM dc_guild_config ORDER BY guild_id, "key";) แล้วค่อย DROP
 DROP TABLE dc_server_settings;
+
+-- 2026-06-04: dc_media_baskets — รองรับ type 'video' สำหรับ Reels
+ALTER TYPE dc_media_baskets_type ADD VALUE IF NOT EXISTS 'video';
+-- 2026-06-04: dc_basket_history — เพิ่ม video_count สำหรับ Reels
+ALTER TABLE dc_basket_history ADD COLUMN IF NOT EXISTS video_count INT NULL DEFAULT 0;

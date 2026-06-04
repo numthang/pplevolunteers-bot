@@ -5,7 +5,7 @@ import path from 'path';
 const TEMP_DIR = process.env.META_TEMP_DIR
   || path.join(process.cwd(), 'public', 'media-temp');
 
-const MIME = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };
+const MIME = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', mp4: 'video/mp4' };
 
 export async function GET(request, { params }) {
   const { filename } = await params;
