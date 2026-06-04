@@ -5,7 +5,7 @@ require('dotenv').config({ path: require('path').join(__dirname, '../../.env') }
 const path = require('path')
 const crypto = require('crypto')
 const XLSX = require('xlsx')
-const mysql = require('mysql2/promise')
+const pool = require('../../db')
 
 const XLSX_PATH = path.join(__dirname, '../../md/docs/act_event_register.xlsx')
 const CAMPAIGN_ID = 146354
@@ -78,67 +78,60 @@ async function main() {
 
   console.log(`✅ Mapped ${mapped.length} rows`)
 
-  const conn = await mysql.createConnection({
-    host: 'localhost',
-    user: 'pple_dcbot',
-    password: process.env.DB_PASS || '',
-    database: 'pple_volunteers'
-  })
+  const sql = `
+    INSERT INTO act_event_cache
+    (id, parent_id, guild_id, type, name, province, description,
+     user_id, serial_number, title, first_name, last_name, phone, national_id,
+     address, subdistrict, district, postal_code, age, gender, account_no, bank, membership_status,
+     data_hash, synced_at, source_timestamp)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
+            $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26)
+    ON CONFLICT (id) DO UPDATE SET
+      parent_id         = EXCLUDED.parent_id,
+      guild_id          = EXCLUDED.guild_id,
+      user_id           = EXCLUDED.user_id,
+      serial_number     = EXCLUDED.serial_number,
+      title             = EXCLUDED.title,
+      first_name        = EXCLUDED.first_name,
+      last_name         = EXCLUDED.last_name,
+      phone             = EXCLUDED.phone,
+      national_id       = EXCLUDED.national_id,
+      address           = EXCLUDED.address,
+      subdistrict       = EXCLUDED.subdistrict,
+      district          = EXCLUDED.district,
+      postal_code       = EXCLUDED.postal_code,
+      age               = EXCLUDED.age,
+      gender            = EXCLUDED.gender,
+      account_no        = EXCLUDED.account_no,
+      bank              = EXCLUDED.bank,
+      membership_status = EXCLUDED.membership_status,
+      data_hash         = EXCLUDED.data_hash,
+      synced_at         = EXCLUDED.synced_at,
+      source_timestamp  = EXCLUDED.source_timestamp,
+      updated_at        = CURRENT_TIMESTAMP
+    RETURNING (xmax::text::int > 0) AS was_updated
+  `
+
+  let inserted = 0
+  let updated = 0
 
   try {
-    const sql = `
-      INSERT INTO act_event_cache
-      (id, parent_id, guild_id, type, name, province, description,
-       user_id, serial_number, title, first_name, last_name, phone, national_id,
-       address, subdistrict, district, postal_code, age, gender, account_no, bank, membership_status,
-       data_hash, synced_at, source_timestamp)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-              ?, ?, ?)
-      ON DUPLICATE KEY UPDATE
-        parent_id=VALUES(parent_id),
-        guild_id=VALUES(guild_id),
-        user_id=VALUES(user_id),
-        serial_number=VALUES(serial_number),
-        title=VALUES(title),
-        first_name=VALUES(first_name),
-        last_name=VALUES(last_name),
-        phone=VALUES(phone),
-        national_id=VALUES(national_id),
-        address=VALUES(address),
-        subdistrict=VALUES(subdistrict),
-        district=VALUES(district),
-        postal_code=VALUES(postal_code),
-        age=VALUES(age),
-        gender=VALUES(gender),
-        account_no=VALUES(account_no),
-        bank=VALUES(bank),
-        membership_status=VALUES(membership_status),
-        data_hash=VALUES(data_hash),
-        synced_at=VALUES(synced_at),
-        source_timestamp=VALUES(source_timestamp),
-        updated_at=CURRENT_TIMESTAMP
-    `
-
-    let inserted = 0
-    let updated = 0
-
     for (const row of mapped) {
-      const [result] = await conn.execute(sql, [
+      const result = await pool.query(sql, [
         row.id, row.parent_id, row.guild_id, row.type, row.name, row.province, row.description,
         row.user_id, row.serial_number, row.title, row.first_name, row.last_name, row.phone, row.national_id,
         row.address, row.subdistrict, row.district, row.postal_code, row.age, row.gender, row.account_no, row.bank, row.membership_status,
         row.data_hash, row.synced_at, row.source_timestamp
       ])
 
-      if (result.affectedRows === 1) inserted++
-      else if (result.affectedRows === 2) updated++
+      if (result.rows[0].was_updated) updated++
+      else inserted++
     }
 
     console.log(`\n📝 Insert: ${inserted}, Update: ${updated}`)
     console.log(`✨ Done! Synced at ${new Date().toLocaleString('th-TH')}`)
-
   } finally {
-    await conn.end()
+    await pool.end()
   }
 }
 

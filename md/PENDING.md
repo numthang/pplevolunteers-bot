@@ -8,35 +8,19 @@
 
 ---
 
+## 🗄️ Database / Infrastructure
+
+### dc_server_settings → dc_guild_config ⚠️ (2026-06-04)
+
+---
+
 ## 🤖 PPLE Bot / Social Share
 
-### Discord (Guild) Config — Restructure
-- [ ] เปลี่ยนเมนู **BOT** → **DISCORD**, path `/bot/` → `/discord/`
-- [ ] รวม guild config ทุกอย่างไว้ที่เดียว:
-  - `/discord/social/accounts` — Social accounts (ย้ายจาก /bot/)
-  - `/discord/watermark` — Guild watermark management (Admin only, upload/ลบบนเว็บ)
-  - `/bot/watermark` หรือ `/discord/watermark/personal` — **Personal watermark** (ทุก user จัดการลายน้ำของตัวเองได้)
-  - `/discord/roles` — Role mapping (Discord role → Admin/Mod ในระบบ)
-  - `/discord/config` — Meta/X API keys (ย้ายจาก social/accounts)
-- [ ] Permission model:
-  - **Superadmin** (ENV: `DEV_DISCORD_IDS`) → จัดการได้ทุก guild
-  - **Guild Admin** → จัดการได้เฉพาะ guild ของตัวเอง
-  - อนาคต: migrate superadmin จาก ENV → DB table ถ้าต้องการ co-admin
-- [ ] **Guild isolation bug** — `/bot/social/accounts` ตอนนี้แสดง accounts ของทุก guild ให้คนที่มี Admin role ใดก็ได้ดู ต้องแก้ให้แสดงเฉพาะ guild ที่ตัวเองเป็น Admin พร้อม restructure
+### Discord (Guild) Config — Restructure ✅ (ทำส่วนใหญ่แล้ว 2026-06-04)
 
-### Watermark — Personal Account
-- [ ] **Personal watermark** บนเว็บ — แยกจาก guild watermark โดยสิ้นเชิง
-  - **Folder:** `assets/watermark/user_{discordId}/` (prefix `user_` ป้องกัน collision กับ guild snowflake)
-  - **Web page:** `/bot/watermark` หรือ `/discord/watermark/personal`
-    - Upload / ลบลายน้ำส่วนตัว (เห็นเฉพาะของตัวเอง)
-    - ไม่ต้องเป็น Admin — ทุก user ใช้ได้
-  - **API:**
-    - `GET /api/watermark/personal` — list ไฟล์ของ user ที่ login
-    - `POST /api/watermark/personal` — upload รูปลายน้ำ (multipart)
-    - `DELETE /api/watermark/personal/[filename]` — ลบ
-  - **Bot:** `watermarkHandler.js` — merge personal + guild watermarks ใน dropdown
-    - แสดงของ user ก่อน (label "🔒 ชื่อไฟล์") ตามด้วย guild watermarks
-    - ถ้า user ไม่มีของตัวเอง → ไม่โชว์ section นั้น
+
+### Watermark — Personal Account ✅ (2026-06-04)
+
 
 ### Social Share — X (Twitter)
 - [ ] **Optional / Future:** Infographic — แปลงบทความยาวๆ เป็นรูปสรุปแนบโพสต์หลัก
