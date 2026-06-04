@@ -10,8 +10,8 @@ const pool = new Pool({
   max: 10,
 });
 
-pool.on('connect', (client) => {
-  client.query("SET TIME ZONE 'Asia/Bangkok'");
+pool.on('connect', (client, done) => {
+  client.query("SET TIME ZONE 'Asia/Bangkok'", done);
 });
 
 module.exports = pool;

@@ -231,8 +231,8 @@ export default function SocialAccountsPage() {
   }
 
   const discordId = session?.user?.discordId
-  const myAccounts  = accounts.filter(a => a.user_discord_id === discordId)
-  const guildAccounts = accounts.filter(a => a.user_discord_id !== discordId)
+  const myAccounts  = accounts.filter(a => a.visibility === 'private' && a.user_discord_id === discordId)
+  const guildAccounts = accounts.filter(a => a.visibility === 'public')
 
   const byGuild = {}
   for (const acc of guildAccounts) {
