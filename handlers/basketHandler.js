@@ -197,6 +197,9 @@ async function buildBasketPayload(basket, guildId, channelId, userId) {
   const links  = msgIds.map((id, i) =>
     `[ดูรูปชุดที่ ${i + 1}](https://discord.com/channels/${guildId}/${channelId}/${id})`
   );
+  const videoMsgId = videos[0]?.message_id;
+  if (videoMsgId) links.push(`[ดูวิดีโอต้นทาง 🎬](https://discord.com/channels/${guildId}/${channelId}/${videoMsgId})`);
+
   const previewUrl = images.length
     ? images[Math.floor(Math.random() * images.length)].image_url
     : null;
@@ -330,13 +333,13 @@ async function handleBasketAdd(interaction) {
   const isBot = msg.author?.bot ?? false;
 
   if (images.length || videos.length) {
+    if (videos.length > 1) return interaction.editReply({ content: '❌ เพิ่มได้แค่ 1 วิดีโอต่อครั้ง' });
     const existingBasket = await getBasket(guildId, channelId);
     const hasImages = existingBasket.some(r => r.type === 'image');
     const hasVideo  = existingBasket.some(r => r.type === 'video');
-    if (videos.length && hasImages)  return interaction.editReply({ content: '❌ ตะกร้ามีรูปอยู่แล้ว — ล้างก่อนแล้วค่อยเพิ่มวิดีโอ' });
-    if (images.length && hasVideo)   return interaction.editReply({ content: '❌ ตะกร้ามีวิดีโออยู่แล้ว — ล้างก่อนแล้วค่อยเพิ่มรูป' });
-    if (videos.length && hasVideo)   return interaction.editReply({ content: '❌ รองรับได้แค่ 1 วิดีโอต่อโพสต์ — ล้างก่อนแล้วค่อยเพิ่มอันใหม่' });
-    if (videos.length > 1)           return interaction.editReply({ content: '❌ เพิ่มได้แค่ 1 วิดีโอต่อครั้ง' });
+    if ((videos.length && (hasImages || hasVideo)) || (images.length && hasVideo)) {
+      await clearBasket(guildId, channelId);
+    }
   }
 
   if (images.length) await addImages(guildId, channelId, addedBy, images.map(a => ({ url: a.url })), msg.id);
