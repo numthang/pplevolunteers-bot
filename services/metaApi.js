@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { fetchBuffer } = require('../utils/watermarkImage');
+const { convertVideoIfNeeded } = require('../utils/videoUtils');
 
 const TEMP_DIR = process.env.META_TEMP_DIR
   || path.join(__dirname, '..', 'web', 'public', 'media-temp');
@@ -521,6 +522,70 @@ async function postToThreads(guildId, userId, images, caption, onProgress = null
   return result;
 }
 
+// POST ไปยัง URL ใดก็ได้ (ใช้สำหรับ upload ไปยัง host นอกจาก graph.facebook.com)
+function httpsPostToUrl(fullUrl, body, headers) {
+  return new Promise((resolve, reject) => {
+    const u = new URL(fullUrl);
+    const req = https.request({
+      hostname: u.hostname,
+      path: u.pathname + u.search,
+      method: 'POST',
+      headers: { 'Content-Length': Buffer.byteLength(body), ...headers },
+    }, res => {
+      let data = '';
+      res.on('data', c => data += c);
+      res.on('end', () => {
+        try { resolve({ status: res.statusCode, body: JSON.parse(data) }); }
+        catch { resolve({ status: res.statusCode, body: data }); }
+      });
+    });
+    req.on('error', reject);
+    req.write(body);
+    req.end();
+  });
+}
+
+async function postReelsToFacebook(guildId, userId, videoDiscordUrl, caption, onProgress = null, groupName = null) {
+  const cfg = await getConfig(guildId, 'fb', userId, groupName);
+  if (!cfg) throw new Error('ไม่พบ Facebook config สำหรับ guild นี้');
+
+  if (onProgress) onProgress('📤 Facebook Reels: กำลังดาวน์โหลดวิดีโอ...');
+  let buffer = await fetchBuffer(videoDiscordUrl);
+  buffer = await convertVideoIfNeeded(buffer, videoDiscordUrl, onProgress);
+
+  // Phase 1: start — ขอ upload session
+  if (onProgress) onProgress('📤 Facebook Reels: เริ่ม upload session...');
+  const startRes = await igPost(`/v22.0/${cfg.socialId}/video_reels`, {
+    upload_phase: 'start', access_token: cfg.token,
+  });
+  const { video_id, upload_url } = startRes;
+  if (!video_id || !upload_url) throw new Error(`FB Reels: ไม่ได้รับ video_id/upload_url — ${JSON.stringify(startRes)}`);
+
+  // Phase 2: upload binary ไปยัง rupload.facebook.com
+  if (onProgress) onProgress('📤 Facebook Reels: กำลัง upload วิดีโอ...');
+  const uploadRes = await httpsPostToUrl(upload_url, buffer, {
+    Authorization: `OAuth ${cfg.token}`,
+    'Content-Type': 'video/mp4',
+    offset: '0',
+    file_size: String(buffer.length),
+  });
+  if (uploadRes.status >= 400) throw new Error(`FB Reels upload: HTTP ${uploadRes.status} — ${JSON.stringify(uploadRes.body)}`);
+
+  // Phase 3: finish — publish
+  if (onProgress) onProgress('📤 Facebook Reels: กำลัง publish...');
+  const finishRes = await igPost(`/v22.0/${cfg.socialId}/video_reels`, {
+    upload_phase: 'finish',
+    video_id,
+    video_state: 'PUBLISHED',
+    description: caption || '',
+    access_token: cfg.token,
+  });
+
+  const postId = finishRes.post_id_string || finishRes.id || null;
+  const permalink = postId ? `https://www.facebook.com/${postId}` : null;
+  return { id: postId, permalink };
+}
+
 async function postReelsToInstagram(guildId, userId, videoDiscordUrl, caption, onProgress = null, groupName = null) {
   const cfg = await getConfig(guildId, 'ig', userId, groupName);
   if (!cfg) throw new Error('ไม่พบ Instagram config สำหรับ guild นี้');
@@ -531,7 +596,8 @@ async function postReelsToInstagram(guildId, userId, videoDiscordUrl, caption, o
   if (!igToken) throw new Error('ไม่พบ User Token สำหรับ IG — กรุณาเข้าไป reconnect Meta OAuth ใหม่');
 
   if (onProgress) onProgress('📤 Instagram Reels: กำลังดาวน์โหลดวิดีโอ...');
-  const buffer = await fetchBuffer(videoDiscordUrl);
+  let buffer = await fetchBuffer(videoDiscordUrl);
+  buffer = await convertVideoIfNeeded(buffer, videoDiscordUrl, onProgress);
   fs.mkdirSync(TEMP_DIR, { recursive: true });
   const filename = `${crypto.randomBytes(12).toString('hex')}.mp4`;
   fs.writeFileSync(path.join(TEMP_DIR, filename), buffer);
@@ -557,4 +623,4 @@ async function postReelsToInstagram(guildId, userId, videoDiscordUrl, caption, o
   return { id: mediaId, permalink };
 }
 
-module.exports = { getConfig, getAvailablePlatforms, getAvailableGroups, getGuildMetaApp, postToFacebook, postToInstagram, postToThreads, postReelsToInstagram };
+module.exports = { getConfig, getAvailablePlatforms, getAvailableGroups, getGuildMetaApp, postToFacebook, postToInstagram, postToThreads, postReelsToInstagram, postReelsToFacebook };

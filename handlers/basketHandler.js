@@ -15,8 +15,8 @@ const fs = require('fs');
 const sharp = require('sharp');
 const { addImages, addVideo, setCaption, getBasket, clearBasket, addHistory, getHistory } = require('../db/mediaBasket');
 const { fetchBuffer, applyWatermark, autoEnhance } = require('../utils/watermarkImage');
-const { postToFacebook, postToInstagram, postToThreads, postReelsToInstagram, getAvailablePlatforms, getAvailableGroups } = require('../services/metaApi');
-const { postToX } = require('../services/xApi');
+const { postToFacebook, postToInstagram, postToThreads, postReelsToInstagram, postReelsToFacebook, getAvailablePlatforms, getAvailableGroups } = require('../services/metaApi');
+const { postToX, postVideoToX } = require('../services/xApi');
 const { getSetting, setSetting, deleteSetting } = require('../db/settings');
 const pool = require('../db/index');
 
@@ -37,7 +37,7 @@ async function clearBasketState(guildId, channelId) {
 
 const ASSETS_DIR = path.join(__dirname, '..', 'assets', 'watermark');
 const SUPPORTED_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp']);
-const VIDEO_TYPES = new Set(['video/mp4']);
+const VIDEO_TYPES = new Set(['video/mp4', 'video/quicktime']);
 
 const pendingPost = new Map(); // userId → { guildId, channelId, wmType, platform, caption?, scheduleTime? }
 
@@ -599,9 +599,28 @@ async function processAndPost(interaction, state) {
         results.push(`❌ Instagram Reels: ${err.message}`);
       }
     }
-    if (platforms.includes('fb'))      results.push('⚠️ Facebook Reels: ยังไม่รองรับใน v1');
+    if (platforms.includes('fb')) {
+      await interaction.editReply({ content: '📤 กำลังโพสต์ Reels ไปยัง Facebook...' }).catch(() => {});
+      try {
+        const fbProgress = msg => interaction.editReply({ content: msg }).catch(() => {});
+        const fbRes = await postReelsToFacebook(state.guildId, interaction.user.id, videoItems[0].image_url, state.caption, fbProgress, state.group);
+        const fbLink = fbRes?.permalink ? ` · 🔗 [ดูโพสต์](${fbRes.permalink})` : '';
+        results.push(`✅ Facebook Reels โพสต์แล้ว${fbLink}`);
+      } catch (err) {
+        results.push(`❌ Facebook Reels: ${err.message}`);
+      }
+    }
     if (platforms.includes('threads')) results.push('⚠️ Threads: ไม่รองรับ video');
-    if (platforms.includes('x'))       results.push('⚠️ X video: ยังไม่รองรับใน v1');
+    if (platforms.includes('x')) {
+      await interaction.editReply({ content: '📤 กำลังโพสต์วิดีโอไปยัง X...' }).catch(() => {});
+      try {
+        const xRes = await postVideoToX(state.guildId, interaction.user.id, videoItems[0].image_url, state.caption, state.group);
+        const xLink = xRes?.url ? ` · 🔗 [ดูโพสต์](${xRes.url})` : '';
+        results.push(`✅ X โพสต์วิดีโอแล้ว${xLink}`);
+      } catch (err) {
+        results.push(`❌ X video: ${err.message}`);
+      }
+    }
 
     const overallStatus = results.every(r => r.startsWith('✅')) ? 'success'
       : results.every(r => r.startsWith('❌')) ? 'failed' : 'partial';

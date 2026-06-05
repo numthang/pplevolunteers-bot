@@ -1,6 +1,8 @@
 const https  = require('https');
 const crypto = require('crypto');
 const pool   = require('../db/index');
+const { fetchBuffer } = require('../utils/watermarkImage');
+const { convertVideoIfNeeded } = require('../utils/videoUtils');
 
 async function getGuildXApp(guildId) {
   const { rows } = await pool.query(
@@ -223,4 +225,103 @@ async function postToX(guildId, userId, images, caption, groupName = null) {
   };
 }
 
-module.exports = { getXConfig, getGuildXApp, postToX };
+const VIDEO_CHUNK_SIZE = 5 * 1024 * 1024; // 5 MB
+
+async function uploadVideoMedia(cfg, buffer) {
+  const totalBytes = buffer.length;
+
+  // INIT
+  const initBody = `command=INIT&total_bytes=${totalBytes}&media_type=video%2Fmp4&media_category=tweet_video`;
+  const initAuth = buildAuthHeader('POST', 'https://upload.twitter.com/1.1/media/upload.json', cfg);
+  const initRes  = await xReq('upload.twitter.com', '/1.1/media/upload.json', 'POST', {
+    Authorization:  initAuth,
+    'Content-Type': 'application/x-www-form-urlencoded',
+    'Content-Length': Buffer.byteLength(initBody),
+  }, initBody);
+  if (!initRes.body?.media_id_string) throw new Error(`X video INIT: ${JSON.stringify(initRes.body)}`);
+  const mediaId = initRes.body.media_id_string;
+
+  // APPEND — ทีละ 5 MB
+  let segment = 0;
+  for (let offset = 0; offset < totalBytes; offset += VIDEO_CHUNK_SIZE) {
+    const chunk    = buffer.slice(offset, offset + VIDEO_CHUNK_SIZE);
+    const boundary = `x${crypto.randomBytes(8).toString('hex')}`;
+    const chunkBody = Buffer.concat([
+      Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="media"\r\nContent-Type: application/octet-stream\r\n\r\n`),
+      chunk,
+      Buffer.from(`\r\n--${boundary}--\r\n`),
+    ]);
+    const appendAuth = buildAuthHeader('POST', 'https://upload.twitter.com/1.1/media/upload.json', cfg);
+    const appendRes  = await xReq(
+      'upload.twitter.com',
+      `/1.1/media/upload.json?command=APPEND&media_id=${mediaId}&segment_index=${segment}`,
+      'POST',
+      { Authorization: appendAuth, 'Content-Type': `multipart/form-data; boundary=${boundary}`, 'Content-Length': chunkBody.length },
+      chunkBody
+    );
+    if (appendRes.status !== 204 && appendRes.status !== 200) {
+      throw new Error(`X video APPEND segment ${segment}: HTTP ${appendRes.status} — ${JSON.stringify(appendRes.body)}`);
+    }
+    segment++;
+  }
+
+  // FINALIZE
+  const finalBody = `command=FINALIZE&media_id=${mediaId}`;
+  const finalAuth = buildAuthHeader('POST', 'https://upload.twitter.com/1.1/media/upload.json', cfg);
+  const finalRes  = await xReq('upload.twitter.com', '/1.1/media/upload.json', 'POST', {
+    Authorization:  finalAuth,
+    'Content-Type': 'application/x-www-form-urlencoded',
+    'Content-Length': Buffer.byteLength(finalBody),
+  }, finalBody);
+  if (finalRes.body?.error) throw new Error(`X video FINALIZE: ${finalRes.body.error}`);
+
+  // STATUS poll — ถ้า processing_info มีให้ poll จนสำเร็จ
+  const procInfo = finalRes.body?.processing_info;
+  if (procInfo && procInfo.state !== 'succeeded') {
+    await pollXVideoStatus(cfg, mediaId, procInfo.check_after_secs || 5);
+  }
+  return mediaId;
+}
+
+async function pollXVideoStatus(cfg, mediaId, initialWaitSecs, maxWaitMs = 300_000) {
+  const start = Date.now();
+  let waitSecs = initialWaitSecs;
+  while (Date.now() - start < maxWaitMs) {
+    await new Promise(r => setTimeout(r, waitSecs * 1000));
+    const auth = buildAuthHeader('GET', 'https://upload.twitter.com/1.1/media/upload.json', cfg);
+    const res  = await xReq('upload.twitter.com', `/1.1/media/upload.json?command=STATUS&media_id=${mediaId}`, 'GET', {
+      Authorization: auth,
+    }, null);
+    const info = res.body?.processing_info;
+    if (!info || info.state === 'succeeded') return;
+    if (info.state === 'failed') throw new Error('X video: server ประมวลผลไม่สำเร็จ');
+    waitSecs = info.check_after_secs || 5;
+  }
+  throw new Error('X video: หมดเวลารอ processing');
+}
+
+async function postVideoToX(guildId, userId, videoDiscordUrl, caption, groupName = null) {
+  const cfg = await getXConfig(guildId, userId, groupName);
+  if (!cfg) throw new Error('ไม่พบ X account — เพิ่ม X account ที่ /bot/social/accounts ก่อน');
+
+  let buffer = await fetchBuffer(videoDiscordUrl);
+  buffer = await convertVideoIfNeeded(buffer, videoDiscordUrl);
+  const mediaId = await uploadVideoMedia(cfg, buffer);
+
+  const tweetBody = { media: { media_ids: [mediaId] } };
+  if (caption) tweetBody.text = caption.slice(0, 280);
+  const bodyStr = JSON.stringify(tweetBody);
+  const auth    = buildAuthHeader('POST', 'https://api.twitter.com/2/tweets', cfg);
+  const res     = await xReq('api.twitter.com', '/2/tweets', 'POST', {
+    Authorization:    auth,
+    'Content-Type':   'application/json',
+    'Content-Length': Buffer.byteLength(bodyStr),
+  }, bodyStr);
+
+  if (res.status === 429) throw new Error('X API: Rate limit — รอแล้วลองใหม่');
+  if (!res.body?.data?.id) throw new Error(`X video post: ${res.body?.errors?.[0]?.message || JSON.stringify(res.body)}`);
+  const url = cfg.username ? `https://x.com/${cfg.username}/status/${res.body.data.id}` : null;
+  return { id: res.body.data.id, url };
+}
+
+module.exports = { getXConfig, getGuildXApp, postToX, postVideoToX };
