@@ -146,7 +146,7 @@ async function toPng(canvas) {
 // ── Core render ───────────────────────────────────────────────────────────────
 // markScale: relative size of mark (1.0 = default)
 // gradDark:  0.0–1.0 how dark the bottom gradient is
-async function renderVariant(buf, { quoteText, authorName, side = 'left', vertical = 'bottom', markScale = 1.0, gradDark = 0.95, saturation = 0.15, fontBold = 'Anakotmai', fontLight = 'AnakotmaiLight' }) {
+async function renderVariant(buf, { quoteText, authorName, side = 'left', vertical = 'bottom', markScale = 1.0, gradDark = 0.95, saturation = 0.15, fontBold = 'GSans', fontLight = 'AnakotmaiLight' }) {
   const isRight = side === 'right';
   const isTop   = vertical === 'top';
 
@@ -249,7 +249,7 @@ async function renderBorder(buf, { quoteText, authorName, saturation = 0.15 }) {
   const borderImg = await loadMark('frame_left');
 
   const maxW7   = W * 0.80;
-  const { fontSize: qszFit, lines } = fitFont(ctx, quoteText, maxW7, qsz, 4);
+  const { fontSize: qszFit, lines } = fitFont(ctx, quoteText, maxW7, qsz, 4, 'GSans');
   const lh      = qszFit * 1.2;
   const textH   = lines.length * lh + nsz * 1.8;
   const maxTextW = maxW7;
@@ -278,6 +278,7 @@ async function renderBorder(buf, { quoteText, authorName, saturation = 0.15 }) {
   // quote text
   ctx.textBaseline = 'top';
   ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
+  ctx.font = `bold ${qszFit}px GSans`;
   let ty = textBlockTop;
   for (const l of lines) {
     ctx.fillStyle = WHITE; lsDraw(ctx, l, textX, ty, 1.0);
@@ -311,7 +312,7 @@ async function renderBorder2(buf, { quoteText, authorName, saturation = 0.15 }) 
   const borderImg = await loadMark('frame_right');
 
   const maxW8   = W * 0.80;
-  const { fontSize: qszFit, lines } = fitFont(ctx, quoteText, maxW8, qsz, 4);
+  const { fontSize: qszFit, lines } = fitFont(ctx, quoteText, maxW8, qsz, 4, 'GSans');
   const lh      = qszFit * 1.2;
   const maxTextW = maxW8;
   const textH = lines.length * lh + nsz * 1.8;
@@ -341,6 +342,7 @@ async function renderBorder2(buf, { quoteText, authorName, saturation = 0.15 }) 
 
   ctx.textBaseline = 'top';
   ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
+  ctx.font = `bold ${qszFit}px GSans`;
   let ty = textBlockTop;
   for (const l of lines) {
     const drawX = contentX + (contentMaxW - lsWidth(ctx, l, 1.0));
@@ -424,7 +426,7 @@ async function renderCenter(buf, { quoteText, authorName, saturation = 1.0 }) {
 
   // author กลาง
   ty += nsz * 0.6;
-  ctx.font = `${nsz}px GSansLight`; ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  ctx.font = `${nsz}px AnakotmaiLight`; ctx.fillStyle = 'rgba(255,255,255,0.85)';   // author ไม่มีหัวเสมอ
   const aw = lsWidth(ctx, authorName, 0.8);
   lsDraw(ctx, authorName, (W - aw) / 2, ty, 0.8);
 
