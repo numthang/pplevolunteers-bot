@@ -146,7 +146,7 @@ async function toPng(canvas) {
 // ── Core render ───────────────────────────────────────────────────────────────
 // markScale: relative size of mark (1.0 = default)
 // gradDark:  0.0–1.0 how dark the bottom gradient is
-async function renderVariant(buf, { quoteText, authorName, side = 'left', vertical = 'bottom', markScale = 1.0, gradDark = 0.95, saturation = 0.15 }) {
+async function renderVariant(buf, { quoteText, authorName, side = 'left', vertical = 'bottom', markScale = 1.0, gradDark = 0.95, saturation = 0.15, fontBold = 'Anakotmai', fontLight = 'AnakotmaiLight' }) {
   const isRight = side === 'right';
   const isTop   = vertical === 'top';
 
@@ -166,7 +166,7 @@ async function renderVariant(buf, { quoteText, authorName, side = 'left', vertic
   const markGap = Math.round(pad * 0.25);
 
   const maxW  = W * 0.80;
-  const { fontSize: qszFit, lines } = fitFont(ctx, quoteText, maxW - barW - barGap - 4, qsz, 4);
+  const { fontSize: qszFit, lines } = fitFont(ctx, quoteText, maxW - barW - barGap - 4, qsz, 4, fontBold);
   const lh    = qszFit * 1.2;
   const textH = lines.length * lh + nsz * 1.8;
 
@@ -201,6 +201,7 @@ async function renderVariant(buf, { quoteText, authorName, side = 'left', vertic
 
   ctx.textBaseline = 'top';
   ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
+  ctx.font = `bold ${qszFit}px ${fontBold}`;
   let ty = textBlockTop;
   for (const l of lines) {
     const drawX = isRight ? textX + (maxW - lsWidth(ctx, l, 1.0)) : textX;
@@ -209,7 +210,7 @@ async function renderVariant(buf, { quoteText, authorName, side = 'left', vertic
   }
 
   ty += nsz * 0.5;
-  ctx.font = `${nsz}px AnakotmaiLight`;
+  ctx.font = `${nsz}px ${fontLight}`;
   const authorStr = `— ${authorName}`;
   const aw = lsWidth(ctx, authorStr, 0.8);
   const ax = isRight ? textX + (maxW - aw) : textX;
