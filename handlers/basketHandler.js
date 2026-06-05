@@ -13,12 +13,15 @@ const {
 const path = require('path');
 const fs = require('fs');
 const sharp = require('sharp');
-const { addImages, addVideo, setCaption, getBasket, clearBasket, addHistory, getHistory } = require('../db/mediaBasket');
+const { addImages, addVideo, setCaption, appendCaption, getBasket, clearBasket, clearBasketMedia, addHistory, getHistory } = require('../db/mediaBasket');
 const { fetchBuffer, applyWatermark, autoEnhance } = require('../utils/watermarkImage');
 const { postToFacebook, postToInstagram, postToThreads, postReelsToInstagram, postReelsToFacebook, getAvailablePlatforms, getAvailableGroups } = require('../services/metaApi');
 const { postToX, postVideoToX } = require('../services/xApi');
 const { getSetting, setSetting, deleteSetting } = require('../db/settings');
+const { resolveConfig } = require('../db/configResolver');
 const pool = require('../db/index');
+
+const KEY_WATERMARK = 'default_watermark'; // ค่ากลาง — ตั้งที่หน้าเว็บ /discord/quote (ใช้ร่วม quote)
 
 const stateKey = channelId => `basket_state_${channelId}`;
 async function getBasketState(guildId, channelId) {
@@ -124,7 +127,7 @@ function buildBasketEmbed(imgCount, videoCount, caption, previewUrl = null) {
 
 function buildBasketButtons(imgCount, videoCount, hasCaption = false) {
   const empty = imgCount === 0 && videoCount === 0 && !hasCaption;
-  return new ActionRowBuilder().addComponents(
+  const buttons = [
     new ButtonBuilder()
       .setCustomId('basket_post')
       .setLabel('📋 สร้างโพสต์')
@@ -134,15 +137,23 @@ function buildBasketButtons(imgCount, videoCount, hasCaption = false) {
       .setCustomId('basket_edit_caption')
       .setLabel('✏️ แก้ Caption')
       .setStyle(ButtonStyle.Primary),
+  ];
+  // AI เรียบเรียง — โผล่เมื่อมี caption ให้ทำงาน
+  if (hasCaption) {
+    buttons.push(
+      new ButtonBuilder()
+        .setCustomId('basket_ai_compose')
+        .setLabel('🤖 AI เรียบเรียง')
+        .setStyle(ButtonStyle.Success),
+    );
+  }
+  buttons.push(
     new ButtonBuilder()
       .setCustomId('basket_clear')
       .setLabel('🗑️ ล้าง')
       .setStyle(ButtonStyle.Danger),
-    new ButtonBuilder()
-      .setCustomId('basket_view_public')
-      .setLabel('👁️')
-      .setStyle(ButtonStyle.Secondary),
   );
+  return new ActionRowBuilder().addComponents(...buttons);
 }
 
 function buildGroupRow(groups, currentGroup) {
@@ -215,7 +226,21 @@ async function buildBasketPayload(basket, guildId, channelId, userId) {
   // saved.platforms must be subset of available; otherwise default = all available
   const savedPlatforms = Array.isArray(saved?.platforms) ? saved.platforms.filter(p => availablePlatforms.includes(p)) : [];
   const selectedPlatforms = savedPlatforms.length ? savedPlatforms : [...availablePlatforms];
-  const currentWmType = saved?.wmType ?? 'none';
+  // ยังไม่เคยเลือก watermark → ใช้ default_watermark (personal > guild > global)
+  // เฉพาะเมื่อไฟล์มีจริงใน context นี้ (group/guild/personal) ไม่งั้น 'none'
+  let defaultWmType = 'none';
+  if (saved?.wmType == null) {
+    try {
+      const { value } = await resolveConfig(userId, guildId, KEY_WATERMARK);
+      if (value) {
+        const p = resolveWatermarkPath(value, guildId, currentGroup, userId);
+        if (p && fs.existsSync(p)) defaultWmType = value;
+      }
+    } catch (err) {
+      console.error('[basket] resolve default watermark:', err.message);
+    }
+  }
+  const currentWmType = saved?.wmType ?? defaultWmType;
 
   const history = await getHistory(guildId, channelId);
   if (history.length) {
@@ -338,19 +363,19 @@ async function handleBasketAdd(interaction) {
     const hasImages = existingBasket.some(r => r.type === 'image');
     const hasVideo  = existingBasket.some(r => r.type === 'video');
     if ((videos.length && (hasImages || hasVideo)) || (images.length && hasVideo)) {
-      await clearBasket(guildId, channelId);
+      await clearBasketMedia(guildId, channelId); // เก็บ caption ไว้ — ล้างแค่ media เก่า
     }
   }
 
   if (images.length) await addImages(guildId, channelId, addedBy, images.map(a => ({ url: a.url })), msg.id);
   if (videos.length) await addVideo(guildId, channelId, addedBy, videos.map(a => ({ url: a.url })), msg.id);
-  if (text && !isBot && !images.length && !videos.length) await setCaption(guildId, channelId, addedBy, text, msg.id);
+  if (text && !isBot && !images.length && !videos.length) await appendCaption(guildId, channelId, addedBy, text, msg.id);
 
   const basket = await getBasket(guildId, channelId);
   const added = [
     images.length ? `🖼️ ${images.length} รูป` : null,
     videos.length ? `🎬 1 วิดีโอ` : null,
-    text && !isBot && !images.length && !videos.length ? `📝 caption (แทนอันเก่า)` : null,
+    text && !isBot && !images.length && !videos.length ? `📝 caption (ต่อท้าย)` : null,
   ].filter(Boolean).join(' + ');
 
   const payload = await buildBasketPayload(basket, guildId, channelId, interaction.user.id);
@@ -831,4 +856,6 @@ module.exports = {
   handleBasketEditCaption,
   handleBasketCaptionEditModal,
   handleBasketViewPublic,
+  buildBasketPayload,
+  stripDiscordMarkdown,
 };

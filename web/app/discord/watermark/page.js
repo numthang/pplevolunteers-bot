@@ -71,7 +71,7 @@ export default function WatermarkPage() {
   const canUpload = files.length < MAX_FILES && !uploading
 
   return (
-    <div className="max-w-2xl">
+    <div>
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-disc-text">ลายน้ำของฉัน</h1>
         <p className="text-sm text-gray-500 dark:text-disc-muted mt-1">
@@ -130,7 +130,7 @@ export default function WatermarkPage() {
       {files.length === 0 ? (
         <p className="text-sm text-gray-400 dark:text-disc-muted text-center py-8">ยังไม่มีลายน้ำ</p>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
           {files.map(filename => (
             <div key={filename} className="group relative bg-card-bg rounded-xl border border-warm-200 dark:border-disc-border overflow-hidden">
               {/* Preview */}

@@ -15,6 +15,11 @@ const fs    = require('fs');
 const sharp = require('sharp');
 const { fetchBuffer, applyWatermark } = require('../utils/watermarkImage');
 const { renderQuoteStyle } = require('../utils/quoteStyles');
+const { QUOTE_STYLE_OPTIONS, QUOTE_STYLE_KEYS, QUOTE_AI_KEY } = require('../utils/quoteStyleKeys');
+const { resolveConfig } = require('../db/configResolver');
+
+const QUOTE_KEY_TEMPLATE  = 'quote_default_template'; // template = เฉพาะ quote
+const KEY_WATERMARK       = 'default_watermark';      // watermark default = ค่ากลาง ใช้ร่วมทุก feature
 
 // crop เป็น 1:1 ตายตัว — เลือกตำแหน่ง: auto (attention หาโซนคน) / แนวนอน left-center-right / แนวตั้ง top-bottom
 const CROP_POS = {
@@ -31,15 +36,8 @@ const SUPPORTED  = new Set(['image/png', 'image/jpeg', 'image/webp']);
 const pending    = new Map(); // userId → { url, mimeType, filename, style, saturation, crop, watermark }
 
 // AI = ค่า default ทุก dropdown (ไม่เลือก = AI/1:1) — เลือกเองได้ทับ AI
-const STYLE_OPTIONS = [
-  { value: 'quote-1-ember-bottom-left',  label: 'ember ล่างซ้าย', description: 'gradient ล่าง · ซ้าย' },
-  { value: 'quote-1-ember-bottom-right', label: 'ember ล่างขวา', description: 'gradient ล่าง · ขวา' },
-  { value: 'quote-1-ember-top-left',     label: 'ember บนซ้าย',  description: 'gradient บน · ซ้าย' },
-  { value: 'quote-1-ember-top-right',    label: 'ember บนขวา',  description: 'gradient บน · ขวา' },
-  { value: 'quote-1-pillar-left',        label: 'pillar-left',   description: 'frame decoration · ซ้าย' },
-  { value: 'quote-1-frame-right',        label: 'frame-right',   description: 'กรอบส้ม · ขวา' },
-  { value: 'quote-2-center',             label: 'center',        description: 'กลางภาพ · ดำคลุม · Google Sans' },
-];
+// รายชื่อ styles มาจาก utils/quoteStyleKeys.js (zero-dep, web ใช้ร่วมได้)
+const STYLE_OPTIONS = QUOTE_STYLE_OPTIONS;
 
 
 // ── Watermark helpers (server + personal รวมกัน) ─────────────────────────────
@@ -100,14 +98,26 @@ async function handleQuoteCommand(interaction) {
 
   const wmChoices = getWatermarkChoices(interaction.guildId, interaction.user.id);
 
+  // default watermark: ค่าที่ admin/user ตั้งไว้ (personal > guild > global) ถ้าไฟล์ยังอยู่ → ใช้
+  // ไม่งั้น fallback เป็นตัวแรกใน choices (พฤติกรรมเดิม)
+  let defaultWatermark = wmChoices[0]?.value ?? null;
+  try {
+    const { value } = await resolveConfig(interaction.user.id, interaction.guildId, KEY_WATERMARK);
+    if (value && resolveWatermarkPath(value, interaction.guildId, interaction.user.id)) {
+      defaultWatermark = value;
+    }
+  } catch (err) {
+    console.error('[quoteHandler] resolve watermark default:', err.message);
+  }
+
   pending.set(interaction.user.id, {
     url:        att.url,
     mimeType:   att.contentType.split(';')[0].trim(),
     filename:   att.name,
-    style:      null,                          // null = AI (ember-ai)
+    style:      null,                          // null = AI (ember-ai) / default template
     saturation: null,                          // null = AI ตัดสินสี
     crop:       'auto',                         // default = auto (attention) — สัดส่วน 1:1 ตายตัว
-    watermark:  wmChoices[0]?.value ?? null,   // default = ตัวแรก (ถ้ามี)
+    watermark:  defaultWatermark,              // default จาก config > ตัวแรกใน choices
   });
 
   // ทุก dropdown ไม่บังคับเลือก — ไม่เลือก = AI/default จัดให้
@@ -261,9 +271,19 @@ async function handleQuoteModal(interaction) {
   const quoteText  = interaction.fields.getTextInputValue('quote_text');
   const authorName = interaction.fields.getTextInputValue('quote_author');
 
-  // ไม่เลือกสไตล์ → AI (ember-ai). สี: ember-ai ปล่อย null ให้ AI ตัดสิน, manual → null = สี
-  const styleKey   = state.style ?? 'quote-1-ember-ai';
-  const isAI       = styleKey === 'quote-1-ember-ai';
+  // ไม่เลือกสไตล์ → default template ที่ตั้งไว้ (personal > guild > global) → ไม่มี = AI (ember-ai)
+  let defaultStyle = QUOTE_AI_KEY;
+  if (!state.style) {
+    try {
+      const { value } = await resolveConfig(interaction.user.id, interaction.guildId, QUOTE_KEY_TEMPLATE);
+      if (value && QUOTE_STYLE_KEYS.includes(value)) defaultStyle = value;
+    } catch (err) {
+      console.error('[quoteHandler] resolve template default:', err.message);
+    }
+  }
+  // สี: ember-ai ปล่อย null ให้ AI ตัดสิน, manual → null = สี
+  const styleKey   = state.style ?? defaultStyle;
+  const isAI       = styleKey === QUOTE_AI_KEY;
   const saturation = isAI ? state.saturation : (state.saturation ?? 1.0);
 
   pending.delete(interaction.user.id);

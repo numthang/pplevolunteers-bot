@@ -25,6 +25,8 @@ const { handleOpenSearch, handleSearchModal, handleResultPage } = require('./han
 const { handleGogoSignup, handleGogoModal, handleGogoDMButton, handleGogoDMModal, handleGogoEventButton, handleGogoEventSelect, handleGogoEventModal, handleGogoListButton } = require('./handlers/gogoHandler');
 const { handleWatermarkSelect, handleWatermarkEnhance, handleWatermarkConfirm, handleWatermarkModal } = require('./handlers/watermarkHandler');
 const { handleQuoteModal, handleQuoteStyleSelect, handleQuoteColorSelect, handleQuoteCropSelect, handleQuoteWatermarkSelect, handleQuoteConfirm } = require('./handlers/quoteHandler');
+const { handleBasketAiStart, handleBasketAiModeSelect, handleBasketAiCustomModal, handleBasketAiReplace } = require('./handlers/basketAiHandler');
+const { handleAiThreadModeSelect, handleAiThreadCustomModal, handleAiThreadAddCaption } = require('./handlers/aiThreadHandler');
 const {
   handleBasketView, handleBasketClear,
   handleBasketPost, handleBasketRetry, handleBasketSelect, handleBasketModal,
@@ -121,6 +123,8 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.customId.startsWith('quote_modal:'))    return handleQuoteModal(interaction);
     if (interaction.customId.startsWith('basket_schedule_modal'))      return handleBasketModal(interaction);
     if (interaction.customId.startsWith('basket_caption_edit_modal')) return handleBasketCaptionEditModal(interaction);
+    if (interaction.customId.startsWith('basket_ai_custom:'))         return handleBasketAiCustomModal(interaction);
+    if (interaction.customId.startsWith('ai_thread_custom:'))         return handleAiThreadCustomModal(interaction);
     if (interaction.customId.startsWith('anon_submit:')) {
       const channelId = interaction.customId.split(':')[1];
       const text      = interaction.fields.getTextInputValue('anon_text');
@@ -147,6 +151,8 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.customId.startsWith('stat_top:'))          return handleStatTopSelect(interaction);
     if (interaction.customId.startsWith('stat_user:'))         return handleStatUserSelect(interaction);
     if (interaction.customId === 'prov_region')                return handleProvinceRegionSelect(interaction);
+    if (interaction.customId === 'basket_ai_mode')             return handleBasketAiModeSelect(interaction);
+    if (interaction.customId === 'ai_thread_mode')             return handleAiThreadModeSelect(interaction);
     await handleInterestSelect(interaction);   // interest/skill
     if (interaction.customId.startsWith('report_category:'))   return handleReportCategory(interaction);
     return;
@@ -166,6 +172,8 @@ client.on('interactionCreate', async (interaction) => {
           if (interaction.customId === 'basket_clear')        return await handleBasketClear(interaction);
           if (interaction.customId === 'basket_edit_caption') return await handleBasketEditCaption(interaction);
           if (interaction.customId === 'basket_view_public')  return await handleBasketViewPublic(interaction);
+          if (interaction.customId === 'basket_ai_compose')          return await handleBasketAiStart(interaction);
+          if (interaction.customId.startsWith('basket_ai_replace:')) return await handleBasketAiReplace(interaction);
         } catch (err) {
           console.error('[basket button]', err);
           const msg = { content: `❌ ${err.message}`, flags: MessageFlags.Ephemeral };
@@ -192,6 +200,7 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.customId.startsWith('forum_refresh_'))    return handleRefresh(interaction);
     if (interaction.customId === 'fin_refresh_dashboard')      return handleFinanceRefresh(interaction);
     if (interaction.customId.startsWith('forum_result_'))     return handleResultPage(interaction);
+    if (interaction.customId.startsWith('ai_thread_caption:')) return handleAiThreadAddCaption(interaction);
     return;
   }
 });

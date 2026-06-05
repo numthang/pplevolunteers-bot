@@ -8,6 +8,11 @@ const {
   ActionRowBuilder,
   MessageFlags,
 } = require('discord.js');
+const { fetchAllMessages, buildFile } = require('../services/fetchMessages');
+const { processMessages } = require('../services/aiSummarize');
+const { AI_MODES } = require('../config/aiModes');
+
+const REPLY_LIMIT = 1800; // กัน Discord 2000-char limit
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -32,6 +37,12 @@ module.exports = {
               { name: 'CSV',  value: 'csv'  },
               { name: 'TXT',  value: 'txt'  },
             )
+        )
+        .addStringOption(opt =>
+          opt.setName('ai')
+            .setDescription('ให้ AI ประมวลผลข้อความ (ถ้าไม่ใส่ = แค่ดึง raw)')
+            .setRequired(false)
+            .addChoices(...AI_MODES.map(m => ({ name: m.label, value: m.value })))
         )
         .addBooleanOption(opt =>
           opt.setName('public')
@@ -60,6 +71,7 @@ module.exports = {
       const isPublic      = interaction.options.getBoolean('public') ?? false;
       const format        = interaction.options.getString('format') ?? 'txt';
       const channelIdsRaw = interaction.options.getString('channel-ids');
+      const aiMode        = interaction.options.getString('ai'); // null = ไม่ใช้ AI
 
       await interaction.deferReply({ flags: isPublic ? undefined : MessageFlags.Ephemeral });
 
@@ -92,16 +104,32 @@ module.exports = {
 
       allMessages.sort((a, b) => a.timestamp - b.timestamp);
 
-      const { buffer, filename } = buildFile(allMessages, format);
-      const attachment = new AttachmentBuilder(buffer, { name: filename });
+      const lines = [`✅ ดึงข้อความสำเร็จ **${allMessages.length}** ข้อความ`];
+      let attachment;
 
-      const summary = [
-        `✅ ดึงข้อความสำเร็จ **${allMessages.length}** ข้อความ`,
-        `📁 ไฟล์: \`${filename}\``,
-        ...errors,
-      ].join('\n');
+      if (aiMode) {
+        // เลือก AI mode → ไฟล์เป็นผลสรุป (.txt) แทน raw
+        try {
+          const { mode, output, truncated } = await processMessages(allMessages, aiMode);
+          const date = new Date().toISOString().slice(0, 10);
+          attachment = new AttachmentBuilder(Buffer.from(output, 'utf8'), { name: `${aiMode}_${date}.txt` });
+          const body = output.length > REPLY_LIMIT ? output.slice(0, REPLY_LIMIT) + '\n…(ตัด — ดูไฟล์)' : output;
+          lines.push(`${mode.label}${truncated ? ' (บางส่วน)' : ''}`, '─'.repeat(20), body);
+        } catch (err) {
+          // AI พัง → fallback เป็น raw file
+          const { buffer, filename } = buildFile(allMessages, format);
+          attachment = new AttachmentBuilder(buffer, { name: filename });
+          lines.push(`⚠️ AI ประมวลผลไม่สำเร็จ: ${err.message}`, `📁 ส่ง raw file แทน: \`${filename}\``);
+        }
+      } else {
+        // ไม่เลือก AI → raw file ตาม format
+        const { buffer, filename } = buildFile(allMessages, format);
+        attachment = new AttachmentBuilder(buffer, { name: filename });
+        lines.push(`📁 ไฟล์: \`${filename}\``);
+      }
 
-      return interaction.editReply({ content: summary, files: [attachment] });
+      lines.push(...errors);
+      return interaction.editReply({ content: lines.join('\n'), files: [attachment] });
     }
 
     // ================================================================
@@ -133,91 +161,3 @@ module.exports = {
     }
   },
 };
-
-// ────────────────────────────────────────────────
-// Helpers
-// ────────────────────────────────────────────────
-
-async function fetchAllMessages(channel) {
-  const result = [];
-  let lastId   = null;
-
-  while (true) {
-    const options = { limit: 100 };
-    if (lastId) options.before = lastId;
-
-    const batch = await channel.messages.fetch(options);
-    if (batch.size === 0) break;
-
-    for (const msg of batch.values()) {
-      result.push(serializeMessage(msg, channel));
-    }
-
-    lastId = batch.last().id;
-    if (batch.size < 100) break;
-  }
-
-  return result;
-}
-
-function serializeMessage(msg, channel) {
-  return {
-    channel_id:   channel.id,
-    channel_name: channel.name,
-    message_id:   msg.id,
-    timestamp:    msg.createdAt.toISOString(),
-    author_id:    msg.author.id,
-    author_tag:   msg.author.tag,
-    content:      msg.content,
-    attachments:  msg.attachments.map(a => ({ filename: a.name, url: a.url })),
-    embeds:       msg.embeds.map(e => ({ title: e.title ?? null, description: e.description ?? null })),
-    reactions:    msg.reactions.cache.map(r => ({ emoji: r.emoji.name, count: r.count })),
-  };
-}
-
-function buildFile(messages, format) {
-  const ts           = new Date().toISOString().slice(0, 10);
-  const channelNames = [...new Set(messages.map(m => m.channel_name))]
-    .map(name => name.replace(/\s+/g, '_'))
-    .join('_');
-  const baseName = `${channelNames}_${ts}`;
-
-  if (format === 'json') {
-    return {
-      buffer:   Buffer.from(JSON.stringify(messages, null, 2), 'utf8'),
-      filename: `${baseName}.json`,
-    };
-  }
-
-  if (format === 'csv') {
-    const headers = ['channel_id','channel_name','message_id','timestamp','author_id','author_tag','content','attachments','embeds','reactions'];
-    const rows = messages.map(m => [
-      m.channel_id, m.channel_name, m.message_id, m.timestamp,
-      m.author_id, m.author_tag,
-      csvEscape(m.content),
-      csvEscape(JSON.stringify(m.attachments)),
-      csvEscape(JSON.stringify(m.embeds)),
-      csvEscape(JSON.stringify(m.reactions)),
-    ].join(','));
-    return {
-      buffer:   Buffer.from('\uFEFF' + [headers.join(','), ...rows].join('\n'), 'utf8'),
-      filename: `${baseName}.csv`,
-    };
-  }
-
-  // TXT
-  const lines = messages.map(m =>
-    `[${m.timestamp}] ${m.author_tag} (${m.channel_name})\n${m.content || '(no text content)'}` +
-    (m.attachments.length ? `\nAttachments: ${m.attachments.map(a => a.url).join(', ')}` : '') +
-    '\n' + '─'.repeat(60)
-  );
-  return {
-    buffer:   Buffer.from(lines.join('\n'), 'utf8'),
-    filename: `${baseName}.txt`,
-  };
-}
-
-function csvEscape(str) {
-  if (!str) return '';
-  return `"${String(str).replace(/"/g, '""')}"`;
-}

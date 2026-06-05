@@ -11,9 +11,7 @@ if (!g._pgPool) {
     password: process.env.DB_PASS,
     database: process.env.DB_NAME || 'pple_volunteers',
     max: 3,
-  })
-  g._pgPool.on('connect', (client) => {
-    client.query("SET TIME ZONE 'Asia/Bangkok'")
+    options: '-c timezone=Asia/Bangkok',
   })
 }
 

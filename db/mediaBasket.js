@@ -32,6 +32,17 @@ async function setCaption(guildId, channelId, addedBy, caption, messageId) {
   );
 }
 
+// ต่อท้าย caption เดิม (ไม่มี → สร้างใหม่) — ใช้ตอนสะสมข้อความหลายอันก่อนให้ AI เรียบเรียง
+async function appendCaption(guildId, channelId, addedBy, text, messageId) {
+  const { rows } = await pool.query(
+    `SELECT caption FROM dc_media_baskets WHERE guild_id = $1 AND channel_id = $2 AND type = 'caption' LIMIT 1`,
+    [guildId, channelId]
+  );
+  const prev = rows[0]?.caption?.trim();
+  const merged = prev ? `${prev}\n\n${text}` : text;
+  await setCaption(guildId, channelId, addedBy, merged, messageId);
+}
+
 async function getBasket(guildId, channelId) {
   const { rows } = await pool.query(
     `SELECT * FROM dc_media_baskets WHERE guild_id = $1 AND channel_id = $2 ORDER BY added_at ASC`,
@@ -43,6 +54,14 @@ async function getBasket(guildId, channelId) {
 async function clearBasket(guildId, channelId) {
   await pool.query(
     `DELETE FROM dc_media_baskets WHERE guild_id = $1 AND channel_id = $2`,
+    [guildId, channelId]
+  );
+}
+
+// ล้างเฉพาะ media (รูป/วิดีโอ) — เก็บ caption ไว้ ใช้ตอนสลับชนิด media
+async function clearBasketMedia(guildId, channelId) {
+  await pool.query(
+    `DELETE FROM dc_media_baskets WHERE guild_id = $1 AND channel_id = $2 AND type IN ('image', 'video')`,
     [guildId, channelId]
   );
 }
@@ -63,4 +82,4 @@ async function getHistory(guildId, channelId) {
   return rows;
 }
 
-module.exports = { addImages, addVideo, setCaption, getBasket, clearBasket, addHistory, getHistory };
+module.exports = { addImages, addVideo, setCaption, appendCaption, getBasket, clearBasket, clearBasketMedia, addHistory, getHistory };

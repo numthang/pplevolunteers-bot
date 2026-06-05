@@ -285,3 +285,14 @@ DROP TABLE dc_server_settings;
 ALTER TYPE dc_media_baskets_type ADD VALUE IF NOT EXISTS 'video';
 -- 2026-06-04: dc_basket_history — เพิ่ม video_count สำหรับ Reels
 ALTER TABLE dc_basket_history ADD COLUMN IF NOT EXISTS video_count INT NULL DEFAULT 0;
+
+-- 2026-06-05: dc_user_config — per-user settings (personal defaults) แยกจาก dc_guild_config
+-- guild_id เป็น VARCHAR(20) ใส่ user_<discordId> (24 ตัว) ไม่ได้ → ตารางใหม่
+-- 3 ระดับ config: personal (dc_user_config) > guild (dc_guild_config guild_id จริง) > global (dc_guild_config guild_id='global')
+CREATE TABLE IF NOT EXISTS dc_user_config (
+  discord_id VARCHAR(20)  NOT NULL,
+  "key"      VARCHAR(100) NOT NULL,
+  value      json,
+  updated_at timestamptz DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (discord_id, "key")
+);

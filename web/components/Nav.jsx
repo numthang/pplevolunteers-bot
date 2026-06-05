@@ -32,6 +32,9 @@ const ICONS = {
   logout:         'M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75',
   integrations:   'M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437l1.745-1.437m6.615 8.206L15.75 15.75M4.867 19.125h.008v.008h-.008v-.008z',
   social:         'M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z',
+  droplet:        'M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C7 11.1 6 13 6 15a7 7 0 0 0 6 7z',
+  quote:          'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z',
+  server:         'M5 4h14a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zm0 10h14a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1z',
 }
 
 const FINANCE_LINKS = [
@@ -53,8 +56,10 @@ const CONTACTS_LINKS = [
 ]
 
 const DISCORD_LINKS = [
-  { href: '/discord/social/accounts', label: 'Social Accounts', icon: 'social' },
-  { href: '/discord/watermark', label: 'Watermark', icon: 'logs' },
+  { href: '/discord/watermark',       label: 'ลายน้ำ',       icon: 'droplet' },
+  { href: '/discord/quote',           label: 'Quote',        icon: 'quote' },
+  { href: '/discord/guild-watermark', label: 'ลายน้ำ Guild', icon: 'server' },
+  { href: '/discord/social/accounts', label: 'บัญชี Social', icon: 'social' },
 ]
 
 const SOCIAL_LINKS = [
@@ -65,6 +70,7 @@ const DASHBOARD_LINKS = [
   { href: '/finance',       label: 'FINANCE',   icon: 'transactions' },
   { href: '/calling',       label: 'CALLING',   icon: 'campaigns' },
   { href: '/contacts',      label: 'CONTACTS',  icon: 'contacts' },
+  { href: '/discord/social/accounts', label: 'DISCORD', icon: 'social' },
   { href: '/admin/logs',    label: 'LOGS',           icon: 'logs', roles: ['Admin', 'Moderator'] },
 ]
 

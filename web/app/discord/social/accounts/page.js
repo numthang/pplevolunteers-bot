@@ -34,62 +34,65 @@ const EMPTY_X_FORM = { name: '', handle: '', access_token: '', access_token_secr
 
 function AccountRow({ acc, accounts, onToggleVisibility, onSetGroup, onRemove, deleting }) {
   return (
-    <div className="bg-card-bg rounded-xl px-4 py-3 flex items-center gap-3 border border-warm-200 dark:border-disc-border">
-      <span className={`shrink-0 text-xs font-bold px-2 py-0.5 rounded-md ${PLATFORM_COLOR[acc.platform] || 'bg-gray-500 text-white'}`}>
-        {PLATFORM_LABEL[acc.platform] || acc.platform}
-      </span>
-
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium text-gray-900 dark:text-disc-text">{acc.name}</p>
-        <p className="text-xs text-gray-400 dark:text-disc-muted font-mono">{acc.social_id}</p>
-        {acc.platform === 'ig' && <TokenExpiry expiresAt={acc.user_token_expires_at} />}
-        {acc.platform === 'ig' && !acc.has_user_token && (
-          <span className="flex items-center gap-1 text-xs text-red-500 dark:text-red-400">
-            <AlertTriangle size={12} /> ไม่มี User Token — กด Connect ใหม่
-          </span>
-        )}
+    <div className="bg-card-bg rounded-xl px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3 border border-warm-200 dark:border-disc-border">
+      <div className="flex items-center gap-3 min-w-0 flex-1">
+        <span className={`shrink-0 text-xs font-bold px-2 py-0.5 rounded-md ${PLATFORM_COLOR[acc.platform] || 'bg-gray-500 text-white'}`}>
+          {PLATFORM_LABEL[acc.platform] || acc.platform}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium text-gray-900 dark:text-disc-text truncate">{acc.name}</p>
+          <p className="text-xs text-gray-400 dark:text-disc-muted font-mono truncate">{acc.social_id}</p>
+          {acc.platform === 'ig' && <TokenExpiry expiresAt={acc.user_token_expires_at} />}
+          {acc.platform === 'ig' && !acc.has_user_token && (
+            <span className="flex items-center gap-1 text-xs text-red-500 dark:text-red-400">
+              <AlertTriangle size={12} /> ไม่มี User Token — กด Connect ใหม่
+            </span>
+          )}
+        </div>
       </div>
 
-      <select
-        value={acc.group_name || ''}
-        onChange={async e => {
-          if (e.target.value === '__new__') {
-            const name = prompt('ชื่อกลุ่มใหม่:')?.trim()
-            if (name) await onSetGroup(acc, name)
-          } else {
-            await onSetGroup(acc, e.target.value || null)
-          }
-        }}
-        title="กลุ่มโพสต์"
-        className="shrink-0 text-xs px-2 py-1 rounded-md bg-gray-100 dark:bg-disc-hover text-gray-700 dark:text-disc-text border border-warm-200 dark:border-disc-border focus:outline-none focus:ring-2 focus:ring-orange/40"
-      >
-        <option value="">(ไม่มีกลุ่ม)</option>
-        {[...new Set(accounts.map(a => a.group_name).filter(Boolean))].map(g => (
-          <option key={g} value={g}>{g}</option>
-        ))}
-        <option value="__new__">+ สร้างกลุ่มใหม่</option>
-      </select>
+      <div className="flex items-center gap-2 flex-wrap shrink-0">
+        <select
+          value={acc.group_name || ''}
+          onChange={async e => {
+            if (e.target.value === '__new__') {
+              const name = prompt('ชื่อกลุ่มใหม่:')?.trim()
+              if (name) await onSetGroup(acc, name)
+            } else {
+              await onSetGroup(acc, e.target.value || null)
+            }
+          }}
+          title="กลุ่มโพสต์"
+          className="text-xs px-2 py-1 rounded-md bg-gray-100 dark:bg-disc-hover text-gray-700 dark:text-disc-text border border-warm-200 dark:border-disc-border focus:outline-none focus:ring-2 focus:ring-orange/40"
+        >
+          <option value="">(ไม่มีกลุ่ม)</option>
+          {[...new Set(accounts.map(a => a.group_name).filter(Boolean))].map(g => (
+            <option key={g} value={g}>{g}</option>
+          ))}
+          <option value="__new__">+ สร้างกลุ่มใหม่</option>
+        </select>
 
-      <button
-        onClick={() => onToggleVisibility(acc)}
-        title={acc.visibility === 'public' ? 'สาธารณะ' : 'ส่วนตัว'}
-        className={`shrink-0 flex items-center gap-1 text-xs px-2 py-1 rounded-md transition ${
-          acc.visibility === 'public'
-            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50'
-            : 'bg-gray-100 text-gray-500 dark:bg-disc-hover dark:text-disc-muted hover:bg-gray-200 dark:hover:bg-disc-border'
-        }`}
-      >
-        {acc.visibility === 'public' ? <Globe size={12} /> : <Lock size={12} />}
-        {acc.visibility === 'public' ? 'สาธารณะ' : 'ส่วนตัว'}
-      </button>
+        <button
+          onClick={() => onToggleVisibility(acc)}
+          title={acc.visibility === 'public' ? 'สาธารณะ' : 'ส่วนตัว'}
+          className={`flex items-center gap-1 text-xs px-2 py-1 rounded-md transition ${
+            acc.visibility === 'public'
+              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50'
+              : 'bg-gray-100 text-gray-500 dark:bg-disc-hover dark:text-disc-muted hover:bg-gray-200 dark:hover:bg-disc-border'
+          }`}
+        >
+          {acc.visibility === 'public' ? <Globe size={12} /> : <Lock size={12} />}
+          {acc.visibility === 'public' ? 'สาธารณะ' : 'ส่วนตัว'}
+        </button>
 
-      <button
-        onClick={() => onRemove(acc.id)}
-        disabled={deleting === acc.id}
-        className="shrink-0 p-1.5 rounded text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition disabled:opacity-40"
-      >
-        <Trash2 size={15} />
-      </button>
+        <button
+          onClick={() => onRemove(acc.id)}
+          disabled={deleting === acc.id}
+          className="p-1.5 rounded text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition disabled:opacity-40"
+        >
+          <Trash2 size={15} />
+        </button>
+      </div>
     </div>
   )
 }
@@ -246,13 +249,13 @@ export default function SocialAccountsPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-disc-text">Social Accounts</h1>
           <p className="text-sm text-gray-500 dark:text-disc-muted mt-1">บัญชี Facebook / Instagram / Threads / X ที่เชื่อมต่อกับ bot</p>
         </div>
         {superAdmin && guilds.length > 1 && (
-          <div className="relative">
+          <div className="relative shrink-0">
             <select
               value={selectedGuild}
               onChange={e => {
@@ -287,11 +290,11 @@ export default function SocialAccountsPage() {
 
           return (
             <div key={guild.guild_id}>
-              <div className="flex items-center justify-between mb-3">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-3">
                 <h2 className="text-base font-semibold text-gray-700 dark:text-disc-muted uppercase tracking-wide">
                   {guild.name}
                 </h2>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <button
                     onClick={() => { setXModal({ guildId: guild.guild_id }); setXForm(EMPTY_X_FORM) }}
                     disabled={!hasX}
