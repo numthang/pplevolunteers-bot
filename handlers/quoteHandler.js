@@ -38,6 +38,7 @@ const STYLE_OPTIONS = [
   { value: 'quote-1-ember-top-right',    label: 'ember บนขวา',  description: 'gradient บน · ขวา' },
   { value: 'quote-1-pillar-left',        label: 'pillar-left',   description: 'frame decoration · ซ้าย' },
   { value: 'quote-1-frame-right',        label: 'frame-right',   description: 'กรอบส้ม · ขวา' },
+  { value: 'quote-2-center',             label: 'center',        description: 'กลางภาพ · ดำคลุม · Google Sans' },
 ];
 
 
@@ -278,10 +279,12 @@ async function handleQuoteModal(interaction) {
       quoteText, authorName, saturation, mimeType: state.mimeType,
     });
 
-    // ลายน้ำ: ฝั่งเดียวกับ quote แนวนอน (ซ้าย/ขวา) แต่คนละแถบแนวตั้ง — บนซ้าย→ล่างซ้าย
+    // ลายน้ำ: center → สุ่ม, อื่นๆ → ฝั่งเดียวกับ quote แนวนอน คนละแถบแนวตั้ง (บนซ้าย→ล่างซ้าย)
     const wmPath = resolveWatermarkPath(state.watermark, interaction.guildId, interaction.user.id);
     if (wmPath) {
-      const wmPos  = `${vertical === 'top' ? 'bottom' : 'top'}-${side === 'right' ? 'right' : 'left'}`;
+      const wmPos  = vertical === 'center'
+        ? 'random'
+        : `${vertical === 'top' ? 'bottom' : 'top'}-${side === 'right' ? 'right' : 'left'}`;
       const result = await applyWatermark(outBuf, { imagePath: wmPath, position: wmPos, opacity: 0.9, size: 0.13 });
       outBuf = result.buffer;
       ext    = result.ext;

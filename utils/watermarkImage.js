@@ -25,21 +25,26 @@ async function fetchBuffer(url) {
 
 function calcPos(imgW, imgH, wmW, wmH, position) {
   const pad = Math.max(10, Math.round(Math.min(imgW, imgH) * 0.025));
+  const cx = (imgW - wmW) / 2;
   if (position === 'random') {
-    const corners = [
-      { x: pad,              y: pad },
-      { x: imgW - wmW - pad, y: pad },
-      { x: pad,              y: imgH - wmH - pad },
-      { x: imgW - wmW - pad, y: imgH - wmH - pad },
+    const spots = [
+      { x: pad,              y: pad },                 // top-left
+      { x: cx,               y: pad },                 // top-center
+      { x: imgW - wmW - pad, y: pad },                 // top-right
+      { x: pad,              y: imgH - wmH - pad },     // bottom-left
+      { x: cx,               y: imgH - wmH - pad },     // bottom-center
+      { x: imgW - wmW - pad, y: imgH - wmH - pad },     // bottom-right
     ];
-    return corners[Math.floor(Math.random() * 4)];
+    return spots[Math.floor(Math.random() * spots.length)];
   }
   switch (position) {
-    case 'top-left':    return { x: pad,              y: pad };
-    case 'bottom-left': return { x: pad,              y: imgH - wmH - pad };
-    case 'center':      return { x: (imgW - wmW) / 2, y: (imgH - wmH) / 2 };
-    case 'top-right':   return { x: imgW - wmW - pad, y: pad };
-    default:            return { x: imgW - wmW - pad, y: imgH - wmH - pad }; // bottom-right
+    case 'top-left':      return { x: pad,              y: pad };
+    case 'top-center':    return { x: cx,               y: pad };
+    case 'top-right':     return { x: imgW - wmW - pad, y: pad };
+    case 'bottom-left':   return { x: pad,              y: imgH - wmH - pad };
+    case 'bottom-center': return { x: cx,               y: imgH - wmH - pad };
+    case 'center':        return { x: cx,               y: (imgH - wmH) / 2 };
+    default:              return { x: imgW - wmW - pad, y: imgH - wmH - pad }; // bottom-right
   }
 }
 

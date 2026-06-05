@@ -12,6 +12,15 @@ GlobalFonts.registerFromPath(
   path.join(__dirname, '..', 'assets', 'fonts', 'Anakotmai-Light.ttf'),
   'AnakotmaiLight'
 );
+// Google Sans (มีหัว) — สำหรับ quote-2-center. family ไม่ซ้ำ Anakotmai ที่ติดตั้งในเครื่อง
+GlobalFonts.registerFromPath(
+  path.join(__dirname, '..', 'assets', 'fonts', 'GoogleSans-Bold.ttf'),
+  'GSans'
+);
+GlobalFonts.registerFromPath(
+  path.join(__dirname, '..', 'assets', 'fonts', 'GoogleSans-Regular.ttf'),
+  'GSansLight'
+);
 
 const QUOTE_DIR = path.join(__dirname, '..', 'assets', 'quote');
 const markCache = {};
@@ -71,31 +80,31 @@ function lsWidth(ctx, text, sp = 1.5) {
   return w;
 }
 
-function fitFont(ctx, text, maxWidth, startSz, maxLines = 4) {
+function fitFont(ctx, text, maxWidth, startSz, maxLines = 4, fontFamily = 'Anakotmai') {
   // ถ้า user ใส่ \n เอง — respect ทุกบรรทัด ไม่ wrap เพิ่ม แค่ shrink font ให้ fit
   if (text.includes('\n')) {
     const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
     const minSz = Math.round(startSz * 0.30);
     let sz = startSz;
     while (sz > minSz) {
-      ctx.font = `bold ${sz}px Anakotmai`;
+      ctx.font = `bold ${sz}px ${fontFamily}`;
       if (lines.every(l => lsWidth(ctx, l) <= maxWidth)) return { fontSize: sz, lines };
       sz = Math.max(minSz, Math.round(sz * 0.9));
     }
-    ctx.font = `bold ${minSz}px Anakotmai`;
+    ctx.font = `bold ${minSz}px ${fontFamily}`;
     return { fontSize: minSz, lines };
   }
 
   const minSz = Math.round(startSz * 0.65);
   let sz = startSz;
   while (sz > minSz) {
-    ctx.font = `bold ${sz}px Anakotmai`;
+    ctx.font = `bold ${sz}px ${fontFamily}`;
     const lines = wrapText(ctx, text, maxWidth);
     const allFit = lines.every(l => lsWidth(ctx, l) <= maxWidth);
     if (lines.length <= maxLines && allFit) return { fontSize: sz, lines };
     sz = Math.max(minSz, Math.round(sz * 0.9));
   }
-  ctx.font = `bold ${minSz}px Anakotmai`;
+  ctx.font = `bold ${minSz}px ${fontFamily}`;
   return { fontSize: minSz, lines: wrapText(ctx, text, maxWidth) };
 }
 
@@ -370,6 +379,59 @@ async function renderEmberAI(buf, opts) {
 const ember = (side, vertical) => (buf, opts) =>
   renderVariant(buf, { ...opts, side, vertical, markScale: 0.7, gradDark: 0.98 });
 
+// ── quote-2-center: ข้อความกลางภาพ, BG หรี่ + ดำคลุม 75%, Google Sans (มีหัว) ──
+// supersample 2x แล้วย่อ = ขอบคม. ใช้ fitFont/lsDraw ตัวเดียวกับ quote-1
+async function renderCenter(buf, { quoteText, authorName, saturation = 1.0 }) {
+  const SS = 2, OVERLAY = 0.75;
+  const meta = await sharp(buf).metadata();
+  const W = meta.width, H = meta.height;
+
+  const work = await sharp(buf).modulate({ saturation }).resize(W * SS, H * SS, { fit: 'cover' }).toBuffer();
+  const img  = await loadImage(work);
+  const cv   = createCanvas(W * SS, H * SS);
+  const ctx  = cv.getContext('2d');
+  ctx.scale(SS, SS);
+
+  ctx.drawImage(img, 0, 0, W, H);
+  ctx.fillStyle = `rgba(0,0,0,${OVERLAY})`;
+  ctx.fillRect(0, 0, W, H);
+
+  const padX = Math.round(W * 0.11);
+  const startSz = Math.max(40, Math.round(W * 0.085));
+  const { fontSize: qsz, lines } = fitFont(ctx, quoteText, W - padX * 2, startSz, 6, 'GSans');
+  const lh    = qsz * 1.22;
+  const nsz   = Math.max(16, Math.round(W * 0.028));
+  const qmsz  = Math.round(W * 0.11);
+  const qmGap = Math.round(qsz * 0.5);
+  const blockH = qmsz + qmGap + lines.length * lh + nsz * 2.2;
+  let ty = Math.round((H - blockH) / 2);
+
+  // เครื่องหมายคำพูด (รูป) กลางบน
+  ctx.textBaseline = 'top';
+  const qm = await loadMark('white_close');
+  ctx.drawImage(qm, Math.round((W - qmsz) / 2), ty, qmsz, qmsz);
+  ty += qmsz + qmGap;
+
+  // quote กลาง
+  ctx.font = `bold ${qsz}px GSans`;
+  for (const l of lines) {
+    const w = lsWidth(ctx, l, 1.0);
+    ctx.fillStyle = WHITE;
+    lsDraw(ctx, l, (W - w) / 2, ty, 1.0);
+    ty += lh;
+  }
+
+  // author กลาง
+  ty += nsz * 0.6;
+  ctx.font = `${nsz}px GSansLight`; ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  const aw = lsWidth(ctx, authorName, 0.8);
+  lsDraw(ctx, authorName, (W - aw) / 2, ty, 0.8);
+
+  const big = await toPng(cv);
+  const out = await sharp(big).resize(W, H).png().toBuffer();   // ย่อ 2x → 1x ขอบคม
+  return { buffer: out, ext: 'png', vertical: 'center', side: 'center' };
+}
+
 const STYLES = {
   'quote-1-ember-bottom-left':  ember('left',  'bottom'),
   'quote-1-ember-bottom-right': ember('right', 'bottom'),
@@ -378,6 +440,7 @@ const STYLES = {
   'quote-1-pillar-left':        (buf, opts) => renderBorder(buf, opts),
   'quote-1-frame-right':        (buf, opts) => renderBorder2(buf, opts),
   'quote-1-ember-ai':           (buf, opts) => renderEmberAI(buf, opts),
+  'quote-2-center':             (buf, opts) => renderCenter(buf, opts),
 };
 // random pool ไม่รวม ember-ai — สุ่มจะได้ไม่เผลอยิง API
 const RANDOM_KEYS = Object.keys(STYLES).filter(k => k !== 'quote-1-ember-ai');
