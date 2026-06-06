@@ -26,7 +26,7 @@ const { handleGogoSignup, handleGogoModal, handleGogoDMButton, handleGogoDMModal
 const { handleWatermarkSelect, handleWatermarkEnhance, handleWatermarkConfirm, handleWatermarkModal } = require('./handlers/watermarkHandler');
 const { handleQuoteModal, handleQuoteStyleSelect, handleQuoteColorSelect, handleQuoteCropSelect, handleQuoteWatermarkSelect, handleQuoteConfirm } = require('./handlers/quoteHandler');
 const { handleBasketAiStart, handleBasketAiModeSelect, handleBasketAiCustomModal, handleBasketAiReplace } = require('./handlers/basketAiHandler');
-const { handleAiThreadModeSelect, handleAiThreadCustomModal, handleAiThreadAddCaption } = require('./handlers/aiThreadHandler');
+const { handleAiThreadModeSelect, handleAiThreadCustomModal, handleAiThreadAddCaption, handleAiThreadPublic } = require('./handlers/aiThreadHandler');
 const {
   handleBasketView, handleBasketClear,
   handleBasketPost, handleBasketRetry, handleBasketSelect, handleBasketModal,
@@ -201,6 +201,7 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.customId === 'fin_refresh_dashboard')      return handleFinanceRefresh(interaction);
     if (interaction.customId.startsWith('forum_result_'))     return handleResultPage(interaction);
     if (interaction.customId.startsWith('ai_thread_caption:')) return handleAiThreadAddCaption(interaction);
+    if (interaction.customId.startsWith('ai_thread_public:'))  return handleAiThreadPublic(interaction);
     return;
   }
 });

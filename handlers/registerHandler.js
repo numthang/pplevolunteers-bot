@@ -20,7 +20,7 @@ const pendingForms = new Map();
 // -------- Build Modal (รับ existing data เพื่อ pre-fill) --------
 function buildRegisterModal(existing = null) {
   const modal = new ModalBuilder()
-    .setCustomId('modal_register')
+    .setCustomId(`modal_register_${Date.now()}`)
     .setTitle('แนะนำตัวให้เพื่อนรู้จัก');
 
   const nameInput = new TextInputBuilder()
@@ -77,7 +77,7 @@ function buildRegisterModal(existing = null) {
 // -------- Modal Submit --------
 async function handleModalSubmit(interaction) {
   if (!interaction.isModalSubmit()) return;
-  if (interaction.customId !== 'modal_register') return;
+  if (!interaction.customId.startsWith('modal_register')) return;
 
   const formData = {
     name:       interaction.fields.getTextInputValue('field_name'),

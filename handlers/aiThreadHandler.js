@@ -123,17 +123,21 @@ async function runAiOnThread(interaction, { modeValue = null, customPrompt = nul
   const date = new Date().toISOString().slice(0, 10);
   const file = new AttachmentBuilder(Buffer.from(output, 'utf8'), { name: `ai_${mode.value}_${date}.txt` });
 
-  const token = putOutput({ caption: output, guildId: interaction.guildId, channelId: interaction.channelId });
+  const token = putOutput({ caption: output, guildId: interaction.guildId, channelId: interaction.channelId, modeLabel: mode.label, modeValue: mode.value, msgCount: messages.length, truncated });
   const addBtn = new ButtonBuilder()
     .setCustomId(`ai_thread_caption:${token}`)
     .setLabel('🧺 ใช้เป็น caption ในตะกร้า')
     .setStyle(ButtonStyle.Success);
+  const publicBtn = new ButtonBuilder()
+    .setCustomId(`ai_thread_public:${token}`)
+    .setLabel('📢 แสดงใน public')
+    .setStyle(ButtonStyle.Primary);
 
   const header = `${mode.label}${truncated ? ' (บางส่วน)' : ''} · ${messages.length} ข้อความ`;
   await interaction.editReply({
     content: `${header}\n${'─'.repeat(20)}\n${body}`,
     files: [file],
-    components: [new ActionRowBuilder().addComponents(addBtn)],
+    components: [new ActionRowBuilder().addComponents(addBtn, publicBtn)],
   });
 }
 
@@ -160,4 +164,35 @@ async function handleAiThreadAddCaption(interaction) {
   });
 }
 
-module.exports = { handleAiThreadStart, handleAiThreadModeSelect, handleAiThreadCustomModal, handleAiThreadAddCaption };
+// ─── 4. กดแสดงใน public → post ผล AI ออกช่องสาธารณะ ──────────────────────────
+async function handleAiThreadPublic(interaction) {
+  const token = interaction.customId.split(':')[1];
+  const data  = takeOutput(token);
+
+  if (!data) {
+    return interaction.reply({ content: '❌ ผลลัพธ์หมดอายุแล้ว — กด AI ใหม่', flags: MessageFlags.Ephemeral });
+  }
+
+  await interaction.deferUpdate();
+
+  const body = data.caption.length > REPLY_LIMIT ? data.caption.slice(0, REPLY_LIMIT) + '\n…(ตัด — ดูไฟล์)' : data.caption;
+  const date = new Date().toISOString().slice(0, 10);
+  const file = new AttachmentBuilder(Buffer.from(data.caption, 'utf8'), { name: `ai_${data.modeValue}_${date}.txt` });
+  const header = `${data.modeLabel}${data.truncated ? ' (บางส่วน)' : ''} · ${data.msgCount} ข้อความ`;
+
+  await interaction.followUp({ content: `${header}\n${'─'.repeat(20)}\n${body}`, files: [file] });
+
+  // disable ปุ่ม public หลังกด ป้องกัน post ซ้ำ
+  const disabledPublic = new ButtonBuilder()
+    .setCustomId(`ai_thread_public:${token}`)
+    .setLabel('📢 แสดงใน public แล้ว')
+    .setStyle(ButtonStyle.Secondary)
+    .setDisabled(true);
+  const addBtn = new ButtonBuilder()
+    .setCustomId(`ai_thread_caption:${token}`)
+    .setLabel('🧺 ใช้เป็น caption ในตะกร้า')
+    .setStyle(ButtonStyle.Success);
+  await interaction.editReply({ components: [new ActionRowBuilder().addComponents(addBtn, disabledPublic)] });
+}
+
+module.exports = { handleAiThreadStart, handleAiThreadModeSelect, handleAiThreadCustomModal, handleAiThreadAddCaption, handleAiThreadPublic };
