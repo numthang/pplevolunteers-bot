@@ -103,6 +103,7 @@ module.exports = {
         .addChannelOption(o => o.setName('log_channel').setDescription('channel ส่ง log').setRequired(false))
         .addBooleanOption(o => o.setName('province_select').setDescription('ให้เลือกจังหวัดหลัง register').setRequired(false))
         .addBooleanOption(o => o.setName('interest_select').setDescription('ให้เลือก interest/skill หลัง register').setRequired(false))
+        .addRoleOption(o => o.setName('member_role').setDescription('ยศที่ติดให้อัตโนมัติหลัง register').setRequired(false))
         .addBooleanOption(o => o.setName('public').setDescription('แสดงผลให้ทุกคนเห็น (default: false)').setRequired(false))
     ),
 
@@ -361,6 +362,7 @@ await refreshDashboard(thread, interaction.guildId, ids, existing.dashboard_msg_
       const logChannel     = interaction.options.getChannel('log_channel') ?? interaction.channel;
       const provinceSelect = interaction.options.getBoolean('province_select');
       const interestSelect = interaction.options.getBoolean('interest_select');
+      const memberRole     = interaction.options.getRole('member_role');
 
       let regConfig = await getSetting(interaction.guildId, 'config_register');
       if (typeof regConfig === 'string') {
@@ -371,6 +373,7 @@ await refreshDashboard(thread, interaction.guildId, ids, existing.dashboard_msg_
       regConfig.log_channel_id = logChannel.id;
       if (provinceSelect !== null) regConfig.province_select = provinceSelect;
       if (interestSelect !== null) regConfig.interest_select = interestSelect;
+      if (memberRole !== null) regConfig.member_role_id = memberRole.id;
 
       await setSetting(interaction.guildId, 'config_register', regConfig);
 
@@ -394,6 +397,7 @@ await refreshDashboard(thread, interaction.guildId, ids, existing.dashboard_msg_
           `Log → ${logDisplay}`,
           `Province select → ${regConfig.province_select ? '✅' : '❌'}`,
           `Interest select → ${regConfig.interest_select ? '✅' : '❌'}`,
+          `Member role → ${regConfig.member_role_id ? `<@&${regConfig.member_role_id}>` : '❌'}`,
         ].join('\n'),
       });
     }

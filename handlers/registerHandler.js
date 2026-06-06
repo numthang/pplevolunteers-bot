@@ -98,10 +98,17 @@ async function handleModalSubmit(interaction) {
   regConfig = regConfig ?? {};
   const provinceSelect = regConfig.province_select === true;
   const interestSelect = regConfig.interest_select === true;
+  const memberRoleId   = regConfig.member_role_id ?? null;
 
-  pendingForms.set(interaction.user.id, {formData, selectedProvinces: {}, interestSelect});
+  pendingForms.set(interaction.user.id, {formData, selectedProvinces: {}, interestSelect, memberRoleId});
 
   const {name, interest, position, amphoe, referredBy} = formData;
+
+  if (memberRoleId) {
+    await interaction.member.roles.add(memberRoleId).catch(err =>
+      console.error(`❌ ติด member role (${memberRoleId}) ไม่ได้:`, err.message)
+    );
+  }
 
   await upsertMember(interaction.guildId, {
     discord_id: interaction.user.id,
@@ -242,8 +249,14 @@ async function handleRegisterConfirm(interaction) {
     return interaction.followUp({content: '❌ ไม่พบข้อมูล กรุณาใช้ /register ใหม่', flags: MessageFlags.Ephemeral});
   }
 
-  const {formData, interestSelect} = pending;
+  const {formData, interestSelect, memberRoleId} = pending;
   const {name, interest, position, amphoe, referredBy} = formData;
+
+  if (memberRoleId) {
+    await interaction.member.roles.add(memberRoleId).catch(err =>
+      console.error(`❌ ติด member role (${memberRoleId}) ไม่ได้:`, err.message)
+    );
+  }
 
   await interaction.member.fetch();
   const allProvinces = Object.entries(PROVINCE_ROLES)
