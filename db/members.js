@@ -4,8 +4,8 @@ const { PROVINCE_ROLES, INTEREST_ROLES, SKILL_ROLES } = require('../config/roles
 async function upsertMember(guildId, data) {
   const sql = `
   INSERT INTO dc_members
-    (guild_id, discord_id, username, display_name, nickname, firstname, lastname, member_id, specialty, amphoe, province, region, roles, interests, referred_by)
-  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+    (guild_id, discord_id, username, display_name, nickname, firstname, lastname, member_id, specialty, position, amphoe, province, region, roles, interests, referred_by)
+  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
   ON CONFLICT (guild_id, discord_id) DO UPDATE SET
     username = EXCLUDED.username,
     display_name = EXCLUDED.display_name,
@@ -14,6 +14,7 @@ async function upsertMember(guildId, data) {
     lastname = EXCLUDED.lastname,
     member_id = EXCLUDED.member_id,
     specialty = EXCLUDED.specialty,
+    position = EXCLUDED.position,
     amphoe = EXCLUDED.amphoe,
     province = EXCLUDED.province,
     region = EXCLUDED.region,
@@ -32,6 +33,7 @@ async function upsertMember(guildId, data) {
     data.lastname ?? null,
     data.member_id ?? null,
     data.specialty ?? null,
+    data.position ?? null,
     data.amphoe ?? null,
     data.province ?? null,
     data.region ?? null,

@@ -126,7 +126,7 @@ async function runAiOnThread(interaction, { modeValue = null, customPrompt = nul
   const token = putOutput({ caption: output, guildId: interaction.guildId, channelId: interaction.channelId });
   const addBtn = new ButtonBuilder()
     .setCustomId(`ai_thread_caption:${token}`)
-    .setLabel('🧺 หยิบลงตะกร้าสื่อ')
+    .setLabel('🧺 ใช้เป็น caption ในตะกร้า')
     .setStyle(ButtonStyle.Success);
 
   const header = `${mode.label}${truncated ? ' (บางส่วน)' : ''} · ${messages.length} ข้อความ`;

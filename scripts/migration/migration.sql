@@ -296,3 +296,6 @@ CREATE TABLE IF NOT EXISTS dc_user_config (
   updated_at timestamptz DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (discord_id, "key")
 );
+
+-- 2026-06-06: dc_members — เพิ่ม position สำหรับ generic register form
+ALTER TABLE dc_members ADD COLUMN IF NOT EXISTS position VARCHAR(100) NULL;

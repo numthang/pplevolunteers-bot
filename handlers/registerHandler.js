@@ -25,21 +25,11 @@ function buildRegisterModal(existing = null) {
 
   const nameInput = new TextInputBuilder()
     .setCustomId('field_name')
-    .setLabel('ชื่อ-นามสกุล')
+    .setLabel('ชื่อ')
     .setStyle(TextInputStyle.Short)
-    .setPlaceholder('เช่น ณัฐพงษ์ เรืองปัญญาวุฒิ')
+    .setPlaceholder('ชื่อเล่น หรือชื่อ-นามสกุล')
     .setRequired(true);
-  if (existing?.firstname) {
-    nameInput.setValue([existing.firstname, existing.lastname].filter(Boolean).join(' '));
-  }
-
-  const nicknameInput = new TextInputBuilder()
-    .setCustomId('field_nickname')
-    .setLabel('ชื่อเล่น')
-    .setStyle(TextInputStyle.Short)
-    .setPlaceholder('เช่น เท้ง')
-    .setRequired(true);
-  if (existing?.nickname) nicknameInput.setValue(existing.nickname);
+  if (existing?.nickname) nameInput.setValue(existing.nickname);
 
   const interestInput = new TextInputBuilder()
     .setCustomId('field_interest')
@@ -48,6 +38,14 @@ function buildRegisterModal(existing = null) {
     .setPlaceholder('เช่น ทีมกราฟิก, ทีมคอนเทนต์, อื่นๆ')
     .setRequired(true);
   if (existing?.specialty) interestInput.setValue(existing.specialty);
+
+  const positionInput = new TextInputBuilder()
+    .setCustomId('field_position')
+    .setLabel('ตำแหน่ง (ถ้ามี)')
+    .setStyle(TextInputStyle.Short)
+    .setPlaceholder('เช่น ผู้ประสานงานเขต, อาสาสมัคร')
+    .setRequired(false);
+  if (existing?.position) positionInput.setValue(existing.position);
 
   const amphoeInput = new TextInputBuilder()
     .setCustomId('field_amphoe')
@@ -67,8 +65,8 @@ function buildRegisterModal(existing = null) {
 
   modal.addComponents(
     new ActionRowBuilder().addComponents(nameInput),
-    new ActionRowBuilder().addComponents(nicknameInput),
     new ActionRowBuilder().addComponents(interestInput),
+    new ActionRowBuilder().addComponents(positionInput),
     new ActionRowBuilder().addComponents(amphoeInput),
     new ActionRowBuilder().addComponents(referredByInput),
   );
@@ -83,8 +81,8 @@ async function handleModalSubmit(interaction) {
 
   const formData = {
     name:       interaction.fields.getTextInputValue('field_name'),
-    nickname:   interaction.fields.getTextInputValue('field_nickname'),
     interest:   interaction.fields.getTextInputValue('field_interest'),
+    position:   interaction.fields.getTextInputValue('field_position'),
     amphoe:     interaction.fields.getTextInputValue('field_amphoe'),
     referredBy: interaction.fields.getTextInputValue('field_referred_by'),
   };
@@ -103,20 +101,16 @@ async function handleModalSubmit(interaction) {
 
   pendingForms.set(interaction.user.id, {formData, selectedProvinces: {}, interestSelect});
 
-  const {name, nickname, interest, amphoe, referredBy} = formData;
-  const parts = name.trim().split(/\s+/);
-  const firstname = parts[0] ?? null;
-  const lastname = parts.slice(1).join(' ') || null;
+  const {name, interest, position, amphoe, referredBy} = formData;
 
   await upsertMember(interaction.guildId, {
     discord_id: interaction.user.id,
     username: interaction.user.username,
-    nickname,
-    firstname,
-    lastname,
+    nickname: name,
     specialty: interest,
+    position: position || null,
     amphoe: amphoe || null,
-    referred_by: referredBy,
+    referred_by: referredBy || null,
     province: null,
     region: null,
     roles: null,
@@ -186,18 +180,18 @@ async function handleModalSubmit(interaction) {
 // -------- Send Register Log --------
 async function sendRegisterLog(interaction, formData, allProvinces) {
   const { getSetting } = require('../db/settings');
-  const {name, nickname, interest, amphoe, referredBy} = formData;
+  const {name, interest, position, amphoe, referredBy} = formData;
 
   const embed = new EmbedBuilder()
     .setColor(0x5865f3)
     .setThumbnail(interaction.user.displayAvatarURL())
     .addFields(
-      {name: 'ชื่อ-นามสกุล',     value: name,                                                    inline: true},
-      {name: 'ชื่อเล่น',          value: nickname,                                                inline: true},
-      {name: 'อำเภอ/จังหวัด (role)',     value: [amphoe, allProvinces.join(', ')].filter(Boolean).join(' · ') || '-', inline: false},
-      {name: 'ความสนใจ/ความถนัด', value: interest || '-',               inline: false},
-      {name: 'แนะนำโดย',         value: referredBy || '-',             inline: true},
-      {name: 'Discord',           value: `<@${interaction.user.id}> (${interaction.user.id})`, inline: false},
+      {name: 'ชื่อ',              value: name,                                                                         inline: true},
+      {name: 'ตำแหน่ง',          value: position || '-',                                                              inline: true},
+      {name: 'อำเภอ/จังหวัด',    value: [amphoe, allProvinces.join(', ')].filter(Boolean).join(' · ') || '-',         inline: false},
+      {name: 'ความสนใจ/ความถนัด', value: interest || '-',                                                             inline: false},
+      {name: 'แนะนำโดย',         value: referredBy || '-',                                                            inline: true},
+      {name: 'Discord',           value: `<@${interaction.user.id}> (${interaction.user.id})`,                        inline: false},
     )
     .setTimestamp();
 
@@ -249,7 +243,7 @@ async function handleRegisterConfirm(interaction) {
   }
 
   const {formData, interestSelect} = pending;
-  const {name, nickname, interest, amphoe, referredBy} = formData;
+  const {name, interest, position, amphoe, referredBy} = formData;
 
   await interaction.member.fetch();
   const allProvinces = Object.entries(PROVINCE_ROLES)
