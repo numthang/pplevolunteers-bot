@@ -1,13 +1,15 @@
+End of the Day
+- อ่านที่แก้ไข แล้วเอาขึ้น git พร้อมข้อความแก้ไข พร้อม bump version ใน package.json ให้ถูกต้อง (เช็ค git log ก่อนว่า version ล่าสุดคืออะไร ใช้ semver — patch สำหรับแก้เล็กน้อย, minor สำหรับฟีเจอร์ใหม่) tag เฉพาะ minor ขึ้นไป และ push ด้วย
+หลังวันที่ x ผมทำอะไรบ้าง ขอรายละเอียดแบบ non-technichal อ่านแล้วเข้าใจ ขอ format แบบนี้
+- x พ.ค. xxxxxxxxxxxxxxxxxxxxxxxxx, xxxx, xxxxx
+- x พ.ค. xxxxxxxxxxxxxxxxxxxxxxxxx, xxxx, xxxxx
+
 TODO
 - เชื่อมระบบ Discord กับของพรรค
 - อื่นๆ ที่คาดหวังในอนาคต project management แบบ notion และ appflowy ให้ simple และ easy
 - ระบบชำระเงินค่าเบี้ยเลี้ยงผูกเบอร์บัญชี
 - ทำ context menu add to calendar เข้า discord event และ google calendar โดยที่ parse url discord event หรือ google meet ได้ และเอา content มาทำ description ได้ พร้อม parse วันที่เวลา จาก ข้อความนั้นได้ด้วย ทำแบบว่าให้รวมถึงไปการนำเข้าปฏิทิน "ทีมสื่อราชบุรี" ได้ด้วยอ่ะ มีให้เลือก ปฏิทิน ตอนนี้เรามี 2 - 3 ปฏิทิน
-- อ่านที่แก้ไข แล้วเอาขึ้น git พร้อมข้อความแก้ไข พร้อมเลข version และ push ด้วย
 
-วันที่ 4 กับ 5 ผมทำอะไรบ้าง ขอรายละเอียดแบบ non-technichal อ่านแล้วเข้าใจ ขอ format แบบนี้
-- x พ.ค. xxxxxxxxxxxxxxxxxxxxxxxxx, xxxx, xxxxx
-- x พ.ค. xxxxxxxxxxxxxxxxxxxxxxxxx, xxxx, xxxxx
 ==
 แนะนำแบ่งเป็น 2 session:
 Session A: อ่าน PDF + verify/correct CSV (source_page, benefit_amount, eligibility)

@@ -1,7 +1,7 @@
 
 export const metadata = { title: 'Integrations' }
 
-const BOT_INVITE_URL = `https://discord.com/oauth2/authorize?client_id=${process.env.DISCORD_BOT_CLIENT_ID}&permissions=1394003710544&scope=bot+applications.commands`
+const BOT_INVITE_URL = process.env.DISCORD_BOT_INVITE_URL
 const API_BASE = process.env.NEXTAUTH_URL || 'https://pplethai.org'
 
 function Section({ title, children, id }) {

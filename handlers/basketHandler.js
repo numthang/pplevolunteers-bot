@@ -498,11 +498,11 @@ function openScheduleModal(interaction, existingCaption, platforms) {
     .setLabel('Caption (เว้นว่างได้)')
     .setStyle(TextInputStyle.Paragraph)
     .setRequired(false)
-    .setMaxLength(2200);
+    .setMaxLength(4000);
 
   // setValue only if non-empty (some Discord.js versions silently drop empty value)
   if (existingCaption && existingCaption.length > 0) {
-    captionInput.setValue(existingCaption.slice(0, 2200));
+    captionInput.setValue(existingCaption.slice(0, 4000));
   }
 
   const timeInput = new TextInputBuilder()
@@ -827,8 +827,8 @@ async function handleBasketEditCaption(interaction) {
     .setLabel('Caption')
     .setStyle(TextInputStyle.Paragraph)
     .setRequired(false)
-    .setMaxLength(2200);
-  if (existing) input.setValue(existing.slice(0, 2200));
+    .setMaxLength(4000);
+  if (existing) input.setValue(existing.slice(0, 4000));
   modal.addComponents(new ActionRowBuilder().addComponents(input));
   return interaction.showModal(modal);
 }
