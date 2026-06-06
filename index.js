@@ -231,6 +231,25 @@ client.on('guildMemberAdd', async (member) => {
       .replace(/\{user\}/g, `<@${member.id}>`);
     member.send(text).catch(err => console.error('[memberAdd] welcome DM failed:', err));
   }
+
+  const systemChannel = member.guild.systemChannel;
+  if (systemChannel) {
+    const stickyKey = `sticky_${systemChannel.id}`;
+    const stickyRaw = await getSetting(member.guild.id, stickyKey).catch(() => null);
+    if (stickyRaw) {
+      let parsed = stickyRaw;
+      if (typeof parsed === 'string') { try { parsed = JSON.parse(parsed); } catch { parsed = null; } }
+      if (parsed) {
+        const refreshMs = (parsed.refresh_minutes ?? 1440) * 60 * 1000;
+        const now = Date.now();
+        const last = cooldowns.get(systemChannel.id) || 0;
+        if (now - last >= refreshMs) {
+          cooldowns.set(systemChannel.id, now);
+          refreshSticky(systemChannel).catch(err => console.error('[memberAdd] sticky:', err));
+        }
+      }
+    }
+  }
 });
 
 client.on('guildMemberUpdate', async (oldMember, newMember) => {
