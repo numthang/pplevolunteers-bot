@@ -125,7 +125,7 @@ function buildBasketEmbed(imgCount, videoCount, caption, previewUrl = null) {
   return embed;
 }
 
-function buildBasketButtons(imgCount, videoCount, hasCaption = false) {
+function buildBasketButtons(imgCount, videoCount, hasCaption = false, webUrl = null) {
   const empty = imgCount === 0 && videoCount === 0 && !hasCaption;
   const buttons = [
     new ButtonBuilder()
@@ -138,6 +138,15 @@ function buildBasketButtons(imgCount, videoCount, hasCaption = false) {
       .setLabel('✏️ แก้ Caption')
       .setStyle(ButtonStyle.Primary),
   ];
+  // จัดการรูป (เรียงลำดับ + แก้ caption) บนเว็บ — ปุ่ม Link โผล่เมื่อมีรูป ≥ 2
+  if (webUrl && imgCount > 1) {
+    buttons.push(
+      new ButtonBuilder()
+        .setLabel('🖼️ จัดการรูป')
+        .setStyle(ButtonStyle.Link)
+        .setURL(webUrl),
+    );
+  }
   // AI เรียบเรียง — โผล่เมื่อมี caption ให้ทำงาน
   if (hasCaption) {
     buttons.push(
@@ -197,7 +206,7 @@ function buildPlatformRow(availablePlatforms, selectedPlatforms) {
 }
 
 // ─── shared: build full basket reply payload ──────────────────────────────────
-async function buildBasketPayload(basket, guildId, channelId, userId) {
+async function buildBasketPayload(basket, guildId, channelId, userId, channelName = null) {
   const images  = basket.filter(r => r.type === 'image');
   const videos  = basket.filter(r => r.type === 'video');
   const caption = basket.find(r => r.type === 'caption')?.caption || null;
@@ -308,18 +317,22 @@ async function buildBasketPayload(basket, guildId, channelId, userId) {
           ])
       ));
     }
-    const currentEnhance = pendingPost.get(userId)?.enhance || false;
-    components.push(new ActionRowBuilder().addComponents(
-      new StringSelectMenuBuilder()
-        .setCustomId('basket_enhance')
-        .setPlaceholder('Auto Enhance (default: ปิด)')
-        .addOptions([
-          new StringSelectMenuOptionBuilder().setLabel('ไม่ Enhance').setValue('off').setEmoji('🖼️').setDefault(!currentEnhance),
-          new StringSelectMenuOptionBuilder().setLabel('Auto Enhance').setValue('on').setEmoji('✨').setDefault(currentEnhance),
-        ])
-    ));
+    // const currentEnhance = pendingPost.get(userId)?.enhance || false;
+    // components.push(new ActionRowBuilder().addComponents(
+    //   new StringSelectMenuBuilder()
+    //     .setCustomId('basket_enhance')
+    //     .setPlaceholder('Auto Enhance (default: ปิด)')
+    //     .addOptions([
+    //       new StringSelectMenuOptionBuilder().setLabel('ไม่ Enhance').setValue('off').setEmoji('🖼️').setDefault(!currentEnhance),
+    //       new StringSelectMenuOptionBuilder().setLabel('Auto Enhance').setValue('on').setEmoji('✨').setDefault(currentEnhance),
+    //     ])
+    // ));
   }
-  components.push(buildBasketButtons(imgCount, videoCount, !!caption));
+  const webUrl = process.env.WEB_BASE_URL
+    ? `${process.env.WEB_BASE_URL}/discord/media/basket?guild=${guildId}&channel=${channelId}`
+      + (channelName ? `&name=${encodeURIComponent(channelName)}` : '')
+    : null;
+  components.push(buildBasketButtons(imgCount, videoCount, !!caption, webUrl));
 
   return { embeds: [embed], components };
 }
@@ -341,10 +354,13 @@ async function handleBasketAdd(interaction) {
     const ct = a.contentType?.split(';')[0].trim();
     return SUPPORTED_TYPES.has(ct);
   });
-  const videos = [...sourceMsg.attachments.values()].filter(a => {
+  let videos = [...sourceMsg.attachments.values()].filter(a => {
     const ct = a.contentType?.split(';')[0].trim();
     return VIDEO_TYPES.has(ct);
   });
+  // รูป + คลิปในข้อความเดียวกัน → เอาแต่รูป (Reels โพสต์ได้ทีละวิดีโอ ไม่ปนรูป)
+  const skippedVideos = images.length && videos.length ? videos.length : 0;
+  if (skippedVideos) videos = [];
   const text = sourceMsg.content ? stripDiscordMarkdown(sourceMsg.content) : '';
 
   if (!images.length && !videos.length && !text) {
@@ -377,9 +393,10 @@ async function handleBasketAdd(interaction) {
     videos.length ? `🎬 1 วิดีโอ` : null,
     text && !isBot && !images.length && !videos.length ? `📝 caption (ต่อท้าย)` : null,
   ].filter(Boolean).join(' + ');
+  const skipNote = skippedVideos ? `\n⚠️ ข้ามวิดีโอ ${skippedVideos} คลิป (ข้อความนี้มีรูป — โพสต์รูปกับคลิปแยกกัน)` : '';
 
-  const payload = await buildBasketPayload(basket, guildId, channelId, interaction.user.id);
-  await interaction.editReply({ content: `✅ เพิ่ม ${added} แล้ว`, ...payload });
+  const payload = await buildBasketPayload(basket, guildId, channelId, interaction.user.id, interaction.channel?.name);
+  await interaction.editReply({ content: `✅ เพิ่ม ${added} แล้ว${skipNote}`, ...payload });
 }
 
 // ─── View basket ──────────────────────────────────────────────────────────────
@@ -391,7 +408,7 @@ async function handleBasketView(interaction) {
     return interaction.reply({ content: '🧺 ตะกร้าสื่อว่างเปล่า', flags: MessageFlags.Ephemeral });
   }
 
-  const payload = await buildBasketPayload(basket, guildId, channelId, interaction.user.id);
+  const payload = await buildBasketPayload(basket, guildId, channelId, interaction.user.id, interaction.channel?.name);
   await interaction.reply({ ...payload, flags: MessageFlags.Ephemeral });
 }
 
@@ -431,7 +448,11 @@ async function handleBasketPost(interaction) {
     return interaction.reply({ content: '⏳ กำลังโพสต์อยู่ กรุณารอสักครู่', flags: MessageFlags.Ephemeral });
   }
   if (!state) state = await rehydrateState(interaction);
-  return openScheduleModal(interaction, state.caption || '', state.platforms || []);
+  // caption อาจถูกแก้บนเว็บหลัง embed นี้ถูก render — ดึงสดจาก DB เสมอ ไม่ใช้ของที่ค้างใน memory
+  const basket = await getBasket(interaction.guildId, interaction.channelId);
+  const freshCaption = basket.find(r => r.type === 'caption')?.caption || '';
+  state.caption = freshCaption;
+  return openScheduleModal(interaction, freshCaption, state.platforms || []);
 }
 
 // ─── Retry button (after date parse error) ────────────────────────────────────
@@ -460,10 +481,10 @@ async function handleBasketSelect(interaction) {
       // ต้อง await ก่อน re-render — ไม่งั้น buildBasketPayload จะอ่าน group เก่าจาก DB
       await setBasketStatePartial(guildId, channelId, { group: interaction.values[0], wmType: 'none' }).catch(e => console.error('[basket_group setState]', e));
       const basket = await getBasket(guildId, channelId);
-      const payload = await buildBasketPayload(basket, guildId, channelId, interaction.user.id);
+      const payload = await buildBasketPayload(basket, guildId, channelId, interaction.user.id, interaction.channel?.name);
       await interaction.editReply(payload).catch(e => console.error('[basket_group editReply]', e));
     }
-    if (interaction.customId === 'basket_enhance' && state) state.enhance = interaction.values[0] === 'on';
+    // if (interaction.customId === 'basket_enhance' && state) state.enhance = interaction.values[0] === 'on';
   } catch (err) {
     if (err.code !== 10062) console.error('[basketSelect]', err);
   }
@@ -587,6 +608,8 @@ async function handleBasketModal(interaction) {
 
   state.caption      = caption;
   state.scheduleTime = scheduleTime;
+  // เซฟ caption ที่แก้ใน modal กลับ DB ให้ตะกร้า (เว็บ + โพสต์ครั้งหน้า) sync กัน
+  await setCaption(interaction.guildId, interaction.channelId, interaction.user.id, caption, null).catch(() => {});
   state.posting      = true;
   try {
     await processAndPost(interaction, state);
@@ -669,7 +692,7 @@ async function processAndPost(interaction, state) {
       for (let i = 0; i < imageItems.length; i++) {
         try {
           let srcBuf = await fetchBuffer(imageItems[i].image_url);
-          if (state.enhance) srcBuf = await autoEnhance(srcBuf);
+          // if (state.enhance) srcBuf = await autoEnhance(srcBuf);
           const { buffer, ext } = await applyWatermark(srcBuf, {
             imagePath, position: 'random', opacity: 0.8, size: 0.13,
           });
@@ -687,7 +710,7 @@ async function processAndPost(interaction, state) {
       for (let i = 0; i < imageItems.length; i++) {
         try {
           let buffer     = await fetchBuffer(imageItems[i].image_url);
-          if (state.enhance) buffer = await autoEnhance(buffer);
+          // if (state.enhance) buffer = await autoEnhance(buffer);
           const extMatch = imageItems[i].image_url.match(/\.(png|jpe?g|webp)/i);
           let ext        = extMatch ? extMatch[1].replace('jpeg', 'jpg') : 'jpg';
           if (ext === 'webp') {
@@ -810,7 +833,7 @@ async function handleBasketViewPublic(interaction) {
     return interaction.reply({ content: '🧺 ตะกร้าสื่อว่างเปล่า', flags: MessageFlags.Ephemeral });
   }
   await interaction.deferUpdate();
-  const payload = await buildBasketPayload(basket, guildId, channelId, interaction.user.id);
+  const payload = await buildBasketPayload(basket, guildId, channelId, interaction.user.id, interaction.channel?.name);
   await interaction.followUp({ ...payload });
 }
 
@@ -841,7 +864,7 @@ async function handleBasketCaptionEditModal(interaction) {
   await setCaption(guildId, channelId, interaction.user.id, caption, null);
 
   const basket = await getBasket(guildId, channelId);
-  const payload = await buildBasketPayload(basket, guildId, channelId, interaction.user.id);
+  const payload = await buildBasketPayload(basket, guildId, channelId, interaction.user.id, interaction.channel?.name);
   await interaction.editReply({ content: '✅ แก้ caption แล้ว', ...payload });
 }
 

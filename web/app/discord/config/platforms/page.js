@@ -251,7 +251,7 @@ export default function SocialAccountsPage() {
     <div>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-disc-text">Social Accounts</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-disc-text">แพลตฟอร์ม</h1>
           <p className="text-sm text-gray-500 dark:text-disc-muted mt-1">บัญชี Facebook / Instagram / Threads / X ที่เชื่อมต่อกับ bot</p>
         </div>
         {superAdmin && guilds.length > 1 && (

@@ -299,3 +299,7 @@ CREATE TABLE IF NOT EXISTS dc_user_config (
 
 -- 2026-06-06: dc_members — เพิ่ม position สำหรับ generic register form
 ALTER TABLE dc_members ADD COLUMN IF NOT EXISTS position VARCHAR(100) NULL;
+
+-- 2026-06-07: dc_media_baskets — sort_order สำหรับเรียงลำดับรูป (Discord modal + web drag-drop)
+-- default 0 = ยังไม่เคยเรียง → fall back เป็น added_at (ลำดับที่เพิ่ม) รูปใหม่ได้ max+1 ต่อท้ายเสมอ
+ALTER TABLE dc_media_baskets ADD COLUMN IF NOT EXISTS sort_order INT NOT NULL DEFAULT 0;

@@ -28,6 +28,7 @@ const CROP_POS = {
   top: 'top', bottom: 'bottom',
 };
 async function cropSquare(buf, pos) {
+  if (pos === 'none') return buf;   // ไม่ครอป — ส่งภาพต้นฉบับผ่านไปเลย
   return sharp(buf).resize(1080, 1080, { fit: 'cover', position: CROP_POS[pos] ?? sharp.strategy.attention }).toBuffer();
 }
 
@@ -148,6 +149,7 @@ async function handleQuoteCommand(interaction) {
       .setMinValues(0).setMaxValues(1)
       .addOptions([
         { label: 'อัตโนมัติ', value: 'auto',   description: 'หาโซนคนให้เอง' },
+        { label: 'ไม่ครอป',   value: 'none',   description: 'ใช้สัดส่วนเดิม ไม่ตัด' },
         { label: 'ซ้าย',     value: 'left',   description: 'เก็บฝั่งซ้าย (แนวนอน)' },
         { label: 'กลาง',     value: 'center', description: 'เก็บตรงกลาง' },
         { label: 'ขวา',      value: 'right',  description: 'เก็บฝั่งขวา (แนวนอน)' },

@@ -113,6 +113,8 @@ async function handleModalSubmit(interaction) {
   await upsertMember(interaction.guildId, {
     discord_id: interaction.user.id,
     username: interaction.user.username,
+    display_name: interaction.member.displayName,
+    avatar: interaction.user.displayAvatarURL({ size: 256 }),
     nickname: name,
     specialty: interest,
     position: position || null,

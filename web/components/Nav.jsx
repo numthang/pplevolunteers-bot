@@ -56,10 +56,9 @@ const CONTACTS_LINKS = [
 ]
 
 const DISCORD_LINKS = [
-  { href: '/discord/watermark',       label: 'ลายน้ำ',       icon: 'droplet' },
-  { href: '/discord/quote',           label: 'Quote',        icon: 'quote' },
-  { href: '/discord/guild-watermark', label: 'ลายน้ำ Guild', icon: 'server' },
-  { href: '/discord/social/accounts', label: 'บัญชี Social', icon: 'social' },
+  { href: '/discord/media/quote',      label: 'Quote',      icon: 'quote' },
+  { href: '/discord/config/platforms', label: 'แพลตฟอร์ม',  icon: 'social' },
+  { href: '/discord/config/watermark', label: 'ลายน้ำ',     icon: 'droplet' },
 ]
 
 const SOCIAL_LINKS = [
@@ -70,7 +69,7 @@ const DASHBOARD_LINKS = [
   { href: '/finance',       label: 'FINANCE',   icon: 'transactions' },
   { href: '/calling',       label: 'CALLING',   icon: 'campaigns' },
   { href: '/contacts',      label: 'CONTACTS',  icon: 'contacts' },
-  { href: '/discord/social/accounts', label: 'DISCORD', icon: 'social' },
+  { href: '/discord/config/platforms', label: 'DISCORD', icon: 'social' },
   { href: '/admin/logs',    label: 'LOGS',           icon: 'logs', roles: ['Admin', 'Moderator'] },
 ]
 
@@ -79,7 +78,7 @@ const APPS = [
   { key: 'finance',  label: 'FINANCE',   href: '/finance',        icon: 'transactions' },
   { key: 'calling',  label: 'CALLING',   href: '/calling',        icon: 'campaigns' },
   { key: 'contacts', label: 'CONTACTS',  href: '/contacts',       icon: 'contacts' },
-  { key: 'discord',  label: 'DISCORD',   href: '/discord/social/accounts', icon: 'social' },
+  { key: 'discord',  label: 'DISCORD',   href: '/discord/config/platforms', icon: 'social' },
 ]
 
 export default function Nav({ session }) {

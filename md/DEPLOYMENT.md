@@ -393,6 +393,10 @@ Page Access Token **ไม่มีวันหมดอายุ** ปกติ
 - มีการ revoke permission ใน Facebook Settings
 - เพิ่ม guild/page ใหม่
 
+> **⚠️ ตอน OAuth — ให้เลือก Business Portfolio แทน individual pages**
+> Meta มีตัวเลือก "สิทธิ์จัดการเพจที่จะตามในอนาคต" ผ่าน Business Portfolio
+> ถ้าเลือก Portfolio level → เพจใหม่ที่เพิ่มเข้า Portfolio ทีหลังได้สิทธิ์อัตโนมัติ ไม่ต้อง reconnect ใหม่
+
 วิธีรัน: เปิดใน browser ในฐานะ Admin
 ```
 https://pplevolunteers.org/api/meta/oauth/start?guild_id=GUILD_ID
