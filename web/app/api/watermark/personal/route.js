@@ -1,5 +1,6 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
+import pool from '@/db/index.js'
 import { writeFile, mkdir, readdir } from 'fs/promises'
 import { existsSync } from 'fs'
 import { join } from 'path'
@@ -23,7 +24,35 @@ export async function GET(req) {
   if (existsSync(dir)) {
     files = (await readdir(dir)).filter(f => /\.(png|jpe?g|webp)$/i.test(f))
   }
-  return Response.json(files)
+  const { rows } = await pool.query(
+    `SELECT value FROM dc_user_config WHERE discord_id = $1 AND "key" = 'default_watermark'`,
+    [session.user.discordId]
+  )
+  const defaultWm = rows[0]?.value ?? null
+  return Response.json({ files, default: defaultWm })
+}
+
+export async function PATCH(req) {
+  const session = await getServerSession(authOptions)
+  if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { default_watermark } = await req.json()
+  const discordId = session.user.discordId
+
+  if (!default_watermark || default_watermark === 'none') {
+    await pool.query(
+      `DELETE FROM dc_user_config WHERE discord_id = $1 AND "key" = 'default_watermark'`,
+      [discordId]
+    )
+  } else {
+    await pool.query(
+      `INSERT INTO dc_user_config (discord_id, "key", value)
+       VALUES ($1, 'default_watermark', $2)
+       ON CONFLICT (discord_id, "key") DO UPDATE SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP`,
+      [discordId, JSON.stringify(default_watermark)]
+    )
+  }
+  return Response.json({ ok: true })
 }
 
 export async function POST(req) {

@@ -13,18 +13,36 @@ const PERSONAL_MAX = 10
 
 function PersonalPanel() {
   const fileRef = useRef(null)
-  const [files,    setFiles]    = useState([])
-  const [loading,  setLoading]  = useState(true)
-  const [uploading, setUploading] = useState(false)
-  const [deleting, setDeleting] = useState(null)
-  const [error,    setError]    = useState(null)
-  const [dragging, setDragging] = useState(false)
+  const [files,      setFiles]      = useState([])
+  const [defaultWm,  setDefaultWm]  = useState(null)
+  const [loading,    setLoading]    = useState(true)
+  const [uploading,  setUploading]  = useState(false)
+  const [deleting,   setDeleting]   = useState(null)
+  const [settingDef, setSettingDef] = useState(false)
+  const [error,      setError]      = useState(null)
+  const [dragging,   setDragging]   = useState(false)
 
   const load = useCallback(async () => {
     const res = await fetch('/api/watermark/personal')
-    if (res.ok) setFiles(await res.json())
+    if (res.ok) {
+      const d = await res.json()
+      setFiles(d.files || [])
+      setDefaultWm(d.default || null)
+    }
     setLoading(false)
   }, [])
+
+  async function setPersonalDefault(filename) {
+    const next = filename ? `personal:${filename}` : 'none'
+    setSettingDef(true)
+    await fetch('/api/watermark/personal', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ default_watermark: next }),
+    })
+    setDefaultWm(next === 'none' ? null : next)
+    setSettingDef(false)
+  }
 
   useEffect(() => { load() }, [load])
 
@@ -106,33 +124,52 @@ function PersonalPanel() {
       {files.length === 0 ? (
         <p className="text-sm text-gray-400 dark:text-disc-muted text-center py-8">ยังไม่มีลายน้ำ</p>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-          {files.map(filename => (
-            <div key={filename} className="group relative bg-card-bg rounded-xl border border-warm-200 dark:border-disc-border overflow-hidden">
-              <div className="aspect-square bg-[repeating-conic-gradient(#e5e7eb_0%_25%,transparent_0%_50%)] dark:bg-[repeating-conic-gradient(#2a2d31_0%_25%,transparent_0%_50%)] bg-[length:16px_16px] flex items-center justify-center p-3">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={`/api/watermark/personal/${encodeURIComponent(filename)}`} alt={stripExt(filename)}
-                  className="max-h-24 max-w-full object-contain"
-                  onError={e => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex' }} />
-                <div className="hidden items-center justify-center"><ImageIcon size={32} className="text-gray-300 dark:text-disc-muted" /></div>
-              </div>
-              <div className="px-3 py-2 flex items-center justify-between gap-2">
-                <p className="text-xs font-medium text-gray-700 dark:text-disc-text truncate" title={filename}>{stripExt(filename)}</p>
-                <button onClick={() => remove(filename)} disabled={deleting === filename}
-                  className="shrink-0 p-1 rounded text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition disabled:opacity-40">
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            </div>
-          ))}
-          {canUpload && (
-            <button onClick={() => fileRef.current?.click()}
-              className="aspect-square rounded-xl border-2 border-dashed border-warm-300 dark:border-disc-border hover:border-orange dark:hover:border-orange text-gray-400 dark:text-disc-muted hover:text-orange transition flex flex-col items-center justify-center gap-2">
-              <Upload size={24} />
-              <span className="text-xs">อัปโหลด</span>
-            </button>
+        <>
+          {defaultWm && (
+            <p className="text-xs text-amber-600 dark:text-amber-400 mb-3">
+              ⭐ default: <span className="font-medium">{stripExt(defaultWm.replace('personal:', ''))}</span>
+            </p>
           )}
-        </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+            {files.map(filename => {
+              const isDefault = defaultWm === `personal:${filename}`
+              return (
+                <div key={filename} className={`group relative bg-card-bg rounded-xl border overflow-hidden transition ${isDefault ? 'border-amber-400 dark:border-amber-500' : 'border-warm-200 dark:border-disc-border'}`}>
+                  <div className="aspect-square bg-[repeating-conic-gradient(#e5e7eb_0%_25%,transparent_0%_50%)] dark:bg-[repeating-conic-gradient(#2a2d31_0%_25%,transparent_0%_50%)] bg-[length:16px_16px] flex items-center justify-center p-3">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={`/api/watermark/personal/${encodeURIComponent(filename)}`} alt={stripExt(filename)}
+                      className="max-h-24 max-w-full object-contain"
+                      onError={e => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex' }} />
+                    <div className="hidden items-center justify-center"><ImageIcon size={32} className="text-gray-300 dark:text-disc-muted" /></div>
+                  </div>
+                  <div className="px-3 py-2 flex items-center justify-between gap-2">
+                    <p className="text-xs font-medium text-gray-700 dark:text-disc-text truncate" title={filename}>{stripExt(filename)}</p>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={() => setPersonalDefault(isDefault ? null : filename)}
+                        disabled={settingDef}
+                        title={isDefault ? 'ยกเลิก default' : 'ตั้งเป็น default'}
+                        className={`p-1 rounded transition disabled:opacity-40 ${isDefault ? 'text-amber-500 hover:text-amber-600' : 'text-gray-300 dark:text-disc-muted hover:text-amber-400'}`}>
+                        <Star size={14} fill={isDefault ? 'currentColor' : 'none'} />
+                      </button>
+                      <button onClick={() => remove(filename)} disabled={deleting === filename}
+                        className="p-1 rounded text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition disabled:opacity-40">
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+            {canUpload && (
+              <button onClick={() => fileRef.current?.click()}
+                className="aspect-square rounded-xl border-2 border-dashed border-warm-300 dark:border-disc-border hover:border-orange dark:hover:border-orange text-gray-400 dark:text-disc-muted hover:text-orange transition flex flex-col items-center justify-center gap-2">
+                <Upload size={24} />
+                <span className="text-xs">อัปโหลด</span>
+              </button>
+            )}
+          </div>
+        </>
       )}
     </>
   )
@@ -320,14 +357,14 @@ function GuildPanel() {
             <p className="text-sm text-gray-400 dark:text-disc-muted text-center py-8">ยังไม่มีลายน้ำในโฟลเดอร์นี้</p>
           ) : (
             <>
-              {target !== ROOT && defaults[target] && (
+              {defaults[target] && (
                 <p className="text-xs text-amber-600 dark:text-amber-400 mb-3">
                   ⭐ default: <span className="font-medium">{stripExt(defaults[target].replace('guild:', ''))}</span>
                 </p>
               )}
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
                 {files.map(filename => {
-                  const isDefault = target !== ROOT && defaults[target] === `guild:${filename}`
+                  const isDefault = defaults[target] === `guild:${filename}`
                   return (
                     <div key={filename} className={`group relative bg-card-bg rounded-xl border overflow-hidden transition ${isDefault ? 'border-amber-400 dark:border-amber-500' : 'border-warm-200 dark:border-disc-border'}`}>
                       <div className="aspect-square bg-[repeating-conic-gradient(#e5e7eb_0%_25%,transparent_0%_50%)] dark:bg-[repeating-conic-gradient(#2a2d31_0%_25%,transparent_0%_50%)] bg-[length:16px_16px] flex items-center justify-center p-3">
@@ -339,15 +376,13 @@ function GuildPanel() {
                       <div className="px-3 py-2 flex items-center justify-between gap-2">
                         <p className="text-xs font-medium text-gray-700 dark:text-disc-text truncate" title={filename}>{stripExt(filename)}</p>
                         <div className="flex items-center gap-1 shrink-0">
-                          {target !== ROOT && (
-                            <button
-                              onClick={() => setGroupDefault(target, isDefault ? null : filename)}
-                              disabled={settingDefault}
-                              title={isDefault ? 'ยกเลิก default' : 'ตั้งเป็น default'}
-                              className={`p-1 rounded transition disabled:opacity-40 ${isDefault ? 'text-amber-500 hover:text-amber-600' : 'text-gray-300 dark:text-disc-muted hover:text-amber-400'}`}>
-                              <Star size={14} fill={isDefault ? 'currentColor' : 'none'} />
-                            </button>
-                          )}
+                          <button
+                            onClick={() => setGroupDefault(target, isDefault ? null : filename)}
+                            disabled={settingDefault}
+                            title={isDefault ? 'ยกเลิก default' : 'ตั้งเป็น default'}
+                            className={`p-1 rounded transition disabled:opacity-40 ${isDefault ? 'text-amber-500 hover:text-amber-600' : 'text-gray-300 dark:text-disc-muted hover:text-amber-400'}`}>
+                            <Star size={14} fill={isDefault ? 'currentColor' : 'none'} />
+                          </button>
                           <button onClick={() => remove(filename)} disabled={deleting === filename}
                             className="p-1 rounded text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition disabled:opacity-40">
                             <Trash2 size={14} />

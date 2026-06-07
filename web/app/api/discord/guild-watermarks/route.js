@@ -98,13 +98,14 @@ export async function GET(req) {
 
   const { rows: defRows } = await pool.query(
     `SELECT key, value FROM dc_guild_config
-     WHERE guild_id = $1 AND key LIKE 'default_watermark_group:%'`,
+     WHERE guild_id = $1 AND (key = 'default_watermark' OR key LIKE 'default_watermark_group:%')`,
     [guildId]
   )
   const defaults = {}
   for (const r of defRows) {
-    const group = r.key.slice('default_watermark_group:'.length)
-    defaults[group] = typeof r.value === 'string' ? JSON.parse(r.value) : r.value
+    const parsed = typeof r.value === 'string' ? JSON.parse(r.value) : r.value
+    if (r.key === 'default_watermark') defaults[''] = parsed
+    else defaults[r.key.slice('default_watermark_group:'.length)] = parsed
   }
 
   return Response.json({ groups, files, defaults })
@@ -153,17 +154,22 @@ export async function PATCH(req) {
   const auth = await authGuild(guildId)
   if (auth.error) return Response.json({ error: auth.error }, { status: auth.status })
 
-  const groups = await getGuildGroups(guildId)
-  if (!groups.includes(group)) return Response.json({ error: 'invalid group' }, { status: 400 })
+  let key
+  if (!group) {
+    key = 'default_watermark'
+  } else {
+    const groups = await getGuildGroups(guildId)
+    if (!groups.includes(group)) return Response.json({ error: 'invalid group' }, { status: 400 })
+    key = `default_watermark_group:${group}`
+  }
 
-  const key = `default_watermark_group:${group}`
   if (!default_watermark || default_watermark === 'none') {
-    await pool.query(`DELETE FROM dc_guild_config WHERE guild_id = $1 AND key = $2`, [guildId, key])
+    await pool.query(`DELETE FROM dc_guild_config WHERE guild_id = $1 AND "key" = $2`, [guildId, key])
   } else {
     await pool.query(
-      `INSERT INTO dc_guild_config (guild_id, key, value)
+      `INSERT INTO dc_guild_config (guild_id, "key", value)
        VALUES ($1, $2, $3)
-       ON CONFLICT (guild_id, key) DO UPDATE SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP`,
+       ON CONFLICT (guild_id, "key") DO UPDATE SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP`,
       [guildId, key, JSON.stringify(default_watermark)]
     )
   }
