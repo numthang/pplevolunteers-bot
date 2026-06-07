@@ -581,8 +581,15 @@ async function postReelsToFacebook(guildId, userId, videoDiscordUrl, caption, on
     access_token: cfg.token,
   });
 
-  const postId = finishRes.post_id_string || finishRes.id || null;
-  const permalink = postId ? `https://www.facebook.com/${postId}` : null;
+  const postId = finishRes.post_id || finishRes.post_id_string || finishRes.id || null;
+  console.log('[FB Reels finish]', JSON.stringify(finishRes));
+  let permalink = null;
+  if (postId) {
+    const parts = String(postId).split('_');
+    permalink = parts.length === 2
+      ? `https://www.facebook.com/permalink.php?story_fbid=${parts[1]}&id=${parts[0]}`
+      : `https://www.facebook.com/${postId}`;
+  }
   return { id: postId, permalink };
 }
 
