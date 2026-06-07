@@ -486,9 +486,10 @@ async function handleBasketSelect(interaction) {
       setBasketStatePartial(guildId, channelId, { platforms: interaction.values }).catch(e => console.error('[basket_platform setState]', e));
     }
     if (interaction.customId === 'basket_group') {
-      if (state) { state.group = interaction.values[0]; state.wmType = 'none'; }
+      if (state) { state.group = interaction.values[0]; state.wmType = null; }
       // ต้อง await ก่อน re-render — ไม่งั้น buildBasketPayload จะอ่าน group เก่าจาก DB
-      await setBasketStatePartial(guildId, channelId, { group: interaction.values[0], wmType: 'none' }).catch(e => console.error('[basket_group setState]', e));
+      // wmType: null เพื่อให้ default resolution รันใหม่ตาม per-group default ของ group ใหม่
+      await setBasketStatePartial(guildId, channelId, { group: interaction.values[0], wmType: null }).catch(e => console.error('[basket_group setState]', e));
       const basket = await getBasket(guildId, channelId);
       const payload = await buildBasketPayload(basket, guildId, channelId, interaction.user.id, interaction.channel?.name);
       await interaction.editReply(payload).catch(e => console.error('[basket_group editReply]', e));

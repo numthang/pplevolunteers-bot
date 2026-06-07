@@ -50,8 +50,9 @@ function pct(str) {
 }
 
 // สร้าง OAuth 1.0a Authorization header (HMAC-SHA1)
-// body params ไม่รวมเมื่อใช้ multipart หรือ JSON — ส่ง {} เสมอ
-function buildAuthHeader(method, url, cfg) {
+// extraParams: ใส่ query string หรือ form body params (application/x-www-form-urlencoded)
+// multipart/JSON body — ไม่ต้องส่ง extraParams
+function buildAuthHeader(method, url, cfg, extraParams = {}) {
   const o = {
     oauth_consumer_key:     cfg.x_api_key,
     oauth_nonce:            crypto.randomBytes(16).toString('hex'),
@@ -60,7 +61,8 @@ function buildAuthHeader(method, url, cfg) {
     oauth_token:            cfg.x_access_token,
     oauth_version:          '1.0',
   };
-  const paramStr = Object.keys(o).sort().map(k => `${pct(k)}=${pct(o[k])}`).join('&');
+  const allParams = { ...extraParams, ...o };
+  const paramStr = Object.keys(allParams).sort().map(k => `${pct(k)}=${pct(allParams[k])}`).join('&');
   const base     = `${method.toUpperCase()}&${pct(url)}&${pct(paramStr)}`;
   const sigKey   = `${pct(cfg.x_api_secret)}&${pct(cfg.x_access_token_secret)}`;
   o.oauth_signature = crypto.createHmac('sha1', sigKey).update(base).digest('base64');
@@ -232,7 +234,9 @@ async function uploadVideoMedia(cfg, buffer) {
 
   // INIT
   const initBody = `command=INIT&total_bytes=${totalBytes}&media_type=video%2Fmp4&media_category=tweet_video`;
-  const initAuth = buildAuthHeader('POST', 'https://upload.twitter.com/1.1/media/upload.json', cfg);
+  const initAuth = buildAuthHeader('POST', 'https://upload.twitter.com/1.1/media/upload.json', cfg, {
+    command: 'INIT', total_bytes: String(totalBytes), media_type: 'video/mp4', media_category: 'tweet_video',
+  });
   const initRes  = await xReq('upload.twitter.com', '/1.1/media/upload.json', 'POST', {
     Authorization:  initAuth,
     'Content-Type': 'application/x-www-form-urlencoded',
@@ -251,7 +255,9 @@ async function uploadVideoMedia(cfg, buffer) {
       chunk,
       Buffer.from(`\r\n--${boundary}--\r\n`),
     ]);
-    const appendAuth = buildAuthHeader('POST', 'https://upload.twitter.com/1.1/media/upload.json', cfg);
+    const appendAuth = buildAuthHeader('POST', 'https://upload.twitter.com/1.1/media/upload.json', cfg, {
+      command: 'APPEND', media_id: mediaId, segment_index: String(segment),
+    });
     const appendRes  = await xReq(
       'upload.twitter.com',
       `/1.1/media/upload.json?command=APPEND&media_id=${mediaId}&segment_index=${segment}`,
@@ -267,7 +273,9 @@ async function uploadVideoMedia(cfg, buffer) {
 
   // FINALIZE
   const finalBody = `command=FINALIZE&media_id=${mediaId}`;
-  const finalAuth = buildAuthHeader('POST', 'https://upload.twitter.com/1.1/media/upload.json', cfg);
+  const finalAuth = buildAuthHeader('POST', 'https://upload.twitter.com/1.1/media/upload.json', cfg, {
+    command: 'FINALIZE', media_id: mediaId,
+  });
   const finalRes  = await xReq('upload.twitter.com', '/1.1/media/upload.json', 'POST', {
     Authorization:  finalAuth,
     'Content-Type': 'application/x-www-form-urlencoded',
@@ -288,7 +296,9 @@ async function pollXVideoStatus(cfg, mediaId, initialWaitSecs, maxWaitMs = 300_0
   let waitSecs = initialWaitSecs;
   while (Date.now() - start < maxWaitMs) {
     await new Promise(r => setTimeout(r, waitSecs * 1000));
-    const auth = buildAuthHeader('GET', 'https://upload.twitter.com/1.1/media/upload.json', cfg);
+    const auth = buildAuthHeader('GET', 'https://upload.twitter.com/1.1/media/upload.json', cfg, {
+      command: 'STATUS', media_id: mediaId,
+    });
     const res  = await xReq('upload.twitter.com', `/1.1/media/upload.json?command=STATUS&media_id=${mediaId}`, 'GET', {
       Authorization: auth,
     }, null);
