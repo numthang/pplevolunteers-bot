@@ -61,3 +61,7 @@ ALTER TABLE dc_user_reports
 -- 2026-06-02: Add member flag (green/yellow/red) to calling_member_tiers
 ALTER TABLE calling_member_tiers
   ADD COLUMN IF NOT EXISTS flag VARCHAR(10) NULL CHECK (flag IN ('green', 'yellow', 'red'));
+
+-- 2026-06-07: dc_basket_history.platform — ขยาย VARCHAR(10) → VARCHAR(100) รองรับหลาย platform เช่น fb,ig,threads,x
+ALTER TABLE dc_basket_history
+  ALTER COLUMN platform TYPE VARCHAR(100);
