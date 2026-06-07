@@ -103,9 +103,8 @@ export async function GET(req) {
   )
   const defaults = {}
   for (const r of defRows) {
-    const parsed = typeof r.value === 'string' ? JSON.parse(r.value) : r.value
-    if (r.key === 'default_watermark') defaults[''] = parsed
-    else defaults[r.key.slice('default_watermark_group:'.length)] = parsed
+    if (r.key === 'default_watermark') defaults[''] = r.value
+    else defaults[r.key.slice('default_watermark_group:'.length)] = r.value
   }
 
   return Response.json({ groups, files, defaults })

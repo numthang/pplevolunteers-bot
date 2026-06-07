@@ -208,14 +208,14 @@ export default function BasketPage() {
 
           {/* Caption */}
           <div>
-            <label className="block text-sm font-medium text-gray-600 dark:text-disc-muted mb-1">Caption</label>
+            <label className="block text-base font-semibold text-gray-700 dark:text-disc-text mb-1.5">Caption</label>
             <textarea
               ref={capRef}
               value={caption}
               onChange={e => { setCaption(e.target.value); autoGrow(e.target) }}
               rows={3}
               placeholder="ใส่ caption..."
-              className="w-full px-3 py-2 text-sm rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-gray-900 dark:text-disc-text placeholder-gray-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-teal resize-none overflow-hidden"
+              className="w-full px-3 py-2 text-base rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-gray-900 dark:text-disc-text placeholder-gray-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-teal resize-none overflow-hidden"
             />
             <div className="flex items-center gap-2 mt-2 flex-wrap">
               <button onClick={saveCaption} disabled={savingCap}
