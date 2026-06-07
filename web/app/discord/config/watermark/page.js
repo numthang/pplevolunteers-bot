@@ -2,7 +2,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { Trash2, Upload, ImageIcon, X, Server, User } from 'lucide-react'
+import { Trash2, Upload, ImageIcon, X, Server, User, Star } from 'lucide-react'
 
 function stripExt(name) {
   return name.replace(/\.[^.]+$/, '').replace(/^\d+-/, '')
@@ -148,10 +148,12 @@ function GuildPanel() {
   const [guildId, setGuildId] = useState('')
   const [groups,  setGroups]  = useState([])
   const [filesByGroup, setFilesByGroup] = useState({})
+  const [defaults, setDefaults] = useState({})
   const [target,  setTarget]  = useState(ROOT)
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
   const [deleting, setDeleting] = useState(null)
+  const [settingDefault, setSettingDefault] = useState(false)
   const [error,    setError]    = useState(null)
   const [dragging, setDragging] = useState(false)
 
@@ -175,10 +177,23 @@ function GuildPanel() {
       const d = await res.json()
       setGroups(d.groups || [])
       setFilesByGroup(d.files || {})
+      setDefaults(d.defaults || {})
     }
     setTarget(ROOT)
     setLoading(false)
   }, [])
+
+  async function setGroupDefault(group, filename) {
+    const next = filename ? `guild:${filename}` : 'none'
+    setSettingDefault(true)
+    await fetch('/api/discord/guild-watermarks', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ guild_id: guildId, group, default_watermark: next }),
+    })
+    setDefaults(prev => ({ ...prev, [group]: next === 'none' ? null : next }))
+    setSettingDefault(false)
+  }
 
   useEffect(() => { if (guildId) loadFiles(guildId) }, [guildId, loadFiles])
 
@@ -304,25 +319,46 @@ function GuildPanel() {
           {files.length === 0 ? (
             <p className="text-sm text-gray-400 dark:text-disc-muted text-center py-8">ยังไม่มีลายน้ำในโฟลเดอร์นี้</p>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-              {files.map(filename => (
-                <div key={filename} className="group relative bg-card-bg rounded-xl border border-warm-200 dark:border-disc-border overflow-hidden">
-                  <div className="aspect-square bg-[repeating-conic-gradient(#e5e7eb_0%_25%,transparent_0%_50%)] dark:bg-[repeating-conic-gradient(#2a2d31_0%_25%,transparent_0%_50%)] bg-[length:16px_16px] flex items-center justify-center p-3">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={imgUrl(filename)} alt={stripExt(filename)} className="max-h-24 max-w-full object-contain"
-                      onError={e => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex' }} />
-                    <div className="hidden items-center justify-center"><ImageIcon size={32} className="text-gray-300 dark:text-disc-muted" /></div>
-                  </div>
-                  <div className="px-3 py-2 flex items-center justify-between gap-2">
-                    <p className="text-xs font-medium text-gray-700 dark:text-disc-text truncate" title={filename}>{stripExt(filename)}</p>
-                    <button onClick={() => remove(filename)} disabled={deleting === filename}
-                      className="shrink-0 p-1 rounded text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition disabled:opacity-40">
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <>
+              {target !== ROOT && defaults[target] && (
+                <p className="text-xs text-amber-600 dark:text-amber-400 mb-3">
+                  ⭐ default: <span className="font-medium">{stripExt(defaults[target].replace('guild:', ''))}</span>
+                </p>
+              )}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+                {files.map(filename => {
+                  const isDefault = target !== ROOT && defaults[target] === `guild:${filename}`
+                  return (
+                    <div key={filename} className={`group relative bg-card-bg rounded-xl border overflow-hidden transition ${isDefault ? 'border-amber-400 dark:border-amber-500' : 'border-warm-200 dark:border-disc-border'}`}>
+                      <div className="aspect-square bg-[repeating-conic-gradient(#e5e7eb_0%_25%,transparent_0%_50%)] dark:bg-[repeating-conic-gradient(#2a2d31_0%_25%,transparent_0%_50%)] bg-[length:16px_16px] flex items-center justify-center p-3">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={imgUrl(filename)} alt={stripExt(filename)} className="max-h-24 max-w-full object-contain"
+                          onError={e => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex' }} />
+                        <div className="hidden items-center justify-center"><ImageIcon size={32} className="text-gray-300 dark:text-disc-muted" /></div>
+                      </div>
+                      <div className="px-3 py-2 flex items-center justify-between gap-2">
+                        <p className="text-xs font-medium text-gray-700 dark:text-disc-text truncate" title={filename}>{stripExt(filename)}</p>
+                        <div className="flex items-center gap-1 shrink-0">
+                          {target !== ROOT && (
+                            <button
+                              onClick={() => setGroupDefault(target, isDefault ? null : filename)}
+                              disabled={settingDefault}
+                              title={isDefault ? 'ยกเลิก default' : 'ตั้งเป็น default'}
+                              className={`p-1 rounded transition disabled:opacity-40 ${isDefault ? 'text-amber-500 hover:text-amber-600' : 'text-gray-300 dark:text-disc-muted hover:text-amber-400'}`}>
+                              <Star size={14} fill={isDefault ? 'currentColor' : 'none'} />
+                            </button>
+                          )}
+                          <button onClick={() => remove(filename)} disabled={deleting === filename}
+                            className="p-1 rounded text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition disabled:opacity-40">
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </>
           )}
         </>
       )}

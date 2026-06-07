@@ -95,7 +95,19 @@ export async function GET(req) {
   const groups = await getGuildGroups(guildId)
   const files = { '': listImgs(join(ASSETS_DIR, guildId)) }
   for (const g of groups) files[g] = listImgs(join(ASSETS_DIR, guildId, g))
-  return Response.json({ groups, files })
+
+  const { rows: defRows } = await pool.query(
+    `SELECT key, value FROM dc_guild_config
+     WHERE guild_id = $1 AND key LIKE 'default_watermark_group:%'`,
+    [guildId]
+  )
+  const defaults = {}
+  for (const r of defRows) {
+    const group = r.key.slice('default_watermark_group:'.length)
+    defaults[group] = typeof r.value === 'string' ? JSON.parse(r.value) : r.value
+  }
+
+  return Response.json({ groups, files, defaults })
 }
 
 // POST multipart: guild_id, group, file
@@ -133,6 +145,29 @@ export async function POST(req) {
 
   await writeFile(join(dir, filename), Buffer.from(bytes))
   return Response.json({ filename })
+}
+
+// PATCH { guild_id, group, default_watermark } — ตั้ง/ล้าง default ต่อ group
+export async function PATCH(req) {
+  const { guild_id: guildId, group, default_watermark } = await req.json()
+  const auth = await authGuild(guildId)
+  if (auth.error) return Response.json({ error: auth.error }, { status: auth.status })
+
+  const groups = await getGuildGroups(guildId)
+  if (!groups.includes(group)) return Response.json({ error: 'invalid group' }, { status: 400 })
+
+  const key = `default_watermark_group:${group}`
+  if (!default_watermark || default_watermark === 'none') {
+    await pool.query(`DELETE FROM dc_guild_config WHERE guild_id = $1 AND key = $2`, [guildId, key])
+  } else {
+    await pool.query(
+      `INSERT INTO dc_guild_config (guild_id, key, value)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (guild_id, key) DO UPDATE SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP`,
+      [guildId, key, JSON.stringify(default_watermark)]
+    )
+  }
+  return Response.json({ ok: true })
 }
 
 // DELETE ?guild_id=&group=&file=

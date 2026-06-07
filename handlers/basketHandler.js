@@ -22,6 +22,7 @@ const { resolveConfig } = require('../db/configResolver');
 const pool = require('../db/index');
 
 const KEY_WATERMARK = 'default_watermark'; // ค่ากลาง — ตั้งที่หน้าเว็บ /discord/quote (ใช้ร่วม quote)
+const groupWmKey = groupName => `default_watermark_group:${groupName}`;
 
 const stateKey = channelId => `basket_state_${channelId}`;
 async function getBasketState(guildId, channelId) {
@@ -225,7 +226,7 @@ async function buildBasketPayload(basket, guildId, channelId, userId, channelNam
     : null;
 
   const embed = buildBasketEmbed(imgCount, videoCount, caption, previewUrl);
-  if (links.length) embed.addFields({ name: '🖼️ ต้นทาง', value: links.join('\n'), inline: false });
+  if (links.length) embed.addFields({ name: '🖼️ ต้นทาง', value: links.join(' · '), inline: false });
 
   const saved = await getBasketState(guildId, channelId);
   const groups = await getAvailableGroups(guildId, userId);
@@ -235,15 +236,23 @@ async function buildBasketPayload(basket, guildId, channelId, userId, channelNam
   // saved.platforms must be subset of available; otherwise default = all available
   const savedPlatforms = Array.isArray(saved?.platforms) ? saved.platforms.filter(p => availablePlatforms.includes(p)) : [];
   const selectedPlatforms = savedPlatforms.length ? savedPlatforms : [...availablePlatforms];
-  // ยังไม่เคยเลือก watermark → ใช้ default_watermark (personal > guild > global)
+  // ยังไม่เคยเลือก watermark → ลอง per-group default ก่อน แล้วค่อย fallback guild/global
   // เฉพาะเมื่อไฟล์มีจริงใน context นี้ (group/guild/personal) ไม่งั้น 'none'
   let defaultWmType = 'none';
   if (saved?.wmType == null) {
     try {
-      const { value } = await resolveConfig(userId, guildId, KEY_WATERMARK);
-      if (value) {
-        const p = resolveWatermarkPath(value, guildId, currentGroup, userId);
-        if (p && fs.existsSync(p)) defaultWmType = value;
+      let resolved = null;
+      if (currentGroup) {
+        const groupDefault = await getSetting(guildId, groupWmKey(currentGroup));
+        if (groupDefault) resolved = groupDefault;
+      }
+      if (!resolved) {
+        const { value } = await resolveConfig(userId, guildId, KEY_WATERMARK);
+        if (value) resolved = value;
+      }
+      if (resolved) {
+        const p = resolveWatermarkPath(resolved, guildId, currentGroup, userId);
+        if (p && fs.existsSync(p)) defaultWmType = resolved;
       }
     } catch (err) {
       console.error('[basket] resolve default watermark:', err.message);

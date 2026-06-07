@@ -114,7 +114,7 @@ export default function BasketPage() {
   }
 
   if (status === 'loading' || loading) {
-    return <p className="text-warm-500 dark:text-disc-muted text-sm">กำลังโหลด...</p>
+    return <p className="text-gray-500 dark:text-disc-muted text-sm">กำลังโหลด...</p>
   }
   if (error) {
     return <p className="text-red-500 dark:text-red-400 text-sm">{error}</p>
@@ -131,23 +131,23 @@ export default function BasketPage() {
             <ArrowLeft size={14} /> กลับไป{chName ? ` #${chName}` : 'ตะกร้าใน Discord'}
           </a>
         )}
-        <h1 className="text-2xl font-bold text-warm-900 dark:text-disc-text">🧺 ตะกร้าสื่อ</h1>
-        <p className="text-sm text-warm-500 dark:text-disc-muted mt-1">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-disc-text">🧺 ตะกร้าสื่อ</h1>
+        <p className="text-sm text-gray-500 dark:text-disc-muted mt-1">
           เรียงลำดับรูปและแก้ caption แล้วกลับไปกด <b>สร้างโพสต์</b> ใน Discord
         </p>
       </div>
 
       {empty ? (
         <div className="bg-card-bg rounded-xl border border-warm-200 dark:border-disc-border p-8 text-center">
-          <ImageOff size={32} className="mx-auto text-warm-300 dark:text-disc-muted mb-2" />
-          <p className="text-sm text-warm-500 dark:text-disc-muted">ตะกร้าว่างเปล่า</p>
+          <ImageOff size={32} className="mx-auto text-gray-300 dark:text-disc-muted mb-2" />
+          <p className="text-sm text-gray-500 dark:text-disc-muted">ตะกร้าว่างเปล่า</p>
         </div>
       ) : (
         <div className="flex flex-col gap-6">
           {/* รูป — grid เรียงลำดับได้ (ลากบน desktop / ◀▶ บนมือถือ) */}
           {images.length > 0 && (
             <div>
-              <h2 className="text-sm font-semibold text-warm-700 dark:text-disc-muted uppercase tracking-wide mb-2">
+              <h2 className="text-sm font-semibold text-gray-700 dark:text-disc-muted uppercase tracking-wide mb-2">
                 รูป ({images.length}) — ลากเรียง หรือกด ◀▶
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -192,14 +192,14 @@ export default function BasketPage() {
           {/* วิดีโอ — read-only */}
           {videos.length > 0 && (
             <div>
-              <h2 className="text-sm font-semibold text-warm-700 dark:text-disc-muted uppercase tracking-wide mb-2">
+              <h2 className="text-sm font-semibold text-gray-700 dark:text-disc-muted uppercase tracking-wide mb-2">
                 วิดีโอ ({videos.length})
               </h2>
               <div className="flex flex-col gap-2">
                 {videos.map(v => (
                   <div key={v.id} className="flex items-center gap-3 bg-card-bg rounded-xl border border-warm-200 dark:border-disc-border p-2">
                     <span className="shrink-0">🎬</span>
-                    <span className="flex-1 min-w-0 text-xs text-warm-400 dark:text-disc-muted font-mono truncate">{v.url}</span>
+                    <span className="flex-1 min-w-0 text-xs text-gray-400 dark:text-disc-muted font-mono truncate">{v.url}</span>
                   </div>
                 ))}
               </div>
@@ -208,14 +208,14 @@ export default function BasketPage() {
 
           {/* Caption */}
           <div>
-            <label className="block text-sm font-medium text-warm-700 dark:text-disc-muted mb-1">Caption</label>
+            <label className="block text-sm font-medium text-gray-600 dark:text-disc-muted mb-1">Caption</label>
             <textarea
               ref={capRef}
               value={caption}
               onChange={e => { setCaption(e.target.value); autoGrow(e.target) }}
               rows={3}
               placeholder="ใส่ caption..."
-              className="w-full px-3 py-2 text-sm rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-teal resize-none overflow-hidden"
+              className="w-full px-3 py-2 text-sm rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-gray-900 dark:text-disc-text placeholder-gray-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-teal resize-none overflow-hidden"
             />
             <div className="flex items-center gap-2 mt-2 flex-wrap">
               <button onClick={saveCaption} disabled={savingCap}
@@ -226,7 +226,7 @@ export default function BasketPage() {
               {savedCap && <span className="text-sm text-green-600 dark:text-green-400">บันทึกแล้ว</span>}
               {guild && channel && (
                 <a href={`https://discord.com/channels/${guild}/${channel}`}
-                  className="flex items-center gap-1.5 px-4 py-2 text-sm rounded-lg border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover transition ml-auto">
+                  className="flex items-center gap-1.5 px-4 py-2 text-sm rounded-lg border border-warm-200 dark:border-disc-border text-gray-900 dark:text-disc-text hover:bg-gray-50 dark:hover:bg-disc-hover transition ml-auto">
                   <ArrowLeft size={14} /> กลับไปตะกร้าบน Discord
                 </a>
               )}
