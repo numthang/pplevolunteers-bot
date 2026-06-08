@@ -266,14 +266,12 @@ async function buildBasketPayload(basket, guildId, channelId, userId, channelNam
     const lines = history.map(h => {
       const hPlats = (h.platform || '').split(',').filter(Boolean);
       const icon = hPlats.length > 1 ? '📲' : (platformIcon[hPlats[0]] || '📤');
-      const date  = new Date((h.schedule_time ? h.schedule_time * 1000 : h.created_at));
-      const thaiDate = new Date(date.getTime() + 7 * 60 * 60 * 1000);
-      const d = `${String(thaiDate.getUTCDate()).padStart(2,'0')}/${String(thaiDate.getUTCMonth()+1).padStart(2,'0')} ${String(thaiDate.getUTCHours()).padStart(2,'0')}:${String(thaiDate.getUTCMinutes()).padStart(2,'0')}`;
-      const imgs  = h.image_count > 0 ? ` · ${h.image_count} รูป` : '';
+      const grp  = h.group_name ? ` [${h.group_name}]` : '';
+      const imgs = h.image_count > 0 ? ` · ${h.image_count}` : (h.video_count > 0 ? ' · 🎬' : '');
       const links = [h.fb_url && '[FB]('+h.fb_url+')', h.ig_url && '[IG]('+h.ig_url+')', h.threads_url && '[@]('+h.threads_url+')', h.x_url && '[𝕏]('+h.x_url+')'].filter(Boolean);
       const link  = links.length ? ` · ${links.join(' · ')}` : '';
       const fail  = h.status !== 'success' ? ' ⚠️' : '';
-      return `${icon} ${d}${imgs}${link}${fail}`;
+      return `${icon}${grp}${imgs}${link}${fail}`;
     });
     // Discord field value limit: 1024 chars — keep newest entries that fit
     let totalLen = 0;
@@ -689,6 +687,7 @@ async function processAndPost(interaction, state) {
       platform: platforms.join(','), imageCount: 0, videoCount: 1,
       wmType: null, caption: state.caption || null, scheduleTime: null,
       fbUrl: null, igUrl, threadsUrl: null, xUrl: null, status: overallStatus,
+      groupName: state.group || null,
     }).catch(() => {});
     await interaction.followUp({ content: ['✅ โพสต์เสร็จแล้ว', ...results].join('\n') }).catch(() => {});
     return;
@@ -819,6 +818,7 @@ async function processAndPost(interaction, state) {
     scheduleTime: state.scheduleTime || null,
     fbUrl, igUrl, threadsUrl, xUrl,
     status:      overallStatus,
+    groupName:   state.group || null,
   }).catch(() => {});
 
   await setSetting(state.guildId, `last_post_${state.channelId}`, { fbUrl, postedAt: new Date() }).catch(() => {});

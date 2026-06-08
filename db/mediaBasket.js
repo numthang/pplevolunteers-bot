@@ -87,11 +87,11 @@ async function clearBasketMedia(guildId, channelId) {
   );
 }
 
-async function addHistory(guildId, channelId, postedBy, { platform, imageCount, videoCount, wmType, caption, scheduleTime, fbUrl, igUrl, threadsUrl, xUrl, status }) {
+async function addHistory(guildId, channelId, postedBy, { platform, imageCount, videoCount, wmType, caption, scheduleTime, fbUrl, igUrl, threadsUrl, xUrl, status, groupName }) {
   await pool.query(
-    `INSERT INTO dc_basket_history (guild_id, channel_id, posted_by, platform, image_count, video_count, wm_type, caption, schedule_time, fb_url, ig_url, threads_url, x_url, status)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
-    [guildId, channelId, postedBy, platform, imageCount, videoCount || 0, wmType || null, caption || null, scheduleTime || null, fbUrl || null, igUrl || null, threadsUrl || null, xUrl || null, status]
+    `INSERT INTO dc_basket_history (guild_id, channel_id, posted_by, platform, image_count, video_count, wm_type, caption, schedule_time, fb_url, ig_url, threads_url, x_url, status, group_name)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+    [guildId, channelId, postedBy, platform, imageCount, videoCount || 0, wmType || null, caption || null, scheduleTime || null, fbUrl || null, igUrl || null, threadsUrl || null, xUrl || null, status, groupName || null]
   );
 }
 

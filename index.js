@@ -281,6 +281,7 @@ client.on('threadCreate', async (thread) => {
 
 // Cooldown map per channel
 const cooldowns = new Map();
+const msgCounts = new Map();
 
 client.on('messageCreate', async (message) => {
   // track activity (ไม่ block bot message เพราะ onMessage เช็คเองอยู่แล้ว)
@@ -324,11 +325,21 @@ client.on('messageCreate', async (message) => {
   if (typeof config === 'string') { try { config = JSON.parse(config); } catch { return; } }
 
   const refreshMs = (config.refresh_minutes ?? 1440) * 60 * 1000;
+  const refreshEvery = config.refresh_every ?? 5;
   const now = Date.now();
   const last = cooldowns.get(message.channel.id) || 0;
-  if (now - last < refreshMs) return;
+  const count = (msgCounts.get(message.channel.id) || 0) + 1;
+
+  const timeReady  = now - last >= refreshMs;
+  const countReady = count >= refreshEvery;
+
+  if (!timeReady && !countReady) {
+    msgCounts.set(message.channel.id, count);
+    return;
+  }
 
   cooldowns.set(message.channel.id, now);
+  msgCounts.set(message.channel.id, 0);
   await refreshSticky(message.channel);
 });
 
