@@ -13,7 +13,7 @@ const {
 } = require('discord.js');
 const crypto = require('crypto');
 const { processText } = require('../services/aiSummarize');
-const { AI_MODES, getMode } = require('../config/aiModes');
+const { getModes, getMode } = require('../db/aiConfig');
 const { setCaption, getBasket } = require('../db/mediaBasket');
 const { buildBasketPayload, stripDiscordMarkdown } = require('./basketHandler');
 
@@ -53,11 +53,12 @@ async function handleBasketAiStart(interaction) {
     return interaction.reply({ content: '❌ ยังไม่มี caption ในตะกร้าให้เรียบเรียง', flags: MessageFlags.Ephemeral });
   }
 
+  const modes = await getModes(interaction.guildId);
   const menu = new StringSelectMenuBuilder()
     .setCustomId('basket_ai_mode')
     .setPlaceholder('เลือกรูปแบบที่ต้องการ')
     .addOptions([
-      ...AI_MODES.map(m => ({ label: m.label, value: m.value })),
+      ...modes.map(m => ({ label: m.label, value: m.value })),
       { label: '✍️ กำหนด prompt เอง', value: CUSTOM_VALUE },
     ]);
 
@@ -73,11 +74,12 @@ async function handleBasketAiModeSelect(interaction) {
   const modeValue = interaction.values[0];
 
   if (modeValue === CUSTOM_VALUE) {
+    const seed = await getMode(interaction.guildId, 'social_post');
     const input = new TextInputBuilder()
       .setCustomId('basket_ai_prompt')
       .setLabel('Prompt (แก้ได้ตามใจ)')
       .setStyle(TextInputStyle.Paragraph)
-      .setValue(getMode('social_post').prompt)
+      .setValue(seed?.prompt || '')
       .setMaxLength(4000)
       .setRequired(true);
     const modal = new ModalBuilder()
@@ -114,7 +116,7 @@ async function runAiOnCaption(interaction, { modeValue = null, customPrompt = nu
 
   let result;
   try {
-    result = await processText(caption, modeValue, customPrompt, basketSuffix);
+    result = await processText(guildId, caption, modeValue, customPrompt, basketSuffix);
   } catch (err) {
     return interaction.editReply({ content: `⚠️ AI ประมวลผลไม่สำเร็จ: ${err.message}`, components: [] });
   }

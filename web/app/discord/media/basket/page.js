@@ -22,7 +22,9 @@ export default function BasketPage() {
   const [draggingId, setDraggingId] = useState(null)
   const dragIndex = useRef(null)   // live index ของรูปที่กำลังลาก
   const imagesRef = useRef([])     // mirror ของ images ล่าสุด (ใช้ persist ตอน drag จบ)
-  const capRef    = useRef(null)
+  const capRef       = useRef(null)
+  const autoSaveTimer = useRef(null)
+  const isFirstLoad   = useRef(true)
 
   function autoGrow(el) {
     if (!el) return
@@ -50,6 +52,14 @@ export default function BasketPage() {
 
   // caption box โตตามเนื้อหาหลังโหลดเสร็จ
   useEffect(() => { autoGrow(capRef.current) }, [loading, caption])
+
+  // auto-save — debounce 1s หลังหยุดพิมพ์ ข้ามครั้งแรกที่โหลดค่าจาก API
+  useEffect(() => {
+    if (isFirstLoad.current) { isFirstLoad.current = false; return }
+    clearTimeout(autoSaveTimer.current)
+    autoSaveTimer.current = setTimeout(saveCaption, 1000)
+    return () => clearTimeout(autoSaveTimer.current)
+  }, [caption])
   // sync mirror ของ images ไว้ persist ตอน drag จบ
   useEffect(() => { imagesRef.current = images }, [images])
 

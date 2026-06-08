@@ -16,7 +16,7 @@ const {
 const crypto = require('crypto');
 const { fetchAllMessages } = require('../services/fetchMessages');
 const { processMessages } = require('../services/aiSummarize');
-const { AI_MODES, getMode } = require('../config/aiModes');
+const { getModes, getMode } = require('../db/aiConfig');
 const { setCaption, getBasket } = require('../db/mediaBasket');
 const { buildBasketPayload, stripDiscordMarkdown } = require('./basketHandler');
 
@@ -45,11 +45,12 @@ setInterval(() => {
 
 // ─── 1. กด context menu → เลือก mode ──────────────────────────────────────────
 async function handleAiThreadStart(interaction) {
+  const modes = await getModes(interaction.guildId);
   const menu = new StringSelectMenuBuilder()
     .setCustomId('ai_thread_mode')
     .setPlaceholder('เลือกรูปแบบที่ต้องการ')
     .addOptions([
-      ...AI_MODES.map(m => ({ label: m.label, value: m.value })),
+      ...modes.map(m => ({ label: m.label, value: m.value })),
       { label: '✍️ กำหนด prompt เอง', value: CUSTOM_VALUE },
     ]);
 
@@ -65,11 +66,12 @@ async function handleAiThreadModeSelect(interaction) {
   const modeValue = interaction.values[0];
 
   if (modeValue === CUSTOM_VALUE) {
+    const seed = await getMode(interaction.guildId, 'social_post');
     const input = new TextInputBuilder()
       .setCustomId('ai_thread_prompt')
       .setLabel('Prompt (แก้ได้ตามใจ)')
       .setStyle(TextInputStyle.Paragraph)
-      .setValue(getMode('social_post').prompt)
+      .setValue(seed?.prompt || '')
       .setMaxLength(4000)
       .setRequired(true);
     const modal = new ModalBuilder()
@@ -114,7 +116,7 @@ async function runAiOnThread(interaction, { modeValue = null, customPrompt = nul
     const threadSuffix = !customPrompt && modeValue === 'social_post'
       ? 'ถ้ามีหลายเรื่องที่โพสต์ได้ ให้เขียนแยกทุกเรื่อง อย่ารวบเป็นโพสต์เดียว และอย่าเลือกมาแค่เรื่องเดียว'
       : null;
-    result = await processMessages(messages, modeValue, channel.name, customPrompt, threadSuffix);
+    result = await processMessages(interaction.guildId, messages, modeValue, channel.name, customPrompt, threadSuffix);
   } catch (err) {
     return interaction.editReply({ content: `⚠️ AI ประมวลผลไม่สำเร็จ: ${err.message}`, components: [] });
   }

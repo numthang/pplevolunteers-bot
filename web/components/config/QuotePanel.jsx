@@ -1,7 +1,5 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
-import { useSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
 import { Check, Loader2, User, Server, Globe } from 'lucide-react'
 import { QUOTE_TEMPLATE_CHOICES } from '@/lib/quoteStyles.js'
 
@@ -66,10 +64,7 @@ function ScopeRow({ icon: Icon, label, sublabel, templateValue, watermarkValue, 
   )
 }
 
-export default function QuoteConfigPage() {
-  const { data: session, status } = useSession()
-  const router = useRouter()
-
+export default function QuotePanel() {
   const [data,    setData]    = useState(null)   // { personal, guilds, isSuperAdmin, global }
   const [wm,      setWm]      = useState({})      // scopeKey → choices[]
   const [loading, setLoading] = useState(true)
@@ -97,10 +92,7 @@ export default function QuoteConfigPage() {
     if (d.isSuperAdmin) loadWatermarks('global', 'global')
   }, [loadWatermarks])
 
-  useEffect(() => {
-    if (status === 'unauthenticated') { router.push('/login'); return }
-    if (status === 'authenticated') load()
-  }, [status, load, router])
+  useEffect(() => { load() }, [load])
 
   // save → PATCH → update local state ถ้าสำเร็จ
   const save = useCallback(async (scope, guildId, key, value) => {
@@ -123,7 +115,7 @@ export default function QuoteConfigPage() {
     return true
   }, [])
 
-  if (status === 'loading' || loading) {
+  if (loading) {
     return <p className="text-warm-500 dark:text-disc-muted text-sm">กำลังโหลด...</p>
   }
   if (!data) return <p className="text-red-500 text-sm">{error || 'เกิดข้อผิดพลาด'}</p>
@@ -139,8 +131,7 @@ export default function QuoteConfigPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-disc-text">Quote — ค่าเริ่มต้น</h1>
-        <p className="text-sm text-gray-500 dark:text-disc-muted mt-1">
+        <p className="text-sm text-gray-500 dark:text-disc-muted">
           ค่าที่ใช้เมื่อผู้ใช้ไม่ได้เลือกเองตอนสร้าง quote — ลำดับความสำคัญ:
           <span className="font-medium"> ของฉัน → Server → ทั้งระบบ</span>
         </p>

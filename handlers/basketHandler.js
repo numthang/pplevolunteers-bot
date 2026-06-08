@@ -21,7 +21,7 @@ const { getSetting, setSetting, deleteSetting } = require('../db/settings');
 const { resolveConfig } = require('../db/configResolver');
 const pool = require('../db/index');
 
-const KEY_WATERMARK = 'default_watermark'; // ค่ากลาง — ตั้งที่หน้าเว็บ /discord/quote (ใช้ร่วม quote)
+const KEY_WATERMARK = 'default_watermark'; // ค่ากลาง — ตั้งที่หน้าเว็บ /discord/config/media (ใช้ร่วม quote)
 const groupWmKey = groupName => `default_watermark_group:${groupName}`;
 
 const stateKey = channelId => `basket_state_${channelId}`;

@@ -110,7 +110,7 @@ module.exports = {
       if (aiMode) {
         // เลือก AI mode → ไฟล์เป็นผลสรุป (.txt) แทน raw
         try {
-          const { mode, output, truncated } = await processMessages(allMessages, aiMode);
+          const { mode, output, truncated } = await processMessages(interaction.guildId, allMessages, aiMode);
           const date = new Date().toISOString().slice(0, 10);
           attachment = new AttachmentBuilder(Buffer.from(output, 'utf8'), { name: `${aiMode}_${date}.txt` });
           const body = output.length > REPLY_LIMIT ? output.slice(0, REPLY_LIMIT) + '\n…(ตัด — ดูไฟล์)' : output;

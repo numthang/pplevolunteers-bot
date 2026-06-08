@@ -310,3 +310,20 @@ ALTER TABLE dc_basket_history ADD COLUMN IF NOT EXISTS group_name VARCHAR(100) N
 
 -- 2026-06-08: rename dc_basket_history → dc_media_history
 ALTER TABLE dc_basket_history RENAME TO dc_media_history;
+
+-- 2026-06-08: dc_ai_modes — AI prompt modes แก้ผ่าน backoffice (/discord/config/ai)
+-- guild_id = 'global' = ชุดกลางใช้ทุก guild; เก็บ column guild_id ไว้รองรับ per-guild ในอนาคต
+--   bot resolver: guild row override global row ตาม value (ดู db/aiConfig.js) — ตอนนี้ UI แก้เฉพาะ global
+-- agent config (provider/model/max_tokens) เก็บใน dc_guild_config guild_id='global' keys: ai.provider / ai.model / ai.max_tokens
+-- seed 3 modes เริ่มต้นด้วย: node scripts/seedAiModes.js (อ่านจาก config/aiModes.js)
+CREATE TABLE IF NOT EXISTS dc_ai_modes (
+  id         SERIAL PRIMARY KEY,
+  guild_id   VARCHAR(20)  NOT NULL DEFAULT 'global',
+  value      VARCHAR(50)  NOT NULL,
+  label      VARCHAR(100) NOT NULL,
+  prompt     TEXT         NOT NULL,
+  sort_order INT          NOT NULL DEFAULT 0,
+  enabled    BOOLEAN      NOT NULL DEFAULT TRUE,
+  updated_at timestamptz  DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE (guild_id, value)
+);

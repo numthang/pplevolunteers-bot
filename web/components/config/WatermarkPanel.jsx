@@ -1,7 +1,5 @@
 'use client'
 import { useEffect, useState, useRef, useCallback } from 'react'
-import { useSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
 import { Trash2, Upload, ImageIcon, X, Server, User, Star } from 'lucide-react'
 
 function stripExt(name) {
@@ -401,19 +399,9 @@ function GuildPanel() {
   )
 }
 
-// ─── Page: รวม personal + guild เป็นหน้าเดียว มี tab ───────────────────────────
-export default function WatermarkPage() {
-  const { status } = useSession()
-  const router = useRouter()
+// ─── Panel: รวม personal + guild — sub-tab ส่วนตัว/Guild (ไม่มี page h1, parent คุม) ──
+export default function WatermarkPanel() {
   const [tab, setTab] = useState('personal')
-
-  useEffect(() => {
-    if (status === 'unauthenticated') router.push('/login')
-  }, [status, router])
-
-  if (status !== 'authenticated') {
-    return <p className="text-warm-500 dark:text-disc-muted text-sm">กำลังโหลด...</p>
-  }
 
   const tabs = [
     { key: 'personal', label: 'ส่วนตัว', icon: User },
@@ -422,8 +410,6 @@ export default function WatermarkPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-disc-text mb-4">ลายน้ำ</h1>
-
       <div className="flex gap-2 mb-5 border-b border-warm-200 dark:border-disc-border">
         {tabs.map(t => {
           const Icon = t.icon
