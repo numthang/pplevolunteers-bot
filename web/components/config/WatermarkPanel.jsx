@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState, useRef, useCallback } from 'react'
-import { Trash2, Upload, ImageIcon, X, Server, User, Star } from 'lucide-react'
+import { Trash2, Upload, ImageIcon, X, Server, Star } from 'lucide-react'
 
 function stripExt(name) {
   return name.replace(/\.[^.]+$/, '').replace(/^\d+-/, '')
@@ -177,10 +177,8 @@ function PersonalPanel() {
 const GUILD_MAX = 15
 const ROOT = '' // โฟลเดอร์ลายน้ำกลางของ guild
 
-function GuildPanel() {
+function GuildPanel({ guildId }) {
   const fileRef = useRef(null)
-  const [guilds,  setGuilds]  = useState([])
-  const [guildId, setGuildId] = useState('')
   const [groups,  setGroups]  = useState([])
   const [filesByGroup, setFilesByGroup] = useState({})
   const [defaults, setDefaults] = useState({})
@@ -191,18 +189,6 @@ function GuildPanel() {
   const [settingDefault, setSettingDefault] = useState(false)
   const [error,    setError]    = useState(null)
   const [dragging, setDragging] = useState(false)
-
-  useEffect(() => {
-    fetch('/api/discord/guild-watermarks')
-      .then(r => r.json())
-      .then(d => {
-        const gs = d.guilds || []
-        setGuilds(gs)
-        if (gs.length) setGuildId(gs[0].guild_id)
-        else setLoading(false)
-      })
-      .catch(() => setLoading(false))
-  }, [])
 
   const loadFiles = useCallback(async (gid) => {
     if (!gid) return
@@ -269,10 +255,6 @@ function GuildPanel() {
     return `/api/discord/guild-watermarks?${qs}`
   }
 
-  if (guilds.length === 0 && !loading) {
-    return <p className="text-sm text-warm-500 dark:text-disc-muted">ต้องเป็น Admin ของ guild ถึงจะจัดการลายน้ำระดับ guild ได้</p>
-  }
-
   const targetTabs = [{ key: ROOT, label: 'ลายน้ำกลาง (Guild)' }, ...groups.map(g => ({ key: g, label: g }))]
 
   return (
@@ -280,20 +262,6 @@ function GuildPanel() {
       <p className="text-sm text-gray-500 dark:text-disc-muted mb-4">
         จัดการลายน้ำของ guild — &quot;ลายน้ำกลาง&quot; ใช้กับ Quote + Basket (ไม่มีกลุ่ม), ลายน้ำกลุ่มใช้กับ Basket ที่โพสต์ในนามกลุ่มนั้น
       </p>
-
-      <div className="mb-4">
-        <label className="text-sm font-medium text-warm-700 dark:text-disc-muted mb-1 block">Server</label>
-        {guilds.length > 1 ? (
-          <select value={guildId} onChange={e => setGuildId(e.target.value)}
-            className="h-11 px-3 text-base rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text focus:outline-none focus:ring-2 focus:ring-teal w-full">
-            {guilds.map(g => <option key={g.guild_id} value={g.guild_id}>{g.name}</option>)}
-          </select>
-        ) : (
-          <div className="h-11 px-3 flex items-center rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text">
-            {guilds.find(g => g.guild_id === guildId)?.name || guildId}
-          </div>
-        )}
-      </div>
 
       <div className="flex gap-2 overflow-x-auto pb-2 mb-4">
         {targetTabs.map(t => (
@@ -399,34 +367,32 @@ function GuildPanel() {
   )
 }
 
-// ─── Panel: รวม personal + guild — sub-tab ส่วนตัว/Guild (ไม่มี page h1, parent คุม) ──
+// ─── Panel: เลือกขอบเขตจาก dropdown เดียว (ส่วนตัว / แต่ละ guild) — ไม่ซ้อน tab ──
 export default function WatermarkPanel() {
-  const [tab, setTab] = useState('personal')
+  const [guilds, setGuilds]   = useState([])
+  const [scope,  setScope]    = useState('personal') // 'personal' | guild_id
+  const [loading, setLoading] = useState(true)
 
-  const tabs = [
-    { key: 'personal', label: 'ส่วนตัว', icon: User },
-    { key: 'guild',    label: 'Guild',   icon: Server },
-  ]
+  useEffect(() => {
+    fetch('/api/discord/guild-watermarks')
+      .then(r => r.json())
+      .then(d => setGuilds(d.guilds || []))
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [])
 
   return (
     <div>
-      <div className="flex gap-2 mb-5 border-b border-warm-200 dark:border-disc-border">
-        {tabs.map(t => {
-          const Icon = t.icon
-          return (
-            <button key={t.key} onClick={() => setTab(t.key)}
-              className={`flex items-center gap-1.5 px-4 py-2 -mb-px border-b-2 text-base transition ${
-                tab === t.key
-                  ? 'border-orange text-orange font-medium'
-                  : 'border-transparent text-warm-600 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text'
-              }`}>
-              <Icon size={16} /> {t.label}
-            </button>
-          )
-        })}
+      <div className="mb-5 max-w-xs">
+        <label className="text-sm font-medium text-warm-700 dark:text-disc-muted mb-1 block">ขอบเขต</label>
+        <select value={scope} onChange={e => setScope(e.target.value)} disabled={loading}
+          className="h-11 px-3 text-base rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text focus:outline-none focus:ring-2 focus:ring-teal w-full">
+          <option value="personal">ส่วนตัว (ทุก server)</option>
+          {guilds.map(g => <option key={g.guild_id} value={g.guild_id}>{g.name}</option>)}
+        </select>
       </div>
 
-      {tab === 'personal' ? <PersonalPanel /> : <GuildPanel />}
+      {scope === 'personal' ? <PersonalPanel /> : <GuildPanel key={scope} guildId={scope} />}
     </div>
   )
 }
