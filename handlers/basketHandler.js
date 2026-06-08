@@ -162,7 +162,7 @@ function buildBasketButtons(imgCount, videoCount, hasCaption = false, webUrl = n
   const row2 = [
     new ButtonBuilder()
       .setCustomId('basket_view_public')
-      .setLabel('👁️ ดูตะกร้า')
+      .setLabel('👁️ แสดงตะกร้า')
       .setStyle(ButtonStyle.Secondary),
     new ButtonBuilder()
       .setCustomId('basket_clear')
