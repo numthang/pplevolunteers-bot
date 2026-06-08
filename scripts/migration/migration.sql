@@ -307,3 +307,6 @@ ALTER TABLE dc_media_baskets ADD COLUMN IF NOT EXISTS sort_order INT NOT NULL DE
 
 -- 2026-06-08: dc_basket_history — group_name สำหรับแสดงใน history ว่าโพสต์จาก group ไหน
 ALTER TABLE dc_basket_history ADD COLUMN IF NOT EXISTS group_name VARCHAR(100) NULL;
+
+-- 2026-06-08: rename dc_basket_history → dc_media_history
+ALTER TABLE dc_basket_history RENAME TO dc_media_history;

@@ -230,7 +230,15 @@ async function buildBasketPayload(basket, guildId, channelId, userId, channelNam
     : null;
 
   const embed = buildBasketEmbed(imgCount, videoCount, caption, previewUrl);
-  if (links.length) embed.addFields({ name: '🖼️ ต้นทาง', value: links.join(' · '), inline: false });
+  if (links.length) {
+    const parts = [];
+    for (const l of links) {
+      const candidate = parts.length ? parts.join(' · ') + ' · ' + l : l;
+      if (candidate.length > 1024) { parts.push('…'); break; }
+      parts.push(l);
+    }
+    embed.addFields({ name: '🖼️ ต้นทาง', value: parts.join(' · '), inline: false });
+  }
 
   const saved = await getBasketState(guildId, channelId);
   const groups = await getAvailableGroups(guildId, userId);
