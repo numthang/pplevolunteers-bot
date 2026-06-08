@@ -157,7 +157,7 @@ function buildBasketButtons(imgCount, videoCount, hasCaption = false, webUrl = n
     buttons.push(
       new ButtonBuilder()
         .setCustomId('basket_ai_compose')
-        .setLabel('🤖 AI เรียบเรียง')
+        .setLabel('🤖 AI ปรับ Caption')
         .setStyle(ButtonStyle.Success),
     );
   }

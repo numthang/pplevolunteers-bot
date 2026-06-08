@@ -111,7 +111,10 @@ async function runAiOnThread(interaction, { modeValue = null, customPrompt = nul
 
   let result;
   try {
-    result = await processMessages(messages, modeValue, channel.name, customPrompt);
+    const threadSuffix = !customPrompt && modeValue === 'social_post'
+      ? 'ถ้ามีหลายเรื่องที่โพสต์ได้ ให้เขียนแยกทุกเรื่อง อย่ารวบเป็นโพสต์เดียว และอย่าเลือกมาแค่เรื่องเดียว'
+      : null;
+    result = await processMessages(messages, modeValue, channel.name, customPrompt, threadSuffix);
   } catch (err) {
     return interaction.editReply({ content: `⚠️ AI ประมวลผลไม่สำเร็จ: ${err.message}`, components: [] });
   }

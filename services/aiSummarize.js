@@ -32,8 +32,9 @@ async function callClaude(userContent, mode) {
 // ── ประมวลผลจาก messages[] (ใช้โดย /message fetch) ────────────────────────────
 // title: ชื่อเธรด/หัวข้อ (optional) — ใช้เป็นเรื่องหลักที่ AI ควรโฟกัส
 // customPrompt: ถ้าส่งมา จะใช้แทน mode สำเร็จรูป (ผู้ใช้พิมพ์เอง)
-async function processMessages(messages, modeValue, title = null, customPrompt = null) {
-  const mode   = resolveMode(modeValue, customPrompt);
+async function processMessages(messages, modeValue, title = null, customPrompt = null, promptSuffix = null) {
+  let mode = resolveMode(modeValue, customPrompt);
+  if (promptSuffix && !customPrompt) mode = { ...mode, prompt: mode.prompt + '\n\n' + promptSuffix };
   const capped = messages.slice(-MAX_MESSAGES);
   const text   = messagesToPlainText(capped);
 
@@ -49,8 +50,9 @@ async function processMessages(messages, modeValue, title = null, customPrompt =
 }
 
 // ── ประมวลผลจาก text ดิบ (ใช้โดย basket editorial — caption ที่ append มา) ──────
-async function processText(text, modeValue, customPrompt = null) {
-  const mode = resolveMode(modeValue, customPrompt);
+async function processText(text, modeValue, customPrompt = null, promptSuffix = null) {
+  let mode = resolveMode(modeValue, customPrompt);
+  if (promptSuffix && !customPrompt) mode = { ...mode, prompt: mode.prompt + '\n\n' + promptSuffix };
   if (!text?.trim()) return { mode, output: 'ไม่มีข้อความที่ประมวลผลได้' };
   const output = await callClaude(`เนื้อหา:\n\n${text}`, mode);
   return { mode, output };

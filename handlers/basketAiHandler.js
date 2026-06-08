@@ -62,7 +62,7 @@ async function handleBasketAiStart(interaction) {
     ]);
 
   await interaction.reply({
-    content: '🤖 จะให้ AI เรียบเรียง caption ในตะกร้าเป็นแบบไหน?',
+    content: '🤖 จะให้ AI ปรับ caption เป็นแบบไหน?',
     components: [new ActionRowBuilder().addComponents(menu)],
     flags: MessageFlags.Ephemeral,
   });
@@ -108,9 +108,13 @@ async function runAiOnCaption(interaction, { modeValue = null, customPrompt = nu
     return interaction.editReply({ content: '❌ ไม่มี caption ในตะกร้าแล้ว', components: [] });
   }
 
+  const basketSuffix = !customPrompt && modeValue === 'social_post'
+    ? 'สำคัญ: ให้เขียนโพสต์เดียวเท่านั้น รวมทุกแง่มุมของเนื้อหาไว้ในโพสต์เดียว ห้ามแยก'
+    : null;
+
   let result;
   try {
-    result = await processText(caption, modeValue, customPrompt);
+    result = await processText(caption, modeValue, customPrompt, basketSuffix);
   } catch (err) {
     return interaction.editReply({ content: `⚠️ AI ประมวลผลไม่สำเร็จ: ${err.message}`, components: [] });
   }
@@ -123,11 +127,55 @@ async function runAiOnCaption(interaction, { modeValue = null, customPrompt = nu
     .setCustomId(`basket_ai_replace:${token}`)
     .setLabel('✅ แทนที่ caption')
     .setStyle(ButtonStyle.Success);
+  const appendBtn = new ButtonBuilder()
+    .setCustomId(`basket_ai_append:${token}`)
+    .setLabel('➕ ต่อท้าย caption')
+    .setStyle(ButtonStyle.Secondary);
 
   await interaction.editReply({
     content: `${mode.label}\n${'─'.repeat(20)}\n${body}`,
-    components: [new ActionRowBuilder().addComponents(replaceBtn)],
+    components: [new ActionRowBuilder().addComponents(replaceBtn, appendBtn)],
   });
+}
+
+// ─── 3b. กดต่อท้าย → modal pre-fill original+AI ──────────────────────────────
+async function handleBasketAiAppend(interaction) {
+  const token = interaction.customId.split(':')[1];
+  const data  = takeOutput(token);
+
+  if (!data) {
+    return interaction.reply({ content: '❌ ผลลัพธ์หมดอายุแล้ว — กด 🤖 ใหม่', flags: MessageFlags.Ephemeral });
+  }
+
+  const current = await getCaption(data.guildId, data.channelId);
+  const aiText  = stripDiscordMarkdown(data.caption);
+  const combined = current.trim() ? `${current}\n\n${aiText}` : aiText;
+  const preview  = combined.length > 4000 ? combined.slice(0, 4000) : combined;
+
+  const input = new TextInputBuilder()
+    .setCustomId('basket_ai_append_text')
+    .setLabel('Caption รวม (แก้ได้ก่อนบันทึก)')
+    .setStyle(TextInputStyle.Paragraph)
+    .setValue(preview)
+    .setMaxLength(4000)
+    .setRequired(true);
+  const modal = new ModalBuilder()
+    .setCustomId(`basket_ai_append_modal:${Date.now()}`)
+    .setTitle('ต่อท้าย caption')
+    .addComponents(new ActionRowBuilder().addComponents(input));
+  return interaction.showModal(modal);
+}
+
+// ─── 3c. submit modal ต่อท้าย → save ─────────────────────────────────────────
+async function handleBasketAiAppendModal(interaction) {
+  const text = interaction.fields.getTextInputValue('basket_ai_append_text')?.trim();
+  if (!text) return interaction.reply({ content: '❌ caption ว่าง', flags: MessageFlags.Ephemeral });
+
+  await setCaption(interaction.guildId, interaction.channelId, interaction.user.id, text, null);
+
+  const basket  = await getBasket(interaction.guildId, interaction.channelId);
+  const payload = await buildBasketPayload(basket, interaction.guildId, interaction.channelId, interaction.user.id);
+  await interaction.reply({ content: '✅ ต่อท้าย caption แล้ว', ...payload, flags: MessageFlags.Ephemeral });
 }
 
 // ─── 3. กดแทนที่ → เขียนทับ caption → เปิดตะกร้า ─────────────────────────────
@@ -158,4 +206,6 @@ module.exports = {
   handleBasketAiModeSelect,
   handleBasketAiCustomModal,
   handleBasketAiReplace,
+  handleBasketAiAppend,
+  handleBasketAiAppendModal,
 };
