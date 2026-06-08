@@ -92,7 +92,7 @@ export async function DELETE(req) {
   if (idParam != null) {
     if (!Number.isInteger(id)) return Response.json({ error: 'invalid id' }, { status: 400 })
     await pool.query(
-      `DELETE FROM dc_media_baskets WHERE id = $1 AND guild_id = $2 AND channel_id = $3 AND type = 'image'`,
+      `DELETE FROM dc_media_baskets WHERE id = $1 AND guild_id = $2 AND channel_id = $3 AND type IN ('image', 'video')`,
       [id, guildId, channelId]
     )
     return Response.json({ ok: true })

@@ -96,6 +96,11 @@ export default function BasketPage() {
     await fetch(`/api/discord/basket?guild=${guild}&channel=${channel}&id=${id}`, { method: 'DELETE' }).catch(() => {})
   }
 
+  async function removeVideo(id) {
+    setVideos(prev => prev.filter(v => v.id !== id))
+    await fetch(`/api/discord/basket?guild=${guild}&channel=${channel}&id=${id}`, { method: 'DELETE' }).catch(() => {})
+  }
+
   async function saveCaption() {
     setSavingCap(true); setSavedCap(false)
     const res = await fetch('/api/discord/basket', {
@@ -189,7 +194,7 @@ export default function BasketPage() {
             </div>
           )}
 
-          {/* วิดีโอ — read-only */}
+          {/* วิดีโอ */}
           {videos.length > 0 && (
             <div>
               <h2 className="text-sm font-semibold text-gray-700 dark:text-disc-muted uppercase tracking-wide mb-2">
@@ -200,6 +205,10 @@ export default function BasketPage() {
                   <div key={v.id} className="flex items-center gap-3 bg-card-bg rounded-xl border border-warm-200 dark:border-disc-border p-2">
                     <span className="shrink-0">🎬</span>
                     <span className="flex-1 min-w-0 text-xs text-gray-400 dark:text-disc-muted font-mono truncate">{v.url}</span>
+                    <button onClick={() => removeVideo(v.id)} title="ลบวิดีโอนี้"
+                      className="shrink-0 w-7 h-7 flex items-center justify-center rounded-full text-gray-400 hover:bg-red-100 hover:text-red-500 dark:hover:bg-red-900/30 dark:hover:text-red-400 transition">
+                      <X size={15} />
+                    </button>
                   </div>
                 ))}
               </div>
