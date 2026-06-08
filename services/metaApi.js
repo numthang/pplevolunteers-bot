@@ -630,4 +630,36 @@ async function postReelsToInstagram(guildId, userId, videoDiscordUrl, caption, o
   return { id: mediaId, permalink };
 }
 
-module.exports = { getConfig, getAvailablePlatforms, getAvailableGroups, getGuildMetaApp, postToFacebook, postToInstagram, postToThreads, postReelsToInstagram, postReelsToFacebook };
+async function postReelsToThreads(guildId, userId, videoDiscordUrl, caption, onProgress = null, groupName = null) {
+  const cfg = await getConfig(guildId, 'threads', userId, groupName);
+  if (!cfg) throw new Error('ไม่พบ Threads config สำหรับ guild นี้');
+  if (!TEMP_URL.startsWith('http')) {
+    throw new Error(`META_TEMP_URL หรือ WEB_BASE_URL ไม่ได้ set — Threads เข้าถึง URL ไม่ได้`);
+  }
+
+  if (onProgress) onProgress('📤 Threads Reels: กำลังดาวน์โหลดวิดีโอ...');
+  let buffer = await fetchBuffer(videoDiscordUrl);
+  buffer = await convertVideoIfNeeded(buffer, videoDiscordUrl, onProgress);
+  fs.mkdirSync(TEMP_DIR, { recursive: true });
+  const filename = `${crypto.randomBytes(12).toString('hex')}.mp4`;
+  fs.writeFileSync(path.join(TEMP_DIR, filename), buffer);
+  const videoUrl = `${TEMP_URL}/${filename}`;
+
+  if (onProgress) onProgress('📤 Threads Reels: กำลังสร้าง container...');
+  const { id: containerId } = await threadsPost(`/v1.0/${cfg.socialId}/threads`, {
+    media_type: 'REELS', video_url: videoUrl, text: caption || '', access_token: cfg.token,
+  });
+  console.log('[Threads Reels container created] id:', containerId);
+
+  await waitForThreadsContainer(containerId, cfg.token, 300_000,
+    s => onProgress && onProgress(`📤 Threads Reels: กำลัง process วิดีโอ... (${s}s)`)
+  );
+
+  const { id: mediaId } = await threadsPost(`/v1.0/${cfg.socialId}/threads_publish`, {
+    creation_id: containerId, access_token: cfg.token,
+  });
+  const info = await threadsGet(`/v1.0/${mediaId}?fields=permalink&access_token=${cfg.token}`);
+  return { id: mediaId, permalink: info.permalink || null };
+}
+
+module.exports = { getConfig, getAvailablePlatforms, getAvailableGroups, getGuildMetaApp, postToFacebook, postToInstagram, postToThreads, postReelsToInstagram, postReelsToFacebook, postReelsToThreads };

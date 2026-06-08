@@ -15,7 +15,7 @@ const fs = require('fs');
 const sharp = require('sharp');
 const { addImages, addVideo, setCaption, appendCaption, getBasket, clearBasket, clearBasketMedia, addHistory, getHistory } = require('../db/mediaBasket');
 const { fetchBuffer, applyWatermark, autoEnhance } = require('../utils/watermarkImage');
-const { postToFacebook, postToInstagram, postToThreads, postReelsToInstagram, postReelsToFacebook, getAvailablePlatforms, getAvailableGroups } = require('../services/metaApi');
+const { postToFacebook, postToInstagram, postToThreads, postReelsToInstagram, postReelsToFacebook, postReelsToThreads, getAvailablePlatforms, getAvailableGroups } = require('../services/metaApi');
 const { postToX, postVideoToX } = require('../services/xApi');
 const { getSetting, setSetting, deleteSetting } = require('../db/settings');
 const { resolveConfig } = require('../db/configResolver');
@@ -123,24 +123,28 @@ function buildBasketEmbed(imgCount, videoCount, caption, previewUrl = null) {
   if (caption) embed.setDescription(caption.length > 280 ? caption.slice(0, 280) + '…' : caption);
   else embed.setDescription('*ยังไม่มี caption*');
   if (previewUrl) embed.setImage(previewUrl);
+  if (imgCount > 0 && videoCount > 0) {
+    embed.addFields({ name: '⚠️ ผสม media', value: 'มีทั้งรูปและวิดีโอ — ลบออกให้เหลือประเภทเดียวก่อนโพสต์', inline: false });
+  }
   return embed;
 }
 
 function buildBasketButtons(imgCount, videoCount, hasCaption = false, webUrl = null) {
   const empty = imgCount === 0 && videoCount === 0 && !hasCaption;
+  const mixed = imgCount > 0 && videoCount > 0;
   const buttons = [
     new ButtonBuilder()
       .setCustomId('basket_post')
       .setLabel('📋 สร้างโพสต์')
       .setStyle(ButtonStyle.Primary)
-      .setDisabled(empty),
+      .setDisabled(empty || mixed),
     new ButtonBuilder()
       .setCustomId('basket_edit_caption')
       .setLabel('✏️ แก้ Caption')
       .setStyle(ButtonStyle.Primary),
   ];
-  // จัดการรูป (เรียงลำดับ + แก้ caption) บนเว็บ — ปุ่ม Link โผล่เมื่อมีรูป ≥ 2
-  if (webUrl && imgCount > 1) {
+  // จัดการรูป (เรียงลำดับ + ลบ) บนเว็บ — ปุ่ม Link โผล่เมื่อมีรูป ≥ 1
+  if (webUrl && imgCount >= 1) {
     buttons.push(
       new ButtonBuilder()
         .setLabel('🖼️ จัดการรูป')
@@ -361,13 +365,10 @@ async function handleBasketAdd(interaction) {
     const ct = a.contentType?.split(';')[0].trim();
     return SUPPORTED_TYPES.has(ct);
   });
-  let videos = [...sourceMsg.attachments.values()].filter(a => {
+  const videos = [...sourceMsg.attachments.values()].filter(a => {
     const ct = a.contentType?.split(';')[0].trim();
     return VIDEO_TYPES.has(ct);
   });
-  // รูป + คลิปในข้อความเดียวกัน → เอาแต่รูป (Reels โพสต์ได้ทีละวิดีโอ ไม่ปนรูป)
-  const skippedVideos = images.length && videos.length ? videos.length : 0;
-  if (skippedVideos) videos = [];
   const text = sourceMsg.content ? stripDiscordMarkdown(sourceMsg.content) : '';
 
   if (!images.length && !videos.length && !text) {
@@ -380,15 +381,7 @@ async function handleBasketAdd(interaction) {
   const addedBy = interaction.user.id;
   const isBot = msg.author?.bot ?? false;
 
-  if (images.length || videos.length) {
-    if (videos.length > 1) return interaction.editReply({ content: '❌ เพิ่มได้แค่ 1 วิดีโอต่อครั้ง' });
-    const existingBasket = await getBasket(guildId, channelId);
-    const hasImages = existingBasket.some(r => r.type === 'image');
-    const hasVideo  = existingBasket.some(r => r.type === 'video');
-    if ((videos.length && (hasImages || hasVideo)) || (images.length && hasVideo)) {
-      await clearBasketMedia(guildId, channelId); // เก็บ caption ไว้ — ล้างแค่ media เก่า
-    }
-  }
+  if (videos.length > 1) return interaction.editReply({ content: '❌ เพิ่มได้แค่ 1 วิดีโอต่อครั้ง' });
 
   if (images.length) await addImages(guildId, channelId, addedBy, images.map(a => ({ url: a.url })), msg.id);
   if (videos.length) await addVideo(guildId, channelId, addedBy, videos.map(a => ({ url: a.url })), msg.id);
@@ -400,10 +393,9 @@ async function handleBasketAdd(interaction) {
     videos.length ? `🎬 1 วิดีโอ` : null,
     text && !isBot && !images.length && !videos.length ? `📝 caption (ต่อท้าย)` : null,
   ].filter(Boolean).join(' + ');
-  const skipNote = skippedVideos ? `\n⚠️ ข้ามวิดีโอ ${skippedVideos} คลิป (ข้อความนี้มีรูป — โพสต์รูปกับคลิปแยกกัน)` : '';
 
   const payload = await buildBasketPayload(basket, guildId, channelId, interaction.user.id, interaction.channel?.name);
-  await interaction.editReply({ content: `✅ เพิ่ม ${added} แล้ว${skipNote}`, ...payload });
+  await interaction.editReply({ content: `✅ เพิ่ม ${added} แล้ว`, ...payload });
 }
 
 // ─── View basket ──────────────────────────────────────────────────────────────
@@ -457,6 +449,11 @@ async function handleBasketPost(interaction) {
   if (!state) state = await rehydrateState(interaction);
   // caption อาจถูกแก้บนเว็บหลัง embed นี้ถูก render — ดึงสดจาก DB เสมอ ไม่ใช้ของที่ค้างใน memory
   const basket = await getBasket(interaction.guildId, interaction.channelId);
+  const hasImages = basket.some(r => r.type === 'image');
+  const hasVideo  = basket.some(r => r.type === 'video');
+  if (hasImages && hasVideo) {
+    return interaction.reply({ content: '❌ ตะกร้ามีทั้งรูปและวิดีโอ — ลบออกให้เหลือประเภทเดียวก่อน\nกด 🖼️ จัดการรูป หรือ 🗑️ ล้าง', flags: MessageFlags.Ephemeral });
+  }
   const freshCaption = basket.find(r => r.type === 'caption')?.caption || '';
   state.caption = freshCaption;
   return openScheduleModal(interaction, freshCaption, state.platforms || []);
@@ -669,7 +666,17 @@ async function processAndPost(interaction, state) {
         results.push(`❌ Facebook Reels: ${err.message}`);
       }
     }
-    if (platforms.includes('threads')) results.push('⚠️ Threads: ไม่รองรับ video');
+    if (platforms.includes('threads')) {
+      await interaction.editReply({ content: '📤 กำลังโพสต์ Reels ไปยัง Threads...' }).catch(() => {});
+      try {
+        const thProgress = msg => interaction.editReply({ content: msg }).catch(() => {});
+        const thRes = await postReelsToThreads(state.guildId, interaction.user.id, videoItems[0].image_url, state.caption, thProgress, state.group);
+        const thLink = thRes?.permalink ? ` · 🔗 [ดูโพสต์](${thRes.permalink})` : '';
+        results.push(`✅ Threads Reels โพสต์แล้ว${thLink}`);
+      } catch (err) {
+        results.push(`❌ Threads Reels: ${err.message}`);
+      }
+    }
     if (platforms.includes('x')) {
       await interaction.editReply({ content: '📤 กำลังโพสต์วิดีโอไปยัง X...' }).catch(() => {});
       try {
