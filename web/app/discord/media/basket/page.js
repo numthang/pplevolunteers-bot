@@ -26,8 +26,10 @@ export default function BasketPage() {
 
   function autoGrow(el) {
     if (!el) return
+    const scrollY = window.scrollY
     el.style.height = 'auto'
     el.style.height = el.scrollHeight + 'px'
+    window.scrollTo({ top: scrollY, behavior: 'instant' })
   }
 
   const load = useCallback(async () => {
