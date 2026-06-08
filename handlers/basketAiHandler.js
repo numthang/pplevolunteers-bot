@@ -178,7 +178,7 @@ async function handleBasketAiAppendModal(interaction) {
   await interaction.reply({ content: '✅ ต่อท้าย caption แล้ว', ...payload, flags: MessageFlags.Ephemeral });
 }
 
-// ─── 3. กดแทนที่ → เขียนทับ caption → เปิดตะกร้า ─────────────────────────────
+// ─── 3. กดแทนที่ → modal pre-fill AI text ให้ confirm/แก้ก่อนบันทึก ────────────
 async function handleBasketAiReplace(interaction) {
   const token = interaction.customId.split(':')[1];
   const data  = takeOutput(token);
@@ -187,18 +187,34 @@ async function handleBasketAiReplace(interaction) {
     return interaction.reply({ content: '❌ ผลลัพธ์หมดอายุแล้ว — กด 🤖 ใหม่', flags: MessageFlags.Ephemeral });
   }
 
-  // ตะกร้าสื่อไม่เอา markdown
-  const caption = stripDiscordMarkdown(data.caption);
-  await setCaption(data.guildId, data.channelId, interaction.user.id, caption, null);
-  outputCache.delete(token);
+  const aiText = stripDiscordMarkdown(data.caption);
+  const preview = aiText.length > 4000 ? aiText.slice(0, 4000) : aiText;
 
-  const basket  = await getBasket(data.guildId, data.channelId);
-  const payload = await buildBasketPayload(basket, data.guildId, data.channelId, interaction.user.id);
-  await interaction.reply({
-    content: '✅ แทนที่ caption แล้ว',
-    ...payload,
-    flags: MessageFlags.Ephemeral,
-  });
+  const input = new TextInputBuilder()
+    .setCustomId('basket_ai_replace_text')
+    .setLabel('Caption ใหม่ (แก้ได้ก่อนบันทึก)')
+    .setStyle(TextInputStyle.Paragraph)
+    .setValue(preview)
+    .setMaxLength(4000)
+    .setRequired(true);
+  const modal = new ModalBuilder()
+    .setCustomId(`basket_ai_replace_modal:${data.guildId}:${data.channelId}:${Date.now()}`)
+    .setTitle('แทนที่ caption')
+    .addComponents(new ActionRowBuilder().addComponents(input));
+  return interaction.showModal(modal);
+}
+
+// ─── 3d. submit modal แทนที่ → save ──────────────────────────────────────────
+async function handleBasketAiReplaceModal(interaction) {
+  const text = interaction.fields.getTextInputValue('basket_ai_replace_text')?.trim();
+  if (!text) return interaction.reply({ content: '❌ caption ว่าง', flags: MessageFlags.Ephemeral });
+
+  const [, guildId, channelId] = interaction.customId.split(':');
+  await setCaption(guildId, channelId, interaction.user.id, text, null);
+
+  const basket  = await getBasket(guildId, channelId);
+  const payload = await buildBasketPayload(basket, guildId, channelId, interaction.user.id);
+  await interaction.reply({ content: '✅ แทนที่ caption แล้ว', ...payload, flags: MessageFlags.Ephemeral });
 }
 
 module.exports = {
@@ -206,6 +222,7 @@ module.exports = {
   handleBasketAiModeSelect,
   handleBasketAiCustomModal,
   handleBasketAiReplace,
+  handleBasketAiReplaceModal,
   handleBasketAiAppend,
   handleBasketAiAppendModal,
 };

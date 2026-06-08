@@ -143,16 +143,6 @@ function buildBasketButtons(imgCount, videoCount, hasCaption = false, webUrl = n
       .setLabel('✏️ แก้ Caption')
       .setStyle(ButtonStyle.Primary),
   ];
-  // จัดการรูป (เรียงลำดับ + ลบ) บนเว็บ — ปุ่ม Link โผล่เมื่อมีรูป ≥ 1
-  if (webUrl && imgCount >= 1) {
-    buttons.push(
-      new ButtonBuilder()
-        .setLabel('🖼️ จัดการรูป')
-        .setStyle(ButtonStyle.Link)
-        .setURL(webUrl),
-    );
-  }
-  // AI เรียบเรียง — โผล่เมื่อมี caption ให้ทำงาน
   if (hasCaption) {
     buttons.push(
       new ButtonBuilder()
@@ -161,11 +151,19 @@ function buildBasketButtons(imgCount, videoCount, hasCaption = false, webUrl = n
         .setStyle(ButtonStyle.Success),
     );
   }
+  if (webUrl && imgCount >= 1) {
+    buttons.push(
+      new ButtonBuilder()
+        .setLabel('🖼️ จัดการรูป')
+        .setStyle(ButtonStyle.Link)
+        .setURL(webUrl),
+    );
+  }
   buttons.push(
     new ButtonBuilder()
       .setCustomId('basket_clear')
       .setLabel('🗑️ ล้าง')
-      .setStyle(ButtonStyle.Danger),
+      .setStyle(ButtonStyle.Secondary),
   );
   return new ActionRowBuilder().addComponents(...buttons);
 }

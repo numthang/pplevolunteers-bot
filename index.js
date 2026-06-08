@@ -25,7 +25,7 @@ const { handleOpenSearch, handleSearchModal, handleResultPage } = require('./han
 const { handleGogoSignup, handleGogoModal, handleGogoDMButton, handleGogoDMModal, handleGogoEventButton, handleGogoEventSelect, handleGogoEventModal, handleGogoListButton } = require('./handlers/gogoHandler');
 const { handleWatermarkSelect, handleWatermarkEnhance, handleWatermarkConfirm, handleWatermarkModal } = require('./handlers/watermarkHandler');
 const { handleQuoteModal, handleQuoteStyleSelect, handleQuoteColorSelect, handleQuoteCropSelect, handleQuoteWatermarkSelect, handleQuoteConfirm } = require('./handlers/quoteHandler');
-const { handleBasketAiStart, handleBasketAiModeSelect, handleBasketAiCustomModal, handleBasketAiReplace, handleBasketAiAppend, handleBasketAiAppendModal } = require('./handlers/basketAiHandler');
+const { handleBasketAiStart, handleBasketAiModeSelect, handleBasketAiCustomModal, handleBasketAiReplace, handleBasketAiReplaceModal, handleBasketAiAppend, handleBasketAiAppendModal } = require('./handlers/basketAiHandler');
 const { handleAiThreadModeSelect, handleAiThreadCustomModal, handleAiThreadAddCaption, handleAiThreadPublic } = require('./handlers/aiThreadHandler');
 const {
   handleBasketView, handleBasketClear,
@@ -124,6 +124,7 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.customId.startsWith('basket_schedule_modal'))      return handleBasketModal(interaction);
     if (interaction.customId.startsWith('basket_caption_edit_modal')) return handleBasketCaptionEditModal(interaction);
     if (interaction.customId.startsWith('basket_ai_custom:'))         return handleBasketAiCustomModal(interaction);
+    if (interaction.customId.startsWith('basket_ai_replace_modal:')) return handleBasketAiReplaceModal(interaction);
     if (interaction.customId.startsWith('basket_ai_append_modal:'))  return handleBasketAiAppendModal(interaction);
     if (interaction.customId.startsWith('ai_thread_custom:'))         return handleAiThreadCustomModal(interaction);
     if (interaction.customId.startsWith('anon_submit:')) {
