@@ -21,6 +21,10 @@ export function isProvinceCoordinator(roles = []) {
   return roles.includes('ผู้ประสานงานจังหวัด') || roles.includes('กรรมการจังหวัด')
 }
 
+export function isEditor(roles = []) {
+  return roles.includes('ทีมบรรณาธิการ') || roles.includes('บรรณาธิการ')
+}
+
 export function canEditFinance(roles = []) {
   return isAdmin(roles) || isเหรัญญิก(roles)
 }

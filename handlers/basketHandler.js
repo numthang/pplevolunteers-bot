@@ -132,7 +132,7 @@ function buildBasketEmbed(imgCount, videoCount, caption, previewUrl = null) {
 function buildBasketButtons(imgCount, videoCount, hasCaption = false, webUrl = null) {
   const empty = imgCount === 0 && videoCount === 0 && !hasCaption;
   const mixed = imgCount > 0 && videoCount > 0;
-  const buttons = [
+  const row1 = [
     new ButtonBuilder()
       .setCustomId('basket_post')
       .setLabel('📋 สร้างโพสต์')
@@ -144,7 +144,7 @@ function buildBasketButtons(imgCount, videoCount, hasCaption = false, webUrl = n
       .setStyle(ButtonStyle.Primary),
   ];
   if (hasCaption) {
-    buttons.push(
+    row1.push(
       new ButtonBuilder()
         .setCustomId('basket_ai_compose')
         .setLabel('🤖 AI ปรับ Caption')
@@ -152,20 +152,27 @@ function buildBasketButtons(imgCount, videoCount, hasCaption = false, webUrl = n
     );
   }
   if (webUrl && imgCount >= 1) {
-    buttons.push(
+    row1.push(
       new ButtonBuilder()
         .setLabel('🖼️ จัดการรูป')
         .setStyle(ButtonStyle.Link)
         .setURL(webUrl),
     );
   }
-  buttons.push(
+  const row2 = [
+    new ButtonBuilder()
+      .setCustomId('basket_view_public')
+      .setLabel('👁️ ดูตะกร้า')
+      .setStyle(ButtonStyle.Secondary),
     new ButtonBuilder()
       .setCustomId('basket_clear')
       .setLabel('🗑️ ล้าง')
       .setStyle(ButtonStyle.Secondary),
-  );
-  return new ActionRowBuilder().addComponents(...buttons);
+  ];
+  return [
+    new ActionRowBuilder().addComponents(...row1),
+    new ActionRowBuilder().addComponents(...row2),
+  ];
 }
 
 function buildGroupRow(groups, currentGroup) {
@@ -180,10 +187,10 @@ function buildGroupRow(groups, currentGroup) {
 
 function buildPlatformRow(availablePlatforms, selectedPlatforms) {
   const meta = {
-    fb:      { label: 'Facebook',    emoji: '📘' },
-    ig:      { label: 'Instagram',   emoji: '📷' },
-    threads: { label: '@ Threads',   emoji: '🧵' },
-    x:       { label: 'X (Twitter)' },
+    fb:      { label: 'FB',  emoji: '📘' },
+    ig:      { label: 'IG',  emoji: '📷' },
+    threads: { label: '@',   emoji: '🧵' },
+    x:       { label: 'X',  emoji: '🐦' },
   };
   const order = ['fb', 'ig', 'threads', 'x'];
   const opts = order
@@ -349,7 +356,7 @@ async function buildBasketPayload(basket, guildId, channelId, userId, channelNam
     ? `${process.env.WEB_BASE_URL}/discord/media/basket?guild=${guildId}&channel=${channelId}`
       + (channelName ? `&name=${encodeURIComponent(channelName)}` : '')
     : null;
-  components.push(buildBasketButtons(imgCount, videoCount, !!caption, webUrl));
+  components.push(...buildBasketButtons(imgCount, videoCount, !!caption, webUrl));
 
   return { embeds: [embed], components };
 }

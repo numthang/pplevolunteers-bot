@@ -253,22 +253,23 @@ function ModesSection() {
 }
 
 export default function AiConfigPage() {
-  const { status } = useSession()
+  const { data: session, status } = useSession()
   const router = useRouter()
-  const [forbidden, setForbidden] = useState(false)
 
   useEffect(() => {
-    if (status === 'unauthenticated') { router.push('/login'); return }
-    if (status === 'authenticated') {
-      fetch('/api/discord/ai-config').then(r => { if (r.status === 403) setForbidden(true) })
-    }
+    if (status === 'unauthenticated') router.push('/login')
   }, [status, router])
 
   if (status !== 'authenticated') {
     return <p className="text-warm-500 dark:text-disc-muted text-sm">กำลังโหลด...</p>
   }
-  if (forbidden) {
-    return <p className="text-sm text-warm-500 dark:text-disc-muted">ต้องเป็น Superadmin ถึงจะตั้งค่า AI ได้</p>
+
+  const superAdmin = session.user.isSuperAdmin
+  const roles = session.user.roles || []
+  const editor = roles.includes('ทีมบรรณาธิการ') || roles.includes('บรรณาธิการ')
+
+  if (!superAdmin && !editor) {
+    return <p className="text-sm text-warm-500 dark:text-disc-muted">ต้องเป็น Superadmin หรือ ทีมบรรณาธิการ ถึงจะตั้งค่า AI ได้</p>
   }
 
   return (
@@ -278,7 +279,7 @@ export default function AiConfigPage() {
         <p className="text-sm text-gray-500 dark:text-disc-muted mt-1">ตั้งค่าโมเดลและ prompt ที่ระบบ AI ใช้</p>
       </div>
       <div className="flex flex-col gap-6">
-        <AgentSection />
+        {superAdmin && <AgentSection />}
         <ModesSection />
       </div>
     </div>

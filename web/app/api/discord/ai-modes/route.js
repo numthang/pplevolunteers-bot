@@ -1,6 +1,6 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
-import { isSuperAdmin } from '@/lib/roles.js'
+import { isSuperAdmin, isEditor } from '@/lib/roles.js'
 import pool from '@/db/index.js'
 
 // AI prompt modes — backoffice แก้ชุดกลาง (guild_id='global'); bot resolver รองรับ per-guild ในอนาคต
@@ -11,7 +11,8 @@ const VALUE_RE = /^[a-z0-9_]{2,50}$/ // mode key เป็น snake_case — bot
 async function authAdmin() {
   const session = await getServerSession(authOptions)
   if (!session) return { error: 'Unauthorized', status: 401 }
-  if (!isSuperAdmin(session.user.discordId)) return { error: 'Forbidden', status: 403 }
+  const ok = isSuperAdmin(session.user.discordId) || isEditor(session.user.roles || [])
+  if (!ok) return { error: 'Forbidden', status: 403 }
   return { ok: true }
 }
 
