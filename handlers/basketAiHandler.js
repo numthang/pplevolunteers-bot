@@ -151,7 +151,7 @@ async function handleBasketAiAppend(interaction) {
 
   const current = await getCaption(data.guildId, data.channelId);
   const aiText  = stripDiscordMarkdown(data.caption);
-  const combined = current.trim() ? `${current}\n\n${aiText}` : aiText;
+  const combined = current.trim() ? `${current}\n\n— AI —\n\n${aiText}` : aiText;
   const preview  = combined.length > 4000 ? combined.slice(0, 4000) : combined;
 
   const input = new TextInputBuilder()

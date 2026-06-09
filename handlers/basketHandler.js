@@ -9,6 +9,7 @@ const {
   TextInputStyle,
   EmbedBuilder,
   MessageFlags,
+  PermissionFlagsBits,
 } = require('discord.js');
 const path = require('path');
 const fs = require('fs');
@@ -355,8 +356,13 @@ async function buildBasketPayload(basket, guildId, channelId, userId, channelNam
   const webUrl = (() => {
     if (!process.env.WEB_BASE_URL) return null;
     const base = `${process.env.WEB_BASE_URL}/discord/media/basket?guild=${guildId}&channel=${channelId}`;
-    const withName = channelName ? `${base}&name=${encodeURIComponent(channelName)}` : base;
-    return withName.length <= 512 ? withName : base;
+    if (!channelName) return base;
+    const budget = 512 - base.length - 6; // 6 = len('&name=')
+    let encoded = encodeURIComponent(channelName);
+    if (encoded.length > budget) {
+      encoded = encoded.slice(0, budget).replace(/%[0-9A-F]?$/i, ''); // ไม่ตัดกลาง %XX
+    }
+    return `${base}&name=${encoded}`;
   })();
   components.push(...buildBasketButtons(imgCount, videoCount, !!caption, webUrl));
 
@@ -457,6 +463,9 @@ async function rehydrateState(interaction) {
 }
 
 async function handleBasketPost(interaction) {
+  if (!interaction.member.permissions.has(PermissionFlagsBits.ManageMessages)) {
+    return interaction.reply({ content: '❌ ไม่มีสิทธิ์สร้างโพสต์', flags: MessageFlags.Ephemeral });
+  }
   let state = pendingPost.get(interaction.user.id);
   if (state?.posting) {
     return interaction.reply({ content: '⏳ กำลังโพสต์อยู่ กรุณารอสักครู่', flags: MessageFlags.Ephemeral });
