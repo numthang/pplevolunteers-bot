@@ -405,6 +405,19 @@ login Facebook → token อัพเดทอัตโนมัติ ทุก
 
 ---
 
+### เพจใหม่ไม่ขึ้นใน `/me/accounts` (Troubleshooting)
+
+**สาเหตุ:** Token ตัวเดิมยังไม่ได้อัปเดตสิทธิ์ให้เข้าถึงเพจที่เพิ่งเพิ่มเข้ามา (Business Settings → Connect Assets ไม่ได้ช่วย)
+
+**วิธีแก้ (ทำที่ [Graph API Explorer](https://developers.facebook.com/tools/explorer)):**
+1. เลือก Meta App ให้ตรง (เช่น People's Volunteers)
+2. ช่อง **User or Page** (ฝั่งขวา) → dropdown → **"Uninstall the app"** เพื่อล้าง Token เก่า
+3. กด **"Generate Access Token"** ใหม่
+4. Pop-up สีฟ้าเด้งขึ้น → **ติ๊กถูกหน้าชื่อเพจใหม่**
+5. กด Submit → เรียก `/me/accounts` อีกครั้ง เพจใหม่จะขึ้นทันที
+
+---
+
 ### .env ที่เกี่ยวข้อง
 
 ```
