@@ -24,6 +24,12 @@
 ### Social Share — X (Twitter)
 - [ ] **Optional / Future:** Infographic — แปลงบทความยาวๆ เป็นรูปสรุปแนบโพสต์หลัก
 
+### Context Menu — Add to Calendar
+- [ ] Context menu บนข้อความใน Discord → เพิ่มเข้าปฏิทิน
+  - parse Discord event URL หรือ Google Meet URL จากข้อความ
+  - parse วันที่/เวลาจากเนื้อความ
+  - เลือกปฏิทินได้ (Google Calendar + ปฏิทินทีม เช่น "ทีมสื่อราชบุรี") — รองรับ 2-3 ปฏิทิน
+
 ---
 
 ## 💰 PPLE Finance
@@ -31,6 +37,7 @@
 - [ ] ระบบเบี้ยเลี้ยง — โอนเงินเป็นรอบๆ (บัญชีเขต + บัญชีทีมงาน)
 - [ ] ระบบบัญชีเบี้ยเลี้ยงจังหวัด — ส่งสลิปเก็บง่าย + DM สลิปไปหาสมาชิก
 - [ ] จัดการเบี้ยเลี้ยงจากสมาชิก Discord
+- [ ] ระบบชำระเงินค่าเบี้ยเลี้ยง — ผูกเบอร์บัญชีธนาคารกับสมาชิก
 
 ---
 
@@ -75,6 +82,12 @@
 ## 📋 PPLE Docs
 
 <!-- รอ Schema จริงจากทาง ACT ก่อน — ดู PENDING.md section ACT Integration -->
+
+---
+
+## 🛠️ Internal Tools / Productivity
+
+- [ ] Project management ในแบบ Notion/AppFlowy — simple, lightweight สำหรับทีม
 
 ---
 
