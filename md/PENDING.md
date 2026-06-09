@@ -11,6 +11,15 @@
 ## 🗄️ Database / Infrastructure
 
 - ~~dc_server_settings → dc_guild_config~~ ✅ (2026-06-04)
+- [ ] **Multi-guild role config** — `config/roles.js` เป็น flat map ของ guild อาสาประชาชน guild เดียว → guild อื่น (people party ฯลฯ) ใช้ province/interests จาก role ไม่ได้
+  - ทิศทาง: guild-keyed `{ [guildId]: { PROVINCE_ROLES, SKILL_ROLES } }` + `getRoleConfig(guildId)`
+  - กระทบหลายไฟล์ที่ import roles.js → grep touch points ก่อน estimate
+  - ⚠️ feature ใหม่ → ติด feature freeze (รอ MySQL→PG migration เสร็จ); รวมเข้า Web Role Config Plan
+- [ ] **Backfill member people party** (guild 1115613658408566844) — script เขียนเสร็จแล้ว รอรัน
+  - `node scripts/calling/sync-discord-members.js 1115613658408566844` → สร้าง row + username/display_name
+  - `node scripts/data/backfill-intro-peoplesparty.js --dry-run` → ดูผล parse free-form (ห้องแนะนำตัว 1115613659297751072)
+  - แล้วรันจริง (fill-null upsert เติม firstname/nickname/province/position) — **ยังไม่ได้รัน dry-run review**
+- [ ] **ลบ/แทนที่ `scripts/roles/syncAllMembers.js`** — ตัวเก่าพังหลัง migrate PG (เขียน table `members` + MySQL syntax) ใช้ `scripts/calling/sync-discord-members.js` แทน
 
 ---
 
