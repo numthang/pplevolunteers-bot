@@ -9,11 +9,37 @@ require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
 const { Client, GatewayIntentBits } = require('discord.js');
-const { upsertMemberFromDiscord } = require('../../db/members');
+const pool = require('../../db/index');
 const { PROVINCE_ROLES, INTEREST_ROLES, SKILL_ROLES } = require('../../config/roles');
 
 const DRY_RUN = process.argv.includes('--dry-run');
 const SQL_OUT = process.argv.includes('--sql');
+
+const interestIds = new Set([...Object.values(SKILL_ROLES), ...Object.values(INTEREST_ROLES)]);
+
+function buildRow(m) {
+  return {
+    guild_id: m.guild.id,
+    discord_id: m.id,
+    username: m.user.username,
+    display_name: m.displayName,
+    province: Object.entries(PROVINCE_ROLES).filter(([, id]) => m.roles.cache.has(id)).map(([p]) => p).join(',') || null,
+    roles: m.roles.cache.filter(r => r.name !== '@everyone').map(r => r.name).join(',') || null,
+    interests: m.roles.cache.filter(r => interestIds.has(r.id)).map(r => r.name).join(',') || null,
+  };
+}
+
+const UPSERT_SQL = `
+  INSERT INTO dc_members (guild_id, discord_id, username, display_name, province, roles, interests)
+  VALUES ($1, $2, $3, $4, $5, $6, $7)
+  ON CONFLICT (guild_id, discord_id) DO UPDATE SET
+    username = EXCLUDED.username,
+    display_name = EXCLUDED.display_name,
+    province = EXCLUDED.province,
+    roles = EXCLUDED.roles,
+    interests = EXCLUDED.interests,
+    updated_at = CURRENT_TIMESTAMP
+`;
 
 const sqlVal = (v) => (v == null ? 'NULL' : `'${String(v).replace(/'/g, "''")}'`);
 
@@ -72,22 +98,7 @@ client.once('ready', async () => {
   }
 
   if (SQL_OUT) {
-    const interestIds = new Set([...Object.values(SKILL_ROLES), ...Object.values(INTEREST_ROLES)]);
-    const rows = [];
-    for (const m of humans) {
-      rows.push({
-        guild_id: m.guild.id,
-        discord_id: m.id,
-        username: m.user.username,
-        display_name: m.displayName,
-        province: Object.entries(PROVINCE_ROLES).filter(([, id]) => m.roles.cache.has(id)).map(([p]) => p).join(',') || null,
-        roles: m.roles.cache.filter(r => r.name !== '@everyone').map(r => r.name).join(',') || null,
-        interests: m.roles.cache.filter(r => interestIds.has(r.id)).map(r => r.name).join(',') || null,
-      });
-      if (rows.length % 10 === 0 || rows.length === total) {
-        process.stdout.write(`\r  building ${rows.length}/${total}`);
-      }
-    }
+    const rows = humans.map(buildRow);
     const logDir = path.join(__dirname, '../../logs');
     fs.mkdirSync(logDir, { recursive: true });
     const file = path.join(logDir, `sync-members-${guildId}-${Date.now()}.sql`);
@@ -97,16 +108,17 @@ client.once('ready', async () => {
   }
 
   let done = 0, errors = 0;
-  for (const member of humans) {
+  for (const m of humans) {
+    const r = buildRow(m);
     try {
-      await upsertMemberFromDiscord(member);
+      await pool.query(UPSERT_SQL, [r.guild_id, r.discord_id, r.username, r.display_name, r.province, r.roles, r.interests]);
       done++;
     } catch (err) {
-      console.error(`  ✗ ${member.user.username}: ${err.message}`);
+      console.error(`  ✗ ${m.user.username}: ${err.message}`);
       errors++;
     }
     if ((done + errors) % 10 === 0 || done + errors === total) {
-      process.stdout.write(`\r  ${done + errors}/${total} (${errors} errors)`)
+      process.stdout.write(`\r  ${done + errors}/${total} (${errors} errors)`);
     }
   }
 
