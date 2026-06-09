@@ -672,9 +672,10 @@ async function processAndPost(interaction, state) {
       await interaction.editReply({ content: '📤 กำลังโพสต์ Reels ไปยัง Facebook...' }).catch(() => {});
       try {
         const fbProgress = msg => interaction.editReply({ content: msg }).catch(() => {});
-        const fbRes = await postReelsToFacebook(state.guildId, interaction.user.id, videoItems[0].image_url, state.caption, fbProgress, state.group);
+        const fbRes = await postReelsToFacebook(state.guildId, interaction.user.id, videoItems[0].image_url, state.caption, fbProgress, state.group, scheduleTime);
         const fbLink = fbRes?.permalink ? ` · 🔗 [ดูโพสต์](${fbRes.permalink})` : '';
-        results.push(`✅ Facebook Reels โพสต์แล้ว${fbLink}`);
+        const fbLabel = scheduleTime ? 'ตั้งเวลาแล้ว' : 'โพสต์แล้ว';
+        results.push(`✅ Facebook Reels ${fbLabel}${fbLink}`);
       } catch (err) {
         results.push(`❌ Facebook Reels: ${err.message}`);
       }

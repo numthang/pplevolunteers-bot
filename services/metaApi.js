@@ -545,7 +545,7 @@ function httpsPostToUrl(fullUrl, body, headers) {
   });
 }
 
-async function postReelsToFacebook(guildId, userId, videoDiscordUrl, caption, onProgress = null, groupName = null) {
+async function postReelsToFacebook(guildId, userId, videoDiscordUrl, caption, onProgress = null, groupName = null, scheduleTime = null) {
   const cfg = await getConfig(guildId, 'fb', userId, groupName);
   if (!cfg) throw new Error('ไม่พบ Facebook config สำหรับ guild นี้');
 
@@ -571,15 +571,18 @@ async function postReelsToFacebook(guildId, userId, videoDiscordUrl, caption, on
   });
   if (uploadRes.status >= 400) throw new Error(`FB Reels upload: HTTP ${uploadRes.status} — ${JSON.stringify(uploadRes.body)}`);
 
-  // Phase 3: finish — publish
-  if (onProgress) onProgress('📤 Facebook Reels: กำลัง publish...');
-  const finishRes = await igPost(`/v22.0/${cfg.socialId}/video_reels`, {
+  // Phase 3: finish — publish หรือ schedule
+  const finishLabel = scheduleTime ? '📤 Facebook Reels: กำลังตั้งเวลา...' : '📤 Facebook Reels: กำลัง publish...';
+  if (onProgress) onProgress(finishLabel);
+  const finishBody = {
     upload_phase: 'finish',
     video_id,
-    video_state: 'PUBLISHED',
+    video_state: scheduleTime ? 'SCHEDULED' : 'PUBLISHED',
     description: caption || '',
     access_token: cfg.token,
-  });
+  };
+  if (scheduleTime) finishBody.scheduled_publish_time = scheduleTime;
+  const finishRes = await igPost(`/v22.0/${cfg.socialId}/video_reels`, finishBody);
 
   const postId = finishRes.post_id || finishRes.post_id_string || finishRes.id || null;
   console.log('[FB Reels finish]', JSON.stringify(finishRes));
@@ -647,7 +650,7 @@ async function postReelsToThreads(guildId, userId, videoDiscordUrl, caption, onP
 
   if (onProgress) onProgress('📤 Threads Reels: กำลังสร้าง container...');
   const { id: containerId } = await threadsPost(`/v1.0/${cfg.socialId}/threads`, {
-    media_type: 'REELS', video_url: videoUrl, text: caption || '', access_token: cfg.token,
+    media_type: 'REELS', video_url: videoUrl, text: splitCaption(caption)[0], access_token: cfg.token,
   });
   console.log('[Threads Reels container created] id:', containerId);
 

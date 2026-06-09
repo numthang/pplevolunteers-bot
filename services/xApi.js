@@ -318,20 +318,38 @@ async function postVideoToX(guildId, userId, videoDiscordUrl, caption, groupName
   buffer = await convertVideoIfNeeded(buffer, videoDiscordUrl);
   const mediaId = await uploadVideoMedia(cfg, buffer);
 
-  const tweetBody = { media: { media_ids: [mediaId] } };
-  if (caption) tweetBody.text = caption.slice(0, 280);
-  const bodyStr = JSON.stringify(tweetBody);
-  const auth    = buildAuthHeader('POST', 'https://api.twitter.com/2/tweets', cfg);
-  const res     = await xReq('api.twitter.com', '/2/tweets', 'POST', {
-    Authorization:    auth,
-    'Content-Type':   'application/json',
-    'Content-Length': Buffer.byteLength(bodyStr),
-  }, bodyStr);
+  const fullText = (caption || '').trim();
+  const urls = fullText.match(URL_RE) || [];
+  const mainText = urls.length ? fullText.replace(URL_RE, '').replace(/\s{2,}/g, ' ').trim() : fullText;
+  const chunks = mainText.length > X_LIMIT
+    ? splitCaption(mainText, X_LIMIT - INDICATOR_BUF)
+    : (mainText ? [mainText] : []);
 
-  if (res.status === 429) throw new Error('X API: Rate limit — รอแล้วลองใหม่');
-  if (!res.body?.data?.id) throw new Error(`X video post: ${res.body?.errors?.[0]?.message || JSON.stringify(res.body)}`);
-  const url = cfg.username ? `https://x.com/${cfg.username}/status/${res.body.data.id}` : null;
-  return { id: res.body.data.id, url };
+  const total = chunks.length + (urls.length ? 1 : 0);
+  const needsIndicator = total > 1;
+
+  // tweet แรก — แนบวิดีโอ
+  const firstText = chunks[0] || '';
+  const text0 = needsIndicator ? `${firstText} 1/${total}`.trim() : firstText;
+  const firstId = await postSingleTweet(cfg, text0, [mediaId], null);
+  let prevId = firstId;
+
+  // tweet ต่อมา — text เพิ่มเติม
+  for (let i = 1; i < chunks.length; i++) {
+    const indicator = needsIndicator ? ` ${i + 1}/${total}` : '';
+    prevId = await postSingleTweet(cfg, chunks[i] + indicator, [], prevId);
+  }
+
+  // tweet ลิงก์
+  if (urls.length) {
+    let linkText = '🔗 ลิงก์:\n' + urls.join('\n');
+    if (needsIndicator) linkText += `\n${total}/${total}`;
+    if (linkText.length > X_LIMIT) linkText = linkText.slice(0, X_LIMIT - 1) + '…';
+    await postSingleTweet(cfg, linkText, [], prevId);
+  }
+
+  const url = cfg.username ? `https://x.com/${cfg.username}/status/${firstId}` : null;
+  return { id: firstId, url, threadCount: total };
 }
 
 module.exports = { getXConfig, getGuildXApp, postToX, postVideoToX };
