@@ -1,6 +1,6 @@
 // node scripts/testMetaToken.js
 require('dotenv').config({ override: true });
-const pool = require('../db/index');
+const pool = require('../../db/index');
 const https = require('https');
 
 function httpsGet(url) {

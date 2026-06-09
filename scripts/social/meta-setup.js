@@ -21,7 +21,7 @@
 
 require('dotenv').config();
 const https = require('https');
-const pool  = require('../db/index');
+const pool  = require('../../db/index');
 
 const APP_ID     = process.env.META_APP_ID;
 const APP_SECRET = process.env.META_APP_SECRET;

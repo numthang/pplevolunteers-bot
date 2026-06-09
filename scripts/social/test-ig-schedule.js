@@ -5,7 +5,7 @@
 
 require('dotenv').config();
 const https = require('https');
-const pool  = require('../db/index');
+const pool  = require('../../db/index');
 
 const GUILD_ID = process.env.GUILD_ID;
 const IMAGE_URL = 'https://pplevolunteers.org/api/media-temp/f10e2e8aededfc2f1f62b3d5.jpg';

@@ -3,7 +3,7 @@ require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
 const {parse} = require('csv-parse/sync');
-const pool = require('../db/index');
+const pool = require('../../db/index');
 
 async function main() {
   const csvPath = path.join(__dirname, '../backups/intro_normalized (3).csv');

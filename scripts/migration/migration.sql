@@ -387,3 +387,8 @@ UPDATE dc_ai_modes SET
   updated_at = CURRENT_TIMESTAMP
 WHERE guild_id = 'global' AND value = 'social_post'
   AND prompt NOT LIKE '%hashtag%';
+
+-- 2026-06-09: archive schema สำหรับ dc_activity_* — รัน scripts/archive-activity.js ปีละครั้ง
+CREATE SCHEMA IF NOT EXISTS archive;
+CREATE TABLE IF NOT EXISTS archive.dc_activity_daily    (LIKE dc_activity_daily    INCLUDING CONSTRAINTS EXCLUDING DEFAULTS);
+CREATE TABLE IF NOT EXISTS archive.dc_activity_mentions (LIKE dc_activity_mentions INCLUDING CONSTRAINTS EXCLUDING DEFAULTS);

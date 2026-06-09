@@ -6,7 +6,7 @@
 const https    = require('https');
 const crypto   = require('crypto');
 const readline = require('readline');
-const pool     = require('../db/index');
+const pool     = require('../../db/index');
 
 const API_KEY    = process.env.X_CONSUMER_KEY    || process.argv[2];
 const API_SECRET = process.env.X_CONSUMER_SECRET || process.argv[3];

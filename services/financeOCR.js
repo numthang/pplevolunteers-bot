@@ -7,6 +7,8 @@ const { createWorker } = require('tesseract.js')
 const { Jimp } = require('jimp')
 const { writeFile, mkdir } = require('fs/promises')
 const { join } = require('path')
+
+const TESSDATA_PATH = join(__dirname, '../assets/tessdata')
 const { randomUUID } = require('crypto')
 const pool   = require('../db/index')
 const log    = require('../utils/logger')
@@ -106,7 +108,7 @@ async function processSlipImage(imageUrl, message) {
 
     // ── ขั้น 2: OCR fallback ถ้า QR ล้มเหลว ──────────────────────────────────
     if (!slip) {
-      worker = await createWorker(['tha', 'eng'])
+      worker = await createWorker(['tha', 'eng'], 1, { langPath: TESSDATA_PATH })
       const imgInput = await preprocessForOCR(imageUrl)
       const { data: { text } } = await worker.recognize(imgInput)
       log.info('[financeOCR] OCR text:\n' + text.substring(0, 500))
@@ -222,7 +224,7 @@ async function processSlipImage(imageUrl, message) {
 async function enrichSlipFromOCR(imageUrl, qrData) {
   let worker
   try {
-    worker = await createWorker(['tha', 'eng'])
+    worker = await createWorker(['tha', 'eng'], 1, { langPath: TESSDATA_PATH })
     const imgInput = await preprocessForOCR(imageUrl)
     const { data: { text } } = await worker.recognize(imgInput)
     log.info('[financeOCR] enrich OCR text:\n' + text.substring(0, 400))

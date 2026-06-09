@@ -3,7 +3,7 @@
 require('dotenv').config();
 const fs   = require('fs');
 const path = require('path');
-const { renderQuoteStyle } = require('../utils/quoteStyles');
+const { renderQuoteStyle } = require('../../utils/quoteStyles');
 
 const imgPath = process.argv[2];
 if (!imgPath || !fs.existsSync(imgPath)) {

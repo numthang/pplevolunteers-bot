@@ -5,8 +5,8 @@
 require('dotenv').config();
 const fs   = require('fs');
 const path = require('path');
-const { analyzeLayout } = require('../services/aiLayout');
-const { applyQuoteOverlay } = require('../utils/watermarkImage');
+const { analyzeLayout } = require('../../services/aiLayout');
+const { applyQuoteOverlay } = require('../../utils/watermarkImage');
 
 const imgPath = process.argv[2] || path.join(__dirname, '../assets/watermark/pple-orange.png');
 

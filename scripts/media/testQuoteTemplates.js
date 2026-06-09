@@ -3,8 +3,8 @@
 require('dotenv').config({ override: true });
 const fs   = require('fs');
 const path = require('path');
-const { renderQuoteStyle } = require('../utils/quoteStyles');
-const { shortenQuote }     = require('../services/aiLayout');
+const { renderQuoteStyle } = require('../../utils/quoteStyles');
+const { shortenQuote }     = require('../../services/aiLayout');
 
 const CACHE_FILE = path.join(__dirname, '.quote_cache.json');
 
