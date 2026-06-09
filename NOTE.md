@@ -1,8 +1,8 @@
 End of the Day
-- อ่านที่แก้ไข แล้วเอาขึ้น git พร้อมข้อความแก้ไข พร้อม bump version ใน package.json ให้ถูกต้อง (เช็ค git log ก่อนว่า version ล่าสุดคืออะไร ใช้ semver — patch สำหรับแก้เล็กน้อย, minor สำหรับฟีเจอร์ใหม่) tag เฉพาะ minor ขึ้นไป และ push ด้วย
-หลังวันที่ x ผมทำอะไรบ้าง ขอรายละเอียดแบบ non-technichal อ่านแล้วเข้าใจ ขอ format แบบนี้
-- x พ.ค. xxxxxxxxxxxxxxxxxxxxxxxxx, xxxx, xxxxx
-- x พ.ค. xxxxxxxxxxxxxxxxxxxxxxxxx, xxxx, xxxxx
+- Update PENDING.md สิ่งที่อยากทำ สิ่งที่ทำไปแล้ว, อ่านส่วนที่แก้ไขแล้วเอาขึ้น git พร้อมข้อความแก้ไข พร้อม bump version ใน package.json ให้ถูกต้อง (เช็ค git log ก่อนว่า version ล่าสุดคืออะไร ใช้ semver — patch สำหรับแก้เล็กน้อย, minor สำหรับฟีเจอร์ใหม่) tag เฉพาะ minor ขึ้นไป และ push ด้วย
+วันที่ 7-9 ผมทำอะไรบ้าง ขอรายละเอียดแบบ non-technichal อ่านแล้วคนอื่นเข้าใจขอ format แบบนี้
+- [วันที่] [เดือน] xxxxxxxxxxxxxxxxxxxxxxxxx, xxxx, xxxxx
+- [วันที่] [เดือน] xxxxxxxxxxxxxxxxxxxxxxxxx, xxxx, xxxxx
 
 TODO
 - เชื่อมระบบ Discord กับของพรรค
