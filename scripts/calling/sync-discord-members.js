@@ -66,8 +66,8 @@ client.once('ready', async () => {
   console.log(`Fetched ${members.size} members (${total} non-bot)${DRY_RUN ? '' : ', upserting...'}`);
 
   if (DRY_RUN) {
-    console.log(`✅ DRY-RUN: would upsert ${total} members (sample 10):`);
-    for (const m of humans.slice(0, 10)) console.log(`  ${m.user.username} | ${m.displayName} (${m.id})`);
+    console.log(`✅ DRY-RUN: would upsert ${total} members:`);
+    for (const m of humans) console.log(`  ${m.user.username} | ${m.displayName} (${m.id})`);
     process.exit(0);
   }
 
@@ -75,7 +75,6 @@ client.once('ready', async () => {
     const interestIds = new Set([...Object.values(SKILL_ROLES), ...Object.values(INTEREST_ROLES)]);
     const rows = [];
     for (const m of humans) {
-      await m.fetch();
       rows.push({
         guild_id: m.guild.id,
         discord_id: m.id,
