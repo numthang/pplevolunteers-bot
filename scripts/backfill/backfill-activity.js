@@ -262,7 +262,7 @@ async function main() {
     }
   });
 
-  client.login(process.env.TOKEN);
+  client.login(process.env.DISCORD_BOT_TOKEN || process.env.TOKEN);
 }
 
 main();
