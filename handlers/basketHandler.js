@@ -352,10 +352,12 @@ async function buildBasketPayload(basket, guildId, channelId, userId, channelNam
     //     ])
     // ));
   }
-  const webUrl = process.env.WEB_BASE_URL
-    ? `${process.env.WEB_BASE_URL}/discord/media/basket?guild=${guildId}&channel=${channelId}`
-      + (channelName ? `&name=${encodeURIComponent(channelName)}` : '')
-    : null;
+  const webUrl = (() => {
+    if (!process.env.WEB_BASE_URL) return null;
+    const base = `${process.env.WEB_BASE_URL}/discord/media/basket?guild=${guildId}&channel=${channelId}`;
+    const withName = channelName ? `${base}&name=${encodeURIComponent(channelName)}` : base;
+    return withName.length <= 512 ? withName : base;
+  })();
   components.push(...buildBasketButtons(imgCount, videoCount, !!caption, webUrl));
 
   return { embeds: [embed], components };
