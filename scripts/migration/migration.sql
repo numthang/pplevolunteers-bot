@@ -392,3 +392,36 @@ WHERE guild_id = 'global' AND value = 'social_post'
 CREATE SCHEMA IF NOT EXISTS archive;
 CREATE TABLE IF NOT EXISTS archive.dc_activity_daily    (LIKE dc_activity_daily    INCLUDING CONSTRAINTS EXCLUDING DEFAULTS);
 CREATE TABLE IF NOT EXISTS archive.dc_activity_mentions (LIKE dc_activity_mentions INCLUDING CONSTRAINTS EXCLUDING DEFAULTS);
+
+-- 2026-06-10: Per-guild Role Config (RBAC + Picker) — SPEC.md กอง A
+--   2 ตาราง: นิยามกลุ่ม picker ต่อ guild + catalog ของทุก role (ป้าย A picker + ป้าย B RBAC)
+--   seed อาสาประชาชน ด้วย scripts/migration/seed-guild-roles.js (idempotent)
+
+-- นิยามกลุ่ม picker ต่อ guild (รอบนี้ fix 3 กลุ่ม, kind เผื่อ dynamic groups ทำต่อทีหลัง)
+CREATE TABLE IF NOT EXISTS dc_guild_role_groups (
+  guild_id   VARCHAR(20)  NOT NULL,
+  group_key  VARCHAR(40)  NOT NULL,                    -- 'interest' | 'skill' | 'province'
+  label      VARCHAR(100) NOT NULL,                    -- ชื่อโชว์ เช่น 'ความสนใจ'
+  kind       VARCHAR(20)  NOT NULL DEFAULT 'plain',    -- 'plain' | 'province'
+  sort_order INT          NOT NULL DEFAULT 0,
+  PRIMARY KEY (guild_id, group_key)
+);
+
+-- catalog ของทุก role + ป้าย A (picker) + ป้าย B (RBAC) — ป้าย A/B เป็น human-set sparse ที่เหลือ null
+CREATE TABLE IF NOT EXISTS dc_guild_roles (
+  guild_id     VARCHAR(20)  NOT NULL,
+  role_id      VARCHAR(20)  NOT NULL,                  -- discord snowflake (anchor สำหรับ rename)
+  role_name    VARCHAR(100) NOT NULL,                  -- ตรงกับที่ dc_members.roles เก็บ
+  -- ป้าย B (RBAC)
+  permission   VARCHAR(40),                            -- nullable
+  scope_node   VARCHAR(80),                            -- nullable; 'province:ราชบุรี'|'subregion:<role>'|'region:<role>'
+  -- ป้าย A (Picker)
+  picker_group VARCHAR(40),                            -- nullable; → dc_guild_role_groups.group_key
+  picker_label VARCHAR(100),                           -- nullable; ข้อความบนปุ่ม (default = role_name)
+  picker_emoji VARCHAR(40),                            -- nullable
+  picker_order INT,                                    -- nullable; ลำดับในกลุ่ม
+  updated_at   TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (guild_id, role_id)                      -- key ด้วย id (Discord ตั้งชื่อ role ซ้ำได้)
+);
+CREATE INDEX IF NOT EXISTS idx_dc_guild_roles_lookup ON dc_guild_roles (guild_id, role_name);   -- web lookup by name
+CREATE INDEX IF NOT EXISTS idx_dc_guild_roles_picker ON dc_guild_roles (guild_id, picker_group);
