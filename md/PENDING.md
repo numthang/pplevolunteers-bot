@@ -8,13 +8,74 @@
 
 ---
 
+## 🔐 RBAC / Multi-guild Refactor
+
+> **รายละเอียดเต็มอยู่ที่ `SPEC.md` (root)** — ที่นี่เก็บสรุปไว้กัน SPEC.md ถูกลบหลัง implement
+
+**เป้าหมาย:** ให้แต่ละ guild **ปรับแต่ง role ของตัวเอง**ได้โดยไม่แก้ code — ครอบทั้ง **RBAC** (permission+scope สำหรับ calling/finance) และ **Picker** (interest/skill/province = เมนูปุ่มกดเลือก role ติดป้าย/เปิดห้อง) ตอนนี้ hardcode อาสาประชาชนทุกที่: `financeAccess.js`, `callingAccess.js`, `roles.js`, `config/roles.js`, `GUILD_ID`
+
+### แนวคิดหลัก — role แขวน 2 ป้าย
+- **ป้าย A (Picker):** group + label + emoji + order → ปุ่มกดเลือก
+- **ป้าย B (RBAC):** permission + scope_node → คุมการเห็นข้อมูล
+- ป้ายซ้อนกันจุดเดียว = กลุ่ม **province** (กดเลือกจังหวัด + role พ่วง scope)
+
+### Canonical permission set (2 แกน)
+- 🔧 action: `admin` (เห็น private คนอื่น), `moderator` (action-only ไม่เห็นข้อมูล)
+- 🗂️ data: `secretary_general`=เลขาธิการ (≠admin ดู private คนอื่นไม่ได้), `regional_coordinator` (รวม deputy), `province_coordinator`=ผู้ประสานงานจังหวัด, `district_coordinator`=กรรมการจังหวัด (ตทอ. · สิทธิ์เท่า province_coordinator ตอนนี้ แยก token ไว้ปรับลดทีหลัง), `treasurer`, `editor`
+- `super_admin` (env), `member` (default)
+- เปลี่ยนแค่ input ไม่แตะ branching logic → test เดิม 57+37 พิสูจน์
+- ⚠️ `supervisor` เปลี่ยนชื่อเป็น `secretary_general` แล้ว (เลี่ยงชนชื่อ Discord role `supervisor` ที่เป็นสาย technical)
+
+### Schema (2 ตาราง)
+- `dc_guild_role_groups` — นิยามกลุ่ม picker (guild_id, group_key, label, **kind** plain/province, sort_order); fix 3 กลุ่ม รอบนี้ (สร้างเองทีหลัง)
+- `dc_guild_roles` — catalog ทุก role + ป้าย B (permission, scope_node) + ป้าย A (picker_group, picker_label, picker_emoji, picker_order); PK `(guild_id, role_id)`, lookup by role_name ผ่าน index
+- bot sync catalog อัตโนมัติ (เพิ่ม/ลบ/rename ไม่ต้องแตะมือ) · fail-safe: ไม่มีแถว/null = ไม่มีสิทธิ์
+
+### Resolver
+`resolveAccess(guildId, roleNames[]) → { isMember, permissions: Set, scopeGrants: [] }`
+- คืน **raw scope grants ไม่ pre-expand** — finance/calling expand เองคนละแบบ (สองระบบนับ scope ต่างกัน: finance 3-ชั้น/ถือหลายจังหวัดได้, calling ภาคย่อย+จังหวัดเดียว/primaryProvince) **ห้ามยุบรวม**
+- `getUserScope` (calling) เก็บเหมือนเดิม แค่กิน grant แทนชื่อ role
+
+### Feature matrix (สกัดจาก code)
+- **Finance** — view private คนอื่น: **admin เท่านั้น** · edit province: admin/supervisor/province_coordinator(scope)/treasurer(scope) · edit wide: admin/supervisor/treasurer · create non-private: +regional_coordinator
+- **Calling** — view campaigns/members: admin/supervisor/regional/province(scope) · create campaign: เหมือน view (ไม่รวม member) · see phone/LINE: admin/supervisor/regional/province · override tier: admin/supervisor/treasurer · delete log: admin/supervisor/**moderator**
+- **Bot/Social** — manage social+guild config: admin · ai config: super_admin
+
+### ขอบเขต
+- ✅ ทำรอบนี้: RBAC (permission+scope) + Picker (interest/skill/province render จาก DB) — **fix 3 กลุ่ม**
+- ⏳ ทำต่อ: **สร้างกลุ่ม picker เองได้ (dynamic groups)** — schema เผื่อ `kind` ไว้แล้ว ไม่ต้องรื้อ
+- ⏳ ทำต่อ: UI per-guild role config
+
+### หลักการ DB (ตัดสินแล้ว)
+- ทุกตารางอยู่ `public` schema เดียว — **ไม่แยก** calling/finance เป็น pg schema (share `dc_members` หนัก, data น้อย, join ยุ่งขึ้นเปล่าๆ)
+- แยกด้วยชื่อขึ้นต้น (`dc_`/`calling_`/`finance_`) พอ
+- boundary public/internal บังคับที่ **app layer** (membership gate + resolver) ไม่ใช่ DB schema
+- Tier 0 identity (`dc_`, `dc_guild_roles`, `dc_guild_config`) อ่านโดย resolver → Tier 1 feature data (`calling_`, `finance_`) เข้าได้หลังผ่าน gate+permission
+
+### Security gate (แยกงาน — ยังไม่เร่ง เพราะยังไม่เปิดใช้จริง)
+- `POST /api/calling/logs` ไม่เช็ค role · `GET /api/calling/stats`,`logs` ไม่ filter scope
+- `getEffectiveIdentity` fallback ใช้ JWT เก่าเมื่อ user ไม่อยู่ guild
+- JWT `maxAge` 90 วัน → stale roles · หลาย route ใช้ `session.user.roles` (JWT) แทน `getEffectiveRoles` (DB-fresh)
+
+### ลำดับทำ (guild อาสาประชาชนทำงานปกติทุก step)
+1. ✅ migration 2 ตาราง (`dc_guild_role_groups` + `dc_guild_roles`) — commit bbc8291
+2. ✅ seed — **ดึง role id↔name สดจาก Discord** (ไม่พึ่ง config/roles.js ที่ drift) + overlay policy · รัน DB จริงแล้ว (207 roles)
+3. ✅ `web/lib/` geography + permissions + resolveAccess + tests
+4. ✅ financeAccess/callingAccess เช็ค permission/scope (commit e6cf556) — ลบ map ใหญ่, branching เดิม
+5. ✅ port test (finance 57 + calling 37) ผ่านครบ · รวม suite 134 เขียว
+6. ⏳ **เหลือ — bot:** (a) sync catalog → `dc_guild_roles` ใน bot startup/role-change (logic เหมือน seed, ควร extract ไป share) · (b) render interest/skill/province panel จาก DB แทน `config/roles.js`
+7. ⏳ **เหลือ — DB-wiring (multi-guild จริง):** ตอนนี้ runtime ใช้ `web/lib/roleAccess.js` (policy mirror = seed) ทั้ง server+client · ขั้นต่อไป boundary (`getEffectiveIdentity`) เรียก `resolveAccess`/DB ส่ง access object · client (`useEffectiveRoles`) ต้องมี API ดึง permissions (แตะ DB ตรงจาก client ไม่ได้) · `normalizeAccess` รับ access object อยู่แล้ว ไม่ต้องแก้ access fn
+8. *(ทีหลัง)* UI per-guild config + dynamic groups
+
+> **สถานะ 2026-06-10:** กอง A + กอง B (lib/RBAC core) เสร็จ+commit · behavior อาสาประชาชนเท่าเดิม (134 tests) · call site ไม่ต้องแก้ (normalizeAccess รับ array ได้) · เหลือ bot (step 6) + DB-wiring multi-guild (step 7)
+
+---
+
 ## 🗄️ Database / Infrastructure
 
 - ~~dc_server_settings → dc_guild_config~~ ✅ (2026-06-04)
-- [ ] **Multi-guild role config** — `config/roles.js` เป็น flat map ของ guild อาสาประชาชน guild เดียว → guild อื่น (people party ฯลฯ) ใช้ province/interests จาก role ไม่ได้
-  - ทิศทาง: guild-keyed `{ [guildId]: { PROVINCE_ROLES, SKILL_ROLES } }` + `getRoleConfig(guildId)`
-  - กระทบหลายไฟล์ที่ import roles.js → grep touch points ก่อน estimate
-  - ⚠️ feature ใหม่ → ติด feature freeze (รอ MySQL→PG migration เสร็จ); รวมเข้า Web Role Config Plan
+- ~~MySQL → PostgreSQL migration~~ ✅ (2026-06-04)
+- [ ] **Multi-guild role config** → ย้ายไปรวมที่ section **🔐 RBAC / Multi-guild Refactor** ด้านบน (design ตกผลึกแล้ว: `dc_guild_roles` DB table + permission abstraction + resolver)
 - [ ] **Backfill member people party** (guild 1115613658408566844) — script เขียนเสร็จแล้ว รอรัน
   - `node scripts/calling/sync-discord-members.js 1115613658408566844` → สร้าง row + username/display_name
   - `node scripts/data/backfill-intro-peoplesparty.js --dry-run` → ดูผล parse free-form (ห้องแนะนำตัว 1115613659297751072)
@@ -91,6 +152,36 @@
 ## 📋 PPLE Docs
 
 <!-- รอ Schema จริงจากทาง ACT ก่อน — ดู PENDING.md section ACT Integration -->
+
+---
+
+## 🤖 RAG AI — Discord Forum Search
+
+> ให้ user ถามคำถามใน Discord แล้ว bot ตอบโดยดึงข้อมูลจาก forum_posts ใน Meilisearch
+
+### Flow (reuse infra ที่มีอยู่)
+1. User `/ask <คำถาม>`
+2. `searchPosts()` → top-K โพสต์จาก Meilisearch (index `forum_posts`, 1,924 docs)
+3. ตัด snippet ~500 chars/โพสต์ → build context string
+4. `callAI(ragSystemPrompt, context + question)` → คำตอบ + cite URL โพสต์
+5. ส่ง embed reply พร้อม sources
+
+### ไฟล์ที่ต้องสร้าง/แก้
+- `commands/ask.js` — slash command รับคำถาม
+- `services/ragSearch.js` — retrieval + context builder (glue layer ใหม่)
+- `handlers/askHandler.js` — interaction handler
+
+### ต้นทุน token (Haiku 4.5 — $1/$5 per 1M)
+| กลยุทธ์ | Input | Output | รวม/ครั้ง |
+|---|---|---|---|
+| snippet 500 chars × K=5 | ~3,000 tokens | ~500 tokens | **~$0.006 ≈ ฿0.20** |
+| content เต็ม × K=5 | ~15,500 tokens | ~500 tokens | ~$0.018 ≈ ฿0.65 |
+
+- แนะนำ: **snippet strategy** — ถูก + เร็ว; ขยับเป็น content เต็มถ้าคุณภาพไม่พอ
+- Prompt caching ช่วยน้อย (context เปลี่ยนทุก query + system prompt < 4,096 tokens)
+- 1,000 query/เดือน ≈ ฿200 (snippet) หรือ ฿650 (เต็ม)
+
+- [ ] implement `services/ragSearch.js` + `/ask` command
 
 ---
 
