@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { isAdmin, isRegionalCoordinator, isProvincialCoordinator, getUserScope, canAccessMember, canCreateCampaign, canOverrideTier, canSeeContacts } from '../callingAccess.js'
+// กอง B: ฟังก์ชันรับได้ทั้ง array(ชื่อ role) และ access object — test เดิมส่ง array ตรงๆ ได้เลย (เป็น behavior spec)
 
 // ---- isAdmin ----
 describe('isAdmin', () => {

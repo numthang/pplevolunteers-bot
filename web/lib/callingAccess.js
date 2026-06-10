@@ -1,163 +1,61 @@
 /**
  * Calling System Access Control
- * Based on role hierarchy and scope
+ *
+ * รับ access = { permissions: Set<string>, scopeGrants: string[] } จาก resolveAccess (SPEC กอง B)
+ * — เก็บ logic เดิม (single-province + primaryProvince) แค่กิน permission/scope แทนชื่อ role (SPEC §2, §7)
+ *
+ * ⚠️ scope ต่างจาก finance (SPEC §7): regional → expand แค่ "ภาคย่อย" (ไม่รู้จักภาคใหญ่) ·
+ *    province-level → จังหวัดเดียว (primaryProvince) ไม่ expand
  */
 
-import { getOrganizationInfo } from '@/db/calling/members.js'
+import { can } from './permissions.js'
+import { expandGrants } from './geography.js'
+import { normalizeAccess } from './roleAccess.js'
 
-// Role hierarchy levels
-const ADMIN_ROLES = ['Admin', 'เลขาธิการ']
-const REGIONAL_ROLES = ['ผู้ประสานงานภาค', 'รองเลขาธิการ']
-const PROVINCIAL_ROLES = ['ผู้ประสานงานจังหวัด', 'กรรมการจังหวัด']
-
-// Map discord role name to province
-export const PROVINCE_ROLE_MAP = {
-  'ทีมกรุงเทพชั้นใน': 'กรุงเทพชั้นใน',
-  'ทีมกรุงเทพธนบุรี': 'กรุงเทพธนบุรี',
-  'ทีมกรุงเทพตะวันออก': 'กรุงเทพตะวันออก',
-  'ทีมกรุงเทพเหนือ': 'กรุงเทพเหนือ',
-  'ทีมนนทบุรี': 'นนทบุรี',
-  'ทีมสมุทรปราการ': 'สมุทรปราการ',
-  'ทีมสมุทรสาคร': 'สมุทรสาคร',
-  'ทีมปทุมธานี': 'ปทุมธานี',
-  'ทีมราชบุรี': 'ราชบุรี',
-  'ทีมนครปฐม': 'นครปฐม',
-  'ทีมกาญจนบุรี': 'กาญจนบุรี',
-  'ทีมเพชรบุรี': 'เพชรบุรี',
-  'ทีมสุพรรณบุรี': 'สุพรรณบุรี',
-  'ทีมสมุทรสงคราม': 'สมุทรสงคราม',
-  'ทีมประจวบคีรีขันธ์': 'ประจวบคีรีขันธ์',
-  'ทีมอุทัยธานี': 'อุทัยธานี',
-  'ทีมอ่างทอง': 'อ่างทอง',
-  'ทีมสระบุรี': 'สระบุรี',
-  'ทีมอยุธยา': 'อยุธยา',
-  'ทีมนครนายก': 'นครนายก',
-  'ทีมลพบุรี': 'ลพบุรี',
-  'ทีมชัยนาท': 'ชัยนาท',
-  'ทีมสิงห์บุรี': 'สิงห์บุรี',
-  'ทีมเชียงใหม่': 'เชียงใหม่',
-  'ทีมเชียงราย': 'เชียงราย',
-  'ทีมแม่ฮ่องสอน': 'แม่ฮ่องสอน',
-  'ทีมลำพูน': 'ลำพูน',
-  'ทีมลำปาง': 'ลำปาง',
-  'ทีมแพร่': 'แพร่',
-  'ทีมพะเยา': 'พะเยา',
-  'ทีมน่าน': 'น่าน',
-  'ทีมกำแพงเพชร': 'กำแพงเพชร',
-  'ทีมตาก': 'ตาก',
-  'ทีมนครสวรรค์': 'นครสวรรค์',
-  'ทีมพิจิตร': 'พิจิตร',
-  'ทีมพิษณุโลก': 'พิษณุโลก',
-  'ทีมเพชรบูรณ์': 'เพชรบูรณ์',
-  'ทีมสุโขทัย': 'สุโขทัย',
-  'ทีมอุตรดิตถ์': 'อุตรดิตถ์',
-  'ทีมตราด': 'ตราด',
-  'ทีมจันทบุรี': 'จันทบุรี',
-  'ทีมระยอง': 'ระยอง',
-  'ทีมชลบุรี': 'ชลบุรี',
-  'ทีมฉะเชิงเทรา': 'ฉะเชิงเทรา',
-  'ทีมปราจีนบุรี': 'ปราจีนบุรี',
-  'ทีมสระแก้ว': 'สระแก้ว',
-  'ทีมอุดรธานี': 'อุดรธานี',
-  'ทีมหนองคาย': 'หนองคาย',
-  'ทีมบึงกาฬ': 'บึงกาฬ',
-  'ทีมสกลนคร': 'สกลนคร',
-  'ทีมมุกดาหาร': 'มุกดาหาร',
-  'ทีมนครพนม': 'นครพนม',
-  'ทีมอำนาจเจริญ': 'อำนาจเจริญ',
-  'ทีมเลย': 'เลย',
-  'ทีมชัยภูมิ': 'ชัยภูมิ',
-  'ทีมขอนแก่น': 'ขอนแก่น',
-  'ทีมกาฬสินธุ์': 'กาฬสินธุ์',
-  'ทีมยโสธร': 'ยโสธร',
-  'ทีมหนองบัวลำภู': 'หนองบัวลำภู',
-  'ทีมมหาสารคาม': 'มหาสารคาม',
-  'ทีมร้อยเอ็ด': 'ร้อยเอ็ด',
-  'ทีมอุบลราชธานี': 'อุบลราชธานี',
-  'ทีมศรีสะเกษ': 'ศรีสะเกษ',
-  'ทีมสุรินทร์': 'สุรินทร์',
-  'ทีมบุรีรัมย์': 'บุรีรัมย์',
-  'ทีมนครราชสีมา': 'นครราชสีมา',
-  'ทีมชุมพร': 'ชุมพร',
-  'ทีมพังงา': 'พังงา',
-  'ทีมระนอง': 'ระนอง',
-  'ทีมภูเก็ต': 'ภูเก็ต',
-  'ทีมสุราษฎร์ธานี': 'สุราษฎร์ธานี',
-  'ทีมนครศรีธรรมราช': 'นครศรีธรรมราช',
-  'ทีมตรัง': 'ตรัง',
-  'ทีมกระบี่': 'กระบี่',
-  'ทีมสงขลา': 'สงขลา',
-  'ทีมพัทลุง': 'พัทลุง',
-  'ทีมสตูล': 'สตูล',
-  'ทีม 3 จังหวัด': 'ปัตตานี', // default
+/** Admin / เลขาธิการ — เห็นทุกจังหวัด */
+export function isAdmin(access = {}) {
+  const p = normalizeAccess(access).permissions || new Set()
+  return p.has('admin') || p.has('secretary_general')
 }
 
-// Map region role to provinces
-export const REGION_PROVINCES = {
-  'ทีมกรุงเทพ': ['กรุงเทพชั้นใน', 'กรุงเทพธนบุรี', 'กรุงเทพตะวันออก', 'กรุงเทพเหนือ'],
-  'ทีมปริมณฑล': ['นนทบุรี', 'สมุทรปราการ', 'สมุทรสาคร', 'ปทุมธานี'],
-  'ทีมภาคกลางตะวันตก': ['ราชบุรี', 'นครปฐม', 'กาญจนบุรี', 'เพชรบุรี', 'สุพรรณบุรี', 'สมุทรสงคราม', 'ประจวบคีรีขันธ์'],
-  'ทีมภาคกลางตะวันออก': ['อุทัยธานี', 'อ่างทอง', 'สระบุรี', 'อยุธยา', 'นครนายก', 'ลพบุรี', 'ชัยนาท', 'สิงห์บุรี'],
-  'ทีมภาคเหนือตอนบน': ['เชียงใหม่', 'เชียงราย', 'แม่ฮ่องสอน', 'ลำพูน', 'ลำปาง', 'แพร่', 'พะเยา', 'น่าน'],
-  'ทีมภาคเหนือตอนล่าง': ['กำแพงเพชร', 'ตาก', 'นครสวรรค์', 'พิจิตร', 'พิษณุโลก', 'เพชรบูรณ์', 'สุโขทัย', 'อุตรดิตถ์'],
-  'ทีมภาคตะวันออก': ['ตราด', 'จันทบุรี', 'ระยอง', 'ชลบุรี', 'ฉะเชิงเทรา', 'ปราจีนบุรี', 'สระแก้ว'],
-  'ทีมภาคอีสานเหนือ': ['อุดรธานี', 'หนองคาย', 'บึงกาฬ', 'สกลนคร', 'มุกดาหาร', 'นครพนม', 'อำนาจเจริญ'],
-  'ทีมภาคอีสานกลาง': ['เลย', 'ชัยภูมิ', 'ขอนแก่น', 'กาฬสินธุ์', 'ยโสธร', 'หนองบัวลำภู', 'มหาสารคาม', 'ร้อยเอ็ด'],
-  'ทีมภาคอีสานใต้': ['อุบลราชธานี', 'ศรีสะเกษ', 'สุรินทร์', 'บุรีรัมย์', 'นครราชสีมา'],
-  'ทีมภาคใต้ตอนบน': ['ชุมพร', 'พังงา', 'ระนอง', 'ภูเก็ต', 'สุราษฎร์ธานี', 'นครศรีธรรมราช'],
-  'ทีมภาคใต้ตอนล่าง': ['ตรัง', 'กระบี่', 'สงขลา', 'พัทลุง', 'สตูล', 'ปัตตานี', 'ยะลา', 'นราธิวาส'],
+/** ผู้ประสานงานภาค / รองเลขาธิการ */
+export function isRegionalCoordinator(access = {}) {
+  return (normalizeAccess(access).permissions || new Set()).has('regional_coordinator')
 }
 
-/**
- * Check if user is admin
- */
-export function isAdmin(roles = []) {
-  return roles.some(r => ADMIN_ROLES.includes(r))
-}
-
-/**
- * Check if user is regional coordinator
- */
-export function isRegionalCoordinator(roles = []) {
-  return roles.some(r => REGIONAL_ROLES.includes(r))
-}
-
-/**
- * Check if user is provincial coordinator
- */
-export function isProvincialCoordinator(roles = []) {
-  return roles.some(r => PROVINCIAL_ROLES.includes(r))
+/** ผู้ประสานงานจังหวัด / กรรมการจังหวัด (ตทอ.) */
+export function isProvincialCoordinator(access = {}) {
+  const p = normalizeAccess(access).permissions || new Set()
+  return p.has('province_coordinator') || p.has('district_coordinator')
 }
 
 /**
  * Get user's scope (provinces they can access)
- * Returns: ['ราชบุรี', 'นครปฐม', ...] or null if admin (all provinces)
+ * Returns: ['ราชบุรี', ...] หรือ null ถ้า admin (ทุกจังหวัด)
  */
-export function getUserScope(roles = [], primaryProvince = null) {
+export function getUserScope(access = {}, primaryProvince = null) {
+  const { permissions = new Set(), scopeGrants = [] } = normalizeAccess(access)
+
   // Admin → all provinces
-  if (isAdmin(roles)) return null
+  if (isAdmin(access)) return null
 
-  const provinces = new Set()
-
-  // Regional coordinator + ทีมภาค → add region's provinces
-  if (isRegionalCoordinator(roles)) {
-    for (const role of roles) {
-      if (REGION_PROVINCES[role]) {
-        REGION_PROVINCES[role].forEach(p => provinces.add(p))
-      }
-    }
+  // Regional → expand เฉพาะภาคย่อย (calling ไม่รู้จักภาคใหญ่)
+  if (permissions.has('regional_coordinator')) {
+    const subGrants = scopeGrants.filter(g => g.startsWith('subregion:'))
+    const provinces = expandGrants(subGrants, { mode: 'calling' })
     return provinces.size > 0 ? Array.from(provinces) : []
   }
 
-  // Collect team provinces from roles
-  const teamProvinces = roles.map(r => PROVINCE_ROLE_MAP[r]).filter(Boolean)
+  // ทีมจังหวัด → จังหวัดเดียว
+  const teamProvinces = scopeGrants
+    .filter(g => g.startsWith('province:'))
+    .map(g => g.slice('province:'.length))
   if (teamProvinces.length === 0) return []
 
-  // Use primaryProvince only if it's actually one of this user's team provinces
-  // (guards against debug/view-as-role where session.user.primary_province belongs to the real admin)
+  // Use primaryProvince เฉพาะถ้าเป็นจังหวัดของ user จริง (กัน debug/view-as-role)
   if (primaryProvince && teamProvinces.includes(primaryProvince)) return [primaryProvince]
 
-  // Fallback: first team province found
+  // Fallback: จังหวัดแรก
   return [teamProvinces[0]]
 }
 
@@ -165,41 +63,27 @@ export function getUserScope(roles = [], primaryProvince = null) {
  * Check if user can view member in province
  * If assigned already → always allow (bypass scope)
  */
-export function canAccessMember(memberProvince, roles = [], isAssigned = false) {
-  // Assigned → always allow
+export function canAccessMember(memberProvince, access = {}, isAssigned = false) {
   if (isAssigned) return true
+  if (isAdmin(access)) return true
 
-  // Admin → always allow
-  if (isAdmin(roles)) return true
-
-  // Check scope
-  const scope = getUserScope(roles)
-  if (scope === null) return true // admin
-  if (scope.length === 0) return false // no scope
-
+  const scope = getUserScope(access)
+  if (scope === null) return true   // admin
+  if (scope.length === 0) return false
   return scope.includes(memberProvince)
 }
 
-/**
- * Check if user can see member contact fields (phone, LINE) — PDPA-sensitive
- * Requires provincial coordinator level or above
- */
-export function canSeeContacts(roles = []) {
-  return isAdmin(roles) || isRegionalCoordinator(roles) || isProvincialCoordinator(roles)
+/** see phone/LINE (PDPA) — provincial level ขึ้นไป */
+export function canSeeContacts(access = {}) {
+  return can('seeContacts', normalizeAccess(access).permissions || new Set())
 }
 
-/**
- * Check if user can create campaign
- * Provincial level and above
- */
-export function canCreateCampaign(roles = []) {
-  return isAdmin(roles) || isRegionalCoordinator(roles) || isProvincialCoordinator(roles)
+/** create campaign — provincial level ขึ้นไป */
+export function canCreateCampaign(access = {}) {
+  return can('createCampaign', normalizeAccess(access).permissions || new Set())
 }
 
-/**
- * Check if user can override tier
- * (Only admin or เหรัญญิก can override)
- */
-export function canOverrideTier(roles = []) {
-  return isAdmin(roles) || roles.includes('เหรัญญิก')
+/** override tier — admin / เลขาธิการ / เหรัญญิก */
+export function canOverrideTier(access = {}) {
+  return can('overrideTier', normalizeAccess(access).permissions || new Set())
 }
