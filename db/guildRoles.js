@@ -45,4 +45,35 @@ async function deleteGuildRole(role) {
   )
 }
 
-module.exports = { syncGuildRolesCatalog, upsertGuildRole, deleteGuildRole }
+/**
+ * ปุ่ม picker ของกลุ่ม (interest/skill/province) เรียงตาม picker_order (SPEC §6 step 6b)
+ * คืน [{ roleId, label, emoji }] — render/แปะ ใช้ role_id เสมอ (ทน rename)
+ */
+async function getPickerRoles(guildId, groupKey) {
+  const { rows } = await pool.query(
+    `SELECT role_id, role_name, picker_label, picker_emoji
+     FROM dc_guild_roles
+     WHERE guild_id = $1 AND picker_group = $2
+     ORDER BY picker_order NULLS LAST, role_name`,
+    [guildId, groupKey]
+  )
+  return rows.map(r => ({
+    roleId: r.role_id,
+    label:  r.picker_label || r.role_name,
+    emoji:  r.picker_emoji || null,
+  }))
+}
+
+/** นิยามกลุ่ม picker (label, kind) — ใช้ทำ embed title; null ถ้าไม่มี */
+async function getPickerGroup(guildId, groupKey) {
+  const { rows } = await pool.query(
+    `SELECT label, kind FROM dc_guild_role_groups WHERE guild_id = $1 AND group_key = $2`,
+    [guildId, groupKey]
+  )
+  return rows[0] || null
+}
+
+module.exports = {
+  syncGuildRolesCatalog, upsertGuildRole, deleteGuildRole,
+  getPickerRoles, getPickerGroup,
+}

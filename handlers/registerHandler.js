@@ -9,11 +9,11 @@ const {
   TextInputStyle,
   MessageFlags,
 } = require('discord.js');
-const { buildRows } = require('./interestSelect');
+const { buildGroupedRows } = require('./interestSelect');
 const { buildRegionDropdown } = require('./provinceSelect');
-const { INTEREST_ROLES, SKILL_ROLES, PROVINCE_ROLES } = require('../config/roles');
+const { PROVINCE_ROLES } = require('../config/roles');
 const { upsertMember, syncMemberRoles } = require('../db/members');
-const { INTEREST_BUTTONS, SKILL_BUTTONS } = require('../config/constants');
+const { getPickerRoles } = require('../db/guildRoles');
 
 const pendingForms = new Map();
 
@@ -151,12 +151,12 @@ async function handleModalSubmit(interaction) {
       const dn = interaction.member?.displayName ?? interaction.user.username;
       await interaction.followUp({
         embeds: [new EmbedBuilder().setTitle(`🎯 ความสนใจ · ${dn}`).setColor(0xf1c40f)],
-        components: buildRows(INTEREST_BUTTONS, INTEREST_ROLES, memberRoles, 'interest'),
+        components: buildGroupedRows(await getPickerRoles(interaction.guild.id, 'interest'), memberRoles, 'interest'),
         flags: MessageFlags.Ephemeral,
       });
       await interaction.followUp({
         embeds: [new EmbedBuilder().setTitle(`🛠️ ความถนัด · ${dn}`).setColor(0x3498db)],
-        components: buildRows(SKILL_BUTTONS, SKILL_ROLES, memberRoles, 'skill'),
+        components: buildGroupedRows(await getPickerRoles(interaction.guild.id, 'skill'), memberRoles, 'skill'),
         flags: MessageFlags.Ephemeral,
       });
     }
@@ -294,7 +294,7 @@ async function handleRegisterConfirm(interaction) {
       embeds: [new EmbedBuilder()
         .setTitle(`🎯 ความสนใจ · ${dn}`)
         .setColor(0xf1c40f)],
-      components: buildRows(INTEREST_BUTTONS, INTEREST_ROLES, memberRoles, 'interest'),
+      components: buildGroupedRows(await getPickerRoles(interaction.guild.id, 'interest'), memberRoles, 'interest'),
       flags: MessageFlags.Ephemeral,
     });
 
@@ -302,7 +302,7 @@ async function handleRegisterConfirm(interaction) {
       embeds: [new EmbedBuilder()
         .setTitle(`🛠️ ความถนัด · ${dn}`)
         .setColor(0x3498db)],
-      components: buildRows(SKILL_BUTTONS, SKILL_ROLES, memberRoles, 'skill'),
+      components: buildGroupedRows(await getPickerRoles(interaction.guild.id, 'skill'), memberRoles, 'skill'),
       flags: MessageFlags.Ephemeral,
     });
   }

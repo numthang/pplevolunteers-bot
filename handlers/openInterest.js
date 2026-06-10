@@ -1,11 +1,9 @@
 // handlers/openInterest.js
-const {
-  EmbedBuilder,
-  MessageFlags
-} = require('discord.js');
-const { INTEREST_CONFIG, INTEREST_ROLES, SKILL_ROLES } = require('../config/roles');
-const { SKILL_BUTTONS } = require('../config/constants');
-const { buildRows, parseGroups, buildGroupedRows } = require('./interestSelect');
+const { EmbedBuilder, MessageFlags } = require('discord.js');
+const { buildGroupedRows } = require('./interestSelect');
+const { getPickerRoles } = require('../db/guildRoles');
+
+const HINT = 'กดเพื่อเลือก • กดซ้ำเพื่อถอด\n🔵 = มี role อยู่แล้ว • ⬜ = ยังไม่มี';
 
 async function handleOpenInterest(interaction) {
   if (!interaction.isButton()) return;
@@ -15,37 +13,36 @@ async function handleOpenInterest(interaction) {
 
   const member = interaction.member;
   await member.fetch();
-  const memberRoles = member.roles;
   const displayName = member.displayName ?? interaction.user.username;
+  const guildId = interaction.guild.id;
 
-  // ส่ง interest แยกต่อ group
-  const groups = parseGroups(INTEREST_CONFIG);
-  let first = true;
-  for (const group of groups) {
+  const interestRows = await getPickerRoles(guildId, 'interest');
+  const skillRows    = await getPickerRoles(guildId, 'skill');
+
+  let sent = false;
+
+  // interest = list เดียว (ไม่มี divider sub-section)
+  if (interestRows.length) {
     const embed = new EmbedBuilder()
-      .setTitle(`🎯 ${group.title} · ${displayName}`)
-      .setDescription('กดเพื่อเลือก • กดซ้ำเพื่อถอด\n🔵 = มี role อยู่แล้ว • ⬜ = ยังไม่มี')
+      .setTitle(`🎯 ความสนใจ · ${displayName}`)
+      .setDescription(HINT)
       .setColor(0xf1c40f);
-    const components = buildGroupedRows(group.items, INTEREST_ROLES, memberRoles, 'interest');
-    if (first) {
-      await interaction.editReply({ embeds: [embed], components });
-      first = false;
-    } else {
-      await interaction.followUp({ flags: MessageFlags.Ephemeral, embeds: [embed], components });
-    }
+    await interaction.editReply({ embeds: [embed], components: buildGroupedRows(interestRows, member.roles, 'interest') });
+    sent = true;
   }
 
-  // ส่ง skill ต่อท้าย
-  const skillEmbed = new EmbedBuilder()
-    .setTitle(`🛠️ ความถนัด · ${displayName}`)
-    .setDescription('กดเพื่อเลือก • กดซ้ำเพื่อถอด\n🔵 = มี role อยู่แล้ว • ⬜ = ยังไม่มี')
-    .setColor(0x3498db);
+  // skill
+  if (skillRows.length) {
+    const skillEmbed = new EmbedBuilder()
+      .setTitle(`🛠️ ความถนัด · ${displayName}`)
+      .setDescription(HINT)
+      .setColor(0x3498db);
+    const payload = { embeds: [skillEmbed], components: buildGroupedRows(skillRows, member.roles, 'skill') };
+    if (sent) await interaction.followUp({ flags: MessageFlags.Ephemeral, ...payload });
+    else { await interaction.editReply(payload); sent = true; }
+  }
 
-  await interaction.followUp({
-    flags: MessageFlags.Ephemeral,
-    embeds: [skillEmbed],
-    components: buildRows(SKILL_BUTTONS, SKILL_ROLES, memberRoles, 'skill'),
-  });
+  if (!sent) await interaction.editReply({ content: 'ยังไม่มีตัวเลือกในเซิร์ฟเวอร์นี้' });
 }
 
 module.exports = { handleOpenInterest };

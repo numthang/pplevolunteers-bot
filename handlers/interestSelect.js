@@ -1,118 +1,91 @@
 // handlers/interestSelect.js
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
-const { INTEREST_CONFIG, INTEREST_ROLES, SKILL_ROLES, MEDIA_TEAM_ROLE_ID, MEDIA_TEAM_TRIGGERS } = require('../config/roles');
+const { SKILL_ROLES, MEDIA_TEAM_ROLE_ID, MEDIA_TEAM_TRIGGERS } = require('../config/roles');
 const { syncMemberRoles } = require('../db/members');
-const { SKILL_BUTTONS } = require('../config/constants');
+const { getPickerRoles, getPickerGroup } = require('../db/guildRoles');
 
-// แบ่ง config เป็น groups ตาม divider
-function parseGroups(config) {
-  const groups = [];
-  let current = null;
-  for (const item of config) {
-    if (item.divider) {
-      current = { title: item.label.replace(/^──\s*|\s*──$/g, '').trim(), items: [] };
-      groups.push(current);
-    } else if (current) {
-      current.items.push(item);
-    }
-  }
-  return groups;
-}
+// MEDIA_TEAM special-case (กฎพิเศษ ไม่อยู่ใน DB model) — กดทีมกราฟิก/ช่างภาพ/คอนเทนต์/ตัดต่อ → แปะ ทีมสื่อ ด้วย
+const MEDIA_TEAM_TRIGGER_IDS = new Set(MEDIA_TEAM_TRIGGERS.map(k => SKILL_ROLES[k]).filter(Boolean));
 
-// สร้าง rows สำหรับ items กลุ่มเดียว (ไม่มี divider)
-// opts: { disableAll, overrideKey, overrideHasRole } — ใช้สำหรับ optimistic UI
-function buildGroupedRows(items, roleMap, memberRoles, prefix, opts = {}) {
-  const { disableAll = false, overrideKey = null, overrideHasRole = false } = opts;
-  const rows = [];
+/**
+ * สร้างปุ่มจาก DB rows [{ roleId, label, emoji }]
+ * customId = `${prefix}:${roleId}` (role_id เสมอ — ทน rename)
+ * opts: { disableAll, overrideRoleId, overrideHasRole } — optimistic UI
+ */
+function buildGroupedRows(rows, memberRoles, prefix, opts = {}) {
+  const { disableAll = false, overrideRoleId = null, overrideHasRole = false } = opts;
+  const out = [];
   let chunk = [];
-  for (const b of items) {
-    const roleId  = roleMap[b.key];
-    let hasRole   = roleId && memberRoles.cache.has(roleId);
-    if (overrideKey === b.key) hasRole = overrideHasRole;
-    chunk.push(
-      new ButtonBuilder()
-        .setCustomId(`${prefix}:${b.key}`)
-        .setLabel(b.label)
-        .setEmoji(b.emoji)
-        .setStyle(hasRole ? ButtonStyle.Primary : ButtonStyle.Secondary)
-        .setDisabled(disableAll)
-    );
-    if (chunk.length === 4) {
-      rows.push(new ActionRowBuilder().addComponents(chunk));
-      chunk = [];
-    }
+  for (const b of rows) {
+    let hasRole = b.roleId && memberRoles.cache.has(b.roleId);
+    if (overrideRoleId === b.roleId) hasRole = overrideHasRole;
+    const btn = new ButtonBuilder()
+      .setCustomId(`${prefix}:${b.roleId}`)
+      .setLabel(b.label)
+      .setStyle(hasRole ? ButtonStyle.Primary : ButtonStyle.Secondary)
+      .setDisabled(disableAll);
+    if (b.emoji) btn.setEmoji(b.emoji);
+    chunk.push(btn);
+    if (chunk.length === 4) { out.push(new ActionRowBuilder().addComponents(chunk)); chunk = []; }
   }
-  if (chunk.length) rows.push(new ActionRowBuilder().addComponents(chunk));
-  return rows;
-}
-
-// backward compat — flat list ไม่มี group (ใช้ใน registerHandler)
-function buildRows(buttons, roleMap, memberRoles, prefix, opts = {}) {
-  return buildGroupedRows(buttons.filter(b => !b.divider), roleMap, memberRoles, prefix, opts);
+  if (chunk.length) out.push(new ActionRowBuilder().addComponents(chunk));
+  return out;
 }
 
 async function handleInterestSelect(interaction) {
   if (!interaction.isButton()) return;
 
-  const [prefix, ...keyParts] = interaction.customId.split(':');
+  const [prefix, ...idParts] = interaction.customId.split(':');
   if (!['interest', 'skill'].includes(prefix)) return;
 
   await interaction.deferUpdate();
 
-  const name       = keyParts.join(':');
-  const roleMap    = prefix === 'interest' ? INTEREST_ROLES : SKILL_ROLES;
-  const dn         = interaction.member?.displayName ?? interaction.user?.username ?? '';
-  const embedColor = prefix === 'interest' ? 0xf1c40f : 0x3498db;
-  const roleId     = roleMap[name];
+  const roleId     = idParts.join(':'); // role_id (snowflake)
   const member     = interaction.member;
   const userId     = interaction.user.id;
+  const dn         = member?.displayName ?? interaction.user?.username ?? '';
+  const embedColor = prefix === 'interest' ? 0xf1c40f : 0x3498db;
+  const emojiHead  = prefix === 'interest' ? '🎯' : '🛠️';
 
-  // หา group ที่ปุ่มนี้อยู่ เพื่อ update เฉพาะ group นั้น
-  let embedTitle, groupComponents, optimisticComponents;
-  if (prefix === 'interest') {
-    const groups = parseGroups(INTEREST_CONFIG);
-    const group  = groups.find(g => g.items.some(item => item.key === name));
-    embedTitle          = `🎯 ${group?.title ?? 'ความสนใจ'} · ${dn}`;
-    groupComponents     = group ? () => buildGroupedRows(group.items, INTEREST_ROLES, member.roles, 'interest') : () => [];
-    optimisticComponents = group
-      ? (flip) => buildGroupedRows(group.items, INTEREST_ROLES, member.roles, 'interest', { disableAll: true, overrideKey: name, overrideHasRole: flip })
-      : () => [];
-  } else {
-    embedTitle          = `🛠️ ความถนัด · ${dn}`;
-    groupComponents     = () => buildRows(SKILL_BUTTONS, SKILL_ROLES, member.roles, 'skill');
-    optimisticComponents = (flip) => buildRows(SKILL_BUTTONS, SKILL_ROLES, member.roles, 'skill', { disableAll: true, overrideKey: name, overrideHasRole: flip });
-  }
+  // ดึง rows กลุ่มนี้จาก DB (re-render) + label ของปุ่มที่กด
+  const rows       = await getPickerRoles(interaction.guild.id, prefix);
+  const grp        = await getPickerGroup(interaction.guild.id, prefix);
+  const groupLabel = grp?.label ?? (prefix === 'interest' ? 'ความสนใจ' : 'ความถนัด');
+  const label      = rows.find(r => r.roleId === roleId)?.label ?? roleId;
+  const embedTitle = `${emojiHead} ${groupLabel} · ${dn}`;
+
+  const reRender   = () => buildGroupedRows(rows, member.roles, prefix);
+  const optimistic = (flip) => buildGroupedRows(rows, member.roles, prefix, { disableAll: true, overrideRoleId: roleId, overrideHasRole: flip });
 
   function reply(description) {
     return interaction.editReply({
       embeds: [new EmbedBuilder().setTitle(embedTitle).setDescription(description).setColor(embedColor)],
-      components: groupComponents(),
+      components: reRender(),
     });
   }
 
-  if (!roleId) return reply(`⚠️ ไม่พบ Role ID สำหรับ \`${name}\``);
+  // role หายจาก guild แล้ว (catalog stale) — fail-safe
+  if (!interaction.guild.roles.cache.has(roleId)) return reply(`⚠️ ไม่พบ role นี้แล้ว`);
 
   const hasRole = member.roles.cache.has(roleId);
 
   // Optimistic: flip สีปุ่มทันที + disable ทั้ง group ป้องกัน double-click
   await interaction.editReply({
     embeds: [new EmbedBuilder().setTitle(embedTitle).setDescription('⏳ กำลังดำเนินการ...').setColor(embedColor)],
-    components: optimisticComponents(!hasRole),
+    components: optimistic(!hasRole),
   });
 
   try {
     if (hasRole) {
       await member.roles.remove(roleId);
-      if (MEDIA_TEAM_TRIGGERS.includes(name)) {
+      if (MEDIA_TEAM_TRIGGER_IDS.has(roleId)) {
         await member.fetch();
-        const stillHas = MEDIA_TEAM_TRIGGERS.some(
-          t => t !== name && member.roles.cache.has(SKILL_ROLES[t])
-        );
+        const stillHas = [...MEDIA_TEAM_TRIGGER_IDS].some(id => id !== roleId && member.roles.cache.has(id));
         if (!stillHas) await member.roles.remove(MEDIA_TEAM_ROLE_ID).catch(() => {});
       }
     } else {
       await member.roles.add(roleId);
-      if (MEDIA_TEAM_TRIGGERS.includes(name)) {
+      if (MEDIA_TEAM_TRIGGER_IDS.has(roleId)) {
         await member.roles.add(MEDIA_TEAM_ROLE_ID).catch(() => {});
       }
     }
@@ -120,15 +93,14 @@ async function handleInterestSelect(interaction) {
     await member.fetch();
     await syncMemberRoles(interaction.member);
 
-    const statusMsg = hasRole
-      ? `🔴 <@${userId}> • ถอด role **${name}** ออกแล้ว`
-      : `🟢 <@${userId}> • เพิ่ม role **${name}** แล้ว`;
-    return reply(statusMsg);
+    return reply(hasRole
+      ? `🔴 <@${userId}> • ถอด role **${label}** ออกแล้ว`
+      : `🟢 <@${userId}> • เพิ่ม role **${label}** แล้ว`);
 
   } catch (err) {
-    console.error(`❌ toggle role ${name}:`, err);
-    return reply(`❌ <@${userId}> • เกิดข้อผิดพลาดกับ role **${name}**`);
+    console.error(`❌ toggle role ${label}:`, err);
+    return reply(`❌ <@${userId}> • เกิดข้อผิดพลาดกับ role **${label}**`);
   }
 }
 
-module.exports = { handleInterestSelect, buildRows, parseGroups, buildGroupedRows };
+module.exports = { handleInterestSelect, buildGroupedRows };
