@@ -42,6 +42,7 @@ const { initMeilisearch } = require('./services/meilisearch')
 const emailPoller = require('./services/emailPoller');
 const smsWebhook  = require('./services/smsWebhook');
 const { upsertGuilds } = require('./db/guilds');
+const { syncGuildRolesCatalog, upsertGuildRole, deleteGuildRole } = require('./db/guildRoles');
 const { handleSlipMessage } = require('./services/financeOCR');
 
 const fs = require('fs');
@@ -75,8 +76,10 @@ client.once('clientReady', async () => {
   await upsertGuilds(client.guilds.cache);
   emailPoller.init(client);
   smsWebhook.init(client);
-  // โหลด forum configs ทุก guild ที่ bot อยู่
+  // โหลด forum configs + sync role catalog ทุก guild ที่ bot อยู่
   for (const guild of client.guilds.cache.values()) {
+    const synced = await syncGuildRolesCatalog(guild).catch(e => { console.error(`⚠️ role sync ${guild.id}:`, e.message); return 0; });
+    if (synced) console.log(`  🔄 ${synced} roles → dc_guild_roles (${guild.name})`);
     const configs = await getAllForumConfigs(guild.id).catch(() => []);
     if (configs.length) {
       forumChannelCache.set(guild.id, new Set(configs.map(c => c.channel_id)));
@@ -85,6 +88,11 @@ client.once('clientReady', async () => {
     }
   }
 });
+
+// keep dc_guild_roles catalog สดอัตโนมัติ (เพิ่ม/แก้ชื่อ/ลบ role ใน Discord) — ไม่แตะ policy
+client.on('roleCreate', role => upsertGuildRole(role).catch(e => console.error('roleCreate sync:', e.message)));
+client.on('roleUpdate', (_oldRole, newRole) => upsertGuildRole(newRole).catch(e => console.error('roleUpdate sync:', e.message)));
+client.on('roleDelete', role => deleteGuildRole(role).catch(e => console.error('roleDelete sync:', e.message)));
 
 client.on('interactionCreate', async (interaction) => {
   // --- Autocomplete ---
