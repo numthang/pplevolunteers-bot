@@ -50,7 +50,7 @@ git reset --hard origin/master
 # Bot
 npm install --omit=dev
 node deploy-commands.js $GUILD_ARG
-pm2 restart pple-dcbot
+pm2 restart pple-dcbot --time
 
 if [ "$BOT_ONLY" = "false" ]; then
   # Web — หยุด web ก่อน build เพื่อคืน RAM
@@ -58,7 +58,7 @@ if [ "$BOT_ONLY" = "false" ]; then
   cd web
   npm install --omit=dev
   npm run build
-  pm2 restart pple-web || pm2 start npm --name pple-web -- start
+  pm2 restart pple-web --time || pm2 start npm --name pple-web --time -- start
   pm2 save
 fi
 
