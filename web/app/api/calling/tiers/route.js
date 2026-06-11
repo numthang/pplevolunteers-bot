@@ -3,7 +3,7 @@ import * as tierDB from '@/db/calling/tiers.js'
 import * as memberDB from '@/db/calling/members.js'
 import { canAccessMember, canOverrideTier } from '@/lib/callingAccess.js'
 import { authOptions } from '@/lib/auth-options.js'
-import { getEffectiveRoles } from '@/lib/getEffectiveRoles.js'
+import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 
 /**
  * GET /api/calling/tiers
@@ -63,8 +63,8 @@ export async function POST(req) {
     }
 
     // Check permission
-    const userRoles = await getEffectiveRoles(session)
-    if (!canOverrideTier(userRoles)) {
+    const { access } = await getEffectiveIdentity(session)
+    if (!canOverrideTier(access)) {
       return Response.json({ error: 'Forbidden' }, { status: 403 })
     }
 
@@ -130,8 +130,8 @@ export async function DELETE(req) {
     }
 
     // Check permission
-    const userRoles = await getEffectiveRoles(session)
-    if (!canOverrideTier(userRoles)) {
+    const { access } = await getEffectiveIdentity(session)
+    if (!canOverrideTier(access)) {
       return Response.json({ error: 'Forbidden' }, { status: 403 })
     }
 

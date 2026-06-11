@@ -64,10 +64,16 @@
 4. ✅ financeAccess/callingAccess เช็ค permission/scope (commit e6cf556) — ลบ map ใหญ่, branching เดิม
 5. ✅ port test (finance 57 + calling 37) ผ่านครบ · รวม suite 134 เขียว
 6. **bot:** (a) ✅ catalog auto-sync → `dc_guild_roles` (commit 894f596 · `db/guildRoles.js` + index.js ready/roleCreate/Update/Delete · ไม่แตะ policy) · (b) ✅ render **interest/skill** จาก DB (commit 644abe1 · customId=role_id, ทิ้ง divider) · (c) ✅ **province จาก DB** — `getRolesByScopePrefix('province:')` + cascade ผ่าน `parent_role_id` chain
-7. ⏳ **เหลือ — DB-wiring (multi-guild จริง):** ตอนนี้ runtime ใช้ `web/lib/roleAccess.js` (policy mirror = seed) ทั้ง server+client · ขั้นต่อไป boundary (`getEffectiveIdentity`) เรียก `resolveAccess`/DB ส่ง access object · client (`useEffectiveRoles`) ต้องมี API ดึง permissions (แตะ DB ตรงจาก client ไม่ได้) · `normalizeAccess` รับ access object อยู่แล้ว ไม่ต้องแก้ access fn
+7. ✅ **DB-wiring เสร็จ (2026-06-11):** `getEffectiveIdentity` คืน `access` จาก `resolveAccess`(DB) · เพิ่ม `GET /api/me/access` (permissions เป็น array เพราะ Set ข้าม JSON ไม่ได้) · `useEffectiveRoles` fetch endpoint นี้ · consumer 22 ไฟล์ส่ง `access` แทน array · **ลบ mirror (`roleToAccess`+`PERMISSION_BY_ROLE`) ออกจาก `roleAccess.js` แล้ว** ย้ายเป็น test fixture `lib/__tests__/_rolesToAccess.js` · test 134 เขียว + build ผ่าน · ⚠️ **ยังไม่ deploy prod**
+   - ⚠️ **ค้างฝั่ง user:** role **"เลขาธิการ" ไม่มีใน Discord guild อาสาประชาชน** (มีแค่ "รองเลขาธิการ") → permission `secretary_general` ตอนนี้ dormant (ไม่มีใครถือ, debug combo "ดูในฐานะเลขาธิการ" จะ preview ว่าง) · ต้อง **สร้าง role "เลขาธิการ" ใน Discord** → bot sync → รัน `seed-guild-roles.js` (overlay มี `'เลขาธิการ':'secretary_general'` รออยู่แล้ว) สิทธิ์จะติดเอง
 8. ✅ **ลบ `config/roles.js`** — migrate consumer ทุกตัว query `dc_guild_roles` แทน hardcode · MEDIA_TEAM + province cascade รวมเป็น **`parent_role_id` column เดียว** (add → แปะ parent chain · remove → ถอด parent ถ้าไม่เหลือ sibling) · ทั้ง 2 handler โชว์ parent ที่ถูกแตะใน status · ข้อมูลเดิม archive ที่ `scripts/migration/_roles-archive.js` (seed scripts เท่านั้น) · **ยังไม่ deploy prod**
 9. ⏳ **UI per-guild config + dynamic groups** — **blocker ตัวจริงของ tenant ใหม่:** catalog auto-sync แล้ว แต่ policy (`permission`/`scope_node`/`picker_group`/`parent_role_id`) = null → guild ใหม่ไม่มี picker/RBAC/cascade จนกว่าจะตั้ง · ตอนนี้ตั้งได้ทางเดียว = แก้ DB มือ → ต้องมีหน้า admin ตั้งเอง
 10. ⏳ **web `GUILD_ID` → session/route param** — **blocker multi-tenant ฝั่ง web:** finance routes / profile / page.js / quote-config ยัง `process.env.GUILD_ID` (pin guild เดียว) · ต้องเปลี่ยนเป็น guild จาก session ก่อนรับ guild ที่สอง · bot runtime สะอาดแล้ว (เหลือ `services/financeOCR.js` ที่เดียว)
+11. ⏳ **แทนที่ name-check ด้วย permission (~15 จุด)** — **blocker multi-tenant ฝั่ง web** (คนละกลุ่มกับ RBAC mirror ที่ step 7 ลบไปแล้ว): พวกนี้เช็ค **ชื่อ role ตรงๆ** เพื่อ gate UI/ฟีเจอร์ ไม่ผ่านระบบ permission → guild ที่ตั้งชื่อ role ต่างจะพัง · **ตอนนี้ guild อาสาประชาชนทำงานถูกหมด ไม่ใช่บั๊กวันนี้** · แต่ละจุดต้อง thread `access` แล้วเช็ค permission แทนชื่อ (เหมือน 22 ไฟล์ใน step 7):
+    - `useEffectiveRoles.js:19` `realRoles.includes('Admin')` (debug gate ใครกด view-as-role ได้) · `roles.js:9` `isAdmin` = `'Admin'\|\|'เลขาธิการ'` (canonical ใช้หลายที่)
+    - `roles.includes('Admin')` admin flag → finance `accounts/route.js`, `accounts/page.js`, `app/page.js`, `finance/page.js`
+    - ลิสต์ชื่อ role hardcode: `GLOBAL_EDITORS`/`ADMIN_ROLES` (finance categories ×2), `MODERATOR_ROLES` (calling logs/assignee/assignments ×3), `SMS_ROLES`, `MANAGE_ROLES` (contacts), `['Admin','Moderator']` (admin logs route+page), `transactions/page.js:243`
+    - map ที่มีอยู่แล้วใน DB: Admin→`admin`, เลขาธิการ→`secretary_general`, Moderator→`moderator` · ทำพร้อม step 10 (ไปด้วยกันตอนเปิด guild ที่สอง)
 
 ### Deferred (RBAC) — ทำตอนต้องใช้
 - **registerHandler province part** — ✅ ย้าย DB แล้ว (`getRolesByScopePrefix`)
@@ -76,8 +82,8 @@
 - **interest flat ≤20 ปุ่ม/ข้อความ** (Discord 5 แถว) — ตอนนี้ 18 · ถ้าเกินต้อง paginate
 - **(optional) `dc_members.role_ids` ขนานกับ `roles`** — แก้ปัญหา *rename role แล้วสิทธิ์หาย*: web เช็ค permission โดย match **ชื่อ** `dc_members.roles` ↔ `dc_guild_roles.role_name` → ถ้า admin เปลี่ยนชื่อ role ใน Discord, `dc_guild_roles` อัปเดตทันที (roleUpdate) แต่ `dc_members.roles` ค้างของเก่าจน member re-sync → match ไม่เจอ สิทธิ์หายชั่วคราว · ทางแก้: เพิ่ม column `role_ids` (id, comma) ใช้ **เช็ค permission อย่างเดียว** (id ทน rename), คง `roles` เดิมไว้ display ไม่แตะ · `_deriveRoleFields` เขียน 2 ช่อง, resolveAccess match `role_id`, backfill member เก่า + fallback ชื่อระหว่าง migrate · **ยังไม่จำเป็นตอนนี้** (rename ไม่บ่อย) จดเผื่อเจอ bug สิทธิ์หายจะได้นึกออก · bot ไม่เจอปัญหานี้เพราะใช้ role_id อยู่แล้ว
 
-> **สถานะ 2026-06-11 (v2.11.0):** step 8 (ลบ config/roles.js) เสร็จ + **push origin/master แล้ว** (RBAC + web IA `/discord`→`/bot` + AI modes DB) · **bot roles multi-tenant แล้ว** — ทุก role มาจาก DB, `parent_role_id` คุม cascade (กราฟิก→สื่อ, จังหวัด→ภาคย่อย→ภาคใหญ่) · **แต่ยังไม่ multi-tenant เต็มตัว** — เหลือ blocker tenant ใหม่: step 9 (UI ตั้ง policy, ไม่งั้นต้องแก้ DB มือ) + step 10 (web ยัง pin GUILD_ID) · step 7 (web RBAC DB-wiring) ยังค้าง
-> **prod deploy:** รอรันบน server (prod เป็น PG อยู่แล้ว) — ลำดับ: `git reset --hard origin/master` → `psql -f migration.sql` → `./deploy.sh --production` → `seed-guild-roles.js` → `seed-parent-roles.js` · rollback: `git reset --hard 22fae83`
+> **สถานะ 2026-06-11 (v2.11.0):** step 7 (web RBAC DB-wiring) + step 8 (ลบ config/roles.js) เสร็จ · v2.11.0 push origin/master แล้ว (step 8) · **step 7 ยังไม่ commit/deploy** (อยู่ใน working tree) · **bot + web roles อ่านจาก DB หมดแล้ว** — runtime ไม่มี hardcode policy เหลือ (mirror ลบแล้ว) · **เหลือ blocker tenant ใหม่:** step 9 (UI ตั้ง policy) + step 10 (web ยัง pin GUILD_ID) · ค้างฝั่ง user: สร้าง role "เลขาธิการ" ใน Discord (ดู step 7)
+> **prod deploy:** ✅ **deploy แล้ว 2026-06-11** (v2.11.0) — RBAC step 1–8 live · rollback: `git reset --hard 22fae83`
 
 ---
 
@@ -114,6 +120,7 @@
 
 ## 💰 PPLE Finance
 
+- [ ] **Web routes tenant-ready** — เปลี่ยน `process.env.GUILD_ID` → `guildId` จาก session ใน 5 ไฟล์: `api/finance/accounts`, `transactions`, `categories`, `transactions/balance`, `report` (DB layer พร้อมแล้ว ไม่ต้องแตะ)
 - [ ] ระบบเบี้ยเลี้ยง — โอนเงินเป็นรอบๆ (บัญชีเขต + บัญชีทีมงาน)
 - [ ] ระบบบัญชีเบี้ยเลี้ยงจังหวัด — ส่งสลิปเก็บง่าย + DM สลิปไปหาสมาชิก
 - [ ] จัดการเบี้ยเลี้ยงจากสมาชิก Discord
@@ -127,6 +134,7 @@
 - ~~Dashboard สรุป (`/calling/stats`) — gauges + charts~~ ✅
 
 ### ยังเหลือ
+- [ ] **Tenant-ready refactor** — 3 ขั้น: (1) add `guild_id` + backfill ใน `ngs_member_cache`, `calling_logs`, `calling_assignments`, `calling_member_tiers`; (2) DB functions (`web/db/calling/members.js`, `tiers.js`, `starred.js`) รับ `guildId` param + filter; (3) `/api/calling/*` routes ใช้ `guildId` จาก session แทน `process.env.GUILD_ID` — plan: `.claude/plans/calling-contact-twinkly-beacon.md`
 - [ ] เบอร์กลางโทรออก — แสดงเบอร์กลางขององค์กรแทนเบอร์ส่วนตัว (ต้องการ provider/config เบอร์กลาง)
 - [ ] แสดง active event บน dashboard + default event จังหวัดดึงจาก XLS
 - [ ] Audit logs — ดูประวัติการแก้ไข/เพิ่มข้อมูล

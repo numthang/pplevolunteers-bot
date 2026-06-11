@@ -1,6 +1,17 @@
 import { describe, it, expect } from 'vitest'
-import { isAdmin, isRegionalCoordinator, isProvincialCoordinator, getUserScope, canAccessMember, canCreateCampaign, canOverrideTier, canSeeContacts } from '../callingAccess.js'
-// กอง B: ฟังก์ชันรับได้ทั้ง array(ชื่อ role) และ access object — test เดิมส่ง array ตรงๆ ได้เลย (เป็น behavior spec)
+import * as ca from '../callingAccess.js'
+import { rolesToAccess } from './_rolesToAccess.js'
+
+// access fn รับ access object (จาก DB) — test เคสเขียนด้วย "ชื่อ role" ของ guild อาสาประชาชน
+// → shim แปลง array ชื่อ role → access object ผ่าน fixture (body เคสไม่ต้องแก้ ยังเป็น behavior spec เดิม)
+const isAdmin                = (roles) => ca.isAdmin(rolesToAccess(roles))
+const isRegionalCoordinator  = (roles) => ca.isRegionalCoordinator(rolesToAccess(roles))
+const isProvincialCoordinator = (roles) => ca.isProvincialCoordinator(rolesToAccess(roles))
+const canCreateCampaign      = (roles) => ca.canCreateCampaign(rolesToAccess(roles))
+const canOverrideTier        = (roles) => ca.canOverrideTier(rolesToAccess(roles))
+const canSeeContacts         = (roles) => ca.canSeeContacts(rolesToAccess(roles))
+const getUserScope           = (roles, primary) => ca.getUserScope(rolesToAccess(roles), primary)
+const canAccessMember        = (province, roles, isAssigned) => ca.canAccessMember(province, rolesToAccess(roles), isAssigned)
 
 // ---- isAdmin ----
 describe('isAdmin', () => {

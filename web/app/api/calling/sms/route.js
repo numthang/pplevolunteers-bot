@@ -1,12 +1,15 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
-import { isAdmin, isRegionalCoordinator } from '@/lib/callingAccess.js'
+import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
+import { normalizeAccess } from '@/lib/roleAccess.js'
 import pool from '@/db/index.js'
 import { createLog } from '@/db/calling/logs.js'
 
-// กรรมการจังหวัด ส่ง SMS ไม่ได้ — เฉพาะ ผู้ประสานงานจังหวัด ขึ้นไป
-function canSendSms(roles = []) {
-  return isAdmin(roles) || isRegionalCoordinator(roles) || roles.includes('ผู้ประสานงานจังหวัด')
+// กรรมการจังหวัด (district_coordinator) ส่ง SMS ไม่ได้ — เฉพาะ ผู้ประสานงานจังหวัด (province_coordinator) ขึ้นไป
+function canSendSms(access) {
+  const { permissions } = normalizeAccess(access)
+  return permissions.has('admin') || permissions.has('secretary_general')
+      || permissions.has('regional_coordinator') || permissions.has('province_coordinator')
 }
 
 const API_KEY    = process.env.THAIBULKSMS_API_KEY
@@ -31,7 +34,8 @@ export async function POST(req) {
     return Response.json({ error: 'SMS gateway not configured' }, { status: 503 })
   }
 
-  const hasSmsRole = canSendSms(session.user.roles || [])
+  const { access } = await getEffectiveIdentity(session)
+  const hasSmsRole = canSendSms(access)
 
   try {
     const { campaign_id, contact_type = 'member', member_ids, message } = await req.json()

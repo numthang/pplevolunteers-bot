@@ -21,9 +21,9 @@ function fmt(n) {
 }
 export default async function FinancePage() {
   const session = await requireAuth()
-  const { roles, discordId } = await getEffectiveIdentity(session)
+  const { roles, discordId, access } = await getEffectiveIdentity(session)
   const raw = await getAccountsAll(GUILD_ID, discordId, roles.includes('Admin'))
-  const accounts = raw.filter(a => canViewAccount(a, discordId, roles))
+  const accounts = raw.filter(a => canViewAccount(a, discordId, access))
 
   const summaries = await Promise.all(
     accounts.map(async acc => {
@@ -65,7 +65,7 @@ export default async function FinancePage() {
                   </span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {group.map(acc => <AccountCard key={acc.id} account={{ ...acc, balance: acc.balance }} canEdit={canEditAccount(acc, discordId, roles)} />)}
+                  {group.map(acc => <AccountCard key={acc.id} account={{ ...acc, balance: acc.balance }} canEdit={canEditAccount(acc, discordId, access)} />)}
                 </div>
               </div>
             )

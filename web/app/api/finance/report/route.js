@@ -21,11 +21,11 @@ export async function GET(req) {
     dateTo:    p.get('dateTo')    || undefined,
   }
 
-  const { roles: effectiveRoles, discordId: effectiveDiscordId } = await getEffectiveIdentity(session)
+  const { discordId: effectiveDiscordId, access } = await getEffectiveIdentity(session)
 
   if (filter.accountId) {
     const account = await getAccountById(filter.accountId)
-    if (!account || !canViewAccount(account, effectiveDiscordId, effectiveRoles)) {
+    if (!account || !canViewAccount(account, effectiveDiscordId, access)) {
       return Response.json({ error: 'Forbidden' }, { status: 403 })
     }
   }

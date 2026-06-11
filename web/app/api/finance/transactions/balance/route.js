@@ -14,9 +14,9 @@ export async function GET(req) {
   const accountId = new URL(req.url).searchParams.get('accountId')
   if (!accountId) return Response.json({ error: 'accountId required' }, { status: 400 })
 
-  const { roles: effectiveRoles, discordId: effectiveDiscordId } = await getEffectiveIdentity(session)
+  const { discordId: effectiveDiscordId, access } = await getEffectiveIdentity(session)
   const account = await getAccountById(accountId)
-  if (!account || !canViewAccount(account, effectiveDiscordId, effectiveRoles)) {
+  if (!account || !canViewAccount(account, effectiveDiscordId, access)) {
     return Response.json({ error: 'Forbidden' }, { status: 403 })
   }
 

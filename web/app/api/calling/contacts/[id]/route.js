@@ -4,8 +4,8 @@ import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import { getUserScope, isProvincialCoordinator, isRegionalCoordinator, isAdmin } from '@/lib/callingAccess.js'
 import { getContactById, updateContact, deleteContact } from '@/db/calling/contacts.js'
 
-function canEdit(contact, roles, discordId) {
-  if (isAdmin(roles) || isRegionalCoordinator(roles) || isProvincialCoordinator(roles)) return true
+function canEdit(contact, access, discordId) {
+  if (isAdmin(access) || isRegionalCoordinator(access) || isProvincialCoordinator(access)) return true
   return contact.created_by === discordId
 }
 
@@ -28,14 +28,14 @@ export async function PUT(req, { params }) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.discordId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { roles, discordId } = await getEffectiveIdentity(session)
+  const { access, discordId } = await getEffectiveIdentity(session)
   const { id } = await params
 
   try {
     const contact = await getContactById(parseInt(id))
     if (!contact) return Response.json({ error: 'Not found' }, { status: 404 })
 
-    if (!canEdit(contact, roles, discordId)) {
+    if (!canEdit(contact, access, discordId)) {
       return Response.json({ error: 'Forbidden' }, { status: 403 })
     }
 
@@ -62,14 +62,14 @@ export async function DELETE(req, { params }) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.discordId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { roles, discordId } = await getEffectiveIdentity(session)
+  const { access, discordId } = await getEffectiveIdentity(session)
   const { id } = await params
 
   try {
     const contact = await getContactById(parseInt(id))
     if (!contact) return Response.json({ error: 'Not found' }, { status: 404 })
 
-    if (!canEdit(contact, roles, discordId)) {
+    if (!canEdit(contact, access, discordId)) {
       return Response.json({ error: 'Forbidden' }, { status: 403 })
     }
 

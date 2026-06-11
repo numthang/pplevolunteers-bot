@@ -30,11 +30,11 @@ export async function GET(req) {
   const session = await getServerSession(authOptions)
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { roles: effectiveRoles, discordId: effectiveDiscordId } = await getEffectiveIdentity(session)
+  const { roles: effectiveRoles, discordId: effectiveDiscordId, access } = await getEffectiveIdentity(session)
 
   if (accountId) {
     const account = await getAccountById(accountId)
-    if (!account || !canViewAccount(account, effectiveDiscordId, effectiveRoles)) {
+    if (!account || !canViewAccount(account, effectiveDiscordId, access)) {
       return Response.json({ error: 'Forbidden' }, { status: 403 })
     }
   }
@@ -52,8 +52,8 @@ export async function POST(req) {
   let account = null
   if (data.account_id) {
     account = await getAccountById(data.account_id)
-    const { roles: effectiveRoles, discordId: effectiveDiscordId } = await getEffectiveIdentity(session)
-    if (!account || !canEditAccount(account, effectiveDiscordId, effectiveRoles)) {
+    const { discordId: effectiveDiscordId, access } = await getEffectiveIdentity(session)
+    if (!account || !canEditAccount(account, effectiveDiscordId, access)) {
       return Response.json({ error: 'Forbidden' }, { status: 403 })
     }
   }

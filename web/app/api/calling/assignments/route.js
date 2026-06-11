@@ -2,11 +2,11 @@ import { getServerSession } from 'next-auth'
 import * as assignmentDB from '@/db/calling/assignments.js'
 import * as campaignDB from '@/db/calling/campaigns.js'
 import { getUserScope } from '@/lib/callingAccess.js'
-import { getEffectiveRoles } from '@/lib/getEffectiveRoles.js'
+import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import { authOptions } from '@/lib/auth-options.js'
 
-function canSeeProvince(province, userRoles, primaryProvince) {
-  const scope = getUserScope(userRoles, primaryProvince)
+function canSeeProvince(province, access, primaryProvince) {
+  const scope = getUserScope(access, primaryProvince)
   return scope === null || scope.includes(province)
 }
 
@@ -66,8 +66,8 @@ export async function POST(req) {
       return Response.json({ error: 'Campaign not found' }, { status: 404 })
     }
 
-    const userRoles = await getEffectiveRoles(session)
-    if (!canSeeProvince(campaign.province, userRoles, session.user.primary_province)) {
+    const { access } = await getEffectiveIdentity(session)
+    if (!canSeeProvince(campaign.province, access, session.user.primary_province)) {
       return Response.json({ error: `Forbidden: cannot assign in ${campaign.province}` }, { status: 403 })
     }
 
@@ -116,8 +116,8 @@ export async function PUT(req) {
       return Response.json({ error: 'Campaign not found' }, { status: 404 })
     }
 
-    const userRoles = await getEffectiveRoles(session)
-    if (!canSeeProvince(campaign.province, userRoles, session.user.primary_province)) {
+    const { access } = await getEffectiveIdentity(session)
+    if (!canSeeProvince(campaign.province, access, session.user.primary_province)) {
       return Response.json({ error: 'Forbidden' }, { status: 403 })
     }
 
@@ -187,8 +187,8 @@ export async function DELETE(req) {
       return Response.json({ error: 'Campaign not found' }, { status: 404 })
     }
 
-    const userRoles = await getEffectiveRoles(session)
-    if (!canSeeProvince(campaign.province, userRoles, session.user.primary_province)) {
+    const { access } = await getEffectiveIdentity(session)
+    if (!canSeeProvince(campaign.province, access, session.user.primary_province)) {
       return Response.json({ error: 'Forbidden' }, { status: 403 })
     }
 

@@ -24,9 +24,9 @@ async function getTodayCallCount() {
 }
 
 async function getFINANCESummary(session) {
-  const { roles, discordId } = await getEffectiveIdentity(session)
+  const { roles, discordId, access } = await getEffectiveIdentity(session)
   const raw = await getAccountsAll(GUILD_ID, discordId, isAdmin(roles))
-  const accessibleAccounts = raw.filter(a => canViewAccount(a, discordId, roles))
+  const accessibleAccounts = raw.filter(a => canViewAccount(a, discordId, access))
 
   const results = { public: null, internal: null, private: null }
 

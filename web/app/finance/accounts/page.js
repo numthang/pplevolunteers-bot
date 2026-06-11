@@ -11,7 +11,7 @@ const EMPTY = { name: '', bank: '', account_no: '', visibility: 'private', provi
 
 export default function AccountsPage() {
   const { data: session } = useSession()
-  const { roles: effectiveRoles, discordId: effectiveDiscordId } = useEffectiveRoles(session)
+  const { discordId: effectiveDiscordId, access: effectiveAccess } = useEffectiveRoles(session)
   const [accounts, setAccounts] = useState([])
   const [editing, setEditing] = useState(null)
   const [form, setForm] = useState(EMPTY)
@@ -67,7 +67,7 @@ export default function AccountsPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {accounts.map(a => {
-          const canEdit = canEditAccount({ owner_id: a.owner_id, visibility: a.visibility, province: a.province }, effectiveDiscordId, effectiveRoles)
+          const canEdit = canEditAccount({ owner_id: a.owner_id, visibility: a.visibility, province: a.province }, effectiveDiscordId, effectiveAccess)
           return (
             <div key={a.id} className={`bg-card-bg rounded-xl shadow px-5 py-4 flex items-center justify-between gap-3 ${a.archived ? 'opacity-50' : ''}`}>
               <BankBadge bank={a.bank} size={40} />

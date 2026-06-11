@@ -8,8 +8,8 @@ import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 async function checkEditPermission(session, id) {
   const account = await getAccountById(id)
   if (!account) return { error: 'Not found', status: 404 }
-  const { roles, discordId } = await getEffectiveIdentity(session)
-  if (!canEditAccount(account, discordId, roles)) return { error: 'Forbidden', status: 403 }
+  const { roles, discordId, access } = await getEffectiveIdentity(session)
+  if (!canEditAccount(account, discordId, access)) return { error: 'Forbidden', status: 403 }
   return { account, roles }
 }
 

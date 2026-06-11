@@ -17,7 +17,7 @@ function TransactionsContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const { data: session } = useSession()
-  const { roles: effectiveRoles, discordId: effectiveDiscordId } = useEffectiveRoles(session)
+  const { roles: effectiveRoles, discordId: effectiveDiscordId, access: effectiveAccess } = useEffectiveRoles(session)
 
   const [txns, setTxns]         = useState([])
   const [accounts, setAccounts] = useState([])
@@ -164,7 +164,7 @@ function TransactionsContent() {
 
   const canEditAcc = (() => {
     const acc = accounts.find(a => String(a.id) === String(filter.accountId))
-    return acc ? canEditAccount({ owner_id: acc.owner_id, visibility: acc.visibility, province: acc.province }, effectiveDiscordId, effectiveRoles) : false
+    return acc ? canEditAccount({ owner_id: acc.owner_id, visibility: acc.visibility, province: acc.province }, effectiveDiscordId, effectiveAccess) : false
   })()
 
   function openNew()  { setForm({ ...EMPTY_FORM }); setEditing({}) }
@@ -571,7 +571,7 @@ function TransactionsContent() {
                 {canEditAccount(
                   { owner_id: t.account_owner_id, visibility: t.account_visibility, province: t.account_province },
                   effectiveDiscordId,
-                  effectiveRoles
+                  effectiveAccess
                 ) && (
                   <div className="flex gap-2">
                     <button
@@ -604,7 +604,7 @@ function TransactionsContent() {
           <TxnForm form={form} onChange={v => setForm(f => ({ ...f, ...v }))}
             accounts={accounts.filter(a => canEditAccount(
               { owner_id: a.owner_id, visibility: a.visibility, province: a.province },
-              effectiveDiscordId, effectiveRoles
+              effectiveDiscordId, effectiveAccess
             ))}
             categories={categories} />
         </Modal>

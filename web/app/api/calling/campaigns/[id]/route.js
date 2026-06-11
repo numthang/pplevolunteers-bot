@@ -2,7 +2,7 @@ import { getServerSession } from 'next-auth'
 import * as campaignDB from '@/db/calling/campaigns.js'
 import { canCreateCampaign } from '@/lib/callingAccess.js'
 import { authOptions } from '@/lib/auth-options.js'
-import { getEffectiveRoles } from '@/lib/getEffectiveRoles.js'
+import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 
 export async function GET(req, { params }) {
   const session = await getServerSession(authOptions)
@@ -23,8 +23,8 @@ export async function PATCH(req, { params }) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.discordId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const userRoles = await getEffectiveRoles(session)
-  if (!canCreateCampaign(userRoles)) return Response.json({ error: 'Forbidden' }, { status: 403 })
+  const { access } = await getEffectiveIdentity(session)
+  if (!canCreateCampaign(access)) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
   const { id } = await params
   try {
@@ -52,8 +52,8 @@ export async function DELETE(req, { params }) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.discordId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const userRoles = await getEffectiveRoles(session)
-  if (!canCreateCampaign(userRoles)) return Response.json({ error: 'Forbidden' }, { status: 403 })
+  const { access } = await getEffectiveIdentity(session)
+  if (!canCreateCampaign(access)) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
   const { id } = await params
   try {

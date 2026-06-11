@@ -1,51 +1,23 @@
 /**
- * roleAccess — แปลงชื่อ role (อาสาประชาชน) → { permissions, scopeGrants }
+ * roleAccess — normalize access object ให้รูปแบบเดียว
  *
- * เป็น "policy mirror" ของ seed-guild-roles.js — ใช้เป็น runtime source ชั่วคราวสำหรับ guild อาสาประชาชน
- * (ทำงานได้ทั้ง server + client — client (useEffectiveRoles) แตะ DB ไม่ได้)
+ * source ของ access คือ DB (dc_guild_roles ผ่าน resolveAccess) — server ได้ Set ตรงๆ,
+ * client ได้ผ่าน /api/me/access ที่ permissions เป็น array (Set ข้าม JSON ไม่ได้)
+ * ฟังก์ชันนี้แปลงทั้งสองรูปให้เป็น { permissions: Set, scopeGrants: [] } เสมอ
  *
- * 🔜 multi-guild: resolveAccess.js อ่าน dc_guild_roles จาก DB เป็น source จริง — boundary (getEffectiveIdentity)
- *    จะส่ง access object เข้ามาแทน array แล้ว normalizeAccess จะปล่อยผ่าน (ไม่ต้องแก้ access function)
+ * (เดิมมี mirror hardcode roleToAccess/PERMISSION_BY_ROLE สำหรับ guild อาสาประชาชน —
+ *  ลบแล้วหลัง consumer ทุกตัวรับ access object จาก DB · policy per-guild อยู่ใน dc_guild_roles)
  */
-import { SUB_REGION_MAP, MAIN_REGION_MAP } from './geography.js'
-
-const PERMISSION_BY_ROLE = {
-  'Admin':                'admin',
-  'เลขาธิการ':            'secretary_general',
-  'ผู้ประสานงานภาค':      'regional_coordinator',
-  'รองเลขาธิการ':         'regional_coordinator',
-  'ผู้ประสานงานจังหวัด':  'province_coordinator',
-  'กรรมการจังหวัด':       'district_coordinator',
-  'เหรัญญิก':             'treasurer',
-  'ทีมบรรณาธิการ':        'editor',
-  'Moderator':            'moderator',
-}
-
-const PROVINCES        = new Set(Object.keys(SUB_REGION_MAP))    // ชื่อจังหวัดทั้งหมด
-const SUBREGION_ROLES  = new Set(Object.values(SUB_REGION_MAP))  // role ภาคย่อย
-const MAINREGION_ROLES = new Set(Object.values(MAIN_REGION_MAP)) // role ภาคใหญ่
-
-/** roleNames[] → { permissions: Set, scopeGrants: [] } (รูปแบบเดียวกับ resolveAccess) */
-export function roleToAccess(roleNames = []) {
-  const permissions = new Set()
-  const scopeGrants = []
-  for (const r of roleNames) {
-    if (PERMISSION_BY_ROLE[r]) permissions.add(PERMISSION_BY_ROLE[r])
-    if (r.startsWith('ทีม')) {
-      const prov = r.replace(/^ทีม/, '')
-      if (PROVINCES.has(prov))     { scopeGrants.push(`province:${prov}`); continue }
-      if (SUBREGION_ROLES.has(r))  { scopeGrants.push(`subregion:${r}`);  continue }
-      if (MAINREGION_ROLES.has(r)) { scopeGrants.push(`region:${r}`);     continue }
-    }
-  }
-  return { permissions, scopeGrants }
-}
 
 /**
- * รับได้ทั้ง array(ชื่อ role) และ access object → คืน { permissions, scopeGrants } เสมอ
- * array → แปลงผ่าน mirror · object → ปล่อยผ่าน (มาจาก resolveAccess/DB)
+ * รับ access object → คืน { permissions: Set, scopeGrants: [] } เสมอ
+ * - object จาก resolveAccess (server) → permissions เป็น Set อยู่แล้ว ปล่อยผ่าน
+ * - object จาก JSON wire (API)        → permissions เป็น array → แปลงกลับเป็น Set
  */
 export function normalizeAccess(access) {
-  if (Array.isArray(access)) return roleToAccess(access)
-  return access || {}
+  if (!access) return { permissions: new Set(), scopeGrants: [] }
+  const permissions = access.permissions instanceof Set
+    ? access.permissions
+    : new Set(access.permissions || [])
+  return { permissions, scopeGrants: access.scopeGrants || [] }
 }

@@ -1,7 +1,7 @@
 import { getServerSession } from 'next-auth'
 import * as memberDB from '@/db/calling/members.js'
 import { canAccessMember, getUserScope, isAdmin, canSeeContacts } from '@/lib/callingAccess.js'
-import { getEffectiveRoles } from '@/lib/getEffectiveRoles.js'
+import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import { authOptions } from '@/lib/auth-options.js'
 
 /**
@@ -39,9 +39,9 @@ export async function GET(req) {
   const filterSms = searchParams.get('sms') || null
 
   try {
-    const userRoles = await getEffectiveRoles(session)
-    const userScope = getUserScope(userRoles, session.user.primary_province)
-    const isUserAdmin = isAdmin(userRoles)
+    const { access } = await getEffectiveIdentity(session)
+    const userScope = getUserScope(access, session.user.primary_province)
+    const isUserAdmin = isAdmin(access)
 
     // Stats-only request
     if (campaignId && statsOnly) {
@@ -76,7 +76,7 @@ export async function GET(req) {
       rows = rows.filter(m => userScope.includes(m.home_province))
     }
 
-    const showContacts = canSeeContacts(userRoles)
+    const showContacts = canSeeContacts(access)
     if (!showContacts) {
       rows = rows.map(({ mobile_number, line_id, ...rest }) => rest)
     }

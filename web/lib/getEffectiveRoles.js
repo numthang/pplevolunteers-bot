@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers'
 import { isAdmin } from './roles.js'
 import { DEBUG_COMBOS } from './debugCombos.js'
+import { resolveAccess } from './resolveAccess.js'
 import pool from '@/db/index.js'
 
 const DEBUG_LABELS = DEBUG_COMBOS.map(c => c.label)
@@ -10,7 +11,18 @@ export async function getEffectiveRoles(session) {
   return roles
 }
 
+/**
+ * คืน { roles, discordId, access } — roles/discordId คือ identity (debug-aware)
+ * access = { isMember, permissions: Set, scopeGrants: [] } resolve จาก dc_guild_roles (DB จริง)
+ */
 export async function getEffectiveIdentity(session) {
+  const { roles, discordId } = await resolveIdentity(session)
+  const access = await resolveAccess(process.env.GUILD_ID, roles)
+  return { roles, discordId, access }
+}
+
+/** identity layer เดิม (อ่าน roles จาก DB + จัดการ debug/view-as-role) — แยกออกเพื่อ resolve access ครั้งเดียว */
+async function resolveIdentity(session) {
   const realDiscordId = session?.user?.discordId || null
 
   // Always read fresh roles from DB (bypass JWT cache)

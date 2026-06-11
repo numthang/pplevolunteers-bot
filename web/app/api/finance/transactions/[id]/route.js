@@ -15,8 +15,8 @@ export async function PUT(req, { params }) {
   if (!txn) return Response.json({ error: 'Not found' }, { status: 404 })
 
   const account = await getAccountById(txn.account_id)
-  const { roles: effectiveRoles, discordId: effectiveDiscordId } = await getEffectiveIdentity(session)
-  if (!account || !canEditAccount(account, effectiveDiscordId, effectiveRoles)) {
+  const { discordId: effectiveDiscordId, access } = await getEffectiveIdentity(session)
+  if (!account || !canEditAccount(account, effectiveDiscordId, access)) {
     return Response.json({ error: 'Forbidden' }, { status: 403 })
   }
 
@@ -39,8 +39,8 @@ export async function DELETE(req, { params }) {
   if (!txn) return Response.json({ error: 'Not found' }, { status: 404 })
 
   const account = await getAccountById(txn.account_id)
-  const { roles: effectiveRoles, discordId: effectiveDiscordId } = await getEffectiveIdentity(session)
-  if (!account || !canEditAccount(account, effectiveDiscordId, effectiveRoles)) {
+  const { discordId: effectiveDiscordId, access } = await getEffectiveIdentity(session)
+  if (!account || !canEditAccount(account, effectiveDiscordId, access)) {
     return Response.json({ error: 'Forbidden' }, { status: 403 })
   }
 

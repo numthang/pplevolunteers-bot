@@ -3,17 +3,17 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { getUserScope, isAdmin, canCreateCampaign } from '@/lib/callingAccess.js'
 import { getCampaigns } from '@/db/calling/campaigns.js'
-import { getEffectiveRoles } from '@/lib/getEffectiveRoles.js'
+import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import CampaignCard from '@/components/calling/CampaignCard.jsx'
 
 export default async function CallingPage() {
   const session = await getSession()
   if (!session) redirect('/')
 
-  const userRoles = await getEffectiveRoles(session)
-  const userScope = getUserScope(userRoles)
-  const isUserAdmin = isAdmin(userRoles)
-  const canCreate = canCreateCampaign(userRoles)
+  const { access } = await getEffectiveIdentity(session)
+  const userScope = getUserScope(access)
+  const isUserAdmin = isAdmin(access)
+  const canCreate = canCreateCampaign(access)
 
   const campaigns = await getCampaigns()
   const filteredCampaigns = campaigns.filter(

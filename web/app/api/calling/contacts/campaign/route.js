@@ -1,6 +1,6 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
-import { getEffectiveRoles } from '@/lib/getEffectiveRoles.js'
+import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import { getUserScope, isAdmin } from '@/lib/callingAccess.js'
 import { getContactsInCampaign, getContactsInCampaignStats } from '@/db/calling/contacts.js'
 
@@ -17,9 +17,9 @@ export async function GET(req) {
   if (!campaignId) return Response.json({ error: 'campaignId is required' }, { status: 400 })
 
   try {
-    const userRoles  = await getEffectiveRoles(session)
-    const userScope  = getUserScope(userRoles, session.user.primary_province)
-    const isUserAdmin = isAdmin(userRoles)
+    const { access }  = await getEffectiveIdentity(session)
+    const userScope  = getUserScope(access, session.user.primary_province)
+    const isUserAdmin = isAdmin(access)
 
     if (!isUserAdmin && Array.isArray(userScope) && userScope.length === 0) {
       return Response.json({ success: true, data: [], hasMore: false, noAccess: true })

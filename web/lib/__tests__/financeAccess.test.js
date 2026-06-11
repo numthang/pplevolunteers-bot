@@ -1,6 +1,16 @@
 import { describe, it, expect } from 'vitest'
-import { canViewAccount, canEditAccount, canCreateNonPrivateAccount } from '../financeAccess.js'
-// กอง B: ฟังก์ชันรับได้ทั้ง array(ชื่อ role) และ access object — test เดิมส่ง array ตรงๆ ได้เลย (เป็น behavior spec)
+import {
+  canViewAccount as _canViewAccount,
+  canEditAccount as _canEditAccount,
+  canCreateNonPrivateAccount as _canCreateNonPrivateAccount,
+} from '../financeAccess.js'
+import { rolesToAccess } from './_rolesToAccess.js'
+
+// access fn รับ access object (จาก DB) — test เคสเขียนด้วย "ชื่อ role" ของ guild อาสาประชาชน
+// → shim แปลง array ชื่อ role → access object ผ่าน fixture (body เคสไม่ต้องแก้ ยังเป็น behavior spec เดิม)
+const canViewAccount            = (account, id, roles) => _canViewAccount(account, id, rolesToAccess(roles))
+const canEditAccount            = (account, id, roles) => _canEditAccount(account, id, rolesToAccess(roles))
+const canCreateNonPrivateAccount = (roles)             => _canCreateNonPrivateAccount(rolesToAccess(roles))
 
 // ---- helpers ----
 const acc = (overrides) => ({
