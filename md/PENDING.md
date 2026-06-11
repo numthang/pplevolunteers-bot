@@ -63,11 +63,19 @@
 3. ✅ `web/lib/` geography + permissions + resolveAccess + tests
 4. ✅ financeAccess/callingAccess เช็ค permission/scope (commit e6cf556) — ลบ map ใหญ่, branching เดิม
 5. ✅ port test (finance 57 + calling 37) ผ่านครบ · รวม suite 134 เขียว
-6. ⏳ **เหลือ — bot:** (a) sync catalog → `dc_guild_roles` ใน bot startup/role-change (logic เหมือน seed, ควร extract ไป share) · (b) render interest/skill/province panel จาก DB แทน `config/roles.js`
+6. **bot:** (a) ✅ catalog auto-sync → `dc_guild_roles` (commit 894f596 · `db/guildRoles.js` + index.js ready/roleCreate/Update/Delete · ไม่แตะ policy) · (b) ✅ render **interest/skill** จาก DB (commit 644abe1 · customId=role_id, ทิ้ง divider) · (c) ✅ **province จาก DB** — `getRolesByScopePrefix('province:')` + cascade ผ่าน `parent_role_id` chain
 7. ⏳ **เหลือ — DB-wiring (multi-guild จริง):** ตอนนี้ runtime ใช้ `web/lib/roleAccess.js` (policy mirror = seed) ทั้ง server+client · ขั้นต่อไป boundary (`getEffectiveIdentity`) เรียก `resolveAccess`/DB ส่ง access object · client (`useEffectiveRoles`) ต้องมี API ดึง permissions (แตะ DB ตรงจาก client ไม่ได้) · `normalizeAccess` รับ access object อยู่แล้ว ไม่ต้องแก้ access fn
-8. *(ทีหลัง)* UI per-guild config + dynamic groups
+8. ✅ **ลบ `config/roles.js`** — migrate consumer ทุกตัว query `dc_guild_roles` แทน hardcode · MEDIA_TEAM + province cascade รวมเป็น **`parent_role_id` column เดียว** (add → แปะ parent chain · remove → ถอด parent ถ้าไม่เหลือ sibling) · ทั้ง 2 handler โชว์ parent ที่ถูกแตะใน status · ข้อมูลเดิม archive ที่ `scripts/migration/_roles-archive.js` (seed scripts เท่านั้น) · **ยังไม่ deploy prod**
+9. ⏳ **UI per-guild config + dynamic groups** — **blocker ตัวจริงของ tenant ใหม่:** catalog auto-sync แล้ว แต่ policy (`permission`/`scope_node`/`picker_group`/`parent_role_id`) = null → guild ใหม่ไม่มี picker/RBAC/cascade จนกว่าจะตั้ง · ตอนนี้ตั้งได้ทางเดียว = แก้ DB มือ → ต้องมีหน้า admin ตั้งเอง
+10. ⏳ **web `GUILD_ID` → session/route param** — **blocker multi-tenant ฝั่ง web:** finance routes / profile / page.js / quote-config ยัง `process.env.GUILD_ID` (pin guild เดียว) · ต้องเปลี่ยนเป็น guild จาก session ก่อนรับ guild ที่สอง · bot runtime สะอาดแล้ว (เหลือ `services/financeOCR.js` ที่เดียว)
 
-> **สถานะ 2026-06-10:** กอง A + กอง B (lib/RBAC core) เสร็จ+commit · behavior อาสาประชาชนเท่าเดิม (134 tests) · call site ไม่ต้องแก้ (normalizeAccess รับ array ได้) · เหลือ bot (step 6) + DB-wiring multi-guild (step 7)
+### Deferred (RBAC) — ทำตอนต้องใช้
+- **registerHandler province part** — ✅ ย้าย DB แล้ว (`getRolesByScopePrefix`)
+- **db/members.js** — ✅ derive province/interests จาก DB แล้ว (`getRolesByScopePrefix` + `getPickerRoles`)
+- **MEDIA_TEAM + cascade → DB** — ✅ `parent_role_id` column · per-guild config rule เองได้ ไม่ hardcode
+- **interest flat ≤20 ปุ่ม/ข้อความ** (Discord 5 แถว) — ตอนนี้ 18 · ถ้าเกินต้อง paginate
+
+> **สถานะ 2026-06-11:** step 8 (ลบ config/roles.js) เสร็จ · **bot roles multi-tenant แล้ว** — ทุก role มาจาก DB, `parent_role_id` คุม cascade (กราฟิก→สื่อ, จังหวัด→ภาคย่อย→ภาคใหญ่) · **แต่ยังไม่ multi-tenant เต็มตัว** — เหลือ blocker tenant ใหม่: step 9 (UI ตั้ง policy, ไม่งั้นต้องแก้ DB มือ) + step 10 (web ยัง pin GUILD_ID) · step 7 (web RBAC DB-wiring) ยังค้าง · **ยังไม่ deploy prod** — ตอน deploy รัน `sudo -u www`: migration.sql → seed-guild-roles.js → seed-parent-roles.js
 
 ---
 
@@ -127,6 +135,22 @@
 ## 👥 PPLE Contacts
 
 - [ ] Multi-server design — ถกเรื่อง schema: แยก table ตาม guild หรืออยู่ table เดียวแยกด้วย `guild_id`
+
+---
+
+## ❓ Open Question — Guild Identity & Data Ownership
+
+ยังไม่ได้ตัดสิน รอถกในอนาคต:
+
+**Finance / Calling contacts ผูกกับ guild ไหน?**
+- ตอนนี้ finance + calling ผูก `GUILD_ID` อาสาประชาชนโดย default (hardcode env)
+- ถ้ามี 4 guilds แล้ว: บัญชีการเงิน/รายชื่อ contact ของแต่ละ guild แยกกันไหม? หรือ share ข้ามกัน?
+- `ngs_member_cache` (calling) มาจากฐาน NGS ไม่ใช่ Discord → ไม่ผูก guild_id เลยตอนนี้
+
+**User เข้า web ในฐานะ guild ไหน?**
+- ตอนนี้ทุกคนเข้าในฐานะ "อาสาประชาชน" โดย default
+- ถ้า user อยู่หลาย guild: web รู้ได้ยังไงว่า request นี้ของ guild ไหน (subdomain? route param? session?)
+- ยังไม่มี multi-guild routing ใน web เลย
 
 ---
 

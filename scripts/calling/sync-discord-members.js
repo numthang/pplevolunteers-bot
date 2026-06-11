@@ -10,20 +10,18 @@ const fs = require('fs');
 const path = require('path');
 const { Client, GatewayIntentBits } = require('discord.js');
 const pool = require('../../db/index');
-const { PROVINCE_ROLES, INTEREST_ROLES, SKILL_ROLES } = require('../../config/roles');
+const { getRolesByScopePrefix, getPickerRoles } = require('../../db/guildRoles');
 
 const DRY_RUN = process.argv.includes('--dry-run');
 const SQL_OUT = process.argv.includes('--sql');
 
-const interestIds = new Set([...Object.values(SKILL_ROLES), ...Object.values(INTEREST_ROLES)]);
-
-function buildRow(m) {
+async function buildRow(m, provinceRows, interestIds) {
   return {
     guild_id: m.guild.id,
     discord_id: m.id,
     username: m.user.username,
     display_name: m.displayName,
-    province: Object.entries(PROVINCE_ROLES).filter(([, id]) => m.roles.cache.has(id)).map(([p]) => p).join(',') || null,
+    province: provinceRows.filter(r => m.roles.cache.has(r.role_id)).map(r => r.scope_node.replace('province:', '')).join(',') || null,
     roles: m.roles.cache.filter(r => r.name !== '@everyone').map(r => r.name).join(',') || null,
     interests: m.roles.cache.filter(r => interestIds.has(r.id)).map(r => r.name).join(',') || null,
   };
@@ -91,6 +89,13 @@ client.once('ready', async () => {
   const total = humans.length
   console.log(`Fetched ${members.size} members (${total} non-bot)${DRY_RUN ? '' : ', upserting...'}`);
 
+  const [provinceRows, interestRows, skillRows] = await Promise.all([
+    getRolesByScopePrefix(guildId, 'province:'),
+    getPickerRoles(guildId, 'interest'),
+    getPickerRoles(guildId, 'skill'),
+  ]);
+  const interestIds = new Set([...interestRows, ...skillRows].map(r => r.roleId));
+
   if (DRY_RUN) {
     console.log(`✅ DRY-RUN: would upsert ${total} members:`);
     for (const m of humans) console.log(`  ${m.user.username} | ${m.displayName} (${m.id})`);
@@ -98,7 +103,7 @@ client.once('ready', async () => {
   }
 
   if (SQL_OUT) {
-    const rows = humans.map(buildRow);
+    const rows = await Promise.all(humans.map(m => buildRow(m, provinceRows, interestIds)));
     const logDir = path.join(__dirname, '../../logs');
     fs.mkdirSync(logDir, { recursive: true });
     const file = path.join(logDir, `sync-members-${guildId}-${Date.now()}.sql`);
@@ -109,7 +114,7 @@ client.once('ready', async () => {
 
   let done = 0, errors = 0;
   for (const m of humans) {
-    const r = buildRow(m);
+    const r = await buildRow(m, provinceRows, interestIds);
     try {
       await pool.query(UPSERT_SQL, [r.guild_id, r.discord_id, r.username, r.display_name, r.province, r.roles, r.interests]);
       done++;

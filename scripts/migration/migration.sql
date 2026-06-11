@@ -425,3 +425,12 @@ CREATE TABLE IF NOT EXISTS dc_guild_roles (
 );
 CREATE INDEX IF NOT EXISTS idx_dc_guild_roles_lookup ON dc_guild_roles (guild_id, role_name);   -- web lookup by name
 CREATE INDEX IF NOT EXISTS idx_dc_guild_roles_picker ON dc_guild_roles (guild_id, picker_group);
+
+-- 2026-06-11: calling_member_tiers — เพิ่ม flag column (green/yellow/red สำหรับ mark สมาชิก)
+ALTER TABLE calling_member_tiers ADD COLUMN IF NOT EXISTS flag VARCHAR(20);
+
+-- 2026-06-11: dc_guild_roles — parent_role_id สำหรับ cascade role
+--   กด role ที่มี parent → แปะ parent ด้วย (chain); ถอด → ถ้าไม่มี sibling เหลือ ถอด parent ด้วย
+--   ใช้คลุมทั้ง MEDIA_TEAM (ทีมกราฟิก→ทีมสื่อ) และ province hierarchy (จังหวัด→ภาคย่อย→ภาคใหญ่)
+--   seed ด้วย: node scripts/migration/seed-parent-roles.js
+ALTER TABLE dc_guild_roles ADD COLUMN IF NOT EXISTS parent_role_id VARCHAR(20) NULL;

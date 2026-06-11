@@ -36,7 +36,7 @@ export default function BasketPage() {
 
   const load = useCallback(async () => {
     if (!guild || !channel) { setError('ลิงก์ไม่ครบ (ต้องมี guild + channel)'); setLoading(false); return }
-    const res = await fetch(`/api/discord/basket?guild=${guild}&channel=${channel}`)
+    const res = await fetch(`/api/bot/basket?guild=${guild}&channel=${channel}`)
     if (!res.ok) { setError('โหลดตะกร้าไม่สำเร็จ'); setLoading(false); return }
     const d = await res.json()
     setImages(d.images || [])
@@ -64,7 +64,7 @@ export default function BasketPage() {
   useEffect(() => { imagesRef.current = images }, [images])
 
   function saveOrder(arr) {
-    return fetch('/api/discord/basket', {
+    return fetch('/api/bot/basket', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ guild, channel, action: 'reorder', order: arr.map(im => im.id) }),
@@ -105,17 +105,17 @@ export default function BasketPage() {
 
   async function removeImage(id) {
     setImages(prev => prev.filter(im => im.id !== id))
-    await fetch(`/api/discord/basket?guild=${guild}&channel=${channel}&id=${id}`, { method: 'DELETE' }).catch(() => {})
+    await fetch(`/api/bot/basket?guild=${guild}&channel=${channel}&id=${id}`, { method: 'DELETE' }).catch(() => {})
   }
 
   async function removeVideo(id) {
     setVideos(prev => prev.filter(v => v.id !== id))
-    await fetch(`/api/discord/basket?guild=${guild}&channel=${channel}&id=${id}`, { method: 'DELETE' }).catch(() => {})
+    await fetch(`/api/bot/basket?guild=${guild}&channel=${channel}&id=${id}`, { method: 'DELETE' }).catch(() => {})
   }
 
   async function saveCaption() {
     setSavingCap(true); setSavedCap(false)
-    const res = await fetch('/api/discord/basket', {
+    const res = await fetch('/api/bot/basket', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ guild, channel, action: 'caption', caption }),
@@ -126,7 +126,7 @@ export default function BasketPage() {
 
   async function clearBasket() {
     if (!confirm('ล้างตะกร้าทั้งหมด? (รูป + วิดีโอ + caption)')) return
-    await fetch(`/api/discord/basket?guild=${guild}&channel=${channel}`, { method: 'DELETE' })
+    await fetch(`/api/bot/basket?guild=${guild}&channel=${channel}`, { method: 'DELETE' })
     setImages([]); setVideos([]); setCaption('')
   }
 

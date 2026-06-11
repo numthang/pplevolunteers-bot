@@ -2,7 +2,7 @@
 require('dotenv').config();
 const {Client, GatewayIntentBits} = require('discord.js');
 const pool = require('../../db/index');
-const {PROVINCE_ROLES, INTEREST_ROLES, SKILL_ROLES} = require('../../config/roles');
+const {PROVINCE_ROLES, INTEREST_ROLES, SKILL_ROLES} = require('../migration/_roles-archive');
 
 const GUILD_ID = process.env.GUILD_ID;
 const DELAY_MS = 100;

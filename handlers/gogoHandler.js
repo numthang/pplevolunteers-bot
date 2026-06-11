@@ -15,22 +15,11 @@ const {
   GuildScheduledEventPrivacyLevel,
 } = require('discord.js');
 const { getSetting, setSetting } = require('../db/settings');
-const { ROLES } = require('../config/roles');
 const { getMember } = require('../db/members');
 const { getEntries, hasPanel, upsertEntries, seedEntries } = require('../db/gogo');
 
 const FIELD_PREFIX = 'ผู้เข้าร่วม';
 const isEntryField = f => f.name.startsWith(FIELD_PREFIX) || f.name.startsWith('👥 ' + FIELD_PREFIX);
-
-const DM_ALLOWED_ROLE_IDS = new Set([
-  ROLES['Admin'],
-  ROLES['Moderator'],
-  ROLES['เจ้าหน้าที่พรรค'],
-  ROLES['รองเลขาธิการ'],
-  ROLES['ผู้ประสานงานภาค'],
-  ROLES['ผู้ประสานงานจังหวัด'],
-  ROLES['กรรมการจังหวัด'],
-]);
 
 const DM_ALLOWED_ROLE_NAMES = new Set([
   'Admin', 'Moderator', 'เจ้าหน้าที่พรรค', 'รองเลขาธิการ',
@@ -243,7 +232,7 @@ async function handleGogoDMButton(interaction) {
   if (!allowed) {
     // เช็ค Discord API (real-time)
     const member = await interaction.guild.members.fetch(userId);
-    allowed = [...DM_ALLOWED_ROLE_IDS].some(id => member.roles.cache.has(id));
+    allowed = member.roles.cache.some(r => DM_ALLOWED_ROLE_NAMES.has(r.name));
   }
 
   if (!allowed) {

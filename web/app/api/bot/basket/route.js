@@ -16,7 +16,7 @@ async function auth(guildId, channelId) {
   return { ok: true, session }
 }
 
-// GET /api/discord/basket?guild=...&channel=...  → { images: [...], caption }
+// GET /api/bot/basket?guild=...&channel=...  → { images: [...], caption }
 export async function GET(req) {
   const { searchParams } = new URL(req.url)
   const guildId   = searchParams.get('guild')
@@ -38,7 +38,7 @@ export async function GET(req) {
   return Response.json({ images, videos, caption })
 }
 
-// PATCH /api/discord/basket  body: { guild, channel, action: 'reorder'|'caption', order?, caption? }
+// PATCH /api/bot/basket  body: { guild, channel, action: 'reorder'|'caption', order?, caption? }
 export async function PATCH(req) {
   const body = await req.json().catch(() => ({}))
   const { guild: guildId, channel: channelId, action } = body
@@ -78,7 +78,7 @@ export async function PATCH(req) {
   return Response.json({ error: 'unknown action' }, { status: 400 })
 }
 
-// DELETE /api/discord/basket?guild=...&channel=...[&id=...]
+// DELETE /api/bot/basket?guild=...&channel=...[&id=...]
 //   มี id → ลบรูปนั้นรูปเดียว, ไม่มี id → ล้างตะกร้าทั้งหมด
 export async function DELETE(req) {
   const { searchParams } = new URL(req.url)

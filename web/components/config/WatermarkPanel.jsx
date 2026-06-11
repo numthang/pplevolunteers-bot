@@ -193,7 +193,7 @@ function GuildPanel({ guildId }) {
   const loadFiles = useCallback(async (gid) => {
     if (!gid) return
     setLoading(true)
-    const res = await fetch(`/api/discord/guild-watermarks?guild_id=${gid}`)
+    const res = await fetch(`/api/bot/guild-watermarks?guild_id=${gid}`)
     if (res.ok) {
       const d = await res.json()
       setGroups(d.groups || [])
@@ -207,7 +207,7 @@ function GuildPanel({ guildId }) {
   async function setGroupDefault(group, filename) {
     const next = filename ? `guild:${filename}` : 'none'
     setSettingDefault(true)
-    await fetch('/api/discord/guild-watermarks', {
+    await fetch('/api/bot/guild-watermarks', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ guild_id: guildId, group, default_watermark: next }),
@@ -228,7 +228,7 @@ function GuildPanel({ guildId }) {
     form.append('file', file)
     form.append('guild_id', guildId)
     form.append('group', target)
-    const res = await fetch('/api/discord/guild-watermarks', { method: 'POST', body: form })
+    const res = await fetch('/api/bot/guild-watermarks', { method: 'POST', body: form })
     const data = await res.json()
     if (!res.ok) setError(data.error || 'อัปโหลดไม่สำเร็จ')
     else await loadFiles(guildId)
@@ -239,7 +239,7 @@ function GuildPanel({ guildId }) {
     if (!confirm(`ลบ "${filename}"?`)) return
     setDeleting(filename)
     const qs = new URLSearchParams({ guild_id: guildId, group: target, file: filename })
-    await fetch(`/api/discord/guild-watermarks?${qs}`, { method: 'DELETE' })
+    await fetch(`/api/bot/guild-watermarks?${qs}`, { method: 'DELETE' })
     setFilesByGroup(prev => ({ ...prev, [target]: (prev[target] || []).filter(f => f !== filename) }))
     setDeleting(null)
   }
@@ -252,7 +252,7 @@ function GuildPanel({ guildId }) {
 
   function imgUrl(filename) {
     const qs = new URLSearchParams({ guild_id: guildId, group: target, file: filename, raw: '1' })
-    return `/api/discord/guild-watermarks?${qs}`
+    return `/api/bot/guild-watermarks?${qs}`
   }
 
   const targetTabs = [{ key: ROOT, label: 'ลายน้ำกลาง (Guild)' }, ...groups.map(g => ({ key: g, label: g }))]
@@ -374,7 +374,7 @@ export default function WatermarkPanel() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch('/api/discord/guild-watermarks')
+    fetch('/api/bot/guild-watermarks')
       .then(r => r.json())
       .then(d => setGuilds(d.guilds || []))
       .catch(() => {})

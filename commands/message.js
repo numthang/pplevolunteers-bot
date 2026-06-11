@@ -10,7 +10,7 @@ const {
 } = require('discord.js');
 const { fetchAllMessages, buildFile } = require('../services/fetchMessages');
 const { processMessages } = require('../services/aiSummarize');
-const { AI_MODES } = require('../config/aiModes');
+const { getModes } = require('../db/aiConfig');
 
 const REPLY_LIMIT = 1800; // กัน Discord 2000-char limit
 
@@ -42,7 +42,7 @@ module.exports = {
           opt.setName('ai')
             .setDescription('ให้ AI ประมวลผลข้อความ (ถ้าไม่ใส่ = แค่ดึง raw)')
             .setRequired(false)
-            .addChoices(...AI_MODES.map(m => ({ name: m.label, value: m.value })))
+            .setAutocomplete(true)
         )
         .addBooleanOption(opt =>
           opt.setName('public')
@@ -62,6 +62,15 @@ module.exports = {
             .setMaxLength(2000)
         )
     ),
+
+  async autocomplete(interaction) {
+    const focused = interaction.options.getFocused().toLowerCase();
+    const modes = await getModes(interaction.guildId);
+    const filtered = modes
+      .filter(m => m.label.toLowerCase().includes(focused) || m.value.includes(focused))
+      .slice(0, 25);
+    await interaction.respond(filtered.map(m => ({ name: m.label, value: m.value })));
+  },
 
   async execute(interaction) {
     const sub = interaction.options.getSubcommand();

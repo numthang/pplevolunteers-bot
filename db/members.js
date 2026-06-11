@@ -1,5 +1,5 @@
 const pool = require('./index');
-const { PROVINCE_ROLES, INTEREST_ROLES, SKILL_ROLES } = require('../config/roles');
+const { getRolesByScopePrefix, getPickerRoles } = require('./guildRoles');
 
 async function upsertMember(guildId, data) {
   const sql = `
@@ -46,14 +46,18 @@ async function upsertMember(guildId, data) {
   await pool.query(sql, values);
 }
 
-async function upsertMemberFromDiscord(member) {
-  const { PROVINCE_ROLES, INTEREST_ROLES, SKILL_ROLES } = require('../config/roles');
+async function _deriveRoleFields(member) {
+  const guildId = member.guild.id;
 
-  await member.fetch();
+  const [provinceRows, interestRows, skillRows] = await Promise.all([
+    getRolesByScopePrefix(guildId, 'province:'),
+    getPickerRoles(guildId, 'interest'),
+    getPickerRoles(guildId, 'skill'),
+  ]);
 
-  const allProvinces = Object.entries(PROVINCE_ROLES)
-    .filter(([, roleId]) => member.roles.cache.has(roleId))
-    .map(([province]) => province)
+  const allProvinces = provinceRows
+    .filter(r => member.roles.cache.has(r.role_id))
+    .map(r => r.scope_node.replace('province:', ''))
     .join(',') || null;
 
   const allRoles = member.roles.cache
@@ -61,14 +65,18 @@ async function upsertMemberFromDiscord(member) {
     .map(r => r.name)
     .join(',') || null;
 
-  const interestIds = new Set([
-    ...Object.values(SKILL_ROLES),
-    ...Object.values(INTEREST_ROLES),
-  ]);
+  const interestIds = new Set([...interestRows, ...skillRows].map(r => r.roleId));
   const interestRoles = member.roles.cache
     .filter(r => interestIds.has(r.id))
     .map(r => r.name)
     .join(',') || null;
+
+  return { allProvinces, allRoles, interestRoles };
+}
+
+async function upsertMemberFromDiscord(member) {
+  await member.fetch();
+  const { allProvinces, allRoles, interestRoles } = await _deriveRoleFields(member);
 
   const sql = `
   INSERT INTO dc_members
@@ -103,31 +111,12 @@ async function getMember(guildId, discord_id) {
 
 async function syncMemberRoles(member) {
   await member.fetch();
-
   const guildId = member.guild.id;
-
-  const allProvinces = Object.entries(PROVINCE_ROLES)
-    .filter(([, roleId]) => member.roles.cache.has(roleId))
-    .map(([province]) => province);
-
-  const allRoles = member.roles.cache
-    .filter(r => r.name !== '@everyone')
-    .map(r => r.name)
-    .join(',');
-
-  const interestIds = new Set([
-    ...Object.values(SKILL_ROLES),
-    ...Object.values(INTEREST_ROLES),
-  ]);
-
-  const interestRoles = member.roles.cache
-    .filter(r => interestIds.has(r.id))
-    .map(r => r.name)
-    .join(',');
+  const { allProvinces, allRoles, interestRoles } = await _deriveRoleFields(member);
 
   await pool.query(
     'UPDATE dc_members SET province = $1, roles = $2, interests = $3, updated_at = CURRENT_TIMESTAMP WHERE guild_id = $4 AND discord_id = $5',
-    [allProvinces.join(',') || null, allRoles || null, interestRoles || null, guildId, member.id]
+    [allProvinces, allRoles || null, interestRoles, guildId, member.id]
   );
 }
 

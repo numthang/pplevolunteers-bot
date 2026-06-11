@@ -1,11 +1,7 @@
 // handlers/interestSelect.js
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
-const { SKILL_ROLES, MEDIA_TEAM_ROLE_ID, MEDIA_TEAM_TRIGGERS } = require('../config/roles');
 const { syncMemberRoles } = require('../db/members');
-const { getPickerRoles, getPickerGroup } = require('../db/guildRoles');
-
-// MEDIA_TEAM special-case (กฎพิเศษ ไม่อยู่ใน DB model) — กดทีมกราฟิก/ช่างภาพ/คอนเทนต์/ตัดต่อ → แปะ ทีมสื่อ ด้วย
-const MEDIA_TEAM_TRIGGER_IDS = new Set(MEDIA_TEAM_TRIGGERS.map(k => SKILL_ROLES[k]).filter(Boolean));
+const { getPickerRoles, getPickerGroup, addRoleWithParents, removeRoleWithParents } = require('../db/guildRoles');
 
 /**
  * สร้างปุ่มจาก DB rows [{ roleId, label, emoji }]
@@ -76,26 +72,26 @@ async function handleInterestSelect(interaction) {
   });
 
   try {
+    let parentIds;
     if (hasRole) {
-      await member.roles.remove(roleId);
-      if (MEDIA_TEAM_TRIGGER_IDS.has(roleId)) {
-        await member.fetch();
-        const stillHas = [...MEDIA_TEAM_TRIGGER_IDS].some(id => id !== roleId && member.roles.cache.has(id));
-        if (!stillHas) await member.roles.remove(MEDIA_TEAM_ROLE_ID).catch(() => {});
-      }
+      parentIds = await removeRoleWithParents(member, roleId);
     } else {
-      await member.roles.add(roleId);
-      if (MEDIA_TEAM_TRIGGER_IDS.has(roleId)) {
-        await member.roles.add(MEDIA_TEAM_ROLE_ID).catch(() => {});
-      }
+      parentIds = await addRoleWithParents(member, roleId);
     }
 
     await member.fetch();
     await syncMemberRoles(interaction.member);
 
+    const parentNames = parentIds
+      .map(id => interaction.guild.roles.cache.get(id)?.name)
+      .filter(Boolean);
+    const parentSuffix = parentNames.length
+      ? ` (${hasRole ? 'พร้อมถอด' : 'พร้อม'} ${parentNames.join(' · ')})`
+      : '';
+
     return reply(hasRole
-      ? `🔴 <@${userId}> • ถอด role **${label}** ออกแล้ว`
-      : `🟢 <@${userId}> • เพิ่ม role **${label}** แล้ว`);
+      ? `🔴 <@${userId}> • ถอด role **${label}**${parentSuffix} ออกแล้ว`
+      : `🟢 <@${userId}> • เพิ่ม role **${label}**${parentSuffix} แล้ว`);
 
   } catch (err) {
     console.error(`❌ toggle role ${label}:`, err);

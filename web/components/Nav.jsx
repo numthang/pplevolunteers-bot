@@ -58,9 +58,10 @@ const CONTACTS_LINKS = [
 ]
 
 const DISCORD_LINKS = [
-  { href: '/discord/config/media',     label: 'สื่อ',       icon: 'media' },
-  { href: '/discord/config/platforms', label: 'แพลตฟอร์ม',  icon: 'social' },
-  { href: '/discord/config/ai',        label: 'AI',         icon: 'ai' },
+  { href: '/bot/media/basket',      label: 'Basket',      icon: 'media' },
+  { href: '/bot/media/settings',    label: 'สื่อ',        icon: 'quote' },
+  { href: '/bot/server/platforms',  label: 'แพลตฟอร์ม',  icon: 'social' },
+  { href: '/bot/global/ai',         label: 'AI',          icon: 'ai' },
 ]
 
 const SOCIAL_LINKS = [
@@ -71,7 +72,7 @@ const DASHBOARD_LINKS = [
   { href: '/finance',       label: 'FINANCE',   icon: 'transactions' },
   { href: '/calling',       label: 'CALLING',   icon: 'campaigns' },
   { href: '/contacts',      label: 'CONTACTS',  icon: 'contacts' },
-  { href: '/discord/config/platforms', label: 'DISCORD', icon: 'social' },
+  { href: '/bot/server/platforms', label: 'BOT', icon: 'social' },
   { href: '/admin/logs',    label: 'LOGS',           icon: 'logs', roles: ['Admin', 'Moderator'] },
 ]
 
@@ -80,7 +81,7 @@ const APPS = [
   { key: 'finance',  label: 'FINANCE',   href: '/finance',        icon: 'transactions' },
   { key: 'calling',  label: 'CALLING',   href: '/calling',        icon: 'campaigns' },
   { key: 'contacts', label: 'CONTACTS',  href: '/contacts',       icon: 'contacts' },
-  { key: 'discord',  label: 'DISCORD',   href: '/discord/config/platforms', icon: 'social' },
+  { key: 'discord',  label: 'BOT',       href: '/bot/server/platforms',     icon: 'social' },
 ]
 
 export default function Nav({ session }) {
@@ -98,7 +99,7 @@ export default function Nav({ session }) {
   const isFinanceApp   = pathname.startsWith('/finance')
   const isContactsApp  = pathname.startsWith('/contacts')
   const isSocialApp    = pathname.startsWith('/social')
-  const isDiscordApp   = pathname.startsWith('/discord') || pathname.startsWith('/bot')
+  const isDiscordApp   = pathname.startsWith('/bot')
   const isLinkActive = (href) => pathname === href || (href !== '/' && pathname.startsWith(href))
   const currentApp = isDiscordApp ? APPS[4] : isContactsApp ? APPS[3] : isCallingApp ? APPS[2] : isFinanceApp ? APPS[1] : APPS[0]
   const links = isDiscordApp ? DISCORD_LINKS : isSocialApp ? SOCIAL_LINKS : isContactsApp ? CONTACTS_LINKS : isCallingApp ? CALLING_LINKS : isFinanceApp ? FINANCE_LINKS : DASHBOARD_LINKS

@@ -11,7 +11,7 @@ const {
 } = require('discord.js');
 const { buildGroupedRows } = require('./interestSelect');
 const { buildRegionDropdown } = require('./provinceSelect');
-const { PROVINCE_ROLES } = require('../config/roles');
+const { getRolesByScopePrefix } = require('../db/guildRoles');
 const { upsertMember, syncMemberRoles } = require('../db/members');
 const { getPickerRoles } = require('../db/guildRoles');
 
@@ -130,9 +130,10 @@ async function handleModalSubmit(interaction) {
   if (!provinceSelect) {
     pendingForms.delete(interaction.user.id);
     await interaction.member.fetch();
-    const allProvinces = Object.entries(PROVINCE_ROLES)
-      .filter(([, roleId]) => interaction.member.roles.cache.has(roleId))
-      .map(([province]) => province);
+    const pRows = await getRolesByScopePrefix(interaction.guildId, 'province:');
+    const allProvinces = pRows
+      .filter(r => interaction.member.roles.cache.has(r.role_id))
+      .map(r => r.scope_node.replace('province:', ''));
     const logMessageUrl = await sendRegisterLog(interaction, formData, allProvinces);
     const memberRoles = interaction.member.roles;
     await interaction.editReply({
@@ -261,9 +262,10 @@ async function handleRegisterConfirm(interaction) {
   }
 
   await interaction.member.fetch();
-  const allProvinces = Object.entries(PROVINCE_ROLES)
-    .filter(([, roleId]) => interaction.member.roles.cache.has(roleId))
-    .map(([province]) => province);
+  const pRows2 = await getRolesByScopePrefix(interaction.guildId, 'province:');
+  const allProvinces = pRows2
+    .filter(r => interaction.member.roles.cache.has(r.role_id))
+    .map(r => r.scope_node.replace('province:', ''));
   await syncMemberRoles(interaction.member);
 
   const logMessageUrl = await sendRegisterLog(interaction, formData, allProvinces);

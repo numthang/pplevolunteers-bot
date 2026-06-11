@@ -2,7 +2,7 @@
 require('dotenv').config();
 const {Client, GatewayIntentBits} = require('discord.js');
 const pool = require('../../db/index');
-const {ROLES} = require('../../config/roles');
+const { getRoleIdByName } = require('../../db/guildRoles');
 
 const GUILD_ID = process.env.GUILD_ID;
 const DELAY_MS = 500;
@@ -39,7 +39,7 @@ client.once('ready', async () => {
     }
 
     const roleNames = row.roles.split(',').map((r) => r.trim()).filter(Boolean);
-    const roleIds = roleNames.map((name) => ROLES[name]).filter(Boolean);
+    const roleIds = (await Promise.all(roleNames.map(name => getRoleIdByName(GUILD_ID, name)))).filter(Boolean);
 
     if (roleIds.length === 0) {
       console.log(`⚠️  ไม่พบ role ID: ${row.username} — ${row.roles}`);

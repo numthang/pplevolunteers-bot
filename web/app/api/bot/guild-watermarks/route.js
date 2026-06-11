@@ -16,7 +16,7 @@ const ALLOWED_MIME = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'w
 
 // กลุ่ม "public" ของ guild เท่านั้น (whitelist สำหรับ validate path segment)
 // private group = ลายน้ำอยู่ใน personal folder (user_<id>/) ตาม isPersonalGroup ใน basketHandler
-// → จัดการที่หน้า /discord/watermark (ส่วนตัว) ไม่ใช่ระดับ guild
+// → จัดการที่หน้า /bot/media/settings (ส่วนตัว) ไม่ใช่ระดับ guild
 async function getGuildGroups(guildId) {
   const { rows } = await pool.query(
     `SELECT DISTINCT group_name FROM dc_social_accounts

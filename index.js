@@ -42,7 +42,7 @@ const { initMeilisearch } = require('./services/meilisearch')
 const emailPoller = require('./services/emailPoller');
 const smsWebhook  = require('./services/smsWebhook');
 const { upsertGuilds } = require('./db/guilds');
-const { syncGuildRolesCatalog, upsertGuildRole, deleteGuildRole } = require('./db/guildRoles');
+const { syncGuildRolesCatalog, upsertGuildRole, deleteGuildRole, invalidateGuildRoleCache } = require('./db/guildRoles');
 const { handleSlipMessage } = require('./services/financeOCR');
 
 const fs = require('fs');
@@ -91,8 +91,14 @@ client.once('clientReady', async () => {
 
 // keep dc_guild_roles catalog สดอัตโนมัติ (เพิ่ม/แก้ชื่อ/ลบ role ใน Discord) — ไม่แตะ policy
 client.on('roleCreate', role => upsertGuildRole(role).catch(e => console.error('roleCreate sync:', e.message)));
-client.on('roleUpdate', (_oldRole, newRole) => upsertGuildRole(newRole).catch(e => console.error('roleUpdate sync:', e.message)));
-client.on('roleDelete', role => deleteGuildRole(role).catch(e => console.error('roleDelete sync:', e.message)));
+client.on('roleUpdate', (_oldRole, newRole) => {
+  invalidateGuildRoleCache(newRole.guild.id);
+  upsertGuildRole(newRole).catch(e => console.error('roleUpdate sync:', e.message));
+});
+client.on('roleDelete', role => {
+  invalidateGuildRoleCache(role.guild.id);
+  deleteGuildRole(role).catch(e => console.error('roleDelete sync:', e.message));
+});
 
 client.on('interactionCreate', async (interaction) => {
   // --- Autocomplete ---

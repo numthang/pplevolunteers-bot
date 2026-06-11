@@ -73,14 +73,14 @@ export default function QuotePanel() {
   const loadWatermarks = useCallback(async (scopeKey, scope, guildId) => {
     const qs = new URLSearchParams({ scope })
     if (guildId) qs.set('guild_id', guildId)
-    const res = await fetch(`/api/discord/quote-watermarks?${qs}`)
+    const res = await fetch(`/api/bot/quote-watermarks?${qs}`)
     const choices = res.ok ? await res.json() : []
     setWm(prev => ({ ...prev, [scopeKey]: choices }))
   }, [])
 
   const load = useCallback(async () => {
     setLoading(true)
-    const res = await fetch('/api/discord/quote-config')
+    const res = await fetch('/api/bot/quote-config')
     if (!res.ok) { setError('โหลดข้อมูลไม่สำเร็จ'); setLoading(false); return }
     const d = await res.json()
     setData(d)
@@ -96,7 +96,7 @@ export default function QuotePanel() {
 
   // save → PATCH → update local state ถ้าสำเร็จ
   const save = useCallback(async (scope, guildId, key, value) => {
-    const res = await fetch('/api/discord/quote-config', {
+    const res = await fetch('/api/bot/quote-config', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ scope, guild_id: guildId, key, value }),

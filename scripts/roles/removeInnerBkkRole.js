@@ -1,7 +1,7 @@
 // scripts/removeInnerBkkRole.js //ใช้ลบกรุงเทพชั้นในที่อนุมานผิดใน intro_normalize ใช้ครั้งเดียว
 require('dotenv').config();
 const {Client, GatewayIntentBits} = require('discord.js');
-const {ROLES} = require('../../config/roles');
+const { getRoleIdByName } = require('../../db/guildRoles');
 
 const GUILD_ID = process.env.GUILD_ID;
 const DELAY_MS = 500;
@@ -11,7 +11,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // discord_id ของคนที่พิมพ์ กรุงเทพ เฉยๆ
 const TARGET_IDS = new Set(require('../bkk_ids.json'));
 
-const ROLE_TO_REMOVE = ROLES['ทีมกรุงเทพชั้นใน'];
+let ROLE_TO_REMOVE;
 
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers],
@@ -20,6 +20,9 @@ const client = new Client({
 client.once('ready', async () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
   if (DRY_RUN) console.log(`⚠️  DRY RUN mode\n`);
+
+  ROLE_TO_REMOVE = await getRoleIdByName(GUILD_ID, 'ทีมกรุงเทพชั้นใน');
+  if (!ROLE_TO_REMOVE) { console.error('ไม่พบ role ทีมกรุงเทพชั้นใน'); process.exit(1); }
 
   const guild = await client.guilds.fetch(GUILD_ID);
   await guild.members.fetch();

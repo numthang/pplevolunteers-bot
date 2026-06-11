@@ -23,7 +23,7 @@ function AgentSection() {
   const [error, setError]   = useState(null)
 
   useEffect(() => {
-    fetch('/api/discord/ai-config')
+    fetch('/api/bot/ai-config')
       .then(r => r.json().then(d => ({ ok: r.ok, d })))
       .then(({ ok, d }) => { if (ok) setCfg(d); else setError(d.error || 'โหลดไม่สำเร็จ') })
       .catch(() => setError('โหลดไม่สำเร็จ'))
@@ -31,7 +31,7 @@ function AgentSection() {
 
   async function save() {
     setSaving(true); setSaved(false); setError(null)
-    const res = await fetch('/api/discord/ai-config', {
+    const res = await fetch('/api/bot/ai-config', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ provider: cfg.provider, model: cfg.model, maxTokens: cfg.maxTokens }),
@@ -110,7 +110,7 @@ function ModeCard({ mode, first, last, onMove, onSaved, onDeleted }) {
 
   async function save() {
     setSaving(true); setSaved(false)
-    const res = await fetch('/api/discord/ai-modes', {
+    const res = await fetch('/api/bot/ai-modes', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id: mode.id, label, prompt, enabled }),
@@ -121,7 +121,7 @@ function ModeCard({ mode, first, last, onMove, onSaved, onDeleted }) {
 
   async function del() {
     if (!confirm(`ลบโหมด "${mode.label}" (${mode.value})?`)) return
-    await fetch(`/api/discord/ai-modes?id=${mode.id}`, { method: 'DELETE' })
+    await fetch(`/api/bot/ai-modes?id=${mode.id}`, { method: 'DELETE' })
     onDeleted(mode.id)
   }
 
@@ -170,7 +170,7 @@ function ModesSection() {
   const [addErr, setAddErr] = useState(null)
 
   const load = useCallback(async () => {
-    const res = await fetch('/api/discord/ai-modes')
+    const res = await fetch('/api/bot/ai-modes')
     if (res.ok) { const d = await res.json(); setModes(d.modes || []) }
     setLoading(false)
   }, [])
@@ -182,7 +182,7 @@ function ModesSection() {
     const next = [...modes]
     ;[next[i], next[j]] = [next[j], next[i]]
     setModes(next)
-    await fetch('/api/discord/ai-modes', {
+    await fetch('/api/bot/ai-modes', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'reorder', order: next.map(m => m.id) }),
@@ -191,7 +191,7 @@ function ModesSection() {
 
   async function add() {
     setAddErr(null)
-    const res = await fetch('/api/discord/ai-modes', {
+    const res = await fetch('/api/bot/ai-modes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form),

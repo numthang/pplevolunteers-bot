@@ -24,7 +24,7 @@ const pool = require('../../db/index');
 const {
   ROLES, INTEREST_CONFIG, SKILL_CONFIG,
   PROVINCE_ROLES, SUB_REGION_ROLES, MAIN_REGION_ROLES,
-} = require('../../config/roles');
+} = require('./_roles-archive');
 
 const GUILD_ID = process.env.GUILD_ID;
 const TOKEN    = process.env.DISCORD_BOT_TOKEN || process.env.TOKEN;

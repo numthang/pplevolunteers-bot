@@ -1,6 +1,4 @@
 // config/constants.js
-const { INTEREST_BUTTONS, SKILL_BUTTONS } = require('./roles');
-
 const PROVINCE_REGIONS = [
   {
     id: 'bkk',
@@ -63,8 +61,4 @@ const PROVINCE_REGIONS = [
   },
 ];
 
-module.exports = {
-  INTEREST_BUTTONS,
-  SKILL_BUTTONS,
-  PROVINCE_REGIONS
-};
+module.exports = { PROVINCE_REGIONS };
