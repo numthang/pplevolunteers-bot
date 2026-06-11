@@ -75,7 +75,8 @@
 - **MEDIA_TEAM + cascade → DB** — ✅ `parent_role_id` column · per-guild config rule เองได้ ไม่ hardcode
 - **interest flat ≤20 ปุ่ม/ข้อความ** (Discord 5 แถว) — ตอนนี้ 18 · ถ้าเกินต้อง paginate
 
-> **สถานะ 2026-06-11:** step 8 (ลบ config/roles.js) เสร็จ · **bot roles multi-tenant แล้ว** — ทุก role มาจาก DB, `parent_role_id` คุม cascade (กราฟิก→สื่อ, จังหวัด→ภาคย่อย→ภาคใหญ่) · **แต่ยังไม่ multi-tenant เต็มตัว** — เหลือ blocker tenant ใหม่: step 9 (UI ตั้ง policy, ไม่งั้นต้องแก้ DB มือ) + step 10 (web ยัง pin GUILD_ID) · step 7 (web RBAC DB-wiring) ยังค้าง · **ยังไม่ deploy prod** — ตอน deploy รัน `sudo -u www`: migration.sql → seed-guild-roles.js → seed-parent-roles.js
+> **สถานะ 2026-06-11 (v2.11.0):** step 8 (ลบ config/roles.js) เสร็จ + **push origin/master แล้ว** (RBAC + web IA `/discord`→`/bot` + AI modes DB) · **bot roles multi-tenant แล้ว** — ทุก role มาจาก DB, `parent_role_id` คุม cascade (กราฟิก→สื่อ, จังหวัด→ภาคย่อย→ภาคใหญ่) · **แต่ยังไม่ multi-tenant เต็มตัว** — เหลือ blocker tenant ใหม่: step 9 (UI ตั้ง policy, ไม่งั้นต้องแก้ DB มือ) + step 10 (web ยัง pin GUILD_ID) · step 7 (web RBAC DB-wiring) ยังค้าง
+> **prod deploy:** รอรันบน server (prod เป็น PG อยู่แล้ว) — ลำดับ: `git reset --hard origin/master` → `psql -f migration.sql` → `./deploy.sh --production` → `seed-guild-roles.js` → `seed-parent-roles.js` · rollback: `git reset --hard 22fae83`
 
 ---
 
