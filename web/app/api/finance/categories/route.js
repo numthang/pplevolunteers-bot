@@ -2,8 +2,8 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
 import { getCategories, getCategoriesAll, createCategory } from '@/db/finance/categories.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
+import { getGuildId } from '@/lib/guildContext.js'
 
-const GUILD_ID = process.env.GUILD_ID
 const ADMIN_ROLES    = ['Admin', 'เลขาธิการ']
 const GLOBAL_EDITORS = ['Admin', 'เลขาธิการ', 'Moderator']
 
@@ -12,6 +12,7 @@ export async function GET() {
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { roles, discordId } = await getEffectiveIdentity(session)
+  const GUILD_ID = await getGuildId(session)
   const isAdmin = ADMIN_ROLES.some(r => roles.includes(r))
 
   const rows = isAdmin
@@ -26,6 +27,7 @@ export async function POST(req) {
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { roles, discordId } = await getEffectiveIdentity(session)
+  const GUILD_ID = await getGuildId(session)
 
   const { name, icon, is_global } = await req.json()
   if (!name?.trim()) return Response.json({ error: 'name required' }, { status: 400 })

@@ -2,6 +2,7 @@ import { getServerSession } from 'next-auth'
 import * as memberDB from '@/db/calling/members.js'
 import * as contactDB from '@/db/calling/contacts.js'
 import { authOptions } from '@/lib/auth-options.js'
+import { getGuildId } from '@/lib/guildContext.js'
 export async function GET(req) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.discordId) {
@@ -22,13 +23,14 @@ export async function GET(req) {
   const name = searchParams.get('name') || ''
 
   try {
+    const guildId = await getGuildId(session)
     if (historyMode) {
       const limit = Math.min(parseInt(searchParams.get('limit') || '60'), 200)
       const offset = parseInt(searchParams.get('offset') || '0')
       const flat = searchParams.get('flat') === 'true'
       const rows = flat
-        ? await memberDB.getMyCallHistoryFlat(process.env.GUILD_ID, session.user.discordId, { name, limit, offset })
-        : await memberDB.getMyCallHistory(process.env.GUILD_ID, session.user.discordId, { name, limit, offset })
+        ? await memberDB.getMyCallHistoryFlat(guildId, session.user.discordId, { name, limit, offset })
+        : await memberDB.getMyCallHistory(guildId, session.user.discordId, { name, limit, offset })
       return Response.json({ success: true, data: rows, hasMore: rows.length === limit })
     }
 
@@ -69,7 +71,7 @@ export async function GET(req) {
       })
     }
 
-    const members = await memberDB.getMyAssignedMembers(process.env.GUILD_ID, session.user.discordId, {
+    const members = await memberDB.getMyAssignedMembers(guildId, session.user.discordId, {
       campaignId: campaignId ? parseInt(campaignId) : null,
       status: status || null,
       rsvp: rsvp || null,

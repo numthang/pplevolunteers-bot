@@ -3,6 +3,7 @@ import * as assignmentDB from '@/db/calling/assignments.js'
 import * as campaignDB from '@/db/calling/campaigns.js'
 import { getUserScope } from '@/lib/callingAccess.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
+import { getGuildId } from '@/lib/guildContext.js'
 import { authOptions } from '@/lib/auth-options.js'
 
 function canSeeProvince(province, access, primaryProvince) {
@@ -71,8 +72,9 @@ export async function POST(req) {
       return Response.json({ error: `Forbidden: cannot assign in ${campaign.province}` }, { status: 403 })
     }
 
+    const guildId = await getGuildId(session)
     const affectedRows = await assignmentDB.bulkAssignMembers(
-      process.env.GUILD_ID,
+      guildId,
       member_ids,
       assigned_to,
       session.user.discordId,
@@ -122,7 +124,8 @@ export async function PUT(req) {
       return Response.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    await assignmentDB.assignMember(process.env.GUILD_ID, parseInt(member_id), assigned_to, session.user.discordId, campaign_id || 0)
+    const guildId = await getGuildId(session)
+    await assignmentDB.assignMember(guildId, parseInt(member_id), assigned_to, session.user.discordId, campaign_id || 0)
 
     const assignment = await assignmentDB.getAssignment(parseInt(member_id), campaign_id || 0)
     return Response.json({ success: true, data: assignment })

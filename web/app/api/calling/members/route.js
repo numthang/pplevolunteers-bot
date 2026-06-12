@@ -2,6 +2,7 @@ import { getServerSession } from 'next-auth'
 import * as memberDB from '@/db/calling/members.js'
 import { canAccessMember, getUserScope, isAdmin, canSeeContacts } from '@/lib/callingAccess.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
+import { getGuildId } from '@/lib/guildContext.js'
 import { authOptions } from '@/lib/auth-options.js'
 
 /**
@@ -40,12 +41,13 @@ export async function GET(req) {
 
   try {
     const { access } = await getEffectiveIdentity(session)
+    const guildId = await getGuildId(session)
     const userScope = getUserScope(access, session.user.primary_province)
     const isUserAdmin = isAdmin(access)
 
     // Stats-only request
     if (campaignId && statsOnly) {
-      const stats = await memberDB.getMembersInCampaignStats(process.env.GUILD_ID, parseInt(campaignId))
+      const stats = await memberDB.getMembersInCampaignStats(guildId, parseInt(campaignId))
       return Response.json({ success: true, data: stats })
     }
 
@@ -54,16 +56,16 @@ export async function GET(req) {
 
     if (campaignId) {
       const filters = { amphure: filterAmphure, subdistricts: filterSubdistricts, tier: filterTier, status: filterStatus, assignedTo: filterAssignedTo, rsvp: filterRsvp, name: filterName, expiry: filterExpiry, called: filterCalled, sort: filterSort, sms: filterSms }
-      rows = await memberDB.getMembersInCampaign(process.env.GUILD_ID, parseInt(campaignId), filters, limit, offset)
+      rows = await memberDB.getMembersInCampaign(guildId, parseInt(campaignId), filters, limit, offset)
     } else if (province) {
-      rows = await memberDB.getMembersByProvince(process.env.GUILD_ID, province, limit, offset)
+      rows = await memberDB.getMembersByProvince(guildId, province, limit, offset)
     } else if (district) {
-      rows = await memberDB.getMembersByDistrict(process.env.GUILD_ID, district, limit, offset)
+      rows = await memberDB.getMembersByDistrict(guildId, district, limit, offset)
     } else if (keyword) {
-      rows = await memberDB.searchMembers(process.env.GUILD_ID, keyword, limit, offset)
+      rows = await memberDB.searchMembers(guildId, keyword, limit, offset)
     } else {
-      rows = await memberDB.getAllMembers(process.env.GUILD_ID, limit, offset)
-      total = await memberDB.getMembersCount(process.env.GUILD_ID)
+      rows = await memberDB.getAllMembers(guildId, limit, offset)
+      total = await memberDB.getMembersCount(guildId)
     }
 
     // No calling roles at all → return noAccess flag

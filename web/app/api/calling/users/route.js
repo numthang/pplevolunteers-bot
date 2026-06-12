@@ -1,6 +1,7 @@
 import { getServerSession } from 'next-auth'
 import pool from '@/db/index.js'
 import { authOptions } from '@/lib/auth-options.js'
+import { getGuildId } from '@/lib/guildContext.js'
 
 /**
  * GET /api/calling/users
@@ -12,7 +13,7 @@ export async function GET(req) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const guildId = process.env.GUILD_ID
+  const guildId = await getGuildId(session)
   if (!guildId) {
     return Response.json({ error: 'GUILD_ID not configured' }, { status: 500 })
   }

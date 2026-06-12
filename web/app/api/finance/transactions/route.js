@@ -5,9 +5,8 @@ import { getAccountById, incrementUsageCount as incrementAccount } from '@/db/fi
 import { incrementUsageCount as incrementCategory } from '@/db/finance/categories.js'
 import { isAdmin } from '@/lib/roles.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
+import { getGuildId } from '@/lib/guildContext.js'
 import { canViewAccount, canEditAccount } from '@/lib/financeAccess.js'
-
-const GUILD_ID = process.env.GUILD_ID
 
 export async function GET(req) {
   const { searchParams } = new URL(req.url)
@@ -31,6 +30,7 @@ export async function GET(req) {
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { roles: effectiveRoles, discordId: effectiveDiscordId, access } = await getEffectiveIdentity(session)
+  const GUILD_ID = await getGuildId(session)
 
   if (accountId) {
     const account = await getAccountById(accountId)
@@ -58,6 +58,7 @@ export async function POST(req) {
     }
   }
 
+  const GUILD_ID = await getGuildId(session)
   const guildId = account?.guild_id || GUILD_ID
   const id = await createTransaction(guildId, data, session.user.discordId)
   if (data.account_id)  await incrementAccount(data.account_id)

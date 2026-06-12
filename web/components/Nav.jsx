@@ -40,14 +40,14 @@ const ICONS = {
 }
 
 const FINANCE_LINKS = [
-  { href: '/finance',               label: 'ภาพรวม',    icon: 'overview' },
+  { href: '/finance',               label: 'ภาพรวม',    icon: 'overview', exact: true },
   { href: '/finance/transactions',  label: 'รายการ',    icon: 'transactions' },
   { href: '/finance/categories',    label: 'หมวดหมู่',  icon: 'categories' },
   { href: '/finance/report',        label: 'รายงาน',    icon: 'report' },
 ]
 
 const CALLING_LINKS = [
-  { href: '/calling',           label: 'Dashboard',  icon: 'overview' },
+  { href: '/calling',           label: 'Dashboard',  icon: 'overview', exact: true },
   { href: '/calling/campaigns', label: 'Campaigns',  icon: 'campaigns' },
   { href: '/calling/assignee',  label: 'Assignee',   icon: 'pending' },
   { href: '/calling/stats',     label: 'Statistics', icon: 'report' },
@@ -69,27 +69,27 @@ const SOCIAL_LINKS = [
 ]
 
 const DASHBOARD_LINKS = [
-  { href: '/finance',       label: 'FINANCE',   icon: 'transactions' },
-  { href: '/calling',       label: 'CALLING',   icon: 'campaigns' },
-  { href: '/contacts',      label: 'CONTACTS',  icon: 'contacts' },
-  { href: '/bot/server/platforms', label: 'BOT', icon: 'social' },
-  { href: '/admin/logs',    label: 'LOGS',           icon: 'logs', roles: ['Admin', 'Moderator'] },
+  { href: '/finance',              label: 'FINANCE',  icon: 'transactions' },
+  { href: '/calling',              label: 'CALLING',  icon: 'campaigns' },
+  { href: '/contacts',             label: 'CONTACTS', icon: 'contacts' },
+  { href: '/bot/server/platforms', label: 'BOT',      icon: 'social' },
+  { href: '/admin/logs',           label: 'LOGS',     icon: 'logs', roles: ['Admin', 'Moderator'] },
 ]
 
 const APPS = [
-  { key: 'home',     label: 'DASHBOARD', href: '/',               icon: 'overview' },
-  { key: 'finance',  label: 'FINANCE',   href: '/finance',        icon: 'transactions' },
-  { key: 'calling',  label: 'CALLING',   href: '/calling',        icon: 'campaigns' },
-  { key: 'contacts', label: 'CONTACTS',  href: '/contacts',       icon: 'contacts' },
-  { key: 'discord',  label: 'BOT',       href: '/bot/server/platforms',     icon: 'social' },
+  { key: 'home',     label: 'DASHBOARD', href: '/',                      icon: 'overview' },
+  { key: 'finance',  label: 'FINANCE',   href: '/finance',               icon: 'transactions' },
+  { key: 'calling',  label: 'CALLING',   href: '/calling',               icon: 'campaigns' },
+  { key: 'contacts', label: 'CONTACTS',  href: '/contacts',              icon: 'contacts' },
+  { key: 'discord',  label: 'BOT',       href: '/bot/server/platforms',  icon: 'social' },
 ]
 
-export default function Nav({ session }) {
+export default function Nav({ session, guilds = [], currentGuildId = null }) {
   const pathname = usePathname()
   const router = useRouter()
   const { dark, toggle } = useTheme()
   const [menuOpen, setMenuOpen] = useState(false)
-  const [appOpen, setAppOpen] = useState(false)
+  const [guildOpen, setGuildOpen] = useState(false)
   const [campaignOpen, setCampaignOpen] = useState(false)
   const [campaigns, setCampaigns] = useState([])
   const [pendingCount, setPendingCount] = useState(0)
@@ -100,7 +100,10 @@ export default function Nav({ session }) {
   const isContactsApp  = pathname.startsWith('/contacts')
   const isSocialApp    = pathname.startsWith('/social')
   const isDiscordApp   = pathname.startsWith('/bot')
-  const isLinkActive = (href) => pathname === href || (href !== '/' && pathname.startsWith(href))
+  const isLinkActive = (href, exact = false) => {
+    if (exact) return pathname === href
+    return pathname === href || (href !== '/' && pathname.startsWith(href))
+  }
   const currentApp = isDiscordApp ? APPS[4] : isContactsApp ? APPS[3] : isCallingApp ? APPS[2] : isFinanceApp ? APPS[1] : APPS[0]
   const links = isDiscordApp ? DISCORD_LINKS : isSocialApp ? SOCIAL_LINKS : isContactsApp ? CONTACTS_LINKS : isCallingApp ? CALLING_LINKS : isFinanceApp ? FINANCE_LINKS : DASHBOARD_LINKS
 
@@ -148,6 +151,22 @@ export default function Nav({ session }) {
 
   const visibleApps = APPS.filter(a => !a.roles || a.roles.some(r => roles.includes(r)))
 
+  const currentGuild = guilds.find(g => g.guild_id === currentGuildId) || guilds[0] || null
+  const canSwitchGuild = guilds.length > 1
+
+  const switchGuild = async (gid) => {
+    setGuildOpen(false)
+    if (gid === currentGuildId) return
+    try {
+      const res = await fetch('/api/guild/switch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ guildId: gid }),
+      })
+      if (res.ok) router.refresh()
+    } catch {}
+  }
+
   const activeClass = 'bg-teal/10 dark:bg-teal/10 text-teal dark:text-teal font-medium'
   const inactiveClass = 'text-warm-500 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text hover:bg-warm-100 dark:hover:bg-disc-hover'
 
@@ -156,41 +175,43 @@ export default function Nav({ session }) {
     <nav className="bg-white dark:bg-disc-bg2 border-b border-warm-200 dark:border-disc-border shadow-sm sticky top-0 z-40">
       <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
 
-        {/* App Switcher */}
+        {/* Guild Switcher */}
         <div className="relative shrink-0">
           <div className="flex items-center gap-1">
             <Link href="/" className="hover:opacity-80 transition shrink-0">
               <Image src="/logo.png" alt="PPLE" width={40} height={40} />
             </Link>
-            <button
-              onClick={() => setAppOpen(o => !o)}
-              className="hidden md:flex items-center gap-1.5 hover:opacity-80 transition"
-            >
-              <span className="font-bold text-base text-teal dark:text-teal">
-                {currentApp.label}
-              </span>
-              <span className="text-warm-400 dark:text-disc-muted text-xs">▾</span>
-            </button>
+            {session && currentGuild && (
+              <button
+                onClick={() => canSwitchGuild && setGuildOpen(o => !o)}
+                disabled={!canSwitchGuild}
+                className="hidden md:flex items-center gap-1.5 hover:opacity-80 transition disabled:cursor-default"
+              >
+                <span className="font-bold text-base text-teal dark:text-teal truncate max-w-[180px]">
+                  {currentGuild.name}
+                </span>
+                {canSwitchGuild && <span className="text-warm-400 dark:text-disc-muted text-xs">▾</span>}
+              </button>
+            )}
           </div>
 
-          {appOpen && (
+          {guildOpen && canSwitchGuild && (
             <>
-              <div className="fixed inset-0 z-10" onClick={() => setAppOpen(false)} />
-              <div className="absolute left-0 top-full mt-1 z-20 bg-white dark:bg-disc-hover border border-warm-200 dark:border-disc-border rounded-lg shadow-lg py-1 min-w-[160px]">
-                {visibleApps.map(app => (
-                  <Link
-                    key={app.key}
-                    href={app.href}
-                    onClick={() => setAppOpen(false)}
-                    className={`flex items-center gap-2 px-4 py-2 text-sm transition ${
-                      currentApp?.key === app.key
+              <div className="fixed inset-0 z-10" onClick={() => setGuildOpen(false)} />
+              <div className="absolute left-0 top-full mt-1 z-20 bg-white dark:bg-disc-hover border border-warm-200 dark:border-disc-border rounded-lg shadow-lg py-1 min-w-[200px]">
+                {guilds.map(g => (
+                  <button
+                    key={g.guild_id}
+                    onClick={() => switchGuild(g.guild_id)}
+                    className={`w-full text-left flex items-center gap-2 px-4 py-2 text-sm transition ${
+                      g.guild_id === currentGuildId
                         ? 'bg-teal/10 dark:bg-teal/10 text-teal dark:text-teal font-medium'
                         : 'text-warm-900 dark:text-disc-muted hover:bg-warm-100 dark:hover:bg-disc-hover'
                     }`}
                   >
-                    {app.label}
-                    {currentApp?.key === app.key && <span className="ml-auto text-teal">✓</span>}
-                  </Link>
+                    <span className="truncate">{g.name}</span>
+                    {g.guild_id === currentGuildId && <span className="ml-auto text-teal shrink-0">✓</span>}
+                  </button>
                 ))}
               </div>
             </>
@@ -249,7 +270,7 @@ export default function Nav({ session }) {
                 className={`flex px-3 py-1 rounded-md text-base transition items-center gap-1.5 ${
                   (l.href === '/calling/stats' || l.href === '/admin/logs') ? 'hidden md:flex' : 'flex'
                 } ${
-                  isLinkActive(l.href) ? activeClass : inactiveClass
+                  isLinkActive(l.href, l.exact) ? activeClass : inactiveClass
                 }`}
               >
                 <Ic d={ICONS[l.icon]} className="w-7 h-7 shrink-0" />
@@ -334,7 +355,7 @@ export default function Nav({ session }) {
                           href={l.href}
                           onClick={() => setMenuOpen(false)}
                           className={`flex items-center gap-2 px-4 py-2.5 text-base transition ${
-                            isLinkActive(l.href)
+                            isLinkActive(l.href, l.exact)
                               ? 'text-teal dark:text-teal font-medium bg-teal/10 dark:bg-teal/10'
                               : 'text-warm-900 dark:text-disc-muted hover:bg-warm-100 dark:hover:bg-disc-hover'
                           }`}
@@ -370,23 +391,46 @@ export default function Nav({ session }) {
                       </div>
                     </a>
 
-                    {/* App switcher — only when not on dashboard */}
-                    {currentApp?.key !== 'home' && (
+                    {/* Guild switcher (mobile) */}
+                    {canSwitchGuild && (
                       <>
                         <div className="border-t border-warm-200 dark:border-disc-border my-1" />
-                        {visibleApps.filter(a => a.key !== currentApp?.key).map(app => (
-                          <Link
-                            key={app.key}
-                            href={app.href}
-                            onClick={() => setMenuOpen(false)}
-                            className="flex items-center gap-2 px-4 py-2.5 text-base text-warm-900 dark:text-disc-text hover:bg-warm-100 dark:hover:bg-disc-hover transition"
+                        <div className="px-4 py-1 text-xs text-warm-400 dark:text-disc-muted">เซิร์ฟเวอร์</div>
+                        {guilds.map(g => (
+                          <button
+                            key={g.guild_id}
+                            onClick={() => { setMenuOpen(false); switchGuild(g.guild_id) }}
+                            className={`w-full text-left flex items-center gap-2 px-4 py-2.5 text-base transition ${
+                              g.guild_id === currentGuildId
+                                ? 'text-teal dark:text-teal font-medium bg-teal/10 dark:bg-teal/10'
+                                : 'text-warm-900 dark:text-disc-text hover:bg-warm-100 dark:hover:bg-disc-hover'
+                            }`}
                           >
-                            <Ic d={ICONS[app.icon]} className="w-7 h-7 shrink-0" />
-                            {app.label}
-                          </Link>
+                            <span className="truncate">{g.name}</span>
+                            {g.guild_id === currentGuildId && <span className="ml-auto text-teal shrink-0">✓</span>}
+                          </button>
                         ))}
                       </>
                     )}
+
+                    {/* App switcher */}
+                    <div className="border-t border-warm-200 dark:border-disc-border my-1" />
+                    {visibleApps.map(app => (
+                      <Link
+                        key={app.key}
+                        href={app.href}
+                        onClick={() => setMenuOpen(false)}
+                        className={`flex items-center gap-2 px-4 py-2.5 text-base transition ${
+                          currentApp?.key === app.key
+                            ? 'text-teal dark:text-teal font-medium bg-teal/10 dark:bg-teal/10'
+                            : 'text-warm-900 dark:text-disc-text hover:bg-warm-100 dark:hover:bg-disc-hover'
+                        }`}
+                      >
+                        <Ic d={ICONS[app.icon]} className="w-7 h-7 shrink-0" />
+                        {app.label}
+                        {currentApp?.key === app.key && <span className="ml-auto text-teal">✓</span>}
+                      </Link>
+                    ))}
 
                     {/* Actions */}
                     <div className="border-t border-warm-200 dark:border-disc-border my-1" />

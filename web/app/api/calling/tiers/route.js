@@ -4,6 +4,7 @@ import * as memberDB from '@/db/calling/members.js'
 import { canAccessMember, canOverrideTier } from '@/lib/callingAccess.js'
 import { authOptions } from '@/lib/auth-options.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
+import { getGuildId } from '@/lib/guildContext.js'
 
 /**
  * GET /api/calling/tiers
@@ -69,13 +70,14 @@ export async function POST(req) {
     }
 
     // Check member access (optional, for audit trail)
-    const member = await memberDB.getMemberById(process.env.GUILD_ID, parseInt(member_id))
+    const guildId = await getGuildId(session)
+    const member = await memberDB.getMemberById(guildId, parseInt(member_id))
     if (!member) {
       return Response.json({ error: 'Member not found' }, { status: 404 })
     }
 
     // Override tier
-    await tierDB.overrideTier(process.env.GUILD_ID, member_id, tier, session.user.discordId, reason)
+    await tierDB.overrideTier(guildId, member_id, tier, session.user.discordId, reason)
 
     const updated = await tierDB.getTier(member_id)
     return Response.json({ success: true, data: updated }, { status: 201 })
@@ -102,7 +104,8 @@ export async function PATCH(req) {
     if (flag && !['green', 'yellow', 'red'].includes(flag)) {
       return Response.json({ error: 'Invalid flag' }, { status: 400 })
     }
-    await tierDB.updateFlag(process.env.GUILD_ID, member_id, flag || null, contact_type)
+    const guildId = await getGuildId(session)
+    await tierDB.updateFlag(guildId, member_id, flag || null, contact_type)
     return Response.json({ success: true })
   } catch (error) {
     console.error('[PATCH /api/calling/tiers]', error)
@@ -136,13 +139,14 @@ export async function DELETE(req) {
     }
 
     // Check member
-    const member = await memberDB.getMemberById(process.env.GUILD_ID, parseInt(member_id))
+    const guildId = await getGuildId(session)
+    const member = await memberDB.getMemberById(guildId, parseInt(member_id))
     if (!member) {
       return Response.json({ error: 'Member not found' }, { status: 404 })
     }
 
     // Clear override
-    await tierDB.clearOverride(process.env.GUILD_ID, member_id)
+    await tierDB.clearOverride(guildId, member_id)
 
     const updated = await tierDB.getTier(member_id)
     return Response.json({ success: true, data: updated })

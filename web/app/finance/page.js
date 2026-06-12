@@ -3,12 +3,11 @@ import { getAccountsAll } from '@/db/finance/accounts.js'
 import { getAccountSummary } from '@/db/finance/transactions.js'
 import { canViewAccount, canEditAccount } from '@/lib/financeAccess.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
+import { getGuildId } from '@/lib/guildContext.js'
 import { isAdmin } from '@/lib/roles.js'
 import Link from 'next/link'
 import AccountCard from '@/components/finance/AccountCard'
 import AddAccountButton from '@/components/finance/AddAccountButton'
-
-const GUILD_ID = process.env.GUILD_ID
 
 const VISIBILITY_LABEL = {
   public:   { label: 'สาธารณะ', cls: 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400' },
@@ -22,6 +21,7 @@ function fmt(n) {
 export default async function FinancePage() {
   const session = await requireAuth()
   const { roles, discordId, access } = await getEffectiveIdentity(session)
+  const GUILD_ID = await getGuildId(session)
   const raw = await getAccountsAll(GUILD_ID, discordId, roles.includes('Admin'))
   const accounts = raw.filter(a => canViewAccount(a, discordId, access))
 

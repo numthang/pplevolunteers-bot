@@ -120,7 +120,7 @@
 
 ## 💰 PPLE Finance
 
-- [ ] **Web routes tenant-ready** — เปลี่ยน `process.env.GUILD_ID` → `guildId` จาก session ใน 5 ไฟล์: `api/finance/accounts`, `transactions`, `categories`, `transactions/balance`, `report` (DB layer พร้อมแล้ว ไม่ต้องแตะ)
+- [ ] **Web routes multi-guild** — เปลี่ยน `process.env.GUILD_ID` → `guildId` จาก session ใน 5 ไฟล์: `api/finance/accounts`, `transactions`, `categories`, `transactions/balance`, `report` — DB layer พร้อมแล้ว ไม่ต้องแตะ, auto-detect guild จาก Discord membership (ไม่มี switcher)
 - [ ] ระบบเบี้ยเลี้ยง — โอนเงินเป็นรอบๆ (บัญชีเขต + บัญชีทีมงาน)
 - [ ] ระบบบัญชีเบี้ยเลี้ยงจังหวัด — ส่งสลิปเก็บง่าย + DM สลิปไปหาสมาชิก
 - [ ] จัดการเบี้ยเลี้ยงจากสมาชิก Discord
@@ -134,7 +134,23 @@
 - ~~Dashboard สรุป (`/calling/stats`) — gauges + charts~~ ✅
 
 ### ยังเหลือ
-- [ ] **Tenant-ready refactor** — 3 ขั้น: (1) add `guild_id` + backfill ใน `ngs_member_cache`, `calling_logs`, `calling_assignments`, `calling_member_tiers`; (2) DB functions (`web/db/calling/members.js`, `tiers.js`, `starred.js`) รับ `guildId` param + filter; (3) `/api/calling/*` routes ใช้ `guildId` จาก session แทน `process.env.GUILD_ID` — plan: `.claude/plans/calling-contact-twinkly-beacon.md`
+
+#### Schema + tenant-ready (3 ขั้น) — ✅ เสร็จ 2026-06-13
+
+- ✅ **ขั้น 1 Migration** — `guild_id` + index + backfill 4 tables (commit 2fd9e5f) · รัน DB จริงแล้ว rowcount ครบ
+- ✅ **ขั้น 2 DB functions** — members/tiers/starred/logs/assignments รับ `guildId` param (commit 2fd9e5f) · ครอบ read+write path
+- ✅ **ขั้น 3 Web routes** — calling routes ใช้ `await getGuildId(session)` แทน `process.env.GUILD_ID`
+- test 134 เขียว + build ผ่าน
+
+---
+
+#### CSV import สมาชิก (`scripts/importGuildMembers.js`)
+- รับ `<guild_id> <file.csv>` → insert ลง `ngs_member_cache`
+- columns ขั้นต่ำ: `first_name`, `last_name`, `phone`; optional: `line_id`, `province`, `amphoe`
+- ACT-specific fields = NULL; progress output ตาม convention (total → `\r N/total` → สรุป)
+
+---
+
 - [ ] เบอร์กลางโทรออก — แสดงเบอร์กลางขององค์กรแทนเบอร์ส่วนตัว (ต้องการ provider/config เบอร์กลาง)
 - [ ] แสดง active event บน dashboard + default event จังหวัดดึงจาก XLS
 - [ ] Audit logs — ดูประวัติการแก้ไข/เพิ่มข้อมูล
@@ -144,23 +160,31 @@
 
 ## 👥 PPLE Contacts
 
-- [ ] Multi-server design — ถกเรื่อง schema: แยก table ตาม guild หรืออยู่ table เดียวแยกด้วย `guild_id`
+- ~~Multi-server design~~ ✅ ตัดสินใจแล้ว: `calling_contacts` อยู่ table เดียว แยกด้วย `guild_id` (มีอยู่แล้ว) — ล็อคเฉพาะ อาสาประชาชน
 
 ---
 
-## ❓ Open Question — Guild Identity & Data Ownership
+## 🏗️ Web Architecture — ตัดสินใจแล้ว (2026-06-12)
 
-ยังไม่ได้ตัดสิน รอถกในอนาคต:
+**Guild switcher** — ทุกหน้า, ทุก feature; user เห็นเฉพาะ guild ที่ตัวเองเป็น Discord member (`dc_members WHERE discord_id = ?`); admin เห็นทุก guild; data เปลี่ยนตาม guild ที่เลือก
 
-**Finance / Calling contacts ผูกกับ guild ไหน?**
-- ตอนนี้ finance + calling ผูก `GUILD_ID` อาสาประชาชนโดย default (hardcode env)
-- ถ้ามี 4 guilds แล้ว: บัญชีการเงิน/รายชื่อ contact ของแต่ละ guild แยกกันไหม? หรือ share ข้ามกัน?
-- `ngs_member_cache` (calling) มาจากฐาน NGS ไม่ใช่ Discord → ไม่ผูก guild_id เลยตอนนี้
+**Feature toggle** — ระดับ guild (ไม่ใช่ระดับ user); เก็บใน `dc_guild_config` key `enabled_features`; เมนูซ่อนตาม toggle:
 
-**User เข้า web ในฐานะ guild ไหน?**
-- ตอนนี้ทุกคนเข้าในฐานะ "อาสาประชาชน" โดย default
-- ถ้า user อยู่หลาย guild: web รู้ได้ยังไงว่า request นี้ของ guild ไหน (subdomain? route param? session?)
-- ยังไม่มี multi-guild routing ใน web เลย
+| Feature | Default |
+|---|---|
+| Finance | เปิดตลอดทุก guild (ไม่มี toggle) |
+| Calling | อาสาประชาชน = on, อื่น = off |
+| Contacts | อาสาประชาชน = on, อื่น = off |
+| Bot | public ทุก guild |
+
+✅ **Nav.jsx เสร็จแล้ว (2026-06-12):**
+- แก้บั๊ก ภาพรวม/Dashboard active ตลอด (เพิ่ม `exact: true` สำหรับ root links `/finance` และ `/calling`)
+
+- ✅ **Guild switcher เสร็จ (2026-06-13):** guild dropdown แทน app switcher (ซ้ายบน) · app switching → hamburger · `getUserGuilds(discordId)` list เฉพาะ guild ที่เป็น member (INNER JOIN `dc_guilds`) · route `POST /api/guild/switch` set cookie `selected_guild` + validate membership · `router.refresh()` เปลี่ยน data
+  - **รากฐาน (chunk 1–4):** `lib/guildContext.js` `getGuildId(session)` (cookie → validate member → fallback env) · `getEffectiveIdentity` guild-aware · ทุก consumer `process.env.GUILD_ID` → `await getGuildId(session)` (calling 9 + finance 5 + profile + page + debug-role) · เหลือ fallback ใน guildContext + login ใน auth-options (ตั้งใจ)
+  - ⚠️ **edge case ค้าง:** user ที่ไม่ได้เป็น member ของ guild default (env=อาสาประชาชน) แต่เป็น guild อื่น → ไม่มี cookie → `getGuildId` คืน default → backend query default แต่ Nav โชว์ guilds[0] = mismatch · RBAC กันข้อมูลอยู่ (`isMember=false`) แต่ UX สับสน · ไม่กระทบตอนนี้ (user หลักเป็น member อาสาประชาชน) · แก้: `getGuildId` fallback = guild แรกที่เป็น member (เพิ่ม query/request — ชั่งทีหลัง)
+- [ ] **Feature toggle** — seed `dc_guild_config` `enabled_features` สำหรับ อาสาประชาชน; Nav อ่าน config ซ่อน/แสดงเมนูตาม toggle (ยังไม่ทำ — งานถัดไป)
+- [ ] **API routes** — Finance (`accounts`, `transactions`, `categories`, `balance`, `report`) + Calling (`/api/calling/*`) เปลี่ยน `process.env.GUILD_ID` → guildId จาก selected guild
 
 ---
 

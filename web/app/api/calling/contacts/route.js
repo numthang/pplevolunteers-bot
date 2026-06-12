@@ -3,6 +3,7 @@ import { authOptions } from '@/lib/auth-options.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import { getUserScope, isAdmin, isProvincialCoordinator, isRegionalCoordinator } from '@/lib/callingAccess.js'
 import { getContactsList, createContact } from '@/db/calling/contacts.js'
+import { getGuildId } from '@/lib/guildContext.js'
 
 export async function GET(req) {
   const session = await getServerSession(authOptions)
@@ -38,7 +39,8 @@ export async function GET(req) {
   }
 
   try {
-    let contacts = await getContactsList(process.env.GUILD_ID, {
+    const guildId = await getGuildId(session)
+    let contacts = await getContactsList(guildId, {
       provinces: effectiveProvinces,
       keyword,
       limit,
@@ -78,8 +80,9 @@ export async function POST(req) {
       return Response.json({ error: 'Forbidden: province out of scope' }, { status: 403 })
     }
 
+    const guildId = await getGuildId(session)
     const id = await createContact({
-      guild_id: process.env.GUILD_ID,
+      guild_id: guildId,
       first_name,
       last_name,
       phone,

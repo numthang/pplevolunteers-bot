@@ -1,5 +1,6 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options'
+import { getGuildId } from '@/lib/guildContext.js'
 import pool from '@/db/index.js'
 import geographyData from '@/lib/thailand-geography.json'
 
@@ -9,17 +10,18 @@ export async function GET() {
   const session = await getServerSession(authOptions)
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
+  const guildId = await getGuildId(session)
   const { rows } = await pool.query(
     `SELECT nickname, firstname, lastname, member_id, specialty, amphoe, province, region,
             phone, line_id, google_id, roles, interests, username, display_name, primary_province,
             bank_name, account_no, account_holder
      FROM dc_members WHERE guild_id = $1 AND discord_id = $2`,
-    [process.env.GUILD_ID, session.user.discordId]
+    [guildId, session.user.discordId]
   )
 
   let guild = null
   try {
-    const res = await fetch(`https://discord.com/api/v10/guilds/${process.env.GUILD_ID}?with_counts=true`, {
+    const res = await fetch(`https://discord.com/api/v10/guilds/${guildId}?with_counts=true`, {
       headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}` },
       next: { revalidate: 300 },
     })
@@ -48,13 +50,14 @@ export async function GET() {
       .filter(p => PROVINCE_LIST.includes(p))
   )]
 
-  return Response.json({ ...row, guild_id: process.env.GUILD_ID, guild, province_options: provinceOptions })
+  return Response.json({ ...row, guild_id: guildId, guild, province_options: provinceOptions })
 }
 
 export async function PATCH(req) {
   const session = await getServerSession(authOptions)
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
+  const guildId = await getGuildId(session)
   const body = await req.json()
   const allowed = ['nickname', 'firstname', 'lastname', 'member_id', 'specialty', 'amphoe', 'phone', 'line_id', 'google_id', 'primary_province', 'bank_name', 'account_no', 'account_holder']
   const updates = {}
@@ -71,7 +74,7 @@ export async function PATCH(req) {
   const keys = Object.keys(updates)
   const values = Object.values(updates)
   const setClause = keys.map((k, i) => `${k} = $${i + 1}`).join(', ')
-  values.push(process.env.GUILD_ID, session.user.discordId)
+  values.push(guildId, session.user.discordId)
 
   await pool.query(
     `UPDATE dc_members SET ${setClause} WHERE guild_id = $${values.length - 1} AND discord_id = $${values.length}`,

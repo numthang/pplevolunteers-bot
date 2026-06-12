@@ -12,8 +12,8 @@ import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import { isAdmin } from '@/lib/roles.js'
 import pool from '@/db/index.js'
 import { getGuilds } from '@/db/guilds.js'
+import { getGuildId } from '@/lib/guildContext.js'
 
-const GUILD_ID = process.env.GUILD_ID
 const BOT_INVITE_URL = process.env.DISCORD_BOT_INVITE_URL
 
 async function getTodayCallCount() {
@@ -25,6 +25,7 @@ async function getTodayCallCount() {
 
 async function getFINANCESummary(session) {
   const { roles, discordId, access } = await getEffectiveIdentity(session)
+  const GUILD_ID = await getGuildId(session)
   const raw = await getAccountsAll(GUILD_ID, discordId, isAdmin(roles))
   const accessibleAccounts = raw.filter(a => canViewAccount(a, discordId, access))
 
@@ -63,18 +64,18 @@ async function getGuildMemberCounts() {
   return rows
 }
 
-async function getCONTACTSCount() {
+async function getCONTACTSCount(guildId) {
   const { rows } = await pool.query(
     `SELECT COUNT(*) AS count FROM calling_contacts WHERE guild_id = $1`,
-    [GUILD_ID]
+    [guildId]
   )
   return Number(rows[0]?.count) || 0
 }
 
-async function getDisplayName(discordId) {
+async function getDisplayName(guildId, discordId) {
   const { rows } = await pool.query(
     `SELECT display_name FROM dc_members WHERE guild_id = $1 AND discord_id = $2`,
-    [GUILD_ID, discordId]
+    [guildId, discordId]
   )
   return rows[0]?.display_name || null
 }
@@ -193,17 +194,18 @@ export default async function HomePage() {
     ? session.user.roles
     : (session.user.roles || '').split(',').map(r => r.trim())
   const userIsAdmin = isAdmin(roles)
+  const GUILD_ID = await getGuildId(session)
 
   const [memberCount, guilds, guildMemberCounts, campaigns, todayCalls, pendingCount, finance, displayName, contactsCount, contactPending] = await Promise.all([
-    getMembersCount(),
+    getMembersCount(GUILD_ID),
     getGuilds(),
     getGuildMemberCounts(),
     getCampaigns(),
     getTodayCallCount(),
     discordId ? getPendingCallCount(discordId) : Promise.resolve(0),
     getFINANCESummary(session),
-    discordId ? getDisplayName(discordId) : Promise.resolve(null),
-    getCONTACTSCount(),
+    discordId ? getDisplayName(GUILD_ID, discordId) : Promise.resolve(null),
+    getCONTACTSCount(GUILD_ID),
     discordId ? getContactPendingCount(discordId) : Promise.resolve(0),
   ])
 

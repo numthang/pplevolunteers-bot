@@ -9,14 +9,14 @@ import {
   removeFavorite,
   updateFavoriteNote,
 } from '@/db/calling/starred.js'
-
-const GUILD_ID = process.env.GUILD_ID
+import { getGuildId } from '@/lib/guildContext.js'
 
 export async function GET(req) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.discordId) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
+  const GUILD_ID = await getGuildId(session)
 
   const { searchParams } = new URL(req.url)
   const enriched    = searchParams.get('enriched') === 'true'
@@ -52,6 +52,7 @@ export async function POST(req) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  const GUILD_ID = await getGuildId(session)
   try {
     const { memberId, contactType = 'member', note = null } = await req.json()
     if (!memberId) {
@@ -74,6 +75,7 @@ export async function DELETE(req) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  const GUILD_ID = await getGuildId(session)
   try {
     const { searchParams } = new URL(req.url)
     const memberId    = searchParams.get('memberId')
@@ -95,6 +97,7 @@ export async function PATCH(req) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  const GUILD_ID = await getGuildId(session)
   try {
     const { memberId, contactType = 'member', note } = await req.json()
     if (!memberId) {

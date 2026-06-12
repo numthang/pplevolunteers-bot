@@ -2,6 +2,7 @@ import { cookies } from 'next/headers'
 import { isAdmin } from './roles.js'
 import { DEBUG_COMBOS } from './debugCombos.js'
 import { resolveAccess } from './resolveAccess.js'
+import { getGuildId } from './guildContext.js'
 import pool from '@/db/index.js'
 
 const DEBUG_LABELS = DEBUG_COMBOS.map(c => c.label)
@@ -16,13 +17,14 @@ export async function getEffectiveRoles(session) {
  * access = { isMember, permissions: Set, scopeGrants: [] } resolve จาก dc_guild_roles (DB จริง)
  */
 export async function getEffectiveIdentity(session) {
-  const { roles, discordId } = await resolveIdentity(session)
-  const access = await resolveAccess(process.env.GUILD_ID, roles)
+  const guildId = await getGuildId(session)
+  const { roles, discordId } = await resolveIdentity(session, guildId)
+  const access = await resolveAccess(guildId, roles)
   return { roles, discordId, access }
 }
 
 /** identity layer เดิม (อ่าน roles จาก DB + จัดการ debug/view-as-role) — แยกออกเพื่อ resolve access ครั้งเดียว */
-async function resolveIdentity(session) {
+async function resolveIdentity(session, guildId) {
   const realDiscordId = session?.user?.discordId || null
 
   // Always read fresh roles from DB (bypass JWT cache)
@@ -31,7 +33,7 @@ async function resolveIdentity(session) {
     try {
       const { rows } = await pool.query(
         'SELECT roles FROM dc_members WHERE guild_id = $1 AND discord_id = $2',
-        [process.env.GUILD_ID, realDiscordId]
+        [guildId, realDiscordId]
       )
       if (rows[0]?.roles) {
         realRoles = rows[0].roles.split(',').map(r => r.trim()).filter(Boolean)
@@ -49,7 +51,7 @@ async function resolveIdentity(session) {
     try {
       const { rows } = await pool.query(
         'SELECT roles FROM dc_members WHERE guild_id = $1 AND discord_id = $2',
-        [process.env.GUILD_ID, debugDiscordId]
+        [guildId, debugDiscordId]
       )
       const roles = rows[0]?.roles ? rows[0].roles.split(',').map(r => r.trim()).filter(Boolean) : []
       return { roles, discordId: null }

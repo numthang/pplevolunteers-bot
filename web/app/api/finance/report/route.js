@@ -4,8 +4,7 @@ import { getCategorySummary, getMonthlyTrend } from '@/db/finance/transactions.j
 import { getAccountById } from '@/db/finance/accounts.js'
 import { canViewAccount } from '@/lib/financeAccess.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
-
-const GUILD_ID = process.env.GUILD_ID
+import { getGuildId } from '@/lib/guildContext.js'
 
 export async function GET(req) {
   const session = await getServerSession(authOptions)
@@ -22,6 +21,7 @@ export async function GET(req) {
   }
 
   const { discordId: effectiveDiscordId, access } = await getEffectiveIdentity(session)
+  const GUILD_ID = await getGuildId(session)
 
   if (filter.accountId) {
     const account = await getAccountById(filter.accountId)

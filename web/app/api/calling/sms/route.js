@@ -2,6 +2,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import { normalizeAccess } from '@/lib/roleAccess.js'
+import { getGuildId } from '@/lib/guildContext.js'
 import pool from '@/db/index.js'
 import { createLog } from '@/db/calling/logs.js'
 
@@ -35,6 +36,7 @@ export async function POST(req) {
   }
 
   const { access } = await getEffectiveIdentity(session)
+  const guildId = await getGuildId(session)
   const hasSmsRole = canSendSms(access)
 
   try {
@@ -63,7 +65,7 @@ export async function POST(req) {
     } else {
       const { rows } = await pool.query(
         `SELECT source_id, mobile_number FROM ngs_member_cache WHERE source_id = ANY($1) AND guild_id = $2`,
-        [member_ids, process.env.GUILD_ID]
+        [member_ids, guildId]
       )
       for (const r of rows) {
         if (r.mobile_number) phoneMap[r.source_id] = r.mobile_number
@@ -110,7 +112,7 @@ export async function POST(req) {
       if (apiData.error) {
         // Whole batch failed — log each as sms_failed
         for (const id of batch) {
-          await createLog(process.env.GUILD_ID, { campaign_id: campaign_id || 0, member_id: id, contact_type, called_by: calledBy, caller_name: callerName, status: 'sms_failed', note: message, extra: { reason: apiData.error.description } })
+          await createLog(guildId, { campaign_id: campaign_id || 0, member_id: id, contact_type, called_by: calledBy, caller_name: callerName, status: 'sms_failed', note: message, extra: { reason: apiData.error.description } })
           results.failed++
         }
         continue
@@ -119,14 +121,14 @@ export async function POST(req) {
       for (const item of (apiData.phone_number_list || [])) {
         const id = phoneToId[normalizePhone(item.number)]
         if (!id) continue
-        await createLog(process.env.GUILD_ID, { campaign_id: campaign_id || 0, member_id: id, contact_type, called_by: calledBy, caller_name: callerName, status: 'sms_sent', note: message, extra: { message_id: item.message_id, used_credit: item.used_credit } })
+        await createLog(guildId, { campaign_id: campaign_id || 0, member_id: id, contact_type, called_by: calledBy, caller_name: callerName, status: 'sms_sent', note: message, extra: { message_id: item.message_id, used_credit: item.used_credit } })
         results.sent++
       }
 
       for (const item of (apiData.bad_phone_number_list || [])) {
         const id = phoneToId[normalizePhone(item.number)]
         if (!id) continue
-        await createLog(process.env.GUILD_ID, { campaign_id: campaign_id || 0, member_id: id, contact_type, called_by: calledBy, caller_name: callerName, status: 'sms_failed', note: message, extra: { reason: item.message } })
+        await createLog(guildId, { campaign_id: campaign_id || 0, member_id: id, contact_type, called_by: calledBy, caller_name: callerName, status: 'sms_failed', note: message, extra: { reason: item.message } })
         results.failed++
       }
     }

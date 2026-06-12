@@ -2,6 +2,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
 import { createLog, getLogsByCampaignMember, getLogById, updateLog, deleteLog } from '@/db/calling/logs.js'
 import { calculateTierFromSignals, upsertTier } from '@/db/calling/tiers.js'
+import { getGuildId } from '@/lib/guildContext.js'
 
 export async function GET(req) {
   const session = await getServerSession(authOptions)
@@ -45,7 +46,8 @@ export async function POST(req) {
       return Response.json({ error: 'member_id and status are required' }, { status: 400 })
     }
 
-    const logId = await createLog(process.env.GUILD_ID, {
+    const guildId = await getGuildId(session)
+    const logId = await createLog(guildId, {
       campaign_id: campaign_id || 0,
       member_id,
       contact_type,
@@ -65,7 +67,7 @@ export async function POST(req) {
     // Auto-calculate and update tier if signals are present (answered call หรือ พบปะ)
     if (status === 'answered' || status === 'met') {
       const tier = await calculateTierFromSignals(member_id, null, contact_type)
-      if (tier) await upsertTier(process.env.GUILD_ID, member_id, tier, 'auto', contact_type)
+      if (tier) await upsertTier(guildId, member_id, tier, 'auto', contact_type)
     }
 
     return Response.json({ success: true, data: { id: logId } }, { status: 201 })
@@ -98,8 +100,9 @@ export async function PATCH(req) {
     await updateLog(id, { status, note, sig_overall, sig_location, sig_availability, sig_interest, sig_reachable })
 
     if (status === 'answered' || status === 'met' || log.status === 'answered' || log.status === 'met') {
+      const guildId = await getGuildId(session)
       const tier = await calculateTierFromSignals(log.member_id, null, log.contact_type)
-      if (tier) await upsertTier(process.env.GUILD_ID, log.member_id, tier, 'auto', log.contact_type)
+      if (tier) await upsertTier(guildId, log.member_id, tier, 'auto', log.contact_type)
     }
 
     return Response.json({ success: true })
