@@ -1,8 +1,5 @@
 import pool from '../index.js'
 
-/**
- * Get tier for member
- */
 export async function getTier(memberId, contactType = 'member') {
   const { rows } = await pool.query(
     `SELECT * FROM calling_member_tiers WHERE member_id = $1 AND contact_type = $2`,
@@ -11,9 +8,6 @@ export async function getTier(memberId, contactType = 'member') {
   return rows[0] || null
 }
 
-/**
- * Get tiers for multiple members
- */
 export async function getTiersByMembers(memberIds) {
   if (!memberIds || memberIds.length === 0) return []
 
@@ -24,58 +18,46 @@ export async function getTiersByMembers(memberIds) {
   return rows
 }
 
-/**
- * Get all members grouped by tier
- */
-export async function getMembersByTier(tier) {
+export async function getMembersByTier(guildId, tier) {
   const { rows } = await pool.query(
     `SELECT m.*, t.tier
      FROM ngs_member_cache m
      LEFT JOIN calling_member_tiers t ON t.member_id = m.source_id::text
-     WHERE COALESCE(t.tier::text, 'D') = $1
+     WHERE m.guild_id = $1 AND COALESCE(t.tier::text, 'D') = $2
      ORDER BY m.first_name ASC`,
-    [tier]
+    [guildId, tier]
   )
   return rows
 }
 
-/**
- * Upsert tier (auto-calculated)
- */
-export async function upsertTier(memberId, tier, source = 'auto', contactType = 'member') {
+export async function upsertTier(guildId, memberId, tier, source = 'auto', contactType = 'member') {
   await pool.query(
     `INSERT INTO calling_member_tiers
-      (member_id, contact_type, tier, tier_source, updated_at)
-     VALUES ($1, $2, $3, $4, NOW())
+      (member_id, contact_type, tier, tier_source, guild_id, updated_at)
+     VALUES ($1, $2, $3, $4, $5, NOW())
      ON CONFLICT (member_id, contact_type) DO UPDATE SET
       tier = EXCLUDED.tier,
       tier_source = EXCLUDED.tier_source,
       updated_at = NOW()`,
-    [memberId, contactType, tier, source]
+    [memberId, contactType, tier, source, guildId]
   )
 }
 
-/**
- * Manually override tier
- */
-export async function overrideTier(memberId, tier, overrideBy, reason, contactType = 'member') {
+export async function overrideTier(guildId, memberId, tier, overrideBy, reason, contactType = 'member') {
   await pool.query(
     `INSERT INTO calling_member_tiers
-      (member_id, contact_type, tier, tier_source, override_by, override_reason, updated_at)
-     VALUES ($1, $2, $3, 'manual', $4, $5, NOW())
+      (member_id, contact_type, tier, tier_source, override_by, override_reason, guild_id, updated_at)
+     VALUES ($1, $2, $3, 'manual', $4, $5, $6, NOW())
      ON CONFLICT (member_id, contact_type) DO UPDATE SET
       tier = EXCLUDED.tier,
       tier_source = 'manual',
       override_by = EXCLUDED.override_by,
       override_reason = EXCLUDED.override_reason,
       updated_at = NOW()`,
-    [memberId, contactType, tier, overrideBy, reason || null]
+    [memberId, contactType, tier, overrideBy, reason || null, guildId]
   )
 }
 
-/**
- * Calculate tier from signals (average of answered calls)
- */
 export async function calculateTierFromSignals(memberId, campaignId = null, contactType = 'member') {
   const params = [memberId, contactType]
   let query = `
@@ -105,9 +87,6 @@ export async function calculateTierFromSignals(memberId, campaignId = null, cont
   return 'D'
 }
 
-/**
- * Get tier distribution (count by tier)
- */
 export async function getTierDistribution() {
   const { rows } = await pool.query(
     `SELECT
@@ -120,10 +99,7 @@ export async function getTierDistribution() {
   return rows
 }
 
-/**
- * Get tier with full member info
- */
-export async function getTierWithMemberInfo(memberId) {
+export async function getTierWithMemberInfo(guildId, memberId) {
   const { rows } = await pool.query(
     `SELECT
        m.*,
@@ -134,37 +110,31 @@ export async function getTierWithMemberInfo(memberId) {
        t.updated_at AS tier_updated_at
      FROM ngs_member_cache m
      LEFT JOIN calling_member_tiers t ON t.member_id = m.source_id::text
-     WHERE m.source_id = $1`,
-    [memberId]
+     WHERE m.source_id = $1 AND m.guild_id = $2`,
+    [memberId, guildId]
   )
   return rows[0] || null
 }
 
-/**
- * Set or clear member flag (green/yellow/red)
- */
-export async function updateFlag(memberId, flag, contactType = 'member') {
+export async function updateFlag(guildId, memberId, flag, contactType = 'member') {
   await pool.query(
-    `INSERT INTO calling_member_tiers (member_id, contact_type, tier, flag, updated_at)
-     VALUES ($1, $2, 'D', $3, NOW())
+    `INSERT INTO calling_member_tiers (member_id, contact_type, tier, flag, guild_id, updated_at)
+     VALUES ($1, $2, 'D', $3, $4, NOW())
      ON CONFLICT (member_id, contact_type) DO UPDATE SET
        flag = EXCLUDED.flag,
        updated_at = NOW()`,
-    [memberId, contactType, flag || null]
+    [memberId, contactType, flag || null, guildId]
   )
 }
 
-/**
- * Clear manual override (revert to auto)
- */
-export async function clearOverride(memberId) {
+export async function clearOverride(guildId, memberId) {
   await pool.query(
     `UPDATE calling_member_tiers
      SET tier_source = 'auto',
          override_by = NULL,
          override_reason = NULL,
          updated_at = NOW()
-     WHERE member_id = $1`,
-    [memberId]
+     WHERE member_id = $1 AND guild_id = $2`,
+    [memberId, guildId]
   )
 }

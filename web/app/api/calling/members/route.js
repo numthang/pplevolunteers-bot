@@ -45,7 +45,7 @@ export async function GET(req) {
 
     // Stats-only request
     if (campaignId && statsOnly) {
-      const stats = await memberDB.getMembersInCampaignStats(parseInt(campaignId))
+      const stats = await memberDB.getMembersInCampaignStats(process.env.GUILD_ID, parseInt(campaignId))
       return Response.json({ success: true, data: stats })
     }
 
@@ -54,16 +54,16 @@ export async function GET(req) {
 
     if (campaignId) {
       const filters = { amphure: filterAmphure, subdistricts: filterSubdistricts, tier: filterTier, status: filterStatus, assignedTo: filterAssignedTo, rsvp: filterRsvp, name: filterName, expiry: filterExpiry, called: filterCalled, sort: filterSort, sms: filterSms }
-      rows = await memberDB.getMembersInCampaign(parseInt(campaignId), filters, limit, offset)
+      rows = await memberDB.getMembersInCampaign(process.env.GUILD_ID, parseInt(campaignId), filters, limit, offset)
     } else if (province) {
-      rows = await memberDB.getMembersByProvince(province, limit, offset)
+      rows = await memberDB.getMembersByProvince(process.env.GUILD_ID, province, limit, offset)
     } else if (district) {
-      rows = await memberDB.getMembersByDistrict(district, limit, offset)
+      rows = await memberDB.getMembersByDistrict(process.env.GUILD_ID, district, limit, offset)
     } else if (keyword) {
-      rows = await memberDB.searchMembers(keyword, limit, offset)
+      rows = await memberDB.searchMembers(process.env.GUILD_ID, keyword, limit, offset)
     } else {
-      rows = await memberDB.getAllMembers(limit, offset)
-      total = await memberDB.getMembersCount()
+      rows = await memberDB.getAllMembers(process.env.GUILD_ID, limit, offset)
+      total = await memberDB.getMembersCount(process.env.GUILD_ID)
     }
 
     // No calling roles at all → return noAccess flag

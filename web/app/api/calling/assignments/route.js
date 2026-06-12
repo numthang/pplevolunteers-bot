@@ -72,6 +72,7 @@ export async function POST(req) {
     }
 
     const affectedRows = await assignmentDB.bulkAssignMembers(
+      process.env.GUILD_ID,
       member_ids,
       assigned_to,
       session.user.discordId,
@@ -121,7 +122,7 @@ export async function PUT(req) {
       return Response.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    await assignmentDB.assignMember(parseInt(member_id), assigned_to, session.user.discordId, campaign_id || 0)
+    await assignmentDB.assignMember(process.env.GUILD_ID, parseInt(member_id), assigned_to, session.user.discordId, campaign_id || 0)
 
     const assignment = await assignmentDB.getAssignment(parseInt(member_id), campaign_id || 0)
     return Response.json({ success: true, data: assignment })

@@ -27,8 +27,8 @@ export async function GET(req) {
       const offset = parseInt(searchParams.get('offset') || '0')
       const flat = searchParams.get('flat') === 'true'
       const rows = flat
-        ? await memberDB.getMyCallHistoryFlat(session.user.discordId, { name, limit, offset })
-        : await memberDB.getMyCallHistory(session.user.discordId, { name, limit, offset })
+        ? await memberDB.getMyCallHistoryFlat(process.env.GUILD_ID, session.user.discordId, { name, limit, offset })
+        : await memberDB.getMyCallHistory(process.env.GUILD_ID, session.user.discordId, { name, limit, offset })
       return Response.json({ success: true, data: rows, hasMore: rows.length === limit })
     }
 
@@ -69,7 +69,7 @@ export async function GET(req) {
       })
     }
 
-    const members = await memberDB.getMyAssignedMembers(session.user.discordId, {
+    const members = await memberDB.getMyAssignedMembers(process.env.GUILD_ID, session.user.discordId, {
       campaignId: campaignId ? parseInt(campaignId) : null,
       status: status || null,
       rsvp: rsvp || null,

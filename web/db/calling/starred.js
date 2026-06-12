@@ -65,8 +65,8 @@ export async function getFavoritesEnriched(guildId, userDiscordId) {
     memberIds.length === 0 ? Promise.resolve({ rows: [] }) : pool.query(
       `SELECT source_id, first_name, last_name, mobile_number AS phone,
               home_province, home_amphure AS home_district, date_of_birth
-       FROM ngs_member_cache WHERE source_id = ANY($1)`,
-      [memberIds]
+       FROM ngs_member_cache WHERE source_id = ANY($1) AND guild_id = $2`,
+      [memberIds, guildId]
     ),
     contactIds.length === 0 ? Promise.resolve({ rows: [] }) : pool.query(
       `SELECT id, first_name, last_name, phone, province, amphoe, category
@@ -123,7 +123,7 @@ export async function getFavoritesDisplay(guildId, userDiscordId, { name, limit 
        c.category
      FROM calling_starred f
      LEFT JOIN ngs_member_cache m
-       ON f.contact_type = 'member' AND m.source_id::text = f.member_id
+       ON f.contact_type = 'member' AND m.source_id::text = f.member_id AND m.guild_id = $1
      LEFT JOIN calling_member_tiers t
        ON f.contact_type = 'member' AND t.member_id = f.member_id AND t.contact_type = 'member'
      LEFT JOIN dc_members dc

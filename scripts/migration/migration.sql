@@ -434,3 +434,47 @@ ALTER TABLE calling_member_tiers ADD COLUMN IF NOT EXISTS flag VARCHAR(20);
 --   ใช้คลุมทั้ง MEDIA_TEAM (ทีมกราฟิก→ทีมสื่อ) และ province hierarchy (จังหวัด→ภาคย่อย→ภาคใหญ่)
 --   seed ด้วย: node scripts/migration/seed-parent-roles.js
 ALTER TABLE dc_guild_roles ADD COLUMN IF NOT EXISTS parent_role_id VARCHAR(20) NULL;
+
+-- 2026-06-12: Calling — เพิ่ม guild_id ใน 4 tables + backfill สำหรับ multi-tenant support
+--   GUILD_ID อาสาประชาชน = 1340903354037178410 (hardcode สำหรับ backfill ข้อมูลเดิม)
+
+-- Step 1: ngs_member_cache — ข้อมูลทั้งหมดเป็นของ guild อาสาประชาชน
+ALTER TABLE ngs_member_cache ADD COLUMN IF NOT EXISTS guild_id VARCHAR(20);
+UPDATE ngs_member_cache SET guild_id = '1340903354037178410' WHERE guild_id IS NULL;
+ALTER TABLE ngs_member_cache ALTER COLUMN guild_id SET NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_ngs_member_cache_guild ON ngs_member_cache (guild_id);
+
+-- Step 2: calling_logs — JOIN act_event_cache; guild_id='1' คือ legacy value ของ guild อาสาประชาชน
+ALTER TABLE calling_logs ADD COLUMN IF NOT EXISTS guild_id VARCHAR(20);
+UPDATE calling_logs cl
+SET guild_id = COALESCE(NULLIF(aec.guild_id, '1'), '1340903354037178410')
+FROM act_event_cache aec
+WHERE cl.campaign_id = aec.id;
+-- fallback: campaign_id=0 ไม่มี act_event_cache row หรือ rows ที่ยังไม่ match
+UPDATE calling_logs SET guild_id = '1340903354037178410' WHERE guild_id IS NULL;
+ALTER TABLE calling_logs ALTER COLUMN guild_id SET NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_calling_logs_guild ON calling_logs (guild_id);
+
+-- Step 3: calling_assignments — JOIN act_event_cache
+ALTER TABLE calling_assignments ADD COLUMN IF NOT EXISTS guild_id VARCHAR(20);
+UPDATE calling_assignments ca
+SET guild_id = COALESCE(NULLIF(aec.guild_id, '1'), '1340903354037178410')
+FROM act_event_cache aec
+WHERE ca.campaign_id = aec.id;
+UPDATE calling_assignments SET guild_id = '1340903354037178410' WHERE guild_id IS NULL;
+ALTER TABLE calling_assignments ALTER COLUMN guild_id SET NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_calling_assignments_guild ON calling_assignments (guild_id);
+
+-- Step 4: calling_member_tiers — JOIN ngs_member_cache (member) / calling_contacts (contact)
+ALTER TABLE calling_member_tiers ADD COLUMN IF NOT EXISTS guild_id VARCHAR(20);
+UPDATE calling_member_tiers cmt
+SET guild_id = nmc.guild_id
+FROM ngs_member_cache nmc
+WHERE cmt.member_id::int = nmc.source_id AND cmt.contact_type = 'member';
+UPDATE calling_member_tiers cmt
+SET guild_id = cc.guild_id
+FROM calling_contacts cc
+WHERE cmt.member_id::int = cc.id AND cmt.contact_type = 'contact';
+UPDATE calling_member_tiers SET guild_id = '1340903354037178410' WHERE guild_id IS NULL;
+ALTER TABLE calling_member_tiers ALTER COLUMN guild_id SET NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_calling_member_tiers_guild ON calling_member_tiers (guild_id);

@@ -40,7 +40,7 @@ export async function getLogsByCampaign(campaignId, { limit = 100, offset = 0 } 
   return rows
 }
 
-export async function createLog(data) {
+export async function createLog(guildId, data) {
   const {
     campaign_id = 0,
     member_id,
@@ -63,8 +63,8 @@ export async function createLog(data) {
     `INSERT INTO calling_logs
       (campaign_id, contact_type, member_id, called_by, caller_name, caller_image, called_at, status,
        sig_overall, sig_location, sig_availability, sig_interest, sig_reachable,
-       note, extra, created_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, NOW())
+       note, extra, guild_id, created_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW())
      RETURNING id`,
     [
       campaign_id || 0,
@@ -81,7 +81,8 @@ export async function createLog(data) {
       sig_interest || null,
       sig_reachable || null,
       note || null,
-      extra ? JSON.stringify(extra) : null
+      extra ? JSON.stringify(extra) : null,
+      guildId
     ]
   )
   return rows[0].id

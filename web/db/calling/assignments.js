@@ -54,16 +54,16 @@ export async function getAssignmentsForPerson(discordId, campaignId = 0) {
 /**
  * Assign member to person (campaign defaults to 0 / Undefined)
  */
-export async function assignMember(memberId, assignedTo, assignedBy, campaignId = 0, contactType = 'member') {
+export async function assignMember(guildId, memberId, assignedTo, assignedBy, campaignId = 0, contactType = 'member') {
   const { rows } = await pool.query(
     `INSERT INTO calling_assignments
-      (campaign_id, contact_type, member_id, assigned_to, assigned_by, created_at)
-     VALUES ($1, $2, $3, $4, $5, NOW())
+      (campaign_id, contact_type, member_id, assigned_to, assigned_by, guild_id, created_at)
+     VALUES ($1, $2, $3, $4, $5, $6, NOW())
      ON CONFLICT (campaign_id, member_id, contact_type) DO UPDATE SET
       assigned_to = EXCLUDED.assigned_to,
       assigned_by = EXCLUDED.assigned_by
      RETURNING id`,
-    [campaignId || 0, contactType, memberId, assignedTo, assignedBy]
+    [campaignId || 0, contactType, memberId, assignedTo, assignedBy, guildId]
   )
   return rows[0]?.id
 }
@@ -71,19 +71,19 @@ export async function assignMember(memberId, assignedTo, assignedBy, campaignId 
 /**
  * Bulk assign members (campaign defaults to 0 / Undefined)
  */
-export async function bulkAssignMembers(memberIds, assignedTo, assignedBy, campaignId = 0, contactType = 'member') {
+export async function bulkAssignMembers(guildId, memberIds, assignedTo, assignedBy, campaignId = 0, contactType = 'member') {
   if (!memberIds || memberIds.length === 0) return 0
 
   const values = []
   const params = []
   let p = 1
   for (const memberId of memberIds) {
-    values.push(`($${p++}, $${p++}, $${p++}, $${p++}, $${p++})`)
-    params.push(campaignId || 0, contactType, memberId, assignedTo, assignedBy)
+    values.push(`($${p++}, $${p++}, $${p++}, $${p++}, $${p++}, $${p++})`)
+    params.push(campaignId || 0, contactType, memberId, assignedTo, assignedBy, guildId)
   }
   const result = await pool.query(
     `INSERT INTO calling_assignments
-      (campaign_id, contact_type, member_id, assigned_to, assigned_by)
+      (campaign_id, contact_type, member_id, assigned_to, assigned_by, guild_id)
      VALUES ${values.join(', ')}
      ON CONFLICT (campaign_id, member_id, contact_type) DO UPDATE SET
       assigned_to = EXCLUDED.assigned_to,
@@ -118,15 +118,15 @@ export async function unassignMember(memberId, campaignId = 0, contactType = 'me
 /**
  * Get unassigned members (campaign defaults to 0 / Undefined)
  */
-export async function getUnassignedMembers(campaignId = 0, limit = 100, offset = 0) {
+export async function getUnassignedMembers(guildId, campaignId = 0, limit = 100, offset = 0) {
   const { rows } = await pool.query(
     `SELECT m.* FROM ngs_member_cache m
      LEFT JOIN calling_assignments a
-       ON a.campaign_id = $1 AND a.member_id = m.source_id::text
-     WHERE a.id IS NULL
+       ON a.campaign_id = $2 AND a.member_id = m.source_id::text
+     WHERE a.id IS NULL AND m.guild_id = $1
      ORDER BY m.home_amphure ASC, m.first_name ASC
-     LIMIT $2 OFFSET $3`,
-    [campaignId, limit, offset]
+     LIMIT $3 OFFSET $4`,
+    [guildId, campaignId, limit, offset]
   )
   return rows
 }
@@ -134,13 +134,13 @@ export async function getUnassignedMembers(campaignId = 0, limit = 100, offset =
 /**
  * Get unassigned count (campaign defaults to 0 / Undefined)
  */
-export async function getUnassignedCount(campaignId = 0) {
+export async function getUnassignedCount(guildId, campaignId = 0) {
   const { rows } = await pool.query(
     `SELECT COUNT(*) AS count FROM ngs_member_cache m
      LEFT JOIN calling_assignments a
-       ON a.campaign_id = $1 AND a.member_id = m.source_id::text
-     WHERE a.id IS NULL`,
-    [campaignId]
+       ON a.campaign_id = $2 AND a.member_id = m.source_id::text
+     WHERE a.id IS NULL AND m.guild_id = $1`,
+    [guildId, campaignId]
   )
   return Number(rows[0]?.count) || 0
 }
