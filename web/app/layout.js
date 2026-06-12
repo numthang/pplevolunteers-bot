@@ -4,6 +4,7 @@ import { getUserGuilds } from '@/db/guilds.js'
 import { getGuildId } from '@/lib/guildContext.js'
 import Providers from '@/components/Providers.jsx'
 import Nav from '@/components/Nav.jsx'
+import NoGuildNotice from '@/components/NoGuildNotice.jsx'
 
 export const metadata = {
   title: {
@@ -25,12 +26,17 @@ export default async function RootLayout({ children }) {
     ])
   }
 
+  // login แล้วแต่ไม่ได้เป็น member ของ guild ใดเลย → block (ยกเว้น super_admin ที่เห็นทุก guild)
+  const noGuild = !!session?.user && guilds.length === 0 && !session.user.isSuperAdmin
+
   return (
     <html lang="th">
       <body className="bg-gray-100 dark:bg-disc-bg2 text-gray-900 dark:text-disc-text min-h-screen">
         <Providers session={session}>
           <Nav session={session} guilds={guilds} currentGuildId={currentGuildId} />
-          <main className="max-w-5xl mx-auto px-3 sm:px-4 pt-3 pb-6">{children}</main>
+          <main className="max-w-5xl mx-auto px-3 sm:px-4 pt-3 pb-6">
+            {noGuild ? <NoGuildNotice /> : children}
+          </main>
         </Providers>
       </body>
     </html>
