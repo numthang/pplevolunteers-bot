@@ -20,8 +20,10 @@ export async function getAdminGuildIds(discordId) {
 /**
  * Guilds ที่ user เป็น member จริง (INNER JOIN dc_guilds = เฉพาะ guild ที่ register ในระบบ)
  * ใช้ render guild switcher dropdown
+ * @param {object} opts - { all: true } = super_admin เห็นทุก guild (ไม่ใช่แค่ที่เป็น member)
  */
-export async function getUserGuilds(discordId) {
+export async function getUserGuilds(discordId, { all = false } = {}) {
+  if (all) return getGuilds()
   if (!discordId) return []
   const { rows } = await pool.query(
     `SELECT g.guild_id, g.name
@@ -44,4 +46,19 @@ export async function isGuildMember(discordId, guildId) {
     [discordId, guildId]
   )
   return rows.length > 0
+}
+
+/**
+ * Features ที่ guild นี้เปิด (toggle ได้: 'calling', 'contacts')
+ * finance + bot เปิดตลอดทุก guild → ไม่อยู่ใน toggle · default (ไม่มี config) = []
+ * เก็บใน dc_guild_config key 'enabled_features' เป็น json array เช่น ["calling","contacts"]
+ */
+export async function getEnabledFeatures(guildId) {
+  if (!guildId) return []
+  const { rows } = await pool.query(
+    `SELECT value FROM dc_guild_config WHERE guild_id = $1 AND "key" = 'enabled_features'`,
+    [guildId]
+  )
+  const v = rows[0]?.value
+  return Array.isArray(v) ? v : []
 }

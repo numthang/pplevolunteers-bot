@@ -1,6 +1,6 @@
 import './globals.css'
 import { getSession } from '@/lib/auth.js'
-import { getUserGuilds } from '@/db/guilds.js'
+import { getUserGuilds, getEnabledFeatures } from '@/db/guilds.js'
 import { getGuildId } from '@/lib/guildContext.js'
 import Providers from '@/components/Providers.jsx'
 import Nav from '@/components/Nav.jsx'
@@ -19,10 +19,12 @@ export default async function RootLayout({ children }) {
 
   let guilds = []
   let currentGuildId = null
+  let enabledFeatures = []
   if (session?.user?.discordId) {
-    ;[guilds, currentGuildId] = await Promise.all([
-      getUserGuilds(session.user.discordId),
-      getGuildId(session),
+    currentGuildId = await getGuildId(session)
+    ;[guilds, enabledFeatures] = await Promise.all([
+      getUserGuilds(session.user.discordId, { all: session.user.isSuperAdmin }),
+      getEnabledFeatures(currentGuildId),
     ])
   }
 
@@ -33,7 +35,7 @@ export default async function RootLayout({ children }) {
     <html lang="th">
       <body className="bg-gray-100 dark:bg-disc-bg2 text-gray-900 dark:text-disc-text min-h-screen">
         <Providers session={session}>
-          <Nav session={session} guilds={guilds} currentGuildId={currentGuildId} />
+          <Nav session={session} guilds={guilds} currentGuildId={currentGuildId} enabledFeatures={enabledFeatures} />
           <main className="max-w-5xl mx-auto px-3 sm:px-4 pt-3 pb-6">
             {noGuild ? <NoGuildNotice /> : children}
           </main>

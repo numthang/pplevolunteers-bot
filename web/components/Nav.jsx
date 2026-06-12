@@ -70,8 +70,8 @@ const SOCIAL_LINKS = [
 
 const DASHBOARD_LINKS = [
   { href: '/finance',              label: 'FINANCE',  icon: 'transactions' },
-  { href: '/calling',              label: 'CALLING',  icon: 'campaigns' },
-  { href: '/contacts',             label: 'CONTACTS', icon: 'contacts' },
+  { href: '/calling',              label: 'CALLING',  icon: 'campaigns', feature: 'calling' },
+  { href: '/contacts',             label: 'CONTACTS', icon: 'contacts', feature: 'contacts' },
   { href: '/bot/server/platforms', label: 'BOT',      icon: 'social' },
   { href: '/admin/logs',           label: 'LOGS',     icon: 'logs', roles: ['Admin', 'Moderator'] },
 ]
@@ -79,12 +79,12 @@ const DASHBOARD_LINKS = [
 const APPS = [
   { key: 'home',     label: 'DASHBOARD', href: '/',                      icon: 'overview' },
   { key: 'finance',  label: 'FINANCE',   href: '/finance',               icon: 'transactions' },
-  { key: 'calling',  label: 'CALLING',   href: '/calling',               icon: 'campaigns' },
-  { key: 'contacts', label: 'CONTACTS',  href: '/contacts',              icon: 'contacts' },
+  { key: 'calling',  label: 'CALLING',   href: '/calling',               icon: 'campaigns', feature: 'calling' },
+  { key: 'contacts', label: 'CONTACTS',  href: '/contacts',              icon: 'contacts', feature: 'contacts' },
   { key: 'discord',  label: 'BOT',       href: '/bot/server/platforms',  icon: 'social' },
 ]
 
-export default function Nav({ session, guilds = [], currentGuildId = null }) {
+export default function Nav({ session, guilds = [], currentGuildId = null, enabledFeatures = [] }) {
   const pathname = usePathname()
   const router = useRouter()
   const { dark, toggle } = useTheme()
@@ -141,7 +141,10 @@ export default function Nav({ session, guilds = [], currentGuildId = null }) {
     ? session.user.roles
     : (session?.user?.roles || '').split(',').map(r => r.trim())
 
+  const featureOn = (f) => !f || enabledFeatures.includes(f)
+
   const visibleLinks = links.filter(l => {
+    if (!featureOn(l.feature)) return false
     if (!session) return l.public
     if (l.roles) return l.roles.some(r => roles.includes(r))
     return true
@@ -149,7 +152,7 @@ export default function Nav({ session, guilds = [], currentGuildId = null }) {
 
   const userIsAdmin = roles.includes('Admin')
 
-  const visibleApps = APPS.filter(a => !a.roles || a.roles.some(r => roles.includes(r)))
+  const visibleApps = APPS.filter(a => (!a.roles || a.roles.some(r => roles.includes(r))) && featureOn(a.feature))
 
   const currentGuild = guilds.find(g => g.guild_id === currentGuildId) || guilds[0] || null
   const canSwitchGuild = guilds.length > 1

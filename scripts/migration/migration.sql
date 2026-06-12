@@ -478,3 +478,10 @@ WHERE cmt.member_id::int = cc.id AND cmt.contact_type = 'contact';
 UPDATE calling_member_tiers SET guild_id = '1340903354037178410' WHERE guild_id IS NULL;
 ALTER TABLE calling_member_tiers ALTER COLUMN guild_id SET NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_calling_member_tiers_guild ON calling_member_tiers (guild_id);
+
+-- 2026-06-13: Feature toggle ต่อ guild — calling/contacts เปิดเฉพาะ guild ที่ตั้ง
+--   finance + bot เปิดตลอดทุก guild (ไม่อยู่ใน toggle) · default (ไม่มี row) = []
+--   value json array · Nav อ่านผ่าน getEnabledFeatures() ซ่อน/แสดงเมนู
+INSERT INTO dc_guild_config (guild_id, "key", value) VALUES
+  ('1340903354037178410', 'enabled_features', '["calling","contacts"]'::json)
+ON CONFLICT (guild_id, "key") DO UPDATE SET value = EXCLUDED.value;
