@@ -347,7 +347,7 @@ client.on('messageCreate', async (message) => {
   const refreshMs = (config.refresh_minutes ?? 1440) * 60 * 1000;
   const refreshEvery = config.refresh_every ?? 5;
   const now = Date.now();
-  const last = cooldowns.get(message.channel.id) || 0;
+  const last = cooldowns.get(message.channel.id) ?? now;
   const count = (msgCounts.get(message.channel.id) || 0) + 1;
 
   const timeReady  = now - last >= refreshMs;
