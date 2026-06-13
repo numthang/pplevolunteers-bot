@@ -13,7 +13,7 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('role')
     .setDescription('จัดการ Role (เฉพาะ Moderator)')
-    .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles)
 
     .addSubcommand(sub =>
       sub.setName('add')
