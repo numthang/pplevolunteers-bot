@@ -57,10 +57,9 @@ module.exports = {
         .setCustomId(`role_add_modal:${roles.map(r => r.id).join(',')}`)
         .setTitle(roles.length === 1 ? `เพิ่ม Role: ${roles[0].name}` : `เพิ่ม ${roles.length} Roles`);
 
-      const label = `Username หรือ Discord ID (คั่นด้วย , หรือ Enter)`;
       const input = new TextInputBuilder()
         .setCustomId('role_usernames')
-        .setLabel(label)
+        .setLabel('Username หรือ ID (คั่น , หรือ Enter)')
         .setStyle(TextInputStyle.Paragraph)
         .setPlaceholder('john_doe\njane_smith\n123456789012345678')
         .setRequired(true)
