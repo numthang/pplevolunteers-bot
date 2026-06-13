@@ -4,9 +4,6 @@ import pool from '@/db/index.js'
 
 const SNOWFLAKE = /^\d{15,20}$/
 
-// ตะกร้าเป็น internal media tool — เข้าผ่านลิงก์จาก Discord embed (ephemeral, เห็นคนเดียว)
-// auth: แค่ login เป็นสมาชิก guild พอ + scope ทุก query ด้วย guild_id + channel_id (snowflake)
-// content = Discord CDN image URL (public อยู่แล้ว) + caption → sensitivity ต่ำ ไม่ต้อง gate ระดับ admin
 async function auth(guildId, channelId) {
   const session = await getServerSession(authOptions)
   if (!session) return { error: 'Unauthorized', status: 401 }
@@ -16,7 +13,36 @@ async function auth(guildId, channelId) {
   return { ok: true, session }
 }
 
-// GET /api/bot/basket?guild=...&channel=...  → { images: [...], caption }
+// parse attachment_id จาก URL path — ไม่เปลี่ยนแม้ query string หมดอายุ
+function parseAttachmentId(url) {
+  return url?.match(/\/attachments\/\d+\/(\d+)\//)?.[1] || null
+}
+
+// Discord CDN URL มี ?ex=<hex unix timestamp> — เช็คว่าหมดอายุหรือยัง (buffer 5 นาที)
+function isExpired(url) {
+  const ex = url?.match(/[?&]ex=([0-9a-f]+)/i)?.[1]
+  if (!ex) return true
+  return Date.now() / 1000 > parseInt(ex, 16) - 300
+}
+
+// fetch fresh URLs จาก Discord API, คืน Map: attachment_id → fresh URL
+async function fetchFreshUrls(channelId, messageIds) {
+  const map = new Map()
+  await Promise.all([...messageIds].map(async msgId => {
+    try {
+      const res = await fetch(
+        `https://discord.com/api/v10/channels/${channelId}/messages/${msgId}`,
+        { headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}` } }
+      )
+      if (!res.ok) return
+      const msg = await res.json()
+      for (const att of msg.attachments || []) map.set(String(att.id), att.url)
+    } catch {}
+  }))
+  return map
+}
+
+// GET /api/bot/basket?guild=...&channel=...  → { images: [...], videos: [...], caption }
 export async function GET(req) {
   const { searchParams } = new URL(req.url)
   const guildId   = searchParams.get('guild')
@@ -30,9 +56,25 @@ export async function GET(req) {
      ORDER BY sort_order ASC, added_at ASC`,
     [guildId, channelId]
   )
-  const images  = rows.filter(r => r.type === 'image').map(r => ({
-    id: r.id, url: r.image_url, message_id: r.message_id, sort_order: r.sort_order,
+
+  const imageRows = rows.filter(r => r.type === 'image')
+
+  // เฉพาะรูปที่ URL หมดอายุแล้วเท่านั้นที่ fetch ใหม่
+  const expiredRows = imageRows.filter(r => isExpired(r.image_url) && r.message_id)
+  const msgIds = new Set(expiredRows.map(r => r.message_id))
+  const freshMap = msgIds.size ? await fetchFreshUrls(channelId, msgIds) : new Map()
+
+  // update DB + build response
+  const images = await Promise.all(imageRows.map(async r => {
+    if (!isExpired(r.image_url)) return { id: r.id, url: r.image_url, sort_order: r.sort_order }
+    const attId   = parseAttachmentId(r.image_url)
+    const freshUrl = attId ? freshMap.get(attId) : null
+    if (freshUrl) {
+      await pool.query(`UPDATE dc_media_baskets SET image_url = $1 WHERE id = $2`, [freshUrl, r.id])
+    }
+    return { id: r.id, url: freshUrl || r.image_url, sort_order: r.sort_order }
   }))
+
   const videos  = rows.filter(r => r.type === 'video').map(r => ({ id: r.id, url: r.image_url }))
   const caption = rows.find(r => r.type === 'caption')?.caption || ''
   return Response.json({ images, videos, caption })

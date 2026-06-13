@@ -75,7 +75,7 @@ export default function ContactDetailPage({ params }) {
     try {
       const res = await fetch(`/api/calling/contacts/${id}`, { method: 'DELETE' })
       if (!res.ok) { const j = await res.json(); throw new Error(j.error || 'ลบไม่สำเร็จ') }
-      router.push('/contacts')
+      router.push('/calling/contacts')
     } catch (e) { setError(e.message); setDeleting(false) }
   }
 
@@ -93,7 +93,7 @@ export default function ContactDetailPage({ params }) {
   return (
     <div>
       <div className="mb-4">
-        <Link href="/contacts" className="text-base text-teal hover:underline">← กลับไปรายการ</Link>
+        <Link href="/calling/contacts" className="text-base text-teal hover:underline">← กลับไปรายการ</Link>
       </div>
 
       {error && (

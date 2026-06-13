@@ -2,10 +2,12 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
 import { isAdmin, isSuperAdmin } from '@/lib/roles.js'
 import { getAdminGuildIds } from '@/db/guilds.js'
+import { getGuildId } from '@/lib/guildContext.js'
 import pool from '@/db/index.js'
 
 const ALLOWED_KEYS = ['meta_app_id', 'meta_app_secret', 'x_consumer_key', 'x_consumer_secret']
 
+// GET → { guildId, guildName, meta_app_id?, meta_app_secret?, x_consumer_key?, x_consumer_secret? }
 export async function GET() {
   const session = await getServerSession(authOptions)
   if (!session) return Response.json({ error: 'Forbidden' }, { status: 403 })
@@ -14,30 +16,24 @@ export async function GET() {
   const superAdmin = isSuperAdmin(session.user.discordId)
   if (!admin && !superAdmin) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
-  let rows
-  if (superAdmin) {
-    const r = await pool.query(
-      `SELECT guild_id, "key", value FROM dc_guild_config WHERE "key" = ANY($1)`,
-      [ALLOWED_KEYS]
-    )
-    rows = r.rows
-  } else {
+  const guildId = await getGuildId(session)
+
+  if (!superAdmin) {
     const adminGuildIds = await getAdminGuildIds(session.user.discordId)
-    if (adminGuildIds.length === 0) return Response.json({})
-    const r = await pool.query(
-      `SELECT guild_id, "key", value FROM dc_guild_config
-       WHERE "key" = ANY($1) AND guild_id = ANY($2)`,
-      [ALLOWED_KEYS, adminGuildIds]
-    )
-    rows = r.rows
+    if (!adminGuildIds.includes(guildId)) return Response.json({ guildId, guildName: null })
   }
 
-  const configs = {}
-  for (const r of rows) {
-    if (!configs[r.guild_id]) configs[r.guild_id] = {}
-    configs[r.guild_id][r.key] = r.value
-  }
-  return Response.json(configs)
+  const [cfgRes, guildRes] = await Promise.all([
+    pool.query(
+      `SELECT "key", value FROM dc_guild_config WHERE guild_id = $1 AND "key" = ANY($2)`,
+      [guildId, ALLOWED_KEYS]
+    ),
+    pool.query(`SELECT name FROM dc_guilds WHERE guild_id = $1`, [guildId]),
+  ])
+
+  const cfg = { guildId, guildName: guildRes.rows[0]?.name ?? null }
+  for (const r of cfgRes.rows) cfg[r.key] = r.value
+  return Response.json(cfg)
 }
 
 export async function PATCH(req) {

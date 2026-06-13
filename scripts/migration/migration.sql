@@ -485,3 +485,9 @@ CREATE INDEX IF NOT EXISTS idx_calling_member_tiers_guild ON calling_member_tier
 INSERT INTO dc_guild_config (guild_id, "key", value) VALUES
   ('1340903354037178410', 'enabled_features', '["calling","contacts"]'::json)
 ON CONFLICT (guild_id, "key") DO UPDATE SET value = EXCLUDED.value;
+
+-- 2026-06-13: dc_guild_roles — is_managed สำหรับกรอง bot role ออกจาก UI
+ALTER TABLE dc_guild_roles ADD COLUMN IF NOT EXISTS is_managed BOOLEAN NOT NULL DEFAULT FALSE;
+
+-- 2026-06-13: dc_media_baskets — channel_name เพื่อแสดงชื่อ thread ใน list view
+ALTER TABLE dc_media_baskets ADD COLUMN IF NOT EXISTS channel_name VARCHAR(100) NULL;

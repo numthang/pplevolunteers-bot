@@ -220,6 +220,23 @@ export default function PendingCallsPage() {
     fetchItems(activeTab, filterCampaign, filterStatus, filterRsvp)
   }, [activeTab, filterCampaign, filterStatus, filterRsvp, fetchItems])
 
+  // สลับ guild → รีโหลดแคมเปญ/นับ/รายการ/ดาว ใหม่ทั้งหมด
+  useEffect(() => {
+    function onSwitch() {
+      fetch('/api/calling/pending?campaigns=true')
+        .then(r => r.json()).then(d => setCampaigns(d.data || [])).catch(() => {})
+      Promise.all([
+        fetch('/api/calling/pending?count=true&type=member').then(r => r.json()),
+        fetch('/api/calling/pending?count=true&type=contact').then(r => r.json()),
+      ]).then(([m, c]) => setTabCounts({ member: m.count ?? null, contact: c.count ?? null })).catch(() => {})
+      fetchItems(activeTab, filterCampaign, filterStatus, filterRsvp)
+      setHistoryVersion(v => v + 1)
+      setStarredVersion(v => v + 1)
+    }
+    window.addEventListener('guild-switched', onSwitch)
+    return () => window.removeEventListener('guild-switched', onSwitch)
+  }, [activeTab, filterCampaign, filterStatus, filterRsvp, fetchItems])
+
   const toggleFavorite = useCallback(async (e, memberId, contactType) => {
     e.stopPropagation()
     const key = `${memberId}:${contactType}`

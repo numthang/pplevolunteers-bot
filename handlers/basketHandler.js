@@ -22,7 +22,7 @@ const { getSetting, setSetting, deleteSetting } = require('../db/settings');
 const { resolveConfig } = require('../db/configResolver');
 const pool = require('../db/index');
 
-const KEY_WATERMARK = 'default_watermark'; // ค่ากลาง — ตั้งที่หน้าเว็บ /discord/config/media (ใช้ร่วม quote)
+const KEY_WATERMARK = 'default_watermark'; // ค่ากลาง — ตั้งที่หน้าเว็บ /bot/media/settings (ใช้ร่วม quote)
 const groupWmKey = groupName => `default_watermark_group:${groupName}`;
 
 const stateKey = channelId => `basket_state_${channelId}`;
@@ -355,7 +355,7 @@ async function buildBasketPayload(basket, guildId, channelId, userId, channelNam
   }
   const webUrl = (() => {
     if (!process.env.WEB_BASE_URL) return null;
-    const base = `${process.env.WEB_BASE_URL}/discord/media/basket?guild=${guildId}&channel=${channelId}`;
+    const base = `${process.env.WEB_BASE_URL}/bot/media/basket?guild=${guildId}&channel=${channelId}`;
     if (!channelName) return base;
     const budget = 512 - base.length - 6; // 6 = len('&name=')
     let encoded = encodeURIComponent(channelName);
@@ -401,12 +401,13 @@ async function handleBasketAdd(interaction) {
   const { guildId, channelId } = interaction;
   const addedBy = interaction.user.id;
   const isBot = msg.author?.bot ?? false;
+  const channelName = interaction.channel?.name || null;
 
   if (videos.length > 1) return interaction.editReply({ content: '❌ เพิ่มได้แค่ 1 วิดีโอต่อครั้ง' });
 
-  if (images.length) await addImages(guildId, channelId, addedBy, images.map(a => ({ url: a.url })), msg.id);
-  if (videos.length) await addVideo(guildId, channelId, addedBy, videos.map(a => ({ url: a.url })), msg.id);
-  if (text && !isBot && !images.length && !videos.length) await appendCaption(guildId, channelId, addedBy, text, msg.id);
+  if (images.length) await addImages(guildId, channelId, addedBy, images.map(a => ({ url: a.url })), msg.id, channelName);
+  if (videos.length) await addVideo(guildId, channelId, addedBy, videos.map(a => ({ url: a.url })), msg.id, channelName);
+  if (text && !isBot && !images.length && !videos.length) await appendCaption(guildId, channelId, addedBy, text, msg.id, channelName);
 
   const basket = await getBasket(guildId, channelId);
   const added = [

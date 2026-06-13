@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Trash2, RefreshCw, Globe, Lock, AlertTriangle, X, Plus, Settings, Check, ChevronDown } from 'lucide-react'
+import { Trash2, RefreshCw, Globe, Lock, AlertTriangle, X, Plus, Settings, Check } from 'lucide-react'
 import { isAdmin } from '@/lib/roles.js'
 
 const PLATFORM_LABEL = { fb: 'Facebook', ig: 'Instagram', threads: '@ (Threads)', x: 'X (Twitter)' }
@@ -103,8 +103,7 @@ export default function SocialAccountsPage() {
   const searchParams = useSearchParams()
 
   const [accounts, setAccounts] = useState([])
-  const [guilds, setGuilds]   = useState([])
-  const [configs, setConfigs] = useState({})
+  const [cfg, setCfg]           = useState(null)   // { guildId, guildName, meta_app_id, ... }
   const [editConfig, setEditConfig] = useState(null)
   const [savingConfig, setSavingConfig] = useState(false)
   const [loading, setLoading]   = useState(true)
@@ -113,22 +112,18 @@ export default function SocialAccountsPage() {
   const [xForm, setXForm]       = useState(EMPTY_X_FORM)
   const [xSaving, setXSaving]   = useState(false)
   const [banner, setBanner]     = useState(null)
-  const [selectedGuild, setSelectedGuild] = useState('')
 
   const roles      = Array.isArray(session?.user?.roles) ? session.user.roles : []
   const admin      = isAdmin(roles)
   const superAdmin = session?.user?.isSuperAdmin ?? false
 
-  const load = useCallback(async (guildFilter = '') => {
-    const qs = guildFilter ? `?guild_id=${guildFilter}` : ''
-    const [accRes, gRes, cfgRes] = await Promise.all([
-      fetch(`/api/social/accounts${qs}`),
-      fetch('/api/admin/guilds'),
+  const load = useCallback(async () => {
+    const [accRes, cfgRes] = await Promise.all([
+      fetch('/api/social/accounts'),
       fetch('/api/social/guild-configs'),
     ])
     if (accRes.ok) setAccounts(await accRes.json())
-    if (gRes.ok)   setGuilds(await gRes.json())
-    if (cfgRes.ok) setConfigs(await cfgRes.json())
+    if (cfgRes.ok) setCfg(await cfgRes.json())
     setLoading(false)
   }, [])
 
@@ -136,6 +131,11 @@ export default function SocialAccountsPage() {
     if (status === 'unauthenticated') { router.push('/login'); return }
     if (status === 'authenticated') load()
   }, [status, load, router])
+
+  useEffect(() => {
+    window.addEventListener('guild-switched', load)
+    return () => window.removeEventListener('guild-switched', load)
+  }, [load])
 
   useEffect(() => {
     const connected = searchParams.get('connected')
@@ -166,13 +166,10 @@ export default function SocialAccountsPage() {
     const res = await fetch('/api/social/guild-configs', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ guild_id: editConfig.guildId, key: editConfig.key, value: editConfig.value }),
+      body: JSON.stringify({ guild_id: cfg.guildId, key: editConfig.key, value: editConfig.value }),
     })
     if (res.ok) {
-      setConfigs(prev => ({
-        ...prev,
-        [editConfig.guildId]: { ...(prev[editConfig.guildId] || {}), [editConfig.key]: editConfig.value || undefined },
-      }))
+      setCfg(prev => ({ ...prev, [editConfig.key]: editConfig.value || undefined }))
       setEditConfig(null)
     }
     setSavingConfig(false)
@@ -214,7 +211,7 @@ export default function SocialAccountsPage() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        guild_id: xModal.guildId,
+        guild_id: cfg?.guildId,
         platform: 'x',
         social_id: handle.replace(/^@/, ''),
         name: name || handle,
@@ -222,7 +219,7 @@ export default function SocialAccountsPage() {
       }),
     })
     if (res.ok) {
-      await load(selectedGuild)
+      await load()
       setXModal(null)
       setXForm(EMPTY_X_FORM)
     }
@@ -233,44 +230,19 @@ export default function SocialAccountsPage() {
     return <p className="text-warm-500 dark:text-disc-muted text-sm">กำลังโหลด...</p>
   }
 
-  const discordId = session?.user?.discordId
-  const myAccounts  = accounts.filter(a => a.visibility === 'private' && a.user_discord_id === discordId)
+  const discordId    = session?.user?.discordId
+  const guildId      = cfg?.guildId
+  const guildName    = cfg?.guildName ?? guildId
+  const hasMeta      = !!cfg?.meta_app_id && !!cfg?.meta_app_secret
+  const hasX         = !!cfg?.x_consumer_key && !!cfg?.x_consumer_secret
   const guildAccounts = accounts.filter(a => a.visibility === 'public')
-
-  const byGuild = {}
-  for (const acc of guildAccounts) {
-    if (!byGuild[acc.guild_id]) byGuild[acc.guild_id] = []
-    byGuild[acc.guild_id].push(acc)
-  }
-
-  const visibleGuilds = selectedGuild
-    ? guilds.filter(g => g.guild_id === selectedGuild)
-    : guilds
+  const myAccounts    = accounts.filter(a => a.visibility === 'private' && a.user_discord_id === discordId)
 
   return (
     <div>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-disc-text">แพลตฟอร์ม</h1>
-          <p className="text-sm text-gray-500 dark:text-disc-muted mt-1">บัญชี Facebook / Instagram / Threads / X ที่เชื่อมต่อกับ bot</p>
-        </div>
-        {superAdmin && guilds.length > 1 && (
-          <div className="relative shrink-0">
-            <select
-              value={selectedGuild}
-              onChange={e => {
-                setSelectedGuild(e.target.value)
-                setLoading(true)
-                load(e.target.value).then(() => setLoading(false))
-              }}
-              className="appearance-none pl-3 pr-8 py-2 text-sm rounded-lg border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-gray-900 dark:text-disc-text focus:outline-none focus:ring-2 focus:ring-orange/40"
-            >
-              <option value="">ทุก guild</option>
-              {guilds.map(g => <option key={g.guild_id} value={g.guild_id}>{g.name}</option>)}
-            </select>
-            <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-          </div>
-        )}
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-disc-text">แพลตฟอร์ม</h1>
+        <p className="text-sm text-gray-500 dark:text-disc-muted mt-1">บัญชี Facebook / Instagram / Threads / X ที่เชื่อมต่อกับ bot</p>
       </div>
 
       {banner && (
@@ -281,102 +253,95 @@ export default function SocialAccountsPage() {
       )}
 
       <div className="flex flex-col gap-8">
-        {/* Guild sections — admin/superadmin only */}
-        {(admin || superAdmin) && visibleGuilds.map(guild => {
-          const gAccounts = byGuild[guild.guild_id] || []
-          const cfg    = configs[guild.guild_id] || {}
-          const hasMeta = !!cfg.meta_app_id && !!cfg.meta_app_secret
-          const hasX    = !!cfg.x_consumer_key && !!cfg.x_consumer_secret
-
-          return (
-            <div key={guild.guild_id}>
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-3">
-                <h2 className="text-base font-semibold text-gray-700 dark:text-disc-muted uppercase tracking-wide">
-                  {guild.name}
-                </h2>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <button
-                    onClick={() => { setXModal({ guildId: guild.guild_id }); setXForm(EMPTY_X_FORM) }}
-                    disabled={!hasX}
-                    title={hasX ? '' : 'ตั้งค่า X Consumer Key/Secret ก่อน'}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black text-white text-sm hover:opacity-80 transition disabled:opacity-30 disabled:cursor-not-allowed"
+        {/* Guild section — admin/superadmin only */}
+        {(admin || superAdmin) && guildId && (
+          <div>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-3">
+              <h2 className="text-base font-semibold text-gray-700 dark:text-disc-muted uppercase tracking-wide">
+                {guildName}
+              </h2>
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  onClick={() => { setXModal({ guildId }); setXForm(EMPTY_X_FORM) }}
+                  disabled={!hasX}
+                  title={hasX ? '' : 'ตั้งค่า X Consumer Key/Secret ก่อน'}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black text-white text-sm hover:opacity-80 transition disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  <Plus size={14} /> X (Guild)
+                </button>
+                {hasX ? (
+                  <a
+                    href={`/api/x/oauth/start?guild_id=${guildId}&visibility=private`}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-700 text-white text-sm hover:opacity-80 transition"
                   >
-                    <Plus size={14} /> X (Guild)
+                    <Lock size={14} /> X (ส่วนตัว)
+                  </a>
+                ) : (
+                  <button disabled title="ตั้งค่า X Consumer Key/Secret ก่อน" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-700 text-white text-sm opacity-30 cursor-not-allowed">
+                    <Lock size={14} /> X (ส่วนตัว)
                   </button>
-                  {hasX ? (
-                    <a
-                      href={`/api/x/oauth/start?guild_id=${guild.guild_id}&visibility=private`}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-700 text-white text-sm hover:opacity-80 transition"
-                    >
-                      <Lock size={14} /> X (ส่วนตัว)
-                    </a>
-                  ) : (
-                    <button disabled title="ตั้งค่า X Consumer Key/Secret ก่อน" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-700 text-white text-sm opacity-30 cursor-not-allowed">
-                      <Lock size={14} /> X (ส่วนตัว)
-                    </button>
-                  )}
-                  {hasMeta ? (
-                    <a
-                      href={`/api/meta/oauth/start?guild_id=${guild.guild_id}`}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange text-white text-sm hover:opacity-90 transition"
-                    >
-                      <RefreshCw size={14} /> Connect Meta OAuth
-                    </a>
-                  ) : (
-                    <button disabled title="ตั้งค่า Meta App ID/Secret ก่อน" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange text-white text-sm opacity-30 cursor-not-allowed">
-                      <RefreshCw size={14} /> Connect Meta OAuth
-                    </button>
-                  )}
-                </div>
+                )}
+                {hasMeta ? (
+                  <a
+                    href={`/api/meta/oauth/start?guild_id=${guildId}`}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange text-white text-sm hover:opacity-90 transition"
+                  >
+                    <RefreshCw size={14} /> Connect Meta OAuth
+                  </a>
+                ) : (
+                  <button disabled title="ตั้งค่า Meta App ID/Secret ก่อน" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange text-white text-sm opacity-30 cursor-not-allowed">
+                    <RefreshCw size={14} /> Connect Meta OAuth
+                  </button>
+                )}
               </div>
-
-              {/* App Credentials */}
-              <div className="bg-card-bg rounded-xl border border-warm-200 dark:border-disc-border p-4 mb-3">
-                <div className="flex items-center gap-2 mb-3">
-                  <Settings size={14} className="text-gray-500 dark:text-disc-muted" />
-                  <span className="text-xs font-semibold text-gray-700 dark:text-disc-text uppercase tracking-wide">App Credentials</span>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  {[
-                    { key: 'meta_app_id',       label: 'Meta App ID',       secret: false },
-                    { key: 'meta_app_secret',   label: 'Meta App Secret',   secret: true  },
-                    { key: 'x_consumer_key',    label: 'X Consumer Key',    secret: false },
-                    { key: 'x_consumer_secret', label: 'X Consumer Secret', secret: true  },
-                  ].map(({ key, label, secret }) => {
-                    const val = cfg[key]
-                    const display = !val ? '—' : secret ? '••••••••' : (val.length > 24 ? val.slice(0, 12) + '…' + val.slice(-6) : val)
-                    return (
-                      <div key={key} className="flex items-center gap-2 text-sm">
-                        <span className="text-xs text-gray-500 dark:text-disc-muted w-36 shrink-0">{label}</span>
-                        <span className={`flex-1 font-mono text-xs ${val ? 'text-gray-700 dark:text-disc-text' : 'text-gray-400 dark:text-disc-muted'}`}>{display}</span>
-                        <button
-                          onClick={() => setEditConfig({ guildId: guild.guild_id, key, value: val || '' })}
-                          className="text-xs text-orange hover:underline shrink-0"
-                        >
-                          {val ? 'แก้ไข' : 'ตั้งค่า'}
-                        </button>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-
-              {gAccounts.length === 0 ? (
-                <p className="text-sm text-gray-400 dark:text-disc-muted pl-1">ยังไม่มีบัญชี</p>
-              ) : (
-                <div className="flex flex-col gap-2">
-                  {gAccounts.map(acc => (
-                    <AccountRow key={acc.id} acc={acc} accounts={accounts}
-                      onToggleVisibility={toggleVisibility} onSetGroup={setGroup}
-                      onRemove={remove} deleting={deleting} />
-                  ))}
-                </div>
-              )}
             </div>
-          )
-        })}
 
-        {/* Personal section — all users */}
+            {/* App Credentials */}
+            <div className="bg-card-bg rounded-xl border border-warm-200 dark:border-disc-border p-4 mb-3">
+              <div className="flex items-center gap-2 mb-3">
+                <Settings size={14} className="text-gray-500 dark:text-disc-muted" />
+                <span className="text-xs font-semibold text-gray-700 dark:text-disc-text uppercase tracking-wide">App Credentials</span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {[
+                  { key: 'meta_app_id',       label: 'Meta App ID',       secret: false },
+                  { key: 'meta_app_secret',   label: 'Meta App Secret',   secret: true  },
+                  { key: 'x_consumer_key',    label: 'X Consumer Key',    secret: false },
+                  { key: 'x_consumer_secret', label: 'X Consumer Secret', secret: true  },
+                ].map(({ key, label, secret }) => {
+                  const val = cfg?.[key]
+                  const display = !val ? '—' : secret ? '••••••••' : (val.length > 24 ? val.slice(0, 12) + '…' + val.slice(-6) : val)
+                  return (
+                    <div key={key} className="flex items-center gap-2 text-sm">
+                      <span className="text-xs text-gray-500 dark:text-disc-muted w-36 shrink-0">{label}</span>
+                      <span className={`flex-1 font-mono text-xs ${val ? 'text-gray-700 dark:text-disc-text' : 'text-gray-400 dark:text-disc-muted'}`}>{display}</span>
+                      <button
+                        onClick={() => setEditConfig({ key, value: val || '' })}
+                        className="text-xs text-orange hover:underline shrink-0"
+                      >
+                        {val ? 'แก้ไข' : 'ตั้งค่า'}
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            {guildAccounts.length === 0 ? (
+              <p className="text-sm text-gray-400 dark:text-disc-muted pl-1">ยังไม่มีบัญชี</p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {guildAccounts.map(acc => (
+                  <AccountRow key={acc.id} acc={acc} accounts={accounts}
+                    onToggleVisibility={toggleVisibility} onSetGroup={setGroup}
+                    onRemove={remove} deleting={deleting} />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Personal section */}
         <div>
           <h2 className="text-base font-semibold text-gray-700 dark:text-disc-muted uppercase tracking-wide mb-3">
             Personal

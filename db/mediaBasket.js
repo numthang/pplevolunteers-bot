@@ -1,7 +1,6 @@
 const pool = require('./index');
 
-async function addImages(guildId, channelId, addedBy, images, messageId) {
-  // ต่อท้ายเสมอ — รูปใหม่ได้ sort_order = max+1 จะได้ไม่กระโดดไปหน้าสุดถ้าเคยเรียงไว้
+async function addImages(guildId, channelId, addedBy, images, messageId, channelName = null) {
   const { rows } = await pool.query(
     `SELECT COALESCE(MAX(sort_order), 0) AS m FROM dc_media_baskets
      WHERE guild_id = $1 AND channel_id = $2 AND type = 'image'`,
@@ -11,44 +10,44 @@ async function addImages(guildId, channelId, addedBy, images, messageId) {
   for (const img of images) {
     next += 1;
     await pool.query(
-      `INSERT INTO dc_media_baskets (guild_id, channel_id, added_by, type, image_url, message_id, sort_order)
-       VALUES ($1, $2, $3, 'image', $4, $5, $6)`,
-      [guildId, channelId, addedBy, img.url, messageId, next]
+      `INSERT INTO dc_media_baskets (guild_id, channel_id, added_by, type, image_url, message_id, sort_order, channel_name)
+       VALUES ($1, $2, $3, 'image', $4, $5, $6, $7)`,
+      [guildId, channelId, addedBy, img.url, messageId, next, channelName]
     );
   }
 }
 
-async function addVideo(guildId, channelId, addedBy, videos, messageId) {
+async function addVideo(guildId, channelId, addedBy, videos, messageId, channelName = null) {
   for (const vid of videos) {
     await pool.query(
-      `INSERT INTO dc_media_baskets (guild_id, channel_id, added_by, type, image_url, message_id)
-       VALUES ($1, $2, $3, 'video', $4, $5)`,
-      [guildId, channelId, addedBy, vid.url, messageId]
+      `INSERT INTO dc_media_baskets (guild_id, channel_id, added_by, type, image_url, message_id, channel_name)
+       VALUES ($1, $2, $3, 'video', $4, $5, $6)`,
+      [guildId, channelId, addedBy, vid.url, messageId, channelName]
     );
   }
 }
 
-async function setCaption(guildId, channelId, addedBy, caption, messageId) {
+async function setCaption(guildId, channelId, addedBy, caption, messageId, channelName = null) {
   await pool.query(
     `DELETE FROM dc_media_baskets WHERE guild_id = $1 AND channel_id = $2 AND type = 'caption'`,
     [guildId, channelId]
   );
   await pool.query(
-    `INSERT INTO dc_media_baskets (guild_id, channel_id, added_by, type, caption, message_id)
-     VALUES ($1, $2, $3, 'caption', $4, $5)`,
-    [guildId, channelId, addedBy, caption, messageId]
+    `INSERT INTO dc_media_baskets (guild_id, channel_id, added_by, type, caption, message_id, channel_name)
+     VALUES ($1, $2, $3, 'caption', $4, $5, $6)`,
+    [guildId, channelId, addedBy, caption, messageId, channelName]
   );
 }
 
 // ต่อท้าย caption เดิม (ไม่มี → สร้างใหม่) — ใช้ตอนสะสมข้อความหลายอันก่อนให้ AI เรียบเรียง
-async function appendCaption(guildId, channelId, addedBy, text, messageId) {
+async function appendCaption(guildId, channelId, addedBy, text, messageId, channelName = null) {
   const { rows } = await pool.query(
     `SELECT caption FROM dc_media_baskets WHERE guild_id = $1 AND channel_id = $2 AND type = 'caption' LIMIT 1`,
     [guildId, channelId]
   );
   const prev = rows[0]?.caption?.trim();
   const merged = prev ? `${prev}\n\n${text}` : text;
-  await setCaption(guildId, channelId, addedBy, merged, messageId);
+  await setCaption(guildId, channelId, addedBy, merged, messageId, channelName);
 }
 
 async function getBasket(guildId, channelId) {

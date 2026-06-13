@@ -117,7 +117,11 @@ export default function CategoriesPage() {
     const res = await fetch('/api/finance/categories')
     if (res.ok) setCats(await res.json())
   }
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    load()
+    window.addEventListener('guild-switched', load)
+    return () => window.removeEventListener('guild-switched', load)
+  }, [])
 
   async function add() {
     if (!input.trim()) return

@@ -2,6 +2,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
 import { isSuperAdmin } from '@/lib/roles.js'
 import { getAdminGuildIds, getGuilds } from '@/db/guilds.js'
+import { getGuildId } from '@/lib/guildContext.js'
 import pool from '@/db/index.js'
 import { writeFile, mkdir, unlink, readdir, readFile } from 'fs/promises'
 import { existsSync, statSync, readdirSync } from 'fs'
@@ -63,15 +64,16 @@ export async function GET(req) {
   if (!guildId) {
     const session = await getServerSession(authOptions)
     if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+    const currentGuildId = await getGuildId(session)
     // superadmin เห็นทุก guild, admin เห็นเฉพาะ guild ที่ตัวเองมี role Admin
     if (isSuperAdmin(session.user.discordId)) {
       const all = await getGuilds()
-      return Response.json({ guilds: all.map(g => ({ guild_id: g.guild_id, name: g.name })) })
+      return Response.json({ currentGuildId, guilds: all.map(g => ({ guild_id: g.guild_id, name: g.name })) })
     }
     const ids = await getAdminGuildIds(session.user.discordId)
     const all = ids.length ? await getGuilds() : []
     const nameById = Object.fromEntries(all.map(g => [g.guild_id, g.name]))
-    return Response.json({ guilds: ids.map(id => ({ guild_id: id, name: nameById[id] || id })) })
+    return Response.json({ currentGuildId, guilds: ids.map(id => ({ guild_id: id, name: nameById[id] || id })) })
   }
 
   const auth = await authGuild(guildId)

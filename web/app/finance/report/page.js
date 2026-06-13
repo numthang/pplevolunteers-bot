@@ -179,8 +179,13 @@ function ReportContent() {
   const [dateOpen, setDateOpen] = useState(false)
 
   useEffect(() => {
-    fetch('/api/finance/accounts').then(r => r.json()).then(setAccounts)
-    fetch('/api/finance/categories').then(r => r.json()).then(setCategories)
+    function loadMeta() {
+      fetch('/api/finance/accounts').then(r => r.json()).then(setAccounts)
+      fetch('/api/finance/categories').then(r => r.json()).then(setCategories)
+    }
+    loadMeta()
+    window.addEventListener('guild-switched', loadMeta)
+    return () => window.removeEventListener('guild-switched', loadMeta)
   }, [])
 
   const fetchReport = useCallback(async () => {
@@ -193,6 +198,12 @@ function ReportContent() {
   }, [filter])
 
   useEffect(() => { fetchReport() }, [filter])
+
+  // สลับ guild → รีโหลดรายงาน
+  useEffect(() => {
+    window.addEventListener('guild-switched', fetchReport)
+    return () => window.removeEventListener('guild-switched', fetchReport)
+  }, [fetchReport])
 
   const years = Array.from({ length: 6 }, (_, i) => now.getFullYear() - 5 + i)
 

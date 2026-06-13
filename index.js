@@ -44,6 +44,7 @@ const smsWebhook  = require('./services/smsWebhook');
 const { upsertGuilds } = require('./db/guilds');
 const { syncGuildRolesCatalog, upsertGuildRole, deleteGuildRole, invalidateGuildRoleCache } = require('./db/guildRoles');
 const { handleSlipMessage } = require('./services/financeOCR');
+const { handleRoleAddModal } = require('./handlers/roleBulkHandler');
 
 const fs = require('fs');
 const path = require('path');
@@ -141,6 +142,7 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.customId.startsWith('basket_ai_replace_modal:')) return handleBasketAiReplaceModal(interaction);
     if (interaction.customId.startsWith('basket_ai_append_modal:'))  return handleBasketAiAppendModal(interaction);
     if (interaction.customId.startsWith('ai_thread_custom:'))         return handleAiThreadCustomModal(interaction);
+    if (interaction.customId.startsWith('role_add_modal:'))           return handleRoleAddModal(interaction);
     if (interaction.customId.startsWith('anon_submit:')) {
       const channelId = interaction.customId.split(':')[1];
       const text      = interaction.fields.getTextInputValue('anon_text');

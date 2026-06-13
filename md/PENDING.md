@@ -65,7 +65,7 @@
 5. ✅ port test (finance 57 + calling 37) ผ่านครบ · รวม suite 134 เขียว
 6. **bot:** (a) ✅ catalog auto-sync → `dc_guild_roles` (commit 894f596 · `db/guildRoles.js` + index.js ready/roleCreate/Update/Delete · ไม่แตะ policy) · (b) ✅ render **interest/skill** จาก DB (commit 644abe1 · customId=role_id, ทิ้ง divider) · (c) ✅ **province จาก DB** — `getRolesByScopePrefix('province:')` + cascade ผ่าน `parent_role_id` chain
 7. ✅ **DB-wiring เสร็จ (2026-06-11):** `getEffectiveIdentity` คืน `access` จาก `resolveAccess`(DB) · เพิ่ม `GET /api/me/access` (permissions เป็น array เพราะ Set ข้าม JSON ไม่ได้) · `useEffectiveRoles` fetch endpoint นี้ · consumer 22 ไฟล์ส่ง `access` แทน array · **ลบ mirror (`roleToAccess`+`PERMISSION_BY_ROLE`) ออกจาก `roleAccess.js` แล้ว** ย้ายเป็น test fixture `lib/__tests__/_rolesToAccess.js` · test 134 เขียว + build ผ่าน · ⚠️ **ยังไม่ deploy prod**
-   - ⚠️ **ค้างฝั่ง user:** role **"เลขาธิการ" ไม่มีใน Discord guild อาสาประชาชน** (มีแค่ "รองเลขาธิการ") → permission `secretary_general` ตอนนี้ dormant (ไม่มีใครถือ, debug combo "ดูในฐานะเลขาธิการ" จะ preview ว่าง) · ต้อง **สร้าง role "เลขาธิการ" ใน Discord** → bot sync → รัน `seed-guild-roles.js` (overlay มี `'เลขาธิการ':'secretary_general'` รออยู่แล้ว) สิทธิ์จะติดเอง
+   - ✅ **เลขาธิการ:** สร้าง role ใน Discord + sync `dc_guild_roles` จาก production แล้ว — `secretary_general` active
 8. ✅ **ลบ `config/roles.js`** — migrate consumer ทุกตัว query `dc_guild_roles` แทน hardcode · MEDIA_TEAM + province cascade รวมเป็น **`parent_role_id` column เดียว** (add → แปะ parent chain · remove → ถอด parent ถ้าไม่เหลือ sibling) · ทั้ง 2 handler โชว์ parent ที่ถูกแตะใน status · ข้อมูลเดิม archive ที่ `scripts/migration/_roles-archive.js` (seed scripts เท่านั้น) · **ยังไม่ deploy prod**
 9. ⏳ **UI per-guild config + dynamic groups** — **blocker ตัวจริงของ tenant ใหม่:** catalog auto-sync แล้ว แต่ policy (`permission`/`scope_node`/`picker_group`/`parent_role_id`) = null → guild ใหม่ไม่มี picker/RBAC/cascade จนกว่าจะตั้ง · ตอนนี้ตั้งได้ทางเดียว = แก้ DB มือ → ต้องมีหน้า admin ตั้งเอง
 10. ✅ **web `GUILD_ID` → session (เสร็จ 2026-06-13, v2.12.0):** `lib/guildContext.js` `getGuildId(session)` (cookie `selected_guild` → validate member → fallback env) · `getEffectiveIdentity` guild-aware · ทุก consumer (calling 9 + finance 5 + profile + page + debug-role) → `await getGuildId(session)` · **guild switcher UI** (dropdown แทน app switcher) + **feature toggle** + **no-guild gate** + **super_admin เห็นทุก guild** · เหลือ edge fallback (defer) · ⏳ **ยังไม่ deploy prod**
@@ -92,10 +92,6 @@
 - ~~dc_server_settings → dc_guild_config~~ ✅ (2026-06-04)
 - ~~MySQL → PostgreSQL migration~~ ✅ (2026-06-04)
 - [ ] **Multi-guild role config** → ย้ายไปรวมที่ section **🔐 RBAC / Multi-guild Refactor** ด้านบน (design ตกผลึกแล้ว: `dc_guild_roles` DB table + permission abstraction + resolver)
-- [ ] **Backfill member people party** (guild 1115613658408566844) — script เขียนเสร็จแล้ว รอรัน
-  - `node scripts/calling/sync-discord-members.js 1115613658408566844` → สร้าง row + username/display_name
-  - `node scripts/data/backfill-intro-peoplesparty.js --dry-run` → ดูผล parse free-form (ห้องแนะนำตัว 1115613659297751072)
-  - แล้วรันจริง (fill-null upsert เติม firstname/nickname/province/position) — **ยังไม่ได้รัน dry-run review**
 - [ ] **ลบ/แทนที่ `scripts/roles/syncAllMembers.js`** — ตัวเก่าพังหลัง migrate PG (เขียน table `members` + MySQL syntax) ใช้ `scripts/calling/sync-discord-members.js` แทน
 
 ---
@@ -120,7 +116,7 @@
 
 ## 💰 PPLE Finance
 
-- [ ] **Web routes multi-guild** — เปลี่ยน `process.env.GUILD_ID` → `guildId` จาก session ใน 5 ไฟล์: `api/finance/accounts`, `transactions`, `categories`, `transactions/balance`, `report` — DB layer พร้อมแล้ว ไม่ต้องแตะ, auto-detect guild จาก Discord membership (ไม่มี switcher)
+- ~~Web routes multi-guild~~ ✅ — 5 ไฟล์ใช้ `getGuildId(session)` ครบแล้ว (v2.12.0)
 - [ ] ระบบเบี้ยเลี้ยง — โอนเงินเป็นรอบๆ (บัญชีเขต + บัญชีทีมงาน)
 - [ ] ระบบบัญชีเบี้ยเลี้ยงจังหวัด — ส่งสลิปเก็บง่าย + DM สลิปไปหาสมาชิก
 - [ ] จัดการเบี้ยเลี้ยงจากสมาชิก Discord
@@ -185,7 +181,8 @@
   - ✅ **no-guild gate:** login แต่ไม่ได้เป็น member ของ guild ใด → `NoGuildNotice` (layout block children) · ยกเว้น super_admin
   - ✅ **super_admin เห็นทุก guild:** `getUserGuilds(discordId, { all })` → `all=true` คืน `getGuilds()` ทั้งหมด
   - ⚠️ **edge case ค้าง (defer):** user ที่ไม่ได้เป็น member ของ guild default (env=อาสาประชาชน) แต่เป็น guild อื่น → ไม่มี cookie → `getGuildId` คืน default → backend query default แต่ Nav โชว์ guilds[0] = mismatch · RBAC กันข้อมูลอยู่ (`isMember=false`) · ไม่กระทบตอนนี้ (user หลักเป็น member อาสาประชาชน) · แก้ที่ดีต้อง middleware/cookie-on-login (เลี่ยง +query ทุก request) — ทำตอนเปิด guild ที่ 2 จริง
-- ✅ **Feature toggle เสร็จ (2026-06-13):** `getEnabledFeatures(guildId)` อ่าน `dc_guild_config` key `enabled_features` (json array) · Nav `APPS`/`DASHBOARD_LINKS` มี field `feature` ('calling'/'contacts') · `featureOn()` ซ่อนเมนู · finance/bot เปิดตลอด · seed อาสาประชาชน `["calling","contacts"]` · guild ใหม่ default `[]` = off
+- ✅ **Feature toggle เสร็จ (2026-06-13):** `getEnabledFeatures(guildId)` อ่าน `dc_guild_config` key `enabled_features` (json array) · Nav `APPS`/`DASHBOARD_LINKS` มี field `feature` ('calling'/'contacts') · `featureOn()` ซ่อนเมนู · finance/bot เปิดตลอด · seed อาสาประชาชน `["calling","contacts"]` · guild ใหม่ default `[]` = off · **scope ปัจจุบัน: ซ่อน nav เท่านั้น (ไม่ block route)** — ข้อมูลถูก isolate ด้วย guild_id อยู่แล้ว
+  - ⏳ **Backoffice UI เปิด/ปิด feature ต่อ guild** — ตอนนี้ต้องแก้ `dc_guild_config` ด้วย SQL; ต้องการ UI admin สำหรับ PATCH `enabled_features`
 - ✅ **API routes:** Finance 5 + Calling 9 routes เปลี่ยน `process.env.GUILD_ID` → `await getGuildId(session)` แล้ว (อยู่ใน chunk 3–4)
 
 ---

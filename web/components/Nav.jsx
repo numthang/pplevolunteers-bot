@@ -49,19 +49,19 @@ const FINANCE_LINKS = [
 const CALLING_LINKS = [
   { href: '/calling',           label: 'Dashboard',  icon: 'overview', exact: true },
   { href: '/calling/campaigns', label: 'Campaigns',  icon: 'campaigns' },
+  { href: '/calling/contacts',  label: 'Contacts',   icon: 'contacts' },
   { href: '/calling/assignee',  label: 'Assignee',   icon: 'pending' },
   { href: '/calling/stats',     label: 'Statistics', icon: 'report' },
 ]
 
-const CONTACTS_LINKS = [
-  { href: '/contacts', label: 'Contacts', icon: 'contacts' },
-]
-
 const DISCORD_LINKS = [
-  { href: '/bot/media/basket',      label: 'Basket',      icon: 'media' },
-  { href: '/bot/media/settings',    label: 'สื่อ',        icon: 'quote' },
-  { href: '/bot/server/platforms',  label: 'แพลตฟอร์ม',  icon: 'social' },
-  { href: '/bot/global/ai',         label: 'AI',          icon: 'ai' },
+  { href: '/bot/media/basket',     label: 'Basket',      icon: 'media',    mediaGroup: true },
+  { href: '/bot/media/quote',      label: 'Quote',       icon: 'quote',    mediaGroup: true },
+  { href: '/bot/media/watermark',  label: 'ลายน้ำ',     icon: 'droplet',  mediaGroup: true },
+  { href: '/bot/platforms',        label: 'แพลตฟอร์ม',  icon: 'social',   menuOnly: true },
+  { href: '/bot/features',         label: 'ฟีเจอร์',    icon: 'overview', menuOnly: true, adminOnly: true },
+  { href: '/bot/roles',            label: 'สิทธิ์ Role', icon: 'logs',    menuOnly: true, adminOnly: true },
+  { href: '/bot/ai',               label: 'AI',          icon: 'ai',       menuOnly: true },
 ]
 
 const SOCIAL_LINKS = [
@@ -71,8 +71,7 @@ const SOCIAL_LINKS = [
 const DASHBOARD_LINKS = [
   { href: '/finance',              label: 'FINANCE',  icon: 'transactions' },
   { href: '/calling',              label: 'CALLING',  icon: 'campaigns', feature: 'calling' },
-  { href: '/contacts',             label: 'CONTACTS', icon: 'contacts', feature: 'contacts' },
-  { href: '/bot/server/platforms', label: 'BOT',      icon: 'social' },
+  { href: '/bot/platforms', label: 'BOT',      icon: 'social' },
   { href: '/admin/logs',           label: 'LOGS',     icon: 'logs', roles: ['Admin', 'Moderator'] },
 ]
 
@@ -80,8 +79,7 @@ const APPS = [
   { key: 'home',     label: 'DASHBOARD', href: '/',                      icon: 'overview' },
   { key: 'finance',  label: 'FINANCE',   href: '/finance',               icon: 'transactions' },
   { key: 'calling',  label: 'CALLING',   href: '/calling',               icon: 'campaigns', feature: 'calling' },
-  { key: 'contacts', label: 'CONTACTS',  href: '/contacts',              icon: 'contacts', feature: 'contacts' },
-  { key: 'discord',  label: 'BOT',       href: '/bot/server/platforms',  icon: 'social' },
+  { key: 'discord',  label: 'BOT',       href: '/bot/platforms',  icon: 'social' },
 ]
 
 export default function Nav({ session, guilds = [], currentGuildId = null, enabledFeatures = [] }) {
@@ -90,22 +88,23 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
   const { dark, toggle } = useTheme()
   const [menuOpen, setMenuOpen] = useState(false)
   const [guildOpen, setGuildOpen] = useState(false)
+  const [mediaOpen, setMediaOpen] = useState(false)
   const [campaignOpen, setCampaignOpen] = useState(false)
+  const mediaRef = useRef(null)
   const [campaigns, setCampaigns] = useState([])
   const [pendingCount, setPendingCount] = useState(0)
   const campaignRef = useRef(null)
 
   const isCallingApp   = pathname.startsWith('/calling')
   const isFinanceApp   = pathname.startsWith('/finance')
-  const isContactsApp  = pathname.startsWith('/contacts')
   const isSocialApp    = pathname.startsWith('/social')
   const isDiscordApp   = pathname.startsWith('/bot')
   const isLinkActive = (href, exact = false) => {
     if (exact) return pathname === href
     return pathname === href || (href !== '/' && pathname.startsWith(href))
   }
-  const currentApp = isDiscordApp ? APPS[4] : isContactsApp ? APPS[3] : isCallingApp ? APPS[2] : isFinanceApp ? APPS[1] : APPS[0]
-  const links = isDiscordApp ? DISCORD_LINKS : isSocialApp ? SOCIAL_LINKS : isContactsApp ? CONTACTS_LINKS : isCallingApp ? CALLING_LINKS : isFinanceApp ? FINANCE_LINKS : DASHBOARD_LINKS
+  const currentApp = isDiscordApp ? APPS[3] : isCallingApp ? APPS[2] : isFinanceApp ? APPS[1] : APPS[0]
+  const links = isDiscordApp ? DISCORD_LINKS : isSocialApp ? SOCIAL_LINKS : isCallingApp ? CALLING_LINKS : isFinanceApp ? FINANCE_LINKS : DASHBOARD_LINKS
 
   const campaignIdMatch = pathname.match(/^\/calling\/assignments\/(\d+)/)
   const activeCampaignId = campaignIdMatch ? parseInt(campaignIdMatch[1]) : null
@@ -125,15 +124,14 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
   }, [isCallingApp, session])
 
   useEffect(() => {
-    if (!campaignOpen) return
+    if (!campaignOpen && !mediaOpen) return
     const handleClickOutside = (e) => {
-      if (campaignRef.current && !campaignRef.current.contains(e.target)) {
-        setCampaignOpen(false)
-      }
+      if (campaignRef.current && !campaignRef.current.contains(e.target)) setCampaignOpen(false)
+      if (mediaRef.current && !mediaRef.current.contains(e.target)) setMediaOpen(false)
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [campaignOpen])
+  }, [campaignOpen, mediaOpen])
 
   const activeCampaign = campaigns.find(c => c.id === activeCampaignId)
 
@@ -142,15 +140,18 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
     : (session?.user?.roles || '').split(',').map(r => r.trim())
 
   const featureOn = (f) => !f || enabledFeatures.includes(f)
+  const userIsAdmin = roles.includes('Admin') || (session?.user?.isSuperAdmin ?? false)
 
   const visibleLinks = links.filter(l => {
     if (!featureOn(l.feature)) return false
     if (!session) return l.public
+    if (l.adminOnly && !userIsAdmin) return false
     if (l.roles) return l.roles.some(r => roles.includes(r))
     return true
   })
-
-  const userIsAdmin = roles.includes('Admin')
+  const mediaLinks = visibleLinks.filter(l => l.mediaGroup)
+  const topLinks   = visibleLinks.filter(l => !l.menuOnly && !l.mediaGroup)
+  const menuLinks  = visibleLinks
 
   const visibleApps = APPS.filter(a => (!a.roles || a.roles.some(r => roles.includes(r))) && featureOn(a.feature))
 
@@ -166,7 +167,7 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ guildId: gid }),
       })
-      if (res.ok) router.refresh()
+      if (res.ok) { window.dispatchEvent(new Event('guild-switched')); router.refresh() }
     } catch {}
   }
 
@@ -224,7 +225,44 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
 
         {/* Nav links */}
         <div className="flex items-center gap-1 ml-4">
-          {visibleLinks.map(l => {
+          {/* สื่อ dropdown (quote + watermark) — เฉพาะ BOT section */}
+          {isDiscordApp && mediaLinks.length > 0 && (
+            <div className="relative" ref={mediaRef}>
+              <button
+                onClick={() => setMediaOpen(o => !o)}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-base transition ${
+                  mediaLinks.some(l => isLinkActive(l.href))
+                    ? activeClass
+                    : inactiveClass
+                }`}
+              >
+                <Ic d={ICONS.quote} className="w-7 h-7 shrink-0" />
+                <span className="hidden md:inline">สื่อ</span>
+                <svg className={`w-3 h-3 transition-transform hidden md:block ${mediaOpen ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.17l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+                </svg>
+              </button>
+              {mediaOpen && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setMediaOpen(false)} />
+                  <div className="absolute left-0 top-full mt-1 z-20 bg-white dark:bg-disc-hover border border-warm-200 dark:border-disc-border rounded-lg shadow-lg py-1 min-w-[160px]">
+                    {mediaLinks.map(l => (
+                      <Link key={l.href} href={l.href} onClick={() => setMediaOpen(false)}
+                        className={`flex items-center gap-2 px-4 py-2.5 text-base transition ${
+                          isLinkActive(l.href)
+                            ? 'text-teal dark:text-teal font-medium bg-teal/10 dark:bg-teal/10'
+                            : 'text-warm-900 dark:text-disc-muted hover:bg-warm-100 dark:hover:bg-disc-hover'
+                        }`}>
+                        <Ic d={ICONS[l.icon]} className="w-4 h-4 shrink-0" />
+                        {l.label}
+                      </Link>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+          {topLinks.map(l => {
             if (l.href === '/calling/campaigns' && isCallingApp && campaigns.length > 0) {
               const isActive = pathname === '/calling/campaigns' || !!activeCampaignId
               return (
@@ -317,7 +355,7 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
                   <div className="absolute right-0 top-full mt-2 z-20 bg-white dark:bg-disc-hover border border-warm-200 dark:border-disc-border rounded-xl shadow-lg py-2 w-64 max-h-[80vh] overflow-y-auto flex flex-col gap-0.5">
 
                     {/* Nav links for current app */}
-                    {visibleLinks.map(l => {
+                    {menuLinks.map(l => {
                       if (l.href === '/calling/campaigns' && isCallingApp && campaigns.length > 0) {
                         return (
                           <div key={l.href}>

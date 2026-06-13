@@ -93,6 +93,10 @@ export default function QuotePanel() {
   }, [loadWatermarks])
 
   useEffect(() => { load() }, [load])
+  useEffect(() => {
+    window.addEventListener('guild-switched', load)
+    return () => window.removeEventListener('guild-switched', load)
+  }, [load])
 
   // save → PATCH → update local state ถ้าสำเร็จ
   const save = useCallback(async (scope, guildId, key, value) => {

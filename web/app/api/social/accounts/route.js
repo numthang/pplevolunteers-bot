@@ -2,73 +2,63 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
 import { isAdmin, isSuperAdmin } from '@/lib/roles.js'
 import { getAdminGuildIds } from '@/db/guilds.js'
+import { getGuildId } from '@/lib/guildContext.js'
 import pool from '@/db/index.js'
 
-export async function GET(req) {
+const SELECT = `SELECT id, user_discord_id, guild_id, name, group_name, platform, social_id,
+                       access_token IS NOT NULL AS has_access_token,
+                       user_token IS NOT NULL AS has_user_token,
+                       user_token_expires_at, visibility, created_at
+                FROM dc_social_accounts`
+
+// GET → public accounts ของ guild ปัจจุบัน (cookie) + private accounts ของ user ทุก guild
+export async function GET() {
   const session = await getServerSession(authOptions)
   if (!session) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
-  const { searchParams } = new URL(req.url)
-  const guildId = searchParams.get('guild_id')
-  const admin   = isAdmin(session.user.roles)
+  const admin    = isAdmin(session.user.roles)
   const superAdmin = isSuperAdmin(session.user.discordId)
+  const discordId  = session.user.discordId
+  const guildId    = await getGuildId(session)
 
-  const SELECT = `SELECT id, user_discord_id, guild_id, name, group_name, platform, social_id,
-                         access_token IS NOT NULL AS has_access_token,
-                         user_token IS NOT NULL AS has_user_token,
-                         user_token_expires_at, visibility, created_at
-                  FROM dc_social_accounts`
+  let publicRows = []
+  let privateRows = []
 
-  let rows
-  if (superAdmin) {
-    if (guildId) {
-      const r = await pool.query(`${SELECT} WHERE guild_id = $1 ORDER BY platform, id`, [guildId])
-      rows = r.rows
-    } else {
-      const r = await pool.query(`${SELECT} ORDER BY guild_id, platform, id`)
-      rows = r.rows
-    }
-  } else if (admin) {
-    const adminGuildIds = await getAdminGuildIds(session.user.discordId)
-    if (guildId) {
-      if (!adminGuildIds.includes(guildId)) return Response.json([], { status: 200 })
-      const r = await pool.query(`${SELECT} WHERE guild_id = $1 ORDER BY platform, id`, [guildId])
-      rows = r.rows
-    } else {
-      if (adminGuildIds.length === 0) {
-        rows = []
-      } else {
+  if (superAdmin || admin) {
+    if (!superAdmin) {
+      const adminGuildIds = await getAdminGuildIds(discordId)
+      if (!adminGuildIds.includes(guildId)) {
+        // admin แต่ไม่ใช่ admin ของ guild นี้ — เห็นแค่ private ของตัวเอง
         const r = await pool.query(
-          `${SELECT} WHERE guild_id = ANY($1) ORDER BY guild_id, platform, id`,
-          [adminGuildIds]
+          `${SELECT} WHERE user_discord_id = $1 AND visibility = 'private' ORDER BY platform, id`,
+          [discordId]
         )
-        rows = r.rows
+        return Response.json(r.rows)
       }
     }
+    const [pub, priv] = await Promise.all([
+      pool.query(`${SELECT} WHERE guild_id = $1 AND visibility = 'public' ORDER BY platform, id`, [guildId]),
+      pool.query(`${SELECT} WHERE user_discord_id = $1 AND visibility = 'private' ORDER BY platform, id`, [discordId]),
+    ])
+    publicRows  = pub.rows
+    privateRows = priv.rows
   } else {
-    if (guildId) {
-      const r = await pool.query(
-        `${SELECT} WHERE user_discord_id = $1 AND guild_id = $2 ORDER BY platform, id`,
-        [session.user.discordId, guildId]
-      )
-      rows = r.rows
-    } else {
-      const r = await pool.query(
-        `${SELECT} WHERE user_discord_id = $1 ORDER BY platform, id`,
-        [session.user.discordId]
-      )
-      rows = r.rows
-    }
+    // regular user: เห็นแค่ private ของตัวเอง
+    const r = await pool.query(
+      `${SELECT} WHERE user_discord_id = $1 AND visibility = 'private' ORDER BY platform, id`,
+      [discordId]
+    )
+    privateRows = r.rows
   }
 
-  return Response.json(rows)
+  return Response.json([...publicRows, ...privateRows])
 }
 
 export async function POST(req) {
   const session = await getServerSession(authOptions)
   if (!session) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
-  const admin = isAdmin(session.user.roles)
+  const admin      = isAdmin(session.user.roles)
   const superAdmin = isSuperAdmin(session.user.discordId)
 
   const body = await req.json()

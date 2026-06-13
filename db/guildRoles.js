@@ -13,10 +13,11 @@ const pool = require('./index')
  */
 
 const UPSERT_SQL = `
-  INSERT INTO dc_guild_roles (guild_id, role_id, role_name)
-  VALUES ($1, $2, $3)
+  INSERT INTO dc_guild_roles (guild_id, role_id, role_name, is_managed)
+  VALUES ($1, $2, $3, $4)
   ON CONFLICT (guild_id, role_id) DO UPDATE SET
-    role_name = EXCLUDED.role_name,
+    role_name  = EXCLUDED.role_name,
+    is_managed = EXCLUDED.is_managed,
     updated_at = CURRENT_TIMESTAMP`
 
 /** upsert ทุก role ของ guild — คืนจำนวน role ที่ sync */
@@ -24,7 +25,7 @@ async function syncGuildRolesCatalog(guild) {
   const roles = guild.roles.cache.filter(r => r.name !== '@everyone')
   let count = 0
   for (const role of roles.values()) {
-    await pool.query(UPSERT_SQL, [guild.id, role.id, role.name])
+    await pool.query(UPSERT_SQL, [guild.id, role.id, role.name, role.managed])
     count++
   }
   return count

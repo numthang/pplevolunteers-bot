@@ -23,10 +23,15 @@ function AgentSection() {
   const [error, setError]   = useState(null)
 
   useEffect(() => {
-    fetch('/api/bot/ai-config')
-      .then(r => r.json().then(d => ({ ok: r.ok, d })))
-      .then(({ ok, d }) => { if (ok) setCfg(d); else setError(d.error || 'โหลดไม่สำเร็จ') })
-      .catch(() => setError('โหลดไม่สำเร็จ'))
+    function loadCfg() {
+      fetch('/api/bot/ai-config')
+        .then(r => r.json().then(d => ({ ok: r.ok, d })))
+        .then(({ ok, d }) => { if (ok) setCfg(d); else setError(d.error || 'โหลดไม่สำเร็จ') })
+        .catch(() => setError('โหลดไม่สำเร็จ'))
+    }
+    loadCfg()
+    window.addEventListener('guild-switched', loadCfg)
+    return () => window.removeEventListener('guild-switched', loadCfg)
   }, [])
 
   async function save() {
@@ -175,6 +180,10 @@ function ModesSection() {
     setLoading(false)
   }, [])
   useEffect(() => { load() }, [load])
+  useEffect(() => {
+    window.addEventListener('guild-switched', load)
+    return () => window.removeEventListener('guild-switched', load)
+  }, [load])
 
   async function move(i, dir) {
     const j = i + dir

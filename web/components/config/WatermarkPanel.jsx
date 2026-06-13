@@ -367,32 +367,56 @@ function GuildPanel({ guildId }) {
   )
 }
 
-// ─── Panel: เลือกขอบเขตจาก dropdown เดียว (ส่วนตัว / แต่ละ guild) — ไม่ซ้อน tab ──
+// ─── Panel: tabs ส่วนตัว / Guild (ใช้ cookie guild ปัจจุบัน) ──────────────────
+const TABS = [
+  { key: 'personal', label: 'ส่วนตัว' },
+  { key: 'guild',    label: 'Guild' },
+]
+
 export default function WatermarkPanel() {
-  const [guilds, setGuilds]   = useState([])
-  const [scope,  setScope]    = useState('personal') // 'personal' | guild_id
-  const [loading, setLoading] = useState(true)
+  const [currentGuildId, setCurrentGuildId] = useState(null)
+  const [isAdmin, setIsAdmin]               = useState(false)
+  const [tab, setTab]                       = useState('personal')
+  const [loading, setLoading]               = useState(true)
 
   useEffect(() => {
-    fetch('/api/bot/guild-watermarks')
-      .then(r => r.json())
-      .then(d => setGuilds(d.guilds || []))
-      .catch(() => {})
-      .finally(() => setLoading(false))
+    function loadGuild() {
+      fetch('/api/bot/guild-watermarks')
+        .then(r => r.json())
+        .then(d => {
+          setCurrentGuildId(d.currentGuildId || null)
+          setIsAdmin((d.guilds || []).some(g => g.guild_id === d.currentGuildId))
+        })
+        .catch(() => {})
+        .finally(() => setLoading(false))
+    }
+    loadGuild()
+    window.addEventListener('guild-switched', loadGuild)
+    return () => window.removeEventListener('guild-switched', loadGuild)
   }, [])
+
+  if (loading) return <p className="text-warm-500 dark:text-disc-muted text-sm">กำลังโหลด...</p>
 
   return (
     <div>
-      <div className="mb-5 max-w-xs">
-        <label className="text-sm font-medium text-warm-700 dark:text-disc-muted mb-1 block">ขอบเขต</label>
-        <select value={scope} onChange={e => setScope(e.target.value)} disabled={loading}
-          className="h-11 px-3 text-base rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text focus:outline-none focus:ring-2 focus:ring-teal w-full">
-          <option value="personal">ส่วนตัว (ทุก server)</option>
-          {guilds.map(g => <option key={g.guild_id} value={g.guild_id}>{g.name}</option>)}
-        </select>
-      </div>
+      {isAdmin && (
+        <div className="flex gap-2 mb-5 border-b border-warm-200 dark:border-disc-border">
+          {TABS.map(t => (
+            <button key={t.key} onClick={() => setTab(t.key)}
+              className={`px-4 py-2 -mb-px border-b-2 text-base transition ${
+                tab === t.key
+                  ? 'border-teal text-teal font-medium'
+                  : 'border-transparent text-warm-600 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text'
+              }`}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+      )}
 
-      {scope === 'personal' ? <PersonalPanel /> : <GuildPanel key={scope} guildId={scope} />}
+      {tab === 'personal' || !isAdmin
+        ? <PersonalPanel />
+        : <GuildPanel key={currentGuildId} guildId={currentGuildId} />}
     </div>
   )
 }

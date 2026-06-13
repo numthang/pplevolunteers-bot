@@ -38,6 +38,8 @@ function StatsContent() {
     }
 
     fetchStats()
+    window.addEventListener('guild-switched', fetchStats)
+    return () => window.removeEventListener('guild-switched', fetchStats)
   }, [])
 
   if (loading) {

@@ -2,15 +2,115 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { ChevronLeft, ChevronRight, Trash2, X, Check, Loader2, ImageOff, ArrowLeft } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Trash2, X, Check, Loader2, ImageOff, ArrowLeft, Pencil, ShoppingBasket } from 'lucide-react'
 
-export default function BasketPage() {
+// ─── List view — แสดงตะกร้าทั้งหมดใน guild ───────────────────────────────────
+
+function BasketList() {
   const { status } = useSession()
   const router = useRouter()
-  const params = useSearchParams()
-  const guild   = params.get('guild')
-  const channel = params.get('channel')
-  const chName  = params.get('name')
+  const [data, setData]     = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError]   = useState(null)
+
+  const load = useCallback(() => {
+    setLoading(true)
+    fetch('/api/bot/baskets')
+      .then(r => r.json().then(d => ({ ok: r.ok, d })))
+      .then(({ ok, d }) => { if (ok) setData(d); else setError(d.error || 'โหลดไม่สำเร็จ') })
+      .catch(() => setError('โหลดไม่สำเร็จ'))
+      .finally(() => setLoading(false))
+  }, [])
+
+  useEffect(() => {
+    if (status === 'unauthenticated') { router.push('/login'); return }
+    if (status === 'authenticated') {
+      load()
+      window.addEventListener('guild-switched', load)
+      return () => window.removeEventListener('guild-switched', load)
+    }
+  }, [status, load, router])
+
+  if (status !== 'authenticated' || loading) {
+    return <p className="text-gray-500 dark:text-disc-muted text-sm">กำลังโหลด...</p>
+  }
+  if (error) {
+    return <p className="text-sm text-red-500 dark:text-red-400">{error}</p>
+  }
+
+  const baskets = data?.baskets || []
+
+  return (
+    <div>
+      <div className="mb-5">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-disc-text">🧺 ตะกร้าสื่อ</h1>
+        <p className="text-sm text-gray-500 dark:text-disc-muted mt-1">ตะกร้าสื่อที่มีอยู่ใน guild นี้</p>
+      </div>
+
+      {baskets.length === 0 ? (
+        <div className="bg-card-bg rounded-xl border border-warm-200 dark:border-disc-border p-10 text-center">
+          <ShoppingBasket size={32} className="mx-auto text-gray-300 dark:text-disc-muted mb-2" />
+          <p className="text-sm text-gray-500 dark:text-disc-muted">ยังไม่มีตะกร้า — เพิ่มรูปจาก Discord ก่อน</p>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {baskets.map(b => (
+            <BasketRow key={b.channel_id} basket={b} guildId={data.guildId} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function BasketRow({ basket, guildId }) {
+  const editUrl  = `/bot/media/basket?guild=${guildId}&channel=${basket.channel_id}&name=${encodeURIComponent(basket.channel_name || '')}`
+  const imgCount = Number(basket.image_count)
+  const vidCount = Number(basket.video_count)
+  const caption  = basket.caption?.trim()
+  const name     = basket.channel_name || basket.channel_id
+
+  return (
+    <a href={editUrl}
+      className="flex items-center gap-3 bg-card-bg rounded-xl border border-warm-200 dark:border-disc-border p-3 hover:border-orange/50 dark:hover:border-orange/50 transition group">
+      {/* Thumbnail */}
+      <div className="shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-gray-100 dark:bg-disc-border flex items-center justify-center">
+        {basket.thumbnail
+          ? /* eslint-disable-next-line @next/next/no-img-element */
+            <img src={basket.thumbnail} alt="" className="w-full h-full object-cover" />
+          : <ImageOff size={20} className="text-gray-300 dark:text-disc-muted" />
+        }
+      </div>
+
+      {/* Info */}
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-medium text-gray-900 dark:text-disc-text truncate group-hover:text-orange transition">
+          #{name}
+        </p>
+        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+          {imgCount > 0 && <span className="text-xs text-gray-500 dark:text-disc-muted">🖼 {imgCount}</span>}
+          {vidCount > 0 && <span className="text-xs text-gray-500 dark:text-disc-muted">🎬 {vidCount}</span>}
+          {caption && (
+            <span className="text-xs text-gray-400 dark:text-disc-muted truncate max-w-[200px]">
+              "{caption.slice(0, 50)}{caption.length > 50 ? '…' : ''}"
+            </span>
+          )}
+        </div>
+        <p className="text-xs text-gray-300 dark:text-disc-muted mt-0.5">
+          {new Date(basket.last_added).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' })}
+        </p>
+      </div>
+
+      <Pencil size={14} className="shrink-0 text-gray-300 dark:text-disc-muted group-hover:text-orange transition" />
+    </a>
+  )
+}
+
+// ─── Detail view — ตะกร้าของ channel นั้น (เดิม) ─────────────────────────────
+
+function BasketDetail({ guild, channel, chName }) {
+  const { status } = useSession()
+  const router = useRouter()
 
   const [images, setImages]   = useState([])
   const [videos, setVideos]   = useState([])
@@ -20,8 +120,8 @@ export default function BasketPage() {
   const [savedCap, setSavedCap]   = useState(false)
   const [error, setError]     = useState(null)
   const [draggingId, setDraggingId] = useState(null)
-  const dragIndex = useRef(null)   // live index ของรูปที่กำลังลาก
-  const imagesRef = useRef([])     // mirror ของ images ล่าสุด (ใช้ persist ตอน drag จบ)
+  const dragIndex = useRef(null)
+  const imagesRef = useRef([])
   const capRef       = useRef(null)
   const autoSaveTimer = useRef(null)
   const isFirstLoad   = useRef(true)
@@ -35,7 +135,6 @@ export default function BasketPage() {
   }
 
   const load = useCallback(async () => {
-    if (!guild || !channel) { setError('ลิงก์ไม่ครบ (ต้องมี guild + channel)'); setLoading(false); return }
     const res = await fetch(`/api/bot/basket?guild=${guild}&channel=${channel}`)
     if (!res.ok) { setError('โหลดตะกร้าไม่สำเร็จ'); setLoading(false); return }
     const d = await res.json()
@@ -50,17 +149,15 @@ export default function BasketPage() {
     if (status === 'authenticated') load()
   }, [status, load, router])
 
-  // caption box โตตามเนื้อหาหลังโหลดเสร็จ
   useEffect(() => { autoGrow(capRef.current) }, [loading, caption])
 
-  // auto-save — debounce 1s หลังหยุดพิมพ์ ข้ามครั้งแรกที่โหลดค่าจาก API
   useEffect(() => {
     if (isFirstLoad.current) { isFirstLoad.current = false; return }
     clearTimeout(autoSaveTimer.current)
     autoSaveTimer.current = setTimeout(saveCaption, 1000)
     return () => clearTimeout(autoSaveTimer.current)
   }, [caption])
-  // sync mirror ของ images ไว้ persist ตอน drag จบ
+
   useEffect(() => { imagesRef.current = images }, [images])
 
   function saveOrder(arr) {
@@ -71,10 +168,7 @@ export default function BasketPage() {
     }).catch(() => {})
   }
 
-  function persistOrder(next) {
-    setImages(next)
-    saveOrder(next)
-  }
+  function persistOrder(next) { setImages(next); saveOrder(next) }
 
   function move(i, dir) {
     const j = i + dir
@@ -84,7 +178,6 @@ export default function BasketPage() {
     persistOrder(next)
   }
 
-  // ─── drag: live reflow — รูปอื่นขยับหลบให้เห็นว่าจะไปลงตรงไหน ───
   function onDragStart(i, id) { dragIndex.current = i; setDraggingId(id) }
   function onDragEnterCell(i) {
     const from = dragIndex.current
@@ -142,13 +235,18 @@ export default function BasketPage() {
   return (
     <div>
       <div className="mb-6">
+        <a href="/bot/media/basket"
+          className="inline-flex items-center gap-1.5 text-sm text-teal hover:underline mb-2">
+          <ArrowLeft size={14} /> ตะกร้าทั้งหมด
+        </a>
         {guild && channel && (
           <a href={`https://discord.com/channels/${guild}/${channel}`}
-            className="inline-flex items-center gap-1.5 text-sm text-teal hover:underline mb-2">
-            <ArrowLeft size={14} /> กลับไป{chName ? ` #${chName}` : 'ตะกร้าใน Discord'}
+            className="inline-flex items-center gap-1.5 text-sm text-teal hover:underline mb-2 ml-4">
+            ↗ {chName ? `#${chName}` : 'เปิดใน Discord'}
           </a>
         )}
         <h1 className="text-2xl font-bold text-gray-900 dark:text-disc-text">🧺 ตะกร้าสื่อ</h1>
+        {chName && <p className="text-sm text-gray-500 dark:text-disc-muted mt-0.5">#{chName}</p>}
         <p className="text-sm text-gray-500 dark:text-disc-muted mt-1">
           เรียงลำดับรูปและแก้ caption แล้วกลับไปกด <b>สร้างโพสต์</b> ใน Discord
         </p>
@@ -161,7 +259,6 @@ export default function BasketPage() {
         </div>
       ) : (
         <div className="flex flex-col gap-6">
-          {/* รูป — grid เรียงลำดับได้ (ลากบน desktop / ◀▶ บนมือถือ) */}
           {images.length > 0 && (
             <div>
               <h2 className="text-sm font-semibold text-gray-700 dark:text-disc-muted uppercase tracking-wide mb-2">
@@ -184,18 +281,17 @@ export default function BasketPage() {
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={im.url} alt={`รูป ${i + 1}`} className="w-full h-full object-cover" />
-
                     <span className="absolute top-2 left-2 w-6 h-6 flex items-center justify-center rounded-full bg-black/60 text-white text-xs font-bold">{i + 1}</span>
                     <button onClick={() => removeImage(im.id)} title="ลบรูปนี้"
                       className="absolute top-2 right-2 w-7 h-7 flex items-center justify-center rounded-full bg-black/60 text-white hover:bg-red-500 transition">
                       <X size={15} />
                     </button>
                     <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5 opacity-90">
-                      <button onClick={() => move(i, -1)} disabled={i === 0} title="เลื่อนไปก่อนหน้า"
+                      <button onClick={() => move(i, -1)} disabled={i === 0}
                         className="w-7 h-7 flex items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80 disabled:opacity-30 transition">
                         <ChevronLeft size={16} />
                       </button>
-                      <button onClick={() => move(i, 1)} disabled={i === images.length - 1} title="เลื่อนไปถัดไป"
+                      <button onClick={() => move(i, 1)} disabled={i === images.length - 1}
                         className="w-7 h-7 flex items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80 disabled:opacity-30 transition">
                         <ChevronRight size={16} />
                       </button>
@@ -206,7 +302,6 @@ export default function BasketPage() {
             </div>
           )}
 
-          {/* วิดีโอ */}
           {videos.length > 0 && (
             <div>
               <h2 className="text-sm font-semibold text-gray-700 dark:text-disc-muted uppercase tracking-wide mb-2">
@@ -217,7 +312,7 @@ export default function BasketPage() {
                   <div key={v.id} className="flex items-center gap-3 bg-card-bg rounded-xl border border-warm-200 dark:border-disc-border p-2">
                     <span className="shrink-0">🎬</span>
                     <span className="flex-1 min-w-0 text-xs text-gray-400 dark:text-disc-muted font-mono truncate">{v.url}</span>
-                    <button onClick={() => removeVideo(v.id)} title="ลบวิดีโอนี้"
+                    <button onClick={() => removeVideo(v.id)}
                       className="shrink-0 w-7 h-7 flex items-center justify-center rounded-full text-gray-400 hover:bg-red-100 hover:text-red-500 dark:hover:bg-red-900/30 dark:hover:text-red-400 transition">
                       <X size={15} />
                     </button>
@@ -227,7 +322,6 @@ export default function BasketPage() {
             </div>
           )}
 
-          {/* Caption */}
           <div>
             <label className="block text-base font-semibold text-gray-700 dark:text-disc-text mb-1.5">Caption</label>
             <textarea
@@ -254,7 +348,6 @@ export default function BasketPage() {
             </div>
           </div>
 
-          {/* ล้าง */}
           <div className="pt-2 border-t border-warm-200 dark:border-disc-border">
             <button onClick={clearBasket}
               className="flex items-center gap-1.5 px-4 py-2 text-sm rounded-lg text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition">
@@ -265,4 +358,16 @@ export default function BasketPage() {
       )}
     </div>
   )
+}
+
+// ─── Router ───────────────────────────────────────────────────────────────────
+
+export default function BasketPage() {
+  const params  = useSearchParams()
+  const channel = params.get('channel')
+  const guild   = params.get('guild')
+  const chName  = params.get('name')
+
+  if (channel && guild) return <BasketDetail guild={guild} channel={channel} chName={chName} />
+  return <BasketList />
 }

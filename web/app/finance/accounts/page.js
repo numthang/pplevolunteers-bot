@@ -25,6 +25,8 @@ export default function AccountsPage() {
   useEffect(() => {
     load()
     fetch('/api/admin/guilds').then(r => r.ok ? r.json() : []).then(setGuilds)
+    window.addEventListener('guild-switched', load)
+    return () => window.removeEventListener('guild-switched', load)
   }, [])
 
   async function toggleArchive(a) {

@@ -162,6 +162,18 @@ function TransactionsContent() {
     fetchFunds()
   }, [fetchPage, fetchBalance, fetchFunds])
 
+  // สลับ guild → โหลดบัญชี/หมวด/รายการใหม่ทั้งหมด
+  useEffect(() => {
+    function onSwitch() {
+      fetch('/api/finance/accounts').then(r => r.json()).then(setAccounts)
+      fetch('/api/finance/categories').then(r => r.json()).then(setCategories)
+      setFilter(f => ({ ...f, accountId: '' }))
+      load()
+    }
+    window.addEventListener('guild-switched', onSwitch)
+    return () => window.removeEventListener('guild-switched', onSwitch)
+  }, [load])
+
   const canEditAcc = (() => {
     const acc = accounts.find(a => String(a.id) === String(filter.accountId))
     return acc ? canEditAccount({ owner_id: acc.owner_id, visibility: acc.visibility, province: acc.province }, effectiveDiscordId, effectiveAccess) : false
