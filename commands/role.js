@@ -82,7 +82,7 @@ module.exports = {
 
       const input = new TextInputBuilder()
         .setCustomId('role_usernames')
-        .setLabel('Username หรือ Discord ID (คั่นด้วย , หรือ Enter)')
+        .setLabel('Username หรือ ID (คั่น , หรือ Enter)')
         .setStyle(TextInputStyle.Paragraph)
         .setPlaceholder('john_doe\njane_smith\n123456789012345678')
         .setRequired(true)
