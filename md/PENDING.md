@@ -184,6 +184,7 @@
 - ✅ **Feature toggle เสร็จ (2026-06-13):** `getEnabledFeatures(guildId)` อ่าน `dc_guild_config` key `enabled_features` (json array) · Nav `APPS`/`DASHBOARD_LINKS` มี field `feature` ('calling'/'contacts') · `featureOn()` ซ่อนเมนู · finance/bot เปิดตลอด · seed อาสาประชาชน `["calling","contacts"]` · guild ใหม่ default `[]` = off · **scope ปัจจุบัน: ซ่อน nav เท่านั้น (ไม่ block route)** — ข้อมูลถูก isolate ด้วย guild_id อยู่แล้ว
   - ⏳ **Backoffice UI เปิด/ปิด feature ต่อ guild** — ตอนนี้ต้องแก้ `dc_guild_config` ด้วย SQL; ต้องการ UI admin สำหรับ PATCH `enabled_features`
 - ✅ **API routes:** Finance 5 + Calling 9 routes เปลี่ยน `process.env.GUILD_ID` → `await getGuildId(session)` แล้ว (อยู่ใน chunk 3–4)
+- ✅ **Client-component reload ตอนสลับ guild (เสร็จ 2026-06-14):** เดิม `router.refresh()` รีเฟรชแค่ server component · client page/component ที่ fetch เองไม่รีโหลด → เพิ่ม `window.addEventListener('guild-switched', load)` + cleanup ครบ **11 จุด** (finance accounts/categories/transactions/report · calling contacts/assignee/stats · bot platforms/ai · QuotePanel · WatermarkPanel) · transactions ล้าง accountId filter + WatermarkPanel re-fetch currentGuildId → remount GuildPanel · home (server comp) ใช้ router.refresh เหมือนเดิม · **ยังไม่ deploy prod**
 
 ---
 

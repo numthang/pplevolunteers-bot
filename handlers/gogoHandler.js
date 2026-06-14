@@ -172,6 +172,8 @@ async function handleGogoModal(interaction) {
   if (newNames.length > 10) {
     return interaction.editReply({ content: '❌ ชื่อได้สูงสุด 10 คนต่อ 1 ครั้ง' });
   }
+  // ป้อนชื่อเดียวและเป็นชื่อตัวเอง → self-entry (name = '') ป้องกัน display ซ้ำ
+  if (newNames.length === 1 && newNames[0] === displayName) newNames[0] = '';
   await upsertEntries(interaction.guildId, messageId, userId, newNames);
 
   // อ่าน DB เพื่อ render embed
