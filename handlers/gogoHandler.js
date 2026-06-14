@@ -167,6 +167,8 @@ async function handleGogoModal(interaction) {
     if (fieldIdx >= 0) await seedEntries(interaction.guildId, messageId, parseEntries(fields[fieldIdx].value));
   }
 
+  const displayName = interaction.member?.displayName ?? interaction.user.username;
+
   // เขียน DB
   const newNames = rawInput ? rawInput.split('\n').map(n => n.trim()).filter(Boolean) : [];
   if (newNames.length > 10) {
@@ -178,7 +180,6 @@ async function handleGogoModal(interaction) {
 
   // อ่าน DB เพื่อ render embed
   const allEntries = await getEntries(interaction.guildId, messageId);
-  const displayName = interaction.member?.displayName ?? interaction.user.username;
   const dbEntries = allEntries.map(({ user_id: u, name: n }) => {
     // ถ้า name ตรงกับ displayName ของผู้ใช้ → self-entry (name = '')
     if (u === userId && n === displayName) return { userId: u, name: '' };
