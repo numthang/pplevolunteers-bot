@@ -1,6 +1,8 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import { useSession } from 'next-auth/react'
+import { useEffectiveRoles } from '@/lib/useEffectiveRoles.js'
+import { can } from '@/lib/permissions.js'
 import { useRouter } from 'next/navigation'
 
 const LEVEL_CLS = {
@@ -32,15 +34,14 @@ export default function LogsPage() {
   const [autoScroll, setAutoScroll] = useState(true)
   const bottomRef = useRef(null)
 
-  const roles = Array.isArray(session?.user?.roles)
-    ? session.user.roles
-    : (session?.user?.roles || '').split(',').map(r => r.trim())
+  const { access } = useEffectiveRoles(session)
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/login')
-    if (status === 'authenticated' && !['Admin', 'Moderator'].some(r => roles.includes(r)))
+    // access เริ่มเป็น null ระหว่างโหลด — รอจน resolve ค่อยตัดสิน (กัน redirect ผิด)
+    if (status === 'authenticated' && access && !can('viewServerLogs', access.permissions))
       router.push('/dashboard')
-  }, [status, roles])
+  }, [status, access])
 
   async function fetchLogs() {
     setLoading(true)

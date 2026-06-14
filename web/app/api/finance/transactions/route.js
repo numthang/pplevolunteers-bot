@@ -3,7 +3,6 @@ import { authOptions } from '@/lib/auth-options.js'
 import { getTransactions, createTransaction } from '@/db/finance/transactions.js'
 import { getAccountById, incrementUsageCount as incrementAccount } from '@/db/finance/accounts.js'
 import { incrementUsageCount as incrementCategory } from '@/db/finance/categories.js'
-import { isAdmin } from '@/lib/roles.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import { getGuildId } from '@/lib/guildContext.js'
 import { canViewAccount, canEditAccount } from '@/lib/financeAccess.js'
@@ -29,7 +28,7 @@ export async function GET(req) {
   const session = await getServerSession(authOptions)
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { roles: effectiveRoles, discordId: effectiveDiscordId, access } = await getEffectiveIdentity(session)
+  const { discordId: effectiveDiscordId, access } = await getEffectiveIdentity(session)
   const GUILD_ID = await getGuildId(session)
 
   if (accountId) {
@@ -39,7 +38,7 @@ export async function GET(req) {
     }
   }
 
-  const rows = await getTransactions(GUILD_ID, { accountId, type, categoryId, noCategory, fundId, noFund, search, year, month, dateFrom, dateTo, limit, offset, discordId: effectiveDiscordId, admin: isAdmin(effectiveRoles) })
+  const rows = await getTransactions(GUILD_ID, { accountId, type, categoryId, noCategory, fundId, noFund, search, year, month, dateFrom, dateTo, limit, offset, discordId: effectiveDiscordId })
   return Response.json(rows)
 }
 

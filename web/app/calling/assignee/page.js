@@ -6,11 +6,10 @@ import RecordCallModal from '@/components/calling/RecordCallModal.jsx'
 import PdpaAgreementModal from '@/components/calling/PdpaAgreementModal.jsx'
 import { useSession } from 'next-auth/react'
 import { useEffectiveRoles } from '@/lib/useEffectiveRoles.js'
+import { can } from '@/lib/permissions.js'
 import { CALL_STATUS_COLORS } from '@/lib/callingStatusColors.js'
 import { CATEGORY_LABELS, CATEGORY_COLORS } from '@/../config/callingCategories.js'
 import { PhoneCall, PhoneOff, Clock, Minus, Users, MessageSquare, AlertTriangle, Timer, Star, IdCard, BookUser, History } from 'lucide-react'
-
-const MODERATOR_ROLES = ['Admin', 'เลขาธิการ', 'Moderator']
 const EDIT_STATUS_OPTIONS = [
   { value: 'answered',   label: 'รับสาย' },
   { value: 'no_answer',  label: 'ไม่รับ' },
@@ -124,8 +123,8 @@ export default function PendingCallsPage() {
   const [favoriteSet, setFavoriteSet] = useState(new Set())
 
   const { data: session } = useSession()
-  const { roles: effectiveRoles, discordId: effectiveDiscordId } = useEffectiveRoles(session)
-  const isModerator = MODERATOR_ROLES.some(r => effectiveRoles.includes(r))
+  const { discordId: effectiveDiscordId, access } = useEffectiveRoles(session)
+  const isModerator = can('deleteLog', access?.permissions || [])
 
   const itemsRef = useRef([])
   useEffect(() => { itemsRef.current = items }, [items])

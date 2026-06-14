@@ -1,6 +1,7 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
 import { isAdmin, isSuperAdmin } from '@/lib/roles.js'
+import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import { getAdminGuildIds, getGuilds } from '@/db/guilds.js'
 import { QUOTE_STYLE_KEYS } from '@/lib/quoteStyles.js'
 import pool from '@/db/index.js'
@@ -45,13 +46,14 @@ export async function GET() {
 
   const discordId  = session.user.discordId
   const superAdmin = isSuperAdmin(discordId)
+  const { access } = await getEffectiveIdentity(session)
 
   // superadmin เห็นทุก guild, admin เห็นเฉพาะ guild ที่ตัวเองมี role Admin
   const allGuilds = await getGuilds()
   const nameById  = Object.fromEntries(allGuilds.map(g => [g.guild_id, g.name]))
   const adminGuildIds = superAdmin
     ? allGuilds.map(g => g.guild_id)
-    : isAdmin(session.user.roles)
+    : isAdmin(access)
       ? await getAdminGuildIds(discordId)
       : []
 

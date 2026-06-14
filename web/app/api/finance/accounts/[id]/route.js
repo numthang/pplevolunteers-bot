@@ -8,9 +8,9 @@ import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 async function checkEditPermission(session, id) {
   const account = await getAccountById(id)
   if (!account) return { error: 'Not found', status: 404 }
-  const { roles, discordId, access } = await getEffectiveIdentity(session)
+  const { discordId, access } = await getEffectiveIdentity(session)
   if (!canEditAccount(account, discordId, access)) return { error: 'Forbidden', status: 403 }
-  return { account, roles }
+  return { account, access }
 }
 
 export async function PUT(req, { params }) {
@@ -18,11 +18,11 @@ export async function PUT(req, { params }) {
   const session = await getServerSession(authOptions)
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { error, status, roles } = await checkEditPermission(session, id)
+  const { error, status, access } = await checkEditPermission(session, id)
   if (error) return Response.json({ error }, { status })
 
   const data = await req.json()
-  await updateAccount(id, data, session.user.discordId, isAdmin(roles))
+  await updateAccount(id, data, session.user.discordId, isAdmin(access))
   return Response.json({ ok: true })
 }
 

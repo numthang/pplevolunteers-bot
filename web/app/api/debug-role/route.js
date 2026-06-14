@@ -2,12 +2,13 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
 import { cookies } from 'next/headers'
 import { isAdmin } from '@/lib/roles.js'
+import { getRealAccess } from '@/lib/getEffectiveRoles.js'
 
 const COOKIE_OPTS = { httpOnly: false, sameSite: 'lax', path: '/', maxAge: 60 * 60 * 8 }
 
 export async function POST(req) {
   const session = await getServerSession(authOptions)
-  if (!session || !isAdmin(session.user.roles)) {
+  if (!session || !isAdmin(await getRealAccess(session))) {
     return Response.json({ error: 'Forbidden' }, { status: 403 })
   }
 
@@ -33,7 +34,7 @@ export async function POST(req) {
 
 export async function DELETE() {
   const session = await getServerSession(authOptions)
-  if (!session || !isAdmin(session.user.roles)) {
+  if (!session || !isAdmin(await getRealAccess(session))) {
     return Response.json({ error: 'Forbidden' }, { status: 403 })
   }
 

@@ -1,13 +1,14 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
 import { isAdmin } from '@/lib/roles.js'
+import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import pool from '@/db/index.js'
 
 export async function PATCH(req, { params }) {
   const session = await getServerSession(authOptions)
-  if (!session || !isAdmin(session.user.roles)) {
-    return Response.json({ error: 'Forbidden' }, { status: 403 })
-  }
+  if (!session) return Response.json({ error: 'Forbidden' }, { status: 403 })
+  const { access } = await getEffectiveIdentity(session)
+  if (!isAdmin(access)) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
   const { id } = await params
   const body = await req.json()
@@ -32,7 +33,8 @@ export async function DELETE(req, { params }) {
 
   const { id } = await params
 
-  if (!isAdmin(session.user.roles)) {
+  const { access } = await getEffectiveIdentity(session)
+  if (!isAdmin(access)) {
     const { rows } = await pool.query(
       `SELECT user_discord_id FROM dc_social_accounts WHERE id = $1`, [id]
     )

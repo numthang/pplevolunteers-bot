@@ -10,6 +10,7 @@ import { getAccountsAll } from '@/db/finance/accounts.js'
 import { canViewAccount } from '@/lib/financeAccess.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import { isAdmin } from '@/lib/roles.js'
+import { can } from '@/lib/permissions.js'
 import pool from '@/db/index.js'
 import { getGuilds, getEnabledFeatures } from '@/db/guilds.js'
 import { getGuildId } from '@/lib/guildContext.js'
@@ -24,9 +25,9 @@ async function getTodayCallCount() {
 }
 
 async function getFINANCESummary(session) {
-  const { roles, discordId, access } = await getEffectiveIdentity(session)
+  const { discordId, access } = await getEffectiveIdentity(session)
   const GUILD_ID = await getGuildId(session)
-  const raw = await getAccountsAll(GUILD_ID, discordId, isAdmin(roles))
+  const raw = await getAccountsAll(GUILD_ID, discordId, can('viewPrivateOther', access.permissions))
   const accessibleAccounts = raw.filter(a => canViewAccount(a, discordId, access))
 
   const results = { public: null, internal: null, private: null }
@@ -184,10 +185,8 @@ export default async function HomePage() {
 
   // --- Logged in: Dashboard ---
   const discordId = session.user.discordId
-  const roles = Array.isArray(session.user.roles)
-    ? session.user.roles
-    : (session.user.roles || '').split(',').map(r => r.trim())
-  const userIsAdmin = isAdmin(roles)
+  const { access } = await getEffectiveIdentity(session)
+  const userIsAdmin = isAdmin(access)
   const GUILD_ID = await getGuildId(session)
   const enabledFeatures = await getEnabledFeatures(GUILD_ID)
   const callingOn = enabledFeatures.includes('calling')

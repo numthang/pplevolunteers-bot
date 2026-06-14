@@ -4,6 +4,7 @@ import { useSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Trash2, RefreshCw, Globe, Lock, AlertTriangle, X, Plus, Settings, Check } from 'lucide-react'
 import { isAdmin } from '@/lib/roles.js'
+import { useEffectiveRoles } from '@/lib/useEffectiveRoles.js'
 
 const PLATFORM_LABEL = { fb: 'Facebook', ig: 'Instagram', threads: '@ (Threads)', x: 'X (Twitter)' }
 const PLATFORM_COLOR = {
@@ -113,8 +114,8 @@ export default function SocialAccountsPage() {
   const [xSaving, setXSaving]   = useState(false)
   const [banner, setBanner]     = useState(null)
 
-  const roles      = Array.isArray(session?.user?.roles) ? session.user.roles : []
-  const admin      = isAdmin(roles)
+  const { access }  = useEffectiveRoles(session)
+  const admin      = isAdmin(access)
   const superAdmin = session?.user?.isSuperAdmin ?? false
 
   const load = useCallback(async () => {

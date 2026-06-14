@@ -1,14 +1,10 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
+import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
+import { can } from '@/lib/permissions.js'
 import fs from 'fs'
 import path from 'path'
 import os from 'os'
-
-const ALLOWED = ['Admin', 'Moderator']
-
-function canViewLogs(roles = []) {
-  return ALLOWED.some(r => roles.includes(r))
-}
 
 // PM2 log dir: /home/www/.pm2/logs/ หรือ ~/.pm2/logs/
 const PM2_LOG_DIR = path.join(os.homedir(), '.pm2', 'logs')
@@ -35,7 +31,9 @@ function readTail(filePath, maxLines) {
 
 export async function GET(req) {
   const session = await getServerSession(authOptions)
-  if (!session || !canViewLogs(session.user.roles))
+  if (!session) return Response.json({ error: 'Forbidden' }, { status: 403 })
+  const { access } = await getEffectiveIdentity(session)
+  if (!can('viewServerLogs', access.permissions))
     return Response.json({ error: 'Forbidden' }, { status: 403 })
 
   const p      = new URL(req.url).searchParams

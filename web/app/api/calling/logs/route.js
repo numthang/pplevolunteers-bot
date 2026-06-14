@@ -3,6 +3,8 @@ import { authOptions } from '@/lib/auth-options.js'
 import { createLog, getLogsByCampaignMember, getLogById, updateLog, deleteLog } from '@/db/calling/logs.js'
 import { calculateTierFromSignals, upsertTier } from '@/db/calling/tiers.js'
 import { getGuildId } from '@/lib/guildContext.js'
+import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
+import { can } from '@/lib/permissions.js'
 
 export async function GET(req) {
   const session = await getServerSession(authOptions)
@@ -77,8 +79,6 @@ export async function POST(req) {
   }
 }
 
-const MODERATOR_ROLES = ['Admin', 'เลขาธิการ', 'Moderator']
-
 export async function PATCH(req) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.discordId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
@@ -91,8 +91,8 @@ export async function PATCH(req) {
     const log = await getLogById(id)
     if (!log) return Response.json({ error: 'Not found' }, { status: 404 })
 
-    const userRoles = session.user.roles || []
-    const isModerator = MODERATOR_ROLES.some(r => userRoles.includes(r))
+    const { access } = await getEffectiveIdentity(session)
+    const isModerator = can('deleteLog', access.permissions)
     if (log.called_by !== session.user.discordId && !isModerator) {
       return Response.json({ error: 'Forbidden' }, { status: 403 })
     }
@@ -121,9 +121,8 @@ export async function DELETE(req) {
     const id = parseInt(searchParams.get('id'))
     if (!id) return Response.json({ error: 'id is required' }, { status: 400 })
 
-    const userRoles = session.user.roles || []
-    const isModerator = MODERATOR_ROLES.some(r => userRoles.includes(r))
-    if (!isModerator) return Response.json({ error: 'Forbidden' }, { status: 403 })
+    const { access } = await getEffectiveIdentity(session)
+    if (!can('deleteLog', access.permissions)) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
     await deleteLog(id)
     return Response.json({ success: true })

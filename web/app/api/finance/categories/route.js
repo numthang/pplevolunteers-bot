@@ -3,19 +3,17 @@ import { authOptions } from '@/lib/auth-options.js'
 import { getCategories, getCategoriesAll, createCategory } from '@/db/finance/categories.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import { getGuildId } from '@/lib/guildContext.js'
-
-const ADMIN_ROLES    = ['Admin', 'เลขาธิการ']
-const GLOBAL_EDITORS = ['Admin', 'เลขาธิการ', 'Moderator']
+import { isAdmin } from '@/lib/roles.js'
+import { can } from '@/lib/permissions.js'
 
 export async function GET() {
   const session = await getServerSession(authOptions)
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { roles, discordId } = await getEffectiveIdentity(session)
+  const { discordId, access } = await getEffectiveIdentity(session)
   const GUILD_ID = await getGuildId(session)
-  const isAdmin = ADMIN_ROLES.some(r => roles.includes(r))
 
-  const rows = isAdmin
+  const rows = isAdmin(access)
     ? await getCategoriesAll(GUILD_ID)
     : await getCategories(GUILD_ID, discordId)
 
@@ -26,12 +24,12 @@ export async function POST(req) {
   const session = await getServerSession(authOptions)
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { roles, discordId } = await getEffectiveIdentity(session)
+  const { discordId, access } = await getEffectiveIdentity(session)
   const GUILD_ID = await getGuildId(session)
 
   const { name, icon, is_global } = await req.json()
   if (!name?.trim()) return Response.json({ error: 'name required' }, { status: 400 })
-  if (is_global && !GLOBAL_EDITORS.some(r => roles.includes(r)))
+  if (is_global && !can('editGlobalCategory', access.permissions))
     return Response.json({ error: 'Forbidden' }, { status: 403 })
 
   const id = await createCategory(GUILD_ID, discordId ?? session.user.discordId, name.trim(), icon || null, !!is_global)

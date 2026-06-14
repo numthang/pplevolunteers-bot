@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffectiveRoles } from '@/lib/useEffectiveRoles.js'
+import { can } from '@/lib/permissions.js'
 import ContactForm from '@/components/calling/ContactForm.jsx'
 import ContactModal from '@/components/calling/ContactModal.jsx'
 import geographyData from '@/lib/thailand-geography.json'
@@ -16,18 +17,17 @@ function getProvinceFromRoles(roles = []) {
   return matches[0] || ''
 }
 
-const MANAGE_ROLES = ['Admin', 'เลขาธิการ', 'ผู้ประสานงานภาค', 'รองเลขาธิการ', 'ผู้ประสานงานจังหวัด', 'กรรมการจังหวัด']
 
 export default function ContactsPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
-  const { roles, discordId } = useEffectiveRoles(session)
+  const { roles, discordId, access } = useEffectiveRoles(session)
 
   useEffect(() => {
     if (status === 'unauthenticated') router.replace('/')
   }, [status, router])
   const defaultProvince = session?.user?.primary_province || getProvinceFromRoles(roles)
-  const canManageAll = roles.some(r => MANAGE_ROLES.includes(r))
+  const canManageAll = can('manageContacts', access?.permissions || [])
 
   const [contacts, setContacts]             = useState([])
   const [contactsHidden, setContactsHidden] = useState(false)

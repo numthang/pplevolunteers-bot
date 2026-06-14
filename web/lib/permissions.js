@@ -32,17 +32,23 @@ export const CAPABILITIES = {
   editProvinceAccount: ['admin', 'secretary_general', 'province_coordinator', 'district_coordinator', 'treasurer'],
   editWide:            ['admin', 'secretary_general', 'treasurer'],
   createNonPrivate:    ['admin', 'secretary_general', 'regional_coordinator', 'province_coordinator', 'district_coordinator', 'treasurer'],
+  editGlobalCategory:  ['admin', 'secretary_general', 'moderator'],   // เดิม GLOBAL_EDITORS
 
   // ── Calling ──
   viewCalling:         ['admin', 'secretary_general', 'regional_coordinator', 'province_coordinator', 'district_coordinator'],
   createCampaign:      ['admin', 'secretary_general', 'regional_coordinator', 'province_coordinator', 'district_coordinator'],
   seeContacts:         ['admin', 'secretary_general', 'regional_coordinator', 'province_coordinator', 'district_coordinator'], // เบอร์/LINE (PDPA)
+  manageContacts:      ['admin', 'secretary_general', 'regional_coordinator', 'province_coordinator', 'district_coordinator'], // เดิม MANAGE_ROLES
+  sendBulkSms:         ['admin', 'secretary_general', 'regional_coordinator', 'province_coordinator'],                          // เดิม SMS_ROLES
   overrideTier:        ['admin', 'secretary_general', 'treasurer'],
-  deleteLog:           ['admin', 'secretary_general', 'moderator'],
+  deleteLog:           ['admin', 'secretary_general', 'moderator'],   // เดิม MODERATOR_ROLES (moderation gate)
 
   // ── Bot / Social ──
   manageSocial:        ['admin'],
   manageGuildConfig:   ['admin'],
+
+  // ── Admin ──
+  viewServerLogs:      ['admin', 'moderator'],   // เดิม ['Admin','Moderator']
 }
 
 /**

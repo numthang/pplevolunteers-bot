@@ -6,6 +6,8 @@ import { signOut } from 'next-auth/react'
 import { useState, useEffect, useRef } from 'react'
 import { useTheme } from './Providers.jsx'
 import { DebugRoleButton, DebugRoleBanner } from './DebugRoleBanner.jsx'
+import { useEffectiveRoles } from '@/lib/useEffectiveRoles.js'
+import { can } from '@/lib/permissions.js'
 
 function Ic({ d, className = 'w-4 h-4 shrink-0' }) {
   return (
@@ -72,7 +74,7 @@ const DASHBOARD_LINKS = [
   { href: '/finance',              label: 'FINANCE',  icon: 'transactions' },
   { href: '/calling',              label: 'CALLING',  icon: 'campaigns', feature: 'calling' },
   { href: '/bot/platforms', label: 'BOT',      icon: 'social' },
-  { href: '/admin/logs',           label: 'LOGS',     icon: 'logs', roles: ['Admin', 'Moderator'] },
+  { href: '/admin/logs',           label: 'LOGS',     icon: 'logs', capability: 'viewServerLogs' },
 ]
 
 const APPS = [
@@ -135,25 +137,23 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
 
   const activeCampaign = campaigns.find(c => c.id === activeCampaignId)
 
-  const roles = Array.isArray(session?.user?.roles)
-    ? session.user.roles
-    : (session?.user?.roles || '').split(',').map(r => r.trim())
+  const { access, realAdmin } = useEffectiveRoles(session)
 
   const featureOn = (f) => !f || enabledFeatures.includes(f)
-  const userIsAdmin = roles.includes('Admin') || (session?.user?.isSuperAdmin ?? false)
+  const userIsAdmin = realAdmin || (session?.user?.isSuperAdmin ?? false)
 
   const visibleLinks = links.filter(l => {
     if (!featureOn(l.feature)) return false
     if (!session) return l.public
     if (l.adminOnly && !userIsAdmin) return false
-    if (l.roles) return l.roles.some(r => roles.includes(r))
+    if (l.capability) return can(l.capability, access?.permissions || [])
     return true
   })
   const mediaLinks = visibleLinks.filter(l => l.mediaGroup)
   const topLinks   = visibleLinks.filter(l => !l.menuOnly && !l.mediaGroup)
   const menuLinks  = visibleLinks
 
-  const visibleApps = APPS.filter(a => (!a.roles || a.roles.some(r => roles.includes(r))) && featureOn(a.feature))
+  const visibleApps = APPS.filter(a => featureOn(a.feature))
 
   const currentGuild = guilds.find(g => g.guild_id === currentGuildId) || guilds[0] || null
   const canSwitchGuild = guilds.length > 1

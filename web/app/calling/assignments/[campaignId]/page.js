@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useCallback, use } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { useEffectiveRoles } from '@/lib/useEffectiveRoles.js'
+import { can } from '@/lib/permissions.js'
 import SplitModal from '@/components/calling/SplitModal.jsx'
 import SmsModal from '@/components/calling/SmsModal.jsx'
 import { CALL_STATUS_COLORS } from '@/lib/callingStatusColors.js'
@@ -23,8 +24,6 @@ const STATUS_ICONS = {
 import { buildSmsTemplate } from '@/lib/buildSmsTemplate.js'
 import { CATEGORY_LABELS, CATEGORY_COLORS } from '@/../config/callingCategories.js'
 
-const MODERATOR_ROLES = ['Admin', 'เลขาธิการ', 'Moderator']
-const SMS_ROLES = ['Admin', 'เลขาธิการ', 'ผู้ประสานงานภาค', 'รองเลขาธิการ', 'ผู้ประสานงานจังหวัด']
 const EDIT_STATUS_OPTIONS = [
   { value: 'answered',   label: 'รับสาย' },
   { value: 'no_answer',  label: 'ไม่รับ' },
@@ -155,9 +154,9 @@ export default function CampaignPage({ params }) {
   const [filterStatus, setFilterStatus] = useState(() => searchParams.get('status') || '')
   const [filterSms, setFilterSms] = useState(() => searchParams.get('sms') || '')
   const { data: session } = useSession()
-  const { roles: effectiveRoles, discordId: effectiveDiscordId } = useEffectiveRoles(session)
-  const isModerator = MODERATOR_ROLES.some(r => effectiveRoles.includes(r))
-  const canSendBulkSms = SMS_ROLES.some(r => effectiveRoles.includes(r))
+  const { discordId: effectiveDiscordId, access } = useEffectiveRoles(session)
+  const isModerator = can('deleteLog', access?.permissions || [])
+  const canSendBulkSms = can('sendBulkSms', access?.permissions || [])
 
   const [splitModalOpen, setSplitModalOpen] = useState(false)
   const [smsModalOpen, setSmsModalOpen] = useState(false)

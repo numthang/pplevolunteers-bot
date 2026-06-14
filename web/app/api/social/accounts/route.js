@@ -1,6 +1,7 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
 import { isAdmin, isSuperAdmin } from '@/lib/roles.js'
+import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import { getAdminGuildIds } from '@/db/guilds.js'
 import { getGuildId } from '@/lib/guildContext.js'
 import pool from '@/db/index.js'
@@ -16,7 +17,8 @@ export async function GET() {
   const session = await getServerSession(authOptions)
   if (!session) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
-  const admin    = isAdmin(session.user.roles)
+  const { access } = await getEffectiveIdentity(session)
+  const admin    = isAdmin(access)
   const superAdmin = isSuperAdmin(session.user.discordId)
   const discordId  = session.user.discordId
   const guildId    = await getGuildId(session)
@@ -58,7 +60,8 @@ export async function POST(req) {
   const session = await getServerSession(authOptions)
   if (!session) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
-  const admin      = isAdmin(session.user.roles)
+  const { access } = await getEffectiveIdentity(session)
+  const admin      = isAdmin(access)
   const superAdmin = isSuperAdmin(session.user.discordId)
 
   const body = await req.json()

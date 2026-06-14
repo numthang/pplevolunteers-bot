@@ -1,6 +1,7 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
 import { isAdmin, isSuperAdmin } from '@/lib/roles.js'
+import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import { getAdminGuildIds } from '@/db/guilds.js'
 import { getGuildId } from '@/lib/guildContext.js'
 import pool from '@/db/index.js'
@@ -10,7 +11,8 @@ const TOGGLEABLE = ['calling']
 
 async function authGuildAdmin(session, guildId) {
   if (isSuperAdmin(session.user.discordId)) return true
-  if (!isAdmin(session.user.roles)) return false
+  const { access } = await getEffectiveIdentity(session)
+  if (!isAdmin(access)) return false
   const adminGuildIds = await getAdminGuildIds(session.user.discordId)
   return adminGuildIds.includes(guildId)
 }

@@ -1,46 +1,21 @@
-// roles มาจาก dc_members.roles เป็น array ของชื่อ role เช่น ['Admin', 'ทีมเชียงใหม่', 'เหรัญญิก']
+// Permission-based role helpers — รับ access object (จาก resolveAccess / /api/me/access)
+// ไม่เช็คชื่อ Discord role ตรงๆ อีกต่อไป → guild ที่ตั้งชื่อ role ต่างกันก็ทำงานถูก
+import { normalizeAccess } from '@/lib/roleAccess.js'
 
+// platform-level — env DEV_DISCORD_IDS (ไม่ขึ้นกับ guild/role)
 export function isSuperAdmin(discordId) {
   const ids = (process.env.DEV_DISCORD_IDS || '').split(',').map(s => s.trim()).filter(Boolean)
   return ids.includes(String(discordId))
 }
 
-export function isAdmin(roles = []) {
-  return roles.includes('Admin') || roles.includes('เลขาธิการ')
+// org-level admin = admin (god-mode/technical) || secretary_general (เลขาธิการ)
+// ⚠️ ไม่รวม "เห็น private คนอื่น" — อันนั้นใช้ can('viewPrivateOther') = admin เท่านั้น
+export function isAdmin(access = {}) {
+  const p = normalizeAccess(access).permissions
+  return p.has('admin') || p.has('secretary_general')
 }
 
-export function isเหรัญญิก(roles = []) {
-  return roles.includes('เหรัญญิก')
-}
-
-export function isRegionCoordinator(roles = []) {
-  return roles.includes('ผู้ประสานงานภาค')
-}
-
-export function isProvinceCoordinator(roles = []) {
-  return roles.includes('ผู้ประสานงานจังหวัด') || roles.includes('กรรมการจังหวัด')
-}
-
-export function isEditor(roles = []) {
-  return roles.includes('ทีมบรรณาธิการ') || roles.includes('บรรณาธิการ')
-}
-
-export function canEditFinance(roles = []) {
-  return isAdmin(roles) || isเหรัญญิก(roles)
-}
-
-export function canEditAccount(roles = [], account) {
-  if (isAdmin(roles)) return true
-  if (!isเหรัญญิก(roles)) return false
-  if (account.visibility === 'private') return false
-  return true
-}
-
-export function canViewAccount(roles = [], account, discordId) {
-  if (account.visibility === 'public') return true
-  if (account.owner_id === discordId) return true
-  if (account.visibility === 'internal') {
-    return isAdmin(roles) || isRegionCoordinator(roles) || isProvinceCoordinator(roles) || isเหรัญญิก(roles)
-  }
-  return false
+export function isEditor(access = {}) {
+  const p = normalizeAccess(access).permissions
+  return p.has('editor')
 }

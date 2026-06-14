@@ -10,6 +10,7 @@ import { Pencil, Trash2, ImagePlus, X, ChevronDown, Copy, Check } from 'lucide-r
 import BankBadge from '@/components/BankBadge'
 import { canEditAccount } from '@/lib/financeAccess.js'
 import { useEffectiveRoles } from '@/lib/useEffectiveRoles.js'
+import { can } from '@/lib/permissions.js'
 
 const MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.']
 
@@ -17,7 +18,7 @@ function TransactionsContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const { data: session } = useSession()
-  const { roles: effectiveRoles, discordId: effectiveDiscordId, access: effectiveAccess } = useEffectiveRoles(session)
+  const { discordId: effectiveDiscordId, access: effectiveAccess } = useEffectiveRoles(session)
 
   const [txns, setTxns]         = useState([])
   const [accounts, setAccounts] = useState([])
@@ -226,7 +227,29 @@ function TransactionsContent() {
       body: JSON.stringify(form),
     })
     if (!res.ok) return alert('ไม่มีสิทธิ์บันทึกรายการในบัญชีนี้')
-    close(); load()
+    if (isNew) {
+      close(); load()
+    } else {
+      // update in-place เพื่อ preserve scroll position
+      const cat = categories.find(c => c.id === Number(form.category_id))
+      setTxns(prev => prev.map(t => t.id === editing.id ? {
+        ...t,
+        amount: form.amount,
+        type: form.type,
+        description: form.description || null,
+        category_id: form.category_id ? Number(form.category_id) : null,
+        category_name: cat?.name || null,
+        category_icon: cat?.icon || null,
+        txn_at: form.txn_at,
+        counterpart_name: form.counterpart_name || null,
+        counterpart_bank: form.counterpart_bank || null,
+        counterpart_account: form.counterpart_account || null,
+        evidence_url: form.evidence_url || null,
+      } : t))
+      close()
+      fetchBalance()
+      fetchFunds()
+    }
   }
 
   async function remove(id) {
@@ -252,7 +275,7 @@ function TransactionsContent() {
     <div>
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-bold">รายการธุรกรรม</h1>
-        {['เหรัญญิก','กรรมการจังหวัด','ผู้ประสานงานจังหวัด','Admin','เลขาธิการ'].some(r => effectiveRoles.includes(r)) && (
+        {can('editProvinceAccount', effectiveAccess?.permissions || []) && (
           <button onClick={openNew} className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-indigo-700">
             + เพิ่มรายการ
           </button>

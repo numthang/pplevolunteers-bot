@@ -1,13 +1,15 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
 import { isAdmin, isSuperAdmin } from '@/lib/roles.js'
+import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import { getGuilds, getAdminGuildIds } from '@/db/guilds.js'
 
 export async function GET() {
   const session = await getServerSession(authOptions)
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const admin = isAdmin(session.user.roles)
+  const { access } = await getEffectiveIdentity(session)
+  const admin = isAdmin(access)
   const superAdmin = isSuperAdmin(session.user.discordId)
   if (!admin && !superAdmin) return Response.json({ error: 'Forbidden' }, { status: 403 })
 

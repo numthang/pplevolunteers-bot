@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import { useEffectiveRoles } from '@/lib/useEffectiveRoles.js'
+import { can } from '@/lib/permissions.js'
 import { CALL_STATUS_COLORS } from '@/lib/callingStatusColors.js'
 import { SIGNALS, SIGNAL_OPTIONS, findSignalLabel } from '@/lib/callingSignals.js'
 import SmsModal from '@/components/calling/SmsModal.jsx'
@@ -22,7 +23,6 @@ const STATUS_ICONS = {
   sms_failed:    { Icon: AlertTriangle, color: '#a32d2d' },
 }
 
-const MODERATOR_ROLES = ['Admin', 'เลขาธิการ', 'Moderator']
 
 const CALL_STATUS_OPTIONS = [
   { value: 'answered',   label: 'รับสาย', icon: '📞', color: '#0d9e94', bg: '#e1f5f4' },
@@ -169,8 +169,8 @@ function formatEventDate(dateStr) {
 
 export default function RecordCallModal({ isOpen, member, contact_type = 'member', onClose, onSave, onSaveAndNext, hasNext, onStarChange, onFlagChange }) {
   const { data: session } = useSession()
-  const { roles: effectiveRoles, discordId: effectiveDiscordId } = useEffectiveRoles(session)
-  const isModerator = MODERATOR_ROLES.some(r => effectiveRoles.includes(r))
+  const { discordId: effectiveDiscordId, access } = useEffectiveRoles(session)
+  const isModerator = can('deleteLog', access?.permissions || [])
 
   const [smsModalOpen, setSmsModalOpen] = useState(false)
   const [status, setStatus] = useState('')

@@ -4,7 +4,7 @@ import { getAccountSummary } from '@/db/finance/transactions.js'
 import { canViewAccount, canEditAccount } from '@/lib/financeAccess.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import { getGuildId } from '@/lib/guildContext.js'
-import { isAdmin } from '@/lib/roles.js'
+import { can } from '@/lib/permissions.js'
 import Link from 'next/link'
 import AccountCard from '@/components/finance/AccountCard'
 import AddAccountButton from '@/components/finance/AddAccountButton'
@@ -20,9 +20,9 @@ function fmt(n) {
 }
 export default async function FinancePage() {
   const session = await requireAuth()
-  const { roles, discordId, access } = await getEffectiveIdentity(session)
+  const { discordId, access } = await getEffectiveIdentity(session)
   const GUILD_ID = await getGuildId(session)
-  const raw = await getAccountsAll(GUILD_ID, discordId, roles.includes('Admin'))
+  const raw = await getAccountsAll(GUILD_ID, discordId, can('viewPrivateOther', access.permissions))
   const accounts = raw.filter(a => canViewAccount(a, discordId, access))
 
   const summaries = await Promise.all(

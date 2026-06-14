@@ -1,6 +1,7 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
 import { isAdmin } from '@/lib/roles.js'
+import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import pool from '@/db/index.js'
 
 const REDIRECT_URI = `${process.env.NEXTAUTH_URL || 'https://pplevolunteers.org'}/api/meta/oauth/callback`
@@ -22,9 +23,9 @@ async function getGuildMetaApp(guildId) {
 
 export async function GET(req) {
   const session = await getServerSession(authOptions)
-  if (!session || !isAdmin(session.user.roles)) {
-    return Response.json({ error: 'Forbidden' }, { status: 403 })
-  }
+  if (!session) return Response.json({ error: 'Forbidden' }, { status: 403 })
+  const { access } = await getEffectiveIdentity(session)
+  if (!isAdmin(access)) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
   const { searchParams } = new URL(req.url)
   const guildId = searchParams.get('guild_id')

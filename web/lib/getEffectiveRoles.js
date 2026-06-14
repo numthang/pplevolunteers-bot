@@ -23,11 +23,9 @@ export async function getEffectiveIdentity(session) {
   return { roles, discordId, access }
 }
 
-/** identity layer เดิม (อ่าน roles จาก DB + จัดการ debug/view-as-role) — แยกออกเพื่อ resolve access ครั้งเดียว */
-async function resolveIdentity(session, guildId) {
+/** อ่าน roles จริง (DB-fresh, bypass JWT cache) — ไม่ผ่าน debug/view-as-role */
+async function getRealRoles(session, guildId) {
   const realDiscordId = session?.user?.discordId || null
-
-  // Always read fresh roles from DB (bypass JWT cache)
   let realRoles = session?.user?.roles || []
   if (realDiscordId) {
     try {
@@ -40,8 +38,26 @@ async function resolveIdentity(session, guildId) {
       }
     } catch {}
   }
+  return { realRoles, realDiscordId }
+}
 
-  if (!isAdmin(realRoles)) return { roles: realRoles, discordId: realDiscordId }
+/**
+ * access จริง (ไม่ผ่าน debug) — ใช้กับ gate ที่ต้องเช็คตัวตนจริง เช่น "ใครเปิด view-as-role ได้"
+ * (getEffectiveIdentity คืน access ของ role ที่ถูก impersonate ซึ่งผิดสำหรับ gate พวกนี้)
+ */
+export async function getRealAccess(session) {
+  const guildId = await getGuildId(session)
+  const { realRoles } = await getRealRoles(session, guildId)
+  return resolveAccess(guildId, realRoles)
+}
+
+/** identity layer เดิม (อ่าน roles จาก DB + จัดการ debug/view-as-role) — แยกออกเพื่อ resolve access ครั้งเดียว */
+async function resolveIdentity(session, guildId) {
+  const { realRoles, realDiscordId } = await getRealRoles(session, guildId)
+
+  // เฉพาะ admin จริงเท่านั้นที่ debug/view-as-role ได้ — เช็คด้วย real access (ไม่ใช่ effective)
+  const realAccess = await resolveAccess(guildId, realRoles)
+  if (!isAdmin(realAccess)) return { roles: realRoles, discordId: realDiscordId }
 
   const cookieStore = await cookies()
 

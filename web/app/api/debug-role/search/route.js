@@ -1,12 +1,13 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
 import { isAdmin } from '@/lib/roles.js'
+import { getRealAccess } from '@/lib/getEffectiveRoles.js'
 import { getGuildId } from '@/lib/guildContext.js'
 import pool from '@/db/index.js'
 
 export async function GET(req) {
   const session = await getServerSession(authOptions)
-  if (!session || !isAdmin(session.user.roles)) {
+  if (!session || !isAdmin(await getRealAccess(session))) {
     return Response.json({ error: 'Forbidden' }, { status: 403 })
   }
 

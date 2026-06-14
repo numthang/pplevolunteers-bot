@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { useEffectiveRoles } from '@/lib/useEffectiveRoles.js'
+import { can } from '@/lib/permissions.js'
 import {
   Utensils, Car, Package, Building2, Newspaper, Banknote, CreditCard,
   PartyPopper, BookOpen, Zap, Droplets, Smartphone, ShoppingCart,
@@ -12,7 +13,6 @@ import {
   Pencil, Trash2, Check, X,
 } from 'lucide-react'
 
-const GLOBAL_EDITORS = ['Admin', 'เลขาธิการ', 'Moderator']
 
 const ICONS = [
   { name: 'Utensils',       Icon: Utensils },
@@ -97,7 +97,7 @@ function IconPicker({ value, onChange }) {
 
 export default function CategoriesPage() {
   const { data: session } = useSession()
-  const { roles: effectiveRoles, discordId: effectiveDiscordId } = useEffectiveRoles(session)
+  const { discordId: effectiveDiscordId, access } = useEffectiveRoles(session)
   const [cats, setCats]               = useState([])
   const [input, setInput]             = useState('')
   const [inputIcon, setInputIcon]     = useState('Folder')
@@ -107,7 +107,7 @@ export default function CategoriesPage() {
   const [editIcon, setEditIcon]       = useState('Folder')
   const [editGlobal, setEditGlobal]   = useState(false)
 
-  const canEditGlobal = GLOBAL_EDITORS.some(r => effectiveRoles.includes(r))
+  const canEditGlobal = can('editGlobalCategory', access?.permissions || [])
 
   function canEdit(c) {
     return c.is_global ? canEditGlobal : c.owner_id === effectiveDiscordId
