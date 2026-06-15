@@ -1,7 +1,7 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
-import { getUserScope, isAdmin } from '@/lib/callingAccess.js'
+import { getUserScope, isAdmin, canSeeContacts } from '@/lib/callingAccess.js'
 import { getContactsInCampaign, getContactsInCampaignStats } from '@/db/calling/contacts.js'
 
 export async function GET(req) {
@@ -18,8 +18,9 @@ export async function GET(req) {
 
   try {
     const { access }  = await getEffectiveIdentity(session)
-    const userScope  = getUserScope(access, session.user.primary_province)
+    const userScope   = getUserScope(access)
     const isUserAdmin = isAdmin(access)
+    const showContacts = canSeeContacts(access)
 
     if (!isUserAdmin && Array.isArray(userScope) && userScope.length === 0) {
       return Response.json({ success: true, data: [], hasMore: false, noAccess: true })
@@ -42,17 +43,17 @@ export async function GET(req) {
       sms:        searchParams.get('sms')        || null,
     }
 
-    const rows = await getContactsInCampaign(campaignId, filters, limit, offset)
+    let rows = await getContactsInCampaign(campaignId, filters, limit, offset)
 
-    // scope filter — contacts by province
-    const filtered = (isUserAdmin || !userScope)
-      ? rows
-      : rows.filter(c => !c.province || userScope.includes(c.province))
+    if (!showContacts) {
+      rows = rows.map(({ phone, line_id, email, ...rest }) => rest)
+    }
 
     return Response.json({
       success: true,
-      data: filtered,
-      hasMore: filtered.length === limit,
+      data: rows,
+      contacts_hidden: !showContacts,
+      hasMore: rows.length === limit,
       limit,
       offset,
     })

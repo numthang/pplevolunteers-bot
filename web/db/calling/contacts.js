@@ -107,7 +107,7 @@ export async function getContactsInCampaign(campaignId, filters = {}, limit = 10
      ON a.campaign_id = cc.id AND a.member_id = c.id::text AND a.contact_type = 'contact'
    LEFT JOIN calling_logs l
      ON l.campaign_id = cc.id AND l.member_id = c.id::text AND l.contact_type = 'contact'
-   WHERE cc.id = $2 AND cc.type = 'campaign'`
+   WHERE cc.id = $2 AND cc.type = 'campaign' AND (cc.province IS NULL OR c.province = cc.province)`
 
   if (amphoe) { params.push(amphoe); query += ` AND c.amphoe = $${params.length}` }
   if (name)   { params.push(`%${name}%`); query += ` AND (c.first_name || ' ' || COALESCE(c.last_name, '')) ILIKE $${params.length}` }
@@ -172,7 +172,7 @@ export async function getContactsInCampaignStats(campaignId, provinces = null) {
       sql: `${selectClause}
             FROM act_event_cache cc
             JOIN calling_contacts c ON c.guild_id = $1
-            WHERE cc.id = $2 AND cc.type = 'campaign' ${scope}
+            WHERE cc.id = $2 AND cc.type = 'campaign' AND (cc.province IS NULL OR c.province = cc.province) ${scope}
             ${groupOrderClause}`,
       params: p,
     }
@@ -189,7 +189,7 @@ export async function getContactsInCampaignStats(campaignId, provinces = null) {
           JOIN calling_contacts c ON c.guild_id = $1
           JOIN calling_assignments a
             ON a.campaign_id = cc.id AND a.member_id = c.id::text AND a.contact_type = 'contact'
-          WHERE cc.id = $2 AND cc.type = 'campaign'${hasProvinces ? ` AND (c.province IS NULL OR c.province = ANY($3))` : ''}
+          WHERE cc.id = $2 AND cc.type = 'campaign' AND (cc.province IS NULL OR c.province = cc.province)${hasProvinces ? ` AND (c.province IS NULL OR c.province = ANY($3))` : ''}
           GROUP BY a.assigned_to`,
     params: hasProvinces ? [process.env.GUILD_ID, campaignId, provinces] : [process.env.GUILD_ID, campaignId],
   }
@@ -208,7 +208,7 @@ export async function getContactsInCampaignStats(campaignId, provinces = null) {
        FROM calling_logs WHERE campaign_id = $2 AND contact_type = 'contact'
        GROUP BY member_id
      ) lc ON lc.member_id = c.id::text
-     WHERE cc.id = $3 AND cc.type = 'campaign'${hasProvinces ? ` AND (c.province IS NULL OR c.province = ANY($4))` : ''}`
+     WHERE cc.id = $3 AND cc.type = 'campaign' AND (cc.province IS NULL OR c.province = cc.province)${hasProvinces ? ` AND (c.province IS NULL OR c.province = ANY($4))` : ''}`
 
   const mainParams = hasProvinces
     ? [process.env.GUILD_ID, campaignId, campaignId, provinces]

@@ -12,11 +12,9 @@ import { getCampaigns } from '@/db/calling/campaigns.js'
 async function getTotalCallStats() {
   const { rows } = await pool.query(
     `SELECT
-       COUNT(*) FILTER (WHERE l.status IN ('answered','no_answer','met')) AS total,
-       COUNT(*) FILTER (WHERE l.status IN ('answered','met')) AS answered
-     FROM calling_logs l
-     JOIN act_event_cache ec ON ec.id = l.campaign_id
-     WHERE ec.event_date IS NULL OR ec.event_date >= CURRENT_DATE - INTERVAL '7 days'`
+       COUNT(*) FILTER (WHERE status IN ('answered','no_answer','met')) AS total,
+       COUNT(*) FILTER (WHERE status IN ('answered','met')) AS answered
+     FROM calling_logs`
   )
   const total = Number(rows[0]?.total) || 0
   const answered = Number(rows[0]?.answered) || 0
