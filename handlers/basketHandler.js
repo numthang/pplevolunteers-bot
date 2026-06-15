@@ -333,7 +333,7 @@ async function buildBasketPayload(basket, guildId, channelId, userId, channelNam
             new StringSelectMenuOptionBuilder().setLabel('ไม่มีลายน้ำ').setValue('none').setDefault(currentWm === 'none'),
             ...wmFiles.map(f => {
               const opt = new StringSelectMenuOptionBuilder()
-                .setLabel(stripExt(f))
+                .setLabel(`ลายน้ำ ${stripExt(f)}`)
                 .setValue(`${prefix}:${f}`)
                 .setDefault(currentWm === `${prefix}:${f}`);
               if (isPersonal) opt.setEmoji('🔒');

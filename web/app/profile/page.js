@@ -198,7 +198,7 @@ export default function ProfilePage() {
               </div>
             ))}
 
-            {provinceOptions.length > 1 && (
+            {provinceOptions.length > 0 && (
               <div>
                 <label className="block text-base font-medium text-warm-500 dark:text-disc-text mb-1">
                   จังหวัดหลัก (Primary Province)

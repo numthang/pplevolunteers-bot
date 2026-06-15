@@ -434,9 +434,7 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
                     {/* User info */}
                     <div className="border-t border-warm-200 dark:border-disc-border my-1" />
                     <a
-                      href={`https://discord.com/users/${session.user.discordId}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                      href="/profile"
                       onClick={() => setMenuOpen(false)}
                       className="flex items-center gap-3 px-4 py-2.5 hover:bg-warm-100 dark:hover:bg-disc-hover transition"
                     >

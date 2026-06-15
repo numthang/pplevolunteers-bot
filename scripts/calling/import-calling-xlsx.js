@@ -18,6 +18,7 @@
 
 'use strict';
 
+require('dotenv').config();
 const XLSX = require('xlsx');
 const fs   = require('fs');
 const path = require('path');
@@ -318,7 +319,7 @@ function main() {
   const sql = generateSQL(result);
 
   const ts  = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-  const out = path.join(__dirname, `../../backups/calling/calling-import-${PROVINCE_NAME}-${ts}.sql`);
+  const out = path.join(__dirname, `../../backups/calling/calling-log-${PROVINCE_NAME}-${ts}.sql`);
   fs.mkdirSync(path.dirname(out), { recursive: true });
   fs.writeFileSync(out, sql, 'utf8');
 

@@ -1,4 +1,6 @@
-Fixed
+PENDING
+- ทำระบบ import contact
+- finance บัญชี ตอนนี้ ให้แสดงตาม guild นั้น ตอนนี้ มีบัญชีของ ราชบุรี ไปโผล่ใน อาสาประชาชน
 - http://localhost:3000/bot/platforms หน้านี้ เวลาคนทั่วไปจะเพิ่ม social platform ให้ตัวเองทำไง หน้านี้ ทุกคนต้องใส่ค่าได้ ยกเว้น app credentials ระดับ guild ต้องเป็น admin province_coordinator district_coordinator (จะไม่พูดถึง superadmin นะ อันนี้ bypass ทุกสถานการณ์) ตรวจสอบตรงนี้ดีๆ หน่อย ผมก็ชักจะงงว่า permission ควรเป็นแบบไหนกันแน่
 
 End of the Day

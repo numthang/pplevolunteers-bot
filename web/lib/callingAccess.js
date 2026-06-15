@@ -33,7 +33,7 @@ export function isProvincialCoordinator(access = {}) {
  * Get user's scope (provinces they can access)
  * Returns: ['ราชบุรี', ...] หรือ null ถ้า admin (ทุกจังหวัด)
  */
-export function getUserScope(access = {}, primaryProvince = null) {
+export function getUserScope(access = {}) {
   const { permissions = new Set(), scopeGrants = [] } = normalizeAccess(access)
 
   // Admin → all provinces
@@ -46,17 +46,10 @@ export function getUserScope(access = {}, primaryProvince = null) {
     return provinces.size > 0 ? Array.from(provinces) : []
   }
 
-  // ทีมจังหวัด → จังหวัดเดียว
-  const teamProvinces = scopeGrants
+  // ทีมจังหวัด → ทุกจังหวัดที่ติดยศ
+  return scopeGrants
     .filter(g => g.startsWith('province:'))
     .map(g => g.slice('province:'.length))
-  if (teamProvinces.length === 0) return []
-
-  // Use primaryProvince เฉพาะถ้าเป็นจังหวัดของ user จริง (กัน debug/view-as-role)
-  if (primaryProvince && teamProvinces.includes(primaryProvince)) return [primaryProvince]
-
-  // Fallback: จังหวัดแรก
-  return [teamProvinces[0]]
 }
 
 /**

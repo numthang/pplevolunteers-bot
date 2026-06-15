@@ -38,7 +38,7 @@ export async function GET() {
   } catch {}
 
   const row = rows[0] || {}
-  const provinceOptions = [...new Set(
+  const roleProvinces = [...new Set(
     (row.roles || '').split(',')
       .map(r => {
         r = r.trim()
@@ -49,6 +49,7 @@ export async function GET() {
       })
       .filter(p => PROVINCE_LIST.includes(p))
   )]
+  const provinceOptions = roleProvinces.length > 0 ? roleProvinces : PROVINCE_LIST
 
   return Response.json({ ...row, guild_id: guildId, guild, province_options: provinceOptions })
 }

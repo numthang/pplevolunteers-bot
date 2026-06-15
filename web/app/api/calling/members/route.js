@@ -1,6 +1,6 @@
 import { getServerSession } from 'next-auth'
 import * as memberDB from '@/db/calling/members.js'
-import { canAccessMember, getUserScope, isAdmin, canSeeContacts } from '@/lib/callingAccess.js'
+import { canAccessMember, getUserScope, isAdmin, isRegionalCoordinator, canSeeContacts } from '@/lib/callingAccess.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import { getGuildId } from '@/lib/guildContext.js'
 import { authOptions } from '@/lib/auth-options.js'
@@ -42,7 +42,7 @@ export async function GET(req) {
   try {
     const { access } = await getEffectiveIdentity(session)
     const guildId = await getGuildId(session)
-    const userScope = getUserScope(access, session.user.primary_province)
+    const userScope = getUserScope(access)
     const isUserAdmin = isAdmin(access)
 
     // Stats-only request
@@ -81,6 +81,18 @@ export async function GET(req) {
     const showContacts = canSeeContacts(access)
     if (!showContacts) {
       rows = rows.map(({ mobile_number, line_id, ...rest }) => rest)
+    } else if (!isUserAdmin && !isRegionalCoordinator(access)) {
+      // province/district coordinator: contacts scoped to primary_province only
+      const contactProvince = session.user.primary_province
+      if (!contactProvince) {
+        rows = rows.map(({ mobile_number, line_id, ...rest }) => rest)
+      } else {
+        rows = rows.map(m => {
+          if (m.home_province === contactProvince) return m
+          const { mobile_number, line_id, ...rest } = m
+          return rest
+        })
+      }
     }
 
     return Response.json({

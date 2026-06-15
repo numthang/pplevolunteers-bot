@@ -11,7 +11,7 @@ export default async function CallingPage() {
   if (!session) redirect('/')
 
   const { access } = await getEffectiveIdentity(session)
-  const userScope = getUserScope(access, session.user.primary_province)
+  const userScope = getUserScope(access)
   const isUserAdmin = isAdmin(access)
   const canCreate = canCreateCampaign(access)
 
