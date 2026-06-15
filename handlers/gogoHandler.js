@@ -85,6 +85,8 @@ function buildFieldValue(entries) {
   for (const [userId, names] of groups.entries()) {
     const hasExtras = names.some(Boolean);
     const emptyCount = names.filter(n => !n).length;
+    // ลงชื่อให้คนอื่นอย่างเดียว (ไม่มี self-entry) → ไม่แสดง mention
+    if (emptyCount === 0 && hasExtras) continue;
     const partCount = hasExtras ? emptyCount : (emptyCount || 1);
     const part = hasExtras
       ? `<@${userId}> [🔗](https://discord.com/users/${userId})`

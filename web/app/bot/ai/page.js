@@ -3,6 +3,8 @@ import { useEffect, useState, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { Check, Loader2, Plus, Trash2, ChevronUp, ChevronDown, Cpu, Sparkles } from 'lucide-react'
+import { useEffectiveRoles } from '@/lib/useEffectiveRoles.js'
+import { isEditor } from '@/lib/roles.js'
 
 const INPUT_CLS =
   'w-full px-3 py-2 text-base rounded-lg border border-warm-200 dark:border-disc-border ' +
@@ -263,6 +265,7 @@ function ModesSection() {
 
 export default function AiConfigPage() {
   const { data: session, status } = useSession()
+  const { access } = useEffectiveRoles(session)
   const router = useRouter()
 
   useEffect(() => {
@@ -274,8 +277,7 @@ export default function AiConfigPage() {
   }
 
   const superAdmin = session.user.isSuperAdmin
-  const roles = session.user.roles || []
-  const editor = roles.includes('ทีมบรรณาธิการ') || roles.includes('บรรณาธิการ')
+  const editor = isEditor(access)
 
   if (!superAdmin && !editor) {
     return <p className="text-sm text-warm-500 dark:text-disc-muted">ต้องเป็น Superadmin หรือ ทีมบรรณาธิการ ถึงจะตั้งค่า AI ได้</p>

@@ -7,11 +7,17 @@ export async function getGuilds() {
   return rows
 }
 
+// guild ที่ user ถือ role ซึ่ง map เป็น permission admin/secretary_general (permission-based, multi-tenant)
+// match ชื่อ role ใน dc_members.roles กับ dc_guild_roles.role_name ต่อ guild → ไม่ผูกชื่อ 'Admin'/'เลขาธิการ' ตายตัว
 export async function getAdminGuildIds(discordId) {
   const { rows } = await pool.query(
-    `SELECT guild_id FROM dc_members
-     WHERE discord_id = $1
-       AND (',' || roles || ',' LIKE '%,Admin,%' OR ',' || roles || ',' LIKE '%,เลขาธิการ,%')`,
+    `SELECT DISTINCT m.guild_id
+     FROM dc_members m
+     JOIN dc_guild_roles r
+       ON r.guild_id = m.guild_id
+      AND (',' || m.roles || ',') LIKE ('%,' || r.role_name || ',%')
+     WHERE m.discord_id = $1
+       AND r.permission IN ('admin', 'secretary_general')`,
     [discordId]
   )
   return rows.map(r => r.guild_id)

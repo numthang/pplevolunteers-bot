@@ -76,6 +76,13 @@
     - **calling/admin logs:** `calling/logs` → `can('deleteLog')` · `admin/logs` route+page → `can('viewServerLogs')`
     - **client:** Nav (link `capability:` + `userIsAdmin=realAdmin`), platforms, categories, contacts, assignee, assignments, RecordCallModal, transactions → `can()`/`isAdmin(access)` ผ่าน `useEffectiveRoles` (access เริ่ม null = fail-closed)
     - **คงไว้โดยตั้งใจ:** `useEffectiveRoles.js:19` (optimistic debug-combo read ฝั่ง client — authoritative gate ย้ายไป server `getRealAccess` แล้ว) · `lib/debugCombos.js` (debug fixture data ไม่ใช่ gate)
+    - **follow-up (2026-06-14):** `db/guilds.js getAdminGuildIds` เคยหลุด (อยู่ใน `db/` grep ไม่โดน) ยัง name-check `Admin`/`เลขาธิการ` → แก้เป็น JOIN `dc_guild_roles` หา permission `admin`/`secretary_general` (multi-tenant) · parity ผ่าน: อาสาประชาชน admin ครบ, ราชบุรีไม่มี admin ทั้ง 2 query, 6 pair ที่ต่างอยู่ใน guild ไม่ register (benign) · bot/ai page เลิก name-check `ทีมบรรณาธิการ` → `isEditor(access)`
+
+12. ✅ **view-as-role effective ทุกหน้า/ทุก role (2026-06-14):** เดิม effective แค่ finance/calling — แก้ให้ครบ
+    - **กัน trap ก่อน:** `DebugRoleButton`/`DebugRoleBanner` โผล่จาก cookie `active` อย่างเดียว (ไม่ผูก `isAdmin`) → ออกจาก debug ได้เสมอแม้ view เป็น role ที่ไม่ใช่ admin
+    - **Nav `userIsAdmin`** เปลี่ยน `realAdmin` → `isAdmin(access)` (effective) → เมนู admin/adminOnly สะท้อน view-as-role · superAdmin (env) ยังเป็น escape hatch (preview-as-lower ไม่ได้ = by design)
+    - **กระทบเฉพาะ debug session** — user ปกติ effective==real ไม่มี regression · combo ใหม่ตาม use case (เพิ่ม Moderator, ตัดตัวซ้ำ regional/district) ใน `debugCombos.js`
+    - **ยังไม่ effective โดยตั้งใจ:** assignee (key personal discordId), stats (ไม่ filter scope — security gate งานแยก PENDING §RBAC line 55-56)
 
 ### Deferred (RBAC) — ทำตอนต้องใช้
 - **registerHandler province part** — ✅ ย้าย DB แล้ว (`getRolesByScopePrefix`)

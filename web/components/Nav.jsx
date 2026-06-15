@@ -8,6 +8,7 @@ import { useTheme } from './Providers.jsx'
 import { DebugRoleButton, DebugRoleBanner } from './DebugRoleBanner.jsx'
 import { useEffectiveRoles } from '@/lib/useEffectiveRoles.js'
 import { can } from '@/lib/permissions.js'
+import { isAdmin } from '@/lib/roles.js'
 
 function Ic({ d, className = 'w-4 h-4 shrink-0' }) {
   return (
@@ -42,28 +43,28 @@ const ICONS = {
 }
 
 const FINANCE_LINKS = [
-  { href: '/finance',               label: 'ภาพรวม',    icon: 'overview', exact: true },
-  { href: '/finance/transactions',  label: 'รายการ',    icon: 'transactions' },
-  { href: '/finance/categories',    label: 'หมวดหมู่',  icon: 'categories' },
-  { href: '/finance/report',        label: 'รายงาน',    icon: 'report' },
+  { href: '/finance',               label: 'Overview',    icon: 'overview', exact: true },
+  { href: '/finance/transactions',  label: 'Transactions', icon: 'transactions' },
+  { href: '/finance/categories',    label: 'Categories',  icon: 'categories' },
+  { href: '/finance/report',        label: 'Report',      icon: 'report' },
 ]
 
 const CALLING_LINKS = [
-  { href: '/calling',           label: 'Dashboard',  icon: 'overview', exact: true },
+  { href: '/calling',           label: 'Dashboard',  icon: 'overview',  exact: true },
   { href: '/calling/campaigns', label: 'Campaigns',  icon: 'campaigns' },
-  { href: '/calling/contacts',  label: 'Contacts',   icon: 'contacts' },
   { href: '/calling/assignee',  label: 'Assignee',   icon: 'pending' },
-  { href: '/calling/stats',     label: 'Statistics', icon: 'report' },
+  { href: '/calling/contacts',  label: 'Contacts',   icon: 'contacts',  hamburgerOnly: true },
+  { href: '/calling/stats',     label: 'Statistics', icon: 'report',    hamburgerOnly: true },
 ]
 
 const DISCORD_LINKS = [
-  { href: '/bot/media/basket',     label: 'Basket',      icon: 'media',    mediaGroup: true },
-  { href: '/bot/media/quote',      label: 'Quote',       icon: 'quote',    mediaGroup: true },
-  { href: '/bot/media/watermark',  label: 'ลายน้ำ',     icon: 'droplet',  mediaGroup: true },
-  { href: '/bot/platforms',        label: 'แพลตฟอร์ม',  icon: 'social',   menuOnly: true },
-  { href: '/bot/features',         label: 'ฟีเจอร์',    icon: 'overview', menuOnly: true, adminOnly: true },
-  { href: '/bot/roles',            label: 'สิทธิ์ Role', icon: 'logs',    menuOnly: true, adminOnly: true },
-  { href: '/bot/ai',               label: 'AI',          icon: 'ai',       menuOnly: true },
+  { href: '/bot/media/basket',     label: 'Basket',    icon: 'media',    mediaGroup: true },
+  { href: '/bot/media/quote',      label: 'Quote',     icon: 'quote',    mediaGroup: true },
+  { href: '/bot/media/watermark',  label: 'Watermark', icon: 'droplet',  mediaGroup: true },
+  { href: '/bot/platforms',        label: 'Platforms', icon: 'social',   menuOnly: true },
+  { href: '/bot/features',         label: 'Features',  icon: 'overview', menuOnly: true, adminOnly: true },
+  { href: '/bot/roles',            label: 'Roles',     icon: 'logs',     menuOnly: true, adminOnly: true },
+  { href: '/bot/ai',               label: 'AI',        icon: 'ai',       menuOnly: true },
 ]
 
 const SOCIAL_LINKS = [
@@ -137,10 +138,12 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
 
   const activeCampaign = campaigns.find(c => c.id === activeCampaignId)
 
-  const { access, realAdmin } = useEffectiveRoles(session)
+  const { access } = useEffectiveRoles(session)
 
   const featureOn = (f) => !f || enabledFeatures.includes(f)
-  const userIsAdmin = realAdmin || (session?.user?.isSuperAdmin ?? false)
+  // effective access → เมนู admin สะท้อน view-as-role ด้วย (debug ทุก role ทุกหน้า)
+  // exit ไม่ติดกับเพราะ DebugRoleButton/Banner โผล่จาก cookie active ไม่ผูก isAdmin
+  const userIsAdmin = isAdmin(access) || (session?.user?.isSuperAdmin ?? false)
 
   const visibleLinks = links.filter(l => {
     if (!featureOn(l.feature)) return false
@@ -150,7 +153,7 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
     return true
   })
   const mediaLinks = visibleLinks.filter(l => l.mediaGroup)
-  const topLinks   = visibleLinks.filter(l => !l.menuOnly && !l.mediaGroup)
+  const topLinks   = visibleLinks.filter(l => !l.menuOnly && !l.hamburgerOnly && !l.mediaGroup)
   const menuLinks  = visibleLinks
 
   const visibleApps = APPS.filter(a => featureOn(a.feature))
@@ -237,7 +240,7 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
                 }`}
               >
                 <Ic d={ICONS.quote} className="w-7 h-7 shrink-0" />
-                <span className="hidden md:inline">สื่อ</span>
+                <span className="hidden md:inline">Media</span>
                 <svg className={`w-3 h-3 transition-transform hidden md:block ${mediaOpen ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.17l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
                 </svg>

@@ -98,7 +98,8 @@ export function DebugRoleButton({ isAdmin }) {
   const { label, active, setCombo, setMember, clear } = useDebugState()
   const [open, setOpen] = useState(false)
 
-  if (!isAdmin) return null
+  // active = อยู่ใน debug mode → โชว์ปุ่มเสมอ (ต่อให้ effective role ไม่ใช่ admin) เพื่อให้กดออกได้
+  if (!isAdmin && !active) return null
 
   return (
     <div className="relative">
@@ -162,7 +163,8 @@ export function DebugRoleButton({ isAdmin }) {
 export function DebugRoleBanner({ isAdmin }) {
   const { label, active, clear, debugDiscordId, debugDiscordRoles, debugRole } = useDebugState()
 
-  if (!isAdmin || !active) return null
+  // โชว์เมื่ออยู่ใน debug mode เสมอ — ไม่ผูก isAdmin เพื่อให้ออกจาก debug ได้แม้ effective role ไม่ใช่ admin
+  if (!active) return null
 
   // roles string: impersonate mode → from cookie, combo mode → from DEBUG_COMBOS
   const rolesDisplay = debugDiscordRoles
