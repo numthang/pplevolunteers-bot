@@ -1,6 +1,7 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
 import { isSuperAdmin } from '@/lib/roles.js'
+import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import pool from '@/db/index.js'
 
 // AI agent config = global infrastructure (ค่าย/โมเดลที่ใช้ทั้งระบบ) → superadmin เท่านั้น
@@ -12,7 +13,8 @@ const DEFAULT_MODEL = { claude: 'claude-haiku-4-5-20251001', gemini: 'gemini-2.0
 async function authAdmin() {
   const session = await getServerSession(authOptions)
   if (!session) return { error: 'Unauthorized', status: 401 }
-  if (!isSuperAdmin(session.user.discordId)) return { error: 'Forbidden', status: 403 }
+  const { discordId } = await getEffectiveIdentity(session)  // null ตอน debug → super off
+  if (!isSuperAdmin(discordId)) return { error: 'Forbidden', status: 403 }
   return { ok: true }
 }
 

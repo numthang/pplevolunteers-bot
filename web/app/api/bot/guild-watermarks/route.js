@@ -1,6 +1,7 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
 import { isSuperAdmin } from '@/lib/roles.js'
+import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import { getAdminGuildIds, getGuilds } from '@/db/guilds.js'
 import { getGuildId } from '@/lib/guildContext.js'
 import pool from '@/db/index.js'
@@ -34,8 +35,10 @@ async function authGuild(guildId) {
   const session = await getServerSession(authOptions)
   if (!session) return { error: 'Unauthorized', status: 401 }
   if (!SNOWFLAKE.test(guildId || '')) return { error: 'invalid guild_id', status: 400 }
-  if (isSuperAdmin(session.user.discordId)) return { ok: true }
-  const adminGuildIds = await getAdminGuildIds(session.user.discordId)
+  // effective discordId เป็น null ตอน debug → super/adminGuild bypass ปิด ตาม debug role
+  const { discordId } = await getEffectiveIdentity(session)
+  if (isSuperAdmin(discordId)) return { ok: true }
+  const adminGuildIds = await getAdminGuildIds(discordId)
   if (!adminGuildIds.includes(guildId)) return { error: 'Forbidden', status: 403 }
   return { ok: true }
 }
@@ -65,12 +68,13 @@ export async function GET(req) {
     const session = await getServerSession(authOptions)
     if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
     const currentGuildId = await getGuildId(session)
+    const { discordId: effDiscordId } = await getEffectiveIdentity(session)
     // superadmin เห็นทุก guild, admin เห็นเฉพาะ guild ที่ตัวเองมี role Admin
-    if (isSuperAdmin(session.user.discordId)) {
+    if (isSuperAdmin(effDiscordId)) {
       const all = await getGuilds()
       return Response.json({ currentGuildId, guilds: all.map(g => ({ guild_id: g.guild_id, name: g.name })) })
     }
-    const ids = await getAdminGuildIds(session.user.discordId)
+    const ids = await getAdminGuildIds(effDiscordId)
     const all = ids.length ? await getGuilds() : []
     const nameById = Object.fromEntries(all.map(g => [g.guild_id, g.name]))
     return Response.json({ currentGuildId, guilds: ids.map(id => ({ guild_id: id, name: nameById[id] || id })) })

@@ -11,7 +11,7 @@ import { DEBUG_COMBOS } from './debugCombos.js'
 export function useEffectiveRoles(session) {
   const realRoles = session?.user?.roles || []
   const realDiscordId = session?.user?.discordId || null
-  const [state, setState] = useState({ roles: realRoles, discordId: realDiscordId, access: null, realAdmin: false })
+  const [state, setState] = useState({ roles: realRoles, discordId: realDiscordId, access: null, realAdmin: false, superAdmin: false })
 
   useEffect(() => {
     // roles/discordId — sync, debug-aware
@@ -28,7 +28,7 @@ export function useEffectiveRoles(session) {
     let cancelled = false
     fetch('/api/me/access')
       .then(r => (r.ok ? r.json() : null))
-      .then(data => { if (!cancelled && data) setState(s => ({ ...s, access: data.access, realAdmin: !!data.realAdmin })) })
+      .then(data => { if (!cancelled && data) setState(s => ({ ...s, access: data.access, realAdmin: !!data.realAdmin, superAdmin: !!data.superAdmin })) })
       .catch(() => {})
     return () => { cancelled = true }
   }, [session])

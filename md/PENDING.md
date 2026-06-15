@@ -94,6 +94,19 @@
 > **สถานะ 2026-06-11 (v2.11.0):** step 7 (web RBAC DB-wiring) + step 8 (ลบ config/roles.js) เสร็จ · v2.11.0 push origin/master แล้ว (step 8) · **step 7 ยังไม่ commit/deploy** (อยู่ใน working tree) · **bot + web roles อ่านจาก DB หมดแล้ว** — runtime ไม่มี hardcode policy เหลือ (mirror ลบแล้ว) · **เหลือ blocker tenant ใหม่:** step 9 (UI ตั้ง policy) + step 10 (web ยัง pin GUILD_ID) · ค้างฝั่ง user: สร้าง role "เลขาธิการ" ใน Discord (ดู step 7)
 > **prod deploy:** ✅ **deploy แล้ว 2026-06-11** (v2.11.0) — RBAC step 1–8 live · rollback: `git reset --hard 22fae83`
 
+### 🚀 HANDOFF (session ถัดไป) — สถานะ 2026-06-14
+**กลไก multi-tenant พร้อมหมดแล้ว เหลือ 2 อย่าง:**
+
+**A. Deploy batch ที่ค้าง** (step 10-12 + guild switcher + basket list + client guild-switched listeners — ทั้งหมดอยู่ใน working tree ยังไม่ deploy):
+1. รัน migration บน prod DB: `channel_name` (dc_media_baskets) + `is_managed` (dc_guild_roles) — อยู่ใน `scripts/migration/migration.sql`
+2. deploy code (`sudo -u www npm run build` + `pm2 restart pple-web` + restart bot)
+3. รัน backfill ครั้งเดียว: `sudo -u www bash -c 'cd /www/wwwroot/pple-volunteers && node scripts/backfillBasketNames.js'` → เสร็จแล้วลบ script ได้
+4. เทสบน prod: guild switcher, view-as-role, basket list
+
+**B. Step 9 — UI per-guild role config (กอง B, ยังไม่เริ่ม)** = blocker ตัวเดียวที่เหลือของการเปิด guild ที่ 2 · `/scrutinize` ก่อน · อ่าน memory `project_role_config_plan.md` + step 9 ด้านบน · หน้า admin ตั้ง permission/scope_node/picker_group/parent_role_id ต่อ role ต่อ guild (แทนการแก้ DB มือ)
+
+**✅ แก้แล้ว (2026-06-14):** view-as-role effective บน bot/* สำหรับ superAdmin ด้วย — gate bot/* + social เปลี่ยนเป็น `isSuperAdmin(effDiscordId)` + `getAdminGuildIds(effDiscordId)` (effective discordId = null ตอน debug → super off ตาม role) · personal data (quote/watermark/social private) ยังใช้ real discordId · เพิ่ม `effectiveSuperAdmin` ใน `/api/me/access` (หน้า ai) · เพิ่ม combo `Admin` · ปุ่ม exit "กลับ Admin"→"กลับเป็นตัวเอง" · admin/guilds (guild switcher) ปล่อย real ตั้งใจ · test 171 + build ผ่าน
+
 ---
 
 ## 🗄️ Database / Infrastructure

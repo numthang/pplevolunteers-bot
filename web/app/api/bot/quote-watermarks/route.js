@@ -1,6 +1,7 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
 import { isSuperAdmin } from '@/lib/roles.js'
+import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import { getAdminGuildIds } from '@/db/guilds.js'
 import { existsSync, readdirSync } from 'fs'
 import { join } from 'path'
@@ -41,19 +42,20 @@ export async function GET(req) {
   const { searchParams } = new URL(req.url)
   const scope    = searchParams.get('scope')
   const guildId  = searchParams.get('guild_id')
-  const discordId = session.user.discordId
+  const realDiscordId = session.user.discordId               // personal files = ของจริงเสมอ
+  const { discordId: effDiscordId } = await getEffectiveIdentity(session)  // gate = effective
 
   let files = []
   let prefix = 'guild'
 
   if (scope === 'personal') {
     prefix = 'personal'
-    files = listFilesRec(join(ASSETS_DIR, `user_${discordId}`))
+    files = listFilesRec(join(ASSETS_DIR, `user_${realDiscordId}`))
   } else if (scope === 'guild') {
     if (!SNOWFLAKE.test(guildId || '')) return Response.json({ error: 'invalid guild_id' }, { status: 400 })
-    const superAdmin = isSuperAdmin(discordId)
+    const superAdmin = isSuperAdmin(effDiscordId)
     if (!superAdmin) {
-      const adminGuildIds = await getAdminGuildIds(discordId)
+      const adminGuildIds = await getAdminGuildIds(effDiscordId)
       if (!adminGuildIds.includes(guildId)) return Response.json({ error: 'Forbidden' }, { status: 403 })
     }
     // guild default = ไฟล์ flat ของ guild เท่านั้น (ไม่ลง subfolder ตาม group)
@@ -62,7 +64,7 @@ export async function GET(req) {
     const guildDir = join(ASSETS_DIR, guildId)
     files = listTopLevel(existsSync(guildDir) ? guildDir : ASSETS_DIR)
   } else if (scope === 'global') {
-    if (!isSuperAdmin(discordId)) return Response.json({ error: 'Forbidden' }, { status: 403 })
+    if (!isSuperAdmin(effDiscordId)) return Response.json({ error: 'Forbidden' }, { status: 403 })
     files = listTopLevel(ASSETS_DIR)
   } else {
     return Response.json({ error: 'invalid scope' }, { status: 400 })

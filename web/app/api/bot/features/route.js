@@ -10,10 +10,11 @@ import pool from '@/db/index.js'
 const TOGGLEABLE = ['calling']
 
 async function authGuildAdmin(session, guildId) {
-  if (isSuperAdmin(session.user.discordId)) return true
-  const { access } = await getEffectiveIdentity(session)
+  // effective discordId เป็น null ตอน view-as-role → super/adminGuild bypass ปิด ตาม debug role
+  const { access, discordId } = await getEffectiveIdentity(session)
+  if (isSuperAdmin(discordId)) return true
   if (!isAdmin(access)) return false
-  const adminGuildIds = await getAdminGuildIds(session.user.discordId)
+  const adminGuildIds = await getAdminGuildIds(discordId)
   return adminGuildIds.includes(guildId)
 }
 

@@ -149,7 +149,7 @@ export function DebugRoleButton({ isAdmin }) {
                   onClick={() => { clear(); setOpen(false) }}
                   className="w-full text-left px-3 py-2 text-sm text-red-500 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-disc-header"
                 >
-                  ยกเลิก / กลับ Admin
+                  ยกเลิก / กลับเป็นตัวเอง
                 </button>
               </>
             )}

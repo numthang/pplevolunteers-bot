@@ -1,7 +1,7 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
 import { getEffectiveIdentity, getRealAccess } from '@/lib/getEffectiveRoles.js'
-import { isAdmin } from '@/lib/roles.js'
+import { isAdmin, isSuperAdmin } from '@/lib/roles.js'
 
 /**
  * GET /api/me/access — access ของผู้ใช้ปัจจุบัน (debug-aware) สำหรับ client
@@ -15,10 +15,13 @@ export async function GET() {
 
   const { roles, discordId, access } = await getEffectiveIdentity(session)
   const realAdmin = isAdmin(await getRealAccess(session))
+  // effective discordId เป็น null ตอน debug combo → isSuperAdmin(null)=false → debug หลุด super
+  const superAdmin = isSuperAdmin(discordId)
   return Response.json({
     roles,
     discordId,
     realAdmin,
+    superAdmin,
     access: {
       isMember: access.isMember,
       permissions: Array.from(access.permissions),

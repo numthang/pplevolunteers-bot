@@ -265,7 +265,7 @@ function ModesSection() {
 
 export default function AiConfigPage() {
   const { data: session, status } = useSession()
-  const { access } = useEffectiveRoles(session)
+  const { access, superAdmin } = useEffectiveRoles(session)
   const router = useRouter()
 
   useEffect(() => {
@@ -276,7 +276,6 @@ export default function AiConfigPage() {
     return <p className="text-warm-500 dark:text-disc-muted text-sm">กำลังโหลด...</p>
   }
 
-  const superAdmin = session.user.isSuperAdmin
   const editor = isEditor(access)
 
   if (!superAdmin && !editor) {

@@ -44,9 +44,9 @@ export async function GET() {
   const session = await getServerSession(authOptions)
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const discordId  = session.user.discordId
-  const superAdmin = isSuperAdmin(discordId)
-  const { access } = await getEffectiveIdentity(session)
+  const realDiscordId = session.user.discordId               // personal config = ของจริงเสมอ
+  const { access, discordId: effDiscordId } = await getEffectiveIdentity(session)  // gate = effective (debug-aware)
+  const superAdmin = isSuperAdmin(effDiscordId)
 
   // superadmin เห็นทุก guild, admin เห็นเฉพาะ guild ที่ตัวเองมี role Admin
   const allGuilds = await getGuilds()
@@ -54,11 +54,11 @@ export async function GET() {
   const adminGuildIds = superAdmin
     ? allGuilds.map(g => g.guild_id)
     : isAdmin(access)
-      ? await getAdminGuildIds(discordId)
+      ? await getAdminGuildIds(effDiscordId)
       : []
 
   const guildCfg = await readGuild(adminGuildIds)
-  const personal = await readUser(discordId)
+  const personal = await readUser(realDiscordId)
 
   const guilds = adminGuildIds.map(id => ({
     guild_id: id,
@@ -78,8 +78,9 @@ export async function PATCH(req) {
   const session = await getServerSession(authOptions)
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const discordId  = session.user.discordId
-  const superAdmin = isSuperAdmin(discordId)
+  const realDiscordId = session.user.discordId               // personal config = ของจริงเสมอ
+  const { discordId: effDiscordId } = await getEffectiveIdentity(session)  // gate = effective
+  const superAdmin = isSuperAdmin(effDiscordId)
 
   const body = await req.json()
   const { scope, guild_id, key } = body
@@ -90,12 +91,12 @@ export async function PATCH(req) {
   if (!isValidValue(key, value)) return Response.json({ error: 'invalid value' }, { status: 400 })
 
   if (scope === 'personal') {
-    return await upsertUser(discordId, key, value)
+    return await upsertUser(realDiscordId, key, value)
   }
 
   if (scope === 'guild') {
     if (!guild_id) return Response.json({ error: 'guild_id required' }, { status: 400 })
-    const adminGuildIds = await getAdminGuildIds(discordId)
+    const adminGuildIds = await getAdminGuildIds(effDiscordId)
     if (!superAdmin && !adminGuildIds.includes(guild_id)) {
       return Response.json({ error: 'Forbidden' }, { status: 403 })
     }

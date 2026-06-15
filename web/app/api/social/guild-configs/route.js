@@ -13,15 +13,15 @@ export async function GET() {
   const session = await getServerSession(authOptions)
   if (!session) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
-  const { access } = await getEffectiveIdentity(session)
+  const { access, discordId: effDiscordId } = await getEffectiveIdentity(session)
   const admin = isAdmin(access)
-  const superAdmin = isSuperAdmin(session.user.discordId)
+  const superAdmin = isSuperAdmin(effDiscordId)              // gate = effective (debug-aware)
   if (!admin && !superAdmin) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
   const guildId = await getGuildId(session)
 
   if (!superAdmin) {
-    const adminGuildIds = await getAdminGuildIds(session.user.discordId)
+    const adminGuildIds = await getAdminGuildIds(effDiscordId)
     if (!adminGuildIds.includes(guildId)) return Response.json({ guildId, guildName: null })
   }
 
@@ -42,9 +42,9 @@ export async function PATCH(req) {
   const session = await getServerSession(authOptions)
   if (!session) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
-  const { access } = await getEffectiveIdentity(session)
+  const { access, discordId: effDiscordId } = await getEffectiveIdentity(session)
   const admin = isAdmin(access)
-  const superAdmin = isSuperAdmin(session.user.discordId)
+  const superAdmin = isSuperAdmin(effDiscordId)              // gate = effective (debug-aware)
   if (!admin && !superAdmin) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
   const body = await req.json()
@@ -54,7 +54,7 @@ export async function PATCH(req) {
   if (!ALLOWED_KEYS.includes(key)) return Response.json({ error: 'invalid key' }, { status: 400 })
 
   if (!superAdmin) {
-    const adminGuildIds = await getAdminGuildIds(session.user.discordId)
+    const adminGuildIds = await getAdminGuildIds(effDiscordId)
     if (!adminGuildIds.includes(guild_id)) return Response.json({ error: 'Forbidden' }, { status: 403 })
   }
 

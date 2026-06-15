@@ -12,8 +12,8 @@ const VALUE_RE = /^[a-z0-9_]{2,50}$/ // mode key เป็น snake_case — bot
 async function authAdmin() {
   const session = await getServerSession(authOptions)
   if (!session) return { error: 'Unauthorized', status: 401 }
-  const { access } = await getEffectiveIdentity(session)
-  const ok = isSuperAdmin(session.user.discordId) || isEditor(access)
+  const { access, discordId } = await getEffectiveIdentity(session)
+  const ok = isSuperAdmin(discordId) || isEditor(access)
   if (!ok) return { error: 'Forbidden', status: 403 }
   return { ok: true }
 }

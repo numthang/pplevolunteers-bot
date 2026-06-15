@@ -17,10 +17,10 @@ export async function GET() {
   const session = await getServerSession(authOptions)
   if (!session) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
-  const { access } = await getEffectiveIdentity(session)
+  const { access, discordId: effDiscordId } = await getEffectiveIdentity(session)
   const admin    = isAdmin(access)
-  const superAdmin = isSuperAdmin(session.user.discordId)
-  const discordId  = session.user.discordId
+  const superAdmin = isSuperAdmin(effDiscordId)               // gate = effective (debug-aware)
+  const discordId  = session.user.discordId                  // private accounts = ของจริงเสมอ
   const guildId    = await getGuildId(session)
 
   let publicRows = []
@@ -28,7 +28,7 @@ export async function GET() {
 
   if (superAdmin || admin) {
     if (!superAdmin) {
-      const adminGuildIds = await getAdminGuildIds(discordId)
+      const adminGuildIds = await getAdminGuildIds(effDiscordId)
       if (!adminGuildIds.includes(guildId)) {
         // admin แต่ไม่ใช่ admin ของ guild นี้ — เห็นแค่ private ของตัวเอง
         const r = await pool.query(
@@ -60,9 +60,9 @@ export async function POST(req) {
   const session = await getServerSession(authOptions)
   if (!session) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
-  const { access } = await getEffectiveIdentity(session)
+  const { access, discordId: effDiscordId } = await getEffectiveIdentity(session)
   const admin      = isAdmin(access)
-  const superAdmin = isSuperAdmin(session.user.discordId)
+  const superAdmin = isSuperAdmin(effDiscordId)              // gate = effective (debug-aware)
 
   const body = await req.json()
   const { guild_id, name, platform, social_id, access_token, user_token, visibility = 'public' } = body
@@ -72,7 +72,7 @@ export async function POST(req) {
   }
 
   if (!superAdmin && admin) {
-    const adminGuildIds = await getAdminGuildIds(session.user.discordId)
+    const adminGuildIds = await getAdminGuildIds(effDiscordId)
     if (!adminGuildIds.includes(guild_id)) {
       return Response.json({ error: 'Forbidden' }, { status: 403 })
     }
