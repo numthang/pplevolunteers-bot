@@ -19,6 +19,18 @@ function Ic({ d, className = 'w-4 h-4 shrink-0' }) {
   )
 }
 
+function GuildIcon({ guild, className = 'w-7 h-7' }) {
+  if (guild?.icon_url) {
+    return <Image src={guild.icon_url} alt={guild.name} width={28} height={28} className={`${className} rounded-full object-cover shrink-0`} />
+  }
+  const abbr = guild?.name?.split(/\s+/).map(w => w[0]).slice(0, 2).join('') || '?'
+  return (
+    <span className={`${className} rounded-full bg-teal/20 text-teal flex items-center justify-center text-xs font-bold shrink-0 select-none`}>
+      {abbr}
+    </span>
+  )
+}
+
 const ICONS = {
   overview:     'M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z',
   transactions: 'M5.25 3.75A2.25 2.25 0 003 6v12a2.25 2.25 0 002.25 2.25h13.5A2.25 2.25 0 0021 18V6a2.25 2.25 0 00-2.25-2.25H5.25zM3.75 9a.75.75 0 000 1.5h13.5a.75.75 0 000-1.5H3.75zm0 3a.75.75 0 000 1.5h13.5a.75.75 0 000-1.5H3.75zM8.25 15a1.5 1.5 0 110-3 1.5 1.5 0 010 3z',
@@ -138,12 +150,13 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
 
   const activeCampaign = campaigns.find(c => c.id === activeCampaignId)
 
-  const { access } = useEffectiveRoles(session)
+  const { access, superAdmin } = useEffectiveRoles(session)
 
   const featureOn = (f) => !f || enabledFeatures.includes(f)
-  // effective access → เมนู admin สะท้อน view-as-role ด้วย (debug ทุก role ทุกหน้า)
+  // effective access + effective superAdmin → เมนู admin สะท้อน view-as-role (debug ทุก role ทุกหน้า)
+  // ใช้ effective superAdmin (จาก /api/me/access) ไม่ใช่ session.user.isSuperAdmin (real) ไม่งั้น debug ไม่ซ่อนเมนู
   // exit ไม่ติดกับเพราะ DebugRoleButton/Banner โผล่จาก cookie active ไม่ผูก isAdmin
-  const userIsAdmin = isAdmin(access) || (session?.user?.isSuperAdmin ?? false)
+  const userIsAdmin = isAdmin(access) || superAdmin
 
   const visibleLinks = links.filter(l => {
     if (!featureOn(l.feature)) return false
@@ -185,20 +198,22 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
         {/* Guild Switcher */}
         <div className="relative shrink-0">
           <div className="flex items-center gap-1">
-            <Link href="/" className="hover:opacity-80 transition shrink-0">
-              <Image src="/logo.png" alt="PPLE" width={40} height={40} />
-            </Link>
-            {session && currentGuild && (
+            {session && currentGuild ? (
               <button
                 onClick={() => canSwitchGuild && setGuildOpen(o => !o)}
                 disabled={!canSwitchGuild}
-                className="hidden md:flex items-center gap-1.5 hover:opacity-80 transition disabled:cursor-default"
+                className="flex items-center gap-1.5 hover:opacity-80 transition disabled:cursor-default"
               >
-                <span className="font-bold text-base text-teal dark:text-teal truncate max-w-[180px]">
+                <GuildIcon guild={currentGuild} className="w-8 h-8" />
+                <span className="hidden md:block font-bold text-base text-teal dark:text-teal truncate max-w-[180px]">
                   {currentGuild.name}
                 </span>
-                {canSwitchGuild && <span className="text-warm-400 dark:text-disc-muted text-xs">▾</span>}
+                {canSwitchGuild && <span className="hidden md:block text-warm-400 dark:text-disc-muted text-xs">▾</span>}
               </button>
+            ) : (
+              <Link href="/" className="hover:opacity-80 transition shrink-0">
+                <Image src="/logo.png" alt="PPLE" width={40} height={40} />
+              </Link>
             )}
           </div>
 
@@ -210,12 +225,13 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
                   <button
                     key={g.guild_id}
                     onClick={() => switchGuild(g.guild_id)}
-                    className={`w-full text-left flex items-center gap-2 px-4 py-2 text-sm transition ${
+                    className={`w-full text-left flex items-center gap-2.5 px-4 py-2 text-sm transition ${
                       g.guild_id === currentGuildId
                         ? 'bg-teal/10 dark:bg-teal/10 text-teal dark:text-teal font-medium'
                         : 'text-warm-900 dark:text-disc-muted hover:bg-warm-100 dark:hover:bg-disc-hover'
                     }`}
                   >
+                    <GuildIcon guild={g} className="w-6 h-6" />
                     <span className="truncate">{g.name}</span>
                     {g.guild_id === currentGuildId && <span className="ml-auto text-teal shrink-0">✓</span>}
                   </button>
@@ -444,12 +460,13 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
                           <button
                             key={g.guild_id}
                             onClick={() => { setMenuOpen(false); switchGuild(g.guild_id) }}
-                            className={`w-full text-left flex items-center gap-2 px-4 py-2.5 text-base transition ${
+                            className={`w-full text-left flex items-center gap-2.5 px-4 py-2.5 text-base transition ${
                               g.guild_id === currentGuildId
                                 ? 'text-teal dark:text-teal font-medium bg-teal/10 dark:bg-teal/10'
                                 : 'text-warm-900 dark:text-disc-text hover:bg-warm-100 dark:hover:bg-disc-hover'
                             }`}
                           >
+                            <GuildIcon guild={g} className="w-6 h-6" />
                             <span className="truncate">{g.name}</span>
                             {g.guild_id === currentGuildId && <span className="ml-auto text-teal shrink-0">✓</span>}
                           </button>

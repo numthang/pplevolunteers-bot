@@ -46,6 +46,7 @@ export const CAPABILITIES = {
   // ── Bot / Social ──
   manageSocial:        ['admin'],
   manageGuildConfig:   ['admin'],
+  manageBasket:        ['admin', 'secretary_general', 'editor'],   // ตะกร้าสื่อ — ทีมสื่อ + admin
 
   // ── Admin ──
   viewServerLogs:      ['admin', 'moderator'],   // เดิม ['Admin','Moderator']

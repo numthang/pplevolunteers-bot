@@ -3,7 +3,7 @@ import { authOptions } from '@/lib/auth-options.js'
 import { getGuildId } from '@/lib/guildContext.js'
 import pool from '@/db/index.js'
 
-// GET /api/bot/baskets — รายการตะกร้าทั้งหมดใน guild ปัจจุบัน
+// GET /api/bot/baskets — รายการตะกร้าทั้งหมดใน guild ปัจจุบัน (ดูได้ทุก member, scope ด้วย guild)
 export async function GET() {
   const session = await getServerSession(authOptions)
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })

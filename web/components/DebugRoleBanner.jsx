@@ -182,7 +182,7 @@ export function DebugRoleBanner({ isAdmin }) {
         )}
       </span>
       <button onClick={clear} className="underline hover:no-underline shrink-0">
-        กลับ Admin
+        กลับเป็นตัวเอง
       </button>
     </div>
   )

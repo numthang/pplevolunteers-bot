@@ -2,7 +2,7 @@ import pool from './index.js'
 
 export async function getGuilds() {
   const { rows } = await pool.query(
-    `SELECT guild_id, name FROM dc_guilds ORDER BY name ASC`
+    `SELECT guild_id, name, icon_url FROM dc_guilds ORDER BY name ASC`
   )
   return rows
 }
@@ -32,7 +32,7 @@ export async function getUserGuilds(discordId, { all = false } = {}) {
   if (all) return getGuilds()
   if (!discordId) return []
   const { rows } = await pool.query(
-    `SELECT g.guild_id, g.name
+    `SELECT g.guild_id, g.name, g.icon_url
      FROM dc_members m
      JOIN dc_guilds g ON g.guild_id = m.guild_id
      WHERE m.discord_id = $1

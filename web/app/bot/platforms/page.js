@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Trash2, RefreshCw, Globe, Lock, AlertTriangle, X, Plus, Settings, Check } from 'lucide-react'
+import { Trash2, RefreshCw, Globe, Lock, AlertTriangle, X, Settings, Check } from 'lucide-react'
 import { isAdmin } from '@/lib/roles.js'
 import { useEffectiveRoles } from '@/lib/useEffectiveRoles.js'
 
@@ -30,8 +30,6 @@ function TokenExpiry({ expiresAt }) {
   )
   return <span className="text-xs text-green-600 dark:text-green-400">Token อีก {days} วัน</span>
 }
-
-const EMPTY_X_FORM = { name: '', handle: '', access_token: '', access_token_secret: '' }
 
 function AccountRow({ acc, accounts, onToggleVisibility, onSetGroup, onRemove, deleting }) {
   return (
@@ -109,14 +107,10 @@ export default function SocialAccountsPage() {
   const [savingConfig, setSavingConfig] = useState(false)
   const [loading, setLoading]   = useState(true)
   const [deleting, setDeleting] = useState(null)
-  const [xModal, setXModal]     = useState(null)
-  const [xForm, setXForm]       = useState(EMPTY_X_FORM)
-  const [xSaving, setXSaving]   = useState(false)
   const [banner, setBanner]     = useState(null)
 
-  const { access }  = useEffectiveRoles(session)
+  const { access, superAdmin } = useEffectiveRoles(session)  // effective — สะท้อน view-as-role
   const admin      = isAdmin(access)
-  const superAdmin = session?.user?.isSuperAdmin ?? false
 
   const load = useCallback(async () => {
     const [accRes, cfgRes] = await Promise.all([
@@ -153,13 +147,6 @@ export default function SocialAccountsPage() {
     window.addEventListener('keydown', h)
     return () => window.removeEventListener('keydown', h)
   }, [editConfig])
-
-  useEffect(() => {
-    if (!xModal) return
-    const h = e => { if (e.key === 'Escape') setXModal(null) }
-    window.addEventListener('keydown', h)
-    return () => window.removeEventListener('keydown', h)
-  }, [xModal])
 
   async function saveConfig() {
     if (!editConfig) return
@@ -203,30 +190,6 @@ export default function SocialAccountsPage() {
     setDeleting(null)
   }
 
-  async function saveX(e) {
-    e.preventDefault()
-    const { name, handle, access_token, access_token_secret } = xForm
-    if (!handle || !access_token || !access_token_secret) return
-    setXSaving(true)
-    const res = await fetch('/api/social/accounts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        guild_id: cfg?.guildId,
-        platform: 'x',
-        social_id: handle.replace(/^@/, ''),
-        name: name || handle,
-        access_token: JSON.stringify({ access_token, access_token_secret }),
-      }),
-    })
-    if (res.ok) {
-      await load()
-      setXModal(null)
-      setXForm(EMPTY_X_FORM)
-    }
-    setXSaving(false)
-  }
-
   if (status === 'loading' || loading) {
     return <p className="text-warm-500 dark:text-disc-muted text-sm">กำลังโหลด...</p>
   }
@@ -262,24 +225,16 @@ export default function SocialAccountsPage() {
                 {guildName}
               </h2>
               <div className="flex items-center gap-2 flex-wrap">
-                <button
-                  onClick={() => { setXModal({ guildId }); setXForm(EMPTY_X_FORM) }}
-                  disabled={!hasX}
-                  title={hasX ? '' : 'ตั้งค่า X Consumer Key/Secret ก่อน'}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black text-white text-sm hover:opacity-80 transition disabled:opacity-30 disabled:cursor-not-allowed"
-                >
-                  <Plus size={14} /> X (Guild)
-                </button>
                 {hasX ? (
                   <a
                     href={`/api/x/oauth/start?guild_id=${guildId}&visibility=private`}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-700 text-white text-sm hover:opacity-80 transition"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black text-white text-sm hover:opacity-80 transition"
                   >
-                    <Lock size={14} /> X (ส่วนตัว)
+                    <Globe size={14} /> Connect X
                   </a>
                 ) : (
-                  <button disabled title="ตั้งค่า X Consumer Key/Secret ก่อน" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-700 text-white text-sm opacity-30 cursor-not-allowed">
-                    <Lock size={14} /> X (ส่วนตัว)
+                  <button disabled title="ตั้งค่า X Consumer Key/Secret ก่อน" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black text-white text-sm opacity-30 cursor-not-allowed">
+                    <Globe size={14} /> Connect X
                   </button>
                 )}
                 {hasMeta ? (
@@ -394,46 +349,6 @@ export default function SocialAccountsPage() {
         </div>
       )}
 
-      {/* Add X modal */}
-      {xModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4" onClick={() => setXModal(null)}>
-          <div className="bg-white dark:bg-disc-bg2 rounded-2xl shadow-xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-base font-bold text-gray-900 dark:text-disc-text">เพิ่ม X (Twitter) Account</h2>
-              <button onClick={() => setXModal(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-disc-text"><X size={18} /></button>
-            </div>
-            <form onSubmit={saveX} className="flex flex-col gap-3">
-              {[
-                { key: 'name',                label: 'ชื่อที่แสดง',    placeholder: 'เช่น Peoples Volunteers X', required: false },
-                { key: 'handle',              label: 'X Handle',       placeholder: '@pple_volunteers',          required: true  },
-                { key: 'access_token',        label: 'Access Token',   placeholder: '',                          required: true  },
-                { key: 'access_token_secret', label: 'Access Token Secret', placeholder: '',                     required: true  },
-              ].map(({ key, label, placeholder, required }) => (
-                <div key={key}>
-                  <label className="block text-xs font-medium text-gray-700 dark:text-disc-text mb-1">
-                    {label}{required && <span className="text-red-500 ml-0.5">*</span>}
-                  </label>
-                  <input
-                    type={['access_token', 'access_token_secret'].includes(key) ? 'password' : 'text'}
-                    value={xForm[key]}
-                    onChange={e => setXForm(prev => ({ ...prev, [key]: e.target.value }))}
-                    placeholder={placeholder}
-                    required={required}
-                    className="w-full px-3 py-2 text-sm rounded-lg border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-gray-900 dark:text-disc-text placeholder-gray-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-white/30"
-                  />
-                </div>
-              ))}
-              <p className="text-xs text-gray-400 dark:text-disc-muted mt-1">ดู credentials ได้ที่ X Developer Portal → Your App → Keys and Tokens</p>
-              <div className="flex justify-end gap-2 mt-2">
-                <button type="button" onClick={() => setXModal(null)} className="px-4 py-2 text-sm rounded-lg text-gray-500 dark:text-disc-muted hover:bg-gray-100 dark:hover:bg-disc-hover transition">ยกเลิก</button>
-                <button type="submit" disabled={xSaving} className="px-4 py-2 text-sm rounded-lg bg-black text-white hover:opacity-80 transition disabled:opacity-40">
-                  {xSaving ? 'กำลังบันทึก...' : 'บันทึก'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

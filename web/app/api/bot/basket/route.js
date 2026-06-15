@@ -1,16 +1,33 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
+import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
+import { getGuildId } from '@/lib/guildContext.js'
+import { can } from '@/lib/permissions.js'
+import { isSuperAdmin } from '@/lib/roles.js'
 import pool from '@/db/index.js'
 
 const SNOWFLAKE = /^\d{15,20}$/
 
-async function auth(guildId, channelId) {
+// ดู — member ใดก็ได้ของ guild ปัจจุบัน (กันข้าม guild)
+async function authView(guildId, channelId) {
   const session = await getServerSession(authOptions)
   if (!session) return { error: 'Unauthorized', status: 401 }
   if (!SNOWFLAKE.test(guildId || '') || !SNOWFLAKE.test(channelId || '')) {
     return { error: 'invalid guild_id / channel_id', status: 400 }
   }
-  return { ok: true, session }
+  const currentGuild = await getGuildId(session)
+  if (guildId !== currentGuild) return { error: 'Forbidden', status: 403 }
+  const { access, discordId } = await getEffectiveIdentity(session)
+  return { ok: true, session, access, discordId }
+}
+
+// แก้ไข (reorder/caption/ลบ) — เฉพาะทีมสื่อ (editor) หรือ admin/เลขา (superadmin bypass เมื่อไม่ได้ debug)
+async function authEdit(guildId, channelId) {
+  const a = await authView(guildId, channelId)
+  if (!a.ok) return a
+  if (isSuperAdmin(a.discordId)) return a
+  if (!can('manageBasket', a.access.permissions)) return { error: 'Forbidden', status: 403 }
+  return a
 }
 
 // parse attachment_id จาก URL path — ไม่เปลี่ยนแม้ query string หมดอายุ
@@ -47,7 +64,7 @@ export async function GET(req) {
   const { searchParams } = new URL(req.url)
   const guildId   = searchParams.get('guild')
   const channelId = searchParams.get('channel')
-  const a = await auth(guildId, channelId)
+  const a = await authView(guildId, channelId)
   if (!a.ok) return Response.json({ error: a.error }, { status: a.status })
 
   const { rows } = await pool.query(
@@ -84,7 +101,7 @@ export async function GET(req) {
 export async function PATCH(req) {
   const body = await req.json().catch(() => ({}))
   const { guild: guildId, channel: channelId, action } = body
-  const a = await auth(guildId, channelId)
+  const a = await authEdit(guildId, channelId)
   if (!a.ok) return Response.json({ error: a.error }, { status: a.status })
 
   if (action === 'reorder') {
@@ -127,7 +144,7 @@ export async function DELETE(req) {
   const guildId   = searchParams.get('guild')
   const channelId = searchParams.get('channel')
   const idParam = searchParams.get('id')
-  const a = await auth(guildId, channelId)
+  const a = await authEdit(guildId, channelId)
   if (!a.ok) return Response.json({ error: a.error }, { status: a.status })
 
   const id = Number(idParam)

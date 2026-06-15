@@ -82,10 +82,11 @@ export default function CreateCampaignPage() {
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
             <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-disc-text">
-              Campaign ID <span className="font-normal text-gray-400">(ไม่ระบุ = อัตโนมัติ)</span>
+              Campaign ID <span className="font-normal text-gray-400">(ใช้ ACT ID — ไม่ระบุ = อัตโนมัติ)</span>
             </label>
             <input type="number" value={campaignId} onChange={e => setCampaignId(e.target.value)}
-              placeholder="เช่น 1234" className={inputCls} min="1" />
+              placeholder="ACT ID เช่น 1234" className={inputCls} min="1" />
+            <p className="mt-1.5 text-sm text-gray-400 dark:text-disc-muted">ID เช่น 160456 คัดลอกจาก ACT URL — ใช้สำหรับการ sync ระบบในภายหลัง</p>
           </div>
 
           <div>

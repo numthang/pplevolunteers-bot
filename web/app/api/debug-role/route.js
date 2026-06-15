@@ -1,14 +1,21 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
 import { cookies } from 'next/headers'
-import { isAdmin } from '@/lib/roles.js'
+import { isAdmin, isSuperAdmin } from '@/lib/roles.js'
 import { getRealAccess } from '@/lib/getEffectiveRoles.js'
 
 const COOKIE_OPTS = { httpOnly: false, sameSite: 'lax', path: '/', maxAge: 60 * 60 * 8 }
 
+// ใครเปิด/ปิด debug ได้: superadmin (env, ทุก guild) หรือ admin จริงของ guild ปัจจุบัน
+// superadmin escape สำคัญ — กันค้างเมื่อ view guild ที่ตัวเองไม่ได้เป็น role-admin
+async function canDebug(session) {
+  if (isSuperAdmin(session.user.discordId)) return true
+  return isAdmin(await getRealAccess(session))
+}
+
 export async function POST(req) {
   const session = await getServerSession(authOptions)
-  if (!session || !isAdmin(await getRealAccess(session))) {
+  if (!session || !(await canDebug(session))) {
     return Response.json({ error: 'Forbidden' }, { status: 403 })
   }
 
@@ -34,7 +41,7 @@ export async function POST(req) {
 
 export async function DELETE() {
   const session = await getServerSession(authOptions)
-  if (!session || !isAdmin(await getRealAccess(session))) {
+  if (!session || !(await canDebug(session))) {
     return Response.json({ error: 'Forbidden' }, { status: 403 })
   }
 

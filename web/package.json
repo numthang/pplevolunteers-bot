@@ -14,6 +14,7 @@
     "lucide-react": "^1.8.0",
     "next": "15.5.14",
     "next-auth": "^4.24.10",
+    "nextjs-toploader": "^3.9.17",
     "pg": "^8.21.0",
     "postcss": "^8.4.0",
     "qrcode.react": "^4.2.0",

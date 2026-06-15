@@ -1,4 +1,5 @@
 import './globals.css'
+import NextTopLoader from 'nextjs-toploader'
 import { getSession } from '@/lib/auth.js'
 import { getUserGuilds, getEnabledFeatures } from '@/db/guilds.js'
 import { getGuildId } from '@/lib/guildContext.js'
@@ -35,6 +36,7 @@ export default async function RootLayout({ children }) {
     <html lang="th">
       <body className="bg-gray-100 dark:bg-disc-bg2 text-gray-900 dark:text-disc-text min-h-screen">
         <Providers session={session}>
+          <NextTopLoader color="#ff6a13" showSpinner={false} />
           <Nav session={session} guilds={guilds} currentGuildId={currentGuildId} enabledFeatures={enabledFeatures} />
           <main className="max-w-5xl mx-auto px-3 sm:px-4 pt-3 pb-6">
             {noGuild ? <NoGuildNotice /> : children}

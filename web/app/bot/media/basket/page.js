@@ -2,6 +2,8 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { useEffectiveRoles } from '@/lib/useEffectiveRoles.js'
+import { can } from '@/lib/permissions.js'
 import { ChevronLeft, ChevronRight, Trash2, X, Check, Loader2, ImageOff, ArrowLeft, Pencil, ShoppingBasket } from 'lucide-react'
 
 // ─── List view — แสดงตะกร้าทั้งหมดใน guild ───────────────────────────────────
@@ -113,7 +115,9 @@ function BasketRow({ basket, guildId }) {
 // ─── Detail view — ตะกร้าของ channel นั้น (เดิม) ─────────────────────────────
 
 function BasketDetail({ guild, channel, chName }) {
-  const { status } = useSession()
+  const { data: session, status } = useSession()
+  const { access, superAdmin } = useEffectiveRoles(session)
+  const canManage = superAdmin || can('manageBasket', access?.permissions || [])
   const router = useRouter()
 
   const [images, setImages]   = useState([])
@@ -272,7 +276,7 @@ function BasketDetail({ guild, channel, chName }) {
                 {images.map((im, i) => (
                   <div
                     key={im.id}
-                    draggable
+                    draggable={canManage}
                     onDragStart={() => onDragStart(i, im.id)}
                     onDragEnter={() => onDragEnterCell(i)}
                     onDragOver={e => e.preventDefault()}
@@ -286,20 +290,24 @@ function BasketDetail({ guild, channel, chName }) {
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={im.url} alt={`รูป ${i + 1}`} className="w-full h-full object-cover" />
                     <span className="absolute top-2 left-2 w-6 h-6 flex items-center justify-center rounded-full bg-black/60 text-white text-xs font-bold">{i + 1}</span>
-                    <button onClick={() => removeImage(im.id)} title="ลบรูปนี้"
-                      className="absolute top-2 right-2 w-7 h-7 flex items-center justify-center rounded-full bg-black/60 text-white hover:bg-red-500 transition">
-                      <X size={15} />
-                    </button>
-                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5 opacity-90">
-                      <button onClick={() => move(i, -1)} disabled={i === 0}
-                        className="w-7 h-7 flex items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80 disabled:opacity-30 transition">
-                        <ChevronLeft size={16} />
+                    {canManage && (
+                      <button onClick={() => removeImage(im.id)} title="ลบรูปนี้"
+                        className="absolute top-2 right-2 w-7 h-7 flex items-center justify-center rounded-full bg-black/60 text-white hover:bg-red-500 transition">
+                        <X size={15} />
                       </button>
-                      <button onClick={() => move(i, 1)} disabled={i === images.length - 1}
-                        className="w-7 h-7 flex items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80 disabled:opacity-30 transition">
-                        <ChevronRight size={16} />
-                      </button>
-                    </div>
+                    )}
+                    {canManage && (
+                      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5 opacity-90">
+                        <button onClick={() => move(i, -1)} disabled={i === 0}
+                          className="w-7 h-7 flex items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80 disabled:opacity-30 transition">
+                          <ChevronLeft size={16} />
+                        </button>
+                        <button onClick={() => move(i, 1)} disabled={i === images.length - 1}
+                          className="w-7 h-7 flex items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80 disabled:opacity-30 transition">
+                          <ChevronRight size={16} />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -316,10 +324,12 @@ function BasketDetail({ guild, channel, chName }) {
                   <div key={v.id} className="flex items-center gap-3 bg-card-bg rounded-xl border border-warm-200 dark:border-disc-border p-2">
                     <span className="shrink-0">🎬</span>
                     <span className="flex-1 min-w-0 text-xs text-gray-400 dark:text-disc-muted font-mono truncate">{v.url}</span>
-                    <button onClick={() => removeVideo(v.id)}
-                      className="shrink-0 w-7 h-7 flex items-center justify-center rounded-full text-gray-400 hover:bg-red-100 hover:text-red-500 dark:hover:bg-red-900/30 dark:hover:text-red-400 transition">
-                      <X size={15} />
-                    </button>
+                    {canManage && (
+                      <button onClick={() => removeVideo(v.id)}
+                        className="shrink-0 w-7 h-7 flex items-center justify-center rounded-full text-gray-400 hover:bg-red-100 hover:text-red-500 dark:hover:bg-red-900/30 dark:hover:text-red-400 transition">
+                        <X size={15} />
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
@@ -333,15 +343,18 @@ function BasketDetail({ guild, channel, chName }) {
               value={caption}
               onChange={e => { setCaption(e.target.value); autoGrow(e.target) }}
               rows={3}
-              placeholder="ใส่ caption..."
-              className="w-full px-3 py-2 text-base rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-gray-900 dark:text-disc-text placeholder-gray-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-teal resize-none overflow-hidden"
+              readOnly={!canManage}
+              placeholder={canManage ? 'ใส่ caption...' : ''}
+              className="w-full px-3 py-2 text-base rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-gray-900 dark:text-disc-text placeholder-gray-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-teal resize-none overflow-hidden read-only:opacity-70"
             />
             <div className="flex items-center gap-2 mt-2 flex-wrap">
-              <button onClick={saveCaption} disabled={savingCap}
-                className="flex items-center gap-1.5 px-4 py-2 text-sm rounded-lg bg-orange text-white hover:opacity-90 transition disabled:opacity-40">
-                {savingCap ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-                บันทึก caption
-              </button>
+              {canManage && (
+                <button onClick={saveCaption} disabled={savingCap}
+                  className="flex items-center gap-1.5 px-4 py-2 text-sm rounded-lg bg-orange text-white hover:opacity-90 transition disabled:opacity-40">
+                  {savingCap ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                  บันทึก caption
+                </button>
+              )}
               {savedCap && <span className="text-sm text-green-600 dark:text-green-400">บันทึกแล้ว</span>}
               {guild && channel && (
                 <a href={`https://discord.com/channels/${guild}/${channel}`}
@@ -352,12 +365,14 @@ function BasketDetail({ guild, channel, chName }) {
             </div>
           </div>
 
-          <div className="pt-2 border-t border-warm-200 dark:border-disc-border">
-            <button onClick={clearBasket}
-              className="flex items-center gap-1.5 px-4 py-2 text-sm rounded-lg text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition">
-              <Trash2 size={14} /> ล้างตะกร้าทั้งหมด
-            </button>
-          </div>
+          {canManage && (
+            <div className="pt-2 border-t border-warm-200 dark:border-disc-border">
+              <button onClick={clearBasket}
+                className="flex items-center gap-1.5 px-4 py-2 text-sm rounded-lg text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition">
+                <Trash2 size={14} /> ล้างตะกร้าทั้งหมด
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
