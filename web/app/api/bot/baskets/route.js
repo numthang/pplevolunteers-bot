@@ -18,9 +18,9 @@ export async function GET() {
        COUNT(*) FILTER (WHERE type = 'video') AS video_count,
        MAX(added_at) AS last_added,
        MAX(CASE WHEN type = 'caption' THEN caption END) AS caption,
-       (SELECT image_url FROM dc_media_baskets b2
-        WHERE b2.guild_id = b1.guild_id AND b2.channel_id = b1.channel_id AND b2.type = 'image'
-        ORDER BY sort_order ASC, added_at ASC LIMIT 1) AS thumbnail
+       (SELECT array_agg(image_url ORDER BY sort_order ASC, added_at ASC)
+        FROM dc_media_baskets b2
+        WHERE b2.guild_id = $1 AND b2.channel_id = b1.channel_id AND b2.type = 'image') AS thumbnails
      FROM dc_media_baskets b1
      WHERE guild_id = $1
      GROUP BY channel_id

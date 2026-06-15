@@ -65,43 +65,47 @@ function BasketList() {
 
 function BasketRow({ basket, guildId }) {
   const editUrl  = `/bot/media/basket?guild=${guildId}&channel=${basket.channel_id}&name=${encodeURIComponent(basket.channel_name || '')}`
-  const imgCount = Number(basket.image_count)
   const vidCount = Number(basket.video_count)
   const caption  = basket.caption?.trim()
   const name     = basket.channel_name || basket.channel_id
+  const thumbs   = basket.thumbnails || []
 
   return (
     <a href={editUrl}
-      className="flex items-center gap-3 bg-card-bg rounded-xl border border-warm-200 dark:border-disc-border p-3 hover:border-orange/50 dark:hover:border-orange/50 transition group">
-      {/* Thumbnail */}
-      <div className="shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-gray-100 dark:bg-disc-border flex items-center justify-center">
-        {basket.thumbnail
-          ? /* eslint-disable-next-line @next/next/no-img-element */
-            <img src={basket.thumbnail} alt="" className="w-full h-full object-cover" />
-          : <ImageOff size={20} className="text-gray-300 dark:text-disc-muted" />
-        }
-      </div>
-
-      {/* Info */}
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium text-gray-900 dark:text-disc-text truncate group-hover:text-orange transition">
+      className="block bg-card-bg rounded-xl border border-warm-200 dark:border-disc-border p-3 hover:border-orange/50 dark:hover:border-orange/50 transition group">
+      {/* Header: ชื่อ thread + วันที่ */}
+      <div className="flex items-center gap-2">
+        <p className="min-w-0 flex-1 text-sm font-medium text-gray-900 dark:text-disc-text truncate group-hover:text-orange transition">
           #{name}
         </p>
-        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-          {imgCount > 0 && <span className="text-xs text-gray-500 dark:text-disc-muted">🖼 {imgCount}</span>}
-          {vidCount > 0 && <span className="text-xs text-gray-500 dark:text-disc-muted">🎬 {vidCount}</span>}
-          {caption && (
-            <span className="text-xs text-gray-400 dark:text-disc-muted truncate max-w-[200px]">
-              "{caption.slice(0, 50)}{caption.length > 50 ? '…' : ''}"
-            </span>
-          )}
-        </div>
-        <p className="text-xs text-gray-300 dark:text-disc-muted mt-0.5">
+        <span className="shrink-0 text-xs text-gray-400 dark:text-disc-muted">
           {new Date(basket.last_added).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' })}
-        </p>
+        </span>
+        <Pencil size={14} className="shrink-0 text-gray-300 dark:text-disc-muted group-hover:text-orange transition" />
       </div>
 
-      <Pencil size={14} className="shrink-0 text-gray-300 dark:text-disc-muted group-hover:text-orange transition" />
+      {/* Thumbnails (กลาง) — แสดงทุกรูปเรียงแนวนอน */}
+      {thumbs.length > 0 ? (
+        <div className="flex gap-1.5 mt-2 overflow-x-auto pb-1">
+          {thumbs.map((url, i) => (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img key={i} src={url} alt=""
+              className="shrink-0 w-14 h-14 rounded-md object-cover border border-warm-200 dark:border-disc-border" />
+          ))}
+        </div>
+      ) : (
+        <div className="flex items-center gap-1 mt-2 text-gray-300 dark:text-disc-muted">
+          <ImageOff size={16} />
+          <span className="text-xs">{vidCount > 0 ? 'วิดีโอเท่านั้น' : 'ไม่มีรูป'}</span>
+        </div>
+      )}
+
+      {/* Caption (ล่าง, quote ตัดสั้น) */}
+      {caption && (
+        <p className="mt-2 text-xs italic text-gray-500 dark:text-disc-muted border-l-2 border-warm-200 dark:border-disc-border pl-2 truncate">
+          “{caption.slice(0, 120)}{caption.length > 120 ? '…' : ''}”
+        </p>
+      )}
     </a>
   )
 }
