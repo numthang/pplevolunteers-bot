@@ -99,26 +99,26 @@ async function handleQuoteCommand(interaction) {
 
   const wmChoices = getWatermarkChoices(interaction.guildId, interaction.user.id);
 
-  // default watermark: ค่าที่ admin/user ตั้งไว้ (personal > guild > global) ถ้าไฟล์ยังอยู่ → ใช้
-  // ไม่งั้น fallback เป็นตัวแรกใน choices (พฤติกรรมเดิม)
+  // resolve defaults จาก config (personal > guild > global)
   let defaultWatermark = wmChoices[0]?.value ?? null;
+  let defaultStyle = null;
   try {
-    const { value } = await resolveConfig(interaction.user.id, interaction.guildId, KEY_WATERMARK);
-    if (value && resolveWatermarkPath(value, interaction.guildId, interaction.user.id)) {
-      defaultWatermark = value;
-    }
-  } catch (err) {
-    console.error('[quoteHandler] resolve watermark default:', err.message);
-  }
+    const { value: wmVal } = await resolveConfig(interaction.user.id, interaction.guildId, KEY_WATERMARK);
+    if (wmVal && resolveWatermarkPath(wmVal, interaction.guildId, interaction.user.id)) defaultWatermark = wmVal;
+  } catch (err) { console.error('[quoteHandler] resolve watermark default:', err.message); }
+  try {
+    const { value: tmplVal } = await resolveConfig(interaction.user.id, interaction.guildId, QUOTE_KEY_TEMPLATE);
+    if (tmplVal && QUOTE_STYLE_KEYS.includes(tmplVal)) defaultStyle = tmplVal;
+  } catch (err) { console.error('[quoteHandler] resolve template default:', err.message); }
 
   pending.set(interaction.user.id, {
     url:        att.url,
     mimeType:   att.contentType.split(';')[0].trim(),
     filename:   att.name,
-    style:      null,                          // null = AI (ember-ai) / default template
-    saturation: null,                          // null = AI ตัดสินสี
-    crop:       'auto',                         // default = auto (attention) — สัดส่วน 1:1 ตายตัว
-    watermark:  defaultWatermark,              // default จาก config > ตัวแรกใน choices
+    style:      defaultStyle,
+    saturation: null,
+    crop:       'auto',
+    watermark:  defaultWatermark,
   });
 
   // ทุก dropdown ไม่บังคับเลือก — ไม่เลือก = AI/default จัดให้
@@ -127,7 +127,7 @@ async function handleQuoteCommand(interaction) {
       .setCustomId('quote_style_select')
       .setPlaceholder('🎨 สไตล์ — ไม่เลือก = ✨ AI จัดตำแหน่ง')
       .setMinValues(0).setMaxValues(1)
-      .addOptions(STYLE_OPTIONS)
+      .addOptions(STYLE_OPTIONS.map(o => ({ ...o, default: o.value === defaultStyle })))
   );
 
   const colorRow = new ActionRowBuilder().addComponents(
@@ -168,8 +168,8 @@ async function handleQuoteCommand(interaction) {
         .setPlaceholder('💧 ลายน้ำ — ไม่เลือก = ตัวแรก')
         .setMinValues(0).setMaxValues(1)
         .addOptions([
-          { label: 'ไม่ใส่ลายน้ำ', value: 'none', emoji: { name: '🚫' } },
-          ...wmChoices.map(c => ({ label: c.label, value: c.value, ...(c.emoji ? { emoji: { name: c.emoji } } : {}) })),
+          { label: 'ไม่ใส่ลายน้ำ', value: 'none', emoji: { name: '🚫' }, default: defaultWatermark === 'none' },
+          ...wmChoices.map(c => ({ label: c.label, value: c.value, ...(c.emoji ? { emoji: { name: c.emoji } } : {}), default: c.value === defaultWatermark })),
         ])
     ));
   }

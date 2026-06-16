@@ -125,6 +125,10 @@
 - ~~Web IA restructure~~ ✅ (2026-06-07) — basket/quote/platforms/watermark ใน path ใหม่
 - ~~AI Thread Summarizer — context menu "🤖 AI สรุปเธรด"~~ ✅ (2026-06)
 
+### Quote Modal — Pre-fill & AI
+- [ ] **Optional / Future:** ตั้งค่า default ชื่อ/ตำแหน่งใน Quote modal ผ่าน backoffice (แทน `.setValue` hardcode ที่ลบออกแล้ว)
+- [ ] **Optional / Future (ถ้าไม่ซับซ้อนเกิน):** ปุ่ม "AI คัด quote เด็ด" ใน modal — ดึง quote + attribution จาก thread อัตโนมัติโดยใช้ mode `quote_highlight` แล้ว pre-fill ช่องให้
+
 ### Social Share — X (Twitter)
 - [ ] **Optional / Future:** Infographic — แปลงบทความยาวๆ เป็นรูปสรุปแนบโพสต์หลัก
 
