@@ -23,9 +23,10 @@ export async function getAccountsForUser(guildId, discordId) {
 export async function getAccountsAll(guildId, discordId, admin = false) {
   const { rows } = await pool.query(
     `SELECT * FROM finance_accounts
-     WHERE ($1 = 1 OR owner_id = $2 OR visibility != 'private')
+     WHERE guild_id = $3
+       AND ($1 = 1 OR owner_id = $2 OR visibility != 'private')
      ORDER BY archived ASC, usage_count DESC, name ASC`,
-    [admin ? 1 : 0, discordId]
+    [admin ? 1 : 0, discordId, guildId]
   )
   return rows
 }

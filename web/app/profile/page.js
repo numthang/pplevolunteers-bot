@@ -44,8 +44,7 @@ export default function ProfilePage() {
     if (status === 'unauthenticated') router.replace('/')
   }, [status, router])
 
-  useEffect(() => {
-    if (status !== 'authenticated') return
+  function load() {
     fetch('/api/profile')
       .then(r => r.json())
       .then(data => {
@@ -67,7 +66,17 @@ export default function ProfilePage() {
         setLoading(false)
       })
       .catch(() => setLoading(false))
+  }
+
+  useEffect(() => {
+    if (status !== 'authenticated') return
+    load()
   }, [status])
+
+  useEffect(() => {
+    window.addEventListener('guild-switched', load)
+    return () => window.removeEventListener('guild-switched', load)
+  }, [])
 
   async function handleSubmit(e) {
     e.preventDefault()
