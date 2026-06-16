@@ -6,15 +6,14 @@ import { getAdminGuildIds, getGuilds } from '@/db/guilds.js'
 import { QUOTE_STYLE_KEYS } from '@/lib/quoteStyles.js'
 import pool from '@/db/index.js'
 
-// quote_default_template = เฉพาะ quote, default_watermark = ค่ากลางใช้ร่วมทุก feature
-const KEYS = ['quote_default_template', 'default_watermark']
+const KEYS = ['quote_default_template', 'quote_default_watermark']
 const GLOBAL_GUILD_ID = 'global'
 
 // value validators ต่อ key
 function isValidValue(key, value) {
   if (value === null) return true // ลบค่า
   if (key === 'quote_default_template') return QUOTE_STYLE_KEYS.includes(value)
-  if (key === 'default_watermark') return /^(personal|guild):.+/.test(value)
+  if (key === 'quote_default_watermark') return /^(personal|guild):.+/.test(value)
   return false
 }
 

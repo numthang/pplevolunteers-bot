@@ -19,7 +19,7 @@ const { QUOTE_STYLE_OPTIONS, QUOTE_STYLE_KEYS, QUOTE_AI_KEY } = require('../util
 const { resolveConfig } = require('../db/configResolver');
 
 const QUOTE_KEY_TEMPLATE  = 'quote_default_template'; // template = เฉพาะ quote
-const KEY_WATERMARK       = 'default_watermark';      // watermark default = ค่ากลาง ใช้ร่วมทุก feature
+const KEY_WATERMARK       = 'quote_default_watermark'; // watermark default เฉพาะ quote (basket ใช้ default_watermark แยก)
 
 // crop เป็น 1:1 ตายตัว — เลือกตำแหน่ง: auto (attention หาโซนคน) / แนวนอน left-center-right / แนวตั้ง top-bottom
 const CROP_POS = {

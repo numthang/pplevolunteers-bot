@@ -7,7 +7,7 @@ const SELECT_CLS =
   'h-11 px-3 text-base rounded-lg border border-warm-200 dark:border-disc-border ' +
   'bg-card-bg text-warm-900 dark:text-disc-text focus:outline-none focus:ring-2 focus:ring-teal w-full'
 
-const KEY_WATERMARK = 'default_watermark'
+const KEY_WATERMARK = 'quote_default_watermark'
 const KEY_TEMPLATE  = 'quote_default_template'
 
 // ── เซลล์เลือกค่า 1 ช่อง (template หรือ watermark) ของ scope หนึ่ง ──

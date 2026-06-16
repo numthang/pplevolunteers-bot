@@ -128,6 +128,8 @@
 ### Quote Modal — Pre-fill & AI
 - [ ] **Optional / Future:** ตั้งค่า default ชื่อ/ตำแหน่งใน Quote modal ผ่าน backoffice (แทน `.setValue` hardcode ที่ลบออกแล้ว)
 - [ ] **Optional / Future (ถ้าไม่ซับซ้อนเกิน):** ปุ่ม "AI คัด quote เด็ด" ใน modal — ดึง quote + attribution จาก thread อัตโนมัติโดยใช้ mode `quote_highlight` แล้ว pre-fill ช่องให้
+- [ ] backoffice Quote (`/bot/media/quote`) — เพิ่ม config **default crop position** (ตำแหน่งครอป 1:1) ต่อ user/guild ให้ขึ้น pre-select ใน dropdown เหมือน template + watermark
+- [ ] **ตรวจสอบ:** ลายน้ำบน Quote Image มีประโยชน์จริงไหม? — Quote ส่งตรงจาก `/quote` ไม่ผ่าน basket ส่วน basket ติดลายน้ำตอน post อยู่แล้ว → ถ้า flow หลักคือ quote → basket → post ลายน้ำบน quote อาจซ้ำซ้อน พิจารณาตัด dropdown ลายน้ำออกจาก quote modal
 
 ### Social Share — X (Twitter)
 - [ ] **Optional / Future:** Infographic — แปลงบทความยาวๆ เป็นรูปสรุปแนบโพสต์หลัก
