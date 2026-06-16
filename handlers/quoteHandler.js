@@ -17,6 +17,19 @@ const { fetchBuffer, applyWatermark } = require('../utils/watermarkImage');
 const { renderQuoteStyle } = require('../utils/quoteStyles');
 const { QUOTE_STYLE_OPTIONS, QUOTE_STYLE_KEYS, QUOTE_AI_KEY } = require('../utils/quoteStyleKeys');
 const { resolveConfig } = require('../db/configResolver');
+const { getUserSetting, setUserSetting } = require('../db/userConfig');
+
+const QUOTE_STATE_KEY = 'quote_state';
+async function getQuoteState(userId) {
+  const v = await getUserSetting(userId, QUOTE_STATE_KEY);
+  if (!v) return null;
+  if (typeof v === 'object') return v;
+  try { return JSON.parse(v); } catch { return null; }
+}
+async function setQuoteStatePartial(userId, patch) {
+  const cur = (await getQuoteState(userId)) || {};
+  await setUserSetting(userId, QUOTE_STATE_KEY, { ...cur, ...patch });
+}
 
 const QUOTE_KEY_TEMPLATE  = 'quote_default_template'; // template = เฉพาะ quote
 const KEY_WATERMARK       = 'quote_default_watermark'; // watermark default เฉพาะ quote (basket ใช้ default_watermark แยก)
@@ -99,29 +112,54 @@ async function handleQuoteCommand(interaction) {
 
   const wmChoices = getWatermarkChoices(interaction.guildId, interaction.user.id);
 
-  // resolve defaults จาก config (personal > guild > global)
-  let defaultWatermark = wmChoices[0]?.value ?? null;
-  let defaultStyle = null;
-  try {
-    const { value: wmVal } = await resolveConfig(interaction.user.id, interaction.guildId, KEY_WATERMARK);
-    if (wmVal && resolveWatermarkPath(wmVal, interaction.guildId, interaction.user.id)) defaultWatermark = wmVal;
-  } catch (err) { console.error('[quoteHandler] resolve watermark default:', err.message); }
-  try {
-    const { value: tmplVal } = await resolveConfig(interaction.user.id, interaction.guildId, QUOTE_KEY_TEMPLATE);
-    if (tmplVal && QUOTE_STYLE_KEYS.includes(tmplVal)) defaultStyle = tmplVal;
-  } catch (err) { console.error('[quoteHandler] resolve template default:', err.message); }
+  // โหลด saved state ก่อน แล้วค่อย fallback config > hard default
+  const saved = await getQuoteState(interaction.user.id).catch(() => null);
+
+  let defaultStyle = saved?.style ?? null;
+  if (defaultStyle === null) {
+    try {
+      const { value } = await resolveConfig(interaction.user.id, interaction.guildId, QUOTE_KEY_TEMPLATE);
+      if (value && QUOTE_STYLE_KEYS.includes(value)) defaultStyle = value;
+    } catch (err) { console.error('[quoteHandler] resolve template default:', err.message); }
+  }
+
+  let defaultWatermark = saved?.watermark ?? null;
+  if (defaultWatermark === null) {
+    try {
+      const { value } = await resolveConfig(interaction.user.id, interaction.guildId, KEY_WATERMARK);
+      if (value && resolveWatermarkPath(value, interaction.guildId, interaction.user.id)) defaultWatermark = value;
+    } catch (err) { console.error('[quoteHandler] resolve watermark default:', err.message); }
+  }
+
+  const defaultSaturation = saved?.saturation ?? null;
+  const defaultCrop       = saved?.crop ?? 'auto';
 
   pending.set(interaction.user.id, {
     url:        att.url,
     mimeType:   att.contentType.split(';')[0].trim(),
     filename:   att.name,
     style:      defaultStyle,
-    saturation: null,
-    crop:       'auto',
-    watermark:  defaultWatermark,
+    saturation: defaultSaturation != null ? parseFloat(defaultSaturation) : null,
+    crop:       defaultCrop,
+    watermark:  (defaultWatermark === 'none' || defaultWatermark === null) ? null : defaultWatermark,
   });
 
-  // ทุก dropdown ไม่บังคับเลือก — ไม่เลือก = AI/default จัดให้
+  const COLOR_OPTIONS = [
+    { label: 'สี',    value: '1.0',  description: 'ภาพสีเต็ม' },
+    { label: 'กลาง', value: '0.55', description: 'สีอ่อนลง' },
+    { label: 'ขาวดำ', value: '0.15', description: 'ขาวดำ' },
+  ];
+  const CROP_OPTIONS = [
+    { label: 'อัตโนมัติ', value: 'auto',   description: 'หาโซนคนให้เอง' },
+    { label: 'ไม่ครอป',   value: 'none',   description: 'ใช้สัดส่วนเดิม ไม่ตัด' },
+    { label: 'ซ้าย',     value: 'left',   description: 'เก็บฝั่งซ้าย (แนวนอน)' },
+    { label: 'กลาง',     value: 'center', description: 'เก็บตรงกลาง' },
+    { label: 'ขวา',      value: 'right',  description: 'เก็บฝั่งขวา (แนวนอน)' },
+    { label: 'บน',       value: 'top',    description: 'เก็บด้านบน (แนวตั้ง)' },
+    { label: 'ล่าง',     value: 'bottom', description: 'เก็บด้านล่าง (แนวตั้ง)' },
+  ];
+  const satStr = defaultSaturation != null ? String(defaultSaturation) : null;
+
   const styleRow = new ActionRowBuilder().addComponents(
     new StringSelectMenuBuilder()
       .setCustomId('quote_style_select')
@@ -129,33 +167,19 @@ async function handleQuoteCommand(interaction) {
       .setMinValues(0).setMaxValues(1)
       .addOptions(STYLE_OPTIONS.map(o => ({ ...o, default: o.value === defaultStyle })))
   );
-
   const colorRow = new ActionRowBuilder().addComponents(
     new StringSelectMenuBuilder()
       .setCustomId('quote_color_select')
       .setPlaceholder('🌈 สี — ไม่เลือก = ✨ AI ตัดสิน')
       .setMinValues(0).setMaxValues(1)
-      .addOptions([
-        { label: 'สี',    value: '1.0',  description: 'ภาพสีเต็ม' },
-        { label: 'กลาง', value: '0.55', description: 'สีอ่อนลง' },
-        { label: 'ขาวดำ', value: '0.15', description: 'ขาวดำ' },
-      ])
+      .addOptions(COLOR_OPTIONS.map(o => ({ ...o, default: o.value === satStr })))
   );
-
   const cropRow = new ActionRowBuilder().addComponents(
     new StringSelectMenuBuilder()
       .setCustomId('quote_crop_select')
       .setPlaceholder('🖼️ ครอป 1:1 — ไม่เลือก = auto')
       .setMinValues(0).setMaxValues(1)
-      .addOptions([
-        { label: 'อัตโนมัติ', value: 'auto',   description: 'หาโซนคนให้เอง' },
-        { label: 'ไม่ครอป',   value: 'none',   description: 'ใช้สัดส่วนเดิม ไม่ตัด' },
-        { label: 'ซ้าย',     value: 'left',   description: 'เก็บฝั่งซ้าย (แนวนอน)' },
-        { label: 'กลาง',     value: 'center', description: 'เก็บตรงกลาง' },
-        { label: 'ขวา',      value: 'right',  description: 'เก็บฝั่งขวา (แนวนอน)' },
-        { label: 'บน',       value: 'top',    description: 'เก็บด้านบน (แนวตั้ง)' },
-        { label: 'ล่าง',     value: 'bottom', description: 'เก็บด้านล่าง (แนวตั้ง)' },
-      ])
+      .addOptions(CROP_OPTIONS.map(o => ({ ...o, default: o.value === defaultCrop })))
   );
 
   const components = [styleRow, colorRow, cropRow];
@@ -165,10 +189,10 @@ async function handleQuoteCommand(interaction) {
     components.push(new ActionRowBuilder().addComponents(
       new StringSelectMenuBuilder()
         .setCustomId('quote_wm_select')
-        .setPlaceholder('💧 ลายน้ำ — ไม่เลือก = ตัวแรก')
+        .setPlaceholder('💧 ลายน้ำ — ไม่เลือก = ไม่ใส่')
         .setMinValues(0).setMaxValues(1)
         .addOptions([
-          { label: 'ไม่ใส่ลายน้ำ', value: 'none', emoji: { name: '🚫' }, default: defaultWatermark === 'none' },
+          { label: 'ไม่ใส่ลายน้ำ', value: 'none', emoji: { name: '🚫' }, default: defaultWatermark === null || defaultWatermark === 'none' },
           ...wmChoices.map(c => ({ label: c.label, value: c.value, ...(c.emoji ? { emoji: { name: c.emoji } } : {}), default: c.value === defaultWatermark })),
         ])
     ));
@@ -202,25 +226,31 @@ async function safeDeferUpdate(interaction) {
 // ── dropdowns (ไม่เลือก = null = AI/default) ─────────────────────────────────
 async function handleQuoteStyleSelect(interaction) {
   const state = pending.get(interaction.user.id);
-  if (state) state.style = interaction.values[0] ?? null;
+  const v = interaction.values[0] ?? null;
+  if (state) state.style = v;
+  setQuoteStatePartial(interaction.user.id, { style: v }).catch(console.error);
   await safeDeferUpdate(interaction);
 }
 async function handleQuoteColorSelect(interaction) {
   const state = pending.get(interaction.user.id);
-  if (state) state.saturation = interaction.values[0] != null ? parseFloat(interaction.values[0]) : null;
+  const v = interaction.values[0] ?? null; // เก็บเป็น string '1.0'/'0.55'/'0.15' เพื่อเทียบ dropdown
+  if (state) state.saturation = v != null ? parseFloat(v) : null;
+  setQuoteStatePartial(interaction.user.id, { saturation: v }).catch(console.error);
   await safeDeferUpdate(interaction);
 }
 async function handleQuoteCropSelect(interaction) {
   const state = pending.get(interaction.user.id);
-  if (state) state.crop = interaction.values[0] ?? 'auto';
+  const v = interaction.values[0] ?? 'auto';
+  if (state) state.crop = v;
+  setQuoteStatePartial(interaction.user.id, { crop: v }).catch(console.error);
   await safeDeferUpdate(interaction);
 }
 async function handleQuoteWatermarkSelect(interaction) {
   const state = pending.get(interaction.user.id);
-  if (state) {
-    const v = interaction.values[0];
-    state.watermark = v === 'none' ? null : (v ?? state.watermark);
-  }
+  const v = interaction.values[0] ?? null;
+  if (state) state.watermark = v === 'none' ? null : v;
+  // บันทึก 'none' แทน null เพื่อแยกว่า "ตั้งใจไม่ใส่" vs "ยังไม่ตั้ง"
+  setQuoteStatePartial(interaction.user.id, { watermark: v ?? 'none' }).catch(console.error);
   await safeDeferUpdate(interaction);
 }
 
@@ -231,29 +261,33 @@ async function handleQuoteConfirm(interaction) {
     return interaction.reply({ content: '❌ Session หมดอายุ ลองใหม่อีกครั้ง', flags: MessageFlags.Ephemeral });
   }
 
+  const saved = await getQuoteState(interaction.user.id).catch(() => null);
+
   const modal = new ModalBuilder()
     .setCustomId(`quote_modal:${Date.now()}`)
     .setTitle('💬 Quote Overlay');
 
+  const textInput = new TextInputBuilder()
+    .setCustomId('quote_text')
+    .setLabel('ข้อความ Quote (กด Enter เพื่อแบ่งบรรทัด)')
+    .setStyle(TextInputStyle.Paragraph)
+    .setPlaceholder('Discord ดีกว่า Line มาก\nจัดการงานเป็นระเบียบ\nทั้งองค์กรเปลี่ยนมาใช้แล้ว')
+    .setRequired(true)
+    .setMaxLength(300);
+  if (saved?.quote_text) textInput.setValue(saved.quote_text);
+
+  const authorInput = new TextInputBuilder()
+    .setCustomId('quote_author')
+    .setLabel('ชื่อ / ตำแหน่ง (ไม่เกิน 35 ตัวอักษร)')
+    .setStyle(TextInputStyle.Short)
+    .setPlaceholder('ชื่อ คณะทำงานพรรคประชาชนราชบุรี เขต 1')
+    .setRequired(true)
+    .setMaxLength(35);
+  if (saved?.quote_author) authorInput.setValue(saved.quote_author);
+
   modal.addComponents(
-    new ActionRowBuilder().addComponents(
-      new TextInputBuilder()
-        .setCustomId('quote_text')
-        .setLabel('ข้อความ Quote (กด Enter เพื่อแบ่งบรรทัด)')
-        .setStyle(TextInputStyle.Paragraph)
-        .setPlaceholder('Discord ดีกว่า Line มาก\nจัดการงานเป็นระเบียบ\nทั้งองค์กรเปลี่ยนมาใช้แล้ว')
-        .setRequired(true)
-        .setMaxLength(300)
-    ),
-    new ActionRowBuilder().addComponents(
-      new TextInputBuilder()
-        .setCustomId('quote_author')
-        .setLabel('ชื่อ / ตำแหน่ง (ไม่เกิน 35 ตัวอักษร)')
-        .setStyle(TextInputStyle.Short)
-        .setPlaceholder('ชื่อ คณะทำงานพรรคประชาชนราชบุรี เขต 1')
-        .setRequired(true)
-        .setMaxLength(35)
-    ),
+    new ActionRowBuilder().addComponents(textInput),
+    new ActionRowBuilder().addComponents(authorInput),
   );
 
   await interaction.showModal(modal);
@@ -268,6 +302,7 @@ async function handleQuoteModal(interaction) {
 
   const quoteText  = interaction.fields.getTextInputValue('quote_text');
   const authorName = interaction.fields.getTextInputValue('quote_author');
+  setQuoteStatePartial(interaction.user.id, { quote_text: quoteText, quote_author: authorName }).catch(console.error);
 
   // ไม่เลือกสไตล์ → default template ที่ตั้งไว้ (personal > guild > global) → ไม่มี = AI (ember-ai)
   let defaultStyle = QUOTE_AI_KEY;

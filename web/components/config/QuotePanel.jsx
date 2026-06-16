@@ -140,7 +140,7 @@ export default function QuotePanel() {
           <span className="font-medium"> ของฉัน → Server → ทั้งระบบ</span>
         </p>
         <p className="text-xs text-gray-400 dark:text-disc-muted mt-1">
-          💧 ลายน้ำเริ่มต้นเป็นค่ากลาง ใช้ร่วมกับระบบ Basket ด้วย
+          💧 ลายน้ำนี้ใช้เฉพาะ Quote Image — Basket ตั้งแยกที่หน้า Watermark
         </p>
       </div>
 
