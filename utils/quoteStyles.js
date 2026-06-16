@@ -38,15 +38,38 @@ const BLACK  = '#000000';
 const _segmenter = new Intl.Segmenter('th', { granularity: 'grapheme' });
 function graphemes(text) { return [..._segmenter.segment(text)].map(s => s.segment); }
 
+const _thaiSeg = (() => {
+  try { return new Intl.Segmenter('th', { granularity: 'word' }); } catch { return null; }
+})();
+
+// แตก text เป็น units สำหรับ line-wrap
+// — space-separated segments คง space ไว้ (prefixSpace=true)
+// — ภายใน segment ใช้ Intl.Segmenter ตัดคำไทยอีกชั้น (prefixSpace=false)
+function _breakUnits(text) {
+  const result = [];
+  const spaceParts = text.split(' ');
+  for (let i = 0; i < spaceParts.length; i++) {
+    const part = spaceParts[i];
+    if (!part) continue;
+    const segs = _thaiSeg
+      ? [..._thaiSeg.segment(part)].map(s => s.segment).filter(Boolean)
+      : [part];
+    segs.forEach((seg, j) => result.push({ text: seg, prefixSpace: j === 0 && i > 0 }));
+  }
+  return result;
+}
+
 function _wrapGreedy(ctx, text, maxWidth) {
   const lines = [];
   for (const para of text.split('\n')) {
-    const words = para.trim().split(' ').filter(Boolean);
-    if (!words.length) continue;
+    const trimmed = para.trim();
+    if (!trimmed) continue;
+    const units = _breakUnits(trimmed);
+    if (!units.length) continue;
     let cur = '';
-    for (const w of words) {
-      const test = cur ? `${cur} ${w}` : w;
-      if (ctx.measureText(test).width > maxWidth && cur) { lines.push(cur); cur = w; }
+    for (const { text: u, prefixSpace } of units) {
+      const test = cur + (prefixSpace ? ' ' : '') + u;
+      if (ctx.measureText(test).width > maxWidth && cur) { lines.push(cur); cur = u; }
       else cur = test;
     }
     if (cur) lines.push(cur);

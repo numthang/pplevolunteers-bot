@@ -242,8 +242,6 @@ async function handleQuoteConfirm(interaction) {
         .setLabel('ข้อความ Quote (กด Enter เพื่อแบ่งบรรทัด)')
         .setStyle(TextInputStyle.Paragraph)
         .setPlaceholder('Discord ดีกว่า Line มาก\nจัดการงานเป็นระเบียบ\nทั้งองค์กรเปลี่ยนมาใช้แล้ว')
-        // TEMP: default ไว้เทสรัวๆ — ลบ .setValue ออกเมื่อเทสเสร็จ
-        .setValue('ผมยกเลิก LINE\nSuscrption หมดเลย\nมาใช้ Discord ทั้งหมด')
         .setRequired(true)
         .setMaxLength(300)
     ),
@@ -253,8 +251,6 @@ async function handleQuoteConfirm(interaction) {
         .setLabel('ชื่อ / ตำแหน่ง (ไม่เกิน 35 ตัวอักษร)')
         .setStyle(TextInputStyle.Short)
         .setPlaceholder('ชื่อ คณะทำงานพรรคประชาชนราชบุรี เขต 1')
-        // TEMP: default ไว้เทสรัวๆ — ลบ .setValue ออกเมื่อเทสเสร็จ
-        .setValue('นรพนธ์ คณะทำงานพรรคประชาชนราชบุรี')
         .setRequired(true)
         .setMaxLength(35)
     ),

@@ -1,7 +1,6 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
-import { getGuildId } from '@/lib/guildContext.js'
 import { can } from '@/lib/permissions.js'
 import { isSuperAdmin } from '@/lib/roles.js'
 import pool from '@/db/index.js'
@@ -15,8 +14,11 @@ async function authView(guildId, channelId) {
   if (!SNOWFLAKE.test(guildId || '') || !SNOWFLAKE.test(channelId || '')) {
     return { error: 'invalid guild_id / channel_id', status: 400 }
   }
-  const currentGuild = await getGuildId(session)
-  if (guildId !== currentGuild) return { error: 'Forbidden', status: 403 }
+  const { rows: membership } = await pool.query(
+    'SELECT 1 FROM dc_members WHERE guild_id = $1 AND discord_id = $2 LIMIT 1',
+    [guildId, session.user.discordId]
+  )
+  if (!membership.length) return { error: 'Forbidden', status: 403 }
   const { access, discordId } = await getEffectiveIdentity(session)
   return { ok: true, session, access, discordId }
 }
