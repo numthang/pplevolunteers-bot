@@ -207,9 +207,11 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
                 {canSwitchGuild && (
                   <button
                     onClick={() => setGuildOpen(o => !o)}
-                    className="text-warm-400 dark:text-disc-muted hover:text-warm-700 dark:hover:text-disc-text transition px-1"
+                    className="flex items-center justify-center w-6 h-6 rounded-md hover:bg-warm-100 dark:hover:bg-disc-hover text-warm-400 dark:text-disc-muted hover:text-warm-700 dark:hover:text-disc-text transition-all"
                   >
-                    ▾
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" className={`w-4 h-4 transition-transform duration-200 ${guildOpen ? 'rotate-180' : ''}`}>
+                      <path d="M6 9l6 6 6-6"/>
+                    </svg>
                   </button>
                 )}
               </div>
