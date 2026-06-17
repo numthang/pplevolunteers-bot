@@ -14,12 +14,13 @@
 
 ## 🌐 pplevolunteers.org — Auth & Platform
 
-- [ ] **Multi-provider login** — Discord บังคับครั้งแรก แล้วผูก provider เพิ่มได้จากหน้า profile
-  - **LINE + Google:** เก็บ `line_id` / `google_id` ใน `dc_members` (field มีอยู่แล้ว) — 1:1 per user, unique
-  - **Passkey:** ตารางแยก `dc_user_passkeys` (credential_id, public_key, counter) — รองรับหลายอุปกรณ์ต่อ user
-  - next-auth รองรับ LINE + Google provider ได้เลย, passkey ใช้ `@simplewebauthn/server` + `@simplewebauthn/browser`
-  - ตอน login ด้วย LINE/Google: `SELECT discord_id FROM dc_members WHERE line_id = ?` → สร้าง session ด้วย discordId นั้น
-  - ตอน link: user login Discord แล้ว → OAuth LINE/Google → `UPDATE dc_members SET line_id = ?`
+- ✅ **Multi-provider login** (v2.13.0, 2026-06-17) — Discord บังคับครั้งแรก แล้วผูก LINE / Google / Passkey ได้จากหน้า profile
+  - `dc_user_identities` table (provider, provider_id, credential json) — migration อยู่ใน `scripts/migration/migration.sql`
+  - `dc_user_config` table — เก็บ passkey challenge + nonce (TTL 2 นาที)
+  - Link UI ใน `/profile?tab=security` + `LinkAccountsBanner` บน dashboard (ผูกได้เลยไม่ต้องเข้าหน้า profile)
+  - Login page: icon เล็ก LINE/Google/Passkey ใต้ปุ่ม Discord
+  - session username/avatar โหลดจาก `dc_members` ทุก provider (ไม่ใช่จาก provider profile)
+  - **⚠️ prod pending:** เพิ่ม redirect URI `https://pplevolunteers.org/api/auth/callback/google` ใน Google Cloud Console + ตั้ง env `LINE_CLIENT_ID/SECRET`, `GOOGLE_CLIENT_ID/SECRET`, `PASSKEY_RP_ID`
 
 ---
 
