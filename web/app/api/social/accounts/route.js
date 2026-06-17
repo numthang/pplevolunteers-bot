@@ -30,25 +30,25 @@ export async function GET() {
     if (!superAdmin) {
       const managerGuildIds = await getSocialManagerGuildIds(effDiscordId)
       if (!managerGuildIds.includes(guildId)) {
-        // canManage แต่ไม่ใช่ manager ของ guild นี้ — เห็นแค่ private ของตัวเอง
+        // canManage แต่ไม่ใช่ manager ของ guild นี้ — เห็นแค่ private ของตัวเองใน guild นี้
         const r = await pool.query(
-          `${SELECT} WHERE user_discord_id = $1 AND visibility = 'private' ORDER BY platform, id`,
-          [discordId]
+          `${SELECT} WHERE user_discord_id = $1 AND guild_id = $2 AND visibility = 'private' ORDER BY platform, id`,
+          [discordId, guildId]
         )
         return Response.json(r.rows)
       }
     }
     const [pub, priv] = await Promise.all([
       pool.query(`${SELECT} WHERE guild_id = $1 AND visibility = 'public' ORDER BY platform, id`, [guildId]),
-      pool.query(`${SELECT} WHERE user_discord_id = $1 AND visibility = 'private' ORDER BY platform, id`, [discordId]),
+      pool.query(`${SELECT} WHERE user_discord_id = $1 AND guild_id = $2 AND visibility = 'private' ORDER BY platform, id`, [discordId, guildId]),
     ])
     publicRows  = pub.rows
     privateRows = priv.rows
   } else {
-    // regular user: เห็นแค่ private ของตัวเอง
+    // regular user: เห็นแค่ private ของตัวเองใน guild นี้
     const r = await pool.query(
-      `${SELECT} WHERE user_discord_id = $1 AND visibility = 'private' ORDER BY platform, id`,
-      [discordId]
+      `${SELECT} WHERE user_discord_id = $1 AND guild_id = $2 AND visibility = 'private' ORDER BY platform, id`,
+      [discordId, guildId]
     )
     privateRows = r.rows
   }
