@@ -57,28 +57,28 @@ export async function GET(req) {
   const oauthVerifier = searchParams.get('oauth_verifier')
   const denied        = searchParams.get('denied')
 
-  if (denied) return Response.redirect(`${BASE_URL}/bot/social/accounts?error=denied`)
-  if (!oauthToken || !oauthVerifier) return Response.redirect(`${BASE_URL}/bot/social/accounts?error=missing`)
+  if (denied) return Response.redirect(`${BASE_URL}/bot/platforms?error=denied`)
+  if (!oauthToken || !oauthVerifier) return Response.redirect(`${BASE_URL}/bot/platforms?error=missing`)
 
   const cookieStore = await cookies()
   const raw = cookieStore.get('x_oauth_pending')?.value
-  if (!raw) return Response.redirect(`${BASE_URL}/bot/social/accounts?error=expired`)
+  if (!raw) return Response.redirect(`${BASE_URL}/bot/platforms?error=expired`)
 
   let state
-  try { state = JSON.parse(raw) } catch { return Response.redirect(`${BASE_URL}/bot/social/accounts?error=invalid`) }
+  try { state = JSON.parse(raw) } catch { return Response.redirect(`${BASE_URL}/bot/platforms?error=invalid`) }
 
   const { token_secret, guild_id, discord_id, visibility } = state
 
-  if (!guild_id) return Response.redirect(`${BASE_URL}/bot/social/accounts?error=no_guild`)
+  if (!guild_id) return Response.redirect(`${BASE_URL}/bot/platforms?error=no_guild`)
   const app = await getGuildXApp(guild_id)
-  if (!app) return Response.redirect(`${BASE_URL}/bot/social/accounts?error=app_not_configured`)
+  if (!app) return Response.redirect(`${BASE_URL}/bot/platforms?error=app_not_configured`)
 
   // แลก verifier เป็น access token
   const auth = buildAuthHeader(app.api_key, app.api_secret, oauthToken, oauthVerifier, token_secret)
   const body = `oauth_token=${oauthToken}&oauth_verifier=${oauthVerifier}`
   const res  = await xPost('/oauth/access_token', auth, body)
 
-  if (res.status !== 200) return Response.redirect(`${BASE_URL}/bot/social/accounts?error=token`)
+  if (res.status !== 200) return Response.redirect(`${BASE_URL}/bot/platforms?error=token`)
 
   const result = Object.fromEntries(res.body.split('&').map(p => p.split('=')))
   const { oauth_token: accessToken, oauth_token_secret: accessTokenSecret, screen_name: screenName } = result
@@ -99,5 +99,5 @@ export async function GET(req) {
   // ล้าง cookie
   cookieStore.set('x_oauth_pending', '', { maxAge: 0, path: '/' })
 
-  return Response.redirect(`${BASE_URL}/bot/social/accounts?connected=x&account=${encodeURIComponent(screenName)}`)
+  return Response.redirect(`${BASE_URL}/bot/platforms?connected=x&account=${encodeURIComponent(screenName)}`)
 }

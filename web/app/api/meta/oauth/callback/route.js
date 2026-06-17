@@ -107,10 +107,11 @@ export async function GET(req) {
     const results = []
 
     const userDiscordId = state.userId || null
+    const visibility    = state.visibility || 'public'
 
     for (const page of pages) {
       // FB row: ใช้ page token, ไม่ต้องเก็บ user_token
-      await upsertSocialRow(userDiscordId, state.guildId, page.name, 'fb', page.id, page.access_token, null, null, 'public')
+      await upsertSocialRow(userDiscordId, state.guildId, page.name, 'fb', page.id, page.access_token, null, null, visibility)
 
       // IG row (ถ้ามี): ใช้ user_token, access_token ใส่ null
       const igRes = await fbGet(
@@ -119,7 +120,7 @@ export async function GET(req) {
       )
       const igId = igRes.instagram_business_account?.id || null
       if (igId) {
-        await upsertSocialRow(userDiscordId, state.guildId, page.name, 'ig', igId, null, longRes.access_token, userTokenExpiresAt, 'public')
+        await upsertSocialRow(userDiscordId, state.guildId, page.name, 'ig', igId, null, longRes.access_token, userTokenExpiresAt, visibility)
       }
 
       results.push(`✅ <b>${page.name}</b>${igId ? ` + Instagram` : ''}`)

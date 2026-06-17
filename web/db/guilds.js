@@ -23,6 +23,21 @@ export async function getAdminGuildIds(discordId) {
   return rows.map(r => r.guild_id)
 }
 
+// guild ที่ user จัดการ social ได้ (admin + coordinators)
+export async function getSocialManagerGuildIds(discordId) {
+  const { rows } = await pool.query(
+    `SELECT DISTINCT m.guild_id
+     FROM dc_members m
+     JOIN dc_guild_roles r
+       ON r.guild_id = m.guild_id
+      AND (',' || m.roles || ',') LIKE ('%,' || r.role_name || ',%')
+     WHERE m.discord_id = $1
+       AND r.permission IN ('admin', 'secretary_general', 'province_coordinator', 'district_coordinator')`,
+    [discordId]
+  )
+  return rows.map(r => r.guild_id)
+}
+
 /**
  * Guilds ที่ user เป็น member จริง (INNER JOIN dc_guilds = เฉพาะ guild ที่ register ในระบบ)
  * ใช้ render guild switcher dropdown

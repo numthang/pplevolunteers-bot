@@ -19,3 +19,9 @@ export function isEditor(access = {}) {
   const p = normalizeAccess(access).permissions
   return p.has('editor')
 }
+
+// social guild management — admin + coordinators
+export function canManageSocialGuild(access = {}) {
+  const p = normalizeAccess(access).permissions
+  return p.has('admin') || p.has('secretary_general') || p.has('province_coordinator') || p.has('district_coordinator')
+}

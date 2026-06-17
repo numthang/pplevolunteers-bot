@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Trash2, RefreshCw, Globe, Lock, AlertTriangle, X, Settings, Check } from 'lucide-react'
-import { isAdmin } from '@/lib/roles.js'
+import { canManageSocialGuild } from '@/lib/roles.js'
 import { useEffectiveRoles } from '@/lib/useEffectiveRoles.js'
 
 const PLATFORM_LABEL = { fb: 'Facebook', ig: 'Instagram', threads: '@ (Threads)', x: 'X (Twitter)' }
@@ -71,18 +71,20 @@ function AccountRow({ acc, accounts, onToggleVisibility, onSetGroup, onRemove, d
           <option value="__new__">+ สร้างกลุ่มใหม่</option>
         </select>
 
-        <button
-          onClick={() => onToggleVisibility(acc)}
-          title={acc.visibility === 'public' ? 'สาธารณะ' : 'ส่วนตัว'}
-          className={`flex items-center gap-1 text-xs px-2 py-1 rounded-md transition ${
-            acc.visibility === 'public'
-              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50'
-              : 'bg-gray-100 text-gray-500 dark:bg-disc-hover dark:text-disc-muted hover:bg-gray-200 dark:hover:bg-disc-border'
-          }`}
-        >
-          {acc.visibility === 'public' ? <Globe size={12} /> : <Lock size={12} />}
-          {acc.visibility === 'public' ? 'สาธารณะ' : 'ส่วนตัว'}
-        </button>
+        {onToggleVisibility && (
+          <button
+            onClick={() => onToggleVisibility(acc)}
+            title={acc.visibility === 'public' ? 'สาธารณะ' : 'ส่วนตัว'}
+            className={`flex items-center gap-1 text-xs px-2 py-1 rounded-md transition ${
+              acc.visibility === 'public'
+                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50'
+                : 'bg-gray-100 text-gray-500 dark:bg-disc-hover dark:text-disc-muted hover:bg-gray-200 dark:hover:bg-disc-border'
+            }`}
+          >
+            {acc.visibility === 'public' ? <Globe size={12} /> : <Lock size={12} />}
+            {acc.visibility === 'public' ? 'สาธารณะ' : 'ส่วนตัว'}
+          </button>
+        )}
 
         <button
           onClick={() => onRemove(acc.id)}
@@ -110,7 +112,7 @@ export default function SocialAccountsPage() {
   const [banner, setBanner]     = useState(null)
 
   const { access, superAdmin } = useEffectiveRoles(session)  // effective — สะท้อน view-as-role
-  const admin      = isAdmin(access)
+  const canManage  = canManageSocialGuild(access)
 
   const load = useCallback(async () => {
     const [accRes, cfgRes] = await Promise.all([
@@ -197,8 +199,9 @@ export default function SocialAccountsPage() {
   const discordId    = session?.user?.discordId
   const guildId      = cfg?.guildId
   const guildName    = cfg?.guildName ?? guildId
-  const hasMeta      = !!cfg?.meta_app_id && !!cfg?.meta_app_secret
-  const hasX         = !!cfg?.x_consumer_key && !!cfg?.x_consumer_secret
+  // รองรับทั้ง manager response (field จริง) และ member response (boolean flag)
+  const hasMeta      = !!(cfg?.meta_app_id && cfg?.meta_app_secret) || !!cfg?.hasMeta
+  const hasX         = !!(cfg?.x_consumer_key && cfg?.x_consumer_secret) || !!cfg?.hasX
   const guildAccounts = accounts.filter(a => a.visibility === 'public')
   const myAccounts    = accounts.filter(a => a.visibility === 'private' && a.user_discord_id === discordId)
 
@@ -217,8 +220,8 @@ export default function SocialAccountsPage() {
       )}
 
       <div className="flex flex-col gap-8">
-        {/* Guild section — admin/superadmin only */}
-        {(admin || superAdmin) && guildId && (
+        {/* Guild section — manager/superadmin only */}
+        {(canManage || superAdmin) && guildId && (
           <div>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-3">
               <h2 className="text-base font-semibold text-gray-700 dark:text-disc-muted uppercase tracking-wide">
@@ -299,16 +302,47 @@ export default function SocialAccountsPage() {
 
         {/* Personal section */}
         <div>
-          <h2 className="text-base font-semibold text-gray-700 dark:text-disc-muted uppercase tracking-wide mb-3">
-            Personal
-          </h2>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-3">
+            <h2 className="text-base font-semibold text-gray-700 dark:text-disc-muted uppercase tracking-wide">
+              Personal
+            </h2>
+            {guildId && (
+              <div className="flex items-center gap-2 flex-wrap">
+                {hasX ? (
+                  <a
+                    href={`/api/x/oauth/start?guild_id=${guildId}&visibility=private`}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black text-white text-sm hover:opacity-80 transition"
+                  >
+                    <Globe size={14} /> Connect X
+                  </a>
+                ) : (
+                  <button disabled title="ยังไม่มี X App Credentials — ติดต่อ admin" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black text-white text-sm opacity-30 cursor-not-allowed">
+                    <Globe size={14} /> Connect X
+                  </button>
+                )}
+                {hasMeta ? (
+                  <a
+                    href={`/api/meta/oauth/start?guild_id=${guildId}&visibility=private`}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange text-white text-sm hover:opacity-90 transition"
+                  >
+                    <RefreshCw size={14} /> Connect Meta
+                  </a>
+                ) : (
+                  <button disabled title="ยังไม่มี Meta App Credentials — ติดต่อ admin" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange text-white text-sm opacity-30 cursor-not-allowed">
+                    <RefreshCw size={14} /> Connect Meta
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
           {myAccounts.length === 0 ? (
             <p className="text-sm text-gray-400 dark:text-disc-muted pl-1">ยังไม่มีบัญชีส่วนตัว</p>
           ) : (
             <div className="flex flex-col gap-2">
               {myAccounts.map(acc => (
                 <AccountRow key={acc.id} acc={acc} accounts={accounts}
-                  onToggleVisibility={toggleVisibility} onSetGroup={setGroup}
+                  onToggleVisibility={canManage || superAdmin ? toggleVisibility : null}
+                  onSetGroup={setGroup}
                   onRemove={remove} deleting={deleting} />
               ))}
             </div>

@@ -4,7 +4,12 @@
 
 ## 🌐 pplevolunteers.org — Auth & Platform
 
-- [ ] ผูกระบบ PPLE กับ **LINE** และ **โทรศัพท์**, PASSKEY
+- [ ] **Multi-provider login** — Discord บังคับครั้งแรก แล้วผูก provider เพิ่มได้จากหน้า profile
+  - **LINE + Google:** เก็บ `line_id` / `google_id` ใน `dc_members` (field มีอยู่แล้ว) — 1:1 per user, unique
+  - **Passkey:** ตารางแยก `dc_user_passkeys` (credential_id, public_key, counter) — รองรับหลายอุปกรณ์ต่อ user
+  - next-auth รองรับ LINE + Google provider ได้เลย, passkey ใช้ `@simplewebauthn/server` + `@simplewebauthn/browser`
+  - ตอน login ด้วย LINE/Google: `SELECT discord_id FROM dc_members WHERE line_id = ?` → สร้าง session ด้วย discordId นั้น
+  - ตอน link: user login Discord แล้ว → OAuth LINE/Google → `UPDATE dc_members SET line_id = ?`
 
 ---
 
@@ -185,6 +190,7 @@
 ## 👥 PPLE Contacts
 
 - ~~Multi-server design~~ ✅ ตัดสินใจแล้ว: `calling_contacts` อยู่ table เดียว แยกด้วย `guild_id` (มีอยู่แล้ว) — ล็อคเฉพาะ อาสาประชาชน
+- [ ] **Import ข้อมูลผู้บริจาค** เข้า `calling_contacts` — ข้อมูลต้อง copy จากเว็บไซต์มาก่อน (format ยังไม่ชัด) → ต้องทำ import script รับ CSV/Excel
 
 ---
 
@@ -210,7 +216,7 @@
   - ✅ **super_admin เห็นทุก guild:** `getUserGuilds(discordId, { all })` → `all=true` คืน `getGuilds()` ทั้งหมด
   - ⚠️ **edge case ค้าง (defer):** user ที่ไม่ได้เป็น member ของ guild default (env=อาสาประชาชน) แต่เป็น guild อื่น → ไม่มี cookie → `getGuildId` คืน default → backend query default แต่ Nav โชว์ guilds[0] = mismatch · RBAC กันข้อมูลอยู่ (`isMember=false`) · ไม่กระทบตอนนี้ (user หลักเป็น member อาสาประชาชน) · แก้ที่ดีต้อง middleware/cookie-on-login (เลี่ยง +query ทุก request) — ทำตอนเปิด guild ที่ 2 จริง
 - ✅ **Feature toggle เสร็จ (2026-06-13):** `getEnabledFeatures(guildId)` อ่าน `dc_guild_config` key `enabled_features` (json array) · Nav `APPS`/`DASHBOARD_LINKS` มี field `feature` ('calling'/'contacts') · `featureOn()` ซ่อนเมนู · finance/bot เปิดตลอด · seed อาสาประชาชน `["calling","contacts"]` · guild ใหม่ default `[]` = off · **scope ปัจจุบัน: ซ่อน nav เท่านั้น (ไม่ block route)** — ข้อมูลถูก isolate ด้วย guild_id อยู่แล้ว
-  - ⏳ **Backoffice UI เปิด/ปิด feature ต่อ guild** — ตอนนี้ต้องแก้ `dc_guild_config` ด้วย SQL; ต้องการ UI admin สำหรับ PATCH `enabled_features`
+  - ✅ **Backoffice UI เปิด/ปิด feature ต่อ guild** — `/bot/features` toggle UI พร้อมแล้ว
 - ✅ **API routes:** Finance 5 + Calling 9 routes เปลี่ยน `process.env.GUILD_ID` → `await getGuildId(session)` แล้ว (อยู่ใน chunk 3–4)
 - ✅ **Client-component reload ตอนสลับ guild (เสร็จ 2026-06-14):** เดิม `router.refresh()` รีเฟรชแค่ server component · client page/component ที่ fetch เองไม่รีโหลด → เพิ่ม `window.addEventListener('guild-switched', load)` + cleanup ครบ **11 จุด** (finance accounts/categories/transactions/report · calling contacts/assignee/stats · bot platforms/ai · QuotePanel · WatermarkPanel) · transactions ล้าง accountId filter + WatermarkPanel re-fetch currentGuildId → remount GuildPanel · home (server comp) ใช้ router.refresh เหมือนเดิม · **ยังไม่ deploy prod**
 

@@ -1,7 +1,5 @@
 PENDING
-- ทำระบบ import contact
 - finance บัญชี ตอนนี้ ให้แสดงตาม guild นั้น ตอนนี้ มีบัญชีของ ราชบุรี ไปโผล่ใน อาสาประชาชน
-- http://localhost:3000/bot/platforms หน้านี้ เวลาคนทั่วไปจะเพิ่ม social platform ให้ตัวเองทำไง หน้านี้ ทุกคนต้องใส่ค่าได้ ยกเว้น app credentials ระดับ guild ต้องเป็น admin province_coordinator district_coordinator (จะไม่พูดถึง superadmin นะ อันนี้ bypass ทุกสถานการณ์) ตรวจสอบตรงนี้ดีๆ หน่อย ผมก็ชักจะงงว่า permission ควรเป็นแบบไหนกันแน่
 
 End of the Day
 - Update PENDING.md สิ่งที่อยากทำ สิ่งที่ทำไปแล้ว, อ่านส่วนที่แก้ไขแล้วเอาขึ้น git พร้อมข้อความแก้ไข พร้อม bump version ใน package.json ให้ถูกต้อง (เช็ค git log ก่อนว่า version ล่าสุดคืออะไร ใช้ semver — patch สำหรับแก้เล็กน้อย, minor สำหรับฟีเจอร์ใหม่) tag เฉพาะ minor ขึ้นไป และ push ด้วย

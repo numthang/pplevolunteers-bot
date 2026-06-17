@@ -1,8 +1,8 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
-import { isAdmin, isSuperAdmin } from '@/lib/roles.js'
+import { canManageSocialGuild, isSuperAdmin } from '@/lib/roles.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
-import { getAdminGuildIds } from '@/db/guilds.js'
+import { getSocialManagerGuildIds } from '@/db/guilds.js'
 import { getGuildId } from '@/lib/guildContext.js'
 import pool from '@/db/index.js'
 
@@ -18,19 +18,19 @@ export async function GET() {
   if (!session) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
   const { access, discordId: effDiscordId } = await getEffectiveIdentity(session)
-  const admin    = isAdmin(access)
+  const canManage  = canManageSocialGuild(access)
   const superAdmin = isSuperAdmin(effDiscordId)               // gate = effective (debug-aware)
-  const discordId  = session.user.discordId                  // private accounts = ของจริงเสมอ
+  const discordId  = session.user.discordId                   // private accounts = ของจริงเสมอ
   const guildId    = await getGuildId(session)
 
   let publicRows = []
   let privateRows = []
 
-  if (superAdmin || admin) {
+  if (superAdmin || canManage) {
     if (!superAdmin) {
-      const adminGuildIds = await getAdminGuildIds(effDiscordId)
-      if (!adminGuildIds.includes(guildId)) {
-        // admin แต่ไม่ใช่ admin ของ guild นี้ — เห็นแค่ private ของตัวเอง
+      const managerGuildIds = await getSocialManagerGuildIds(effDiscordId)
+      if (!managerGuildIds.includes(guildId)) {
+        // canManage แต่ไม่ใช่ manager ของ guild นี้ — เห็นแค่ private ของตัวเอง
         const r = await pool.query(
           `${SELECT} WHERE user_discord_id = $1 AND visibility = 'private' ORDER BY platform, id`,
           [discordId]
@@ -61,25 +61,28 @@ export async function POST(req) {
   if (!session) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
   const { access, discordId: effDiscordId } = await getEffectiveIdentity(session)
-  const admin      = isAdmin(access)
-  const superAdmin = isSuperAdmin(effDiscordId)              // gate = effective (debug-aware)
+  const canManage  = canManageSocialGuild(access)
+  const superAdmin = isSuperAdmin(effDiscordId)               // gate = effective (debug-aware)
 
   const body = await req.json()
-  const { guild_id, name, platform, social_id, access_token, user_token, visibility = 'public' } = body
+  const { guild_id, name, platform, social_id, access_token, user_token } = body
+  let { visibility = 'public' } = body
 
   if (!guild_id || !platform || !social_id) {
     return Response.json({ error: 'guild_id, platform, social_id required' }, { status: 400 })
   }
 
-  if (!superAdmin && admin) {
-    const adminGuildIds = await getAdminGuildIds(effDiscordId)
-    if (!adminGuildIds.includes(guild_id)) {
-      return Response.json({ error: 'Forbidden' }, { status: 403 })
-    }
+  // non-manager → force private, ห้ามสร้าง public account
+  if (!superAdmin && !canManage) {
+    visibility = 'private'
   }
 
-  if (!superAdmin && !admin) {
-    return Response.json({ error: 'Forbidden' }, { status: 403 })
+  // ถ้าจะสร้าง public ต้องเป็น manager ของ guild นั้น
+  if (visibility === 'public' && !superAdmin) {
+    const managerGuildIds = await getSocialManagerGuildIds(effDiscordId)
+    if (!managerGuildIds.includes(guild_id)) {
+      return Response.json({ error: 'Forbidden' }, { status: 403 })
+    }
   }
 
   await pool.query(

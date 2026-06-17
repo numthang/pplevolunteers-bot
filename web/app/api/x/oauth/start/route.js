@@ -2,6 +2,8 @@
 //     https://pplevolunteers.org/api/x/oauth/callback
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
+import { canManageSocialGuild } from '@/lib/roles.js'
+import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import { cookies } from 'next/headers'
 import pool from '@/db/index.js'
 import https from 'https'
@@ -65,6 +67,14 @@ export async function GET(req) {
 
   if (!guildId) {
     return Response.json({ error: 'guild_id required' }, { status: 400 })
+  }
+
+  // public account → ต้องเป็น manager; private → ทุกคน connect ได้
+  if (visibility === 'public') {
+    const { access } = await getEffectiveIdentity(session)
+    if (!canManageSocialGuild(access)) {
+      return Response.json({ error: 'Forbidden' }, { status: 403 })
+    }
   }
 
   const app = await getGuildXApp(guildId)
