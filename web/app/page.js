@@ -14,6 +14,8 @@ import { can } from '@/lib/permissions.js'
 import pool from '@/db/index.js'
 import { getGuilds, getEnabledFeatures } from '@/db/guilds.js'
 import { getGuildId } from '@/lib/guildContext.js'
+import { getUserIdentities } from '@/db/userIdentities.js'
+import LinkAccountsBanner from '@/components/LinkAccountsBanner.jsx'
 
 const BOT_INVITE_URL = process.env.DISCORD_BOT_INVITE_URL
 
@@ -191,7 +193,7 @@ export default async function HomePage() {
   const enabledFeatures = await getEnabledFeatures(GUILD_ID)
   const callingOn = enabledFeatures.includes('calling')
 
-  const [memberCount, guilds, guildMemberCounts, campaigns, todayCalls, pendingCount, finance, displayName, contactsCount, contactPending] = await Promise.all([
+  const [memberCount, guilds, guildMemberCounts, campaigns, todayCalls, pendingCount, finance, displayName, contactsCount, contactPending, identities] = await Promise.all([
     getMembersCount(GUILD_ID),
     getGuilds(),
     getGuildMemberCounts(),
@@ -202,6 +204,7 @@ export default async function HomePage() {
     discordId ? getDisplayName(GUILD_ID, discordId) : Promise.resolve(null),
     getCONTACTSCount(GUILD_ID),
     discordId ? getContactPendingCount(discordId) : Promise.resolve(0),
+    discordId ? getUserIdentities(discordId) : Promise.resolve([]),
   ])
 
   const fmt = (n) => Number(n || 0).toLocaleString('th-TH')
@@ -215,6 +218,9 @@ export default async function HomePage() {
 
   return (
     <div className="space-y-3">
+
+      {/* Link accounts banner */}
+      <LinkAccountsBanner linkedProviders={identities.map(i => i.provider)} />
 
       {/* Profile */}
       <div className="flex items-center gap-3 p-4 bg-card-bg rounded-xl border border-warm-200 dark:border-disc-border">

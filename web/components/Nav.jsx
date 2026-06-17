@@ -84,10 +84,8 @@ const SOCIAL_LINKS = [
 ]
 
 const DASHBOARD_LINKS = [
-  { href: '/finance',              label: 'FINANCE',  icon: 'transactions' },
-  { href: '/calling',              label: 'CALLING',  icon: 'campaigns', feature: 'calling' },
-  { href: '/bot/platforms', label: 'BOT',      icon: 'social' },
-  { href: '/admin/logs',           label: 'LOGS',     icon: 'logs', capability: 'viewServerLogs' },
+  { href: '/finance',  label: 'FINANCE',  icon: 'transactions' },
+  { href: '/calling',  label: 'CALLING',  icon: 'campaigns', feature: 'calling' },
 ]
 
 const APPS = [
@@ -199,17 +197,22 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
         <div className="relative shrink-0">
           <div className="flex items-center gap-1">
             {session && currentGuild ? (
-              <button
-                onClick={() => canSwitchGuild && setGuildOpen(o => !o)}
-                disabled={!canSwitchGuild}
-                className="flex items-center gap-1.5 hover:opacity-80 transition disabled:cursor-default"
-              >
-                <GuildIcon guild={currentGuild} className="w-8 h-8" />
-                <span className="hidden md:block font-bold text-base text-teal dark:text-teal truncate max-w-[180px]">
-                  {currentGuild.name}
-                </span>
-                {canSwitchGuild && <span className="hidden md:block text-warm-400 dark:text-disc-muted text-xs">▾</span>}
-              </button>
+              <div className="flex items-center gap-1">
+                <Link href="/" className="flex items-center gap-1.5 hover:opacity-80 transition">
+                  <GuildIcon guild={currentGuild} className="w-8 h-8" />
+                  <span className="hidden md:block font-bold text-base text-teal dark:text-teal truncate max-w-[160px]">
+                    {currentGuild.name}
+                  </span>
+                </Link>
+                {canSwitchGuild && (
+                  <button
+                    onClick={() => setGuildOpen(o => !o)}
+                    className="text-warm-400 dark:text-disc-muted hover:text-warm-700 dark:hover:text-disc-text transition px-1"
+                  >
+                    ▾
+                  </button>
+                )}
+              </div>
             ) : (
               <Link href="/" className="hover:opacity-80 transition shrink-0">
                 <Image src="/logo.png" alt="PPLE" width={40} height={40} />

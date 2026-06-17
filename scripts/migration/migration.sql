@@ -491,3 +491,20 @@ ALTER TABLE dc_guild_roles ADD COLUMN IF NOT EXISTS is_managed BOOLEAN NOT NULL 
 
 -- 2026-06-13: dc_media_baskets — channel_name เพื่อแสดงชื่อ thread ใน list view
 ALTER TABLE dc_media_baskets ADD COLUMN IF NOT EXISTS channel_name VARCHAR(100) NULL;
+
+-- 2026-06-17: dc_user_identities — multi-provider login (LINE, Google, Passkey)
+--   discord_id = primary identity (ยังเป็น FK ของทุก table)
+--   provider   = 'line' | 'google' | 'passkey'
+--   provider_id = LINE sub / Google sub / WebAuthn credential_id
+--   credential  = passkey เท่านั้น (public_key, counter, device_type, transports)
+--   UNIQUE(provider, provider_id) — 1 LINE account ผูกได้แค่ 1 discord เท่านั้น
+CREATE TABLE IF NOT EXISTS dc_user_identities (
+  id          SERIAL PRIMARY KEY,
+  discord_id  VARCHAR(20) NOT NULL,
+  provider    VARCHAR(20) NOT NULL,
+  provider_id TEXT        NOT NULL,
+  credential  JSONB       NULL,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (provider, provider_id)
+);
+CREATE INDEX IF NOT EXISTS idx_user_identities_discord ON dc_user_identities (discord_id);

@@ -2,6 +2,16 @@
 
 ---
 
+## 📲 LINE Messaging API
+
+- [ ] **LINE Push Notification** — ส่งแจ้งเตือน 1:1 หา user ผ่าน LINE OA ที่มีอยู่แล้ว
+  - ต้องเปิด Messaging API บน OA (LINE Official Account Manager → Settings → Messaging API)
+  - User ต้อง add OA เป็นเพื่อน + ผูก LINE OAuth ในระบบ → ได้ LINE User ID (`line_sub` ใน `dc_user_identities`)
+  - use case: แจ้งสลิปโอนเงิน, แจ้ง calling campaign, แจ้ง tier
+  - ค่าใช้จ่าย: 200 ข้อความ/เดือนฟรี, หลังจากนั้นคิดเงินเหมือน broadcast plan
+
+---
+
 ## 🌐 pplevolunteers.org — Auth & Platform
 
 - [ ] **Multi-provider login** — Discord บังคับครั้งแรก แล้วผูก provider เพิ่มได้จากหน้า profile
