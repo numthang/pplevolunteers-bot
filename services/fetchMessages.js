@@ -101,11 +101,18 @@ function buildFile(messages, format) {
   }
 
   // TXT
-  const lines = messages.map(m =>
-    `[${m.timestamp}] ${m.author_tag} (${m.channel_name})${m.forwarded ? ' ↪️forwarded' : ''}\n${m.content || '(no text content)'}` +
-    (m.attachments.length ? `\nAttachments: ${m.attachments.map(a => a.url).join(', ')}` : '') +
-    '\n' + '─'.repeat(60)
-  );
+  const lines = messages.map(m => {
+    const embedLines = m.embeds.flatMap(e => {
+      const parts = [];
+      if (e.title) parts.push(`[Embed] ${e.title}`);
+      if (e.description) parts.push(e.description);
+      return parts;
+    });
+    const body = [m.content, ...embedLines].filter(Boolean).join('\n') || '(no text content)';
+    return `[${m.timestamp}] ${m.author_tag} (${m.channel_name})${m.forwarded ? ' ↪️forwarded' : ''}\n${body}` +
+      (m.attachments.length ? `\nAttachments: ${m.attachments.map(a => a.url).join(', ')}` : '') +
+      '\n' + '─'.repeat(60);
+  });
   return {
     buffer:   Buffer.from(lines.join('\n'), 'utf8'),
     filename: `${baseName}.txt`,
