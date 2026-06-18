@@ -48,7 +48,11 @@ function serializeMessage(msg, channel) {
     forwarded:    isForwarded,
     content,
     attachments:  attachments.map(a => ({ filename: a.name, url: a.url })),
-    embeds:       msg.embeds.map(e => ({ title: e.title ?? null, description: e.description ?? null })),
+    embeds:       msg.embeds.map(e => ({
+      title:       e.title ?? null,
+      description: e.description ?? null,
+      fields:      e.fields.map(f => ({ name: f.name, value: f.value })),
+    })),
     reactions:    msg.reactions.cache.map(r => ({ emoji: r.emoji.name, count: r.count })),
   };
 }
@@ -56,13 +60,14 @@ function serializeMessage(msg, channel) {
 // แปลง messages → plain text สำหรับส่งให้ AI (เรียงเก่า→ใหม่)
 function messagesToPlainText(messages) {
   return messages
-    .filter(m => m.content || m.embeds.length)
+    .filter(m => m.content || m.embeds.some(e => e.title || e.description || e.fields.length))
     .map(m => {
       const parts = [`[${m.timestamp.slice(0, 16)}] ${m.author_tag}:`];
       if (m.content) parts.push(m.content);
       for (const e of m.embeds) {
         if (e.title) parts.push(`[Embed] ${e.title}`);
         if (e.description) parts.push(e.description);
+        for (const f of e.fields) parts.push(`${f.name}: ${f.value}`);
       }
       return parts.join(' ');
     })
@@ -106,6 +111,7 @@ function buildFile(messages, format) {
       const parts = [];
       if (e.title) parts.push(`[Embed] ${e.title}`);
       if (e.description) parts.push(e.description);
+      for (const f of e.fields) parts.push(`${f.name}: ${f.value}`);
       return parts;
     });
     const body = [m.content, ...embedLines].filter(Boolean).join('\n') || '(no text content)';
