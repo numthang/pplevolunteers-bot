@@ -120,7 +120,7 @@ function buildFile(messages, format) {
       '\n' + '─'.repeat(60);
   });
   return {
-    buffer:   Buffer.from(lines.join('\n'), 'utf8'),
+    buffer:   Buffer.from('﻿' + lines.join('\n'), 'utf8'),
     filename: `${baseName}.txt`,
   };
 }

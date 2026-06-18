@@ -126,7 +126,7 @@ async function runAiOnThread(interaction, { modeValue = null, customPrompt = nul
 
   // ไฟล์ download (ผล AI เต็มๆ)
   const date = new Date().toISOString().slice(0, 10);
-  const file = new AttachmentBuilder(Buffer.from(output, 'utf8'), { name: `ai_${mode.value}_${date}.txt` });
+  const file = new AttachmentBuilder(Buffer.from('﻿' + output, 'utf8'), { name: `ai_${mode.value}_${date}.txt` });
 
   const token = putOutput({ caption: output, guildId: interaction.guildId, channelId: interaction.channelId, modeLabel: mode.label, modeValue: mode.value, msgCount: messages.length, truncated });
   const addBtn = new ButtonBuilder()
@@ -182,7 +182,7 @@ async function handleAiThreadPublic(interaction) {
 
   const body = data.caption.length > REPLY_LIMIT ? data.caption.slice(0, REPLY_LIMIT) + '\n…(ตัด — ดูไฟล์)' : data.caption;
   const date = new Date().toISOString().slice(0, 10);
-  const file = new AttachmentBuilder(Buffer.from(data.caption, 'utf8'), { name: `ai_${data.modeValue}_${date}.txt` });
+  const file = new AttachmentBuilder(Buffer.from('﻿' + data.caption, 'utf8'), { name: `ai_${data.modeValue}_${date}.txt` });
   const header = `${data.modeLabel}${data.truncated ? ' (บางส่วน)' : ''} · ${data.msgCount} ข้อความ`;
 
   await interaction.followUp({ content: `${header}\n${'─'.repeat(20)}\n${body}`, files: [file] });
