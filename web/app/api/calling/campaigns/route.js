@@ -93,14 +93,14 @@ export async function POST(req) {
 
   try {
     const body = await req.json()
-    const { id, name, description, province, event_date } = body
+    const { id, name, description, province, event_date, event_end_date } = body
 
     if (!name) {
       return Response.json({ error: 'Campaign name is required' }, { status: 400 })
     }
 
     const campaignId = await campaignDB.createCampaign(
-      { id: id || null, name, description, province, event_date: event_date || null },
+      { id: id || null, name, description, province, event_date: event_date || null, event_end_date: event_end_date || null },
       session.user.discordId
     )
 

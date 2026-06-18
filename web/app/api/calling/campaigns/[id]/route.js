@@ -29,7 +29,7 @@ export async function PATCH(req, { params }) {
   const { id } = await params
   try {
     const body = await req.json()
-    const { newId, name, description, province, event_date } = body
+    const { newId, name, description, province, event_date, event_end_date } = body
     if (!name) return Response.json({ error: 'name is required' }, { status: 400 })
 
     const oldId = parseInt(id)
@@ -39,7 +39,7 @@ export async function PATCH(req, { params }) {
       await campaignDB.renameCampaignId(oldId, targetId)
     }
 
-    await campaignDB.updateCampaign(targetId, { name, description, province, event_date })
+    await campaignDB.updateCampaign(targetId, { name, description, province, event_date, event_end_date })
     const campaign = await campaignDB.getCampaignById(targetId)
     return Response.json({ success: true, data: campaign })
   } catch (error) {

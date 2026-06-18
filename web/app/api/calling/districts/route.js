@@ -57,7 +57,7 @@ export async function GET(req) {
       `SELECT COALESCE(m.home_district, '') AS district, COUNT(DISTINCT m.source_id) AS count
        FROM act_event_cache cc
        JOIN ngs_member_cache m ON (cc.province IS NULL OR m.home_province = cc.province)
-       WHERE cc.id = $1 AND cc.type = 'campaign'
+       WHERE cc.id = $1 AND cc.type IN ('campaign', 'event')
          AND m.home_amphure = $2
          AND m.mobile_number IS NOT NULL
        GROUP BY COALESCE(m.home_district, '')

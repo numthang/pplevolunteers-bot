@@ -81,13 +81,14 @@ export default function AccountCard({ account, canEdit = false }) {
             </p>
           </div>
           <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-            <p className={`text-base font-mono font-bold ${balance >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
+            <p className={`text-base font-mono font-bold tabular-nums ${balance >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
               {balance < 0 ? '-' : ''}{fmt(balance)}
             </p>
             <div className="flex items-center gap-2">
               <button onClick={copyAll}
                 className="flex items-center gap-1 text-[11px] text-gray-400 dark:text-disc-muted hover:text-indigo-500 dark:hover:text-indigo-400 transition"
                 title="คัดลอกชื่อ ธนาคาร เลขบัญชี"
+                aria-label="คัดลอกชื่อ ธนาคาร เลขบัญชี"
               >
                 {copied ? <Check size={11} className="text-green-500" /> : <Copy size={11} />}
                 {copied ? 'คัดลอกแล้ว' : 'คัดลอก'}
@@ -110,18 +111,19 @@ export default function AccountCard({ account, canEdit = false }) {
           <div className="bg-card-bg rounded-xl shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-bold text-gray-900 dark:text-disc-text">แก้ไขบัญชี</h2>
-              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-disc-text"><X size={18} /></button>
+              <button onClick={() => setShowModal(false)} aria-label="ปิด" className="text-gray-400 hover:text-gray-600 dark:hover:text-disc-text"><X size={18} /></button>
             </div>
             <AccountFormFields form={form} onChange={v => setForm(f => ({ ...f, ...v }))} guilds={guilds} />
             <div className="flex items-center justify-between mt-5 gap-2">
               <div className="flex gap-1">
                 <button onClick={toggleArchive}
                   title={account.archived ? 'เลิกซ่อน' : 'ซ่อน'}
+                  aria-label={account.archived ? 'เลิกซ่อนบัญชี' : 'ซ่อนบัญชี'}
                   className="p-2 rounded text-gray-400 hover:bg-gray-100 dark:hover:bg-disc-hover"
                 >
                   {account.archived ? <ArchiveRestore size={16} /> : <Archive size={16} />}
                 </button>
-                <button onClick={remove} className="p-2 rounded text-red-500 hover:bg-red-50 dark:hover:bg-red-900/40">
+                <button onClick={remove} aria-label="ลบบัญชี" className="p-2 rounded text-red-500 hover:bg-red-50 dark:hover:bg-red-900/40">
                   <Trash2 size={16} />
                 </button>
               </div>

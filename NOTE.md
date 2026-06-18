@@ -11,8 +11,7 @@ Panel Forum:
 /panel forum channel:#💬┆กระทู้-ทั่วไป
 
 Greeting:
-
-/panel register title:ยินดีต้อนรับสู่ อาสาประชาชน! description:กดปุ่มด้านล่างเพื่อแนะนำตัวและ #🎖️┆ติดยศ ได้เลยครับ log_channel:#👋┆แนะนำตัว
+/panel register title:ยินดีต้อนรับสู่ อาสาประชาชน! description:กดปุ่มด้านล่างเพื่อแนะนำตัวและ #🎖️┆ติดยศ ได้เลย province_select:True interest_select:True log_channel:#👋┆แนะนำตัว member_role:@อาสาประชาชน
 
 Welcome DM
 ยินดีต้อนรับสู่ อาสาประชาชน!

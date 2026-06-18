@@ -510,6 +510,11 @@ export default function CampaignPage({ params }) {
 
       {/* Campaign Header */}
       <div className="bg-card-bg border border-warm-200 dark:border-disc-border border-l-4 border-l-violet-500 dark:border-l-violet-400 rounded-lg px-4 py-3 mb-4">
+        <img
+          src={campaign.image_url || 'https://act.pplethai.org/wp-content/uploads/2024/09/pple-cover-yt.jpg'}
+          alt={campaign.name}
+          className="w-full h-40 object-cover rounded-lg mb-3"
+        />
         <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
           <h1 className="text-2xl font-bold text-warm-900 dark:text-disc-text">
             {campaign?.name} <span className="text-warm-500 dark:text-disc-muted font-normal text-base">(assignor)</span>

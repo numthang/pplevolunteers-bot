@@ -56,7 +56,42 @@ ALTER TABLE dc_members
 - Import จาก XLSX: 1 ไฟล์ = 1 campaign ชื่อ campaign มาจาก filename (เช่น `กิจกรรมโทรหาสมาชิกราชบุรี.xlsx` → campaign name = `กิจกรรมโทรหาสมาชิกราชบุรี`)
 - **สร้างได้เฉพาะ** Admin, ระดับภาค, ระดับจังหวัด (กรรมการจังหวัด / ผู้ประสานงานจังหวัด) — ทีมปฏิบัติการสร้างไม่ได้
 
-Key fields: `id`, `name`, `province`, `description`, `event_date`, `guild_id`
+Key fields: `id`, `name`, `province`, `description`, `event_date`, `event_end_date`, `guild_id`, `act_event_id`, `image_url`, `location`, `map_url`
+
+#### ID Range Convention (`act_event_cache.id`)
+
+| Range | ใช้สำหรับ |
+|---|---|
+| **1 – 100** | สงวนไว้สำหรับ province xlsx imports — ใช้รหัสจังหวัดไทยเป็น ID (เช่น ราชบุรี = 70, นครปฐม = 73) |
+| **101 – ∞** | Manual campaigns สร้างผ่าน Web UI (sequence เริ่มจาก 106) |
+| — | ACT events ที่ sync เข้ามา — ได้ auto-increment ID เหมือน campaign แต่มี `act_event_id` เก็บ ACT URL ID แยกไว้ |
+
+> ห้ามใช้ `id` ≤ 100 สำหรับ manual campaign — INSERT province xlsx ต้องระบุ `id` ตรงๆ เสมอ  
+> `act_event_id` เป็น column แยก (partial unique index) ไม่ปนกับ `id`
+
+#### type
+
+| value | ความหมาย |
+|---|---|
+| `campaign` | สร้างเอง (Web UI หรือ xlsx import) |
+| `event` | sync อัตโนมัติจาก act.pplethai.org |
+| `register` | การลงทะเบียนเข้าร่วม event — เป็นลูกของ `campaign` หรือ `event` ผ่าน `parent_id` |
+
+Calling system query ใช้ `WHERE type IN ('campaign', 'event')` สำหรับ READ  
+WRITE queries (updateCampaign, deleteCampaign) ใช้ `WHERE type = 'campaign'` เท่านั้น — ป้องกันแก้ ACT event โดยไม่ตั้งใจ
+
+#### parent_id — ความสัมพันธ์ parent/child
+
+`register` rows มี `parent_id` ชี้ไปที่ `act_event_cache.id` ของ parent (`campaign` หรือ `event`)
+
+```
+act_event_cache (type='campaign', id=70)     ← parent
+  └── act_event_cache (type='register', parent_id=70)  ← ลงทะเบียนเข้าร่วม
+```
+
+- `parent_id` = `id` ของ parent row (ไม่ใช่ `act_event_id`)
+- เมื่อ re-ID campaign ต้อง cascade `UPDATE act_event_cache SET parent_id = <new> WHERE parent_id = <old>` ด้วยเสมอ — อยู่ใน migration.sql แล้ว
+- import script (`scripts/calling/import-act-event-cache.js`) ต้องตั้ง `CAMPAIGN_ID` ให้ตรงกับ `id` ของ parent campaign
 
 ---
 

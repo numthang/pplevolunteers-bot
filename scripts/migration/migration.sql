@@ -508,3 +508,49 @@ CREATE TABLE IF NOT EXISTS dc_user_identities (
   UNIQUE (provider, provider_id)
 );
 CREATE INDEX IF NOT EXISTS idx_user_identities_discord ON dc_user_identities (discord_id);
+
+-- 2026-06-19: act_event_cache — re-ID manual campaigns ให้อยู่ใน range 101+
+--   สงวน 1-100 สำหรับ province xlsx imports (เช่น ราชบุรี=70, นครปฐม=73)
+--   ลบ register rows ทิ้ง (ข้อมูล test เท่านั้น ยังไม่ได้ใช้จริง)
+BEGIN;
+DELETE FROM act_event_cache WHERE type = 'register';
+DELETE FROM act_event_cache WHERE type = 'event';
+
+UPDATE act_event_cache SET id = 101 WHERE id = 159214 AND type = 'campaign';
+UPDATE calling_assignments SET campaign_id = 101 WHERE campaign_id = 159214;
+UPDATE calling_logs SET campaign_id = 101 WHERE campaign_id = 159214;
+
+UPDATE act_event_cache SET id = 102 WHERE id = 159258 AND type = 'campaign';
+UPDATE calling_assignments SET campaign_id = 102 WHERE campaign_id = 159258;
+UPDATE calling_logs SET campaign_id = 102 WHERE campaign_id = 159258;
+
+UPDATE act_event_cache SET id = 103 WHERE id = 159531 AND type = 'campaign';
+UPDATE calling_assignments SET campaign_id = 103 WHERE campaign_id = 159531;
+UPDATE calling_logs SET campaign_id = 103 WHERE campaign_id = 159531;
+
+UPDATE act_event_cache SET id = 104 WHERE id = 159959 AND type = 'campaign';
+UPDATE calling_assignments SET campaign_id = 104 WHERE campaign_id = 159959;
+UPDATE calling_logs SET campaign_id = 104 WHERE campaign_id = 159959;
+
+UPDATE act_event_cache SET id = 105 WHERE id = 160456 AND type = 'campaign';
+UPDATE calling_assignments SET campaign_id = 105 WHERE campaign_id = 160456;
+UPDATE calling_logs SET campaign_id = 105 WHERE campaign_id = 160456;
+
+SELECT setval('act_event_cache_id_seq', 106);
+COMMIT;
+
+-- 2026-06-19: act_event_cache — sync events จาก act.pplethai.org
+ALTER TABLE act_event_cache ADD COLUMN IF NOT EXISTS act_event_id INT NULL;
+ALTER TABLE act_event_cache ADD COLUMN IF NOT EXISTS image_url TEXT NULL;
+ALTER TABLE act_event_cache ADD COLUMN IF NOT EXISTS location TEXT NULL;
+ALTER TABLE act_event_cache ADD COLUMN IF NOT EXISTS map_url TEXT NULL;
+ALTER TABLE act_event_cache ADD COLUMN IF NOT EXISTS event_end_date TIMESTAMPTZ NULL;
+
+-- partial unique index สำหรับ upsert by act_event_id (NULL rows ไม่ conflict กัน)
+CREATE UNIQUE INDEX IF NOT EXISTS idx_act_event_cache_act_event_id
+  ON act_event_cache (act_event_id) WHERE act_event_id IS NOT NULL;
+
+-- type column เป็น PostgreSQL ENUM ชื่อ act_event_cache_type
+ALTER TYPE act_event_cache_type ADD VALUE IF NOT EXISTS 'event';
+ALTER TABLE act_event_cache ADD COLUMN IF NOT EXISTS map_url TEXT NULL;
+

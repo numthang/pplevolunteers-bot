@@ -239,9 +239,13 @@
 
 ---
 
-## 📋 PPLE Docs
+## 📋 PPLE Docs — E-Signature & E-Document
 
-<!-- รอ Schema จริงจากทาง ACT ก่อน — ดู PENDING.md section ACT Integration -->
+> รายละเอียดทั้งหมดอยู่ที่ [md/docs/DOCS.md](docs/DOCS.md)
+
+- ✅ `act_event_cache` sync จาก `act.pplethai.org` (`scripts/sync-act-events.js`)
+- [ ] ใบสำคัญรับเงิน — budget planner + e-signature + PDF (ทีมงาน dc_members ก่อน)
+- [ ] act_event_registers — ยังหาวิธีดึงไม่ได้ (รอ)
 
 ---
 

@@ -274,7 +274,7 @@ function TransactionsContent() {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-bold">รายการธุรกรรม</h1>
+        <h1 className="text-2xl font-bold text-balance">รายการธุรกรรม</h1>
         {can('editProvinceAccount', effectiveAccess?.permissions || []) && (
           <button onClick={openNew} className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-indigo-700">
             + เพิ่มรายการ
@@ -546,7 +546,7 @@ function TransactionsContent() {
                 </p>
               </div>
               <div className="text-right flex-shrink-0 flex flex-col items-end gap-1">
-                <p className={`text-base font-mono font-semibold ${t.type === 'income' ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
+                <p className={`text-base font-mono font-semibold tabular-nums ${t.type === 'income' ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
                   {t.type === 'income' ? '+' : '-'}{Number(t.amount).toLocaleString('th-TH')} ฿
                 </p>
                 <ChevronDown size={14} className={`text-gray-400 transition-transform ${expandedId === t.id ? 'rotate-180' : ''}`} />

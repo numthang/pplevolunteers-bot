@@ -41,7 +41,7 @@ export default async function FinancePage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">ภาพรวม</h1>
+        <h1 className="text-2xl font-bold text-balance">ภาพรวม</h1>
         <AddAccountButton />
       </div>
 
@@ -59,8 +59,8 @@ export default async function FinancePage() {
             return (
               <div key={key}>
                 <div className="flex items-center gap-2 mb-3">
-                  <h2 className="text-sm font-semibold text-gray-500 dark:text-disc-muted uppercase tracking-wide">{label}</h2>
-                  <span className={`text-sm font-mono font-semibold ${total >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
+                  <h2 className="text-sm font-semibold text-gray-500 dark:text-disc-muted uppercase">{label}</h2>
+                  <span className={`text-sm font-mono font-semibold tabular-nums ${total >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
                     {total < 0 ? '-' : ''}{fmt(total)}
                   </span>
                 </div>

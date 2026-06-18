@@ -2,6 +2,9 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { Calendar, Pencil, Trash2 } from 'lucide-react'
+
+const FALLBACK_IMAGE = 'https://act.pplethai.org/wp-content/uploads/2024/09/pple-cover-yt.jpg'
 
 const THAI_MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.']
 
@@ -47,53 +50,73 @@ export default function CampaignCard({ campaign, canCreate }) {
     router.refresh()
   }
 
+  const calendarUrl = buildGoogleCalendarUrl(campaign)
+
   return (
     <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg hover:border-teal dark:hover:border-teal hover:shadow-md transition h-full flex flex-col">
-      <Link href={`/calling/assignments/${campaign.id}`} className="flex-1 block p-6 group">
-        <h3 className="text-base font-medium text-warm-900 dark:text-disc-text mb-2 group-hover:text-teal transition-colors line-clamp-2">
-          {campaign.name}
-        </h3>
-        {campaign.description && (
-          <p className="text-base text-warm-500 dark:text-disc-muted mb-4 line-clamp-2">
-            {campaign.description}
-          </p>
-        )}
-        <div className="space-y-1 pt-2 border-t border-warm-200 dark:border-disc-border text-base">
-          <span className="font-medium text-warm-900 dark:text-disc-text block">
-            {campaign.call_count || 0} การโทร
-          </span>
+      <Link href={`/calling/assignments/${campaign.id}`} className="flex-1 block group">
+        <div className="h-36 rounded-t-lg overflow-hidden">
+          <img src={campaign.image_url || FALLBACK_IMAGE} alt={campaign.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+        </div>
+        <div className="p-4">
+          <h3 className="text-base font-semibold text-warm-900 dark:text-disc-text mb-1 group-hover:text-teal transition-colors line-clamp-2">
+            {campaign.name}
+          </h3>
           {campaign.event_date && (
-            <span className="text-orange-600 dark:text-orange-400 font-medium block">
-              วันจัดกิจกรรม: {formatEventDate(campaign.event_date)}
-            </span>
+            <p className="text-base text-warm-500 dark:text-disc-muted mb-1">
+              {formatEventDate(campaign.event_date)}
+            </p>
+          )}
+          {campaign.description && (
+            <p className="text-base text-warm-500 dark:text-disc-muted line-clamp-2">
+              {campaign.description}
+            </p>
           )}
         </div>
       </Link>
 
-      {(canCreate || campaign.event_date) && (
-        <div className="px-4 py-2 border-t border-warm-200 dark:border-disc-border flex gap-3 items-center">
-          {campaign.event_date && (
+      {/* unified footer */}
+      <div className="px-4 py-2.5 border-t border-warm-200 dark:border-disc-border flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <span className="text-base text-warm-500 dark:text-disc-muted">
+            {campaign.call_count || 0} การโทร
+          </span>
+        </div>
+
+        <div className="flex items-center gap-1 shrink-0">
+          {calendarUrl && (
             <a
-              href={buildGoogleCalendarUrl(campaign)}
+              href={calendarUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-base text-teal hover:underline"
+              title="เพิ่มใน Google Calendar"
+              className="p-1.5 rounded hover:bg-warm-100 dark:hover:bg-disc-hover text-teal transition-colors"
+              onClick={e => e.stopPropagation()}
             >
-              + Google Calendar
+              <Calendar size={16} />
             </a>
           )}
           {canCreate && (
             <>
-              <Link href={`/calling/campaigns/${campaign.id}/edit`} className="text-base text-teal hover:underline">
-                แก้ไข
+              <Link
+                href={`/calling/campaigns/${campaign.id}/edit`}
+                title="แก้ไข"
+                className="p-1.5 rounded hover:bg-warm-100 dark:hover:bg-disc-hover text-teal transition-colors"
+                onClick={e => e.stopPropagation()}
+              >
+                <Pencil size={16} />
               </Link>
-              <button onClick={handleDelete} className="text-base text-red-500 dark:text-red-400 hover:underline">
-                ลบ
+              <button
+                onClick={handleDelete}
+                title="ลบ"
+                className="p-1.5 rounded hover:bg-warm-100 dark:hover:bg-disc-hover text-red-500 dark:text-red-400 transition-colors"
+              >
+                <Trash2 size={16} />
               </button>
             </>
           )}
         </div>
-      )}
+      </div>
     </div>
   )
 }

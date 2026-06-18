@@ -38,11 +38,11 @@ export default function CreateCampaignPage() {
   const { roles } = useEffectiveRoles(session)
   const defaultProvince = session?.user?.primary_province || getProvinceFromRoles(roles)
 
-  const [campaignId, setCampaignId] = useState('')
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [province, setProvince] = useState('')
   const [eventDate, setEventDate] = useState('')
+  const [eventEndDate, setEventEndDate] = useState('')
 
   useEffect(() => {
     if (defaultProvince && !province) setProvince(defaultProvince)
@@ -58,7 +58,7 @@ export default function CreateCampaignPage() {
       const res = await fetch('/api/calling/campaigns', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: campaignId ? Number(campaignId) : null, name, description, province: province || null, event_date: eventDate || null })
+        body: JSON.stringify({ name, description, province: province || null, event_date: eventDate || null, event_end_date: eventEndDate || null })
       })
       if (!res.ok) throw new Error('Failed to create campaign')
       const data = await res.json()
@@ -81,15 +81,6 @@ export default function CreateCampaignPage() {
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-disc-text">
-              Campaign ID <span className="font-normal text-gray-400">(ใช้ ACT ID — ไม่ระบุ = อัตโนมัติ)</span>
-            </label>
-            <input type="number" value={campaignId} onChange={e => setCampaignId(e.target.value)}
-              placeholder="ACT ID เช่น 1234" className={inputCls} min="1" />
-            <p className="mt-1.5 text-sm text-gray-400 dark:text-disc-muted">ID เช่น 160456 คัดลอกจาก ACT URL — ใช้สำหรับการ sync ระบบในภายหลัง</p>
-          </div>
-
-          <div>
             <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-disc-text">ชื่อแคมเปญ *</label>
             <input type="text" value={name} onChange={e => setName(e.target.value)}
               placeholder="เช่น บ้านโป่ง ราชบุรี ครั้งที่ 1" className={inputCls} required />
@@ -110,9 +101,15 @@ export default function CreateCampaignPage() {
             </select>
           </div>
 
-          <div>
-            <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-disc-text">วันจัดกิจกรรม</label>
-            <input type="datetime-local" value={eventDate} onChange={e => setEventDate(e.target.value)} className={inputCls} />
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-disc-text">วันจัดกิจกรรม</label>
+              <input type="datetime-local" value={eventDate} onChange={e => setEventDate(e.target.value)} className={inputCls} />
+            </div>
+            <div>
+              <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-disc-text">เวลาสิ้นสุด</label>
+              <input type="datetime-local" value={eventEndDate} onChange={e => setEventEndDate(e.target.value)} className={inputCls} />
+            </div>
           </div>
 
           <button type="submit" disabled={loading}

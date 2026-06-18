@@ -34,6 +34,7 @@ export default function EditCampaignPage({ params }) {
   const [description, setDescription] = useState('')
   const [province, setProvince] = useState('')
   const [eventDate, setEventDate] = useState('')
+  const [eventEndDate, setEventEndDate] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [notFound, setNotFound] = useState(false)
@@ -49,6 +50,7 @@ export default function EditCampaignPage({ params }) {
         setDescription(c.description || '')
         setProvince(c.province || '')
         setEventDate(c.event_date || '')
+        setEventEndDate(c.event_end_date || '')
         setLoading(false)
       })
       .catch(() => { setNotFound(true); setLoading(false) })
@@ -62,7 +64,7 @@ export default function EditCampaignPage({ params }) {
       const res = await fetch(`/api/calling/campaigns/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ newId: newId || null, name, description, province: province || null, event_date: eventDate || null })
+        body: JSON.stringify({ newId: newId || null, name, description, province: province || null, event_date: eventDate || null, event_end_date: eventEndDate || null })
       })
       if (!res.ok) throw new Error((await res.json()).error || 'Failed')
       router.push('/calling/campaigns')
@@ -124,9 +126,15 @@ export default function EditCampaignPage({ params }) {
             </select>
           </div>
 
-          <div>
-            <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-disc-text">วันจัดกิจกรรม</label>
-            <input type="datetime-local" value={eventDate} onChange={e => setEventDate(e.target.value)} className={inputCls} />
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-disc-text">วันจัดกิจกรรม</label>
+              <input type="datetime-local" value={eventDate} onChange={e => setEventDate(e.target.value)} className={inputCls} />
+            </div>
+            <div>
+              <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-disc-text">เวลาสิ้นสุด</label>
+              <input type="datetime-local" value={eventEndDate} onChange={e => setEventEndDate(e.target.value)} className={inputCls} />
+            </div>
           </div>
 
           <div className="flex gap-3 pt-1">
