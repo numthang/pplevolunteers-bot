@@ -56,8 +56,16 @@ function serializeMessage(msg, channel) {
 // แปลง messages → plain text สำหรับส่งให้ AI (เรียงเก่า→ใหม่)
 function messagesToPlainText(messages) {
   return messages
-    .filter(m => m.content)
-    .map(m => `[${m.timestamp.slice(0, 16)}] ${m.author_tag}: ${m.content}`)
+    .filter(m => m.content || m.embeds.length)
+    .map(m => {
+      const parts = [`[${m.timestamp.slice(0, 16)}] ${m.author_tag}:`];
+      if (m.content) parts.push(m.content);
+      for (const e of m.embeds) {
+        if (e.title) parts.push(`[Embed] ${e.title}`);
+        if (e.description) parts.push(e.description);
+      }
+      return parts.join(' ');
+    })
     .join('\n');
 }
 
