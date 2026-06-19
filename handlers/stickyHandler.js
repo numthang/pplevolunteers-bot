@@ -80,6 +80,7 @@ async function refreshSticky(channel) {
 
     // 4. อัปเดตเฉพาะ message_id แล้วเซฟ config ก้อนเดิมกลับไป
     config.message_id = sent.id;
+    config.refreshed_at = Date.now();
     await setSetting(channel.guildId, key, config);
 
     console.log(`[Sticky] Refreshed successfully in #${channel.name} (${channelId}) → new msg ${sent.id}`);

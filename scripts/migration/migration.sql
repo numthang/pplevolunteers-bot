@@ -554,3 +554,47 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_act_event_cache_act_event_id
 ALTER TYPE act_event_cache_type ADD VALUE IF NOT EXISTS 'event';
 ALTER TABLE act_event_cache ADD COLUMN IF NOT EXISTS map_url TEXT NULL;
 
+-- 2026-06-19: PPLE Docs — ใบสำคัญรับเงิน + e-signature
+CREATE TABLE IF NOT EXISTS docs_projects (
+  id                 SERIAL PRIMARY KEY,
+  guild_id           VARCHAR(20)    NOT NULL,
+  act_event_cache_id INT            NOT NULL REFERENCES act_event_cache(id),
+  is_mobile          BOOLEAN        NOT NULL DEFAULT FALSE,
+  participant_count  INT            NULL,
+  budget             NUMERIC(12,2)  NULL,
+  allowed_items      JSONB          NULL,   -- ['food','travel','supplies',...]
+  status             VARCHAR(20)    NOT NULL DEFAULT 'draft',
+  created_by         VARCHAR(20)    NOT NULL,
+  created_at         TIMESTAMPTZ    NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_docs_projects_guild ON docs_projects (guild_id);
+CREATE INDEX IF NOT EXISTS idx_docs_projects_event ON docs_projects (act_event_cache_id);
+
+CREATE TABLE IF NOT EXISTS docs_activity_entries (
+  id                 SERIAL PRIMARY KEY,
+  project_id         INT            NOT NULL REFERENCES docs_projects(id) ON DELETE CASCADE,
+  member_discord_id  VARCHAR(20)    NOT NULL,
+  item_type          VARCHAR(20)    NOT NULL,  -- 'food'|'speaker'|'travel'|'venue'|'accommodation'|'supplies'
+  description        TEXT           NULL,
+  amount             NUMERIC(12,2)  NULL,
+  override_data      JSONB          NULL,
+  status             VARCHAR(20)    NOT NULL DEFAULT 'pending',  -- pending|signed|printed
+  sign_token         UUID           NOT NULL DEFAULT gen_random_uuid(),
+  token_expires_at   TIMESTAMPTZ    NULL,
+  signed_at          TIMESTAMPTZ    NULL,
+  printed_at         TIMESTAMPTZ    NULL,
+  pdf_url            TEXT           NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_docs_entries_token ON docs_activity_entries (sign_token);
+CREATE INDEX IF NOT EXISTS idx_docs_entries_project ON docs_activity_entries (project_id);
+CREATE INDEX IF NOT EXISTS idx_docs_entries_member ON docs_activity_entries (member_discord_id);
+
+CREATE TABLE IF NOT EXISTS docs_signatures (
+  id                   SERIAL PRIMARY KEY,
+  entry_id             INT         NOT NULL REFERENCES docs_activity_entries(id) ON DELETE CASCADE,
+  signature_base64     TEXT        NOT NULL,
+  signed_by_discord_id VARCHAR(20) NOT NULL,
+  signed_ip            VARCHAR(45) NULL,
+  created_at           TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+

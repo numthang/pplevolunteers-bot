@@ -277,11 +277,25 @@
 
 - [ ] implement `services/ragSearch.js` + `/ask` command
 
+### Chat with AI via Mention (ต่อเนื่องจาก RAG)
+- [ ] **ห้อง chat คุยกับ AI ได้โดย mention bot** — user พิมพ์ `@bot <ข้อความ>` ในห้อง Discord แล้ว bot ตอบโดยดึง context จาก RAG (Meilisearch) เหมือน `/ask`
+  - เหมาะกับ channel ที่กำหนดไว้ (เช่น `#ask-ai`) ไม่ใช่ทุกห้อง — config ได้ใน `dc_guild_config`
+  - reuse `ragSearch.js` (retrieval) + `callAI()` (services/ai.js)
+  - ต่างจาก `/ask` แค่ trigger จาก `messageCreate` event + mention check แทน slash command
+  - อาจเพิ่ม conversation thread (Discord thread auto-created) เพื่อ multi-turn ต่อเนื่อง
+
 ---
 
 ## 🛠️ Internal Tools / Productivity
 
-- [ ] Project management ในแบบ Notion/AppFlowy — simple, lightweight สำหรับทีม
+- [ ] **Project management (Notion + Trello) — Discord-native** — ระบบจัดการงานที่ทำงานร่วมกับ Discord แบบไร้รอยต่อ
+  - **Notion-side:** page/doc แนบกับ project, rich content, nested tasks
+  - **Trello-side:** Kanban board drag-and-drop, swimlane ตาม assignee/label
+  - สร้าง/อัปเดต task จาก Discord (slash command หรือ context menu บนข้อความ → กลาย task ทันที)
+  - แจ้งเตือนใน Discord channel เมื่อ task เปลี่ยนสถานะ / ถึง deadline / assign ให้ใคร
+  - member ผูกกับ Discord user โดยอัตโนมัติ (reuse `dc_members`)
+  - web UI (`/projects`) — board view + table view + doc view
+  - reuse โครงสร้าง `guild_id` + RBAC pattern ที่มีอยู่แล้ว
 
 ---
 

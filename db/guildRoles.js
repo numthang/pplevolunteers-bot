@@ -34,7 +34,7 @@ async function syncGuildRolesCatalog(guild) {
 /** upsert role เดียว (event roleCreate / roleUpdate) */
 async function upsertGuildRole(role) {
   if (!role || role.name === '@everyone') return
-  await pool.query(UPSERT_SQL, [role.guild.id, role.id, role.name])
+  await pool.query(UPSERT_SQL, [role.guild.id, role.id, role.name, role.managed])
 }
 
 /** ลบ role ออกจาก catalog (event roleDelete) */
