@@ -34,7 +34,8 @@ export async function GET(req, { params }) {
     const pdf = await generateEntryPdf(entry, {
       signatureBase64:      sig?.signature_base64    ?? null,
       payerSignatureBase64: paySig?.signature_base64 ?? null,
-      payerDisplayName:     entry.payer_display_name ?? null,
+      payerDisplayName:     entry.payer_display_name  ?? null,
+      payerPosition:        entry.payer_position      ?? null,
     })
 
     if (markAsPrinted) {

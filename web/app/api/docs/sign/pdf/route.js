@@ -37,6 +37,7 @@ export async function GET(req) {
       signatureBase64:      recSig?.signature_base64  ?? null,
       payerSignatureBase64: paySig?.signature_base64  ?? null,
       payerDisplayName:     full.payer_display_name   ?? null,
+      payerPosition:        full.payer_position       ?? null,
     })
 
     const filename = `doc-${full.id}.pdf`

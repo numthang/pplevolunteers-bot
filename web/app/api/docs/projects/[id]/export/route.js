@@ -48,7 +48,9 @@ export async function GET(req, { params }) {
         const entry = await getEntryById(row.id)
         const sig   = await getSignatureByEntryId(row.id)
         const pdf   = await generateEntryPdf(entry, {
-          signatureBase64: sig?.signature_base64 ?? null,
+          signatureBase64:  sig?.signature_base64    ?? null,
+          payerDisplayName: entry.payer_display_name ?? null,
+          payerPosition:    entry.payer_position     ?? null,
         })
 
         const name = (entry.display_name ?? 'unknown').replace(/[^\w฀-๿]/g, '_')

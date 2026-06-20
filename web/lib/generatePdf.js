@@ -13,19 +13,19 @@ const __dirname   = path.dirname(fileURLToPath(import.meta.url))
 const TEMPLATES   = path.join(__dirname, '../templates')
 const LIBREOFFICE = '/usr/bin/libreoffice'
 
-const TEMPLATE_GENERIC = '1-ใบสำคัญรับเงิน.docx'
+const TEMPLATE_1 = path.join(TEMPLATES, 'receipts', 'template-1.docx')
+const BODY_1_DIR  = path.join(TEMPLATES, 'receipts', 'body-1')
 
-const TEMPLATE_MAP = {
-  food:         TEMPLATE_GENERIC,
-  accommodation: TEMPLATE_GENERIC,
-  photo:        TEMPLATE_GENERIC,
-  venue:        '1.1-ใบสำคัญรับเงินค่าสถานที่.docx',
-  equipment:    '1.2-ใบสำคัญรับเงินค่าเช่าอุปกรณ์.docx',
-  sound:        '1.3-ใบสำคัญรับเงินค่าเช่าเครื่องเสียง.docx',
-  supplies:     '1.4-ใบสำคัญรับเงินค่าซื้อวัสดุอุปกรณ์.docx',
-  speaker:      '1.5-ใบสำคัญรับเงินค่าวิทยากร.docx',
-  travel:       '2-ใบสำคัญรับเงินค่าเบี้ยเลี้ยงเจ้าหน้าที่.docx',
-  attendance:   '3-แบบรายชื่อผู้เข้าร่วมประชุม อบรม สัมนา และเบิกค่าพาหนะเดินทาง.docx',
+const HEADER_MAP = {
+  break:     'ค่าอาหาร',
+  lunch:     'ค่าอาหาร',
+  dinner:    'ค่าอาหาร',
+  speaker:   'ค่าวิทยากร',
+  transport: 'ค่าเดินทาง',
+  venue:     'ค่าสถานที่',
+  equipment: 'ค่าเช่าอุปกรณ์',
+  sound:     'ค่าเช่าเครื่องเสียง',
+  supplies:  'ค่าวัสดุอุปกรณ์',
 }
 
 const THAI_MONTHS = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
@@ -87,7 +87,7 @@ function calcDuration(startStr, endStr) {
   return `${days} วัน`
 }
 
-function buildData(entry, { payerDisplayName = null } = {}) {
+function buildData(entry, { payerDisplayName = null, payerPosition = null } = {}) {
   const override = entry.override_data ?? {}
   const ngs = {
     full_name:      [(entry.title ?? ''), (entry.ngs_first_name ?? entry.firstname ?? '')].filter(Boolean).join('') || entry.display_name || '',
@@ -112,45 +112,59 @@ function buildData(entry, { payerDisplayName = null } = {}) {
 
   return {
     // common
+    header:            HEADER_MAP[entry.item_type] ?? '',
     receipt_no:        String(entry.id).padStart(4, '0'),
     project_name:      entry.project_name ?? '',
     sub_project_name:  entry.event_name ?? '',
-    total_amount:      amtFmt,
+    amount:            amtFmt,
+    total:             amtFmt,
     amount_text:       bahtText(amt),
     participant_count: String(entry.participant_count ?? ''),
     ...dateInfo,
 
     // personal info
-    full_name:     override.full_name     ?? ngs.full_name,
-    last_name:     override.last_name     ?? ngs.last_name,
-    payee_name:    [override.full_name ?? ngs.full_name, override.last_name ?? ngs.last_name].filter(Boolean).join(' '),
-    payer_name:    payerDisplayName ?? '',
-    id_number:     override.id_number     ?? ngs.id_number,
-    house_no:      override.house_no      ?? ngs.house_no,
-    moo:           override.moo           ?? ngs.moo,
-    road:          override.road          ?? ngs.road,
-    subdistrict:   override.subdistrict   ?? ngs.subdistrict,
-    district:      override.district      ?? ngs.district,
-    province_addr: override.province_addr ?? ngs.province_addr,
-    phone:         override.phone         ?? '',
-    branch_no:     override.branch_no     ?? '',
+    full_name:       override.full_name     ?? ngs.full_name,
+    last_name:       override.last_name     ?? ngs.last_name,
+    payee_name:      [override.full_name ?? ngs.full_name, override.last_name ?? ngs.last_name].filter(Boolean).join(' '),
+    payer_name:      payerDisplayName ?? '',
+    payer_position:  payerPosition ?? '',
+    id_number:       override.id_number     ?? ngs.id_number,
+    house_no:        override.house_no      ?? ngs.house_no,
+    moo:             override.moo           ?? ngs.moo,
+    road:            override.road          ?? ngs.road,
+    subdistrict:     override.subdistrict   ?? ngs.subdistrict,
+    district:        override.district      ?? ngs.district,
+    province_addr:   override.province_addr ?? ngs.province_addr,
+    phone:           override.phone         ?? '',
+    branch_no:       override.branch_no     ?? '',
     branch_province: override.branch_province ?? '',
 
-    // type-specific (override_data takes precedence, then event cache, then description)
+    // body-specific (override_data takes precedence, then event cache)
     venue:            override.venue          ?? eventVenue,
     duration:         override.duration       ?? eventDuration,
-    equipment_desc:   override.equipment_desc ?? entry.description ?? '',
+    topic:            override.topic          ?? eventTopic,
+    meal_count:       override.meal_count     ?? '',
     unit_price:       override.unit_price     ?? '',
     quantity:         override.quantity       ?? '',
+    equipment_desc:   override.equipment_desc ?? entry.description ?? '',
     items_desc:       override.items_desc     ?? entry.description ?? '',
-    item_2:           override.item_2         ?? '',
-    item_3:           override.item_3         ?? '',
-    item_4:           override.item_4         ?? '',
-    item_5:           override.item_5         ?? '',
-    topic:            override.topic          ?? eventTopic,
-    days:             override.days           ?? '',
     daily_rate:       override.daily_rate     ?? '',
+    days:             override.days           ?? '',
   }
+}
+
+function injectBodyIntoTemplate(templateZip, bodyPath) {
+  const bodyZip = new PizZip(fs.readFileSync(bodyPath))
+  const bodyXml = bodyZip.files['word/document.xml'].asText()
+  const bodyMatch = bodyXml.match(/<w:body>([\s\S]*?)<w:sectPr/)
+  const bodyContent = bodyMatch ? bodyMatch[1].trim() : ''
+
+  const xml = templateZip.files['word/document.xml'].asText()
+  const merged = xml.replace(
+    /<w:p\b[^>]*>(?:(?!<\/w:p>)[\s\S])*\{\{payment_details\}\}(?:(?!<\/w:p>)[\s\S])*<\/w:p>/,
+    bodyContent
+  )
+  templateZip.file('word/document.xml', merged)
 }
 
 function colorVariableRuns(zip) {
@@ -167,15 +181,13 @@ function colorVariableRuns(zip) {
   zip.file('word/document.xml', out)
 }
 
-export async function generateEntryPdf(entry, { signatureBase64 = null, payerSignatureBase64 = null, payerDisplayName = null } = {}) {
-  const templateFile = TEMPLATE_MAP[entry.item_type]
-  if (!templateFile) throw new Error(`no template for item_type: ${entry.item_type}`)
+export async function generateEntryPdf(entry, { signatureBase64 = null, payerSignatureBase64 = null, payerDisplayName = null, payerPosition = null } = {}) {
+  const bodyPath = path.join(BODY_1_DIR, `${entry.item_type}.docx`)
+  if (!fs.existsSync(bodyPath)) throw new Error(`no body template for item_type: ${entry.item_type}`)
 
-  const templatePath = path.join(TEMPLATES, templateFile)
-  if (!fs.existsSync(templatePath)) throw new Error(`template not found: ${templateFile}`)
-
-  const buf  = fs.readFileSync(templatePath)
+  const buf  = fs.readFileSync(TEMPLATE_1)
   const zip  = new PizZip(buf)
+  injectBodyIntoTemplate(zip, bodyPath)
   colorVariableRuns(zip)
 
   const sigBuf    = signatureBase64      ? Buffer.from(signatureBase64.replace(/^data:image\/\w+;base64,/, ''),      'base64') : null
@@ -201,7 +213,7 @@ export async function generateEntryPdf(entry, { signatureBase64 = null, payerSig
     nullGetter:    () => '',
   })
 
-  doc.render(buildData(entry, { payerDisplayName }))
+  doc.render(buildData(entry, { payerDisplayName, payerPosition }))
 
   const filled  = doc.getZip().generate({ type: 'nodebuffer', compression: 'DEFLATE' })
   const tmpDir  = os.tmpdir()

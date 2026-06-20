@@ -27,7 +27,11 @@ export async function GET(req) {
 
     // ดึง entry เต็ม (มี project_name + id_card_image) เพื่อ generate ให้ตรงกับใบจริง
     const full = await getEntryById(entry.id)
-    const pdf  = await generateEntryPdf(full, { signatureBase64: null })
+    const pdf  = await generateEntryPdf(full, {
+      signatureBase64: null,
+      payerDisplayName: full.payer_display_name ?? null,
+      payerPosition:    full.payer_position     ?? null,
+    })
 
     return new Response(pdf, {
       headers: {

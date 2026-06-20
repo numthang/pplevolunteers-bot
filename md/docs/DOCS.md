@@ -81,23 +81,43 @@ docs_signatures
 
 **Stack:** `docxtemplater` render `{{variable}}` ลงใน `.docx` → LibreOffice headless แปลงเป็น PDF → `pdf-lib` append หน้าสำเนาบัตรประชาชน
 
-- Template ไฟล์อยู่ที่ `web/templates/*.docx`
-- ตัวอย่าง / reference PDF+DOCX อยู่ที่ `md/docs/example/`
+- Template ไฟล์อยู่ที่ `web/templates/receipts/`
 - Logic อยู่ที่ `web/lib/generatePdf.js` — `buildData()` map entry → variables, `generateEntryPdf()` render + convert
 
-### Template Map (`item_type` → ไฟล์)
+### โครงสร้างไฟล์ template
 
-> `accommodation` และ `photo` ตัดออก — ค่าที่พักออกใบ VAT ได้อยู่แล้ว, ค่าถ่ายภาพไม่ใช้ในระบบนี้
+```
+web/templates/receipts/
+  template-1.docx          ← ส่วน 1/2/4 (header, personal info, footer) — ไฟล์เดียวทุก type
+  body-1/                  ← ส่วน 3 (รายละเอียดการรับเงิน) แยกต่อ item_type
+    break.docx
+    lunch.docx
+    dinner.docx
+    equipment.docx
+    sound.docx
+    speaker.docx
+    supplies.docx
+    transport.docx
+    venue.docx
+```
 
-| item_type | template | สถานะ |
-|---|---|---|
-| `food` | `food.docx` | ❌ ต้องสร้าง |
-| `venue` | `1.1-ใบสำคัญรับเงินค่าสถานที่.docx` | ✅ |
-| `equipment` | `1.2-ใบสำคัญรับเงินค่าเช่าอุปกรณ์.docx` | ✅ |
-| `sound` | `1.3-ใบสำคัญรับเงินค่าเช่าเครื่องเสียง.docx` | ✅ |
-| `supplies` | `1.4-ใบสำคัญรับเงินค่าซื้อวัสดุอุปกรณ์.docx` | ✅ |
-| `speaker` | `1.5-ใบสำคัญรับเงินค่าวิทยากร.docx` | ✅ |
-| `travel` | `travel.docx` | ❌ ต้องสร้าง |
+**กลไก:** ตอน generate — โหลด `template-1.docx` → inject XML จาก `body-1/[item_type].docx` แทน `{{payment_details}}` paragraph → `colorVariableRuns` ใส่สีน้ำเงิน → `docxtemplater` render → LibreOffice PDF
+
+**ข้อดี:** แก้ส่วน 1/2/4 ที่ `template-1.docx` ที่เดียว → reflect ทุก type ทันที
+
+### item_type ที่รองรับ
+
+| item_type | HEADER_MAP | body file | สถานะ |
+|---|---|---|---|
+| `break` | ค่าอาหาร | `break.docx` | ✅ |
+| `lunch` | ค่าอาหาร | `lunch.docx` | ✅ |
+| `dinner` | ค่าอาหาร | `dinner.docx` | ✅ |
+| `equipment` | ค่าเช่าอุปกรณ์ | `equipment.docx` | ✅ |
+| `sound` | ค่าเช่าเครื่องเสียง | `sound.docx` | ✅ |
+| `speaker` | ค่าวิทยากร | `speaker.docx` | ✅ |
+| `supplies` | ค่าวัสดุอุปกรณ์ | `supplies.docx` | ✅ |
+| `transport` | ค่าเดินทาง | `transport.docx` | ✅ |
+| `venue` | ค่าสถานที่ | `venue.docx` | ✅ |
 
 ---
 
@@ -110,7 +130,7 @@ docs_signatures
 #### ส่วน 2 — รายละเอียดคนรับเงิน (ทุก template เหมือนกัน)
 
 ```
-วันที่ {{day}} เดือน {{month_name}} พ.ศ. {{year}}
+วันที่ {{day}} เดือน {{month}} พ.ศ. {{year}}
 ข้าพเจ้า (นาย/นาง/นางสาว) {{full_name}} นามสกุล {{last_name}}
 หมายเลขประจำตัวประชาชน (13 หลัก) {{id_number}} อยู่บ้านเลขที่ {{house_no}} หมู่ที่ {{moo}}
 ซอย {{road}} ถนน  ตำบล/แขวง {{subdistrict}}
@@ -121,7 +141,7 @@ docs_signatures
 
 | variable | แหล่งข้อมูล |
 |---|---|
-| `day` / `month_name` / `year` | `parseThaiDate(entry.event_date)` |
+| `day` / `month` / `year` | `parseThaiDate(entry.event_date)` |
 | `full_name` | `override_data.full_name` → `ngs_member_cache.title + first_name` |
 | `last_name` | `override_data.last_name` → `ngs_member_cache.last_name` |
 | `id_number` | `override_data.id_number` → `ngs_member_cache.identification_number` |
@@ -191,20 +211,20 @@ docs_signatures
 #### ส่วน 4 — Footer (ทุก template เหมือนกัน)
 
 ```
-ลงชื่อ    {%sig}      ผู้รับเงิน
+ลงชื่อ    {{%sig}}      ผู้รับเงิน
            ({{payee_name}})
-ลงชื่อ    {%paysig}   ผู้จ่ายเงิน
+ลงชื่อ    {{%paysig}}   ผู้จ่ายเงิน
            ({{payer_name}})
 ตำแหน่ง   {{payer_position}}
 ```
 
 | variable | หมายเหตุ |
 |---|---|
-| `{%sig}` | รูปลายเซ็นผู้รับเงิน — docxtemplater ImageModule syntax |
-| `{%paysig}` | รูปลายเซ็นผู้จ่ายเงิน |
+| `{{%sig}}` | รูปลายเซ็นผู้รับเงิน — ImageModule syntax (double-brace บังคับ) |
+| `{{%paysig}}` | รูปลายเซ็นผู้จ่ายเงิน |
 | `payee_name` | `full_name + ' ' + last_name` |
-| `payer_name` | ชื่อผู้จ่ายเงิน — ดึงจาก set-payer API |
-| `payer_position` | ⚠️ **ยังไม่มีใน `buildData()`** — ต้องเพิ่ม field นี้ใน `docs_projects` + `buildData()` |
+| `payer_name` | ชื่อผู้จ่ายเงิน — ดึงจาก `docs_payers` (pending) |
+| `payer_position` | ✅ มีใน `buildData()` แล้ว — ส่งผ่าน `payerPosition` param |
 
 ---
 
@@ -376,27 +396,21 @@ docs_signatures
 
 ### ✅ Done
 - DB migration — `docs_projects`, `docs_activity_entries`, `docs_signatures`
-- `web/lib/generatePdf.js` — docxtemplater + LibreOffice + id-card append
+- `web/lib/generatePdf.js` — docxtemplater + LibreOffice + id-card append + `injectBodyIntoTemplate` + `colorVariableRuns` (สีน้ำเงิน #1A47CC)
 - `web/lib/idCard.js` — watermark + สำเนาถูกต้อง overlay
-- API routes — projects, entries, sign, id-card, export
+- API routes — projects, entries, sign, id-card, export (ทุก route ส่ง `payerPosition` แล้ว)
 - Sign page — `/docs/sign/[token]`
 - `web/lib/docsAccess.js` — permission + scope
 - `"docs"` ใน `enabled_features`
+- Template system — `template-1.docx` + `body-1/` (break/lunch/dinner/equipment/sound/speaker/supplies/transport/venue) ✅ ครบ
+- `buildData()` — `header`, `amount`, `total`, `payer_position` ✅
 
-### 🔧 Template files (web/templates/)
-- [ ] สร้าง `food.docx` — section 3 ค่าอาหาร (ผู้ใช้ design เอง)
-- [ ] สร้าง `travel.docx` — section 3 ค่าเดินทาง (ผู้ใช้ design เอง)
-- [ ] อัปเดต `1.1`–`1.5` — ใส่ variable ส่วน 1/2/4 ให้ครบ (`{{header}}`, `{{receipt_no}}`, ที่อยู่ทุก field, footer)
-- [ ] ลบ `generic.docx` และ `1-ใบสำคัญรับเงิน.docx` ออก (ไม่ใช้แล้ว)
-
-### 🔧 generatePdf.js
-- [ ] อัปเดต `TEMPLATE_MAP` — ตัด `accommodation`, `photo`, `attendance` ออก; เพิ่ม `food`, `travel`
-- [ ] เพิ่ม `header` ใน `buildData()` ต่อ `item_type` (ชื่อประเภท เช่น `"ค่าอาหาร"`)
-- [ ] เพิ่ม `payer_position` ใน `buildData()` (ดึงจาก `docs_projects`)
-- [ ] `amount = total_amount` (สำหรับตอนนี้ — future: หลาย amount ต่อ entry)
+### 🔧 Pending
+- [ ] **`docs_payers` table** — guild_id, discord_id, display_name, position, sort_order; auto-select payer ≠ recipient; รัน `/scrutinize` ก่อน
+- [ ] `section 3` ของ body files — ตรวจ variable ครบทุกไฟล์ (เช็คกับ `buildData()`)
 
 ### 🔧 Web UI
 - [ ] `/docs` — รายการ project + สถานะ
-- [ ] `/docs/create` — เลือก event + ตั้งงบ + ติ๊กสมาชิก
+- [ ] `/docs/create` — เลือก event + ตั้งงบ + ติ๊กสมาชิก + เลือกผู้จ่าย
 - [ ] `/docs/[id]` — overview entries ต่อ project + status (pending/signed/printed)
 - [ ] Batch export — ZIP PDF ครบชุดต่อโครงการ
