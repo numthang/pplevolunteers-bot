@@ -509,6 +509,21 @@ CREATE TABLE IF NOT EXISTS dc_user_identities (
 );
 CREATE INDEX IF NOT EXISTS idx_user_identities_discord ON dc_user_identities (discord_id);
 
+-- 2026-06-19: act_event_cache — sync events จาก act.pplethai.org
+ALTER TABLE act_event_cache ADD COLUMN IF NOT EXISTS act_event_id INT NULL;
+ALTER TABLE act_event_cache ADD COLUMN IF NOT EXISTS image_url TEXT NULL;
+ALTER TABLE act_event_cache ADD COLUMN IF NOT EXISTS location TEXT NULL;
+ALTER TABLE act_event_cache ADD COLUMN IF NOT EXISTS map_url TEXT NULL;
+ALTER TABLE act_event_cache ADD COLUMN IF NOT EXISTS event_end_date TIMESTAMPTZ NULL;
+
+-- partial unique index สำหรับ upsert by act_event_id (NULL rows ไม่ conflict กัน)
+CREATE UNIQUE INDEX IF NOT EXISTS idx_act_event_cache_act_event_id
+  ON act_event_cache (act_event_id) WHERE act_event_id IS NOT NULL;
+
+-- type column เป็น PostgreSQL ENUM ชื่อ act_event_cache_type
+ALTER TYPE act_event_cache_type ADD VALUE IF NOT EXISTS 'event';
+ALTER TABLE act_event_cache ADD COLUMN IF NOT EXISTS map_url TEXT NULL;
+
 -- 2026-06-19: act_event_cache — re-ID manual campaigns ให้อยู่ใน range 101+
 --   สงวน 1-100 สำหรับ province xlsx imports (เช่น ราชบุรี=70, นครปฐม=73)
 --   ลบ register rows ทิ้ง (ข้อมูล test เท่านั้น ยังไม่ได้ใช้จริง)
@@ -538,21 +553,6 @@ UPDATE calling_logs SET campaign_id = 105 WHERE campaign_id = 160456;
 
 SELECT setval('act_event_cache_id_seq', 106);
 COMMIT;
-
--- 2026-06-19: act_event_cache — sync events จาก act.pplethai.org
-ALTER TABLE act_event_cache ADD COLUMN IF NOT EXISTS act_event_id INT NULL;
-ALTER TABLE act_event_cache ADD COLUMN IF NOT EXISTS image_url TEXT NULL;
-ALTER TABLE act_event_cache ADD COLUMN IF NOT EXISTS location TEXT NULL;
-ALTER TABLE act_event_cache ADD COLUMN IF NOT EXISTS map_url TEXT NULL;
-ALTER TABLE act_event_cache ADD COLUMN IF NOT EXISTS event_end_date TIMESTAMPTZ NULL;
-
--- partial unique index สำหรับ upsert by act_event_id (NULL rows ไม่ conflict กัน)
-CREATE UNIQUE INDEX IF NOT EXISTS idx_act_event_cache_act_event_id
-  ON act_event_cache (act_event_id) WHERE act_event_id IS NOT NULL;
-
--- type column เป็น PostgreSQL ENUM ชื่อ act_event_cache_type
-ALTER TYPE act_event_cache_type ADD VALUE IF NOT EXISTS 'event';
-ALTER TABLE act_event_cache ADD COLUMN IF NOT EXISTS map_url TEXT NULL;
 
 -- 2026-06-19: PPLE Docs — ใบสำคัญรับเงิน + e-signature
 CREATE TABLE IF NOT EXISTS docs_projects (
@@ -597,4 +597,41 @@ CREATE TABLE IF NOT EXISTS docs_signatures (
   signed_ip            VARCHAR(45) NULL,
   created_at           TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- 2026-06-19: add project_name to docs_projects for {{project_name}} template field
+ALTER TABLE docs_projects ADD COLUMN IF NOT EXISTS project_name TEXT NULL;
+
+-- 2026-06-19: docs_projects — UNIQUE (guild_id, act_event_cache_id) สำหรับ upsert
+CREATE UNIQUE INDEX IF NOT EXISTS idx_docs_projects_guild_event
+  ON docs_projects (guild_id, act_event_cache_id);
+
+-- 2026-06-19: เปิด docs feature สำหรับ guild อาสาประชาชน
+INSERT INTO dc_guild_config (guild_id, "key", value)
+VALUES ('1340903354037178410', 'enabled_features', '["calling","contacts","docs"]'::json)
+ON CONFLICT (guild_id, "key") DO UPDATE SET value = '["calling","contacts","docs"]'::json;
+
+-- 2026-06-20: docs — สำเนาบัตรประชาชน เก็บใน dc_members (per-guild, resize เหลือขนาดพิมพ์ A4)
+-- ไม่เก็บใน ngs_member_cache เพราะเป็น cache ที่ sync ทับจาก act.pplethai.org
+ALTER TABLE dc_members ADD COLUMN IF NOT EXISTS id_card_image BYTEA NULL;
+
+-- 2026-06-20: docs — กัน 2 Discord accounts ผูก NGS source_id เดียวกันใน guild เดียวกัน (anti-impersonation)
+CREATE UNIQUE INDEX IF NOT EXISTS uq_dc_members_guild_member
+  ON dc_members (guild_id, member_id)
+  WHERE member_id IS NOT NULL;
+
+-- 2026-06-20: docs — ผู้จ่ายเงิน (payer) 2-signer flow
+-- docs_projects: เก็บ default payer สำหรับ project
+ALTER TABLE docs_projects
+  ADD COLUMN IF NOT EXISTS payer_discord_id VARCHAR(20) NULL;
+
+-- docs_activity_entries: token + timestamp สำหรับผู้จ่าย (แยกจาก recipient)
+ALTER TABLE docs_activity_entries
+  ADD COLUMN IF NOT EXISTS payer_discord_id       VARCHAR(20)  NULL,
+  ADD COLUMN IF NOT EXISTS payer_sign_token        UUID         NULL,
+  ADD COLUMN IF NOT EXISTS payer_token_expires_at  TIMESTAMPTZ  NULL,
+  ADD COLUMN IF NOT EXISTS payer_signed_at         TIMESTAMPTZ  NULL;
+
+-- docs_signatures: แยก role ระหว่าง recipient vs payer (เพิ่ม DEFAULT เพื่อไม่ break row เดิม)
+ALTER TABLE docs_signatures
+  ADD COLUMN IF NOT EXISTS role VARCHAR(20) NOT NULL DEFAULT 'recipient';
 

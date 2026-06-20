@@ -7,7 +7,7 @@ import { getGuildId } from '@/lib/guildContext.js'
 import pool from '@/db/index.js'
 
 // features ที่ toggle ได้ — finance + contacts + bot เปิดตลอด (ไม่อยู่ในนี้)
-const TOGGLEABLE = ['calling']
+const TOGGLEABLE = ['calling', 'docs']
 
 async function authGuildAdmin(session, guildId) {
   // effective discordId เป็น null ตอน view-as-role → super/adminGuild bypass ปิด ตาม debug role

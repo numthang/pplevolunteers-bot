@@ -1,0 +1,80 @@
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth-options.js'
+import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
+import { canManageDocs, getUserScope } from '@/lib/docsAccess.js'
+import { getGuildId } from '@/lib/guildContext.js'
+import { createDocProject, getDocEvents } from '@/db/docs/projects.js'
+import { getAllowedItems } from '@/config/fund69-rules.js'
+
+/**
+ * GET /api/docs/projects?active=true
+ * คืนโครงการที่ตั้งค่าแล้ว (มี docs_project) ตาม scope — ใช้ feed dropdown ใน nav
+ */
+export async function GET(req) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.discordId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { access } = await getEffectiveIdentity(session)
+  if (!canManageDocs(access)) return Response.json({ error: 'Forbidden' }, { status: 403 })
+
+  const { searchParams } = new URL(req.url)
+  const onlyActive = searchParams.get('active') === 'true'
+  const guildId = await getGuildId(session)
+  const scope   = getUserScope(access)
+
+  try {
+    const all = await getDocEvents(guildId, scope)
+    const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 7)
+    const cutoffStr = cutoff.toISOString().slice(0, 10)
+
+    const data = all
+      .filter(p => p.id)  // เฉพาะที่ตั้งค่าแล้ว (มี docs_project)
+      .filter(p => !onlyActive || !p.event_date || p.event_date >= cutoffStr)
+      .map(p => ({
+        act_event_cache_id: p.act_event_cache_id,
+        event_name:         p.event_name,
+        status:             p.status,
+      }))
+
+    return Response.json({ success: true, data })
+  } catch (err) {
+    console.error('[GET /api/docs/projects]', err)
+    return Response.json({ error: 'Internal Server Error' }, { status: 500 })
+  }
+}
+
+/**
+ * POST /api/docs/projects
+ * Create a new docs project (legacy — setup page now uses POST /api/docs/entries instead)
+ */
+export async function POST(req) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.discordId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { access } = await getEffectiveIdentity(session)
+  if (!canManageDocs(access)) return Response.json({ error: 'Forbidden' }, { status: 403 })
+
+  try {
+    const body = await req.json()
+    const { actEventCacheId, isMobile, participantCount, budget, projectName } = body
+
+    if (!actEventCacheId) return Response.json({ error: 'actEventCacheId is required' }, { status: 400 })
+
+    const guildId = await getGuildId(session)
+    const id = await createDocProject({
+      guildId,
+      actEventCacheId,
+      isMobile:         isMobile ?? false,
+      participantCount: participantCount || null,
+      budget:           budget || null,
+      allowedItems:     getAllowedItems(isMobile ?? false),
+      projectName:      projectName || null,
+      createdBy:        session.user.discordId,
+    })
+
+    return Response.json({ success: true, data: { id } }, { status: 201 })
+  } catch (err) {
+    console.error('[POST /api/docs/projects]', err)
+    return Response.json({ error: 'Internal Server Error' }, { status: 500 })
+  }
+}

@@ -246,6 +246,8 @@
 - ✅ `act_event_cache` sync จาก `act.pplethai.org` (`scripts/sync-act-events.js`)
 - [ ] ใบสำคัญรับเงิน — budget planner + e-signature + PDF (ทีมงาน dc_members ก่อน)
 - [ ] act_event_registers — ยังหาวิธีดึงไม่ได้ (รอ)
+- [ ] **Bot command `/link-ngs`** — ให้สมาชิกค้นชื่อตัวเองใน `ngs_member_cache` แล้วผูก `dc_members.member_id` ถาวร (ทางเลือก B ของ ngs link flow; ตอนนี้ใช้ sign-page self-link แทน)
+- [ ] **Edit/Delete entry** — แก้ไขรายการเบิกจาก `/docs/[id]` ได้ทุก status (ลายเซ็นเดิมยังใช้ได้); ลบได้เฉพาะ `status = 'pending'` เท่านั้น
 
 ---
 

@@ -2,12 +2,13 @@
 import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { Loader2, Phone, Users } from 'lucide-react'
+import { Loader2, Phone, Users, FileText } from 'lucide-react'
 
 // ฟีเจอร์ที่ toggle ได้ + คำอธิบาย (finance + bot เปิดตลอด ไม่อยู่ที่นี่)
 const FEATURE_META = {
   calling:  { label: 'Calling', icon: Phone, desc: 'ระบบโทรหาสมาชิก — แคมเปญ, มอบหมาย, บันทึกการโทร' },
   contacts: { label: 'Contacts', icon: Users, desc: 'ฐานข้อมูลผู้ติดต่อ (CRM)' },
+  docs:     { label: 'Docs', icon: FileText, desc: 'ใบสำคัญรับเงิน + e-signature สำหรับเบิกจ่ายกิจกรรม' },
 }
 
 function FeatureRow({ feature, enabled, saving, onToggle }) {

@@ -77,29 +77,133 @@ docs_signatures
 
 ---
 
-## Template
+## Template System
 
-- ต้นฉบับ PDF อยู่ใน `md/docs/example/`
-- ใช้ **pdf-lib** overlay ข้อความลงบน PDF ต้นฉบับตามพิกัด XY
-- **สีตัวอักษร: น้ำเงินหมึกปากกา** — ประมาณ `#1a47cc` หรือ `#2255bb` เพื่อให้ดูเหมือนเขียนด้วยมือ
+**Stack:** `docxtemplater` render `{{variable}}` ลงใน `.docx` → LibreOffice headless แปลงเป็น PDF → `pdf-lib` append หน้าสำเนาบัตรประชาชน
 
-**การ maintain พิกัดฟิลด์:**  
-พิกัด XY ทุกฟิลด์ต้อง config แยกไว้ใน `web/config/pdf-fields.js` — ไม่ hardcode ใน logic  
-ถ้า PDF form เปลี่ยน layout → แก้ไฟล์ config ไฟล์เดียวพอ
+- Template ไฟล์อยู่ที่ `web/templates/*.docx`
+- ตัวอย่าง / reference PDF+DOCX อยู่ที่ `md/docs/example/`
+- Logic อยู่ที่ `web/lib/generatePdf.js` — `buildData()` map entry → variables, `generateEntryPdf()` render + convert
 
-```js
-// web/config/pdf-fields.js
-export const RECEIPT_FIELDS = {
-  project_name:  { x: 120, y: 680, size: 11 },
-  sub_project:   { x: 120, y: 660, size: 11 },
-  citizen_id:    { x: 320, y: 610, size: 11 },
-  full_name:     { x: 120, y: 610, size: 11 },
-  address:       { x: 120, y: 590, size: 10 },
-  amount:        { x: 400, y: 540, size: 11 },
-  signature:     { x: 280, y: 160, width: 120, height: 50 },
-  // ...
-}
+### Template Map (`item_type` → ไฟล์)
+
+| item_type | template |
+|---|---|
+| `food` / `accommodation` / `photo` | `1-ใบสำคัญรับเงิน.docx` (generic) |
+| `venue` | `1.1-ใบสำคัญรับเงินค่าสถานที่.docx` |
+| `equipment` | `1.2-ใบสำคัญรับเงินค่าเช่าอุปกรณ์.docx` |
+| `sound` | `1.3-ใบสำคัญรับเงินค่าเช่าเครื่องเสียง.docx` |
+| `supplies` | `1.4-ใบสำคัญรับเงินค่าซื้อวัสดุอุปกรณ์.docx` |
+| `speaker` | `1.5-ใบสำคัญรับเงินค่าวิทยากร.docx` |
+| `travel` | `2-ใบสำคัญรับเงินค่าเบี้ยเลี้ยงเจ้าหน้าที่.docx` |
+| `attendance` | `3-แบบรายชื่อผู้เข้าร่วมประชุม อบรม สัมนา และเบิกค่าพาหนะเดินทาง.docx` |
+
+---
+
+### โครงสร้างใบสำคัญรับเงิน — 4 ส่วน
+
+#### ส่วน 1 — หัวเรื่อง
+
+ชื่อฝังอยู่ใน template แต่ละไฟล์ (ไม่มี variable) เช่น "ใบสำคัญรับเงิน", "ใบสำคัญรับเงินค่าเบี้ยเลี้ยงเจ้าหน้าที่โครงการ"
+
+#### ส่วน 2 — รายละเอียดคนรับเงิน (ทุก template เหมือนกัน)
+
 ```
+วันที่ {{day}} เดือน {{month_name}} พ.ศ. {{year}}
+ข้าพเจ้า (นาย/นาง/นางสาว) {{full_name}} นามสกุล {{last_name}}
+หมายเลขประจำตัวประชาชน (13 หลัก) {{id_number}} อยู่บ้านเลขที่ {{house_no}} หมู่ที่ {{moo}}
+ซอย {{road}} ถนน  ตำบล/แขวง {{subdistrict}}
+อำเภอ/เขต {{district}} จังหวัด {{province_addr}} หมายเลขโทรศัพท์ {{phone}}
+ข้าพเจ้าขอรับรองว่าได้รับเงินจากพรรค/สาขาพรรค {{branch_province}} ลำดับที่ {{branch_no}}
+ประจำจังหวัด {{branch_province}} ตามรายละเอียด ดังต่อไปนี้
+```
+
+| variable | แหล่งข้อมูล |
+|---|---|
+| `day` / `month_name` / `year` | `parseThaiDate(entry.event_date)` |
+| `full_name` | `override_data.full_name` → `ngs_member_cache.title + first_name` |
+| `last_name` | `override_data.last_name` → `ngs_member_cache.last_name` |
+| `id_number` | `override_data.id_number` → `ngs_member_cache.identification_number` |
+| `house_no` / `moo` / `road` | `override_data` → `ngs_member_cache.home_*` |
+| `subdistrict` / `district` / `province_addr` | `override_data` → `ngs_member_cache.home_*` |
+| `phone` | `override_data.phone` (ไม่มีใน ngs — ต้องกรอกเอง) |
+| `branch_no` | `override_data.branch_no` (ลำดับที่ของสาขา) |
+| `branch_province` | `override_data.branch_province` (ชื่อจังหวัดที่สาขาสังกัด) |
+
+#### ส่วน 3 — รายละเอียดการรับเงิน (แตกต่างกันตาม template)
+
+**1 / food / accommodation / photo — generic (ตารางอิสระ):**
+```
+{{items_desc}}     {{total_amount}}
+{{item_2}}
+{{item_3}}
+{{item_4}}
+{{item_5}}
+รวมเป็นเงิน       {{total_amount}}
+จำนวนเงิน (ตัวอักษร) {{amount_text}}
+```
+
+**1.1 — ค่าสถานที่:**
+```
+ค่าเช่าสถานที่ {{venue}} ระยะเวลา {{duration}}
+ผู้เข้าร่วม {{participant_count}} คน
+```
+
+**1.2 — ค่าเช่าอุปกรณ์:**
+```
+{{equipment_desc}} จำนวน {{quantity}} ชิ้น ราคา {{unit_price}} บาท/ชิ้น
+```
+
+**1.3 — ค่าเช่าเครื่องเสียง:**
+```
+{{equipment_desc}} จำนวน {{quantity}} ชุด ราคา {{unit_price}} บาท/ชุด
+```
+
+**1.4 — ค่าซื้อวัสดุอุปกรณ์:**
+```
+{{items_desc}}
+{{item_2}} / {{item_3}} / {{item_4}} / {{item_5}}
+```
+
+**1.5 — ค่าวิทยากร:**
+```
+หัวข้อ {{topic}}
+ชื่อโครงการใหญ่ {{project_name}}
+ชื่อโครงการย่อย {{sub_project_name}}
+ระยะเวลา {{duration}}
+```
+
+**2 — ค่าเบี้ยเลี้ยงเจ้าหน้าที่ (pre-structured):**
+```
+จ่ายค่าเบี้ยเลี้ยงเจ้าหน้าที่โครงการ
+ชื่อโครงการใหญ่ {{project_name}}
+ชื่อโครงการย่อย {{sub_project_name}}
+จำนวน {{days}} วัน เป็นเงินคนละ {{daily_rate}} บาท/วัน
+รวม {{total_amount}} บาท
+*แนบสำเนาบัตรประจำตัวประชาชนและรับรองสำเนาถูกต้อง
+```
+> มี `เลขที่ {{receipt_no}}` ที่มุมบนขวาด้วย (template อื่นไม่มี)
+
+**3 — แบบรายชื่อผู้เข้าร่วม + ค่าพาหนะ:**
+> ⚠️ ยังไม่ได้ document variables — ดู `md/docs/example/docx/3-แบบรายชื่อฯ.docx` โดยตรง
+
+#### ส่วน 4 — Footer (ทุก template เหมือนกัน)
+
+```
+ลงชื่อ    {%sig}      ผู้รับเงิน
+           ({{payee_name}})
+ลงชื่อ    {%paysig}   ผู้จ่ายเงิน
+           ({{payer_name}})
+ตำแหน่ง   {{payer_position}}
+```
+
+| variable | หมายเหตุ |
+|---|---|
+| `{%sig}` | รูปลายเซ็นผู้รับเงิน — docxtemplater ImageModule syntax |
+| `{%paysig}` | รูปลายเซ็นผู้จ่ายเงิน |
+| `payee_name` | `full_name + ' ' + last_name` |
+| `payer_name` | ชื่อผู้จ่ายเงิน — ดึงจาก set-payer API |
+| `payer_position` | ⚠️ **ยังไม่มีใน `buildData()`** — ต้องเพิ่ม field นี้ใน `docs_projects` + `buildData()` |
 
 ---
 

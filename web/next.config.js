@@ -3,6 +3,8 @@ require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') }
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   outputFileTracingRoot: require('path').resolve(__dirname, '../'),
+  // @napi-rs/canvas มี native .node binary — ห้าม webpack bundle ให้ require ตอน runtime
+  serverExternalPackages: ['@napi-rs/canvas'],
   images: {
     domains: ['cdn.discordapp.com'],
     unoptimized: true,

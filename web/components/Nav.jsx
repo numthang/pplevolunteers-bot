@@ -52,6 +52,7 @@ const ICONS = {
   server:         'M5 4h14a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zm0 10h14a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1z',
   media:          'M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z',
   ai:             'M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z',
+  docs:           'M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z',
 }
 
 const FINANCE_LINKS = [
@@ -67,6 +68,10 @@ const CALLING_LINKS = [
   { href: '/calling/assignee',  label: 'Assignee',   icon: 'pending' },
   { href: '/calling/contacts',  label: 'Contacts',   icon: 'contacts',  hamburgerOnly: true },
   { href: '/calling/stats',     label: 'Statistics', icon: 'report',    hamburgerOnly: true },
+]
+
+const DOCS_LINKS = [
+  { href: '/docs', label: 'Projects', icon: 'docs', exact: true },
 ]
 
 const DISCORD_LINKS = [
@@ -86,12 +91,14 @@ const SOCIAL_LINKS = [
 const DASHBOARD_LINKS = [
   { href: '/finance',  label: 'FINANCE',  icon: 'transactions' },
   { href: '/calling',  label: 'CALLING',  icon: 'campaigns', feature: 'calling' },
+  { href: '/docs',     label: 'DOCS',     icon: 'docs',      feature: 'docs' },
 ]
 
 const APPS = [
-  { key: 'home',     label: 'DASHBOARD', href: '/',                      icon: 'overview' },
-  { key: 'finance',  label: 'FINANCE',   href: '/finance',               icon: 'transactions' },
-  { key: 'calling',  label: 'CALLING',   href: '/calling',               icon: 'campaigns', feature: 'calling' },
+  { key: 'home',     label: 'DASHBOARD', href: '/',               icon: 'overview' },
+  { key: 'finance',  label: 'FINANCE',   href: '/finance',        icon: 'transactions' },
+  { key: 'calling',  label: 'CALLING',   href: '/calling',        icon: 'campaigns', feature: 'calling' },
+  { key: 'docs',     label: 'DOCS',      href: '/docs',           icon: 'docs',      feature: 'docs' },
   { key: 'discord',  label: 'BOT',       href: '/bot/platforms',  icon: 'social' },
 ]
 
@@ -103,24 +110,34 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
   const [guildOpen, setGuildOpen] = useState(false)
   const [mediaOpen, setMediaOpen] = useState(false)
   const [campaignOpen, setCampaignOpen] = useState(false)
+  const [docOpen, setDocOpen] = useState(false)
   const mediaRef = useRef(null)
   const [campaigns, setCampaigns] = useState([])
+  const [docProjects, setDocProjects] = useState([])
   const [pendingCount, setPendingCount] = useState(0)
   const campaignRef = useRef(null)
+  const docRef = useRef(null)
 
   const isCallingApp   = pathname.startsWith('/calling')
   const isFinanceApp   = pathname.startsWith('/finance')
   const isSocialApp    = pathname.startsWith('/social')
   const isDiscordApp   = pathname.startsWith('/bot')
+  const isDocsApp      = pathname.startsWith('/docs')
   const isLinkActive = (href, exact = false) => {
     if (exact) return pathname === href
     return pathname === href || (href !== '/' && pathname.startsWith(href))
   }
-  const currentApp = isDiscordApp ? APPS[3] : isCallingApp ? APPS[2] : isFinanceApp ? APPS[1] : APPS[0]
-  const links = isDiscordApp ? DISCORD_LINKS : isSocialApp ? SOCIAL_LINKS : isCallingApp ? CALLING_LINKS : isFinanceApp ? FINANCE_LINKS : DASHBOARD_LINKS
+  const appByKey = (key) => APPS.find(a => a.key === key)
+  const currentApp = isDiscordApp ? appByKey('discord') : isDocsApp ? appByKey('docs')
+    : isCallingApp ? appByKey('calling') : isFinanceApp ? appByKey('finance') : appByKey('home')
+  const links = isDiscordApp ? DISCORD_LINKS : isSocialApp ? SOCIAL_LINKS : isDocsApp ? DOCS_LINKS
+    : isCallingApp ? CALLING_LINKS : isFinanceApp ? FINANCE_LINKS : DASHBOARD_LINKS
 
   const campaignIdMatch = pathname.match(/^\/calling\/assignments\/(\d+)/)
   const activeCampaignId = campaignIdMatch ? parseInt(campaignIdMatch[1]) : null
+
+  const docIdMatch = pathname.match(/^\/docs\/(\d+)/)
+  const activeDocId = docIdMatch ? parseInt(docIdMatch[1]) : null
 
   useEffect(() => {
     if (!isCallingApp) return
@@ -137,14 +154,23 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
   }, [isCallingApp, session])
 
   useEffect(() => {
-    if (!campaignOpen && !mediaOpen) return
+    if (!isDocsApp) return
+    fetch('/api/docs/projects?active=true')
+      .then(r => r.json())
+      .then(d => setDocProjects(d.data || []))
+      .catch(() => {})
+  }, [isDocsApp, session])
+
+  useEffect(() => {
+    if (!campaignOpen && !mediaOpen && !docOpen) return
     const handleClickOutside = (e) => {
       if (campaignRef.current && !campaignRef.current.contains(e.target)) setCampaignOpen(false)
+      if (docRef.current && !docRef.current.contains(e.target)) setDocOpen(false)
       if (mediaRef.current && !mediaRef.current.contains(e.target)) setMediaOpen(false)
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [campaignOpen, mediaOpen])
+  }, [campaignOpen, mediaOpen, docOpen])
 
   const activeCampaign = campaigns.find(c => c.id === activeCampaignId)
 
@@ -287,6 +313,47 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
             </div>
           )}
           {topLinks.map(l => {
+            if (l.href === '/docs' && isDocsApp && docProjects.length > 0) {
+              const isActive = pathname === '/docs' || !!activeDocId
+              return (
+                <div key={l.href} className="relative flex items-center" ref={docRef}>
+                  <Link
+                    href="/docs"
+                    className={`px-3 py-1 rounded-l-md text-base transition flex items-center gap-1.5 ${isActive ? activeClass : inactiveClass}`}
+                  >
+                    <Ic d={ICONS[l.icon]} className="w-7 h-7 shrink-0" />
+                    <span className="hidden md:inline">{l.label}</span>
+                    <span className="text-xs font-normal opacity-60">({docProjects.length})</span>
+                  </Link>
+                  <button
+                    onClick={() => setDocOpen(o => !o)}
+                    className={`px-1 py-1 rounded-r-md text-sm transition border-l border-warm-200 dark:border-disc-border ${isActive ? activeClass : inactiveClass}`}
+                  >
+                    <svg className={`w-3 h-3 transition-transform ${docOpen ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.17l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                  {docOpen && (
+                    <div className="absolute left-0 top-full mt-1 w-60 bg-white dark:bg-disc-hover border border-warm-200 dark:border-disc-border rounded-lg shadow-lg z-50 py-1 max-h-72 overflow-y-auto">
+                      {docProjects.map(p => (
+                        <button
+                          key={p.act_event_cache_id}
+                          onClick={() => { setDocOpen(false); router.push(`/docs/${p.act_event_cache_id}`) }}
+                          className={`w-full text-left px-4 py-2.5 text-sm hover:bg-warm-50 dark:hover:bg-disc-hover transition ${
+                            activeDocId === p.act_event_cache_id ? 'text-teal dark:text-teal font-medium' : 'text-warm-900 dark:text-disc-muted'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="truncate pr-2">{p.event_name}</span>
+                            {activeDocId === p.act_event_cache_id && <span className="text-teal shrink-0">✓</span>}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            }
             if (l.href === '/calling/campaigns' && isCallingApp && campaigns.length > 0) {
               const isActive = pathname === '/calling/campaigns' || !!activeCampaignId
               return (
@@ -380,6 +447,40 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
 
                     {/* Nav links for current app */}
                     {menuLinks.map(l => {
+                      if (l.href === '/docs' && isDocsApp && docProjects.length > 0) {
+                        return (
+                          <div key={l.href}>
+                            <Link
+                              href="/docs"
+                              onClick={() => setMenuOpen(false)}
+                              className={`flex items-center gap-2 px-4 py-2.5 text-base transition ${
+                                pathname === '/docs' || !!activeDocId
+                                  ? 'text-teal dark:text-teal font-medium bg-teal/10 dark:bg-teal/10'
+                                  : 'text-warm-900 dark:text-disc-muted hover:bg-warm-100 dark:hover:bg-disc-hover'
+                              }`}
+                            >
+                              <Ic d={ICONS[l.icon]} className="w-7 h-7 shrink-0" />
+                              {l.label}
+                              <span className="text-xs font-normal opacity-60">({docProjects.length})</span>
+                            </Link>
+                            <div className="ml-4 border-l-2 border-warm-200 dark:border-disc-border pl-3 flex flex-col gap-0.5 mb-1">
+                              {docProjects.map(p => (
+                                <button
+                                  key={p.act_event_cache_id}
+                                  onClick={() => { setMenuOpen(false); router.push(`/docs/${p.act_event_cache_id}`) }}
+                                  className={`w-full text-left px-2 py-1.5 rounded text-base transition ${
+                                    activeDocId === p.act_event_cache_id
+                                      ? 'text-teal dark:text-teal font-medium'
+                                      : 'text-warm-500 dark:text-disc-muted hover:bg-warm-100 dark:hover:bg-disc-hover'
+                                  }`}
+                                >
+                                  {activeDocId === p.act_event_cache_id && '› '}{p.event_name}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )
+                      }
                       if (l.href === '/calling/campaigns' && isCallingApp && campaigns.length > 0) {
                         return (
                           <div key={l.href}>
