@@ -66,12 +66,12 @@ export function bahtText(amount) {
 }
 
 function parseThaiDate(dateStr) {
-  if (!dateStr) return { day: '', month_name: '', year: '' }
+  if (!dateStr) return { day: '', month: '', year: '' }
   const [datePart] = dateStr.split('T')
   const [y, m, d] = datePart.split('-').map(Number)
   return {
     day:        String(d),
-    month_name: THAI_MONTHS[m - 1] ?? '',
+    month:      THAI_MONTHS[m - 1] ?? '',
     year:       String(y + 543),
     event_date: `${d} ${THAI_MONTHS[m - 1]} ${y + 543}`,
   }
@@ -153,6 +153,20 @@ function buildData(entry, { payerDisplayName = null } = {}) {
   }
 }
 
+function colorVariableRuns(zip) {
+  const xml = zip.files['word/document.xml'].asText()
+  const out = xml.replace(/<w:r\b[^>]*>[\s\S]*?<\/w:r>/g, run => {
+    if (!run.includes('{{') && !run.includes('{%')) return run
+    const colored = '<w:color w:val="1A47CC"/>'
+    if (run.includes('w:color'))
+      return run.replace(/<w:color[^/]*\/>/, colored)
+    return run.includes('<w:rPr>')
+      ? run.replace('<w:rPr>', `<w:rPr>${colored}`)
+      : run.replace(/(<w:r\b[^>]*>)/, `$1<w:rPr>${colored}</w:rPr>`)
+  })
+  zip.file('word/document.xml', out)
+}
+
 export async function generateEntryPdf(entry, { signatureBase64 = null, payerSignatureBase64 = null, payerDisplayName = null } = {}) {
   const templateFile = TEMPLATE_MAP[entry.item_type]
   if (!templateFile) throw new Error(`no template for item_type: ${entry.item_type}`)
@@ -162,6 +176,7 @@ export async function generateEntryPdf(entry, { signatureBase64 = null, payerSig
 
   const buf  = fs.readFileSync(templatePath)
   const zip  = new PizZip(buf)
+  colorVariableRuns(zip)
 
   const sigBuf    = signatureBase64      ? Buffer.from(signatureBase64.replace(/^data:image\/\w+;base64,/, ''),      'base64') : null
   const payerBuf  = payerSignatureBase64 ? Buffer.from(payerSignatureBase64.replace(/^data:image\/\w+;base64,/, ''), 'base64') : null

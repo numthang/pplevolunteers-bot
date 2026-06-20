@@ -87,16 +87,17 @@ docs_signatures
 
 ### Template Map (`item_type` → ไฟล์)
 
-| item_type | template |
-|---|---|
-| `food` / `accommodation` / `photo` | `1-ใบสำคัญรับเงิน.docx` (generic) |
-| `venue` | `1.1-ใบสำคัญรับเงินค่าสถานที่.docx` |
-| `equipment` | `1.2-ใบสำคัญรับเงินค่าเช่าอุปกรณ์.docx` |
-| `sound` | `1.3-ใบสำคัญรับเงินค่าเช่าเครื่องเสียง.docx` |
-| `supplies` | `1.4-ใบสำคัญรับเงินค่าซื้อวัสดุอุปกรณ์.docx` |
-| `speaker` | `1.5-ใบสำคัญรับเงินค่าวิทยากร.docx` |
-| `travel` | `2-ใบสำคัญรับเงินค่าเบี้ยเลี้ยงเจ้าหน้าที่.docx` |
-| `attendance` | `3-แบบรายชื่อผู้เข้าร่วมประชุม อบรม สัมนา และเบิกค่าพาหนะเดินทาง.docx` |
+> `accommodation` และ `photo` ตัดออก — ค่าที่พักออกใบ VAT ได้อยู่แล้ว, ค่าถ่ายภาพไม่ใช้ในระบบนี้
+
+| item_type | template | สถานะ |
+|---|---|---|
+| `food` | `food.docx` | ❌ ต้องสร้าง |
+| `venue` | `1.1-ใบสำคัญรับเงินค่าสถานที่.docx` | ✅ |
+| `equipment` | `1.2-ใบสำคัญรับเงินค่าเช่าอุปกรณ์.docx` | ✅ |
+| `sound` | `1.3-ใบสำคัญรับเงินค่าเช่าเครื่องเสียง.docx` | ✅ |
+| `supplies` | `1.4-ใบสำคัญรับเงินค่าซื้อวัสดุอุปกรณ์.docx` | ✅ |
+| `speaker` | `1.5-ใบสำคัญรับเงินค่าวิทยากร.docx` | ✅ |
+| `travel` | `travel.docx` | ❌ ต้องสร้าง |
 
 ---
 
@@ -373,18 +374,29 @@ docs_signatures
 
 ## Checklist
 
-- [ ] DB migration — `docs_projects`, `docs_activity_entries`, `docs_signatures`
-- [ ] กฎกองทุน69 → `web/config/fund69-rules.js` สำหรับ validate ceiling แต่ละรายการ
-- [ ] `web/config/pdf-fields.js` — map พิกัด XY ทุกฟิลด์ต่อแบบฟอร์ม
-- [ ] `web/lib/docsAccess.js` — permission + scope (pattern เดียวกับ callingAccess + financeAccess)
-- [ ] เพิ่ม `"docs"` ใน `enabled_features` ของ `dc_guild_config`
-- [ ] `/docs` — รายการ event (filter ตาม scope) + เลือก event เพื่อตั้งงบ
-- [ ] `/docs/[eventId]` — overview entries ต่อ event + status (pending/signed/printed)
-- [ ] `/docs/[eventId]/setup` — กรอกงบ + รายการ + ติ๊กสมาชิก
-- [ ] `/docs/sign/[token]` — signing page (deeplink, login required, expire 2 เดือนหลัง event)
-  - ครั้งแรก: ค้นชื่อ link ngs + upload สำเนาบัตร
-  - วาด e-signature → submit → หน้าสำเร็จ
-- [ ] `/api/docs/id-card/[discordId]` — serve ไฟล์ + auth check (เจ้าของ / canManageDocs)
-- [ ] Image processing — overlay ลายน้ำ + "สำเนาถูกต้อง" บนสำเนาบัตร (`@napi-rs/canvas`)
-- [ ] Document generation — pdf-lib overlay ข้อมูล + signature บน PDF ต้นฉบับ (สีน้ำเงิน)
+### ✅ Done
+- DB migration — `docs_projects`, `docs_activity_entries`, `docs_signatures`
+- `web/lib/generatePdf.js` — docxtemplater + LibreOffice + id-card append
+- `web/lib/idCard.js` — watermark + สำเนาถูกต้อง overlay
+- API routes — projects, entries, sign, id-card, export
+- Sign page — `/docs/sign/[token]`
+- `web/lib/docsAccess.js` — permission + scope
+- `"docs"` ใน `enabled_features`
+
+### 🔧 Template files (web/templates/)
+- [ ] สร้าง `food.docx` — section 3 ค่าอาหาร (ผู้ใช้ design เอง)
+- [ ] สร้าง `travel.docx` — section 3 ค่าเดินทาง (ผู้ใช้ design เอง)
+- [ ] อัปเดต `1.1`–`1.5` — ใส่ variable ส่วน 1/2/4 ให้ครบ (`{{header}}`, `{{receipt_no}}`, ที่อยู่ทุก field, footer)
+- [ ] ลบ `generic.docx` และ `1-ใบสำคัญรับเงิน.docx` ออก (ไม่ใช้แล้ว)
+
+### 🔧 generatePdf.js
+- [ ] อัปเดต `TEMPLATE_MAP` — ตัด `accommodation`, `photo`, `attendance` ออก; เพิ่ม `food`, `travel`
+- [ ] เพิ่ม `header` ใน `buildData()` ต่อ `item_type` (ชื่อประเภท เช่น `"ค่าอาหาร"`)
+- [ ] เพิ่ม `payer_position` ใน `buildData()` (ดึงจาก `docs_projects`)
+- [ ] `amount = total_amount` (สำหรับตอนนี้ — future: หลาย amount ต่อ entry)
+
+### 🔧 Web UI
+- [ ] `/docs` — รายการ project + สถานะ
+- [ ] `/docs/create` — เลือก event + ตั้งงบ + ติ๊กสมาชิก
+- [ ] `/docs/[id]` — overview entries ต่อ project + status (pending/signed/printed)
 - [ ] Batch export — ZIP PDF ครบชุดต่อโครงการ
