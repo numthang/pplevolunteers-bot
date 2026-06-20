@@ -1,7 +1,6 @@
 import { getSession } from '@/lib/auth.js'
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { canManageDocs, getUserScope } from '@/lib/docsAccess.js'
+import { getUserScope } from '@/lib/docsAccess.js'
 import { getDocEvents } from '@/db/docs/projects.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import { getGuildId } from '@/lib/guildContext.js'

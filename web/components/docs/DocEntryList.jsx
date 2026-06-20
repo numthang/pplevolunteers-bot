@@ -17,11 +17,10 @@ const ITEM_LABELS = {
 const ALL_ITEMS    = Object.keys(ITEM_LABELS)
 const MOBILE_ITEMS = ['food','travel','accommodation','supplies','equipment','photo']
 
-const STATUS_LABEL = { pending: 'รอเซ็น', signed: 'เซ็นแล้ว', printed: 'พิมพ์แล้ว' }
+const STATUS_LABEL = { pending: 'รอเซ็น', signed: 'เซ็นแล้ว' }
 const STATUS_COLOR  = {
   pending: 'bg-warm-100 text-warm-500 dark:bg-disc-hover dark:text-disc-muted',
   signed:  'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-  printed: 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400',
 }
 const PAYER_SIGNED_CLS   = 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400'
 const PAYER_UNSIGNED_CLS = 'bg-warm-100 text-warm-500 dark:bg-disc-hover dark:text-disc-muted'
@@ -191,8 +190,8 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, onAd
                               ลิงก์จ่าย
                             </Link>
                           )}
-                          {(entry.status === 'signed' || entry.status === 'printed') && (
-                            <a href={`/api/docs/entries/${entry.id}/pdf?mark=printed`} target="_blank" className="text-xs text-orange hover:underline">
+                          {entry.status === 'signed' && (
+                            <a href={`/api/docs/entries/${entry.id}/pdf`} target="_blank" className="text-xs text-orange hover:underline">
                               PDF
                             </a>
                           )}
@@ -205,15 +204,13 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, onAd
                               >
                                 <Pencil size={13} />
                               </button>
-                              {entry.status === 'pending' && (
-                                <button
-                                  onClick={() => handleDelete(entry.id)}
-                                  className="p-1 rounded text-warm-400 dark:text-disc-muted hover:text-red-500 dark:hover:text-red-400 hover:bg-warm-100 dark:hover:bg-disc-hover transition"
-                                  title="ลบ"
-                                >
-                                  <Trash2 size={13} />
-                                </button>
-                              )}
+                              <button
+                                onClick={() => handleDelete(entry.id)}
+                                className="p-1 rounded text-warm-400 dark:text-disc-muted hover:text-red-500 dark:hover:text-red-400 hover:bg-warm-100 dark:hover:bg-disc-hover transition"
+                                title="ลบ"
+                              >
+                                <Trash2 size={13} />
+                              </button>
                             </>
                           )}
                         </div>

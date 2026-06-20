@@ -11,8 +11,7 @@ export async function getDocEvents(guildId, provinces = null) {
       TO_CHAR(e.event_end_date, 'YYYY-MM-DD"T"HH24:MI') AS event_end_date,
       p.id, p.is_mobile, p.participant_count, p.budget, p.status,
       COUNT(DISTINCT dae.id)                                       AS entry_count,
-      COUNT(DISTINCT dae.id) FILTER (WHERE dae.status = 'signed')  AS signed_count,
-      COUNT(DISTINCT dae.id) FILTER (WHERE dae.status = 'printed') AS printed_count
+      COUNT(DISTINCT dae.id) FILTER (WHERE dae.status = 'signed')  AS signed_count
     FROM act_event_cache e
     LEFT JOIN docs_projects p ON p.act_event_cache_id = e.id AND p.guild_id = $1
     LEFT JOIN docs_activity_entries dae ON dae.project_id = p.id

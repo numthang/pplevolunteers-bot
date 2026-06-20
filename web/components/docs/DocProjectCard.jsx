@@ -26,7 +26,6 @@ const STATUS_COLOR = {
 export default function DocProjectCard({ project }) {
   const signed  = Number(project.signed_count)  || 0
   const total   = Number(project.entry_count)   || 0
-  const printed = Number(project.printed_count) || 0
   const hasProject = Boolean(project.id)
 
   return (
@@ -72,7 +71,6 @@ export default function DocProjectCard({ project }) {
             ? <span>{signed}/{total} เซ็นแล้ว</span>
             : <span className="text-xs">คลิกเพื่อตั้งค่า</span>
           }
-          {printed > 0 && <span className="text-xs text-green-600 dark:text-green-400">· พิมพ์แล้ว {printed}</span>}
         </div>
         {project.budget && (
           <span className="text-xs text-warm-400 dark:text-disc-muted shrink-0">

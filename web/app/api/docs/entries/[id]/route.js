@@ -1,18 +1,21 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
-import { canManageDocs } from '@/lib/docsAccess.js'
-import { updateEntry, deleteEntry } from '@/db/docs/entries.js'
+import { canAccessEvent } from '@/lib/docsAccess.js'
+import { updateEntry, deleteEntry, getEntryByIdSimple } from '@/db/docs/entries.js'
 
-/** PATCH /api/docs/entries/[id] — edit item_type, description, amount (all statuses) */
+/** PATCH /api/docs/entries/[id] — แก้ไขได้ทุกสถานะ (จำกัดด้วย scope จังหวัด) */
 export async function PATCH(req, { params }) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.discordId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
   const { access } = await getEffectiveIdentity(session)
-  if (!canManageDocs(access)) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
   try {
     const { id } = await params
+    const entry = await getEntryByIdSimple(id)
+    if (!entry) return Response.json({ error: 'Not found' }, { status: 404 })
+    if (!canAccessEvent(entry.province, access)) return Response.json({ error: 'Forbidden' }, { status: 403 })
+
     const { itemType, description, amount } = await req.json()
     await updateEntry(id, { itemType, description, amount })
     return Response.json({ success: true })
@@ -22,17 +25,19 @@ export async function PATCH(req, { params }) {
   }
 }
 
-/** DELETE /api/docs/entries/[id] — only for status='pending' */
+/** DELETE /api/docs/entries/[id] — ลบได้ทุกสถานะ (จำกัดด้วย scope จังหวัด) */
 export async function DELETE(req, { params }) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.discordId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
   const { access } = await getEffectiveIdentity(session)
-  if (!canManageDocs(access)) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
   try {
     const { id } = await params
-    const deleted = await deleteEntry(id)
-    if (!deleted) return Response.json({ error: 'ลบได้เฉพาะรายการที่ยังไม่เซ็น' }, { status: 400 })
+    const entry = await getEntryByIdSimple(id)
+    if (!entry) return Response.json({ error: 'Not found' }, { status: 404 })
+    if (!canAccessEvent(entry.province, access)) return Response.json({ error: 'Forbidden' }, { status: 403 })
+
+    await deleteEntry(id)
     return Response.json({ success: true })
   } catch (err) {
     console.error('[DELETE /api/docs/entries/:id]', err)

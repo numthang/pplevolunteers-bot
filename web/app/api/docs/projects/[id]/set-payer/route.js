@@ -27,7 +27,7 @@ export async function POST(req, { params }) {
     const { payerDiscordId } = await req.json()
     if (!payerDiscordId) return Response.json({ error: 'payerDiscordId required' }, { status: 400 })
 
-    const tokens = await setProjectPayer(project.id, payerDiscordId)
+    const tokens = await setProjectPayer(project.id, payerDiscordId, guildId, project.province ?? null)
 
     return Response.json({ success: true, data: { payer_discord_id: payerDiscordId, entries: tokens } })
   } catch (err) {

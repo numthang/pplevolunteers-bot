@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Search, X, Plus, Trash2, CreditCard, CheckCircle, UserMinus } from 'lucide-react'
+import Link from 'next/link'
+import { Search, X, Plus, Trash2, CreditCard, CheckCircle } from 'lucide-react'
 import DocEntryList from './DocEntryList'
 import DocAutoCalc from './DocAutoCalc'
 
@@ -56,20 +57,14 @@ export default function DocProjectView({ project: initialProject, initialEntries
   const [saving, setSaving]     = useState(false)
   const [autoSaving, setAutoSaving] = useState(false)
 
-  // payer picker state
-  const [payerQuery, setPayerQuery]           = useState('')
-  const [payerResults, setPayerResults]       = useState([])
-  const [showPayerDrop, setShowPayerDrop]     = useState(false)
+  // payer picker state — เลือกจากรายชื่อผู้จ่ายใน settings ที่ scope ครอบคลุมจังหวัดโครงการ
+  const [eligiblePayers, setEligiblePayers]   = useState([])
   const [payerDiscordId, setPayerDiscordId]   = useState(project?.payer_discord_id ?? null)
-  const [payerName, setPayerName]             = useState(null)
   const [settingPayer, setSettingPayer]       = useState(false)
-  const payerDebounce = useRef(null)
-  const payerDropRef  = useRef(null)
 
   useEffect(() => {
     function handler(e) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setShowDropdown(false)
-      if (payerDropRef.current && !payerDropRef.current.contains(e.target)) setShowPayerDrop(false)
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
@@ -86,32 +81,21 @@ export default function DocProjectView({ project: initialProject, initialEntries
     }, 300)
   }, [query])
 
+  // โหลดรายชื่อผู้จ่ายที่ scope ครอบคลุมจังหวัดของโครงการ (จาก settings)
   useEffect(() => {
-    clearTimeout(payerDebounce.current)
-    if (!payerQuery.trim()) { setPayerResults([]); setShowPayerDrop(false); return }
-    payerDebounce.current = setTimeout(async () => {
-      const res  = await fetch(`/api/docs/members?q=${encodeURIComponent(payerQuery)}&limit=20`)
-      const data = await res.json()
-      setPayerResults(data.data || [])
-      setShowPayerDrop(true)
-    }, 300)
-  }, [payerQuery])
+    if (!canManage || !project?.province) { setEligiblePayers([]); return }
+    fetch(`/api/docs/payers?province=${encodeURIComponent(project.province)}`)
+      .then(r => r.json())
+      .then(d => setEligiblePayers(d.data || []))
+      .catch(() => setEligiblePayers([]))
+  }, [canManage, project?.province])
 
-  // ดึงชื่อผู้จ่ายปัจจุบัน (ถ้ามี)
+  // sync payer ปัจจุบันจาก project (ชื่อมาจาก eligiblePayers list ตอน render)
   useEffect(() => {
-    if (!project?.payer_discord_id) return
-    setPayerDiscordId(project.payer_discord_id)
-    // หาชื่อจาก entries ที่โหลดมาแล้ว — ถ้าไม่มีค่อย fetch
-    const found = entries.find(e => e.payer_discord_id === project.payer_discord_id)
-    if (found?.payer_display_name) {
-      setPayerName(found.payer_display_name)
-    }
+    if (project?.payer_discord_id) setPayerDiscordId(project.payer_discord_id)
   }, [project?.payer_discord_id])
 
   async function selectPayer(member) {
-    setPayerQuery('')
-    setPayerResults([])
-    setShowPayerDrop(false)
     if (!project) { alert('กรุณาบันทึกรายการก่อนตั้งผู้จ่าย'); return }
 
     setSettingPayer(true)
@@ -124,7 +108,6 @@ export default function DocProjectView({ project: initialProject, initialEntries
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed')
       setPayerDiscordId(member.discord_id)
-      setPayerName(member.display_name || `${member.first_name || ''} ${member.last_name || ''}`.trim() || member.discord_id)
       // refresh entry list เพื่อดู payer_sign_token ใหม่
       setRefreshKey(k => k + 1)
       const rowsRes  = await fetch(`/api/docs/entries?projectId=${project.id}`)
@@ -137,12 +120,6 @@ export default function DocProjectView({ project: initialProject, initialEntries
     }
   }
 
-  function removePayer() {
-    // สำหรับ UI state เท่านั้น — ถ้าอยากเคลียร์ DB ด้วยต้องมี API แยก
-    setPayerDiscordId(null)
-    setPayerName(null)
-    setPayerQuery('')
-  }
 
   function addMember(member) {
     if (members.find(m => m.discordId === member.discord_id)) {
@@ -230,8 +207,7 @@ export default function DocProjectView({ project: initialProject, initialEntries
   }
 
   const totalAmount  = entries.reduce((s, e) => s + Number(e.amount || 0), 0)
-  const signedCount  = entries.filter(e => e.status === 'signed' || e.status === 'printed').length
-  const printedCount = entries.filter(e => e.status === 'printed').length
+  const signedCount  = entries.filter(e => e.status === 'signed').length
   const payerSignedCount = entries.filter(e => e.payer_signed_at).length
   const isMobile     = project?.is_mobile ?? false
   const allowedItems = isMobile ? MOBILE_ITEMS : ALL_ITEMS
@@ -308,61 +284,52 @@ export default function DocProjectView({ project: initialProject, initialEntries
             <span className="text-base font-semibold text-warm-900 dark:text-disc-text">ผู้จ่ายเงิน</span>
           </div>
 
-          {payerDiscordId ? (
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <CheckCircle size={16} className="text-green-500 shrink-0" />
-                <span className="text-base text-warm-900 dark:text-disc-text font-medium">
-                  {payerName || payerDiscordId}
-                </span>
-                {payerSignedCount > 0 && (
-                  <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                    เซ็นแล้ว {payerSignedCount}/{entries.length}
-                  </span>
-                )}
-              </div>
-              <button
-                type="button"
-                onClick={removePayer}
-                className="flex items-center gap-1.5 text-sm text-warm-400 dark:text-disc-muted hover:text-orange transition"
-              >
-                <UserMinus size={14} /> เปลี่ยน
-              </button>
-            </div>
+          {!project ? (
+            <p className="text-sm text-warm-400 dark:text-disc-muted">บันทึกรายการเบิกก่อน จึงจะตั้งผู้จ่ายเงินได้</p>
+          ) : eligiblePayers.length === 0 ? (
+            <p className="text-sm text-warm-400 dark:text-disc-muted">
+              ไม่มีผู้จ่ายเงินที่ครอบคลุมจังหวัด{project.province ? `${project.province}` : 'นี้'} —
+              เพิ่มได้ที่ <Link href="/docs/settings" className="text-orange hover:underline">ตั้งค่าเอกสาร</Link>
+            </p>
           ) : (
-            <div className="relative" ref={payerDropRef}>
-              <div className="relative">
-                <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-warm-400 dark:text-disc-muted pointer-events-none" />
-                <input
-                  type="text"
-                  value={payerQuery}
-                  onChange={e => setPayerQuery(e.target.value)}
-                  placeholder={settingPayer ? 'กำลังบันทึก...' : 'ค้นหาสมาชิกเพื่อตั้งเป็นผู้จ่ายเงิน...'}
-                  disabled={settingPayer}
-                  className={`${inputCls} pl-9`}
-                />
-              </div>
-              {showPayerDrop && payerResults.length > 0 && (
-                <ul className="absolute z-10 w-full mt-1 bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg shadow-lg max-h-56 overflow-y-auto">
-                  {payerResults.map(m => (
-                    <li key={m.discord_id}>
+            <div>
+              <ul className="border border-warm-200 dark:border-disc-border rounded-lg divide-y divide-warm-100 dark:divide-disc-border overflow-hidden">
+                {eligiblePayers.map(p => {
+                  const isSelected = p.discord_id === payerDiscordId
+                  return (
+                    <li key={p.discord_id}>
                       <button
                         type="button"
-                        onClick={() => selectPayer(m)}
-                        className="w-full text-left px-4 py-2.5 hover:bg-warm-50 dark:hover:bg-disc-hover transition"
+                        onClick={() => { if (!isSelected) selectPayer(p) }}
+                        disabled={settingPayer || isSelected}
+                        className={`w-full text-left px-4 py-2.5 transition flex items-center justify-between gap-3 disabled:cursor-default
+                          ${isSelected ? 'bg-green-50/60 dark:bg-green-900/20' : 'hover:bg-warm-50 dark:hover:bg-disc-hover disabled:opacity-50'}`}
                       >
-                        <span className="text-base font-medium text-warm-900 dark:text-disc-text">{m.display_name}</span>
-                        <span className="ml-2 text-sm text-warm-500 dark:text-disc-muted">
-                          {m.username && `@${m.username}`}
-                          {(m.first_name || m.last_name) && ` · ${m.first_name || ''} ${m.last_name || ''}`.trim()}
+                        <span className="min-w-0 flex items-center gap-2">
+                          {isSelected && <CheckCircle size={16} className="text-green-500 shrink-0" />}
+                          <span className="min-w-0">
+                            <span className="block text-base font-medium text-warm-900 dark:text-disc-text truncate">{p.display_name}</span>
+                            <span className="block text-sm text-warm-500 dark:text-disc-muted truncate">{p.position}</span>
+                          </span>
                         </span>
+                        {isSelected ? (
+                          payerSignedCount > 0 ? (
+                            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400 shrink-0">
+                              เซ็นแล้ว {payerSignedCount}/{entries.length}
+                            </span>
+                          ) : (
+                            <span className="text-sm text-green-600 dark:text-green-400 shrink-0">ผู้จ่ายปัจจุบัน</span>
+                          )
+                        ) : (
+                          <span className="text-sm text-orange shrink-0">{settingPayer ? 'กำลังบันทึก...' : 'เลือก'}</span>
+                        )}
                       </button>
                     </li>
-                  ))}
-                </ul>
-              )}
+                  )
+                })}
+              </ul>
               <p className="text-xs text-warm-400 dark:text-disc-muted mt-2">
-                เมื่อเลือกแล้ว ระบบจะสร้างลิงก์เซ็นสำหรับผู้จ่ายทุกรายการอัตโนมัติ
+                แสดงผู้จ่ายที่ดูแลจังหวัด{project.province ? `${project.province}` : 'นี้'} · เลือกคนใหม่เพื่อเปลี่ยน ระบบจะสร้างลิงก์เซ็นให้ทุกรายการอัตโนมัติ
               </p>
             </div>
           )}

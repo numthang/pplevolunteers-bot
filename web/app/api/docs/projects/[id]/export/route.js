@@ -3,7 +3,7 @@ import { authOptions } from '@/lib/auth-options.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import { canManageDocs } from '@/lib/docsAccess.js'
 import { getDocProjectById } from '@/db/docs/projects.js'
-import { getEntriesByProject, getEntryById, getSignatureByEntryId, markPrinted } from '@/db/docs/entries.js'
+import { getEntriesByProject, getEntryById, getSignatureByEntryId } from '@/db/docs/entries.js'
 import { generateEntryPdf } from '@/lib/generatePdf.js'
 import PizZip from 'pizzip'
 
@@ -33,7 +33,7 @@ export async function GET(req, { params }) {
 
     const entries = await getEntriesByProject(id)
     const targets = onlySigned
-      ? entries.filter(e => e.status === 'signed' || e.status === 'printed')
+      ? entries.filter(e => e.status === 'signed')
       : entries
 
     if (!targets.length) {
@@ -55,8 +55,6 @@ export async function GET(req, { params }) {
 
         const name = (entry.display_name ?? 'unknown').replace(/[^\w฀-๿]/g, '_')
         zip.file(`${String(entry.id).padStart(4, '0')}-${entry.item_type}-${name}.pdf`, pdf)
-
-        await markPrinted(row.id).catch(() => {})
       } catch (err) {
         errors.push({ id: row.id, error: err.message })
       }

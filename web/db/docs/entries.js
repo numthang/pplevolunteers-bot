@@ -1,4 +1,5 @@
 import pool from '../index.js'
+import { getPayersForEvent } from './payers.js'
 
 export async function getEntriesByProject(projectId) {
   const { rows } = await pool.query(
@@ -75,26 +76,55 @@ export async function setTokenExpiry(projectId, expiresAt) {
   )
 }
 
-/** ตั้ง payer และสร้าง payer_sign_token สำหรับทุก entry ใน project */
-export async function setProjectPayer(projectId, payerDiscordId) {
+/**
+ * ตั้ง payer ต่อ project — province-aware per-entry auto-select
+ * @param {number}   projectId
+ * @param {string}   defaultPayerDiscordId
+ * @param {string}   guildId
+ * @param {string|null} eventProvince  — จังหวัดของ event (กรอง payer pool)
+ */
+export async function setProjectPayer(projectId, defaultPayerDiscordId, guildId, eventProvince) {
+  // pool ที่ scope match จังหวัดนี้ เรียงตาม sort_order
+  const payerPool = await getPayersForEvent(guildId, eventProvince)
+
+  // ดึง entries ที่ต้องการ resolve payer
+  const { rows: entries } = await pool.query(
+    `SELECT id, member_discord_id FROM docs_activity_entries WHERE project_id = $1`,
+    [projectId]
+  )
+
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
     await client.query(
       `UPDATE docs_projects SET payer_discord_id = $2 WHERE id = $1`,
-      [projectId, payerDiscordId]
+      [projectId, defaultPayerDiscordId]
     )
-    const { rows } = await client.query(
-      `UPDATE docs_activity_entries
-       SET payer_discord_id      = $2,
-           payer_sign_token       = gen_random_uuid(),
-           payer_token_expires_at = token_expires_at
-       WHERE project_id = $1
-       RETURNING id, payer_sign_token`,
-      [projectId, payerDiscordId]
-    )
+
+    const results = []
+    for (const entry of entries) {
+      // ถ้า recipient ไม่ใช่ default payer → ใช้ default ตรงๆ
+      // ถ้า recipient == default payer → fallback ไป payer ถัดไปใน pool ที่ ≠ recipient
+      let resolved = defaultPayerDiscordId
+      if (entry.member_discord_id === defaultPayerDiscordId) {
+        const fallback = payerPool.find(p => p.discord_id !== entry.member_discord_id)
+        resolved = fallback?.discord_id ?? defaultPayerDiscordId
+      }
+
+      const { rows } = await client.query(
+        `UPDATE docs_activity_entries
+         SET payer_discord_id      = $2,
+             payer_sign_token       = gen_random_uuid(),
+             payer_token_expires_at = token_expires_at
+         WHERE id = $1
+         RETURNING id, payer_sign_token, payer_discord_id`,
+        [entry.id, resolved]
+      )
+      if (rows[0]) results.push(rows[0])
+    }
+
     await client.query('COMMIT')
-    return rows  // [{ id, payer_sign_token }]
+    return results  // [{ id, payer_sign_token, payer_discord_id }]
   } catch (err) {
     await client.query('ROLLBACK')
     throw err
@@ -149,13 +179,6 @@ export async function signEntry({ token, signatureBase64, discordId, ip, role = 
   }
 }
 
-export async function markPrinted(entryId) {
-  await pool.query(
-    `UPDATE docs_activity_entries SET status = 'printed', printed_at = NOW() WHERE id = $1`,
-    [entryId]
-  )
-}
-
 export async function getEntryById(id) {
   const { rows } = await pool.query(
     `SELECT
@@ -171,12 +194,14 @@ export async function getEntryById(id) {
        n.first_name AS ngs_first_name, n.last_name AS ngs_last_name,
        n.home_house_number, n.home_alley, n.home_road,
        n.home_district, n.home_amphure, n.home_province, n.home_zip_code,
-       pm.display_name AS payer_display_name
+       COALESCE(dp.display_name, pm.display_name) AS payer_display_name,
+       dp.position AS payer_position
      FROM docs_activity_entries e
      JOIN docs_projects p ON p.id = e.project_id
      JOIN act_event_cache ev ON ev.id = p.act_event_cache_id
      LEFT JOIN dc_members m  ON m.discord_id  = e.member_discord_id AND m.guild_id = p.guild_id
      LEFT JOIN dc_members pm ON pm.discord_id = e.payer_discord_id  AND pm.guild_id = p.guild_id
+     LEFT JOIN docs_payers dp ON dp.discord_id = e.payer_discord_id AND dp.guild_id = p.guild_id
      LEFT JOIN ngs_member_cache n ON n.source_id = m.member_id
      WHERE e.id = $1`,
     [id]
@@ -197,7 +222,7 @@ export async function updateEntry(id, { itemType, description, amount }) {
 
 export async function deleteEntry(id) {
   const { rowCount } = await pool.query(
-    `DELETE FROM docs_activity_entries WHERE id = $1 AND status = 'pending'`,
+    `DELETE FROM docs_activity_entries WHERE id = $1`,
     [id]
   )
   return rowCount > 0
@@ -215,8 +240,11 @@ export async function getSignatureByEntryId(entryId, role = 'recipient') {
 
 export async function getEntryByIdSimple(id) {
   const { rows } = await pool.query(
-    `SELECT e.*, p.guild_id FROM docs_activity_entries e
-     JOIN docs_projects p ON p.id = e.project_id WHERE e.id = $1`,
+    `SELECT e.*, p.guild_id, ev.province
+     FROM docs_activity_entries e
+     JOIN docs_projects p ON p.id = e.project_id
+     JOIN act_event_cache ev ON ev.id = p.act_event_cache_id
+     WHERE e.id = $1`,
     [id]
   )
   return rows[0] || null

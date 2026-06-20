@@ -553,7 +553,7 @@ UPDATE calling_logs SET campaign_id = 105 WHERE campaign_id = 160456;
 
 SELECT setval('act_event_cache_id_seq', 106);
 COMMIT;
-
+--------------------------------
 -- 2026-06-19: PPLE Docs — ใบสำคัญรับเงิน + e-signature
 CREATE TABLE IF NOT EXISTS docs_projects (
   id                 SERIAL PRIMARY KEY,
@@ -635,3 +635,22 @@ ALTER TABLE docs_activity_entries
 ALTER TABLE docs_signatures
   ADD COLUMN IF NOT EXISTS role VARCHAR(20) NOT NULL DEFAULT 'recipient';
 
+-- 2026-06-21: docs_payers — รายชื่อผู้จ่ายเงินที่ authorize ต่อ guild
+-- signature_base64 NULL เผื่อไว้สำหรับ static-sig flow ในอนาคต (ตอนนี้ใช้ token-sign)
+CREATE TABLE IF NOT EXISTS docs_payers (
+  id               SERIAL PRIMARY KEY,
+  guild_id         VARCHAR(20)  NOT NULL,
+  discord_id       VARCHAR(20)  NOT NULL,
+  display_name     TEXT         NOT NULL,
+  position         TEXT         NOT NULL,
+  sort_order       INT          NOT NULL DEFAULT 0,
+  signature_base64 TEXT         NULL,
+  created_at       TIMESTAMPTZ  DEFAULT NOW(),
+  UNIQUE (guild_id, discord_id)
+);
+CREATE INDEX IF NOT EXISTS idx_docs_payers_guild ON docs_payers (guild_id, sort_order);
+
+
+-- 2026-06-21: เลิกใช้สถานะ 'printed' — แค่เปิดลิงก์ PDF ไม่ควรนับว่าพิมพ์
+-- รวมเข้ากับ 'signed' (printed เดิม = เคยเซ็นแล้วทั้งหมด) · printed_at ปล่อยไว้ไม่ใช้
+UPDATE docs_activity_entries SET status = 'signed' WHERE status = 'printed';

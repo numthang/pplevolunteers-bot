@@ -245,7 +245,7 @@
 
 - ✅ `act_event_cache` sync จาก `act.pplethai.org` (`scripts/sync-act-events.js`)
 - ✅ **PDF pipeline (v2.15.0, 2026-06-21)** — docxtemplater + LibreOffice headless; `template-1.docx` (ส่วน 1/2/4) + `body-1/[item_type].docx` (ส่วน 3 inject ด้วย XML merge); สีน้ำเงิน #1A47CC อัตโนมัติทุก variable run; body files: break/lunch/dinner/equipment/sound/speaker/supplies/transport/venue; `generatePdf.js` refactor ครบ (HEADER_MAP, injectBodyIntoTemplate, colorVariableRuns, payerPosition)
-- [ ] **`docs_payers` table** — รายชื่อผู้จ่ายที่ authorize ต่อ guild (guild_id, discord_id, display_name, position, sort_order); auto-select: เลือก payer คนแรกใน list ที่ discord_id ≠ recipient; manager override ได้
+- ✅ **`docs_payers` table** — guild_id, discord_id, display_name, position, sort_order; auto-select per-entry (setProjectPayer SQL subquery); getEntryById JOIN docs_payers ดึง position; /docs/settings จัดการ payers list (2026-06-21)
 - [ ] act_event_registers — ยังหาวิธีดึงไม่ได้ (รอ)
 - [ ] **Bot command `/link-ngs`** — ให้สมาชิกค้นชื่อตัวเองใน `ngs_member_cache` แล้วผูก `dc_members.member_id` ถาวร (ทางเลือก B ของ ngs link flow; ตอนนี้ใช้ sign-page self-link แทน)
 - [ ] **Edit/Delete entry** — แก้ไขรายการเบิกจาก `/docs/[id]` ได้ทุก status (ลายเซ็นเดิมยังใช้ได้); ลบได้เฉพาะ `status = 'pending'` เท่านั้น
