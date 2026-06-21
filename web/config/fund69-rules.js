@@ -32,7 +32,8 @@ export function calcMeals({ startTime, endTime, durationHours, isOvernightMiddle
   const start = toMinutes(startTime)
   const end   = toMinutes(endTime)
   const noon  = 12 * 60   // 12:00
-  const eve   = 19 * 60   // 19:00
+  const pm5   = 17 * 60   // 17:00 — threshold คร่อมเย็น
+  const pm8   = 20 * 60   // 20:00 — threshold เย็นกรณีคร่อมเที่ยง
 
   const main = []
 
@@ -45,11 +46,15 @@ export function calcMeals({ startTime, endTime, durationHours, isOvernightMiddle
   // < 4 ชม. → ไม่ได้เลย
   if (durationHours < 4) return { main: [], snack: 0 }
 
-  // กลางวัน: เริ่มก่อนเที่ยง + เลิกหลังเที่ยง
-  if (start < noon && end > noon) main.push('lunch')
+  const crossesNoon = start < noon && end > noon
+  const crosses5pm  = start < pm5  && end > pm5
 
-  // เย็น: เลิก ≥ 19:00
-  if (end >= eve) main.push('dinner')
+  // กลางวัน: คร่อม 12:00
+  if (crossesNoon) main.push('lunch')
+
+  // เย็น: คร่อม 17:00 (ไม่คร่อม 12:00) หรือ คร่อม 12:00 + จบ ≥ 20:00
+  if (!crossesNoon && crosses5pm) main.push('dinner')
+  if (crossesNoon && end >= pm8)  main.push('dinner')
 
   // ว่าง ตาม duration
   const snack = durationHours >= 6 ? 2 : 1
