@@ -92,8 +92,7 @@ export async function createDocProject({ guildId, actEventCacheId, isMobile, par
 export async function getActEventById(actEventCacheId, guildId) {
   const { rows } = await pool.query(
     `SELECT TO_CHAR(event_date,     'YYYY-MM-DD"T"HH24:MI') AS event_date,
-            TO_CHAR(event_end_date, 'YYYY-MM-DD"T"HH24:MI') AS event_end_date,
-            participant_count
+            TO_CHAR(event_end_date, 'YYYY-MM-DD"T"HH24:MI') AS event_end_date
      FROM act_event_cache WHERE id = $1 AND guild_id = $2`,
     [actEventCacheId, guildId]
   )
