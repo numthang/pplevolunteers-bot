@@ -7,7 +7,7 @@ import fs from 'fs'
 import path from 'path'
 import os from 'os'
 import { fileURLToPath } from 'url'
-import { buildWatermarkedIdCard } from './idCard.js'
+import { buildWatermarkedIdCard, buildCertifyBlock, normalizeSignature } from './idCard.js'
 
 const __dirname   = path.dirname(fileURLToPath(import.meta.url))
 const TEMPLATES   = path.join(__dirname, '../templates')
@@ -20,13 +20,24 @@ const HEADER_MAP = {
   break:     'ค่าอาหาร',
   lunch:     'ค่าอาหาร',
   dinner:    'ค่าอาหาร',
+  food:      'ค่าอาหาร',
   speaker:   'ค่าวิทยากร',
   transport: 'ค่าเดินทาง',
+  travel:    'ค่าเดินทาง',
   venue:     'ค่าสถานที่',
   equipment: 'ค่าเช่าอุปกรณ์',
   sound:     'ค่าเช่าเครื่องเสียง',
   supplies:  'ค่าวัสดุอุปกรณ์',
+  accommodation: 'ค่าที่พัก',
+  photo:     'ค่าถ่ายภาพ',
 }
+
+// type ที่มี body template เฉพาะ (มีโครงสร้าง) — นอกนั้นใช้ generic plaintext (เติม description)
+const SPECIAL_BODIES = new Set(['venue', 'equipment', 'sound', 'speaker', 'supplies'])
+
+// generic body — plaintext เอา description มาเติมตรงๆ (food/break/lunch/dinner/transport/accommodation/photo)
+const GENERIC_BODY_XML =
+  '<w:p><w:pPr><w:pStyle w:val="Normal"/><w:widowControl w:val="false"/><w:spacing w:lineRule="auto" w:line="240" w:before="0" w:after="160"/><w:contextualSpacing/><w:jc w:val="left"/><w:rPr><w:rFonts w:ascii="TH Sarabun New" w:hAnsi="TH Sarabun New" w:cs="TH Sarabun New"/><w:b/><w:bCs/><w:sz w:val="28"/><w:szCs w:val="32"/></w:rPr></w:pPr><w:r><w:rPr><w:rFonts w:ascii="TH Sarabun New" w:hAnsi="TH Sarabun New" w:cs="TH Sarabun New"/><w:b/><w:bCs/><w:sz w:val="28"/><w:szCs w:val="32"/></w:rPr><w:t xml:space="preserve">{{items_desc}}</w:t></w:r></w:p>'
 
 const THAI_MONTHS = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
                      'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม']
@@ -153,16 +164,20 @@ function buildData(entry, { payerDisplayName = null, payerPosition = null } = {}
   }
 }
 
-function injectBodyIntoTemplate(templateZip, bodyPath) {
+/** ดึง body content (XML ระหว่าง <w:body>…<w:sectPr) จากไฟล์ .docx */
+function bodyContentFromFile(bodyPath) {
   const bodyZip = new PizZip(fs.readFileSync(bodyPath))
   const bodyXml = bodyZip.files['word/document.xml'].asText()
-  const bodyMatch = bodyXml.match(/<w:body>([\s\S]*?)<w:sectPr/)
-  const bodyContent = bodyMatch ? bodyMatch[1].trim() : ''
+  const m = bodyXml.match(/<w:body>([\s\S]*?)<w:sectPr/)
+  return m ? m[1].trim() : ''
+}
 
+/** แทน paragraph {{payment_details}} ใน template ด้วย body content (รับ XML ตรงๆ) */
+function injectBodyIntoTemplate(templateZip, bodyContent) {
   const xml = templateZip.files['word/document.xml'].asText()
   const merged = xml.replace(
     /<w:p\b[^>]*>(?:(?!<\/w:p>)[\s\S])*\{\{payment_details\}\}(?:(?!<\/w:p>)[\s\S])*<\/w:p>/,
-    bodyContent
+    () => bodyContent   // function replacer — กัน $ ใน description ถูกตีความเป็น backreference
   )
   templateZip.file('word/document.xml', merged)
 }
@@ -182,16 +197,24 @@ function colorVariableRuns(zip) {
 }
 
 export async function generateEntryPdf(entry, { signatureBase64 = null, payerSignatureBase64 = null, payerDisplayName = null, payerPosition = null } = {}) {
-  const bodyPath = path.join(BODY_1_DIR, `${entry.item_type}.docx`)
-  if (!fs.existsSync(bodyPath)) throw new Error(`no body template for item_type: ${entry.item_type}`)
+  // type ที่มีโครงสร้างเฉพาะ → ใช้ .docx, นอกนั้น → generic plaintext (เติม description)
+  let bodyContent
+  if (SPECIAL_BODIES.has(entry.item_type)) {
+    const bodyPath = path.join(BODY_1_DIR, `${entry.item_type}.docx`)
+    if (!fs.existsSync(bodyPath)) throw new Error(`no body template for item_type: ${entry.item_type}`)
+    bodyContent = bodyContentFromFile(bodyPath)
+  } else {
+    bodyContent = GENERIC_BODY_XML
+  }
 
   const buf  = fs.readFileSync(TEMPLATE_1)
   const zip  = new PizZip(buf)
-  injectBodyIntoTemplate(zip, bodyPath)
+  injectBodyIntoTemplate(zip, bodyContent)
   colorVariableRuns(zip)
 
-  const sigBuf    = signatureBase64      ? Buffer.from(signatureBase64.replace(/^data:image\/\w+;base64,/, ''),      'base64') : null
-  const payerBuf  = payerSignatureBase64 ? Buffer.from(payerSignatureBase64.replace(/^data:image\/\w+;base64,/, ''), 'base64') : null
+  // normalize ลายเซ็น → trim หมึก + fit กล่องมาตรฐาน (ขนาดเท่ากันทุกใบ ไม่บีบเพี้ยน)
+  const sigBuf    = signatureBase64      ? await normalizeSignature(signatureBase64)      : null
+  const payerBuf  = payerSignatureBase64 ? await normalizeSignature(payerSignatureBase64) : null
 
   const modules = []
   if (sigBuf || payerBuf) {
@@ -201,7 +224,7 @@ export async function generateEntryPdf(entry, { signatureBase64 = null, payerSig
         if (tagName === 'paysig') return payerBuf ?? sigBuf
         return sigBuf ?? payerBuf
       },
-      getSize: () => [120, 40],
+      getSize: () => [96, 32],
     }))
   }
 
@@ -213,7 +236,13 @@ export async function generateEntryPdf(entry, { signatureBase64 = null, payerSig
     nullGetter:    () => '',
   })
 
-  doc.render(buildData(entry, { payerDisplayName, payerPosition }))
+  // image module จะ render รูปก็ต่อเมื่อ key {{%sig}}/{{%paysig}} มีค่า truthy ใน data
+  // (ถ้าไม่มี → module short-circuit คืนว่าง ไม่เรียก getImage) → set flag ตามว่ามี buffer ไหน
+  doc.render({
+    ...buildData(entry, { payerDisplayName, payerPosition }),
+    sig:    sigBuf   ? 'sig'    : '',
+    paysig: payerBuf ? 'paysig' : '',
+  })
 
   const filled  = doc.getZip().generate({ type: 'nodebuffer', compression: 'DEFLATE' })
   const tmpDir  = os.tmpdir()
@@ -239,7 +268,7 @@ export async function generateEntryPdf(entry, { signatureBase64 = null, payerSig
   // แนบสำเนาบัตรประชาชน (ถ้ามี) ต่อท้ายเป็นหน้า A4 — ลายน้ำแล้ว
   if (entry.id_card_image) {
     try {
-      return await appendIdCardPage(pdfBuf, entry.id_card_image, signatureBase64)
+      return await appendIdCardPage(pdfBuf, entry.id_card_image, sigBuf)
     } catch (err) {
       console.error(`[generateEntryPdf] id-card append failed for entry ${entry.id}:`, err.message)
       // ล้มเหลวตรงนี้ไม่ควรทำให้ทั้งใบพัง — คืนใบเสร็จเปล่าๆ ไป
@@ -252,25 +281,36 @@ export async function generateEntryPdf(entry, { signatureBase64 = null, payerSig
 const A4 = { w: 595.28, h: 841.89 }  // pt (portrait)
 
 /** append หน้า A4 ที่มีสำเนาบัตร watermark แล้ว ต่อท้าย PDF ใบเสร็จ */
-async function appendIdCardPage(pdfBuf, idCardBuffer, signatureBase64 = null) {
-  const wmJpeg = await buildWatermarkedIdCard(idCardBuffer, signatureBase64)
+async function appendIdCardPage(pdfBuf, idCardBuffer, sigBuffer = null) {
+  const cardJpeg = await buildWatermarkedIdCard(idCardBuffer)   // ลายน้ำอย่างเดียว
+  const certify  = await buildCertifyBlock(sigBuffer)            // ลายเซ็น (normalize แล้ว) + สำเนาถูกต้อง
 
   const pdf = await PDFDocument.load(pdfBuf)
-  const img = await pdf.embedJpg(wmJpeg)
+  const cardImg = await pdf.embedJpg(cardJpeg)
+  const certImg = await pdf.embedPng(certify.png)
   const page = pdf.addPage([A4.w, A4.h])
 
   const margin = 48
-  const maxW = A4.w - margin * 2
-  const maxH = A4.h - margin * 2
-  const scale = Math.min(maxW / img.width, maxH / img.height)
-  const w = img.width * scale
-  const h = img.height * scale
 
-  page.drawImage(img, {
-    x: (A4.w - w) / 2,
-    y: (A4.h - h) / 2,
-    width:  w,
-    height: h,
+  // ── บัตร: ขนาดบัตรจริง ISO ID-1 (85.6×54mm) วางครึ่งบน รักษาสัดส่วนภาพ (ไม่ยืด) ──
+  const MM = 2.83465                               // mm → pt
+  const CARD_W = 85.6 * MM                          // ≈ 242.6pt
+  const CARD_H = 54   * MM                          // ≈ 153.1pt
+  const cScale = Math.min(CARD_W / cardImg.width, CARD_H / cardImg.height)
+  const cW = cardImg.width * cScale
+  const cH = cardImg.height * cScale
+  const cX = (A4.w - cW) / 2
+  const cY = A4.h - margin - cH                    // ชิดบน
+  page.drawImage(cardImg, { x: cX, y: cY, width: cW, height: cH })
+
+  // ── ลายเซ็น + สำเนาถูกต้อง: ใต้ภาพบัตร ──
+  const certW = 240
+  const certH = certW * (certify.height / certify.width)
+  page.drawImage(certImg, {
+    x: (A4.w - certW) / 2,
+    y: cY - 28 - certH,
+    width:  certW,
+    height: certH,
   })
 
   const out = await pdf.save()

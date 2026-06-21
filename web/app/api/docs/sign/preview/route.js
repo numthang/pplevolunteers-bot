@@ -1,6 +1,6 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
-import { getEntryByToken, getEntryById } from '@/db/docs/entries.js'
+import { getEntryByToken, getEntryById, getSignatureByEntryId } from '@/db/docs/entries.js'
 import { generateEntryPdf } from '@/lib/generatePdf.js'
 
 /**
@@ -27,8 +27,12 @@ export async function GET(req) {
 
     // ดึง entry เต็ม (มี project_name + id_card_image) เพื่อ generate ให้ตรงกับใบจริง
     const full = await getEntryById(entry.id)
+    // ดึงลายเซ็นล่าสุด (ถ้ามี) → preview สะท้อนสถานะจริง: เซ็นแล้วเห็นลายเซ็น, ยังไม่เซ็นเห็นว่าง
+    const recSig = await getSignatureByEntryId(entry.id, 'recipient')
+    const paySig = await getSignatureByEntryId(entry.id, 'payer')
     const pdf  = await generateEntryPdf(full, {
-      signatureBase64: null,
+      signatureBase64:      recSig?.signature_base64 ?? null,
+      payerSignatureBase64: paySig?.signature_base64 ?? null,
       payerDisplayName: full.payer_display_name ?? null,
       payerPosition:    full.payer_position     ?? null,
     })

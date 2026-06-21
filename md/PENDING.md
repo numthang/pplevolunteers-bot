@@ -249,6 +249,7 @@
 - [ ] act_event_registers — ยังหาวิธีดึงไม่ได้ (รอ)
 - [ ] **Bot command `/link-ngs`** — ให้สมาชิกค้นชื่อตัวเองใน `ngs_member_cache` แล้วผูก `dc_members.member_id` ถาวร (ทางเลือก B ของ ngs link flow; ตอนนี้ใช้ sign-page self-link แทน)
 - [ ] **Edit/Delete entry** — แก้ไขรายการเบิกจาก `/docs/[id]` ได้ทุก status (ลายเซ็นเดิมยังใช้ได้); ลบได้เฉพาะ `status = 'pending'` เท่านั้น
+- [ ] **Transport แบบแยกใบรายบุคคล (rich)** — ตอนนี้ค่าเดินทางใช้ generic plaintext (description) แบบทุกคนเท่ากัน/ใบรวม. อนาคตทำแบบ rich แยกใบรายบุคคล (ตาราง per-person) ใช้ `transport.docx` structured. ตัดสินใจ 2026-06-21 ว่า defer ไว้ก่อน
 - [ ] **Payer auto-suggest / full-auto** — ตอนนี้เพิ่ม payer ผ่าน MemberSearch ในหน้า settings (manual). อนาคตถ้า payer setup เป็นภาระ (หลาย guild / ยศเปลี่ยนบ่อย) → ทำ "รายชื่อแนะนำตามตำแหน่ง" (query `dc_guild_roles WHERE permission IN province_coordinator/regional_coordinator/district_coordinator` → member ที่ถือ role นั้น → reuse `resolveAccess`+`gatedScopeNodes`) หรือข้ามไป full-auto เลย (payer = ผู้ประสานงานจังหวัด, ถ้าซ้ำ payee → กองเลขาภาค). ตัดสินใจ 2026-06-21 ว่ายังไม่ทำเพราะ list เล็ก ตั้งครั้งเดียว ไม่คุ้ม surface
 
 ---

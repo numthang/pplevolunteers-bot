@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, use } from 'react'
 import { useSession, signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { CheckCircle, AlertTriangle, Pen, Search, UserCheck, IdCard, FileText, RefreshCw, CreditCard } from 'lucide-react'
+import IdCardCropper from '@/components/docs/IdCardCropper'
 
 const ITEM_LABELS = {
   food: 'ค่าอาหาร', speaker: 'ค่าวิทยากร', travel: 'ค่าเดินทาง',
@@ -46,6 +47,7 @@ export default function SignPage({ params }) {
   const [idCardPreviewUrl, setIdCardPreviewUrl] = useState(null)
   const [uploading, setUploading]               = useState(false)
   const [idCardErr, setIdCardErr]               = useState('')
+  const [cropSrc, setCropSrc]                   = useState(null)  // dataURL ที่กำลังครอบ
   const fileRef = useRef(null)
 
   // document preview
@@ -145,25 +147,34 @@ export default function SignPage({ params }) {
     }
   }
 
-  async function handleIdCardUpload(file) {
+  // เลือกไฟล์ → เปิด cropper (ยังไม่อัปโหลด)
+  function onIdCardFile(file) {
     if (!file) return
     setIdCardErr('')
     if (file.size > 8 * 1024 * 1024) { setIdCardErr('ไฟล์ใหญ่เกิน 8 MB'); return }
+    const reader = new FileReader()
+    reader.onload = () => setCropSrc(reader.result)
+    reader.readAsDataURL(file)
+    if (fileRef.current) fileRef.current.value = ''
+  }
+
+  // ได้ภาพที่ครอบแล้ว (สัดส่วนบัตรจริง) → อัปโหลด
+  async function uploadIdCard(blob) {
+    setCropSrc(null)
     setUploading(true)
     try {
       const fd = new FormData()
-      fd.append('file', file)
+      fd.append('file', blob, 'idcard.jpg')
       fd.append('token', token)
       const res = await fetch('/api/docs/id-card', { method: 'POST', body: fd })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'อัปโหลดไม่สำเร็จ')
       setHasIdCard(true)
-      setIdCardPreviewUrl(URL.createObjectURL(file))
+      setIdCardPreviewUrl(URL.createObjectURL(blob))
     } catch (err) {
       setIdCardErr(err.message)
     } finally {
       setUploading(false)
-      if (fileRef.current) fileRef.current.value = ''
     }
   }
 
@@ -213,6 +224,9 @@ export default function SignPage({ params }) {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed')
       setDone(true)
+      clearCanvas()
+      setPreviewVer(v => v + 1)   // โหลด preview ใหม่ (เผื่อ render มีลายเซ็น)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
     } catch (err) {
       alert('เกิดข้อผิดพลาด: ' + err.message)
     } finally {
@@ -226,29 +240,6 @@ export default function SignPage({ params }) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-warm-50 dark:bg-disc-bg2">
         <p className="text-warm-500 dark:text-disc-muted">กำลังโหลด...</p>
-      </div>
-    )
-  }
-
-  if (done) {
-    const isPayer = signerRole === 'payer'
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-warm-50 dark:bg-disc-bg2 p-4">
-        <div className="max-w-sm w-full bg-card-bg border border-warm-200 dark:border-disc-border rounded-2xl p-8 text-center">
-          <CheckCircle size={56} className="mx-auto text-green-500 mb-4" />
-          <h1 className="text-xl font-bold text-warm-900 dark:text-disc-text mb-2">
-            {isPayer ? 'ลงนามจ่ายเรียบร้อยแล้ว' : 'เซ็นเรียบร้อยแล้ว'}
-          </h1>
-          <p className="text-warm-500 dark:text-disc-muted text-base mb-5">ลายเซ็นของคุณถูกบันทึกแล้ว</p>
-          <a
-            href={`/api/docs/sign/pdf?token=${encodeURIComponent(token)}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-orange text-white text-base font-semibold rounded-lg hover:bg-orange-light transition"
-          >
-            ดาวน์โหลด PDF
-          </a>
-        </div>
       </div>
     )
   }
@@ -287,38 +278,38 @@ export default function SignPage({ params }) {
     )
   }
 
-  // เช็คว่าเซ็นไปแล้วหรือยัง (แยกตาม role)
-  const alreadySigned = entry && (
-    signerRole === 'payer'
-      ? !!entry.payer_signed_at
-      : entry.status !== 'pending'
-  )
-  if (alreadySigned) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-warm-50 dark:bg-disc-bg2 p-4">
-        <div className="max-w-sm w-full bg-card-bg border border-warm-200 dark:border-disc-border rounded-2xl p-8 text-center">
-          <CheckCircle size={48} className="mx-auto text-green-500 mb-4" />
-          <h1 className="text-xl font-bold text-warm-900 dark:text-disc-text mb-2">เซ็นไปแล้ว</h1>
-          <p className="text-warm-500 dark:text-disc-muted text-base mb-5">รายการนี้ถูกเซ็นเรียบร้อยแล้ว</p>
-          <a
-            href={`/api/docs/sign/pdf?token=${encodeURIComponent(token)}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-orange text-white text-base font-semibold rounded-lg hover:bg-orange-light transition"
-          >
-            ดาวน์โหลด PDF
-          </a>
-        </div>
-      </div>
-    )
-  }
+  // เซ็นไปแล้วหรือยัง (แยกตาม role) — ไม่ dead-end แล้ว แค่โชว์ banner + เซ็นใหม่ทับได้เสมอ
+  const isSigned = done || (entry && (
+    signerRole === 'payer' ? !!entry.payer_signed_at : entry.status !== 'pending'
+  ))
 
   // Payer มีสิทธิ์เซ็นได้ทันที (ไม่ต้องผ่าน NGS/บัตร)
   const canSign = signerRole === 'payer' || ngsLinked
 
   return (
     <div className="min-h-screen bg-warm-50 dark:bg-disc-bg2 p-4">
+      {cropSrc && (
+        <IdCardCropper src={cropSrc} onCancel={() => setCropSrc(null)} onCropped={uploadIdCard} />
+      )}
       <div className="max-w-2xl mx-auto space-y-4">
+
+        {/* Banner: เซ็นแล้ว (ยังเซ็นใหม่ทับได้) */}
+        {isSigned && (
+          <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-900/40 rounded-xl p-4 flex items-center justify-between gap-3">
+            <span className="flex items-center gap-2 text-green-700 dark:text-green-400 font-semibold">
+              <CheckCircle size={18} className="shrink-0" /> เซ็นแล้ว
+              <span className="font-normal text-sm text-green-600/80 dark:text-green-400/70">· เซ็นใหม่ทับได้</span>
+            </span>
+            <a
+              href={`/api/docs/sign/pdf?token=${encodeURIComponent(token)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm font-medium text-orange hover:underline shrink-0"
+            >
+              ดาวน์โหลด PDF
+            </a>
+          </div>
+        )}
 
         {/* Entry details */}
         <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-6">
@@ -482,7 +473,7 @@ export default function SignPage({ params }) {
               type="file"
               accept="image/jpeg,image/png,image/webp"
               className="hidden"
-              onChange={e => handleIdCardUpload(e.target.files?.[0])}
+              onChange={e => onIdCardFile(e.target.files?.[0])}
             />
             {idCardErr && <p className="text-sm text-red-500 dark:text-red-400 mt-2">{idCardErr}</p>}
           </div>
@@ -509,9 +500,9 @@ export default function SignPage({ params }) {
             </p>
             <object
               key={previewVer}
-              data={`/api/docs/sign/preview?token=${encodeURIComponent(token)}&v=${previewVer}`}
+              data={`/api/docs/sign/preview?token=${encodeURIComponent(token)}&v=${previewVer}#toolbar=1&navpanes=0&view=FitH`}
               type="application/pdf"
-              className="w-full h-[60vh] rounded-lg border border-warm-200 dark:border-disc-border bg-white"
+              className="w-full h-[85vh] rounded-lg border border-warm-200 dark:border-disc-border bg-white"
             >
               <a
                 href={`/api/docs/sign/preview?token=${encodeURIComponent(token)}`}
@@ -569,7 +560,7 @@ export default function SignPage({ params }) {
               disabled={!hasDrawn || submitting}
               className="w-full bg-orange text-white py-3.5 rounded-xl text-base font-semibold hover:bg-orange-light disabled:opacity-50 transition"
             >
-              {submitting ? 'กำลังบันทึก...' : signerRole === 'payer' ? 'ยืนยันการจ่ายเงิน' : 'ยืนยันลายเซ็น'}
+              {submitting ? 'กำลังบันทึก...' : isSigned ? 'เซ็นใหม่' : signerRole === 'payer' ? 'ยืนยันการจ่ายเงิน' : 'ยืนยันลายเซ็น'}
             </button>
           </>
         )}

@@ -42,7 +42,7 @@ function newItem() {
   return { id: Math.random().toString(36).slice(2), itemType: 'food', description: ITEM_LABELS.food, amount: '' }
 }
 
-export default function DocProjectView({ project: initialProject, initialEntries, canManage, eventId, eventDate, eventEndDate, participantCount }) {
+export default function DocProjectView({ project: initialProject, initialEntries, canManage, currentDiscordId, eventId, eventDate, eventEndDate, participantCount }) {
   const [project, setProject]       = useState(initialProject)
   const [entries, setEntries]       = useState(initialEntries)
   const [refreshKey, setRefreshKey] = useState(0)
@@ -257,9 +257,11 @@ export default function DocProjectView({ project: initialProject, initialEntries
           {canManage && signedCount > 0 && (
             <a
               href={`/api/docs/projects/${project.id}/export`}
+              target="_blank"
+              rel="noopener noreferrer"
               className="inline-flex items-center gap-2 px-4 py-2.5 bg-card-bg border border-warm-200 dark:border-disc-border text-warm-700 dark:text-disc-text text-base font-medium rounded-lg hover:bg-warm-50 dark:hover:bg-disc-hover transition"
             >
-              Export ZIP
+              พิมพ์เอกสารทั้งหมด
             </a>
           )}
         </div>
@@ -496,6 +498,7 @@ export default function DocProjectView({ project: initialProject, initialEntries
         initialEntries={entries}
         isMobile={isMobile}
         canManage={canManage}
+        currentDiscordId={currentDiscordId}
         onChange={setEntries}
       />
     </div>

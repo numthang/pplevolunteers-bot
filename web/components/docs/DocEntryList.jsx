@@ -17,21 +17,24 @@ const ITEM_LABELS = {
 const ALL_ITEMS    = Object.keys(ITEM_LABELS)
 const MOBILE_ITEMS = ['food','travel','accommodation','supplies','equipment','photo']
 
-const STATUS_LABEL = { pending: 'รอเซ็น', signed: 'เซ็นแล้ว' }
-const STATUS_COLOR  = {
-  pending: 'bg-warm-100 text-warm-500 dark:bg-disc-hover dark:text-disc-muted',
-  signed:  'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-}
-const PAYER_SIGNED_CLS   = 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-const PAYER_UNSIGNED_CLS = 'bg-warm-100 text-warm-500 dark:bg-disc-hover dark:text-disc-muted'
+// 2 badge: เซ็นรับ (ลิงก์เซ็นผู้รับ) / เซ็นจ่าย (ลิงก์เซ็นผู้จ่าย) — เซ็นแล้ว → เขียว active
+const BADGE_BASE    = 'text-xs font-medium px-2 py-0.5 rounded-full transition'
+const BADGE_PENDING = 'bg-amber-50 text-amber-700 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400 dark:hover:bg-amber-900/50'
+const BADGE_MUTED   = 'bg-warm-100 text-warm-400 dark:bg-disc-hover dark:text-disc-muted'
+const BADGE_MUTED_LINK = BADGE_MUTED + ' hover:bg-warm-200 dark:hover:bg-disc-border'
 
 const inputCls = 'border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-warm-900 dark:text-disc-text text-sm rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-orange'
 
-export default function DocEntryList({ initialEntries, isMobile, canManage, onAddClick, onChange }) {
+export default function DocEntryList({ initialEntries, isMobile, canManage, currentDiscordId, onAddClick, onChange }) {
   const [entries, setEntries] = useState(initialEntries)
   const [editingId, setEditingId] = useState(null)
   const [editForm, setEditForm]   = useState({})
   const [saving, setSaving]       = useState(false)
+  /** badge ลายเซ็น: เหลือง=ยังไม่เซ็น / เทา=เซ็นแล้ว · กดเปิดดู/เซ็นได้เสมอ */
+  function signBadge(label, token, signed) {
+    if (!token) return <span className={`${BADGE_BASE} ${BADGE_MUTED}`}>{label}</span>
+    return <Link href={`/docs/sign/${token}`} target="_blank" className={`${BADGE_BASE} ${signed ? BADGE_MUTED_LINK : BADGE_PENDING}`}>{label}</Link>
+  }
 
   function startEdit(entry) {
     setEditingId(entry.id)
@@ -176,24 +179,9 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, onAd
                           <span className="text-base font-medium text-warm-900 dark:text-disc-text">
                             {Number(entry.amount).toLocaleString()} บ.
                           </span>
-                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_COLOR[entry.status] || STATUS_COLOR.pending}`}>
-                            {STATUS_LABEL[entry.status] || entry.status}
-                          </span>
-                          {entry.status === 'pending' && entry.sign_token && (
-                            <Link href={`/docs/sign/${entry.sign_token}`} className="text-xs text-teal hover:underline" target="_blank">
-                              ลิงก์เซ็น
-                            </Link>
-                          )}
-                          {entry.payer_sign_token && (
-                            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${entry.payer_signed_at ? PAYER_SIGNED_CLS : PAYER_UNSIGNED_CLS}`}>
-                              {entry.payer_signed_at ? 'จ่าย ✓' : 'จ่าย ✗'}
-                            </span>
-                          )}
-                          {entry.payer_sign_token && !entry.payer_signed_at && (
-                            <Link href={`/docs/sign/${entry.payer_sign_token}`} className="text-xs text-blue-500 hover:underline" target="_blank">
-                              ลิงก์จ่าย
-                            </Link>
-                          )}
+                          {/* เซ็นรับ / เซ็นจ่าย: เหลือง=ยังไม่เซ็น, เทา=เซ็นแล้ว · กด=เปิดดู, ไอคอน=คัดลอกลิงก์ส่งต่อ */}
+                          {signBadge('เซ็นรับ', entry.sign_token, entry.status === 'signed')}
+                          {signBadge('เซ็นจ่าย', entry.payer_sign_token, !!entry.payer_signed_at)}
                           {entry.status === 'signed' && (
                             <a href={`/api/docs/entries/${entry.id}/pdf`} target="_blank" className="text-xs text-orange hover:underline">
                               PDF

@@ -24,6 +24,43 @@ function ensureFont() {
 const MAX_EDGE   = 1011  // ด้านยาวสุด (px) — พอสำหรับพิมพ์บัตรบน A4 ที่ 300dpi
 const JPEG_Q     = 82
 
+/** trim ลายเซ็นเฉพาะรอยหมึก แล้ว fit ลงกล่องมาตรฐานคงที่ (โปร่งใส) → PNG buffer
+ *  ทำให้ทุกลายเซ็น (เก่า/ใหม่ วาดเล็ก/ใหญ่/มุมไหน) ออกมาขนาด+สัดส่วนเท่ากันเสมอ
+ *  คืน null ถ้าไม่มีหมึก */
+export async function normalizeSignature(base64, outW = 360, outH = 120, pad = 8) {
+  try {
+    const buf = Buffer.from(base64.replace(/^data:image\/\w+;base64,/, ''), 'base64')
+    const img = await loadImage(buf)
+    const W = img.width, H = img.height
+    const scan = createCanvas(W, H)
+    const sctx = scan.getContext('2d')
+    sctx.drawImage(img, 0, 0)
+    const { data } = sctx.getImageData(0, 0, W, H)
+    let minX = W, minY = H, maxX = -1, maxY = -1
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        if (data[(y * W + x) * 4 + 3] > 10) {        // alpha > 10 = มีหมึก
+          if (x < minX) minX = x
+          if (x > maxX) maxX = x
+          if (y < minY) minY = y
+          if (y > maxY) maxY = y
+        }
+      }
+    }
+    if (maxX < 0) return null                          // ไม่มีหมึก
+    const bw = maxX - minX + 1, bh = maxY - minY + 1
+    const out = createCanvas(outW, outH)
+    const octx = out.getContext('2d')
+    const scale = Math.min((outW - pad * 2) / bw, (outH - pad * 2) / bh)
+    const dw = bw * scale, dh = bh * scale
+    octx.drawImage(scan, minX, minY, bw, bh, (outW - dw) / 2, (outH - dh) / 2, dw, dh)
+    return out.toBuffer('image/png')
+  } catch {
+    // normalize พัง → fallback ใช้รูปเดิม (ลายเซ็นไม่หาย)
+    try { return Buffer.from(base64.replace(/^data:image\/\w+;base64,/, ''), 'base64') } catch { return null }
+  }
+}
+
 /** ย่อ + re-encode เป็น JPEG (strip metadata). คืน Buffer สำหรับเก็บ DB */
 export async function processIdCardImage(inputBuffer) {
   const img = await loadImage(inputBuffer)
@@ -37,9 +74,8 @@ export async function processIdCardImage(inputBuffer) {
   return canvas.toBuffer('image/jpeg', JPEG_Q)
 }
 
-/** เติมลายน้ำลงภาพบัตรที่เก็บไว้ → JPEG buffer สำหรับ embed PDF
- *  signatureBase64 (option) = ลายเซ็นรับรองสำเนาถูกต้อง วาดเหนือข้อความ "สำเนาถูกต้อง" */
-export async function buildWatermarkedIdCard(storedBuffer, signatureBase64 = null) {
+/** เติมลายน้ำลงภาพบัตรที่เก็บไว้ → JPEG buffer สำหรับ embed PDF (เฉพาะลายน้ำ ไม่มีลายเซ็น/สแตมป์) */
+export async function buildWatermarkedIdCard(storedBuffer) {
   ensureFont()
   const img = await loadImage(storedBuffer)
   const W = img.width, H = img.height
@@ -68,26 +104,33 @@ export async function buildWatermarkedIdCard(storedBuffer, signatureBase64 = nul
   }
   ctx.restore()
 
-  // ── "สำเนาถูกต้อง" สีน้ำเงินหมึกปากกา มุมล่าง ──
-  const stampFont = Math.round(Math.max(W, H) * 0.055)
-  ctx.font = `${stampFont}px ${FONT}`
-  ctx.textAlign = 'right'
-  ctx.textBaseline = 'bottom'
-  ctx.fillStyle = '#1a47cc'
-  ctx.fillText('สำเนาถูกต้อง', W - stampFont * 0.5, H - stampFont * 0.5)
+  return canvas.toBuffer('image/jpeg', 90)
+}
 
-  // ── ลายเซ็นรับรองสำเนา วาดเหนือข้อความ (ถ้ามี) ──
-  if (signatureBase64) {
+/** บล็อก "ลายเซ็น + สำเนาถูกต้อง" สำหรับวางใต้ภาพบัตร → PNG โปร่งใส (วางบน A4 ขาวได้พอดี)
+ *  คืน { png, width, height } เพื่อให้ผู้เรียก scale ตามสัดส่วน */
+export async function buildCertifyBlock(sigBuffer = null) {
+  ensureFont()
+  const W = 700, H = 320
+  const canvas = createCanvas(W, H)
+  const ctx = canvas.getContext('2d')
+
+  // ลายเซ็น (normalize มาแล้ว สัดส่วน 3:1) — กลางบน
+  if (sigBuffer) {
     try {
-      const sigBuf = Buffer.from(signatureBase64.replace(/^data:image\/\w+;base64,/, ''), 'base64')
-      const sig = await loadImage(sigBuf)
-      const sigW = Math.round(W * 0.28)
-      const sigH = Math.round(sigW * (sig.height / sig.width))
-      const sigX = W - stampFont * 0.5 - sigW
-      const sigY = H - stampFont * 0.5 - stampFont * 1.2 - sigH
-      ctx.drawImage(sig, sigX, sigY, sigW, sigH)
+      const sig = await loadImage(sigBuffer)
+      const sigW = 320
+      const sigH = Math.min(170, Math.round(sigW * (sig.height / sig.width)))
+      ctx.drawImage(sig, (W - sigW) / 2, 20, sigW, sigH)
     } catch { /* ลายเซ็นพังไม่ควรล้มทั้งใบ */ }
   }
 
-  return canvas.toBuffer('image/jpeg', 90)
+  // "สำเนาถูกต้อง" สีน้ำเงินหมึกปากกา — กลางล่าง ใต้ลายเซ็น
+  ctx.font = `54px ${FONT}`
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'bottom'
+  ctx.fillStyle = '#1a47cc'
+  ctx.fillText('สำเนาถูกต้อง', W / 2, H - 24)
+
+  return { png: canvas.toBuffer('image/png'), width: W, height: H }
 }
