@@ -27,7 +27,7 @@ const PAYER_UNSIGNED_CLS = 'bg-warm-100 text-warm-500 dark:bg-disc-hover dark:te
 
 const inputCls = 'border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-warm-900 dark:text-disc-text text-sm rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-orange'
 
-export default function DocEntryList({ initialEntries, isMobile, canManage, onAddClick }) {
+export default function DocEntryList({ initialEntries, isMobile, canManage, onAddClick, onChange }) {
   const [entries, setEntries] = useState(initialEntries)
   const [editingId, setEditingId] = useState(null)
   const [editForm, setEditForm]   = useState({})
@@ -53,11 +53,13 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, onAd
         }),
       })
       if (!res.ok) throw new Error((await res.json()).error)
-      setEntries(prev => prev.map(e =>
+      const next = entries.map(e =>
         e.id === entryId
           ? { ...e, item_type: editForm.itemType, description: editForm.description || null, amount: editForm.amount }
           : e
-      ))
+      )
+      setEntries(next)
+      onChange?.(next)
       setEditingId(null)
     } catch (err) {
       alert('เกิดข้อผิดพลาด: ' + err.message)
@@ -71,7 +73,9 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, onAd
     try {
       const res = await fetch(`/api/docs/entries/${entryId}`, { method: 'DELETE' })
       if (!res.ok) throw new Error((await res.json()).error)
-      setEntries(prev => prev.filter(e => e.id !== entryId))
+      const next = entries.filter(e => e.id !== entryId)
+      setEntries(next)
+      onChange?.(next)
     } catch (err) {
       alert('เกิดข้อผิดพลาด: ' + err.message)
     }

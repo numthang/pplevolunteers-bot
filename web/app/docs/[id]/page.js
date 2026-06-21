@@ -4,7 +4,7 @@ import { canManageDocs } from '@/lib/docsAccess.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import { getGuildId } from '@/lib/guildContext.js'
 import { getDocProjectByEventId, getActEventById } from '@/db/docs/projects.js'
-import { getEntriesByProject } from '@/db/docs/entries.js'
+import { getEntriesByProject, autoAssignPayers } from '@/db/docs/entries.js'
 import DocProjectView from '@/components/docs/DocProjectView'
 
 export default async function DocProjectPage({ params }) {
@@ -18,6 +18,11 @@ export default async function DocProjectPage({ params }) {
   const guildId = await getGuildId(session)
   const project = await getDocProjectByEventId(id, guildId)
   if (!project && !canManage) notFound()
+
+  // auto-เลือกผู้จ่ายให้ entry ที่ยังไม่มี (idempotent — no-op ถ้าทุก entry มี payer แล้ว)
+  if (project && canManage) {
+    await autoAssignPayers(project.id, guildId, project.province ?? null)
+  }
 
   const entries = project ? await getEntriesByProject(project.id) : []
 

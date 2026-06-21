@@ -77,6 +77,66 @@ export async function setTokenExpiry(projectId, expiresAt) {
 }
 
 /**
+ * auto-assign payer ให้ entry ที่ "ยังไม่มี payer" — ไม่แตะ entry ที่ตั้งแล้ว/เซ็นแล้ว
+ * default = payer คนแรกใน pool จังหวัดนั้น (เรียงตาม sort_order); ถ้า payee == default → สลับคนถัดไป
+ * เรียกอัตโนมัติหลังสร้าง entry (ไม่มี UI ให้เลือก)
+ * @param {number}      projectId
+ * @param {string}      guildId
+ * @param {string|null} eventProvince
+ * @returns {Promise<Array<{id, payer_sign_token, payer_discord_id}>>}
+ */
+export async function autoAssignPayers(projectId, guildId, eventProvince) {
+  if (!eventProvince) return []             // event ไม่มีจังหวัด → ไม่ auto-assign (กันเลือกผิดจังหวัด)
+  const payerPool = await getPayersForEvent(guildId, eventProvince)
+  if (!payerPool.length) return []          // ไม่มีผู้จ่ายในจังหวัดนี้ → ข้าม
+  const defaultPayer = payerPool[0].discord_id
+
+  const { rows: entries } = await pool.query(
+    `SELECT id, member_discord_id FROM docs_activity_entries
+     WHERE project_id = $1 AND payer_discord_id IS NULL`,
+    [projectId]
+  )
+  if (!entries.length) return []            // ทุก entry มี payer แล้ว
+
+  const client = await pool.connect()
+  try {
+    await client.query('BEGIN')
+    // ตั้ง default ของ project ครั้งแรกเท่านั้น (ไว้แสดงผล) — ไม่ทับถ้ามีอยู่แล้ว
+    await client.query(
+      `UPDATE docs_projects SET payer_discord_id = COALESCE(payer_discord_id, $2) WHERE id = $1`,
+      [projectId, defaultPayer]
+    )
+
+    const results = []
+    for (const entry of entries) {
+      let resolved = defaultPayer
+      if (entry.member_discord_id === defaultPayer) {
+        const fallback = payerPool.find(p => p.discord_id !== entry.member_discord_id)
+        resolved = fallback?.discord_id ?? defaultPayer
+      }
+      const { rows } = await client.query(
+        `UPDATE docs_activity_entries
+         SET payer_discord_id      = $2,
+             payer_sign_token       = gen_random_uuid(),
+             payer_token_expires_at = token_expires_at
+         WHERE id = $1
+         RETURNING id, payer_sign_token, payer_discord_id`,
+        [entry.id, resolved]
+      )
+      if (rows[0]) results.push(rows[0])
+    }
+
+    await client.query('COMMIT')
+    return results
+  } catch (err) {
+    await client.query('ROLLBACK')
+    throw err
+  } finally {
+    client.release()
+  }
+}
+
+/**
  * ตั้ง payer ต่อ project — province-aware per-entry auto-select
  * @param {number}   projectId
  * @param {string}   defaultPayerDiscordId

@@ -194,7 +194,7 @@ export default function DocAutoCalc({ eventDate, eventEndDate, participantCount,
     <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-5 mb-6">
       <div className="flex items-center gap-2 mb-4">
         <Calculator size={18} className="text-orange shrink-0" />
-        <h2 className="text-base font-semibold text-warm-900 dark:text-disc-text">คำนวณอัตโนมัติ</h2>
+        <h2 className="text-base font-semibold text-warm-900 dark:text-disc-text">เพิ่มรายการอัตโนมัติ</h2>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
@@ -261,7 +261,7 @@ export default function DocAutoCalc({ eventDate, eventEndDate, participantCount,
               disabled={saving}
               className="px-6 py-2.5 bg-orange text-white text-base font-semibold rounded-lg hover:bg-orange-light disabled:opacity-50 transition"
             >
-              {saving ? 'กำลังสร้าง...' : 'สร้างใบสำคัญ'}
+              {saving ? 'กำลังสร้าง...' : 'สร้างรายการ'}
             </button>
             {grandTotal > 0 && (
               <div className="text-right">

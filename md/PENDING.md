@@ -249,6 +249,7 @@
 - [ ] act_event_registers — ยังหาวิธีดึงไม่ได้ (รอ)
 - [ ] **Bot command `/link-ngs`** — ให้สมาชิกค้นชื่อตัวเองใน `ngs_member_cache` แล้วผูก `dc_members.member_id` ถาวร (ทางเลือก B ของ ngs link flow; ตอนนี้ใช้ sign-page self-link แทน)
 - [ ] **Edit/Delete entry** — แก้ไขรายการเบิกจาก `/docs/[id]` ได้ทุก status (ลายเซ็นเดิมยังใช้ได้); ลบได้เฉพาะ `status = 'pending'` เท่านั้น
+- [ ] **Payer auto-suggest / full-auto** — ตอนนี้เพิ่ม payer ผ่าน MemberSearch ในหน้า settings (manual). อนาคตถ้า payer setup เป็นภาระ (หลาย guild / ยศเปลี่ยนบ่อย) → ทำ "รายชื่อแนะนำตามตำแหน่ง" (query `dc_guild_roles WHERE permission IN province_coordinator/regional_coordinator/district_coordinator` → member ที่ถือ role นั้น → reuse `resolveAccess`+`gatedScopeNodes`) หรือข้ามไป full-auto เลย (payer = ผู้ประสานงานจังหวัด, ถ้าซ้ำ payee → กองเลขาภาค). ตัดสินใจ 2026-06-21 ว่ายังไม่ทำเพราะ list เล็ก ตั้งครั้งเดียว ไม่คุ้ม surface
 
 ---
 
@@ -279,6 +280,16 @@
 - 1,000 query/เดือน ≈ ฿200 (snippet) หรือ ฿650 (เต็ม)
 
 - [ ] implement `services/ragSearch.js` + `/ask` command
+
+### ⚠️ Open Questions ก่อน implement
+
+- **Meilisearch capacity — channel threads:** ตอนนี้ index `forum_posts` มี 1,924 docs (forum เท่านั้น) ถ้าจะเพิ่ม channel thread messages จำนวนจะกระโดดอีกหลายเท่า → ต้องประเมิน doc count จริง + ทดสอบ query latency ก่อนตัดสินใจ index รวมหรือแยก index (`channel_threads`)
+
+- **Privacy & third-party protection:** RAG ดึง content จาก forum/thread ที่อาจมีชื่อ/เบอร์/ข้อมูลส่วนตัวของบุคคล → ต้องมีมาตรการก่อน deploy:
+  - system prompt ห้าม AI สรุป/วิเคราะห์บุคคลที่ 3 โดยตรง
+  - filter ไม่ index channel ส่วนตัว (DM, private thread, channel ที่กำหนด off-limits)
+  - พิจารณา strip ชื่อ/mention ออกจาก snippet ก่อนส่ง context ให้ AI
+  - ถ้า query ถามเรื่องคน (detect keyword ชื่อจริง/mention) → refuse หรือ redirect
 
 ### Chat with AI via Mention (ต่อเนื่องจาก RAG)
 - [ ] **ห้อง chat คุยกับ AI ได้โดย mention bot** — user พิมพ์ `@bot <ข้อความ>` ในห้อง Discord แล้ว bot ตอบโดยดึง context จาก RAG (Meilisearch) เหมือน `/ask`

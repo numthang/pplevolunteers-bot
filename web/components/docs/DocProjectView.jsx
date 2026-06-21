@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
-import { Search, X, Plus, Trash2, CreditCard, CheckCircle } from 'lucide-react'
+import { Search, X, Plus, Trash2, CreditCard, CheckCircle, FilePlus, Check, Pencil, ChevronDown } from 'lucide-react'
 import DocEntryList from './DocEntryList'
 import DocAutoCalc from './DocAutoCalc'
 
@@ -39,7 +39,7 @@ const MOBILE_ITEMS = ['food','travel','accommodation','supplies','equipment','ph
 const inputCls = 'w-full border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-warm-900 dark:text-disc-text p-2.5 text-base rounded-lg placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-orange'
 
 function newItem() {
-  return { id: Math.random().toString(36).slice(2), itemType: 'food', description: '', amount: '' }
+  return { id: Math.random().toString(36).slice(2), itemType: 'food', description: ITEM_LABELS.food, amount: '' }
 }
 
 export default function DocProjectView({ project: initialProject, initialEntries, canManage, eventId, eventDate, eventEndDate, participantCount }) {
@@ -56,11 +56,36 @@ export default function DocProjectView({ project: initialProject, initialEntries
   const [members, setMembers]   = useState([])
   const [saving, setSaving]     = useState(false)
   const [autoSaving, setAutoSaving] = useState(false)
+  const [billMode, setBillMode]     = useState('auto')  // 'auto' (default) | 'manual'
+  const [showPayer, setShowPayer]   = useState(false)   // ผู้จ่ายเงิน — พับเก็บ default ปิด
 
-  // payer picker state — เลือกจากรายชื่อผู้จ่ายใน settings ที่ scope ครอบคลุมจังหวัดโครงการ
+  // กรอบงบโครงการ (เกินได้ แต่อย่าขาด — ต้องเคลียร์บิลให้ครบกรอบงบ)
+  const [budget, setBudget]               = useState(project?.budget != null ? Number(project.budget) : null)
+  const [editingBudget, setEditingBudget] = useState(false)
+  const [budgetInput, setBudgetInput]     = useState('')
+  const [savingBudget, setSavingBudget]   = useState(false)
+
+  async function saveBudget() {
+    setSavingBudget(true)
+    try {
+      const res  = await fetch(`/api/docs/projects/${eventId}`, {
+        method:  'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ budget: budgetInput === '' ? null : parseFloat(budgetInput) }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed')
+      setBudget(data.data.budget != null ? Number(data.data.budget) : null)
+      setEditingBudget(false)
+    } catch (err) {
+      alert('เกิดข้อผิดพลาด: ' + err.message)
+    } finally {
+      setSavingBudget(false)
+    }
+  }
+
+  // รายชื่อผู้จ่ายใน settings ที่ scope ครอบคลุมจังหวัดโครงการ (ใช้ map id→ชื่อ ตอนแสดงผล)
   const [eligiblePayers, setEligiblePayers]   = useState([])
-  const [payerDiscordId, setPayerDiscordId]   = useState(project?.payer_discord_id ?? null)
-  const [settingPayer, setSettingPayer]       = useState(false)
 
   useEffect(() => {
     function handler(e) {
@@ -89,37 +114,6 @@ export default function DocProjectView({ project: initialProject, initialEntries
       .then(d => setEligiblePayers(d.data || []))
       .catch(() => setEligiblePayers([]))
   }, [canManage, project?.province])
-
-  // sync payer ปัจจุบันจาก project (ชื่อมาจาก eligiblePayers list ตอน render)
-  useEffect(() => {
-    if (project?.payer_discord_id) setPayerDiscordId(project.payer_discord_id)
-  }, [project?.payer_discord_id])
-
-  async function selectPayer(member) {
-    if (!project) { alert('กรุณาบันทึกรายการก่อนตั้งผู้จ่าย'); return }
-
-    setSettingPayer(true)
-    try {
-      const res = await fetch(`/api/docs/projects/${eventId}/set-payer`, {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ payerDiscordId: member.discord_id }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Failed')
-      setPayerDiscordId(member.discord_id)
-      // refresh entry list เพื่อดู payer_sign_token ใหม่
-      setRefreshKey(k => k + 1)
-      const rowsRes  = await fetch(`/api/docs/entries?projectId=${project.id}`)
-      const rowsData = await rowsRes.json()
-      if (rowsData.success) setEntries(rowsData.data)
-    } catch (err) {
-      alert('เกิดข้อผิดพลาด: ' + err.message)
-    } finally {
-      setSettingPayer(false)
-    }
-  }
-
 
   function addMember(member) {
     if (members.find(m => m.discordId === member.discord_id)) {
@@ -152,7 +146,15 @@ export default function DocProjectView({ project: initialProject, initialEntries
   function updateItem(discordId, itemId, field, value) {
     setMembers(prev => prev.map(m =>
       m.discordId === discordId
-        ? { ...m, items: m.items.map(i => i.id === itemId ? { ...i, [field]: value } : i) }
+        ? { ...m, items: m.items.map(i => {
+            if (i.id !== itemId) return i
+            const next = { ...i, [field]: value }
+            // เปลี่ยนประเภท → เติม description default ตามประเภทใหม่ (เฉพาะถ้ายังเป็นค่า default เดิม/ว่าง ไม่ทับที่ผู้ใช้พิมพ์เอง)
+            if (field === 'itemType' && (!i.description || i.description === ITEM_LABELS[i.itemType])) {
+              next.description = ITEM_LABELS[value] || ''
+            }
+            return next
+          }) }
         : m
     ))
   }
@@ -209,6 +211,22 @@ export default function DocProjectView({ project: initialProject, initialEntries
   const totalAmount  = entries.reduce((s, e) => s + Number(e.amount || 0), 0)
   const signedCount  = entries.filter(e => e.status === 'signed').length
   const payerSignedCount = entries.filter(e => e.payer_signed_at).length
+
+  // ผู้จ่ายที่ระบบ auto-เลือกไว้ — map payer_discord_id ของ entries → ชื่อจาก eligiblePayers
+  const payerById = Object.fromEntries(eligiblePayers.map(p => [p.discord_id, p]))
+  const assignedPayers = [...new Set(entries.map(e => e.payer_discord_id).filter(Boolean))]
+    .map(id => {
+      const info  = payerById[id]
+      const mine  = entries.filter(e => e.payer_discord_id === id)
+      return {
+        discord_id:   id,
+        display_name: info?.display_name || id,
+        position:     info?.position || '',
+        total:        mine.length,
+        signed:       mine.filter(e => e.payer_signed_at).length,
+      }
+    })
+
   const isMobile     = project?.is_mobile ?? false
   const allowedItems = isMobile ? MOBILE_ITEMS : ALL_ITEMS
   const formTotal    = members.flatMap(m => m.items).reduce((s, i) => s + (parseFloat(i.amount) || 0), 0)
@@ -267,26 +285,58 @@ export default function DocProjectView({ project: initialProject, initialEntries
             <div className="text-2xl font-bold text-warm-900 dark:text-disc-text">
               {totalAmount.toLocaleString()} <span className="text-sm font-normal">บ.</span>
             </div>
-            {project.budget && (
-              <div className="text-xs text-warm-500 dark:text-disc-muted mt-0.5">
-                งบ {Number(project.budget).toLocaleString()} บ.
+            {editingBudget ? (
+              <div className="flex items-center gap-1 mt-1.5">
+                <input
+                  type="number" min="0" step="0.01" autoFocus
+                  value={budgetInput}
+                  onChange={e => setBudgetInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') saveBudget(); if (e.key === 'Escape') setEditingBudget(false) }}
+                  placeholder="กรอบงบ"
+                  className="w-24 border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-warm-900 dark:text-disc-text text-sm rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-orange"
+                />
+                <button type="button" onClick={saveBudget} disabled={savingBudget} className="p-1 rounded text-green-600 dark:text-green-400 hover:bg-warm-100 dark:hover:bg-disc-hover transition"><Check size={15} /></button>
+                <button type="button" onClick={() => setEditingBudget(false)} className="p-1 rounded text-warm-400 dark:text-disc-muted hover:bg-warm-100 dark:hover:bg-disc-hover transition"><X size={15} /></button>
               </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => { setBudgetInput(budget != null ? String(budget) : ''); setEditingBudget(true) }}
+                className="flex items-center gap-1 mt-1 text-xs text-warm-500 dark:text-disc-muted hover:text-orange transition"
+              >
+                <Pencil size={11} />
+                กรอบงบ {budget != null ? `${budget.toLocaleString()} บ.` : 'ตั้งค่า'}
+              </button>
+            )}
+
+            {budget > 0 && (
+              totalAmount >= budget ? (
+                <div className="text-xs font-medium text-green-600 dark:text-green-400 mt-1">✓ ถึงกรอบงบแล้ว</div>
+              ) : (
+                <div className="text-xs font-medium text-amber-600 dark:text-amber-400 mt-1">⚠ ยังขาด {(budget - totalAmount).toLocaleString()} บ.</div>
+              )
             )}
           </div>
         </div>
       )}
 
-      {/* Payer picker (manager only, project must exist) */}
+      {/* ผู้จ่ายเงิน — ระบบเลือกอัตโนมัติจาก settings (read-only) */}
       {canManage && project && (
         <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-5 mb-6">
-          <div className="flex items-center gap-2 mb-3">
+          <button
+            type="button"
+            onClick={() => setShowPayer(v => !v)}
+            className="w-full flex items-center gap-2 text-left"
+          >
             <CreditCard size={16} className="text-orange shrink-0" />
-            <span className="text-base font-semibold text-warm-900 dark:text-disc-text">ผู้จ่ายเงิน</span>
-          </div>
+            <span className="text-base font-semibold text-warm-900 dark:text-disc-text">
+              ผู้จ่ายเงิน
+              <span className="ml-1 font-normal text-warm-400 dark:text-disc-muted">({assignedPayers.length || (eligiblePayers.length ? 1 : 0)})</span>
+            </span>
+            <ChevronDown size={16} className={`ml-auto text-warm-400 dark:text-disc-muted transition-transform ${showPayer ? 'rotate-180' : ''}`} />
+          </button>
 
-          {!project ? (
-            <p className="text-sm text-warm-400 dark:text-disc-muted">บันทึกรายการเบิกก่อน จึงจะตั้งผู้จ่ายเงินได้</p>
-          ) : eligiblePayers.length === 0 ? (
+          {showPayer && (eligiblePayers.length === 0 ? (
             <p className="text-sm text-warm-400 dark:text-disc-muted">
               ไม่มีผู้จ่ายเงินที่ครอบคลุมจังหวัด{project.province ? `${project.province}` : 'นี้'} —
               เพิ่มได้ที่ <Link href="/docs/settings" className="text-orange hover:underline">ตั้งค่าเอกสาร</Link>
@@ -294,64 +344,69 @@ export default function DocProjectView({ project: initialProject, initialEntries
           ) : (
             <div>
               <ul className="border border-warm-200 dark:border-disc-border rounded-lg divide-y divide-warm-100 dark:divide-disc-border overflow-hidden">
-                {eligiblePayers.map(p => {
-                  const isSelected = p.discord_id === payerDiscordId
-                  return (
-                    <li key={p.discord_id}>
-                      <button
-                        type="button"
-                        onClick={() => { if (!isSelected) selectPayer(p) }}
-                        disabled={settingPayer || isSelected}
-                        className={`w-full text-left px-4 py-2.5 transition flex items-center justify-between gap-3 disabled:cursor-default
-                          ${isSelected ? 'bg-green-50/60 dark:bg-green-900/20' : 'hover:bg-warm-50 dark:hover:bg-disc-hover disabled:opacity-50'}`}
-                      >
-                        <span className="min-w-0 flex items-center gap-2">
-                          {isSelected && <CheckCircle size={16} className="text-green-500 shrink-0" />}
-                          <span className="min-w-0">
-                            <span className="block text-base font-medium text-warm-900 dark:text-disc-text truncate">{p.display_name}</span>
-                            <span className="block text-sm text-warm-500 dark:text-disc-muted truncate">{p.position}</span>
-                          </span>
-                        </span>
-                        {isSelected ? (
-                          payerSignedCount > 0 ? (
-                            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400 shrink-0">
-                              เซ็นแล้ว {payerSignedCount}/{entries.length}
-                            </span>
-                          ) : (
-                            <span className="text-sm text-green-600 dark:text-green-400 shrink-0">ผู้จ่ายปัจจุบัน</span>
-                          )
-                        ) : (
-                          <span className="text-sm text-orange shrink-0">{settingPayer ? 'กำลังบันทึก...' : 'เลือก'}</span>
-                        )}
-                      </button>
-                    </li>
-                  )
-                })}
+                {(assignedPayers.length ? assignedPayers : [{
+                  discord_id:   eligiblePayers[0].discord_id,
+                  display_name: eligiblePayers[0].display_name,
+                  position:     eligiblePayers[0].position,
+                  total: 0, signed: 0,
+                }]).map(p => (
+                  <li key={p.discord_id} className="px-4 py-2.5 flex items-center justify-between gap-3">
+                    <span className="min-w-0 flex items-center gap-2">
+                      <CheckCircle size={16} className="text-green-500 shrink-0" />
+                      <span className="min-w-0">
+                        <span className="block text-base font-medium text-warm-900 dark:text-disc-text truncate">{p.display_name}</span>
+                        <span className="block text-sm text-warm-500 dark:text-disc-muted truncate">{p.position}</span>
+                      </span>
+                    </span>
+                    {p.total > 0 && (
+                      <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400 shrink-0">
+                        เซ็นแล้ว {p.signed}/{p.total}
+                      </span>
+                    )}
+                  </li>
+                ))}
               </ul>
               <p className="text-xs text-warm-400 dark:text-disc-muted mt-2">
-                แสดงผู้จ่ายที่ดูแลจังหวัด{project.province ? `${project.province}` : 'นี้'} · เลือกคนใหม่เพื่อเปลี่ยน ระบบจะสร้างลิงก์เซ็นให้ทุกรายการอัตโนมัติ
+                ระบบเลือกผู้จ่ายอัตโนมัติจาก<Link href="/docs/settings" className="text-orange hover:underline">ตั้งค่าเอกสาร</Link> (ผู้ดูแลจังหวัด{project.province ? `${project.province}` : 'นี้'}) · ถ้าผู้เบิกเป็นผู้จ่ายเอง ระบบสลับเป็นผู้จ่ายสำรองให้อัตโนมัติ
               </p>
             </div>
-          )}
+          ))}
         </div>
       )}
 
-      {/* Auto-calc */}
+      {/* เลือกโหมดเพิ่มบิล: คำนวณอัตโนมัติ (default) / เพิ่มเอง */}
       {canManage && (
-        <DocAutoCalc
-          eventDate={eventDate}
-          eventEndDate={eventEndDate}
-          participantCount={project?.participant_count ?? participantCount}
-          onSubmit={handleAutoSubmit}
-          saving={autoSaving}
-        />
-      )}
+        <div className="mb-6">
+          <div className="flex gap-2 mb-4 border-b border-warm-200 dark:border-disc-border">
+            {[{ key: 'auto', label: 'เพิ่มรายการอัตโนมัติ' }, { key: 'manual', label: 'เพิ่มรายการเอง' }].map(t => (
+              <button
+                key={t.key}
+                type="button"
+                onClick={() => setBillMode(t.key)}
+                className={`px-4 py-2 text-base font-semibold border-b-2 -mb-px transition
+                  ${billMode === t.key
+                    ? 'border-orange text-orange'
+                    : 'border-transparent text-warm-500 dark:text-disc-muted hover:text-warm-700 dark:hover:text-disc-text'}`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
 
-      {/* เพิ่มรายการ */}
-      {canManage && (
-        <form onSubmit={handleSubmit} className="space-y-4 mb-8">
+          {billMode === 'auto' ? (
+            <DocAutoCalc
+              eventDate={eventDate}
+              eventEndDate={eventEndDate}
+              participantCount={project?.participant_count ?? participantCount}
+              onSubmit={handleAutoSubmit}
+              saving={autoSaving}
+            />
+          ) : (
+            <form onSubmit={handleSubmit} className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-5 mb-6 space-y-4">
           <div className="flex items-center justify-between">
-            <span className="text-base font-semibold text-warm-700 dark:text-disc-text">เพิ่มรายการเบิก</span>
+            <span className="flex items-center gap-2 text-base font-semibold text-warm-900 dark:text-disc-text">
+              <FilePlus size={18} className="text-orange shrink-0" /> เพิ่มรายการเอง
+            </span>
             {formTotal > 0 && (
               <span className="text-base font-semibold text-warm-900 dark:text-disc-text">รวม {formTotal.toLocaleString()} บ.</span>
             )}
@@ -427,10 +482,12 @@ export default function DocProjectView({ project: initialProject, initialEntries
 
           {members.length > 0 && (
             <button type="submit" disabled={saving} className="px-6 py-2.5 bg-orange text-white text-base font-semibold rounded-lg hover:bg-orange-light disabled:opacity-50 transition">
-              {saving ? 'กำลังบันทึก...' : `บันทึก (${members.flatMap(m => m.items.filter(i => i.amount)).length} รายการ)`}
+              {saving ? 'กำลังสร้าง...' : `สร้างรายการ (${members.flatMap(m => m.items.filter(i => i.amount)).length})`}
             </button>
           )}
-        </form>
+            </form>
+          )}
+        </div>
       )}
 
       {/* Entry list */}
@@ -439,6 +496,7 @@ export default function DocProjectView({ project: initialProject, initialEntries
         initialEntries={entries}
         isMobile={isMobile}
         canManage={canManage}
+        onChange={setEntries}
       />
     </div>
   )
