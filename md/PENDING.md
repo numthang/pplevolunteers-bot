@@ -246,9 +246,13 @@
 - ✅ `act_event_cache` sync จาก `act.pplethai.org` (`scripts/sync-act-events.js`)
 - ✅ **PDF pipeline (v2.15.0, 2026-06-21)** — docxtemplater + LibreOffice headless; `template-1.docx` (ส่วน 1/2/4) + `body-1/[item_type].docx` (ส่วน 3 inject ด้วย XML merge); สีน้ำเงิน #1A47CC อัตโนมัติทุก variable run; body files: break/lunch/dinner/equipment/sound/speaker/supplies/transport/venue; `generatePdf.js` refactor ครบ (HEADER_MAP, injectBodyIntoTemplate, colorVariableRuns, payerPosition)
 - ✅ **`docs_payers` table** — guild_id, discord_id, display_name, position, sort_order; auto-select per-entry (setProjectPayer SQL subquery); getEntryById JOIN docs_payers ดึง position; /docs/settings จัดการ payers list (2026-06-21)
+- ✅ **Docs security (v2.16.0, 2026-06-23)** — PDF + ID card ดูได้เฉพาะ canManageDocs; ซ่อนลิงก์ PDF ใน DocEntryList; /docs redirect คนไม่มีสิทธิ์; Nav ซ่อน Docs link + ไม่ fetch projects ถ้าไม่มีสิทธิ์
+- ✅ **Page titles (v2.16.0)** — layout template `%s — Docs`; generateMetadata per page; document.title สำหรับ client pages
+- ✅ **Sign page UX (v2.16.0)** — ผู้รับเงินแสดงชื่อจริง + @username; ชื่อโครงการใหญ่/ย่อย; upload บัตร ปชช. ซ่อนถ้าไม่ใช่เจ้าของ; mobile layout (2-row + ปุ่มเปิด PDF แทน embed)
+- ✅ **Edit entry (v2.16.0)** — แก้ได้ทุก field รวมเปลี่ยนผู้รับเงิน (member search); เปลี่ยนคนที่เซ็นแล้ว → reset ลายเซ็นอัตโนมัติ + confirm ก่อน
 - [ ] act_event_registers — ยังหาวิธีดึงไม่ได้ (รอ)
 - [ ] **Bot command `/link-ngs`** — ให้สมาชิกค้นชื่อตัวเองใน `ngs_member_cache` แล้วผูก `dc_members.member_id` ถาวร (ทางเลือก B ของ ngs link flow; ตอนนี้ใช้ sign-page self-link แทน)
-- [ ] **Edit/Delete entry** — แก้ไขรายการเบิกจาก `/docs/[id]` ได้ทุก status (ลายเซ็นเดิมยังใช้ได้); ลบได้เฉพาะ `status = 'pending'` เท่านั้น
+- [ ] **Delete entry restrict** — ตอนนี้ลบได้ทุก status; ควร block ถ้า status ≠ 'pending' (signed entry ลบไม่ได้)
 - [ ] **Transport แบบแยกใบรายบุคคล (rich)** — ตอนนี้ค่าเดินทางใช้ generic plaintext (description) แบบทุกคนเท่ากัน/ใบรวม. อนาคตทำแบบ rich แยกใบรายบุคคล (ตาราง per-person) ใช้ `transport.docx` structured. ตัดสินใจ 2026-06-21 ว่า defer ไว้ก่อน
 - [ ] **Payer auto-suggest / full-auto** — ตอนนี้เพิ่ม payer ผ่าน MemberSearch ในหน้า settings (manual). อนาคตถ้า payer setup เป็นภาระ (หลาย guild / ยศเปลี่ยนบ่อย) → ทำ "รายชื่อแนะนำตามตำแหน่ง" (query `dc_guild_roles WHERE permission IN province_coordinator/regional_coordinator/district_coordinator` → member ที่ถือ role นั้น → reuse `resolveAccess`+`gatedScopeNodes`) หรือข้ามไป full-auto เลย (payer = ผู้ประสานงานจังหวัด, ถ้าซ้ำ payee → กองเลขาภาค). ตัดสินใจ 2026-06-21 ว่ายังไม่ทำเพราะ list เล็ก ตั้งครั้งเดียว ไม่คุ้ม surface
 

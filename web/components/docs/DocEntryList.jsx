@@ -77,6 +77,11 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
   }
 
   async function saveEdit(entryId) {
+    const entry = entries.find(e => e.id === entryId)
+    const memberChanged = editForm.memberDiscordId && editForm.memberDiscordId !== entry?.member_discord_id
+    if (memberChanged && entry?.status === 'signed') {
+      if (!confirm('รายการนี้เซ็นรับแล้ว การเปลี่ยนผู้รับเงินจะ reset ลายเซ็น — ยืนยัน?')) return
+    }
     setSaving(true)
     try {
       const res = await fetch(`/api/docs/entries/${entryId}`, {
@@ -90,10 +95,12 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
         }),
       })
       if (!res.ok) throw new Error((await res.json()).error)
+      const d = await res.json()
       const next = entries.map(e =>
         e.id === entryId
           ? { ...e, item_type: editForm.itemType, description: editForm.description || null, amount: editForm.amount,
-              member_discord_id: editForm.memberDiscordId, display_name: editForm.memberName.split(' (')[0] }
+              member_discord_id: editForm.memberDiscordId, display_name: editForm.memberName.split(' (')[0],
+              ...(d.resetSignature ? { status: 'pending', signed_at: null } : {}) }
           : e
       )
       setEntries(next)
@@ -149,7 +156,7 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
       {Object.values(byMember).map(({ name, realName, items }) => {
         const memberTotal = items.reduce((s, e) => s + Number(e.amount || 0), 0)
         return (
-          <div key={items[0].member_discord_id} className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg overflow-hidden">
+          <div key={items[0].member_discord_id} className={`bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg ${items.some(e => editingId === e.id) ? 'overflow-visible' : 'overflow-hidden'}`}>
             <div className="px-4 py-3 border-b border-warm-200 dark:border-disc-border flex items-center justify-between">
               <span className="font-semibold text-warm-900 dark:text-disc-text">
                 {name}
@@ -223,6 +230,7 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
                                     className="px-3 py-2 cursor-pointer hover:bg-warm-50 dark:hover:bg-disc-border text-sm"
                                   >
                                     <span className="text-warm-900 dark:text-disc-text">{m.display_name}</span>
+                                    {m.username && <span className="ml-1 text-warm-400 dark:text-disc-muted">@{m.username}</span>}
                                     {realName && <span className="ml-1.5 text-warm-400 dark:text-disc-muted">({realName})</span>}
                                   </li>
                                 )
@@ -232,17 +240,25 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
                         </div>
                       </div>
                     ) : (
-                      <div className="flex items-center justify-between gap-4">
-                        <div className="min-w-0">
+                      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                        {/* row 1 mobile: ชื่อหมวด + จำนวน */}
+                        <div className="flex items-center justify-between gap-2 sm:block sm:min-w-0">
                           <div className="text-base text-warm-900 dark:text-disc-text">
                             {ITEM_LABELS[entry.item_type] || entry.item_type}
                           </div>
-                          {entry.description && (
-                            <div className="text-sm text-warm-500 dark:text-disc-muted truncate">{entry.description}</div>
-                          )}
+                          <span className="text-base font-medium text-warm-900 dark:text-disc-text sm:hidden shrink-0">
+                            {Number(entry.amount).toLocaleString()} บ.
+                          </span>
                         </div>
+                        {entry.description && (
+                          <div className="text-sm text-warm-500 dark:text-disc-muted truncate sm:hidden">{entry.description}</div>
+                        )}
+                        {/* row 2 mobile: badges + icons; desktop: full right side */}
                         <div className="flex items-center gap-2 shrink-0">
-                          <span className="text-base font-medium text-warm-900 dark:text-disc-text">
+                          {entry.description && (
+                            <span className="hidden sm:inline text-sm text-warm-500 dark:text-disc-muted truncate max-w-[120px]">{entry.description}</span>
+                          )}
+                          <span className="hidden sm:inline text-base font-medium text-warm-900 dark:text-disc-text">
                             {Number(entry.amount).toLocaleString()} บ.
                           </span>
                           {signBadge('เซ็นรับ', entry.sign_token, entry.status === 'signed')}

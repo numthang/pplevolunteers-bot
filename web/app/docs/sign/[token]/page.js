@@ -506,11 +506,21 @@ export default function SignPage({ params }) {
             <p className="text-sm text-warm-500 dark:text-disc-muted mb-3">
               ตรวจสอบความถูกต้องของใบสำคัญรับเงินก่อนเซ็น
             </p>
+            {/* mobile: ปุ่มเปิด PDF ใน tab ใหม่ */}
+            <a
+              href={`/api/docs/sign/preview?token=${encodeURIComponent(token)}&v=${previewVer}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="sm:hidden flex items-center justify-center gap-2 w-full py-3 rounded-lg border border-warm-200 dark:border-disc-border text-base text-orange hover:bg-warm-50 dark:hover:bg-disc-hover transition"
+            >
+              <FileText size={16} /> เปิดดูตัวอย่างเอกสาร (PDF)
+            </a>
+            {/* desktop: embed */}
             <object
               key={previewVer}
               data={`/api/docs/sign/preview?token=${encodeURIComponent(token)}&v=${previewVer}#toolbar=1&navpanes=0&view=FitH`}
               type="application/pdf"
-              className="w-full h-[85vh] rounded-lg border border-warm-200 dark:border-disc-border bg-white"
+              className="hidden sm:block w-full h-[85vh] rounded-lg border border-warm-200 dark:border-disc-border bg-white"
             >
               <a
                 href={`/api/docs/sign/preview?token=${encodeURIComponent(token)}`}

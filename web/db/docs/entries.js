@@ -283,6 +283,17 @@ export async function updateEntry(id, { itemType, description, amount, memberDis
   )
 }
 
+export async function resetRecipientSignature(id) {
+  await pool.query(
+    `UPDATE docs_activity_entries SET status = 'pending', signed_at = NULL WHERE id = $1`,
+    [id]
+  )
+  await pool.query(
+    `DELETE FROM docs_signatures WHERE entry_id = $1 AND role = 'recipient'`,
+    [id]
+  )
+}
+
 export async function deleteEntry(id) {
   const { rowCount } = await pool.query(
     `DELETE FROM docs_activity_entries WHERE id = $1`,
