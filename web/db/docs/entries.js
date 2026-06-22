@@ -41,7 +41,8 @@ export async function getEntryByToken(token) {
        n.identification_number, n.title,
        n.first_name AS ngs_first_name, n.last_name AS ngs_last_name,
        n.home_house_number, n.home_alley, n.home_road,
-       n.home_district, n.home_amphure, n.home_province, n.home_zip_code
+       n.home_district, n.home_amphure, n.home_province, n.home_zip_code,
+       n.mobile_number, n.road
      FROM docs_activity_entries e
      JOIN docs_projects p ON p.id = e.project_id
      JOIN act_event_cache ev ON ev.id = p.act_event_cache_id
@@ -254,6 +255,7 @@ export async function getEntryById(id) {
        n.first_name AS ngs_first_name, n.last_name AS ngs_last_name,
        n.home_house_number, n.home_alley, n.home_road,
        n.home_district, n.home_amphure, n.home_province, n.home_zip_code,
+       n.mobile_number, n.road,
        COALESCE(dp.display_name, pm.display_name) AS payer_display_name,
        dp.position AS payer_position
      FROM docs_activity_entries e
@@ -269,14 +271,15 @@ export async function getEntryById(id) {
   return rows[0] || null
 }
 
-export async function updateEntry(id, { itemType, description, amount }) {
+export async function updateEntry(id, { itemType, description, amount, memberDiscordId }) {
   await pool.query(
     `UPDATE docs_activity_entries SET
-       item_type   = COALESCE($2, item_type),
-       description = $3,
-       amount      = COALESCE($4, amount)
+       item_type         = COALESCE($2, item_type),
+       description       = $3,
+       amount            = COALESCE($4, amount),
+       member_discord_id = COALESCE($5, member_discord_id)
      WHERE id = $1`,
-    [id, itemType ?? null, description ?? null, amount ?? null]
+    [id, itemType ?? null, description ?? null, amount ?? null, memberDiscordId ?? null]
   )
 }
 

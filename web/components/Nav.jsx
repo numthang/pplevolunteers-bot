@@ -9,6 +9,7 @@ import { DebugRoleButton, DebugRoleBanner } from './DebugRoleBanner.jsx'
 import { useEffectiveRoles } from '@/lib/useEffectiveRoles.js'
 import { can } from '@/lib/permissions.js'
 import { isAdmin } from '@/lib/roles.js'
+import { canManageDocs } from '@/lib/docsAccess.js'
 
 function Ic({ d, className = 'w-4 h-4 shrink-0' }) {
   return (
@@ -72,7 +73,7 @@ const CALLING_LINKS = [
 ]
 
 const DOCS_LINKS = [
-  { href: '/docs',          label: 'Projects', icon: 'docs',     exact: true },
+  { href: '/docs',          label: 'Projects', icon: 'docs',     exact: true, docsAccess: true },
   { href: '/docs/settings', label: 'Settings', icon: 'settings', adminOnly: true },
 ]
 
@@ -93,7 +94,7 @@ const SOCIAL_LINKS = [
 const DASHBOARD_LINKS = [
   { href: '/finance',  label: 'FINANCE',  icon: 'transactions' },
   { href: '/calling',  label: 'CALLING',  icon: 'campaigns', feature: 'calling' },
-  { href: '/docs',     label: 'DOCS',     icon: 'docs',      feature: 'docs' },
+  { href: '/docs',     label: 'DOCS',     icon: 'docs',      feature: 'docs', docsAccess: true },
 ]
 
 const APPS = [
@@ -141,6 +142,8 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
   const docIdMatch = pathname.match(/^\/docs\/(\d+)/)
   const activeDocId = docIdMatch ? parseInt(docIdMatch[1]) : null
 
+  const { access, superAdmin } = useEffectiveRoles(session)
+
   useEffect(() => {
     if (!isCallingApp) return
     fetch('/api/calling/campaigns?active=true&limit=50')
@@ -156,12 +159,12 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
   }, [isCallingApp, session])
 
   useEffect(() => {
-    if (!isDocsApp) return
+    if (!isDocsApp || !canManageDocs(access)) return
     fetch('/api/docs/projects?active=true')
       .then(r => r.json())
       .then(d => setDocProjects(d.data || []))
       .catch(() => {})
-  }, [isDocsApp, session])
+  }, [isDocsApp, session, access])
 
   useEffect(() => {
     if (!campaignOpen && !mediaOpen && !docOpen) return
@@ -176,8 +179,6 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
 
   const activeCampaign = campaigns.find(c => c.id === activeCampaignId)
 
-  const { access, superAdmin } = useEffectiveRoles(session)
-
   const featureOn = (f) => !f || enabledFeatures.includes(f)
   // effective access + effective superAdmin → เมนู admin สะท้อน view-as-role (debug ทุก role ทุกหน้า)
   // ใช้ effective superAdmin (จาก /api/me/access) ไม่ใช่ session.user.isSuperAdmin (real) ไม่งั้น debug ไม่ซ่อนเมนู
@@ -189,13 +190,18 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
     if (!session) return l.public
     if (l.adminOnly && !userIsAdmin) return false
     if (l.capability) return can(l.capability, access?.permissions || [])
+    if (l.docsAccess) return canManageDocs(access)
     return true
   })
   const mediaLinks = visibleLinks.filter(l => l.mediaGroup)
   const topLinks   = visibleLinks.filter(l => !l.menuOnly && !l.hamburgerOnly && !l.mediaGroup)
   const menuLinks  = visibleLinks
 
-  const visibleApps = APPS.filter(a => featureOn(a.feature))
+  const visibleApps = APPS.filter(a => {
+    if (!featureOn(a.feature)) return false
+    if (a.key === 'docs') return canManageDocs(access)
+    return true
+  })
 
   const currentGuild = guilds.find(g => g.guild_id === currentGuildId) || guilds[0] || null
   const canSwitchGuild = guilds.length > 1
@@ -336,7 +342,7 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
                     </svg>
                   </button>
                   {docOpen && (
-                    <div className="absolute left-0 top-full mt-1 w-60 bg-white dark:bg-disc-hover border border-warm-200 dark:border-disc-border rounded-lg shadow-lg z-50 py-1 max-h-72 overflow-y-auto">
+                    <div className="absolute left-0 top-full mt-1 w-80 bg-white dark:bg-disc-hover border border-warm-200 dark:border-disc-border rounded-lg shadow-lg z-50 py-1 max-h-72 overflow-y-auto">
                       {docProjects.map(p => (
                         <button
                           key={p.act_event_cache_id}
@@ -345,8 +351,8 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
                             activeDocId === p.act_event_cache_id ? 'text-teal dark:text-teal font-medium' : 'text-warm-900 dark:text-disc-muted'
                           }`}
                         >
-                          <div className="flex items-center justify-between">
-                            <span className="truncate pr-2">{p.event_name}</span>
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="leading-snug">{p.event_name}</span>
                             {activeDocId === p.act_event_cache_id && <span className="text-teal shrink-0">✓</span>}
                           </div>
                         </button>

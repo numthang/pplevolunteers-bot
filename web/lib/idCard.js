@@ -74,7 +74,8 @@ export async function processIdCardImage(inputBuffer) {
   return canvas.toBuffer('image/jpeg', JPEG_Q)
 }
 
-/** เติมลายน้ำลงภาพบัตรที่เก็บไว้ → JPEG buffer สำหรับ embed PDF (เฉพาะลายน้ำ ไม่มีลายเซ็น/สแตมป์) */
+/** ขีดคร่อมบัตร — 2 เส้นขนาน ล่างซ้าย→บนขวา + ข้อความระหว่างเส้น
+ *  auto-size font ให้ text พอดีแนวทแยง ไม่ถูก clip */
 export async function buildWatermarkedIdCard(storedBuffer) {
   ensureFont()
   const img = await loadImage(storedBuffer)
@@ -84,27 +85,82 @@ export async function buildWatermarkedIdCard(storedBuffer) {
 
   ctx.drawImage(img, 0, 0, W, H)
 
-  // ── ลายน้ำเอียง ~30° จาง ครอบทั้งใบ (tiled) ──
-  const wmFont = Math.round(Math.max(W, H) * 0.045)
+  const today    = new Date()
+  const dd       = String(today.getDate()).padStart(2, '0')
+  const mo       = String(today.getMonth() + 1).padStart(2, '0')
+  const yyyy     = String(today.getFullYear() + 543)
+  const lineText = `#ใช้สำหรับใบสำคัญรับเงินพรรคประชาชนเท่านั้น# ${dd}/${mo}/${yyyy}`
+
+  // auto-size: text ต้องพอดีแนวทแยง (88% ของ diagonal)
+  const diag      = Math.hypot(W, H)
+  let fontSize    = Math.round(H * 0.09)
+  ctx.font        = `bold ${fontSize}px ${FONT}`
+  const measured  = ctx.measureText(lineText).width
+  if (measured > diag * 0.88)
+    fontSize = Math.floor(fontSize * (diag * 0.88) / measured)
+
+  const lineSpacing = Math.round(fontSize * 1.8)
+  const lineW       = Math.max(3, Math.round(H * 0.007))
+  const angle       = Math.atan2(-H, W)          // ล่างซ้าย→บนขวา
+  const halfDiag    = Math.ceil(diag / 2) + 20
+
   ctx.save()
   ctx.translate(W / 2, H / 2)
-  ctx.rotate((-30 * Math.PI) / 180)
-  ctx.font = `${wmFont}px ${FONT}`
-  ctx.textAlign = 'center'
+  ctx.rotate(angle)
+
+  ctx.strokeStyle = 'rgba(0,40,120,0.55)'
+  ctx.lineWidth   = lineW
+  ctx.beginPath(); ctx.moveTo(-halfDiag, -lineSpacing / 2); ctx.lineTo(halfDiag, -lineSpacing / 2); ctx.stroke()
+  ctx.beginPath(); ctx.moveTo(-halfDiag,  lineSpacing / 2); ctx.lineTo(halfDiag,  lineSpacing / 2); ctx.stroke()
+
+  ctx.font         = `bold ${fontSize}px ${FONT}`
+  ctx.textAlign    = 'center'
   ctx.textBaseline = 'middle'
-  ctx.fillStyle = 'rgba(120,120,120,0.20)'
-  const text = 'ใช้สำหรับพรรคประชาชนเท่านั้น'
-  const stepY = wmFont * 2.4
-  const stepX = ctx.measureText(text).width + wmFont * 2
-  const diag = Math.ceil(Math.hypot(W, H) / 2)
-  for (let y = -diag; y <= diag; y += stepY) {
-    for (let x = -diag; x <= diag; x += stepX) {
-      ctx.fillText(text, x, y)
-    }
-  }
+  ctx.fillStyle    = 'rgba(0,40,120,0.72)'
+  ctx.fillText(lineText, 0, 0)
+
   ctx.restore()
 
   return canvas.toBuffer('image/jpeg', 90)
+}
+
+/** blank transparent PNG ขนาดเดียวกับ normalizeSignature output — ใช้แทน null เมื่อยังไม่มีลายเซ็น */
+export async function buildBlankSignature(outW = 360, outH = 120) {
+  const canvas = createCanvas(outW, outH)
+  return canvas.toBuffer('image/png')
+}
+
+const FOOTER_FONT = 'THSarabunNew'
+let footerFontReady = false
+function ensureFooterFont() {
+  if (footerFontReady) return
+  GlobalFonts.registerFromPath(
+    path.join(process.cwd(), '..', 'assets', 'fonts', 'THSarabunNew-Bold.ttf'),
+    FOOTER_FONT
+  )
+  footerFontReady = true
+}
+
+/** render footer text (Thai) เป็น PNG — แก้ pdf-lib drawText Thai render ผิด
+ *  คืน PNG buffer, วางใน PDF ด้วย embedPng + drawImage แทน drawText */
+export async function buildFooterImage(text) {
+  ensureFooterFont()
+  const W = 1200, H = 40
+  const canvas = createCanvas(W, H)
+  const ctx = canvas.getContext('2d')
+  const maxW = W - 40
+  let fontSize = 26
+  ctx.font = `${fontSize}px ${FOOTER_FONT}`
+  const measured = ctx.measureText(text).width
+  if (measured > maxW) {
+    fontSize = Math.floor(fontSize * maxW / measured)
+    ctx.font = `${fontSize}px ${FOOTER_FONT}`
+  }
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillStyle = 'rgb(153,153,153)'
+  ctx.fillText(text, W / 2, H / 2)
+  return canvas.toBuffer('image/png')
 }
 
 /** บล็อก "ลายเซ็น + สำเนาถูกต้อง" สำหรับวางใต้ภาพบัตร → PNG โปร่งใส (วางบน A4 ขาวได้พอดี)

@@ -37,6 +37,8 @@ export default function CreateDocProjectPage() {
   const dropdownRef = useRef(null)
   const debounceRef = useRef(null)
 
+  useEffect(() => { document.title = 'สร้างโครงการ — Docs' }, [])
+
   useEffect(() => {
     function handleClickOutside(e) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {

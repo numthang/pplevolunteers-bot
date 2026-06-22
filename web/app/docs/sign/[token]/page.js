@@ -74,8 +74,8 @@ export default function SignPage({ params }) {
           if (role === 'recipient') {
             setNgsLinked(!!d.data.has_ngs_link)
             setHasIdCard(!!d.data.has_id_card)
-            if (d.data.has_id_card && session?.user?.discordId) {
-              setIdCardPreviewUrl(`/api/docs/id-card/${session.user.discordId}?token=${encodeURIComponent(token)}`)
+            if (d.data.has_id_card && d.data.member_discord_id) {
+              setIdCardPreviewUrl(`/api/docs/id-card/${d.data.member_discord_id}?token=${encodeURIComponent(token)}`)
             }
           }
         }
@@ -85,6 +85,10 @@ export default function SignPage({ params }) {
   }, [token, status])
 
   // Canvas setup
+  useEffect(() => {
+    if (entry?.event_name) document.title = `${entry.event_name} — Docs`
+  }, [entry])
+
   useEffect(() => {
     if (!entry || !canvasRef.current) return
     const canvas = canvasRef.current
@@ -337,7 +341,11 @@ export default function SignPage({ params }) {
                 )}
               </div>
               <div className="mt-3 pt-3 border-t border-warm-100 dark:border-disc-border text-sm text-warm-500 dark:text-disc-muted">
-                ผู้รับเงิน: <span className="font-medium text-warm-900 dark:text-disc-text">{entry.display_name}</span>
+                ผู้รับเงิน: <span className="font-medium text-warm-900 dark:text-disc-text">
+                  {entry.ngs_first_name && entry.ngs_last_name
+                    ? `${entry.ngs_first_name} ${entry.ngs_last_name} (@${entry.display_name})`
+                    : entry.display_name}
+                </span>
               </div>
             </>
           )}
@@ -423,12 +431,12 @@ export default function SignPage({ params }) {
           </div>
         )}
 
-        {/* Step: ID-card upload (recipient only, after ngs linked) */}
-        {signerRole === 'recipient' && ngsLinked && (
+        {/* Step: ID-card upload (recipient only, after ngs linked, เฉพาะเจ้าของเอกสาร) */}
+        {signerRole === 'recipient' && ngsLinked && session?.user?.discordId === entry?.member_discord_id && (
           <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-6">
             <div className="flex items-center gap-2 mb-1">
               <IdCard size={18} className="text-orange shrink-0" />
-              <h2 className="text-base font-semibold text-warm-900 dark:text-disc-text">สำเนาบัตรประชาชน</h2>
+              <h2 className="text-base font-semibold text-warm-900 dark:text-disc-text">สำเนาบัตรประชาชน <span className="text-sm font-normal text-warm-400 dark:text-disc-muted">(ทำครั้งเดียว)</span></h2>
             </div>
             {hasIdCard ? (
               <div className="mt-2">

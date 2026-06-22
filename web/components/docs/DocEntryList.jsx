@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { Pencil, Trash2, Check, X } from 'lucide-react'
 
@@ -17,7 +17,6 @@ const ITEM_LABELS = {
 const ALL_ITEMS    = Object.keys(ITEM_LABELS)
 const MOBILE_ITEMS = ['food','travel','accommodation','supplies','equipment','photo']
 
-// 2 badge: เซ็นรับ (ลิงก์เซ็นผู้รับ) / เซ็นจ่าย (ลิงก์เซ็นผู้จ่าย) — เซ็นแล้ว → เขียว active
 const BADGE_BASE    = 'text-xs font-medium px-2 py-0.5 rounded-full transition'
 const BADGE_PENDING = 'bg-amber-50 text-amber-700 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400 dark:hover:bg-amber-900/50'
 const BADGE_MUTED   = 'bg-warm-100 text-warm-400 dark:bg-disc-hover dark:text-disc-muted'
@@ -30,7 +29,13 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
   const [editingId, setEditingId] = useState(null)
   const [editForm, setEditForm]   = useState({})
   const [saving, setSaving]       = useState(false)
-  /** badge ลายเซ็น: เหลือง=ยังไม่เซ็น / เทา=เซ็นแล้ว · กดเปิดดู/เซ็นได้เสมอ */
+
+  // member search state
+  const [memberResults, setMemberResults] = useState([])
+  const [memberOpen, setMemberOpen]       = useState(false)
+  const debounceRef = useRef(null)
+  const memberWrapRef = useRef(null)
+
   function signBadge(label, token, signed) {
     if (!token) return <span className={`${BADGE_BASE} ${BADGE_MUTED}`}>{label}</span>
     return <Link href={`/docs/sign/${token}`} target="_blank" className={`${BADGE_BASE} ${signed ? BADGE_MUTED_LINK : BADGE_PENDING}`}>{label}</Link>
@@ -38,10 +43,38 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
 
   function startEdit(entry) {
     setEditingId(entry.id)
-    setEditForm({ itemType: entry.item_type, description: entry.description || '', amount: entry.amount })
+    setEditForm({
+      itemType:        entry.item_type,
+      description:     entry.description || '',
+      amount:          entry.amount,
+      memberDiscordId: entry.member_discord_id,
+      memberName:      entry.display_name || entry.member_discord_id,
+    })
+    setMemberResults([])
+    setMemberOpen(false)
   }
 
-  function cancelEdit() { setEditingId(null); setEditForm({}) }
+  function cancelEdit() { setEditingId(null); setEditForm({}); setMemberResults([]); setMemberOpen(false) }
+
+  function onMemberQueryChange(q) {
+    setEditForm(f => ({ ...f, memberName: q, memberDiscordId: f.memberDiscordId }))
+    clearTimeout(debounceRef.current)
+    if (!q.trim()) { setMemberResults([]); setMemberOpen(false); return }
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/docs/members?q=${encodeURIComponent(q)}&limit=10`)
+        const d = await res.json()
+        setMemberResults(d.data || [])
+        setMemberOpen(true)
+      } catch {}
+    }, 300)
+  }
+
+  function selectMember(m) {
+    const label = [m.first_name, m.last_name].filter(Boolean).join(' ') || m.display_name
+    setEditForm(f => ({ ...f, memberDiscordId: m.discord_id, memberName: m.display_name + (label !== m.display_name ? ` (${label})` : '') }))
+    setMemberOpen(false)
+  }
 
   async function saveEdit(entryId) {
     setSaving(true)
@@ -50,15 +83,17 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          itemType:    editForm.itemType,
-          description: editForm.description || null,
-          amount:      parseFloat(editForm.amount),
+          itemType:        editForm.itemType,
+          description:     editForm.description || null,
+          amount:          parseFloat(editForm.amount),
+          memberDiscordId: editForm.memberDiscordId,
         }),
       })
       if (!res.ok) throw new Error((await res.json()).error)
       const next = entries.map(e =>
         e.id === entryId
-          ? { ...e, item_type: editForm.itemType, description: editForm.description || null, amount: editForm.amount }
+          ? { ...e, item_type: editForm.itemType, description: editForm.description || null, amount: editForm.amount,
+              member_discord_id: editForm.memberDiscordId, display_name: editForm.memberName.split(' (')[0] }
           : e
       )
       setEntries(next)
@@ -128,42 +163,73 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
                 return (
                   <div key={entry.id} className="px-4 py-3">
                     {isEditing ? (
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <select
-                          value={editForm.itemType}
-                          onChange={e => setEditForm(f => ({ ...f, itemType: e.target.value }))}
-                          className={`${inputCls} w-36`}
-                        >
-                          {allowedItems.map(t => <option key={t} value={t}>{ITEM_LABELS[t]}</option>)}
-                        </select>
-                        <input
-                          type="text"
-                          value={editForm.description}
-                          onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))}
-                          placeholder="หมายเหตุ"
-                          className={`${inputCls} flex-1 min-w-0`}
-                        />
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={editForm.amount}
-                          onChange={e => setEditForm(f => ({ ...f, amount: e.target.value }))}
-                          className={`${inputCls} w-24`}
-                        />
-                        <button
-                          onClick={() => saveEdit(entry.id)}
-                          disabled={saving}
-                          className="p-1.5 rounded text-green-600 dark:text-green-400 hover:bg-warm-100 dark:hover:bg-disc-hover transition"
-                        >
-                          <Check size={15} />
-                        </button>
-                        <button
-                          onClick={cancelEdit}
-                          className="p-1.5 rounded text-warm-400 dark:text-disc-muted hover:bg-warm-100 dark:hover:bg-disc-hover transition"
-                        >
-                          <X size={15} />
-                        </button>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <select
+                            value={editForm.itemType}
+                            onChange={e => setEditForm(f => ({ ...f, itemType: e.target.value }))}
+                            className={`${inputCls} w-36`}
+                          >
+                            {allowedItems.map(t => <option key={t} value={t}>{ITEM_LABELS[t]}</option>)}
+                          </select>
+                          <input
+                            type="text"
+                            value={editForm.description}
+                            onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))}
+                            placeholder="หมายเหตุ"
+                            className={`${inputCls} flex-1 min-w-0`}
+                          />
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={editForm.amount}
+                            onChange={e => setEditForm(f => ({ ...f, amount: e.target.value }))}
+                            className={`${inputCls} w-24`}
+                          />
+                          <button
+                            onClick={() => saveEdit(entry.id)}
+                            disabled={saving}
+                            className="p-1.5 rounded text-green-600 dark:text-green-400 hover:bg-warm-100 dark:hover:bg-disc-hover transition"
+                          >
+                            <Check size={15} />
+                          </button>
+                          <button
+                            onClick={cancelEdit}
+                            className="p-1.5 rounded text-warm-400 dark:text-disc-muted hover:bg-warm-100 dark:hover:bg-disc-hover transition"
+                          >
+                            <X size={15} />
+                          </button>
+                        </div>
+                        {/* member search row */}
+                        <div className="relative" ref={memberWrapRef}>
+                          <input
+                            type="text"
+                            value={editForm.memberName || ''}
+                            onChange={e => onMemberQueryChange(e.target.value)}
+                            onFocus={() => editForm.memberName && setMemberOpen(memberResults.length > 0)}
+                            onBlur={() => setTimeout(() => setMemberOpen(false), 150)}
+                            placeholder="ค้นหาคนรับเงิน..."
+                            className={`${inputCls} w-full`}
+                          />
+                          {memberOpen && memberResults.length > 0 && (
+                            <ul className="absolute z-20 mt-1 w-full bg-white dark:bg-disc-hover border border-warm-200 dark:border-disc-border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                              {memberResults.map(m => {
+                                const realName = [m.first_name, m.last_name].filter(Boolean).join(' ')
+                                return (
+                                  <li
+                                    key={m.discord_id}
+                                    onMouseDown={() => selectMember(m)}
+                                    className="px-3 py-2 cursor-pointer hover:bg-warm-50 dark:hover:bg-disc-border text-sm"
+                                  >
+                                    <span className="text-warm-900 dark:text-disc-text">{m.display_name}</span>
+                                    {realName && <span className="ml-1.5 text-warm-400 dark:text-disc-muted">({realName})</span>}
+                                  </li>
+                                )
+                              })}
+                            </ul>
+                          )}
+                        </div>
                       </div>
                     ) : (
                       <div className="flex items-center justify-between gap-4">
@@ -179,10 +245,9 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
                           <span className="text-base font-medium text-warm-900 dark:text-disc-text">
                             {Number(entry.amount).toLocaleString()} บ.
                           </span>
-                          {/* เซ็นรับ / เซ็นจ่าย: เหลือง=ยังไม่เซ็น, เทา=เซ็นแล้ว · กด=เปิดดู, ไอคอน=คัดลอกลิงก์ส่งต่อ */}
                           {signBadge('เซ็นรับ', entry.sign_token, entry.status === 'signed')}
                           {signBadge('เซ็นจ่าย', entry.payer_sign_token, !!entry.payer_signed_at)}
-                          {entry.status === 'signed' && (
+                          {canManage && entry.status === 'signed' && (
                             <a href={`/api/docs/entries/${entry.id}/pdf`} target="_blank" className="text-xs text-orange hover:underline">
                               PDF
                             </a>

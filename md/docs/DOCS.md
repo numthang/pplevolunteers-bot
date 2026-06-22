@@ -405,6 +405,8 @@ web/templates/receipts/
 - `"docs"` ใน `enabled_features`
 - Template system — `template-1.docx` + `body-1/` (break/lunch/dinner/equipment/sound/speaker/supplies/transport/venue) ✅ ครบ
 - `buildData()` — `header`, `amount`, `total`, `payer_position` ✅
+- `assets/fonts/THSarabunNew.ttf` + `THSarabunNew-Bold.ttf` — installed system-wide on production (`/usr/share/fonts/truetype/`) แก้ font size ต่างกันระหว่าง local/production
+- **Nav dropdown scope** — ใครก็ได้ที่มี province grant เห็น Projects dropdown ได้ (เหมือน calling), cutoff 60 วัน จาก `event_date` (`GET /api/docs/projects` ไม่ require `canManageDocs` แล้ว)
 
 ### 🔧 Pending
 - [ ] **`docs_payers` table** — guild_id, discord_id, display_name, position, sort_order; auto-select payer ≠ recipient; รัน `/scrutinize` ก่อน

@@ -9,13 +9,13 @@ import { getAllowedItems } from '@/config/fund69-rules.js'
 /**
  * GET /api/docs/projects?active=true
  * คืนโครงการที่ตั้งค่าแล้ว (มี docs_project) ตาม scope — ใช้ feed dropdown ใน nav
+ * ไม่ต้อง canManageDocs — ใครมี province grant ก็เห็น dropdown ได้ (เหมือน calling)
  */
 export async function GET(req) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.discordId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { access } = await getEffectiveIdentity(session)
-  if (!canManageDocs(access)) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
   const { searchParams } = new URL(req.url)
   const onlyActive = searchParams.get('active') === 'true'
@@ -24,7 +24,7 @@ export async function GET(req) {
 
   try {
     const all = await getDocEvents(guildId, scope)
-    const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 7)
+    const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 60)
     const cutoffStr = cutoff.toISOString().slice(0, 10)
 
     const data = all

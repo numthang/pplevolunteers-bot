@@ -16,8 +16,8 @@ export async function PATCH(req, { params }) {
     if (!entry) return Response.json({ error: 'Not found' }, { status: 404 })
     if (!canAccessEvent(entry.province, access)) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
-    const { itemType, description, amount } = await req.json()
-    await updateEntry(id, { itemType, description, amount })
+    const { itemType, description, amount, memberDiscordId } = await req.json()
+    await updateEntry(id, { itemType, description, amount, memberDiscordId })
     return Response.json({ success: true })
   } catch (err) {
     console.error('[PATCH /api/docs/entries/:id]', err)

@@ -7,7 +7,7 @@ import fs from 'fs'
 import path from 'path'
 import os from 'os'
 import { fileURLToPath } from 'url'
-import { buildWatermarkedIdCard, buildCertifyBlock, normalizeSignature } from './idCard.js'
+import { buildWatermarkedIdCard, buildCertifyBlock, normalizeSignature, buildBlankSignature } from './idCard.js'
 
 const __dirname   = path.dirname(fileURLToPath(import.meta.url))
 const TEMPLATES   = path.join(__dirname, '../templates')
@@ -38,6 +38,14 @@ const SPECIAL_BODIES = new Set(['venue', 'equipment', 'sound', 'speaker', 'suppl
 // generic body — plaintext เอา description มาเติมตรงๆ (food/break/lunch/dinner/transport/accommodation/photo)
 const GENERIC_BODY_XML =
   '<w:p><w:pPr><w:pStyle w:val="Normal"/><w:widowControl w:val="false"/><w:spacing w:lineRule="auto" w:line="240" w:before="0" w:after="160"/><w:contextualSpacing/><w:jc w:val="left"/><w:rPr><w:rFonts w:ascii="TH Sarabun New" w:hAnsi="TH Sarabun New" w:cs="TH Sarabun New"/><w:b/><w:bCs/><w:sz w:val="28"/><w:szCs w:val="32"/></w:rPr></w:pPr><w:r><w:rPr><w:rFonts w:ascii="TH Sarabun New" w:hAnsi="TH Sarabun New" w:cs="TH Sarabun New"/><w:b/><w:bCs/><w:sz w:val="28"/><w:szCs w:val="32"/></w:rPr><w:t xml:space="preserve">{{items_desc}}</w:t></w:r></w:p>'
+
+const THAI_TITLES = ['นางสาว', 'นาง', 'นาย', 'เด็กหญิง', 'เด็กชาย', 'ด.ช.', 'ด.ญ.']
+function stripTitle(name = '') {
+  for (const t of THAI_TITLES) {
+    if (name.startsWith(t)) return name.slice(t.length).trimStart()
+  }
+  return name
+}
 
 const THAI_MONTHS = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
                      'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม']
@@ -125,7 +133,7 @@ function buildData(entry, { payerDisplayName = null, payerPosition = null } = {}
     // common
     header:            HEADER_MAP[entry.item_type] ?? '',
     receipt_no:        String(entry.id).padStart(4, '0'),
-    project_name:      entry.project_name ?? '',
+    project_name:      'การจัดประชุมสมาชิกสัมพันธ์และผู้สนับสนุนพรรคทั่วประเทศ ปี 2569',
     sub_project_name:  entry.event_name ?? '',
     amount:            amtFmt,
     total:             amtFmt,
@@ -136,19 +144,19 @@ function buildData(entry, { payerDisplayName = null, payerPosition = null } = {}
     // personal info
     full_name:       override.full_name     ?? ngs.full_name,
     last_name:       override.last_name     ?? ngs.last_name,
-    payee_name:      [override.full_name ?? ngs.full_name, override.last_name ?? ngs.last_name].filter(Boolean).join(' '),
+    payee_name:      [stripTitle(override.full_name ?? ngs.full_name), override.last_name ?? ngs.last_name].filter(Boolean).join(' '),
     payer_name:      payerDisplayName ?? '',
     payer_position:  payerPosition ?? '',
     id_number:       override.id_number     ?? ngs.id_number,
-    house_no:        override.house_no      ?? ngs.house_no,
-    moo:             override.moo           ?? ngs.moo,
-    road:            override.road          ?? ngs.road,
+    house_no:        override.house_no      || ngs.house_no   || '-',
+    moo:             override.moo           || ngs.moo        || '-',
+    road:            override.road          || ngs.road       || entry.road || '-',
     subdistrict:     override.subdistrict   ?? ngs.subdistrict,
     district:        override.district      ?? ngs.district,
     province_addr:   override.province_addr ?? ngs.province_addr,
-    phone:           override.phone         ?? '',
+    phone:           override.phone         || entry.mobile_number || '-',
     branch_no:       override.branch_no     ?? '',
-    branch_province: override.branch_province ?? '',
+    branch_province: override.branch_province ?? entry.province ?? '',
 
     // body-specific (override_data takes precedence, then event cache)
     venue:            override.venue          ?? eventVenue,
@@ -212,21 +220,16 @@ export async function generateEntryPdf(entry, { signatureBase64 = null, payerSig
   injectBodyIntoTemplate(zip, bodyContent)
   colorVariableRuns(zip)
 
-  // normalize ลายเซ็น → trim หมึก + fit กล่องมาตรฐาน (ขนาดเท่ากันทุกใบ ไม่บีบเพี้ยน)
-  const sigBuf    = signatureBase64      ? await normalizeSignature(signatureBase64)      : null
-  const payerBuf  = payerSignatureBase64 ? await normalizeSignature(payerSignatureBase64) : null
+  // normalize ลายเซ็น → trim หมึก + fit กล่องมาตรฐาน; fallback blank PNG ขนาดเดียวกันเมื่อยังไม่เซ็น
+  const blank    = await buildBlankSignature()
+  const sigBuf   = signatureBase64      ? (await normalizeSignature(signatureBase64)      ?? blank) : blank
+  const payerBuf = payerSignatureBase64 ? (await normalizeSignature(payerSignatureBase64) ?? blank) : blank
 
-  const modules = []
-  if (sigBuf || payerBuf) {
-    modules.push(new ImageModule({
-      centered: false,
-      getImage: (_val, tagName) => {
-        if (tagName === 'paysig') return payerBuf ?? sigBuf
-        return sigBuf ?? payerBuf
-      },
-      getSize: () => [96, 32],
-    }))
-  }
+  const modules = [new ImageModule({
+    centered: false,
+    getImage: (_val, tagName) => tagName === 'paysig' ? payerBuf : sigBuf,
+    getSize:  () => [96, 32],
+  })]
 
   const doc = new Docxtemplater(zip, {
     modules,
@@ -236,12 +239,10 @@ export async function generateEntryPdf(entry, { signatureBase64 = null, payerSig
     nullGetter:    () => '',
   })
 
-  // image module จะ render รูปก็ต่อเมื่อ key {{%sig}}/{{%paysig}} มีค่า truthy ใน data
-  // (ถ้าไม่มี → module short-circuit คืนว่าง ไม่เรียก getImage) → set flag ตามว่ามี buffer ไหน
   doc.render({
     ...buildData(entry, { payerDisplayName, payerPosition }),
-    sig:    sigBuf   ? 'sig'    : '',
-    paysig: payerBuf ? 'paysig' : '',
+    sig:    'sig',
+    paysig: 'paysig',
   })
 
   const filled  = doc.getZip().generate({ type: 'nodebuffer', compression: 'DEFLATE' })
@@ -285,37 +286,33 @@ export async function generateEntryPdf(entry, { signatureBase64 = null, payerSig
 
 const A4 = { w: 595.28, h: 841.89 }  // pt (portrait)
 
-/** append หน้า A4 ที่มีสำเนาบัตร watermark แล้ว ต่อท้าย PDF ใบเสร็จ */
+/** append หน้า A4 — บัตร (watermark) ครึ่งบน + สำเนาถูกต้อง/ลายเซ็นใต้บัตร */
 async function appendIdCardPage(pdfBuf, idCardBuffer, sigBuffer = null) {
-  const cardJpeg = await buildWatermarkedIdCard(idCardBuffer)   // ลายน้ำอย่างเดียว
-  const certify  = await buildCertifyBlock(sigBuffer)            // ลายเซ็น (normalize แล้ว) + สำเนาถูกต้อง
+  const cardJpeg = await buildWatermarkedIdCard(idCardBuffer)
+  const certify  = await buildCertifyBlock(sigBuffer)
 
-  const pdf = await PDFDocument.load(pdfBuf)
+  const pdf     = await PDFDocument.load(pdfBuf)
   const cardImg = await pdf.embedJpg(cardJpeg)
   const certImg = await pdf.embedPng(certify.png)
-  const page = pdf.addPage([A4.w, A4.h])
+  const page    = pdf.addPage([A4.w, A4.h])
 
+  // ขนาดบัตร ISO ID-1 จริง: 85.6 × 54mm → pt (1mm = 2.835pt)
+  const CARD_W = 85.6 * 2.835   // ≈ 243 pt
+  const CARD_H = 54  * 2.835   // ≈ 153 pt
   const margin = 48
-
-  // ── บัตร: ขนาดบัตรจริง ISO ID-1 (85.6×54mm) วางครึ่งบน รักษาสัดส่วนภาพ (ไม่ยืด) ──
-  const MM = 2.83465                               // mm → pt
-  const CARD_W = 85.6 * MM                          // ≈ 242.6pt
-  const CARD_H = 54   * MM                          // ≈ 153.1pt
   const cScale = Math.min(CARD_W / cardImg.width, CARD_H / cardImg.height)
-  const cW = cardImg.width * cScale
+  const cW = cardImg.width  * cScale
   const cH = cardImg.height * cScale
   const cX = (A4.w - cW) / 2
-  const cY = A4.h - margin - cH                    // ชิดบน
+  const cY = A4.h - margin - cH
   page.drawImage(cardImg, { x: cX, y: cY, width: cW, height: cH })
 
-  // ── ลายเซ็น + สำเนาถูกต้อง: ใต้ภาพบัตร ──
   const certW = 240
   const certH = certW * (certify.height / certify.width)
   page.drawImage(certImg, {
     x: (A4.w - certW) / 2,
-    y: cY - 28 - certH,
-    width:  certW,
-    height: certH,
+    y: cY - 24 - certH,
+    width: certW, height: certH,
   })
 
   const out = await pdf.save()

@@ -14,6 +14,8 @@ function MemberSearch({ onSelect }) {
   const debounce = useRef(null)
   const wrapRef  = useRef(null)
 
+  useEffect(() => { document.title = 'ตั้งค่า — Docs' }, [])
+
   useEffect(() => {
     function handler(e) { if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false) }
     document.addEventListener('mousedown', handler)
@@ -45,7 +47,7 @@ function MemberSearch({ onSelect }) {
         placeholder="พิมพ์ชื่อเพื่อค้นหาสมาชิก..."
         value={q}
         onChange={e => setQ(e.target.value)}
-        className="w-full text-sm px-3 py-2 rounded-lg border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-orange"
+        className="w-full text-base px-3 py-2 rounded-lg border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-orange"
       />
       {open && results.length > 0 && (
         <ul className="absolute z-50 left-0 right-0 top-full mt-1 bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg shadow-lg overflow-hidden max-h-48 overflow-y-auto">
@@ -58,8 +60,8 @@ function MemberSearch({ onSelect }) {
                   onClick={() => select(m)}
                   className="w-full text-left px-4 py-2.5 hover:bg-warm-50 dark:hover:bg-disc-hover transition text-warm-900 dark:text-disc-text"
                 >
-                  <span className="text-sm font-medium">{name}</span>
-                  {m.member_id && <span className="ml-2 text-xs text-warm-400 dark:text-disc-muted">#{m.member_id}</span>}
+                  <span className="text-base font-medium">{name}</span>
+                  {m.member_id && <span className="ml-2 text-sm text-warm-400 dark:text-disc-muted">#{m.member_id}</span>}
                 </button>
               </li>
             )
@@ -208,7 +210,7 @@ export default function DocsSettingsPage() {
 
   if (status === 'loading' || loading) {
     return (
-      <div className="flex items-center justify-center py-24 text-warm-400 dark:text-disc-muted text-sm">
+      <div className="flex items-center justify-center py-24 text-warm-400 dark:text-disc-muted text-base">
         กำลังโหลด...
       </div>
     )
@@ -218,11 +220,11 @@ export default function DocsSettingsPage() {
     <div className="max-w-2xl">
       <div className="mb-6 flex items-center gap-3">
         <Link href="/docs" className="text-warm-400 dark:text-disc-muted hover:text-warm-700 dark:hover:text-disc-text transition-colors">
-          <ArrowLeft size={18} />
+          <ArrowLeft size={20} />
         </Link>
         <div>
-          <h1 className="text-xl font-bold text-warm-900 dark:text-disc-text">ตั้งค่าเอกสาร</h1>
-          <p className="text-sm text-warm-500 dark:text-disc-muted">รายชื่อผู้จ่ายเงิน — คนแรกในลิสต์ที่ไม่ใช่ผู้รับเงินจะถูกเลือกอัตโนมัติ</p>
+          <h1 className="text-2xl font-bold text-warm-900 dark:text-disc-text">ตั้งค่าเอกสาร</h1>
+          <p className="text-base text-warm-500 dark:text-disc-muted">รายชื่อผู้จ่ายเงิน — คนแรกในลิสต์ที่ไม่ใช่ผู้รับเงินจะถูกเลือกอัตโนมัติ</p>
         </div>
       </div>
 
@@ -235,21 +237,21 @@ export default function DocsSettingsPage() {
 
       <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl overflow-hidden">
         <div className="px-4 py-3 border-b border-warm-200 dark:border-disc-border flex items-center justify-between">
-          <span className="text-sm font-semibold text-warm-700 dark:text-disc-text">
+          <span className="text-base font-semibold text-warm-700 dark:text-disc-text">
             ผู้จ่ายเงิน ({payers.length})
           </span>
           {!adding && (
             <button
               onClick={() => setAdding(true)}
-              className="flex items-center gap-1.5 text-xs font-medium text-orange hover:text-orange-light transition-colors"
+              className="flex items-center gap-1.5 text-sm font-medium text-orange hover:text-orange-light transition-colors"
             >
-              <Plus size={14} /> เพิ่มผู้จ่ายเงิน
+              <Plus size={15} /> เพิ่มผู้จ่ายเงิน
             </button>
           )}
         </div>
 
         {payers.length === 0 && !adding && (
-          <div className="px-4 py-10 text-center text-sm text-warm-400 dark:text-disc-muted">
+          <div className="px-4 py-10 text-center text-base text-warm-400 dark:text-disc-muted">
             ยังไม่มีรายชื่อผู้จ่ายเงิน
           </div>
         )}
@@ -261,43 +263,43 @@ export default function DocsSettingsPage() {
                 <div className="space-y-2">
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="block text-xs text-warm-500 dark:text-disc-muted mb-1">ชื่อในเอกสาร</label>
+                      <label className="block text-sm text-warm-500 dark:text-disc-muted mb-1">ชื่อในเอกสาร</label>
                       <input
                         value={editForm.displayName}
                         onChange={e => setEditForm(f => ({ ...f, displayName: e.target.value }))}
-                        className="w-full text-sm px-3 py-1.5 rounded-lg border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-bg2 text-warm-900 dark:text-disc-text focus:outline-none focus:ring-2 focus:ring-orange/40"
+                        className="w-full text-base px-3 py-2 rounded-lg border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-bg2 text-warm-900 dark:text-disc-text focus:outline-none focus:ring-2 focus:ring-orange/40"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs text-warm-500 dark:text-disc-muted mb-1">ตำแหน่ง</label>
+                      <label className="block text-sm text-warm-500 dark:text-disc-muted mb-1">ตำแหน่ง</label>
                       <input
                         value={editForm.position}
                         onChange={e => setEditForm(f => ({ ...f, position: e.target.value }))}
-                        className="w-full text-sm px-3 py-1.5 rounded-lg border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-bg2 text-warm-900 dark:text-disc-text focus:outline-none focus:ring-2 focus:ring-orange/40"
+                        className="w-full text-base px-3 py-2 rounded-lg border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-bg2 text-warm-900 dark:text-disc-text focus:outline-none focus:ring-2 focus:ring-orange/40"
                       />
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <label className="text-xs text-warm-500 dark:text-disc-muted">ลำดับ</label>
+                    <label className="text-sm text-warm-500 dark:text-disc-muted">ลำดับ</label>
                     <input
                       type="number"
                       value={editForm.sortOrder}
                       onChange={e => setEditForm(f => ({ ...f, sortOrder: Number(e.target.value) }))}
-                      className="w-20 text-sm px-3 py-1.5 rounded-lg border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-bg2 text-warm-900 dark:text-disc-text focus:outline-none focus:ring-2 focus:ring-orange/40"
+                      className="w-20 text-base px-3 py-2 rounded-lg border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-bg2 text-warm-900 dark:text-disc-text focus:outline-none focus:ring-2 focus:ring-orange/40"
                     />
                     <div className="flex items-center gap-1 ml-auto">
                       <button
                         onClick={() => handleSaveEdit(p.id)}
                         disabled={saving}
-                        className="flex items-center gap-1 text-xs px-3 py-1.5 bg-orange text-white rounded-lg hover:bg-orange-light disabled:opacity-50 transition-colors"
+                        className="flex items-center gap-1 text-sm px-3 py-1.5 bg-orange text-white rounded-lg hover:bg-orange-light disabled:opacity-50 transition-colors"
                       >
-                        <Check size={12} /> บันทึก
+                        <Check size={13} /> บันทึก
                       </button>
                       <button
                         onClick={() => setEditId(null)}
-                        className="flex items-center gap-1 text-xs px-3 py-1.5 border border-warm-200 dark:border-disc-border text-warm-600 dark:text-disc-muted rounded-lg hover:bg-warm-50 dark:hover:bg-disc-bg2 transition-colors"
+                        className="flex items-center gap-1 text-sm px-3 py-1.5 border border-warm-200 dark:border-disc-border text-warm-600 dark:text-disc-muted rounded-lg hover:bg-warm-50 dark:hover:bg-disc-bg2 transition-colors"
                       >
-                        <X size={12} /> ยกเลิก
+                        <X size={13} /> ยกเลิก
                       </button>
                     </div>
                   </div>
@@ -310,20 +312,20 @@ export default function DocsSettingsPage() {
                       disabled={idx === 0}
                       className="text-warm-300 dark:text-disc-muted hover:text-warm-600 dark:hover:text-disc-text disabled:opacity-20 transition-colors"
                     >
-                      <ChevronUp size={14} />
+                      <ChevronUp size={15} />
                     </button>
                     <button
                       onClick={() => handleMove(p.id, 1)}
                       disabled={idx === payers.length - 1}
                       className="text-warm-300 dark:text-disc-muted hover:text-warm-600 dark:hover:text-disc-text disabled:opacity-20 transition-colors"
                     >
-                      <ChevronDown size={14} />
+                      <ChevronDown size={15} />
                     </button>
                   </div>
-                  <span className="text-xs text-warm-300 dark:text-disc-muted w-4 text-center select-none">{idx + 1}</span>
+                  <span className="text-xs text-warm-300 dark:text-disc-muted w-4 text-center select-none tabular-nums">{idx + 1}</span>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-warm-900 dark:text-disc-text">{p.display_name}</p>
-                    <p className="text-xs text-warm-500 dark:text-disc-muted">{p.position}</p>
+                    <p className="text-base font-medium text-warm-900 dark:text-disc-text">{p.display_name}</p>
+                    <p className="text-sm text-warm-500 dark:text-disc-muted">{p.position}</p>
                     <ScopeBadges nodes={p.scope_nodes} />
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
@@ -331,13 +333,13 @@ export default function DocsSettingsPage() {
                       onClick={() => { setEditId(p.id); setEditForm({ displayName: p.display_name, position: p.position, sortOrder: p.sort_order }) }}
                       className="p-1.5 text-warm-400 dark:text-disc-muted hover:text-warm-700 dark:hover:text-disc-text transition-colors"
                     >
-                      <Pencil size={14} />
+                      <Pencil size={15} />
                     </button>
                     <button
                       onClick={() => handleDelete(p.id, p.display_name)}
                       className="p-1.5 text-warm-400 dark:text-disc-muted hover:text-red-500 transition-colors"
                     >
-                      <Trash2 size={14} />
+                      <Trash2 size={15} />
                     </button>
                   </div>
                 </div>
@@ -350,15 +352,14 @@ export default function DocsSettingsPage() {
           <form onSubmit={handleAdd} className="px-4 py-4 border-t border-warm-200 dark:border-disc-border bg-warm-50 dark:bg-disc-bg2 space-y-3">
             <p className="text-xs font-semibold text-warm-600 dark:text-disc-muted uppercase tracking-wide">เพิ่มผู้จ่ายเงิน</p>
 
-            {/* ค้นหาสมาชิก */}
             <div>
-              <label className="block text-xs text-warm-500 dark:text-disc-muted mb-1">ค้นหาสมาชิก</label>
+              <label className="block text-sm text-warm-500 dark:text-disc-muted mb-1">ค้นหาสมาชิก</label>
               {selectedMember ? (
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-orange/40 bg-orange/5 text-sm">
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-orange/40 bg-orange/5 text-base">
                   <span className="flex-1 text-warm-900 dark:text-disc-text font-medium">{selectedMember.display_name || selectedMember.discord_id}</span>
                   <button type="button" onClick={() => { setSelectedMember(null); setForm(f => ({ ...f, discordId: '', displayName: '' })) }}
                     className="text-warm-400 hover:text-red-500 transition-colors">
-                    <X size={14} />
+                    <X size={15} />
                   </button>
                 </div>
               ) : (
@@ -370,26 +371,25 @@ export default function DocsSettingsPage() {
               )}
             </div>
 
-            {/* ชื่อในเอกสาร + ตำแหน่ง — แสดงหลังเลือกสมาชิกแล้ว */}
             {selectedMember && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-xs text-warm-500 dark:text-disc-muted mb-1">ชื่อในเอกสาร</label>
+                  <label className="block text-sm text-warm-500 dark:text-disc-muted mb-1">ชื่อในเอกสาร</label>
                   <input
                     required
                     value={form.displayName}
                     onChange={e => setForm(f => ({ ...f, displayName: e.target.value }))}
-                    className="w-full text-sm px-3 py-1.5 rounded-lg border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-bg text-warm-900 dark:text-disc-text focus:outline-none focus:ring-2 focus:ring-orange/40"
+                    className="w-full text-base px-3 py-2 rounded-lg border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-bg text-warm-900 dark:text-disc-text focus:outline-none focus:ring-2 focus:ring-orange/40"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-warm-500 dark:text-disc-muted mb-1">ตำแหน่ง</label>
+                  <label className="block text-sm text-warm-500 dark:text-disc-muted mb-1">ตำแหน่ง</label>
                   <input
                     required
                     placeholder="เช่น ผู้ประสานงานจังหวัดราชบุรี"
                     value={form.position}
                     onChange={e => setForm(f => ({ ...f, position: e.target.value }))}
-                    className="w-full text-sm px-3 py-1.5 rounded-lg border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-bg text-warm-900 dark:text-disc-text focus:outline-none focus:ring-2 focus:ring-orange/40"
+                    className="w-full text-base px-3 py-2 rounded-lg border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-bg text-warm-900 dark:text-disc-text focus:outline-none focus:ring-2 focus:ring-orange/40"
                   />
                 </div>
               </div>
@@ -399,14 +399,14 @@ export default function DocsSettingsPage() {
               <button
                 type="submit"
                 disabled={saving || !selectedMember}
-                className="flex items-center gap-1.5 text-sm px-4 py-1.5 bg-orange text-white rounded-lg hover:bg-orange-light disabled:opacity-50 transition-colors"
+                className="flex items-center gap-1.5 text-sm px-4 py-2 bg-orange text-white rounded-lg hover:bg-orange-light disabled:opacity-50 transition-colors"
               >
-                <Plus size={14} /> เพิ่ม
+                <Plus size={15} /> เพิ่ม
               </button>
               <button
                 type="button"
                 onClick={() => { setAdding(false); setForm(EMPTY_FORM); setSelectedMember(null) }}
-                className="text-sm px-4 py-1.5 border border-warm-200 dark:border-disc-border text-warm-600 dark:text-disc-muted rounded-lg hover:bg-warm-100 dark:hover:bg-disc-bg transition-colors"
+                className="text-sm px-4 py-2 border border-warm-200 dark:border-disc-border text-warm-600 dark:text-disc-muted rounded-lg hover:bg-warm-100 dark:hover:bg-disc-bg transition-colors"
               >
                 ยกเลิก
               </button>

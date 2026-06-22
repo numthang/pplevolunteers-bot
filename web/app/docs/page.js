@@ -1,6 +1,8 @@
+export const metadata = { title: 'โครงการ' }
+
 import { getSession } from '@/lib/auth.js'
 import { redirect } from 'next/navigation'
-import { getUserScope } from '@/lib/docsAccess.js'
+import { canManageDocs, getUserScope } from '@/lib/docsAccess.js'
 import { getDocEvents } from '@/db/docs/projects.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import { getGuildId } from '@/lib/guildContext.js'
@@ -11,6 +13,8 @@ export default async function DocsPage() {
   if (!session) redirect('/')
 
   const { access } = await getEffectiveIdentity(session)
+  if (!canManageDocs(access)) redirect('/')
+
   const scope = getUserScope(access)
   const guildId = await getGuildId(session)
   const projects = await getDocEvents(guildId, scope)

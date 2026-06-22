@@ -1,4 +1,4 @@
-export const metadata = { title: 'Docs' }
+export const metadata = { title: { template: '%s — Docs', default: 'Docs' } }
 
 export default function DocsLayout({ children }) {
   return (

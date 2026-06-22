@@ -301,6 +301,12 @@
 
 ---
 
+## 🔤 Page Titles (UX)
+
+- [ ] **ทุกหน้าควรมี `<title>` ที่บ่งบอกว่าหน้านั้นคืออะไร** — ตอนนี้หลายหน้าแสดงแค่ชื่อ app เช่น "Docs" ทุกหน้า ทุก app ควรแก้ให้ title สะท้อน context จริง เช่น "ใบสำคัญรับเงิน — โครงการ X", "Settings — Docs", "Campaigns — Calling" ฯลฯ ครอบทุก app ไม่ใช่แค่ Docs
+
+---
+
 ## 🛠️ Internal Tools / Productivity
 
 - [ ] **Project management (Notion + Trello) — Discord-native** — ระบบจัดการงานที่ทำงานร่วมกับ Discord แบบไร้รอยต่อ

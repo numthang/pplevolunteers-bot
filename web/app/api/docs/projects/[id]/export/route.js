@@ -5,10 +5,8 @@ import { canManageDocs } from '@/lib/docsAccess.js'
 import { getDocProjectById } from '@/db/docs/projects.js'
 import { getEntriesByProject, getEntryById, getSignatureByEntryId } from '@/db/docs/entries.js'
 import { generateEntryPdf } from '@/lib/generatePdf.js'
-import { PDFDocument, rgb } from 'pdf-lib'
-import fontkit from '@pdf-lib/fontkit'
-import fs from 'fs'
-import path from 'path'
+import { buildFooterImage } from '@/lib/idCard.js'
+import { PDFDocument } from 'pdf-lib'
 
 /**
  * GET /api/docs/projects/[id]/export
@@ -40,10 +38,15 @@ export async function GET(req, { params }) {
     }
 
     const merged = await PDFDocument.create()
-    merged.registerFontkit(fontkit)
-    const fontBytes = fs.readFileSync(path.join(process.cwd(), '..', 'assets', 'fonts', 'GoogleSans-Medium.ttf'))
-    const font = await merged.embedFont(fontBytes, { subset: true })
     const headerText = project.event_name ?? project.project_name ?? ''
+
+    // pre-render footer เป็น PNG ครั้งเดียว — แก้ pdf-lib drawText Thai render ผิด
+    let footerImg = null
+    const FOOTER_H = 14  // pt
+    if (headerText) {
+      const footerPng = await buildFooterImage(headerText)
+      footerImg = await merged.embedPng(footerPng)
+    }
 
     const errors = []
     for (const row of targets) {
@@ -62,19 +65,9 @@ export async function GET(req, { params }) {
         const pages = await merged.copyPages(src, src.getPageIndices())
         for (const p of pages) {
           merged.addPage(p)
-          if (headerText) {
+          if (footerImg) {
             const { width } = p.getSize()
-            let size = 7
-            const maxW = width - 16
-            let tw = font.widthOfTextAtSize(headerText, size)
-            if (tw > maxW) { size = size * maxW / tw; tw = maxW }   // ย่อ font ถ้าชื่อยาวเกินหน้า
-            p.drawText(headerText, {
-              x: (width - tw) / 2,
-              y: 12,                                                // footer ขอบล่าง จางๆ
-              size,
-              font,
-              color: rgb(0.6, 0.6, 0.6),
-            })
+            p.drawImage(footerImg, { x: 0, y: 0, width, height: FOOTER_H })
           }
         }
       } catch (err) {
@@ -86,10 +79,11 @@ export async function GET(req, { params }) {
       return Response.json({ error: 'ทุกรายการ generate ไม่ได้', errors }, { status: 500 })
     }
 
+    merged.setTitle(`ใบสำคัญรับเงินโครงการ${project.event_name ? ` ${project.event_name}` : ''}`)
     const bytes    = await merged.save()
     const buf      = Buffer.from(bytes)
     // HTTP header เป็น latin1 → ชื่อไทยต้อง encode: ASCII fallback + filename* (RFC 5987)
-    const utf8Name = encodeURIComponent(`docs-${(project.event_name ?? `project-${id}`)}.pdf`)
+    const utf8Name = encodeURIComponent(`ใบสำคัญรับเงินโครงการ${project.event_name ? ` ${project.event_name}` : ''}.pdf`)
 
     return new Response(buf, {
       headers: {

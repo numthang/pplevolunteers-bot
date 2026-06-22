@@ -345,7 +345,7 @@ function BasketDetail({ guild, channel, chName }) {
               rows={3}
               readOnly={!canManage}
               placeholder={canManage ? 'ใส่ caption...' : ''}
-              className="w-full px-3 py-2 text-base rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-gray-900 dark:text-disc-text placeholder-gray-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-teal resize-none overflow-hidden read-only:opacity-70"
+              className="w-full px-3 py-2 text-lg rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-gray-900 dark:text-disc-text placeholder-gray-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-teal resize-none overflow-hidden read-only:opacity-70"
             />
             <div className="flex items-center gap-2 mt-2 flex-wrap">
               {canManage && (

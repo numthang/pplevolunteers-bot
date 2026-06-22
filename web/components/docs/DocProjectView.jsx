@@ -42,7 +42,7 @@ function newItem() {
   return { id: Math.random().toString(36).slice(2), itemType: 'food', description: ITEM_LABELS.food, amount: '' }
 }
 
-export default function DocProjectView({ project: initialProject, initialEntries, canManage, currentDiscordId, eventId, eventDate, eventEndDate, participantCount }) {
+export default function DocProjectView({ project: initialProject, initialEntries, canManage, currentDiscordId, eventId, eventName, eventDate, eventEndDate, participantCount }) {
   const [project, setProject]       = useState(initialProject)
   const [entries, setEntries]       = useState(initialEntries)
   const [refreshKey, setRefreshKey] = useState(0)
@@ -254,9 +254,9 @@ export default function DocProjectView({ project: initialProject, initialEntries
               </p>
             )}
           </div>
-          {canManage && signedCount > 0 && (
+          {canManage && (
             <a
-              href={`/api/docs/projects/${project.id}/export`}
+              href={`/api/docs/projects/${project.id}/export?status=all`}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 px-4 py-2.5 bg-card-bg border border-warm-200 dark:border-disc-border text-warm-700 dark:text-disc-text text-base font-medium rounded-lg hover:bg-warm-50 dark:hover:bg-disc-hover transition"
@@ -266,7 +266,12 @@ export default function DocProjectView({ project: initialProject, initialEntries
           )}
         </div>
       ) : canManage ? (
-        <h1 className="text-2xl font-bold text-warm-900 dark:text-disc-text mb-6">ตั้งค่ารายการเบิก</h1>
+        <div className="mb-6">
+          {eventName && <h1 className="text-2xl font-bold text-warm-900 dark:text-disc-text">{eventName}</h1>}
+          <p className="text-base text-warm-500 dark:text-disc-muted mt-1">
+            {eventDate ? `${formatDate(eventDate)}${eventEndDate ? ` – ${formatDate(eventEndDate)}` : ''} · ` : ''}ตั้งค่ารายการเบิก
+          </p>
+        </div>
       ) : null}
 
       {/* Stats dashboard */}

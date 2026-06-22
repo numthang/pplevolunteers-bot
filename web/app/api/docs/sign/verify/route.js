@@ -37,6 +37,8 @@ export async function GET(req) {
         event_date:       entry.event_date,
         event_end_date:   entry.event_end_date,
         display_name:     entry.display_name,
+        ngs_first_name:   entry.ngs_first_name ?? null,
+        ngs_last_name:    entry.ngs_last_name ?? null,
         member_discord_id: entry.member_discord_id,
         token_expires_at: entry.signer_token_expires_at,
         signer_role:      role,
