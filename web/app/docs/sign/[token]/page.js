@@ -84,7 +84,6 @@ export default function SignPage({ params }) {
       .finally(() => setLoading(false))
   }, [token, status])
 
-  // Canvas setup
   useEffect(() => {
     if (entry?.event_name) document.title = `${entry.event_name} — Docs`
   }, [entry])
@@ -509,7 +508,7 @@ export default function SignPage({ params }) {
             <iframe
               key={previewVer}
               src={`/api/docs/sign/preview?token=${encodeURIComponent(token)}&v=${previewVer}`}
-              className="w-full h-[75vh] rounded-lg border border-warm-200 dark:border-disc-border bg-white"
+              className="w-full h-[160vh] sm:h-[85vh] rounded-lg border border-warm-200 dark:border-disc-border bg-white"
               title="ตัวอย่างเอกสาร"
             />
             <a
