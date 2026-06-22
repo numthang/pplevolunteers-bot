@@ -250,14 +250,19 @@ export async function generateEntryPdf(entry, { signatureBase64 = null, payerSig
 
   fs.writeFileSync(tmpDocx, filled)
 
+  if (!fs.existsSync(LIBREOFFICE)) {
+    fs.unlinkSync(tmpDocx)
+    throw new Error(`LibreOffice not found at ${LIBREOFFICE}`)
+  }
+
   const result = spawnSync(LIBREOFFICE, [
     '--headless', '--convert-to', 'pdf', '--outdir', tmpDir, tmpDocx,
   ], { timeout: 30_000 })
 
   fs.unlinkSync(tmpDocx)
 
-  if (result.status !== 0) {
-    const errMsg = result.stderr?.toString() || result.stdout?.toString() || 'unknown'
+  if (result.status !== 0 || result.error) {
+    const errMsg = result.error?.message || result.stderr?.toString()?.trim() || result.stdout?.toString()?.trim() || `status=${result.status}`
     throw new Error(`LibreOffice failed: ${errMsg}`)
   }
 
