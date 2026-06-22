@@ -22,7 +22,8 @@ const BADGE_PENDING = 'bg-amber-50 text-amber-700 hover:bg-amber-100 dark:bg-amb
 const BADGE_MUTED   = 'bg-warm-100 text-warm-400 dark:bg-disc-hover dark:text-disc-muted'
 const BADGE_MUTED_LINK = BADGE_MUTED + ' hover:bg-warm-200 dark:hover:bg-disc-border'
 
-const inputCls = 'border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-warm-900 dark:text-disc-text text-sm rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-orange'
+const inputCls = 'h-8 border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-warm-900 dark:text-disc-text text-sm rounded px-2 focus:outline-none focus:ring-1 focus:ring-orange'
+const selectCls = inputCls + ' appearance-none pr-6'
 
 export default function DocEntryList({ initialEntries, isMobile, canManage, currentDiscordId, onAddClick, onChange }) {
   const [entries, setEntries] = useState(initialEntries)
@@ -175,7 +176,7 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
                           <select
                             value={editForm.itemType}
                             onChange={e => setEditForm(f => ({ ...f, itemType: e.target.value }))}
-                            className={`${inputCls} w-36`}
+                            className={`${selectCls} w-36`}
                           >
                             {allowedItems.map(t => <option key={t} value={t}>{ITEM_LABELS[t]}</option>)}
                           </select>
