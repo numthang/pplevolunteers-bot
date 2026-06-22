@@ -291,7 +291,7 @@ export default function SignPage({ params }) {
   const canSign = signerRole === 'payer' || ngsLinked
 
   return (
-    <div className="min-h-screen bg-warm-50 dark:bg-disc-bg2 px-2 py-4 sm:px-4">
+    <div className="min-h-screen bg-warm-50 dark:bg-disc-bg2 py-4 sm:px-4">
       {cropSrc && (
         <IdCardCropper src={cropSrc} onCancel={() => setCropSrc(null)} onCropped={uploadIdCard} />
       )}
