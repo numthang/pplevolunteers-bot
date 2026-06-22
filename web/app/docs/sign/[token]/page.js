@@ -51,7 +51,10 @@ export default function SignPage({ params }) {
   const fileRef = useRef(null)
 
   // document preview
-  const [previewVer, setPreviewVer] = useState(0)
+  const [previewVer, setPreviewVer]         = useState(0)
+  const [previewPages, setPreviewPages]     = useState([])
+  const [previewLoading, setPreviewLoading] = useState(false)
+  const [previewErr, setPreviewErr]         = useState('')
 
   const canvasRef = useRef(null)
   const drawing   = useRef(false)
@@ -87,6 +90,18 @@ export default function SignPage({ params }) {
   useEffect(() => {
     if (entry?.event_name) document.title = `${entry.event_name} — Docs`
   }, [entry])
+
+  useEffect(() => {
+    const ready = signerRole === 'payer' || ngsLinked
+    if (!ready || !entry) return
+    setPreviewLoading(true)
+    setPreviewErr('')
+    fetch(`/api/docs/sign/preview-img?token=${encodeURIComponent(token)}&v=${previewVer}`)
+      .then(r => r.json())
+      .then(d => { if (d.pages) setPreviewPages(d.pages); else setPreviewErr(d.error || 'โหลดไม่สำเร็จ') })
+      .catch(() => setPreviewErr('โหลดไม่สำเร็จ'))
+      .finally(() => setPreviewLoading(false))
+  }, [signerRole, ngsLinked, entry, token, previewVer])
 
   useEffect(() => {
     if (!entry || !canvasRef.current) return
@@ -505,12 +520,21 @@ export default function SignPage({ params }) {
             <p className="text-sm text-warm-500 dark:text-disc-muted mb-3">
               ตรวจสอบความถูกต้องของใบสำคัญรับเงินก่อนเซ็น
             </p>
-            <iframe
-              key={previewVer}
-              src={`/api/docs/sign/preview?token=${encodeURIComponent(token)}&v=${previewVer}`}
-              className="w-full h-[160vh] sm:h-[85vh] rounded-lg border border-warm-200 dark:border-disc-border bg-white"
-              title="ตัวอย่างเอกสาร"
-            />
+            {previewLoading && (
+              <div className="flex items-center justify-center py-12 text-warm-400 dark:text-disc-muted text-sm">
+                กำลังโหลดตัวอย่าง...
+              </div>
+            )}
+            {previewErr && (
+              <div className="py-4 text-center text-sm text-red-500">{previewErr}</div>
+            )}
+            {!previewLoading && previewPages.length > 0 && (
+              <div className="space-y-2">
+                {previewPages.map((src, i) => (
+                  <img key={i} src={src} alt={`หน้า ${i + 1}`} className="w-full rounded-lg border border-warm-200 dark:border-disc-border" />
+                ))}
+              </div>
+            )}
             <a
               href={`/api/docs/sign/preview?token=${encodeURIComponent(token)}&v=${previewVer}`}
               target="_blank"
