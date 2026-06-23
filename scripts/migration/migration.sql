@@ -654,3 +654,19 @@ CREATE INDEX IF NOT EXISTS idx_docs_payers_guild ON docs_payers (guild_id, sort_
 -- 2026-06-21: เลิกใช้สถานะ 'printed' — แค่เปิดลิงก์ PDF ไม่ควรนับว่าพิมพ์
 -- รวมเข้ากับ 'signed' (printed เดิม = เคยเซ็นแล้วทั้งหมด) · printed_at ปล่อยไว้ไม่ใช้
 UPDATE docs_activity_entries SET status = 'signed' WHERE status = 'printed';
+
+-- 2026-06-23: เอกสารแนบโครงการ (ภาพถ่ายเอกสาร เช่น แนบท้าย 3 ที่เซ็นมือ)
+-- file_path = path สัมพัทธ์จาก DOCS_UPLOAD_DIR (ไม่ใช่ URL สาธารณะ)
+CREATE TABLE IF NOT EXISTS docs_project_attachments (
+  id            SERIAL PRIMARY KEY,
+  project_id    INT          NOT NULL REFERENCES docs_projects(id) ON DELETE CASCADE,
+  guild_id      VARCHAR(20)  NOT NULL,
+  original_name TEXT,
+  file_path     TEXT         NOT NULL,
+  sort_order    INT          NOT NULL DEFAULT 0,
+  created_at    TIMESTAMPTZ  DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_docs_attachments_project ON docs_project_attachments (project_id, sort_order);
+
+-- 2026-06-23: อนุญาตให้สร้าง entry โดยยังไม่มีผู้รับ (กำหนดทีหลังได้)
+ALTER TABLE docs_activity_entries ALTER COLUMN member_discord_id DROP NOT NULL;

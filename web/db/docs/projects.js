@@ -33,7 +33,7 @@ export const getDocProjects = getDocEvents
 export async function getDocProjectByEventId(actEventCacheId, guildId) {
   const { rows } = await pool.query(
     `SELECT
-       p.*, e.name AS event_name, e.province, e.image_url, e.location,
+       p.*, e.name AS event_name, e.province, e.image_url, e.location, e.act_event_id,
        TO_CHAR(e.event_date,     'YYYY-MM-DD"T"HH24:MI') AS event_date,
        TO_CHAR(e.event_end_date, 'YYYY-MM-DD"T"HH24:MI') AS event_end_date
      FROM docs_projects p
@@ -91,7 +91,7 @@ export async function createDocProject({ guildId, actEventCacheId, isMobile, par
 /** ดึง event_date/end_date จาก act_event_cache เมื่อยังไม่มี docs_project */
 export async function getActEventById(actEventCacheId, guildId) {
   const { rows } = await pool.query(
-    `SELECT name, province,
+    `SELECT name, province, act_event_id,
             TO_CHAR(event_date,     'YYYY-MM-DD"T"HH24:MI') AS event_date,
             TO_CHAR(event_end_date, 'YYYY-MM-DD"T"HH24:MI') AS event_end_date
      FROM act_event_cache WHERE id = $1 AND guild_id = $2`,

@@ -1,12 +1,14 @@
 import { getSession } from '@/lib/auth.js'
 import { redirect } from 'next/navigation'
+import { Suspense } from 'react'
 import Link from 'next/link'
 import { getUserScope, isAdmin, canCreateCampaign } from '@/lib/callingAccess.js'
 import { getCampaigns } from '@/db/calling/campaigns.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import CampaignCard from '@/components/calling/CampaignCard.jsx'
+import DocsProvinceFilter from '@/components/docs/DocsProvinceFilter.jsx'
 
-export default async function CallingPage() {
+export default async function CallingPage({ searchParams }) {
   const session = await getSession()
   if (!session) redirect('/')
 
@@ -20,10 +22,16 @@ export default async function CallingPage() {
     c => !c.province || isUserAdmin || userScope.includes(c.province)
   )
 
+  const selectedProvince = (await searchParams)?.province || ''
+  const provinces = [...new Set(filteredCampaigns.map(c => c.province).filter(Boolean))].sort()
+  const displayed = selectedProvince
+    ? filteredCampaigns.filter(c => c.province === selectedProvince)
+    : filteredCampaigns
+
   const cutoffDate = new Date(); cutoffDate.setDate(cutoffDate.getDate() - 7)
   const cutoff = cutoffDate.toISOString().slice(0, 10)
-  const active = filteredCampaigns.filter(c => !c.event_date || c.event_date >= cutoff)
-  const past   = filteredCampaigns.filter(c => c.event_date && c.event_date < cutoff)
+  const active = displayed.filter(c => !c.event_date || c.event_date >= cutoff)
+  const past   = displayed.filter(c => c.event_date && c.event_date < cutoff)
 
   const groupBy = list => list.reduce((acc, c) => {
     const key = c.province || 'ทั่วไป'
@@ -55,7 +63,15 @@ export default async function CallingPage() {
         )}
       </div>
 
-      {filteredCampaigns.length === 0 ? (
+      {provinces.length > 1 && (
+        <div className="mb-6">
+          <Suspense>
+            <DocsProvinceFilter provinces={provinces} selected={selectedProvince} />
+          </Suspense>
+        </div>
+      )}
+
+      {displayed.length === 0 ? (
         <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-12 text-center text-warm-500 dark:text-disc-muted">
           ไม่มีแคมเปญ
         </div>

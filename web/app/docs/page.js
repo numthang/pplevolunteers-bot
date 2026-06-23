@@ -1,5 +1,6 @@
 export const metadata = { title: 'โครงการ' }
 
+import { Suspense } from 'react'
 import { getSession } from '@/lib/auth.js'
 import { redirect } from 'next/navigation'
 import { canManageDocs, getUserScope } from '@/lib/docsAccess.js'
@@ -7,8 +8,9 @@ import { getDocEvents } from '@/db/docs/projects.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import { getGuildId } from '@/lib/guildContext.js'
 import DocProjectCard from '@/components/docs/DocProjectCard.jsx'
+import DocsProvinceFilter from '@/components/docs/DocsProvinceFilter.jsx'
 
-export default async function DocsPage() {
+export default async function DocsPage({ searchParams }) {
   const session = await getSession()
   if (!session) redirect('/')
 
@@ -17,9 +19,16 @@ export default async function DocsPage() {
 
   const scope = getUserScope(access)
   const guildId = await getGuildId(session)
-  const projects = await getDocEvents(guildId, scope)
+  const allProjects = await getDocEvents(guildId, scope)
 
-  const cutoffDate = new Date(); cutoffDate.setDate(cutoffDate.getDate() - 7)
+  const selectedProvince = (await searchParams)?.province || ''
+
+  const provinces = [...new Set(allProjects.map(p => p.province).filter(Boolean))].sort()
+  const projects = selectedProvince
+    ? allProjects.filter(p => p.province === selectedProvince)
+    : allProjects
+
+  const cutoffDate = new Date(); cutoffDate.setMonth(cutoffDate.getMonth() - 2)
   const cutoff = cutoffDate.toISOString().slice(0, 10)
   const active = projects.filter(p => !p.event_date || p.event_date >= cutoff)
   const past   = projects.filter(p => p.event_date && p.event_date < cutoff)
@@ -36,12 +45,20 @@ export default async function DocsPage() {
 
   return (
     <div>
-      <div className="mb-8">
+      <div className="mb-6">
         <h1 className="text-2xl font-bold text-warm-900 dark:text-disc-text mb-2">เอกสาร</h1>
         <p className="text-base text-warm-500 dark:text-disc-muted">
           ใบสำคัญรับเงินและเอกสารเบิกจ่ายสำหรับกิจกรรม
         </p>
       </div>
+
+      {provinces.length > 1 && (
+        <div className="mb-6">
+          <Suspense>
+            <DocsProvinceFilter provinces={provinces} selected={selectedProvince} />
+          </Suspense>
+        </div>
+      )}
 
       {projects.length === 0 ? (
         <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-12 text-center text-warm-500 dark:text-disc-muted">

@@ -109,7 +109,7 @@ function calcDuration(startStr, endStr) {
 function buildData(entry, { payerDisplayName = null, payerPosition = null } = {}) {
   const override = entry.override_data ?? {}
   const ngs = {
-    full_name:      [(entry.title ?? ''), (entry.ngs_first_name ?? entry.firstname ?? '')].filter(Boolean).join('') || entry.display_name || '',
+    full_name:      [(entry.title ?? ''), (entry.ngs_first_name ?? entry.firstname ?? '')].filter(Boolean).join('') || entry.display_name || 'ยังไม่ระบุผู้รับ',
     last_name:      entry.ngs_last_name ?? entry.lastname ?? '',
     id_number:      entry.identification_number ?? '',
     house_no:       entry.home_house_number ?? '',

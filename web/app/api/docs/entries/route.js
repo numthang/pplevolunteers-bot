@@ -3,7 +3,7 @@ import { authOptions } from '@/lib/auth-options.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import { canManageDocs } from '@/lib/docsAccess.js'
 import { getGuildId } from '@/lib/guildContext.js'
-import { createEntries, setTokenExpiry, getEntriesByProject, autoAssignPayers } from '@/db/docs/entries.js'
+import { createEntries, setTokenExpiry, getEntriesByProject, autoAssignPayers, deleteAllEntriesByProject } from '@/db/docs/entries.js'
 import { getDocProjectByEventId, upsertDocProject } from '@/db/docs/projects.js'
 import { getAllowedItems } from '@/config/fund69-rules.js'
 
@@ -43,8 +43,9 @@ export async function POST(req) {
     }
 
     for (const e of entries) {
-      if (!e.memberDiscordId || !e.itemType || e.amount == null) {
-        return Response.json({ error: 'Each entry needs memberDiscordId, itemType, amount' }, { status: 400 })
+      // memberDiscordId เป็น null ได้ — กำหนดผู้รับทีหลังใน DocEntryList (column nullable)
+      if (!e.itemType || e.amount == null) {
+        return Response.json({ error: 'Each entry needs itemType, amount' }, { status: 400 })
       }
     }
 
@@ -80,4 +81,19 @@ export async function POST(req) {
     console.error('[POST /api/docs/entries]', err)
     return Response.json({ error: 'Internal Server Error' }, { status: 500 })
   }
+}
+
+/** DELETE /api/docs/entries?projectId=X — ลบทุกรายการของโครงการ */
+export async function DELETE(req) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.discordId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  const { access } = await getEffectiveIdentity(session)
+  if (!canManageDocs(access)) return Response.json({ error: 'Forbidden' }, { status: 403 })
+
+  const { searchParams } = new URL(req.url)
+  const projectId = parseInt(searchParams.get('projectId'))
+  if (!projectId) return Response.json({ error: 'projectId required' }, { status: 400 })
+
+  const deleted = await deleteAllEntriesByProject(projectId)
+  return Response.json({ success: true, deleted })
 }

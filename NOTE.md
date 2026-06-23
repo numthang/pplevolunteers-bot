@@ -1,10 +1,17 @@
 PENDING
 
+
 End of the Day
 - Update PENDING.md สิ่งที่อยากทำ สิ่งที่ทำไปแล้ว, อ่านส่วนที่แก้ไขแล้วเอาขึ้น git พร้อมข้อความแก้ไข พร้อม bump version ใน package.json ให้ถูกต้อง (เช็ค git log ก่อนว่า version ล่าสุดคืออะไร ใช้ semver — patch สำหรับแก้เล็กน้อย, minor สำหรับฟีเจอร์ใหม่) tag เฉพาะ minor ขึ้นไป และ push ด้วย
 วันที่ 12-17 ผมทำอะไรบ้าง ขอรายละเอียดแบบ non-technichal อ่านแล้วคนอื่นเข้าใจขอ format แบบนี้
 - [วันที่] [เดือน] xxxxxxxxxxxxxxxxxxxxxxxxx, xxxx, xxxxx
 - [วันที่] [เดือน] xxxxxxxxxxxxxxxxxxxxxxxxx, xxxx, xxxxx
+
+สรุป workflow ที่เราเคาะกัน — ไว้ใช้รอบหน้า:
+เริ่มกับ Sonnet ลองไปเรื่อยๆ ให้เห็นรูปร่าง
+พอเริ่มรู้สึกมั่ว → /model opus สั่งให้ช่วยมองภาพรวม (ไม่ต้องทนจนพังสุด)
+ฟอร์ม ....... ทั้งฟอร์ม UX งง UI ไม่เป็นระบบ ช่วย redesign ใหม่ทั้ง section: control ให้เหลือชนิดเดียวกัน, accent สีเดียว, label อ่านออกทั้ง light/dark, mobile ห้าม wrap พัง — เสนอ layout direction ให้ดูก่อน แล้วค่อยทำ
+
 
 ===
 Panel Forum: 

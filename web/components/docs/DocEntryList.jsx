@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { Pencil, Trash2, Check, X } from 'lucide-react'
+import { calcTravelCeiling } from '@/config/fund69-rules.js'
 
 const ITEM_LABELS = {
   food:          'ค่าอาหาร',
@@ -31,11 +32,70 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
   const [editForm, setEditForm]   = useState({})
   const [saving, setSaving]       = useState(false)
 
-  // member search state
+  // member search state (edit form)
   const [memberResults, setMemberResults] = useState([])
   const [memberOpen, setMemberOpen]       = useState(false)
   const debounceRef = useRef(null)
   const memberWrapRef = useRef(null)
+
+  // inline assign state (for unassigned entries)
+  const [assigningId, setAssigningId]       = useState(null)
+  const [assignQuery, setAssignQuery]       = useState('')
+  const [assignResults, setAssignResults]   = useState([])
+  const [assigning, setAssigning]           = useState(false)
+  const [assignDistance, setAssignDistance] = useState('')  // กม. — ใช้กับใบค่าเดินทางตามจริง (ยอด 0)
+  const assignDebounceRef = useRef(null)
+
+  function onAssignQueryChange(q) {
+    setAssignQuery(q)
+    clearTimeout(assignDebounceRef.current)
+    if (!q.trim()) { setAssignResults([]); return }
+    assignDebounceRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/docs/members?q=${encodeURIComponent(q)}&limit=10`)
+        const d = await res.json()
+        setAssignResults(d.data || [])
+      } catch {}
+    }, 300)
+  }
+
+  async function confirmAssign(entryId, m) {
+    const entry = entries.find(e => e.id === entryId)
+    // ใบค่าเดินทางตามจริง (ยอด 0) — ต้องกรอกระยะทางก่อน → คิด rate ตาม tier
+    const isTravelBlank = entry?.item_type === 'travel' && Number(entry.amount) === 0
+    const body = { memberDiscordId: m.discord_id }
+    if (isTravelBlank) {
+      if (assignDistance === '') { alert('กรอกระยะทาง (กม.) ก่อน'); return }
+      const km   = parseFloat(assignDistance) || 0
+      const rate = calcTravelCeiling(km) ?? 0  // >700 กม. = null → 0 (ไปกรอกยอดจริงผ่านแก้ไข)
+      body.amount = rate
+    }
+    setAssigning(true)
+    try {
+      const res = await fetch(`/api/docs/entries/${entryId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      if (!res.ok) throw new Error((await res.json()).error)
+      const next = entries.map(e =>
+        e.id === entryId
+          ? { ...e, member_discord_id: m.discord_id, display_name: m.display_name,
+              ...(body.amount != null ? { amount: body.amount } : {}) }
+          : e
+      )
+      setEntries(next)
+      onChange?.(next)
+      setAssigningId(null)
+      setAssignQuery('')
+      setAssignResults([])
+      setAssignDistance('')
+    } catch (err) {
+      alert('เกิดข้อผิดพลาด: ' + err.message)
+    } finally {
+      setAssigning(false)
+    }
+  }
 
   function signBadge(label, token, signed) {
     if (!token) return <span className={`${BADGE_BASE} ${BADGE_MUTED}`}>{label}</span>
@@ -127,14 +187,22 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
     }
   }
 
-  const byMember = {}
+  const byMember = []
   for (const e of entries) {
-    const key = e.member_discord_id
-    if (!byMember[key]) {
+    const key = e.member_discord_id ?? `__unassigned_${e.id}`
+    const existing = byMember.find(g => g.key === key)
+    if (existing) {
+      existing.items.push(e)
+    } else {
       const realName = [e.ngs_first_name, e.ngs_last_name].filter(Boolean).join(' ')
-      byMember[key] = { name: e.display_name || e.member_discord_id, realName, items: [] }
+      byMember.push({
+        key,
+        name:         e.member_discord_id ? (e.display_name || e.member_discord_id) : null,
+        realName,
+        isUnassigned: !e.member_discord_id,
+        items:        [e],
+      })
     }
-    byMember[key].items.push(e)
   }
 
   const allowedItems = isMobile ? MOBILE_ITEMS : ALL_ITEMS
@@ -154,16 +222,96 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
 
   return (
     <div className="space-y-4">
-      {Object.values(byMember).map(({ name, realName, items }) => {
-        const memberTotal = items.reduce((s, e) => s + Number(e.amount || 0), 0)
+      {byMember.map(({ key, name, realName, isUnassigned, items }) => {
+        const memberTotal  = items.reduce((s, e) => s + Number(e.amount || 0), 0)
+        const entryId      = items[0].id
+        const isAssigning  = assigningId === entryId
+        const isTravelBlank = items[0].item_type === 'travel' && Number(items[0].amount) === 0
         return (
-          <div key={items[0].member_discord_id} className={`bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg ${items.some(e => editingId === e.id) ? 'overflow-visible' : 'overflow-hidden'}`}>
-            <div className="px-4 py-3 border-b border-warm-200 dark:border-disc-border flex items-center justify-between">
-              <span className="font-semibold text-warm-900 dark:text-disc-text">
-                {name}
-                {realName && <span className="ml-1.5 text-sm font-normal text-warm-500 dark:text-disc-muted">({realName})</span>}
-              </span>
-              <span className="text-sm text-warm-500 dark:text-disc-muted">{memberTotal.toLocaleString()} บ.</span>
+          <div key={key} className={`bg-card-bg border ${isUnassigned ? 'border-amber-300 dark:border-amber-700' : 'border-warm-200 dark:border-disc-border'} rounded-lg ${items.some(e => editingId === e.id) || isAssigning ? 'overflow-visible' : 'overflow-hidden'}`}>
+            <div className="px-4 py-3 border-b border-warm-200 dark:border-disc-border flex items-center justify-between gap-3">
+              {isUnassigned ? (
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <span className="font-semibold text-amber-600 dark:text-amber-400">ยังไม่ระบุผู้รับ</span>
+                  {canManage && !isAssigning && (
+                    <button
+                      type="button"
+                      onClick={() => { setAssigningId(entryId); setAssignQuery(''); setAssignResults([]); setAssignDistance('') }}
+                      className="text-xs px-2 py-1 rounded border border-amber-400 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition"
+                    >
+                      กำหนดผู้รับ
+                    </button>
+                  )}
+                  {isAssigning && (
+                    <div className="flex-1 max-w-xs space-y-1.5">
+                      {isTravelBlank && (
+                        <div>
+                          <input
+                            type="number" min="0" value={assignDistance}
+                            onChange={e => setAssignDistance(e.target.value)}
+                            placeholder="ระยะทาง (กม.)"
+                            className={inputCls + ' w-full'}
+                            disabled={assigning}
+                          />
+                          {assignDistance !== '' && (() => {
+                            const km   = parseFloat(assignDistance) || 0
+                            const rate = calcTravelCeiling(km)
+                            return (
+                              <p className="text-xs text-warm-500 dark:text-disc-muted mt-0.5">
+                                {rate != null
+                                  ? `${km} กม. → ${rate.toLocaleString()} บ.`
+                                  : `${km} กม. (>700) ตามจริง — กรอกยอดผ่านปุ่มแก้ไข`}
+                              </p>
+                            )
+                          })()}
+                        </div>
+                      )}
+                      <div className="relative">
+                        <input
+                          autoFocus
+                          type="text"
+                          value={assignQuery}
+                          onChange={e => onAssignQueryChange(e.target.value)}
+                          placeholder="ค้นชื่อสมาชิก..."
+                          className={inputCls + ' w-full'}
+                          disabled={assigning}
+                        />
+                        {assignResults.length > 0 && (
+                          <ul className="absolute z-20 left-0 right-0 mt-1 bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                            {assignResults.map(m => (
+                              <li key={m.discord_id}>
+                                <button
+                                  type="button"
+                                  onClick={() => confirmAssign(entryId, m)}
+                                  className="w-full text-left px-3 py-2 text-sm hover:bg-warm-50 dark:hover:bg-disc-hover transition text-warm-900 dark:text-disc-text"
+                                >
+                                  {m.display_name}
+                                  {(m.first_name || m.last_name) && (
+                                    <span className="ml-1.5 text-warm-400 dark:text-disc-muted">
+                                      ({[m.first_name, m.last_name].filter(Boolean).join(' ')})
+                                    </span>
+                                  )}
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  {isAssigning && (
+                    <button type="button" onClick={() => setAssigningId(null)} className="text-warm-400 hover:text-warm-600 dark:hover:text-disc-text">
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <span className="font-semibold text-warm-900 dark:text-disc-text">
+                  {name}
+                  {realName && <span className="ml-1.5 text-sm font-normal text-warm-500 dark:text-disc-muted">({realName})</span>}
+                </span>
+              )}
+              <span className="text-sm text-warm-500 dark:text-disc-muted shrink-0">{memberTotal.toLocaleString()} บ.</span>
             </div>
             <div className="divide-y divide-warm-100 dark:divide-disc-border">
               {items.map(entry => {
@@ -262,7 +410,7 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
                           <span className="hidden sm:inline text-base font-medium text-warm-900 dark:text-disc-text">
                             {Number(entry.amount).toLocaleString()} บ.
                           </span>
-                          {signBadge('เซ็นรับ', entry.sign_token, entry.status === 'signed')}
+                          {signBadge('เซ็นรับ', entry.member_discord_id ? entry.sign_token : null, entry.status === 'signed')}
                           {signBadge('เซ็นจ่าย', entry.payer_sign_token, !!entry.payer_signed_at)}
                           {canManage && entry.status === 'signed' && (
                             <a href={`/api/docs/entries/${entry.id}/pdf`} target="_blank" className="text-xs text-orange hover:underline">

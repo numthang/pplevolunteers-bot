@@ -302,6 +302,14 @@ export async function deleteEntry(id) {
   return rowCount > 0
 }
 
+export async function deleteAllEntriesByProject(projectId) {
+  const { rowCount } = await pool.query(
+    `DELETE FROM docs_activity_entries WHERE project_id = $1`,
+    [projectId]
+  )
+  return rowCount
+}
+
 export async function getSignatureByEntryId(entryId, role = 'recipient') {
   const { rows } = await pool.query(
     `SELECT signature_base64, signed_by_discord_id, created_at

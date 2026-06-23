@@ -37,7 +37,7 @@ export default async function DocProjectPage({ params }) {
 
   // เมื่อยังไม่มี project — ดึง event times จาก act_event_cache เพื่อให้ auto-calc ทำงานได้
   const eventMeta = project
-    ? { name: project.event_name, province: project.province, event_date: project.event_date, event_end_date: project.event_end_date, participant_count: project.participant_count }
+    ? { name: project.event_name, province: project.province, event_date: project.event_date, event_end_date: project.event_end_date, participant_count: project.participant_count, act_event_id: project.act_event_id }
     : await getActEventById(id, guildId)
 
   if (!eventMeta) notFound()  // event ไม่มีอยู่จริงใน act_event_cache
@@ -53,6 +53,7 @@ export default async function DocProjectPage({ params }) {
       eventDate={eventMeta?.event_date ?? null}
       eventEndDate={eventMeta?.event_end_date ?? null}
       participantCount={eventMeta?.participant_count ?? null}
+      actEventId={eventMeta?.act_event_id ?? null}
     />
   )
 }

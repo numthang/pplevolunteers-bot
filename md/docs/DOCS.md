@@ -55,6 +55,8 @@ docs_signatures
 ```
 
 **แหล่งข้อมูลส่วนตัว:**
+- `member_discord_id` เป็น **nullable** (2026-06-23) — สร้าง entry ได้โดยยังไม่มีผู้รับ กำหนดทีหลังได้ผ่าน inline assign ใน DocEntryList
+
 - ผูกกันด้วย `dc_members.member_id` = `ngs_member_cache.source_id`
 - **ครั้งแรก:** ทีมงานค้นชื่อตัวเองใน ngs_member_cache → ยืนยัน → บันทึก `source_id` ลง `dc_members.member_id`
 - **ครั้งถัดไป:** join ได้เลย ไม่ต้องค้นซ้ำ
@@ -74,6 +76,64 @@ docs_signatures
   1. **ลายน้ำ** — ข้อความ `"ใช้สำหรับพรรคประชาชนเท่านั้น"` เอียง ~30°, สีจางโปร่งใส ครอบกลางบัตร
   2. **สำเนาถูกต้อง** — ข้อความสีน้ำเงิน `"สำเนาถูกต้อง"` ใต้ภาพบัตร
 - ใช้ `@napi-rs/canvas` (มีอยู่แล้วใน package.json) สำหรับ overlay ข้อความบนภาพ
+
+---
+
+## DocAutoCalc — Budget Planner (2026-06-23)
+
+ระบบคำนวณรายการเบิกอัตโนมัติตามกฎกองทุน 69 (`web/config/fund69-rules.js`)
+
+### โหมดงบ
+| โหมด | พฤติกรรม |
+|---|---|
+| **ตามกรอบงบ** (default) | ถ้า total > งบ → ตัดอาหาร+เดินทาง proportional; ถ้า total < งบ → scale food ขึ้น |
+| **สูงสุด** | คำนวณ maximum ตามกฎโดยไม่สนใจงบ |
+
+- การตัดใช้ `Math.ceil` หลักสิบ → ผลรวม ≥ งบ (เกินนิดหน่อยได้)
+- ตัดอาหาร: รวมเป็นรายการเดียว "ค่าอาหาร (เฉลี่ย)" แทน แยกมื้อ
+- ตัดเดินทาง (lump mode): ปรับ rate ต่อหัวตาม proportional share
+
+### อัตราค่าเดินทาง
+ใช้ `TRAVEL_INDIVIDUAL_TIERS` จาก fund69-rules.js — user เลือก tier จาก dropdown ไม่ต้องกรอกเอง:
+- ในจังหวัด — 300 บ./คน
+- ต่างจังหวัด ≤200 กม. — 500 บ./คน
+- ต่างจังหวัด ≤500 กม. — 800 บ./คน
+- ต่างจังหวัด ≤700 กม. — 1,500 บ./คน
+- ต่างจังหวัด >700 กม. — ตามจริง (ไม่คำนวณ)
+
+### กิจกรรมสัญจร
+- toggle pill "สัญจร" — ปิดค่าวิทยากร + ค่าเช่าสถานที่อัตโนมัติ
+
+### รายการเพิ่มเติม (toggle pills)
+- ค่าวิทยากร: กำหนดจำนวน, ชั่วโมง, ประเภท (ทั่วไป/ข้าราชการ)
+- ค่าเช่าสถานที่, ค่าเช่าเครื่องเสียง (default 2,000), ค่าอุปกรณ์ (default 500)
+
+### Individual travel (ไม่ต้องเลือกคนก่อน)
+- individual mode → สร้าง N entries (`noMember: true`) เข้า DB ทันที โดยไม่ต้องเลือกผู้รับ
+- กำหนดผู้รับทีหลังผ่าน inline search ใน DocEntryList (`กำหนดผู้รับ` button ต่อ entry)
+- ต้องรัน migration ก่อน: `ALTER TABLE docs_activity_entries ALTER COLUMN member_discord_id DROP NOT NULL`
+
+---
+
+## Attachments (เอกสารแนบ, 2026-06-23)
+
+อัพโหลดภาพเอกสาร (แนบท้าย 3 ที่เซ็นมือ) — auto-crop เป็น A4 แล้วรวมต่อท้าย export PDF
+
+- **Table:** `docs_project_attachments` (id, project_id, guild_id, original_name, file_path, sort_order)
+- **Storage:** `DOCS_UPLOAD_DIR` env (default: `uploads/docs/`) — นอก web/public
+- **Auto-crop:** `scripts/crop_document.py` (OpenCV — grayscale→Canny→contour→perspective transform → 2480×3508px A4)
+- **API:** `GET/POST /api/docs/projects/[id]/attachments` · `DELETE /api/docs/projects/[id]/attachments/[attId]` · `GET /api/docs/projects/[id]/attachments/[attId]/image` (auth-gated)
+- **Export:** ต่อท้าย entry PDFs ด้วย `merged.embedJpg()` + `page.drawImage()` (A4 595×842pt)
+
+---
+
+## ACT Tab (2026-06-23)
+
+Tab ที่ 3 ใน DocProjectView — เชื่อม ACT event กับเอกสารแนบ
+
+- ลิงก์ "พิมพ์แนบท้าย 3 (ใบรายชื่อเปล่า)" → `https://act.peoplesparty.or.th/ect-paper-3/?eid={act_event_id}`
+- อัพโหลดแนบท้าย 3 ที่เซ็นแล้ว → Attachment system ด้านบน
+- `act_event_id` ดึงจาก `docs_projects.act_event_id` (FK → `act_event_cache.id`)
 
 ---
 
@@ -407,13 +467,11 @@ web/templates/receipts/
 - `buildData()` — `header`, `amount`, `total`, `payer_position` ✅
 - `assets/fonts/THSarabunNew.ttf` + `THSarabunNew-Bold.ttf` — installed system-wide on production (`/usr/share/fonts/truetype/`) แก้ font size ต่างกันระหว่าง local/production
 - **Nav dropdown scope** — ใครก็ได้ที่มี province grant เห็น Projects dropdown ได้ (เหมือน calling), cutoff 60 วัน จาก `event_date` (`GET /api/docs/projects` ไม่ require `canManageDocs` แล้ว)
+- **`docs_payers` table** — guild_id, discord_id, display_name, position, sort_order; auto-select per-entry (setProjectPayer); /docs/settings CRUD
+- **Attachment system** — `docs_project_attachments` table; auto-crop A4 (OpenCV `scripts/crop_document.py`); API GET/POST/DELETE + image route (auth-gated); UI ใน ACT tab (upload zone + thumbnail grid); export รวมต่อท้าย merged PDF อัตโนมัติ
+- **`/docs` page** — DocProjectCard grid + DocsProvinceFilter chips + active (≤2 เดือน) / past collapsible split
+- **`/docs/[id]` page** — DocProjectView: 3 tabs (อัตโนมัติ/กำหนดเอง/ACT) + DocEntryList + payer panel + budget bar inline
+- **Batch export** — merged PDF inline (ไม่ใช่ ZIP); attachment images ต่อท้าย; skip entry ที่ member_discord_id = null + X-Skipped-Count header
 
 ### 🔧 Pending
-- [ ] **`docs_payers` table** — guild_id, discord_id, display_name, position, sort_order; auto-select payer ≠ recipient; รัน `/scrutinize` ก่อน
 - [ ] `section 3` ของ body files — ตรวจ variable ครบทุกไฟล์ (เช็คกับ `buildData()`)
-
-### 🔧 Web UI
-- [ ] `/docs` — รายการ project + สถานะ
-- [ ] `/docs/create` — เลือก event + ตั้งงบ + ติ๊กสมาชิก + เลือกผู้จ่าย
-- [ ] `/docs/[id]` — overview entries ต่อ project + status (pending/signed/printed)
-- [ ] Batch export — ZIP PDF ครบชุดต่อโครงการ

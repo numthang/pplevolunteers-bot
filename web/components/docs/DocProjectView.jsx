@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Search, X, Plus, Trash2, CreditCard, CheckCircle, FilePlus, Check, Pencil, ChevronDown } from 'lucide-react'
 import DocEntryList from './DocEntryList'
 import DocAutoCalc from './DocAutoCalc'
+import { calcSpeakerCeiling, SPEAKER_RULES } from '@/config/fund69-rules.js'
 
 const THAI_MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.']
 function formatDate(dateStr) {
@@ -39,10 +40,14 @@ const MOBILE_ITEMS = ['food','travel','accommodation','supplies','equipment','ph
 const inputCls = 'w-full border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-warm-900 dark:text-disc-text p-2.5 text-base rounded-lg placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-orange'
 
 function newItem() {
-  return { id: Math.random().toString(36).slice(2), itemType: 'food', description: ITEM_LABELS.food, amount: '' }
+  return { id: Math.random().toString(36).slice(2), itemType: 'food', description: ITEM_LABELS.food, amount: '', speakerHours: 1, speakerType: 'general' }
 }
 
-export default function DocProjectView({ project: initialProject, initialEntries, canManage, currentDiscordId, eventId, eventName, eventDate, eventEndDate, participantCount }) {
+function calcSpeakerAmount(hours, type) {
+  return calcSpeakerCeiling({ hours: Math.floor(hours), minutes: Math.round((hours % 1) * 60), isGovOfficer: type === 'government' })
+}
+
+export default function DocProjectView({ project: initialProject, initialEntries, canManage, currentDiscordId, eventId, eventName, eventDate, eventEndDate, participantCount, actEventId }) {
   const [project, setProject]       = useState(initialProject)
   const [entries, setEntries]       = useState(initialEntries)
   const [refreshKey, setRefreshKey] = useState(0)
@@ -59,11 +64,47 @@ export default function DocProjectView({ project: initialProject, initialEntries
   const [billMode, setBillMode]     = useState('auto')  // 'auto' (default) | 'manual'
   const [showPayer, setShowPayer]   = useState(false)   // ผู้จ่ายเงิน — พับเก็บ default ปิด
 
+  // ACT tab — attachments
+  const [attachments, setAttachments] = useState([])
+  const [attLoaded, setAttLoaded]     = useState(false)
+  const [attUploading, setAttUploading] = useState(false)
+  const attInputRef = useRef(null)
+
   // กรอบงบโครงการ (เกินได้ แต่อย่าขาด — ต้องเคลียร์บิลให้ครบกรอบงบ)
   const [budget, setBudget]               = useState(project?.budget != null ? Number(project.budget) : null)
   const [editingBudget, setEditingBudget] = useState(false)
   const [budgetInput, setBudgetInput]     = useState('')
   const [savingBudget, setSavingBudget]   = useState(false)
+
+  async function loadAttachments() {
+    if (!project?.id) return
+    const res = await fetch(`/api/docs/projects/${project.id}/attachments`)
+    if (res.ok) { setAttachments(await res.json()); setAttLoaded(true) }
+  }
+
+  useEffect(() => { if (billMode === 'act' && !attLoaded) loadAttachments() }, [billMode])
+
+  async function uploadAttachment(file) {
+    if (!project?.id) return
+    setAttUploading(true)
+    const fd = new FormData(); fd.append('file', file)
+    try {
+      const res = await fetch(`/api/docs/projects/${project.id}/attachments`, { method: 'POST', body: fd })
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Upload failed') }
+      const att = await res.json()
+      setAttachments(prev => [...prev, att])
+    } catch (err) {
+      alert('อัพโหลดไม่สำเร็จ: ' + err.message)
+    } finally {
+      setAttUploading(false)
+    }
+  }
+
+  async function deleteAttachment(attId) {
+    if (!project?.id || !confirm('ลบไฟล์นี้?')) return
+    const res = await fetch(`/api/docs/projects/${project.id}/attachments/${attId}`, { method: 'DELETE' })
+    if (res.ok) setAttachments(prev => prev.filter(a => a.id !== attId))
+  }
 
   async function saveBudget() {
     setSavingBudget(true)
@@ -149,9 +190,17 @@ export default function DocProjectView({ project: initialProject, initialEntries
         ? { ...m, items: m.items.map(i => {
             if (i.id !== itemId) return i
             const next = { ...i, [field]: value }
-            // เปลี่ยนประเภท → เติม description default ตามประเภทใหม่ (เฉพาะถ้ายังเป็นค่า default เดิม/ว่าง ไม่ทับที่ผู้ใช้พิมพ์เอง)
             if (field === 'itemType' && (!i.description || i.description === ITEM_LABELS[i.itemType])) {
               next.description = ITEM_LABELS[value] || ''
+            }
+            if (field === 'itemType' && value === 'speaker') {
+              next.amount = calcSpeakerAmount(i.speakerHours, i.speakerType)
+            }
+            if (field === 'speakerHours') {
+              next.amount = calcSpeakerAmount(value, i.speakerType)
+            }
+            if (field === 'speakerType') {
+              next.amount = calcSpeakerAmount(i.speakerHours, value)
             }
             return next
           }) }
@@ -199,6 +248,20 @@ export default function DocProjectView({ project: initialProject, initialEntries
     }
     setEntries(resData.data || [])
     setRefreshKey(k => k + 1)
+  }
+
+  async function handleAutoCalcBudgetChange(val) {
+    setBudget(val)
+    if (!project) return  // ยังไม่มี project — update local state เฉยๆ
+    try {
+      const res  = await fetch(`/api/docs/projects/${eventId}`, {
+        method:  'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ budget: val }),
+      })
+      const data = await res.json()
+      if (res.ok && data.data) setBudget(data.data.budget != null ? Number(data.data.budget) : null)
+    } catch { /* silent */ }
   }
 
   async function handleAutoSubmit(autoEntries, pCount) {
@@ -259,7 +322,7 @@ export default function DocProjectView({ project: initialProject, initialEntries
               href={`/api/docs/projects/${project.id}/export?status=all`}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-card-bg border border-warm-200 dark:border-disc-border text-warm-700 dark:text-disc-text text-base font-medium rounded-lg hover:bg-warm-50 dark:hover:bg-disc-hover transition"
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-orange text-white text-base font-semibold rounded-lg hover:bg-orange-light transition"
             >
               พิมพ์เอกสารทั้งหมด
             </a>
@@ -274,110 +337,49 @@ export default function DocProjectView({ project: initialProject, initialEntries
         </div>
       ) : null}
 
-      {/* Stats dashboard */}
+      {/* Stats — compact inline row */}
       {project && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl px-4 py-3 mb-6 flex flex-wrap items-center gap-x-6 gap-y-2">
           {[
-            { label: 'รายการทั้งหมด', value: entries.length,   cls: 'text-warm-900 dark:text-disc-text' },
-            { label: 'ผู้รับเซ็นแล้ว', value: signedCount,      cls: 'text-blue-600 dark:text-blue-400' },
-            { label: 'ผู้จ่ายเซ็นแล้ว', value: payerSignedCount, cls: 'text-green-600 dark:text-green-400' },
+            { label: 'รายการ', value: entries.length, cls: 'text-warm-900 dark:text-disc-text' },
+            { label: 'ผู้รับเซ็น', value: signedCount, cls: 'text-blue-600 dark:text-blue-400' },
+            { label: 'ผู้จ่ายเซ็น', value: payerSignedCount, cls: 'text-green-600 dark:text-green-400' },
           ].map(({ label, value, cls }) => (
-            <div key={label} className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg p-4">
-              <div className="text-xs text-warm-500 dark:text-disc-muted mb-1">{label}</div>
-              <div className={`text-2xl font-bold ${cls}`}>{value}</div>
-            </div>
+            <span key={label} className="flex items-center gap-1.5 text-sm">
+              <span className="text-warm-400 dark:text-disc-muted">{label}</span>
+              <span className={`font-bold text-base ${cls}`}>{value}</span>
+            </span>
           ))}
-          <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg p-4">
-            <div className="text-xs text-warm-500 dark:text-disc-muted mb-1">ยอดรวม</div>
-            <div className="text-2xl font-bold text-warm-900 dark:text-disc-text">
-              {totalAmount.toLocaleString()} <span className="text-sm font-normal">บ.</span>
-            </div>
+          <span className="flex items-center gap-1.5 text-sm">
+            <span className="text-warm-400 dark:text-disc-muted">ยอดรวม</span>
+            <span className="font-bold text-base text-warm-900 dark:text-disc-text">{totalAmount.toLocaleString()} บ.</span>
+          </span>
+          <span className="ml-auto flex items-center gap-2">
             {editingBudget ? (
-              <div className="flex items-center gap-1 mt-1.5">
+              <>
                 <input
                   type="number" min="0" step="0.01" autoFocus
                   value={budgetInput}
                   onChange={e => setBudgetInput(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') saveBudget(); if (e.key === 'Escape') setEditingBudget(false) }}
                   placeholder="กรอบงบ"
-                  className="w-24 border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-warm-900 dark:text-disc-text text-sm rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-orange"
+                  className="w-28 border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-warm-900 dark:text-disc-text text-sm rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-orange"
                 />
                 <button type="button" onClick={saveBudget} disabled={savingBudget} className="p-1 rounded text-green-600 dark:text-green-400 hover:bg-warm-100 dark:hover:bg-disc-hover transition"><Check size={15} /></button>
                 <button type="button" onClick={() => setEditingBudget(false)} className="p-1 rounded text-warm-400 dark:text-disc-muted hover:bg-warm-100 dark:hover:bg-disc-hover transition"><X size={15} /></button>
-              </div>
+              </>
             ) : (
-              <button
-                type="button"
-                onClick={() => { setBudgetInput(budget != null ? String(budget) : ''); setEditingBudget(true) }}
-                className="flex items-center gap-1 mt-1 text-xs text-warm-500 dark:text-disc-muted hover:text-orange transition"
-              >
+              <button type="button" onClick={() => { setBudgetInput(budget != null ? String(budget) : ''); setEditingBudget(true) }}
+                className="flex items-center gap-1 text-xs text-warm-400 dark:text-disc-muted hover:text-orange transition">
                 <Pencil size={11} />
-                กรอบงบ {budget != null ? `${budget.toLocaleString()} บ.` : 'ตั้งค่า'}
+                {budget != null ? `งบ ${budget.toLocaleString()} บ.` : 'ตั้งกรอบงบ'}
               </button>
             )}
-
-            {budget > 0 && (
-              totalAmount >= budget ? (
-                <div className="text-xs font-medium text-green-600 dark:text-green-400 mt-1">✓ ถึงกรอบงบแล้ว</div>
-              ) : (
-                <div className="text-xs font-medium text-amber-600 dark:text-amber-400 mt-1">⚠ ยังขาด {(budget - totalAmount).toLocaleString()} บ.</div>
-              )
+            {budget > 0 && (totalAmount >= budget
+              ? <span className="text-xs font-medium text-green-600 dark:text-green-400">✓ ถึงกรอบงบ</span>
+              : <span className="text-xs font-medium text-amber-600 dark:text-amber-400">ขาด {(budget - totalAmount).toLocaleString()} บ.</span>
             )}
-          </div>
-        </div>
-      )}
-
-      {/* ผู้จ่ายเงิน — ระบบเลือกอัตโนมัติจาก settings (read-only) */}
-      {canManage && project && (
-        <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-5 mb-6">
-          <button
-            type="button"
-            onClick={() => setShowPayer(v => !v)}
-            className="w-full flex items-center gap-2 text-left"
-          >
-            <CreditCard size={16} className="text-orange shrink-0" />
-            <span className="text-base font-semibold text-warm-900 dark:text-disc-text">
-              ผู้จ่ายเงิน
-              <span className="ml-1 font-normal text-warm-400 dark:text-disc-muted">({assignedPayers.length || (eligiblePayers.length ? 1 : 0)})</span>
-            </span>
-            <ChevronDown size={16} className={`ml-auto text-warm-400 dark:text-disc-muted transition-transform ${showPayer ? 'rotate-180' : ''}`} />
-          </button>
-
-          {showPayer && (eligiblePayers.length === 0 ? (
-            <p className="text-sm text-warm-400 dark:text-disc-muted">
-              ไม่มีผู้จ่ายเงินที่ครอบคลุมจังหวัด{project.province ? `${project.province}` : 'นี้'} —
-              เพิ่มได้ที่ <Link href="/docs/settings" className="text-orange hover:underline">ตั้งค่าเอกสาร</Link>
-            </p>
-          ) : (
-            <div>
-              <ul className="border border-warm-200 dark:border-disc-border rounded-lg divide-y divide-warm-100 dark:divide-disc-border overflow-hidden">
-                {(assignedPayers.length ? assignedPayers : [{
-                  discord_id:   eligiblePayers[0].discord_id,
-                  display_name: eligiblePayers[0].display_name,
-                  position:     eligiblePayers[0].position,
-                  total: 0, signed: 0,
-                }]).map(p => (
-                  <li key={p.discord_id} className="px-4 py-2.5 flex items-center justify-between gap-3">
-                    <span className="min-w-0 flex items-center gap-2">
-                      <CheckCircle size={16} className="text-green-500 shrink-0" />
-                      <span className="min-w-0">
-                        <span className="block text-base font-medium text-warm-900 dark:text-disc-text truncate">{p.display_name}</span>
-                        <span className="block text-sm text-warm-500 dark:text-disc-muted truncate">{p.position}</span>
-                      </span>
-                    </span>
-                    {p.total > 0 && (
-                      <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400 shrink-0">
-                        เซ็นแล้ว {p.signed}/{p.total}
-                      </span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-              <p className="text-xs text-warm-400 dark:text-disc-muted mt-2">
-                ระบบเลือกผู้จ่ายอัตโนมัติจาก<Link href="/docs/settings" className="text-orange hover:underline">ตั้งค่าเอกสาร</Link> (ผู้ดูแลจังหวัด{project.province ? `${project.province}` : 'นี้'}) · ถ้าผู้เบิกเป็นผู้จ่ายเอง ระบบสลับเป็นผู้จ่ายสำรองให้อัตโนมัติ
-              </p>
-            </div>
-          ))}
+          </span>
         </div>
       )}
 
@@ -385,7 +387,7 @@ export default function DocProjectView({ project: initialProject, initialEntries
       {canManage && (
         <div className="mb-6">
           <div className="flex gap-2 mb-4 border-b border-warm-200 dark:border-disc-border">
-            {[{ key: 'auto', label: 'เพิ่มรายการอัตโนมัติ' }, { key: 'manual', label: 'เพิ่มรายการเอง' }].map(t => (
+            {[{ key: 'auto', label: 'อัตโนมัติ' }, { key: 'manual', label: 'กำหนดเอง' }, { key: 'act', label: 'ACT' }].map(t => (
               <button
                 key={t.key}
                 type="button"
@@ -400,24 +402,98 @@ export default function DocProjectView({ project: initialProject, initialEntries
             ))}
           </div>
 
-          {billMode === 'auto' ? (
+          <div className={billMode !== 'act' ? 'hidden' : ''}>
+            <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-5 space-y-5">
+              {/* ลิงก์ ACT */}
+              {actEventId ? (
+                <div>
+                  <p className="text-xs font-semibold text-warm-400 dark:text-disc-muted uppercase tracking-widest mb-2">ลิงก์เอกสาร</p>
+                  <a href={`https://act.peoplesparty.or.th/ect-paper-3/?eid=${actEventId}`} target="_blank" rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-orange hover:underline font-medium text-sm">
+                    พิมพ์แนบท้าย 3 (ใบรายชื่อเปล่า) ↗
+                  </a>
+                </div>
+              ) : (
+                <p className="text-warm-400 dark:text-disc-muted text-sm">ไม่พบ ACT Event ID</p>
+              )}
+
+              {/* Upload zone */}
+              {project && (<>
+                <div>
+                  <p className="text-xs font-semibold text-warm-400 dark:text-disc-muted uppercase tracking-widest mb-2">อัพโหลดแนบท้าย 3 ที่เซ็นแล้ว</p>
+                  <button
+                    type="button"
+                    onClick={() => attInputRef.current?.click()}
+                    disabled={attUploading}
+                    className="w-full border-2 border-dashed border-warm-300 dark:border-disc-border rounded-xl py-8 flex flex-col items-center gap-2 text-warm-400 dark:text-disc-muted hover:border-orange hover:text-orange transition disabled:opacity-50 cursor-pointer"
+                  >
+                    {attUploading
+                      ? <span className="text-sm">กำลังประมวลผล...</span>
+                      : (<>
+                          <FilePlus size={28} />
+                          <span className="text-sm">แตะเพื่ออัพโหลดภาพเอกสาร</span>
+                          <span className="text-xs opacity-70">JPG / PNG · auto-crop A4</span>
+                        </>)
+                    }
+                  </button>
+                  <input
+                    ref={attInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+                    multiple
+                    className="hidden"
+                    onChange={e => { [...(e.target.files || [])].forEach(f => uploadAttachment(f)); e.target.value = '' }}
+                  />
+                </div>
+
+                {/* Thumbnail grid */}
+                {attachments.length > 0 && (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {attachments.map((att, i) => (
+                      <div key={att.id} className="relative group rounded-lg overflow-hidden border border-warm-200 dark:border-disc-border aspect-[3/4] bg-warm-100 dark:bg-disc-hover">
+                        <img
+                          src={`/api/docs/projects/${project.id}/attachments/${att.id}/image`}
+                          alt={att.original_name || `เอกสาร ${i + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => deleteAttachment(att.id)}
+                          className="absolute top-1.5 right-1.5 p-1 rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition"
+                        >
+                          <X size={14} />
+                        </button>
+                        <span className="absolute bottom-0 left-0 right-0 text-[10px] text-center bg-black/40 text-white py-0.5 truncate px-1">
+                          {att.original_name || `เอกสาร ${i + 1}`}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>)}
+            </div>
+          </div>
+
+          <div className={billMode !== 'auto' ? 'hidden' : ''}>
             <DocAutoCalc
               eventDate={eventDate}
               eventEndDate={eventEndDate}
               participantCount={project?.participant_count ?? participantCount}
+              isMobile={isMobile}
+              projectBudget={budget}
+              onBudgetChange={handleAutoCalcBudgetChange}
               onSubmit={handleAutoSubmit}
               saving={autoSaving}
             />
-          ) : (
-            <form onSubmit={handleSubmit} className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-5 mb-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <span className="flex items-center gap-2 text-base font-semibold text-warm-900 dark:text-disc-text">
-              <FilePlus size={18} className="text-orange shrink-0" /> เพิ่มรายการเอง
-            </span>
-            {formTotal > 0 && (
-              <span className="text-base font-semibold text-warm-900 dark:text-disc-text">รวม {formTotal.toLocaleString()} บ.</span>
-            )}
           </div>
+
+          <div className={billMode !== 'manual' ? 'hidden' : ''}>
+            <form onSubmit={handleSubmit} className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-5 mb-6 space-y-4">
+          {formTotal > 0 && (
+            <div className="flex justify-end">
+              <span className="text-base font-semibold text-warm-900 dark:text-disc-text">รวม {formTotal.toLocaleString()} บ.</span>
+            </div>
+          )}
 
           <div className="relative" ref={dropdownRef}>
             <div className="relative">
@@ -468,15 +544,26 @@ export default function DocProjectView({ project: initialProject, initialEntries
                 </div>
                 <div className="p-3 space-y-2">
                   {m.items.map(item => (
-                    <div key={item.id} className="grid grid-cols-[160px_1fr_120px_36px] gap-2 items-center">
-                      <select value={item.itemType} onChange={e => updateItem(m.discordId, item.id, 'itemType', e.target.value)} className={inputCls}>
+                    <div key={item.id} className="flex flex-wrap gap-2 items-center">
+                      <select value={item.itemType} onChange={e => updateItem(m.discordId, item.id, 'itemType', e.target.value)} className={`${inputCls} w-full sm:w-40 shrink-0`}>
                         {allowedItems.map(t => <option key={t} value={t}>{ITEM_LABELS[t]}</option>)}
                       </select>
-                      <input type="text" value={item.description} onChange={e => updateItem(m.discordId, item.id, 'description', e.target.value)} placeholder="หมายเหตุ (ไม่บังคับ)" className={inputCls} />
-                      <input type="number" min="0" step="0.01" value={item.amount} onChange={e => updateItem(m.discordId, item.id, 'amount', e.target.value)} placeholder="จำนวนเงิน" className={inputCls} />
-                      <button type="button" onClick={() => removeItem(m.discordId, item.id)} disabled={m.items.length === 1} className="p-1.5 rounded hover:bg-warm-100 dark:hover:bg-disc-hover text-warm-400 dark:text-disc-muted disabled:opacity-30 transition-colors">
-                        <Trash2 size={15} />
-                      </button>
+                      {item.itemType === 'speaker' && (<>
+                        <select value={item.speakerHours} onChange={e => updateItem(m.discordId, item.id, 'speakerHours', Number(e.target.value))} className={`${inputCls} w-24 shrink-0`}>
+                          {[0.5,1,1.5,2,2.5,3,3.5,4,5,6].map(h => <option key={h} value={h}>{h} ชม.</option>)}
+                        </select>
+                        <select value={item.speakerType} onChange={e => updateItem(m.discordId, item.id, 'speakerType', e.target.value)} className={`${inputCls} w-full sm:w-36 shrink-0`}>
+                          <option value="general">ทั่วไป ({SPEAKER_RULES.rates.general.toLocaleString()})</option>
+                          <option value="government">ข้าราชการ ({SPEAKER_RULES.rates.government.toLocaleString()})</option>
+                        </select>
+                      </>)}
+                      <input type="text" value={item.description} onChange={e => updateItem(m.discordId, item.id, 'description', e.target.value)} placeholder="หมายเหตุ" className={`${inputCls} flex-1 min-w-28`} />
+                      <div className="flex gap-2 items-center shrink-0">
+                        <input type="number" min="0" step="0.01" value={item.amount} onChange={e => updateItem(m.discordId, item.id, 'amount', e.target.value)} placeholder="จำนวนเงิน" className={`${inputCls} w-28`} />
+                        <button type="button" onClick={() => removeItem(m.discordId, item.id)} disabled={m.items.length === 1} className="p-1.5 rounded hover:bg-warm-100 dark:hover:bg-disc-hover text-warm-400 dark:text-disc-muted disabled:opacity-30 transition-colors shrink-0">
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
                     </div>
                   ))}
                   <button type="button" onClick={() => addItem(m.discordId)} className="flex items-center gap-1.5 text-sm text-teal hover:text-teal/80 transition mt-1">
@@ -493,7 +580,61 @@ export default function DocProjectView({ project: initialProject, initialEntries
             </button>
           )}
             </form>
-          )}
+          </div>
+        </div>
+      )}
+
+      {/* ผู้จ่ายเงิน — ระบบเลือกอัตโนมัติจาก settings (read-only) */}
+      {canManage && project && (
+        <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-5 mb-6">
+          <button
+            type="button"
+            onClick={() => setShowPayer(v => !v)}
+            className="w-full flex items-center gap-2 text-left"
+          >
+            <CreditCard size={16} className="text-orange shrink-0" />
+            <span className="text-base font-semibold text-warm-900 dark:text-disc-text">
+              ผู้จ่ายเงิน
+              <span className="ml-1 font-normal text-warm-400 dark:text-disc-muted">({assignedPayers.length || (eligiblePayers.length ? 1 : 0)})</span>
+            </span>
+            <ChevronDown size={16} className={`ml-auto text-warm-400 dark:text-disc-muted transition-transform ${showPayer ? 'rotate-180' : ''}`} />
+          </button>
+
+          {showPayer && (eligiblePayers.length === 0 ? (
+            <p className="text-sm text-warm-400 dark:text-disc-muted mt-3">
+              ไม่มีผู้จ่ายเงินที่ครอบคลุมจังหวัด{project.province ? `${project.province}` : 'นี้'} —
+              เพิ่มได้ที่ <Link href="/docs/settings" className="text-orange hover:underline">ตั้งค่าเอกสาร</Link>
+            </p>
+          ) : (
+            <div className="mt-3">
+              <ul className="border border-warm-200 dark:border-disc-border rounded-lg divide-y divide-warm-100 dark:divide-disc-border overflow-hidden">
+                {(assignedPayers.length ? assignedPayers : [{
+                  discord_id:   eligiblePayers[0].discord_id,
+                  display_name: eligiblePayers[0].display_name,
+                  position:     eligiblePayers[0].position,
+                  total: 0, signed: 0,
+                }]).map(p => (
+                  <li key={p.discord_id} className="px-4 py-2.5 flex items-center justify-between gap-3">
+                    <span className="min-w-0 flex items-center gap-2">
+                      <CheckCircle size={16} className="text-green-500 shrink-0" />
+                      <span className="min-w-0">
+                        <span className="block text-base font-medium text-warm-900 dark:text-disc-text truncate">{p.display_name}</span>
+                        <span className="block text-sm text-warm-500 dark:text-disc-muted truncate">{p.position}</span>
+                      </span>
+                    </span>
+                    {p.total > 0 && (
+                      <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400 shrink-0">
+                        เซ็นแล้ว {p.signed}/{p.total}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+              <p className="text-xs text-warm-400 dark:text-disc-muted mt-2">
+                ระบบเลือกผู้จ่ายอัตโนมัติจาก<Link href="/docs/settings" className="text-orange hover:underline">ตั้งค่าเอกสาร</Link> (ผู้ดูแลจังหวัด{project.province ? `${project.province}` : 'นี้'}) · ถ้าผู้เบิกเป็นผู้จ่ายเอง ระบบสลับเป็นผู้จ่ายสำรองให้อัตโนมัติ
+              </p>
+            </div>
+          ))}
         </div>
       )}
 
@@ -506,6 +647,24 @@ export default function DocProjectView({ project: initialProject, initialEntries
         currentDiscordId={currentDiscordId}
         onChange={setEntries}
       />
+
+      {/* ล้างบิลทั้งหมด */}
+      {canManage && project && entries.length > 0 && (
+        <div className="mt-6 flex justify-end">
+          <button
+            type="button"
+            onClick={async () => {
+              if (!confirm(`ล้างบิลทั้งหมด ${entries.length} รายการ? ไม่สามารถยกเลิกได้`)) return
+              const res = await fetch(`/api/docs/entries?projectId=${project.id}`, { method: 'DELETE' })
+              if (res.ok) { setEntries([]); setRefreshKey(k => k + 1) }
+              else alert('เกิดข้อผิดพลาด')
+            }}
+            className="px-4 py-2 text-sm font-medium text-red-500 dark:text-red-400 border border-red-200 dark:border-red-900 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition"
+          >
+            ล้างบิลทั้งหมด
+          </button>
+        </div>
+      )}
     </div>
   )
 }

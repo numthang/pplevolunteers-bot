@@ -250,9 +250,16 @@
 - ✅ **Page titles (v2.16.0)** — layout template `%s — Docs`; generateMetadata per page; document.title สำหรับ client pages
 - ✅ **Sign page UX (v2.16.0)** — ผู้รับเงินแสดงชื่อจริง + @username; ชื่อโครงการใหญ่/ย่อย; upload บัตร ปชช. ซ่อนถ้าไม่ใช่เจ้าของ; mobile layout (2-row + ปุ่มเปิด PDF แทน embed)
 - ✅ **Edit entry (v2.16.0)** — แก้ได้ทุก field รวมเปลี่ยนผู้รับเงิน (member search); เปลี่ยนคนที่เซ็นแล้ว → reset ลายเซ็นอัตโนมัติ + confirm ก่อน
+- ✅ **ACT tab + Attachment system (v2.17.0, 2026-06-23)** — Tab ACT ใน DocProjectView ลิงก์แนบท้าย 3; อัพโหลดภาพเอกสาร auto-crop A4 (OpenCV `scripts/crop_document.py`); `docs_project_attachments` table; รวมต่อท้าย export PDF; API auth-gated `/api/docs/projects/[id]/attachments/`
+- ✅ **Province filter (v2.17.0, 2026-06-23)** — `/docs` page แสดง 2 เดือนย้อนหลัง + filter chips จังหวัด (`DocsProvinceFilter`); `/calling/campaigns` มี filter จังหวัดเหมือนกัน; sync-act-events รองรับ `?province=XX` pages
+- ✅ **member_discord_id nullable (v2.17.0, 2026-06-23)** — migration รันแล้ว; DocEntryList inline "กำหนดผู้รับ" per unassigned entry; generatePdf fallback 'ยังไม่ระบุผู้รับ'
+- ✅ **Sign button disable (v2.17.0)** — DocEntryList ส่ง `sign_token: null` ถ้า entry ไม่มีผู้รับ → sign badge disabled อัตโนมัติ
+- ✅ **Export PDF skip unassigned (v2.17.0)** — route.js กรอง `member_discord_id != null` ก่อนสร้าง PDF; ส่ง header `X-Skipped-Count` กรณีมี entry ถูก skip
+- ✅ **Payer logic null check (v2.17.0)** — ตรวจสอบแล้ว: `autoAssignPayers` ไม่ error เมื่อ entry มี null recipient (ระบบ payer-switching trigger เฉพาะเมื่อ recipient มีค่า)
+- ✅ **DocAutoCalc UX rewrite (v2.17.0, 2026-06-23)** — Layout ใหม่: Field/Check abstraction, one orange accent, label token สม่ำเสมอ; "รายการเบิก" section (ค่าอาหาร/ค่าเดินทาง default checked, option inline ใต้ checkbox แต่ละตัว); ค่าเช่าสถานที่ auto-fill เพดานตามจำนวนคน; ค่าเดินทาง 2 mode (เท่ากัน 300 บ./คน / ตามจริง = blank entries กรอกระยะทางทีหลัง); กรอบงบลิงก์กับ stats card (2-way sync ผ่าน `projectBudget` prop + `onBudgetChange` callback); ปุ่มล้างบิลทั้งหมด (DELETE `/api/docs/entries?projectId=X`)
 - [ ] act_event_registers — ยังหาวิธีดึงไม่ได้ (รอ)
+- [ ] **แนบใบลงทะเบียน** — PDF โครงการควรรองรับการแนบใบลงทะเบียนเพิ่มเติมได้
 - [ ] **Bot command `/link-ngs`** — ให้สมาชิกค้นชื่อตัวเองใน `ngs_member_cache` แล้วผูก `dc_members.member_id` ถาวร (ทางเลือก B ของ ngs link flow; ตอนนี้ใช้ sign-page self-link แทน)
-- [ ] **Delete entry restrict** — ตอนนี้ลบได้ทุก status; ควร block ถ้า status ≠ 'pending' (signed entry ลบไม่ได้)
 - [ ] **Transport แบบแยกใบรายบุคคล (rich)** — ตอนนี้ค่าเดินทางใช้ generic plaintext (description) แบบทุกคนเท่ากัน/ใบรวม. อนาคตทำแบบ rich แยกใบรายบุคคล (ตาราง per-person) ใช้ `transport.docx` structured. ตัดสินใจ 2026-06-21 ว่า defer ไว้ก่อน
 - [ ] **Payer auto-suggest / full-auto** — ตอนนี้เพิ่ม payer ผ่าน MemberSearch ในหน้า settings (manual). อนาคตถ้า payer setup เป็นภาระ (หลาย guild / ยศเปลี่ยนบ่อย) → ทำ "รายชื่อแนะนำตามตำแหน่ง" (query `dc_guild_roles WHERE permission IN province_coordinator/regional_coordinator/district_coordinator` → member ที่ถือ role นั้น → reuse `resolveAccess`+`gatedScopeNodes`) หรือข้ามไป full-auto เลย (payer = ผู้ประสานงานจังหวัด, ถ้าซ้ำ payee → กองเลขาภาค). ตัดสินใจ 2026-06-21 ว่ายังไม่ทำเพราะ list เล็ก ตั้งครั้งเดียว ไม่คุ้ม surface
 
