@@ -15,7 +15,7 @@ export default async function DocsPage({ searchParams }) {
   if (!session) redirect('/')
 
   const { access } = await getEffectiveIdentity(session)
-  if (!canManageDocs(access)) redirect('/')
+  if (!canManageDocs(access)) redirect('/docs/pending')
 
   const scope = getUserScope(access)
   const guildId = await getGuildId(session)

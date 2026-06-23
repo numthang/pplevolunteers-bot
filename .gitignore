@@ -1,5 +1,6 @@
 .env
 node_modules/
+.wolf/
 pgloader.load
 backups/
 /logs/

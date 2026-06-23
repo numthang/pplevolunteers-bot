@@ -390,23 +390,22 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
                       </div>
                     ) : (
                       <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-                        {/* row 1 mobile: ชื่อหมวด + จำนวน */}
-                        <div className="flex items-center justify-between gap-2 sm:block sm:min-w-0">
-                          <div className="text-base text-warm-900 dark:text-disc-text">
-                            {ITEM_LABELS[entry.item_type] || entry.item_type}
+                        {/* ซ้าย: ชื่อหมวด + รายละเอียด (มือถือมีจำนวนเงินท้ายบรรทัด) */}
+                        <div className="flex items-start justify-between gap-2 sm:block sm:min-w-0 sm:flex-1">
+                          <div className="min-w-0">
+                            <div className="text-base text-warm-900 dark:text-disc-text">
+                              {ITEM_LABELS[entry.item_type] || entry.item_type}
+                            </div>
+                            {entry.description && (
+                              <div className="text-sm text-warm-500 dark:text-disc-muted break-words">{entry.description}</div>
+                            )}
                           </div>
                           <span className="text-base font-medium text-warm-900 dark:text-disc-text sm:hidden shrink-0">
                             {Number(entry.amount).toLocaleString()} บ.
                           </span>
                         </div>
-                        {entry.description && (
-                          <div className="text-sm text-warm-500 dark:text-disc-muted truncate sm:hidden">{entry.description}</div>
-                        )}
-                        {/* row 2 mobile: badges + icons; desktop: full right side */}
+                        {/* ขวา: จำนวนเงิน (desktop) + badges/icons */}
                         <div className="flex items-center gap-2 shrink-0">
-                          {entry.description && (
-                            <span className="hidden sm:inline text-sm text-warm-500 dark:text-disc-muted truncate max-w-[120px]">{entry.description}</span>
-                          )}
                           <span className="hidden sm:inline text-base font-medium text-warm-900 dark:text-disc-text">
                             {Number(entry.amount).toLocaleString()} บ.
                           </span>

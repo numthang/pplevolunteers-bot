@@ -266,8 +266,8 @@ export default function DocProjectView({ project: initialProject, initialEntries
 
   async function handleAutoSubmit(autoEntries, pCount) {
     setAutoSaving(true)
-    try { await postEntries(autoEntries, pCount) }
-    catch (err) { alert('เกิดข้อผิดพลาด: ' + err.message) }
+    try { await postEntries(autoEntries, pCount); return true }
+    catch (err) { alert('เกิดข้อผิดพลาด: ' + err.message); return false }
     finally { setAutoSaving(false) }
   }
 

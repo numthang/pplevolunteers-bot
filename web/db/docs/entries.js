@@ -310,6 +310,41 @@ export async function deleteAllEntriesByProject(projectId) {
   return rowCount
 }
 
+/**
+ * รายการที่ user คนนี้ต้องเซ็น (สำหรับหน้า /docs/pending — คนทั่วไปก็ใช้ได้)
+ * - recipient: entry ที่ตัวเองเป็นผู้รับเงิน + ยังไม่เซ็น
+ * - payer:     entry ที่ตัวเองเป็นผู้จ่ายเงิน + มี token แล้ว + ยังไม่เซ็น
+ * @returns {Promise<{recipient: Array, payer: Array}>}
+ */
+export async function getPendingSignaturesForUser(discordId, guildId) {
+  const { rows: recipient } = await pool.query(
+    `SELECT e.id, e.item_type, e.amount, e.description,
+            e.sign_token AS token, e.token_expires_at AS expires_at,
+            ev.name AS event_name, ev.province,
+            TO_CHAR(ev.event_date, 'YYYY-MM-DD"T"HH24:MI') AS event_date
+     FROM docs_activity_entries e
+     JOIN docs_projects p   ON p.id = e.project_id
+     JOIN act_event_cache ev ON ev.id = p.act_event_cache_id
+     WHERE p.guild_id = $1 AND e.member_discord_id = $2 AND e.signed_at IS NULL
+     ORDER BY ev.event_date DESC NULLS LAST, e.item_type`,
+    [guildId, discordId]
+  )
+  const { rows: payer } = await pool.query(
+    `SELECT e.id, e.item_type, e.amount, e.description,
+            e.payer_sign_token AS token, e.payer_token_expires_at AS expires_at,
+            ev.name AS event_name, ev.province,
+            TO_CHAR(ev.event_date, 'YYYY-MM-DD"T"HH24:MI') AS event_date
+     FROM docs_activity_entries e
+     JOIN docs_projects p   ON p.id = e.project_id
+     JOIN act_event_cache ev ON ev.id = p.act_event_cache_id
+     WHERE p.guild_id = $1 AND e.payer_discord_id = $2
+       AND e.payer_sign_token IS NOT NULL AND e.payer_signed_at IS NULL
+     ORDER BY ev.event_date DESC NULLS LAST, e.item_type`,
+    [guildId, discordId]
+  )
+  return { recipient, payer }
+}
+
 export async function getSignatureByEntryId(entryId, role = 'recipient') {
   const { rows } = await pool.query(
     `SELECT signature_base64, signed_by_discord_id, created_at

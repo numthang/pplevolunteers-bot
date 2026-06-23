@@ -74,6 +74,7 @@ const CALLING_LINKS = [
 
 const DOCS_LINKS = [
   { href: '/docs',          label: 'Projects', icon: 'docs',     exact: true, docsAccess: true },
+  { href: '/docs/pending',  label: 'รอเซ็น',   icon: 'pending' },   // คนทั่วไปก็เห็น (ไม่ gate)
   { href: '/docs/settings', label: 'Settings', icon: 'settings', adminOnly: true },
 ]
 
@@ -118,6 +119,7 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
   const [campaigns, setCampaigns] = useState([])
   const [docProjects, setDocProjects] = useState([])
   const [pendingCount, setPendingCount] = useState(0)
+  const [docsPendingCount, setDocsPendingCount] = useState(0)
   const campaignRef = useRef(null)
   const docRef = useRef(null)
 
@@ -166,6 +168,15 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
       .catch(() => {})
   }, [isDocsApp, session, access])
 
+  // นับรายการรอเซ็นของ user คนนี้ (global badge — เห็นได้ทุกหน้าถ้า docs เปิด)
+  useEffect(() => {
+    if (!session || !enabledFeatures.includes('docs')) return
+    fetch('/api/docs/pending?count=true')
+      .then(r => r.json())
+      .then(d => setDocsPendingCount(d.total || 0))
+      .catch(() => {})
+  }, [session, enabledFeatures, pathname])
+
   useEffect(() => {
     if (!campaignOpen && !mediaOpen && !docOpen) return
     const handleClickOutside = (e) => {
@@ -199,7 +210,7 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
 
   const visibleApps = APPS.filter(a => {
     if (!featureOn(a.feature)) return false
-    if (a.key === 'docs') return canManageDocs(access)
+    // docs เปิดให้ทุกคน (คนทั่วไปเข้าได้ที่หน้ารอเซ็น) — gate ระดับ feature toggle พอ
     return true
   })
 
@@ -420,6 +431,11 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
                     {pendingCount}
                   </span>
                 )}
+                {l.href === '/docs/pending' && docsPendingCount > 0 && (
+                  <span className="text-xs font-semibold px-2 py-1 rounded-full bg-orange text-white leading-none">
+                    {docsPendingCount}
+                  </span>
+                )}
               </Link>
             )
           })}
@@ -541,6 +557,11 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
                               {pendingCount}
                             </span>
                           )}
+                          {l.href === '/docs/pending' && docsPendingCount > 0 && (
+                            <span className="ml-auto text-xs font-semibold px-2 py-1 rounded-full bg-orange text-white">
+                              {docsPendingCount}
+                            </span>
+                          )}
                         </Link>
                       )
                     })}
@@ -601,6 +622,11 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
                       >
                         <Ic d={ICONS[app.icon]} className="w-7 h-7 shrink-0" />
                         {app.label}
+                        {app.key === 'docs' && docsPendingCount > 0 && (
+                          <span className={`text-xs font-semibold px-2 py-1 rounded-full bg-orange text-white ${currentApp?.key === app.key ? '' : 'ml-auto'}`}>
+                            {docsPendingCount}
+                          </span>
+                        )}
                         {currentApp?.key === app.key && <span className="ml-auto text-teal">✓</span>}
                       </Link>
                     ))}
