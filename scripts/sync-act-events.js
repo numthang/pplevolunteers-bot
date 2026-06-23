@@ -6,10 +6,14 @@ const { load } = require('cheerio')
 const pool = require('../db')
 
 const BASE_URL = 'https://act.pplethai.org'
+const PROVINCE_BASE_URL = 'https://act.peoplesparty.or.th'
 const MAX_PAGES = 20
 const CUTOFF_MONTHS = 2
 const GUILD_ID = process.env.GUILD_ID || '1'
 const DELAY_MS = 600
+
+// Province IDs from CLI args, e.g. node sync-act-events.js 71 80
+const PROVINCES = process.argv.slice(2).map(Number).filter(n => n > 0)
 
 const THAI_MONTHS = {
   มกราคม: 1, กุมภาพันธ์: 2, มีนาคม: 3, เมษายน: 4,
@@ -38,9 +42,7 @@ async function fetchHtml(url) {
   return res.text()
 }
 
-async function getEventIdsFromPage(page) {
-  const url = page === 1 ? `${BASE_URL}/` : `${BASE_URL}/page/${page}/`
-  const html = await fetchHtml(url)
+function scrapeEventIds(html) {
   const $ = load(html)
   const ids = new Set()
   $('a[href*="/event/"]').each((_, el) => {
@@ -48,6 +50,18 @@ async function getEventIdsFromPage(page) {
     if (m) ids.add(parseInt(m[1]))
   })
   return [...ids]
+}
+
+async function getEventIdsFromPage(page) {
+  const url = page === 1 ? `${BASE_URL}/` : `${BASE_URL}/page/${page}/`
+  return scrapeEventIds(await fetchHtml(url))
+}
+
+async function getEventIdsFromProvincePage(province, page) {
+  const url = page === 1
+    ? `${PROVINCE_BASE_URL}/?province=${province}`
+    : `${PROVINCE_BASE_URL}/page/${page}/?province=${province}`
+  return scrapeEventIds(await fetchHtml(url))
 }
 
 async function getEventDetail(actEventId) {
@@ -127,27 +141,18 @@ async function upsert(actEventId, data) {
   )
 }
 
-async function main() {
-  const cutoff = new Date()
-  cutoff.setMonth(cutoff.getMonth() - CUTOFF_MONTHS)
-
-  const { rows: fresh } = await pool.query(
-    `SELECT act_event_id, event_date FROM act_event_cache
-     WHERE type = 'event' AND act_event_id IS NOT NULL AND synced_at > NOW() - INTERVAL '23 hours'`
-  )
-  const freshMap = new Map(fresh.map(r => [r.act_event_id, r.event_date]))
-
-  const seenIds = new Set()
+// Paginate through a source until cutoff or no new IDs. seenIds shared across all sources.
+async function syncPages(label, getPageFn, { cutoff, freshMap, seenIds }) {
   let done = 0, skipped = 0, errors = 0
 
   for (let page = 1; page <= MAX_PAGES; page++) {
-    process.stdout.write(`\rFetching listing page ${page}/${MAX_PAGES}...`)
-    const pageIds = await getEventIdsFromPage(page)
+    process.stdout.write(`\r${label} — page ${page}...`)
+    const pageIds = await getPageFn(page)
     const newIds = pageIds.filter(id => !seenIds.has(id))
     newIds.forEach(id => seenIds.add(id))
 
     if (newIds.length === 0) {
-      console.log(`\nNo new IDs on page ${page}, stopping`)
+      console.log(`\n  No new IDs on page ${page}, stopping`)
       break
     }
 
@@ -167,7 +172,7 @@ async function main() {
           await upsert(id, detail)
           done++
         }
-        process.stdout.write(`\r  Page ${page} — ${done} synced, ${skipped} fresh, ${errors} errors`)
+        process.stdout.write(`\r  ${label} — ${done} synced, ${skipped} fresh, ${errors} errors  `)
       } catch (err) {
         errors++
         process.stderr.write(`\n  Error event ${id}: ${err.message}\n`)
@@ -175,12 +180,39 @@ async function main() {
     }
 
     if (!pageHasRecent) {
-      console.log(`\nPage ${page}: all events older than ${CUTOFF_MONTHS} months, stopping`)
+      console.log(`\n  Page ${page}: all events older than ${CUTOFF_MONTHS} months, stopping`)
       break
     }
   }
 
-  console.log(`\nDone: ${done} synced, ${skipped} skipped (fresh), ${errors} errors at ${new Date().toLocaleString('th-TH')}`)
+  return { done, skipped, errors }
+}
+
+async function main() {
+  const cutoff = new Date()
+  cutoff.setMonth(cutoff.getMonth() - CUTOFF_MONTHS)
+
+  const { rows: fresh } = await pool.query(
+    `SELECT act_event_id, event_date FROM act_event_cache
+     WHERE type = 'event' AND act_event_id IS NOT NULL AND synced_at > NOW() - INTERVAL '23 hours'`
+  )
+  const freshMap = new Map(fresh.map(r => [r.act_event_id, r.event_date]))
+  const seenIds = new Set()
+  const ctx = { cutoff, freshMap, seenIds }
+
+  let totalDone = 0, totalSkipped = 0, totalErrors = 0
+
+  console.log('=== Global sync ===')
+  const g = await syncPages('Global', page => getEventIdsFromPage(page), ctx)
+  totalDone += g.done; totalSkipped += g.skipped; totalErrors += g.errors
+
+  for (const province of PROVINCES) {
+    console.log(`\n=== Province ${province} ===`)
+    const p = await syncPages(`Province ${province}`, page => getEventIdsFromProvincePage(province, page), ctx)
+    totalDone += p.done; totalSkipped += p.skipped; totalErrors += p.errors
+  }
+
+  console.log(`\nDone: ${totalDone} synced, ${totalSkipped} skipped (fresh), ${totalErrors} errors at ${new Date().toLocaleString('th-TH')}`)
   await pool.end()
 }
 
