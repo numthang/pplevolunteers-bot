@@ -6,7 +6,8 @@ const { load } = require('cheerio')
 const pool = require('../db')
 
 const BASE_URL = 'https://act.pplethai.org'
-const PAGES = 3
+const MAX_PAGES = 20
+const CUTOFF_MONTHS = 2
 const GUILD_ID = process.env.GUILD_ID || '1'
 const DELAY_MS = 600
 
@@ -127,37 +128,59 @@ async function upsert(actEventId, data) {
 }
 
 async function main() {
+  const cutoff = new Date()
+  cutoff.setMonth(cutoff.getMonth() - CUTOFF_MONTHS)
+
   const { rows: fresh } = await pool.query(
-    `SELECT act_event_id FROM act_event_cache
+    `SELECT act_event_id, event_date FROM act_event_cache
      WHERE type = 'event' AND act_event_id IS NOT NULL AND synced_at > NOW() - INTERVAL '23 hours'`
   )
-  const freshIds = new Set(fresh.map(r => r.act_event_id))
+  const freshMap = new Map(fresh.map(r => [r.act_event_id, r.event_date]))
 
-  const allIds = []
-  for (let page = 1; page <= PAGES; page++) {
-    process.stdout.write(`\rFetching listing page ${page}/${PAGES}...`)
-    const ids = await getEventIdsFromPage(page)
-    ids.forEach(id => { if (!allIds.includes(id)) allIds.push(id) })
-  }
-  console.log(`\nFound ${allIds.length} events on ${PAGES} pages`)
+  const seenIds = new Set()
+  let done = 0, skipped = 0, errors = 0
 
-  const toFetch = allIds.filter(id => !freshIds.has(id))
-  console.log(`Syncing ${toFetch.length} (${allIds.length - toFetch.length} fresh, skipped)`)
+  for (let page = 1; page <= MAX_PAGES; page++) {
+    process.stdout.write(`\rFetching listing page ${page}/${MAX_PAGES}...`)
+    const pageIds = await getEventIdsFromPage(page)
+    const newIds = pageIds.filter(id => !seenIds.has(id))
+    newIds.forEach(id => seenIds.add(id))
 
-  let done = 0, errors = 0
-  for (const id of toFetch) {
-    try {
-      const detail = await getEventDetail(id)
-      await upsert(id, detail)
-      done++
-      process.stdout.write(`\r  ${done}/${toFetch.length} (${errors} errors)`)
-    } catch (err) {
-      errors++
-      process.stderr.write(`\n  Error event ${id}: ${err.message}\n`)
+    if (newIds.length === 0) {
+      console.log(`\nNo new IDs on page ${page}, stopping`)
+      break
+    }
+
+    let pageHasRecent = false
+    for (const id of newIds) {
+      if (freshMap.has(id)) {
+        const cachedDate = freshMap.get(id)
+        if (!cachedDate || new Date(cachedDate) >= cutoff) pageHasRecent = true
+        skipped++
+        continue
+      }
+      try {
+        const detail = await getEventDetail(id)
+        const eventDate = detail.event_date ? new Date(detail.event_date) : null
+        if (!eventDate || eventDate >= cutoff) {
+          pageHasRecent = true
+          await upsert(id, detail)
+          done++
+        }
+        process.stdout.write(`\r  Page ${page} — ${done} synced, ${skipped} fresh, ${errors} errors`)
+      } catch (err) {
+        errors++
+        process.stderr.write(`\n  Error event ${id}: ${err.message}\n`)
+      }
+    }
+
+    if (!pageHasRecent) {
+      console.log(`\nPage ${page}: all events older than ${CUTOFF_MONTHS} months, stopping`)
+      break
     }
   }
 
-  console.log(`\nDone: ${done} synced, ${errors} errors at ${new Date().toLocaleString('th-TH')}`)
+  console.log(`\nDone: ${done} synced, ${skipped} skipped (fresh), ${errors} errors at ${new Date().toLocaleString('th-TH')}`)
   await pool.end()
 }
 
