@@ -198,6 +198,7 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
       byMember.push({
         key,
         name:         e.member_discord_id ? (e.display_name || e.member_discord_id) : null,
+        username:     e.username || null,
         realName,
         isUnassigned: !e.member_discord_id,
         items:        [e],
@@ -222,7 +223,7 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
 
   return (
     <div className="space-y-4">
-      {byMember.map(({ key, name, realName, isUnassigned, items }) => {
+      {byMember.map(({ key, name, username, realName, isUnassigned, items }) => {
         const memberTotal  = items.reduce((s, e) => s + Number(e.amount || 0), 0)
         const entryId      = items[0].id
         const isAssigning  = assigningId === entryId
@@ -285,7 +286,8 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
                                   onClick={() => confirmAssign(entryId, m)}
                                   className="w-full text-left px-3 py-2 text-sm hover:bg-warm-50 dark:hover:bg-disc-hover transition text-warm-900 dark:text-disc-text"
                                 >
-                                  {m.display_name}
+                                  <span className="font-medium">{m.display_name}</span>
+                                  {m.username && <span className="ml-1.5 text-xs text-warm-400 dark:text-disc-muted">@{m.username}</span>}
                                   {(m.first_name || m.last_name) && (
                                     <span className="ml-1.5 text-warm-400 dark:text-disc-muted">
                                       ({[m.first_name, m.last_name].filter(Boolean).join(' ')})
@@ -308,6 +310,7 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
               ) : (
                 <span className="font-semibold text-warm-900 dark:text-disc-text">
                   {name}
+                  {username && <span className="ml-1.5 text-sm font-normal text-warm-400 dark:text-disc-muted">@{username}</span>}
                   {realName && <span className="ml-1.5 text-sm font-normal text-warm-500 dark:text-disc-muted">({realName})</span>}
                 </span>
               )}

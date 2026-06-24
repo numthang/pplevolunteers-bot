@@ -8,7 +8,7 @@ export async function getEntriesByProject(projectId) {
        e.description, e.amount, e.override_data, e.status,
        e.sign_token, e.token_expires_at, e.signed_at, e.printed_at, e.pdf_url,
        e.payer_discord_id, e.payer_sign_token, e.payer_signed_at,
-       m.display_name, m.firstname, m.lastname, m.member_id,
+       m.display_name, m.username, m.firstname, m.lastname, m.member_id,
        n.first_name AS ngs_first_name, n.last_name AS ngs_last_name
      FROM docs_activity_entries e
      JOIN docs_projects p ON p.id = e.project_id

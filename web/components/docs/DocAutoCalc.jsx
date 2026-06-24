@@ -48,6 +48,7 @@ function MemberSearch({ selected, multi, onSelect, onRemove }) {
           {arr.map(m => (
             <span key={m.discord_id} className="inline-flex items-center gap-1 px-2.5 py-1 bg-orange/10 text-orange text-sm rounded-full">
               {m.display_name}
+              {m.username && <span className="text-xs opacity-60">@{m.username}</span>}
               <button type="button" onClick={() => onRemove(m.discord_id)} className="hover:text-red-500 transition"><X size={12} /></button>
             </span>
           ))}
