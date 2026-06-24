@@ -419,7 +419,7 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
                 key={l.href}
                 href={l.href}
                 className={`flex px-1 py-1 rounded-md text-base transition items-center gap-1 ${
-                  (l.href === '/calling/stats' || l.href === '/admin/logs' || l.href === '/calling' || l.href === '/docs/settings') ? 'hidden md:flex' : 'flex'
+                  (l.href === '/calling/stats' || l.href === '/admin/logs' || (l.href === '/calling' && isCallingApp) || l.href === '/docs/settings') ? 'hidden md:flex' : 'flex'
                 } ${
                   isLinkActive(l.href, l.exact) ? activeClass : inactiveClass
                 }`}
