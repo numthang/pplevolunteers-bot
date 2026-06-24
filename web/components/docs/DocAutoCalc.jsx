@@ -13,7 +13,7 @@ const labelCls        = 'text-sm font-medium text-warm-700 dark:text-disc-text'
 // hint รอง — section header / คำอธิบาย
 const hintCls         = 'text-xs text-warm-500 dark:text-disc-muted'
 
-function MemberSearch({ selected, multi, onSelect, onRemove }) {
+function MemberSearch({ selected, multi, onSelect, onRemove, suggestions = [] }) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState([])
   const [open, setOpen] = useState(false)
@@ -28,7 +28,7 @@ function MemberSearch({ selected, multi, onSelect, onRemove }) {
 
   useEffect(() => {
     clearTimeout(timer.current)
-    if (!query.trim()) { setResults([]); setOpen(false); return }
+    if (!query.trim()) { setResults([]); return }
     timer.current = setTimeout(async () => {
       const r = await fetch(`/api/docs/members?q=${encodeURIComponent(query)}&limit=20`)
       const d = await r.json()
@@ -40,6 +40,8 @@ function MemberSearch({ selected, multi, onSelect, onRemove }) {
   function pick(m) { onSelect(m); setQuery(''); setResults([]); setOpen(false) }
 
   const arr = multi ? (selected || []) : (selected ? [selected] : [])
+  const selectedIds = new Set(arr.map(m => m.discord_id))
+  const visibleList = query.trim() ? results : suggestions.filter(m => !selectedIds.has(m.discord_id))
 
   return (
     <div>
@@ -61,16 +63,21 @@ function MemberSearch({ selected, multi, onSelect, onRemove }) {
             type="text"
             value={query}
             onChange={e => setQuery(e.target.value)}
+            onFocus={() => { if (!query.trim() && visibleList.length > 0) setOpen(true) }}
             placeholder={multi ? 'เพิ่มผู้รับ...' : 'ค้นชื่อผู้รับ...'}
             className="w-full border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-warm-900 dark:text-disc-text pl-8 pr-3 py-2 text-sm rounded-lg placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-orange"
           />
-          {open && results.length > 0 && (
+          {open && visibleList.length > 0 && (
             <ul className="absolute z-20 w-full mt-1 bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg shadow-lg max-h-48 overflow-y-auto">
-              {results.map(m => (
+              {!query.trim() && (
+                <li className="px-3 pt-2 pb-1 text-xs text-warm-400 dark:text-disc-muted font-medium">ล่าสุด</li>
+              )}
+              {visibleList.map(m => (
                 <li key={m.discord_id}>
                   <button type="button" onClick={() => pick(m)} className="w-full text-left px-3 py-2 hover:bg-warm-50 dark:hover:bg-disc-hover text-sm transition">
                     <span className="font-medium text-warm-900 dark:text-disc-text">{m.display_name}</span>
                     {m.username && <span className="ml-1.5 text-xs text-warm-400 dark:text-disc-muted">@{m.username}</span>}
+                    {(m.first_name || m.last_name) && <span className="ml-1.5 text-xs text-warm-400 dark:text-disc-muted">({[m.first_name, m.last_name].filter(Boolean).join(' ')})</span>}
                   </button>
                 </li>
               ))}
@@ -118,7 +125,7 @@ function Check({ label, checked, disabled, onChange }) {
   )
 }
 
-export default function DocAutoCalc({ eventDate, eventEndDate, participantCount, isMobile: isMobileProp = false, projectBudget = null, onBudgetChange, onSubmit, saving, canCreate = true, blockReason = null }) {
+export default function DocAutoCalc({ eventDate, eventEndDate, participantCount, isMobile: isMobileProp = false, projectBudget = null, onBudgetChange, onSubmit, saving, canCreate = true, blockReason = null, province = null }) {
   const [n, setN]                       = useState(participantCount ? String(participantCount) : '')
   const [isMobile, setIsMobile]         = useState(isMobileProp)
   const [foodEnabled, setFoodEnabled]   = useState(true)   // ค่าอาหาร (มื้อหลัก) default ติ๊ก
@@ -141,6 +148,15 @@ export default function DocAutoCalc({ eventDate, eventEndDate, participantCount,
   const [budgetMode, setBudgetMode]     = useState('budget')  // 'max' | 'budget'
   const [proposal, setProposal]         = useState(null)
   const [recipients, setRecipients]     = useState([])
+  const [recentMembers, setRecentMembers] = useState([])
+
+  useEffect(() => {
+    if (!province) return
+    fetch(`/api/docs/members/recent?province=${encodeURIComponent(province)}&limit=8`)
+      .then(r => r.json())
+      .then(d => { if (d.data) setRecentMembers(d.data) })
+      .catch(() => {})
+  }, [province])
 
   function toggleMobile(val) {
     setIsMobile(val)
@@ -344,7 +360,8 @@ export default function DocAutoCalc({ eventDate, eventEndDate, participantCount,
             foodItems = foodItemsNatural.map((it, idx, arr) => {
               const amount = idx === arr.length - 1 ? foodShare - acc : Math.round(it.amount * foodShare / totalFoodNat)
               if (idx !== arr.length - 1) acc += amount
-              return { ...it, amount, detail: `ปรับตามกรอบงบ = ${amount.toLocaleString()} บ. (จาก ${it.amount.toLocaleString()})` }
+              const perHead = count > 0 ? Math.round(amount / count) : 0
+              return { ...it, amount, detail: `≈ ${perHead.toLocaleString()} บ./คน × ${count} คน = ${amount.toLocaleString()} บ. (ปรับตามกรอบงบ)` }
             })
           } else {
             foodItems = []
@@ -373,11 +390,16 @@ export default function DocAutoCalc({ eventDate, eventEndDate, participantCount,
     setRecipients(items.map(item => item.isIndividual ? [] : null))
   }
 
-  // แก้ยอดเงินรายการที่ระบบคำนวณมาได้เอง (manual override)
   function updateAmount(i, val) {
     const amount = val === '' ? 0 : (parseFloat(val) || 0)
     setProposal(prev => prev.map((it, j) =>
       j === i ? { ...it, amount, detail: 'แก้ยอดเอง', edited: true } : it
+    ))
+  }
+
+  function updateDescription(i, val) {
+    setProposal(prev => prev.map((it, j) =>
+      j === i ? { ...it, description: val } : it
     ))
   }
 
@@ -463,6 +485,14 @@ export default function DocAutoCalc({ eventDate, eventEndDate, participantCount,
         </Field>
       </div>
 
+      {/* วิธีคำนวณ — global (อยู่คู่กับกรอบงบ) */}
+      <Field label="วิธีคำนวณ" hint={hasBudget ? undefined : 'ใส่กรอบงบก่อนถึงจะปรับได้ — ตอนนี้คิดตามเพดานกฎ'}>
+        <select value={budgetMode} onChange={e => setBudgetMode(e.target.value)} disabled={!hasBudget} className={`${inputCls} disabled:opacity-50`}>
+          <option value="budget">ตามกรอบงบ — ตัดให้พอดีงบ</option>
+          <option value="max">สูงสุด — ตามเพดานกฎกองทุน</option>
+        </select>
+      </Field>
+
       {/* ประเภทกิจกรรม */}
       <Field label="ประเภทกิจกรรม">
         <div className="space-y-2">
@@ -479,23 +509,15 @@ export default function DocAutoCalc({ eventDate, eventEndDate, participantCount,
         </div>
       </Field>
 
-      {/* วิธีคำนวณ — global (อยู่คู่กับกรอบงบ) */}
-      <Field label="วิธีคำนวณ" hint={hasBudget ? undefined : 'ใส่กรอบงบก่อนถึงจะปรับได้ — ตอนนี้คิดตามเพดานกฎ'}>
-        <select value={budgetMode} onChange={e => setBudgetMode(e.target.value)} disabled={!hasBudget} className={`${inputCls} disabled:opacity-50`}>
-          <option value="budget">ตามกรอบงบ — ตัดให้พอดีงบ</option>
-          <option value="max">สูงสุด — ตามเพดานกฎกองทุน</option>
-        </select>
-      </Field>
-
       {/* รายการเบิก — ติ๊กรายการไหน option ของรายการนั้นโผล่ใต้เลย */}
       <div>
         <button
           type="button"
           onClick={() => setShowItems(v => !v)}
-          className="flex items-center gap-1.5 mb-2 group"
+          className="w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg bg-orange/10 hover:bg-orange/20 border border-orange/30 transition-colors"
         >
-          <ChevronDown size={15} className={`text-warm-400 dark:text-disc-muted transition-transform ${showItems ? '' : '-rotate-90'}`} />
-          <span className={`${labelCls} group-hover:text-orange transition-colors`}>รายการเบิกเพิ่มเติม</span>
+          <span className="text-sm font-semibold text-orange">+ เลือกรายการเบิกเพิ่มเติม</span>
+          <ChevronDown size={15} className={`text-orange transition-transform shrink-0 ${showItems ? '' : '-rotate-90'}`} />
         </button>
         {showItems && <div className="space-y-2">
 
@@ -631,12 +653,20 @@ export default function DocAutoCalc({ eventDate, eventEndDate, participantCount,
                   </button>
                 </div>
               </div>
-              <p className="text-xs text-warm-500 dark:text-disc-muted mb-3">{item.detail}</p>
+              <p className="text-xs text-warm-500 dark:text-disc-muted mb-2">{item.detail}</p>
+              <input
+                type="text"
+                value={item.description || ''}
+                onChange={e => updateDescription(i, e.target.value)}
+                placeholder="คำอธิบายรายการ (ใส่ใน PDF)"
+                className="w-full mb-3 border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-warm-900 dark:text-disc-text px-2.5 py-1.5 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-orange"
+              />
               <MemberSearch
                 selected={recipients[i]}
                 multi={item.isIndividual}
                 onSelect={m => pickRecipient(i, m)}
                 onRemove={id => removeRecipient(i, id)}
+                suggestions={recentMembers}
               />
             </div>
           ))}

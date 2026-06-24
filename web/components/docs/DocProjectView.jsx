@@ -578,6 +578,7 @@ export default function DocProjectView({ project: initialProject, initialEntries
               saving={autoSaving}
               canCreate={canCreate}
               blockReason={blockReason}
+              province={province}
             />
           </div>
 

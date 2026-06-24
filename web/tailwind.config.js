@@ -21,7 +21,7 @@ module.exports = {
           200: '#e0ddd7',
           300: '#d3d1c7',
           400: '#b4b2a9',
-          500: '#888880',
+          500: '#6b6b64',
           900: '#1a1a1a',
           dark: {
             50:  '#1e1d1b',
@@ -38,7 +38,7 @@ module.exports = {
           hover:  '#2a2d2e',  // row hover + expanded panel
           border: '#3e3e3e',  // dividers
           text:   '#d4d4d4',  // primary text
-          muted:  '#858585',  // secondary / label text
+          muted:  '#a8a8a8',  // secondary / label text
         },
         orange: {
           DEFAULT: 'var(--brand-orange)',

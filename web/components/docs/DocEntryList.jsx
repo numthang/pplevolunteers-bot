@@ -18,7 +18,7 @@ const ITEM_LABELS = {
 const ALL_ITEMS    = Object.keys(ITEM_LABELS)
 const MOBILE_ITEMS = ['food','travel','accommodation','supplies','equipment','photo']
 
-const BADGE_BASE    = 'text-xs font-medium px-2 py-0.5 rounded-full transition'
+const BADGE_BASE    = 'text-sm font-medium px-3 py-1 rounded-full transition'
 const BADGE_PENDING = 'bg-amber-50 text-amber-700 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400 dark:hover:bg-amber-900/50'
 const BADGE_MUTED   = 'bg-warm-100 text-warm-400 dark:bg-disc-hover dark:text-disc-muted'
 const BADGE_MUTED_LINK = BADGE_MUTED + ' hover:bg-warm-200 dark:hover:bg-disc-border'
@@ -220,11 +220,11 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
       {byMember.map(({ key, name, username, realName, isUnassigned, items }) => {
         const memberTotal  = items.reduce((s, e) => s + Number(e.amount || 0), 0)
         return (
-          <div key={key} className={`bg-card-bg border ${isUnassigned ? 'border-amber-300 dark:border-amber-700' : 'border-warm-200 dark:border-disc-border'} rounded-lg ${items.some(e => editingId === e.id) ? 'overflow-visible' : 'overflow-hidden'}`}>
+          <div key={key} className={`bg-card-bg border ${isUnassigned ? 'border-orange' : 'border-warm-200 dark:border-disc-border'} rounded-lg ${items.some(e => editingId === e.id) ? 'overflow-visible' : 'overflow-hidden'}`}>
             <div className="px-4 py-3 border-b border-warm-200 dark:border-disc-border flex items-center justify-between gap-3 bg-warm-50 dark:bg-disc-hover rounded-t-lg">
               {isUnassigned ? (
                 <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <span className="font-semibold text-amber-600 dark:text-amber-400">ยังไม่ระบุผู้รับ</span>
+                  <span className="font-semibold text-orange">ยังไม่ระบุผู้รับ</span>
                 </div>
               ) : (
                 <div className="min-w-0 flex-1">
@@ -280,12 +280,12 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
                             )}
                           </div>
                         </div>
-                        {/* item type / description / amount */}
-                        <div className="flex items-center gap-2 flex-wrap">
+                        {/* item type + description */}
+                        <div className="flex items-center gap-2">
                           <select
                             value={editForm.itemType}
                             onChange={e => setEditForm(f => ({ ...f, itemType: e.target.value }))}
-                            className={`${selectCls} w-36`}
+                            className={`${selectCls} w-32 shrink-0`}
                           >
                             {allowedItems.map(t => <option key={t} value={t}>{ITEM_LABELS[t]}</option>)}
                           </select>
@@ -296,13 +296,16 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
                             placeholder="หมายเหตุ"
                             className={`${inputCls} flex-1 min-w-0`}
                           />
+                        </div>
+                        {/* amount + actions */}
+                        <div className="flex items-center gap-2">
                           <input
                             type="number"
                             min="0"
                             step="0.01"
                             value={editForm.amount}
                             onChange={e => setEditForm(f => ({ ...f, amount: e.target.value }))}
-                            className={`${inputCls} w-24`}
+                            className={`${inputCls} flex-1`}
                           />
                           <button
                             onClick={() => saveEdit(entry.id)}

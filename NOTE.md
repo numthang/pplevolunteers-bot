@@ -1,5 +1,4 @@
 PENDING
-- ไม่รู้ตรง ค้นหา ชื่อสมาชิกอ่ะ มันทำได้ไหม ให้แสดงชื่อ recently member ก่อน โดยที่ไม่ต้องพิมพ์
 
 End of the Day
 - Update PENDING.md สิ่งที่อยากทำ สิ่งที่ทำไปแล้ว, อ่านส่วนที่แก้ไขแล้วเอาขึ้น git พร้อมข้อความแก้ไข พร้อม bump version ใน package.json ให้ถูกต้อง (เช็ค git log ก่อนว่า version ล่าสุดคืออะไร ใช้ semver — patch สำหรับแก้เล็กน้อย, minor สำหรับฟีเจอร์ใหม่) tag เฉพาะ minor ขึ้นไป และ push ด้วย
