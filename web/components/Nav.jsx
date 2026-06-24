@@ -299,7 +299,7 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
             <div className="relative" ref={mediaRef}>
               <button
                 onClick={() => setMediaOpen(o => !o)}
-                className={`flex items-center gap-1 px-1.5 py-1 rounded-md text-base transition ${
+                className={`flex items-center gap-1 px-1 py-1 rounded-md text-base transition ${
                   mediaLinks.some(l => isLinkActive(l.href))
                     ? activeClass
                     : inactiveClass
@@ -338,7 +338,7 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
                 <div key={l.href} className="relative flex items-center" ref={docRef}>
                   <Link
                     href="/docs"
-                    className={`px-1.5 py-1 rounded-l-md text-base transition flex items-center gap-1 ${isActive ? activeClass : inactiveClass}`}
+                    className={`px-1 py-1 rounded-l-md text-base transition flex items-center gap-1 ${isActive ? activeClass : inactiveClass}`}
                   >
                     <Ic d={ICONS[l.icon]} className="w-7 h-7 shrink-0" />
                     <span className="hidden md:inline">{l.label}</span>
@@ -346,7 +346,7 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
                   </Link>
                   <button
                     onClick={() => setDocOpen(o => !o)}
-                    className={`px-1 py-1 rounded-r-md text-sm transition border-l border-warm-200 dark:border-disc-border ${isActive ? activeClass : inactiveClass}`}
+                    className={`px-1.5 py-1 rounded-r-md text-sm transition border-l border-warm-200 dark:border-disc-border ${isActive ? activeClass : inactiveClass}`}
                   >
                     <svg className={`w-3 h-3 transition-transform ${docOpen ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="currentColor">
                       <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.17l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
@@ -379,7 +379,7 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
                 <div key={l.href} className="relative flex items-center" ref={campaignRef}>
                   <Link
                     href="/calling/campaigns"
-                    className={`px-1.5 py-1 rounded-l-md text-base transition flex items-center gap-1 ${isActive ? activeClass : inactiveClass}`}
+                    className={`px-1 py-1 rounded-l-md text-base transition flex items-center gap-1 ${isActive ? activeClass : inactiveClass}`}
                   >
                     <Ic d={ICONS[l.icon]} className="w-7 h-7 shrink-0" />
                     <span className="hidden md:inline">{l.label}</span>
@@ -387,7 +387,7 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
                   </Link>
                   <button
                     onClick={() => setCampaignOpen(o => !o)}
-                    className={`px-1 py-1 rounded-r-md text-sm transition border-l border-warm-200 dark:border-disc-border ${isActive ? activeClass : inactiveClass}`}
+                    className={`px-1.5 py-1 rounded-r-md text-sm transition border-l border-warm-200 dark:border-disc-border ${isActive ? activeClass : inactiveClass}`}
                   >
                     <svg className={`w-3 h-3 transition-transform ${campaignOpen ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="currentColor">
                       <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.17l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
@@ -418,7 +418,7 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
               <Link
                 key={l.href}
                 href={l.href}
-                className={`flex px-1.5 py-1 rounded-md text-base transition items-center gap-1 ${
+                className={`flex px-1 py-1 rounded-md text-base transition items-center gap-1 ${
                   (l.href === '/calling/stats' || l.href === '/admin/logs' || l.href === '/calling' || l.href === '/docs/settings') ? 'hidden md:flex' : 'flex'
                 } ${
                   isLinkActive(l.href, l.exact) ? activeClass : inactiveClass
