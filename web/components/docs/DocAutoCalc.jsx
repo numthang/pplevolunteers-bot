@@ -475,7 +475,7 @@ export default function DocAutoCalc({ eventDate, eventEndDate, participantCount,
             placeholder="50" className={inputCls}
           />
         </Field>
-        <Field label="กรอบงบ (บาท)" hint={projectBudget != null ? 'จากกรอบงบโครงการ · แก้ได้ (บันทึกตอนออกจากช่อง)' : undefined}>
+        <Field label="กรอบงบ (บาท)">
           <input
             type="number" min="0" step="100" value={budget}
             onChange={e => setBudget(e.target.value)}
