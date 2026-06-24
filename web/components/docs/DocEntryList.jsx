@@ -26,7 +26,7 @@ const BADGE_MUTED_LINK = BADGE_MUTED + ' hover:bg-warm-200 dark:hover:bg-disc-bo
 const inputCls = 'h-8 border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-warm-900 dark:text-disc-text text-sm rounded px-2 focus:outline-none focus:ring-1 focus:ring-orange'
 const selectCls = inputCls + ' appearance-none pr-6'
 
-export default function DocEntryList({ initialEntries, isMobile, canManage, currentDiscordId, onAddClick, onChange, eligiblePayers = [], eventId }) {
+export default function DocEntryList({ initialEntries, isMobile, canManage, currentDiscordId, onAddClick, onChange, eligiblePayers = [], eventId, recentMembers = [] }) {
   const [entries, setEntries] = useState(initialEntries)
   const [editingId, setEditingId] = useState(null)
   const [editForm, setEditForm]   = useState({})
@@ -65,7 +65,7 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
   function onMemberQueryChange(q) {
     setEditForm(f => ({ ...f, memberName: q, memberDiscordId: f.memberDiscordId }))
     clearTimeout(debounceRef.current)
-    if (!q.trim()) { setMemberResults([]); setMemberOpen(false); return }
+    if (!q.trim()) { setMemberResults([]); return }
     debounceRef.current = setTimeout(async () => {
       try {
         const res = await fetch(`/api/docs/members?q=${encodeURIComponent(q)}&limit=10`)
@@ -252,29 +252,39 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
                               type="text"
                               value={editForm.memberName || ''}
                               onChange={e => onMemberQueryChange(e.target.value)}
-                              onFocus={() => editForm.memberName && setMemberOpen(memberResults.length > 0)}
+                              onFocus={() => {
+                                const q = editForm.memberName || ''
+                                if (!q.trim() && recentMembers.length > 0) setMemberOpen(true)
+                                else if (q.trim() && memberResults.length > 0) setMemberOpen(true)
+                              }}
                               onBlur={() => setTimeout(() => setMemberOpen(false), 150)}
                               placeholder="ค้นหาผู้รับเงิน..."
                               className={`${inputCls} w-full`}
                             />
-                            {memberOpen && memberResults.length > 0 && (
-                              <ul className="absolute z-20 mt-1 w-full bg-white dark:bg-disc-hover border border-warm-200 dark:border-disc-border rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                                {memberResults.map(m => {
-                                  const realName = [m.first_name, m.last_name].filter(Boolean).join(' ')
-                                  return (
-                                    <li
-                                      key={m.discord_id}
-                                      onMouseDown={() => selectMember(m)}
-                                      className="px-3 py-2 cursor-pointer hover:bg-warm-50 dark:hover:bg-disc-border text-sm"
-                                    >
-                                      <span className="text-warm-900 dark:text-disc-text">{m.display_name}</span>
-                                      {m.username && <span className="ml-1 text-warm-500 dark:text-disc-text">@{m.username}</span>}
-                                      {realName && <span className="ml-1.5 text-warm-500 dark:text-disc-text">({realName})</span>}
-                                    </li>
-                                  )
-                                })}
-                              </ul>
-                            )}
+                            {memberOpen && (() => {
+                              const q = editForm.memberName || ''
+                              const list = q.trim() ? memberResults : recentMembers
+                              if (!list.length) return null
+                              return (
+                                <ul className="absolute z-20 mt-1 w-full bg-white dark:bg-disc-hover border border-warm-200 dark:border-disc-border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                                  {!q.trim() && <li className="px-3 pt-2 pb-1 text-xs text-warm-400 dark:text-disc-muted font-medium">ล่าสุด</li>}
+                                  {list.map(m => {
+                                    const realName = [m.first_name, m.last_name].filter(Boolean).join(' ')
+                                    return (
+                                      <li
+                                        key={m.discord_id}
+                                        onMouseDown={() => selectMember(m)}
+                                        className="px-3 py-2 cursor-pointer hover:bg-warm-50 dark:hover:bg-disc-border text-sm"
+                                      >
+                                        <span className="text-warm-900 dark:text-disc-text">{m.display_name}</span>
+                                        {m.username && <span className="ml-1 text-warm-500 dark:text-disc-text">@{m.username}</span>}
+                                        {realName && <span className="ml-1.5 text-warm-500 dark:text-disc-text">({realName})</span>}
+                                      </li>
+                                    )
+                                  })}
+                                </ul>
+                              )
+                            })()}
                           </div>
                         </div>
                         {/* item type + description */}

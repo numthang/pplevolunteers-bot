@@ -60,6 +60,7 @@ export default function DocProjectView({ project: initialProject, initialEntries
   const [query, setQuery]                 = useState('')
   const [searchResults, setSearchResults] = useState([])
   const [showDropdown, setShowDropdown]   = useState(false)
+  const [recentMembers, setRecentMembers] = useState([])
   const debounceRef = useRef(null)
   const dropdownRef = useRef(null)
   const [members, setMembers]   = useState([])
@@ -142,8 +143,16 @@ export default function DocProjectView({ project: initialProject, initialEntries
   }, [])
 
   useEffect(() => {
+    if (!province) return
+    fetch(`/api/docs/members/recent?province=${encodeURIComponent(province)}&limit=8`)
+      .then(r => r.json())
+      .then(d => { if (d.data) setRecentMembers(d.data) })
+      .catch(() => {})
+  }, [province])
+
+  useEffect(() => {
     clearTimeout(debounceRef.current)
-    if (!query.trim()) { setSearchResults([]); setShowDropdown(false); return }
+    if (!query.trim()) { setSearchResults([]); return }
     debounceRef.current = setTimeout(async () => {
       const res  = await fetch(`/api/docs/members?q=${encodeURIComponent(query)}&limit=20`)
       const data = await res.json()
@@ -597,13 +606,15 @@ export default function DocProjectView({ project: initialProject, initialEntries
                 type="text"
                 value={query}
                 onChange={e => setQuery(e.target.value)}
+                onFocus={() => { if (!query.trim() && recentMembers.length > 0) setShowDropdown(true) }}
                 placeholder="ค้นชื่อสมาชิก..."
                 className={`${inputCls} pl-9`}
               />
             </div>
-            {showDropdown && searchResults.length > 0 && (
+            {showDropdown && (searchResults.length > 0 || (!query.trim() && recentMembers.length > 0)) && (
               <ul className="absolute z-10 w-full mt-1 bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg shadow-lg max-h-56 overflow-y-auto">
-                {searchResults.map(m => (
+                {!query.trim() && <li className="px-4 pt-2 pb-1 text-xs text-warm-400 dark:text-disc-muted font-medium">ล่าสุด</li>}
+                {(query.trim() ? searchResults : recentMembers).map(m => (
                   <li key={m.discord_id}>
                     <button
                       type="button"
@@ -694,6 +705,7 @@ export default function DocProjectView({ project: initialProject, initialEntries
         onChange={setEntries}
         eligiblePayers={eligiblePayers}
         eventId={eventId}
+        recentMembers={recentMembers}
       />
 
       {/* ล้างบิลทั้งหมด */}
