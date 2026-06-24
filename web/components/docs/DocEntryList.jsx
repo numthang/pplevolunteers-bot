@@ -229,11 +229,8 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
               ) : (
                 <div className="min-w-0 flex-1">
                   <div className="flex items-baseline gap-1.5">
-                    <span className="text-xs text-warm-600 dark:text-disc-text shrink-0">ผู้รับ</span>
                     <span className="font-semibold text-warm-900 dark:text-disc-text">
-                      {name}
-                      {username && <span className="ml-1.5 text-sm font-normal text-warm-500 dark:text-disc-text">@{username}</span>}
-                      {realName && <span className="ml-1.5 text-sm font-normal text-warm-500 dark:text-disc-text">({realName})</span>}
+                      {realName || (username ? `@${username}` : name)}
                     </span>
                   </div>
                 </div>
