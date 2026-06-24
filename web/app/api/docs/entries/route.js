@@ -3,7 +3,7 @@ import { authOptions } from '@/lib/auth-options.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import { canManageDocs } from '@/lib/docsAccess.js'
 import { getGuildId } from '@/lib/guildContext.js'
-import { createEntries, setTokenExpiry, getEntriesByProject, autoAssignPayers, deleteAllEntriesByProject } from '@/db/docs/entries.js'
+import { createEntries, setTokenExpiry, getEntriesByProject, autoAssignPayers, setProjectPayer, deleteAllEntriesByProject } from '@/db/docs/entries.js'
 import { getDocProjectByEventId, upsertDocProject } from '@/db/docs/projects.js'
 import { getAllowedItems } from '@/config/fund69-rules.js'
 
@@ -36,7 +36,7 @@ export async function POST(req) {
 
   try {
     const body = await req.json()
-    const { actEventCacheId, isMobile, projectName, participantCount, entries, tokenExpiresAt } = body
+    const { actEventCacheId, isMobile, projectName, participantCount, entries, tokenExpiresAt, payerDiscordId } = body
 
     if (!actEventCacheId || !Array.isArray(entries) || entries.length === 0) {
       return Response.json({ error: 'actEventCacheId and entries[] required' }, { status: 400 })
@@ -72,8 +72,13 @@ export async function POST(req) {
     await createEntries(entries.map(e => ({ ...e, projectId })))
     if (tokenExpiresAt) await setTokenExpiry(projectId, tokenExpiresAt)
 
-    // auto-เลือกผู้จ่ายให้ entry ใหม่ (คนแรกใน settings ที่ scope ครอบคลุมจังหวัด, ข้ามถ้าเป็น payee เอง)
-    await autoAssignPayers(projectId, guildId, project?.province ?? null)
+    // payer: ถ้าผู้ใช้เลือกจาก dropdown บนสุด → set ทั้งโครงการ (project default + apply ทุก entry + auto-swap)
+    //         ถ้าไม่ได้เลือก → auto-assign default (project default หรือ pool[0])
+    if (payerDiscordId) {
+      await setProjectPayer(projectId, payerDiscordId, guildId, project?.province ?? null)
+    } else {
+      await autoAssignPayers(projectId, guildId, project?.province ?? null)
+    }
 
     const rows = await getEntriesByProject(projectId)
     return Response.json({ success: true, data: rows }, { status: 201 })

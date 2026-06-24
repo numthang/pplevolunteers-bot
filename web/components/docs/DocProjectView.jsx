@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
-import { Search, X, Plus, Trash2, CreditCard, CheckCircle, FilePlus, Check, Pencil, ChevronDown } from 'lucide-react'
+import { Search, X, Plus, Trash2, CreditCard, CheckCircle, FilePlus, Check, Pencil } from 'lucide-react'
 import DocEntryList from './DocEntryList'
 import DocAutoCalc from './DocAutoCalc'
 import { calcSpeakerCeiling, SPEAKER_RULES } from '@/config/fund69-rules.js'
@@ -30,6 +30,7 @@ const ITEM_LABELS = {
   travel:        'ค่าเดินทาง',
   venue:         'ค่าสถานที่',
   accommodation: 'ค่าที่พัก',
+  sound:         'ค่าเช่าเครื่องเสียง',
   supplies:      'ค่าวัสดุสิ้นเปลือง',
   equipment:     'ค่าอุปกรณ์',
   photo:         'ค่าถ่ายภาพ',
@@ -40,17 +41,20 @@ const MOBILE_ITEMS = ['food','travel','accommodation','supplies','equipment','ph
 const inputCls = 'w-full border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-warm-900 dark:text-disc-text p-2.5 text-base rounded-lg placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-orange'
 
 function newItem() {
-  return { id: Math.random().toString(36).slice(2), itemType: 'food', description: ITEM_LABELS.food, amount: '', speakerHours: 1, speakerType: 'general' }
+  return { id: Math.random().toString(36).slice(2), itemType: 'food', description: ITEM_LABELS.food, amount: '', speakerHours: 1, speakerType: 'general', soundHours: 1 }
 }
 
 function calcSpeakerAmount(hours, type) {
   return calcSpeakerCeiling({ hours: Math.floor(hours), minutes: Math.round((hours % 1) * 60), isGovOfficer: type === 'government' })
 }
 
-export default function DocProjectView({ project: initialProject, initialEntries, canManage, currentDiscordId, eventId, eventName, eventDate, eventEndDate, participantCount, actEventId }) {
+export default function DocProjectView({ project: initialProject, initialEntries, canManage, currentDiscordId, eventId, eventName, eventDate, eventEndDate, participantCount, actEventId, eventProvince }) {
   const [project, setProject]       = useState(initialProject)
   const [entries, setEntries]       = useState(initialEntries)
   const [refreshKey, setRefreshKey] = useState(0)
+
+  // province จาก project (ถ้ามีแล้ว) หรือจาก event โดยตรง (ก่อนสร้าง project)
+  const province = project?.province ?? eventProvince
 
   // manual form state
   const [query, setQuery]                 = useState('')
@@ -62,7 +66,6 @@ export default function DocProjectView({ project: initialProject, initialEntries
   const [saving, setSaving]     = useState(false)
   const [autoSaving, setAutoSaving] = useState(false)
   const [billMode, setBillMode]     = useState('auto')  // 'auto' (default) | 'manual'
-  const [showPayer, setShowPayer]   = useState(false)   // ผู้จ่ายเงิน — พับเก็บ default ปิด
 
   // ACT tab — attachments
   const [attachments, setAttachments] = useState([])
@@ -125,8 +128,10 @@ export default function DocProjectView({ project: initialProject, initialEntries
     }
   }
 
-  // รายชื่อผู้จ่ายใน settings ที่ scope ครอบคลุมจังหวัดโครงการ (ใช้ map id→ชื่อ ตอนแสดงผล)
+  // รายชื่อผู้จ่ายที่ scope ครอบคลุมจังหวัดโครงการ (pool) + payer ระดับโครงการที่เลือก (dropdown บนสุด)
   const [eligiblePayers, setEligiblePayers]   = useState([])
+  const [selectedPayer, setSelectedPayer]     = useState(null)   // discord_id ที่เลือกเป็น payer หลักของโครงการ
+  const [payerSavingTop, setPayerSavingTop]   = useState(false)
 
   useEffect(() => {
     function handler(e) {
@@ -147,14 +152,23 @@ export default function DocProjectView({ project: initialProject, initialEntries
     }, 300)
   }, [query])
 
-  // โหลดรายชื่อผู้จ่ายที่ scope ครอบคลุมจังหวัดของโครงการ (จาก settings)
+  // โหลด pool ผู้จ่ายที่ scope ครอบคลุมจังหวัดของโครงการ + seed payer default
   useEffect(() => {
-    if (!canManage || !project?.province) { setEligiblePayers([]); return }
-    fetch(`/api/docs/payers?province=${encodeURIComponent(project.province)}`)
+    if (!canManage || !province) { setEligiblePayers([]); return }
+    fetch(`/api/docs/payers?province=${encodeURIComponent(province)}`)
       .then(r => r.json())
-      .then(d => setEligiblePayers(d.data || []))
+      .then(d => {
+        const pool = d.data || []
+        setEligiblePayers(pool)
+        // default = payer ที่โครงการตั้งไว้ (ถ้ามีและยังอยู่ใน pool) → ไม่งั้น pool[0] (ผู้ประสานงานจังหวัด)
+        setSelectedPayer(prev => {
+          const projectPayer = project?.payer_discord_id
+          if (projectPayer && pool.some(p => p.discord_id === projectPayer)) return projectPayer
+          return prev && pool.some(p => p.discord_id === prev) ? prev : (pool[0]?.discord_id ?? null)
+        })
+      })
       .catch(() => setEligiblePayers([]))
-  }, [canManage, project?.province])
+  }, [canManage, province, project?.payer_discord_id])
 
   function addMember(member) {
     if (members.find(m => m.discordId === member.discord_id)) {
@@ -208,13 +222,54 @@ export default function DocProjectView({ project: initialProject, initialEntries
     ))
   }
 
+  // ต้องตั้งกรอบงบ + มีผู้มีสิทธิ์จ่าย ≥ 2 คน ถึงจะสร้างบิลได้
+  const canCreate = budget != null && eligiblePayers.length >= 2
+  const blockReason = budget == null
+    ? 'ต้องระบุกรอบงบก่อนจึงจะสร้างบิลได้'
+    : eligiblePayers.length < 2
+      ? `จังหวัด${province ?? 'นี้'}มีผู้มีสิทธิ์จ่ายไม่ถึง 2 คน — เพิ่มที่ตั้งค่าเอกสารก่อนจึงจะสร้างบิลได้`
+      : null
+
+  async function changeProjectPayer(payerDiscordId) {
+    if (!payerDiscordId || payerDiscordId === selectedPayer) return
+    setSelectedPayer(payerDiscordId)
+    if (!project) return  // ยังไม่สร้างบิล — เก็บ state เฉยๆ
+    if (entries.some(e => e.payer_signed_at) &&
+        !confirm('มีผู้จ่ายเซ็นไปแล้วบางรายการ การเปลี่ยนจะ reset ลายเซ็นผู้จ่าย — ยืนยัน?')) return
+    setPayerSavingTop(true)
+    try {
+      const res = await fetch(`/api/docs/projects/${eventId}/set-payer`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ payerDiscordId }),
+      })
+      if (!res.ok) throw new Error((await res.json()).error)
+      const r2 = await fetch(`/api/docs/entries?projectId=${project.id}`)
+      if (r2.ok) { const d = await r2.json(); if (d.data) { setEntries(d.data); setRefreshKey(k => k + 1) } }
+    } catch (err) {
+      alert('เกิดข้อผิดพลาด: ' + err.message)
+    } finally {
+      setPayerSavingTop(false)
+    }
+  }
+
   async function handleSubmit(e) {
     e.preventDefault()
+    if (!canCreate) { alert(blockReason); return }
     const payload = []
     for (const m of members) {
       for (const item of m.items) {
         if (!item.amount) continue
-        payload.push({ memberDiscordId: m.discordId, itemType: item.itemType, description: item.description || null, amount: parseFloat(item.amount) })
+        payload.push({
+          memberDiscordId: m.discordId,
+          itemType:        item.itemType,
+          description:     item.description || null,
+          amount:          parseFloat(item.amount),
+          // วิทยากร/เครื่องเสียง: เก็บจำนวนชั่วโมงไว้ที่ override_data.duration (PDF เติม "ชั่วโมง" ต่อท้ายเอง)
+          overrideData:    item.itemType === 'speaker' ? { duration: String(item.speakerHours) }
+                         : item.itemType === 'sound'   ? { duration: String(item.soundHours ?? 1) }
+                         : undefined,
+        })
       }
     }
     if (payload.length === 0) { alert('กรุณาใส่รายการอย่างน้อย 1 รายการ'); return }
@@ -237,6 +292,7 @@ export default function DocProjectView({ project: initialProject, initialEntries
         participantCount: pCount ?? null,
         entries:          payload,
         tokenExpiresAt:   expiresAt.toISOString(),
+        payerDiscordId:   selectedPayer,   // payer ที่เลือกจาก dropdown บนสุด
       }),
     })
     const resData = await res.json()
@@ -265,6 +321,7 @@ export default function DocProjectView({ project: initialProject, initialEntries
   }
 
   async function handleAutoSubmit(autoEntries, pCount) {
+    if (!canCreate) { alert(blockReason); return false }
     setAutoSaving(true)
     try { await postEntries(autoEntries, pCount); return true }
     catch (err) { alert('เกิดข้อผิดพลาด: ' + err.message); return false }
@@ -275,7 +332,7 @@ export default function DocProjectView({ project: initialProject, initialEntries
   const signedCount  = entries.filter(e => e.status === 'signed').length
   const payerSignedCount = entries.filter(e => e.payer_signed_at).length
 
-  // ผู้จ่ายที่ระบบ auto-เลือกไว้ — map payer_discord_id ของ entries → ชื่อจาก eligiblePayers
+  // ผู้จ่ายที่ระบบ auto-เลือกไว้ — map payer_discord_id ของ entries → ชื่อจาก eligiblePayers หรือ payer_display_name จาก entry
   const payerById = Object.fromEntries(eligiblePayers.map(p => [p.discord_id, p]))
   const assignedPayers = [...new Set(entries.map(e => e.payer_discord_id).filter(Boolean))]
     .map(id => {
@@ -283,8 +340,8 @@ export default function DocProjectView({ project: initialProject, initialEntries
       const mine  = entries.filter(e => e.payer_discord_id === id)
       return {
         discord_id:   id,
-        display_name: info?.display_name || id,
-        position:     info?.position || '',
+        display_name: info?.display_name ?? mine[0]?.payer_display_name ?? id,
+        position:     info?.position     ?? mine[0]?.payer_position     ?? '',
         total:        mine.length,
         signed:       mine.filter(e => e.payer_signed_at).length,
       }
@@ -380,6 +437,41 @@ export default function DocProjectView({ project: initialProject, initialEntries
               : <span className="text-xs font-medium text-amber-600 dark:text-amber-400">ขาด {(budget - totalAmount).toLocaleString()} บ.</span>
             )}
           </span>
+        </div>
+      )}
+
+      {/* payer dropdown — ผู้จ่ายระดับโครงการ (เซ็ตให้ถูกก่อนสร้างบิล) */}
+      {canManage && (
+        <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-5 mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+            <div className="flex items-center gap-2 shrink-0">
+              <CreditCard size={16} className="text-orange shrink-0" />
+              <span className="text-base font-semibold text-warm-900 dark:text-disc-text">ผู้จ่ายเงิน</span>
+            </div>
+            {eligiblePayers.length === 0 ? (
+              <p className="text-sm text-warm-400 dark:text-disc-muted">
+                ไม่มีผู้มีสิทธิ์จ่ายที่ครอบคลุมจังหวัด{province ?? 'นี้'} —
+                เพิ่มได้ที่ <Link href="/docs/settings" className="text-orange hover:underline">ตั้งค่าเอกสาร</Link>
+              </p>
+            ) : (<>
+              <select
+                value={selectedPayer || ''}
+                onChange={e => changeProjectPayer(e.target.value)}
+                disabled={payerSavingTop}
+                className="h-10 border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-warm-900 dark:text-disc-text rounded-lg px-3 text-base focus:outline-none focus:ring-1 focus:ring-orange disabled:opacity-50 w-full sm:w-auto"
+              >
+                {eligiblePayers.map(p => (
+                  <option key={p.discord_id} value={p.discord_id}>
+                    {(p.firstname && p.lastname) ? `${p.firstname} ${p.lastname}` : p.display_name}
+                  </option>
+                ))}
+              </select>
+              {payerSavingTop && <span className="text-sm text-warm-400 dark:text-disc-muted">กำลังบันทึก…</span>}
+              {!canCreate && (
+                <span className="text-sm rounded-lg px-3 py-1.5 bg-orange/10 text-orange">{blockReason}</span>
+              )}
+            </>)}
+          </div>
         </div>
       )}
 
@@ -484,6 +576,8 @@ export default function DocProjectView({ project: initialProject, initialEntries
               onBudgetChange={handleAutoCalcBudgetChange}
               onSubmit={handleAutoSubmit}
               saving={autoSaving}
+              canCreate={canCreate}
+              blockReason={blockReason}
             />
           </div>
 
@@ -557,6 +651,11 @@ export default function DocProjectView({ project: initialProject, initialEntries
                           <option value="government">ข้าราชการ ({SPEAKER_RULES.rates.government.toLocaleString()})</option>
                         </select>
                       </>)}
+                      {item.itemType === 'sound' && (
+                        <select value={item.soundHours} onChange={e => updateItem(m.discordId, item.id, 'soundHours', Number(e.target.value))} className={`${inputCls} w-24 shrink-0`}>
+                          {[1,2,3,4,5,6,7,8].map(h => <option key={h} value={h}>{h} ชม.</option>)}
+                        </select>
+                      )}
                       <input type="text" value={item.description} onChange={e => updateItem(m.discordId, item.id, 'description', e.target.value)} placeholder="หมายเหตุ" className={`${inputCls} flex-1 min-w-28`} />
                       <div className="flex gap-2 items-center shrink-0">
                         <input type="number" min="0" step="0.01" value={item.amount} onChange={e => updateItem(m.discordId, item.id, 'amount', e.target.value)} placeholder="จำนวนเงิน" className={`${inputCls} w-28`} />
@@ -566,7 +665,7 @@ export default function DocProjectView({ project: initialProject, initialEntries
                       </div>
                     </div>
                   ))}
-                  <button type="button" onClick={() => addItem(m.discordId)} className="flex items-center gap-1.5 text-sm text-teal hover:text-teal/80 transition mt-1">
+                  <button type="button" onClick={() => addItem(m.discordId)} disabled={!canCreate} title={blockReason || undefined} className="flex items-center gap-1.5 text-sm text-teal hover:text-teal/80 disabled:opacity-40 disabled:cursor-not-allowed transition mt-1">
                     <Plus size={14} /> เพิ่มรายการ
                   </button>
                 </div>
@@ -575,66 +674,12 @@ export default function DocProjectView({ project: initialProject, initialEntries
           })}
 
           {members.length > 0 && (
-            <button type="submit" disabled={saving} className="px-6 py-2.5 bg-orange text-white text-base font-semibold rounded-lg hover:bg-orange-light disabled:opacity-50 transition">
+            <button type="submit" disabled={saving || !canCreate} title={blockReason || undefined} className="px-6 py-2.5 bg-orange text-white text-base font-semibold rounded-lg hover:bg-orange-light disabled:opacity-50 disabled:cursor-not-allowed transition">
               {saving ? 'กำลังสร้าง...' : `สร้างรายการ (${members.flatMap(m => m.items.filter(i => i.amount)).length})`}
             </button>
           )}
             </form>
           </div>
-        </div>
-      )}
-
-      {/* ผู้จ่ายเงิน — ระบบเลือกอัตโนมัติจาก settings (read-only) */}
-      {canManage && project && (
-        <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-5 mb-6">
-          <button
-            type="button"
-            onClick={() => setShowPayer(v => !v)}
-            className="w-full flex items-center gap-2 text-left"
-          >
-            <CreditCard size={16} className="text-orange shrink-0" />
-            <span className="text-base font-semibold text-warm-900 dark:text-disc-text">
-              ผู้จ่ายเงิน
-              <span className="ml-1 font-normal text-warm-400 dark:text-disc-muted">({assignedPayers.length || (eligiblePayers.length ? 1 : 0)})</span>
-            </span>
-            <ChevronDown size={16} className={`ml-auto text-warm-400 dark:text-disc-muted transition-transform ${showPayer ? 'rotate-180' : ''}`} />
-          </button>
-
-          {showPayer && (eligiblePayers.length === 0 ? (
-            <p className="text-sm text-warm-400 dark:text-disc-muted mt-3">
-              ไม่มีผู้จ่ายเงินที่ครอบคลุมจังหวัด{project.province ? `${project.province}` : 'นี้'} —
-              เพิ่มได้ที่ <Link href="/docs/settings" className="text-orange hover:underline">ตั้งค่าเอกสาร</Link>
-            </p>
-          ) : (
-            <div className="mt-3">
-              <ul className="border border-warm-200 dark:border-disc-border rounded-lg divide-y divide-warm-100 dark:divide-disc-border overflow-hidden">
-                {(assignedPayers.length ? assignedPayers : [{
-                  discord_id:   eligiblePayers[0].discord_id,
-                  display_name: eligiblePayers[0].display_name,
-                  position:     eligiblePayers[0].position,
-                  total: 0, signed: 0,
-                }]).map(p => (
-                  <li key={p.discord_id} className="px-4 py-2.5 flex items-center justify-between gap-3">
-                    <span className="min-w-0 flex items-center gap-2">
-                      <CheckCircle size={16} className="text-green-500 shrink-0" />
-                      <span className="min-w-0">
-                        <span className="block text-base font-medium text-warm-900 dark:text-disc-text truncate">{p.display_name}</span>
-                        <span className="block text-sm text-warm-500 dark:text-disc-muted truncate">{p.position}</span>
-                      </span>
-                    </span>
-                    {p.total > 0 && (
-                      <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400 shrink-0">
-                        เซ็นแล้ว {p.signed}/{p.total}
-                      </span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-              <p className="text-xs text-warm-400 dark:text-disc-muted mt-2">
-                ระบบเลือกผู้จ่ายอัตโนมัติจาก<Link href="/docs/settings" className="text-orange hover:underline">ตั้งค่าเอกสาร</Link> (ผู้ดูแลจังหวัด{project.province ? `${project.province}` : 'นี้'}) · ถ้าผู้เบิกเป็นผู้จ่ายเอง ระบบสลับเป็นผู้จ่ายสำรองให้อัตโนมัติ
-              </p>
-            </div>
-          ))}
         </div>
       )}
 
@@ -646,6 +691,8 @@ export default function DocProjectView({ project: initialProject, initialEntries
         canManage={canManage}
         currentDiscordId={currentDiscordId}
         onChange={setEntries}
+        eligiblePayers={eligiblePayers}
+        eventId={eventId}
       />
 
       {/* ล้างบิลทั้งหมด */}

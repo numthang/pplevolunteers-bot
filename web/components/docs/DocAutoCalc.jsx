@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Calculator, Search, X } from 'lucide-react'
+import { Calculator, Search, X, ChevronDown } from 'lucide-react'
 import { calcMeals, FOOD_RATES, calcSpeakerCeiling, SPEAKER_RULES, calcVenueCeiling, TRAVEL_INDIVIDUAL_TIERS } from '@/config/fund69-rules.js'
 
 const TRAVEL_IN_PROVINCE_RATE = TRAVEL_INDIVIDUAL_TIERS[0].ceiling  // ในจังหวัด 300 บ./คน
@@ -118,7 +118,7 @@ function Check({ label, checked, disabled, onChange }) {
   )
 }
 
-export default function DocAutoCalc({ eventDate, eventEndDate, participantCount, isMobile: isMobileProp = false, projectBudget = null, onBudgetChange, onSubmit, saving }) {
+export default function DocAutoCalc({ eventDate, eventEndDate, participantCount, isMobile: isMobileProp = false, projectBudget = null, onBudgetChange, onSubmit, saving, canCreate = true, blockReason = null }) {
   const [n, setN]                       = useState(participantCount ? String(participantCount) : '')
   const [isMobile, setIsMobile]         = useState(isMobileProp)
   const [foodEnabled, setFoodEnabled]   = useState(true)   // ค่าอาหาร (มื้อหลัก) default ติ๊ก
@@ -133,6 +133,7 @@ export default function DocAutoCalc({ eventDate, eventEndDate, participantCount,
   const [venueEnabled, setVenueEnabled] = useState(false)
   const [venueAmount, setVenueAmount]   = useState('')     // default = เพดานตามจำนวนคน (auto-fill ตอนติ๊ก)
   const [soundEnabled, setSoundEnabled] = useState(false)
+  const [showItems, setShowItems]       = useState(false)
   const [soundAmount, setSoundAmount]   = useState(2000)
   const [suppliesEnabled, setSuppliesEnabled] = useState(false)
   const [suppliesAmount, setSuppliesAmount]   = useState(500)
@@ -172,15 +173,25 @@ export default function DocAutoCalc({ eventDate, eventEndDate, participantCount,
 
     // ดึงข้อมูล meal ครั้งเดียว แล้วใช้ซ้ำเมื่อต้อง scale
     let mealMeta = null
+    let durationHours = 0
     if (eventDate) {
       const startTime    = eventDate.split('T')[1] || '09:00'
-      const endTime      = (eventEndDate || eventDate).split('T')[1] || '17:00'
       const startDateStr = eventDate.split('T')[0]
-      const endDateStr   = (eventEndDate || eventDate).split('T')[0]
-      const daysDiff     = (new Date(endDateStr) - new Date(startDateStr)) / 86400000
-      const [sh, sm]     = startTime.split(':').map(Number)
-      const [eh, em]     = endTime.split(':').map(Number)
-      const durationHours = daysDiff * 24 + ((eh * 60 + em) - (sh * 60 + sm)) / 60
+      // ถ้าไม่มี eventEndDate → default end = start + 4 ชม.
+      let endTime, endDateStr
+      if (eventEndDate) {
+        endTime    = eventEndDate.split('T')[1] || '17:00'
+        endDateStr = eventEndDate.split('T')[0]
+      } else {
+        const [sth, stm] = startTime.split(':').map(Number)
+        const endMins    = sth * 60 + stm + 240  // +4 ชม.
+        endTime    = `${String(Math.floor(endMins / 60) % 24).padStart(2, '0')}:${String(endMins % 60).padStart(2, '0')}`
+        endDateStr = startDateStr
+      }
+      const daysDiff = (new Date(endDateStr) - new Date(startDateStr)) / 86400000
+      const [sh, sm] = startTime.split(':').map(Number)
+      const [eh, em] = endTime.split(':').map(Number)
+      durationHours  = daysDiff * 24 + ((eh * 60 + em) - (sh * 60 + sm)) / 60
       const isOvernightMiddleDay = daysDiff > 1
       const { main, snack } = calcMeals({ startTime, endTime, durationHours, isOvernightMiddleDay })
       mealMeta = { main, snack, rate: FOOD_RATES[venueType] }
@@ -230,6 +241,7 @@ export default function DocAutoCalc({ eventDate, eventEndDate, participantCount,
           amount,
           detail:       `${rate.toLocaleString()} บ./ชม. × ${hrs} ชม. = ${amount.toLocaleString()} บ.`,
           isIndividual: false,
+          overrideData: { duration: String(hrs) },
         })
       }
     }
@@ -256,6 +268,7 @@ export default function DocAutoCalc({ eventDate, eventEndDate, participantCount,
         amount,
         detail:       amount ? `${amount.toLocaleString()} บ.` : 'กรุณาระบุยอด',
         isIndividual: false,
+        overrideData: durationHours > 0 ? { duration: String(Math.round(durationHours)) } : undefined,
       })
     }
 
@@ -395,16 +408,17 @@ export default function DocAutoCalc({ eventDate, eventEndDate, participantCount,
       const item = proposal[i]
       const r    = recipients[i]
       // ไม่บังคับเลือกผู้รับ — สร้างได้เลย กำหนดผู้รับทีหลังใน DocEntryList ได้ (member_discord_id nullable)
+      const base = { itemType: item.itemType, description: item.description, amount: item.amount, overrideData: item.overrideData ?? undefined }
       if (item.noMember) {
-        entries.push({ memberDiscordId: null, itemType: item.itemType, description: item.description, amount: item.amount })
+        entries.push({ memberDiscordId: null, ...base })
       } else if (item.isIndividual) {
         if (r.length) {
-          for (const m of r) entries.push({ memberDiscordId: m.discord_id, itemType: item.itemType, description: item.description, amount: item.amount })
+          for (const m of r) entries.push({ memberDiscordId: m.discord_id, ...base })
         } else {
-          entries.push({ memberDiscordId: null, itemType: item.itemType, description: item.description, amount: item.amount })
+          entries.push({ memberDiscordId: null, ...base })
         }
       } else {
-        entries.push({ memberDiscordId: r?.discord_id ?? null, itemType: item.itemType, description: item.description, amount: item.amount })
+        entries.push({ memberDiscordId: r?.discord_id ?? null, ...base })
       }
     }
     const ok = await onSubmit(entries, parseInt(n))
@@ -449,14 +463,6 @@ export default function DocAutoCalc({ eventDate, eventEndDate, participantCount,
         </Field>
       </div>
 
-      {/* วิธีคำนวณ — global (อยู่คู่กับกรอบงบ) */}
-      <Field label="วิธีคำนวณ" hint={hasBudget ? undefined : 'ใส่กรอบงบก่อนถึงจะปรับได้ — ตอนนี้คิดตามเพดานกฎ'}>
-        <select value={budgetMode} onChange={e => setBudgetMode(e.target.value)} disabled={!hasBudget} className={`${inputCls} disabled:opacity-50`}>
-          <option value="budget">ตามกรอบงบ — ตัดให้พอดีงบ</option>
-          <option value="max">สูงสุด — ตามเพดานกฎกองทุน</option>
-        </select>
-      </Field>
-
       {/* ประเภทกิจกรรม */}
       <Field label="ประเภทกิจกรรม">
         <div className="space-y-2">
@@ -466,17 +472,32 @@ export default function DocAutoCalc({ eventDate, eventEndDate, participantCount,
             onChange={() => toggleMobile(!isMobile)}
           />
           <Check
-            label="จัดที่โรงแรม / รีสอร์ท (เรทอาหาร·เบรก·สถานที่สูงขึ้น)"
+            label="จัดที่โรงแรม / รีสอร์ท"
             checked={venueType === 'hotel'}
             onChange={() => setVenueType(v => v === 'hotel' ? 'normal' : 'hotel')}
           />
         </div>
       </Field>
 
+      {/* วิธีคำนวณ — global (อยู่คู่กับกรอบงบ) */}
+      <Field label="วิธีคำนวณ" hint={hasBudget ? undefined : 'ใส่กรอบงบก่อนถึงจะปรับได้ — ตอนนี้คิดตามเพดานกฎ'}>
+        <select value={budgetMode} onChange={e => setBudgetMode(e.target.value)} disabled={!hasBudget} className={`${inputCls} disabled:opacity-50`}>
+          <option value="budget">ตามกรอบงบ — ตัดให้พอดีงบ</option>
+          <option value="max">สูงสุด — ตามเพดานกฎกองทุน</option>
+        </select>
+      </Field>
+
       {/* รายการเบิก — ติ๊กรายการไหน option ของรายการนั้นโผล่ใต้เลย */}
       <div>
-        <p className={`${labelCls} mb-2`}>รายการเบิก</p>
-        <div className="space-y-2">
+        <button
+          type="button"
+          onClick={() => setShowItems(v => !v)}
+          className="flex items-center gap-1.5 mb-2 group"
+        >
+          <ChevronDown size={15} className={`text-warm-400 dark:text-disc-muted transition-transform ${showItems ? '' : '-rotate-90'}`} />
+          <span className={`${labelCls} group-hover:text-orange transition-colors`}>รายการเบิกเพิ่มเติม</span>
+        </button>
+        {showItems && <div className="space-y-2">
 
           {/* ค่าเดินทาง */}
           <div>
@@ -549,10 +570,10 @@ export default function DocAutoCalc({ eventDate, eventEndDate, participantCount,
             )}
           </div>
 
-          {/* ค่าเช่าเครื่องเสียง */}
+          {/* ค่าเช่าเครื่องเสียง — เบิกไม่ได้ถ้าจัดในโรงแรม */}
           <div>
-            <Check label="ค่าเช่าเครื่องเสียง" checked={soundEnabled} onChange={() => setSoundEnabled(v => !v)} />
-            {soundEnabled && (
+            <Check label="ค่าเช่าเครื่องเสียง" checked={soundEnabled} disabled={venueType === 'hotel'} onChange={() => setSoundEnabled(v => !v)} />
+            {soundEnabled && venueType !== 'hotel' && (
               <div className="mt-2 ml-7">
                 <input type="number" min="0" step="100" value={soundAmount} onChange={e => setSoundAmount(e.target.value)} placeholder="ยอดเงิน" className={inputCls} />
               </div>
@@ -569,7 +590,7 @@ export default function DocAutoCalc({ eventDate, eventEndDate, participantCount,
             )}
           </div>
 
-        </div>
+        </div>}
       </div>
 
       {!eventDate && (foodEnabled || snackEnabled) && (
@@ -630,11 +651,11 @@ export default function DocAutoCalc({ eventDate, eventEndDate, participantCount,
             <button
               type="button"
               onClick={handleCreate}
-              disabled={saving || !!budgetError}
-              title={budgetError || undefined}
+              disabled={saving || !!budgetError || !canCreate}
+              title={blockReason || budgetError || undefined}
               className="px-6 py-2.5 bg-orange text-white text-base font-semibold rounded-lg hover:bg-orange-light disabled:opacity-50 disabled:cursor-not-allowed transition"
             >
-              {saving ? 'กำลังสร้าง...' : budgetError ? 'เคลียร์งบไม่ได้' : `สร้างเอกสาร ${proposal.length} รายการ`}
+              {saving ? 'กำลังสร้าง...' : !canCreate ? 'ตั้งผู้จ่ายก่อน' : budgetError ? 'เคลียร์งบไม่ได้' : `สร้างเอกสาร ${proposal.length} รายการ`}
             </button>
             {grandTotal > 0 && (
               <div className="text-right">

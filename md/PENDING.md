@@ -261,7 +261,24 @@
 - [ ] **แนบใบลงทะเบียน** — PDF โครงการควรรองรับการแนบใบลงทะเบียนเพิ่มเติมได้
 - [ ] **Bot command `/link-ngs`** — ให้สมาชิกค้นชื่อตัวเองใน `ngs_member_cache` แล้วผูก `dc_members.member_id` ถาวร (ทางเลือก B ของ ngs link flow; ตอนนี้ใช้ sign-page self-link แทน)
 - [ ] **Transport แบบแยกใบรายบุคคล (rich)** — ตอนนี้ค่าเดินทางใช้ generic plaintext (description) แบบทุกคนเท่ากัน/ใบรวม. อนาคตทำแบบ rich แยกใบรายบุคคล (ตาราง per-person) ใช้ `transport.docx` structured. ตัดสินใจ 2026-06-21 ว่า defer ไว้ก่อน
-- [ ] **Payer auto-suggest / full-auto** — ตอนนี้เพิ่ม payer ผ่าน MemberSearch ในหน้า settings (manual). อนาคตถ้า payer setup เป็นภาระ (หลาย guild / ยศเปลี่ยนบ่อย) → ทำ "รายชื่อแนะนำตามตำแหน่ง" (query `dc_guild_roles WHERE permission IN province_coordinator/regional_coordinator/district_coordinator` → member ที่ถือ role นั้น → reuse `resolveAccess`+`gatedScopeNodes`) หรือข้ามไป full-auto เลย (payer = ผู้ประสานงานจังหวัด, ถ้าซ้ำ payee → กองเลขาภาค). ตัดสินใจ 2026-06-21 ว่ายังไม่ทำเพราะ list เล็ก ตั้งครั้งเดียว ไม่คุ้ม surface
+- ✅ **Payer redesign — role-based auto + manual override (เสร็จ local 2026-06-24)** — เปลี่ยนจาก manual `docs_payers` เป็น source หลัก → query `dc_members` ตาม role:
+  - **Source of truth:** payer ราย entry (`docs_activity_entries.payer_discord_id`) เท่านั้น · `docs_projects.payer_discord_id` = dead column (เลิกเขียน)
+  - **Pool `getPayersForEvent(guildId, province)`** — รวมทุก level dedupe (ไม่ fallback หยุด):
+    1. `province_coordinator` ครอบจังหวัด — เรียง scope น้อยก่อน → `primary_province` ตรง → ชื่อ
+    2. `regional_coordinator` ครอบจังหวัด (region/subregion expand finance mode)
+    3. `docs_payers` manual — **กรองด้วย scope coverage** เหมือน role-based (gatedScopeNodes)
+    - **position = ชื่อ role ที่ให้ permission** (province_coordinator→"ผู้ประสานงานจังหวัด", regional→"ผู้ประสานงานภาค") ไม่ใช่ docs_payers.position · dedup เก็บ level แรก
+  - **Auto-assign** (`autoAssignPayers`, idempotent): default = pool[0] คนเดียวทั้งโครงการ · ถ้า default==recipient → คนถัดไปใน pool ที่ ≠ recipient · **ข้าม entry ที่ยังไม่มีผู้รับ** (member_discord_id NULL) → resolve ตอนกำหนดผู้รับ (trigger ใน PATCH entries/[id])
+  - **Manual override:** dropdown ที่ group header รายผู้รับ (`DocEntryList`) · pool ตัด recipient ออก · POST `/api/docs/projects/[id]/set-payer` `{recipientDiscordId, payerDiscordId}` → `setRecipientGroupPayer` (gen token ใหม่ + reset ลายเซ็น payer เดิมถ้าเซ็นแล้ว) · validate payer≠recipient
+  - **กล่อง "ผู้จ่ายเงิน" บนหน้า** = summary read-only (แก้ที่ group header เท่านั้น)
+  - แก้: `payers.js`, `entries.js`, `set-payer/route.js`, `entries/[id]/route.js`, `DocEntryList.jsx`, `DocProjectView.jsx` · 175 tests ผ่าน · build ผ่าน
+  - **เหลือ:** deploy prod + clear stale assignment (Tee `1098111730015543386` นอกราชบุรี + teerapon `899627308967690270` ในนครปฐม ที่ยังไม่เซ็น — SQL อยู่ใน migration.sql)
+  - **nuance จดไว้:** คนถือหลาย role permission เดียวกัน (Jatsada regional ผ่าน "รองเลขาธิการ") → `array_agg[1]` หยิบตัวแรก · เคสจริงไม่กระทบ (resolve ผ่าน level1)
+- ✅ **Docs v2.18.0 (2026-06-24)** — sound item type, override_data duration, payer real name, DocAutoCalc UX fixes:
+  - **Sound item type ครบทุกที่:** `ITEM_LABELS` ใน `DocProjectView` + `DocEntryList` (ไม่เคยมีมาก่อน ทำให้แสดงเป็น "sound" แทนชื่อไทย) · manual entry มี soundHours dropdown (1–8 ชม.) · `overrideData.duration` เก็บทั้ง speaker และ sound
+  - **override_data.duration ทั้ง 2 path:** auto-calc — ยก `durationHours` ออกนอก `if (eventDate)` block แล้วส่งเป็น `Math.round(durationHours)` ให้ sound · manual form — speaker ส่ง `speakerHours`, sound ส่ง `soundHours` → PDF `{{duration}} ชั่วโมง` แสดงถูกต้อง
+  - **Payer dropdown แสดงชื่อจริง:** `getPayersForEvent` / `queryPayersByPermission` JOIN `ngs_member_cache n ON n.source_id = mr.member_id` → `COALESCE(n.first_name, mr.firstname)` · dropdown option แสดงชื่อจริงถ้ามี fallback display_name · `enrichPayerInfo` ใช้ real name ก่อน
+  - **DocAutoCalc:** end time fallback +4h เมื่อไม่มี `eventEndDate` · sound checkbox disabled (ไม่ hidden) เมื่อ `venueType === 'hotel'` เหมือน สัญจร · รายการเบิก collapsible toggle (ซ่อน by default)
 
 ---
 

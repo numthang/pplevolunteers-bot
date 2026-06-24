@@ -142,7 +142,7 @@ export const ACCOMMODATION_RATES = {
 // ──────────────────────────────────────────────
 
 export const ALLOWED_ITEMS_BY_TYPE = {
-  normal: ['food', 'speaker', 'travel', 'venue', 'accommodation', 'supplies', 'equipment', 'photo'],
+  normal: ['food', 'speaker', 'travel', 'venue', 'accommodation', 'supplies', 'equipment', 'photo', 'sound'],
   mobile: ['food', 'travel', 'accommodation', 'supplies', 'equipment', 'photo'],
 }
 
