@@ -438,8 +438,8 @@ export default function DocAutoCalc({ eventDate, eventEndDate, participantCount,
   // ข้ามถ้ามีค่าเดินทางจ่ายตามจริง (ยอดยังไม่รู้ กรอกระยะทางทีหลัง)
   const budgetVal2     = parseFloat(budget) || 0
   const hasDeferred    = !!proposal?.some(it => it.noMember)
-  const budgetError    = (proposal && budgetVal2 > 0 && !hasDeferred && grandTotal < budgetVal2)
-    ? `เคลียร์งบ ${budgetVal2.toLocaleString()} บ. ไม่ได้ — ยอดรวมตอนนี้ ${grandTotal.toLocaleString()} บ. (ขาด ${(budgetVal2 - grandTotal).toLocaleString()} บ.) เพิ่มรายการเบิก แก้ยอด หรือลดกรอบงบ`
+  const budgetWarn     = (proposal && budgetVal2 > 0 && !hasDeferred && grandTotal < budgetVal2)
+    ? `ยอดรวมตอนนี้ ${grandTotal.toLocaleString()} บ. (ขาด ${(budgetVal2 - grandTotal).toLocaleString()} บ.) เพิ่มรายการเบิก แก้ยอด หรือลดกรอบงบ`
     : null
 
   return (
@@ -607,12 +607,6 @@ export default function DocAutoCalc({ eventDate, eventEndDate, participantCount,
 
       {proposal && (
         <div className="mt-5 space-y-3">
-          {budgetError && (
-            <div className="flex items-start gap-2 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900 text-sm text-red-700 dark:text-red-300">
-              <span className="shrink-0 font-bold">⚠</span>
-              <span>{budgetError}</span>
-            </div>
-          )}
           {proposal.map((item, i) => (
             <div key={i} className="border border-warm-200 dark:border-disc-border rounded-lg p-4">
               <div className="flex items-start justify-between gap-4 mb-1">
@@ -647,15 +641,21 @@ export default function DocAutoCalc({ eventDate, eventEndDate, participantCount,
             </div>
           ))}
 
+          {budgetWarn && (
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-sm text-amber-700 dark:text-amber-300">
+              <span className="shrink-0 font-bold">⚠</span>
+              <span>{budgetWarn}</span>
+            </div>
+          )}
           <div className="flex items-center justify-between pt-1">
             <button
               type="button"
               onClick={handleCreate}
-              disabled={saving || !!budgetError || !canCreate}
-              title={blockReason || budgetError || undefined}
+              disabled={saving || !canCreate}
+              title={blockReason || undefined}
               className="px-6 py-2.5 bg-orange text-white text-base font-semibold rounded-lg hover:bg-orange-light disabled:opacity-50 disabled:cursor-not-allowed transition"
             >
-              {saving ? 'กำลังสร้าง...' : !canCreate ? 'ตั้งผู้จ่ายก่อน' : budgetError ? 'เคลียร์งบไม่ได้' : `สร้างเอกสาร ${proposal.length} รายการ`}
+              {saving ? 'กำลังสร้าง...' : !canCreate ? 'ตั้งผู้จ่ายก่อน' : `สร้างเอกสาร ${proposal.length} รายการ`}
             </button>
             {grandTotal > 0 && (
               <div className="text-right">
