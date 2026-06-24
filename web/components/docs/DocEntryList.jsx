@@ -39,6 +39,12 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
   const debounceRef = useRef(null)
   const memberWrapRef = useRef(null)
 
+  useEffect(() => {
+    const h = e => { if (memberWrapRef.current && !memberWrapRef.current.contains(e.target)) setMemberOpen(false) }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [])
+
   // inline assign state (for unassigned entries)
 
   function signBadge(label, token, signed) {
@@ -257,7 +263,6 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
                                 if (!q.trim() && recentMembers.length > 0) setMemberOpen(true)
                                 else if (q.trim() && memberResults.length > 0) setMemberOpen(true)
                               }}
-                              onBlur={() => setTimeout(() => setMemberOpen(false), 150)}
                               placeholder="ค้นหาผู้รับเงิน..."
                               className={`${inputCls} w-full`}
                             />
