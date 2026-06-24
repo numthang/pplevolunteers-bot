@@ -293,13 +293,13 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
 
 
         {/* Nav links */}
-        <div className="flex items-center gap-1 ml-4">
+        <div className="flex items-center gap-0 ml-1">
           {/* สื่อ dropdown (quote + watermark) — เฉพาะ BOT section */}
           {isDiscordApp && mediaLinks.length > 0 && (
             <div className="relative" ref={mediaRef}>
               <button
                 onClick={() => setMediaOpen(o => !o)}
-                className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-base transition ${
+                className={`flex items-center gap-1 px-1.5 py-1 rounded-md text-base transition ${
                   mediaLinks.some(l => isLinkActive(l.href))
                     ? activeClass
                     : inactiveClass
@@ -338,7 +338,7 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
                 <div key={l.href} className="relative flex items-center" ref={docRef}>
                   <Link
                     href="/docs"
-                    className={`px-3 py-1 rounded-l-md text-base transition flex items-center gap-1.5 ${isActive ? activeClass : inactiveClass}`}
+                    className={`px-1.5 py-1 rounded-l-md text-base transition flex items-center gap-1 ${isActive ? activeClass : inactiveClass}`}
                   >
                     <Ic d={ICONS[l.icon]} className="w-7 h-7 shrink-0" />
                     <span className="hidden md:inline">{l.label}</span>
@@ -379,7 +379,7 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
                 <div key={l.href} className="relative flex items-center" ref={campaignRef}>
                   <Link
                     href="/calling/campaigns"
-                    className={`px-3 py-1 rounded-l-md text-base transition flex items-center gap-1.5 ${isActive ? activeClass : inactiveClass}`}
+                    className={`px-1.5 py-1 rounded-l-md text-base transition flex items-center gap-1 ${isActive ? activeClass : inactiveClass}`}
                   >
                     <Ic d={ICONS[l.icon]} className="w-7 h-7 shrink-0" />
                     <span className="hidden md:inline">{l.label}</span>
@@ -418,8 +418,8 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
               <Link
                 key={l.href}
                 href={l.href}
-                className={`flex px-3 py-1 rounded-md text-base transition items-center gap-1.5 ${
-                  (l.href === '/calling/stats' || l.href === '/admin/logs') ? 'hidden md:flex' : 'flex'
+                className={`flex px-1.5 py-1 rounded-md text-base transition items-center gap-1 ${
+                  (l.href === '/calling/stats' || l.href === '/admin/logs' || l.href === '/calling' || l.href === '/docs/settings') ? 'hidden md:flex' : 'flex'
                 } ${
                   isLinkActive(l.href, l.exact) ? activeClass : inactiveClass
                 }`}
