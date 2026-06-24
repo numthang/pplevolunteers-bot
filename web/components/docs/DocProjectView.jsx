@@ -364,13 +364,12 @@ export default function DocProjectView({ project: initialProject, initialEntries
     <div>
       {/* Header */}
       {project ? (
-        <div className="mb-6 flex items-start justify-between gap-4 flex-wrap">
+        <div className="mb-3 flex items-start justify-between gap-4 flex-wrap">
           <div>
             <div className="flex items-center gap-3 mb-1 flex-wrap">
-              <h1 className="text-2xl font-bold text-warm-900 dark:text-disc-text">{project.event_name}</h1>
-              <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${PROJECT_STATUS_COLOR[project.status] || PROJECT_STATUS_COLOR.draft}`}>
+              <h1 className="text-2xl font-bold text-warm-900 dark:text-disc-text">{project.event_name} <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${PROJECT_STATUS_COLOR[project.status] || PROJECT_STATUS_COLOR.draft}`}>
                 {PROJECT_STATUS_LABEL[project.status]}
-              </span>
+              </span></h1>
               {project.is_mobile && (
                 <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-orange/10 text-orange">สัญจร</span>
               )}
@@ -395,7 +394,7 @@ export default function DocProjectView({ project: initialProject, initialEntries
           )}
         </div>
       ) : canManage ? (
-        <div className="mb-6">
+        <div className="mb-3">
           {eventName && <h1 className="text-2xl font-bold text-warm-900 dark:text-disc-text">{eventName}</h1>}
           <p className="text-base text-warm-500 dark:text-disc-muted mt-1">
             {eventDate ? `${formatDate(eventDate)}${eventEndDate ? ` – ${formatDate(eventEndDate)}` : ''} · ` : ''}ตั้งค่ารายการเบิก
@@ -405,7 +404,7 @@ export default function DocProjectView({ project: initialProject, initialEntries
 
       {/* Stats — compact inline row */}
       {project && (
-        <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl px-4 py-3 mb-6 flex flex-wrap items-center gap-x-6 gap-y-2">
+        <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl px-4 py-3 mb-3 flex flex-wrap items-center gap-x-6 gap-y-2">
           {[
             { label: 'รายการ', value: entries.length, cls: 'text-warm-900 dark:text-disc-text' },
             { label: 'ผู้รับเซ็น', value: signedCount, cls: 'text-blue-600 dark:text-blue-400' },
@@ -451,7 +450,7 @@ export default function DocProjectView({ project: initialProject, initialEntries
 
       {/* payer dropdown — ผู้จ่ายระดับโครงการ (เซ็ตให้ถูกก่อนสร้างบิล) */}
       {canManage && (
-        <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-5 mb-6">
+        <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-5 mb-3">
           <div className="flex flex-col sm:flex-row sm:items-center gap-2">
             <div className="flex items-center gap-2 shrink-0">
               <CreditCard size={16} className="text-orange shrink-0" />
@@ -486,7 +485,7 @@ export default function DocProjectView({ project: initialProject, initialEntries
 
       {/* เลือกโหมดเพิ่มบิล: คำนวณอัตโนมัติ (default) / เพิ่มเอง */}
       {canManage && (
-        <div className="mb-6">
+        <div className="mb-3">
           <div className="flex gap-2 mb-4 border-b border-warm-200 dark:border-disc-border">
             {[{ key: 'auto', label: 'อัตโนมัติ' }, { key: 'manual', label: 'กำหนดเอง' }, { key: 'act', label: 'ACT' }].map(t => (
               <button
@@ -592,7 +591,7 @@ export default function DocProjectView({ project: initialProject, initialEntries
           </div>
 
           <div className={billMode !== 'manual' ? 'hidden' : ''}>
-            <form onSubmit={handleSubmit} className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-5 mb-6 space-y-4">
+            <form onSubmit={handleSubmit} className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-5 mb-3 space-y-4">
           {formTotal > 0 && (
             <div className="flex justify-end">
               <span className="text-base font-semibold text-warm-900 dark:text-disc-text">รวม {formTotal.toLocaleString()} บ.</span>

@@ -465,7 +465,7 @@ export default function DocAutoCalc({ eventDate, eventEndDate, participantCount,
     : null
 
   return (
-    <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-5 mb-6 space-y-4">
+    <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-1.5 mb-4 space-y-3">
 
       {/* จำนวนคน + กรอบงบ */}
       <div className="grid grid-cols-2 gap-3">
@@ -628,10 +628,10 @@ export default function DocAutoCalc({ eventDate, eventEndDate, participantCount,
       </button>
 
       {proposal && (
-        <div className="mt-5 space-y-3">
+        <div className="mt-3 space-y-2">
           {proposal.map((item, i) => (
-            <div key={i} className="border border-warm-200 dark:border-disc-border rounded-lg p-4">
-              <div className="flex items-start justify-between gap-4 mb-1">
+            <div key={i} className="border border-warm-200 dark:border-disc-border rounded-lg p-1.5">
+              <div className="flex items-start justify-between gap-2 mb-1">
                 <span className="text-base font-medium text-warm-900 dark:text-disc-text">{item.label}</span>
                 <div className="flex items-center gap-2 shrink-0">
                   <input
@@ -685,7 +685,7 @@ export default function DocAutoCalc({ eventDate, eventEndDate, participantCount,
               title={blockReason || undefined}
               className="px-6 py-2.5 bg-orange text-white text-base font-semibold rounded-lg hover:bg-orange-light disabled:opacity-50 disabled:cursor-not-allowed transition"
             >
-              {saving ? 'กำลังสร้าง...' : !canCreate ? 'ตั้งผู้จ่ายก่อน' : `สร้างเอกสาร ${proposal.length} รายการ`}
+              {saving ? 'กำลังสร้าง...' : !canCreate ? 'ตั้งผู้จ่ายก่อน' : `สร้าง ${proposal.length} รายการ`}
             </button>
             {grandTotal > 0 && (
               <div className="text-right">

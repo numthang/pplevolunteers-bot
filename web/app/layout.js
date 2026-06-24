@@ -38,7 +38,7 @@ export default async function RootLayout({ children }) {
         <Providers session={session}>
           <NextTopLoader color="#ff6a13" showSpinner={false} />
           <Nav session={session} guilds={guilds} currentGuildId={currentGuildId} enabledFeatures={enabledFeatures} />
-          <main className="max-w-5xl mx-auto px-3 sm:px-4 pt-3 pb-6">
+          <main className="max-w-5xl mx-auto px-1 sm:px-4 pt-3 pb-4">
             {noGuild ? <NoGuildNotice /> : children}
           </main>
         </Providers>
