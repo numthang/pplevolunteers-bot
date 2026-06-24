@@ -3,7 +3,6 @@
 import { useState, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { Pencil, Trash2, Check, X } from 'lucide-react'
-import { calcTravelCeiling } from '@/config/fund69-rules.js'
 
 const ITEM_LABELS = {
   food:          'ค่าอาหาร',
@@ -41,72 +40,6 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
   const memberWrapRef = useRef(null)
 
   // inline assign state (for unassigned entries)
-  const [assigningId, setAssigningId]       = useState(null)
-  const [assignQuery, setAssignQuery]       = useState('')
-  const [assignResults, setAssignResults]   = useState([])
-  const [assigning, setAssigning]           = useState(false)
-  const [assignDistance, setAssignDistance] = useState('')  // กม. — ใช้กับใบค่าเดินทางตามจริง (ยอด 0)
-  const assignDebounceRef = useRef(null)
-
-  function onAssignQueryChange(q) {
-    setAssignQuery(q)
-    clearTimeout(assignDebounceRef.current)
-    if (!q.trim()) { setAssignResults([]); return }
-    assignDebounceRef.current = setTimeout(async () => {
-      try {
-        const res = await fetch(`/api/docs/members?q=${encodeURIComponent(q)}&limit=10`)
-        const d = await res.json()
-        setAssignResults(d.data || [])
-      } catch {}
-    }, 300)
-  }
-
-  async function confirmAssign(entryId, m) {
-    const entry = entries.find(e => e.id === entryId)
-    // ใบค่าเดินทางตามจริง (ยอด 0) — ต้องกรอกระยะทางก่อน → คิด rate ตาม tier
-    const isTravelBlank = entry?.item_type === 'travel' && Number(entry.amount) === 0
-    const body = { memberDiscordId: m.discord_id }
-    if (isTravelBlank) {
-      if (assignDistance === '') { alert('กรอกระยะทาง (กม.) ก่อน'); return }
-      const km   = parseFloat(assignDistance) || 0
-      const rate = calcTravelCeiling(km) ?? 0  // >700 กม. = null → 0 (ไปกรอกยอดจริงผ่านแก้ไข)
-      body.amount = rate
-    }
-    setAssigning(true)
-    try {
-      const res = await fetch(`/api/docs/entries/${entryId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      })
-      if (!res.ok) throw new Error((await res.json()).error)
-      const next = entries.map(e =>
-        e.id === entryId
-          ? { ...e, member_discord_id: m.discord_id, display_name: m.display_name,
-              ...(body.amount != null ? { amount: body.amount } : {}) }
-          : e
-      )
-      setEntries(next)
-      onChange?.(next)
-      setAssigningId(null)
-      setAssignQuery('')
-      setAssignResults([])
-      setAssignDistance('')
-
-      // server auto-resolve payer ให้ entry ที่เพิ่งกำหนดผู้รับ → refetch เพื่อแสดง payer
-      try {
-        const r2 = await fetch(`/api/docs/entries?projectId=${entry.project_id}`)
-        if (r2.ok) {
-          const dd = await r2.json()
-          if (dd.data) { setEntries(dd.data); onChange?.(dd.data) }
-        }
-      } catch {}
-    } catch (err) {
-      alert('เกิดข้อผิดพลาด: ' + err.message)
-    } finally {
-      setAssigning(false)
-    }
-  }
 
   function signBadge(label, token, signed) {
     if (!token) return <span className={`${BADGE_BASE} ${BADGE_MUTED}`}>{label}</span>
@@ -150,8 +83,9 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
   }
 
   async function saveEdit(entryId) {
+    if (!editForm.memberDiscordId) { alert('กรุณาระบุผู้รับก่อนบันทึก'); return }
     const entry = entries.find(e => e.id === entryId)
-    const memberChanged = editForm.memberDiscordId && editForm.memberDiscordId !== entry?.member_discord_id
+    const memberChanged = editForm.memberDiscordId !== entry?.member_discord_id
     if (memberChanged && entry?.status === 'signed') {
       if (!confirm('รายการนี้เซ็นรับแล้ว การเปลี่ยนผู้รับเงินจะ reset ลายเซ็น — ยืนยัน?')) return
     }
@@ -285,87 +219,12 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
     <div className="space-y-4">
       {byMember.map(({ key, name, username, realName, isUnassigned, items }) => {
         const memberTotal  = items.reduce((s, e) => s + Number(e.amount || 0), 0)
-        const entryId      = items[0].id
-        const isAssigning  = assigningId === entryId
-        const isTravelBlank = items[0].item_type === 'travel' && Number(items[0].amount) === 0
         return (
-          <div key={key} className={`bg-card-bg border ${isUnassigned ? 'border-amber-300 dark:border-amber-700' : 'border-warm-200 dark:border-disc-border'} rounded-lg ${items.some(e => editingId === e.id) || isAssigning ? 'overflow-visible' : 'overflow-hidden'}`}>
+          <div key={key} className={`bg-card-bg border ${isUnassigned ? 'border-amber-300 dark:border-amber-700' : 'border-warm-200 dark:border-disc-border'} rounded-lg ${items.some(e => editingId === e.id) ? 'overflow-visible' : 'overflow-hidden'}`}>
             <div className="px-4 py-3 border-b border-warm-200 dark:border-disc-border flex items-center justify-between gap-3 bg-warm-50 dark:bg-disc-hover rounded-t-lg">
               {isUnassigned ? (
                 <div className="flex items-center gap-3 flex-1 min-w-0">
                   <span className="font-semibold text-amber-600 dark:text-amber-400">ยังไม่ระบุผู้รับ</span>
-                  {canManage && !isAssigning && (
-                    <button
-                      type="button"
-                      onClick={() => { setAssigningId(entryId); setAssignQuery(''); setAssignResults([]); setAssignDistance('') }}
-                      className="text-xs px-2 py-1 rounded border border-amber-400 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition"
-                    >
-                      กำหนดผู้รับ
-                    </button>
-                  )}
-                  {isAssigning && (
-                    <div className="flex-1 max-w-xs space-y-1.5">
-                      {isTravelBlank && (
-                        <div>
-                          <input
-                            type="number" min="0" value={assignDistance}
-                            onChange={e => setAssignDistance(e.target.value)}
-                            placeholder="ระยะทาง (กม.)"
-                            className={inputCls + ' w-full'}
-                            disabled={assigning}
-                          />
-                          {assignDistance !== '' && (() => {
-                            const km   = parseFloat(assignDistance) || 0
-                            const rate = calcTravelCeiling(km)
-                            return (
-                              <p className="text-xs text-warm-500 dark:text-disc-text mt-0.5">
-                                {rate != null
-                                  ? `${km} กม. → ${rate.toLocaleString()} บ.`
-                                  : `${km} กม. (>700) ตามจริง — กรอกยอดผ่านปุ่มแก้ไข`}
-                              </p>
-                            )
-                          })()}
-                        </div>
-                      )}
-                      <div className="relative">
-                        <input
-                          autoFocus
-                          type="text"
-                          value={assignQuery}
-                          onChange={e => onAssignQueryChange(e.target.value)}
-                          placeholder="ค้นชื่อสมาชิก..."
-                          className={inputCls + ' w-full'}
-                          disabled={assigning}
-                        />
-                        {assignResults.length > 0 && (
-                          <ul className="absolute z-20 left-0 right-0 mt-1 bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                            {assignResults.map(m => (
-                              <li key={m.discord_id}>
-                                <button
-                                  type="button"
-                                  onClick={() => confirmAssign(entryId, m)}
-                                  className="w-full text-left px-3 py-2 text-sm hover:bg-warm-50 dark:hover:bg-disc-hover transition text-warm-900 dark:text-disc-text"
-                                >
-                                  <span className="font-medium">{m.display_name}</span>
-                                  {m.username && <span className="ml-1.5 text-xs text-warm-500 dark:text-disc-text">@{m.username}</span>}
-                                  {(m.first_name || m.last_name) && (
-                                    <span className="ml-1.5 text-warm-500 dark:text-disc-text">
-                                      ({[m.first_name, m.last_name].filter(Boolean).join(' ')})
-                                    </span>
-                                  )}
-                                </button>
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                  {isAssigning && (
-                    <button type="button" onClick={() => setAssigningId(null)} className="text-warm-400 hover:text-warm-600 dark:hover:text-disc-text">
-                      <X size={14} />
-                    </button>
-                  )}
                 </div>
               ) : (
                 <div className="min-w-0 flex-1">
