@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import Link from 'next/link'
 import { Pencil, Trash2, Check, X } from 'lucide-react'
 
@@ -71,7 +71,11 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
   function onMemberQueryChange(q) {
     setEditForm(f => ({ ...f, memberName: q, memberDiscordId: f.memberDiscordId }))
     clearTimeout(debounceRef.current)
-    if (!q.trim()) { setMemberResults([]); return }
+    if (!q.trim()) {
+      setMemberResults([])
+      if (recentMembers.length > 0) setMemberOpen(true)
+      return
+    }
     debounceRef.current = setTimeout(async () => {
       try {
         const res = await fetch(`/api/docs/members?q=${encodeURIComponent(q)}&limit=10`)
