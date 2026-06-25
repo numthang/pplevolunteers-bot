@@ -218,7 +218,6 @@ async function renderVariant(buf, { quoteText, authorName, side = 'left', vertic
   ctx.fillStyle = gV;
   ctx.fillRect(0, 0, W, H);
 
-  const markW = (markImg.width / markImg.height) * markH;
   drawTinted(ctx, markImg, markX, markY, markW, markH, accent);
 
   ctx.fillStyle = accent;
