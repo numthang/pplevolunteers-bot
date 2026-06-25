@@ -2,6 +2,16 @@
 
 ---
 
+## 🤖 Discord Bot AI Chat (DM)
+
+- [ ] **Bot คุยได้เหมือน AI** — ให้ bot ตอบ DM อัตโนมัติผ่าน Claude API
+  - bot listen `messageCreate` event ใน DM channel (`ChannelType.DM`)
+  - ส่ง message history ไปหา Claude API พร้อม system prompt (บุคลิกของ bot)
+  - bot reply กลับใน DM thread เดิม
+  - use case หลัก: ส่งลิงก์เซ็นเอกสารให้ผู้รับ/ผู้จ่ายแล้ว bot คอยตอบคำถามแทนผู้ส่ง
+
+---
+
 ## 📲 LINE Messaging API
 
 - [ ] **LINE Push Notification** — ส่งแจ้งเตือน 1:1 หา user ผ่าน LINE OA ที่มีอยู่แล้ว

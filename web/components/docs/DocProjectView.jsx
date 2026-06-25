@@ -635,7 +635,7 @@ export default function DocProjectView({ project: initialProject, initialEntries
               </div>
 
               {/* Thumbnail grid */}
-              {attachments.length > 0 && (
+              {attachments.length > 0 && project?.id && (
                 <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
                   {attachments.map((att, i) => {
                     const src = `/api/docs/projects/${project.id}/attachments/${att.id}/image`

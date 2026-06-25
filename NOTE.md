@@ -1,5 +1,4 @@
 PENDING
-มี icon Dm link sign ทั้งหมด และ หน้า pending หา ผู้รับและผู้จ่าย
 
 
 End of the Day

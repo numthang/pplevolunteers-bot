@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react'
 import Link from 'next/link'
-import { Pencil, Trash2, Check, X } from 'lucide-react'
+import { Pencil, Trash2, Check, X, Copy } from 'lucide-react'
 
 const ITEM_LABELS = {
   food:          'ค่าอาหาร',
@@ -31,7 +31,26 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
   const [editingId, setEditingId] = useState(null)
   const [editForm, setEditForm]   = useState({})
   const [saving, setSaving]       = useState(false)
-  const [payerSaving, setPayerSaving] = useState(null)  // recipientDiscordId กำลังบันทึก
+  const [payerSaving, setPayerSaving] = useState(null)
+  const [copiedKey, setCopiedKey]     = useState(null)
+
+  function copySignLinks(type, groupItems, groupKey) {
+    const origin = window.location.origin
+    const lines = groupItems
+      .map(e => {
+        const token = type === 'recipient' ? e.sign_token : e.payer_sign_token
+        if (!token) return null
+        const label = ITEM_LABELS[e.item_type] || e.item_type
+        return `${label}: ${origin}/docs/sign/${token}`
+      })
+      .filter(Boolean)
+    if (!lines.length) return
+    const pendingTab = type === 'recipient' ? 'recipient' : 'payer'
+    lines.push(`\nดูรายการรออนุมัติ: ${origin}/docs/pending?tab=${pendingTab}`)
+    navigator.clipboard.writeText(lines.join('\n'))
+    setCopiedKey(`${type}-${groupKey}`)
+    setTimeout(() => setCopiedKey(null), 2000)
+  }
 
   // member search state (edit form)
   const [memberResults, setMemberResults] = useState([])
@@ -238,10 +257,23 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
                 </div>
               ) : (
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-baseline gap-1.5">
-                    <span className="font-semibold text-warm-900 dark:text-disc-text">
-                      {realName || (username ? `@${username}` : name)}
-                    </span>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {key && !key.startsWith('__') ? (
+                      <a href={`https://discord.com/users/${key}`} target="_blank" rel="noopener noreferrer"
+                        className="font-semibold text-warm-900 dark:text-disc-text hover:text-orange transition">
+                        {realName || (username ? `@${username}` : name)}
+                      </a>
+                    ) : (
+                      <span className="font-semibold text-warm-900 dark:text-disc-text">
+                        {realName || (username ? `@${username}` : name)}
+                      </span>
+                    )}
+                    <button
+                      onClick={() => copySignLinks('recipient', items, key)}
+                      className="text-warm-400 dark:text-disc-muted hover:text-orange transition" title="คัดลอกลิงก์เซ็นรับ"
+                    >
+                      {copiedKey === `recipient-${key}` ? <Check size={13} className="text-green-500" /> : <Copy size={13} />}
+                    </button>
                   </div>
                 </div>
               )}
@@ -416,6 +448,12 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
                 {items[0].payer_position && (
                   <span className="text-xs text-warm-500 dark:text-disc-text">· {items[0].payer_position}</span>
                 )}
+                <button
+                  onClick={() => copySignLinks('payer', items, key)}
+                  className="text-warm-400 dark:text-disc-muted hover:text-orange transition" title="คัดลอกลิงก์เซ็นจ่าย"
+                >
+                  {copiedKey === `payer-${key}` ? <Check size={11} className="text-green-500" /> : <Copy size={11} />}
+                </button>
               </div>
             )}
           </div>
