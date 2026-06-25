@@ -331,7 +331,9 @@ async function handleQuoteModal(interaction) {
     await interaction.editReply({ content: isAI ? '✨ AI กำลังจัดตำแหน่งและสี...' : `🎨 กำลัง render...` });
     let ciAccent;
     try {
-      const { value } = await resolveConfig(interaction.user.id, interaction.guildId, KEY_CI_ACCENT);
+      const { value: raw } = await resolveConfig(interaction.user.id, interaction.guildId, KEY_CI_ACCENT);
+      let value = raw;
+      if (typeof raw === 'string') { try { value = JSON.parse(raw); } catch { /* keep raw */ } }
       if (value && /^#[0-9a-fA-F]{6}$/.test(value)) ciAccent = value;
     } catch (err) { console.error('[quoteHandler] resolve ci accent:', err.message); }
     let { buffer: outBuf, ext, vertical, side } = await renderQuoteStyle(styleKey, buf, {
