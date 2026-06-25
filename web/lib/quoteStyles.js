@@ -14,10 +14,11 @@ export const QUOTE_STYLE_OPTIONS = [
   { value: 'quote-2-center',             label: 'center',         description: 'กลางภาพ · ดำคลุม' },
 ]
 
-// ตัวเลือก default template (มี AI เป็นตัวแรก) + ตัวเลือก "ใช้ค่าระดับล่าง" = ลบค่า (null)
+// ตัวเลือก default template (มี AI และ สุ่ม เป็นตัวแรก)
 export const QUOTE_TEMPLATE_CHOICES = [
-  { value: QUOTE_AI_KEY, label: '✨ AI จัดให้', description: 'ember-ai เลือกตำแหน่ง+สีเอง' },
+  { value: QUOTE_AI_KEY, label: '✨ AI จัดให้', description: 'Claude วิเคราะห์ภาพ เลือกตำแหน่ง+สีเอง' },
+  { value: 'random',     label: '🎲 สุ่ม',      description: 'สุ่มสไตล์จากทั้งหมด' },
   ...QUOTE_STYLE_OPTIONS,
 ]
 
-export const QUOTE_STYLE_KEYS = [QUOTE_AI_KEY, ...QUOTE_STYLE_OPTIONS.map(o => o.value)]
+export const QUOTE_STYLE_KEYS = [QUOTE_AI_KEY, 'random', ...QUOTE_STYLE_OPTIONS.map(o => o.value)]

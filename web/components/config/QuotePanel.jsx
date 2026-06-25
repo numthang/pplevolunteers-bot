@@ -125,7 +125,7 @@ function ScopeRow({ icon: Icon, label, sublabel, templateValue, watermarkValue, 
         value={templateValue}
         choices={QUOTE_TEMPLATE_CHOICES}
         onSave={onSaveTemplate}
-        placeholder="— ใช้ค่าระดับล่าง —"
+        placeholder="— ไม่ตั้ง (รับค่าจาก scope ล่าง) —"
       />
       <SettingSelect
         value={watermarkValue}
