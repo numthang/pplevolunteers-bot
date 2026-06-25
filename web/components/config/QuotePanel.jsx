@@ -35,17 +35,40 @@ function ColorInput({ value, onSave }) {
     if (ok) { setLocal(DEFAULT_ACCENT); setSaved(true); setTimeout(() => setSaved(false), 1500) }
   }
 
+  function handleTextChange(e) {
+    const v = e.target.value
+    setLocal(v.startsWith('#') ? v : '#' + v)
+  }
+
+  async function handleTextBlur(e) {
+    const v = e.target.value
+    if (!/^#[0-9a-fA-F]{6}$/.test(v)) return
+    if (v === (value || DEFAULT_ACCENT)) return
+    setSaving(true); setSaved(false)
+    const ok = await onSave(v)
+    setSaving(false)
+    if (ok) { setSaved(true); setTimeout(() => setSaved(false), 1500) }
+  }
+
   return (
     <div className="flex items-center gap-2">
       <div className="relative flex items-center gap-2 h-11 px-3 rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg flex-1 min-w-0">
         <input
           type="color"
-          value={local}
+          value={/^#[0-9a-fA-F]{6}$/.test(local) ? local : DEFAULT_ACCENT}
           onChange={e => setLocal(e.target.value)}
           onBlur={handleBlur}
           className="w-6 h-6 shrink-0 rounded cursor-pointer border-0 bg-transparent p-0"
         />
-        <span className="text-sm font-mono text-warm-700 dark:text-disc-text truncate">{local}</span>
+        <input
+          type="text"
+          value={local}
+          onChange={handleTextChange}
+          onBlur={handleTextBlur}
+          maxLength={7}
+          className="flex-1 min-w-0 text-sm font-mono bg-transparent text-warm-700 dark:text-disc-text focus:outline-none"
+          placeholder="#rrggbb"
+        />
         {value && (
           <button
             onClick={handleClear}
