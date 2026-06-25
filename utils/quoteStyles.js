@@ -169,7 +169,7 @@ async function toPng(canvas) {
 // ── Core render ───────────────────────────────────────────────────────────────
 // markScale: relative size of mark (1.0 = default)
 // gradDark:  0.0–1.0 how dark the bottom gradient is
-async function renderVariant(buf, { quoteText, authorName, side = 'left', vertical = 'bottom', markScale = 1.0, gradDark = 0.95, saturation = 0.15, fontBold = 'GSans', fontLight = 'AnakotmaiLight', accentColor }) {
+async function renderVariant(buf, { quoteText, authorName, side = 'left', vertical = 'bottom', markScale = 1.0, gradDark = 0.95, saturation = 0.15, fontBold = 'GSans', fontLight = 'AnakotmaiLight', accentColor, markExtraGap = 0, markAfterText = false }) {
   const accent = accentColor || ORANGE;
   const isRight = side === 'right';
   const isTop   = vertical === 'top';
@@ -197,8 +197,14 @@ async function renderVariant(buf, { quoteText, authorName, side = 'left', vertic
   const textX        = isRight ? W - maxW - pad - barW - barGap - 4 : pad + barW + barGap + 4;
   const barX         = isRight ? W - pad - barW : pad;
   // top: mark ↓ pad, then text block below it. bottom: text block ↑ pad, mark above it.
-  const markY        = isTop ? pad : H - pad - textH - markGap - markH;
-  const textBlockTop = isTop ? pad + markH + markGap : H - pad - textH;
+  // markAfterText=true (top only): text ก่อน แล้ว mark ใต้บล็อก
+  const extraGap     = Math.round(pad * markExtraGap);
+  const markY        = isTop
+    ? (markAfterText ? pad + textH + markGap + extraGap : pad)
+    : H - pad - textH - markGap - markH - extraGap;
+  const textBlockTop = isTop
+    ? (markAfterText ? pad : pad + markH + markGap + extraGap)
+    : H - pad - textH;
 
   const OPEN_MARKS  = ['double_open', 'classic_open', 'block_open', 'outline_open', 'big_open'];
   const CLOSE_MARKS = ['double_close', 'classic_close', 'block_close', 'outline_close'];
@@ -405,8 +411,8 @@ async function renderEmberAI(buf, opts) {
   return renderVariant(buf, { ...opts, side, vertical, saturation, markScale: 0.7, gradDark: 0.98 });
 }
 
-const ember = (side, vertical) => (buf, opts) =>
-  renderVariant(buf, { ...opts, side, vertical, markScale: 0.7, gradDark: 0.98 });
+const ember = (side, vertical, extra = {}) => (buf, opts) =>
+  renderVariant(buf, { ...opts, side, vertical, markScale: 0.7, gradDark: 0.98, ...extra });
 
 // ── quote-2-center: ข้อความกลางภาพ, BG หรี่ + ดำคลุม 75%, Google Sans (มีหัว) ──
 // supersample 2x แล้วย่อ = ขอบคม. ใช้ fitFont/lsDraw ตัวเดียวกับ quote-1
@@ -462,10 +468,10 @@ async function renderCenter(buf, { quoteText, authorName, saturation = 1.0 }) {
 }
 
 const STYLES = {
-  'quote-1-ember-bottom-left':  ember('left',  'bottom'),
-  'quote-1-ember-bottom-right': ember('right', 'bottom'),
-  'quote-1-ember-top-left':     ember('left',  'top'),
-  'quote-1-ember-top-right':    ember('right', 'top'),
+  'quote-1-ember-bottom-left':  ember('left',  'bottom', { markExtraGap: 0.65, markScale: 0.84 }),
+  'quote-1-ember-bottom-right': ember('right', 'bottom', { markExtraGap: 0.65, markScale: 0.84 }),
+  'quote-1-ember-top-left':     ember('left',  'top',   { markExtraGap: 0.65, markScale: 0.84 }),
+  'quote-1-ember-top-right':    ember('right', 'top',   { markExtraGap: 0.65, markScale: 0.84 }),
   'quote-1-pillar-left':        (buf, opts) => renderBorder(buf, opts),
   'quote-1-frame-right':        (buf, opts) => renderBorder2(buf, opts),
   'quote-1-ember-ai':           (buf, opts) => renderEmberAI(buf, opts),
