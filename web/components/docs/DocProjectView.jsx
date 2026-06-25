@@ -74,6 +74,7 @@ export default function DocProjectView({ project: initialProject, initialEntries
   const [attUploading, setAttUploading] = useState(false)
   const [tokens, setTokens]             = useState(null)
   const [copiedKey, setCopiedKey]       = useState(null)
+  const [previewSrc, setPreviewSrc]     = useState(null)
   const attInputRef = useRef(null)
 
   // กรอบงบโครงการ (เกินได้ แต่อย่าขาด — ต้องเคลียร์บิลให้ครบกรอบงบ)
@@ -101,6 +102,13 @@ export default function DocProjectView({ project: initialProject, initialEntries
   useEffect(() => {
     if (project?.id && !tokens) loadTokensForId(project.id)
   }, [project?.id])
+
+  useEffect(() => {
+    if (!previewSrc) return
+    const handler = e => { if (e.key === 'Escape') setPreviewSrc(null) }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [previewSrc])
 
   useEffect(() => {
     if (billMode === 'act' && !attLoaded) loadAttachments()
@@ -628,26 +636,49 @@ export default function DocProjectView({ project: initialProject, initialEntries
 
               {/* Thumbnail grid */}
               {attachments.length > 0 && (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {attachments.map((att, i) => (
-                    <div key={att.id} className="relative group rounded-lg overflow-hidden border border-warm-200 dark:border-disc-border aspect-[3/4] bg-warm-100 dark:bg-disc-hover">
-                      <img
-                        src={`/api/docs/projects/${project.id}/attachments/${att.id}/image`}
-                        alt={att.original_name || `เอกสาร ${i + 1}`}
-                        className="w-full h-full object-cover"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => deleteAttachment(att.id)}
-                        className="absolute top-1.5 right-1.5 p-1 rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition"
-                      >
-                        <X size={14} />
-                      </button>
-                      <span className="absolute bottom-0 left-0 right-0 text-[10px] text-center bg-black/40 text-white py-0.5 truncate px-1">
-                        {att.original_name || `เอกสาร ${i + 1}`}
-                      </span>
-                    </div>
-                  ))}
+                <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                  {attachments.map((att, i) => {
+                    const src = `/api/docs/projects/${project.id}/attachments/${att.id}/image`
+                    return (
+                      <div key={att.id} className="relative group rounded-lg overflow-hidden border border-warm-200 dark:border-disc-border aspect-[3/4] bg-warm-100 dark:bg-disc-hover">
+                        <img
+                          src={src}
+                          alt={att.original_name || `เอกสาร ${i + 1}`}
+                          onClick={() => setPreviewSrc(src)}
+                          className="w-full h-full object-cover cursor-zoom-in"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => deleteAttachment(att.id)}
+                          className="absolute top-1 right-1 p-0.5 rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition"
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+
+              {/* Lightbox */}
+              {previewSrc && (
+                <div
+                  className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
+                  onClick={() => setPreviewSrc(null)}
+                  onKeyDown={e => e.key === 'Escape' && setPreviewSrc(null)}
+                  tabIndex={-1}
+                >
+                  <button
+                    onClick={() => setPreviewSrc(null)}
+                    className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition"
+                  >
+                    <X size={22} />
+                  </button>
+                  <img
+                    src={previewSrc}
+                    onClick={e => e.stopPropagation()}
+                    className="max-h-[92vh] max-w-[92vw] object-contain rounded-lg shadow-2xl"
+                  />
                 </div>
               )}
             </div>

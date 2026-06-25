@@ -636,7 +636,7 @@ export default function DocAutoCalc({ eventDate, eventEndDate, participantCount,
                 <div className="flex items-center gap-2 shrink-0">
                   <input
                     type="number" min="0" step="1"
-                    value={item.amount}
+                    value={item.amount || ''}
                     onChange={e => updateAmount(i, e.target.value)}
                     className="w-28 border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-warm-900 dark:text-disc-text px-2.5 py-1.5 text-base rounded-lg text-right tabular-nums focus:outline-none focus:ring-2 focus:ring-orange"
                   />
