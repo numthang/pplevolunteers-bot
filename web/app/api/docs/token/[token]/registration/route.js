@@ -19,7 +19,7 @@ export async function GET(req, { params }) {
     return new Response(buf, {
       headers: {
         'Content-Type':        'application/pdf',
-        'Content-Disposition': `attachment; filename="reg.pdf"; filename*=UTF-8''${encodeURIComponent(filename)}`,
+        'Content-Disposition': `inline; filename="reg.pdf"; filename*=UTF-8''${encodeURIComponent(filename)}`,
         'Content-Length':      String(buf.length),
         'Cache-Control':       'private, no-store',
       },

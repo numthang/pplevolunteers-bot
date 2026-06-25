@@ -37,10 +37,10 @@ export async function GET(req, { params }) {
   const project = await getDocProjectById(id)
   if (!project) return Response.json({ error: 'Not found' }, { status: 404 })
 
-  return Response.json({
-    export_token:         project.export_token,
-    export_token_expires: project.export_token_expires,
-    pdf_token:            project.pdf_token,
-    pdf_token_expires:    project.pdf_token_expires,
-  })
+  // auto-create tokens if missing
+  let { export_token, export_token_expires, pdf_token, pdf_token_expires } = project
+  if (!export_token) { const r = await regenerateToken(id, 'export'); export_token = r.token; export_token_expires = r.expires }
+  if (!pdf_token)    { const r = await regenerateToken(id, 'pdf');    pdf_token    = r.token; pdf_token_expires    = r.expires }
+
+  return Response.json({ export_token, export_token_expires, pdf_token, pdf_token_expires })
 }

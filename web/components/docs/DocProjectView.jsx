@@ -99,10 +99,11 @@ export default function DocProjectView({ project: initialProject, initialEntries
   }
 
   useEffect(() => {
-    if (billMode === 'act') {
-      if (!attLoaded) loadAttachments()
-      if (!tokens) loadTokens()
-    }
+    if (project?.id && !tokens) loadTokensForId(project.id)
+  }, [project?.id])
+
+  useEffect(() => {
+    if (billMode === 'act' && !attLoaded) loadAttachments()
   }, [billMode])
 
   async function uploadAttachment(file) {
@@ -116,7 +117,7 @@ export default function DocProjectView({ project: initialProject, initialEntries
         // direct PDF upload — refresh project if it was just created
         if (!project) {
           const pr = await fetch(`/api/docs/projects/${eventId}`)
-          if (pr.ok) { const pd = await pr.json(); setProject(pd); loadTokensForId(pd.id) }
+          if (pr.ok) { const pd = await pr.json(); setProject(pd.data); loadTokensForId(pd.data.id) }
         }
         return
       }
@@ -124,7 +125,7 @@ export default function DocProjectView({ project: initialProject, initialEntries
       // if project was just created, load it into state
       if (!project) {
         const pr = await fetch(`/api/docs/projects/${eventId}`)
-        if (pr.ok) { const pd = await pr.json(); setProject(pd); loadTokensForId(pd.id) }
+        if (pr.ok) { const pd = await pr.json(); setProject(pd.data); loadTokensForId(pd.data.id) }
       } else if (!tokens) {
         loadTokens()
       }
@@ -162,7 +163,7 @@ export default function DocProjectView({ project: initialProject, initialEntries
   function copyToken(type) {
     const token = tokens?.[`${type}_token`]
     if (!token) return
-    const suffix = type === 'pdf' ? 'pdf' : 'export'
+    const suffix = type === 'pdf' ? 'registration' : 'receipt'
     const url = `${window.location.origin}/api/docs/token/${token}/${suffix}`
     navigator.clipboard.writeText(url)
     setCopiedKey(type)
@@ -443,10 +444,11 @@ export default function DocProjectView({ project: initialProject, initialEntries
           </div>
           {canManage && (
             <a
-              href={`/api/docs/projects/${project.id}/export?status=all`}
+              href={tokens?.export_token ? `/api/docs/token/${tokens.export_token}/receipt` : undefined}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-orange text-white text-base font-semibold rounded-lg hover:bg-orange-light transition"
+              aria-disabled={!tokens?.export_token}
+              className={`inline-flex items-center gap-2 px-4 py-2.5 bg-orange text-white text-base font-semibold rounded-lg transition ${tokens?.export_token ? 'hover:bg-orange-light' : 'opacity-50 pointer-events-none'}`}
             >
               พิมพ์เอกสารทั้งหมด
             </a>
@@ -585,7 +587,7 @@ export default function DocProjectView({ project: initialProject, initialEntries
                   ].map(({ type, label }) => {
                     const token   = tokens?.[`${type}_token`]
                     const expires = tokens?.[`${type}_token_expires`]
-                    const suffix  = type === 'pdf' ? 'pdf' : 'export'
+                    const suffix  = type === 'pdf' ? 'registration' : 'receipt'
                     const url     = token ? `${typeof window !== 'undefined' ? window.location.origin : ''}/api/docs/token/${token}/${suffix}` : null
                     return (
                       <div key={type} className="border border-warm-200 dark:border-disc-border rounded-lg p-3 space-y-2">
