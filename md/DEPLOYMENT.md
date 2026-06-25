@@ -4,6 +4,56 @@ Production VPS hosting both Discord Bot and Next.js Web app.
 
 ---
 
+## System Requirements
+
+Software ที่ต้องติดตั้งบน VPS ก่อน deploy ครั้งแรก (และหลัง provision server ใหม่)
+
+### Runtime
+
+| Software | Version | วิธีติดตั้ง | ใช้ทำอะไร |
+|---|---|---|---|
+| **Node.js** | v24+ | `/www/server/nodejs/v24.14.0/bin` (ติดตั้งแล้ว) | Bot + Web |
+| **npm** | มากับ Node | — | package manager |
+| **PM2** | latest | `npm install -g pm2` | process manager |
+| **Python 3** | 3.8+ | `sudo apt install python3 python3-pip` | scripts รูปภาพ |
+
+### Database
+
+| Software | Version | วิธีติดตั้ง | ใช้ทำอะไร |
+|---|---|---|---|
+| **MySQL** | 8.0+ | `sudo apt install mysql-server` | main database (bot + web ส่วนใหญ่) |
+| **PostgreSQL** | 14+ | `sudo apt install postgresql` | docs module (`docs_projects`, `docs_activity_entries` ฯลฯ) |
+
+### Search
+
+| Software | Version | วิธีติดตั้ง | ใช้ทำอะไร |
+|---|---|---|---|
+| **Meilisearch** | latest | ดู section Meilisearch ด้านล่าง | full-text search สมาชิก |
+
+### Python Packages (Image Processing)
+
+ใช้ใน `scripts/crop_document.py` และ `scripts/build_pdf.py`
+
+```bash
+sudo pip3 install pillow opencv-python-headless
+```
+
+| Package | ใช้ใน | ทำอะไร |
+|---|---|---|
+| `pillow` | `build_pdf.py` | รวมรูปภาพเป็น PDF (แนบท้าย 3) |
+| `opencv-python-headless` | `crop_document.py` | ตัดขอบเอกสารจากรูปถ่าย |
+
+> ⚠️ ถ้าไม่ติดตั้ง pillow → อัพโหลดรูปใน ACT tab แล้ว PDF ไม่ถูกสร้าง (fail silently)  
+> ⚠️ ถ้าไม่ติดตั้ง opencv → รูปจะถูก save แบบไม่ crop (fallback ทำงานได้แต่ไม่ crop)
+
+### Web Server
+
+| Software | ใช้ทำอะไร |
+|---|---|
+| **Nginx** | reverse proxy → Next.js port 3000, HTTPS |
+
+---
+
 ## VPS Info
 
 - **Host:** Production VPS

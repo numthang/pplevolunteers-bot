@@ -40,13 +40,14 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
       .map(e => {
         const token = type === 'recipient' ? e.sign_token : e.payer_sign_token
         if (!token) return null
-        const label = ITEM_LABELS[e.item_type] || e.item_type
+        const label = e.description || ITEM_LABELS[e.item_type] || e.item_type
         return `${label}: ${origin}/docs/sign/${token}`
       })
       .filter(Boolean)
     if (!lines.length) return
     const pendingTab = type === 'recipient' ? 'recipient' : 'payer'
-    lines.push(`\nดูรายการรออนุมัติ: ${origin}/docs/pending?tab=${pendingTab}`)
+    if (type === 'recipient') lines.push(`\n* ครั้งแรกระบบจะขอถ่ายบัตรประชาชน 1 ครั้ง และจะมีลายน้ำคร่อมให้อัตโนมัติ`)
+    lines.push(`\nดูรายการรอเซ็นทั้งหมด: ${origin}/docs/pending?tab=${pendingTab}`)
     navigator.clipboard.writeText(lines.join('\n'))
     setCopiedKey(`${type}-${groupKey}`)
     setTimeout(() => setCopiedKey(null), 2000)

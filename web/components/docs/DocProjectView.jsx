@@ -74,7 +74,7 @@ export default function DocProjectView({ project: initialProject, initialEntries
   const [attUploading, setAttUploading] = useState(false)
   const [tokens, setTokens]             = useState(null)
   const [copiedKey, setCopiedKey]       = useState(null)
-  const [previewSrc, setPreviewSrc]     = useState(null)
+  const [previewIdx, setPreviewIdx]     = useState(null)
   const attInputRef = useRef(null)
 
   // กรอบงบโครงการ (เกินได้ แต่อย่าขาด — ต้องเคลียร์บิลให้ครบกรอบงบ)
@@ -104,11 +104,15 @@ export default function DocProjectView({ project: initialProject, initialEntries
   }, [project?.id])
 
   useEffect(() => {
-    if (!previewSrc) return
-    const handler = e => { if (e.key === 'Escape') setPreviewSrc(null) }
+    if (previewIdx === null) return
+    const handler = e => {
+      if (e.key === 'Escape')     setPreviewIdx(null)
+      if (e.key === 'ArrowRight') setPreviewIdx(i => Math.min(i + 1, attachments.length - 1))
+      if (e.key === 'ArrowLeft')  setPreviewIdx(i => Math.max(i - 1, 0))
+    }
     document.addEventListener('keydown', handler)
     return () => document.removeEventListener('keydown', handler)
-  }, [previewSrc])
+  }, [previewIdx, attachments.length])
 
   useEffect(() => {
     if (billMode === 'act' && !attLoaded) loadAttachments()
@@ -577,7 +581,7 @@ export default function DocProjectView({ project: initialProject, initialEntries
       {canManage && (
         <div className="mb-3">
           <div className="flex gap-2 mb-4 border-b border-warm-200 dark:border-disc-border">
-            {[{ key: 'auto', label: 'อัตโนมัติ' }, { key: 'manual', label: 'กำหนดเอง' }, { key: 'act', label: 'ACT' }].map(t => (
+            {[{ key: 'auto', label: 'อัตโนมัติ' }, { key: 'manual', label: 'กำหนดเอง' }, { key: 'act', label: 'แนบท้าย 3' }].map(t => (
               <button
                 key={t.key}
                 type="button"
@@ -596,19 +600,28 @@ export default function DocProjectView({ project: initialProject, initialEntries
             <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-4 space-y-4">
 
               {/* ลิงก์ ACT */}
-              {actEventId && (
-                <div>
-                  <p className="text-xs font-semibold text-warm-400 dark:text-disc-muted uppercase tracking-widest mb-2">ลิงก์ ACT</p>
-                  <a href={`https://act.peoplesparty.or.th/ect-paper-3/?eid=${actEventId}`} target="_blank" rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 text-orange hover:underline font-medium text-sm">
-                    พิมพ์แนบท้าย 3 (ใบรายชื่อเปล่า) ↗
-                  </a>
+              {(actEventId || tokens?.pdf_token) && (
+                <div className="space-y-1.5">
+                  
+                  {actEventId && (
+                    <a href={`https://act.peoplesparty.or.th/ect-paper-3/?eid=${actEventId}`} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 text-orange hover:underline font-medium text-sm">
+                      พิมพ์แนบท้าย 3 (ใบรายชื่อเปล่า) ↗
+                    </a>
+                  )}
+                  {tokens?.pdf_token && (
+                    <a href={`/api/docs/token/${tokens.pdf_token}/registration`} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 text-orange hover:underline font-medium text-sm">
+                      พิมพ์แนบท้าย 3 (มีลายเซ็นแล้ว) ↗
+                    </a>
+                  )}
                 </div>
               )}
 
               {/* Upload zone */}
               <div>
-                <p className="text-xs font-semibold text-warm-400 dark:text-disc-muted uppercase tracking-widest mb-2">อัพโหลดแนบท้าย 3 ที่เซ็นแล้ว</p>
+                <p className="text-xs font-semibold text-warm-400 dark:text-disc-muted uppercase tracking-widest mb-1">อัพโหลดแนบท้าย 3 ที่เซ็นแล้ว</p>
+                <p className="text-xs text-warm-400 dark:text-disc-muted mb-2">เร็วๆ นี้: อัพบัตรประชาชนครั้งเดียว ระบบจะแนบลายน้ำคร่อมให้อัตโนมัติทุกครั้ง</p>
                 <button
                   type="button"
                   onClick={() => attInputRef.current?.click()}
@@ -644,7 +657,7 @@ export default function DocProjectView({ project: initialProject, initialEntries
                         <img
                           src={src}
                           alt={att.original_name || `เอกสาร ${i + 1}`}
-                          onClick={() => setPreviewSrc(src)}
+                          onClick={() => setPreviewIdx(i)}
                           className="w-full h-full object-cover cursor-zoom-in"
                         />
                         <button
@@ -661,24 +674,25 @@ export default function DocProjectView({ project: initialProject, initialEntries
               )}
 
               {/* Lightbox */}
-              {previewSrc && (
-                <div
-                  className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
-                  onClick={() => setPreviewSrc(null)}
-                  onKeyDown={e => e.key === 'Escape' && setPreviewSrc(null)}
-                  tabIndex={-1}
-                >
-                  <button
-                    onClick={() => setPreviewSrc(null)}
-                    className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition"
-                  >
+              {previewIdx !== null && attachments[previewIdx] && (
+                <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center" onClick={() => setPreviewIdx(null)}>
+                  <button onClick={() => setPreviewIdx(null)} className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition">
                     <X size={22} />
                   </button>
+                  {previewIdx > 0 && (
+                    <button onClick={e => { e.stopPropagation(); setPreviewIdx(i => i - 1) }}
+                      className="absolute left-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition text-2xl font-light">‹</button>
+                  )}
+                  {previewIdx < attachments.length - 1 && (
+                    <button onClick={e => { e.stopPropagation(); setPreviewIdx(i => i + 1) }}
+                      className="absolute right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition text-2xl font-light">›</button>
+                  )}
                   <img
-                    src={previewSrc}
+                    src={`/api/docs/projects/${project.id}/attachments/${attachments[previewIdx].id}/image`}
                     onClick={e => e.stopPropagation()}
-                    className="max-h-[92vh] max-w-[92vw] object-contain rounded-lg shadow-2xl"
+                    className="max-h-[92vh] max-w-[80vw] object-contain rounded-lg shadow-2xl"
                   />
+                  <span className="absolute bottom-4 text-white/60 text-sm">{previewIdx + 1} / {attachments.length}</span>
                 </div>
               )}
             </div>
