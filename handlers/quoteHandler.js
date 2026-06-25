@@ -305,8 +305,8 @@ async function handleQuoteModal(interaction) {
   const authorName = interaction.fields.getTextInputValue('quote_author');
   setQuoteStatePartial(interaction.user.id, { quote_text: quoteText, quote_author: authorName }).catch(console.error);
 
-  // ไม่เลือกสไตล์ → default template ที่ตั้งไว้ (personal > guild > global) → ไม่มี = AI (ember-ai)
-  let defaultStyle = QUOTE_AI_KEY;
+  // ไม่เลือกสไตล์ → default template ที่ตั้งไว้ (personal > guild > global) → ไม่มี = สุ่ม
+  let defaultStyle = 'random';
   if (!state.style) {
     try {
       const { value } = await resolveConfig(interaction.user.id, interaction.guildId, QUOTE_KEY_TEMPLATE);

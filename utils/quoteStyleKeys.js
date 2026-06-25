@@ -5,8 +5,10 @@
 // AI = ไม่เลือกสไตล์ → ember-ai จัดตำแหน่ง/สีให้เอง (ยิง API)
 const QUOTE_AI_KEY = 'quote-1-ember-ai';
 
-// styles ที่เลือกได้เอง (ไม่รวม AI) — value ต้องตรงกับ key ใน STYLES map ของ quoteStyles.js
+// styles ที่เลือกได้เอง — value ต้องตรงกับ key ใน STYLES map ของ quoteStyles.js
 const QUOTE_STYLE_OPTIONS = [
+  { value: QUOTE_AI_KEY, label: '✨ AI จัดให้',  description: 'Claude วิเคราะห์ภาพ เลือกตำแหน่ง+สีเอง' },
+  { value: 'random',     label: '🎲 สุ่ม',       description: 'สุ่มสไตล์จากทั้งหมด' },
   { value: 'quote-1-ember-bottom-left',  label: 'ember ล่างซ้าย', description: 'gradient ล่าง · ซ้าย' },
   { value: 'quote-1-ember-bottom-right', label: 'ember ล่างขวา',  description: 'gradient ล่าง · ขวา' },
   { value: 'quote-1-ember-top-left',     label: 'ember บนซ้าย',   description: 'gradient บน · ซ้าย' },
@@ -23,7 +25,7 @@ const QUOTE_TEMPLATE_CHOICES = [
 ];
 
 // set ของ key ที่ valid (รวม AI) — ใช้ validate ค่าที่รับจาก web
-const QUOTE_STYLE_KEYS = [QUOTE_AI_KEY, ...QUOTE_STYLE_OPTIONS.map(o => o.value)];
+const QUOTE_STYLE_KEYS = ['random', ...QUOTE_STYLE_OPTIONS.map(o => o.value)];
 
 module.exports = {
   QUOTE_AI_KEY,
