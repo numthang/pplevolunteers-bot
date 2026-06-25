@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
-import { Search, X, Plus, Trash2, CreditCard, CheckCircle, FilePlus, Check, Pencil } from 'lucide-react'
+import { Search, X, Plus, Trash2, CreditCard, CheckCircle, FilePlus, Check, Pencil, Copy, RefreshCw, Link2 } from 'lucide-react'
 import DocEntryList from './DocEntryList'
 import DocAutoCalc from './DocAutoCalc'
 import { calcSpeakerCeiling, SPEAKER_RULES } from '@/config/fund69-rules.js'
@@ -68,10 +68,12 @@ export default function DocProjectView({ project: initialProject, initialEntries
   const [autoSaving, setAutoSaving] = useState(false)
   const [billMode, setBillMode]     = useState('auto')  // 'auto' (default) | 'manual'
 
-  // ACT tab — attachments
-  const [attachments, setAttachments] = useState([])
-  const [attLoaded, setAttLoaded]     = useState(false)
+  // ACT tab — attachments + tokens
+  const [attachments, setAttachments]   = useState([])
+  const [attLoaded, setAttLoaded]       = useState(false)
   const [attUploading, setAttUploading] = useState(false)
+  const [tokens, setTokens]             = useState(null)
+  const [copiedKey, setCopiedKey]       = useState(null)
   const attInputRef = useRef(null)
 
   // กรอบงบโครงการ (เกินได้ แต่อย่าขาด — ต้องเคลียร์บิลให้ครบกรอบงบ)
@@ -86,17 +88,46 @@ export default function DocProjectView({ project: initialProject, initialEntries
     if (res.ok) { setAttachments(await res.json()); setAttLoaded(true) }
   }
 
-  useEffect(() => { if (billMode === 'act' && !attLoaded) loadAttachments() }, [billMode])
+  async function loadTokensForId(pid) {
+    const res = await fetch(`/api/docs/projects/${pid}/tokens`)
+    if (res.ok) setTokens(await res.json())
+  }
+
+  async function loadTokens() {
+    if (!project?.id) return
+    loadTokensForId(project.id)
+  }
+
+  useEffect(() => {
+    if (billMode === 'act') {
+      if (!attLoaded) loadAttachments()
+      if (!tokens) loadTokens()
+    }
+  }, [billMode])
 
   async function uploadAttachment(file) {
-    if (!project?.id) return
     setAttUploading(true)
     const fd = new FormData(); fd.append('file', file)
     try {
-      const res = await fetch(`/api/docs/projects/${project.id}/attachments`, { method: 'POST', body: fd })
+      const res = await fetch(`/api/docs/events/${eventId}/attachments`, { method: 'POST', body: fd })
       if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Upload failed') }
-      const att = await res.json()
-      setAttachments(prev => [...prev, att])
+      const data = await res.json()
+      if (data.type === 'pdf') {
+        // direct PDF upload — refresh project if it was just created
+        if (!project) {
+          const pr = await fetch(`/api/docs/projects/${eventId}`)
+          if (pr.ok) { const pd = await pr.json(); setProject(pd); loadTokensForId(pd.id) }
+        }
+        return
+      }
+      setAttachments(prev => [...prev, data])
+      // if project was just created, load it into state
+      if (!project) {
+        const pr = await fetch(`/api/docs/projects/${eventId}`)
+        if (pr.ok) { const pd = await pr.json(); setProject(pd); loadTokensForId(pd.id) }
+      } else if (!tokens) {
+        loadTokens()
+      }
     } catch (err) {
       alert('อัพโหลดไม่สำเร็จ: ' + err.message)
     } finally {
@@ -108,6 +139,34 @@ export default function DocProjectView({ project: initialProject, initialEntries
     if (!project?.id || !confirm('ลบไฟล์นี้?')) return
     const res = await fetch(`/api/docs/projects/${project.id}/attachments/${attId}`, { method: 'DELETE' })
     if (res.ok) setAttachments(prev => prev.filter(a => a.id !== attId))
+  }
+
+  async function regenerateToken(type) {
+    if (!project?.id) return
+    if (!confirm(`สร้างลิงก์ ${type === 'pdf' ? 'ใบลงทะเบียน' : 'ใบสำคัญรับเงิน'} ใหม่? ลิงก์เก่าจะใช้ไม่ได้ทันที`)) return
+    const res = await fetch(`/api/docs/projects/${project.id}/tokens`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type }),
+    })
+    if (res.ok) {
+      const data = await res.json()
+      setTokens(prev => ({
+        ...prev,
+        [`${type}_token`]: data.token,
+        [`${type}_token_expires`]: data.expires,
+      }))
+    }
+  }
+
+  function copyToken(type) {
+    const token = tokens?.[`${type}_token`]
+    if (!token) return
+    const suffix = type === 'pdf' ? 'pdf' : 'export'
+    const url = `${window.location.origin}/api/docs/token/${token}/${suffix}`
+    navigator.clipboard.writeText(url)
+    setCopiedKey(type)
+    setTimeout(() => setCopiedKey(null), 2000)
   }
 
   async function saveBudget() {
@@ -503,74 +562,113 @@ export default function DocProjectView({ project: initialProject, initialEntries
           </div>
 
           <div className={billMode !== 'act' ? 'hidden' : ''}>
-            <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-5 space-y-5">
+            <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-4 space-y-4">
+
               {/* ลิงก์ ACT */}
-              {actEventId ? (
+              {actEventId && (
                 <div>
-                  <p className="text-xs font-semibold text-warm-400 dark:text-disc-muted uppercase tracking-widest mb-2">ลิงก์เอกสาร</p>
+                  <p className="text-xs font-semibold text-warm-400 dark:text-disc-muted uppercase tracking-widest mb-2">ลิงก์ ACT</p>
                   <a href={`https://act.peoplesparty.or.th/ect-paper-3/?eid=${actEventId}`} target="_blank" rel="noopener noreferrer"
                     className="inline-flex items-center gap-1.5 text-orange hover:underline font-medium text-sm">
                     พิมพ์แนบท้าย 3 (ใบรายชื่อเปล่า) ↗
                   </a>
                 </div>
-              ) : (
-                <p className="text-warm-400 dark:text-disc-muted text-sm">ไม่พบ ACT Event ID</p>
+              )}
+
+              {/* Public links */}
+              {project && (
+                <div className="space-y-3">
+                  <p className="text-xs font-semibold text-warm-400 dark:text-disc-muted uppercase tracking-widest">ลิงก์ Public (ส่งให้ กกต)</p>
+                  {[
+                    { type: 'pdf',    label: 'ใบลงทะเบียน (PDF รวมรูป)' },
+                    { type: 'export', label: 'ใบสำคัญรับเงิน (Export)' },
+                  ].map(({ type, label }) => {
+                    const token   = tokens?.[`${type}_token`]
+                    const expires = tokens?.[`${type}_token_expires`]
+                    const suffix  = type === 'pdf' ? 'pdf' : 'export'
+                    const url     = token ? `${typeof window !== 'undefined' ? window.location.origin : ''}/api/docs/token/${token}/${suffix}` : null
+                    return (
+                      <div key={type} className="border border-warm-200 dark:border-disc-border rounded-lg p-3 space-y-2">
+                        <p className="text-sm font-medium text-warm-800 dark:text-disc-text">{label}</p>
+                        {token ? (
+                          <>
+                            <div className="flex items-center gap-2">
+                              <code className="flex-1 text-xs bg-warm-100 dark:bg-disc-hover px-2 py-1 rounded truncate text-warm-600 dark:text-disc-muted">{url}</code>
+                              <button onClick={() => copyToken(type)} className="p-1.5 rounded hover:bg-warm-100 dark:hover:bg-disc-hover text-warm-500 dark:text-disc-muted transition">
+                                {copiedKey === type ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
+                              </button>
+                            </div>
+                            <p className="text-xs text-warm-400 dark:text-disc-muted">
+                              หมดอายุ {expires ? new Date(expires).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' }) : '-'}
+                            </p>
+                          </>
+                        ) : (
+                          <p className="text-xs text-warm-400 dark:text-disc-muted">ยังไม่มีลิงก์</p>
+                        )}
+                        <button
+                          onClick={() => regenerateToken(type)}
+                          className="flex items-center gap-1.5 text-xs text-orange hover:underline"
+                        >
+                          <RefreshCw size={12} /> {token ? 'สร้างลิงก์ใหม่' : 'สร้างลิงก์'}
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
               )}
 
               {/* Upload zone */}
-              {project && (<>
-                <div>
-                  <p className="text-xs font-semibold text-warm-400 dark:text-disc-muted uppercase tracking-widest mb-2">อัพโหลดแนบท้าย 3 ที่เซ็นแล้ว</p>
-                  <button
-                    type="button"
-                    onClick={() => attInputRef.current?.click()}
-                    disabled={attUploading}
-                    className="w-full border-2 border-dashed border-warm-300 dark:border-disc-border rounded-xl py-8 flex flex-col items-center gap-2 text-warm-400 dark:text-disc-muted hover:border-orange hover:text-orange transition disabled:opacity-50 cursor-pointer"
-                  >
-                    {attUploading
-                      ? <span className="text-sm">กำลังประมวลผล...</span>
-                      : (<>
-                          <FilePlus size={28} />
-                          <span className="text-sm">แตะเพื่ออัพโหลดภาพเอกสาร</span>
-                          <span className="text-xs opacity-70">JPG / PNG · auto-crop A4</span>
-                        </>)
-                    }
-                  </button>
-                  <input
-                    ref={attInputRef}
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
-                    multiple
-                    className="hidden"
-                    onChange={e => { [...(e.target.files || [])].forEach(f => uploadAttachment(f)); e.target.value = '' }}
-                  />
-                </div>
+              <div>
+                <p className="text-xs font-semibold text-warm-400 dark:text-disc-muted uppercase tracking-widest mb-2">อัพโหลดแนบท้าย 3 ที่เซ็นแล้ว</p>
+                <button
+                  type="button"
+                  onClick={() => attInputRef.current?.click()}
+                  disabled={attUploading}
+                  className="w-full border-2 border-dashed border-warm-300 dark:border-disc-border rounded-xl py-6 flex flex-col items-center gap-2 text-warm-400 dark:text-disc-muted hover:border-orange hover:text-orange transition disabled:opacity-50 cursor-pointer"
+                >
+                  {attUploading
+                    ? <span className="text-sm">กำลังประมวลผล...</span>
+                    : (<>
+                        <FilePlus size={26} />
+                        <span className="text-sm">แตะเพื่ออัพโหลดรูปหรือ PDF</span>
+                        <span className="text-xs opacity-70">JPG / PNG (auto-crop) · PDF</span>
+                      </>)
+                  }
+                </button>
+                <input
+                  ref={attInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/heic,image/heif,application/pdf"
+                  multiple
+                  className="hidden"
+                  onChange={e => { [...(e.target.files || [])].forEach(f => uploadAttachment(f)); e.target.value = '' }}
+                />
+              </div>
 
-                {/* Thumbnail grid */}
-                {attachments.length > 0 && (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {attachments.map((att, i) => (
-                      <div key={att.id} className="relative group rounded-lg overflow-hidden border border-warm-200 dark:border-disc-border aspect-[3/4] bg-warm-100 dark:bg-disc-hover">
-                        <img
-                          src={`/api/docs/projects/${project.id}/attachments/${att.id}/image`}
-                          alt={att.original_name || `เอกสาร ${i + 1}`}
-                          className="w-full h-full object-cover"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => deleteAttachment(att.id)}
-                          className="absolute top-1.5 right-1.5 p-1 rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition"
-                        >
-                          <X size={14} />
-                        </button>
-                        <span className="absolute bottom-0 left-0 right-0 text-[10px] text-center bg-black/40 text-white py-0.5 truncate px-1">
-                          {att.original_name || `เอกสาร ${i + 1}`}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </>)}
+              {/* Thumbnail grid */}
+              {attachments.length > 0 && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {attachments.map((att, i) => (
+                    <div key={att.id} className="relative group rounded-lg overflow-hidden border border-warm-200 dark:border-disc-border aspect-[3/4] bg-warm-100 dark:bg-disc-hover">
+                      <img
+                        src={`/api/docs/projects/${project.id}/attachments/${att.id}/image`}
+                        alt={att.original_name || `เอกสาร ${i + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => deleteAttachment(att.id)}
+                        className="absolute top-1.5 right-1.5 p-1 rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition"
+                      >
+                        <X size={14} />
+                      </button>
+                      <span className="absolute bottom-0 left-0 right-0 text-[10px] text-center bg-black/40 text-white py-0.5 truncate px-1">
+                        {att.original_name || `เอกสาร ${i + 1}`}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 

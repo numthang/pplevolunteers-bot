@@ -718,3 +718,15 @@ INSERT INTO ngs_member_cache (
 (23, 'นางสาว', 'สุภาวดี', 'ทั้งพรม', 'สุภาวดี ทั้งพรม', NULL, '2024-08-08 14:29:12', '2024-08-08', NULL, NULL, 'หญิง', '6750000002', 'ไทย',  '1340903354037178410'),
 (24, 'นางสาว', 'กชกร', 'พละพันธ์', 'กชกร พละพันธ์', NULL, '2024-08-08 14:30:31', '2024-08-08', NULL, NULL, 'หญิง', '6750000003', 'ไทย', '1340903354037178410'),
 (25, 'นาย', 'วชิรวิทย์', 'เทศศรีเมือง', 'วชิรวิทย์ เทศศรีเมือง', NULL, '2024-08-08 14:30:55', '2024-08-08', NULL, NULL, 'ชาย', '6740000001', 'ไทย', '1340903354037178410');
+
+-- 2026-06-25: public tokens สำหรับ share PDF ใบลงทะเบียน + export ใบสำคัญรับเงิน
+ALTER TABLE docs_projects
+  ADD COLUMN IF NOT EXISTS export_token         VARCHAR(8)  NULL,
+  ADD COLUMN IF NOT EXISTS export_token_expires TIMESTAMP   NULL,
+  ADD COLUMN IF NOT EXISTS pdf_token            VARCHAR(8)  NULL,
+  ADD COLUMN IF NOT EXISTS pdf_token_expires    TIMESTAMP   NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_docs_projects_export_token
+  ON docs_projects (export_token) WHERE export_token IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_docs_projects_pdf_token
+  ON docs_projects (pdf_token) WHERE pdf_token IS NOT NULL;

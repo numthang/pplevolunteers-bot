@@ -9,6 +9,56 @@ const SELECT_CLS =
 
 const KEY_WATERMARK = 'quote_default_watermark'
 const KEY_TEMPLATE  = 'quote_default_template'
+const KEY_CI_ACCENT = 'quote_ci_accent'
+const DEFAULT_ACCENT = '#ff6a13'
+
+// ── color picker สี CI accent ──
+function ColorInput({ value, onSave }) {
+  const [local, setLocal]   = useState(value || DEFAULT_ACCENT)
+  const [saving, setSaving] = useState(false)
+  const [saved,  setSaved]  = useState(false)
+
+  useEffect(() => { setLocal(value || DEFAULT_ACCENT) }, [value])
+
+  async function handleBlur() {
+    if (local === (value || DEFAULT_ACCENT)) return
+    setSaving(true); setSaved(false)
+    const ok = await onSave(local)
+    setSaving(false)
+    if (ok) { setSaved(true); setTimeout(() => setSaved(false), 1500) }
+  }
+
+  async function handleClear() {
+    setSaving(true); setSaved(false)
+    const ok = await onSave(null)
+    setSaving(false)
+    if (ok) { setLocal(DEFAULT_ACCENT); setSaved(true); setTimeout(() => setSaved(false), 1500) }
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <div className="relative flex items-center gap-2 h-11 px-3 rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg flex-1 min-w-0">
+        <input
+          type="color"
+          value={local}
+          onChange={e => setLocal(e.target.value)}
+          onBlur={handleBlur}
+          className="w-6 h-6 shrink-0 rounded cursor-pointer border-0 bg-transparent p-0"
+        />
+        <span className="text-sm font-mono text-warm-700 dark:text-disc-text truncate">{local}</span>
+        {value && (
+          <button
+            onClick={handleClear}
+            className="ml-auto shrink-0 text-xs text-warm-400 dark:text-disc-muted hover:text-red-500 leading-none"
+            title="ล้างค่า (ใช้ default)"
+          >✕</button>
+        )}
+      </div>
+      {saving && <Loader2 size={16} className="shrink-0 animate-spin text-teal" />}
+      {saved  && <Check   size={16} className="shrink-0 text-green-500" />}
+    </div>
+  )
+}
 
 // ── เซลล์เลือกค่า 1 ช่อง (template หรือ watermark) ของ scope หนึ่ง ──
 function SettingSelect({ value, choices, onSave, placeholder }) {
@@ -37,10 +87,10 @@ function SettingSelect({ value, choices, onSave, placeholder }) {
   )
 }
 
-// ── 1 แถว scope (icon + ชื่อ + 2 ช่องเลือก) ──
-function ScopeRow({ icon: Icon, label, sublabel, templateValue, watermarkValue, wmChoices, onSaveTemplate, onSaveWatermark }) {
+// ── 1 แถว scope (icon + ชื่อ + 3 ช่องเลือก) ──
+function ScopeRow({ icon: Icon, label, sublabel, templateValue, watermarkValue, accentValue, wmChoices, onSaveTemplate, onSaveWatermark, onSaveAccent }) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-[200px_1fr_1fr] gap-3 items-center py-3 border-t border-warm-200 dark:border-disc-border first:border-t-0">
+    <div className="grid grid-cols-1 sm:grid-cols-[200px_1fr_1fr_160px] gap-3 items-center py-3 border-t border-warm-200 dark:border-disc-border first:border-t-0">
       <div className="flex items-center gap-2 min-w-0">
         <Icon size={18} className="shrink-0 text-warm-400 dark:text-disc-muted" />
         <div className="min-w-0">
@@ -60,6 +110,7 @@ function ScopeRow({ icon: Icon, label, sublabel, templateValue, watermarkValue, 
         onSave={onSaveWatermark}
         placeholder={wmChoices.length ? '— ไม่ตั้ง —' : '(ไม่มีไฟล์ลายน้ำ)'}
       />
+      <ColorInput value={accentValue} onSave={onSaveAccent} />
     </div>
   )
 }
@@ -125,10 +176,11 @@ export default function QuotePanel() {
   if (!data) return <p className="text-red-500 text-sm">{error || 'เกิดข้อผิดพลาด'}</p>
 
   const headerRow = (
-    <div className="hidden sm:grid grid-cols-[200px_1fr_1fr] gap-3 pb-2 text-xs font-medium text-warm-500 dark:text-disc-muted uppercase">
+    <div className="hidden sm:grid grid-cols-[200px_1fr_1fr_160px] gap-3 pb-2 text-xs font-medium text-warm-500 dark:text-disc-muted uppercase">
       <span>ระดับ</span>
       <span>เทมเพลต Quote</span>
       <span>ลายน้ำเริ่มต้น</span>
+      <span>สี CI</span>
     </div>
   )
 
@@ -160,9 +212,11 @@ export default function QuotePanel() {
           sublabel="ใช้กับตัวคุณทุก server"
           templateValue={data.personal?.[KEY_TEMPLATE]}
           watermarkValue={data.personal?.[KEY_WATERMARK]}
+          accentValue={data.personal?.[KEY_CI_ACCENT]}
           wmChoices={wm['personal'] || []}
           onSaveTemplate={v => save('personal', null, KEY_TEMPLATE, v)}
           onSaveWatermark={v => save('personal', null, KEY_WATERMARK, v)}
+          onSaveAccent={v => save('personal', null, KEY_CI_ACCENT, v)}
         />
 
         {/* Guilds (admin) */}
@@ -174,9 +228,11 @@ export default function QuotePanel() {
             sublabel="Server (admin)"
             templateValue={g.config?.[KEY_TEMPLATE]}
             watermarkValue={g.config?.[KEY_WATERMARK]}
+            accentValue={g.config?.[KEY_CI_ACCENT]}
             wmChoices={wm[`guild:${g.guild_id}`] || []}
             onSaveTemplate={v => save('guild', g.guild_id, KEY_TEMPLATE, v)}
             onSaveWatermark={v => save('guild', g.guild_id, KEY_WATERMARK, v)}
+            onSaveAccent={v => save('guild', g.guild_id, KEY_CI_ACCENT, v)}
           />
         ))}
 
@@ -188,9 +244,11 @@ export default function QuotePanel() {
             sublabel="Superadmin — fallback ทุก guild"
             templateValue={data.global?.[KEY_TEMPLATE]}
             watermarkValue={data.global?.[KEY_WATERMARK]}
+            accentValue={data.global?.[KEY_CI_ACCENT]}
             wmChoices={wm['global'] || []}
             onSaveTemplate={v => save('global', null, KEY_TEMPLATE, v)}
             onSaveWatermark={v => save('global', null, KEY_WATERMARK, v)}
+            onSaveAccent={v => save('global', null, KEY_CI_ACCENT, v)}
           />
         )}
       </div>

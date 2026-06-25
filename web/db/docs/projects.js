@@ -1,4 +1,16 @@
 import pool from '../index.js'
+import { randomBytes } from 'crypto'
+
+function genToken() {
+  const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+  return Array.from(randomBytes(8)).map(b => chars[b % 62]).join('')
+}
+
+function sixMonthsFromNow() {
+  const d = new Date()
+  d.setMonth(d.getMonth() + 6)
+  return d
+}
 
 /** list events จาก act_event_cache โดยตรง, LEFT JOIN docs_projects เพื่อดู status */
 export async function getDocEvents(guildId, provinces = null) {
@@ -98,6 +110,32 @@ export async function getActEventById(actEventCacheId, guildId) {
     [actEventCacheId, guildId]
   )
   return rows[0] || null
+}
+
+export async function getProjectByToken(tokenType, token) {
+  const col = tokenType === 'pdf' ? 'pdf_token' : 'export_token'
+  const exp = tokenType === 'pdf' ? 'pdf_token_expires' : 'export_token_expires'
+  const { rows } = await pool.query(
+    `SELECT p.*, e.name AS event_name, e.province,
+            TO_CHAR(e.event_date, 'YYYY-MM-DD"T"HH24:MI') AS event_date
+     FROM docs_projects p
+     JOIN act_event_cache e ON e.id = p.act_event_cache_id
+     WHERE p.${col} = $1 AND p.${exp} > NOW()`,
+    [token]
+  )
+  return rows[0] || null
+}
+
+export async function regenerateToken(projectId, tokenType) {
+  const col = tokenType === 'pdf' ? 'pdf_token' : 'export_token'
+  const exp = tokenType === 'pdf' ? 'pdf_token_expires' : 'export_token_expires'
+  const token = genToken()
+  const expires = sixMonthsFromNow()
+  await pool.query(
+    `UPDATE docs_projects SET ${col} = $2, ${exp} = $3 WHERE id = $1`,
+    [projectId, token, expires]
+  )
+  return { token, expires }
 }
 
 export async function updateDocProject(id, { isMobile, participantCount, budget, allowedItems, projectName, status }) {

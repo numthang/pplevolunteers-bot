@@ -169,7 +169,8 @@ async function toPng(canvas) {
 // ── Core render ───────────────────────────────────────────────────────────────
 // markScale: relative size of mark (1.0 = default)
 // gradDark:  0.0–1.0 how dark the bottom gradient is
-async function renderVariant(buf, { quoteText, authorName, side = 'left', vertical = 'bottom', markScale = 1.0, gradDark = 0.95, saturation = 0.15, fontBold = 'GSans', fontLight = 'AnakotmaiLight' }) {
+async function renderVariant(buf, { quoteText, authorName, side = 'left', vertical = 'bottom', markScale = 1.0, gradDark = 0.95, saturation = 0.15, fontBold = 'GSans', fontLight = 'AnakotmaiLight', accentColor }) {
+  const accent = accentColor || ORANGE;
   const isRight = side === 'right';
   const isTop   = vertical === 'top';
 
@@ -219,7 +220,7 @@ async function renderVariant(buf, { quoteText, authorName, side = 'left', vertic
 
   drawMark(ctx, markImg, markX, markY, markH);
 
-  ctx.fillStyle = ORANGE;
+  ctx.fillStyle = accent;
   ctx.fillRect(barX, textBlockTop, barW, textH);
 
   ctx.textBaseline = 'top';
@@ -246,7 +247,7 @@ async function renderVariant(buf, { quoteText, authorName, side = 'left', vertic
     ctx.fillRect(ax - padX, ty - padY, aw + padX * 2, nsz + padY * 2);
   }
 
-  ctx.fillStyle = isTop ? BLACK : ORANGE;
+  ctx.fillStyle = isTop ? BLACK : accent;
   if (!isTop) { ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 4; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0; }
   lsDraw(ctx, authorStr, ax, ty, 0.8);
 
@@ -256,7 +257,8 @@ async function renderVariant(buf, { quoteText, authorName, side = 'left', vertic
 
 // ── Style 7: quote_border (mark + H-bar + V-bar เป็นชิ้นเดียว) ───────────────
 // PNG 822x714 — V-bar spans y 32%–95%, text area starts at x 24%, y 32%
-async function renderBorder(buf, { quoteText, authorName, saturation = 0.15 }) {
+async function renderBorder(buf, { quoteText, authorName, saturation = 0.15, accentColor }) {
+  const accent = accentColor || ORANGE;
   const work = await sharp(buf).modulate({ saturation }).toBuffer();
   const img  = await loadImage(work);
   const W = img.width, H = img.height;
@@ -309,7 +311,7 @@ async function renderBorder(buf, { quoteText, authorName, saturation = 0.15 }) {
   }
 
   ty += nsz * 0.5;
-  ctx.font = `${nsz}px AnakotmaiLight`; ctx.fillStyle = ORANGE;
+  ctx.font = `${nsz}px AnakotmaiLight`; ctx.fillStyle = accent;
   ctx.shadowBlur = 4; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
   lsDraw(ctx, `— ${authorName}`, textX, ty, 0.8);
 
@@ -320,7 +322,8 @@ async function renderBorder(buf, { quoteText, authorName, saturation = 0.15 }) {
 // ── Style 8: quote_border_2 (top H + right V + bottom H — right frame) ───────
 // PNG 865x400 — C-shape: H-bar top y≈5%, V-bar right x≈97%, H-bar bottom y≈94%
 // content area height = 89% of pngH, aspect ratio = 865/400 = 2.1625
-async function renderBorder2(buf, { quoteText, authorName, saturation = 0.15 }) {
+async function renderBorder2(buf, { quoteText, authorName, saturation = 0.15, accentColor }) {
+  const accent = accentColor || ORANGE;
   const work = await sharp(buf).modulate({ saturation }).toBuffer();
   const img  = await loadImage(work);
   const W = img.width, H = img.height;
@@ -374,7 +377,7 @@ async function renderBorder2(buf, { quoteText, authorName, saturation = 0.15 }) 
   }
 
   ty += nsz * 0.5;
-  ctx.font = `${nsz}px AnakotmaiLight`; ctx.fillStyle = ORANGE;
+  ctx.font = `${nsz}px AnakotmaiLight`; ctx.fillStyle = accent;
   ctx.shadowBlur = 4; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
   const aw = lsWidth(ctx, `— ${authorName}`, 0.8);
   lsDraw(ctx, `— ${authorName}`, contentX + (authorMaxW - aw), ty, 0.8);

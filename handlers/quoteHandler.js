@@ -33,6 +33,7 @@ async function setQuoteStatePartial(userId, patch) {
 
 const QUOTE_KEY_TEMPLATE  = 'quote_default_template'; // template = เฉพาะ quote
 const KEY_WATERMARK       = 'quote_default_watermark'; // watermark default เฉพาะ quote (basket ใช้ default_watermark แยก)
+const KEY_CI_ACCENT       = 'quote_ci_accent';         // CI accent color (#rrggbb) — user > guild > default orange
 
 // crop เป็น 1:1 ตายตัว — เลือกตำแหน่ง: auto (attention หาโซนคน) / แนวนอน left-center-right / แนวตั้ง top-bottom
 const CROP_POS = {
@@ -328,8 +329,13 @@ async function handleQuoteModal(interaction) {
     const buf = await cropSquare(raw, state.crop ?? 'auto'); // 1:1, auto=attention เก็บคน
 
     await interaction.editReply({ content: isAI ? '✨ AI กำลังจัดตำแหน่งและสี...' : `🎨 กำลัง render...` });
+    let ciAccent;
+    try {
+      const { value } = await resolveConfig(interaction.user.id, interaction.guildId, KEY_CI_ACCENT);
+      if (value && /^#[0-9a-fA-F]{6}$/.test(value)) ciAccent = value;
+    } catch (err) { console.error('[quoteHandler] resolve ci accent:', err.message); }
     let { buffer: outBuf, ext, vertical, side } = await renderQuoteStyle(styleKey, buf, {
-      quoteText, authorName, saturation, mimeType: state.mimeType,
+      quoteText, authorName, saturation, mimeType: state.mimeType, accentColor: ciAccent,
     });
 
     // ลายน้ำ: center → สุ่ม, อื่นๆ → ฝั่งเดียวกับ quote แนวนอน คนละแถบแนวตั้ง (บนซ้าย→ล่างซ้าย)
