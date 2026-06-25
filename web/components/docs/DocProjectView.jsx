@@ -144,7 +144,6 @@ export default function DocProjectView({ project: initialProject, initialEntries
 
   async function regenerateToken(type) {
     if (!project?.id) return
-    if (!confirm(`สร้างลิงก์ ${type === 'pdf' ? 'ใบลงทะเบียน' : 'ใบสำคัญรับเงิน'} ใหม่? ลิงก์เก่าจะใช้ไม่ได้ทันที`)) return
     const res = await fetch(`/api/docs/projects/${project.id}/tokens`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -158,6 +157,12 @@ export default function DocProjectView({ project: initialProject, initialEntries
         [`${type}_token_expires`]: data.expires,
       }))
     }
+  }
+
+  async function regenerateBothTokens() {
+    if (!project?.id) return
+    if (!confirm('สร้างลิงก์ใหม่ทั้งสอง? ลิงก์เก่าจะใช้ไม่ได้ทันที')) return
+    await Promise.all([regenerateToken('pdf'), regenerateToken('export')])
   }
 
   function copyToken(type) {
@@ -443,15 +448,31 @@ export default function DocProjectView({ project: initialProject, initialEntries
             )}
           </div>
           {canManage && (
-            <a
-              href={tokens?.export_token ? `/api/docs/token/${tokens.export_token}/receipt` : undefined}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-disabled={!tokens?.export_token}
-              className={`inline-flex items-center gap-2 px-4 py-2.5 bg-orange text-white text-base font-semibold rounded-lg transition ${tokens?.export_token ? 'hover:bg-orange-light' : 'opacity-50 pointer-events-none'}`}
-            >
-              พิมพ์เอกสารทั้งหมด
-            </a>
+            <div className="flex flex-col items-end gap-1">
+              <div className="flex gap-2">
+                <a
+                  href={tokens?.export_token ? `/api/docs/token/${tokens.export_token}/receipt` : undefined}
+                  target="_blank" rel="noopener noreferrer"
+                  aria-disabled={!tokens?.export_token}
+                  className={`inline-flex items-center gap-2 px-4 py-2.5 bg-orange text-white text-base font-semibold rounded-lg transition ${tokens?.export_token ? 'hover:bg-orange-light' : 'opacity-50 pointer-events-none'}`}
+                >
+                  ใบสำคัญรับเงิน
+                </a>
+                <a
+                  href={tokens?.pdf_token ? `/api/docs/token/${tokens.pdf_token}/registration` : undefined}
+                  target="_blank" rel="noopener noreferrer"
+                  aria-disabled={!tokens?.pdf_token}
+                  className={`inline-flex items-center gap-2 px-4 py-2.5 border border-warm-300 dark:border-disc-border text-warm-700 dark:text-disc-text text-base font-semibold rounded-lg transition ${tokens?.pdf_token ? 'hover:bg-warm-50 dark:hover:bg-disc-hover' : 'opacity-50 pointer-events-none'}`}
+                >
+                  แนบท้าย 3
+                </a>
+              </div>
+              {project && (
+                <button onClick={regenerateBothTokens} className="flex items-center gap-1 text-xs text-warm-400 dark:text-disc-muted hover:text-orange transition">
+                  <RefreshCw size={11} /> สร้างลิงก์ใหม่
+                </button>
+              )}
+            </div>
           )}
         </div>
       ) : canManage ? (
@@ -574,48 +595,6 @@ export default function DocProjectView({ project: initialProject, initialEntries
                     className="inline-flex items-center gap-1.5 text-orange hover:underline font-medium text-sm">
                     พิมพ์แนบท้าย 3 (ใบรายชื่อเปล่า) ↗
                   </a>
-                </div>
-              )}
-
-              {/* Public links */}
-              {project && (
-                <div className="space-y-3">
-                  <p className="text-xs font-semibold text-warm-400 dark:text-disc-muted uppercase tracking-widest">ลิงก์ Public (ส่งให้ กกต)</p>
-                  {[
-                    { type: 'pdf',    label: 'ใบลงทะเบียน (PDF รวมรูป)' },
-                    { type: 'export', label: 'ใบสำคัญรับเงิน (Export)' },
-                  ].map(({ type, label }) => {
-                    const token   = tokens?.[`${type}_token`]
-                    const expires = tokens?.[`${type}_token_expires`]
-                    const suffix  = type === 'pdf' ? 'registration' : 'receipt'
-                    const url     = token ? `${typeof window !== 'undefined' ? window.location.origin : ''}/api/docs/token/${token}/${suffix}` : null
-                    return (
-                      <div key={type} className="border border-warm-200 dark:border-disc-border rounded-lg p-3 space-y-2">
-                        <p className="text-sm font-medium text-warm-800 dark:text-disc-text">{label}</p>
-                        {token ? (
-                          <>
-                            <div className="flex items-center gap-2">
-                              <code className="flex-1 text-xs bg-warm-100 dark:bg-disc-hover px-2 py-1 rounded truncate text-warm-600 dark:text-disc-muted">{url}</code>
-                              <button onClick={() => copyToken(type)} className="p-1.5 rounded hover:bg-warm-100 dark:hover:bg-disc-hover text-warm-500 dark:text-disc-muted transition">
-                                {copiedKey === type ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
-                              </button>
-                            </div>
-                            <p className="text-xs text-warm-400 dark:text-disc-muted">
-                              หมดอายุ {expires ? new Date(expires).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' }) : '-'}
-                            </p>
-                          </>
-                        ) : (
-                          <p className="text-xs text-warm-400 dark:text-disc-muted">ยังไม่มีลิงก์</p>
-                        )}
-                        <button
-                          onClick={() => regenerateToken(type)}
-                          className="flex items-center gap-1.5 text-xs text-orange hover:underline"
-                        >
-                          <RefreshCw size={12} /> {token ? 'สร้างลิงก์ใหม่' : 'สร้างลิงก์'}
-                        </button>
-                      </div>
-                    )
-                  })}
                 </div>
               )}
 
