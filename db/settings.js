@@ -31,8 +31,14 @@ async function deleteSetting(guildId, key) {
     }
 }
 
+async function getEnabledFeatures(guildId) {
+    const v = await getSetting(guildId, 'enabled_features');
+    return Array.isArray(v) ? v : [];
+}
+
 module.exports = {
     getSetting,
     setSetting,
-    deleteSetting
+    deleteSetting,
+    getEnabledFeatures,
 };

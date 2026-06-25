@@ -45,6 +45,9 @@ const { upsertGuilds } = require('./db/guilds');
 const { syncGuildRolesCatalog, upsertGuildRole, deleteGuildRole, invalidateGuildRoleCache } = require('./db/guildRoles');
 const { handleSlipMessage } = require('./services/financeOCR');
 const { handleRoleAddModal, handleRoleRemoveModal } = require('./handlers/roleBulkHandler');
+const { buildRagContext } = require('./services/ragSearch');
+const { callAI } = require('./services/aiSummarize');
+const { getEnabledFeatures } = require('./db/settings');
 
 const fs = require('fs');
 const path = require('path');
@@ -303,6 +306,39 @@ client.on('threadCreate', async (thread) => {
 const cooldowns = new Map();
 const msgCounts = new Map();
 
+// RAG mention rate limiting (in-memory)
+const mentionCooldown = new Map();   // userId → timestamp
+const mentionDailyCount = new Map(); // guildId → { date, count }
+const MENTION_COOLDOWN_MS = 60_000;
+const MENTION_DAILY_LIMIT = 100;
+
+function checkMentionRateLimit(userId, guildId) {
+  const now = Date.now();
+  const today = new Date().toDateString();
+
+  // per-user cooldown
+  const lastUsed = mentionCooldown.get(userId) ?? 0;
+  if (now - lastUsed < MENTION_COOLDOWN_MS) {
+    const secsLeft = Math.ceil((MENTION_COOLDOWN_MS - (now - lastUsed)) / 1000);
+    return { ok: false, reason: `รอ ${secsLeft} วินาทีก่อนนะครับ` };
+  }
+
+  // per-guild daily limit
+  const daily = mentionDailyCount.get(guildId);
+  if (daily?.date === today && daily.count >= MENTION_DAILY_LIMIT) {
+    return { ok: false, reason: 'ใช้ครบโควต้าวันนี้แล้วครับ ลองพรุ่งนี้นะครับ' };
+  }
+
+  // update state
+  mentionCooldown.set(userId, now);
+  if (daily?.date === today) {
+    mentionDailyCount.set(guildId, { date: today, count: daily.count + 1 });
+  } else {
+    mentionDailyCount.set(guildId, { date: today, count: 1 });
+  }
+  return { ok: true };
+}
+
 client.on('messageCreate', async (message) => {
   // track activity (ไม่ block bot message เพราะ onMessage เช็คเองอยู่แล้ว)
   onMessage(message).catch(err => console.error('[onMessage]', err));
@@ -334,6 +370,53 @@ client.on('messageCreate', async (message) => {
       indexMessage(message, message.channel.id).catch(err =>
         console.error('[forumIndex] messageCreate:', err)
       );
+    }
+  }
+
+  // mention → RAG AI reply
+  if (!message.author.bot && message.guild && message.mentions.has(client.user)) {
+    const features = await getEnabledFeatures(message.guildId);
+    if (features.includes('ai_mention')) {
+      const question = message.content.replace(/<@!?\d+>/g, '').trim();
+      if (!question) { await message.reply('ถามมาได้เลยครับ 😊'); return; }
+
+      const limit = checkMentionRateLimit(message.author.id, message.guildId);
+      if (!limit.ok) { await message.reply(limit.reason); return; }
+
+      await message.channel.sendTyping().catch(() => {});
+      try {
+        // ดึง conversation context 10 messages ก่อนหน้า
+        const prevMessages = await message.channel.messages
+          .fetch({ limit: 10, before: message.id })
+          .catch(() => null);
+        const convoContext = prevMessages
+          ? [...prevMessages.values()].reverse()
+              .map(m => `${m.author.username}: ${m.content}`)
+              .join('\n')
+          : '';
+
+        const ragContext = await buildRagContext(question, message.guildId);
+
+        const systemPrompt = [
+          'คุณคือบอทช่วยงานของทีมอาสาประชาชน คุยเป็นกันเองเหมือนเพื่อนร่วมทีม ภาษา casual ได้เลย',
+          'ตอบสั้นตรงประเด็น ไม่เกิน 1800 ตัวอักษร',
+          'ห้ามเปิดเผยเบอร์โทร LINE ID ที่อยู่ หรือข้อมูลส่วนตัวของบุคคลใด',
+          ragContext ? 'มีข้อมูลจากกระทู้ Discord ที่เกี่ยวข้อง ใช้อ้างอิงได้ถ้าตรงกับคำถาม' : '',
+        ].filter(Boolean).join('\n');
+
+        const userContent = [
+          ragContext ? `ข้อมูลจากกระทู้:\n${ragContext}` : '',
+          convoContext ? `บทสนทนาก่อนหน้า:\n${convoContext}` : '',
+          `คำถาม: ${question}`,
+        ].filter(Boolean).join('\n\n');
+
+        const answer = await callAI(systemPrompt, userContent);
+        await message.reply(answer);
+      } catch (err) {
+        console.error('[mentionAI]', err);
+        await message.reply('ขอโทษครับ ตอบตอนนี้ไม่ได้ ลองใหม่อีกทีนะครับ 🙏');
+      }
+      return;
     }
   }
 

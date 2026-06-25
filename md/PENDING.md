@@ -2,13 +2,16 @@
 
 ---
 
-## 🤖 Discord Bot AI Chat (DM)
+## 🤖 Discord Bot AI Chat (Mention)
 
-- [ ] **Bot คุยได้เหมือน AI** — ให้ bot ตอบ DM อัตโนมัติผ่าน Claude API
-  - bot listen `messageCreate` event ใน DM channel (`ChannelType.DM`)
-  - ส่ง message history ไปหา Claude API พร้อม system prompt (บุคลิกของ bot)
-  - bot reply กลับใน DM thread เดิม
-  - use case หลัก: ส่งลิงก์เซ็นเอกสารให้ผู้รับ/ผู้จ่ายแล้ว bot คอยตอบคำถามแทนผู้ส่ง
+- [ ] **Bot ตอบเมื่อ mention** — `@bot <คำถาม>` ในทุกห้อง bot ตอบ plain text reply
+  - trigger: `messageCreate` + `message.mentions.has(client.user)` (ไม่ใช่ slash command)
+  - retrieval: `searchPostsWithContent()` จาก Meilisearch (ต้องเพิ่ม fn ใหม่ใน `meilisearch.js` — คืน id/post_name/post_url/content ไม่ตัด crop)
+  - context: forum content เป็น context เสริม ถ้าไม่มีก็ตอบ general knowledge ได้เลย
+  - บุคลิก: casual เหมือนทีมงานคนนึง ไม่ formal
+  - reuse `callAI` จาก `aiSummarize.js` (ต้อง export เพิ่ม)
+  - toggle เปิด/ปิด: feature key `ai_mention` ที่ `/bot/features` (ระบบ `dc_guild_config` enabled_features ที่มีอยู่แล้ว)
+  - ไฟล์ใหม่: `services/ragSearch.js` (buildRagContext) · แก้: `services/meilisearch.js`, `services/aiSummarize.js`, `index.js`
 
 ---
 
@@ -267,10 +270,10 @@
 - ✅ **Export PDF skip unassigned (v2.17.0)** — route.js กรอง `member_discord_id != null` ก่อนสร้าง PDF; ส่ง header `X-Skipped-Count` กรณีมี entry ถูก skip
 - ✅ **Payer logic null check (v2.17.0)** — ตรวจสอบแล้ว: `autoAssignPayers` ไม่ error เมื่อ entry มี null recipient (ระบบ payer-switching trigger เฉพาะเมื่อ recipient มีค่า)
 - ✅ **DocAutoCalc UX rewrite (v2.17.0, 2026-06-23)** — Layout ใหม่: Field/Check abstraction, one orange accent, label token สม่ำเสมอ; "รายการเบิก" section (ค่าอาหาร/ค่าเดินทาง default checked, option inline ใต้ checkbox แต่ละตัว); ค่าเช่าสถานที่ auto-fill เพดานตามจำนวนคน; ค่าเดินทาง 2 mode (เท่ากัน 300 บ./คน / ตามจริง = blank entries กรอกระยะทางทีหลัง); กรอบงบลิงก์กับ stats card (2-way sync ผ่าน `projectBudget` prop + `onBudgetChange` callback); ปุ่มล้างบิลทั้งหมด (DELETE `/api/docs/entries?projectId=X`)
-- [ ] act_event_registers — ยังหาวิธีดึงไม่ได้ (รอ)
-- [ ] **แนบใบลงทะเบียน** — PDF โครงการควรรองรับการแนบใบลงทะเบียนเพิ่มเติมได้
-- [ ] **Bot command `/link-ngs`** — ให้สมาชิกค้นชื่อตัวเองใน `ngs_member_cache` แล้วผูก `dc_members.member_id` ถาวร (ทางเลือก B ของ ngs link flow; ตอนนี้ใช้ sign-page self-link แทน)
-- [ ] **Transport แบบแยกใบรายบุคคล (rich)** — ตอนนี้ค่าเดินทางใช้ generic plaintext (description) แบบทุกคนเท่ากัน/ใบรวม. อนาคตทำแบบ rich แยกใบรายบุคคล (ตาราง per-person) ใช้ `transport.docx` structured. ตัดสินใจ 2026-06-21 ว่า defer ไว้ก่อน
+- ~~act_event_registers~~ ✅ (2026-06-25)
+- ~~**แนบใบลงทะเบียน**~~ ✅ (2026-06-25)
+- ~~**Bot command `/link-ngs`**~~ ✅ (2026-06-25)
+- ~~**Transport แบบแยกใบรายบุคคล (rich)**~~ ✅ (2026-06-25)
 - ✅ **Payer redesign — role-based auto + manual override (เสร็จ local 2026-06-24)** — เปลี่ยนจาก manual `docs_payers` เป็น source หลัก → query `dc_members` ตาม role:
   - **Source of truth:** payer ราย entry (`docs_activity_entries.payer_discord_id`) เท่านั้น · `docs_projects.payer_discord_id` = dead column (เลิกเขียน)
   - **Pool `getPayersForEvent(guildId, province)`** — รวมทุก level dedupe (ไม่ fallback หยุด):
@@ -282,7 +285,7 @@
   - **Manual override:** dropdown ที่ group header รายผู้รับ (`DocEntryList`) · pool ตัด recipient ออก · POST `/api/docs/projects/[id]/set-payer` `{recipientDiscordId, payerDiscordId}` → `setRecipientGroupPayer` (gen token ใหม่ + reset ลายเซ็น payer เดิมถ้าเซ็นแล้ว) · validate payer≠recipient
   - **กล่อง "ผู้จ่ายเงิน" บนหน้า** = summary read-only (แก้ที่ group header เท่านั้น)
   - แก้: `payers.js`, `entries.js`, `set-payer/route.js`, `entries/[id]/route.js`, `DocEntryList.jsx`, `DocProjectView.jsx` · 175 tests ผ่าน · build ผ่าน
-  - **เหลือ:** deploy prod + clear stale assignment (Tee `1098111730015543386` นอกราชบุรี + teerapon `899627308967690270` ในนครปฐม ที่ยังไม่เซ็น — SQL อยู่ใน migration.sql)
+  - ✅ **deploy prod + clear stale assignment (2026-06-25)**
   - **nuance จดไว้:** คนถือหลาย role permission เดียวกัน (Jatsada regional ผ่าน "รองเลขาธิการ") → `array_agg[1]` หยิบตัวแรก · เคสจริงไม่กระทบ (resolve ผ่าน level1)
 - ✅ **Docs v2.18.0 (2026-06-24)** — sound item type, override_data duration, payer real name, DocAutoCalc UX fixes:
   - **Sound item type ครบทุกที่:** `ITEM_LABELS` ใน `DocProjectView` + `DocEntryList` (ไม่เคยมีมาก่อน ทำให้แสดงเป็น "sound" แทนชื่อไทย) · manual entry มี soundHours dropdown (1–8 ชม.) · `overrideData.duration` เก็บทั้ง speaker และ sound

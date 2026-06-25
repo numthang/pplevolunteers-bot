@@ -83,7 +83,7 @@ const DISCORD_LINKS = [
   { href: '/bot/media/quote',      label: 'Quote',     icon: 'quote',    mediaGroup: true },
   { href: '/bot/media/watermark',  label: 'Watermark', icon: 'droplet',  mediaGroup: true },
   { href: '/bot/platforms',        label: 'Platforms', icon: 'social',   menuOnly: true },
-  { href: '/bot/features',         label: 'Features',  icon: 'overview', menuOnly: true, adminOnly: true },
+  { href: '/bot/features',         label: 'Features',  icon: 'overview', menuOnly: true, superAdminOnly: true },
   { href: '/bot/roles',            label: 'Roles',     icon: 'logs',     menuOnly: true, adminOnly: true },
   { href: '/bot/ai',               label: 'AI',        icon: 'ai',       menuOnly: true },
 ]
@@ -199,6 +199,7 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
   const visibleLinks = links.filter(l => {
     if (!featureOn(l.feature)) return false
     if (!session) return l.public
+    if (l.superAdminOnly && !superAdmin) return false
     if (l.adminOnly && !userIsAdmin) return false
     if (l.capability) return can(l.capability, access?.permissions || [])
     if (l.docsAccess) return canManageDocs(access)

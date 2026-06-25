@@ -81,4 +81,4 @@ async function processText(guildId, text, modeValue, customPrompt = null, prompt
   return { mode, output };
 }
 
-module.exports = { processMessages, processText, MAX_MESSAGES };
+module.exports = { processMessages, processText, callAI, MAX_MESSAGES };

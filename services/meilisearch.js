@@ -103,6 +103,27 @@ async function searchPosts(keyword, { guildId, channelId } = {}) {
   }
 }
 
+// RAG retrieval — คืน full content (ไม่ crop) สำหรับส่งให้ Claude เป็น context
+async function searchPostsWithContent(keyword, { guildId, channelId, excludeChannelIds = [], limit = 3 } = {}) {
+  if (!ready) return [];
+  try {
+    const index = getClient().index(INDEX_NAME);
+    const filters = [`guild_id = "${guildId}"`];
+    if (channelId) filters.push(`channel_id = "${channelId}"`);
+    for (const id of excludeChannelIds) filters.push(`channel_id != "${id}"`);
+
+    const result = await index.search(keyword, {
+      filter: filters.join(' AND '),
+      limit,
+      attributesToRetrieve: ['id', 'post_name', 'post_url', 'content'],
+    });
+    return result.hits;
+  } catch (e) {
+    console.warn('[meilisearch] searchPostsWithContent error:', e.message);
+    return [];
+  }
+}
+
 async function deletePost(postId) {
   if (!ready) return;
   try {
@@ -112,4 +133,4 @@ async function deletePost(postId) {
   }
 }
 
-module.exports = { initMeilisearch, isReady, upsertPost, appendContent, searchPosts, deletePost };
+module.exports = { initMeilisearch, isReady, upsertPost, appendContent, searchPosts, searchPostsWithContent, deletePost };

@@ -1,21 +1,16 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
-import { isAdmin, isSuperAdmin } from '@/lib/roles.js'
+import { isSuperAdmin } from '@/lib/roles.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
-import { getAdminGuildIds } from '@/db/guilds.js'
 import { getGuildId } from '@/lib/guildContext.js'
 import pool from '@/db/index.js'
 
 // features ที่ toggle ได้ — finance + contacts + bot เปิดตลอด (ไม่อยู่ในนี้)
-const TOGGLEABLE = ['calling', 'docs']
+const TOGGLEABLE = ['calling', 'docs', 'ai_mention']
 
-async function authGuildAdmin(session, guildId) {
-  // effective discordId เป็น null ตอน view-as-role → super/adminGuild bypass ปิด ตาม debug role
-  const { access, discordId } = await getEffectiveIdentity(session)
-  if (isSuperAdmin(discordId)) return true
-  if (!isAdmin(access)) return false
-  const adminGuildIds = await getAdminGuildIds(discordId)
-  return adminGuildIds.includes(guildId)
+async function authGuildAdmin(session) {
+  const { discordId } = await getEffectiveIdentity(session)
+  return isSuperAdmin(discordId)
 }
 
 // GET → { guildId, toggleable: [...], enabled: [...] }
@@ -24,7 +19,7 @@ export async function GET() {
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
   const guildId = await getGuildId(session)
-  if (!(await authGuildAdmin(session, guildId))) {
+  if (!(await authGuildAdmin(session))) {
     return Response.json({ error: 'Forbidden' }, { status: 403 })
   }
 
@@ -43,7 +38,7 @@ export async function PATCH(req) {
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
   const guildId = await getGuildId(session)
-  if (!(await authGuildAdmin(session, guildId))) {
+  if (!(await authGuildAdmin(session))) {
     return Response.json({ error: 'Forbidden' }, { status: 403 })
   }
 

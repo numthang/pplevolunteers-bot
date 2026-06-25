@@ -33,13 +33,14 @@ const ORANGE = '#ff6a13';
 const WHITE  = '#ffffff';
 const BLACK  = '#000000';
 
-// คืน '#ffffff' หรือ '#000000' ตาม luminance ของ bg color (WCAG relative luminance)
+// คืน '#ffffff' หรือ '#000000' ตาม WCAG relative luminance (with sRGB linearization)
 function contrastText(hex) {
-  const r = parseInt(hex.slice(1, 3), 16) / 255;
-  const g = parseInt(hex.slice(3, 5), 16) / 255;
-  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  const lin = c => c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  const r = lin(parseInt(hex.slice(1, 3), 16) / 255);
+  const g = lin(parseInt(hex.slice(3, 5), 16) / 255);
+  const b = lin(parseInt(hex.slice(5, 7), 16) / 255);
   const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-  return lum > 0.4 ? BLACK : WHITE;
+  return lum > 0.179 ? BLACK : WHITE;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -492,8 +493,11 @@ const RANDOM_KEYS = Object.keys(STYLES).filter(k => k !== 'quote-1-ember-ai');
 const STYLE_KEYS  = Object.keys(STYLES);
 
 async function renderQuoteStyle(styleKey, sourceBuffer, opts) {
-  const fn = STYLES[styleKey];
-  if (!fn) throw new Error(`Unknown style: ${styleKey}`);
+  const key = (!styleKey || styleKey === 'random')
+    ? RANDOM_KEYS[Math.floor(Math.random() * RANDOM_KEYS.length)]
+    : styleKey;
+  const fn = STYLES[key];
+  if (!fn) throw new Error(`Unknown style: ${key}`);
   return fn(sourceBuffer, { ...opts, authorName: opts.authorName || '' });
 }
 
