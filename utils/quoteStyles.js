@@ -33,6 +33,15 @@ const ORANGE = '#ff6a13';
 const WHITE  = '#ffffff';
 const BLACK  = '#000000';
 
+// คืน '#ffffff' หรือ '#000000' ตาม luminance ของ bg color (WCAG relative luminance)
+function contrastText(hex) {
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  return lum > 0.4 ? BLACK : WHITE;
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const _segmenter = new Intl.Segmenter('th', { granularity: 'grapheme' });
@@ -169,7 +178,7 @@ async function toPng(canvas) {
 // ── Core render ───────────────────────────────────────────────────────────────
 // markScale: relative size of mark (1.0 = default)
 // gradDark:  0.0–1.0 how dark the bottom gradient is
-async function renderVariant(buf, { quoteText, authorName, side = 'left', vertical = 'bottom', markScale = 1.0, gradDark = 0.95, saturation = 0.15, fontBold = 'GSans', fontLight = 'AnakotmaiLight', accentColor, markExtraGap = 0, markAfterText = false }) {
+async function renderVariant(buf, { quoteText, authorName, side = 'left', vertical = 'bottom', markScale = 1.0, gradDark = 0.95, saturation = 0.15, fontBold = 'GSans', fontLight = 'AnakotmaiLight', accentColor, markExtraGap = 0, markAfterText = false, noMark = false }) {
   const accent = accentColor || ORANGE;
   const isRight = side === 'right';
   const isTop   = vertical === 'top';
@@ -196,25 +205,17 @@ async function renderVariant(buf, { quoteText, authorName, side = 'left', vertic
 
   const textX        = isRight ? W - maxW - pad - barW - barGap - 4 : pad + barW + barGap + 4;
   const barX         = isRight ? W - pad - barW : pad;
-  // top: mark ↓ pad, then text block below it. bottom: text block ↑ pad, mark above it.
-  // markAfterText=true (top only): text ก่อน แล้ว mark ใต้บล็อก
   const extraGap     = Math.round(pad * markExtraGap);
+  const effectMarkH  = noMark ? 0 : markH;
+  const effectGap    = noMark ? 0 : markGap + extraGap;
   const markY        = isTop
-    ? (markAfterText ? pad + textH + markGap + extraGap : pad)
-    : H - pad - textH - markGap - markH - extraGap;
+    ? (markAfterText ? pad + textH + effectGap : pad)
+    : H - pad - textH - effectGap - effectMarkH;
   const textBlockTop = isTop
-    ? (markAfterText ? pad : pad + markH + markGap + extraGap)
+    ? (markAfterText ? pad : pad + effectMarkH + effectGap)
     : H - pad - textH;
 
-  const OPEN_MARKS  = ['double_open', 'classic_open', 'block_open', 'outline_open', 'big_open'];
-  const CLOSE_MARKS = ['double_close', 'classic_close', 'block_close', 'outline_close'];
-  const pool    = isRight ? CLOSE_MARKS : OPEN_MARKS;
-  const markImg = await loadMark(pool[Math.floor(Math.random() * pool.length)]);
-  const markW   = (markImg.width / markImg.height) * markH;
-  // left: mark ซ้าย align กับ bar edge, right: mark ขวา align กับ text ขวา
-  const markX   = isRight ? textX + maxW - markW : pad;
-
-  // gradient ไล่จากด้านที่มี text → จางไปอีกฝั่ง
+  // gradient
   const gV = isTop
     ? ctx.createLinearGradient(0, 0, 0, (textBlockTop + textH) + H * 0.2)
     : ctx.createLinearGradient(0, H, 0, markY - H * 0.2);
@@ -224,7 +225,15 @@ async function renderVariant(buf, { quoteText, authorName, side = 'left', vertic
   ctx.fillStyle = gV;
   ctx.fillRect(0, 0, W, H);
 
-  drawTinted(ctx, markImg, markX, markY, markW, markH, accent);
+  if (!noMark) {
+    const OPEN_MARKS  = ['double_open', 'classic_open', 'block_open', 'outline_open', 'big_open'];
+    const CLOSE_MARKS = ['double_close', 'classic_close', 'block_close', 'outline_close'];
+    const pool    = isRight ? CLOSE_MARKS : OPEN_MARKS;
+    const markImg = await loadMark(pool[Math.floor(Math.random() * pool.length)]);
+    const markW   = (markImg.width / markImg.height) * markH;
+    const markX   = isRight ? textX + maxW - markW : pad;
+    drawTinted(ctx, markImg, markX, markY, markW, markH, accent);
+  }
 
   ctx.fillStyle = accent;
   ctx.fillRect(barX, textBlockTop, barW, textH);
@@ -245,15 +254,15 @@ async function renderVariant(buf, { quoteText, authorName, side = 'left', vertic
   const aw = lsWidth(ctx, authorStr, 0.8);
   const ax = isRight ? textX + (maxW - aw) : textX;
 
-  // top mode: author หลุดโซน gradient เข้ม → fill bg ขาวหลังตัวอักษร (author สีดำบนขาว)
+  // top mode: author หลุดโซน gradient เข้ม → fill bg CI accent หลังตัวอักษร
   if (isTop) {
     const padX = Math.round(nsz * 0.5), padY = Math.round(nsz * 0.35);
     ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
-    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    ctx.fillStyle = accent;
     ctx.fillRect(ax - padX, ty - padY, aw + padX * 2, nsz + padY * 2);
   }
 
-  ctx.fillStyle = isTop ? BLACK : accent;
+  ctx.fillStyle = isTop ? contrastText(accent) : WHITE;
   if (!isTop) { ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 4; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0; }
   lsDraw(ctx, authorStr, ax, ty, 0.8);
 
@@ -289,8 +298,9 @@ async function renderBorder(buf, { quoteText, authorName, saturation = 0.15, acc
   const pngH    = (textH / 0.75) * 0.5;
   const pngW    = pngH * (698 / 591);
   const borderX = Math.round(pad * 0.6);
-  const textBlockTop = H - pad - textH;
-  const borderY      = textBlockTop - pngH * 0.25;
+  const textBlockTop0 = H - pad - textH;
+  const borderY       = textBlockTop0 - pngH * 0.25;
+  const textBlockTop  = textBlockTop0 + Math.round(pad * 0.4);
 
   // text starts right of V-bar (24%) + double gap
   const vBarRight = borderX + pngW * 0.24;
@@ -470,8 +480,8 @@ async function renderCenter(buf, { quoteText, authorName, saturation = 1.0 }) {
 const STYLES = {
   'quote-1-ember-bottom-left':  ember('left',  'bottom', { markExtraGap: 0.65, markScale: 0.84 }),
   'quote-1-ember-bottom-right': ember('right', 'bottom', { markExtraGap: 0.65, markScale: 0.84 }),
-  'quote-1-ember-top-left':     ember('left',  'top',   { markExtraGap: 0.65, markScale: 0.84 }),
-  'quote-1-ember-top-right':    ember('right', 'top',   { markExtraGap: 0.65, markScale: 0.84 }),
+  'quote-1-ember-top-left':     ember('left',  'top',   { noMark: true }),
+  'quote-1-ember-top-right':    ember('right', 'top',   { noMark: true }),
   'quote-1-pillar-left':        (buf, opts) => renderBorder(buf, opts),
   'quote-1-frame-right':        (buf, opts) => renderBorder2(buf, opts),
   'quote-1-ember-ai':           (buf, opts) => renderEmberAI(buf, opts),
