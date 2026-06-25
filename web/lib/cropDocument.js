@@ -1,5 +1,5 @@
 import path from 'path'
-import { writeFile, readFile as fsReadFile, unlink, mkdir } from 'fs/promises'
+import { writeFile, readFile as fsReadFile, unlink, mkdir, access } from 'fs/promises'
 import { execFile } from 'child_process'
 import { promisify } from 'util'
 import { randomUUID } from 'crypto'
@@ -27,13 +27,16 @@ export async function cropAndSave(buffer, projectId) {
   try {
     await execFileAsync(PYTHON, [CROP_SCRIPT, tmpIn, outPath], { timeout: 30000 })
   } catch (err) {
-    // exit code 1 = no document detected, script still wrote resized fallback — OK
+    // exit code 1 = no document detected, script wrote resized fallback — OK
     if (err.code !== 1) throw err
   } finally {
     await unlink(tmpIn).catch(() => {})
   }
 
-  // relative path stored in DB (relative to getUploadPath())
+  // If script failed to write output (e.g. missing cv2), save original buffer as fallback
+  const outExists = await access(outPath).then(() => true).catch(() => false)
+  if (!outExists) await writeFile(outPath, buffer)
+
   return path.join(String(projectId), outName)
 }
 
