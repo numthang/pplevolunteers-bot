@@ -309,7 +309,7 @@ const msgCounts = new Map();
 // RAG mention rate limiting (in-memory)
 const mentionCooldown = new Map();   // userId → timestamp
 const mentionDailyCount = new Map(); // guildId → { date, count }
-const MENTION_COOLDOWN_MS = 60_000;
+const MENTION_COOLDOWN_MS = 10_000;
 const MENTION_DAILY_LIMIT = 100;
 
 function checkMentionRateLimit(userId, guildId) {
