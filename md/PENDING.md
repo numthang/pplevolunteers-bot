@@ -2,6 +2,50 @@
 
 ---
 
+## 📢 ระบบเรื่องร้องเรียน (Case System) — ✅ implement เสร็จ local 2026-06-26 · ดู `md/CASE.md`
+
+> naming เคาะเป็น **`case`** (ไม่ใช่ complaint) · table `cases`/`case_*` · URL `/case/*` · permission `caseworker`
+
+### ✅ ทำเสร็จแล้ว (ยังไม่ deploy prod)
+- **Schema:** `cases`/`case_notes`/`case_assignees`/`case_attachments`/`case_config` (รัน dev DB แล้ว) + `config/province-codes.json` (77 จว.) + `config/case-options.json`
+- **Public form** `/case/new?province=X` — province จาก URL/picker, PDPA consent, แนบภาพ/เสียง, honeypot + rate limit (เบอร์ 3/วัน, IP 10/วัน)
+- **Submit API** `POST /api/case` → createCase + SMS tracking link (ThaiBulkSMS) + สร้าง forum thread ผ่าน Discord REST
+- **Public tracking** `/case/[ref]` (status + public note, ไม่มี PII) + dashboard `/case` (headline count + ref lookup)
+- **Discord import:** context menu `📋 นำเข้าเป็นเคสร้องเรียน` → modal (จังหวัด pre-fill `case_default_province` + ประเภท) → AI สรุปกระทู้ · `/panel case channel:#forum`
+- **เปลี่ยน `/case` เก่า (report สมาชิก) → `/report`** (table `dc_user_reports` ไม่แตะ)
+- **Caseworker workspace** `/case/manage` + `/case/manage/[ref]` (gate `canManageCases` + province scope) — รับเรื่อง/note(public·internal)/เปลี่ยนสถานะ + close_reason+public note บังคับตอนปิด
+- **Ref:** `<รหัสมหาดไทย>-<พ.ศ.2หลัก>-<random4>` เช่น `70-69-A8F3` · scope เหมือน calling · 189 tests เขียว + build ผ่าน
+
+### ⚠️ ก่อน deploy prod
+1. รัน migration block "2026-06-26: Case" บน prod DB (`sudo -u www`) + ALTER `complainant_phone` nullable + `title`/`detail`
+2. `./deploy.sh` ลง slash command ใหม่ (`/panel case` + context menu + `/report`)
+3. เปิด feature: เพิ่ม `"cases"` ใน `dc_guild_config.enabled_features` ของ guild + `/panel case` ตั้ง forum channel + ตั้ง `case_default_province`
+4. สร้าง Discord role + map permission `caseworker` ใน `dc_guild_roles`
+5. **เทสต์ happy-path จริง** (ฟอร์ม → SMS เข้าเบอร์ตัวเอง → forum thread เกิด) — ยังไม่ได้เทสต์เพราะ SMS ยิงจริง
+
+### ⏳ ต้องทดสอบหลัง deploy
+- **Discord import จากกระทู้เรื่องร้องเรียน** — context menu `📋 นำเข้าเป็นเคสร้องเรียน` บนข้อความใน thread → modal → สร้าง case + AI สรุป (build แล้ว ยังไม่ได้ทดสอบจริง ต้อง deploy.sh ก่อน)
+
+### 🔧 Backlog — Case System UX
+- **ปุ่มสีส้ม** — CaseNewForm + CaseManageActions เปลี่ยนปุ่ม primary จาก indigo → `bg-brand-orange hover:bg-brand-orange-light`
+- **`/bot/features` เปิด/ปิด feature cases** — เพิ่ม `cases` เข้า feature list ใน `/bot/features` UI (ปัจจุบัน toggle ได้แค่ผ่าน DB ตรงๆ)
+- **URL `/case/new/[province]` แทน `?province=`** — เปลี่ยน route จาก `app/case/new/page.js` เป็น `app/case/new/[province]/page.js` · redirect `/case/new` → `/case/new/` (picker) · link ที่แชร์จะเป็น `/case/new/ราชบุรี` หรือ `/case/new/70`
+- **Hamburger — เอา 3 เมนูบนออก** — เมนูบนใน hamburger คือ `menuLinks` (links ของ app ปัจจุบัน) ซ้ำกับ app switcher ด้านล่าง → ซ่อน section นี้เมื่ออยู่หน้า home/dashboard (หรือเอาออกถาวร ถ้า DASHBOARD_LINKS ซ้ำทุก app)
+- **Detect location → link จังหวัด** — หน้า `/case` public dashboard มีปุ่ม "ใช้ตำแหน่งของฉัน" → `navigator.geolocation` → reverse geocode → redirect `/case/new/[จังหวัด]` (ต้องหา reverse geocode API ที่ไม่มีค่าใช้จ่าย เช่น Nominatim/OSM)
+
+### 🆕 Auto-import เมื่อสร้างกระทู้ใหม่ใน forum
+- `threadCreate` listener ใน `index.js` → เช็คว่า thread อยู่ใน `case_config.forum_channel_id` ของ guild
+- auto สร้าง case: `source='discord'`, `province=case_default_province`, `category=null`, `title`=thread title, `detail`=first message, `created_by`=Discord ID ผู้สร้าง, `complainant_phone=null`
+- AI สรุป → `ai_summary` · โพสต์ใน thread: "✅ เข้าระบบแล้ว · ref: `XX-XX-XXXX`"
+- context menu เดิมยังไว้ใช้กับ historical thread ที่ bot พลาด
+- ไฟล์: `index.js` + `handlers/caseImportHandler.js` (เพิ่ม `handleThreadCreate`)
+
+### V2 (เลื่อนไว้)
+- Public dashboard charts (จังหวัด/ประเภท/สถานะ) + flag "ซ่อนเคสจาก dashboard"
+- ปุ่ม "อัปเดต AI สรุป" ฝั่ง web (ต้องเพิ่ม AI SDK ใน web ก่อน) · auto-assign · cron poll · แยกห้อง noti ตามจังหวัด · CAPTCHA
+
+---
+
 ## 🤖 Discord Bot AI Chat (Mention)
 
 - [ ] **Bot ตอบเมื่อ mention** — `@bot <คำถาม>` ในทุกห้อง bot ตอบ plain text reply
@@ -287,6 +331,7 @@
   - แก้: `payers.js`, `entries.js`, `set-payer/route.js`, `entries/[id]/route.js`, `DocEntryList.jsx`, `DocProjectView.jsx` · 175 tests ผ่าน · build ผ่าน
   - ✅ **deploy prod + clear stale assignment (2026-06-25)**
   - **nuance จดไว้:** คนถือหลาย role permission เดียวกัน (Jatsada regional ผ่าน "รองเลขาธิการ") → `array_agg[1]` หยิบตัวแรก · เคสจริงไม่กระทบ (resolve ผ่าน level1)
+- [ ] **Consolidate docs tokens เป็น token เดียว** — ตอนนี้ `docs_projects` มี 2 token (`pdf_token`/`export_token`) แยกกัน → เปลี่ยนเป็น `project_token` ตัวเดียว แยกเอกสารด้วย URL path: `/dl/[token]/receipt` (ใบสำคัญรับเงิน) vs `/dl/[token]/registration` (ใบลงทะเบียน) · DB: ลบ 4 column เก่า + เพิ่ม 2 column ใหม่ · แก้ ~5 ไฟล์ (projects.js, tokens/route.js, receipt/route.js, registration/route.js, DocProjectView.jsx)
 - ✅ **Docs v2.18.0 (2026-06-24)** — sound item type, override_data duration, payer real name, DocAutoCalc UX fixes:
   - **Sound item type ครบทุกที่:** `ITEM_LABELS` ใน `DocProjectView` + `DocEntryList` (ไม่เคยมีมาก่อน ทำให้แสดงเป็น "sound" แทนชื่อไทย) · manual entry มี soundHours dropdown (1–8 ชม.) · `overrideData.duration` เก็บทั้ง speaker และ sound
   - **override_data.duration ทั้ง 2 path:** auto-calc — ยก `durationHours` ออกนอก `if (eventDate)` block แล้วส่งเป็น `Math.round(durationHours)` ให้ sound · manual form — speaker ส่ง `speakerHours`, sound ส่ง `soundHours` → PDF `{{duration}} ชั่วโมง` แสดงถูกต้อง

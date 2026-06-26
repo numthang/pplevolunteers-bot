@@ -6,6 +6,7 @@ const {
   ButtonStyle,
   EmbedBuilder,
   MessageFlags,
+  ChannelType,
 } = require('discord.js');
 const { getSetting, setSetting } = require('../db/settings');
 
@@ -105,6 +106,16 @@ module.exports = {
         .addBooleanOption(o => o.setName('interest_select').setDescription('ให้เลือก interest/skill หลัง register').setRequired(false))
         .addRoleOption(o => o.setName('member_role').setDescription('ยศที่ติดให้อัตโนมัติหลัง register').setRequired(false))
         .addBooleanOption(o => o.setName('public').setDescription('แสดงผลให้ทุกคนเห็น (default: false)').setRequired(false))
+    )
+
+    // --- case (เรื่องร้องเรียน) ---
+    .addSubcommand(sub =>
+      sub.setName('case')
+        .setDescription('ตั้งค่าห้อง forum สำหรับเรื่องร้องเรียน (1 เคส = 1 กระทู้)')
+        .addChannelOption(opt =>
+          opt.setName('channel').setDescription('forum channel สำหรับสร้างกระทู้เคส').setRequired(true)
+            .addChannelTypes(ChannelType.GuildForum)
+        )
     ),
 
   async execute(interaction) {
@@ -279,6 +290,18 @@ await refreshDashboard(thread, interaction.guildId, ids, existing.dashboard_msg_
       })
 
       return interaction.editReply({ content: `✅ สร้าง thread dashboard การเงินใน <#${channelOpt.id}> แล้วครับ` })
+    }
+
+    // ================================================================
+    if (sub === 'case') {
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral })
+      const channelOpt = interaction.options.getChannel('channel')
+      if (channelOpt.type !== ChannelType.GuildForum) {
+        return interaction.editReply({ content: '❌ กรุณาเลือก **forum channel** เท่านั้น (เคสจะถูกสร้างเป็นกระทู้)' })
+      }
+      const { upsertCaseConfig } = require('../db/case')
+      await upsertCaseConfig(interaction.guildId, { forum_channel_id: channelOpt.id })
+      return interaction.editReply({ content: `✅ ตั้งค่าห้องเรื่องร้องเรียนเป็น <#${channelOpt.id}> แล้ว — เคสใหม่จะสร้างเป็นกระทู้ในห้องนี้` })
     }
 
     // ================================================================

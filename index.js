@@ -27,6 +27,7 @@ const { handleWatermarkSelect, handleWatermarkEnhance, handleWatermarkConfirm, h
 const { handleQuoteModal, handleQuoteStyleSelect, handleQuoteColorSelect, handleQuoteCropSelect, handleQuoteWatermarkSelect, handleQuoteConfirm } = require('./handlers/quoteHandler');
 const { handleBasketAiStart, handleBasketAiModeSelect, handleBasketAiCustomModal, handleBasketAiReplace, handleBasketAiReplaceModal, handleBasketAiAppend, handleBasketAiAppendModal } = require('./handlers/basketAiHandler');
 const { handleAiThreadModeSelect, handleAiThreadCustomModal, handleAiThreadAddCaption, handleAiThreadPublic } = require('./handlers/aiThreadHandler');
+const { handleCaseImportModal } = require('./handlers/caseImportHandler');
 const {
   handleBasketView, handleBasketClear,
   handleBasketPost, handleBasketRetry, handleBasketSelect, handleBasketModal,
@@ -137,6 +138,7 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.customId.startsWith('modal_gogo_event:')) return handleGogoEventModal(interaction);
     if (interaction.customId.startsWith('rate_submit:'))   return handleRateModalSubmit(interaction);
     if (interaction.customId.startsWith('report_submit:')) return handleReportSubmit(interaction);
+    if (interaction.customId.startsWith('case_import_modal:')) return handleCaseImportModal(interaction);
     if (interaction.customId === 'wm_custom_text')          return handleWatermarkModal(interaction);
     if (interaction.customId.startsWith('quote_modal:'))    return handleQuoteModal(interaction);
     if (interaction.customId.startsWith('basket_schedule_modal'))      return handleBasketModal(interaction);

@@ -10,6 +10,7 @@ import { useEffectiveRoles } from '@/lib/useEffectiveRoles.js'
 import { can } from '@/lib/permissions.js'
 import { isAdmin } from '@/lib/roles.js'
 import { canManageDocs } from '@/lib/docsAccess.js'
+import { canManageCases } from '@/lib/caseAccess.js'
 
 function Ic({ d, className = 'w-4 h-4 shrink-0' }) {
   return (
@@ -93,9 +94,10 @@ const SOCIAL_LINKS = [
 ]
 
 const DASHBOARD_LINKS = [
-  { href: '/finance',  label: 'FINANCE',  icon: 'transactions' },
-  { href: '/calling',  label: 'CALLING',  icon: 'campaigns', feature: 'calling' },
-  { href: '/docs',     label: 'DOCS',     icon: 'docs',      feature: 'docs', docsAccess: true },
+  { href: '/finance',      label: 'FINANCE',  icon: 'transactions' },
+  { href: '/calling',      label: 'CALLING',  icon: 'campaigns', feature: 'calling' },
+  { href: '/docs',         label: 'DOCS',     icon: 'docs',      feature: 'docs', docsAccess: true },
+  { href: '/case/manage',  label: 'CASES',    icon: 'logs',      feature: 'cases', casesAccess: true },
 ]
 
 const APPS = [
@@ -203,6 +205,7 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
     if (l.adminOnly && !userIsAdmin) return false
     if (l.capability) return can(l.capability, access?.permissions || [])
     if (l.docsAccess) return canManageDocs(access)
+    if (l.casesAccess) return canManageCases(access)
     return true
   })
   const mediaLinks = visibleLinks.filter(l => l.mediaGroup)

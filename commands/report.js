@@ -1,4 +1,4 @@
-// commands/case.js
+// commands/report.js — จัดการรายงานสมาชิกใน Discord (เดิม /case, เปลี่ยนเป็น /report กันชนกับระบบเรื่องร้องเรียน)
 const {
   SlashCommandBuilder,
   EmbedBuilder,
@@ -35,8 +35,8 @@ const STATUS_CHOICES = [
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName('case')
-    .setDescription('จัดการเคสร้องเรียน (เฉพาะ Moderator)')
+    .setName('report')
+    .setDescription('จัดการรายงานสมาชิก (เฉพาะ Moderator)')
     .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
 
     // --- list ---

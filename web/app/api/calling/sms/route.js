@@ -5,6 +5,7 @@ import { normalizeAccess } from '@/lib/roleAccess.js'
 import { getGuildId } from '@/lib/guildContext.js'
 import pool from '@/db/index.js'
 import { createLog } from '@/db/calling/logs.js'
+import { sendSms, normalizePhone, smsConfigured } from '@/lib/sendSms.js'
 
 // กรรมการจังหวัด (district_coordinator) ส่ง SMS ไม่ได้ — เฉพาะ ผู้ประสานงานจังหวัด (province_coordinator) ขึ้นไป
 function canSendSms(access) {
@@ -13,25 +14,13 @@ function canSendSms(access) {
       || permissions.has('regional_coordinator') || permissions.has('province_coordinator')
 }
 
-const API_KEY    = process.env.THAIBULKSMS_API_KEY
-const API_SECRET = process.env.THAIBULKSMS_API_SECRET
-const SENDER     = process.env.THAIBULKSMS_SENDER
-const FORCE      = process.env.THAIBULKSMS_FORCE || 'corporate'
-
-function normalizePhone(phone) {
-  if (!phone) return null
-  const digits = phone.replace(/\D/g, '')
-  if (digits.startsWith('66')) return '0' + digits.slice(2)
-  return digits
-}
-
 export async function POST(req) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.discordId) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  if (!API_KEY || !API_SECRET) {
+  if (!smsConfigured()) {
     return Response.json({ error: 'SMS gateway not configured' }, { status: 503 })
   }
 
@@ -92,22 +81,12 @@ export async function POST(req) {
 
     // Send in batches of 500 (ThaiBulkSMS limit)
     const BATCH = 500
-    const auth  = Buffer.from(`${API_KEY}:${API_SECRET}`).toString('base64')
 
     for (let i = 0; i < validIds.length; i += BATCH) {
       const batch  = validIds.slice(i, i + BATCH)
       const msisdn = batch.map(id => phoneMap[id]).join(',')
 
-      const urlsInMsg = message.match(/https?:\/\/[^\s]+/g) || []
-      const shortenUrl = urlsInMsg.some(u => u.length > 40)
-
-      const apiRes = await fetch('https://api-v2.thaibulksms.com/sms', {
-        method: 'POST',
-        headers: { 'Authorization': `Basic ${auth}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ msisdn, message, sender: SENDER, force: FORCE, Shorten_url: shortenUrl }),
-      })
-
-      const apiData = await apiRes.json()
+      const apiData = await sendSms({ msisdn, message })
 
       if (apiData.error) {
         // Whole batch failed — log each as sms_failed

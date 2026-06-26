@@ -1,0 +1,180 @@
+'use client'
+
+import { useState } from 'react'
+import Link from 'next/link'
+
+const inputCls = 'w-full border border-gray-300 dark:border-disc-border bg-white dark:bg-disc-hover text-gray-900 dark:text-disc-text p-3 text-base rounded-lg placeholder-gray-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-indigo-500'
+const labelCls = 'block text-base font-semibold mb-1.5 text-gray-700 dark:text-disc-text'
+
+const MAX_FILES = 3
+const MAX_SIZE = 10 * 1024 * 1024 // 10MB
+const ACCEPT = 'image/jpeg,image/png,image/webp,audio/mpeg,audio/mp4,audio/x-m4a,audio/ogg'
+
+export default function CaseNewForm({ fixedProvince, provinces, categories }) {
+  const [province, setProvince] = useState(fixedProvince || '')
+  const [title, setTitle] = useState('')
+  const [category, setCategory] = useState(categories[0] || '')
+  const [detail, setDetail] = useState('')
+  const [name, setName] = useState('')
+  const [phone, setPhone] = useState('')
+  const [lineId, setLineId] = useState('')
+  const [files, setFiles] = useState([])
+  const [consent, setConsent] = useState(false)
+  const [website, setWebsite] = useState('') // honeypot — มนุษย์ไม่กรอก
+  const [loading, setLoading] = useState(false)
+  const [result, setResult] = useState(null) // { ref }
+  const [copied, setCopied] = useState(false)
+
+  function onPickFiles(e) {
+    const picked = Array.from(e.target.files || [])
+    if (picked.length > MAX_FILES) { alert(`แนบได้ไม่เกิน ${MAX_FILES} ไฟล์`); e.target.value = ''; return }
+    const tooBig = picked.find(f => f.size > MAX_SIZE)
+    if (tooBig) { alert(`ไฟล์ "${tooBig.name}" เกิน 10MB`); e.target.value = ''; return }
+    setFiles(picked)
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    if (!province) { alert('กรุณาเลือกจังหวัด'); return }
+    if (!title.trim()) { alert('กรุณาใส่หัวข้อเรื่อง'); return }
+    if (!detail.trim()) { alert('กรุณาใส่รายละเอียด'); return }
+    if (!name.trim()) { alert('กรุณาใส่ชื่อ'); return }
+    if (!phone.trim()) { alert('กรุณาใส่เบอร์โทรศัพท์'); return }
+    if (!consent) { alert('กรุณายินยอมให้เก็บข้อมูลก่อนส่งเรื่อง'); return }
+
+    setLoading(true)
+    try {
+      const fd = new FormData()
+      fd.append('province', province)
+      fd.append('title', title)
+      fd.append('category', category)
+      fd.append('detail', detail)
+      fd.append('name', name)
+      fd.append('phone', phone)
+      fd.append('line_id', lineId)
+      fd.append('consent', '1')
+      fd.append('website', website) // honeypot
+      files.forEach(f => fd.append('files', f))
+
+      const res = await fetch('/api/case', { method: 'POST', body: fd })
+      if (res.status === 429) { alert('คุณส่งเรื่องบ่อยเกินไป กรุณาลองใหม่ภายหลัง'); return }
+      if (!res.ok) throw new Error('ส่งเรื่องไม่สำเร็จ')
+      const data = await res.json()
+      setResult({ ref: data.ref })
+    } catch (err) {
+      alert('เกิดข้อผิดพลาด: ' + err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // ── success state ──
+  if (result) {
+    const trackUrl = `/case/${result.ref}`
+    return (
+      <div className="bg-card-bg border border-gray-200 dark:border-disc-border rounded-xl p-6 text-center">
+        <div className="text-5xl mb-3">✅</div>
+        <h2 className="text-xl font-bold text-gray-900 dark:text-disc-text mb-2">ส่งเรื่องเรียบร้อยแล้ว</h2>
+        <p className="text-base text-gray-500 dark:text-disc-muted mb-4">
+          เราส่งลิงก์ติดตามเรื่องไปทาง SMS แล้ว · กรุณาบันทึกรหัสนี้ไว้
+        </p>
+        <div className="flex items-center justify-center gap-2 mb-5">
+          <span className="text-2xl font-mono font-bold tracking-wider text-orange">{result.ref}</span>
+          <button
+            onClick={() => { navigator.clipboard?.writeText(result.ref); setCopied(true); setTimeout(() => setCopied(false), 1500) }}
+            className="px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-disc-border text-gray-700 dark:text-disc-text hover:border-orange hover:text-orange transition"
+          >
+            {copied ? 'คัดลอกแล้ว' : 'คัดลอก'}
+          </button>
+        </div>
+        <Link href={trackUrl}
+          className="inline-block w-full bg-indigo-600 text-white py-3 rounded-lg text-base font-semibold hover:bg-indigo-700 transition">
+          ดูสถานะเรื่องร้องเรียน
+        </Link>
+      </div>
+    )
+  }
+
+  // ── form ──
+  return (
+    <form onSubmit={handleSubmit} className="bg-card-bg border border-gray-200 dark:border-disc-border rounded-xl p-6 space-y-5">
+      <div>
+        <label className={labelCls}>จังหวัด *</label>
+        {fixedProvince ? (
+          <div className="w-full border border-gray-200 dark:border-disc-border bg-gray-50 dark:bg-disc-hover text-gray-900 dark:text-disc-text p-3 text-base rounded-lg">
+            {fixedProvince}
+          </div>
+        ) : (
+          <select value={province} onChange={e => setProvince(e.target.value)} className={inputCls} required>
+            <option value="">-- เลือกจังหวัด --</option>
+            {provinces.map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
+        )}
+      </div>
+
+      <div>
+        <label className={labelCls}>หัวข้อเรื่อง *</label>
+        <input type="text" value={title} onChange={e => setTitle(e.target.value)}
+          placeholder="เช่น ไฟทางสาธารณะดับหน้าหมู่บ้าน" className={inputCls} required />
+      </div>
+
+      <div>
+        <label className={labelCls}>ประเภทเรื่อง</label>
+        <select value={category} onChange={e => setCategory(e.target.value)} className={inputCls}>
+          {categories.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
+      </div>
+
+      <div>
+        <label className={labelCls}>รายละเอียด *</label>
+        <textarea value={detail}
+          onChange={e => { setDetail(e.target.value); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px' }}
+          placeholder="อธิบายปัญหาที่พบ สถานที่ และรายละเอียดที่เกี่ยวข้อง..." className={inputCls} rows="5"
+          style={{ resize: 'none', overflow: 'hidden' }} required />
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label className={labelCls}>ชื่อ-นามสกุล *</label>
+          <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="ชื่อผู้ร้องเรียน" className={inputCls} required />
+        </div>
+        <div>
+          <label className={labelCls}>เบอร์โทรศัพท์ *</label>
+          <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="08xxxxxxxx" className={inputCls} required />
+        </div>
+      </div>
+
+      <div>
+        <label className={labelCls}>LINE ID <span className="font-normal text-gray-400 dark:text-disc-muted">(ไม่บังคับ)</span></label>
+        <input type="text" value={lineId} onChange={e => setLineId(e.target.value)} placeholder="@yourline" className={inputCls} />
+      </div>
+
+      <div>
+        <label className={labelCls}>แนบไฟล์ <span className="font-normal text-gray-400 dark:text-disc-muted">(ภาพ/เสียง · สูงสุด 3 ไฟล์ · ไม่เกิน 10MB)</span></label>
+        <input type="file" accept={ACCEPT} multiple onChange={onPickFiles}
+          className="w-full text-base text-gray-700 dark:text-disc-text file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
+        {files.length > 0 && (
+          <p className="mt-1.5 text-sm text-gray-500 dark:text-disc-muted">เลือกแล้ว {files.length} ไฟล์</p>
+        )}
+      </div>
+
+      {/* honeypot — ซ่อนจากมนุษย์ */}
+      <input type="text" value={website} onChange={e => setWebsite(e.target.value)}
+        name="website" tabIndex="-1" autoComplete="off" aria-hidden="true"
+        style={{ position: 'absolute', left: '-9999px', width: '1px', height: '1px', opacity: 0 }} />
+
+      <label className="flex items-start gap-2.5 cursor-pointer">
+        <input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)}
+          className="mt-1 w-4 h-4 accent-orange" />
+        <span className="text-sm text-gray-600 dark:text-disc-muted">
+          ข้าพเจ้ายินยอมให้จัดเก็บและใช้ข้อมูลส่วนบุคคล (ชื่อ เบอร์โทร LINE) เพื่อติดต่อกลับและดำเนินการเรื่องร้องเรียนนี้ตามนโยบายคุ้มครองข้อมูลส่วนบุคคล (PDPA)
+        </span>
+      </label>
+
+      <button type="submit" disabled={loading}
+        className="w-full bg-indigo-600 text-white py-3 rounded-lg text-base font-semibold hover:bg-indigo-700 disabled:opacity-50 transition">
+        {loading ? 'กำลังส่ง...' : 'ส่งเรื่องร้องเรียน'}
+      </button>
+    </form>
+  )
+}

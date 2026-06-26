@@ -18,6 +18,7 @@ export const PERMISSIONS = [
   'treasurer',              // เหรัญญิก
   'editor',                 // ทีมบรรณาธิการ / บรรณาธิการ
   'moderator',              // action-only — ลบ log ได้ แต่ดูข้อมูลไม่ได้
+  'caseworker',             // ทีมเรื่องร้องเรียน — บริหารเคสในจังหวัด scope ของตัวเอง
   'member',                 // อยู่ guild แต่ไม่มี role พิเศษ
 ]
 
@@ -42,6 +43,9 @@ export const CAPABILITIES = {
   sendBulkSms:         ['admin', 'secretary_general', 'regional_coordinator', 'province_coordinator'],                          // เดิม SMS_ROLES
   overrideTier:        ['admin', 'secretary_general', 'treasurer'],
   deleteLog:           ['admin', 'secretary_general', 'moderator'],   // เดิม MODERATOR_ROLES (moderation gate)
+
+  // ── Case (เรื่องร้องเรียน) ──
+  manageCases:         ['admin', 'secretary_general', 'regional_coordinator', 'province_coordinator', 'district_coordinator', 'caseworker'],
 
   // ── Bot / Social ──
   manageSocial:        ['admin'],
