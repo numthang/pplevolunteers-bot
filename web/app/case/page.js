@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { countByStatus } from '@/db/cases.js'
 import { statusLabel } from '@/lib/caseOptions.js'
 import CaseRefLookup from '@/components/case/CaseRefLookup.jsx'
+import LocationButton from '@/components/case/LocationButton.jsx'
 
 export const metadata = { title: 'ศูนย์รับเรื่องร้องเรียน' }
 
@@ -38,10 +39,13 @@ export default async function CasePublicHome() {
       </div>
 
       {/* แจ้งเรื่องใหม่ */}
-      <Link href="/case/new"
-        className="block w-full bg-indigo-600 text-white py-4 rounded-xl text-lg font-semibold hover:bg-indigo-700 transition text-center mb-8">
-        + แจ้งเรื่องร้องเรียนใหม่
-      </Link>
+      <div className="space-y-2 mb-8">
+        <Link href="/case/new"
+          className="block w-full bg-brand-orange text-white py-4 rounded-xl text-lg font-semibold hover:bg-brand-orange-light transition text-center">
+          + แจ้งเรื่องร้องเรียนใหม่
+        </Link>
+        <LocationButton />
+      </div>
 
       {/* ติดตาม ref */}
       <div className="bg-card-bg border border-gray-200 dark:border-disc-border rounded-xl p-6">

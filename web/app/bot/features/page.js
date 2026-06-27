@@ -2,14 +2,15 @@
 import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { Loader2, Phone, Users, FileText, Bot } from 'lucide-react'
+import { Loader2, Phone, Users, FileText, Bot, MessageSquareWarning } from 'lucide-react'
 
 // ฟีเจอร์ที่ toggle ได้ + คำอธิบาย (finance + bot เปิดตลอด ไม่อยู่ที่นี่)
 const FEATURE_META = {
-  calling:    { label: 'Calling',    icon: Phone,    desc: 'ระบบโทรหาสมาชิก — แคมเปญ, มอบหมาย, บันทึกการโทร' },
-  contacts:   { label: 'Contacts',   icon: Users,    desc: 'ฐานข้อมูลผู้ติดต่อ (CRM)' },
-  docs:       { label: 'Docs',       icon: FileText, desc: 'ใบสำคัญรับเงิน + e-signature สำหรับเบิกจ่ายกิจกรรม' },
-  ai_mention: { label: 'AI Mention', icon: Bot,      desc: 'ตอบเมื่อถูก @mention — ดึงข้อมูล forum เป็น context + Claude ตอบ' },
+  calling:    { label: 'Calling',    icon: Phone,                 desc: 'ระบบโทรหาสมาชิก — แคมเปญ, มอบหมาย, บันทึกการโทร' },
+  contacts:   { label: 'Contacts',   icon: Users,                 desc: 'ฐานข้อมูลผู้ติดต่อ (CRM)' },
+  docs:       { label: 'Docs',       icon: FileText,              desc: 'ใบสำคัญรับเงิน + e-signature สำหรับเบิกจ่ายกิจกรรม' },
+  cases:      { label: 'Cases',      icon: MessageSquareWarning,  desc: 'ระบบรับและติดตามเรื่องร้องเรียนจากประชาชน' },
+  ai_mention: { label: 'AI Mention', icon: Bot,                   desc: 'ตอบเมื่อถูก @mention — ดึงข้อมูล forum เป็น context + Claude ตอบ' },
 }
 
 function FeatureRow({ feature, enabled, saving, onToggle }) {

@@ -667,15 +667,13 @@ async function processAndPost(interaction, state) {
     let igUrl = null;
 
     if (platforms.includes('ig')) {
-      const igMsg = scheduleTime ? '📤 IG Reels ไม่รองรับตั้งเวลา — โพสต์ทันที...' : '📤 กำลังโพสต์ Reels ไปยัง Instagram...';
-      await interaction.editReply({ content: igMsg }).catch(() => {});
+      await interaction.editReply({ content: '📤 กำลังโพสต์ Reels ไปยัง Instagram...' }).catch(() => {});
       try {
         const igProgress = msg => interaction.editReply({ content: msg }).catch(() => {});
         const igRes = await postReelsToInstagram(state.guildId, interaction.user.id, videoItems[0].image_url, state.caption, igProgress, state.group);
         igUrl = igRes?.permalink || null;
         const igLink = igUrl ? ` · 🔗 [ดูโพสต์](${igUrl})` : '';
-        const igNote = scheduleTime ? ' (IG Reels ไม่รองรับตั้งเวลา)' : '';
-        results.push(`✅ Instagram Reels โพสต์แล้ว${igLink}${igNote}`);
+        results.push(`✅ Instagram Reels${igLink}`);
       } catch (err) {
         results.push(`❌ Instagram Reels: ${err.message}`);
       }
@@ -686,8 +684,7 @@ async function processAndPost(interaction, state) {
         const fbProgress = msg => interaction.editReply({ content: msg }).catch(() => {});
         const fbRes = await postReelsToFacebook(state.guildId, interaction.user.id, videoItems[0].image_url, state.caption, fbProgress, state.group, scheduleTime);
         const fbLink = fbRes?.permalink ? ` · 🔗 [ดูโพสต์](${fbRes.permalink})` : '';
-        const fbLabel = scheduleTime ? 'ตั้งเวลาแล้ว' : 'โพสต์แล้ว';
-        results.push(`✅ Facebook Reels ${fbLabel}${fbLink}`);
+        results.push(`✅ Facebook Reels${fbLink}`);
       } catch (err) {
         results.push(`❌ Facebook Reels: ${err.message}`);
       }
@@ -698,7 +695,7 @@ async function processAndPost(interaction, state) {
         const thProgress = msg => interaction.editReply({ content: msg }).catch(() => {});
         const thRes = await postReelsToThreads(state.guildId, interaction.user.id, videoItems[0].image_url, state.caption, thProgress, state.group);
         const thLink = thRes?.permalink ? ` · 🔗 [ดูโพสต์](${thRes.permalink})` : '';
-        results.push(`✅ Threads Reels โพสต์แล้ว${thLink}`);
+        results.push(`✅ @ Threads Reels${thLink}`);
       } catch (err) {
         results.push(`❌ Threads Reels: ${err.message}`);
       }
@@ -708,7 +705,7 @@ async function processAndPost(interaction, state) {
       try {
         const xRes = await postVideoToX(state.guildId, interaction.user.id, videoItems[0].image_url, state.caption, state.group);
         const xLink = xRes?.url ? ` · 🔗 [ดูโพสต์](${xRes.url})` : '';
-        results.push(`✅ X โพสต์วิดีโอแล้ว${xLink}`);
+        results.push(`✅ X (Twitter)${xLink}`);
       } catch (err) {
         results.push(`❌ X video: ${err.message}`);
       }
@@ -789,25 +786,20 @@ async function processAndPost(interaction, state) {
           fbUrl = `https://www.facebook.com/permalink.php?story_fbid=${parts[1]}&id=${parts[0]}`;
         }
       }
-      const fbLabel = scheduleTime ? 'ตั้งเวลาแล้ว' : 'โพสต์แล้ว';
-      const fbLinks = fbUrl
-        ? ` · 🔗 [ดูโพสต์](${fbUrl}) · [จัดการโพสต์ทั้งหมด](https://www.facebook.com/professional_dashboard/content_calendar/)`
-        : '';
-      results.push(`✅ Facebook ${fbLabel}${fbLinks}`);
+      const fbLinks = fbUrl ? ` · 🔗 [ดูโพสต์](${fbUrl})` : '';
+      results.push(`✅ Facebook${fbLinks}`);
     } catch (err) {
       results.push(`❌ Facebook: ${err.message}`);
     }
   }
   if (postIg) {
-    const igMsg = scheduleTime ? '📤 IG ไม่รองรับตั้งเวลา — โพสต์ทันที...' : '📤 กำลังโพสต์ไปยัง Instagram...';
-    await interaction.editReply({ content: igMsg }).catch(() => {});
+    await interaction.editReply({ content: '📤 กำลังโพสต์ไปยัง Instagram...' }).catch(() => {});
     try {
       const igProgress = msg => interaction.editReply({ content: msg }).catch(() => {});
       const igRes = await postToInstagram(state.guildId, interaction.user.id, processed, state.caption, null, igProgress, state.group);
       igUrl = igRes?.permalink || null;
       const igLink = igUrl ? ` · 🔗 [ดูโพสต์](${igUrl})` : '';
-      const igNote = scheduleTime ? ' (IG ไม่รองรับตั้งเวลา)' : '';
-      results.push(`✅ Instagram โพสต์แล้ว${igLink}${igNote}`);
+      results.push(`✅ Instagram${igLink}`);
     } catch (err) {
       results.push(`❌ Instagram: ${err.message}`);
     }
@@ -820,7 +812,7 @@ async function processAndPost(interaction, state) {
       const thRes = await postToThreads(state.guildId, interaction.user.id, processed, state.caption, thProgress, state.group);
       threadsUrl = thRes?.permalink || null;
       const thLink = threadsUrl ? ` · 🔗 [ดูโพสต์](${threadsUrl})` : '';
-      results.push(`✅ @ Threads โพสต์แล้ว${thLink}`);
+      results.push(`✅ @ Threads${thLink}`);
     } catch (err) {
       results.push(`❌ Threads: ${err.message}`);
     }
@@ -832,9 +824,7 @@ async function processAndPost(interaction, state) {
       const xRes = await postToX(state.guildId, interaction.user.id, processed, state.caption, state.group);
       xUrl = xRes?.url || null;
       const xLink = xUrl ? ` · 🔗 [ดูโพสต์](${xUrl})` : '';
-      const xThread = xRes?.threadCount > 1 ? ` (thread ${xRes.threadCount} tweets${xRes.urlCount ? `, ${xRes.urlCount} link ใน reply` : ''})` : '';
-      const xNote = xRes?.truncated ? ' ⚠️ caption เกิน limit — ตัดส่วนเกินทิ้ง' : '';
-      results.push(`✅ X (Twitter) โพสต์แล้ว${xThread}${xLink}${xNote}`);
+      results.push(`✅ X (Twitter)${xLink}`);
     } catch (err) {
       results.push(`❌ X: ${err.message}`);
     }

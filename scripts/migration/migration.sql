@@ -730,3 +730,21 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_docs_projects_export_token
   ON docs_projects (export_token) WHERE export_token IS NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_docs_projects_pdf_token
   ON docs_projects (pdf_token) WHERE pdf_token IS NOT NULL;
+
+-- 2026-06-28: case_timeline — AI-generated + manual timeline entries per case
+CREATE TABLE IF NOT EXISTS case_timeline (
+  id                  SERIAL PRIMARY KEY,
+  case_id             INT          NOT NULL REFERENCES cases(id) ON DELETE CASCADE,
+  guild_id            VARCHAR(20)  NOT NULL,
+  discord_message_id  VARCHAR(20)  NULL,
+  source              VARCHAR(20)  NOT NULL DEFAULT 'human',   -- human | ai
+  body                TEXT         NOT NULL,
+  is_public           BOOLEAN      NOT NULL DEFAULT FALSE,
+  occurred_at         TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+  created_at          TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_case_timeline_case
+  ON case_timeline (case_id, occurred_at);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_case_timeline_message
+  ON case_timeline (case_id, discord_message_id)
+  WHERE discord_message_id IS NOT NULL;

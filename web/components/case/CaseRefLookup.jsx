@@ -20,7 +20,7 @@ export default function CaseRefLookup() {
       <input value={ref} onChange={e => setRef(e.target.value)}
         placeholder="กรอกรหัสอ้างอิง เช่น 70-69-A8F3" className={inputCls} />
       <button type="submit"
-        className="shrink-0 px-5 bg-indigo-600 text-white rounded-lg text-base font-semibold hover:bg-indigo-700 transition">
+        className="shrink-0 px-5 bg-brand-orange text-white rounded-lg text-base font-semibold hover:bg-brand-orange-light transition">
         ติดตาม
       </button>
     </form>

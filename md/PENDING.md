@@ -33,6 +33,26 @@
 - **Hamburger — เอา 3 เมนูบนออก** — เมนูบนใน hamburger คือ `menuLinks` (links ของ app ปัจจุบัน) ซ้ำกับ app switcher ด้านล่าง → ซ่อน section นี้เมื่ออยู่หน้า home/dashboard (หรือเอาออกถาวร ถ้า DASHBOARD_LINKS ซ้ำทุก app)
 - **Detect location → link จังหวัด** — หน้า `/case` public dashboard มีปุ่ม "ใช้ตำแหน่งของฉัน" → `navigator.geolocation` → reverse geocode → redirect `/case/new/[จังหวัด]` (ต้องหา reverse geocode API ที่ไม่มีค่าใช้จ่าย เช่น Nominatim/OSM)
 
+### 🔄 Sync กระทู้เข้าระบบ — 2 ช่วง
+- **Backfill** — script รัน 1 ครั้ง ดึงกระทู้เก่าทั้งหมดใน forum channel มาสร้าง case (skip ถ้ามี `discord_thread_id` แล้ว)
+- **Manual** — context menu `📋 นำเข้าเป็นเคสร้องเรียน` ทีละกระทู้ (สำหรับ historical ที่ bot พลาด)
+- *(ต่อไป: auto-import ทุกครั้งที่สร้างกระทู้ใหม่ — ดู section ด้านล่าง)*
+
+**กระบวนการ sync — AI generate 3 ส่วน:**
+1. **หัวข้อ (title)** — ต้องการคุยก่อนว่า prompt ให้ AI เขียนอะไร ให้อ่านแล้วเข้าใจเรื่องได้เร็ว (เช่น "ถนนพัง ซ.3 ต.บ้านเลือก / ราชบุรี" หรือ "ไฟฟ้าดับซ้ำซาก อ.โพธาราม" ?)
+2. **เรื่องย่อ (ai_summary)** — สรุปเนื้อหากระทู้ทั้งหมด
+3. **Timeline** — เรียง message สำคัญจากกระทู้ (ยังไม่ได้ออกแบบ schema รองรับ)
+
+**เคาะแล้ว 2026-06-28:**
+- format หัวข้อ = `[ประเภท] สาระสำคัญ — พื้นที่` เช่น `ถนนชำรุด ซ.วัดโพธิ์ หมู่ 3 — อ.โพธาราม ราชบุรี`
+- timeline แยก table `case_timeline` (ไม่ใช้ case_notes) — เพราะบาง event ไม่อยากเผยแพร่ มี visibility control แยก
+  - schema: `(id, case_id, discord_message_id UNIQUE, body, is_public, occurred_at)`
+  - partial unique index บน `discord_message_id` → dedup incremental update ได้
+  - refresh: fetch message หลัง `last_synced_message_id` → AI คัด event → `INSERT ... ON CONFLICT DO NOTHING`
+  - **Auto:** AI generate จาก Discord messages → ตัดสิน is_public เองจากเนื้อหา (public=ความคืบหน้าทั่วไป, private=ชื่อ/เบอร์/นัดหมายภายใน) → return JSON `[{ body, is_public, occurred_at }]`
+  - **Manual:** caseworker เพิ่ม/แก้/toggle is_public รายตัวใน manage page
+  - ต้องเพิ่มใน migration.sql + `web/db/cases.js` + `db/case.js` + backfillCaseThreads.js + หน้า tracking + manage page
+
 ### 🆕 Auto-import เมื่อสร้างกระทู้ใหม่ใน forum
 - `threadCreate` listener ใน `index.js` → เช็คว่า thread อยู่ใน `case_config.forum_channel_id` ของ guild
 - auto สร้าง case: `source='discord'`, `province=case_default_province`, `category=null`, `title`=thread title, `detail`=first message, `created_by`=Discord ID ผู้สร้าง, `complainant_phone=null`

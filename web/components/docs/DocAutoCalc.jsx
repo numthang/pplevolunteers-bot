@@ -145,7 +145,7 @@ export default function DocAutoCalc({ eventDate, eventEndDate, participantCount,
   const [suppliesEnabled, setSuppliesEnabled] = useState(false)
   const [suppliesAmount, setSuppliesAmount]   = useState(500)
   const [budget, setBudget]             = useState(projectBudget != null ? String(projectBudget) : '')
-  const [budgetMode, setBudgetMode]     = useState('budget')  // 'max' | 'budget'
+  const [budgetMode, setBudgetMode]     = useState('max')     // 'max' | 'budget'
   const [proposal, setProposal]         = useState(null)
   const [recipients, setRecipients]     = useState([])
   const [recentMembers, setRecentMembers] = useState([])

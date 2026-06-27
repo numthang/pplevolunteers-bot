@@ -1,10 +1,9 @@
 import Link from 'next/link'
-import { getCaseByRefPublic } from '@/db/cases.js'
+import { getCaseByRefPublic, getTimeline } from '@/db/cases.js'
 import { statusLabel } from '@/lib/caseOptions.js'
 
 export const metadata = { title: 'ติดตามเรื่องร้องเรียน' }
 
-// ลำดับ + สีของแต่ละสถานะ (public)
 const STATUS_STYLE = {
   open:        'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
   in_progress: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
@@ -31,6 +30,13 @@ export default async function CaseTrackPage({ params }) {
       </div>
     )
   }
+
+  // รวม timeline (public) + public notes → เรียงตามเวลา
+  const timelineEntries = await getTimeline(c.id, { publicOnly: true })
+  const allEntries = [
+    ...timelineEntries.map(e => ({ ...e, _kind: 'timeline' })),
+    ...c.publicNotes.map(n => ({ ...n, _kind: 'note', occurred_at: n.created_at })),
+  ].sort((a, b) => new Date(a.occurred_at) - new Date(b.occurred_at))
 
   return (
     <div className="max-w-xl mx-auto">
@@ -60,15 +66,20 @@ export default async function CaseTrackPage({ params }) {
 
       <div className="bg-card-bg border border-gray-200 dark:border-disc-border rounded-xl p-6">
         <h2 className="text-base font-semibold text-gray-700 dark:text-disc-text mb-4">ความคืบหน้า</h2>
-        {c.publicNotes.length === 0 ? (
+        {allEntries.length === 0 ? (
           <p className="text-base text-gray-400 dark:text-disc-muted">ยังไม่มีอัปเดตจากทีมงาน</p>
         ) : (
           <ol className="space-y-4">
-            {c.publicNotes.map((n, i) => (
+            {allEntries.map((e, i) => (
               <li key={i} className="relative pl-5 border-l-2 border-orange/40">
                 <span className="absolute -left-[5px] top-1.5 w-2 h-2 rounded-full bg-orange" />
-                <p className="text-sm text-gray-400 dark:text-disc-muted mb-0.5">{fmtDate(n.created_at)}</p>
-                <p className="text-base text-gray-900 dark:text-disc-text whitespace-pre-wrap">{n.body}</p>
+                <p className="text-sm text-gray-400 dark:text-disc-muted mb-0.5">
+                  {fmtDate(e.occurred_at)}
+                  {e.source === 'ai' && (
+                    <span className="ml-2 text-xs text-gray-300 dark:text-disc-muted/60">· AI สรุป</span>
+                  )}
+                </p>
+                <p className="text-base text-gray-900 dark:text-disc-text whitespace-pre-wrap">{e.body}</p>
               </li>
             ))}
           </ol>

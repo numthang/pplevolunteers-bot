@@ -24,3 +24,18 @@ export function provinceToCode(name) {
 export function isValidProvince(name) {
   return !!provinceToCode(name)
 }
+
+/** รหัส 2 หลัก → ชื่อจังหวัด หรือ null */
+export function codeToProvince(code) {
+  if (!code) return null
+  const c = String(code).trim()
+  return Object.keys(CODE_BY_PROVINCE).find(k => CODE_BY_PROVINCE[k] === c) ?? null
+}
+
+/** resolve ทั้งชื่อจังหวัด และรหัส → ชื่อจังหวัด หรือ null */
+export function resolveProvince(input) {
+  if (!input) return null
+  const s = decodeURIComponent(String(input)).trim()
+  if (isValidProvince(s)) return s
+  return codeToProvince(s)
+}

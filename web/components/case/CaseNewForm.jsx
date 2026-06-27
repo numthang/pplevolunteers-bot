@@ -2,8 +2,9 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import ProvinceCombobox from '@/components/case/ProvinceCombobox.jsx'
 
-const inputCls = 'w-full border border-gray-300 dark:border-disc-border bg-white dark:bg-disc-hover text-gray-900 dark:text-disc-text p-3 text-base rounded-lg placeholder-gray-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-indigo-500'
+const inputCls = 'w-full border border-gray-300 dark:border-disc-border bg-white dark:bg-disc-hover text-gray-900 dark:text-disc-text p-3 text-base rounded-lg placeholder-gray-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-brand-orange'
 const labelCls = 'block text-base font-semibold mb-1.5 text-gray-700 dark:text-disc-text'
 
 const MAX_FILES = 3
@@ -88,7 +89,7 @@ export default function CaseNewForm({ fixedProvince, provinces, categories }) {
           </button>
         </div>
         <Link href={trackUrl}
-          className="inline-block w-full bg-indigo-600 text-white py-3 rounded-lg text-base font-semibold hover:bg-indigo-700 transition">
+          className="inline-block w-full bg-brand-orange text-white py-3 rounded-lg text-base font-semibold hover:bg-brand-orange-light transition">
           ดูสถานะเรื่องร้องเรียน
         </Link>
       </div>
@@ -100,16 +101,11 @@ export default function CaseNewForm({ fixedProvince, provinces, categories }) {
     <form onSubmit={handleSubmit} className="bg-card-bg border border-gray-200 dark:border-disc-border rounded-xl p-6 space-y-5">
       <div>
         <label className={labelCls}>จังหวัด *</label>
-        {fixedProvince ? (
-          <div className="w-full border border-gray-200 dark:border-disc-border bg-gray-50 dark:bg-disc-hover text-gray-900 dark:text-disc-text p-3 text-base rounded-lg">
-            {fixedProvince}
-          </div>
-        ) : (
-          <select value={province} onChange={e => setProvince(e.target.value)} className={inputCls} required>
-            <option value="">-- เลือกจังหวัด --</option>
-            {provinces.map(p => <option key={p} value={p}>{p}</option>)}
-          </select>
-        )}
+        <ProvinceCombobox
+          value={province}
+          onChange={setProvince}
+          provinces={provinces}
+        />
       </div>
 
       <div>
@@ -152,7 +148,7 @@ export default function CaseNewForm({ fixedProvince, provinces, categories }) {
       <div>
         <label className={labelCls}>แนบไฟล์ <span className="font-normal text-gray-400 dark:text-disc-muted">(ภาพ/เสียง · สูงสุด 3 ไฟล์ · ไม่เกิน 10MB)</span></label>
         <input type="file" accept={ACCEPT} multiple onChange={onPickFiles}
-          className="w-full text-base text-gray-700 dark:text-disc-text file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
+          className="w-full text-base text-gray-700 dark:text-disc-text file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-orange-50 file:text-brand-orange hover:file:bg-orange-100" />
         {files.length > 0 && (
           <p className="mt-1.5 text-sm text-gray-500 dark:text-disc-muted">เลือกแล้ว {files.length} ไฟล์</p>
         )}
@@ -172,7 +168,7 @@ export default function CaseNewForm({ fixedProvince, provinces, categories }) {
       </label>
 
       <button type="submit" disabled={loading}
-        className="w-full bg-indigo-600 text-white py-3 rounded-lg text-base font-semibold hover:bg-indigo-700 disabled:opacity-50 transition">
+        className="w-full bg-brand-orange text-white py-3 rounded-lg text-base font-semibold hover:bg-brand-orange-light disabled:opacity-50 transition">
         {loading ? 'กำลังส่ง...' : 'ส่งเรื่องร้องเรียน'}
       </button>
     </form>

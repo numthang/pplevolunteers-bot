@@ -4,9 +4,10 @@ import { getSession } from '@/lib/auth.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import { getGuildId } from '@/lib/guildContext.js'
 import { canAccessCaseProvince } from '@/lib/caseAccess.js'
-import { getCaseByRefFull, getCaseNotes, getAssigneesWithNames, getAttachments } from '@/db/cases.js'
+import { getCaseByRefFull, getCaseNotes, getAssigneesWithNames, getAttachments, getTimeline } from '@/db/cases.js'
 import { statusLabel, CASE_CLOSE_REASONS } from '@/lib/caseOptions.js'
 import CaseManageActions from '@/components/case/CaseManageActions.jsx'
+import CaseTimeline from '@/components/case/CaseTimeline.jsx'
 
 export async function generateMetadata({ params }) {
   const { ref } = await params
@@ -27,8 +28,8 @@ export default async function CaseManageDetail({ params }) {
   if (!c) notFound()
   if (!canAccessCaseProvince(c.province, access)) redirect('/case/manage')
 
-  const [notes, assignees, attachments] = await Promise.all([
-    getCaseNotes(c.id), getAssigneesWithNames(c.id, guildId), getAttachments(c.id),
+  const [notes, assignees, attachments, timeline] = await Promise.all([
+    getCaseNotes(c.id), getAssigneesWithNames(c.id, guildId), getAttachments(c.id), getTimeline(c.id),
   ])
   const isAssigned = assignees.some(a => a.discord_id === session.user.discordId)
 
@@ -122,12 +123,10 @@ export default async function CaseManageDetail({ params }) {
         closeReasons={CASE_CLOSE_REASONS}
       />
 
-      {/* timeline */}
-      <div className="bg-card-bg border border-gray-200 dark:border-disc-border rounded-xl p-5 mt-5">
-        <h2 className="text-sm font-semibold text-gray-500 dark:text-disc-muted mb-3">บันทึก / ความคืบหน้า</h2>
-        {notes.length === 0 ? (
-          <p className="text-base text-gray-400 dark:text-disc-muted">ยังไม่มีบันทึก</p>
-        ) : (
+      {/* notes (case_notes) — บันทึกภายในและ public note จาก CaseManageActions */}
+      {notes.length > 0 && (
+        <div className="bg-card-bg border border-gray-200 dark:border-disc-border rounded-xl p-5 mt-5">
+          <h2 className="text-sm font-semibold text-gray-500 dark:text-disc-muted mb-3">บันทึก</h2>
           <ol className="space-y-3">
             {notes.map(n => (
               <li key={n.id} className="text-base">
@@ -141,8 +140,14 @@ export default async function CaseManageDetail({ params }) {
               </li>
             ))}
           </ol>
-        )}
-      </div>
+        </div>
+      )}
+
+      <CaseTimeline
+        refId={c.ref}
+        initialEntries={timeline}
+        hasThread={!!c.discord_thread_id}
+      />
     </div>
   )
 }

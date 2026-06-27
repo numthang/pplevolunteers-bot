@@ -27,7 +27,7 @@ const { handleWatermarkSelect, handleWatermarkEnhance, handleWatermarkConfirm, h
 const { handleQuoteModal, handleQuoteStyleSelect, handleQuoteColorSelect, handleQuoteCropSelect, handleQuoteWatermarkSelect, handleQuoteConfirm } = require('./handlers/quoteHandler');
 const { handleBasketAiStart, handleBasketAiModeSelect, handleBasketAiCustomModal, handleBasketAiReplace, handleBasketAiReplaceModal, handleBasketAiAppend, handleBasketAiAppendModal } = require('./handlers/basketAiHandler');
 const { handleAiThreadModeSelect, handleAiThreadCustomModal, handleAiThreadAddCaption, handleAiThreadPublic } = require('./handlers/aiThreadHandler');
-const { handleCaseImportModal } = require('./handlers/caseImportHandler');
+const { handleCaseImportModal, handleThreadCreate: handleCaseThreadCreate } = require('./handlers/caseImportHandler');
 const {
   handleBasketView, handleBasketClear,
   handleBasketPost, handleBasketRetry, handleBasketSelect, handleBasketModal,
@@ -296,12 +296,16 @@ client.on('threadDelete', async (thread) => {
 
 client.on('threadCreate', async (thread) => {
   if (!thread.parentId) return;
+  // forum indexing (Meilisearch)
   const forumIds = forumChannelCache.get(thread.guildId);
-  if (!forumIds?.has(thread.parentId)) return;
-  await indexThread(thread, thread.guildId, thread.parentId).catch(err =>
-    console.error('[forumIndex] threadCreate:', err)
-  );
-  addForumChannel(thread.guildId, thread.parentId);
+  if (forumIds?.has(thread.parentId)) {
+    await indexThread(thread, thread.guildId, thread.parentId).catch(err =>
+      console.error('[forumIndex] threadCreate:', err)
+    );
+    addForumChannel(thread.guildId, thread.parentId);
+  }
+  // case auto-import (best-effort, ไม่ block)
+  handleCaseThreadCreate(thread).catch(() => {});
 });
 
 // Cooldown map per channel

@@ -450,7 +450,7 @@ export default function SignPage({ params }) {
           <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-6">
             <div className="flex items-center gap-2 mb-1">
               <IdCard size={18} className="text-orange shrink-0" />
-              <h2 className="text-base font-semibold text-warm-900 dark:text-disc-text">สำเนาบัตรประชาชน <span className="text-sm font-normal text-warm-400 dark:text-disc-muted">(ทำครั้งเดียว)</span></h2>
+              <h2 className="text-base font-semibold text-warm-900 dark:text-disc-text">ภาพบัตรประชาชน <span className="text-sm font-normal text-warm-400 dark:text-disc-muted">(ทำครั้งเดียว crop เฉพาะบัตร ระบบจะเซ็นคร่อมให้อัตโนมัติ)</span></h2>
             </div>
             {hasIdCard ? (
               <div className="mt-2">

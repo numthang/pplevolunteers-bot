@@ -6,6 +6,7 @@ const { getSetting } = require('../db/settings');
 const caseDb = require('../db/case');
 const { fetchAllMessages, messagesToPlainText } = require('../services/fetchMessages');
 const { callAI } = require('../services/aiSummarize');
+const { generateTimeline } = require('../services/caseTimeline');
 
 const AI_SYSTEM = `คุณเป็นผู้ช่วยสรุปเรื่องร้องเรียนจากบทสนทนาใน Discord ให้ทีมงานเข้าใจเร็ว
 - สรุปสั้น กระชับ เป็นกลาง ภาษาทางการเล็กน้อย
@@ -94,6 +95,15 @@ async function handleCaseImportModal(interaction) {
   if (aiSummary) await caseDb.setAiSummary(row.id, aiSummary, lastMsgId);
   else if (lastMsgId) await caseDb.setLastSyncedMessageId(row.id, lastMsgId);
 
+  // AI timeline (best-effort)
+  try {
+    const messages = await fetchAllMessages(thread);
+    const events = await generateTimeline(title, messages);
+    if (events.length) await caseDb.addTimelineEvents(row.id, interaction.guildId, events, 'ai');
+  } catch (e) {
+    console.error('[caseImport] timeline', e.message);
+  }
+
   // โพสต์ยืนยันในเธรด
   try {
     await thread.send(`📋 นำเข้าเป็นเคสร้องเรียนแล้ว · รหัส **${row.ref}** · จังหวัด ${province}${category ? ` · ${category}` : ''}`);
@@ -102,4 +112,64 @@ async function handleCaseImportModal(interaction) {
   return interaction.editReply({ content: `✅ สร้างเคส **${row.ref}** จากกระทู้นี้แล้ว${aiSummary ? ' (มี AI สรุปให้ในระบบ)' : ''}` });
 }
 
-module.exports = { handleCaseImportStart, handleCaseImportModal };
+/**
+ * auto-import เมื่อสร้างกระทู้ใหม่ใน complaint forum channel
+ * เรียกจาก index.js threadCreate event หลังจาก forum indexing เสร็จ
+ */
+async function handleThreadCreate(thread) {
+  try {
+    const config = await caseDb.getCaseConfig(thread.guildId);
+    if (!config?.forum_channel_id || thread.parentId !== config.forum_channel_id) return;
+
+    // กันซ้ำ
+    const existing = await caseDb.getCaseByThreadId(thread.id);
+    if (existing) return;
+
+    const province = (await getSetting(thread.guildId, 'case_default_province')) || 'ไม่ระบุ';
+    const title = thread.name || 'เรื่องร้องเรียน';
+
+    // เจ้าของกระทู้
+    const ownerId = thread.ownerId;
+    const ownerMember = ownerId ? await thread.guild.members.fetch(ownerId).catch(() => null) : null;
+    const complainantName = ownerMember?.displayName || 'ไม่ระบุ';
+
+    // รอ message แรกโหลด แล้วดึง detail
+    await new Promise(r => setTimeout(r, 2000));
+    let detail = null;
+    let aiSummary = null;
+    let lastMsgId = null;
+    try {
+      const messages = await fetchAllMessages(thread);
+      if (messages.length) {
+        detail = messages[0].content || null;
+        lastMsgId = messages[messages.length - 1].id;
+        const text = messagesToPlainText(messages);
+        if (text.trim()) aiSummary = await callAI(AI_SYSTEM, `หัวข้อ: ${title}\n\nบทสนทนา:\n\n${text}`);
+      }
+    } catch (e) {
+      console.error('[caseImport] threadCreate ai', e.message);
+    }
+
+    const row = await caseDb.createCase({
+      guild_id: thread.guildId, province, category: null, title,
+      detail, source: 'discord', complainant_name: complainantName,
+      complainant_phone: null, discord_thread_id: thread.id, created_by: ownerId || null,
+    });
+    if (aiSummary) await caseDb.setAiSummary(row.id, aiSummary, lastMsgId);
+    else if (lastMsgId) await caseDb.setLastSyncedMessageId(row.id, lastMsgId);
+
+    // AI timeline (best-effort)
+    try {
+      if (messages?.length) {
+        const events = await generateTimeline(title, messages);
+        if (events.length) await caseDb.addTimelineEvents(row.id, thread.guildId, events, 'ai');
+      }
+    } catch (e) { console.error('[caseImport] threadCreate timeline', e.message); }
+
+    await thread.send(`📋 เข้าระบบเรื่องร้องเรียนแล้ว · รหัส **${row.ref}** · จังหวัด ${province}`).catch(() => {});
+  } catch (err) {
+    console.error('[caseImport] handleThreadCreate:', err.message);
+  }
+}
+
+module.exports = { handleCaseImportStart, handleCaseImportModal, handleThreadCreate };

@@ -247,3 +247,37 @@ export async function setAiSummary(caseId, summary, lastSyncedMessageId = null) 
     [caseId, summary, lastSyncedMessageId],
   )
 }
+
+export async function addTimelineEvents(caseId, guildId, events, source = 'ai') {
+  for (const e of events) {
+    await pool.query(
+      `INSERT INTO case_timeline (case_id, guild_id, discord_message_id, source, body, is_public, occurred_at)
+       VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7, NOW()))
+       ON CONFLICT (case_id, discord_message_id) WHERE discord_message_id IS NOT NULL DO NOTHING`,
+      [caseId, guildId, e.discord_message_id || null, source, e.body, e.is_public ?? false, e.occurred_at || null],
+    )
+  }
+}
+
+export async function getTimeline(caseId, { publicOnly = false } = {}) {
+  const { rows } = await pool.query(
+    `SELECT * FROM case_timeline WHERE case_id = $1${publicOnly ? ' AND is_public = TRUE' : ''}
+     ORDER BY occurred_at ASC`,
+    [caseId],
+  )
+  return rows
+}
+
+export async function toggleTimelinePublic(entryId, caseId, isPublic) {
+  await pool.query(
+    `UPDATE case_timeline SET is_public = $3 WHERE id = $1 AND case_id = $2`,
+    [entryId, caseId, isPublic],
+  )
+}
+
+export async function deleteTimelineEntry(entryId, caseId) {
+  await pool.query(
+    `DELETE FROM case_timeline WHERE id = $1 AND case_id = $2`,
+    [entryId, caseId],
+  )
+}

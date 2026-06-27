@@ -473,8 +473,8 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
                   <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
                   <div className="absolute right-0 top-full mt-2 z-20 bg-white dark:bg-disc-hover border border-warm-200 dark:border-disc-border rounded-xl shadow-lg py-2 w-64 max-h-[80vh] overflow-y-auto flex flex-col gap-0.5">
 
-                    {/* Nav links for current app */}
-                    {menuLinks.map(l => {
+                    {/* Nav links for current app — ซ่อนเมื่ออยู่ home (ซ้ำกับ app switcher) */}
+                    {(isFinanceApp || isCallingApp || isDocsApp || isDiscordApp || isCaseApp || isSocialApp) && menuLinks.map(l => {
                       if (l.href === '/docs' && isDocsApp && docProjects.length > 0) {
                         return (
                           <div key={l.href}>

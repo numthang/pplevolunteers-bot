@@ -148,6 +148,31 @@ async function setLastSyncedMessageId(caseId, messageId) {
   );
 }
 
+/**
+ * เพิ่ม timeline entries (AI หรือ manual)
+ * events = [{ discord_message_id?, body, is_public, occurred_at? }]
+ * ถ้ามี discord_message_id จะ skip ถ้าชน (dedup incremental)
+ */
+async function addTimelineEvents(caseId, guildId, events, source = 'ai') {
+  for (const e of events) {
+    await pool.query(
+      `INSERT INTO case_timeline (case_id, guild_id, discord_message_id, source, body, is_public, occurred_at)
+       VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7, NOW()))
+       ON CONFLICT (case_id, discord_message_id) WHERE discord_message_id IS NOT NULL DO NOTHING`,
+      [caseId, guildId, e.discord_message_id || null, source, e.body, e.is_public ?? false, e.occurred_at || null],
+    );
+  }
+}
+
+async function getTimeline(caseId, { publicOnly = false } = {}) {
+  const { rows } = await pool.query(
+    `SELECT * FROM case_timeline WHERE case_id = $1${publicOnly ? ' AND is_public = TRUE' : ''}
+     ORDER BY occurred_at ASC`,
+    [caseId],
+  );
+  return rows;
+}
+
 module.exports = {
   provinceToCode,
   getCaseConfig,
@@ -162,4 +187,6 @@ module.exports = {
   updateStatus,
   setAiSummary,
   setLastSyncedMessageId,
+  addTimelineEvents,
+  getTimeline,
 };

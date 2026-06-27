@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { STATUS_LABELS } from '@/lib/caseOptionsClient.js'
 
-const inputCls = 'w-full border border-gray-300 dark:border-disc-border bg-white dark:bg-disc-hover text-gray-900 dark:text-disc-text p-3 text-base rounded-lg placeholder-gray-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-indigo-500'
+const inputCls = 'w-full border border-gray-300 dark:border-disc-border bg-white dark:bg-disc-hover text-gray-900 dark:text-disc-text p-3 text-base rounded-lg placeholder-gray-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-brand-orange'
 const btnCls = 'px-4 py-2 rounded-lg text-base font-semibold transition disabled:opacity-50'
 
 const NEEDS_REASON = ['closed', 'rejected']
@@ -75,7 +75,7 @@ export default function CaseManageActions({ refId, status, isAssigned, closeReas
             <input type="checkbox" checked={notePublic} onChange={e => setNotePublic(e.target.checked)} className="w-4 h-4 accent-orange" />
             แสดงต่อผู้ร้องเรียน (สาธารณะ)
           </label>
-          <button onClick={addNote} disabled={busy} className={`${btnCls} bg-indigo-600 text-white hover:bg-indigo-700`}>บันทึก</button>
+          <button onClick={addNote} disabled={busy} className={`${btnCls} bg-brand-orange text-white hover:bg-brand-orange-light`}>บันทึก</button>
         </div>
       </div>
 
@@ -97,7 +97,7 @@ export default function CaseManageActions({ refId, status, isAssigned, closeReas
         )}
 
         <button onClick={changeStatus} disabled={busy || newStatus === status && !needsReason}
-          className={`${btnCls} w-full mt-3 bg-indigo-600 text-white hover:bg-indigo-700`}>
+          className={`${btnCls} w-full mt-3 bg-brand-orange text-white hover:bg-brand-orange-light`}>
           อัปเดตสถานะ
         </button>
       </div>
