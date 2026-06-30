@@ -7,6 +7,7 @@ import { useEffectiveRoles } from '@/lib/useEffectiveRoles.js'
 import { can } from '@/lib/permissions.js'
 import SplitModal from '@/components/calling/SplitModal.jsx'
 import SmsModal from '@/components/calling/SmsModal.jsx'
+import RecordCallModal from '@/components/calling/RecordCallModal.jsx'
 import { CALL_STATUS_COLORS } from '@/lib/callingStatusColors.js'
 import { PhoneCall, PhoneOff, Clock, Minus, Users, MessageSquare, AlertTriangle, Timer, UserMinus, Infinity } from 'lucide-react'
 
@@ -160,33 +161,21 @@ export default function CampaignPage({ params }) {
 
   const [splitModalOpen, setSplitModalOpen] = useState(false)
   const [smsModalOpen, setSmsModalOpen] = useState(false)
-  const [expandedId, setExpandedId] = useState(null)
-  const [logsCache, setLogsCache] = useState({})
-  const [editingLogId, setEditingLogId] = useState(null)
-  const [editStatus, setEditStatus] = useState('')
-  const [editNote, setEditNote] = useState('')
+  const [recordModalMember, setRecordModalMember] = useState(null)
 
-
-  const reloadLogs = useCallback(async (itemId) => {
-    const contactType = activeTab === 'contact' ? '&contactType=contact' : ''
-    const res = await fetch(`/api/calling/logs?memberId=${itemId}${contactType}`)
-    const data = await res.json()
-    setLogsCache(prev => ({ ...prev, [itemId]: data.data || [] }))
-  }, [activeTab])
 
   // id ของแต่ละ row ตาม tab
   const getItemId = useCallback((item) => activeTab === 'contact' ? item.id : item.source_id, [activeTab])
 
-  const handleExpand = async (itemId) => {
-    const next = expandedId === itemId ? null : itemId
-    setExpandedId(next)
-    if (next && !logsCache[next]) {
-      const contactType = activeTab === 'contact' ? '&contactType=contact' : ''
-      const res = await fetch(`/api/calling/logs?memberId=${next}${contactType}`)
-      const data = await res.json()
-      setLogsCache(prev => ({ ...prev, [next]: data.data || [] }))
-    }
-  }
+  const openRecordModal = useCallback((item) => {
+    setRecordModalMember({
+      ...item,
+      campaign_id: parseInt(campaignId),
+      campaign_name: campaign?.name,
+      campaign_description: campaign?.description,
+      event_date: campaign?.event_date,
+    })
+  }, [campaignId, campaign])
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedName(filterName), 400)
@@ -285,8 +274,6 @@ export default function CampaignPage({ params }) {
     setHasMore(false)
     hasMoreRef.current = false
     offsetRef.current = 0
-    setExpandedId(null)
-    setLogsCache({})
     try {
       const dataUrl = tab === 'contact'
         ? buildContactsUrl(0, amphure, tier, assignee, name, called, status, sms)
@@ -337,17 +324,26 @@ export default function CampaignPage({ params }) {
     }
   }, [activeTab, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled, filterSort, filterStatus, filterSms])
 
+  const handleRecordSave = useCallback(async (payload) => {
+    await fetch('/api/calling/logs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    setRecordModalMember(null)
+    await loadFirst(activeTab, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled, filterSort, filterStatus, filterSms)
+  }, [activeTab, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled, filterSort, filterStatus, filterSms, loadFirst])
+
   useEffect(() => {
     ;(async () => {
       const [campaignRes, usersRes, memberStatsRes, contactStatsRes] = await Promise.all([
-        fetch('/api/calling/campaigns'),
+        fetch(`/api/calling/campaigns/${campaignId}`),
         fetch('/api/calling/users?all=true'),
         fetch(`/api/calling/members?campaignId=${campaignId}&stats=true`),
         fetch(`/api/calling/contacts/campaign?campaignId=${campaignId}&stats=true`),
       ])
       const cData = await campaignRes.json()
-      const camp = cData.data?.find(c => String(c.id) === String(campaignId))
-      if (camp) setCampaign(camp)
+      if (cData.data) setCampaign(cData.data)
       const uData = await usersRes.json()
       if (uData.data) {
         const map = {}
@@ -726,9 +722,6 @@ export default function CampaignPage({ params }) {
               const tierColor = TIER_COLORS[tier]
               const status  = item.member_status || 'unassigned'
               const badge   = getStatusBadge(status)
-              const isExpanded = expandedId === itemId
-              const itemLogs   = logsCache[itemId]
-
               // member-specific
               const isMember  = activeTab === 'member'
               const hasPhone  = contactsHidden || !!(isMember ? item.mobile_number : item.phone)
@@ -750,14 +743,13 @@ export default function CampaignPage({ params }) {
                     hover:bg-warm-50 dark:hover:bg-disc-hover transition-colors
                     [grid-template-columns:40px_1fr_auto]
                     md:[grid-template-columns:40px_40px_1fr_120px_88px_80px]
-                    ${isExpanded ? 'bg-warm-50 dark:bg-disc-hover' : ''}
                   `}>
                     <input type="checkbox"
                       checked={selectedMembers.has(itemId)}
                       onChange={() => handleSelectMember(itemId)}
                       className="w-6 h-6 accent-teal cursor-pointer" />
                     <span className={`hidden md:block text-sm tabular-nums text-warm-400 dark:text-disc-muted ${dimmed}`}>{idx + 1}</span>
-                    <div className={`min-w-0 pr-2 cursor-pointer ${dimmed}`} onClick={() => handleExpand(itemId)}>
+                    <div className={`min-w-0 pr-2 cursor-pointer ${dimmed}`} onClick={() => openRecordModal(item)}>
                       <div className="flex items-center gap-1.5 truncate">
                         <span className="truncate text-base font-medium text-warm-900 dark:text-disc-text">
                           {displayName}
@@ -822,101 +814,6 @@ export default function CampaignPage({ params }) {
                     </div>
                   </div>
 
-                  {/* Expanded info panel */}
-                  {isExpanded && (
-                    <div className="px-4 py-2 bg-warm-50 dark:bg-disc-hover border-t border-warm-200 dark:border-disc-border">
-                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-base mb-1.5">
-                        {!contactsHidden && (
-                          <span>
-                            {phone
-                              ? <a href={`tel:${phone}`} className="text-teal font-medium">{phone}</a>
-                              : <span className="text-warm-400 dark:text-disc-muted">ไม่มีเบอร์</span>}
-                          </span>
-                        )}
-                        {lineId && <span className="text-warm-500 dark:text-disc-muted">LINE: {lineId}</span>}
-                        {!isMember && item.email && <span className="text-warm-500 dark:text-disc-muted">{item.email}</span>}
-                        {!isMember && item.note && <span className="text-warm-600 dark:text-disc-text italic">"{item.note}"</span>}
-                      </div>
-                      {itemLogs === undefined ? (
-                        <div className="text-base text-warm-400 dark:text-disc-muted py-1">กำลังโหลด...</div>
-                      ) : itemLogs.length === 0 ? (
-                        <div className="text-base text-warm-400 dark:text-disc-muted py-1">ยังไม่มีประวัติการโทร</div>
-                      ) : (
-                        <div className="space-y-1">
-                          {itemLogs.map(log => {
-                            const logColor = CALL_STATUS_COLORS[log.status] || { bg: '#f3f4f6', text: '#6b7280', label: log.status }
-                            const canEdit = log.called_by === effectiveDiscordId || isModerator
-                            const isEditing = editingLogId === log.id
-                            return (
-                              <div key={log.id} className="py-0.5">
-                                {!isEditing && (
-                                  <div className="flex flex-col gap-0.5">
-                                    <div className="flex items-center gap-1">
-                                      {(() => { const si = STATUS_ICONS[log.status]; return si ? <span className="inline-flex items-center gap-1 flex-1" style={{ color: si.color }}><si.Icon className="w-4 h-4" /><span className="text-sm font-medium">{logColor.label}</span></span> : <span className="flex-1" /> })()}
-                                      {canEdit && (
-                                        <button onClick={() => { setEditingLogId(log.id); setEditStatus(log.status); setEditNote(log.note || '') }}
-                                          className="p-0.5 rounded text-warm-400 hover:text-teal transition shrink-0">
-                                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                                        </button>
-                                      )}
-                                      {isModerator && (
-                                        <button onClick={async () => {
-                                          if (!confirm('ลบ log นี้?')) return
-                                          await fetch(`/api/calling/logs?id=${log.id}`, { method: 'DELETE' })
-                                          reloadLogs(itemId)
-                                        }} className="p-0.5 rounded text-warm-400 hover:text-red-500 transition shrink-0">
-                                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
-                                        </button>
-                                      )}
-                                    </div>
-                                    <span className="text-base text-warm-800 dark:text-disc-text break-words">
-                                      {log.note ? parseLinksPage(log.note) : null}
-                                      <span className="italic text-warm-400 dark:text-disc-muted">
-                                        {(log.note && (log.caller_name || log.called_at)) ? ' — ' : ''}
-                                        {log.caller_name && <a href={`https://discord.com/users/${log.called_by}`} target="_blank" rel="noopener noreferrer" className="hover:underline">{log.caller_name}</a>}
-                                        {log.caller_name && log.called_at ? ' ' : ''}
-                                        {log.called_at ? new Date(log.called_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' }) : null}
-                                      </span>
-                                    </span>
-                                  </div>
-                                )}
-                                {isEditing ? (
-                                  <div className="space-y-2">
-                                    <div className="flex flex-wrap gap-1.5">
-                                      {EDIT_STATUS_OPTIONS.map(opt => {
-                                        const si = STATUS_ICONS[opt.value]
-                                        return (
-                                        <button key={opt.value} type="button" onClick={() => setEditStatus(opt.value)}
-                                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-sm border transition"
-                                          style={editStatus === opt.value
-                                            ? { backgroundColor: CALL_STATUS_COLORS[opt.value]?.bg, color: CALL_STATUS_COLORS[opt.value]?.text, borderColor: CALL_STATUS_COLORS[opt.value]?.text }
-                                            : {}}>
-                                          {si && <si.Icon className="w-3.5 h-3.5 shrink-0" />}
-                                          {opt.label}
-                                        </button>
-                                        )
-                                      })}
-                                    </div>
-                                    <textarea rows={2} value={editNote} onChange={e => setEditNote(e.target.value)}
-                                      className="w-full border dark:border-disc-border rounded px-2 py-1.5 text-base bg-card-bg text-warm-900 dark:text-disc-text resize-none" />
-                                    <div className="flex gap-2">
-                                      <button onClick={async () => {
-                                        await fetch('/api/calling/logs', { method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-                                          body: JSON.stringify({ id: log.id, status: editStatus, note: editNote }) })
-                                        setEditingLogId(null)
-                                        reloadLogs(itemId)
-                                      }} className="px-3 py-1 rounded text-base bg-teal text-white hover:bg-teal/90 transition">บันทึก</button>
-                                      <button onClick={() => setEditingLogId(null)} className="px-3 py-1 rounded text-base text-warm-500 hover:bg-warm-100 dark:hover:bg-disc-hover transition">ยกเลิก</button>
-                                    </div>
-                                  </div>
-                                ) : null}
-                              </div>
-                            )
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  )}
                 </div>
               )
             })}
@@ -955,6 +852,16 @@ export default function CampaignPage({ params }) {
             className="px-3 py-2 text-warm-600 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text text-xl w-10 h-10 flex items-center justify-center rounded-lg hover:bg-warm-100 dark:hover:bg-disc-hover transition">×</button>
         </div>
       )}
+
+      <RecordCallModal
+        isOpen={!!recordModalMember}
+        member={recordModalMember}
+        contact_type={activeTab === 'contact' ? 'contact' : 'member'}
+        source="assignments"
+        hasNext={false}
+        onClose={() => setRecordModalMember(null)}
+        onSave={handleRecordSave}
+      />
 
       <SplitModal
         isOpen={splitModalOpen}

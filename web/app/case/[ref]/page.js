@@ -31,12 +31,7 @@ export default async function CaseTrackPage({ params }) {
     )
   }
 
-  // รวม timeline (public) + public notes → เรียงตามเวลา
-  const timelineEntries = await getTimeline(c.id, { publicOnly: true })
-  const allEntries = [
-    ...timelineEntries.map(e => ({ ...e, _kind: 'timeline' })),
-    ...c.publicNotes.map(n => ({ ...n, _kind: 'note', occurred_at: n.created_at })),
-  ].sort((a, b) => new Date(a.occurred_at) - new Date(b.occurred_at))
+  const allEntries = await getTimeline(c.id, { publicOnly: true })
 
   return (
     <div className="max-w-xl mx-auto">

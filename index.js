@@ -1,6 +1,6 @@
 // index.js 
 require('dotenv').config({ override: true });
-const { Client, GatewayIntentBits, Collection, MessageFlags } = require('discord.js');
+const { Client, GatewayIntentBits, Collection, MessageFlags, ChannelType } = require('discord.js');
 const { handleInterestSelect } = require('./handlers/interestSelect');
 const { handleModalSubmit, handleRegisterConfirm, handleDeleteLog, handleOpenRegisterModal } = require('./handlers/registerHandler');
 const { handleProvinceBtn, handleProvinceRegionSelect } = require('./handlers/provinceSelect');
@@ -47,7 +47,7 @@ const { syncGuildRolesCatalog, upsertGuildRole, deleteGuildRole, invalidateGuild
 const { handleSlipMessage } = require('./services/financeOCR');
 const { handleRoleAddModal, handleRoleRemoveModal } = require('./handlers/roleBulkHandler');
 const { buildRagContext } = require('./services/ragSearch');
-const { callAI } = require('./services/aiSummarize');
+const { callAI, callAIWithHistory } = require('./services/aiSummarize');
 const { getEnabledFeatures } = require('./db/settings');
 
 const fs = require('fs');
@@ -289,20 +289,29 @@ client.on('guildMemberUpdate', async (oldMember, newMember) => {
 client.on('threadDelete', async (thread) => {
   if (!thread.parentId) return;
   const forumIds = forumChannelCache.get(thread.guildId);
-  if (!forumIds?.has(thread.parentId)) return;
-  await deleteForumPost(thread.id).catch(err => console.error('[forumIndex] threadDelete DB:', err));
-  await deletePost(thread.id).catch(err => console.error('[forumIndex] threadDelete meili:', err));
+  if (forumIds?.has(thread.parentId)) {
+    await deleteForumPost(thread.id).catch(err => console.error('[forumIndex] threadDelete DB:', err));
+    await deletePost(thread.id).catch(err => console.error('[forumIndex] threadDelete meili:', err));
+  } else if (thread.parent?.type === ChannelType.GuildText) {
+    await deleteForumPost(thread.id).catch(err => console.error('[threadIndex] threadDelete DB:', err));
+    await deletePost(thread.id).catch(err => console.error('[threadIndex] threadDelete meili:', err));
+  }
 });
 
 client.on('threadCreate', async (thread) => {
   if (!thread.parentId) return;
-  // forum indexing (Meilisearch)
   const forumIds = forumChannelCache.get(thread.guildId);
   if (forumIds?.has(thread.parentId)) {
+    // forum indexing (Meilisearch)
     await indexThread(thread, thread.guildId, thread.parentId).catch(err =>
       console.error('[forumIndex] threadCreate:', err)
     );
     addForumChannel(thread.guildId, thread.parentId);
+  } else if (thread.parent?.type === ChannelType.GuildText) {
+    // text channel thread indexing
+    await indexThread(thread, thread.guildId, thread.parentId).catch(err =>
+      console.error('[threadIndex] threadCreate:', err)
+    );
   }
   // case auto-import (best-effort, ไม่ block)
   handleCaseThreadCreate(thread).catch(() => {});
@@ -376,11 +385,15 @@ client.on('messageCreate', async (message) => {
       indexMessage(message, message.channel.id).catch(err =>
         console.error('[forumIndex] messageCreate:', err)
       );
+    } else if (message.channel.parent?.type === ChannelType.GuildText) {
+      indexMessage(message, message.channel.id).catch(err =>
+        console.error('[threadIndex] messageCreate:', err)
+      );
     }
   }
 
   // mention → RAG AI reply
-  if (!message.author.bot && message.guild && message.mentions.has(client.user)) {
+  if (!message.author.bot && message.guild && !message.mentions.everyone && message.mentions.has(client.user)) {
     const features = await getEnabledFeatures(message.guildId);
     if (features.includes('ai_mention')) {
       const question = message.content.replace(/<@!?\d+>/g, '').trim();
@@ -391,32 +404,39 @@ client.on('messageCreate', async (message) => {
 
       await message.channel.sendTyping().catch(() => {});
       try {
-        // ดึง conversation context 10 messages ก่อนหน้า
-        const prevMessages = await message.channel.messages
-          .fetch({ limit: 10, before: message.id })
-          .catch(() => null);
-        const convoContext = prevMessages
-          ? [...prevMessages.values()].reverse()
-              .map(m => `${m.author.username}: ${m.content}`)
-              .join('\n')
-          : '';
+        const [prevMessages, ragContext] = await Promise.all([
+          message.channel.messages.fetch({ limit: 25, before: message.id }).catch(() => null),
+          buildRagContext(question, message.guildId),
+        ]);
 
-        const ragContext = await buildRagContext(question, message.guildId);
+        // แปลง history เป็น proper user/assistant turns
+        const stripMentions = t => t.replace(/<@!?\d+>/g, '').replace(/<#\d+>/g, '').trim();
+        const botId = client.user.id;
+        const history = prevMessages ? [...prevMessages.values()].reverse() : [];
+        const messagesArr = [];
+        for (const m of history) {
+          const role = m.author.id === botId ? 'assistant' : 'user';
+          const content = stripMentions(m.content);
+          if (!content) continue;
+          const last = messagesArr[messagesArr.length - 1];
+          if (last?.role === role) {
+            last.content += '\n' + content;
+          } else {
+            messagesArr.push({ role, content });
+          }
+        }
+        // Claude messages ต้องเริ่มด้วย user
+        while (messagesArr.length > 0 && messagesArr[0].role === 'assistant') messagesArr.shift();
+        messagesArr.push({ role: 'user', content: question });
 
         const systemPrompt = [
           'คุณคือบอทช่วยงานของทีมอาสาประชาชน คุยเป็นกันเองเหมือนเพื่อนร่วมทีม ภาษา casual ได้เลย',
           'ตอบสั้นตรงประเด็น ไม่เกิน 1800 ตัวอักษร',
           'ห้ามเปิดเผยเบอร์โทร LINE ID ที่อยู่ หรือข้อมูลส่วนตัวของบุคคลใด',
-          ragContext ? 'มีข้อมูลจากกระทู้ Discord ที่เกี่ยวข้อง ใช้อ้างอิงได้ถ้าตรงกับคำถาม' : '',
-        ].filter(Boolean).join('\n');
-
-        const userContent = [
-          ragContext ? `ข้อมูลจากกระทู้:\n${ragContext}` : '',
-          convoContext ? `บทสนทนาก่อนหน้า:\n${convoContext}` : '',
-          `คำถาม: ${question}`,
+          ragContext ? `ข้อมูลจากกระทู้ Discord ที่เกี่ยวข้อง (ใช้อ้างอิงได้ถ้าตรงกับคำถาม):\n${ragContext}` : '',
         ].filter(Boolean).join('\n\n');
 
-        const answer = await callAI(systemPrompt, userContent);
+        const answer = await callAIWithHistory(systemPrompt, messagesArr);
         await message.reply(answer);
       } catch (err) {
         console.error('[mentionAI]', err);

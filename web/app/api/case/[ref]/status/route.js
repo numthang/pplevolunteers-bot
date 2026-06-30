@@ -1,7 +1,8 @@
 import { gateCase } from '@/lib/caseGate.js'
-import { updateStatus, addNote } from '@/db/cases.js'
+import { updateStatus, addTimelineEvents } from '@/db/cases.js'
 import { postToThread } from '@/lib/caseDiscord.js'
 import { statusLabel, CASE_CLOSE_REASONS } from '@/lib/caseOptions.js'
+import { logAction } from '@/db/auditLog.js'
 
 const VALID_STATUS = ['open', 'in_progress', 'resolved', 'closed', 'rejected']
 const NEEDS_REASON = ['closed', 'rejected']
@@ -29,11 +30,10 @@ export async function POST(req, { params }) {
   await updateStatus(caseRow.id, status, NEEDS_REASON.includes(status) ? close_reason : null)
 
   if (public_note?.trim()) {
-    await addNote(caseRow.id, guildId, {
-      author_discord_id: session.user.discordId,
+    await addTimelineEvents(caseRow.id, guildId, [{
       body: public_note.trim(),
       is_public: true,
-    })
+    }], 'human')
   }
 
   // แจ้งในเธรดของเคส
@@ -41,6 +41,8 @@ export async function POST(req, { params }) {
     const reasonTxt = NEEDS_REASON.includes(status) ? ` (${close_reason})` : ''
     await postToThread(caseRow.discord_thread_id, `🔄 สถานะเคส **${caseRow.ref}** → **${statusLabel(status)}**${reasonTxt}`)
   }
+
+  logAction({ guildId, app: 'cases', action: 'case.status_changed', actorId: session.user.discordId, targetId: caseRow.ref, meta: { from: caseRow.status, to: status, close_reason: close_reason || null } })
 
   return Response.json({ ok: true })
 }

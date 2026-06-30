@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import ProvinceCombobox from '@/components/case/ProvinceCombobox.jsx'
 
@@ -13,6 +13,30 @@ const ACCEPT = 'image/jpeg,image/png,image/webp,audio/mpeg,audio/mp4,audio/x-m4a
 
 export default function CaseNewForm({ fixedProvince, provinces, categories }) {
   const [province, setProvince] = useState(fixedProvince || '')
+  const [locating, setLocating] = useState(false)
+
+  useEffect(() => {
+    if (fixedProvince || !navigator.geolocation) return
+    setLocating(true)
+    navigator.geolocation.getCurrentPosition(
+      async ({ coords: { latitude: lat, longitude: lon } }) => {
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=th`,
+            { headers: { 'User-Agent': 'pple-volunteers/1.0' } },
+          )
+          const data = await res.json()
+          const raw = data.address?.state || data.address?.county || ''
+          const p = raw.replace(/^จังหวัด/, '').trim()
+          if (p && provinces.includes(p)) setProvince(p)
+        } catch { /* ไม่มี province → ผู้ใช้เลือกเอง */ }
+        finally { setLocating(false) }
+      },
+      () => setLocating(false),
+      { timeout: 8000 },
+    )
+  }, [])
+
   const [title, setTitle] = useState('')
   const [category, setCategory] = useState(categories[0] || '')
   const [detail, setDetail] = useState('')
@@ -105,6 +129,7 @@ export default function CaseNewForm({ fixedProvince, provinces, categories }) {
           value={province}
           onChange={setProvince}
           provinces={provinces}
+          placeholder={locating ? '📍 กำลังระบุตำแหน่ง...' : 'ค้นหาจังหวัด...'}
         />
       </div>
 

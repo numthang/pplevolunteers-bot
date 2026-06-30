@@ -32,7 +32,7 @@ Software ที่ต้องติดตั้งบน VPS ก่อน deplo
 
 ### Python Packages (Image Processing)
 
-ใช้ใน `scripts/crop_document.py` และ `scripts/build_pdf.py`
+ใช้ใน `scripts/docs/crop_document.py` และ `scripts/docs/build_pdf.py`
 
 ```bash
 sudo pip3 install pillow opencv-python-headless

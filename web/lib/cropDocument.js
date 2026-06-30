@@ -11,8 +11,8 @@ export function getUploadPath() {
 }
 
 const PYTHON     = process.env.PYTHON_BIN ?? 'python3'
-const CROP_SCRIPT = path.join(process.cwd(), '..', 'scripts', 'crop_document.py')
-const PDF_SCRIPT  = path.join(process.cwd(), '..', 'scripts', 'build_pdf.py')
+const CROP_SCRIPT = path.join(process.cwd(), '..', 'scripts', 'docs', 'crop_document.py')
+const PDF_SCRIPT  = path.join(process.cwd(), '..', 'scripts', 'docs', 'build_pdf.py')
 
 export function sanitizeProjectName(name) {
   return (name || 'document').replace(/\s+/g, '_').replace(/[^฀-๿a-zA-Z0-9_-]/g, '').slice(0, 80)

@@ -121,7 +121,7 @@ docs_signatures
 
 - **Table:** `docs_project_attachments` (id, project_id, guild_id, original_name, file_path, sort_order)
 - **Storage:** `DOCS_UPLOAD_DIR` env (default: `uploads/docs/`) — นอก web/public
-- **Auto-crop:** `scripts/crop_document.py` (OpenCV — grayscale→Canny→contour→perspective transform → 2480×3508px A4)
+- **Auto-crop:** `scripts/docs/crop_document.py` (OpenCV — grayscale→Canny→contour→perspective transform → 2480×3508px A4)
 - **API:** `GET/POST /api/docs/projects/[id]/attachments` · `DELETE /api/docs/projects/[id]/attachments/[attId]` · `GET /api/docs/projects/[id]/attachments/[attId]/image` (auth-gated)
 - **Export:** ต่อท้าย entry PDFs ด้วย `merged.embedJpg()` + `page.drawImage()` (A4 595×842pt)
 
@@ -468,7 +468,7 @@ web/templates/receipts/
 - `assets/fonts/THSarabunNew.ttf` + `THSarabunNew-Bold.ttf` — installed system-wide on production (`/usr/share/fonts/truetype/`) แก้ font size ต่างกันระหว่าง local/production
 - **Nav dropdown scope** — ใครก็ได้ที่มี province grant เห็น Projects dropdown ได้ (เหมือน calling), cutoff 60 วัน จาก `event_date` (`GET /api/docs/projects` ไม่ require `canManageDocs` แล้ว)
 - **`docs_payers` table** — guild_id, discord_id, display_name, position, sort_order; auto-select per-entry (setProjectPayer); /docs/settings CRUD
-- **Attachment system** — `docs_project_attachments` table; auto-crop A4 (OpenCV `scripts/crop_document.py`); API GET/POST/DELETE + image route (auth-gated); UI ใน ACT tab (upload zone + thumbnail grid); export รวมต่อท้าย merged PDF อัตโนมัติ
+- **Attachment system** — `docs_project_attachments` table; auto-crop A4 (OpenCV `scripts/docs/crop_document.py`); API GET/POST/DELETE + image route (auth-gated); UI ใน ACT tab (upload zone + thumbnail grid); export รวมต่อท้าย merged PDF อัตโนมัติ
 - **`/docs` page** — DocProjectCard grid + DocsProvinceFilter chips + active (≤2 เดือน) / past collapsible split
 - **`/docs/[id]` page** — DocProjectView: 3 tabs (อัตโนมัติ/กำหนดเอง/ACT) + DocEntryList + payer panel + budget bar inline
 - **Batch export** — merged PDF inline (ไม่ใช่ ZIP); attachment images ต่อท้าย; skip entry ที่ member_discord_id = null + X-Skipped-Count header

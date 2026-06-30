@@ -731,20 +731,108 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_docs_projects_export_token
 CREATE UNIQUE INDEX IF NOT EXISTS idx_docs_projects_pdf_token
   ON docs_projects (pdf_token) WHERE pdf_token IS NOT NULL;
 
--- 2026-06-28: case_timeline — AI-generated + manual timeline entries per case
+-- 2026-06-28: Case System — case_config, cases, case_assignees, case_attachments, case_timeline
+CREATE TABLE IF NOT EXISTS case_config (
+  guild_id         VARCHAR(20) NOT NULL PRIMARY KEY,
+  forum_channel_id VARCHAR(20) NULL,
+  updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS cases (
+  id                     SERIAL PRIMARY KEY,
+  guild_id               VARCHAR(20)  NOT NULL,
+  ref                    VARCHAR(20)  NOT NULL,
+  province               VARCHAR(100) NOT NULL,
+  category               VARCHAR(50)  NULL,
+  status                 VARCHAR(20)  NOT NULL DEFAULT 'open',
+  close_reason           VARCHAR(40)  NULL,
+  source                 VARCHAR(20)  NOT NULL DEFAULT 'web',
+  complainant_name       VARCHAR(200) NOT NULL,
+  complainant_phone      VARCHAR(30)  NULL,
+  complainant_line_id    VARCHAR(100) NULL,
+  consent_at             TIMESTAMPTZ  NULL,
+  discord_thread_id      VARCHAR(20)  NULL,
+  last_synced_message_id VARCHAR(20)  NULL,
+  ai_summary             TEXT         NULL,
+  ai_summary_updated_at  TIMESTAMPTZ  NULL,
+  intake_ip              VARCHAR(45)  NULL,
+  created_by             VARCHAR(20)  NULL,
+  title                  VARCHAR(300) NULL,
+  detail                 TEXT         NULL,
+  letters                JSONB        NOT NULL DEFAULT '[]',
+  created_at             TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+  updated_at             TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_cases_ref         ON cases (ref);
+CREATE INDEX        IF NOT EXISTS idx_cases_guild      ON cases (guild_id, status, created_at DESC);
+CREATE INDEX        IF NOT EXISTS idx_cases_province   ON cases (guild_id, province);
+CREATE INDEX        IF NOT EXISTS idx_cases_thread     ON cases (discord_thread_id) WHERE discord_thread_id IS NOT NULL;
+CREATE INDEX        IF NOT EXISTS idx_cases_phone_time ON cases (complainant_phone, created_at DESC);
+CREATE INDEX        IF NOT EXISTS idx_cases_ip_time    ON cases (intake_ip, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS case_assignees (
+  case_id     INT         NOT NULL REFERENCES cases(id) ON DELETE CASCADE,
+  guild_id    VARCHAR(20) NOT NULL,
+  discord_id  VARCHAR(20) NOT NULL,
+  assigned_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (case_id, discord_id)
+);
+CREATE INDEX IF NOT EXISTS idx_case_assignees_user ON case_assignees (guild_id, discord_id);
+
+CREATE TABLE IF NOT EXISTS case_attachments (
+  id            SERIAL       PRIMARY KEY,
+  case_id       INT          NOT NULL REFERENCES cases(id) ON DELETE CASCADE,
+  guild_id      VARCHAR(20)  NOT NULL,
+  file_path     VARCHAR(300) NOT NULL,
+  original_name VARCHAR(300) NULL,
+  mime          VARCHAR(80)  NOT NULL,
+  created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_case_attachments_case ON case_attachments (case_id);
+
 CREATE TABLE IF NOT EXISTS case_timeline (
   id                  SERIAL PRIMARY KEY,
   case_id             INT          NOT NULL REFERENCES cases(id) ON DELETE CASCADE,
   guild_id            VARCHAR(20)  NOT NULL,
   discord_message_id  VARCHAR(20)  NULL,
-  source              VARCHAR(20)  NOT NULL DEFAULT 'human',   -- human | ai
+  source              VARCHAR(20)  NOT NULL DEFAULT 'human',
   body                TEXT         NOT NULL,
   is_public           BOOLEAN      NOT NULL DEFAULT FALSE,
   occurred_at         TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
   created_at          TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
-CREATE INDEX IF NOT EXISTS idx_case_timeline_case
-  ON case_timeline (case_id, occurred_at);
-CREATE UNIQUE INDEX IF NOT EXISTS uq_case_timeline_message
-  ON case_timeline (case_id, discord_message_id)
-  WHERE discord_message_id IS NOT NULL;
+CREATE INDEX        IF NOT EXISTS idx_case_timeline_case      ON case_timeline (case_id, occurred_at);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_case_timeline_message    ON case_timeline (case_id, discord_message_id) WHERE discord_message_id IS NOT NULL;
+
+-- 2026-06-30: audit_logs
+CREATE TABLE IF NOT EXISTS audit_logs (
+  id         BIGSERIAL    PRIMARY KEY,
+  guild_id   VARCHAR(20)  NOT NULL,
+  app        VARCHAR(20)  NOT NULL,
+  action     VARCHAR(60)  NOT NULL,
+  actor_id   VARCHAR(20)  NULL,
+  target_id  VARCHAR(50)  NULL,
+  meta       JSONB        NULL,
+  created_at TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_guild ON audit_logs (guild_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_app   ON audit_logs (guild_id, app, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_actor ON audit_logs (actor_id, created_at DESC) WHERE actor_id IS NOT NULL;
+
+-- 2026-06-30: case_letter_config
+CREATE TABLE IF NOT EXISTS case_letter_config (
+  id                SERIAL       PRIMARY KEY,
+  guild_id          VARCHAR(20)  NOT NULL,
+  province          VARCHAR(100) NOT NULL,
+  org_name          VARCHAR(200) NOT NULL,
+  address           VARCHAR(300) NOT NULL,
+  signer_name       VARCHAR(100) NOT NULL,
+  signer_position   VARCHAR(200) NOT NULL,
+  coordinator_name  VARCHAR(100) NULL,
+  coordinator_phone VARCHAR(30)  NULL,
+  updated_at        TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+  UNIQUE (guild_id, province)
+);
+
+-- 2026-06-30: add letters column
+ALTER TABLE cases ADD COLUMN IF NOT EXISTS letters JSONB NOT NULL DEFAULT '[]';

@@ -167,7 +167,7 @@ function formatEventDate(dateStr) {
   return result
 }
 
-export default function RecordCallModal({ isOpen, member, contact_type = 'member', onClose, onSave, onSaveAndNext, hasNext, onStarChange, onFlagChange }) {
+export default function RecordCallModal({ isOpen, member, contact_type = 'member', source = 'assignee', onClose, onSave, onSaveAndNext, hasNext, onStarChange, onFlagChange }) {
   const { data: session } = useSession()
   const { discordId: effectiveDiscordId, access } = useEffectiveRoles(session)
   const isModerator = can('deleteLog', access?.permissions || [])
@@ -307,7 +307,7 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
   const expiryIcon = isContact ? null : getExpiryIcon(member.expired_at)
   const showSignals = signalsApply
   const signalsFilled = SIGNALS.some(s => signals[s.key])
-  const canSave = status && note.trim() && (!signalsApply || signalsFilled) && (status !== 'answered' || isContact || rsvp)
+  const canSave = !!status && !!note.trim()
 
   return (
     <>
@@ -386,6 +386,7 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
                 {phone ? (
                   <a
                     href={`tel:${phone}`}
+                    onClick={() => fetch('/api/calling/dial', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ member_id: memberId, campaign_id: member?.campaign_id, contact_type }) }).catch(() => {})}
                     className="flex items-center justify-center gap-2 flex-1 py-3 rounded-lg font-semibold text-base transition hover:opacity-90"
                     style={{ backgroundColor: '#0d9e94', color: '#fff' }}
                   >

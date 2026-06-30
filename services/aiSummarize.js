@@ -52,6 +52,27 @@ async function callAI(system, userContent) {
   return fn(system, userContent, model, maxTokens);
 }
 
+// multi-turn — ส่ง messages[] (user/assistant turns) โดยตรง ใช้กับ mention handler
+async function callAIWithHistory(system, messages) {
+  const { provider, model, maxTokens } = await getAgentConfig();
+  if (provider === 'claude') {
+    const Anthropic = require('@anthropic-ai/sdk');
+    const client = new Anthropic.default({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const res = await client.messages.create({
+      model,
+      max_tokens: maxTokens,
+      system: [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }],
+      messages,
+    });
+    return res.content.find(b => b.type === 'text')?.text ?? 'ประมวลผลไม่สำเร็จ';
+  }
+  // Fallback สำหรับ provider อื่น: flatten เป็น text
+  const flat = messages.map(m => `${m.role === 'assistant' ? '[บอท]' : '[ผู้ใช้]'}: ${m.content}`).join('\n');
+  const fn = PROVIDERS[provider];
+  if (!fn) throw new Error(`AI provider ไม่รองรับ: ${provider}`);
+  return fn(system, flat, model, maxTokens);
+}
+
 // ── ประมวลผลจาก messages[] (ใช้โดย /message fetch + thread context menu) ───────
 // title: ชื่อเธรด/หัวข้อ (optional) — เรื่องหลักที่ AI ควรโฟกัส
 // customPrompt: ถ้าส่งมา จะใช้แทน mode สำเร็จรูป (ผู้ใช้พิมพ์เอง)
@@ -81,4 +102,4 @@ async function processText(guildId, text, modeValue, customPrompt = null, prompt
   return { mode, output };
 }
 
-module.exports = { processMessages, processText, callAI, MAX_MESSAGES };
+module.exports = { processMessages, processText, callAI, callAIWithHistory, MAX_MESSAGES };

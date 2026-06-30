@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { STATUS_LABELS } from '@/lib/caseOptionsClient.js'
+import CaseLetterModal from '@/components/case/CaseLetterModal.jsx'
 
 const inputCls = 'w-full border border-gray-300 dark:border-disc-border bg-white dark:bg-disc-hover text-gray-900 dark:text-disc-text p-3 text-base rounded-lg placeholder-gray-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-brand-orange'
 const btnCls = 'px-4 py-2 rounded-lg text-base font-semibold transition disabled:opacity-50'
@@ -13,10 +14,7 @@ const STATUS_ORDER = ['open', 'in_progress', 'resolved', 'closed', 'rejected']
 export default function CaseManageActions({ refId, status, isAssigned, closeReasons }) {
   const router = useRouter()
   const [busy, setBusy] = useState(false)
-
-  // note
-  const [note, setNote] = useState('')
-  const [notePublic, setNotePublic] = useState(false)
+  const [showLetter, setShowLetter] = useState(false)
 
   // status
   const [newStatus, setNewStatus] = useState(status)
@@ -36,13 +34,6 @@ export default function CaseManageActions({ refId, status, isAssigned, closeReas
 
   async function takeCase() { await call(`/api/case/${refId}/assign`) }
 
-  async function addNote() {
-    if (!note.trim()) { alert('กรุณาใส่ข้อความ'); return }
-    if (await call(`/api/case/${refId}/note`, { body: note, is_public: notePublic })) {
-      setNote(''); setNotePublic(false)
-    }
-  }
-
   async function changeStatus() {
     const needsReason = NEEDS_REASON.includes(newStatus)
     if (needsReason && !publicNote.trim()) { alert('กรุณาเขียนข้อความแจ้งผู้ร้องเรียน'); return }
@@ -57,6 +48,8 @@ export default function CaseManageActions({ refId, status, isAssigned, closeReas
   const needsReason = NEEDS_REASON.includes(newStatus)
 
   return (
+    <>
+    {showLetter && <CaseLetterModal refId={refId} onClose={() => setShowLetter(false)} />}
     <div className="bg-card-bg border border-gray-200 dark:border-disc-border rounded-xl p-5 space-y-5">
       {/* รับเรื่อง */}
       {!isAssigned && (
@@ -65,22 +58,8 @@ export default function CaseManageActions({ refId, status, isAssigned, closeReas
         </button>
       )}
 
-      {/* เพิ่มบันทึก */}
-      <div>
-        <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-disc-text">เพิ่มบันทึก</label>
-        <textarea value={note} onChange={e => setNote(e.target.value)} rows="3" className={inputCls}
-          placeholder="บันทึกความคืบหน้า..." style={{ resize: 'none' }} />
-        <div className="flex items-center justify-between mt-2">
-          <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-600 dark:text-disc-muted">
-            <input type="checkbox" checked={notePublic} onChange={e => setNotePublic(e.target.checked)} className="w-4 h-4 accent-orange" />
-            แสดงต่อผู้ร้องเรียน (สาธารณะ)
-          </label>
-          <button onClick={addNote} disabled={busy} className={`${btnCls} bg-brand-orange text-white hover:bg-brand-orange-light`}>บันทึก</button>
-        </div>
-      </div>
-
       {/* เปลี่ยนสถานะ */}
-      <div className="pt-4 border-t border-gray-100 dark:border-disc-border">
+      <div>
         <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-disc-text">เปลี่ยนสถานะ</label>
         <select value={newStatus} onChange={e => setNewStatus(e.target.value)} className={inputCls}>
           {STATUS_ORDER.map(s => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
@@ -101,6 +80,14 @@ export default function CaseManageActions({ refId, status, isAssigned, closeReas
           อัปเดตสถานะ
         </button>
       </div>
+
+      {/* ร่างหนังสือ */}
+      <div>
+        <button onClick={() => setShowLetter(true)} className={`${btnCls} w-full border border-gray-300 dark:border-disc-border text-gray-700 dark:text-disc-text hover:border-brand-orange hover:text-brand-orange`}>
+          📄 ร่างหนังสือร้องเรียน
+        </button>
+      </div>
     </div>
+    </>
   )
 }

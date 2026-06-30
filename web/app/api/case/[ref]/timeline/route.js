@@ -1,5 +1,6 @@
 import { gateCase } from '@/lib/caseGate.js'
 import { addTimelineEvents, getTimeline } from '@/db/cases.js'
+import { logAction } from '@/db/auditLog.js'
 
 /** GET /api/case/[ref]/timeline — โหลด timeline ทั้งหมด (สำหรับ manage page) */
 export async function GET(req, { params }) {
@@ -24,6 +25,8 @@ export async function POST(req, { params }) {
   await addTimelineEvents(caseRow.id, guildId, [
     { body: body.trim(), is_public: !!is_public, occurred_at: occurred_at || null },
   ], 'human')
+
+  logAction({ guildId, app: 'cases', action: 'case.timeline_added', actorId: gate.session.user.discordId, targetId: caseRow.ref, meta: { is_public: !!is_public } })
 
   const entries = await getTimeline(caseRow.id)
   return Response.json({ ok: true, entries })

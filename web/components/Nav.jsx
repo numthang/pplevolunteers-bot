@@ -89,6 +89,11 @@ const DISCORD_LINKS = [
   { href: '/bot/ai',               label: 'AI',        icon: 'ai',       menuOnly: true },
 ]
 
+const CASE_LINKS = [
+  { href: '/case',        label: 'Complaints', icon: 'overview', exact: true },
+  { href: '/case/manage', label: 'Cases',      icon: 'logs',     exact: true },
+]
+
 const SOCIAL_LINKS = [
   { href: '/social', label: 'My Accounts', icon: 'social' },
 ]
@@ -105,6 +110,7 @@ const APPS = [
   { key: 'finance',  label: 'FINANCE',   href: '/finance',        icon: 'transactions' },
   { key: 'calling',  label: 'CALLING',   href: '/calling',        icon: 'campaigns', feature: 'calling' },
   { key: 'docs',     label: 'DOCS',      href: '/docs',           icon: 'docs',      feature: 'docs' },
+  { key: 'cases',    label: 'CASES',     href: '/case/manage',    icon: 'logs',      feature: 'cases', casesAccess: true },
   { key: 'discord',  label: 'BOT',       href: '/bot/platforms',  icon: 'social' },
 ]
 
@@ -114,6 +120,7 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
   const { dark, toggle } = useTheme()
   const [menuOpen, setMenuOpen] = useState(false)
   const [guildOpen, setGuildOpen] = useState(false)
+  const [switching, setSwitching] = useState(false)
   const [mediaOpen, setMediaOpen] = useState(false)
   const [campaignOpen, setCampaignOpen] = useState(false)
   const [docOpen, setDocOpen] = useState(false)
@@ -130,15 +137,18 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
   const isSocialApp    = pathname.startsWith('/social')
   const isDiscordApp   = pathname.startsWith('/bot')
   const isDocsApp      = pathname.startsWith('/docs')
+  const isCaseApp      = pathname.startsWith('/case')
   const isLinkActive = (href, exact = false) => {
     if (exact) return pathname === href
     return pathname === href || (href !== '/' && pathname.startsWith(href))
   }
   const appByKey = (key) => APPS.find(a => a.key === key)
   const currentApp = isDiscordApp ? appByKey('discord') : isDocsApp ? appByKey('docs')
-    : isCallingApp ? appByKey('calling') : isFinanceApp ? appByKey('finance') : appByKey('home')
+    : isCallingApp ? appByKey('calling') : isFinanceApp ? appByKey('finance')
+    : isCaseApp ? appByKey('cases') : appByKey('home')
   const links = isDiscordApp ? DISCORD_LINKS : isSocialApp ? SOCIAL_LINKS : isDocsApp ? DOCS_LINKS
-    : isCallingApp ? CALLING_LINKS : isFinanceApp ? FINANCE_LINKS : DASHBOARD_LINKS
+    : isCallingApp ? CALLING_LINKS : isFinanceApp ? FINANCE_LINKS
+    : isCaseApp ? CASE_LINKS : DASHBOARD_LINKS
 
   const campaignIdMatch = pathname.match(/^\/calling\/assignments\/(\d+)/)
   const activeCampaignId = campaignIdMatch ? parseInt(campaignIdMatch[1]) : null
@@ -223,7 +233,9 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
 
   const switchGuild = async (gid) => {
     setGuildOpen(false)
+    setMenuOpen(false)
     if (gid === currentGuildId) return
+    setSwitching(true)
     try {
       const res = await fetch('/api/guild/switch', {
         method: 'POST',
@@ -232,6 +244,7 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
       })
       if (res.ok) { window.dispatchEvent(new Event('guild-switched')); router.refresh() }
     } catch {}
+    setSwitching(false)
   }
 
   const activeClass = 'bg-teal/10 dark:bg-teal/10 text-teal dark:text-teal font-medium'
@@ -255,12 +268,20 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
                 </Link>
                 {canSwitchGuild && (
                   <button
-                    onClick={() => setGuildOpen(o => !o)}
-                    className="flex items-center justify-center w-6 h-6 rounded-md hover:bg-warm-100 dark:hover:bg-disc-hover text-warm-400 dark:text-disc-muted hover:text-warm-700 dark:hover:text-disc-text transition-all"
+                    onClick={() => !switching && setGuildOpen(o => !o)}
+                    disabled={switching}
+                    className="flex items-center justify-center w-6 h-6 rounded-md hover:bg-warm-100 dark:hover:bg-disc-hover text-warm-400 dark:text-disc-muted hover:text-warm-700 dark:hover:text-disc-text transition-all disabled:pointer-events-none"
                   >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" className={`w-4 h-4 transition-transform duration-200 ${guildOpen ? 'rotate-180' : ''}`}>
-                      <path d="M6 9l6 6 6-6"/>
-                    </svg>
+                    {switching ? (
+                      <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3"/>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z"/>
+                      </svg>
+                    ) : (
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" className={`w-4 h-4 transition-transform duration-200 ${guildOpen ? 'rotate-180' : ''}`}>
+                        <path d="M6 9l6 6 6-6"/>
+                      </svg>
+                    )}
                   </button>
                 )}
               </div>

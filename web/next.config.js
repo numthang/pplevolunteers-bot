@@ -1,4 +1,5 @@
-require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') })
+// override: true — .env เป็น source of truth; กัน env var ที่ export ค้างใน shell (เช่น ANTHROPIC_API_KEY ใน ~/.bashrc) มาทับ
+require('dotenv').config({ path: require('path').resolve(__dirname, '../.env'), override: true })
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {

@@ -17,11 +17,13 @@
 - **Ref:** `<รหัสมหาดไทย>-<พ.ศ.2หลัก>-<random4>` เช่น `70-69-A8F3` · scope เหมือน calling · 189 tests เขียว + build ผ่าน
 
 ### ⚠️ ก่อน deploy prod
-1. รัน migration block "2026-06-26: Case" บน prod DB (`sudo -u www`) + ALTER `complainant_phone` nullable + `title`/`detail`
+1. รัน `scripts/migration/migration.sql` บน prod DB (`sudo -u www psql ... -f scripts/migration/migration.sql`) — สร้าง `case_config`/`cases`/`case_assignees`/`case_attachments`/`case_timeline`/`audit_logs`/`case_letter_config` + `letters` column ครบแล้ว (ลำดับถูกต้อง IF NOT EXISTS ปลอดภัย)
 2. `./deploy.sh` ลง slash command ใหม่ (`/panel case` + context menu + `/report`)
 3. เปิด feature: เพิ่ม `"cases"` ใน `dc_guild_config.enabled_features` ของ guild + `/panel case` ตั้ง forum channel + ตั้ง `case_default_province`
 4. สร้าง Discord role + map permission `caseworker` ใน `dc_guild_roles`
 5. **เทสต์ happy-path จริง** (ฟอร์ม → SMS เข้าเบอร์ตัวเอง → forum thread เกิด) — ยังไม่ได้เทสต์เพราะ SMS ยิงจริง
+6. **แก้ crontab บน prod** — `sync-act-events.js` ย้ายจาก `scripts/` → `scripts/data/` แล้ว ต้องอัปเดต path ใน crontab ของ `www` user
+7. ใส่ `case_letter_config` per-province ผ่าน DB INSERT (org_name/address/signer_name/signer_position/coordinator_name/coordinator_phone)
 
 ### ⏳ ต้องทดสอบหลัง deploy
 - **Discord import จากกระทู้เรื่องร้องเรียน** — context menu `📋 นำเข้าเป็นเคสร้องเรียน` บนข้อความใน thread → modal → สร้าง case + AI สรุป (build แล้ว ยังไม่ได้ทดสอบจริง ต้อง deploy.sh ก่อน)
@@ -63,6 +65,28 @@
 ### V2 (เลื่อนไว้)
 - Public dashboard charts (จังหวัด/ประเภท/สถานะ) + flag "ซ่อนเคสจาก dashboard"
 - ปุ่ม "อัปเดต AI สรุป" ฝั่ง web (ต้องเพิ่ม AI SDK ใน web ก่อน) · auto-assign · cron poll · แยกห้อง noti ตามจังหวัด · CAPTCHA
+
+### ✅ Audit Log กลาง (v2.19.0)
+- table `audit_logs (id, guild_id, app, action, actor_id, target_id, meta JSONB, created_at)` — migration เสร็จแล้ว
+- `web/db/auditLog.js` fire-and-forget · ใช้ใน cases routes แล้ว
+- ยังไม่ wire: finance/docs/calling routes + admin log page (V2)
+
+### 📍 Auto-detect location บน `/case/new`
+- โหลดหน้า → `navigator.geolocation` อัตโนมัติ (ถ้าไม่มี province ใน URL) → Nominatim → pre-fill จังหวัด
+- ถ้า user ปฏิเสธ/ไม่รองรับ → ตกไปที่ combobox เลือกเอง
+
+### ✅ ระบบร่างหนังสือร้องเรียน (v2.19.0, 2026-06-30)
+- AI ร่างหนังสือจากข้อมูลเคส → แก้ไข → บันทึกร่างหลายฉบับใน `cases.letters` (JSONB)
+- header/ผู้ลงนามดึงจาก `case_letter_config` per-province อัตโนมัติ (ไม่ต้องกรอกในฟอร์ม)
+- สร้าง PDF (LibreOffice headless + TH Sarabun New) → preview image + ดาวน์โหลด + พิมพ์
+- เลขอารบิกในเอกสาร → เลขไทยอัตโนมัติ · margin left 2cm · font 16pt
+- `CaseLetterModal` 5 steps: init → pick draft → AI loading → edit → preview
+- ไฟล์: `web/app/api/case/[ref]/letter/` (draft/drafts/save/generate) · `web/components/case/CaseLetterModal.jsx` · `web/lib/generateComplaintLetter.js` · `web/db/caseLetterConfig.js` · `web/templates/complaint/`
+
+### 🏛️ ระบบแนะนำหน่วยงาน + ช่องทางยื่น
+- จาก category + ประเภทปัญหา → AI แนะนำว่าควรยื่นหน่วยงานไหน (ท้องถิ่น / จังหวัด / สภา / ระดับชาติ / อื่นๆ)
+- บอก workflow ติดตาม: ยื่นแล้วต้องทำอะไรต่อ ภายในกี่วัน มีสิทธิ์อุทธรณ์ไหม
+- ต้องคุย scope ก่อน: เป็น AI-generated per case หรือ static knowledge base + AI overlay
 
 ---
 

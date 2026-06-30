@@ -115,9 +115,9 @@ async function getAssignees(caseId) {
 
 async function addNote(caseId, guildId, { author_discord_id = null, body, is_public = false }) {
   const { rows } = await pool.query(
-    `INSERT INTO case_notes (case_id, guild_id, author_discord_id, body, is_public)
-     VALUES ($1,$2,$3,$4,$5) RETURNING *`,
-    [caseId, guildId, author_discord_id, body, is_public],
+    `INSERT INTO case_timeline (case_id, guild_id, source, body, is_public, occurred_at)
+     VALUES ($1,$2,'note',$3,$4,NOW()) RETURNING *`,
+    [caseId, guildId, body, is_public],
   );
   return rows[0];
 }

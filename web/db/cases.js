@@ -99,15 +99,7 @@ export async function getCaseByRefPublic(ref) {
      FROM cases WHERE ref = $1`,
     [ref],
   )
-  const row = rows[0]
-  if (!row) return null
-  const { rows: notes } = await pool.query(
-    `SELECT body, created_at FROM case_notes
-     WHERE case_id = (SELECT id FROM cases WHERE ref = $1) AND is_public = TRUE
-     ORDER BY created_at`,
-    [ref],
-  )
-  return { ...row, publicNotes: notes }
+  return rows[0] || null
 }
 
 /**
@@ -121,13 +113,6 @@ export async function getCaseByRefFull(guildId, ref) {
   return rows[0] || null
 }
 
-export async function getCaseNotes(caseId) {
-  const { rows } = await pool.query(
-    `SELECT * FROM case_notes WHERE case_id = $1 ORDER BY created_at`,
-    [caseId],
-  )
-  return rows
-}
 
 export async function getAssignees(caseId) {
   const { rows } = await pool.query(
@@ -268,6 +253,14 @@ export async function getTimeline(caseId, { publicOnly = false } = {}) {
   return rows
 }
 
+export async function getTimelineEntry(entryId, caseId) {
+  const { rows } = await pool.query(
+    `SELECT id, source, body, is_public, occurred_at FROM case_timeline WHERE id = $1 AND case_id = $2`,
+    [entryId, caseId],
+  )
+  return rows[0] || null
+}
+
 export async function toggleTimelinePublic(entryId, caseId, isPublic) {
   await pool.query(
     `UPDATE case_timeline SET is_public = $3 WHERE id = $1 AND case_id = $2`,
@@ -280,4 +273,35 @@ export async function deleteTimelineEntry(entryId, caseId) {
     `DELETE FROM case_timeline WHERE id = $1 AND case_id = $2`,
     [entryId, caseId],
   )
+}
+
+export async function getLetterDrafts(caseId) {
+  const { rows } = await pool.query(`SELECT letters FROM cases WHERE id = $1`, [caseId])
+  return rows[0]?.letters || []
+}
+
+export async function saveLetterDraft(caseId, fields) {
+  const { randomUUID } = await import('crypto')
+  const draft = { id: randomUUID(), ...fields, saved_at: new Date().toISOString() }
+  await pool.query(
+    `UPDATE cases SET letters = COALESCE(letters, '[]'::jsonb) || $2::jsonb WHERE id = $1`,
+    [caseId, JSON.stringify([draft])],
+  )
+  return draft
+}
+
+export async function updateLetterDraft(caseId, draftId, fields) {
+  const { rows } = await pool.query(`SELECT letters FROM cases WHERE id = $1`, [caseId])
+  const letters = rows[0]?.letters || []
+  const idx = letters.findIndex(l => l.id === draftId)
+  if (idx === -1) return null
+  letters[idx] = { ...letters[idx], ...fields, saved_at: new Date().toISOString() }
+  await pool.query(`UPDATE cases SET letters = $2 WHERE id = $1`, [caseId, JSON.stringify(letters)])
+  return letters[idx]
+}
+
+export async function deleteLetterDraft(caseId, draftId) {
+  const { rows } = await pool.query(`SELECT letters FROM cases WHERE id = $1`, [caseId])
+  const letters = (rows[0]?.letters || []).filter(l => l.id !== draftId)
+  await pool.query(`UPDATE cases SET letters = $2 WHERE id = $1`, [caseId, JSON.stringify(letters)])
 }

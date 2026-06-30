@@ -1,3 +1,4 @@
+import { logAction } from '@/db/auditLog.js'
 import { isValidProvince } from '@/lib/provinceCode.js'
 import { CASE_CATEGORIES } from '@/lib/caseOptions.js'
 import {
@@ -132,6 +133,8 @@ export async function POST(req) {
   } catch (e) {
     console.error('[POST /api/case] forum thread', e.message)
   }
+
+  logAction({ guildId, app: 'cases', action: 'case.submitted', targetId: row.ref, meta: { province, category, source: 'web' } })
 
   return Response.json({ ok: true, ref: row.ref })
 }

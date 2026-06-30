@@ -1,6 +1,7 @@
 import { gateCase } from '@/lib/caseGate.js'
 import { addAssignee, getAssignees } from '@/db/cases.js'
 import { postToThread } from '@/lib/caseDiscord.js'
+import { logAction } from '@/db/auditLog.js'
 
 /** POST /api/case/[ref]/assign — รับเรื่อง (default = ตัวเอง) หรือ assign คนอื่น { discordId } */
 export async function POST(req, { params }) {
@@ -23,6 +24,8 @@ export async function POST(req, { params }) {
     const mentions = assignees.map(a => `<@${a.discord_id}>`).join(' ')
     await postToThread(caseRow.discord_thread_id, `👤 ผู้รับผิดชอบเคส **${caseRow.ref}**: ${mentions}`)
   }
+
+  logAction({ guildId, app: 'cases', action: 'case.assigned', actorId: session.user.discordId, targetId: caseRow.ref, meta: { assignedTo: discordId } })
 
   return Response.json({ ok: true })
 }
