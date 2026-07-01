@@ -36,7 +36,7 @@ const {
 } = require('./handlers/basketHandler');
 const { indexThread, indexMessage, hybridSearch } = require('./services/forumIndexer');
 const { buildSearchResultEmbed, buildSearchComponents } = require('./handlers/forumSearch');
-const { forumChannelCache, dashboardThreadCache, addForumChannel, addDashboardThread } = require('./services/forumCache');
+const { forumChannelCache, dashboardThreadCache, searchChannelCache, addForumChannel, addDashboardThread, setSearchChannel } = require('./services/forumCache');
 const { getAllForumConfigs, deleteForumPost } = require('./db/forum');
 const { deletePost } = require('./services/meilisearch');
 const { initMeilisearch } = require('./services/meilisearch')
@@ -46,6 +46,7 @@ const { upsertGuilds } = require('./db/guilds');
 const { syncGuildRolesCatalog, upsertGuildRole, deleteGuildRole, invalidateGuildRoleCache } = require('./db/guildRoles');
 const { handleSlipMessage } = require('./services/financeOCR');
 const { handleRoleAddModal, handleRoleRemoveModal } = require('./handlers/roleBulkHandler');
+const { handleHandraiseButton, handleHandraiseVoiceUpdate } = require('./handlers/handraiseHandler');
 const { buildRagContext } = require('./services/ragSearch');
 const { callAI, callAIWithHistory } = require('./services/aiSummarize');
 const { getEnabledFeatures } = require('./db/settings');
@@ -91,6 +92,8 @@ client.once('clientReady', async () => {
       const dashboardIds = configs.map(c => c.dashboard_msg_id).filter(Boolean);
       if (dashboardIds.length) dashboardThreadCache.set(guild.id, new Set(dashboardIds));
     }
+    const searchCh = await getSetting(guild.id, 'search_channel').catch(() => null);
+    if (searchCh) setSearchChannel(guild.id, searchCh);
   }
 });
 
@@ -227,13 +230,17 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.customId.startsWith('forum_result_'))     return handleResultPage(interaction);
     if (interaction.customId.startsWith('ai_thread_caption:')) return handleAiThreadAddCaption(interaction);
     if (interaction.customId.startsWith('ai_thread_public:'))  return handleAiThreadPublic(interaction);
+    if (interaction.customId.startsWith('handraise_'))         return handleHandraiseButton(interaction);
     return;
   }
 });
 
 // ผูกให้ทุกไฟล์เรียกได้
 client.refreshSticky = refreshSticky;
-client.on('voiceStateUpdate', onVoiceStateUpdate);
+client.on('voiceStateUpdate', (oldState, newState) => {
+  onVoiceStateUpdate(oldState, newState);
+  handleHandraiseVoiceUpdate(oldState, newState).catch(e => console.error('[handraise voice]', e));
+});
 
 client.on('guildMemberAdd', async (member) => {
   const { upsertMemberFromDiscord } = require('./db/members');
@@ -360,6 +367,20 @@ client.on('messageCreate', async (message) => {
 
   // slip OCR — อ่านสลิปใน finance thread
   handleSlipMessage(message).catch(err => console.error('[financeOCR]', err));
+
+  // search channel — universal search ข้ามทุก forum/thread
+  if (!message.author.bot && searchChannelCache.get(message.guildId) === message.channelId && message.content?.trim()) {
+    const keyword = message.content.trim();
+    await message.delete().catch(() => {});
+    const results    = await hybridSearch(keyword, { guildId: message.guildId });
+    const totalPages = Math.max(1, Math.ceil(results.length / 10));
+    const embed      = buildSearchResultEmbed(results.slice(0, 10), { keyword, page: 1, totalPages, sort: 'relevant' });
+    const components = buildSearchComponents({ sort: 'relevant', page: 1, totalPages });
+    await message.channel.send({ embeds: [embed], components }).catch(err =>
+      console.error('[searchChannel] send:', err)
+    );
+    return;
+  }
 
   // forum — จัดการ message ใน forum threads ที่ setup ไว้
   if (message.channel.isThread() && message.channel.parentId && !message.author.bot) {

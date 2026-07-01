@@ -108,6 +108,16 @@ module.exports = {
         .addBooleanOption(o => o.setName('public').setDescription('แสดงผลให้ทุกคนเห็น (default: false)').setRequired(false))
     )
 
+    // --- search channel ---
+    .addSubcommand(sub =>
+      sub.setName('search')
+        .setDescription('ตั้งค่า channel สำหรับค้นหากระทู้ + thread ทุกช่อง (Moderator)')
+        .addChannelOption(opt =>
+          opt.setName('channel').setDescription('channel ที่ใช้เป็นห้องค้นหา').setRequired(true)
+            .addChannelTypes(ChannelType.GuildText)
+        )
+    )
+
     // --- case (เรื่องร้องเรียน) ---
     .addSubcommand(sub =>
       sub.setName('case')
@@ -116,6 +126,12 @@ module.exports = {
           opt.setName('channel').setDescription('forum channel สำหรับสร้างกระทู้เคส').setRequired(true)
             .addChannelTypes(ChannelType.GuildForum)
         )
+    )
+
+    // --- handraise ---
+    .addSubcommand(sub =>
+      sub.setName('handraise')
+        .setDescription('เปิดคิวยกมือขอพูดสำหรับ Voice Channel ที่คุณอยู่')
     ),
 
   async execute(interaction) {
@@ -422,6 +438,24 @@ await refreshDashboard(thread, interaction.guildId, ids, existing.dashboard_msg_
           `Interest select → ${regConfig.interest_select ? '✅' : '❌'}`,
           `Member role → ${regConfig.member_role_id ? `<@&${regConfig.member_role_id}>` : '❌'}`,
         ].join('\n'),
+      });
+    }
+
+    // ================================================================
+    if (sub === 'handraise') {
+      const { handleHandraiseStart } = require('../handlers/handraiseHandler');
+      return handleHandraiseStart(interaction);
+    }
+
+    // ================================================================
+    if (sub === 'search') {
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+      const channelOpt = interaction.options.getChannel('channel');
+      await setSetting(interaction.guildId, 'search_channel', channelOpt.id);
+      const { setSearchChannel } = require('../services/forumCache');
+      setSearchChannel(interaction.guildId, channelOpt.id);
+      return interaction.editReply({
+        content: `✅ ตั้งค่า search channel เป็น <#${channelOpt.id}> แล้วครับ\nพิมพ์ keyword ใน channel นั้นได้เลย — ค้นข้ามทุก forum + thread`,
       });
     }
   },

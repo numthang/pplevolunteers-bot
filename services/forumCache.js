@@ -3,6 +3,7 @@
 
 const forumChannelCache    = new Map(); // guildId → Set<channelId>
 const dashboardThreadCache = new Map(); // guildId → Set<threadId>
+const searchChannelCache   = new Map(); // guildId → channelId (universal search channel)
 
 function addForumChannel(guildId, channelId) {
   const set = forumChannelCache.get(guildId) ?? new Set();
@@ -16,4 +17,8 @@ function addDashboardThread(guildId, threadId) {
   dashboardThreadCache.set(guildId, set);
 }
 
-module.exports = { forumChannelCache, dashboardThreadCache, addForumChannel, addDashboardThread };
+function setSearchChannel(guildId, channelId) {
+  searchChannelCache.set(guildId, channelId);
+}
+
+module.exports = { forumChannelCache, dashboardThreadCache, searchChannelCache, addForumChannel, addDashboardThread, setSearchChannel };

@@ -181,7 +181,7 @@ export default function DocProjectView({ project: initialProject, initialEntries
     const token = tokens?.[`${type}_token`]
     if (!token) return
     const suffix = type === 'pdf' ? 'registration' : 'receipt'
-    const url = `${window.location.origin}/api/docs/token/${token}/${suffix}`
+    const url = `${window.location.origin}/dl/${token}/${suffix}`
     navigator.clipboard.writeText(url)
     setCopiedKey(type)
     setTimeout(() => setCopiedKey(null), 2000)
