@@ -121,7 +121,8 @@ module.exports = {
       if (sub === 'view') {
         const raw = await getSetting(guildId, 'autorole_id');
         if (!raw) return interaction.editReply({ content: '❌ ยังไม่ได้ตั้งค่า auto role ครับ' });
-        return interaction.editReply({ content: `🎭 **Auto Role ปัจจุบัน:** <@&${parseSetting(raw)}>` });
+        const roleId = String(parseSetting(raw));
+        return interaction.editReply({ content: `🎭 **Auto Role ปัจจุบัน:** <@&${roleId}>` });
       }
 
       if (sub === 'clear') {

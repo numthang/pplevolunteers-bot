@@ -1,0 +1,381 @@
+{
+  "template_id": "th-civic-starter",
+  "name": "องค์กรภาคประชาสังคม/การเมือง (ไทย) — Starter",
+  "description": "แม่แบบเริ่มต้นสำหรับองค์กรเชิงพื้นที่/การเมืองไทย จับโครงสร้างจากเซิร์ฟเวอร์ 'อาสาประชาชน' — ใช้เป็นจุดตั้งต้นแล้วปรับแต่งต่อ",
+  "based_on": "อาสาประชาชน",
+  "version": "0.4.0",
+  "meta": {
+    "separator": "┆",
+    "note": "channel name = <emoji><separator><ชื่อ> · bot provision ทีละ call ผ่าน Discord REST · {{org_name}} = แทนที่ตอน setup · ไม่รวม secret/credential/channel-id จริง",
+    "discord_permissions_note": "ค่า discord_permissions / overwrite allow-deny = ชื่อ key ใน discord.js v14 PermissionFlagsBits (PascalCase: ViewChannel, ManageGuild) — bot map เป็น bit ก่อนใช้",
+    "rate_limit_note": "provisioner ต้อง delay ~400-600ms ระหว่างแต่ละ create call เลี่ยง 429"
+  },
+
+  "community": {
+    "enable": true,
+    "note": "จำเป็น — announcement/forum/stage channel สร้างไม่ได้ถ้าไม่เปิด Community · bot เปิดหลังสร้าง rules+updates channel เสร็จ",
+    "rules_channel": "📕┆ข้อตกลง",
+    "public_updates_channel": "moderator-only",
+    "verification_level": "Low",
+    "explicit_content_filter": "AllMembers",
+    "default_message_notifications": "OnlyMentions"
+  },
+
+  "roles": {
+    "_note": "สร้างตามลำดับ — role ที่อยู่บนมี hoist priority สูงกว่า · discord_permissions = PascalCase key",
+
+    "staff": [
+      {
+        "default_name": "Admin",
+        "color": "#FF0000",
+        "hoist": true,
+        "mentionable": false,
+        "rbac_permission": "admin",
+        "discord_permissions": ["Administrator"],
+        "note": "Administrator รวมทุก permission อัตโนมัติ"
+      },
+      {
+        "default_name": "Supervisor",
+        "color": "#E74C3C",
+        "hoist": true,
+        "mentionable": false,
+        "rbac_permission": null,
+        "discord_permissions": [
+          "ManageGuild", "ManageChannels", "ManageRoles",
+          "KickMembers", "BanMembers", "ManageMessages",
+          "ManageThreads", "MuteMembers", "MoveMembers",
+          "ManageNicknames", "ViewAuditLog"
+        ],
+        "note": "Technical supervisor — สายเทคนิค/IT จัดการ server แต่ไม่ใช่ Admin · ไม่ map RBAC"
+      },
+      {
+        "default_name": "เลขาธิการ",
+        "color": "#9B59B6",
+        "hoist": true,
+        "mentionable": true,
+        "rbac_permission": "secretary_general",
+        "discord_permissions": [
+          "ManageMessages", "ManageThreads", "MentionEveryone",
+          "MuteMembers", "MoveMembers", "ManageNicknames"
+        ]
+      },
+      {
+        "default_name": "ผู้ประสานงานภาค",
+        "color": "#2980B9",
+        "hoist": true,
+        "mentionable": true,
+        "rbac_permission": "regional_coordinator",
+        "discord_permissions": [
+          "ManageMessages", "ManageThreads", "MentionEveryone",
+          "MuteMembers", "MoveMembers"
+        ]
+      },
+      {
+        "default_name": "รองเลขาธิการ",
+        "color": "#5DADE2",
+        "hoist": false,
+        "mentionable": true,
+        "rbac_permission": "regional_coordinator",
+        "discord_permissions": [
+          "ManageMessages", "ManageThreads", "MentionEveryone",
+          "MuteMembers", "MoveMembers"
+        ]
+      },
+      {
+        "default_name": "ผู้ประสานงานจังหวัด",
+        "color": "#27AE60",
+        "hoist": true,
+        "mentionable": true,
+        "rbac_permission": "province_coordinator",
+        "discord_permissions": [
+          "ManageMessages", "ManageThreads", "MentionEveryone", "MuteMembers"
+        ]
+      },
+      {
+        "default_name": "กรรมการจังหวัด",
+        "color": "#58D68D",
+        "hoist": false,
+        "mentionable": true,
+        "rbac_permission": "district_coordinator",
+        "discord_permissions": [
+          "ManageMessages", "ManageThreads", "MentionEveryone"
+        ]
+      },
+      {
+        "default_name": "เหรัญญิก",
+        "color": "#F39C12",
+        "hoist": false,
+        "mentionable": true,
+        "rbac_permission": "treasurer",
+        "discord_permissions": ["ManageMessages", "ManageThreads"]
+      },
+      {
+        "default_name": "ทีมบรรณาธิการ",
+        "color": "#E67E22",
+        "hoist": false,
+        "mentionable": true,
+        "rbac_permission": "editor",
+        "discord_permissions": ["ManageMessages", "ManageThreads", "AttachFiles", "EmbedLinks"]
+      },
+      {
+        "default_name": "Moderator",
+        "color": "#E74C3C",
+        "hoist": false,
+        "mentionable": true,
+        "rbac_permission": "moderator",
+        "discord_permissions": [
+          "KickMembers", "BanMembers", "ManageMessages",
+          "ManageThreads", "MuteMembers", "MoveMembers", "ViewAuditLog"
+        ]
+      },
+      {
+        "default_name": "ทีมพื้นที่/ร้องเรียน",
+        "color": "#1ABC9C",
+        "hoist": false,
+        "mentionable": true,
+        "rbac_permission": "caseworker",
+        "discord_permissions": ["ManageMessages", "ManageThreads"],
+        "note": "ผู้ดูแลเคสร้องเรียน (case system) — ชื่อจริงในอาสาประชาชน"
+      }
+    ],
+
+    "autorole": {
+      "default_name": "{{org_name}}",
+      "color": "#FF6A13",
+      "hoist": false,
+      "note": "ติดอัตโนมัติเมื่อ member เข้าใหม่ — ตั้งใน dc_guild_config key autorole_id",
+      "discord_permissions": [
+        "ViewChannel", "SendMessages", "AddReactions",
+        "ReadMessageHistory", "UseApplicationCommands",
+        "SendMessagesInThreads", "CreatePublicThreads",
+        "AttachFiles", "EmbedLinks", "ChangeNickname",
+        "UseExternalEmojis", "Connect", "Speak", "UseVAD"
+      ]
+    },
+
+    "pickers": {
+      "note": "ปุ่มกดเลือก role ใน #ติดยศ — แก้ label/emoji ได้ · Discord จำกัด ~20 ปุ่ม/ข้อความ (5 แถว) · picker role inherit permission จาก @everyone",
+      "interest": {
+        "group_label": "ความสนใจ",
+        "kind": "plain",
+        "options": [
+          { "emoji": "🍊", "label": "{{org_name}}" },
+          { "emoji": "⚔️", "label": "อาสาส้ม" },
+          { "emoji": "🔥", "label": "อาสาสู้ภัยพิบัติ" },
+          { "emoji": "🏥", "label": "ทีมสาธารณสุข" },
+          { "emoji": "🌟", "label": "ปีกเยาวชน" },
+          { "emoji": "🧣", "label": "ทีมเครือข่ายชาติพันธุ์" },
+          { "emoji": "🌾", "label": "ประชาชนคนเกษตร" },
+          { "emoji": "✊", "label": "ทีมเครือข่ายผู้ใช้แรงงาน" },
+          { "emoji": "🎓", "label": "ก้าวเลิร์น (การศึกษา)" },
+          { "emoji": "🎭", "label": "ปีกวัฒนธรรม" },
+          { "emoji": "🏛️", "label": "ทีมงานสภา" },
+          { "emoji": "🪪", "label": "ทีมผู้สมัครรับเลือกตั้ง" },
+          { "emoji": "📣", "label": "ทีมผู้ช่วยหาเสียง/เรื่องร้องเรียน" },
+          { "emoji": "💰", "label": "ทีมระดมทุน" },
+          { "emoji": "👥", "label": "ทีมตัวแทนสมาชิก" },
+          { "emoji": "🤝", "label": "ทีมจังหวัด/สมาชิกสัมพันธ์" },
+          { "emoji": "👷", "label": "ทีมเจ้าหน้าที่/สตาฟ" }
+        ]
+      },
+      "skill": {
+        "group_label": "ความถนัด",
+        "kind": "plain",
+        "options": [
+          { "emoji": "🧙", "label": "ทีมกระบวนกร" },
+          { "emoji": "🖼️", "label": "ทีมกราฟิก",   "parent": "ทีมสื่อ" },
+          { "emoji": "✍️", "label": "ทีมคอนเทนต์", "parent": "ทีมสื่อ" },
+          { "emoji": "🎬", "label": "ทีมตัดต่อ",    "parent": "ทีมสื่อ" },
+          { "emoji": "📸", "label": "ทีมช่างภาพ",   "parent": "ทีมสื่อ" },
+          { "emoji": "📊", "label": "ทีมนโยบาย" },
+          { "emoji": "💻", "label": "ทีมเทคโนโลยี" },
+          { "emoji": "⚖️", "label": "ทีมกฎหมาย" }
+        ],
+        "note": "parent = role แม่ — ติดอัตโนมัติเมื่อเลือกลูก"
+      }
+    },
+
+    "geography": {
+      "provision_at_setup": false,
+      "note": "ยังไม่สร้างตอน setup (ตามที่เคาะ) — เก็บนิยามไว้เพิ่มทีหลังผ่าน /server หรือ web · เมื่อเปิดแล้ว province picker ค่อยใช้ได้",
+      "discord_permissions_default": [
+        "ViewChannel", "SendMessages", "AddReactions",
+        "ReadMessageHistory", "UseApplicationCommands",
+        "SendMessagesInThreads", "CreatePublicThreads"
+      ],
+      "regions": [
+        { "default_name": "ทีมภาคเหนือ",  "scope_node": "region:ทีมภาคเหนือ",  "color": "#85C1E9" },
+        { "default_name": "ทีมภาคกลาง",   "scope_node": "region:ทีมภาคกลาง",   "color": "#A9DFBF" },
+        { "default_name": "ทีมภาคอีสาน",  "scope_node": "region:ทีมภาคอีสาน",  "color": "#F9E79F" },
+        { "default_name": "ทีมภาคใต้",    "scope_node": "region:ทีมภาคใต้",    "color": "#F5CBA7" }
+      ],
+      "subregions": [
+        "ทีมกรุงเทพ", "ทีมปริมณฑล",
+        "ทีมภาคกลางตะวันตก", "ทีมภาคกลางตะวันออก", "ทีมภาคตะวันออก",
+        "ทีมภาคเหนือตอนบน", "ทีมภาคเหนือตอนล่าง",
+        "ทีมภาคอีสานเหนือ", "ทีมภาคอีสานกลาง", "ทีมภาคอีสานใต้",
+        "ทีมภาคใต้ตอนบน", "ทีมภาคใต้ตอนล่าง", "ทีม 3 จังหวัด"
+      ],
+      "provinces": {
+        "source": "config/province-codes.json",
+        "grouped_by": "subregion",
+        "picker_group": "province"
+      }
+    }
+  },
+
+  "categories": [
+    {
+      "name": "ทีมงาน",
+      "permission_overwrites": [
+        { "role": "@everyone",   "deny": ["ViewChannel"] },
+        { "role": "Admin",       "allow": ["ViewChannel", "SendMessages", "ManageMessages"] },
+        { "role": "Supervisor",  "allow": ["ViewChannel", "SendMessages", "ManageMessages"] },
+        { "role": "Moderator",   "allow": ["ViewChannel", "SendMessages"] },
+        { "role": "เลขาธิการ",   "allow": ["ViewChannel", "SendMessages"] }
+      ],
+      "channels": [
+        {
+          "name": "moderator-only",
+          "type": "text",
+          "permission_overwrites": "inherit",
+          "note": "ห้องพูดคุยทีมงาน/mod + public updates channel ของ Community + ปลายทาง log"
+        }
+      ]
+    },
+    {
+      "name": "INFORMATION",
+      "permission_overwrites": [
+        { "role": "@everyone", "allow": ["ViewChannel", "ReadMessageHistory"], "deny": ["SendMessages"] }
+      ],
+      "channels": [
+        {
+          "name": "👋┆แนะนำตัว",
+          "type": "text",
+          "panel": "register",
+          "permission_overwrites": [
+            { "role": "@everyone", "allow": ["ViewChannel", "SendMessages", "ReadMessageHistory"] }
+          ],
+          "note": "วาง register panel (sticky) — ปุ่มแนะนำตัว → กรอกข้อมูล → เลือกทีม"
+        },
+        {
+          "name": "📕┆ข้อตกลง",
+          "type": "text",
+          "permission_overwrites": "inherit",
+          "note": "กติกา/ข้อตกลงชุมชน — @everyone อ่านได้อย่างเดียว · ใช้เป็น rules channel ของ Community"
+        },
+        {
+          "name": "⭐┆ติดยศ",
+          "type": "text",
+          "panel": "role_picker",
+          "permission_overwrites": [
+            { "role": "@everyone",    "allow": ["ViewChannel", "ReadMessageHistory"], "deny": ["SendMessages"] },
+            { "role": "{{org_name}}", "allow": ["ViewChannel", "ReadMessageHistory"] }
+          ],
+          "note": "วาง interest/skill picker — กดปุ่มเลือก role ได้ แต่พิมพ์ไม่ได้ (province picker เพิ่มเมื่อเปิด geography)"
+        },
+        {
+          "name": "📢┆ประกาศ",
+          "type": "announcement",
+          "requires_community": true,
+          "permission_overwrites": "inherit",
+          "note": "@everyone อ่านได้อย่างเดียว — INFORMATION inherit"
+        },
+        {
+          "name": "🙋┆follow-me",
+          "type": "text",
+          "optional": true,
+          "permission_overwrites": [
+            { "role": "@everyone", "allow": ["ViewChannel", "SendMessages", "ReadMessageHistory", "EmbedLinks"] }
+          ],
+          "note": "แชร์ช่องทางโซเชียลส่วนตัว — optional"
+        }
+      ]
+    },
+    {
+      "name": "{{org_name}}",
+      "note": "หมวดชุมชนหลัก — ชื่อ = ชื่อองค์กร · เห็นได้หลังรับ autorole",
+      "permission_overwrites": [
+        { "role": "@everyone",      "deny":  ["ViewChannel"] },
+        { "role": "{{org_name}}",   "allow": ["ViewChannel", "SendMessages", "AddReactions",
+                                               "ReadMessageHistory", "UseApplicationCommands",
+                                               "SendMessagesInThreads", "CreatePublicThreads",
+                                               "AttachFiles", "EmbedLinks"] }
+      ],
+      "channels": [
+        { "name": "💬┆พูดคุยทั่วไป",     "type": "text",        "permission_overwrites": "inherit" },
+        {
+          "name": "💬┆กระทู้-ทั่วไป",
+          "type": "forum",
+          "requires_community": true,
+          "features": ["forum_search"],
+          "permission_overwrites": "inherit",
+          "note": "bot สร้างโพสต์ 'ค้นหาโพสต์' ให้อัตโนมัติ"
+        },
+        {
+          "name": "🔊┆ประชุมทั่วไป",
+          "type": "voice",
+          "permission_overwrites": [
+            { "role": "@everyone",    "deny":  ["ViewChannel"] },
+            { "role": "{{org_name}}", "allow": ["ViewChannel", "Connect", "Speak", "UseVAD", "SendMessages"] }
+          ]
+        },
+        {
+          "name": "🎙️┆เวทีสาธารณะ",
+          "type": "stage",
+          "requires_community": true,
+          "permission_overwrites": [
+            { "role": "@everyone",    "deny":  ["ViewChannel"] },
+            { "role": "{{org_name}}", "allow": ["ViewChannel", "Connect"] },
+            { "role": "เลขาธิการ",   "allow": ["RequestToSpeak", "Speak"] },
+            { "role": "Admin",        "allow": ["RequestToSpeak", "Speak", "MuteMembers", "MoveMembers"] },
+            { "role": "Supervisor",   "allow": ["RequestToSpeak", "Speak", "MuteMembers"] }
+          ]
+        }
+      ]
+    }
+  ],
+
+  "features": {
+    "enabled_default": ["calling", "docs", "cases", "ai_mention"],
+    "note": "finance เปิดตลอดทุก guild (ไม่มี toggle) · เลือกเปิด/ปิดตอน setup wizard"
+  },
+
+  "config": {
+    "note": "ไม่รวม secret/credential (meta/x keys) และ channel-id จริง",
+    "autorole": {
+      "enabled": true,
+      "role": "{{org_name}}",
+      "note": "ติด role ให้ member ใหม่อัตโนมัติ — bot ตั้ง autorole_id ใน dc_guild_config"
+    },
+    "register": {
+      "interest_select": true,
+      "province_select": false,
+      "log_channel": "moderator-only",
+      "note": "province_select = false จนกว่าจะเปิด geography · log ไปที่ moderator-only"
+    },
+    "log_channel": {
+      "channel": "moderator-only",
+      "events": ["member_join", "member_leave", "register_submit"],
+      "note": "ปลายทาง log กลาง — bot เก็บ channel-id ลง dc_guild_config"
+    },
+    "welcome_dm": "ยินดีต้อนรับสู่ {{org_name}}!\n- แนะนำตัว — บอกให้ทีมรู้ว่าคุณคือใคร\n- ติดยศ — เลือกบทบาทเพื่อเข้าถึงห้องที่เกี่ยวข้อง\n- สอบถามปัญหาการใช้งาน — ติดปัญหาอะไรถามได้เลย",
+    "quote_default_template": "quote-1-ember-ai",
+    "sticky_register": true
+  },
+
+  "bot_provisions": {
+    "order": [
+      "1. สร้าง role ทุกตัว: staff → autorole (geography ข้ามตาม provision_at_setup=false)",
+      "2. สร้าง category ทีมงาน + INFORMATION + text channel ที่ Community ต้องใช้ (📕┆ข้อตกลง, moderator-only)",
+      "3. เปิด Community: set rules_channel + public_updates_channel + verification/content-filter + features",
+      "4. สร้าง channel ที่เหลือ (announcement/forum/stage ได้แล้วหลัง Community)",
+      "5. ตั้ง permission_overwrites รายช่อง (map ชื่อ role → id ที่สร้างไว้)",
+      "6. วาง register panel (sticky) ที่ 👋┆แนะนำตัว + role picker ที่ ⭐┆ติดยศ",
+      "7. สร้างโพสต์ 'ค้นหาโพสต์' ในทุก forum channel",
+      "8. sync role catalog → dc_guild_roles",
+      "9. seed dc_guild_config: autorole_id, enabled_features, register config, log_channel_id, welcome_dm"
+    ],
+    "no_rollback": "ถ้าค้างกลางทาง ต้องลบเองใน Discord (v1 ยอมรับได้)"
+  }
+}

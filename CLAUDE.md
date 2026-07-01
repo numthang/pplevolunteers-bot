@@ -13,13 +13,16 @@ Quick navigation to detailed docs for the entire pple-volunteers project (Bot + 
 
 | Topic | File |
 |---|---|
-| **Discord Bot** | [md/BOT.md](md/BOT.md) |
+| **Discord Bot** | [md/discord/BOT.md](md/discord/BOT.md) |
 | **Web App (Next.js)** | [md/WEB.md](md/WEB.md) |
-| **Finance System** | [md/FINANCE.md](md/FINANCE.md) |
-| **Calling System** | [md/CALLING.md](md/CALLING.md) |
-| **Contacts (CRM)** | [md/CONTACT.md](md/CONTACT.md) |
+| **Finance System** | [md/finance/FINANCE.md](md/finance/FINANCE.md) |
+| **Calling System** | [md/calling/CALLING.md](md/calling/CALLING.md) |
+| **Contacts (CRM)** | [md/calling/CONTACT.md](md/calling/CONTACT.md) |
 | **Database Schema** | [md/DATABASE.md](md/DATABASE.md) |
 | **Production Deployment** | [md/DEPLOYMENT.md](md/DEPLOYMENT.md) |
+| **Case System** | [md/case/CASE.md](md/case/CASE.md) |
+| **Server Wizard** | [md/discord/SERVER_WIZARD.md](md/discord/SERVER_WIZARD.md) |
+| **RAG AI** | [md/discord/RAG.md](md/discord/RAG.md) |
 
 ---
 

@@ -2,7 +2,7 @@
 
 ---
 
-## 📢 ระบบเรื่องร้องเรียน (Case System) — ✅ implement เสร็จ local 2026-06-26 · ดู `md/CASE.md`
+## 📢 ระบบเรื่องร้องเรียน (Case System) — ✅ implement เสร็จ local 2026-06-26 · ดู `md/case/CASE.md`
 
 > naming เคาะเป็น **`case`** (ไม่ใช่ complaint) · table `cases`/`case_*` · URL `/case/*` · permission `caseworker`
 
@@ -447,6 +447,18 @@
   - member ผูกกับ Discord user โดยอัตโนมัติ (reuse `dc_members`)
   - web UI (`/projects`) — board view + table view + doc view
   - reuse โครงสร้าง `guild_id` + RBAC pattern ที่มีอยู่แล้ว
+
+---
+
+## 🧙 Server Setup Wizard
+
+> รายละเอียดทั้งหมดอยู่ที่ [md/discord/SERVER_WIZARD.md](discord/SERVER_WIZARD.md)
+
+- [ ] **Wizard สร้าง Discord server สำเร็จรูปสำหรับองค์กร** — ตอบ 1–N คำถาม → ได้ server พร้อมใช้ + service pack จาก bot นี้
+  - Wizard อยู่ที่ไหน (web / Discord DM) — ยังไม่เคาะ
+  - Templates: พรรคการเมือง / มูลนิธิ / ชมรม / กลุ่มอาสา
+  - Service packs: Calling / Finance / Cases / Media / AI
+  - กำลัง define requirements — ดู md/discord/SERVER_WIZARD.md
 
 ---
 
