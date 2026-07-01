@@ -252,11 +252,19 @@
         {
           "name": "👋┆แนะนำตัว",
           "type": "text",
-          "panel": "register",
+          "panel": {
+            "type": "register",
+            "title": "ยินดีต้อนรับสู่ {{org_name}}!",
+            "description": "กดปุ่มด้านล่างเพื่อแนะนำตัวและ {{ch:🎖️┆ติดยศ}} ได้เลย",
+            "province_select": false,
+            "interest_select": true,
+            "member_role": "{{org_name}}",
+            "log_channel": "self"
+          },
           "permission_overwrites": [
             { "role": "@everyone", "allow": ["ViewChannel", "SendMessages", "ReadMessageHistory"] }
           ],
-          "note": "วาง register panel (sticky) — ปุ่มแนะนำตัว → กรอกข้อมูล → เลือกทีม"
+          "note": "register panel (public:true) — ปุ่มแนะนำตัว → กรอกข้อมูล → เลือกทีม · log_channel=self (โพสต์ intro ในห้องนี้เอง)"
         },
         {
           "name": "📕┆ข้อตกลง",
@@ -265,9 +273,9 @@
           "note": "กติกา/ข้อตกลงชุมชน — @everyone อ่านได้อย่างเดียว · ใช้เป็น rules channel ของ Community"
         },
         {
-          "name": "⭐┆ติดยศ",
+          "name": "🎖️┆ติดยศ",
           "type": "text",
-          "panel": "role_picker",
+          "panel": { "type": "interest", "public": true },
           "permission_overwrites": [
             { "role": "@everyone",    "allow": ["ViewChannel", "ReadMessageHistory"], "deny": ["SendMessages"] },
             { "role": "{{org_name}}", "allow": ["ViewChannel", "ReadMessageHistory"] }
@@ -284,11 +292,19 @@
         {
           "name": "🙋┆follow-me",
           "type": "text",
-          "optional": true,
+          "panel": {
+            "type": "register",
+            "title": "ยินดีต้อนรับสู่ {{org_name}}!",
+            "description": "กดปุ่มด้านล่างเพื่อแนะนำตัวและ {{ch:🎖️┆ติดยศ}} ได้เลย",
+            "province_select": false,
+            "interest_select": true,
+            "member_role": "{{org_name}}",
+            "log_channel": "👋┆แนะนำตัว"
+          },
           "permission_overwrites": [
             { "role": "@everyone", "allow": ["ViewChannel", "SendMessages", "ReadMessageHistory", "EmbedLinks"] }
           ],
-          "note": "แชร์ช่องทางโซเชียลส่วนตัว — optional"
+          "note": "register panel จุดที่ 2 (public:true) · log_channel → 👋┆แนะนำตัว · เดิมเป็น follow-me แชร์โซเชียล"
         }
       ]
     },
@@ -351,8 +367,8 @@
       "member_role": "{{org_name}}",
       "interest_select": true,
       "province_select": false,
-      "log_channel": "moderator-only",
-      "note": "member_role = ยศองค์กร ติดหลังกรอก modal แนะนำตัว → seed เป็น config_register.member_role_id · province_select=false จนเปิด geography · log ไป moderator-only"
+      "log_channel": "👋┆แนะนำตัว",
+      "note": "member_role = ยศองค์กร ติดหลังกรอก modal แนะนำตัว → seed เป็น config_register.member_role_id · province_select=false จนเปิด geography · log intro โพสต์ในห้อง 👋┆แนะนำตัว"
     },
     "log_channel": {
       "channel": "moderator-only",
@@ -371,11 +387,12 @@
       "3. เปิด Community: set rules_channel + public_updates_channel + verification/content-filter + features",
       "4. สร้าง channel ที่เหลือ (announcement/forum/stage ได้แล้วหลัง Community)",
       "5. ตั้ง permission_overwrites รายช่อง (map ชื่อ role → id ที่สร้างไว้)",
-      "6. วาง register panel (sticky) ที่ 👋┆แนะนำตัว + role picker ที่ ⭐┆ติดยศ",
+      "6. วาง register panel ที่ 👋┆แนะนำตัว + 🙋┆follow-me (log→แนะนำตัว) + interest panel (public) ที่ 🎖️┆ติดยศ — เรียก helper ตรง ไม่ผ่าน slash command · เช็ค panel เดิมก่อนโพสต์ (idempotent)",
       "7. สร้างโพสต์ 'ค้นหาโพสต์' ในทุก forum channel",
       "8. sync role catalog → dc_guild_roles",
       "9. seed dc_guild_config: config_register (member_role_id, interest_select, log_channel_id), enabled_features, welcome_dm (ไม่ตั้ง autorole_id — ยศได้หลังแนะนำตัว)"
     ],
-    "no_rollback": "ถ้าค้างกลางทาง ต้องลบเองใน Discord (v1 ยอมรับได้)"
+    "idempotent": "รันซ้ำได้ ไม่ error — roles/channels ใช้ find-or-create · overwrites ใช้ set(replace) · panels เช็ค sticky · dc_* ใช้ upsert · ทุก create ห่อ try/catch",
+    "no_rollback": "ถ้าค้างกลางทาง รันซ้ำได้ (idempotent) — ไม่มี rollback อัตโนมัติใน v1"
   }
 }
