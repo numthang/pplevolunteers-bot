@@ -7,7 +7,7 @@
 
 require('dotenv').config();
 const { Client, GatewayIntentBits, ChannelType } = require('discord.js');
-const { indexThread } = require('../services/forumIndexer');
+const { indexThread } = require('../../services/forumIndexer');
 
 const DRY_RUN = process.argv.includes('--dry-run');
 

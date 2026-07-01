@@ -7,22 +7,21 @@ const {
   MessageFlags,
   PermissionFlagsBits,
 } = require('discord.js');
+const { getSetting, setSetting, deleteSetting } = require('../db/settings');
 
 const MAX_QUEUE = 50;
-const queues       = new Map(); // `${guildId}:${vcId}` → Set<userId>
-const queueMessages = new Map(); // same key → Message
 
-function _key(guildId, vcId) {
-  return `${guildId}:${vcId}`;
-}
+// key = `${guildId}:${vcId}`
+const queues   = new Map(); // key → Set<userId>
+const queueMeta = new Map(); // key → { message, channel, guildId }
+
+function _key(guildId, vcId) { return `${guildId}:${vcId}`; }
+function _stickyKey(channelId) { return `sticky_${channelId}`; }
 
 function _buildEmbed(vcName, queue) {
   const lines = [];
   let i = 1;
-  for (const userId of queue) {
-    lines.push(`${i}. <@${userId}>`);
-    i++;
-  }
+  for (const userId of queue) { lines.push(`${i++}. <@${userId}>`); }
   return new EmbedBuilder()
     .setTitle(`✋ คิวขอพูด — ${vcName}`)
     .setDescription(queue.size === 0 ? '*ยังไม่มีคนในคิว*' : lines.join('\n'))
@@ -31,33 +30,63 @@ function _buildEmbed(vcName, queue) {
 }
 
 function _buildComponents(vcId, queue) {
-  const row1 = new ActionRowBuilder().addComponents(
+  return [new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId(`handraise_raise:${vcId}`)
-      .setLabel('✋ ยกมือขอพูด')
+      .setLabel('✋ ยกมือ')
       .setStyle(ButtonStyle.Primary),
-  );
-  const row2 = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId(`handraise_call:${vcId}`)
-      .setLabel('🎤 เรียกคนต่อไป')
+      .setLabel('🎤 เรียกคิว')
       .setStyle(ButtonStyle.Success)
       .setDisabled(queue.size === 0),
     new ButtonBuilder()
       .setCustomId(`handraise_clear:${vcId}`)
       .setLabel('🗑️ ปิดคิว')
       .setStyle(ButtonStyle.Danger),
-  );
-  return [row1, row2];
+  )];
 }
 
-async function _updateEmbed(key, vcId, vcName, queue) {
-  const msg = queueMessages.get(key);
-  if (!msg) return;
-  await msg.edit({
-    embeds: [_buildEmbed(vcName, queue)],
-    components: _buildComponents(vcId, queue),
-  }).catch(e => console.error('[handraise] edit:', e.message));
+// อัพเดต embed + sync DB sticky
+// msg = message ที่จะ edit (interaction.message หรือ meta.message)
+async function _updateEmbed(key, vcId, vcName, queue, msg) {
+  const meta = queueMeta.get(key);
+  if (!meta) return;
+
+  const embed = _buildEmbed(vcName, queue);
+  const components = _buildComponents(vcId, queue);
+  const payload = { embeds: [embed], components };
+
+  // ถ้า msg ที่ส่งมาต่างจาก meta → อัพเดต ref ด้วย (กรณี sticky repost สร้าง msg ใหม่)
+  const target = msg || meta.message;
+
+  try {
+    await target.edit(payload);
+    meta.message = target;
+  } catch (e) {
+    if (e.code === 10008) {
+      // Unknown Message — sticky handler repost แล้ว ดึง message ใหม่จาก DB
+      const config = await getSetting(meta.guildId, _stickyKey(meta.channel.id)).catch(() => null);
+      if (config?.message_id) {
+        const newMsg = await meta.channel.messages.fetch(config.message_id).catch(() => null);
+        if (newMsg) {
+          await newMsg.edit(payload).catch(e2 => console.error('[handraise] retry edit:', e2.message));
+          meta.message = newMsg;
+        }
+      }
+    } else {
+      console.error('[handraise] edit:', e.message);
+      return;
+    }
+  }
+
+  // Sync embed state → DB (sticky handler จะใช้ JSON นี้ตอน repost)
+  await setSetting(meta.guildId, _stickyKey(meta.channel.id), {
+    embeds:     [embed.toJSON()],
+    components: components.map(r => r.toJSON()),
+    message_id: meta.message.id,
+    content:    null,
+  }).catch(e => console.error('[handraise] setSetting:', e.message));
 }
 
 async function handleHandraiseStart(interaction) {
@@ -70,7 +99,7 @@ async function handleHandraiseStart(interaction) {
   }
 
   const key = _key(interaction.guildId, userVc.id);
-  if (queueMessages.has(key)) {
+  if (queueMeta.has(key)) {
     return interaction.reply({
       content: '❌ มีคิวยกมืออยู่แล้วในห้องนี้ครับ',
       flags: MessageFlags.Ephemeral,
@@ -80,14 +109,27 @@ async function handleHandraiseStart(interaction) {
   const queue = new Set();
   queues.set(key, queue);
 
-  const msg = await interaction.channel.send({
-    embeds: [_buildEmbed(userVc.name, queue)],
-    components: _buildComponents(userVc.id, queue),
+  const embed = _buildEmbed(userVc.name, queue);
+  const components = _buildComponents(userVc.id, queue);
+
+  const msg = await interaction.channel.send({ embeds: [embed], components });
+
+  queueMeta.set(key, {
+    message:  msg,
+    channel:  interaction.channel,
+    guildId:  interaction.guildId,
   });
-  queueMessages.set(key, msg);
+
+  // บันทึก sticky ให้ embed นี้ลอยขึ้นมาล่างสุดเสมอเมื่อมีข้อความใหม่
+  await setSetting(interaction.guildId, _stickyKey(interaction.channelId), {
+    embeds:     [embed.toJSON()],
+    components: components.map(r => r.toJSON()),
+    message_id: msg.id,
+    content:    null,
+  }).catch(e => console.error('[handraise] init sticky:', e.message));
 
   return interaction.reply({
-    content: `✅ เปิดคิวขอพูดสำหรับ **${userVc.name}** แล้วครับ`,
+    content: `✅ เปิดคิวขอพูดสำหรับ **${userVc.name}** แล้วครับ (sticky ✅)`,
     flags: MessageFlags.Ephemeral,
   });
 }
@@ -100,7 +142,7 @@ async function handleHandraiseButton(interaction) {
   const key   = _key(interaction.guildId, vcId);
   const queue = queues.get(key);
 
-  if (!queue || !queueMessages.has(key)) {
+  if (!queue || !queueMeta.has(key)) {
     return interaction.reply({
       content: '❌ เซสชันนี้หมดอายุแล้วครับ กรุณาเปิดคิวใหม่ด้วย `/panel handraise`',
       flags: MessageFlags.Ephemeral,
@@ -122,7 +164,7 @@ async function handleHandraiseButton(interaction) {
 
     if (queue.has(interaction.user.id)) {
       queue.delete(interaction.user.id);
-      await _updateEmbed(key, vcId, vcName, queue);
+      await _updateEmbed(key, vcId, vcName, queue, interaction.message);
       return interaction.reply({ content: '✅ ลดมือแล้วครับ', flags: MessageFlags.Ephemeral });
     }
 
@@ -132,14 +174,14 @@ async function handleHandraiseButton(interaction) {
 
     queue.add(interaction.user.id);
     const position = [...queue].indexOf(interaction.user.id) + 1;
-    await _updateEmbed(key, vcId, vcName, queue);
+    await _updateEmbed(key, vcId, vcName, queue, interaction.message);
     return interaction.reply({
       content: `✋ ยกมือแล้วครับ — ลำดับที่ **${position}** (กดอีกครั้งเพื่อลดมือ)`,
       flags: MessageFlags.Ephemeral,
     });
   }
 
-  // 🎤 เรียกคนต่อไป
+  // 🎤 เรียกคิว
   if (action === 'handraise_call') {
     if (!interaction.member.permissions.has(PermissionFlagsBits.MoveMembers)) {
       return interaction.reply({ content: '❌ คุณไม่มีสิทธิ์เรียกคิวครับ', flags: MessageFlags.Ephemeral });
@@ -150,7 +192,7 @@ async function handleHandraiseButton(interaction) {
 
     const nextUserId = queue.values().next().value;
     queue.delete(nextUserId);
-    await _updateEmbed(key, vcId, vcName, queue);
+    await _updateEmbed(key, vcId, vcName, queue, interaction.message);
     return interaction.reply({ content: `🎤 <@${nextUserId}> — ถึงคิวคุณแล้ว!` });
   }
 
@@ -162,10 +204,14 @@ async function handleHandraiseButton(interaction) {
 
     queue.clear();
     queues.delete(key);
-    const msg = queueMessages.get(key);
-    queueMessages.delete(key);
+    const meta = queueMeta.get(key);
+    queueMeta.delete(key);
 
-    await msg?.edit({
+    // ลบ sticky setting ก่อน (ป้องกัน handler repost หลังจากปิด)
+    await deleteSetting(meta.guildId, _stickyKey(meta.channel.id))
+      .catch(e => console.error('[handraise] deleteSetting:', e.message));
+
+    await interaction.message.edit({
       embeds: [
         new EmbedBuilder()
           .setTitle(`✋ คิวขอพูด — ${vcName}`)
@@ -191,7 +237,7 @@ async function handleHandraiseVoiceUpdate(oldState, newState) {
 
   queue.delete(member.id);
   const vc = member.guild.channels.cache.get(oldState.channelId);
-  await _updateEmbed(key, oldState.channelId, vc?.name ?? 'Voice Channel', queue);
+  await _updateEmbed(key, oldState.channelId, vc?.name ?? 'Voice Channel', queue, null);
 }
 
 module.exports = { handleHandraiseStart, handleHandraiseButton, handleHandraiseVoiceUpdate };
