@@ -139,11 +139,11 @@
       }
     ],
 
-    "autorole": {
+    "org_role": {
       "default_name": "{{org_name}}",
       "color": "#FF6A13",
       "hoist": false,
-      "note": "ติดอัตโนมัติเมื่อ member เข้าใหม่ — ตั้งใน dc_guild_config key autorole_id",
+      "note": "ยศองค์กร — ติดหลังกรอก modal แนะนำตัวเท่านั้น (config_register.member_role_id) · ไม่ติดตอน join · ปลดล็อกหมวด {{org_name}}",
       "discord_permissions": [
         "ViewChannel", "SendMessages", "AddReactions",
         "ReadMessageHistory", "UseApplicationCommands",
@@ -343,16 +343,16 @@
 
   "config": {
     "note": "ไม่รวม secret/credential (meta/x keys) และ channel-id จริง",
-    "autorole": {
-      "enabled": true,
-      "role": "{{org_name}}",
-      "note": "ติด role ให้ member ใหม่อัตโนมัติ — bot ตั้ง autorole_id ใน dc_guild_config"
+    "autorole_on_join": {
+      "enabled": false,
+      "note": "ไม่ติด role ตอน join — สมาชิกได้ยศ {{org_name}} หลังแนะนำตัวเท่านั้น (gate เข้าถึงหมวดชุมชนหลัง introduce)"
     },
     "register": {
+      "member_role": "{{org_name}}",
       "interest_select": true,
       "province_select": false,
       "log_channel": "moderator-only",
-      "note": "province_select = false จนกว่าจะเปิด geography · log ไปที่ moderator-only"
+      "note": "member_role = ยศองค์กร ติดหลังกรอก modal แนะนำตัว → seed เป็น config_register.member_role_id · province_select=false จนเปิด geography · log ไป moderator-only"
     },
     "log_channel": {
       "channel": "moderator-only",
@@ -366,7 +366,7 @@
 
   "bot_provisions": {
     "order": [
-      "1. สร้าง role ทุกตัว: staff → autorole (geography ข้ามตาม provision_at_setup=false)",
+      "1. สร้าง role ทุกตัว: staff → org_role (geography ข้ามตาม provision_at_setup=false)",
       "2. สร้าง category ทีมงาน + INFORMATION + text channel ที่ Community ต้องใช้ (📕┆ข้อตกลง, moderator-only)",
       "3. เปิด Community: set rules_channel + public_updates_channel + verification/content-filter + features",
       "4. สร้าง channel ที่เหลือ (announcement/forum/stage ได้แล้วหลัง Community)",
@@ -374,7 +374,7 @@
       "6. วาง register panel (sticky) ที่ 👋┆แนะนำตัว + role picker ที่ ⭐┆ติดยศ",
       "7. สร้างโพสต์ 'ค้นหาโพสต์' ในทุก forum channel",
       "8. sync role catalog → dc_guild_roles",
-      "9. seed dc_guild_config: autorole_id, enabled_features, register config, log_channel_id, welcome_dm"
+      "9. seed dc_guild_config: config_register (member_role_id, interest_select, log_channel_id), enabled_features, welcome_dm (ไม่ตั้ง autorole_id — ยศได้หลังแนะนำตัว)"
     ],
     "no_rollback": "ถ้าค้างกลางทาง ต้องลบเองใน Discord (v1 ยอมรับได้)"
   }
