@@ -10,6 +10,7 @@ const path = require('path');
 const pool = require('./db/index');
 
 const isGlobal   = process.argv.includes('--global');
+const isClear    = process.argv.includes('--clear');
 const guildIndex = process.argv.indexOf('--guild');
 const singleGuildId = guildIndex !== -1 ? process.argv[guildIndex + 1] : null;
 
@@ -29,7 +30,16 @@ const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_BOT_TOKEN)
 
 (async () => {
   try {
-    if (isGlobal) {
+    if (isClear) {
+      const targets = singleGuildId ? [{ guild_id: singleGuildId, name: singleGuildId }]
+        : (await pool.query('SELECT guild_id, name FROM dc_guilds ORDER BY name')).rows;
+      console.log(`\n🗑️  กำลังลบ guild commands ออกจาก ${targets.length} guilds...`);
+      for (const g of targets) {
+        await rest.put(Routes.applicationGuildCommands(process.env.DISCORD_BOT_CLIENT_ID, g.guild_id), { body: [] });
+        console.log(`✅ cleared: ${g.name} (${g.guild_id})`);
+      }
+      console.log('✅ ลบ guild commands ทั้งหมดแล้ว — global commands จะทำงานแทน');
+    } else if (isGlobal) {
       console.log(`\n🚀 กำลัง deploy ${commands.length} commands (global)...`);
       await rest.put(
         Routes.applicationCommands(process.env.DISCORD_BOT_CLIENT_ID),
