@@ -16,6 +16,7 @@
     "note": "จำเป็น — announcement/forum/stage channel สร้างไม่ได้ถ้าไม่เปิด Community · bot เปิดหลังสร้าง rules+updates channel เสร็จ",
     "rules_channel": "📕┆ข้อตกลง",
     "public_updates_channel": "moderator-only",
+    "system_channel": "🙋┆follow-me",
     "verification_level": "Low",
     "explicit_content_filter": "AllMembers",
     "default_message_notifications": "OnlyMentions"
@@ -49,7 +50,7 @@
         "note": "Technical supervisor — สายเทคนิค/IT จัดการ server แต่ไม่ใช่ Admin · ไม่ map RBAC"
       },
       {
-        "default_name": "เลขาธิการ",
+        "default_name": "ผู้จัดการ",
         "color": "#9B59B6",
         "hoist": true,
         "mentionable": true,
@@ -60,7 +61,7 @@
         ]
       },
       {
-        "default_name": "ผู้ประสานงานภาค",
+        "default_name": "หัวหน้าทีม",
         "color": "#2980B9",
         "hoist": true,
         "mentionable": true,
@@ -71,34 +72,13 @@
         ]
       },
       {
-        "default_name": "รองเลขาธิการ",
-        "color": "#5DADE2",
-        "hoist": false,
-        "mentionable": true,
-        "rbac_permission": "regional_coordinator",
-        "discord_permissions": [
-          "ManageMessages", "ManageThreads", "MentionEveryone",
-          "MuteMembers", "MoveMembers"
-        ]
-      },
-      {
-        "default_name": "ผู้ประสานงานจังหวัด",
+        "default_name": "ผู้ประสานงาน",
         "color": "#27AE60",
         "hoist": true,
         "mentionable": true,
         "rbac_permission": "province_coordinator",
         "discord_permissions": [
           "ManageMessages", "ManageThreads", "MentionEveryone", "MuteMembers"
-        ]
-      },
-      {
-        "default_name": "กรรมการจังหวัด",
-        "color": "#58D68D",
-        "hoist": false,
-        "mentionable": true,
-        "rbac_permission": "district_coordinator",
-        "discord_permissions": [
-          "ManageMessages", "ManageThreads", "MentionEveryone"
         ]
       },
       {
@@ -110,7 +90,7 @@
         "discord_permissions": ["ManageMessages", "ManageThreads"]
       },
       {
-        "default_name": "ทีมบรรณาธิการ",
+        "default_name": "ทีมสื่อ",
         "color": "#E67E22",
         "hoist": false,
         "mentionable": true,
@@ -129,13 +109,13 @@
         ]
       },
       {
-        "default_name": "ทีมพื้นที่/ร้องเรียน",
+        "default_name": "ทีมดูแลเคส",
         "color": "#1ABC9C",
         "hoist": false,
         "mentionable": true,
         "rbac_permission": "caseworker",
         "discord_permissions": ["ManageMessages", "ManageThreads"],
-        "note": "ผู้ดูแลเคสร้องเรียน (case system) — ชื่อจริงในอาสาประชาชน"
+        "note": "ผู้ดูแลเคสร้องเรียน (case system)"
       }
     ],
 
@@ -159,38 +139,23 @@
         "group_label": "ความสนใจ",
         "kind": "plain",
         "options": [
-          { "emoji": "⚔️", "label": "อาสาส้ม" },
-          { "emoji": "🔥", "label": "อาสาสู้ภัยพิบัติ" },
-          { "emoji": "🏥", "label": "ทีมสาธารณสุข" },
-          { "emoji": "🌟", "label": "ปีกเยาวชน" },
-          { "emoji": "🧣", "label": "ทีมเครือข่ายชาติพันธุ์" },
-          { "emoji": "🌾", "label": "ประชาชนคนเกษตร" },
-          { "emoji": "✊", "label": "ทีมเครือข่ายผู้ใช้แรงงาน" },
-          { "emoji": "🎓", "label": "ก้าวเลิร์น (การศึกษา)" },
-          { "emoji": "🎭", "label": "ปีกวัฒนธรรม" },
-          { "emoji": "🏛️", "label": "ทีมงานสภา" },
-          { "emoji": "🪪", "label": "ทีมผู้สมัครรับเลือกตั้ง" },
-          { "emoji": "📣", "label": "ทีมผู้ช่วยหาเสียง/เรื่องร้องเรียน" },
+          { "emoji": "🙋", "label": "อาสาสมัคร" },
+          { "emoji": "🎪", "label": "ทีมกิจกรรม" },
+          { "emoji": "📢", "label": "ทีมประชาสัมพันธ์" },
           { "emoji": "💰", "label": "ทีมระดมทุน" },
-          { "emoji": "👥", "label": "ทีมตัวแทนสมาชิก" },
-          { "emoji": "🤝", "label": "ทีมจังหวัด/สมาชิกสัมพันธ์" },
-          { "emoji": "👷", "label": "ทีมเจ้าหน้าที่/สตาฟ" }
+          { "emoji": "🤝", "label": "ทีมสมาชิกสัมพันธ์" }
         ]
       },
       "skill": {
         "group_label": "ความถนัด",
         "kind": "plain",
         "options": [
-          { "emoji": "🧙", "label": "ทีมกระบวนกร" },
-          { "emoji": "🖼️", "label": "ทีมกราฟิก",   "parent": "ทีมสื่อ" },
-          { "emoji": "✍️", "label": "ทีมคอนเทนต์", "parent": "ทีมสื่อ" },
-          { "emoji": "🎬", "label": "ทีมตัดต่อ",    "parent": "ทีมสื่อ" },
-          { "emoji": "📸", "label": "ทีมช่างภาพ",   "parent": "ทีมสื่อ" },
-          { "emoji": "📊", "label": "ทีมนโยบาย" },
-          { "emoji": "💻", "label": "ทีมเทคโนโลยี" },
-          { "emoji": "⚖️", "label": "ทีมกฎหมาย" }
-        ],
-        "note": "parent = role แม่ — ติดอัตโนมัติเมื่อเลือกลูก"
+          { "emoji": "🎨", "label": "ทีมกราฟิก/ออกแบบ" },
+          { "emoji": "✍️", "label": "ทีมคอนเทนต์" },
+          { "emoji": "💻", "label": "ทีมไอที" },
+          { "emoji": "⚖️", "label": "ทีมกฎหมาย" },
+          { "emoji": "📊", "label": "ทีมข้อมูล/นโยบาย" }
+        ]
       }
     },
 
@@ -231,7 +196,7 @@
         { "role": "Admin",       "allow": ["ViewChannel", "SendMessages", "ManageMessages"] },
         { "role": "Supervisor",  "allow": ["ViewChannel", "SendMessages", "ManageMessages"] },
         { "role": "Moderator",   "allow": ["ViewChannel", "SendMessages"] },
-        { "role": "เลขาธิการ",   "allow": ["ViewChannel", "SendMessages"] }
+        { "role": "ผู้จัดการ",   "allow": ["ViewChannel", "SendMessages"] }
       ],
       "channels": [
         {
@@ -342,7 +307,7 @@
           "permission_overwrites": [
             { "role": "@everyone",    "deny":  ["ViewChannel"] },
             { "role": "{{org_name}}", "allow": ["ViewChannel", "Connect"] },
-            { "role": "เลขาธิการ",   "allow": ["RequestToSpeak", "Speak"] },
+            { "role": "ผู้จัดการ",   "allow": ["RequestToSpeak", "Speak"] },
             { "role": "Admin",        "allow": ["RequestToSpeak", "Speak", "MuteMembers", "MoveMembers"] },
             { "role": "Supervisor",   "allow": ["RequestToSpeak", "Speak", "MuteMembers"] }
           ]

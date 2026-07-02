@@ -87,26 +87,33 @@ async function findOrCreateChannel(guild, { name, type, parentId }, log) {
   }
 }
 
-/** เปิด Community ถ้ายังไม่เปิด */
+/** เปิด Community + ตั้ง rules/updates/safety channel · idempotent (รันซ้ำ set channel ซ้ำได้แม้เปิดอยู่แล้ว) */
 async function ensureCommunity(guild, community, chMap, log) {
   if (!community?.enable) return;
-  if (guild.features.includes(GuildFeature.Community)) { log.notes.push('Community เปิดอยู่แล้ว — ข้าม'); return; }
-  const rules = chMap.get(community.rules_channel);
+  const rules   = chMap.get(community.rules_channel);
   const updates = chMap.get(community.public_updates_channel);
-  if (!rules || !updates) { log.errors.push('เปิด Community ไม่ได้: ไม่พบ rules/updates channel'); return; }
+  const alreadyOn = guild.features.includes(GuildFeature.Community);
+  if (!alreadyOn && (!rules || !updates)) {
+    log.errors.push('เปิด Community ไม่ได้: ไม่พบ rules/updates channel');
+    return;
+  }
   try {
-    await guild.edit({
-      features: [...guild.features, GuildFeature.Community],
-      rulesChannel: rules.id,
-      publicUpdatesChannel: updates.id,
-      verificationLevel: GuildVerificationLevel[community.verification_level] ?? GuildVerificationLevel.Low,
-      explicitContentFilter: GuildExplicitContentFilter[community.explicit_content_filter] ?? GuildExplicitContentFilter.AllMembers,
-      reason: 'server setup — enable community',
-    });
-    log.notes.push('เปิด Community แล้ว');
+    const payload = { reason: 'server setup — community' };
+    if (!alreadyOn) {
+      payload.features = [...guild.features, GuildFeature.Community];
+      payload.verificationLevel = GuildVerificationLevel[community.verification_level] ?? GuildVerificationLevel.Low;
+      payload.explicitContentFilter = GuildExplicitContentFilter[community.explicit_content_filter] ?? GuildExplicitContentFilter.AllMembers;
+    }
+    if (rules)   payload.rulesChannel = rules.id;
+    if (updates) {
+      payload.publicUpdatesChannel = updates.id; // Community Updates Channel
+      payload.safetyAlertsChannel  = updates.id; // Safety Notifications Channel
+    }
+    await guild.edit(payload);
+    log.notes.push(alreadyOn ? 'Community เปิดอยู่แล้ว — อัปเดต updates/safety channel' : 'เปิด Community แล้ว');
     await sleep(CREATE_DELAY_MS);
   } catch (e) {
-    log.errors.push(`เปิด Community: ${e.message}`);
+    log.errors.push(`community: ${e.message}`);
   }
 }
 
@@ -263,6 +270,15 @@ async function run(guild, { templateId, orgName, includeOptional = false, onProg
   await onProgress('เปิด Community…');
   await ensureCommunity(guild, tpl.community, chMap, log);
 
+  // ---- 3b. System Messages Channel (welcome) → follow-me ----
+  const sysCh = tpl.community?.system_channel ? chMap.get(tpl.community.system_channel) : null;
+  if (sysCh && guild.systemChannelId !== sysCh.id) {
+    try {
+      await guild.edit({ systemChannel: sysCh.id, reason: 'server setup — system messages channel' });
+      log.notes.push(`ตั้ง system messages channel → #${sysCh.name}`);
+    } catch (e) { log.errors.push(`system channel: ${e.message}`); }
+  }
+
   // ---- 4b. สร้าง channel ที่รอ Community ----
   if (pending.length) {
     await onProgress('สร้าง forum/announcement/stage…');
@@ -280,7 +296,19 @@ async function run(guild, { templateId, orgName, includeOptional = false, onProg
     for (const ch of cat.channels ?? []) {
       if (ch.optional && !includeOptional) continue;
       const channel = chMap.get(sub(ch.name, orgName));
-      if (channel) await applyOverwrites(guild, channel, ch.permission_overwrites, roleMap, orgName, log);
+      if (!channel) continue;
+      if (ch.permission_overwrites === 'inherit') {
+        // sync กับ category (ห้อง inherit ต้อง lock ตาม parent — ไม่งั้นค้าง perm เปิดตอนสร้าง)
+        if (category) {
+          try {
+            await channel.lockPermissions();
+            log.notes.push(`sync #${channel.name} → ${category.name}`);
+            await sleep(200);
+          } catch (e) { log.errors.push(`sync "${channel.name}": ${e.message}`); }
+        }
+      } else {
+        await applyOverwrites(guild, channel, ch.permission_overwrites, roleMap, orgName, log);
+      }
     }
   }
 
