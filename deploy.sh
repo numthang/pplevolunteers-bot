@@ -49,7 +49,11 @@ git reset --hard origin/master
 
 # Bot
 npm install --omit=dev
-node deploy-commands.js $GUILD_ARG
+if [ -n "$GUILD_ARG" ]; then
+  node deploy-commands.js $GUILD_ARG
+else
+  node deploy-commands.js --global
+fi
 pm2 restart pple-dcbot --time
 
 if [ "$BOT_ONLY" = "false" ]; then

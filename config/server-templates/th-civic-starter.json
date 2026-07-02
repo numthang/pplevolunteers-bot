@@ -159,7 +159,6 @@
         "group_label": "ความสนใจ",
         "kind": "plain",
         "options": [
-          { "emoji": "🍊", "label": "{{org_name}}" },
           { "emoji": "⚔️", "label": "อาสาส้ม" },
           { "emoji": "🔥", "label": "อาสาสู้ภัยพิบัติ" },
           { "emoji": "🏥", "label": "ทีมสาธารณสุข" },
@@ -320,13 +319,13 @@
       ],
       "channels": [
         { "name": "💬┆พูดคุยทั่วไป",     "type": "text",        "permission_overwrites": "inherit" },
+        { "name": "🤖┆ถาม-บอท",          "type": "text",        "permission_overwrites": "inherit", "note": "ห้องคุยกับ AI bot — พิมพ์ keyword หรือ mention bot เพื่อค้นหา · ฟีเจอร์ ai_mention" },
         {
           "name": "💬┆กระทู้-ทั่วไป",
           "type": "forum",
           "requires_community": true,
-          "features": ["forum_search"],
           "permission_overwrites": "inherit",
-          "note": "bot สร้างโพสต์ 'ค้นหาโพสต์' ให้อัตโนมัติ"
+          "note": "forum กระทู้ทั่วไป — ไม่มี search post (ใช้ห้อง 🤖┆ถาม-บอท ค้นหาแทน)"
         },
         {
           "name": "🔊┆ประชุมทั่วไป",
@@ -353,8 +352,8 @@
   ],
 
   "features": {
-    "enabled_default": ["calling", "docs", "cases", "ai_mention"],
-    "note": "finance เปิดตลอดทุก guild (ไม่มี toggle) · เลือกเปิด/ปิดตอน setup wizard"
+    "enabled_default": ["ai_mention"],
+    "note": "finance เปิดตลอดทุก guild (ไม่มี toggle) · ai_mention เปิด default (ห้อง 🤖┆ถาม-บอท ต้องใช้) · calling/docs/cases ปิด — admin เปิดเองผ่าน web"
   },
 
   "config": {

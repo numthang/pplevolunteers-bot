@@ -5,6 +5,9 @@ const {
   PermissionFlagsBits,
   MessageFlags,
   ChannelType,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
 } = require('discord.js');
 const fs   = require('fs');
 const path = require('path');
@@ -100,6 +103,21 @@ module.exports = {
           sub.setName('clear')
             .setDescription('ลบข้อความ welcome')
         )
+    )
+
+    // --- setup (server template provisioner) ---
+    .addSubcommand(sub =>
+      sub.setName('setup')
+        .setDescription('สร้างห้อง/ยศ/permission จาก template สำเร็จรูป (รันซ้ำได้)')
+        .addStringOption(opt =>
+          opt.setName('org_name').setDescription('ชื่อองค์กร (แทน {{org_name}})').setRequired(true)
+        )
+        .addStringOption(opt =>
+          opt.setName('template').setDescription('template (default: th-civic-starter)').setRequired(false)
+        )
+        .addBooleanOption(opt =>
+          opt.setName('include_optional').setDescription('สร้าง channel ที่เป็น optional ด้วย (default: false)').setRequired(false)
+        )
     ),
 
   async execute(interaction) {
@@ -152,6 +170,75 @@ module.exports = {
         await deleteSetting(guildId, 'welcome_dm');
         return interaction.editReply({ content: '✅ ลบ welcome message แล้วครับ' });
       }
+    }
+
+    // ================================================================
+    if (sub === 'setup') {
+      // gate: ผู้ใช้ต้องเป็น Administrator (สูงกว่า /server default)
+      if (!interaction.memberPermissions.has(PermissionFlagsBits.Administrator)) {
+        return interaction.reply({ content: '❌ ต้องมีสิทธิ์ **Administrator** ถึงจะ setup ได้ครับ', flags: MessageFlags.Ephemeral });
+      }
+      // gate: bot ต้องมี ManageChannels + ManageRoles + ManageGuild
+      const me = guild.members.me;
+      const need = [
+        [PermissionFlagsBits.ManageChannels, 'Manage Channels'],
+        [PermissionFlagsBits.ManageRoles, 'Manage Roles'],
+        [PermissionFlagsBits.ManageGuild, 'Manage Server'],
+      ];
+      const missing = need.filter(([p]) => !me.permissions.has(p)).map(([, n]) => n);
+      if (missing.length) {
+        return interaction.reply({ content: `❌ bot ขาดสิทธิ์: **${missing.join(', ')}** — เพิ่มให้ bot ก่อนครับ`, flags: MessageFlags.Ephemeral });
+      }
+
+      const orgName    = interaction.options.getString('org_name');
+      const templateId = interaction.options.getString('template') ?? 'th-civic-starter';
+      const includeOpt = interaction.options.getBoolean('include_optional') ?? false;
+
+      const { run, buildPlan } = require('../services/serverProvisioner');
+      let plan;
+      try { plan = buildPlan(templateId, includeOpt); }
+      catch (e) { return interaction.reply({ content: `❌ ${e.message}`, flags: MessageFlags.Ephemeral }); }
+
+      const confirmRow = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('setup_confirm').setLabel('✅ ยืนยัน').setStyle(ButtonStyle.Success),
+        new ButtonBuilder().setCustomId('setup_cancel').setLabel('❌ ยกเลิก').setStyle(ButtonStyle.Secondary),
+      );
+      await interaction.reply({
+        content: [
+          `**Setup:** ${plan.name}`,
+          `องค์กร: **${orgName}**`,
+          `จะสร้าง ~${plan.roleCount} roles · ~${plan.chCount} channels${plan.community ? ' · เปิด Community' : ''}`,
+          `ของเดิมที่มีอยู่จะไม่สร้างซ้ำ (รันซ้ำได้) — ยืนยันไหมครับ?`,
+        ].join('\n'),
+        components: [confirmRow],
+        flags: MessageFlags.Ephemeral,
+      });
+
+      const msg = await interaction.fetchReply();
+      let btn;
+      try {
+        btn = await msg.awaitMessageComponent({ filter: i => i.user.id === interaction.user.id, time: 60_000 });
+      } catch {
+        return interaction.editReply({ content: '⏱️ หมดเวลา — ยกเลิก setup', components: [] });
+      }
+      if (btn.customId === 'setup_cancel') {
+        return btn.update({ content: '❌ ยกเลิก setup ครับ', components: [] });
+      }
+      await btn.update({ content: '⏳ เริ่ม setup…', components: [] });
+
+      const log = await run(guild, {
+        templateId, orgName, includeOptional: includeOpt,
+        onProgress: async (step) => { await interaction.editReply({ content: `⏳ ${step}` }).catch(() => {}); },
+      });
+
+      const report = [
+        '✅ **Setup เสร็จแล้วครับ**',
+        `🎭 Roles — สร้าง ${log.rolesCreated.length} · ข้าม ${log.rolesSkipped.length}`,
+        `🗂️ Channels — สร้าง ${log.channelsCreated.length} · ข้าม ${log.channelsSkipped.length}`,
+        log.notes.length  ? '\n' + log.notes.map(n => `• ${n}`).join('\n') : '',
+        log.errors.length ? `\n⚠️ **${log.errors.length} errors:**\n` + log.errors.slice(0, 8).map(e => `• ${e}`).join('\n') : '',
+      ].filter(Boolean).join('\n');
+      return interaction.editReply({ content: report.slice(0, 1950), components: [] });
     }
 
     // ================================================================

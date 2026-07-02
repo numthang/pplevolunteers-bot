@@ -462,6 +462,13 @@
 
 ---
 
+## 💳 Donation — หน้าเว็บรับบริจาค
+
+- [ ] **หน้าบริจาคสาธารณะ** — ผู้สนับสนุนภายนอกบริจาคให้องค์กรได้ผ่านเว็บ
+  - scope/design ยังไม่ได้คุย — จดไว้ก่อน ต้องคุยก่อน implement
+
+---
+
 ## 🔗 References
 
 - [addyosmani/agent-skills](https://github.com/addyosmani/agent-skills) — Production-grade engineering skills for AI coding agents
