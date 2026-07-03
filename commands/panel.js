@@ -105,6 +105,7 @@ module.exports = {
         .addBooleanOption(o => o.setName('province_select').setDescription('ให้เลือกจังหวัดหลัง register').setRequired(false))
         .addBooleanOption(o => o.setName('interest_select').setDescription('ให้เลือก interest/skill หลัง register').setRequired(false))
         .addRoleOption(o => o.setName('member_role').setDescription('ยศที่ติดให้อัตโนมัติหลัง register').setRequired(false))
+        .addBooleanOption(o => o.setName('verify_phone').setDescription('เพิ่มปุ่มยืนยันตัวตนด้วย SMS OTP (เช็คเบอร์กับทะเบียนสมาชิก)').setRequired(false))
         .addBooleanOption(o => o.setName('public').setDescription('แสดงผลให้ทุกคนเห็น (default: false)').setRequired(false))
     )
 
@@ -402,6 +403,7 @@ await refreshDashboard(thread, interaction.guildId, ids, existing.dashboard_msg_
       const provinceSelect = interaction.options.getBoolean('province_select');
       const interestSelect = interaction.options.getBoolean('interest_select');
       const memberRole     = interaction.options.getRole('member_role');
+      const verifyPhone    = interaction.options.getBoolean('verify_phone');
 
       let regConfig = await getSetting(interaction.guildId, 'config_register');
       if (typeof regConfig === 'string') {
@@ -413,16 +415,24 @@ await refreshDashboard(thread, interaction.guildId, ids, existing.dashboard_msg_
       if (provinceSelect !== null) regConfig.province_select = provinceSelect;
       if (interestSelect !== null) regConfig.interest_select = interestSelect;
       if (memberRole !== null) regConfig.member_role_id = memberRole.id;
+      if (verifyPhone !== null) regConfig.verify_phone = verifyPhone;
 
       await setSetting(interaction.guildId, 'config_register', regConfig);
 
       const embed = new EmbedBuilder().setTitle(title).setDescription(description).setColor(color);
-      const row = new ActionRowBuilder().addComponents(
+      const buttons = [
         new ButtonBuilder()
           .setCustomId('btn_open_register_modal')
           .setLabel(buttonLabel)
-          .setStyle(ButtonStyle.Primary)
-      );
+          .setStyle(ButtonStyle.Primary),
+      ];
+      if (regConfig.verify_phone) {
+        buttons.push(new ButtonBuilder()
+          .setCustomId('btn_open_verify_modal')
+          .setLabel('✅ ยืนยันตัวตนสมาชิก')
+          .setStyle(ButtonStyle.Success));
+      }
+      const row = new ActionRowBuilder().addComponents(...buttons);
 
       await interaction.channel.send({ embeds: [embed], components: [row] });
 
@@ -437,6 +447,7 @@ await refreshDashboard(thread, interaction.guildId, ids, existing.dashboard_msg_
           `Province select → ${regConfig.province_select ? '✅' : '❌'}`,
           `Interest select → ${regConfig.interest_select ? '✅' : '❌'}`,
           `Member role → ${regConfig.member_role_id ? `<@&${regConfig.member_role_id}>` : '❌'}`,
+          `Verify phone (OTP) → ${regConfig.verify_phone ? '✅' : '❌'}`,
         ].join('\n'),
       });
     }
