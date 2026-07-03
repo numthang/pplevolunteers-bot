@@ -836,3 +836,9 @@ CREATE TABLE IF NOT EXISTS case_letter_config (
 
 -- 2026-06-30: add letters column
 ALTER TABLE cases ADD COLUMN IF NOT EXISTS letters JSONB NOT NULL DEFAULT '[]';
+
+-- 2026-07-03: finance เปลี่ยนเป็น feature toggle (default ปิดทุก guild) — seed เปิดให้อาสาประชาชนที่ใช้อยู่จริง
+UPDATE dc_guild_config
+SET value = value::jsonb || '["finance"]'::jsonb, updated_at = CURRENT_TIMESTAMP
+WHERE guild_id = '1340903354037178410' AND "key" = 'enabled_features'
+  AND NOT value::jsonb ? 'finance';

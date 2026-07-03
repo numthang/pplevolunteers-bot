@@ -99,7 +99,7 @@ const SOCIAL_LINKS = [
 ]
 
 const DASHBOARD_LINKS = [
-  { href: '/finance',      label: 'FINANCE',  icon: 'transactions' },
+  { href: '/finance',      label: 'FINANCE',  icon: 'transactions', feature: 'finance' },
   { href: '/calling',      label: 'CALLING',  icon: 'campaigns', feature: 'calling' },
   { href: '/docs',         label: 'DOCS',     icon: 'docs',      feature: 'docs', docsAccess: true },
   { href: '/case/manage',  label: 'CASES',    icon: 'logs',      feature: 'cases', casesAccess: true },
@@ -107,7 +107,7 @@ const DASHBOARD_LINKS = [
 
 const APPS = [
   { key: 'home',     label: 'DASHBOARD', href: '/',               icon: 'overview' },
-  { key: 'finance',  label: 'FINANCE',   href: '/finance',        icon: 'transactions' },
+  { key: 'finance',  label: 'FINANCE',   href: '/finance',        icon: 'transactions', feature: 'finance' },
   { key: 'calling',  label: 'CALLING',   href: '/calling',        icon: 'campaigns', feature: 'calling' },
   { key: 'docs',     label: 'DOCS',      href: '/docs',           icon: 'docs',      feature: 'docs' },
   { key: 'cases',    label: 'CASES',     href: '/case/manage',    icon: 'logs',      feature: 'cases', casesAccess: true },

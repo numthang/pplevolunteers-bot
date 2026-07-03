@@ -5,8 +5,8 @@ import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import { getGuildId } from '@/lib/guildContext.js'
 import pool from '@/db/index.js'
 
-// features ที่ toggle ได้ — finance + contacts + bot เปิดตลอด (ไม่อยู่ในนี้)
-const TOGGLEABLE = ['calling', 'docs', 'cases', 'ai_mention']
+// features ที่ toggle ได้ — bot เปิดตลอด (ไม่อยู่ในนี้) · default ทุกตัว = ปิด
+const TOGGLEABLE = ['finance', 'calling', 'docs', 'cases', 'ai_mention']
 
 async function authGuildAdmin(session) {
   const { discordId } = await getEffectiveIdentity(session)

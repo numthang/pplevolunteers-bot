@@ -2,10 +2,11 @@
 import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { Loader2, Phone, Users, FileText, Bot, MessageSquareWarning } from 'lucide-react'
+import { Loader2, Phone, Users, FileText, Bot, MessageSquareWarning, Wallet } from 'lucide-react'
 
-// ฟีเจอร์ที่ toggle ได้ + คำอธิบาย (finance + bot เปิดตลอด ไม่อยู่ที่นี่)
+// ฟีเจอร์ที่ toggle ได้ + คำอธิบาย (bot เปิดตลอด ไม่อยู่ที่นี่)
 const FEATURE_META = {
+  finance:    { label: 'Finance',    icon: Wallet,                desc: 'ระบบการเงิน — บัญชี รายรับรายจ่าย รายงาน' },
   calling:    { label: 'Calling',    icon: Phone,                 desc: 'ระบบโทรหาสมาชิก — แคมเปญ, มอบหมาย, บันทึกการโทร' },
   contacts:   { label: 'Contacts',   icon: Users,                 desc: 'ฐานข้อมูลผู้ติดต่อ (CRM)' },
   docs:       { label: 'Docs',       icon: FileText,              desc: 'ใบสำคัญรับเงิน + e-signature สำหรับเบิกจ่ายกิจกรรม' },
@@ -89,7 +90,7 @@ export default function FeaturesPage() {
       <div className="mb-5">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-disc-text">ฟีเจอร์</h1>
         <p className="text-sm text-gray-500 dark:text-disc-muted mt-1">
-          เปิด/ปิดระบบที่ใช้ใน guild นี้ — Finance และ Bot เปิดตลอดทุก guild
+          เปิด/ปิดระบบที่ใช้ใน guild นี้ — Bot เปิดตลอดทุก guild
         </p>
       </div>
 
