@@ -216,8 +216,21 @@ async function run(guild, { templateId, orgName, includeOptional = false, onProg
   await guild.roles.fetch();
   await guild.channels.fetch();
 
-  // ---- 1. Roles: staff → org_role → picker parents → picker (interest/skill) ----
+  // ---- 1. Roles: @everyone base → staff → org_role → picker parents → picker (interest/skill) ----
   await onProgress('สร้าง roles…');
+  // @everyone base permission (คัดลอกจาก server ต้นแบบ) — gate community ทำที่ overwrite ไม่ใช่ที่นี่
+  if (Array.isArray(tpl.roles.everyone_permissions)) {
+    try {
+      await guild.roles.everyone.edit({
+        permissions: resolvePerms(tpl.roles.everyone_permissions),
+        reason: 'server setup — @everyone base permission',
+      });
+      log.notes.push('ตั้ง @everyone base permission');
+      await sleep(CREATE_DELAY_MS);
+    } catch (e) {
+      log.errors.push(`@everyone permission: ${e.message}`);
+    }
+  }
   for (const def of tpl.roles.staff ?? []) {
     const r = await findOrCreateRole(guild, def, orgName, log);
     if (r) roleMap.set(r.name, r.id);

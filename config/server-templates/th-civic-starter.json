@@ -25,6 +25,16 @@
   "roles": {
     "_note": "สร้างตามลำดับ — role ที่อยู่บนมี hoist priority สูงกว่า · discord_permissions = PascalCase key",
 
+    "everyone_permissions": [
+      "CreateInstantInvite", "AddReactions", "Stream", "ViewChannel", "SendMessages",
+      "SendTTSMessages", "EmbedLinks", "AttachFiles", "ReadMessageHistory", "UseExternalEmojis",
+      "Connect", "Speak", "UseVAD", "ChangeNickname", "UseApplicationCommands",
+      "RequestToSpeak", "CreatePublicThreads", "CreatePrivateThreads", "UseExternalStickers",
+      "SendMessagesInThreads", "UseEmbeddedActivities", "UseSoundboard", "CreateEvents",
+      "UseExternalSounds", "SendVoiceMessages", "SendPolls", "PinMessages"
+    ],
+    "everyone_note": "base permission ของ @everyone — คัดลอกจาก server อาสาประชาชน (27 perms) · การ gate community ทำที่ category overwrite (deny ViewChannel) ไม่ใช่ที่นี่",
+
     "staff": [
       {
         "default_name": "Admin",
@@ -90,14 +100,6 @@
         "discord_permissions": ["ManageMessages", "ManageThreads"]
       },
       {
-        "default_name": "ทีมสื่อ",
-        "color": "#E67E22",
-        "hoist": false,
-        "mentionable": true,
-        "rbac_permission": "editor",
-        "discord_permissions": ["ManageMessages", "ManageThreads", "AttachFiles", "EmbedLinks"]
-      },
-      {
         "default_name": "Moderator",
         "color": "#E74C3C",
         "hoist": false,
@@ -109,8 +111,8 @@
         ]
       },
       {
-        "default_name": "ทีมดูแลเคส",
-        "color": "#1ABC9C",
+        "default_name": "ทีมเรื่องร้องเรียน",
+        "color": null,
         "hoist": false,
         "mentionable": true,
         "rbac_permission": "caseworker",
@@ -123,13 +125,12 @@
       "default_name": "{{org_name}}",
       "color": "#FF6A13",
       "hoist": false,
-      "note": "ยศองค์กร — ติดหลังกรอก modal แนะนำตัวเท่านั้น (config_register.member_role_id) · ไม่ติดตอน join · ปลดล็อกหมวด {{org_name}}",
+      "note": "ยศองค์กร — ติดหลังกรอก modal แนะนำตัวเท่านั้น (config_register.member_role_id) · ไม่ติดตอน join · ปลดล็อกหมวด {{org_name}} · perm คัดลอกจาก role อาสาประชาชน (14 perms) — ที่เหลือได้จาก @everyone base อยู่แล้ว",
       "discord_permissions": [
-        "ViewChannel", "SendMessages", "AddReactions",
-        "ReadMessageHistory", "UseApplicationCommands",
-        "SendMessagesInThreads", "CreatePublicThreads",
-        "AttachFiles", "EmbedLinks", "ChangeNickname",
-        "UseExternalEmojis", "Connect", "Speak", "UseVAD"
+        "ViewChannel", "SendMessages", "Connect", "UseApplicationCommands",
+        "RequestToSpeak", "ManageEvents", "CreatePublicThreads", "CreatePrivateThreads",
+        "SendMessagesInThreads", "UseSoundboard", "CreateEvents", "UseExternalSounds",
+        "SendPolls", "PinMessages"
       ]
     },
 
@@ -154,7 +155,8 @@
           { "emoji": "✍️", "label": "ทีมคอนเทนต์" },
           { "emoji": "💻", "label": "ทีมไอที" },
           { "emoji": "⚖️", "label": "ทีมกฎหมาย" },
-          { "emoji": "📊", "label": "ทีมข้อมูล/นโยบาย" }
+          { "emoji": "📊", "label": "ทีมข้อมูล/นโยบาย" },
+          { "emoji": "📸", "label": "ทีมสื่อ" }
         ]
       }
     },

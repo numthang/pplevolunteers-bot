@@ -46,6 +46,8 @@ const LEGACY_ROLE_NAMES = [
   'ทีมกระบวนกร', 'ทีมตัดต่อ', 'ทีมช่างภาพ', 'ทีมนโยบาย', 'ทีมเทคโนโลยี', 'ทีมสื่อ',
   // skill v0.3 → v0.4 rename
   'ทีมกราฟิก',
+  // staff rename
+  'ทีมดูแลเคส',
 ];
 
 const subOrg = (s) => (typeof s === 'string' ? s.replaceAll('{{org_name}}', orgName) : s);
