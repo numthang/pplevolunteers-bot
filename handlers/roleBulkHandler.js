@@ -186,7 +186,7 @@ async function handleRoleRecoverModal(interaction) {
   await guild.roles.fetch();
 
   const raw = interaction.fields.getTextInputValue('role_names');
-  const names = raw.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+  const names = raw.split(/[\n,]+/).map(s => s.trim().replace(/^@/, '')).filter(Boolean);
 
   if (names.length === 0) {
     return interaction.editReply({ content: '❌ ไม่พบชื่อ role ในช่องที่ใส่มา' });
