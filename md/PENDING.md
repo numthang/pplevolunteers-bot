@@ -312,6 +312,31 @@
 
 ---
 
+## 🛡️ Anti-Spam — Honeypot Channel (แทน Wick quarantine) — คุยไว้ 2026-07-05
+
+> ที่มา: Wick quarantine ถอด role หมดเวลา sensitivity สูง → งง ตั้งค่าไม่ถูก ตอนนี้ quarantine ทำ manual เองอยู่แล้ว อยากได้ระบบ auto ที่ไม่ต้องเฝ้าห้อง
+
+**แนวคิด:** สร้างห้องซ่อน (honeypot) ที่คนจริงมองไม่เห็น (deny "View Channel" ให้ role สมาชิกทั่วไป) — ใครก็ตามที่โพสต์ในห้องนี้ ถือว่าไม่ใช่คนจริงแน่นอน (ต่างจาก anti-spam ทั่วไปที่เดาจาก rate/pattern มี false-positive)
+
+**จับได้ 2 เคส:**
+1. สแปมบอท/self-bot ที่ join แล้วยิงรัวทุกห้องที่ token มัน permission ส่งได้ (ไม่ได้เลือกว่าคนคุยจริงไหม)
+2. Account staff/admin ที่โดนแฮค — สคริปต์ยิงด้วย permission เดิมของ role ที่ถืออยู่ (เช่น `Administrator`) ซึ่ง **bypass channel overwrite ทุกอัน** → เห็น/โพสต์ห้องที่คนจริงมองไม่เห็นได้
+
+**⚠️ จุดสำคัญที่ทำผิดพลาดง่าย:** ต้อง deny view เฉพาะ role สมาชิกทั่วไป (interest/skill/province role) ห้าม deny @everyone/role พื้นฐานที่ได้ตอน join ใหม่ ไม่งั้น raid-bot ที่เพิ่ง join จะมองไม่เห็นห้องไปด้วย (permission บล็อกตั้งแต่ API level → ไม่มี event ให้จับเลย)
+
+**เคาะแล้ว:**
+- Admin สร้างห้อง honeypot เอง (ตั้งชื่อ/permission เอง) + ตั้ง channel_id ผ่าน `/panel` (bot เก็บ config อย่างเดียว ไม่ auto-create ห้อง)
+
+**ยังไม่เคาะ:**
+- Action เมื่อมีคนโพสต์ในห้อง — ban ทันที vs timeout + แจ้งเตือน mod ก่อน
+- เก็บ config ที่ไหน (น่าจะ `dc_guild_config` key ใหม่ เช่น `honeypot_channel_id` + `honeypot_action` ตาม pattern เดิม — ยังไม่ยืนยัน)
+- listener: น่าจะ hook `messageCreate` เช็ค `message.channel.id === honeypotChannelId` แล้ว action ตาม config (ยังไม่ได้ออกแบบ error handling/logging)
+- user (เจ้าของ) ยังไม่เข้าใจ permission mechanism ทั้งหมด 100% — ต้องอธิบายซ้ำ/ทดสอบจริงตอน implement
+
+**สถานะ:** แค่จดไว้ ยังไม่ implement — user จะไปทำต่อบนเครื่อง Linux (ไม่ถนัดทำงานบน Mac)
+
+---
+
 ## 🔗 References
 
 - [addyosmani/agent-skills](https://github.com/addyosmani/agent-skills) — Production-grade engineering skills for AI coding agents
