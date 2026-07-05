@@ -14,6 +14,7 @@ const { getSetting } = require('../db/settings');
 const { getUserSetting, setUserSetting, deleteUserSetting } = require('../db/userConfig');
 const { upsertMemberFromDiscord, syncMemberRoles } = require('../db/members');
 const { sendSms, smsConfigured, normalizePhone } = require('../services/sms');
+const { parseSetting } = require('../utils/parseSetting');
 
 const OTP_TTL_MS         = 5 * 60 * 1000;
 const MAX_ATTEMPTS       = 5;
@@ -200,14 +201,14 @@ async function handleVerifyOtpSubmit(interaction) {
   // ผูก binding — unique (guild_id, member_id) กันสองบัญชี claim รายชื่อเดียวกัน
   try {
     let { rowCount } = await pool.query(
-      'UPDATE dc_members SET member_id = $1, phone = $2 WHERE guild_id = $3 AND discord_id = $4',
+      'UPDATE dc_members SET member_id = $1, phone = $2, phone_verified_at = NOW() WHERE guild_id = $3 AND discord_id = $4',
       [session.source_id, session.phone, guildId, discordId]
     );
     if (rowCount === 0) {
       // row ยังไม่มี (sync พลาด) → สร้างจาก interaction.member ก่อน
       await upsertMemberFromDiscord(interaction.member);
       ({ rowCount } = await pool.query(
-        'UPDATE dc_members SET member_id = $1, phone = $2 WHERE guild_id = $3 AND discord_id = $4',
+        'UPDATE dc_members SET member_id = $1, phone = $2, phone_verified_at = NOW() WHERE guild_id = $3 AND discord_id = $4',
         [session.source_id, session.phone, guildId, discordId]
       ));
     }
@@ -224,10 +225,7 @@ async function handleVerifyOtpSubmit(interaction) {
   await deleteUserSetting(discordId, key);
 
   // ติดยศ (member_role เดียวกับ register panel) — fail ต้องบอก user เพราะยศคือผลลัพธ์หลักของ flow นี้
-  let regConfig = await getSetting(guildId, 'config_register');
-  if (typeof regConfig === 'string') {
-    try { regConfig = JSON.parse(regConfig); } catch { regConfig = {}; }
-  }
+  const regConfig = parseSetting(await getSetting(guildId, 'config_register'));
   let roleNote = '';
   if (regConfig?.member_role_id) {
     const ok = await interaction.member.roles.add(regConfig.member_role_id)

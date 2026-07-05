@@ -1,7 +1,7 @@
 'use client'
 import { signIn } from 'next-auth/react'
 import { useSearchParams } from 'next/navigation'
-import { Suspense, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import Image from 'next/image'
 import { startAuthentication } from '@simplewebauthn/browser'
 
@@ -30,6 +30,56 @@ function LoginForm() {
   const errorKey      = searchParams.get('error') || ''
   const [busy, setBusy]     = useState(false)
   const [pkError, setPkError] = useState(null)
+
+  // Phone OTP login
+  const [phoneOpen, setPhoneOpen]   = useState(false)
+  const [phoneStep, setPhoneStep]   = useState('phone') // 'phone' | 'otp'
+  const [phone, setPhone]           = useState('')
+  const [otp, setOtp]               = useState('')
+  const [phoneError, setPhoneError] = useState(null)
+  const [countdown, setCountdown]   = useState(0)
+
+  useEffect(() => {
+    if (countdown <= 0) return
+    const t = setInterval(() => setCountdown(c => c - 1), 1000)
+    return () => clearInterval(t)
+  }, [countdown > 0])
+
+  async function requestOtp(e) {
+    e.preventDefault()
+    setBusy(true); setPhoneError(null)
+    try {
+      const res = await fetch('/api/auth/phone/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone }),
+      })
+      if (!res.ok) throw new Error((await res.json()).error)
+      setPhoneStep('otp')
+      setCountdown(60)
+    } catch (err) {
+      setPhoneError(err.message || 'ไม่สำเร็จ กรุณาลองใหม่')
+    }
+    setBusy(false)
+  }
+
+  async function verifyOtp(e) {
+    e.preventDefault()
+    setBusy(true); setPhoneError(null)
+    try {
+      const res = await fetch('/api/auth/phone/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, otp }),
+      })
+      if (!res.ok) throw new Error((await res.json()).error)
+      const { nonce } = await res.json()
+      await signIn('phone', { nonce, callbackUrl })
+    } catch (err) {
+      setPhoneError(err.message || 'ไม่สำเร็จ กรุณาลองใหม่')
+    }
+    setBusy(false)
+  }
 
   async function loginWithPasskey() {
     setBusy(true); setPkError(null)
@@ -119,6 +169,77 @@ function LoginForm() {
           />
 
           {pkError && <p className="text-xs text-red-500 dark:text-red-400 text-center">{pkError}</p>}
+
+          <ProviderButton
+            onClick={() => { setPhoneOpen(o => !o); setPhoneError(null) }}
+            label="เข้าด้วยเบอร์มือถือ (SMS OTP)"
+            icon={
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" stroke="currentColor" className="text-warm-400 dark:text-disc-muted">
+                <rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/>
+              </svg>
+            }
+          />
+
+          {phoneOpen && (
+            phoneStep === 'phone' ? (
+              <form onSubmit={requestOtp} className="w-full flex flex-col gap-2.5">
+                <input
+                  type="tel"
+                  inputMode="tel"
+                  value={phone}
+                  onChange={e => setPhone(e.target.value)}
+                  placeholder="เบอร์มือถือ เช่น 0812345678"
+                  required
+                  className="w-full h-11 px-3 text-base rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text"
+                />
+                <button
+                  type="submit"
+                  disabled={busy}
+                  className="w-full bg-teal hover:opacity-90 text-white rounded-lg text-base font-medium px-4 py-2 disabled:opacity-40"
+                >
+                  {busy ? 'กำลังส่ง...' : 'ส่งรหัส OTP'}
+                </button>
+                <p className="text-warm-500 dark:text-disc-muted text-xs text-center">
+                  ใช้ได้เฉพาะเบอร์ที่ยืนยันตัวตนผ่าน Discord ไว้แล้ว
+                </p>
+              </form>
+            ) : (
+              <form onSubmit={verifyOtp} className="w-full flex flex-col gap-2.5">
+                <p className="text-warm-900 dark:text-disc-text text-sm text-center">
+                  ถ้าเบอร์นี้อยู่ในระบบ จะได้รับ SMS รหัส 6 หลักภายใน 1 นาที
+                </p>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  value={otp}
+                  onChange={e => setOtp(e.target.value)}
+                  placeholder="รหัส 6 หลัก"
+                  minLength={6}
+                  maxLength={6}
+                  required
+                  className="w-full h-11 px-3 text-base rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text text-center tracking-widest"
+                />
+                <button
+                  type="submit"
+                  disabled={busy}
+                  className="w-full bg-teal hover:opacity-90 text-white rounded-lg text-base font-medium px-4 py-2 disabled:opacity-40"
+                >
+                  {busy ? 'กำลังตรวจสอบ...' : 'เข้าสู่ระบบ'}
+                </button>
+                <div className="flex justify-between text-xs">
+                  <button type="button" onClick={() => { setPhoneStep('phone'); setOtp(''); setPhoneError(null) }} className="text-warm-500 dark:text-disc-muted hover:underline">
+                    ← เปลี่ยนเบอร์
+                  </button>
+                  <button type="button" onClick={requestOtp} disabled={busy || countdown > 0} className="text-warm-500 dark:text-disc-muted hover:underline disabled:opacity-40 disabled:no-underline">
+                    {countdown > 0 ? `ขอรหัสใหม่ได้ใน ${countdown} วิ` : 'ขอรหัสใหม่'}
+                  </button>
+                </div>
+              </form>
+            )
+          )}
+
+          {phoneError && <p className="text-xs text-red-500 dark:text-red-400 text-center">{phoneError}</p>}
         </div>
 
         <p className="mt-8 text-warm-400 dark:text-disc-muted text-xs text-center">

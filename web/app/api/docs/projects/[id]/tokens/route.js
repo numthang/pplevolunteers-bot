@@ -6,8 +6,7 @@ import { regenerateToken, getDocProjectById } from '@/db/docs/projects.js'
 
 /**
  * POST /api/docs/projects/[id]/tokens
- * Body: { type: 'pdf' | 'export' }
- * สร้าง token ใหม่ + ตั้ง expiry 6 เดือน
+ * สร้าง project_token ใหม่ + ตั้ง expiry 6 เดือน (token เดียวใช้ทั้ง receipt/registration)
  */
 export async function POST(req, { params }) {
   const session = await getServerSession(authOptions)
@@ -16,13 +15,10 @@ export async function POST(req, { params }) {
   if (!canManageDocs(access)) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
   const { id } = await params
-  const { type } = await req.json()
-  if (type !== 'pdf' && type !== 'export') return Response.json({ error: 'type must be pdf or export' }, { status: 400 })
-
   const project = await getDocProjectById(id)
   if (!project) return Response.json({ error: 'Not found' }, { status: 404 })
 
-  const result = await regenerateToken(id, type)
+  const result = await regenerateToken(id)
   return Response.json(result)
 }
 
@@ -37,10 +33,9 @@ export async function GET(req, { params }) {
   const project = await getDocProjectById(id)
   if (!project) return Response.json({ error: 'Not found' }, { status: 404 })
 
-  // auto-create tokens if missing
-  let { export_token, export_token_expires, pdf_token, pdf_token_expires } = project
-  if (!export_token) { const r = await regenerateToken(id, 'export'); export_token = r.token; export_token_expires = r.expires }
-  if (!pdf_token)    { const r = await regenerateToken(id, 'pdf');    pdf_token    = r.token; pdf_token_expires    = r.expires }
+  // auto-create token if missing
+  let { project_token, project_token_expires } = project
+  if (!project_token) { const r = await regenerateToken(id); project_token = r.token; project_token_expires = r.expires }
 
-  return Response.json({ export_token, export_token_expires, pdf_token, pdf_token_expires })
+  return Response.json({ project_token, project_token_expires })
 }

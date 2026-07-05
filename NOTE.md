@@ -1,7 +1,6 @@
 PENDING
 - ทำระบบจัดการโครงการ กันต่อไหม 
 
-
 End of the Day
 วันที่ 1-3 ผมทำอะไรบ้าง ขอรายละเอียดแบบ non-technichal อ่านแล้วคนอื่นเข้าใจขอ format แบบนี้
 - [วันที่] [เดือน] xxxxxxxxxxxxxxxxxxxxxxxxx, xxxx, xxxxx

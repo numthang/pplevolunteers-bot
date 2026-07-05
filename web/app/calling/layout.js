@@ -1,4 +1,4 @@
-export const metadata = { title: 'Calling' }
+export const metadata = { title: { template: '%s — Calling', default: 'Calling' } }
 
 export default function CallingLayout({ children }) {
   return (

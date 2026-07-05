@@ -1,3 +1,5 @@
+export const metadata = { title: 'Campaigns' }
+
 import { getSession } from '@/lib/auth.js'
 import { redirect } from 'next/navigation'
 import { Suspense } from 'react'

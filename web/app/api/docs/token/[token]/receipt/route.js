@@ -12,7 +12,7 @@ export async function GET(req, { params }) {
   const { token } = await params
   if (!token || token.length !== 8) return new Response('Invalid token', { status: 400 })
 
-  const project = await getProjectByToken('export', token)
+  const project = await getProjectByToken(token)
   if (!project) return new Response('ลิงก์หมดอายุหรือไม่ถูกต้อง', { status: 410 })
 
   const onlySigned = new URL(req.url).searchParams.get('status') !== 'all'

@@ -73,7 +73,6 @@ export default function DocProjectView({ project: initialProject, initialEntries
   const [attLoaded, setAttLoaded]       = useState(false)
   const [attUploading, setAttUploading] = useState(false)
   const [tokens, setTokens]             = useState(null)
-  const [copiedKey, setCopiedKey]       = useState(null)
   const [previewIdx, setPreviewIdx]     = useState(null)
   const attInputRef = useRef(null)
 
@@ -154,37 +153,14 @@ export default function DocProjectView({ project: initialProject, initialEntries
     if (res.ok) setAttachments(prev => prev.filter(a => a.id !== attId))
   }
 
-  async function regenerateToken(type) {
+  async function regenerateToken() {
     if (!project?.id) return
-    const res = await fetch(`/api/docs/projects/${project.id}/tokens`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type }),
-    })
+    if (!confirm('สร้างลิงก์ใหม่? ลิงก์เก่าทั้งสองจะใช้ไม่ได้ทันที')) return
+    const res = await fetch(`/api/docs/projects/${project.id}/tokens`, { method: 'POST' })
     if (res.ok) {
       const data = await res.json()
-      setTokens(prev => ({
-        ...prev,
-        [`${type}_token`]: data.token,
-        [`${type}_token_expires`]: data.expires,
-      }))
+      setTokens({ project_token: data.token, project_token_expires: data.expires })
     }
-  }
-
-  async function regenerateBothTokens() {
-    if (!project?.id) return
-    if (!confirm('สร้างลิงก์ใหม่ทั้งสอง? ลิงก์เก่าจะใช้ไม่ได้ทันที')) return
-    await Promise.all([regenerateToken('pdf'), regenerateToken('export')])
-  }
-
-  function copyToken(type) {
-    const token = tokens?.[`${type}_token`]
-    if (!token) return
-    const suffix = type === 'pdf' ? 'registration' : 'receipt'
-    const url = `${window.location.origin}/dl/${token}/${suffix}`
-    navigator.clipboard.writeText(url)
-    setCopiedKey(type)
-    setTimeout(() => setCopiedKey(null), 2000)
   }
 
   async function saveBudget() {
@@ -463,24 +439,24 @@ export default function DocProjectView({ project: initialProject, initialEntries
             <div className="flex flex-col items-end gap-1">
               <div className="flex gap-2">
                 <a
-                  href={tokens?.export_token ? `/api/docs/token/${tokens.export_token}/receipt` : undefined}
+                  href={tokens?.project_token ? `/api/docs/token/${tokens.project_token}/receipt` : undefined}
                   target="_blank" rel="noopener noreferrer"
-                  aria-disabled={!tokens?.export_token}
-                  className={`inline-flex items-center gap-2 px-4 py-2.5 bg-orange text-white text-base font-semibold rounded-lg transition ${tokens?.export_token ? 'hover:bg-orange-light' : 'opacity-50 pointer-events-none'}`}
+                  aria-disabled={!tokens?.project_token}
+                  className={`inline-flex items-center gap-2 px-4 py-2.5 bg-orange text-white text-base font-semibold rounded-lg transition ${tokens?.project_token ? 'hover:bg-orange-light' : 'opacity-50 pointer-events-none'}`}
                 >
                   ใบสำคัญรับเงิน
                 </a>
                 <a
-                  href={tokens?.pdf_token ? `/api/docs/token/${tokens.pdf_token}/registration` : undefined}
+                  href={tokens?.project_token ? `/api/docs/token/${tokens.project_token}/registration` : undefined}
                   target="_blank" rel="noopener noreferrer"
-                  aria-disabled={!tokens?.pdf_token}
-                  className={`inline-flex items-center gap-2 px-4 py-2.5 border border-warm-300 dark:border-disc-border text-warm-700 dark:text-disc-text text-base font-semibold rounded-lg transition ${tokens?.pdf_token ? 'hover:bg-warm-50 dark:hover:bg-disc-hover' : 'opacity-50 pointer-events-none'}`}
+                  aria-disabled={!tokens?.project_token}
+                  className={`inline-flex items-center gap-2 px-4 py-2.5 border border-warm-300 dark:border-disc-border text-warm-700 dark:text-disc-text text-base font-semibold rounded-lg transition ${tokens?.project_token ? 'hover:bg-warm-50 dark:hover:bg-disc-hover' : 'opacity-50 pointer-events-none'}`}
                 >
                   แนบท้าย 3
                 </a>
               </div>
               {project && (
-                <button onClick={regenerateBothTokens} className="flex items-center gap-1 text-xs text-warm-400 dark:text-disc-muted hover:text-orange transition">
+                <button onClick={regenerateToken} className="flex items-center gap-1 text-xs text-warm-400 dark:text-disc-muted hover:text-orange transition">
                   <RefreshCw size={11} /> สร้างลิงก์ใหม่
                 </button>
               )}
@@ -600,7 +576,7 @@ export default function DocProjectView({ project: initialProject, initialEntries
             <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-4 space-y-4">
 
               {/* ลิงก์ ACT */}
-              {(actEventId || tokens?.pdf_token) && (
+              {(actEventId || tokens?.project_token) && (
                 <div className="space-y-1.5">
                   
                   {actEventId && (
@@ -609,8 +585,8 @@ export default function DocProjectView({ project: initialProject, initialEntries
                       พิมพ์แนบท้าย 3 (ใบรายชื่อเปล่า) ↗
                     </a>
                   )}
-                  {tokens?.pdf_token && (
-                    <a href={`/api/docs/token/${tokens.pdf_token}/registration`} target="_blank" rel="noopener noreferrer"
+                  {tokens?.project_token && (
+                    <a href={`/api/docs/token/${tokens.project_token}/registration`} target="_blank" rel="noopener noreferrer"
                       className="flex items-center gap-1.5 text-orange hover:underline font-medium text-sm">
                       พิมพ์แนบท้าย 3 (มีลายเซ็นแล้ว) ↗
                     </a>

@@ -842,3 +842,30 @@ UPDATE dc_guild_config
 SET value = value::jsonb || '["finance"]'::jsonb, updated_at = CURRENT_TIMESTAMP
 WHERE guild_id = '1340903354037178410' AND "key" = 'enabled_features'
   AND NOT value::jsonb ? 'finance';
+
+-- 2026-07-05: phone OTP login บนเว็บ — เบอร์ใช้เป็น login credential ได้เฉพาะที่ verify ผ่าน OTP แล้ว
+-- verifyHandler เซ็ตตอน OTP ผ่าน · user แก้เบอร์เองจากหน้า profile → reset เป็น NULL
+ALTER TABLE dc_members ADD COLUMN IF NOT EXISTS phone_verified_at TIMESTAMPTZ NULL;
+
+-- 2026-07-05: Docs token consolidation — ยุบ pdf_token/export_token เหลือ project_token เดียว
+-- แยกประเภทเอกสารด้วย URL path (/receipt, /registration) · backfill จาก export_token
+-- → ลิงก์ receipt เก่าใช้ได้ต่อ, ลิงก์ registration เก่าต้อง copy ใหม่
+ALTER TABLE docs_projects
+  ADD COLUMN IF NOT EXISTS project_token         VARCHAR(8) NULL,
+  ADD COLUMN IF NOT EXISTS project_token_expires TIMESTAMP  NULL;
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns
+             WHERE table_name = 'docs_projects' AND column_name = 'export_token') THEN
+    UPDATE docs_projects
+       SET project_token = export_token, project_token_expires = export_token_expires
+     WHERE project_token IS NULL AND export_token IS NOT NULL;
+  END IF;
+END $$;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_docs_projects_project_token
+  ON docs_projects (project_token) WHERE project_token IS NOT NULL;
+ALTER TABLE docs_projects
+  DROP COLUMN IF EXISTS export_token,
+  DROP COLUMN IF EXISTS export_token_expires,
+  DROP COLUMN IF EXISTS pdf_token,
+  DROP COLUMN IF EXISTS pdf_token_expires;

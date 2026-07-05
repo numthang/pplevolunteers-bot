@@ -58,14 +58,11 @@ export async function getDocProjectByEventId(actEventCacheId, guildId) {
 
 /** upsert: สร้าง docs_project ถ้ายังไม่มี, return project id */
 export async function upsertDocProject({ guildId, actEventCacheId, isMobile, participantCount, budget, allowedItems, projectName, createdBy }) {
-  const exportToken = genToken()
-  const pdfToken    = genToken()
-  const expires     = sixMonthsFromNow()
   const { rows } = await pool.query(
     `INSERT INTO docs_projects
        (guild_id, act_event_cache_id, is_mobile, participant_count, budget, allowed_items, project_name, created_by,
-        export_token, export_token_expires, pdf_token, pdf_token_expires)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        project_token, project_token_expires)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
      ON CONFLICT (guild_id, act_event_cache_id) DO UPDATE SET
        is_mobile         = COALESCE(EXCLUDED.is_mobile,         docs_projects.is_mobile),
        participant_count = COALESCE(EXCLUDED.participant_count, docs_projects.participant_count),
@@ -75,7 +72,7 @@ export async function upsertDocProject({ guildId, actEventCacheId, isMobile, par
      RETURNING id`,
     [guildId, actEventCacheId, isMobile ?? false, participantCount ?? null, budget ?? null,
      JSON.stringify(allowedItems ?? []), projectName ?? null, createdBy,
-     exportToken, expires, pdfToken, expires]
+     genToken(), sixMonthsFromNow()]
   )
   return rows[0].id
 }
@@ -95,17 +92,14 @@ export async function getDocProjectById(id) {
 }
 
 export async function createDocProject({ guildId, actEventCacheId, isMobile, participantCount, budget, allowedItems, projectName, createdBy }) {
-  const exportToken = genToken()
-  const pdfToken    = genToken()
-  const expires     = sixMonthsFromNow()
   const { rows } = await pool.query(
     `INSERT INTO docs_projects
        (guild_id, act_event_cache_id, is_mobile, participant_count, budget, allowed_items, project_name, created_by,
-        export_token, export_token_expires, pdf_token, pdf_token_expires)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        project_token, project_token_expires)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
      RETURNING id`,
     [guildId, actEventCacheId, isMobile ?? false, participantCount, budget, JSON.stringify(allowedItems ?? []), projectName ?? null, createdBy,
-     exportToken, expires, pdfToken, expires]
+     genToken(), sixMonthsFromNow()]
   )
   return rows[0].id
 }
@@ -122,27 +116,23 @@ export async function getActEventById(actEventCacheId, guildId) {
   return rows[0] || null
 }
 
-export async function getProjectByToken(tokenType, token) {
-  const col = tokenType === 'pdf' ? 'pdf_token' : 'export_token'
-  const exp = tokenType === 'pdf' ? 'pdf_token_expires' : 'export_token_expires'
+export async function getProjectByToken(token) {
   const { rows } = await pool.query(
     `SELECT p.*, e.name AS event_name, e.province,
             TO_CHAR(e.event_date, 'YYYY-MM-DD"T"HH24:MI') AS event_date
      FROM docs_projects p
      JOIN act_event_cache e ON e.id = p.act_event_cache_id
-     WHERE p.${col} = $1 AND p.${exp} > NOW()`,
+     WHERE p.project_token = $1 AND p.project_token_expires > NOW()`,
     [token]
   )
   return rows[0] || null
 }
 
-export async function regenerateToken(projectId, tokenType) {
-  const col = tokenType === 'pdf' ? 'pdf_token' : 'export_token'
-  const exp = tokenType === 'pdf' ? 'pdf_token_expires' : 'export_token_expires'
+export async function regenerateToken(projectId) {
   const token = genToken()
   const expires = sixMonthsFromNow()
   await pool.query(
-    `UPDATE docs_projects SET ${col} = $2, ${exp} = $3 WHERE id = $1`,
+    `UPDATE docs_projects SET project_token = $2, project_token_expires = $3 WHERE id = $1`,
     [projectId, token, expires]
   )
   return { token, expires }
