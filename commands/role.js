@@ -6,6 +6,7 @@ const {
   TextInputBuilder,
   TextInputStyle,
   ActionRowBuilder,
+  MessageFlags,
 } = require('discord.js');
 const { handleRoleMembersCmd } = require('../handlers/roleBulkHandler');
 
@@ -43,15 +44,36 @@ module.exports = {
         .addRoleOption(opt => opt.setName('role3').setDescription('Role ที่ 3').setRequired(false))
         .addRoleOption(opt => opt.setName('role4').setDescription('Role ที่ 4').setRequired(false))
         .addRoleOption(opt => opt.setName('role5').setDescription('Role ที่ 5').setRequired(false))
+    )
+
+    .addSubcommand(sub =>
+      sub.setName('recover')
+        .setDescription('คืน role หลายอันให้สมาชิกคนเดียว — Admin เท่านั้น')
+        .addUserOption(opt => opt.setName('user').setDescription('สมาชิกที่จะคืน role ให้').setRequired(true))
     ),
 
   async execute(interaction) {
     const sub = interaction.options.getSubcommand();
 
+    // กัน Moderator แจก/ถอด role ที่สูงกว่า role สูงสุดของตัวเอง (privilege escalation)
+    function findTooHighRoles(roles) {
+      if (interaction.guild.ownerId === interaction.user.id) return [];
+      const myTop = interaction.member.roles.highest.position;
+      return roles.filter(r => r.position >= myTop);
+    }
+
     if (sub === 'add') {
       const roles = ['role1','role2','role3','role4','role5']
         .map(k => interaction.options.getRole(k))
         .filter(Boolean);
+
+      const tooHigh = findTooHighRoles(roles);
+      if (tooHigh.length > 0) {
+        return interaction.reply({
+          content: `❌ คุณไม่มีสิทธิ์แจก role ที่สูงกว่าหรือเท่ากับ role สูงสุดของคุณเอง: ${tooHigh.map(r => `**${r.name}**`).join(', ')}`,
+          flags: MessageFlags.Ephemeral,
+        });
+      }
 
       const modal = new ModalBuilder()
         .setCustomId(`role_add_modal:${roles.map(r => r.id).join(',')}`)
@@ -75,6 +97,14 @@ module.exports = {
         .map(k => interaction.options.getRole(k))
         .filter(Boolean);
 
+      const tooHigh = findTooHighRoles(roles);
+      if (tooHigh.length > 0) {
+        return interaction.reply({
+          content: `❌ คุณไม่มีสิทธิ์ถอด role ที่สูงกว่าหรือเท่ากับ role สูงสุดของคุณเอง: ${tooHigh.map(r => `**${r.name}**`).join(', ')}`,
+          flags: MessageFlags.Ephemeral,
+        });
+      }
+
       const modal = new ModalBuilder()
         .setCustomId(`role_remove_modal:${roles.map(r => r.id).join(',')}`)
         .setTitle(roles.length === 1 ? `ถอด Role: ${roles[0].name}` : `ถอด ${roles.length} Roles`);
@@ -94,6 +124,30 @@ module.exports = {
 
     if (sub === 'list') {
       return handleRoleMembersCmd(interaction);
+    }
+
+    if (sub === 'recover') {
+      if (!interaction.memberPermissions.has(PermissionFlagsBits.Administrator)) {
+        return interaction.reply({ content: '❌ ต้องมีสิทธิ์ **Administrator** ถึงจะคืน role ได้ครับ', flags: MessageFlags.Ephemeral });
+      }
+
+      const target = interaction.options.getUser('user');
+
+      const modal = new ModalBuilder()
+        .setCustomId(`role_recover_modal:${target.id}`)
+        .setTitle(`คืน Role: ${target.username}`);
+
+      const input = new TextInputBuilder()
+        .setCustomId('role_names')
+        .setLabel('ชื่อ Role (คั่น , หรือ Enter)')
+        .setStyle(TextInputStyle.Paragraph)
+        .setPlaceholder('ทีมกระบวนกร\nทีมนครปฐม\nSupervisor')
+        .setRequired(true)
+        .setMaxLength(4000);
+
+      modal.addComponents(new ActionRowBuilder().addComponents(input));
+      await interaction.showModal(modal);
+      return;
     }
   },
 };

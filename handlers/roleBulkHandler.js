@@ -173,4 +173,57 @@ async function handleRoleRemoveModal(interaction) {
   return interaction.editReply({ content: lines.join('\n') });
 }
 
-module.exports = { handleRoleAddModal, handleRoleRemoveModal, handleRoleMembersCmd };
+async function handleRoleRecoverModal(interaction) {
+  const userId = interaction.customId.split(':')[1];
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+  const guild = interaction.guild;
+  const member = await guild.members.fetch(userId).catch(() => null);
+  if (!member) {
+    return interaction.editReply({ content: '❌ ไม่พบสมาชิกคนนี้ในเซิร์ฟเวอร์' });
+  }
+
+  await guild.roles.fetch();
+
+  const raw = interaction.fields.getTextInputValue('role_names');
+  const names = raw.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+
+  if (names.length === 0) {
+    return interaction.editReply({ content: '❌ ไม่พบชื่อ role ในช่องที่ใส่มา' });
+  }
+
+  const found = [];
+  const missing = [];
+  for (const name of names) {
+    const role = guild.roles.cache.find(r => r.name === name);
+    if (role) found.push(role); else missing.push(name);
+  }
+
+  const alreadyHas = found.filter(r => member.roles.cache.has(r.id));
+  const toAdd      = found.filter(r => !member.roles.cache.has(r.id));
+
+  if (toAdd.length === 0) {
+    return interaction.editReply({
+      content: [
+        `ℹ️ ${member.user.username} มี role ที่ระบุครบอยู่แล้ว`,
+        missing.length > 0 ? `⚠️ ไม่พบ role ในเซิร์ฟเวอร์: \`${missing.join(', ')}\`` : null,
+      ].filter(Boolean).join('\n'),
+    });
+  }
+
+  try {
+    await member.roles.add(toAdd, `role recover โดย ${interaction.user.tag}`);
+  } catch (err) {
+    return interaction.editReply({ content: `❌ เพิ่ม role ไม่สำเร็จ: ${err.message}` });
+  }
+
+  const lines = [
+    `✅ คืน role ให้ ${member.user.username} สำเร็จ ${toAdd.length}/${found.length}: ${toAdd.map(r => `**${r.name}**`).join(', ')}`,
+    alreadyHas.length > 0 ? `ℹ️ มีอยู่แล้ว ไม่แตะซ้ำ: ${alreadyHas.map(r => r.name).join(', ')}` : null,
+    missing.length > 0    ? `⚠️ ไม่พบ role ในเซิร์ฟเวอร์: \`${missing.join(', ')}\`` : null,
+  ].filter(Boolean);
+
+  return interaction.editReply({ content: lines.join('\n') });
+}
+
+module.exports = { handleRoleAddModal, handleRoleRemoveModal, handleRoleMembersCmd, handleRoleRecoverModal };

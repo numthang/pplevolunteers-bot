@@ -307,6 +307,11 @@
   - `project_token` ตัวเดียวแทน `pdf_token`/`export_token` · แยกเอกสารด้วย path `/receipt` vs `/registration`
   - **ก่อน deploy prod:** รัน `migration.sql` แล้ว restart ทันที (โค้ดเก่า INSERT column เก่า — window ไม่กี่วินาที) · backfill จาก `export_token` → **ลิงก์ registration (แนบท้าย 3) ที่แชร์ไปแล้วพัง ต้อง copy ใหม่** ลิงก์ receipt เดิมใช้ได้ต่อ
 
+### 🐛 Bug — Internal Server Error ตอนสร้าง bill (แจ้งไว้ 2026-07-05, ยังไม่ repro)
+- เจอ error ตอนกำลังจะสร้าง "bill" (ใบสำคัญรับเงิน/entry ใน docs) — ยังไม่มี stack trace/ขั้นตอน repro ชัดเจน
+- **ต้องถาม/เก็บเพิ่มตอนสะดวก:** สร้าง project ใหม่หรือเพิ่ม entry ในโปรเจกต์เดิม, item_type ไหน, error ตรง client (toast) หรือเห็นใน server log
+- เช็ค `logs/` บน prod/local ตอน repro ได้ — ยังไม่เจอ log ที่ตรงช่วงเวลาตอนไล่หาไว้ครั้งก่อน
+
 ---
 
 ## 🤖 RAG AI — Discord Forum Search

@@ -46,7 +46,7 @@ const smsWebhook  = require('./services/smsWebhook');
 const { upsertGuilds } = require('./db/guilds');
 const { syncGuildRolesCatalog, upsertGuildRole, deleteGuildRole, invalidateGuildRoleCache } = require('./db/guildRoles');
 const { handleSlipMessage } = require('./services/financeOCR');
-const { handleRoleAddModal, handleRoleRemoveModal } = require('./handlers/roleBulkHandler');
+const { handleRoleAddModal, handleRoleRemoveModal, handleRoleRecoverModal } = require('./handlers/roleBulkHandler');
 const { handleHandraiseButton, handleHandraiseVoiceUpdate } = require('./handlers/handraiseHandler');
 const { buildRagContext } = require('./services/ragSearch');
 const { callAI, callAIWithHistory } = require('./services/aiSummarize');
@@ -153,6 +153,7 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.customId.startsWith('ai_thread_custom:'))         return handleAiThreadCustomModal(interaction);
     if (interaction.customId.startsWith('role_add_modal:'))           return handleRoleAddModal(interaction);
     if (interaction.customId.startsWith('role_remove_modal:'))        return handleRoleRemoveModal(interaction);
+    if (interaction.customId.startsWith('role_recover_modal:'))       return handleRoleRecoverModal(interaction);
     if (interaction.customId === 'modal_verify_phone')                return handleVerifyPhoneSubmit(interaction);
     if (interaction.customId === 'modal_verify_otp')                  return handleVerifyOtpSubmit(interaction);
     if (interaction.customId.startsWith('anon_submit:')) {
