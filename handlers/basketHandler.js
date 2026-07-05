@@ -601,6 +601,17 @@ function parseThaiDateTime(input) {
   return null;
 }
 
+// unix seconds → "16/05/2026 15:00" เวลาไทย (สำหรับแปะท้าย backlink ตอนตั้งเวลา)
+function formatScheduleThai(unixSec) {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Bangkok',
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  }).formatToParts(new Date(unixSec * 1000));
+  const p = Object.fromEntries(parts.map(x => [x.type, x.value]));
+  return `${p.day}/${p.month}/${p.year} ${p.hour}:${p.minute}`;
+}
+
 const retryRow = new ActionRowBuilder().addComponents(
   new ButtonBuilder().setCustomId('basket_retry').setLabel('✏️ แก้ไขใหม่').setStyle(ButtonStyle.Primary)
 );
@@ -684,7 +695,8 @@ async function processAndPost(interaction, state) {
         const fbProgress = msg => interaction.editReply({ content: msg }).catch(() => {});
         const fbRes = await postReelsToFacebook(state.guildId, interaction.user.id, videoItems[0].image_url, state.caption, fbProgress, state.group, scheduleTime);
         const fbLink = fbRes?.permalink ? ` · 🔗 [ดูโพสต์](${fbRes.permalink})` : '';
-        results.push(`✅ Facebook Reels${fbLink}`);
+        const fbSched = scheduleTime ? ` (⏰ ตั้งเวลา ${formatScheduleThai(scheduleTime)} น.)` : '';
+        results.push(`✅ Facebook Reels${fbLink}${fbSched}`);
       } catch (err) {
         results.push(`❌ Facebook Reels: ${err.message}`);
       }
@@ -787,7 +799,8 @@ async function processAndPost(interaction, state) {
         }
       }
       const fbLinks = fbUrl ? ` · 🔗 [ดูโพสต์](${fbUrl})` : '';
-      results.push(`✅ Facebook${fbLinks}`);
+      const fbSched = scheduleTime ? ` (⏰ ตั้งเวลา ${formatScheduleThai(scheduleTime)} น.)` : '';
+      results.push(`✅ Facebook${fbLinks}${fbSched}`);
     } catch (err) {
       results.push(`❌ Facebook: ${err.message}`);
     }
