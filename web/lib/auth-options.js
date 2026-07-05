@@ -8,6 +8,19 @@ import { findDiscordIdByProvider } from '@/db/userIdentities.js'
 
 const OAUTH_PROVIDERS = ['line', 'google']
 
+// Passkey / Phone OTP — verify endpoint ออก nonce ลง dc_user_config แล้ว client แลก session ผ่าน credentials
+const nonceAuthorize = (nonceKey) => async (credentials) => {
+  if (!credentials?.nonce) return null
+  const { rows } = await pool.query(
+    `DELETE FROM dc_user_config WHERE "key" = $1 AND value::text = to_json($2::text)::text
+     AND updated_at > NOW() - INTERVAL '2 minutes'
+     RETURNING discord_id`,
+    [nonceKey, credentials.nonce]
+  )
+  if (!rows[0]) return null
+  return { id: rows[0].discord_id, discordId: rows[0].discord_id }
+}
+
 async function loadMemberData(token) {
   try {
     const { rows } = await pool.query(
@@ -44,22 +57,18 @@ export const authOptions = {
       clientId:     process.env.GOOGLE_CLIENT_ID     || '',
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
     }),
-    // Passkey login — nonce ออกจาก /api/auth/passkey/login-verify แล้วใช้ credentials ต่อ
     CredentialsProvider({
       id: 'passkey',
       name: 'Passkey',
       credentials: { nonce: { type: 'text' } },
-      async authorize(credentials) {
-        if (!credentials?.nonce) return null
-        const { rows } = await pool.query(
-          `DELETE FROM dc_user_config WHERE "key" = $1 AND value::text = to_json($2::text)::text
-           AND updated_at > NOW() - INTERVAL '2 minutes'
-           RETURNING discord_id`,
-          ['passkey_nonce', credentials.nonce]
-        )
-        if (!rows[0]) return null
-        return { id: rows[0].discord_id, discordId: rows[0].discord_id }
-      },
+      authorize: nonceAuthorize('passkey_nonce'),
+    }),
+    // Phone OTP login — nonce ออกจาก /api/auth/phone/verify (เบอร์ verified ผ่าน Discord เท่านั้น)
+    CredentialsProvider({
+      id: 'phone',
+      name: 'Phone OTP',
+      credentials: { nonce: { type: 'text' } },
+      authorize: nonceAuthorize('phone_nonce'),
     }),
   ],
   callbacks: {
@@ -88,7 +97,7 @@ export const authOptions = {
         } else if (OAUTH_PROVIDERS.includes(account.provider)) {
           // lookup discordId จาก dc_user_identities
           token.discordId = await findDiscordIdByProvider(account.provider, profile.sub).catch(() => null)
-        } else if (account.provider === 'passkey') {
+        } else if (account.provider === 'passkey' || account.provider === 'phone') {
           // credentials authorize คืน user.discordId มาแล้ว
           token.discordId = user?.discordId || user?.id
         }

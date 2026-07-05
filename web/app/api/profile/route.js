@@ -70,6 +70,9 @@ export async function PATCH(req) {
     return Response.json({ error: 'No fields to update' }, { status: 400 })
   }
 
+  // เบอร์เป็น login credential (phone OTP login) — แก้เองจาก profile = ไม่ verified อีกต่อไป
+  if ('phone' in updates) updates.phone_verified_at = null
+
   updates.updated_at = new Date()
 
   const keys = Object.keys(updates)

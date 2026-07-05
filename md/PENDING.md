@@ -84,16 +84,18 @@
 - **ค้าง:** `./deploy.sh` (slash option ใหม่) · เทสต์ happy-path จริง (SMS ยิงจริง) · panel เก่าที่วางไว้แล้วต้อง `/panel register verify_phone:true` ใหม่ถึงได้ปุ่ม
 - **ค้าง:** import สมาชิก Amnesty เข้า `ngs_member_cache` (มี API sync หรือไฟล์ครั้งเดียว **ยังไม่เคาะ**)
 
+### 🆕 Phone OTP login (web) — implement เสร็จ local 2026-07-05 · ยังไม่ deploy prod
+- login เว็บด้วยเบอร์ + SMS OTP สำหรับสมาชิกที่ verify เบอร์ผ่าน Discord แล้ว (เข้า Discord ไม่ได้/ลืมรหัส) · session สิทธิ์เท่า Discord login
+- เบอร์เป็น credential เฉพาะ `phone_verified_at IS NOT NULL` (verifyHandler เซ็ต / แก้เบอร์เองจาก profile → reset) · endpoint ตอบ generic ทุกกรณีกัน enumeration · quota แชร์ `otp_quota` กับ bot
+- **ก่อน deploy prod:** รัน `migration.sql` (column `phone_verified_at`) · เทสต์ happy-path จริง (SMS ยิงจริง)
+- หมายเหตุ: สมาชิกที่ verify เบอร์ก่อน 2026-07-05 ไม่มี `phone_verified_at` ต้อง verify ใหม่ — prod ยังไม่กระทบ (verify_phone ยังไม่ deploy)
+
 **จังหวะ 2 (เลื่อน — เมื่อ org ต้องการ custom text field ต่างกันจริง):**
 - ระบบฟอร์ม dynamic: นิยามฟอร์มเก็บใน `dc_guild_config` key `register_form_fields` (json array — **ไม่ต้องมี table ใหม่**) + `dc_members.extra JSONB` สำหรับค่าที่ไม่มี column · ดู section "Custom Register Form"
 - modal สร้างสดจาก config · renderer dispatch ตาม type: text→modal(≤5 ช่อง), verified_phone→OTP flow, choice→picker เดิม (`dc_guild_roles`)
 - หน้า backoffice `/bot/forms` (pattern เดียวกับ `/bot/roles`) · `verify_phone` toggle จังหวะ 1 ถูกดูดเข้ามาเป็น field type `verified_phone`
 - เก็บ JSONB (ไม่ใช่ EAV) — PG query/index `extra->>'key'` ได้ · field common → เลื่อนเป็น native column
 - **web `/join/<slug>` + SMS blast** สำหรับกลุ่มที่ยังไม่มี Discord เลย (ต้องเขียน custom OAuth + `guilds.join` scope) · Magic Link email เป็น fallback
-
-### ⚠️ Multi-provider login — prod pending
-- v2.13.0 live แล้ว (Discord บังคับครั้งแรก แล้วผูก LINE/Google/Passkey ได้จาก profile)
-- **prod ยังต้อง:** เพิ่ม redirect URI `https://pplevolunteers.org/api/auth/callback/google` ใน Google Cloud Console + ตั้ง env `LINE_CLIENT_ID/SECRET`, `GOOGLE_CLIENT_ID/SECRET`, `PASSKEY_RP_ID`
 
 ---
 
@@ -301,7 +303,9 @@
 
 > รายละเอียดทั้งหมดอยู่ที่ [md/docs/DOCS.md](docs/DOCS.md) · shipped v2.15–v2.19: PDF pipeline, `docs_payers` role-based auto+override, security gate, ACT tab + attachment auto-crop, province filter, member_discord_id nullable, ระบบร่างหนังสือร้องเรียน (AI + PDF)
 
-- [ ] **Consolidate docs tokens เป็น token เดียว** — ตอนนี้ `docs_projects` มี 2 token (`pdf_token`/`export_token`) แยกกัน → เปลี่ยนเป็น `project_token` ตัวเดียว แยกเอกสารด้วย URL path: `/dl/[token]/receipt` vs `/dl/[token]/registration` · DB: ลบ 4 column เก่า + เพิ่ม 2 ใหม่ · แก้ ~5 ไฟล์
+- **Docs token consolidation — ✅ implement เสร็จ local 2026-07-05 · ยังไม่ deploy prod**
+  - `project_token` ตัวเดียวแทน `pdf_token`/`export_token` · แยกเอกสารด้วย path `/receipt` vs `/registration`
+  - **ก่อน deploy prod:** รัน `migration.sql` แล้ว restart ทันที (โค้ดเก่า INSERT column เก่า — window ไม่กี่วินาที) · backfill จาก `export_token` → **ลิงก์ registration (แนบท้าย 3) ที่แชร์ไปแล้วพัง ต้อง copy ใหม่** ลิงก์ receipt เดิมใช้ได้ต่อ
 
 ---
 
@@ -328,12 +332,6 @@
 
 ### Chat with AI via Mention
 - [ ] **`@bot <ข้อความ>` ในห้องที่กำหนด** — reuse `ragSearch.js` + `callAI()` · trigger จาก `messageCreate` + mention check · config ห้องใน `dc_guild_config` · อาจเพิ่ม conversation thread (multi-turn)
-
----
-
-## 🔤 Page Titles (UX)
-
-- [ ] **ทุกหน้าควรมี `<title>` ที่บ่งบอก context** — ตอนนี้หลายหน้าแสดงแค่ชื่อ app เช่น "Docs" ทุกหน้า → แก้ให้สะท้อน context จริง เช่น "ใบสำคัญรับเงิน — โครงการ X", "Campaigns — Calling" (ครอบทุก app)
 
 ---
 
@@ -374,10 +372,11 @@
 
 > ที่มา: ให้ GLM อ่าน code แล้วสรุปจุดที่ควรปรับปรุง (ไฟล์ IMPROVEMENTS.md เดิมลบแล้ว — สาระอยู่ครบใน list นี้)
 
-- [ ] **Phase 1 — Quick wins**: ย้าย `require()` ที่อยู่ในฟังก์ชันขึ้น top of file (เช่น `registerHandler.js`) · extract JSON parsing จาก settings เป็น helper กลาง · แทน magic numbers (timeouts/limits) ด้วย constants
-- [ ] **Phase 2 — Code organization**: แตกไฟล์ใหญ่ (`basketHandler.js` 927 บรรทัด, `index.js` 453 บรรทัด) เป็น module ย่อย · สร้าง shared utilities
-- [ ] **Phase 3 — Error handling**: standardize pattern + error message ให้ชัดขึ้น
-- [ ] **Phase 4 — Documentation**: JSDoc + input validation
+> **ตัดสินใจ 2026-07-05:** GLM list เป็น checklist ตำราทั่วไป ไม่ดูบริบท repo (bot ไม่มี test + คนเดียวดูแล) · P2 (แตกไฟล์ใหญ่) เสี่ยงพัง > ประโยชน์ ถ้าจะทำต้องเขียน test ครอบก่อน · P3/P4 churn เยอะ ผลลัพธ์ที่ user เห็น = 0 → **ตัด P2–P4 ทิ้ง**
+
+- [x] **JSON parse helper** — `utils/parseSetting.js` สร้างแล้ว (2026-07-05) · แทน pattern `typeof x === 'string' ? JSON.parse` ที่ซ้ำ ~34 จุด (เคยเป็นเหตุ basket CPU spike bug)
+- [ ] **ทยอยแทนที่ call site ที่เหลือ (boy-scout rule)** — แตะไฟล์ไหน เก็บไฟล์นั้น ไม่ sweep รอบเดียว (กัน silent bug จาก fallback type ผิด) · ทำแล้ว: verifyHandler.js, panel.js
+- ~~magic numbers → constants, ย้าย require ขึ้น top~~ — cosmetic, ทำเฉพาะตอนแตะไฟล์นั้นอยู่แล้ว ไม่ต้องเป็น task
 
 ---
 

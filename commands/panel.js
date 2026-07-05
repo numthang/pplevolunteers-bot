@@ -9,6 +9,7 @@ const {
   ChannelType,
 } = require('discord.js');
 const { getSetting, setSetting } = require('../db/settings');
+const { parseSetting } = require('../utils/parseSetting');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -102,11 +103,10 @@ module.exports = {
         .addStringOption(o => o.setName('button_label').setDescription('ข้อความปุ่ม').setRequired(false))
         .addStringOption(o => o.setName('color').setDescription('สี hex').setRequired(false))
         .addChannelOption(o => o.setName('log_channel').setDescription('channel ส่ง log').setRequired(false))
-        .addBooleanOption(o => o.setName('province_select').setDescription('ให้เลือกจังหวัดหลัง register').setRequired(false))
-        .addBooleanOption(o => o.setName('interest_select').setDescription('ให้เลือก interest/skill หลัง register').setRequired(false))
+        .addBooleanOption(o => o.setName('province_select').setDescription('ให้เลือกจังหวัดหลัง register (ไม่ระบุ = ค่าเดิม, เริ่มต้น: ปิด)').setRequired(false))
+        .addBooleanOption(o => o.setName('interest_select').setDescription('ให้เลือก interest/skill หลัง register (ไม่ระบุ = ค่าเดิม, เริ่มต้น: ปิด)').setRequired(false))
         .addRoleOption(o => o.setName('member_role').setDescription('ยศที่ติดให้อัตโนมัติหลัง register').setRequired(false))
         .addBooleanOption(o => o.setName('verify_phone').setDescription('เพิ่มปุ่มยืนยันตัวตนด้วย SMS OTP (เช็คเบอร์กับทะเบียนสมาชิก)').setRequired(false))
-        .addBooleanOption(o => o.setName('public').setDescription('แสดงผลให้ทุกคนเห็น (default: false)').setRequired(false))
     )
 
     // --- search channel ---
@@ -359,10 +359,7 @@ await refreshDashboard(thread, interaction.guildId, ids, existing.dashboard_msg_
 
       if (isSticky) {
         // clean up old sticky message ก่อนวางใหม่
-        let existingSticky = await getSetting(interaction.guildId, `sticky_${interaction.channelId}`);
-        if (typeof existingSticky === 'string') {
-          try { existingSticky = JSON.parse(existingSticky); } catch { existingSticky = null; }
-        }
+        const existingSticky = parseSetting(await getSetting(interaction.guildId, `sticky_${interaction.channelId}`), null);
         if (existingSticky?.message_id) {
           const oldMsg = await interaction.channel.messages.fetch(existingSticky.message_id).catch(() => null);
           if (oldMsg) await oldMsg.delete().catch(() => {});
@@ -405,11 +402,7 @@ await refreshDashboard(thread, interaction.guildId, ids, existing.dashboard_msg_
       const memberRole     = interaction.options.getRole('member_role');
       const verifyPhone    = interaction.options.getBoolean('verify_phone');
 
-      let regConfig = await getSetting(interaction.guildId, 'config_register');
-      if (typeof regConfig === 'string') {
-        try { regConfig = JSON.parse(regConfig); } catch { regConfig = {}; }
-      }
-      regConfig = regConfig ?? {};
+      const regConfig = parseSetting(await getSetting(interaction.guildId, 'config_register'));
 
       regConfig.log_channel_id = logChannel.id;
       if (provinceSelect !== null) regConfig.province_select = provinceSelect;

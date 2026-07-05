@@ -1,4 +1,4 @@
-export const metadata = { title: 'Bot Settings' }
+export const metadata = { title: { template: '%s — Bot', default: 'Bot Settings' } }
 
 export default function BotLayout({ children }) {
   return (
