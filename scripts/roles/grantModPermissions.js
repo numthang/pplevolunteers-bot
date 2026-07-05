@@ -28,9 +28,9 @@ client.once('ready', async () => {
     PermissionFlagsBits.KickMembers,
   ]);
 
-  await role.setPermissions(updated, 'grantModPermissions.js — เพิ่มสิทธิ์ ban/kick ให้ moderator');
+  const savedRole = await role.setPermissions(updated, 'grantModPermissions.js — เพิ่มสิทธิ์ ban/kick ให้ moderator');
 
-  console.log(`✅ เพิ่มสิทธิ์สำเร็จ: BanMembers=${role.permissions.has(PermissionFlagsBits.BanMembers)}, KickMembers=${role.permissions.has(PermissionFlagsBits.KickMembers)}`);
+  console.log(`✅ เพิ่มสิทธิ์สำเร็จ: BanMembers=${savedRole.permissions.has(PermissionFlagsBits.BanMembers)}, KickMembers=${savedRole.permissions.has(PermissionFlagsBits.KickMembers)}`);
   process.exit(0);
 });
 
