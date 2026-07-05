@@ -94,7 +94,7 @@ export const VENUE_TIERS = [
   { min: 200, max: 249, ceiling: 12500 },
   { min: 250, max: Infinity, ceiling: null },  // null = ตามที่จ่ายจริง
 ]
-export const VENUE_HOTEL_MULTIPLIER = 2
+export const VENUE_HOTEL_MULTIPLIER = 1
 export const VENUE_ALLOWED_ON_MOBILE = false
 
 export function calcVenueCeiling({ participants, isHotel = false }) {

@@ -24,7 +24,8 @@ export default function AccountCard({ account, canEdit = false }) {
 
   function copyAll(e) {
     e.preventDefault()
-    e.stopPropagation()
+    // nextjs-toploader ฟัง click ที่ document — ต้อง stopImmediatePropagation ไม่งั้น progress bar ค้าง
+    e.nativeEvent.stopImmediatePropagation()
     const parts = [account.name, account.bank, account.account_no].filter(Boolean)
     navigator.clipboard.writeText(parts.join(' ')).then(() => {
       setCopied(true)
@@ -34,7 +35,7 @@ export default function AccountCard({ account, canEdit = false }) {
 
   function openEdit(e) {
     e.preventDefault()
-    e.stopPropagation()
+    e.nativeEvent.stopImmediatePropagation()
     setForm({ ...account })
     setShowModal(true)
   }
