@@ -307,10 +307,10 @@
   - `project_token` ตัวเดียวแทน `pdf_token`/`export_token` · แยกเอกสารด้วย path `/receipt` vs `/registration`
   - **ก่อน deploy prod:** รัน `migration.sql` แล้ว restart ทันที (โค้ดเก่า INSERT column เก่า — window ไม่กี่วินาที) · backfill จาก `export_token` → **ลิงก์ registration (แนบท้าย 3) ที่แชร์ไปแล้วพัง ต้อง copy ใหม่** ลิงก์ receipt เดิมใช้ได้ต่อ
 
-### 🐛 Bug — Internal Server Error ตอนสร้าง bill (แจ้งไว้ 2026-07-05, ยังไม่ repro)
-- เจอ error ตอนกำลังจะสร้าง "bill" (ใบสำคัญรับเงิน/entry ใน docs) — ยังไม่มี stack trace/ขั้นตอน repro ชัดเจน
-- **ต้องถาม/เก็บเพิ่มตอนสะดวก:** สร้าง project ใหม่หรือเพิ่ม entry ในโปรเจกต์เดิม, item_type ไหน, error ตรง client (toast) หรือเห็นใน server log
-- เช็ค `logs/` บน prod/local ตอน repro ได้ — ยังไม่เจอ log ที่ตรงช่วงเวลาตอนไล่หาไว้ครั้งก่อน
+### 🐛 Bug — Internal Server Error ตอนสร้าง bill — **น่าจะเจอ root cause แล้ว 2026-07-06**
+- **สาเหตุที่คาดว่าใช่:** prod DB ยังไม่ได้รัน `ALTER TABLE docs_activity_entries ALTER COLUMN member_discord_id DROP NOT NULL` (migration.sql:672) → สร้างบิลแบบ individual mode/ยังไม่กำหนดผู้รับ (`member_discord_id = NULL`) ชน NOT NULL constraint → error ถูกกลืนเป็น "Internal Server Error" ที่ `web/app/api/docs/entries/route.js:87` (catch-all ไม่ log detail ให้ client)
+- เช็คแล้ว local dev DB column นี้ nullable แล้ว (รัน migration ไปแล้วตอน dev) — ต่างจาก prod ที่โดน error
+- **ต้องทำ:** รัน `scripts/migration/migration.sql` เต็มไฟล์บน prod (ทุกบรรทัด idempotent) แล้วลองสร้างบิลซ้ำว่าหายไหม — ยังไม่ได้ยืนยัน 100% เพราะไม่มี stack trace จริงจาก prod log ตอนเกิดเหตุ
 
 ---
 
