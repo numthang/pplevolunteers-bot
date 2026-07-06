@@ -42,6 +42,16 @@ export default function SignPage({ params }) {
   const ngsDebounce = useRef(null)
   const ngsDropRef  = useRef(null)
 
+  // self-fill state — ผู้รับที่ไม่มีใน ngs roster กรอกข้อมูลเอง (recipient only)
+  const [selfMode, setSelfMode]         = useState(false)
+  const [selfInfoDone, setSelfInfoDone] = useState(false)
+  const [selfSaving, setSelfSaving]     = useState(false)
+  const [selfErr, setSelfErr]           = useState('')
+  const [selfForm, setSelfForm]         = useState({
+    firstName: '', lastName: '', idNumber: '',
+    houseNo: '', moo: '', road: '', subdistrict: '', district: '', provinceAddr: '',
+  })
+
   // id-card upload state (recipient only)
   const [hasIdCard, setHasIdCard]               = useState(false)
   const [idCardPreviewUrl, setIdCardPreviewUrl] = useState(null)
@@ -76,6 +86,7 @@ export default function SignPage({ params }) {
 
           if (role === 'recipient') {
             setNgsLinked(!!d.data.has_ngs_link)
+            setSelfInfoDone(!!d.data.has_self_info)
             setHasIdCard(!!d.data.has_id_card)
             if (d.data.has_id_card && d.data.member_discord_id) {
               setIdCardPreviewUrl(`/api/docs/id-card/${d.data.member_discord_id}?token=${encodeURIComponent(token)}`)
@@ -92,7 +103,7 @@ export default function SignPage({ params }) {
   }, [entry])
 
   useEffect(() => {
-    const ready = signerRole === 'payer' || ngsLinked
+    const ready = signerRole === 'payer' || ngsLinked || selfInfoDone
     if (!ready || !entry) return
     setPreviewLoading(true)
     setPreviewErr('')
@@ -101,7 +112,7 @@ export default function SignPage({ params }) {
       .then(d => { if (d.pages) setPreviewPages(d.pages); else setPreviewErr(d.error || 'โหลดไม่สำเร็จ') })
       .catch(() => setPreviewErr('โหลดไม่สำเร็จ'))
       .finally(() => setPreviewLoading(false))
-  }, [signerRole, ngsLinked, entry, token, previewVer])
+  }, [signerRole, ngsLinked, selfInfoDone, entry, token, previewVer])
 
   useEffect(() => {
     if (!entry || !canvasRef.current) return
@@ -111,7 +122,7 @@ export default function SignPage({ params }) {
     ctx.lineWidth = 2.5
     ctx.lineCap = 'round'
     ctx.lineJoin = 'round'
-  }, [entry, ngsLinked, signerRole])
+  }, [entry, ngsLinked, selfInfoDone, signerRole])
 
   // Close ngs dropdown on outside click
   useEffect(() => {
@@ -162,6 +173,69 @@ export default function SignPage({ params }) {
       setNgsErr(err.message)
     } finally {
       setNgsLinking(false)
+    }
+  }
+
+  // Auto-apply: คนที่เคย self-fill ครบแล้ว (ชื่อ+เลขบัตร+ที่อยู่) เปิดบิลใหม่ → เติมให้เองข้ามฟอร์ม
+  // การตรวจจริงอยู่ที่ preview ก่อนเซ็น + มีปุ่ม "แก้ไขข้อมูล" ถ้าข้อมูลเปลี่ยน
+  useEffect(() => {
+    if (!entry || signerRole !== 'recipient' || ngsLinked || selfInfoDone) return
+    if (status !== 'authenticated' || session?.user?.discordId !== entry.member_discord_id) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await fetch(`/api/docs/sign/self-info?token=${encodeURIComponent(token)}`)
+        const d = await res.json()
+        const p = d?.data
+        if (!res.ok || !p) return
+        const idDigits = String(p.idNumber || '').replace(/\D/g, '')
+        if (!p.firstName?.trim() || !p.lastName?.trim() || idDigits.length !== 13) return
+        const save = await fetch('/api/docs/sign/self-info', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token, ...p, idNumber: idDigits }),
+        })
+        if (save.ok && !cancelled) {
+          setSelfForm(p)
+          setSelfInfoDone(true)
+        }
+      } catch {}
+    })()
+    return () => { cancelled = true }
+  }, [entry, signerRole, ngsLinked, selfInfoDone, status, session, token])
+
+  // เปิดโหมดกรอกเอง + โหลด prefill (เคยกรอกครั้งก่อน/ค่าที่มีอยู่)
+  async function openSelfMode() {
+    setSelfMode(true)
+    setSelfErr('')
+    try {
+      const res = await fetch(`/api/docs/sign/self-info?token=${encodeURIComponent(token)}`)
+      const d = await res.json()
+      if (res.ok && d.data) setSelfForm(d.data)
+    } catch {}
+  }
+
+  async function saveSelfInfo() {
+    const idDigits = selfForm.idNumber.replace(/\D/g, '')
+    if (!selfForm.firstName.trim() || !selfForm.lastName.trim()) { setSelfErr('กรุณากรอกชื่อและนามสกุล'); return }
+    if (idDigits.length !== 13) { setSelfErr('กรุณากรอกเลขบัตรประชาชน 13 หลัก'); return }
+    setSelfErr('')
+    setSelfSaving(true)
+    try {
+      const res = await fetch('/api/docs/sign/self-info', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, ...selfForm, idNumber: idDigits }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed')
+      setSelfInfoDone(true)
+      setSelfMode(false)
+      setPreviewVer(v => v + 1) // ข้อมูลบนเอกสารเปลี่ยน → gen preview ใหม่
+    } catch (err) {
+      setSelfErr(err.message)
+    } finally {
+      setSelfSaving(false)
     }
   }
 
@@ -302,7 +376,7 @@ export default function SignPage({ params }) {
   ))
 
   // Payer มีสิทธิ์เซ็นได้ทันที (ไม่ต้องผ่าน NGS/บัตร)
-  const canSign = signerRole === 'payer' || ngsLinked
+  const canSign = signerRole === 'payer' || ngsLinked || selfInfoDone
 
   return (
     <div className="min-h-screen bg-warm-50 dark:bg-disc-bg2 py-4 sm:px-4">
@@ -366,13 +440,78 @@ export default function SignPage({ params }) {
         </div>
 
         {/* Step: NGS self-link (recipient only, if not yet linked) */}
-        {signerRole === 'recipient' && !ngsLinked && (
+        {signerRole === 'recipient' && !ngsLinked && (!selfInfoDone || selfMode) && (
           <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-6">
             <div className="flex items-center gap-2 mb-1">
               <UserCheck size={18} className="text-orange shrink-0" />
               <h2 className="text-base font-semibold text-warm-900 dark:text-disc-text">ยืนยันตัวตน</h2>
             </div>
-            {!selectedNgs ? (
+            {selfMode ? (
+              <>
+                <p className="text-sm text-warm-500 dark:text-disc-muted mb-3">
+                  กรอกข้อมูลตามบัตรประชาชน เพื่อให้ข้อมูลในเอกสารถูกต้อง
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    ['firstName', 'ชื่อ (ไม่ต้องใส่คำนำหน้า)'], ['lastName', 'นามสกุล'],
+                  ].map(([key, label]) => (
+                    <div key={key}>
+                      <label className="block text-sm text-warm-700 dark:text-disc-text mb-1">{label}</label>
+                      <input
+                        type="text"
+                        value={selfForm[key]}
+                        onChange={e => setSelfForm(f => ({ ...f, [key]: e.target.value }))}
+                        className="w-full border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-warm-900 dark:text-disc-text px-3 py-2.5 text-base rounded-lg focus:outline-none focus:ring-2 focus:ring-orange"
+                      />
+                    </div>
+                  ))}
+                  <div className="col-span-2">
+                    <label className="block text-sm text-warm-700 dark:text-disc-text mb-1">เลขบัตรประชาชน 13 หลัก</label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={17}
+                      value={selfForm.idNumber}
+                      onChange={e => setSelfForm(f => ({ ...f, idNumber: e.target.value }))}
+                      className="w-full border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-warm-900 dark:text-disc-text px-3 py-2.5 text-base rounded-lg tracking-widest focus:outline-none focus:ring-2 focus:ring-orange"
+                    />
+                  </div>
+                  {[
+                    ['houseNo', 'บ้านเลขที่'], ['moo', 'หมู่ที่'], ['road', 'ถนน/ซอย'],
+                    ['subdistrict', 'ตำบล/แขวง'], ['district', 'อำเภอ/เขต'], ['provinceAddr', 'จังหวัด'],
+                  ].map(([key, label]) => (
+                    <div key={key}>
+                      <label className="block text-sm text-warm-700 dark:text-disc-text mb-1">{label}</label>
+                      <input
+                        type="text"
+                        value={selfForm[key]}
+                        onChange={e => setSelfForm(f => ({ ...f, [key]: e.target.value }))}
+                        className="w-full border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-warm-900 dark:text-disc-text px-3 py-2.5 text-base rounded-lg focus:outline-none focus:ring-2 focus:ring-orange"
+                      />
+                    </div>
+                  ))}
+                </div>
+                {selfErr && <p className="text-sm text-red-500 dark:text-red-400 mt-2">{selfErr}</p>}
+                <div className="flex items-center gap-2 mt-3">
+                  <button
+                    type="button"
+                    onClick={saveSelfInfo}
+                    disabled={selfSaving}
+                    className="flex-1 bg-orange text-white py-2.5 rounded-lg text-base font-semibold hover:bg-orange-light disabled:opacity-50 transition"
+                  >
+                    {selfSaving ? 'กำลังบันทึก...' : 'บันทึกข้อมูล'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setSelfMode(false); setSelfErr('') }}
+                    disabled={selfSaving}
+                    className="px-4 py-2.5 text-base text-warm-500 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text transition"
+                  >
+                    {selfInfoDone ? 'ยกเลิก' : 'กลับไปค้นหา'}
+                  </button>
+                </div>
+              </>
+            ) : !selectedNgs ? (
               <>
                 <p className="text-sm text-warm-500 dark:text-disc-muted mb-3">
                   ค้นหาชื่อ-นามสกุลของคุณในระบบสมาชิก เพื่อให้ข้อมูลในเอกสารถูกต้อง
@@ -406,6 +545,13 @@ export default function SignPage({ params }) {
                     </ul>
                   )}
                 </div>
+                <button
+                  type="button"
+                  onClick={openSelfMode}
+                  className="mt-3 text-sm text-warm-500 dark:text-disc-muted hover:text-orange underline underline-offset-2 transition"
+                >
+                  ไม่พบชื่อในทะเบียนสมาชิก? กรอกข้อมูลเอง
+                </button>
               </>
             ) : (
               <>
@@ -445,8 +591,27 @@ export default function SignPage({ params }) {
           </div>
         )}
 
+        {/* Self-fill สำเร็จ (auto หรือกรอกเอง) — แสดงสถานะ + ปุ่มแก้ไข */}
+        {signerRole === 'recipient' && !ngsLinked && selfInfoDone && !selfMode && (
+          <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl px-6 py-4 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 min-w-0">
+              <UserCheck size={18} className="text-green-600 dark:text-green-400 shrink-0" />
+              <p className="text-sm text-warm-700 dark:text-disc-text truncate">
+                ใช้ข้อมูลผู้รับที่บันทึกไว้ (ชื่อ เลขบัตร ที่อยู่) — ตรวจได้จากตัวอย่างเอกสารด้านล่าง
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={openSelfMode}
+              className="shrink-0 text-sm text-warm-500 dark:text-disc-muted hover:text-orange underline underline-offset-2 transition"
+            >
+              แก้ไขข้อมูล
+            </button>
+          </div>
+        )}
+
         {/* Step: ID-card upload (recipient only, after ngs linked, เฉพาะเจ้าของเอกสาร) */}
-        {signerRole === 'recipient' && ngsLinked && session?.user?.discordId === entry?.member_discord_id && (
+        {signerRole === 'recipient' && (ngsLinked || selfInfoDone) && session?.user?.discordId === entry?.member_discord_id && (
           <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-6">
             <div className="flex items-center gap-2 mb-1">
               <IdCard size={18} className="text-orange shrink-0" />
