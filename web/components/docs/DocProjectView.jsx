@@ -439,7 +439,7 @@ export default function DocProjectView({ project: initialProject, initialEntries
             <div className="flex flex-col items-end gap-1">
               <div className="flex gap-2">
                 <a
-                  href={tokens?.project_token ? `/api/docs/token/${tokens.project_token}/receipt` : undefined}
+                  href={tokens?.project_token ? `/dl/${tokens.project_token}/receipt` : undefined}
                   target="_blank" rel="noopener noreferrer"
                   aria-disabled={!tokens?.project_token}
                   className={`inline-flex items-center gap-2 px-4 py-2.5 bg-orange text-white text-base font-semibold rounded-lg transition ${tokens?.project_token ? 'hover:bg-orange-light' : 'opacity-50 pointer-events-none'}`}
@@ -447,7 +447,7 @@ export default function DocProjectView({ project: initialProject, initialEntries
                   ใบสำคัญรับเงิน
                 </a>
                 <a
-                  href={tokens?.project_token ? `/api/docs/token/${tokens.project_token}/registration` : undefined}
+                  href={tokens?.project_token ? `/dl/${tokens.project_token}/registration` : undefined}
                   target="_blank" rel="noopener noreferrer"
                   aria-disabled={!tokens?.project_token}
                   className={`inline-flex items-center gap-2 px-4 py-2.5 border border-warm-300 dark:border-disc-border text-warm-700 dark:text-disc-text text-base font-semibold rounded-lg transition ${tokens?.project_token ? 'hover:bg-warm-50 dark:hover:bg-disc-hover' : 'opacity-50 pointer-events-none'}`}
@@ -586,7 +586,7 @@ export default function DocProjectView({ project: initialProject, initialEntries
                     </a>
                   )}
                   {tokens?.project_token && (
-                    <a href={`/api/docs/token/${tokens.project_token}/registration`} target="_blank" rel="noopener noreferrer"
+                    <a href={`/dl/${tokens.project_token}/registration`} target="_blank" rel="noopener noreferrer"
                       className="flex items-center gap-1.5 text-orange hover:underline font-medium text-sm">
                       พิมพ์แนบท้าย 3 (มีลายเซ็นแล้ว) ↗
                     </a>
