@@ -10,6 +10,12 @@ const nextConfig = {
     domains: ['cdn.discordapp.com'],
     unoptimized: true,
   },
+  async rewrites() {
+    return [
+      // ลิงก์สั้นแชร์เอกสาร — เสิร์ฟตรง URL ค้างเป็น /dl/... (ไม่ redirect ไป /api ยาวๆ)
+      { source: '/dl/:token/:type(receipt|registration)', destination: '/api/docs/token/:token/:type' },
+    ]
+  },
   async redirects() {
     return [
       { source: '/calling/pending',     destination: '/calling/assignee',           permanent: true },
