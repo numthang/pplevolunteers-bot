@@ -64,8 +64,10 @@ function buildFieldValue(entries) {
     if (!groups.has(userId)) groups.set(userId, []);
     groups.get(userId).push(name);
   }
-  const MAX_LEN = 1024;
+  const MAX_LEN = 1024;   // ลิมิต Discord field value
+  const MAX_NAME = 14;    // ตัดชื่อพร็อกซีที่ยาวเกิน
   const total = entries.length;
+  const trunc = s => s.length > MAX_NAME ? s.slice(0, MAX_NAME - 1) + '…' : s;
   let result = '';
   let shownCount = 0;
 
@@ -98,10 +100,10 @@ function buildFieldValue(entries) {
     }
   }
 
-  // 2. extra names
+  // 2. extra names — truncate ชื่อยาว
   for (const [userId, names] of groups.entries()) {
     for (const n of names.filter(Boolean)) {
-      if (!tryAppend(`[${n}](https://discord.com/users/${userId})`, 1)) {
+      if (!tryAppend(`[${trunc(n)}](https://discord.com/users/${userId})`, 1)) {
         const hidden = total - shownCount;
         if (hidden > 0 && result) result += ` · +${hidden} คน`;
         return result || '-';
@@ -128,10 +130,11 @@ async function handleGogoSignup(interaction) {
   const allEntries = await getEntries(guildId, messageId);
   const myEntries = allEntries.filter(e => e.user_id === userId);
   const displayName = interaction.member?.displayName ?? interaction.user.username;
-  const prefill = myEntries.length > 0 ? myEntries.map(e => e.name).join('\n') : displayName;
+  // self-entry (name='') แสดงเป็นชื่อจริงเพื่อให้ round-trip ตอน submit ได้
+  const prefill = myEntries.length > 0 ? myEntries.map(e => e.name || displayName).join('\n') : displayName;
 
   const modal = new ModalBuilder()
-    .setCustomId(`modal_gogo:${interaction.message.id}`)
+    .setCustomId(`modal_gogo:${interaction.message.id}:${Date.now()}`)
     .setTitle('🙋 รายชื่อผู้เข้าร่วม');
 
   modal.addComponents(
@@ -176,9 +179,9 @@ async function handleGogoModal(interaction) {
   if (newNames.length > 10) {
     return interaction.editReply({ content: '❌ ชื่อได้สูงสุด 10 คนต่อ 1 ครั้ง' });
   }
-  // ป้อนชื่อเดียวและเป็นชื่อตัวเอง → self-entry (name = '') ป้องกัน display ซ้ำ
-  if (newNames.length === 1 && newNames[0] === displayName) newNames[0] = '';
-  await upsertEntries(interaction.guildId, messageId, userId, newNames);
+  // บรรทัดที่ตรงชื่อตัวเอง → self-entry (name = '') ป้องกัน display ซ้ำ + round-trip กับ prefill
+  const normalized = newNames.map(n => n === displayName ? '' : n)
+  await upsertEntries(interaction.guildId, messageId, userId, normalized);
 
   // อ่าน DB เพื่อ render embed
   const allEntries = await getEntries(interaction.guildId, messageId);

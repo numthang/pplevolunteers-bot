@@ -89,6 +89,32 @@
 - เบอร์เป็น credential เฉพาะ `phone_verified_at IS NOT NULL` (verifyHandler เซ็ต / แก้เบอร์เองจาก profile → reset) · endpoint ตอบ generic ทุกกรณีกัน enumeration · quota แชร์ `otp_quota` กับ bot
 - **ก่อน deploy prod:** รัน `migration.sql` (column `phone_verified_at`) · เทสต์ happy-path จริง (SMS ยิงจริง)
 - หมายเหตุ: สมาชิกที่ verify เบอร์ก่อน 2026-07-05 ไม่มี `phone_verified_at` ต้อง verify ใหม่ — prod ยังไม่กระทบ (verify_phone ยังไม่ deploy)
+- **Coverage (จด 2026-07-07):** phone login ใช้ได้เฉพาะคนที่ผูกเบอร์ผ่าน verify_phone ใน Discord → ผูกได้เฉพาะคนที่มีชื่อใน `ngs_member_cache` → **ตอนนี้ทะเบียนมีแค่ราชบุรี = phone login ครอบแค่ราชบุรี** · ขยายจังหวัด/องค์กรอื่น = import ทะเบียนเพิ่ม (งาน CSV import / Amnesty roster ที่จดไว้แล้ว) ไม่ต้องแก้โค้ด
+- **Binding เป็น per-guild แต่ login เป็น global (จด 2026-07-07):** verify_phone เขียนเบอร์ลง `dc_members` เฉพาะ guild ที่วาง panel · login เว็บค้นเบอร์ข้ามทุก guild (`findOwnerByVerifiedPhone` ไม่ filter guild) → ผูกที่ guild เดียวก็ login ได้ session ระดับตัวคน ใช้ทุก guild ที่เป็นสมาชิก · ข้อจำกัด cosmetic: profile guild อื่นไม่โชว์เบอร์
+- **⚠️ ก่อนวาง panel verify_phone ที่ server ราชบุรี:** ทะเบียน `ngs_member_cache` ทั้ง 4,488 รายชื่ออยู่ใต้ guild อาสาประชาชน (1340903354037178410) — วาง panel ใน server ราชบุรี (1111998833652678757) จะ **match ไม่เจอใครเลย** เพราะ verifyHandler ค้นเฉพาะ guild ที่กดปุ่ม → ต้องเลือก: (ก) วาง panel ใน server อาสาประชาชน หรือ (ข) import ทะเบียนราชบุรีเข้า guild_id ราชบุรีก่อน (script `importGuildMembers.js` ที่จดคิวไว้)
+
+### 🔜 งาน session หน้า — Org layer: 3 guild = องค์กรเดียว (โมเดลเคาะแล้ว 2026-07-07)
+
+> **โมเดลเคาะแล้ว** — ดู decision memory `decision_tenant_anchor_guild.md` · ที่นี่เก็บ scope งาน implement
+
+**ปัญหา (1 ราก 2 อาการ):** ระบบ conflate `guild_id = tenant` แต่จริงๆ **3 guild เป็นองค์กรเดียวกัน** (อาสาประชาชน `1340903354037178410`, ราชบุรี `1111998833652678757`, + อีก 1 server ในเครือ — ระบุ id ตอนเริ่มงาน)
+- **อาการ A — cases:** forum thread ฝังที่ guild ราชบุรี (ย้ายไม่ได้) แต่เว็บ manage มองทีละ guild → เห็นเคสไม่ครบทั้งเครือ
+- **อาการ B — verify_phone / phone-login:** ทะเบียน `ngs_member_cache` 4,488 รายอยู่ใต้ guild อาสาประชาชนหมด แต่ verifyHandler ค้น**เฉพาะ guild ที่กดปุ่ม** → วาง panel ที่ราชบุรี match ไม่เจอใคร · เบอร์ผูก guild เดียว profile guild อื่นไม่เห็น
+
+**โมเดลที่เคาะ:** org ครอบหลาย guild
+- ตาราง `organizations (id, name, slug, created_at)` + `dc_guilds.org_id` (FK, nullable) — migration เพิ่มล้วน ไม่กระทบแอปเดิม
+- seed: org "อาสาประชาชน" (slug `pple`) → set `org_id` ให้ทั้ง 3 guild
+- **ทุก guild ต้องมี org เสมอ** (guild เดี่ยว = org สมาชิกตัวเดียว) → scope by `org_id` แบบเดียวหมด ไม่มี fallback พิเศษ
+- Amnesty มาทีหลัง = insert org ใหม่ + set org_id ของ guild มัน → แยกขาดอัตโนมัติ (ทิศ multi-tenant คงอยู่)
+
+**หลักแยก — แอปไหนต้องขยับ:**
+- มี Discord artifact ต่อ guild (**cases**) → เปลี่ยน web query `WHERE guild_id = ?` → `WHERE guild_id IN (SELECT guild_id FROM dc_guilds WHERE org_id = $org)` · `/panel case` ยังตั้งต่อ guild
+- **roster/verify_phone** → เปลี่ยน verifyHandler + `findOwnerByVerifiedPhone` จาก "ค้น guild ปุ่ม" → "ค้นทุก guild ใน org"
+- **finance/calling/contacts** → ไม่แตะ (anchor guild อาสาประชาชนอันเดียว + filter จังหวัดพอ) จนกว่าจะมี cross-guild need จริง
+
+**Wrinkle cases (ยังไม่ตัดสิน):** caseworker ถูก assign เคสราชบุรีจากเว็บ → จะ ping ในกระทู้ได้ต้องเป็นสมาชิก guild ราชบุรีด้วย
+
+**Task order:** migration+seed → cases web query → verifyHandler/findOwner org-scope → เทสต์ · **ยังไม่ลงโค้ด**
 
 **จังหวะ 2 (เลื่อน — เมื่อ org ต้องการ custom text field ต่างกันจริง):**
 - ระบบฟอร์ม dynamic: นิยามฟอร์มเก็บใน `dc_guild_config` key `register_form_fields` (json array — **ไม่ต้องมี table ใหม่**) + `dc_members.extra JSONB` สำหรับค่าที่ไม่มี column · ดู section "Custom Register Form"
@@ -399,6 +425,7 @@
 
 **ยังไม่เคาะ:**
 - Action เมื่อมีคนโพสต์ในห้อง — ban ทันที vs timeout + แจ้งเตือน mod ก่อน
+  - ข้อมูลประกอบ (2026-07-07): timeout 28 วัน (เพดาน Discord) + ลบข้อความ + แจ้งห้อง mod = ปลอดภัยกว่าสำหรับเคส staff โดนแฮค (ban แล้ว unban ประวัติ/role หาย) · ban ทันที = เด็ดขาดเหมาะกับ spam bot ล้วน
 - เก็บ config ที่ไหน (น่าจะ `dc_guild_config` key ใหม่ เช่น `honeypot_channel_id` + `honeypot_action` ตาม pattern เดิม — ยังไม่ยืนยัน)
 - listener: น่าจะ hook `messageCreate` เช็ค `message.channel.id === honeypotChannelId` แล้ว action ตาม config (ยังไม่ได้ออกแบบ error handling/logging)
 - user (เจ้าของ) ยังไม่เข้าใจ permission mechanism ทั้งหมด 100% — ต้องอธิบายซ้ำ/ทดสอบจริงตอน implement
