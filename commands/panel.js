@@ -333,6 +333,8 @@ await refreshDashboard(thread, interaction.guildId, ids, existing.dashboard_msg_
       if (calendarId) await setSetting(interaction.guildId, 'gogo_calendar_id', calendarId);
 
       const creatorName = interaction.member?.displayName ?? interaction.user.username;
+      // session_id: key ของ roster — mint ใหม่ทุกครั้งที่สร้าง panel → roster ว่างสด, นิ่งข้าม sticky repost
+      const sid = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
       const embed = new EmbedBuilder()
         .setColor(color)
         .addFields({ name: `ผู้เข้าร่วม ${title} (0 คน)`, value: '-', inline: false })
@@ -340,19 +342,19 @@ await refreshDashboard(thread, interaction.guildId, ids, existing.dashboard_msg_
 
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
-          .setCustomId('btn_gogo_signup')
+          .setCustomId(`btn_gogo_signup:${sid}`)
           .setLabel('🙋 เข้าร่วม')
           .setStyle(ButtonStyle.Success),
         new ButtonBuilder()
-          .setCustomId('btn_gogo_event')
+          .setCustomId('btn_gogo_event')  // ไม่แตะ roster — ไม่ต้องมี sid
           .setEmoji('🗓️')
           .setStyle(ButtonStyle.Secondary),
         new ButtonBuilder()
-          .setCustomId('btn_gogo_dm')
+          .setCustomId(`btn_gogo_dm:${sid}`)
           .setEmoji('📢')
           .setStyle(ButtonStyle.Secondary),
         new ButtonBuilder()
-          .setCustomId('btn_gogo_list')
+          .setCustomId(`btn_gogo_list:${sid}`)
           .setEmoji('📋')
           .setStyle(ButtonStyle.Secondary),
       );
@@ -368,7 +370,7 @@ await refreshDashboard(thread, interaction.guildId, ids, existing.dashboard_msg_
 
       const sent = await interaction.channel.send({ embeds: [embed], components: [row] });
 
-      await setSetting(interaction.guildId, `gogo_creator:${sent.id}`, interaction.user.id);
+      await setSetting(interaction.guildId, `gogo_creator:${sid}`, interaction.user.id);
 
       if (isSticky) {
         await setSetting(interaction.guildId, `sticky_${interaction.channelId}`, {

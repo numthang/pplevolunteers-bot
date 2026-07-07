@@ -224,10 +224,10 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.customId.startsWith('ratings_page:'))    return handlePageButton(interaction);
     if (interaction.customId.startsWith('interest:') || interaction.customId.startsWith('skill:')) return handleInterestSelect(interaction);
     if (interaction.customId.startsWith('report_start:')) return handleReportStart(interaction);
-    if (interaction.customId === 'btn_gogo_signup')  return handleGogoSignup(interaction);
-    if (interaction.customId === 'btn_gogo_dm')      return handleGogoDMButton(interaction);
-    if (interaction.customId === 'btn_gogo_event')   return handleGogoEventButton(interaction);
-    if (interaction.customId === 'btn_gogo_list')    return handleGogoListButton(interaction);
+    if (interaction.customId.startsWith('btn_gogo_signup')) return handleGogoSignup(interaction);
+    if (interaction.customId.startsWith('btn_gogo_dm'))     return handleGogoDMButton(interaction);
+    if (interaction.customId === 'btn_gogo_event')          return handleGogoEventButton(interaction);
+    if (interaction.customId.startsWith('btn_gogo_list'))   return handleGogoListButton(interaction);
     if (interaction.customId === 'btn_open_interest')         return handleOpenInterest(interaction);
     if (interaction.customId === 'btn_open_province')         return handleOpenProvince(interaction);
     if (interaction.customId === 'forum_search')              return handleOpenSearch(interaction);

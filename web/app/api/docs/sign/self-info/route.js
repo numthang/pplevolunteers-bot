@@ -11,7 +11,7 @@ import { getEntryByToken } from '@/db/docs/entries.js'
  * หลักฐานตัวตนจริง = สำเนาบัตรที่อัปโหลด + ลายเซ็น (เหมือน flow เดิม link-ngs เป็นแค่ pre-check)
  */
 
-const FIELDS = ['idNumber', 'houseNo', 'moo', 'road', 'subdistrict', 'district', 'provinceAddr']
+const FIELDS = ['idNumber', 'houseNo', 'moo', 'road', 'subdistrict', 'district', 'provinceAddr', 'phone']
 
 async function loadRecipientEntry(req, tokenFromBody) {
   const session = await getServerSession(authOptions)
@@ -52,6 +52,7 @@ export async function GET(req) {
       subdistrict:  ov.subdistrict ?? saved.subdistrict ?? '',
       district:     ov.district ?? saved.district ?? '',
       provinceAddr: ov.province_addr ?? saved.provinceAddr ?? '',
+      phone:        ov.phone ?? saved.phone ?? '',
     },
   })
 }
@@ -78,9 +79,10 @@ export async function POST(req) {
 
   try {
     // ชื่อจริง → dc_members (ใช้ซ้ำทุกเอกสาร)
+    const phone = String(body.phone ?? '').trim().slice(0, 30)
     const { rowCount } = await pool.query(
-      `UPDATE dc_members SET firstname = $1, lastname = $2 WHERE discord_id = $3 AND guild_id = $4`,
-      [firstName, lastName, discordId, entry.guild_id]
+      `UPDATE dc_members SET firstname = $1, lastname = $2, phone = $3 WHERE discord_id = $4 AND guild_id = $5`,
+      [firstName, lastName, phone || null, discordId, entry.guild_id]
     )
     if (rowCount === 0) return Response.json({ error: 'ไม่พบข้อมูลสมาชิก' }, { status: 404 })
 
@@ -97,6 +99,7 @@ export async function POST(req) {
         subdistrict:   clean.subdistrict,
         district:      clean.district,
         province_addr: clean.provinceAddr,
+        phone:         clean.phone || null,
       })]
     )
 

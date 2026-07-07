@@ -16,7 +16,13 @@ const {
 } = require('discord.js');
 const { getSetting, setSetting } = require('../db/settings');
 const { getMember } = require('../db/members');
-const { getEntries, hasPanel, upsertEntries, seedEntries } = require('../db/gogo');
+const { getEntries, upsertEntries } = require('../db/gogo');
+
+// อ่าน session_id จาก customId ของปุ่ม/modal gogo — รูปแบบ `prefix:sid[:...]`
+const sidOf = customId => customId.split(':')[1] || null;
+
+// ปุ่มบน message: sid จาก customId → fallback message.id (ปุ่มเก่าก่อน migrate; session_id = message_id หลัง backfill)
+const btnSid = interaction => sidOf(interaction.customId) || interaction.message.id;
 
 const FIELD_PREFIX = 'ผู้เข้าร่วม';
 const isEntryField = f => f.name.startsWith(FIELD_PREFIX) || f.name.startsWith('👥 ' + FIELD_PREFIX);
@@ -25,37 +31,6 @@ const DM_ALLOWED_ROLE_NAMES = new Set([
   'Admin', 'Moderator', 'เจ้าหน้าที่พรรค', 'รองเลขาธิการ',
   'ผู้ประสานงานภาค', 'ผู้ประสานงานจังหวัด', 'กรรมการจังหวัด',
 ]);
-
-// รองรับทุก format เก่า/ใหม่
-function parseEntries(fieldValue) {
-  if (!fieldValue || fieldValue === '-') return [];
-  // format เก่า: "1. ชื่อ (<@id>)"
-  if (fieldValue.startsWith('1.')) {
-    return fieldValue.split('\n').filter(Boolean).map(line => {
-      const match = line.match(/^\d+\. (.+?) \(<@(\d+)>\)$/);
-      return match ? { name: match[1], userId: match[2] } : null;
-    }).filter(Boolean);
-  }
-  const entries = [];
-  let rest = fieldValue;
-  // "<@id> ([text](url))" — format กลาง มีวงเล็บ
-  for (const m of fieldValue.matchAll(/<@(\d+)> \(\[[^\]]+\]\(https:\/\/discord\.com\/users\/\d+\)\)/g)) {
-    entries.push({ name: '', userId: m[1] });
-    rest = rest.replace(m[0], '');
-  }
-  // "<@id> [text](url)" — format ปัจจุบัน ไม่มีวงเล็บ
-  for (const m of rest.matchAll(/<@(\d+)> \[[^\]]+\]\(https:\/\/discord\.com\/users\/\d+\)/g)) {
-    entries.push({ name: '', userId: m[1] });
-    rest = rest.replace(m[0], '');
-  }
-  // standalone "<@id>" — format เก่าสุด
-  for (const m of rest.matchAll(/<@(\d+)>/g))
-    entries.push({ name: '', userId: m[1] });
-  // extra names: "[ชื่อ](url)"
-  for (const m of rest.matchAll(/\[([^\]]+)\]\(https:\/\/discord\.com\/users\/(\d+)\)/g))
-    entries.push({ name: m[1], userId: m[2] });
-  return entries;
-}
 
 function buildFieldValue(entries) {
   if (!entries.length) return '-';
@@ -117,24 +92,19 @@ function buildFieldValue(entries) {
 async function handleGogoSignup(interaction) {
   if (!interaction.isButton()) return;
   const { guildId } = interaction;
-  const messageId = interaction.message.id;
+  const sid = btnSid(interaction);
   const userId = interaction.user.id;
 
-  // lazy migrate entries เก่าจาก embed field เข้า DB
-  if (!(await hasPanel(guildId, messageId))) {
-    const fields = interaction.message.embeds[0]?.fields ?? [];
-    const fieldIdx = fields.findIndex(f => isEntryField(f));
-    if (fieldIdx >= 0) await seedEntries(guildId, messageId, parseEntries(fields[fieldIdx].value));
-  }
-
-  const allEntries = await getEntries(guildId, messageId);
+  const allEntries = await getEntries(guildId, sid);
   const myEntries = allEntries.filter(e => e.user_id === userId);
   const displayName = interaction.member?.displayName ?? interaction.user.username;
   // self-entry (name='') แสดงเป็นชื่อจริงเพื่อให้ round-trip ตอน submit ได้
   const prefill = myEntries.length > 0 ? myEntries.map(e => e.name || displayName).join('\n') : displayName;
 
+  // ยัด sid (key DB) + message.id ปัจจุบัน (ไว้ edit embed) — modal submit ไม่มี interaction.message
+  // timestamp กัน Discord cache modal เก่า
   const modal = new ModalBuilder()
-    .setCustomId(`modal_gogo:${interaction.message.id}:${Date.now()}`)
+    .setCustomId(`modal_gogo:${sid}:${interaction.message.id}:${Date.now()}`)
     .setTitle('🙋 รายชื่อผู้เข้าร่วม');
 
   modal.addComponents(
@@ -154,72 +124,74 @@ async function handleGogoSignup(interaction) {
 
 async function handleGogoModal(interaction) {
   if (!interaction.isModalSubmit()) return;
-  const messageId = interaction.customId.split(':')[1];
+  // customId = modal_gogo:${sid}:${msgId}:${ts}
+  const [, sid, customMsgId] = interaction.customId.split(':');
   const rawInput  = interaction.fields.getTextInputValue('field_gogo_names').trim();
   const userId    = interaction.user.id;
 
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-  const msg = await interaction.channel.messages.fetch(messageId).catch(() => null);
-  if (!msg) return interaction.editReply({ content: '❌ ไม่พบข้อความต้นทาง' });
-
-  const embed    = EmbedBuilder.from(msg.embeds[0]);
-  const fields   = [...(embed.data.fields ?? [])];
-  const fieldIdx = fields.findIndex(f => isEntryField(f));
-
-  // lazy migrate
-  if (!(await hasPanel(interaction.guildId, messageId))) {
-    if (fieldIdx >= 0) await seedEntries(interaction.guildId, messageId, parseEntries(fields[fieldIdx].value));
+  // sticky config (per-channel) — source ของ current message_id + ที่เก็บ embed snapshot
+  const stickyKey = `sticky_${interaction.channelId}`;
+  let stickyConfig = await getSetting(interaction.guildId, stickyKey);
+  if (typeof stickyConfig === 'string') {
+    try { stickyConfig = JSON.parse(stickyConfig); } catch { stickyConfig = null; }
   }
+
+  // หา live message: msgId จาก customId ก่อน (fallback current message_id จาก sticky config เผื่อ repost)
+  let msg = await interaction.channel.messages.fetch(customMsgId).catch(() => null);
+  if (!msg && stickyConfig?.message_id) {
+    msg = await interaction.channel.messages.fetch(stickyConfig.message_id).catch(() => null);
+  }
+  // ต้องมี embed source อย่างน้อยจาก msg หรือ sticky config
+  const srcEmbedJson = msg?.embeds?.[0]?.toJSON?.() ?? stickyConfig?.embeds?.[0];
+  if (!srcEmbedJson) return interaction.editReply({ content: '❌ ไม่พบข้อความต้นทาง' });
 
   const displayName = interaction.member?.displayName ?? interaction.user.username;
 
-  // เขียน DB
+  // เขียน DB (key = sid — ไม่ผูกกับ message_id ที่ churn)
   const newNames = rawInput ? rawInput.split('\n').map(n => n.trim()).filter(Boolean) : [];
   if (newNames.length > 10) {
     return interaction.editReply({ content: '❌ ชื่อได้สูงสุด 10 คนต่อ 1 ครั้ง' });
   }
   // บรรทัดที่ตรงชื่อตัวเอง → self-entry (name = '') ป้องกัน display ซ้ำ + round-trip กับ prefill
   const normalized = newNames.map(n => n === displayName ? '' : n)
-  await upsertEntries(interaction.guildId, messageId, userId, normalized);
+  await upsertEntries(interaction.guildId, sid, userId, normalized);
 
   // อ่าน DB เพื่อ render embed
-  const allEntries = await getEntries(interaction.guildId, messageId);
+  const allEntries = await getEntries(interaction.guildId, sid);
   const dbEntries = allEntries.map(({ user_id: u, name: n }) => {
-    // ถ้า name ตรงกับ displayName ของผู้ใช้ → self-entry (name = '')
     if (u === userId && n === displayName) return { userId: u, name: '' };
     return { userId: u, name: n };
   });
 
+  const embed    = EmbedBuilder.from(srcEmbedJson);
+  const fields   = [...(embed.data.fields ?? [])];
+  const fieldIdx = fields.findIndex(f => isEntryField(f));
   const baseName = fieldIdx >= 0
     ? fields[fieldIdx].name.replace(/ \(\d+ คน\)$/, '').replace(/^👥 /, '')
     : FIELD_PREFIX;
   const newField = { name: `${baseName} (${allEntries.length} คน)`, value: buildFieldValue(dbEntries), inline: false };
-
   if (fieldIdx >= 0) fields[fieldIdx] = newField;
   else fields.push(newField);
-
   embed.setFields(fields);
 
-  const stickyKey = `sticky_${interaction.channelId}`;
-  let stickyConfig = await getSetting(interaction.guildId, stickyKey);
-  if (typeof stickyConfig === 'string') {
-    try { stickyConfig = JSON.parse(stickyConfig); } catch { stickyConfig = null; }
-  }
+  // ปุ่มต้อง carry sid เสมอ (ไม่งั้น repost/ปุ่มใหม่จะไม่มี sid)
   const latestRow = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId('btn_gogo_signup').setLabel('🙋 เข้าร่วม').setStyle(ButtonStyle.Success),
+    new ButtonBuilder().setCustomId(`btn_gogo_signup:${sid}`).setLabel('🙋 เข้าร่วม').setStyle(ButtonStyle.Success),
     new ButtonBuilder().setCustomId('btn_gogo_event').setEmoji('🗓️').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId('btn_gogo_dm').setEmoji('📢').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId('btn_gogo_list').setEmoji('📋').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId(`btn_gogo_dm:${sid}`).setEmoji('📢').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId(`btn_gogo_list:${sid}`).setEmoji('📋').setStyle(ButtonStyle.Secondary),
   );
 
-  if (stickyConfig && stickyConfig.message_id === messageId) {
+  // อัปเดต sticky embed snapshot เสมอ (sticky re-render จาก snapshot ไม่ใช่ DB) — 1 gogo/ห้อง
+  if (stickyConfig) {
     stickyConfig.embeds = [embed.toJSON()];
     stickyConfig.components = [latestRow.toJSON()];
     await setSetting(interaction.guildId, stickyKey, stickyConfig);
   }
 
-  await msg.edit({ embeds: [embed], components: [latestRow] });
+  if (msg) await msg.edit({ embeds: [embed], components: [latestRow] }).catch(() => {});
 
   if (rawInput && interaction.channel.isThread()) {
     await interaction.channel.members.add(userId).catch(() => {});
@@ -232,7 +204,8 @@ async function handleGogoDMButton(interaction) {
   if (!interaction.isButton()) return;
 
   const userId    = interaction.user.id;
-  const creatorId = await getSetting(interaction.guildId, `gogo_creator:${interaction.message.id}`);
+  const sid       = btnSid(interaction);
+  const creatorId = await getSetting(interaction.guildId, `gogo_creator:${sid}`);
   const isCreator = creatorId === userId;
 
   let allowed = isCreator;
@@ -267,15 +240,14 @@ async function handleGogoDMButton(interaction) {
 
   const defaultText = ch.name ?? '';
 
-  const messageId = interaction.message.id;
-  const entries   = await getEntries(interaction.guildId, messageId);
+  const entries   = await getEntries(interaction.guildId, sid);
   const names     = [...new Set(entries.map(e => e.name).filter(Boolean))];
   const modalTitle  = `📢 DM: ${names.join(', ')}`.length <= 45
     ? `📢 DM: ${names.join(', ')}`
     : `📢 DM ผู้ลงชื่อ (${entries.length} คน)`;
 
   const modal = new ModalBuilder()
-    .setCustomId(`modal_gogo_dm:${interaction.message.id}`)
+    .setCustomId(`modal_gogo_dm:${sid}`)
     .setTitle(modalTitle);
 
   modal.addComponents(
@@ -294,15 +266,12 @@ async function handleGogoDMButton(interaction) {
 
 async function handleGogoDMModal(interaction) {
   if (!interaction.isModalSubmit()) return;
-  const messageId = interaction.customId.split(':')[1];
-  const body      = interaction.fields.getTextInputValue('dm_body').trim();
+  const sid  = sidOf(interaction.customId);
+  const body = interaction.fields.getTextInputValue('dm_body').trim();
 
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-  const msg = await interaction.channel.messages.fetch(messageId).catch(() => null);
-  if (!msg) return interaction.editReply({ content: '❌ ไม่พบข้อความต้นทาง' });
-
-  const entries = await getEntries(interaction.guildId, messageId);
+  const entries = await getEntries(interaction.guildId, sid);
   const uniqueUserIds = [...new Set(entries.map(e => e.user_id))];
 
   if (!uniqueUserIds.length) return interaction.editReply({ content: '❌ ยังไม่มีผู้ลงชื่อ' });
@@ -459,7 +428,7 @@ async function handleGogoEventModal(interaction) {
 
 async function handleGogoListButton(interaction) {
   if (!interaction.isButton()) return;
-  const entries = await getEntries(interaction.guildId, interaction.message.id);
+  const entries = await getEntries(interaction.guildId, btnSid(interaction));
 
   if (!entries.length) {
     return interaction.reply({ content: '📋 ยังไม่มีผู้เข้าร่วม', flags: MessageFlags.Ephemeral });

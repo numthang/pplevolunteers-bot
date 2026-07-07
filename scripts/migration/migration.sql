@@ -869,3 +869,11 @@ ALTER TABLE docs_projects
   DROP COLUMN IF EXISTS export_token_expires,
   DROP COLUMN IF EXISTS pdf_token,
   DROP COLUMN IF EXISTS pdf_token_expires;
+
+-- 2026-07-08: gogo panel session_id — roster ผูกกับ message_id ที่ churn ทุก sticky repost
+-- → lazy re-seed ยิงซ้ำ copy roster ลง message_id ใหม่ = ข้อมูลซ้ำ
+-- ย้าย key ไป session_id (mint ตอนสร้าง panel, นิ่งข้าม repost, แยกต่อ event, เก็บ log ได้)
+-- backfill: session_id = message_id (ทุก panel เดิม = 1 session, log ครบ — channel mapping หายแล้ว consolidate ไม่ได้)
+ALTER TABLE dc_gogo_entries ADD COLUMN IF NOT EXISTS session_id VARCHAR(30) NULL;
+UPDATE dc_gogo_entries SET session_id = message_id WHERE session_id IS NULL;
+CREATE INDEX IF NOT EXISTS idx_gogo_session ON dc_gogo_entries (guild_id, session_id);

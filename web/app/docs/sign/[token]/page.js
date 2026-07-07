@@ -48,7 +48,7 @@ export default function SignPage({ params }) {
   const [selfSaving, setSelfSaving]     = useState(false)
   const [selfErr, setSelfErr]           = useState('')
   const [selfForm, setSelfForm]         = useState({
-    firstName: '', lastName: '', idNumber: '',
+    firstName: '', lastName: '', idNumber: '', phone: '',
     houseNo: '', moo: '', road: '', subdistrict: '', district: '', provinceAddr: '',
   })
 
@@ -490,6 +490,17 @@ export default function SignPage({ params }) {
                       />
                     </div>
                   ))}
+                  <div className="col-span-2">
+                    <label className="block text-sm text-warm-700 dark:text-disc-text mb-1">เบอร์โทรศัพท์</label>
+                    <input
+                      type="tel"
+                      inputMode="numeric"
+                      maxLength={15}
+                      value={selfForm.phone}
+                      onChange={e => setSelfForm(f => ({ ...f, phone: e.target.value }))}
+                      className="w-full border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-warm-900 dark:text-disc-text px-3 py-2.5 text-base rounded-lg focus:outline-none focus:ring-2 focus:ring-orange"
+                    />
+                  </div>
                 </div>
                 {selfErr && <p className="text-sm text-red-500 dark:text-red-400 mt-2">{selfErr}</p>}
                 <div className="flex items-center gap-2 mt-3">
