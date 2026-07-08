@@ -114,7 +114,15 @@
 
 **Wrinkle cases (ยังไม่ตัดสิน):** caseworker ถูก assign เคสราชบุรีจากเว็บ → จะ ping ในกระทู้ได้ต้องเป็นสมาชิก guild ราชบุรีด้วย
 
-**Task order:** migration+seed → cases web query → verifyHandler/findOwner org-scope → เทสต์ · **ยังไม่ลงโค้ด**
+**ความคืบหน้า (2026-07-08):**
+- ✅ **Phase 1 — mapping:** ตาราง `organizations` + `dc_guilds.org_id` + seed org `pple` ผูก 3 guild (อาสาฯ `1340903354037178410`, ราชบุรี `1111998833652678757`, people's party `1115613658408566844` — pre-seed เพราะ bot ยังไม่ sync) · helper `db/org.js` + `web/lib/org.js` `getOrgGuildIds()` (fallback `[guildId]` ถ้า org_id NULL = ไม่ regress guild อื่น) · รัน local แล้ว
+- ✅ **Phase 2a — verifyHandler:** roster match + "ผูกแล้วยัง" + claimed-check → org-scope (`guild_id = ANY(orgGuilds)`) · เขียน member_id ยังลง guild ตัวเอง · พิสูจน์ query จริง: ราชบุรี context เจอทะเบียนใต้อาสาฯ (source_id 44027) · `findOwnerByVerifiedPhone` ไม่แตะ (global อยู่แล้ว)
+- ⏳ **Phase 2b — docs link-ngs (แยกทำ):** ประตูผูก member_id ที่ 2 · ต้อง trace เพิ่ม (ngs-search + `entry.guild_id` + จุด write) · **คำถาม design ค้าง:** signer ไม่ได้อยู่ guild ของบิล → เขียน member_id ที่ row guild ไหน · ความเสี่ยง double-claim ข้ามประตูต่ำ (docs ต้องเลขบัตร 13 หลัก) เลยแยกทำได้
+- ⏳ **Phase 3 — deploy prod + เทสต์:** (1) รัน `migration.sql` (org block + `phone_verified_at`) (2) restart bot (โหลด db/org.js) (3) `/panel register verify_phone:true` ที่ **server ราชบุรี** (4) เทสต์ SMS จริง: verify เบอร์ที่ราชบุรี → เจอทะเบียน → login เว็บด้วยเบอร์
+
+**หมายเหตุ decision:** org_id เก็บที่ `dc_guilds` **ที่เดียว** (single source of truth) — ไม่ copy ลง ngs_member_cache/ตารางอื่น · org scope ทำผ่าน `getOrgGuildIds()` หรือ JOIN dc_guilds
+
+**cases (org-scope web query)** ยังไม่เริ่ม — คนละก้อนกับ phone login
 
 **จังหวะ 2 (เลื่อน — เมื่อ org ต้องการ custom text field ต่างกันจริง):**
 - ระบบฟอร์ม dynamic: นิยามฟอร์มเก็บใน `dc_guild_config` key `register_form_fields` (json array — **ไม่ต้องมี table ใหม่**) + `dc_members.extra JSONB` สำหรับค่าที่ไม่มี column · ดู section "Custom Register Form"

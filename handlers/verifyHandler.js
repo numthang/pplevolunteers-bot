@@ -15,6 +15,7 @@ const { getUserSetting, setUserSetting, deleteUserSetting } = require('../db/use
 const { upsertMemberFromDiscord, syncMemberRoles } = require('../db/members');
 const { sendSms, smsConfigured, normalizePhone } = require('../services/sms');
 const { parseSetting } = require('../utils/parseSetting');
+const { getOrgGuildIds } = require('../db/org');
 
 const OTP_TTL_MS         = 5 * 60 * 1000;
 const MAX_ATTEMPTS       = 5;
@@ -66,12 +67,15 @@ async function handleVerifyPhoneSubmit(interaction) {
     return interaction.editReply('❌ รูปแบบเบอร์ไม่ถูกต้อง — ต้องเป็นเบอร์มือถือไทย 10 หลัก เช่น 0812345678');
   }
 
-  // ผูกไปแล้ว → จบเลย ไม่เปลือง SMS
+  // เครือ guild ในองค์กรเดียวกัน — roster/ผูกชื่อ มองข้าม guild ระดับ org (roster อยู่ guild เดียวในเครือ)
+  const orgGuilds = await getOrgGuildIds(guildId);
+
+  // ผูกไปแล้วที่ guild ใดในเครือ → จบเลย ไม่เปลือง SMS (กันผูกซ้ำระดับ org)
   const { rows: meRows } = await pool.query(
-    'SELECT member_id FROM dc_members WHERE guild_id = $1 AND discord_id = $2',
-    [guildId, discordId]
+    'SELECT 1 FROM dc_members WHERE guild_id = ANY($1) AND discord_id = $2 AND member_id IS NOT NULL LIMIT 1',
+    [orgGuilds, discordId]
   );
-  if (meRows[0]?.member_id) {
+  if (meRows.length) {
     return interaction.editReply('✅ บัญชีของคุณยืนยันตัวตนไว้แล้ว');
   }
 
@@ -88,27 +92,27 @@ async function handleVerifyPhoneSubmit(interaction) {
     return interaction.editReply(`⏳ เพิ่งส่งรหัสไปแล้ว — รออีก ${wait} วินาที แล้วกดปุ่ม "กรอกรหัส OTP" จากข้อความก่อนหน้า`);
   }
 
-  // match roster — เทียบเฉพาะตัวเลข รองรับทั้งเก็บแบบ 0xxx และ 66xxx · ตัดแถวที่ถูกบัญชีอื่น claim แล้ว
+  // match roster — เทียบเฉพาะตัวเลข รองรับทั้งเก็บแบบ 0xxx และ 66xxx · ค้นข้าม guild ในเครือ · ตัดแถวที่ถูก claim แล้วระดับ org
   const phone66 = '66' + phone.slice(1);
   const { rows } = await pool.query(
     `SELECT n.source_id
        FROM ngs_member_cache n
-      WHERE n.guild_id = $1
+      WHERE n.guild_id = ANY($1)
         AND regexp_replace(COALESCE(n.mobile_number, ''), '\\D', '', 'g') IN ($2, $3)
         AND NOT EXISTS (
           SELECT 1 FROM dc_members m
-           WHERE m.guild_id = n.guild_id AND m.member_id = n.source_id
+           WHERE m.guild_id = ANY($1) AND m.member_id = n.source_id
         )`,
-    [guildId, phone, phone66]
+    [orgGuilds, phone, phone66]
   );
   if (rows.length === 0) {
     const { rows: claimed } = await pool.query(
       `SELECT 1 FROM ngs_member_cache n
-         JOIN dc_members m ON m.guild_id = n.guild_id AND m.member_id = n.source_id
-        WHERE n.guild_id = $1
+         JOIN dc_members m ON m.guild_id = ANY($1) AND m.member_id = n.source_id
+        WHERE n.guild_id = ANY($1)
           AND regexp_replace(COALESCE(n.mobile_number, ''), '\\D', '', 'g') IN ($2, $3)
         LIMIT 1`,
-      [guildId, phone, phone66]
+      [orgGuilds, phone, phone66]
     );
     if (claimed.length) {
       return interaction.editReply('❌ เบอร์นี้ถูกผูกกับบัญชี Discord อื่นแล้ว — ติดต่อแอดมินหากคิดว่าไม่ถูกต้อง');

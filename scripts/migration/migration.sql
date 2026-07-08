@@ -877,3 +877,29 @@ ALTER TABLE docs_projects
 ALTER TABLE dc_gogo_entries ADD COLUMN IF NOT EXISTS session_id VARCHAR(30) NULL;
 UPDATE dc_gogo_entries SET session_id = message_id WHERE session_id IS NULL;
 CREATE INDEX IF NOT EXISTS idx_gogo_session ON dc_gogo_entries (guild_id, session_id);
+
+-- 2026-07-08: Org layer (Phase 1 — mapping) — หลาย guild ในเครือ = "องค์กร" เดียว
+-- ปัญหา: ระบบ isolate ด้วย guild_id (1 guild = 1 องค์กร) แต่ อาสาฯ+ราชบุรี+(อีก 1) เป็นองค์กรเดียวกัน
+--        roster (ngs_member_cache) อยู่ใต้ guild อาสาฯ ที่เดียว → verify/docs ที่ guild อื่นหาชื่อไม่เจอ
+-- แก้: ผูก guild ในเครือเข้า org เดียว แล้วให้ roster match/dedup มองข้าม guild ระดับ org
+CREATE TABLE IF NOT EXISTS organizations (
+  id         SERIAL PRIMARY KEY,
+  name       VARCHAR(120) NOT NULL,
+  slug       VARCHAR(60) UNIQUE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- org_id NULL = guild ที่ยังไม่ได้อยู่ org ไหน → พฤติกรรมเดิม (isolate per-guild) ยังคงอยู่
+ALTER TABLE dc_guilds ADD COLUMN IF NOT EXISTS org_id INT REFERENCES organizations(id);
+
+-- seed org แรก: อาสาประชาชน (tenant #1) + ผูก guild ในเครือ
+INSERT INTO organizations (name, slug) VALUES ('อาสาประชาชน', 'pple')
+  ON CONFLICT (slug) DO NOTHING;
+
+-- ผูก 3 guild ในเครือเข้า org pple · upsert เพราะ people's party ยังไม่ถูก bot sync เข้า dc_guilds
+-- (bot upsertGuilds ตั้งแค่ name/icon ไม่แตะ org_id → pre-seed org_id ที่นี่ จะอยู่ทนข้าม sync)
+INSERT INTO dc_guilds (guild_id, name, org_id, updated_at) VALUES
+  ('1340903354037178410', 'อาสาประชาชน',    (SELECT id FROM organizations WHERE slug = 'pple'), NOW()),  -- roster อยู่ที่นี่
+  ('1111998833652678757', 'ประชาชนราชบุรี',  (SELECT id FROM organizations WHERE slug = 'pple'), NOW()),
+  ('1115613658408566844', 'People''s Party', (SELECT id FROM organizations WHERE slug = 'pple'), NOW())
+ON CONFLICT (guild_id) DO UPDATE SET org_id = EXCLUDED.org_id;
