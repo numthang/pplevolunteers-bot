@@ -691,7 +691,7 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
               )}
             </div>
           ) : (
-            <Link href="/login" className="text-sm text-teal hover:underline">เข้าสู่ระบบ</Link>
+            <Link href="/" className="text-sm text-teal hover:underline">เข้าสู่ระบบ</Link>
           )}
         </div>
       </div>

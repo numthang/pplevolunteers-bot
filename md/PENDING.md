@@ -84,7 +84,10 @@
 - **ค้าง:** `./deploy.sh` (slash option ใหม่) · เทสต์ happy-path จริง (SMS ยิงจริง) · panel เก่าที่วางไว้แล้วต้อง `/panel register verify_phone:true` ใหม่ถึงได้ปุ่ม
 - **ค้าง:** import สมาชิก Amnesty เข้า `ngs_member_cache` (มี API sync หรือไฟล์ครั้งเดียว **ยังไม่เคาะ**)
 
-### 🆕 Phone OTP login (web) — implement เสร็จ local 2026-07-05 · ยังไม่ deploy prod
+### 🆕 Phone OTP login (web) — **UI ขึ้น prod แล้ว** (verify ด้วย curl 2026-07-08: /login มีปุ่ม "เข้าด้วยเบอร์มือถือ (SMS OTP)")
+
+> ⚠️ **ต้องเช็คด่วน:** prod รัน `migration.sql` (column `phone_verified_at`) แล้วหรือยัง — ถ้ายัง `findOwnerByVerifiedPhone` จะ query column ที่ไม่มี → `/api/auth/phone/request` พัง 500 ทั้งที่ปุ่มโชว์อยู่บน prod
+> ทางเข้าลึก: หน้าแรกไม่มี CTA · ต้องกด text link จางๆ `เข้าสู่ระบบ` บน Nav ([Nav.jsx:694](../web/components/Nav.jsx#L694)) ก่อนถึงเจอปุ่ม OTP
 - login เว็บด้วยเบอร์ + SMS OTP สำหรับสมาชิกที่ verify เบอร์ผ่าน Discord แล้ว (เข้า Discord ไม่ได้/ลืมรหัส) · session สิทธิ์เท่า Discord login
 - เบอร์เป็น credential เฉพาะ `phone_verified_at IS NOT NULL` (verifyHandler เซ็ต / แก้เบอร์เองจาก profile → reset) · endpoint ตอบ generic ทุกกรณีกัน enumeration · quota แชร์ `otp_quota` กับ bot
 - **ก่อน deploy prod:** รัน `migration.sql` (column `phone_verified_at`) · เทสต์ happy-path จริง (SMS ยิงจริง)
@@ -93,26 +96,36 @@
 - **Binding เป็น per-guild แต่ login เป็น global (จด 2026-07-07):** verify_phone เขียนเบอร์ลง `dc_members` เฉพาะ guild ที่วาง panel · login เว็บค้นเบอร์ข้ามทุก guild (`findOwnerByVerifiedPhone` ไม่ filter guild) → ผูกที่ guild เดียวก็ login ได้ session ระดับตัวคน ใช้ทุก guild ที่เป็นสมาชิก · ข้อจำกัด cosmetic: profile guild อื่นไม่โชว์เบอร์
 - **⚠️ ก่อนวาง panel verify_phone ที่ server ราชบุรี:** ทะเบียน `ngs_member_cache` ทั้ง 4,488 รายชื่ออยู่ใต้ guild อาสาประชาชน (1340903354037178410) — วาง panel ใน server ราชบุรี (1111998833652678757) จะ **match ไม่เจอใครเลย** เพราะ verifyHandler ค้นเฉพาะ guild ที่กดปุ่ม → ต้องเลือก: (ก) วาง panel ใน server อาสาประชาชน หรือ (ข) import ทะเบียนราชบุรีเข้า guild_id ราชบุรีก่อน (script `importGuildMembers.js` ที่จดคิวไว้)
 
-### 🔜 งาน session หน้า — Org layer: 3 guild = องค์กรเดียว (โมเดลเคาะแล้ว 2026-07-07)
+### ✅ Org layer + phone login — โค้ดเสร็จ local 2026-07-08 · **ยังไม่ deploy prod**
 
-> **โมเดลเคาะแล้ว** — ดู decision memory `decision_tenant_anchor_guild.md` · ที่นี่เก็บ scope งาน implement
+> โมเดลเต็ม + rationale ดู memory `decision_tenant_anchor_guild.md` · ที่นี่คือ checklist deploy + งานค้าง
 
-**ปัญหา (1 ราก 2 อาการ):** ระบบ conflate `guild_id = tenant` แต่จริงๆ **3 guild เป็นองค์กรเดียวกัน** (อาสาประชาชน `1340903354037178410`, ราชบุรี `1111998833652678757`, + อีก 1 server ในเครือ — ระบุ id ตอนเริ่มงาน)
-- **อาการ A — cases:** forum thread ฝังที่ guild ราชบุรี (ย้ายไม่ได้) แต่เว็บ manage มองทีละ guild → เห็นเคสไม่ครบทั้งเครือ
-- **อาการ B — verify_phone / phone-login:** ทะเบียน `ngs_member_cache` 4,488 รายอยู่ใต้ guild อาสาประชาชนหมด แต่ verifyHandler ค้น**เฉพาะ guild ที่กดปุ่ม** → วาง panel ที่ราชบุรี match ไม่เจอใคร · เบอร์ผูก guild เดียว profile guild อื่นไม่เห็น
+**ทำเสร็จ + พิสูจน์กับ DB จริงแล้ว:**
+- ตาราง `organizations` + `dc_guilds.org_id` — seed org "pple" ครอบ 3 guild (อาสาฯ `1340903354037178410` roster อยู่ที่นี่ / ราชบุรี `1111998833652678757` / people's party `1115613658408566844`)
+- `db/org.js` + `web/lib/org.js` — `getOrgGuildIds()` (fallback `[guildId]` เดี่ยวถ้าไม่มี org)
+- `verifyHandler.js` — roster match + dedup มองข้าม guild ในเครือ · **เขียน `member_id` ที่ guild เจ้าของ roster เท่านั้น** (ไม่ใช่ guild ปุ่ม — กัน dangling pointer, join `m.guild_id=n.guild_id` จะหาไม่เจอถ้าเขียนผิด guild) · ถ้า user ไม่ได้อยู่ guild เจ้าของ roster → error บอกตรงๆ ให้ไป join ก่อน (ไม่ silent fail)
+- Bug 2 ตัวที่เจอระหว่างเทสและแก้แล้ว: (1) `deploy-commands.js` ไม่มี try/catch ต่อ guild → guild เดียวพัง (50001 Missing Access) ทำ guild อื่นไม่ได้ deploy ไปด้วย (2) early-exit "ยืนยันแล้ว" เช็คแค่ `member_id` ไม่เช็ค `phone_verified_at` → คนที่ผูกไว้ก่อนมีคอลัมน์นี้ (หรือผูกผ่าน docs) re-verify ไม่ได้ ติดกับดักถาวร login เว็บไม่ได้ (แก้แล้ว: เช็คทั้งคู่ + NOT EXISTS ตัดเฉพาะแถวคนอื่น claim)
+- OTP ref code (4 ตัว, ตัด ILO01) ทั้ง bot+web — กัน SMS หลายฉบับสับสน + ปิดช่อง enumeration (คืน ref ทุกกรณี)
+- quota 3→5 ครั้ง/วัน (แชร์ bot+web) — 3 ไม่พอเมื่อ SMS หาย/ขอใหม่
+- Login UI รวมเป็นหน้าเดียว — หน้าแรก = login (การ์ด login 2 คอลัมน์กลางจอ, Discord ปุ่มส้มเด่น) · `/login` เหลือแค่ redirect (`pages.signIn` ยังต้องมี route นี้) · ลบ `LoginButton.jsx` (ตัวก่อความซ้ำซ้อน) · ถอดการ์ด CALLING/FINANCE ออกจากหน้า public (เตรียม rebrand)
 
-**โมเดลที่เคาะ:** org ครอบหลาย guild
-- ตาราง `organizations (id, name, slug, created_at)` + `dc_guilds.org_id` (FK, nullable) — migration เพิ่มล้วน ไม่กระทบแอปเดิม
-- seed: org "อาสาประชาชน" (slug `pple`) → set `org_id` ให้ทั้ง 3 guild
-- **ทุก guild ต้องมี org เสมอ** (guild เดี่ยว = org สมาชิกตัวเดียว) → scope by `org_id` แบบเดียวหมด ไม่มี fallback พิเศษ
-- Amnesty มาทีหลัง = insert org ใหม่ + set org_id ของ guild มัน → แยกขาดอัตโนมัติ (ทิศ multi-tenant คงอยู่)
+**เคาะ scope แล้ว (คุยกับ user 2026-07-08):**
+- **verify_phone panel ให้มีแค่ที่ guild อาสาประชาชน** — ห้ามเปิดที่ราชบุรี/peopleparty (เพราะ bind สำเร็จได้เฉพาะคนที่เป็นสมาชิกอาสาฯอยู่แล้ว จากทะเบียนที่ anchor ที่นั่น — เปิด panel ที่อื่นจะสร้าง error เปล่าๆ ให้คนที่ไม่ได้อยู่อาสาฯ)
+- member_id **ห้าม sync/copy ไปหลาย guild** — เขียนแถวเดียวที่ guild เจ้าของ roster เท่านั้น (join พังถ้าเขียนผิด guild)
+- `guildMemberAdd` upsert `dc_members` อัตโนมัติทุกคนที่ join (ไม่ต้องแนะนำตัว) — path fallback ใน verifyHandler (สร้างแถวถ้าไม่มี) ใช้จริงน้อยเพราะแถวมีอยู่แล้วเกือบทุกคน
 
-**หลักแยก — แอปไหนต้องขยับ:**
-- มี Discord artifact ต่อ guild (**cases**) → เปลี่ยน web query `WHERE guild_id = ?` → `WHERE guild_id IN (SELECT guild_id FROM dc_guilds WHERE org_id = $org)` · `/panel case` ยังตั้งต่อ guild
-- **roster/verify_phone** → เปลี่ยน verifyHandler + `findOwnerByVerifiedPhone` จาก "ค้น guild ปุ่ม" → "ค้นทุก guild ใน org"
-- **finance/calling/contacts** → ไม่แตะ (anchor guild อาสาประชาชนอันเดียว + filter จังหวัดพอ) จนกว่าจะมี cross-guild need จริง
+**ยังไม่ทำ / ค้าง:**
+- **Docs link-ngs (Phase 2b)** — ประตูผูก member_id ที่ 2 ยังเป็น guild-local ไม่ได้ทำ org-scope (ความเสี่ยง double-claim ต่ำ เพราะต้องรู้เลขบัตร 13 หลัก — แยกทำได้ไม่บล็อก phone login)
+- **cases org-scope query** — ยังไม่เริ่ม (คนละก้อนกับ phone login)
+- **ก่อน deploy prod:**
+  1. รัน `migration.sql` เต็มไฟล์ (org block + `phone_verified_at`)
+  2. `./deploy.sh` (slash option `verify_phone` ใหม่) + restart bot (โหลด `db/org.js`)
+  3. build+restart web
+  4. `/panel register verify_phone:true` **ที่ guild อาสาประชาชนเท่านั้น** (ไม่ใช่ราชบุรี)
+  5. เทสต์ SMS จริงครบ flow: verify ใน Discord → `phone_verified_at` ขึ้น → login เว็บด้วยเบอร์ได้
+- **people's party ยังไม่มี slash commands** (bot จริงยังไม่ได้ invite — เจ้าของตั้งใจไม่เอา tester bot เข้า ไม่ใช่ bug) — ต้อง invite bot จริงเข้า server นี้เอง แล้วรัน `deploy-commands.js` ใหม่
 
-**Wrinkle cases (ยังไม่ตัดสิน):** caseworker ถูก assign เคสราชบุรีจากเว็บ → จะ ping ในกระทู้ได้ต้องเป็นสมาชิก guild ราชบุรีด้วย
+**Wrinkle cases (ยังไม่ตัดสิน, ไม่บล็อกงานอื่น):** caseworker ถูก assign เคสราชบุรีจากเว็บ → จะ ping ในกระทู้ได้ต้องเป็นสมาชิก guild ราชบุรีด้วย
 
 **ความคืบหน้า (2026-07-08):**
 - ✅ **Phase 1 — mapping:** ตาราง `organizations` + `dc_guilds.org_id` + seed org `pple` ผูก 3 guild (อาสาฯ `1340903354037178410`, ราชบุรี `1111998833652678757`, people's party `1115613658408566844` — pre-seed เพราะ bot ยังไม่ sync) · helper `db/org.js` + `web/lib/org.js` `getOrgGuildIds()` (fallback `[guildId]` ถ้า org_id NULL = ไม่ regress guild อื่น) · รัน local แล้ว

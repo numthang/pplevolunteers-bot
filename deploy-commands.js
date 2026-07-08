@@ -56,14 +56,21 @@ const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_BOT_TOKEN)
     } else {
       const { rows } = await pool.query('SELECT guild_id, name FROM dc_guilds ORDER BY name');
       console.log(`\n🚀 กำลัง deploy ${commands.length} commands ไปยัง ${rows.length} guilds...`);
+      let failed = 0;
       for (const guild of rows) {
-        await rest.put(
-          Routes.applicationGuildCommands(process.env.DISCORD_BOT_CLIENT_ID, guild.guild_id),
-          { body: commands }
-        );
-        console.log(`✅ ${guild.name} (${guild.guild_id})`);
+        // guild ใน DB อาจนำหน้า bot (pre-seed org) — 50001 Missing Access ต้องไม่ล้ม guild ที่เหลือ
+        try {
+          await rest.put(
+            Routes.applicationGuildCommands(process.env.DISCORD_BOT_CLIENT_ID, guild.guild_id),
+            { body: commands }
+          );
+          console.log(`✅ ${guild.name} (${guild.guild_id})`);
+        } catch (err) {
+          failed++;
+          console.error(`❌ ${guild.name} (${guild.guild_id}): ${err.message}${err.code === 50001 ? ' — bot ยังไม่ได้ invite เข้า server นี้' : ''}`);
+        }
       }
-      console.log('✅ Deploy ทุก guild สำเร็จ!');
+      console.log(failed ? `⚠️  สำเร็จ ${rows.length - failed}/${rows.length} guilds` : '✅ Deploy ทุก guild สำเร็จ!');
     }
   } catch (err) {
     console.error('❌ Deploy ไม่สำเร็จ:', err);

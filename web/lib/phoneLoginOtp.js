@@ -9,7 +9,7 @@ import crypto from 'crypto'
 export const SESSION_KEY         = 'web_otp_login'
 export const OTP_TTL_MS          = 5 * 60 * 1000
 export const MAX_ATTEMPTS        = 5
-export const MAX_SENDS_PER_DAY   = 3   // แชร์ quota `otp_quota` กับ bot verify flow
+export const MAX_SENDS_PER_DAY   = 5   // แชร์ quota `otp_quota` กับ bot verify flow — 3 ไม่พอเมื่อ SMS หาย/ขอใหม่
 export const RESEND_COOLDOWN_MS  = 60 * 1000
 
 // HMAC ไม่ใช่ sha256 เปล่า — OTP 6 หลักมีแค่ 1M ค่า brute-force ได้ทันทีถ้า DB หลุด
@@ -20,6 +20,15 @@ export function hashOtp(otp, discordId) {
 
 export function validPhone(phone) {
   return /^0[689]\d{8}$/.test(phone || '')
+}
+
+// ref code 4 ตัว — โชว์บนหน้าจอคู่กับใน SMS ให้ user จับคู่ได้ว่า SMS ฉบับไหนตรงกับ session ปัจจุบัน
+// (มีปุ่มส่งซ้ำ → ถือ SMS หลายฉบับ แต่ใช้ได้เฉพาะฉบับล่าสุด) · ตัดตัวสับสน I L O 0 1 ออก
+const REF_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
+export function genRef() {
+  let s = ''
+  for (let i = 0; i < 4; i++) s += REF_ALPHABET[crypto.randomInt(REF_ALPHABET.length)]
+  return s
 }
 
 /** หาเจ้าของเบอร์ verified — dc_members per-guild มีหลายแถวได้ถ้าเป็นคนเดียวกัน

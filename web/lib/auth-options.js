@@ -117,6 +117,6 @@ export const authOptions = {
       return session
     },
   },
-  pages: { signIn: '/login' },
+  pages: { signIn: '/' },  // login รวมอยู่หน้าแรก (LoginPanel) · /login เหลือแค่ redirect
   secret: process.env.NEXTAUTH_SECRET,
 }
