@@ -173,6 +173,7 @@ export default async function HomePage() {
   const userIsAdmin = isAdmin(access)
   const GUILD_ID = await getGuildId(session)
   const enabledFeatures = await getEnabledFeatures(GUILD_ID)
+  const financeOn = enabledFeatures.includes('finance')
   const callingOn = enabledFeatures.includes('calling')
   const docsOn = enabledFeatures.includes('docs')
   const casesOn = enabledFeatures.includes('cases') && canManageCases(access)
@@ -184,7 +185,7 @@ export default async function HomePage() {
     getCampaigns(),
     getTodayCallCount(),
     discordId ? getPendingCallCount(discordId) : Promise.resolve(0),
-    getFINANCESummary(session),
+    financeOn ? getFINANCESummary(session) : Promise.resolve({ public: null, internal: null, private: null }),
     discordId ? getDisplayName(GUILD_ID, discordId) : Promise.resolve(null),
     getCONTACTSCount(GUILD_ID),
     discordId ? getContactPendingCount(discordId) : Promise.resolve(0),
@@ -271,6 +272,7 @@ export default async function HomePage() {
         )}
 
         {/* FINANCE */}
+        {financeOn && (
         <Link href="/finance" className="flex flex-col bg-card-bg border border-brand-blue-light dark:border-disc-border rounded-lg p-5 hover:border-brand-orange transition-colors">
           <div className="flex items-center gap-2 mb-3">
             <div className="w-9 h-9 rounded-lg bg-warm-100 dark:bg-disc-hover flex items-center justify-center shrink-0">
@@ -309,6 +311,7 @@ export default async function HomePage() {
             </div>
           )}
         </Link>
+        )}
 
         {/* DOCS */}
         {docsOn && (

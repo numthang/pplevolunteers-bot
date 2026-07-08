@@ -1,5 +1,6 @@
 PENDING
-- ทำระบบจัดการโครงการ กันต่อไหม 
+- แบรนดิ้ง ยังไม่ได้สักที
+- ทำระบบจัดการโครงการ notion, trello, appflowy
 - Project ย้ายจาก LINE กลุ่มมาใช้ discord อยากทำอันนี้
 
 End of the Day

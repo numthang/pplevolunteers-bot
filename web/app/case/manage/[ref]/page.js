@@ -3,6 +3,7 @@ import { redirect, notFound } from 'next/navigation'
 import { getSession } from '@/lib/auth.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import { getGuildId } from '@/lib/guildContext.js'
+import { getOrgGuildIds } from '@/lib/org.js'
 import { canAccessCaseProvince } from '@/lib/caseAccess.js'
 import { getCaseByRefFull, getAssigneesWithNames, getAttachments, getTimeline } from '@/db/cases.js'
 import { statusLabel, CASE_CLOSE_REASONS } from '@/lib/caseOptions.js'
@@ -23,13 +24,14 @@ export default async function CaseManageDetail({ params }) {
   const session = await getSession()
   const { access } = await getEffectiveIdentity(session)
   const guildId = await getGuildId(session)
+  const orgGuildIds = await getOrgGuildIds(guildId)
 
-  const c = await getCaseByRefFull(guildId, ref)
+  const c = await getCaseByRefFull(orgGuildIds, ref)
   if (!c) notFound()
   if (!canAccessCaseProvince(c.province, access)) redirect('/case/manage')
 
   const [assignees, attachments, timeline] = await Promise.all([
-    getAssigneesWithNames(c.id, guildId), getAttachments(c.id), getTimeline(c.id),
+    getAssigneesWithNames(c.id, orgGuildIds), getAttachments(c.id), getTimeline(c.id),
   ])
   const isAssigned = assignees.some(a => a.discord_id === session.user.discordId)
 

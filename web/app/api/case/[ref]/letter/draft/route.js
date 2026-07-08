@@ -24,7 +24,7 @@ export async function POST(req, { params }) {
   const { guildId, caseRow } = gate
 
   const timeline = await getTimeline(caseRow.id)
-  const letterConfig = await getLetterConfig(guildId, caseRow.province)
+  const letterConfig = await getLetterConfig(caseRow.guild_id, caseRow.province)
 
   const caseContext = [
     `จังหวัด: ${caseRow.province}`,

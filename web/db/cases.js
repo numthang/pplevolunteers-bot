@@ -104,11 +104,12 @@ export async function getCaseByRefPublic(ref) {
 
 /**
  * 🔒 FULL — ทุก field รวม PII · เรียกหลังผ่าน gate (canManageCases + scope) เท่านั้น
+ * @param {string[]} guildIds  org-scope — guild เจ้าของ session + guild ในเครือเดียวกัน (getOrgGuildIds)
  */
-export async function getCaseByRefFull(guildId, ref) {
+export async function getCaseByRefFull(guildIds, ref) {
   const { rows } = await pool.query(
-    `SELECT * FROM cases WHERE guild_id = $1 AND ref = $2`,
-    [guildId, ref],
+    `SELECT * FROM cases WHERE guild_id = ANY($1) AND ref = $2`,
+    [guildIds, ref],
   )
   return rows[0] || null
 }
@@ -122,17 +123,21 @@ export async function getAssignees(caseId) {
   return rows
 }
 
-/** assignees พร้อมชื่อ (JOIN dc_members) — สำหรับแสดงในหน้า workspace */
-export async function getAssigneesWithNames(caseId, guildId) {
+/**
+ * assignees พร้อมชื่อ (JOIN dc_members) — สำหรับแสดงในหน้า workspace
+ * @param {string[]} guildIds  org-scope — ผู้รับผิดชอบอาจเป็นสมาชิก guild ในเครือที่ไม่ใช่ guild เจ้าของเคส
+ */
+export async function getAssigneesWithNames(caseId, guildIds) {
   const { rows } = await pool.query(
-    `SELECT a.discord_id, a.assigned_at,
+    `SELECT DISTINCT ON (a.discord_id) a.discord_id, a.assigned_at,
             COALESCE(m.display_name, m.username, a.discord_id) AS name
      FROM case_assignees a
-     LEFT JOIN dc_members m ON m.discord_id = a.discord_id AND m.guild_id = $2
-     WHERE a.case_id = $1 ORDER BY a.assigned_at`,
-    [caseId, guildId],
+     LEFT JOIN dc_members m ON m.discord_id = a.discord_id AND m.guild_id = ANY($2)
+     WHERE a.case_id = $1
+     ORDER BY a.discord_id, (m.display_name IS NULL), (m.username IS NULL)`,
+    [caseId, guildIds],
   )
-  return rows
+  return rows.sort((a, b) => new Date(a.assigned_at) - new Date(b.assigned_at))
 }
 
 export async function getAttachments(caseId) {
@@ -165,11 +170,12 @@ export async function insertAttachment(caseId, guildId, { file_path, original_na
 
 /**
  * รายการเคส (scope-filtered) — provinces=null = admin (ทุกจังหวัด)
+ * @param {string[]} guildIds  org-scope — getOrgGuildIds(session guild)
  */
-export async function listCases(guildId, { provinces = null, status = null, limit = 100, offset = 0 } = {}) {
-  const params = [guildId]
-  let q = `SELECT id, ref, province, category, status, source, created_at, updated_at
-           FROM cases WHERE guild_id = $1`
+export async function listCases(guildIds, { provinces = null, status = null, limit = 100, offset = 0 } = {}) {
+  const params = [guildIds]
+  let q = `SELECT id, ref, province, category, title, status, source, created_at, updated_at
+           FROM cases WHERE guild_id = ANY($1)`
   if (Array.isArray(provinces)) {
     if (provinces.length === 0) return []
     params.push(provinces)
@@ -185,10 +191,10 @@ export async function listCases(guildId, { provinces = null, status = null, limi
   return rows
 }
 
-/** นับเคสแยกสถานะ (dashboard) — provinces=null = ทุกจังหวัด */
-export async function countByStatus(guildId, provinces = null) {
-  const params = [guildId]
-  let q = `SELECT status, COUNT(*)::int AS n FROM cases WHERE guild_id = $1`
+/** นับเคสแยกสถานะ (dashboard) — provinces=null = ทุกจังหวัด · guildIds = org-scope */
+export async function countByStatus(guildIds, provinces = null) {
+  const params = [guildIds]
+  let q = `SELECT status, COUNT(*)::int AS n FROM cases WHERE guild_id = ANY($1)`
   if (Array.isArray(provinces)) {
     if (provinces.length === 0) return {}
     params.push(provinces)
