@@ -400,20 +400,19 @@ async function handleBasketAdd(interaction) {
 
   const { guildId, channelId } = interaction;
   const addedBy = interaction.user.id;
-  const isBot = msg.author?.bot ?? false;
   const channelName = interaction.channel?.name || null;
 
   if (videos.length > 1) return interaction.editReply({ content: '❌ เพิ่มได้แค่ 1 วิดีโอต่อครั้ง' });
 
   if (images.length) await addImages(guildId, channelId, addedBy, images.map(a => ({ url: a.url })), msg.id, channelName);
   if (videos.length) await addVideo(guildId, channelId, addedBy, videos.map(a => ({ url: a.url })), msg.id, channelName);
-  if (text && !isBot && !images.length && !videos.length) await appendCaption(guildId, channelId, addedBy, text, msg.id, channelName);
+  if (text && !images.length && !videos.length) await appendCaption(guildId, channelId, addedBy, text, msg.id, channelName);
 
   const basket = await getBasket(guildId, channelId);
   const added = [
     images.length ? `🖼️ ${images.length} รูป` : null,
     videos.length ? `🎬 1 วิดีโอ` : null,
-    text && !isBot && !images.length && !videos.length ? `📝 caption (ต่อท้าย)` : null,
+    text && !images.length && !videos.length ? `📝 caption (ต่อท้าย)` : null,
   ].filter(Boolean).join(' + ');
 
   const payload = await buildBasketPayload(basket, guildId, channelId, interaction.user.id, interaction.channel?.name);
