@@ -1,6 +1,8 @@
 PENDING
+- อยากได้หน้า dashboard ของ http://localhost:3000/bot/ ตอนนี้มันวิ่งไป http://localhost:3000/bot/platforms ดูแปลกๆ ไม่มี landing
 - แบรนดิ้ง ยังไม่ได้สักที
-- ทำระบบจัดการโครงการ notion, trello, appflowy
+- ทำระบบจัดการโครงการ project management อย่าง notion, trello, appflowy
+- gogo panel อัพเกรด ให้กดลงชื่องานด้านต่างๆ แล้วลิงก์กับ project management
 - Project ย้ายจาก LINE กลุ่มมาใช้ discord อยากทำอันนี้
 
 End of the Day

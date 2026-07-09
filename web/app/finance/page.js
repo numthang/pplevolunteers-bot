@@ -5,20 +5,16 @@ import { canViewAccount, canEditAccount } from '@/lib/financeAccess.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import { getGuildId } from '@/lib/guildContext.js'
 import { can } from '@/lib/permissions.js'
+import { getTranslations } from 'next-intl/server'
 import Link from 'next/link'
 import AccountCard from '@/components/finance/AccountCard'
 import AddAccountButton from '@/components/finance/AddAccountButton'
-
-const VISIBILITY_LABEL = {
-  public:   { label: 'สาธารณะ', cls: 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400' },
-  internal: { label: 'ภายใน',   cls: 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-400' },
-  private:  { label: 'ส่วนตัว', cls: 'bg-gray-100 dark:bg-disc-hover text-gray-500 dark:text-disc-muted' },
-}
 
 function fmt(n) {
   return Math.abs(n).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '\u00A0฿'
 }
 export default async function FinancePage() {
+  const t = await getTranslations('finance')
   const session = await requireAuth()
   const { discordId, access } = await getEffectiveIdentity(session)
   const GUILD_ID = await getGuildId(session)
@@ -33,22 +29,22 @@ export default async function FinancePage() {
   )
 
   const groups = [
-    { key: 'public',   label: '🌐 สาธารณะ' },
-    { key: 'internal', label: '👥 ภายใน' },
-    { key: 'private',  label: '🔒 ส่วนตัว' },
+    { key: 'public',   label: `🌐 ${t('visibility.public')}` },
+    { key: 'internal', label: `👥 ${t('visibility.internal')}` },
+    { key: 'private',  label: `🔒 ${t('visibility.private')}` },
   ]
 
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-balance">ภาพรวม</h1>
+        <h1 className="text-2xl font-bold text-balance">{t('dashboard.title')}</h1>
         <AddAccountButton />
       </div>
 
       {summaries.length === 0 ? (
         <div className="text-center text-gray-400 py-20">
-          <p className="mb-4">ยังไม่มีบัญชีที่คุณเข้าถึงได้</p>
-          <Link href="/finance/accounts" className="text-indigo-600 hover:underline">+ เพิ่มบัญชีใหม่</Link>
+          <p className="mb-4">{t('dashboard.empty')}</p>
+          <Link href="/finance/accounts" className="text-indigo-600 hover:underline">+ {t('dashboard.addAccountLink')}</Link>
         </div>
       ) : (
         <div className="space-y-8">
@@ -74,8 +70,8 @@ export default async function FinancePage() {
       )}
 
       <div className="mt-8 flex gap-4 text-sm">
-        <Link href="/finance/transactions" className="text-indigo-600 hover:underline">รายการทั้งหมด</Link>
-        <Link href="/finance/categories" className="text-indigo-600 hover:underline">หมวดหมู่</Link>
+        <Link href="/finance/transactions" className="text-indigo-600 hover:underline">{t('dashboard.allTransactionsLink')}</Link>
+        <Link href="/finance/categories" className="text-indigo-600 hover:underline">{t('categories.title')}</Link>
       </div>
     </div>
   )

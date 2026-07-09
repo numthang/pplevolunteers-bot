@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { Suspense } from 'react'
+import { useTranslations } from 'next-intl'
 import CategorySelect, { CatIcon } from '@/components/CategorySelect'
 import { formatThaiDateHeader, formatThaiDateShort, formatThaiDateTime } from '@/lib/dateFormat'
 import AccountSelect from '@/components/AccountSelect'
@@ -12,13 +13,13 @@ import { canEditAccount } from '@/lib/financeAccess.js'
 import { useEffectiveRoles } from '@/lib/useEffectiveRoles.js'
 import { can } from '@/lib/permissions.js'
 
-const MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.']
-
 function TransactionsContent() {
+  const t = useTranslations('finance')
   const searchParams = useSearchParams()
   const router = useRouter()
   const { data: session } = useSession()
   const { discordId: effectiveDiscordId, access: effectiveAccess } = useEffectiveRoles(session)
+  const MONTHS = t.raw('filters.monthsShort')
 
   const [txns, setTxns]         = useState([])
   const [accounts, setAccounts] = useState([])
@@ -180,6 +181,14 @@ function TransactionsContent() {
     return acc ? canEditAccount({ owner_id: acc.owner_id, visibility: acc.visibility, province: acc.province }, effectiveDiscordId, effectiveAccess) : false
   })()
 
+  // precomputed labels for use inside the transaction-list map below, where the loop
+  // variable is itself named `t` and would shadow the translation function
+  const noCategoryLabel = t('categories.none')
+  const fundsLabel      = t('transactions.fundsTitle')
+  const unspecifiedLabel = t('common.unspecified')
+  const editAllLabel    = t('transactions.editAllButton')
+  const deleteLabel     = t('common.delete')
+
   function openNew()  { setForm({ ...EMPTY_FORM }); setEditing({}) }
   function openEdit(t){ setForm({ ...t, txn_at: toLocalDT(new Date(t.txn_at)) }); setEditing(t) }
   function close()    { setEditing(null) }
@@ -211,22 +220,22 @@ function TransactionsContent() {
   }
 
   async function removeFund(id) {
-    if (!confirm('ลบกองเงินนี้? transaction ที่ผูกไว้จะถูกเปลี่ยนเป็น "ไม่ระบุ"')) return
+    if (!confirm(t('transactions.removeFundConfirm'))) return
     await fetch(`/api/finance/funds/${id}`, { method: 'DELETE' })
     if (String(filter.fundId) === String(id)) setFilter(f => ({ ...f, fundId: '' }))
     fetchFunds()
   }
 
   async function save() {
-    if (!form.account_id) return alert('กรุณาเลือกบัญชี')
-    if (!form.amount || Number(form.amount) <= 0) return alert('กรุณาใส่จำนวนเงิน')
+    if (!form.account_id) return alert(t('transactions.accountRequiredAlert'))
+    if (!form.amount || Number(form.amount) <= 0) return alert(t('transactions.amountRequiredAlert'))
     const isNew = !editing?.id
     const res = await fetch(isNew ? '/api/finance/transactions' : `/api/finance/transactions/${editing.id}`, {
       method: isNew ? 'POST' : 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form),
     })
-    if (!res.ok) return alert('ไม่มีสิทธิ์บันทึกรายการในบัญชีนี้')
+    if (!res.ok) return alert(t('transactions.permissionDeniedAlert'))
     if (isNew) {
       close(); load()
     } else {
@@ -253,7 +262,7 @@ function TransactionsContent() {
   }
 
   async function remove(id) {
-    if (!confirm('ลบรายการนี้?')) return
+    if (!confirm(t('transactions.confirmDelete'))) return
     await fetch(`/api/finance/transactions/${id}`, { method: 'DELETE' })
     load()
   }
@@ -274,10 +283,10 @@ function TransactionsContent() {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-bold text-balance">รายการธุรกรรม</h1>
+        <h1 className="text-2xl font-bold text-balance">{t('transactions.title')}</h1>
         {can('editProvinceAccount', effectiveAccess?.permissions || []) && (
           <button onClick={openNew} className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-indigo-700">
-            + เพิ่มรายการ
+            + {t('transactions.addButton')}
           </button>
         )}
       </div>
@@ -285,7 +294,7 @@ function TransactionsContent() {
       {/* Account selector card */}
       {accounts.length > 0 && (() => {
         const acc = accounts.find(a => String(a.id) === String(filter.accountId))
-        const visLabel = acc?.visibility === 'private' ? '🔒 ส่วนตัว' : acc?.visibility === 'internal' ? '👥 ภายใน' : '🌐 สาธารณะ'
+        const visLabel = acc?.visibility === 'private' ? `🔒 ${t('visibility.private')}` : acc?.visibility === 'internal' ? `👥 ${t('visibility.internal')}` : `🌐 ${t('visibility.public')}`
         function copyAll(e) {
           e.stopPropagation()
           const text = [acc.name, acc.bank, acc.account_no].filter(Boolean).join(' ')
@@ -315,7 +324,7 @@ function TransactionsContent() {
                     </p>
                   </>
                 ) : (
-                  <p className="text-gray-400 dark:text-disc-muted">เลือกบัญชี</p>
+                  <p className="text-gray-400 dark:text-disc-muted">{t('transactions.selectAccountPlaceholder')}</p>
                 )}
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
@@ -324,7 +333,7 @@ function TransactionsContent() {
                     className="flex items-center gap-1 text-[11px] text-gray-400 dark:text-disc-muted hover:text-indigo-500 dark:hover:text-indigo-400 transition px-1 cursor-pointer"
                   >
                     {copiedAcc ? <Check size={12} className="text-green-500" /> : <Copy size={12} />}
-                    {copiedAcc ? 'คัดลอกแล้ว' : 'คัดลอก'}
+                    {copiedAcc ? t('common.copied') : t('common.copy')}
                   </span>
                 )}
                 <ChevronDown size={16} className={`text-gray-400 transition-transform ${accOpen ? 'rotate-180' : ''}`} />
@@ -337,7 +346,7 @@ function TransactionsContent() {
                 <button type="button"
                   onClick={() => { setFilter(f => ({ ...f, accountId: '' })); setAccOpen(false) }}
                   className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-400 hover:bg-gray-50 dark:hover:bg-disc-hover/50">
-                  ทุกบัญชี
+                  {t('filters.allAccounts')}
                 </button>
                 {accounts.map(a => (
                   <button key={a.id} type="button"
@@ -358,16 +367,16 @@ function TransactionsContent() {
             {acc && balance?.has_balance_after && (
               <div className="border-t dark:border-disc-border px-4 py-2.5 space-y-1.5">
                 <div className="flex justify-between text-base">
-                  <span className="text-gray-500 dark:text-disc-muted">ยอดรวมในระบบ</span>
-                  <span className="font-semibold">{Number(balance.net).toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท</span>
+                  <span className="text-gray-500 dark:text-disc-muted">{t('transactions.totalInSystem')}</span>
+                  <span className="font-semibold">{Number(balance.net).toLocaleString('th-TH', { minimumFractionDigits: 2 })} {t('transactions.bahtSuffix')}</span>
                 </div>
                 <div className="flex justify-between text-base">
-                  <span className="text-gray-500 dark:text-disc-muted">ยอดคงเหลือจริง</span>
-                  <span className="font-semibold text-indigo-600 dark:text-indigo-400">{Number(balance.balance_after).toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท</span>
+                  <span className="text-gray-500 dark:text-disc-muted">{t('transactions.actualBalance')}</span>
+                  <span className="font-semibold text-indigo-600 dark:text-indigo-400">{Number(balance.balance_after).toLocaleString('th-TH', { minimumFractionDigits: 2 })} {t('transactions.bahtSuffix')}</span>
                 </div>
                 {Math.abs(Number(balance.net) - Number(balance.balance_after)) > 0.01 && (
                   <div className="text-xs text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 rounded px-2 py-1">
-                    ⚠️ ยอดต่างกัน {Math.abs(Number(balance.net) - Number(balance.balance_after)).toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท
+                    {t('transactions.balanceDiffWarning', { amount: Math.abs(Number(balance.net) - Number(balance.balance_after)).toLocaleString('th-TH', { minimumFractionDigits: 2 }) })}
                   </div>
                 )}
               </div>
@@ -377,23 +386,23 @@ function TransactionsContent() {
             {acc && fundBalances && (fundBalances.funds?.length > 0 || Number(fundBalances.untagged?.count) > 0 || canEditAcc) && (
               <div className="border-t dark:border-disc-border px-4 py-2.5">
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-xs font-semibold text-gray-500 dark:text-disc-muted uppercase tracking-wide">กองเงิน</span>
+                  <span className="text-xs font-semibold text-gray-500 dark:text-disc-muted uppercase tracking-wide">{t('transactions.fundsTitle')}</span>
                   {canEditAcc && (
                     addingFund ? (
                       <div className="flex items-center gap-1.5">
                         <input
                           autoFocus
                           className="text-xs border dark:border-disc-border rounded px-2 py-0.5 bg-white dark:bg-disc-hover text-gray-900 dark:text-disc-text w-28 focus:outline-none focus:ring-1 focus:ring-indigo-400"
-                          placeholder="ชื่อกองเงิน"
+                          placeholder={t('transactions.newFundPlaceholder')}
                           value={newFundName}
                           onChange={e => setNewFundName(e.target.value)}
                           onKeyDown={e => { if (e.key === 'Enter') saveFund(); if (e.key === 'Escape') { setAddingFund(false); setNewFundName('') } }}
                         />
-                        <button onClick={saveFund} className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">บันทึก</button>
-                        <button onClick={() => { setAddingFund(false); setNewFundName('') }} className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-disc-text">ยกเลิก</button>
+                        <button onClick={saveFund} className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">{t('common.save')}</button>
+                        <button onClick={() => { setAddingFund(false); setNewFundName('') }} className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-disc-text">{t('common.cancel')}</button>
                       </div>
                     ) : (
-                      <button onClick={() => setAddingFund(true)} className="text-xs text-indigo-500 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300">+ เพิ่มกอง</button>
+                      <button onClick={() => setAddingFund(true)} className="text-xs text-indigo-500 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300">+ {t('transactions.addFundButton')}</button>
                     )
                   )}
                 </div>
@@ -416,7 +425,7 @@ function TransactionsContent() {
                     onClick={() => { setFilter(f => ({ ...f, fundId: filter.fundId === '0' ? '' : '0' })); setAccOpen(false) }}
                     className={`w-full flex justify-between text-sm rounded px-1.5 py-1 transition ${filter.fundId === '0' ? 'bg-orange-100 dark:bg-orange-800/40 text-orange-700 dark:text-orange-300 font-semibold ring-1 ring-inset ring-orange-300 dark:ring-orange-600' : 'text-gray-400 dark:text-disc-muted hover:bg-gray-50 dark:hover:bg-disc-hover'}`}
                   >
-                    <span>ไม่ระบุกอง ({fundBalances.untagged.count} รายการ)</span>
+                    <span>{t('transactions.unspecifiedFundCount', { count: fundBalances.untagged.count })}</span>
                     <span className="font-mono tabular-nums select-text">{Number(fundBalances.untagged?.net || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })} ฿</span>
                   </button>
                 )}
@@ -431,7 +440,7 @@ function TransactionsContent() {
       <div className="flex flex-col gap-2 mb-5">
         {/* Type */}
         <div className="flex rounded border dark:border-disc-border overflow-hidden text-base">
-          {[['', 'ทั้งหมด'], ['income', '📥 รายรับ'], ['expense', '📤 รายจ่าย']].map(([val, label]) => (
+          {[['', t('filters.typeAll')], ['income', `📥 ${t('common.income')}`], ['expense', `📤 ${t('common.expense')}`]].map(([val, label]) => (
             <button key={val} type="button"
               onClick={() => setFilter(f => ({ ...f, type: val }))}
               className={`flex-1 px-3 py-1.5 ${filter.type === val ? 'bg-indigo-600 text-white' : 'bg-card-bg text-gray-700 dark:text-disc-text hover:bg-gray-50 dark:hover:bg-disc-hover'}`}
@@ -452,12 +461,12 @@ function TransactionsContent() {
               <button type="button" onClick={() => setDateOpen(o => !o)}
                 className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-disc-hover/50 transition">
                 <span className={hasDate ? 'text-indigo-600 dark:text-indigo-400 font-medium' : 'text-gray-400 dark:text-disc-muted'}>
-                  {dateLabel || 'กรองตามวันที่'}
+                  {dateLabel || t('filters.dateFilterPlaceholder')}
                 </span>
                 <div className="flex items-center gap-2">
                   {hasDate && (
                     <span onClick={e => { e.stopPropagation(); setSearchInput(''); setFilter(f => ({ ...f, year: '', month: '', dateFrom: '', dateTo: '', search: '' })) }}
-                      className="text-xs text-gray-400 hover:text-red-500 transition px-1">ล้าง</span>
+                      className="text-xs text-gray-400 hover:text-red-500 transition px-1">{t('filters.clear')}</span>
                   )}
                   <ChevronDown size={14} className={`text-gray-400 transition-transform ${dateOpen ? 'rotate-180' : ''}`} />
                 </div>
@@ -466,7 +475,7 @@ function TransactionsContent() {
                 <div className="border-t dark:border-disc-border px-3 py-3 space-y-2">
                   <input
                     className="w-full border dark:border-disc-border rounded px-2 py-1.5 text-sm bg-white dark:bg-disc-hover text-gray-900 dark:text-disc-text placeholder-gray-400"
-                    placeholder="ค้นหารายการ..."
+                    placeholder={t('transactions.searchPlaceholder')}
                     value={searchInput}
                     onChange={e => setSearchInput(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && setFilter(f => ({ ...f, search: searchInput }))}
@@ -474,12 +483,12 @@ function TransactionsContent() {
                   <div className="flex gap-2">
                     <select className="flex-1 border dark:border-disc-border rounded px-2 py-1.5 text-sm bg-white dark:bg-disc-hover text-gray-900 dark:text-disc-text"
                       value={filter.year} onChange={e => setFilter(f => ({ ...f, year: e.target.value, month: '', dateFrom: '', dateTo: '' }))}>
-                      <option value="">ทุกปี</option>
+                      <option value="">{t('filters.allYears')}</option>
                       {years.map(y => <option key={y} value={y}>{y + 543} ({y})</option>)}
                     </select>
                     <select className="flex-1 border dark:border-disc-border rounded px-2 py-1.5 text-sm bg-white dark:bg-disc-hover text-gray-900 dark:text-disc-text"
                       value={filter.month} onChange={e => setFilter(f => ({ ...f, month: e.target.value, dateFrom: '', dateTo: '' }))}>
-                      <option value="">ทุกเดือน</option>
+                      <option value="">{t('filters.allMonths')}</option>
                       {MONTHS.map((m, i) => <option key={i+1} value={i+1}>{m}</option>)}
                     </select>
                   </div>
@@ -500,7 +509,7 @@ function TransactionsContent() {
       {/* List */}
       <div className="space-y-2">
         {txns.length === 0 && (
-          <div className="text-center py-12 text-gray-400">ไม่มีรายการ</div>
+          <div className="text-center py-12 text-gray-400">{t('common.noItems')}</div>
         )}
         {txns.reduce((acc, t) => {
           const dateKey = formatThaiDateHeader(t.txn_at)
@@ -536,7 +545,7 @@ function TransactionsContent() {
                       <span>{t.category_name}</span>
                     </>
                   )}
-                  {!t.category_name && <span className="text-gray-300 dark:text-disc-muted/50">· ไม่มีหมวด</span>}
+                  {!t.category_name && <span className="text-gray-300 dark:text-disc-muted/50">· {noCategoryLabel}</span>}
                   {t.fund_name && (
                     <span className="ml-1 px-1.5 py-0.5 rounded text-[10px] bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 flex-shrink-0">{t.fund_name}</span>
                   )}
@@ -564,7 +573,7 @@ function TransactionsContent() {
                       ${!t.category_id
                         ? 'bg-gray-200 dark:bg-disc-hover border-gray-400 dark:border-disc-border text-gray-800 dark:text-disc-text font-medium'
                         : 'border-gray-200 dark:border-disc-border text-gray-400 hover:bg-gray-100 dark:hover:bg-disc-hover'}`}
-                  >ไม่มีหมวด</button>
+                  >{noCategoryLabel}</button>
 
                   {/* category icons — all, sorted by usage_count */}
                   {[...categories].sort((a, b) => (b.usage_count || 0) - (a.usage_count || 0)).slice(0, 10).map(c => (
@@ -583,14 +592,14 @@ function TransactionsContent() {
                 </div>
                 {funds.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 mb-3">
-                    <p className="w-full text-xs text-gray-400 dark:text-disc-muted mb-0.5">กองเงิน</p>
+                    <p className="w-full text-xs text-gray-400 dark:text-disc-muted mb-0.5">{fundsLabel}</p>
                     <button
                       onClick={() => changeFund(t, null)}
                       className={`px-3 py-1.5 rounded-full text-[15px] border transition
                         ${!t.fund_id
                           ? 'bg-gray-200 dark:bg-disc-hover border-gray-400 dark:border-disc-border text-gray-800 dark:text-disc-text font-medium'
                           : 'border-gray-200 dark:border-disc-border text-gray-400 hover:bg-gray-100 dark:hover:bg-disc-hover'}`}
-                    >ไม่ระบุ</button>
+                    >{unspecifiedLabel}</button>
                     {funds.map(fund => (
                       <button
                         key={fund.id}
@@ -612,11 +621,11 @@ function TransactionsContent() {
                     <button
                       onClick={e => { e.stopPropagation(); openEdit(t); setExpandedId(null) }}
                       className="flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 hover:underline"
-                    ><Pencil size={12} /> แก้ไขทั้งหมด</button>
+                    ><Pencil size={12} /> {editAllLabel}</button>
                     <button
                       onClick={e => { e.stopPropagation(); remove(t.id) }}
                       className="flex items-center gap-1 text-xs text-red-500 dark:text-red-400 hover:underline ml-2"
-                    ><Trash2 size={12} /> ลบ</button>
+                    ><Trash2 size={12} /> {deleteLabel}</button>
                   </div>
                 )}
               </div>
@@ -630,12 +639,12 @@ function TransactionsContent() {
 
       {/* infinite scroll sentinel */}
       <div ref={sentinelRef} className="py-2 text-center text-sm text-gray-400">
-        {loading && 'กำลังโหลด...'}
-        {!loading && !hasMore && txns.length > 0 && 'แสดงทั้งหมดแล้ว'}
+        {loading && t('common.loading')}
+        {!loading && !hasMore && txns.length > 0 && t('common.allLoaded')}
       </div>
 
       {editing !== null && (
-        <Modal title={editing.id ? `แก้ไขรายการ #${editing.id}` : 'เพิ่มรายการ'} onClose={close} onSave={save}>
+        <Modal title={editing.id ? t('transactions.editModalTitle', { id: editing.id }) : t('transactions.addButton')} onClose={close} onSave={save}>
           <TxnForm form={form} onChange={v => setForm(f => ({ ...f, ...v }))}
             accounts={accounts.filter(a => canEditAccount(
               { owner_id: a.owner_id, visibility: a.visibility, province: a.province },
@@ -649,6 +658,7 @@ function TransactionsContent() {
 }
 
 function TxnForm({ form, onChange, accounts, categories }) {
+  const t = useTranslations('finance')
   const inputCls = "block w-full border dark:border-disc-border rounded px-2 py-1 mt-1 bg-white dark:bg-disc-hover text-gray-900 dark:text-disc-text"
   const hasDetails = !!(form.counterpart_name || form.counterpart_bank || form.counterpart_account || form.evidence_url)
   const [showDetails, setShowDetails] = useState(hasDetails)
@@ -656,20 +666,20 @@ function TxnForm({ form, onChange, accounts, categories }) {
   return (
     <div className="space-y-3 text-sm text-gray-700 dark:text-disc-text">
       <label className="block">
-        บัญชี
+        {t('transactions.accountFieldLabel')}
         <AccountSelect
           accounts={accounts}
           value={form.account_id}
           onChange={v => onChange({ account_id: v })}
-          placeholder="เลือกบัญชี"
+          placeholder={t('transactions.selectAccountPlaceholder')}
           className="mt-1"
         />
       </label>
       <div className="grid grid-cols-2 gap-3">
         <div className="block">
-          ประเภท
+          {t('transactions.typeFieldLabel')}
           <div className="flex rounded border dark:border-disc-border overflow-hidden mt-1 text-sm">
-            {[['income','📥 รายรับ'],['expense','📤 รายจ่าย']].map(([val, label]) => (
+            {[['income', `📥 ${t('common.income')}`], ['expense', `📤 ${t('common.expense')}`]].map(([val, label]) => (
               <button key={val} type="button"
                 onClick={() => onChange({ type: val })}
                 className={`flex-1 py-1 ${form.type === val
@@ -680,16 +690,16 @@ function TxnForm({ form, onChange, accounts, categories }) {
           </div>
         </div>
         <div className="block">
-          จำนวนเงิน
+          {t('transactions.amountFieldLabel')}
           <CalcInput value={form.amount} onChange={v => onChange({ amount: v })} />
         </div>
       </div>
       <label className="block">
-        รายละเอียด
+        {t('transactions.descriptionFieldLabel')}
         <input name="description" className={inputCls} value={form.description || ''} onChange={e => onChange({ description: e.target.value })} />
       </label>
       <div className="block text-sm">
-        หมวดหมู่
+        {t('categories.title')}
         <CategorySelect
           categories={categories}
           value={form.category_id || ''}
@@ -698,7 +708,7 @@ function TxnForm({ form, onChange, accounts, categories }) {
         />
       </div>
       <label className="block">
-        วันที่ / เวลา
+        {t('transactions.dateFieldLabel')}
         <input type="datetime-local" lang="th" className={inputCls} value={form.txn_at || ''} onChange={e => onChange({ txn_at: e.target.value })} />
       </label>
 
@@ -709,23 +719,23 @@ function TxnForm({ form, onChange, accounts, categories }) {
           onClick={() => setShowDetails(v => !v)}
           className="w-full flex items-center justify-between text-xs text-gray-400 dark:text-disc-muted hover:text-gray-600 dark:hover:text-disc-text py-0.5"
         >
-          <span>{showDetails ? 'ซ่อนรายละเอียด' : 'แหล่งที่มา / หลักฐาน'}{!showDetails && hasDetails && <span className="ml-1 text-indigo-500">•</span>}</span>
+          <span>{showDetails ? t('transactions.hideDetailsToggle') : t('transactions.showDetailsToggle')}{!showDetails && hasDetails && <span className="ml-1 text-indigo-500">•</span>}</span>
           <ChevronDown size={14} className={`transition-transform ${showDetails ? 'rotate-180' : ''}`} />
         </button>
 
         {showDetails && (
           <div className="space-y-3 mt-2">
             <label className="block">
-              แหล่งที่มา (ชื่อผู้โอน/รับ)
+              {t('transactions.counterpartNameLabel')}
               <input name="counterpart_name" className={inputCls} value={form.counterpart_name || ''} onChange={e => onChange({ counterpart_name: e.target.value })} />
             </label>
             <div className="grid grid-cols-2 gap-3">
               <label className="block">
-                ธนาคารคู่โอน
+                {t('transactions.counterpartBankLabel')}
                 <input name="counterpart_bank" className={inputCls} value={form.counterpart_bank || ''} onChange={e => onChange({ counterpart_bank: e.target.value })} />
               </label>
               <label className="block">
-                เลขบัญชีคู่โอน
+                {t('transactions.counterpartAccountLabel')}
                 <input name="counterpart_account" className={inputCls} value={form.counterpart_account || ''} onChange={e => onChange({ counterpart_account: e.target.value })} />
               </label>
             </div>
@@ -846,6 +856,7 @@ function CalcInput({ value, onChange }) {
 }
 
 function EvidenceUpload({ value, onChange }) {
+  const t = useTranslations('finance')
   const [uploading, setUploading] = useState(false)
 
   async function handleFile(e) {
@@ -872,7 +883,7 @@ function EvidenceUpload({ value, onChange }) {
 
   return (
     <div className="text-sm text-gray-700 dark:text-disc-text mt-1">
-      <p className="mb-1">หลักฐาน</p>
+      <p className="mb-1">{t('transactions.evidenceLabel')}</p>
       {value ? (
         <div className="mt-1 relative inline-block">
           <img src={value} alt="evidence"
@@ -886,7 +897,7 @@ function EvidenceUpload({ value, onChange }) {
       ) : (
         <label className="mt-1 flex items-center gap-2 border dark:border-disc-border rounded px-3 py-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-disc-hover text-gray-400">
           <ImagePlus size={16} />
-          <span className="text-sm">{uploading ? 'กำลังอัพโหลด...' : 'เลือกรูปภาพ'}</span>
+          <span className="text-sm">{uploading ? t('transactions.evidenceUploading') : t('transactions.evidenceChoose')}</span>
           <input type="file" accept="image/*" className="hidden" onChange={handleFile} disabled={uploading} />
         </label>
       )}
@@ -895,6 +906,7 @@ function EvidenceUpload({ value, onChange }) {
 }
 
 function Modal({ title, onClose, onSave, children }) {
+  const t = useTranslations('finance')
   useEffect(() => {
     function onKey(e) { if (e.key === 'Escape') onClose() }
     document.addEventListener('keydown', onKey)
@@ -915,8 +927,8 @@ function Modal({ title, onClose, onSave, children }) {
         </div>
         <div className="px-6 overflow-y-auto flex-1">{children}</div>
         <div className="flex justify-end gap-2 px-6 py-4 flex-shrink-0">
-          <button type="button" onClick={onClose} className="px-4 py-1.5 rounded border dark:border-disc-border text-sm text-gray-700 dark:text-disc-text">ยกเลิก</button>
-          <button type="submit" className="px-4 py-1.5 rounded bg-indigo-600 text-white text-sm hover:bg-indigo-700">บันทึก</button>
+          <button type="button" onClick={onClose} className="px-4 py-1.5 rounded border dark:border-disc-border text-sm text-gray-700 dark:text-disc-text">{t('common.cancel')}</button>
+          <button type="submit" className="px-4 py-1.5 rounded bg-indigo-600 text-white text-sm hover:bg-indigo-700">{t('common.save')}</button>
         </div>
       </form>
     </div>

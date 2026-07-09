@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
+import { useTranslations } from 'next-intl'
 import { useEffectiveRoles } from '@/lib/useEffectiveRoles.js'
 import { can } from '@/lib/permissions.js'
 import {
@@ -96,6 +97,7 @@ function IconPicker({ value, onChange }) {
 }
 
 export default function CategoriesPage() {
+  const t = useTranslations('finance')
   const { data: session } = useSession()
   const { discordId: effectiveDiscordId, access } = useEffectiveRoles(session)
   const [cats, setCats]               = useState([])
@@ -145,20 +147,20 @@ export default function CategoriesPage() {
   }
 
   async function remove(id) {
-    if (!confirm('ลบหมวดหมู่นี้?')) return
+    if (!confirm(t('categories.confirmDelete'))) return
     await fetch(`/api/finance/categories/${id}`, { method: 'DELETE' })
     load()
   }
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">หมวดหมู่</h1>
+      <h1 className="text-2xl font-bold mb-6">{t('categories.title')}</h1>
 
       <div className="flex flex-wrap gap-2 mb-6">
         <IconPicker value={inputIcon} onChange={setInputIcon} />
         <input
           className="border dark:border-disc-border rounded px-3 py-1.5 text-base flex-1 bg-card-bg text-gray-900 dark:text-disc-text"
-          placeholder="ชื่อหมวดหมู่ใหม่"
+          placeholder={t('categories.namePlaceholder')}
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && add()}
@@ -166,13 +168,13 @@ export default function CategoriesPage() {
         {canEditGlobal && (
           <label className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-disc-text">
             <input type="checkbox" checked={inputGlobal} onChange={e => setInputGlobal(e.target.checked)} />
-            global
+            {t('categories.globalCheckboxLabel')}
           </label>
         )}
-        <button onClick={add} className="bg-indigo-600 text-white px-4 py-1.5 rounded text-base hover:bg-indigo-700">เพิ่ม</button>
+        <button onClick={add} className="bg-indigo-600 text-white px-4 py-1.5 rounded text-base hover:bg-indigo-700">{t('categories.addButton')}</button>
       </div>
 
-      {[{ label: '🌐 Global', items: cats.filter(c => c.is_global) }, { label: '👤 ของฉัน', items: cats.filter(c => !c.is_global) }]
+      {[{ label: `🌐 ${t('categories.globalLabel')}`, items: cats.filter(c => c.is_global) }, { label: `👤 ${t('categories.mine')}`, items: cats.filter(c => !c.is_global) }]
         .filter(g => g.items.length > 0)
         .map(group => (
           <div key={group.label} className="mb-6">
@@ -203,7 +205,7 @@ export default function CategoriesPage() {
                         <CatIcon name={c.icon} size={18} />
                       </span>
                       <span className="text-base text-gray-900 dark:text-disc-text">{c.name}</span>
-                      <span className="text-xs text-gray-400">{c.is_global ? '(global)' : '(ของฉัน)'}</span>
+                      <span className="text-xs text-gray-400">{c.is_global ? `(${t('categories.globalLabel')})` : `(${t('categories.mine')})`}</span>
                     </div>
                   )}
                   <div className="flex gap-2 flex-shrink-0">
@@ -224,7 +226,7 @@ export default function CategoriesPage() {
             </div>
           </div>
         ))}
-      {cats.length === 0 && <p className="px-4 py-6 text-center text-gray-400 text-sm">ยังไม่มีหมวดหมู่</p>}
+      {cats.length === 0 && <p className="px-4 py-6 text-center text-gray-400 text-sm">{t('categories.empty')}</p>}
     </div>
   )
 }

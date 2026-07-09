@@ -106,6 +106,25 @@ pple-volunteers/
 
 **ถ้าแก้ไฟล์ที่มี stats/query — ต้องอ่าน query เทียบกับ tab/type อื่นด้วยว่า return field ครบไหม**
 
+## ⚡ Token / Model — Claude บริหารเอง (user ไม่ต้องสั่ง)
+
+User มักอยู่ model แพง (Opus/Fable) และ**ไม่อยากสลับ /model เอง** — หน้าที่ Claude คือบริหาร token ให้อัตโนมัติทุก session โดยไม่ต้องรอ user สั่ง (user เคาะแล้ว 2026-07-09):
+
+- **งาน mechanical ก้อนใหญ่** (migrate string i18n, refactor ตาม pattern เดิม, งานซ้ำหลายไฟล์) → **spawn subagent `model: sonnet` เอง** แล้วบอก user สั้นๆ ว่ากำลังส่งให้ subagent
+- **ซอยเป็นก้อนเล็ก 2-3 ไฟล์ต่อ subagent** อย่าโยนทั้งโซนรวดเดียว (เคยชนเพดานโควต้า account 2026-07-09 — Sonnet ก็ดึงจากโควต้าเดียวกัน จึงประหยัด "ต่อ token" ไม่ใช่ "ไม่จำกัด")
+- **งานคิด / ออกแบบ / ตรวจงาน subagent / debug** → ทำใน main thread เอง
+- user เปลี่ยนเรื่องคุย → แนะนำ `/clear` · session ยาวมาก → เตือนว่า context เริ่มแพง ควรปิดจบเป็นเรื่องๆ
+- ถ้า Claude ลืม/พลาด — user นัดไว้ว่าจะพิมพ์คำเดียว "sonnet" เป็นสัญญาณเตือน
+
+## 🌍 i18n — โค้ดใหม่ห้าม hardcode ข้อความ
+
+รางวางแล้ว (2026-07-09) — **string ที่ user เห็น ในโค้ดใหม่ทุกไฟล์ต้องผ่าน t() เสมอ** (ไฟล์เก่าที่แก้เล็กน้อยยังไม่บังคับ — จะทยอย migrate เป็นโซน):
+
+- **เว็บ:** key ลง `web/locales/th.json` (+ `en.json`) · client: `useTranslations('ns')` · server: `await getTranslations('ns')` จาก `next-intl/server`
+- **Bot:** key ลง `locales/th.json` (+ `en.json`) · `const t = await getT(guildId)` จาก `services/i18n.js` → `t('ns.key', { vars })`
+- Key naming: `<โมดูล>.<จุดใช้>` เช่น `calling.logForm.saveButton` · ใช้ interpolation `{name}` ไม่ต่อ string เอง
+- locale ต่อ guild: `dc_guild_config` key `locale` (ไม่มี = `th`)
+
 ## 📋 Import / Sync Scripts
 
 **PRODUCTION: Always run with `sudo -u www bash -c 'cd /www/wwwroot/pple-volunteers && node scripts/...'`**

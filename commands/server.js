@@ -13,6 +13,7 @@ const fs   = require('fs');
 const path = require('path');
 const { getServerOverview, getTopChannels } = require('../db/stat');
 const { getSetting, setSetting, deleteSetting } = require('../db/settings');
+const { setAntiSpamConfig, clearAntiSpamConfig, getAntiSpamConfig } = require('../services/antiSpamCache');
 
 function parseSetting(raw) {
   try { return JSON.parse(raw); } catch { return raw; }
@@ -105,6 +106,33 @@ module.exports = {
         )
     )
 
+    // --- antispam ---
+    .addSubcommandGroup(group =>
+      group.setName('antispam')
+        .setDescription('ตั้งค่า anti-spam: honeypot channel + quarantine role + mod alert channel')
+        .addSubcommand(sub =>
+          sub.setName('set')
+            .setDescription('ตั้งค่า anti-spam (ระบุเฉพาะ field ที่ต้องการเปลี่ยน)')
+            .addChannelOption(opt =>
+              opt.setName('honeypot_channel').setDescription('ห้องดักสแปม (ต้อง deny เฉพาะ role สมาชิกจริง ไม่ deny @everyone)').setRequired(false)
+            )
+            .addRoleOption(opt =>
+              opt.setName('quarantine_role').setDescription('Role ที่ติดให้ผู้ต้องสงสัย (ต้อง deny SendMessages ทุก category แล้ว)').setRequired(false)
+            )
+            .addChannelOption(opt =>
+              opt.setName('mod_channel').setDescription('ห้องแจ้งเตือน mod เมื่อจับสแปมได้').setRequired(false)
+            )
+        )
+        .addSubcommand(sub =>
+          sub.setName('view')
+            .setDescription('ดูค่า anti-spam ปัจจุบัน')
+        )
+        .addSubcommand(sub =>
+          sub.setName('clear')
+            .setDescription('ยกเลิกการตั้งค่า anti-spam ทั้งหมด')
+        )
+    )
+
     // --- setup (server template provisioner) ---
     .addSubcommand(sub =>
       sub.setName('setup')
@@ -169,6 +197,108 @@ module.exports = {
       if (sub === 'clear') {
         await deleteSetting(guildId, 'welcome_dm');
         return interaction.editReply({ content: '✅ ลบ welcome message แล้วครับ' });
+      }
+    }
+
+    // ================================================================
+    if (group === 'antispam') {
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+      if (sub === 'set') {
+        const honeypotChannel = interaction.options.getChannel('honeypot_channel');
+        const quarantineRole  = interaction.options.getRole('quarantine_role');
+        const modChannel      = interaction.options.getChannel('mod_channel');
+
+        if (!honeypotChannel && !quarantineRole && !modChannel) {
+          return interaction.editReply({ content: '❌ ระบุอย่างน้อย 1 field ครับ (honeypot_channel / quarantine_role / mod_channel)' });
+        }
+
+        // honeypot กับ mod channel ต้องเป็นคนละห้อง — honeypot ห้ามมีใครพิมพ์ได้ (แม้ mod)
+        // ไม่งั้น mod ตอบ alert ในห้องเดียวกันจะโดน auto-quarantine ตัวเอง
+        const existing = getAntiSpamConfig(guildId);
+        const finalHoneypotId = honeypotChannel?.id ?? existing.honeypotChannelId;
+        const finalModId      = modChannel?.id ?? existing.modChannelId;
+        if (finalHoneypotId && finalModId && finalHoneypotId === finalModId) {
+          return interaction.editReply({ content: '❌ honeypot_channel กับ mod_channel ห้ามเป็นห้องเดียวกัน — honeypot ต้องไม่มีใครพิมพ์ได้เลยแม้แต่ mod ครับ' });
+        }
+
+        const cacheUpdate = {};
+        if (honeypotChannel) {
+          await setSetting(guildId, 'antispam_honeypot_channel_id', honeypotChannel.id);
+          cacheUpdate.honeypotChannelId = honeypotChannel.id;
+        }
+        if (quarantineRole) {
+          await setSetting(guildId, 'antispam_quarantine_role_id', quarantineRole.id);
+          cacheUpdate.quarantineRoleId = quarantineRole.id;
+        }
+        if (modChannel) {
+          await setSetting(guildId, 'antispam_mod_channel_id', modChannel.id);
+          cacheUpdate.modChannelId = modChannel.id;
+        }
+        setAntiSpamConfig(guildId, cacheUpdate);
+
+        const lines = [];
+        if (honeypotChannel) lines.push(`✅ Honeypot channel: <#${honeypotChannel.id}>`);
+        if (quarantineRole)  lines.push(`✅ Quarantine role: <@&${quarantineRole.id}>`);
+        if (modChannel)      lines.push(`✅ Mod alert channel: <#${modChannel.id}>`);
+
+        // ตั้ง honeypot channel → auto deny ViewChannel ให้ member_role_id (กันลืมตั้งมือ ตาม PENDING gotcha)
+        if (honeypotChannel) {
+          // interaction.options.getChannel() คืน partial — ต้องใช้ cache สำหรับ permissionOverwrites (BOT.md convention)
+          const fullChannel = guild.channels.cache.get(honeypotChannel.id);
+          const regConfig   = parseSetting(await getSetting(guildId, 'config_register'));
+          const memberRoleId = regConfig?.member_role_id;
+
+          if (!memberRoleId) {
+            lines.push(`⚠️ ยังไม่ได้ตั้ง \`member_role\` ใน \`/panel register\` — ตั้ง permission ห้อง honeypot เอง (deny ViewChannel ให้ role สมาชิกจริง) ไม่งั้น honeypot ไม่ทำงาน`);
+          } else {
+            try {
+              await fullChannel.permissionOverwrites.edit(memberRoleId, { ViewChannel: false });
+              lines.push(`✅ deny ViewChannel ให้ <@&${memberRoleId}> ในห้อง honeypot แล้ว`);
+            } catch (err) {
+              lines.push(`⚠️ ตั้ง permission deny ให้ <@&${memberRoleId}> ไม่สำเร็จ: ${err.message} — เช็คสิทธิ์ Manage Permissions ของ bot ในห้องนี้ แล้วตั้งเอง`);
+            }
+
+            const everyoneOverwrite = fullChannel.permissionOverwrites.cache.get(guild.roles.everyone.id);
+            if (everyoneOverwrite?.deny.has(PermissionFlagsBits.ViewChannel)) {
+              lines.push(`⚠️ @everyone ถูก deny ViewChannel ในห้องนี้อยู่ — honeypot จะไม่ทำงาน (bot/account ใหม่มองไม่เห็นห้องด้วย) ต้องเปิดให้ @everyone เห็นห้องนี้`);
+            }
+          }
+        }
+
+        return interaction.editReply({ content: lines.join('\n') });
+      }
+
+      if (sub === 'view') {
+        const [honeypotRaw, quarantineRaw, modRaw] = await Promise.all([
+          getSetting(guildId, 'antispam_honeypot_channel_id'),
+          getSetting(guildId, 'antispam_quarantine_role_id'),
+          getSetting(guildId, 'antispam_mod_channel_id'),
+        ]);
+        if (!honeypotRaw && !quarantineRaw && !modRaw) {
+          return interaction.editReply({ content: '❌ ยังไม่ได้ตั้งค่า anti-spam ครับ\nลองใช้ `/server antispam set` ก่อนนะครับ' });
+        }
+        const honeypotId   = honeypotRaw  ? parseSetting(honeypotRaw)  : null;
+        const quarantineId = quarantineRaw ? parseSetting(quarantineRaw) : null;
+        const modId        = modRaw       ? parseSetting(modRaw)       : null;
+        const lines = [
+          `📢 Honeypot channel: ${honeypotId ? `<#${honeypotId}>` : '❌ ยังไม่ตั้งค่า'}`,
+          `🚫 Quarantine role: ${quarantineId ? `<@&${quarantineId}>` : '❌ ยังไม่ตั้งค่า'}`,
+          `🔔 Mod alert channel: ${modId ? `<#${modId}>` : '❌ ยังไม่ตั้งค่า'}`,
+        ];
+        return interaction.editReply({ content: `🛡️ **Anti-Spam ปัจจุบัน:**\n\n${lines.join('\n')}` });
+      }
+
+      if (sub === 'clear') {
+        await Promise.all([
+          deleteSetting(guildId, 'antispam_honeypot_channel_id'),
+          deleteSetting(guildId, 'antispam_quarantine_role_id'),
+          deleteSetting(guildId, 'antispam_mod_channel_id'),
+        ]);
+        clearAntiSpamConfig(guildId, 'honeypotChannelId');
+        clearAntiSpamConfig(guildId, 'quarantineRoleId');
+        clearAntiSpamConfig(guildId, 'modChannelId');
+        return interaction.editReply({ content: '✅ ยกเลิกการตั้งค่า anti-spam ทั้งหมดแล้วครับ' });
       }
     }
 

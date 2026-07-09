@@ -1,0 +1,10 @@
+{
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "error": "Something went wrong, please try again",
+    "noPermission": "You don't have permission to use this command"
+  }
+}

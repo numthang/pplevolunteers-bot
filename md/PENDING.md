@@ -4,6 +4,23 @@
 
 ---
 
+## 📢 Social share → ห้องข่าวสาร + Discord Event — implement เสร็จ local (2026-07-08)
+
+> โค้ดเสร็จ ยังไม่ทดสอบ dev / ยังไม่ deploy · files: `services/newsShare.js`, `handlers/basketHandler.js`, `index.js`, `web/app/bot/platforms/page.js` + guild-configs API
+
+### ⚠️ ก่อน deploy prod
+1. ตั้ง `news_channel_id` ต่อ guild — หน้าเว็บ /bot/platforms (การ์ด config) หรือ INSERT `dc_guild_config`
+2. ให้สิทธิ์ bot ในห้องข่าวสาร: **Send Messages + Mention Everyone** และระดับ guild: **Manage Events**
+3. ทดสอบ dev ก่อน: โพสต์ตะกร้า (เลือก 📢) → กดปุ่ม 📅 → modal (มี channel select — feature ใหม่ discord.js 14.25) → event เกิด + ประกาศเข้าห้องข่าวสาร
+4. ทดสอบ quiet hours: สร้าง event หลัง 21:00 → ประกาศต้องเข้าคิว (`dc_guild_config` key `pending_event_announcements`) แล้วส่ง 09:00
+
+### 📝 Design ที่เคาะแล้ว
+- 📢 ข่าวสาร = option ใน platform select (default เปิดเมื่อตั้ง config), โพสต์ caption+รูป **ไม่ ping**, ลงทันทีเสมอ (ไม่มี scheduler ฝั่ง bot — FB ตั้งเวลาฝั่ง Meta)
+- 📅 Event = ปุ่ม follow-up หลังโพสต์ → modal เดียว (ชื่อ prefill/เริ่ม/จบ default +2 ชม./ห้องประชุม **หรือ** สถานที่ free text — ห้องชนะ) → ประกาศแยกใน ห้องข่าวสาร + **@everyone** template อัตโนมัติ (เชิญชวน+เวลา+สถานที่+กดกระดิ่ง)
+- quiet hours 21:00–09:00 ไทย → อั้นประกาศส่ง 09:00 (event ตัวจริงสร้างทันที)
+
+---
+
 ## 📢 ระบบเรื่องร้องเรียน (Case System) — implement เสร็จ local · ดู `md/case/CASE.md`
 
 > ยังไม่ deploy prod
@@ -189,6 +206,27 @@
 3. [ ] **Gamification สำหรับอาสา/สมาชิก** — คะแนนกิจกรรม, badge, leaderboard · เชื่อมข้อมูลกิจกรรมที่เก็บอยู่แล้ว · เข้ากับ volunteer org กว่า gaming
 4. [ ] **ค่าสมาชิก/เงินบริจาคผ่านระบบ** — เชื่อม Finance ที่มีกับ membership dues · องค์กรไทยต้องการมาก ไม่มี bot ไหนทำ · เกี่ยวพัน section Donation ด้านล่าง
 5. [ ] **Insight summary ให้ผู้บริหาร** — AI สรุปรายสัปดาห์ "สมาชิกพูดเรื่องอะไร อารมณ์เป็นยังไง" แบบ Levellr · ทำทีหลังได้ ใช้ AI infra เดิม
+
+---
+
+## 🌍 i18n — เว็บ + bot รองรับหลายภาษา (จด 2026-07-09 · วางรางเสร็จ local 2026-07-09)
+
+> string ไทย hardcode อยู่ ~2,500 บรรทัด/201 ไฟล์ (web) + ~1,500 บรรทัด/70 ไฟล์ (bot) · **รางวางแล้ว** — โค้ดใหม่ต้องใช้ t() เสมอ (กติกาใน CLAUDE.md) หนี้จะหยุดโต ของเก่าทยอย migrate
+
+### ✅ รางที่วางแล้ว (ยังไม่ deploy)
+- **เว็บ:** next-intl 4.13.1 (ไม่มี locale routing) · locale จาก cookie `locale` default `th` · config: `web/i18n/request.js`, strings: `web/locales/{th,en}.json` · ใช้: `useTranslations` (client) / `getTranslations` (server)
+- **Bot:** `services/i18n.js` — `const t = await getT(guildId)` → `t('common.error')` · locale ต่อ guild = `dc_guild_config` key `locale` ผ่าน resolveConfig (guild > global, cache 5 นาที) · strings: `locales/{th,en}.json`
+- ไม่ต้อง migrate schema — `dc_guild_config` เป็น key-value อยู่แล้ว
+
+### ⏳ งานที่เหลือ (ทยอยตามสะดวก)
+- [x] **finance — เสร็จครบทั้งโซน (2026-07-09)** — ทุกไฟล์ใน `web/app/finance/**` + `web/components/finance/**` migrate แล้ว · dictionary 113 keys th=en ตรงกัน · ทุก route โหลดผ่าน · ใช้ i18n-migrator (Sonnet) 3 ก้อน
+  - ⚠️ **ยังไม่ได้แปล:** อาเรย์ `BANKS`/`PROVINCES` ใน `AccountFormFields.jsx` เว้นไว้ตั้งใจ (เป็นข้อมูล domain ผูก DB + financeAccess.js) — ถ้าจะรองรับ en จริงต้องทำ mapping แยก ไม่ใช่แค่ t() → เป็น design decision ทีหลัง
+  - shared component ที่ finance ใช้แต่อยู่ `web/components/` (BankBadge, CategorySelect, AccountSelect) — ยังไม่แตะ รอเคาะ namespace กลางตอน migrate โซนที่ใช้ร่วม
+- [ ] Migrate string เก่าโซนอื่นทีละโมดูล (calling, case, contacts — web) + bot (`services/i18n.js`) — ใช้ i18n-migrator agent (ตั้งแต่ session หน้าเรียกด้วยชื่อได้เลย) ซอยทีละ 2-3 ไฟล์
+- [x] UI เปลี่ยนภาษาบนเว็บ (2026-07-09) — `web/components/LocaleSwitcher.jsx` (ปุ่ม ไทย/EN) วางในเมนู hamburger ถัดจาก dark mode toggle · set cookie `locale` + `router.refresh()`
+- [ ] เว็บ fallback เป็น locale ของ guild ก่อนถึง default (ตอนนี้ cookie → th)
+- [ ] คำสั่ง/หน้า config ตั้ง locale ต่อ guild
+- [ ] แปล en จริง (ตอนนี้มีแค่ skeleton `common.*`)
 
 ---
 
@@ -424,6 +462,24 @@
 - [ ] **Wizard สร้าง Discord server สำเร็จรูป** — ตอบ 1–N คำถาม → ได้ server พร้อมใช้ + service pack
   - Wizard อยู่ที่ไหน (web/Discord DM) — ยังไม่เคาะ
   - Templates: พรรคการเมือง/มูลนิธิ/ชมรม/กลุ่มอาสา · Service packs: Calling/Finance/Cases/Media/AI
+- [ ] **ห้อง honeypot ใน template** (จด 2026-07-09) — wizard สร้างห้อง honeypot ให้เลย + ตั้ง `honeypot_channel_id` ใน config อัตโนมัติ
+  - permission: @everyone เห็นได้ (**ห้าม deny** ไม่งั้น bot join ใหม่มองไม่เห็น กับดักไร้ค่า) · deny ViewChannel ให้ `member_role_id` (role ที่ทุกคนได้ตอน verify ผ่าน `/panel register`/verify flow — ครอบสมาชิกจริงทุกคนแน่นอนกว่า interest/skill/province ที่เลือกหรือไม่เลือกก็ได้) · จะ deny เพิ่มที่ interest/skill/province ด้วยก็ได้แต่ไม่ใช่ตัวหลัก
+  - ชื่อห้องกันคนจริงที่ยังไม่ verify เผลอพิมพ์ เช่น `🚫-do-not-post`
+  - ผูกกับ Quarantine role (section ถัดไป) — ใครโพสต์ = auto-quarantine ตาม design ใน section Anti-Spam
+
+---
+
+## 🚫 Quarantine Role (anti-spam)
+
+- [ ] เพิ่ม role `Quarantine` ใน template `th-civic-starter.json`
+  - deny `ViewChannel` + `SendMessages` + `SendMessagesInThreads` + `CreatePublicThreads` + `CreatePrivateThreads` เป็น overwrite บน **ทุก category** (มองไม่เห็น ส่งไม่ได้ สร้าง thread ไม่ได้)
+  - channel ที่ `lockPermissions()` (inherit) รับ deny มาอัตโนมัติ
+  - channel ที่มี explicit overwrite ของตัวเองต้องเพิ่ม deny แยก
+  - **position: สูงกว่า Admin** (ต่ำกว่า bot เท่านั้น) — ให้ mod assign Quarantine ให้ Admin ได้ด้วย
+  - provisioner: สร้าง Quarantine **ก่อน** staff roles ทุกตัว (= position สูงกว่า) + เพิ่ม `{ role: "Quarantine", deny: ["ViewChannel", "SendMessages", "SendMessagesInThreads", "CreatePublicThreads", "CreatePrivateThreads"] }` เข้า overwrite ทุก category ใน template
+  - ใช้: mod ติด role นี้กับ spammer → ส่งข้อความไม่ได้ทุก channel ทันที โดยไม่ต้อง ban
+  - **ปัญหา:** category ที่ Admin สร้างเองทีหลังไม่มี Quarantine overwrite อัตโนมัติ
+  - **แก้:** เพิ่ม subcommand `/server quarantine-sync` (หรือรวมใน `/server setup` idempotent) — วน loop ทุก category ใน guild แล้ว apply Quarantine deny ให้ครบ
 
 ---
 
@@ -443,19 +499,49 @@
 1. สแปมบอท/self-bot ที่ join แล้วยิงรัวทุกห้องที่ token มัน permission ส่งได้ (ไม่ได้เลือกว่าคนคุยจริงไหม)
 2. Account staff/admin ที่โดนแฮค — สคริปต์ยิงด้วย permission เดิมของ role ที่ถืออยู่ (เช่น `Administrator`) ซึ่ง **bypass channel overwrite ทุกอัน** → เห็น/โพสต์ห้องที่คนจริงมองไม่เห็นได้
 
-**⚠️ จุดสำคัญที่ทำผิดพลาดง่าย:** ต้อง deny view เฉพาะ role สมาชิกทั่วไป (interest/skill/province role) ห้าม deny @everyone/role พื้นฐานที่ได้ตอน join ใหม่ ไม่งั้น raid-bot ที่เพิ่ง join จะมองไม่เห็นห้องไปด้วย (permission บล็อกตั้งแต่ API level → ไม่มี event ให้จับเลย)
+**⚠️ จุดสำคัญที่ทำผิดพลาดง่าย:** ต้อง deny view เฉพาะ `member_role_id` (role ที่ติดอัตโนมัติตอน verify ผ่าน — ดู `handlers/registerHandler.js`/`verifyHandler.js` — ครอบสมาชิกจริงทุกคนแน่นอน ต่างจาก interest/skill/province ที่เลือกหรือไม่เลือกก็ได้) ห้าม deny @everyone/role พื้นฐานที่ได้ตอน join ใหม่ ไม่งั้น raid-bot ที่เพิ่ง join จะมองไม่เห็นห้องไปด้วย (permission บล็อกตั้งแต่ API level → ไม่มี event ให้จับเลย)
 
 **เคาะแล้ว:**
-- Admin สร้างห้อง honeypot เอง (ตั้งชื่อ/permission เอง) + ตั้ง channel_id ผ่าน `/panel` (bot เก็บ config อย่างเดียว ไม่ auto-create ห้อง)
+- Admin สร้างห้อง honeypot เอง (ตั้งชื่อ) — bot ไม่ auto-create ห้อง
+- **`/server antispam set honeypot_channel:<#ch>` auto-apply permission ให้เลย** (แก้ 2026-07-09 หลังพบว่า manual setup error-prone): deny ViewChannel ให้ `member_role_id` (จาก `config_register` — ต้องตั้ง `/panel register member_role` ไว้ก่อน) + เตือนถ้า @everyone โดน deny อยู่ (honeypot จะไม่ทำงาน) + เตือนถ้ายังไม่ได้ตั้ง `member_role_id`
 
-**ยังไม่เคาะ:**
-- Action เมื่อมีคนโพสต์ในห้อง — ban ทันที vs timeout + แจ้งเตือน mod ก่อน
-  - ข้อมูลประกอบ (2026-07-07): timeout 28 วัน (เพดาน Discord) + ลบข้อความ + แจ้งห้อง mod = ปลอดภัยกว่าสำหรับเคส staff โดนแฮค (ban แล้ว unban ประวัติ/role หาย) · ban ทันที = เด็ดขาดเหมาะกับ spam bot ล้วน
-- เก็บ config ที่ไหน (น่าจะ `dc_guild_config` key ใหม่ เช่น `honeypot_channel_id` + `honeypot_action` ตาม pattern เดิม — ยังไม่ยืนยัน)
-- listener: น่าจะ hook `messageCreate` เช็ค `message.channel.id === honeypotChannelId` แล้ว action ตาม config (ยังไม่ได้ออกแบบ error handling/logging)
-- user (เจ้าของ) ยังไม่เข้าใจ permission mechanism ทั้งหมด 100% — ต้องอธิบายซ้ำ/ทดสอบจริงตอน implement
+**⚡ Threat model จริง (2026-07-09):** เคสที่เจอจริงแทบทั้งหมด = **account สมาชิกธรรมดาโดนแฮคมายิง** ไม่ใช่ bot join ใหม่ → honeypot จับเคสนี้ไม่ได้ (สมาชิกโดน deny มองไม่เห็นห้อง Discord reject ที่ API level) → honeypot ลดเป็นตัวรอง จับเฉพาะ admin/staff ที่มี Administrator โดนแฮค + bot join ใหม่ · ยังทำเพราะถูกมาก (listener เดียว)
 
-**สถานะ:** แค่จดไว้ ยังไม่ implement — user จะไปทำต่อบนเครื่อง Linux (ไม่ถนัดทำงานบน Mac)
+### เงื่อนไขการติด Quarantine (เคาะแล้ว 2026-07-09)
+
+**Auto-quarantine ทันที — เฉพาะพฤติกรรมที่คนจริงไม่มีทางทำ:**
+| # | เงื่อนไข | เกณฑ์ (threshold ยังไม่เคาะ เคาะตอน implement) |
+|---|---|---|
+| 1 | **Duplicate ข้ามห้อง** (ตัวหลัก — จับ account โดนแฮค) | user เดิมส่ง content เหมือนเป๊ะใน ≥3 ห้อง ภายใน ~30 วิ · exact match (hash ต่อ user ใน memory) ไม่ใช่ fuzzy |
+| 2 | **Mass-mention** | mention users+roles รวม ≥10 ในข้อความเดียว · `@everyone` ไม่ต้องเขียนโค้ด — กันด้วย server permission อยู่แล้ว |
+| 3 | **โพสต์ในห้อง honeypot** | ข้อความใดๆ ในห้องที่ตั้งเป็น honeypot |
+
+**Action เมื่อ trigger:** ติด **Quarantine role** + ลบข้อความ (เคส duplicate = ลบทุกห้อง) + แจ้งห้อง mod → mod ตัดสินเอง: ปลด role คืน (โดนแฮค กู้ account แล้ว — ยศอื่นอยู่ครบ ไม่ต้องจำ) หรือ ban (bot จริง) · **ไม่ถอดยศอื่น ไม่ใช้ timeout ไม่ ban อัตโนมัติ**
+
+**พฤติกรรมกำกวม — ห้าม auto-quarantine (คนจริงทำได้):**
+- พิมพ์รัว (เช่น 8 ข้อความ/5 วิ) → แจ้ง mod เฉยๆ
+- ข้อความซ้ำในห้องเดิม → ลบตัวซ้ำ ไม่ลงโทษ (มักเป็น lag กดส่งซ้ำ)
+- Invite link server อื่น → ลบ + แจ้ง mod
+
+**ทำไม Quarantine role (ไม่ถอดยศ) ใช้ได้:**
+- Quarantine role มี deny overwrite (SendMessages) ติดทุก category + ทุก channel แล้ว (ห้อง unsync ก็มี — copy overwrite มาตอน unsync + user ตั้งมือทุกครั้งที่สร้างห้อง) → โดนแล้วพิมพ์ไม่ได้ทุกห้อง
+- กติกา allow-ชนะ-deny ระดับ role ไม่ทำให้พัง เพราะห้องลับ allow แค่ ViewChannel ให้ role สมาชิก ไม่ได้ allow SendMessages → deny ของ Quarantine อยู่
+- จุดบอดที่ยอมรับ: ห้องที่ explicit allow SendMessages ให้ role อื่น (เช่นห้องประกาศ staff) · คนถือ Administrator (bypass ทุก overwrite — honeypot จับเคสนี้แทน แล้ว mod จัดการมือ)
+
+**Implement (เสร็จแล้ว 2026-07-09):**
+- `services/antiSpamCache.js` — in-memory guild config cache (honeypotChannelId, quarantineRoleId, modChannelId) populate ตอน `clientReady` (index.js) เหมือน pattern `forumCache.js`
+- `handlers/antiSpamHandler.js` — `handleAntiSpam(message)` เช็ค 3 เงื่อนไข (honeypot/mass-mention/duplicate-cross-channel) + staff-exempt (`ManageMessages` ขึ้นไป → แจ้ง mod เฉยๆ ไม่ quarantine) + consolidate เป็น 1 action ต่อ 1 ข้อความ + quarantine-fail ยังแจ้ง mod (ไม่ swallow error)
+  - duplicate cache เก็บ `{channelId, messageId, content, timestamp}` ต่อ user + prune เก่ากว่า 30s ทุกครั้งที่เช็ค + sweep ทุก 5 นาทีกัน memory โต
+  - config เก็บผ่าน `/server antispam set/view/clear` (commands/server.js) → `dc_guild_config` keys: `antispam_honeypot_channel_id`, `antispam_quarantine_role_id`, `antispam_mod_channel_id`
+  - wire เข้า `messageCreate` (index.js) เป็นจุดแรกสุด — return early ถ้ามี action กัน forum-index/search/RAG ประมวลผลข้อความที่กำลังจะถูกลบ
+- ทดสอบ: mock smoke test 7 เคสผ่านหมด (ไม่ใช่ automated test suite ในโปรเจกต์ — สคริปต์ทดสอบทิ้งไว้ scratchpad ไม่ commit)
+
+**ยังไม่ได้ทำ:**
+- Deploy `/server antispam` command ขึ้นจริง (`node deploy-commands.js`) — รอ user สั่ง
+- ทดสอบจริงใน Discord server (ต้องมี honeypot channel + quarantine role ตั้งค่าจริงก่อน)
+- `channelCreate` listener เติม Quarantine deny อัตโนมัติ + audit script (optional, ยังไม่ทำ)
+
+**สถานะ:** Code เสร็จ + mock test ผ่าน รอ deploy command + ทดสอบจริงบน Discord
 
 ---
 
@@ -468,6 +554,19 @@
 - [x] **JSON parse helper** — `utils/parseSetting.js` สร้างแล้ว (2026-07-05) · แทน pattern `typeof x === 'string' ? JSON.parse` ที่ซ้ำ ~34 จุด (เคยเป็นเหตุ basket CPU spike bug)
 - [ ] **ทยอยแทนที่ call site ที่เหลือ (boy-scout rule)** — แตะไฟล์ไหน เก็บไฟล์นั้น ไม่ sweep รอบเดียว (กัน silent bug จาก fallback type ผิด) · ทำแล้ว: verifyHandler.js, panel.js
 - ~~magic numbers → constants, ย้าย require ขึ้น top~~ — cosmetic, ทำเฉพาะตอนแตะไฟล์นั้นอยู่แล้ว ไม่ต้องเป็น task
+
+---
+
+## 🎮 เพิ่ม engagement ให้คนอยู่บน Discord นานขึ้น — ไอเดีย, พับไว้ 2026-07-09
+
+จุดประสงค์จริง: อยากดึงดูดคนอยู่บน Discord มากขึ้น (ไม่ใช่ต้องเป็นเกมขยับตัวเป๊ะๆ)
+
+- ลองไล่มาแล้ว: Discord Activity (ตัดทิ้ง — ต้อง voice/browser), bot+embed grid ขยับ emoji (ตัดทิ้ง — ดูไม่น่าสนใจ)
+- 3 ทางเลือกที่เสนอไว้ (ยังไม่เลือก):
+  1. **Leveling/Rank system** — ต่อยอดจาก `db/activity.js` + `orgchartEmbed.js` ที่มีอยู่แล้ว, effort ต่ำสุด, engagement แบบ passive
+  2. **Slash-command minigame แบบ RNG/สะสม** (เช่น ตกปลา) — loop ให้กลับมาเล่นทุกวัน ต้องออกแบบ economy
+  3. **Event/quiz ประจำสัปดาห์** เกี่ยวกับองค์กร — spike engagement แต่ต้องมีคนคิด content ต่อเนื่อง
+- **สถานะ:** นึกไม่ออกว่าจะเลือกทางไหน — พับไว้ก่อน ไม่ต้อง scope ต่อจนกว่าจะมีทิศทางชัดขึ้น
 
 ---
 

@@ -91,14 +91,12 @@ export default async function HomePage() {
 
   if (!session) {
     const guilds = await getGuilds()
-    const fmt = (n) => Number(n || 0).toLocaleString('th-TH')
 
     return (
       <div className="space-y-3">
-
-        {/* Hero — 2 คอลัมน์: ซ้าย logo+description · ขวา login ทุก provider (LoginPanel เดียวกับ /login) */}
+        {/* card เดียว — 2 คอลัมน์ ทุก element อยู่กึ่งกลางคอลัมน์ตัวเอง */}
         <div className="bg-card-bg border border-brand-blue-light dark:border-disc-border rounded-xl px-6 py-10">
-          <div className="max-w-3xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-10 items-center justify-items-center">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-10 items-center justify-items-center">
             <div className="flex flex-col items-center text-center">
               <Image src="/logo.png" alt="PPLE" width={200} height={200} className="drop-shadow mb-3" />
               <h1 className="text-3xl font-bold text-warm-900 dark:text-disc-text mb-3">
@@ -115,54 +113,20 @@ export default async function HomePage() {
               </Suspense>
             </div>
           </div>
-        </div>
 
-        {/* Feature cards (calling/finance) ถูกถอดออกจากหน้า public — เตรียม rebrand เป็นแบรนด์กลาง ไม่โชว์ feature ภายในก่อน login */}
-
-        {/* INTEGRATIONS card */}
-        <div className="flex flex-col bg-card-bg border border-brand-blue-light dark:border-disc-border rounded-lg p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-9 h-9 rounded-lg bg-warm-100 dark:bg-disc-hover flex items-center justify-center shrink-0">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-brand-orange">
-                <path d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437l1.745-1.437m6.615 8.206L15.75 15.75M4.867 19.125h.008v.008h-.008v-.008z" />
-              </svg>
-            </div>
-            <p className="font-semibold text-base text-warm-900 dark:text-disc-text">INTEGRATIONS</p>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="border border-brand-blue-light dark:border-disc-border rounded-lg p-4 hover:border-brand-orange transition-colors">
-              <Link href="/integrations#discord-bot" className="block mb-3">
-                <div className="flex items-center gap-1.5 mb-1">
-                  <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-[#5865F2] shrink-0">
-                    <path d="M20.317 4.37a19.791 19.791 0 00-4.885-1.515.074.074 0 00-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 00-5.487 0 12.64 12.64 0 00-.617-1.25.077.077 0 00-.079-.037A19.736 19.736 0 003.677 4.37a.07.07 0 00-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 00.031.057 19.9 19.9 0 005.993 3.03.078.078 0 00.084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 00-.041-.106 13.107 13.107 0 01-1.872-.892.077.077 0 01-.008-.128 10.2 10.2 0 00.372-.292.074.074 0 01.077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 01.078.01c.12.098.246.198.373.292a.077.077 0 01-.006.127 12.299 12.299 0 01-1.873.892.077.077 0 00-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 00.084.028 19.839 19.839 0 006.002-3.03.077.077 0 00.032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 00-.031-.03z"/>
-                  </svg>
-                  <p className="text-base font-semibold text-warm-900 dark:text-disc-text">Discord Bot</p>
-                </div>
-                <p className="text-2xl font-bold text-warm-900 dark:text-disc-text mb-0.5">{fmt(guilds.length)}</p>
-                <p className="text-base text-warm-500 dark:text-disc-muted">servers · Slash commands · Role management</p>
-              </Link>
-              <a
-                href={BOT_INVITE_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-sm font-semibold text-white bg-[#5865F2] hover:bg-[#4752C4] px-3 py-1.5 rounded-md transition-colors"
-              >
-                Add to Server
-              </a>
-            </div>
-            <Link href="/integrations#api-access" className="border border-brand-blue-light dark:border-disc-border rounded-lg p-4 hover:border-brand-orange transition-colors block">
-              <div className="flex items-center gap-1.5 mb-1">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-brand-orange shrink-0">
-                  <path d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5" />
-                </svg>
-                <p className="text-base font-semibold text-warm-900 dark:text-disc-text">REST API</p>
-              </div>
-              <p className="text-base text-warm-500 dark:text-disc-muted mb-3">เชื่อมต่อระบบภายนอก — ดู docs หลัง login</p>
-              <span className="inline-block text-sm bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-semibold px-2.5 py-1 rounded-md">Active</span>
+          {/* Discord bot — บรรทัดเดียว สั้นๆ ใต้ hero */}
+          <div className="mt-6 pt-6 border-t border-brand-blue-light dark:border-disc-border flex items-center justify-center gap-2 text-sm text-warm-500 dark:text-disc-muted">
+            <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-[#5865F2] shrink-0">
+              <path d="M20.317 4.37a19.791 19.791 0 00-4.885-1.515.074.074 0 00-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 00-5.487 0 12.64 12.64 0 00-.617-1.25.077.077 0 00-.079-.037A19.736 19.736 0 003.677 4.37a.07.07 0 00-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 00.031.057 19.9 19.9 0 005.993 3.03.078.078 0 00.084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 00-.041-.106 13.107 13.107 0 01-1.872-.892.077.077 0 01-.008-.128 10.2 10.2 0 00.372-.292.074.074 0 01.077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 01.078.01c.12.098.246.198.373.292a.077.077 0 01-.006.127 12.299 12.299 0 01-1.873.892.077.077 0 00-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 00.084.028 19.839 19.839 0 006.002-3.03.077.077 0 00.032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 00-.031-.03z"/>
+            </svg>
+            <Link href="/integrations#discord-bot" className="hover:text-warm-900 dark:hover:text-disc-text transition-colors">
+              Discord Bot · {guilds.length} servers
             </Link>
+            <a href={BOT_INVITE_URL} target="_blank" rel="noopener noreferrer" className="text-brand-orange hover:text-brand-orange-light font-medium">
+              Add to Server
+            </a>
           </div>
         </div>
-
       </div>
     )
   }

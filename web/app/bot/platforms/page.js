@@ -267,6 +267,7 @@ export default function SocialAccountsPage() {
                   { key: 'meta_app_secret',   label: 'Meta App Secret',   secret: true  },
                   { key: 'x_consumer_key',    label: 'X Consumer Key',    secret: false },
                   { key: 'x_consumer_secret', label: 'X Consumer Secret', secret: true  },
+                  { key: 'news_channel_id',   label: '📢 ห้องข่าวสาร (Channel ID)', secret: false },
                 ].map(({ key, label, secret }) => {
                   const val = cfg?.[key]
                   const display = !val ? '—' : secret ? '••••••••' : (val.length > 24 ? val.slice(0, 12) + '…' + val.slice(-6) : val)
@@ -356,7 +357,7 @@ export default function SocialAccountsPage() {
           <div className="bg-white dark:bg-disc-bg2 rounded-2xl shadow-xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-base font-bold text-gray-900 dark:text-disc-text">
-                {{ meta_app_id: 'Meta App ID', meta_app_secret: 'Meta App Secret', x_consumer_key: 'X Consumer Key', x_consumer_secret: 'X Consumer Secret' }[editConfig.key]}
+                {{ meta_app_id: 'Meta App ID', meta_app_secret: 'Meta App Secret', x_consumer_key: 'X Consumer Key', x_consumer_secret: 'X Consumer Secret', news_channel_id: '📢 ห้องข่าวสาร (Channel ID)' }[editConfig.key]}
               </h2>
               <button onClick={() => setEditConfig(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-disc-text"><X size={18} /></button>
             </div>
@@ -370,7 +371,9 @@ export default function SocialAccountsPage() {
                 className="w-full px-3 py-2 text-sm rounded-lg border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-gray-900 dark:text-disc-text placeholder-gray-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-orange/40"
               />
               <p className="text-xs text-gray-400 dark:text-disc-muted">
-                ดูค่าได้จาก {editConfig.key.startsWith('meta_') ? 'Meta Developer Portal → My Apps' : 'X Developer Portal → Keys and Tokens'}
+                {editConfig.key === 'news_channel_id'
+                  ? 'คลิกขวาที่ห้องข่าวสารใน Discord → Copy Channel ID (ต้องเปิด Developer Mode) — ตั้งแล้วตะกร้าสื่อจะมีตัวเลือกแชร์ลงห้องนี้'
+                  : `ดูค่าได้จาก ${editConfig.key.startsWith('meta_') ? 'Meta Developer Portal → My Apps' : 'X Developer Portal → Keys and Tokens'}`}
               </p>
               <div className="flex justify-end gap-2 mt-2">
                 <button type="button" onClick={() => setEditConfig(null)} className="px-4 py-2 text-sm rounded-lg text-gray-500 dark:text-disc-muted hover:bg-gray-100 dark:hover:bg-disc-hover transition">ยกเลิก</button>

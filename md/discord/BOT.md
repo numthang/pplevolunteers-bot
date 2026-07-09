@@ -306,6 +306,51 @@ pm2 restart pple-dcbot
 
 ---
 
+## Anti-Spam System (Quarantine + Honeypot)
+
+> ที่มา: แทน Wick quarantine (ถอด role หมด งงตั้งค่า) — design เต็มใน [md/PENDING.md](../PENDING.md) section "🛡️ Anti-Spam"
+
+### Threat model
+เคสจริงที่เจอเกือบทั้งหมด = **account สมาชิกโดนแฮคมายิงสแปม** ไม่ใช่ bot join ใหม่ — honeypot จับเคสนี้ไม่ได้ (สมาชิกโดน deny มองไม่เห็นห้อง) จึงมี 3 signal คนละบทบาท:
+
+| Signal | จับอะไร | Threshold |
+|---|---|---|
+| **Duplicate ข้ามห้อง** (ตัวหลัก) | account โดนแฮค ยิงข้อความเดิมหลายห้อง | content เหมือนเป๊ะ ≥3 ห้อง ภายใน 30s (exact match ไม่ fuzzy) |
+| **Mass-mention** | สคริปต์แฮคยิง mention รัว | mention users+roles รวม ≥10 ในข้อความเดียว |
+| **Honeypot channel** | self-bot / staff ที่มี `Administrator` โดนแฮค | โพสต์ในห้องที่ตั้งเป็น honeypot |
+
+### Action เมื่อ trigger
+ติด **Quarantine role** (ไม่ถอดยศอื่น) + ลบข้อความ (duplicate = ลบทุกห้องที่ match) + แจ้งห้อง mod → mod ตัดสินเอง (ปลด role คืนถ้าโดนแฮค กู้แล้ว / ban ถ้าเป็นบอทจริง)
+
+- **Staff exempt** — สมาชิกที่มี `ManageMessages` ขึ้นไป ไม่ auto-quarantine จาก mass-mention/duplicate (กันเคสมือจริงประกาศงาน mention เยอะ/โพสต์ซ้ำหลายห้อง) — แค่แจ้ง mod เฉยๆ
+  - **honeypot ไม่มี staff-exempt** (แก้ 2026-07-09) — `Administrator` bypass ViewChannel/SendMessages deny ทุกที่อยู่แล้ว ถ้า exempt ด้วยจะเท่ากับ honeypot จับ hacked-Admin ไม่ได้เลย ซึ่งเป็นเคสหลักที่ตั้งใจจับ (case 2 ในหัวข้อ threat model)
+- **Quarantine role ทำงานได้โดยไม่ถอดยศ** เพราะมี deny `SendMessages` overwrite ติดทุก category/channel อยู่แล้ว (setup มือ) — allow-ชนะ-deny ระดับ role ไม่ทำให้พัง เพราะห้องอื่นไม่มี explicit allow `SendMessages` ให้ role สมาชิก (มีแค่ allow `ViewChannel`)
+- **Honeypot permission ต้องห้าม deny @everyone** — deny ViewChannel ให้ `member_role_id` (role ที่ติดอัตโนมัติตอน verify ผ่าน `registerHandler.js`/`verifyHandler.js` — ครอบสมาชิกจริงทุกคนแน่นอน ต่างจาก interest/skill/province ที่เลือกหรือไม่เลือกก็ได้) ไม่งั้น bot/account ที่เพิ่ง join จะมองไม่เห็นห้องไปด้วย (กับดักไร้ค่า)
+
+### Files
+```
+services/antiSpamCache.js    In-memory guild config cache (honeypotChannelId, quarantineRoleId, modChannelId)
+                              populate ตอน clientReady, อัปเดตตอน /server antispam set (pattern เดียวกับ forumCache.js)
+handlers/antiSpamHandler.js  handleAntiSpam(message) — เช็ค 3 signal, staff-exempt, consolidate เป็น 1 action/ข้อความ
+                              duplicate cache: {channelId, messageId, content, timestamp} ต่อ user, prune 30s + sweep ทุก 5 นาที
+commands/server.js           /server antispam set/view/clear — เก็บ dc_guild_config
+                              keys: antispam_honeypot_channel_id, antispam_quarantine_role_id, antispam_mod_channel_id
+```
+
+Wire เข้า `messageCreate` (index.js) เป็นจุดแรกสุด — ถ้ามี action ให้ `return` ทันที กัน forum-index/search/RAG ประมวลผลข้อความที่กำลังจะถูกลบ
+
+### Setup (ต่อ guild)
+1. สร้างห้อง honeypot มือ (แค่สร้าง+ตั้งชื่อ ไม่ต้องตั้ง permission เอง) — bot ไม่ auto-create ห้อง
+2. Quarantine role ต้องมี deny `SendMessages`+`ViewChannel` ทุก category อยู่แล้ว + position สูงกว่า Admin (ต่ำกว่า bot)
+3. ตั้ง `member_role` ไว้ก่อนที่ `/panel register` (ถ้ายังไม่มี) — honeypot permission auto-apply ต้องใช้ค่านี้
+4. `/server antispam set honeypot_channel:<#ch> quarantine_role:<@&role> mod_channel:<#ch>` — **auto deny ViewChannel ให้ `member_role_id` ในห้อง honeypot ให้เลย** + เตือนถ้า @everyone โดน deny อยู่ (ต้องแก้เองให้ @everyone เห็นห้องได้)
+   - `honeypot_channel` กับ `mod_channel` **ห้ามเป็นห้องเดียวกัน** — command reject ให้เลยถ้าตั้งซ้ำ (honeypot ห้ามมีใครพิมพ์ได้แม้ mod ไม่งั้น mod ตอบ alert ในห้องเดียวกันจะโดน auto-quarantine ตัวเอง — honeypot ไม่มี staff-exempt)
+
+### สถานะ (2026-07-09)
+Code เสร็จ + mock smoke test ผ่าน (7 เคส) — ยังไม่ deploy command จริง / ยังไม่ทดสอบใน Discord จริง
+
+---
+
 ## Known Gotcha
 
 ### `dc_server_settings.setting_value` เป็น JSON column type

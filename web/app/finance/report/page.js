@@ -1,18 +1,18 @@
 'use client'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { Suspense } from 'react'
+import { useTranslations } from 'next-intl'
 import AccountSelect from '@/components/AccountSelect'
 import CategorySelect, { CatIcon } from '@/components/CategorySelect'
 import { formatThaiDateShort } from '@/lib/dateFormat'
 import { X, ChevronDown } from 'lucide-react'
-
-const MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.']
 
 function fmt(n) {
   return Number(n).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
 function DescEdit({ txn, onSaved }) {
+  const t = useTranslations('finance')
   const [editing, setEditing] = useState(false)
   const [val, setVal] = useState(txn.description || '')
   const [saving, setSaving] = useState(false)
@@ -34,8 +34,8 @@ function DescEdit({ txn, onSaved }) {
       <input autoFocus className="text-sm border dark:border-disc-border rounded px-2 py-0.5 flex-1 bg-white dark:bg-disc-hover text-gray-900 dark:text-disc-text"
         value={val} onChange={e => setVal(e.target.value)}
         onKeyDown={e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') setEditing(false) }} />
-      <button onClick={save} disabled={saving} className="text-xs text-indigo-600 dark:text-indigo-400 px-1">บันทึก</button>
-      <button onClick={() => setEditing(false)} className="text-xs text-gray-400 px-1">ยกเลิก</button>
+      <button onClick={save} disabled={saving} className="text-xs text-indigo-600 dark:text-indigo-400 px-1">{t('common.save')}</button>
+      <button onClick={() => setEditing(false)} className="text-xs text-gray-400 px-1">{t('common.cancel')}</button>
     </div>
   )
 
@@ -51,6 +51,9 @@ function DescEdit({ txn, onSaved }) {
 
 // Modal แสดงรายการใน category
 function CategoryModal({ catRow, filter, categories, onClose, onUpdated }) {
+  const t = useTranslations('finance')
+  // precomputed for use inside the row map below, where the loop variable is itself named `t`
+  const selectCategoryPlaceholder = t('report.selectCategoryPlaceholder')
   const [txns, setTxns] = useState([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState({})
@@ -101,16 +104,16 @@ function CategoryModal({ catRow, filter, categories, onClose, onUpdated }) {
         <div className="flex items-center justify-between px-5 pt-5 pb-3 flex-shrink-0 gap-3 flex-wrap">
           <div className="flex items-center gap-2">
             <CatIcon name={catRow.category_icon} size={16} />
-            <h2 className="text-base font-bold text-gray-900 dark:text-disc-text">{catRow.category_name || 'ไม่มีหมวด'}</h2>
-            <span className="text-sm text-gray-400">{catRow.type === 'income' ? '📥' : '📤'} {catRow.count} รายการ</span>
+            <h2 className="text-base font-bold text-gray-900 dark:text-disc-text">{catRow.category_name || t('categories.none')}</h2>
+            <span className="text-sm text-gray-400">{catRow.type === 'income' ? '📥' : '📤'} {t('report.itemsCount', { count: catRow.count })}</span>
           </div>
           <div className="flex items-center gap-2">
             <select value={sort} onChange={e => setSort(e.target.value)}
               className="border dark:border-disc-border rounded px-2 py-1 text-sm bg-white dark:bg-disc-hover text-gray-700 dark:text-disc-text">
-              <option value="date_desc">วันที่ ใหม่→เก่า</option>
-              <option value="date_asc">วันที่ เก่า→ใหม่</option>
-              <option value="amount_desc">ยอด มาก→น้อย</option>
-              <option value="amount_asc">ยอด น้อย→มาก</option>
+              <option value="date_desc">{t('report.sortDateDesc')}</option>
+              <option value="date_asc">{t('report.sortDateAsc')}</option>
+              <option value="amount_desc">{t('report.sortAmountDesc')}</option>
+              <option value="amount_asc">{t('report.sortAmountAsc')}</option>
             </select>
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-disc-text"><X size={18} /></button>
           </div>
@@ -118,9 +121,9 @@ function CategoryModal({ catRow, filter, categories, onClose, onUpdated }) {
 
         <div className="px-5 overflow-y-auto flex-1">
           {loading
-            ? <p className="text-center text-gray-400 py-8 text-sm">กำลังโหลด...</p>
+            ? <p className="text-center text-gray-400 py-8 text-sm">{t('common.loading')}</p>
             : txns.length === 0
-              ? <p className="text-center text-gray-400 py-8 text-sm">ไม่มีรายการ</p>
+              ? <p className="text-center text-gray-400 py-8 text-sm">{t('common.noItems')}</p>
               : <div className="space-y-2 pb-4">
                   {[...txns].sort((a, b) => {
                     if (sort === 'date_desc')   return new Date(b.txn_at) - new Date(a.txn_at)
@@ -143,7 +146,7 @@ function CategoryModal({ catRow, filter, categories, onClose, onUpdated }) {
                           categories={categories}
                           value={t.category_id || ''}
                           onChange={v => changeCategory(t, v)}
-                          placeholder="เลือกหมวด"
+                          placeholder={selectCategoryPlaceholder}
                           disabled={saving[t.id]}
                         />
                       </div>
@@ -154,7 +157,7 @@ function CategoryModal({ catRow, filter, categories, onClose, onUpdated }) {
         </div>
 
         <div className="px-5 py-3 flex-shrink-0 border-t dark:border-disc-border">
-          <button onClick={onClose} className="px-4 py-1.5 rounded border dark:border-disc-border text-base text-gray-700 dark:text-disc-text">ปิด</button>
+          <button onClick={onClose} className="px-4 py-1.5 rounded border dark:border-disc-border text-base text-gray-700 dark:text-disc-text">{t('common.close')}</button>
         </div>
       </div>
     </div>
@@ -162,6 +165,8 @@ function CategoryModal({ catRow, filter, categories, onClose, onUpdated }) {
 }
 
 function ReportContent() {
+  const t = useTranslations('finance')
+  const MONTHS = t.raw('filters.monthsShort')
   const now = new Date()
   const [accounts, setAccounts]     = useState([])
   const [categories, setCategories] = useState([])
@@ -219,13 +224,13 @@ function ReportContent() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">รายงาน</h1>
+      <h1 className="text-2xl font-bold mb-6">{t('report.title')}</h1>
 
       {/* Filters */}
       <div className="flex flex-col gap-2 mb-6">
-        <AccountSelect accounts={accounts} value={filter.accountId} onChange={v => setFilter(f => ({ ...f, accountId: v }))} placeholder="ทุกบัญชี" className="w-full" />
+        <AccountSelect accounts={accounts} value={filter.accountId} onChange={v => setFilter(f => ({ ...f, accountId: v }))} placeholder={t('filters.allAccounts')} className="w-full" />
         <div className="flex rounded border dark:border-disc-border overflow-hidden text-base">
-          {[['', 'ทั้งหมด'], ['income', '📥 รายรับ'], ['expense', '📤 รายจ่าย']].map(([val, label]) => (
+          {[['', t('filters.typeAll')], ['income', `📥 ${t('common.income')}`], ['expense', `📤 ${t('common.expense')}`]].map(([val, label]) => (
             <button key={val} type="button"
               onClick={() => setFilter(f => ({ ...f, type: val }))}
               className={`flex-1 px-3 py-1.5 ${filter.type === val ? 'bg-indigo-600 text-white' : 'bg-card-bg text-gray-700 dark:text-disc-text hover:bg-gray-50 dark:hover:bg-disc-hover'}`}
@@ -242,12 +247,12 @@ function ReportContent() {
               <button type="button" onClick={() => setDateOpen(o => !o)}
                 className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-disc-hover/50 transition">
                 <span className={hasDate ? 'text-indigo-600 dark:text-indigo-400 font-medium' : 'text-gray-400 dark:text-disc-muted'}>
-                  {dateLabel || 'กรองตามวันที่'}
+                  {dateLabel || t('filters.dateFilterPlaceholder')}
                 </span>
                 <div className="flex items-center gap-2">
                   {hasDate && (
                     <span onClick={e => { e.stopPropagation(); setFilter(f => ({ ...f, year: '', month: '', dateFrom: '', dateTo: '' })) }}
-                      className="text-xs text-gray-400 hover:text-red-500 transition px-1">ล้าง</span>
+                      className="text-xs text-gray-400 hover:text-red-500 transition px-1">{t('filters.clear')}</span>
                   )}
                   <ChevronDown size={14} className={`text-gray-400 transition-transform ${dateOpen ? 'rotate-180' : ''}`} />
                 </div>
@@ -257,12 +262,12 @@ function ReportContent() {
                   <div className="flex gap-2">
                     <select className="flex-1 border dark:border-disc-border rounded px-2 py-1.5 text-sm bg-white dark:bg-disc-hover text-gray-900 dark:text-disc-text"
                       value={filter.year} onChange={e => setFilter(f => ({ ...f, year: e.target.value, month: '', dateFrom: '', dateTo: '' }))}>
-                      <option value="">ทุกปี</option>
+                      <option value="">{t('filters.allYears')}</option>
                       {years.map(y => <option key={y} value={y}>{y + 543} ({y})</option>)}
                     </select>
                     <select className="flex-1 border dark:border-disc-border rounded px-2 py-1.5 text-sm bg-white dark:bg-disc-hover text-gray-900 dark:text-disc-text"
                       value={filter.month} onChange={e => setFilter(f => ({ ...f, month: e.target.value, dateFrom: '', dateTo: '' }))}>
-                      <option value="">ทุกเดือน</option>
+                      <option value="">{t('filters.allMonths')}</option>
                       {MONTHS.map((m, i) => <option key={i+1} value={i+1}>{m}</option>)}
                     </select>
                   </div>
@@ -280,15 +285,15 @@ function ReportContent() {
         })()}
       </div>
 
-      {loading && <p className="text-gray-400 text-sm mb-4">กำลังโหลด...</p>}
+      {loading && <p className="text-gray-400 text-sm mb-4">{t('common.loading')}</p>}
 
       {/* Summary bar */}
       {data && (
         <div className="flex flex-col gap-3 mb-6">
           <div className="grid grid-cols-2 gap-3">
             {[
-              { label: 'รายรับ',  value: totalIncome,  cls: 'text-green-600 dark:text-green-400' },
-              { label: 'รายจ่าย', value: totalExpense, cls: 'text-red-500 dark:text-red-400' },
+              { label: t('common.income'),  value: totalIncome,  cls: 'text-green-600 dark:text-green-400' },
+              { label: t('common.expense'), value: totalExpense, cls: 'text-red-500 dark:text-red-400' },
             ].map(({ label, value, cls }) => (
               <div key={label} className="bg-card-bg rounded-xl shadow px-3 py-3 text-center">
                 <p className="text-sm text-gray-500 dark:text-disc-muted mb-1">{label}</p>
@@ -297,7 +302,7 @@ function ReportContent() {
             ))}
           </div>
           <div className="bg-card-bg rounded-xl shadow px-3 py-3 text-center">
-            <p className="text-xs text-gray-500 dark:text-disc-muted mb-1">สุทธิ</p>
+            <p className="text-xs text-gray-500 dark:text-disc-muted mb-1">{t('report.netLabel')}</p>
             <p className={`font-mono font-bold text-lg leading-tight ${net >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>{fmt(net)} ฿</p>
           </div>
         </div>
@@ -306,14 +311,14 @@ function ReportContent() {
       {/* Category breakdown */}
       {data && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          {[{ label: '📥 รายรับตามหมวด', rows: incomeRows, total: totalIncome, barCls: 'bg-green-500' },
-            { label: '📤 รายจ่ายตามหมวด', rows: expenseRows, total: totalExpense, barCls: 'bg-red-500' }]
+          {[{ label: `📥 ${t('report.byCategoryIncome')}`, rows: incomeRows, total: totalIncome, barCls: 'bg-green-500' },
+            { label: `📤 ${t('report.byCategoryExpense')}`, rows: expenseRows, total: totalExpense, barCls: 'bg-red-500' }]
             .filter(g => g.rows.length > 0 || !filter.type)
             .map(({ label, rows, total, barCls }) => (
             <div key={label} className="bg-card-bg rounded-xl shadow p-4">
               <h2 className="text-sm font-semibold text-gray-500 dark:text-disc-muted mb-3">{label}</h2>
               {rows.length === 0
-                ? <p className="text-gray-400 text-sm text-center py-4">ไม่มีข้อมูล</p>
+                ? <p className="text-gray-400 text-sm text-center py-4">{t('report.noData')}</p>
                 : <div className="space-y-2">
                     {rows.map(r => {
                       const pct = total > 0 ? (Number(r.total) / total) * 100 : 0
@@ -324,7 +329,7 @@ function ReportContent() {
                           <div className="flex items-center justify-between text-base mb-0.5">
                             <span className="flex items-center gap-1.5 text-gray-700 dark:text-disc-text group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
                               <CatIcon name={r.category_icon} size={13} />
-                              {r.category_name || 'ไม่มีหมวด'}
+                              {r.category_name || t('categories.none')}
                               <span className="text-xs text-gray-400">({r.count})</span>
                             </span>
                             <span className="font-mono text-gray-900 dark:text-disc-text text-sm">{fmt(r.total)} ฿</span>
@@ -345,15 +350,15 @@ function ReportContent() {
       {/* Monthly trend */}
       {data && trendMonths.length > 0 && (
         <div className="bg-card-bg rounded-xl shadow p-4">
-          <h2 className="text-sm font-semibold text-gray-500 dark:text-disc-muted mb-3">แนวโน้มรายเดือน</h2>
+          <h2 className="text-sm font-semibold text-gray-500 dark:text-disc-muted mb-3">{t('report.monthlyTrendTitle')}</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-base">
               <thead>
                 <tr className="text-sm text-gray-400 border-b dark:border-disc-border">
-                  <th className="text-left pb-2">เดือน</th>
-                  <th className="text-right pb-2 text-green-600 dark:text-green-400">รายรับ</th>
-                  <th className="text-right pb-2 text-red-500 dark:text-red-400">รายจ่าย</th>
-                  <th className="text-right pb-2">สุทธิเดือนนี้</th>
+                  <th className="text-left pb-2">{t('report.colMonth')}</th>
+                  <th className="text-right pb-2 text-green-600 dark:text-green-400">{t('common.income')}</th>
+                  <th className="text-right pb-2 text-red-500 dark:text-red-400">{t('common.expense')}</th>
+                  <th className="text-right pb-2">{t('report.colNetThisMonth')}</th>
                 </tr>
               </thead>
               <tbody>

@@ -6,7 +6,7 @@ import { getSocialManagerGuildIds } from '@/db/guilds.js'
 import { getGuildId } from '@/lib/guildContext.js'
 import pool from '@/db/index.js'
 
-const ALLOWED_KEYS = ['meta_app_id', 'meta_app_secret', 'x_consumer_key', 'x_consumer_secret']
+const ALLOWED_KEYS = ['meta_app_id', 'meta_app_secret', 'x_consumer_key', 'x_consumer_secret', 'news_channel_id']
 
 // GET → manager: { guildId, guildName, meta_app_id?, ... } / member: { guildId, hasMeta, hasX }
 export async function GET() {

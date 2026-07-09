@@ -1,2 +1,7 @@
-export const metadata = { title: 'หมวดหมู่' }
+import { getTranslations } from 'next-intl/server'
+
+export async function generateMetadata() {
+  const t = await getTranslations('finance')
+  return { title: t('categories.title') }
+}
 export default function Layout({ children }) { return children }

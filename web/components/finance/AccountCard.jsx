@@ -2,6 +2,7 @@
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { Copy, Check, Pencil, Archive, ArchiveRestore, Trash2, X } from 'lucide-react'
 import BankBadge from '@/components/BankBadge'
 import AccountFormFields from './AccountFormFields'
@@ -11,6 +12,7 @@ function fmt(n) {
 }
 
 export default function AccountCard({ account, canEdit = false }) {
+  const t = useTranslations('finance')
   const { balance } = account
   const router = useRouter()
   const [copied, setCopied] = useState(false)
@@ -60,7 +62,7 @@ export default function AccountCard({ account, canEdit = false }) {
   }
 
   async function remove() {
-    if (!confirm('ลบบัญชีนี้?')) return
+    if (!confirm(t('accounts.confirmDelete'))) return
     await fetch(`/api/finance/accounts/${account.id}`, { method: 'DELETE' })
     setShowModal(false)
     router.refresh()
@@ -74,10 +76,10 @@ export default function AccountCard({ account, canEdit = false }) {
           <div className="flex-1 min-w-0">
             <p className="text-base font-semibold text-gray-900 dark:text-disc-text leading-snug">
               {account.name}
-              {!!account.archived && <span className="text-xs text-gray-400 font-normal ml-1">(ซ่อน)</span>}
+              {!!account.archived && <span className="text-xs text-gray-400 font-normal ml-1">{t('accounts.archivedSuffix')}</span>}
             </p>
             <p className="text-sm text-gray-400 dark:text-disc-muted">
-              {account.bank || 'เงินสด'}
+              {account.bank || t('accounts.cashFallback')}
               {account.account_no && <span className="font-mono ml-1">{account.account_no}</span>}
             </p>
           </div>
@@ -88,18 +90,18 @@ export default function AccountCard({ account, canEdit = false }) {
             <div className="flex items-center gap-2">
               <button onClick={copyAll}
                 className="flex items-center gap-1 text-[11px] text-gray-400 dark:text-disc-muted hover:text-indigo-500 dark:hover:text-indigo-400 transition"
-                title="คัดลอกชื่อ ธนาคาร เลขบัญชี"
-                aria-label="คัดลอกชื่อ ธนาคาร เลขบัญชี"
+                title={t('accounts.copyAllTooltip')}
+                aria-label={t('accounts.copyAllTooltip')}
               >
                 {copied ? <Check size={11} className="text-green-500" /> : <Copy size={11} />}
-                {copied ? 'คัดลอกแล้ว' : 'คัดลอก'}
+                {copied ? t('common.copied') : t('common.copy')}
               </button>
               {canEdit && (
                 <button onClick={openEdit}
                   className="flex items-center gap-1 text-[11px] text-indigo-500 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition"
-                  title="แก้ไขบัญชี"
+                  title={t('accounts.editAccount')}
                 >
-                  <Pencil size={11} /> แก้ไข
+                  <Pencil size={11} /> {t('common.edit')}
                 </button>
               )}
             </div>
@@ -111,26 +113,26 @@ export default function AccountCard({ account, canEdit = false }) {
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={() => setShowModal(false)}>
           <div className="bg-card-bg rounded-xl shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-disc-text">แก้ไขบัญชี</h2>
-              <button onClick={() => setShowModal(false)} aria-label="ปิด" className="text-gray-400 hover:text-gray-600 dark:hover:text-disc-text"><X size={18} /></button>
+              <h2 className="text-lg font-bold text-gray-900 dark:text-disc-text">{t('accounts.editAccount')}</h2>
+              <button onClick={() => setShowModal(false)} aria-label={t('common.close')} className="text-gray-400 hover:text-gray-600 dark:hover:text-disc-text"><X size={18} /></button>
             </div>
             <AccountFormFields form={form} onChange={v => setForm(f => ({ ...f, ...v }))} guilds={guilds} />
             <div className="flex items-center justify-between mt-5 gap-2">
               <div className="flex gap-1">
                 <button onClick={toggleArchive}
-                  title={account.archived ? 'เลิกซ่อน' : 'ซ่อน'}
-                  aria-label={account.archived ? 'เลิกซ่อนบัญชี' : 'ซ่อนบัญชี'}
+                  title={account.archived ? t('accounts.unhideLabel') : t('accounts.hideLabel')}
+                  aria-label={account.archived ? t('accounts.unhideAria') : t('accounts.hideAria')}
                   className="p-2 rounded text-gray-400 hover:bg-gray-100 dark:hover:bg-disc-hover"
                 >
                   {account.archived ? <ArchiveRestore size={16} /> : <Archive size={16} />}
                 </button>
-                <button onClick={remove} aria-label="ลบบัญชี" className="p-2 rounded text-red-500 hover:bg-red-50 dark:hover:bg-red-900/40">
+                <button onClick={remove} aria-label={t('accounts.deleteAria')} className="p-2 rounded text-red-500 hover:bg-red-50 dark:hover:bg-red-900/40">
                   <Trash2 size={16} />
                 </button>
               </div>
               <div className="flex gap-2">
-                <button onClick={() => setShowModal(false)} className="px-4 py-1.5 rounded border dark:border-disc-border text-sm text-gray-700 dark:text-disc-text">ยกเลิก</button>
-                <button onClick={save} className="px-4 py-1.5 rounded bg-indigo-600 text-white text-sm hover:bg-indigo-700">บันทึก</button>
+                <button onClick={() => setShowModal(false)} className="px-4 py-1.5 rounded border dark:border-disc-border text-sm text-gray-700 dark:text-disc-text">{t('common.cancel')}</button>
+                <button onClick={save} className="px-4 py-1.5 rounded bg-indigo-600 text-white text-sm hover:bg-indigo-700">{t('common.save')}</button>
               </div>
             </div>
           </div>

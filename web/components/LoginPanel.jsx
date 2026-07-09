@@ -240,8 +240,8 @@ export default function LoginPanel() {
         {phoneError && <p className="text-xs text-red-500 dark:text-red-400 text-center">{phoneError}</p>}
       </div>
 
-      <p className="mt-8 text-warm-500 dark:text-disc-muted text-xs text-center">
-        ครั้งแรกต้องเข้าด้วย Discord — LINE / Google / Passkey / เบอร์มือถือ ใช้ได้หลังผูกบัญชีหรือยืนยันตัวตนผ่าน Discord แล้ว
+      <p className="mt-2 text-warm-500 dark:text-disc-muted text-xs text-center">
+        LINE / Google / Passkey / เบอร์มือถือ ใช้ได้หลังผูกบัญชีหรือยืนยันตัวตนผ่าน Discord แล้ว
       </p>
     </div>
   )

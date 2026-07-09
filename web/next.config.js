@@ -1,6 +1,9 @@
 // override: true — .env เป็น source of truth; กัน env var ที่ export ค้างใน shell (เช่น ANTHROPIC_API_KEY ใน ~/.bashrc) มาทับ
 require('dotenv').config({ path: require('path').resolve(__dirname, '../.env'), override: true })
 
+const createNextIntlPlugin = require('next-intl/plugin')
+const withNextIntl = createNextIntlPlugin('./i18n/request.js')
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   outputFileTracingRoot: require('path').resolve(__dirname, '../'),
@@ -25,4 +28,4 @@ const nextConfig = {
     ]
   },
 }
-module.exports = nextConfig
+module.exports = withNextIntl(nextConfig)

@@ -10,6 +10,11 @@ const {
   EmbedBuilder,
   MessageFlags,
   PermissionFlagsBits,
+  LabelBuilder,
+  ChannelSelectMenuBuilder,
+  ChannelType,
+  GuildScheduledEventPrivacyLevel,
+  GuildScheduledEventEntityType,
 } = require('discord.js');
 const path = require('path');
 const fs = require('fs');
@@ -19,6 +24,7 @@ const { fetchBuffer, applyWatermark, autoEnhance } = require('../utils/watermark
 const { postToFacebook, postToInstagram, postToThreads, postReelsToInstagram, postReelsToFacebook, postReelsToThreads, getAvailablePlatforms, getAvailableGroups } = require('../services/metaApi');
 const { postToX, postVideoToX } = require('../services/xApi');
 const { getSetting, setSetting, deleteSetting } = require('../db/settings');
+const { getNewsChannelId, postNews, buildEventAnnouncement, sendOrQueueAnnouncement } = require('../services/newsShare');
 const { resolveConfig } = require('../db/configResolver');
 const pool = require('../db/index');
 
@@ -160,7 +166,16 @@ function buildBasketButtons(imgCount, videoCount, hasCaption = false, webUrl = n
         .setURL(webUrl),
     );
   }
-  const row2 = [
+  const row2 = [];
+  if (!empty) {
+    row2.push(
+      new ButtonBuilder()
+        .setCustomId('basket_event_open')
+        .setLabel('📅 สร้าง Event')
+        .setStyle(ButtonStyle.Secondary),
+    );
+  }
+  row2.push(
     new ButtonBuilder()
       .setCustomId('basket_view_public')
       .setLabel('👁️ แสดงตะกร้า')
@@ -169,7 +184,7 @@ function buildBasketButtons(imgCount, videoCount, hasCaption = false, webUrl = n
       .setCustomId('basket_clear')
       .setLabel('🗑️ ล้าง')
       .setStyle(ButtonStyle.Secondary),
-  ];
+  );
   return [
     new ActionRowBuilder().addComponents(...row1),
     new ActionRowBuilder().addComponents(...row2),
@@ -192,8 +207,9 @@ function buildPlatformRow(availablePlatforms, selectedPlatforms) {
     ig:      { label: 'IG',  emoji: '📷' },
     threads: { label: '@',   emoji: '🧵' },
     x:       { label: 'X',  emoji: '🐦' },
+    news:    { label: 'ห้องข่าวสาร', emoji: '📢' },
   };
-  const order = ['fb', 'ig', 'threads', 'x'];
+  const order = ['fb', 'ig', 'threads', 'x', 'news'];
   const opts = order
     .filter(p => availablePlatforms.includes(p))
     .map(p => {
@@ -251,6 +267,7 @@ async function buildBasketPayload(basket, guildId, channelId, userId, channelNam
   const currentGroup = saved?.group && groups.includes(saved.group) ? saved.group : (groups[0] || null);
 
   const availablePlatforms = await getAvailablePlatforms(guildId, userId, currentGroup);
+  if (await getNewsChannelId(guildId)) availablePlatforms.push('news');
   // saved.platforms must be subset of available; otherwise default = all available
   const savedPlatforms = Array.isArray(saved?.platforms) ? saved.platforms.filter(p => availablePlatforms.includes(p)) : [];
   const selectedPlatforms = savedPlatforms.length ? savedPlatforms : [...availablePlatforms];
@@ -280,7 +297,7 @@ async function buildBasketPayload(basket, guildId, channelId, userId, channelNam
 
   const history = await getHistory(guildId, channelId);
   if (history.length) {
-    const platformIcon = { fb: '📘', ig: '📷', threads: '🧵', x: '𝕏' };
+    const platformIcon = { fb: '📘', ig: '📷', threads: '🧵', x: '𝕏', news: '📢' };
     const lines = history.map(h => {
       const hPlats = (h.platform || '').split(',').filter(Boolean);
       const icon = hPlats.length > 1 ? '📲' : (platformIcon[hPlats[0]] || '📤');
@@ -447,6 +464,7 @@ async function rehydrateState(interaction) {
   const groups = await getAvailableGroups(guildId, userId);
   const group = saved?.group && groups.includes(saved.group) ? saved.group : (groups[0] || null);
   const availablePlatforms = await getAvailablePlatforms(guildId, userId, group);
+  if (await getNewsChannelId(guildId)) availablePlatforms.push('news');
   const savedPlatforms = Array.isArray(saved?.platforms) ? saved.platforms.filter(p => availablePlatforms.includes(p)) : [];
   const platforms = savedPlatforms.length ? savedPlatforms : [...availablePlatforms];
   const basket = await getBasket(guildId, channelId);
@@ -529,8 +547,18 @@ function defaultScheduleTime() {
   return `${d}/${m}/${tomorrow.getUTCFullYear()} 17:00`;
 }
 
+// default วันเวลาเริ่ม event = ตอนนี้ +24 ชม. (เวลาเดิม วันถัดไป) ให้แก้ง่ายๆ
+function defaultEventStartTime() {
+  const thaiPlus24 = new Date(Date.now() + 31 * 60 * 60 * 1000); // +24h ชดเชย offset +7
+  const d  = String(thaiPlus24.getUTCDate()).padStart(2, '0');
+  const m  = String(thaiPlus24.getUTCMonth() + 1).padStart(2, '0');
+  const h  = String(thaiPlus24.getUTCHours()).padStart(2, '0');
+  const mi = String(thaiPlus24.getUTCMinutes()).padStart(2, '0');
+  return `${d}/${m}/${thaiPlus24.getUTCFullYear()} ${h}:${mi}`;
+}
+
 const PLATFORM_LABEL = { fb: 'Facebook', ig: 'Instagram', threads: '@ Threads', x: 'X' };
-const PLATFORM_SHORT = { fb: 'FB', ig: 'IG', threads: '@', x: 'X' };
+const PLATFORM_SHORT = { fb: 'FB', ig: 'IG', threads: '@', x: 'X', news: 'ข่าวสาร' };
 
 function formatPlatforms(platforms) {
   return (platforms || []).map(p => PLATFORM_SHORT[p] || p).join(' + ');
@@ -722,6 +750,17 @@ async function processAndPost(interaction, state) {
       }
     }
 
+    if (platforms.includes('news')) {
+      await interaction.editReply({ content: '📤 กำลังแชร์ลงห้องข่าวสาร...' }).catch(() => {});
+      try {
+        const content = [state.caption, videoItems[0].image_url].filter(Boolean).join('\n');
+        const msg = await postNews(interaction.guild, { content });
+        results.push(`✅ ห้องข่าวสาร · 🔗 [ดูโพสต์](${msg.url})`);
+      } catch (err) {
+        results.push(`❌ ห้องข่าวสาร: ${err.message}`);
+      }
+    }
+
     const overallStatus = results.every(r => r.startsWith('✅')) ? 'success'
       : results.every(r => r.startsWith('❌')) ? 'failed' : 'partial';
     await addHistory(state.guildId, state.channelId, interaction.user.id, {
@@ -842,6 +881,25 @@ async function processAndPost(interaction, state) {
     }
   }
 
+  if (platforms.includes('news')) {
+    await interaction.editReply({ content: '📤 กำลังแชร์ลงห้องข่าวสาร...' }).catch(() => {});
+    try {
+      // ส่ง buffer ที่ผ่านลายน้ำแล้ว — Discord จำกัด 10 ไฟล์/ข้อความ เกินให้ต่อข้อความถัดไป
+      const files = processed.map((p, i) => ({ attachment: p.buffer, name: `image_${i + 1}.${p.ext}` }));
+      let firstMsg = null;
+      for (let i = 0; i < files.length; i += 10) {
+        const msg = await postNews(interaction.guild, {
+          content: i === 0 ? (state.caption || undefined) : undefined,
+          files: files.slice(i, i + 10),
+        });
+        if (!firstMsg) firstMsg = msg;
+      }
+      results.push(`✅ ห้องข่าวสาร · 🔗 [ดูโพสต์](${firstMsg.url})`);
+    } catch (err) {
+      results.push(`❌ ห้องข่าวสาร: ${err.message}`);
+    }
+  }
+
   const overallStatus = results.every(r => r.startsWith('✅')) ? 'success'
     : results.every(r => r.startsWith('❌')) ? 'failed' : 'partial';
   await addHistory(state.guildId, state.channelId, interaction.user.id, {
@@ -913,6 +971,133 @@ async function handleBasketCaptionEditModal(interaction) {
   await interaction.editReply({ content: '✅ แก้ caption แล้ว', ...payload });
 }
 
+// ─── สร้าง Discord Event จากโพสต์ ────────────────────────────────────────────
+async function handleBasketEventOpen(interaction) {
+  if (!interaction.member.permissions.has(PermissionFlagsBits.ManageMessages)) {
+    return interaction.reply({ content: '❌ ไม่มีสิทธิ์สร้าง Event', flags: MessageFlags.Ephemeral });
+  }
+  const basket = await getBasket(interaction.guildId, interaction.channelId);
+  const caption = basket.find(r => r.type === 'caption')?.caption
+    || pendingPost.get(interaction.user.id)?.caption || '';
+  const defaultName = (caption.split('\n').map(s => s.trim()).find(Boolean) || '').slice(0, 100);
+
+  // unique customId to bypass Discord client modal cache (forces fresh render)
+  const cid = `basket_event_modal:${Date.now()}`;
+
+  const nameInput = new TextInputBuilder()
+    .setCustomId('event_name').setStyle(TextInputStyle.Short).setRequired(true).setMaxLength(100);
+  if (defaultName) nameInput.setValue(defaultName);
+
+  const startInput = new TextInputBuilder()
+    .setCustomId('event_start').setStyle(TextInputStyle.Short).setRequired(true)
+    .setMaxLength(20).setPlaceholder('เช่น 19/7 09:00')
+    .setValue(defaultEventStartTime());
+
+  const endInput = new TextInputBuilder()
+    .setCustomId('event_end').setStyle(TextInputStyle.Short).setRequired(false)
+    .setMaxLength(20).setPlaceholder('เว้นว่าง = เริ่ม +2 ชม.');
+
+  const channelSelect = new ChannelSelectMenuBuilder()
+    .setCustomId('event_channel').setRequired(false)
+    .setChannelTypes(ChannelType.GuildVoice, ChannelType.GuildStageVoice);
+
+  const locationInput = new TextInputBuilder()
+    .setCustomId('event_location').setStyle(TextInputStyle.Short).setRequired(false)
+    .setMaxLength(100).setPlaceholder('เช่น หน้าศาลากลางราชบุรี');
+
+  const modal = new ModalBuilder().setCustomId(cid).setTitle('📅 สร้าง Event').addLabelComponents(
+    new LabelBuilder().setLabel('ชื่อกิจกรรม').setTextInputComponent(nameInput),
+    new LabelBuilder().setLabel('วันเวลาเริ่ม').setTextInputComponent(startInput),
+    new LabelBuilder().setLabel('วันเวลาจบ').setTextInputComponent(endInput),
+    new LabelBuilder().setLabel('จัดในห้องประชุม (เลือกอย่างใดอย่างหนึ่ง)').setChannelSelectMenuComponent(channelSelect),
+    new LabelBuilder().setLabel('หรือสถานที่ข้างนอก').setTextInputComponent(locationInput),
+  );
+  return interaction.showModal(modal);
+}
+
+async function handleBasketEventModal(interaction) {
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+  const name     = interaction.fields.getTextInputValue('event_name').trim();
+  const startStr = interaction.fields.getTextInputValue('event_start').trim();
+  const endStr   = (interaction.fields.getTextInputValue('event_end') || '').trim();
+  const location = (interaction.fields.getTextInputValue('event_location') || '').trim();
+  const channelId = interaction.fields.getSelectedChannels('event_channel', false)?.first()?.id || null;
+
+  const start = parseThaiDateTime(startStr);
+  if (!start || isNaN(start.getTime())) {
+    return interaction.editReply({ content: '❌ รูปแบบวันเวลาเริ่มไม่ถูกต้อง — ใช้เช่น 19/7 09:00' });
+  }
+  if (start.getTime() < Date.now() + 5 * 60 * 1000) {
+    return interaction.editReply({ content: '❌ เวลาเริ่มต้องเป็นอนาคต (อย่างน้อย 5 นาทีจากนี้)' });
+  }
+  let end = null;
+  if (endStr) {
+    end = parseThaiDateTime(endStr);
+    if (!end || isNaN(end.getTime())) return interaction.editReply({ content: '❌ รูปแบบวันเวลาจบไม่ถูกต้อง' });
+    if (end <= start) return interaction.editReply({ content: '❌ เวลาจบต้องอยู่หลังเวลาเริ่ม' });
+  } else {
+    end = new Date(start.getTime() + 2 * 3600 * 1000);
+  }
+  if (!channelId && !location) {
+    return interaction.editReply({ content: '❌ เลือกห้องประชุม หรือพิมพ์สถานที่ข้างนอก อย่างใดอย่างหนึ่ง' });
+  }
+
+  const basket  = await getBasket(interaction.guildId, interaction.channelId);
+  const caption = basket.find(r => r.type === 'caption')?.caption
+    || pendingPost.get(interaction.user.id)?.caption || '';
+
+  // รูปปกจากรูปแรกในตะกร้า — ลิงก์ CDN หมดอายุ/ดึงไม่ได้ = สร้างแบบไม่มีปก
+  let image;
+  const firstImage = basket.find(r => r.type === 'image');
+  if (firstImage) {
+    try { image = await fetchBuffer(firstImage.image_url); } catch { image = undefined; }
+  }
+
+  await interaction.editReply({ content: '📅 กำลังสร้าง Event...' }).catch(() => {});
+
+  const selectedChannel = channelId ? interaction.guild.channels.cache.get(channelId) : null;
+  const isStage = selectedChannel?.type === ChannelType.GuildStageVoice;
+  let event;
+  try {
+    event = await interaction.guild.scheduledEvents.create({
+      name,
+      scheduledStartTime: start,
+      scheduledEndTime: end,
+      privacyLevel: GuildScheduledEventPrivacyLevel.GuildOnly,
+      entityType: channelId
+        ? (isStage ? GuildScheduledEventEntityType.StageInstance : GuildScheduledEventEntityType.Voice)
+        : GuildScheduledEventEntityType.External,
+      ...(channelId ? { channel: channelId } : { entityMetadata: { location } }),
+      description: caption ? caption.slice(0, 1000) : undefined,
+      image,
+      reason: `สร้างจากตะกร้าสื่อโดย ${interaction.user.tag}`,
+    });
+  } catch (err) {
+    return interaction.editReply({ content: `❌ สร้าง Event ไม่สำเร็จ: ${err.message}` });
+  }
+
+  const eventUrl = `https://discord.com/events/${interaction.guildId}/${event.id}`;
+  const announcement = buildEventAnnouncement({
+    name,
+    startUnix: Math.floor(start.getTime() / 1000),
+    locationText: channelId ? `<#${channelId}>` : location,
+    eventUrl,
+  });
+
+  let announceLine;
+  try {
+    const res = await sendOrQueueAnnouncement(interaction.guild, announcement);
+    if (res.skipped)      announceLine = 'ℹ️ ยังไม่ได้ตั้งค่าห้องข่าวสาร — ข้ามการประกาศ';
+    else if (res.queued)  announceLine = `⏰ ช่วงนี้เป็นเวลาพัก — ประกาศ @everyone จะส่งเข้าห้องข่าวสาร <t:${res.releaseUnix}:f> น.`;
+    else                  announceLine = '📣 ส่งประกาศพร้อม @everyone เข้าห้องข่าวสารแล้ว';
+  } catch (err) {
+    announceLine = `⚠️ ส่งประกาศไม่สำเร็จ: ${err.message}`;
+  }
+
+  return interaction.editReply({ content: `✅ สร้าง Event "${name}" แล้ว\n${eventUrl}\n${announceLine}` });
+}
+
 module.exports = {
   handleBasketAdd,
   handleBasketView,
@@ -924,6 +1109,8 @@ module.exports = {
   handleBasketEditCaption,
   handleBasketCaptionEditModal,
   handleBasketViewPublic,
+  handleBasketEventOpen,
+  handleBasketEventModal,
   buildBasketPayload,
   stripDiscordMarkdown,
 };

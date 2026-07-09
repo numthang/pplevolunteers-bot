@@ -34,10 +34,15 @@ const {
   handleBasketPost, handleBasketRetry, handleBasketSelect, handleBasketModal,
   handleBasketEditCaption, handleBasketCaptionEditModal,
   handleBasketViewPublic,
+  handleBasketEventOpen, handleBasketEventModal,
 } = require('./handlers/basketHandler');
+const { startAnnounceWorker } = require('./services/newsShare');
 const { indexThread, indexMessage, hybridSearch } = require('./services/forumIndexer');
 const { buildSearchResultEmbed, buildSearchComponents } = require('./handlers/forumSearch');
 const { forumChannelCache, dashboardThreadCache, searchChannelCache, addForumChannel, addDashboardThread, setSearchChannel } = require('./services/forumCache');
+const { setAntiSpamConfig } = require('./services/antiSpamCache');
+const { handleAntiSpam } = require('./handlers/antiSpamHandler');
+const { parseSetting } = require('./utils/parseSetting');
 const { getAllForumConfigs, deleteForumPost } = require('./db/forum');
 const { deletePost } = require('./services/meilisearch');
 const { initMeilisearch } = require('./services/meilisearch')
@@ -83,6 +88,7 @@ client.once('clientReady', async () => {
   await upsertGuilds(client.guilds.cache);
   emailPoller.init(client);
   smsWebhook.init(client);
+  startAnnounceWorker(client); // ประกาศ event ที่ค้างคิวช่วง quiet hours
   // โหลด forum configs + sync role catalog ทุก guild ที่ bot อยู่
   for (const guild of client.guilds.cache.values()) {
     const synced = await syncGuildRolesCatalog(guild).catch(e => { console.error(`⚠️ role sync ${guild.id}:`, e.message); return 0; });
@@ -95,6 +101,18 @@ client.once('clientReady', async () => {
     }
     const searchCh = await getSetting(guild.id, 'search_channel').catch(() => null);
     if (searchCh) setSearchChannel(guild.id, searchCh);
+
+    const [honeypotChannelIdRaw, quarantineRoleIdRaw, modChannelIdRaw] = await Promise.all([
+      getSetting(guild.id, 'antispam_honeypot_channel_id').catch(() => null),
+      getSetting(guild.id, 'antispam_quarantine_role_id').catch(() => null),
+      getSetting(guild.id, 'antispam_mod_channel_id').catch(() => null),
+    ]);
+    const honeypotChannelId = parseSetting(honeypotChannelIdRaw, null);
+    const quarantineRoleId  = parseSetting(quarantineRoleIdRaw, null);
+    const modChannelId      = parseSetting(modChannelIdRaw, null);
+    if (honeypotChannelId || quarantineRoleId || modChannelId) {
+      setAntiSpamConfig(guild.id, { honeypotChannelId, quarantineRoleId, modChannelId });
+    }
   }
 });
 
@@ -146,6 +164,7 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.customId === 'wm_custom_text')          return handleWatermarkModal(interaction);
     if (interaction.customId.startsWith('quote_modal:'))    return handleQuoteModal(interaction);
     if (interaction.customId.startsWith('basket_schedule_modal'))      return handleBasketModal(interaction);
+    if (interaction.customId.startsWith('basket_event_modal'))         return handleBasketEventModal(interaction);
     if (interaction.customId.startsWith('basket_caption_edit_modal')) return handleBasketCaptionEditModal(interaction);
     if (interaction.customId.startsWith('basket_ai_custom:'))         return handleBasketAiCustomModal(interaction);
     if (interaction.customId.startsWith('basket_ai_replace_modal:')) return handleBasketAiReplaceModal(interaction);
@@ -203,6 +222,7 @@ client.on('interactionCreate', async (interaction) => {
           if (interaction.customId === 'basket_clear')        return await handleBasketClear(interaction);
           if (interaction.customId === 'basket_edit_caption') return await handleBasketEditCaption(interaction);
           if (interaction.customId === 'basket_view_public')  return await handleBasketViewPublic(interaction);
+          if (interaction.customId === 'basket_event_open')   return await handleBasketEventOpen(interaction);
           if (interaction.customId === 'basket_ai_compose')          return await handleBasketAiStart(interaction);
           if (interaction.customId.startsWith('basket_ai_replace:')) return await handleBasketAiReplace(interaction);
           if (interaction.customId.startsWith('basket_ai_append:'))  return await handleBasketAiAppend(interaction);
@@ -368,6 +388,14 @@ function checkMentionRateLimit(userId, guildId) {
 }
 
 client.on('messageCreate', async (message) => {
+  // anti-spam: duplicate ข้ามห้อง / mass-mention / honeypot — เช็คก่อนเสมอ
+  // ถ้ามี action (ลบข้อความ + quarantine) ให้ return ทันที ไม่ทำ forum-index/search/RAG ต่อ
+  const spamActionTaken = await handleAntiSpam(message).catch(err => {
+    console.error('[antiSpam] handleAntiSpam:', err);
+    return false;
+  });
+  if (spamActionTaken) return;
+
   // track activity (ไม่ block bot message เพราะ onMessage เช็คเองอยู่แล้ว)
   onMessage(message).catch(err => console.error('[onMessage]', err));
 
