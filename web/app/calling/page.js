@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import { getSession } from '@/lib/auth.js'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import { getTranslations } from 'next-intl/server'
 import { Target, Phone, BarChart3, Users } from 'lucide-react'
 import pool from '@/db/index.js'
 import { getMembersCount, getPendingCallCount } from '@/db/calling/members.js'
@@ -80,6 +81,7 @@ export default async function CallingDashboard() {
   const session = await getSession()
   if (!session) redirect('/')
 
+  const t = await getTranslations('calling')
   const discordId = session.user.discordId
 
   const [
@@ -105,25 +107,25 @@ export default async function CallingDashboard() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-warm-900 dark:text-disc-text mb-1">Calling</h1>
-        <p className="text-base text-warm-500 dark:text-disc-muted">ภาพรวมระบบโทรหาสมาชิก</p>
+        <h1 className="text-2xl font-bold text-warm-900 dark:text-disc-text mb-1">{t('dashboard.pageTitle')}</h1>
+        <p className="text-base text-warm-500 dark:text-disc-muted">{t('dashboard.subtitle')}</p>
       </div>
 
       {/* Personal stats — "ของฉัน" */}
       <div>
-        <h2 className="text-sm font-semibold text-warm-500 dark:text-disc-muted uppercase tracking-wider mb-3">ของฉัน</h2>
+        <h2 className="text-sm font-semibold text-warm-500 dark:text-disc-muted uppercase tracking-wider mb-3">{t('dashboard.myStatsHeading')}</h2>
         <div className="grid grid-cols-2 gap-3">
           <StatCard
-            label="งานคงค้าง"
+            label={t('dashboard.pendingWorkLabel')}
             value={fmt(myPending)}
-            sub={pendingMember + pendingContact > 0 ? `${fmt(pendingMember)} สมาชิก · ${fmt(pendingContact)} contact` : null}
+            sub={pendingMember + pendingContact > 0 ? t('dashboard.pendingWorkSub', { member: fmt(pendingMember), contact: fmt(pendingContact) }) : null}
             accent="orange"
             href="/calling/assignee?status=pending"
           />
           <StatCard
-            label="โทรทั้งหมด"
+            label={t('dashboard.totalCallsLabel')}
             value={fmt(myTotal)}
-            sub="ตลอดกาล · นับเฉพาะที่โทรเอง"
+            sub={t('dashboard.totalCallsPersonalSub')}
             accent="teal"
           />
         </div>
@@ -131,22 +133,22 @@ export default async function CallingDashboard() {
 
       {/* System stats — "ภาพรวม" */}
       <div>
-        <h2 className="text-sm font-semibold text-warm-500 dark:text-disc-muted uppercase tracking-wider mb-3">ภาพรวมระบบ</h2>
+        <h2 className="text-sm font-semibold text-warm-500 dark:text-disc-muted uppercase tracking-wider mb-3">{t('dashboard.systemStatsHeading')}</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <StatCard label="โทรทั้งหมด" value={fmt(callStats.total)} sub="ตลอดกาล" accent="teal" />
-          <StatCard label="รับสาย" value={fmt(callStats.answered)} sub={`จาก ${fmt(callStats.total)} ครั้ง`} accent="blue" />
-          <StatCard label="อัตรารับสาย" value={`${callStats.rate}%`} sub="ตลอดกาล" accent="purple" />
-          <StatCard label="Campaign active" value={fmt(activeCampaigns.length)} sub={`รวม ${fmt(campaigns.length)} campaigns`} accent="orange" />
+          <StatCard label={t('dashboard.totalCallsLabel')} value={fmt(callStats.total)} sub={t('dashboard.allTimeSub')} accent="teal" />
+          <StatCard label={t('assignee.answeredLabel')} value={fmt(callStats.answered)} sub={t('dashboard.answeredSub', { total: fmt(callStats.total) })} accent="blue" />
+          <StatCard label={t('dashboard.answerRateLabel')} value={`${callStats.rate}%`} sub={t('dashboard.allTimeSub')} accent="purple" />
+          <StatCard label={t('dashboard.activeCampaignsLabel')} value={fmt(activeCampaigns.length)} sub={t('dashboard.totalCampaignsSub', { count: fmt(campaigns.length) })} accent="orange" />
         </div>
       </div>
 
       <div>
-        <h2 className="text-sm font-semibold text-warm-500 dark:text-disc-muted uppercase tracking-wider mb-3">เข้าหน้า</h2>
+        <h2 className="text-sm font-semibold text-warm-500 dark:text-disc-muted uppercase tracking-wider mb-3">{t('dashboard.navHeading')}</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <NavCard href="/calling/campaigns" title="Campaigns" desc={`จัดการ ${fmt(activeCampaigns.length)} campaign ที่ active · มอบหมายงาน`} Icon={Target} />
-          <NavCard href="/calling/assignee" title="Assignee" desc={myPending > 0 ? `งานของคุณ ${fmt(myPending)} รายการ` : 'ดูรายการที่ได้รับมอบหมาย'} Icon={Phone} />
-          <NavCard href="/calling/stats" title="Statistics" desc={`สถิติเชิงลึก · รับสาย ${fmt(callStats.answered)} จาก ${fmt(callStats.total)} ครั้ง`} Icon={BarChart3} />
-          <NavCard href="/calling/contacts" title="Contacts" desc={`จัดการผู้ติดต่อนอกฐานสมาชิก · สมาชิก ${fmt(memberCount)} ในระบบ`} Icon={Users} />
+          <NavCard href="/calling/campaigns" title={t('campaigns.pageTitle')} desc={t('dashboard.campaignsNavDesc', { count: fmt(activeCampaigns.length) })} Icon={Target} />
+          <NavCard href="/calling/assignee" title={t('dashboard.assigneeNavTitle')} desc={myPending > 0 ? t('dashboard.assigneeNavDescPending', { count: fmt(myPending) }) : t('dashboard.assigneeNavDescDefault')} Icon={Phone} />
+          <NavCard href="/calling/stats" title={t('dashboard.statsNavTitle')} desc={t('dashboard.statsNavDesc', { answered: fmt(callStats.answered), total: fmt(callStats.total) })} Icon={BarChart3} />
+          <NavCard href="/calling/contacts" title={t('contacts.pageTitle')} desc={t('dashboard.contactsNavDesc', { count: fmt(memberCount) })} Icon={Users} />
         </div>
       </div>
     </div>

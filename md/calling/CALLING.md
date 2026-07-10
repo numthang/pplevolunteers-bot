@@ -15,7 +15,7 @@
 
 - **Frontend:** Next.js App Router (เหมือน finance)
 - **Backend:** Node.js API routes
-- **Database:** MySQL `pple_volunteers` — prefix `calling_`
+- **Database:** PostgreSQL `pple_volunteers` — prefix `calling_`
 - **Auth:** Discord OAuth (next-auth เดิม)
 - **ข้อมูลสมาชิก:** ตอนนี้ดึงจาก `bq_members` / อนาคตเชื่อม BigQuery จริง
 
@@ -434,4 +434,4 @@ scripts/
 
 - **BigQuery:** เมื่อเชื่อมได้ → เปลี่ยน query source ใน `db/calling/members.js` โดยไม่ต้องแตะ schema calling_ tables
 - **ACT:** เมื่อได้ API → ดึง activity list มาให้เลือกใน dropdown แทนกรอกเอง schema ไม่ต้องเปลี่ยน
-- **Bot integration:** Discord bot ดึงข้อมูลจาก MySQL ตัวเดียวกันได้เลย
+- **Bot integration:** Discord bot ดึงข้อมูลจาก PostgreSQL ตัวเดียวกันได้เลย

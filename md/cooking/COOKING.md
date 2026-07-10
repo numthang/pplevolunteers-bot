@@ -62,18 +62,23 @@
 
 ## 🗃️ Data / DB
 
-- ตารางชุดใหม่ `cooking_*` ใน MySQL เดิม — **ไม่มี FK ผูกตาราง org** (bounded, ยกออกทีหลังได้)
-- ร่าง (build ค่อยลงรายละเอียด):
+> ⚠️ **DB จริงคือ PostgreSQL** (`pg`, port 5432) — CLAUDE.md เขียน "MySQL" ตกหล่น อย่าเชื่อ · migration = `scripts/migration/migration.sql` (Postgres syntax: SERIAL, TIMESTAMPTZ, ON CONFLICT)
+
+**แยก 2 อย่าง — static ไม่เข้า DB, mutable เข้า DB:**
+
+- **เมนู + ลิสต์วัตถุดิบ = static JSON** `md/cooking/menus.seed.json` (121 เมนู เสร็จแล้ว) — 121 แถวนิ่ง query ไม่ได้ประโยชน์ แถม versioned/diff ง่าย → โหลดเข้า memory ตอนรัน, match แบบ **deterministic** เร็ว ฟรี ไม่พึ่ง AI
+  - แต่ละเมนู: `{ id, name, food_groups[], protein[] (แทนกันได้), method, cuisine, flavor[], carb_in_dish, ingredients{core[],optional[]}, staples_used[], steps[], source(A/B), image{emoji,url}, gates{protein[],key[]} }`
+  - **`gates` = ตัวใช้ match จริง** (ไม่ใช่ ingredients ดิบ 253 ตัว): `gates.protein` = โปรตีน enum · `gates.key` = ของเฉพาะที่เป็นตัวตัดสิน 0-3 ตัว (กะทิ/ชีส/ผงกะหรี่/ผักหวานป่า...) · ของโรย+ผักจิปาถะ+staples ไม่ gate
+- **`md/cooking/canonical.json`** = checklist 44 ช่อง (protein 7 + veg 20 + special 17) แต่ละช่องมี `tier: regular`(ของประจำ) `/ occasional`(นานๆ ที) — tier 3 (staple) เพิ่มทีหลังได้
+- **state ต่อผู้ใช้ = Postgres** `cooking_*` (ไม่มี FK ผูกตาราง org → bounded):
 
 | ตาราง | ใช้ทำอะไร |
 |---|---|
-| `cooking_menus` | เมนู + แท็ก: food_groups, protein, method, cuisine, flavor, ingredients[] (core/optional + กลุ่มแทนกันได้), steps, source(A/B) |
-| `cooking_ingredients` | รายการวัตถุดิบ + category + is_staple |
-| `cooking_pantry` | **owner** + ingredient + state(มี/หมด) — จำของในครัว |
-| `cooking_history` | **owner** + menu + cooked_at — กันซ้ำ 3 วัน |
+| `cooking_pantry` | (owner, ingredient) + status `have`/`out` — จำของในครัว · `out` = list ตลาด |
+| `cooking_history` | owner + menu_id + cooked_at — กันซ้ำ 3 วัน |
 
-- เมนู seed จาก [MENUS.md](MENUS.md) → **pre-generate ลิสต์วัตถุดิบ + แท็กทั้ง 120 เมนู** (AI ร่าง, user เช็ค) เก็บลง `cooking_menus`
-- match วัตถุดิบ↔เมนู ตอนใช้งาน = **deterministic** เร็ว ฟรี (ไม่พึ่ง AI)
+- owner = **discord user id** (จาก next-auth) เก็บตั้งแต่แรก เผื่อ multi-user
+- ingredient master (สำหรับ checklist) = derive จาก seed (รวม core+optional ทุกเมนู + ตั้ง staples)
 
 ## 🔐 Auth / Owner
 
@@ -112,7 +117,7 @@
 7. ครบมื้อ — โปรตีน+ผัก+คาร์บ, จัดชุดให้
 8. หน้าเดียวจบ
 9. login Discord, เก็บ owner, เผื่อ multi-user
-10. DB = `cooking_*` ใน MySQL เดิม, ไม่ FK org
+10. เมนู=static JSON (`menus.seed.json`), state=Postgres `cooking_pantry`+`cooking_history`, ไม่ FK org (DB จริงคือ **Postgres** ไม่ใช่ MySQL)
 
 ## ▶️ Next step
 

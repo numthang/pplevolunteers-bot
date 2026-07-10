@@ -903,3 +903,30 @@ INSERT INTO dc_guilds (guild_id, name, org_id, updated_at) VALUES
   ('1111998833652678757', 'ประชาชนราชบุรี',  (SELECT id FROM organizations WHERE slug = 'pple'), NOW()),
   ('1115613658408566844', 'People''s Party', (SELECT id FROM organizations WHERE slug = 'pple'), NOW())
 ON CONFLICT (guild_id) DO UPDATE SET org_id = EXCLUDED.org_id;
+
+-- 2026-07-10: Cooking (/cooking) — ผู้ช่วยครัวส่วนตัว (personal app #1) · spec: md/cooking/COOKING.md
+-- เมนู 121 อัน + ingredient master = static JSON (md/cooking/menus.seed.json) → ไม่เข้า DB
+-- DB เก็บเฉพาะ state ที่เปลี่ยนต่อผู้ใช้: pantry (มี/หมด) + history (กันซ้ำ 3 วัน)
+-- owner = discord user id (snowflake จาก next-auth) เก็บตั้งแต่แรก เผื่อ multi-user (v1 ใช้คนเดียว)
+-- ไม่มี FK ผูกตาราง org → bounded ยกออกไป DB/repo ตัวเองทีหลังได้
+
+-- ของในครัว: 1 แถวต่อ (owner, ingredient) ที่ผู้ใช้เคยแตะ
+--   status 'have' = มีอยู่ (ใช้ match ว่าทำเมนูไหนได้) · 'out' = หมด → ขึ้น list ไปตลาดอัตโนมัติ
+--   ไม่มีแถว = ไม่มีของนั้น และไม่ได้อยู่ list ตลาด (neutral) → กันหลุม "ต้องอัปเดต stock ทุกครั้ง"
+CREATE TABLE IF NOT EXISTS cooking_pantry (
+  owner       VARCHAR(20) NOT NULL,
+  ingredient  VARCHAR(80) NOT NULL,
+  status      VARCHAR(8)  NOT NULL DEFAULT 'have' CHECK (status IN ('have','out')),
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (owner, ingredient)
+);
+CREATE INDEX IF NOT EXISTS idx_cooking_pantry_owner_status ON cooking_pantry (owner, status);
+
+-- ประวัติการทำ: กด "ทำแล้ว" → ลง 1 แถว → variety หัก score เมนูที่ซ้ำใน 3 วันล่าสุด
+CREATE TABLE IF NOT EXISTS cooking_history (
+  id         SERIAL PRIMARY KEY,
+  owner      VARCHAR(20) NOT NULL,
+  menu_id    VARCHAR(60) NOT NULL,   -- อ้าง id ใน menus.seed.json (ไม่มี FK เพราะเมนูอยู่ JSON)
+  cooked_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_cooking_history_owner_time ON cooking_history (owner, cooked_at DESC);

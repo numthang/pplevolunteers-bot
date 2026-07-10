@@ -1,8 +1,11 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 
-export default function UserCombobox({ value = [], onChange, placeholder = 'ค้นหาชื่อ...' }) {
+export default function UserCombobox({ value = [], onChange, placeholder }) {
+  const t = useTranslations('calling')
+  const effectivePlaceholder = placeholder || t('assignment.searchNamePlaceholder')
   const [query, setQuery] = useState('')
   const [options, setOptions] = useState([])
   const [open, setOpen] = useState(false)
@@ -70,7 +73,7 @@ export default function UserCombobox({ value = [], onChange, placeholder = 'ค�
           value={query}
           onChange={e => { setQuery(e.target.value); setOpen(true) }}
           onFocus={() => setOpen(true)}
-          placeholder={value.length === 0 ? placeholder : ''}
+          placeholder={value.length === 0 ? effectivePlaceholder : ''}
           className="flex-1 min-w-[120px] bg-transparent text-base text-warm-900 dark:text-disc-text placeholder-warm-400 outline-none py-0.5"
         />
       </div>
@@ -78,10 +81,10 @@ export default function UserCombobox({ value = [], onChange, placeholder = 'ค�
       {open && (
         <div className="absolute z-50 top-full mt-1 w-full bg-white dark:bg-disc-hover border border-warm-200 dark:border-disc-border rounded-lg shadow-lg max-h-48 overflow-y-auto">
           {loading ? (
-            <div className="px-3 py-2 text-sm text-warm-400">กำลังโหลด...</div>
+            <div className="px-3 py-2 text-sm text-warm-400">{t('common.loading')}</div>
           ) : options.length === 0 ? (
             <div className="px-3 py-2 text-sm text-warm-400">
-              {query ? 'ไม่พบผู้ใช้' : 'พิมพ์เพื่อค้นหา'}
+              {query ? t('userCombobox.noResults') : t('userCombobox.typeToSearch')}
             </div>
           ) : (
             options.map(user => (

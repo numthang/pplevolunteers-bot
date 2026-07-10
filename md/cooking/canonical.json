@@ -1,0 +1,206 @@
+{
+  "protein": [
+    {
+      "token": "pork",
+      "label": "หมู",
+      "tier": "regular"
+    },
+    {
+      "token": "chicken",
+      "label": "ไก่",
+      "tier": "regular"
+    },
+    {
+      "token": "beef",
+      "label": "เนื้อวัว",
+      "tier": "regular"
+    },
+    {
+      "token": "shrimp",
+      "label": "กุ้ง",
+      "tier": "regular"
+    },
+    {
+      "token": "squid",
+      "label": "ปลาหมึก",
+      "tier": "regular"
+    },
+    {
+      "token": "fish",
+      "label": "ปลา",
+      "tier": "regular"
+    },
+    {
+      "token": "tofu",
+      "label": "เต้าหู้",
+      "tier": "regular"
+    }
+  ],
+  "veg": [
+    {
+      "token": "หอมใหญ่",
+      "tier": "regular"
+    },
+    {
+      "token": "กะหล่ำปลี",
+      "tier": "regular"
+    },
+    {
+      "token": "ผักบุ้ง",
+      "tier": "regular"
+    },
+    {
+      "token": "คะน้า",
+      "tier": "regular"
+    },
+    {
+      "token": "ผักกาดขาว",
+      "tier": "regular"
+    },
+    {
+      "token": "แตงกวา",
+      "tier": "regular"
+    },
+    {
+      "token": "มะเขือเทศ",
+      "tier": "regular"
+    },
+    {
+      "token": "ฟักทอง",
+      "tier": "regular"
+    },
+    {
+      "token": "ฟัก",
+      "tier": "regular"
+    },
+    {
+      "token": "ผักหวานป่า",
+      "tier": "occasional"
+    },
+    {
+      "token": "ผักกูด",
+      "tier": "occasional"
+    },
+    {
+      "token": "ถั่วงอก",
+      "tier": "regular"
+    },
+    {
+      "token": "มะม่วงเปรี้ยว",
+      "tier": "occasional"
+    },
+    {
+      "token": "บวบ",
+      "tier": "regular"
+    },
+    {
+      "token": "เห็ด",
+      "tier": "regular"
+    },
+    {
+      "token": "สะตอ",
+      "tier": "occasional"
+    },
+    {
+      "token": "ใบชะพลู",
+      "tier": "occasional"
+    },
+    {
+      "token": "มะละกอ",
+      "tier": "regular"
+    },
+    {
+      "token": "ใบกะเพรา",
+      "tier": "regular"
+    },
+    {
+      "token": "ใบโหระพา",
+      "tier": "regular"
+    }
+  ],
+  "special": [
+    {
+      "token": "กะทิ",
+      "tier": "occasional"
+    },
+    {
+      "token": "ชีส",
+      "tier": "occasional"
+    },
+    {
+      "token": "กะปิ",
+      "tier": "occasional"
+    },
+    {
+      "token": "ผงกะหรี่",
+      "tier": "occasional"
+    },
+    {
+      "token": "เครื่องแกง",
+      "tier": "occasional"
+    },
+    {
+      "token": "วุ้นเส้น",
+      "tier": "occasional"
+    },
+    {
+      "token": "เส้นก๋วยเตี๋ยว",
+      "tier": "occasional"
+    },
+    {
+      "token": "เส้นราเมน",
+      "tier": "occasional"
+    },
+    {
+      "token": "เส้นพาสต้า",
+      "tier": "occasional"
+    },
+    {
+      "token": "มิโซะ",
+      "tier": "occasional"
+    },
+    {
+      "token": "ซอสเกาหลี",
+      "tier": "occasional"
+    },
+    {
+      "token": "มายองเนส",
+      "tier": "occasional"
+    },
+    {
+      "token": "นมสด",
+      "tier": "regular"
+    },
+    {
+      "token": "สับปะรด",
+      "tier": "occasional"
+    },
+    {
+      "token": "ข้าวเหนียว",
+      "tier": "occasional"
+    },
+    {
+      "token": "มะพร้าว",
+      "tier": "occasional"
+    },
+    {
+      "token": "เต้าหู้",
+      "tier": "regular"
+    },
+    {
+      "token": "ถั่วชิกพี",
+      "tier": "occasional"
+    },
+    {
+      "token": "ไข่เค็ม",
+      "tier": "occasional"
+    },
+    {
+      "token": "กุยช่าย",
+      "tier": "occasional"
+    }
+  ],
+  "_legend": {
+    "tier": "regular = ของประจำซื้อบ่อย (โปรตีน+ผักสด) · occasional = ของนานๆ ซื้อที (เก็บได้นาน/หายาก) · tier 3 (staple ถือว่ามีตลอด) เพิ่มทีหลังได้"
+  }
+}

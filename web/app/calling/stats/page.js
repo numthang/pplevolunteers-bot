@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, Suspense } from 'react'
+import { useTranslations } from 'next-intl'
 import { PieChart, Pie, Cell, Legend, Tooltip, ResponsiveContainer } from 'recharts'
 import { CircularProgressbar, buildStyles } from 'react-circular-progressbar'
 import { useTheme } from '@/components/Providers'
@@ -11,23 +12,24 @@ const COLORS = {
   status: ['#66bb6a', '#ffb84d', '#ff7070']
 }
 
-const GAUGE_DESCRIPTIONS = {
-  successRate: 'โทรติดสาย ÷ โทรทั้งหมด',
-  coverage: 'ได้รับมอบหมาย ÷ สมาชิกทั้งหมด',
-  engagement: 'สนใจสูง (A+B) ÷ สมาชิกทั้งหมด'
-}
-
 function StatsContent() {
+  const t = useTranslations('calling')
   const { dark } = useTheme()
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
+  const GAUGE_DESCRIPTIONS = {
+    successRate: t('stats.gaugeSuccessRate'),
+    coverage: t('stats.gaugeCoverage'),
+    engagement: t('stats.gaugeEngagement')
+  }
+
   useEffect(() => {
     const fetchStats = async () => {
       try {
         const res = await fetch('/api/calling/stats')
-        if (!res.ok) throw new Error('ไม่สามารถดึงข้อมูลได้')
+        if (!res.ok) throw new Error(t('stats.fetchError'))
         const json = await res.json()
         setData(json.data)
       } catch (err) {
@@ -45,7 +47,7 @@ function StatsContent() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-80">
-        <p className="text-warm-500 dark:text-disc-muted">กำลังโหลด...</p>
+        <p className="text-warm-500 dark:text-disc-muted">{t('common.loading')}</p>
       </div>
     )
   }
@@ -53,7 +55,7 @@ function StatsContent() {
   if (error || !data) {
     return (
       <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg p-6 text-center">
-        <p className="text-warm-900 dark:text-disc-text font-medium">ผิดพลาด</p>
+        <p className="text-warm-900 dark:text-disc-text font-medium">{t('stats.errorTitle')}</p>
         <p className="text-warm-500 dark:text-disc-muted text-sm mt-1">{error}</p>
       </div>
     )
@@ -64,10 +66,10 @@ function StatsContent() {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-warm-900 dark:text-disc-text mb-2">
-          สถิติการโทรหา
+          {t('stats.pageTitle')}
         </h1>
         <p className="text-base text-warm-500 dark:text-disc-muted">
-          สรุปผลการโทรหาสมาชิก
+          {t('stats.subtitle')}
         </p>
       </div>
 
@@ -106,7 +108,7 @@ function StatsContent() {
         {/* Tier Distribution */}
         <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg p-6">
           <h2 className="text-lg font-semibold text-warm-900 dark:text-disc-text mb-4">
-            การจำแนกระดับ (A, B, C, D)
+            {t('stats.tierDistributionTitle')}
           </h2>
           {data.tiers.length > 0 ? (
             <ResponsiveContainer width="100%" height={250}>
@@ -132,7 +134,7 @@ function StatsContent() {
             </ResponsiveContainer>
           ) : (
             <div className="h-64 flex items-center justify-center text-warm-500 dark:text-disc-muted">
-              ไม่มีข้อมูล
+              {t('stats.noData')}
             </div>
           )}
         </div>
@@ -140,7 +142,7 @@ function StatsContent() {
         {/* Call Status */}
         <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg p-6">
           <h2 className="text-lg font-semibold text-warm-900 dark:text-disc-text mb-4">
-            สถานะการโทร
+            {t('stats.callStatusTitle')}
           </h2>
           {data.statuses.length > 0 ? (
             <ResponsiveContainer width="100%" height={250}>
@@ -166,7 +168,7 @@ function StatsContent() {
             </ResponsiveContainer>
           ) : (
             <div className="h-64 flex items-center justify-center text-warm-500 dark:text-disc-muted">
-              ไม่มีข้อมูล
+              {t('stats.noData')}
             </div>
           )}
         </div>
@@ -176,8 +178,9 @@ function StatsContent() {
 }
 
 export default function StatsPage() {
+  const t = useTranslations('calling')
   return (
-    <Suspense fallback={<div className="flex items-center justify-center min-h-80"><p className="text-warm-500 dark:text-disc-muted">กำลังโหลด...</p></div>}>
+    <Suspense fallback={<div className="flex items-center justify-center min-h-80"><p className="text-warm-500 dark:text-disc-muted">{t('common.loading')}</p></div>}>
       <StatsContent />
     </Suspense>
   )

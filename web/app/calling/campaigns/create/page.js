@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
+import { useTranslations } from 'next-intl'
 import { useEffectiveRoles } from '@/lib/useEffectiveRoles.js'
 
 const PROVINCES = [
@@ -33,6 +34,7 @@ function getProvinceFromRoles(roles = []) {
 const inputCls = 'w-full border border-gray-300 dark:border-disc-border bg-white dark:bg-disc-hover text-gray-900 dark:text-disc-text p-3 text-base rounded-lg placeholder-gray-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-indigo-500'
 
 export default function CreateCampaignPage() {
+  const t = useTranslations('calling')
   const router = useRouter()
   const { data: session } = useSession()
   const { roles } = useEffectiveRoles(session)
@@ -51,7 +53,7 @@ export default function CreateCampaignPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!name) { alert('กรุณาใส่ชื่อแคมเปญ'); return }
+    if (!name) { alert(t('campaignForm.nameRequiredAlert')); return }
 
     setLoading(true)
     try {
@@ -64,7 +66,7 @@ export default function CreateCampaignPage() {
       const data = await res.json()
       router.push(`/calling/assignments/${data.data.id}`)
     } catch (error) {
-      alert('เกิดข้อผิดพลาด: ' + error.message)
+      alert(t('campaignForm.errorAlert', { message: error.message }))
     } finally {
       setLoading(false)
     }
@@ -73,48 +75,48 @@ export default function CreateCampaignPage() {
   return (
     <div>
       <Link href="/calling/campaigns" className="text-teal hover:underline mb-6 block text-base">
-        ← กลับ
+        {t('campaignForm.backLink')}
       </Link>
 
       <div className="max-w-2xl bg-card-bg border border-gray-200 dark:border-disc-border rounded-xl p-6">
-        <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-disc-text">สร้างแคมเปญการโทรใหม่</h1>
+        <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-disc-text">{t('campaignForm.createTitle')}</h1>
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-disc-text">ชื่อแคมเปญ *</label>
+            <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-disc-text">{t('campaignForm.nameLabel')}</label>
             <input type="text" value={name} onChange={e => setName(e.target.value)}
-              placeholder="เช่น บ้านโป่ง ราชบุรี ครั้งที่ 1" className={inputCls} required />
+              placeholder={t('campaignForm.namePlaceholder')} className={inputCls} required />
           </div>
 
           <div>
-            <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-disc-text">รายละเอียด</label>
+            <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-disc-text">{t('campaignForm.descriptionLabel')}</label>
             <textarea value={description}
               onChange={e => { setDescription(e.target.value); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px' }}
-              placeholder="บรรยายเพิ่มเติม..." className={inputCls} rows="4" style={{ resize: 'none', overflow: 'hidden' }} />
+              placeholder={t('campaignForm.descriptionPlaceholder')} className={inputCls} rows="4" style={{ resize: 'none', overflow: 'hidden' }} />
           </div>
 
           <div>
-            <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-disc-text">จังหวัด</label>
+            <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-disc-text">{t('campaignForm.provinceLabel')}</label>
             <select value={province} onChange={e => setProvince(e.target.value)} className={inputCls}>
-              <option value="">-- ไม่ระบุ --</option>
+              <option value="">{t('campaignForm.provinceNone')}</option>
               {[...PROVINCES].sort((a, b) => a.localeCompare(b, 'th')).map(p => <option key={p} value={p}>{p}</option>)}
             </select>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-disc-text">วันจัดกิจกรรม</label>
+              <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-disc-text">{t('campaignForm.eventDateLabel')}</label>
               <input type="datetime-local" value={eventDate} onChange={e => setEventDate(e.target.value)} className={inputCls} />
             </div>
             <div>
-              <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-disc-text">เวลาสิ้นสุด</label>
+              <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-disc-text">{t('campaignForm.eventEndDateLabel')}</label>
               <input type="datetime-local" value={eventEndDate} onChange={e => setEventEndDate(e.target.value)} className={inputCls} />
             </div>
           </div>
 
           <button type="submit" disabled={loading}
             className="w-full bg-indigo-600 text-white py-3 rounded-lg text-base font-semibold hover:bg-indigo-700 disabled:opacity-50 transition">
-            {loading ? 'กำลังสร้าง...' : 'สร้างแคมเปญ'}
+            {loading ? t('campaignForm.creatingButton') : t('campaignForm.createButton')}
           </button>
         </form>
       </div>

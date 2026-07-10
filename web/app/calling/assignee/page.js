@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import RecordCallModal from '@/components/calling/RecordCallModal.jsx'
 import PdpaAgreementModal from '@/components/calling/PdpaAgreementModal.jsx'
 import { useSession } from 'next-auth/react'
@@ -10,11 +11,6 @@ import { can } from '@/lib/permissions.js'
 import { CALL_STATUS_COLORS } from '@/lib/callingStatusColors.js'
 import { CATEGORY_LABELS, CATEGORY_COLORS } from '@/../config/callingCategories.js'
 import { PhoneCall, PhoneOff, Clock, Minus, Users, MessageSquare, AlertTriangle, Timer, Star, IdCard, BookUser, History } from 'lucide-react'
-const EDIT_STATUS_OPTIONS = [
-  { value: 'answered',   label: 'รับสาย' },
-  { value: 'no_answer',  label: 'ไม่รับ' },
-  { value: 'not_called', label: 'ไม่โทร' },
-]
 
 const TIER_COLORS = {
   A: { bg: '#ead3ce', text: '#714b2b' },
@@ -30,37 +26,41 @@ const RSVP_ICONS = {
 }
 
 
-function getExpiryIcon(expiredAt) {
+function getExpiryIcon(expiredAt, t) {
   if (!expiredAt) return null
   const now = Date.now()
   const exp = new Date(expiredAt).getTime()
-  if (exp < now) return { Icon: AlertTriangle, color: '#ef4444', title: 'หมดอายุ' }
-  if (exp - now < 90 * 24 * 60 * 60 * 1000) return { Icon: Timer, color: '#d97706', title: 'ใกล้หมดอายุ' }
+  if (exp < now) return { Icon: AlertTriangle, color: '#ef4444', title: t('assignment.expiredLabel') }
+  if (exp - now < 90 * 24 * 60 * 60 * 1000) return { Icon: Timer, color: '#d97706', title: t('assignment.expiringLabel') }
   return null
 }
 
-const STATUS_ICONS = {
-  pending:       { Icon: Clock,         color: '#ff9800',  title: 'รอโทร' },
-  called:        { Icon: PhoneCall,     color: '#0d9e94',  title: 'โทรแล้ว' },
-  answered:      { Icon: PhoneCall,     color: '#0d9e94',  title: 'รับสาย' },
-  no_answer:     { Icon: PhoneOff,      color: '#854f0b',  title: 'ไม่รับ' },
-  not_called:    { Icon: Minus,         color: '#9ca3af',  title: 'ไม่โทร' },
-  met:           { Icon: Users,         color: '#1a5e2d',  title: 'พบปะ' },
-  sms_sent:      { Icon: MessageSquare, color: '#4338ca',  title: 'ส่ง SMS' },
-  sms_delivered: { Icon: MessageSquare, color: '#1d4ed8',  title: 'SMS ถึง' },
-  sms_failed:    { Icon: AlertTriangle, color: '#a32d2d',  title: 'SMS ล้มเหลว' },
+function getStatusIcons(t) {
+  return {
+    pending:       { Icon: Clock,         color: '#ff9800',  title: t('assignment.pendingCallLabel') },
+    called:        { Icon: PhoneCall,     color: '#0d9e94',  title: t('assignment.calledLabel') },
+    answered:      { Icon: PhoneCall,     color: '#0d9e94',  title: t('assignee.answeredLabel') },
+    no_answer:     { Icon: PhoneOff,      color: '#854f0b',  title: t('assignee.noAnswerLabel') },
+    not_called:    { Icon: Minus,         color: '#9ca3af',  title: t('assignee.notCalledLabel') },
+    met:           { Icon: Users,         color: '#1a5e2d',  title: t('assignee.metLabel') },
+    sms_sent:      { Icon: MessageSquare, color: '#4338ca',  title: t('assignee.smsSentLabel') },
+    sms_delivered: { Icon: MessageSquare, color: '#1d4ed8',  title: t('assignee.smsDeliveredLabel') },
+    sms_failed:    { Icon: AlertTriangle, color: '#a32d2d',  title: t('assignee.smsFailedLabel') },
+  }
 }
 
-function getStatusIcon(callStatus, logStatus) {
-  if (callStatus === 'pending') return STATUS_ICONS.pending
-  return STATUS_ICONS[logStatus] || STATUS_ICONS.pending
+function getStatusIcon(callStatus, logStatus, statusIcons) {
+  if (callStatus === 'pending') return statusIcons.pending
+  return statusIcons[logStatus] || statusIcons.pending
 }
 
-const STATUS_OPTIONS = [
-  { value: '',        label: 'ทั้งหมด' },
-  { value: 'pending', label: 'รอโทร' },
-  { value: 'called',  label: 'โทรแล้ว' },
-]
+function getStatusOptions(t) {
+  return [
+    { value: '',        label: t('assignee.statusAll') },
+    { value: 'pending', label: t('assignment.pendingCallLabel') },
+    { value: 'called',  label: t('assignment.calledLabel') },
+  ]
+}
 
 function getItemKey(item) {
   return item.source_id != null ? `m-${item.source_id}-${item.campaign_id}` : `c-${item.id}-${item.campaign_id}`
@@ -94,8 +94,11 @@ function MemberAvatar({ item, size = 36 }) {
 }
 
 export default function PendingCallsPage() {
+  const t = useTranslations('calling')
   const searchParams = useSearchParams()
   const router = useRouter()
+  const STATUS_ICON_MAP = getStatusIcons(t)
+  const STATUS_OPTIONS_LIST = getStatusOptions(t)
 
   const [activeTab, setActiveTab] = useState(() => searchParams.get('tab') || 'member')
   const [tabCounts, setTabCounts] = useState({ member: null, contact: null })
@@ -130,13 +133,13 @@ export default function PendingCallsPage() {
   useEffect(() => { itemsRef.current = items }, [items])
 
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedHistorySearch(historySearch), 400)
-    return () => clearTimeout(t)
+    const timer = setTimeout(() => setDebouncedHistorySearch(historySearch), 400)
+    return () => clearTimeout(timer)
   }, [historySearch])
 
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedStarredSearch(starredSearch), 400)
-    return () => clearTimeout(t)
+    const timer = setTimeout(() => setDebouncedStarredSearch(starredSearch), 400)
+    return () => clearTimeout(timer)
   }, [starredSearch])
 
   useEffect(() => {
@@ -329,7 +332,7 @@ export default function PendingCallsPage() {
     })
     if (!res.ok) {
       const err = await res.json()
-      throw new Error(err.error || 'เกิดข้อผิดพลาด')
+      throw new Error(err.error || t('assignment.genericError'))
     }
     if (payload.rsvp && activeTab === 'member') {
       await fetch('/api/calling/assignments', {
@@ -391,8 +394,8 @@ export default function PendingCallsPage() {
     <div>
       {/* Header */}
       <div className="mb-5">
-        <h1 className="text-2xl font-medium text-warm-900 dark:text-disc-text mb-1">Pending calls <span className="text-warm-400 dark:text-disc-muted font-normal">(assignee)</span></h1>
-        <p className="text-base text-warm-500 dark:text-disc-muted">รายชื่อที่ได้รับ assign มาให้คุณโทร</p>
+        <h1 className="text-2xl font-medium text-warm-900 dark:text-disc-text mb-1">{t('assignee.pageTitle')} <span className="text-warm-400 dark:text-disc-muted font-normal">{t('assignee.roleLabel')}</span></h1>
+        <p className="text-base text-warm-500 dark:text-disc-muted">{t('assignee.pageSubtitle')}</p>
       </div>
 
       {/* Tabs */}
@@ -408,7 +411,7 @@ export default function PendingCallsPage() {
                   : 'border-transparent text-warm-500 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text'
               }`}>
               <TabIcon className="w-4 h-4 shrink-0" />
-              <span className="hidden sm:inline">{tab === 'member' ? 'Member' : 'Contact'}</span>
+              <span className="hidden sm:inline">{tab === 'member' ? t('assignment.tabMember') : t('assignment.tabContact')}</span>
               {count !== null && (
                 <span className={`text-sm px-1.5 py-0.5 rounded-full font-normal ${
                   activeTab === tab
@@ -426,7 +429,7 @@ export default function PendingCallsPage() {
               : 'border-transparent text-warm-500 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text'
           }`}>
           <History className="w-4 h-4 shrink-0" />
-          <span className="hidden sm:inline">History</span>
+          <span className="hidden sm:inline">{t('assignee.historyTab')}</span>
         </button>
         <button onClick={() => switchTab('starred')}
           className={`px-4 py-2 text-base font-medium border-b-2 -mb-px transition-colors flex items-center gap-1.5 ${
@@ -435,7 +438,7 @@ export default function PendingCallsPage() {
               : 'border-transparent text-warm-500 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text'
           }`}>
           <Star className="w-4 h-4 shrink-0" />
-          <span className="hidden sm:inline">Starred</span>
+          <span className="hidden sm:inline">{t('assignee.starredTab')}</span>
           {favoriteSet.size > 0 && (
             <span className={`text-sm px-1.5 py-0.5 rounded-full font-normal ${
               activeTab === 'starred'
@@ -453,14 +456,14 @@ export default function PendingCallsPage() {
             type="text"
             value={historySearch}
             onChange={e => setHistorySearch(e.target.value)}
-            placeholder="ค้นหาชื่อ เบอร์ หรือ note ที่เคยเขียน..."
+            placeholder={t('assignee.historySearchPlaceholder')}
             className="w-full h-11 px-3 text-base border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted rounded-lg focus:outline-none focus:ring-2 focus:ring-teal mb-4"
           />
           {historyLoading ? (
-            <div className="py-20 text-center text-warm-400 dark:text-disc-muted text-base">กำลังโหลด...</div>
+            <div className="py-20 text-center text-warm-400 dark:text-disc-muted text-base">{t('common.loading')}</div>
           ) : historyItems.length === 0 ? (
             <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl py-16 text-center text-warm-400 dark:text-disc-muted text-base">
-              {historySearch ? 'ไม่พบผลลัพธ์' : 'ยังไม่มีประวัติการโทร'}
+              {historySearch ? t('assignee.noResults') : t('assignee.noHistory')}
             </div>
           ) : (
             <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl overflow-hidden">
@@ -468,7 +471,7 @@ export default function PendingCallsPage() {
                 {historyItems.map(log => {
                   const tier = log.tier || 'D'
                   const tierColor = TIER_COLORS[tier]
-                  const si = STATUS_ICONS[log.status]
+                  const si = STATUS_ICON_MAP[log.status]
                   const statusColor = CALL_STATUS_COLORS[log.status]
                   const logMemberId = log.member_id
                   const logContactType = log.contact_type || 'member'
@@ -498,7 +501,7 @@ export default function PendingCallsPage() {
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="text-base font-medium text-warm-900 dark:text-disc-text">{log.full_name}</span>
                           <span className="text-xs font-bold shrink-0 px-1 py-px rounded" style={{ color: tierColor.text, backgroundColor: tierColor.bg }}>{tier}</span>
-                          <button onClick={e => toggleFavorite(e, logMemberId, logContactType)} className="p-0.5 flex-shrink-0" title={isLogFav ? 'ยกเลิก starred' : 'เพิ่ม starred'}>
+                          <button onClick={e => toggleFavorite(e, logMemberId, logContactType)} className="p-0.5 flex-shrink-0" title={isLogFav ? t('assignee.unstarTitle') : t('assignee.starTitle')}>
                             <Star className={`w-5 h-5 transition ${isLogFav ? 'fill-yellow-400 text-yellow-400' : 'text-warm-300 dark:text-disc-border'}`} />
                           </button>
                           {si && <span className="inline-flex items-center gap-1 shrink-0" style={{ color: si.color }}><si.Icon className="w-3.5 h-3.5" /><span className="text-sm font-medium">{statusColor?.label || log.status}</span></span>}
@@ -529,14 +532,14 @@ export default function PendingCallsPage() {
             type="text"
             value={starredSearch}
             onChange={e => setStarredSearch(e.target.value)}
-            placeholder="ค้นหาชื่อหรือเบอร์..."
+            placeholder={t('assignee.starredSearchPlaceholder')}
             className="w-full h-11 px-3 text-base border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted rounded-lg focus:outline-none focus:ring-2 focus:ring-teal mb-4"
           />
           {starredLoading ? (
-            <div className="py-20 text-center text-warm-400 dark:text-disc-muted text-base">กำลังโหลด...</div>
+            <div className="py-20 text-center text-warm-400 dark:text-disc-muted text-base">{t('common.loading')}</div>
           ) : starredItems.length === 0 ? (
             <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl py-16 text-center text-warm-400 dark:text-disc-muted text-base">
-              {starredSearch ? 'ไม่พบผลลัพธ์' : 'ยังไม่มีรายการที่ starred'}
+              {starredSearch ? t('assignee.noResults') : t('assignee.noStarred')}
             </div>
           ) : (
             <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl overflow-hidden">
@@ -589,7 +592,7 @@ export default function PendingCallsPage() {
                       <button
                         onClick={e => toggleFavorite(e, item.member_id, item.contact_type)}
                         className="px-4 py-3 shrink-0 text-yellow-400 hover:text-yellow-500 transition"
-                        title="ยกเลิก starred"
+                        title={t('assignee.unstarTitle')}
                       >
                         <Star className="w-5 h-5 fill-yellow-400" />
                       </button>
@@ -609,14 +612,14 @@ export default function PendingCallsPage() {
           onChange={e => setFilterCampaign(e.target.value)}
           className="w-full h-11 px-3 text-base border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text rounded-lg focus:outline-none focus:ring-2 focus:ring-teal"
         >
-          <option value="">Campaign (ทั้งหมด)</option>
+          <option value="">{t('assignee.campaignAllOption')}</option>
           {campaigns.map(c => (
             <option key={c.id} value={c.id}>{c.name}</option>
           ))}
         </select>
 
         <div className="flex rounded-lg border border-warm-200 dark:border-disc-border overflow-hidden">
-          {STATUS_OPTIONS.map(opt => (
+          {STATUS_OPTIONS_LIST.map(opt => (
             <button
               key={opt.value}
               onClick={() => setFilterStatus(opt.value)}
@@ -637,10 +640,10 @@ export default function PendingCallsPage() {
             onChange={e => setFilterRsvp(e.target.value)}
             className="w-full h-11 px-3 text-base border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text rounded-lg focus:outline-none focus:ring-2 focus:ring-teal"
           >
-            <option value="">RSVP (ทั้งหมด)</option>
-            <option value="yes">✓ เข้าร่วม</option>
-            <option value="no">✗ ไม่เข้าร่วม</option>
-            <option value="maybe">? อาจจะ</option>
+            <option value="">{t('assignee.rsvpAllOption')}</option>
+            <option value="yes">{t('assignment.rsvpYes')}</option>
+            <option value="no">{t('assignment.rsvpNo')}</option>
+            <option value="maybe">{t('assignment.rsvpMaybe')}</option>
           </select>
         )}
       </div>}
@@ -648,15 +651,15 @@ export default function PendingCallsPage() {
       {activeTab !== 'history' && activeTab !== 'starred' && !loading && total > 0 && (
         <div className="flex gap-6 mb-5 text-base">
           <div>
-            <span className="text-warm-500 dark:text-disc-muted">ทั้งหมด:</span>
+            <span className="text-warm-500 dark:text-disc-muted">{t('assignee.totalLabel')}</span>
             <span className="ml-1.5 font-semibold text-warm-900 dark:text-disc-text">{total}</span>
           </div>
           <div>
-            <span className="text-warm-500 dark:text-disc-muted">รอโทร:</span>
+            <span className="text-warm-500 dark:text-disc-muted">{t('assignee.pendingLabel')}</span>
             <span className="ml-1.5 font-semibold text-orange-600">{totalPending}</span>
           </div>
           <div>
-            <span className="text-warm-500 dark:text-disc-muted">โทรแล้ว:</span>
+            <span className="text-warm-500 dark:text-disc-muted">{t('assignee.calledLabelColon')}</span>
             <span className="ml-1.5 font-semibold text-teal">{totalCalled}</span>
           </div>
         </div>
@@ -664,18 +667,18 @@ export default function PendingCallsPage() {
 
       {/* List */}
       {activeTab !== 'history' && activeTab !== 'starred' && (loading ? (
-        <div className="py-20 text-center text-warm-400 dark:text-disc-muted text-base">กำลังโหลด...</div>
+        <div className="py-20 text-center text-warm-400 dark:text-disc-muted text-base">{t('common.loading')}</div>
       ) : items.length === 0 ? (
         <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl py-16 text-center text-warm-400 dark:text-disc-muted text-base">
-          {filterStatus === 'pending' ? 'โทรครบทุกคนแล้ว 🎉' : 'ไม่มีรายการ'}
+          {filterStatus === 'pending' ? t('assignee.allCalledEmpty') : t('assignee.noItems')}
         </div>
       ) : (
         <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl overflow-hidden">
           {/* Table header — desktop only */}
           <div className={`hidden sm:grid items-center px-4 py-2.5 gap-2 bg-warm-100 dark:bg-disc-header border-b border-warm-200 dark:border-disc-border text-sm font-medium text-warm-500 dark:text-disc-muted ${activeTab === 'contact' ? '[grid-template-columns:1fr_80px_88px]' : '[grid-template-columns:1fr_88px]'}`}>
-            <span>ชื่อ</span>
-            {activeTab === 'contact' && <span className="text-center">ประเภท</span>}
-            <span className="text-right">สถานะ</span>
+            <span>{t('assignee.nameColumnHeader')}</span>
+            {activeTab === 'contact' && <span className="text-center">{t('assignment.categoryColumnHeader')}</span>}
+            <span className="text-right">{t('assignee.statusColumnHeader')}</span>
           </div>
 
           <div className="divide-y divide-warm-200 dark:divide-disc-border">
@@ -686,7 +689,7 @@ export default function PendingCallsPage() {
               const displayName = item.full_name || [item.first_name, item.last_name].filter(Boolean).join(' ')
               const phone = item.mobile_number || item.phone
               const amphoe = item.home_amphure || item.amphoe
-              const expiryIcon = isContact ? null : getExpiryIcon(item.expired_at)
+              const expiryIcon = isContact ? null : getExpiryIcon(item.expired_at, t)
               const catColor = isContact && item.category ? (CATEGORY_COLORS[item.category] || CATEGORY_COLORS.other) : null
               const itemMemberId = isContact ? item.id : item.source_id
               const itemContactType = isContact ? 'contact' : 'member'
@@ -711,7 +714,7 @@ export default function PendingCallsPage() {
                             {displayName}
                           </span>
                           <span className="text-xs font-bold flex-shrink-0 px-1 py-px rounded" style={{ color: tierColor.text, backgroundColor: tierColor.bg }}>{tier}</span>
-                          <button onClick={e => toggleFavorite(e, itemMemberId, itemContactType)} className="p-0.5 flex-shrink-0" title={isFav ? 'ยกเลิก starred' : 'เพิ่ม starred'}>
+                          <button onClick={e => toggleFavorite(e, itemMemberId, itemContactType)} className="p-0.5 flex-shrink-0" title={isFav ? t('assignee.unstarTitle') : t('assignee.starTitle')}>
                             <Star className={`w-5 h-5 transition ${isFav ? 'fill-yellow-400 text-yellow-400' : 'text-warm-300 dark:text-disc-border'}`} />
                           </button>
                           {expiryIcon && <expiryIcon.Icon title={expiryIcon.title} style={{ color: expiryIcon.color }} className="w-4 h-4 flex-shrink-0 inline-block" />}
@@ -730,7 +733,7 @@ export default function PendingCallsPage() {
                       </div>
                       <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
                         {(() => {
-                          const si = getStatusIcon(item.call_status, item.latest_log_status)
+                          const si = getStatusIcon(item.call_status, item.latest_log_status, STATUS_ICON_MAP)
                           return (
                             <div className="flex items-center gap-1">
                               {!isContact && item.rsvp && (
@@ -743,7 +746,7 @@ export default function PendingCallsPage() {
                           )
                         })()}
                         <span className="text-base text-warm-400 dark:text-disc-muted">
-                          {item.answered_count}/{item.total_calls} รับ
+                          {t('assignee.answeredCountLabel', { answered: item.answered_count, total: item.total_calls })}
                         </span>
                       </div>
                     </div>
@@ -759,7 +762,7 @@ export default function PendingCallsPage() {
                             {displayName}
                           </span>
                           <span className="text-xs font-bold flex-shrink-0 px-1 py-px rounded" style={{ color: tierColor.text, backgroundColor: tierColor.bg }}>{tier}</span>
-                          <button onClick={e => toggleFavorite(e, itemMemberId, itemContactType)} className="p-0.5 flex-shrink-0" title={isFav ? 'ยกเลิก starred' : 'เพิ่ม starred'}>
+                          <button onClick={e => toggleFavorite(e, itemMemberId, itemContactType)} className="p-0.5 flex-shrink-0" title={isFav ? t('assignee.unstarTitle') : t('assignee.starTitle')}>
                             <Star className={`w-5 h-5 transition ${isFav ? 'fill-yellow-400 text-yellow-400' : 'text-warm-300 dark:text-disc-border'}`} />
                           </button>
                           {expiryIcon && <expiryIcon.Icon title={expiryIcon.title} style={{ color: expiryIcon.color }} className="w-4 h-4 flex-shrink-0 inline-block" />}
@@ -787,7 +790,7 @@ export default function PendingCallsPage() {
 
                     <div className="flex items-center gap-1 justify-end">
                       {(() => {
-                        const si = getStatusIcon(item.call_status, item.latest_log_status)
+                        const si = getStatusIcon(item.call_status, item.latest_log_status, STATUS_ICON_MAP)
                         return (
                           <>
                             {!isContact && item.rsvp && (

@@ -61,7 +61,7 @@ components/
   CategorySelect.jsx           Category dropdown
 
 db/
-  index.js                     MySQL pool
+  index.js                     PostgreSQL pool (pg)
   finance/
     accounts.js                Account queries
     transactions.js            Transaction queries
@@ -82,7 +82,7 @@ public/                        Static assets
 
 - **Runtime:** Node.js
 - **Framework:** Next.js (App Router, not Pages Router)
-- **Database:** MySQL (`pple_volunteers`)
+- **Database:** PostgreSQL (`pple_volunteers`)
 - **Auth:** Discord OAuth → next-auth
 - **UI:** React (Server Components by default)
 

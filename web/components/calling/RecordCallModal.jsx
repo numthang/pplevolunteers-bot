@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useSession } from 'next-auth/react'
+import { useTranslations } from 'next-intl'
 import { useEffectiveRoles } from '@/lib/useEffectiveRoles.js'
 import { can } from '@/lib/permissions.js'
 import { CALL_STATUS_COLORS } from '@/lib/callingStatusColors.js'
@@ -24,36 +25,17 @@ const STATUS_ICONS = {
 }
 
 
-const CALL_STATUS_OPTIONS = [
-  { value: 'answered',   label: 'รับสาย', icon: '📞', color: '#0d9e94', bg: '#e1f5f4' },
-  { value: 'no_answer',  label: 'ไม่รับ',  icon: '📵', color: '#854f0b', bg: '#faeeda' },
-  { value: 'not_called', label: 'ไม่โทร', icon: '📝', color: '#6b7280', bg: '#f3f4f6' },
-]
-
-const NOTE_PLACEHOLDER = {
-  answered:   'เช่น ทำงานอยู่กรุงเทพ กลับบ้านเดือนละครั้ง',
-  no_answer:  'เช่น สายไม่ว่าง / ปิดเครื่อง / เบอร์ผิด / ฝากข้อความ',
-  not_called: 'เช่น บันทึกข้อมูลสมาชิก / ติดต่อ LINE แล้ว / เบอร์ผิด / คาดว่าไม่สะดวก',
-  met:        'เช่น เจอที่งาน event ราชบุรี / นัดเจอที่ร้านกาแฟ',
-}
-
-const RSVP_OPTIONS = [
-  { value: 'yes',   label: 'ตอบรับ',    icon: '✓', activeClass: 'bg-teal border-teal text-white' },
-  { value: 'no',    label: 'ไม่ตอบรับ', icon: '✗', activeClass: 'bg-[#fcebeb] border-[#a32d2d] text-[#a32d2d]' },
-  { value: 'maybe', label: 'อาจจะ',     icon: '?', activeClass: 'bg-[#faeeda] border-[#854f0b] text-[#854f0b]' },
-]
-
 const getLogStatusStyle = (status) => {
   const color = CALL_STATUS_COLORS[status]
   return color ? { bg: color.bg, text: color.text, label: color.label } : { bg: '#f3f4f6', text: '#6b7280', label: status }
 }
 
-function getExpiryIcon(expiredAt) {
+function getExpiryIcon(expiredAt, t) {
   if (!expiredAt) return null
   const now = Date.now()
   const exp = new Date(expiredAt).getTime()
-  if (exp < now) return { Icon: AlertTriangle, color: '#ef4444', title: 'หมดอายุ' }
-  if (exp - now < 90 * 24 * 60 * 60 * 1000) return { Icon: Timer, color: '#d97706', title: 'ใกล้หมดอายุ' }
+  if (exp < now) return { Icon: AlertTriangle, color: '#ef4444', title: t('assignment.expiredLabel') }
+  if (exp - now < 90 * 24 * 60 * 60 * 1000) return { Icon: Timer, color: '#d97706', title: t('assignment.expiringLabel') }
   return null
 }
 
@@ -79,6 +61,7 @@ function parseLinks(text) {
 }
 
 function ExpandableText({ text, clamp = 'line-clamp-2', className = '' }) {
+  const t = useTranslations('calling')
   const [expanded, setExpanded] = useState(false)
   const [clamped, setClamped] = useState(false)
   const ref = useRef(null)
@@ -97,7 +80,7 @@ function ExpandableText({ text, clamp = 'line-clamp-2', className = '' }) {
       </p>
       {(clamped || expanded) && (
         <button onClick={() => setExpanded(!expanded)} className="text-base text-teal hover:underline shrink-0">
-          {expanded ? 'ย่อ' : 'ดูเพิ่ม'}
+          {expanded ? t('assignment.collapseLabel') : t('assignment.expandLabel')}
         </button>
       )}
     </div>
@@ -105,6 +88,7 @@ function ExpandableText({ text, clamp = 'line-clamp-2', className = '' }) {
 }
 
 function CollapsibleDescription({ text }) {
+  const t = useTranslations('calling')
   const [expanded, setExpanded] = useState(false)
   const [isOverflowing, setIsOverflowing] = useState(false)
   const ref = useRef(null)
@@ -127,7 +111,7 @@ function CollapsibleDescription({ text }) {
             onClick={() => setExpanded(false)}
             className="ml-2 inline-flex items-center gap-1 text-sm font-semibold text-teal hover:underline align-baseline"
           >
-            ▲ ย่อ
+            ▲ {t('assignment.collapseLabel')}
           </button>
         )}
       </p>
@@ -137,18 +121,12 @@ function CollapsibleDescription({ text }) {
           onClick={() => setExpanded(true)}
           className="absolute right-0 bottom-0 pl-8 pr-1 text-sm font-semibold text-teal hover:underline bg-gradient-to-l from-white dark:from-disc-hover from-60% to-transparent"
         >
-          ▼ ดูเพิ่ม
+          ▼ {t('assignment.expandLabel')}
         </button>
       )}
     </div>
   )
 }
-
-const FLAG_OPTIONS = [
-  { value: 'green',  emoji: '🟢', title: 'ตอบรับดี' },
-  { value: 'yellow', emoji: '🟡', title: 'ระวัง' },
-  { value: 'red',    emoji: '🔴', title: 'อย่าโทร' },
-]
 
 function SignalScoreLabel({ signalKey, value }) {
   const label = findSignalLabel(signalKey, value)
@@ -168,9 +146,35 @@ function formatEventDate(dateStr) {
 }
 
 export default function RecordCallModal({ isOpen, member, contact_type = 'member', source = 'assignee', onClose, onSave, onSaveAndNext, hasNext, onStarChange, onFlagChange }) {
+  const t = useTranslations('calling')
   const { data: session } = useSession()
   const { discordId: effectiveDiscordId, access } = useEffectiveRoles(session)
   const isModerator = can('deleteLog', access?.permissions || [])
+
+  const CALL_STATUS_OPTIONS = [
+    { value: 'answered',   label: t('assignee.answeredLabel'),   icon: '📞', color: '#0d9e94', bg: '#e1f5f4' },
+    { value: 'no_answer',  label: t('assignee.noAnswerLabel'),   icon: '📵', color: '#854f0b', bg: '#faeeda' },
+    { value: 'not_called', label: t('assignee.notCalledLabel'),  icon: '📝', color: '#6b7280', bg: '#f3f4f6' },
+  ]
+
+  const NOTE_PLACEHOLDER = {
+    answered:   t('recordCall.notePlaceholder.answered'),
+    no_answer:  t('recordCall.notePlaceholder.noAnswer'),
+    not_called: t('recordCall.notePlaceholder.notCalled'),
+    met:        t('recordCall.notePlaceholder.met'),
+  }
+
+  const RSVP_OPTIONS = [
+    { value: 'yes',   label: t('recordCall.rsvpYes'),   icon: '✓', activeClass: 'bg-teal border-teal text-white' },
+    { value: 'no',    label: t('recordCall.rsvpNo'),    icon: '✗', activeClass: 'bg-[#fcebeb] border-[#a32d2d] text-[#a32d2d]' },
+    { value: 'maybe', label: t('recordCall.rsvpMaybe'), icon: '?', activeClass: 'bg-[#faeeda] border-[#854f0b] text-[#854f0b]' },
+  ]
+
+  const FLAG_OPTIONS = [
+    { value: 'green',  emoji: '🟢', title: t('assignment.flagGood') },
+    { value: 'yellow', emoji: '🟡', title: t('assignment.flagCaution') },
+    { value: 'red',    emoji: '🔴', title: t('assignment.flagDoNotCall') },
+  ]
 
   const [smsModalOpen, setSmsModalOpen] = useState(false)
   const [status, setStatus] = useState('')
@@ -304,7 +308,7 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
     member.home_amphure || member.amphoe,
     member.home_province || member.province,
   ].filter(Boolean).join(' · ')
-  const expiryIcon = isContact ? null : getExpiryIcon(member.expired_at)
+  const expiryIcon = isContact ? null : getExpiryIcon(member.expired_at, t)
   const showSignals = signalsApply
   const signalsFilled = SIGNALS.some(s => signals[s.key])
   const canSave = !!status && !!note.trim()
@@ -320,7 +324,7 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
 
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-4 border-b border-warm-200 dark:border-disc-border">
-          <h2 className="text-lg font-semibold text-warm-900 dark:text-disc-text">บันทึกการโทร</h2>
+          <h2 className="text-lg font-semibold text-warm-900 dark:text-disc-text">{t('recordCall.title')}</h2>
           <button
             onClick={onClose}
             className="text-warm-400 hover:text-warm-700 dark:hover:text-disc-text text-2xl leading-none w-10 h-10 flex items-center justify-center rounded-lg hover:bg-warm-100 dark:hover:bg-disc-hover transition"
@@ -369,7 +373,7 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
                   {locationStr || '—'}
                 </div>
                 <div className="flex items-center gap-2 mt-1">
-                  <span className="text-xs text-warm-400 dark:text-disc-muted">ประเมินสมาชิก</span>
+                  <span className="text-xs text-warm-400 dark:text-disc-muted">{t('recordCall.flagRatingLabel')}</span>
                   {FLAG_OPTIONS.map(f => (
                     <button key={f.value} type="button" onClick={() => saveFlag(f.value)} title={f.title}
                       className={`text-base leading-none transition ${memberFlag === f.value ? 'opacity-100' : 'opacity-25 hover:opacity-60'}`}>
@@ -395,14 +399,14 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
                   </a>
                 ) : (
                   <div className="flex items-center justify-center flex-1 py-3 rounded-lg text-base border border-dashed border-warm-300 dark:border-disc-border text-warm-400 dark:text-disc-muted">
-                    ไม่มีเบอร์โทร
+                    {t('recordCall.noPhoneLabel')}
                   </div>
                 )}
                 <button
                   onClick={() => setSmsModalOpen(true)}
                   className="flex items-center justify-center px-3 py-3 rounded-lg transition hover:opacity-90"
                   style={{ backgroundColor: '#4338ca', color: '#fff' }}
-                  title="ส่ง SMS"
+                  title={t('recordCall.sendSmsTitle')}
                 >
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
                 </button>
@@ -462,16 +466,16 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
             {/* Call History */}
             <div>
               <div className="text-base font-semibold text-warm-500 dark:text-disc-muted mb-2">
-                ประวัติ{history.length > 0 && (
+                {t('recordCall.historyHeading')}{history.length > 0 && (
                   <span className="font-normal ml-1">
-                    ({history.filter(l => l.status === 'answered').length}/{history.length} รับ)
+                    ({t('assignee.answeredCountLabel', { answered: history.filter(l => l.status === 'answered').length, total: history.length })})
                   </span>
                 )}
               </div>
               {historyLoading ? (
-                <div className="text-base text-warm-400 dark:text-disc-muted">โหลด...</div>
+                <div className="text-base text-warm-400 dark:text-disc-muted">{t('common.loading')}</div>
               ) : history.length === 0 ? (
-                <div className="text-base text-warm-400 dark:text-disc-muted">ยังไม่มี</div>
+                <div className="text-base text-warm-400 dark:text-disc-muted">{t('assignee.noHistory')}</div>
               ) : (
                 <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
                   {history.map(log => {
@@ -505,7 +509,7 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
                               )}
                               {isModerator && (
                                 <button onClick={async () => {
-                                  if (!confirm('ลบ log นี้?')) return
+                                  if (!confirm(t('recordCall.deleteLogConfirm'))) return
                                   await fetch(`/api/calling/logs?id=${log.id}`, { method: 'DELETE' })
                                   loadHistory()
                                 }} className="p-1 rounded text-warm-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition">
@@ -541,8 +545,8 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
                                   body: JSON.stringify({ id: log.id, status: editStatus, note: editNote }) })
                                 setEditingLogId(null)
                                 loadHistory()
-                              }} className="px-3 py-1 rounded text-base bg-teal text-white hover:bg-teal/90 transition">บันทึก</button>
-                              <button onClick={() => setEditingLogId(null)} className="px-3 py-1 rounded text-base text-warm-500 hover:bg-warm-100 dark:hover:bg-disc-hover transition">ยกเลิก</button>
+                              }} className="px-3 py-1 rounded text-base bg-teal text-white hover:bg-teal/90 transition">{t('common.save')}</button>
+                              <button onClick={() => setEditingLogId(null)} className="px-3 py-1 rounded text-base text-warm-500 hover:bg-warm-100 dark:hover:bg-disc-hover transition">{t('common.cancel')}</button>
                             </div>
                           </div>
                         ) : null}
@@ -566,7 +570,7 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
                     <span className="font-normal text-orange-600 dark:text-orange-400 ml-1.5">({formatEventDate(member.event_date)})</span>
                   )}
                 </div>
-                <button onClick={copyCampaignText} title="คัดลอก"
+                <button onClick={copyCampaignText} title={t('recordCall.copyTitle')}
                   className="shrink-0 p-1 rounded text-warm-400 hover:text-teal dark:text-disc-muted dark:hover:text-teal transition">
                   {copiedCampaign
                     ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><polyline points="20 6 9 17 4 12" /></svg>
@@ -581,22 +585,19 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
 
             {/* Call guide */}
             <div className="px-1 text-base text-warm-600 dark:text-disc-text leading-snug">
-              <span className="font-semibold text-orange-600 dark:text-orange-400">หัวข้อสนทนา</span>
-              {' · '}อยู่ในพื้นที่ไหม
-              {' · '}วันสะดวกร่วมกิจกรรม
-              {' · '}สนใจเข้าร่วมขนาดไหน
-              {' · '}ส่งลิงก์ ACT ทาง SMS หรือไลน์
+              <span className="font-semibold text-orange-600 dark:text-orange-400">{t('recordCall.callGuideLabel')}</span>
+              {' · '}{t('recordCall.callGuideText')}
             </div>
 
             {/* Status */}
             <div>
-              <div className="text-base font-semibold text-warm-700 dark:text-disc-text mb-2">สถานะการโทร *</div>
+              <div className="text-base font-semibold text-warm-700 dark:text-disc-text mb-2">{t('recordCall.statusLabel')}</div>
               <div className="grid grid-cols-3 gap-2">
                 {CALL_STATUS_OPTIONS.map(opt => (
                   <button
                     key={opt.value}
                     type="button"
-                    onClick={() => { setStatus(opt.value); if (opt.value === 'no_answer' && !note.trim()) setNote('ไม่รับสาย') }}
+                    onClick={() => { setStatus(opt.value); if (opt.value === 'no_answer' && !note.trim()) setNote(t('recordCall.defaultNoAnswerNote')) }}
                     className={`py-4 px-2 text-xl rounded-xl border-2 transition font-medium flex flex-col items-center gap-1.5 ${
                       status === opt.value
                         ? ''
@@ -616,12 +617,12 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
 
             {/* Note */}
             <div>
-              <div className="text-base font-semibold text-warm-700 dark:text-disc-text mb-2">บันทึก *</div>
+              <div className="text-base font-semibold text-warm-700 dark:text-disc-text mb-2">{t('recordCall.noteLabel')}</div>
               <textarea
                 value={note}
                 onChange={e => setNote(e.target.value)}
                 rows={3}
-                placeholder={NOTE_PLACEHOLDER[status] || 'บันทึกเพิ่มเติม'}
+                placeholder={NOTE_PLACEHOLDER[status] || t('recordCall.notePlaceholderDefault')}
                 className="w-full px-3 py-2.5 text-base border-2 border-teal bg-white dark:bg-disc-hover text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-teal"
               />
             </div>
@@ -629,7 +630,7 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
             {/* RSVP — members only */}
             {!isContact && status === 'answered' && (
               <div>
-                <div className="text-base font-semibold text-warm-700 dark:text-disc-text mb-2">ตอบรับแคมเปญ *</div>
+                <div className="text-base font-semibold text-warm-700 dark:text-disc-text mb-2">{t('recordCall.rsvpLabel')}</div>
                 <div className="grid grid-cols-3 gap-2">
                   {RSVP_OPTIONS.map(opt => (
                     <button
@@ -688,7 +689,7 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
                   disabled={!canSave || saving}
                   className="flex-1 py-3 bg-teal hover:opacity-90 disabled:opacity-40 text-white text-base font-semibold rounded-lg transition"
                 >
-                  {saving ? '...' : 'บันทึก & ต่อ'}
+                  {saving ? '...' : t('recordCall.saveAndNextButton')}
                 </button>
               )}
               <button
@@ -700,13 +701,13 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
                     : 'flex-1 bg-teal hover:opacity-90 text-white border-teal'
                 }`}
               >
-                {saving ? '...' : 'บันทึก'}
+                {saving ? '...' : t('common.save')}
               </button>
               <button
                 onClick={onClose}
                 className="px-4 py-3 text-base text-warm-500 dark:text-disc-muted hover:text-warm-700 dark:hover:text-disc-text rounded-lg hover:bg-warm-100 dark:hover:bg-disc-hover transition"
               >
-                ยกเลิก
+                {t('common.cancel')}
               </button>
             </div>
           </div>

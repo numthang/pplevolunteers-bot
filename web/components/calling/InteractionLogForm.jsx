@@ -1,9 +1,11 @@
 'use client'
 
 import { useState, useCallback } from 'react'
+import { useTranslations } from 'next-intl'
 import { SIGNALS, SIGNAL_OPTIONS } from '@/lib/callingSignals.js'
 
 export default function InteractionLogForm({ contactId, onSaved }) {
+  const t = useTranslations('calling')
   const [note, setNote] = useState('')
   const [signals, setSignals] = useState({})
   const [saving, setSaving] = useState(false)
@@ -38,7 +40,7 @@ export default function InteractionLogForm({ contactId, onSaved }) {
           note: note.trim(),
         }),
       })
-      if (!res.ok) { const j = await res.json(); throw new Error(j.error || 'บันทึกไม่สำเร็จ') }
+      if (!res.ok) { const j = await res.json(); throw new Error(j.error || t('contactModal.saveError')) }
       setNote('')
       setSignals({})
       onSaved?.()
@@ -50,13 +52,13 @@ export default function InteractionLogForm({ contactId, onSaved }) {
     <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg p-4 space-y-4">
       <div>
         <label className="block text-sm font-medium text-warm-700 dark:text-disc-muted mb-1">
-          บันทึกการพบปะ <span className="text-red-500">*</span>
+          {t('logForm.noteLabel')} <span className="text-red-500">*</span>
         </label>
         <textarea
           value={note}
           onChange={e => setNote(e.target.value)}
           rows={3}
-          placeholder="เช่น เจอที่งาน event ราชบุรี / นัดเจอที่ร้านกาแฟ"
+          placeholder={t('recordCall.notePlaceholder.met')}
           className="w-full px-3 py-2 text-base border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted rounded-lg focus:outline-none focus:ring-2 focus:ring-teal resize-none"
         />
       </div>
@@ -98,7 +100,7 @@ export default function InteractionLogForm({ contactId, onSaved }) {
           disabled={!canSave || saving}
           className="px-4 py-2 text-base font-medium rounded-lg bg-teal hover:opacity-90 text-white disabled:opacity-40"
         >
-          {saving ? 'กำลังบันทึก…' : 'บันทึกการพบปะ'}
+          {saving ? t('common.saving') : t('logForm.saveButton')}
         </button>
       </div>
     </div>

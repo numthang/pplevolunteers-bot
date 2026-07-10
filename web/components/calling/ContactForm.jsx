@@ -1,12 +1,14 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 import geographyData from '@/lib/thailand-geography.json'
 import { CATEGORIES } from '@/../config/callingCategories.js'
 
 const PROVINCE_LIST = geographyData.map(p => p.province).sort((a, b) => a.localeCompare(b, 'th'))
 
 export default function ContactForm({ initial = {}, onSubmit, onCancel, loading }) {
+  const t = useTranslations('calling')
   const [form, setForm] = useState({
     first_name: initial.first_name || '',
     phone:      initial.phone      || '',
@@ -57,16 +59,16 @@ export default function ContactForm({ initial = {}, onSubmit, onCancel, loading 
     <form onSubmit={handleSubmit} className="space-y-4">
       {/* ชื่อ */}
       <div>
-        <label className={labelCls}>ชื่อ <span className="text-red-500">*</span></label>
+        <label className={labelCls}>{t('contactForm.nameLabel')} <span className="text-red-500">*</span></label>
         <input className={inputCls} value={form.first_name}
-          onChange={e => set('first_name', e.target.value)} required placeholder="ชื่อ" />
+          onChange={e => set('first_name', e.target.value)} required placeholder={t('contactForm.namePlaceholder')} />
       </div>
 
       {/* ประเภท */}
       <div>
-        <label className={labelCls}>ประเภท</label>
+        <label className={labelCls}>{t('contactForm.categoryLabel')}</label>
         <select className={inputCls} value={form.category} onChange={e => set('category', e.target.value)}>
-          <option value="">— เลือกประเภท —</option>
+          <option value="">{t('contactForm.categoryPlaceholder')}</option>
           {CATEGORIES.map(g => (
             <optgroup key={g.group} label={g.group}>
               {g.options.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
@@ -78,12 +80,12 @@ export default function ContactForm({ initial = {}, onSubmit, onCancel, loading 
       {/* เบอร์โทร / LINE */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
-          <label className={labelCls}>เบอร์โทร</label>
+          <label className={labelCls}>{t('contactForm.phoneLabel')}</label>
           <input className={inputCls} value={form.phone}
             onChange={e => set('phone', e.target.value)} placeholder="0812345678" />
         </div>
         <div>
-          <label className={labelCls}>LINE ID</label>
+          <label className={labelCls}>{t('contactForm.lineIdLabel')}</label>
           <input className={inputCls} value={form.line_id}
             onChange={e => set('line_id', e.target.value)} placeholder="@lineId" />
         </div>
@@ -91,34 +93,34 @@ export default function ContactForm({ initial = {}, onSubmit, onCancel, loading 
 
       {/* อาชีพ / ตำแหน่ง / ความสามารถ */}
       <div>
-        <label className={labelCls}>อาชีพ / ตำแหน่ง / ความสามารถ</label>
+        <label className={labelCls}>{t('contactForm.specialtyLabel')}</label>
         <textarea className={textareaCls} rows={2} value={form.specialty}
           onChange={e => set('specialty', e.target.value)}
-          placeholder="เช่น ครู / นักธุรกิจ / ออกแบบกราฟิก / พูดอังกฤษได้" />
+          placeholder={t('contactForm.specialtyPlaceholder')} />
       </div>
 
       {/* Cascading dropdown: จังหวัด → อำเภอ → ตำบล */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div>
-          <label className={labelCls}>จังหวัด</label>
+          <label className={labelCls}>{t('contactForm.provinceLabel')}</label>
           <select className={inputCls} value={form.province} onChange={e => set('province', e.target.value)}>
-            <option value="">— จังหวัด —</option>
+            <option value="">{t('contactForm.provincePlaceholder')}</option>
             {PROVINCE_LIST.map(p => <option key={p} value={p}>{p}</option>)}
           </select>
         </div>
         <div>
-          <label className={labelCls}>อำเภอ</label>
+          <label className={labelCls}>{t('contactForm.amphoeLabel')}</label>
           <select className={inputCls} value={form.amphoe} onChange={e => set('amphoe', e.target.value)}
             disabled={!amphoeList.length}>
-            <option value="">— อำเภอ —</option>
+            <option value="">{t('contactForm.amphoePlaceholder')}</option>
             {amphoeList.map(a => { const n = a.amphoe.replace(/^อำเภอ/, ''); return <option key={n} value={n}>{n}</option> })}
           </select>
         </div>
         <div>
-          <label className={labelCls}>ตำบล</label>
+          <label className={labelCls}>{t('contactForm.tambonLabel')}</label>
           <select className={inputCls} value={form.tambon} onChange={e => set('tambon', e.target.value)}
             disabled={!tambonList.length}>
-            <option value="">— ตำบล —</option>
+            <option value="">{t('contactForm.tambonPlaceholder')}</option>
             {tambonList.map(t => <option key={t} value={t}>{t}</option>)}
           </select>
         </div>
@@ -126,10 +128,10 @@ export default function ContactForm({ initial = {}, onSubmit, onCancel, loading 
 
       {/* หมายเหตุ */}
       <div>
-        <label className={labelCls}>หมายเหตุ</label>
+        <label className={labelCls}>{t('contactForm.noteLabel')}</label>
         <textarea className={textareaCls} rows={3} value={form.note}
           onChange={e => set('note', e.target.value)}
-          placeholder="ข้อมูลเพิ่มเติม เช่น รู้จักกันผ่านอะไร ความสัมพันธ์กับพรรค" />
+          placeholder={t('contactForm.notePlaceholder')} />
       </div>
 
       {/* Actions */}
@@ -137,12 +139,12 @@ export default function ContactForm({ initial = {}, onSubmit, onCancel, loading 
         {onCancel && (
           <button type="button" onClick={onCancel}
             className="px-4 py-3 text-base font-medium rounded-lg border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover">
-            ยกเลิก
+            {t('common.cancel')}
           </button>
         )}
         <button type="submit" disabled={loading}
           className="px-4 py-3 text-base font-medium rounded-lg bg-teal hover:opacity-90 text-white disabled:opacity-40">
-          {loading ? 'กำลังบันทึก…' : 'บันทึก'}
+          {loading ? t('common.saving') : t('common.save')}
         </button>
       </div>
     </form>

@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { Calendar, Pencil, Trash2 } from 'lucide-react'
 
 const FALLBACK_IMAGE = 'https://act.pplethai.org/wp-content/uploads/2024/09/pple-cover-yt.jpg'
@@ -42,11 +43,12 @@ function buildGoogleCalendarUrl(campaign) {
 
 export default function CampaignCard({ campaign, canCreate }) {
   const router = useRouter()
+  const t = useTranslations('calling')
 
   const handleDelete = async () => {
-    if (!confirm(`ลบแคมเปญ "${campaign.name}" ?\n\nข้อมูลการมอบหมายและบันทึกการโทรที่เกี่ยวข้องอาจได้รับผลกระทบ`)) return
+    if (!confirm(t('campaignCard.deleteConfirm', { name: campaign.name }))) return
     const res = await fetch(`/api/calling/campaigns/${campaign.id}`, { method: 'DELETE' })
-    if (!res.ok) { alert('เกิดข้อผิดพลาด ไม่สามารถลบได้'); return }
+    if (!res.ok) { alert(t('campaignCard.deleteError')); return }
     router.refresh()
   }
 
@@ -79,7 +81,7 @@ export default function CampaignCard({ campaign, canCreate }) {
       <div className="px-4 py-2.5 border-t border-warm-200 dark:border-disc-border flex items-center justify-between gap-2">
         <div className="min-w-0">
           <span className="text-base text-warm-500 dark:text-disc-muted">
-            {campaign.call_count || 0} การโทร
+            {t('campaignCard.callCount', { count: campaign.call_count || 0 })}
           </span>
         </div>
 
@@ -89,7 +91,7 @@ export default function CampaignCard({ campaign, canCreate }) {
               href={calendarUrl}
               target="_blank"
               rel="noopener noreferrer"
-              title="เพิ่มใน Google Calendar"
+              title={t('campaignCard.addToCalendar')}
               className="p-1.5 rounded hover:bg-warm-100 dark:hover:bg-disc-hover text-teal transition-colors"
               onClick={e => e.stopPropagation()}
             >
@@ -100,7 +102,7 @@ export default function CampaignCard({ campaign, canCreate }) {
             <>
               <Link
                 href={`/calling/campaigns/${campaign.id}/edit`}
-                title="แก้ไข"
+                title={t('campaignCard.editTitle')}
                 className="p-1.5 rounded hover:bg-warm-100 dark:hover:bg-disc-hover text-teal transition-colors"
                 onClick={e => e.stopPropagation()}
               >
@@ -108,7 +110,7 @@ export default function CampaignCard({ campaign, canCreate }) {
               </Link>
               <button
                 onClick={handleDelete}
-                title="ลบ"
+                title={t('common.delete')}
                 className="p-1.5 rounded hover:bg-warm-100 dark:hover:bg-disc-hover text-red-500 dark:text-red-400 transition-colors"
               >
                 <Trash2 size={16} />

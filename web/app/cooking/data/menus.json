@@ -1,0 +1,6126 @@
+{
+  "_legend": {
+    "food_groups": [
+      "protein",
+      "veg",
+      "carb",
+      "dessert"
+    ],
+    "protein": [
+      "pork",
+      "chicken",
+      "beef",
+      "shrimp",
+      "squid",
+      "seafood",
+      "fish",
+      "egg",
+      "tofu",
+      "none"
+    ],
+    "method": [
+      "stir-fry",
+      "boil-soup",
+      "curry",
+      "deep-fry",
+      "grill-bake",
+      "salad-yum",
+      "steam",
+      "simmer-stew",
+      "other"
+    ],
+    "cuisine": [
+      "thai",
+      "korean",
+      "japanese",
+      "italian",
+      "western",
+      "chinese",
+      "indian-me"
+    ],
+    "flavor": [
+      "spicy",
+      "plain",
+      "sour",
+      "savory-rich",
+      "sweet"
+    ],
+    "source": {
+      "A": "มีสูตรจดจริงใน MENUS.md",
+      "B": "มีแต่ชื่อ — ingredients/steps ร่างจากความรู้ทั่วไป user ต้องเช็ค"
+    },
+    "notes": [
+      "protein เป็น array = กลุ่มแทนกันได้ (เช่น ['chicken','squid','shrimp'] = มีตัวใดตัวหนึ่งก็ทำได้)",
+      "carb_in_dish=true = เมนูมีคาร์บในตัว (ข้าว/เส้น) ไม่ต้องเสิร์ฟข้าวเพิ่ม",
+      "ingredients.core = ขาดไม่ได้ (ใช้ match) · optional = ขาดได้ (ไม่ตัดสิทธิ์)",
+      "staples_used = ของติดครัว ถือว่ามีตลอด ไม่นับใน match",
+      "gates.protein = protein[] ตัดตัว 'none'/'egg' ออก (egg ถือเป็นของติดครัว) · gates.key = ingredient ที่ 'ขาดไม่ได้จริงๆ' ของจานนั้น (เลือกจาก canonical.json เท่านั้น) ใช้คู่กับ canonical.json เพื่อทำ checklist กรองเมนูตามวัตถุดิบที่มี"
+    ],
+    "image": "image.emoji = placeholder v1 ตามชนิดจาน · image.url = รูปจริง (null=รอเติมทีหลัง เช่น รูปที่ user ถ่ายเอง)"
+  },
+  "menus": [
+    {
+      "id": "krapao-moo",
+      "name": "กระเพราหมู",
+      "food_groups": [
+        "protein",
+        "veg"
+      ],
+      "protein": [
+        "pork",
+        "chicken",
+        "squid",
+        "shrimp"
+      ],
+      "method": "stir-fry",
+      "cuisine": "thai",
+      "flavor": [
+        "spicy"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "หมูสับ",
+          "ใบกะเพรา",
+          "พริก",
+          "กระเทียม"
+        ],
+        "optional": [
+          "ถั่วฝักยาว",
+          "ไข่ดาว",
+          "หอมใหญ่"
+        ]
+      },
+      "staples_used": [
+        "น้ำมัน",
+        "น้ำปลา",
+        "น้ำตาล",
+        "ซีอิ๊วดำ"
+      ],
+      "steps": [
+        "ตำพริกกระเทียม",
+        "ผัดหมูให้สุก",
+        "ใส่ผัก ปรุงรส ใส่ใบกะเพรา"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍽️",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "pork",
+          "chicken",
+          "squid",
+          "shrimp"
+        ],
+        "key": [
+          "ใบกะเพรา"
+        ]
+      }
+    },
+    {
+      "id": "kai-kapi-prik-yuak",
+      "name": "ไก่กะปิพริกหยวก",
+      "food_groups": [
+        "protein",
+        "veg"
+      ],
+      "protein": [
+        "chicken"
+      ],
+      "method": "stir-fry",
+      "cuisine": "thai",
+      "flavor": [
+        "savory-rich",
+        "spicy"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "สะโพกไก่",
+          "กะปิ",
+          "พริกหยวก",
+          "พริกชี้ฟ้า",
+          "หอมแดง",
+          "กระเทียม"
+        ],
+        "optional": [
+          "ใบมะกรูด",
+          "หัวหอมใหญ่"
+        ]
+      },
+      "staples_used": [
+        "น้ำมัน",
+        "พริกไทยขาว",
+        "น้ำตาลปีบ"
+      ],
+      "steps": [
+        "ตำกระเทียม หอมแดง พริกไทยขาว เจียวหอม",
+        "ใส่กะปิผัดหอม ตามด้วยไก่",
+        "ไก่สุกใส่หัวหอม พริก น้ำตาลปีบ",
+        "ปิดท้ายใบมะกรูดซอย"
+      ],
+      "source": "A",
+      "image": {
+        "emoji": "🍽️",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "chicken"
+        ],
+        "key": [
+          "กะปิ"
+        ]
+      }
+    },
+    {
+      "id": "soup-fakthong",
+      "name": "ซุปฟักทอง",
+      "food_groups": [
+        "veg"
+      ],
+      "protein": [
+        "none"
+      ],
+      "method": "boil-soup",
+      "cuisine": "western",
+      "flavor": [
+        "savory-rich"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "ฟักทอง",
+          "หอมใหญ่",
+          "นม"
+        ],
+        "optional": [
+          "ชีส",
+          "ออริกาโน",
+          "น้ำซุป"
+        ]
+      },
+      "staples_used": [
+        "เนย",
+        "เกลือ"
+      ],
+      "steps": [
+        "ใส่เนย หอมใหญ่ ฟักทอง เกลือ น้ำซุป เคี่ยวจนเละ",
+        "ปั่นใส่นม",
+        "กลับลงกระทะกวน ใส่ออริกาโน โรยชีส"
+      ],
+      "source": "A",
+      "image": {
+        "emoji": "🥘",
+        "url": null
+      },
+      "gates": {
+        "protein": [],
+        "key": [
+          "ฟักทอง",
+          "นมสด"
+        ]
+      }
+    },
+    {
+      "id": "khao-pad-pong-kari",
+      "name": "ข้าวผัดผงกะหรี่",
+      "food_groups": [
+        "carb",
+        "protein"
+      ],
+      "protein": [
+        "shrimp"
+      ],
+      "method": "stir-fry",
+      "cuisine": "thai",
+      "flavor": [
+        "savory-rich"
+      ],
+      "carb_in_dish": true,
+      "ingredients": {
+        "core": [
+          "ข้าวสวย",
+          "กุ้ง",
+          "ไข่",
+          "ผงกะหรี่",
+          "รากผักชี",
+          "กระเทียม"
+        ],
+        "optional": [
+          "มันกุ้ง",
+          "ต้นหอม"
+        ]
+      },
+      "staples_used": [
+        "น้ำมัน",
+        "พริกไทย",
+        "น้ำปลา"
+      ],
+      "steps": [
+        "ผัดไข่พอสุก 80% ตักพักกับข้าว",
+        "ผัดรากผักชี กระเทียม พริกไทย กุ้ง ผงกะหรี่",
+        "ใส่ข้าว+ไข่ ตีร่วน เร่งไฟคั่วหอม โรยต้นหอม"
+      ],
+      "source": "A",
+      "image": {
+        "emoji": "🍚",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "shrimp"
+        ],
+        "key": [
+          "ผงกะหรี่"
+        ]
+      }
+    },
+    {
+      "id": "lasagna",
+      "name": "ลาซานญ่า",
+      "food_groups": [
+        "carb",
+        "protein"
+      ],
+      "protein": [
+        "beef",
+        "pork"
+      ],
+      "method": "grill-bake",
+      "cuisine": "italian",
+      "flavor": [
+        "savory-rich"
+      ],
+      "carb_in_dish": true,
+      "ingredients": {
+        "core": [
+          "แผ่นพาสต้า",
+          "เนื้อสับ",
+          "มะเขือเทศ",
+          "ชีส",
+          "นมสด",
+          "เนย"
+        ],
+        "optional": [
+          "ไข่ต้ม",
+          "แครอท",
+          "หอมใหญ่",
+          "ออริกาโน",
+          "ใบเบย์"
+        ]
+      },
+      "staples_used": [
+        "แป้ง",
+        "เกลือ",
+        "พริกไทย",
+        "น้ำตาล"
+      ],
+      "steps": [
+        "ทำเส้นพาสต้า",
+        "ซอสโบลองเนส (เนื้อ+มะเขือเทศ)",
+        "ซอสเบชาเมล (เนย+นม+ชีส)",
+        "เรียงชั้นพาสต้า/ซอส/ชีส แล้วอบ"
+      ],
+      "source": "A",
+      "image": {
+        "emoji": "🍚",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "beef",
+          "pork"
+        ],
+        "key": [
+          "เส้นพาสต้า",
+          "มะเขือเทศ",
+          "ชีส"
+        ]
+      }
+    },
+    {
+      "id": "khao-niao-mun",
+      "name": "ข้าวเหนียวมูน",
+      "food_groups": [
+        "carb",
+        "dessert"
+      ],
+      "protein": [
+        "none"
+      ],
+      "method": "steam",
+      "cuisine": "thai",
+      "flavor": [
+        "sweet"
+      ],
+      "carb_in_dish": true,
+      "ingredients": {
+        "core": [
+          "ข้าวเหนียว",
+          "หัวกะทิ",
+          "น้ำตาล"
+        ],
+        "optional": [
+          "สารส้ม"
+        ]
+      },
+      "staples_used": [
+        "เกลือ"
+      ],
+      "steps": [
+        "แช่ข้าว 3 ชม. แกว่งสารส้ม 5 นาที",
+        "นึ่งข้าว",
+        "หัวกะทิผสมเกลือต้มไม่เดือด คลุกข้าว ปิดฝา 10 นาที"
+      ],
+      "source": "A",
+      "image": {
+        "emoji": "🧁",
+        "url": null
+      },
+      "gates": {
+        "protein": [],
+        "key": [
+          "ข้าวเหนียว",
+          "กะทิ"
+        ]
+      }
+    },
+    {
+      "id": "larb",
+      "name": "ลาบ",
+      "food_groups": [
+        "protein"
+      ],
+      "protein": [
+        "pork",
+        "chicken",
+        "beef"
+      ],
+      "method": "salad-yum",
+      "cuisine": "thai",
+      "flavor": [
+        "spicy",
+        "sour"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "หมูสับ",
+          "ข้าวคั่ว",
+          "พริกป่น",
+          "หอมแดง",
+          "ต้นหอม",
+          "ผักชีฝรั่ง",
+          "ใบสะระแหน่"
+        ],
+        "optional": [
+          "ตับ"
+        ]
+      },
+      "staples_used": [
+        "น้ำปลา",
+        "มะนาว"
+      ],
+      "steps": [
+        "ลวก/คั่วหมูสับให้สุก",
+        "ปรุงน้ำปลา มะนาว พริกป่น ข้าวคั่ว",
+        "คลุกหอมแดง ต้นหอม ผักชีฝรั่ง สะระแหน่"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🥗",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "pork",
+          "chicken",
+          "beef"
+        ],
+        "key": []
+      }
+    },
+    {
+      "id": "ramen-miso",
+      "name": "ราเม็งมิโซะ",
+      "food_groups": [
+        "carb",
+        "protein"
+      ],
+      "protein": [
+        "pork",
+        "egg"
+      ],
+      "method": "boil-soup",
+      "cuisine": "japanese",
+      "flavor": [
+        "savory-rich"
+      ],
+      "carb_in_dish": true,
+      "ingredients": {
+        "core": [
+          "เส้นราเมน",
+          "มิโซะ",
+          "หมูสามชั้น",
+          "ไข่",
+          "ต้นหอม"
+        ],
+        "optional": [
+          "ข้าวโพด",
+          "สาหร่าย",
+          "เห็ด"
+        ]
+      },
+      "staples_used": [
+        "ซีอิ๊ว",
+        "น้ำซุป"
+      ],
+      "steps": [
+        "ทำน้ำซุปละลายมิโซะ",
+        "ลวกเส้น",
+        "ประกอบใส่หมู ไข่ต้ม ต้นหอม"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍜",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "pork"
+        ],
+        "key": [
+          "เส้นราเมน",
+          "มิโซะ"
+        ]
+      }
+    },
+    {
+      "id": "jajangmyeon",
+      "name": "จาจางเมียน",
+      "food_groups": [
+        "carb",
+        "protein"
+      ],
+      "protein": [
+        "pork"
+      ],
+      "method": "stir-fry",
+      "cuisine": "korean",
+      "flavor": [
+        "savory-rich"
+      ],
+      "carb_in_dish": true,
+      "ingredients": {
+        "core": [
+          "เส้นอูดง",
+          "ชุนจัง (ซอสถั่วดำ)",
+          "หมู",
+          "หอมใหญ่",
+          "มันฝรั่ง",
+          "บวบ/แตงกวา"
+        ],
+        "optional": [
+          "แป้งมัน"
+        ]
+      },
+      "staples_used": [
+        "น้ำมัน",
+        "น้ำตาล"
+      ],
+      "steps": [
+        "ผัดซอสถั่วดำกับน้ำมัน",
+        "ผัดหมูและผัก",
+        "ใส่ซอส น้ำ เคี่ยวข้น ราดเส้น"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍜",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "pork"
+        ],
+        "key": [
+          "เส้นราเมน",
+          "ซอสเกาหลี"
+        ]
+      }
+    },
+    {
+      "id": "yum-mamuang-kapi",
+      "name": "ยำมะม่วงคลุกกะปิ",
+      "food_groups": [
+        "veg"
+      ],
+      "protein": [
+        "none"
+      ],
+      "method": "salad-yum",
+      "cuisine": "thai",
+      "flavor": [
+        "sour",
+        "spicy"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "มะม่วงเปรี้ยว",
+          "กะปิ",
+          "พริก",
+          "หอมแดง"
+        ],
+        "optional": [
+          "กุ้งแห้ง",
+          "มะพร้าวคั่ว"
+        ]
+      },
+      "staples_used": [
+        "น้ำปลา",
+        "น้ำตาลปีบ"
+      ],
+      "steps": [
+        "โขลกกะปิ พริก น้ำตาล น้ำปลา",
+        "คลุกมะม่วงสับ หอมแดง",
+        "โรยกุ้งแห้ง"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🥗",
+        "url": null
+      },
+      "gates": {
+        "protein": [],
+        "key": [
+          "มะม่วงเปรี้ยว",
+          "กะปิ"
+        ]
+      }
+    },
+    {
+      "id": "kaeng-khilek",
+      "name": "แกงขี้เหล็ก",
+      "food_groups": [
+        "protein",
+        "veg"
+      ],
+      "protein": [
+        "pork",
+        "chicken"
+      ],
+      "method": "curry",
+      "cuisine": "thai",
+      "flavor": [
+        "savory-rich"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "ใบขี้เหล็ก",
+          "เนื้อสัตว์",
+          "ทะเลแห้ง",
+          "กระชาย",
+          "กะทิ",
+          "เครื่องแกงกะทิ"
+        ],
+        "optional": [
+          "น้ำตาลมะพร้าว"
+        ]
+      },
+      "staples_used": [
+        "เกลือ",
+        "น้ำปลา"
+      ],
+      "steps": [
+        "ต้มล้างใบ/ดอกขี้เหล็ก 3 น้ำ ใส่ก่บกล้วย",
+        "รอบสุดท้ายตุ๋นแรงดันให้นุ่ม",
+        "ใส่เนื้อสัตว์ ทะเลแห้ง กระชายสับ กะทิ เครื่องแกง",
+        "ใส่ผักลงเคี่ยว ปรุงน้ำตาลมะพร้าว เกลือ น้ำปลา"
+      ],
+      "source": "A",
+      "image": {
+        "emoji": "🥘",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "pork",
+          "chicken"
+        ],
+        "key": [
+          "กะทิ",
+          "เครื่องแกง"
+        ]
+      }
+    },
+    {
+      "id": "kimchi-recipe-1",
+      "name": "กิมจิ (สูตร 1)",
+      "food_groups": [
+        "veg"
+      ],
+      "protein": [
+        "none"
+      ],
+      "method": "other",
+      "cuisine": "korean",
+      "flavor": [
+        "spicy",
+        "sour"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "ผักกาด",
+          "เกลือ",
+          "กระเทียม",
+          "พริกป่น",
+          "แป้งข้าวเหนียว"
+        ],
+        "optional": [
+          "หอมใหญ่",
+          "แอปเปิ้ล",
+          "กุยช่าย",
+          "แตงกวา",
+          "แครอท",
+          "ไช้เท้า",
+          "ต้นหอม"
+        ]
+      },
+      "staples_used": [
+        "น้ำตาล",
+        "ซีอิ๊ว"
+      ],
+      "steps": [
+        "โรยเกลือขยำผักกาด พักให้ยุบ 2-3 ชม.",
+        "ล้างน้ำจนหายเค็มพอดี",
+        "ปั่นกระเทียม หอมใหญ่ แอปเปิ้ล ผสมแป้งข้าวเหนียวเคี่ยวข้น",
+        "ใส่พริกป่นชิมรส คลุกผักที่เตรียมไว้",
+        "อัดใส่โหลปิดฝาหมัก 12-16 ชม."
+      ],
+      "source": "A",
+      "image": {
+        "emoji": "🍽️",
+        "url": null
+      },
+      "gates": {
+        "protein": [],
+        "key": [
+          "ผักกาดขาว"
+        ]
+      }
+    },
+    {
+      "id": "kimchi-recipe-2",
+      "name": "กิมจิ (สูตร 2)",
+      "food_groups": [
+        "veg"
+      ],
+      "protein": [
+        "none"
+      ],
+      "method": "other",
+      "cuisine": "korean",
+      "flavor": [
+        "spicy",
+        "sour"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "ผักกาดขาว",
+          "ไช้เท้า",
+          "เกลือ",
+          "พริกเกาหลี",
+          "น้ำปลา",
+          "กระเทียม",
+          "ขิง"
+        ],
+        "optional": [
+          "หอมใหญ่",
+          "สาลี่/แอปเปิ้ล",
+          "ซอสสุกี้",
+          "ต้นหอม",
+          "แครอท",
+          "ใบกุยช่าย"
+        ]
+      },
+      "staples_used": [
+        "แป้งข้าวเหนียว",
+        "น้ำตาล"
+      ],
+      "steps": [
+        "หั่นผักกาดขาว ขยำเกลือ พักจนก้านนิ่ม ล้าง 3 รอบ บีบแห้ง",
+        "เคี่ยวแป้งข้าวเหนียวกับน้ำจนใส ใส่น้ำตาล พักเย็น",
+        "ผสมพริกเกาหลี น้ำปลา กระเทียม ขิง หอมใหญ่ปั่น ผลไม้ปั่น ซอสสุกี้ ลงแป้งเปียก",
+        "คลุกผักกาด ไช้เท้า ต้นหอม แครอท กุยช่ายให้ทั่ว",
+        "บรรจุโหลอัดแน่น พักนอกตู้เย็น 1 คืนแล้วแช่เย็น"
+      ],
+      "source": "A",
+      "image": {
+        "emoji": "🍽️",
+        "url": null
+      },
+      "gates": {
+        "protein": [],
+        "key": [
+          "ผักกาดขาว"
+        ]
+      }
+    },
+    {
+      "id": "khao-mok-kai",
+      "name": "ข้าวหมกไก่",
+      "food_groups": [
+        "carb",
+        "protein"
+      ],
+      "protein": [
+        "chicken"
+      ],
+      "method": "other",
+      "cuisine": "indian-me",
+      "flavor": [
+        "savory-rich",
+        "spicy"
+      ],
+      "carb_in_dish": true,
+      "ingredients": {
+        "core": [
+          "ข้าว",
+          "ไก่",
+          "เครื่องแกง",
+          "ผงกะหรี่"
+        ],
+        "optional": [
+          "ยี่หร่าบด",
+          "มะแขว่น",
+          "มัสตาร์ด",
+          "อบเชย",
+          "เม็ดผักชี"
+        ]
+      },
+      "staples_used": [
+        "น้ำมัน",
+        "เกลือ"
+      ],
+      "steps": [
+        "ตำเครื่องเทศ (ยี่หร่า มะแขว่น ผงกะหรี่ มัสตาร์ด อบเชย เม็ดผักชี) ให้เป็นผง",
+        "ผัดเครื่องเทศรวมกับเครื่องแกง",
+        "ผัดไก่กับเครื่องที่ตำ แล้วหุงรวมกับข้าว"
+      ],
+      "source": "A",
+      "image": {
+        "emoji": "🍚",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "chicken"
+        ],
+        "key": [
+          "เครื่องแกง",
+          "ผงกะหรี่"
+        ]
+      }
+    },
+    {
+      "id": "katsudon",
+      "name": "ข้าวหน้าหมู/ไก่ทอดคัตสึด้ง",
+      "food_groups": [
+        "carb",
+        "protein"
+      ],
+      "protein": [
+        "pork",
+        "chicken"
+      ],
+      "method": "deep-fry",
+      "cuisine": "japanese",
+      "flavor": [
+        "savory-rich",
+        "sweet"
+      ],
+      "carb_in_dish": true,
+      "ingredients": {
+        "core": [
+          "หมู/ไก่",
+          "แป้ง",
+          "ไข่",
+          "เกล็ดขนมปัง",
+          "ซุปปลา",
+          "หอมใหญ่",
+          "กะหล่ำปลี",
+          "ข้าวสวย"
+        ],
+        "optional": [
+          "เหล้า"
+        ]
+      },
+      "staples_used": [
+        "น้ำ",
+        "น้ำตาล",
+        "ซีอิ๊ว"
+      ],
+      "steps": [
+        "หมักหมู/ไก่ให้นุ่ม ชุบไข่→แป้ง→ไข่→เกล็ดขนมปัง ทอดแล้วหั่นชิ้น",
+        "เคี่ยวน้ำ ซุปปลา เหล้าเล็กน้อย หอมใหญ่จนสุก",
+        "ใส่กะหล่ำปลีและเนื้อทอดลงไป พอสุกตีไข่ราด",
+        "ปิดฝาจนไข่เกือบสุก ราดบนข้าวสวย"
+      ],
+      "source": "A",
+      "image": {
+        "emoji": "🍚",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "pork",
+          "chicken"
+        ],
+        "key": [
+          "กะหล่ำปลี"
+        ]
+      }
+    },
+    {
+      "id": "lon-pla-tu",
+      "name": "หลน",
+      "food_groups": [
+        "protein"
+      ],
+      "protein": [
+        "fish"
+      ],
+      "method": "simmer-stew",
+      "cuisine": "thai",
+      "flavor": [
+        "savory-rich",
+        "sweet"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "ปลาทู",
+          "กะทิ",
+          "ตะไคร้",
+          "หอมแดง",
+          "กะปิ"
+        ],
+        "optional": [
+          "พริกชี้ฟ้า"
+        ]
+      },
+      "staples_used": [
+        "น้ำปลา",
+        "น้ำตาลปี๊บ",
+        "มะขามเปียก"
+      ],
+      "steps": [
+        "เคี่ยวปลาทู กะทิ น้ำ ตะไคร้ หอมแดงรวมกัน",
+        "ปรุงรสด้วยน้ำตาลปี๊บ น้ำปลา มะขามเปียก กะปิ",
+        "เคี่ยวจนข้นหอม"
+      ],
+      "source": "A",
+      "image": {
+        "emoji": "🥘",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "fish"
+        ],
+        "key": [
+          "กะทิ",
+          "กะปิ"
+        ]
+      }
+    },
+    {
+      "id": "tom-sapparot-kraduk-on",
+      "name": "ต้มสับปะรดกระดูกอ่อน",
+      "food_groups": [
+        "protein"
+      ],
+      "protein": [
+        "pork"
+      ],
+      "method": "boil-soup",
+      "cuisine": "thai",
+      "flavor": [
+        "sour",
+        "spicy"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "กระดูกอ่อนหมู",
+          "สับปะรด",
+          "กะปิ",
+          "หอมแดง"
+        ],
+        "optional": []
+      },
+      "staples_used": [
+        "พริกไทย",
+        "น้ำปลา",
+        "น้ำตาล"
+      ],
+      "steps": [
+        "โขลกกะปิ หอมแดง พริกไทยให้ละเอียด",
+        "ผัดเครื่องที่โขลกให้หอม",
+        "เติมน้ำต้มกับกระดูกอ่อนและสับปะรด",
+        "ปรุงรสด้วยน้ำปลา น้ำตาล"
+      ],
+      "source": "A",
+      "image": {
+        "emoji": "🥘",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "pork"
+        ],
+        "key": [
+          "สับปะรด",
+          "กะปิ"
+        ]
+      }
+    },
+    {
+      "id": "salad-kaek",
+      "name": "สลัดแขก",
+      "food_groups": [
+        "veg"
+      ],
+      "protein": [
+        "egg"
+      ],
+      "method": "salad-yum",
+      "cuisine": "thai",
+      "flavor": [
+        "savory-rich",
+        "sweet"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "เครื่องแกงพะแนง",
+          "กะทิ",
+          "น้ำสลัดแขก",
+          "ไข่ต้ม",
+          "ผักสด"
+        ],
+        "optional": [
+          "หอมใหญ่"
+        ]
+      },
+      "staples_used": [],
+      "steps": [
+        "ทำน้ำสลัดโดยผสมเครื่องแกงพะแนง กะทิ น้ำสลัดแขก",
+        "ราดบนผักสด ไข่ต้ม หอมใหญ่"
+      ],
+      "source": "A",
+      "image": {
+        "emoji": "🥗",
+        "url": null
+      },
+      "gates": {
+        "protein": [],
+        "key": [
+          "เครื่องแกง",
+          "กะทิ"
+        ]
+      }
+    },
+    {
+      "id": "suki-haeng",
+      "name": "สุกี้แห้ง",
+      "food_groups": [
+        "protein",
+        "veg",
+        "carb"
+      ],
+      "protein": [
+        "squid",
+        "shrimp",
+        "chicken"
+      ],
+      "method": "stir-fry",
+      "cuisine": "thai",
+      "flavor": [
+        "savory-rich",
+        "spicy"
+      ],
+      "carb_in_dish": true,
+      "ingredients": {
+        "core": [
+          "ผักกาดขาว",
+          "ผักบุ้ง",
+          "วุ้นเส้น",
+          "น้ำจิ้มสุกี้",
+          "กระเทียม"
+        ],
+        "optional": [
+          "ลูกชิ้นปลา",
+          "ปลาหมึก",
+          "กุ้ง",
+          "ไก่",
+          "พริก"
+        ]
+      },
+      "staples_used": [
+        "น้ำมัน"
+      ],
+      "steps": [
+        "ลวกวุ้นเส้นพักไว้",
+        "ผัดกระเทียมพริกให้หอม ใส่เนื้อสัตว์ที่เลือก",
+        "ใส่ผักกาดขาว ผักบุ้ง ลูกชิ้น ผัดรวม",
+        "ราดน้ำจิ้มสุกี้คลุกให้เข้ากัน"
+      ],
+      "source": "A",
+      "image": {
+        "emoji": "🍚",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "squid",
+          "shrimp",
+          "chicken"
+        ],
+        "key": [
+          "วุ้นเส้น"
+        ]
+      }
+    },
+    {
+      "id": "kuychai-neung",
+      "name": "กุยช่ายนึ่ง",
+      "food_groups": [
+        "veg",
+        "carb"
+      ],
+      "protein": [
+        "none"
+      ],
+      "method": "steam",
+      "cuisine": "thai",
+      "flavor": [
+        "plain"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "แป้ง",
+          "กุยช่าย",
+          "น้ำร้อน"
+        ],
+        "optional": []
+      },
+      "staples_used": [
+        "เกลือ",
+        "น้ำเย็น"
+      ],
+      "steps": [
+        "ผสมแป้งกับน้ำเย็นตีให้เข้ากัน",
+        "ค่อยๆ หยอดน้ำร้อนคนจนเหนียว ใส่เกลือ",
+        "ใส่กุยช่ายคลุกให้เข้ากันแล้วนึ่งจนสุก"
+      ],
+      "source": "A",
+      "image": {
+        "emoji": "🍽️",
+        "url": null
+      },
+      "gates": {
+        "protein": [],
+        "key": [
+          "กุยช่าย"
+        ]
+      }
+    },
+    {
+      "id": "pad-thai",
+      "name": "ผัดไท",
+      "food_groups": [
+        "protein",
+        "carb"
+      ],
+      "protein": [
+        "shrimp",
+        "tofu"
+      ],
+      "method": "stir-fry",
+      "cuisine": "thai",
+      "flavor": [
+        "sweet",
+        "sour",
+        "savory-rich"
+      ],
+      "carb_in_dish": true,
+      "ingredients": {
+        "core": [
+          "เส้นผัดไทย",
+          "กุ้งสด",
+          "เต้าหู้",
+          "ไข่",
+          "ถั่วงอก",
+          "หัวไชโป๊ว",
+          "น้ำมะขามเปียก"
+        ],
+        "optional": [
+          "ถั่วลิสงบุบ",
+          "กุ้งแห้ง",
+          "ใบกุยช่าย",
+          "พริกป่น"
+        ]
+      },
+      "staples_used": [
+        "น้ำมัน",
+        "กระเทียม",
+        "น้ำปลา",
+        "น้ำตาลทราย"
+      ],
+      "steps": [
+        "เจียวกระเทียม ผัดกุ้งสดพอสุกตักขึ้น",
+        "ทอดเต้าหู้ ใส่หัวไชโป๊ว ถั่วลิสง กุ้งแห้ง ใส่เส้นผัดกับน้ำเล็กน้อย",
+        "ปรุงน้ำปลา น้ำตาล น้ำมะขามเปียก พริกป่น ตักขึ้นพัก",
+        "ตอกไข่ขยี้พอสุก โปะเส้นที่ผัดไว้ผัดเข้ากัน",
+        "ใส่ถั่วงอก ใบกุยช่าย กุ้งที่ผัดไว้ ผัดรวมให้เข้ากัน"
+      ],
+      "source": "A",
+      "image": {
+        "emoji": "🍜",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "shrimp",
+          "tofu"
+        ],
+        "key": [
+          "เส้นก๋วยเตี๋ยว"
+        ]
+      }
+    },
+    {
+      "id": "pizza",
+      "name": "พิซซ่า",
+      "food_groups": [
+        "carb",
+        "protein"
+      ],
+      "protein": [
+        "pork",
+        "beef"
+      ],
+      "method": "grill-bake",
+      "cuisine": "italian",
+      "flavor": [
+        "savory-rich"
+      ],
+      "carb_in_dish": true,
+      "ingredients": {
+        "core": [
+          "แป้งขนมปัง",
+          "ยีสต์",
+          "ซอสมะเขือเทศ",
+          "ชีส"
+        ],
+        "optional": [
+          "เนื้อสับ"
+        ]
+      },
+      "staples_used": [
+        "น้ำมัน",
+        "น้ำตาล"
+      ],
+      "steps": [
+        "นวดแป้งกับยีสต์ น้ำมัน น้ำตาลจนเนียน",
+        "ตีแป้งให้บางเต็มถาด",
+        "ทาซอสโบลองเนส โรยชีสและท็อปปิ้ง",
+        "อบไฟแรง ~300°C ประมาณ 10 นาที"
+      ],
+      "source": "A",
+      "image": {
+        "emoji": "🍚",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "pork",
+          "beef"
+        ],
+        "key": [
+          "มะเขือเทศ",
+          "ชีส"
+        ]
+      }
+    },
+    {
+      "id": "khanom-pang-bread-machine",
+      "name": "ขนมปัง (เครื่องทำสำเร็จ)",
+      "food_groups": [
+        "carb"
+      ],
+      "protein": [
+        "none"
+      ],
+      "method": "grill-bake",
+      "cuisine": "western",
+      "flavor": [
+        "plain",
+        "sweet"
+      ],
+      "carb_in_dish": true,
+      "ingredients": {
+        "core": [
+          "แป้ง",
+          "น้ำอุ่น",
+          "ยีสต์",
+          "น้ำมันมะกอก"
+        ],
+        "optional": []
+      },
+      "staples_used": [
+        "เกลือ",
+        "น้ำตาล"
+      ],
+      "steps": [
+        "ใส่น้ำอุ่น 45°C ตามด้วยน้ำตาลและยีสต์ พักให้ฟูเป็นโฟม ~10 นาที",
+        "ใส่แป้ง น้ำมัน เกลือ นวดด้วยเครื่อง",
+        "อบจนสุกหอม"
+      ],
+      "source": "A",
+      "image": {
+        "emoji": "🍚",
+        "url": null
+      },
+      "gates": {
+        "protein": [],
+        "key": []
+      }
+    },
+    {
+      "id": "tofu-homemade",
+      "name": "เต้าหู้ (โฮมเมด)",
+      "food_groups": [
+        "protein"
+      ],
+      "protein": [
+        "tofu"
+      ],
+      "method": "other",
+      "cuisine": "thai",
+      "flavor": [
+        "plain"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "ถั่วเหลือง",
+          "น้ำดีเกลือ",
+          "น้ำ"
+        ],
+        "optional": []
+      },
+      "staples_used": [],
+      "steps": [
+        "แช่ถั่วเหลืองแล้วปั่นกับน้ำ กรองเอาน้ำเต้าหู้",
+        "ต้มน้ำเต้าหู้ที่ 70-80°C",
+        "ใส่น้ำดีเกลือให้จับตัวเป็นเต้าหู้ พักให้เซ็ตตัว"
+      ],
+      "source": "A",
+      "image": {
+        "emoji": "🍽️",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "tofu"
+        ],
+        "key": []
+      }
+    },
+    {
+      "id": "tao-thueng",
+      "name": "เต้าทึง",
+      "food_groups": [
+        "dessert"
+      ],
+      "protein": [
+        "none"
+      ],
+      "method": "boil-soup",
+      "cuisine": "chinese",
+      "flavor": [
+        "sweet"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "ถั่วเขียวซีก",
+          "เดือย",
+          "ถั่วแดง",
+          "น้ำตาล"
+        ],
+        "optional": []
+      },
+      "staples_used": [],
+      "steps": [
+        "แช่ถั่วทุกชนิดอย่างน้อย 3 ชม.",
+        "ต้มถั่วเขียวซีกและใช้หม้อแรงดันต้มถั่วชนิดอื่นจนนุ่ม",
+        "เก็บน้ำต้มถั่วผสมน้ำตาลทำเป็นน้ำเชื่อม",
+        "รวมถั่วทุกชนิดเสิร์ฟพร้อมน้ำเชื่อม"
+      ],
+      "source": "A",
+      "image": {
+        "emoji": "🧁",
+        "url": null
+      },
+      "gates": {
+        "protein": [],
+        "key": []
+      }
+    },
+    {
+      "id": "ovaltine-pan",
+      "name": "โอวัลตินปั่น",
+      "food_groups": [
+        "dessert"
+      ],
+      "protein": [
+        "none"
+      ],
+      "method": "other",
+      "cuisine": "thai",
+      "flavor": [
+        "sweet"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "โอวัลติน",
+          "กล้วย"
+        ],
+        "optional": [
+          "ถั่วแดง"
+        ]
+      },
+      "staples_used": [],
+      "steps": [
+        "ปั่นโอวัลติน กล้วยหั่น และถั่วแดงรวมกันจนเนียน"
+      ],
+      "source": "A",
+      "image": {
+        "emoji": "🧁",
+        "url": null
+      },
+      "gates": {
+        "protein": [],
+        "key": []
+      }
+    },
+    {
+      "id": "namsom-kluay",
+      "name": "น้ำส้มกล้วย",
+      "food_groups": [
+        "dessert"
+      ],
+      "protein": [
+        "none"
+      ],
+      "method": "other",
+      "cuisine": "thai",
+      "flavor": [
+        "sweet"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "น้ำ",
+          "กล้วย",
+          "น้ำตาล"
+        ],
+        "optional": []
+      },
+      "staples_used": [],
+      "steps": [
+        "ปั่นกล้วยกับน้ำและน้ำตาลให้เข้ากัน",
+        "กรองหรือดื่มได้ทันที"
+      ],
+      "source": "A",
+      "image": {
+        "emoji": "🧁",
+        "url": null
+      },
+      "gates": {
+        "protein": [],
+        "key": []
+      }
+    },
+    {
+      "id": "apple-pie",
+      "name": "แอปเปิ้ลพาย",
+      "food_groups": [
+        "dessert",
+        "carb"
+      ],
+      "protein": [
+        "none"
+      ],
+      "method": "grill-bake",
+      "cuisine": "western",
+      "flavor": [
+        "sweet"
+      ],
+      "carb_in_dish": true,
+      "ingredients": {
+        "core": [
+          "แป้งอเนกประสงค์",
+          "เนย",
+          "ผลไม้(แอปเปิ้ล)",
+          "อบเชย"
+        ],
+        "optional": [
+          "แป้งข้าวโพด"
+        ]
+      },
+      "staples_used": [
+        "เกลือ",
+        "ผงฟู",
+        "น้ำเย็น"
+      ],
+      "steps": [
+        "ผสมแป้งแห้งกับเนยและส่วนผสม ค่อยเติมน้ำนวดแล้วแช่เย็นครึ่ง ชม.",
+        "แบ่งแป้ง 2 ก้อน กดลงพิมพ์ จิ้มรูด้วยส้อม",
+        "ผสมไส้แอปเปิ้ลกับอบเชย แป้งข้าวโพด เกลือ ใส่ลงพิมพ์",
+        "ปิดหน้าด้วยแป้งอีกก้อน อบ 300°C ประมาณ 15 นาที"
+      ],
+      "source": "A",
+      "image": {
+        "emoji": "🧁",
+        "url": null
+      },
+      "gates": {
+        "protein": [],
+        "key": []
+      }
+    },
+    {
+      "id": "banana-cake",
+      "name": "เค้กกล้วยหอม",
+      "food_groups": [
+        "dessert",
+        "carb"
+      ],
+      "protein": [
+        "egg"
+      ],
+      "method": "grill-bake",
+      "cuisine": "western",
+      "flavor": [
+        "sweet"
+      ],
+      "carb_in_dish": true,
+      "ingredients": {
+        "core": [
+          "กล้วยหอมสุก",
+          "แป้งสาลี",
+          "เนย",
+          "ไข่ไก่",
+          "น้ำตาลทราย"
+        ],
+        "optional": [
+          "นมสด",
+          "วานิลลา"
+        ]
+      },
+      "staples_used": [
+        "ผงฟู",
+        "เบกกิ้งโซดา"
+      ],
+      "steps": [
+        "บดกล้วยหอมผสมกับนม วานิลลา",
+        "ตีเนยกับน้ำตาลจนฟู ใส่ไข่ทีละฟอง",
+        "ผสมแป้ง ผงฟู เบกกิ้งโซดา สลับกับกล้วยบด",
+        "เทใส่พิมพ์ อบ 175°C 20 นาที"
+      ],
+      "source": "A",
+      "image": {
+        "emoji": "🧁",
+        "url": null
+      },
+      "gates": {
+        "protein": [],
+        "key": []
+      }
+    },
+    {
+      "id": "hummus",
+      "name": "Hummus (ฮัมมัส)",
+      "food_groups": [
+        "protein"
+      ],
+      "protein": [
+        "none"
+      ],
+      "method": "other",
+      "cuisine": "indian-me",
+      "flavor": [
+        "savory-rich",
+        "sour"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "ถั่วชิกพี",
+          "ทาฮินี่",
+          "น้ำมะนาว",
+          "กระเทียม",
+          "น้ำมันมะกอก"
+        ],
+        "optional": [
+          "ผงยี่หร่า",
+          "เมล็ดผักชี"
+        ]
+      },
+      "staples_used": [
+        "เกลือ",
+        "พริกไทย"
+      ],
+      "steps": [
+        "ต้มถั่วชิกพีให้สุกนุ่ม พักเย็น",
+        "ปั่นถั่วชิกพีกับทาฮินี่ น้ำมะนาว เกลือ ผงยี่หร่า กระเทียม",
+        "เติมน้ำมันมะกอกและน้ำถ้าเหนียวเกินไปจนเนียน"
+      ],
+      "source": "A",
+      "image": {
+        "emoji": "🍽️",
+        "url": null
+      },
+      "gates": {
+        "protein": [],
+        "key": [
+          "ถั่วชิกพี"
+        ]
+      }
+    },
+    {
+      "id": "kluay-cheuam",
+      "name": "กล้วยเชื่อม",
+      "food_groups": [
+        "dessert"
+      ],
+      "protein": [
+        "none"
+      ],
+      "method": "simmer-stew",
+      "cuisine": "thai",
+      "flavor": [
+        "sweet"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "กล้วย",
+          "น้ำตาล",
+          "น้ำตาลปี๊บ"
+        ],
+        "optional": []
+      },
+      "staples_used": [
+        "เกลือ",
+        "มะนาว"
+      ],
+      "steps": [
+        "ต้มน้ำกับน้ำตาลและน้ำตาลปี๊บให้ละลาย",
+        "ใส่กล้วยเชื่อมไฟอ่อนจนน้ำเชื่อมซึมเข้าเนื้อกล้วย",
+        "ปรุงรสด้วยเกลือและมะนาวเล็กน้อย"
+      ],
+      "source": "A",
+      "image": {
+        "emoji": "🧁",
+        "url": null
+      },
+      "gates": {
+        "protein": [],
+        "key": []
+      }
+    },
+    {
+      "id": "malako-dong",
+      "name": "มะละกอดอง",
+      "food_groups": [
+        "veg"
+      ],
+      "protein": [
+        "none"
+      ],
+      "method": "other",
+      "cuisine": "thai",
+      "flavor": [
+        "sour",
+        "sweet"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "มะละกอ",
+          "น้ำตาล",
+          "น้ำส้มสายชู"
+        ],
+        "optional": []
+      },
+      "staples_used": [
+        "เกลือ"
+      ],
+      "steps": [
+        "ตวงมะละกอที่หั่นแล้ว",
+        "ตั้งไฟละลายน้ำตาลกับน้ำส้มสายชูและเกลือ รอเย็น",
+        "เทน้ำดองใส่โหลที่มีมะละกอ หมักจนได้ที่"
+      ],
+      "source": "A",
+      "image": {
+        "emoji": "🍽️",
+        "url": null
+      },
+      "gates": {
+        "protein": [],
+        "key": [
+          "มะละกอ"
+        ]
+      }
+    },
+    {
+      "id": "dong-pak-sian",
+      "name": "ดองผักเสี้ยน",
+      "food_groups": [
+        "veg"
+      ],
+      "protein": [
+        "none"
+      ],
+      "method": "other",
+      "cuisine": "thai",
+      "flavor": [
+        "sour",
+        "savory-rich"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "ผักเสี้ยน",
+          "เกลือ",
+          "ข้าวเหนียวนึ่ง"
+        ],
+        "optional": []
+      },
+      "staples_used": [
+        "น้ำตาล"
+      ],
+      "steps": [
+        "ล้างผักเสี้ยน ผึ่งให้สะเด็ดน้ำ",
+        "ขยำกับเกลือจนผักนิ่ม",
+        "ใส่ข้าวเหนียวนึ่งคลุกให้ทั่ว",
+        "หมักในอ่างเคลือบ 3 วันจึงรับประทานได้"
+      ],
+      "source": "A",
+      "image": {
+        "emoji": "🍽️",
+        "url": null
+      },
+      "gates": {
+        "protein": [],
+        "key": [
+          "ข้าวเหนียว"
+        ]
+      }
+    },
+    {
+      "id": "tua-khiao-tom",
+      "name": "ถั่วเขียวต้ม",
+      "food_groups": [
+        "dessert"
+      ],
+      "protein": [
+        "none"
+      ],
+      "method": "boil-soup",
+      "cuisine": "thai",
+      "flavor": [
+        "sweet"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "ถั่วเขียว",
+          "น้ำตาล"
+        ],
+        "optional": []
+      },
+      "staples_used": [],
+      "steps": [
+        "แช่ถั่วเขียวประมาณ 30 นาที",
+        "ต้มถั่วกับน้ำ 3 เท่าจนนุ่ม",
+        "ปรุงรสด้วยน้ำตาลตามชอบ"
+      ],
+      "source": "A",
+      "image": {
+        "emoji": "🧁",
+        "url": null
+      },
+      "gates": {
+        "protein": [],
+        "key": []
+      }
+    },
+    {
+      "id": "menu-kalampli-video",
+      "name": "เมนูกะหล่ำปลี",
+      "food_groups": [
+        "veg"
+      ],
+      "protein": [
+        "none"
+      ],
+      "method": "stir-fry",
+      "cuisine": "thai",
+      "flavor": [
+        "savory-rich"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "กะหล่ำปลี",
+          "น้ำปลา"
+        ],
+        "optional": [
+          "กระเทียม"
+        ]
+      },
+      "staples_used": [
+        "น้ำมัน"
+      ],
+      "steps": [
+        "ผัดกะหล่ำปลีกับกระเทียมและน้ำมันพอสุกกรอบ",
+        "ปรุงรสด้วยน้ำปลา"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍽️",
+        "url": null
+      },
+      "gates": {
+        "protein": [],
+        "key": [
+          "กะหล่ำปลี"
+        ]
+      }
+    },
+    {
+      "id": "khao-khai-khon-moo-see-io",
+      "name": "ข้าวไข่ข้นหมูซีอิ้ว พริกไทย",
+      "food_groups": [
+        "carb",
+        "protein"
+      ],
+      "protein": [
+        "pork",
+        "egg"
+      ],
+      "method": "stir-fry",
+      "cuisine": "thai",
+      "flavor": [
+        "savory-rich"
+      ],
+      "carb_in_dish": true,
+      "ingredients": {
+        "core": [
+          "ข้าวสวย",
+          "หมูสับ",
+          "ไข่",
+          "ซีอิ๊ว"
+        ],
+        "optional": [
+          "ต้นหอม"
+        ]
+      },
+      "staples_used": [
+        "น้ำมัน",
+        "พริกไทย",
+        "กระเทียม"
+      ],
+      "steps": [
+        "ผัดหมูสับกับกระเทียมให้สุก ปรุงซีอิ๊ว",
+        "ตีไข่เทราดให้ข้นเป็นครีม",
+        "ราดบนข้าวสวย โรยพริกไทย"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍳",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "pork"
+        ],
+        "key": []
+      }
+    },
+    {
+      "id": "khao-khai-khon-cheese",
+      "name": "ข้าวไข่ข้นชีส",
+      "food_groups": [
+        "carb",
+        "protein"
+      ],
+      "protein": [
+        "egg"
+      ],
+      "method": "stir-fry",
+      "cuisine": "thai",
+      "flavor": [
+        "savory-rich"
+      ],
+      "carb_in_dish": true,
+      "ingredients": {
+        "core": [
+          "ข้าวสวย",
+          "ไข่",
+          "ชีส"
+        ],
+        "optional": [
+          "นม"
+        ]
+      },
+      "staples_used": [
+        "น้ำมัน",
+        "เกลือ"
+      ],
+      "steps": [
+        "ตีไข่กับนมเล็กน้อย",
+        "ผัดไข่ไฟอ่อนให้ข้นแบบครีม ใส่ชีสละลาย",
+        "ราดบนข้าวสวย"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍳",
+        "url": null
+      },
+      "gates": {
+        "protein": [],
+        "key": [
+          "ชีส"
+        ]
+      }
+    },
+    {
+      "id": "khao-haeng-talay-ruam",
+      "name": "ข้าวแห้งทะเลรวม",
+      "food_groups": [
+        "carb",
+        "protein"
+      ],
+      "protein": [
+        "shrimp",
+        "squid",
+        "seafood"
+      ],
+      "method": "stir-fry",
+      "cuisine": "thai",
+      "flavor": [
+        "savory-rich",
+        "spicy"
+      ],
+      "carb_in_dish": true,
+      "ingredients": {
+        "core": [
+          "ข้าวสวย",
+          "ทะเลรวม",
+          "กระเทียม",
+          "พริก"
+        ],
+        "optional": [
+          "ผักบุ้ง"
+        ]
+      },
+      "staples_used": [
+        "น้ำมัน",
+        "น้ำปลา",
+        "ซอสหอยนางรม"
+      ],
+      "steps": [
+        "ผัดกระเทียมพริกให้หอม ใส่ทะเลรวมผัดให้สุก",
+        "ปรุงรสด้วยน้ำปลาซอสหอยนางรม",
+        "ตักราดข้าวสวย"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍚",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "shrimp",
+          "squid",
+          "seafood"
+        ],
+        "key": []
+      }
+    },
+    {
+      "id": "khao-man-sed-nuea-nong-kai",
+      "name": "ข้าวมันเศษเนื้อน่องไก่",
+      "food_groups": [
+        "carb",
+        "protein"
+      ],
+      "protein": [
+        "chicken"
+      ],
+      "method": "steam",
+      "cuisine": "thai",
+      "flavor": [
+        "savory-rich"
+      ],
+      "carb_in_dish": true,
+      "ingredients": {
+        "core": [
+          "ข้าว",
+          "เนื้อน่องไก่",
+          "กระเทียม",
+          "ขิง"
+        ],
+        "optional": [
+          "แตงกวา",
+          "ผักชี"
+        ]
+      },
+      "staples_used": [
+        "น้ำมัน",
+        "เกลือ",
+        "ซีอิ๊ว"
+      ],
+      "steps": [
+        "ต้มน่องไก่กับขิงจนสุก พักน้ำต้มไว้ทำน้ำซุป",
+        "หุงข้าวกับน้ำมันกระเทียมและน้ำต้มไก่",
+        "หั่นไก่เสิร์ฟพร้อมข้าวมันและน้ำจิ้ม"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍚",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "chicken"
+        ],
+        "key": []
+      }
+    },
+    {
+      "id": "khao-pad-namprik-kakmoo",
+      "name": "ข้าวผัดน้ำพริกกากหมู",
+      "food_groups": [
+        "carb",
+        "protein"
+      ],
+      "protein": [
+        "pork"
+      ],
+      "method": "stir-fry",
+      "cuisine": "thai",
+      "flavor": [
+        "spicy",
+        "savory-rich"
+      ],
+      "carb_in_dish": true,
+      "ingredients": {
+        "core": [
+          "ข้าวสวย",
+          "น้ำพริกกากหมู",
+          "กากหมู"
+        ],
+        "optional": [
+          "ไข่",
+          "ผักสด"
+        ]
+      },
+      "staples_used": [
+        "น้ำมัน",
+        "น้ำปลา"
+      ],
+      "steps": [
+        "ผัดน้ำพริกกากหมูกับน้ำมันให้หอม",
+        "ใส่ข้าวสวยผัดคลุกให้เข้ากัน",
+        "โรยกากหมูเสิร์ฟพร้อมผักสด"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍚",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "pork"
+        ],
+        "key": []
+      }
+    },
+    {
+      "id": "khao-moo-pad-sauce-korea",
+      "name": "ข้าวหมูผัดซอสเกาหลี",
+      "food_groups": [
+        "carb",
+        "protein"
+      ],
+      "protein": [
+        "pork"
+      ],
+      "method": "stir-fry",
+      "cuisine": "korean",
+      "flavor": [
+        "sweet",
+        "spicy",
+        "savory-rich"
+      ],
+      "carb_in_dish": true,
+      "ingredients": {
+        "core": [
+          "ข้าวสวย",
+          "หมูสไลซ์",
+          "ซอสเกาหลี (โคชูจัง)",
+          "หอมใหญ่"
+        ],
+        "optional": [
+          "งาขาว",
+          "ต้นหอม"
+        ]
+      },
+      "staples_used": [
+        "น้ำมัน",
+        "กระเทียม",
+        "น้ำตาล"
+      ],
+      "steps": [
+        "หมักหมูกับซอสเกาหลี",
+        "ผัดหมูกับกระเทียมหอมใหญ่จนสุก",
+        "ราดบนข้าวสวย โรยงา"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍚",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "pork"
+        ],
+        "key": [
+          "ซอสเกาหลี"
+        ]
+      }
+    },
+    {
+      "id": "khao-na-nuea-wagyu-mayo",
+      "name": "ข้าวหน้าเนื้อวากิว มายองเนส",
+      "food_groups": [
+        "carb",
+        "protein"
+      ],
+      "protein": [
+        "beef"
+      ],
+      "method": "grill-bake",
+      "cuisine": "japanese",
+      "flavor": [
+        "savory-rich"
+      ],
+      "carb_in_dish": true,
+      "ingredients": {
+        "core": [
+          "ข้าวสวย",
+          "เนื้อวากิว",
+          "มายองเนส"
+        ],
+        "optional": [
+          "ต้นหอม",
+          "งา"
+        ]
+      },
+      "staples_used": [
+        "ซีอิ๊ว",
+        "เกลือ",
+        "พริกไทย"
+      ],
+      "steps": [
+        "ย่างเนื้อวากิวให้สุกตามชอบ พักแล้วหั่นบาง",
+        "วางบนข้าวสวยร้อน",
+        "ราดมายองเนสและซีอิ๊วเล็กน้อย"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍚",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "beef"
+        ],
+        "key": [
+          "มายองเนส"
+        ]
+      }
+    },
+    {
+      "id": "khao-na-nuea-korea-cheese-hotsauce",
+      "name": "ข้าวหน้าเนื้อเกาหลีชีส ฮอตซอส",
+      "food_groups": [
+        "carb",
+        "protein"
+      ],
+      "protein": [
+        "beef"
+      ],
+      "method": "stir-fry",
+      "cuisine": "korean",
+      "flavor": [
+        "spicy",
+        "savory-rich"
+      ],
+      "carb_in_dish": true,
+      "ingredients": {
+        "core": [
+          "ข้าวสวย",
+          "เนื้อวัว",
+          "ซอสเกาหลี",
+          "ชีส",
+          "ฮอตซอส"
+        ],
+        "optional": [
+          "ต้นหอม"
+        ]
+      },
+      "staples_used": [
+        "น้ำมัน",
+        "กระเทียม"
+      ],
+      "steps": [
+        "ผัดเนื้อวัวกับซอสเกาหลีและฮอตซอสจนสุก",
+        "ราดบนข้าวสวย โรยชีสละลาย"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍚",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "beef"
+        ],
+        "key": [
+          "ซอสเกาหลี",
+          "ชีส"
+        ]
+      }
+    },
+    {
+      "id": "khao-yum",
+      "name": "ข้าวยำ",
+      "food_groups": [
+        "carb",
+        "veg",
+        "protein"
+      ],
+      "protein": [
+        "shrimp",
+        "none"
+      ],
+      "method": "salad-yum",
+      "cuisine": "thai",
+      "flavor": [
+        "spicy",
+        "sour"
+      ],
+      "carb_in_dish": true,
+      "ingredients": {
+        "core": [
+          "ข้าวสวย",
+          "น้ำบูดู",
+          "ผักสมุนไพรซอย",
+          "ถั่วฝักยาว",
+          "มะพร้าวคั่ว"
+        ],
+        "optional": [
+          "กุ้งแห้ง",
+          "มะนาว"
+        ]
+      },
+      "staples_used": [],
+      "steps": [
+        "จัดข้าวสวยและผักสมุนไพรซอยใส่จาน",
+        "คลุกน้ำบูดูปรุงรส",
+        "โรยมะพร้าวคั่วกุ้งแห้ง เสิร์ฟพร้อมมะนาว"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🥗",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "shrimp"
+        ],
+        "key": [
+          "มะพร้าว"
+        ]
+      }
+    },
+    {
+      "id": "khao-sauce-bbq-salad",
+      "name": "ข้าวซอสบาร์บีคิว สลัด",
+      "food_groups": [
+        "carb",
+        "protein",
+        "veg"
+      ],
+      "protein": [
+        "chicken",
+        "pork"
+      ],
+      "method": "grill-bake",
+      "cuisine": "western",
+      "flavor": [
+        "sweet",
+        "savory-rich"
+      ],
+      "carb_in_dish": true,
+      "ingredients": {
+        "core": [
+          "ข้าวสวย",
+          "เนื้อย่าง(ไก่/หมู)",
+          "ซอสบาร์บีคิว",
+          "ผักสลัด"
+        ],
+        "optional": [
+          "มายองเนส"
+        ]
+      },
+      "staples_used": [
+        "น้ำมัน",
+        "เกลือ",
+        "พริกไทย"
+      ],
+      "steps": [
+        "ย่างเนื้อไก่หรือหมูให้สุก ทาซอสบาร์บีคิว",
+        "หั่นเนื้อวางบนข้าวสวยพร้อมผักสลัด",
+        "ราดซอสบาร์บีคิวเพิ่ม"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍚",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "chicken",
+          "pork"
+        ],
+        "key": []
+      }
+    },
+    {
+      "id": "khao-tom-kai-goong-moo",
+      "name": "ข้าวต้มไก่ กุ้ง หมู",
+      "food_groups": [
+        "carb",
+        "protein"
+      ],
+      "protein": [
+        "chicken",
+        "shrimp",
+        "pork"
+      ],
+      "method": "boil-soup",
+      "cuisine": "thai",
+      "flavor": [
+        "plain",
+        "savory-rich"
+      ],
+      "carb_in_dish": true,
+      "ingredients": {
+        "core": [
+          "ข้าวสวย",
+          "เนื้อสัตว์(ไก่/กุ้ง/หมู)",
+          "น้ำซุป"
+        ],
+        "optional": [
+          "ขิงซอย",
+          "ต้นหอม",
+          "ผักชี"
+        ]
+      },
+      "staples_used": [
+        "เกลือ",
+        "ซีอิ๊ว",
+        "พริกไทย"
+      ],
+      "steps": [
+        "ต้มน้ำซุปให้เดือด ใส่ข้าวสวยต้มจนนุ่ม",
+        "ใส่เนื้อสัตว์ที่เลือกต้มจนสุก",
+        "ปรุงรสด้วยเกลือซีอิ๊ว โรยขิงต้นหอม"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🥘",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "chicken",
+          "shrimp",
+          "pork"
+        ],
+        "key": []
+      }
+    },
+    {
+      "id": "khao-tom-pla-goong-kai-baan",
+      "name": "ข้าวต้มปลา / ต้มกุ้ง / ต้มไก่บ้าน",
+      "food_groups": [
+        "carb",
+        "protein"
+      ],
+      "protein": [
+        "fish",
+        "shrimp",
+        "chicken"
+      ],
+      "method": "boil-soup",
+      "cuisine": "thai",
+      "flavor": [
+        "plain",
+        "savory-rich"
+      ],
+      "carb_in_dish": true,
+      "ingredients": {
+        "core": [
+          "ข้าวสวย",
+          "ปลา/กุ้ง/ไก่บ้าน",
+          "น้ำซุป",
+          "ขิง"
+        ],
+        "optional": [
+          "ต้นหอม",
+          "ผักชี",
+          "กระเทียมเจียว"
+        ]
+      },
+      "staples_used": [
+        "เกลือ",
+        "ซีอิ๊ว",
+        "พริกไทย"
+      ],
+      "steps": [
+        "ต้มน้ำซุปกับขิงให้หอม",
+        "ใส่ข้าวสวยและเนื้อสัตว์ที่เลือกต้มจนสุกนุ่ม",
+        "ปรุงรส โรยต้นหอมผักชีกระเทียมเจียว"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🥘",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "fish",
+          "shrimp",
+          "chicken"
+        ],
+        "key": []
+      }
+    },
+    {
+      "id": "khao-soi-kaeng-kai",
+      "name": "ข้าวซอยแกงไก่",
+      "food_groups": [
+        "carb",
+        "protein"
+      ],
+      "protein": [
+        "chicken"
+      ],
+      "method": "curry",
+      "cuisine": "thai",
+      "flavor": [
+        "savory-rich",
+        "spicy"
+      ],
+      "carb_in_dish": true,
+      "ingredients": {
+        "core": [
+          "เส้นบะหมี่",
+          "ไก่",
+          "เครื่องแกงข้าวซอย",
+          "กะทิ"
+        ],
+        "optional": [
+          "หอมแดงดอง",
+          "ผักกาดดอง",
+          "มะนาว"
+        ]
+      },
+      "staples_used": [
+        "น้ำปลา",
+        "น้ำตาล"
+      ],
+      "steps": [
+        "ผัดเครื่องแกงข้าวซอยกับกะทิให้แตกมัน",
+        "ใส่ไก่และกะทิที่เหลือ ต้มจนไก่สุก",
+        "ปรุงรสด้วยน้ำปลาน้ำตาล",
+        "ลวกเส้นบะหมี่ ราดน้ำแกง โรยหน้าด้วยเส้นทอดกรอบ"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍜",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "chicken"
+        ],
+        "key": [
+          "เครื่องแกง",
+          "กะทิ",
+          "เส้นราเมน"
+        ]
+      }
+    },
+    {
+      "id": "bibimbap",
+      "name": "บิบิมบับ",
+      "food_groups": [
+        "carb",
+        "protein",
+        "veg"
+      ],
+      "protein": [
+        "beef",
+        "egg"
+      ],
+      "method": "stir-fry",
+      "cuisine": "korean",
+      "flavor": [
+        "savory-rich",
+        "spicy"
+      ],
+      "carb_in_dish": true,
+      "ingredients": {
+        "core": [
+          "ข้าวสวย",
+          "เนื้อวัวสไลซ์",
+          "ไข่ดาว",
+          "ผักรวม(แครอท ผักโขม ถั่วงอก)",
+          "โคชูจัง"
+        ],
+        "optional": [
+          "สาหร่าย",
+          "งา"
+        ]
+      },
+      "staples_used": [
+        "น้ำมัน",
+        "กระเทียม",
+        "ซีอิ๊ว"
+      ],
+      "steps": [
+        "ผัดผักแต่ละชนิดแยกกันให้สุกพอดี",
+        "ผัดเนื้อวัวกับกระเทียมซีอิ๊ว",
+        "จัดข้าวสวยใส่ชาม เรียงผักและเนื้อ ไข่ดาวตรงกลาง",
+        "คลุกกับโคชูจังก่อนรับประทาน"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍚",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "beef"
+        ],
+        "key": [
+          "ซอสเกาหลี"
+        ]
+      }
+    },
+    {
+      "id": "jok",
+      "name": "โจ๊ก",
+      "food_groups": [
+        "carb",
+        "protein"
+      ],
+      "protein": [
+        "pork",
+        "egg"
+      ],
+      "method": "boil-soup",
+      "cuisine": "thai",
+      "flavor": [
+        "plain",
+        "savory-rich"
+      ],
+      "carb_in_dish": true,
+      "ingredients": {
+        "core": [
+          "ข้าวต้มบด",
+          "หมูสับ",
+          "ไข่"
+        ],
+        "optional": [
+          "ขิงซอย",
+          "ต้นหอม",
+          "กระเทียมเจียว"
+        ]
+      },
+      "staples_used": [
+        "เกลือ",
+        "ซีอิ๊ว",
+        "พริกไทย"
+      ],
+      "steps": [
+        "ต้มข้าวจนเปื่อยเป็นโจ๊ก",
+        "ปั้นหมูสับใส่ลงต้มจนสุก",
+        "ตอกไข่ใส่ ปรุงรส โรยขิงต้นหอมกระเทียมเจียว"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🥘",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "pork"
+        ],
+        "key": []
+      }
+    },
+    {
+      "id": "kare-ramen",
+      "name": "kare ramen (กะหรี่ราเมน)",
+      "food_groups": [
+        "carb",
+        "protein"
+      ],
+      "protein": [
+        "pork",
+        "chicken"
+      ],
+      "method": "boil-soup",
+      "cuisine": "japanese",
+      "flavor": [
+        "spicy",
+        "savory-rich"
+      ],
+      "carb_in_dish": true,
+      "ingredients": {
+        "core": [
+          "เส้นราเมน",
+          "ผงกะหรี่",
+          "น้ำซุป",
+          "หมู/ไก่"
+        ],
+        "optional": [
+          "ต้นหอม",
+          "ไข่ต้ม"
+        ]
+      },
+      "staples_used": [
+        "ซีอิ๊ว",
+        "กระเทียม"
+      ],
+      "steps": [
+        "ผัดผงกะหรี่กับกระเทียมให้หอม",
+        "เติมน้ำซุปเคี่ยวกับเนื้อสัตว์จนสุก",
+        "ลวกเส้นราเมน ราดน้ำซุปกะหรี่"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍜",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "pork",
+          "chicken"
+        ],
+        "key": [
+          "เส้นราเมน",
+          "ผงกะหรี่"
+        ]
+      }
+    },
+    {
+      "id": "ramen-moo-tun",
+      "name": "ราเม็งหมูตุ๋น",
+      "food_groups": [
+        "carb",
+        "protein"
+      ],
+      "protein": [
+        "pork"
+      ],
+      "method": "simmer-stew",
+      "cuisine": "japanese",
+      "flavor": [
+        "savory-rich"
+      ],
+      "carb_in_dish": true,
+      "ingredients": {
+        "core": [
+          "เส้นราเมน",
+          "หมูสามชั้น",
+          "น้ำซุปกระดูก",
+          "ซีอิ๊ว"
+        ],
+        "optional": [
+          "ไข่ต้มยางมะตูม",
+          "ต้นหอม",
+          "สาหร่าย"
+        ]
+      },
+      "staples_used": [
+        "น้ำตาล",
+        "กระเทียม"
+      ],
+      "steps": [
+        "ตุ๋นหมูสามชั้นกับซีอิ๊วน้ำตาลจนนุ่ม",
+        "เคี่ยวน้ำซุปกระดูกให้เข้มข้น",
+        "ลวกเส้นราเมน ใส่หมูตุ๋น ราดน้ำซุป"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍜",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "pork"
+        ],
+        "key": [
+          "เส้นราเมน"
+        ]
+      }
+    },
+    {
+      "id": "ramyeon",
+      "name": "รามยอน",
+      "food_groups": [
+        "carb",
+        "protein"
+      ],
+      "protein": [
+        "egg",
+        "none"
+      ],
+      "method": "boil-soup",
+      "cuisine": "korean",
+      "flavor": [
+        "spicy",
+        "savory-rich"
+      ],
+      "carb_in_dish": true,
+      "ingredients": {
+        "core": [
+          "เส้นบะหมี่เกาหลี",
+          "ซองปรุงรส",
+          "ไข่"
+        ],
+        "optional": [
+          "ต้นหอม",
+          "กิมจิ",
+          "ชีส"
+        ]
+      },
+      "staples_used": [],
+      "steps": [
+        "ต้มน้ำเดือด ใส่เส้นและซองปรุงรส",
+        "ตอกไข่ลงต้ม",
+        "ใส่ต้นหอมหรือกิมจิเสิร์ฟร้อน"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍜",
+        "url": null
+      },
+      "gates": {
+        "protein": [],
+        "key": [
+          "เส้นราเมน"
+        ]
+      }
+    },
+    {
+      "id": "naengmyeon",
+      "name": "บะหมี่เย็น",
+      "food_groups": [
+        "carb",
+        "protein"
+      ],
+      "protein": [
+        "beef",
+        "egg"
+      ],
+      "method": "boil-soup",
+      "cuisine": "korean",
+      "flavor": [
+        "sour",
+        "plain"
+      ],
+      "carb_in_dish": true,
+      "ingredients": {
+        "core": [
+          "เส้นบะหมี่เย็น(นังเมียน)",
+          "น้ำซุปเย็น",
+          "แตงกวา",
+          "ไข่ต้ม"
+        ],
+        "optional": [
+          "เนื้อวัวต้ม",
+          "สาลี่"
+        ]
+      },
+      "staples_used": [
+        "น้ำส้มสายชู",
+        "น้ำตาล"
+      ],
+      "steps": [
+        "ต้มเส้นแล้วแช่น้ำเย็นจัด",
+        "จัดเส้นใส่ชาม เติมน้ำซุปเย็น",
+        "ใส่แตงกวา ไข่ต้ม เนื้อวัวต้มหั่นบาง"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍜",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "beef"
+        ],
+        "key": []
+      }
+    },
+    {
+      "id": "spaghetti-carbonara-nampikpao",
+      "name": "สปาเกตตี คาโบนารา น้ำพริกเผา",
+      "food_groups": [
+        "carb",
+        "protein"
+      ],
+      "protein": [
+        "egg",
+        "pork"
+      ],
+      "method": "stir-fry",
+      "cuisine": "italian",
+      "flavor": [
+        "spicy",
+        "savory-rich"
+      ],
+      "carb_in_dish": true,
+      "ingredients": {
+        "core": [
+          "เส้นสปาเกตตี",
+          "ไข่แดง",
+          "น้ำพริกเผา",
+          "เบคอน"
+        ],
+        "optional": [
+          "ชีส",
+          "พาร์เมซาน"
+        ]
+      },
+      "staples_used": [
+        "พริกไทย",
+        "น้ำมัน"
+      ],
+      "steps": [
+        "ต้มเส้นสปาเกตตีให้สุกพอดี",
+        "ผัดเบคอนกับน้ำพริกเผาให้หอม",
+        "คลุกเส้นกับไข่แดงและชีสนอกเตาให้ข้น"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍜",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "pork"
+        ],
+        "key": [
+          "เส้นพาสต้า"
+        ]
+      }
+    },
+    {
+      "id": "spaghetti-bacon-oil-basil-oregano",
+      "name": "สปาเกตตี น้ำมันเบคอน ผักโหระพา ออริกาโน",
+      "food_groups": [
+        "carb",
+        "protein"
+      ],
+      "protein": [
+        "pork"
+      ],
+      "method": "stir-fry",
+      "cuisine": "italian",
+      "flavor": [
+        "savory-rich"
+      ],
+      "carb_in_dish": true,
+      "ingredients": {
+        "core": [
+          "เส้นสปาเกตตี",
+          "เบคอน",
+          "ใบโหระพา",
+          "ออริกาโน"
+        ],
+        "optional": [
+          "กระเทียม",
+          "พริกแห้ง"
+        ]
+      },
+      "staples_used": [
+        "น้ำมันมะกอก",
+        "เกลือ"
+      ],
+      "steps": [
+        "ต้มเส้นสปาเกตตีให้สุกพอดี",
+        "ผัดเบคอนให้กรอบออกน้ำมัน ใส่กระเทียม",
+        "คลุกเส้นกับน้ำมันเบคอน โรยโหระพาและออริกาโน"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍜",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "pork"
+        ],
+        "key": [
+          "เส้นพาสต้า",
+          "ใบโหระพา"
+        ]
+      }
+    },
+    {
+      "id": "spaghetti-makheuayao-cheese-mala-moosub",
+      "name": "สปาเกตตี มะเขือยาวชีสเผ็ด มะเขือเทศ พริกหมาล่า หมูสับ",
+      "food_groups": [
+        "carb",
+        "protein",
+        "veg"
+      ],
+      "protein": [
+        "pork"
+      ],
+      "method": "stir-fry",
+      "cuisine": "italian",
+      "flavor": [
+        "spicy",
+        "savory-rich"
+      ],
+      "carb_in_dish": true,
+      "ingredients": {
+        "core": [
+          "เส้นสปาเกตตี",
+          "มะเขือยาว",
+          "หมูสับ",
+          "มะเขือเทศ",
+          "พริกหมาล่า",
+          "ชีส"
+        ],
+        "optional": []
+      },
+      "staples_used": [
+        "น้ำมัน",
+        "กระเทียม",
+        "เกลือ"
+      ],
+      "steps": [
+        "ผัดหมูสับกับกระเทียมให้สุก ใส่มะเขือยาวและมะเขือเทศ",
+        "ปรุงรสด้วยพริกหมาล่า เคี่ยวจนข้น",
+        "คลุกกับเส้นสปาเกตตีที่ต้มแล้ว โรยชีส"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍜",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "pork"
+        ],
+        "key": [
+          "เส้นพาสต้า",
+          "มะเขือเทศ",
+          "ชีส"
+        ]
+      }
+    },
+    {
+      "id": "pasta-sauce-general",
+      "name": "พาสต้า (ราด/ผัด) ซอส",
+      "food_groups": [
+        "carb",
+        "protein"
+      ],
+      "protein": [
+        "pork",
+        "beef"
+      ],
+      "method": "stir-fry",
+      "cuisine": "italian",
+      "flavor": [
+        "savory-rich"
+      ],
+      "carb_in_dish": true,
+      "ingredients": {
+        "core": [
+          "เส้นพาสต้า",
+          "ซอสมะเขือเทศ/ครีม"
+        ],
+        "optional": [
+          "เนื้อสับ",
+          "ชีส"
+        ]
+      },
+      "staples_used": [
+        "น้ำมัน",
+        "กระเทียม",
+        "เกลือ"
+      ],
+      "steps": [
+        "ต้มเส้นพาสต้าให้สุกพอดี",
+        "ทำซอสตามชนิดที่เลือก (มะเขือเทศ/ครีม)",
+        "คลุกเส้นกับซอสให้เข้ากัน"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍜",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "pork",
+          "beef"
+        ],
+        "key": [
+          "เส้นพาสต้า",
+          "มะเขือเทศ"
+        ]
+      }
+    },
+    {
+      "id": "sen-yai-namman-nga-khai-mak-see-io",
+      "name": "เส้นใหญ่น้ำมันงา ไข่หมักซีอิ๊ว",
+      "food_groups": [
+        "carb",
+        "protein"
+      ],
+      "protein": [
+        "egg"
+      ],
+      "method": "other",
+      "cuisine": "chinese",
+      "flavor": [
+        "savory-rich"
+      ],
+      "carb_in_dish": true,
+      "ingredients": {
+        "core": [
+          "เส้นใหญ่",
+          "น้ำมันงา",
+          "ไข่หมักซีอิ๊ว"
+        ],
+        "optional": [
+          "ต้นหอม",
+          "กระเทียมเจียว"
+        ]
+      },
+      "staples_used": [
+        "ซีอิ๊ว",
+        "น้ำตาล"
+      ],
+      "steps": [
+        "หมักไข่ดิบกับซีอิ๊วล่วงหน้า",
+        "ลวกเส้นใหญ่ให้สุกนุ่ม",
+        "คลุกกับน้ำมันงาและไข่หมัก โรยต้นหอม"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍜",
+        "url": null
+      },
+      "gates": {
+        "protein": [],
+        "key": [
+          "เส้นก๋วยเตี๋ยว"
+        ]
+      }
+    },
+    {
+      "id": "kuaytiao-kaeng-som",
+      "name": "ก๋วยเตี๋ยวแกงส้ม",
+      "food_groups": [
+        "carb",
+        "protein",
+        "veg"
+      ],
+      "protein": [
+        "shrimp",
+        "fish"
+      ],
+      "method": "curry",
+      "cuisine": "thai",
+      "flavor": [
+        "sour",
+        "spicy"
+      ],
+      "carb_in_dish": true,
+      "ingredients": {
+        "core": [
+          "เส้นก๋วยเตี๋ยว",
+          "น้ำพริกแกงส้ม",
+          "กุ้ง/ปลา",
+          "ผัก"
+        ],
+        "optional": [
+          "มะขามเปียก"
+        ]
+      },
+      "staples_used": [
+        "น้ำปลา",
+        "น้ำตาล"
+      ],
+      "steps": [
+        "ผัดน้ำพริกแกงส้มกับน้ำให้ละลาย",
+        "ใส่กุ้งหรือปลาและผัก ต้มจนสุก",
+        "ปรุงรสเปรี้ยวเผ็ดด้วยมะขามเปียก ราดบนเส้น"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍜",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "shrimp",
+          "fish"
+        ],
+        "key": [
+          "เส้นก๋วยเตี๋ยว",
+          "เครื่องแกง"
+        ]
+      }
+    },
+    {
+      "id": "pad-mee-buab-hom-yang-hedhom-moosub",
+      "name": "ผัดหมี่บวบหอมย่าง เห็ดหอม หมูสับ",
+      "food_groups": [
+        "carb",
+        "protein",
+        "veg"
+      ],
+      "protein": [
+        "pork"
+      ],
+      "method": "stir-fry",
+      "cuisine": "thai",
+      "flavor": [
+        "savory-rich"
+      ],
+      "carb_in_dish": true,
+      "ingredients": {
+        "core": [
+          "เส้นหมี่",
+          "บวบ",
+          "เห็ดหอม",
+          "หมูสับ"
+        ],
+        "optional": []
+      },
+      "staples_used": [
+        "น้ำมัน",
+        "กระเทียม",
+        "ซีอิ๊ว",
+        "น้ำปลา"
+      ],
+      "steps": [
+        "ย่างบวบหอมให้มีกลิ่นหอม หั่นชิ้น",
+        "ผัดหมูสับกับกระเทียมและเห็ดหอมแช่น้ำ",
+        "ใส่เส้นหมี่และบวบผัดคลุกปรุงรส"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍜",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "pork"
+        ],
+        "key": [
+          "เส้นก๋วยเตี๋ยว",
+          "บวบ",
+          "เห็ด"
+        ]
+      }
+    },
+    {
+      "id": "pad-mee-korat",
+      "name": "ผัดหมี่โคราช",
+      "food_groups": [
+        "carb",
+        "protein"
+      ],
+      "protein": [
+        "pork",
+        "shrimp"
+      ],
+      "method": "stir-fry",
+      "cuisine": "thai",
+      "flavor": [
+        "sweet",
+        "sour",
+        "savory-rich"
+      ],
+      "carb_in_dish": true,
+      "ingredients": {
+        "core": [
+          "เส้นหมี่โคราช",
+          "หมู/กุ้ง",
+          "ถั่วงอก",
+          "ใบกุยช่าย"
+        ],
+        "optional": [
+          "เต้าหู้เหลือง"
+        ]
+      },
+      "staples_used": [
+        "น้ำมัน",
+        "น้ำปลา",
+        "น้ำตาล",
+        "น้ำมะขามเปียก"
+      ],
+      "steps": [
+        "ผัดหมู/กุ้งให้สุก ใส่เต้าหู้เหลือง",
+        "ใส่เส้นหมี่โคราชผัดกับซอสปรุงรสเปรี้ยวหวาน",
+        "ใส่ถั่วงอกและใบกุยช่ายผัดให้เข้ากัน"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍜",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "pork",
+          "shrimp"
+        ],
+        "key": [
+          "เส้นก๋วยเตี๋ยว"
+        ]
+      }
+    },
+    {
+      "id": "pad-mee-tiao",
+      "name": "ผัดหมี่เตี๊ยว",
+      "food_groups": [
+        "carb",
+        "protein"
+      ],
+      "protein": [
+        "pork",
+        "shrimp"
+      ],
+      "method": "stir-fry",
+      "cuisine": "thai",
+      "flavor": [
+        "savory-rich"
+      ],
+      "carb_in_dish": true,
+      "ingredients": {
+        "core": [
+          "เส้นหมี่เตี๊ยว",
+          "หมู/กุ้ง",
+          "ผัก"
+        ],
+        "optional": [
+          "ไข่"
+        ]
+      },
+      "staples_used": [
+        "น้ำมัน",
+        "ซีอิ๊ว",
+        "น้ำปลา"
+      ],
+      "steps": [
+        "ผัดหมูหรือกุ้งให้สุก",
+        "ใส่เส้นหมี่เตี๊ยวและผักผัดคลุก",
+        "ปรุงรสด้วยซีอิ๊วน้ำปลา"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍜",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "pork",
+          "shrimp"
+        ],
+        "key": [
+          "เส้นก๋วยเตี๋ยว"
+        ]
+      }
+    },
+    {
+      "id": "mee-kati",
+      "name": "หมี่กะทิ",
+      "food_groups": [
+        "carb",
+        "protein"
+      ],
+      "protein": [
+        "shrimp",
+        "pork"
+      ],
+      "method": "stir-fry",
+      "cuisine": "thai",
+      "flavor": [
+        "sweet",
+        "savory-rich"
+      ],
+      "carb_in_dish": true,
+      "ingredients": {
+        "core": [
+          "เส้นหมี่ขาว",
+          "กะทิ",
+          "กุ้ง/หมู",
+          "เต้าหู้เหลือง"
+        ],
+        "optional": [
+          "ถั่วงอก",
+          "ใบกุยช่าย"
+        ]
+      },
+      "staples_used": [
+        "น้ำตาลปีบ",
+        "น้ำปลา"
+      ],
+      "steps": [
+        "เคี่ยวกะทิกับน้ำตาลปีบและน้ำปลาให้ข้น",
+        "ผัดเส้นหมี่กับกะทิที่เคี่ยวและกุ้งหรือหมู",
+        "จัดเสิร์ฟพร้อมถั่วงอกใบกุยช่าย"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍜",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "shrimp",
+          "pork"
+        ],
+        "key": [
+          "เส้นก๋วยเตี๋ยว",
+          "กะทิ",
+          "เต้าหู้"
+        ]
+      }
+    },
+    {
+      "id": "rad-na",
+      "name": "ราดหน้า",
+      "food_groups": [
+        "carb",
+        "protein",
+        "veg"
+      ],
+      "protein": [
+        "pork",
+        "chicken",
+        "seafood"
+      ],
+      "method": "stir-fry",
+      "cuisine": "thai",
+      "flavor": [
+        "savory-rich"
+      ],
+      "carb_in_dish": true,
+      "ingredients": {
+        "core": [
+          "เส้นใหญ่",
+          "เนื้อสัตว์",
+          "คะน้า",
+          "แป้งมัน"
+        ],
+        "optional": []
+      },
+      "staples_used": [
+        "น้ำมัน",
+        "ซีอิ๊ว",
+        "น้ำปลา",
+        "กระเทียม"
+      ],
+      "steps": [
+        "ผัดเส้นใหญ่กับซีอิ๊วดำให้ติดกระทะเล็กน้อย",
+        "ผัดกระเทียมเนื้อสัตว์และคะน้า เติมน้ำ",
+        "ละลายแป้งมันใส่ให้ข้น ราดบนเส้น"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍜",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "pork",
+          "chicken",
+          "seafood"
+        ],
+        "key": [
+          "เส้นก๋วยเตี๋ยว",
+          "คะน้า"
+        ]
+      }
+    },
+    {
+      "id": "kuaytiao-lod",
+      "name": "เตี๋ยวหลอด / ก๋วยเตี๋ยวหลอด",
+      "food_groups": [
+        "carb",
+        "protein"
+      ],
+      "protein": [
+        "shrimp",
+        "pork"
+      ],
+      "method": "steam",
+      "cuisine": "chinese",
+      "flavor": [
+        "savory-rich"
+      ],
+      "carb_in_dish": true,
+      "ingredients": {
+        "core": [
+          "แผ่นเกี๊ยว/เส้นเผาะ",
+          "กุ้ง/หมู",
+          "ไข่"
+        ],
+        "optional": [
+          "ต้นหอม",
+          "ผักกาดดอง"
+        ]
+      },
+      "staples_used": [
+        "ซีอิ๊ว",
+        "น้ำมันงา"
+      ],
+      "steps": [
+        "ตีไข่ราดบนกระทะแบนบางให้เป็นแผ่น",
+        "วางไส้กุ้งหรือหมูแล้วม้วนห่อ",
+        "นึ่งจนสุก ราดซอสซีอิ๊วน้ำมันงา"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍜",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "shrimp",
+          "pork"
+        ],
+        "key": []
+      }
+    },
+    {
+      "id": "koi-see-mee",
+      "name": "โกยซีหมี่",
+      "food_groups": [
+        "carb",
+        "protein"
+      ],
+      "protein": [
+        "seafood",
+        "pork"
+      ],
+      "method": "stir-fry",
+      "cuisine": "chinese",
+      "flavor": [
+        "savory-rich"
+      ],
+      "carb_in_dish": true,
+      "ingredients": {
+        "core": [
+          "เส้นหมี่กรอบ",
+          "ทะเลรวม/หมู",
+          "ผักรวม"
+        ],
+        "optional": [
+          "ไข่"
+        ]
+      },
+      "staples_used": [
+        "น้ำมัน",
+        "ซีอิ๊ว",
+        "แป้งมัน"
+      ],
+      "steps": [
+        "ทอดเส้นหมี่ให้กรอบพักไว้",
+        "ผัดเนื้อสัตว์กับผักรวม เติมน้ำและปรุงรส",
+        "ละลายแป้งมันราดให้ข้น ราดบนเส้นกรอบ"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍜",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "seafood",
+          "pork"
+        ],
+        "key": [
+          "เส้นก๋วยเตี๋ยว"
+        ]
+      }
+    },
+    {
+      "id": "pok-kia",
+      "name": "โบ๊กเกี้ย",
+      "food_groups": [
+        "carb",
+        "protein"
+      ],
+      "protein": [
+        "pork",
+        "shrimp"
+      ],
+      "method": "stir-fry",
+      "cuisine": "chinese",
+      "flavor": [
+        "savory-rich"
+      ],
+      "carb_in_dish": true,
+      "ingredients": {
+        "core": [
+          "เส้นก๋วยจั๊บ/เส้นแบน",
+          "หมู/กุ้ง",
+          "ผักกาดขาว"
+        ],
+        "optional": [
+          "ไข่"
+        ]
+      },
+      "staples_used": [
+        "น้ำมัน",
+        "ซีอิ๊ว",
+        "กระเทียม"
+      ],
+      "steps": [
+        "ผัดกระเทียมกับหมูหรือกุ้งให้สุก",
+        "ใส่เส้นและผักกาดขาวผัดคลุก",
+        "ปรุงรสด้วยซีอิ๊ว"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍚",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "pork",
+          "shrimp"
+        ],
+        "key": [
+          "เส้นก๋วยเตี๋ยว",
+          "ผักกาดขาว"
+        ]
+      }
+    },
+    {
+      "id": "kaeng-bai-chaphlu-sator",
+      "name": "แกงใบชะพลู (ใส่สะตอ)",
+      "food_groups": [
+        "protein",
+        "veg"
+      ],
+      "protein": [
+        "pork",
+        "shrimp"
+      ],
+      "method": "curry",
+      "cuisine": "thai",
+      "flavor": [
+        "spicy",
+        "savory-rich"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "ใบชะพลู",
+          "สะตอ",
+          "เครื่องแกง",
+          "กะทิ",
+          "หมู/กุ้ง"
+        ],
+        "optional": []
+      },
+      "staples_used": [
+        "น้ำปลา",
+        "น้ำตาลปีบ"
+      ],
+      "steps": [
+        "ผัดเครื่องแกงกับกะทิให้แตกมัน",
+        "ใส่หมูหรือกุ้งผัดให้สุก เติมกะทิ",
+        "ใส่ใบชะพลูและสะตอ ปรุงรสเคี่ยวจนสุก"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🥘",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "pork",
+          "shrimp"
+        ],
+        "key": [
+          "ใบชะพลู",
+          "สะตอ",
+          "เครื่องแกง"
+        ]
+      }
+    },
+    {
+      "id": "kaeng-kari-moo-tod",
+      "name": "แกงกะหรี่หมูทอด",
+      "food_groups": [
+        "protein",
+        "veg",
+        "carb"
+      ],
+      "protein": [
+        "pork"
+      ],
+      "method": "curry",
+      "cuisine": "thai",
+      "flavor": [
+        "savory-rich",
+        "spicy"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "หมูทอด",
+          "ผงกะหรี่",
+          "กะทิ",
+          "มันฝรั่ง",
+          "หอมใหญ่"
+        ],
+        "optional": [
+          "แครอท"
+        ]
+      },
+      "staples_used": [
+        "น้ำปลา",
+        "น้ำตาล"
+      ],
+      "steps": [
+        "ทอดหมูให้สุกเหลืองพักไว้",
+        "ผัดผงกะหรี่กับกะทิให้หอม ใส่มันฝรั่งหอมใหญ่",
+        "ใส่หมูทอดเคี่ยวจนมันฝรั่งนุ่ม ปรุงรส"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🥘",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "pork"
+        ],
+        "key": [
+          "ผงกะหรี่",
+          "กะทิ"
+        ]
+      }
+    },
+    {
+      "id": "kaeng-jued-taeng-kwa",
+      "name": "แกงจืดแตงกวา",
+      "food_groups": [
+        "protein",
+        "veg"
+      ],
+      "protein": [
+        "pork"
+      ],
+      "method": "boil-soup",
+      "cuisine": "thai",
+      "flavor": [
+        "plain"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "แตงกวา",
+          "หมูสับ",
+          "น้ำซุป"
+        ],
+        "optional": [
+          "เต้าหู้",
+          "วุ้นเส้น"
+        ]
+      },
+      "staples_used": [
+        "เกลือ",
+        "ซีอิ๊ว",
+        "พริกไทย"
+      ],
+      "steps": [
+        "ปั้นหมูสับเป็นลูกชิ้น",
+        "ต้มน้ำซุปให้เดือด ใส่ลูกชิ้นหมูจนสุก",
+        "ใส่แตงกวาต้มจนนุ่ม ปรุงรสอ่อนๆ"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🥘",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "pork"
+        ],
+        "key": [
+          "แตงกวา"
+        ]
+      }
+    },
+    {
+      "id": "palo-nomai",
+      "name": "พะโล้ / พะโล้หน่อไม้",
+      "food_groups": [
+        "protein",
+        "veg"
+      ],
+      "protein": [
+        "pork",
+        "egg"
+      ],
+      "method": "simmer-stew",
+      "cuisine": "chinese",
+      "flavor": [
+        "savory-rich",
+        "sweet"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "หมูสามชั้น",
+          "ไข่ต้ม",
+          "พะโล้ผง",
+          "หน่อไม้"
+        ],
+        "optional": [
+          "เต้าหู้"
+        ]
+      },
+      "staples_used": [
+        "ซีอิ๊วดำ",
+        "น้ำตาล",
+        "กระเทียม"
+      ],
+      "steps": [
+        "ต้มหมูสามชั้นกับพะโล้ผงและซีอิ๊วดำ",
+        "ใส่ไข่ต้มและหน่อไม้เคี่ยวจนเข้าเนื้อ",
+        "ปรุงรสหวานเค็มตามชอบ"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🥘",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "pork"
+        ],
+        "key": []
+      }
+    },
+    {
+      "id": "moo-tom-sapparot",
+      "name": "หมูต้มสับปะรด",
+      "food_groups": [
+        "protein"
+      ],
+      "protein": [
+        "pork"
+      ],
+      "method": "boil-soup",
+      "cuisine": "thai",
+      "flavor": [
+        "sour",
+        "spicy"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "หมู",
+          "สับปะรด",
+          "กะปิ",
+          "หอมแดง"
+        ],
+        "optional": []
+      },
+      "staples_used": [
+        "พริกไทย",
+        "น้ำปลา",
+        "น้ำตาล"
+      ],
+      "steps": [
+        "โขลกกะปิ หอมแดง พริกไทยให้ละเอียด ผัดให้หอม",
+        "เติมน้ำต้มกับหมูจนสุกนุ่ม",
+        "ใส่สับปะรด ปรุงรสเปรี้ยวหวานเค็ม"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🥘",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "pork"
+        ],
+        "key": [
+          "สับปะรด",
+          "กะปิ"
+        ]
+      }
+    },
+    {
+      "id": "kraduk-moo-tom-fak",
+      "name": "กระดูกหมูต้มฟัก",
+      "food_groups": [
+        "protein",
+        "veg"
+      ],
+      "protein": [
+        "pork"
+      ],
+      "method": "boil-soup",
+      "cuisine": "thai",
+      "flavor": [
+        "plain"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "กระดูกหมู",
+          "ฟัก",
+          "น้ำซุป"
+        ],
+        "optional": [
+          "ผักชี",
+          "ต้นหอม"
+        ]
+      },
+      "staples_used": [
+        "เกลือ",
+        "ซีอิ๊ว",
+        "พริกไทย"
+      ],
+      "steps": [
+        "ต้มกระดูกหมูให้เดือดสักครู่แล้วเปลี่ยนน้ำ",
+        "ต้มกระดูกหมูกับน้ำซุปจนนุ่ม",
+        "ใส่ฟักต้มจนสุก ปรุงรสอ่อนๆ"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🥘",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "pork"
+        ],
+        "key": [
+          "ฟัก"
+        ]
+      }
+    },
+    {
+      "id": "kraduk-moo-tun-tua",
+      "name": "กระดูกหมูตุ๋นถั่ว",
+      "food_groups": [
+        "protein"
+      ],
+      "protein": [
+        "pork"
+      ],
+      "method": "simmer-stew",
+      "cuisine": "chinese",
+      "flavor": [
+        "savory-rich"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "กระดูกหมู",
+          "ถั่วลิสง/ถั่วแดง",
+          "น้ำซุป"
+        ],
+        "optional": [
+          "เห็ดหอม"
+        ]
+      },
+      "staples_used": [
+        "เกลือ",
+        "ซีอิ๊ว"
+      ],
+      "steps": [
+        "ต้มกระดูกหมูให้เดือดสักครู่แล้วล้าง",
+        "ตุ๋นกระดูกหมูกับถั่วในหม้อแรงดันจนนุ่ม",
+        "ปรุงรสอ่อนๆ"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🥘",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "pork"
+        ],
+        "key": []
+      }
+    },
+    {
+      "id": "kai-tom-khamin-fak",
+      "name": "ไก่ต้มขมิ้นฟัก",
+      "food_groups": [
+        "protein",
+        "veg"
+      ],
+      "protein": [
+        "chicken"
+      ],
+      "method": "boil-soup",
+      "cuisine": "thai",
+      "flavor": [
+        "plain",
+        "savory-rich"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "ไก่",
+          "ขมิ้น",
+          "ฟัก"
+        ],
+        "optional": []
+      },
+      "staples_used": [
+        "เกลือ",
+        "น้ำปลา"
+      ],
+      "steps": [
+        "ต้มไก่กับขมิ้นทุบให้หอม",
+        "ใส่ฟักต้มจนไก่และฟักสุกนุ่ม",
+        "ปรุงรสด้วยเกลือหรือน้ำปลา"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🥘",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "chicken"
+        ],
+        "key": [
+          "ฟัก"
+        ]
+      }
+    },
+    {
+      "id": "soup-khai",
+      "name": "ซุปไข่",
+      "food_groups": [
+        "protein"
+      ],
+      "protein": [
+        "egg"
+      ],
+      "method": "boil-soup",
+      "cuisine": "chinese",
+      "flavor": [
+        "plain",
+        "savory-rich"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "ไข่",
+          "น้ำซุป"
+        ],
+        "optional": [
+          "ข้าวโพดอ่อน",
+          "แป้งมัน"
+        ]
+      },
+      "staples_used": [
+        "ซีอิ๊ว",
+        "พริกไทย"
+      ],
+      "steps": [
+        "ต้มน้ำซุปให้เดือด ปรุงรสด้วยซีอิ๊ว",
+        "ละลายแป้งมันใส่ให้ข้นเล็กน้อย",
+        "ตีไข่เทหยอดเป็นสายให้เป็นทาง โรยพริกไทย"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍳",
+        "url": null
+      },
+      "gates": {
+        "protein": [],
+        "key": []
+      }
+    },
+    {
+      "id": "soup-miso-tofu-pak-samchan-korea",
+      "name": "ซุปมิโสะ เต้าหู้ ผักรวม สามชั้น เผ็ด เกาหลี",
+      "food_groups": [
+        "protein",
+        "veg"
+      ],
+      "protein": [
+        "pork",
+        "tofu"
+      ],
+      "method": "boil-soup",
+      "cuisine": "korean",
+      "flavor": [
+        "spicy",
+        "savory-rich"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "มิโสะ/โคชูจัง",
+          "เต้าหู้",
+          "หมูสามชั้น",
+          "ผักรวม"
+        ],
+        "optional": [
+          "เห็ด"
+        ]
+      },
+      "staples_used": [
+        "น้ำซุป",
+        "กระเทียม"
+      ],
+      "steps": [
+        "ผัดหมูสามชั้นกับกระเทียมให้หอม",
+        "เติมน้ำซุปละลายมิโสะและโคชูจัง",
+        "ใส่เต้าหู้และผักรวมต้มจนสุก"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🥘",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "pork",
+          "tofu"
+        ],
+        "key": [
+          "มิโซะ"
+        ]
+      }
+    },
+    {
+      "id": "moo-bai-chaphlu",
+      "name": "หมูใบชะพลู / แกงใบชะพลู",
+      "food_groups": [
+        "protein",
+        "veg"
+      ],
+      "protein": [
+        "pork"
+      ],
+      "method": "curry",
+      "cuisine": "thai",
+      "flavor": [
+        "spicy",
+        "savory-rich"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "ใบชะพลู",
+          "หมู",
+          "เครื่องแกง",
+          "กะทิ"
+        ],
+        "optional": []
+      },
+      "staples_used": [
+        "น้ำปลา",
+        "น้ำตาลปีบ"
+      ],
+      "steps": [
+        "ผัดเครื่องแกงกับกะทิให้แตกมัน",
+        "ใส่หมูผัดให้สุก เติมกะทิที่เหลือ",
+        "ใส่ใบชะพลู เคี่ยวจนสุก ปรุงรส"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🥘",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "pork"
+        ],
+        "key": [
+          "ใบชะพลู",
+          "เครื่องแกง",
+          "กะทิ"
+        ]
+      }
+    },
+    {
+      "id": "yum-pakwanpa-goong-moosub",
+      "name": "ยำผักหวานป่า กุ้ง+หมูสับ",
+      "food_groups": [
+        "protein",
+        "veg"
+      ],
+      "protein": [
+        "shrimp",
+        "pork"
+      ],
+      "method": "salad-yum",
+      "cuisine": "thai",
+      "flavor": [
+        "spicy",
+        "sour"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "ผักหวานป่า",
+          "กุ้ง",
+          "หมูสับ",
+          "พริก",
+          "หอมแดง"
+        ],
+        "optional": []
+      },
+      "staples_used": [
+        "น้ำปลา",
+        "มะนาว",
+        "น้ำตาล"
+      ],
+      "steps": [
+        "ลวกผักหวานป่าให้สุกพอเขียว",
+        "ลวกกุ้งและหมูสับให้สุก",
+        "ปรุงน้ำยำด้วยน้ำปลามะนาวพริกหอมแดง คลุกรวมกัน"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🥗",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "shrimp",
+          "pork"
+        ],
+        "key": [
+          "ผักหวานป่า"
+        ]
+      }
+    },
+    {
+      "id": "yum-pakkud-goong-moosub",
+      "name": "ยำผักกูด กุ้ง+หมูสับ",
+      "food_groups": [
+        "protein",
+        "veg"
+      ],
+      "protein": [
+        "shrimp",
+        "pork"
+      ],
+      "method": "salad-yum",
+      "cuisine": "thai",
+      "flavor": [
+        "spicy",
+        "sour"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "ผักกูด",
+          "กุ้ง",
+          "หมูสับ",
+          "พริก",
+          "หอมแดง"
+        ],
+        "optional": []
+      },
+      "staples_used": [
+        "น้ำปลา",
+        "มะนาว",
+        "น้ำตาล"
+      ],
+      "steps": [
+        "ลวกผักกูดพอสุกกรอบ",
+        "ลวกกุ้งและหมูสับให้สุก",
+        "ปรุงน้ำยำคลุกรวมกับผักและเนื้อสัตว์"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🥗",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "shrimp",
+          "pork"
+        ],
+        "key": [
+          "ผักกูด"
+        ]
+      }
+    },
+    {
+      "id": "pakwanpa-khai-dao",
+      "name": "ผักหวานป่าไข่ดาว",
+      "food_groups": [
+        "protein",
+        "veg"
+      ],
+      "protein": [
+        "egg"
+      ],
+      "method": "stir-fry",
+      "cuisine": "thai",
+      "flavor": [
+        "plain",
+        "savory-rich"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "ผักหวานป่า",
+          "ไข่"
+        ],
+        "optional": []
+      },
+      "staples_used": [
+        "น้ำมัน",
+        "น้ำปลา"
+      ],
+      "steps": [
+        "ลวกหรือผัดผักหวานป่าให้สุก",
+        "ทอดไข่ดาวแยก",
+        "จัดเสิร์ฟคู่กัน"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍳",
+        "url": null
+      },
+      "gates": {
+        "protein": [],
+        "key": [
+          "ผักหวานป่า"
+        ]
+      }
+    },
+    {
+      "id": "pakwanpa-pad-khai",
+      "name": "ผักหวานป่าผัดไข่",
+      "food_groups": [
+        "protein",
+        "veg"
+      ],
+      "protein": [
+        "egg"
+      ],
+      "method": "stir-fry",
+      "cuisine": "thai",
+      "flavor": [
+        "plain",
+        "savory-rich"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "ผักหวานป่า",
+          "ไข่"
+        ],
+        "optional": []
+      },
+      "staples_used": [
+        "น้ำมัน",
+        "น้ำปลา"
+      ],
+      "steps": [
+        "ผัดผักหวานป่ากับน้ำมันพอสุก",
+        "ตอกไข่ลงผัดคลุกให้เข้ากัน",
+        "ปรุงรสด้วยน้ำปลา"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍳",
+        "url": null
+      },
+      "gates": {
+        "protein": [],
+        "key": [
+          "ผักหวานป่า"
+        ]
+      }
+    },
+    {
+      "id": "kaeng-jued-khai-pakwanpa",
+      "name": "แกงจืดไข่ผักหวานป่า",
+      "food_groups": [
+        "protein",
+        "veg"
+      ],
+      "protein": [
+        "egg"
+      ],
+      "method": "boil-soup",
+      "cuisine": "thai",
+      "flavor": [
+        "plain"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "ผักหวานป่า",
+          "ไข่",
+          "น้ำซุป"
+        ],
+        "optional": [
+          "หมูสับ"
+        ]
+      },
+      "staples_used": [
+        "เกลือ",
+        "ซีอิ๊ว",
+        "พริกไทย"
+      ],
+      "steps": [
+        "ต้มน้ำซุปให้เดือด",
+        "ใส่ผักหวานป่าต้มพอสุก",
+        "ตีไข่ราดหยอดเป็นสาย ปรุงรสอ่อนๆ"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍳",
+        "url": null
+      },
+      "gates": {
+        "protein": [],
+        "key": [
+          "ผักหวานป่า"
+        ]
+      }
+    },
+    {
+      "id": "yum-khai-khem",
+      "name": "ยำไข่เค็ม",
+      "food_groups": [
+        "protein"
+      ],
+      "protein": [
+        "egg"
+      ],
+      "method": "salad-yum",
+      "cuisine": "thai",
+      "flavor": [
+        "spicy",
+        "sour"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "ไข่เค็ม",
+          "พริก",
+          "หอมแดง"
+        ],
+        "optional": [
+          "มะม่วง"
+        ]
+      },
+      "staples_used": [
+        "น้ำปลา",
+        "มะนาว",
+        "น้ำตาล"
+      ],
+      "steps": [
+        "ต้มหรือทอดไข่เค็มแล้วหั่นชิ้น",
+        "ปรุงน้ำยำด้วยน้ำปลามะนาวน้ำตาลพริก",
+        "คลุกรวมกับหอมแดงและไข่เค็ม"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🥗",
+        "url": null
+      },
+      "gates": {
+        "protein": [],
+        "key": [
+          "ไข่เค็ม"
+        ]
+      }
+    },
+    {
+      "id": "salad-mexico",
+      "name": "สลัดเม็กซิโก",
+      "food_groups": [
+        "protein",
+        "veg"
+      ],
+      "protein": [
+        "beef",
+        "chicken"
+      ],
+      "method": "salad-yum",
+      "cuisine": "western",
+      "flavor": [
+        "spicy",
+        "savory-rich"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "ผักสลัด",
+          "เนื้อบด/ไก่",
+          "ข้าวโพด",
+          "ถั่วแดง",
+          "ซัลซ่า"
+        ],
+        "optional": [
+          "ชีส",
+          "อโวคาโด"
+        ]
+      },
+      "staples_used": [
+        "เกลือ",
+        "พริกไทย"
+      ],
+      "steps": [
+        "ผัดเนื้อบดหรือไก่กับเครื่องเทศเม็กซิกัน",
+        "จัดผักสลัด ข้าวโพด ถั่วแดงลงชาม",
+        "วางเนื้อที่ผัด ราดซัลซ่า"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🥗",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "beef",
+          "chicken"
+        ],
+        "key": []
+      }
+    },
+    {
+      "id": "salad-roll",
+      "name": "สลัดโรล",
+      "food_groups": [
+        "protein",
+        "veg"
+      ],
+      "protein": [
+        "shrimp",
+        "chicken"
+      ],
+      "method": "other",
+      "cuisine": "western",
+      "flavor": [
+        "plain",
+        "sour"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "แผ่นแป้งเวียดนาม",
+          "ผักสลัด",
+          "กุ้ง/ไก่",
+          "วุ้นเส้น"
+        ],
+        "optional": [
+          "สะระแหน่"
+        ]
+      },
+      "staples_used": [],
+      "steps": [
+        "ลวกกุ้งหรือไก่และวุ้นเส้นให้สุก",
+        "จุ่มแผ่นแป้งเวียดนามในน้ำให้นิ่ม",
+        "ห่อผักสลัดกุ้งวุ้นเส้นเป็นแท่ง เสิร์ฟกับน้ำจิ้ม"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍽️",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "shrimp",
+          "chicken"
+        ],
+        "key": [
+          "วุ้นเส้น"
+        ]
+      }
+    },
+    {
+      "id": "salad-khai",
+      "name": "สลัดไข่",
+      "food_groups": [
+        "protein",
+        "veg"
+      ],
+      "protein": [
+        "egg"
+      ],
+      "method": "salad-yum",
+      "cuisine": "western",
+      "flavor": [
+        "savory-rich"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "ไข่ต้ม",
+          "ผักสลัด",
+          "มายองเนส"
+        ],
+        "optional": [
+          "หอมใหญ่"
+        ]
+      },
+      "staples_used": [
+        "เกลือ",
+        "พริกไทย"
+      ],
+      "steps": [
+        "ต้มไข่แล้วสับหยาบ",
+        "คลุกไข่กับมายองเนสและหอมใหญ่",
+        "จัดเสิร์ฟบนผักสลัด"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🥗",
+        "url": null
+      },
+      "gates": {
+        "protein": [],
+        "key": [
+          "มายองเนส"
+        ]
+      }
+    },
+    {
+      "id": "khai-khon-goong",
+      "name": "ไข่ข้นกุ้ง (เน้นหอมเนย)",
+      "food_groups": [
+        "protein"
+      ],
+      "protein": [
+        "shrimp",
+        "egg"
+      ],
+      "method": "stir-fry",
+      "cuisine": "thai",
+      "flavor": [
+        "savory-rich"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "ไข่",
+          "กุ้ง",
+          "เนย"
+        ],
+        "optional": [
+          "ต้นหอม"
+        ]
+      },
+      "staples_used": [
+        "น้ำปลา",
+        "พริกไทย"
+      ],
+      "steps": [
+        "ผัดกุ้งกับเนยให้หอมและสุก",
+        "ตีไข่เทลงกวนไฟอ่อนให้ข้นแบบครีม",
+        "ปรุงรสด้วยน้ำปลา โรยพริกไทย"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍳",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "shrimp"
+        ],
+        "key": []
+      }
+    },
+    {
+      "id": "khai-tun-woonsen",
+      "name": "ไข่ตุ๋นวุ้นเส้น",
+      "food_groups": [
+        "protein",
+        "carb"
+      ],
+      "protein": [
+        "egg",
+        "pork"
+      ],
+      "method": "steam",
+      "cuisine": "thai",
+      "flavor": [
+        "plain"
+      ],
+      "carb_in_dish": true,
+      "ingredients": {
+        "core": [
+          "ไข่",
+          "วุ้นเส้น",
+          "หมูสับ"
+        ],
+        "optional": [
+          "กุ้งแห้ง"
+        ]
+      },
+      "staples_used": [
+        "ซีอิ๊ว",
+        "น้ำซุป"
+      ],
+      "steps": [
+        "แช่วุ้นเส้นให้นุ่ม ผสมกับหมูสับ",
+        "ตีไข่กับน้ำซุปและซีอิ๊ว ผสมวุ้นเส้นลงชาม",
+        "นึ่งจนไข่สุกเซ็ตตัว"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍜",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "pork"
+        ],
+        "key": [
+          "วุ้นเส้น"
+        ]
+      }
+    },
+    {
+      "id": "khai-raboed",
+      "name": "ไข่ระเบิด",
+      "food_groups": [
+        "protein"
+      ],
+      "protein": [
+        "egg"
+      ],
+      "method": "deep-fry",
+      "cuisine": "thai",
+      "flavor": [
+        "spicy",
+        "savory-rich"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "ไข่ไก่",
+          "หมูสับ",
+          "พริกแกง"
+        ],
+        "optional": [
+          "ใบมะกรูด"
+        ]
+      },
+      "staples_used": [
+        "น้ำมัน",
+        "น้ำปลา"
+      ],
+      "steps": [
+        "ผสมไข่กับหมูสับและพริกแกงให้เข้ากัน",
+        "ทอดในน้ำมันร้อนจัดให้ฟูกรอบ",
+        "ราดน้ำยำหรือซอสรสจัดจ้าน"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍳",
+        "url": null
+      },
+      "gates": {
+        "protein": [],
+        "key": [
+          "เครื่องแกง"
+        ]
+      }
+    },
+    {
+      "id": "khai-yat-sai",
+      "name": "ไข่ยัดไส้",
+      "food_groups": [
+        "protein"
+      ],
+      "protein": [
+        "egg",
+        "pork"
+      ],
+      "method": "deep-fry",
+      "cuisine": "thai",
+      "flavor": [
+        "savory-rich"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "ไข่ไก่",
+          "หมูสับ",
+          "แครอท",
+          "หอมใหญ่"
+        ],
+        "optional": [
+          "ถั่วลันเตา"
+        ]
+      },
+      "staples_used": [
+        "น้ำมัน",
+        "น้ำปลา",
+        "พริกไทย"
+      ],
+      "steps": [
+        "ทอดไข่ดาวหรือไข่เจียวบางแล้วพักไว้",
+        "ผัดหมูสับกับผักปรุงรสเป็นไส้",
+        "ห่อไข่หุ้มไส้แล้วทอดให้เหลือง"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍳",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "pork"
+        ],
+        "key": []
+      }
+    },
+    {
+      "id": "khai-jiao-moosub-kuychai",
+      "name": "ไข่เจียวหมูสับ (ใบกุยช่าย)",
+      "food_groups": [
+        "protein"
+      ],
+      "protein": [
+        "egg",
+        "pork"
+      ],
+      "method": "deep-fry",
+      "cuisine": "thai",
+      "flavor": [
+        "savory-rich"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "ไข่",
+          "หมูสับ",
+          "ใบกุยช่าย"
+        ],
+        "optional": []
+      },
+      "staples_used": [
+        "น้ำมัน",
+        "น้ำปลา"
+      ],
+      "steps": [
+        "ตีไข่ผสมหมูสับและใบกุยช่ายซอย ปรุงน้ำปลา",
+        "ตั้งน้ำมันให้ร้อนจัด",
+        "เทไข่ลงทอดจนสุกเหลืองกรอบ"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍳",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "pork"
+        ],
+        "key": []
+      }
+    },
+    {
+      "id": "khai-pad-thua-ngok",
+      "name": "ไข่ผัดถั่วงอก",
+      "food_groups": [
+        "protein",
+        "veg"
+      ],
+      "protein": [
+        "egg"
+      ],
+      "method": "stir-fry",
+      "cuisine": "thai",
+      "flavor": [
+        "plain",
+        "savory-rich"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "ไข่",
+          "ถั่วงอก"
+        ],
+        "optional": [
+          "ต้นหอม"
+        ]
+      },
+      "staples_used": [
+        "น้ำมัน",
+        "น้ำปลา"
+      ],
+      "steps": [
+        "ตีไข่พักไว้",
+        "ผัดถั่วงอกไฟแรงสักครู่",
+        "ใส่ไข่ลงผัดคลุกให้เข้ากัน ปรุงรส"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍳",
+        "url": null
+      },
+      "gates": {
+        "protein": [],
+        "key": [
+          "ถั่วงอก"
+        ]
+      }
+    },
+    {
+      "id": "malako-pad-khai",
+      "name": "มะละกอผัดไข่",
+      "food_groups": [
+        "protein",
+        "veg"
+      ],
+      "protein": [
+        "egg"
+      ],
+      "method": "stir-fry",
+      "cuisine": "thai",
+      "flavor": [
+        "plain",
+        "savory-rich"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "มะละกอดิบ",
+          "ไข่"
+        ],
+        "optional": []
+      },
+      "staples_used": [
+        "น้ำมัน",
+        "น้ำปลา"
+      ],
+      "steps": [
+        "ผัดมะละกอสับกับน้ำมันจนสุกนุ่ม",
+        "ตอกไข่ลงผัดคลุก",
+        "ปรุงรสด้วยน้ำปลา"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍳",
+        "url": null
+      },
+      "gates": {
+        "protein": [],
+        "key": [
+          "มะละกอ"
+        ]
+      }
+    },
+    {
+      "id": "pakwan-moosub",
+      "name": "ผักหวานหมูสับ",
+      "food_groups": [
+        "protein",
+        "veg"
+      ],
+      "protein": [
+        "pork"
+      ],
+      "method": "stir-fry",
+      "cuisine": "thai",
+      "flavor": [
+        "savory-rich"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "ผักหวานบ้าน",
+          "หมูสับ",
+          "กระเทียม"
+        ],
+        "optional": []
+      },
+      "staples_used": [
+        "น้ำมัน",
+        "น้ำปลา"
+      ],
+      "steps": [
+        "ผัดกระเทียมกับหมูสับให้สุก",
+        "ใส่ผักหวานผัดไฟแรงสักครู่",
+        "ปรุงรสด้วยน้ำปลา"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍽️",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "pork"
+        ],
+        "key": []
+      }
+    },
+    {
+      "id": "khana-moo-krob",
+      "name": "คะน้าหมูกรอบ",
+      "food_groups": [
+        "protein",
+        "veg"
+      ],
+      "protein": [
+        "pork"
+      ],
+      "method": "stir-fry",
+      "cuisine": "thai",
+      "flavor": [
+        "savory-rich"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "คะน้า",
+          "หมูกรอบ",
+          "กระเทียม"
+        ],
+        "optional": []
+      },
+      "staples_used": [
+        "น้ำมัน",
+        "ซอสหอยนางรม",
+        "น้ำปลา"
+      ],
+      "steps": [
+        "ผัดกระเทียมให้หอม ใส่คะน้าผัดไฟแรง",
+        "ใส่หมูกรอบผัดคลุก",
+        "ปรุงรสด้วยซอสหอยนางรม"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍽️",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "pork"
+        ],
+        "key": [
+          "คะน้า"
+        ]
+      }
+    },
+    {
+      "id": "kalampli-moo-krob",
+      "name": "กะหล่ำหมูกรอบ",
+      "food_groups": [
+        "protein",
+        "veg"
+      ],
+      "protein": [
+        "pork"
+      ],
+      "method": "stir-fry",
+      "cuisine": "thai",
+      "flavor": [
+        "savory-rich"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "กะหล่ำปลี",
+          "หมูกรอบ",
+          "กระเทียม"
+        ],
+        "optional": []
+      },
+      "staples_used": [
+        "น้ำมัน",
+        "น้ำปลา",
+        "ซอสหอยนางรม"
+      ],
+      "steps": [
+        "ผัดกระเทียมให้หอม ใส่กะหล่ำปลีผัดไฟแรง",
+        "ใส่หมูกรอบผัดคลุกให้เข้ากัน",
+        "ปรุงรสด้วยน้ำปลาซอสหอยนางรม"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍽️",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "pork"
+        ],
+        "key": [
+          "กะหล่ำปลี"
+        ]
+      }
+    },
+    {
+      "id": "pak-ruam-moo-krob",
+      "name": "ผักรวมหมูกรอบ",
+      "food_groups": [
+        "protein",
+        "veg"
+      ],
+      "protein": [
+        "pork"
+      ],
+      "method": "stir-fry",
+      "cuisine": "thai",
+      "flavor": [
+        "savory-rich"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "ผักรวม",
+          "หมูกรอบ",
+          "กระเทียม"
+        ],
+        "optional": []
+      },
+      "staples_used": [
+        "น้ำมัน",
+        "ซอสหอยนางรม",
+        "น้ำปลา"
+      ],
+      "steps": [
+        "ผัดกระเทียมให้หอม ใส่ผักรวมผัดไฟแรง",
+        "ใส่หมูกรอบผัดคลุก",
+        "ปรุงรสด้วยซอสหอยนางรม"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍽️",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "pork"
+        ],
+        "key": []
+      }
+    },
+    {
+      "id": "pakbung-moo-krob",
+      "name": "ผักบุ้งหมูกรอบ",
+      "food_groups": [
+        "protein",
+        "veg"
+      ],
+      "protein": [
+        "pork"
+      ],
+      "method": "stir-fry",
+      "cuisine": "thai",
+      "flavor": [
+        "spicy",
+        "savory-rich"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "ผักบุ้ง",
+          "หมูกรอบ",
+          "กระเทียม",
+          "พริก"
+        ],
+        "optional": []
+      },
+      "staples_used": [
+        "น้ำมัน",
+        "น้ำปลา",
+        "ซอสหอยนางรม"
+      ],
+      "steps": [
+        "ผัดกระเทียมพริกไฟแรงให้หอม",
+        "ใส่ผักบุ้งผัดเร็วๆ ให้สุกกรอบ",
+        "ใส่หมูกรอบผัดคลุก ปรุงรส"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍽️",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "pork"
+        ],
+        "key": [
+          "ผักบุ้ง"
+        ]
+      }
+    },
+    {
+      "id": "kalampli-tod-namplaa",
+      "name": "กะหล่ำปลีทอดน้ำปลา",
+      "food_groups": [
+        "veg"
+      ],
+      "protein": [
+        "none"
+      ],
+      "method": "deep-fry",
+      "cuisine": "thai",
+      "flavor": [
+        "savory-rich"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "กะหล่ำปลี",
+          "น้ำปลา"
+        ],
+        "optional": [
+          "กระเทียมเจียว"
+        ]
+      },
+      "staples_used": [
+        "น้ำมัน",
+        "น้ำตาล"
+      ],
+      "steps": [
+        "ทอดกะหล่ำปลีในน้ำมันร้อนจัดให้กรอบขอบไหม้เล็กน้อย",
+        "ราดน้ำปลาหวานที่เคี่ยวข้น",
+        "โรยกระเทียมเจียว"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍗",
+        "url": null
+      },
+      "gates": {
+        "protein": [],
+        "key": [
+          "กะหล่ำปลี"
+        ]
+      }
+    },
+    {
+      "id": "pad-priao-wan",
+      "name": "ผัดเปรี้ยวหวาน",
+      "food_groups": [
+        "protein",
+        "veg"
+      ],
+      "protein": [
+        "pork",
+        "chicken",
+        "shrimp"
+      ],
+      "method": "stir-fry",
+      "cuisine": "chinese",
+      "flavor": [
+        "sweet",
+        "sour"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "เนื้อสัตว์",
+          "สับปะรด",
+          "หอมใหญ่",
+          "พริกหวาน",
+          "มะเขือเทศ"
+        ],
+        "optional": [
+          "แตงกวา"
+        ]
+      },
+      "staples_used": [
+        "น้ำมัน",
+        "น้ำตาล",
+        "ซอสมะเขือเทศ"
+      ],
+      "steps": [
+        "ผัดเนื้อสัตว์ที่เลือกให้สุก",
+        "ใส่ผัก สับปะรด ผัดรวม",
+        "ปรุงรสเปรี้ยวหวานด้วยซอสมะเขือเทศและน้ำตาล"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍽️",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "pork",
+          "chicken",
+          "shrimp"
+        ],
+        "key": [
+          "สับปะรด",
+          "มะเขือเทศ"
+        ]
+      }
+    },
+    {
+      "id": "krapao-khai-yiao-ma",
+      "name": "กระเพราไข่เยี่ยวม้า (ไก่/หมึก/กุ้ง)",
+      "food_groups": [
+        "protein",
+        "veg"
+      ],
+      "protein": [
+        "chicken",
+        "squid",
+        "shrimp"
+      ],
+      "method": "stir-fry",
+      "cuisine": "thai",
+      "flavor": [
+        "spicy"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "ใบกะเพรา",
+          "พริก",
+          "กระเทียม",
+          "ไข่เยี่ยวม้า",
+          "เนื้อสัตว์(ไก่/หมึก/กุ้ง)"
+        ],
+        "optional": []
+      },
+      "staples_used": [
+        "น้ำมัน",
+        "น้ำปลา",
+        "น้ำตาล"
+      ],
+      "steps": [
+        "ตำพริกกระเทียม ผัดกับเนื้อสัตว์ที่เลือกให้สุก",
+        "หั่นไข่เยี่ยวม้าใส่ผัดรวม",
+        "ปรุงรส ใส่ใบกะเพรา"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍽️",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "chicken",
+          "squid",
+          "shrimp"
+        ],
+        "key": [
+          "ใบกะเพรา"
+        ]
+      }
+    },
+    {
+      "id": "pad-prikpao",
+      "name": "ผัดพริกเผา (ไก่/หมึก/กุ้ง/หอยลาย)",
+      "food_groups": [
+        "protein",
+        "veg"
+      ],
+      "protein": [
+        "chicken",
+        "squid",
+        "shrimp"
+      ],
+      "method": "stir-fry",
+      "cuisine": "thai",
+      "flavor": [
+        "spicy",
+        "sweet"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "พริกเผา",
+          "เนื้อสัตว์(ไก่/หมึก/กุ้ง/หอยลาย)",
+          "หอมใหญ่",
+          "พริกชี้ฟ้า"
+        ],
+        "optional": []
+      },
+      "staples_used": [
+        "น้ำมัน",
+        "น้ำปลา",
+        "น้ำตาล"
+      ],
+      "steps": [
+        "ผัดพริกเผากับน้ำมันให้หอม",
+        "ใส่เนื้อสัตว์ที่เลือกผัดให้สุก",
+        "ใส่หอมใหญ่พริกชี้ฟ้าผัดคลุก ปรุงรส"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍽️",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "chicken",
+          "squid",
+          "shrimp"
+        ],
+        "key": []
+      }
+    },
+    {
+      "id": "kuychai-pad-goong",
+      "name": "กุยช่ายผัดกุ้ง",
+      "food_groups": [
+        "protein",
+        "veg"
+      ],
+      "protein": [
+        "shrimp"
+      ],
+      "method": "stir-fry",
+      "cuisine": "thai",
+      "flavor": [
+        "savory-rich"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "ใบกุยช่าย",
+          "กุ้ง",
+          "กระเทียม"
+        ],
+        "optional": []
+      },
+      "staples_used": [
+        "น้ำมัน",
+        "น้ำปลา",
+        "ซอสหอยนางรม"
+      ],
+      "steps": [
+        "ผัดกระเทียมให้หอม ใส่กุ้งผัดพอสุก",
+        "ใส่ใบกุยช่ายผัดไฟแรง",
+        "ปรุงรสด้วยซอสหอยนางรม"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍽️",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "shrimp"
+        ],
+        "key": []
+      }
+    },
+    {
+      "id": "moo-pad-taohuyi",
+      "name": "หมูผัดเต้าหู้ยี้",
+      "food_groups": [
+        "protein",
+        "veg"
+      ],
+      "protein": [
+        "pork"
+      ],
+      "method": "stir-fry",
+      "cuisine": "thai",
+      "flavor": [
+        "savory-rich"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "หมู",
+          "เต้าหู้ยี้",
+          "ผักบุ้ง/คะน้า",
+          "กระเทียม"
+        ],
+        "optional": []
+      },
+      "staples_used": [
+        "น้ำมัน",
+        "น้ำตาล"
+      ],
+      "steps": [
+        "ผัดกระเทียมกับหมูให้สุก",
+        "ใส่เต้าหู้ยี้บดผัดให้เข้ากัน",
+        "ใส่ผักผัดคลุก ปรุงรส"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍽️",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "pork"
+        ],
+        "key": [
+          "เต้าหู้"
+        ]
+      }
+    },
+    {
+      "id": "goong-pad-pong-kari",
+      "name": "กุ้งผัดผงกะหรี่",
+      "food_groups": [
+        "protein"
+      ],
+      "protein": [
+        "shrimp"
+      ],
+      "method": "stir-fry",
+      "cuisine": "thai",
+      "flavor": [
+        "savory-rich",
+        "spicy"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "กุ้ง",
+          "ผงกะหรี่",
+          "หอมใหญ่",
+          "ไข่"
+        ],
+        "optional": [
+          "ต้นหอม",
+          "นมสด"
+        ]
+      },
+      "staples_used": [
+        "น้ำมัน",
+        "น้ำปลา"
+      ],
+      "steps": [
+        "ผัดกุ้งให้สุกพักไว้",
+        "ผัดผงกะหรี่กับหอมใหญ่ให้หอม ใส่ไข่คน",
+        "ใส่กุ้งกลับลงผัดคลุก ปรุงรส"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍽️",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "shrimp"
+        ],
+        "key": [
+          "ผงกะหรี่"
+        ]
+      }
+    },
+    {
+      "id": "steak",
+      "name": "สเต๊ก / เสต็ก",
+      "food_groups": [
+        "protein"
+      ],
+      "protein": [
+        "beef",
+        "pork",
+        "chicken"
+      ],
+      "method": "grill-bake",
+      "cuisine": "western",
+      "flavor": [
+        "savory-rich"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "เนื้อสเต็ก",
+          "เกลือ",
+          "พริกไทย"
+        ],
+        "optional": [
+          "เนย",
+          "กระเทียม"
+        ]
+      },
+      "staples_used": [
+        "น้ำมัน"
+      ],
+      "steps": [
+        "หมักเนื้อกับเกลือพริกไทย",
+        "ย่างกระทะร้อนจัดทั้งสองด้านตามความสุกที่ชอบ",
+        "พักเนื้อสักครู่ก่อนหั่นเสิร์ฟ"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍖",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "beef",
+          "pork",
+          "chicken"
+        ],
+        "key": []
+      }
+    },
+    {
+      "id": "steak-pla-basa-pesto",
+      "name": "สเต๊กปลาบาซาซอสเพสโต้",
+      "food_groups": [
+        "protein"
+      ],
+      "protein": [
+        "fish"
+      ],
+      "method": "grill-bake",
+      "cuisine": "western",
+      "flavor": [
+        "savory-rich"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "ปลาบาซา",
+          "ซอสเพสโต้"
+        ],
+        "optional": [
+          "มะเขือเทศ"
+        ]
+      },
+      "staples_used": [
+        "น้ำมัน",
+        "เกลือ",
+        "พริกไทย"
+      ],
+      "steps": [
+        "หมักปลาบาซากับเกลือพริกไทย",
+        "ย่างหรือทอดปลาให้สุกเหลือง",
+        "ราดซอสเพสโต้เสิร์ฟ"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍖",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "fish"
+        ],
+        "key": []
+      }
+    },
+    {
+      "id": "kai-op-masala",
+      "name": "ไก่อบมาซาล่า",
+      "food_groups": [
+        "protein"
+      ],
+      "protein": [
+        "chicken"
+      ],
+      "method": "grill-bake",
+      "cuisine": "indian-me",
+      "flavor": [
+        "spicy",
+        "savory-rich"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "ไก่",
+          "เครื่องเทศมาซาล่า",
+          "โยเกิร์ต"
+        ],
+        "optional": [
+          "กระเทียม",
+          "ขิง"
+        ]
+      },
+      "staples_used": [
+        "น้ำมัน",
+        "เกลือ"
+      ],
+      "steps": [
+        "หมักไก่กับโยเกิร์ตและเครื่องเทศมาซาล่าอย่างน้อย 1 ชม.",
+        "นำเข้าอบจนสุกหอม",
+        "เสิร์ฟร้อน"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍖",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "chicken"
+        ],
+        "key": [
+          "เครื่องแกง"
+        ]
+      }
+    },
+    {
+      "id": "hom-yai-op",
+      "name": "หอมใหญ่อบ",
+      "food_groups": [
+        "veg"
+      ],
+      "protein": [
+        "none"
+      ],
+      "method": "grill-bake",
+      "cuisine": "western",
+      "flavor": [
+        "savory-rich"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "หอมใหญ่",
+          "ชีส"
+        ],
+        "optional": [
+          "เนย"
+        ]
+      },
+      "staples_used": [
+        "น้ำมัน",
+        "เกลือ",
+        "พริกไทย"
+      ],
+      "steps": [
+        "หั่นหอมใหญ่เป็นชิ้นหนา ทาเนยและปรุงรส",
+        "โรยชีสด้านบน",
+        "อบจนหอมใหญ่นุ่มและชีสละลาย"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍖",
+        "url": null
+      },
+      "gates": {
+        "protein": [],
+        "key": [
+          "หอมใหญ่",
+          "ชีส"
+        ]
+      }
+    },
+    {
+      "id": "onion-ring",
+      "name": "โอเนี่ยนริง",
+      "food_groups": [
+        "veg"
+      ],
+      "protein": [
+        "none"
+      ],
+      "method": "deep-fry",
+      "cuisine": "western",
+      "flavor": [
+        "savory-rich"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "หอมใหญ่",
+          "แป้งทอดกรอบ",
+          "ไข่"
+        ],
+        "optional": []
+      },
+      "staples_used": [
+        "น้ำมัน",
+        "เกลือ"
+      ],
+      "steps": [
+        "หั่นหอมใหญ่เป็นวงแหวน",
+        "ชุบไข่แล้วคลุกแป้งทอดกรอบ",
+        "ทอดในน้ำมันร้อนจนเหลืองกรอบ"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍗",
+        "url": null
+      },
+      "gates": {
+        "protein": [],
+        "key": [
+          "หอมใหญ่"
+        ]
+      }
+    },
+    {
+      "id": "moo-krata",
+      "name": "หมูกระทะ",
+      "food_groups": [
+        "protein",
+        "veg"
+      ],
+      "protein": [
+        "pork"
+      ],
+      "method": "grill-bake",
+      "cuisine": "thai",
+      "flavor": [
+        "savory-rich",
+        "spicy"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "หมูสไลซ์",
+          "ผักรวม",
+          "น้ำจิ้มหมูกระทะ"
+        ],
+        "optional": [
+          "ไข่",
+          "เส้นหมี่"
+        ]
+      },
+      "staples_used": [
+        "น้ำมัน"
+      ],
+      "steps": [
+        "หมักหมูให้เข้าเครื่อง",
+        "ปิ้งย่างบนกระทะร้อน พร้อมลวกผักรอบขอบกระทะ",
+        "จิ้มน้ำจิ้มหมูกระทะ"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍖",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "pork"
+        ],
+        "key": []
+      }
+    },
+    {
+      "id": "taohu-nim-rad-tonkatsu-wasabi",
+      "name": "เต้าหู้นิ่มราดทงคัตสึ ซอสวาซาบิ",
+      "food_groups": [
+        "protein"
+      ],
+      "protein": [
+        "tofu"
+      ],
+      "method": "deep-fry",
+      "cuisine": "japanese",
+      "flavor": [
+        "savory-rich",
+        "spicy"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "เต้าหู้นิ่ม",
+          "แป้งทอดกรอบ",
+          "ซอสทงคัตสึ",
+          "วาซาบิ"
+        ],
+        "optional": []
+      },
+      "staples_used": [
+        "น้ำมัน",
+        "ไข่"
+      ],
+      "steps": [
+        "ชุบเต้าหู้นิ่มด้วยแป้งไข่และเกล็ดขนมปัง",
+        "ทอดในน้ำมันร้อนจนเหลืองกรอบ",
+        "ราดซอสทงคัตสึและวาซาบิ"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍗",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "tofu"
+        ],
+        "key": []
+      }
+    },
+    {
+      "id": "goong-op-woonsen",
+      "name": "กุ้งอบวุ้นเส้น",
+      "food_groups": [
+        "protein",
+        "carb"
+      ],
+      "protein": [
+        "shrimp"
+      ],
+      "method": "grill-bake",
+      "cuisine": "thai",
+      "flavor": [
+        "savory-rich"
+      ],
+      "carb_in_dish": true,
+      "ingredients": {
+        "core": [
+          "กุ้ง",
+          "วุ้นเส้น",
+          "กระเทียม",
+          "ขิง"
+        ],
+        "optional": [
+          "เห็ด"
+        ]
+      },
+      "staples_used": [
+        "ซีอิ๊ว",
+        "น้ำมันหอย"
+      ],
+      "steps": [
+        "แช่วุ้นเส้นให้นุ่ม จัดใส่หม้อดิน",
+        "วางกุ้งและกระเทียมขิงด้านบน ปรุงน้ำซีอิ๊ว",
+        "อบหรือตั้งไฟจนกุ้งสุกวุ้นเส้นซึมซับรส"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍜",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "shrimp"
+        ],
+        "key": [
+          "วุ้นเส้น"
+        ]
+      }
+    },
+    {
+      "id": "takoyaki",
+      "name": "ทาโกะยากิ",
+      "food_groups": [
+        "protein",
+        "carb"
+      ],
+      "protein": [
+        "seafood"
+      ],
+      "method": "other",
+      "cuisine": "japanese",
+      "flavor": [
+        "savory-rich"
+      ],
+      "carb_in_dish": true,
+      "ingredients": {
+        "core": [
+          "แป้งทาโกะยากิ",
+          "หมึกยักษ์",
+          "ไข่"
+        ],
+        "optional": [
+          "ต้นหอม",
+          "สาหร่ายโรยหน้า",
+          "มายองเนส"
+        ]
+      },
+      "staples_used": [
+        "น้ำมัน"
+      ],
+      "steps": [
+        "ผสมแป้งทาโกะยากิกับไข่และน้ำซุป",
+        "เทลงหลุมพิมพ์ทาโกะยากิ ใส่หมึกยักษ์สับ",
+        "พลิกลูกกลมจนสุกทั่ว ราดซอสและมายองเนส"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍚",
+        "url": null
+      },
+      "gates": {
+        "protein": [
+          "seafood"
+        ],
+        "key": []
+      }
+    },
+    {
+      "id": "mama-khai-cheese",
+      "name": "มาม่าไข่ชีส",
+      "food_groups": [
+        "carb",
+        "protein"
+      ],
+      "protein": [
+        "egg"
+      ],
+      "method": "boil-soup",
+      "cuisine": "thai",
+      "flavor": [
+        "savory-rich"
+      ],
+      "carb_in_dish": true,
+      "ingredients": {
+        "core": [
+          "บะหมี่กึ่งสำเร็จรูป",
+          "ไข่",
+          "ชีส"
+        ],
+        "optional": [
+          "ต้นหอม"
+        ]
+      },
+      "staples_used": [
+        "น้ำ"
+      ],
+      "steps": [
+        "ต้มมาม่ากับน้ำและซองปรุงรส",
+        "ตอกไข่ใส่ตุ๋นให้สุก",
+        "ใส่ชีสคนให้ละลายเข้ากัน"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍜",
+        "url": null
+      },
+      "gates": {
+        "protein": [],
+        "key": [
+          "เส้นราเมน",
+          "ชีส"
+        ]
+      }
+    },
+    {
+      "id": "mansampalang-bod-op-cheese",
+      "name": "มันสำปะหลังบดอบชีส",
+      "food_groups": [
+        "carb"
+      ],
+      "protein": [
+        "none"
+      ],
+      "method": "grill-bake",
+      "cuisine": "western",
+      "flavor": [
+        "savory-rich"
+      ],
+      "carb_in_dish": true,
+      "ingredients": {
+        "core": [
+          "มันสำปะหลัง",
+          "ชีส"
+        ],
+        "optional": [
+          "เนย"
+        ]
+      },
+      "staples_used": [
+        "เกลือ"
+      ],
+      "steps": [
+        "ต้มมันสำปะหลังจนนุ่มแล้วบด",
+        "ผสมเนยและเกลือ ใส่ถาดอบ",
+        "โรยชีสด้านบนแล้วอบจนชีสละลายเหลือง"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🍚",
+        "url": null
+      },
+      "gates": {
+        "protein": [],
+        "key": [
+          "ชีส"
+        ]
+      }
+    },
+    {
+      "id": "manwaan-tom-khing-kha-takrai",
+      "name": "มันหวานต้มขิง ข่า ตะไคร้",
+      "food_groups": [
+        "carb"
+      ],
+      "protein": [
+        "none"
+      ],
+      "method": "boil-soup",
+      "cuisine": "thai",
+      "flavor": [
+        "sweet"
+      ],
+      "carb_in_dish": true,
+      "ingredients": {
+        "core": [
+          "มันหวาน",
+          "ขิง",
+          "ข่า",
+          "ตะไคร้"
+        ],
+        "optional": []
+      },
+      "staples_used": [
+        "น้ำตาล"
+      ],
+      "steps": [
+        "ต้มขิงข่าตะไคร้ให้หอม",
+        "ใส่มันหวานต้มจนนุ่ม",
+        "ปรุงรสหวานด้วยน้ำตาล"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🥘",
+        "url": null
+      },
+      "gates": {
+        "protein": [],
+        "key": []
+      }
+    },
+    {
+      "id": "kluay-ping-cheese",
+      "name": "กล้วยปิ้งชีส",
+      "food_groups": [
+        "dessert"
+      ],
+      "protein": [
+        "none"
+      ],
+      "method": "grill-bake",
+      "cuisine": "thai",
+      "flavor": [
+        "sweet"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "กล้วยน้ำว้า",
+          "ชีส"
+        ],
+        "optional": [
+          "นมข้นหวาน"
+        ]
+      },
+      "staples_used": [],
+      "steps": [
+        "ปิ้งกล้วยน้ำว้าบนเตาจนหอมสุกทั่ว",
+        "ราดนมข้นหวาน โรยชีส",
+        "ปิ้งต่อจนชีสละลายเล็กน้อย"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🧁",
+        "url": null
+      },
+      "gates": {
+        "protein": [],
+        "key": [
+          "ชีส"
+        ]
+      }
+    },
+    {
+      "id": "kluay-tab",
+      "name": "กล้วยทับ",
+      "food_groups": [
+        "dessert"
+      ],
+      "protein": [
+        "none"
+      ],
+      "method": "grill-bake",
+      "cuisine": "thai",
+      "flavor": [
+        "sweet"
+      ],
+      "carb_in_dish": false,
+      "ingredients": {
+        "core": [
+          "กล้วยน้ำว้า"
+        ],
+        "optional": [
+          "มะพร้าวขูด"
+        ]
+      },
+      "staples_used": [
+        "น้ำตาล"
+      ],
+      "steps": [
+        "ปิ้งกล้วยน้ำว้าพอสุก",
+        "ทับให้แบน",
+        "ปิ้งต่อให้เหลืองทั้งสองด้าน ราดน้ำตาลหรือมะพร้าว"
+      ],
+      "source": "B",
+      "image": {
+        "emoji": "🧁",
+        "url": null
+      },
+      "gates": {
+        "protein": [],
+        "key": []
+      }
+    }
+  ]
+}

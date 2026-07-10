@@ -21,7 +21,7 @@ Software ที่ต้องติดตั้งบน VPS ก่อน deplo
 
 | Software | Version | วิธีติดตั้ง | ใช้ทำอะไร |
 |---|---|---|---|
-| **MySQL** | 8.0+ | `sudo apt install mysql-server` | main database (bot + web ส่วนใหญ่) |
+| **PostgreSQL** | 14+ | `sudo apt install postgresql` | main database (bot + web ส่วนใหญ่) |
 | **PostgreSQL** | 14+ | `sudo apt install postgresql` | docs module (`docs_projects`, `docs_activity_entries` ฯลฯ) |
 
 ### Search
@@ -222,7 +222,7 @@ DISCORD_BOT_TOKEN=...
 DISCORD_CLIENT_ID=...
 DISCORD_CLIENT_SECRET=...
 GUILD_ID=...
-DATABASE_URL=mysql://pple_dcbot:...@localhost/pple_volunteers
+DATABASE_URL=postgresql://pple_dcbot:...@localhost:5432/pple_volunteers
 NEXTAUTH_SECRET=...
 NEXTAUTH_URL=https://pplethai.org
 MEILISEARCH_HOST=...
@@ -261,13 +261,13 @@ tail -f /www/wwwroot/pple-volunteers/logs/calling.log
 
 ```bash
 # Manual backup
-sudo -u www mysqldump -u pple_dcbot -p pple_volunteers > /www/wwwroot/pple-volunteers/backups/backup_$(date +%Y%m%d_%H%M%S).sql
+sudo -u www pg_dump -U pple_dcbot pple_volunteers > /www/wwwroot/pple-volunteers/backups/backup_$(date +%Y%m%d_%H%M%S).sql
 ```
 
 ### Restore
 
 ```bash
-sudo -u www mysql -u pple_dcbot -p pple_volunteers < /www/wwwroot/pple-volunteers/backups/backup_20240101_000000.sql
+sudo -u www psql -U pple_dcbot -d pple_volunteers < /www/wwwroot/pple-volunteers/backups/backup_20240101_000000.sql
 ```
 
 ---
@@ -316,7 +316,7 @@ MEILISEARCH_KEY=YOUR_KEY
 ### Run SQL Migration
 
 ```bash
-sudo -u www mysql -u pple_dcbot -p pple_volunteers < scripts/migration-forum.sql
+sudo -u www psql -U pple_dcbot -d pple_volunteers -f scripts/migration-forum.sql
 ```
 
 ### Status
@@ -385,24 +385,24 @@ pm2 restart pple-dcbot
 ```bash
 pm2 logs pple-web --lines 100
 # Check database connection
-mysql -u pple_dcbot -p -e "USE pple_volunteers; SELECT COUNT(*) FROM dc_members LIMIT 1;"
+psql -U pple_dcbot -d pple_volunteers -c "SELECT COUNT(*) FROM dc_members;"
 ```
 
 ### Database connection failed
 
 ```bash
 # Test connection
-mysql -u pple_dcbot -p pple_volunteers -e "SELECT 1"
+psql -U pple_dcbot -d pple_volunteers -c "SELECT 1"
 
-# Check if MySQL running
-ps aux | grep mysqld
+# Check if PostgreSQL running
+ps aux | grep postgres
 ```
 
 ### Meilisearch down
 
 ```bash
 ps aux | grep meilisearch
-# If down, forum search falls back to MySQL LIKE (works but slower)
+# If down, forum search falls back to Postgres ILIKE (works but slower)
 ```
 
 ---

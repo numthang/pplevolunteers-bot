@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import ContactForm from './ContactForm.jsx'
 import InteractionLogForm from './InteractionLogForm.jsx'
@@ -30,6 +31,7 @@ function formatThaiDate(dateStr) {
 }
 
 export default function ContactModal({ contactId, discordId, canManageAll, onClose, onDeleted, onSaved }) {
+  const t = useTranslations('calling')
   const [contact, setContact] = useState(null)
   const [logs, setLogs] = useState([])
   const [loading, setLoading] = useState(true)
@@ -45,7 +47,7 @@ export default function ContactModal({ contactId, discordId, canManageAll, onClo
         fetch(`/api/calling/contacts/${contactId}`),
         fetch(`/api/calling/contacts/${contactId}/logs`),
       ])
-      if (!cRes.ok) throw new Error('โหลดข้อมูลไม่สำเร็จ')
+      if (!cRes.ok) throw new Error(t('contactModal.loadError'))
       const cj = await cRes.json()
       const lj = await lRes.json()
       setContact(cj.data)
@@ -71,7 +73,7 @@ export default function ContactModal({ contactId, discordId, canManageAll, onClo
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       })
-      if (!res.ok) { const j = await res.json(); throw new Error(j.error || 'บันทึกไม่สำเร็จ') }
+      if (!res.ok) { const j = await res.json(); throw new Error(j.error || t('contactModal.saveError')) }
       onSaved?.()
       onClose()
     } catch (e) { setError(e.message); setSaving(false) }
@@ -82,7 +84,7 @@ export default function ContactModal({ contactId, discordId, canManageAll, onClo
     setError('')
     try {
       const res = await fetch(`/api/calling/contacts/${contactId}`, { method: 'DELETE' })
-      if (!res.ok) { const j = await res.json(); throw new Error(j.error || 'ลบไม่สำเร็จ') }
+      if (!res.ok) { const j = await res.json(); throw new Error(j.error || t('contactModal.deleteError')) }
       onDeleted?.()
       onClose()
     } catch (e) { setError(e.message); setDeleting(false) }
@@ -101,7 +103,7 @@ export default function ContactModal({ contactId, discordId, canManageAll, onClo
         <div className="flex items-center justify-between px-5 py-4 border-b border-warm-200 dark:border-disc-border shrink-0">
           <div className="min-w-0 flex-1">
             {loading ? (
-              <span className="text-warm-400 dark:text-disc-muted text-base">กำลังโหลด…</span>
+              <span className="text-warm-400 dark:text-disc-muted text-base">{t('common.loading')}</span>
             ) : contact ? (
               <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-lg font-semibold text-warm-900 dark:text-disc-text">
@@ -131,7 +133,7 @@ export default function ContactModal({ contactId, discordId, canManageAll, onClo
                   ? 'border-teal text-teal'
                   : 'border-transparent text-warm-500 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text'
               }`}>
-              ข้อมูล
+              {t('contactModal.infoTab')}
             </button>
             <button onClick={() => setTab('history')}
               className={`px-5 py-2.5 text-sm font-medium border-b-2 transition ${
@@ -139,7 +141,7 @@ export default function ContactModal({ contactId, discordId, canManageAll, onClo
                   ? 'border-teal text-teal'
                   : 'border-transparent text-warm-500 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text'
               }`}>
-              ประวัติ{logs.length > 0 ? ` (${logs.length})` : ''}
+              {logs.length > 0 ? t('contactModal.historyTabCount', { count: logs.length }) : t('contactModal.historyTab')}
             </button>
           </div>
         )}
@@ -148,16 +150,16 @@ export default function ContactModal({ contactId, discordId, canManageAll, onClo
         {error && (
           <div className="mx-5 mt-3 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 text-sm shrink-0">
             {error}
-            <button onClick={() => setError('')} className="ml-2 underline">ปิด</button>
+            <button onClick={() => setError('')} className="ml-2 underline">{t('common.close')}</button>
           </div>
         )}
 
         {/* Body */}
         <div className="overflow-y-auto flex-1">
           {loading ? (
-            <div className="py-12 text-center text-warm-400 dark:text-disc-muted">กำลังโหลด…</div>
+            <div className="py-12 text-center text-warm-400 dark:text-disc-muted">{t('common.loading')}</div>
           ) : !contact ? (
-            <div className="py-12 text-center text-warm-400 dark:text-disc-muted">ไม่พบ contact</div>
+            <div className="py-12 text-center text-warm-400 dark:text-disc-muted">{t('contactModal.notFound')}</div>
           ) : tab === 'info' ? (
             <div className="p-5">
               <ContactForm
@@ -171,20 +173,20 @@ export default function ContactModal({ contactId, discordId, canManageAll, onClo
                   {!deleteConfirm ? (
                     <button onClick={() => setDeleteConfirm(true)}
                       className="text-sm text-red-500 hover:text-red-700 dark:hover:text-red-400">
-                      ลบ contact นี้
+                      {t('contactModal.deleteLink')}
                     </button>
                   ) : (
                     <div className="flex items-center gap-3 flex-wrap">
                       <span className="text-sm text-warm-700 dark:text-disc-text">
-                        ยืนยันลบ {contact.first_name}?
+                        {t('contactModal.confirmDelete', { name: contact.first_name })}
                       </span>
                       <button onClick={handleDelete} disabled={deleting}
                         className="text-sm px-3 py-1.5 rounded-lg bg-red-500 hover:bg-red-600 text-white disabled:opacity-50">
-                        {deleting ? '…' : 'ลบเลย'}
+                        {deleting ? t('contactModal.deleting') : t('contactModal.deleteNow')}
                       </button>
                       <button onClick={() => setDeleteConfirm(false)}
                         className="text-sm text-warm-500 dark:text-disc-muted hover:text-warm-700 dark:hover:text-disc-text">
-                        ยกเลิก
+                        {t('common.cancel')}
                       </button>
                     </div>
                   )}
@@ -195,7 +197,7 @@ export default function ContactModal({ contactId, discordId, canManageAll, onClo
             <div className="p-5 space-y-4">
               <InteractionLogForm contactId={contact.id} onSaved={fetchAll} />
               {logs.length === 0 ? (
-                <div className="text-center py-6 text-warm-400 dark:text-disc-muted text-base">ยังไม่มีบันทึก</div>
+                <div className="text-center py-6 text-warm-400 dark:text-disc-muted text-base">{t('contactModal.noLogs')}</div>
               ) : (
                 <div className="space-y-2">
                   {logs.map(log => {
@@ -209,7 +211,7 @@ export default function ContactModal({ contactId, discordId, canManageAll, onClo
                               {formatThaiDate(log.called_at)}
                             </span>
                             {log.caller_name && (
-                              <span className="text-base text-warm-500 dark:text-disc-muted">โดย {log.caller_name}</span>
+                              <span className="text-base text-warm-500 dark:text-disc-muted">{t('contactModal.byCaller', { name: log.caller_name })}</span>
                             )}
                           </div>
                           {log.campaign_name && (
@@ -226,9 +228,9 @@ export default function ContactModal({ contactId, discordId, canManageAll, onClo
                         )}
                         {(log.sig_location || log.sig_availability || log.sig_interest) && (
                           <div className="mt-1.5 flex flex-wrap gap-x-3 text-sm text-warm-500 dark:text-disc-muted">
-                            {log.sig_location     && <span>ที่อยู่: {findSignalLabel('sig_location', log.sig_location)}</span>}
-                            {log.sig_availability && <span>เวลา: {findSignalLabel('sig_availability', log.sig_availability)}</span>}
-                            {log.sig_interest     && <span>สนใจ: {findSignalLabel('sig_interest', log.sig_interest)}</span>}
+                            {log.sig_location     && <span>{t('contactModal.sigLocation', { value: findSignalLabel('sig_location', log.sig_location) })}</span>}
+                            {log.sig_availability && <span>{t('contactModal.sigAvailability', { value: findSignalLabel('sig_availability', log.sig_availability) })}</span>}
+                            {log.sig_interest     && <span>{t('contactModal.sigInterest', { value: findSignalLabel('sig_interest', log.sig_interest) })}</span>}
                           </div>
                         )}
                       </div>

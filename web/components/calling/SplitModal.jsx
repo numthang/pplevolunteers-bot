@@ -1,9 +1,11 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import UserCombobox from './UserCombobox.jsx'
 
 export default function SplitModal({ isOpen, unassignedCount, onClose, onConfirm }) {
+  const t = useTranslations('calling')
   const [assignees, setAssignees] = useState([])
   const [isLoading, setIsLoading] = useState(false)
 
@@ -32,23 +34,23 @@ export default function SplitModal({ isOpen, unassignedCount, onClose, onConfirm
       <div className="flex min-h-full items-center justify-center p-4">
         <div className="bg-white dark:bg-disc-hover rounded-lg shadow-lg max-w-lg w-full">
           <div className="flex items-center justify-between p-6 border-b border-warm-200 dark:border-disc-border">
-            <h2 className="text-lg font-medium text-warm-900 dark:text-disc-text">แบ่งงาน</h2>
+            <h2 className="text-lg font-medium text-warm-900 dark:text-disc-text">{t('splitModal.title')}</h2>
             <button onClick={handleClose} className="text-warm-400 hover:text-warm-900 dark:hover:text-disc-text text-2xl w-10 h-10 flex items-center justify-center rounded-lg hover:bg-warm-100 dark:hover:bg-disc-hover transition">×</button>
           </div>
 
           <div className="p-6 space-y-4">
             <div className="text-base text-warm-600 dark:text-disc-muted bg-warm-50 dark:bg-disc-header px-4 py-3 rounded-lg">
-              สมาชิกที่ยังไม่ได้มอบหมาย: <strong>{unassignedCount} คน</strong>
+              {t('splitModal.unassignedLabel')} <strong>{t('splitModal.peopleCount', { count: unassignedCount })}</strong>
             </div>
 
             <div>
               <label className="block text-base font-medium text-warm-700 dark:text-disc-text mb-2">
-                ผู้รับผิดชอบ
+                {t('assignment.assigneeOption')}
               </label>
               <UserCombobox
                 value={assignees}
                 onChange={setAssignees}
-                placeholder="ค้นหาชื่อผู้รับผิดชอบ..."
+                placeholder={t('splitModal.searchPlaceholder')}
               />
             </div>
 
@@ -61,7 +63,7 @@ export default function SplitModal({ isOpen, unassignedCount, onClose, onConfirm
                     <div key={u.discord_id} className="flex items-center justify-between px-3 py-2.5">
                       <span className="font-medium text-warm-900 dark:text-disc-text">{u.display_name}</span>
                       <span className="text-warm-400 dark:text-disc-muted">
-                        {to - from + 1} คน (#{from}–#{to})
+                        {t('splitModal.rangeLabel', { count: to - from + 1, from, to })}
                       </span>
                     </div>
                   )
@@ -75,13 +77,13 @@ export default function SplitModal({ isOpen, unassignedCount, onClose, onConfirm
                 disabled={assignees.length === 0 || unassignedCount === 0 || isLoading}
                 className="flex-1 px-4 py-3 bg-teal hover:opacity-90 text-white text-base font-medium rounded-lg disabled:opacity-40 transition"
               >
-                {isLoading ? 'กำลังมอบหมาย...' : `ยืนยัน (${assignees.length} คน)`}
+                {isLoading ? t('splitModal.assigning') : t('splitModal.confirmButton', { count: assignees.length })}
               </button>
               <button
                 onClick={handleClose}
                 className="px-4 py-3 border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text text-base font-medium rounded-lg hover:bg-warm-50 dark:hover:bg-disc-hover transition"
               >
-                ยกเลิก
+                {t('common.cancel')}
               </button>
             </div>
           </div>

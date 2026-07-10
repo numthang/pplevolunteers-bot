@@ -3,6 +3,7 @@
 import { useState, useEffect, use } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 
 const PROVINCES = [
   'กรุงเทพ', 'นนทบุรี', 'สมุทรปราการ', 'สมุทรสาคร', 'ปทุมธานี',
@@ -27,6 +28,7 @@ const inputCls = 'w-full border border-gray-300 dark:border-disc-border bg-white
 
 export default function EditCampaignPage({ params }) {
   const { id } = use(params)
+  const t = useTranslations('calling')
   const router = useRouter()
 
   const [newId, setNewId] = useState('')
@@ -58,7 +60,7 @@ export default function EditCampaignPage({ params }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!name) { alert('กรุณาใส่ชื่อแคมเปญ'); return }
+    if (!name) { alert(t('campaignForm.nameRequiredAlert')); return }
     setSaving(true)
     try {
       const res = await fetch(`/api/calling/campaigns/${id}`, {
@@ -69,42 +71,42 @@ export default function EditCampaignPage({ params }) {
       if (!res.ok) throw new Error((await res.json()).error || 'Failed')
       router.push('/calling/campaigns')
     } catch (error) {
-      alert('เกิดข้อผิดพลาด: ' + error.message)
+      alert(t('campaignForm.errorAlert', { message: error.message }))
     } finally {
       setSaving(false)
     }
   }
 
-  if (loading) return <div className="py-20 text-center text-warm-400 dark:text-disc-muted text-base">กำลังโหลด...</div>
-  if (notFound) return <div className="py-20 text-center text-red-500">ไม่พบแคมเปญ</div>
+  if (loading) return <div className="py-20 text-center text-warm-400 dark:text-disc-muted text-base">{t('common.loading')}</div>
+  if (notFound) return <div className="py-20 text-center text-red-500">{t('campaignForm.notFound')}</div>
 
   return (
     <div>
       <Link href="/calling/campaigns" className="text-teal hover:underline mb-6 block text-base">
-        ← กลับ
+        {t('campaignForm.backLink')}
       </Link>
 
       <div className="max-w-2xl bg-card-bg border border-gray-200 dark:border-disc-border rounded-xl p-6">
-        <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-disc-text">แก้ไขแคมเปญ</h1>
+        <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-disc-text">{t('campaignForm.editTitle')}</h1>
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
             <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-disc-text">
-              Campaign ID
-              {newId !== String(id) && <span className="ml-2 text-sm font-normal text-amber-500">จะ rename cascade ทุก assignment + log</span>}
+              {t('campaignForm.idLabel')}
+              {newId !== String(id) && <span className="ml-2 text-sm font-normal text-amber-500">{t('campaignForm.idRenameWarning')}</span>}
             </label>
             <input type="number" value={newId} onChange={e => setNewId(e.target.value)}
               min="1" className={inputCls} />
           </div>
 
           <div>
-            <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-disc-text">ชื่อแคมเปญ *</label>
+            <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-disc-text">{t('campaignForm.nameLabel')}</label>
             <input type="text" value={name} onChange={e => setName(e.target.value)}
-              placeholder="เช่น บ้านโป่ง ราชบุรี ครั้งที่ 1" className={inputCls} required />
+              placeholder={t('campaignForm.namePlaceholder')} className={inputCls} required />
           </div>
 
           <div>
-            <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-disc-text">รายละเอียด</label>
+            <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-disc-text">{t('campaignForm.descriptionLabel')}</label>
             <textarea value={description}
               onChange={e => {
                 setDescription(e.target.value)
@@ -115,24 +117,24 @@ export default function EditCampaignPage({ params }) {
                 window.scrollTo({ top: scrollY, behavior: 'instant' })
               }}
               ref={el => { if (el && !el._init) { el._init = true; el.style.height = el.scrollHeight + 'px' } }}
-              placeholder="บรรยายเพิ่มเติม..." className={inputCls} rows="4" style={{ resize: 'none', overflow: 'hidden' }} />
+              placeholder={t('campaignForm.descriptionPlaceholder')} className={inputCls} rows="4" style={{ resize: 'none', overflow: 'hidden' }} />
           </div>
 
           <div>
-            <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-disc-text">จังหวัด</label>
+            <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-disc-text">{t('campaignForm.provinceLabel')}</label>
             <select value={province} onChange={e => setProvince(e.target.value)} className={inputCls}>
-              <option value="">-- ไม่ระบุ --</option>
+              <option value="">{t('campaignForm.provinceNone')}</option>
               {[...PROVINCES].sort((a, b) => a.localeCompare(b, 'th')).map(p => <option key={p} value={p}>{p}</option>)}
             </select>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-disc-text">วันจัดกิจกรรม</label>
+              <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-disc-text">{t('campaignForm.eventDateLabel')}</label>
               <input type="datetime-local" value={eventDate} onChange={e => setEventDate(e.target.value)} className={inputCls} />
             </div>
             <div>
-              <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-disc-text">เวลาสิ้นสุด</label>
+              <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-disc-text">{t('campaignForm.eventEndDateLabel')}</label>
               <input type="datetime-local" value={eventEndDate} onChange={e => setEventEndDate(e.target.value)} className={inputCls} />
             </div>
           </div>
@@ -140,11 +142,11 @@ export default function EditCampaignPage({ params }) {
           <div className="flex gap-3 pt-1">
             <button type="submit" disabled={saving}
               className="flex-1 bg-indigo-600 text-white py-3 rounded-lg text-base font-semibold hover:bg-indigo-700 disabled:opacity-50 transition">
-              {saving ? 'กำลังบันทึก...' : 'บันทึก'}
+              {saving ? t('common.saving') : t('common.save')}
             </button>
             <Link href="/calling/campaigns"
               className="px-6 py-3 rounded-lg text-base font-semibold border border-gray-300 dark:border-disc-border text-gray-700 dark:text-disc-text hover:bg-gray-50 dark:hover:bg-disc-hover transition text-center">
-              ยกเลิก
+              {t('common.cancel')}
             </Link>
           </div>
         </form>

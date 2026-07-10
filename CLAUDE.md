@@ -30,7 +30,7 @@ Quick navigation to detailed docs for the entire pple-volunteers project (Bot + 
 
 - **Bot:** Node.js + discord.js v14 — root directory
 - **Web:** Node.js + Next.js (App Router) — `/web/`
-- **Database:** MySQL `pple_volunteers` (host: localhost, user: pple_dcbot)
+- **Database:** PostgreSQL `pple_volunteers` (host: localhost, port 5432, user: pple_dcbot)
 - **Auth:** Discord OAuth via next-auth
 - **Search:** Meilisearch (binary: `/usr/local/bin/meilisearch`, data: `data.ms/`)
 
@@ -158,7 +158,7 @@ cd web && npm run test:watch  # watch mode
 ### Timezone bug — `updateTransaction` / `createTransaction`
 `txn_at` ที่รับมาจาก form input เป็น local Thai time string (`"2026-04-19T23:20"`)  
 **ห้ามแปลงผ่าน `new Date(txn_at).toISOString()`** — Node.js server ทำงานใน UTC จะทำให้เวลา +7 ชั่วโมงทุกครั้งที่ save  
-ให้ pass `txn_at || null` ตรงๆ ให้ mysql2 จัดการเอง
+ให้ pass `txn_at || null` ตรงๆ ให้ pg (node-postgres) จัดการเอง
 
 ### Calling — `contact_type` ใน SQL ต้องใส่เสมอ
 `calling_logs`, `calling_assignments`, `calling_member_tiers` ใช้ `member_id` ร่วมกันทั้ง member และ contact  

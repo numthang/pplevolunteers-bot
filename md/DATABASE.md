@@ -1,6 +1,6 @@
 # Database Schema — pple_volunteers
 
-MySQL database supporting Discord bot + Finance + Calling systems.
+PostgreSQL database supporting Discord bot + Finance + Calling systems.
 
 **Host:** localhost  
 **User:** pple_dcbot  

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback, use } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { useSession } from 'next-auth/react'
 import { useEffectiveRoles } from '@/lib/useEffectiveRoles.js'
 import { can } from '@/lib/permissions.js'
@@ -25,11 +26,6 @@ const STATUS_ICONS = {
 import { buildSmsTemplate } from '@/lib/buildSmsTemplate.js'
 import { CATEGORY_LABELS, CATEGORY_COLORS } from '@/../config/callingCategories.js'
 
-const EDIT_STATUS_OPTIONS = [
-  { value: 'answered',   label: 'รับสาย' },
-  { value: 'no_answer',  label: 'ไม่รับ' },
-  { value: 'not_called', label: 'ไม่โทร' },
-]
 const URL_RE_PAGE = /https?:\/\/[^\s]+/g
 function parseLinksPage(text) {
   const parts = []; let last = 0
@@ -58,17 +54,17 @@ const RSVP_ICONS = {
 }
 
 
-function getStatusBadge(status) {
-  if (status === 'assigned') return { bg: '#e0e7ff', text: '#4f46e5', label: 'มอบหมายแล้ว' }
-  return { bg: '#faeeda', text: '#854f0b', label: 'รอมอบหมาย' }
+function getStatusBadge(status, t) {
+  if (status === 'assigned') return { bg: '#e0e7ff', text: '#4f46e5', label: t('assignment.statusAssigned') }
+  return { bg: '#faeeda', text: '#854f0b', label: t('assignment.statusUnassigned') }
 }
 
-function getExpiryIcon(expiredAt) {
+function getExpiryIcon(expiredAt, t) {
   if (!expiredAt) return null
   const now = Date.now()
   const exp = new Date(expiredAt).getTime()
-  if (exp < now) return { Icon: AlertTriangle, color: '#ef4444', title: 'หมดอายุ' }
-  if (exp - now < 90 * 24 * 60 * 60 * 1000) return { Icon: Timer, color: '#d97706', title: 'ใกล้หมดอายุ' }
+  if (exp < now) return { Icon: AlertTriangle, color: '#ef4444', title: t('assignment.expiredLabel') }
+  if (exp - now < 90 * 24 * 60 * 60 * 1000) return { Icon: Timer, color: '#d97706', title: t('assignment.expiringLabel') }
   return null
 }
 
@@ -87,6 +83,7 @@ function parseLinks(text) {
 }
 
 function ExpandableDescription({ text }) {
+  const t = useTranslations('calling')
   const [expanded, setExpanded] = useState(false)
   const [clamped, setClamped] = useState(false)
   const ref = useRef(null)
@@ -105,7 +102,7 @@ function ExpandableDescription({ text }) {
       </p>
       {(clamped || expanded) && (
         <button onClick={() => setExpanded(!expanded)} className="text-base text-teal hover:underline shrink-0">
-          {expanded ? 'ย่อ' : 'ดูเพิ่ม'}
+          {expanded ? t('assignment.collapseLabel') : t('assignment.expandLabel')}
         </button>
       )}
     </div>
@@ -117,6 +114,7 @@ const FILTER_CLS_ACTIVE = 'h-11 px-3 text-base border border-teal bg-teal/10 tex
 const filterCls = (val) => val ? FILTER_CLS_ACTIVE : FILTER_CLS
 
 export default function CampaignPage({ params }) {
+  const t = useTranslations('calling')
   const { campaignId } = use(params)
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -178,8 +176,8 @@ export default function CampaignPage({ params }) {
   }, [campaignId, campaign])
 
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedName(filterName), 400)
-    return () => clearTimeout(t)
+    const timer = setTimeout(() => setDebouncedName(filterName), 400)
+    return () => clearTimeout(timer)
   }, [filterName])
 
   useEffect(() => {
@@ -422,13 +420,13 @@ export default function CampaignPage({ params }) {
       setSplitModalOpen(false)
       await loadFirst(activeTab, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled, filterSort, filterStatus, filterSms)
     } catch (err) {
-      alert('เกิดข้อผิดพลาด: ' + err.message)
+      alert(t('assignment.errorWithMessage', { message: err.message }))
     }
   }
 
   const handleUnassign = async () => {
     const ids = Array.from(selectedMembers)
-    if (!confirm(`ยกเลิกมอบหมาย ${ids.length} คน?`)) return
+    if (!confirm(t('assignment.unassignConfirm', { count: ids.length }))) return
     try {
       await Promise.all(
         ids.map(itemId =>
@@ -447,7 +445,7 @@ export default function CampaignPage({ params }) {
       )
       await loadFirst(activeTab, filterAmphure, filterSubdistricts, filterTier, filterAssignee, filterRsvp, debouncedName, filterExpiry, filterCalled, filterSort, filterStatus, filterSms)
     } catch (err) {
-      alert('เกิดข้อผิดพลาด: ' + err.message)
+      alert(t('assignment.errorWithMessage', { message: err.message }))
     }
   }
 
@@ -495,10 +493,10 @@ export default function CampaignPage({ params }) {
   const isAllSelected = members.length > 0 && selectedMembers.size === members.length
 
   if (loadingInitial && !campaign) {
-    return <div className="py-20 text-center text-warm-400 dark:text-disc-muted text-base">กำลังโหลด...</div>
+    return <div className="py-20 text-center text-warm-400 dark:text-disc-muted text-base">{t('common.loading')}</div>
   }
   if (!loadingInitial && !campaign) {
-    return <div className="py-20 text-center text-red-500 text-base">ไม่พบแคมเปญ</div>
+    return <div className="py-20 text-center text-red-500 text-base">{t('campaignForm.notFound')}</div>
   }
 
   return (
@@ -513,11 +511,11 @@ export default function CampaignPage({ params }) {
         />
         <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
           <h1 className="text-2xl font-bold text-warm-900 dark:text-disc-text">
-            {campaign?.name} <span className="text-warm-500 dark:text-disc-muted font-normal text-base">(assignor)</span>
+            {campaign?.name} <span className="text-warm-500 dark:text-disc-muted font-normal text-base">{t('assignment.roleLabel')}</span>
           </h1>
           <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-base text-warm-500 dark:text-disc-muted">
-            <span>{activeTab === 'contact' ? 'Contact' : 'Member'} <span className="font-semibold text-warm-900 dark:text-disc-text">{stats.total}</span></span>
-            <span>โทรแล้ว <span className="font-semibold text-warm-900 dark:text-disc-text">{stats.called}/{stats.assigned}</span></span>
+            <span>{activeTab === 'contact' ? t('assignment.tabContact') : t('assignment.tabMember')} <span className="font-semibold text-warm-900 dark:text-disc-text">{stats.total}</span></span>
+            <span>{t('assignment.calledLabel')} <span className="font-semibold text-warm-900 dark:text-disc-text">{stats.called}/{stats.assigned}</span></span>
           </div>
         </div>
         {campaign?.description && (
@@ -536,7 +534,7 @@ export default function CampaignPage({ params }) {
                   ? 'border-teal text-teal'
                   : 'border-transparent text-warm-500 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text'
               }`}>
-              {tab === 'member' ? 'Member' : 'Contact'}
+              {tab === 'member' ? t('assignment.tabMember') : t('assignment.tabContact')}
               {total !== null && (
                 <span className={`text-sm px-1.5 py-0.5 rounded-full font-normal ${
                   activeTab === tab
@@ -555,13 +553,13 @@ export default function CampaignPage({ params }) {
           type="text"
           value={filterName}
           onChange={e => setFilterName(e.target.value)}
-          placeholder="ค้นหาชื่อ..."
+          placeholder={t('assignment.searchNamePlaceholder')}
           className="h-11 px-3 text-base border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted rounded-lg focus:outline-none focus:ring-2 focus:ring-teal w-full sm:w-40"
         />
         <select value={filterAmphure} onChange={e => setFilterAmphure(e.target.value)} className={filterCls(filterAmphure)}>
-          <option value="">อำเภอ</option>
+          <option value="">{t('assignment.districtOption')}</option>
           {stats.districts.map(d => (
-            <option key={d} value={d}>{d || '(ไม่ระบุ)'} ({stats.districtCounts[d] || 0})</option>
+            <option key={d} value={d}>{d || t('assignment.notSpecified')} ({stats.districtCounts[d] || 0})</option>
           ))}
         </select>
 
@@ -570,11 +568,11 @@ export default function CampaignPage({ params }) {
           <div ref={subdistrictsRef} className="relative">
             {loadingSubdistricts ? (
               <div className="h-11 px-3 text-base border border-warm-200 dark:border-disc-border bg-warm-50 dark:bg-disc-bg2 text-warm-900 dark:text-disc-text rounded-lg flex items-center">
-                กำลังโหลด...
+                {t('common.loading')}
               </div>
             ) : availableSubdistricts.length === 0 ? (
               <div className="h-11 px-3 text-base border border-warm-200 dark:border-disc-border bg-warm-50 dark:bg-disc-bg2 text-warm-400 dark:text-disc-muted rounded-lg flex items-center">
-                ไม่มีตำบล
+                {t('assignment.subdistrictNoneOption')}
               </div>
             ) : (
               <>
@@ -582,7 +580,7 @@ export default function CampaignPage({ params }) {
                   onClick={() => setSubdistrictsOpen(!subdistrictsOpen)}
                   className="h-11 px-3 text-base border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text rounded-lg focus:outline-none focus:ring-2 focus:ring-teal w-full text-left flex justify-between items-center"
                 >
-                  ตำบล {filterSubdistricts.size > 0 && <span>({filterSubdistricts.size})</span>}
+                  {t('assignment.subdistrictLabel')} {filterSubdistricts.size > 0 && <span>({filterSubdistricts.size})</span>}
                 </button>
                 {subdistrictsOpen && (
                   <div className="absolute top-full left-0 mt-1 bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg shadow-lg z-20 w-56 max-h-60 overflow-y-auto">
@@ -598,7 +596,7 @@ export default function CampaignPage({ params }) {
                           }}
                           className="accent-teal"
                         />
-                        <span className="ml-2">{sub.name || '(ไม่ระบุ)'} ({sub.count})</span>
+                        <span className="ml-2">{sub.name || t('assignment.notSpecified')} ({sub.count})</span>
                       </label>
                     ))}
                   </div>
@@ -609,27 +607,27 @@ export default function CampaignPage({ params }) {
         )}
 
         <select value={filterTier} onChange={e => setFilterTier(e.target.value)} className={filterCls(filterTier)}>
-          <option value="">Tier</option>
-          {['A','B','C','D'].map(t => <option key={t} value={t}>{t}</option>)}
+          <option value="">{t('assignment.tierOption')}</option>
+          {['A','B','C','D'].map(tierVal => <option key={tierVal} value={tierVal}>{tierVal}</option>)}
         </select>
 
         <select value={filterAssignee} onChange={e => setFilterAssignee(e.target.value)} className={filterCls(filterAssignee)}>
-          <option value="">ผู้รับผิดชอบ</option>
+          <option value="">{t('assignment.assigneeOption')}</option>
           {assignees.map(a => (
             <option key={a.id} value={a.id}>{a.name} ({a.count})</option>
           ))}
         </select>
 
         <select value={filterCalled} onChange={e => setFilterCalled(e.target.value)} className={filterCls(filterCalled)}>
-          <option value="">สถานะ</option>
-          <option value="called">โทรแล้ว</option>
-          <option value="uncalled">รอโทร</option>
+          <option value="">{t('assignment.statusOption')}</option>
+          <option value="called">{t('assignment.calledLabel')}</option>
+          <option value="uncalled">{t('assignment.pendingCallLabel')}</option>
         </select>
 
         <select value={filterSms} onChange={e => setFilterSms(e.target.value)} className={filterCls(filterSms)}>
-          <option value="">SMS</option>
-          <option value="sms_sent">ส่ง SMS แล้ว</option>
-          <option value="no_sms">ยังไม่ส่ง SMS</option>
+          <option value="">{t('assignment.smsOption')}</option>
+          <option value="sms_sent">{t('assignment.smsSentOption')}</option>
+          <option value="no_sms">{t('assignment.smsNotSentOption')}</option>
         </select>
 
         <button
@@ -640,30 +638,30 @@ export default function CampaignPage({ params }) {
               : 'border-warm-200 dark:border-disc-border bg-card-bg text-warm-500 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text'
           }`}
         >
-          รอมอบหมาย
+          {t('assignment.statusUnassigned')}
         </button>
 
         {/* member-only filters */}
         {activeTab === 'member' && <>
           <select value={filterRsvp} onChange={e => setFilterRsvp(e.target.value)} className={filterCls(filterRsvp)}>
-            <option value="">RSVP</option>
-            <option value="yes">✓ เข้าร่วม</option>
-            <option value="no">✗ ไม่เข้าร่วม</option>
-            <option value="maybe">? อาจจะ</option>
+            <option value="">{t('assignment.rsvpOption')}</option>
+            <option value="yes">{t('assignment.rsvpYes')}</option>
+            <option value="no">{t('assignment.rsvpNo')}</option>
+            <option value="maybe">{t('assignment.rsvpMaybe')}</option>
           </select>
 
           <select value={filterExpiry} onChange={e => setFilterExpiry(e.target.value)} className={filterCls(filterExpiry)}>
-            <option value="">สมาชิกภาพ</option>
-            <option value="lifetime">ตลอดชีพ</option>
-            <option value="expiring">ใกล้หมดอายุ (90 วัน)</option>
-            <option value="expired">หมดอายุแล้ว</option>
+            <option value="">{t('assignment.membershipOption')}</option>
+            <option value="lifetime">{t('assignment.membershipLifetime')}</option>
+            <option value="expiring">{t('assignment.membershipExpiringOption')}</option>
+            <option value="expired">{t('assignment.membershipExpiredOption')}</option>
           </select>
 
           <select value={filterSort} onChange={e => setFilterSort(e.target.value)} className={filterCls(filterSort)}>
-            <option value="">เรียงตาม: ที่อยู่/ชื่อ</option>
-            <option value="least_called">โทรน้อยสุด (ทุกแคมเปญ)</option>
-            <option value="uncalled">ยังไม่โทร (แคมเปญนี้)</option>
-            <option value="tier">Tier</option>
+            <option value="">{t('assignment.sortDefaultOption')}</option>
+            <option value="least_called">{t('assignment.sortLeastCalled')}</option>
+            <option value="uncalled">{t('assignment.sortUncalledCampaign')}</option>
+            <option value="tier">{t('assignment.tierOption')}</option>
           </select>
         </>}
 
@@ -672,7 +670,7 @@ export default function CampaignPage({ params }) {
             onClick={clearFilters}
             className="h-11 px-3 text-base border border-warm-200 dark:border-disc-border bg-card-bg text-warm-500 dark:text-disc-muted hover:text-red-500 dark:hover:text-red-400 hover:border-red-300 dark:hover:border-red-700 rounded-lg transition-colors whitespace-nowrap"
           >
-            ล้าง filter ×
+            {t('assignment.clearFilterButton')}
           </button>
         )}
       </div>
@@ -693,26 +691,26 @@ export default function CampaignPage({ params }) {
           <span className="hidden md:block">#</span>
           <span>
             {selectedMembers.size > 0
-              ? `เลือก ${selectedMembers.size} / ${members.length}`
-              : `ชื่อ (${loadingInitial ? '...' : members.length})`}
+              ? t('assignment.selectedCountLabel', { selected: selectedMembers.size, total: members.length })
+              : t('assignment.nameHeaderLabel', { count: loadingInitial ? '...' : members.length })}
           </span>
-          <span className="md:hidden text-center">โทร</span>
-          <span className="hidden md:block">มอบหมาย</span>
-          <span className="hidden md:block">{activeTab === 'contact' ? 'ประเภท' : 'ตำบล'}</span>
-          <span className="hidden md:block text-center">โทร</span>
+          <span className="md:hidden text-center">{t('assignment.callColumnHeader')}</span>
+          <span className="hidden md:block">{t('assignment.assignedColumnHeader')}</span>
+          <span className="hidden md:block">{activeTab === 'contact' ? t('assignment.categoryColumnHeader') : t('assignment.subdistrictLabel')}</span>
+          <span className="hidden md:block text-center">{t('assignment.callColumnHeader')}</span>
         </div>
 
         {/* Rows */}
         {loadingInitial ? (
-          <div className="px-6 py-8 text-center text-warm-400 dark:text-disc-muted text-base">กำลังโหลด...</div>
+          <div className="px-6 py-8 text-center text-warm-400 dark:text-disc-muted text-base">{t('common.loading')}</div>
         ) : noAccess ? (
           <div className="px-6 py-10 text-center">
-            <p className="text-base text-warm-700 dark:text-disc-text font-medium mb-1">ยังไม่ได้รับสิทธิ์เข้าถึงส่วนนี้</p>
-            <p className="text-base text-warm-400 dark:text-disc-muted">ต้องการเข้าใช้งาน? ติดต่อฝ่ายเครือข่ายได้เลยนะครับ</p>
+            <p className="text-base text-warm-700 dark:text-disc-text font-medium mb-1">{t('assignment.noAccessTitle')}</p>
+            <p className="text-base text-warm-400 dark:text-disc-muted">{t('assignment.noAccessSubtitle')}</p>
           </div>
         ) : members.length === 0 ? (
           <div className="px-6 py-8 text-center text-warm-400 dark:text-disc-muted text-base">
-            {activeTab === 'contact' ? 'ไม่พบ contact' : 'ไม่พบสมาชิก'}
+            {activeTab === 'contact' ? t('assignment.emptyContacts') : t('assignment.emptyMembers')}
           </div>
         ) : (
           <div>
@@ -721,12 +719,12 @@ export default function CampaignPage({ params }) {
               const tier    = item.tier || 'D'
               const tierColor = TIER_COLORS[tier]
               const status  = item.member_status || 'unassigned'
-              const badge   = getStatusBadge(status)
+              const badge   = getStatusBadge(status, t)
               // member-specific
               const isMember  = activeTab === 'member'
               const hasPhone  = contactsHidden || !!(isMember ? item.mobile_number : item.phone)
               const dimmed    = !hasPhone ? 'opacity-50' : ''
-              const expiryIcon = isMember ? getExpiryIcon(item.expired_at) : null
+              const expiryIcon = isMember ? getExpiryIcon(item.expired_at, t) : null
               const catColor  = !isMember && item.category ? (CATEGORY_COLORS[item.category] || CATEGORY_COLORS.other) : null
 
               const displayName = isMember ? item.full_name : [item.first_name, item.last_name].filter(Boolean).join(' ')
@@ -757,16 +755,16 @@ export default function CampaignPage({ params }) {
                         <span className="shrink-0 px-1 py-px rounded text-xs font-bold"
                           style={{ backgroundColor: tierColor.bg, color: tierColor.text }}>{tier}</span>
                         {item.flag && (
-                          <span className="shrink-0 text-sm leading-none" title={item.flag === 'green' ? 'ตอบรับดี' : item.flag === 'yellow' ? 'ระวัง' : 'อย่าโทร'}>
+                          <span className="shrink-0 text-sm leading-none" title={item.flag === 'green' ? t('assignment.flagGood') : item.flag === 'yellow' ? t('assignment.flagCaution') : t('assignment.flagDoNotCall')}>
                             {item.flag === 'green' ? '🟢' : item.flag === 'yellow' ? '🟡' : '🔴'}
                           </span>
                         )}
                         {isMember && (item.membership_type === 'ตลอดชีพ' || item.membership_type === 'สมาชิกตลอดชีพ') && (
-                          <Infinity title="สมาชิกตลอดชีพ" className="w-4 h-4 shrink-0 text-green-600 dark:text-green-400" />
+                          <Infinity title={t('assignment.lifetimeMemberTitle')} className="w-4 h-4 shrink-0 text-green-600 dark:text-green-400" />
                         )}
                         {expiryIcon && <expiryIcon.Icon title={expiryIcon.title} style={{ color: expiryIcon.color }} className="w-4 h-4 shrink-0 inline-block" />}
                         {catColor && <span className="md:hidden shrink-0 text-sm px-1.5 py-0.5 rounded font-medium" style={{ background: catColor.bg, color: catColor.text }}>{CATEGORY_LABELS[item.category] || item.category}</span>}
-                        {!hasPhone && <span className="shrink-0 text-base text-warm-400 dark:text-disc-muted font-normal">ไม่มีเบอร์</span>}
+                        {!hasPhone && <span className="shrink-0 text-base text-warm-400 dark:text-disc-muted font-normal">{t('assignment.noPhoneLabel')}</span>}
                       </div>
                       <div className="flex items-center gap-1.5 text-base text-warm-500 dark:text-disc-text truncate">
                         <span className="shrink-0 w-1.5 h-1.5 rounded-full inline-block" style={{ backgroundColor: badge.text }} />
@@ -788,9 +786,9 @@ export default function CampaignPage({ params }) {
                     </div>
                     <div className={`md:hidden flex justify-center items-center pl-2 ${dimmed}`}>
                       {item.total_calls > 0
-                        ? <span className="inline-flex items-center gap-1" style={{ color: STATUS_ICONS.called.color }}><PhoneCall className="w-4 h-4" /><span className="text-sm font-medium">โทรแล้ว</span></span>
+                        ? <span className="inline-flex items-center gap-1" style={{ color: STATUS_ICONS.called.color }}><PhoneCall className="w-4 h-4" /><span className="text-sm font-medium">{t('assignment.calledLabel')}</span></span>
                         : item.assigned_to
-                          ? <span className="inline-flex items-center gap-1" style={{ color: STATUS_ICONS.pending.color }}><Clock className="w-4 h-4" /><span className="text-sm font-medium">รอโทร</span></span>
+                          ? <span className="inline-flex items-center gap-1" style={{ color: STATUS_ICONS.pending.color }}><Clock className="w-4 h-4" /><span className="text-sm font-medium">{t('assignment.pendingCallLabel')}</span></span>
                           : <span className="text-warm-300 dark:text-disc-muted text-sm">—</span>}
                     </div>
                     <div className={`hidden md:block text-base truncate pr-2 ${dimmed}`}>
@@ -807,9 +805,9 @@ export default function CampaignPage({ params }) {
                     </div>
                     <div className={`hidden md:block text-center ${dimmed}`}>
                       {item.total_calls > 0
-                        ? <span className="inline-flex items-center gap-1" style={{ color: STATUS_ICONS.called.color }}><PhoneCall className="w-4 h-4" /><span className="text-sm font-medium">โทรแล้ว</span></span>
+                        ? <span className="inline-flex items-center gap-1" style={{ color: STATUS_ICONS.called.color }}><PhoneCall className="w-4 h-4" /><span className="text-sm font-medium">{t('assignment.calledLabel')}</span></span>
                         : item.assigned_to
-                          ? <span className="inline-flex items-center gap-1" style={{ color: STATUS_ICONS.pending.color }}><Clock className="w-4 h-4" /><span className="text-sm font-medium">รอโทร</span></span>
+                          ? <span className="inline-flex items-center gap-1" style={{ color: STATUS_ICONS.pending.color }}><Clock className="w-4 h-4" /><span className="text-sm font-medium">{t('assignment.pendingCallLabel')}</span></span>
                           : <span className="text-warm-300 dark:text-disc-muted text-sm">—</span>}
                     </div>
                   </div>
@@ -824,9 +822,11 @@ export default function CampaignPage({ params }) {
         <div ref={sentinelRef}
           className="px-6 py-3 text-center text-base text-warm-400 dark:text-disc-muted border-t border-warm-200 dark:border-disc-border">
           {loadingMore
-            ? 'กำลังโหลดเพิ่มเติม...'
+            ? t('assignment.loadingMoreLabel')
             : !loadingInitial && members.length > 0
-              ? hasMore ? '' : `แสดงครบ ${members.length} ${activeTab === 'contact' ? 'contact' : 'คน'}`
+              ? hasMore ? '' : (activeTab === 'contact'
+                  ? t('assignment.showingAllContacts', { count: members.length })
+                  : t('assignment.showingAllMembers', { count: members.length }))
               : ''}
         </div>
       </div>
@@ -836,16 +836,16 @@ export default function CampaignPage({ params }) {
         <div className="fixed bottom-4 left-4 right-4 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 sm:w-auto flex items-center gap-3 bg-card-bg border border-warm-200 dark:border-disc-border rounded-2xl sm:rounded-full shadow-lg px-5 py-3 z-40">
           <button onClick={() => setSplitModalOpen(true)}
             className="flex-1 sm:flex-none px-4 py-2 bg-teal hover:opacity-90 text-white text-base font-medium rounded-full transition text-center">
-            Assign ({selectedMembers.size})
+            {t('assignment.assignButton', { count: selectedMembers.size })}
           </button>
           <button onClick={handleUnassign}
             className="flex-1 sm:flex-none px-4 py-2 bg-red-500 hover:opacity-90 text-white text-base font-medium rounded-full transition text-center">
-            Unassign ({selectedMembers.size})
+            {t('assignment.unassignButton', { count: selectedMembers.size })}
           </button>
           {canSendBulkSms && (
             <button onClick={() => setSmsModalOpen(true)}
               className="flex-1 sm:flex-none px-4 py-2 bg-indigo-600 hover:opacity-90 text-white text-base font-medium rounded-full transition text-center">
-              SMS ({selectedMembers.size})
+              {t('assignment.smsButton', { count: selectedMembers.size })}
             </button>
           )}
           <button onClick={() => setSelectedMembers(new Set())}

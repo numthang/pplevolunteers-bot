@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, use } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import ContactForm from '@/components/calling/ContactForm.jsx'
 import InteractionLogForm from '@/components/calling/InteractionLogForm.jsx'
 import { CALL_STATUS_COLORS } from '@/lib/callingStatusColors.js'
@@ -20,6 +21,7 @@ function formatThaiDate(dateStr) {
 export default function ContactDetailPage({ params }) {
   const { id } = use(params)
   const router = useRouter()
+  const t = useTranslations('calling')
 
   const [contact, setContact] = useState(null)
   const [logs, setLogs]       = useState([])
@@ -37,7 +39,7 @@ export default function ContactDetailPage({ params }) {
         fetch(`/api/calling/contacts/${id}`),
         fetch(`/api/calling/contacts/${id}/logs`),
       ])
-      if (!contactRes.ok) throw new Error('โหลดข้อมูลไม่สำเร็จ')
+      if (!contactRes.ok) throw new Error(t('contactDetail.loadError'))
       const cj = await contactRes.json()
       const lj = await logsRes.json()
       setContact(cj.data)
@@ -63,7 +65,7 @@ export default function ContactDetailPage({ params }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       })
-      if (!res.ok) { const j = await res.json(); throw new Error(j.error || 'บันทึกไม่สำเร็จ') }
+      if (!res.ok) { const j = await res.json(); throw new Error(j.error || t('contactDetail.saveError')) }
       setEditing(false)
       await fetchAll()
     } catch (e) { setError(e.message) }
@@ -74,16 +76,16 @@ export default function ContactDetailPage({ params }) {
     setDeleting(true)
     try {
       const res = await fetch(`/api/calling/contacts/${id}`, { method: 'DELETE' })
-      if (!res.ok) { const j = await res.json(); throw new Error(j.error || 'ลบไม่สำเร็จ') }
+      if (!res.ok) { const j = await res.json(); throw new Error(j.error || t('contactDetail.deleteError')) }
       router.push('/calling/contacts')
     } catch (e) { setError(e.message); setDeleting(false) }
   }
 
   if (loading) {
-    return <div className="py-12 text-center text-warm-400 dark:text-disc-muted">กำลังโหลด…</div>
+    return <div className="py-12 text-center text-warm-400 dark:text-disc-muted">{t('common.loading')}</div>
   }
   if (!contact) {
-    return <div className="py-12 text-center text-warm-400 dark:text-disc-muted">ไม่พบ contact</div>
+    return <div className="py-12 text-center text-warm-400 dark:text-disc-muted">{t('contactDetail.notFound')}</div>
   }
 
   const cat = CATEGORY_COLORS[contact.category] || CATEGORY_COLORS.other
@@ -93,13 +95,13 @@ export default function ContactDetailPage({ params }) {
   return (
     <div>
       <div className="mb-4">
-        <Link href="/calling/contacts" className="text-base text-teal hover:underline">← กลับไปรายการ</Link>
+        <Link href="/calling/contacts" className="text-base text-teal hover:underline">{t('contactDetail.backLink')}</Link>
       </div>
 
       {error && (
         <div className="mb-4 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 text-sm">
           {error}
-          <button onClick={() => setError('')} className="ml-2 underline">ปิด</button>
+          <button onClick={() => setError('')} className="ml-2 underline">{t('common.close')}</button>
         </div>
       )}
 
@@ -121,23 +123,23 @@ export default function ContactDetailPage({ params }) {
           <div className="flex items-center gap-2 shrink-0 flex-wrap">
             <button onClick={() => setEditing(true)}
               className="text-sm px-3 py-1.5 rounded-lg border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover">
-              แก้ไข
+              {t('contactDetail.editButton')}
             </button>
             {!deleteConfirm ? (
               <button onClick={() => setDeleteConfirm(true)}
                 className="text-sm px-3 py-1.5 rounded-lg border border-red-300 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">
-                ลบ
+                {t('common.delete')}
               </button>
             ) : (
               <div className="flex items-center gap-2">
-                <span className="text-sm text-warm-700 dark:text-disc-text">ยืนยัน?</span>
+                <span className="text-sm text-warm-700 dark:text-disc-text">{t('contactDetail.confirmDelete')}</span>
                 <button onClick={handleDelete} disabled={deleting}
                   className="text-sm px-3 py-1.5 rounded-lg bg-red-500 hover:bg-red-600 text-white disabled:opacity-50">
-                  {deleting ? '…' : 'ลบเลย'}
+                  {deleting ? t('contactDetail.deleting') : t('contactDetail.deleteNow')}
                 </button>
                 <button onClick={() => setDeleteConfirm(false)}
                   className="text-sm text-warm-500 dark:text-disc-muted hover:text-warm-700 dark:hover:text-disc-text">
-                  ยกเลิก
+                  {t('common.cancel')}
                 </button>
               </div>
             )}
@@ -147,25 +149,25 @@ export default function ContactDetailPage({ params }) {
         <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-base">
           {contact.phone && (
             <div>
-              <dt className="text-sm text-warm-500 dark:text-disc-muted">เบอร์โทร</dt>
+              <dt className="text-sm text-warm-500 dark:text-disc-muted">{t('contactDetail.phoneLabel')}</dt>
               <dd><a href={`tel:${contact.phone}`} className="text-teal font-medium">{contact.phone}</a></dd>
             </div>
           )}
           {contact.line_id && (
             <div>
-              <dt className="text-sm text-warm-500 dark:text-disc-muted">LINE ID</dt>
+              <dt className="text-sm text-warm-500 dark:text-disc-muted">{t('contactDetail.lineIdLabel')}</dt>
               <dd className="text-warm-900 dark:text-disc-text">{contact.line_id}</dd>
             </div>
           )}
           {contact.specialty && (
             <div className="sm:col-span-2">
-              <dt className="text-sm text-warm-500 dark:text-disc-muted">อาชีพ / ตำแหน่ง / ความสามารถ</dt>
+              <dt className="text-sm text-warm-500 dark:text-disc-muted">{t('contactDetail.specialtyLabel')}</dt>
               <dd className="text-warm-900 dark:text-disc-text whitespace-pre-wrap">{contact.specialty}</dd>
             </div>
           )}
           {contact.note && (
             <div className="sm:col-span-2">
-              <dt className="text-sm text-warm-500 dark:text-disc-muted">หมายเหตุ</dt>
+              <dt className="text-sm text-warm-500 dark:text-disc-muted">{t('contactDetail.noteLabel')}</dt>
               <dd className="text-warm-900 dark:text-disc-text italic whitespace-pre-wrap">"{contact.note}"</dd>
             </div>
           )}
@@ -174,12 +176,12 @@ export default function ContactDetailPage({ params }) {
 
       {/* ส่วน Interaction Log */}
       <div className="space-y-4">
-        <h2 className="text-lg font-semibold text-warm-900 dark:text-disc-text">บันทึกการพบปะ / ประวัติ</h2>
+        <h2 className="text-lg font-semibold text-warm-900 dark:text-disc-text">{t('contactDetail.historyHeading')}</h2>
 
         <InteractionLogForm contactId={contact.id} onSaved={fetchAll} />
 
         {logs.length === 0 ? (
-          <div className="text-center py-8 text-warm-400 dark:text-disc-muted text-base">ยังไม่มีบันทึก</div>
+          <div className="text-center py-8 text-warm-400 dark:text-disc-muted text-base">{t('contactDetail.noLogs')}</div>
         ) : (
           <div className="space-y-2">
             {logs.map(log => {
@@ -190,7 +192,7 @@ export default function ContactDetailPage({ params }) {
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-xs px-2 py-0.5 rounded font-semibold" style={{ background: s.bg, color: s.text }}>{s.label}</span>
                       <span className="text-base text-warm-500 dark:text-disc-muted">{formatThaiDate(log.called_at)}</span>
-                      {log.caller_name && <span className="text-base text-warm-500 dark:text-disc-muted">โดย {log.caller_name}</span>}
+                      {log.caller_name && <span className="text-base text-warm-500 dark:text-disc-muted">{t('contactDetail.byCaller', { name: log.caller_name })}</span>}
                     </div>
                     {log.campaign_name && (
                       <Link href={`/calling/assignments/${log.campaign_id}`} className="text-sm text-teal hover:underline truncate max-w-[60%]">
@@ -203,9 +205,9 @@ export default function ContactDetailPage({ params }) {
                   )}
                   {(log.sig_location || log.sig_availability || log.sig_interest) && (
                     <div className="mt-1.5 flex flex-wrap gap-x-3 text-sm text-warm-500 dark:text-disc-muted">
-                      {log.sig_location     && <span>ที่อยู่: {findSignalLabel('sig_location', log.sig_location)}</span>}
-                      {log.sig_availability && <span>เวลา: {findSignalLabel('sig_availability', log.sig_availability)}</span>}
-                      {log.sig_interest     && <span>สนใจ: {findSignalLabel('sig_interest', log.sig_interest)}</span>}
+                      {log.sig_location     && <span>{t('contactDetail.sigLocation', { value: findSignalLabel('sig_location', log.sig_location) })}</span>}
+                      {log.sig_availability && <span>{t('contactDetail.sigAvailability', { value: findSignalLabel('sig_availability', log.sig_availability) })}</span>}
+                      {log.sig_interest     && <span>{t('contactDetail.sigInterest', { value: findSignalLabel('sig_interest', log.sig_interest) })}</span>}
                     </div>
                   )}
                 </div>
@@ -222,7 +224,7 @@ export default function ContactDetailPage({ params }) {
           <div className="w-full max-w-lg bg-card-bg rounded-xl shadow-xl max-h-[90vh] overflow-y-auto"
             onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-6 py-4 border-b border-warm-200 dark:border-disc-border">
-              <h2 className="text-lg font-semibold text-warm-900 dark:text-disc-text">แก้ไข — {contact.first_name}</h2>
+              <h2 className="text-lg font-semibold text-warm-900 dark:text-disc-text">{t('contactDetail.editModalTitle', { name: contact.first_name })}</h2>
               <button onClick={() => setEditing(false)}
                 className="text-warm-400 hover:text-warm-700 dark:hover:text-disc-text text-2xl leading-none">×</button>
             </div>

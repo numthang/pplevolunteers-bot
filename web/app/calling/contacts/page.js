@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import { useTranslations } from 'next-intl'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffectiveRoles } from '@/lib/useEffectiveRoles.js'
@@ -19,6 +20,7 @@ function getProvinceFromRoles(roles = []) {
 
 
 export default function ContactsPage() {
+  const t = useTranslations('calling')
   const { data: session, status } = useSession()
   const router = useRouter()
   const { roles, discordId, access } = useEffectiveRoles(session)
@@ -53,7 +55,7 @@ export default function ContactsPage() {
       const json = await res.json()
       setContacts(json.data || [])
       setContactsHidden(json.contacts_hidden || false)
-    } catch { setError('โหลดข้อมูลไม่สำเร็จ') }
+    } catch { setError(t('contacts.loadError')) }
     finally { setLoading(false) }
   }, [keyword])
 
@@ -73,7 +75,7 @@ export default function ContactsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       })
-      if (!res.ok) { const j = await res.json(); throw new Error(j.error || 'เกิดข้อผิดพลาด') }
+      if (!res.ok) { const j = await res.json(); throw new Error(j.error || t('contacts.createError')) }
       setModal(null)
       await fetchContacts()
     } catch (e) { setError(e.message) }
@@ -83,33 +85,33 @@ export default function ContactsPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-xl font-semibold text-warm-900 dark:text-disc-text">Contacts</h1>
+        <h1 className="text-xl font-semibold text-warm-900 dark:text-disc-text">{t('contacts.pageTitle')}</h1>
         <button onClick={() => setModal('new')}
           className="px-4 py-2 text-base font-medium rounded-lg bg-teal hover:opacity-90 text-white">
-          + เพิ่ม Contact
+          {t('contacts.addButton')}
         </button>
       </div>
 
       {error && (
         <div className="mb-4 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 text-sm">
           {error}
-          <button onClick={() => setError('')} className="ml-2 underline">ปิด</button>
+          <button onClick={() => setError('')} className="ml-2 underline">{t('common.close')}</button>
         </div>
       )}
 
       <div className="mb-4">
         <input
           className="w-full h-11 px-3 text-base border border-warm-200 dark:border-disc-border bg-card-bg dark:bg-card-bg text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted rounded-lg focus:outline-none focus:ring-2 focus:ring-teal"
-          placeholder="ค้นหาชื่อ เบอร์โทร หรือ LINE…"
+          placeholder={t('contacts.searchPlaceholder')}
           value={keyword}
           onChange={e => setKeyword(e.target.value)}
         />
       </div>
 
       {loading ? (
-        <div className="text-center py-12 text-warm-400 dark:text-disc-muted text-base">กำลังโหลด…</div>
+        <div className="text-center py-12 text-warm-400 dark:text-disc-muted text-base">{t('common.loading')}</div>
       ) : contacts.length === 0 ? (
-        <div className="text-center py-12 text-warm-400 dark:text-disc-muted text-base">ยังไม่มี contact</div>
+        <div className="text-center py-12 text-warm-400 dark:text-disc-muted text-base">{t('contacts.empty')}</div>
       ) : (
         <div className="space-y-2">
           {contacts.map(c => {
@@ -135,7 +137,7 @@ export default function ContactsPage() {
                 <div className="text-base text-warm-500 dark:text-disc-muted mt-0.5 flex flex-wrap gap-x-3">
                   {location && <span>{location}</span>}
                   {!contactsHidden && c.phone   && <span className="text-teal font-medium">{c.phone}</span>}
-                  {!contactsHidden && c.line_id && <span>LINE: {c.line_id}</span>}
+                  {!contactsHidden && c.line_id && <span>{t('contacts.lineLabel', { id: c.line_id })}</span>}
                 </div>
                 {c.note && <p className="text-base text-warm-500 dark:text-disc-muted mt-0.5 line-clamp-1 italic">"{c.note}"</p>}
               </button>
@@ -163,7 +165,7 @@ export default function ContactsPage() {
           <div className="w-full max-w-lg bg-card-bg rounded-xl shadow-xl max-h-[90vh] overflow-y-auto"
             onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-6 py-4 border-b border-warm-200 dark:border-disc-border">
-              <h2 className="text-lg font-semibold text-warm-900 dark:text-disc-text">เพิ่ม Contact</h2>
+              <h2 className="text-lg font-semibold text-warm-900 dark:text-disc-text">{t('contacts.modalTitle')}</h2>
               <button onClick={() => setModal(null)}
                 className="text-warm-400 hover:text-warm-700 dark:hover:text-disc-text text-2xl leading-none">×</button>
             </div>
