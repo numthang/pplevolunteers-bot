@@ -120,10 +120,10 @@ Phase 2 (features) ยังไม่ทำ: #2 แยก 3 สี chip · #8 br
 
 - นับจำนวน stock / ปริมาณ (แค่ มี/หมด)
 - วางแผนล่วงหน้าหลายวัน / ปฏิทินมื้อ
-- CRUD เมนูเต็มรูปแบบ (เพิ่มเมนูใหม่ = แก้ seed ก่อน)
 - แยก repo / subdomain / ชื่อ brand
+- privacy/permission ระหว่างเมนูผู้ใช้ (เคาะแล้ว v2 — public หมด ไม่ต้องทำ)
 
-## ✅ Decision ledger (เคาะแล้ว 2026-07-09)
+## ✅ Decision ledger (เคาะแล้ว 2026-07-09 — ดู v2 ด้านบนสำหรับของที่กลับคำ)
 
 1. กรองด้วยวัตถุดิบก่อน → สุ่มจากที่ทำได้ (random ลอยๆ = ตัดทิ้ง)
 2. pre-generate ลิสต์วัตถุดิบทุกเมนู, match deterministic
@@ -132,13 +132,44 @@ Phase 2 (features) ยังไม่ทำ: #2 แยก 3 สี chip · #8 br
 5. pantry แบบ มี/หมด, ของหมด = list ตลาด
 6. variety — ไม่ซ้ำ 3 วัน, 3 แกน (โปรตีน/วิธีทำ/สัญชาติ)
 7. ครบมื้อ — โปรตีน+ผัก+คาร์บ, จัดชุดให้
-8. หน้าเดียวจบ
-9. login Discord, เก็บ owner, เผื่อ multi-user
-10. เมนู=static JSON (`menus.seed.json`), state=Postgres `cooking_pantry`+`cooking_history`, ไม่ FK org (DB จริงคือ **Postgres** ไม่ใช่ MySQL)
+8. หน้าเดียวจบ (ยังจริง — คลังเมนู `/cooking/menus` เป็นหน้าย่อยแยกต่างหาก ไม่ใช่หน้าเมนหลัก)
+9. ~~login Discord, เก็บ owner, เผื่อ multi-user~~ → **v2: ไม่บังคับ login** (ดูด้านบน)
+10. ~~เมนู=static JSON~~ → **v2: เมนูอยู่ Postgres `cooking_menus`** · state ยังเป็น Postgres `cooking_pantry`+`cooking_history`+`cooking_ingredients` เหมือนเดิม, ไม่ FK org (DB จริงคือ **Postgres** ไม่ใช่ MySQL)
 
-## ▶️ Next step
+## 🗺️ Build map (v2 — อัปเดต 2026-07-10)
 
-1. รีวิว [MENUS.md](MENUS.md) — เมนูครบ/ถูกไหม
-2. pre-generate แท็ก + ลิสต์วัตถุดิบทั้ง 120 เมนู → seed
-3. ออกแบบ schema `cooking_*` ละเอียด + migration
-4. scaffold `web/app/cooking/` (หน้าเดียว) + `web/app/api/cooking/`
+**เสร็จ + verify แล้ว:**
+- Phase 0 — เมนู→DB (`cooking_menus`), owner widened VARCHAR(64), anon cookie login (`web/lib/cookingOwner.js`), de-login `page.js`, client โหลดเมนูจาก `/api/cooking/menus`
+- #2 — สี pastel 3 สถานะ chip (`CookingClient.jsx`: `CHIP_HAVE` เขียวอ่อน, `CHIP_OUT` ชมพูอ่อน, `CHIP_NEUTRAL` เทาเส้นประ)
+- #3 — เมนู CRUD: `web/lib/cookingMenu.js` (validator) + `web/db/cooking/menus.js` + `POST /api/cooking/menus` + `PATCH/DELETE /api/cooking/menus/[id]` (ownership guard, seed แก้ไม่ได้) + `web/app/cooking/MenuForm.jsx` (modal เพิ่ม/แก้ — เตือนถ้า gates ว่าง)
+- #7 + #9 — `web/app/cooking/menus/page.js` + `MenusClient.jsx` = คลังเมนูรวม (ทุกเมนู public, ป้าย by=ระบบ/ฉัน/สมาชิก) + ปุ่มคัดลอกรายชื่อ
+- #10 — `web/app/api/cooking/import/route.js` (Haiku raw fetch, บังคับ gates.protein เป็น enum + gates.key) + ปุ่ม "✨ AI ช่วยสร้าง" ใน MenusClient → เปิด MenuForm พร้อมข้อมูลให้รีวิวก่อน save
+
+**เสร็จ + verify แล้ว (2026-07-10):**
+- #6 — `web/db/cooking/ingredients.js` + `GET/POST/DELETE /api/cooking/ingredients(/[id])` + `AddIngredientRow` + `×` ลบบน custom chip ใน `CookingClient.jsx` (dedup client-side + DB unique constraint กันซ้ำ 2 ชั้น) — เทสผ่าน browser จริง (puppeteer): add/dup(409)/bad-grp(400)/delete ครบ
+  - `guessGroup()` เดา grp (protein/veg/special) จาก keyword ในชื่อตอนพิมพ์ — select ยังแก้ทับเองได้
+- #8 — slot-machine reel ใน `runSuggest` (ref + interval 80ms/900ms, cleanup on unmount, reduced-motion skip) — เทสผ่าน browser จริง เห็น reel หมุนแล้ว reveal การ์ดปกติ
+- หัวข้อ = `{{display_name}}, วันนี้ทำอะไรกินดี?` (nickname จาก session ผ่าน `page.js`, anon ไม่มี prefix) · ปุ่ม CTA ใช้สี custom จาก palette ที่ user ส่งมา (`#E57A72` สุ่ม, `#C1F0B4` ทำแล้ว) แทน `bg-teal` เดิม (สดไป) · "ของในครัว" เปิดโดย default เหมือนเดิม, **"วิธีทำ" ในการ์ดผลลัพธ์ปิดโดย default** (`<details>`, กดหัวข้อเพื่อดู)
+- หน้าแรก `/cooking` เพิ่มลิงก์ "คลังเมนู →" ไปหน้า `/cooking/menus` (เดิมไม่มีทางเข้าเลยนอกจากพิมพ์ URL เอง)
+- **44 รายการ checklist ย้ายจาก static `canonical.json` เข้า `cooking_ingredients` เป็นของ user คนเดียว** (`scripts/cooking/migrateCanonicalToOwn.js`, idempotent, owner default = `DEV_DISCORD_IDS` ตัวแรก) — เคาะแล้ว 2026-07-10 (กลับคำจาก v2 เดิมที่บอก "เมนู+ingredient list = static") เพราะ user อยากแก้ไข/เพิ่มเองได้ทั้งหมดโดยไม่ต้องแก้โค้ด
+  - `byGroup()` ใน `CookingClient.jsx` กันโชว์ซ้ำ: ถ้า token มีใน `cooking_ingredients` ของ owner แล้ว ใช้แถว DB แทน static (static ยังเป็น fallback ให้ owner ใหม่ที่ยังไม่ได้ migrate — เผื่อ multi-user ในอนาคต ต้องรัน migrate script ให้แต่ละคนเอง หรือเขียน auto-seed ตอน user ใหม่ตอน onboarding — ยังไม่ทำ)
+- **121 เมนู seed (`owner NULL`) โอนเป็นของ user คนเดียวทั้งหมด** (`scripts/cooking/migrateMenusToOwn.js`) — เหตุผลเดียวกับ ingredients: อยากแก้/ลบเมนูเก่าได้ผ่านปุ่มแก้ไข (เดิม `updateMenu`/`deleteMenu` เช็ค `WHERE owner=$` ซึ่งไม่ match NULL ได้เลย) — **cooking_menus ไม่มีแถว `owner IS NULL` เหลือแล้ว** (0 seed) → `seedMenus.js` รันซ้ำจะไม่ update อะไรอีก (WHERE owner IS NULL ไม่ match ใครแล้ว), เมนูทั้งหมดขึ้นป้าย "ฉัน" แทน "ระบบ"
+
+**ยังไม่ทำ:**
+
+### #6 — เพิ่ม ingredient เอง + เช็คซ้ำ/คำใกล้เคียง (เสร็จแล้ว — เก็บ spec ไว้อ้างอิง)
+- DB: table `cooking_ingredients` **มีอยู่แล้ว** (migration รันแล้ว) — `owner VARCHAR(64), token VARCHAR(80), label VARCHAR(80), grp('protein'|'veg'|'special'), tier DEFAULT 'regular'`, unique `(owner, token)`
+- สร้าง `web/db/cooking/ingredients.js`: `getIngredients(owner)` (`SELECT ... WHERE owner=$1 ORDER BY id`), `addIngredient(owner, {token,label,grp,tier='regular'})` (`INSERT ... ON CONFLICT (owner,token) DO NOTHING RETURNING ...` คืน null ถ้าซ้ำ)
+- สร้าง `web/app/api/cooking/ingredients/route.js`: `GET` → resolveOwner → list · `POST` validate `token`/`label` ไม่ว่าง + `grp` ∈ 3 ค่า (ไม่งั้น 400) → addIngredient
+- ใน `CookingClient.jsx`: state `customIngredients`, โหลดพร้อม pantry ตอน mount (เพิ่ม fetch ที่ 3 ใน `Promise.all`), merge เข้าแต่ละ `ChipGroup` (`[...canonicalData.X, ...customIngredients.filter(i=>i.grp==='X')]`), extend `allCanonical` ให้ `labelFor` เจอ token ใหม่ด้วย
+- UI เพิ่มแถวท้าย `<details>` "ของในครัว": input ชื่อ + select กลุ่ม (default `special`) + ปุ่ม "เพิ่ม"
+- **Dedup client-side ก่อนยิง API**: normalize = `s.trim().toLowerCase().replace(/\s+/g,'')` เทียบกับทุก token+label ที่มีอยู่ (canonical + custom) — ถือว่าซ้ำถ้า equal หรือ (ยาว≥2 ทั้งคู่ และ substring กันได้) → ถ้าซ้ำ **ไม่ยิง API** โชว์ "มีอยู่แล้ว: {label ที่ match}" · ถ้าไม่ซ้ำค่อย POST แล้วต่อ chip ใหม่เข้า state ทันที (`token=label=ชื่อที่พิมพ์` — เป็น Thai name ตรงกับ `gates.key` ของเมนู import ได้เลย)
+
+### #8 — Slot-machine animation ตอนสุ่ม (เสร็จแล้ว — เก็บ spec ไว้อ้างอิง)
+- state ใหม่: `spinning`, `reel` ({name,emoji})
+- ใน `runSuggest`: คำนวณผล `r` จริงเหมือนเดิมก่อน (ห้ามเปลี่ยน logic) → ถ้า `r` ไม่ empty และ `!window.matchMedia('(prefers-reduced-motion: reduce)').matches` → `setSpinning(true)`, `setInterval` ~80ms สุ่ม `reel` จาก `makeableMenus(menus, haveSet)` (import จาก `@/lib/cookingMatch.js`, fallback `menus` ถ้าพูลว่าง) ~900ms แล้ว clear interval, `setReel(null)`, `setSpinning(false)` — ใช้ ref เก็บ interval id + cleanup ตอน unmount กัน leak
+- ถ้า reduced-motion → ข้าม reel เผยผลทันที (พฤติกรรมเดิม)
+- Render: ตอน `spinning=true` โชว์แค่ emoji+ชื่อจาก `reel` ใหญ่ๆ (animate เบาๆ แบบ transform/opacity เท่านั้น กัน layout thrash) ซ่อนเครื่องปรุง/วิธีทำ/ปุ่ม/แชทไว้ก่อน พอ `spinning=false` ค่อยโชว์การ์ดเดิมทั้งหมด
+
+### Phase 1 (แยกทำทีหลัง, ไม่ block อะไร) — merge anon → login
+- ตอน login สำเร็จ (next-auth callback หรือหน้า cooking เช็คตอน mount) — อ่าน `readAnonUid()` จาก `web/lib/cookingOwner.js` ถ้ามี cookie anon เดิม → `UPDATE cooking_pantry/cooking_history/cooking_menus SET owner=$discordId WHERE owner=$anonUid` แล้วลบ cookie · ทำเป็น task แยก ถ้าเริ่มยุ่งให้หยุด (ตามที่ user สั่งไว้)

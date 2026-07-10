@@ -353,21 +353,6 @@
 
 ---
 
-## 🏗️ Web Architecture — ตัดสินใจแล้ว (2026-06-12)
-
-**Guild switcher** — ทุกหน้า, ทุก feature; user เห็นเฉพาะ guild ที่เป็น Discord member; admin เห็นทุก guild; data เปลี่ยนตาม guild ที่เลือก · **Feature toggle** ระดับ guild เก็บใน `dc_guild_config` key `enabled_features`:
-
-| Feature | Default |
-|---|---|
-| Finance | เปิดตลอดทุก guild (ไม่มี toggle) |
-| Calling | อาสาประชาชน = on, อื่น = off |
-| Contacts | อาสาประชาชน = on, อื่น = off |
-| Bot | public ทุก guild |
-
-> scope ปัจจุบัน: toggle ซ่อน nav เท่านั้น (ไม่ block route) — ข้อมูล isolate ด้วย guild_id อยู่แล้ว · guild switcher + feature toggle + view-as-role + per-guild role config UI live แล้ว
-
----
-
 ## 🔌 Integration — Panel / ACT / External APIs
 
 ### Panel 360
@@ -554,9 +539,7 @@
 
 > **ตัดสินใจ 2026-07-05:** GLM list เป็น checklist ตำราทั่วไป ไม่ดูบริบท repo (bot ไม่มี test + คนเดียวดูแล) · P2 (แตกไฟล์ใหญ่) เสี่ยงพัง > ประโยชน์ ถ้าจะทำต้องเขียน test ครอบก่อน · P3/P4 churn เยอะ ผลลัพธ์ที่ user เห็น = 0 → **ตัด P2–P4 ทิ้ง**
 
-- [x] **JSON parse helper** — `utils/parseSetting.js` สร้างแล้ว (2026-07-05) · แทน pattern `typeof x === 'string' ? JSON.parse` ที่ซ้ำ ~34 จุด (เคยเป็นเหตุ basket CPU spike bug)
-- [ ] **ทยอยแทนที่ call site ที่เหลือ (boy-scout rule)** — แตะไฟล์ไหน เก็บไฟล์นั้น ไม่ sweep รอบเดียว (กัน silent bug จาก fallback type ผิด) · ทำแล้ว: verifyHandler.js, panel.js
-- ~~magic numbers → constants, ย้าย require ขึ้น top~~ — cosmetic, ทำเฉพาะตอนแตะไฟล์นั้นอยู่แล้ว ไม่ต้องเป็น task
+- [ ] **ทยอยแทนที่ call site ที่เหลือ (boy-scout rule)** — ใช้ `utils/parseSetting.js` แทน pattern `typeof x === 'string' ? JSON.parse` ที่ซ้ำอยู่หลายจุด (เคยเป็นเหตุ basket CPU spike bug) · แตะไฟล์ไหน เก็บไฟล์นั้น ไม่ sweep รอบเดียว (กัน silent bug จาก fallback type ผิด) · ทำแล้ว: verifyHandler.js, panel.js
 
 ---
 
