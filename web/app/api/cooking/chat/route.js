@@ -1,10 +1,4 @@
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth-options.js'
-
 export async function POST(req) {
-  const session = await getServerSession(authOptions)
-  if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
-
   const { messages, context } = await req.json()
   if (!Array.isArray(messages) || !messages.length) {
     return Response.json({ error: 'Bad request' }, { status: 400 })

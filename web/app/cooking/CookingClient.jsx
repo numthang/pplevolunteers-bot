@@ -1,18 +1,17 @@
 'use client'
 import { useEffect, useMemo, useState } from 'react'
-import menusData from './data/menus.json'
 import canonicalData from './data/canonical.json'
 import { suggestMeal } from '@/lib/cookingMatch.js'
 
-const MENUS = menusData.menus
-const MENU_BY_ID = Object.fromEntries(MENUS.map(m => [m.id, m]))
-
 const CHIP_BASE =
   'inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm border transition'
+// 3 สถานะ สี pastel ต่างกันชัด: มี=เขียวอ่อน · หมด=ชมพูอ่อน(เตือน) · ยังไม่ติ๊ก=เทาโปร่งเส้นประ
 const CHIP_NEUTRAL =
-  'border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover'
-const CHIP_HAVE = 'border-teal bg-teal text-white'
-const CHIP_OUT = 'border-orange-500 bg-orange-500 text-white'
+  'border-dashed border-warm-300 dark:border-disc-border text-warm-500 dark:text-disc-muted hover:bg-warm-50 dark:hover:bg-disc-hover'
+const CHIP_HAVE =
+  'border-emerald-300 bg-emerald-100 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'
+const CHIP_OUT =
+  'border-rose-300 bg-rose-100 text-rose-700 dark:border-rose-700 dark:bg-rose-900/40 dark:text-rose-300'
 
 function nextStatus(current) {
   if (current === 'have') return 'out'
@@ -71,6 +70,7 @@ function ChipGroup({ heading, items, pantry, onCycle }) {
 
 export default function CookingClient() {
   const [loading, setLoading] = useState(true)
+  const [menus, setMenus] = useState([]) // loaded from DB (public menus)
   const [pantry, setPantry] = useState({}) // token -> 'have' | 'out'
   const [recent, setRecent] = useState([]) // menu_id[], newest first
   const [result, setResult] = useState(null)
@@ -81,17 +81,25 @@ export default function CookingClient() {
   const [chatLoading, setChatLoading] = useState(false)
 
   useEffect(() => {
-    fetch('/api/cooking/state')
-      .then(r => r.json())
-      .then(data => {
+    Promise.all([
+      fetch('/api/cooking/state').then(r => r.json()),
+      fetch('/api/cooking/menus').then(r => r.json()),
+    ])
+      .then(([state, menuData]) => {
         const map = {}
-        for (const row of data.pantry || []) map[row.ingredient] = row.status
+        for (const row of state.pantry || []) map[row.ingredient] = row.status
         setPantry(map)
-        setRecent(data.recent || [])
+        setRecent(state.recent || [])
+        setMenus(menuData.menus || [])
         setLoading(false)
       })
       .catch(() => setLoading(false))
   }, [])
+
+  const menuById = useMemo(
+    () => Object.fromEntries(menus.map(m => [m.id, m])),
+    [menus]
+  )
 
   const haveSet = useMemo(
     () => new Set(Object.keys(pantry).filter(k => pantry[k] === 'have')),
@@ -100,10 +108,10 @@ export default function CookingClient() {
 
   function runSuggest(excludeId = null) {
     const recentTags = recent
-      .map(id => MENU_BY_ID[id])
+      .map(id => menuById[id])
       .filter(Boolean)
       .map(m => ({ protein: m.protein, method: m.method, cuisine: m.cuisine }))
-    const r = suggestMeal(MENUS, haveSet, recentTags, { excludeId })
+    const r = suggestMeal(menus, haveSet, recentTags, { excludeId })
     setResult(r)
     setLastMainId(r.empty ? null : r.main.id)
     setCookedMsg(false)
@@ -178,7 +186,7 @@ export default function CookingClient() {
   }
 
   return (
-    <div className="max-w-md mx-auto px-4 py-6">
+    <div className="py-4">
       <h1 className="text-2xl font-bold text-warm-900 dark:text-disc-text mb-4">
         วันนี้กินอะไรดี?
       </h1>

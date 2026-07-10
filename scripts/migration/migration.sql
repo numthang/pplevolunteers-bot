@@ -930,3 +930,49 @@ CREATE TABLE IF NOT EXISTS cooking_history (
   cooked_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_cooking_history_owner_time ON cooking_history (owner, cooked_at DESC);
+
+-- 2026-07-10 (2): Cooking v2 — เมนูย้ายเข้า DB + owner, เข้าใช้ได้โดยไม่ต้อง login (anonymous cookie id)
+--   ⚠️ กลับ decision เดิม: เดิมเมนู = static JSON, ไม่มี CRUD → ตอนนี้เมนูเข้า DB มี owner รองรับ
+--      เพิ่ม/แก้เมนู, import ด้วย AI, ดูเมนูคนอื่น (public หมด ไม่มี privacy)
+--   owner เดิม = discord snowflake (≤20). ตอนนี้ owner อาจเป็น anonymous uuid (cookie) → ขยายเป็น 64
+--   widening อย่างเดียว (ไม่ DROP) — discord id เดิมยังพอดี, โค้ดเก่ายัง insert ได้ → deploy-safe
+ALTER TABLE cooking_pantry  ALTER COLUMN owner TYPE VARCHAR(64);
+ALTER TABLE cooking_history ALTER COLUMN owner TYPE VARCHAR(64);
+ALTER TABLE cooking_history ALTER COLUMN menu_id TYPE VARCHAR(80);  -- match cooking_menus.id
+
+-- เมนูทั้งหมด (seed 121 = ระบบ owner NULL · import ของผู้ใช้ = owner = uid) ทุกเมนู public เห็นได้หมด
+--   id = slug (seed) หรือ generated (import) · fields ตรงกับ menus.seed.json + image_url
+CREATE TABLE IF NOT EXISTS cooking_menus (
+  id            VARCHAR(80) PRIMARY KEY,
+  owner         VARCHAR(64),                    -- NULL = seed/ระบบ · else = uid เจ้าของ
+  name          TEXT        NOT NULL,
+  food_groups   JSONB       NOT NULL DEFAULT '[]',
+  protein       JSONB       NOT NULL DEFAULT '[]',
+  method        TEXT,
+  cuisine       TEXT,
+  flavor        JSONB       NOT NULL DEFAULT '[]',
+  carb_in_dish  BOOLEAN     NOT NULL DEFAULT false,
+  ingredients   JSONB       NOT NULL DEFAULT '{"core":[],"optional":[]}',
+  staples_used  JSONB       NOT NULL DEFAULT '[]',
+  steps         JSONB       NOT NULL DEFAULT '[]',
+  gates         JSONB       NOT NULL DEFAULT '{"protein":[],"key":[]}',
+  image_emoji   TEXT,
+  image_url     TEXT,
+  source        VARCHAR(2),                     -- A/B (seed) · U = user import
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_cooking_menus_owner ON cooking_menus (owner);
+
+-- วัตถุดิบที่ผู้ใช้เพิ่มเอง (#6) — canonical.json เป็น master static, ตารางนี้ต่อยอดเฉพาะ owner
+--   grp = protein/veg/special (จัดกลุ่ม chip) · token ไม่ซ้ำต่อ owner
+CREATE TABLE IF NOT EXISTS cooking_ingredients (
+  id          SERIAL PRIMARY KEY,
+  owner       VARCHAR(64) NOT NULL,
+  token       VARCHAR(80) NOT NULL,
+  label       VARCHAR(80) NOT NULL,
+  grp         VARCHAR(16) NOT NULL CHECK (grp IN ('protein','veg','special')),
+  tier        VARCHAR(16) NOT NULL DEFAULT 'regular',
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (owner, token)
+);
+CREATE INDEX IF NOT EXISTS idx_cooking_ingredients_owner ON cooking_ingredients (owner);

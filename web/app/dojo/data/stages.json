@@ -1,0 +1,88 @@
+{
+  "stages": [
+    {
+      "number": "01",
+      "title": "ปูตรรกะพื้นฐาน",
+      "tag": "~2-4 สัปดาห์",
+      "parallel": false,
+      "description": "เริ่มที่ [Express Course](https://studio.code.org/courses/express-2025/units/1) ของ code.org — คอร์สย่อยที่ออกแบบมาสำหรับเด็กที่ยังไม่เคยโค้ดมาก่อนโดยเฉพาะ พาเข้า Unit 1 ตรงจุดเลย ไม่ต้องงมหาเอง",
+      "howTo": [
+        "เปิด [studio.code.org/courses/express-2025/units/1](https://studio.code.org/courses/express-2025/units/1) — ล็อกอิน (Google/email) ไว้จะเซฟความคืบหน้า",
+        "กด Start บทเรียนแรกใน Unit 1",
+        "ทำทีละบทตามลำดับ ห้ามข้าม แต่ละบทมีวิดีโอสั้น + โจทย์ให้ลองเอง",
+        "เล่นวันละ 20-30 นาทีพอ ไม่ต้องรวดเดียวจบ"
+      ],
+      "links": [
+        { "label": "code.org — Express Course Unit 1", "href": "https://studio.code.org/courses/express-2025/units/1" },
+        { "label": "Scratch (ถ้าอยากปูภาพก่อน)", "href": "https://scratch.mit.edu/" }
+      ]
+    },
+    {
+      "number": "02",
+      "title": "Python เบื้องต้น",
+      "tag": "~4-6 สัปดาห์",
+      "parallel": false,
+      "description": "Syntax สะอาดสุดสำหรับเริ่มเขียนโค้ดจริงจัง ไม่มี async/callback ให้งงตั้งแต่ต้น CS50P ออกแบบมาให้เรียนคนเดียวจบเป็นคอร์ส ไม่ต้องมีคนสอนประกบ",
+      "links": [
+        { "label": "CS50P — Harvard", "href": "https://cs50.harvard.edu/python/" },
+        { "label": "freeCodeCamp — Python", "href": "https://www.freecodecamp.org/learn/scientific-computing-with-python/" },
+        { "label": "Replit — รันโค้ดในเบราว์เซอร์", "href": "https://replit.com/" }
+      ]
+    },
+    {
+      "number": "03",
+      "title": "Web พื้นฐาน",
+      "tag": "~4-6 สัปดาห์",
+      "parallel": false,
+      "description": "HTML / CSS / JavaScript — ต่อจาก CS Discoveries unit 2-3 ได้เลย เห็นผลลัพธ์เป็นหน้าเว็บทันที แรงจูงใจสูง",
+      "links": [
+        { "label": "code.org — CSD unit 2-3", "href": "https://code.org/educate/csd" },
+        { "label": "freeCodeCamp — Web Design", "href": "https://www.freecodecamp.org/learn/2022/responsive-web-design/" }
+      ]
+    },
+    {
+      "number": "04",
+      "title": "Database / SQL",
+      "tag": "แทร็กขนาน",
+      "parallel": true,
+      "description": "เริ่มจาก SQLite ไม่ต้องติดตั้ง server แค่ไฟล์เดียว SQLBolt สอนแบบ query-ต่อ-query ในหน้าเดียว เล่นสนุกกว่าที่คิด",
+      "links": [
+        { "label": "SQLBolt", "href": "https://sqlbolt.com/" },
+        { "label": "Khan Academy — Intro to SQL", "href": "https://www.khanacademy.org/computing/computer-programming/sql" },
+        { "label": "DB Fiddle — sandbox ทดลอง", "href": "https://www.db-fiddle.com/" }
+      ]
+    },
+    {
+      "number": "05",
+      "title": "Physical Computing / Hardware",
+      "tag": "แทร็กขนาน",
+      "parallel": true,
+      "description": "micro:bit เขียนด้วย Python ได้ตรงตัว ต่อจากที่เพิ่งเรียนมา ไม่ต้องเปิดภาษาใหม่ KidBright เป็นบอร์ดไทยที่ตรงหลักสูตรและมีสื่อฟรีจาก สวทช.",
+      "links": [
+        { "label": "micro:bit Python Editor", "href": "https://python.microbit.org/" },
+        { "label": "KidBright (สวทช.)", "href": "https://www.kid-bright.org/" },
+        { "label": "Arduino — ขั้นถัดไป", "href": "https://www.arduino.cc/education/" }
+      ]
+    },
+    {
+      "number": "06",
+      "title": "โปรเจกต์จริง",
+      "tag": "ต่อเนื่อง",
+      "parallel": false,
+      "description": "ให้เด็กเลือกทำของที่อยากได้เอง — เกมเล็กๆ, บอทดิสคอร์ดด้วย [discord.py](https://discordpy.readthedocs.io/), สคริปต์อัตโนมัติ — แรงจูงใจสำคัญกว่าคอร์สในช่วงนี้ ใช้ AI เป็นผู้ช่วย debug ไม่ใช่คนเขียนให้ทั้งหมด",
+      "links": [
+        { "label": "discord.py Guide", "href": "https://discordpy.readthedocs.io/" },
+        { "label": "code.org — CS Principles (ต่อยอด)", "href": "https://code.org/educate/csp" }
+      ]
+    }
+  ],
+  "revisionNote": {
+    "title": "สิ่งที่ต้องปรับจากหลักสูตรเดิม — ยุค AI",
+    "items": [
+      "อ่านโค้ด/debug สำคัญกว่าจำ syntax — AI generate โค้ดให้ได้ แต่เด็กต้องรู้ว่ามันถูกไหม",
+      "ใช้ AI เป็นติวเตอร์ที่ถามกลับ — ให้ช่วยอธิบาย error ไม่ใช่เขียนฟังก์ชันให้ทั้งฟังก์ชัน",
+      "โปรเจกต์จริงสำคัญกว่าท่องบท — เด็กที่สร้างของเองจะรู้ว่า AI ช่วยตรงไหน ตัวเองต้องรู้ตรงไหน",
+      "ตรรกะ + decomposition + อ่าน error message — ทักษะที่ AI แทนไม่ได้ ต้องฝึกตรงๆ"
+    ]
+  }
+}

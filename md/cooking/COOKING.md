@@ -4,6 +4,23 @@
 > ⚠️ **แก้ใหญ่จากเวอร์ชันแรก:** เดิมวางเป็น "หน้าเดียว stateless สุ่มจบ" — **ผิด** user ไม่เคยอยาก stateless
 > ของจริงคือ **ผู้ช่วยครัวที่จำ state ได้ แต่ยังจบใน 1 หน้า**
 
+## 🔄 v2 — กลับ decision เดิม (2026-07-10, Phase 0 เสร็จ+verify แล้ว)
+
+User ขอต่อยอด → กลับ 3 ข้อจากสเปคเดิม:
+
+1. **เมนูย้ายเข้า DB + มี owner** (เดิม = static JSON, CRUD = YAGNI) — ปลดล็อก เพิ่ม/แก้เมนู, import ด้วย AI, ดูเมนูคนอื่น
+   - ตาราง `cooking_menus` (fields ตรงกับ seed + `image_url`) · seed 121 = `owner NULL` (ระบบ) · import ผู้ใช้ = `owner = uid`, `source='U'`
+   - ทุกเมนู **public** — ไม่มี privacy (user เคาะ: ความเป็นส่วนตัวไม่แก้ pain แถมทำให้ซับซ้อน)
+   - matcher ยัง deterministic เหมือนเดิม แค่โหลดเมนูจาก `/api/cooking/menus` แทน static import
+   - loader: `scripts/cooking/seedMenus.js` (idempotent, refresh เฉพาะแถว `owner IS NULL`)
+2. **เข้าใช้ได้โดยไม่ต้อง login** (เดิมบังคับ login Discord) — owner = anonymous cookie `cooking_uid` เป็น default, login เหลือเป็นตัวเลือกไว้ผูก state ถาวร/ข้ามเครื่อง
+   - helper `web/lib/cookingOwner.js` → `resolveOwner()` (login → discordId, ไม่งั้น → anon uid, set cookie ตอนแรก)
+   - owner column ขยาย `VARCHAR(20)→(64)` รองรับ `anon-<uuid>`
+   - **ค้าง:** merge state anon → discord id ตอน login (Phase 1, ทำถ้าไม่ยุ่ง)
+3. **รูปเมนู = อัปโหลด/วางลิงก์เอง** (ไม่ auto-fetch จากเน็ต — repo ไม่มี image-search API, เลี่ยง key/ลิขสิทธิ์) + export รายชื่อเมนูช่วยไปหารูป
+
+Phase 2 (features) ยังไม่ทำ: #2 แยก 3 สี chip · #8 browse+slot animation · #3 CRUD form+รูป · #10 AI import · #9 gallery · #6 เพิ่ม ingredient เอง · #7 export
+
 ## 🎯 What / Why
 
 แก้ pain: ทุกวันต้องนั่งนึก **"ทำอะไรให้ลูกกินดี"** (2 มื้อ/วัน) ทั้งที่ทำเป็นเยอะ
