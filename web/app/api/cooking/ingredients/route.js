@@ -9,8 +9,11 @@ export async function GET() {
   return Response.json({ ingredients })
 }
 
+// ⚠️ ต้อง login (Discord) ถึงจะเขียนได้ — ดูได้ทุกคนไม่ต้อง login แต่แก้ต้อง login กันคนแปลกหน้าป่วน wiki
 export async function POST(req) {
-  const { owner } = await resolveOwner()
+  const { owner, isAnon } = await resolveOwner()
+  if (isAnon) return Response.json({ error: 'ต้อง login ก่อนถึงจะเพิ่ม ingredient ได้' }, { status: 401 })
+
   const body = await req.json().catch(() => null)
   const token = body?.token?.trim()
   const label = body?.label?.trim()

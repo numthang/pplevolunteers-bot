@@ -12,8 +12,11 @@ export async function GET() {
 }
 
 // เพิ่มเมนูใหม่ (public ทันที) · id gen ฝั่ง server · owner เก็บไว้เป็น "ใครเพิ่ม" เฉยๆ
+// ⚠️ ต้อง login (Discord) ถึงจะเขียนได้ — ดูได้ทุกคนไม่ต้อง login แต่แก้ต้อง login กันคนแปลกหน้าป่วน wiki
 export async function POST(req) {
-  const { owner } = await resolveOwner()
+  const { owner, isAnon } = await resolveOwner()
+  if (isAnon) return Response.json({ error: 'ต้อง login ก่อนถึงจะเพิ่มเมนูได้' }, { status: 401 })
+
   const body = await req.json().catch(() => null)
   const { menu, error } = normalizeMenuInput(body)
   if (error) return Response.json({ error }, { status: 400 })
