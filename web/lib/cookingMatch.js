@@ -59,19 +59,8 @@ function pickTopish(ranked, excludeId) {
   return top[Math.floor(Math.random() * top.length)]
 }
 
-// ── main entry ────────────────────────────────────────────────
-// returns { main, side, needsVeg, reason } or { empty:true }
-export function suggestMeal(menus, have, recent = [], { excludeId = null } = {}) {
-  const pool = makeableMenus(menus, have)
-  const mains = pool
-    .filter(isMain)
-    .map((m) => ({ m, s: varietyScore(m, recent) }))
-    .sort((a, b) => b.s - a.s)
-    .map((x) => x.m)
-
-  if (!mains.length) return { empty: true, makeableCount: pool.length }
-
-  const main = pickTopish(mains, excludeId)
+// สร้าง meal object รอบๆ จานหลัก 1 จาน (side/carb/reason) — ใช้ร่วมกันทั้ง suggestMeal / suggestMeals
+function buildMeal(main, pool) {
   const needsVeg = !providesVeg(main)
 
   let side = null
@@ -98,6 +87,46 @@ export function suggestMeal(menus, have, recent = [], { excludeId = null } = {})
         : 'จานหลักโปรตีน (ยังขาดผัก — ไม่มีผักที่ทำได้ตอนนี้)'
       : 'จานเดียวครบโปรตีน+ผัก',
   }
+}
+
+// จานหลักที่ทำได้ เรียงตาม variety (ดี→แย่)
+function rankedMains(pool, recent) {
+  return pool
+    .filter(isMain)
+    .map((m) => ({ m, s: varietyScore(m, recent) }))
+    .sort((a, b) => b.s - a.s)
+    .map((x) => x.m)
+}
+
+// ── main entry ────────────────────────────────────────────────
+// returns { main, side, needsVeg, reason } or { empty:true }
+export function suggestMeal(menus, have, recent = [], { excludeId = null } = {}) {
+  const pool = makeableMenus(menus, have)
+  const mains = rankedMains(pool, recent)
+  if (!mains.length) return { empty: true, makeableCount: pool.length }
+
+  const main = pickTopish(mains, excludeId)
+  return buildMeal(main, pool)
+}
+
+// สุ่มหลายเมนู (จานหลักไม่ซ้ำกัน) — คืน array ของ meal object · น้อยกว่า count ได้ถ้าเมนูที่ทำได้มีไม่พอ
+export function suggestMeals(menus, have, recent = [], count = 4) {
+  const pool = makeableMenus(menus, have)
+  const mains = rankedMains(pool, recent)
+  if (!mains.length) return []
+
+  const chosen = []
+  const used = new Set()
+  while (chosen.length < count) {
+    const remaining = mains.filter((m) => !used.has(m.id))
+    if (!remaining.length) break
+    // สุ่มจาก topish ของที่เหลือ ให้รู้สึกสดแต่ยังคุมความหลากหลาย
+    const top = remaining.slice(0, Math.max(3, Math.ceil(remaining.length * 0.4)))
+    const pick = top[Math.floor(Math.random() * top.length)]
+    used.add(pick.id)
+    chosen.push(buildMeal(pick, pool))
+  }
+  return chosen
 }
 
 // market list helper: canonical tokens the user marked 'out'

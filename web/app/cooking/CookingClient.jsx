@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
-import { suggestMeal, makeableMenus } from '@/lib/cookingMatch.js'
+import { suggestMeals, makeableMenus } from '@/lib/cookingMatch.js'
 import MenuForm from './MenuForm.jsx'
 
 // แทน 🛒 emoji — emoji เป็น full-color glyph ของระบบ แก้สีผ่าน CSS ไม่ได้ ใช้ currentColor แทนให้เข้ากับสีรอบๆ เอง
@@ -160,7 +160,8 @@ export default function CookingClient({ displayName }) {
   const [menus, setMenus] = useState([]) // loaded from DB (public menus)
   const [pantry, setPantry] = useState({}) // token -> 'have' | 'out'
   const [recent, setRecent] = useState([]) // menu_id[], newest first
-  const [result, setResult] = useState(null)
+  const [candidates, setCandidates] = useState(null) // null = ยังไม่สุ่ม, [] = สุ่มแล้วแต่ไม่มีเมนูที่ทำได้, [...] = 4 การ์ดผลสุ่ม
+  const [result, setResult] = useState(null) // เมนูที่เลือกจาก candidates (null = ยังไม่เลือก โชว์ grid)
   const [lastMainId, setLastMainId] = useState(null)
   const [cookedMsg, setCookedMsg] = useState(false)
   const [chatInput, setChatInput] = useState('')
@@ -216,16 +217,17 @@ export default function CookingClient({ displayName }) {
     [pantry]
   )
 
-  function runSuggest(excludeId = null) {
+  function runSuggest() {
     const recentTags = recent
       .map(id => menuById[id])
       .filter(Boolean)
       .map(m => ({ protein: m.protein, method: m.method, cuisine: m.cuisine }))
-    const r = suggestMeal(menus, haveSet, recentTags, { excludeId })
+    const meals = suggestMeals(menus, haveSet, recentTags, 4)
 
     const reveal = () => {
-      setResult(r)
-      setLastMainId(r.empty ? null : r.main.id)
+      setCandidates(meals)
+      setResult(null)
+      setLastMainId(null)
       setCookedMsg(false)
       setChatReply(null)
     }
@@ -234,7 +236,7 @@ export default function CookingClient({ displayName }) {
       typeof window !== 'undefined' &&
       window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
     const pool = makeableMenus(menus, haveSet)
-    if (r.empty || reduceMotion || !pool.length) {
+    if (!meals.length || reduceMotion || !pool.length) {
       reveal()
       return
     }
@@ -343,8 +345,9 @@ export default function CookingClient({ displayName }) {
   // แก้ไขเมนูจากการ์ดผลสุ่ม — อัพเดตทั้ง menus (สำหรับสุ่มครั้งถัดไป) และ result.main (โชว์ผลทันที)
   function handleMenuSaved(updatedMenu) {
     setMenus(prev => prev.map(m => (m.id === updatedMenu.id ? updatedMenu : m)))
-    setResult(prev =>
-      prev && !prev.empty && prev.main.id === updatedMenu.id ? { ...prev, main: updatedMenu } : prev
+    setResult(prev => (prev && prev.main.id === updatedMenu.id ? { ...prev, main: updatedMenu } : prev))
+    setCandidates(prev =>
+      prev ? prev.map(c => (c.main.id === updatedMenu.id ? { ...c, main: updatedMenu } : c)) : prev
     )
   }
 
@@ -445,7 +448,7 @@ export default function CookingClient({ displayName }) {
 
       <button
         type="button"
-        onClick={() => runSuggest(null)}
+        onClick={() => runSuggest()}
         className="w-full bg-[#ff6a13] hover:bg-[#f37a2c] text-white rounded-lg text-base font-medium px-4 py-3 transition"
       >
         🎲 สุ่มให้เลย
@@ -462,97 +465,121 @@ export default function CookingClient({ displayName }) {
         </div>
       )}
 
+      {!spinning && candidates && candidates.length === 0 && !result && (
+        <div className="mt-4 bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-4">
+          <p className="text-warm-500 dark:text-disc-muted text-sm">
+            ยังไม่มีเมนูที่ทำได้จากของที่มี — ติ๊กวัตถุดิบเพิ่ม หรือไปตลาด
+          </p>
+        </div>
+      )}
+
+      {!spinning && candidates && candidates.length > 0 && !result && (
+        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {candidates.map(meal => (
+            <button
+              key={meal.main.id}
+              type="button"
+              onClick={() => {
+                setResult(meal)
+                setLastMainId(meal.main.id)
+                setCookedMsg(false)
+                setChatReply(null)
+              }}
+              className="text-left bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-3 hover:-translate-y-0.5 hover:shadow-md transition"
+            >
+              {meal.main.image?.url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={meal.main.image.url}
+                  alt={meal.main.name}
+                  className="w-full h-32 object-cover rounded-lg"
+                />
+              ) : (
+                <div className="w-full h-32 flex items-center justify-center rounded-lg bg-warm-50 dark:bg-disc-hover">
+                  <span className="text-4xl leading-none">{meal.main.image?.emoji || '🍽️'}</span>
+                </div>
+              )}
+              <p className="mt-2 font-bold text-warm-900 dark:text-disc-text">{meal.main.name}</p>
+              <p className="text-xs text-warm-500 dark:text-disc-muted mt-0.5">{meal.reason}</p>
+            </button>
+          ))}
+        </div>
+      )}
+
       {!spinning && result && (
         <div className="mt-4 bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-4">
-          {result.empty ? (
-            <p className="text-warm-500 dark:text-disc-muted text-sm">
-              ยังไม่มีเมนูที่ทำได้จากของที่มี — ติ๊กวัตถุดิบเพิ่ม หรือไปตลาด
-            </p>
-          ) : (
-            <>
-              <div className="flex flex-col sm:flex-row gap-4">
-                <div className="w-full sm:w-64 shrink-0">
-                  {result.main.image?.url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={result.main.image.url}
-                      alt={result.main.name}
-                      onClick={() => setLightboxUrl(result.main.image.url)}
-                      className="w-full h-56 sm:h-64 object-cover rounded-lg cursor-zoom-in"
-                    />
-                  ) : (
-                    <div className="w-full h-56 sm:h-64 flex items-center justify-center rounded-lg bg-warm-50 dark:bg-disc-hover">
-                      <span className="text-6xl leading-none">{result.main.image?.emoji || '🍽️'}</span>
-                    </div>
-                  )}
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="w-full sm:w-64 shrink-0">
+              {result.main.image?.url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={result.main.image.url}
+                  alt={result.main.name}
+                  onClick={() => setLightboxUrl(result.main.image.url)}
+                  className="w-full h-56 sm:h-64 object-cover rounded-lg cursor-zoom-in"
+                />
+              ) : (
+                <div className="w-full h-56 sm:h-64 flex items-center justify-center rounded-lg bg-warm-50 dark:bg-disc-hover">
+                  <span className="text-6xl leading-none">{result.main.image?.emoji || '🍽️'}</span>
                 </div>
-
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-3">
-                    <p className="text-xl font-bold text-warm-900 dark:text-disc-text min-w-0">
-                      {result.main.name}
-                      {result.side && (
-                        <span className="text-base font-normal text-warm-500 dark:text-disc-muted">
-                          {' '}+ {result.side.name}
-                        </span>
-                      )}
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => setEditingMenu(result.main)}
-                      className="text-sm text-[#E57A72] hover:opacity-80 whitespace-nowrap shrink-0"
-                    >
-                      แก้ไข
-                    </button>
-                  </div>
-
-                  <p className="text-sm italic text-warm-500 dark:text-disc-muted mt-1">
-                    {result.reason}
-                  </p>
-
-                  <p className="text-sm font-medium text-warm-900 dark:text-disc-text mt-3">เครื่องปรุง</p>
-                  <p className="text-sm text-warm-500 dark:text-disc-muted">
-                    {result.main.ingredients?.core?.join(', ')}
-                  </p>
-
-                  <details className="mt-3">
-                    <summary className="cursor-pointer text-sm font-medium text-warm-900 dark:text-disc-text mb-1 select-none">
-                      วิธีทำ
-                    </summary>
-                    <ol className="list-decimal list-inside text-sm text-warm-500 dark:text-disc-muted space-y-0.5 mt-1">
-                      {result.main.steps?.map((step, i) => (
-                        <li key={i}>{step}</li>
-                      ))}
-                    </ol>
-                  </details>
-                </div>
-              </div>
-
-              <div className="mt-4 flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => runSuggest(lastMainId)}
-                  className="flex-1 border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover rounded-lg px-4 py-2 text-sm font-medium transition"
-                >
-                  เอาอันอื่น
-                </button>
-                <button
-                  type="button"
-                  onClick={markCooked}
-                  className="flex-1 bg-[#AAD9CE] hover:bg-[#93cabb] text-[#1f4a3d] rounded-lg px-4 py-2 text-sm font-medium transition"
-                >
-                  ทำแล้ว ✓
-                </button>
-              </div>
-              {cookedMsg && (
-                <p className="mt-2 text-sm text-teal text-center">บันทึกแล้ว — เก็บไว้กันซ้ำเมนูไม่กี่วันนี้</p>
               )}
-            </>
+            </div>
+
+            <div className="flex-1 min-w-0">
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-xl font-bold text-warm-900 dark:text-disc-text min-w-0">
+                  {result.main.name}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setEditingMenu(result.main)}
+                  className="text-sm text-[#E57A72] hover:opacity-80 whitespace-nowrap shrink-0"
+                >
+                  แก้ไข
+                </button>
+              </div>
+
+              <p className="text-sm italic text-warm-500 dark:text-disc-muted mt-1">
+                {result.reason}
+              </p>
+
+              <p className="text-sm font-medium text-warm-900 dark:text-disc-text mt-3">เครื่องปรุง</p>
+              <p className="text-sm text-warm-500 dark:text-disc-muted">
+                {result.main.ingredients?.core?.join(', ')}
+              </p>
+
+              <p className="text-sm font-medium text-warm-900 dark:text-disc-text mt-3 mb-1">วิธีทำ</p>
+              <ol className="list-decimal list-inside text-sm text-warm-500 dark:text-disc-muted space-y-0.5">
+                {result.main.steps?.map((step, i) => (
+                  <li key={i}>{step}</li>
+                ))}
+              </ol>
+            </div>
+          </div>
+
+          <div className="mt-4 flex gap-2">
+            <button
+              type="button"
+              onClick={() => setResult(null)}
+              className="flex-1 border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover rounded-lg px-4 py-2 text-sm font-medium transition"
+            >
+              ← กลับไปดู 4 อัน
+            </button>
+            <button
+              type="button"
+              onClick={markCooked}
+              className="flex-1 bg-[#AAD9CE] hover:bg-[#93cabb] text-[#1f4a3d] rounded-lg px-4 py-2 text-sm font-medium transition"
+            >
+              ทำแล้ว ✓
+            </button>
+          </div>
+          {cookedMsg && (
+            <p className="mt-2 text-sm text-teal text-center">บันทึกแล้ว — เก็บไว้กันซ้ำเมนูไม่กี่วันนี้</p>
           )}
         </div>
       )}
 
-      {!spinning && result && !result.empty && (
+      {!spinning && result && (
         <div className="mt-4">
           <div className="flex gap-2">
             <input
