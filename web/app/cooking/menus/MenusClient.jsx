@@ -143,7 +143,12 @@ export default function MenusClient() {
             className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-4"
           >
             <div className="flex items-start gap-3">
-              <span className="text-2xl leading-none">{m.image?.emoji || '🍽️'}</span>
+              {m.image?.url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={m.image.url} alt={m.name} className="w-12 h-12 rounded-lg object-cover shrink-0" />
+              ) : (
+                <span className="text-2xl leading-none">{m.image?.emoji || '🍽️'}</span>
+              )}
               <div className="min-w-0 flex-1">
                 <p className="text-base font-semibold text-warm-900 dark:text-disc-text truncate">
                   {m.name}

@@ -62,7 +62,7 @@ function Chip({ token, label, status, onCycle }) {
     <button
       type="button"
       onClick={() => onCycle(token)}
-      className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-base border transition ${cls}`}
+      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-base border transition ${cls}`}
     >
       {status === 'have' && <span>✓</span>}
       {status === 'out' && <CartIcon />}
@@ -438,7 +438,7 @@ export default function CookingClient({ displayName }) {
       <button
         type="button"
         onClick={() => runSuggest(null)}
-        className="w-full bg-[#ED9A73] hover:bg-[#e2835a] text-white rounded-lg text-base font-medium px-4 py-3 transition"
+        className="w-full bg-[#ff6a13] hover:bg-[#f37a2c] text-white rounded-lg text-base font-medium px-4 py-3 transition"
       >
         🎲 สุ่มให้เลย
       </button>
@@ -464,7 +464,12 @@ export default function CookingClient({ displayName }) {
             <>
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-3 min-w-0">
-                  <span className="text-3xl leading-none">{result.main.image?.emoji || '🍽️'}</span>
+                  {result.main.image?.url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={result.main.image.url} alt={result.main.name} className="w-16 h-16 rounded-lg object-cover shrink-0" />
+                  ) : (
+                    <span className="text-3xl leading-none">{result.main.image?.emoji || '🍽️'}</span>
+                  )}
                   <div className="min-w-0">
                     <p className="text-xl font-bold text-warm-900 dark:text-disc-text">
                       {result.main.name}
@@ -572,7 +577,7 @@ export default function CookingClient({ displayName }) {
             {marketTokens.map(token => (
               <span
                 key={token}
-                className="px-3 py-1 rounded-full text-sm bg-[#E688A1] text-[#4a1f2e]"
+                className="px-2.5 py-0.5 rounded-md text-base bg-[#E688A1] text-[#4a1f2e]"
               >
                 {labelFor(token)}
               </span>
