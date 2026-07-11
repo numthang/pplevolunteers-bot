@@ -225,3 +225,14 @@ Phase 2 (features) ยังไม่ทำ: #2 แยก 3 สี chip · #8 br
 5. **อัพโหลดรูปเมนูจริง** — `POST /api/cooking/upload` (login-gated, mime jpeg/png/webp, ≤5MB, เขียน `web/public/uploads/cooking/{uuid}.ext`, คืน `{url}`) · `MenuForm` เพิ่ม file input + preview thumbnail, คงช่องวาง URL เดิมไว้ด้วย · เก็บ url ใน `cooking_menus.image_url`
 
 **⚠️ ตอน deploy:** ต้อง `mkdir web/public/uploads/cooking` บน prod (git ไม่ track dir เปล่า) + ให้สิทธิ์ www เขียน
+
+---
+
+## 🎲 สุ่มเมนูแบบ 4 การ์ด (2026-07-11, build ผ่าน ยังไม่ deploy)
+
+เปลี่ยนจากสุ่มทีละ 1 → **สุ่มมา 4 เมนู แตะเลือกกางเต็ม**
+- logic: `suggestMeals(menus, have, recent, count=4)` ใน `lib/cookingMatch.js` — คืน array จานหลักไม่ซ้ำ (refactor `buildMeal`/`rankedMains` ออกมาใช้ร่วมกับ `suggestMeal` เดิม) · ได้ < 4 ถ้าเมนูที่ทำได้มีไม่พอ
+- state: `candidates` (null=ยังไม่สุ่ม, []=ไม่มีเมนูทำได้, [...]=4 อัน) + `result` (อันที่แตะกางเต็ม, null=โชว์ grid)
+- UI: กด "สุ่มให้เลย" → slot spin เดิม → grid การ์ดเล็ก 4 อัน (รูป h-32 + ชื่อ + reason) → แตะ → การ์ดเต็ม (รูปใหญ่ซ้าย/รายละเอียดขวา, เครื่องปรุง, วิธีทำกาง, lightbox, แชตเฉพาะตอนกาง) · ปุ่มล่าง "← กลับไปดู 4 อัน" (`setResult(null)`) + "ทำแล้ว ✓"
+- **ตัด side ("+ เมนูผัก") ออกจากการ์ด** (2026-07-11) — user งงว่าคืออะไร; logic side ใน buildMeal ยังคำนวณอยู่แต่ไม่ได้โชว์
+- `lastMainId` เหลือ vestigial (ไม่ได้ใช้ที่ไหนแล้ว) — ลบทีหลังได้
