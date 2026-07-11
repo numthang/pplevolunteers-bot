@@ -173,7 +173,15 @@ export default function CookingClient({ displayName }) {
   const [kitchens, setKitchens] = useState([])
   const [currentKitchenId, setCurrentKitchenId] = useState(null)
   const [editingMenu, setEditingMenu] = useState(null) // เมนูที่กำลังแก้ไขจากการ์ดผลสุ่ม (เปิด MenuForm modal)
+  const [lightboxUrl, setLightboxUrl] = useState(null) // รูปเมนูที่เปิดดูเต็มจอ
   const spinRef = useRef(null)
+
+  useEffect(() => {
+    if (!lightboxUrl) return
+    const onKey = e => e.key === 'Escape' && setLightboxUrl(null)
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [lightboxUrl])
 
   useEffect(() => {
     Promise.all([
@@ -462,16 +470,26 @@ export default function CookingClient({ displayName }) {
             </p>
           ) : (
             <>
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-start gap-3 min-w-0">
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="w-full sm:w-64 shrink-0">
                   {result.main.image?.url ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={result.main.image.url} alt={result.main.name} className="w-16 h-16 rounded-lg object-cover shrink-0" />
+                    <img
+                      src={result.main.image.url}
+                      alt={result.main.name}
+                      onClick={() => setLightboxUrl(result.main.image.url)}
+                      className="w-full h-56 sm:h-64 object-cover rounded-lg cursor-zoom-in"
+                    />
                   ) : (
-                    <span className="text-3xl leading-none">{result.main.image?.emoji || '🍽️'}</span>
+                    <div className="w-full h-56 sm:h-64 flex items-center justify-center rounded-lg bg-warm-50 dark:bg-disc-hover">
+                      <span className="text-6xl leading-none">{result.main.image?.emoji || '🍽️'}</span>
+                    </div>
                   )}
-                  <div className="min-w-0">
-                    <p className="text-xl font-bold text-warm-900 dark:text-disc-text">
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="text-xl font-bold text-warm-900 dark:text-disc-text min-w-0">
                       {result.main.name}
                       {result.side && (
                         <span className="text-base font-normal text-warm-500 dark:text-disc-muted">
@@ -479,42 +497,36 @@ export default function CookingClient({ displayName }) {
                         </span>
                       )}
                     </p>
-                    {result.carb && (
-                      <p className="text-sm text-warm-500 dark:text-disc-muted mt-0.5">
-                        เสิร์ฟกับ{result.carb}
-                      </p>
-                    )}
-                    <p className="text-sm italic text-warm-500 dark:text-disc-muted mt-1">
-                      {result.reason}
-                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setEditingMenu(result.main)}
+                      className="text-sm text-[#E57A72] hover:opacity-80 whitespace-nowrap shrink-0"
+                    >
+                      แก้ไข
+                    </button>
                   </div>
+
+                  <p className="text-sm italic text-warm-500 dark:text-disc-muted mt-1">
+                    {result.reason}
+                  </p>
+
+                  <p className="text-sm font-medium text-warm-900 dark:text-disc-text mt-3">เครื่องปรุง</p>
+                  <p className="text-sm text-warm-500 dark:text-disc-muted">
+                    {result.main.ingredients?.core?.join(', ')}
+                  </p>
+
+                  <details className="mt-3">
+                    <summary className="cursor-pointer text-sm font-medium text-warm-900 dark:text-disc-text mb-1 select-none">
+                      วิธีทำ
+                    </summary>
+                    <ol className="list-decimal list-inside text-sm text-warm-500 dark:text-disc-muted space-y-0.5 mt-1">
+                      {result.main.steps?.map((step, i) => (
+                        <li key={i}>{step}</li>
+                      ))}
+                    </ol>
+                  </details>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setEditingMenu(result.main)}
-                  className="text-sm text-[#E57A72] hover:opacity-80 whitespace-nowrap shrink-0"
-                >
-                  แก้ไข
-                </button>
               </div>
-
-              <div className="mt-4">
-                <p className="text-sm font-medium text-warm-900 dark:text-disc-text mb-1">เครื่องปรุง</p>
-                <p className="text-sm text-warm-500 dark:text-disc-muted">
-                  {result.main.ingredients?.core?.join(', ')}
-                </p>
-              </div>
-
-              <details className="mt-3">
-                <summary className="cursor-pointer text-sm font-medium text-warm-900 dark:text-disc-text mb-1 select-none">
-                  วิธีทำ
-                </summary>
-                <ol className="list-decimal list-inside text-sm text-warm-500 dark:text-disc-muted space-y-0.5 mt-1">
-                  {result.main.steps?.map((step, i) => (
-                    <li key={i}>{step}</li>
-                  ))}
-                </ol>
-              </details>
 
               <div className="mt-4 flex gap-2">
                 <button
@@ -671,6 +683,16 @@ export default function CookingClient({ displayName }) {
           onClose={() => setEditingMenu(null)}
           onSaved={handleMenuSaved}
         />
+      )}
+
+      {lightboxUrl && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 cursor-zoom-out"
+          onClick={() => setLightboxUrl(null)}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={lightboxUrl} alt="" className="max-w-full max-h-full rounded-lg object-contain" />
+        </div>
       )}
     </div>
   )
