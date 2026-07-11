@@ -16,6 +16,8 @@
 
 **เหลือ:** (1) เปิดเบราว์เซอร์ทดสอบจริงทุก flow (2) commit (3) deploy prod — ต้อง `mkdir web/public/uploads/cooking` บน prod (dir เปล่า git ไม่ track) ให้สิทธิ์ www เขียนได้
 
+- [ ] **อนิเมชันตอนกดสุ่มแบบ slot machine จริงจัง** (parked 2026-07-11) — ตอนนี้มี spin ง่ายๆ อยู่แล้ว (`spinning`/`reel` ใน CookingClient สุ่มโชว์ emoji+ชื่อสลับ 900ms) → อยากได้แบบสล็อตจริง (รีลหมุน, decelerate มาหยุดที่เมนู, เสียง/สั่นได้) · ทำตอนสุ่ม 4 อาจโชว์รีลหมุนแล้วเผย grid ทีเดียว
+
 ---
 
 ## 📢 Social share → ห้องข่าวสาร + Discord Event — implement เสร็จ local (2026-07-08)

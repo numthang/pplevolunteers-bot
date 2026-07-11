@@ -242,17 +242,23 @@ export default function CookingClient({ displayName }) {
     }
 
     clearInterval(spinRef.current)
+    clearTimeout(spinRef.current)
     setSpinning(true)
-    spinRef.current = setInterval(() => {
+    // สล็อต: หมุนเร็วแล้วค่อยๆ ช้าลงจนหยุด (delay โตขึ้นเรื่อยๆ) แทนความเร็วคงที่
+    let delay = 50
+    const tick = () => {
       const m = pool[Math.floor(Math.random() * pool.length)]
       setReel({ name: m.name, emoji: m.image?.emoji || '🍽️' })
-    }, 80)
-    setTimeout(() => {
-      clearInterval(spinRef.current)
-      setSpinning(false)
-      setReel(null)
-      reveal()
-    }, 900)
+      delay *= 1.18
+      if (delay < 320) {
+        spinRef.current = setTimeout(tick, delay)
+      } else {
+        setSpinning(false)
+        setReel(null)
+        reveal()
+      }
+    }
+    spinRef.current = setTimeout(tick, delay)
   }
 
   // เดาหมวดด้วย AI ผ่าน bulk endpoint เดียวกับที่ใช้แยกรายการ (ส่งคำเดียวก็ได้)
@@ -500,7 +506,9 @@ export default function CookingClient({ displayName }) {
                 </div>
               )}
               <p className="mt-2 font-bold text-warm-900 dark:text-disc-text">{meal.main.name}</p>
-              <p className="text-xs text-warm-500 dark:text-disc-muted mt-0.5">{meal.reason}</p>
+              <p className="text-xs text-warm-500 dark:text-disc-muted mt-0.5 truncate">
+                {meal.main.ingredients?.core?.join(', ')}
+              </p>
             </button>
           ))}
         </div>
