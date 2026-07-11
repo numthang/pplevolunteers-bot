@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { suggestMeal, makeableMenus } from '@/lib/cookingMatch.js'
+import MenuForm from './MenuForm.jsx'
 
 // แทน 🛒 emoji — emoji เป็น full-color glyph ของระบบ แก้สีผ่าน CSS ไม่ได้ ใช้ currentColor แทนให้เข้ากับสีรอบๆ เอง
 function CartIcon({ className = 'w-4 h-4 inline-block align-[-2px]' }) {
@@ -38,26 +39,8 @@ const GROUP_OPTIONS = [
   { value: 'seasoning', label: 'เครื่องปรุงและสมุนไพร' },
 ]
 
-// เดากลุ่มจากคำในชื่อ — deterministic ไม่พึ่ง AI (เหมือน matcher หลัก) ผู้ใช้แก้ทับได้ที่ select
-const PROTEIN_HINTS = ['หมู', 'ไก่', 'วัว', 'เนื้อ', 'กุ้ง', 'ปลา', 'ไข่', 'เป็ด', 'แพะ', 'ปู', 'หมึก', 'กบ', 'แกะ', 'เต้าหู้', 'กระบือ', 'ห่าน']
-const VEG_HINTS = ['ผัก', 'ใบ', 'หัว', 'ดอก', 'ฝัก', 'ถั่ว', 'เห็ด', 'มะเขือ', 'แตง', 'ฟัก', 'บวบ', 'กะหล่ำ', 'คะน้า', 'หน่อ', 'ยอด', 'สะตอ', 'ชะอม', 'กวางตุ้ง', 'กุยช่าย', 'ผลไม้']
-const STARCH_HINTS = ['เส้น', 'วุ้นเส้น', 'ข้าวเหนียว', 'สปาเกตตี', 'พาสต้า', 'ขนมปัง', 'แป้ง', 'ข้าว']
-const DAIRY_HINTS = ['นม', 'ชีส', 'เนย', 'ครีม', 'โยเกิร์ต']
-const SEASONING_HINTS = ['กะทิ', 'กะปิ', 'ซอส', 'พริกแกง', 'เครื่องแกง', 'มายองเนส', 'มัสตาร์ด', 'น้ำจิ้ม', 'ผงกะหรี่', 'มิโซะ', 'น้ำพริก', 'หอม', 'สมุนไพร']
-
-function guessGroup(text) {
-  const s = text.trim()
-  if (!s) return 'seasoning'
-  if (PROTEIN_HINTS.some(k => s.includes(k))) return 'protein'
-  if (VEG_HINTS.some(k => s.includes(k))) return 'veg'
-  if (DAIRY_HINTS.some(k => s.includes(k))) return 'dairy'
-  if (STARCH_HINTS.some(k => s.includes(k))) return 'starch'
-  if (SEASONING_HINTS.some(k => s.includes(k))) return 'seasoning'
-  return 'seasoning'
-}
-
 const CHIP_BASE =
-  'inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm border transition'
+  'inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-base border transition'
 // 3 สถานะ สี pastel ต่างกันชัด: มี=เขียวอ่อน · หมด=ชมพูอ่อน(เตือน) · ยังไม่ติ๊ก=เทาโปร่งเส้นประ
 const CHIP_NEUTRAL =
   'border-dashed border-warm-300 dark:border-disc-border text-warm-500 dark:text-disc-muted hover:bg-warm-50 dark:hover:bg-disc-hover'
@@ -71,110 +54,31 @@ function nextStatus(current) {
   return 'have'
 }
 
-function Chip({ id, token, label, status, onCycle, onRemove, onEditStart }) {
+// แตะเพื่อสลับสถานะเท่านั้น — แก้ไข/ลบ ย้ายไปหน้า /cooking/ingredients แล้ว (2026-07-11)
+function Chip({ token, label, status, onCycle }) {
   const cls =
     status === 'have' ? CHIP_HAVE : status === 'out' ? CHIP_OUT : CHIP_NEUTRAL
   return (
-    <span
-      className={`inline-flex items-center gap-1 pl-3 pr-1 py-1.5 rounded-full text-sm border transition ${cls}`}
+    <button
+      type="button"
+      onClick={() => onCycle(token)}
+      className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-base border transition ${cls}`}
     >
-      <button type="button" onClick={() => onCycle(token)} className="inline-flex items-center gap-1">
-        {status === 'have' && <span>✓</span>}
-        {status === 'out' && <CartIcon />}
-        <span>{label}</span>
-      </button>
-      <button
-        type="button"
-        onClick={() => onEditStart(id)}
-        aria-label={`แก้ไข ${label}`}
-        className="w-4 h-4 flex items-center justify-center rounded-full text-xs leading-none hover:bg-black/10 dark:hover:bg-white/10"
-      >
-        ✎
-      </button>
-      <button
-        type="button"
-        onClick={() => onRemove(token)}
-        aria-label={`ลบ ${label}`}
-        className="w-4 h-4 flex items-center justify-center rounded-full text-xs leading-none hover:bg-black/10 dark:hover:bg-white/10"
-      >
-        ✕
-      </button>
-    </span>
+      {status === 'have' && <span>✓</span>}
+      {status === 'out' && <CartIcon />}
+      <span>{label}</span>
+    </button>
   )
 }
 
-function EditChip({ item, onSave, onCancel }) {
-  const [label, setLabel] = useState(item.label)
-  const [grp, setGrp] = useState(item.grp)
-  const [busy, setBusy] = useState(false)
-
-  async function save() {
-    if (!label.trim() || busy) return
-    setBusy(true)
-    await onSave(item.id, { label: label.trim(), grp })
-    setBusy(false)
-  }
-
-  return (
-    <span className="inline-flex items-center gap-1 pl-2 pr-1 py-1 rounded-full text-sm border border-warm-300 dark:border-disc-border bg-card-bg">
-      <input
-        type="text"
-        value={label}
-        onChange={e => setLabel(e.target.value)}
-        onKeyDown={e => e.key === 'Enter' && save()}
-        className="w-24 min-w-0 px-1.5 py-0.5 rounded border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text text-xs"
-      />
-      <select
-        value={grp}
-        onChange={e => setGrp(e.target.value)}
-        className="px-1 py-0.5 rounded border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text text-xs"
-      >
-        {GROUP_OPTIONS.map(o => (
-          <option key={o.value} value={o.value}>{o.label}</option>
-        ))}
-      </select>
-      <button
-        type="button"
-        onClick={save}
-        disabled={busy}
-        aria-label="บันทึก"
-        className="w-4 h-4 flex items-center justify-center rounded-full text-xs leading-none hover:bg-black/10 dark:hover:bg-white/10 disabled:opacity-50"
-      >
-        ✓
-      </button>
-      <button
-        type="button"
-        onClick={onCancel}
-        aria-label="ยกเลิก"
-        className="w-4 h-4 flex items-center justify-center rounded-full text-xs leading-none hover:bg-black/10 dark:hover:bg-white/10"
-      >
-        ✕
-      </button>
-    </span>
-  )
-}
-
+// จัดหมวดด้วย AI แทนให้ผู้ใช้เลือกเอง (2026-07-11) — แก้หมวดทีหลังได้ที่ /cooking/ingredients
 function AddIngredientRow({ onAdd, onBulkPreview }) {
   const [text, setText] = useState('')
-  const [grp, setGrp] = useState('seasoning')
-  const [manualGrp, setManualGrp] = useState(false)
   const [msg, setMsg] = useState(null)
   const [busy, setBusy] = useState(false)
 
-  function handleTextChange(v) {
-    setText(v)
-    if (!manualGrp) setGrp(guessGroup(v))
-  }
-
-  function handleGrpChange(v) {
-    setGrp(v)
-    setManualGrp(true)
-  }
-
   function reset() {
     setText('')
-    setGrp('seasoning')
-    setManualGrp(false)
   }
 
   async function submit() {
@@ -190,7 +94,7 @@ function AddIngredientRow({ onAdd, onBulkPreview }) {
       return
     }
 
-    const { error } = await onAdd(text, grp)
+    const { error } = await onAdd(text)
     setBusy(false)
     if (error) {
       setMsg(error)
@@ -206,21 +110,11 @@ function AddIngredientRow({ onAdd, onBulkPreview }) {
         <input
           type="text"
           value={text}
-          onChange={e => handleTextChange(e.target.value)}
+          onChange={e => setText(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && submit()}
           placeholder="เพิ่มของในครัว เช่น ผักหวานบ้าน หรือคั่นด้วย , ใส่หลายอย่างพร้อมกัน"
           className="flex-1 min-w-0 px-3 py-1.5 rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text text-sm placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-teal transition"
         />
-        <select
-          value={grp}
-          onChange={e => handleGrpChange(e.target.value)}
-          disabled={text.includes(',')}
-          className="px-2 py-1.5 rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text text-sm disabled:opacity-40"
-        >
-          {GROUP_OPTIONS.map(o => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
-        </select>
         <button
           type="button"
           onClick={submit}
@@ -235,24 +129,18 @@ function AddIngredientRow({ onAdd, onBulkPreview }) {
   )
 }
 
-function ChipGroup({ heading, items, pantry, onCycle, onRemove, editingId, onEditStart, onEditSave, onEditCancel }) {
+function ChipGroup({ heading, items, pantry, onCycle }) {
   const regular = items.filter(i => i.tier !== 'occasional')
   const occasional = items.filter(i => i.tier === 'occasional')
-  const renderItem = i =>
-    i.id === editingId ? (
-      <EditChip key={i.token} item={i} onSave={onEditSave} onCancel={onEditCancel} />
-    ) : (
-      <Chip
-        key={i.token}
-        id={i.id}
-        token={i.token}
-        label={i.label || i.token}
-        status={pantry[i.token]}
-        onCycle={onCycle}
-        onRemove={onRemove}
-        onEditStart={onEditStart}
-      />
-    )
+  const renderItem = i => (
+    <Chip
+      key={i.token}
+      token={i.token}
+      label={i.label || i.token}
+      status={pantry[i.token]}
+      onCycle={onCycle}
+    />
+  )
   return (
     <div className="mb-4 last:mb-0">
       <p className="text-sm font-medium text-warm-500 dark:text-disc-muted mb-2">{heading}</p>
@@ -280,11 +168,11 @@ export default function CookingClient({ displayName }) {
   const [chatLoading, setChatLoading] = useState(false)
   const [ingredients, setIngredients] = useState([]) // public wiki — ทุกคนแก้ได้หมด ไม่มี owner แล้ว
   const [bulkPreview, setBulkPreview] = useState(null) // [{token,label,grp,include}] รอรีวิวก่อนเพิ่มจริง
-  const [editingIngredientId, setEditingIngredientId] = useState(null)
   const [spinning, setSpinning] = useState(false)
   const [reel, setReel] = useState(null)
   const [kitchens, setKitchens] = useState([])
   const [currentKitchenId, setCurrentKitchenId] = useState(null)
+  const [editingMenu, setEditingMenu] = useState(null) // เมนูที่กำลังแก้ไขจากการ์ดผลสุ่ม (เปิด MenuForm modal)
   const spinRef = useRef(null)
 
   useEffect(() => {
@@ -357,16 +245,33 @@ export default function CookingClient({ displayName }) {
     }, 900)
   }
 
+  // เดาหมวดด้วย AI ผ่าน bulk endpoint เดียวกับที่ใช้แยกรายการ (ส่งคำเดียวก็ได้)
+  // ล้มเหลว/ไม่คืน grp → fallback 'seasoning' ผู้ใช้แก้ทีหลังได้ที่ /cooking/ingredients
+  async function guessGroupViaAI(label) {
+    try {
+      const res = await fetch('/api/cooking/ingredients/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: label }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (res.ok && data.items?.[0]?.grp) return data.items[0].grp
+    } catch {}
+    return 'seasoning'
+  }
+
   async function addCustomIngredient(input, grp) {
     const label = input.trim()
     if (!label) return { error: null }
     const dupe = findDuplicate(label, ingredients)
     if (dupe) return { error: `มีอยู่แล้ว: ${dupe.label || dupe.token}` }
 
+    const finalGrp = grp || (await guessGroupViaAI(label))
+
     const res = await fetch('/api/cooking/ingredients', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: label, label, grp }),
+      body: JSON.stringify({ token: label, label, grp: finalGrp }),
     })
     if (!res.ok) {
       const data = await res.json().catch(() => ({}))
@@ -411,57 +316,6 @@ export default function CookingClient({ displayName }) {
     if (firstError) alert(firstError)
   }
 
-  async function updateCustomIngredient(id, { label, grp }) {
-    const res = await fetch(`/api/cooking/ingredients/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ label, grp }),
-    })
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}))
-      alert(data.error || 'แก้ไขไม่สำเร็จ')
-      return
-    }
-    const { ingredient } = await res.json()
-    setIngredients(prev => prev.map(i => (i.id === id ? ingredient : i)))
-    setEditingIngredientId(null)
-  }
-
-  async function removeCustomIngredient(token) {
-    const item = ingredients.find(i => i.token === token)
-    if (!item) return
-
-    // gates.key ผูกด้วย token ตรงๆ ไม่ใช่ FK — ลบแล้วเมนูที่ใช้ token นี้เป็นเงื่อนไขจะทำได้ไม่ได้อีกเลย (เงียบๆ)
-    const usedBy = menus.filter(m => (m.gates?.key || []).includes(token))
-    if (usedBy.length) {
-      const names = usedBy.map(m => m.name).join(', ')
-      const ok = window.confirm(
-        `"${item.label}" เป็นเงื่อนไขของเมนู: ${names}\nลบแล้วเมนูนี้จะไม่มีวันขึ้นว่า "ทำได้" อีก จนกว่าจะเพิ่มของชื่อเดิมกลับมา\n\nยืนยันลบ?`
-      )
-      if (!ok) return
-    }
-
-    const res = await fetch(`/api/cooking/ingredients/${item.id}`, { method: 'DELETE' }).catch(() => null)
-    if (!res || !res.ok) {
-      const data = await res?.json().catch(() => ({})) || {}
-      alert(data.error || 'ลบไม่สำเร็จ')
-      return
-    }
-
-    setIngredients(prev => prev.filter(i => i.id !== item.id))
-    setPantry(prev => {
-      if (!(token in prev)) return prev
-      const copy = { ...prev }
-      delete copy[token]
-      return copy
-    })
-    fetch('/api/cooking/pantry', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token, status: 'clear' }),
-    }).catch(() => {})
-  }
-
   function cyclePantry(token) {
     const current = pantry[token]
     const next = nextStatus(current)
@@ -476,6 +330,14 @@ export default function CookingClient({ displayName }) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token, status: next }),
     }).catch(() => {})
+  }
+
+  // แก้ไขเมนูจากการ์ดผลสุ่ม — อัพเดตทั้ง menus (สำหรับสุ่มครั้งถัดไป) และ result.main (โชว์ผลทันที)
+  function handleMenuSaved(updatedMenu) {
+    setMenus(prev => prev.map(m => (m.id === updatedMenu.id ? updatedMenu : m)))
+    setResult(prev =>
+      prev && !prev.empty && prev.main.id === updatedMenu.id ? { ...prev, main: updatedMenu } : prev
+    )
   }
 
   async function markCooked() {
@@ -600,26 +462,35 @@ export default function CookingClient({ displayName }) {
             </p>
           ) : (
             <>
-              <div className="flex items-start gap-3">
-                <span className="text-3xl leading-none">{result.main.image?.emoji || '🍽️'}</span>
-                <div className="min-w-0">
-                  <p className="text-xl font-bold text-warm-900 dark:text-disc-text">
-                    {result.main.name}
-                    {result.side && (
-                      <span className="text-base font-normal text-warm-500 dark:text-disc-muted">
-                        {' '}+ {result.side.name}
-                      </span>
-                    )}
-                  </p>
-                  {result.carb && (
-                    <p className="text-sm text-warm-500 dark:text-disc-muted mt-0.5">
-                      เสิร์ฟกับ{result.carb}
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3 min-w-0">
+                  <span className="text-3xl leading-none">{result.main.image?.emoji || '🍽️'}</span>
+                  <div className="min-w-0">
+                    <p className="text-xl font-bold text-warm-900 dark:text-disc-text">
+                      {result.main.name}
+                      {result.side && (
+                        <span className="text-base font-normal text-warm-500 dark:text-disc-muted">
+                          {' '}+ {result.side.name}
+                        </span>
+                      )}
                     </p>
-                  )}
-                  <p className="text-sm italic text-warm-500 dark:text-disc-muted mt-1">
-                    {result.reason}
-                  </p>
+                    {result.carb && (
+                      <p className="text-sm text-warm-500 dark:text-disc-muted mt-0.5">
+                        เสิร์ฟกับ{result.carb}
+                      </p>
+                    )}
+                    <p className="text-sm italic text-warm-500 dark:text-disc-muted mt-1">
+                      {result.reason}
+                    </p>
+                  </div>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setEditingMenu(result.main)}
+                  className="text-sm text-[#E57A72] hover:opacity-80 whitespace-nowrap shrink-0"
+                >
+                  แก้ไข
+                </button>
               </div>
 
               <div className="mt-4">
@@ -692,28 +563,38 @@ export default function CookingClient({ displayName }) {
         </div>
       )}
 
-      <details open className="mt-6 bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-4">
+      {marketTokens.length > 0 && (
+        <div className="mt-6 bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-4">
+          <p className="text-base font-semibold text-warm-900 dark:text-disc-text mb-2 flex items-center gap-1.5">
+            <CartIcon className="w-4 h-4 inline-block" /> ไปตลาด
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {marketTokens.map(token => (
+              <span
+                key={token}
+                className="px-3 py-1 rounded-full text-sm bg-[#E688A1] text-[#4a1f2e]"
+              >
+                {labelFor(token)}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <details open className="mt-4 bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-4">
         <summary className="cursor-pointer text-base font-semibold text-warm-900 dark:text-disc-text select-none">
           ของในครัว
         </summary>
-        <p className="text-xs text-warm-400 dark:text-disc-muted mt-2 mb-3 flex items-center gap-1">
-          ✓ มี · <CartIcon className="w-3.5 h-3.5 inline-block" /> หมด · แตะเพื่อสลับ
-        </p>
-        <div className="mt-2">
-          {GROUP_OPTIONS.map(o => (
-            <ChipGroup
-              key={o.value}
-              heading={o.label}
-              items={byGroup(o.value)}
-              pantry={pantry}
-              onCycle={cyclePantry}
-              onRemove={removeCustomIngredient}
-              editingId={editingIngredientId}
-              onEditStart={setEditingIngredientId}
-              onEditSave={updateCustomIngredient}
-              onEditCancel={() => setEditingIngredientId(null)}
-            />
-          ))}
+        <div className="flex items-center justify-between gap-3 mt-2 mb-3">
+          <p className="text-xs text-warm-400 dark:text-disc-muted flex items-center gap-1">
+            ✓ มี · <CartIcon className="w-3.5 h-3.5 inline-block" /> หมด · แตะเพื่อสลับ
+          </p>
+          <Link
+            href="/cooking/ingredients"
+            className="text-xs text-[#E57A72] hover:opacity-80 whitespace-nowrap shrink-0"
+          >
+            จัดการวัตถุดิบ →
+          </Link>
         </div>
         <AddIngredientRow onAdd={addCustomIngredient} onBulkPreview={startBulkPreview} />
         {bulkPreview && (
@@ -765,24 +646,26 @@ export default function CookingClient({ displayName }) {
             </div>
           </div>
         )}
+        <div className="mt-3">
+          {GROUP_OPTIONS.map(o => (
+            <ChipGroup
+              key={o.value}
+              heading={o.label}
+              items={byGroup(o.value)}
+              pantry={pantry}
+              onCycle={cyclePantry}
+            />
+          ))}
+        </div>
       </details>
 
-      {marketTokens.length > 0 && (
-        <div className="mt-4 bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-4">
-          <p className="text-base font-semibold text-warm-900 dark:text-disc-text mb-2 flex items-center gap-1.5">
-            <CartIcon className="w-4 h-4 inline-block" /> ไปตลาด
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {marketTokens.map(token => (
-              <span
-                key={token}
-                className="px-3 py-1 rounded-full text-sm bg-[#E688A1] text-[#4a1f2e]"
-              >
-                {labelFor(token)}
-              </span>
-            ))}
-          </div>
-        </div>
+      {editingMenu && (
+        <MenuForm
+          mode="edit"
+          menu={editingMenu}
+          onClose={() => setEditingMenu(null)}
+          onSaved={handleMenuSaved}
+        />
       )}
     </div>
   )

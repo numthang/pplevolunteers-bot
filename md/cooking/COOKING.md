@@ -211,3 +211,17 @@ Phase 2 (features) ยังไม่ทำ: #2 แยก 3 สี chip · #8 br
 
 ### Phase 1 (แยกทำทีหลัง, ไม่ block อะไร) — merge anon → login
 - ตอน login สำเร็จ (next-auth callback หรือหน้า cooking เช็คตอน mount) — อ่าน `readAnonUid()` จาก `web/lib/cookingOwner.js` ถ้ามี cookie anon เดิม → `UPDATE cooking_pantry/cooking_history/cooking_menus SET owner=$discordId WHERE owner=$anonUid` แล้วลบ cookie · ทำเป็น task แยก ถ้าเริ่มยุ่งให้หยุด (ตามที่ user สั่งไว้)
+
+---
+
+## 🎨 UI/UX ปรับปรุงรอบ 2026-07-11 (เขียนโค้ดเสร็จ local, build ผ่าน, ยังไม่ deploy)
+
+ทำโดย 2 Sonnet subagent (แก้คนละไฟล์ขนานกัน) — รายละเอียดสถานะอยู่ใน `md/PENDING.md`
+
+1. **เพิ่มของในครัว: ตัด dropdown หมวด → ใช้ AI** — `AddIngredientRow` เหลือแค่ช่องพิมพ์ · single-add เรียก `guessGroupViaAI()` → `POST /api/cooking/ingredients/bulk` (ส่ง 1 รายการ เอา `items[0].grp`), fallback `seasoning` · bulk-confirm (คั่น comma) ยังส่ง grp จาก preview เอง (bypass AI)
+2. **แก้ไข/ลบ ingredient ย้ายไปหน้าใหม่ `/cooking/ingredients`** — `IngredientsClient.jsx` (CRUD wiki, group 5 หมวด, modal add/edit ครบ X+ESC+click-outside, delete + คำเตือน gate เมนู `gates.key`) · chip ในหน้า /cooking เหลือแค่แตะสลับมี/หมด (`Chip` ตัด ✎/✕ + `EditChip`/`updateCustomIngredient`/`removeCustomIngredient` ออกหมด) · ลิงก์ "จัดการวัตถุดิบ →" ที่หัวการ์ดของในครัว
+3. **ฟอนต์ chip ใหญ่ขึ้น** — `text-sm` → `text-base`
+4. **ปุ่มแก้ไขเมนูที่การ์ดผลสุ่ม** — เปิด `MenuForm` mode edit ใน modal · `handleMenuSaved` อัพเดต menus + result.main ทันที (ได้แก้เนื้อหา + อัพรูปในตัว)
+5. **อัพโหลดรูปเมนูจริง** — `POST /api/cooking/upload` (login-gated, mime jpeg/png/webp, ≤5MB, เขียน `web/public/uploads/cooking/{uuid}.ext`, คืน `{url}`) · `MenuForm` เพิ่ม file input + preview thumbnail, คงช่องวาง URL เดิมไว้ด้วย · เก็บ url ใน `cooking_menus.image_url`
+
+**⚠️ ตอน deploy:** ต้อง `mkdir web/public/uploads/cooking` บน prod (git ไม่ track dir เปล่า) + ให้สิทธิ์ www เขียน

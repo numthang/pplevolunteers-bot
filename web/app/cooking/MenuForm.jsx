@@ -167,6 +167,7 @@ export default function MenuForm({ mode, menu, onClose, onSaved }) {
   const [form, setForm] = useState(() => fromMenu(menu))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
+  const [uploading, setUploading] = useState(false)
 
   // ESC ปิด modal
   useEffect(() => {
@@ -179,6 +180,30 @@ export default function MenuForm({ mode, menu, onClose, onSaved }) {
 
   function set(patch) {
     setForm(prev => ({ ...prev, ...patch }))
+  }
+
+  async function handleFileUpload(e) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+
+    setUploading(true)
+    setError(null)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const res = await fetch('/api/cooking/upload', { method: 'POST', body: fd })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setError(data.error || 'อัพโหลดรูปไม่สำเร็จ')
+        return
+      }
+      set({ imageUrl: data.url })
+    } catch {
+      setError('อัพโหลดรูปไม่สำเร็จ ลองใหม่อีกครั้ง')
+    } finally {
+      setUploading(false)
+    }
   }
 
   const noGates = form.gatesProtein.length === 0 && form.gatesKey.length === 0
@@ -284,6 +309,30 @@ export default function MenuForm({ mode, menu, onClose, onSaved }) {
                 className={INPUT_CLS}
                 placeholder="https://..."
               />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            {form.imageUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={form.imageUrl}
+                alt="ตัวอย่างรูปเมนู"
+                className="w-24 h-24 object-cover rounded-lg border border-warm-200 dark:border-disc-border shrink-0"
+              />
+            )}
+            <div className="flex-1 min-w-0">
+              <p className={LABEL_CLS}>อัพโหลดรูปจากเครื่อง</p>
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={handleFileUpload}
+                disabled={uploading}
+                className="text-sm text-warm-700 dark:text-disc-muted file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-teal file:text-white hover:file:opacity-90 disabled:opacity-50"
+              />
+              {uploading && (
+                <p className="text-xs text-warm-400 dark:text-disc-muted mt-1">กำลังอัพโหลด...</p>
+              )}
             </div>
           </div>
 

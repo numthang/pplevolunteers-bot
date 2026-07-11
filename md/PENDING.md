@@ -4,6 +4,20 @@
 
 ---
 
+## 🍳 /cooking — UI/UX ปรับปรุง (จดไว้ 2026-07-11) — ✅ เขียนโค้ดเสร็จ local (build ผ่าน) รอทดสอบเบราว์เซอร์ + deploy
+
+> spec หลัก: `md/cooking/COOKING.md` · 2 Sonnet subagent เขียน 2026-07-11 · build ผ่าน ยังไม่ commit ยังไม่เปิดจริงในเบราว์เซอร์
+
+- [x] **เพิ่มของในครัว — ตัด dropdown เลือกหมวดหมู่** → single-add เรียก AI (`guessGroupViaAI` → `/api/cooking/ingredients/bulk` ส่ง 1 รายการ) เดาหมวดให้ · fallback `seasoning` · bulk-confirm ยังส่ง grp เอง bypass AI
+- [x] **ย้ายแก้ไข/ลบ ingredient ไปหน้าใหม่ `/cooking/ingredients`** — chip ในหน้า /cooking เหลือแค่แตะสลับมี/หมด · หน้าใหม่ = CRUD wiki (group 5 หมวด, modal add/edit, delete + คำเตือน gate เมนู) `IngredientsClient.jsx` · ลิงก์ "จัดการวัตถุดิบ →" ที่หัวการ์ดของในครัว
+- [x] **ฟอนต์ chip ใหญ่ขึ้น** — `text-sm` → `text-base`
+- [x] **ปุ่มแก้ไขเมนู ที่การ์ดผลสุ่ม** — เปิด `MenuForm` (mode edit) modal · `handleMenuSaved` อัพเดตทั้ง menus + result.main ทันที
+- [x] **อัพโหลดรูปเมนูจริง** — route ใหม่ `POST /api/cooking/upload` (login-gated, mime jpeg/png/webp, ≤5MB, เขียน `web/public/uploads/cooking/{uuid}.ext` คืน url) · MenuForm เพิ่ม file input + preview thumbnail (คงช่องวาง URL เดิมไว้ด้วย)
+
+**เหลือ:** (1) เปิดเบราว์เซอร์ทดสอบจริงทุก flow (2) commit (3) deploy prod — ต้อง `mkdir web/public/uploads/cooking` บน prod (dir เปล่า git ไม่ track) ให้สิทธิ์ www เขียนได้
+
+---
+
 ## 📢 Social share → ห้องข่าวสาร + Discord Event — implement เสร็จ local (2026-07-08)
 
 > โค้ดเสร็จ ยังไม่ทดสอบ dev / ยังไม่ deploy · files: `services/newsShare.js`, `handlers/basketHandler.js`, `index.js`, `web/app/bot/platforms/page.js` + guild-configs API
