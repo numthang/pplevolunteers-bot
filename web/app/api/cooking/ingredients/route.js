@@ -1,11 +1,11 @@
 import { resolveOwner } from '@/lib/cookingOwner.js'
 import { getIngredients, addIngredient } from '@/db/cooking/ingredients.js'
 
-const GROUPS = ['protein', 'veg', 'special']
+const GROUPS = ['protein', 'veg', 'starch', 'dairy', 'seasoning']
 
+// public wiki เดียว — ทุกคนเห็นรายการเดียวกันหมด
 export async function GET() {
-  const { owner } = await resolveOwner()
-  const ingredients = await getIngredients(owner)
+  const ingredients = await getIngredients()
   return Response.json({ ingredients })
 }
 

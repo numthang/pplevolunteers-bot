@@ -1,6 +1,5 @@
 'use client'
 import { useEffect, useState } from 'react'
-import canonicalData from './data/canonical.json'
 
 const FOOD_GROUPS = [
   { token: 'protein', label: 'โปรตีน' },
@@ -8,6 +7,18 @@ const FOOD_GROUPS = [
   { token: 'carb', label: 'คาร์บ' },
   { token: 'dessert', label: 'ของหวาน' },
   { token: 'drink', label: 'เครื่องดื่ม' },
+]
+
+// gates.protein enum คงที่ (matcher หลักผูกกับชุดนี้ตรงๆ — ดู PROTEIN_ENUM ใน api/cooking/import/route.js)
+// เดิมเคยดึงจาก canonical.json.protein แต่ไฟล์นั้นถูกยกเลิกแล้ว (ingredients ทั้งหมดย้ายเข้า DB wiki)
+const PROTEIN_ENUM_OPTIONS = [
+  { token: 'pork', label: 'หมู' },
+  { token: 'chicken', label: 'ไก่' },
+  { token: 'beef', label: 'เนื้อวัว' },
+  { token: 'shrimp', label: 'กุ้ง' },
+  { token: 'squid', label: 'ปลาหมึก' },
+  { token: 'fish', label: 'ปลา' },
+  { token: 'tofu', label: 'เต้าหู้' },
 ]
 
 const CHIP_BASE =
@@ -285,7 +296,7 @@ export default function MenuForm({ mode, menu, onClose, onSaved }) {
 
           <ChipMultiSelect
             label="โปรตีน"
-            options={canonicalData.protein}
+            options={PROTEIN_ENUM_OPTIONS}
             values={form.protein}
             onChange={v => set({ protein: v })}
           />
@@ -371,7 +382,7 @@ export default function MenuForm({ mode, menu, onClose, onSaved }) {
               <ChipMultiSelect
                 label="โปรตีนที่ใช้ตัดสิน"
                 helper="ต้องมีอย่างน้อย 1 ตัวถึงจะถูกสุ่มเจอ"
-                options={canonicalData.protein}
+                options={PROTEIN_ENUM_OPTIONS}
                 values={form.gatesProtein}
                 onChange={v => set({ gatesProtein: v })}
               />

@@ -1,8 +1,18 @@
 'use client'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
-import canonicalData from './data/canonical.json'
 import { suggestMeal, makeableMenus } from '@/lib/cookingMatch.js'
+
+// แทน 🛒 emoji — emoji เป็น full-color glyph ของระบบ แก้สีผ่าน CSS ไม่ได้ ใช้ currentColor แทนให้เข้ากับสีรอบๆ เอง
+function CartIcon({ className = 'w-4 h-4 inline-block align-[-2px]' }) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M2 3h2l1.6 9.6a1.6 1.6 0 0 0 1.6 1.4h6.6a1.6 1.6 0 0 0 1.6-1.3L17 6H5" />
+      <circle cx="8" cy="17" r="1.1" fill="currentColor" stroke="none" />
+      <circle cx="14.5" cy="17" r="1.1" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
 
 // normalize for client-side dedup: strip spaces/case before comparing
 const norm = s => s.trim().toLowerCase().replace(/\s+/g, '')
@@ -12,23 +22,38 @@ function findDuplicate(input, existing) {
   for (const c of existing) {
     const nt = norm(c.token)
     const nl = norm(c.label || c.token)
+    // เทียบเท่ากันตรงๆ เท่านั้น — ห้ามเช็ค substring/containment: คำไทยผสมคำกันได้ตามปกติ
+    // (เช่น "ไข่ไก่" contains "ไก่", "ไข่เค็ม" contains "ไข่") ถือว่าซ้ำผิดๆ ถ้าเช็คแบบ containment
     if (n === nt || n === nl) return c
-    if (n.length >= 2 && nt.length >= 2 && (n.includes(nt) || nt.includes(n))) return c
-    if (n.length >= 2 && nl.length >= 2 && (n.includes(nl) || nl.includes(n))) return c
   }
   return null
 }
 
+// 5 หมวด — เคาะกับ user 2026-07-10 (เลิกใช้ "ของเฉพาะ" เป็นถังรวมสารพัด)
+const GROUP_OPTIONS = [
+  { value: 'protein', label: 'โปรตีน' },
+  { value: 'veg', label: 'ผักและผลไม้' },
+  { value: 'starch', label: 'แป้งและธัญพืช' },
+  { value: 'dairy', label: 'ไขมันและนม' },
+  { value: 'seasoning', label: 'เครื่องปรุงและสมุนไพร' },
+]
+
 // เดากลุ่มจากคำในชื่อ — deterministic ไม่พึ่ง AI (เหมือน matcher หลัก) ผู้ใช้แก้ทับได้ที่ select
 const PROTEIN_HINTS = ['หมู', 'ไก่', 'วัว', 'เนื้อ', 'กุ้ง', 'ปลา', 'ไข่', 'เป็ด', 'แพะ', 'ปู', 'หมึก', 'กบ', 'แกะ', 'เต้าหู้', 'กระบือ', 'ห่าน']
-const VEG_HINTS = ['ผัก', 'ใบ', 'หัว', 'ดอก', 'ฝัก', 'ถั่ว', 'เห็ด', 'มะเขือ', 'แตง', 'ฟัก', 'บวบ', 'กะหล่ำ', 'คะน้า', 'หน่อ', 'ยอด', 'สะตอ', 'ชะอม', 'กวางตุ้ง']
+const VEG_HINTS = ['ผัก', 'ใบ', 'หัว', 'ดอก', 'ฝัก', 'ถั่ว', 'เห็ด', 'มะเขือ', 'แตง', 'ฟัก', 'บวบ', 'กะหล่ำ', 'คะน้า', 'หน่อ', 'ยอด', 'สะตอ', 'ชะอม', 'กวางตุ้ง', 'กุยช่าย', 'ผลไม้']
+const STARCH_HINTS = ['เส้น', 'วุ้นเส้น', 'ข้าวเหนียว', 'สปาเกตตี', 'พาสต้า', 'ขนมปัง', 'แป้ง', 'ข้าว']
+const DAIRY_HINTS = ['นม', 'ชีส', 'เนย', 'ครีม', 'โยเกิร์ต']
+const SEASONING_HINTS = ['กะทิ', 'กะปิ', 'ซอส', 'พริกแกง', 'เครื่องแกง', 'มายองเนส', 'มัสตาร์ด', 'น้ำจิ้ม', 'ผงกะหรี่', 'มิโซะ', 'น้ำพริก', 'หอม', 'สมุนไพร']
 
 function guessGroup(text) {
   const s = text.trim()
-  if (!s) return 'special'
+  if (!s) return 'seasoning'
   if (PROTEIN_HINTS.some(k => s.includes(k))) return 'protein'
   if (VEG_HINTS.some(k => s.includes(k))) return 'veg'
-  return 'special'
+  if (DAIRY_HINTS.some(k => s.includes(k))) return 'dairy'
+  if (STARCH_HINTS.some(k => s.includes(k))) return 'starch'
+  if (SEASONING_HINTS.some(k => s.includes(k))) return 'seasoning'
+  return 'seasoning'
 }
 
 const CHIP_BASE =
@@ -36,10 +61,9 @@ const CHIP_BASE =
 // 3 สถานะ สี pastel ต่างกันชัด: มี=เขียวอ่อน · หมด=ชมพูอ่อน(เตือน) · ยังไม่ติ๊ก=เทาโปร่งเส้นประ
 const CHIP_NEUTRAL =
   'border-dashed border-warm-300 dark:border-disc-border text-warm-500 dark:text-disc-muted hover:bg-warm-50 dark:hover:bg-disc-hover'
-const CHIP_HAVE =
-  'border-emerald-300 bg-emerald-100 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'
-const CHIP_OUT =
-  'border-rose-300 bg-rose-100 text-rose-700 dark:border-rose-700 dark:bg-rose-900/40 dark:text-rose-300'
+// สีจากคลังพาสเทลของ user: มี = ชุด "เขียว" (#AAD9CE) · หมด = ชุด "ชมพูอ่อน" (#E688A1)
+const CHIP_HAVE = 'border-transparent bg-[#AAD9CE] text-[#1f4a3d]'
+const CHIP_OUT = 'border-transparent bg-[#E688A1] text-[#4a1f2e]'
 
 function nextStatus(current) {
   if (current === 'have') return 'out'
@@ -47,35 +71,92 @@ function nextStatus(current) {
   return 'have'
 }
 
-function Chip({ token, label, status, onCycle, custom, onRemove }) {
+function Chip({ id, token, label, status, onCycle, onRemove, onEditStart }) {
   const cls =
     status === 'have' ? CHIP_HAVE : status === 'out' ? CHIP_OUT : CHIP_NEUTRAL
   return (
     <span
-      className={`inline-flex items-center gap-1 pl-3 py-1.5 rounded-full text-sm border transition ${custom ? 'pr-1' : 'pr-3'} ${cls}`}
+      className={`inline-flex items-center gap-1 pl-3 pr-1 py-1.5 rounded-full text-sm border transition ${cls}`}
     >
       <button type="button" onClick={() => onCycle(token)} className="inline-flex items-center gap-1">
         {status === 'have' && <span>✓</span>}
-        {status === 'out' && <span>🛒</span>}
+        {status === 'out' && <CartIcon />}
         <span>{label}</span>
       </button>
-      {custom && (
-        <button
-          type="button"
-          onClick={() => onRemove(token)}
-          aria-label={`ลบ ${label}`}
-          className="w-4 h-4 flex items-center justify-center rounded-full text-xs leading-none hover:bg-black/10 dark:hover:bg-white/10"
-        >
-          ✕
-        </button>
-      )}
+      <button
+        type="button"
+        onClick={() => onEditStart(id)}
+        aria-label={`แก้ไข ${label}`}
+        className="w-4 h-4 flex items-center justify-center rounded-full text-xs leading-none hover:bg-black/10 dark:hover:bg-white/10"
+      >
+        ✎
+      </button>
+      <button
+        type="button"
+        onClick={() => onRemove(token)}
+        aria-label={`ลบ ${label}`}
+        className="w-4 h-4 flex items-center justify-center rounded-full text-xs leading-none hover:bg-black/10 dark:hover:bg-white/10"
+      >
+        ✕
+      </button>
+    </span>
+  )
+}
+
+function EditChip({ item, onSave, onCancel }) {
+  const [label, setLabel] = useState(item.label)
+  const [grp, setGrp] = useState(item.grp)
+  const [busy, setBusy] = useState(false)
+
+  async function save() {
+    if (!label.trim() || busy) return
+    setBusy(true)
+    await onSave(item.id, { label: label.trim(), grp })
+    setBusy(false)
+  }
+
+  return (
+    <span className="inline-flex items-center gap-1 pl-2 pr-1 py-1 rounded-full text-sm border border-warm-300 dark:border-disc-border bg-card-bg">
+      <input
+        type="text"
+        value={label}
+        onChange={e => setLabel(e.target.value)}
+        onKeyDown={e => e.key === 'Enter' && save()}
+        className="w-24 min-w-0 px-1.5 py-0.5 rounded border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text text-xs"
+      />
+      <select
+        value={grp}
+        onChange={e => setGrp(e.target.value)}
+        className="px-1 py-0.5 rounded border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text text-xs"
+      >
+        {GROUP_OPTIONS.map(o => (
+          <option key={o.value} value={o.value}>{o.label}</option>
+        ))}
+      </select>
+      <button
+        type="button"
+        onClick={save}
+        disabled={busy}
+        aria-label="บันทึก"
+        className="w-4 h-4 flex items-center justify-center rounded-full text-xs leading-none hover:bg-black/10 dark:hover:bg-white/10 disabled:opacity-50"
+      >
+        ✓
+      </button>
+      <button
+        type="button"
+        onClick={onCancel}
+        aria-label="ยกเลิก"
+        className="w-4 h-4 flex items-center justify-center rounded-full text-xs leading-none hover:bg-black/10 dark:hover:bg-white/10"
+      >
+        ✕
+      </button>
     </span>
   )
 }
 
 function AddIngredientRow({ onAdd, onBulkPreview }) {
   const [text, setText] = useState('')
-  const [grp, setGrp] = useState('special')
+  const [grp, setGrp] = useState('seasoning')
   const [manualGrp, setManualGrp] = useState(false)
   const [msg, setMsg] = useState(null)
   const [busy, setBusy] = useState(false)
@@ -92,7 +173,7 @@ function AddIngredientRow({ onAdd, onBulkPreview }) {
 
   function reset() {
     setText('')
-    setGrp('special')
+    setGrp('seasoning')
     setManualGrp(false)
   }
 
@@ -136,9 +217,9 @@ function AddIngredientRow({ onAdd, onBulkPreview }) {
           disabled={text.includes(',')}
           className="px-2 py-1.5 rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text text-sm disabled:opacity-40"
         >
-          <option value="protein">โปรตีน</option>
-          <option value="veg">ผัก</option>
-          <option value="special">ของเฉพาะ</option>
+          {GROUP_OPTIONS.map(o => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
         </select>
         <button
           type="button"
@@ -154,38 +235,33 @@ function AddIngredientRow({ onAdd, onBulkPreview }) {
   )
 }
 
-function ChipGroup({ heading, items, pantry, onCycle, onRemove }) {
+function ChipGroup({ heading, items, pantry, onCycle, onRemove, editingId, onEditStart, onEditSave, onEditCancel }) {
   const regular = items.filter(i => i.tier !== 'occasional')
   const occasional = items.filter(i => i.tier === 'occasional')
+  const renderItem = i =>
+    i.id === editingId ? (
+      <EditChip key={i.token} item={i} onSave={onEditSave} onCancel={onEditCancel} />
+    ) : (
+      <Chip
+        key={i.token}
+        id={i.id}
+        token={i.token}
+        label={i.label || i.token}
+        status={pantry[i.token]}
+        onCycle={onCycle}
+        onRemove={onRemove}
+        onEditStart={onEditStart}
+      />
+    )
   return (
     <div className="mb-4 last:mb-0">
       <p className="text-sm font-medium text-warm-500 dark:text-disc-muted mb-2">{heading}</p>
       <div className="flex flex-wrap gap-2">
-        {regular.map(i => (
-          <Chip
-            key={i.token}
-            token={i.token}
-            label={i.label || i.token}
-            status={pantry[i.token]}
-            onCycle={onCycle}
-            custom={i.custom}
-            onRemove={onRemove}
-          />
-        ))}
+        {regular.map(renderItem)}
         {occasional.length > 0 && (
           <span className="w-full border-t border-warm-200 dark:border-disc-border my-1" />
         )}
-        {occasional.map(i => (
-          <Chip
-            key={i.token}
-            token={i.token}
-            label={i.label || i.token}
-            status={pantry[i.token]}
-            onCycle={onCycle}
-            custom={i.custom}
-            onRemove={onRemove}
-          />
-        ))}
+        {occasional.map(renderItem)}
       </div>
     </div>
   )
@@ -202,10 +278,13 @@ export default function CookingClient({ displayName }) {
   const [chatInput, setChatInput] = useState('')
   const [chatReply, setChatReply] = useState(null)
   const [chatLoading, setChatLoading] = useState(false)
-  const [customIngredients, setCustomIngredients] = useState([])
+  const [ingredients, setIngredients] = useState([]) // public wiki — ทุกคนแก้ได้หมด ไม่มี owner แล้ว
   const [bulkPreview, setBulkPreview] = useState(null) // [{token,label,grp,include}] รอรีวิวก่อนเพิ่มจริง
+  const [editingIngredientId, setEditingIngredientId] = useState(null)
   const [spinning, setSpinning] = useState(false)
   const [reel, setReel] = useState(null)
+  const [kitchens, setKitchens] = useState([])
+  const [currentKitchenId, setCurrentKitchenId] = useState(null)
   const spinRef = useRef(null)
 
   useEffect(() => {
@@ -213,14 +292,17 @@ export default function CookingClient({ displayName }) {
       fetch('/api/cooking/state').then(r => r.json()),
       fetch('/api/cooking/menus').then(r => r.json()),
       fetch('/api/cooking/ingredients').then(r => r.json()),
+      fetch('/api/cooking/kitchens').then(r => r.json()),
     ])
-      .then(([state, menuData, ingredientData]) => {
+      .then(([state, menuData, ingredientData, kitchenData]) => {
         const map = {}
         for (const row of state.pantry || []) map[row.ingredient] = row.status
         setPantry(map)
         setRecent(state.recent || [])
         setMenus(menuData.menus || [])
-        setCustomIngredients(ingredientData.ingredients || [])
+        setIngredients(ingredientData.ingredients || [])
+        setKitchens(kitchenData.kitchens || [])
+        setCurrentKitchenId(kitchenData.currentKitchenId || null)
         setLoading(false)
       })
       .catch(() => setLoading(false))
@@ -278,7 +360,7 @@ export default function CookingClient({ displayName }) {
   async function addCustomIngredient(input, grp) {
     const label = input.trim()
     if (!label) return { error: null }
-    const dupe = findDuplicate(label, allCanonical)
+    const dupe = findDuplicate(label, ingredients)
     if (dupe) return { error: `มีอยู่แล้ว: ${dupe.label || dupe.token}` }
 
     const res = await fetch('/api/cooking/ingredients', {
@@ -291,7 +373,7 @@ export default function CookingClient({ displayName }) {
       return { error: data.error || 'เพิ่มไม่สำเร็จ' }
     }
     const { ingredient } = await res.json()
-    setCustomIngredients(prev => [...prev, ingredient])
+    setIngredients(prev => [...prev, ingredient])
     return { error: null }
   }
 
@@ -306,7 +388,7 @@ export default function CookingClient({ displayName }) {
 
     const deduped = []
     for (const item of data.items) {
-      const dupe = findDuplicate(item.label, [...allCanonical, ...deduped])
+      const dupe = findDuplicate(item.label, [...ingredients, ...deduped])
       if (!dupe) deduped.push({ ...item, include: true })
     }
     if (!deduped.length) return { error: 'มีอยู่แล้วทุกรายการ' }
@@ -326,10 +408,33 @@ export default function CookingClient({ displayName }) {
     }
   }
 
+  async function updateCustomIngredient(id, { label, grp }) {
+    const res = await fetch(`/api/cooking/ingredients/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ label, grp }),
+    })
+    if (!res.ok) return
+    const { ingredient } = await res.json()
+    setIngredients(prev => prev.map(i => (i.id === id ? ingredient : i)))
+    setEditingIngredientId(null)
+  }
+
   async function removeCustomIngredient(token) {
-    const item = customIngredients.find(i => i.token === token)
+    const item = ingredients.find(i => i.token === token)
     if (!item) return
-    setCustomIngredients(prev => prev.filter(i => i.id !== item.id))
+
+    // gates.key ผูกด้วย token ตรงๆ ไม่ใช่ FK — ลบแล้วเมนูที่ใช้ token นี้เป็นเงื่อนไขจะทำได้ไม่ได้อีกเลย (เงียบๆ)
+    const usedBy = menus.filter(m => (m.gates?.key || []).includes(token))
+    if (usedBy.length) {
+      const names = usedBy.map(m => m.name).join(', ')
+      const ok = window.confirm(
+        `"${item.label}" เป็นเงื่อนไขของเมนู: ${names}\nลบแล้วเมนูนี้จะไม่มีวันขึ้นว่า "ทำได้" อีก จนกว่าจะเพิ่มของชื่อเดิมกลับมา\n\nยืนยันลบ?`
+      )
+      if (!ok) return
+    }
+
+    setIngredients(prev => prev.filter(i => i.id !== item.id))
     setPantry(prev => {
       if (!(token in prev)) return prev
       const copy = { ...prev }
@@ -396,20 +501,18 @@ export default function CookingClient({ displayName }) {
   }
 
   const marketTokens = Object.keys(pantry).filter(t => pantry[t] === 'out')
-  const allCanonical = [
-    ...canonicalData.protein,
-    ...canonicalData.veg,
-    ...canonicalData.special,
-    ...customIngredients,
-  ]
-  const labelFor = token => allCanonical.find(c => c.token === token)?.label || token
-  // ถ้า token นี้ถูกย้ายเข้า DB เป็นของ owner แล้ว (migrateCanonicalToOwn.js) ใช้แถว DB แทน
-  // static — กันโชว์ซ้ำ 2 อัน · ผู้ใช้ใหม่ที่ยังไม่ได้ย้ายจะยังเห็น static ตามเดิม (graceful fallback)
-  const byGroup = grp => {
-    const custom = customIngredients.filter(i => i.grp === grp)
-    const customTokens = new Set(custom.map(i => i.token))
-    const base = canonicalData[grp].filter(i => !customTokens.has(i.token))
-    return [...base, ...custom.map(i => ({ ...i, custom: true }))]
+  const labelFor = token => ingredients.find(c => c.token === token)?.label || token
+  const byGroup = grp => ingredients.filter(i => i.grp === grp)
+  const currentKitchen = kitchens.find(k => k.id === currentKitchenId)
+
+  async function switchKitchen(kitchenId) {
+    const res = await fetch('/api/cooking/kitchens/switch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ kitchenId }),
+    })
+    if (!res.ok) return
+    window.location.reload() // pantry/history เปลี่ยนทั้งชุด — โหลดใหม่ให้ชัวร์ว่า sync
   }
 
   if (loading) {
@@ -422,7 +525,7 @@ export default function CookingClient({ displayName }) {
 
   return (
     <div className="py-4">
-      <div className="flex items-center justify-between gap-3 mb-4">
+      <div className="flex items-center justify-between gap-3 mb-1">
         <h1 className="text-2xl font-bold text-warm-900 dark:text-disc-text">
           {displayName ? `${displayName}, ` : ''}วันนี้ทำอะไรกินดี?
         </h1>
@@ -434,10 +537,33 @@ export default function CookingClient({ displayName }) {
         </Link>
       </div>
 
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <div className="flex items-center gap-1 text-xs text-warm-500 dark:text-disc-muted">
+          <span>🏠 {currentKitchen?.name || 'ครัวของฉัน'}</span>
+          {kitchens.length > 1 && (
+            <select
+              value={currentKitchenId || ''}
+              onChange={e => switchKitchen(Number(e.target.value))}
+              className="ml-1 px-1 py-0.5 rounded border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text text-xs"
+            >
+              {kitchens.map(k => (
+                <option key={k.id} value={k.id}>{k.name}</option>
+              ))}
+            </select>
+          )}
+        </div>
+        <Link
+          href="/cooking/kitchen"
+          className="text-xs text-warm-500 dark:text-disc-muted hover:opacity-80 whitespace-nowrap shrink-0"
+        >
+          จัดการครัว →
+        </Link>
+      </div>
+
       <button
         type="button"
         onClick={() => runSuggest(null)}
-        className="w-full bg-[#E57A72] hover:bg-[#d5685f] text-white rounded-lg text-base font-medium px-4 py-3 transition"
+        className="w-full bg-[#ED9A73] hover:bg-[#e2835a] text-white rounded-lg text-base font-medium px-4 py-3 transition"
       >
         🎲 สุ่มให้เลย
       </button>
@@ -512,7 +638,7 @@ export default function CookingClient({ displayName }) {
                 <button
                   type="button"
                   onClick={markCooked}
-                  className="flex-1 bg-[#C1F0B4] hover:bg-[#aee89d] text-emerald-900 rounded-lg px-4 py-2 text-sm font-medium transition"
+                  className="flex-1 bg-[#AAD9CE] hover:bg-[#93cabb] text-[#1f4a3d] rounded-lg px-4 py-2 text-sm font-medium transition"
                 >
                   ทำแล้ว ✓
                 </button>
@@ -557,31 +683,24 @@ export default function CookingClient({ displayName }) {
         <summary className="cursor-pointer text-base font-semibold text-warm-900 dark:text-disc-text select-none">
           ของในครัว
         </summary>
-        <p className="text-xs text-warm-400 dark:text-disc-muted mt-2 mb-3">
-          ✓ มี · 🛒 หมด · แตะเพื่อสลับ
+        <p className="text-xs text-warm-400 dark:text-disc-muted mt-2 mb-3 flex items-center gap-1">
+          ✓ มี · <CartIcon className="w-3.5 h-3.5 inline-block" /> หมด · แตะเพื่อสลับ
         </p>
         <div className="mt-2">
-          <ChipGroup
-            heading="โปรตีน"
-            items={byGroup('protein')}
-            pantry={pantry}
-            onCycle={cyclePantry}
-            onRemove={removeCustomIngredient}
-          />
-          <ChipGroup
-            heading="ผัก"
-            items={byGroup('veg')}
-            pantry={pantry}
-            onCycle={cyclePantry}
-            onRemove={removeCustomIngredient}
-          />
-          <ChipGroup
-            heading="ของเฉพาะ"
-            items={byGroup('special')}
-            pantry={pantry}
-            onCycle={cyclePantry}
-            onRemove={removeCustomIngredient}
-          />
+          {GROUP_OPTIONS.map(o => (
+            <ChipGroup
+              key={o.value}
+              heading={o.label}
+              items={byGroup(o.value)}
+              pantry={pantry}
+              onCycle={cyclePantry}
+              onRemove={removeCustomIngredient}
+              editingId={editingIngredientId}
+              onEditStart={setEditingIngredientId}
+              onEditSave={updateCustomIngredient}
+              onEditCancel={() => setEditingIngredientId(null)}
+            />
+          ))}
         </div>
         <AddIngredientRow onAdd={addCustomIngredient} onBulkPreview={startBulkPreview} />
         {bulkPreview && (
@@ -608,9 +727,9 @@ export default function CookingClient({ displayName }) {
                     onChange={e => updateBulkItem(i, { grp: e.target.value })}
                     className="px-2 py-1 rounded border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text text-sm"
                   >
-                    <option value="protein">โปรตีน</option>
-                    <option value="veg">ผัก</option>
-                    <option value="special">ของเฉพาะ</option>
+                    {GROUP_OPTIONS.map(o => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
                   </select>
                 </div>
               ))}
@@ -626,7 +745,7 @@ export default function CookingClient({ displayName }) {
               <button
                 type="button"
                 onClick={confirmBulkAdd}
-                className="flex-1 bg-[#C1F0B4] hover:bg-[#aee89d] text-emerald-900 rounded-lg px-3 py-1.5 text-sm font-medium transition"
+                className="flex-1 bg-[#AAD9CE] hover:bg-[#93cabb] text-[#1f4a3d] rounded-lg px-3 py-1.5 text-sm font-medium transition"
               >
                 เพิ่มทั้งหมด
               </button>
@@ -637,12 +756,14 @@ export default function CookingClient({ displayName }) {
 
       {marketTokens.length > 0 && (
         <div className="mt-4 bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-4">
-          <p className="text-base font-semibold text-warm-900 dark:text-disc-text mb-2">🛒 ไปตลาด</p>
+          <p className="text-base font-semibold text-warm-900 dark:text-disc-text mb-2 flex items-center gap-1.5">
+            <CartIcon className="w-4 h-4 inline-block" /> ไปตลาด
+          </p>
           <div className="flex flex-wrap gap-2">
             {marketTokens.map(token => (
               <span
                 key={token}
-                className="px-3 py-1 rounded-full text-sm bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300"
+                className="px-3 py-1 rounded-full text-sm bg-[#E688A1] text-[#4a1f2e]"
               >
                 {labelFor(token)}
               </span>

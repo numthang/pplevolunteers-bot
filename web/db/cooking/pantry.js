@@ -1,31 +1,31 @@
 import pool from '../index.js'
 
-// pantry rows: (owner, ingredient) with status 'have' | 'out'. No row = neutral (don't have).
-// owner = discord user id.
+// pantry rows: (kitchen_id, ingredient) with status 'have' | 'out'. No row = neutral (don't have).
+// kitchen_id = คนหลายคนช่วยกันจัดการครัวเดียวกันได้ (ไม่ใช่ owner คนเดียวเหมือนเดิม)
 
-export async function getPantry(owner) {
+export async function getPantry(kitchenId) {
   const { rows } = await pool.query(
-    `SELECT ingredient, status FROM cooking_pantry WHERE owner = $1`,
-    [owner]
+    `SELECT ingredient, status FROM cooking_pantry WHERE kitchen_id = $1`,
+    [kitchenId]
   )
   return rows
 }
 
 // upsert a token to 'have' or 'out'
-export async function setPantry(owner, ingredient, status) {
+export async function setPantry(kitchenId, ingredient, status) {
   await pool.query(
-    `INSERT INTO cooking_pantry (owner, ingredient, status, updated_at)
+    `INSERT INTO cooking_pantry (kitchen_id, ingredient, status, updated_at)
      VALUES ($1, $2, $3, NOW())
-     ON CONFLICT (owner, ingredient)
+     ON CONFLICT (kitchen_id, ingredient)
      DO UPDATE SET status = EXCLUDED.status, updated_at = NOW()`,
-    [owner, ingredient, status]
+    [kitchenId, ingredient, status]
   )
 }
 
 // remove the row entirely → back to neutral (not have, not on market list)
-export async function clearPantry(owner, ingredient) {
+export async function clearPantry(kitchenId, ingredient) {
   await pool.query(
-    `DELETE FROM cooking_pantry WHERE owner = $1 AND ingredient = $2`,
-    [owner, ingredient]
+    `DELETE FROM cooking_pantry WHERE kitchen_id = $1 AND ingredient = $2`,
+    [kitchenId, ingredient]
   )
 }

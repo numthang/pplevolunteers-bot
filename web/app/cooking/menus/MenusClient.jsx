@@ -144,37 +144,30 @@ export default function MenusClient() {
             <div className="flex items-start gap-3">
               <span className="text-2xl leading-none">{m.image?.emoji || '🍽️'}</span>
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <p className="text-base font-semibold text-warm-900 dark:text-disc-text truncate">
-                    {m.name}
-                  </p>
-                  <span className="px-2 py-0.5 rounded-full text-xs bg-warm-100 dark:bg-disc-hover text-warm-500 dark:text-disc-muted whitespace-nowrap">
-                    {m.by}
-                  </span>
-                </div>
+                <p className="text-base font-semibold text-warm-900 dark:text-disc-text truncate">
+                  {m.name}
+                </p>
                 <p className="text-sm text-warm-500 dark:text-disc-muted mt-1 truncate">
                   {(m.ingredients?.core || []).join(', ') || '—'}
                 </p>
               </div>
             </div>
-            {m.mine && (
-              <div className="mt-3 flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setFormState({ mode: 'edit', menu: m })}
-                  className="flex-1 border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover rounded-lg px-3 py-1.5 text-sm font-medium transition"
-                >
-                  แก้ไข
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleDelete(m)}
-                  className="flex-1 border border-red-500 text-red-500 hover:bg-red-500 hover:text-white rounded-lg px-3 py-1.5 text-sm font-medium transition"
-                >
-                  ลบ
-                </button>
-              </div>
-            )}
+            <div className="mt-3 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setFormState({ mode: 'edit', menu: m })}
+                className="flex-1 border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover rounded-lg px-3 py-1.5 text-sm font-medium transition"
+              >
+                แก้ไข
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDelete(m)}
+                className="flex-1 border border-red-500 text-red-500 hover:bg-red-500 hover:text-white rounded-lg px-3 py-1.5 text-sm font-medium transition"
+              >
+                ลบ
+              </button>
+            </div>
           </div>
         ))}
         {filtered.length === 0 && (

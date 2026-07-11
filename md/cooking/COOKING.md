@@ -4,6 +4,25 @@
 > ⚠️ **แก้ใหญ่จากเวอร์ชันแรก:** เดิมวางเป็น "หน้าเดียว stateless สุ่มจบ" — **ผิด** user ไม่เคยอยาก stateless
 > ของจริงคือ **ผู้ช่วยครัวที่จำ state ได้ แต่ยังจบใน 1 หน้า**
 
+## 🔄 v3 — public wiki + multi-kitchen (2026-07-11, เสร็จ+verify แล้ว)
+
+**กลับคำจาก v2 อีกรอบ** (v2 เคยย้าย ingredient/menu ให้เป็นของ user คนเดียว) — user อยากให้:
+
+1. **เมนู + ingredient checklist = public wiki เดียว** — ไม่มีเจ้าของ ใครก็เพิ่ม/แก้/ลบได้หมด ทุกคนเห็นชุดเดียวกัน (`cooking_menus`/`cooking_ingredients` เลิกเช็ค owner ใน WHERE clause ของ update/delete ทุกจุด, `cooking_ingredients` unique เปลี่ยนจาก `(owner,token)` เป็น `(token)` เดียว)
+2. **pantry (มี/หมด) + history (ทำแล้ว/กันซ้ำ) แยกไปผูกกับ "ครัว" (kitchen) แทนคนคนเดียว** — หลายคนช่วยกันจัดการครัวเดียวกันได้ (เช่น Mean ช่วย Tee ซื้อของ/ติ๊กสถานะแทน) สมาชิกทุกคนสิทธิ์เท่ากันหมด ไม่มี role/tier
+3. **`canonical.json` (44 รายการ static เดิม) ถูกลบทิ้งแล้ว** — DB (`cooking_ingredients`) เป็นแหล่งข้อมูลเดียว ไม่มี fallback คู่กันอีกต่อไป
+
+### Data model ใหม่
+- `cooking_kitchens` (id, name, owner=ผู้สร้างเฉยๆ) + `cooking_kitchen_members` (kitchen_id, member) — ผู้สร้างถูกใส่เป็นสมาชิกอัตโนมัติ, ทุก authorization check = "เป็นสมาชิกไหม" เท่านั้น
+- `cooking_pantry`/`cooking_history` — คอลัมน์ `owner` ถูกตัดออกแล้ว เปลี่ยนเป็น `kitchen_id` (FK, NOT NULL) — **ไม่มี CASCADE** ตอนลบ kitchen (แต่ยังไม่มีฟีเจอร์ลบ kitchen เลยในแอพ ไม่กระทบ)
+- Identity (`resolveOwner()` เดิม, `web/lib/cookingOwner.js`) ยังใช้อยู่ — แค่เพิ่มชั้น `web/lib/cookingKitchen.js` (`resolveKitchen()`) ครอบอีกที เพื่อ map identity → kitchen ปัจจุบัน (cookie `cooking_kitchen_id`, validate membership ทุกครั้ง ลอก pattern `web/lib/guildContext.js`) — auto สร้างครัวแรกให้ถ้ายังไม่เคยมีเลย (zero setup)
+
+### หน้าใหม่ — `/cooking/kitchen`
+สลับครัว (dropdown ในหน้าแรกก็สลับได้เร็วๆ ถ้ามี >1 ครัว) + เปลี่ยนชื่อครัว + เชิญสมาชิกด้วย Discord ID (พิมพ์ตรงๆ — ไม่มี directory ค้นหาชื่อ เพราะจะผูกกับ org roster ซึ่งขัด "bounded, ไม่ import business logic ของ org" ที่วางไว้ตั้งแต่ต้น) + ลบสมาชิก (กันลบคนสุดท้าย — ครัวต้องมี ≥1 คนเสมอ)
+
+### ⚠️ Data hygiene ที่เจอหลัง migrate
+เมื่อ ingredient กลายเป็น public ทุก session ที่เคย test (ของผมเองหลายรอบ + ของจริงที่ user พิมพ์) มารวมกันเป็นลิสต์เดียว — มีคำแปลกๆ/ทดสอบปนอยู่เยอะ (ดูตัวอย่างใน `.wolf/memory.md` ช่วงเวลานี้) ยังไม่ได้ล้าง เพราะแยกไม่ออกแน่ชัดว่าอันไหน test อันไหนจริง หลังรวมเป็น public แล้ว — ปล่อยให้ user ไล่ลบเองผ่าน UI (ลบได้ทุกอันแล้วตอนนี้) หรือรอสั่งให้ช่วยไล่ดู
+
 ## 🔄 v2 — กลับ decision เดิม (2026-07-10, Phase 0 เสร็จ+verify แล้ว)
 
 User ขอต่อยอด → กลับ 3 ข้อจากสเปคเดิม:
@@ -146,8 +165,17 @@ Phase 2 (features) ยังไม่ทำ: #2 แยก 3 สี chip · #8 br
 - #10 — `web/app/api/cooking/import/route.js` (Haiku raw fetch, บังคับ gates.protein เป็น enum + gates.key) + ปุ่ม "✨ AI ช่วยสร้าง" ใน MenusClient → เปิด MenuForm พร้อมข้อมูลให้รีวิวก่อน save
 
 **เสร็จ + verify แล้ว (2026-07-10):**
-- #6 — `web/db/cooking/ingredients.js` + `GET/POST/DELETE /api/cooking/ingredients(/[id])` + `AddIngredientRow` + `×` ลบบน custom chip ใน `CookingClient.jsx` (dedup client-side + DB unique constraint กันซ้ำ 2 ชั้น) — เทสผ่าน browser จริง (puppeteer): add/dup(409)/bad-grp(400)/delete ครบ
-  - `guessGroup()` เดา grp (protein/veg/special) จาก keyword ในชื่อตอนพิมพ์ — select ยังแก้ทับเองได้
+- #6 — `web/db/cooking/ingredients.js` + `GET/POST/PATCH/DELETE /api/cooking/ingredients(/[id])` + `AddIngredientRow` + `✎` แก้ไข/`×` ลบบน custom chip ใน `CookingClient.jsx` (dedup client-side + DB unique constraint กันซ้ำ 2 ชั้น) — เทสผ่าน browser จริง (puppeteer): add/dup(409)/bad-grp(400)/edit/delete ครบ
+  - `guessGroup()` เดา grp จาก keyword ในชื่อตอนพิมพ์ — select ยังแก้ทับเองได้
+  - แก้ไข (`updateIngredient`) เปลี่ยนได้แค่ label/grp — **token คงเดิมเสมอ** เพราะ `cooking_pantry` ผูก status ด้วย token ไม่ใช่ id (เปลี่ยน token = pantry status เดิมหลุด)
+  - **หมวด ingredient เคาะใหม่ 2026-07-10 — เลิก "ของเฉพาะ" ถังรวม เหลือ 5 หมวดตาม taxonomy ที่ user กำหนด:**
+    `protein`(เนื้อสัตว์/อาหารทะเล/ไข่/เต้าหู้/ถั่วโปรตีน) · `veg`(ผักสด/ผลไม้/เห็ด) · `starch`(แป้ง/ธัญพืช/เส้น/ข้าว) · `dairy`(นม/ชีส/เนย/ครีม) · `seasoning`(เครื่องปรุง/ซอส/สมุนไพร/ผักสวนครัวอย่างหอมใหญ่)
+    → `canonical.json` จัดใหม่ตามนี้ + migration แก้ CHECK constraint บน `cooking_ingredients` (`scripts/migration/migration.sql` บล็อกวันที่ 2026-07-10 — ต้อง DROP constraint ก่อน UPDATE ค่าใหม่เสมอ ไม่งั้นชน CHECK เดิม) + reclassify แถวเก่าที่เคย migrate เป็น `special` ให้ตรงหมวดใหม่ (รันแล้วบน dev DB)
+    ทุกจุดที่ hardcode 3 ตัวเลือกเดิม (select ×3, ChipGroup ×3, GROUPS validation ×3 API route, AI bulk-import system prompt) เปลี่ยนเป็นอ่านจาก `GROUP_OPTIONS` constant ตัวเดียวหรือ 5 ค่าใหม่แล้วทั้งหมด
+  - เพิ่มแบบ bulk: พิมพ์คั่นด้วย `,` → `POST /api/cooking/ingredients/bulk` (Haiku แก้คำผิดไทย + จัดหมวดให้) → รีวิว/แก้ทีละแถวก่อนกด "เพิ่มทั้งหมด"
+  - **ลบ custom ingredient ที่ถูกใช้เป็น `gates.key` ของเมนู** → เตือนก่อนลบ (`window.confirm`, list ชื่อเมนูที่กระทบ) เพราะ `gates.key` ผูกด้วย token string ตรงๆ ไม่ใช่ FK — ลบแล้วเมนูนั้นจะทำได้ไม่ได้อีกเลยแบบเงียบๆ จนกว่าจะเพิ่ม token เดิมกลับมา หรือแก้ gates ของเมนูเอง (ยังไม่มี UI เตือนตอนแก้เมนูโดยตรง เผื่อทำทีหลัง)
+  - `CartIcon` (inline SVG, `currentColor`) แทน emoji 🛒 ทั้ง 3 จุด (chip "หมด", hint text, หัวข้อ "ไปตลาด") — emoji เป็น full-color glyph ของ OS แก้สีผ่าน CSS ไม่ได้ ใช้ currentColor ให้เข้ากับสีข้อความรอบๆ เองแทน
+  - **แก้ bug `findDuplicate()` เช็ค substring/containment เข้มเกินไป** — คำไทยผสมคำกันปกติ (เช่น "ไข่ไก่" contains "ไก่", "ไข่เค็ม" contains "ไข่") ทำให้เพิ่ม "ไข่ไก่"/"ไข่" ไม่ได้เพราะโดนตีว่าซ้ำกับ "ไก่"/"ไข่เค็ม" ที่มีอยู่แล้ว → ตัด containment check ออก เหลือแค่ exact match (normalize case/space) เท่านั้น
 - #8 — slot-machine reel ใน `runSuggest` (ref + interval 80ms/900ms, cleanup on unmount, reduced-motion skip) — เทสผ่าน browser จริง เห็น reel หมุนแล้ว reveal การ์ดปกติ
 - หัวข้อ = `{{display_name}}, วันนี้ทำอะไรกินดี?` (nickname จาก session ผ่าน `page.js`, anon ไม่มี prefix) · ปุ่ม CTA ใช้สี custom จาก palette ที่ user ส่งมา (`#E57A72` สุ่ม, `#C1F0B4` ทำแล้ว) แทน `bg-teal` เดิม (สดไป) · "ของในครัว" เปิดโดย default เหมือนเดิม, **"วิธีทำ" ในการ์ดผลลัพธ์ปิดโดย default** (`<details>`, กดหัวข้อเพื่อดู)
 - หน้าแรก `/cooking` เพิ่มลิงก์ "คลังเมนู →" ไปหน้า `/cooking/menus` (เดิมไม่มีทางเข้าเลยนอกจากพิมพ์ URL เอง)

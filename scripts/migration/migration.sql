@@ -964,7 +964,7 @@ CREATE TABLE IF NOT EXISTS cooking_menus (
 CREATE INDEX IF NOT EXISTS idx_cooking_menus_owner ON cooking_menus (owner);
 
 -- วัตถุดิบที่ผู้ใช้เพิ่มเอง (#6) — canonical.json เป็น master static, ตารางนี้ต่อยอดเฉพาะ owner
---   grp = protein/veg/special (จัดกลุ่ม chip) · token ไม่ซ้ำต่อ owner
+--   grp = protein/veg/starch/dairy/seasoning (จัดกลุ่ม chip, เคาะ 2026-07-10) · token ไม่ซ้ำต่อ owner
 CREATE TABLE IF NOT EXISTS cooking_ingredients (
   id          SERIAL PRIMARY KEY,
   owner       VARCHAR(64) NOT NULL,
@@ -976,3 +976,70 @@ CREATE TABLE IF NOT EXISTS cooking_ingredients (
   UNIQUE (owner, token)
 );
 CREATE INDEX IF NOT EXISTS idx_cooking_ingredients_owner ON cooking_ingredients (owner);
+
+-- 2026-07-10: cooking_ingredients grp — เลิกใช้ "ของเฉพาะ" เป็นถังรวมสารพัด (user งงว่าคืออะไร)
+--   เปลี่ยนเป็น 5 หมวดที่มีความหมายจริง: protein(เนื้อสัตว์/อาหารทะเล/ไข่/เต้าหู้) ·
+--   veg(ผักและผลไม้/เห็ด) · starch(แป้ง/ธัญพืช/เส้น) · dairy(ไขมันและนม) ·
+--   seasoning(เครื่องปรุงและสมุนไพร รวมผักสวนครัวอย่างหอมใหญ่) — ตรงกับ canonical.json ที่จัดใหม่แล้ว
+-- ⚠️ ต้อง DROP constraint เดิมก่อน UPDATE เสมอ (ค่าใหม่ starch/dairy ยังไม่อยู่ใน constraint เก่า)
+ALTER TABLE cooking_ingredients DROP CONSTRAINT cooking_ingredients_grp_check;
+
+UPDATE cooking_ingredients SET grp = 'starch'
+  WHERE grp = 'special' AND token IN ('วุ้นเส้น','เส้นก๋วยเตี๋ยว','เส้นราเมน','เส้นพาสต้า','ข้าวเหนียว');
+UPDATE cooking_ingredients SET grp = 'dairy'
+  WHERE grp = 'special' AND token IN ('ชีส','นมสด','คุกกี้ครีม');
+UPDATE cooking_ingredients SET grp = 'veg'
+  WHERE grp = 'special' AND token IN ('กุยช่าย','สับปะรด','มะพร้าว');
+UPDATE cooking_ingredients SET grp = 'protein'
+  WHERE grp = 'special' AND token IN ('เต้าหู้','ถั่วชิกพี','ไข่เค็ม');
+UPDATE cooking_ingredients SET grp = 'seasoning'
+  WHERE grp = 'special' AND token IN ('กะทิ','กะปิ','ผงกะหรี่','เครื่องแกง','มิโซะ','ซอสเกาหลี','มายองเนส','น้ำตาล','รสดี');
+UPDATE cooking_ingredients SET grp = 'seasoning'
+  WHERE grp = 'veg' AND token = 'หอมใหญ่';
+
+ALTER TABLE cooking_ingredients ADD CONSTRAINT cooking_ingredients_grp_check
+  CHECK (grp IN ('protein','veg','starch','dairy','seasoning'));
+
+-- 2026-07-11: Cooking v3 — menus/ingredients กลับเป็น public wiki (ไม่มีเจ้าของ ใครก็แก้/ลบได้)
+--   pantry(มี/หมด)+history(ทำแล้ว) แยกไปผูกกับ "ครัว" (kitchen) แทนคนคนเดียว — เพื่อให้หลายคนช่วยกัน
+--   จัดการครัวเดียวกันได้ (เช่น Mean ช่วย Tee ซื้อของ/ติ๊กสถานะแทนได้) โดย pantry/history ยังเป็นส่วนตัวต่อครัว
+-- ⚠️ ต้องรัน scripts/cooking/migrateOwnersToKitchens.js คั่นระหว่าง PART A กับ PART C ด้านล่าง
+--   (PART A เปิดทางให้ backfill เขียนได้ก่อน, PART C ปิดผนึกหลัง backfill เสร็จ)
+
+-- ── PART A: สร้างตาราง kitchen + เปิด column kitchen_id (nullable ชั่วคราว) ──
+CREATE TABLE IF NOT EXISTS cooking_kitchens (
+  id          SERIAL PRIMARY KEY,
+  name        VARCHAR(80) NOT NULL,
+  owner       VARCHAR(64) NOT NULL,  -- ผู้สร้าง — เก็บไว้เป็นข้อมูล ไม่ได้ใช้ gate สิทธิ์
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS cooking_kitchen_members (
+  kitchen_id  INT NOT NULL REFERENCES cooking_kitchens(id) ON DELETE CASCADE,
+  member      VARCHAR(64) NOT NULL,  -- discord id หรือ anon uid
+  added_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (kitchen_id, member)
+);
+CREATE INDEX IF NOT EXISTS idx_cooking_kitchen_members_member ON cooking_kitchen_members (member);
+
+ALTER TABLE cooking_pantry  ADD COLUMN IF NOT EXISTS kitchen_id INT REFERENCES cooking_kitchens(id);
+ALTER TABLE cooking_history ADD COLUMN IF NOT EXISTS kitchen_id INT REFERENCES cooking_kitchens(id);
+
+-- ── (รัน scripts/cooking/migrateOwnersToKitchens.js ตรงนี้ — สร้าง 1 ครัวต่อ owner เดิม, เติม kitchen_id ให้ทุกแถว) ──
+
+-- ── PART C: ปิดผนึก — kitchen_id เป็น NOT NULL, ตัด owner ออกจาก pantry/history ──
+ALTER TABLE cooking_pantry  ALTER COLUMN kitchen_id SET NOT NULL;
+ALTER TABLE cooking_history ALTER COLUMN kitchen_id SET NOT NULL;
+ALTER TABLE cooking_pantry  DROP CONSTRAINT cooking_pantry_pkey;
+ALTER TABLE cooking_pantry  DROP COLUMN owner;
+ALTER TABLE cooking_pantry  ADD PRIMARY KEY (kitchen_id, ingredient);
+ALTER TABLE cooking_history DROP COLUMN owner;
+CREATE INDEX IF NOT EXISTS idx_cooking_pantry_kitchen_status ON cooking_pantry (kitchen_id, status);
+CREATE INDEX IF NOT EXISTS idx_cooking_history_kitchen_time ON cooking_history (kitchen_id, cooked_at DESC);
+DROP INDEX IF EXISTS idx_cooking_pantry_owner_status;
+DROP INDEX IF EXISTS idx_cooking_history_owner_time;
+
+-- ── cooking_ingredients: unique เดิมคือ (owner, token) → เปลี่ยนเป็น (token) เดียว (public wiki เดียว ไม่แยกต่อคน) ──
+ALTER TABLE cooking_ingredients DROP CONSTRAINT cooking_ingredients_owner_token_key;
+ALTER TABLE cooking_ingredients ADD CONSTRAINT cooking_ingredients_token_key UNIQUE (token);
+-- cooking_menus.owner: เก็บคอลัมน์ไว้เป็นข้อมูล "ใครสร้าง" เฉยๆ ไม่ได้ ALTER อะไร — โค้ดแค่เลิกเช็คตอน update/delete
