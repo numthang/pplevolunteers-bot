@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 
 const INPUT_CLS =
@@ -11,8 +11,11 @@ export default function KitchenClient() {
   const [currentKitchenId, setCurrentKitchenId] = useState(null)
   const [members, setMembers] = useState([])
   const [nameInput, setNameInput] = useState('')
-  const [inviteInput, setInviteInput] = useState('')
+  const [inviteQuery, setInviteQuery] = useState('')
+  const [inviteResults, setInviteResults] = useState([])
+  const [selectedInvitee, setSelectedInvitee] = useState(null) // { discord_id, display_name }
   const [busy, setBusy] = useState(false)
+  const searchTimer = useRef(null)
 
   const currentKitchen = kitchens.find(k => k.id === currentKitchenId)
 
@@ -36,6 +39,28 @@ export default function KitchenClient() {
   useEffect(() => {
     if (currentKitchen) setNameInput(currentKitchen.name)
   }, [currentKitchen?.id])
+
+  function handleQueryChange(v) {
+    setInviteQuery(v)
+    setSelectedInvitee(null)
+    clearTimeout(searchTimer.current)
+    if (!v.trim()) {
+      setInviteResults([])
+      return
+    }
+    searchTimer.current = setTimeout(async () => {
+      const res = await fetch(`/api/cooking/kitchens/member-search?q=${encodeURIComponent(v.trim())}`)
+      if (!res.ok) return
+      const data = await res.json()
+      setInviteResults(data.members || [])
+    }, 250)
+  }
+
+  function pickInvitee(m) {
+    setSelectedInvitee(m)
+    setInviteQuery(m.display_name || m.username || m.discord_id)
+    setInviteResults([])
+  }
 
   async function switchKitchen(kitchenId) {
     setBusy(true)
@@ -71,13 +96,14 @@ export default function KitchenClient() {
   }
 
   async function invite() {
-    const trimmed = inviteInput.trim()
-    if (!trimmed || !currentKitchenId) return
+    // เลือกจาก dropdown ค้นหาไว้ ใช้ discord_id ตรงๆ · ถ้าไม่เจอในค้นหา (ยังไม่เคยเข้าเว็บ) ให้พิมพ์ ID เองแทนได้
+    const discordId = selectedInvitee?.discord_id || inviteQuery.trim()
+    if (!discordId || !currentKitchenId) return
     setBusy(true)
     const res = await fetch(`/api/cooking/kitchens/${currentKitchenId}/members`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ discordId: trimmed }),
+      body: JSON.stringify({ discordId }),
     })
     setBusy(false)
     if (!res.ok) {
@@ -87,7 +113,8 @@ export default function KitchenClient() {
     }
     const { members: updated } = await res.json()
     setMembers(updated)
-    setInviteInput('')
+    setInviteQuery('')
+    setSelectedInvitee(null)
   }
 
   async function removeMember(member) {
@@ -190,25 +217,44 @@ export default function KitchenClient() {
               ))}
             </div>
             <p className="text-xs text-warm-400 dark:text-disc-muted mb-2">
-              เชิญเพิ่ม — ใส่ Discord ID ของคนที่จะช่วยจัดการครัวนี้
+              เชิญเพิ่ม — ค้นชื่อคนที่จะช่วยจัดการครัวนี้ (พิมพ์ Discord ID ตรงๆ ก็ได้ถ้าค้นไม่เจอ)
             </p>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={inviteInput}
-                onChange={e => setInviteInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && invite()}
-                placeholder="Discord ID"
-                className={INPUT_CLS}
-              />
-              <button
-                type="button"
-                onClick={invite}
-                disabled={busy}
-                className="border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover rounded-lg px-4 py-2 text-sm font-medium transition disabled:opacity-50"
-              >
-                เชิญ
-              </button>
+            <div className="relative">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={inviteQuery}
+                  onChange={e => handleQueryChange(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && invite()}
+                  placeholder="ชื่อ หรือ Discord ID"
+                  className={INPUT_CLS}
+                />
+                <button
+                  type="button"
+                  onClick={invite}
+                  disabled={busy}
+                  className="border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover rounded-lg px-4 py-2 text-sm font-medium transition disabled:opacity-50"
+                >
+                  เชิญ
+                </button>
+              </div>
+              {inviteResults.length > 0 && (
+                <div className="absolute left-0 right-14 mt-1 bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg shadow-lg z-10 overflow-hidden">
+                  {inviteResults.map(m => (
+                    <button
+                      key={m.discord_id}
+                      type="button"
+                      onClick={() => pickInvitee(m)}
+                      className="w-full text-left px-3 py-2 text-sm text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover transition"
+                    >
+                      {m.display_name || m.username}
+                      {m.username && m.display_name !== m.username && (
+                        <span className="text-warm-400 dark:text-disc-muted"> (@{m.username})</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </>

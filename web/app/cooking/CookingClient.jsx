@@ -403,9 +403,12 @@ export default function CookingClient({ displayName }) {
   async function confirmBulkAdd() {
     const toAdd = bulkPreview.filter(i => i.include)
     setBulkPreview(null)
+    let firstError = null
     for (const item of toAdd) {
-      await addCustomIngredient(item.label, item.grp)
+      const { error } = await addCustomIngredient(item.label, item.grp)
+      if (error && !firstError) firstError = error
     }
+    if (firstError) alert(firstError)
   }
 
   async function updateCustomIngredient(id, { label, grp }) {
@@ -414,7 +417,11 @@ export default function CookingClient({ displayName }) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ label, grp }),
     })
-    if (!res.ok) return
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      alert(data.error || 'แก้ไขไม่สำเร็จ')
+      return
+    }
     const { ingredient } = await res.json()
     setIngredients(prev => prev.map(i => (i.id === id ? ingredient : i)))
     setEditingIngredientId(null)
@@ -434,6 +441,13 @@ export default function CookingClient({ displayName }) {
       if (!ok) return
     }
 
+    const res = await fetch(`/api/cooking/ingredients/${item.id}`, { method: 'DELETE' }).catch(() => null)
+    if (!res || !res.ok) {
+      const data = await res?.json().catch(() => ({})) || {}
+      alert(data.error || 'ลบไม่สำเร็จ')
+      return
+    }
+
     setIngredients(prev => prev.filter(i => i.id !== item.id))
     setPantry(prev => {
       if (!(token in prev)) return prev
@@ -441,7 +455,6 @@ export default function CookingClient({ displayName }) {
       delete copy[token]
       return copy
     })
-    await fetch(`/api/cooking/ingredients/${item.id}`, { method: 'DELETE' }).catch(() => {})
     fetch('/api/cooking/pantry', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

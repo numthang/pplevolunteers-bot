@@ -18,7 +18,17 @@
 - Identity (`resolveOwner()` เดิม, `web/lib/cookingOwner.js`) ยังใช้อยู่ — แค่เพิ่มชั้น `web/lib/cookingKitchen.js` (`resolveKitchen()`) ครอบอีกที เพื่อ map identity → kitchen ปัจจุบัน (cookie `cooking_kitchen_id`, validate membership ทุกครั้ง ลอก pattern `web/lib/guildContext.js`) — auto สร้างครัวแรกให้ถ้ายังไม่เคยมีเลย (zero setup)
 
 ### หน้าใหม่ — `/cooking/kitchen`
-สลับครัว (dropdown ในหน้าแรกก็สลับได้เร็วๆ ถ้ามี >1 ครัว) + เปลี่ยนชื่อครัว + เชิญสมาชิกด้วย Discord ID (พิมพ์ตรงๆ — ไม่มี directory ค้นหาชื่อ เพราะจะผูกกับ org roster ซึ่งขัด "bounded, ไม่ import business logic ของ org" ที่วางไว้ตั้งแต่ต้น) + ลบสมาชิก (กันลบคนสุดท้าย — ครัวต้องมี ≥1 คนเสมอ)
+สลับครัว (dropdown ในหน้าแรกก็สลับได้เร็วๆ ถ้ามี >1 ครัว) + เปลี่ยนชื่อครัว + เชิญสมาชิกแบบค้นชื่อ + ลบสมาชิก (กันลบคนสุดท้าย — ครัวต้องมี ≥1 คนเสมอ)
+
+**อัปเดต (เดิมตั้งใจให้พิมพ์ Discord ID เอง กันผูกกับ org roster — user ขอเปลี่ยนเป็นค้นชื่อทีหลังในวันเดียวกัน):**
+`GET /api/cooking/kitchens/member-search?q=` ค้น `dc_members` ตรงๆ (login อย่างเดียวพอ ไม่ต้องมี permission ระดับ docs เหมือน `/api/docs/members`) — คืน `discord_id`/`display_name`/`username` ให้ทำ autocomplete ใน `KitchenClient.jsx` (debounce 250ms) เลือกจาก dropdown แล้วยิง invite ด้วย `discord_id` จริง · ยังพิมพ์ Discord ID ตรงๆ เป็น fallback ได้ถ้าค้นไม่เจอ (คนที่ยังไม่เคย sync เข้า `dc_members`) — หมายเหตุ: จุดนี้ทำให้ cooking ผูกกับตาราง org (`dc_members`) แบบ read-only เพื่อความสะดวก ถือเป็น trade-off ที่ user เลือกเอง ไม่ใช่ business-logic coupling (แค่ lookup ชื่อ)
+
+### 🔐 เพิ่มทีหลังในวันเดียวกัน — "public" ≠ "ใครก็ได้ในโลก"
+เคาะเพิ่ม: ดูเมนู/ingredient ได้ทุกคนไม่ต้อง login (GET) แต่ **เขียน (POST/PATCH/DELETE) ต้อง login ด้วย Discord ก่อน** —
+กันคนแปลกหน้าจากอินเทอร์เน็ต (ไม่มี Discord เลย) มาป่วน wiki เพราะ `/cooking` เข้าได้โดยไม่ต้อง login ตั้งแต่ v2
+- Guard = เช็ค `isAnon` จาก `resolveOwner()` ใน 6 route: `POST/PATCH/DELETE` ของทั้ง `menus` และ `ingredients`
+- pantry/cooked/kitchens **ไม่โดน guard นี้** — ยังใช้แบบไม่ต้อง login ได้ตามเดิม (ครัวส่วนตัวผ่าน anon cookie)
+- **เจอ bug ระหว่างใส่ guard**: `removeCustomIngredient` ใน `CookingClient.jsx` ทำ optimistic UI (ลบออกจาก state ก่อนยิง DELETE) แล้ว `.catch(()=>{})` ทิ้ง response — ถ้า anon โดน 401 UI จะลบ chip ออกไปเฉยๆ ทั้งที่ server ไม่ได้ลบจริง (desync เงียบๆ) → แก้เป็นเช็ค `res.ok` ก่อนอัปเดต state เสมอ, เพิ่ม error surfacing ให้ `updateCustomIngredient`/`confirmBulkAdd` ด้วย (เดิมสองอันนี้ก็ swallow error เงียบๆ เหมือนกัน)
 
 ### ⚠️ Data hygiene ที่เจอหลัง migrate
 เมื่อ ingredient กลายเป็น public ทุก session ที่เคย test (ของผมเองหลายรอบ + ของจริงที่ user พิมพ์) มารวมกันเป็นลิสต์เดียว — มีคำแปลกๆ/ทดสอบปนอยู่เยอะ (ดูตัวอย่างใน `.wolf/memory.md` ช่วงเวลานี้) ยังไม่ได้ล้าง เพราะแยกไม่ออกแน่ชัดว่าอันไหน test อันไหนจริง หลังรวมเป็น public แล้ว — ปล่อยให้ user ไล่ลบเองผ่าน UI (ลบได้ทุกอันแล้วตอนนี้) หรือรอสั่งให้ช่วยไล่ดู

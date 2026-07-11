@@ -35,7 +35,8 @@ export default function MenusClient() {
     try {
       const res = await fetch(`/api/cooking/menus/${m.id}`, { method: 'DELETE' })
       if (!res.ok) {
-        alert('ลบไม่สำเร็จ')
+        const data = await res.json().catch(() => ({}))
+        alert(data.error || 'ลบไม่สำเร็จ')
         return
       }
       setMenus(prev => prev.filter(x => x.id !== m.id))
