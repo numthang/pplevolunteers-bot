@@ -245,12 +245,12 @@ export default function CookingClient({ displayName }) {
     clearTimeout(spinRef.current)
     setSpinning(true)
     // สล็อต: หมุนเร็วแล้วค่อยๆ ช้าลงจนหยุด (delay โตขึ้นเรื่อยๆ) แทนความเร็วคงที่
-    let delay = 50
+    let delay = 80
     const tick = () => {
       const m = pool[Math.floor(Math.random() * pool.length)]
       setReel({ name: m.name, emoji: m.image?.emoji || '🍽️' })
-      delay *= 1.18
-      if (delay < 320) {
+      delay *= 1.15
+      if (delay < 420) {
         spinRef.current = setTimeout(tick, delay)
       } else {
         setSpinning(false)
@@ -471,11 +471,21 @@ export default function CookingClient({ displayName }) {
       </button>
 
       {spinning && (
-        <div className="mt-4 bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-8 flex flex-col items-center justify-center">
-          <span className="text-5xl leading-none transition-opacity duration-75">
+        <div className="mt-4 bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-10 flex flex-col items-center justify-center overflow-hidden">
+          <style>{`@keyframes cookslot{0%{transform:translateY(-45%) scale(.85);opacity:.25}100%{transform:translateY(0) scale(1);opacity:1}}`}</style>
+          <p className="text-sm font-medium text-[#ff6a13] mb-3">🎰 กำลังสุ่มเมนู...</p>
+          <span
+            key={'e' + (reel?.name || '')}
+            style={{ animation: 'cookslot 150ms ease-out' }}
+            className="text-6xl leading-none"
+          >
             {reel?.emoji || '🍽️'}
           </span>
-          <p className="mt-3 text-lg font-bold text-warm-900 dark:text-disc-text transition-opacity duration-75">
+          <p
+            key={'n' + (reel?.name || '')}
+            style={{ animation: 'cookslot 150ms ease-out' }}
+            className="mt-3 text-xl font-bold text-warm-900 dark:text-disc-text"
+          >
             {reel?.name || '...'}
           </p>
         </div>
