@@ -109,21 +109,39 @@ export function suggestMeal(menus, have, recent = [], { excludeId = null } = {})
   return buildMeal(main, pool)
 }
 
-// สุ่มหลายเมนู (จานหลักไม่ซ้ำกัน) — คืน array ของ meal object · น้อยกว่า count ได้ถ้าเมนูที่ทำได้มีไม่พอ
+// หักคะแนนถ้าจานนี้ "รสชาติ/โปรตีน" ซ้ำกับจานที่หยิบเข้าเซ็ตไปแล้ว → เซ็ต 4 อันเลยหลากหลายในตัว
+function inSetPenalty(menu, picked) {
+  let p = 0
+  for (const c of picked) {
+    if ((menu.flavor || []).some((f) => (c.flavor || []).includes(f))) p += 0.5
+    if ((menu.protein || []).some((pr) => (c.protein || []).includes(pr))) p += 0.4
+  }
+  return p
+}
+
+// สุ่มหลายเมนู (จานหลักไม่ซ้ำ + กระจายรสชาติ/โปรตีนภายในเซ็ต) — คืน array ของ meal object
+//   greedy: หยิบทีละอัน แล้ว re-rank ที่เหลือด้วย variety(เทียบมื้อล่าสุด) − ซ้ำในเซ็ต(รส/โปรตีน)
+//   น้อยกว่า count ได้ถ้าเมนูที่ทำได้มีไม่พอ
 export function suggestMeals(menus, have, recent = [], count = 4) {
   const pool = makeableMenus(menus, have)
   const mains = rankedMains(pool, recent)
   if (!mains.length) return []
 
   const chosen = []
+  const picked = [] // main menu objects ที่หยิบแล้ว (ใช้เช็คซ้ำในเซ็ต)
   const used = new Set()
   while (chosen.length < count) {
-    const remaining = mains.filter((m) => !used.has(m.id))
+    let remaining = mains.filter((m) => !used.has(m.id))
     if (!remaining.length) break
+    remaining = remaining
+      .map((m) => ({ m, s: varietyScore(m, recent) - inSetPenalty(m, picked) }))
+      .sort((a, b) => b.s - a.s)
+      .map((x) => x.m)
     // สุ่มจาก topish ของที่เหลือ ให้รู้สึกสดแต่ยังคุมความหลากหลาย
     const top = remaining.slice(0, Math.max(3, Math.ceil(remaining.length * 0.4)))
     const pick = top[Math.floor(Math.random() * top.length)]
     used.add(pick.id)
+    picked.push(pick)
     chosen.push(buildMeal(pick, pool))
   }
   return chosen
