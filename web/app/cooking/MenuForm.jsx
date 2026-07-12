@@ -192,6 +192,7 @@ export default function MenuForm({ mode, menu, onClose, onSaved }) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
   const [uploading, setUploading] = useState(false)
+  const [gating, setGating] = useState(false)
 
   // ESC ปิด modal
   useEffect(() => {
@@ -227,6 +228,33 @@ export default function MenuForm({ mode, menu, onClose, onSaved }) {
       setError('อัพโหลดรูปไม่สำเร็จ ลองใหม่อีกครั้ง')
     } finally {
       setUploading(false)
+    }
+  }
+
+  // ให้ AI เดา gates จากชื่อ + วัตถุดิบหลัก แล้วเติมลงช่อง (ยังไม่ save — ผู้ใช้ตรวจ/กดบันทึกเอง)
+  async function suggestGates() {
+    if (!form.name.trim()) {
+      setError('ใส่ชื่อเมนูก่อน')
+      return
+    }
+    setGating(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/cooking/gates-suggest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: form.name.trim(), ingredients: linesToArr(form.core) }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setError(data.error || 'เดา gates ไม่สำเร็จ')
+        return
+      }
+      set({ gatesProtein: data.protein || [], gatesKey: data.key || [] })
+    } catch {
+      setError('เดา gates ไม่สำเร็จ ลองใหม่อีกครั้ง')
+    } finally {
+      setGating(false)
     }
   }
 
@@ -405,9 +433,19 @@ export default function MenuForm({ mode, menu, onClose, onSaved }) {
           </div>
 
           <div className="border-t border-warm-200 dark:border-disc-border pt-4">
-            <p className="text-sm font-semibold text-warm-900 dark:text-disc-text mb-3">
-              เงื่อนไขวัตถุดิบ (gates) — สำคัญที่สุด
-            </p>
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <p className="text-sm font-semibold text-warm-900 dark:text-disc-text">
+                เงื่อนไขวัตถุดิบ (gates) — สำคัญที่สุด
+              </p>
+              <button
+                type="button"
+                onClick={suggestGates}
+                disabled={gating}
+                className="shrink-0 text-xs border border-teal text-teal rounded-lg px-2.5 py-1 font-medium hover:bg-teal hover:text-white transition disabled:opacity-50"
+              >
+                {gating ? 'กำลังเดา...' : '🤖 ให้ AI เติม'}
+              </button>
+            </div>
 
             <div className="mb-4">
               <ChipMultiSelect
