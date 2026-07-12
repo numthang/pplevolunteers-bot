@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 const FOOD_GROUPS = [
   { token: 'protein', label: 'โปรตีน' },
@@ -120,6 +120,30 @@ function TagInput({ label, helper, values, onChange, placeholder }) {
 
 function linesToArr(s) {
   return s.split('\n').map(x => x.trim()).filter(Boolean)
+}
+
+// textarea ที่ยืดสูงตามจำนวนบรรทัดเอง (ไม่ต้อง scroll ในกล่อง)
+function AutoTextarea({ value, onChange, minRows = 2, ...props }) {
+  const ref = useRef(null)
+  const resize = () => {
+    const el = ref.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = el.scrollHeight + 'px'
+  }
+  useEffect(() => {
+    resize()
+  }, [value])
+  return (
+    <textarea
+      ref={ref}
+      value={value}
+      onChange={onChange}
+      rows={minRows}
+      className={`${TEXTAREA_CLS} resize-none overflow-hidden`}
+      {...props}
+    />
+  )
 }
 
 // menu (จาก API) → form state. image เป็น nested {emoji,url}, ingredients เป็น {core[],optional[]}
@@ -343,36 +367,6 @@ export default function MenuForm({ mode, menu, onClose, onSaved }) {
             onChange={v => set({ food_groups: v })}
           />
 
-          <ChipMultiSelect
-            label="โปรตีน"
-            options={PROTEIN_ENUM_OPTIONS}
-            values={form.protein}
-            onChange={v => set({ protein: v })}
-          />
-
-          <div className="flex gap-3">
-            <div className="flex-1 min-w-0">
-              <p className={LABEL_CLS}>วิธีทำ</p>
-              <input
-                type="text"
-                value={form.method}
-                onChange={e => set({ method: e.target.value })}
-                className={INPUT_CLS}
-                placeholder="เช่น ผัด, ต้ม, ทอด"
-              />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className={LABEL_CLS}>สัญชาติ</p>
-              <input
-                type="text"
-                value={form.cuisine}
-                onChange={e => set({ cuisine: e.target.value })}
-                className={INPUT_CLS}
-                placeholder="เช่น ไทย, จีน, ญี่ปุ่น"
-              />
-            </div>
-          </div>
-
           <TagInput
             label="รสชาติ"
             values={form.flavor}
@@ -380,24 +374,13 @@ export default function MenuForm({ mode, menu, onClose, onSaved }) {
             placeholder="พิมพ์แล้วกด Enter เช่น เผ็ด, เค็ม"
           />
 
-          <label className="flex items-center gap-2 text-sm text-warm-900 dark:text-disc-text">
-            <input
-              type="checkbox"
-              checked={form.carb_in_dish}
-              onChange={e => set({ carb_in_dish: e.target.checked })}
-              className="w-4 h-4 accent-teal"
-            />
-            มีคาร์บในจานแล้ว (เช่น ข้าวผัด, บะหมี่)
-          </label>
-
           <div>
             <p className={LABEL_CLS}>วัตถุดิบหลัก</p>
             <p className="text-xs text-warm-400 dark:text-disc-muted mb-2">หนึ่งบรรทัดต่อหนึ่งรายการ</p>
-            <textarea
+            <AutoTextarea
               value={form.core}
               onChange={e => set({ core: e.target.value })}
-              rows={3}
-              className={TEXTAREA_CLS}
+              minRows={3}
               placeholder={'หมูสับ\nใบกะเพรา\nพริก'}
             />
           </div>
@@ -407,17 +390,16 @@ export default function MenuForm({ mode, menu, onClose, onSaved }) {
             <p className="text-xs text-warm-400 dark:text-disc-muted mb-2">
               หนึ่งบรรทัดต่อหนึ่งรายการ (ไม่บังคับ)
             </p>
-            <textarea value={form.optional} onChange={e => set({ optional: e.target.value })} rows={2} className={TEXTAREA_CLS} />
+            <AutoTextarea value={form.optional} onChange={e => set({ optional: e.target.value })} minRows={2} />
           </div>
 
           <div>
             <p className={LABEL_CLS}>ขั้นตอน</p>
             <p className="text-xs text-warm-400 dark:text-disc-muted mb-2">หนึ่งบรรทัดต่อหนึ่งขั้นตอน</p>
-            <textarea
+            <AutoTextarea
               value={form.steps}
               onChange={e => set({ steps: e.target.value })}
-              rows={4}
-              className={TEXTAREA_CLS}
+              minRows={4}
               placeholder={'ตำกระเทียมพริก\nผัดหมูสับ\nใส่ใบกะเพรา'}
             />
           </div>
