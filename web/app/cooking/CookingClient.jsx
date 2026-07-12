@@ -348,6 +348,16 @@ export default function CookingClient({ displayName }) {
     }).catch(() => {})
   }
 
+  // ซื้อจากตลาดแล้ว → เด้งกลับเป็น "มี" (หายจากลิสต์ตลาด ขึ้นไปอยู่เขียว)
+  function markHave(token) {
+    setPantry(prev => ({ ...prev, [token]: 'have' }))
+    fetch('/api/cooking/pantry', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, status: 'have' }),
+    }).catch(() => {})
+  }
+
   // แก้ไขเมนูจากการ์ดผลสุ่ม — อัพเดตทั้ง menus (สำหรับสุ่มครั้งถัดไป) และ result.main (โชว์ผลทันที)
   function handleMenuSaved(updatedMenu) {
     setMenus(prev => prev.map(m => (m.id === updatedMenu.id ? updatedMenu : m)))
@@ -617,17 +627,21 @@ export default function CookingClient({ displayName }) {
 
       {marketTokens.length > 0 && (
         <div className="mt-6 bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-4">
-          <p className="text-base font-semibold text-warm-900 dark:text-disc-text mb-2 flex items-center gap-1.5">
+          <p className="text-base font-semibold text-warm-900 dark:text-disc-text mb-1 flex items-center gap-1.5">
             <CartIcon className="w-4 h-4 inline-block" /> ไปตลาด
           </p>
+          <p className="text-xs text-warm-400 dark:text-disc-muted mb-2">แตะเมื่อซื้อแล้ว → กลับไปเป็น "มี"</p>
           <div className="flex flex-wrap gap-2">
             {marketTokens.map(token => (
-              <span
+              <button
                 key={token}
-                className="px-2.5 py-0.5 rounded-md text-base bg-[#E688A1] text-[#4a1f2e]"
+                type="button"
+                onClick={() => markHave(token)}
+                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-base bg-[#E688A1] text-[#4a1f2e] hover:bg-[#dd7690] transition"
               >
                 {labelFor(token)}
-              </span>
+                <span className="text-xs opacity-70">✓</span>
+              </button>
             ))}
           </div>
         </div>
