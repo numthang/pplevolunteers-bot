@@ -3,17 +3,22 @@ import { resolveOwner } from '@/lib/cookingOwner.js'
 // เดา gates (เงื่อนไขวัตถุดิบ) ให้เมนู จากชื่อ + วัตถุดิบหลัก — ใช้ในฟอร์มแก้เมนู (ปุ่ม "ให้ AI เติม")
 // ลอก pattern raw fetch Haiku จาก app/api/cooking/import/route.js · ต้อง login (เป็นส่วนของ flow แก้เมนู)
 const PROTEIN_ENUM = ['pork', 'chicken', 'beef', 'shrimp', 'squid', 'fish', 'tofu']
+const FOOD_GROUP_ENUM = ['protein', 'veg', 'carb', 'dessert', 'drink']
 
-const SYSTEM = `คุณเป็นผู้ช่วยกำหนด "เงื่อนไขวัตถุดิบ (gates)" ของเมนูอาหาร จากชื่อเมนู + วัตถุดิบที่ให้มา
+const SYSTEM = `คุณเป็นผู้ช่วยกำหนด "หมู่อาหาร + เงื่อนไขวัตถุดิบ (gates)" ของเมนูอาหาร จากชื่อเมนู + วัตถุดิบที่ให้มา
 ตอบกลับเป็น JSON ออบเจ็กต์เดียวเท่านั้น ห้ามมีข้อความอื่นนอก JSON ห้ามใส่ \`\`\`
 
 รูปแบบ:
 {
-  "protein": ["chicken"],   // โปรตีนที่เป็นตัวตัดสินว่าทำเมนูนี้ได้ไหม — enum เท่านั้น: ${PROTEIN_ENUM.join(', ')}
-  "key": ["ใบกะเพรา"]        // ของเฉพาะที่ขาดไม่ได้ 0-3 อย่าง (ชื่อไทย) ไม่มีก็ []
+  "food_groups": ["protein","veg"],  // หมู่อาหาร enum: ${FOOD_GROUP_ENUM.join(', ')}
+  "flavor": ["เผ็ด"],                  // รสชาติเด่น ภาษาไทย 1-3 คำ เช่น เผ็ด, เค็ม, หวาน, เปรี้ยว, มัน, จืด
+  "protein": ["chicken"],            // โปรตีนที่เป็นตัวตัดสินว่าทำเมนูนี้ได้ไหม — enum เท่านั้น: ${PROTEIN_ENUM.join(', ')}
+  "key": ["ใบกะเพรา"]                 // ของเฉพาะที่ขาดไม่ได้ 0-3 อย่าง (ชื่อไทย) ไม่มีก็ []
 }
 
 กติกา:
+- food_groups: จานคาวมีเนื้อ→ใส่ "protein" (มีผักด้วยก็ ["protein","veg"]) · ของหวาน→["dessert"] · เครื่องดื่ม→["drink"] · จานผักล้วน/แป้งล้วน→ใส่ veg/carb ตามจริง
+- flavor: รสเด่นของจาน 1-3 คำ (ไทย) เช่น เผ็ด/เค็ม/หวาน/เปรี้ยว/มัน/จืด
 - protein ต้องเป็น subset ของ enum เท่านั้น (หมูสับ→"pork" ไม่ใช่ "หมู") · มีเนื้อสัตว์ให้ใส่อย่างน้อย 1 · มังสวิรัติที่มีเต้าหู้ใช้ "tofu" · ไม่มีโปรตีนเลยก็ []
 - key = เฉพาะวัตถุดิบที่ "ขาดแล้วทำเมนูนี้ไม่ได้" (0-3 อย่าง) ไม่ใช่ของทั่วไปอย่างน้ำมัน/กระเทียม/เกลือ/น้ำตาล`
 
@@ -59,6 +64,12 @@ export async function POST(req) {
     return Response.json({ error: 'เดา gates ไม่สำเร็จ ลองใหม่อีกครั้ง' }, { status: 502 })
   }
 
+  const food_groups = Array.isArray(parsed.food_groups)
+    ? parsed.food_groups.filter((g) => FOOD_GROUP_ENUM.includes(g))
+    : []
+  const flavor = Array.isArray(parsed.flavor)
+    ? parsed.flavor.map((f) => String(f).trim()).filter(Boolean).slice(0, 3)
+    : []
   const protein = Array.isArray(parsed.protein)
     ? parsed.protein.filter((p) => PROTEIN_ENUM.includes(p))
     : []
@@ -66,5 +77,5 @@ export async function POST(req) {
     ? parsed.key.map((k) => String(k).trim()).filter(Boolean).slice(0, 3)
     : []
 
-  return Response.json({ protein, key })
+  return Response.json({ food_groups, flavor, protein, key })
 }

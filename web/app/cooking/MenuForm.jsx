@@ -250,7 +250,12 @@ export default function MenuForm({ mode, menu, onClose, onSaved }) {
         setError(data.error || 'เดา gates ไม่สำเร็จ')
         return
       }
-      set({ gatesProtein: data.protein || [], gatesKey: data.key || [] })
+      set({
+        food_groups: data.food_groups?.length ? data.food_groups : form.food_groups,
+        flavor: data.flavor?.length ? data.flavor : form.flavor,
+        gatesProtein: data.protein || [],
+        gatesKey: data.key || [],
+      })
     } catch {
       setError('เดา gates ไม่สำเร็จ ลองใหม่อีกครั้ง')
     } finally {
@@ -388,20 +393,6 @@ export default function MenuForm({ mode, menu, onClose, onSaved }) {
             </div>
           </div>
 
-          <ChipMultiSelect
-            label="หมู่อาหาร"
-            options={FOOD_GROUPS}
-            values={form.food_groups}
-            onChange={v => set({ food_groups: v })}
-          />
-
-          <TagInput
-            label="รสชาติ"
-            values={form.flavor}
-            onChange={v => set({ flavor: v })}
-            placeholder="พิมพ์แล้วกด Enter เช่น เผ็ด, เค็ม"
-          />
-
           <div>
             <p className={LABEL_CLS}>วัตถุดิบหลัก</p>
             <p className="text-xs text-warm-400 dark:text-disc-muted mb-2">หนึ่งบรรทัดต่อหนึ่งรายการ</p>
@@ -432,10 +423,14 @@ export default function MenuForm({ mode, menu, onClose, onSaved }) {
             />
           </div>
 
-          <div className="border-t border-warm-200 dark:border-disc-border pt-4">
-            <div className="flex items-center justify-between gap-2 mb-3">
-              <p className="text-sm font-semibold text-warm-900 dark:text-disc-text">
-                เงื่อนไขวัตถุดิบ (gates) — สำคัญที่สุด
+          <details className="border-t border-warm-200 dark:border-disc-border pt-4">
+            <summary className="cursor-pointer text-sm font-semibold text-warm-900 dark:text-disc-text select-none">
+              ข้อมูลระบบสุ่ม (หมู่อาหาร · รสชาติ · gates)
+              {noGates && <span className="text-orange-500 font-normal"> — ⚠️ ยังไม่มี gates</span>}
+            </summary>
+            <div className="flex items-center justify-between gap-2 mt-3 mb-4">
+              <p className="text-xs text-warm-400 dark:text-disc-muted">
+                ปกติไม่ต้องแตะเอง — กด AI เติมให้ หรือแก้เองก็ได้
               </p>
               <button
                 type="button"
@@ -443,9 +438,31 @@ export default function MenuForm({ mode, menu, onClose, onSaved }) {
                 disabled={gating}
                 className="shrink-0 text-xs border border-teal text-teal rounded-lg px-2.5 py-1 font-medium hover:bg-teal hover:text-white transition disabled:opacity-50"
               >
-                {gating ? 'กำลังเดา...' : '🤖 ให้ AI เติม'}
+                {gating ? 'กำลังเดา...' : '🤖 ให้ AI เติมทั้งหมด'}
               </button>
             </div>
+
+            <div className="mb-4">
+              <ChipMultiSelect
+                label="หมู่อาหาร"
+                options={FOOD_GROUPS}
+                values={form.food_groups}
+                onChange={v => set({ food_groups: v })}
+              />
+            </div>
+
+            <div className="mb-4">
+              <TagInput
+                label="รสชาติ"
+                values={form.flavor}
+                onChange={v => set({ flavor: v })}
+                placeholder="พิมพ์แล้วกด Enter เช่น เผ็ด, เค็ม"
+              />
+            </div>
+
+            <p className="text-sm font-semibold text-warm-900 dark:text-disc-text mb-2">
+              เงื่อนไขวัตถุดิบ (gates) — สำคัญที่สุด
+            </p>
 
             <div className="mb-4">
               <ChipMultiSelect
@@ -470,7 +487,7 @@ export default function MenuForm({ mode, menu, onClose, onSaved }) {
                 ⚠️ เมนูนี้จะถือว่าทำได้เสมอ (ไม่มีเงื่อนไขวัตถุดิบ)
               </p>
             )}
-          </div>
+          </details>
 
           {error && <p className="text-sm text-red-500">{error}</p>}
 

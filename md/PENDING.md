@@ -16,7 +16,17 @@
 
 **เหลือ:** (1) เปิดเบราว์เซอร์ทดสอบจริงทุก flow (2) commit (3) deploy prod — ต้อง `mkdir web/public/uploads/cooking` บน prod (dir เปล่า git ไม่ track) ให้สิทธิ์ www เขียนได้
 
-- [ ] **อนิเมชันตอนกดสุ่มแบบ slot machine จริงจัง** (parked 2026-07-11) — ตอนนี้มี spin ง่ายๆ อยู่แล้ว (`spinning`/`reel` ใน CookingClient สุ่มโชว์ emoji+ชื่อสลับ 900ms) → อยากได้แบบสล็อตจริง (รีลหมุน, decelerate มาหยุดที่เมนู, เสียง/สั่นได้) · ทำตอนสุ่ม 4 อาจโชว์รีลหมุนแล้วเผย grid ทีเดียว
+- [ ] **อนิเมชันตอนกดสุ่มแบบ slot machine จริงจัง** (parked 2026-07-11) — ตอนนี้มี spin ง่ายๆ อยู่แล้ว (`spinning`/`reel` ใน CookingClient สุ่มโชว์ emoji+ชื่อสลับ, decelerate ~2.3s + animation cookslot) → อยากได้แบบสล็อตจริง (รีลหมุนแนวตั้ง, เสียง/สั่นได้)
+
+### 🎯 รอสรุปแล้วส่ง Sonnet ทำทีเดียว (คุยไว้ 2026-07-11 — ยังไม่ลงมือ ตามที่ user สั่งให้รอ)
+
+- [ ] **Combobox วัตถุดิบหลัก/เสริม + รสชาติ** — ตอนนี้ core/optional เป็น textarea freeform, flavor เป็น TagInput พิมพ์เองล้วน → เปลี่ยนเป็น **multi-select combobox** (พิมพ์แล้วเด้ง dropdown ให้เลือกของที่มี + เพิ่มใหม่ได้) · แหล่ง suggestion: วัตถุดิบ→ดึงจาก `cooking_ingredients` wiki · รสชาติ→ดึงรส distinct จากเมนูอื่น · ทำ component เดียว reuse 3 จุด · trade-off: เขียนปริมาณติดชื่อไม่ได้ (เป็น token ล้วน) — user รับได้
+- [ ] **MenuForm → autosave ทั้งฟอร์ม เอาปุ่ม "บันทึก" ออก** (เคาะ 2026-07-11 — แนว Notion, ทุก field ติดทันทีไม่ต้องกดเซฟ) ครอบทุกช่อง: ชื่อ/ขั้นตอน/วัตถุดิบ/รสชาติ/หมู่อาหาร/gates/**รูป**
+  - **จังหวะเซฟต่อชนิด field:** พิมพ์ต่อเนื่อง (ชื่อ/ขั้นตอน/URL รูป) = **debounce ~1s หรือ on-blur** (กัน PATCH รัว) · tag add/remove (combobox/รสชาติ) + toggle chip (หมู่อาหาร/gate protein) + **อัพโหลดไฟล์รูปสำเร็จ** = เซฟทันที (เป็น event ชัด)
+  - **⚠️ guard:** (1) **edit mode เท่านั้น** — add mode ยังไม่มี id, ต้อง create เมนูก่อน (อาจ create ทันทีที่พิมพ์ชื่อ แล้วสลับเป็น edit) (2) **ชื่อว่างห้ามเซฟ** (required) (3) มี indicator เล็กๆ ว่า "บันทึกแล้ว/กำลังบันทึก" กัน user งงว่าติดไหม
+  - เกี่ยวกับ combobox ด้านบน — ทำพร้อมกันได้
+- [ ] **protein gate ให้ derive จาก wiki แทน hardcode** — ตอนนี้ 7 โปรตีน (pork/chicken/beef/shrimp/squid/fish/tofu) ถูก hardcode ซ้ำ ~3 ไฟล์ (MenuForm `PROTEIN_ENUM_OPTIONS`, gates-suggest `PROTEIN_ENUM`, import `PROTEIN_ENUM`) → ให้ดึงจาก `cooking_ingredients` ที่ grp='protein' แทน → เพิ่มโปรตีน (เช่น **ไข่** ที่ยังขาด) = แค่เพิ่มวัตถุดิบ 1 แถวผ่านหน้าเว็บ แล้วมันโผล่เป็น chip ครัว + ตัวเลือก gate + AI รู้จัก อัตโนมัติ · **⚠️ ก่อนทำต้องเช็ค:** AI prompt (gates-suggest/import) ที่ฝัง enum ในข้อความต้อง gen จาก list เดียวกันด้วย
+- [ ] **หมู่อาหาร (food_groups) — แค่รวม constant ให้เหลือที่เดียว** (เคาะ 2026-07-11: **ไม่ทำ user-extensible**) — ตอนนี้ 5 หมวด (protein/veg/carb/dessert/drink) hardcode ซ้ำ 2 ไฟล์ (MenuForm `FOOD_GROUPS`, gates-suggest `FOOD_GROUP_ENUM`) → รวมเป็น constant เดียว import ร่วม จบ · **เหตุผลที่ไม่ทำแบบ protein:** food_groups = taxonomy ปิด (บทบาทในมื้อ) ที่ matcher ผูก logic กับ token ตรงๆ (`cookingMatch.js` isMain='protein'/'veg', isDessertOrDrink='dessert') — เพิ่มหมวดใหม่ต้องเขียน logic สอน matcher ไม่ใช่ mirror wiki · 5 หมวดครอบคลุมบทบาทครบแล้ว + AI เติมให้ + ซ่อนใน toggle = ผู้ใช้แทบไม่แตะ ความยืดหยุ่นไม่จำเป็น
 
 ---
 
