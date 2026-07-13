@@ -610,6 +610,37 @@
       "addPlaceholder": "Add a timeline entry...",
       "publishToggleLabel": "Visible to the public",
       "addButton": "Add"
+    },
+    "track": {
+      "metaTitle": "Track your complaint",
+      "notFoundHeading": "Complaint not found",
+      "notFoundDesc": "Please check the reference code again",
+      "notFoundBackLink": "← Back to home",
+      "backLink": "← Home",
+      "refLabel": "Reference code",
+      "provinceLabel": "Province",
+      "categoryLabel": "Category",
+      "receivedAtLabel": "Received on",
+      "progressHeading": "Progress",
+      "noUpdatesYet": "No updates from the team yet",
+      "aiSummaryTag": "· AI summary"
+    },
+    "landing": {
+      "metaTitle": "Complaint Center",
+      "heading": "Complaint Center",
+      "description": "Report local issues — roads, electricity, water supply, or matters of unfair treatment",
+      "totalLabel": "Total complaints",
+      "newCaseButton": "+ File a new complaint",
+      "trackHeading": "Track a complaint you filed",
+      "trackHint": "Use the reference code you received via SMS when filing"
+    },
+    "location": {
+      "errorMessage": "Unable to determine your location —",
+      "retry": "Try again",
+      "or": "or",
+      "chooseManually": "Choose province manually",
+      "locating": "Locating...",
+      "useMyLocation": "Use my location"
     }
   }
 }

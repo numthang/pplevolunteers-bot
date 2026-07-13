@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 
 // Nominatim → province name ไทย (address.state)
 // ถ้า state ไม่ตรงกับชื่อจังหวัด Nominatim มักคืนรูปแบบ "จังหวัดราชบุรี" — ตัด "จังหวัด" ออก
@@ -11,6 +12,7 @@ function extractProvince(address) {
 }
 
 export default function LocationButton() {
+  const t = useTranslations('case')
   const router = useRouter()
   const [status, setStatus] = useState('idle') // idle | locating | error
 
@@ -47,10 +49,10 @@ export default function LocationButton() {
   if (status === 'error') {
     return (
       <p className="text-sm text-red-500 dark:text-red-400 text-center">
-        ไม่สามารถระบุตำแหน่งได้ —{' '}
-        <button onClick={() => setStatus('idle')} className="underline">ลองอีกครั้ง</button>
-        {' หรือ '}
-        <a href="/case/new" className="underline">เลือกจังหวัดเอง</a>
+        {t('location.errorMessage')}{' '}
+        <button onClick={() => setStatus('idle')} className="underline">{t('location.retry')}</button>
+        {' '}{t('location.or')}{' '}
+        <a href="/case/new" className="underline">{t('location.chooseManually')}</a>
       </p>
     )
   }
@@ -64,12 +66,12 @@ export default function LocationButton() {
       {status === 'locating' ? (
         <>
           <span className="animate-spin text-lg">⊙</span>
-          กำลังระบุตำแหน่ง...
+          {t('location.locating')}
         </>
       ) : (
         <>
           <span>📍</span>
-          ใช้ตำแหน่งของฉัน
+          {t('location.useMyLocation')}
         </>
       )}
     </button>

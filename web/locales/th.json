@@ -610,6 +610,37 @@
       "addPlaceholder": "เพิ่ม timeline entry...",
       "publishToggleLabel": "เผยแพร่ให้ประชาชนเห็น",
       "addButton": "เพิ่ม"
+    },
+    "track": {
+      "metaTitle": "ติดตามเรื่องร้องเรียน",
+      "notFoundHeading": "ไม่พบเรื่องร้องเรียนนี้",
+      "notFoundDesc": "กรุณาตรวจสอบรหัสอ้างอิงอีกครั้ง",
+      "notFoundBackLink": "← กลับหน้าหลัก",
+      "backLink": "← หน้าหลัก",
+      "refLabel": "รหัสอ้างอิง",
+      "provinceLabel": "จังหวัด",
+      "categoryLabel": "ประเภท",
+      "receivedAtLabel": "รับเรื่องเมื่อ",
+      "progressHeading": "ความคืบหน้า",
+      "noUpdatesYet": "ยังไม่มีอัปเดตจากทีมงาน",
+      "aiSummaryTag": "· AI สรุป"
+    },
+    "landing": {
+      "metaTitle": "ศูนย์รับเรื่องร้องเรียน",
+      "heading": "ศูนย์รับเรื่องร้องเรียน",
+      "description": "แจ้งปัญหาในพื้นที่ ถนน ไฟฟ้า น้ำประปา หรือเรื่องที่ไม่ได้รับความเป็นธรรม",
+      "totalLabel": "รับเรื่องทั้งหมด",
+      "newCaseButton": "+ แจ้งเรื่องร้องเรียนใหม่",
+      "trackHeading": "ติดตามเรื่องที่แจ้งไว้",
+      "trackHint": "ใช้รหัสอ้างอิงที่ได้รับทาง SMS ตอนแจ้งเรื่อง"
+    },
+    "location": {
+      "errorMessage": "ไม่สามารถระบุตำแหน่งได้ —",
+      "retry": "ลองอีกครั้ง",
+      "or": "หรือ",
+      "chooseManually": "เลือกจังหวัดเอง",
+      "locating": "กำลังระบุตำแหน่ง...",
+      "useMyLocation": "ใช้ตำแหน่งของฉัน"
     }
   }
 }

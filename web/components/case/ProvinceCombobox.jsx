@@ -1,8 +1,11 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 
-export default function ProvinceCombobox({ value, onChange, provinces, placeholder = 'ค้นหาจังหวัด...' }) {
+export default function ProvinceCombobox({ value, onChange, provinces, placeholder }) {
+  const t = useTranslations('case')
+  const effectivePlaceholder = placeholder || t('newForm.provincePlaceholder')
   const [query, setQuery] = useState(value || '')
   const [open, setOpen] = useState(false)
   const inputRef = useRef(null)
@@ -51,7 +54,7 @@ export default function ProvinceCombobox({ value, onChange, provinces, placehold
         onChange={handleInputChange}
         onFocus={() => setOpen(true)}
         onBlur={handleBlur}
-        placeholder={placeholder}
+        placeholder={effectivePlaceholder}
         autoComplete="off"
         className="w-full px-3 py-2.5 rounded-lg border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-base text-gray-900 dark:text-disc-text placeholder-gray-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-brand-orange"
       />

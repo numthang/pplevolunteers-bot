@@ -4,7 +4,7 @@
 
 ---
 
-## 🍳 /cooking — UI/UX ปรับปรุง (จดไว้ 2026-07-11) — ✅ เขียนโค้ดเสร็จ local (build ผ่าน) รอทดสอบเบราว์เซอร์ + deploy
+## 🍳 /cooking — UI/UX ปรับปรุง (จดไว้ 2026-07-11) — ✅ เขียนโค้ดเสร็จ + เทสเบราว์เซอร์ผ่านแล้ว (2026-07-14) รอ commit + deploy
 
 - [ ] **ตอนแยก personal apps ออกไป domain ตัวเอง → เปลี่ยน image serving เป็น API route** (จดไว้ 2026-07-14) — ตอนนี้ cooking + finance upload เขียนลง `public/uploads/` แล้วเสิร์ฟผ่าน **nginx block** (`location ^~ /uploads/` บน prod — ดู DEPLOYMENT.md) ซึ่งผูกกับ server config · ตอนยกเว็บออก ให้เปลี่ยนไปเสิร์ฟผ่าน **API route อ่าน disk สด** แบบ `media-temp`/`docs`/`case` (route `/api/cooking/media/[filename]` + เปลี่ยน URL ที่ upload คืน + จุดแสดงรูป result card/คลังเมนู/preview) → **self-contained ใน repo, ยกออกไม่ต้อง config nginx, dev=prod เหมือนกัน** · แล้วลบ nginx /uploads block ทิ้งได้ · เหตุผลเลือกตอนนี้ยังใช้ nginx (เร็ว/เบา/ทำเสร็จแล้ว) แต่ตอนแยกออก portability คุ้มกว่า
 
@@ -16,11 +16,13 @@
 - [x] **ปุ่มแก้ไขเมนู ที่การ์ดผลสุ่ม** — เปิด `MenuForm` (mode edit) modal · `handleMenuSaved` อัพเดตทั้ง menus + result.main ทันที
 - [x] **อัพโหลดรูปเมนูจริง** — route ใหม่ `POST /api/cooking/upload` (login-gated, mime jpeg/png/webp, ≤5MB, เขียน `web/public/uploads/cooking/{uuid}.ext` คืน url) · MenuForm เพิ่ม file input + preview thumbnail (คงช่องวาง URL เดิมไว้ด้วย)
 
-**เหลือ:** (1) เปิดเบราว์เซอร์ทดสอบจริงทุก flow (2) commit (3) deploy prod — ต้อง `mkdir web/public/uploads/cooking` บน prod (dir เปล่า git ไม่ track) ให้สิทธิ์ www เขียนได้
+- [x] **เทสเบราว์เซอร์ครบทุก flow** (2026-07-14) — ไม่เจอปัญหา
+
+**เหลือ:** (1) commit (2) deploy prod — ต้อง `mkdir web/public/uploads/cooking` บน prod (dir เปล่า git ไม่ track) ให้สิทธิ์ www เขียนได้
 
 - [ ] **อนิเมชันตอนกดสุ่มแบบ slot machine จริงจัง** (parked 2026-07-11) — ตอนนี้มี spin ง่ายๆ อยู่แล้ว (`spinning`/`reel` ใน CookingClient สุ่มโชว์ emoji+ชื่อสลับ, decelerate ~2.3s + animation cookslot) → อยากได้แบบสล็อตจริง (รีลหมุนแนวตั้ง, เสียง/สั่นได้)
 
-### 🎯 ส่ง Sonnet ทำเสร็จแล้ว (commit 12-13 ก.ค. — build ผ่าน · ยังไม่เปิดเบราว์เซอร์เทสจริง)
+### 🎯 ส่ง Sonnet ทำเสร็จแล้ว (commit 12-13 ก.ค. — build ผ่าน + เทสเบราว์เซอร์ผ่านแล้ว 2026-07-14)
 
 - [x] **Combobox วัตถุดิบหลัก/เสริม + รสชาติ** — `ComboTagInput` (autocomplete dropdown + free-add ด้วย Enter) · core/optional เป็น array แล้ว · suggestion: วัตถุดิบ→`/api/cooking/ingredients` · รสชาติ→รส distinct · reuse 3 จุด
 - [x] **MenuForm → autosave ทั้งฟอร์ม เอาปุ่ม "บันทึก" ออก** — `idRef`/`savingRef`/`pendingRef` guard กัน double-create · `patchNow` (event ชัด: tag/chip/อัปโหลดรูป) vs `patchDebounced` ~1s (พิมพ์: ชื่อ/ขั้นตอน) · add-mode create-on-first-edit · ชื่อว่างไม่เซฟ · `SaveIndicator` บอกสถานะ
@@ -255,7 +257,10 @@
 - [x] **calling — เสร็จครบทั้งโซน (2026-07-10)** — ทุกไฟล์ `web/app/calling/**` + `web/components/calling/**` migrate แล้ว · `calling` namespace 277 keys th=en · verify ทุก route 200 + i18n สลับ th/en ได้ · ใช้ i18n-migrator (Sonnet) 7 ก้อน
   - ⚠️ follow-up: **gauge labels ในหน้า stats มาจาก `web/app/api/calling/stats/route.js`** (API generate ข้อความไทย server-side) — ไม่ได้อยู่ในไฟล์ UI เลยยังไม่ได้แปล ต้องทำแยกถ้าจะรองรับ en เต็ม
   - ⚠️ follow-up: tooltip ดาว `StarredStar` (calling.starredStar.*) ถ้อยคำต่างจาก `calling.assignee.starTitle/unstarTitle` — พิจารณารวมให้เป็นคำเดียว
-- [ ] Migrate โซนที่เหลือ: **case, docs, bot pages (`web/app/bot/**`)** + shared components (finance: BankBadge/CategorySelect/AccountSelect; root: LoginPanel/NoGuildNotice ฯลฯ) + **bot จริง (`services/i18n.js`, discord.js embed/handler)** — ใช้ i18n-migrator agent ซอยทีละ 2-3 ไฟล์
+- [x] **case — เสร็จครบทั้งโซน (2026-07-14)** — ทั้ง 14 ไฟล์ `web/app/case/**` + `web/components/case/**` migrate แล้ว · `case` namespace 140 keys th=en ตรงกัน · build compile ผ่าน + ทุก route verify 200/307 · ใช้ i18n-migrator (Sonnet) 5 ก้อน
+  - ⚠️ follow-up: status/action display labels ใน `web/lib/caseOptions.js` (`statusLabel`) + `web/lib/caseOptionsClient.js` (`STATUS_LABELS`) ยัง hardcode ไทย — เป็น lookup keyed ด้วย DB enum value ไม่ได้อยู่ในไฟล์ UI เลยยังไม่แตะ ต้องทำ mapping แยกถ้าจะรองรับ en เต็ม
+  - ⚠️ เว้นตั้งใจ: `CASE_CLOSE_REASONS` values (เก็บลง DB ตรงๆ) + province data list = domain data ผูก DB ไม่แปล
+- [ ] Migrate โซนที่เหลือ: **docs, bot pages (`web/app/bot/**`)** + shared components (finance: BankBadge/CategorySelect/AccountSelect; root: LoginPanel/NoGuildNotice ฯลฯ) + **bot จริง (`services/i18n.js`, discord.js embed/handler)** — ใช้ i18n-migrator agent ซอยทีละ 2-3 ไฟล์
 - [x] UI เปลี่ยนภาษาบนเว็บ (2026-07-09) — `web/components/LocaleSwitcher.jsx` (ปุ่ม ไทย/EN) วางในเมนู hamburger ถัดจาก dark mode toggle · set cookie `locale` + `router.refresh()`
 - [ ] เว็บ fallback เป็น locale ของ guild ก่อนถึง default (ตอนนี้ cookie → th)
 - [ ] คำสั่ง/หน้า config ตั้ง locale ต่อ guild
