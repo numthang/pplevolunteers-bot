@@ -10,6 +10,8 @@ export default function MenusClient() {
   const [formState, setFormState] = useState(null) // { mode: 'add'|'edit', menu? }
   const [copied, setCopied] = useState(false)
   const [aiLoading, setAiLoading] = useState(false)
+  const [aiPromptOpen, setAiPromptOpen] = useState(false)
+  const [aiPromptText, setAiPromptText] = useState('')
 
   useEffect(() => {
     fetch('/api/cooking/menus')
@@ -45,9 +47,11 @@ export default function MenusClient() {
     }
   }
 
-  async function importWithAI() {
-    const name = window.prompt('พิมพ์ชื่ออาหาร แล้ว AI จะร่างสูตรให้ (แก้ได้ก่อนบันทึก)')
-    if (!name || !name.trim()) return
+  async function confirmAiPrompt() {
+    const name = aiPromptText.trim()
+    if (!name) return
+    setAiPromptOpen(false)
+    setAiPromptText('')
     setAiLoading(true)
     try {
       const res = await fetch('/api/cooking/import', {
@@ -99,7 +103,7 @@ export default function MenusClient() {
         <div className="flex gap-2 shrink-0">
           <button
             type="button"
-            onClick={importWithAI}
+            onClick={() => setAiPromptOpen(true)}
             disabled={aiLoading}
             className="border border-teal text-teal hover:bg-teal hover:text-white rounded-lg text-sm font-medium px-4 py-2 transition whitespace-nowrap disabled:opacity-50"
           >
@@ -190,6 +194,58 @@ export default function MenusClient() {
           onClose={() => setFormState(null)}
           onSaved={handleSaved}
         />
+      )}
+
+      {aiPromptOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-8"
+          onClick={() => setAiPromptOpen(false)}
+        >
+          <div
+            className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-2xl shadow-xl w-full max-w-sm p-6"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-warm-900 dark:text-disc-text">✨ AI ช่วยสร้างเมนู</h2>
+              <button
+                type="button"
+                onClick={() => setAiPromptOpen(false)}
+                className="text-warm-400 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text text-xl leading-none"
+              >
+                ✕
+              </button>
+            </div>
+            <p className="text-sm text-warm-500 dark:text-disc-muted mb-3">
+              พิมพ์ชื่ออาหาร แล้ว AI จะร่างสูตรให้ (แก้ได้ก่อนบันทึก)
+            </p>
+            <input
+              type="text"
+              autoFocus
+              value={aiPromptText}
+              onChange={e => setAiPromptText(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && confirmAiPrompt()}
+              placeholder="เช่น ผัดกะเพราหมูสับ"
+              className="w-full h-11 px-3 text-base rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-teal"
+            />
+            <div className="flex gap-2 pt-4">
+              <button
+                type="button"
+                onClick={() => setAiPromptOpen(false)}
+                className="flex-1 border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover rounded-lg text-base font-medium px-4 py-2 transition"
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="button"
+                onClick={confirmAiPrompt}
+                disabled={!aiPromptText.trim()}
+                className="flex-1 bg-teal hover:opacity-90 text-white rounded-lg text-base font-medium px-4 py-2 transition disabled:opacity-50"
+              >
+                สร้าง
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

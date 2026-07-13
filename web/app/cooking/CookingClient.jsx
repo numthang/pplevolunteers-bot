@@ -48,6 +48,13 @@ const CHIP_NEUTRAL =
 const CHIP_HAVE = 'border-transparent bg-[#AAD9CE] text-[#1f4a3d]'
 const CHIP_OUT = 'border-transparent bg-[#E688A1] text-[#4a1f2e]'
 
+// สล็อต reel: ความสูงต่อช่อง (ต้องตรงกับ h-32 = 8rem = 128px ของแต่ละแถวใน reel)
+const REEL_ITEM_HEIGHT = 128
+// จำนวนช่องใน strip — ยิ่งเยอะยิ่งดูหมุนไว ก่อนไป landing ที่ช่องสุดท้าย
+const REEL_ITEM_COUNT = 24
+// รวมเวลาหมุน (ms) — ต้อง sync กับ transition duration ด้านล่างเป๊ะๆ
+const REEL_SPIN_MS = 1900
+
 function nextStatus(current) {
   if (current === 'have') return 'out'
   if (current === 'out') return 'clear'
@@ -170,7 +177,9 @@ export default function CookingClient({ displayName }) {
   const [ingredients, setIngredients] = useState([]) // public wiki — ทุกคนแก้ได้หมด ไม่มี owner แล้ว
   const [bulkPreview, setBulkPreview] = useState(null) // [{token,label,grp,include}] รอรีวิวก่อนเพิ่มจริง
   const [spinning, setSpinning] = useState(false)
-  const [reel, setReel] = useState(null)
+  const [reelItems, setReelItems] = useState([]) // strip ของช่อง {name,emoji} ที่จะเลื่อนผ่านตอนหมุน
+  const [reelOffset, setReelOffset] = useState(0) // translateY (px) ของ strip
+  const [reelGo, setReelGo] = useState(false) // true = ใส่ transition (เริ่มหมุน), false = จัดตำแหน่งเริ่มต้นแบบไม่มี animation
   const [kitchens, setKitchens] = useState([])
   const [currentKitchenId, setCurrentKitchenId] = useState(null)
   const [editingMenu, setEditingMenu] = useState(null) // เมนูที่กำลังแก้ไขจากการ์ดผลสุ่ม (เปิด MenuForm modal)
@@ -205,7 +214,7 @@ export default function CookingClient({ displayName }) {
       .catch(() => setLoading(false))
   }, [])
 
-  useEffect(() => () => clearInterval(spinRef.current), [])
+  useEffect(() => () => clearTimeout(spinRef.current), [])
 
   const menuById = useMemo(
     () => Object.fromEntries(menus.map(m => [m.id, m])),
@@ -241,24 +250,33 @@ export default function CookingClient({ displayName }) {
       return
     }
 
-    clearInterval(spinRef.current)
     clearTimeout(spinRef.current)
     setSpinning(true)
-    // สล็อต: หมุนเร็วแล้วค่อยๆ ช้าลงจนหยุด (delay โตขึ้นเรื่อยๆ) แทนความเร็วคงที่
-    let delay = 80
-    const tick = () => {
+
+    // สร้าง strip ของช่องสุ่ม (ไม่ผูกกับผลจริง — ผลจริงโชว์เป็น grid 4 อันหลัง reveal)
+    const items = Array.from({ length: REEL_ITEM_COUNT }, () => {
       const m = pool[Math.floor(Math.random() * pool.length)]
-      setReel({ name: m.name, emoji: m.image?.emoji || '🍽️' })
-      delay *= 1.15
-      if (delay < 420) {
-        spinRef.current = setTimeout(tick, delay)
-      } else {
-        setSpinning(false)
-        setReel(null)
-        reveal()
-      }
-    }
-    spinRef.current = setTimeout(tick, delay)
+      return { name: m.name, emoji: m.image?.emoji || '🍽️' }
+    })
+    setReelItems(items)
+    setReelGo(false)
+    setReelOffset(0) // จัดตำแหน่งเริ่มต้นที่บนสุดโดยไม่มี transition ก่อน
+
+    // double rAF: รอให้ browser paint ตำแหน่งเริ่มต้น(offset 0, ไม่มี transition) ก่อน แล้วค่อยเปิด transition
+    // + เลื่อนไป offset ปลายทาง — ถ้าไม่รอ browser จะ batch แล้วข้ามไปตำแหน่งสุดท้ายทันทีโดยไม่มี animation
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setReelGo(true)
+        setReelOffset(-(items.length - 1) * REEL_ITEM_HEIGHT)
+      })
+    })
+
+    // เวลาต้องตรงกับ transition duration ที่ใส่ inline style ด้านล่าง (REEL_SPIN_MS)
+    spinRef.current = setTimeout(() => {
+      setSpinning(false)
+      setReelGo(false)
+      reveal()
+    }, REEL_SPIN_MS)
   }
 
   // เดาหมวดด้วย AI ผ่าน bulk endpoint เดียวกับที่ใช้แยกรายการ (ส่งคำเดียวก็ได้)
@@ -471,23 +489,30 @@ export default function CookingClient({ displayName }) {
       </button>
 
       {spinning && (
-        <div className="mt-4 bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-10 flex flex-col items-center justify-center overflow-hidden">
-          <style>{`@keyframes cookslot{0%{transform:translateY(-45%) scale(.85);opacity:.25}100%{transform:translateY(0) scale(1);opacity:1}}`}</style>
+        <div className="mt-4 bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-6 flex flex-col items-center">
           <p className="text-sm font-medium text-[#ff6a13] mb-3">🎰 กำลังสุ่มเมนู...</p>
-          <span
-            key={'e' + (reel?.name || '')}
-            style={{ animation: 'cookslot 150ms ease-out' }}
-            className="text-6xl leading-none"
-          >
-            {reel?.emoji || '🍽️'}
-          </span>
-          <p
-            key={'n' + (reel?.name || '')}
-            style={{ animation: 'cookslot 150ms ease-out' }}
-            className="mt-3 text-xl font-bold text-warm-900 dark:text-disc-text"
-          >
-            {reel?.name || '...'}
-          </p>
+          {/* หน้าต่างสูง 1 ช่อง (REEL_ITEM_HEIGHT) — strip ด้านในเลื่อน translateY ผ่านหน้าต่างนี้เหมือน reel สล็อตจริง */}
+          <div className="relative w-full max-w-xs h-32 overflow-hidden rounded-lg bg-warm-50 dark:bg-disc-hover">
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-8 bg-gradient-to-b from-card-bg to-transparent z-10" />
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-card-bg to-transparent z-10" />
+            <div
+              style={{
+                transform: `translateY(${reelOffset}px)`,
+                transition: reelGo
+                  ? `transform ${REEL_SPIN_MS}ms cubic-bezier(0.34, 1.56, 0.64, 1)`
+                  : 'none',
+              }}
+            >
+              {reelItems.map((it, i) => (
+                <div key={i} className="h-32 flex flex-col items-center justify-center">
+                  <span className="text-5xl leading-none">{it.emoji}</span>
+                  <span className="mt-1 text-base font-bold text-warm-900 dark:text-disc-text truncate max-w-[90%]">
+                    {it.name}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 
