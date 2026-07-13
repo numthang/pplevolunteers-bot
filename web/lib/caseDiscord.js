@@ -60,6 +60,20 @@ export async function postToThread(threadId, content) {
   }
 }
 
+/** ดึงชื่อเธรด (best-effort, สำหรับ back link) → คืนชื่อ หรือ null */
+export async function getThreadName(threadId) {
+  if (!TOKEN || !threadId) return null
+  try {
+    const res = await fetch(`${API}/channels/${threadId}`, { headers: headers() })
+    if (!res.ok) return null
+    const data = await res.json()
+    return data.name || null
+  } catch (e) {
+    console.error('[caseDiscord.getThreadName]', e.message)
+    return null
+  }
+}
+
 /**
  * ดึงข้อความใหม่ในเธรดหลัง messageId (incremental AI refresh) → คืน array หรือ []
  * @param {string} threadId

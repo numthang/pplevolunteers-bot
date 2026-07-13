@@ -1,5 +1,5 @@
 import { gateCase } from '@/lib/caseGate.js'
-import { addAssignee, getAssignees } from '@/db/cases.js'
+import { addAssignee, removeAssignee, getAssignees } from '@/db/cases.js'
 import { postToThread } from '@/lib/caseDiscord.js'
 import { logAction } from '@/db/auditLog.js'
 
@@ -26,6 +26,26 @@ export async function POST(req, { params }) {
   }
 
   logAction({ guildId, app: 'cases', action: 'case.assigned', actorId: session.user.discordId, targetId: caseRow.ref, meta: { assignedTo: discordId } })
+
+  return Response.json({ ok: true })
+}
+
+/** DELETE /api/case/[ref]/assign — ถอนตัว (default = ตัวเอง) หรือถอนคนอื่น { discordId } */
+export async function DELETE(req, { params }) {
+  const { ref } = await params
+  const gate = await gateCase(ref)
+  if (gate.error) return gate.error
+  const { session, guildId, caseRow } = gate
+
+  let discordId = session.user.discordId
+  try {
+    const body = await req.json().catch(() => ({}))
+    if (body.discordId) discordId = String(body.discordId)
+  } catch { /* default self */ }
+
+  await removeAssignee(caseRow.id, discordId)
+
+  logAction({ guildId, app: 'cases', action: 'case.unassigned', actorId: session.user.discordId, targetId: caseRow.ref, meta: { removedFrom: discordId } })
 
   return Response.json({ ok: true })
 }

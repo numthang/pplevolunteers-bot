@@ -6,6 +6,8 @@
 
 ## 🍳 /cooking — UI/UX ปรับปรุง (จดไว้ 2026-07-11) — ✅ เขียนโค้ดเสร็จ local (build ผ่าน) รอทดสอบเบราว์เซอร์ + deploy
 
+- [ ] **ตอนแยก personal apps ออกไป domain ตัวเอง → เปลี่ยน image serving เป็น API route** (จดไว้ 2026-07-14) — ตอนนี้ cooking + finance upload เขียนลง `public/uploads/` แล้วเสิร์ฟผ่าน **nginx block** (`location ^~ /uploads/` บน prod — ดู DEPLOYMENT.md) ซึ่งผูกกับ server config · ตอนยกเว็บออก ให้เปลี่ยนไปเสิร์ฟผ่าน **API route อ่าน disk สด** แบบ `media-temp`/`docs`/`case` (route `/api/cooking/media/[filename]` + เปลี่ยน URL ที่ upload คืน + จุดแสดงรูป result card/คลังเมนู/preview) → **self-contained ใน repo, ยกออกไม่ต้อง config nginx, dev=prod เหมือนกัน** · แล้วลบ nginx /uploads block ทิ้งได้ · เหตุผลเลือกตอนนี้ยังใช้ nginx (เร็ว/เบา/ทำเสร็จแล้ว) แต่ตอนแยกออก portability คุ้มกว่า
+
 > spec หลัก: `md/cooking/COOKING.md` · 2 Sonnet subagent เขียน 2026-07-11 · build ผ่าน ยังไม่ commit ยังไม่เปิดจริงในเบราว์เซอร์
 
 - [x] **เพิ่มของในครัว — ตัด dropdown เลือกหมวดหมู่** → single-add เรียก AI (`guessGroupViaAI` → `/api/cooking/ingredients/bulk` ส่ง 1 รายการ) เดาหมวดให้ · fallback `seasoning` · bulk-confirm ยังส่ง grp เอง bypass AI
@@ -18,15 +20,14 @@
 
 - [ ] **อนิเมชันตอนกดสุ่มแบบ slot machine จริงจัง** (parked 2026-07-11) — ตอนนี้มี spin ง่ายๆ อยู่แล้ว (`spinning`/`reel` ใน CookingClient สุ่มโชว์ emoji+ชื่อสลับ, decelerate ~2.3s + animation cookslot) → อยากได้แบบสล็อตจริง (รีลหมุนแนวตั้ง, เสียง/สั่นได้)
 
-### 🎯 รอสรุปแล้วส่ง Sonnet ทำทีเดียว (คุยไว้ 2026-07-11 — ยังไม่ลงมือ ตามที่ user สั่งให้รอ)
+### 🎯 ส่ง Sonnet ทำเสร็จแล้ว (commit 12-13 ก.ค. — build ผ่าน · ยังไม่เปิดเบราว์เซอร์เทสจริง)
 
-- [ ] **Combobox วัตถุดิบหลัก/เสริม + รสชาติ** — ตอนนี้ core/optional เป็น textarea freeform, flavor เป็น TagInput พิมพ์เองล้วน → เปลี่ยนเป็น **multi-select combobox** (พิมพ์แล้วเด้ง dropdown ให้เลือกของที่มี + เพิ่มใหม่ได้) · แหล่ง suggestion: วัตถุดิบ→ดึงจาก `cooking_ingredients` wiki · รสชาติ→ดึงรส distinct จากเมนูอื่น · ทำ component เดียว reuse 3 จุด · trade-off: เขียนปริมาณติดชื่อไม่ได้ (เป็น token ล้วน) — user รับได้
-- [ ] **MenuForm → autosave ทั้งฟอร์ม เอาปุ่ม "บันทึก" ออก** (เคาะ 2026-07-11 — แนว Notion, ทุก field ติดทันทีไม่ต้องกดเซฟ) ครอบทุกช่อง: ชื่อ/ขั้นตอน/วัตถุดิบ/รสชาติ/หมู่อาหาร/gates/**รูป**
-  - **จังหวะเซฟต่อชนิด field:** พิมพ์ต่อเนื่อง (ชื่อ/ขั้นตอน/URL รูป) = **debounce ~1s หรือ on-blur** (กัน PATCH รัว) · tag add/remove (combobox/รสชาติ) + toggle chip (หมู่อาหาร/gate protein) + **อัพโหลดไฟล์รูปสำเร็จ** = เซฟทันที (เป็น event ชัด)
-  - **⚠️ guard:** (1) **edit mode เท่านั้น** — add mode ยังไม่มี id, ต้อง create เมนูก่อน (อาจ create ทันทีที่พิมพ์ชื่อ แล้วสลับเป็น edit) (2) **ชื่อว่างห้ามเซฟ** (required) (3) มี indicator เล็กๆ ว่า "บันทึกแล้ว/กำลังบันทึก" กัน user งงว่าติดไหม
-  - เกี่ยวกับ combobox ด้านบน — ทำพร้อมกันได้
-- [ ] **protein gate ให้ derive จาก wiki แทน hardcode** — ตอนนี้ 7 โปรตีน (pork/chicken/beef/shrimp/squid/fish/tofu) ถูก hardcode ซ้ำ ~3 ไฟล์ (MenuForm `PROTEIN_ENUM_OPTIONS`, gates-suggest `PROTEIN_ENUM`, import `PROTEIN_ENUM`) → ให้ดึงจาก `cooking_ingredients` ที่ grp='protein' แทน → เพิ่มโปรตีน (เช่น **ไข่** ที่ยังขาด) = แค่เพิ่มวัตถุดิบ 1 แถวผ่านหน้าเว็บ แล้วมันโผล่เป็น chip ครัว + ตัวเลือก gate + AI รู้จัก อัตโนมัติ · **⚠️ ก่อนทำต้องเช็ค:** AI prompt (gates-suggest/import) ที่ฝัง enum ในข้อความต้อง gen จาก list เดียวกันด้วย
-- [ ] **หมู่อาหาร (food_groups) — แค่รวม constant ให้เหลือที่เดียว** (เคาะ 2026-07-11: **ไม่ทำ user-extensible**) — ตอนนี้ 5 หมวด (protein/veg/carb/dessert/drink) hardcode ซ้ำ 2 ไฟล์ (MenuForm `FOOD_GROUPS`, gates-suggest `FOOD_GROUP_ENUM`) → รวมเป็น constant เดียว import ร่วม จบ · **เหตุผลที่ไม่ทำแบบ protein:** food_groups = taxonomy ปิด (บทบาทในมื้อ) ที่ matcher ผูก logic กับ token ตรงๆ (`cookingMatch.js` isMain='protein'/'veg', isDessertOrDrink='dessert') — เพิ่มหมวดใหม่ต้องเขียน logic สอน matcher ไม่ใช่ mirror wiki · 5 หมวดครอบคลุมบทบาทครบแล้ว + AI เติมให้ + ซ่อนใน toggle = ผู้ใช้แทบไม่แตะ ความยืดหยุ่นไม่จำเป็น
+- [x] **Combobox วัตถุดิบหลัก/เสริม + รสชาติ** — `ComboTagInput` (autocomplete dropdown + free-add ด้วย Enter) · core/optional เป็น array แล้ว · suggestion: วัตถุดิบ→`/api/cooking/ingredients` · รสชาติ→รส distinct · reuse 3 จุด
+- [x] **MenuForm → autosave ทั้งฟอร์ม เอาปุ่ม "บันทึก" ออก** — `idRef`/`savingRef`/`pendingRef` guard กัน double-create · `patchNow` (event ชัด: tag/chip/อัปโหลดรูป) vs `patchDebounced` ~1s (พิมพ์: ชื่อ/ขั้นตอน) · add-mode create-on-first-edit · ชื่อว่างไม่เซฟ · `SaveIndicator` บอกสถานะ
+- [x] **protein gate derive จาก wiki** — `getProteinEnum()` query `grp='protein'` สดทุก request (gates-suggest + import) · fallback `PROTEIN_ENUM_FALLBACK` · เพิ่มโปรตีน (ไข่/เนื้อวัว) = เพิ่มวัตถุดิบ 1 แถว โผล่เป็น chip + gate + AI รู้จักเอง
+- [x] **หมู่อาหาร (food_groups) รวม constant** — `web/lib/cookingConstants.js` (`FOOD_GROUPS`/`FOOD_GROUP_ENUM`) import ร่วม (ไม่ทำ user-extensible ตามที่เคาะ)
+
+**เหลือของทั้งโซน cooking:** (1) เปิดเบราว์เซอร์ทดสอบ combobox/autosave/slot จริง — โดยเฉพาะ add-mode พิมพ์ชื่อใหม่+สลับ chip รัวๆ ต้องไม่ create ซ้ำ (2) deploy prod (git pull + build + restart) — `mkdir web/public/uploads/cooking` + สิทธิ์ www + nginx `/uploads` block (ดู DEPLOYMENT.md)
 
 ---
 
@@ -64,10 +65,13 @@
 - **Discord import จากกระทู้** — context menu `📋 นำเข้าเป็นเคสร้องเรียน` บนข้อความใน thread → modal → สร้าง case + AI สรุป (build แล้ว ยังไม่ได้ทดสอบจริง)
 
 ### 🔧 Backlog — Case System UX
-- **ปุ่มสีส้ม** — CaseNewForm + CaseManageActions เปลี่ยนปุ่ม primary จาก indigo → `bg-brand-orange hover:bg-brand-orange-light`
-- **URL `/case/new/[province]` แทน `?province=`** — redirect `/case/new` → picker · link แชร์เป็น `/case/new/ราชบุรี` หรือ `/case/new/70`
-- **Hamburger — เอา 3 เมนูบนออก** — `menuLinks` ซ้ำกับ app switcher → ซ่อนเมื่ออยู่ home/dashboard
-- **Detect location → link จังหวัด** — หน้า `/case` ปุ่ม "ใช้ตำแหน่งของฉัน" → reverse geocode (Nominatim/OSM) → redirect `/case/new/[จังหวัด]`
+- [x] **ปุ่มสีส้ม** — CaseNewForm + CaseManageActions ใช้ `bg-orange`/`bg-brand-orange` แล้ว
+- [x] **URL `/case/new/[province]`** — route มีแล้ว (`/case/new` = picker, `/case/new/ราชบุรี` = fix จังหวัด)
+- [x] **ถอนตัวจากเคส** (2026-07-14) — ปุ่ม "ถอนตัวจากเคสนี้" + `DELETE /api/case/[ref]/assign` (`removeAssignee`) + audit `case.unassigned`
+- [x] **ลิงก์คลิกได้ Discord↔เว็บ** (2026-07-14) — ref ในข้อความ bot เป็นลิงก์ไปหน้า manage (base จาก `guild_config.web_base_url` → fallback `.env WEB_BASE_URL`) · หน้า manage โชว์ชื่อ+ลิงก์กระทู้ Discord
+- [x] **รองรับ alias จังหวัด** (2026-07-14) — พิมพ์ "กรุงเทพ/กทม/กรุงเทพฯ" → normalize เป็น "กรุงเทพมหานคร" (`normalizeProvinceName`) ตอน import
+- [ ] **Hamburger — เอา 3 เมนูบนออก** — `menuLinks` ซ้ำกับ app switcher → ซ่อนเมื่ออยู่ home/dashboard
+- [ ] **Detect location → link จังหวัด** — หน้า `/case` ปุ่ม "ใช้ตำแหน่งของฉัน" → reverse geocode (Nominatim/OSM) → redirect `/case/new/[จังหวัด]`
 
 ### 🔄 Sync กระทู้เข้าระบบ — 2 ช่วง
 - **Backfill** — script รัน 1 ครั้ง ดึงกระทู้เก่าทั้งหมดใน forum channel มาสร้าง case (skip ถ้ามี `discord_thread_id` แล้ว)

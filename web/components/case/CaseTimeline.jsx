@@ -1,12 +1,14 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 
 function fmtDate(d) {
   return new Date(d).toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' })
 }
 
 export default function CaseTimeline({ refId, initialEntries, hasThread }) {
+  const t = useTranslations('case')
   const [entries, setEntries] = useState(initialEntries)
   const [body, setBody] = useState('')
   const [isPublic, setIsPublic] = useState(false)
@@ -26,7 +28,7 @@ export default function CaseTimeline({ refId, initialEntries, hasThread }) {
     })
     const d = await res.json().catch(() => ({}))
     setSaving(false)
-    if (!res.ok) { setError(d.error || 'บันทึกไม่สำเร็จ'); return }
+    if (!res.ok) { setError(d.error || t('timeline.saveFailedMsg')); return }
     setEntries(d.entries)
     setBody('')
   }
@@ -42,7 +44,7 @@ export default function CaseTimeline({ refId, initialEntries, hasThread }) {
   }
 
   async function remove(id) {
-    if (!confirm('ลบรายการนี้?')) return
+    if (!confirm(t('timeline.deleteConfirm'))) return
     setDeletingId(id)
     const res = await fetch(`/api/case/${refId}/timeline/${id}`, { method: 'DELETE' })
     const d = await res.json().catch(() => ({}))
@@ -55,7 +57,7 @@ export default function CaseTimeline({ refId, initialEntries, hasThread }) {
     const res = await fetch(`/api/case/${refId}/timeline/refresh`, { method: 'POST' })
     const d = await res.json().catch(() => ({}))
     setRefreshing(false)
-    if (!res.ok) { setError(d.error || 'refresh ไม่สำเร็จ'); return }
+    if (!res.ok) { setError(d.error || t('timeline.refreshFailedMsg')); return }
     setEntries(d.entries)
   }
 
@@ -66,13 +68,13 @@ export default function CaseTimeline({ refId, initialEntries, hasThread }) {
         {hasThread && (
           <button onClick={refresh} disabled={refreshing}
             className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-disc-border text-gray-500 dark:text-disc-muted hover:bg-gray-50 dark:hover:bg-disc-hover disabled:opacity-50 transition">
-            {refreshing ? 'กำลัง refresh...' : '↻ ดึง Discord ใหม่'}
+            {refreshing ? t('timeline.refreshingButton') : t('timeline.refreshButton')}
           </button>
         )}
       </div>
 
       {entries.length === 0 ? (
-        <p className="text-base text-gray-400 dark:text-disc-muted mb-4">ยังไม่มี timeline</p>
+        <p className="text-base text-gray-400 dark:text-disc-muted mb-4">{t('timeline.emptyState')}</p>
       ) : (
         <ol className="space-y-3 mb-5">
           {entries.map(e => (
@@ -84,15 +86,15 @@ export default function CaseTimeline({ refId, initialEntries, hasThread }) {
                   e.is_public
                     ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-900/60'
                     : 'bg-gray-100 text-gray-500 dark:bg-disc-hover dark:text-disc-muted hover:bg-gray-200 dark:hover:bg-disc-border'
-                }`} onClick={() => toggle(e)} title="คลิกเพื่อสลับ สาธารณะ/ภายใน">
-                  {e.is_public ? 'สาธารณะ' : 'ภายใน'}
+                }`} onClick={() => toggle(e)} title={t('timeline.toggleVisibilityTitle')}>
+                  {e.is_public ? t('timeline.publicLabel') : t('timeline.internalLabel')}
                 </span>
                 {e.source === 'ai' && (
                   <span className="text-xs text-gray-300 dark:text-disc-muted/60">AI</span>
                 )}
                 <button onClick={() => remove(e.id)} disabled={deletingId === e.id}
                   className="ml-auto text-xs text-gray-300 dark:text-disc-muted/50 hover:text-red-400 dark:hover:text-red-400 disabled:opacity-50 transition">
-                  ลบ
+                  {t('timeline.deleteButton')}
                 </button>
               </div>
               <p className="text-base text-gray-900 dark:text-disc-text whitespace-pre-wrap">{e.body}</p>
@@ -104,7 +106,7 @@ export default function CaseTimeline({ refId, initialEntries, hasThread }) {
       <form onSubmit={addEntry} className="border-t border-gray-100 dark:border-disc-border pt-4 space-y-2">
         <textarea
           value={body} onChange={e => setBody(e.target.value)}
-          placeholder="เพิ่ม timeline entry..."
+          placeholder={t('timeline.addPlaceholder')}
           rows={2}
           className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-disc-border bg-white dark:bg-disc-hover text-base text-gray-900 dark:text-disc-text placeholder-gray-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-brand-orange resize-none"
         />
@@ -112,11 +114,11 @@ export default function CaseTimeline({ refId, initialEntries, hasThread }) {
           <label className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-disc-muted cursor-pointer">
             <input type="checkbox" checked={isPublic} onChange={e => setIsPublic(e.target.checked)}
               className="accent-orange" />
-            เผยแพร่ให้ประชาชนเห็น
+            {t('timeline.publishToggleLabel')}
           </label>
           <button type="submit" disabled={saving || !body.trim()}
             className="ml-auto px-4 py-1.5 rounded-lg bg-brand-orange text-white text-sm font-semibold hover:bg-brand-orange-light disabled:opacity-50 transition">
-            {saving ? 'กำลังบันทึก...' : 'เพิ่ม'}
+            {saving ? t('common.saving') : t('timeline.addButton')}
           </button>
         </div>
         {error && <p className="text-sm text-red-500 dark:text-red-400">{error}</p>}

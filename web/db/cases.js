@@ -213,6 +213,13 @@ export async function addAssignee(caseId, guildId, discordId) {
   )
 }
 
+export async function removeAssignee(caseId, discordId) {
+  await pool.query(
+    `DELETE FROM case_assignees WHERE case_id = $1 AND discord_id = $2`,
+    [caseId, discordId],
+  )
+}
+
 export async function addNote(caseId, guildId, { author_discord_id = null, body, is_public = false }) {
   const { rows } = await pool.query(
     `INSERT INTO case_notes (case_id, guild_id, author_discord_id, body, is_public)

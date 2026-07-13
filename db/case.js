@@ -10,13 +10,30 @@
 const crypto = require('crypto');
 const path = require('path');
 const pool = require('./index');
+const { getSetting } = require('./settings');
 
 // source of truth เดียวกับ web/lib/provinceCode.js
 const PROVINCE_CODES = require(path.join(__dirname, '..', 'config', 'province-codes.json'));
 
-function provinceToCode(name) {
+// ชื่อย่อ/พิมพ์เล่นที่คนกรอกบ่อย → ชื่อทางการใน province-codes.json
+const PROVINCE_ALIASES = {
+  'กรุงเทพ': 'กรุงเทพมหานคร',
+  'กรุงเทพฯ': 'กรุงเทพมหานคร',
+  'กทม': 'กรุงเทพมหานคร',
+  'กทม.': 'กรุงเทพมหานคร',
+};
+
+/** คืนชื่อจังหวัดทางการ (แก้ alias แล้ว) ถ้าถูกต้อง — ไม่งั้น null */
+function normalizeProvinceName(name) {
   if (!name) return null;
-  return PROVINCE_CODES[String(name).trim()] || null;
+  const trimmed = String(name).trim();
+  const canonical = PROVINCE_ALIASES[trimmed] || trimmed;
+  return PROVINCE_CODES[canonical] ? canonical : null;
+}
+
+function provinceToCode(name) {
+  const canonical = normalizeProvinceName(name);
+  return canonical ? PROVINCE_CODES[canonical] : null;
 }
 
 function beYear2() {
@@ -25,6 +42,16 @@ function beYear2() {
 
 function randomChunk() {
   return crypto.randomBytes(2).toString('hex').toUpperCase(); // 4 hex chars
+}
+
+/**
+ * ลิงก์หน้าจัดการเคสบนเว็บ — base URL มาจาก guild_config (key 'web_base_url') ก่อนเสมอ
+ * รองรับ multi-tenant (แต่ละ guild อาจมี domain web ต่างกันในอนาคต) · .env WEB_BASE_URL เป็นแค่ fallback กันลิงก์หายตอนยังไม่ตั้งค่า
+ */
+async function getCaseManageUrl(guildId, ref) {
+  const base = (await getSetting(guildId, 'web_base_url')) || process.env.WEB_BASE_URL;
+  if (!base) return null;
+  return `${String(base).replace(/\/$/, '')}/case/manage/${ref}`;
 }
 
 // ── config: forum channel ต่อ guild ──
@@ -175,6 +202,8 @@ async function getTimeline(caseId, { publicOnly = false } = {}) {
 
 module.exports = {
   provinceToCode,
+  normalizeProvinceName,
+  getCaseManageUrl,
   getCaseConfig,
   upsertCaseConfig,
   generateRef,

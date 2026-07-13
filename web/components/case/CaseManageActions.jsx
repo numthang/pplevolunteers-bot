@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { STATUS_LABELS } from '@/lib/caseOptionsClient.js'
 import CaseLetterModal from '@/components/case/CaseLetterModal.jsx'
 
@@ -12,6 +13,7 @@ const NEEDS_REASON = ['closed', 'rejected']
 const STATUS_ORDER = ['open', 'in_progress', 'resolved', 'closed', 'rejected']
 
 export default function CaseManageActions({ refId, status, isAssigned, closeReasons }) {
+  const t = useTranslations('case')
   const router = useRouter()
   const [busy, setBusy] = useState(false)
   const [showLetter, setShowLetter] = useState(false)
@@ -21,22 +23,23 @@ export default function CaseManageActions({ refId, status, isAssigned, closeReas
   const [closeReason, setCloseReason] = useState(closeReasons[0])
   const [publicNote, setPublicNote] = useState('')
 
-  async function call(url, body) {
+  async function call(url, body, method = 'POST') {
     setBusy(true)
     try {
-      const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) })
-      if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error || 'ไม่สำเร็จ') }
+      const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) })
+      if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error || t('actions.genericFailMsg')) }
       router.refresh()
       return true
-    } catch (e) { alert('เกิดข้อผิดพลาด: ' + e.message); return false }
+    } catch (e) { alert(t('actions.errorAlert', { message: e.message })); return false }
     finally { setBusy(false) }
   }
 
   async function takeCase() { await call(`/api/case/${refId}/assign`) }
+  async function leaveCase() { await call(`/api/case/${refId}/assign`, {}, 'DELETE') }
 
   async function changeStatus() {
     const needsReason = NEEDS_REASON.includes(newStatus)
-    if (needsReason && !publicNote.trim()) { alert('กรุณาเขียนข้อความแจ้งผู้ร้องเรียน'); return }
+    if (needsReason && !publicNote.trim()) { alert(t('actions.publicNoteRequiredAlert')); return }
     const ok = await call(`/api/case/${refId}/status`, {
       status: newStatus,
       close_reason: needsReason ? closeReason : undefined,
@@ -51,16 +54,20 @@ export default function CaseManageActions({ refId, status, isAssigned, closeReas
     <>
     {showLetter && <CaseLetterModal refId={refId} onClose={() => setShowLetter(false)} />}
     <div className="bg-card-bg border border-gray-200 dark:border-disc-border rounded-xl p-5 space-y-5">
-      {/* รับเรื่อง */}
-      {!isAssigned && (
+      {/* รับเรื่อง / ถอนตัว */}
+      {!isAssigned ? (
         <button onClick={takeCase} disabled={busy} className={`${btnCls} w-full bg-orange text-white hover:bg-orange-light`}>
-          รับเรื่องนี้
+          {t('actions.takeCaseButton')}
+        </button>
+      ) : (
+        <button onClick={leaveCase} disabled={busy} className={`${btnCls} w-full border border-gray-300 dark:border-disc-border text-gray-700 dark:text-disc-text hover:border-red-400 hover:text-red-500`}>
+          {t('actions.leaveCaseButton')}
         </button>
       )}
 
       {/* เปลี่ยนสถานะ */}
       <div>
-        <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-disc-text">เปลี่ยนสถานะ</label>
+        <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-disc-text">{t('actions.changeStatusLabel')}</label>
         <select value={newStatus} onChange={e => setNewStatus(e.target.value)} className={inputCls}>
           {STATUS_ORDER.map(s => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
         </select>
@@ -71,20 +78,20 @@ export default function CaseManageActions({ refId, status, isAssigned, closeReas
               {closeReasons.map(r => <option key={r} value={r}>{r}</option>)}
             </select>
             <textarea value={publicNote} onChange={e => setPublicNote(e.target.value)} rows="2" className={inputCls}
-              placeholder="ข้อความแจ้งผู้ร้องเรียน (จำเป็น) — จะแสดงในหน้าติดตามสาธารณะ" style={{ resize: 'none' }} />
+              placeholder={t('actions.publicNotePlaceholder')} style={{ resize: 'none' }} />
           </div>
         )}
 
         <button onClick={changeStatus} disabled={busy || newStatus === status && !needsReason}
           className={`${btnCls} w-full mt-3 bg-brand-orange text-white hover:bg-brand-orange-light`}>
-          อัปเดตสถานะ
+          {t('actions.updateStatusButton')}
         </button>
       </div>
 
       {/* ร่างหนังสือ */}
       <div>
         <button onClick={() => setShowLetter(true)} className={`${btnCls} w-full border border-gray-300 dark:border-disc-border text-gray-700 dark:text-disc-text hover:border-brand-orange hover:text-brand-orange`}>
-          📄 ร่างหนังสือร้องเรียน
+          {t('actions.draftLetterButton')}
         </button>
       </div>
     </div>

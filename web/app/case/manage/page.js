@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { getTranslations } from 'next-intl/server'
 import { getSession } from '@/lib/auth.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import { getGuildId } from '@/lib/guildContext.js'
@@ -8,7 +9,10 @@ import { listCases, countByStatus } from '@/db/cases.js'
 import { statusLabel } from '@/lib/caseOptions.js'
 import DocsProvinceFilter from '@/components/docs/DocsProvinceFilter.jsx'
 
-export const metadata = { title: 'รายการเคส' }
+export async function generateMetadata() {
+  const t = await getTranslations('case')
+  return { title: t('manage.listMetaTitle') }
+}
 
 const STATUS_DOT = {
   open: 'bg-blue-500', in_progress: 'bg-amber-500',
@@ -20,6 +24,7 @@ function fmtDate(d) {
 }
 
 export default async function CaseManageList({ searchParams }) {
+  const t = await getTranslations('case')
   const session = await getSession()
   const { access } = await getEffectiveIdentity(session)
   const guildId = await getGuildId(session)
@@ -39,9 +44,9 @@ export default async function CaseManageList({ searchParams }) {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-disc-text mb-1">เรื่องร้องเรียน</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-disc-text mb-1">{t('manage.listHeading')}</h1>
         <p className="text-base text-gray-500 dark:text-disc-muted">
-          ทั้งหมด {all.length} เรื่อง · รับเรื่องใหม่ {counts.open || 0} · กำลังดำเนินการ {counts.in_progress || 0}
+          {t('manage.listSummary', { total: all.length, open: counts.open || 0, inProgress: counts.in_progress || 0 })}
         </p>
       </div>
 
@@ -53,7 +58,7 @@ export default async function CaseManageList({ searchParams }) {
 
       {cases.length === 0 ? (
         <div className="bg-card-bg border border-gray-200 dark:border-disc-border rounded-xl p-10 text-center text-gray-400 dark:text-disc-muted">
-          ยังไม่มีเรื่องร้องเรียน
+          {t('manage.emptyState')}
         </div>
       ) : (
         <div className="space-y-2">
@@ -62,7 +67,7 @@ export default async function CaseManageList({ searchParams }) {
               className="flex items-center gap-3 bg-card-bg border border-gray-200 dark:border-disc-border rounded-xl p-4 hover:border-orange transition">
               <span className={`shrink-0 w-2.5 h-2.5 rounded-full ${STATUS_DOT[c.status] || 'bg-gray-300'}`} />
               <div className="min-w-0 flex-1">
-                <p className="text-base font-semibold text-gray-900 dark:text-disc-text truncate">{c.title || '(ไม่มีหัวข้อ)'}</p>
+                <p className="text-base font-semibold text-gray-900 dark:text-disc-text truncate">{c.title || t('manage.noTitle')}</p>
                 <p className="text-sm text-gray-400 dark:text-disc-muted">
                   <span className="font-mono">{c.ref}</span> · {c.province}{c.category ? ` · ${c.category}` : ''} · {fmtDate(c.created_at)}
                 </p>

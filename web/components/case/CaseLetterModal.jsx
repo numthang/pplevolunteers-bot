@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useTranslations } from 'next-intl'
 
 const inputCls = 'w-full border border-gray-300 dark:border-disc-border bg-white dark:bg-disc-hover text-gray-900 dark:text-disc-text p-3 text-base rounded-lg placeholder-gray-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-brand-orange'
 const labelCls = 'block text-sm font-semibold mb-1 text-gray-700 dark:text-disc-text'
@@ -10,6 +11,7 @@ function fmtDate(d) {
 }
 
 export default function CaseLetterModal({ refId, onClose }) {
+  const t = useTranslations('case')
   // steps: init | pick | loading | edit | preview | error
   const [step, setStep]             = useState('init')
   const [drafts, setDrafts]         = useState([])
@@ -53,7 +55,7 @@ export default function CaseLetterModal({ refId, onClose }) {
         })
         setStep('edit')
       })
-      .catch(() => { setError('โหลดร่างไม่สำเร็จ'); setStep('error') })
+      .catch(() => { setError(t('letter.loadDraftError')); setStep('error') })
   }
 
   function loadSavedDraft(draft) {
@@ -75,9 +77,9 @@ export default function CaseLetterModal({ refId, onClose }) {
         body: JSON.stringify(draftId ? { id: draftId, ...fields } : fields),
       })
       const d = await res.json()
-      if (!res.ok) throw new Error(d.error || 'บันทึกไม่สำเร็จ')
+      if (!res.ok) throw new Error(d.error || t('letter.saveDraftError'))
       if (!draftId) setDraftId(d.draft.id)
-      setSavedMsg('บันทึกแล้ว')
+      setSavedMsg(t('letter.savedMsg'))
       setTimeout(() => setSavedMsg(''), 2000)
     } catch (e) {
       setError(e.message)
@@ -96,7 +98,7 @@ export default function CaseLetterModal({ refId, onClose }) {
         body: JSON.stringify(fields),
       })
       const d = await res.json()
-      if (!res.ok) throw new Error(d.error || 'สร้างเอกสารไม่สำเร็จ')
+      if (!res.ok) throw new Error(d.error || t('letter.generateError'))
       setPages(d.pages)
       setPdfBase64(d.pdfBase64)
       setStep('preview')
@@ -110,7 +112,7 @@ export default function CaseLetterModal({ refId, onClose }) {
   function downloadPdf() {
     const a = document.createElement('a')
     a.href = 'data:application/pdf;base64,' + pdfBase64
-    a.download = `หนังสือร้องเรียน-${refId}.pdf`
+    a.download = `${t('letter.downloadFilename', { ref: refId })}.pdf`
     a.click()
   }
 
@@ -136,7 +138,7 @@ export default function CaseLetterModal({ refId, onClose }) {
 
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-disc-border shrink-0">
-          <h2 className="text-lg font-bold text-gray-900 dark:text-disc-text">ร่างหนังสือร้องเรียน</h2>
+          <h2 className="text-lg font-bold text-gray-900 dark:text-disc-text">{t('letter.title')}</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-700 dark:hover:text-disc-text text-2xl leading-none">&times;</button>
         </div>
 
@@ -144,63 +146,63 @@ export default function CaseLetterModal({ refId, onClose }) {
 
           {(step === 'init' || step === 'loading') && (
             <div className="py-16 text-center text-gray-400 dark:text-disc-muted">
-              {step === 'init' ? '⏳ กำลังโหลด...' : '🤖 AI กำลังร่างหนังสือ...'}
+              {step === 'init' ? t('letter.loadingInit') : t('letter.loadingAi')}
             </div>
           )}
 
           {step === 'error' && (
-            <div className="py-8 text-center text-red-500">{error || 'เกิดข้อผิดพลาด'}</div>
+            <div className="py-8 text-center text-red-500">{error || t('common.error')}</div>
           )}
 
           {step === 'pick' && (
             <div className="space-y-3">
-              <p className="text-sm text-gray-500 dark:text-disc-muted mb-1">เลือกร่างที่บันทึกไว้ หรือสร้างใหม่ด้วย AI</p>
+              <p className="text-sm text-gray-500 dark:text-disc-muted mb-1">{t('letter.pickPrompt')}</p>
               {drafts.map(d => (
                 <button
                   key={d.id}
                   onClick={() => loadSavedDraft(d)}
                   className="w-full text-left px-4 py-3 rounded-lg border border-gray-200 dark:border-disc-border hover:border-brand-orange hover:bg-orange-50 dark:hover:bg-disc-hover transition"
                 >
-                  <p className="text-base font-medium text-gray-900 dark:text-disc-text truncate">{d.subject || '(ไม่มีหัวเรื่อง)'}</p>
-                  <p className="text-sm text-gray-400 dark:text-disc-muted mt-0.5">บันทึกเมื่อ {fmtDate(d.saved_at)}</p>
+                  <p className="text-base font-medium text-gray-900 dark:text-disc-text truncate">{d.subject || t('letter.noSubject')}</p>
+                  <p className="text-sm text-gray-400 dark:text-disc-muted mt-0.5">{t('letter.savedAt', { date: fmtDate(d.saved_at) })}</p>
                 </button>
               ))}
               <button
                 onClick={loadAiDraft}
                 className="w-full py-3 rounded-lg border-2 border-dashed border-gray-300 dark:border-disc-border text-gray-500 dark:text-disc-muted hover:border-brand-orange hover:text-brand-orange transition text-base"
               >
-                + สร้างร่างใหม่ด้วย AI
+                {t('letter.newDraftButton')}
               </button>
             </div>
           )}
 
           {step === 'edit' && fields && (
             <div className="space-y-4">
-              <p className="text-sm text-gray-500 dark:text-disc-muted">ตรวจสอบและแก้ไขก่อนสร้าง PDF</p>
+              <p className="text-sm text-gray-500 dark:text-disc-muted">{t('letter.editIntro')}</p>
 
               <div>
-                <label className={labelCls}>เรื่อง</label>
+                <label className={labelCls}>{t('letter.subjectLabel')}</label>
                 <input className={inputCls} value={fields.subject} onChange={set('subject')} />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className={labelCls}>ตำแหน่งผู้รับ (เรียน)</label>
-                  <input className={inputCls} value={fields.recipient_title} onChange={set('recipient_title')} placeholder="เช่น ผู้อำนวยการ" />
+                  <label className={labelCls}>{t('letter.recipientTitleLabel')}</label>
+                  <input className={inputCls} value={fields.recipient_title} onChange={set('recipient_title')} placeholder={t('letter.recipientTitlePlaceholder')} />
                 </div>
                 <div>
-                  <label className={labelCls}>ชื่อผู้รับ / หน่วยงาน</label>
+                  <label className={labelCls}>{t('letter.recipientNameLabel')}</label>
                   <input className={inputCls} value={fields.recipient_name} onChange={set('recipient_name')} />
                 </div>
               </div>
 
               <div>
-                <label className={labelCls}>สิ่งที่แนบมา</label>
-                <input className={inputCls} value={fields.attachments} onChange={set('attachments')} placeholder="- เอกสาร..." />
+                <label className={labelCls}>{t('letter.attachmentsLabel')}</label>
+                <input className={inputCls} value={fields.attachments} onChange={set('attachments')} placeholder={t('letter.attachmentsPlaceholder')} />
               </div>
 
               <div>
-                <label className={labelCls}>เนื้อหาหนังสือ</label>
+                <label className={labelCls}>{t('letter.bodyLabel')}</label>
                 <textarea className={inputCls} rows={8} value={fields.body} onChange={set('body')} style={{ resize: 'vertical' }} />
               </div>
 
@@ -211,10 +213,10 @@ export default function CaseLetterModal({ refId, onClose }) {
           {step === 'preview' && (
             <div className="space-y-3">
               {pages.map((src, i) => (
-                <img key={i} src={src} alt={`หน้า ${i + 1}`} className="w-full rounded-lg border border-gray-200 dark:border-disc-border" />
+                <img key={i} src={src} alt={t('letter.pageAlt', { page: i + 1 })} className="w-full rounded-lg border border-gray-200 dark:border-disc-border" />
               ))}
               <button onClick={() => setStep('edit')} className="w-full py-2 text-sm text-gray-500 dark:text-disc-muted hover:text-orange border border-gray-200 dark:border-disc-border rounded-lg transition">
-                ← แก้ไขอีกครั้ง
+                {t('letter.backToEditButton')}
               </button>
             </div>
           )}
@@ -225,11 +227,11 @@ export default function CaseLetterModal({ refId, onClose }) {
         <div className="px-6 py-4 border-t border-gray-200 dark:border-disc-border shrink-0 flex gap-3 justify-between items-center">
           <div className="flex items-center gap-3">
             <button onClick={onClose} className="px-4 py-2 text-base text-gray-500 dark:text-disc-muted hover:text-gray-700 dark:hover:text-disc-text transition">
-              ปิด
+              {t('common.close')}
             </button>
             {step === 'edit' && drafts.length > 0 && (
               <button onClick={() => setStep('pick')} className="px-4 py-2 text-base text-gray-500 dark:text-disc-muted hover:text-gray-700 dark:hover:text-disc-text transition">
-                ← รายการ
+                {t('letter.backToListButton')}
               </button>
             )}
           </div>
@@ -237,20 +239,20 @@ export default function CaseLetterModal({ refId, onClose }) {
             {savedMsg && <span className="text-sm text-green-600 dark:text-green-400">{savedMsg}</span>}
             {step === 'edit' && (
               <button onClick={saveDraft} disabled={saving} className="px-4 py-2 border border-gray-300 dark:border-disc-border text-gray-700 dark:text-disc-text rounded-lg text-base hover:border-brand-orange hover:text-brand-orange disabled:opacity-50 transition">
-                {saving ? 'กำลังบันทึก...' : 'บันทึกร่าง'}
+                {saving ? t('common.saving') : t('letter.saveDraftButton')}
               </button>
             )}
             {step === 'edit' && (
               <button onClick={generate} disabled={generating} className="px-5 py-2 bg-brand-orange text-white rounded-lg text-base font-semibold hover:bg-brand-orange-light disabled:opacity-50 transition">
-                {generating ? 'กำลังสร้าง PDF...' : 'สร้าง PDF'}
+                {generating ? t('letter.generatingButton') : t('letter.generatePdfButton')}
               </button>
             )}
             {step === 'preview' && (<>
               <button onClick={printPdf} className="px-4 py-2 border border-gray-300 dark:border-disc-border text-gray-700 dark:text-disc-text rounded-lg text-base hover:border-brand-orange hover:text-brand-orange transition">
-                🖨️ พิมพ์
+                {t('letter.printButton')}
               </button>
               <button onClick={downloadPdf} className="px-5 py-2 bg-brand-orange text-white rounded-lg text-base font-semibold hover:bg-brand-orange-light transition">
-                ดาวน์โหลด PDF
+                {t('letter.downloadButton')}
               </button>
             </>)}
           </div>

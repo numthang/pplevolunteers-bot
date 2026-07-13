@@ -57,11 +57,12 @@ async function handleCaseImportModal(interaction) {
   if (!thread) return interaction.editReply({ content: '❌ ไม่พบกระทู้ต้นทาง' });
 
   const title = interaction.fields.getTextInputValue('title').trim();
-  const province = interaction.fields.getTextInputValue('province').trim();
+  const provinceInput = interaction.fields.getTextInputValue('province').trim();
   const category = interaction.fields.getTextInputValue('category').trim() || null;
 
-  if (!caseDb.provinceToCode(province)) {
-    return interaction.editReply({ content: `❌ จังหวัด "${province}" ไม่ถูกต้อง กรุณาลองใหม่` });
+  const province = caseDb.normalizeProvinceName(provinceInput);
+  if (!province) {
+    return interaction.editReply({ content: `❌ จังหวัด "${provinceInput}" ไม่ถูกต้อง กรุณาลองใหม่` });
   }
 
   // กันซ้ำ: กระทู้นี้ถูกนำเข้าแล้วหรือยัง
@@ -106,7 +107,9 @@ async function handleCaseImportModal(interaction) {
 
   // โพสต์ยืนยันในเธรด
   try {
-    await thread.send(`📋 นำเข้าเป็นเคสร้องเรียนแล้ว · รหัส **${row.ref}** · จังหวัด ${province}${category ? ` · ${category}` : ''}`);
+    const manageUrl = await caseDb.getCaseManageUrl(interaction.guildId, row.ref);
+    const refLabel = manageUrl ? `[${row.ref}](${manageUrl})` : `**${row.ref}**`;
+    await thread.send(`📋 นำเข้าเป็นเคสร้องเรียนแล้ว · รหัส ${refLabel} · จังหวัด ${province}${category ? ` · ${category}` : ''}`);
   } catch { /* best-effort */ }
 
   return interaction.editReply({ content: `✅ สร้างเคส **${row.ref}** จากกระทู้นี้แล้ว${aiSummary ? ' (มี AI สรุปให้ในระบบ)' : ''}` });
@@ -166,7 +169,9 @@ async function handleThreadCreate(thread) {
       }
     } catch (e) { console.error('[caseImport] threadCreate timeline', e.message); }
 
-    await thread.send(`📋 เข้าระบบเรื่องร้องเรียนแล้ว · รหัส **${row.ref}** · จังหวัด ${province}`).catch(() => {});
+    const manageUrl = await caseDb.getCaseManageUrl(thread.guildId, row.ref);
+    const refLabel = manageUrl ? `[${row.ref}](${manageUrl})` : `**${row.ref}**`;
+    await thread.send(`📋 เข้าระบบเรื่องร้องเรียนแล้ว · รหัส ${refLabel} · จังหวัด ${province}`).catch(() => {});
   } catch (err) {
     console.error('[caseImport] handleThreadCreate:', err.message);
   }

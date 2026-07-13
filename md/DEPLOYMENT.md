@@ -512,3 +512,27 @@ git pull origin master
 ## Contact
 
 For VPS access issues or emergencies: [admin contact info]
+
+---
+
+## ⚠️ Static uploads ต้องให้ nginx เสิร์ฟ (ไม่ใช่ Next) — เคาะ 2026-07-13
+
+**อาการ:** อัพรูปเมนู (/cooking) หรือ finance evidence สำเร็จ (ไฟล์ลง disk จริง) แต่เปิด URL `/uploads/...` แล้ว **404** เฉพาะไฟล์ที่อัพ *หลัง* pm2 restart ล่าสุด (ไฟล์เก่าเปิดได้)
+
+**สาเหตุ:** `next start` (production) **ไม่เสิร์ฟไฟล์ใน `public/` ที่เพิ่มเข้ามาหลัง server เริ่มรัน** — รู้จักแค่ไฟล์ตอน start · `cooking/upload` + `finance/upload` เขียนลง `public/uploads/` แล้วคืน static URL `/uploads/...` (proxy ไป Node → Node 404)
+- (docs/case/media-basket ไม่โดน เพราะเสิร์ฟผ่าน API route อ่าน disk สดทุก request)
+
+**วิธีแก้ (ทำครั้งเดียวต่อ server):** ให้ nginx เสิร์ฟ `/uploads/` ตรงจาก disk — สร้างไฟล์ใน extension dir ของ BT Panel (panel ไม่ regenerate ทับ):
+```bash
+sudo tee /www/server/panel/vhost/nginx/extension/pplevolunteers.org/uploads.conf > /dev/null <<'NGINX'
+location ^~ /uploads/ {
+    alias /www/wwwroot/pple-volunteers/web/public/uploads/;
+    expires 30d;
+    access_log off;
+}
+NGINX
+sudo nginx -t && sudo nginx -s reload
+```
+- `^~` = ชนะทั้ง `location /` (proxy Node) และ regex block รูป → เสิร์ฟ static ตรงๆ ไม่แตะ Node
+- ครอบทั้ง `/uploads/cooking/` + `/uploads/evidence/` · ไฟล์ใหม่โผล่ทันทีไม่ต้อง pm2 restart
+- ถ้าย้าย server / ตั้ง site ใหม่ ต้องทำซ้ำ (config อยู่บน server ไม่ใช่ใน repo)
