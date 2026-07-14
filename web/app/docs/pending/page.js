@@ -2,13 +2,10 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import { PenLine, CreditCard, ChevronRight, AlertTriangle } from 'lucide-react'
 
-const ITEM_LABELS = {
-  food: 'ค่าอาหาร', speaker: 'ค่าวิทยากร', travel: 'ค่าเดินทาง', venue: 'ค่าสถานที่',
-  accommodation: 'ค่าที่พัก', supplies: 'ค่าวัสดุ', equipment: 'ค่าอุปกรณ์',
-  sound: 'ค่าเครื่องเสียง', photo: 'ค่าถ่ายภาพ',
-}
+const KNOWN_ITEM_TYPES = ['food', 'speaker', 'travel', 'venue', 'accommodation', 'supplies', 'equipment', 'sound', 'photo']
 
 const THAI_MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.']
 function formatDate(dateStr) {
@@ -17,16 +14,17 @@ function formatDate(dateStr) {
   return `${d} ${THAI_MONTHS[m - 1]} ${y + 543}`
 }
 
-function expiryWarn(expiresAt) {
+function expiryWarn(expiresAt, t) {
   if (!expiresAt) return null
   const exp = new Date(expiresAt).getTime()
   const now = Date.now()
-  if (exp < now) return { text: 'หมดอายุแล้ว', danger: true }
-  if (exp - now < 14 * 86400000) return { text: `หมดอายุ ${formatDate(expiresAt)}`, danger: false }
+  if (exp < now) return { text: t('pending.expired'), danger: true }
+  if (exp - now < 14 * 86400000) return { text: t('pending.expiresOn', { date: formatDate(expiresAt) }), danger: false }
   return null
 }
 
 function SignList({ items, emptyText }) {
+  const t = useTranslations('docs')
   if (items.length === 0) {
     return (
       <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl py-16 text-center text-warm-400 dark:text-disc-muted text-base">
@@ -37,7 +35,7 @@ function SignList({ items, emptyText }) {
   return (
     <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl overflow-hidden divide-y divide-warm-200 dark:divide-disc-border">
       {items.map(it => {
-        const warn = expiryWarn(it.expires_at)
+        const warn = expiryWarn(it.expires_at, t)
         return (
           <Link
             key={it.id}
@@ -50,9 +48,9 @@ function SignList({ items, emptyText }) {
                 {it.province && <span className="text-xs px-1.5 py-0.5 rounded-full bg-orange/10 text-orange shrink-0">{it.province}</span>}
               </div>
               <div className="flex items-center gap-1.5 text-sm text-warm-500 dark:text-disc-muted mt-0.5 flex-wrap">
-                <span>{ITEM_LABELS[it.item_type] || it.item_type}</span>
+                <span>{KNOWN_ITEM_TYPES.includes(it.item_type) ? t(`pending.itemLabels.${it.item_type}`) : it.item_type}</span>
                 <span className="text-warm-300 dark:text-disc-muted/40">·</span>
-                <span className="font-medium text-warm-700 dark:text-disc-text tabular-nums">{Number(it.amount).toLocaleString()} บ.</span>
+                <span className="font-medium text-warm-700 dark:text-disc-text tabular-nums">{t('pending.amount', { amount: Number(it.amount).toLocaleString() })}</span>
                 {it.event_date && <><span className="text-warm-300 dark:text-disc-muted/40">·</span><span>{formatDate(it.event_date)}</span></>}
                 {warn && (
                   <span className={`inline-flex items-center gap-1 ${warn.danger ? 'text-red-500 dark:text-red-400' : 'text-amber-600 dark:text-amber-400'}`}>
@@ -70,6 +68,7 @@ function SignList({ items, emptyText }) {
 }
 
 export default function DocsPendingPage() {
+  const t = useTranslations('docs')
   const [data, setData] = useState({ recipient: [], payer: [] })
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState('recipient')
@@ -96,8 +95,8 @@ export default function DocsPendingPage() {
   return (
     <div>
       <div className="mb-5">
-        <h1 className="text-2xl font-bold text-warm-900 dark:text-disc-text mb-1">รอเซ็น</h1>
-        <p className="text-base text-warm-500 dark:text-disc-muted">รายการเบิกจ่ายที่รอลายเซ็นของคุณ</p>
+        <h1 className="text-2xl font-bold text-warm-900 dark:text-disc-text mb-1">{t('pending.title')}</h1>
+        <p className="text-base text-warm-500 dark:text-disc-muted">{t('pending.subtitle')}</p>
       </div>
 
       {/* Tabs */}
@@ -111,7 +110,7 @@ export default function DocsPendingPage() {
           }`}
         >
           <PenLine className="w-4 h-4 shrink-0" />
-          เซ็นรับ
+          {t('pending.tabRecipient')}
           {data.recipient.length > 0 && (
             <span className={`text-sm px-1.5 py-0.5 rounded-full font-normal ${
               activeTab === 'recipient' ? 'bg-orange/10 text-orange' : 'bg-warm-100 dark:bg-disc-header text-warm-500 dark:text-disc-muted'
@@ -128,7 +127,7 @@ export default function DocsPendingPage() {
             }`}
           >
             <CreditCard className="w-4 h-4 shrink-0" />
-            เซ็นจ่าย
+            {t('pending.tabPayer')}
             <span className={`text-sm px-1.5 py-0.5 rounded-full font-normal ${
               activeTab === 'payer' ? 'bg-orange/10 text-orange' : 'bg-warm-100 dark:bg-disc-header text-warm-500 dark:text-disc-muted'
             }`}>{data.payer.length}</span>
@@ -137,11 +136,11 @@ export default function DocsPendingPage() {
       </div>
 
       {loading ? (
-        <div className="py-20 text-center text-warm-400 dark:text-disc-muted text-base">กำลังโหลด...</div>
+        <div className="py-20 text-center text-warm-400 dark:text-disc-muted text-base">{t('pending.loading')}</div>
       ) : activeTab === 'recipient' ? (
-        <SignList items={data.recipient} emptyText="ไม่มีรายการรอเซ็นรับ 🎉" />
+        <SignList items={data.recipient} emptyText={t('pending.emptyRecipient')} />
       ) : (
-        <SignList items={data.payer} emptyText="ไม่มีรายการรอเซ็นจ่าย 🎉" />
+        <SignList items={data.payer} emptyText={t('pending.emptyPayer')} />
       )}
     </div>
   )

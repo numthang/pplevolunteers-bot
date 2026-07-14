@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback, useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 import Cropper from 'react-easy-crop'
 import { X, RotateCw, ZoomIn } from 'lucide-react'
 
@@ -41,6 +42,7 @@ async function getCroppedBlob(src, area, rotation = 0) {
 }
 
 export default function IdCardCropper({ src, onCancel, onCropped }) {
+  const t = useTranslations('docs')
   const [crop, setCrop]         = useState({ x: 0, y: 0 })
   const [zoom, setZoom]         = useState(1)
   const [rotation, setRotation] = useState(0)
@@ -74,7 +76,7 @@ export default function IdCardCropper({ src, onCancel, onCropped }) {
     >
       <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-2xl w-full max-w-lg overflow-hidden">
         <div className="flex items-center justify-between px-5 py-3 border-b border-warm-200 dark:border-disc-border">
-          <h2 className="text-base font-semibold text-warm-900 dark:text-disc-text">ครอบรูปบัตรประชาชน</h2>
+          <h2 className="text-base font-semibold text-warm-900 dark:text-disc-text">{t('idCard.title')}</h2>
           <button type="button" onClick={onCancel} className="p-1 rounded text-warm-400 dark:text-disc-muted hover:bg-warm-100 dark:hover:bg-disc-hover transition">
             <X size={18} />
           </button>
@@ -97,7 +99,7 @@ export default function IdCardCropper({ src, onCancel, onCropped }) {
 
         <div className="px-5 py-3 space-y-3">
           <p className="text-xs text-warm-500 dark:text-disc-muted">
-            ลากเลื่อน · ซูม · หมุน ให้กรอบพอดีบัตร (สัดส่วนบัตรจริงถูกล็อกไว้แล้ว)
+            {t('idCard.instructions')}
           </p>
           <div className="flex items-center gap-2">
             <ZoomIn size={16} className="text-warm-400 dark:text-disc-muted shrink-0" />
@@ -112,14 +114,14 @@ export default function IdCardCropper({ src, onCancel, onCropped }) {
               onClick={() => setRotation(r => (r + 90) % 360)}
               className="flex items-center gap-1 px-2.5 py-1.5 text-sm rounded-lg border border-warm-200 dark:border-disc-border text-warm-600 dark:text-disc-muted hover:bg-warm-50 dark:hover:bg-disc-hover transition shrink-0"
             >
-              <RotateCw size={14} /> หมุน
+              <RotateCw size={14} /> {t('idCard.rotateButton')}
             </button>
           </div>
         </div>
 
         <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-warm-200 dark:border-disc-border">
           <button type="button" onClick={onCancel} className="px-4 py-2 text-base text-warm-500 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text transition">
-            ยกเลิก
+            {t('idCard.cancelButton')}
           </button>
           <button
             type="button"
@@ -127,7 +129,7 @@ export default function IdCardCropper({ src, onCancel, onCropped }) {
             disabled={busy || !areaPixels}
             className="px-5 py-2 bg-orange text-white text-base font-semibold rounded-lg hover:bg-orange-light disabled:opacity-50 transition"
           >
-            {busy ? 'กำลังประมวลผล...' : 'ใช้รูปนี้'}
+            {busy ? t('idCard.processing') : t('idCard.useThisPhoto')}
           </button>
         </div>
       </div>

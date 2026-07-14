@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import { FileText } from 'lucide-react'
 
 const FALLBACK_IMAGE = 'https://act.pplethai.org/wp-content/uploads/2024/09/pple-cover-yt.jpg'
@@ -16,7 +17,7 @@ function formatEventDate(dateStr) {
   return result
 }
 
-const STATUS_LABEL = { draft: 'ร่าง', active: 'เปิดรับ', closed: 'ปิด' }
+const KNOWN_STATUSES = ['draft', 'active', 'closed']
 const STATUS_COLOR = {
   draft:  'bg-warm-100 text-warm-500 dark:bg-disc-hover dark:text-disc-muted',
   active: 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400',
@@ -24,6 +25,7 @@ const STATUS_COLOR = {
 }
 
 export default function DocProjectCard({ project }) {
+  const t = useTranslations('docs')
   const signed  = Number(project.signed_count)  || 0
   const total   = Number(project.entry_count)   || 0
   const hasProject = Boolean(project.id)
@@ -45,11 +47,11 @@ export default function DocProjectCard({ project }) {
             </h3>
             {hasProject ? (
               <span className={`shrink-0 text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_COLOR[project.status] || STATUS_COLOR.draft}`}>
-                {STATUS_LABEL[project.status] || project.status}
+                {KNOWN_STATUSES.includes(project.status) ? t(`projectCard.statusLabels.${project.status}`) : project.status}
               </span>
             ) : (
               <span className="shrink-0 text-xs font-medium px-2 py-0.5 rounded-full bg-warm-100 text-warm-400 dark:bg-disc-hover dark:text-disc-muted">
-                ยังไม่ตั้งค่า
+                {t('projectCard.notConfigured')}
               </span>
             )}
           </div>
@@ -59,7 +61,7 @@ export default function DocProjectCard({ project }) {
             </p>
           )}
           {project.is_mobile && (
-            <span className="text-xs text-orange font-medium">สัญจร</span>
+            <span className="text-xs text-orange font-medium">{t('projectCard.mobile')}</span>
           )}
         </div>
       </Link>
@@ -68,13 +70,13 @@ export default function DocProjectCard({ project }) {
         <div className="flex items-center gap-1.5 text-base text-warm-500 dark:text-disc-muted">
           <FileText size={14} />
           {hasProject
-            ? <span>{signed}/{total} เซ็นแล้ว</span>
-            : <span className="text-xs">คลิกเพื่อตั้งค่า</span>
+            ? <span>{t('projectCard.signedCount', { signed, total })}</span>
+            : <span className="text-xs">{t('projectCard.clickToConfigure')}</span>
           }
         </div>
         {project.budget && (
           <span className="text-xs text-warm-400 dark:text-disc-muted shrink-0">
-            {Number(project.budget).toLocaleString()} บ.
+            {t('projectCard.budget', { amount: Number(project.budget).toLocaleString() })}
           </span>
         )}
       </div>

@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -8,13 +9,14 @@ import { Pencil, Trash2, Plus, Check, X, ArrowLeft, ChevronUp, ChevronDown } fro
 const EMPTY_FORM = { discordId: '', displayName: '', position: '', sortOrder: 0 }
 
 function MemberSearch({ onSelect }) {
+  const t = useTranslations('docs')
   const [q, setQ]             = useState('')
   const [results, setResults] = useState([])
   const [open, setOpen]       = useState(false)
   const debounce = useRef(null)
   const wrapRef  = useRef(null)
 
-  useEffect(() => { document.title = 'ตั้งค่า — Docs' }, [])
+  useEffect(() => { document.title = t('settings.clientTitle') }, [t])
 
   useEffect(() => {
     function handler(e) { if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false) }
@@ -44,7 +46,7 @@ function MemberSearch({ onSelect }) {
     <div ref={wrapRef} className="relative">
       <input
         type="text"
-        placeholder="พิมพ์ชื่อเพื่อค้นหาสมาชิก..."
+        placeholder={t('settings.memberSearchPlaceholder')}
         value={q}
         onChange={e => setQ(e.target.value)}
         className="w-full text-base px-3 py-2 rounded-lg border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-orange"
@@ -73,10 +75,11 @@ function MemberSearch({ onSelect }) {
 }
 
 function ScopeBadges({ nodes = [] }) {
+  const t = useTranslations('docs')
   if (!nodes.length) {
     return (
       <span className="inline-block mt-1 text-xs px-1.5 py-0.5 rounded bg-warm-100 dark:bg-disc-hover text-warm-400 dark:text-disc-muted">
-        ไม่ระบุขอบเขต
+        {t('settings.noScope')}
       </span>
     )
   }
@@ -106,6 +109,7 @@ function ScopeBadges({ nodes = [] }) {
 }
 
 export default function DocsSettingsPage() {
+  const t = useTranslations('docs')
   const { status } = useSession()
   const router = useRouter()
 
@@ -132,8 +136,8 @@ export default function DocsSettingsPage() {
     setLoading(true)
     fetch('/api/docs/payers')
       .then(r => r.json())
-      .then(d => { if (d.data) setPayers(d.data); else setError(d.error || 'โหลดไม่สำเร็จ') })
-      .catch(() => setError('โหลดไม่สำเร็จ'))
+      .then(d => { if (d.data) setPayers(d.data); else setError(d.error || t('settings.loadFailed')) })
+      .catch(() => setError(t('settings.loadFailed')))
       .finally(() => setLoading(false))
   }
 
@@ -147,7 +151,7 @@ export default function DocsSettingsPage() {
         body: JSON.stringify(form),
       })
       const d = await r.json()
-      if (!r.ok) { setError(d.error || 'เพิ่มไม่สำเร็จ'); return }
+      if (!r.ok) { setError(d.error || t('settings.addFailed')); return }
       setPayers(prev => [...prev, d.data].sort((a, b) => a.sort_order - b.sort_order || a.id - b.id))
       setForm(EMPTY_FORM)
       setSelectedMember(null)
@@ -166,7 +170,7 @@ export default function DocsSettingsPage() {
         body: JSON.stringify(editForm),
       })
       const d = await r.json()
-      if (!r.ok) { setError(d.error || 'แก้ไขไม่สำเร็จ'); return }
+      if (!r.ok) { setError(d.error || t('settings.editFailed')); return }
       setPayers(prev =>
         prev.map(p => p.id === id ? { ...p, ...d.data } : p)
             .sort((a, b) => a.sort_order - b.sort_order || a.id - b.id)
@@ -178,10 +182,10 @@ export default function DocsSettingsPage() {
   }
 
   async function handleDelete(id, displayName) {
-    if (!confirm(`ลบ "${displayName}" ออกจากรายชื่อผู้จ่าย?`)) return
+    if (!confirm(t('settings.deleteConfirm', { name: displayName }))) return
     const r = await fetch(`/api/docs/payers/${id}`, { method: 'DELETE' })
     if (r.ok) setPayers(prev => prev.filter(p => p.id !== id))
-    else setError('ลบไม่สำเร็จ')
+    else setError(t('settings.deleteFailed'))
   }
 
   async function handleMove(id, direction) {
@@ -211,7 +215,7 @@ export default function DocsSettingsPage() {
   if (status === 'loading' || loading) {
     return (
       <div className="flex items-center justify-center py-24 text-warm-400 dark:text-disc-muted text-base">
-        กำลังโหลด...
+        {t('settings.loading')}
       </div>
     )
   }
@@ -223,8 +227,8 @@ export default function DocsSettingsPage() {
           <ArrowLeft size={20} />
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-warm-900 dark:text-disc-text">ตั้งค่าเอกสาร</h1>
-          <p className="text-base text-warm-500 dark:text-disc-muted">รายชื่อผู้จ่ายเงิน — คนแรกในลิสต์ที่ไม่ใช่ผู้รับเงินจะถูกเลือกอัตโนมัติ</p>
+          <h1 className="text-2xl font-bold text-warm-900 dark:text-disc-text">{t('settings.heading')}</h1>
+          <p className="text-base text-warm-500 dark:text-disc-muted">{t('settings.description')}</p>
         </div>
       </div>
 
@@ -238,21 +242,21 @@ export default function DocsSettingsPage() {
       <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl overflow-hidden">
         <div className="px-4 py-3 border-b border-warm-200 dark:border-disc-border flex items-center justify-between">
           <span className="text-base font-semibold text-warm-700 dark:text-disc-text">
-            ผู้จ่ายเงิน ({payers.length})
+            {t('settings.payersCount', { count: payers.length })}
           </span>
           {!adding && (
             <button
               onClick={() => setAdding(true)}
               className="flex items-center gap-1.5 text-sm font-medium text-orange hover:text-orange-light transition-colors"
             >
-              <Plus size={15} /> เพิ่มผู้จ่ายเงิน
+              <Plus size={15} /> {t('settings.addPayerButton')}
             </button>
           )}
         </div>
 
         {payers.length === 0 && !adding && (
           <div className="px-4 py-10 text-center text-base text-warm-400 dark:text-disc-muted">
-            ยังไม่มีรายชื่อผู้จ่ายเงิน
+            {t('settings.emptyState')}
           </div>
         )}
 
@@ -263,7 +267,7 @@ export default function DocsSettingsPage() {
                 <div className="space-y-2">
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="block text-sm text-warm-500 dark:text-disc-muted mb-1">ชื่อในเอกสาร</label>
+                      <label className="block text-sm text-warm-500 dark:text-disc-muted mb-1">{t('settings.displayNameLabel')}</label>
                       <input
                         value={editForm.displayName}
                         onChange={e => setEditForm(f => ({ ...f, displayName: e.target.value }))}
@@ -271,7 +275,7 @@ export default function DocsSettingsPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm text-warm-500 dark:text-disc-muted mb-1">ตำแหน่ง</label>
+                      <label className="block text-sm text-warm-500 dark:text-disc-muted mb-1">{t('settings.positionLabel')}</label>
                       <input
                         value={editForm.position}
                         onChange={e => setEditForm(f => ({ ...f, position: e.target.value }))}
@@ -280,7 +284,7 @@ export default function DocsSettingsPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <label className="text-sm text-warm-500 dark:text-disc-muted">ลำดับ</label>
+                    <label className="text-sm text-warm-500 dark:text-disc-muted">{t('settings.sortOrderLabel')}</label>
                     <input
                       type="number"
                       value={editForm.sortOrder}
@@ -293,13 +297,13 @@ export default function DocsSettingsPage() {
                         disabled={saving}
                         className="flex items-center gap-1 text-sm px-3 py-1.5 bg-orange text-white rounded-lg hover:bg-orange-light disabled:opacity-50 transition-colors"
                       >
-                        <Check size={13} /> บันทึก
+                        <Check size={13} /> {t('settings.saveButton')}
                       </button>
                       <button
                         onClick={() => setEditId(null)}
                         className="flex items-center gap-1 text-sm px-3 py-1.5 border border-warm-200 dark:border-disc-border text-warm-600 dark:text-disc-muted rounded-lg hover:bg-warm-50 dark:hover:bg-disc-bg2 transition-colors"
                       >
-                        <X size={13} /> ยกเลิก
+                        <X size={13} /> {t('settings.cancelButton')}
                       </button>
                     </div>
                   </div>
@@ -350,10 +354,10 @@ export default function DocsSettingsPage() {
 
         {adding && (
           <form onSubmit={handleAdd} className="px-4 py-4 border-t border-warm-200 dark:border-disc-border bg-warm-50 dark:bg-disc-bg2 space-y-3">
-            <p className="text-xs font-semibold text-warm-600 dark:text-disc-muted uppercase tracking-wide">เพิ่มผู้จ่ายเงิน</p>
+            <p className="text-xs font-semibold text-warm-600 dark:text-disc-muted uppercase tracking-wide">{t('settings.addPayerButton')}</p>
 
             <div>
-              <label className="block text-sm text-warm-500 dark:text-disc-muted mb-1">ค้นหาสมาชิก</label>
+              <label className="block text-sm text-warm-500 dark:text-disc-muted mb-1">{t('settings.searchMemberLabel')}</label>
               {selectedMember ? (
                 <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-orange/40 bg-orange/5 text-base">
                   <span className="flex-1 text-warm-900 dark:text-disc-text font-medium">{selectedMember.display_name || selectedMember.discord_id}</span>
@@ -374,7 +378,7 @@ export default function DocsSettingsPage() {
             {selectedMember && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-sm text-warm-500 dark:text-disc-muted mb-1">ชื่อในเอกสาร</label>
+                  <label className="block text-sm text-warm-500 dark:text-disc-muted mb-1">{t('settings.displayNameLabel')}</label>
                   <input
                     required
                     value={form.displayName}
@@ -383,10 +387,10 @@ export default function DocsSettingsPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-warm-500 dark:text-disc-muted mb-1">ตำแหน่ง</label>
+                  <label className="block text-sm text-warm-500 dark:text-disc-muted mb-1">{t('settings.positionLabel')}</label>
                   <input
                     required
-                    placeholder="เช่น ผู้ประสานงานจังหวัดราชบุรี"
+                    placeholder={t('settings.positionPlaceholder')}
                     value={form.position}
                     onChange={e => setForm(f => ({ ...f, position: e.target.value }))}
                     className="w-full text-base px-3 py-2 rounded-lg border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-bg text-warm-900 dark:text-disc-text focus:outline-none focus:ring-2 focus:ring-orange/40"
@@ -401,14 +405,14 @@ export default function DocsSettingsPage() {
                 disabled={saving || !selectedMember}
                 className="flex items-center gap-1.5 text-sm px-4 py-2 bg-orange text-white rounded-lg hover:bg-orange-light disabled:opacity-50 transition-colors"
               >
-                <Plus size={15} /> เพิ่ม
+                <Plus size={15} /> {t('settings.addButton')}
               </button>
               <button
                 type="button"
                 onClick={() => { setAdding(false); setForm(EMPTY_FORM); setSelectedMember(null) }}
                 className="text-sm px-4 py-2 border border-warm-200 dark:border-disc-border text-warm-600 dark:text-disc-muted rounded-lg hover:bg-warm-100 dark:hover:bg-disc-bg transition-colors"
               >
-                ยกเลิก
+                {t('settings.cancelButton')}
               </button>
             </div>
           </form>

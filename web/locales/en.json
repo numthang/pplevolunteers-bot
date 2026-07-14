@@ -642,5 +642,395 @@
       "locating": "Locating...",
       "useMyLocation": "Use my location"
     }
+  },
+  "docs": {
+    "list": {
+      "metaTitle": "Projects",
+      "heading": "Documents",
+      "description": "Receipts and disbursement documents for events",
+      "emptyState": "No document projects",
+      "noActiveProjects": "No active projects",
+      "pastProjectsToggle": "Past events ({count})",
+      "noProvinceGroup": "General"
+    },
+    "detail": {
+      "defaultTitle": "Project"
+    },
+    "entryList": {
+      "itemLabels": {
+        "food": "Food",
+        "speaker": "Speaker fee",
+        "travel": "Travel",
+        "venue": "Venue",
+        "accommodation": "Accommodation",
+        "sound": "Sound equipment rental",
+        "supplies": "Supplies",
+        "equipment": "Equipment",
+        "photo": "Photography"
+      },
+      "idCardNotice": "The first time, the system will ask for a photo of your ID card, and a watermark will be applied automatically.",
+      "viewAllPending": "View all pending items: {url}",
+      "recipientRequired": "Please specify a recipient before saving",
+      "confirmResetRecipientSignature": "This item has already been signed. Changing the recipient will reset the signature — confirm?",
+      "confirmResetPayerSignature": "The current payer has already signed. Changing the payer will reset the payer's signature — confirm?",
+      "confirmDelete": "Delete this item?",
+      "errorPrefix": "Error: {message}",
+      "emptyState": "No expense items yet",
+      "addButton": "Add item →",
+      "unassigned": "Recipient not specified",
+      "copyRecipientLinkTitle": "Copy signing link",
+      "copyPayerLinkTitle": "Copy payer signing link",
+      "recipientLabel": "Recipient",
+      "payerLabel": "Payer",
+      "searchRecipientPlaceholder": "Search for recipient...",
+      "recent": "Recent",
+      "notePlaceholder": "Note",
+      "selectPayerPlaceholder": "— Select payer —",
+      "signReceivedLabel": "Signed (received)",
+      "signPaidLabel": "Signed (paid)",
+      "editTitle": "Edit",
+      "deleteTitle": "Delete",
+      "amount": "{amount} THB"
+    },
+    "pending": {
+      "title": "Pending Signatures",
+      "subtitle": "Disbursement items awaiting your signature",
+      "tabRecipient": "Sign as recipient",
+      "tabPayer": "Sign as payer",
+      "loading": "Loading...",
+      "emptyRecipient": "No items pending your signature 🎉",
+      "emptyPayer": "No items pending payer signature 🎉",
+      "expired": "Expired",
+      "expiresOn": "Expires {date}",
+      "amount": "{amount} THB",
+      "itemLabels": {
+        "food": "Food",
+        "speaker": "Speaker fee",
+        "travel": "Travel",
+        "venue": "Venue",
+        "accommodation": "Accommodation",
+        "supplies": "Supplies",
+        "equipment": "Equipment",
+        "sound": "Sound system",
+        "photo": "Photography"
+      }
+    },
+    "projectCard": {
+      "statusLabels": {
+        "draft": "Draft",
+        "active": "Open",
+        "closed": "Closed"
+      },
+      "notConfigured": "Not configured yet",
+      "mobile": "Mobile",
+      "signedCount": "{signed}/{total} signed",
+      "clickToConfigure": "Click to configure",
+      "budget": "{amount} THB"
+    },
+    "provinceFilter": {
+      "all": "All"
+    },
+    "settings": {
+      "metaTitle": "Document Settings",
+      "clientTitle": "Settings — Docs",
+      "heading": "Document Settings",
+      "description": "Payer list — the first person on the list who isn't the recipient is selected automatically",
+      "loading": "Loading...",
+      "loadFailed": "Failed to load",
+      "addFailed": "Failed to add",
+      "editFailed": "Failed to save changes",
+      "deleteConfirm": "Remove \"{name}\" from the payer list?",
+      "deleteFailed": "Failed to delete",
+      "payersCount": "Payers ({count})",
+      "addPayerButton": "Add Payer",
+      "emptyState": "No payers yet",
+      "displayNameLabel": "Name on document",
+      "positionLabel": "Position",
+      "sortOrderLabel": "Order",
+      "saveButton": "Save",
+      "cancelButton": "Cancel",
+      "searchMemberLabel": "Search member",
+      "memberSearchPlaceholder": "Type a name to search members...",
+      "positionPlaceholder": "e.g. Ratchaburi Provincial Coordinator",
+      "addButton": "Add",
+      "noScope": "No scope specified"
+    },
+    "idCard": {
+      "title": "Crop ID Card Photo",
+      "instructions": "Drag · zoom · rotate to fit the frame to the card (the actual card ratio is locked)",
+      "rotateButton": "Rotate",
+      "cancelButton": "Cancel",
+      "processing": "Processing...",
+      "useThisPhoto": "Use This Photo"
+    },
+    "autoCalc": {
+      "memberSearch": {
+        "placeholderMulti": "Add recipient...",
+        "placeholderSingle": "Search recipient name...",
+        "recentLabel": "Recent"
+      },
+      "alerts": {
+        "participantsRequired": "Please enter the number of participants"
+      },
+      "mealLabels": {
+        "lunch": "Lunch",
+        "dinner": "Dinner"
+      },
+      "venueTypeLabels": {
+        "hotel": "Hotel",
+        "normal": "Standard"
+      },
+      "speakerTypeLabels": {
+        "general": "General public",
+        "government": "Government officer"
+      },
+      "items": {
+        "food": {
+          "label": "Food ({meals})",
+          "description": "Food ({meals}) for {count} people",
+          "detail": "{rate} × {mealCount} meals × {count} people = {total} THB"
+        },
+        "snack": {
+          "label": "Snack ({count} meals)",
+          "description": "Snack {count} meals × {foodCount} people",
+          "detail": "{rate} × {count} meals × {foodCount} people = {total} THB"
+        },
+        "speaker": {
+          "label": "Speaker fee (person {n})",
+          "description": "Speaker fee ({type})",
+          "detail": "{rate} THB/hr × {hours} hrs = {total} THB"
+        },
+        "venue": {
+          "label": "Venue rental",
+          "description": "Venue rental for the event",
+          "detailCeiling": "Ceiling by participant count: {ceiling} THB",
+          "detailActual": "Actual cost"
+        },
+        "sound": {
+          "label": "Sound equipment rental",
+          "description": "Sound equipment rental for the event"
+        },
+        "supplies": {
+          "label": "Supplies",
+          "description": "Supplies for the event"
+        },
+        "travelLump": {
+          "label": "Travel (combined)",
+          "description": "Travel for {count} people",
+          "detail": "{rate} × {count} people = {total} THB"
+        },
+        "travelIndividual": {
+          "label": "Travel",
+          "description": "Travel",
+          "detail": "Fill in distance + recipient later (the system will calculate the amount)"
+        }
+      },
+      "common": {
+        "detailAmount": "{amount} THB",
+        "detailPrompt": "Please specify an amount",
+        "budgetAdjustedDetail": "≈ {perHead} THB/person × {count} people = {amount} THB (adjusted to budget)",
+        "manualEditDetail": "Manually edited"
+      },
+      "budgetWarn": "Current total {total} THB (short {shortfall} THB) — add items, edit amounts, or lower the budget",
+      "fields": {
+        "participantCountLabel": "Number of participants",
+        "participantCountPlaceholder": "50",
+        "budgetLabel": "Budget (THB)",
+        "budgetPlaceholder": "Unspecified = use ceiling",
+        "calcModeLabel": "Calculation method",
+        "calcModeHint": "Enter a budget first to enable adjustment — currently using the rule ceiling",
+        "calcModeBudgetOption": "By budget — trim to fit budget",
+        "calcModeMaxOption": "Maximum — per fund rule ceiling",
+        "eventTypeLabel": "Event type",
+        "mobileEventCheck": "Outreach event (booth / field visit)",
+        "hotelCheck": "Held at a hotel / resort",
+        "expandItemsButton": "+ Select additional expense items",
+        "travelCheck": "Travel",
+        "travelLumpOption": "Equal for everyone — in-province {rate} THB/person (single receipt)",
+        "travelIndividualOption": "Actual cost — itemized per person (fill in distance later)",
+        "travelIndividualHint": "Creates a blank item per person → fill in distance + recipient later per item, the system calculates the amount",
+        "foodCheck": "Food",
+        "foodRateHint": "{rate} THB/person/meal ({venueLabel})",
+        "snackCheck": "Snack / break",
+        "snackRateHint": "{rate} THB/person/meal ({venueLabel})",
+        "speakerCheck": "Speaker fee",
+        "speakerCountLabel": "Count (max {max})",
+        "speakerHoursLabel": "Hours/person",
+        "speakerTypeLabel": "Type",
+        "speakerTypeGeneralOption": "General ({rate} THB/hr)",
+        "speakerTypeGovernmentOption": "Government officer ({rate} THB/hr)",
+        "venueCheck": "Venue rental",
+        "venueAmountPlaceholder": "Amount",
+        "venueCeilingHint": "Ceiling by participant count: {ceiling} THB (leave blank to use the ceiling)",
+        "venueNoCeilingHint": "Enter participant count to see the ceiling",
+        "soundCheck": "Sound equipment rental",
+        "suppliesCheck": "Supplies",
+        "noDateHint": "* No event date/time — food/snack items will not be calculated"
+      },
+      "calculateButton": "Calculate",
+      "perHeadUnit": "THB/person",
+      "currencyUnit": "THB",
+      "descriptionPlaceholder": "Item description (shown in PDF)",
+      "creatingButton": "Creating...",
+      "setPayerFirstButton": "Set payer first",
+      "createButton": "Create {count} items",
+      "totalLabel": "Total"
+    },
+    "projectView": {
+      "upload": {
+        "uploadFailed": "Upload failed: {message}"
+      },
+      "attachments": {
+        "confirmDelete": "Delete this file?",
+        "documentAlt": "Document {n}"
+      },
+      "tokens": {
+        "confirmRegenerate": "Generate a new link? Both old links will stop working immediately."
+      },
+      "blockReason": {
+        "needBudget": "You must set a budget before you can create a bill",
+        "needPayers": "There are fewer than 2 eligible payers for {province} — add payers in Document Settings before you can create a bill",
+        "thisProvince": "this province"
+      },
+      "payer": {
+        "confirmResetPayerSignature": "Some items have already been signed by the payer. Changing the payer will reset the payer's signature — confirm?",
+        "noEligiblePayers": "No eligible payers found for {province}",
+        "addAtLabel": "Add one in",
+        "settingsLinkText": "Document Settings",
+        "sectionTitle": "Payer",
+        "saving": "Saving…"
+      },
+      "validation": {
+        "entriesRequired": "Please add at least 1 item"
+      },
+      "header": {
+        "receiptButton": "Receipt",
+        "regenerateLinkButton": "Regenerate link",
+        "setupExpenseItems": "Set up expense items"
+      },
+      "common": {
+        "attachment3Label": "Attachment 3"
+      },
+      "stats": {
+        "itemsLabel": "Items",
+        "recipientSignedLabel": "Recipient signed",
+        "payerSignedLabel": "Payer signed"
+      },
+      "budget": {
+        "placeholder": "Budget",
+        "amountLabel": "Budget {amount} THB",
+        "setButton": "Set budget",
+        "reached": "✓ Budget reached",
+        "shortfall": "Short {amount} THB"
+      },
+      "tabs": {
+        "auto": "Automatic",
+        "manual": "Manual"
+      },
+      "act": {
+        "printBlankLink": "Print Attachment 3 (blank form) ↗",
+        "printSignedLink": "Print Attachment 3 (signed) ↗",
+        "uploadSectionTitle": "Upload signed Attachment 3",
+        "comingSoonNotice": "Coming soon: upload your ID card once, the system will automatically apply the watermark every time",
+        "tapToUpload": "Tap to upload an image or PDF",
+        "fileTypesHint": "JPG / PNG (auto-crop) · PDF"
+      },
+      "manual": {
+        "totalLabel": "Total {amount} THB",
+        "searchMemberPlaceholder": "Search member name...",
+        "amountPlaceholder": "Amount",
+        "addItemButton": "Add item",
+        "creating": "Creating...",
+        "createButton": "Create items ({count})",
+        "hoursUnit": "hrs",
+        "speakerGeneralOption": "General ({rate})",
+        "speakerGovernmentOption": "Government officer ({rate})"
+      },
+      "clearAll": {
+        "confirm": "Clear all {count} bill items? This cannot be undone",
+        "genericError": "An error occurred",
+        "button": "Clear all"
+      }
+    },
+    "sign": {
+      "invalidLink": "Invalid link",
+      "idNumberRequired": "Please enter your 13-digit ID number",
+      "nameRequired": "Please enter first and last name",
+      "fileTooLarge": "File exceeds 8 MB",
+      "idCardUploadFailed": "Upload failed",
+      "signPayerTitle": "Sign as Payer",
+      "signReceiptTitle": "Sign Receipt",
+      "loginPrompt": "Please sign in with Discord to verify your identity before signing",
+      "loginButton": "Sign in with Discord",
+      "signedBanner": "Signed",
+      "signedBannerNote": "· Can re-sign",
+      "downloadPdf": "Download PDF",
+      "signingAsPayer": "Signing as payer",
+      "recipientLabel": "Recipient:",
+      "confirmIdentityTitle": "Verify Identity",
+      "selfFillIntro": "Enter details as on your ID card so the document information is correct",
+      "selfForm": {
+        "fields": {
+          "firstName": "First name (no title)",
+          "lastName": "Last name",
+          "idNumber": "13-digit ID number",
+          "houseNo": "House No.",
+          "moo": "Moo (village no.)",
+          "road": "Road/Soi",
+          "subdistrict": "Subdistrict",
+          "district": "District",
+          "provinceAddr": "Province",
+          "phone": "Phone number"
+        },
+        "saveButton": "Save Info",
+        "saving": "Saving...",
+        "cancel": "Cancel",
+        "backToSearch": "Back to search"
+      },
+      "ngsSearch": {
+        "intro": "Search your name in the member registry so the document information is correct",
+        "placeholder": "Type first or last name...",
+        "notFound": "Can't find your name in the member registry? Enter it manually",
+        "confirmIdentity": "Confirm you are {name} by entering your ID number",
+        "idPlaceholder": "13-digit ID number",
+        "confirmButton": "Verify Identity",
+        "confirming": "Verifying...",
+        "reselect": "Choose again"
+      },
+      "selfInfoSaved": "Using saved recipient information (name, ID number, address) — check the document preview below",
+      "editInfo": "Edit information",
+      "idCard": {
+        "title": "ID Card Photo",
+        "hint": "(One-time only — crop to the card, watermark applied automatically)",
+        "attached": "ID copy attached",
+        "changeImage": "Change image",
+        "alt": "ID card copy",
+        "uploadIntro": "Upload once, used for all receipts — the system will automatically add a \"For People's Party use only\" watermark",
+        "uploading": "Uploading...",
+        "selectButton": "+ Select ID card image"
+      },
+      "preview": {
+        "title": "Document Preview",
+        "reload": "Reload",
+        "intro": "Review the receipt for accuracy before signing",
+        "loading": "Loading preview...",
+        "pageAlt": "Page {n}",
+        "openInNewTab": "Open in new tab"
+      },
+      "signature": {
+        "titlePayer": "Payer Signature",
+        "title": "Signature",
+        "clear": "Clear",
+        "placeholder": "Sign here",
+        "note": "This signature will be recorded with your Discord name and timestamp"
+      },
+      "submit": {
+        "saving": "Saving...",
+        "resign": "Re-sign",
+        "confirmPayment": "Confirm Payment",
+        "confirmSignature": "Confirm Signature"
+      },
+      "layoutTitle": "Sign Document"
+    }
   }
 }

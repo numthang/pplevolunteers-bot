@@ -1,8 +1,10 @@
 'use client'
 
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 
 export default function DocsProvinceFilter({ provinces, selected }) {
+  const t = useTranslations('docs')
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -24,7 +26,7 @@ export default function DocsProvinceFilter({ provinces, selected }) {
             : 'bg-card-bg text-warm-600 dark:text-disc-muted border-warm-200 dark:border-disc-border hover:border-orange hover:text-orange dark:hover:text-orange'
           }`}
       >
-        ทั้งหมด
+        {t('provinceFilter.all')}
       </button>
       {provinces.map(p => (
         <button

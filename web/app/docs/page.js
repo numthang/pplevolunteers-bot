@@ -1,6 +1,5 @@
-export const metadata = { title: 'โครงการ' }
-
 import { Suspense } from 'react'
+import { getTranslations } from 'next-intl/server'
 import { getSession } from '@/lib/auth.js'
 import { redirect } from 'next/navigation'
 import { canManageDocs, getUserScope } from '@/lib/docsAccess.js'
@@ -10,7 +9,13 @@ import { getGuildId } from '@/lib/guildContext.js'
 import DocProjectCard from '@/components/docs/DocProjectCard.jsx'
 import DocsProvinceFilter from '@/components/docs/DocsProvinceFilter.jsx'
 
+export async function generateMetadata() {
+  const t = await getTranslations('docs')
+  return { title: t('list.metaTitle') }
+}
+
 export default async function DocsPage({ searchParams }) {
+  const t = await getTranslations('docs')
   const session = await getSession()
   if (!session) redirect('/')
 
@@ -34,7 +39,7 @@ export default async function DocsPage({ searchParams }) {
   const past   = projects.filter(p => p.event_date && p.event_date < cutoff)
 
   const groupBy = list => list.reduce((acc, p) => {
-    const key = p.province || 'ทั่วไป'
+    const key = p.province || t('list.noProvinceGroup')
     if (!acc[key]) acc[key] = []
     acc[key].push(p)
     return acc
@@ -46,9 +51,9 @@ export default async function DocsPage({ searchParams }) {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-warm-900 dark:text-disc-text mb-2">เอกสาร</h1>
+        <h1 className="text-2xl font-bold text-warm-900 dark:text-disc-text mb-2">{t('list.heading')}</h1>
         <p className="text-base text-warm-500 dark:text-disc-muted">
-          ใบสำคัญรับเงินและเอกสารเบิกจ่ายสำหรับกิจกรรม
+          {t('list.description')}
         </p>
       </div>
 
@@ -62,13 +67,13 @@ export default async function DocsPage({ searchParams }) {
 
       {projects.length === 0 ? (
         <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-12 text-center text-warm-500 dark:text-disc-muted">
-          ไม่มีโครงการเอกสาร
+          {t('list.emptyState')}
         </div>
       ) : (
         <div className="space-y-8">
           {active.length === 0 && (
             <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-12 text-center text-warm-500 dark:text-disc-muted">
-              ไม่มีโครงการที่กำลังดำเนินการ
+              {t('list.noActiveProjects')}
             </div>
           )}
           {Object.entries(grouped).map(([province, list]) => (
@@ -88,7 +93,7 @@ export default async function DocsPage({ searchParams }) {
             <details className="group">
               <summary className="cursor-pointer list-none flex items-center gap-2 text-xs font-semibold text-warm-400 dark:text-disc-muted uppercase tracking-widest select-none w-fit">
                 <span className="transition-transform group-open:rotate-90">▶</span>
-                กิจกรรมที่ผ่านแล้ว ({past.length})
+                {t('list.pastProjectsToggle', { count: past.length })}
               </summary>
               <div className="mt-4 space-y-8 opacity-60">
                 {Object.entries(groupedPast).map(([province, list]) => (

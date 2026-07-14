@@ -2,20 +2,10 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import { Pencil, Trash2, Check, X, Copy } from 'lucide-react'
 
-const ITEM_LABELS = {
-  food:          'ค่าอาหาร',
-  speaker:       'ค่าวิทยากร',
-  travel:        'ค่าเดินทาง',
-  venue:         'ค่าสถานที่',
-  accommodation: 'ค่าที่พัก',
-  sound:         'ค่าเช่าเครื่องเสียง',
-  supplies:      'ค่าวัสดุสิ้นเปลือง',
-  equipment:     'ค่าอุปกรณ์',
-  photo:         'ค่าถ่ายภาพ',
-}
-const ALL_ITEMS    = Object.keys(ITEM_LABELS)
+const ALL_ITEMS    = ['food','speaker','travel','venue','accommodation','sound','supplies','equipment','photo']
 const MOBILE_ITEMS = ['food','travel','accommodation','supplies','equipment','photo']
 
 const BADGE_BASE    = 'text-sm font-medium px-3 py-1 rounded-full transition'
@@ -27,6 +17,7 @@ const inputCls = 'h-8 border border-warm-200 dark:border-disc-border bg-white da
 const selectCls = inputCls + ' appearance-none pr-6'
 
 export default function DocEntryList({ initialEntries, isMobile, canManage, currentDiscordId, onAddClick, onChange, eligiblePayers = [], eventId, recentMembers = [] }) {
+  const t = useTranslations('docs')
   const [entries, setEntries] = useState(initialEntries)
   const [editingId, setEditingId] = useState(null)
   const [editForm, setEditForm]   = useState({})
@@ -34,20 +25,24 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
   const [payerSaving, setPayerSaving] = useState(null)
   const [copiedKey, setCopiedKey]     = useState(null)
 
+  function itemLabel(type) {
+    return ALL_ITEMS.includes(type) ? t(`entryList.itemLabels.${type}`) : type
+  }
+
   function copySignLinks(type, groupItems, groupKey) {
     const origin = window.location.origin
     const lines = groupItems
       .map(e => {
         const token = type === 'recipient' ? e.sign_token : e.payer_sign_token
         if (!token) return null
-        const label = e.description || ITEM_LABELS[e.item_type] || e.item_type
+        const label = e.description || itemLabel(e.item_type)
         return `${label}: ${origin}/docs/sign/${token}`
       })
       .filter(Boolean)
     if (!lines.length) return
     const pendingTab = type === 'recipient' ? 'recipient' : 'payer'
-    if (type === 'recipient') lines.push(`\n* ครั้งแรกระบบจะขอถ่ายบัตรประชาชน 1 ครั้ง และจะมีลายน้ำคร่อมให้อัตโนมัติ`)
-    lines.push(`\nดูรายการรอเซ็นทั้งหมด: ${origin}/docs/pending?tab=${pendingTab}`)
+    if (type === 'recipient') lines.push(`\n* ${t('entryList.idCardNotice')}`)
+    lines.push(`\n${t('entryList.viewAllPending', { url: `${origin}/docs/pending?tab=${pendingTab}` })}`)
     navigator.clipboard.writeText(lines.join('\n'))
     setCopiedKey(`${type}-${groupKey}`)
     setTimeout(() => setCopiedKey(null), 2000)
@@ -113,11 +108,11 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
   }
 
   async function saveEdit(entryId) {
-    if (!editForm.memberDiscordId) { alert('กรุณาระบุผู้รับก่อนบันทึก'); return }
+    if (!editForm.memberDiscordId) { alert(t('entryList.recipientRequired')); return }
     const entry = entries.find(e => e.id === entryId)
     const memberChanged = editForm.memberDiscordId !== entry?.member_discord_id
     if (memberChanged && entry?.status === 'signed') {
-      if (!confirm('รายการนี้เซ็นรับแล้ว การเปลี่ยนผู้รับเงินจะ reset ลายเซ็น — ยืนยัน?')) return
+      if (!confirm(t('entryList.confirmResetRecipientSignature'))) return
     }
     setSaving(true)
     try {
@@ -154,14 +149,14 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
         } catch {}
       }
     } catch (err) {
-      alert('เกิดข้อผิดพลาด: ' + err.message)
+      alert(t('entryList.errorPrefix', { message: err.message }))
     } finally {
       setSaving(false)
     }
   }
 
   async function handleDelete(entryId) {
-    if (!confirm('ลบรายการนี้?')) return
+    if (!confirm(t('entryList.confirmDelete'))) return
     try {
       const res = await fetch(`/api/docs/entries/${entryId}`, { method: 'DELETE' })
       if (!res.ok) throw new Error((await res.json()).error)
@@ -169,7 +164,7 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
       setEntries(next)
       onChange?.(next)
     } catch (err) {
-      alert('เกิดข้อผิดพลาด: ' + err.message)
+      alert(t('entryList.errorPrefix', { message: err.message }))
     }
   }
 
@@ -179,7 +174,7 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
     const curPayer = groupItems[0]?.payer_discord_id
     if (payerDiscordId === curPayer) return
     if (groupItems.some(e => e.payer_signed_at) &&
-        !confirm('ผู้จ่ายเดิมเซ็นแล้ว การเปลี่ยนจะ reset ลายเซ็นผู้จ่าย — ยืนยัน?')) return
+        !confirm(t('entryList.confirmResetPayerSignature'))) return
 
     setPayerSaving(recipientDiscordId)
     try {
@@ -205,7 +200,7 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
       setEntries(next)
       onChange?.(next)
     } catch (err) {
-      alert('เกิดข้อผิดพลาด: ' + err.message)
+      alert(t('entryList.errorPrefix', { message: err.message }))
     } finally {
       setPayerSaving(null)
     }
@@ -235,10 +230,10 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
   if (entries.length === 0) {
     return (
       <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-12 text-center">
-        <p className="text-warm-500 dark:text-disc-text mb-4">ยังไม่มีรายการเบิก</p>
+        <p className="text-warm-500 dark:text-disc-text mb-4">{t('entryList.emptyState')}</p>
         {canManage && onAddClick && (
           <button onClick={onAddClick} className="text-orange hover:underline text-base font-medium">
-            เพิ่มรายการ →
+            {t('entryList.addButton')}
           </button>
         )}
       </div>
@@ -254,7 +249,7 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
             <div className="px-4 py-3 border-b border-warm-200 dark:border-disc-border flex items-center justify-between gap-3 bg-warm-50 dark:bg-disc-hover rounded-t-lg">
               {isUnassigned ? (
                 <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <span className="font-semibold text-orange">ยังไม่ระบุผู้รับ</span>
+                  <span className="font-semibold text-orange">{t('entryList.unassigned')}</span>
                 </div>
               ) : (
                 <div className="min-w-0 flex-1">
@@ -271,14 +266,14 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
                     )}
                     <button
                       onClick={() => copySignLinks('recipient', items, key)}
-                      className="text-warm-400 dark:text-disc-muted hover:text-orange transition" title="คัดลอกลิงก์เซ็นรับ"
+                      className="text-warm-400 dark:text-disc-muted hover:text-orange transition" title={t('entryList.copyRecipientLinkTitle')}
                     >
                       {copiedKey === `recipient-${key}` ? <Check size={13} className="text-green-500" /> : <Copy size={13} />}
                     </button>
                   </div>
                 </div>
               )}
-              <span className="text-sm text-warm-700 dark:text-disc-text shrink-0">{memberTotal.toLocaleString()} บ.</span>
+              <span className="text-sm text-warm-700 dark:text-disc-text shrink-0">{t('entryList.amount', { amount: memberTotal.toLocaleString() })}</span>
             </div>
             <div className="divide-y divide-warm-100 dark:divide-disc-border" id={`entries-${key}`}>
               {items.map(entry => {
@@ -289,7 +284,7 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
                       <div className="space-y-2">
                         {/* payee search — บนสุด */}
                         <div className="flex items-center gap-2">
-                          <span className="text-xs text-warm-600 dark:text-disc-text shrink-0">ผู้รับ</span>
+                          <span className="text-xs text-warm-600 dark:text-disc-text shrink-0">{t('entryList.recipientLabel')}</span>
                           <div className="relative flex-1" ref={memberWrapRef}>
                             <input
                               type="text"
@@ -300,7 +295,7 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
                                 if (!q.trim() && recentMembers.length > 0) setMemberOpen(true)
                                 else if (q.trim() && memberResults.length > 0) setMemberOpen(true)
                               }}
-                              placeholder="ค้นหาผู้รับเงิน..."
+                              placeholder={t('entryList.searchRecipientPlaceholder')}
                               className={`${inputCls} w-full`}
                             />
                             {memberOpen && (() => {
@@ -309,7 +304,7 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
                               if (!list.length) return null
                               return (
                                 <ul className="absolute z-20 mt-1 w-full bg-white dark:bg-disc-hover border border-warm-200 dark:border-disc-border rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                                  {!q.trim() && <li className="px-3 pt-2 pb-1 text-xs text-warm-400 dark:text-disc-muted font-medium">ล่าสุด</li>}
+                                  {!q.trim() && <li className="px-3 pt-2 pb-1 text-xs text-warm-400 dark:text-disc-muted font-medium">{t('entryList.recent')}</li>}
                                   {list.map(m => {
                                     const realName = [m.first_name, m.last_name].filter(Boolean).join(' ')
                                     return (
@@ -336,13 +331,13 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
                             onChange={e => setEditForm(f => ({ ...f, itemType: e.target.value }))}
                             className={`${selectCls} w-32 shrink-0`}
                           >
-                            {allowedItems.map(t => <option key={t} value={t}>{ITEM_LABELS[t]}</option>)}
+                            {allowedItems.map(it => <option key={it} value={it}>{itemLabel(it)}</option>)}
                           </select>
                           <input
                             type="text"
                             value={editForm.description}
                             onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))}
-                            placeholder="หมายเหตุ"
+                            placeholder={t('entryList.notePlaceholder')}
                             className={`${inputCls} flex-1 min-w-0`}
                           />
                         </div>
@@ -373,13 +368,13 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
                         {/* payer dropdown — ล่างสุด */}
                         {eligiblePayers.length > 0 && (
                           <div className="flex items-center gap-2">
-                            <span className="text-xs text-warm-600 dark:text-disc-text shrink-0">ผู้จ่าย</span>
+                            <span className="text-xs text-warm-600 dark:text-disc-text shrink-0">{t('entryList.payerLabel')}</span>
                             <select
                               value={editForm.payerDiscordId || ''}
                               onChange={e => setEditForm(f => ({ ...f, payerDiscordId: e.target.value }))}
                               className={`${selectCls} flex-1`}
                             >
-                              <option value="">— เลือกผู้จ่าย —</option>
+                              <option value="">{t('entryList.selectPayerPlaceholder')}</option>
                               {eligiblePayers.filter(p => p.discord_id !== editForm.memberDiscordId).map(p => (
                                 <option key={p.discord_id} value={p.discord_id}>
                                   {p.display_name}{p.position ? ` · ${p.position}` : ''}
@@ -395,23 +390,23 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
                         <div className="flex items-start justify-between gap-2 sm:block sm:min-w-0 sm:flex-1">
                           <div className="min-w-0">
                             <div className="text-base text-warm-900 dark:text-disc-text">
-                              {ITEM_LABELS[entry.item_type] || entry.item_type}
+                              {itemLabel(entry.item_type)}
                             </div>
                             {entry.description && (
                               <div className="text-sm text-warm-500 dark:text-disc-text break-words">{entry.description}</div>
                             )}
                           </div>
                           <span className="text-base font-medium text-warm-900 dark:text-disc-text sm:hidden shrink-0">
-                            {Number(entry.amount).toLocaleString()} บ.
+                            {t('entryList.amount', { amount: Number(entry.amount).toLocaleString() })}
                           </span>
                         </div>
                         {/* ขวา: จำนวนเงิน (desktop) + badges/icons */}
                         <div className="flex items-center gap-2 shrink-0">
                           <span className="hidden sm:inline text-base font-medium text-warm-900 dark:text-disc-text">
-                            {Number(entry.amount).toLocaleString()} บ.
+                            {t('entryList.amount', { amount: Number(entry.amount).toLocaleString() })}
                           </span>
-                          {signBadge('เซ็นรับ', entry.member_discord_id ? entry.sign_token : null, entry.status === 'signed')}
-                          {signBadge('เซ็นจ่าย', entry.payer_sign_token, !!entry.payer_signed_at)}
+                          {signBadge(t('entryList.signReceivedLabel'), entry.member_discord_id ? entry.sign_token : null, entry.status === 'signed')}
+                          {signBadge(t('entryList.signPaidLabel'), entry.payer_sign_token, !!entry.payer_signed_at)}
                           {canManage && entry.status === 'signed' && (
                             <a href={`/api/docs/entries/${entry.id}/pdf`} target="_blank" className="text-xs text-orange hover:underline">
                               PDF
@@ -422,14 +417,14 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
                               <button
                                 onClick={() => startEdit(entry)}
                                 className="p-1 rounded text-warm-400 dark:text-disc-muted hover:text-warm-700 dark:hover:text-disc-text hover:bg-warm-100 dark:hover:bg-disc-hover transition"
-                                title="แก้ไข"
+                                title={t('entryList.editTitle')}
                               >
                                 <Pencil size={13} />
                               </button>
                               <button
                                 onClick={() => handleDelete(entry.id)}
                                 className="p-1 rounded text-warm-400 dark:text-disc-muted hover:text-red-500 dark:hover:text-red-400 hover:bg-warm-100 dark:hover:bg-disc-hover transition"
-                                title="ลบ"
+                                title={t('entryList.deleteTitle')}
                               >
                                 <Trash2 size={13} />
                               </button>
@@ -444,14 +439,14 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
             </div>
             {!isUnassigned && items[0]?.payer_display_name && (
               <div className="px-4 py-2 border-t border-warm-100 dark:border-disc-border flex items-center gap-1.5">
-                <span className="text-xs text-warm-600 dark:text-disc-text">ผู้จ่าย</span>
+                <span className="text-xs text-warm-600 dark:text-disc-text">{t('entryList.payerLabel')}</span>
                 <span className="text-xs text-warm-700 dark:text-disc-text">{items[0].payer_display_name}</span>
                 {items[0].payer_position && (
                   <span className="text-xs text-warm-500 dark:text-disc-text">· {items[0].payer_position}</span>
                 )}
                 <button
                   onClick={() => copySignLinks('payer', items, key)}
-                  className="text-warm-400 dark:text-disc-muted hover:text-orange transition" title="คัดลอกลิงก์เซ็นจ่าย"
+                  className="text-warm-400 dark:text-disc-muted hover:text-orange transition" title={t('entryList.copyPayerLinkTitle')}
                 >
                   {copiedKey === `payer-${key}` ? <Check size={11} className="text-green-500" /> : <Copy size={11} />}
                 </button>

@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import { Search, X, Plus, Trash2, CreditCard, CheckCircle, FilePlus, Check, Pencil, Copy, RefreshCw, Link2 } from 'lucide-react'
 import DocEntryList from './DocEntryList'
 import DocAutoCalc from './DocAutoCalc'
@@ -17,31 +18,19 @@ function formatDate(dateStr) {
   return r
 }
 
-const PROJECT_STATUS_LABEL = { draft: 'ร่าง', active: 'เปิดรับ', closed: 'ปิด' }
 const PROJECT_STATUS_COLOR = {
   draft:  'bg-warm-100 text-warm-500 dark:bg-disc-hover dark:text-disc-muted',
   active: 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400',
   closed: 'bg-warm-100 text-warm-400 dark:bg-disc-hover dark:text-disc-muted',
 }
 
-const ITEM_LABELS = {
-  food:          'ค่าอาหาร',
-  speaker:       'ค่าวิทยากร',
-  travel:        'ค่าเดินทาง',
-  venue:         'ค่าสถานที่',
-  accommodation: 'ค่าที่พัก',
-  sound:         'ค่าเช่าเครื่องเสียง',
-  supplies:      'ค่าวัสดุสิ้นเปลือง',
-  equipment:     'ค่าอุปกรณ์',
-  photo:         'ค่าถ่ายภาพ',
-}
-const ALL_ITEMS    = Object.keys(ITEM_LABELS)
+const ALL_ITEMS    = ['food','speaker','travel','venue','accommodation','sound','supplies','equipment','photo']
 const MOBILE_ITEMS = ['food','travel','accommodation','supplies','equipment','photo']
 
 const inputCls = 'w-full border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-warm-900 dark:text-disc-text p-2.5 text-base rounded-lg placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-orange'
 
-function newItem() {
-  return { id: Math.random().toString(36).slice(2), itemType: 'food', description: ITEM_LABELS.food, amount: '', speakerHours: 1, speakerType: 'general', soundHours: 1 }
+function newItem(description) {
+  return { id: Math.random().toString(36).slice(2), itemType: 'food', description, amount: '', speakerHours: 1, speakerType: 'general', soundHours: 1 }
 }
 
 function calcSpeakerAmount(hours, type) {
@@ -49,6 +38,10 @@ function calcSpeakerAmount(hours, type) {
 }
 
 export default function DocProjectView({ project: initialProject, initialEntries, canManage, currentDiscordId, eventId, eventName, eventDate, eventEndDate, participantCount, actEventId, eventProvince }) {
+  const t = useTranslations('docs')
+  function itemLabel(itemType) {
+    return ALL_ITEMS.includes(itemType) ? t(`entryList.itemLabels.${itemType}`) : itemType
+  }
   const [project, setProject]       = useState(initialProject)
   const [entries, setEntries]       = useState(initialEntries)
   const [refreshKey, setRefreshKey] = useState(0)
@@ -141,21 +134,21 @@ export default function DocProjectView({ project: initialProject, initialEntries
         loadTokens()
       }
     } catch (err) {
-      alert('อัพโหลดไม่สำเร็จ: ' + err.message)
+      alert(t('projectView.upload.uploadFailed', { message: err.message }))
     } finally {
       setAttUploading(false)
     }
   }
 
   async function deleteAttachment(attId) {
-    if (!project?.id || !confirm('ลบไฟล์นี้?')) return
+    if (!project?.id || !confirm(t('projectView.attachments.confirmDelete'))) return
     const res = await fetch(`/api/docs/projects/${project.id}/attachments/${attId}`, { method: 'DELETE' })
     if (res.ok) setAttachments(prev => prev.filter(a => a.id !== attId))
   }
 
   async function regenerateToken() {
     if (!project?.id) return
-    if (!confirm('สร้างลิงก์ใหม่? ลิงก์เก่าทั้งสองจะใช้ไม่ได้ทันที')) return
+    if (!confirm(t('projectView.tokens.confirmRegenerate'))) return
     const res = await fetch(`/api/docs/projects/${project.id}/tokens`, { method: 'POST' })
     if (res.ok) {
       const data = await res.json()
@@ -176,7 +169,7 @@ export default function DocProjectView({ project: initialProject, initialEntries
       setBudget(data.data.budget != null ? Number(data.data.budget) : null)
       setEditingBudget(false)
     } catch (err) {
-      alert('เกิดข้อผิดพลาด: ' + err.message)
+      alert(t('entryList.errorPrefix', { message: err.message }))
     } finally {
       setSavingBudget(false)
     }
@@ -239,7 +232,7 @@ export default function DocProjectView({ project: initialProject, initialEntries
     setMembers(prev => [...prev, {
       discordId: member.discord_id,
       name: member.display_name || `${member.first_name || ''} ${member.last_name || ''}`.trim() || member.discord_id,
-      items: [newItem()],
+      items: [newItem(itemLabel('food'))],
     }])
     setQuery(''); setShowDropdown(false)
   }
@@ -250,7 +243,7 @@ export default function DocProjectView({ project: initialProject, initialEntries
 
   function addItem(discordId) {
     setMembers(prev => prev.map(m =>
-      m.discordId === discordId ? { ...m, items: [...m.items, newItem()] } : m
+      m.discordId === discordId ? { ...m, items: [...m.items, newItem(itemLabel('food'))] } : m
     ))
   }
 
@@ -266,8 +259,8 @@ export default function DocProjectView({ project: initialProject, initialEntries
         ? { ...m, items: m.items.map(i => {
             if (i.id !== itemId) return i
             const next = { ...i, [field]: value }
-            if (field === 'itemType' && (!i.description || i.description === ITEM_LABELS[i.itemType])) {
-              next.description = ITEM_LABELS[value] || ''
+            if (field === 'itemType' && (!i.description || i.description === itemLabel(i.itemType))) {
+              next.description = itemLabel(value) || ''
             }
             if (field === 'itemType' && value === 'speaker') {
               next.amount = calcSpeakerAmount(i.speakerHours, i.speakerType)
@@ -287,9 +280,9 @@ export default function DocProjectView({ project: initialProject, initialEntries
   // ต้องตั้งกรอบงบ + มีผู้มีสิทธิ์จ่าย ≥ 2 คน ถึงจะสร้างบิลได้
   const canCreate = budget != null && eligiblePayers.length >= 2
   const blockReason = budget == null
-    ? 'ต้องระบุกรอบงบก่อนจึงจะสร้างบิลได้'
+    ? t('projectView.blockReason.needBudget')
     : eligiblePayers.length < 2
-      ? `จังหวัด${province ?? 'นี้'}มีผู้มีสิทธิ์จ่ายไม่ถึง 2 คน — เพิ่มที่ตั้งค่าเอกสารก่อนจึงจะสร้างบิลได้`
+      ? t('projectView.blockReason.needPayers', { province: province ?? t('projectView.blockReason.thisProvince') })
       : null
 
   async function changeProjectPayer(payerDiscordId) {
@@ -297,7 +290,7 @@ export default function DocProjectView({ project: initialProject, initialEntries
     setSelectedPayer(payerDiscordId)
     if (!project) return  // ยังไม่สร้างบิล — เก็บ state เฉยๆ
     if (entries.some(e => e.payer_signed_at) &&
-        !confirm('มีผู้จ่ายเซ็นไปแล้วบางรายการ การเปลี่ยนจะ reset ลายเซ็นผู้จ่าย — ยืนยัน?')) return
+        !confirm(t('projectView.payer.confirmResetPayerSignature'))) return
     setPayerSavingTop(true)
     try {
       const res = await fetch(`/api/docs/projects/${eventId}/set-payer`, {
@@ -309,7 +302,7 @@ export default function DocProjectView({ project: initialProject, initialEntries
       const r2 = await fetch(`/api/docs/entries?projectId=${project.id}`)
       if (r2.ok) { const d = await r2.json(); if (d.data) { setEntries(d.data); setRefreshKey(k => k + 1) } }
     } catch (err) {
-      alert('เกิดข้อผิดพลาด: ' + err.message)
+      alert(t('entryList.errorPrefix', { message: err.message }))
     } finally {
       setPayerSavingTop(false)
     }
@@ -334,11 +327,11 @@ export default function DocProjectView({ project: initialProject, initialEntries
         })
       }
     }
-    if (payload.length === 0) { alert('กรุณาใส่รายการอย่างน้อย 1 รายการ'); return }
+    if (payload.length === 0) { alert(t('projectView.validation.entriesRequired')); return }
 
     setSaving(true)
     try { await postEntries(payload, null); setMembers([]) }
-    catch (err) { alert('เกิดข้อผิดพลาด: ' + err.message) }
+    catch (err) { alert(t('entryList.errorPrefix', { message: err.message })) }
     finally { setSaving(false) }
   }
 
@@ -386,7 +379,7 @@ export default function DocProjectView({ project: initialProject, initialEntries
     if (!canCreate) { alert(blockReason); return false }
     setAutoSaving(true)
     try { await postEntries(autoEntries, pCount); return true }
-    catch (err) { alert('เกิดข้อผิดพลาด: ' + err.message); return false }
+    catch (err) { alert(t('entryList.errorPrefix', { message: err.message })); return false }
     finally { setAutoSaving(false) }
   }
 
@@ -421,10 +414,10 @@ export default function DocProjectView({ project: initialProject, initialEntries
           <div>
             <div className="flex items-center gap-3 mb-1 flex-wrap">
               <h1 className="text-2xl font-bold text-warm-900 dark:text-disc-text">{project.event_name} <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${PROJECT_STATUS_COLOR[project.status] || PROJECT_STATUS_COLOR.draft}`}>
-                {PROJECT_STATUS_LABEL[project.status]}
+                {t(`projectCard.statusLabels.${project.status}`)}
               </span></h1>
               {project.is_mobile && (
-                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-orange/10 text-orange">สัญจร</span>
+                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-orange/10 text-orange">{t('projectCard.mobile')}</span>
               )}
             </div>
             {project.event_date && (
@@ -444,7 +437,7 @@ export default function DocProjectView({ project: initialProject, initialEntries
                   aria-disabled={!tokens?.project_token}
                   className={`inline-flex items-center gap-2 px-4 py-2.5 bg-orange text-white text-base font-semibold rounded-lg transition ${tokens?.project_token ? 'hover:bg-orange-light' : 'opacity-50 pointer-events-none'}`}
                 >
-                  ใบสำคัญรับเงิน
+                  {t('projectView.header.receiptButton')}
                 </a>
                 <a
                   href={tokens?.project_token ? `/dl/${tokens.project_token}/registration` : undefined}
@@ -452,12 +445,12 @@ export default function DocProjectView({ project: initialProject, initialEntries
                   aria-disabled={!tokens?.project_token}
                   className={`inline-flex items-center gap-2 px-4 py-2.5 border border-warm-300 dark:border-disc-border text-warm-700 dark:text-disc-text text-base font-semibold rounded-lg transition ${tokens?.project_token ? 'hover:bg-warm-50 dark:hover:bg-disc-hover' : 'opacity-50 pointer-events-none'}`}
                 >
-                  แนบท้าย 3
+                  {t('projectView.common.attachment3Label')}
                 </a>
               </div>
               {project && (
                 <button onClick={regenerateToken} className="flex items-center gap-1 text-xs text-warm-400 dark:text-disc-muted hover:text-orange transition">
-                  <RefreshCw size={11} /> สร้างลิงก์ใหม่
+                  <RefreshCw size={11} /> {t('projectView.header.regenerateLinkButton')}
                 </button>
               )}
             </div>
@@ -467,7 +460,7 @@ export default function DocProjectView({ project: initialProject, initialEntries
         <div className="mb-3">
           {eventName && <h1 className="text-2xl font-bold text-warm-900 dark:text-disc-text">{eventName}</h1>}
           <p className="text-base text-warm-500 dark:text-disc-muted mt-1">
-            {eventDate ? `${formatDate(eventDate)}${eventEndDate ? ` – ${formatDate(eventEndDate)}` : ''} · ` : ''}ตั้งค่ารายการเบิก
+            {eventDate ? `${formatDate(eventDate)}${eventEndDate ? ` – ${formatDate(eventEndDate)}` : ''} · ` : ''}{t('projectView.header.setupExpenseItems')}
           </p>
         </div>
       ) : null}
@@ -476,9 +469,9 @@ export default function DocProjectView({ project: initialProject, initialEntries
       {project && (
         <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl px-4 py-3 mb-3 flex flex-wrap items-center gap-x-6 gap-y-2">
           {[
-            { label: 'รายการ', value: entries.length, cls: 'text-warm-900 dark:text-disc-text' },
-            { label: 'ผู้รับเซ็น', value: signedCount, cls: 'text-blue-600 dark:text-blue-400' },
-            { label: 'ผู้จ่ายเซ็น', value: payerSignedCount, cls: 'text-green-600 dark:text-green-400' },
+            { label: t('projectView.stats.itemsLabel'), value: entries.length, cls: 'text-warm-900 dark:text-disc-text' },
+            { label: t('projectView.stats.recipientSignedLabel'), value: signedCount, cls: 'text-blue-600 dark:text-blue-400' },
+            { label: t('projectView.stats.payerSignedLabel'), value: payerSignedCount, cls: 'text-green-600 dark:text-green-400' },
           ].map(({ label, value, cls }) => (
             <span key={label} className="flex items-center gap-1.5 text-sm">
               <span className="text-warm-400 dark:text-disc-muted">{label}</span>
@@ -486,8 +479,8 @@ export default function DocProjectView({ project: initialProject, initialEntries
             </span>
           ))}
           <span className="flex items-center gap-1.5 text-sm">
-            <span className="text-warm-400 dark:text-disc-muted">ยอดรวม</span>
-            <span className="font-bold text-base text-warm-900 dark:text-disc-text">{totalAmount.toLocaleString()} บ.</span>
+            <span className="text-warm-400 dark:text-disc-muted">{t('autoCalc.totalLabel')}</span>
+            <span className="font-bold text-base text-warm-900 dark:text-disc-text">{t('entryList.amount', { amount: totalAmount.toLocaleString() })}</span>
           </span>
           <span className="ml-auto flex items-center gap-2">
             {editingBudget ? (
@@ -497,7 +490,7 @@ export default function DocProjectView({ project: initialProject, initialEntries
                   value={budgetInput}
                   onChange={e => setBudgetInput(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') saveBudget(); if (e.key === 'Escape') setEditingBudget(false) }}
-                  placeholder="กรอบงบ"
+                  placeholder={t('projectView.budget.placeholder')}
                   className="w-28 border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-warm-900 dark:text-disc-text text-sm rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-orange"
                 />
                 <button type="button" onClick={saveBudget} disabled={savingBudget} className="p-1 rounded text-green-600 dark:text-green-400 hover:bg-warm-100 dark:hover:bg-disc-hover transition"><Check size={15} /></button>
@@ -507,12 +500,12 @@ export default function DocProjectView({ project: initialProject, initialEntries
               <button type="button" onClick={() => { setBudgetInput(budget != null ? String(budget) : ''); setEditingBudget(true) }}
                 className="flex items-center gap-1 text-xs text-warm-400 dark:text-disc-muted hover:text-orange transition">
                 <Pencil size={11} />
-                {budget != null ? `งบ ${budget.toLocaleString()} บ.` : 'ตั้งกรอบงบ'}
+                {budget != null ? t('projectView.budget.amountLabel', { amount: budget.toLocaleString() }) : t('projectView.budget.setButton')}
               </button>
             )}
             {budget > 0 && (totalAmount >= budget
-              ? <span className="text-xs font-medium text-green-600 dark:text-green-400">✓ ถึงกรอบงบ</span>
-              : <span className="text-xs font-medium text-amber-600 dark:text-amber-400">ขาด {(budget - totalAmount).toLocaleString()} บ.</span>
+              ? <span className="text-xs font-medium text-green-600 dark:text-green-400">{t('projectView.budget.reached')}</span>
+              : <span className="text-xs font-medium text-amber-600 dark:text-amber-400">{t('projectView.budget.shortfall', { amount: (budget - totalAmount).toLocaleString() })}</span>
             )}
           </span>
         </div>
@@ -524,12 +517,12 @@ export default function DocProjectView({ project: initialProject, initialEntries
           <div className="flex flex-col sm:flex-row sm:items-center gap-2">
             <div className="flex items-center gap-2 shrink-0">
               <CreditCard size={16} className="text-orange shrink-0" />
-              <span className="text-base font-semibold text-warm-900 dark:text-disc-text">ผู้จ่ายเงิน</span>
+              <span className="text-base font-semibold text-warm-900 dark:text-disc-text">{t('projectView.payer.sectionTitle')}</span>
             </div>
             {eligiblePayers.length === 0 ? (
               <p className="text-sm text-warm-400 dark:text-disc-muted">
-                ไม่มีผู้มีสิทธิ์จ่ายที่ครอบคลุมจังหวัด{province ?? 'นี้'} —
-                เพิ่มได้ที่ <Link href="/docs/settings" className="text-orange hover:underline">ตั้งค่าเอกสาร</Link>
+                {t('projectView.payer.noEligiblePayers', { province: province ?? t('projectView.blockReason.thisProvince') })} —{' '}
+                {t('projectView.payer.addAtLabel')} <Link href="/docs/settings" className="text-orange hover:underline">{t('projectView.payer.settingsLinkText')}</Link>
               </p>
             ) : (<>
               <select
@@ -544,7 +537,7 @@ export default function DocProjectView({ project: initialProject, initialEntries
                   </option>
                 ))}
               </select>
-              {payerSavingTop && <span className="text-sm text-warm-400 dark:text-disc-muted">กำลังบันทึก…</span>}
+              {payerSavingTop && <span className="text-sm text-warm-400 dark:text-disc-muted">{t('projectView.payer.saving')}</span>}
               {!canCreate && (
                 <span className="text-sm rounded-lg px-3 py-1.5 bg-orange/10 text-orange">{blockReason}</span>
               )}
@@ -557,17 +550,21 @@ export default function DocProjectView({ project: initialProject, initialEntries
       {canManage && (
         <div className="mb-3">
           <div className="flex gap-2 mb-4 border-b border-warm-200 dark:border-disc-border">
-            {[{ key: 'auto', label: 'อัตโนมัติ' }, { key: 'manual', label: 'กำหนดเอง' }, { key: 'act', label: 'แนบท้าย 3' }].map(t => (
+            {[
+              { key: 'auto', label: t('projectView.tabs.auto') },
+              { key: 'manual', label: t('projectView.tabs.manual') },
+              { key: 'act', label: t('projectView.common.attachment3Label') },
+            ].map(tab => (
               <button
-                key={t.key}
+                key={tab.key}
                 type="button"
-                onClick={() => setBillMode(t.key)}
+                onClick={() => setBillMode(tab.key)}
                 className={`px-4 py-2 text-base font-semibold border-b-2 -mb-px transition
-                  ${billMode === t.key
+                  ${billMode === tab.key
                     ? 'border-orange text-orange'
                     : 'border-transparent text-warm-500 dark:text-disc-muted hover:text-warm-700 dark:hover:text-disc-text'}`}
               >
-                {t.label}
+                {tab.label}
               </button>
             ))}
           </div>
@@ -582,13 +579,13 @@ export default function DocProjectView({ project: initialProject, initialEntries
                   {actEventId && (
                     <a href={`https://act.peoplesparty.or.th/ect-paper-3/?eid=${actEventId}`} target="_blank" rel="noopener noreferrer"
                       className="flex items-center gap-1.5 text-orange hover:underline font-medium text-sm">
-                      พิมพ์แนบท้าย 3 (ใบรายชื่อเปล่า) ↗
+                      {t('projectView.act.printBlankLink')}
                     </a>
                   )}
                   {tokens?.project_token && (
                     <a href={`/dl/${tokens.project_token}/registration`} target="_blank" rel="noopener noreferrer"
                       className="flex items-center gap-1.5 text-orange hover:underline font-medium text-sm">
-                      พิมพ์แนบท้าย 3 (มีลายเซ็นแล้ว) ↗
+                      {t('projectView.act.printSignedLink')}
                     </a>
                   )}
                 </div>
@@ -596,8 +593,8 @@ export default function DocProjectView({ project: initialProject, initialEntries
 
               {/* Upload zone */}
               <div>
-                <p className="text-xs font-semibold text-warm-400 dark:text-disc-muted uppercase tracking-widest mb-1">อัพโหลดแนบท้าย 3 ที่เซ็นแล้ว</p>
-                <p className="text-xs text-warm-400 dark:text-disc-muted mb-2">เร็วๆ นี้: อัพบัตรประชาชนครั้งเดียว ระบบจะแนบลายน้ำคร่อมให้อัตโนมัติทุกครั้ง</p>
+                <p className="text-xs font-semibold text-warm-400 dark:text-disc-muted uppercase tracking-widest mb-1">{t('projectView.act.uploadSectionTitle')}</p>
+                <p className="text-xs text-warm-400 dark:text-disc-muted mb-2">{t('projectView.act.comingSoonNotice')}</p>
                 <button
                   type="button"
                   onClick={() => attInputRef.current?.click()}
@@ -605,11 +602,11 @@ export default function DocProjectView({ project: initialProject, initialEntries
                   className="w-full border-2 border-dashed border-warm-300 dark:border-disc-border rounded-xl py-6 flex flex-col items-center gap-2 text-warm-400 dark:text-disc-muted hover:border-orange hover:text-orange transition disabled:opacity-50 cursor-pointer"
                 >
                   {attUploading
-                    ? <span className="text-sm">กำลังประมวลผล...</span>
+                    ? <span className="text-sm">{t('idCard.processing')}</span>
                     : (<>
                         <FilePlus size={26} />
-                        <span className="text-sm">แตะเพื่ออัพโหลดรูปหรือ PDF</span>
-                        <span className="text-xs opacity-70">JPG / PNG (auto-crop) · PDF</span>
+                        <span className="text-sm">{t('projectView.act.tapToUpload')}</span>
+                        <span className="text-xs opacity-70">{t('projectView.act.fileTypesHint')}</span>
                       </>)
                   }
                 </button>
@@ -632,7 +629,7 @@ export default function DocProjectView({ project: initialProject, initialEntries
                       <div key={att.id} className="relative group rounded-lg overflow-hidden border border-warm-200 dark:border-disc-border aspect-[3/4] bg-warm-100 dark:bg-disc-hover">
                         <img
                           src={src}
-                          alt={att.original_name || `เอกสาร ${i + 1}`}
+                          alt={att.original_name || t('projectView.attachments.documentAlt', { n: i + 1 })}
                           onClick={() => setPreviewIdx(i)}
                           className="w-full h-full object-cover cursor-zoom-in"
                         />
@@ -694,7 +691,7 @@ export default function DocProjectView({ project: initialProject, initialEntries
             <form onSubmit={handleSubmit} className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-5 mb-3 space-y-4">
           {formTotal > 0 && (
             <div className="flex justify-end">
-              <span className="text-base font-semibold text-warm-900 dark:text-disc-text">รวม {formTotal.toLocaleString()} บ.</span>
+              <span className="text-base font-semibold text-warm-900 dark:text-disc-text">{t('projectView.manual.totalLabel', { amount: formTotal.toLocaleString() })}</span>
             </div>
           )}
 
@@ -706,13 +703,13 @@ export default function DocProjectView({ project: initialProject, initialEntries
                 value={query}
                 onChange={e => setQuery(e.target.value)}
                 onFocus={() => { if (!query.trim() && recentMembers.length > 0) setShowDropdown(true) }}
-                placeholder="ค้นชื่อสมาชิก..."
+                placeholder={t('projectView.manual.searchMemberPlaceholder')}
                 className={`${inputCls} pl-9`}
               />
             </div>
             {showDropdown && (searchResults.length > 0 || (!query.trim() && recentMembers.length > 0)) && (
               <ul className="absolute z-10 w-full mt-1 bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg shadow-lg max-h-56 overflow-y-auto">
-                {!query.trim() && <li className="px-4 pt-2 pb-1 text-xs text-warm-400 dark:text-disc-muted font-medium">ล่าสุด</li>}
+                {!query.trim() && <li className="px-4 pt-2 pb-1 text-xs text-warm-400 dark:text-disc-muted font-medium">{t('entryList.recent')}</li>}
                 {(query.trim() ? searchResults : recentMembers).map(m => (
                   <li key={m.discord_id}>
                     <button
@@ -740,7 +737,7 @@ export default function DocProjectView({ project: initialProject, initialEntries
                   <span className="font-semibold text-warm-900 dark:text-disc-text">{m.name}</span>
                   <div className="flex items-center gap-3">
                     {memberTotal > 0 && (
-                      <span className="text-sm text-warm-500 dark:text-disc-muted">{memberTotal.toLocaleString()} บ.</span>
+                      <span className="text-sm text-warm-500 dark:text-disc-muted">{t('entryList.amount', { amount: memberTotal.toLocaleString() })}</span>
                     )}
                     <button type="button" onClick={() => removeMember(m.discordId)} className="p-1 rounded hover:bg-warm-100 dark:hover:bg-disc-hover text-red-500 dark:text-red-400 transition-colors">
                       <X size={16} />
@@ -751,25 +748,25 @@ export default function DocProjectView({ project: initialProject, initialEntries
                   {m.items.map(item => (
                     <div key={item.id} className="flex flex-wrap gap-2 items-center">
                       <select value={item.itemType} onChange={e => updateItem(m.discordId, item.id, 'itemType', e.target.value)} className={`${inputCls} w-full sm:w-40 shrink-0`}>
-                        {allowedItems.map(t => <option key={t} value={t}>{ITEM_LABELS[t]}</option>)}
+                        {allowedItems.map(itemType => <option key={itemType} value={itemType}>{itemLabel(itemType)}</option>)}
                       </select>
                       {item.itemType === 'speaker' && (<>
                         <select value={item.speakerHours} onChange={e => updateItem(m.discordId, item.id, 'speakerHours', Number(e.target.value))} className={`${inputCls} w-24 shrink-0`}>
-                          {[0.5,1,1.5,2,2.5,3,3.5,4,5,6].map(h => <option key={h} value={h}>{h} ชม.</option>)}
+                          {[0.5,1,1.5,2,2.5,3,3.5,4,5,6].map(h => <option key={h} value={h}>{h} {t('projectView.manual.hoursUnit')}</option>)}
                         </select>
                         <select value={item.speakerType} onChange={e => updateItem(m.discordId, item.id, 'speakerType', e.target.value)} className={`${inputCls} w-full sm:w-36 shrink-0`}>
-                          <option value="general">ทั่วไป ({SPEAKER_RULES.rates.general.toLocaleString()})</option>
-                          <option value="government">ข้าราชการ ({SPEAKER_RULES.rates.government.toLocaleString()})</option>
+                          <option value="general">{t('projectView.manual.speakerGeneralOption', { rate: SPEAKER_RULES.rates.general.toLocaleString() })}</option>
+                          <option value="government">{t('projectView.manual.speakerGovernmentOption', { rate: SPEAKER_RULES.rates.government.toLocaleString() })}</option>
                         </select>
                       </>)}
                       {item.itemType === 'sound' && (
                         <select value={item.soundHours} onChange={e => updateItem(m.discordId, item.id, 'soundHours', Number(e.target.value))} className={`${inputCls} w-24 shrink-0`}>
-                          {[1,2,3,4,5,6,7,8].map(h => <option key={h} value={h}>{h} ชม.</option>)}
+                          {[1,2,3,4,5,6,7,8].map(h => <option key={h} value={h}>{h} {t('projectView.manual.hoursUnit')}</option>)}
                         </select>
                       )}
-                      <input type="text" value={item.description} onChange={e => updateItem(m.discordId, item.id, 'description', e.target.value)} placeholder="หมายเหตุ" className={`${inputCls} flex-1 min-w-28`} />
+                      <input type="text" value={item.description} onChange={e => updateItem(m.discordId, item.id, 'description', e.target.value)} placeholder={t('entryList.notePlaceholder')} className={`${inputCls} flex-1 min-w-28`} />
                       <div className="flex gap-2 items-center shrink-0">
-                        <input type="number" min="0" step="0.01" value={item.amount} onChange={e => updateItem(m.discordId, item.id, 'amount', e.target.value)} placeholder="จำนวนเงิน" className={`${inputCls} w-28`} />
+                        <input type="number" min="0" step="0.01" value={item.amount} onChange={e => updateItem(m.discordId, item.id, 'amount', e.target.value)} placeholder={t('projectView.manual.amountPlaceholder')} className={`${inputCls} w-28`} />
                         <button type="button" onClick={() => removeItem(m.discordId, item.id)} disabled={m.items.length === 1} className="p-1.5 rounded hover:bg-warm-100 dark:hover:bg-disc-hover text-warm-400 dark:text-disc-muted disabled:opacity-30 transition-colors shrink-0">
                           <Trash2 size={15} />
                         </button>
@@ -777,7 +774,7 @@ export default function DocProjectView({ project: initialProject, initialEntries
                     </div>
                   ))}
                   <button type="button" onClick={() => addItem(m.discordId)} disabled={!canCreate} title={blockReason || undefined} className="flex items-center gap-1.5 text-sm text-teal hover:text-teal/80 disabled:opacity-40 disabled:cursor-not-allowed transition mt-1">
-                    <Plus size={14} /> เพิ่มรายการ
+                    <Plus size={14} /> {t('projectView.manual.addItemButton')}
                   </button>
                 </div>
               </div>
@@ -786,7 +783,7 @@ export default function DocProjectView({ project: initialProject, initialEntries
 
           {members.length > 0 && (
             <button type="submit" disabled={saving || !canCreate} title={blockReason || undefined} className="px-6 py-2.5 bg-orange text-white text-base font-semibold rounded-lg hover:bg-orange-light disabled:opacity-50 disabled:cursor-not-allowed transition">
-              {saving ? 'กำลังสร้าง...' : `สร้างรายการ (${members.flatMap(m => m.items.filter(i => i.amount)).length})`}
+              {saving ? t('projectView.manual.creating') : t('projectView.manual.createButton', { count: members.flatMap(m => m.items.filter(i => i.amount)).length })}
             </button>
           )}
             </form>
@@ -813,14 +810,14 @@ export default function DocProjectView({ project: initialProject, initialEntries
           <button
             type="button"
             onClick={async () => {
-              if (!confirm(`ล้างบิลทั้งหมด ${entries.length} รายการ? ไม่สามารถยกเลิกได้`)) return
+              if (!confirm(t('projectView.clearAll.confirm', { count: entries.length }))) return
               const res = await fetch(`/api/docs/entries?projectId=${project.id}`, { method: 'DELETE' })
               if (res.ok) { setEntries([]); setRefreshKey(k => k + 1) }
-              else alert('เกิดข้อผิดพลาด')
+              else alert(t('projectView.clearAll.genericError'))
             }}
             className="px-4 py-2 text-sm font-medium text-red-500 dark:text-red-400 border border-red-200 dark:border-red-900 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition"
           >
-            ล้างบิลทั้งหมด
+            {t('projectView.clearAll.button')}
           </button>
         </div>
       )}

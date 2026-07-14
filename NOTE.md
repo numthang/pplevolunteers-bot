@@ -1,40 +1,44 @@
-PENDING
-bot 
+CivicFlow
+- แต่ละหน้าพอเป็น mobile view แล้วไม่สัมพันธ์กับ desktop view ไม่รู้ว่าเพราะข้อจำกัดของ vercel.app ที่ไม่ใช่ native หรือเว็บหรือเปล่า เอาจริงๆ ผมยังไม่เข้าใจว่า vercel.app มันมี supabase อะไรพร้อม ต่างจาก vps แค่ไหน
+
+
+
+Re-positioning
+- workspacefor.org
+- ทำให้เว็บไซต์ หรือ sub-domain ภายนอกใช้ระบบเดียวกันได้แต่ใช้ชื่อของเขาเอง
+
+Web
+- อยากได้หน้า dashboard ของ http://localhost:3000/bot/ ตอนนี้มันวิ่งไป http://localhost:3000/bot/platforms ดูแปลกๆ ไม่มี landing ทำแบบไหนดี เปลี่ยนเป็น config หรือ setting ดีไหม อันไหนดี
+- project หลังจากนี้ จะรู้ไหมว่าผมทำรองรับสองภาษาแล้วอ่ะ แล้วก็ไม่รู้ว่าเราต้อง cleaning memory.md, claude.md ที่บางอัน outdate อะไรบ้างไหม เพื่อลด context ตอนทำงาน
+- อยากทำ Project ย้ายจาก LINE กลุ่มมาใช้ discord เพื่อองค์กรกันเถอะ รายละเอียดยังไม่ได้คิด
+- guild switching ใน hamburger ไม่ต้องมีไหมอ่ะ
+- ต้องทำให้รองรับ config WEB_BASE_URL ที่ไม่ได้มาจาก .env แล้ว แต่ต้องสะท้อน จาก guild_config
+- dc_server_settings เราเลิกใช้แล้วใช่ไหม ถ้าใช่ลบทิ้งไปเลย
+
+Bot 
 - มีวิธีย้ายคนจาก stage ไปห้องประชุมธรรมดาทั้งหมดไหมครับ ผมอยากทำตอนปิดประชุม stage
 
-ระบบ cooking
-- ถ้าผมลบ ingredient แล้ว ที่เคยอยู่ใน เมนู ก่อนหน้านี้จะหายไปเลยใชไหม
-- รูป cart เปลี่ยนเป็นสีอะไรดี มองไม่ค่อยเห็น
-
+Cooking
 - ย้าย cooking ออกจาก discord project เถอะ ไปทำเป็น personal ที่แบบ login หรือไม่ login ก็ได้ ไป schema ใหม่ไปเลยดีมะ ส่วน username เราก็แยกออกไปจาก แอพองค์กรไปเลยเนอะ ดีมะอ่ะ รอให้มี domain ของตัวเองก่อน
 
-ระบบ case
-- ผมลองกรอก บน modal ตอน import case จาก กระทู้ แล้วขึ้น ❌ จังหวัด "กรุงเทพ" ไม่ถูกต้อง กรุณาลองใหม่
+Case
 
-- อยากได้หน้า dashboard ของ http://localhost:3000/bot/ ตอนนี้มันวิ่งไป http://localhost:3000/bot/platforms ดูแปลกๆ ไม่มี landing ทำแบบไหนดี เปลี่ยนเป็น config หรือ setting ดีไหม อันไหนดี
-- guild switching ใน hamburger ไม่ต้องมีไหมอ่ะ
 
-- แบรนดิ้ง ยังไม่ได้สักที
+Project Management
 - ทำระบบจัดการโครงการ project management อย่าง notion, trello, appflowy
 - gogo panel อัพเกรด ให้กดลงชื่องานด้านต่างๆ แล้วลิงก์กับ project management
-- Project ย้ายจาก LINE กลุ่มมาใช้ discord อยากทำอันนี้
 
+Rag-AI
 Tester bot ยัง respond กับการเมนชัน @everyone อยู่เลย แต่เหมือน bot PPLE จะไม่มีปัญหา
 
-- project หลังจากนี้ จะรู้ไหมว่าผมทำรองรับสองภาษาแล้วอ่ะ แล้วก็ไม่รู้ว่าเราต้อง cleaning memory.md, claude.md ที่บางอัน outdate อะไรบ้างไหม เพื่อลด context ตอนทำงาน
+multi-language
+- ยังไม่หมด
 
 End of the Day
-วันที่ 7-9 ผมทำอะไรบ้าง ขอรายละเอียดแบบ non-technichal อ่านแล้วคนอื่นเข้าใจขอ format แบบนี้
+วันที่ 10-13 ผมทำอะไรบ้าง ขอรายละเอียดแบบ non-technichal อ่านแล้วคนอื่นเข้าใจขอ format แบบนี้
 - [วันที่] [เดือน] xxxxxxxxxxxxxxxxxxxxxxxxx, xxxx, xxxxx
 - [วันที่] [เดือน] xxxxxxxxxxxxxxxxxxxxxxxxx, xxxx, xxxxx
 - Update PENDING.md สิ่งที่อยากทำ สิ่งที่ทำไปแล้ว, อ่านส่วนที่แก้ไขแล้วเอาขึ้น git พร้อมข้อความแก้ไข พร้อม bump version ใน package.json ให้ถูกต้อง (เช็ค git log ก่อนว่า version ล่าสุดคืออะไร ใช้ semver — patch สำหรับแก้เล็กน้อย, minor สำหรับฟีเจอร์ใหม่) tag เฉพาะ minor ขึ้นไป และ push ด้วย
-
-
-สรุป workflow ที่เราเคาะกัน — ไว้ใช้รอบหน้า:
-- เริ่มกับ Sonnet ลองไปเรื่อยๆ ให้เห็นรูปร่าง
-- พอเริ่มรู้สึกมั่ว → /model opus สั่งให้ช่วยมองภาพรวม (ไม่ต้องทนจนพังสุด)
-- ฟอร์ม ....... ทั้งฟอร์ม UX งง UI ไม่เป็นระบบ ช่วย redesign ใหม่ทั้ง section: control ให้เหลือชนิดเดียวกัน, accent สีเดียว, label อ่านออกทั้ง light/dark, mobile ห้าม wrap พัง — เสนอ layout direction ให้ดูก่อน แล้วค่อยทำ
-
 
 ===
 Panel Forum: 

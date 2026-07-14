@@ -642,5 +642,395 @@
       "locating": "กำลังระบุตำแหน่ง...",
       "useMyLocation": "ใช้ตำแหน่งของฉัน"
     }
+  },
+  "docs": {
+    "list": {
+      "metaTitle": "โครงการ",
+      "heading": "เอกสาร",
+      "description": "ใบสำคัญรับเงินและเอกสารเบิกจ่ายสำหรับกิจกรรม",
+      "emptyState": "ไม่มีโครงการเอกสาร",
+      "noActiveProjects": "ไม่มีโครงการที่กำลังดำเนินการ",
+      "pastProjectsToggle": "กิจกรรมที่ผ่านแล้ว ({count})",
+      "noProvinceGroup": "ทั่วไป"
+    },
+    "detail": {
+      "defaultTitle": "โครงการ"
+    },
+    "entryList": {
+      "itemLabels": {
+        "food": "ค่าอาหาร",
+        "speaker": "ค่าวิทยากร",
+        "travel": "ค่าเดินทาง",
+        "venue": "ค่าสถานที่",
+        "accommodation": "ค่าที่พัก",
+        "sound": "ค่าเช่าเครื่องเสียง",
+        "supplies": "ค่าวัสดุสิ้นเปลือง",
+        "equipment": "ค่าอุปกรณ์",
+        "photo": "ค่าถ่ายภาพ"
+      },
+      "idCardNotice": "ครั้งแรกระบบจะขอถ่ายบัตรประชาชน 1 ครั้ง และจะมีลายน้ำคร่อมให้อัตโนมัติ",
+      "viewAllPending": "ดูรายการรอเซ็นทั้งหมด: {url}",
+      "recipientRequired": "กรุณาระบุผู้รับก่อนบันทึก",
+      "confirmResetRecipientSignature": "รายการนี้เซ็นรับแล้ว การเปลี่ยนผู้รับเงินจะ reset ลายเซ็น — ยืนยัน?",
+      "confirmResetPayerSignature": "ผู้จ่ายเดิมเซ็นแล้ว การเปลี่ยนจะ reset ลายเซ็นผู้จ่าย — ยืนยัน?",
+      "confirmDelete": "ลบรายการนี้?",
+      "errorPrefix": "เกิดข้อผิดพลาด: {message}",
+      "emptyState": "ยังไม่มีรายการเบิก",
+      "addButton": "เพิ่มรายการ →",
+      "unassigned": "ยังไม่ระบุผู้รับ",
+      "copyRecipientLinkTitle": "คัดลอกลิงก์เซ็นรับ",
+      "copyPayerLinkTitle": "คัดลอกลิงก์เซ็นจ่าย",
+      "recipientLabel": "ผู้รับ",
+      "payerLabel": "ผู้จ่าย",
+      "searchRecipientPlaceholder": "ค้นหาผู้รับเงิน...",
+      "recent": "ล่าสุด",
+      "notePlaceholder": "หมายเหตุ",
+      "selectPayerPlaceholder": "— เลือกผู้จ่าย —",
+      "signReceivedLabel": "เซ็นรับ",
+      "signPaidLabel": "เซ็นจ่าย",
+      "editTitle": "แก้ไข",
+      "deleteTitle": "ลบ",
+      "amount": "{amount} บ."
+    },
+    "pending": {
+      "title": "รอเซ็น",
+      "subtitle": "รายการเบิกจ่ายที่รอลายเซ็นของคุณ",
+      "tabRecipient": "เซ็นรับ",
+      "tabPayer": "เซ็นจ่าย",
+      "loading": "กำลังโหลด...",
+      "emptyRecipient": "ไม่มีรายการรอเซ็นรับ 🎉",
+      "emptyPayer": "ไม่มีรายการรอเซ็นจ่าย 🎉",
+      "expired": "หมดอายุแล้ว",
+      "expiresOn": "หมดอายุ {date}",
+      "amount": "{amount} บ.",
+      "itemLabels": {
+        "food": "ค่าอาหาร",
+        "speaker": "ค่าวิทยากร",
+        "travel": "ค่าเดินทาง",
+        "venue": "ค่าสถานที่",
+        "accommodation": "ค่าที่พัก",
+        "supplies": "ค่าวัสดุ",
+        "equipment": "ค่าอุปกรณ์",
+        "sound": "ค่าเครื่องเสียง",
+        "photo": "ค่าถ่ายภาพ"
+      }
+    },
+    "projectCard": {
+      "statusLabels": {
+        "draft": "ร่าง",
+        "active": "เปิดรับ",
+        "closed": "ปิด"
+      },
+      "notConfigured": "ยังไม่ตั้งค่า",
+      "mobile": "สัญจร",
+      "signedCount": "{signed}/{total} เซ็นแล้ว",
+      "clickToConfigure": "คลิกเพื่อตั้งค่า",
+      "budget": "{amount} บ."
+    },
+    "provinceFilter": {
+      "all": "ทั้งหมด"
+    },
+    "settings": {
+      "metaTitle": "ตั้งค่าเอกสาร",
+      "clientTitle": "ตั้งค่า — Docs",
+      "heading": "ตั้งค่าเอกสาร",
+      "description": "รายชื่อผู้จ่ายเงิน — คนแรกในลิสต์ที่ไม่ใช่ผู้รับเงินจะถูกเลือกอัตโนมัติ",
+      "loading": "กำลังโหลด...",
+      "loadFailed": "โหลดไม่สำเร็จ",
+      "addFailed": "เพิ่มไม่สำเร็จ",
+      "editFailed": "แก้ไขไม่สำเร็จ",
+      "deleteConfirm": "ลบ \"{name}\" ออกจากรายชื่อผู้จ่าย?",
+      "deleteFailed": "ลบไม่สำเร็จ",
+      "payersCount": "ผู้จ่ายเงิน ({count})",
+      "addPayerButton": "เพิ่มผู้จ่ายเงิน",
+      "emptyState": "ยังไม่มีรายชื่อผู้จ่ายเงิน",
+      "displayNameLabel": "ชื่อในเอกสาร",
+      "positionLabel": "ตำแหน่ง",
+      "sortOrderLabel": "ลำดับ",
+      "saveButton": "บันทึก",
+      "cancelButton": "ยกเลิก",
+      "searchMemberLabel": "ค้นหาสมาชิก",
+      "memberSearchPlaceholder": "พิมพ์ชื่อเพื่อค้นหาสมาชิก...",
+      "positionPlaceholder": "เช่น ผู้ประสานงานจังหวัดราชบุรี",
+      "addButton": "เพิ่ม",
+      "noScope": "ไม่ระบุขอบเขต"
+    },
+    "idCard": {
+      "title": "ครอบรูปบัตรประชาชน",
+      "instructions": "ลากเลื่อน · ซูม · หมุน ให้กรอบพอดีบัตร (สัดส่วนบัตรจริงถูกล็อกไว้แล้ว)",
+      "rotateButton": "หมุน",
+      "cancelButton": "ยกเลิก",
+      "processing": "กำลังประมวลผล...",
+      "useThisPhoto": "ใช้รูปนี้"
+    },
+    "autoCalc": {
+      "memberSearch": {
+        "placeholderMulti": "เพิ่มผู้รับ...",
+        "placeholderSingle": "ค้นชื่อผู้รับ...",
+        "recentLabel": "ล่าสุด"
+      },
+      "alerts": {
+        "participantsRequired": "กรุณาใส่จำนวนผู้เข้าร่วม"
+      },
+      "mealLabels": {
+        "lunch": "กลางวัน",
+        "dinner": "เย็น"
+      },
+      "venueTypeLabels": {
+        "hotel": "โรงแรม",
+        "normal": "ทั่วไป"
+      },
+      "speakerTypeLabels": {
+        "general": "บุคคลทั่วไป",
+        "government": "ข้าราชการ"
+      },
+      "items": {
+        "food": {
+          "label": "ค่าอาหาร ({meals})",
+          "description": "ค่าอาหาร{meals} {count} คน",
+          "detail": "{rate} × {mealCount} มื้อ × {count} คน = {total} บ."
+        },
+        "snack": {
+          "label": "ค่าอาหารว่าง ({count} มื้อ)",
+          "description": "ค่าอาหารว่าง {count} มื้อ × {foodCount} คน",
+          "detail": "{rate} × {count} มื้อ × {foodCount} คน = {total} บ."
+        },
+        "speaker": {
+          "label": "ค่าวิทยากร (คนที่ {n})",
+          "description": "ค่าตอบแทนวิทยากร ({type})",
+          "detail": "{rate} บ./ชม. × {hours} ชม. = {total} บ."
+        },
+        "venue": {
+          "label": "ค่าเช่าสถานที่",
+          "description": "ค่าเช่าสถานที่จัดกิจกรรม",
+          "detailCeiling": "เพดานตามจำนวนคน {ceiling} บ.",
+          "detailActual": "ตามจริง"
+        },
+        "sound": {
+          "label": "ค่าเช่าเครื่องเสียง",
+          "description": "ค่าเช่าเครื่องเสียงสำหรับกิจกรรม"
+        },
+        "supplies": {
+          "label": "ค่าอุปกรณ์",
+          "description": "ค่าอุปกรณ์สำหรับกิจกรรม"
+        },
+        "travelLump": {
+          "label": "ค่าเดินทาง (รวม)",
+          "description": "ค่าเดินทาง {count} คน",
+          "detail": "{rate} × {count} คน = {total} บ."
+        },
+        "travelIndividual": {
+          "label": "ค่าเดินทาง",
+          "description": "ค่าเดินทาง",
+          "detail": "กรอกระยะทาง + ผู้รับทีหลัง (ระบบคิดเงินให้)"
+        }
+      },
+      "common": {
+        "detailAmount": "{amount} บ.",
+        "detailPrompt": "กรุณาระบุยอด",
+        "budgetAdjustedDetail": "≈ {perHead} บ./คน × {count} คน = {amount} บ. (ปรับตามกรอบงบ)",
+        "manualEditDetail": "แก้ยอดเอง"
+      },
+      "budgetWarn": "ยอดรวมตอนนี้ {total} บ. (ขาด {shortfall} บ.) เพิ่มรายการเบิก แก้ยอด หรือลดกรอบงบ",
+      "fields": {
+        "participantCountLabel": "จำนวนคน",
+        "participantCountPlaceholder": "50",
+        "budgetLabel": "กรอบงบ (บาท)",
+        "budgetPlaceholder": "ไม่ระบุ = ตามเพดาน",
+        "calcModeLabel": "วิธีคำนวณ",
+        "calcModeHint": "ใส่กรอบงบก่อนถึงจะปรับได้ — ตอนนี้คิดตามเพดานกฎ",
+        "calcModeBudgetOption": "ตามกรอบงบ — ตัดให้พอดีงบ",
+        "calcModeMaxOption": "สูงสุด — ตามเพดานกฎกองทุน",
+        "eventTypeLabel": "ประเภทกิจกรรม",
+        "mobileEventCheck": "กิจกรรมสัญจร (ออกบูธ/ลงพื้นที่)",
+        "hotelCheck": "จัดที่โรงแรม / รีสอร์ท",
+        "expandItemsButton": "+ เลือกรายการเบิกเพิ่มเติม",
+        "travelCheck": "ค่าเดินทาง",
+        "travelLumpOption": "เท่ากันทุกคน — ในจังหวัด {rate} บ./คน (ใบเดียว)",
+        "travelIndividualOption": "จ่ายตามจริง — แยกรายบุคคล (กรอกระยะทางทีหลัง)",
+        "travelIndividualHint": "สร้างใบเปล่าแยกรายคน → กรอกระยะทาง+ผู้รับทีละคนในรายการ ระบบคิดเงินให้",
+        "foodCheck": "ค่าอาหาร",
+        "foodRateHint": "{rate} บ./คน/มื้อ ({venueLabel})",
+        "snackCheck": "ค่าอาหารว่าง / เบรก",
+        "snackRateHint": "{rate} บ./คน/มื้อ ({venueLabel})",
+        "speakerCheck": "ค่าวิทยากร",
+        "speakerCountLabel": "จำนวน (สูงสุด {max})",
+        "speakerHoursLabel": "ชั่วโมง/คน",
+        "speakerTypeLabel": "ประเภท",
+        "speakerTypeGeneralOption": "ทั่วไป ({rate} บ./ชม.)",
+        "speakerTypeGovernmentOption": "ข้าราชการ ({rate} บ./ชม.)",
+        "venueCheck": "ค่าเช่าสถานที่",
+        "venueAmountPlaceholder": "ยอดเงิน",
+        "venueCeilingHint": "เพดานตามจำนวนคน {ceiling} บ. (ปล่อยว่าง = ใช้เพดาน)",
+        "venueNoCeilingHint": "กรอกจำนวนคนเพื่อดูเพดาน",
+        "soundCheck": "ค่าเช่าเครื่องเสียง",
+        "suppliesCheck": "ค่าอุปกรณ์",
+        "noDateHint": "* ไม่มีข้อมูลวันเวลากิจกรรม — ค่าอาหาร/อาหารว่างจะไม่คำนวณ"
+      },
+      "calculateButton": "คำนวณ",
+      "perHeadUnit": "บ./คน",
+      "currencyUnit": "บ.",
+      "descriptionPlaceholder": "คำอธิบายรายการ (ใส่ใน PDF)",
+      "creatingButton": "กำลังสร้าง...",
+      "setPayerFirstButton": "ตั้งผู้จ่ายก่อน",
+      "createButton": "สร้าง {count} รายการ",
+      "totalLabel": "ยอดรวม"
+    },
+    "projectView": {
+      "upload": {
+        "uploadFailed": "อัพโหลดไม่สำเร็จ: {message}"
+      },
+      "attachments": {
+        "confirmDelete": "ลบไฟล์นี้?",
+        "documentAlt": "เอกสาร {n}"
+      },
+      "tokens": {
+        "confirmRegenerate": "สร้างลิงก์ใหม่? ลิงก์เก่าทั้งสองจะใช้ไม่ได้ทันที"
+      },
+      "blockReason": {
+        "needBudget": "ต้องระบุกรอบงบก่อนจึงจะสร้างบิลได้",
+        "needPayers": "จังหวัด{province}มีผู้มีสิทธิ์จ่ายไม่ถึง 2 คน — เพิ่มที่ตั้งค่าเอกสารก่อนจึงจะสร้างบิลได้",
+        "thisProvince": "นี้"
+      },
+      "payer": {
+        "confirmResetPayerSignature": "มีผู้จ่ายเซ็นไปแล้วบางรายการ การเปลี่ยนจะ reset ลายเซ็นผู้จ่าย — ยืนยัน?",
+        "noEligiblePayers": "ไม่มีผู้มีสิทธิ์จ่ายที่ครอบคลุมจังหวัด{province}",
+        "addAtLabel": "เพิ่มได้ที่",
+        "settingsLinkText": "ตั้งค่าเอกสาร",
+        "sectionTitle": "ผู้จ่ายเงิน",
+        "saving": "กำลังบันทึก…"
+      },
+      "validation": {
+        "entriesRequired": "กรุณาใส่รายการอย่างน้อย 1 รายการ"
+      },
+      "header": {
+        "receiptButton": "ใบสำคัญรับเงิน",
+        "regenerateLinkButton": "สร้างลิงก์ใหม่",
+        "setupExpenseItems": "ตั้งค่ารายการเบิก"
+      },
+      "common": {
+        "attachment3Label": "แนบท้าย 3"
+      },
+      "stats": {
+        "itemsLabel": "รายการ",
+        "recipientSignedLabel": "ผู้รับเซ็น",
+        "payerSignedLabel": "ผู้จ่ายเซ็น"
+      },
+      "budget": {
+        "placeholder": "กรอบงบ",
+        "amountLabel": "งบ {amount} บ.",
+        "setButton": "ตั้งกรอบงบ",
+        "reached": "✓ ถึงกรอบงบ",
+        "shortfall": "ขาด {amount} บ."
+      },
+      "tabs": {
+        "auto": "อัตโนมัติ",
+        "manual": "กำหนดเอง"
+      },
+      "act": {
+        "printBlankLink": "พิมพ์แนบท้าย 3 (ใบรายชื่อเปล่า) ↗",
+        "printSignedLink": "พิมพ์แนบท้าย 3 (มีลายเซ็นแล้ว) ↗",
+        "uploadSectionTitle": "อัพโหลดแนบท้าย 3 ที่เซ็นแล้ว",
+        "comingSoonNotice": "เร็วๆ นี้: อัพบัตรประชาชนครั้งเดียว ระบบจะแนบลายน้ำคร่อมให้อัตโนมัติทุกครั้ง",
+        "tapToUpload": "แตะเพื่ออัพโหลดรูปหรือ PDF",
+        "fileTypesHint": "JPG / PNG (auto-crop) · PDF"
+      },
+      "manual": {
+        "totalLabel": "รวม {amount} บ.",
+        "searchMemberPlaceholder": "ค้นชื่อสมาชิก...",
+        "amountPlaceholder": "จำนวนเงิน",
+        "addItemButton": "เพิ่มรายการ",
+        "creating": "กำลังสร้าง...",
+        "createButton": "สร้างรายการ ({count})",
+        "hoursUnit": "ชม.",
+        "speakerGeneralOption": "ทั่วไป ({rate})",
+        "speakerGovernmentOption": "ข้าราชการ ({rate})"
+      },
+      "clearAll": {
+        "confirm": "ล้างบิลทั้งหมด {count} รายการ? ไม่สามารถยกเลิกได้",
+        "genericError": "เกิดข้อผิดพลาด",
+        "button": "ล้างบิลทั้งหมด"
+      }
+    },
+    "sign": {
+      "invalidLink": "ลิงก์ไม่ถูกต้อง",
+      "idNumberRequired": "กรุณากรอกเลขบัตรประชาชน 13 หลัก",
+      "nameRequired": "กรุณากรอกชื่อและนามสกุล",
+      "fileTooLarge": "ไฟล์ใหญ่เกิน 8 MB",
+      "idCardUploadFailed": "อัปโหลดไม่สำเร็จ",
+      "signPayerTitle": "ลงนามผู้จ่ายเงิน",
+      "signReceiptTitle": "เซ็นใบสำคัญรับเงิน",
+      "loginPrompt": "กรุณาเข้าสู่ระบบด้วย Discord เพื่อยืนยันตัวตนก่อนเซ็น",
+      "loginButton": "เข้าสู่ระบบด้วย Discord",
+      "signedBanner": "เซ็นแล้ว",
+      "signedBannerNote": "· เซ็นใหม่ทับได้",
+      "downloadPdf": "ดาวน์โหลด PDF",
+      "signingAsPayer": "ลงนามในฐานะผู้จ่ายเงิน",
+      "recipientLabel": "ผู้รับเงิน:",
+      "confirmIdentityTitle": "ยืนยันตัวตน",
+      "selfFillIntro": "กรอกข้อมูลตามบัตรประชาชน เพื่อให้ข้อมูลในเอกสารถูกต้อง",
+      "selfForm": {
+        "fields": {
+          "firstName": "ชื่อ (ไม่ต้องใส่คำนำหน้า)",
+          "lastName": "นามสกุล",
+          "idNumber": "เลขบัตรประชาชน 13 หลัก",
+          "houseNo": "บ้านเลขที่",
+          "moo": "หมู่ที่",
+          "road": "ถนน/ซอย",
+          "subdistrict": "ตำบล/แขวง",
+          "district": "อำเภอ/เขต",
+          "provinceAddr": "จังหวัด",
+          "phone": "เบอร์โทรศัพท์"
+        },
+        "saveButton": "บันทึกข้อมูล",
+        "saving": "กำลังบันทึก...",
+        "cancel": "ยกเลิก",
+        "backToSearch": "กลับไปค้นหา"
+      },
+      "ngsSearch": {
+        "intro": "ค้นหาชื่อ-นามสกุลของคุณในระบบสมาชิก เพื่อให้ข้อมูลในเอกสารถูกต้อง",
+        "placeholder": "พิมพ์ชื่อหรือนามสกุล...",
+        "notFound": "ไม่พบชื่อในทะเบียนสมาชิก? กรอกข้อมูลเอง",
+        "confirmIdentity": "ยืนยันว่าเป็น {name} โดยกรอกเลขบัตรประชาชน",
+        "idPlaceholder": "เลขบัตรประชาชน 13 หลัก",
+        "confirmButton": "ยืนยันตัวตน",
+        "confirming": "กำลังยืนยัน...",
+        "reselect": "เลือกใหม่"
+      },
+      "selfInfoSaved": "ใช้ข้อมูลผู้รับที่บันทึกไว้ (ชื่อ เลขบัตร ที่อยู่) — ตรวจได้จากตัวอย่างเอกสารด้านล่าง",
+      "editInfo": "แก้ไขข้อมูล",
+      "idCard": {
+        "title": "ภาพบัตรประชาชน",
+        "hint": "(ทำครั้งเดียว crop เฉพาะบัตร ระบบจะเซ็นคร่อมให้อัตโนมัติ)",
+        "attached": "แนบสำเนาบัตรแล้ว",
+        "changeImage": "เปลี่ยนรูป",
+        "alt": "สำเนาบัตรประชาชน",
+        "uploadIntro": "อัปโหลดครั้งเดียว ใช้แนบทุกใบสำคัญรับเงิน — ระบบจะใส่ลายน้ำ \"ใช้สำหรับพรรคประชาชนเท่านั้น\" ให้อัตโนมัติ",
+        "uploading": "กำลังอัปโหลด...",
+        "selectButton": "+ เลือกรูปสำเนาบัตร"
+      },
+      "preview": {
+        "title": "ตัวอย่างเอกสาร",
+        "reload": "โหลดใหม่",
+        "intro": "ตรวจสอบความถูกต้องของใบสำคัญรับเงินก่อนเซ็น",
+        "loading": "กำลังโหลดตัวอย่าง...",
+        "pageAlt": "หน้า {n}",
+        "openInNewTab": "เปิดในแท็บใหม่"
+      },
+      "signature": {
+        "titlePayer": "ลายเซ็นผู้จ่ายเงิน",
+        "title": "ลายเซ็น",
+        "clear": "ล้าง",
+        "placeholder": "เซ็นชื่อที่นี่",
+        "note": "ลายเซ็นนี้จะถูกบันทึกพร้อมชื่อ Discord และเวลาประทับ"
+      },
+      "submit": {
+        "saving": "กำลังบันทึก...",
+        "resign": "เซ็นใหม่",
+        "confirmPayment": "ยืนยันการจ่ายเงิน",
+        "confirmSignature": "ยืนยันลายเซ็น"
+      },
+      "layoutTitle": "เซ็นเอกสาร"
+    }
   }
 }

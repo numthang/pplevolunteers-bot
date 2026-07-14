@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 import { Calculator, Search, X, ChevronDown } from 'lucide-react'
 import { calcMeals, FOOD_RATES, calcSpeakerCeiling, SPEAKER_RULES, calcVenueCeiling, TRAVEL_INDIVIDUAL_TIERS } from '@/config/fund69-rules.js'
 
@@ -14,6 +15,7 @@ const labelCls        = 'text-sm font-medium text-warm-700 dark:text-disc-text'
 const hintCls         = 'text-xs text-warm-500 dark:text-disc-muted'
 
 function MemberSearch({ selected, multi, onSelect, onRemove, suggestions = [] }) {
+  const t = useTranslations('docs')
   const [query, setQuery] = useState('')
   const [results, setResults] = useState([])
   const [open, setOpen] = useState(false)
@@ -64,13 +66,13 @@ function MemberSearch({ selected, multi, onSelect, onRemove, suggestions = [] })
             value={query}
             onChange={e => setQuery(e.target.value)}
             onFocus={() => { if (!query.trim() && visibleList.length > 0) setOpen(true) }}
-            placeholder={multi ? 'เพิ่มผู้รับ...' : 'ค้นชื่อผู้รับ...'}
+            placeholder={multi ? t('autoCalc.memberSearch.placeholderMulti') : t('autoCalc.memberSearch.placeholderSingle')}
             className="w-full border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-warm-900 dark:text-disc-text pl-8 pr-3 py-2 text-sm rounded-lg placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-orange"
           />
           {open && visibleList.length > 0 && (
             <ul className="absolute z-20 w-full mt-1 bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg shadow-lg max-h-48 overflow-y-auto">
               {!query.trim() && (
-                <li className="px-3 pt-2 pb-1 text-xs text-warm-400 dark:text-disc-muted font-medium">ล่าสุด</li>
+                <li className="px-3 pt-2 pb-1 text-xs text-warm-400 dark:text-disc-muted font-medium">{t('autoCalc.memberSearch.recentLabel')}</li>
               )}
               {visibleList.map(m => (
                 <li key={m.discord_id}>
@@ -126,6 +128,7 @@ function Check({ label, checked, disabled, onChange }) {
 }
 
 export default function DocAutoCalc({ eventDate, eventEndDate, participantCount, isMobile: isMobileProp = false, projectBudget = null, onBudgetChange, onSubmit, saving, canCreate = true, blockReason = null, province = null }) {
+  const t = useTranslations('docs')
   const [n, setN]                       = useState(participantCount ? String(participantCount) : '')
   const [isMobile, setIsMobile]         = useState(isMobileProp)
   const [foodEnabled, setFoodEnabled]   = useState(true)   // ค่าอาหาร (มื้อหลัก) default ติ๊ก
@@ -182,10 +185,10 @@ export default function DocAutoCalc({ eventDate, eventEndDate, participantCount,
 
   function calculate() {
     const count = parseInt(n)
-    if (!count || count <= 0) { alert('กรุณาใส่จำนวนผู้เข้าร่วม'); return }
+    if (!count || count <= 0) { alert(t('autoCalc.alerts.participantsRequired')); return }
     const budgetVal = parseFloat(budget) || 0
 
-    const MEAL_LABEL = { lunch: 'กลางวัน', dinner: 'เย็น' }
+    const MEAL_LABEL = { lunch: t('autoCalc.mealLabels.lunch'), dinner: t('autoCalc.mealLabels.dinner') }
 
     // ดึงข้อมูล meal ครั้งเดียว แล้วใช้ซ้ำเมื่อต้อง scale
     let mealMeta = null
@@ -217,21 +220,24 @@ export default function DocAutoCalc({ eventDate, eventEndDate, participantCount,
       if (!mealMeta) return []
       const { main, snack, rate } = mealMeta
       const result = []
-      if (foodEnabled && main.length > 0) result.push({
-        itemType: 'food',
-        label: `ค่าอาหาร (${main.map(m => MEAL_LABEL[m]).join('+')})`,
-        description: `ค่าอาหาร${main.map(m => MEAL_LABEL[m]).join('+')} ${foodCount} คน`,
-        amount: main.length * rate.main * foodCount,
-        detail: `${rate.main} × ${main.length} มื้อ × ${foodCount} คน = ${(main.length * rate.main * foodCount).toLocaleString()} บ.`,
-        isIndividual: false,
-      })
+      if (foodEnabled && main.length > 0) {
+        const meals = main.map(m => MEAL_LABEL[m]).join('+')
+        result.push({
+          itemType: 'food',
+          label: t('autoCalc.items.food.label', { meals }),
+          description: t('autoCalc.items.food.description', { meals, count: foodCount }),
+          amount: main.length * rate.main * foodCount,
+          detail: t('autoCalc.items.food.detail', { rate: rate.main, mealCount: main.length, count: foodCount, total: (main.length * rate.main * foodCount).toLocaleString() }),
+          isIndividual: false,
+        })
+      }
       const snackRate = FOOD_RATES[venueType].snack
       if (snackEnabled && snack > 0) result.push({
         itemType: 'food',
-        label: `ค่าอาหารว่าง (${snack} มื้อ)`,
-        description: `ค่าอาหารว่าง ${snack} มื้อ × ${foodCount} คน`,
+        label: t('autoCalc.items.snack.label', { count: snack }),
+        description: t('autoCalc.items.snack.description', { count: snack, foodCount }),
         amount: snack * snackRate * foodCount,
-        detail: `${snackRate} × ${snack} มื้อ × ${foodCount} คน = ${(snack * snackRate * foodCount).toLocaleString()} บ.`,
+        detail: t('autoCalc.items.snack.detail', { rate: snackRate, count: snack, foodCount, total: (snack * snackRate * foodCount).toLocaleString() }),
         isIndividual: false,
       })
       return result
@@ -248,14 +254,14 @@ export default function DocAutoCalc({ eventDate, eventEndDate, participantCount,
       const mins   = Math.round((hrs - hFloor) * 60)
       const rate   = SPEAKER_RULES.rates[speakerType]
       const amount = calcSpeakerCeiling({ hours: hFloor, minutes: mins, isGovOfficer: speakerType === 'government' })
-      const typeLabel = speakerType === 'government' ? 'ข้าราชการ' : 'บุคคลทั่วไป'
+      const typeLabel = speakerType === 'government' ? t('autoCalc.speakerTypeLabels.government') : t('autoCalc.speakerTypeLabels.general')
       for (let i = 0; i < cnt; i++) {
         nonFoodItems.push({
           itemType:     'speaker',
-          label:        `ค่าวิทยากร (คนที่ ${i + 1})`,
-          description:  `ค่าตอบแทนวิทยากร (${typeLabel})`,
+          label:        t('autoCalc.items.speaker.label', { n: i + 1 }),
+          description:  t('autoCalc.items.speaker.description', { type: typeLabel }),
           amount,
-          detail:       `${rate.toLocaleString()} บ./ชม. × ${hrs} ชม. = ${amount.toLocaleString()} บ.`,
+          detail:       t('autoCalc.items.speaker.detail', { rate: rate.toLocaleString(), hours: hrs, total: amount.toLocaleString() }),
           isIndividual: false,
           overrideData: { duration: String(hrs) },
         })
@@ -267,10 +273,10 @@ export default function DocAutoCalc({ eventDate, eventEndDate, participantCount,
       const amount  = parseFloat(venueAmount) || ceiling || 0  // กรอกเอง > เพดานตามคน
       nonFoodItems.push({
         itemType:     'venue',
-        label:        'ค่าเช่าสถานที่',
-        description:  'ค่าเช่าสถานที่จัดกิจกรรม',
+        label:        t('autoCalc.items.venue.label'),
+        description:  t('autoCalc.items.venue.description'),
         amount,
-        detail:       ceiling ? `เพดานตามจำนวนคน ${ceiling.toLocaleString()} บ.` : 'ตามจริง',
+        detail:       ceiling ? t('autoCalc.items.venue.detailCeiling', { ceiling: ceiling.toLocaleString() }) : t('autoCalc.items.venue.detailActual'),
         isIndividual: false,
       })
     }
@@ -279,10 +285,10 @@ export default function DocAutoCalc({ eventDate, eventEndDate, participantCount,
       const amount = parseFloat(soundAmount) || 0
       nonFoodItems.push({
         itemType:     'sound',
-        label:        'ค่าเช่าเครื่องเสียง',
-        description:  'ค่าเช่าเครื่องเสียงสำหรับกิจกรรม',
+        label:        t('autoCalc.items.sound.label'),
+        description:  t('autoCalc.items.sound.description'),
         amount,
-        detail:       amount ? `${amount.toLocaleString()} บ.` : 'กรุณาระบุยอด',
+        detail:       amount ? t('autoCalc.common.detailAmount', { amount: amount.toLocaleString() }) : t('autoCalc.common.detailPrompt'),
         isIndividual: false,
         overrideData: durationHours > 0 ? { duration: String(Math.round(durationHours)) } : undefined,
       })
@@ -292,10 +298,10 @@ export default function DocAutoCalc({ eventDate, eventEndDate, participantCount,
       const amount = parseFloat(suppliesAmount) || 0
       nonFoodItems.push({
         itemType:     'supplies',
-        label:        'ค่าอุปกรณ์',
-        description:  'ค่าอุปกรณ์สำหรับกิจกรรม',
+        label:        t('autoCalc.items.supplies.label'),
+        description:  t('autoCalc.items.supplies.description'),
         amount,
-        detail:       amount ? `${amount.toLocaleString()} บ.` : 'กรุณาระบุยอด',
+        detail:       amount ? t('autoCalc.common.detailAmount', { amount: amount.toLocaleString() }) : t('autoCalc.common.detailPrompt'),
         isIndividual: false,
       })
     }
@@ -306,10 +312,10 @@ export default function DocAutoCalc({ eventDate, eventEndDate, participantCount,
         const rate = TRAVEL_IN_PROVINCE_RATE
         nonFoodItems.push({
           itemType:     'travel',
-          label:        'ค่าเดินทาง (รวม)',
-          description:  `ค่าเดินทาง ${count} คน`,
+          label:        t('autoCalc.items.travelLump.label'),
+          description:  t('autoCalc.items.travelLump.description', { count }),
           amount:       rate * count,
-          detail:       `${rate} × ${count} คน = ${(rate * count).toLocaleString()} บ.`,
+          detail:       t('autoCalc.items.travelLump.detail', { rate, count, total: (rate * count).toLocaleString() }),
           isIndividual: false,
         })
       } else {
@@ -317,10 +323,10 @@ export default function DocAutoCalc({ eventDate, eventEndDate, participantCount,
         for (let i = 0; i < count; i++) {
           nonFoodItems.push({
             itemType:     'travel',
-            label:        'ค่าเดินทาง',
-            description:  'ค่าเดินทาง',
+            label:        t('autoCalc.items.travelIndividual.label'),
+            description:  t('autoCalc.items.travelIndividual.description'),
             amount:       0,
-            detail:       'กรอกระยะทาง + ผู้รับทีหลัง (ระบบคิดเงินให้)',
+            detail:       t('autoCalc.items.travelIndividual.detail'),
             isIndividual: false,
             noMember:     true,
           })
@@ -361,7 +367,7 @@ export default function DocAutoCalc({ eventDate, eventEndDate, participantCount,
               const amount = idx === arr.length - 1 ? foodShare - acc : Math.round(it.amount * foodShare / totalFoodNat)
               if (idx !== arr.length - 1) acc += amount
               const perHead = count > 0 ? Math.round(amount / count) : 0
-              return { ...it, amount, detail: `≈ ${perHead.toLocaleString()} บ./คน × ${count} คน = ${amount.toLocaleString()} บ. (ปรับตามกรอบงบ)` }
+              return { ...it, amount, detail: t('autoCalc.common.budgetAdjustedDetail', { perHead: perHead.toLocaleString(), count, amount: amount.toLocaleString() }) }
             })
           } else {
             foodItems = []
@@ -372,10 +378,10 @@ export default function DocAutoCalc({ eventDate, eventEndDate, participantCount,
             const perHead = count > 0 ? Math.round(travelShare / count) : 0
             finalNonFood = [...fixedItems, {
               itemType:     'travel',
-              label:        'ค่าเดินทาง (รวม)',
-              description:  `ค่าเดินทาง ${count} คน`,
+              label:        t('autoCalc.items.travelLump.label'),
+              description:  t('autoCalc.items.travelLump.description', { count }),
               amount:       travelShare,
-              detail:       `≈ ${perHead.toLocaleString()} บ./คน × ${count} คน = ${travelShare.toLocaleString()} บ. (ปรับตามกรอบงบ)`,
+              detail:       t('autoCalc.common.budgetAdjustedDetail', { perHead: perHead.toLocaleString(), count, amount: travelShare.toLocaleString() }),
               isIndividual: false,
             }]
           } else {
@@ -393,7 +399,7 @@ export default function DocAutoCalc({ eventDate, eventEndDate, participantCount,
   function updateAmount(i, val) {
     const amount = val === '' ? 0 : (parseFloat(val) || 0)
     setProposal(prev => prev.map((it, j) =>
-      j === i ? { ...it, amount, detail: 'แก้ยอดเอง', edited: true } : it
+      j === i ? { ...it, amount, detail: t('autoCalc.common.manualEditDetail'), edited: true } : it
     ))
   }
 
@@ -461,7 +467,7 @@ export default function DocAutoCalc({ eventDate, eventEndDate, participantCount,
   const budgetVal2     = parseFloat(budget) || 0
   const hasDeferred    = !!proposal?.some(it => it.noMember)
   const budgetWarn     = (proposal && budgetVal2 > 0 && !hasDeferred && grandTotal < budgetVal2)
-    ? `ยอดรวมตอนนี้ ${grandTotal.toLocaleString()} บ. (ขาด ${(budgetVal2 - grandTotal).toLocaleString()} บ.) เพิ่มรายการเบิก แก้ยอด หรือลดกรอบงบ`
+    ? t('autoCalc.budgetWarn', { total: grandTotal.toLocaleString(), shortfall: (budgetVal2 - grandTotal).toLocaleString() })
     : null
 
   return (
@@ -469,40 +475,40 @@ export default function DocAutoCalc({ eventDate, eventEndDate, participantCount,
 
       {/* จำนวนคน + กรอบงบ */}
       <div className="grid grid-cols-2 gap-3">
-        <Field label="จำนวนคน">
+        <Field label={t('autoCalc.fields.participantCountLabel')}>
           <input
             type="number" min="1" value={n} onChange={e => setN(e.target.value)}
-            placeholder="50" className={inputCls}
+            placeholder={t('autoCalc.fields.participantCountPlaceholder')} className={inputCls}
           />
         </Field>
-        <Field label="กรอบงบ (บาท)">
+        <Field label={t('autoCalc.fields.budgetLabel')}>
           <input
             type="number" min="0" step="100" value={budget}
             onChange={e => setBudget(e.target.value)}
             onBlur={() => { if (onBudgetChange) onBudgetChange(budget === '' ? null : parseFloat(budget)) }}
-            placeholder="ไม่ระบุ = ตามเพดาน" className={inputCls}
+            placeholder={t('autoCalc.fields.budgetPlaceholder')} className={inputCls}
           />
         </Field>
       </div>
 
       {/* วิธีคำนวณ — global (อยู่คู่กับกรอบงบ) */}
-      <Field label="วิธีคำนวณ" hint={hasBudget ? undefined : 'ใส่กรอบงบก่อนถึงจะปรับได้ — ตอนนี้คิดตามเพดานกฎ'}>
+      <Field label={t('autoCalc.fields.calcModeLabel')} hint={hasBudget ? undefined : t('autoCalc.fields.calcModeHint')}>
         <select value={budgetMode} onChange={e => setBudgetMode(e.target.value)} disabled={!hasBudget} className={`${inputCls} disabled:opacity-50`}>
-          <option value="budget">ตามกรอบงบ — ตัดให้พอดีงบ</option>
-          <option value="max">สูงสุด — ตามเพดานกฎกองทุน</option>
+          <option value="budget">{t('autoCalc.fields.calcModeBudgetOption')}</option>
+          <option value="max">{t('autoCalc.fields.calcModeMaxOption')}</option>
         </select>
       </Field>
 
       {/* ประเภทกิจกรรม */}
-      <Field label="ประเภทกิจกรรม">
+      <Field label={t('autoCalc.fields.eventTypeLabel')}>
         <div className="space-y-2">
           <Check
-            label="กิจกรรมสัญจร (ออกบูธ/ลงพื้นที่)"
+            label={t('autoCalc.fields.mobileEventCheck')}
             checked={isMobile}
             onChange={() => toggleMobile(!isMobile)}
           />
           <Check
-            label="จัดที่โรงแรม / รีสอร์ท"
+            label={t('autoCalc.fields.hotelCheck')}
             checked={venueType === 'hotel'}
             onChange={() => setVenueType(v => v === 'hotel' ? 'normal' : 'hotel')}
           />
@@ -516,22 +522,22 @@ export default function DocAutoCalc({ eventDate, eventEndDate, participantCount,
           onClick={() => setShowItems(v => !v)}
           className="w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg bg-orange/10 hover:bg-orange/20 border border-orange/30 transition-colors"
         >
-          <span className="text-sm font-semibold text-orange">+ เลือกรายการเบิกเพิ่มเติม</span>
+          <span className="text-sm font-semibold text-orange">{t('autoCalc.fields.expandItemsButton')}</span>
           <ChevronDown size={15} className={`text-orange transition-transform shrink-0 ${showItems ? '' : '-rotate-90'}`} />
         </button>
         {showItems && <div className="space-y-2">
 
           {/* ค่าเดินทาง */}
           <div>
-            <Check label="ค่าเดินทาง" checked={travelEnabled} onChange={() => setTravelEnabled(v => !v)} />
+            <Check label={t('autoCalc.fields.travelCheck')} checked={travelEnabled} onChange={() => setTravelEnabled(v => !v)} />
             {travelEnabled && (
               <div className="mt-2 ml-7">
                 <select value={travelMode} onChange={e => setTravelMode(e.target.value)} className={inputCls}>
-                  <option value="lump">เท่ากันทุกคน — ในจังหวัด {TRAVEL_IN_PROVINCE_RATE} บ./คน (ใบเดียว)</option>
-                  <option value="individual">จ่ายตามจริง — แยกรายบุคคล (กรอกระยะทางทีหลัง)</option>
+                  <option value="lump">{t('autoCalc.fields.travelLumpOption', { rate: TRAVEL_IN_PROVINCE_RATE })}</option>
+                  <option value="individual">{t('autoCalc.fields.travelIndividualOption')}</option>
                 </select>
                 {travelMode === 'individual' && (
-                  <p className={`${hintCls} mt-1`}>สร้างใบเปล่าแยกรายคน → กรอกระยะทาง+ผู้รับทีละคนในรายการ ระบบคิดเงินให้</p>
+                  <p className={`${hintCls} mt-1`}>{t('autoCalc.fields.travelIndividualHint')}</p>
                 )}
               </div>
             )}
@@ -539,35 +545,35 @@ export default function DocAutoCalc({ eventDate, eventEndDate, participantCount,
 
           {/* ค่าอาหาร (มื้อหลัก) — เรทตาม toggle โรงแรม ด้านบน */}
           <div>
-            <Check label="ค่าอาหาร" checked={foodEnabled} onChange={() => setFoodEnabled(v => !v)} />
+            <Check label={t('autoCalc.fields.foodCheck')} checked={foodEnabled} onChange={() => setFoodEnabled(v => !v)} />
             {foodEnabled && (
-              <p className={`${hintCls} mt-1 ml-7`}>{FOOD_RATES[venueType].main} บ./คน/มื้อ ({venueType === 'hotel' ? 'โรงแรม' : 'ทั่วไป'})</p>
+              <p className={`${hintCls} mt-1 ml-7`}>{t('autoCalc.fields.foodRateHint', { rate: FOOD_RATES[venueType].main, venueLabel: venueType === 'hotel' ? t('autoCalc.venueTypeLabels.hotel') : t('autoCalc.venueTypeLabels.normal') })}</p>
             )}
           </div>
 
           {/* ค่าอาหารว่าง / เบรก — เรทตาม toggle โรงแรม ด้านบน */}
           <div>
-            <Check label="ค่าอาหารว่าง / เบรก" checked={snackEnabled} onChange={() => setSnackEnabled(v => !v)} />
+            <Check label={t('autoCalc.fields.snackCheck')} checked={snackEnabled} onChange={() => setSnackEnabled(v => !v)} />
             {snackEnabled && (
-              <p className={`${hintCls} mt-1 ml-7`}>{FOOD_RATES[venueType].snack} บ./คน/มื้อ ({venueType === 'hotel' ? 'โรงแรม' : 'ทั่วไป'})</p>
+              <p className={`${hintCls} mt-1 ml-7`}>{t('autoCalc.fields.snackRateHint', { rate: FOOD_RATES[venueType].snack, venueLabel: venueType === 'hotel' ? t('autoCalc.venueTypeLabels.hotel') : t('autoCalc.venueTypeLabels.normal') })}</p>
             )}
           </div>
 
           {/* ค่าวิทยากร */}
           <div>
-            <Check label="ค่าวิทยากร" checked={speakerEnabled} disabled={isMobile} onChange={() => setSpeakerEnabled(v => !v)} />
+            <Check label={t('autoCalc.fields.speakerCheck')} checked={speakerEnabled} disabled={isMobile} onChange={() => setSpeakerEnabled(v => !v)} />
             {speakerEnabled && !isMobile && (
               <div className="mt-2 ml-7 grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <Field label={`จำนวน (สูงสุด ${SPEAKER_RULES.maxPerEvent})`}>
+                <Field label={t('autoCalc.fields.speakerCountLabel', { max: SPEAKER_RULES.maxPerEvent })}>
                   <input type="number" min="1" max={SPEAKER_RULES.maxPerEvent} value={speakerCount} onChange={e => setSpeakerCount(e.target.value)} className={inputCls} />
                 </Field>
-                <Field label="ชั่วโมง/คน">
+                <Field label={t('autoCalc.fields.speakerHoursLabel')}>
                   <input type="number" min="0.5" step="0.5" value={speakerHours} onChange={e => setSpeakerHours(e.target.value)} className={inputCls} />
                 </Field>
-                <Field label="ประเภท">
+                <Field label={t('autoCalc.fields.speakerTypeLabel')}>
                   <select value={speakerType} onChange={e => setSpeakerType(e.target.value)} className={inputCls}>
-                    <option value="general">ทั่วไป ({SPEAKER_RULES.rates.general.toLocaleString()} บ./ชม.)</option>
-                    <option value="government">ข้าราชการ ({SPEAKER_RULES.rates.government.toLocaleString()} บ./ชม.)</option>
+                    <option value="general">{t('autoCalc.fields.speakerTypeGeneralOption', { rate: SPEAKER_RULES.rates.general.toLocaleString() })}</option>
+                    <option value="government">{t('autoCalc.fields.speakerTypeGovernmentOption', { rate: SPEAKER_RULES.rates.government.toLocaleString() })}</option>
                   </select>
                 </Field>
               </div>
@@ -576,17 +582,17 @@ export default function DocAutoCalc({ eventDate, eventEndDate, participantCount,
 
           {/* ค่าเช่าสถานที่ */}
           <div>
-            <Check label="ค่าเช่าสถานที่" checked={venueEnabled} disabled={isMobile} onChange={toggleVenue} />
+            <Check label={t('autoCalc.fields.venueCheck')} checked={venueEnabled} disabled={isMobile} onChange={toggleVenue} />
             {venueEnabled && !isMobile && (
               <div className="mt-2 ml-7">
                 <input
                   type="number" min="0" step="100" value={venueAmount}
                   onChange={e => setVenueAmount(e.target.value)}
-                  placeholder={venueCeiling() ? String(venueCeiling()) : 'ยอดเงิน'}
+                  placeholder={venueCeiling() ? String(venueCeiling()) : t('autoCalc.fields.venueAmountPlaceholder')}
                   className={inputCls}
                 />
                 <p className={`${hintCls} mt-1`}>
-                  {venueCeiling() ? `เพดานตามจำนวนคน ${venueCeiling().toLocaleString()} บ. (ปล่อยว่าง = ใช้เพดาน)` : 'กรอกจำนวนคนเพื่อดูเพดาน'}
+                  {venueCeiling() ? t('autoCalc.fields.venueCeilingHint', { ceiling: venueCeiling().toLocaleString() }) : t('autoCalc.fields.venueNoCeilingHint')}
                 </p>
               </div>
             )}
@@ -594,20 +600,20 @@ export default function DocAutoCalc({ eventDate, eventEndDate, participantCount,
 
           {/* ค่าเช่าเครื่องเสียง — เบิกไม่ได้ถ้าจัดในโรงแรม */}
           <div>
-            <Check label="ค่าเช่าเครื่องเสียง" checked={soundEnabled} disabled={venueType === 'hotel'} onChange={() => setSoundEnabled(v => !v)} />
+            <Check label={t('autoCalc.fields.soundCheck')} checked={soundEnabled} disabled={venueType === 'hotel'} onChange={() => setSoundEnabled(v => !v)} />
             {soundEnabled && venueType !== 'hotel' && (
               <div className="mt-2 ml-7">
-                <input type="number" min="0" step="100" value={soundAmount} onChange={e => setSoundAmount(e.target.value)} placeholder="ยอดเงิน" className={inputCls} />
+                <input type="number" min="0" step="100" value={soundAmount} onChange={e => setSoundAmount(e.target.value)} placeholder={t('autoCalc.fields.venueAmountPlaceholder')} className={inputCls} />
               </div>
             )}
           </div>
 
           {/* ค่าอุปกรณ์ */}
           <div>
-            <Check label="ค่าอุปกรณ์" checked={suppliesEnabled} onChange={() => setSuppliesEnabled(v => !v)} />
+            <Check label={t('autoCalc.fields.suppliesCheck')} checked={suppliesEnabled} onChange={() => setSuppliesEnabled(v => !v)} />
             {suppliesEnabled && (
               <div className="mt-2 ml-7">
-                <input type="number" min="0" step="100" value={suppliesAmount} onChange={e => setSuppliesAmount(e.target.value)} placeholder="ยอดเงิน" className={inputCls} />
+                <input type="number" min="0" step="100" value={suppliesAmount} onChange={e => setSuppliesAmount(e.target.value)} placeholder={t('autoCalc.fields.venueAmountPlaceholder')} className={inputCls} />
               </div>
             )}
           </div>
@@ -616,7 +622,7 @@ export default function DocAutoCalc({ eventDate, eventEndDate, participantCount,
       </div>
 
       {!eventDate && (foodEnabled || snackEnabled) && (
-        <p className={hintCls}>* ไม่มีข้อมูลวันเวลากิจกรรม — ค่าอาหาร/อาหารว่างจะไม่คำนวณ</p>
+        <p className={hintCls}>{t('autoCalc.fields.noDateHint')}</p>
       )}
 
       <button
@@ -624,7 +630,7 @@ export default function DocAutoCalc({ eventDate, eventEndDate, participantCount,
         onClick={calculate}
         className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-orange text-white text-base font-semibold rounded-lg hover:bg-orange-light transition"
       >
-        <Calculator size={16} /> คำนวณ
+        <Calculator size={16} /> {t('autoCalc.calculateButton')}
       </button>
 
       {proposal && (
@@ -640,7 +646,7 @@ export default function DocAutoCalc({ eventDate, eventEndDate, participantCount,
                     onChange={e => updateAmount(i, e.target.value)}
                     className="w-28 border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-warm-900 dark:text-disc-text px-2.5 py-1.5 text-base rounded-lg text-right tabular-nums focus:outline-none focus:ring-2 focus:ring-orange"
                   />
-                  <span className="text-sm text-warm-500 dark:text-disc-muted">{item.isIndividual ? 'บ./คน' : 'บ.'}</span>
+                  <span className="text-sm text-warm-500 dark:text-disc-muted">{item.isIndividual ? t('autoCalc.perHeadUnit') : t('autoCalc.currencyUnit')}</span>
                   <button
                     type="button"
                     onClick={() => {
@@ -658,7 +664,7 @@ export default function DocAutoCalc({ eventDate, eventEndDate, participantCount,
                 type="text"
                 value={item.description || ''}
                 onChange={e => updateDescription(i, e.target.value)}
-                placeholder="คำอธิบายรายการ (ใส่ใน PDF)"
+                placeholder={t('autoCalc.descriptionPlaceholder')}
                 className="w-full mb-3 border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-warm-900 dark:text-disc-text px-2.5 py-1.5 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-orange"
               />
               <MemberSearch
@@ -685,12 +691,12 @@ export default function DocAutoCalc({ eventDate, eventEndDate, participantCount,
               title={blockReason || undefined}
               className="px-6 py-2.5 bg-orange text-white text-base font-semibold rounded-lg hover:bg-orange-light disabled:opacity-50 disabled:cursor-not-allowed transition"
             >
-              {saving ? 'กำลังสร้าง...' : !canCreate ? 'ตั้งผู้จ่ายก่อน' : `สร้าง ${proposal.length} รายการ`}
+              {saving ? t('autoCalc.creatingButton') : !canCreate ? t('autoCalc.setPayerFirstButton') : t('autoCalc.createButton', { count: proposal.length })}
             </button>
             {grandTotal > 0 && (
               <div className="text-right">
-                <div className="text-xs text-warm-500 dark:text-disc-muted">ยอดรวม</div>
-                <div className="text-lg font-bold text-warm-900 dark:text-disc-text tabular-nums">{grandTotal.toLocaleString()} บ.</div>
+                <div className="text-xs text-warm-500 dark:text-disc-muted">{t('autoCalc.totalLabel')}</div>
+                <div className="text-lg font-bold text-warm-900 dark:text-disc-text tabular-nums">{grandTotal.toLocaleString()} {t('autoCalc.currencyUnit')}</div>
               </div>
             )}
           </div>

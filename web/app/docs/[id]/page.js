@@ -1,3 +1,4 @@
+import { getTranslations } from 'next-intl/server'
 import { getSession } from '@/lib/auth.js'
 import { redirect, notFound } from 'next/navigation'
 import { canManageDocs } from '@/lib/docsAccess.js'
@@ -12,11 +13,12 @@ import DocProjectView from '@/components/docs/DocProjectView'
 
 export async function generateMetadata({ params }) {
   const { id: eventCacheId } = await params
+  const t = await getTranslations('docs')
   const session = await getSession()
-  if (!session) return { title: 'โครงการ' }
+  if (!session) return { title: t('detail.defaultTitle') }
   const guildId = await getGuildId(session)
   const meta = await getActEventById(eventCacheId, guildId).catch(() => null)
-  return { title: meta?.name ?? 'โครงการ' }
+  return { title: meta?.name ?? t('detail.defaultTitle') }
 }
 
 export default async function DocProjectPage({ params }) {

@@ -3,14 +3,11 @@
 import { useState, useEffect, useRef, use } from 'react'
 import { useSession, signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { CheckCircle, AlertTriangle, Pen, Search, UserCheck, IdCard, FileText, RefreshCw, CreditCard } from 'lucide-react'
 import IdCardCropper from '@/components/docs/IdCardCropper'
 
-const ITEM_LABELS = {
-  food: 'ค่าอาหาร', speaker: 'ค่าวิทยากร', travel: 'ค่าเดินทาง',
-  venue: 'ค่าสถานที่', accommodation: 'ค่าที่พัก', supplies: 'ค่าวัสดุสิ้นเปลือง',
-  equipment: 'ค่าอุปกรณ์', photo: 'ค่าถ่ายภาพ',
-}
+const ITEM_LABEL_KEYS = ['food', 'speaker', 'travel', 'venue', 'accommodation', 'supplies', 'equipment', 'photo']
 
 const THAI_MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.']
 function formatDate(dateStr) {
@@ -23,6 +20,7 @@ function formatDate(dateStr) {
 }
 
 export default function SignPage({ params }) {
+  const t = useTranslations('docs')
   const { token } = use(params)
   const { data: session, status } = useSession()
 
@@ -78,7 +76,7 @@ export default function SignPage({ params }) {
     fetch(`/api/docs/sign/verify?token=${encodeURIComponent(token)}`)
       .then(r => r.json())
       .then(d => {
-        if (!d.success) setLoadErr(d.error || 'ลิงก์ไม่ถูกต้อง')
+        if (!d.success) setLoadErr(d.error || t('sign.invalidLink'))
         else {
           setEntry(d.data)
           const role = d.data.signer_role || 'recipient'
@@ -94,7 +92,7 @@ export default function SignPage({ params }) {
           }
         }
       })
-      .catch(() => setLoadErr('เกิดข้อผิดพลาด'))
+      .catch(() => setLoadErr(t('projectView.clearAll.genericError')))
       .finally(() => setLoading(false))
   }, [token, status])
 
@@ -109,8 +107,8 @@ export default function SignPage({ params }) {
     setPreviewErr('')
     fetch(`/api/docs/sign/preview-img?token=${encodeURIComponent(token)}&v=${previewVer}`)
       .then(r => r.json())
-      .then(d => { if (d.pages) setPreviewPages(d.pages); else setPreviewErr(d.error || 'โหลดไม่สำเร็จ') })
-      .catch(() => setPreviewErr('โหลดไม่สำเร็จ'))
+      .then(d => { if (d.pages) setPreviewPages(d.pages); else setPreviewErr(d.error || t('settings.loadFailed')) })
+      .catch(() => setPreviewErr(t('settings.loadFailed')))
       .finally(() => setPreviewLoading(false))
   }, [signerRole, ngsLinked, selfInfoDone, entry, token, previewVer])
 
@@ -156,7 +154,7 @@ export default function SignPage({ params }) {
   async function confirmNgsLink() {
     if (!selectedNgs) return
     const idDigits = idInput.replace(/\D/g, '')
-    if (idDigits.length !== 13) { setNgsErr('กรุณากรอกเลขบัตรประชาชน 13 หลัก'); return }
+    if (idDigits.length !== 13) { setNgsErr(t('sign.idNumberRequired')); return }
     setNgsErr('')
     setNgsLinking(true)
     try {
@@ -217,8 +215,8 @@ export default function SignPage({ params }) {
 
   async function saveSelfInfo() {
     const idDigits = selfForm.idNumber.replace(/\D/g, '')
-    if (!selfForm.firstName.trim() || !selfForm.lastName.trim()) { setSelfErr('กรุณากรอกชื่อและนามสกุล'); return }
-    if (idDigits.length !== 13) { setSelfErr('กรุณากรอกเลขบัตรประชาชน 13 หลัก'); return }
+    if (!selfForm.firstName.trim() || !selfForm.lastName.trim()) { setSelfErr(t('sign.nameRequired')); return }
+    if (idDigits.length !== 13) { setSelfErr(t('sign.idNumberRequired')); return }
     setSelfErr('')
     setSelfSaving(true)
     try {
@@ -243,7 +241,7 @@ export default function SignPage({ params }) {
   function onIdCardFile(file) {
     if (!file) return
     setIdCardErr('')
-    if (file.size > 8 * 1024 * 1024) { setIdCardErr('ไฟล์ใหญ่เกิน 8 MB'); return }
+    if (file.size > 8 * 1024 * 1024) { setIdCardErr(t('sign.fileTooLarge')); return }
     const reader = new FileReader()
     reader.onload = () => setCropSrc(reader.result)
     reader.readAsDataURL(file)
@@ -260,7 +258,7 @@ export default function SignPage({ params }) {
       fd.append('token', token)
       const res = await fetch('/api/docs/id-card', { method: 'POST', body: fd })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'อัปโหลดไม่สำเร็จ')
+      if (!res.ok) throw new Error(data.error || t('sign.idCardUploadFailed'))
       setHasIdCard(true)
       setIdCardPreviewUrl(URL.createObjectURL(blob))
     } catch (err) {
@@ -320,7 +318,7 @@ export default function SignPage({ params }) {
       setPreviewVer(v => v + 1)   // โหลด preview ใหม่ (เผื่อ render มีลายเซ็น)
       window.scrollTo({ top: 0, behavior: 'smooth' })
     } catch (err) {
-      alert('เกิดข้อผิดพลาด: ' + err.message)
+      alert(t('entryList.errorPrefix', { message: err.message }))
     } finally {
       setSubmitting(false)
     }
@@ -331,7 +329,7 @@ export default function SignPage({ params }) {
   if (status === 'loading' || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-warm-50 dark:bg-disc-bg2">
-        <p className="text-warm-500 dark:text-disc-muted">กำลังโหลด...</p>
+        <p className="text-warm-500 dark:text-disc-muted">{t('pending.loading')}</p>
       </div>
     )
   }
@@ -341,7 +339,7 @@ export default function SignPage({ params }) {
       <div className="min-h-screen flex items-center justify-center bg-warm-50 dark:bg-disc-bg2 p-4">
         <div className="max-w-sm w-full bg-card-bg border border-warm-200 dark:border-disc-border rounded-2xl p-8 text-center">
           <AlertTriangle size={48} className="mx-auto text-red-500 mb-4" />
-          <h1 className="text-xl font-bold text-warm-900 dark:text-disc-text mb-2">ลิงก์ไม่ถูกต้อง</h1>
+          <h1 className="text-xl font-bold text-warm-900 dark:text-disc-text mb-2">{t('sign.invalidLink')}</h1>
           <p className="text-warm-500 dark:text-disc-muted text-base">{loadErr}</p>
         </div>
       </div>
@@ -354,16 +352,16 @@ export default function SignPage({ params }) {
         <div className="max-w-sm w-full bg-card-bg border border-warm-200 dark:border-disc-border rounded-2xl p-8 text-center">
           <Pen size={48} className="mx-auto text-orange mb-4" />
           <h1 className="text-xl font-bold text-warm-900 dark:text-disc-text mb-3">
-            {signerRole === 'payer' ? 'ลงนามผู้จ่ายเงิน' : 'เซ็นใบสำคัญรับเงิน'}
+            {signerRole === 'payer' ? t('sign.signPayerTitle') : t('sign.signReceiptTitle')}
           </h1>
           <p className="text-warm-500 dark:text-disc-muted text-base mb-6">
-            กรุณาเข้าสู่ระบบด้วย Discord เพื่อยืนยันตัวตนก่อนเซ็น
+            {t('sign.loginPrompt')}
           </p>
           <button
             onClick={() => signIn('discord', { callbackUrl: `/docs/sign/${token}` })}
             className="w-full bg-[#5865F2] text-white py-3 rounded-lg text-base font-semibold hover:bg-[#4752C4] transition"
           >
-            เข้าสู่ระบบด้วย Discord
+            {t('sign.loginButton')}
           </button>
         </div>
       </div>
@@ -389,8 +387,8 @@ export default function SignPage({ params }) {
         {isSigned && (
           <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-900/40 rounded-xl p-4 flex items-center justify-between gap-3">
             <span className="flex items-center gap-2 text-green-700 dark:text-green-400 font-semibold">
-              <CheckCircle size={18} className="shrink-0" /> เซ็นแล้ว
-              <span className="font-normal text-sm text-green-600/80 dark:text-green-400/70">· เซ็นใหม่ทับได้</span>
+              <CheckCircle size={18} className="shrink-0" /> {t('sign.signedBanner')}
+              <span className="font-normal text-sm text-green-600/80 dark:text-green-400/70">{t('sign.signedBannerNote')}</span>
             </span>
             <a
               href={`/api/docs/sign/pdf?token=${encodeURIComponent(token)}`}
@@ -398,7 +396,7 @@ export default function SignPage({ params }) {
               rel="noopener noreferrer"
               className="text-sm font-medium text-orange hover:underline shrink-0"
             >
-              ดาวน์โหลด PDF
+              {t('sign.downloadPdf')}
             </a>
           </div>
         )}
@@ -408,10 +406,10 @@ export default function SignPage({ params }) {
           {signerRole === 'payer' && (
             <div className="flex items-center gap-2 mb-3 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-900/40">
               <CreditCard size={15} className="text-blue-600 dark:text-blue-400 shrink-0" />
-              <span className="text-sm text-blue-700 dark:text-blue-300 font-medium">ลงนามในฐานะผู้จ่ายเงิน</span>
+              <span className="text-sm text-blue-700 dark:text-blue-300 font-medium">{t('sign.signingAsPayer')}</span>
             </div>
           )}
-          <h1 className="text-lg font-bold text-warm-900 dark:text-disc-text mb-1">ใบสำคัญรับเงิน</h1>
+          <h1 className="text-lg font-bold text-warm-900 dark:text-disc-text mb-1">{t('projectView.header.receiptButton')}</h1>
           {entry && (
             <>
               <p className="text-base font-medium text-warm-900 dark:text-disc-text">{entry.event_name}</p>
@@ -421,15 +419,17 @@ export default function SignPage({ params }) {
               </p>
               <div className="border-t border-warm-100 dark:border-disc-border pt-3 space-y-1.5">
                 <div className="flex justify-between text-base">
-                  <span className="text-warm-600 dark:text-disc-muted">{ITEM_LABELS[entry.item_type] || entry.item_type}</span>
-                  <span className="font-semibold text-warm-900 dark:text-disc-text">{Number(entry.amount).toLocaleString()} บ.</span>
+                  <span className="text-warm-600 dark:text-disc-muted">
+                    {ITEM_LABEL_KEYS.includes(entry.item_type) ? t(`entryList.itemLabels.${entry.item_type}`) : entry.item_type}
+                  </span>
+                  <span className="font-semibold text-warm-900 dark:text-disc-text">{Number(entry.amount).toLocaleString()} {t('autoCalc.currencyUnit')}</span>
                 </div>
                 {entry.description && (
                   <p className="text-sm text-warm-500 dark:text-disc-muted">{entry.description}</p>
                 )}
               </div>
               <div className="mt-3 pt-3 border-t border-warm-100 dark:border-disc-border text-sm text-warm-500 dark:text-disc-muted">
-                ผู้รับเงิน: <span className="font-medium text-warm-900 dark:text-disc-text">
+                {t('sign.recipientLabel')} <span className="font-medium text-warm-900 dark:text-disc-text">
                   {entry.ngs_first_name && entry.ngs_last_name
                     ? `${entry.ngs_first_name} ${entry.ngs_last_name} (@${entry.display_name})`
                     : entry.display_name}
@@ -444,19 +444,17 @@ export default function SignPage({ params }) {
           <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-6">
             <div className="flex items-center gap-2 mb-1">
               <UserCheck size={18} className="text-orange shrink-0" />
-              <h2 className="text-base font-semibold text-warm-900 dark:text-disc-text">ยืนยันตัวตน</h2>
+              <h2 className="text-base font-semibold text-warm-900 dark:text-disc-text">{t('sign.confirmIdentityTitle')}</h2>
             </div>
             {selfMode ? (
               <>
                 <p className="text-sm text-warm-500 dark:text-disc-muted mb-3">
-                  กรอกข้อมูลตามบัตรประชาชน เพื่อให้ข้อมูลในเอกสารถูกต้อง
+                  {t('sign.selfFillIntro')}
                 </p>
                 <div className="grid grid-cols-2 gap-2">
-                  {[
-                    ['firstName', 'ชื่อ (ไม่ต้องใส่คำนำหน้า)'], ['lastName', 'นามสกุล'],
-                  ].map(([key, label]) => (
+                  {['firstName', 'lastName'].map(key => (
                     <div key={key}>
-                      <label className="block text-sm text-warm-700 dark:text-disc-text mb-1">{label}</label>
+                      <label className="block text-sm text-warm-700 dark:text-disc-text mb-1">{t(`sign.selfForm.fields.${key}`)}</label>
                       <input
                         type="text"
                         value={selfForm[key]}
@@ -466,7 +464,7 @@ export default function SignPage({ params }) {
                     </div>
                   ))}
                   <div className="col-span-2">
-                    <label className="block text-sm text-warm-700 dark:text-disc-text mb-1">เลขบัตรประชาชน 13 หลัก</label>
+                    <label className="block text-sm text-warm-700 dark:text-disc-text mb-1">{t('sign.selfForm.fields.idNumber')}</label>
                     <input
                       type="text"
                       inputMode="numeric"
@@ -476,12 +474,9 @@ export default function SignPage({ params }) {
                       className="w-full border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-warm-900 dark:text-disc-text px-3 py-2.5 text-base rounded-lg tracking-widest focus:outline-none focus:ring-2 focus:ring-orange"
                     />
                   </div>
-                  {[
-                    ['houseNo', 'บ้านเลขที่'], ['moo', 'หมู่ที่'], ['road', 'ถนน/ซอย'],
-                    ['subdistrict', 'ตำบล/แขวง'], ['district', 'อำเภอ/เขต'], ['provinceAddr', 'จังหวัด'],
-                  ].map(([key, label]) => (
+                  {['houseNo', 'moo', 'road', 'subdistrict', 'district', 'provinceAddr'].map(key => (
                     <div key={key}>
-                      <label className="block text-sm text-warm-700 dark:text-disc-text mb-1">{label}</label>
+                      <label className="block text-sm text-warm-700 dark:text-disc-text mb-1">{t(`sign.selfForm.fields.${key}`)}</label>
                       <input
                         type="text"
                         value={selfForm[key]}
@@ -491,7 +486,7 @@ export default function SignPage({ params }) {
                     </div>
                   ))}
                   <div className="col-span-2">
-                    <label className="block text-sm text-warm-700 dark:text-disc-text mb-1">เบอร์โทรศัพท์</label>
+                    <label className="block text-sm text-warm-700 dark:text-disc-text mb-1">{t('sign.selfForm.fields.phone')}</label>
                     <input
                       type="tel"
                       inputMode="numeric"
@@ -510,7 +505,7 @@ export default function SignPage({ params }) {
                     disabled={selfSaving}
                     className="flex-1 bg-orange text-white py-2.5 rounded-lg text-base font-semibold hover:bg-orange-light disabled:opacity-50 transition"
                   >
-                    {selfSaving ? 'กำลังบันทึก...' : 'บันทึกข้อมูล'}
+                    {selfSaving ? t('sign.selfForm.saving') : t('sign.selfForm.saveButton')}
                   </button>
                   <button
                     type="button"
@@ -518,14 +513,14 @@ export default function SignPage({ params }) {
                     disabled={selfSaving}
                     className="px-4 py-2.5 text-base text-warm-500 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text transition"
                   >
-                    {selfInfoDone ? 'ยกเลิก' : 'กลับไปค้นหา'}
+                    {selfInfoDone ? t('sign.selfForm.cancel') : t('sign.selfForm.backToSearch')}
                   </button>
                 </div>
               </>
             ) : !selectedNgs ? (
               <>
                 <p className="text-sm text-warm-500 dark:text-disc-muted mb-3">
-                  ค้นหาชื่อ-นามสกุลของคุณในระบบสมาชิก เพื่อให้ข้อมูลในเอกสารถูกต้อง
+                  {t('sign.ngsSearch.intro')}
                 </p>
                 <div className="relative" ref={ngsDropRef}>
                   <div className="relative">
@@ -534,7 +529,7 @@ export default function SignPage({ params }) {
                       type="text"
                       value={ngsQuery}
                       onChange={e => setNgsQuery(e.target.value)}
-                      placeholder="พิมพ์ชื่อหรือนามสกุล..."
+                      placeholder={t('sign.ngsSearch.placeholder')}
                       className="w-full border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-warm-900 dark:text-disc-text pl-9 pr-3 py-2.5 text-base rounded-lg placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-orange"
                     />
                   </div>
@@ -561,20 +556,20 @@ export default function SignPage({ params }) {
                   onClick={openSelfMode}
                   className="mt-3 text-sm text-warm-500 dark:text-disc-muted hover:text-orange underline underline-offset-2 transition"
                 >
-                  ไม่พบชื่อในทะเบียนสมาชิก? กรอกข้อมูลเอง
+                  {t('sign.ngsSearch.notFound')}
                 </button>
               </>
             ) : (
               <>
                 <p className="text-sm text-warm-500 dark:text-disc-muted mb-1">
-                  ยืนยันว่าเป็น <span className="font-medium text-warm-900 dark:text-disc-text">{selectedNgs.first_name} {selectedNgs.last_name}</span> โดยกรอกเลขบัตรประชาชน
+                  {t('sign.ngsSearch.confirmIdentity', { name: `${selectedNgs.first_name} ${selectedNgs.last_name}` })}
                 </p>
                 <input
                   type="text"
                   inputMode="numeric"
                   value={idInput}
                   onChange={e => setIdInput(e.target.value)}
-                  placeholder="เลขบัตรประชาชน 13 หลัก"
+                  placeholder={t('sign.ngsSearch.idPlaceholder')}
                   maxLength={17}
                   className="w-full border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-warm-900 dark:text-disc-text px-3 py-2.5 text-base rounded-lg tracking-widest placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-orange mt-2"
                 />
@@ -586,7 +581,7 @@ export default function SignPage({ params }) {
                     disabled={ngsLinking}
                     className="flex-1 bg-orange text-white py-2.5 rounded-lg text-base font-semibold hover:bg-orange-light disabled:opacity-50 transition"
                   >
-                    {ngsLinking ? 'กำลังยืนยัน...' : 'ยืนยันตัวตน'}
+                    {ngsLinking ? t('sign.ngsSearch.confirming') : t('sign.ngsSearch.confirmButton')}
                   </button>
                   <button
                     type="button"
@@ -594,7 +589,7 @@ export default function SignPage({ params }) {
                     disabled={ngsLinking}
                     className="px-4 py-2.5 text-base text-warm-500 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text transition"
                   >
-                    เลือกใหม่
+                    {t('sign.ngsSearch.reselect')}
                   </button>
                 </div>
               </>
@@ -608,7 +603,7 @@ export default function SignPage({ params }) {
             <div className="flex items-center gap-2 min-w-0">
               <UserCheck size={18} className="text-green-600 dark:text-green-400 shrink-0" />
               <p className="text-sm text-warm-700 dark:text-disc-text truncate">
-                ใช้ข้อมูลผู้รับที่บันทึกไว้ (ชื่อ เลขบัตร ที่อยู่) — ตรวจได้จากตัวอย่างเอกสารด้านล่าง
+                {t('sign.selfInfoSaved')}
               </p>
             </div>
             <button
@@ -616,7 +611,7 @@ export default function SignPage({ params }) {
               onClick={openSelfMode}
               className="shrink-0 text-sm text-warm-500 dark:text-disc-muted hover:text-orange underline underline-offset-2 transition"
             >
-              แก้ไขข้อมูล
+              {t('sign.editInfo')}
             </button>
           </div>
         )}
@@ -626,13 +621,13 @@ export default function SignPage({ params }) {
           <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-6">
             <div className="flex items-center gap-2 mb-1">
               <IdCard size={18} className="text-orange shrink-0" />
-              <h2 className="text-base font-semibold text-warm-900 dark:text-disc-text">ภาพบัตรประชาชน <span className="text-sm font-normal text-warm-400 dark:text-disc-muted">(ทำครั้งเดียว crop เฉพาะบัตร ระบบจะเซ็นคร่อมให้อัตโนมัติ)</span></h2>
+              <h2 className="text-base font-semibold text-warm-900 dark:text-disc-text">{t('sign.idCard.title')} <span className="text-sm font-normal text-warm-400 dark:text-disc-muted">{t('sign.idCard.hint')}</span></h2>
             </div>
             {hasIdCard ? (
               <div className="mt-2">
                 <div className="flex items-center justify-between gap-2 mb-3">
                   <p className="flex items-center gap-1.5 text-base text-green-600 dark:text-green-400">
-                    <CheckCircle size={16} /> แนบสำเนาบัตรแล้ว
+                    <CheckCircle size={16} /> {t('sign.idCard.attached')}
                   </p>
                   <button
                     type="button"
@@ -640,13 +635,13 @@ export default function SignPage({ params }) {
                     disabled={uploading}
                     className="text-sm text-warm-400 dark:text-disc-muted hover:text-orange transition"
                   >
-                    เปลี่ยนรูป
+                    {t('sign.idCard.changeImage')}
                   </button>
                 </div>
                 {idCardPreviewUrl && (
                   <img
                     src={idCardPreviewUrl}
-                    alt="สำเนาบัตรประชาชน"
+                    alt={t('sign.idCard.alt')}
                     className="w-full max-h-52 object-contain rounded-lg border border-warm-200 dark:border-disc-border bg-warm-50 dark:bg-disc-hover"
                   />
                 )}
@@ -654,7 +649,7 @@ export default function SignPage({ params }) {
             ) : (
               <>
                 <p className="text-sm text-warm-500 dark:text-disc-muted mb-3">
-                  อัปโหลดครั้งเดียว ใช้แนบทุกใบสำคัญรับเงิน — ระบบจะใส่ลายน้ำ "ใช้สำหรับพรรคประชาชนเท่านั้น" ให้อัตโนมัติ
+                  {t('sign.idCard.uploadIntro')}
                 </p>
                 <button
                   type="button"
@@ -662,7 +657,7 @@ export default function SignPage({ params }) {
                   disabled={uploading}
                   className="w-full border-2 border-dashed border-warm-300 dark:border-disc-border rounded-lg py-3 text-base text-warm-600 dark:text-disc-muted hover:border-orange hover:text-orange disabled:opacity-50 transition"
                 >
-                  {uploading ? 'กำลังอัปโหลด...' : '+ เลือกรูปสำเนาบัตร'}
+                  {uploading ? t('sign.idCard.uploading') : t('sign.idCard.selectButton')}
                 </button>
               </>
             )}
@@ -683,22 +678,22 @@ export default function SignPage({ params }) {
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <FileText size={18} className="text-orange shrink-0" />
-                <h2 className="text-base font-semibold text-warm-900 dark:text-disc-text">ตัวอย่างเอกสาร</h2>
+                <h2 className="text-base font-semibold text-warm-900 dark:text-disc-text">{t('sign.preview.title')}</h2>
               </div>
               <button
                 type="button"
                 onClick={() => setPreviewVer(v => v + 1)}
                 className="flex items-center gap-1.5 text-sm text-warm-400 dark:text-disc-muted hover:text-orange transition"
               >
-                <RefreshCw size={14} /> โหลดใหม่
+                <RefreshCw size={14} /> {t('sign.preview.reload')}
               </button>
             </div>
             <p className="text-sm text-warm-500 dark:text-disc-muted mb-3">
-              ตรวจสอบความถูกต้องของใบสำคัญรับเงินก่อนเซ็น
+              {t('sign.preview.intro')}
             </p>
             {previewLoading && (
               <div className="flex items-center justify-center py-12 text-warm-400 dark:text-disc-muted text-sm">
-                กำลังโหลดตัวอย่าง...
+                {t('sign.preview.loading')}
               </div>
             )}
             {previewErr && (
@@ -707,7 +702,7 @@ export default function SignPage({ params }) {
             {!previewLoading && previewPages.length > 0 && (
               <div className="space-y-2">
                 {previewPages.map((src, i) => (
-                  <img key={i} src={src} alt={`หน้า ${i + 1}`} className="w-full rounded-lg border border-warm-200 dark:border-disc-border" />
+                  <img key={i} src={src} alt={t('sign.preview.pageAlt', { n: i + 1 })} className="w-full rounded-lg border border-warm-200 dark:border-disc-border" />
                 ))}
               </div>
             )}
@@ -717,7 +712,7 @@ export default function SignPage({ params }) {
               rel="noopener noreferrer"
               className="mt-2 flex items-center justify-center gap-2 w-full py-2.5 rounded-lg border border-warm-200 dark:border-disc-border text-sm text-warm-500 dark:text-disc-muted hover:text-orange hover:border-orange transition"
             >
-              <FileText size={14} /> เปิดในแท็บใหม่
+              <FileText size={14} /> {t('sign.preview.openInNewTab')}
             </a>
           </div>
         )}
@@ -728,18 +723,18 @@ export default function SignPage({ params }) {
             <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-6">
               <div className="flex items-center justify-between mb-3">
                 <h2 className="text-base font-semibold text-warm-900 dark:text-disc-text">
-                  {signerRole === 'payer' ? 'ลายเซ็นผู้จ่ายเงิน' : 'ลายเซ็น'}
+                  {signerRole === 'payer' ? t('sign.signature.titlePayer') : t('sign.signature.title')}
                 </h2>
                 {hasDrawn && (
                   <button type="button" onClick={clearCanvas} className="text-sm text-warm-400 dark:text-disc-muted hover:text-red-500 transition">
-                    ล้าง
+                    {t('sign.signature.clear')}
                   </button>
                 )}
               </div>
               <div className="relative border-2 border-dashed border-warm-300 dark:border-disc-border rounded-lg overflow-hidden bg-white">
                 {!hasDrawn && (
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <p className="text-warm-300 dark:text-disc-muted text-sm select-none">เซ็นชื่อที่นี่</p>
+                    <p className="text-warm-300 dark:text-disc-muted text-sm select-none">{t('sign.signature.placeholder')}</p>
                   </div>
                 )}
                 <canvas
@@ -757,7 +752,7 @@ export default function SignPage({ params }) {
                 />
               </div>
               <p className="text-xs text-warm-400 dark:text-disc-muted mt-2">
-                ลายเซ็นนี้จะถูกบันทึกพร้อมชื่อ Discord และเวลาประทับ
+                {t('sign.signature.note')}
               </p>
             </div>
 
@@ -766,7 +761,7 @@ export default function SignPage({ params }) {
               disabled={!hasDrawn || submitting}
               className="w-full bg-orange text-white py-3.5 rounded-xl text-base font-semibold hover:bg-orange-light disabled:opacity-50 transition"
             >
-              {submitting ? 'กำลังบันทึก...' : isSigned ? 'เซ็นใหม่' : signerRole === 'payer' ? 'ยืนยันการจ่ายเงิน' : 'ยืนยันลายเซ็น'}
+              {submitting ? t('sign.submit.saving') : isSigned ? t('sign.submit.resign') : signerRole === 'payer' ? t('sign.submit.confirmPayment') : t('sign.submit.confirmSignature')}
             </button>
           </>
         )}
