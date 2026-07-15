@@ -4,6 +4,19 @@
 
 ---
 
+## 🌐 platformfor.org / CivicFlow — identity/tenant migration (design เสร็จ 2026-07-15, ทำ session หน้า)
+
+> **แผน + สถาปัตยกรรมเต็มอยู่ที่ `md/civicflow/CIVICFLOW.md`** (อ่านก่อนเริ่ม) · rebrand → email-first multi-tenant, Discord = adapter เสริม · consult wedge กับ CivicFlow (US nonprofit, โจทย์ตรงกัน)
+
+- [ ] **Phase 0** — drop ตาราง `members` (+ ลบ block ใน migration.sql) · `dc_members` เพิ่ม `email`, ทำ `discord_id`+`guild_id` nullable
+- [ ] **Phase 1** — email-native login (Google + magic-link → dc_members by email) · แยก platform login จาก PPLE Discord login · **เริ่มที่ login ก่อน**
+- [ ] **Phase 2** — ownership migration ต่อ feature: เพิ่ม `user_id`(→dc_members.id) + `org_id`(→organizations.id) + backfill · **docs cluster ก่อน** → calling/case/config
+- [ ] **Phase 3 (deferred)** — extract `dc_user_guild` · rename `dc_members→users` (subagent, 112 refs) · เคาะ PPLE 3 guild
+- [x] Portfolio consult (web page) เสร็จ — `web/app/tee/portfolio/` (เนื้อหาใน data/portfolio.json แก้เอง) + artifact · รอ deploy prod ให้ขึ้น pplevolunteers.org/tee/portfolio
+- ⚠️ **ตอนนี้ในโค้ดค้าง:** ตาราง `members` ถูกสร้างไปแล้ว (DB + migration.sql) — Phase 0 ต้อง drop
+
+---
+
 ## 🍳 /cooking — UI/UX ปรับปรุง (จดไว้ 2026-07-11) — ✅ เขียนโค้ดเสร็จ + เทสเบราว์เซอร์ผ่านแล้ว (2026-07-14) รอ commit + deploy
 
 - [ ] **ตอนแยก personal apps ออกไป domain ตัวเอง → เปลี่ยน image serving เป็น API route** (จดไว้ 2026-07-14) — ตอนนี้ cooking + finance upload เขียนลง `public/uploads/` แล้วเสิร์ฟผ่าน **nginx block** (`location ^~ /uploads/` บน prod — ดู DEPLOYMENT.md) ซึ่งผูกกับ server config · ตอนยกเว็บออก ให้เปลี่ยนไปเสิร์ฟผ่าน **API route อ่าน disk สด** แบบ `media-temp`/`docs`/`case` (route `/api/cooking/media/[filename]` + เปลี่ยน URL ที่ upload คืน + จุดแสดงรูป result card/คลังเมนู/preview) → **self-contained ใน repo, ยกออกไม่ต้อง config nginx, dev=prod เหมือนกัน** · แล้วลบ nginx /uploads block ทิ้งได้ · เหตุผลเลือกตอนนี้ยังใช้ nginx (เร็ว/เบา/ทำเสร็จแล้ว) แต่ตอนแยกออก portability คุ้มกว่า

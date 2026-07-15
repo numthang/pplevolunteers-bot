@@ -1,0 +1,69 @@
+{
+  "name": "Unnop (Tee) Sricharoenchai",
+  "role": "Engineer, platform architect & community builder — operating systems for civil-society organizations",
+  "thesis": "I already built the platform you're setting out to build and I run the 5,300-person volunteer community it serves. A production, multi-tenant operating system for movement organizations: membership, document e-signing, budget approval, outreach, and casework on one shared core.",
+
+  "contact": [
+    { "k": "Email", "v": "unnop.sricharoenchai@gmail.com", "href": "mailto:unnop.sricharoenchai@gmail.com" },
+    { "k": "Phone", "v": "088 793 8587", "href": "tel:+66887938587" },
+    { "k": "Location", "v": "Ratchaburi, Thailand", "href": "" },
+    { "k": "Discord", "v": "@unnopsri", "href": "" },
+    { "k": "GitHub", "v": "github.com/numthang", "href": "https://github.com/numthang" },
+    { "k": "Facebook", "v": "facebook.com/unnop", "href": "https://www.facebook.com/unnop" },
+    { "k": "Live platform", "v": "pplevolunteers.org", "href": "https://pplevolunteers.org" }
+  ],
+
+  "profile": "A developer who found his way into politics and into building the tools that organizing runs on. For six years I've coordinated for Ratchaburi's People's Party and grown its volunteer community of 5,300 on Discord, so I understand how an organization actually works, and how a community is built, from the inside. Making an organization's work easier through software is my real passion — from [homeschoolnetwork.org](https://homeschoolnetwork.org), which turned homeschool assessment reporting into something simple, to [pplevolunteers.org](https://pplevolunteers.org), the party's own operations platform.",
+
+  "work": {
+    "heading": "A community, and the platform that runs it",
+    "lead": "I run the party's 5,300-person volunteer community on Discord — and I built the platform that powers it. [pplevolunteers.org](https://pplevolunteers.org) is a production system its members and regional chapters use every day to coordinate, approve spending, sign documents, and manage membership. Not a prototype — the real operational backbone.",
+    "metrics": [
+      { "n": "5,300", "k": "volunteers in the community" },
+      { "n": "6 yrs", "k": "coordinating the party" },
+      { "n": "3", "k": "regional chapters, one org" },
+      { "n": "6", "k": "operational modules" }
+    ]
+  },
+
+  "modules": [
+    { "idx": "01", "title": "Membership & roster", "desc": "A central member registry shared across chapters profiles, roles, geography, deduplication." },
+    { "idx": "02", "title": "Document e-signing", "desc": "Generate, route, and sign documents by secure link; PDF generation with ID-card handling & watermarking." },
+    { "idx": "03", "title": "Finance & budget", "desc": "Expense records, fund tracking, and budget approval with role- and scope-gated authority." },
+    { "idx": "04", "title": "Outreach CRM", "desc": "Contact management and calling campaigns with per-contact tiers, assignments, and PDPA-aware access." },
+    { "idx": "05", "title": "Casework", "desc": "Complaint and case tracking with assignment, audit trail, and public reference lookups." },
+    { "idx": "06", "title": "Access & identity", "desc": "Capability-based permissions with geographic scoping, audit logging, and multi-provider login." }
+  ],
+
+  "mapping": {
+    "heading": "Built multi-tenant from the ground up",
+    "lead": "The exact concerns a civic-tech platform confronts are the ones this system already solves in production:",
+    "rows": [
+      { "them": "Many organizations on one platform", "me": "Tenant isolation with a shared central data layer" },
+      { "them": "Request money & sign documents in-org", "me": "Finance + document-signing modules, live today" },
+      { "them": "Every org clears budget differently", "me": "Configurable roles, permissions & forms per org" },
+      { "them": "No shared data across the movement", "me": "Unified membership registry across chapters" }
+    ]
+  },
+
+  "experience": [
+    { "when": "2020 — Present", "title": "Coordinator & platform builder", "org": "Move Forward → People's Party, Ratchaburi", "desc": "Six years organizing and team-building for the party, grew a 5,300-member volunteer community on Discord and built the platform that runs its membership, finance, documents, and outreach." },
+    { "when": "2008 — 2021", "title": "Farmer & programmer", "org": "Numthang Permaculture Farm", "desc": "Thirteen years of farming and study in permaculture and contemplative practice, while continuing to build software." },
+    { "when": "2005 — 2006", "title": "Programmer", "org": "Mirror Art Foundation, Chiang Rai", "desc": "Web-application development and server management for a Thai social-development NGO." },
+    { "when": "2001 — 2005", "title": "Full-stack developer & project manager", "org": "Internet Business Network, Thailand", "desc": "Programming and project management across a range of web applications." }
+  ],
+
+  "education": { "degree": "B.Eng, Computer Engineering", "school": "Mahanakorn University of Technology", "when": "1997 — 2001" },
+  "languages": [
+    { "lang": "Thai", "level": "native" },
+    { "lang": "English", "level": "intermediate" }
+  ],
+
+  "skills": ["Native Linux user & server administration", "PHP/MySQL", "Node.js", "Next.js / App Router", "PostgreSQL", "React", "Multi-tenant architecture", "RBAC / capability design", "next-auth (OAuth · passkey · OTP)", "Meilisearch", "Discord.js"],
+  "alsoSkills": ["Community building", "Workflow & platform design", "Project management", "Graphic design", "Team building & communication"],
+
+  "engagement": {
+    "heading": "How I can help CivicFlow",
+    "text": "Building platforms for organizations is my passion, and I bring a working reference implementation, not a whiteboard. I can consult on the multi-tenant data model, identity and permissions, and the document and finance workflows and stand up a running pilot on proven foundations rather than rebuilding the basics from scratch."
+  }
+}

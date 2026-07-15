@@ -1043,3 +1043,29 @@ DROP INDEX IF EXISTS idx_cooking_history_owner_time;
 ALTER TABLE cooking_ingredients DROP CONSTRAINT cooking_ingredients_owner_token_key;
 ALTER TABLE cooking_ingredients ADD CONSTRAINT cooking_ingredients_token_key UNIQUE (token);
 -- cooking_menus.owner: เก็บคอลัมน์ไว้เป็นข้อมูล "ใครสร้าง" เฉยๆ ไม่ได้ ALTER อะไร — โค้ดแค่เลิกเช็คตอน update/delete
+
+-- 2026-07-15: platformfor.org core — identity/tenant ชั้นใหม่ (email-first) · spec เต็ม: md/civicflow/CIVICFLOW.md
+-- โครง: org = tenant anchor (organizations เดิม) · members = ตัวตนคน (email-native) · Discord = adapter เสริม (optional)
+-- ⚠️ ขนานกับ PPLE เดิม — ไม่แตะ dc_members/dc_guild_roles/guild_id ของเก่า · โลก email-org อยู่ในตารางนี้ล้วน
+-- role: reuse permissions.js (PERMISSIONS + CAPABILITIES) · members.role = ค่าใน PERMISSIONS (v1 hardcode, ไม่มี org_roles)
+
+-- Discord guild ↔ org: ใช้ dc_guilds.org_id ที่มีอยู่แล้ว (migration 2026-07-08) — หลาย guild → 1 org
+--   หา guild ของ org: SELECT guild_id FROM dc_guilds WHERE org_id=? · org ไม่มี Discord = ไม่มีแถวชี้มา (optional เอง)
+--   ไม่เพิ่ม organizations.discord_guild_id — จะกลายเป็น 1 org = 1 guild ทำ multi-guild ไม่ได้
+
+-- ตัวตนคน: 1 คนต่อ 1 org = 1 แถว · ยึด email (login ประตูไหนก็ match ที่ email)
+--   ตัวตน = email · สิทธิ์ = role (แยกกัน) · discord_id = สะพานเชื่อม Discord ทีหลัง (null = ยังไม่ผูก)
+--   status 'pending' = ถูกเชิญแต่ยังไม่ login ครั้งแรก (= ตาราง invite ในตัว ไม่แยกตาราง) · 'active' = claim แล้ว
+CREATE TABLE IF NOT EXISTS members (
+  id            SERIAL PRIMARY KEY,
+  org_id        INT          NOT NULL REFERENCES organizations(id),
+  email         VARCHAR(255) NOT NULL,
+  display_name  VARCHAR(120),
+  role          VARCHAR(40)  NOT NULL DEFAULT 'member',   -- ค่าใน permissions.js PERMISSIONS
+  status        VARCHAR(12)  NOT NULL DEFAULT 'active',   -- 'pending' | 'active'
+  discord_id    VARCHAR(20),                              -- null = ยังไม่ผูก Discord
+  created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+  UNIQUE (org_id, email)                                  -- email เดียวอยู่หลาย org ได้ (unique ต่อ org)
+);
+CREATE INDEX IF NOT EXISTS idx_members_email ON members (email);   -- login: หา org ทั้งหมดจาก email
+CREATE INDEX IF NOT EXISTS idx_members_org   ON members (org_id);
