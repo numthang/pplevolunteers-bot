@@ -107,6 +107,98 @@ export async function createOrg(name, ownerUserId) {
   }
 }
 
+export async function getOrg(orgId) {
+  const { rows } = await pool.query(
+    `SELECT id, name, slug FROM organizations WHERE id = $1`, [orgId]
+  )
+  return rows[0] || null
+}
+
+// เฉพาะ owner เปลี่ยนชื่อได้ (เช็คสิทธิ์ที่ route)
+export async function renameOrg(orgId, name) {
+  const { rows } = await pool.query(
+    `UPDATE organizations SET name = $2 WHERE id = $1 RETURNING id, name, slug`,
+    [orgId, String(name).trim()]
+  )
+  return rows[0] || null
+}
+
+// สมาชิกทั้งหมดของ org (join dc_members เอา email/ชื่อ) — owner ก่อน, ตามด้วยเวลาเข้า
+export async function listOrgMembers(orgId) {
+  const { rows } = await pool.query(
+    `SELECT om.user_id, om.role, om.status, om.joined_at,
+            u.email, u.display_name, u.discord_id
+       FROM org_members om
+       JOIN dc_members u ON u.id = om.user_id
+      WHERE om.org_id = $1
+      ORDER BY (om.role = 'owner') DESC, om.joined_at`,
+    [orgId]
+  )
+  return rows
+}
+
+async function activeOwnerCount(orgId, client = pool) {
+  const { rows } = await client.query(
+    `SELECT COUNT(*)::int AS n FROM org_members
+      WHERE org_id = $1 AND role = 'owner' AND status = 'active'`,
+    [orgId]
+  )
+  return rows[0].n
+}
+
+// เปลี่ยน role · กันลด owner คนสุดท้าย (org ต้องมี active owner ≥ 1 เสมอ)
+export async function setMemberRole(orgId, userId, role) {
+  const client = await pool.connect()
+  try {
+    await client.query('BEGIN')
+    const cur = await client.query(
+      `SELECT role, status FROM org_members WHERE org_id = $1 AND user_id = $2 FOR UPDATE`,
+      [orgId, userId]
+    )
+    if (!cur.rows[0]) { await client.query('ROLLBACK'); return { error: 'not_found' } }
+    // block เฉพาะเมื่อลดขั้น "active owner คนสุดท้าย" (invited owner ไม่นับใน floor)
+    const demotingActiveOwner = cur.rows[0].role === 'owner' && cur.rows[0].status === 'active' && role !== 'owner'
+    if (demotingActiveOwner && await activeOwnerCount(orgId, client) <= 1) {
+      await client.query('ROLLBACK'); return { error: 'last_owner' }
+    }
+    const { rows } = await client.query(
+      `UPDATE org_members SET role = $3 WHERE org_id = $1 AND user_id = $2
+       RETURNING user_id, role, status`,
+      [orgId, userId, role]
+    )
+    await client.query('COMMIT')
+    return { member: rows[0] }
+  } catch (err) {
+    await client.query('ROLLBACK'); throw err
+  } finally {
+    client.release()
+  }
+}
+
+// ลบสมาชิก (หรือ leave = ลบตัวเอง) · กันลบ owner คนสุดท้าย
+export async function removeMember(orgId, userId) {
+  const client = await pool.connect()
+  try {
+    await client.query('BEGIN')
+    const cur = await client.query(
+      `SELECT role, status FROM org_members WHERE org_id = $1 AND user_id = $2 FOR UPDATE`,
+      [orgId, userId]
+    )
+    if (!cur.rows[0]) { await client.query('ROLLBACK'); return { error: 'not_found' } }
+    // block เฉพาะเมื่อลบ "active owner คนสุดท้าย" (invited owner ไม่นับใน floor)
+    if (cur.rows[0].role === 'owner' && cur.rows[0].status === 'active' && await activeOwnerCount(orgId, client) <= 1) {
+      await client.query('ROLLBACK'); return { error: 'last_owner' }
+    }
+    await client.query('DELETE FROM org_members WHERE org_id = $1 AND user_id = $2', [orgId, userId])
+    await client.query('COMMIT')
+    return { ok: true }
+  } catch (err) {
+    await client.query('ROLLBACK'); throw err
+  } finally {
+    client.release()
+  }
+}
+
 // invite = สร้าง shell user (dc_members email-only) + org_members(status='invited')
 // เจ้าตัว login email ตรง → resolveOrgUser เจอ row เดิม + claimInvites flip เป็น active
 export async function inviteMember(orgId, email, invitedByUserId, role = 'member') {
