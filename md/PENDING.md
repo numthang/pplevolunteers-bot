@@ -8,12 +8,17 @@
 
 > **แผน + สถาปัตยกรรมเต็มอยู่ที่ `md/civicflow/CIVICFLOW.md`** (อ่านก่อนเริ่ม) · rebrand → email-first multi-tenant, Discord = adapter เสริม · consult wedge กับ CivicFlow (US nonprofit, โจทย์ตรงกัน)
 
-- [ ] **Phase 0** — drop ตาราง `members` (+ ลบ block ใน migration.sql) · `dc_members` เพิ่ม `email`, ทำ `discord_id`+`guild_id` nullable
-- [ ] **Phase 1** — email-native login (Google + magic-link → dc_members by email) · แยก platform login จาก PPLE Discord login · **เริ่มที่ login ก่อน**
-- [ ] **Phase 2** — ownership migration ต่อ feature: เพิ่ม `user_id`(→dc_members.id) + `org_id`(→organizations.id) + backfill · **docs cluster ก่อน** → calling/case/config
+- [x] **Phase 0 (2026-07-15)** — drop `members` (DB + migration block) · `dc_members` เพิ่ม `email` + partial-unique `uq_dc_members_email` · ปลด NOT NULL `discord_id`/`guild_id`/**`username`** (shell/email row ไม่มีทั้ง 3) · คง DEFAULT '' ของ guild_id (email-insert ใส่ NULL เอง)
+- [x] **Phase 1 (2026-07-15)** — email-native login เสร็จ + verify curl ครบ flow (login→org→dashboard + invite→claim) · **namespace = `org`** (ไม่ใช่ `platform` — เลี่ยงผูกชื่อแบรนด์)
+  - NextAuth **instance ที่ 2** แยกจาก PPLE: cookie `org-auth.*`, route `/api/org/auth/[...nextauth]`, options `web/lib/org-auth-options.js` · ⚠️ next-auth v4 `__NEXTAUTH` เป็น global → **ห้ามใช้ SessionProvider ซ้อน 2 basePath** → platform pages เป็น **server component** (getServerSession) + login trigger แบบ manual CSRF (`web/lib/orgSignIn.js`)
+  - magic-link = **dev stub** (log link + คืน devLink, ไม่ส่งอีเมลจริง — ยังไม่มี SMTP) · token ใน `org_login_tokens` (email-keyed, TTL 15 นาที) · reuse nonce→credentials pattern แทน NextAuth EmailProvider (เลี่ยง DB adapter)
+  - identity = `resolveOrgUser(email)` = findOrCreate `dc_members` by email + claim invites · org create self-serve (creator=owner) · invite = shell user + `org_members(status='invited')` → claim auto ตอน login email ตรง
+  - ⛔ **Google เลื่อน (bug-org-oauth-basepath):** next-auth v4 ล็อก basePath ทั้ง process จาก `NEXTAUTH_URL` → instance ที่ 2 บน subpath ส่ง `redirect_uri=/api/auth/callback/google` (path PPLE) → OAuth พัง. ปิดปุ่ม+provider แล้ว. **Google กลับมาตอน unify auth เป็น instance เดียว** (endgame ที่ user ยืนยัน — auth-options.js เดิม extend, Discord+Google+email+magic = ปุ่มบนบัญชีเดียว)
+  - ⚠️ **ข้อจำกัดที่ตั้งใจ (ไม่ใช่บั๊ก) — email login = สร้าง dc_members แถวใหม่ ไม่ reconcile กับบัญชี Discord เดิม** (user เคาะยอมรับ 2026-07-15). auto-merge ไม่ได้เพราะ (1) PPLE row ไม่มี email verified — `google_id` เป็น text พิมพ์เอง merge = account takeover (2) PPLE 1 คน = หลายแถว (per guild) ไม่มีแถวเดียวให้ email เกาะ. กัดเฉพาะคนซ้อน 2 โลก (target org = non-Discord ไม่กระทบ). **ทางแก้ทีหลัง:** (ก) link path — login Discord อยู่ → verify+เขียน email ลงแถวเดิม → email login เจอแถวนั้นเอง · (ข) เวอร์ชันสะอาด = Phase 3 identity unify (dc_members 1 คน 1 แถว) แล้ว email+discord_id อยู่แถวเดียว
+- [ ] **Phase 2** — ownership migration ต่อ feature: เพิ่ม `user_id`(→dc_members.id) + `org_id`(→organizations.id) + backfill · **docs cluster ก่อน** → calling/case/config · ⚠️ org_members.user_id ชี้ dc_members.id ได้สะอาดเฉพาะ email row (guild_id NULL, 1/คน) — อย่า join PPLE per-guild row เข้า org_members
 - [ ] **Phase 3 (deferred)** — extract `dc_user_guild` · rename `dc_members→users` (subagent, 112 refs) · เคาะ PPLE 3 guild
 - [x] Portfolio consult (web page) เสร็จ — `web/app/tee/portfolio/` (เนื้อหาใน data/portfolio.json แก้เอง) + artifact · รอ deploy prod ให้ขึ้น pplevolunteers.org/tee/portfolio
-- ⚠️ **ตอนนี้ในโค้ดค้าง:** ตาราง `members` ถูกสร้างไปแล้ว (DB + migration.sql) — Phase 0 ต้อง drop
+- ⚠️ **ยังไม่ commit** (checkpoint `f2c0e3b` "Before user.id migration" คือจุดก่อนเริ่ม) · **ก่อน deploy prod:** รัน migration.sql block ล่าสุด (drop members + dc_members email/nullable + org_members + org_login_tokens)
 
 ---
 

@@ -1044,28 +1044,43 @@ ALTER TABLE cooking_ingredients DROP CONSTRAINT cooking_ingredients_owner_token_
 ALTER TABLE cooking_ingredients ADD CONSTRAINT cooking_ingredients_token_key UNIQUE (token);
 -- cooking_menus.owner: เก็บคอลัมน์ไว้เป็นข้อมูล "ใครสร้าง" เฉยๆ ไม่ได้ ALTER อะไร — โค้ดแค่เลิกเช็คตอน update/delete
 
--- 2026-07-15: platformfor.org core — identity/tenant ชั้นใหม่ (email-first) · spec เต็ม: md/civicflow/CIVICFLOW.md
--- โครง: org = tenant anchor (organizations เดิม) · members = ตัวตนคน (email-native) · Discord = adapter เสริม (optional)
--- ⚠️ ขนานกับ PPLE เดิม — ไม่แตะ dc_members/dc_guild_roles/guild_id ของเก่า · โลก email-org อยู่ในตารางนี้ล้วน
--- role: reuse permissions.js (PERMISSIONS + CAPABILITIES) · members.role = ค่าใน PERMISSIONS (v1 hardcode, ไม่มี org_roles)
+-- 2026-07-15: org core — identity/tenant ชั้นใหม่ (email-first) · spec เต็ม: md/civicflow/CIVICFLOW.md
+-- เปลี่ยนแผน (จากตาราง `members` แยก → evolve dc_members เป็น universal user table):
+--   identity = dc_members.id · tenant = org_id · Discord = adapter เสริม (optional)
+-- role: reuse permissions.js (PERMISSIONS + CAPABILITIES) · org_members.role = ค่าใน PERMISSIONS (v1 hardcode)
+-- Discord guild ↔ org: ใช้ dc_guilds.org_id ที่มีอยู่แล้ว (migration 2026-07-08) — org ไม่มี Discord = ไม่มีแถวชี้มา
 
--- Discord guild ↔ org: ใช้ dc_guilds.org_id ที่มีอยู่แล้ว (migration 2026-07-08) — หลาย guild → 1 org
---   หา guild ของ org: SELECT guild_id FROM dc_guilds WHERE org_id=? · org ไม่มี Discord = ไม่มีแถวชี้มา (optional เอง)
---   ไม่เพิ่ม organizations.discord_guild_id — จะกลายเป็น 1 org = 1 guild ทำ multi-guild ไม่ได้
+-- ── ลบตาราง members ที่สร้างไว้รอบก่อน (2026-07-15 ต้นวัน) — ซ้ำซ้อนกับ dc_members ──
+DROP TABLE IF EXISTS members;
 
--- ตัวตนคน: 1 คนต่อ 1 org = 1 แถว · ยึด email (login ประตูไหนก็ match ที่ email)
---   ตัวตน = email · สิทธิ์ = role (แยกกัน) · discord_id = สะพานเชื่อม Discord ทีหลัง (null = ยังไม่ผูก)
---   status 'pending' = ถูกเชิญแต่ยังไม่ login ครั้งแรก (= ตาราง invite ในตัว ไม่แยกตาราง) · 'active' = claim แล้ว
-CREATE TABLE IF NOT EXISTS members (
-  id            SERIAL PRIMARY KEY,
-  org_id        INT          NOT NULL REFERENCES organizations(id),
-  email         VARCHAR(255) NOT NULL,
-  display_name  VARCHAR(120),
-  role          VARCHAR(40)  NOT NULL DEFAULT 'member',   -- ค่าใน permissions.js PERMISSIONS
-  status        VARCHAR(12)  NOT NULL DEFAULT 'active',   -- 'pending' | 'active'
-  discord_id    VARCHAR(20),                              -- null = ยังไม่ผูก Discord
-  created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-  UNIQUE (org_id, email)                                  -- email เดียวอยู่หลาย org ได้ (unique ต่อ org)
+-- ── Phase 0: เปิดทาง email identity บน dc_members (additive, ปลอดภัยต่อ PPLE) ──
+-- email user / shell user (invite) = แถวที่ไม่มี discord/guild/username → ปลด NOT NULL ทั้ง 3
+-- คง DEFAULT '' ของ guild_id ไว้ (PPLE insert เดิมไม่กระทบ) · โค้ด email-insert จะใส่ guild_id=NULL เอง
+ALTER TABLE dc_members ADD COLUMN IF NOT EXISTS email VARCHAR(255);
+ALTER TABLE dc_members ALTER COLUMN discord_id DROP NOT NULL;
+ALTER TABLE dc_members ALTER COLUMN username   DROP NOT NULL;
+ALTER TABLE dc_members ALTER COLUMN guild_id    DROP NOT NULL;
+-- identity ยึด email เป็น global unique (partial — PPLE row email=NULL ไม่โดนคุม, กัน invite/login สร้าง dup)
+CREATE UNIQUE INDEX IF NOT EXISTS uq_dc_members_email ON dc_members (email) WHERE email IS NOT NULL;
+
+-- ── Phase 1: membership (user ↔ org, many-to-many) ──
+-- 1 user อยู่หลาย org ได้ · role อยู่ที่ membership ไม่ใช่ที่ user
+-- status 'invited' = shell user ถูกเชิญแต่ยังไม่ claim (login email ตรง → flip 'active') · ตาราง invite ในตัว
+CREATE TABLE IF NOT EXISTS org_members (
+  org_id      INT         NOT NULL REFERENCES organizations(id),
+  user_id     INT         NOT NULL REFERENCES dc_members(id),
+  role        VARCHAR(40) NOT NULL DEFAULT 'member',   -- ค่าใน permissions.js PERMISSIONS
+  status      VARCHAR(12) NOT NULL DEFAULT 'active',   -- 'active' | 'invited'
+  invited_by  INT         REFERENCES dc_members(id),
+  joined_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (org_id, user_id)
 );
-CREATE INDEX IF NOT EXISTS idx_members_email ON members (email);   -- login: หา org ทั้งหมดจาก email
-CREATE INDEX IF NOT EXISTS idx_members_org   ON members (org_id);
+CREATE INDEX IF NOT EXISTS idx_org_members_user ON org_members (user_id);
+
+-- ── Phase 1: magic-link login token (email-keyed, pre-identity) ──
+-- dc_user_config ใช้ไม่ได้ (PK = discord_id,key ต้องมี discord_id) → ตารางเล็กแยก · TTL เช็คใน query (15 นาที)
+CREATE TABLE IF NOT EXISTS org_login_tokens (
+  token      VARCHAR(64)  PRIMARY KEY,
+  email      VARCHAR(255) NOT NULL,
+  created_at TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
