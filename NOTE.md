@@ -1,3 +1,34 @@
+production ตอนนี้ deploy แล้วค้างที่
+
+npm warn config init.module Use `--init-module` instead.
+
+up to date, audited 243 packages in 6s
+
+46 packages are looking for funding
+  run `npm fund` for details
+
+6 vulnerabilities (4 moderate, 1 high, 1 critical)
+
+To address all issues possible (including breaking changes), run:
+  npm audit fix --force
+
+Some issues need review, and may require choosing
+a different dependency.
+
+Run `npm audit` for details.
+npm warn config init.module Use `--init-module` instead.
+
+> pple-volunteers@2.24.0 build
+> nice -n 19 ionice -c 2 -n 7 next build
+
+[dotenv@17.3.1] injecting env (39) from ../.env -- tip: 🛡️ auth for agents: https://vestauth.com
+   ▲ Next.js 15.5.14
+
+   Creating an optimized production build ...
+
+ตรงนี้แล้วก็ lost connection ไปเลย จนเข้าไม่ได้สักพักอ่ะ ชุด HEAD is now at f2c0e3b Before user.id migration
+
+
 CivicFlow
 - ทำไมผมเข้าระบบมาผมกลายเป็น admin ขององค์กรนึงไปเลยอ่ะ งงอยู่
 - 
