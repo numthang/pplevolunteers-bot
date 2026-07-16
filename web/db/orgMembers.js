@@ -11,17 +11,17 @@ export function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 }
 
-// หา/สร้าง identity ด้วย email (global unique ผ่าน uq_dc_members_email partial index)
-// email row: guild_id/discord_id/username = NULL (insert explicit NULL, ไม่พึ่ง default '')
+// หา/สร้าง identity ด้วย email (global unique ผ่าน uq_users_email partial index)
+// users = lean identity · ชื่อเก็บใน users.username (users ไม่มี display_name)
 export async function findOrCreateUserByEmail(email, displayName = null, client = pool) {
   const e = normalizeEmail(email)
   const { rows } = await client.query(
-    `INSERT INTO dc_members (email, display_name, username, guild_id, discord_id)
-       VALUES ($1, $2, NULL, NULL, NULL)
+    `INSERT INTO users (email, username)
+       VALUES ($1, $2)
      ON CONFLICT (email) WHERE email IS NOT NULL
-       DO UPDATE SET display_name = COALESCE(dc_members.display_name, EXCLUDED.display_name),
-                     updated_at   = NOW()
-     RETURNING id, email, display_name, discord_id`,
+       DO UPDATE SET username   = COALESCE(users.username, EXCLUDED.username),
+                     updated_at = NOW()
+     RETURNING id, email, username AS display_name, discord_id`,
     [e, displayName]
   )
   return rows[0]
@@ -44,7 +44,7 @@ export async function resolveOrgUser(email, displayName = null) {
 
 export async function getUserById(userId) {
   const { rows } = await pool.query(
-    `SELECT id, email, display_name, discord_id FROM dc_members WHERE id = $1`,
+    `SELECT id, email, username AS display_name, discord_id FROM users WHERE id = $1`,
     [userId]
   )
   return rows[0] || null
@@ -123,13 +123,13 @@ export async function renameOrg(orgId, name) {
   return rows[0] || null
 }
 
-// สมาชิกทั้งหมดของ org (join dc_members เอา email/ชื่อ) — owner ก่อน, ตามด้วยเวลาเข้า
+// สมาชิกทั้งหมดของ org (join users เอา email/ชื่อ) — owner ก่อน, ตามด้วยเวลาเข้า
 export async function listOrgMembers(orgId) {
   const { rows } = await pool.query(
     `SELECT om.user_id, om.role, om.status, om.joined_at,
-            u.email, u.display_name, u.discord_id
+            u.email, COALESCE(om.display_name, u.username) AS display_name, u.discord_id
        FROM org_members om
-       JOIN dc_members u ON u.id = om.user_id
+       JOIN users u ON u.id = om.user_id
       WHERE om.org_id = $1
       ORDER BY (om.role = 'owner') DESC, om.joined_at`,
     [orgId]

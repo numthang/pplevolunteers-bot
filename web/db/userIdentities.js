@@ -1,13 +1,22 @@
 import pool from '@/db/index.js'
 
+// discord_id → users.id (identity layer ผูก user_id เป็น NOT NULL แล้ว)
+async function userIdByDiscord(discordId, client = pool) {
+  const { rows } = await client.query(`SELECT id FROM users WHERE discord_id = $1`, [discordId])
+  return rows[0]?.id ?? null
+}
+
 export async function linkIdentity(discordId, provider, providerId, credential = null) {
+  const userId = await userIdByDiscord(discordId)
+  if (userId == null) throw Object.assign(new Error('no_user'), { code: 'no_user' })
+
   if (provider === 'passkey') {
     // passkey: user สามารถมีได้หลาย device, แต่ credential_id ต้องไม่ซ้ำข้าม user
     await pool.query(
-      `INSERT INTO user_identities (discord_id, provider, provider_id, credential)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO user_identities (user_id, discord_id, provider, provider_id, credential)
+       VALUES ($1, $2, $3, $4, $5)
        ON CONFLICT (provider, provider_id) DO NOTHING`,
-      [discordId, provider, providerId, credential ? JSON.stringify(credential) : null]
+      [userId, discordId, provider, providerId, credential ? JSON.stringify(credential) : null]
     )
     return
   }
@@ -27,10 +36,10 @@ export async function linkIdentity(discordId, provider, providerId, credential =
     [discordId, provider, providerId]
   )
   await pool.query(
-    `INSERT INTO user_identities (discord_id, provider, provider_id, credential)
-     VALUES ($1, $2, $3, $4)
+    `INSERT INTO user_identities (user_id, discord_id, provider, provider_id, credential)
+     VALUES ($1, $2, $3, $4, $5)
      ON CONFLICT (provider, provider_id) DO NOTHING`,
-    [discordId, provider, providerId, credential ? JSON.stringify(credential) : null]
+    [userId, discordId, provider, providerId, credential ? JSON.stringify(credential) : null]
   )
 }
 
@@ -54,6 +63,36 @@ export async function findDiscordIdByProvider(provider, providerId) {
     [provider, providerId]
   )
   return rows[0]?.discord_id ?? null
+}
+
+// ประตูใหม่: identity ใดๆ → users.id (แกนหลัง unify auth)
+export async function findUserIdByProvider(provider, providerId) {
+  const { rows } = await pool.query(
+    `SELECT user_id FROM user_identities WHERE provider = $1 AND provider_id = $2`,
+    [provider, providerId]
+  )
+  return rows[0]?.user_id ?? null
+}
+
+// discord login: หา users.id จาก snowflake · ไม่มี = สร้าง users + identity (create-on-login)
+export async function resolveUserByDiscord(discordId, username = null) {
+  const found = await findUserIdByProvider('discord', discordId)
+  if (found) return found
+  const { rows } = await pool.query(
+    `INSERT INTO users (discord_id, username) VALUES ($1, $2)
+     ON CONFLICT (discord_id) WHERE discord_id IS NOT NULL
+       DO UPDATE SET updated_at = NOW()
+     RETURNING id`,
+    [discordId, username]
+  )
+  const userId = rows[0].id
+  await pool.query(
+    `INSERT INTO user_identities (user_id, discord_id, provider, provider_id)
+     VALUES ($1, $2, 'discord', $2)
+     ON CONFLICT (provider, provider_id) DO UPDATE SET user_id = EXCLUDED.user_id`,
+    [userId, discordId]
+  )
+  return userId
 }
 
 export async function getUserIdentities(discordId) {
