@@ -4,7 +4,7 @@ export async function getGuilds() {
   const { rows } = await pool.query(
     `SELECT g.guild_id, g.name, g.icon_url, g.org_id, o.name AS org_name
      FROM dc_guilds g
-     LEFT JOIN organizations o ON o.id = g.org_id
+     LEFT JOIN orgs o ON o.id = g.org_id
      ORDER BY o.name ASC, g.name ASC`
   )
   return rows
@@ -53,7 +53,7 @@ export async function getUserGuilds(discordId, { all = false } = {}) {
     `SELECT g.guild_id, g.name, g.icon_url, g.org_id, o.name AS org_name
      FROM dc_members m
      JOIN dc_guilds g ON g.guild_id = m.guild_id
-     LEFT JOIN organizations o ON o.id = g.org_id
+     LEFT JOIN orgs o ON o.id = g.org_id
      WHERE m.discord_id = $1
      ORDER BY o.name ASC, g.name ASC`,
     [discordId]

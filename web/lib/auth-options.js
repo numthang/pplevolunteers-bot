@@ -95,7 +95,7 @@ export const authOptions = {
             ).catch(() => {})
           }
         } else if (OAUTH_PROVIDERS.includes(account.provider)) {
-          // lookup discordId จาก dc_user_identities
+          // lookup discordId จาก user_identities
           token.discordId = await findDiscordIdByProvider(account.provider, profile.sub).catch(() => null)
         } else if (account.provider === 'passkey' || account.provider === 'phone') {
           // credentials authorize คืน user.discordId มาแล้ว

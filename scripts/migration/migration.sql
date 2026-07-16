@@ -1154,3 +1154,9 @@ END $$;
 -- เก็บ "key" จาก org_roles (เช่น 'treasurer,editor') ไม่ใช่ชื่อ Discord → resolveAccess ใช้เป็น permission ตรงๆ ไม่ต้องแปลผ่าน catalog
 -- คน Discord = ยศไปเขียน Discord (dc_members.roles) · web_roles ไว้คน email เป็นหลัก · resolveAccess union 2 แหล่ง
 ALTER TABLE dc_members ADD COLUMN IF NOT EXISTS web_roles TEXT;
+
+-- 2026-07-16: rename organizations → orgs (เข้าชุด org_* family: org_members/org_roles/org_login_tokens) · FK auto-follow
+ALTER TABLE IF EXISTS organizations RENAME TO orgs;
+
+-- 2026-07-16: rename dc_user_identities → user_identities (identity ข้าม provider = user-level ไม่ใช่ Discord-specific) · key ด้วย user_id repoint ทีหลัง
+ALTER TABLE IF EXISTS dc_user_identities RENAME TO user_identities;

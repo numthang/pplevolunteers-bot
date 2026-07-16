@@ -1,6 +1,6 @@
 // web/db/orgMembers.js — org core: identity (dc_members by email) + org membership (org_members)
 // ⚠️ โลก email-org ล้วน — email row = dc_members ที่ discord_id/guild_id/username = NULL (ไม่ปนกับ PPLE)
-// identity = dc_members.id · tenant = organizations.id · membership = org_members
+// identity = dc_members.id · tenant = orgs.id · membership = org_members
 import pool from '@/db/index.js'
 
 export function normalizeEmail(email) {
@@ -55,7 +55,7 @@ export async function listUserOrgs(userId) {
   const { rows } = await pool.query(
     `SELECT o.id, o.name, o.slug, om.role, om.status
        FROM org_members om
-       JOIN organizations o ON o.id = om.org_id
+       JOIN orgs o ON o.id = om.org_id
       WHERE om.user_id = $1
       ORDER BY om.joined_at`,
     [userId]
@@ -86,11 +86,11 @@ export async function createOrg(name, ownerUserId) {
   try {
     await client.query('BEGIN')
     let slug = slugify(name)
-    // กัน slug ชน (organizations.slug unique) — เติม suffix สุ่มถ้าซ้ำ
-    const exists = await client.query('SELECT 1 FROM organizations WHERE slug = $1', [slug])
+    // กัน slug ชน (orgs.slug unique) — เติม suffix สุ่มถ้าซ้ำ
+    const exists = await client.query('SELECT 1 FROM orgs WHERE slug = $1', [slug])
     if (exists.rows[0]) slug = `${slug}-${Math.random().toString(36).slice(2, 6)}`
     const org = await client.query(
-      `INSERT INTO organizations (name, slug) VALUES ($1, $2) RETURNING id, name, slug`,
+      `INSERT INTO orgs (name, slug) VALUES ($1, $2) RETURNING id, name, slug`,
       [String(name).trim(), slug]
     )
     await client.query(
@@ -109,7 +109,7 @@ export async function createOrg(name, ownerUserId) {
 
 export async function getOrg(orgId) {
   const { rows } = await pool.query(
-    `SELECT id, name, slug FROM organizations WHERE id = $1`, [orgId]
+    `SELECT id, name, slug FROM orgs WHERE id = $1`, [orgId]
   )
   return rows[0] || null
 }
@@ -117,7 +117,7 @@ export async function getOrg(orgId) {
 // เฉพาะ owner เปลี่ยนชื่อได้ (เช็คสิทธิ์ที่ route)
 export async function renameOrg(orgId, name) {
   const { rows } = await pool.query(
-    `UPDATE organizations SET name = $2 WHERE id = $1 RETURNING id, name, slug`,
+    `UPDATE orgs SET name = $2 WHERE id = $1 RETURNING id, name, slug`,
     [orgId, String(name).trim()]
   )
   return rows[0] || null
