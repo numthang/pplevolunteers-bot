@@ -25,6 +25,12 @@
   - ⚠️ **RBAC เป็นคนละส่วน:** เปลี่ยน column เจ้าของ = ง่าย แต่ "ใครมีสิทธิ์ทำ" (financeAccess/caseGate เช็ค Discord role) โลก email ต้องสลับใช้ `org_members.role` ด้วย = ส่วนหนึ่งของงาน
   - ⚠️ org_members.user_id ชี้ dc_members.id ได้สะอาดเฉพาะ email row (guild_id NULL, 1/คน) — อย่า join PPLE per-guild row เข้า org_members
 - [ ] **Phase 3 (deferred)** — extract `dc_user_guild` · rename `dc_members→users` (subagent, 112 refs) · เคาะ PPLE 3 guild
+
+### 🎫 Web-native role grant (RBAC — โลก email + จัดยศผ่านเว็บ)
+
+- [x] **B — grant ยศคน Discord ผ่านเว็บ (2026-07-16, org-core branch, ยังไม่ commit)** — หน้า `/admin/roles` (ค้นสมาชิก → chip ยศ toggle) → สั่ง Discord เพิ่ม/ถอดยศจริง (`lib/discordRoles.js` PUT/DELETE) + write-through `dc_members.roles` + `clearAccessCache` + audit · gate `manageRoles`=admin/moderator (permissions.js) · grantable = 9 role (ยกเว้น admin) · **Discord = one source, เว็บเป็นรีโมท** (ตอบโจทย์ "แก้ที่ไหนก็ตรงกันทั้ง Discord+web") · verify curl 403/200 + jest 189 ผ่าน · ⬜ ยังไม่กดเทสจริงในเบราว์เซอร์ (แตะ Discord side-effect)
+- [ ] **web_roles — grant ยศคน email (guildless)** — เพิ่ม column `dc_members.web_roles TEXT` (CSV ของ **key** จาก `org_roles` เช่น `treasurer,editor` — ไม่ใช่ชื่อไทย) · resolveAccess union: `roles`(ชื่อ Discord→แปลผ่าน catalog) + `web_roles`(key เป็น permission ตรงๆ **ไม่ต้องพึ่ง guild catalog** → คน email guildless resolve ได้) · grant API/UI ตัด `discord_id IS NOT NULL` ออก → คน email โผล่ + branch (Discord→เขียน Discord, email→web_roles) · ⚠️ email ยังเปิดหน้า `/finance` ไม่ได้จนกว่า unify login door (ยศติด+resolve ได้ แต่ page-access รอ)
+- [ ] **⭐ migrate `dc_members.roles` (Discord CSV ชื่อ) → `web_roles` (key)** (user สั่งจด 2026-07-16) — แปลชื่อ Discord → permission key ผ่าน catalog `dc_guild_roles` เขียนลง web_roles → เป้าหมาย **web_roles = แหล่งรวม key ของทุกคน (Discord+email) ที่เดียว** · ⚠️ **decision คู่กัน:** ถ้าจะให้ web_roles เป็น source เดียวจริง ต้องให้ **Discord sync เขียน web_roles ด้วย** (แปล name→key ตอน sync ใน `db/members.js`) + resolveAccess อ่าน web_roles → ไม่งั้น `roles`(name) กับ `web_roles`(key) diverge ทุก sync (sync ทับ `roles` แต่ไม่ทับ `web_roles`)
 - [x] Portfolio consult (web page) เสร็จ — `web/app/tee/portfolio/` (เนื้อหาใน data/portfolio.json แก้เอง) + artifact · รอ deploy prod ให้ขึ้น pplevolunteers.org/tee/portfolio
 - ⚠️ **ยังไม่ commit** (checkpoint `f2c0e3b` "Before user.id migration" คือจุดก่อนเริ่ม) · **ก่อน deploy prod:** รัน migration.sql block ล่าสุด (drop members + dc_members email/nullable + org_members + org_login_tokens)
 

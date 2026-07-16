@@ -54,6 +54,7 @@ export const CAPABILITIES = {
 
   // ── Admin ──
   viewServerLogs:      ['admin', 'moderator'],   // เดิม ['Admin','Moderator']
+  manageRoles:         ['admin', 'moderator'],   // ตั้ง/ถอด Discord role ผ่านเว็บ (ตาม Manage Roles ใน Discord)
 }
 
 /**
