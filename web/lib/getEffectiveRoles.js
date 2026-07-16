@@ -31,7 +31,9 @@ async function getRealRoles(session, guildId) {
   if (realDiscordId) {
     try {
       const { rows } = await pool.query(
-        'SELECT roles, web_roles FROM dc_members WHERE guild_id = $1 AND discord_id = $2',
+        `SELECT om.roles, om.web_roles FROM org_members om
+           JOIN users u ON u.id = om.user_id
+          WHERE om.guild_id = $1 AND u.discord_id = $2`,
         [guildId, realDiscordId]
       )
       if (rows[0]?.roles) {
@@ -70,7 +72,9 @@ async function resolveIdentity(session, guildId) {
   if (debugDiscordId) {
     try {
       const { rows } = await pool.query(
-        'SELECT roles, web_roles FROM dc_members WHERE guild_id = $1 AND discord_id = $2',
+        `SELECT om.roles, om.web_roles FROM org_members om
+           JOIN users u ON u.id = om.user_id
+          WHERE om.guild_id = $1 AND u.discord_id = $2`,
         [guildId, debugDiscordId]
       )
       const roles = rows[0]?.roles ? rows[0].roles.split(',').map(r => r.trim()).filter(Boolean) : []

@@ -130,11 +130,12 @@ export async function getAssignees(caseId) {
 export async function getAssigneesWithNames(caseId, guildIds) {
   const { rows } = await pool.query(
     `SELECT DISTINCT ON (a.discord_id) a.discord_id, a.assigned_at,
-            COALESCE(m.display_name, m.username, a.discord_id) AS name
+            COALESCE(om.display_name, u.username, a.discord_id) AS name
      FROM case_assignees a
-     LEFT JOIN dc_members m ON m.discord_id = a.discord_id AND m.guild_id = ANY($2)
+     LEFT JOIN users u        ON u.discord_id = a.discord_id
+     LEFT JOIN org_members om ON om.user_id = u.id AND om.guild_id = ANY($2)
      WHERE a.case_id = $1
-     ORDER BY a.discord_id, (m.display_name IS NULL), (m.username IS NULL)`,
+     ORDER BY a.discord_id, (om.display_name IS NULL), (u.username IS NULL)`,
     [caseId, guildIds],
   )
   return rows.sort((a, b) => new Date(a.assigned_at) - new Date(b.assigned_at))
