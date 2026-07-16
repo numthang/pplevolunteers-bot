@@ -65,6 +65,24 @@ export async function findDiscordIdByProvider(provider, providerId) {
   return rows[0]?.discord_id ?? null
 }
 
+// ผูก identity เข้ากับ users.id ตรงๆ (ประตูสมัครที่ไม่มี discord เช่น google signup)
+export async function linkIdentityByUser(userId, provider, providerId) {
+  const { rows } = await pool.query(
+    `SELECT user_id FROM user_identities WHERE provider = $1 AND provider_id = $2`,
+    [provider, providerId]
+  )
+  if (rows[0] && rows[0].user_id !== userId) {
+    throw Object.assign(new Error('already_taken'), { code: 'already_taken' })
+  }
+  const { rows: ur } = await pool.query(`SELECT discord_id FROM users WHERE id = $1`, [userId])
+  await pool.query(
+    `INSERT INTO user_identities (user_id, discord_id, provider, provider_id)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (provider, provider_id) DO UPDATE SET user_id = EXCLUDED.user_id`,
+    [userId, ur[0]?.discord_id ?? null, provider, providerId]
+  )
+}
+
 // userId → discord_id (ถ้าคนนั้นมี discord ผูก) · feature code ยัง key ด้วย discordId
 export async function discordIdByUserId(userId) {
   const { rows } = await pool.query(`SELECT discord_id FROM users WHERE id = $1`, [userId])

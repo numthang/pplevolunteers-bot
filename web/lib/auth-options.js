@@ -4,10 +4,8 @@ import GoogleProvider from 'next-auth/providers/google'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import pool from '@/db/index.js'
 import { isSuperAdmin } from '@/lib/roles.js'
-import { findUserIdByProvider, resolveUserByDiscord, discordIdByUserId } from '@/db/userIdentities.js'
+import { findUserIdByProvider, resolveUserByDiscord, discordIdByUserId, linkIdentityByUser } from '@/db/userIdentities.js'
 import { resolveOrgUser } from '@/db/orgMembers.js'
-
-const OAUTH_PROVIDERS = ['line', 'google']
 
 // Passkey / Phone OTP — verify endpoint ออก nonce ลง dc_user_config แล้ว client แลก session ผ่าน credentials
 const nonceAuthorize = (nonceKey) => async (credentials) => {
@@ -99,11 +97,13 @@ export const authOptions = {
   callbacks: {
     async signIn({ account, profile }) {
       if (!account) return false
-      // LINE / Google: ต้องผูกกับ user ก่อน ถ้าไม่มี identity → block (กันบัญชีเปล่า)
-      if (OAUTH_PROVIDERS.includes(account.provider)) {
-        const userId = await findUserIdByProvider(account.provider, profile.sub).catch(() => null)
+      // LINE: ไม่การันตี email = เป็นตัวตนเองไม่ได้ → ต้องผูก user ก่อน (block ถ้าไม่มี link)
+      if (account.provider === 'line') {
+        const userId = await findUserIdByProvider('line', profile.sub).catch(() => null)
         if (!userId) return '/login?error=NotLinked'
       }
+      // Google: ประตูสมัคร (email verified = ตัวตน) → ผ่านได้ · แต่ต้องมี email
+      if (account.provider === 'google' && !profile?.email) return false
       return true
     },
     async jwt({ token, account, profile, user, trigger }) {
@@ -121,9 +121,20 @@ export const authOptions = {
               [avatarUrl, token.userId, process.env.GUILD_ID]
             ).catch(() => {})
           }
-        } else if (OAUTH_PROVIDERS.includes(account.provider)) {
-          // line/google: resolve users.id (signIn block ถ้าไม่มี identity)
-          token.userId = await findUserIdByProvider(account.provider, profile.sub).catch(() => null)
+        } else if (account.provider === 'google') {
+          // google = ประตูสมัคร: เจอ link → ใช้ · ไม่เจอ → สร้าง/หา users จาก email + auto-link
+          let uid = await findUserIdByProvider('google', profile.sub).catch(() => null)
+          if (!uid && profile?.email) {
+            const u = await resolveOrgUser(profile.email, profile.name).catch(() => null)
+            if (u) {
+              uid = u.id
+              await linkIdentityByUser(u.id, 'google', profile.sub).catch(() => {})
+            }
+          }
+          token.userId = uid
+        } else if (account.provider === 'line') {
+          // line: resolve users.id (signIn block แล้วถ้าไม่มี link)
+          token.userId = await findUserIdByProvider('line', profile.sub).catch(() => null)
         } else if (account.provider === 'passkey' || account.provider === 'phone') {
           // credentials authorize คืน discordId มาแล้ว → resolve users.id
           token.discordId = user?.discordId || user?.id
