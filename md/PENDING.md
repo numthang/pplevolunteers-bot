@@ -28,11 +28,26 @@
 
 ### 🎫 Web-native role grant (RBAC — โลก email + จัดยศผ่านเว็บ)
 
-- [x] **B — grant ยศคน Discord ผ่านเว็บ (2026-07-16, org-core branch, ยังไม่ commit)** — หน้า `/admin/roles` (ค้นสมาชิก → chip ยศ toggle) → สั่ง Discord เพิ่ม/ถอดยศจริง (`lib/discordRoles.js` PUT/DELETE) + write-through `dc_members.roles` + `clearAccessCache` + audit · gate `manageRoles`=admin/moderator (permissions.js) · grantable = 9 role (ยกเว้น admin) · **Discord = one source, เว็บเป็นรีโมท** (ตอบโจทย์ "แก้ที่ไหนก็ตรงกันทั้ง Discord+web") · verify curl 403/200 + jest 189 ผ่าน · ⬜ ยังไม่กดเทสจริงในเบราว์เซอร์ (แตะ Discord side-effect)
-- [ ] **web_roles — grant ยศคน email (guildless)** — เพิ่ม column `dc_members.web_roles TEXT` (CSV ของ **key** จาก `org_roles` เช่น `treasurer,editor` — ไม่ใช่ชื่อไทย) · resolveAccess union: `roles`(ชื่อ Discord→แปลผ่าน catalog) + `web_roles`(key เป็น permission ตรงๆ **ไม่ต้องพึ่ง guild catalog** → คน email guildless resolve ได้) · grant API/UI ตัด `discord_id IS NOT NULL` ออก → คน email โผล่ + branch (Discord→เขียน Discord, email→web_roles) · ⚠️ email ยังเปิดหน้า `/finance` ไม่ได้จนกว่า unify login door (ยศติด+resolve ได้ แต่ page-access รอ)
+- [x] **B — grant ยศคน Discord ผ่านเว็บ (2026-07-16, commit 6d534fb)** — หน้า `/admin/roles` (ค้นสมาชิก → chip ยศ toggle) → สั่ง Discord เพิ่ม/ถอดยศจริง (`lib/discordRoles.js` PUT/DELETE) + write-through `dc_members.roles` + `clearAccessCache` + audit · gate `manageRoles`=admin/moderator (permissions.js) · grantable = 9 role (ยกเว้น admin) · **Discord = one source, เว็บเป็นรีโมท** (ตอบโจทย์ "แก้ที่ไหนก็ตรงกันทั้ง Discord+web") · verify curl 403/200 + jest 189 ผ่าน · ⬜ ยังไม่กดเทสจริงในเบราว์เซอร์ (แตะ Discord side-effect)
+- [x] **web_roles — grant ยศคน email (guildless)** ✅ commit 98aef7d — เพิ่ม column `dc_members.web_roles TEXT` (CSV ของ **key** จาก `org_roles` เช่น `treasurer,editor` — ไม่ใช่ชื่อไทย) · resolveAccess union: `roles`(ชื่อ Discord→แปลผ่าน catalog) + `web_roles`(key เป็น permission ตรงๆ **ไม่ต้องพึ่ง guild catalog** → คน email guildless resolve ได้) · grant API/UI ตัด `discord_id IS NOT NULL` ออก → คน email โผล่ + branch (Discord→เขียน Discord, email→web_roles) · ⚠️ email ยังเปิดหน้า `/finance` ไม่ได้จนกว่า unify login door (ยศติด+resolve ได้ แต่ page-access รอ)
 - [ ] **⭐ migrate `dc_members.roles` (Discord CSV ชื่อ) → `web_roles` (key)** (user สั่งจด 2026-07-16) — แปลชื่อ Discord → permission key ผ่าน catalog `dc_guild_roles` เขียนลง web_roles → เป้าหมาย **web_roles = แหล่งรวม key ของทุกคน (Discord+email) ที่เดียว** · ⚠️ **decision คู่กัน:** ถ้าจะให้ web_roles เป็น source เดียวจริง ต้องให้ **Discord sync เขียน web_roles ด้วย** (แปล name→key ตอน sync ใน `db/members.js`) + resolveAccess อ่าน web_roles → ไม่งั้น `roles`(name) กับ `web_roles`(key) diverge ทุก sync (sync ทับ `roles` แต่ไม่ทับ `web_roles`)
+### 🧬 Identity/Membership split (2026-07-16) — build + verify localhost เสร็จ, **ยังไม่ repoint โค้ด**
+
+- [x] **สร้าง `users` (lean identity) + `org_members` (membership+profile)** commit 93ef6de · script `scripts/migration/identity-split-expand.sql` (idempotent, prod-safe รันด้วย `-1`) · dedup dc_members หลายแถว/คน → users 1 แถว/คน (canonical = MIN(id) ต่อ discord_id) · verify localhost: **users 6573 (0 dup) · org_members 7295 (0 orphan) · dc_members ไม่แตะ**
+  - **users** = ตัวตน + contact: `discord_id·email·google_id·username·phone·phone_verified_at·line_id·firstname·lastname` (+ created/updated_at)
+  - **org_members** (id หน้าสุด) = ที่เหลือทั้งหมด: keys(`user_id`→users, `org_id`→orgs, `guild_id`) · membership(role/status/invited_by/joined_at/registered_at) · roles/web_roles/roles_assigned_at · position/member_id/serial · province/region · display_name/avatar/nickname/specialty · interests/referred_by · ย้ายจาก dc_members: amphoe/primary_province/bank_*/id_card_image
+  - **หลักแบ่ง:** contact(phone/line)+ชื่อจริง → users · เอกสาร/bank/ที่อยู่/roles → org_members · "จังหวัดรับผิดชอบจริง" มาจาก **roles(scope_node)** ไม่ใช่ province column (verify แล้ว)
+  - PK org_members = surrogate `id` · unique: Discord `(user_id,guild_id)` · email `(user_id,org_id)` (guild_id NULL)
+  - ⚠️ **ไม่ auto-link Discord↔email** → คนละ users · email พี่ (unnop@) อยู่ orphan `dc_members.id=17505`, แถว discord `id=1` email ว่าง
+- [x] **rename** `organizations`→`orgs` · `dc_user_identities`→`user_identities` (commit 93ef6de + update code refs: guilds/orgMembers/userIdentities/auth-options) · คง `dc_` เฉพาะ Discord-context (dc_members/dc_guilds/dc_guild_roles/dc_user_config/ratings/reports)
+- [x] **Nav org-layout** commit 1899a6b — org switcher (group guild→org, `getUserGuilds` +org_id) + app tabs กางบน topbar (ตัด sub-nav ซ้ำบน home) · Phase A commit 8919047
+- [ ] **NEXT ① repoint โค้ด** — feature อ่าน/เขียน `users`+`org_members` แทน `dc_members` = **ก้อนใหญ่สุด** (finance/cases/calling/docs + auth session → userId)
+- [ ] **NEXT ② merge บัญชี** 17505(email)→1(discord) = data-fix เล็ก เพื่อเทส single-auth (email login เจอ id=1)
+- [ ] **NEXT ③ bot sync** — `db/members.js` เขียน `org_members.roles` (แทน dc_members.roles) = แตะ bot live
+- [ ] **NEXT ④ contract** — drop `dc_members` + คอลัมน์ไม่ใช้ (ท้ายสุด หลัง repoint นิ่ง)
+
 - [x] Portfolio consult (web page) เสร็จ — `web/app/tee/portfolio/` (เนื้อหาใน data/portfolio.json แก้เอง) + artifact · รอ deploy prod ให้ขึ้น pplevolunteers.org/tee/portfolio
-- ⚠️ **ยังไม่ commit** (checkpoint `f2c0e3b` "Before user.id migration" คือจุดก่อนเริ่ม) · **ก่อน deploy prod:** รัน migration.sql block ล่าสุด (drop members + dc_members email/nullable + org_members + org_login_tokens)
+- ⚠️ **org-core ยังไม่ merge เข้า master** (prod = master `2e81e6e` guild-based, ไม่แตะ) · deploy org = merge org-core→master เมื่อ org เสร็จ · **ก่อน deploy prod:** รัน migration.sql (rename orgs/user_identities + dc_members email/nullable + org_roles + web_roles) + `identity-split-expand.sql` · tag ของเก่า `layout-guild-v1`
 
 ---
 
