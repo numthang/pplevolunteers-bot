@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import { signOut } from 'next-auth/react'
+import CreateOrgModal from './CreateOrgModal.jsx'
 
 // top-level switcher: [ส่วนตัว ↔ องค์กร] + nav ของ context ปัจจุบัน
 export default function OrgShell({ user, orgs, activeOrg, children }) {
@@ -9,6 +10,7 @@ export default function OrgShell({ user, orgs, activeOrg, children }) {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [showCreate, setShowCreate] = useState(false)
   const menuRef = useRef(null)
 
   useEffect(() => {
@@ -64,7 +66,12 @@ export default function OrgShell({ user, orgs, activeOrg, children }) {
                   </button>
                 ))}
                 <div className="my-1 border-t border-gray-100 dark:border-disc-border" />
-                <a href="/org/new" className="block px-3 py-2 text-sm text-gray-500 dark:text-disc-muted hover:bg-gray-50 dark:hover:bg-white/5">+ สร้างองค์กรใหม่</a>
+                <button
+                  onClick={() => { setOpen(false); setShowCreate(true) }}
+                  className="block w-full px-3 py-2 text-left text-sm text-gray-500 dark:text-disc-muted hover:bg-gray-50 dark:hover:bg-white/5"
+                >
+                  ＋ สร้างองค์กร
+                </button>
               </div>
             )}
           </div>
@@ -85,6 +92,8 @@ export default function OrgShell({ user, orgs, activeOrg, children }) {
       </header>
 
       <main className="max-w-3xl mx-auto px-3 py-6">{children}</main>
+
+      <CreateOrgModal open={showCreate} onClose={() => setShowCreate(false)} />
     </div>
   )
 }
