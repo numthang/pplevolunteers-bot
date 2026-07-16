@@ -209,7 +209,7 @@ export async function inviteMember(orgId, email, invitedByUserId, role = 'member
     await client.query(
       `INSERT INTO org_members (org_id, user_id, role, status, invited_by)
          VALUES ($1, $2, $3, 'invited', $4)
-       ON CONFLICT (org_id, user_id) DO NOTHING`,
+       ON CONFLICT (user_id, org_id) WHERE guild_id IS NULL DO NOTHING`,
       [orgId, user.id, role, invitedByUserId]
     )
     await client.query('COMMIT')
