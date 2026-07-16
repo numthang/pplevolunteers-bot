@@ -47,7 +47,7 @@
   },
 
   "experience": [
-    { "when": "2020 — Present", "title": "Coordinator & platform builder", "org": "Move Forward → People's Party, Ratchaburi", "desc": "Six years organizing and team-building for the party, grew a 5,300-member volunteer community on Discord and built the platform that runs its membership, finance, documents, and outreach." },
+    { "when": "2020 — Present", "title": "Coordinator & platform builder", "org": "Move Forward → People's Party, Ratchaburi", "desc": "Six years organizing and team-building for the party, grew a 5,300 member volunteer community on Discord and built the platform that runs its membership, finance, documents, and outreach." },
     { "when": "2008 — 2021", "title": "Farmer & programmer", "org": "Numthang Permaculture Farm", "desc": "Thirteen years of farming and study in permaculture and contemplative practice, while continuing to build software." },
     { "when": "2005 — 2006", "title": "Programmer", "org": "Mirror Art Foundation, Chiang Rai", "desc": "Web-application development and server management for a Thai social-development NGO." },
     { "when": "2001 — 2005", "title": "Full-stack developer & project manager", "org": "Internet Business Network, Thailand", "desc": "Programming and project management across a range of web applications." }
