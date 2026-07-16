@@ -876,7 +876,7 @@ export default function CampaignPage({ params }) {
         campaignId={parseInt(campaignId)}
         contactType={activeTab === 'contact' ? 'contact' : 'member'}
         memberIds={Array.from(selectedMembers)}
-        defaultMessage={buildSmsTemplate(campaign?.name, campaign?.event_date, campaignId)}
+        defaultMessage={buildSmsTemplate(campaign?.name, campaign?.event_date, campaign?.act_event_id)}
         onClose={() => setSmsModalOpen(false)}
         onDone={() => {
           setSmsModalOpen(false)

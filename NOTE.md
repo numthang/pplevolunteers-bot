@@ -1,33 +1,12 @@
-production ตอนนี้ deploy แล้วค้างที่
-
-npm warn config init.module Use `--init-module` instead.
-
-up to date, audited 243 packages in 6s
-
-46 packages are looking for funding
-  run `npm fund` for details
-
-6 vulnerabilities (4 moderate, 1 high, 1 critical)
-
-To address all issues possible (including breaking changes), run:
-  npm audit fix --force
-
-Some issues need review, and may require choosing
-a different dependency.
-
-Run `npm audit` for details.
-npm warn config init.module Use `--init-module` instead.
-
-> pple-volunteers@2.24.0 build
-> nice -n 19 ionice -c 2 -n 7 next build
-
-[dotenv@17.3.1] injecting env (39) from ../.env -- tip: 🛡️ auth for agents: https://vestauth.com
-   ▲ Next.js 15.5.14
-
-   Creating an optimized production build ...
-
-ตรงนี้แล้วก็ lost connection ไปเลย จนเข้าไม่ได้สักพักอ่ะ ชุด HEAD is now at f2c0e3b Before user.id migration
-
+Platfor.Org
+- อนาคต org_members จะ migrate มาจาก dc_members ให้รู้ว่าใครอยู่องค์กรไหน 
+- ตอนนี้ถ้าจะดูว่าใครเป็น treasurer บนเว็บเพื่อมีสิทธแก้ไข finance ดูจากอะไร ค้นจาก dc_members.roles แล้วแมพ เหรัญญิก เพื่อหา treasurer เหรอ
+- หน้า http://localhost:3000/org/settings ตรง role ต้องแสดงให้หมดจากตาราง org_roles
+- หน้านี้ http://localhost:3000/org ขอ layout 100% แล้วก็ มีเมนูอะไรสำหรับ org ตอนนี้ช่วยแปะมาให้หมด ทำให้ หน้า /org นี้เป็น layout ใหม่ทั้งหมดสำหรับเว็บ org ได้ไหม ทั้ง top nav bar และ hamburgur ทั้งหมด แล้วใช้ 
+- ทำให้ทั้งระบบเป็น layout ใหม่หมดเลยได้ไหม เป็นระบบ org ทั้งหมดเลย ผมจะไม่ deploy code ใหม่แล้ว ถ้า org ไม่เสร็จ ผมอยากแก้หมดเลย ทั้ง topbar nav ทั้ง hamburgur เป็นระบบ org base ส่วนแบบเก่าก็อาจจะ tag version เก็บไว้ก่อน เอาไว้ดูตัวอย่างย้อนหลัง
+- ขอ rename organizations เป็น orgs ได้ไหม จะได้ consistancy ทีนี้ schema พร้อมจะได้แก้ทีเดียว
+- dc_user_identities ก็ต้องแก้เป็น user_identities ถูกไหม dc_user_config => user_config
+- ยกเลิก orgauth ไหม ขอใช้ auth เดียว auth เดิม ผ่านตาราง users กับ user_identities ถูกไหม
 
 CivicFlow
 - ทำไมผมเข้าระบบมาผมกลายเป็น admin ขององค์กรนึงไปเลยอ่ะ งงอยู่
@@ -61,6 +40,9 @@ Bot
 
 Cooking
 - ย้าย cooking ออกจาก discord project เถอะ ไปทำเป็น personal ที่แบบ login หรือไม่ login ก็ได้ ไป schema ใหม่ไปเลยดีมะ ส่วน username เราก็แยกออกไปจาก แอพองค์กรไปเลยเนอะ ดีมะอ่ะ รอให้มี domain ของตัวเองก่อน
+
+Calling
+- act_event_cache เหมือนจะดึง act_id มาผิดไหม ทำให้ตอนนี้ไปทำ url ส่ง sms ผิดไปด้วย
 
 Case
 

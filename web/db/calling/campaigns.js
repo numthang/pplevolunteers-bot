@@ -16,7 +16,7 @@ export async function getCampaigns(province = null) {
   const params = []
   let query = `
     SELECT
-      c.id, c.name, c.province, c.description, c.image_url,
+      c.id, c.act_event_id, c.name, c.province, c.description, c.image_url,
       TO_CHAR(c.event_date, 'YYYY-MM-DD"T"HH24:MI') AS event_date, c.created_at,
       COUNT(DISTINCT cl.id) AS call_count
     FROM act_event_cache c
