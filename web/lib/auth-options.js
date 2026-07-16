@@ -4,7 +4,7 @@ import GoogleProvider from 'next-auth/providers/google'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import pool from '@/db/index.js'
 import { isSuperAdmin } from '@/lib/roles.js'
-import { findUserIdByProvider, resolveUserByDiscord } from '@/db/userIdentities.js'
+import { findUserIdByProvider, resolveUserByDiscord, discordIdByUserId } from '@/db/userIdentities.js'
 import { resolveOrgUser } from '@/db/orgMembers.js'
 
 const OAUTH_PROVIDERS = ['line', 'google']
@@ -133,6 +133,11 @@ export const authOptions = {
           token.userId = user?.userId || Number(user?.id) || null
           token.email  = user?.email || null
           token.name   = user?.name || null
+        }
+        // ประตู google/line/magic resolve เป็น userId แต่ยังไม่มี discordId →
+        // เติมจาก users ถ้าคนนั้นผูก discord ไว้ (feature code เช่น getUserGuilds ยัง key ด้วย discordId)
+        if (token.userId && !token.discordId) {
+          token.discordId = await discordIdByUserId(token.userId).catch(() => null)
         }
       }
       if ((account || trigger === 'update') && token.userId) {

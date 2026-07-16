@@ -65,6 +65,12 @@ export async function findDiscordIdByProvider(provider, providerId) {
   return rows[0]?.discord_id ?? null
 }
 
+// userId → discord_id (ถ้าคนนั้นมี discord ผูก) · feature code ยัง key ด้วย discordId
+export async function discordIdByUserId(userId) {
+  const { rows } = await pool.query(`SELECT discord_id FROM users WHERE id = $1`, [userId])
+  return rows[0]?.discord_id ?? null
+}
+
 // ประตูใหม่: identity ใดๆ → users.id (แกนหลัง unify auth)
 export async function findUserIdByProvider(provider, providerId) {
   const { rows } = await pool.query(
