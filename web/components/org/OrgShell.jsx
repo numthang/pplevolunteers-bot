@@ -1,7 +1,7 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
-import { orgSignOut } from '@/lib/orgSignIn.js'
+import { signOut } from 'next-auth/react'
 
 // top-level switcher: [ส่วนตัว ↔ องค์กร] + nav ของ context ปัจจุบัน
 export default function OrgShell({ user, orgs, activeOrg, children }) {
@@ -79,7 +79,7 @@ export default function OrgShell({ user, orgs, activeOrg, children }) {
 
           <div className="ml-auto flex items-center gap-3">
             <span className="hidden sm:block text-xs text-gray-400 dark:text-disc-muted max-w-[12rem] truncate">{user.email}</span>
-            <button onClick={() => orgSignOut()} className="text-sm text-gray-500 dark:text-disc-muted hover:text-gray-700 dark:hover:text-disc-text">ออก</button>
+            <button onClick={() => signOut({ callbackUrl: '/org/login' })} className="text-sm text-gray-500 dark:text-disc-muted hover:text-gray-700 dark:hover:text-disc-text">ออก</button>
           </div>
         </div>
       </header>

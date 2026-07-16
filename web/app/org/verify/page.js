@@ -1,8 +1,8 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { orgSignIn } from '@/lib/orgSignIn.js'
+import { signIn } from 'next-auth/react'
 
-// magic-link landing — อ่าน token จาก URL แล้วแลก session ผ่าน credentials 'magic'
+// magic-link landing — อ่าน token จาก URL แล้วแลก session ผ่าน credentials 'magic' (auth หลัก)
 // อ่านจาก window.location (client) เลี่ยง useSearchParams ที่ต้อง Suspense boundary
 export default function OrgVerifyPage() {
   const [failed, setFailed] = useState(false)
@@ -10,7 +10,9 @@ export default function OrgVerifyPage() {
   useEffect(() => {
     const token = new URLSearchParams(window.location.search).get('token')
     if (!token) { setFailed(true); return }
-    orgSignIn('magic', { token, callbackUrl: '/org' }).catch(() => setFailed(true))
+    signIn('magic', { token, redirect: false })
+      .then(res => { if (res?.ok) window.location.href = '/org'; else setFailed(true) })
+      .catch(() => setFailed(true))
   }, [])
 
   return (

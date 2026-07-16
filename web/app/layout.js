@@ -7,7 +7,6 @@ import { getUserGuilds, getEnabledFeatures } from '@/db/guilds.js'
 import { getGuildId } from '@/lib/guildContext.js'
 import Providers from '@/components/Providers.jsx'
 import Nav from '@/components/Nav.jsx'
-import NoGuildNotice from '@/components/NoGuildNotice.jsx'
 
 export const metadata = {
   title: {
@@ -32,9 +31,8 @@ export default async function RootLayout({ children }) {
     ])
   }
 
-  // login แล้วแต่ไม่ได้เป็น member ของ guild ใดเลย → block (ยกเว้น super_admin ที่เห็นทุก guild)
-  const noGuild = !!session?.user && guilds.length === 0 && !session.user.isSuperAdmin
-
+  // ไม่ block ด้วย guild membership อีกต่อไป (org platform หลาย tenant — ใครก็เข้าหน้าแรกได้)
+  // feature ราย guild มี permission check ของตัวเอง · switcher + สร้างองค์กรอยู่ใน Nav
   return (
     <html lang={locale}>
       <body className="bg-gray-100 dark:bg-disc-bg2 text-gray-900 dark:text-disc-text min-h-screen">
@@ -47,7 +45,7 @@ export default async function RootLayout({ children }) {
               ข้าม guild ที่ enable feature ไม่เหมือนกัน — router.refresh() อย่างเดียวไม่พอ
               เพราะ error boundary ไม่ reset เองถ้า component ไม่ remount */}
           <main key={currentGuildId} className="max-w-5xl mx-auto px-1 sm:px-4 pt-3 pb-4">
-            {noGuild ? <NoGuildNotice /> : children}
+            {children}
           </main>
         </Providers>
         </NextIntlClientProvider>
