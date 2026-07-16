@@ -2,7 +2,10 @@ import pool from './index.js'
 
 export async function getGuilds() {
   const { rows } = await pool.query(
-    `SELECT guild_id, name, icon_url FROM dc_guilds ORDER BY name ASC`
+    `SELECT g.guild_id, g.name, g.icon_url, g.org_id, o.name AS org_name
+     FROM dc_guilds g
+     LEFT JOIN organizations o ON o.id = g.org_id
+     ORDER BY o.name ASC, g.name ASC`
   )
   return rows
 }
@@ -47,11 +50,12 @@ export async function getUserGuilds(discordId, { all = false } = {}) {
   if (all) return getGuilds()
   if (!discordId) return []
   const { rows } = await pool.query(
-    `SELECT g.guild_id, g.name, g.icon_url
+    `SELECT g.guild_id, g.name, g.icon_url, g.org_id, o.name AS org_name
      FROM dc_members m
      JOIN dc_guilds g ON g.guild_id = m.guild_id
+     LEFT JOIN organizations o ON o.id = g.org_id
      WHERE m.discord_id = $1
-     ORDER BY g.name ASC`,
+     ORDER BY o.name ASC, g.name ASC`,
     [discordId]
   )
   return rows

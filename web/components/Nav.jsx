@@ -230,7 +230,18 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
   })
 
   const currentGuild = guilds.find(g => g.guild_id === currentGuildId) || guilds[0] || null
-  const canSwitchGuild = guilds.length > 1
+
+  // Org switcher (main nav) — group guild ตาม org · 1 org 1 guild หลักๆ · guild switcher ตัวจริงย้ายไป /bot/*
+  const orgMap = new Map()
+  for (const g of guilds) {
+    const key = g.org_id ?? `g:${g.guild_id}`   // guild ที่ไม่มี org → เป็น org ของตัวเอง
+    if (!orgMap.has(key)) orgMap.set(key, { key, name: g.org_name || g.name, guilds: [] })
+    orgMap.get(key).guilds.push(g)
+  }
+  const orgs = [...orgMap.values()]
+  const currentOrgKey = currentGuild ? (currentGuild.org_id ?? `g:${currentGuild.guild_id}`) : null
+  const currentOrg = orgs.find(o => o.key === currentOrgKey) || orgs[0] || null
+  const canSwitchOrg = orgs.length > 1
 
   const switchGuild = async (gid) => {
     setGuildOpen(false)
@@ -248,6 +259,13 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
     setSwitching(false)
   }
 
+  // เลือก org → สลับไป guild ของ org นั้น (guild ที่ user เป็น member, 1 org 1 guild = ตัวเดียว)
+  const switchOrg = (org) => {
+    setGuildOpen(false)
+    const target = org.guilds.find(g => g.guild_id === currentGuildId) || org.guilds[0]
+    if (target) switchGuild(target.guild_id)
+  }
+
   const activeClass = 'bg-teal/10 dark:bg-teal/10 text-teal dark:text-teal font-medium'
   const inactiveClass = 'text-warm-500 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text hover:bg-warm-100 dark:hover:bg-disc-hover'
 
@@ -256,18 +274,18 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
     <nav className="bg-white dark:bg-disc-bg2 border-b border-warm-200 dark:border-disc-border shadow-sm sticky top-0 z-40">
       <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
 
-        {/* Guild Switcher */}
+        {/* Org Switcher (main nav) — guild switcher ตัวจริงอยู่ /bot/* */}
         <div className="relative shrink-0">
           <div className="flex items-center gap-1">
-            {session && currentGuild ? (
+            {session && currentOrg ? (
               <div className="flex items-center gap-1">
                 <Link href="/" className="flex items-center gap-1.5 hover:opacity-80 transition">
                   <GuildIcon guild={currentGuild} className="w-8 h-8" />
                   <span className="hidden md:block font-bold text-base text-teal dark:text-teal truncate max-w-[160px]">
-                    {currentGuild.name}
+                    {currentOrg.name}
                   </span>
                 </Link>
-                {canSwitchGuild && (
+                {canSwitchOrg && (
                   <button
                     onClick={() => !switching && setGuildOpen(o => !o)}
                     disabled={switching}
@@ -293,23 +311,23 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
             )}
           </div>
 
-          {guildOpen && canSwitchGuild && (
+          {guildOpen && canSwitchOrg && (
             <>
               <div className="fixed inset-0 z-10" onClick={() => setGuildOpen(false)} />
               <div className="absolute left-0 top-full mt-1 z-20 bg-white dark:bg-disc-hover border border-warm-200 dark:border-disc-border rounded-lg shadow-lg py-1 min-w-[200px]">
-                {guilds.map(g => (
+                {orgs.map(o => (
                   <button
-                    key={g.guild_id}
-                    onClick={() => switchGuild(g.guild_id)}
+                    key={o.key}
+                    onClick={() => switchOrg(o)}
                     className={`w-full text-left flex items-center gap-2.5 px-4 py-2 text-sm transition ${
-                      g.guild_id === currentGuildId
+                      o.key === currentOrgKey
                         ? 'bg-teal/10 dark:bg-teal/10 text-teal dark:text-teal font-medium'
                         : 'text-warm-900 dark:text-disc-muted hover:bg-warm-100 dark:hover:bg-disc-hover'
                     }`}
                   >
-                    <GuildIcon guild={g} className="w-6 h-6" />
-                    <span className="truncate">{g.name}</span>
-                    {g.guild_id === currentGuildId && <span className="ml-auto text-teal shrink-0">✓</span>}
+                    <GuildIcon guild={o.guilds[0]} className="w-6 h-6" />
+                    <span className="truncate">{o.name}</span>
+                    {o.key === currentOrgKey && <span className="ml-auto text-teal shrink-0">✓</span>}
                   </button>
                 ))}
               </div>
@@ -611,7 +629,7 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
                     </a>
 
                     {/* Guild switcher (mobile) */}
-                    {canSwitchGuild && (
+                    {canSwitchOrg && (
                       <>
                         <div className="border-t border-warm-200 dark:border-disc-border my-1" />
                         <div className="px-4 py-1 text-xs text-warm-400 dark:text-disc-muted">เซิร์ฟเวอร์</div>
