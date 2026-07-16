@@ -42,6 +42,8 @@
 - [x] **rename** `organizations`→`orgs` · `dc_user_identities`→`user_identities` (commit 93ef6de + update code refs: guilds/orgMembers/userIdentities/auth-options) · คง `dc_` เฉพาะ Discord-context (dc_members/dc_guilds/dc_guild_roles/dc_user_config/ratings/reports)
 - [x] **Nav org-layout** commit 1899a6b — org switcher (group guild→org, `getUserGuilds` +org_id) + app tabs กางบน topbar (ตัด sub-nav ซ้ำบน home) · Phase A commit 8919047
 - [ ] **NEXT ① repoint โค้ด** — feature อ่าน/เขียน `users`+`org_members` แทน `dc_members` = **ก้อนใหญ่สุด** (finance/cases/calling/docs + auth session → userId)
+  - ⚠️ **finance `owner_user_id`** ตอนนี้ backfill ชี้ `dc_members.id` (ผ่าน discord+guild) = อาจเป็น **non-canonical row** → ไม่ตรง `users.id` · repoint ต้อง **re-backfill ผ่าน canonical (MIN(id)/discord_id)** + เปลี่ยน FK → users(id)
+  - ⚠️ **`dc_members.web_roles`** → ย้าย resolveAccess ไปอ่าน `org_members.web_roles` แล้วค่อย drop column (migration ยังคง dc_members.web_roles ไว้จนกว่าจะ repoint เสร็จ)
 - [ ] **NEXT ② merge บัญชี** 17505(email)→1(discord) = data-fix เล็ก เพื่อเทส single-auth (email login เจอ id=1)
 - [ ] **NEXT ③ bot sync** — `db/members.js` เขียน `org_members.roles` (แทน dc_members.roles) = แตะ bot live
 - [ ] **NEXT ④ contract** — drop `dc_members` + คอลัมน์ไม่ใช้ (ท้ายสุด หลัง repoint นิ่ง)

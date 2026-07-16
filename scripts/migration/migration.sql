@@ -1063,19 +1063,9 @@ ALTER TABLE dc_members ALTER COLUMN guild_id    DROP NOT NULL;
 -- identity ยึด email เป็น global unique (partial — PPLE row email=NULL ไม่โดนคุม, กัน invite/login สร้าง dup)
 CREATE UNIQUE INDEX IF NOT EXISTS uq_dc_members_email ON dc_members (email) WHERE email IS NOT NULL;
 
--- ── Phase 1: membership (user ↔ org, many-to-many) ──
--- 1 user อยู่หลาย org ได้ · role อยู่ที่ membership ไม่ใช่ที่ user
--- status 'invited' = shell user ถูกเชิญแต่ยังไม่ claim (login email ตรง → flip 'active') · ตาราง invite ในตัว
-CREATE TABLE IF NOT EXISTS org_members (
-  org_id      INT         NOT NULL REFERENCES organizations(id),
-  user_id     INT         NOT NULL REFERENCES dc_members(id),
-  role        VARCHAR(40) NOT NULL DEFAULT 'member',   -- ค่าใน permissions.js PERMISSIONS
-  status      VARCHAR(12) NOT NULL DEFAULT 'active',   -- 'active' | 'invited'
-  invited_by  INT         REFERENCES dc_members(id),
-  joined_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  PRIMARY KEY (org_id, user_id)
-);
-CREATE INDEX IF NOT EXISTS idx_org_members_user ON org_members (user_id);
+-- ── Phase 1: membership org_members — ⚠️ ย้ายไป scripts/migration/identity-split-expand.sql (2026-07-16) ──
+-- identity-split DROP+CREATE org_members ใหม่ ด้วย schema เต็ม (id หน้าสุด, user_id→users, guild_id, roles, web_roles,
+-- profile ทั้งหมด) → block CREATE เดิม (org_id,user_id,role,status) ตัดทิ้ง เพราะซ้ำซ้อน/โดน drop อยู่ดี
 
 -- ── Phase 1: magic-link login token (email-keyed, pre-identity) ──
 -- dc_user_config ใช้ไม่ได้ (PK = discord_id,key ต้องมี discord_id) → ตารางเล็กแยก · TTL เช็คใน query (15 นาที)
