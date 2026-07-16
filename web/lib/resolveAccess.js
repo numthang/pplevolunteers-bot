@@ -69,11 +69,13 @@ export function reduceRoleRows(byName, roleNames = []) {
  * membership gate: ถ้า caller (getEffectiveRoles) ไม่เจอแถวใน dc_members → ส่ง null/undefined มา → isMember=false
  * สมาชิกที่ไม่มี role พิเศษ ส่ง [] มา → isMember=true แต่ permissions ว่าง (fail-safe)
  */
-export async function resolveAccess(guildId, roleNames) {
+export async function resolveAccess(guildId, roleNames, webRoleKeys = []) {
   const isMember = Array.isArray(roleNames)
   if (!isMember) return { isMember: false, permissions: new Set(), scopeGrants: [] }
 
   const byName = await loadGuildRoles(guildId)
   const { permissions, scopeGrants } = reduceRoleRows(byName, roleNames)
+  // web_roles = "key" (permission) ตรงๆ — grant ผ่านเว็บ (คน email guildless + web-only) · ไม่ต้องแปลผ่าน catalog
+  for (const key of webRoleKeys) if (key) permissions.add(key)
   return { isMember, permissions, scopeGrants }
 }

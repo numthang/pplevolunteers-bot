@@ -14,7 +14,7 @@ export default function RolesAdminPage() {
   const [members, setMembers]     = useState([])
   const [assignable, setAssignable] = useState([])
   const [loading, setLoading]     = useState(false)
-  const [busy, setBusy]           = useState(null)   // `${discordId}:${roleId}` ที่กำลังอัปเดต
+  const [busy, setBusy]           = useState(null)   // `${memberId}:${roleId}` ที่กำลังอัปเดต
   const [msg, setMsg]             = useState(null)
   const debounce = useRef(null)
 
@@ -45,25 +45,38 @@ export default function RolesAdminPage() {
     debounce.current = setTimeout(() => search(v), 350)
   }
 
-  async function toggle(member, role, hasRole) {
-    const key = `${member.discordId}:${role.roleId}`
+  // คน Discord เช็คด้วยชื่อ role · คน email เช็คด้วย key (permission)
+  function memberHasRole(m, role) {
+    return m.type === 'discord'
+      ? m.roles.includes(role.roleName)
+      : m.webRoles.includes(role.permission)
+  }
+
+  async function toggle(member, role) {
+    const hasRole = memberHasRole(member, role)
+    const key = `${member.id}:${role.roleId}`
     setBusy(key); setMsg(null)
     const res = await fetch('/api/admin/roles', {
       method: hasRole ? 'DELETE' : 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ discordId: member.discordId, roleId: role.roleId }),
+      body: JSON.stringify({ memberId: member.id, roleId: role.roleId }),
     })
     const data = await res.json().catch(() => ({}))
     setBusy(null)
     if (!res.ok) { setMsg({ type: 'err', text: data.error || 'ทำรายการไม่สำเร็จ' }); return }
-    // อัปเดต local — add/remove role_name ใน member.roles
+    // อัปเดต local — Discord แก้ roles(ชื่อ) · email แก้ webRoles(key)
     setMembers(ms => ms.map(m => {
-      if (m.discordId !== member.discordId) return m
-      const roles = new Set(m.roles)
-      if (hasRole) roles.delete(role.roleName); else roles.add(role.roleName)
-      return { ...m, roles: [...roles] }
+      if (m.id !== member.id) return m
+      if (m.type === 'discord') {
+        const roles = new Set(m.roles)
+        if (hasRole) roles.delete(role.roleName); else roles.add(role.roleName)
+        return { ...m, roles: [...roles] }
+      }
+      const webRoles = new Set(m.webRoles)
+      if (hasRole) webRoles.delete(role.permission); else webRoles.add(role.permission)
+      return { ...m, webRoles: [...webRoles] }
     }))
-    setMsg({ type: 'ok', text: `${hasRole ? 'ถอด' : 'เพิ่ม'}ยศ "${role.roleName}" ${hasRole ? 'จาก' : 'ให้'} ${member.username || member.discordId} แล้ว` })
+    setMsg({ type: 'ok', text: `${hasRole ? 'ถอด' : 'เพิ่ม'}ยศ "${role.roleName}" ${hasRole ? 'จาก' : 'ให้'} ${member.label} แล้ว` })
   }
 
   if (status === 'loading') return null
@@ -72,14 +85,14 @@ export default function RolesAdminPage() {
     <div>
       <h1 className="text-2xl font-bold mb-1">จัดการยศสมาชิก</h1>
       <p className="text-sm text-gray-500 dark:text-disc-muted mb-4">
-        ตั้ง/ถอดยศผ่านเว็บ — เพิ่มยศจริงใน Discord ทันที · ยศ admin ตั้งได้ใน Discord เท่านั้น
+        ตั้ง/ถอดยศผ่านเว็บ — คน Discord เพิ่มยศจริงในเซิร์ฟเวอร์ทันที · คน email เก็บเป็นสิทธิ์ในเว็บ · ยศ admin ตั้งได้ใน Discord เท่านั้น
       </p>
 
       <input
         type="text"
         value={q}
         onChange={e => onSearchChange(e.target.value)}
-        placeholder="ค้นหาสมาชิก (ชื่อ หรือ Discord ID)"
+        placeholder="ค้นหาสมาชิก (ชื่อ, อีเมล หรือ Discord ID)"
         className="w-full border dark:border-disc-border rounded-lg px-3 py-2 bg-card-bg text-gray-700 dark:text-disc-text mb-3"
       />
 
@@ -101,20 +114,26 @@ export default function RolesAdminPage() {
 
       <div className="space-y-3">
         {members.map(m => (
-          <div key={m.discordId} className="border dark:border-disc-border rounded-xl p-4 bg-card-bg">
+          <div key={m.id} className="border dark:border-disc-border rounded-xl p-4 bg-card-bg">
             <div className="flex items-center justify-between mb-2 gap-2">
-              <span className="font-semibold text-gray-800 dark:text-disc-text truncate">{m.username || m.discordId}</span>
-              <span className="text-xs text-gray-400 dark:text-disc-muted shrink-0">{m.discordId}</span>
+              <span className="font-semibold text-gray-800 dark:text-disc-text truncate">{m.label}</span>
+              <span className={`text-xs px-1.5 py-0.5 rounded shrink-0 ${
+                m.type === 'discord'
+                  ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300'
+                  : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
+              }`}>
+                {m.type === 'discord' ? 'Discord' : 'email'}
+              </span>
             </div>
             <div className="flex flex-wrap gap-2">
               {assignable.map(role => {
-                const hasRole = m.roles.includes(role.roleName)
-                const key = `${m.discordId}:${role.roleId}`
+                const hasRole = memberHasRole(m, role)
+                const key = `${m.id}:${role.roleId}`
                 return (
                   <button
                     key={role.roleId}
                     disabled={busy === key}
-                    onClick={() => toggle(m, role, hasRole)}
+                    onClick={() => toggle(m, role)}
                     title={hasRole ? 'คลิกเพื่อถอดยศ' : 'คลิกเพื่อเพิ่มยศ'}
                     className={`px-2.5 py-1 rounded-full text-xs border transition ${
                       hasRole

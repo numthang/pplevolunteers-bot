@@ -1149,3 +1149,8 @@ DO $$ BEGIN
       FOREIGN KEY (permission) REFERENCES org_roles(key);
   END IF;
 END $$;
+
+-- 2026-07-16: web_roles — role ที่ grant ผ่านเว็บ (สำหรับคน email guildless + web-only grant)
+-- เก็บ "key" จาก org_roles (เช่น 'treasurer,editor') ไม่ใช่ชื่อ Discord → resolveAccess ใช้เป็น permission ตรงๆ ไม่ต้องแปลผ่าน catalog
+-- คน Discord = ยศไปเขียน Discord (dc_members.roles) · web_roles ไว้คน email เป็นหลัก · resolveAccess union 2 แหล่ง
+ALTER TABLE dc_members ADD COLUMN IF NOT EXISTS web_roles TEXT;

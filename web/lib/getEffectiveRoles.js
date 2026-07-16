@@ -18,8 +18,8 @@ export async function getEffectiveRoles(session) {
  */
 export async function getEffectiveIdentity(session) {
   const guildId = await getGuildId(session)
-  const { roles, discordId } = await resolveIdentity(session, guildId)
-  const access = await resolveAccess(guildId, roles)
+  const { roles, webRoles, discordId } = await resolveIdentity(session, guildId)
+  const access = await resolveAccess(guildId, roles, webRoles)
   return { roles, discordId, access }
 }
 
@@ -27,18 +27,22 @@ export async function getEffectiveIdentity(session) {
 async function getRealRoles(session, guildId) {
   const realDiscordId = session?.user?.discordId || null
   let realRoles = session?.user?.roles || []
+  let realWebRoles = []
   if (realDiscordId) {
     try {
       const { rows } = await pool.query(
-        'SELECT roles FROM dc_members WHERE guild_id = $1 AND discord_id = $2',
+        'SELECT roles, web_roles FROM dc_members WHERE guild_id = $1 AND discord_id = $2',
         [guildId, realDiscordId]
       )
       if (rows[0]?.roles) {
         realRoles = rows[0].roles.split(',').map(r => r.trim()).filter(Boolean)
       }
+      if (rows[0]?.web_roles) {
+        realWebRoles = rows[0].web_roles.split(',').map(r => r.trim()).filter(Boolean)
+      }
     } catch {}
   }
-  return { realRoles, realDiscordId }
+  return { realRoles, realWebRoles, realDiscordId }
 }
 
 /**
@@ -47,41 +51,42 @@ async function getRealRoles(session, guildId) {
  */
 export async function getRealAccess(session) {
   const guildId = await getGuildId(session)
-  const { realRoles } = await getRealRoles(session, guildId)
-  return resolveAccess(guildId, realRoles)
+  const { realRoles, realWebRoles } = await getRealRoles(session, guildId)
+  return resolveAccess(guildId, realRoles, realWebRoles)
 }
 
 /** identity layer เดิม (อ่าน roles จาก DB + จัดการ debug/view-as-role) — แยกออกเพื่อ resolve access ครั้งเดียว */
 async function resolveIdentity(session, guildId) {
-  const { realRoles, realDiscordId } = await getRealRoles(session, guildId)
+  const { realRoles, realWebRoles, realDiscordId } = await getRealRoles(session, guildId)
 
   // เฉพาะ admin จริงเท่านั้นที่ debug/view-as-role ได้ — เช็คด้วย real access (ไม่ใช่ effective)
-  const realAccess = await resolveAccess(guildId, realRoles)
-  if (!isAdmin(realAccess)) return { roles: realRoles, discordId: realDiscordId }
+  const realAccess = await resolveAccess(guildId, realRoles, realWebRoles)
+  if (!isAdmin(realAccess)) return { roles: realRoles, webRoles: realWebRoles, discordId: realDiscordId }
 
   const cookieStore = await cookies()
 
-  // Mode 1: impersonate specific member — ใช้ roles จริงจาก DB
+  // Mode 1: impersonate specific member — ใช้ roles + web_roles จริงจาก DB
   const debugDiscordId = cookieStore.get('debug_discord_id')?.value
   if (debugDiscordId) {
     try {
       const { rows } = await pool.query(
-        'SELECT roles FROM dc_members WHERE guild_id = $1 AND discord_id = $2',
+        'SELECT roles, web_roles FROM dc_members WHERE guild_id = $1 AND discord_id = $2',
         [guildId, debugDiscordId]
       )
       const roles = rows[0]?.roles ? rows[0].roles.split(',').map(r => r.trim()).filter(Boolean) : []
-      return { roles, discordId: null }
+      const webRoles = rows[0]?.web_roles ? rows[0].web_roles.split(',').map(r => r.trim()).filter(Boolean) : []
+      return { roles, webRoles, discordId: null }
     } catch {
-      return { roles: realRoles, discordId: realDiscordId }
+      return { roles: realRoles, webRoles: realWebRoles, discordId: realDiscordId }
     }
   }
 
-  // Mode 2: predefined combo
+  // Mode 2: predefined combo (ยศ Discord ล้วน — ไม่มี web_roles)
   const debugLabel = cookieStore.get('debug_role')?.value
-  if (!debugLabel || !DEBUG_LABELS.includes(debugLabel)) return { roles: realRoles, discordId: realDiscordId }
+  if (!debugLabel || !DEBUG_LABELS.includes(debugLabel)) return { roles: realRoles, webRoles: realWebRoles, discordId: realDiscordId }
 
   const combo = DEBUG_COMBOS.find(c => c.label === debugLabel)
-  if (!combo) return { roles: realRoles, discordId: realDiscordId }
+  if (!combo) return { roles: realRoles, webRoles: realWebRoles, discordId: realDiscordId }
 
-  return { roles: combo.roles, discordId: null }
+  return { roles: combo.roles, webRoles: [], discordId: null }
 }
