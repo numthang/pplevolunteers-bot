@@ -220,7 +220,9 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
     return true
   })
   const mediaLinks = visibleLinks.filter(l => l.mediaGroup)
-  const topLinks   = visibleLinks.filter(l => !l.menuOnly && !l.hamburgerOnly && !l.mediaGroup)
+  // home: app tabs ใหม่แทน DASHBOARD_LINKS แล้ว → ไม่ต้องโชว์ sub-nav ซ้ำ · app อื่นโชว์ sub-page จริง
+  const isHomeApp  = currentApp.key === 'home'
+  const topLinks   = isHomeApp ? [] : visibleLinks.filter(l => !l.menuOnly && !l.hamburgerOnly && !l.mediaGroup)
   const menuLinks  = visibleLinks
 
   const visibleApps = APPS.filter(a => {
@@ -336,7 +338,25 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
         </div>
 
 
-        {/* Nav links */}
+        {/* App tabs — กางทุก app บน topbar (org-based) แทนการซ่อนใน hamburger */}
+        {session && (
+          <nav className="hidden md:flex items-center gap-0.5 ml-2 border-l border-warm-200 dark:border-disc-border pl-2">
+            {visibleApps.map(a => (
+              <Link
+                key={a.key}
+                href={a.href}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition ${
+                  a.key === currentApp.key ? activeClass : inactiveClass
+                }`}
+              >
+                <Ic d={ICONS[a.icon]} className="w-4 h-4 shrink-0" />
+                <span className="hidden lg:inline">{a.label}</span>
+              </Link>
+            ))}
+          </nav>
+        )}
+
+        {/* Nav links (sub-nav ของ app ปัจจุบัน) */}
         <div className="flex items-center gap-0 ml-1">
           {/* สื่อ dropdown (quote + watermark) — เฉพาะ BOT section */}
           {isDiscordApp && mediaLinks.length > 0 && (
