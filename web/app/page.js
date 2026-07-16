@@ -60,9 +60,9 @@ async function getFINANCESummary(session) {
 
 async function getGuildMemberCounts() {
   const { rows } = await pool.query(
-    `SELECT g.guild_id, g.name, COUNT(m.discord_id) AS member_count
+    `SELECT g.guild_id, g.name, COUNT(om.user_id) AS member_count
      FROM dc_guilds g
-     LEFT JOIN dc_members m ON m.guild_id = g.guild_id
+     LEFT JOIN org_members om ON om.guild_id = g.guild_id
      GROUP BY g.guild_id, g.name
      ORDER BY member_count DESC`
   )
@@ -79,7 +79,9 @@ async function getCONTACTSCount(guildId) {
 
 async function getDisplayName(guildId, discordId) {
   const { rows } = await pool.query(
-    `SELECT display_name FROM dc_members WHERE guild_id = $1 AND discord_id = $2`,
+    `SELECT om.display_name FROM org_members om
+       JOIN users u ON u.id = om.user_id
+      WHERE om.guild_id = $1 AND u.discord_id = $2`,
     [guildId, discordId]
   )
   return rows[0]?.display_name || null

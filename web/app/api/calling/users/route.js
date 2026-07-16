@@ -5,7 +5,7 @@ import { getGuildId } from '@/lib/guildContext.js'
 
 /**
  * GET /api/calling/users
- * Return dc_members for the guild (for assignee combobox)
+ * Return org_members (+ users identity) for the guild (for assignee combobox)
  */
 export async function GET(req) {
   const session = await getServerSession(authOptions)
@@ -24,12 +24,13 @@ export async function GET(req) {
 
   try {
     const { rows } = await pool.query(
-      `SELECT discord_id,
-              COALESCE(NULLIF(display_name, ''), username) AS display_name,
-              province
-       FROM dc_members
-       WHERE guild_id = $1
-         AND ($2 = '' OR display_name ILIKE $3 OR username ILIKE $3)
+      `SELECT u.discord_id,
+              COALESCE(NULLIF(om.display_name, ''), u.username) AS display_name,
+              om.province
+       FROM org_members om
+       JOIN users u ON u.id = om.user_id
+       WHERE om.guild_id = $1
+         AND ($2 = '' OR om.display_name ILIKE $3 OR u.username ILIKE $3)
        ORDER BY display_name ASC
        ${all ? '' : 'LIMIT 50'}`,
       [guildId, q, `%${q}%`]

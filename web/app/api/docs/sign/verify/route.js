@@ -44,7 +44,7 @@ export async function GET(req) {
         signer_role:      role,
         // recipient-only fields
         has_ngs_link:     role === 'recipient' ? !!entry.member_id : null,
-        // self-fill ครบ (ชื่อใน dc_members + เลขบัตรใน override_data) = ยืนยันตัวตนแบบกรอกเองแล้ว
+        // self-fill ครบ (ชื่อใน users + เลขบัตรใน override_data) = ยืนยันตัวตนแบบกรอกเองแล้ว
         has_self_info:    role === 'recipient' ? !!(entry.firstname && entry.lastname && entry.override_data?.id_number) : null,
         has_id_card:      role === 'recipient' ? !!entry.has_id_card : null,
         // payer status

@@ -31,11 +31,11 @@ export function genRef() {
   return s
 }
 
-/** หาเจ้าของเบอร์ verified — dc_members per-guild มีหลายแถวได้ถ้าเป็นคนเดียวกัน
+/** หาเจ้าของเบอร์ verified — phone/phone_verified_at อยู่ users (identity, 1 แถว/คน)
  *  ต้องได้ discord_id เดียวเท่านั้น (หลายคนใช้เบอร์เดียว = ambiguous → null) */
 export async function findOwnerByVerifiedPhone(phone) {
   const { rows } = await pool.query(
-    `SELECT DISTINCT discord_id FROM dc_members
+    `SELECT DISTINCT discord_id FROM users
       WHERE phone = $1 AND phone_verified_at IS NOT NULL AND discord_id IS NOT NULL`,
     [phone]
   )

@@ -31,7 +31,8 @@ export async function getPayers(guildId) {
             (dp.signature_base64 IS NOT NULL) AS has_static_sig,
             m.roles
      FROM docs_payers dp
-     LEFT JOIN dc_members m ON m.discord_id = dp.discord_id AND m.guild_id = dp.guild_id
+     LEFT JOIN users u      ON u.discord_id = dp.discord_id
+     LEFT JOIN org_members m ON m.user_id = u.id AND m.guild_id = dp.guild_id
      WHERE dp.guild_id = $1
      ORDER BY dp.sort_order, dp.id`,
     [guildId]
@@ -45,7 +46,7 @@ export async function getPayers(guildId) {
 }
 
 /**
- * Query dc_members ที่มี permission นี้ แล้วกรองตาม scope coverage
+ * Query org_members ที่มี permission นี้ แล้วกรองตาม scope coverage
  * - province_coordinator → ตรวจเฉพาะ province: scope nodes
  * - regional_coordinator → ตรวจ region:/subregion: scope nodes
  * คืน members เรียงโดย primary_province == eventProvince ก่อน
@@ -55,10 +56,11 @@ async function queryPayersByPermission(guildId, permission, eventProvince) {
 
   const { rows } = await pool.query(
     `WITH member_roles AS (
-       SELECT m.discord_id, m.display_name, m.primary_province,
-              m.firstname, m.lastname, m.member_id,
+       SELECT u.discord_id, m.display_name, m.primary_province,
+              u.firstname, u.lastname, m.member_id,
               trim(unnest(string_to_array(m.roles, ','))) AS role_name
-       FROM dc_members m
+       FROM org_members m
+       JOIN users u ON u.id = m.user_id
        WHERE m.guild_id = $1 AND m.roles IS NOT NULL AND m.roles != ''
      ),
      has_permission AS (
@@ -158,9 +160,10 @@ async function getHighestPositions(guildId, discordIds) {
   if (!discordIds.length) return {}
   const { rows } = await pool.query(
     `WITH mr AS (
-       SELECT m.discord_id, trim(unnest(string_to_array(m.roles, ','))) AS role_name
-       FROM dc_members m
-       WHERE m.guild_id = $1 AND m.discord_id = ANY($2) AND m.roles IS NOT NULL
+       SELECT u.discord_id, trim(unnest(string_to_array(m.roles, ','))) AS role_name
+       FROM org_members m
+       JOIN users u ON u.id = m.user_id
+       WHERE m.guild_id = $1 AND u.discord_id = ANY($2) AND m.roles IS NOT NULL
      )
      SELECT DISTINCT ON (mr.discord_id) mr.discord_id, gr.role_name
      FROM mr

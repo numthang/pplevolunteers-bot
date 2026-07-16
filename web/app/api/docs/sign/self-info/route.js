@@ -5,7 +5,7 @@ import { getEntryByToken } from '@/db/docs/entries.js'
 
 /**
  * Self-fill ข้อมูลผู้รับเงินที่ไม่มีใน ngs_member_cache (จังหวัดอื่นนอก roster)
- * - ชื่อ-นามสกุล → dc_members (PDF ใช้ fallback ngs_first_name ?? firstname อยู่แล้ว)
+ * - ชื่อ-นามสกุล → users (PDF ใช้ fallback ngs_first_name ?? firstname อยู่แล้ว)
  * - เลขบัตร + ที่อยู่ → override_data ของ entry (override ชนะ ngs ทุก field ใน buildData)
  * - จำทั้งชุดใน dc_user_config key docs_self_info → prefill ครั้งถัดไป
  * หลักฐานตัวตนจริง = สำเนาบัตรที่อัปโหลด + ลายเซ็น (เหมือน flow เดิม link-ngs เป็นแค่ pre-check)
@@ -28,7 +28,7 @@ async function loadRecipientEntry(req, tokenFromBody) {
   return { entry, discordId: session.user.discordId }
 }
 
-/** GET /api/docs/sign/self-info?token= — ค่า prefill (ของเดิมใน entry > ที่เคยกรอกครั้งก่อน > dc_members) */
+/** GET /api/docs/sign/self-info?token= — ค่า prefill (ของเดิมใน entry > ที่เคยกรอกครั้งก่อน > users) */
 export async function GET(req) {
   const { entry, discordId, error } = await loadRecipientEntry(req)
   if (error) return error
@@ -78,11 +78,11 @@ export async function POST(req) {
   clean.idNumber = idNumber
 
   try {
-    // ชื่อจริง → dc_members (ใช้ซ้ำทุกเอกสาร)
+    // ชื่อจริง → users (identity, ใช้ซ้ำทุกเอกสาร ไม่ผูก guild)
     const phone = String(body.phone ?? '').trim().slice(0, 30)
     const { rowCount } = await pool.query(
-      `UPDATE dc_members SET firstname = $1, lastname = $2, phone = $3 WHERE discord_id = $4 AND guild_id = $5`,
-      [firstName, lastName, phone || null, discordId, entry.guild_id]
+      `UPDATE users SET firstname = $1, lastname = $2, phone = $3 WHERE discord_id = $4`,
+      [firstName, lastName, phone || null, discordId]
     )
     if (rowCount === 0) return Response.json({ error: 'ไม่พบข้อมูลสมาชิก' }, { status: 404 })
 

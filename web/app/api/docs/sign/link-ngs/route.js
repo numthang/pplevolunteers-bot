@@ -8,7 +8,7 @@ const digits = (s) => String(s ?? '').replace(/\D/g, '')
 /**
  * POST /api/docs/sign/link-ngs
  * Body: { token, ngsSourceId, idNumber }
- * ผูก dc_members.member_id ของ user (login) กับ ngs_member_cache.source_id
+ * ผูก org_members.member_id ของ user (login) กับ ngs_member_cache.source_id
  * — ต้องยืนยันเลขบัตร 13 หลักให้ตรงกับ record ที่เลือก เพื่อกันการแอบอ้างเป็นคนอื่น
  */
 export async function POST(req) {
@@ -37,7 +37,8 @@ export async function POST(req) {
 
   try {
     const { rowCount } = await pool.query(
-      `UPDATE dc_members SET member_id = $1 WHERE discord_id = $2 AND guild_id = $3`,
+      `UPDATE org_members om SET member_id = $1
+         FROM users u WHERE om.user_id = u.id AND u.discord_id = $2 AND om.guild_id = $3`,
       [ngsSourceId, session.user.discordId, entry.guild_id]
     )
     if (rowCount === 0) return Response.json({ error: 'ไม่พบข้อมูลสมาชิก' }, { status: 404 })

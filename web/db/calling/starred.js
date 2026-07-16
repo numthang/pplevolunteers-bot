@@ -118,7 +118,7 @@ export async function getFavoritesDisplay(guildId, userDiscordId, { name, limit 
        CASE WHEN f.contact_type = 'member' THEN m.home_province ELSE c.province END AS home_province,
        COALESCE(t.tier::text, 'D') AS tier,
        dc.avatar AS discord_avatar,
-       dc.discord_id,
+       u.discord_id,
        m.membership_type,
        c.category
      FROM calling_starred f
@@ -126,8 +126,9 @@ export async function getFavoritesDisplay(guildId, userDiscordId, { name, limit 
        ON f.contact_type = 'member' AND m.source_id::text = f.member_id AND m.guild_id = $1
      LEFT JOIN calling_member_tiers t
        ON f.contact_type = 'member' AND t.member_id = f.member_id AND t.contact_type = 'member'
-     LEFT JOIN dc_members dc
+     LEFT JOIN org_members dc
        ON f.contact_type = 'member' AND dc.serial = m.serial AND dc.guild_id = $1
+     LEFT JOIN users u ON u.id = dc.user_id
      LEFT JOIN calling_contacts c
        ON f.contact_type = 'contact' AND c.id::text = f.member_id
      WHERE f.guild_id = $2 AND f.user_discord_id = $3

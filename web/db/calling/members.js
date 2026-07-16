@@ -96,8 +96,8 @@ export async function getMembersInCampaign(guildId, campaignId, filters = {}, li
        COALESCE(ls.answered_count, 0) AS answered_count,
        COALESCE(ls.sms_count, 0) AS sms_count,
        CASE WHEN a.id IS NOT NULL THEN 'assigned' ELSE 'unassigned' END AS member_status,
-       dc.discord_id,
-       dc.username AS discord_username,
+       u.discord_id,
+       u.username AS discord_username,
        dc.avatar AS discord_avatar${needAllTimeCalls ? `,
        COALESCE(atl.all_time_calls, 0) AS all_time_calls` : ''}
      FROM act_event_cache cc
@@ -120,7 +120,8 @@ export async function getMembersInCampaign(guildId, campaignId, filters = {}, li
        FROM calling_logs WHERE contact_type = 'member'
        GROUP BY campaign_id, member_id
      ) ls ON ls.campaign_id = cc.id AND ls.member_id = m.source_id::text
-     LEFT JOIN dc_members dc ON dc.serial = m.serial AND dc.guild_id = $1${needAllTimeCalls ? `
+     LEFT JOIN org_members dc ON dc.serial = m.serial AND dc.guild_id = $1
+     LEFT JOIN users u ON u.id = dc.user_id${needAllTimeCalls ? `
      LEFT JOIN (SELECT member_id, COUNT(*) AS all_time_calls FROM calling_logs WHERE contact_type = 'member' GROUP BY member_id) atl
        ON atl.member_id = m.source_id::text` : ''}
      WHERE cc.id = $2 AND cc.type IN ('campaign', 'event')
@@ -341,14 +342,15 @@ export async function getMyAssignedMembers(guildId, discordId, { campaignId, sta
          latest_log.note AS latest_note,
          latest_log.status AS latest_log_status,
          latest_log.called_at AS latest_called_at,
-         dc.discord_id,
-         dc.username AS discord_username,
+         u.discord_id,
+         u.username AS discord_username,
          dc.avatar AS discord_avatar
        FROM calling_assignments a
        JOIN ngs_member_cache m ON m.source_id::text = a.member_id AND m.guild_id = $1
        LEFT JOIN calling_member_tiers t ON t.member_id = a.member_id AND t.contact_type = 'member'
        LEFT JOIN act_event_cache ec ON ec.id = a.campaign_id AND ec.type IN ('campaign', 'event')
-       LEFT JOIN dc_members dc ON dc.serial = m.serial AND dc.guild_id = $1
+       LEFT JOIN org_members dc ON dc.serial = m.serial AND dc.guild_id = $1
+       LEFT JOIN users u ON u.id = dc.user_id
        LEFT JOIN (
          SELECT member_id,
            COUNT(*) AS total_calls,
@@ -447,12 +449,13 @@ export async function getMyCallHistoryFlat(guildId, discordId, { name, limit = 6
        'member' AS contact_type, l.member_id,
        m.full_name, m.mobile_number,
        m.home_district, m.home_amphure, m.home_province,
-       dc.avatar AS discord_avatar, dc.discord_id,
+       dc.avatar AS discord_avatar, u.discord_id,
        COALESCE(t.tier::text, 'D') AS tier,
        ec.name AS campaign_name
      FROM calling_logs l
      JOIN ngs_member_cache m ON m.source_id::text = l.member_id AND m.guild_id = $1
-     LEFT JOIN dc_members dc ON dc.serial = m.serial AND dc.guild_id = $1
+     LEFT JOIN org_members dc ON dc.serial = m.serial AND dc.guild_id = $1
+     LEFT JOIN users u ON u.id = dc.user_id
      LEFT JOIN calling_member_tiers t ON t.member_id = l.member_id AND t.contact_type = 'member'
      LEFT JOIN act_event_cache ec ON ec.id = l.campaign_id AND ec.type IN ('campaign', 'event')
      WHERE l.called_by = $2 AND l.contact_type = 'member'

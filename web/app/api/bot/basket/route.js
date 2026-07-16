@@ -15,7 +15,7 @@ async function authView(guildId, channelId) {
     return { error: 'invalid guild_id / channel_id', status: 400 }
   }
   const { rows: membership } = await pool.query(
-    'SELECT 1 FROM dc_members WHERE guild_id = $1 AND discord_id = $2 LIMIT 1',
+    'SELECT 1 FROM org_members om JOIN users u ON u.id = om.user_id WHERE om.guild_id = $1 AND u.discord_id = $2 LIMIT 1',
     [guildId, session.user.discordId]
   )
   if (!membership.length) return { error: 'Forbidden', status: 403 }

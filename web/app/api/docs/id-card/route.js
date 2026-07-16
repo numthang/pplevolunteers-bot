@@ -10,7 +10,7 @@ const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/webp'])
 /**
  * POST /api/docs/id-card  (multipart: file, token)
  * อัปโหลดสำเนาบัตรของตัวเอง — ผูก guild จาก sign token (signer อาจไม่มี guild cookie)
- * เก็บใน dc_members.id_card_image ของ guild นั้น (per-guild)
+ * เก็บใน org_members.id_card_image ของ guild นั้น (per-guild)
  */
 export async function POST(req) {
   const session = await getServerSession(authOptions)

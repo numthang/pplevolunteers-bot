@@ -7,14 +7,15 @@ export async function GET() {
   if (!session) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
   const { rows } = await pool.query(
-    `SELECT DISTINCT m.guild_id, g.name
-     FROM dc_members m
+    `SELECT DISTINCT om.guild_id, g.name
+     FROM org_members om
+     JOIN users u ON u.id = om.user_id
      LEFT JOIN (
        SELECT guild_id, MAX(value #>> '{}') AS name
        FROM dc_guild_config WHERE "key" = 'guild_name'
        GROUP BY guild_id
-     ) g ON g.guild_id = m.guild_id
-     WHERE m.discord_id = $1`,
+     ) g ON g.guild_id = om.guild_id
+     WHERE u.discord_id = $1`,
     [session.user.discordId]
   )
 

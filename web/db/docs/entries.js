@@ -4,7 +4,7 @@ import { getPayersForEvent } from './payers.js'
 /**
  * เติม payer_display_name + payer_position จาก pool ผู้จ่าย (role-based position มาก่อน docs_payers)
  * - role-based payer (เช่น ผู้ประสานงานจังหวัด) ไม่มีแถวใน docs_payers → ต้องดึง position จาก role
- * - payer ที่หลุด pool แล้ว (role ถูกถอด) → คง fallback จาก JOIN (dc_members/docs_payers)
+ * - payer ที่หลุด pool แล้ว (role ถูกถอด) → คง fallback จาก JOIN (users/org_members/docs_payers)
  * rows ทุกแถวอยู่ project เดียว → ใช้ guildId/province ร่วมกัน
  */
 async function enrichPayerInfo(rows, guildId, province) {
@@ -31,11 +31,11 @@ export async function getEntriesByProject(projectId) {
        e.sign_token, e.token_expires_at, e.signed_at, e.printed_at, e.pdf_url,
        e.payer_discord_id, e.payer_sign_token, e.payer_signed_at,
        p.guild_id, ev.province,
-       m.display_name, m.username, m.firstname, m.lastname, m.member_id,
+       m.display_name, u_m.username, u_m.firstname, u_m.lastname, m.member_id,
        n.first_name AS ngs_first_name, n.last_name AS ngs_last_name,
        COALESCE(
          NULLIF(TRIM(CONCAT(np.first_name, ' ', np.last_name)), ''),
-         NULLIF(TRIM(CONCAT(pm.firstname,  ' ', pm.lastname)),  ''),
+         NULLIF(TRIM(CONCAT(u_pm.firstname, ' ', u_pm.lastname)), ''),
          dp.display_name,
          pm.display_name
        ) AS payer_display_name,
@@ -43,8 +43,10 @@ export async function getEntriesByProject(projectId) {
      FROM docs_activity_entries e
      JOIN docs_projects p ON p.id = e.project_id
      JOIN act_event_cache ev ON ev.id = p.act_event_cache_id
-     LEFT JOIN dc_members m  ON m.discord_id  = e.member_discord_id AND m.guild_id = p.guild_id
-     LEFT JOIN dc_members pm ON pm.discord_id = e.payer_discord_id  AND pm.guild_id = p.guild_id
+     LEFT JOIN users u_m        ON u_m.discord_id  = e.member_discord_id
+     LEFT JOIN org_members m    ON m.user_id = u_m.id AND m.guild_id = p.guild_id
+     LEFT JOIN users u_pm       ON u_pm.discord_id = e.payer_discord_id
+     LEFT JOIN org_members pm   ON pm.user_id = u_pm.id AND pm.guild_id = p.guild_id
      LEFT JOIN docs_payers dp ON dp.discord_id = e.payer_discord_id AND dp.guild_id = p.guild_id
      LEFT JOIN ngs_member_cache n  ON n.source_id  = m.member_id
      LEFT JOIN ngs_member_cache np ON np.source_id = pm.member_id
@@ -70,7 +72,7 @@ export async function getEntryByToken(token) {
        ev.name AS event_name, ev.province, ev.location,
        TO_CHAR(ev.event_date,     'YYYY-MM-DD"T"HH24:MI') AS event_date,
        TO_CHAR(ev.event_end_date, 'YYYY-MM-DD"T"HH24:MI') AS event_end_date,
-       m.display_name, m.firstname, m.lastname, m.member_id,
+       m.display_name, u_m.firstname, u_m.lastname, m.member_id,
        m.bank_name, m.account_no, m.account_holder,
        (m.id_card_image IS NOT NULL) AS has_id_card,
        n.identification_number, n.title,
@@ -81,7 +83,8 @@ export async function getEntryByToken(token) {
      FROM docs_activity_entries e
      JOIN docs_projects p ON p.id = e.project_id
      JOIN act_event_cache ev ON ev.id = p.act_event_cache_id
-     LEFT JOIN dc_members m ON m.discord_id = e.member_discord_id AND m.guild_id = p.guild_id
+     LEFT JOIN users u_m ON u_m.discord_id = e.member_discord_id
+     LEFT JOIN org_members m ON m.user_id = u_m.id AND m.guild_id = p.guild_id
      LEFT JOIN ngs_member_cache n ON n.source_id = m.member_id
      WHERE e.sign_token = $1 OR e.payer_sign_token = $1`,
     [token]
@@ -378,7 +381,7 @@ export async function getEntryById(id) {
        ev.name AS event_name, ev.province, ev.location,
        TO_CHAR(ev.event_date,     'YYYY-MM-DD"T"HH24:MI') AS event_date,
        TO_CHAR(ev.event_end_date, 'YYYY-MM-DD"T"HH24:MI') AS event_end_date,
-       m.display_name, m.firstname, m.lastname, m.member_id,
+       m.display_name, u_m.firstname, u_m.lastname, m.member_id,
        m.id_card_image,
        n.identification_number, n.title,
        n.first_name AS ngs_first_name, n.last_name AS ngs_last_name,
@@ -387,7 +390,7 @@ export async function getEntryById(id) {
        n.mobile_number, n.road,
        COALESCE(
          NULLIF(TRIM(CONCAT(np.first_name, ' ', np.last_name)), ''),
-         NULLIF(TRIM(CONCAT(pm.firstname,  ' ', pm.lastname)),  ''),
+         NULLIF(TRIM(CONCAT(u_pm.firstname, ' ', u_pm.lastname)), ''),
          dp.display_name,
          pm.display_name
        ) AS payer_display_name,
@@ -395,8 +398,10 @@ export async function getEntryById(id) {
      FROM docs_activity_entries e
      JOIN docs_projects p ON p.id = e.project_id
      JOIN act_event_cache ev ON ev.id = p.act_event_cache_id
-     LEFT JOIN dc_members m  ON m.discord_id  = e.member_discord_id AND m.guild_id = p.guild_id
-     LEFT JOIN dc_members pm ON pm.discord_id = e.payer_discord_id  AND pm.guild_id = p.guild_id
+     LEFT JOIN users u_m        ON u_m.discord_id  = e.member_discord_id
+     LEFT JOIN org_members m    ON m.user_id = u_m.id AND m.guild_id = p.guild_id
+     LEFT JOIN users u_pm       ON u_pm.discord_id = e.payer_discord_id
+     LEFT JOIN org_members pm   ON pm.user_id = u_pm.id AND pm.guild_id = p.guild_id
      LEFT JOIN docs_payers dp ON dp.discord_id = e.payer_discord_id AND dp.guild_id = p.guild_id
      LEFT JOIN ngs_member_cache n  ON n.source_id  = m.member_id
      LEFT JOIN ngs_member_cache np ON np.source_id = pm.member_id

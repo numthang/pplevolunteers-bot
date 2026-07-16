@@ -14,8 +14,8 @@ import pool from '@/db/index.js'
  *
  *  GET    ?q=...            → ค้นสมาชิก (Discord ของ guild + email ของ org) + catalog role ที่ตั้งได้
  *  POST   {memberId,roleId} → เพิ่ม role · DELETE {memberId,roleId} → ถอด
- *    - คน Discord (มี discord_id) → สั่ง Discord PUT/DELETE + write-through dc_members.roles (ชื่อ)
- *    - คน email  (discord_id NULL) → dc_members.web_roles (key จาก org_roles)
+ *    - คน Discord (มี discord_id) → สั่ง Discord PUT/DELETE + write-through org_members.roles (ชื่อ)
+ *    - คน email  (discord_id NULL) → org_members.web_roles (key จาก org_roles)
  */
 
 async function gate() {
@@ -46,14 +46,15 @@ export async function GET(req) {
   let members = []
   if (q.length >= 2) {
     const like = `%${q}%`
+    // identity = users · roles/web_roles = org_members (per membership: guild สำหรับ Discord, org สำหรับ email)
     const { rows } = await pool.query(
-      `SELECT DISTINCT m.id, m.discord_id, m.username, m.email, m.roles, m.web_roles
-       FROM dc_members m
-       LEFT JOIN org_members om ON om.user_id = m.id AND om.org_id = $4
-       WHERE ( (m.guild_id = $1 AND m.discord_id IS NOT NULL)      -- คน Discord ของ guild นี้
-            OR (m.discord_id IS NULL AND om.org_id = $4) )          -- คน email ของ org นี้
-         AND (m.username ILIKE $2 OR m.email ILIKE $2 OR m.discord_id = $3)
-       ORDER BY m.username
+      `SELECT u.id, u.discord_id, u.username, u.email, om.roles, om.web_roles
+       FROM org_members om
+       JOIN users u ON u.id = om.user_id
+       WHERE ( (om.guild_id = $1 AND u.discord_id IS NOT NULL)                 -- คน Discord ของ guild นี้
+            OR (u.discord_id IS NULL AND om.org_id = $4 AND om.guild_id IS NULL) )  -- คน email ของ org นี้
+         AND (u.username ILIKE $2 OR u.email ILIKE $2 OR u.discord_id = $3)
+       ORDER BY u.username
        LIMIT 20`,
       [g.guildId, like, q, g.orgId],
     )
@@ -89,9 +90,15 @@ async function mutate(req, mode) {
   if (!role || !role.permission || role.permission === 'admin')
     return Response.json({ error: 'role นี้ตั้งผ่านเว็บไม่ได้' }, { status: 400 })
 
+  // identity = users.id · roles/web_roles = org_members row ที่ตรง membership (guild สำหรับ Discord, org สำหรับ email)
   const { rows: mr } = await pool.query(
-    `SELECT id, discord_id, guild_id, roles, web_roles FROM dc_members WHERE id = $1`,
-    [memberId],
+    `SELECT u.id, u.discord_id, om.guild_id, om.roles, om.web_roles
+     FROM users u
+     LEFT JOIN org_members om ON om.user_id = u.id
+          AND ( (u.discord_id IS NOT NULL AND om.guild_id = $2)
+             OR (u.discord_id IS NULL AND om.org_id = $3 AND om.guild_id IS NULL) )
+     WHERE u.id = $1`,
+    [memberId, g.guildId, g.orgId],
   )
   const member = mr[0]
   if (!member) return Response.json({ error: 'ไม่พบสมาชิก' }, { status: 404 })
@@ -103,22 +110,23 @@ async function mutate(req, mode) {
       : await removeGuildRole(member.guild_id || g.guildId, member.discord_id, roleId)
     if (!ok) return Response.json({ error: 'สั่ง Discord ไม่สำเร็จ (เช็คสิทธิ์ bot / ลำดับ role)' }, { status: 502 })
 
-    // write-through dc_members.roles (ชื่อ Discord) — เห็นทันทีไม่รอ sync
+    // write-through org_members.roles (ชื่อ Discord) — เห็นทันทีไม่รอ sync
     const cur = member.roles ? member.roles.split(',').map(s => s.trim()).filter(Boolean) : []
     const set = new Set(cur)
     if (mode === 'add') set.add(role.role_name); else set.delete(role.role_name)
     await pool.query(
-      `UPDATE dc_members SET roles = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
-      [Array.from(set).join(','), member.id],
+      `UPDATE org_members SET roles = $1, roles_assigned_at = NOW() WHERE user_id = $2 AND guild_id = $3`,
+      [Array.from(set).join(','), member.id, member.guild_id || g.guildId],
     )
   } else {
-    // ── คน email: web_roles (key จาก org_roles) ──
+    // ── คน email: web_roles (key จาก org_roles) — org_members row (guild_id NULL) ──
     const cur = member.web_roles ? member.web_roles.split(',').map(s => s.trim()).filter(Boolean) : []
     const set = new Set(cur)
     if (mode === 'add') set.add(role.permission); else set.delete(role.permission)
     await pool.query(
-      `UPDATE dc_members SET web_roles = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
-      [Array.from(set).join(','), member.id],
+      `UPDATE org_members SET web_roles = $1, roles_assigned_at = NOW()
+       WHERE user_id = $2 AND org_id = $3 AND guild_id IS NULL`,
+      [Array.from(set).join(','), member.id, g.orgId],
     )
   }
 

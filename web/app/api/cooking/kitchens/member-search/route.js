@@ -15,9 +15,11 @@ export async function GET(req) {
 
   const guildId = await getGuildId(session)
   const { rows } = await pool.query(
-    `SELECT discord_id, display_name, username FROM dc_members
-     WHERE guild_id = $1 AND (display_name ILIKE $2 OR username ILIKE $2)
-     ORDER BY display_name LIMIT 10`,
+    `SELECT u.discord_id, om.display_name, u.username
+     FROM org_members om
+     JOIN users u ON u.id = om.user_id
+     WHERE om.guild_id = $1 AND (om.display_name ILIKE $2 OR u.username ILIKE $2)
+     ORDER BY om.display_name LIMIT 10`,
     [guildId, `%${q}%`]
   )
   return Response.json({ members: rows })

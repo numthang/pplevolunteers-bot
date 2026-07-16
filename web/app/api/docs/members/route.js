@@ -7,7 +7,7 @@ import { getGuildId } from '@/lib/guildContext.js'
 
 /**
  * GET /api/docs/members?q=&limit=20
- * Search dc_members for docs entry assignment
+ * Search users + org_members for docs entry assignment
  */
 export async function GET(req) {
   const session = await getServerSession(authOptions)
@@ -23,19 +23,20 @@ export async function GET(req) {
 
   const params = [guildId]
   let query = `
-    SELECT m.discord_id, m.display_name, m.username, m.member_id,
+    SELECT u.discord_id, om.display_name, u.username, om.member_id,
            n.first_name, n.last_name
-    FROM dc_members m
-    LEFT JOIN ngs_member_cache n ON n.source_id = m.member_id
-    WHERE m.guild_id = $1`
+    FROM org_members om
+    JOIN users u ON u.id = om.user_id
+    LEFT JOIN ngs_member_cache n ON n.source_id = om.member_id
+    WHERE om.guild_id = $1`
 
   if (q) {
     params.push(`%${q}%`)
-    query += ` AND (m.display_name ILIKE $${params.length} OR m.username ILIKE $${params.length} OR n.first_name ILIKE $${params.length} OR n.last_name ILIKE $${params.length})`
+    query += ` AND (om.display_name ILIKE $${params.length} OR u.username ILIKE $${params.length} OR n.first_name ILIKE $${params.length} OR n.last_name ILIKE $${params.length})`
   }
 
   params.push(limit)
-  query += ` ORDER BY m.display_name LIMIT $${params.length}`
+  query += ` ORDER BY om.display_name LIMIT $${params.length}`
 
   try {
     const { rows } = await pool.query(query, params)
