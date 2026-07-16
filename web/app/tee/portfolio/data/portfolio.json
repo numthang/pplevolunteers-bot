@@ -1,7 +1,7 @@
 {
   "name": "Unnop (Tee) Sricharoenchai",
-  "role": "Engineer, platform architect & community builder — operating systems for civil-society organizations",
-  "thesis": "I already built the platform you're setting out to build and I run the 5,300-person volunteer community it serves. A production, multi-tenant operating system for movement organizations: membership, document e-signing, budget approval, outreach, and casework on one shared core.",
+  "role": "Engineer, platform architect & community builder",
+  "thesis": "I already built the platform you're setting out to build and I run the 5,300 person volunteer community it serves. A production, multi-tenant operating system for movement organizations: membership, document e-signing, budget approval, outreach, and casework on one shared core. Here are some recent portfolio highlights, and a working reference implementation you can explore [https://canva.link/fmwq6u3k3ct1r3x](https://canva.link/fmwq6u3k3ct1r3x)",
 
   "contact": [
     { "k": "Email", "v": "unnop.sricharoenchai@gmail.com", "href": "mailto:unnop.sricharoenchai@gmail.com" },
@@ -13,11 +13,11 @@
     { "k": "Live platform", "v": "pplevolunteers.org", "href": "https://pplevolunteers.org" }
   ],
 
-  "profile": "A developer who found his way into politics and into building the tools that organizing runs on. For six years I've coordinated for Ratchaburi's People's Party and grown its volunteer community of 5,300 on Discord, so I understand how an organization actually works, and how a community is built, from the inside. Making an organization's work easier through software is my real passion — from [homeschoolnetwork.org](https://homeschoolnetwork.org), which turned homeschool assessment reporting into something simple, to [pplevolunteers.org](https://pplevolunteers.org), the party's own operations platform.",
+  "profile": "A developer who found his way into politics and into building the tools that organizing runs on. For six years I've coordinated for Ratchaburi's People's Party and grown its volunteer community of 5,300 on Discord, so I understand how an organization actually works, and how a community is built, from the inside. Making an organization's work easier through software is my real passion from [homeschoolnetwork.org](https://homeschoolnetwork.org), which turned homeschool assessment reporting into something simple, to [pplevolunteers.org](https://pplevolunteers.org), the party's own operations platform.",
 
   "work": {
     "heading": "A community, and the platform that runs it",
-    "lead": "I run the party's 5,300-person volunteer community on Discord — and I built the platform that powers it. [pplevolunteers.org](https://pplevolunteers.org) is a production system its members and regional chapters use every day to coordinate, approve spending, sign documents, and manage membership. Not a prototype — the real operational backbone.",
+    "lead": "I run the party's 5,300 person volunteer community on Discord and I built the platform that powers it. [pplevolunteers.org](https://pplevolunteers.org) is a production system its members and regional chapters use every day to coordinate, approve spending, sign documents, and manage membership. Not a prototype the real operational backbone.",
     "metrics": [
       { "n": "5,300", "k": "volunteers in the community" },
       { "n": "6 yrs", "k": "coordinating the party" },
