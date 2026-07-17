@@ -1,27 +1,15 @@
 import { redirect } from 'next/navigation'
 import { requireOrgUser } from '@/lib/orgAuth.js'
 import { resolveActiveOrg } from '@/lib/activeOrg.js'
-import { getOrgMembership, listOrgStaff } from '@/db/orgMembers.js'
-import OrgSettings from '@/components/org/OrgSettings.jsx'
+import { getOrgMembership } from '@/db/orgMembers.js'
+import OrgGeneral from '@/components/org/OrgGeneral.jsx'
 
-export const metadata = { title: 'ตั้งค่าองค์กร' }
-
-export default async function OrgSettingsPage() {
+export default async function OrgSettingsGeneralPage() {
   const session = await requireOrgUser()
   const { activeOrg } = await resolveActiveOrg(session.user.userId)
   if (!activeOrg) redirect('/org')
 
-  const [membership, members] = await Promise.all([
-    getOrgMembership(activeOrg.id, session.user.userId),
-    listOrgStaff(activeOrg.id),
-  ])
+  const membership = await getOrgMembership(activeOrg.id, session.user.userId)
 
-  return (
-    <OrgSettings
-      org={activeOrg}
-      members={members}
-      me={session.user.userId}
-      myRole={membership?.role || 'member'}
-    />
-  )
+  return <OrgGeneral org={activeOrg} myRole={membership?.role || 'member'} />
 }
