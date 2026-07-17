@@ -99,7 +99,7 @@ function IconPicker({ value, onChange }) {
 export default function CategoriesPage() {
   const t = useTranslations('finance')
   const { data: session } = useSession()
-  const { userId: effectiveUserId, access } = useEffectiveRoles(session)
+  const { userId: effectiveUserId, access } = useEffectiveRoles(session, { scope: 'org' })
   const [cats, setCats]               = useState([])
   const [input, setInput]             = useState('')
   const [inputIcon, setInputIcon]     = useState('Folder')

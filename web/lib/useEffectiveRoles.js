@@ -8,7 +8,7 @@ import { DEBUG_COMBOS } from './debugCombos.js'
  * - access: { permissions, scopeGrants } จาก DB ผ่าน /api/me/access (debug-aware ฝั่ง server)
  *   เริ่มเป็น null → access fn เห็น permissions ว่าง (fail-closed) จน fetch เสร็จ
  */
-export function useEffectiveRoles(session) {
+export function useEffectiveRoles(session, { scope } = {}) {
   const realRoles = session?.user?.roles || []
   const realDiscordId = session?.user?.discordId || null
   const realUserId = session?.user?.userId || null
@@ -26,13 +26,14 @@ export function useEffectiveRoles(session) {
     setState(s => ({ ...s, roles, discordId, userId }))
 
     // access — จาก DB (debug cookie ถูกอ่านฝั่ง server, ส่งไปกับ fetch อัตโนมัติ)
+    // scope='org' → org-keyed access (finance) · ไม่มี scope → guild-based (default)
     let cancelled = false
-    fetch('/api/me/access')
+    fetch(scope ? `/api/me/access?scope=${scope}` : '/api/me/access')
       .then(r => (r.ok ? r.json() : null))
       .then(data => { if (!cancelled && data) setState(s => ({ ...s, access: data.access, realAdmin: !!data.realAdmin, superAdmin: !!data.superAdmin })) })
       .catch(() => {})
     return () => { cancelled = true }
-  }, [session])
+  }, [session, scope])
 
   return state
 }

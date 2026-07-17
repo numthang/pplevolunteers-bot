@@ -28,7 +28,7 @@ export async function getEffectiveOrgIdentity(session) {
   if (!orgId) return { roles: [], discordId, userId, access: emptyAccess }
 
   const { rows } = await pool.query(
-    `SELECT om.guild_id, om.roles, om.web_roles
+    `SELECT om.guild_id, om.roles, om.web_roles, om.role, om.status
        FROM org_members om
       WHERE om.org_id = $1 AND om.user_id = $2`,
     [orgId, userId]
@@ -37,13 +37,18 @@ export async function getEffectiveOrgIdentity(session) {
   const permissions = new Set()
   const scopeGrants = []
   let isMember = false
+  let isOwner = false
   for (const r of rows) {
     isMember = true
+    // owner (membership role) = org superuser — คนสร้าง org เอง = เจ้าของสูงสุดใน org นั้น
+    // bounded ที่ org ตัวเอง (query filter org_id เดียว) → ไม่ elevate ข้าม org
+    if (r.role === 'owner' && r.status === 'active') isOwner = true
     const roles = (r.roles || '').split(',').map(s => s.trim()).filter(Boolean)
     const webRoles = (r.web_roles || '').split(',').map(s => s.trim()).filter(Boolean)
     const a = await resolveAccess(r.guild_id, roles, webRoles)
     for (const p of a.permissions) permissions.add(p)
     for (const g of a.scopeGrants) scopeGrants.push(g)
   }
+  if (isOwner) permissions.add('admin')   // god-mode ภายใน org ตัวเอง (Slack/Notion owner model)
   return { roles: [], discordId, userId, access: { isMember, permissions, scopeGrants } }
 }

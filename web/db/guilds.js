@@ -17,6 +17,17 @@ export async function orgIdOfGuild(guildId) {
   return rows[0]?.org_id ?? null
 }
 
+// org → guilds (Discord artifacts ของ org) · [] = guildless org (self-serve MRSJAN)
+// ใช้ตัดสินว่า org นี้เปิด guild-based features (calling/docs/cases/bot) ได้ไหม
+export async function guildsOfOrg(orgId) {
+  if (!orgId) return []
+  const { rows } = await pool.query(
+    `SELECT guild_id, name, icon_url, org_id FROM dc_guilds WHERE org_id = $1 ORDER BY name`,
+    [orgId]
+  )
+  return rows
+}
+
 // guild ที่ user ถือ role ซึ่ง map เป็น permission admin/secretary_general (permission-based, multi-tenant)
 // match ชื่อ role ใน org_members.roles กับ dc_guild_roles.role_name ต่อ guild → ไม่ผูกชื่อ 'Admin'/'เลขาธิการ' ตายตัว
 export async function getAdminGuildIds(discordId) {

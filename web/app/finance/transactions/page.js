@@ -18,7 +18,7 @@ function TransactionsContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const { data: session } = useSession()
-  const { userId: effectiveUserId, access: effectiveAccess } = useEffectiveRoles(session)
+  const { userId: effectiveUserId, access: effectiveAccess } = useEffectiveRoles(session, { scope: 'org' })
   const MONTHS = t.raw('filters.monthsShort')
 
   const [txns, setTxns]         = useState([])

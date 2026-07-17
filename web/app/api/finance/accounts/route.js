@@ -1,7 +1,6 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
 import { getAccountsAll, createAccount } from '@/db/finance/accounts.js'
-import { isAdmin } from '@/lib/roles.js'
 import { can } from '@/lib/permissions.js'
 import { canViewAccount, canCreateNonPrivateAccount } from '@/lib/financeAccess.js'
 import { getEffectiveOrgIdentity } from '@/lib/orgAccess.js'
@@ -28,7 +27,8 @@ export async function POST(req) {
   const data = await req.json()
   if (!canCreateNonPrivateAccount(access)) data.visibility = 'private'
 
-  const orgId = (isAdmin(access) && data.org_id) ? data.org_id : ORG_ID
-  const id = await createAccount(orgId, data, session.user.userId)
+  // scope = active org เสมอ · ห้าม trust data.org_id (เดิม admin guild-picker ที่ลบ UI ไปแล้ว)
+  // owner=superuser ทำให้ isAdmin true → ถ้า trust body org_id = เขียนข้าม tenant ได้ (cross-org write hole)
+  const id = await createAccount(ORG_ID, data, session.user.userId)
   return Response.json({ id }, { status: 201 })
 }

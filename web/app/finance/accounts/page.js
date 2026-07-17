@@ -13,7 +13,7 @@ const EMPTY = { name: '', bank: '', account_no: '', visibility: 'private', provi
 export default function AccountsPage() {
   const t = useTranslations('finance')
   const { data: session } = useSession()
-  const { userId: effectiveUserId, access: effectiveAccess } = useEffectiveRoles(session)
+  const { userId: effectiveUserId, access: effectiveAccess } = useEffectiveRoles(session, { scope: 'org' })
   const [accounts, setAccounts] = useState([])
   const [editing, setEditing] = useState(null)
   const [form, setForm] = useState(EMPTY)
