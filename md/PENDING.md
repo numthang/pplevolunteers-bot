@@ -48,6 +48,18 @@
 - [ ] **NEXT ③ bot sync** — `db/members.js` เขียน `org_members.roles` (แทน dc_members.roles) = แตะ bot live
 - [ ] **NEXT ④ contract** — drop `dc_members` + คอลัมน์ไม่ใช้ (ท้ายสุด หลัง repoint นิ่ง)
 
+#### 💰 FINANCE org-scope — spec เคาะ grill 2026-07-17 (ทำ session หน้า · scope finance ตัวเดียวก่อน อย่าเพิ่งทำ calling/docs/cases)
+หลักการ: **scope→org_id (ทิ้ง guild_id) · person→user_id (ทิ้ง discord snowflake) · Discord artifact→เก็บ guild-based**
+- **4 ตาราง data → org_id scope, drop guild_id:** `finance_accounts`, `finance_categories`, `finance_transactions`, `finance_incoming_log`
+  - backfill `org_id` จาก `dc_guilds` (guild→org · collapse 3 guild ของ org 1 → org_id=1) — org_id column มีแล้ว แค่ backfill + repoint query
+- **person-ref → ชื่อสั้น + user_id** (user เคาะ ไม่เอาชื่อยาว): **drop** `owner_id`/`updated_by` เก่า (VARCHAR discord) → **rename** `owner_user_id→owner_id`, `updated_by_user_id→updated_by` (INT → users.id)
+  - FK owner_id/updated_by remap `_dc_members` → `users(id)` + re-backfill **canonical** (map _dc_members.id → users.id via discord_id)
+  - code: `financeAccess` ownership `owner_id === discordId` → `owner_id === userId`
+- **เก็บ:** `finance_transactions.discord_msg_id` (artifact ข้อความ bot โพสต์ ใช้แก้/ลบ)
+- **finance_config = OUT OF SCOPE** — เป็น Discord dashboard config (channel/thread/dashboard_msg, bot-only: emailPoller/financeOCR/smsWebhook/db/finance.js) คง guild-based · **future bot-cleanup:** ยุบเข้า `dc_guild_config` (key 'finance_dashboard') — มันคือ guild config ไม่ใช่ finance data
+- **dependency:** ต้องมี `getOrgId(session)` resolver ในแอปหลัก (finance page เปลี่ยน getGuildId→getOrgId) · reuse logic `active_org` cookie จาก `lib/activeOrg.js` (/org shell) · = ชิ้นเล็กสุดของ org-switcher-endgame ที่ finance-first ดึงมา
+- ⚠️ RBAC page-access: email user เปิด /finance ได้เมื่อ resolve permission ผ่าน org_members.web_roles + scope org (ไม่ใช่ guild membership)
+
 - [x] Portfolio consult (web page) เสร็จ — `web/app/tee/portfolio/` (เนื้อหาใน data/portfolio.json แก้เอง) + artifact · รอ deploy prod ให้ขึ้น pplevolunteers.org/tee/portfolio
 - ⚠️ **org-core ยังไม่ merge เข้า master** (prod = master `2e81e6e` guild-based, ไม่แตะ) · deploy org = merge org-core→master เมื่อ org เสร็จ · **ก่อน deploy prod:** รัน migration.sql (rename orgs/user_identities + dc_members email/nullable + org_roles + web_roles) + `identity-split-expand.sql` · tag ของเก่า `layout-guild-v1`
 
