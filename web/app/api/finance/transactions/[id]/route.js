@@ -4,7 +4,7 @@ import { getTransactionById, updateTransaction, deleteTransaction } from '@/db/f
 import { getAccountById } from '@/db/finance/accounts.js'
 import { incrementUsageCount as incrementCategory } from '@/db/finance/categories.js'
 import { canEditAccount } from '@/lib/financeAccess.js'
-import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
+import { getEffectiveOrgIdentity } from '@/lib/orgAccess.js'
 
 export async function PUT(req, { params }) {
   const { id } = await params
@@ -15,7 +15,7 @@ export async function PUT(req, { params }) {
   if (!txn) return Response.json({ error: 'Not found' }, { status: 404 })
 
   const account = await getAccountById(txn.account_id)
-  const { userId: effectiveUserId, access } = await getEffectiveIdentity(session)
+  const { userId: effectiveUserId, access } = await getEffectiveOrgIdentity(session)
   if (!account || !canEditAccount(account, effectiveUserId, access)) {
     return Response.json({ error: 'Forbidden' }, { status: 403 })
   }
@@ -39,7 +39,7 @@ export async function DELETE(req, { params }) {
   if (!txn) return Response.json({ error: 'Not found' }, { status: 404 })
 
   const account = await getAccountById(txn.account_id)
-  const { userId: effectiveUserId, access } = await getEffectiveIdentity(session)
+  const { userId: effectiveUserId, access } = await getEffectiveOrgIdentity(session)
   if (!account || !canEditAccount(account, effectiveUserId, access)) {
     return Response.json({ error: 'Forbidden' }, { status: 403 })
   }

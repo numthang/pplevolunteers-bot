@@ -1,7 +1,7 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
 import { getCategoryById, updateCategory, deleteCategory } from '@/db/finance/categories.js'
-import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
+import { getEffectiveOrgIdentity } from '@/lib/orgAccess.js'
 import { isAdmin } from '@/lib/roles.js'
 import { can } from '@/lib/permissions.js'
 
@@ -14,7 +14,7 @@ export async function PUT(req, { params }) {
   const cat = await getCategoryById(id)
   if (!cat) return Response.json({ error: 'Not found' }, { status: 404 })
 
-  const { userId, access } = await getEffectiveIdentity(session)
+  const { userId, access } = await getEffectiveOrgIdentity(session)
   const admin = isAdmin(access)
 
   if (cat.is_global && !can('editGlobalCategory', access.permissions))
@@ -40,7 +40,7 @@ export async function DELETE(req, { params }) {
   const cat = await getCategoryById(id)
   if (!cat) return Response.json({ error: 'Not found' }, { status: 404 })
 
-  const { userId, access } = await getEffectiveIdentity(session)
+  const { userId, access } = await getEffectiveOrgIdentity(session)
   const admin = isAdmin(access)
 
   if (cat.is_global && !can('editGlobalCategory', access.permissions))

@@ -2,7 +2,7 @@ import { requireAuth } from '@/lib/auth.js'
 import { getAccountsAll } from '@/db/finance/accounts.js'
 import { getAccountSummary } from '@/db/finance/transactions.js'
 import { canViewAccount, canEditAccount } from '@/lib/financeAccess.js'
-import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
+import { getEffectiveOrgIdentity } from '@/lib/orgAccess.js'
 import { getOrgId } from '@/lib/orgContext.js'
 import { can } from '@/lib/permissions.js'
 import { getTranslations } from 'next-intl/server'
@@ -16,7 +16,7 @@ function fmt(n) {
 export default async function FinancePage() {
   const t = await getTranslations('finance')
   const session = await requireAuth()
-  const { userId, access } = await getEffectiveIdentity(session)
+  const { userId, access } = await getEffectiveOrgIdentity(session)
   const ORG_ID = await getOrgId(session)
   const raw = await getAccountsAll(ORG_ID, userId, can('viewPrivateOther', access.permissions))
   const accounts = raw.filter(a => canViewAccount(a, userId, access))

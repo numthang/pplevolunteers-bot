@@ -3,7 +3,7 @@ import { authOptions } from '@/lib/auth-options.js'
 import { getCategorySummary, getMonthlyTrend } from '@/db/finance/transactions.js'
 import { getAccountById } from '@/db/finance/accounts.js'
 import { canViewAccount } from '@/lib/financeAccess.js'
-import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
+import { getEffectiveOrgIdentity } from '@/lib/orgAccess.js'
 import { getOrgId } from '@/lib/orgContext.js'
 
 export async function GET(req) {
@@ -20,7 +20,7 @@ export async function GET(req) {
     dateTo:    p.get('dateTo')    || undefined,
   }
 
-  const { userId: effectiveUserId, access } = await getEffectiveIdentity(session)
+  const { userId: effectiveUserId, access } = await getEffectiveOrgIdentity(session)
   const ORG_ID = await getOrgId(session)
 
   if (filter.accountId) {

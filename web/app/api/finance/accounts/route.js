@@ -4,14 +4,14 @@ import { getAccountsAll, createAccount } from '@/db/finance/accounts.js'
 import { isAdmin } from '@/lib/roles.js'
 import { can } from '@/lib/permissions.js'
 import { canViewAccount, canCreateNonPrivateAccount } from '@/lib/financeAccess.js'
-import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
+import { getEffectiveOrgIdentity } from '@/lib/orgAccess.js'
 import { getOrgId } from '@/lib/orgContext.js'
 
 export async function GET(req) {
   const session = await getServerSession(authOptions)
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { userId, access } = await getEffectiveIdentity(session)
+  const { userId, access } = await getEffectiveOrgIdentity(session)
   const ORG_ID = await getOrgId(session)
   const all = new URL(req.url).searchParams.get('all')
   const raw = await getAccountsAll(ORG_ID, userId, can('viewPrivateOther', access.permissions))
@@ -23,7 +23,7 @@ export async function POST(req) {
   const session = await getServerSession(authOptions)
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { access } = await getEffectiveIdentity(session)
+  const { access } = await getEffectiveOrgIdentity(session)
   const ORG_ID = await getOrgId(session)
   const data = await req.json()
   if (!canCreateNonPrivateAccount(access)) data.visibility = 'private'

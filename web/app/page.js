@@ -17,6 +17,7 @@ import pool from '@/db/index.js'
 import { getGuilds, getEnabledFeatures } from '@/db/guilds.js'
 import { getGuildId } from '@/lib/guildContext.js'
 import { getOrgId } from '@/lib/orgContext.js'
+import { getEffectiveOrgIdentity } from '@/lib/orgAccess.js'
 import { getUserIdentities } from '@/db/userIdentities.js'
 import LinkAccountsBanner from '@/components/LinkAccountsBanner.jsx'
 
@@ -30,7 +31,7 @@ async function getTodayCallCount() {
 }
 
 async function getFINANCESummary(session) {
-  const { userId, access } = await getEffectiveIdentity(session)
+  const { userId, access } = await getEffectiveOrgIdentity(session)
   const ORG_ID = await getOrgId(session)
   const raw = await getAccountsAll(ORG_ID, userId, can('viewPrivateOther', access.permissions))
   const accessibleAccounts = raw.filter(a => canViewAccount(a, userId, access))

@@ -3,7 +3,7 @@ import { authOptions } from '@/lib/auth-options.js'
 import { getTransactions, createTransaction } from '@/db/finance/transactions.js'
 import { getAccountById, incrementUsageCount as incrementAccount } from '@/db/finance/accounts.js'
 import { incrementUsageCount as incrementCategory } from '@/db/finance/categories.js'
-import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
+import { getEffectiveOrgIdentity } from '@/lib/orgAccess.js'
 import { getOrgId } from '@/lib/orgContext.js'
 import { canViewAccount, canEditAccount } from '@/lib/financeAccess.js'
 
@@ -28,7 +28,7 @@ export async function GET(req) {
   const session = await getServerSession(authOptions)
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { userId: effectiveUserId, access } = await getEffectiveIdentity(session)
+  const { userId: effectiveUserId, access } = await getEffectiveOrgIdentity(session)
   const ORG_ID = await getOrgId(session)
 
   if (accountId) {
@@ -51,7 +51,7 @@ export async function POST(req) {
   let account = null
   if (data.account_id) {
     account = await getAccountById(data.account_id)
-    const { userId: effectiveUserId, access } = await getEffectiveIdentity(session)
+    const { userId: effectiveUserId, access } = await getEffectiveOrgIdentity(session)
     if (!account || !canEditAccount(account, effectiveUserId, access)) {
       return Response.json({ error: 'Forbidden' }, { status: 403 })
     }

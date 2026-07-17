@@ -3,7 +3,7 @@ import { authOptions } from '@/lib/auth-options.js'
 import { deleteFund } from '@/db/finance/funds.js'
 import { getAccountById } from '@/db/finance/accounts.js'
 import { canEditAccount } from '@/lib/financeAccess.js'
-import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
+import { getEffectiveOrgIdentity } from '@/lib/orgAccess.js'
 import pool from '@/db/index.js'
 
 export async function DELETE(req, { params }) {
@@ -15,7 +15,7 @@ export async function DELETE(req, { params }) {
   const fund = fundRows[0]
   if (!fund) return Response.json({ error: 'Not found' }, { status: 404 })
 
-  const { userId, access } = await getEffectiveIdentity(session)
+  const { userId, access } = await getEffectiveOrgIdentity(session)
   const account = await getAccountById(fund.account_id)
   if (!account || !canEditAccount(account, userId, access)) {
     return Response.json({ error: 'Forbidden' }, { status: 403 })

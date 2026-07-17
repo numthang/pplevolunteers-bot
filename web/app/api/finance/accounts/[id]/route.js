@@ -3,12 +3,12 @@ import { authOptions } from '@/lib/auth-options.js'
 import { getAccountById, updateAccount, deleteAccount, archiveAccount } from '@/db/finance/accounts.js'
 import { canEditAccount } from '@/lib/financeAccess.js'
 import { isAdmin } from '@/lib/roles.js'
-import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
+import { getEffectiveOrgIdentity } from '@/lib/orgAccess.js'
 
 async function checkEditPermission(session, id) {
   const account = await getAccountById(id)
   if (!account) return { error: 'Not found', status: 404 }
-  const { userId, access } = await getEffectiveIdentity(session)
+  const { userId, access } = await getEffectiveOrgIdentity(session)
   if (!canEditAccount(account, userId, access)) return { error: 'Forbidden', status: 403 }
   return { account, access }
 }
