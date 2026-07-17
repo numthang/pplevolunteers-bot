@@ -70,6 +70,18 @@
 - ⚠️ RBAC page-access: email user เปิด /finance ได้เมื่อ resolve permission ผ่าน org_members.web_roles + scope org (ไม่ใช่ guild membership)
 </details>
 
+#### 🚪 ORG-SWITCHER SPINE — งานถัดไป (grill design เคาะ 2026-07-17 · = "ประตูเลือกองค์กร" + สิทธิ์แบบ org-keyed · เป็นหัวใจ ทำก่อน feature อื่น)
+> เหตุ: ตอนนี้ finance เทสจริงไม่ได้เพราะเข้าได้ทางเดียว (Discord→org 1). ต้องมี spine นี้ก่อน guildless org (MRSJAN) ถึงเข้า finance ได้ + เป็น harness ให้ calling/docs/cases ต่อไป
+
+**Design ที่เคาะแล้ว (org-access + appointment):**
+1. **สิทธิ์ระดับ org = union `roles` + `web_roles` ของทุกแถว `org_members` ใน org นั้น** (คน Discord→`roles`, คนเว็บ→`web_roles`, org หลาย guild→รวมทุกแถว) · ภาษากลาง = `permission` (`org_roles` key); `dc_guild_roles.permission` แปลง role_name→permission, web_roles เก็บ permission key ตรงๆ
+2. **ห้ามก๊อป `roles`→`web_roles` เป็น data** (ดริฟต์+clobber ตอน Discord sync) — สัมพันธ์กันผ่าน `permission` ไม่ใช่สำเนาซ้ำ
+3. **แต่งตั้งยศ = propagate ตอน action ไม่ใช่ mirror column:** คน Discord→หน้าเว็บสั่ง **Discord role จริง** (เลือกชื่อ role ตรงๆ) →บอท sync ลง `roles` (มีบางส่วนแล้ว) · คน email→เขียน `web_roles` (permission key) · 2 ทาง (เว็บ↔Discord) sync ผ่าน action จริง = ไม่ดริฟต์ · ข้อจำกัด: คนไม่อยู่ Discord→อยู่แค่ web_roles (ถูกต้อง) · บอทต้องรัน+role สูงกว่า
+4. **`position` (ตำแหน่งแสดง) ≠ `permission` (สิทธิ์):** รองเลขาธิการ vs ผู้ประสานงานภาค = position ต่าง แต่ permission เท่ากัน → **ไม่ต้องเพิ่ม permission ใหม่** (แก้ปัญหา 1-permission-2-role: คนแต่งตั้งชี้ role เจาะจงเอง ระบบไม่เดา)
+5. **อำนาจแต่งตั้ง = governance ต่อ org (config ได้ ไม่ hardcode)** · ⚠️ ตอนนี้ `moderator` แต่งตั้งได้ทุกคน = escalation hole (mod ตั้งตัวเองเป็น admin ได้) ต้องปิด · **floor บังคับเสมอ: แต่งตั้งไม่เกินอำนาจตัวเอง**
+
+**ต้อง grill/สร้างต่อ:** getEffectiveIdentity เปลี่ยนเป็น org-keyed (union ข้าม guild ใน org) · guildless org resolve จาก web_roles ตรงๆ · UI switcher อ่าน listUserOrgs · หน้าแต่งตั้ง (gate + floor + org-config)
+
 - [x] Portfolio consult (web page) เสร็จ — `web/app/tee/portfolio/` (เนื้อหาใน data/portfolio.json แก้เอง) + artifact · รอ deploy prod ให้ขึ้น pplevolunteers.org/tee/portfolio
 - ⚠️ **org-core ยังไม่ merge เข้า master** (prod = master `2e81e6e` guild-based, ไม่แตะ) · deploy org = merge org-core→master เมื่อ org เสร็จ · **ก่อน deploy prod:** รัน migration.sql (rename orgs/user_identities + dc_members email/nullable + org_roles + web_roles) + `identity-split-expand.sql` · tag ของเก่า `layout-guild-v1`
 
