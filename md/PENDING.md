@@ -81,6 +81,29 @@
 5. **อำนาจแต่งตั้ง = governance ต่อ org (config ได้ ไม่ hardcode)** · ⚠️ ตอนนี้ `moderator` แต่งตั้งได้ทุกคน = escalation hole (mod ตั้งตัวเองเป็น admin ได้) ต้องปิด · **floor บังคับเสมอ: แต่งตั้งไม่เกินอำนาจตัวเอง**
 
 **ต้อง grill/สร้างต่อ:** getEffectiveIdentity เปลี่ยนเป็น org-keyed (union ข้าม guild ใน org) · guildless org resolve จาก web_roles ตรงๆ · UI switcher อ่าน listUserOrgs · หน้าแต่งตั้ง (gate + floor + org-config)
+> ⚠️ **บทเรียน per-guild dedup (2026-07-17):** `org_members` เป็น per-guild → org หลาย guild (org 1 = 3) ให้ user คนเดียวมีหลายแถว · query ระดับ org ที่ทำ list ต้อง dedupe (GROUP BY / DISTINCT ON user_id) — เจอแล้วแก้: listUserOrgs, listOrgMembers, activeOwnerCount · **ตอนทำ ② หน้าแต่งตั้ง: `/admin/roles` (admin/roles/route.js) ที่ list สมาชิก+roles ต้อง dedup per-guild เหมือนกัน**
+
+**✅ SPINE CORE เสร็จ+verify 2026-07-17 (org-core, ยังไม่ commit) — ①③④ + Finding A:**
+- **① org-first switcher:** `getOrgId` = `resolveActiveOrg(userId).activeOrg.id` (org-first, cookie `active_org`) แทน `orgIdOfGuild(getGuildId)` → guildless org (MRSJAN org 8) เข้า finance ได้ · Nav อ่าน `orgs` (listUserOrgs) จริงแทน grouping guilds (ของเดิม fake — เห็นเฉพาะ guild) · layout.js feed orgs/activeOrgId ทุก session ที่มี userId (ไม่ใช่แค่ discordId) · switch route `/api/org/orgs/switch` **dual-write** `selected_guild`=guild หลักของ org (prefer env.GUILD_ID) → guild-based features (calling/docs/cases/bot) align กับ active_org เสมอ · `getGuildId` ไม่แตะ (blast radius 0)
+- **Finding B (guildless gating):** org ไม่มี guild → `enabledFeatures=['finance']` (ORG_NATIVE_FEATURES), Nav ซ่อน app guild-based (เหลือ home+finance) · เดิม email user ตกลง env.GUILD_ID = incoherent
+- **Finding A (owner=superuser):** `getEffectiveOrgIdentity` — row `role='owner' AND status='active'` → `permissions.add('admin')` (bounded org ตัวเอง, Slack/Notion model) · verify: ทั้ง DB มี 1 row trigger (MRSJAN), org 1 = 0 → ไม่ elevate ใคร · แก้ deadlock self-serve owner ไม่มีสิทธิ์
+- **③ client access org-aware:** `/api/me/access?scope=org` → getEffectiveOrgIdentity · `useEffectiveRoles(session,{scope:'org'})` · finance 3 client page (accounts/transactions/categories) ใช้ scope=org · feature อื่นคง guild-based
+- **④ เคาะ: ไม่ flip getEffectiveIdentity ทั้งระบบ** — ~50 route ยัง guild_id-scoped, flip access เป็น org-union = elevation (permission guild A ทำ guild B ใน org 1 = prod) · orgAccess finance-only, revisit ต่อ feature ตอน migrate
+- verify: node --check ครบ + dev curl (/=200, /finance=307, /finance/accounts=200, me/access?scope=org=401 auth, switch=401) ไม่มี 500 + SQL assert owner-superuser + finance isolation (org8=0 acct, org1=11)
+- **✅ LIVE LOGIN-FLOW TEST ผ่าน 2026-07-17 (session จริง via curl):** mint magic token MRSJAN → credentials sign-in → session {userId:17516,discordId:null} · /api/me/access?scope=org = `{isMember:true, permissions:['admin']}` (owner-superuser ทำงาน) · switch org 8 → active_org=8, selected_guild **ไม่** เขียน (guildless ✓) · finance accounts = `[]` (org 8 scoped, org 1 มี 11 = isolated) · create account → org_id=8 ✓
+  - 🔴 **เจอ + ปิด cross-tenant write hole (bug-383):** `POST /api/finance/accounts` line 31 `isAdmin && data.org_id` → owner=superuser ทำให้ MRSJAN ส่ง `org_id:1` เขียนเข้า org 1 ได้ (พิสูจน์แล้ว) · เหตุ: leftover admin guild-picker (ลบ UI แล้วแต่ server ยัง trust) · fix: scope=ORG_ID เสมอ, ลบ override+isAdmin import · re-test: attack org_id:1 → ลง org 8 ✓
+- ⚠️ **ยังไม่ทำ:** ② หน้าแต่งตั้ง (gate+floor+org-config governance) — งานถัดไป · **UI จริงในเบราว์เซอร์** (curl พิสูจน์ logic ครบ แต่ยังไม่กดจริงดู Nav render/switcher)
+
+**🎨 Org switcher DRAFT (2026-07-17) — Notion/AppFlowy style · `components/OrgSwitcherMenu.jsx`:**
+- เมนู workspace hub: email header + org list (member_count + ✓) + สร้าง workspace + จัดการ/โปรไฟล์/ออก · เปิดได้เสมอแม้ org เดียว · icon ตัวหน้า = กลับหน้าแรก `/`, ชื่อ+chevron = เปิดเมนู
+- เอา app tabs ออกจาก topbar (เบียดกัน) → เข้าถึงผ่าน hamburger + การ์ด dashboard · title = **Platfor.ORG** (layout.js metadata)
+- [ ] **org มี icon ของตัวเอง — ดึงจาก org ไม่ใช่ guild** (จดไว้ 2026-07-17) — ⚠️ ตอนนี้ยัง "ยืม" `dc_guilds.icon_url` (ไอคอน Discord guild) มาโชว์เฉพาะ org ที่ active · org อื่น + guildless org = letter avatar (ตัวอักษรแรก + โทนสีวนตาม id) · **ที่ต้องทำ:**
+  1. เพิ่มคอลัมน์ `orgs.icon` (emoji string หรือ url รูปที่อัปโหลด)
+  2. **หน้า `/org/settings` มีปุ่มอัปโหลด icon** (รูป — ใช้ upload route แบบ cooking/finance หรือ emoji picker) · owner เท่านั้น
+  3. `OrgAvatar` (`OrgSwitcherMenu.jsx`) ลำดับ fallback: **`org.icon` → guild icon → letter** (มี slot iconUrl แล้ว แค่เปลี่ยนที่มา) · layout/Nav ส่ง `org.icon` แทน/ก่อน guild icon
+  4. listUserOrgs/listOrgMembers/getOrg คืน `icon` ด้วย
+- [ ] **i18n** — string ไทยใน `const T` ยัง hardcode · ย้ายเข้า next-intl (ns 'org')
+- [ ] เทสจริงในเบราว์เซอร์ (dropdown เปิด/สลับ/สร้าง/ออก) — curl เทส trigger+data แล้ว dropdown เป็น client-only
 
 - [x] Portfolio consult (web page) เสร็จ — `web/app/tee/portfolio/` (เนื้อหาใน data/portfolio.json แก้เอง) + artifact · รอ deploy prod ให้ขึ้น pplevolunteers.org/tee/portfolio
 - ⚠️ **org-core ยังไม่ merge เข้า master** (prod = master `2e81e6e` guild-based, ไม่แตะ) · deploy org = merge org-core→master เมื่อ org เสร็จ · **ก่อน deploy prod:** รัน migration.sql (rename orgs/user_identities + dc_members email/nullable + org_roles + web_roles) + `identity-split-expand.sql` · tag ของเก่า `layout-guild-v1`
