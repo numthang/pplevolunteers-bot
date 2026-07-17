@@ -15,9 +15,9 @@ export async function DELETE(req, { params }) {
   const fund = fundRows[0]
   if (!fund) return Response.json({ error: 'Not found' }, { status: 404 })
 
-  const { discordId, access } = await getEffectiveIdentity(session)
+  const { userId, access } = await getEffectiveIdentity(session)
   const account = await getAccountById(fund.account_id)
-  if (!account || !canEditAccount(account, discordId, access)) {
+  if (!account || !canEditAccount(account, userId, access)) {
     return Response.json({ error: 'Forbidden' }, { status: 403 })
   }
 

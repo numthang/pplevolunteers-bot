@@ -13,9 +13,9 @@ export async function GET(req) {
   const accountId = searchParams.get('accountId')
   if (!accountId) return Response.json({ error: 'accountId required' }, { status: 400 })
 
-  const { discordId, access } = await getEffectiveIdentity(session)
+  const { userId, access } = await getEffectiveIdentity(session)
   const account = await getAccountById(accountId)
-  if (!account || !canViewAccount(account, discordId, access)) {
+  if (!account || !canViewAccount(account, userId, access)) {
     return Response.json({ error: 'Forbidden' }, { status: 403 })
   }
 
@@ -34,9 +34,9 @@ export async function POST(req) {
     return Response.json({ error: 'accountId and name required' }, { status: 400 })
   }
 
-  const { discordId, access } = await getEffectiveIdentity(session)
+  const { userId, access } = await getEffectiveIdentity(session)
   const account = await getAccountById(accountId)
-  if (!account || !canEditAccount(account, discordId, access)) {
+  if (!account || !canEditAccount(account, userId, access)) {
     return Response.json({ error: 'Forbidden' }, { status: 403 })
   }
 

@@ -10,6 +10,13 @@ export async function getGuilds() {
   return rows
 }
 
+// guild → org_id (dc_guilds mapping) · ใช้ resolve org-scope ของ feature จาก guild ที่ active อยู่
+export async function orgIdOfGuild(guildId) {
+  if (!guildId) return null
+  const { rows } = await pool.query(`SELECT org_id FROM dc_guilds WHERE guild_id = $1`, [guildId])
+  return rows[0]?.org_id ?? null
+}
+
 // guild ที่ user ถือ role ซึ่ง map เป็น permission admin/secretary_general (permission-based, multi-tenant)
 // match ชื่อ role ใน org_members.roles กับ dc_guild_roles.role_name ต่อ guild → ไม่ผูกชื่อ 'Admin'/'เลขาธิการ' ตายตัว
 export async function getAdminGuildIds(discordId) {

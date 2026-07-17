@@ -1,11 +1,16 @@
 import pool from '../index.js'
 
-export async function getTransactions(guildId, { accountId, type, categoryId, noCategory, fundId, noFund, search, year, month, dateFrom, dateTo, limit = 50, offset = 0, discordId = null, admin = false } = {}) {
+// org-scope: guild_id→org_id · owner_id/updated_by = users.id (INT) · updatedBy param = userId
+// ⚠️ transaction ไม่มี org_id ในเงื่อนไข visibility → scope ผ่าน account (a.org_id) เสมอ
+
+export async function getTransactions(orgId, { accountId, type, categoryId, noCategory, fundId, noFund, search, year, month, dateFrom, dateTo, limit = 50, offset = 0, userId = null, admin = false } = {}) {
   const params = []
 
-  // Private accounts: only owner can see — even admin cannot
-  params.push('private', discordId)
-  let where = `WHERE (a.visibility != $${params.length - 1} OR a.owner_id = $${params.length})`
+  // org scope ผ่าน account (transaction ไม่ scope เอง) + private accounts: เจ้าของเท่านั้น (แม้ admin)
+  params.push(orgId)
+  let where = `WHERE a.org_id = $${params.length}`
+  params.push('private', userId)
+  where += ` AND (a.visibility != $${params.length - 1} OR a.owner_id = $${params.length})`
 
   if (accountId)  { params.push(accountId);             where += ` AND t.account_id = $${params.length}` }
   if (type)       { params.push(type);                   where += ` AND t.type = $${params.length}` }
@@ -23,7 +28,7 @@ export async function getTransactions(guildId, { accountId, type, categoryId, no
   const { rows } = await pool.query(
     `SELECT t.*, a.name AS account_name, a.bank AS account_bank, a.owner_id AS account_owner_id, a.visibility AS account_visibility, a.province AS account_province, c.name AS category_name, c.icon AS category_icon, f.name AS fund_name
      FROM finance_transactions t
-     LEFT JOIN finance_accounts a ON a.id = t.account_id
+     JOIN finance_accounts a ON a.id = t.account_id
      LEFT JOIN finance_categories c ON c.id = t.category_id
      LEFT JOIN finance_funds f ON f.id = t.fund_id
      ${where}
@@ -42,14 +47,14 @@ export async function getTransactionById(id) {
   return rows[0] || null
 }
 
-export async function createTransaction(guildId, data, updatedBy) {
+export async function createTransaction(orgId, data, updatedBy) {
   const { account_id, type, amount, description, category_id, fund_id, counterpart_name, counterpart_account, counterpart_bank, fee, balance_after, evidence_url, ref_id, discord_msg_id, txn_at } = data
   const { rows } = await pool.query(
     `INSERT INTO finance_transactions
-      (guild_id, account_id, type, amount, description, category_id, fund_id, counterpart_name, counterpart_account, counterpart_bank, fee, balance_after, evidence_url, ref_id, discord_msg_id, txn_at, updated_by, updated_at)
+      (org_id, account_id, type, amount, description, category_id, fund_id, counterpart_name, counterpart_account, counterpart_bank, fee, balance_after, evidence_url, ref_id, discord_msg_id, txn_at, updated_by, updated_at)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, NOW())
      RETURNING id`,
-    [guildId, account_id, type, amount, description, category_id || null, fund_id || null,
+    [orgId, account_id, type, amount, description, category_id || null, fund_id || null,
      counterpart_name || null, counterpart_account || null, counterpart_bank || null,
      fee || null, balance_after || null,
      evidence_url || null, ref_id || null, discord_msg_id || null,
@@ -77,9 +82,9 @@ export async function deleteTransaction(id) {
   await pool.query(`DELETE FROM finance_transactions WHERE id = $1`, [id])
 }
 
-export async function getCategorySummary(guildId, { accountId, type, year, month, dateFrom, dateTo } = {}) {
-  const params = []
-  let where = `WHERE 1=1`
+export async function getCategorySummary(orgId, { accountId, type, year, month, dateFrom, dateTo } = {}) {
+  const params = [orgId]
+  let where = `WHERE a.org_id = $1`
 
   if (accountId) { params.push(accountId); where += ` AND t.account_id = $${params.length}` }
   if (type)      { params.push(type);       where += ` AND t.type = $${params.length}` }
@@ -97,6 +102,7 @@ export async function getCategorySummary(guildId, { accountId, type, year, month
        SUM(t.amount) AS total,
        COUNT(*)      AS count
      FROM finance_transactions t
+     JOIN finance_accounts a ON a.id = t.account_id
      LEFT JOIN finance_categories c ON c.id = t.category_id
      ${where}
      GROUP BY c.id, c.name, c.icon, t.type
@@ -106,9 +112,9 @@ export async function getCategorySummary(guildId, { accountId, type, year, month
   return rows
 }
 
-export async function getMonthlyTrend(guildId, { accountId, type, year } = {}) {
-  const params = []
-  let where = `WHERE 1=1`
+export async function getMonthlyTrend(orgId, { accountId, type, year } = {}) {
+  const params = [orgId]
+  let where = `WHERE a.org_id = $1`
 
   if (accountId) { params.push(accountId); where += ` AND t.account_id = $${params.length}` }
   if (type)      { params.push(type);       where += ` AND t.type = $${params.length}` }
@@ -122,6 +128,7 @@ export async function getMonthlyTrend(guildId, { accountId, type, year } = {}) {
        SUM(t.amount)   AS total,
        COUNT(*)        AS count
      FROM finance_transactions t
+     JOIN finance_accounts a ON a.id = t.account_id
      ${where}
      GROUP BY EXTRACT(YEAR FROM t.txn_at), EXTRACT(MONTH FROM t.txn_at), t.type
      ORDER BY year DESC, month DESC`,
@@ -130,7 +137,8 @@ export async function getMonthlyTrend(guildId, { accountId, type, year } = {}) {
   return rows
 }
 
-export async function getAccountSummary(guildId, accountId) {
+export async function getAccountSummary(orgId, accountId) {
+  // accountId unique across orgs (FK) → scope ผ่าน accountId พอ
   const { rows } = await pool.query(
     `SELECT
        SUM(CASE WHEN type='income'  THEN amount ELSE 0 END) AS total_income,
@@ -142,7 +150,7 @@ export async function getAccountSummary(guildId, accountId) {
   return rows[0]
 }
 
-export async function getBalanceSummary(guildId, accountId) {
+export async function getBalanceSummary(orgId, accountId) {
   // SUM balance
   const { rows: sumRows } = await pool.query(
     `SELECT

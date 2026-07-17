@@ -15,13 +15,13 @@ export async function PUT(req, { params }) {
   if (!txn) return Response.json({ error: 'Not found' }, { status: 404 })
 
   const account = await getAccountById(txn.account_id)
-  const { discordId: effectiveDiscordId, access } = await getEffectiveIdentity(session)
-  if (!account || !canEditAccount(account, effectiveDiscordId, access)) {
+  const { userId: effectiveUserId, access } = await getEffectiveIdentity(session)
+  if (!account || !canEditAccount(account, effectiveUserId, access)) {
     return Response.json({ error: 'Forbidden' }, { status: 403 })
   }
 
   const data = await req.json()
-  await updateTransaction(id, data, session.user.discordId)
+  await updateTransaction(id, data, session.user.userId)
 
   if (data.category_id && String(data.category_id) !== String(txn.category_id)) {
     await incrementCategory(data.category_id)
@@ -39,8 +39,8 @@ export async function DELETE(req, { params }) {
   if (!txn) return Response.json({ error: 'Not found' }, { status: 404 })
 
   const account = await getAccountById(txn.account_id)
-  const { discordId: effectiveDiscordId, access } = await getEffectiveIdentity(session)
-  if (!account || !canEditAccount(account, effectiveDiscordId, access)) {
+  const { userId: effectiveUserId, access } = await getEffectiveIdentity(session)
+  if (!account || !canEditAccount(account, effectiveUserId, access)) {
     return Response.json({ error: 'Forbidden' }, { status: 403 })
   }
 

@@ -122,4 +122,4 @@ SELECT count(*) rows, count(*) FILTER (WHERE org_id IS NULL) org_null,
 \echo '--- org distribution ---'
 SELECT org_id, count(*) FROM finance_transactions GROUP BY org_id;
 
-ROLLBACK;  -- << dry-run · เปลี่ยนเป็น COMMIT เมื่อ verify ผ่าน
+COMMIT;  -- dry-run verified 2026-07-17 (ROLLBACK) → applied localhost org-core

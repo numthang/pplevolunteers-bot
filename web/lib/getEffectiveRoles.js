@@ -18,9 +18,9 @@ export async function getEffectiveRoles(session) {
  */
 export async function getEffectiveIdentity(session) {
   const guildId = await getGuildId(session)
-  const { roles, webRoles, discordId } = await resolveIdentity(session, guildId)
+  const { roles, webRoles, discordId, userId } = await resolveIdentity(session, guildId)
   const access = await resolveAccess(guildId, roles, webRoles)
-  return { roles, discordId, access }
+  return { roles, discordId, userId, access }
 }
 
 /** อ่าน roles จริง (DB-fresh, bypass JWT cache) — ไม่ผ่าน debug/view-as-role */
@@ -44,7 +44,7 @@ async function getRealRoles(session, guildId) {
       }
     } catch {}
   }
-  return { realRoles, realWebRoles, realDiscordId }
+  return { realRoles, realWebRoles, realDiscordId, realUserId: session?.user?.userId || null }
 }
 
 /**
@@ -59,11 +59,11 @@ export async function getRealAccess(session) {
 
 /** identity layer เดิม (อ่าน roles จาก DB + จัดการ debug/view-as-role) — แยกออกเพื่อ resolve access ครั้งเดียว */
 async function resolveIdentity(session, guildId) {
-  const { realRoles, realWebRoles, realDiscordId } = await getRealRoles(session, guildId)
+  const { realRoles, realWebRoles, realDiscordId, realUserId } = await getRealRoles(session, guildId)
 
   // เฉพาะ admin จริงเท่านั้นที่ debug/view-as-role ได้ — เช็คด้วย real access (ไม่ใช่ effective)
   const realAccess = await resolveAccess(guildId, realRoles, realWebRoles)
-  if (!isAdmin(realAccess)) return { roles: realRoles, webRoles: realWebRoles, discordId: realDiscordId }
+  if (!isAdmin(realAccess)) return { roles: realRoles, webRoles: realWebRoles, discordId: realDiscordId, userId: realUserId }
 
   const cookieStore = await cookies()
 
@@ -79,18 +79,18 @@ async function resolveIdentity(session, guildId) {
       )
       const roles = rows[0]?.roles ? rows[0].roles.split(',').map(r => r.trim()).filter(Boolean) : []
       const webRoles = rows[0]?.web_roles ? rows[0].web_roles.split(',').map(r => r.trim()).filter(Boolean) : []
-      return { roles, webRoles, discordId: null }
+      return { roles, webRoles, discordId: null, userId: null }
     } catch {
-      return { roles: realRoles, webRoles: realWebRoles, discordId: realDiscordId }
+      return { roles: realRoles, webRoles: realWebRoles, discordId: realDiscordId, userId: realUserId }
     }
   }
 
   // Mode 2: predefined combo (ยศ Discord ล้วน — ไม่มี web_roles)
   const debugLabel = cookieStore.get('debug_role')?.value
-  if (!debugLabel || !DEBUG_LABELS.includes(debugLabel)) return { roles: realRoles, webRoles: realWebRoles, discordId: realDiscordId }
+  if (!debugLabel || !DEBUG_LABELS.includes(debugLabel)) return { roles: realRoles, webRoles: realWebRoles, discordId: realDiscordId, userId: realUserId }
 
   const combo = DEBUG_COMBOS.find(c => c.label === debugLabel)
-  if (!combo) return { roles: realRoles, webRoles: realWebRoles, discordId: realDiscordId }
+  if (!combo) return { roles: realRoles, webRoles: realWebRoles, discordId: realDiscordId, userId: realUserId }
 
-  return { roles: combo.roles, webRoles: [], discordId: null }
+  return { roles: combo.roles, webRoles: [], discordId: null, userId: null }
 }

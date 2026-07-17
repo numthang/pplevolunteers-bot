@@ -29,9 +29,9 @@ function exactProvinces(scopeGrants) {
 /**
  * ตรวจสิทธิ์ดูบัญชี
  */
-export function canViewAccount(account, discordId, access = {}) {
+export function canViewAccount(account, userId, access = {}) {
   const { permissions = new Set(), scopeGrants = [] } = normalizeAccess(access)
-  const owner = account.owner_id === discordId
+  const owner = account.owner_id === userId
 
   if (account.visibility === 'private') return owner || permissions.has('admin')
   if (account.visibility === 'public')  return true
@@ -58,9 +58,9 @@ export function canViewAccount(account, discordId, access = {}) {
 /**
  * ตรวจสิทธิ์แก้ไข/ลบบัญชี
  */
-export function canEditAccount(account, discordId, access = {}) {
+export function canEditAccount(account, userId, access = {}) {
   const { permissions = new Set(), scopeGrants = [] } = normalizeAccess(access)
-  const owner = account.owner_id === discordId
+  const owner = account.owner_id === userId
   if (owner || isOrgHead(permissions)) return true
 
   if (account.province) {
@@ -72,8 +72,8 @@ export function canEditAccount(account, discordId, access = {}) {
   }
 }
 
-export function filterAccessibleAccounts(accounts, discordId, access = {}) {
-  return accounts.filter(a => canViewAccount(a, discordId, access))
+export function filterAccessibleAccounts(accounts, userId, access = {}) {
+  return accounts.filter(a => canViewAccount(a, userId, access))
 }
 
 export function canCreateNonPrivateAccount(access = {}) {

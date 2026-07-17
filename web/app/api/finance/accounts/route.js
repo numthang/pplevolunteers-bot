@@ -5,17 +5,17 @@ import { isAdmin } from '@/lib/roles.js'
 import { can } from '@/lib/permissions.js'
 import { canViewAccount, canCreateNonPrivateAccount } from '@/lib/financeAccess.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
-import { getGuildId } from '@/lib/guildContext.js'
+import { getOrgId } from '@/lib/orgContext.js'
 
 export async function GET(req) {
   const session = await getServerSession(authOptions)
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { discordId, access } = await getEffectiveIdentity(session)
-  const GUILD_ID = await getGuildId(session)
+  const { userId, access } = await getEffectiveIdentity(session)
+  const ORG_ID = await getOrgId(session)
   const all = new URL(req.url).searchParams.get('all')
-  const raw = await getAccountsAll(GUILD_ID, discordId, can('viewPrivateOther', access.permissions))
-  const accounts = raw.filter(a => canViewAccount(a, discordId, access))
+  const raw = await getAccountsAll(ORG_ID, userId, can('viewPrivateOther', access.permissions))
+  const accounts = raw.filter(a => canViewAccount(a, userId, access))
   return Response.json(accounts)
 }
 
@@ -24,11 +24,11 @@ export async function POST(req) {
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { access } = await getEffectiveIdentity(session)
-  const GUILD_ID = await getGuildId(session)
+  const ORG_ID = await getOrgId(session)
   const data = await req.json()
   if (!canCreateNonPrivateAccount(access)) data.visibility = 'private'
 
-  const guildId = (isAdmin(access) && data.guild_id) ? data.guild_id : GUILD_ID
-  const id = await createAccount(guildId, data, session.user.discordId)
+  const orgId = (isAdmin(access) && data.org_id) ? data.org_id : ORG_ID
+  const id = await createAccount(orgId, data, session.user.userId)
   return Response.json({ id }, { status: 201 })
 }
