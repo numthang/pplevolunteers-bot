@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { requireOrgUser } from '@/lib/orgAuth.js'
 import { resolveActiveOrg } from '@/lib/activeOrg.js'
-import { getOrgMembership, listOrgMembers } from '@/db/orgMembers.js'
+import { getOrgMembership, listOrgStaff } from '@/db/orgMembers.js'
 import OrgSettings from '@/components/org/OrgSettings.jsx'
 
 export const metadata = { title: 'ตั้งค่าองค์กร' }
@@ -13,7 +13,7 @@ export default async function OrgSettingsPage() {
 
   const [membership, members] = await Promise.all([
     getOrgMembership(activeOrg.id, session.user.userId),
-    listOrgMembers(activeOrg.id),
+    listOrgStaff(activeOrg.id),
   ])
 
   return (

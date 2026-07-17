@@ -159,6 +159,49 @@ export async function listOrgMembers(orgId) {
   return rows
 }
 
+// governance list เท่านั้น — owner + คำเชิญค้าง + คนมี role พิเศษ (web_roles)
+// ไม่ลากอาสาทั้ง org (org ใหญ่ = พันแถว) · คนอื่นหาผ่าน searchOrgMembers
+export async function listOrgStaff(orgId) {
+  const { rows } = await pool.query(
+    `SELECT * FROM (
+       SELECT DISTINCT ON (om.user_id)
+              om.user_id, om.role, om.status, om.joined_at,
+              u.email, COALESCE(om.display_name, u.username) AS display_name, u.discord_id
+         FROM org_members om
+         JOIN users u ON u.id = om.user_id
+        WHERE om.org_id = $1
+          AND (om.role <> 'member'
+               OR om.status <> 'active'
+               OR (om.web_roles IS NOT NULL AND om.web_roles <> ''))
+        ORDER BY om.user_id, (om.role = 'owner') DESC, om.joined_at
+     ) t
+     ORDER BY (t.role = 'owner') DESC, t.joined_at`,
+    [orgId]
+  )
+  return rows
+}
+
+// ค้นหาสมาชิกใน org ด้วยชื่อ/อีเมล — LIMIT กันลากทั้งก้อน (ใช้ในหน้า settings หาคนมาแต่งตั้ง/ลบ)
+export async function searchOrgMembers(orgId, q, limit = 20) {
+  const term = `%${q.trim()}%`
+  const { rows } = await pool.query(
+    `SELECT * FROM (
+       SELECT DISTINCT ON (om.user_id)
+              om.user_id, om.role, om.status, om.joined_at,
+              u.email, COALESCE(om.display_name, u.username) AS display_name, u.discord_id
+         FROM org_members om
+         JOIN users u ON u.id = om.user_id
+        WHERE om.org_id = $1
+          AND (u.email ILIKE $2 OR om.display_name ILIKE $2 OR u.username ILIKE $2)
+        ORDER BY om.user_id, (om.role = 'owner') DESC, om.joined_at
+     ) t
+     ORDER BY (t.role = 'owner') DESC, t.display_name
+     LIMIT $3`,
+    [orgId, term, limit]
+  )
+  return rows
+}
+
 // นับ owner ที่ active — COUNT(DISTINCT user) (per-guild rows ไม่ให้ owner คนเดียวถูกนับหลายครั้ง
 // ไม่งั้น last-owner guard พังใน org หลาย guild)
 async function activeOwnerCount(orgId, client = pool) {
