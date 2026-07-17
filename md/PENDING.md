@@ -104,11 +104,12 @@
 **🎨 Org switcher DRAFT (2026-07-17) — Notion/AppFlowy style · `components/OrgSwitcherMenu.jsx`:**
 - เมนู workspace hub: email header + org list (member_count + ✓) + สร้าง workspace + จัดการ/โปรไฟล์/ออก · เปิดได้เสมอแม้ org เดียว · icon ตัวหน้า = กลับหน้าแรก `/`, ชื่อ+chevron = เปิดเมนู
 - เอา app tabs ออกจาก topbar (เบียดกัน) → เข้าถึงผ่าน hamburger + การ์ด dashboard · title = **Platfor.ORG** (layout.js metadata)
-- [ ] **org มี icon ของตัวเอง — ดึงจาก org ไม่ใช่ guild** (จดไว้ 2026-07-17) — ⚠️ ตอนนี้ยัง "ยืม" `dc_guilds.icon_url` (ไอคอน Discord guild) มาโชว์เฉพาะ org ที่ active · org อื่น + guildless org = letter avatar (ตัวอักษรแรก + โทนสีวนตาม id) · **ที่ต้องทำ:**
-  1. เพิ่มคอลัมน์ `orgs.icon` (emoji string หรือ url รูปที่อัปโหลด)
-  2. **หน้า `/org/settings` มีปุ่มอัปโหลด icon** (รูป — ใช้ upload route แบบ cooking/finance หรือ emoji picker) · owner เท่านั้น
-  3. `OrgAvatar` (`OrgSwitcherMenu.jsx`) ลำดับ fallback: **`org.icon` → guild icon → letter** (มี slot iconUrl แล้ว แค่เปลี่ยนที่มา) · layout/Nav ส่ง `org.icon` แทน/ก่อน guild icon
-  4. listUserOrgs/listOrgMembers/getOrg คืน `icon` ด้วย
+- [x] **org icon เสร็จ 2026-07-17** (org-core) — org มี icon ของตัวเอง (emoji หรือรูปอัปโหลด) ไม่ยืม guild:
+  1. ✅ `orgs.icon TEXT` (migration ใน identity-refactor.sql) — emoji string หรือ url `/uploads/org/xxx`
+  2. ✅ `/org/settings` (ทั่วไป, OrgGeneral): preview + ช่องอีโมจิ + อัปโหลดรูป + ลบไอคอน · owner เท่านั้น · upload route `POST /api/org/orgs/[id]/icon` gate ด้วย **org-owner** (ไม่ใช่ discordId — email owner ใช้ได้) · emoji ผ่าน PATCH `/api/org/orgs/[id]` (icon)
+  3. ✅ `OrgAvatar` (OrgSwitcherMenu): fallback `org.icon`(รูป→img / emoji→text) → `iconUrl`(guild) → letter · `isImgSrc` detect path
+  4. ✅ listUserOrgs + getOrg คืน icon (+ `setOrgIcon` ใน db) · verify: emoji/upload/remove authed curl ✓ + SSR 200
+  - ⬜ ยังไม่กดจริงในเบราว์เซอร์ · prod: `public/uploads/org/` route mkdir เอง (nginx `/uploads` block มีแล้ว)
 - [ ] **i18n** — string ไทยใน `const T` ยัง hardcode · ย้ายเข้า next-intl (ns 'org')
 - [ ] เทสจริงในเบราว์เซอร์ (dropdown เปิด/สลับ/สร้าง/ออก) — curl เทส trigger+data แล้ว dropdown เป็น client-only
 

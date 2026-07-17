@@ -57,7 +57,7 @@ export async function getUserById(userId) {
 // status/role = aggregate: active ถ้ามีแถว active สักแถว · owner ถ้าเป็น owner ที่ไหนสักที่
 export async function listUserOrgs(userId) {
   const { rows } = await pool.query(
-    `SELECT o.id, o.name, o.slug,
+    `SELECT o.id, o.name, o.slug, o.icon,
             CASE WHEN bool_or(om.status = 'active') THEN 'active' ELSE 'invited' END AS status,
             CASE WHEN bool_or(om.role = 'owner')    THEN 'owner'  ELSE 'member'  END AS role,
             (SELECT COUNT(DISTINCT m.user_id) FROM org_members m
@@ -65,7 +65,7 @@ export async function listUserOrgs(userId) {
        FROM org_members om
        JOIN orgs o ON o.id = om.org_id
       WHERE om.user_id = $1
-      GROUP BY o.id, o.name, o.slug
+      GROUP BY o.id, o.name, o.slug, o.icon
       ORDER BY min(om.joined_at)`,
     [userId]
   )
@@ -125,7 +125,7 @@ export async function createOrg(name, ownerUserId) {
 
 export async function getOrg(orgId) {
   const { rows } = await pool.query(
-    `SELECT id, name, slug FROM orgs WHERE id = $1`, [orgId]
+    `SELECT id, name, slug, icon FROM orgs WHERE id = $1`, [orgId]
   )
   return rows[0] || null
 }
@@ -133,8 +133,17 @@ export async function getOrg(orgId) {
 // เฉพาะ owner เปลี่ยนชื่อได้ (เช็คสิทธิ์ที่ route)
 export async function renameOrg(orgId, name) {
   const { rows } = await pool.query(
-    `UPDATE orgs SET name = $2 WHERE id = $1 RETURNING id, name, slug`,
+    `UPDATE orgs SET name = $2 WHERE id = $1 RETURNING id, name, slug, icon`,
     [orgId, String(name).trim()]
+  )
+  return rows[0] || null
+}
+
+// icon = emoji string หรือ url รูป (/uploads/org/xxx) · null = ลบ (กลับไป guild icon / letter)
+export async function setOrgIcon(orgId, icon) {
+  const { rows } = await pool.query(
+    `UPDATE orgs SET icon = $2 WHERE id = $1 RETURNING id, name, slug, icon`,
+    [orgId, icon || null]
   )
   return rows[0] || null
 }

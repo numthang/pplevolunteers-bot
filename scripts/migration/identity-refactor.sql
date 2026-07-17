@@ -269,3 +269,6 @@ CREATE TABLE IF NOT EXISTS org_config (
   updated_at TIMESTAMPTZ  DEFAULT now(),
   PRIMARY KEY (org_id, key)
 );
+
+-- org icon: emoji string หรือ url รูปที่อัปโหลด (/uploads/org/xxx) · OrgAvatar detect: path→img, สั้น→emoji
+ALTER TABLE orgs ADD COLUMN IF NOT EXISTS icon TEXT;

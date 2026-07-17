@@ -19,7 +19,7 @@ const T = {
   pick:      'เลือกองค์กร',
 }
 
-// letter-avatar โทนสีวนตาม id (on-brand) — org ยังไม่มีรูป/emoji เก็บใน DB (เพิ่มทีหลังได้)
+// letter-avatar โทนสีวนตาม id (on-brand) — fallback สุดท้ายเมื่อ org ไม่มี icon/รูป guild
 const TONES = [
   'bg-orange/15 text-orange',
   'bg-teal/15 text-teal',
@@ -27,10 +27,19 @@ const TONES = [
   'bg-red-accent/15 text-red-accent',
 ]
 function toneFor(id) { return TONES[Math.abs(Number(id) || 0) % TONES.length] }
+function isImgSrc(s) { return typeof s === 'string' && (s.startsWith('/') || s.startsWith('http')) }
 
+// ลำดับ fallback: org.icon (รูปที่อัปโหลด / emoji) → iconUrl (รูป guild ที่ยืมมา) → letter
 function OrgAvatar({ org, iconUrl, size = 'w-7 h-7' }) {
+  const icon = org?.icon
+  if (isImgSrc(icon)) {
+    return <Image src={icon} alt="" width={32} height={32} className={`${size} rounded-md object-cover shrink-0`} />
+  }
+  if (icon) {
+    return <span className={`${size} rounded-md grid place-items-center text-lg shrink-0 select-none bg-warm-100 dark:bg-white/5`}>{icon}</span>
+  }
   if (iconUrl) {
-    return <Image src={iconUrl} alt="" width={28} height={28} className={`${size} rounded-md object-cover shrink-0`} />
+    return <Image src={iconUrl} alt="" width={32} height={32} className={`${size} rounded-md object-cover shrink-0`} />
   }
   const letter = (org?.name || '?').trim().slice(0, 1).toUpperCase()
   return (
