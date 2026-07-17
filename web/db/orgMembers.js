@@ -51,21 +51,37 @@ export async function getUserById(userId) {
 }
 
 // org ทั้งหมดของ user (active + invited) — picker ใช้ active, แสดง invited แยกได้
+// ⚠️ org_members เป็น per-guild → org หลาย guild (org 1 = 3 guild) ให้ user 1 คนมีหลายแถวต่อ org
+//   → GROUP BY o.id dedupe เป็น 1 org/แถว (กัน switcher โชว์ org ซ้ำ)
+// member_count = COUNT(DISTINCT user) active (คนจริง ไม่ใช่จำนวนแถว membership)
+// status/role = aggregate: active ถ้ามีแถว active สักแถว · owner ถ้าเป็น owner ที่ไหนสักที่
 export async function listUserOrgs(userId) {
   const { rows } = await pool.query(
-    `SELECT o.id, o.name, o.slug, om.role, om.status
+    `SELECT o.id, o.name, o.slug,
+            CASE WHEN bool_or(om.status = 'active') THEN 'active' ELSE 'invited' END AS status,
+            CASE WHEN bool_or(om.role = 'owner')    THEN 'owner'  ELSE 'member'  END AS role,
+            (SELECT COUNT(DISTINCT m.user_id) FROM org_members m
+              WHERE m.org_id = o.id AND m.status = 'active')::int AS member_count
        FROM org_members om
        JOIN orgs o ON o.id = om.org_id
       WHERE om.user_id = $1
-      ORDER BY om.joined_at`,
+      GROUP BY o.id, o.name, o.slug
+      ORDER BY min(om.joined_at)`,
     [userId]
   )
   return rows
 }
 
+// membership ระดับ org ของ user — aggregate ข้าม guild-rows (per-guild)
+// role=owner ถ้าเป็น owner ที่ guild ไหนก็ได้ · status=active ถ้ามีแถว active · HAVING กัน non-member คืน row ผี
 export async function getOrgMembership(orgId, userId) {
   const { rows } = await pool.query(
-    `SELECT org_id, user_id, role, status FROM org_members WHERE org_id = $1 AND user_id = $2`,
+    `SELECT $1::int AS org_id, $2::int AS user_id,
+            CASE WHEN bool_or(role = 'owner')   THEN 'owner'  ELSE 'member'  END AS role,
+            CASE WHEN bool_or(status = 'active') THEN 'active' ELSE 'invited' END AS status
+       FROM org_members
+      WHERE org_id = $1 AND user_id = $2
+     HAVING count(*) > 0`,
     [orgId, userId]
   )
   return rows[0] || null
@@ -124,22 +140,30 @@ export async function renameOrg(orgId, name) {
 }
 
 // สมาชิกทั้งหมดของ org (join users เอา email/ชื่อ) — owner ก่อน, ตามด้วยเวลาเข้า
+// ⚠️ org_members per-guild → org หลาย guild ให้ user คนเดียวมีหลายแถว → DISTINCT ON (user_id)
+//   dedupe เป็น 1 คน/แถว (กัน member list ซ้ำ + React dup key)
 export async function listOrgMembers(orgId) {
   const { rows } = await pool.query(
-    `SELECT om.user_id, om.role, om.status, om.joined_at,
-            u.email, COALESCE(om.display_name, u.username) AS display_name, u.discord_id
-       FROM org_members om
-       JOIN users u ON u.id = om.user_id
-      WHERE om.org_id = $1
-      ORDER BY (om.role = 'owner') DESC, om.joined_at`,
+    `SELECT * FROM (
+       SELECT DISTINCT ON (om.user_id)
+              om.user_id, om.role, om.status, om.joined_at,
+              u.email, COALESCE(om.display_name, u.username) AS display_name, u.discord_id
+         FROM org_members om
+         JOIN users u ON u.id = om.user_id
+        WHERE om.org_id = $1
+        ORDER BY om.user_id, (om.role = 'owner') DESC, om.joined_at
+     ) t
+     ORDER BY (t.role = 'owner') DESC, t.joined_at`,
     [orgId]
   )
   return rows
 }
 
+// นับ owner ที่ active — COUNT(DISTINCT user) (per-guild rows ไม่ให้ owner คนเดียวถูกนับหลายครั้ง
+// ไม่งั้น last-owner guard พังใน org หลาย guild)
 async function activeOwnerCount(orgId, client = pool) {
   const { rows } = await client.query(
-    `SELECT COUNT(*)::int AS n FROM org_members
+    `SELECT COUNT(DISTINCT user_id)::int AS n FROM org_members
       WHERE org_id = $1 AND role = 'owner' AND status = 'active'`,
     [orgId]
   )
