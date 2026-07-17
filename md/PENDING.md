@@ -48,7 +48,16 @@
 - [ ] **NEXT ③ bot sync** — `db/members.js` เขียน `org_members.roles` (แทน dc_members.roles) = แตะ bot live
 - [ ] **NEXT ④ contract** — drop `dc_members` + คอลัมน์ไม่ใช้ (ท้ายสุด หลัง repoint นิ่ง)
 
-#### 💰 FINANCE org-scope — spec เคาะ grill 2026-07-17 (ทำ session หน้า · scope finance ตัวเดียวก่อน อย่าเพิ่งทำ calling/docs/cases)
+#### 💰 FINANCE org-scope — ✅ เสร็จ + verify 2026-07-17 (commit be4d8d3 บน org-core · localhost applied, prod ไม่แตะ)
+**สรุปที่ทำจริง (ต่างจาก spec เดิม 2 จุด — ดีกว่า):**
+- migration `scripts/migration/finance-org-scope.sql` (applied localhost): **in-place type convert** `guild_id→org_id` + `owner_id/updated_by` varchar discord→INT users.id **คงตำแหน่งคอลัมน์** (ไม่ใช่ rename tail col ที่กองท้าย) · ลบ tail col (org_id/owner_user_id/updated_by_user_id) ที่เติมช่วงออกแบบ · FK→users/orgs · gotcha: USING ห้าม subquery → ใช้ pg_temp helper fn `_g2o`/`_d2u`
+- **getOrgId = `orgIdOfGuild(getGuildId)` ไม่ใช่ active_org cookie** (ค้าน spec เดิม): access-control ยัง guild-keyed → derive org จาก guild เดียวกัน = data+access aligned ไม่มี seam · cookie-based เลื่อนไป org-switcher endgame (ขยับพร้อม RBAC-by-org)
+- getTransactions/summaries **เพิ่ม** org filter ผ่าน account join (เดิมไม่ scope เลย — latent leak) · financeAccess owner_id===userId · getEffectiveIdentity+useEffectiveRoles คืน userId (debug-null) · ลบ admin guild-picker ใน account form
+- verify: 57 tests + build + psql queries คืน data จริง + /finance 307
+- ⚠️ **ค้าง cutover ก่อน merge master:** (1) **bot write-path** — SMS/OCR income (emailPoller/financeOCR/smsWebhook/db/finance.js) ยัง INSERT `guild_id` ไม่มี org_id → หลัง drop guild_id บน prod transaction ใหม่จะ org_id NULL หายจากเว็บ · ต้องแก้ bot ให้ set org_id (หรือ trigger backfill) (2) RBAC email-user เปิด /finance ผ่าน org (guildless org ยังเข้าไม่ถึง — ตั้งใจ, เปิดตอน endgame)
+
+<details><summary>spec เดิม (grill 2026-07-17) — เก็บอ้างอิง</summary>
+
 หลักการ: **scope→org_id (ทิ้ง guild_id) · person→user_id (ทิ้ง discord snowflake) · Discord artifact→เก็บ guild-based**
 - **4 ตาราง data → org_id scope, drop guild_id:** `finance_accounts`, `finance_categories`, `finance_transactions`, `finance_incoming_log`
   - backfill `org_id` จาก `dc_guilds` (guild→org · collapse 3 guild ของ org 1 → org_id=1) — org_id column มีแล้ว แค่ backfill + repoint query
@@ -59,6 +68,7 @@
 - **finance_config = OUT OF SCOPE** — เป็น Discord dashboard config (channel/thread/dashboard_msg, bot-only: emailPoller/financeOCR/smsWebhook/db/finance.js) คง guild-based · **future bot-cleanup:** ยุบเข้า `dc_guild_config` (key 'finance_dashboard') — มันคือ guild config ไม่ใช่ finance data
 - **dependency:** ต้องมี `getOrgId(session)` resolver ในแอปหลัก (finance page เปลี่ยน getGuildId→getOrgId) · reuse logic `active_org` cookie จาก `lib/activeOrg.js` (/org shell) · = ชิ้นเล็กสุดของ org-switcher-endgame ที่ finance-first ดึงมา
 - ⚠️ RBAC page-access: email user เปิด /finance ได้เมื่อ resolve permission ผ่าน org_members.web_roles + scope org (ไม่ใช่ guild membership)
+</details>
 
 - [x] Portfolio consult (web page) เสร็จ — `web/app/tee/portfolio/` (เนื้อหาใน data/portfolio.json แก้เอง) + artifact · รอ deploy prod ให้ขึ้น pplevolunteers.org/tee/portfolio
 - ⚠️ **org-core ยังไม่ merge เข้า master** (prod = master `2e81e6e` guild-based, ไม่แตะ) · deploy org = merge org-core→master เมื่อ org เสร็จ · **ก่อน deploy prod:** รัน migration.sql (rename orgs/user_identities + dc_members email/nullable + org_roles + web_roles) + `identity-split-expand.sql` · tag ของเก่า `layout-guild-v1`
