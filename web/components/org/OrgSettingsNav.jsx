@@ -7,18 +7,20 @@ const TABS = [
   { href: '/org/settings/members', label: 'สมาชิก & บทบาท' },
 ]
 
+// list แนวตั้งเสมอ — mobile = stack บนเนื้อหา · desktop = sidebar ซ้าย (จัดวางใน layout grid)
+// เลี่ยง underline tab (scroll แนวนอนบนมือถือเมื่อเมนูโต)
 export default function OrgSettingsNav() {
   const path = usePathname()
   return (
-    <nav className="flex gap-1 border-b border-gray-200 dark:border-disc-border mb-6 overflow-x-auto">
+    <nav className="flex flex-col gap-0.5">
       {TABS.map(t => {
         const active = path === t.href
         return (
           <Link key={t.href} href={t.href}
-            className={`whitespace-nowrap px-4 py-2.5 text-sm font-medium -mb-px border-b-2 ${
+            className={`rounded-lg px-3 py-2 text-sm font-medium ${
               active
-                ? 'border-orange text-orange'
-                : 'border-transparent text-gray-500 dark:text-disc-muted hover:text-gray-900 dark:hover:text-disc-text'
+                ? 'bg-orange/10 text-orange'
+                : 'text-gray-600 dark:text-disc-muted hover:bg-gray-100 dark:hover:bg-disc-hover'
             }`}>
             {t.label}
           </Link>
