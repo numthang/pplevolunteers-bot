@@ -257,3 +257,15 @@ SELECT (SELECT count(*) FROM org_members om LEFT JOIN users u ON u.id=om.user_id
 \echo '=== discord provider rows == users ที่มี discord ==='
 SELECT (SELECT count(*) FROM user_identities WHERE provider='discord') AS discord_rows,
        (SELECT count(*) FROM users WHERE discord_id IS NOT NULL)        AS users_with_discord;
+
+-- ── ORG INFRA (2026-07-17) — org-level KV config ─────────────────────────────
+-- setting ระดับ org จริงๆ (เช่น appoint_policy, enabled_features ตอน migrate)
+-- ⚠️ ไม่ใช่ dc_guild_config: นั่นคือ config/artifact ของ Discord server (channel/msg/role)
+--    คง guild-keyed · org_config = ของ org (ข้าม guild / รองรับ guildless org)
+CREATE TABLE IF NOT EXISTS org_config (
+  org_id     INTEGER      NOT NULL REFERENCES orgs(id) ON DELETE CASCADE,
+  key        VARCHAR(60)  NOT NULL,
+  value      TEXT,
+  updated_at TIMESTAMPTZ  DEFAULT now(),
+  PRIMARY KEY (org_id, key)
+);
