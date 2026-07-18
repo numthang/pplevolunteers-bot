@@ -26,10 +26,11 @@ export async function setOrgConfig(orgId, key, value) {
 // appoint_policy = permission keys ที่แต่งตั้งได้ (นอกจาก owner) · เก็บเป็น JSON array ใน value
 export async function getAppointPolicy(orgId) {
   const raw = await getOrgConfig(orgId, 'appoint_policy')
-  if (!raw) return DEFAULT_APPOINT_POLICY
+  if (raw === null) return DEFAULT_APPOINT_POLICY   // ยังไม่ตั้ง = default
   try {
     const arr = JSON.parse(raw)
-    return Array.isArray(arr) && arr.length ? arr : DEFAULT_APPOINT_POLICY
+    // ตั้งเป็น [] ตั้งใจได้ (owner-only — gate ยังปล่อย owner/admin เสมอ)
+    return Array.isArray(arr) ? arr : DEFAULT_APPOINT_POLICY
   } catch {
     return DEFAULT_APPOINT_POLICY
   }

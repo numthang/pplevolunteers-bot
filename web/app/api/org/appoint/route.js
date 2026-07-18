@@ -33,7 +33,8 @@ async function gate() {
     getAppointPolicy(orgId),
   ])
   const isOwner = membership?.role === 'owner' && membership.status === 'active'
-  const canUse = isOwner || policy.some(p => access.permissions.has(p))
+  // owner + admin (god-mode) แต่งตั้งได้เสมอ · นอกนั้นตาม appoint_policy ต่อ org
+  const canUse = isOwner || access.permissions.has('admin') || policy.some(p => access.permissions.has(p))
   if (!canUse) return { error: 'forbidden', status: 403 }
 
   return { orgId, perms: access.permissions, actorDiscordId: session.user.discordId || null }

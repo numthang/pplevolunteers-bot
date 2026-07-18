@@ -98,7 +98,8 @@
   - **B (API `/api/org/appoint`):** GATE = owner(เสมอ) หรือ permission ∈ appoint_policy (`getEffectiveOrgIdentity`) · **FLOOR = capability-subset** (`canAppoint` ใน permissions.js: caps ของ role เป้าหมาย ⊆ caps ผู้แต่งตั้ง → "แต่งตั้งไม่เกินตัว" · admin ห้าม web-grant · ปิดรู mod→treasurer) · Discord→role จริง+write-through roles / email→web_roles · audit · dedup per-guild
   - **C (UI hub):** `/org/settings` เป็น hub มี sub-nav (nested route `layout.js` + `OrgSettingsNav`) — **ทั่วไป** (`/org/settings` ชื่อ org) · **สมาชิก & บทบาท** (`/org/settings/members`: Section A ทีมงาน+invite+search membership / Section B แต่งตั้ง permission role chips, gated ด้วย appoint probe, ชิปจางถ้าเกิน floor) · ลบ OrgSettings.jsx เก่า
   - **verify:** floor unit 9/9 · authed curl (owner MRSJAN → grant treasurer→web_roles / admin=400 / revoke=ว่าง) · SSR /org/settings/members = 200 ไม่ 500 · gate 401/403
-  - ⬜ **ยังไม่กดจริงในเบราว์เซอร์** (tab switch, chip toggle UI, probe แสดง Section B หลัง hydrate) · ⬜ **org-config governance UI** (แก้ appoint_policy ผ่านเว็บ — ตอนนี้ default hardcode, config ได้ผ่าน DB เท่านั้น)
+  - ⬜ **ยังไม่กดจริงในเบราว์เซอร์** (tab switch, chip toggle UI, probe แสดง Section B หลัง hydrate)
+  - ✅ **org-config governance UI เสร็จ 2026-07-18** — `AppointPolicy.jsx` (owner-only, chips เลือกบทบาทที่แต่งตั้งได้) + `GET/PUT /api/org/orgs/[id]/appoint-policy` (กรอง admin/นอก catalog ออก, [] = owner-only ตั้งใจ) · gate appoint เพิ่ม `admin` god-mode เสมอ · getAppointPolicy respect [] · verify authed curl GET/PUT/filter ✓
 - ⚠️ **feature-toggle ย้ายมา org (`/bot/features`→`/org/settings/features`) = งานแยก** — `enabled_features` ยัง per-guild (dc_guild_config) · ย้ายมา org = data migration → org_config (tab "ฟีเจอร์" เพิ่มทีหลัง)
 
 **🎨 Org switcher DRAFT (2026-07-17) — Notion/AppFlowy style · `components/OrgSwitcherMenu.jsx`:**

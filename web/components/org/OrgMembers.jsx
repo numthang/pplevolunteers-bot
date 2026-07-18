@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
+import AppointPolicy from './AppointPolicy.jsx'
 
 export default function OrgMembers({ org, members: initial, me, myRole }) {
   const isOwner = myRole === 'owner'
@@ -140,6 +141,9 @@ export default function OrgMembers({ org, members: initial, me, myRole }) {
 
       {/* ── แต่งตั้งบทบาท (permission — gated ด้วย appoint policy) ── */}
       <AppointSection orgId={org.id} onNote={setNote} />
+
+      {/* ── governance: ใครแต่งตั้งได้ (owner only) ── */}
+      {isOwner && <AppointPolicy orgId={org.id} />}
 
       {note && <p className="text-sm text-gray-600 dark:text-disc-muted">{note}</p>}
     </div>
