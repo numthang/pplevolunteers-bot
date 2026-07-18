@@ -15,4 +15,23 @@ async function getOrgGuildIds(guildId) {
   return rows.length ? rows.map(r => r.guild_id) : [guildId];
 }
 
-module.exports = { getOrgGuildIds };
+// org_id ของ guild (สำหรับ bot write-path ที่ finance scope เป็น org_id แล้ว) · null ถ้า guild ไม่ผูก org
+async function orgIdOfGuild(guildId) {
+  const { rows } = await pool.query(
+    `SELECT org_id FROM dc_guilds WHERE guild_id = $1`,
+    [guildId]
+  );
+  return rows[0]?.org_id ?? null;
+}
+
+// users.id จาก discord_id (person-ref ใน finance เป็น users.id แล้ว ไม่ใช่ discord snowflake) · null ถ้าไม่พบ
+async function userIdByDiscord(discordId) {
+  if (!discordId) return null;
+  const { rows } = await pool.query(
+    `SELECT id FROM users WHERE discord_id = $1`,
+    [discordId]
+  );
+  return rows[0]?.id ?? null;
+}
+
+module.exports = { getOrgGuildIds, orgIdOfGuild, userIdByDiscord };

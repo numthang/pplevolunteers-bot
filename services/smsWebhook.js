@@ -117,13 +117,13 @@ async function processSmsIncome(txn) {
 
 	const result = await pool.query(
 		`INSERT INTO finance_transactions
-		  (guild_id, account_id, type, amount, description, counterpart_name, fee, balance_after,
+		  (org_id, account_id, type, amount, description, counterpart_name, fee, balance_after,
 		   ref_id, source, txn_at, updated_by, updated_at)
-		 VALUES ($1, $2, 'income', $3, $4, $5, $6, $7, $8, 'sms', $9, 'system', NOW())
+		 VALUES ($1, $2, 'income', $3, $4, $5, $6, $7, $8, 'sms', $9, NULL, NOW())
 		 ON CONFLICT DO NOTHING
 		 RETURNING id`,
 		[
-			account.guild_id,
+			account.org_id,
 			account.id,
 			txn.amount,
 			description,
@@ -169,12 +169,12 @@ async function processSmsExpense(txn) {
 
 	const result = await pool.query(
 		`INSERT INTO finance_transactions
-		  (guild_id, account_id, type, amount, description, balance_after,
+		  (org_id, account_id, type, amount, description, balance_after,
 		   ref_id, source, txn_at, updated_by, updated_at)
-		 VALUES ($1, $2, 'expense', $3, 'เงินออก', $4, $5, 'sms', $6, 'system', NOW())
+		 VALUES ($1, $2, 'expense', $3, 'เงินออก', $4, $5, 'sms', $6, NULL, NOW())
 		 ON CONFLICT DO NOTHING
 		 RETURNING id`,
-		[account.guild_id, account.id, txn.amount, txn.balance_after,
+		[account.org_id, account.id, txn.amount, txn.balance_after,
 		 txn.ref_id, txn.txn_at || new Date()]
 	)
 
@@ -234,8 +234,9 @@ async function notifyDiscord(account, txn) {
 
 	try {
 		const { rows: cfg } = await pool.query(
+			// finance_config = Discord artifact คง guild-keyed (bot single-guild = env.GUILD_ID)
 			`SELECT thread_id, account_ids FROM finance_config WHERE guild_id = $1`,
-			[account.guild_id]
+			[process.env.GUILD_ID]
 		)
 		const threadId = cfg[0]?.thread_id
 		if (!threadId) return

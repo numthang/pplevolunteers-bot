@@ -146,7 +146,7 @@ async function insertTransaction(txn, account, type, balanceAfter) {
            fee                 = COALESCE(fee, $5),
            description         = $6,
            source              = 'email',
-           updated_by          = 'system',
+           updated_by          = NULL,
            updated_at          = NOW()
          WHERE id = $7`,
         [txn.ref_id, txn.counterpart_name, txn.counterpart_account,
@@ -160,12 +160,12 @@ async function insertTransaction(txn, account, type, balanceAfter) {
 
   const result = await pool.query(
     `INSERT INTO finance_transactions
-      (guild_id, account_id, type, amount, description, counterpart_name, counterpart_account, counterpart_bank, fee, balance_after, ref_id, source, txn_at, updated_by, updated_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'email', $12, 'system', NOW())
+      (org_id, account_id, type, amount, description, counterpart_name, counterpart_account, counterpart_bank, fee, balance_after, ref_id, source, txn_at, updated_by, updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'email', $12, NULL, NOW())
      ON CONFLICT DO NOTHING
      RETURNING id`,
     [
-      account.guild_id,
+      account.org_id,
       account.id,
       type,
       txn.amount,
@@ -248,8 +248,10 @@ async function notifyDiscord(account, type, txn) {
 
   try {
     const { rows: cfg } = await pool.query(
+      // finance_config = Discord artifact คง guild-keyed (bot single-guild = env.GUILD_ID)
+      // account ไม่มี guild_id แล้ว (finance scope เป็น org_id) → ใช้ env.GUILD_ID
       `SELECT thread_id, account_ids FROM finance_config WHERE guild_id = $1`,
-      [account.guild_id]
+      [process.env.GUILD_ID]
     )
     const threadId  = cfg[0]?.thread_id
     if (!threadId) return
