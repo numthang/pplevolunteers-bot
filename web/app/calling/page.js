@@ -6,6 +6,8 @@ import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
 import { Target, Phone, BarChart3, Users } from 'lucide-react'
 import pool from '@/db/index.js'
+import { getOrgId } from '@/lib/orgContext.js'
+import { guildsOfOrg } from '@/db/guilds.js'
 import { getMembersCount, getPendingCallCount } from '@/db/calling/members.js'
 import { getContactPendingCount } from '@/db/calling/contacts.js'
 import { getCampaigns } from '@/db/calling/campaigns.js'
@@ -80,6 +82,13 @@ function NavCard({ href, title, desc, Icon }) {
 export default async function CallingDashboard() {
   const session = await getSession()
   if (!session) redirect('/')
+
+  // calling stats = global aggregate (ไม่ scope guild) → guildless org ห้ามคำนวณเลย
+  //   layout requireFeature('calling') คืน 404 แล้ว แต่ page render พร้อมกัน (concurrent) จะ
+  //   compute stats ทั่วโลกฝัง RSC payload ของ 404 → early return กัน query ไม่ให้รัน
+  const orgId = await getOrgId(session)
+  const orgGuilds = orgId ? await guildsOfOrg(orgId) : []
+  if (orgGuilds.length === 0) redirect('/')
 
   const t = await getTranslations('calling')
   const discordId = session.user.discordId
