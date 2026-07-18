@@ -44,7 +44,7 @@ export default function OrgFeatures({ orgId }) {
             <button type="button" onClick={() => toggle(f.key)} disabled={busy}
               role="switch" aria-checked={on} aria-label={f.label}
               className={`relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-60 ${on ? 'bg-orange' : 'bg-gray-300 dark:bg-disc-border'}`}>
-              <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${on ? 'translate-x-5' : 'translate-x-0.5'}`} />
+              <span className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${on ? 'translate-x-5' : ''}`} />
             </button>
           </div>
         )
