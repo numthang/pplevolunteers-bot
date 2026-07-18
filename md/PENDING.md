@@ -100,7 +100,9 @@
   - **verify:** floor unit 9/9 · authed curl (owner MRSJAN → grant treasurer→web_roles / admin=400 / revoke=ว่าง) · SSR /org/settings/members = 200 ไม่ 500 · gate 401/403
   - ⬜ **ยังไม่กดจริงในเบราว์เซอร์** (tab switch, chip toggle UI, probe แสดง Section B หลัง hydrate)
   - ✅ **org-config governance UI เสร็จ 2026-07-18** — `AppointPolicy.jsx` (owner-only, chips เลือกบทบาทที่แต่งตั้งได้) + `GET/PUT /api/org/orgs/[id]/appoint-policy` (กรอง admin/นอก catalog ออก, [] = owner-only ตั้งใจ) · gate appoint เพิ่ม `admin` god-mode เสมอ · getAppointPolicy respect [] · verify authed curl GET/PUT/filter ✓
-- ⚠️ **feature-toggle ย้ายมา org (`/bot/features`→`/org/settings/features`) = งานแยก** — `enabled_features` ยัง per-guild (dc_guild_config) · ย้ายมา org = data migration → org_config (tab "ฟีเจอร์" เพิ่มทีหลัง)
+- [x] **feature-toggle (org-native) เสร็จ 2026-07-18** (org-core) — `lib/orgFeatures.js` (registry `ORG_FEATURES` + `getOrgEnabledFeatures` จาก org_config key `enabled_features`, default=all, [] ตั้งใจได้) · tab **ฟีเจอร์** `/org/settings/features` (OrgFeatures toggle switches, owner) · API `GET/PUT /api/org/orgs/[id]/features` (กรองนอก registry) · layout guildless branch อ่าน getOrgEnabledFeatures แทน hardcode `['finance']` → **คุม Nav app tabs/links จริง** (verify: PUT []→GET / nav gate)
+  - ⚠️ **thin ตอนนี้:** org-native มี finance ตัวเดียว · guild features (calling/docs/cases/media) ยังเปิดปิด per-guild ที่ `/bot/features` (ถูกต้อง — Discord config) · เพิ่ม feature org-native ใหม่ = เพิ่มใน `ORG_FEATURES` โผล่เอง
+  - ⚠️ **seam ที่เหลือ (งานแยก — home org-scope):** `app/page.js` (home dashboard) ยังคำนวณ feature จาก `getEnabledFeatures(env.GUILD_ID)` (PPLE guild) → guildless org เห็นการ์ด finance ของ PPLE ไม่ตาม org · toggle นี้คุมแค่ Nav · fix = ทำ home page เป็น org-aware (ก้อนใหญ่กว่า, interim เดิม)
 
 **🎨 Org switcher DRAFT (2026-07-17) — Notion/AppFlowy style · `components/OrgSwitcherMenu.jsx`:**
 - เมนู workspace hub: email header + org list (member_count + ✓) + สร้าง workspace + จัดการ/โปรไฟล์/ออก · เปิดได้เสมอแม้ org เดียว · icon ตัวหน้า = กลับหน้าแรก `/`, ชื่อ+chevron = เปิดเมนู

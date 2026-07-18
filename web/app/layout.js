@@ -8,16 +8,14 @@ import { getGuildId } from '@/lib/guildContext.js'
 import { resolveActiveOrg } from '@/lib/activeOrg.js'
 import Providers from '@/components/Providers.jsx'
 import Nav from '@/components/Nav.jsx'
-
-// feature ที่ scope ด้วย org_id แล้ว → ใช้ได้แม้ org ไม่มี guild (self-serve)
-const ORG_NATIVE_FEATURES = ['finance']
+import { getOrgEnabledFeatures } from '@/lib/orgFeatures.js'
 
 export const metadata = {
   title: {
     default: 'PLATFOR{m}.ORG',
     template: '%s · PLATFOR{m}.ORG',
   },
-  description: 'platformfor.org — แพลตฟอร์มบริหารองค์กรอาสาและเครือข่าย',
+  description: 'platfor.org · แพลตฟอร์มบริหารองค์กรอาสาและเครือข่าย',
 }
 
 export default async function RootLayout({ children }) {
@@ -45,8 +43,8 @@ export default async function RootLayout({ children }) {
               .filter(g => g.org_id === activeOrg.id)
           : orgGuilds
       } else {
-        // guildless org → org-native feature เท่านั้น (finance) · Nav ซ่อน app guild-based
-        enabledFeatures = ORG_NATIVE_FEATURES
+        // guildless org → org-native feature (config ต่อ org ที่หน้า ตั้งค่า > ฟีเจอร์) · Nav ซ่อน app guild-based
+        enabledFeatures = await getOrgEnabledFeatures(activeOrg.id)
       }
     }
   }

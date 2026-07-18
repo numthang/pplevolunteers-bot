@@ -6,6 +6,7 @@ import { useState } from 'react'
 const TABS = [
   { href: '/org/settings', label: 'ทั่วไป' },
   { href: '/org/settings/members', label: 'สมาชิก & บทบาท' },
+  { href: '/org/settings/features', label: 'ฟีเจอร์' },
 ]
 
 // desktop = sidebar (list แนวตั้ง) · mobile = dropdown overlay (ไม่ดันเนื้อหาลง, เมนูโตได้ไม่จำกัด)
