@@ -14,9 +14,11 @@ import { isAdmin } from '@/lib/roles.js'
 import { canManageCases } from '@/lib/caseAccess.js'
 import { can } from '@/lib/permissions.js'
 import pool from '@/db/index.js'
-import { getGuilds, getEnabledFeatures } from '@/db/guilds.js'
+import { getGuilds, getEnabledFeatures, guildsOfOrg } from '@/db/guilds.js'
 import { getGuildId } from '@/lib/guildContext.js'
 import { getOrgId } from '@/lib/orgContext.js'
+import { getOrgEnabledFeatures } from '@/lib/orgFeatures.js'
+import { resolveActiveOrg } from '@/lib/activeOrg.js'
 import { getEffectiveOrgIdentity } from '@/lib/orgAccess.js'
 import { getUserIdentities } from '@/db/userIdentities.js'
 import LinkAccountsBanner from '@/components/LinkAccountsBanner.jsx'
@@ -90,6 +92,68 @@ async function getDisplayName(guildId, discordId) {
 }
 
 
+// finance summary card — ใช้ร่วมทั้ง guild dashboard และ guildless org dashboard
+// (finance เป็น org-native อยู่แล้ว: getFINANCESummary scope ด้วย getOrgId)
+function FinanceCard({ finance, arrowIcon }) {
+  const fmtBaht = (n) => `฿${Number(n || 0).toLocaleString('th-TH')}`
+  return (
+    <Link href="/finance" className="flex flex-col bg-card-bg border border-brand-blue-light dark:border-disc-border rounded-lg p-5 hover:border-brand-orange transition-colors">
+      <div className="flex items-center gap-2 mb-3">
+        <div className="w-9 h-9 rounded-lg bg-warm-100 dark:bg-disc-hover flex items-center justify-center shrink-0">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-brand-orange">
+            <path d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z" />
+          </svg>
+        </div>
+        <p className="font-semibold text-base text-warm-900 dark:text-disc-text flex-1">FINANCE</p>
+        {arrowIcon}
+      </div>
+      {!finance?.public && !finance?.internal && !finance?.private ? (
+        <p className="text-base text-warm-400 dark:text-disc-muted">ยังไม่มีข้อมูล</p>
+      ) : (
+        <div className="space-y-2">
+          {finance?.public && (
+            <div>
+              <p className="text-sm text-warm-400 dark:text-disc-muted mb-1">🌐 สาธารณะ</p>
+              <div className="flex justify-between text-base"><span className="text-warm-500 dark:text-disc-muted">รายรับ</span><span className="font-medium text-warm-900 dark:text-disc-text">{fmtBaht(finance.public.total_income)}</span></div>
+              <div className="flex justify-between text-base"><span className="text-warm-500 dark:text-disc-muted">รายจ่าย</span><span className="font-medium text-warm-900 dark:text-disc-text">{fmtBaht(finance.public.total_expense)}</span></div>
+            </div>
+          )}
+          {finance?.internal && (
+            <div>
+              <p className="text-sm text-warm-400 dark:text-disc-muted mb-1">👥 ภายใน</p>
+              <div className="flex justify-between text-base"><span className="text-warm-500 dark:text-disc-muted">รายรับ</span><span className="font-medium text-warm-900 dark:text-disc-text">{fmtBaht(finance.internal.total_income)}</span></div>
+              <div className="flex justify-between text-base"><span className="text-warm-500 dark:text-disc-muted">รายจ่าย</span><span className="font-medium text-warm-900 dark:text-disc-text">{fmtBaht(finance.internal.total_expense)}</span></div>
+            </div>
+          )}
+          {finance?.private && (
+            <div>
+              <p className="text-sm text-warm-400 dark:text-disc-muted mb-1">🔒 ส่วนตัว</p>
+              <div className="flex justify-between text-base"><span className="text-warm-500 dark:text-disc-muted">รายรับ</span><span className="font-medium text-warm-900 dark:text-disc-text">{fmtBaht(finance.private.total_income)}</span></div>
+              <div className="flex justify-between text-base"><span className="text-warm-500 dark:text-disc-muted">รายจ่าย</span><span className="font-medium text-warm-900 dark:text-disc-text">{fmtBaht(finance.private.total_expense)}</span></div>
+            </div>
+          )}
+        </div>
+      )}
+    </Link>
+  )
+}
+
+// org icon (emoji / รูปอัปโหลด / fallback ตัวอักษร) — server-safe, mirror OrgAvatar
+function OrgIcon({ icon, name }) {
+  const isImg = typeof icon === 'string' && (icon.startsWith('/') || icon.startsWith('http'))
+  return (
+    <div className="w-12 h-12 rounded-full bg-warm-100 dark:bg-disc-hover flex items-center justify-center shrink-0 overflow-hidden text-2xl">
+      {isImg ? (
+        <Image src={icon} alt="" width={48} height={48} className="w-full h-full object-cover" />
+      ) : icon ? (
+        <span>{icon}</span>
+      ) : (
+        <span className="font-semibold text-warm-500 dark:text-disc-muted">{(name || '?').charAt(0).toUpperCase()}</span>
+      )}
+    </div>
+  )
+}
+
 export default async function HomePage() {
   const session = await getSession()
 
@@ -135,8 +199,88 @@ export default async function HomePage() {
     )
   }
 
-  // --- Logged in: Dashboard ---
+  // --- Logged in ---
   const discordId = session.user.discordId
+  const userId = session.user.userId
+
+  const arrowIcon = (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-warm-400 dark:text-disc-muted shrink-0">
+      <path d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+    </svg>
+  )
+
+  // org-first branch (mirror layout.js): resolve active org แล้วดูว่ามี guild ไหม
+  // guildless org (self-serve เช่น MRSJAN org 8) → org-native dashboard (ไม่ยืม env.GUILD_ID ของ PPLE)
+  if (userId) {
+    const { activeOrg } = await resolveActiveOrg(userId)
+
+    if (!activeOrg && !discordId) {
+      // email login แล้วแต่ยังไม่มีองค์กร (เช่น Google signup ก่อนสร้าง org)
+      // Discord user ที่ไม่มี org row → ตกไป guild dashboard เดิม (ไม่ regress PPLE)
+      return (
+        <div className="space-y-3">
+          <div className="bg-card-bg border border-brand-blue-light dark:border-disc-border rounded-xl px-6 py-10 text-center">
+            <h1 className="text-2xl font-bold text-warm-900 dark:text-disc-text mb-2">ยังไม่มีองค์กร</h1>
+            <p className="text-base text-warm-500 dark:text-disc-muted mb-6">สร้างองค์กรของคุณเพื่อเริ่มใช้งาน หรือรอรับคำเชิญทางอีเมล</p>
+            <Link href="/org/new" className="inline-block bg-brand-orange hover:bg-brand-orange-light text-white font-medium px-5 py-2.5 rounded-lg transition-colors">
+              + สร้างองค์กร
+            </Link>
+          </div>
+        </div>
+      )
+    }
+
+    const orgGuilds = activeOrg ? await guildsOfOrg(activeOrg.id) : []
+    if (activeOrg && orgGuilds.length === 0) {
+      // guildless → finance (org-native) + สมาชิกองค์กร + ปุ่มไปตั้งค่า
+      const orgFeatures = await getOrgEnabledFeatures(activeOrg.id)
+      const financeOn = orgFeatures.includes('finance')
+      const finance = financeOn
+        ? await getFINANCESummary(session)
+        : { public: null, internal: null, private: null }
+
+      return (
+        <div className="space-y-3">
+          {/* Org profile */}
+          <div className="flex items-center gap-3 p-4 bg-card-bg rounded-xl border border-warm-200 dark:border-disc-border">
+            <OrgIcon icon={activeOrg.icon} name={activeOrg.name} />
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold text-base text-warm-900 dark:text-disc-text truncate">{activeOrg.name}</p>
+              <p className="text-sm text-warm-500 dark:text-disc-muted truncate">{session.user.email || session.user.name}</p>
+            </div>
+            <Link href="/org/settings" className="shrink-0 text-sm text-brand-orange hover:text-brand-orange-light border border-brand-orange/30 hover:border-brand-orange px-3 py-1.5 rounded-lg transition-colors">
+              ตั้งค่าองค์กร
+            </Link>
+          </div>
+
+          {/* Feature cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {financeOn && <FinanceCard finance={finance} arrowIcon={arrowIcon} />}
+
+            {/* สมาชิกองค์กร */}
+            <Link href="/org/settings/members" className="flex flex-col bg-card-bg border border-brand-blue-light dark:border-disc-border rounded-lg p-5 hover:border-brand-orange transition-colors">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-9 h-9 rounded-lg bg-warm-100 dark:bg-disc-hover flex items-center justify-center shrink-0">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-brand-orange">
+                    <path d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+                  </svg>
+                </div>
+                <p className="font-semibold text-base text-warm-900 dark:text-disc-text flex-1">สมาชิกองค์กร</p>
+                {arrowIcon}
+              </div>
+              <div className="flex justify-between text-base">
+                <span className="text-warm-500 dark:text-disc-muted">สมาชิกทั้งหมด</span>
+                <span className="font-medium text-warm-900 dark:text-disc-text">{Number(activeOrg.member_count || 0).toLocaleString('th-TH')} คน</span>
+              </div>
+            </Link>
+          </div>
+        </div>
+      )
+    }
+    // org มี guild → ตกไป guild dashboard เดิมด้านล่าง
+  }
+
+  // --- Guild dashboard (PPLE org 1 และ org ที่ผูก Discord guild) ---
   const { access } = await getEffectiveIdentity(session)
   const userIsAdmin = isAdmin(access)
   const GUILD_ID = await getGuildId(session)
@@ -161,13 +305,6 @@ export default async function HomePage() {
   ])
 
   const fmt = (n) => Number(n || 0).toLocaleString('th-TH')
-  const fmtBaht = (n) => `฿${Number(n || 0).toLocaleString('th-TH')}`
-
-  const arrowIcon = (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-warm-400 dark:text-disc-muted shrink-0">
-      <path d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-    </svg>
-  )
 
   return (
     <div className="space-y-3">
@@ -240,46 +377,7 @@ export default async function HomePage() {
         )}
 
         {/* FINANCE */}
-        {financeOn && (
-        <Link href="/finance" className="flex flex-col bg-card-bg border border-brand-blue-light dark:border-disc-border rounded-lg p-5 hover:border-brand-orange transition-colors">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-9 h-9 rounded-lg bg-warm-100 dark:bg-disc-hover flex items-center justify-center shrink-0">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-brand-orange">
-                <path d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z" />
-              </svg>
-            </div>
-            <p className="font-semibold text-base text-warm-900 dark:text-disc-text flex-1">FINANCE</p>
-            {arrowIcon}
-          </div>
-          {!finance?.public && !finance?.internal && !finance?.private ? (
-            <p className="text-base text-warm-400 dark:text-disc-muted">ยังไม่มีข้อมูล</p>
-          ) : (
-            <div className="space-y-2">
-              {finance?.public && (
-                <div>
-                  <p className="text-sm text-warm-400 dark:text-disc-muted mb-1">🌐 สาธารณะ</p>
-                  <div className="flex justify-between text-base"><span className="text-warm-500 dark:text-disc-muted">รายรับ</span><span className="font-medium text-warm-900 dark:text-disc-text">{fmtBaht(finance.public.total_income)}</span></div>
-                  <div className="flex justify-between text-base"><span className="text-warm-500 dark:text-disc-muted">รายจ่าย</span><span className="font-medium text-warm-900 dark:text-disc-text">{fmtBaht(finance.public.total_expense)}</span></div>
-                </div>
-              )}
-              {finance?.internal && (
-                <div>
-                  <p className="text-sm text-warm-400 dark:text-disc-muted mb-1">👥 ภายใน</p>
-                  <div className="flex justify-between text-base"><span className="text-warm-500 dark:text-disc-muted">รายรับ</span><span className="font-medium text-warm-900 dark:text-disc-text">{fmtBaht(finance.internal.total_income)}</span></div>
-                  <div className="flex justify-between text-base"><span className="text-warm-500 dark:text-disc-muted">รายจ่าย</span><span className="font-medium text-warm-900 dark:text-disc-text">{fmtBaht(finance.internal.total_expense)}</span></div>
-                </div>
-              )}
-              {finance?.private && (
-                <div>
-                  <p className="text-sm text-warm-400 dark:text-disc-muted mb-1">🔒 ส่วนตัว</p>
-                  <div className="flex justify-between text-base"><span className="text-warm-500 dark:text-disc-muted">รายรับ</span><span className="font-medium text-warm-900 dark:text-disc-text">{fmtBaht(finance.private.total_income)}</span></div>
-                  <div className="flex justify-between text-base"><span className="text-warm-500 dark:text-disc-muted">รายจ่าย</span><span className="font-medium text-warm-900 dark:text-disc-text">{fmtBaht(finance.private.total_expense)}</span></div>
-                </div>
-              )}
-            </div>
-          )}
-        </Link>
-        )}
+        {financeOn && <FinanceCard finance={finance} arrowIcon={arrowIcon} />}
 
         {/* DOCS */}
         {docsOn && (
