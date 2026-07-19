@@ -108,7 +108,8 @@
 
 - ✅ **BROWSER SMOKE-TEST spine เสร็จ 2026-07-18** (Playwright headless + inject MRSJAN session org 8, localhost) — **ทุกหน้า render + nav ผ่าน ไม่เจอ bug ใหม่:** home org 8 (org-native, ไม่มี PPLE leak) · org switcher dropdown (email+MRSJAN✓+สร้าง/จัดการ/โปรไฟล์/ออก) · /org/settings (ไอคอน preview+อีโมจิ+อัปโหลด+ชื่อ) · /org/settings/members (sidebar nav แนวตั้ง, ทีมงาน owner+invited, chips แต่งตั้ง, AppointPolicy) · /org/settings/features · ไม่มี console/4xx error จริง
   - 🐛 **fix: OrgFeatures toggle switch เพี้ยน** (knob ล้นนอกราง) — [bug-023] knob span ไม่มี `left-0.5` (ใช้ translate-x-0.5) → `<button>` padding ดัน absolute · fix match sibling `bot/features` (`left-0.5` + off=no-translate) · **verify ด้วยตา: knob อยู่ในรางพอดี ✓**
-  - ⬜ interactive write-actions ยังไม่กดจริง (chip toggle แต่งตั้ง, icon upload, org switch จริง) — render/nav ผ่านแล้ว · script: `scratchpad/spine-test.js` (require playwright จาก npx cache, chromium headless-shell)
+  - ✅ **INTERACTIVE WRITE-ACTIONS เทสครบ 2026-07-18** (Playwright กดจริง + DB assert ทุกขา, mutate org 8 แล้ว revert): emoji icon ✓ (fail แรก = hydration race ตอน dev first-compile ไม่ใช่ bug — retest หน้า warm ผ่าน) · upload icon ✓ · ลบไอคอน ✓ · **chip แต่งตั้ง grant→web_roles=secretary_general + revoke→ว่าง ✓** · **feature toggle off→FinanceCard หาย/on→กลับมา ✓** (DB PUT ทั้งคู่) · **create org + switch ไปกลับ ✓** (TESTORG_DEL org 12 — ลบทิ้งแล้ว) · ไม่เจอ product bug ใหม่
+    - 📝 minor: removeIcon ไม่ unlink ไฟล์บน disk (`public/uploads/org/` orphan สะสม) — จิ๋ว ไว้กวาดตอน endgame
 - ✅ **ORG-SCOPE SEAM AUDIT + fix cross-tenant leak 2026-07-18** (org-core) — audit ทุก page/route ที่ guildless org (email user, discordId null) เปิด URL guild-feature ตรงๆ:
   - 🔴 **[bug-024] leak จริง: `/calling`** — guildless เห็น PPLE aggregate stats (5,166 member / 5,056 contact / campaigns) · root: [guildContext.js:18](web/lib/guildContext.js#L18) `if(!discordId) return env.GUILD_ID` → email user ตกไป PPLE guild + calling guard แค่ `if(!session)` (docs/case block ด้วย permission gate, calling ลืม) · **fix: เพิ่ม guildless guard** (getOrgId→guildsOfOrg, []→redirect) แบบ home · verify guildless=307/PPLE ผ่าน · severity ต่ำ (aggregate ไม่ใช่ PII, ราย-record API 401)
   - ✅ ปลอดภัยแล้ว (ไม่ leak data): `/admin/roles` `/bot/features` `/bot/media/basket` = client-gate "ไม่มีสิทธิ์" + **API 403** (shell เปล่า) · `/docs` `/case/manage` = 307 block · `/calling/contacts` = client component + API 401 · `/case` `/case/new` = public intake (ตั้งใจ)
@@ -128,7 +129,7 @@
   3. ✅ `OrgAvatar` (OrgSwitcherMenu): fallback `org.icon`(รูป→img / emoji→text) → `iconUrl`(guild) → letter · `isImgSrc` detect path
   4. ✅ listUserOrgs + getOrg คืน icon (+ `setOrgIcon` ใน db) · verify: emoji/upload/remove authed curl ✓ + SSR 200
   - ⬜ ยังไม่กดจริงในเบราว์เซอร์ · prod: `public/uploads/org/` route mkdir เอง (nginx `/uploads` block มีแล้ว)
-- [ ] **i18n** — string ไทยใน `const T` ยัง hardcode · ย้ายเข้า next-intl (ns 'org')
+- [x] **i18n เสร็จ 2026-07-19** (ns `org` ใหม่ 111 keys, 13 sub-ns) — migrate 12 ไฟล์ org UI ครบ (Sonnet 4 ก้อน, Opus ตรวจ+render authed ทุกหน้า): OrgGeneral/Features/AppointPolicy · OrgMembers/SettingsNav · OrgSwitcherMenu(ลบ const T)/OrgHome(→async server)/CreateModal · OrgShell/NewOrgForm/login/personal/verify · th=en 111/111 · residual Thai เหลือแค่ comment · **defer: metadata `title` 5 หน้า** (browser tab — ทั้งแอป finance/calling ก็ hardcode → ทำรวมทีเดียวตอนหลัง ไม่งั้น inconsistent)
 - [ ] เทสจริงในเบราว์เซอร์ (dropdown เปิด/สลับ/สร้าง/ออก) — curl เทส trigger+data แล้ว dropdown เป็น client-only
 
 - [x] Portfolio consult (web page) เสร็จ — `web/app/tee/portfolio/` (เนื้อหาใน data/portfolio.json แก้เอง) + artifact · รอ deploy prod ให้ขึ้น pplevolunteers.org/tee/portfolio
