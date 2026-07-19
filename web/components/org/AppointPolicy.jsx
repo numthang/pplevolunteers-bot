@@ -1,9 +1,11 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 
 // owner ตั้งค่าว่าบทบาทไหนแต่งตั้งคนอื่นได้บ้าง (นอกจาก owner+admin ที่ได้เสมอ)
 // self-gating: GET 403 (ไม่ใช่ owner) → render null
 export default function AppointPolicy({ orgId }) {
+  const t = useTranslations('org')
   const [roles, setRoles] = useState(null) // null=loading · false=ไม่มีสิทธิ์
   const [selected, setSelected] = useState(new Set())
   const [note, setNote] = useState('')
@@ -30,13 +32,13 @@ export default function AppointPolicy({ orgId }) {
       body: JSON.stringify({ policy: [...selected] }),
     })
     const d = await r.json().catch(() => ({})); setBusy(false)
-    setNote(r.ok ? 'บันทึกแล้ว' : (d.error || 'บันทึกไม่สำเร็จ'))
+    setNote(r.ok ? t('appointPolicy.saveSuccess') : (d.error || t('appointPolicy.saveError')))
   }
 
   return (
     <section className="rounded-2xl border border-gray-200 dark:border-disc-border bg-white dark:bg-card-bg p-5">
-      <p className="text-sm font-medium text-gray-700 dark:text-disc-text">ใครแต่งตั้งบทบาทได้บ้าง</p>
-      <p className="mt-0.5 text-xs text-gray-400 dark:text-disc-muted">owner และ admin แต่งตั้งได้เสมอ · เลือกบทบาทอื่นที่อนุญาตให้แต่งตั้งได้เพิ่ม (ยังจำกัดด้วย floor — แต่งตั้งไม่เกินอำนาจตัวเอง)</p>
+      <p className="text-sm font-medium text-gray-700 dark:text-disc-text">{t('appointPolicy.title')}</p>
+      <p className="mt-0.5 text-xs text-gray-400 dark:text-disc-muted">{t('appointPolicy.desc')}</p>
       <div className="mt-3 flex flex-wrap gap-1.5">
         {roles.map(role => {
           const on = selected.has(role.key)
@@ -54,7 +56,7 @@ export default function AppointPolicy({ orgId }) {
       </div>
       <div className="mt-3 flex items-center gap-3">
         <button onClick={save} disabled={busy}
-          className="rounded-lg bg-orange px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">บันทึก</button>
+          className="rounded-lg bg-orange px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">{t('appointPolicy.saveButton')}</button>
         {note && <span className="text-xs text-gray-500 dark:text-disc-muted">{note}</span>}
       </div>
     </section>

@@ -1,8 +1,10 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 
 // เปิด/ปิด org-native feature (owner) · optimistic + save ทันทีต่อ toggle
 export default function OrgFeatures({ orgId }) {
+  const t = useTranslations('org')
   const [features, setFeatures] = useState(null) // null=loading · false=ไม่มีสิทธิ์
   const [enabled, setEnabled] = useState(new Set())
   const [note, setNote] = useState('')
@@ -15,8 +17,8 @@ export default function OrgFeatures({ orgId }) {
       .catch(() => setFeatures(false))
   }, [orgId])
 
-  if (features === null) return <p className="text-sm text-gray-400 dark:text-disc-muted">กำลังโหลด…</p>
-  if (features === false) return <p className="text-sm text-gray-400 dark:text-disc-muted">เฉพาะ owner เท่านั้น</p>
+  if (features === null) return <p className="text-sm text-gray-400 dark:text-disc-muted">{t('features.loading')}</p>
+  if (features === false) return <p className="text-sm text-gray-400 dark:text-disc-muted">{t('features.ownerOnly')}</p>
 
   async function toggle(key) {
     const next = new Set(enabled)
@@ -27,12 +29,12 @@ export default function OrgFeatures({ orgId }) {
       body: JSON.stringify({ enabled: [...next] }),
     })
     setBusy(false)
-    setNote(r.ok ? 'บันทึกแล้ว · รีเฟรชหน้าเพื่อให้เมนูอัปเดต' : 'บันทึกไม่สำเร็จ')
+    setNote(r.ok ? t('features.saveSuccess') : t('features.saveError'))
   }
 
   return (
     <div className="space-y-3">
-      <p className="text-xs text-gray-400 dark:text-disc-muted">ฟีเจอร์ที่ใช้ได้โดยไม่ต้องเชื่อม Discord · ฟีเจอร์ที่ผูก Discord (สื่อ/โทร/เอกสาร) ตั้งค่าที่เซิร์ฟเวอร์</p>
+      <p className="text-xs text-gray-400 dark:text-disc-muted">{t('features.description')}</p>
       {features.map(f => {
         const on = enabled.has(f.key)
         return (

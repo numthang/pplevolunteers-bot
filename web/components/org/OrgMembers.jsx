@@ -1,8 +1,10 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
+import { useTranslations } from 'next-intl'
 import AppointPolicy from './AppointPolicy.jsx'
 
 export default function OrgMembers({ org, members: initial, me, myRole }) {
+  const t = useTranslations('org')
   const isOwner = myRole === 'owner'
   const [members, setMembers] = useState(initial)
   const [inviteEmail, setInviteEmail] = useState('')
@@ -20,13 +22,13 @@ export default function OrgMembers({ org, members: initial, me, myRole }) {
     if (q.length < 2) { setResults(null); setSearching(false); return }
     setSearching(true)
     const my = ++seq.current
-    const t = setTimeout(async () => {
+    const timer = setTimeout(async () => {
       const r = await fetch(`/api/org/orgs/${org.id}/members?q=${encodeURIComponent(q)}`)
       if (my !== seq.current) return
       setResults(r.ok ? (await r.json()).members : [])
       setSearching(false)
     }, 300)
-    return () => clearTimeout(t)
+    return () => clearTimeout(timer)
   }, [query, org.id])
 
   async function refreshMembers() {
@@ -41,9 +43,11 @@ export default function OrgMembers({ org, members: initial, me, myRole }) {
       body: JSON.stringify({ email: inviteEmail }),
     })
     const d = await r.json(); setBusy(false)
-    if (!r.ok) return setNote(d.error || 'เชิญไม่สำเร็จ')
+    if (!r.ok) return setNote(d.error || t('members.inviteError'))
     setInviteEmail('')
-    setNote(d.emailSent ? `เชิญ ${d.invited.email} + ส่งเมลแล้ว` : `เชิญ ${d.invited.email} แล้ว (ยังไม่ตั้ง SMTP — เมลไม่ออก)`)
+    setNote(d.emailSent
+      ? t('members.inviteSuccessEmailSent', { email: d.invited.email })
+      : t('members.inviteSuccessNoSmtp', { email: d.invited.email }))
     refreshMembers()
   }
 
@@ -54,17 +58,17 @@ export default function OrgMembers({ org, members: initial, me, myRole }) {
       body: JSON.stringify({ role }),
     })
     const d = await r.json()
-    if (!r.ok) return setNote(d.error || 'เปลี่ยนบทบาทไม่สำเร็จ')
+    if (!r.ok) return setNote(d.error || t('members.changeRoleError'))
     setResults(rs => rs && rs.map(m => m.user_id === userId ? { ...m, role } : m))
     refreshMembers()
   }
 
   async function remove(userId, isSelf) {
-    if (!confirm(isSelf ? 'ออกจากองค์กรนี้?' : 'ลบสมาชิกคนนี้?')) return
+    if (!confirm(isSelf ? t('members.confirmLeaveOrg') : t('members.confirmRemoveMember'))) return
     setNote('')
     const r = await fetch(`/api/org/orgs/${org.id}/members/${userId}`, { method: 'DELETE' })
     const d = await r.json().catch(() => ({}))
-    if (!r.ok) return setNote(d.error || 'ลบไม่สำเร็จ')
+    if (!r.ok) return setNote(d.error || t('members.removeError'))
     if (isSelf) { window.location.href = '/org'; return }
     setResults(null); setQuery(''); refreshMembers()
   }
@@ -75,10 +79,10 @@ export default function OrgMembers({ org, members: initial, me, myRole }) {
       <li key={m.user_id} className="flex items-center gap-3 py-2.5">
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm text-gray-900 dark:text-disc-text">
-            {m.display_name || m.email}{isSelf && <span className="text-gray-400"> (คุณ)</span>}
+            {m.display_name || m.email}{isSelf && <span className="text-gray-400">{t('members.youSuffix')}</span>}
           </p>
           <p className="truncate text-xs text-gray-400 dark:text-disc-muted">
-            {m.email}{m.status === 'invited' && ' · รอตอบรับ'}
+            {m.email}{m.status === 'invited' && t('members.pendingInviteSuffix')}
           </p>
         </div>
         {isOwner ? (
@@ -93,7 +97,7 @@ export default function OrgMembers({ org, members: initial, me, myRole }) {
         {(isOwner || isSelf) && (
           <button onClick={() => remove(m.user_id, isSelf)}
             className="text-xs text-red-accent hover:underline">
-            {isSelf ? 'ออก' : 'ลบ'}
+            {isSelf ? t('members.leaveButton') : t('members.removeButton')}
           </button>
         )}
       </li>
@@ -104,15 +108,15 @@ export default function OrgMembers({ org, members: initial, me, myRole }) {
     <div className="space-y-6">
       {/* ── ทีมงาน / บทบาท (governance) ── */}
       <section className="rounded-2xl border border-gray-200 dark:border-disc-border bg-white dark:bg-card-bg p-5">
-        <p className="text-sm font-medium text-gray-700 dark:text-disc-text">ทีมงาน</p>
-        <p className="mt-0.5 text-xs text-gray-400 dark:text-disc-muted">owner · คำเชิญค้าง · คนที่มีบทบาทพิเศษ — ค้นหาด้านล่างเพื่อจัดการสมาชิกคนอื่น</p>
+        <p className="text-sm font-medium text-gray-700 dark:text-disc-text">{t('members.teamTitle')}</p>
+        <p className="mt-0.5 text-xs text-gray-400 dark:text-disc-muted">{t('members.teamDesc')}</p>
 
         {isOwner && (
           <form onSubmit={invite} className="mt-3 flex gap-2">
             <input type="email" required value={inviteEmail} onChange={e => setInviteEmail(e.target.value)}
-              placeholder="เชิญด้วยอีเมล"
+              placeholder={t('members.inviteEmailPlaceholder')}
               className="flex-1 rounded-lg border border-gray-300 dark:border-disc-border bg-white dark:bg-disc-bg2 px-3 py-2 text-sm text-gray-900 dark:text-disc-text" />
-            <button disabled={busy} className="rounded-lg bg-orange px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">เชิญ</button>
+            <button disabled={busy} className="rounded-lg bg-orange px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">{t('members.inviteButton')}</button>
           </form>
         )}
 
@@ -123,14 +127,14 @@ export default function OrgMembers({ org, members: initial, me, myRole }) {
 
       {/* ── ค้นหาสมาชิก (membership) ── */}
       <section className="rounded-2xl border border-gray-200 dark:border-disc-border bg-white dark:bg-card-bg p-5">
-        <p className="text-sm font-medium text-gray-700 dark:text-disc-text">ค้นหาสมาชิก</p>
+        <p className="text-sm font-medium text-gray-700 dark:text-disc-text">{t('members.searchTitle')}</p>
         <input value={query} onChange={e => setQuery(e.target.value)}
-          placeholder="ชื่อ หรือ อีเมล"
+          placeholder={t('members.searchPlaceholder')}
           className="mt-2 w-full rounded-lg border border-gray-300 dark:border-disc-border bg-white dark:bg-disc-bg2 px-3 py-2 text-sm text-gray-900 dark:text-disc-text" />
 
-        {searching && <p className="mt-3 text-xs text-gray-400 dark:text-disc-muted">กำลังค้นหา…</p>}
+        {searching && <p className="mt-3 text-xs text-gray-400 dark:text-disc-muted">{t('members.searching')}</p>}
         {!searching && results !== null && results.length === 0 && (
-          <p className="mt-3 text-xs text-gray-400 dark:text-disc-muted">ไม่พบสมาชิก</p>
+          <p className="mt-3 text-xs text-gray-400 dark:text-disc-muted">{t('members.noResults')}</p>
         )}
         {!searching && results !== null && results.length > 0 && (
           <ul className="mt-3 divide-y divide-gray-100 dark:divide-disc-border">
@@ -153,6 +157,7 @@ export default function OrgMembers({ org, members: initial, me, myRole }) {
 // ── Section B: แต่งตั้ง permission role ──
 // probe /api/org/appoint (no q) → 200 = มีสิทธิ์แต่งตั้ง (โชว์ section) · 403 = ซ่อน
 function AppointSection({ orgId, onNote }) {
+  const t = useTranslations('org')
   const [ready, setReady] = useState(null) // null=probing · false=ไม่มีสิทธิ์ · true=โชว์
   const [catalog, setCatalog] = useState([])
   const [query, setQuery] = useState('')
@@ -173,13 +178,13 @@ function AppointSection({ orgId, onNote }) {
     if (q.length < 2) { setResults(null); setSearching(false); return }
     setSearching(true)
     const my = ++seq.current
-    const t = setTimeout(async () => {
+    const timer = setTimeout(async () => {
       const r = await fetch(`/api/org/appoint?q=${encodeURIComponent(q)}`)
       if (my !== seq.current) return
       setResults(r.ok ? (await r.json()).members : [])
       setSearching(false)
     }, 300)
-    return () => clearTimeout(t)
+    return () => clearTimeout(timer)
   }, [query, ready])
 
   async function toggle(m, role, hasIt) {
@@ -190,7 +195,7 @@ function AppointSection({ orgId, onNote }) {
       body: JSON.stringify({ memberId: m.id, roleKey: role.key }),
     })
     const d = await r.json().catch(() => ({}))
-    if (!r.ok) return onNote(d.error || 'ทำรายการไม่สำเร็จ')
+    if (!r.ok) return onNote(d.error || t('members.appointError'))
     setResults(rs => rs && rs.map(x => x.id === m.id
       ? { ...x, permissions: hasIt ? x.permissions.filter(p => p !== role.key) : [...x.permissions, role.key] }
       : x))
@@ -200,15 +205,15 @@ function AppointSection({ orgId, onNote }) {
 
   return (
     <section className="rounded-2xl border border-gray-200 dark:border-disc-border bg-white dark:bg-card-bg p-5">
-      <p className="text-sm font-medium text-gray-700 dark:text-disc-text">แต่งตั้งบทบาท</p>
-      <p className="mt-0.5 text-xs text-gray-400 dark:text-disc-muted">ค้นหาสมาชิกแล้วกดชิปเพื่อให้/ถอนสิทธิ์ · ชิปที่จางแต่งตั้งไม่ได้ (เกินอำนาจของคุณ)</p>
+      <p className="text-sm font-medium text-gray-700 dark:text-disc-text">{t('members.appointTitle')}</p>
+      <p className="mt-0.5 text-xs text-gray-400 dark:text-disc-muted">{t('members.appointDesc')}</p>
       <input value={query} onChange={e => setQuery(e.target.value)}
-        placeholder="ค้นหาสมาชิกเพื่อแต่งตั้ง"
+        placeholder={t('members.appointSearchPlaceholder')}
         className="mt-2 w-full rounded-lg border border-gray-300 dark:border-disc-border bg-white dark:bg-disc-bg2 px-3 py-2 text-sm text-gray-900 dark:text-disc-text" />
 
-      {searching && <p className="mt-3 text-xs text-gray-400 dark:text-disc-muted">กำลังค้นหา…</p>}
+      {searching && <p className="mt-3 text-xs text-gray-400 dark:text-disc-muted">{t('members.searching')}</p>}
       {!searching && results !== null && results.length === 0 && (
-        <p className="mt-3 text-xs text-gray-400 dark:text-disc-muted">ไม่พบสมาชิก</p>
+        <p className="mt-3 text-xs text-gray-400 dark:text-disc-muted">{t('members.noResults')}</p>
       )}
       {!searching && results !== null && results.length > 0 && (
         <ul className="mt-3 space-y-3">

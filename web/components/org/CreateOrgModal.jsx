@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
+import { useTranslations } from 'next-intl'
 
 // preview slug ฝั่ง client (server เป็น source of truth จริงตอน createOrg)
 function slugPreview(name) {
@@ -9,6 +10,7 @@ function slugPreview(name) {
 
 // modal สร้างองค์กร — เรียกจาก switcher / empty-state · ปิดได้ X + ESC + click-outside
 export default function CreateOrgModal({ open, onClose }) {
+  const t = useTranslations('org')
   const [name, setName] = useState('')
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
@@ -19,8 +21,8 @@ export default function CreateOrgModal({ open, onClose }) {
     setName(''); setErr(''); setBusy(false)
     const onKey = e => { if (e.key === 'Escape') onClose() }
     document.addEventListener('keydown', onKey)
-    const t = setTimeout(() => inputRef.current?.focus(), 50)
-    return () => { document.removeEventListener('keydown', onKey); clearTimeout(t) }
+    const timer = setTimeout(() => inputRef.current?.focus(), 50)
+    return () => { document.removeEventListener('keydown', onKey); clearTimeout(timer) }
   }, [open, onClose])
 
   if (!open) return null
@@ -34,7 +36,7 @@ export default function CreateOrgModal({ open, onClose }) {
       body: JSON.stringify({ name }),
     })
     const data = await r.json().catch(() => ({}))
-    if (!r.ok) { setErr(data.error || 'สร้างองค์กรไม่สำเร็จ'); setBusy(false); return }
+    if (!r.ok) { setErr(data.error || t('createModal.createError')); setBusy(false); return }
     // org ใหม่ = active แล้วเข้าหน้า org (switcher จะโชว์ทันที)
     await fetch('/api/org/orgs/switch', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -56,31 +58,31 @@ export default function CreateOrgModal({ open, onClose }) {
       >
         <div className="flex items-start justify-between">
           <div>
-            <h2 className="text-lg font-bold text-gray-900 dark:text-disc-text">สร้างองค์กร</h2>
-            <p className="mt-1 text-sm text-gray-500 dark:text-disc-muted">คุณจะเป็นเจ้าของ (owner) ขององค์กรนี้</p>
+            <h2 className="text-lg font-bold text-gray-900 dark:text-disc-text">{t('createModal.title')}</h2>
+            <p className="mt-1 text-sm text-gray-500 dark:text-disc-muted">{t('createModal.subtitle')}</p>
           </div>
-          <button onClick={onClose} aria-label="ปิด" className="text-xl leading-none text-gray-400 hover:text-gray-600 dark:hover:text-disc-text">✕</button>
+          <button onClick={onClose} aria-label={t('createModal.closeAriaLabel')} className="text-xl leading-none text-gray-400 hover:text-gray-600 dark:hover:text-disc-text">✕</button>
         </div>
 
         <form onSubmit={create} className="mt-4 space-y-3">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-disc-text">ชื่อองค์กร</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-disc-text">{t('createModal.nameLabel')}</label>
             <input
               ref={inputRef} required value={name} onChange={e => setName(e.target.value)}
-              placeholder="เช่น อาสาสมัครราชบุรี"
+              placeholder={t('createModal.namePlaceholder')}
               className="mt-1 w-full rounded-lg border border-gray-300 dark:border-disc-border bg-white dark:bg-disc-bg2 px-3 py-2 text-sm text-gray-900 dark:text-disc-text"
             />
             {slug && (
               <p className="mt-1 text-xs text-gray-400 dark:text-disc-muted">
-                รหัสองค์กร: <span className="text-gray-600 dark:text-disc-text">{slug}</span> (แก้ได้ภายหลังในตั้งค่า)
+                {t('createModal.slugPrefix')}<span className="text-gray-600 dark:text-disc-text">{slug}</span>{t('createModal.slugSuffix')}
               </p>
             )}
           </div>
           {err && <p className="text-sm text-red-accent">{err}</p>}
           <div className="flex justify-end gap-2 pt-1">
-            <button type="button" onClick={onClose} className="rounded-lg px-4 py-2 text-sm text-gray-500 dark:text-disc-muted hover:bg-gray-50 dark:hover:bg-white/5">ยกเลิก</button>
+            <button type="button" onClick={onClose} className="rounded-lg px-4 py-2 text-sm text-gray-500 dark:text-disc-muted hover:bg-gray-50 dark:hover:bg-white/5">{t('createModal.cancelButton')}</button>
             <button disabled={busy || name.trim().length < 2} className="rounded-lg bg-orange px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60">
-              {busy ? 'กำลังสร้าง…' : 'สร้างองค์กร'}
+              {busy ? t('createModal.creatingButton') : t('createModal.createButton')}
             </button>
           </div>
         </form>

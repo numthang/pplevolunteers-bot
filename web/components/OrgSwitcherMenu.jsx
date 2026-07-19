@@ -4,20 +4,11 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { signOut } from 'next-auth/react'
+import { useTranslations } from 'next-intl'
 import CreateOrgModal from './org/CreateOrgModal.jsx'
 
 // DRAFT (2026-07-17) — org switcher แบบ Notion/AppFlowy สำหรับ main nav
 // เปิดเมนูได้เสมอแม้มี org เดียว (เมนู = workspace hub: email + รายชื่อ org + สร้าง + จัดการ + ออก)
-// TODO(i18n): string ภาษาไทยด้านล่างยัง hardcode — ย้ายเข้า next-intl (ns 'org') ตอน finalize
-const T = {
-  members:   (n) => `${n} สมาชิก`,
-  invited:   'ถูกเชิญ',
-  create:    'สร้าง workspace',
-  manage:    'จัดการองค์กร / เชิญสมาชิก',
-  profile:   'แก้ไขโปรไฟล์',
-  logout:    'ออกจากระบบ',
-  pick:      'เลือกองค์กร',
-}
 
 // letter-avatar โทนสีวนตาม id (on-brand) — fallback สุดท้ายเมื่อ org ไม่มี icon/รูป guild
 const TONES = [
@@ -50,6 +41,7 @@ function OrgAvatar({ org, iconUrl, size = 'w-7 h-7' }) {
 }
 
 export default function OrgSwitcherMenu({ orgs = [], activeOrgId, user, activeIconUrl = null }) {
+  const t = useTranslations('org')
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -87,7 +79,7 @@ export default function OrgSwitcherMenu({ orgs = [], activeOrgId, user, activeIc
   return (
     <div className="relative shrink-0 flex items-center" ref={ref}>
       {/* icon = กลับหน้าแรก / (เหมือนเดิม) */}
-      <Link href="/" aria-label="หน้าแรก" className="rounded-lg p-0.5 hover:bg-warm-100 dark:hover:bg-disc-hover transition">
+      <Link href="/" aria-label={t('switcher.homeAriaLabel')} className="rounded-lg p-0.5 hover:bg-warm-100 dark:hover:bg-disc-hover transition">
         <OrgAvatar org={active} iconUrl={activeIconUrl} size="w-8 h-8" />
       </Link>
       {/* ชื่อ + chevron = เปิดเมนู workspace */}
@@ -97,7 +89,7 @@ export default function OrgSwitcherMenu({ orgs = [], activeOrgId, user, activeIc
         className="flex items-center gap-1 rounded-lg pl-1 pr-1.5 py-1 hover:bg-warm-100 dark:hover:bg-disc-hover transition disabled:opacity-60"
       >
         <span className="hidden md:block font-bold text-base text-teal dark:text-teal truncate max-w-[160px]">
-          {active?.name || T.pick}
+          {active?.name || t('switcher.pick')}
         </span>
         {busy ? (
           <svg className="w-4 h-4 animate-spin text-warm-400 dark:text-disc-muted" viewBox="0 0 24 24" fill="none">
@@ -137,7 +129,7 @@ export default function OrgSwitcherMenu({ orgs = [], activeOrgId, user, activeIc
                     {o.name}
                   </span>
                   <span className="block text-xs text-warm-400 dark:text-disc-muted">
-                    {isInvited ? T.invited : T.members(o.member_count ?? 0)}
+                    {isInvited ? t('switcher.invited') : t('switcher.members', { count: o.member_count ?? 0 })}
                   </span>
                 </span>
                 {isActive && <span className="text-teal shrink-0">✓</span>}
@@ -151,7 +143,7 @@ export default function OrgSwitcherMenu({ orgs = [], activeOrgId, user, activeIc
             className={`${actionCls} mt-0.5`}
           >
             <span className="w-8 h-8 grid place-items-center rounded-md border border-dashed border-warm-300 dark:border-disc-border text-warm-400 dark:text-disc-muted shrink-0">＋</span>
-            <span>{T.create}</span>
+            <span>{t('switcher.create')}</span>
           </button>
 
           <div className="my-1 border-t border-warm-200 dark:border-disc-border" />
@@ -159,15 +151,15 @@ export default function OrgSwitcherMenu({ orgs = [], activeOrgId, user, activeIc
           {/* actions — mirror AppFlowy (invite / settings / logout) */}
           <a href="/org/settings" onClick={() => setOpen(false)} className={actionCls}>
             <IconBox d="M18 21a8 8 0 0 0-16 0M15 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0M22 11h-6" />
-            <span>{T.manage}</span>
+            <span>{t('switcher.manage')}</span>
           </a>
           <a href="/profile" onClick={() => setOpen(false)} className={actionCls}>
             <IconBox d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6 M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" />
-            <span>{T.profile}</span>
+            <span>{t('switcher.profile')}</span>
           </a>
           <button onClick={() => signOut({ callbackUrl: '/' })} className={`${itemBase} text-red-500 dark:text-red-400 hover:bg-warm-100 dark:hover:bg-white/5`}>
             <IconBox d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
-            <span>{T.logout}</span>
+            <span>{t('switcher.logout')}</span>
           </button>
         </div>
       )}

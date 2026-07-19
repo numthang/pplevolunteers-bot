@@ -2,10 +2,12 @@
 import { useState, useRef, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import { signOut } from 'next-auth/react'
+import { useTranslations } from 'next-intl'
 import CreateOrgModal from './CreateOrgModal.jsx'
 
 // top-level switcher: [ส่วนตัว ↔ องค์กร] + nav ของ context ปัจจุบัน
 export default function OrgShell({ user, orgs, activeOrg, children }) {
+  const t = useTranslations('org')
   const active = orgs.filter(o => o.status === 'active')
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
@@ -28,7 +30,7 @@ export default function OrgShell({ user, orgs, activeOrg, children }) {
     window.location.href = '/org'
   }
 
-  const label = activeOrg ? activeOrg.name : 'องค์กรของฉัน'
+  const label = activeOrg ? activeOrg.name : t('shell.myOrgFallback')
 
   return (
     <div>
@@ -51,10 +53,10 @@ export default function OrgShell({ user, orgs, activeOrg, children }) {
             {open && (
               <div className="absolute left-0 mt-1 w-64 rounded-xl border border-gray-200 dark:border-disc-border bg-white dark:bg-card-bg py-1 shadow-lg">
                 <a href="/org/personal" className={`flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-white/5 ${pathname.startsWith('/org/personal') ? 'text-orange font-medium' : 'text-gray-700 dark:text-disc-text'}`}>
-                  <span className="grid h-6 w-6 place-items-center rounded bg-blue-light/40 text-xs">🙂</span> พื้นที่ส่วนตัว
+                  <span className="grid h-6 w-6 place-items-center rounded bg-blue-light/40 text-xs">🙂</span> {t('shell.personalSpace')}
                 </a>
                 <div className="my-1 border-t border-gray-100 dark:border-disc-border" />
-                <p className="px-3 py-1 text-xs uppercase tracking-wide text-gray-400 dark:text-disc-muted">องค์กร</p>
+                <p className="px-3 py-1 text-xs uppercase tracking-wide text-gray-400 dark:text-disc-muted">{t('shell.orgSectionLabel')}</p>
                 {active.map(o => (
                   <button
                     key={o.id} disabled={busy} onClick={() => switchOrg(o.id)}
@@ -70,7 +72,7 @@ export default function OrgShell({ user, orgs, activeOrg, children }) {
                   onClick={() => { setOpen(false); setShowCreate(true) }}
                   className="block w-full px-3 py-2 text-left text-sm text-gray-500 dark:text-disc-muted hover:bg-gray-50 dark:hover:bg-white/5"
                 >
-                  ＋ สร้างองค์กร
+                  ＋ {t('shell.createOrgButton')}
                 </button>
               </div>
             )}
@@ -79,14 +81,14 @@ export default function OrgShell({ user, orgs, activeOrg, children }) {
           {/* context nav (เฉพาะเมื่อมี active org) */}
           {activeOrg && (
             <nav className="flex items-center gap-1 text-sm">
-              <NavTab href="/org" active={pathname === '/org'}>หน้าหลัก</NavTab>
-              <NavTab href="/org/settings" active={pathname.startsWith('/org/settings')}>ตั้งค่า</NavTab>
+              <NavTab href="/org" active={pathname === '/org'}>{t('shell.homeTab')}</NavTab>
+              <NavTab href="/org/settings" active={pathname.startsWith('/org/settings')}>{t('shell.settingsTab')}</NavTab>
             </nav>
           )}
 
           <div className="ml-auto flex items-center gap-3">
             <span className="hidden sm:block text-xs text-gray-400 dark:text-disc-muted max-w-[12rem] truncate">{user.email}</span>
-            <button onClick={() => signOut({ callbackUrl: '/org/login' })} className="text-sm text-gray-500 dark:text-disc-muted hover:text-gray-700 dark:hover:text-disc-text">ออก</button>
+            <button onClick={() => signOut({ callbackUrl: '/org/login' })} className="text-sm text-gray-500 dark:text-disc-muted hover:text-gray-700 dark:hover:text-disc-text">{t('shell.logoutButton')}</button>
           </div>
         </div>
       </header>

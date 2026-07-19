@@ -1032,5 +1032,146 @@
       },
       "layoutTitle": "Sign Document"
     }
+  },
+  "org": {
+    "settings": {
+      "iconTitle": "Organization Icon",
+      "iconDesc": "Shown in the org switcher · use an emoji or upload an image",
+      "emojiPlaceholder": "Emoji, e.g. 🌱",
+      "useEmojiButton": "Use Emoji",
+      "uploadImageButton": "Upload Image",
+      "removeIconButton": "Remove Icon",
+      "nameTitle": "Organization Name",
+      "saveButton": "Save",
+      "saveNameError": "Failed to save",
+      "saveNameSuccess": "Name saved",
+      "saveIconError": "Failed to save icon",
+      "uploadError": "Upload failed"
+    },
+    "features": {
+      "loading": "Loading…",
+      "ownerOnly": "Owner only",
+      "description": "Features that work without connecting Discord · Discord-linked features (media/calling/docs) are configured on the server",
+      "saveSuccess": "Saved · refresh the page for the menu to update",
+      "saveError": "Failed to save"
+    },
+    "appointPolicy": {
+      "title": "Who can appoint roles",
+      "desc": "Owner and admin can always appoint · select other roles allowed to appoint (still limited by floor — cannot appoint above your own authority)",
+      "saveButton": "Save",
+      "saveSuccess": "Saved",
+      "saveError": "Failed to save"
+    },
+    "members": {
+      "inviteError": "Failed to invite",
+      "inviteSuccessEmailSent": "Invited {email} + email sent",
+      "inviteSuccessNoSmtp": "Invited {email} (SMTP not configured — email not sent)",
+      "changeRoleError": "Failed to change role",
+      "confirmLeaveOrg": "Leave this organization?",
+      "confirmRemoveMember": "Remove this member?",
+      "removeError": "Failed to remove",
+      "youSuffix": " (you)",
+      "pendingInviteSuffix": " · invite pending",
+      "leaveButton": "Leave",
+      "removeButton": "Remove",
+      "teamTitle": "Team",
+      "teamDesc": "Owner · pending invites · members with special roles — search below to manage other members",
+      "inviteEmailPlaceholder": "Invite by email",
+      "inviteButton": "Invite",
+      "searchTitle": "Search Members",
+      "searchPlaceholder": "Name or email",
+      "searching": "Searching…",
+      "noResults": "No members found",
+      "appointError": "Action failed",
+      "appointTitle": "Appoint Roles",
+      "appointDesc": "Search for a member and tap a chip to grant/revoke a role · faded chips can't be appointed (exceeds your authority)",
+      "appointSearchPlaceholder": "Search members to appoint"
+    },
+    "settingsNav": {
+      "tabs": {
+        "general": "General",
+        "members": "Members & Roles",
+        "features": "Features"
+      },
+      "settingsLabel": "Settings: ",
+      "pageHeading": "Organization Settings"
+    },
+    "switcher": {
+      "members": "{count} members",
+      "invited": "Invited",
+      "create": "Create Workspace",
+      "manage": "Manage Organization / Invite Members",
+      "profile": "Edit Profile",
+      "logout": "Log Out",
+      "pick": "Select Organization",
+      "homeAriaLabel": "Home"
+    },
+    "home": {
+      "noOrgTitle": "No organization yet",
+      "noOrgDesc": "Create your first organization to get started",
+      "createOrgButton": "Create Organization",
+      "activeOrgLabel": "Active Organization",
+      "yourRole": "Your role: {role}",
+      "manageOrgLink": "Manage Organization →",
+      "onboardingTitle": "Get Started",
+      "inviteMembersTitle": "Invite Members",
+      "inviteMembersDesc": "Add your team by email",
+      "connectDiscordTitle": "Connect Discord Server",
+      "connectDiscordDesc": "Enable finance/calling/docs (coming soon)",
+      "soonBadge": "Coming soon",
+      "invitedTitle": "Invitations",
+      "invitedAutoConfirmSuffix": " — auto-confirmed when you sign in with the invited email"
+    },
+    "createModal": {
+      "createError": "Failed to create organization",
+      "title": "Create Organization",
+      "subtitle": "You will be the owner of this organization",
+      "closeAriaLabel": "Close",
+      "nameLabel": "Organization Name",
+      "namePlaceholder": "e.g. Ratchaburi Volunteers",
+      "slugPrefix": "Org code: ",
+      "slugSuffix": " (can be changed later in settings)",
+      "cancelButton": "Cancel",
+      "createButton": "Create Organization",
+      "creatingButton": "Creating…"
+    },
+    "shell": {
+      "myOrgFallback": "My Organization",
+      "personalSpace": "Personal Space",
+      "orgSectionLabel": "Organizations",
+      "createOrgButton": "Create Organization",
+      "homeTab": "Home",
+      "settingsTab": "Settings",
+      "logoutButton": "Log Out"
+    },
+    "newForm": {
+      "createError": "Failed to create organization",
+      "title": "Create New Organization",
+      "subtitle": "You will be the owner of this organization",
+      "namePlaceholder": "Organization name",
+      "creatingButton": "Creating…",
+      "createButton": "Create",
+      "cancelButton": "Cancel"
+    },
+    "login": {
+      "genericError": "An error occurred",
+      "linkSentMsg": "Login link sent to your email",
+      "title": "Log In",
+      "subtitle": "Log in with your email — no Discord required",
+      "emailLabel": "Email",
+      "sendingButton": "Sending…",
+      "sendLinkButton": "Send Login Link",
+      "devLinkLabel": "dev: click the link to log in"
+    },
+    "personal": {
+      "title": "Personal Space",
+      "subtitle": "Your personal apps — tied to your account, not an organization",
+      "cookingDesc": "Kitchen assistant — random menu ideas from what's in your kitchen"
+    },
+    "verify": {
+      "invalidLinkMsg": "Invalid or expired link",
+      "backToLoginLink": "Back to login",
+      "signingInMsg": "Signing in…"
+    }
   }
 }
