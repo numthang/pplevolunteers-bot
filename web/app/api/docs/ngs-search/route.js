@@ -5,7 +5,7 @@ import { getEntryByToken } from '@/db/docs/entries.js'
 
 /**
  * GET /api/docs/ngs-search?token=&q=
- * Search ngs_member_cache by name, scoped to the guild from the sign token.
+ * Search cache_pple_member by name, scoped to the guild from the sign token.
  * Used on sign page for self-link when member_id not yet set.
  */
 export async function GET(req) {
@@ -28,7 +28,7 @@ export async function GET(req) {
   const { rows } = await pool.query(
     `SELECT source_id, first_name, last_name,
             (identification_number IS NOT NULL AND identification_number <> '') AS has_id_number
-     FROM ngs_member_cache
+     FROM cache_pple_member
      WHERE guild_id = $1
        AND (first_name ILIKE $2 OR last_name ILIKE $2
             OR CONCAT(first_name, ' ', last_name) ILIKE $2)

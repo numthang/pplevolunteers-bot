@@ -76,7 +76,7 @@ async function queryPayersByPermission(guildId, permission, eventProvince) {
             (array_agg(DISTINCT gr.role_name) FILTER (WHERE gr.permission = $2))[1] AS position
      FROM member_roles mr
      JOIN dc_guild_roles gr ON gr.guild_id = $1 AND gr.role_name = mr.role_name
-     LEFT JOIN ngs_member_cache n ON n.source_id = mr.member_id
+     LEFT JOIN cache_pple_member n ON n.source_id = mr.member_id
      WHERE mr.discord_id IN (SELECT discord_id FROM has_permission)
      GROUP BY mr.discord_id, mr.display_name, mr.primary_province, mr.firstname, mr.lastname, n.first_name, n.last_name`,
     [guildId, permission]

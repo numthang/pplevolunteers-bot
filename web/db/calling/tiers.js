@@ -21,7 +21,7 @@ export async function getTiersByMembers(memberIds) {
 export async function getMembersByTier(guildId, tier) {
   const { rows } = await pool.query(
     `SELECT m.*, t.tier
-     FROM ngs_member_cache m
+     FROM cache_pple_member m
      LEFT JOIN calling_member_tiers t ON t.member_id = m.source_id::text
      WHERE m.guild_id = $1 AND COALESCE(t.tier::text, 'D') = $2
      ORDER BY m.first_name ASC`,
@@ -108,7 +108,7 @@ export async function getTierWithMemberInfo(guildId, memberId) {
        t.override_by,
        t.override_reason,
        t.updated_at AS tier_updated_at
-     FROM ngs_member_cache m
+     FROM cache_pple_member m
      LEFT JOIN calling_member_tiers t ON t.member_id = m.source_id::text
      WHERE m.source_id = $1 AND m.guild_id = $2`,
     [memberId, guildId]

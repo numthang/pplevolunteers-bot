@@ -99,7 +99,7 @@ export async function getContactsInCampaign(campaignId, filters = {}, limit = 10
      SUM(CASE WHEN l.status = 'answered' THEN 1 ELSE 0 END) AS answered_count,
      SUM(CASE WHEN l.status IN ('sms_sent', 'sms_delivered') THEN 1 ELSE 0 END) AS sms_count,
      CASE WHEN a.id IS NOT NULL THEN 'assigned' ELSE 'unassigned' END AS member_status
-   FROM act_event_cache cc
+   FROM cache_pple_event cc
    JOIN calling_contacts c ON c.guild_id = $1
    LEFT JOIN calling_member_tiers t
      ON t.member_id = c.id::text AND t.contact_type = 'contact'
@@ -170,7 +170,7 @@ export async function getContactsInCampaignStats(campaignId, provinces = null) {
     }
     return {
       sql: `${selectClause}
-            FROM act_event_cache cc
+            FROM cache_pple_event cc
             JOIN calling_contacts c ON c.guild_id = $1
             WHERE cc.id = $2 AND cc.type IN ('campaign', 'event') AND (cc.province IS NULL OR c.province = cc.province) ${scope}
             ${groupOrderClause}`,
@@ -185,7 +185,7 @@ export async function getContactsInCampaignStats(campaignId, provinces = null) {
 
   const q3 = {
     sql: `SELECT a.assigned_to, COUNT(DISTINCT c.id) AS count
-          FROM act_event_cache cc
+          FROM cache_pple_event cc
           JOIN calling_contacts c ON c.guild_id = $1
           JOIN calling_assignments a
             ON a.campaign_id = cc.id AND a.member_id = c.id::text AND a.contact_type = 'contact'
@@ -199,7 +199,7 @@ export async function getContactsInCampaignStats(campaignId, provinces = null) {
        SUM(CASE WHEN lc.log_count > 0 THEN 1 ELSE 0 END) AS called,
        SUM(CASE WHEN a.id IS NOT NULL THEN 1 ELSE 0 END) AS assigned,
        SUM(CASE WHEN a.id IS NULL THEN 1 ELSE 0 END) AS unassigned
-     FROM act_event_cache cc
+     FROM cache_pple_event cc
      JOIN calling_contacts c ON c.guild_id = $1
      LEFT JOIN calling_assignments a
        ON a.campaign_id = cc.id AND a.member_id = c.id::text AND a.contact_type = 'contact'
@@ -239,7 +239,7 @@ export async function getContactsInCampaignStats(campaignId, provinces = null) {
 export async function getUnassignedContactIds(campaignId) {
   const { rows } = await pool.query(
     `SELECT c.id
-     FROM act_event_cache cc
+     FROM cache_pple_event cc
      JOIN calling_contacts c ON c.guild_id = $1
      LEFT JOIN calling_assignments a
        ON a.campaign_id = cc.id AND a.member_id = c.id::text AND a.contact_type = 'contact'
@@ -281,7 +281,7 @@ export async function getMyAssignedContacts(discordId, { campaignId, status, lim
        FROM calling_assignments a
        JOIN calling_contacts c ON c.id::text = a.member_id
        LEFT JOIN calling_member_tiers t ON t.member_id = c.id::text AND t.contact_type = 'contact'
-       LEFT JOIN act_event_cache ec ON ec.id = a.campaign_id AND ec.type IN ('campaign', 'event')
+       LEFT JOIN cache_pple_event ec ON ec.id = a.campaign_id AND ec.type IN ('campaign', 'event')
        LEFT JOIN (
          SELECT campaign_id, member_id, COUNT(*) AS camp_calls
          FROM calling_logs WHERE contact_type = 'contact'
@@ -315,7 +315,7 @@ export async function getContactLogs(contactId) {
        l.*,
        ec.name AS campaign_name
      FROM calling_logs l
-     LEFT JOIN act_event_cache ec ON ec.id = l.campaign_id AND ec.type IN ('campaign', 'event')
+     LEFT JOIN cache_pple_event ec ON ec.id = l.campaign_id AND ec.type IN ('campaign', 'event')
      WHERE l.member_id = $1 AND l.contact_type = 'contact'
      ORDER BY l.called_at DESC`,
     [contactId]
@@ -327,7 +327,7 @@ export async function getContactPendingCount(discordId) {
   const { rows } = await pool.query(
     `SELECT COUNT(*) AS count
      FROM calling_assignments a
-     LEFT JOIN act_event_cache ec ON ec.id = a.campaign_id AND ec.type IN ('campaign', 'event')
+     LEFT JOIN cache_pple_event ec ON ec.id = a.campaign_id AND ec.type IN ('campaign', 'event')
      LEFT JOIN (
        SELECT campaign_id, member_id, COUNT(*) AS camp_calls
        FROM calling_logs WHERE contact_type = 'contact' GROUP BY campaign_id, member_id

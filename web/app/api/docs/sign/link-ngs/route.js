@@ -8,7 +8,7 @@ const digits = (s) => String(s ?? '').replace(/\D/g, '')
 /**
  * POST /api/docs/sign/link-ngs
  * Body: { token, ngsSourceId, idNumber }
- * ผูก org_members.member_id ของ user (login) กับ ngs_member_cache.source_id
+ * ผูก org_members.member_id ของ user (login) กับ cache_pple_member.source_id
  * — ต้องยืนยันเลขบัตร 13 หลักให้ตรงกับ record ที่เลือก เพื่อกันการแอบอ้างเป็นคนอื่น
  */
 export async function POST(req) {
@@ -26,7 +26,7 @@ export async function POST(req) {
 
   // ยืนยันตัวตน: เลขบัตรที่กรอกต้องตรงกับ record ที่เลือก (ใน guild เดียวกัน)
   const { rows } = await pool.query(
-    `SELECT identification_number FROM ngs_member_cache WHERE source_id = $1 AND guild_id = $2`,
+    `SELECT identification_number FROM cache_pple_member WHERE source_id = $1 AND guild_id = $2`,
     [ngsSourceId, entry.guild_id]
   )
   if (!rows[0]) return Response.json({ error: 'ไม่พบข้อมูลในระบบสมาชิก' }, { status: 404 })

@@ -7,7 +7,7 @@ import { getGuildId } from '@/lib/guildContext.js'
 
 /**
  * GET /api/docs/events?q=&province=&limit=20
- * Search act_event_cache for docs project creation
+ * Search cache_pple_event for docs project creation
  */
 export async function GET(req) {
   const session = await getServerSession(authOptions)
@@ -29,7 +29,7 @@ export async function GET(req) {
       TO_CHAR(event_date,     'YYYY-MM-DD"T"HH24:MI') AS event_date,
       TO_CHAR(event_end_date, 'YYYY-MM-DD"T"HH24:MI') AS event_end_date,
       image_url
-    FROM act_event_cache
+    FROM cache_pple_event
     WHERE guild_id = $1
       AND type = 'event'`
 

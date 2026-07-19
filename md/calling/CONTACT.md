@@ -8,7 +8,7 @@
 ## Overview
 
 ระบบบันทึก "คนนอก" ที่พบปะหรือรู้จักผ่านกิจกรรมของพรรค เช่น ผู้บริจาค คนสนใจ อาสาสมัคร  
-ต่างจาก `ngs_member_cache` ซึ่งเป็นสมาชิกพรรคที่ sync มาจาก ACT (ไม่แตะ)
+ต่างจาก `cache_pple_member` ซึ่งเป็นสมาชิกพรรคที่ sync มาจาก ACT (ไม่แตะ)
 
 จุดประสงค์หลัก:
 - บันทึกคนที่เจอได้เร็วที่สุด (เช่น ตอนลงพื้นที่ event)
@@ -182,7 +182,7 @@ note ย่อ (line-clamp-1, italic)
 ```
 
 - รวม log ทุกประเภท (`met`, `answered`, `no_answer`) เรียง desc
-- แสดง campaign name ถ้า `campaign_id != 0` (join `act_event_cache`)
+- แสดง campaign name ถ้า `campaign_id != 0` (join `cache_pple_event`)
 - Inline form ไม่ใช่ modal popup — expand อยู่แล้วพร้อมกรอก
 
 ---
@@ -206,7 +206,7 @@ POST /api/calling/logs              ← บันทึกพบปะ (body: st
 ```
 GET  /api/calling/contacts/[id]/logs
      query: calling_logs WHERE member_id=? AND contact_type='contact'
-     LEFT JOIN act_event_cache ON id=campaign_id AND type='campaign'
+     LEFT JOIN cache_pple_event ON id=campaign_id AND type='campaign'
      ORDER BY called_at DESC
 ```
 
@@ -216,7 +216,7 @@ GET  /api/calling/contacts/[id]/logs
 
 - **ไม่เปลี่ยนชื่อตาราง**
 - เพิ่ม `specialty` ใน `createContact`, `updateContact`, `getContactsList`, `getContactById`
-- ฟังก์ชันใหม่ `getContactLogs(contactId)` — query `calling_logs` join `act_event_cache` เรียง desc
+- ฟังก์ชันใหม่ `getContactLogs(contactId)` — query `calling_logs` join `cache_pple_event` เรียง desc
 
 ---
 
@@ -245,6 +245,6 @@ GET  /api/calling/contacts/[id]/logs
 
 ## Not in Scope
 
-- `ngs_member_cache` / member CRM → ระบบพรรคจัดการแยก ไม่แตะ
+- `cache_pple_member` / member CRM → ระบบพรรคจัดการแยก ไม่แตะ
 - Photo / social media / export CSV → ไม่ทำในรอบนี้
 - Signal threshold / tier formula → ยังใช้เดิม (ไม่แก้ในรอบนี้)

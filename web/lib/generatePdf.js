@@ -124,7 +124,7 @@ function buildData(entry, { payerDisplayName = null, payerPosition = null } = {}
   const amt       = Number(entry.amount ?? 0)
   const amtFmt    = amt.toLocaleString('th-TH', { minimumFractionDigits: 2 })
 
-  // derive from act_event_cache; override_data takes precedence
+  // derive from cache_pple_event; override_data takes precedence
   const eventVenue    = entry.location || entry.province || ''
   const eventDuration = calcDuration(entry.event_date, entry.event_end_date)
   const eventTopic    = entry.event_name ?? ''

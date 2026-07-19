@@ -31,10 +31,10 @@ export async function GET(req) {
                 e.id AS last_entry_id
          FROM docs_activity_entries e
          JOIN docs_projects dp ON dp.id = e.project_id AND dp.guild_id = $1
-         JOIN act_event_cache ev ON ev.id = dp.act_event_cache_id
+         JOIN cache_pple_event ev ON ev.id = dp.act_event_cache_id
          JOIN users u ON u.discord_id = e.member_discord_id
          JOIN org_members m ON m.user_id = u.id AND m.guild_id = $1
-         LEFT JOIN ngs_member_cache n ON n.source_id = m.member_id
+         LEFT JOIN cache_pple_member n ON n.source_id = m.member_id
          WHERE e.member_discord_id IS NOT NULL
            AND ($2 = '' OR ev.province = $2)
          ORDER BY e.member_discord_id, e.id DESC

@@ -53,7 +53,7 @@ export async function POST(req) {
       }
     } else {
       const { rows } = await pool.query(
-        `SELECT source_id, mobile_number FROM ngs_member_cache WHERE source_id = ANY($1) AND guild_id = $2`,
+        `SELECT source_id, mobile_number FROM cache_pple_member WHERE source_id = ANY($1) AND guild_id = $2`,
         [member_ids, guildId]
       )
       for (const r of rows) {

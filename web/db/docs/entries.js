@@ -42,14 +42,14 @@ export async function getEntriesByProject(projectId) {
        dp.position AS payer_position
      FROM docs_activity_entries e
      JOIN docs_projects p ON p.id = e.project_id
-     JOIN act_event_cache ev ON ev.id = p.act_event_cache_id
+     JOIN cache_pple_event ev ON ev.id = p.act_event_cache_id
      LEFT JOIN users u_m        ON u_m.discord_id  = e.member_discord_id
      LEFT JOIN org_members m    ON m.user_id = u_m.id AND m.guild_id = p.guild_id
      LEFT JOIN users u_pm       ON u_pm.discord_id = e.payer_discord_id
      LEFT JOIN org_members pm   ON pm.user_id = u_pm.id AND pm.guild_id = p.guild_id
      LEFT JOIN docs_payers dp ON dp.discord_id = e.payer_discord_id AND dp.guild_id = p.guild_id
-     LEFT JOIN ngs_member_cache n  ON n.source_id  = m.member_id
-     LEFT JOIN ngs_member_cache np ON np.source_id = pm.member_id
+     LEFT JOIN cache_pple_member n  ON n.source_id  = m.member_id
+     LEFT JOIN cache_pple_member np ON np.source_id = pm.member_id
      WHERE e.project_id = $1
      ORDER BY m.display_name, e.item_type`,
     [projectId]
@@ -82,10 +82,10 @@ export async function getEntryByToken(token) {
        n.mobile_number, n.road
      FROM docs_activity_entries e
      JOIN docs_projects p ON p.id = e.project_id
-     JOIN act_event_cache ev ON ev.id = p.act_event_cache_id
+     JOIN cache_pple_event ev ON ev.id = p.act_event_cache_id
      LEFT JOIN users u_m ON u_m.discord_id = e.member_discord_id
      LEFT JOIN org_members m ON m.user_id = u_m.id AND m.guild_id = p.guild_id
-     LEFT JOIN ngs_member_cache n ON n.source_id = m.member_id
+     LEFT JOIN cache_pple_member n ON n.source_id = m.member_id
      WHERE e.sign_token = $1 OR e.payer_sign_token = $1`,
     [token]
   )
@@ -397,14 +397,14 @@ export async function getEntryById(id) {
        dp.position AS payer_position
      FROM docs_activity_entries e
      JOIN docs_projects p ON p.id = e.project_id
-     JOIN act_event_cache ev ON ev.id = p.act_event_cache_id
+     JOIN cache_pple_event ev ON ev.id = p.act_event_cache_id
      LEFT JOIN users u_m        ON u_m.discord_id  = e.member_discord_id
      LEFT JOIN org_members m    ON m.user_id = u_m.id AND m.guild_id = p.guild_id
      LEFT JOIN users u_pm       ON u_pm.discord_id = e.payer_discord_id
      LEFT JOIN org_members pm   ON pm.user_id = u_pm.id AND pm.guild_id = p.guild_id
      LEFT JOIN docs_payers dp ON dp.discord_id = e.payer_discord_id AND dp.guild_id = p.guild_id
-     LEFT JOIN ngs_member_cache n  ON n.source_id  = m.member_id
-     LEFT JOIN ngs_member_cache np ON np.source_id = pm.member_id
+     LEFT JOIN cache_pple_member n  ON n.source_id  = m.member_id
+     LEFT JOIN cache_pple_member np ON np.source_id = pm.member_id
      WHERE e.id = $1`,
     [id]
   )
@@ -466,7 +466,7 @@ export async function getPendingSignaturesForUser(discordId, guildId) {
             TO_CHAR(ev.event_date, 'YYYY-MM-DD"T"HH24:MI') AS event_date
      FROM docs_activity_entries e
      JOIN docs_projects p   ON p.id = e.project_id
-     JOIN act_event_cache ev ON ev.id = p.act_event_cache_id
+     JOIN cache_pple_event ev ON ev.id = p.act_event_cache_id
      WHERE p.guild_id = $1 AND e.member_discord_id = $2 AND e.signed_at IS NULL
      ORDER BY ev.event_date DESC NULLS LAST, e.item_type`,
     [guildId, discordId]
@@ -478,7 +478,7 @@ export async function getPendingSignaturesForUser(discordId, guildId) {
             TO_CHAR(ev.event_date, 'YYYY-MM-DD"T"HH24:MI') AS event_date
      FROM docs_activity_entries e
      JOIN docs_projects p   ON p.id = e.project_id
-     JOIN act_event_cache ev ON ev.id = p.act_event_cache_id
+     JOIN cache_pple_event ev ON ev.id = p.act_event_cache_id
      WHERE p.guild_id = $1 AND e.payer_discord_id = $2
        AND e.payer_sign_token IS NOT NULL AND e.payer_signed_at IS NULL
      ORDER BY ev.event_date DESC NULLS LAST, e.item_type`,
@@ -502,7 +502,7 @@ export async function getEntryByIdSimple(id) {
     `SELECT e.*, p.guild_id, ev.province
      FROM docs_activity_entries e
      JOIN docs_projects p ON p.id = e.project_id
-     JOIN act_event_cache ev ON ev.id = p.act_event_cache_id
+     JOIN cache_pple_event ev ON ev.id = p.act_event_cache_id
      WHERE e.id = $1`,
     [id]
   )

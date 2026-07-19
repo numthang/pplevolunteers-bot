@@ -1,5 +1,5 @@
 // handlers/verifyHandler.js — ยืนยันตัวตนสมาชิกด้วย SMS OTP (Member Onboarding จังหวะ 1)
-// flow: ปุ่ม [ยืนยันตัวตน] → modal เบอร์ → match ngs_member_cache + ส่ง OTP
+// flow: ปุ่ม [ยืนยันตัวตน] → modal เบอร์ → match cache_pple_member + ส่ง OTP
 //       → ปุ่ม [กรอกรหัส] → modal OTP → ผูก dc_members.member_id + phone + ติดยศ
 // OTP session: dc_user_config key `otp_verify_<guildId>` (guild-scoped ใน key เพราะ PK ไม่มีมิติ guild)
 // TTL 5 นาทีผ่าน expires_at ใน value (pattern เดียวกับ passkey nonce)
@@ -110,7 +110,7 @@ async function handleVerifyPhoneSubmit(interaction) {
   const phone66 = '66' + phone.slice(1);
   const { rows } = await pool.query(
     `SELECT n.source_id, n.guild_id AS roster_guild_id
-       FROM ngs_member_cache n
+       FROM cache_pple_member n
       WHERE n.guild_id = ANY($1)
         AND regexp_replace(COALESCE(n.mobile_number, ''), '\\D', '', 'g') IN ($2, $3)
         AND NOT EXISTS (
@@ -122,7 +122,7 @@ async function handleVerifyPhoneSubmit(interaction) {
   );
   if (rows.length === 0) {
     const { rows: claimed } = await pool.query(
-      `SELECT 1 FROM ngs_member_cache n
+      `SELECT 1 FROM cache_pple_member n
          JOIN dc_members m ON m.guild_id = ANY($1) AND m.member_id = n.source_id
         WHERE n.guild_id = ANY($1)
           AND regexp_replace(COALESCE(n.mobile_number, ''), '\\D', '', 'g') IN ($2, $3)

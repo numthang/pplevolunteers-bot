@@ -2,7 +2,7 @@ import pool from '../index.js'
 
 /**
  * สำเนาบัตรประชาชนเก็บใน org_members.id_card_image (BYTEA) แบบ per-guild
- * — guild ที่อัปโหลดไปเท่านั้นที่มีรูป (ตามที่ตัดสินใจ ไม่ใช่ ngs_member_cache ที่ sync ทับ)
+ * — guild ที่อัปโหลดไปเท่านั้นที่มีรูป (ตามที่ตัดสินใจ ไม่ใช่ cache_pple_member ที่ sync ทับ)
  */
 
 /** บันทึก/แทนที่รูปบัตรของ user ใน guild นั้น คืน true ถ้ามี row ให้อัปเดต */

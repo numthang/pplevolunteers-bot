@@ -31,7 +31,7 @@ export async function GET(req) {
       `SELECT
         COUNT(DISTINCT m.source_id) as total_members,
         COUNT(DISTINCT a.member_id) as assigned_members
-       FROM ngs_member_cache m
+       FROM cache_pple_member m
        LEFT JOIN calling_assignments a ON a.member_id = m.source_id::text AND a.contact_type = 'member'`
     )
     const members = memberRows[0]

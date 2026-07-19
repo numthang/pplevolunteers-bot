@@ -12,7 +12,7 @@ function sixMonthsFromNow() {
   return d
 }
 
-/** list events จาก act_event_cache โดยตรง, LEFT JOIN docs_projects เพื่อดู status */
+/** list events จาก cache_pple_event โดยตรง, LEFT JOIN docs_projects เพื่อดู status */
 export async function getDocEvents(guildId, provinces = null) {
   const params = [guildId]
   let query = `
@@ -24,7 +24,7 @@ export async function getDocEvents(guildId, provinces = null) {
       p.id, p.is_mobile, p.participant_count, p.budget, p.status,
       COUNT(DISTINCT dae.id)                                       AS entry_count,
       COUNT(DISTINCT dae.id) FILTER (WHERE dae.status = 'signed')  AS signed_count
-    FROM act_event_cache e
+    FROM cache_pple_event e
     LEFT JOIN docs_projects p ON p.act_event_cache_id = e.id AND p.guild_id = $1
     LEFT JOIN docs_activity_entries dae ON dae.project_id = p.id
     WHERE e.type = 'event' AND e.guild_id = $1`
@@ -49,7 +49,7 @@ export async function getDocProjectByEventId(actEventCacheId, guildId) {
        TO_CHAR(e.event_date,     'YYYY-MM-DD"T"HH24:MI') AS event_date,
        TO_CHAR(e.event_end_date, 'YYYY-MM-DD"T"HH24:MI') AS event_end_date
      FROM docs_projects p
-     JOIN act_event_cache e ON e.id = p.act_event_cache_id
+     JOIN cache_pple_event e ON e.id = p.act_event_cache_id
      WHERE p.act_event_cache_id = $1 AND p.guild_id = $2`,
     [actEventCacheId, guildId]
   )
@@ -84,7 +84,7 @@ export async function getDocProjectById(id) {
        TO_CHAR(e.event_date,     'YYYY-MM-DD"T"HH24:MI') AS event_date,
        TO_CHAR(e.event_end_date, 'YYYY-MM-DD"T"HH24:MI') AS event_end_date
      FROM docs_projects p
-     JOIN act_event_cache e ON e.id = p.act_event_cache_id
+     JOIN cache_pple_event e ON e.id = p.act_event_cache_id
      WHERE p.id = $1`,
     [id]
   )
@@ -104,13 +104,13 @@ export async function createDocProject({ guildId, actEventCacheId, isMobile, par
   return rows[0].id
 }
 
-/** ดึง event_date/end_date จาก act_event_cache เมื่อยังไม่มี docs_project */
+/** ดึง event_date/end_date จาก cache_pple_event เมื่อยังไม่มี docs_project */
 export async function getActEventById(actEventCacheId, guildId) {
   const { rows } = await pool.query(
     `SELECT name, province, act_event_id,
             TO_CHAR(event_date,     'YYYY-MM-DD"T"HH24:MI') AS event_date,
             TO_CHAR(event_end_date, 'YYYY-MM-DD"T"HH24:MI') AS event_end_date
-     FROM act_event_cache WHERE id = $1 AND guild_id = $2`,
+     FROM cache_pple_event WHERE id = $1 AND guild_id = $2`,
     [actEventCacheId, guildId]
   )
   return rows[0] || null
@@ -121,7 +121,7 @@ export async function getProjectByToken(token) {
     `SELECT p.*, e.name AS event_name, e.province,
             TO_CHAR(e.event_date, 'YYYY-MM-DD"T"HH24:MI') AS event_date
      FROM docs_projects p
-     JOIN act_event_cache e ON e.id = p.act_event_cache_id
+     JOIN cache_pple_event e ON e.id = p.act_event_cache_id
      WHERE p.project_token = $1 AND p.project_token_expires > NOW()`,
     [token]
   )

@@ -27,7 +27,7 @@ export async function GET(req) {
            n.first_name, n.last_name
     FROM org_members om
     JOIN users u ON u.id = om.user_id
-    LEFT JOIN ngs_member_cache n ON n.source_id = om.member_id
+    LEFT JOIN cache_pple_member n ON n.source_id = om.member_id
     WHERE om.guild_id = $1`
 
   if (q) {

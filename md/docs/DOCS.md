@@ -11,17 +11,17 @@
 - Stack: Next.js + pdf-lib (PDF overlay) + Canvas (signature)
 - **Signature model:** Authenticated signature — วาดลายเซ็นบน Canvas ผูกกับ Discord login บันทึก `discord_id` + timestamp + IP เป็น audit trail
 - ต้อง login ก่อนเซ็น — link ที่ส่งให้เป็น deeplink พอคลิกแล้ว login แล้วเด้งกลับมาหน้าเซ็นอัตโนมัติ
-- **Signing token expire:** 2 เดือนหลังจากวันจบโครงการ (`act_event_cache.event_end_date + 60 วัน`)
+- **Signing token expire:** 2 เดือนหลังจากวันจบโครงการ (`cache_pple_event.event_end_date + 60 วัน`)
 
 ---
 
 ## Flow
 
-1. **Admin เลือก event** จาก `act_event_cache` (sync มาจาก act.pplethai.org แล้ว) — ได้ชื่องาน, วันที่, สถานที่, จังหวัด
+1. **Admin เลือก event** จาก `cache_pple_event` (sync มาจาก act.pplethai.org แล้ว) — ได้ชื่องาน, วันที่, สถานที่, จังหวัด
 2. **Admin กรอกเพิ่ม** — จำนวนผู้เข้าร่วม, งบรวม, รายการที่เบิกได้
 3. **Budget planner** — ระบบ propose ยอดแต่ละรายการตามกฎกองทุน69 ให้รวมครบงบ
 4. **Admin ติ๊กสมาชิก** — เลือกว่าใครได้รับอะไรเท่าไหร่ (เช่น คนนี้ได้ค่าเดินทาง คนนั้นได้ค่าวิทยากร)
-5. **สร้าง entry ต่อคนต่อรายการ** → ดึงข้อมูลส่วนตัวจาก `ngs_member_cache` + `dc_members`
+5. **สร้าง entry ต่อคนต่อรายการ** → ดึงข้อมูลส่วนตัวจาก `cache_pple_member` + `dc_members`
 6. **ส่งลิงก์** ให้แต่ละคน → เปิด → ตรวจข้อมูล → วาด e-signature → submit → แสดงหน้า "สำเร็จ"
 7. **Admin export** → PDF ครบชุด (ใบสำคัญรับเงิน + สำเนาบัตรประชาชน) พร้อมพิมพ์
 
@@ -32,7 +32,7 @@
 ```sql
 docs_projects
   id, guild_id
-  act_event_cache_id INT  -- FK → act_event_cache (ชื่อ/วันที่/จังหวัดดึงจากนี้)
+  act_event_cache_id INT  -- FK → cache_pple_event (ชื่อ/วันที่/จังหวัดดึงจากนี้)
   is_mobile BOOLEAN       -- true = สัญจร (ออกบูธ/ลงพื้นที่) → ไม่มีวิทยากร/สถานที่
   participant_count, budget
   allowed_items (json array of strings)  -- ['food','travel','supplies',...]
@@ -57,13 +57,13 @@ docs_signatures
 **แหล่งข้อมูลส่วนตัว:**
 - `member_discord_id` เป็น **nullable** (2026-06-23) — สร้าง entry ได้โดยยังไม่มีผู้รับ กำหนดทีหลังได้ผ่าน inline assign ใน DocEntryList
 
-- ผูกกันด้วย `dc_members.member_id` = `ngs_member_cache.source_id`
-- **ครั้งแรก:** ทีมงานค้นชื่อตัวเองใน ngs_member_cache → ยืนยัน → บันทึก `source_id` ลง `dc_members.member_id`
+- ผูกกันด้วย `dc_members.member_id` = `cache_pple_member.source_id`
+- **ครั้งแรก:** ทีมงานค้นชื่อตัวเองใน cache_pple_member → ยืนยัน → บันทึก `source_id` ลง `dc_members.member_id`
 - **ครั้งถัดไป:** join ได้เลย ไม่ต้องค้นซ้ำ
-- จาก `ngs_member_cache`: `identification_number` (เลขบัตรประชาชน), ชื่อ-นามสกุล, ที่อยู่ครบ
+- จาก `cache_pple_member`: `identification_number` (เลขบัตรประชาชน), ชื่อ-นามสกุล, ที่อยู่ครบ
 - จาก `dc_members`: `discord_id`, `roles`, `bank_name`, `account_no`, `account_holder` (มีอยู่แล้ว)
 
-**เอกสารแนบต่อใบ:** สำเนาบัตรประชาชน 1 ใบ (ดึง `identification_number` จาก `ngs_member_cache`)
+**เอกสารแนบต่อใบ:** สำเนาบัตรประชาชน 1 ใบ (ดึง `identification_number` จาก `cache_pple_member`)
 
 **การเก็บสำเนาบัตรประชาชน:**
 - สมาชิก upload ครั้งเดียวตอน link ngs → เก็บใน storage → ทุกใบสำคัญฯ ดึงใช้ซ้ำ ไม่ต้อง upload ซ้ำ
@@ -134,7 +134,7 @@ Tab ที่ 3 ใน DocProjectView — เชื่อม ACT event กับ
 
 - ลิงก์ "พิมพ์แนบท้าย 3 (ใบรายชื่อเปล่า)" → `https://act.peoplesparty.or.th/ect-paper-3/?eid={act_event_id}`
 - อัพโหลดแนบท้าย 3 ที่เซ็นแล้ว → Attachment system ด้านบน
-- `act_event_id` ดึงจาก `docs_projects.act_event_id` (FK → `act_event_cache.id`)
+- `act_event_id` ดึงจาก `docs_projects.act_event_id` (FK → `cache_pple_event.id`)
 
 ---
 
@@ -203,11 +203,11 @@ web/templates/receipts/
 | variable | แหล่งข้อมูล |
 |---|---|
 | `day` / `month` / `year` | `parseThaiDate(entry.event_date)` |
-| `full_name` | `override_data.full_name` → `ngs_member_cache.title + first_name` |
-| `last_name` | `override_data.last_name` → `ngs_member_cache.last_name` |
-| `id_number` | `override_data.id_number` → `ngs_member_cache.identification_number` |
-| `house_no` / `moo` / `road` | `override_data` → `ngs_member_cache.home_*` |
-| `subdistrict` / `district` / `province_addr` | `override_data` → `ngs_member_cache.home_*` |
+| `full_name` | `override_data.full_name` → `cache_pple_member.title + first_name` |
+| `last_name` | `override_data.last_name` → `cache_pple_member.last_name` |
+| `id_number` | `override_data.id_number` → `cache_pple_member.identification_number` |
+| `house_no` / `moo` / `road` | `override_data` → `cache_pple_member.home_*` |
+| `subdistrict` / `district` / `province_addr` | `override_data` → `cache_pple_member.home_*` |
 | `phone` | `override_data.phone` (ไม่มีใน ngs — ต้องกรอกเอง) |
 | `branch_no` | `override_data.branch_no` (ลำดับที่ของสาขา) |
 | `branch_province` | `override_data.branch_province` (ชื่อจังหวัดที่สาขาสังกัด) |
@@ -333,7 +333,7 @@ web/templates/receipts/
 
 **ข้อมูลที่ต้องกรอกในใบเบิก:**
 - ชื่อโครงการใหญ่ → **"การจัดประชุมสมาชิกสัมพันธ์และผู้สนับสนุนพรรคทั่วประเทศ ปี 2569"** (hardcode ปี 2569)
-- ชื่อโครงการย่อย → ดึงจาก `act_event_cache.name`
+- ชื่อโครงการย่อย → ดึงจาก `cache_pple_event.name`
 - หัวข้อเรื่อง
 - จำนวนชั่วโมง/นาทีที่ดำเนินการ
 

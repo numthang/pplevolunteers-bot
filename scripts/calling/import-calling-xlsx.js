@@ -1,6 +1,6 @@
 /**
  * import-calling-xlsx.js
- * Parse calling log XLSX → SQL for ngs_member_cache (partial) + calling logs
+ * Parse calling log XLSX → SQL for cache_pple_member (partial) + calling logs
  *
  * Usage:
  *   node scripts/calling/import-calling-xlsx.js <file.xlsx> <province> <campaign_id> [--date YYYY-MM-DD]
@@ -232,10 +232,10 @@ function generateSQL({ members, logs, lastGrade }) {
   lines.push('-- ============================================================');
   lines.push('');
 
-  // ngs_member_cache (partial)
+  // cache_pple_member (partial)
   if (memberArray.length > 0) {
-    lines.push(`-- ─── ngs_member_cache (${memberArray.length}) ─────────────────────────────────────`);
-    lines.push('INSERT INTO ngs_member_cache (');
+    lines.push(`-- ─── cache_pple_member (${memberArray.length}) ─────────────────────────────────────`);
+    lines.push('INSERT INTO cache_pple_member (');
     lines.push('  source_id, serial, first_name, last_name, full_name, membership_type,');
     lines.push('  home_province, home_amphure, home_district, mobile_number, guild_id');
     lines.push(') VALUES');
@@ -254,9 +254,9 @@ function generateSQL({ members, logs, lastGrade }) {
     lines.push('');
   }
 
-  // act_event_cache (campaign)
-  lines.push(`-- ─── act_event_cache campaign ──────────────────────────────────`);
-  lines.push(`INSERT INTO act_event_cache (id, type, name, province, guild_id, synced_at)`);
+  // cache_pple_event (campaign)
+  lines.push(`-- ─── cache_pple_event campaign ──────────────────────────────────`);
+  lines.push(`INSERT INTO cache_pple_event (id, type, name, province, guild_id, synced_at)`);
   lines.push(`VALUES (${CAMPAIGN_ID}, 'campaign', ${esc(campaignName)}, ${esc(PROVINCE_NAME)}, ${esc(GUILD_ID)}, NOW())`);
   lines.push(`ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, guild_id = EXCLUDED.guild_id, synced_at = NOW();`);
   lines.push('');

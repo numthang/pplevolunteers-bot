@@ -8,7 +8,7 @@ import { getDocProjectByEventId, getActEventById } from '@/db/docs/projects.js'
 import { getEntriesByProject, autoAssignPayers } from '@/db/docs/entries.js'
 import DocProjectView from '@/components/docs/DocProjectView'
 
-// [id] ใน URL = act_event_cache.id ไม่ใช่ docs_projects.id
+// [id] ใน URL = cache_pple_event.id ไม่ใช่ docs_projects.id
 // docs_projects ถูก lookup ด้วย act_event_cache_id → getDocProjectByEventId
 
 export async function generateMetadata({ params }) {
@@ -40,12 +40,12 @@ export default async function DocProjectPage({ params }) {
 
   const entries = project ? await getEntriesByProject(project.id) : []
 
-  // เมื่อยังไม่มี project — ดึง event times จาก act_event_cache เพื่อให้ auto-calc ทำงานได้
+  // เมื่อยังไม่มี project — ดึง event times จาก cache_pple_event เพื่อให้ auto-calc ทำงานได้
   const eventMeta = project
     ? { name: project.event_name, province: project.province, event_date: project.event_date, event_end_date: project.event_end_date, participant_count: project.participant_count, act_event_id: project.act_event_id }
     : await getActEventById(eventCacheId, guildId)
 
-  if (!eventMeta) notFound()  // event ไม่มีอยู่จริงใน act_event_cache
+  if (!eventMeta) notFound()  // event ไม่มีอยู่จริงใน cache_pple_event
 
   return (
     <DocProjectView

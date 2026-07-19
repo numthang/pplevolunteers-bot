@@ -243,7 +243,7 @@ INDEX idx_channel (channel_id)
 
 ## Calling Tables
 
-### ngs_member_cache
+### cache_pple_member
 
 Party member data synced from NGS (party system). **ห้ามแก้โดยตรง** — sync ผ่าน `scripts/calling/import-ngs-member-cache.js`
 
@@ -284,7 +284,7 @@ INDEX idx_mobile        (mobile_number)
 
 > มี ~100 columns ทั้งหมด ดู schema เต็มใน `scripts/calling/migration-ngs-member-cache.sql`
 
-### act_event_cache
+### cache_pple_event
 
 Events จาก ACT system (WordPress-based). ใช้แทน calling_campaigns.
 
@@ -316,12 +316,12 @@ INDEX idx_type   (type)
 ```
 
 > `id = 0` = "Undefined" campaign (catch-all สำหรับ log ที่ไม่ผูก campaign)  
-> `calling_*.campaign_id` → FK ชี้ที่ `act_event_cache.id` WHERE `type = 'campaign'`
+> `calling_*.campaign_id` → FK ชี้ที่ `cache_pple_event.id` WHERE `type = 'campaign'`
 
 ### calling_contacts
 
 Manual contacts (non-members) — ผู้บริจาค, คนสนใจ, อาสาสมัคร, อื่นๆ  
-สร้าง/แก้ไข/ลบได้ (ต่างจาก `ngs_member_cache` ที่ sync-only)
+สร้าง/แก้ไข/ลบได้ (ต่างจาก `cache_pple_member` ที่ sync-only)
 
 ```sql
 id          INT AUTO_INCREMENT PRIMARY KEY
@@ -346,14 +346,14 @@ INDEX idx_province (province)
 INDEX idx_phone    (phone)
 ```
 
-> id เริ่มจาก 1 (auto_increment) — **ระวัง overlap กับ `ngs_member_cache.source_id`** ที่เริ่มจาก 55  
+> id เริ่มจาก 1 (auto_increment) — **ระวัง overlap กับ `cache_pple_member.source_id`** ที่เริ่มจาก 55  
 > ทุก SQL query ที่ JOIN ตาราง shared ต้องใส่ `AND contact_type = 'member'` หรือ `'contact'` เสมอ
 
 ### calling_assignments
 
 ```sql
 id            INT AUTO_INCREMENT PRIMARY KEY
-campaign_id   INT          NULL              -- act_event_cache.id (0 = Undefined)
+campaign_id   INT          NULL              -- cache_pple_event.id (0 = Undefined)
 contact_type  ENUM('member','contact') NOT NULL DEFAULT 'member'
 member_id     VARCHAR(20)  NOT NULL          -- source_id (member) หรือ id (contact)
 assigned_to   VARCHAR(20)  NOT NULL          -- discord_id
@@ -371,7 +371,7 @@ UNIQUE KEY uq_campaign_member_contact (campaign_id, member_id, contact_type)
 
 ```sql
 id               INT AUTO_INCREMENT PRIMARY KEY
-campaign_id      INT NULL                  -- act_event_cache.id (0 = Undefined)
+campaign_id      INT NULL                  -- cache_pple_event.id (0 = Undefined)
 contact_type     ENUM('member','contact') NOT NULL DEFAULT 'member'
 member_id        VARCHAR(20) NOT NULL      -- source_id (member) หรือ id (contact)
 called_by        VARCHAR(20) NULL          -- discord_id (NULL ถ้า import จาก XLS)

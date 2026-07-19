@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth-options.js'
 import { getEntryByToken } from '@/db/docs/entries.js'
 
 /**
- * Self-fill ข้อมูลผู้รับเงินที่ไม่มีใน ngs_member_cache (จังหวัดอื่นนอก roster)
+ * Self-fill ข้อมูลผู้รับเงินที่ไม่มีใน cache_pple_member (จังหวัดอื่นนอก roster)
  * - ชื่อ-นามสกุล → users (PDF ใช้ fallback ngs_first_name ?? firstname อยู่แล้ว)
  * - เลขบัตร + ที่อยู่ → override_data ของ entry (override ชนะ ngs ทุก field ใน buildData)
  * - จำทั้งชุดใน dc_user_config key docs_self_info → prefill ครั้งถัดไป

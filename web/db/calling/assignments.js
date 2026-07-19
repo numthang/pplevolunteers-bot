@@ -120,7 +120,7 @@ export async function unassignMember(memberId, campaignId = 0, contactType = 'me
  */
 export async function getUnassignedMembers(guildId, campaignId = 0, limit = 100, offset = 0) {
   const { rows } = await pool.query(
-    `SELECT m.* FROM ngs_member_cache m
+    `SELECT m.* FROM cache_pple_member m
      LEFT JOIN calling_assignments a
        ON a.campaign_id = $2 AND a.member_id = m.source_id::text
      WHERE a.id IS NULL AND m.guild_id = $1
@@ -136,7 +136,7 @@ export async function getUnassignedMembers(guildId, campaignId = 0, limit = 100,
  */
 export async function getUnassignedCount(guildId, campaignId = 0) {
   const { rows } = await pool.query(
-    `SELECT COUNT(*) AS count FROM ngs_member_cache m
+    `SELECT COUNT(*) AS count FROM cache_pple_member m
      LEFT JOIN calling_assignments a
        ON a.campaign_id = $2 AND a.member_id = m.source_id::text
      WHERE a.id IS NULL AND m.guild_id = $1`,

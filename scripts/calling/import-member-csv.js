@@ -1,6 +1,6 @@
 /**
  * import-member-csv.js
- * Import ngs_member_cache from full NGS CSV export — direct DB upsert
+ * Import cache_pple_member from full NGS CSV export — direct DB upsert
  *
  * Usage:
  *   node scripts/calling/import-member-csv.js <file.csv>
@@ -8,7 +8,7 @@
  * Example:
  *   node scripts/calling/import-member-csv.js ngs_member_ราชบุรี.csv
  *
- * Target:  ngs_member_cache (all columns, upsert by source_id)
+ * Target:  cache_pple_member (all columns, upsert by source_id)
  * Requires: GUILD_ID env var
  */
 
@@ -94,7 +94,7 @@ async function insertBatch(rows, dbCols) {
   const updates = updateCols.map(c => `${c} = EXCLUDED.${c}`).join(',\n    ');
 
   const sql = `
-    INSERT INTO ngs_member_cache (${dbCols.join(', ')})
+    INSERT INTO cache_pple_member (${dbCols.join(', ')})
     VALUES
       ${rowPlaceholders}
     ON CONFLICT (source_id) DO UPDATE SET

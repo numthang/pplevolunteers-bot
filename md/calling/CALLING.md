@@ -40,7 +40,7 @@ ALTER TABLE dc_members
 
 ---
 
-### 2. `ngs_member_cache` — ข้อมูลสมาชิกพรรค (sync จาก ACT)
+### 2. `cache_pple_member` — ข้อมูลสมาชิกพรรค (sync จาก ACT)
 
 - ตาราง source หลักที่ `db/calling/members.js` และ `db/calling/tiers.js` query
 - key field: `source_id` (= member_id ที่ใช้ join กับ `calling_*` tables), `home_province`
@@ -48,9 +48,9 @@ ALTER TABLE dc_members
 
 ---
 
-### 3. Campaigns — ใช้ `act_event_cache` (`type = 'campaign'`)
+### 3. Campaigns — ใช้ `cache_pple_event` (`type = 'campaign'`)
 
-ไม่มีตาราง `calling_campaigns` แยก — campaign เก็บใน `act_event_cache` เดียวกับ activity ทั่วไป โดยใช้ `type = 'campaign'` เพื่อแยกประเภท
+ไม่มีตาราง `calling_campaigns` แยก — campaign เก็บใน `cache_pple_event` เดียวกับ activity ทั่วไป โดยใช้ `type = 'campaign'` เพื่อแยกประเภท
 
 - สร้างผ่าน Web UI: `/calling/create`
 - Import จาก XLSX: 1 ไฟล์ = 1 campaign ชื่อ campaign มาจาก filename (เช่น `กิจกรรมโทรหาสมาชิกราชบุรี.xlsx` → campaign name = `กิจกรรมโทรหาสมาชิกราชบุรี`)
@@ -58,7 +58,7 @@ ALTER TABLE dc_members
 
 Key fields: `id`, `name`, `province`, `description`, `event_date`, `event_end_date`, `guild_id`, `act_event_id`, `image_url`, `location`, `map_url`
 
-#### ID Range Convention (`act_event_cache.id`)
+#### ID Range Convention (`cache_pple_event.id`)
 
 | Range | ใช้สำหรับ |
 |---|---|
@@ -82,15 +82,15 @@ WRITE queries (updateCampaign, deleteCampaign) ใช้ `WHERE type = 'campaign
 
 #### parent_id — ความสัมพันธ์ parent/child
 
-`register` rows มี `parent_id` ชี้ไปที่ `act_event_cache.id` ของ parent (`campaign` หรือ `event`)
+`register` rows มี `parent_id` ชี้ไปที่ `cache_pple_event.id` ของ parent (`campaign` หรือ `event`)
 
 ```
-act_event_cache (type='campaign', id=70)     ← parent
-  └── act_event_cache (type='register', parent_id=70)  ← ลงทะเบียนเข้าร่วม
+cache_pple_event (type='campaign', id=70)     ← parent
+  └── cache_pple_event (type='register', parent_id=70)  ← ลงทะเบียนเข้าร่วม
 ```
 
 - `parent_id` = `id` ของ parent row (ไม่ใช่ `act_event_id`)
-- เมื่อ re-ID campaign ต้อง cascade `UPDATE act_event_cache SET parent_id = <new> WHERE parent_id = <old>` ด้วยเสมอ — อยู่ใน migration.sql แล้ว
+- เมื่อ re-ID campaign ต้อง cascade `UPDATE cache_pple_event SET parent_id = <new> WHERE parent_id = <old>` ด้วยเสมอ — อยู่ใน migration.sql แล้ว
 - import script (`scripts/calling/import-act-event-cache.js`) ต้องตั้ง `CAMPAIGN_ID` ให้ตรงกับ `id` ของ parent campaign
 
 ---
@@ -99,12 +99,12 @@ act_event_cache (type='campaign', id=70)     ← parent
 
 ตารางนี้เพิ่มใหม่สำหรับ non-member contacts: ผู้บริจาค, คนสนใจ, อาสาสมัคร, อาสาส้ม, แกนนำ, ผู้นำชุมชน, ประชาสังคม, สื่อมวลชน, นักการเมือง/อปท., สถานที่, งานพิมพ์/ป้าย, บริการอีเวนต์
 
-- CRUD ได้ (ต่างจาก `ngs_member_cache` ที่ sync-only)
+- CRUD ได้ (ต่างจาก `cache_pple_member` ที่ sync-only)
 - key fields: `id`, `first_name`, `last_name`, `phone`, `province`, `amphoe`, `tambon`, `category`, `created_by`
 - `category`: `donor` | `prospect` | `volunteer` | `oranger` | `leader` | `community_leader` | `civil` | `media` | `politician` | `venue` | `print` | `event_service` | `other`
 - province กรอกจาก dropdown Thailand geography (JSON static ที่ `web/lib/thailand-geography.json`)
 
-**⚠️ ID Overlap:** `calling_contacts.id` เป็น auto_increment เริ่มจาก 1 แต่ `ngs_member_cache.source_id` เริ่มจาก 55  
+**⚠️ ID Overlap:** `calling_contacts.id` เป็น auto_increment เริ่มจาก 1 แต่ `cache_pple_member.source_id` เริ่มจาก 55  
 → ทุก SQL query ที่ JOIN ตาราง shared (`calling_logs`, `calling_assignments`, `calling_member_tiers`) **ต้องใส่ `AND contact_type = 'member'` หรือ `'contact'` เสมอ** ไม่งั้น ID จะปนกันเมื่อมี contact ≥ 55 ตัว
 
 ---

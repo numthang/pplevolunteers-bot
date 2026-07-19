@@ -192,7 +192,7 @@ export default function CampaignPage({ params }) {
     }
   }, [subdistrictsOpen])
 
-  // subdistricts only for member tab (data from ngs_member_cache)
+  // subdistricts only for member tab (data from cache_pple_member)
   useEffect(() => {
     if (activeTab !== 'member' || !filterAmphure) {
       setAvailableSubdistricts([])
