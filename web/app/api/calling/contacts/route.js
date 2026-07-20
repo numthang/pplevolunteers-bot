@@ -82,7 +82,7 @@ export async function POST(req) {
 
     const orgId = await getOrgId(session)
     const id = await createContact({
-      guild_id: orgId,
+      org_id: orgId,
       first_name,
       last_name,
       phone,

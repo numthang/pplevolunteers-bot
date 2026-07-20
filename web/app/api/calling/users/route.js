@@ -24,14 +24,15 @@ export async function GET(req) {
 
   try {
     const { rows } = await pool.query(
-      `SELECT u.discord_id,
+      `SELECT DISTINCT ON (u.id)
+              u.id AS user_id, u.discord_id,
               COALESCE(NULLIF(om.display_name, ''), u.username) AS display_name,
               om.province
        FROM org_members om
        JOIN users u ON u.id = om.user_id
-       WHERE om.guild_id = $1
+       WHERE om.org_id = $1
          AND ($2 = '' OR om.display_name ILIKE $3 OR u.username ILIKE $3)
-       ORDER BY display_name ASC
+       ORDER BY u.id, display_name ASC
        ${all ? '' : 'LIMIT 50'}`,
       [orgId, q, `%${q}%`]
     )

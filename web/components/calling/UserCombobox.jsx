@@ -19,8 +19,8 @@ export default function UserCombobox({ value = [], onChange, placeholder }) {
       try {
         const res = await fetch(`/api/calling/users?q=${encodeURIComponent(query)}`)
         const data = await res.json()
-        const selected = new Set(value.map(u => u.discord_id))
-        setOptions((data.data || []).filter(u => !selected.has(u.discord_id)))
+        const selected = new Set(value.map(u => u.user_id))
+        setOptions((data.data || []).filter(u => !selected.has(u.user_id)))
       } catch {
         setOptions([])
       } finally {
@@ -45,8 +45,8 @@ export default function UserCombobox({ value = [], onChange, placeholder }) {
     inputRef.current?.focus()
   }
 
-  const handleRemove = (discordId) => {
-    onChange(value.filter(u => u.discord_id !== discordId))
+  const handleRemove = (userId) => {
+    onChange(value.filter(u => u.user_id !== userId))
   }
 
   return (
@@ -57,12 +57,12 @@ export default function UserCombobox({ value = [], onChange, placeholder }) {
       >
         {value.map(user => (
           <span
-            key={user.discord_id}
+            key={user.user_id}
             className="inline-flex items-center gap-1 px-2 py-0.5 bg-teal/10 text-teal rounded text-base font-medium"
           >
             {user.display_name}
             <button
-              onMouseDown={e => { e.preventDefault(); handleRemove(user.discord_id) }}
+              onMouseDown={e => { e.preventDefault(); handleRemove(user.user_id) }}
               className="hover:text-red-400 leading-none text-lg"
             >×</button>
           </span>
@@ -89,7 +89,7 @@ export default function UserCombobox({ value = [], onChange, placeholder }) {
           ) : (
             options.map(user => (
               <button
-                key={user.discord_id}
+                key={user.user_id}
                 onMouseDown={() => handleSelect(user)}
                 className="w-full flex items-center justify-between px-3 py-2.5 text-base hover:bg-warm-50 dark:hover:bg-disc-hover text-left"
               >

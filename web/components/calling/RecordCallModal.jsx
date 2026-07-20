@@ -148,7 +148,7 @@ function formatEventDate(dateStr) {
 export default function RecordCallModal({ isOpen, member, contact_type = 'member', source = 'assignee', onClose, onSave, onSaveAndNext, hasNext, onStarChange, onFlagChange }) {
   const t = useTranslations('calling')
   const { data: session } = useSession()
-  const { discordId: effectiveDiscordId, access } = useEffectiveRoles(session)
+  const { userId: effectiveUserId, access } = useEffectiveRoles(session, { scope: 'org' })
   const isModerator = can('deleteLog', access?.permissions || [])
 
   const CALL_STATUS_OPTIONS = [
@@ -480,7 +480,7 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
                 <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
                   {history.map(log => {
                     const s = getLogStatusStyle(log.status)
-                    const canEdit = log.called_by === effectiveDiscordId || isModerator
+                    const canEdit = log.called_by === effectiveUserId || isModerator
                     const isEditing = editingLogId === log.id
                     return (
                       <div key={log.id} className="rounded-lg p-3 bg-white dark:bg-disc-hover border border-warm-200 dark:border-disc-border">

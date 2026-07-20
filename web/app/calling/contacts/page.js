@@ -23,7 +23,7 @@ export default function ContactsPage() {
   const t = useTranslations('calling')
   const { data: session, status } = useSession()
   const router = useRouter()
-  const { roles, userId, access } = useEffectiveRoles(session)
+  const { roles, userId, access } = useEffectiveRoles(session, { scope: 'org' })
 
   useEffect(() => {
     if (status === 'unauthenticated') router.replace('/')
