@@ -272,3 +272,29 @@ CREATE TABLE IF NOT EXISTS org_config (
 
 -- org icon: emoji string หรือ url รูปที่อัปโหลด (/uploads/org/xxx) · OrgAvatar detect: path→img, สั้น→emoji
 ALTER TABLE orgs ADD COLUMN IF NOT EXISTS icon TEXT;
+
+-- ── MEMBER_ID = ข้อเท็จจริงระดับ ORG (2026-07-21) ────────────────────────────
+-- เดิม: unique (guild_id, member_id) บน dc_members กันสองบัญชี claim เลขสมาชิกซ้ำ "ต่อ guild"
+-- ตอนนี้: roster (cache_pple_member) เป็น org-scope แล้ว + org_members เป็น per-guild
+--   → คนเดียวกันถือ member_id เดียวกันได้หลายแถว (guild ละแถว) = unique index ธรรมดาใช้ไม่ได้
+--   → ต้องการเงื่อนไข "หนึ่ง member_id ต่อ org ต้องเป็นของ user คนเดียว" ซึ่ง index แสดงไม่ได้
+-- จึงใช้ trigger + ยิง SQLSTATE 23505 (unique_violation) เพื่อให้ catch เดิมใน verifyHandler ทำงานต่อได้
+CREATE OR REPLACE FUNCTION org_members_member_id_unique() RETURNS trigger AS $$
+BEGIN
+  IF NEW.member_id IS NOT NULL AND EXISTS (
+    SELECT 1 FROM org_members om
+     WHERE om.org_id = NEW.org_id
+       AND om.member_id = NEW.member_id
+       AND om.user_id <> NEW.user_id
+  ) THEN
+    RAISE EXCEPTION 'member_id % ถูกผูกกับผู้ใช้อื่นใน org % แล้ว', NEW.member_id, NEW.org_id
+      USING ERRCODE = 'unique_violation';
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_org_members_member_id_unique ON org_members;
+CREATE TRIGGER trg_org_members_member_id_unique
+  BEFORE INSERT OR UPDATE OF member_id, org_id, user_id ON org_members
+  FOR EACH ROW EXECUTE FUNCTION org_members_member_id_unique();

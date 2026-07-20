@@ -34,4 +34,23 @@ async function userIdByDiscord(discordId) {
   return rows[0]?.id ?? null;
 }
 
-module.exports = { getOrgGuildIds, orgIdOfGuild, userIdByDiscord };
+// users row จาก discord_id — create-on-first-sight (identity split: dc_members → users + org_members)
+// เขียนเฉพาะคอลัมน์ identity · profile/roles ทั้งหมดอยู่ org_members (per-guild)
+// COALESCE กัน field ที่ไม่ได้ส่งมาลบของเดิมทิ้ง
+async function upsertUserByDiscord(discordId, { username, firstname, lastname } = {}) {
+  if (!discordId) return null;
+  const { rows } = await pool.query(
+    `INSERT INTO users (discord_id, username, firstname, lastname)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (discord_id) WHERE discord_id IS NOT NULL DO UPDATE SET
+       username   = COALESCE(EXCLUDED.username, users.username),
+       firstname  = COALESCE(EXCLUDED.firstname, users.firstname),
+       lastname   = COALESCE(EXCLUDED.lastname, users.lastname),
+       updated_at = NOW()
+     RETURNING id`,
+    [discordId, username ?? null, firstname ?? null, lastname ?? null]
+  );
+  return rows[0].id;
+}
+
+module.exports = { getOrgGuildIds, orgIdOfGuild, userIdByDiscord, upsertUserByDiscord };

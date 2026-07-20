@@ -52,12 +52,13 @@ async function getRatingList(guildId, targetId, page = 1, perPage = 5) {
   const { rows } = await pool.query(
     `SELECT
        r.rater_id,
-       COALESCE(m.nickname, m.username, r.rater_name) AS rater_name,
+       COALESCE(om.nickname, u.username, r.rater_name) AS rater_name,
        r.stars,
        r.comment,
        r.created_at
      FROM dc_user_ratings r
-     LEFT JOIN dc_members m ON m.guild_id = r.guild_id AND m.discord_id = r.rater_id
+     LEFT JOIN users u ON u.discord_id = r.rater_id
+     LEFT JOIN org_members om ON om.user_id = u.id AND om.guild_id = r.guild_id
      WHERE r.guild_id = $1 AND r.target_id = $2
      ORDER BY r.created_at DESC
      LIMIT $3 OFFSET $4`,

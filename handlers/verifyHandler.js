@@ -1,6 +1,6 @@
 // handlers/verifyHandler.js — ยืนยันตัวตนสมาชิกด้วย SMS OTP (Member Onboarding จังหวะ 1)
 // flow: ปุ่ม [ยืนยันตัวตน] → modal เบอร์ → match cache_pple_member + ส่ง OTP
-//       → ปุ่ม [กรอกรหัส] → modal OTP → ผูก dc_members.member_id + phone + ติดยศ
+//       → ปุ่ม [กรอกรหัส] → modal OTP → ผูก org_members.member_id + users.phone + ติดยศ
 // OTP session: dc_user_config key `otp_verify_<guildId>` (guild-scoped ใน key เพราะ PK ไม่มีมิติ guild)
 // TTL 5 นาทีผ่าน expires_at ใน value (pattern เดียวกับ passkey nonce)
 const {
@@ -15,7 +15,7 @@ const { getUserSetting, setUserSetting, deleteUserSetting } = require('../db/use
 const { upsertMemberFromDiscord, syncMemberRoles } = require('../db/members');
 const { sendSms, smsConfigured, normalizePhone } = require('../services/sms');
 const { parseSetting } = require('../utils/parseSetting');
-const { getOrgGuildIds } = require('../db/org');
+const { getOrgGuildIds, orgIdOfGuild } = require('../db/org');
 
 const OTP_TTL_MS         = 5 * 60 * 1000;
 const MAX_ATTEMPTS       = 5;
@@ -78,12 +78,17 @@ async function handleVerifyPhoneSubmit(interaction) {
 
   // เครือ guild ในองค์กรเดียวกัน — roster/ผูกชื่อ มองข้าม guild ระดับ org (roster อยู่ guild เดียวในเครือ)
   const orgGuilds = await getOrgGuildIds(guildId);
+  const orgId = await orgIdOfGuild(guildId);
 
   // ผูก + ยืนยันเบอร์ครบแล้วที่ guild ใดในเครือ → จบเลย ไม่เปลือง SMS
   // เช็ค phone_verified_at ด้วย ไม่ใช่แค่ member_id — คนที่ผูกก่อนมีคอลัมน์นี้ (หรือผูกผ่าน docs) ต้อง re-verify ได้
   // ไม่งั้นติดกับดักถาวร: verify ซ้ำโดนเด้ง "ยืนยันแล้ว" แต่ phone_verified_at ไม่เคยถูกเขียน → login เว็บไม่ได้
   const { rows: meRows } = await pool.query(
-    'SELECT 1 FROM dc_members WHERE guild_id = ANY($1) AND discord_id = $2 AND member_id IS NOT NULL AND phone_verified_at IS NOT NULL LIMIT 1',
+    `SELECT 1 FROM org_members om
+       JOIN users u ON u.id = om.user_id
+      WHERE om.guild_id = ANY($1) AND u.discord_id = $2
+        AND om.member_id IS NOT NULL AND u.phone_verified_at IS NOT NULL
+      LIMIT 1`,
     [orgGuilds, discordId]
   );
   if (meRows.length) {
@@ -104,31 +109,33 @@ async function handleVerifyPhoneSubmit(interaction) {
     return interaction.editReply(`⏳ เพิ่งส่งรหัสไปแล้ว${refNote} — รออีก ${wait} วินาที แล้วกดปุ่ม "กรอกรหัส OTP" จากข้อความก่อนหน้า`);
   }
 
-  // match roster — เทียบเฉพาะตัวเลข รองรับทั้งเก็บแบบ 0xxx และ 66xxx · ค้นข้าม guild ในเครือ · ตัดแถวที่ถูก claim แล้วระดับ org
-  // n.guild_id (roster_guild_id) ต้องจำไว้ — เป็น guild ที่ "เป็นเจ้าของ" รายชื่อนี้จริง (roster อยู่ guild เดียวในเครือ)
-  // ต้องเขียน member_id ลง dc_members ที่ guild นี้เท่านั้น ไม่ใช่ guild ที่กดปุ่ม ไม่งั้น join กับ roster ไม่เจอเลย (dangling pointer)
+  // match roster — เทียบเฉพาะตัวเลข รองรับทั้งเก็บแบบ 0xxx และ 66xxx · ตัดแถวที่ถูก claim แล้วระดับ org
+  // roster (cache_pple_member) เป็น org-scope แล้ว (calling org migration 2026-07-19) → match ด้วย org_id
+  // เลิกใช้ roster_guild_id: "guild เจ้าของรายชื่อ" ไม่มีความหมายอีกต่อไป — เลขสมาชิกเป็นข้อเท็จจริงระดับ org
   const phone66 = '66' + phone.slice(1);
   const { rows } = await pool.query(
-    `SELECT n.source_id, n.guild_id AS roster_guild_id
+    `SELECT n.source_id
        FROM cache_pple_member n
-      WHERE n.guild_id = ANY($1)
+      WHERE n.org_id = $1
         AND regexp_replace(COALESCE(n.mobile_number, ''), '\\D', '', 'g') IN ($2, $3)
         AND NOT EXISTS (
-          SELECT 1 FROM dc_members m
-           WHERE m.guild_id = ANY($1) AND m.member_id = n.source_id
-             AND m.discord_id <> $4
+          SELECT 1 FROM org_members m
+           JOIN users u ON u.id = m.user_id
+           WHERE m.org_id = $1 AND m.member_id = n.source_id
+             AND u.discord_id <> $4
         )`,
-    [orgGuilds, phone, phone66, discordId]
+    [orgId, phone, phone66, discordId]
   );
   if (rows.length === 0) {
     const { rows: claimed } = await pool.query(
       `SELECT 1 FROM cache_pple_member n
-         JOIN dc_members m ON m.guild_id = ANY($1) AND m.member_id = n.source_id
-        WHERE n.guild_id = ANY($1)
+         JOIN org_members m ON m.org_id = $1 AND m.member_id = n.source_id
+         JOIN users u ON u.id = m.user_id
+        WHERE n.org_id = $1
           AND regexp_replace(COALESCE(n.mobile_number, ''), '\\D', '', 'g') IN ($2, $3)
-          AND m.discord_id <> $4
+          AND u.discord_id <> $4
         LIMIT 1`,
-      [orgGuilds, phone, phone66, discordId]
+      [orgId, phone, phone66, discordId]
     );
     if (claimed.length) {
       return interaction.editReply('❌ เบอร์นี้ถูกผูกกับบัญชี Discord อื่นแล้ว — ติดต่อแอดมินหากคิดว่าไม่ถูกต้อง');
@@ -155,7 +162,7 @@ async function handleVerifyPhoneSubmit(interaction) {
     otp_hash: hashOtp(otp, discordId, guildId),
     ref,
     source_id: rows[0].source_id,
-    roster_guild_id: rows[0].roster_guild_id,
+    org_id: orgId,
     attempts: 0,
     sent_at: Date.now(),
     expires_at: Date.now() + OTP_TTL_MS,
@@ -221,35 +228,33 @@ async function handleVerifyOtpSubmit(interaction) {
     return interaction.editReply(`❌ รหัสไม่ถูกต้อง (เหลือ ${MAX_ATTEMPTS - session.attempts} ครั้ง) — กดปุ่ม "กรอกรหัส OTP" เพื่อลองใหม่`);
   }
 
-  // ผูก binding ที่ guild เจ้าของ roster (rosterGuildId) เสมอ — ไม่ใช่ guild ที่กดปุ่ม (guildId)
-  // เหตุผล: join ทุกจุด (docs/calling/verify dedup) ใช้ m.guild_id = n.guild_id AND m.member_id = n.source_id
-  // เขียนผิด guild = member_id ห้อยเปล่า join ไม่เจอที่ไหนเลย · unique (guild_id, member_id) กันสองบัญชี claim ซ้ำที่ guild นี้
-  const rosterGuildId = session.roster_guild_id;
-  const sameGuild = rosterGuildId === guildId;
+  // เลขสมาชิก = ข้อเท็จจริงระดับ org (roster เป็น org-scope) → เขียนลง org_members ทุกแถวของคนนี้ใน org นั้น
+  // (คนเดียวอยู่หลาย guild ในเครือ = สมาชิกเลขเดียวกัน) · trigger uq_om_org_member กันคนอื่น claim เลขซ้ำ (23505)
+  // identity split: member_id → org_members (per-guild rows), phone/phone_verified_at → users (identity)
+  const orgId = session.org_id;
   try {
-    let member = sameGuild ? interaction.member : null;
     let { rowCount } = await pool.query(
-      'UPDATE dc_members SET member_id = $1, phone = $2, phone_verified_at = NOW() WHERE guild_id = $3 AND discord_id = $4',
-      [session.source_id, session.phone, rosterGuildId, discordId]
+      `UPDATE org_members om SET member_id = $1, roles_assigned_at = NOW()
+         FROM users u
+        WHERE u.id = om.user_id AND om.org_id = $2 AND u.discord_id = $3`,
+      [session.source_id, orgId, discordId]
     );
     if (rowCount === 0) {
-      // row ยังไม่มี (sync พลาด) → ต้องมี GuildMember ของ guild เจ้าของ roster มาสร้างแถวก่อน
-      if (!member) {
-        const rosterGuild = interaction.client.guilds.cache.get(rosterGuildId);
-        member = await rosterGuild?.members.fetch(discordId).catch(() => null);
-      }
-      if (!member) {
-        const rosterGuildName = interaction.client.guilds.cache.get(rosterGuildId)?.name || rosterGuildId;
-        await deleteUserSetting(discordId, key);
-        return interaction.editReply(`❌ ทะเบียนรายชื่อนี้อยู่ที่ server "${rosterGuildName}" — ต้องเป็นสมาชิก server นั้นด้วยจึงจะยืนยันตัวตนได้ ติดต่อแอดมิน`);
-      }
-      await upsertMemberFromDiscord(member);
+      // ยังไม่มีแถวใน org นี้เลย (sync พลาด) → สร้างจาก guild ที่กดปุ่มก่อน แล้วเขียนซ้ำ
+      await upsertMemberFromDiscord(interaction.member);
       ({ rowCount } = await pool.query(
-        'UPDATE dc_members SET member_id = $1, phone = $2, phone_verified_at = NOW() WHERE guild_id = $3 AND discord_id = $4',
-        [session.source_id, session.phone, rosterGuildId, discordId]
+        `UPDATE org_members om SET member_id = $1, roles_assigned_at = NOW()
+           FROM users u
+          WHERE u.id = om.user_id AND om.org_id = $2 AND u.discord_id = $3`,
+        [session.source_id, orgId, discordId]
       ));
     }
-    if (rowCount === 0) throw new Error('dc_members row not found after upsert');
+    if (rowCount === 0) throw new Error('org_members row not found after upsert');
+
+    await pool.query(
+      'UPDATE users SET phone = $1, phone_verified_at = NOW() WHERE discord_id = $2',
+      [session.phone, discordId]
+    );
   } catch (err) {
     if (err.code === '23505') {
       await deleteUserSetting(discordId, key);
