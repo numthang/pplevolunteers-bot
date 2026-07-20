@@ -14,44 +14,30 @@ async function upsertMember(guildId, data) {
   });
   const orgId = await orgIdOfGuild(guildId);
 
-  const sql = `
-  INSERT INTO org_members
-    (user_id, org_id, guild_id, display_name, avatar, nickname, member_id, specialty, position, amphoe, province, region, roles, interests, referred_by)
-  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-  ON CONFLICT (user_id, guild_id) WHERE guild_id IS NOT NULL DO UPDATE SET
-    org_id = COALESCE(EXCLUDED.org_id, org_members.org_id),
-    display_name = EXCLUDED.display_name,
-    avatar = EXCLUDED.avatar,
-    nickname = EXCLUDED.nickname,
-    member_id = EXCLUDED.member_id,
-    specialty = EXCLUDED.specialty,
-    position = EXCLUDED.position,
-    amphoe = EXCLUDED.amphoe,
-    province = EXCLUDED.province,
-    region = EXCLUDED.region,
-    roles = EXCLUDED.roles,
-    interests = EXCLUDED.interests,
-    referred_by = EXCLUDED.referred_by,
-    roles_assigned_at = NOW()
-  `;
-  const values = [
-    userId,
-    orgId,
-    guildId,
-    data.display_name ?? null,
-    data.avatar ?? null,
-    data.nickname ?? null,
-    data.member_id ?? null,
-    data.specialty ?? null,
-    data.position ?? null,
-    data.amphoe ?? null,
-    data.province ?? null,
-    data.region ?? null,
-    data.roles ?? null,
-    data.interests ?? null,
-    data.referred_by ?? null,
-  ];
-  await pool.query(sql, values);
+  // ⚠️ อัปเดต "เฉพาะคอลัมน์ที่ caller ส่งมาจริง" — ห้าม SET ทุกคอลัมน์รวด
+  // เดิม (dc_members) แต่ละ caller เขียน SQL ระบุคอลัมน์ของตัวเอง จึงไม่เคยแตะ field ของคนอื่น
+  // ตอนรวมเป็นฟังก์ชันเดียวแล้ว SET หมด → sync ที่ส่งแค่ display_name/province/roles
+  // ล้าง member_id/specialty/bank ฯลฯ เป็น NULL (พังจริงมาแล้ว 2026-07-21 ล้าง member_id 5 แถว)
+  const OPTIONAL_COLS = ['display_name', 'avatar', 'nickname', 'member_id', 'specialty',
+                         'position', 'amphoe', 'province', 'region', 'roles', 'interests', 'referred_by'];
+  const cols = OPTIONAL_COLS.filter(c => data[c] !== undefined);
+
+  const insertCols = ['user_id', 'org_id', 'guild_id', ...cols];
+  const values = [userId, orgId, guildId, ...cols.map(c => data[c] ?? null)];
+  const placeholders = insertCols.map((_, i) => `$${i + 1}`).join(', ');
+  const setClause = [
+    'org_id = COALESCE(EXCLUDED.org_id, org_members.org_id)',
+    ...cols.map(c => `${c} = EXCLUDED.${c}`),
+    'roles_assigned_at = NOW()',
+  ].join(',\n    ');
+
+  await pool.query(
+    `INSERT INTO org_members (${insertCols.join(', ')})
+     VALUES (${placeholders})
+     ON CONFLICT (user_id, guild_id) WHERE guild_id IS NOT NULL DO UPDATE SET
+    ${setClause}`,
+    values
+  );
 }
 
 async function _deriveRoleFields(member) {

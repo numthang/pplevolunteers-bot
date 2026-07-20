@@ -1,5 +1,5 @@
 /**
- * One-time sync: fetch all guild members from Discord → upsert into dc_members
+ * One-time sync: fetch all guild members from Discord → upsert into users + org_members
  * Run:  node scripts/calling/sync-discord-members.js <guildId> [--dry-run|--sql]
  *   --dry-run : print sample, ไม่เขียน db
  *   --sql     : เขียนไฟล์ .sql ลง logs/ (ไม่ต่อ db) แล้ว import ทีหลัง
@@ -11,6 +11,7 @@ const path = require('path');
 const { Client, GatewayIntentBits } = require('discord.js');
 const pool = require('../../db/index');
 const { getRolesByScopePrefix, getPickerRoles } = require('../../db/guildRoles');
+const { upsertMember } = require('../../db/members');
 
 const DRY_RUN = process.argv.includes('--dry-run');
 const SQL_OUT = process.argv.includes('--sql');
@@ -27,42 +28,48 @@ async function buildRow(m, provinceRows, interestIds) {
   };
 }
 
-const UPSERT_SQL = `
-  INSERT INTO dc_members (guild_id, discord_id, username, display_name, province, roles, interests)
-  VALUES ($1, $2, $3, $4, $5, $6, $7)
-  ON CONFLICT (guild_id, discord_id) DO UPDATE SET
-    username = EXCLUDED.username,
-    display_name = EXCLUDED.display_name,
-    province = EXCLUDED.province,
-    roles = EXCLUDED.roles,
-    interests = EXCLUDED.interests,
-    updated_at = CURRENT_TIMESTAMP
-`;
-
 const sqlVal = (v) => (v == null ? 'NULL' : `'${String(v).replace(/'/g, "''")}'`);
 
+// identity split: dc_members → users (identity) + org_members (membership per-guild)
+// bulk import ต้องเป็น 2 statement → stage ลง TEMP TABLE ก่อน แล้ว upsert users → org_members
+// org_id resolve จาก dc_guilds ในไฟล์ SQL เอง (ไม่ hardcode — prod/local เลข org อาจต่างกัน)
 function buildSql(rows) {
+  const guildId = rows[0]?.guild_id;
   const header = [
-    '-- sync dc_members จาก Discord guild (province/roles/interests จาก role)',
-    `-- generated: ${new Date().toISOString()}  rows: ${rows.length}`,
+    '-- sync สมาชิก Discord → users + org_members (province/roles/interests จาก role)',
+    `-- generated: ${new Date().toISOString()}  rows: ${rows.length}  guild: ${guildId}`,
     '-- import: sudo -u www bash -c \'cd /www/wwwroot/pple-volunteers && psql "$DATABASE_URL" -f <ไฟล์นี้>\'',
     '',
     'BEGIN;',
-    'INSERT INTO dc_members',
-    '  (guild_id, discord_id, username, display_name, province, roles, interests)',
-    'VALUES',
+    'CREATE TEMP TABLE _sync (discord_id text, username text, display_name text, province text, roles text, interests text) ON COMMIT DROP;',
+    'INSERT INTO _sync (discord_id, username, display_name, province, roles, interests) VALUES',
   ];
   const values = rows.map((r) =>
-    `  (${sqlVal(r.guild_id)}, ${sqlVal(r.discord_id)}, ${sqlVal(r.username)}, ${sqlVal(r.display_name)}, ${sqlVal(r.province)}, ${sqlVal(r.roles)}, ${sqlVal(r.interests)})`
-  ).join(',\n');
+    `  (${sqlVal(r.discord_id)}, ${sqlVal(r.username)}, ${sqlVal(r.display_name)}, ${sqlVal(r.province)}, ${sqlVal(r.roles)}, ${sqlVal(r.interests)})`
+  ).join(',\n') + ';';
   const footer = [
-    'ON CONFLICT (guild_id, discord_id) DO UPDATE SET',
-    '  username = EXCLUDED.username,',
-    '  display_name = EXCLUDED.display_name,',
-    '  province = EXCLUDED.province,',
-    '  roles = EXCLUDED.roles,',
-    '  interests = EXCLUDED.interests,',
-    '  updated_at = CURRENT_TIMESTAMP;',
+    '',
+    '-- 1) identity',
+    'INSERT INTO users (discord_id, username)',
+    'SELECT discord_id, username FROM _sync',
+    'ON CONFLICT (discord_id) WHERE discord_id IS NOT NULL DO UPDATE SET',
+    '  username   = COALESCE(EXCLUDED.username, users.username),',
+    '  updated_at = NOW();',
+    '',
+    '-- 2) membership + profile (per-guild)',
+    'INSERT INTO org_members (user_id, org_id, guild_id, display_name, province, roles, interests)',
+    'SELECT u.id,',
+    `       (SELECT org_id FROM dc_guilds WHERE guild_id = ${sqlVal(guildId)}),`,
+    `       ${sqlVal(guildId)},`,
+    '       s.display_name, s.province, s.roles, s.interests',
+    '  FROM _sync s JOIN users u ON u.discord_id = s.discord_id',
+    'ON CONFLICT (user_id, guild_id) WHERE guild_id IS NOT NULL DO UPDATE SET',
+    '  org_id            = COALESCE(EXCLUDED.org_id, org_members.org_id),',
+    '  display_name      = EXCLUDED.display_name,',
+    '  province          = EXCLUDED.province,',
+    '  roles             = EXCLUDED.roles,',
+    '  interests         = EXCLUDED.interests,',
+    '  roles_assigned_at = NOW();',
     'COMMIT;',
     '',
   ];
@@ -116,7 +123,7 @@ client.once('ready', async () => {
   for (const m of humans) {
     const r = await buildRow(m, provinceRows, interestIds);
     try {
-      await pool.query(UPSERT_SQL, [r.guild_id, r.discord_id, r.username, r.display_name, r.province, r.roles, r.interests]);
+      await upsertMember(r.guild_id, r);   // 2 จังหวะ users → org_members (db/members.js)
       done++;
     } catch (err) {
       console.error(`  ✗ ${m.user.username}: ${err.message}`);
