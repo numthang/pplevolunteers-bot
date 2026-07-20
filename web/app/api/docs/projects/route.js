@@ -1,8 +1,8 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
-import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
+import { getEffectiveOrgIdentity } from '@/lib/orgAccess.js'
 import { canManageDocs, getUserScope } from '@/lib/docsAccess.js'
-import { getGuildId } from '@/lib/guildContext.js'
+import { getOrgId } from '@/lib/orgContext.js'
 import { createDocProject, getDocEvents } from '@/db/docs/projects.js'
 import { getAllowedItems } from '@/config/fund69-rules.js'
 
@@ -13,17 +13,17 @@ import { getAllowedItems } from '@/config/fund69-rules.js'
  */
 export async function GET(req) {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.discordId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!session?.user?.userId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { access } = await getEffectiveIdentity(session)
+  const { access } = await getEffectiveOrgIdentity(session)
 
   const { searchParams } = new URL(req.url)
   const onlyActive = searchParams.get('active') === 'true'
-  const guildId = await getGuildId(session)
-  const scope   = getUserScope(access)
+  const orgId = await getOrgId(session)
+  const scope = getUserScope(access)
 
   try {
-    const all = await getDocEvents(guildId, scope)
+    const all = await getDocEvents(orgId, scope)
     const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 60)
     const cutoffStr = cutoff.toISOString().slice(0, 10)
 
@@ -49,9 +49,9 @@ export async function GET(req) {
  */
 export async function POST(req) {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.discordId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!session?.user?.userId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { access } = await getEffectiveIdentity(session)
+  const { access } = await getEffectiveOrgIdentity(session)
   if (!canManageDocs(access)) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
   try {
@@ -60,16 +60,16 @@ export async function POST(req) {
 
     if (!actEventCacheId) return Response.json({ error: 'actEventCacheId is required' }, { status: 400 })
 
-    const guildId = await getGuildId(session)
+    const orgId = await getOrgId(session)
     const id = await createDocProject({
-      guildId,
+      orgId,
       actEventCacheId,
       isMobile:         isMobile ?? false,
       participantCount: participantCount || null,
       budget:           budget || null,
       allowedItems:     getAllowedItems(isMobile ?? false),
       projectName:      projectName || null,
-      createdBy:        session.user.discordId,
+      createdBy:        session.user.userId,
     })
 
     return Response.json({ success: true, data: { id } }, { status: 201 })

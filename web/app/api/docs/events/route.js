@@ -1,36 +1,38 @@
 import { getServerSession } from 'next-auth'
 import pool from '@/db/index.js'
 import { authOptions } from '@/lib/auth-options.js'
-import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
+import { getEffectiveOrgIdentity } from '@/lib/orgAccess.js'
 import { canManageDocs, getUserScope } from '@/lib/docsAccess.js'
-import { getGuildId } from '@/lib/guildContext.js'
+import { getOrgId } from '@/lib/orgContext.js'
 
 /**
  * GET /api/docs/events?q=&province=&limit=20
  * Search cache_pple_event for docs project creation
+ * cache_pple_event ยังเป็น guild-based (ไม่ได้ migrate) — scope ด้วย org bridge
+ * เหมือน getDocEvents (db/docs/projects.js) เพื่อครอบทุก guild ของ org นี้
  */
 export async function GET(req) {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.discordId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!session?.user?.userId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { access } = await getEffectiveIdentity(session)
+  const { access } = await getEffectiveOrgIdentity(session)
   if (!canManageDocs(access)) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
   const { searchParams } = new URL(req.url)
   const q        = searchParams.get('q') || ''
   const province = searchParams.get('province') || ''
   const limit    = Math.min(parseInt(searchParams.get('limit') || '30'), 100)
-  const guildId  = await getGuildId(session)
+  const orgId    = await getOrgId(session)
   const scope    = getUserScope(access)
 
-  const params = [guildId]
+  const params = [orgId]
   let query = `
     SELECT id, name, province,
       TO_CHAR(event_date,     'YYYY-MM-DD"T"HH24:MI') AS event_date,
       TO_CHAR(event_end_date, 'YYYY-MM-DD"T"HH24:MI') AS event_end_date,
       image_url
     FROM cache_pple_event
-    WHERE guild_id = $1
+    WHERE guild_id IN (SELECT guild_id FROM dc_guilds WHERE org_id = $1)
       AND type = 'event'`
 
   if (q) {

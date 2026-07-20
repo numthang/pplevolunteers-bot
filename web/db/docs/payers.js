@@ -24,23 +24,45 @@ function gatedScopeNodes(permissions, scopeGrants) {
   return [...new Set(nodes)]
 }
 
-/** คืน payer ทั้งหมดใน guild พร้อม scope_nodes ที่ผ่าน permission gate แล้ว */
-export async function getPayers(guildId) {
+/** คืน payer ทั้งหมดใน org พร้อม scope_nodes ที่ผ่าน permission gate แล้ว
+ *  ⚠️ org_members เป็น per-guild และ **roles ของแต่ละ guild ไม่เหมือนกัน** → ห้ามหยิบแถวเดียว
+ *  (LATERAL LIMIT 1 ไม่มี ORDER BY = สุ่มว่าได้สิทธิ์ชุดไหน — เจอจริง user 2948 มี 2 แถว roles คนละชุด)
+ *  ต้อง **union ทุกแถวใน org** เหมือน getEffectiveOrgIdentity (lib/orgAccess.js) */
+export async function getPayers(orgId) {
   const { rows } = await pool.query(
-    `SELECT dp.id, dp.guild_id, dp.discord_id, dp.display_name, dp.position, dp.sort_order,
-            (dp.signature_base64 IS NOT NULL) AS has_static_sig,
-            m.roles
+    `SELECT dp.id, dp.org_id, dp.user_id, dp.display_name, dp.position, dp.sort_order,
+            (dp.signature_base64 IS NOT NULL) AS has_static_sig
      FROM docs_payers dp
-     LEFT JOIN users u      ON u.discord_id = dp.discord_id
-     LEFT JOIN org_members m ON m.user_id = u.id AND m.guild_id = dp.guild_id
-     WHERE dp.guild_id = $1
+     WHERE dp.org_id = $1
      ORDER BY dp.sort_order, dp.id`,
-    [guildId]
+    [orgId]
+  )
+  if (!rows.length) return []
+
+  // ทุกแถว membership ของ payer เหล่านี้ใน org (guild ละแถว) — resolve ทีละแถวแล้ว union
+  const { rows: memberRows } = await pool.query(
+    `SELECT om.user_id, om.guild_id, om.roles, om.web_roles
+       FROM org_members om
+      WHERE om.org_id = $1 AND om.user_id = ANY($2::int[])`,
+    [orgId, rows.map(r => r.user_id).filter(Boolean)]
   )
 
-  return Promise.all(rows.map(async ({ roles, ...p }) => {
-    const roleNames = roles ? roles.split(',').map(r => r.trim()).filter(Boolean) : []
-    const { permissions, scopeGrants } = await resolveAccess(guildId, roleNames)
+  const byUser = new Map()
+  for (const m of memberRows) {
+    if (!byUser.has(m.user_id)) byUser.set(m.user_id, [])
+    byUser.get(m.user_id).push(m)
+  }
+
+  return Promise.all(rows.map(async (p) => {
+    const permissions = new Set()
+    const scopeGrants = []
+    for (const m of byUser.get(p.user_id) || []) {
+      const roleNames = (m.roles || '').split(',').map(r => r.trim()).filter(Boolean)
+      const webRoles  = (m.web_roles || '').split(',').map(r => r.trim()).filter(Boolean)
+      const a = await resolveAccess(m.guild_id, roleNames, webRoles)
+      for (const perm of a.permissions) permissions.add(perm)
+      for (const g of a.scopeGrants) scopeGrants.push(g)
+    }
     return { ...p, scope_nodes: gatedScopeNodes(permissions, scopeGrants) }
   }))
 }
@@ -51,35 +73,36 @@ export async function getPayers(guildId) {
  * - regional_coordinator → ตรวจ region:/subregion: scope nodes
  * คืน members เรียงโดย primary_province == eventProvince ก่อน
  */
-async function queryPayersByPermission(guildId, permission, eventProvince) {
+async function queryPayersByPermission(orgId, permission, eventProvince) {
   const isProvincial = permission === 'province_coordinator' || permission === 'district_coordinator'
 
   const { rows } = await pool.query(
     `WITH member_roles AS (
-       SELECT u.discord_id, m.display_name, m.primary_province,
+       SELECT u.id AS user_id, u.discord_id, m.display_name, m.primary_province,
               u.firstname, u.lastname, m.member_id,
               trim(unnest(string_to_array(m.roles, ','))) AS role_name
        FROM org_members m
        JOIN users u ON u.id = m.user_id
-       WHERE m.guild_id = $1 AND m.roles IS NOT NULL AND m.roles != ''
+       WHERE m.guild_id IN (SELECT guild_id FROM dc_guilds WHERE org_id = $1)
+         AND m.roles IS NOT NULL AND m.roles != ''
      ),
      has_permission AS (
        SELECT DISTINCT mr.discord_id
        FROM member_roles mr
-       JOIN dc_guild_roles gr ON gr.guild_id = $1 AND gr.role_name = mr.role_name
+       JOIN dc_guild_roles gr ON gr.guild_id IN (SELECT guild_id FROM dc_guilds WHERE org_id = $1) AND gr.role_name = mr.role_name
        WHERE gr.permission = $2
      )
-     SELECT mr.discord_id, mr.display_name, mr.primary_province,
+     SELECT mr.user_id, mr.discord_id, mr.display_name, mr.primary_province,
             COALESCE(n.first_name, mr.firstname) AS firstname,
             COALESCE(n.last_name,  mr.lastname)  AS lastname,
             array_agg(DISTINCT gr.scope_node) FILTER (WHERE gr.scope_node IS NOT NULL) AS scope_nodes,
             (array_agg(DISTINCT gr.role_name) FILTER (WHERE gr.permission = $2))[1] AS position
      FROM member_roles mr
-     JOIN dc_guild_roles gr ON gr.guild_id = $1 AND gr.role_name = mr.role_name
+     JOIN dc_guild_roles gr ON gr.guild_id IN (SELECT guild_id FROM dc_guilds WHERE org_id = $1) AND gr.role_name = mr.role_name
      LEFT JOIN cache_pple_member n ON n.source_id = mr.member_id
      WHERE mr.discord_id IN (SELECT discord_id FROM has_permission)
-     GROUP BY mr.discord_id, mr.display_name, mr.primary_province, mr.firstname, mr.lastname, n.first_name, n.last_name`,
-    [guildId, permission]
+     GROUP BY mr.user_id, mr.discord_id, mr.display_name, mr.primary_province, mr.firstname, mr.lastname, n.first_name, n.last_name`,
+    [orgId, permission]
   )
 
   // Apply gatedScopeNodes logic per permission type, then filter by province coverage
@@ -117,13 +140,13 @@ async function queryPayersByPermission(guildId, permission, eventProvince) {
  *   deduplicate ด้วย discord_id ให้คนเดียวโชว์ครั้งเดียว
  * ถ้า eventProvince เป็น null → คืน getPayers ทั้งหมด (หน้า settings ดูภาพรวม)
  */
-export async function getPayersForEvent(guildId, eventProvince) {
-  if (!eventProvince) return getPayers(guildId)
+export async function getPayersForEvent(orgId, eventProvince) {
+  if (!eventProvince) return getPayers(orgId)
 
   const [level1, level2, manualPayers] = await Promise.all([
-    queryPayersByPermission(guildId, 'province_coordinator', eventProvince),
-    queryPayersByPermission(guildId, 'regional_coordinator', eventProvince),
-    getPayers(guildId),
+    queryPayersByPermission(orgId, 'province_coordinator', eventProvince),
+    queryPayersByPermission(orgId, 'regional_coordinator', eventProvince),
+    getPayers(orgId),
   ])
 
   // docs_payers = manual list — กรองด้วย scope coverage เหมือน role-based
@@ -145,7 +168,7 @@ export async function getPayersForEvent(guildId, eventProvince) {
 
   // position = ยศสูงสุดที่คนนั้นถือ (ไม่ใช่ level ที่ qualify เข้า pool)
   // เช่น Jatsada เป็น province_coordinator แต่ถือ รองเลขาธิการ (regional) → แสดง รองเลขาธิการ
-  const positions = await getHighestPositions(guildId, result.map(p => p.discord_id))
+  const positions = await getHighestPositions(orgId, result.map(p => p.discord_id))
   for (const p of result) {
     if (positions[p.discord_id]) p.position = positions[p.discord_id]
   }
@@ -156,18 +179,19 @@ export async function getPayersForEvent(guildId, eventProvince) {
  * คืน map discord_id → ชื่อ role ตำแหน่ง "ยศสูงสุด" ที่ถือ (จัดอันดับด้วย permission token)
  * secretary_general > regional_coordinator > province_coordinator > district_coordinator
  */
-async function getHighestPositions(guildId, discordIds) {
+async function getHighestPositions(orgId, discordIds) {
   if (!discordIds.length) return {}
   const { rows } = await pool.query(
     `WITH mr AS (
        SELECT u.discord_id, trim(unnest(string_to_array(m.roles, ','))) AS role_name
        FROM org_members m
        JOIN users u ON u.id = m.user_id
-       WHERE m.guild_id = $1 AND u.discord_id = ANY($2) AND m.roles IS NOT NULL
+       WHERE m.guild_id IN (SELECT guild_id FROM dc_guilds WHERE org_id = $1)
+         AND u.discord_id = ANY($2) AND m.roles IS NOT NULL
      )
      SELECT DISTINCT ON (mr.discord_id) mr.discord_id, gr.role_name
      FROM mr
-     JOIN dc_guild_roles gr ON gr.guild_id = $1 AND gr.role_name = mr.role_name
+     JOIN dc_guild_roles gr ON gr.guild_id IN (SELECT guild_id FROM dc_guilds WHERE org_id = $1) AND gr.role_name = mr.role_name
      WHERE gr.permission IN ('secretary_general','regional_coordinator','province_coordinator','district_coordinator')
      ORDER BY mr.discord_id,
        CASE gr.permission
@@ -177,42 +201,42 @@ async function getHighestPositions(guildId, discordIds) {
          WHEN 'district_coordinator' THEN 4
        END,
        gr.role_name`,
-    [guildId, discordIds]
+    [orgId, discordIds]
   )
   return Object.fromEntries(rows.map(r => [r.discord_id, r.role_name]))
 }
 
-export async function addPayer(guildId, { discordId, displayName, position, sortOrder = 0 }) {
+export async function addPayer(orgId, { userId, displayName, position, sortOrder = 0 }) {
   const { rows } = await pool.query(
-    `INSERT INTO docs_payers (guild_id, discord_id, display_name, position, sort_order)
+    `INSERT INTO docs_payers (org_id, user_id, display_name, position, sort_order)
      VALUES ($1, $2, $3, $4, $5)
-     ON CONFLICT (guild_id, discord_id) DO UPDATE SET
+     ON CONFLICT (org_id, user_id) DO UPDATE SET
        display_name = EXCLUDED.display_name,
        position     = EXCLUDED.position,
        sort_order   = EXCLUDED.sort_order
-     RETURNING id, discord_id, display_name, position, sort_order`,
-    [guildId, discordId, displayName, position, sortOrder]
+     RETURNING id, user_id, display_name, position, sort_order`,
+    [orgId, userId, displayName, position, sortOrder]
   )
   return rows[0]
 }
 
-export async function updatePayer(id, guildId, { displayName, position, sortOrder }) {
+export async function updatePayer(id, orgId, { displayName, position, sortOrder }) {
   const { rows } = await pool.query(
     `UPDATE docs_payers SET
        display_name = COALESCE($3, display_name),
        position     = COALESCE($4, position),
        sort_order   = COALESCE($5, sort_order)
-     WHERE id = $1 AND guild_id = $2
-     RETURNING id, discord_id, display_name, position, sort_order`,
-    [id, guildId, displayName ?? null, position ?? null, sortOrder ?? null]
+     WHERE id = $1 AND org_id = $2
+     RETURNING id, user_id, display_name, position, sort_order`,
+    [id, orgId, displayName ?? null, position ?? null, sortOrder ?? null]
   )
   return rows[0] || null
 }
 
-export async function removePayer(id, guildId) {
+export async function removePayer(id, orgId) {
   const { rowCount } = await pool.query(
-    `DELETE FROM docs_payers WHERE id = $1 AND guild_id = $2`,
-    [id, guildId]
+    `DELETE FROM docs_payers WHERE id = $1 AND org_id = $2`,
+    [id, orgId]
   )
   return rowCount > 0
 }

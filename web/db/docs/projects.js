@@ -12,9 +12,11 @@ function sixMonthsFromNow() {
   return d
 }
 
-/** list events จาก cache_pple_event โดยตรง, LEFT JOIN docs_projects เพื่อดู status */
-export async function getDocEvents(guildId, provinces = null) {
-  const params = [guildId]
+/** list events จาก cache_pple_event โดยตรง, LEFT JOIN docs_projects เพื่อดู status
+ *  cache_pple_event ยังคง guild-based (ACT/Discord artifact ไม่แตะ) — scope ให้ org
+ *  ด้วย e.guild_id IN (guild ที่เป็นของ org นี้) เหมือน db/calling/campaigns.js */
+export async function getDocEvents(orgId, provinces = null) {
+  const params = [orgId]
   let query = `
     SELECT
       e.id AS act_event_cache_id,
@@ -25,9 +27,9 @@ export async function getDocEvents(guildId, provinces = null) {
       COUNT(DISTINCT dae.id)                                       AS entry_count,
       COUNT(DISTINCT dae.id) FILTER (WHERE dae.status = 'signed')  AS signed_count
     FROM cache_pple_event e
-    LEFT JOIN docs_projects p ON p.act_event_cache_id = e.id AND p.guild_id = $1
+    LEFT JOIN docs_projects p ON p.cache_pple_event_id = e.id AND p.org_id = $1
     LEFT JOIN docs_activity_entries dae ON dae.project_id = p.id
-    WHERE e.type = 'event' AND e.guild_id = $1`
+    WHERE e.type = 'event' AND e.guild_id IN (SELECT guild_id FROM dc_guilds WHERE org_id = $1)`
 
   if (provinces) {
     params.push(provinces)
@@ -42,35 +44,35 @@ export async function getDocEvents(guildId, provinces = null) {
 /** compat: ใช้ใน places ที่ยังอ้าง getDocProjects */
 export const getDocProjects = getDocEvents
 
-export async function getDocProjectByEventId(actEventCacheId, guildId) {
+export async function getDocProjectByEventId(actEventCacheId, orgId) {
   const { rows } = await pool.query(
     `SELECT
        p.*, e.name AS event_name, e.province, e.image_url, e.location, e.act_event_id,
        TO_CHAR(e.event_date,     'YYYY-MM-DD"T"HH24:MI') AS event_date,
        TO_CHAR(e.event_end_date, 'YYYY-MM-DD"T"HH24:MI') AS event_end_date
      FROM docs_projects p
-     JOIN cache_pple_event e ON e.id = p.act_event_cache_id
-     WHERE p.act_event_cache_id = $1 AND p.guild_id = $2`,
-    [actEventCacheId, guildId]
+     JOIN cache_pple_event e ON e.id = p.cache_pple_event_id
+     WHERE p.cache_pple_event_id = $1 AND p.org_id = $2`,
+    [actEventCacheId, orgId]
   )
   return rows[0] || null
 }
 
 /** upsert: สร้าง docs_project ถ้ายังไม่มี, return project id */
-export async function upsertDocProject({ guildId, actEventCacheId, isMobile, participantCount, budget, allowedItems, projectName, createdBy }) {
+export async function upsertDocProject({ orgId, actEventCacheId, isMobile, participantCount, budget, allowedItems, projectName, createdBy }) {
   const { rows } = await pool.query(
     `INSERT INTO docs_projects
-       (guild_id, act_event_cache_id, is_mobile, participant_count, budget, allowed_items, project_name, created_by,
+       (org_id, cache_pple_event_id, is_mobile, participant_count, budget, allowed_items, project_name, created_by,
         project_token, project_token_expires)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-     ON CONFLICT (guild_id, act_event_cache_id) DO UPDATE SET
+     ON CONFLICT (org_id, cache_pple_event_id) DO UPDATE SET
        is_mobile         = COALESCE(EXCLUDED.is_mobile,         docs_projects.is_mobile),
        participant_count = COALESCE(EXCLUDED.participant_count, docs_projects.participant_count),
        budget            = COALESCE(EXCLUDED.budget,            docs_projects.budget),
        allowed_items     = COALESCE(EXCLUDED.allowed_items,     docs_projects.allowed_items),
        project_name      = COALESCE(EXCLUDED.project_name,      docs_projects.project_name)
      RETURNING id`,
-    [guildId, actEventCacheId, isMobile ?? false, participantCount ?? null, budget ?? null,
+    [orgId, actEventCacheId, isMobile ?? false, participantCount ?? null, budget ?? null,
      JSON.stringify(allowedItems ?? []), projectName ?? null, createdBy,
      genToken(), sixMonthsFromNow()]
   )
@@ -84,21 +86,21 @@ export async function getDocProjectById(id) {
        TO_CHAR(e.event_date,     'YYYY-MM-DD"T"HH24:MI') AS event_date,
        TO_CHAR(e.event_end_date, 'YYYY-MM-DD"T"HH24:MI') AS event_end_date
      FROM docs_projects p
-     JOIN cache_pple_event e ON e.id = p.act_event_cache_id
+     JOIN cache_pple_event e ON e.id = p.cache_pple_event_id
      WHERE p.id = $1`,
     [id]
   )
   return rows[0] || null
 }
 
-export async function createDocProject({ guildId, actEventCacheId, isMobile, participantCount, budget, allowedItems, projectName, createdBy }) {
+export async function createDocProject({ orgId, actEventCacheId, isMobile, participantCount, budget, allowedItems, projectName, createdBy }) {
   const { rows } = await pool.query(
     `INSERT INTO docs_projects
-       (guild_id, act_event_cache_id, is_mobile, participant_count, budget, allowed_items, project_name, created_by,
+       (org_id, cache_pple_event_id, is_mobile, participant_count, budget, allowed_items, project_name, created_by,
         project_token, project_token_expires)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
      RETURNING id`,
-    [guildId, actEventCacheId, isMobile ?? false, participantCount, budget, JSON.stringify(allowedItems ?? []), projectName ?? null, createdBy,
+    [orgId, actEventCacheId, isMobile ?? false, participantCount, budget, JSON.stringify(allowedItems ?? []), projectName ?? null, createdBy,
      genToken(), sixMonthsFromNow()]
   )
   return rows[0].id
@@ -121,7 +123,7 @@ export async function getProjectByToken(token) {
     `SELECT p.*, e.name AS event_name, e.province,
             TO_CHAR(e.event_date, 'YYYY-MM-DD"T"HH24:MI') AS event_date
      FROM docs_projects p
-     JOIN cache_pple_event e ON e.id = p.act_event_cache_id
+     JOIN cache_pple_event e ON e.id = p.cache_pple_event_id
      WHERE p.project_token = $1 AND p.project_token_expires > NOW()`,
     [token]
   )

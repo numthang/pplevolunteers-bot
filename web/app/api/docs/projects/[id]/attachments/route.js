@@ -1,21 +1,21 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
-import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
+import { getEffectiveOrgIdentity } from '@/lib/orgAccess.js'
 import { canManageDocs } from '@/lib/docsAccess.js'
-import { getGuildId } from '@/lib/guildContext.js'
+import { getOrgId } from '@/lib/orgContext.js'
 import { getDocProjectById } from '@/db/docs/projects.js'
 import { getAttachmentsByProject, createAttachment } from '@/db/docs/attachments.js'
 import { cropAndSave } from '@/lib/cropDocument.js'
 
 async function auth(session) {
-  const { access } = await getEffectiveIdentity(session)
+  const { access } = await getEffectiveOrgIdentity(session)
   return canManageDocs(access)
 }
 
 /** GET /api/docs/projects/[id]/attachments */
 export async function GET(req, { params }) {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.discordId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!session?.user?.userId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
   if (!await auth(session)) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
   const { id } = await params
@@ -26,11 +26,11 @@ export async function GET(req, { params }) {
 /** POST /api/docs/projects/[id]/attachments — multipart upload */
 export async function POST(req, { params }) {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.discordId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!session?.user?.userId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
   if (!await auth(session)) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
   const { id } = await params
-  const guildId = await getGuildId(session)
+  const orgId = await getOrgId(session)
   const project = await getDocProjectById(id)
   if (!project) return Response.json({ error: 'Not found' }, { status: 404 })
 
@@ -46,7 +46,7 @@ export async function POST(req, { params }) {
 
   try {
     const filePath = await cropAndSave(buffer, project.id)
-    const attachment = await createAttachment(project.id, guildId, {
+    const attachment = await createAttachment(project.id, orgId, {
       originalName: file.name,
       filePath,
     })

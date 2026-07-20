@@ -2,7 +2,8 @@ import { getTranslations } from 'next-intl/server'
 import { getSession } from '@/lib/auth.js'
 import { redirect, notFound } from 'next/navigation'
 import { canManageDocs } from '@/lib/docsAccess.js'
-import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
+import { getEffectiveOrgIdentity } from '@/lib/orgAccess.js'
+import { getOrgId } from '@/lib/orgContext.js'
 import { getGuildId } from '@/lib/guildContext.js'
 import { getDocProjectByEventId, getActEventById } from '@/db/docs/projects.js'
 import { getEntriesByProject, autoAssignPayers } from '@/db/docs/entries.js'
@@ -10,6 +11,7 @@ import DocProjectView from '@/components/docs/DocProjectView'
 
 // [id] ใน URL = cache_pple_event.id ไม่ใช่ docs_projects.id
 // docs_projects ถูก lookup ด้วย act_event_cache_id → getDocProjectByEventId
+// getActEventById ยังคงรับ guildId จริง — cache_pple_event ไม่ได้ migrate เป็น org (query WHERE guild_id ตรงๆ ไม่ bridge)
 
 export async function generateMetadata({ params }) {
   const { id: eventCacheId } = await params
@@ -26,16 +28,17 @@ export default async function DocProjectPage({ params }) {
   const session = await getSession()
   if (!session) redirect('/')
 
-  const { access, discordId } = await getEffectiveIdentity(session)
+  const { access, discordId } = await getEffectiveOrgIdentity(session)
   const canManage = canManageDocs(access)
   if (!canManage) redirect('/')
 
+  const orgId = await getOrgId(session)
   const guildId = await getGuildId(session)
-  const project = await getDocProjectByEventId(eventCacheId, guildId)
+  const project = await getDocProjectByEventId(eventCacheId, orgId)
 
   // auto-เลือกผู้จ่ายให้ entry ที่ยังไม่มี (idempotent — no-op ถ้าทุก entry มี payer แล้ว)
   if (project) {
-    await autoAssignPayers(project.id, guildId, project.province ?? null)
+    await autoAssignPayers(project.id, orgId, project.province ?? null)
   }
 
   const entries = project ? await getEntriesByProject(project.id) : []

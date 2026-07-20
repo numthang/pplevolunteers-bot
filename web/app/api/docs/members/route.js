@@ -1,9 +1,9 @@
 import { getServerSession } from 'next-auth'
 import pool from '@/db/index.js'
 import { authOptions } from '@/lib/auth-options.js'
-import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
+import { getEffectiveOrgIdentity } from '@/lib/orgAccess.js'
 import { canManageDocs } from '@/lib/docsAccess.js'
-import { getGuildId } from '@/lib/guildContext.js'
+import { getOrgId } from '@/lib/orgContext.js'
 
 /**
  * GET /api/docs/members?q=&limit=20
@@ -11,24 +11,24 @@ import { getGuildId } from '@/lib/guildContext.js'
  */
 export async function GET(req) {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.discordId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!session?.user?.userId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { access } = await getEffectiveIdentity(session)
+  const { access } = await getEffectiveOrgIdentity(session)
   if (!canManageDocs(access)) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
   const { searchParams } = new URL(req.url)
-  const q       = searchParams.get('q') || ''
-  const limit   = Math.min(parseInt(searchParams.get('limit') || '30'), 100)
-  const guildId = await getGuildId(session)
+  const q     = searchParams.get('q') || ''
+  const limit = Math.min(parseInt(searchParams.get('limit') || '30'), 100)
+  const orgId = await getOrgId(session)
 
-  const params = [guildId]
+  const params = [orgId]
   let query = `
     SELECT u.discord_id, om.display_name, u.username, om.member_id,
            n.first_name, n.last_name
     FROM org_members om
     JOIN users u ON u.id = om.user_id
     LEFT JOIN cache_pple_member n ON n.source_id = om.member_id
-    WHERE om.guild_id = $1`
+    WHERE om.org_id = $1`
 
   if (q) {
     params.push(`%${q}%`)
