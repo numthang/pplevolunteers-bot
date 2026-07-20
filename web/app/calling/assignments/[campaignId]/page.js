@@ -131,6 +131,7 @@ export default function CampaignPage({ params }) {
   const [noAccess, setNoAccess] = useState(false)
   const [contactsHidden, setContactsHidden] = useState(false)
   const [usersMap, setUsersMap] = useState({})
+  const [discordIdMap, setDiscordIdMap] = useState({})
 
   const [selectedMembers, setSelectedMembers] = useState(new Set())
   const [filterName, setFilterName] = useState(() => searchParams.get('name') || '')
@@ -344,9 +345,15 @@ export default function CampaignPage({ params }) {
       if (cData.data) setCampaign(cData.data)
       const uData = await usersRes.json()
       if (uData.data) {
+        // assigned_to = users.id (org migration) → key ด้วย user_id
         const map = {}
-        for (const u of uData.data) map[u.discord_id] = u.display_name
+        const dmap = {}
+        for (const u of uData.data) {
+          map[u.user_id] = u.display_name
+          if (u.discord_id) dmap[u.user_id] = u.discord_id
+        }
         setUsersMap(map)
+        setDiscordIdMap(dmap)
       }
       const mStats = await memberStatsRes.json()
       const cStats = await contactStatsRes.json()
@@ -487,7 +494,7 @@ export default function CampaignPage({ params }) {
   }
 
   const assignees = (stats.assigneeCounts || [])
-    .map(a => ({ id: a.id, name: usersMap[a.id] || a.id, count: a.count }))
+    .map(a => ({ id: a.id, name: usersMap[a.id] || String(a.id), count: a.count }))
     .sort((a, b) => a.name.localeCompare(b.name))
 
   const isAllSelected = members.length > 0 && selectedMembers.size === members.length
@@ -793,7 +800,9 @@ export default function CampaignPage({ params }) {
                     </div>
                     <div className={`hidden md:block text-base truncate pr-2 ${dimmed}`}>
                       {item.assigned_to
-                        ? <a href={`https://discord.com/users/${item.assigned_to}`} target="_blank" rel="noopener noreferrer" className="text-teal hover:underline">{usersMap[item.assigned_to] || item.assigned_to}</a>
+                        ? (discordIdMap[item.assigned_to]
+                            ? <a href={`https://discord.com/users/${discordIdMap[item.assigned_to]}`} target="_blank" rel="noopener noreferrer" className="text-teal hover:underline">{usersMap[item.assigned_to] || item.assigned_to}</a>
+                            : <span className="text-warm-700 dark:text-disc-text">{usersMap[item.assigned_to] || item.assigned_to}</span>)
                         : <span className="inline-flex items-center gap-1" style={{ color: badge.text }}><UserMinus className="w-4 h-4" /><span className="text-sm font-medium">{badge.label}</span></span>}
                     </div>
                     <div className={`hidden md:block truncate pr-2 ${dimmed}`}>

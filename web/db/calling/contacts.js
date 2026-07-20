@@ -80,17 +80,17 @@ export async function getContactsList(orgId, { province, provinces, keyword, lim
   return rows
 }
 
-export async function getContactsInCampaign(campaignId, filters = {}, limit = 100, offset = 0) {
+export async function getContactsInCampaign(orgId, campaignId, filters = {}, limit = 100, offset = 0) {
   const { amphoe, tier, status, assignedTo, name, called, sort, sms } = filters
 
-  const params = [process.env.GUILD_ID, campaignId]
+  const params = [orgId, campaignId]
 
   let query = `SELECT
      c.*,
      COALESCE(t.tier::text, 'D') AS tier,
      t.flag,
-     COALESCE(a.assigned_to, '') AS assigned_to,
-     COALESCE(a.assigned_by, '') AS assigned_by,
+     a.assigned_to,
+     a.assigned_by,
      a.created_at AS assignment_date,
      l.called_at AS last_called_at,
      l.status AS last_status,
@@ -130,7 +130,7 @@ export async function getContactsInCampaign(campaignId, filters = {}, limit = 10
      AND ($${statusIdx}::text IS NULL
           OR ($${statusIdx} = 'assigned' AND a.id IS NOT NULL)
           OR ($${statusIdx} = 'unassigned' AND a.id IS NULL))
-     AND ($${assignedToIdx}::text IS NULL OR a.assigned_to = $${assignedToIdx})
+     AND ($${assignedToIdx}::text IS NULL OR a.assigned_to = $${assignedToIdx}::int)
      AND ($${calledIdx}::text IS NULL
           OR ($${calledIdx} = 'called' AND COUNT(DISTINCT l.id) > 0)
           OR ($${calledIdx} = 'uncalled' AND COUNT(DISTINCT l.id) = 0 AND a.id IS NOT NULL))
@@ -149,20 +149,20 @@ export async function getContactsInCampaign(campaignId, filters = {}, limit = 10
   return rows
 }
 
-export async function getContactsInCampaignStats(campaignId, provinces = null) {
+export async function getContactsInCampaignStats(orgId, campaignId, provinces = null) {
   const hasProvinces = provinces && provinces.length > 0
   const scopeClause = hasProvinces ? `AND (c.province IS NULL OR c.province = ANY($4))` : ''
 
-  const params1 = [process.env.GUILD_ID, campaignId, campaignId]
+  const params1 = [orgId, campaignId, campaignId]
   if (hasProvinces) params1.push(provinces)
 
-  const params2 = [process.env.GUILD_ID, campaignId]
+  const params2 = [orgId, campaignId]
   if (hasProvinces) params2.push(null, provinces)  // placeholder $3 unused to keep $4 consistent
   // Actually for queries 2 and 3, the scopeClause has $4; we need params position $4 if exists
   // Let me redo this more carefully
 
   const buildQuery2or3 = (selectClause, groupOrderClause) => {
-    const p = [process.env.GUILD_ID, campaignId]
+    const p = [orgId, campaignId]
     let scope = ''
     if (hasProvinces) {
       p.push(provinces)
@@ -191,7 +191,7 @@ export async function getContactsInCampaignStats(campaignId, provinces = null) {
             ON a.campaign_id = cc.id AND a.member_id = c.id::text AND a.contact_type = 'contact'
           WHERE cc.id = $2 AND cc.type IN ('campaign', 'event') AND (cc.province IS NULL OR c.province = cc.province)${hasProvinces ? ` AND (c.province IS NULL OR c.province = ANY($3))` : ''}
           GROUP BY a.assigned_to`,
-    params: hasProvinces ? [process.env.GUILD_ID, campaignId, provinces] : [process.env.GUILD_ID, campaignId],
+    params: hasProvinces ? [orgId, campaignId, provinces] : [orgId, campaignId],
   }
 
   const mainSql = `SELECT
@@ -211,8 +211,8 @@ export async function getContactsInCampaignStats(campaignId, provinces = null) {
      WHERE cc.id = $3 AND cc.type IN ('campaign', 'event') AND (cc.province IS NULL OR c.province = cc.province)${hasProvinces ? ` AND (c.province IS NULL OR c.province = ANY($4))` : ''}`
 
   const mainParams = hasProvinces
-    ? [process.env.GUILD_ID, campaignId, campaignId, provinces]
-    : [process.env.GUILD_ID, campaignId, campaignId]
+    ? [orgId, campaignId, campaignId, provinces]
+    : [orgId, campaignId, campaignId]
 
   const [mainRes, amphoeRes, assigneeRes] = await Promise.all([
     pool.query(mainSql, mainParams),
@@ -236,7 +236,7 @@ export async function getContactsInCampaignStats(campaignId, provinces = null) {
   }
 }
 
-export async function getUnassignedContactIds(campaignId) {
+export async function getUnassignedContactIds(orgId, campaignId) {
   const { rows } = await pool.query(
     `SELECT c.id
      FROM cache_pple_event cc
@@ -247,7 +247,7 @@ export async function getUnassignedContactIds(campaignId) {
      GROUP BY c.id
      HAVING MAX(a.id) IS NULL
      ORDER BY c.amphoe ASC, c.first_name ASC`,
-    [process.env.GUILD_ID, campaignId]
+    [orgId, campaignId]
   )
   return rows.map(r => r.id)
 }

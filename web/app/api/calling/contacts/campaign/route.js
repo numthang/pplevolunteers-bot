@@ -1,6 +1,7 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
 import { getEffectiveOrgIdentity } from '@/lib/orgAccess.js'
+import { getOrgId } from '@/lib/orgContext.js'
 import { getUserScope, isAdmin, canSeeContacts } from '@/lib/callingAccess.js'
 import { getContactsInCampaign, getContactsInCampaignStats } from '@/db/calling/contacts.js'
 
@@ -18,6 +19,7 @@ export async function GET(req) {
 
   try {
     const { access }  = await getEffectiveOrgIdentity(session)
+    const orgId       = await getOrgId(session)
     const userScope   = getUserScope(access)
     const isUserAdmin = isAdmin(access)
     const showContacts = canSeeContacts(access)
@@ -28,7 +30,7 @@ export async function GET(req) {
 
     if (statsOnly) {
       const provinces = (!isUserAdmin && Array.isArray(userScope)) ? userScope : null
-      const stats = await getContactsInCampaignStats(campaignId, provinces)
+      const stats = await getContactsInCampaignStats(orgId, campaignId, provinces)
       return Response.json({ success: true, data: stats })
     }
 
@@ -43,7 +45,7 @@ export async function GET(req) {
       sms:        searchParams.get('sms')        || null,
     }
 
-    let rows = await getContactsInCampaign(campaignId, filters, limit, offset)
+    let rows = await getContactsInCampaign(orgId, campaignId, filters, limit, offset)
 
     if (!showContacts) {
       rows = rows.map(({ phone, line_id, email, ...rest }) => rest)

@@ -85,8 +85,8 @@ export async function getMembersInCampaign(orgId, campaignId, filters = {}, limi
        m.*,
        COALESCE(t.tier::text, 'D') AS tier,
        t.flag,
-       COALESCE(a.assigned_to, '') AS assigned_to,
-       COALESCE(a.assigned_by, '') AS assigned_by,
+       a.assigned_to,
+       a.assigned_by,
        COALESCE(a.created_at, NULL) AS assignment_date,
        a.rsvp,
        ll.called_at AS last_called_at,
@@ -146,7 +146,7 @@ export async function getMembersInCampaign(orgId, campaignId, filters = {}, limi
   const nameLikeIdx = params.length
 
   query += ` AND ($${tierIdx}::text IS NULL OR COALESCE(t.tier::text, 'D') = $${tierIdx})
-       AND ($${assignedToIdx}::text IS NULL OR a.assigned_to = $${assignedToIdx})
+       AND ($${assignedToIdx}::text IS NULL OR a.assigned_to = $${assignedToIdx}::int)
        AND ($${rsvpIdx}::text IS NULL OR a.rsvp::text = $${rsvpIdx})
        AND ($${nameIdx}::text IS NULL OR m.full_name ILIKE $${nameLikeIdx})`
 

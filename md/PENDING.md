@@ -90,9 +90,18 @@
 > - **verify live:** magic MRSJAN org8 guildless + เปิด calling ชั่วคราว → `/calling` `/calling/contacts` `/calling/campaigns` = **200** · campaigns/contacts/stats = ว่างทั้งหมด **ไม่ leak PPLE** (68 event / 590 contact / 5203 log) · data ครบไม่หาย · revert config org8 กลับ `["finance"]` แล้ว
 > - 🐛 bug ที่ transform สร้างเอง แล้วเก็บใน 137f99f: `/api/calling/users` ส่ง orgId เข้า `om.guild_id` · picker chain ยังใช้ discord_id ทั้งที่ `assigned_to`=users.id · `createContact` key mismatch · ownership พังเงียบ 2 จุด (ContactModal prop / RecordCallModal `called_by`)
 >
+> **✅ Phase 3 — เทสจริงในเบราว์เซอร์ (write path) เสร็จ 2026-07-20 (Playwright กดจริง + assert DB):**
+> - **วิธีเข้า org 1 แบบมี discordId:** ใส่ email จริงให้ `users.id=1` (เดิมว่าง) → magic-link login → auth เติม `discordId` จาก users ให้เอง = session เทียบเท่า Discord OAuth ทุกประการ (`{userId:1, discordId:1098…, isSuperAdmin:true}`) · ลบ users 17518 (shell row email เดียวกัน invited ค้างจาก org 8) ทิ้งก่อน · **harness ต้อง mint token ลง `org_login_tokens` ตรงๆ ห้ามยิง `/api/org/auth/magic`** (SMTP จริง → สแปมเมลตัวเอง, bug-033)
+> - **ผ่านหมด:** star toggle (org_id=1/user_id=1/member, กดซ้ำลบคืน) · record call ฝั่ง member (`called_by`=1) · record call ฝั่ง contact (`contact_type=contact`) · assign ผ่าน SplitModal ทั้ง member และ contact (POST ส่ง `assigned_to`=users.id, DB `1|1|1|member` / `…|contact`) · create/edit/delete contact (`created_by`/`updated_by`=1) · sweep 22 route/API = 200 ทั้งหมด · เทสเสร็จลบ test row คืนสภาพ (5203 logs / 8 stars เท่าเดิม)
+> - **🐛 เจอบั๊กจริง 4 ตัวที่ curl ไม่เจอ — แก้แล้ว (bug-029…032):** `COALESCE(assigned_to,'')` บน INT → **500 ทั้งหน้า assignments** · `assigned_to = $n` (text param) → `operator does not exist: integer = text` · **contacts.js 3 ฟังก์ชัน campaign-scope ตกหล่นจาก migration** ยังใช้ `process.env.GUILD_ID` เป็น org_id → 500 · client `usersMap` key ด้วย discord_id แต่ `assigned_to` เป็น users.id → โชว์เลข id + ลิงก์ Discord พัง
+>
+> - **✅ ownership (non-admin) เทสแล้ว 2026-07-20:** สร้าง test user `zztest.owner@localhost` (users 17559, org_members org 1, `web_roles=province_coordinator` — **ยังอยู่ใน DB localhost** ใช้ซ้ำได้/ลบทิ้งได้) → บันทึกการโทรได้ `called_by`=17559 · `PATCH /api/calling/logs` แก้ log ตัวเอง = 200 DB เปลี่ยนจริง · แก้ log ของ user 1 = **403** ไม่ถูกแตะ · `DELETE` ไม่มี permission `deleteLog` = **403** → ownership เทียบ users.id ถูกจริง ไม่ใช่ผ่านทางลัด admin
+>
 > **⬜ เหลือของ calling:**
-> - เทสจริงในเบราว์เซอร์ (กด record call / assign / star / แก้ contact) — curl เทสได้แค่ read path
-> - org 1 (Discord session) ยังไม่เทส — ต้องเทสในเบราว์เซอร์เหมือน finance
+> - **email member ของ org ที่มี guild เข้า /calling ไม่ได้เลย (404)** — `featureGate.enabledFeaturesFor`: org มี guild → `getEnabledFeatures(getGuildId)` แต่ email user ได้ `getGuildId=null` (seam 2026-07-18) → features ว่าง → 404 ทุกหน้า (API ไม่โดน gate เลยทำงานได้ปกติ = incoherent) · เปิด `calling` ใน org_config ของ org 1 ก็ไม่ช่วย เพราะไม่เคยเข้าสาขา guildless · **ไม่ใช่ผลจาก calling migration** — คือ follow-up ที่จดไว้แล้ว ("เปิด email member ของ guild-backed org") · ทางแก้ที่น่าจะถูก: guild org + ไม่มี guildId → ใช้ config ของ guild หลักของ org (prefer `env.GUILD_ID` เหมือน dual-write ของ switcher) — **ยังไม่ทำ รอเคาะ** (แตะ seam ที่เคยตั้งใจทำ 1-liner)
+> - `manageContacts` มี role set เท่ากับ `viewCalling` เป๊ะ → ใครเห็นหน้า contacts ก็ manage ได้ทั้งหมด → **ownership branch ของ contact (`created_by===userId`) เป็น dead code ในทางปฏิบัติ** · ถ้าตั้งใจให้มี "คนสร้าง contact ได้แต่แก้ได้เฉพาะของตัวเอง" ต้องแยก permission ก่อน
+> - `calling` อยู่ทั้ง `ORG_FEATURES` และ enabled_features ต่อ guild (`/bot/features`) → ตอนนี้ requireFeature org-aware แยกทางให้แล้ว แต่ควรรวมทางเดียวตอน endgame
+> - `calling_assignments.org_id` อยู่ **ท้ายตาราง** (ตารางอื่น org_id อยู่หน้า) — ผิด convention เล็กน้อย ไว้จัดตอน cutover
 > - `calling` อยู่ทั้ง `ORG_FEATURES` และ enabled_features ต่อ guild (`/bot/features`) → ตอนนี้ requireFeature org-aware แยกทางให้แล้ว แต่ควรรวมทางเดียวตอน endgame
 >
 > **(อ้างอิง) scrutinize findings ที่ทำครบแล้ว:**
