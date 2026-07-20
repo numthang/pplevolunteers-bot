@@ -73,6 +73,30 @@
 - ⚠️ RBAC page-access: email user เปิด /finance ได้เมื่อ resolve permission ผ่าน org_members.web_roles + scope org (ไม่ใช่ guild membership)
 </details>
 
+#### 📄 DOCS → org migration (feature ที่ 3 · grill เคาะ 2026-07-21 · ยังไม่เริ่มโค้ด)
+> **ทำก่อน cutover** (เคาะ 2026-07-21 — user ค้านแผนเดิมที่จะ cutover ก่อนแล้วทำ docs ทีหลัง และมีเหตุผลแข็งกว่า): ขึ้น prod ครึ่งเดียว = จ่ายต้นทุน cutover 2 รอบ + prod มี 2 โมเดลพร้อมกัน (finance/calling=org, docs=guild) + **migration ก้อน docs จะไปรันกับ data ที่คนใช้จริง** แทนที่จะรันตอนยังไม่มีใครพึ่ง
+>
+> **ขนาดจริง (เล็กกว่า calling มาก):** projects 9 · payers 1 · attachments 3 · entries 29 · signatures 7 · guild เดียวทั้งหมด · **web อย่างเดียว — ไม่มีโค้ดฝั่งบอทเลย** (5 ไฟล์ `web/db/docs/`, 30 route, 5 page)
+>
+> **สเปกที่เคาะ:**
+> 1. **scope → org_id** 3 ตารางที่มี `guild_id`: `docs_projects` · `docs_payers` · `docs_project_attachments` · ⚠️ `docs_activity_entries` + `docs_signatures` **ไม่มี guild_id ของตัวเอง** → scope ผ่าน `project_id` (ต้องไล่ทุก query ว่า join ถึง project จริง ไม่งั้นหลุด scope)
+> 2. **person → users.id** 6 คอลัมน์: `projects.created_by` · `projects.payer_discord_id` · `entries.member_discord_id` · `entries.payer_discord_id` · `payers.discord_id` · `signatures.signed_by_discord_id`
+>    - **คนนอก (ไม่มีบัญชี Discord) = NULL เหมือนเดิม ไม่สร้าง shell user** — ตอนนี้ entries 8/29 แถวเป็นแบบนี้อยู่แล้ว (ผู้รับเงินที่เซ็นผ่านลิงก์) ชื่อ/ข้อมูลกรอกในเอกสารแทน = พฤติกรรมไม่เปลี่ยน
+>    - `projects.created_by` มี **1 แถว map ไม่ได้** (คนหายจากระบบ) → NULL + **log ค่า discord_id เดิมไว้ใน migration** ให้เห็นก่อนทิ้ง
+>    - ที่เหลือ map 100% (payer 7/7 · entries 21/21 · payers 1/1 · signatures 7/7)
+> 3. **rename column** `docs_projects.act_event_cache_id` → `cache_pple_event_id` (จงใจเว้นไว้ตอน calling rename เพราะไม่อยากลาม — ตอนนี้กำลังแตะ docs อยู่แล้ว = จังหวะที่ถูก) · ตัว `cache_pple_event` **ยังคง guild-based** (ACT/Discord artifact)
+> 4. **`id_card_image`: org_members → `users`** (1 คน 1 ใบ) — ที่มันอยู่ org_members เป็นมรดกจาก identity split ที่ลากตามสูตร ไม่ได้ตัดสินใจใหม่ · ของเดิมสมัย docs เคาะไว้ที่ `dc_members` per-guild โดยรู้ว่าซ้ำ · **PDPA ข้าม tenant** = เหตุผลเดียวที่ต้องระวัง → เก็บใบเดียวที่ users แต่ **ประตูเข้าถึงผูก org**: ผู้ขอต้องอยู่ org เดียวกับเจ้าของ + มีสิทธิ์ docs ใน org นั้น (`/api/docs/id-card/[discordId]` ตอนนี้เช็ค guild จาก session → เปลี่ยนเป็น org)
+> 5. client + route ใช้ `getOrgId` / `getEffectiveOrgIdentity` / `scope:'org'` เหมือน finance/calling
+>
+> **⚠️ scrutinize เจอเพิ่ม 2026-07-21 — ต้องทำ ไม่งั้นเปิดรูระหว่างทาง:**
+> - 🔴 **การเช็ค "อยู่ org เดียวกัน" ไม่เคยมีในระบบ** — [id-card/[discordId]/route.js:28-32](web/app/api/docs/id-card/[discordId]/route.js#L28-L32) เช็คแค่ `isOwner || canManageDocs` · ทุกวันนี้รอดเพราะ storage เป็น per-guild (คนดูแล guild A เห็นได้แค่สำเนาของ guild A) · **พอรวมเป็นใบเดียวที่ users ตัวกันนี้หายทันที** → ต้องเขียนเช็คสมาชิกภาพใหม่ (เจ้าของบัตรต้องมีแถว `org_members` ใน org ของผู้ขอ) + เปลี่ยนเป็น `getEffectiveOrgIdentity` · **เช็คต้องขึ้นก่อนย้าย storage**
+> - 🔴 **URL บัตรประกอบจาก discord_id ฝั่ง client** — [sign/[token]/page.js:90](web/app/docs/sign/[token]/page.js#L90) `/api/docs/id-card/${d.data.member_discord_id}` → พอเป็น `member_user_id` จะกลายเป็น `undefined` **รูปไม่ขึ้นเงียบๆ** = bug-032 ซ้ำ → เปลี่ยน route param + ไล่ caller พร้อมกัน (+ เช็ค join ใน `generatePdf.js:275`)
+> - 🟠 **`link-ngs` ผูก `member_id` แบบ per-guild** ([link-ngs/route.js:44-50](web/app/api/docs/sign/link-ngs/route.js#L44-L50)) แต่ verifyHandler (แก้ 2026-07-21) ผูกทั้ง org → สองมาตรฐาน · คอมเมนต์ยังอ้าง `unique (guild_id, member_id)` ที่ถูกแทนด้วย trigger ระดับ org แล้ว (bug-036) → ทำให้ตรงกัน
+> - 🟠 **อัปโหลดบัตรบังคับ `session.user.discordId`** ([id-card/route.js:17](web/app/api/docs/id-card/route.js#L17)) → คน email อัปไม่ได้ · และ 404 "ไม่พบข้อมูลสมาชิกใน guild นี้" จะหายไปเองหลังย้ายไป users = พฤติกรรมเปลี่ยน ต้องตั้งใจ ไม่ใช่หลุดมา
+> - ✅ ตรวจแล้วปลอดภัย: entries/signatures scope ผ่าน `docs_projects` ครบทุก read · `getEntryByToken` **ไม่มี scope โดยตั้งใจ** (token = ตัวสิทธิ์) ห้ามเผลอยัด org filter · docs ไม่มี `process.env.GUILD_ID` ฝังตรงไหนเลย (ต่างจาก calling) · `getGuildId` 10 route ที่ต้องเปลี่ยนเป็น `getOrgId`
+>
+> **บทเรียนที่ต้องใช้ (จาก calling — bug-029…032):** หลังแปลงชนิดคอลัมน์ต้อง grep หา `COALESCE(<col>, '')` · param text เทียบ column INT (`= $n` → ต้อง `::int`) · **ฟังก์ชันที่ signature ไม่มี orgId จะรอด sweep ทั้งดุ้น** (grep `process.env.GUILD_ID` ปิดท้าย) · client map ที่ยัง key ด้วย discord_id
+
 #### 📞 CALLING → org migration (feature ที่ 2 · grill เคาะ 2026-07-19 · WIP)
 > เคาะ: **calling ก่อน cases** (cases ROI ต่ำ Discord-bound — grill แยกทีหลัง) · depth = **full parity กับ finance**
 >
