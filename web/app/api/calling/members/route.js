@@ -1,8 +1,8 @@
 import { getServerSession } from 'next-auth'
 import * as memberDB from '@/db/calling/members.js'
 import { canAccessMember, getUserScope, isAdmin, isRegionalCoordinator, canSeeContacts } from '@/lib/callingAccess.js'
-import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
-import { getGuildId } from '@/lib/guildContext.js'
+import { getEffectiveOrgIdentity } from '@/lib/orgAccess.js'
+import { getOrgId } from '@/lib/orgContext.js'
 import { authOptions } from '@/lib/auth-options.js'
 
 /**
@@ -12,7 +12,7 @@ import { authOptions } from '@/lib/auth-options.js'
  */
 export async function GET(req) {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.discordId) {
+  if (!session?.user?.userId) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -40,14 +40,14 @@ export async function GET(req) {
   const filterSms = searchParams.get('sms') || null
 
   try {
-    const { access } = await getEffectiveIdentity(session)
-    const guildId = await getGuildId(session)
+    const { access } = await getEffectiveOrgIdentity(session)
+    const orgId = await getOrgId(session)
     const userScope = getUserScope(access)
     const isUserAdmin = isAdmin(access)
 
     // Stats-only request
     if (campaignId && statsOnly) {
-      const stats = await memberDB.getMembersInCampaignStats(guildId, parseInt(campaignId))
+      const stats = await memberDB.getMembersInCampaignStats(orgId, parseInt(campaignId))
       return Response.json({ success: true, data: stats })
     }
 
@@ -56,16 +56,16 @@ export async function GET(req) {
 
     if (campaignId) {
       const filters = { amphure: filterAmphure, subdistricts: filterSubdistricts, tier: filterTier, status: filterStatus, assignedTo: filterAssignedTo, rsvp: filterRsvp, name: filterName, expiry: filterExpiry, called: filterCalled, sort: filterSort, sms: filterSms }
-      rows = await memberDB.getMembersInCampaign(guildId, parseInt(campaignId), filters, limit, offset)
+      rows = await memberDB.getMembersInCampaign(orgId, parseInt(campaignId), filters, limit, offset)
     } else if (province) {
-      rows = await memberDB.getMembersByProvince(guildId, province, limit, offset)
+      rows = await memberDB.getMembersByProvince(orgId, province, limit, offset)
     } else if (district) {
-      rows = await memberDB.getMembersByDistrict(guildId, district, limit, offset)
+      rows = await memberDB.getMembersByDistrict(orgId, district, limit, offset)
     } else if (keyword) {
-      rows = await memberDB.searchMembers(guildId, keyword, limit, offset)
+      rows = await memberDB.searchMembers(orgId, keyword, limit, offset)
     } else {
-      rows = await memberDB.getAllMembers(guildId, limit, offset)
-      total = await memberDB.getMembersCount(guildId)
+      rows = await memberDB.getAllMembers(orgId, limit, offset)
+      total = await memberDB.getMembersCount(orgId)
     }
 
     // No calling roles at all → return noAccess flag

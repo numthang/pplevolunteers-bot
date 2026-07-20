@@ -2,7 +2,8 @@ import { getServerSession } from 'next-auth'
 import * as campaignDB from '@/db/calling/campaigns.js'
 import { isAdmin, getUserScope, canCreateCampaign } from '@/lib/callingAccess.js'
 import { authOptions } from '@/lib/auth-options.js'
-import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
+import { getEffectiveOrgIdentity } from '@/lib/orgAccess.js'
+import { getOrgId } from '@/lib/orgContext.js'
 import pool from '@/db/index.js'
 
 /**
@@ -12,7 +13,7 @@ import pool from '@/db/index.js'
  */
 export async function GET(req) {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.discordId) {
+  if (!session?.user?.userId) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -27,11 +28,11 @@ export async function GET(req) {
     if (province) {
       rows = await campaignDB.getCampaignsByProvince(province)
     } else {
-      rows = await campaignDB.getCampaigns()
+      rows = await campaignDB.getCampaigns(await getOrgId(session))
     }
 
     // Filter by user scope (unless admin)
-    const { access } = await getEffectiveIdentity(session)
+    const { access } = await getEffectiveOrgIdentity(session)
     const isUserAdmin = isAdmin(access)
     const userScope = getUserScope(access)
 
@@ -59,7 +60,7 @@ export async function GET(req) {
                SELECT 1 FROM calling_logs cl
                WHERE cl.campaign_id = ca.campaign_id AND cl.member_id = ca.member_id
              )`,
-            [campaign.id, session.user.discordId]
+            [campaign.id, session.user.userId]
           )
           return { ...campaign, pending_count: Number(r[0]?.cnt) || 0 }
         } catch (e) {
@@ -82,11 +83,11 @@ export async function GET(req) {
  */
 export async function POST(req) {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.discordId) {
+  if (!session?.user?.userId) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const { access } = await getEffectiveIdentity(session)
+  const { access } = await getEffectiveOrgIdentity(session)
   if (!canCreateCampaign(access)) {
     return Response.json({ error: 'Forbidden' }, { status: 403 })
   }
@@ -101,7 +102,7 @@ export async function POST(req) {
 
     const campaignId = await campaignDB.createCampaign(
       { id: id || null, name, description, province, event_date: event_date || null, event_end_date: event_end_date || null },
-      session.user.discordId
+      session.user.userId
     )
 
     const campaign = await campaignDB.getCampaignById(campaignId)

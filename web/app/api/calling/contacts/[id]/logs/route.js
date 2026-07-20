@@ -4,7 +4,7 @@ import { getContactById, getContactLogs } from '@/db/calling/contacts.js'
 
 export async function GET(req, { params }) {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.discordId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!session?.user?.userId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { id } = await params
   try {

@@ -12,24 +12,26 @@ import { getMembersCount, getPendingCallCount } from '@/db/calling/members.js'
 import { getContactPendingCount } from '@/db/calling/contacts.js'
 import { getCampaigns } from '@/db/calling/campaigns.js'
 
-async function getTotalCallStats() {
+async function getTotalCallStats(orgId) {
   const { rows } = await pool.query(
     `SELECT
        COUNT(*) FILTER (WHERE status IN ('answered','no_answer','met')) AS total,
        COUNT(*) FILTER (WHERE status IN ('answered','met')) AS answered
-     FROM calling_logs`
+     FROM calling_logs
+     WHERE org_id = $1`,
+    [orgId]
   )
   const total = Number(rows[0]?.total) || 0
   const answered = Number(rows[0]?.answered) || 0
   return { total, answered, rate: total > 0 ? Math.round((answered / total) * 100) : 0 }
 }
 
-async function getMyTotalCallCount(discordId) {
-  if (!discordId) return 0
+async function getMyTotalCallCount(userId, orgId) {
+  if (!userId) return 0
   const { rows } = await pool.query(
     `SELECT COUNT(*) AS count FROM calling_logs
-     WHERE called_by = $1 AND status IN ('answered','no_answer','met')`,
-    [discordId]
+     WHERE called_by = $1 AND org_id = $2 AND status IN ('answered','no_answer','met')`,
+    [userId, orgId]
   )
   return Number(rows[0]?.count) || 0
 }
@@ -83,15 +85,14 @@ export default async function CallingDashboard() {
   const session = await getSession()
   if (!session) redirect('/')
 
-  // calling stats = global aggregate (ไม่ scope guild) → guildless org ห้ามคำนวณเลย
-  //   layout requireFeature('calling') คืน 404 แล้ว แต่ page render พร้อมกัน (concurrent) จะ
-  //   compute stats ทั่วโลกฝัง RSC payload ของ 404 → early return กัน query ไม่ให้รัน
+  // calling เป็น org-native แล้ว (ทุก query scope ด้วย org_id) → guildless org เข้าได้
+  //   (roster/campaign มาจาก guild ขององค์กร — org ที่ไม่มี guild เห็น 0 แต่ใช้ contacts ได้)
+  //   feature gate อยู่ที่ layout requireFeature('calling') แล้ว
   const orgId = await getOrgId(session)
-  const orgGuilds = orgId ? await guildsOfOrg(orgId) : []
-  if (orgGuilds.length === 0) redirect('/')
+  if (!orgId) redirect('/')
 
   const t = await getTranslations('calling')
-  const discordId = session.user.discordId
+  const userId = session.user.userId
 
   const [
     memberCount,
@@ -101,12 +102,12 @@ export default async function CallingDashboard() {
     pendingMember,
     pendingContact,
   ] = await Promise.all([
-    getMembersCount(),
-    getCampaigns(),
-    getTotalCallStats(),
-    getMyTotalCallCount(discordId),
-    discordId ? getPendingCallCount(discordId) : Promise.resolve(0),
-    discordId ? getContactPendingCount(discordId) : Promise.resolve(0),
+    getMembersCount(orgId),
+    getCampaigns(orgId),
+    getTotalCallStats(orgId),
+    getMyTotalCallCount(userId, orgId),
+    userId ? getPendingCallCount(userId) : Promise.resolve(0),
+    userId ? getContactPendingCount(userId) : Promise.resolve(0),
   ])
 
   const today = new Date().toISOString().slice(0, 10)

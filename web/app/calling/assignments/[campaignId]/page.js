@@ -153,7 +153,7 @@ export default function CampaignPage({ params }) {
   const [filterStatus, setFilterStatus] = useState(() => searchParams.get('status') || '')
   const [filterSms, setFilterSms] = useState(() => searchParams.get('sms') || '')
   const { data: session } = useSession()
-  const { discordId: effectiveDiscordId, access } = useEffectiveRoles(session)
+  const { userId: effectiveDiscordId, access } = useEffectiveRoles(session)
   const isModerator = can('deleteLog', access?.permissions || [])
   const canSendBulkSms = can('sendBulkSms', access?.permissions || [])
 

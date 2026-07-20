@@ -126,7 +126,7 @@ export default function PendingCallsPage() {
   const [favoriteSet, setFavoriteSet] = useState(new Set())
 
   const { data: session } = useSession()
-  const { discordId: effectiveDiscordId, access } = useEffectiveRoles(session)
+  const { userId: effectiveDiscordId, access } = useEffectiveRoles(session)
   const isModerator = can('deleteLog', access?.permissions || [])
 
   const itemsRef = useRef([])

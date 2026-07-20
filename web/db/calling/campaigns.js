@@ -12,16 +12,20 @@ export async function getCampaignById(id) {
   return rows[0] || null
 }
 
-export async function getCampaigns(province = null) {
-  const params = []
+// campaign = event จากระบบ ACT → cache_pple_event คง guild-based (Discord/ACT artifact)
+// แต่ต้อง scope ให้ org ที่เรียก: filter guild ที่เป็นของ org นั้น (guildless org → ไม่มี campaign)
+// เดิมไม่ scope เลย = leak ข้าม org คลาสเดียวกับ stats hole
+export async function getCampaigns(orgId, province = null) {
+  const params = [orgId]
   let query = `
     SELECT
       c.id, c.act_event_id, c.name, c.province, c.description, c.image_url,
       TO_CHAR(c.event_date, 'YYYY-MM-DD"T"HH24:MI') AS event_date, c.created_at,
       COUNT(DISTINCT cl.id) AS call_count
     FROM cache_pple_event c
-    LEFT JOIN calling_logs cl ON cl.campaign_id = c.id
-    WHERE c.type IN ('campaign', 'event')`
+    LEFT JOIN calling_logs cl ON cl.campaign_id = c.id AND cl.org_id = $1
+    WHERE c.type IN ('campaign', 'event')
+      AND c.guild_id IN (SELECT guild_id FROM dc_guilds WHERE org_id = $1)`
 
   if (province) {
     params.push(province)

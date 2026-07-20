@@ -3,8 +3,8 @@ import * as tierDB from '@/db/calling/tiers.js'
 import * as memberDB from '@/db/calling/members.js'
 import { canAccessMember, canOverrideTier } from '@/lib/callingAccess.js'
 import { authOptions } from '@/lib/auth-options.js'
-import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
-import { getGuildId } from '@/lib/guildContext.js'
+import { getEffectiveOrgIdentity } from '@/lib/orgAccess.js'
+import { getOrgId } from '@/lib/orgContext.js'
 
 /**
  * GET /api/calling/tiers
@@ -13,7 +13,7 @@ import { getGuildId } from '@/lib/guildContext.js'
  */
 export async function GET(req) {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.discordId) {
+  if (!session?.user?.userId) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -44,7 +44,7 @@ export async function GET(req) {
  */
 export async function POST(req) {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.discordId) {
+  if (!session?.user?.userId) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -64,20 +64,20 @@ export async function POST(req) {
     }
 
     // Check permission
-    const { access } = await getEffectiveIdentity(session)
+    const { access } = await getEffectiveOrgIdentity(session)
     if (!canOverrideTier(access)) {
       return Response.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     // Check member access (optional, for audit trail)
-    const guildId = await getGuildId(session)
-    const member = await memberDB.getMemberById(guildId, parseInt(member_id))
+    const orgId = await getOrgId(session)
+    const member = await memberDB.getMemberById(orgId, parseInt(member_id))
     if (!member) {
       return Response.json({ error: 'Member not found' }, { status: 404 })
     }
 
     // Override tier
-    await tierDB.overrideTier(guildId, member_id, tier, session.user.discordId, reason)
+    await tierDB.overrideTier(orgId, member_id, tier, session.user.userId, reason)
 
     const updated = await tierDB.getTier(member_id)
     return Response.json({ success: true, data: updated }, { status: 201 })
@@ -94,7 +94,7 @@ export async function POST(req) {
  */
 export async function PATCH(req) {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.discordId) {
+  if (!session?.user?.userId) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -104,8 +104,8 @@ export async function PATCH(req) {
     if (flag && !['green', 'yellow', 'red'].includes(flag)) {
       return Response.json({ error: 'Invalid flag' }, { status: 400 })
     }
-    const guildId = await getGuildId(session)
-    await tierDB.updateFlag(guildId, member_id, flag || null, contact_type)
+    const orgId = await getOrgId(session)
+    await tierDB.updateFlag(orgId, member_id, flag || null, contact_type)
     return Response.json({ success: true })
   } catch (error) {
     console.error('[PATCH /api/calling/tiers]', error)
@@ -120,7 +120,7 @@ export async function PATCH(req) {
  */
 export async function DELETE(req) {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.discordId) {
+  if (!session?.user?.userId) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -133,20 +133,20 @@ export async function DELETE(req) {
     }
 
     // Check permission
-    const { access } = await getEffectiveIdentity(session)
+    const { access } = await getEffectiveOrgIdentity(session)
     if (!canOverrideTier(access)) {
       return Response.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     // Check member
-    const guildId = await getGuildId(session)
-    const member = await memberDB.getMemberById(guildId, parseInt(member_id))
+    const orgId = await getOrgId(session)
+    const member = await memberDB.getMemberById(orgId, parseInt(member_id))
     if (!member) {
       return Response.json({ error: 'Member not found' }, { status: 404 })
     }
 
     // Clear override
-    await tierDB.clearOverride(guildId, member_id)
+    await tierDB.clearOverride(orgId, member_id)
 
     const updated = await tierDB.getTier(member_id)
     return Response.json({ success: true, data: updated })

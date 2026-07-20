@@ -73,6 +73,24 @@
 - ⚠️ RBAC page-access: email user เปิด /finance ได้เมื่อ resolve permission ผ่าน org_members.web_roles + scope org (ไม่ใช่ guild membership)
 </details>
 
+#### 📞 CALLING → org migration (feature ที่ 2 · grill เคาะ 2026-07-19 · WIP)
+> เคาะ: **calling ก่อน cases** (cases ROI ต่ำ Discord-bound — grill แยกทีหลัง) · depth = **full parity กับ finance**
+>
+> **Reframe สำคัญ:** calling ไม่ใช่ twin finance ตรงๆ. callee 2 ฝั่ง — `member`(99.9% ของ log) = roster จากระบบ **NGS** · `contact`(590) = CRM ของ org. campaigns = event จากระบบ **ACT**. หลักการปรับ (2026-07-19): **NGS data = ของ org (org-scope)** · **ACT/Discord event = guild artifact (คง guild)**. guildless org = contacts-only calling (roster/campaign เป็น PPLE-guild)
+>
+> **✅ Phase 1 — RENAME เสร็จ+commit 715cffa (2026-07-19):** `ngs_member_cache→cache_pple_member` · `act_event_cache→cache_pple_event` (สื่อว่าเป็น cache external-sync ต่อ tenant) · `scripts/migration/cache-rename.sql` (idempotent, prod cutover ต้องรันตอน merge) · 31 js + 5 md · ⚠️ column `docs_projects.act_event_cache_id` **คงชื่อเดิม** (rename column = docs scope creep) · cross-feature: rename แตะ docs ด้วย (docs ผูก 2 ตารางนี้หนัก) แต่ additive ไม่พัง · verify build exit0 139 pages + DB JOIN ผ่าน
+>
+> **⬜ Phase 2 — org-scope + full parity (ยังไม่เริ่ม · scrutinize เคาะแล้ว):**
+> - `+org_id` 6 ตาราง: calling_logs/assignments/member_tiers/contacts/starred + **cache_pple_member (roster)** · backfill=orgIdOfGuild · in-place type-convert แบบ finance (pg_temp `_g2o`/`_d2u`) → ไฟล์ `calling-org-scope.sql` (mirror finance-org-scope.sql)
+> - person→users.id: `called_by`/`assigned_to`/`assigned_by`/`override_by`/`created_by`/`updated_by`/`user_discord_id` · ⚠️ **roster รับแค่ org_id — ห้ามแตะ created_by/approved_by ของมัน** (นั่น user ของ NGS ภายนอก)
+> - `cache_pple_event` (campaigns) **คง guild-based** (ACT/Discord artifact)
+> - **scrutinize findings ที่ต้องทำ (ไม่งั้น org-native ไม่จริง):**
+>   1. person conversion มี consumer เดียว = [logs/route.js:96](web/app/api/calling/logs/route.js#L96) `called_by !== session.user.discordId` → **flip เป็น userId** (ไม่งั้น ownership พังเงียบ)
+>   2. rewire 3 จุดให้ guildless เข้า calling ได้: (a) เพิ่ม `calling` ใน `ORG_FEATURES`/getOrgEnabledFeatures (b) ปลด/แก้ bug-025 guildless guard ที่ /calling (c) [stats/route.js:12](web/app/api/calling/stats/route.js#L12) auth `!discordId`→ userId-based
+>   3. **contact_type landmine:** ทุก query ที่เติม `WHERE org_id` ต้อง **AND** contact_type ไม่ใช่แทนที่ (source_id≥55 overlap contact.id)
+> - scope ทุก query + **ปิด stats global-aggregate hole** · client scope=org (3 หน้าเหมือน finance) · cutover 2 import script เขียน org_id
+> - honest scope: data 100% org 1 → payoff = ปิด stats hole + วางราง · justify = ทำตอน calling เล็กถูกกว่าทีหลัง
+
 #### 🚪 ORG-SWITCHER SPINE — งานถัดไป (grill design เคาะ 2026-07-17 · = "ประตูเลือกองค์กร" + สิทธิ์แบบ org-keyed · เป็นหัวใจ ทำก่อน feature อื่น)
 > เหตุ: ตอนนี้ finance เทสจริงไม่ได้เพราะเข้าได้ทางเดียว (Discord→org 1). ต้องมี spine นี้ก่อน guildless org (MRSJAN) ถึงเข้า finance ได้ + เป็น harness ให้ calling/docs/cases ต่อไป
 

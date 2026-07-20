@@ -5,6 +5,7 @@ import { getOrgConfig } from '@/db/orgConfig.js'
 
 export const ORG_FEATURES = [
   { key: 'finance', label: 'การเงิน', desc: 'บัญชี รายรับ-รายจ่าย รายงาน' },
+  { key: 'calling', label: 'โทรอาสา', desc: 'แคมเปญโทร ผู้ติดต่อ (CRM) สถิติการโทร' },
 ]
 
 export const ORG_FEATURE_KEYS = ORG_FEATURES.map(f => f.key)

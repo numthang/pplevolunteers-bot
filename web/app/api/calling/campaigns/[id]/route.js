@@ -2,11 +2,11 @@ import { getServerSession } from 'next-auth'
 import * as campaignDB from '@/db/calling/campaigns.js'
 import { canCreateCampaign } from '@/lib/callingAccess.js'
 import { authOptions } from '@/lib/auth-options.js'
-import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
+import { getEffectiveOrgIdentity } from '@/lib/orgAccess.js'
 
 export async function GET(req, { params }) {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.discordId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!session?.user?.userId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { id } = await params
   try {
@@ -21,9 +21,9 @@ export async function GET(req, { params }) {
 
 export async function PATCH(req, { params }) {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.discordId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!session?.user?.userId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { access } = await getEffectiveIdentity(session)
+  const { access } = await getEffectiveOrgIdentity(session)
   if (!canCreateCampaign(access)) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
   const { id } = await params
@@ -50,9 +50,9 @@ export async function PATCH(req, { params }) {
 
 export async function DELETE(req, { params }) {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.discordId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!session?.user?.userId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { access } = await getEffectiveIdentity(session)
+  const { access } = await getEffectiveOrgIdentity(session)
   if (!canCreateCampaign(access)) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
   const { id } = await params

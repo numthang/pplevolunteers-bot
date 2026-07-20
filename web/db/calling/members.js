@@ -1,47 +1,47 @@
 import pool from '../index.js'
 
-export async function getMemberById(guildId, sourceId) {
+export async function getMemberById(orgId, sourceId) {
   const { rows } = await pool.query(
-    `SELECT * FROM cache_pple_member WHERE guild_id = $1 AND source_id = $2`,
-    [guildId, sourceId]
+    `SELECT * FROM cache_pple_member WHERE org_id = $1 AND source_id = $2`,
+    [orgId, sourceId]
   )
   return rows[0] || null
 }
 
-export async function getMembersByDistrict(guildId, district, limit = 100, offset = 0) {
+export async function getMembersByDistrict(orgId, district, limit = 100, offset = 0) {
   const { rows } = await pool.query(
     `SELECT * FROM cache_pple_member
-     WHERE guild_id = $1 AND home_amphure = $2
+     WHERE org_id = $1 AND home_amphure = $2
      ORDER BY first_name ASC
      LIMIT $3 OFFSET $4`,
-    [guildId, district, limit, offset]
+    [orgId, district, limit, offset]
   )
   return rows
 }
 
-export async function getMembersByProvince(guildId, province, limit = 100, offset = 0) {
+export async function getMembersByProvince(orgId, province, limit = 100, offset = 0) {
   const { rows } = await pool.query(
     `SELECT * FROM cache_pple_member
-     WHERE guild_id = $1 AND home_province = $2
+     WHERE org_id = $1 AND home_province = $2
      ORDER BY home_amphure ASC, first_name ASC
      LIMIT $3 OFFSET $4`,
-    [guildId, province, limit, offset]
+    [orgId, province, limit, offset]
   )
   return rows
 }
 
-export async function searchMembers(guildId, keyword, limit = 100, offset = 0) {
+export async function searchMembers(orgId, keyword, limit = 100, offset = 0) {
   const { rows } = await pool.query(
     `SELECT * FROM cache_pple_member
-     WHERE guild_id = $1 AND (full_name ILIKE $2 OR mobile_number ILIKE $3 OR serial ILIKE $4)
+     WHERE org_id = $1 AND (full_name ILIKE $2 OR mobile_number ILIKE $3 OR serial ILIKE $4)
      ORDER BY first_name ASC
      LIMIT $5 OFFSET $6`,
-    [guildId, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, limit, offset]
+    [orgId, `%${keyword}%`, `%${keyword}%`, `%${keyword}%`, limit, offset]
   )
   return rows
 }
 
-export async function getAllMembers(guildId, limit = 100, offset = 0) {
+export async function getAllMembers(orgId, limit = 100, offset = 0) {
   const { rows } = await pool.query(
     `SELECT
        m.*,
@@ -52,30 +52,30 @@ export async function getAllMembers(guildId, limit = 100, offset = 0) {
      FROM cache_pple_member m
      LEFT JOIN calling_member_tiers t ON t.member_id = m.source_id::text AND t.contact_type = 'member'
      LEFT JOIN calling_logs l ON l.member_id = m.source_id::text AND l.contact_type = 'member'
-     WHERE m.guild_id = $1
+     WHERE m.org_id = $1
      GROUP BY m.source_id, t.tier, t.flag
      ORDER BY m.home_province ASC, m.home_amphure ASC, m.first_name ASC
      LIMIT $2 OFFSET $3`,
-    [guildId, limit, offset]
+    [orgId, limit, offset]
   )
   return rows
 }
 
-export async function getMembersCount(guildId) {
+export async function getMembersCount(orgId) {
   const { rows } = await pool.query(
-    `SELECT COUNT(*) AS count FROM cache_pple_member WHERE guild_id = $1`,
-    [guildId]
+    `SELECT COUNT(*) AS count FROM cache_pple_member WHERE org_id = $1`,
+    [orgId]
   )
   return Number(rows[0]?.count) || 0
 }
 
-export async function getMembersInCampaign(guildId, campaignId, filters = {}, limit = 100, offset = 0) {
+export async function getMembersInCampaign(orgId, campaignId, filters = {}, limit = 100, offset = 0) {
   const { amphure, subdistricts, tier, status, assignedTo, rsvp, name, expiry, called, sort, sms } = filters
 
   const needAllTimeCalls = sort === 'least_called'
 
-  const params = [guildId, campaignId]
-  // $1: guild_id, $2: campaign_id
+  const params = [orgId, campaignId]
+  // $1: org_id, $2: campaign_id
 
   params.push(amphure || null)
   const amphureIdx = params.length
@@ -120,13 +120,13 @@ export async function getMembersInCampaign(guildId, campaignId, filters = {}, li
        FROM calling_logs WHERE contact_type = 'member'
        GROUP BY campaign_id, member_id
      ) ls ON ls.campaign_id = cc.id AND ls.member_id = m.source_id::text
-     LEFT JOIN org_members dc ON dc.serial = m.serial AND dc.guild_id = $1
+     LEFT JOIN LATERAL (SELECT om.avatar, om.user_id FROM org_members om WHERE om.serial = m.serial AND om.org_id = $1 LIMIT 1) dc ON true
      LEFT JOIN users u ON u.id = dc.user_id${needAllTimeCalls ? `
      LEFT JOIN (SELECT member_id, COUNT(*) AS all_time_calls FROM calling_logs WHERE contact_type = 'member' GROUP BY member_id) atl
        ON atl.member_id = m.source_id::text` : ''}
      WHERE cc.id = $2 AND cc.type IN ('campaign', 'event')
        AND m.mobile_number IS NOT NULL
-       AND m.guild_id = $1
+       AND m.org_id = $1
        AND ($${amphureIdx}::text IS NULL OR m.home_amphure = $${amphureIdx})`
 
   if (subdistricts && subdistricts.length > 0) {
@@ -189,12 +189,12 @@ export async function getMembersInCampaign(guildId, campaignId, filters = {}, li
   return rows
 }
 
-export async function getMembersInCampaignStats(guildId, campaignId) {
+export async function getMembersInCampaignStats(orgId, campaignId) {
   const BASE = `
     FROM cache_pple_event cc
     JOIN cache_pple_member m ON (cc.province IS NULL OR m.home_province = cc.province)
     WHERE cc.id = $1 AND cc.type IN ('campaign', 'event') AND m.mobile_number IS NOT NULL
-      AND m.guild_id = $2`
+      AND m.org_id = $2`
 
   const [mainRes, amphureRes, districtCountRes, tierRes, assigneeRes] = await Promise.all([
     pool.query(
@@ -211,36 +211,36 @@ export async function getMembersInCampaignStats(guildId, campaignId) {
          FROM calling_logs WHERE campaign_id = $1 AND contact_type = 'member'
          GROUP BY member_id
        ) lc ON lc.member_id = m.source_id::text
-       WHERE cc.id = $2 AND cc.type IN ('campaign', 'event') AND m.mobile_number IS NOT NULL AND m.guild_id = $3`,
-      [campaignId, campaignId, guildId]
+       WHERE cc.id = $2 AND cc.type IN ('campaign', 'event') AND m.mobile_number IS NOT NULL AND m.org_id = $3`,
+      [campaignId, campaignId, orgId]
     ),
     pool.query(
       `SELECT COALESCE(m.home_amphure, '') AS amphure, COUNT(DISTINCT m.source_id) AS count
        ${BASE} GROUP BY m.home_amphure ORDER BY m.home_amphure`,
-      [campaignId, guildId]
+      [campaignId, orgId]
     ),
     pool.query(
       `SELECT COALESCE(m.home_amphure, '') AS amphure, COUNT(DISTINCT m.home_district) AS "districtCount"
        ${BASE} GROUP BY m.home_amphure ORDER BY m.home_amphure`,
-      [campaignId, guildId]
+      [campaignId, orgId]
     ),
     pool.query(
       `SELECT COALESCE(t.tier::text, 'D') AS tier, COUNT(DISTINCT m.source_id) AS count
        FROM cache_pple_event cc
        JOIN cache_pple_member m ON (cc.province IS NULL OR m.home_province = cc.province)
        LEFT JOIN calling_member_tiers t ON t.member_id = m.source_id::text AND t.contact_type = 'member'
-       WHERE cc.id = $1 AND cc.type IN ('campaign', 'event') AND m.mobile_number IS NOT NULL AND m.guild_id = $2
+       WHERE cc.id = $1 AND cc.type IN ('campaign', 'event') AND m.mobile_number IS NOT NULL AND m.org_id = $2
        GROUP BY COALESCE(t.tier::text, 'D')`,
-      [campaignId, guildId]
+      [campaignId, orgId]
     ),
     pool.query(
       `SELECT a.assigned_to, COUNT(DISTINCT m.source_id) AS count
        FROM cache_pple_event cc
        JOIN cache_pple_member m ON (cc.province IS NULL OR m.home_province = cc.province)
        JOIN calling_assignments a ON a.campaign_id = cc.id AND a.member_id = m.source_id::text AND a.contact_type = 'member'
-       WHERE cc.id = $1 AND cc.type IN ('campaign', 'event') AND m.mobile_number IS NOT NULL AND m.guild_id = $2
+       WHERE cc.id = $1 AND cc.type IN ('campaign', 'event') AND m.mobile_number IS NOT NULL AND m.org_id = $2
        GROUP BY a.assigned_to`,
-      [campaignId, guildId]
+      [campaignId, orgId]
     ),
   ])
 
@@ -273,7 +273,7 @@ export async function getMembersInCampaignStats(guildId, campaignId) {
   }
 }
 
-export async function getUnassignedMemberIds(guildId, campaignId) {
+export async function getUnassignedMemberIds(orgId, campaignId) {
   const { rows } = await pool.query(
     `SELECT m.source_id
      FROM cache_pple_event cc
@@ -283,11 +283,11 @@ export async function getUnassignedMemberIds(guildId, campaignId) {
        ON a.campaign_id = cc.id AND a.member_id = m.source_id::text AND a.contact_type = 'member'
      LEFT JOIN calling_logs l
        ON l.campaign_id = cc.id AND l.member_id = m.source_id::text AND l.contact_type = 'member'
-     WHERE cc.id = $1 AND cc.type IN ('campaign', 'event') AND m.guild_id = $2
+     WHERE cc.id = $1 AND cc.type IN ('campaign', 'event') AND m.org_id = $2
      GROUP BY m.source_id, m.home_amphure, m.first_name
      HAVING COUNT(DISTINCT l.id) = 0 AND MAX(a.id) IS NULL
      ORDER BY m.home_amphure ASC, m.first_name ASC`,
-    [campaignId, guildId]
+    [campaignId, orgId]
   )
   return rows.map(r => r.source_id)
 }
@@ -302,7 +302,7 @@ export async function getMemberCallHistory(campaignId, memberId) {
   return rows
 }
 
-export async function getMyCampaigns(discordId) {
+export async function getMyCampaigns(userId) {
   const { rows } = await pool.query(
     `SELECT
        ec.id, ec.name, ec.province,
@@ -318,12 +318,12 @@ export async function getMyCampaigns(discordId) {
        AND (ec.event_date IS NULL OR ec.event_date >= CURRENT_DATE - INTERVAL '7 days')
      GROUP BY ec.id
      ORDER BY ec.name ASC`,
-    [discordId]
+    [userId]
   )
   return rows
 }
 
-export async function getMyAssignedMembers(guildId, discordId, { campaignId, status, rsvp, limit = 200, offset = 0 } = {}) {
+export async function getMyAssignedMembers(orgId, userId, { campaignId, status, rsvp, limit = 200, offset = 0 } = {}) {
   const { rows } = await pool.query(
     `SELECT * FROM (
        SELECT
@@ -346,10 +346,10 @@ export async function getMyAssignedMembers(guildId, discordId, { campaignId, sta
          u.username AS discord_username,
          dc.avatar AS discord_avatar
        FROM calling_assignments a
-       JOIN cache_pple_member m ON m.source_id::text = a.member_id AND m.guild_id = $1
+       JOIN cache_pple_member m ON m.source_id::text = a.member_id AND m.org_id = $1
        LEFT JOIN calling_member_tiers t ON t.member_id = a.member_id AND t.contact_type = 'member'
        LEFT JOIN cache_pple_event ec ON ec.id = a.campaign_id AND ec.type IN ('campaign', 'event')
-       LEFT JOIN org_members dc ON dc.serial = m.serial AND dc.guild_id = $1
+       LEFT JOIN LATERAL (SELECT om.avatar, om.user_id FROM org_members om WHERE om.serial = m.serial AND om.org_id = $1 LIMIT 1) dc ON true
        LEFT JOIN users u ON u.id = dc.user_id
        LEFT JOIN (
          SELECT member_id,
@@ -381,12 +381,12 @@ export async function getMyAssignedMembers(guildId, discordId, { campaignId, sta
        CASE WHEN call_status = 'pending' THEN first_name ELSE NULL END ASC,
        latest_called_at ASC
      LIMIT $6 OFFSET $7`,
-    [guildId, discordId, campaignId || null, rsvp || null, status || null, limit, offset]
+    [orgId, userId, campaignId || null, rsvp || null, status || null, limit, offset]
   )
   return rows
 }
 
-export async function getPendingCallCount(discordId) {
+export async function getPendingCallCount(userId) {
   const { rows } = await pool.query(
     `SELECT COUNT(*) AS count
      FROM calling_assignments a
@@ -398,12 +398,12 @@ export async function getPendingCallCount(discordId) {
      WHERE a.assigned_to = $1 AND a.contact_type = 'member'
        AND (ec.event_date IS NULL OR ec.event_date >= CURRENT_DATE)
        AND COALESCE(cs.camp_calls, 0) = 0`,
-    [discordId]
+    [userId]
   )
   return Number(rows[0]?.count) || 0
 }
 
-export async function getMyCallHistory(guildId, discordId, { name, limit = 50, offset = 0 } = {}) {
+export async function getMyCallHistory(orgId, userId, { name, limit = 50, offset = 0 } = {}) {
   const keyword = name || null
   const like = keyword ? `%${keyword}%` : null
   const { rows } = await pool.query(
@@ -417,7 +417,7 @@ export async function getMyCallHistory(guildId, discordId, { name, limit = 50, o
        llatest.campaign_id AS latest_campaign_id,
        ec.name AS latest_campaign_name
      FROM calling_logs l
-     JOIN cache_pple_member m ON m.source_id::text = l.member_id AND m.guild_id = $1
+     JOIN cache_pple_member m ON m.source_id::text = l.member_id AND m.org_id = $1
      LEFT JOIN calling_member_tiers t ON t.member_id = l.member_id AND t.contact_type = 'member'
      LEFT JOIN (
        SELECT l2.member_id, l2.note, l2.status, l2.campaign_id
@@ -435,12 +435,12 @@ export async function getMyCallHistory(guildId, discordId, { name, limit = 50, o
      GROUP BY l.member_id, m.source_id, t.tier, llatest.note, llatest.status, llatest.campaign_id, ec.name
      ORDER BY latest_called_at DESC
      LIMIT $6 OFFSET $7`,
-    [guildId, discordId, discordId, keyword, like, limit, offset]
+    [orgId, userId, userId, keyword, like, limit, offset]
   )
   return rows
 }
 
-export async function getMyCallHistoryFlat(guildId, discordId, { name, limit = 60, offset = 0 } = {}) {
+export async function getMyCallHistoryFlat(orgId, userId, { name, limit = 60, offset = 0 } = {}) {
   const keyword = name || null
   const like = keyword ? `%${keyword}%` : null
   const { rows } = await pool.query(
@@ -453,8 +453,8 @@ export async function getMyCallHistoryFlat(guildId, discordId, { name, limit = 6
        COALESCE(t.tier::text, 'D') AS tier,
        ec.name AS campaign_name
      FROM calling_logs l
-     JOIN cache_pple_member m ON m.source_id::text = l.member_id AND m.guild_id = $1
-     LEFT JOIN org_members dc ON dc.serial = m.serial AND dc.guild_id = $1
+     JOIN cache_pple_member m ON m.source_id::text = l.member_id AND m.org_id = $1
+     LEFT JOIN LATERAL (SELECT om.avatar, om.user_id FROM org_members om WHERE om.serial = m.serial AND om.org_id = $1 LIMIT 1) dc ON true
      LEFT JOIN users u ON u.id = dc.user_id
      LEFT JOIN calling_member_tiers t ON t.member_id = l.member_id AND t.contact_type = 'member'
      LEFT JOIN cache_pple_event ec ON ec.id = l.campaign_id AND ec.type IN ('campaign', 'event')
@@ -476,8 +476,8 @@ export async function getMyCallHistoryFlat(guildId, discordId, { name, limit = 6
        AND ($6::text IS NULL OR (c.first_name || ' ' || COALESCE(c.last_name, '')) ILIKE $7 OR c.phone ILIKE $7 OR l.note ILIKE $7))
     ORDER BY called_at DESC
     LIMIT $8 OFFSET $9`,
-    [guildId, discordId, keyword, like,
-     discordId, keyword, like,
+    [orgId, userId, keyword, like,
+     userId, keyword, like,
      limit, offset]
   )
   return rows

@@ -2,8 +2,8 @@ import { getServerSession } from 'next-auth'
 import * as assignmentDB from '@/db/calling/assignments.js'
 import * as campaignDB from '@/db/calling/campaigns.js'
 import { getUserScope } from '@/lib/callingAccess.js'
-import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
-import { getGuildId } from '@/lib/guildContext.js'
+import { getEffectiveOrgIdentity } from '@/lib/orgAccess.js'
+import { getOrgId } from '@/lib/orgContext.js'
 import { authOptions } from '@/lib/auth-options.js'
 
 function canSeeProvince(province, access, primaryProvince) {
@@ -18,7 +18,7 @@ function canSeeProvince(province, access, primaryProvince) {
  */
 export async function GET(req) {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.discordId) {
+  if (!session?.user?.userId) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -47,7 +47,7 @@ export async function GET(req) {
  */
 export async function POST(req) {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.discordId) {
+  if (!session?.user?.userId) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -67,17 +67,17 @@ export async function POST(req) {
       return Response.json({ error: 'Campaign not found' }, { status: 404 })
     }
 
-    const { access } = await getEffectiveIdentity(session)
+    const { access } = await getEffectiveOrgIdentity(session)
     if (!canSeeProvince(campaign.province, access, session.user.primary_province)) {
       return Response.json({ error: `Forbidden: cannot assign in ${campaign.province}` }, { status: 403 })
     }
 
-    const guildId = await getGuildId(session)
+    const orgId = await getOrgId(session)
     const affectedRows = await assignmentDB.bulkAssignMembers(
-      guildId,
+      orgId,
       member_ids,
       assigned_to,
-      session.user.discordId,
+      session.user.userId,
       campaign_id || 0,
       contact_type
     )
@@ -99,7 +99,7 @@ export async function POST(req) {
  */
 export async function PUT(req) {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.discordId) {
+  if (!session?.user?.userId) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -119,13 +119,13 @@ export async function PUT(req) {
       return Response.json({ error: 'Campaign not found' }, { status: 404 })
     }
 
-    const { access } = await getEffectiveIdentity(session)
+    const { access } = await getEffectiveOrgIdentity(session)
     if (!canSeeProvince(campaign.province, access, session.user.primary_province)) {
       return Response.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const guildId = await getGuildId(session)
-    await assignmentDB.assignMember(guildId, parseInt(member_id), assigned_to, session.user.discordId, campaign_id || 0)
+    const orgId = await getOrgId(session)
+    await assignmentDB.assignMember(orgId, parseInt(member_id), assigned_to, session.user.userId, campaign_id || 0)
 
     const assignment = await assignmentDB.getAssignment(parseInt(member_id), campaign_id || 0)
     return Response.json({ success: true, data: assignment })
@@ -141,7 +141,7 @@ export async function PUT(req) {
  */
 export async function PATCH(req) {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.discordId) {
+  if (!session?.user?.userId) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -171,7 +171,7 @@ export async function PATCH(req) {
  */
 export async function DELETE(req) {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.discordId) {
+  if (!session?.user?.userId) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -191,7 +191,7 @@ export async function DELETE(req) {
       return Response.json({ error: 'Campaign not found' }, { status: 404 })
     }
 
-    const { access } = await getEffectiveIdentity(session)
+    const { access } = await getEffectiveOrgIdentity(session)
     if (!canSeeProvince(campaign.province, access, session.user.primary_province)) {
       return Response.json({ error: 'Forbidden' }, { status: 403 })
     }

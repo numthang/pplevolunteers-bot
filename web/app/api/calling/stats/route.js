@@ -1,16 +1,19 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
 import pool from '@/db/index.js'
+import { getOrgId } from '@/lib/orgContext.js'
 
 /**
  * GET /api/calling/stats
- * Fetch stats for calling dashboard
+ * Fetch stats for calling dashboard — org-scoped (เดิม global-aggregate ทุก query = leak ข้าม org)
  */
 export async function GET(req) {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.discordId) {
+  if (!session?.user?.userId) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
+  const ORG_ID = await getOrgId(session)
+  if (!ORG_ID) return Response.json({ error: 'No organization' }, { status: 403 })
 
   try {
     // 1. Call Success Rate (answered contacts / all contacts)
@@ -19,7 +22,8 @@ export async function GET(req) {
         COUNT(DISTINCT member_id) as total_contacts,
         COUNT(DISTINCT CASE WHEN status = 'answered' THEN member_id END) as answered
        FROM calling_logs
-       WHERE contact_type = 'member'`
+       WHERE contact_type = 'member' AND org_id = $1`,
+      [ORG_ID]
     )
     const callStats = callStatsRows[0]
     const successRate = Number(callStats.total_contacts) > 0
@@ -32,7 +36,10 @@ export async function GET(req) {
         COUNT(DISTINCT m.source_id) as total_members,
         COUNT(DISTINCT a.member_id) as assigned_members
        FROM cache_pple_member m
-       LEFT JOIN calling_assignments a ON a.member_id = m.source_id::text AND a.contact_type = 'member'`
+       LEFT JOIN calling_assignments a
+         ON a.member_id = m.source_id::text AND a.contact_type = 'member' AND a.org_id = $1
+       WHERE m.org_id = $1`,
+      [ORG_ID]
     )
     const members = memberRows[0]
     const coverage = Number(members.total_members) > 0
@@ -45,7 +52,8 @@ export async function GET(req) {
         COUNT(*) as total,
         SUM(CASE WHEN tier IN ('A', 'B') THEN 1 ELSE 0 END) as high_tier
        FROM calling_member_tiers
-       WHERE contact_type = 'member'`
+       WHERE contact_type = 'member' AND org_id = $1`,
+      [ORG_ID]
     )
     const tierStats = tierStatsRows[0]
     const engagement = Number(tierStats.total) > 0
@@ -54,12 +62,14 @@ export async function GET(req) {
 
     // 4. Tier distribution (for detail)
     const { rows: tiers } = await pool.query(
-      `SELECT tier, COUNT(*) as count FROM calling_member_tiers WHERE contact_type = 'member' GROUP BY tier ORDER BY tier ASC`
+      `SELECT tier, COUNT(*) as count FROM calling_member_tiers WHERE contact_type = 'member' AND org_id = $1 GROUP BY tier ORDER BY tier ASC`,
+      [ORG_ID]
     )
 
     // 5. Call status distribution (for detail)
     const { rows: statuses } = await pool.query(
-      `SELECT status, COUNT(*) as count FROM calling_logs WHERE contact_type = 'member' GROUP BY status`
+      `SELECT status, COUNT(*) as count FROM calling_logs WHERE contact_type = 'member' AND org_id = $1 GROUP BY status`,
+      [ORG_ID]
     )
 
     return Response.json({

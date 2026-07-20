@@ -237,19 +237,19 @@ function generateSQL({ members, logs, lastGrade }) {
     lines.push(`-- ─── cache_pple_member (${memberArray.length}) ─────────────────────────────────────`);
     lines.push('INSERT INTO cache_pple_member (');
     lines.push('  source_id, serial, first_name, last_name, full_name, membership_type,');
-    lines.push('  home_province, home_amphure, home_district, mobile_number, guild_id');
+    lines.push('  home_province, home_amphure, home_district, mobile_number, org_id');
     lines.push(') VALUES');
     lines.push(memberArray.map(m =>
       `  (${m.source_id}, ${esc(m.serial)}, ${esc(m.first_name)}, ${esc(m.last_name)}, ` +
       `${esc(m.full_name)}, ${esc(m.membership_type)}, ${esc(m.home_province)}, ` +
-      `${esc(m.home_amphure)}, ${esc(m.home_district)}, ${esc(m.mobile_number)}, ${esc(GUILD_ID)})`
+      `${esc(m.home_amphure)}, ${esc(m.home_district)}, ${esc(m.mobile_number)}, (SELECT org_id FROM dc_guilds WHERE guild_id=${esc(GUILD_ID)}))`
     ).join(',\n'));
     lines.push('ON CONFLICT (source_id) DO UPDATE SET');
     lines.push('  serial = EXCLUDED.serial, first_name = EXCLUDED.first_name,');
     lines.push('  last_name = EXCLUDED.last_name, full_name = EXCLUDED.full_name,');
     lines.push('  membership_type = EXCLUDED.membership_type, home_province = EXCLUDED.home_province,');
     lines.push('  home_amphure = EXCLUDED.home_amphure, home_district = EXCLUDED.home_district,');
-    lines.push('  mobile_number = EXCLUDED.mobile_number, guild_id = EXCLUDED.guild_id,');
+    lines.push('  mobile_number = EXCLUDED.mobile_number, org_id = EXCLUDED.org_id,');
     lines.push('  synced_at = CURRENT_TIMESTAMP;');
     lines.push('');
   }
@@ -265,11 +265,11 @@ function generateSQL({ members, logs, lastGrade }) {
   if (logs.length > 0) {
     lines.push(`-- ─── calling_logs (${logs.length}) ─────────────────────────────────────`);
     lines.push('INSERT INTO calling_logs');
-    lines.push('  (campaign_id, member_id, caller_name, called_at, status, sig_overall, note, guild_id)');
+    lines.push('  (campaign_id, member_id, caller_name, called_at, status, sig_overall, note, org_id)');
     lines.push('VALUES');
     lines.push(logs.map(l =>
       `  (${CAMPAIGN_ID}, ${l.sourceId}, ${esc(l.callerName)}, ${esc(IMPORT_DATE)}, ` +
-      `'${l.status}', ${l.sigOverall ?? 'NULL'}, ${esc(l.note)}, ${esc(GUILD_ID)})`
+      `'${l.status}', ${l.sigOverall ?? 'NULL'}, ${esc(l.note)}, (SELECT org_id FROM dc_guilds WHERE guild_id=${esc(GUILD_ID)}))`
     ).join(',\n') + ';');
     lines.push('');
   }

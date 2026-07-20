@@ -23,7 +23,7 @@ export default function ContactsPage() {
   const t = useTranslations('calling')
   const { data: session, status } = useSession()
   const router = useRouter()
-  const { roles, discordId, access } = useEffectiveRoles(session)
+  const { roles, userId, access } = useEffectiveRoles(session)
 
   useEffect(() => {
     if (status === 'unauthenticated') router.replace('/')
@@ -150,7 +150,7 @@ export default function ContactsPage() {
       {modal && modal !== 'new' && (
         <ContactModal
           contactId={modal.id}
-          discordId={discordId}
+          userId={userId}
           canManageAll={canManageAll}
           onClose={() => setModal(null)}
           onSaved={fetchContacts}

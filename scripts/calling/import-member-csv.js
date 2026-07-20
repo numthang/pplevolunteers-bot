@@ -118,6 +118,17 @@ async function importMembers(csvPath) {
   process.stderr.write(`Reading: ${csvPath}\n`);
   process.stderr.write(`Guild: ${GUILD_ID}\n`);
 
+  // cache_pple_member เป็น org-scoped แล้ว (calling org migration) → resolve org จาก GUILD_ID
+  const { rows: orgRows } = await pool.query(
+    'SELECT org_id FROM dc_guilds WHERE guild_id = $1', [GUILD_ID]
+  );
+  const ORG_ID = orgRows[0]?.org_id;
+  if (!ORG_ID) {
+    console.error(`Error: guild ${GUILD_ID} ไม่ได้ผูกกับ org ใด (dc_guilds.org_id ว่าง)`);
+    process.exit(1);
+  }
+  process.stderr.write(`Org: ${ORG_ID}\n`);
+
   let dbCols = null;  // set from first record's keys
   const stats = { total: 0, upserted: 0, invalid: 0, errors: [] };
   let batch   = [];
@@ -150,14 +161,14 @@ async function importMembers(csvPath) {
       if (!dbCols) {
         dbCols = [
           ...Object.keys(record).map(h => HEADER_REMAP[h] ?? h),
-          'guild_id',
+          'org_id',
         ];
-        process.stderr.write(`  Columns detected: ${dbCols.length - 1} from CSV + guild_id\n`);
+        process.stderr.write(`  Columns detected: ${dbCols.length - 1} from CSV + org_id\n`);
       }
 
       stats.total++;
 
-      const row = { guild_id: GUILD_ID };
+      const row = { org_id: ORG_ID };
       for (const [csvKey, val] of Object.entries(record)) {
         const dbCol = HEADER_REMAP[csvKey] ?? csvKey;
         row[dbCol]  = coerce(dbCol, val);

@@ -25,9 +25,11 @@ import LinkAccountsBanner from '@/components/LinkAccountsBanner.jsx'
 
 const BOT_INVITE_URL = process.env.DISCORD_BOT_INVITE_URL
 
-async function getTodayCallCount() {
+async function getTodayCallCount(orgId) {
   const { rows } = await pool.query(
-    `SELECT COUNT(*) AS count FROM calling_logs WHERE created_at::date = CURRENT_DATE`
+    `SELECT COUNT(*) AS count FROM calling_logs
+      WHERE created_at::date = CURRENT_DATE AND org_id = $1`,
+    [orgId]
   )
   return Number(rows[0]?.count) || 0
 }
@@ -73,10 +75,10 @@ async function getGuildMemberCounts() {
   return rows
 }
 
-async function getCONTACTSCount(guildId) {
+async function getCONTACTSCount(orgId) {
   const { rows } = await pool.query(
-    `SELECT COUNT(*) AS count FROM calling_contacts WHERE guild_id = $1`,
-    [guildId]
+    `SELECT COUNT(*) AS count FROM calling_contacts WHERE org_id = $1`,
+    [orgId]
   )
   return Number(rows[0]?.count) || 0
 }
@@ -284,6 +286,8 @@ export default async function HomePage() {
   const { access } = await getEffectiveIdentity(session)
   const userIsAdmin = isAdmin(access)
   const GUILD_ID = await getGuildId(session)
+  // calling เป็น org-native แล้ว → query calling ต้องใช้ org_id (GUILD_ID เป็น snowflake คนละชนิด)
+  const CALLING_ORG_ID = await getOrgId(session)
   const enabledFeatures = await getEnabledFeatures(GUILD_ID)
   const financeOn = enabledFeatures.includes('finance')
   const callingOn = enabledFeatures.includes('calling')
@@ -291,16 +295,16 @@ export default async function HomePage() {
   const casesOn = enabledFeatures.includes('cases') && canManageCases(access)
 
   const [memberCount, guilds, guildMemberCounts, campaigns, todayCalls, pendingCount, finance, displayName, contactsCount, contactPending, identities] = await Promise.all([
-    getMembersCount(GUILD_ID),
+    getMembersCount(CALLING_ORG_ID),
     getGuilds(),
     getGuildMemberCounts(),
-    getCampaigns(),
-    getTodayCallCount(),
-    discordId ? getPendingCallCount(discordId) : Promise.resolve(0),
+    getCampaigns(CALLING_ORG_ID),
+    getTodayCallCount(CALLING_ORG_ID),
+    session.user.userId ? getPendingCallCount(session.user.userId) : Promise.resolve(0),
     financeOn ? getFINANCESummary(session) : Promise.resolve({ public: null, internal: null, private: null }),
     discordId ? getDisplayName(GUILD_ID, discordId) : Promise.resolve(null),
-    getCONTACTSCount(GUILD_ID),
-    discordId ? getContactPendingCount(discordId) : Promise.resolve(0),
+    getCONTACTSCount(CALLING_ORG_ID),
+    session.user.userId ? getContactPendingCount(session.user.userId) : Promise.resolve(0),
     discordId ? getUserIdentities(discordId) : Promise.resolve([]),
   ])
 

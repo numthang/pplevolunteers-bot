@@ -2,6 +2,7 @@ import { getServerSession } from 'next-auth'
 import pool from '@/db/index.js'
 import { authOptions } from '@/lib/auth-options.js'
 import { getEntryByToken } from '@/db/docs/entries.js'
+import { orgIdOfGuild } from '@/db/guilds.js'
 
 const digits = (s) => String(s ?? '').replace(/\D/g, '')
 
@@ -24,10 +25,12 @@ export async function POST(req) {
   const entry = await getEntryByToken(token)
   if (!entry) return Response.json({ error: 'ลิงก์ไม่ถูกต้อง' }, { status: 404 })
 
-  // ยืนยันตัวตน: เลขบัตรที่กรอกต้องตรงกับ record ที่เลือก (ใน guild เดียวกัน)
+  // ยืนยันตัวตน: เลขบัตรที่กรอกต้องตรงกับ record ที่เลือก (ใน org เดียวกัน)
+  // cache_pple_member org-scoped แล้ว (calling migration) → resolve org จาก guild ของ docs entry
+  const entryOrgId = await orgIdOfGuild(entry.guild_id)
   const { rows } = await pool.query(
-    `SELECT identification_number FROM cache_pple_member WHERE source_id = $1 AND guild_id = $2`,
-    [ngsSourceId, entry.guild_id]
+    `SELECT identification_number FROM cache_pple_member WHERE source_id = $1 AND org_id = $2`,
+    [ngsSourceId, entryOrgId]
   )
   if (!rows[0]) return Response.json({ error: 'ไม่พบข้อมูลในระบบสมาชิก' }, { status: 404 })
 

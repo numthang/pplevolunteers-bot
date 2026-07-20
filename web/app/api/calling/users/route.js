@@ -1,7 +1,7 @@
 import { getServerSession } from 'next-auth'
 import pool from '@/db/index.js'
 import { authOptions } from '@/lib/auth-options.js'
-import { getGuildId } from '@/lib/guildContext.js'
+import { getOrgId } from '@/lib/orgContext.js'
 
 /**
  * GET /api/calling/users
@@ -9,12 +9,12 @@ import { getGuildId } from '@/lib/guildContext.js'
  */
 export async function GET(req) {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.discordId) {
+  if (!session?.user?.userId) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const guildId = await getGuildId(session)
-  if (!guildId) {
+  const orgId = await getOrgId(session)
+  if (!orgId) {
     return Response.json({ error: 'GUILD_ID not configured' }, { status: 500 })
   }
 
@@ -33,7 +33,7 @@ export async function GET(req) {
          AND ($2 = '' OR om.display_name ILIKE $3 OR u.username ILIKE $3)
        ORDER BY display_name ASC
        ${all ? '' : 'LIMIT 50'}`,
-      [guildId, q, `%${q}%`]
+      [orgId, q, `%${q}%`]
     )
     return Response.json({ success: true, data: rows })
   } catch (error) {

@@ -5,7 +5,8 @@ import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
 import { getUserScope, isAdmin, canCreateCampaign } from '@/lib/callingAccess.js'
 import { getCampaigns } from '@/db/calling/campaigns.js'
-import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
+import { getEffectiveOrgIdentity } from '@/lib/orgAccess.js'
+import { getOrgId } from '@/lib/orgContext.js'
 import CampaignCard from '@/components/calling/CampaignCard.jsx'
 import DocsProvinceFilter from '@/components/docs/DocsProvinceFilter.jsx'
 
@@ -19,12 +20,12 @@ export default async function CallingPage({ searchParams }) {
   if (!session) redirect('/')
 
   const t = await getTranslations('calling')
-  const { access } = await getEffectiveIdentity(session)
+  const { access } = await getEffectiveOrgIdentity(session)
   const userScope = getUserScope(access)
   const isUserAdmin = isAdmin(access)
   const canCreate = canCreateCampaign(access)
 
-  const campaigns = await getCampaigns()
+  const campaigns = await getCampaigns(await getOrgId(session))
   const filteredCampaigns = campaigns.filter(
     c => !c.province || isUserAdmin || userScope.includes(c.province)
   )
