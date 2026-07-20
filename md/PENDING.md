@@ -80,7 +80,22 @@
 >
 > **✅ Phase 1 — RENAME เสร็จ+commit 715cffa (2026-07-19):** `ngs_member_cache→cache_pple_member` · `act_event_cache→cache_pple_event` (สื่อว่าเป็น cache external-sync ต่อ tenant) · `scripts/migration/cache-rename.sql` (idempotent, prod cutover ต้องรันตอน merge) · 31 js + 5 md · ⚠️ column `docs_projects.act_event_cache_id` **คงชื่อเดิม** (rename column = docs scope creep) · cross-feature: rename แตะ docs ด้วย (docs ผูก 2 ตารางนี้หนัก) แต่ additive ไม่พัง · verify build exit0 139 pages + DB JOIN ผ่าน
 >
-> **⬜ Phase 2 — org-scope + full parity (ยังไม่เริ่ม · scrutinize เคาะแล้ว):**
+> **✅ Phase 2 — org-scope + full parity เสร็จ+verify 2026-07-19 (commit 1be4d48 + 137f99f):**
+> - `scripts/migration/calling-org-scope.sql` (dry-run BEGIN/ROLLBACK ผ่านก่อน → COMMIT, applied localhost) · **prod cutover ต้องรันตอน merge** คู่กับ cache-rename.sql
+> - guild_id→org_id in-place 6 ตาราง (calling 5 + **cache_pple_member roster**) · person→users.id 7 คอลัมน์ · `calling_starred.user_discord_id`→`user_id` · 13 FK ใหม่ · person map 100% (14/14, 20/20, 2/2, 1/1) ไม่มี NULL surprise · `cache_pple_event` (campaign=ACT) คง guild-based · roster รับแค่ org_id (created_by/approved_by = user ระบบ NGS ไม่แตะ)
+> - code: db/calling 7 ไฟล์ + 17 route + 4 page + 5 component → `getOrgId`/`getEffectiveOrgIdentity`/`scope:'org'`
+> - **ปิด global-aggregate hole ครบ:** stats 5 query + `getTotalCallStats` + `getTodayCallCount` + `getCONTACTSCount` + **`getCampaigns`** (เดิมไม่ scope เลยทั้งหมด)
+> - `org_members` join → **LATERAL LIMIT 1** 4 จุด (กัน row multiplication จาก per-guild rows — บทเรียน dedup)
+> - cutover 3 import script (xlsx/member-csv/seed-contacts) เขียน org_id · docs `link-ngs` 1 query
+> - **verify live:** magic MRSJAN org8 guildless + เปิด calling ชั่วคราว → `/calling` `/calling/contacts` `/calling/campaigns` = **200** · campaigns/contacts/stats = ว่างทั้งหมด **ไม่ leak PPLE** (68 event / 590 contact / 5203 log) · data ครบไม่หาย · revert config org8 กลับ `["finance"]` แล้ว
+> - 🐛 bug ที่ transform สร้างเอง แล้วเก็บใน 137f99f: `/api/calling/users` ส่ง orgId เข้า `om.guild_id` · picker chain ยังใช้ discord_id ทั้งที่ `assigned_to`=users.id · `createContact` key mismatch · ownership พังเงียบ 2 จุด (ContactModal prop / RecordCallModal `called_by`)
+>
+> **⬜ เหลือของ calling:**
+> - เทสจริงในเบราว์เซอร์ (กด record call / assign / star / แก้ contact) — curl เทสได้แค่ read path
+> - org 1 (Discord session) ยังไม่เทส — ต้องเทสในเบราว์เซอร์เหมือน finance
+> - `calling` อยู่ทั้ง `ORG_FEATURES` และ enabled_features ต่อ guild (`/bot/features`) → ตอนนี้ requireFeature org-aware แยกทางให้แล้ว แต่ควรรวมทางเดียวตอน endgame
+>
+> **(อ้างอิง) scrutinize findings ที่ทำครบแล้ว:**
 > - `+org_id` 6 ตาราง: calling_logs/assignments/member_tiers/contacts/starred + **cache_pple_member (roster)** · backfill=orgIdOfGuild · in-place type-convert แบบ finance (pg_temp `_g2o`/`_d2u`) → ไฟล์ `calling-org-scope.sql` (mirror finance-org-scope.sql)
 > - person→users.id: `called_by`/`assigned_to`/`assigned_by`/`override_by`/`created_by`/`updated_by`/`user_discord_id` · ⚠️ **roster รับแค่ org_id — ห้ามแตะ created_by/approved_by ของมัน** (นั่น user ของ NGS ภายนอก)
 > - `cache_pple_event` (campaigns) **คง guild-based** (ACT/Discord artifact)
