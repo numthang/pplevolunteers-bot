@@ -25,6 +25,13 @@ async function enabledFeaturesFor(session) {
     if (activeOrg) {
       const guilds = await guildsOfOrg(activeOrg.id)
       if (guilds.length === 0) return getOrgEnabledFeatures(activeOrg.id)
+      // email member ของ guild-backed org: getGuildId=null (seam) → เดิมได้ [] = 404 ทุก feature
+      // ทั้งที่ API ตัวเดียวกันปล่อยผ่าน (bug-034) → ใช้ config ของ guild หลักของ org
+      // (prefer env.GUILD_ID เหมือน dual-write ของ org switcher) · Discord user ไม่เปลี่ยนพฤติกรรม
+      if (!(await getGuildId(session))) {
+        const primary = guilds.find(g => g.guild_id === process.env.GUILD_ID) || guilds[0]
+        return getEnabledFeatures(primary.guild_id)
+      }
     }
   }
   // guild org / legacy (unauth/degenerate) → per-guild config เดิม
