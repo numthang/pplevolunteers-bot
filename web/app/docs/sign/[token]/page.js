@@ -86,8 +86,8 @@ export default function SignPage({ params }) {
             setNgsLinked(!!d.data.has_ngs_link)
             setSelfInfoDone(!!d.data.has_self_info)
             setHasIdCard(!!d.data.has_id_card)
-            if (d.data.has_id_card && d.data.member_discord_id) {
-              setIdCardPreviewUrl(`/api/docs/id-card/${d.data.member_discord_id}?token=${encodeURIComponent(token)}`)
+            if (d.data.has_id_card && d.data.member_user_id) {
+              setIdCardPreviewUrl(`/api/docs/id-card/${d.data.member_user_id}?token=${encodeURIComponent(token)}`)
             }
           }
         }
@@ -178,7 +178,7 @@ export default function SignPage({ params }) {
   // การตรวจจริงอยู่ที่ preview ก่อนเซ็น + มีปุ่ม "แก้ไขข้อมูล" ถ้าข้อมูลเปลี่ยน
   useEffect(() => {
     if (!entry || signerRole !== 'recipient' || ngsLinked || selfInfoDone) return
-    if (status !== 'authenticated' || session?.user?.discordId !== entry.member_discord_id) return
+    if (status !== 'authenticated' || session?.user?.userId !== entry.member_user_id) return
     let cancelled = false
     ;(async () => {
       try {
@@ -617,7 +617,7 @@ export default function SignPage({ params }) {
         )}
 
         {/* Step: ID-card upload (recipient only, after ngs linked, เฉพาะเจ้าของเอกสาร) */}
-        {signerRole === 'recipient' && (ngsLinked || selfInfoDone) && session?.user?.discordId === entry?.member_discord_id && (
+        {signerRole === 'recipient' && (ngsLinked || selfInfoDone) && session?.user?.userId === entry?.member_user_id && (
           <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-6">
             <div className="flex items-center gap-2 mb-1">
               <IdCard size={18} className="text-orange shrink-0" />

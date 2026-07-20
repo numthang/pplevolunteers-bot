@@ -24,12 +24,13 @@ export async function GET(req) {
 
   // ไม่ส่ง identification_number กลับ client — เป็น PII และต้องใช้ยืนยันตัวตนตอน link
   // (ถ้ารั่วออกไป การ verify เลขบัตรตอน link จะไร้ความหมาย)
-  const params = [entry.guild_id, `%${q}%`]
+  // cache_pple_member เป็น org-scope แล้ว (calling migration) · docs entry มี org_id ตรงๆ
+  const params = [entry.org_id, `%${q}%`]
   const { rows } = await pool.query(
     `SELECT source_id, first_name, last_name,
             (identification_number IS NOT NULL AND identification_number <> '') AS has_id_number
      FROM cache_pple_member
-     WHERE guild_id = $1
+     WHERE org_id = $1
        AND (first_name ILIKE $2 OR last_name ILIKE $2
             OR CONCAT(first_name, ' ', last_name) ILIKE $2)
      ORDER BY first_name, last_name

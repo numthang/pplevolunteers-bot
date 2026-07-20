@@ -1,27 +1,42 @@
 import pool from '../index.js'
 
 /**
- * สำเนาบัตรประชาชนเก็บใน org_members.id_card_image (BYTEA) แบบ per-guild
- * — guild ที่อัปโหลดไปเท่านั้นที่มีรูป (ตามที่ตัดสินใจ ไม่ใช่ cache_pple_member ที่ sync ทับ)
+ * สำเนาบัตรประชาชนเก็บใน `users.id_card_image` (BYTEA) — **1 คน 1 ใบ**
+ * (ย้ายมาจาก org_members per-guild เมื่อ 2026-07-21 — คนมีบัตรใบเดียว ไม่ใช่ใบต่อ server)
+ *
+ * ⚠️ เก็บใบเดียว = ตัวกันข้ามองค์กรที่เคยได้มาฟรีจาก per-guild storage หายไป
+ *    → ทุกจุดที่ "คนอื่น" ขอดูบัตร ต้องผ่าน `isMemberOfOrg()` ก่อนเสมอ (PDPA ข้าม tenant)
  */
 
-/** บันทึก/แทนที่รูปบัตรของ user ใน guild นั้น คืน true ถ้ามี row ให้อัปเดต */
-export async function saveIdCard(discordId, guildId, imageBuffer) {
+/** บันทึก/แทนที่รูปบัตรของคนนี้ · คืน true ถ้ามี users row ให้อัปเดต */
+export async function saveIdCard(userId, imageBuffer) {
+  if (!userId) return false
   const { rowCount } = await pool.query(
-    `UPDATE org_members om SET id_card_image = $1
-       FROM users u WHERE om.user_id = u.id AND u.discord_id = $2 AND om.guild_id = $3`,
-    [imageBuffer, discordId, guildId]
+    `UPDATE users SET id_card_image = $1 WHERE id = $2`,
+    [imageBuffer, userId]
   )
   return rowCount > 0
 }
 
-/** ดึงรูปบัตร (Buffer) ของ user ใน guild — null ถ้าไม่มี */
-export async function getIdCard(discordId, guildId) {
+/** ดึงรูปบัตร (Buffer) — null ถ้าไม่มี */
+export async function getIdCard(userId) {
+  if (!userId) return null
   const { rows } = await pool.query(
-    `SELECT om.id_card_image FROM org_members om
-       JOIN users u ON u.id = om.user_id
-      WHERE u.discord_id = $1 AND om.guild_id = $2`,
-    [discordId, guildId]
+    `SELECT id_card_image FROM users WHERE id = $1`,
+    [userId]
   )
   return rows[0]?.id_card_image ?? null
+}
+
+/**
+ * เจ้าของบัตรเป็นสมาชิกของ org นี้จริงไหม — ด่านกัน PDPA ข้าม tenant
+ * (คนมีสิทธิ์ docs ที่ org B ต้องดูบัตรของคนใน org B เท่านั้น)
+ */
+export async function isMemberOfOrg(userId, orgId) {
+  if (!userId || !orgId) return false
+  const { rows } = await pool.query(
+    `SELECT 1 FROM org_members WHERE user_id = $1 AND org_id = $2 LIMIT 1`,
+    [userId, orgId]
+  )
+  return rows.length > 0
 }

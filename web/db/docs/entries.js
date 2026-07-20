@@ -90,7 +90,7 @@ export async function getEntryByToken(token) {
        TO_CHAR(ev.event_end_date, 'YYYY-MM-DD"T"HH24:MI') AS event_end_date,
        m.display_name, u_m.firstname, u_m.lastname, m.member_id,
        m.bank_name, m.account_no, m.account_holder,
-       (m.id_card_image IS NOT NULL) AS has_id_card,
+       (u_m.id_card_image IS NOT NULL) AS has_id_card,
        n.identification_number, n.title,
        n.first_name AS ngs_first_name, n.last_name AS ngs_last_name,
        n.home_house_number, n.home_alley, n.home_road,
@@ -101,7 +101,7 @@ export async function getEntryByToken(token) {
      JOIN cache_pple_event ev ON ev.id = p.cache_pple_event_id
      LEFT JOIN users u_m ON u_m.id = e.member_user_id
      LEFT JOIN LATERAL (
-       SELECT om.display_name, om.member_id, om.bank_name, om.account_no, om.account_holder, om.id_card_image
+       SELECT om.display_name, om.member_id, om.bank_name, om.account_no, om.account_holder
        FROM org_members om
        WHERE om.user_id = u_m.id AND om.org_id = p.org_id
        LIMIT 1
@@ -412,7 +412,7 @@ export async function getEntryById(id) {
        TO_CHAR(ev.event_date,     'YYYY-MM-DD"T"HH24:MI') AS event_date,
        TO_CHAR(ev.event_end_date, 'YYYY-MM-DD"T"HH24:MI') AS event_end_date,
        m.display_name, u_m.firstname, u_m.lastname, m.member_id,
-       m.id_card_image,
+       u_m.id_card_image,
        n.identification_number, n.title,
        n.first_name AS ngs_first_name, n.last_name AS ngs_last_name,
        n.home_house_number, n.home_alley, n.home_road,
@@ -430,7 +430,7 @@ export async function getEntryById(id) {
      JOIN cache_pple_event ev ON ev.id = p.cache_pple_event_id
      LEFT JOIN users u_m ON u_m.id = e.member_user_id
      LEFT JOIN LATERAL (
-       SELECT om.display_name, om.member_id, om.id_card_image
+       SELECT om.display_name, om.member_id
        FROM org_members om
        WHERE om.user_id = u_m.id AND om.org_id = p.org_id
        LIMIT 1

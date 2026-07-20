@@ -6,11 +6,11 @@ import { generateEntryPdf } from '@/lib/generatePdf.js'
 /**
  * GET /api/docs/sign/pdf?token=
  * ดาวน์โหลด PDF ใบสำคัญรับเงินฉบับมีลายเซ็น
- * auth: ผู้รับ (member_discord_id) หรือผู้จ่าย (payer_discord_id) ผ่าน sign token
+ * auth: ผู้รับ (member_user_id) หรือผู้จ่าย (payer_user_id) ผ่าน sign token
  */
 export async function GET(req) {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.discordId) {
+  if (!session?.user?.userId) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -22,8 +22,8 @@ export async function GET(req) {
     const entry = await getEntryByToken(token)
     if (!entry) return Response.json({ error: 'ลิงก์ไม่ถูกต้อง' }, { status: 404 })
 
-    const isRecipient = entry.member_discord_id === session.user.discordId
-    const isPayer     = entry.payer_discord_id  === session.user.discordId
+    const isRecipient = entry.member_user_id === session.user.userId
+    const isPayer     = entry.payer_user_id  === session.user.userId
     if (!isRecipient && !isPayer) {
       return Response.json({ error: 'Forbidden' }, { status: 403 })
     }

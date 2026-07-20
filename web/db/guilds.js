@@ -110,3 +110,11 @@ export async function getEnabledFeatures(guildId) {
   const v = rows[0]?.value
   return Array.isArray(v) ? v : []
 }
+
+/** users.id จาก discord snowflake — ใช้ที่ขอบ route ที่ client ยังส่ง discord_id มา
+ *  (person ref ใน DB เป็น users.id หมดแล้วหลัง identity split) · null ถ้าไม่พบ */
+export async function userIdByDiscord(discordId) {
+  if (!discordId) return null
+  const { rows } = await pool.query('SELECT id FROM users WHERE discord_id = $1', [discordId])
+  return rows[0]?.id ?? null
+}

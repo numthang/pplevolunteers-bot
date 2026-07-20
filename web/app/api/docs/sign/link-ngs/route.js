@@ -2,7 +2,6 @@ import { getServerSession } from 'next-auth'
 import pool from '@/db/index.js'
 import { authOptions } from '@/lib/auth-options.js'
 import { getEntryByToken } from '@/db/docs/entries.js'
-import { orgIdOfGuild } from '@/db/guilds.js'
 
 const digits = (s) => String(s ?? '').replace(/\D/g, '')
 
@@ -14,7 +13,7 @@ const digits = (s) => String(s ?? '').replace(/\D/g, '')
  */
 export async function POST(req) {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.discordId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!session?.user?.userId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { token, ngsSourceId, idNumber } = await req.json()
   if (!token || !ngsSourceId) return Response.json({ error: 'token and ngsSourceId required' }, { status: 400 })
@@ -26,8 +25,8 @@ export async function POST(req) {
   if (!entry) return Response.json({ error: 'ลิงก์ไม่ถูกต้อง' }, { status: 404 })
 
   // ยืนยันตัวตน: เลขบัตรที่กรอกต้องตรงกับ record ที่เลือก (ใน org เดียวกัน)
-  // cache_pple_member org-scoped แล้ว (calling migration) → resolve org จาก guild ของ docs entry
-  const entryOrgId = await orgIdOfGuild(entry.guild_id)
+  // docs org-scoped แล้ว → entry.org_id ตรงๆ (เดิม resolve จาก entry.guild_id ที่ไม่มีคอลัมน์แล้ว)
+  const entryOrgId = entry.org_id
   const { rows } = await pool.query(
     `SELECT identification_number FROM cache_pple_member WHERE source_id = $1 AND org_id = $2`,
     [ngsSourceId, entryOrgId]
@@ -40,14 +39,16 @@ export async function POST(req) {
 
   try {
     const { rowCount } = await pool.query(
+      // เลขสมาชิก = ข้อเท็จจริงระดับ org → เขียนทุกแถวของคนนี้ใน org (คนเดียว หลาย guild
+      // = เลขเดียว) · ให้ตรงกับ verifyHandler ฝั่งบอทที่แก้ 2026-07-21 ไม่งั้นสองมาตรฐาน
       `UPDATE org_members om SET member_id = $1
-         FROM users u WHERE om.user_id = u.id AND u.discord_id = $2 AND om.guild_id = $3`,
-      [ngsSourceId, session.user.discordId, entry.guild_id]
+         WHERE om.user_id = $2 AND om.org_id = $3`,
+      [ngsSourceId, session.user.userId, entry.org_id]
     )
     if (rowCount === 0) return Response.json({ error: 'ไม่พบข้อมูลสมาชิก' }, { status: 404 })
     return Response.json({ success: true })
   } catch (err) {
-    // unique (guild_id, member_id) — รายชื่อนี้ถูกผูกกับบัญชีอื่นไปแล้ว
+    // trigger org_members_member_id_unique (ระดับ org) ยิง 23505 — ถูกผูกกับบัญชีอื่นแล้ว
     if (err.code === '23505') {
       return Response.json({ error: 'รายชื่อนี้ถูกผูกกับบัญชีอื่นแล้ว — ติดต่อแอดมิน' }, { status: 409 })
     }

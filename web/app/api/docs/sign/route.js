@@ -9,7 +9,7 @@ import { getEntryByToken, signEntry } from '@/db/docs/entries.js'
  */
 export async function POST(req) {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.discordId) {
+  if (!session?.user?.userId) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -34,11 +34,11 @@ export async function POST(req) {
 
     // ตรวจว่าเป็นเจ้าของลิงก์ถูกต้อง
     if (role === 'recipient') {
-      if (entry.member_discord_id !== session.user.discordId) {
+      if (entry.member_user_id !== session.user.userId) {
         return Response.json({ error: 'ลิงก์นี้ไม่ใช่ของคุณ' }, { status: 403 })
       }
     } else {
-      if (entry.payer_discord_id !== session.user.discordId) {
+      if (entry.payer_user_id !== session.user.userId) {
         return Response.json({ error: 'ลิงก์นี้ไม่ใช่ของคุณ' }, { status: 403 })
       }
     }
@@ -50,7 +50,7 @@ export async function POST(req) {
     await signEntry({
       token,
       signatureBase64,
-      discordId: session.user.discordId,
+      userId: session.user.userId,
       ip,
       role,
     })

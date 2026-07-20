@@ -14,7 +14,8 @@ const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/webp'])
  */
 export async function POST(req) {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.discordId) {
+  // userId ไม่ใช่ discordId — ผู้เซ็นอาจล็อกอินด้วย email (identity split)
+  if (!session?.user?.userId) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -39,8 +40,10 @@ export async function POST(req) {
   try {
     const raw       = Buffer.from(await file.arrayBuffer())
     const processed = await processIdCardImage(raw)   // ย่อ + re-encode JPEG (strip EXIF)
-    const ok        = await saveIdCard(session.user.discordId, entry.guild_id, processed)
-    if (!ok) return Response.json({ error: 'ไม่พบข้อมูลสมาชิกใน guild นี้' }, { status: 404 })
+    // บัตรผูกกับ "คน" ไม่ใช่ membership → ไม่ต้องใช้ guild/org ของ entry อีกต่อไป
+    // (เดิม 404 'ไม่พบข้อมูลสมาชิกใน guild นี้' = ผู้เซ็นที่ไม่ได้อยู่ guild เจ้าของงานอัปไม่ได้)
+    const ok        = await saveIdCard(session.user.userId, processed)
+    if (!ok) return Response.json({ error: 'ไม่พบบัญชีผู้ใช้' }, { status: 404 })
     return Response.json({ success: true })
   } catch (err) {
     console.error('[POST /api/docs/id-card]', err)
