@@ -159,6 +159,12 @@ sudo -u www bash -c 'cd /www/wwwroot/pple-volunteers && psql "$DATABASE_URL" -v 
 | **bot: verify OTP** | กดยืนยันตัวตนในดิสคอร์ด 1 คน | ผูก `org_members.member_id` + `users.phone_verified_at` (**flow นี้พังมาตั้งแต่ calling migration เพิ่งซ่อม — ต้องเทสจริง**) |
 | bot: member join | ให้คนใหม่เข้า server หรือรัน sync | `users` + `org_members` เกิดแถวใหม่ ไม่มี error |
 | bot: `/user ranking` | รันคำสั่ง | คืนชื่อจริง ไม่ใช่เลข id |
+| **bot: `/panel finance-list`** | รันคำสั่งในดิสคอร์ด | ขึ้นรายชื่อบัญชีครบ · **ถ้าขึ้น "ยังไม่มีบัญชีในระบบ" = `org_id` ไม่ตรง** (จุดนี้เคยพังจริง — query ยังหา guild_id หลัง finance เป็น org · แก้แล้ว `de2cac2`) |
+| **bot: แดชบอร์ดการเงิน** | ดูข้อความ dashboard ในห้องการเงิน (หรือ trigger ให้อัปเดต) | ยอดแต่ละบัญชีขึ้นครบ ไม่ใช่ 0 บัญชี — ใช้ `getAccountsSummary` ตัวเดียวกับข้อบน |
+| bot: เคสจากดิสคอร์ด | สร้างเคสผ่าน `/panel` หรือ forum | `cases` ได้ `org_id` + **`discord_guild_id`** + `created_by`=users.id |
+
+> ⚠️ **บอทต้องกดใช้จริงในดิสคอร์ด — build/smoke test ฝั่งเว็บจับบั๊กพวกนี้ไม่ได้เลย**
+> (2026-07-21 เจอ 3 จุดฝั่งบอทที่ตกสำรวจมาหลายวันโดยที่เว็บเขียว 100% ตลอด)
 | **docs** | เปิด `/docs` → เปิดโครงการ 1 ใบ | รายการผู้รับ/ผู้จ่ายครบ · ลองแก้ 1 entry แล้วเซฟได้ · gen PDF ออก |
 | docs: สำเนาบัตร | เปิดหน้าเซ็นของ entry ที่มีบัตร | รูปขึ้น (URL เป็น `/api/docs/id-card/<users.id>` ไม่ใช่ snowflake) · คนนอก org ต้องได้ **403** |
 | **cases** | เปิด `/case/manage` | เห็นเคสครบ **ทุก guild ของ org รวมกัน** · เปิดเคส 1 ใบ → ลิงก์ thread ต้องชี้ **เซิร์ฟเวอร์เจ้าของเคสจริง** ไม่ใช่เซิร์ฟเวอร์ที่กำลังเปิดอยู่ |
