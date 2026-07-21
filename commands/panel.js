@@ -251,9 +251,11 @@ module.exports = {
     if (sub === 'finance-list') {
       await interaction.deferReply({ flags: MessageFlags.Ephemeral })
       const pool = require('../db/index')
+      // finance_accounts เป็น org-scope แล้ว — แปลง guild ของ interaction เป็น org ก่อน query
+      const { orgIdOfGuild } = require('../db/org')
       const { rows: accounts } = await pool.query(
-        `SELECT id, name, bank, account_no, visibility, owner_id FROM finance_accounts WHERE guild_id = $1 ORDER BY visibility, name`,
-        [interaction.guildId]
+        `SELECT id, name, bank, account_no, visibility, owner_id FROM finance_accounts WHERE org_id = $1 ORDER BY visibility, name`,
+        [await orgIdOfGuild(interaction.guildId)]
       )
       if (!accounts.length) return interaction.editReply({ content: 'ยังไม่มีบัญชีในระบบครับ' })
 

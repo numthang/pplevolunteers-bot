@@ -2,6 +2,14 @@
  * parse-kbank-statement.js
  * แปลง KBank statement PDF → Excel + SQL
  *
+ * ⚠️ **SQL ที่ script นี้ generate ใช้ไม่ได้แล้ว — ต้องแก้ก่อนใช้ (จด 2026-07-21)**
+ *    1. `INSERT IGNORE` = MySQL syntax · Postgres ต้องใช้ `ON CONFLICT ... DO NOTHING`
+ *       (พังตั้งแต่ย้าย MySQL → Postgres ไม่เกี่ยวกับ org migration)
+ *    2. `guild_id` — `finance_transactions` เป็น org-scope แล้ว ต้องเป็น
+ *       `(SELECT org_id FROM dc_guilds WHERE guild_id = ...)` · และ `updated_by`
+ *       เป็น `users.id` (INT) แล้ว ไม่ใช่ string 'statement_import'
+ *    ส่วน parse PDF → Excel ยังใช้ได้ปกติ (ไม่แตะ DB)
+ *
  * Usage:
  *   node scripts/parse-kbank-statement.js <path-to-pdf> [account_id] [guild_id]
  *
