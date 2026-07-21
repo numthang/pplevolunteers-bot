@@ -1,4 +1,5 @@
 // db/org.js — Org layer: resolve guild ในเครือเดียวกัน (ใช้ให้ roster match/dedup มองข้าม guild)
+//             + identity helper ฝั่งบอท (userIdByDiscord / upsertUserByDiscord → ตาราง users)
 const pool = require('./index');
 
 // คืน array ของ guild_id ทั้งหมดใน org เดียวกับ guildId (รวมตัวมันเอง)

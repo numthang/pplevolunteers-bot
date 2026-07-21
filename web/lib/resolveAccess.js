@@ -1,5 +1,5 @@
 /**
- * resolveAccess — แปลงชื่อ role (จาก dc_members.roles) → permissions + raw scope grants ต่อ guild
+ * resolveAccess — แปลงชื่อ role (จาก org_members.roles) → permissions + raw scope grants ต่อ guild
  *
  * อ่าน catalog จาก dc_guild_roles (ป้าย B: permission + scope_node) ด้วย index idx_dc_guild_roles_lookup
  * คืน grant "ดิบ" (ยังไม่ expand) — ปล่อยให้ finance/calling expand เองด้วย geography.expandGrants (SPEC §7, §8)
@@ -63,10 +63,10 @@ export function reduceRoleRows(byName, roleNames = []) {
 
 /**
  * @param {string} guildId
- * @param {string[]} roleNames  ชื่อ role จาก dc_members.roles (null = ไม่ใช่สมาชิก guild นี้)
+ * @param {string[]} roleNames  ชื่อ role จาก org_members.roles (null = ไม่ใช่สมาชิก guild นี้)
  * @returns {Promise<{ isMember: boolean, permissions: Set<string>, scopeGrants: string[] }>}
  *
- * membership gate: ถ้า caller (getEffectiveRoles) ไม่เจอแถวใน dc_members → ส่ง null/undefined มา → isMember=false
+ * membership gate: ถ้า caller (getEffectiveRoles) ไม่เจอแถวใน org_members → ส่ง null/undefined มา → isMember=false
  * สมาชิกที่ไม่มี role พิเศษ ส่ง [] มา → isMember=true แต่ permissions ว่าง (fail-safe)
  */
 export async function resolveAccess(guildId, roleNames, webRoleKeys = []) {

@@ -1,6 +1,7 @@
-// web/db/orgMembers.js — org core: identity (dc_members by email) + org membership (org_members)
-// ⚠️ โลก email-org ล้วน — email row = dc_members ที่ discord_id/guild_id/username = NULL (ไม่ปนกับ PPLE)
-// identity = dc_members.id · tenant = orgs.id · membership = org_members
+// web/db/orgMembers.js — org core: identity (users by email) + org membership (org_members)
+//                         + CRUD ของ orgs เอง (createOrg/getOrg/renameOrg/setOrgIcon) อยู่ไฟล์นี้ด้วย
+// ⚠️ โลก email-org ล้วน — email row = users ที่ discord_id = NULL (ไม่ปนกับ PPLE)
+// identity = users.id · tenant = orgs.id · membership = org_members (email world: guild_id NULL)
 import pool from '@/db/index.js'
 
 export function normalizeEmail(email) {

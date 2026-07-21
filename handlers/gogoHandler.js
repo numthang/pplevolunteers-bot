@@ -217,7 +217,7 @@ async function handleGogoDMButton(interaction) {
   }
 
   if (!allowed) {
-    // fallback เช็ค dc_members.roles (กรณี cache ไม่ sync)
+    // fallback เช็ค org_members.roles (กรณี cache ไม่ sync)
     const dbMember = await getMember(interaction.guildId, userId);
     if (dbMember?.roles) {
       const dbRoles = dbMember.roles.split(',').map(r => r.trim());

@@ -1,6 +1,6 @@
 /**
  * Phone OTP login — shared helpers สำหรับ /api/auth/phone/request + verify
- * เบอร์เป็น login credential ได้เฉพาะ dc_members.phone ที่ phone_verified_at ไม่ NULL
+ * เบอร์เป็น login credential ได้เฉพาะ users.phone ที่ phone_verified_at ไม่ NULL
  * (verify ผ่าน OTP ใน Discord — handlers/verifyHandler.js · แก้เบอร์เองจาก profile = reset)
  */
 import pool from '@/db/index.js'
