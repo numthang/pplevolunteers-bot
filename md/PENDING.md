@@ -2,9 +2,18 @@
 
 > เก็บเฉพาะงานค้าง + design ที่ยังไม่ทำ · ของที่ทำเสร็จ+deploy แล้วย้ายไปอยู่ในโค้ด/`md/*` ตามระบบ
 
+## 📍 อ่านตรงนี้ก่อน — สถานะ ณ 2026-07-21
+
+**org migration ปิดจบแล้วทั้งหมด** — identity split + org core + org-scope ครบทั้ง 4 ฟีเจอร์ (finance · calling · docs · cases) + audit_logs · **ไม่เหลือ tenant data ที่ยัง guild-based**
+
+**งานถัดไปคือ cutover ขึ้น prod** → `md/CUTOVER.md` (10 ขั้น · branch `org-core` นำ `master` 71 commit · prod ยังไม่เคยเห็นโค้ดชุดนี้)
+- ⛔ ค้าง 2 อย่างก่อน deploy: **user เทส docs+cases ในเบราว์เซอร์** · **ซ้อม migration กับ dump ของ prod** (CUTOVER §1.5 — ยังไม่เคยซ้อม = เสี่ยงสุด)
+
+> ⚠️ หัวข้อข้างล่างเรียงตาม**ประวัติการทำงาน** ไม่ใช่ลำดับความสำคัญ · เช็ค `[x]/[ ]` ก่อนเชื่อว่ายังไม่ได้ทำ
+
 ---
 
-## 🌐 platformfor.org / CivicFlow — identity/tenant migration (design เสร็จ 2026-07-15, ทำ session หน้า)
+## 🌐 platformfor.org / CivicFlow — identity/tenant migration (✅ เสร็จ 2026-07-21 · เหลือ cutover)
 
 > **แผน + สถาปัตยกรรมเต็มอยู่ที่ `md/civicflow/CIVICFLOW.md`** (อ่านก่อนเริ่ม) · rebrand → email-first multi-tenant, Discord = adapter เสริม · consult wedge กับ CivicFlow (US nonprofit, โจทย์ตรงกัน)
 
@@ -16,7 +25,10 @@
   - identity = `resolveOrgUser(email)` = findOrCreate `dc_members` by email + claim invites · org create self-serve (creator=owner) · invite = shell user + `org_members(status='invited')` → claim auto ตอน login email ตรง
   - ⛔ **Google เลื่อน (bug-org-oauth-basepath):** next-auth v4 ล็อก basePath ทั้ง process จาก `NEXTAUTH_URL` → instance ที่ 2 บน subpath ส่ง `redirect_uri=/api/auth/callback/google` (path PPLE) → OAuth พัง. ปิดปุ่ม+provider แล้ว. **Google กลับมาตอน unify auth เป็น instance เดียว** (endgame ที่ user ยืนยัน — auth-options.js เดิม extend, Discord+Google+email+magic = ปุ่มบนบัญชีเดียว)
   - ⚠️ **ข้อจำกัดที่ตั้งใจ (ไม่ใช่บั๊ก) — email login = สร้าง dc_members แถวใหม่ ไม่ reconcile กับบัญชี Discord เดิม** (user เคาะยอมรับ 2026-07-15). auto-merge ไม่ได้เพราะ (1) PPLE row ไม่มี email verified — `google_id` เป็น text พิมพ์เอง merge = account takeover (2) PPLE 1 คน = หลายแถว (per guild) ไม่มีแถวเดียวให้ email เกาะ. กัดเฉพาะคนซ้อน 2 โลก (target org = non-Discord ไม่กระทบ). **ทางแก้ทีหลัง:** (ก) link path — login Discord อยู่ → verify+เขียน email ลงแถวเดิม → email login เจอแถวนั้นเอง · (ข) เวอร์ชันสะอาด = Phase 3 identity unify (dc_members 1 คน 1 แถว) แล้ว email+discord_id อยู่แถวเดียว
-- [ ] **Phase 2** — ownership migration ต่อ feature (เคาะ order+rule ใหม่ 2026-07-16): เพิ่ม `user_id`(→dc_members.id) + `org_id`(→organizations.id) + backfill · pattern expand→backfill→migrate→contract
+- [x] **Phase 2 — ownership migration ครบทั้ง 4 ฟีเจอร์ ✅ เสร็จ 2026-07-21** (finance `be4d8d3` → calling `1be4d48` → docs `c73aaba`/`61afecd`/`c207d8f` → cases `37c70d6`/`091c8cc` · + audit_logs `e2f2965`)
+  - **ไม่เหลือ tenant data ที่ยัง guild-based แล้ว** · ที่คง `guild_id` = Discord/ACT artifact โดยตั้งใจ: `case_config` · `finance_config` · `cache_pple_event` · `dc_*` ทั้งหมด
+  - รายละเอียดต่อฟีเจอร์อยู่ในหัวข้อย่อยข้างล่าง (FINANCE / CALLING / DOCS) · cutover runbook = `md/CUTOVER.md` (10 ขั้น)
+  <details><summary>spec เดิมของ Phase 2 (เก็บอ้างอิง — rule ที่ใช้จริงตลอดทั้ง 4 ฟีเจอร์)</summary>
   - **order: cases + finance ก่อน** (งาน org ทั่วไป generic ไม่ผูก geography/ตำแหน่งพรรค + ตรง CivicFlow) → **docs ทีหลัง** (ยากสุด: ผูก Discord role + geography ในสิทธิ์เซ็น)
   - **rule ไม่ใช่ swap ตรงๆ — judgment ทีละตาราง** (บทเรียนเดียวกับ "member 2 concept"):
     - `user_id` แทน `discord_id` = ค่อนข้าง universal (ตัวตน/เจ้าของ: created_by, assignee, ผู้บันทึก)
@@ -25,14 +37,15 @@
   - **discord_id → drop เป็น key** (ไม่ใช่ฆ่า Discord login): feature เลิกเกาะ discord_id → เกาะ user_id · `dc_members.discord_id` เหลือสถานะ **credential** (login Discord ยังใช้ → map เป็น user_id)
   - ⚠️ **RBAC เป็นคนละส่วน:** เปลี่ยน column เจ้าของ = ง่าย แต่ "ใครมีสิทธิ์ทำ" (financeAccess/caseGate เช็ค Discord role) โลก email ต้องสลับใช้ `org_members.role` ด้วย = ส่วนหนึ่งของงาน
   - ⚠️ org_members.user_id ชี้ dc_members.id ได้สะอาดเฉพาะ email row (guild_id NULL, 1/คน) — อย่า join PPLE per-guild row เข้า org_members
-- [ ] **Phase 3 (deferred)** — extract `dc_user_guild` · rename `dc_members→users` (subagent, 112 refs) · เคาะ PPLE 3 guild
+  </details>
+- [x] **Phase 3 — identity split ✅ เสร็จ** (`93ef6de` สร้าง users+org_members · `1aeeb37` repoint บอท) — `dc_members` ถูก rename เป็น `_dc_members` (archive) แล้ว · เหลือแค่ **drop ทิ้งหลัง cutover นิ่ง** (ดู ④ ข้างล่าง)
 
 ### 🎫 Web-native role grant (RBAC — โลก email + จัดยศผ่านเว็บ)
 
 - [x] **B — grant ยศคน Discord ผ่านเว็บ (2026-07-16, commit 6d534fb)** — หน้า `/admin/roles` (ค้นสมาชิก → chip ยศ toggle) → สั่ง Discord เพิ่ม/ถอดยศจริง (`lib/discordRoles.js` PUT/DELETE) + write-through `dc_members.roles` + `clearAccessCache` + audit · gate `manageRoles`=admin/moderator (permissions.js) · grantable = 9 role (ยกเว้น admin) · **Discord = one source, เว็บเป็นรีโมท** (ตอบโจทย์ "แก้ที่ไหนก็ตรงกันทั้ง Discord+web") · verify curl 403/200 + jest 189 ผ่าน · ⬜ ยังไม่กดเทสจริงในเบราว์เซอร์ (แตะ Discord side-effect)
 - [x] **web_roles — grant ยศคน email (guildless)** ✅ commit 98aef7d — เพิ่ม column `dc_members.web_roles TEXT` (CSV ของ **key** จาก `org_roles` เช่น `treasurer,editor` — ไม่ใช่ชื่อไทย) · resolveAccess union: `roles`(ชื่อ Discord→แปลผ่าน catalog) + `web_roles`(key เป็น permission ตรงๆ **ไม่ต้องพึ่ง guild catalog** → คน email guildless resolve ได้) · grant API/UI ตัด `discord_id IS NOT NULL` ออก → คน email โผล่ + branch (Discord→เขียน Discord, email→web_roles) · ⚠️ email ยังเปิดหน้า `/finance` ไม่ได้จนกว่า unify login door (ยศติด+resolve ได้ แต่ page-access รอ)
 - [ ] **⭐ migrate `dc_members.roles` (Discord CSV ชื่อ) → `web_roles` (key)** (user สั่งจด 2026-07-16) — แปลชื่อ Discord → permission key ผ่าน catalog `dc_guild_roles` เขียนลง web_roles → เป้าหมาย **web_roles = แหล่งรวม key ของทุกคน (Discord+email) ที่เดียว** · ⚠️ **decision คู่กัน:** ถ้าจะให้ web_roles เป็น source เดียวจริง ต้องให้ **Discord sync เขียน web_roles ด้วย** (แปล name→key ตอน sync ใน `db/members.js`) + resolveAccess อ่าน web_roles → ไม่งั้น `roles`(name) กับ `web_roles`(key) diverge ทุก sync (sync ทับ `roles` แต่ไม่ทับ `web_roles`)
-### 🧬 Identity/Membership split (2026-07-16) — build + verify localhost เสร็จ, **ยังไม่ repoint โค้ด**
+### 🧬 Identity/Membership split (2026-07-16) — ✅ **repoint เสร็จครบแล้ว 2026-07-21** (เหลือแค่ contract)
 
 - [x] **สร้าง `users` (lean identity) + `org_members` (membership+profile)** commit 93ef6de · script `scripts/migration/identity-split-expand.sql` (idempotent, prod-safe รันด้วย `-1`) · dedup dc_members หลายแถว/คน → users 1 แถว/คน (canonical = MIN(id) ต่อ discord_id) · verify localhost: **users 6573 (0 dup) · org_members 7295 (0 orphan) · dc_members ไม่แตะ**
   - **users** = ตัวตน + contact: `discord_id·email·google_id·username·phone·phone_verified_at·line_id·firstname·lastname` (+ created/updated_at)
@@ -42,12 +55,10 @@
   - ⚠️ **ไม่ auto-link Discord↔email** → คนละ users · email พี่ (unnop@) อยู่ orphan `dc_members.id=17505`, แถว discord `id=1` email ว่าง
 - [x] **rename** `organizations`→`orgs` · `dc_user_identities`→`user_identities` (commit 93ef6de + update code refs: guilds/orgMembers/userIdentities/auth-options) · คง `dc_` เฉพาะ Discord-context (dc_members/dc_guilds/dc_guild_roles/dc_user_config/ratings/reports)
 - [x] **Nav org-layout** commit 1899a6b — org switcher (group guild→org, `getUserGuilds` +org_id) + app tabs กางบน topbar (ตัด sub-nav ซ้ำบน home) · Phase A commit 8919047
-- [ ] **NEXT ① repoint โค้ด** — feature อ่าน/เขียน `users`+`org_members` แทน `dc_members` = **ก้อนใหญ่สุด** (finance/cases/calling/docs + auth session → userId)
-  - ⚠️ **finance `owner_user_id`** ตอนนี้ backfill ชี้ `dc_members.id` (ผ่าน discord+guild) = อาจเป็น **non-canonical row** → ไม่ตรง `users.id` · repoint ต้อง **re-backfill ผ่าน canonical (MIN(id)/discord_id)** + เปลี่ยน FK → users(id)
-  - ⚠️ **`dc_members.web_roles`** → ย้าย resolveAccess ไปอ่าน `org_members.web_roles` แล้วค่อย drop column (migration ยังคง dc_members.web_roles ไว้จนกว่าจะ repoint เสร็จ)
-- [ ] **NEXT ② merge บัญชี** 17505(email)→1(discord) = data-fix เล็ก เพื่อเทส single-auth (email login เจอ id=1)
-- [ ] **NEXT ③ bot sync** — `db/members.js` เขียน `org_members.roles` (แทน dc_members.roles) = แตะ bot live
-- [ ] **NEXT ④ contract** — drop `dc_members` + คอลัมน์ไม่ใช้ (ท้ายสุด หลัง repoint นิ่ง)
+- [x] **① repoint โค้ด ✅ เสร็จ** — ทุกฟีเจอร์อ่าน/เขียน `users`+`org_members` แล้ว (finance/calling/docs/cases) · `owner_id` re-backfill ผ่าน canonical + FK→users(id) เรียบร้อยตอน finance-org-scope · resolveAccess อ่าน `org_members.web_roles` แล้ว ([getEffectiveRoles.js:34](web/lib/getEffectiveRoles.js#L34))
+- [x] **② single-auth เทสได้แล้ว ✅** — ไม่ได้ merge 17505 ตามแผนเดิม แต่ใส่ email ให้ `users.id=1` โดยตรง แล้วลบ shell row ทิ้ง → magic-link login ได้ session ที่มี `discordId` ครบเทียบเท่า Discord OAuth (ใช้เป็น harness เทสมาตลอด — ดู [[reference_local_browser_test_login]])
+- [x] **③ bot sync ✅ เสร็จ** commit `1aeeb37` — `db/members.js` upsert 2 จังหวะ (users → org_members) เขียน `org_members.roles` แล้ว
+- [ ] **④ contract (เหลืออันเดียว)** — `DROP TABLE _dc_members` (7,298 แถว) + คอลัมน์ที่ไม่ใช้ · **ทำหลัง cutover ขึ้น prod แล้วนิ่ง** · ⚠️ `_dc_members` เป็น safety net จริง (2026-07-21 เคยใช้กู้ `member_id` ที่ถูกล้าง) — อย่าเพิ่งรีบลบ
 
 #### 💰 FINANCE org-scope — ✅ เสร็จ + verify 2026-07-17 (commit be4d8d3 บน org-core · localhost applied, prod ไม่แตะ)
 **สรุปที่ทำจริง (ต่างจาก spec เดิม 2 จุด — ดีกว่า):**
