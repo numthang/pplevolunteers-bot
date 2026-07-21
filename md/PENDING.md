@@ -81,11 +81,12 @@
 > - ✅ **Phase 3** commit `c207d8f` (server) + `7514cf3` (client) — **ตัด bridge discord→users.id ทิ้งทั้งเส้น** · API รับ/คืน `user_id` ตรงๆ (`memberUserId`/`payerUserId`/`userId`) · `/api/docs/members(/recent)` คืน `user_id` (เดิมมีแต่ discord_id → คน email เลือกเป็นผู้รับไม่ได้) · client 5 ไฟล์คีย์ด้วย user_id · `member_discord_id` เหลือเป็น **display-only** สำหรับลิงก์โปรไฟล์ Discord เท่านั้น
 >   - 🐛 latent bug ที่เจอระหว่างทาง: `getPayersForEvent` dedup pool ด้วย `discord_id` → manual payer (ไม่มีฟิลด์นี้) และ payer ที่ล็อกอิน email (NULL) โดนทิ้งเงียบ · **ยังไม่เคยกัดจริง** (localhost มี docs_payers 1 แถว) แต่จะกัดทันทีที่มีตัวที่ 2 → เปลี่ยนเป็น dedup ด้วย user_id แล้ว
 >
+> - ✅ **เก็บกวาด** `scripts/migration/docs-index-rename.sql` (applied localhost, idempotent): index/constraint 4 ตัวชื่อหลอก `guild`/`discord_id` → `org`/`user_id` · ตัด dead code `changePayer()` + `assignedPayers` + state/prop ที่ค้าง (`payerSaving`, `eventId` ที่ DocEntryList ไม่ได้ใช้แล้ว)
+>
 > **⬜ เหลือของ docs:**
-> - **เทสจริงในเบราว์เซอร์ครบ flow (write path)** แบบเดียวกับ calling Phase 3 — สร้างบิล → กำหนดผู้รับ/ผู้จ่าย → เซ็น → gen PDF แล้ว assert DB · ที่ทำไปคือ smoke test (ทุกหน้า 200 + PATCH entry 1 ครั้ง) ยังไม่ครบ flow
-> - rename index `docs_payers_guild_id_discord_id_key` (ชื่อหลอก — จริงๆ ครอบ `org_id, user_id` แล้ว) → ใส่ใน migration cutover
-> - dead code 2 จุดที่ repoint ถูกแล้วแต่ไม่มีใครเรียก: `changePayer()` ใน DocEntryList · `assignedPayers` ใน DocProjectView → ตัดทิ้งหรือต่อ UI ให้ครบ
-> - `queryPayersByPermission` อ่านแค่ `org_members.roles` (ชื่อ role Discord) ไม่อ่าน `web_roles` → **คนที่ได้ยศผ่านเว็บอย่างเดียวจะไม่โผล่เป็น role-based payer** (เกี่ยวกับงาน web_roles ที่ค้างอยู่ด้านบน)
+> - **เทสจริงในเบราว์เซอร์ครบ flow (write path)** — สร้างบิล → กำหนดผู้รับ/ผู้จ่าย → เซ็น → gen PDF · **user ขอเทสเอง (2026-07-21)** · ที่ verify ไปคือ smoke test authed (ทุกหน้า/API 200 + PATCH entry 1 ครั้ง assert DB)
+> - `POST /api/docs/projects/[id]/set-payer` **โหมด per-group (`recipientUserId`) ไม่มี client เรียกแล้ว** — UI ที่เคยใช้หายไปก่อนหน้านี้ (ตัว `changePayer` ที่เพิ่งลบเป็นซากของมัน) · เก็บ API ไว้ก่อน ถ้าไม่เอาจริงค่อยตัดทั้ง route mode + i18n key `entryList.confirmResetPayerSignature` ที่ลอยอยู่
+> - `queryPayersByPermission` อ่านแค่ `org_members.roles` (ชื่อ role Discord) ไม่อ่าน `web_roles` → **คนที่ได้ยศผ่านเว็บอย่างเดียวจะไม่โผล่เป็น role-based payer** · ไม่ใช่ cleanup — เป็น decision เรื่องอำนาจลงนาม ผูกกับงาน web_roles ด้านบน (⭐ migrate roles→web_roles) ต้องเคาะพร้อมกัน
 
 <details><summary>สเปกเดิมจาก grill (2026-07-21) — เก็บอ้างอิง</summary>
 > **ทำก่อน cutover** (เคาะ 2026-07-21 — user ค้านแผนเดิมที่จะ cutover ก่อนแล้วทำ docs ทีหลัง และมีเหตุผลแข็งกว่า): ขึ้น prod ครึ่งเดียว = จ่ายต้นทุน cutover 2 รอบ + prod มี 2 โมเดลพร้อมกัน (finance/calling=org, docs=guild) + **migration ก้อน docs จะไปรันกับ data ที่คนใช้จริง** แทนที่จะรันตอนยังไม่มีใครพึ่ง

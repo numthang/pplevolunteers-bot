@@ -388,20 +388,6 @@ export default function DocProjectView({ project: initialProject, initialEntries
   const signedCount  = entries.filter(e => e.status === 'signed').length
   const payerSignedCount = entries.filter(e => e.payer_signed_at).length
 
-  // ผู้จ่ายที่ระบบ auto-เลือกไว้ — map payer_user_id ของ entries → ชื่อจาก eligiblePayers หรือ payer_display_name จาก entry
-  const payerById = Object.fromEntries(eligiblePayers.map(p => [p.user_id, p]))
-  const assignedPayers = [...new Set(entries.map(e => e.payer_user_id).filter(Boolean))]
-    .map(id => {
-      const info  = payerById[id]
-      const mine  = entries.filter(e => e.payer_user_id === id)
-      return {
-        user_id:      id,
-        display_name: info?.display_name ?? mine[0]?.payer_display_name ?? id,
-        position:     info?.position     ?? mine[0]?.payer_position     ?? '',
-        total:        mine.length,
-        signed:       mine.filter(e => e.payer_signed_at).length,
-      }
-    })
 
   const isMobile     = project?.is_mobile ?? false
   const allowedItems = isMobile ? MOBILE_ITEMS : ALL_ITEMS
@@ -801,7 +787,6 @@ export default function DocProjectView({ project: initialProject, initialEntries
         currentUserId={currentUserId}
         onChange={setEntries}
         eligiblePayers={eligiblePayers}
-        eventId={eventId}
         recentMembers={recentMembers}
       />
 

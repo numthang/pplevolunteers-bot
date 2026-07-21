@@ -16,13 +16,12 @@ const BADGE_MUTED_LINK = BADGE_MUTED + ' hover:bg-warm-200 dark:hover:bg-disc-bo
 const inputCls = 'h-8 border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-warm-900 dark:text-disc-text text-sm rounded px-2 focus:outline-none focus:ring-1 focus:ring-orange'
 const selectCls = inputCls + ' appearance-none pr-6'
 
-export default function DocEntryList({ initialEntries, isMobile, canManage, currentUserId, onAddClick, onChange, eligiblePayers = [], eventId, recentMembers = [] }) {
+export default function DocEntryList({ initialEntries, isMobile, canManage, currentUserId, onAddClick, onChange, eligiblePayers = [], recentMembers = [] }) {
   const t = useTranslations('docs')
   const [entries, setEntries] = useState(initialEntries)
   const [editingId, setEditingId] = useState(null)
   const [editForm, setEditForm]   = useState({})
   const [saving, setSaving]       = useState(false)
-  const [payerSaving, setPayerSaving] = useState(null)
   const [copiedKey, setCopiedKey]     = useState(null)
 
   function itemLabel(type) {
@@ -165,44 +164,6 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
       onChange?.(next)
     } catch (err) {
       alert(t('entryList.errorPrefix', { message: err.message }))
-    }
-  }
-
-  // เปลี่ยนผู้จ่ายของทุก entry ในกลุ่มผู้รับคนหนึ่ง (manual override)
-  async function changePayer(recipientUserId, payerUserId, groupItems) {
-    if (!payerUserId || !eventId) return
-    const curPayer = groupItems[0]?.payer_user_id
-    if (payerUserId === curPayer) return
-    if (groupItems.some(e => e.payer_signed_at) &&
-        !confirm(t('entryList.confirmResetPayerSignature'))) return
-
-    setPayerSaving(recipientUserId)
-    try {
-      const res = await fetch(`/api/docs/projects/${eventId}/set-payer`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ recipientUserId, payerUserId }),
-      })
-      if (!res.ok) throw new Error((await res.json()).error)
-      const d = await res.json()
-      const tokenById = Object.fromEntries((d.data?.entries || []).map(t => [t.id, t]))
-      const info = eligiblePayers.find(p => p.user_id === payerUserId)
-      const next = entries.map(e =>
-        e.member_user_id === recipientUserId
-          ? { ...e,
-              payer_user_id:       payerUserId,
-              payer_sign_token:   tokenById[e.id]?.payer_sign_token ?? e.payer_sign_token,
-              payer_signed_at:    null,
-              payer_display_name: info?.display_name ?? e.payer_display_name,
-              payer_position:     info?.position     ?? e.payer_position }
-          : e
-      )
-      setEntries(next)
-      onChange?.(next)
-    } catch (err) {
-      alert(t('entryList.errorPrefix', { message: err.message }))
-    } finally {
-      setPayerSaving(null)
     }
   }
 
