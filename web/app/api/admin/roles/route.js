@@ -21,11 +21,11 @@ import pool from '@/db/index.js'
 async function gate() {
   const session = await getServerSession(authOptions)
   if (!session) return { error: 'Forbidden', status: 403 }
-  const { access, discordId } = await getEffectiveIdentity(session)
+  const { access } = await getEffectiveIdentity(session)
   if (!can('manageRoles', access.permissions)) return { error: 'Forbidden', status: 403 }
   const guildId = await getGuildId(session)
   const { rows } = await pool.query('SELECT org_id FROM dc_guilds WHERE guild_id = $1', [guildId])
-  return { actorId: discordId, guildId, orgId: rows[0]?.org_id ?? null }
+  return { actorId: session.user.userId, guildId, orgId: rows[0]?.org_id ?? null }
 }
 
 export async function GET(req) {
@@ -132,7 +132,7 @@ async function mutate(req, mode) {
 
   clearAccessCache(g.guildId)
   logAction({
-    guildId: g.guildId,
+    orgId: g.orgId,
     app: 'admin',
     action: mode === 'add' ? 'role_grant' : 'role_revoke',
     actorId: g.actorId,

@@ -37,7 +37,7 @@ async function gate() {
   const canUse = isOwner || access.permissions.has('admin') || policy.some(p => access.permissions.has(p))
   if (!canUse) return { error: 'forbidden', status: 403 }
 
-  return { orgId, perms: access.permissions, actorDiscordId: session.user.discordId || null }
+  return { orgId, perms: access.permissions, actorUserId: session.user.userId }
 }
 
 export async function GET(req) {
@@ -163,12 +163,12 @@ async function mutate(req, mode) {
 
   if (m.guild_id) clearAccessCache(m.guild_id)
   logAction({
-    guildId: m.guild_id,
+    orgId: g.orgId,
     app: 'org',
     action: mode === 'add' ? 'role_grant' : 'role_revoke',
-    actorId: g.actorDiscordId,
+    actorId: g.actorUserId,
     targetId: m.discord_id || `u${m.id}`,
-    meta: { roleKey, via: m.discord_id ? 'discord' : 'web', orgId: g.orgId },
+    meta: { roleKey, via: m.discord_id ? 'discord' : 'web' },
   })
 
   return Response.json({ ok: true })

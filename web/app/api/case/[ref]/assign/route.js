@@ -8,7 +8,7 @@ export async function POST(req, { params }) {
   const { ref } = await params
   const gate = await gateCase(ref)
   if (gate.error) return gate.error
-  const { session, guildId, caseRow } = gate
+  const { session, guildId, orgId, caseRow } = gate
 
   let discordId = session.user.discordId
   try {
@@ -25,7 +25,7 @@ export async function POST(req, { params }) {
     await postToThread(caseRow.discord_thread_id, `👤 ผู้รับผิดชอบเคส **${caseRow.ref}**: ${mentions}`)
   }
 
-  logAction({ guildId, app: 'cases', action: 'case.assigned', actorId: session.user.discordId, targetId: caseRow.ref, meta: { assignedTo: discordId } })
+  logAction({ orgId, app: 'cases', action: 'case.assigned', actorId: session.user.userId, targetId: caseRow.ref, meta: { assignedTo: discordId } })
 
   return Response.json({ ok: true })
 }
@@ -35,7 +35,7 @@ export async function DELETE(req, { params }) {
   const { ref } = await params
   const gate = await gateCase(ref)
   if (gate.error) return gate.error
-  const { session, guildId, caseRow } = gate
+  const { session, guildId, orgId, caseRow } = gate
 
   let discordId = session.user.discordId
   try {
@@ -45,7 +45,7 @@ export async function DELETE(req, { params }) {
 
   await removeAssignee(caseRow.id, discordId)
 
-  logAction({ guildId, app: 'cases', action: 'case.unassigned', actorId: session.user.discordId, targetId: caseRow.ref, meta: { removedFrom: discordId } })
+  logAction({ orgId, app: 'cases', action: 'case.unassigned', actorId: session.user.userId, targetId: caseRow.ref, meta: { removedFrom: discordId } })
 
   return Response.json({ ok: true })
 }

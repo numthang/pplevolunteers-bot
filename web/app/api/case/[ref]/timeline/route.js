@@ -26,7 +26,7 @@ export async function POST(req, { params }) {
     { body: body.trim(), is_public: !!is_public, occurred_at: occurred_at || null },
   ], 'human')
 
-  logAction({ guildId, app: 'cases', action: 'case.timeline_added', actorId: gate.session.user.discordId, targetId: caseRow.ref, meta: { is_public: !!is_public } })
+  logAction({ orgId: gate.orgId, app: 'cases', action: 'case.timeline_added', actorId: gate.session.user.userId, targetId: caseRow.ref, meta: { is_public: !!is_public } })
 
   const entries = await getTimeline(caseRow.id)
   return Response.json({ ok: true, entries })

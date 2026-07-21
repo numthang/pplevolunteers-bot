@@ -1,6 +1,9 @@
 /**
  * Gate helper สำหรับ caseworker action APIs — รวม auth + permission + scope ไว้ที่เดียว
- * คืน { error } (Response) ถ้าไม่ผ่าน · คืน { session, access, guildId, caseRow } ถ้าผ่าน
+ * คืน { error } (Response) ถ้าไม่ผ่าน · คืน { session, access, guildId, orgId, caseRow } ถ้าผ่าน
+ *
+ * ⚠️ cases ยัง guild-scoped (ยังไม่ migrate) — `orgId` derive จาก guild ของเคสไว้ให้ audit ใช้
+ *    ตอน cases → org แล้ว ตัว caseRow จะมี org_id ตรงๆ แล้วบรรทัด derive นี้จะหายไปเอง
  */
 
 import { getServerSession } from 'next-auth'
@@ -10,6 +13,7 @@ import { getGuildId } from '@/lib/guildContext.js'
 import { getOrgGuildIds } from '@/lib/org.js'
 import { canManageCases, canAccessCaseProvince } from '@/lib/caseAccess.js'
 import { getCaseByRefFull } from '@/db/cases.js'
+import { orgIdOfGuild } from '@/db/guilds.js'
 
 export async function gateCase(ref) {
   const session = await getServerSession(authOptions)
@@ -29,5 +33,5 @@ export async function gateCase(ref) {
 
   // guildId เจ้าของเคสจริง (ไม่ใช่ guild ที่ session กำลัง browse) — ทุก write/config lookup ต่อจากนี้ต้องยึดตัวนี้
   // กัน dangling pointer แบบเดียวกับ verifyHandler (ดู decision_tenant_anchor_guild)
-  return { session, access, guildId: caseRow.guild_id, caseRow }
+  return { session, access, guildId: caseRow.guild_id, orgId: await orgIdOfGuild(caseRow.guild_id), caseRow }
 }

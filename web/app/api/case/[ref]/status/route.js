@@ -12,7 +12,7 @@ export async function POST(req, { params }) {
   const { ref } = await params
   const gate = await gateCase(ref)
   if (gate.error) return gate.error
-  const { session, guildId, caseRow } = gate
+  const { session, guildId, orgId, caseRow } = gate
 
   const { status, close_reason, public_note } = await req.json().catch(() => ({}))
   if (!VALID_STATUS.includes(status)) return Response.json({ error: 'สถานะไม่ถูกต้อง' }, { status: 400 })
@@ -42,7 +42,7 @@ export async function POST(req, { params }) {
     await postToThread(caseRow.discord_thread_id, `🔄 สถานะเคส **${caseRow.ref}** → **${statusLabel(status)}**${reasonTxt}`)
   }
 
-  logAction({ guildId, app: 'cases', action: 'case.status_changed', actorId: session.user.discordId, targetId: caseRow.ref, meta: { from: caseRow.status, to: status, close_reason: close_reason || null } })
+  logAction({ orgId, app: 'cases', action: 'case.status_changed', actorId: session.user.userId, targetId: caseRow.ref, meta: { from: caseRow.status, to: status, close_reason: close_reason || null } })
 
   return Response.json({ ok: true })
 }
