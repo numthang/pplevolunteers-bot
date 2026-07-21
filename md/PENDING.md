@@ -86,7 +86,34 @@
 > **⬜ เหลือของ docs:**
 > - **เทสจริงในเบราว์เซอร์ครบ flow (write path)** — สร้างบิล → กำหนดผู้รับ/ผู้จ่าย → เซ็น → gen PDF · **user ขอเทสเอง (2026-07-21)** · ที่ verify ไปคือ smoke test authed (ทุกหน้า/API 200 + PATCH entry 1 ครั้ง assert DB)
 > - `POST /api/docs/projects/[id]/set-payer` **โหมด per-group (`recipientUserId`) ไม่มี client เรียกแล้ว** — UI ที่เคยใช้หายไปก่อนหน้านี้ (ตัว `changePayer` ที่เพิ่งลบเป็นซากของมัน) · เก็บ API ไว้ก่อน ถ้าไม่เอาจริงค่อยตัดทั้ง route mode + i18n key `entryList.confirmResetPayerSignature` ที่ลอยอยู่
-> - `queryPayersByPermission` อ่านแค่ `org_members.roles` (ชื่อ role Discord) ไม่อ่าน `web_roles` → **คนที่ได้ยศผ่านเว็บอย่างเดียวจะไม่โผล่เป็น role-based payer** · ไม่ใช่ cleanup — เป็น decision เรื่องอำนาจลงนาม ผูกกับงาน web_roles ด้านบน (⭐ migrate roles→web_roles) ต้องเคาะพร้อมกัน
+> - `queryPayersByPermission` อ่านแค่ `org_members.roles` (ชื่อ role Discord) ไม่อ่าน `web_roles` → ดู **"อำนาจลงนาม → org-generic"** ข้างล่าง (grill เคาะแล้ว รอลงมือหลัง user เทส)
+
+##### ✍️ อำนาจลงนาม (payer) → org-generic — grill เคาะ 2026-07-21 · **รอ user เทส docs ก่อนค่อยลงมือ**
+
+> **ทำไมยังไม่ทำทันที:** user ยังไม่ได้เทส docs migration เลย · เอา schema+UI ใหม่ไปทับก่อนเทส = เจอบั๊กแล้วแยกไม่ออกว่ามาจากไหน · และรูนี้**ยังไม่มีใครตกจริง** (ผู้จ่ายจริงในระบบ 3 คน เป็นคน Discord ครบ) · **ไม่มีลูกค้า/org รอใช้ docs (user ยืนยัน 2026-07-21)**
+
+**🔍 กลไกจริงที่ค้นเจอตอน grill (ก่อนหน้านี้เข้าใจผิด):**
+- scope ของผู้ลงนามมาจาก **Discord role 2 ใบคนละหน้าที่ ที่ต้องถือครบคู่**:
+  - **"ยศ"** เช่น `ผู้ประสานงานจังหวัด` → `dc_guild_roles.permission = province_coordinator` · **ไม่มี scope_node**
+  - **"ทีมพื้นที่"** เช่น `ทีมราชบุรี` → `scope_node = province:ราชบุรี` · **ไม่มี permission**
+  - ใน 392 role: 11 ใบเป็นยศ · 97 ใบเป็นทีมพื้นที่
+- [resolveAccess.js:78](web/lib/resolveAccess.js#L78) `web_roles` เติม **permission อย่างเดียว ไม่เติม scopeGrants** → คนที่ตั้งยศผ่านเว็บได้ "ยศ" แต่ไม่ได้ "พื้นที่" → `gatedScopeNodes` คืน `[]` → โดน `if (!scope_nodes.length) return false` คัดออก **ทั้ง role-based และ manual list** (docs_payers ก็คำนวณ scope จาก role catalog เหมือนกัน ไม่ได้มีของตัวเอง)
+- ตัวเลข org 1: มียศลงนาม 181 คน · มีทีมพื้นที่ 2,310 · **ครบคู่เซ็นได้จริง 110** · **เคยเป็นผู้จ่ายจริง 3 คน** (Tee 11 ใบ · Noom 7 · add_teerapon 3)
+
+**✅ เคาะแล้ว:**
+1. **ผู้ลงนามผูกกับ "ลิสต์ที่ org กรอกเอง" (`docs_payers` = แหล่งจริง)** ไม่ใช่ระบบยศ · ยศ Discord ลดชั้นเป็น **ทางลัดเติมลิสต์** (feature เสริมของ PPLE ปิดได้) · เหตุผล: `docs_payers` มี `display_name`/`position`/`signature_base64`/`sort_order` ของตัวเองครบอยู่แล้ว **ขาดแค่ scope** → เติมช่องเดียวจบ · org ใหม่ไม่ต้องมี Discord ไม่ต้องมียศพรรคก็ใช้ได้
+2. **งานที่ต้องทำ (เล็ก):** `+docs_payers.scope_nodes` (รูปแบบเดียวกับ `dc_guild_roles.scope_node` เช่น `province:ราชบุรี` เพื่อใช้ `expandGrants` ตัวเดิมได้) · หน้า `/docs/settings` เพิ่มช่องเลือกจังหวัด · `getPayers` ใช้ scope ของแถวตัวเองแทนการคำนวณจาก role catalog
+
+**❓ ยังไม่เคาะ (ไว้ตอนลงมือ จะรู้จาก usage จริงแล้ว):** ทางลัดจากยศ Discord เป็นแบบไหน — (ก) ปุ่ม "ดึงจากยศ" import ครั้งเดียวแล้วลิสต์เป็นเจ้าของ (แนะนำ — แหล่งเดียวจริง) · (ข) auto คำนวณสดทุกครั้ง (= 2 แหล่ง ขัดข้อ 1) · (ค) ไม่มีทางลัด กรอกมือล้วน (ใช้จริงแค่ 3 คน อาจพอ แต่จังหวัดใหม่จะ dropdown ว่าง)
+
+**🧱 กำแพงตัวจริงที่ใหญ่กว่า payer — "org สร้าง event เองไม่ได้" (blocker ของ docs generic ทั้งก้อน):**
+- `docs_projects.cache_pple_event_id` **NOT NULL + FK** → ทุกโครงการต้องเกาะ event ที่มีอยู่ก่อน
+- `cache_pple_event` = cache sync จากระบบ **ACT ของพรรค** · `guild_id` NOT NULL · เขียนได้จาก `scripts/data/sync-act-events.js` เท่านั้น — **ไม่มี UI สร้างงานบนเว็บเลย**
+- [projects.js:115](web/db/docs/projects.js#L115) ยัง `WHERE id = $1 AND guild_id = $2` → org ไม่มี guild query ได้ 0 แถว
+- → org ใหม่เปิด /docs = dropdown "เลือกงาน" **ว่างตลอดกาล** ไม่ว่า payer จะ generic แค่ไหน · `province` ที่ใช้กรอง payer ก็มาจาก event ตัวนี้
+- **ทำตอนมีลูกค้าจริง** — ก้อนใหญ่ (event CRUD + ตัด dependency ACT) และ **แตะ calling ด้วย** (ใช้ `cache_pple_event` เป็น campaign)
+
+**+ PPLE hardcode อีกจุด:** [generatePdf.js:136](web/lib/generatePdf.js#L136) ฝังชื่อโครงการพรรคไว้ในโค้ด (`'การจัดประชุมสมาชิกสัมพันธ์และผู้สนับสนุนพรรคทั่วประเทศ ปี 2569'`) → ต้องย้ายเป็น config ต่อ org ตอนทำ generic
 
 <details><summary>สเปกเดิมจาก grill (2026-07-21) — เก็บอ้างอิง</summary>
 > **ทำก่อน cutover** (เคาะ 2026-07-21 — user ค้านแผนเดิมที่จะ cutover ก่อนแล้วทำ docs ทีหลัง และมีเหตุผลแข็งกว่า): ขึ้น prod ครึ่งเดียว = จ่ายต้นทุน cutover 2 รอบ + prod มี 2 โมเดลพร้อมกัน (finance/calling=org, docs=guild) + **migration ก้อน docs จะไปรันกับ data ที่คนใช้จริง** แทนที่จะรันตอนยังไม่มีใครพึ่ง
