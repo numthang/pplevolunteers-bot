@@ -44,6 +44,52 @@ sudo -u www bash -c 'pg_dump "$DATABASE_URL" -Fc -f /www/backup/pple_pre_orgcuto
 
 ---
 
+## 1.5) ⭐ ซ้อมกับ dump ของ prod — **ทำก่อนวันจริง อย่าข้าม**
+
+> เลื่อนมาทำ "ตอนจะ deploy จริง" (user เคาะ 2026-07-21) · **ยังไม่เคยซ้อมเลยสักครั้ง = ความเสี่ยงอันดับ 1 ที่เหลืออยู่**
+> localhost รัน migration ทีละไฟล์ค่อยเป็นค่อยไปตลอดสัปดาห์ → **ไม่ได้พิสูจน์ว่า 10 ขั้นรันรวดเดียวบน data จริงจะผ่าน**
+> prod มีข้อมูลเยอะกว่ามาก + มี state ที่ localhost ไม่มี (คนที่ไม่เคยถูก dedup, แถวกำพร้า, ค่าที่ map ไม่ได้)
+> ได้ของแถม: **ตัวเลขเวลา downtime จริง** ไปแจ้งทีมล่วงหน้า
+
+```bash
+# 1. ดึง dump จาก prod (ทำบนเครื่อง prod)
+sudo -u www bash -c 'pg_dump "$DATABASE_URL" -Fc -f /www/backup/rehearsal_$(date +%F).dump'
+#    แล้วก๊อปมาเครื่อง dev
+
+# 2. สร้าง DB ซ้อมแยก (บนเครื่อง dev — ห้ามทับ pple_volunteers ที่ใช้อยู่)
+createdb pple_rehearsal
+pg_restore -d pple_rehearsal --no-owner --no-privileges rehearsal_YYYY-MM-DD.dump
+
+# 3. รัน 10 ขั้นรวดเดียว จับเวลา (ON_ERROR_STOP = หยุดทันทีที่พัง จะได้รู้ว่าขั้นไหน)
+time (
+  for f in identity-refactor finance-org-scope cache-rename calling-org-scope \
+           docs-org-scope docs-id-card-to-users docs-index-rename audit-org-scope; do
+    echo "=== $f ==="
+    psql -d pple_rehearsal -v ON_ERROR_STOP=1 -f scripts/migration/$f.sql || break
+  done
+  # ⚠️ #9 บล็อก PROD ของ cases (2 บรรทัด) — ต้องรันก่อน cases-org-scope
+  psql -d pple_rehearsal -v ON_ERROR_STOP=1 -c "
+    ALTER TABLE cases ADD COLUMN IF NOT EXISTS discord_guild_id VARCHAR(20);
+    UPDATE cases SET discord_guild_id = guild_id WHERE discord_guild_id IS NULL;"
+  psql -d pple_rehearsal -v ON_ERROR_STOP=1 -f scripts/migration/cases-org-scope.sql
+)
+
+# 4. เช็คจุดที่พังบ่อยบน data จริง (ทั้งหมดต้องได้ 0)
+psql -d pple_rehearsal -c "
+SELECT 'cases ที่มี thread แต่ไม่รู้ guild' t, count(*) FROM cases WHERE discord_thread_id IS NOT NULL AND discord_guild_id IS NULL
+UNION ALL SELECT 'users ซ้ำ discord_id', count(*) FROM (SELECT discord_id FROM users WHERE discord_id IS NOT NULL GROUP BY 1 HAVING count(*)>1) x
+UNION ALL SELECT 'org_members กำพร้า',   count(*) FROM org_members om LEFT JOIN users u ON u.id=om.user_id WHERE u.id IS NULL
+UNION ALL SELECT 'finance ไม่มี org',    count(*) FROM finance_transactions WHERE org_id IS NULL
+UNION ALL SELECT 'calling ไม่มี org',    count(*) FROM calling_logs WHERE org_id IS NULL;"
+
+# 5. ชี้เว็บ dev มาที่ DB ซ้อม แล้วกดใช้จริง (login → finance/calling/docs/cases)
+#    เสร็จแล้วลบทิ้ง: dropdb pple_rehearsal
+```
+
+**ถ้าซ้อมพัง** = ดีแล้ว เจอบนของซ้อมดีกว่าเจอตอน prod ปิดอยู่ · แก้ migration แล้ว `dropdb && restore` ซ้อมใหม่ (ทำซ้ำได้ไม่จำกัด)
+
+---
+
 ## 2) MIGRATION — ลำดับนี้เท่านั้น
 
 | # | ไฟล์ | ทำอะไร | ทำไมต้องลำดับนี้ |
@@ -134,7 +180,7 @@ sudo -u www bash -c 'cd /www/wwwroot/pple-volunteers && psql "$DATABASE_URL" -v 
 ## 6) ยังค้างก่อน cutover (blocker)
 
 - [ ] **user เทส docs + cases จริงในเบราว์เซอร์** (นัดไว้ 2026-07-21 — ยังไม่ได้เทส) · ที่ verify ไปคือ smoke test + write path บางส่วนเท่านั้น
-- [ ] **ซ้อม migration ทั้ง 10 ขั้นกับ DB ที่ restore จาก dump ของ prod จริงสักครั้ง** ← สำคัญสุด · ตอนนี้ยังไม่เคยซ้อมเลย (localhost migrate ทีละไฟล์ไปแล้ว = ไม่ได้พิสูจน์ว่าลำดับนี้รันรวดเดียวผ่าน)
+- [ ] **ซ้อม migration ทั้ง 10 ขั้นกับ dump ของ prod → ดูขั้นตอนพร้อมคำสั่งที่ [§1.5](#15--ซ้อมกับ-dump-ของ-prod--ทำก่อนวันจริง-อย่าข้าม)** ← เสี่ยงสุดที่เหลือ · user เคาะให้ทำ "ตอนจะ deploy จริง" (2026-07-21)
 - [ ] เพิ่มขั้น **stop bot ก่อน migrate** ใน `deploy.sh --production`
 - [ ] `scripts/data/backfill-intro-*.js` + `scripts/social/x-get-token.js` ยังอ้าง `dc_members` (one-off ที่รันไปแล้ว/ตายแล้ว — ตัดสินใจว่าจะแก้หรือลบ)
 - [ ] RBAC: คน login email ของ org ที่**ไม่มี guild** ยังเปิด `/finance` ไม่ได้ (ตั้งใจ — เปิดตอน endgame) · ส่วน email member ของ org ที่**มี guild** แก้แล้ว (bug-034)
