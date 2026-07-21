@@ -61,13 +61,14 @@
 
 ---
 
-## 🗄️ Schema (5 ตาราง)
+## 🗄️ Schema (6 ตาราง)
 
-- `cases` — เคสหลัก (ref, province, category, title, detail, status, close_reason, complainant_*, discord_thread_id, ai_summary, intake_ip, consent_at)
-- `case_notes` — timeline (is_public แยก internal/public)
+- `cases` — เคสหลัก (ref, province, category, title, detail, status, close_reason, complainant_*, discord_thread_id, discord_guild_id, ai_summary, intake_ip, consent_at, letters)
+- `case_timeline` — timeline (is_public แยก internal/public)
 - `case_assignees` — ผู้รับผิดชอบหลายคน/เคส
 - `case_attachments` — ไฟล์แนบ (เก็บนอก /public)
 - `case_config` — forum channel ต่อ guild
+- `case_letter_config` — ข้อมูลออกหนังสือต่อ org+จังหวัด (org_name, address, signer_*, coordinator_*)
 
 ---
 
@@ -102,7 +103,7 @@
 
 ## 📂 ไฟล์หลัก
 
-**Web:** `app/case/` (public + manage) · `app/api/case/` (submit + actions + attachments) · `db/cases.js` · `lib/{caseAccess,caseUploads,caseDiscord,caseGate,sendSms,provinceCode,caseOptions}.js` · `components/case/`
+**Web:** `app/case/` (public + manage) · `app/api/case/` (submit + actions + attachments) · `db/cases.js` · `db/caseLetterConfig.js` · `lib/{caseAccess,caseUploads,caseDiscord,caseGate,sendSms,provinceCode,caseOptions}.js` · `components/case/`
 
 **Bot:** `db/case.js` · `commands/{panel,case-import-context-menu,report}.js` · `handlers/caseImportHandler.js`
 

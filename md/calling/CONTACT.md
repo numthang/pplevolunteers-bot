@@ -8,7 +8,7 @@
 ## Overview
 
 ระบบบันทึก "คนนอก" ที่พบปะหรือรู้จักผ่านกิจกรรมของพรรค เช่น ผู้บริจาค คนสนใจ อาสาสมัคร  
-ต่างจาก `cache_pple_member` ซึ่งเป็นสมาชิกพรรคที่ sync มาจาก ACT (ไม่แตะ)
+ต่างจาก `cache_pple_member` ซึ่งเป็นสมาชิกพรรคที่ sync มาจาก NGS CSV export (ไม่แตะ)
 
 จุดประสงค์หลัก:
 - บันทึกคนที่เจอได้เร็วที่สุด (เช่น ตอนลงพื้นที่ event)
@@ -20,17 +20,13 @@
 ## Route
 
 ```
-/contacts          ← หน้าจัดการ contacts (เดิม: /calling/contacts)
-/contacts/[id]     ← detail + interaction log ของ contact คนนั้น
+/calling/contacts          ← หน้าจัดการ contacts
+/calling/contacts/[id]     ← detail + interaction log ของ contact คนนั้น
 ```
 
-- `/calling/contacts` → redirect ไป `/contacts` (backward compat)
-- Nav: ยังอยู่ใต้ PPLE Calling group ใน Nav.jsx แต่ URL เป็น `/contacts`
-- `isCallingApp` ต้องครอบ `/contacts` ด้วย:
-  ```js
-  const isCallingApp = pathname.startsWith('/calling') || pathname.startsWith('/contacts')
-  ```
-- CALLING_LINKS: เปลี่ยน href จาก `/calling/contacts` → `/contacts`
+- Route อยู่ใต้ `/calling/contacts` ตรงๆ (ไม่มี route แยก `/contacts` แล้ว)
+- Nav: อยู่ใต้ Calling group ใน `Nav.jsx` (`CALLING_LINKS`), `hamburgerOnly: true`
+- `isCallingApp` เช็คแค่ `pathname.startsWith('/calling')` — ครอบ `/calling/contacts` อยู่แล้วในตัว
 
 ---
 
@@ -44,7 +40,7 @@
 
 | Column | Type | Notes |
 |--------|------|-------|
-| `specialty` | TEXT NULL | **ใหม่** — อาชีพ/ตำแหน่ง/ความสามารถ รวม free text (ชื่อเดียวกับ `dc_members.specialty`) |
+| `specialty` | TEXT NULL | **ใหม่** — อาชีพ/ตำแหน่ง/ความสามารถ รวม free text (ชื่อเดียวกับ `org_members.specialty`) |
 
 **Field ที่ยังอยู่ใน DB แต่ถอดออกจากฟอร์ม:**
 - `last_name` — ไม่แสดง ไม่บันทึกจากฟอร์ม (เผื่อมีข้อมูลเดิม)
@@ -53,8 +49,8 @@
 ### ตาราง `calling_logs` — เพิ่ม status ใหม่
 
 ```sql
-ALTER TABLE calling_logs
-  MODIFY COLUMN status ENUM('answered','no_answer','not_called','met') NOT NULL;
+-- Postgres: เพิ่มค่าใน enum type แทน MODIFY COLUMN แบบ MySQL
+ALTER TYPE calling_logs_status ADD VALUE 'met';
 ```
 
 | status | ความหมาย | signals | นับเข้า tier |
@@ -64,17 +60,17 @@ ALTER TABLE calling_logs
 | `not_called` | ยังไม่ได้โทร | ✗ | ✗ |
 | `met` | **พบปะ (ใหม่)** | ✓ | ✓ |
 
-`met` ใช้สำหรับบันทึกการพบปะ in-person — signals แสดงและนับเข้า tier เหมือน `answered`
+`met` ใช้สำหรับบันทึกการพบปะ in-person — signals แสดงและนับเข้า tier เหมือน `answered`  
+(enum `calling_logs_status` ปัจจุบันมีค่าเพิ่มอีก 3: `sms_sent`, `sms_delivered`, `sms_failed` มาจาก SMS feature — คนละรอบ ไม่เกี่ยวกับ Contacts module นี้ ดู `CALLING.md` §6)
 
 ### Migration SQL (เพิ่มใน `scripts/migration/migration.sql`)
 
 ```sql
--- 2025-05 Contacts module: specialty field + met status
+-- 2025-05 Contacts module: specialty field + met status (Postgres)
 ALTER TABLE calling_contacts
-  ADD COLUMN specialty TEXT NULL AFTER note;
+  ADD COLUMN specialty TEXT NULL;
 
-ALTER TABLE calling_logs
-  MODIFY COLUMN status ENUM('answered','no_answer','not_called','met') NOT NULL;
+ALTER TYPE calling_logs_status ADD VALUE 'met';
 ```
 
 ---
@@ -109,7 +105,7 @@ DB ยัง store ค่า 1–4 เหมือนเดิม โดย map:
   "campaign_id": 0,
   "status": "met",
   "note": "...",
-  "called_by": "<discord_id>",
+  "called_by": "<users.id>",
   "sig_location": 1|2|4,
   "sig_availability": 1|2|4,
   "sig_interest": 1|2|4
@@ -121,7 +117,7 @@ DB ยัง store ค่า 1–4 เหมือนเดิม โดย map:
 - tier คำนวณอัตโนมัติหลังบันทึก (เหมือนกับการโทร)
 - POST ไป `/api/calling/logs` ที่มีอยู่แล้ว (ไม่ต้องเพิ่ม endpoint ใหม่)
 
-**UI ใน `/contacts/[id]`:** expand section "บันทึกการพบปะ" — ใช้ RecordCallModal component เดิมแต่กระชับกว่า (inline ไม่ใช่ modal popup)
+**UI ใน `/calling/contacts/[id]`:** expand section "บันทึกการพบปะ" — ใช้ RecordCallModal component เดิมแต่กระชับกว่า (inline ไม่ใช่ modal popup)
 
 ---
 
@@ -145,11 +141,11 @@ DB ยัง store ค่า 1–4 เหมือนเดิม โดย map:
 
 ---
 
-## หน้า /contacts (List)
+## หน้า /calling/contacts (List)
 
 - Header: "Contacts" + ปุ่ม "+ เพิ่ม Contact"
 - Search bar: ค้นชื่อ / เบอร์ / LINE
-- List: card แต่ละคน กดไป `/contacts/[id]`
+- List: card แต่ละคน กดไป `/calling/contacts/[id]`
 
 ### Contact Card
 
@@ -162,7 +158,7 @@ note ย่อ (line-clamp-1, italic)
 
 ---
 
-## หน้า /contacts/[id] (Detail)
+## หน้า /calling/contacts/[id] (Detail)
 
 ### ส่วนข้อมูล
 - แสดงทุก field

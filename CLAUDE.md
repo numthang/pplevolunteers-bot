@@ -184,8 +184,8 @@ cd web && npm run test:watch  # watch mode
 ให้ pass `txn_at || null` ตรงๆ ให้ pg (node-postgres) จัดการเอง
 
 ### Calling — `contact_type` ใน SQL ต้องใส่เสมอ
-`calling_logs`, `calling_assignments`, `calling_member_tiers` ใช้ `member_id` ร่วมกันทั้ง member และ contact  
-`cache_pple_member.source_id` เริ่มจาก **55** แต่ `calling_contacts.id` เริ่มจาก **1** → overlap เมื่อมี contact ≥ 55 ตัว  
+`calling_logs`, `calling_assignments`, `calling_member_tiers`, `calling_starred` ใช้ `member_id` ร่วมกันทั้ง member และ contact  
+`cache_pple_member.source_id` = **1–169505** ส่วน `calling_contacts.id` = **12–601** → ช่วง id **ทับกันเต็มๆ ตั้งแต่ตอนนี้** (ไม่ใช่ปัญหาอนาคต)  
 → ทุก JOIN หรือ WHERE บนตาราง shared ต้องใส่ `AND contact_type = 'member'` หรือ `'contact'` เสมอ  
 → DB functions ทุกตัวใน `db/calling/` มี default `contactType = 'member'` แล้ว ไม่ต้องส่งถ้าเป็น member flow
 

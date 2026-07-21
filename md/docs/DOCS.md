@@ -6,10 +6,10 @@
 
 ## Overview
 
-- ผู้ใช้: ทีมงาน (dc_members) — ไม่เกี่ยวกับ ACT registrations ในระยะแรก
+- ผู้ใช้: ทีมงาน (`users` + `org_members`) — ไม่เกี่ยวกับ ACT registrations ในระยะแรก
 - Auth: Discord OAuth (next-auth เดิม)
 - Stack: Next.js + pdf-lib (PDF overlay) + Canvas (signature)
-- **Signature model:** Authenticated signature — วาดลายเซ็นบน Canvas ผูกกับ Discord login บันทึก `discord_id` + timestamp + IP เป็น audit trail
+- **Signature model:** Authenticated signature — วาดลายเซ็นบน Canvas ผูกกับ login (Discord/email) บันทึก `user_id` + timestamp + IP เป็น audit trail
 - ต้อง login ก่อนเซ็น — link ที่ส่งให้เป็น deeplink พอคลิกแล้ว login แล้วเด้งกลับมาหน้าเซ็นอัตโนมัติ
 - **Signing token expire:** 2 เดือนหลังจากวันจบโครงการ (`cache_pple_event.event_end_date + 60 วัน`)
 
@@ -21,7 +21,7 @@
 2. **Admin กรอกเพิ่ม** — จำนวนผู้เข้าร่วม, งบรวม, รายการที่เบิกได้
 3. **Budget planner** — ระบบ propose ยอดแต่ละรายการตามกฎกองทุน69 ให้รวมครบงบ
 4. **Admin ติ๊กสมาชิก** — เลือกว่าใครได้รับอะไรเท่าไหร่ (เช่น คนนี้ได้ค่าเดินทาง คนนั้นได้ค่าวิทยากร)
-5. **สร้าง entry ต่อคนต่อรายการ** → ดึงข้อมูลส่วนตัวจาก `cache_pple_member` + `dc_members`
+5. **สร้าง entry ต่อคนต่อรายการ** → ดึงข้อมูลส่วนตัวจาก `cache_pple_member` + `users`/`org_members`
 6. **ส่งลิงก์** ให้แต่ละคน → เปิด → ตรวจข้อมูล → วาด e-signature → submit → แสดงหน้า "สำเร็จ"
 7. **Admin export** → PDF ครบชุด (ใบสำคัญรับเงิน + สำเนาบัตรประชาชน) พร้อมพิมพ์
 
@@ -31,46 +31,45 @@
 
 ```sql
 docs_projects
-  id, guild_id
-  act_event_cache_id INT  -- FK → cache_pple_event (ชื่อ/วันที่/จังหวัดดึงจากนี้)
+  id, org_id
+  cache_pple_event_id INT  -- FK → cache_pple_event (ชื่อ/วันที่/จังหวัดดึงจากนี้)
   is_mobile BOOLEAN       -- true = สัญจร (ออกบูธ/ลงพื้นที่) → ไม่มีวิทยากร/สถานที่
   participant_count, budget
   allowed_items (json array of strings)  -- ['food','travel','supplies',...]
   status, created_by, created_at
 
 docs_activity_entries
-  id, project_id, member_discord_id
+  id, project_id, member_user_id
   item_type   -- 'food' | 'speaker' | 'travel' | 'venue' | 'accommodation' | 'supplies'
   description, amount
   override_data (json)   -- แก้ข้อมูลตอนเซ็น
   status  -- pending | signed | printed
   sign_token UUID         -- token สำหรับ signing link
-  token_expires_at TIMESTAMPTZ  -- act_event.event_end_date + 60 วัน
+  token_expires_at TIMESTAMPTZ  -- cache_pple_event.event_end_date + 60 วัน
   signed_at, printed_at, pdf_url
 
 docs_signatures
   id, entry_id
   signature_base64 (TEXT)
-  signed_by_discord_id, signed_ip, created_at  -- audit trail
+  signed_by_user_id, signed_ip, created_at  -- audit trail
 ```
 
 **แหล่งข้อมูลส่วนตัว:**
-- `member_discord_id` เป็น **nullable** (2026-06-23) — สร้าง entry ได้โดยยังไม่มีผู้รับ กำหนดทีหลังได้ผ่าน inline assign ใน DocEntryList
+- `member_user_id` เป็น **nullable** (2026-06-23) — สร้าง entry ได้โดยยังไม่มีผู้รับ กำหนดทีหลังได้ผ่าน inline assign ใน DocEntryList
 
-- ผูกกันด้วย `dc_members.member_id` = `cache_pple_member.source_id`
-- **ครั้งแรก:** ทีมงานค้นชื่อตัวเองใน cache_pple_member → ยืนยัน → บันทึก `source_id` ลง `dc_members.member_id`
+- ผูกกันด้วย `org_members.member_id` = `cache_pple_member.source_id`
+- **ครั้งแรก:** ทีมงานค้นชื่อตัวเองใน cache_pple_member → ยืนยัน → บันทึก `source_id` ลง `org_members.member_id`
 - **ครั้งถัดไป:** join ได้เลย ไม่ต้องค้นซ้ำ
 - จาก `cache_pple_member`: `identification_number` (เลขบัตรประชาชน), ชื่อ-นามสกุล, ที่อยู่ครบ
-- จาก `dc_members`: `discord_id`, `roles`, `bank_name`, `account_no`, `account_holder` (มีอยู่แล้ว)
+- จาก `users`: `discord_id` (display-only) · จาก `org_members`: `roles`, `bank_name`, `account_no`, `account_holder` (มีอยู่แล้ว)
 
 **เอกสารแนบต่อใบ:** สำเนาบัตรประชาชน 1 ใบ (ดึง `identification_number` จาก `cache_pple_member`)
 
 **การเก็บสำเนาบัตรประชาชน:**
-- สมาชิก upload ครั้งเดียวตอน link ngs → เก็บใน storage → ทุกใบสำคัญฯ ดึงใช้ซ้ำ ไม่ต้อง upload ซ้ำ
-- **เก็บที่ `/private/uploads/id-cards/` — นอก `web/public/` ห้าม expose โดยตรง**
-- เสิร์ฟผ่าน `/api/docs/id-card/[discordId]` เท่านั้น — เช็คก่อนส่งไฟล์:
-  - เจ้าของ (`discordId === session.user.discordId`) → ผ่าน
-  - `canManageDocs(access)` → ผ่าน
+- สมาชิก upload ผ่าน `POST /api/docs/id-card` (แนบ sign token) → เก็บใน `users.id_card_image` (BYTEA) — **1 คน 1 ใบ** ใช้ร่วมกันทุก org → ทุกใบสำคัญฯ ดึงใช้ซ้ำ ไม่ต้อง upload ซ้ำ
+- เสิร์ฟผ่าน `/api/docs/id-card/[userId]` เท่านั้น — เช็คก่อนส่งไฟล์:
+  - เจ้าของ (`targetUserId === selfId`) → ผ่าน
+  - `canManageDocs(access)` **และ** เจ้าของบัตรเป็นสมาชิก org เดียวกับผู้ขอ (`isMemberOfOrg`) → ผ่าน (กันดูบัตรข้าม org หลังบัตรรวมเป็นใบเดียวไม่ใช่ per-guild แล้ว)
   - อื่นๆ → 403
 - ตอน generate PDF ให้ประมวลผลภาพก่อน overlay ลงเอกสาร:
   1. **ลายน้ำ** — ข้อความ `"ใช้สำหรับพรรคประชาชนเท่านั้น"` เอียง ~30°, สีจางโปร่งใส ครอบกลางบัตร
@@ -112,7 +111,7 @@ docs_signatures
 ### Individual travel (ไม่ต้องเลือกคนก่อน)
 - individual mode → สร้าง N entries (`noMember: true`) เข้า DB ทันที โดยไม่ต้องเลือกผู้รับ
 - กำหนดผู้รับทีหลังผ่าน inline search ใน DocEntryList (`กำหนดผู้รับ` button ต่อ entry)
-- ต้องรัน migration ก่อน: `ALTER TABLE docs_activity_entries ALTER COLUMN member_discord_id DROP NOT NULL`
+- ต้องรัน migration ก่อน: `ALTER TABLE docs_activity_entries ALTER COLUMN member_user_id DROP NOT NULL`
 
 ---
 
@@ -120,7 +119,7 @@ docs_signatures
 
 อัพโหลดภาพเอกสาร (แนบท้าย 3 ที่เซ็นมือ) — auto-crop เป็น A4 แล้วรวมต่อท้าย export PDF
 
-- **Table:** `docs_project_attachments` (id, project_id, guild_id, original_name, file_path, sort_order)
+- **Table:** `docs_project_attachments` (id, project_id, org_id, original_name, file_path, sort_order)
 - **Storage:** `DOCS_UPLOAD_DIR` env (default: `uploads/docs/`) — นอก web/public
 - **Auto-crop:** `scripts/docs/crop_document.py` (OpenCV — grayscale→Canny→contour→perspective transform → 2480×3508px A4)
 - **API:** `GET/POST /api/docs/projects/[id]/attachments` · `DELETE /api/docs/projects/[id]/attachments/[attId]` · `GET /api/docs/projects/[id]/attachments/[attId]/image` (auth-gated)
@@ -134,7 +133,7 @@ Tab ที่ 3 ใน DocProjectView — เชื่อม ACT event กับ
 
 - ลิงก์ "พิมพ์แนบท้าย 3 (ใบรายชื่อเปล่า)" → `https://act.peoplesparty.or.th/ect-paper-3/?eid={act_event_id}`
 - อัพโหลดแนบท้าย 3 ที่เซ็นแล้ว → Attachment system ด้านบน
-- `act_event_id` ดึงจาก `docs_projects.act_event_id` (FK → `cache_pple_event.id`)
+- `act_event_id` ดึงจาก `cache_pple_event.act_event_id` (ผ่าน `docs_projects.cache_pple_event_id` FK → `cache_pple_event.id`)
 
 ---
 
@@ -203,8 +202,8 @@ web/templates/receipts/
 | variable | แหล่งข้อมูล |
 |---|---|
 | `day` / `month` / `year` | `parseThaiDate(entry.event_date)` |
-| `full_name` | `override_data.full_name` → `cache_pple_member.title + first_name` |
-| `last_name` | `override_data.last_name` → `cache_pple_member.last_name` |
+| `full_name` | `override_data.full_name` → `cache_pple_member.title + first_name` → `users.firstname` (ยังไม่ได้ link ngs) |
+| `last_name` | `override_data.last_name` → `cache_pple_member.last_name` → `users.lastname` |
 | `id_number` | `override_data.id_number` → `cache_pple_member.identification_number` |
 | `house_no` / `moo` / `road` | `override_data` → `cache_pple_member.home_*` |
 | `subdistrict` / `district` / `province_addr` | `override_data` → `cache_pple_member.home_*` |
@@ -416,7 +415,7 @@ web/templates/receipts/
 | ค่าวิทยากร | ✅ | ❌ |
 | ค่าสถานที่ | ✅ | ❌ |
 
-**auto-detect ไม่ได้จาก act_event** — admin ต้องติ๊กเองว่ากิจกรรมนี้เป็น "สัญจร" ตอน setup
+**auto-detect ไม่ได้จาก cache_pple_event** — admin ต้องติ๊กเองว่ากิจกรรมนี้เป็น "สัญจร" ตอน setup
 
 ---
 
@@ -467,11 +466,11 @@ web/templates/receipts/
 - `buildData()` — `header`, `amount`, `total`, `payer_position` ✅
 - `assets/fonts/THSarabunNew.ttf` + `THSarabunNew-Bold.ttf` — installed system-wide on production (`/usr/share/fonts/truetype/`) แก้ font size ต่างกันระหว่าง local/production
 - **Nav dropdown scope** — ใครก็ได้ที่มี province grant เห็น Projects dropdown ได้ (เหมือน calling), cutoff 60 วัน จาก `event_date` (`GET /api/docs/projects` ไม่ require `canManageDocs` แล้ว)
-- **`docs_payers` table** — guild_id, discord_id, display_name, position, sort_order; auto-select per-entry (setProjectPayer); /docs/settings CRUD
+- **`docs_payers` table** — org_id, user_id, display_name, position, sort_order; auto-select per-entry (setProjectPayer); /docs/settings CRUD
 - **Attachment system** — `docs_project_attachments` table; auto-crop A4 (OpenCV `scripts/docs/crop_document.py`); API GET/POST/DELETE + image route (auth-gated); UI ใน ACT tab (upload zone + thumbnail grid); export รวมต่อท้าย merged PDF อัตโนมัติ
 - **`/docs` page** — DocProjectCard grid + DocsProvinceFilter chips + active (≤2 เดือน) / past collapsible split
 - **`/docs/[id]` page** — DocProjectView: 3 tabs (อัตโนมัติ/กำหนดเอง/ACT) + DocEntryList + payer panel + budget bar inline
-- **Batch export** — merged PDF inline (ไม่ใช่ ZIP); attachment images ต่อท้าย; skip entry ที่ member_discord_id = null + X-Skipped-Count header
+- **Batch export** — merged PDF inline (ไม่ใช่ ZIP); attachment images ต่อท้าย; skip entry ที่ member_user_id = null + X-Skipped-Count header
 
 ### 🔧 Pending
 - [ ] `section 3` ของ body files — ตรวจ variable ครบทุกไฟล์ (เช็คกับ `buildData()`)
