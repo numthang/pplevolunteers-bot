@@ -33,6 +33,8 @@ export async function getEntriesByProject(projectId) {
        e.payer_user_id, e.payer_sign_token, e.payer_signed_at,
        p.org_id, ev.province,
        m.display_name, u_m.username, u_m.firstname, u_m.lastname, m.member_id,
+       u_m.discord_id AS member_discord_id,   -- display-only (ลิงก์โปรไฟล์ Discord) · ห้ามใช้เป็น key/identity
+
        n.first_name AS ngs_first_name, n.last_name AS ngs_last_name,
        COALESCE(
          NULLIF(TRIM(CONCAT(np.first_name, ' ', np.last_name)), ''),

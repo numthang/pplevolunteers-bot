@@ -28,7 +28,7 @@ export default async function DocProjectPage({ params }) {
   const session = await getSession()
   if (!session) redirect('/')
 
-  const { access, discordId } = await getEffectiveOrgIdentity(session)
+  const { access, userId } = await getEffectiveOrgIdentity(session)
   const canManage = canManageDocs(access)
   if (!canManage) redirect('/')
 
@@ -55,7 +55,7 @@ export default async function DocProjectPage({ params }) {
       project={project}
       initialEntries={entries}
       canManage={canManage}
-      currentDiscordId={discordId}
+      currentUserId={userId}
       eventId={eventCacheId}
       eventName={eventMeta?.name ?? null}
       eventDate={eventMeta?.event_date ?? null}

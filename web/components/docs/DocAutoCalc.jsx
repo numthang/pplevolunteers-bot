@@ -42,18 +42,18 @@ function MemberSearch({ selected, multi, onSelect, onRemove, suggestions = [] })
   function pick(m) { onSelect(m); setQuery(''); setResults([]); setOpen(false) }
 
   const arr = multi ? (selected || []) : (selected ? [selected] : [])
-  const selectedIds = new Set(arr.map(m => m.discord_id))
-  const visibleList = query.trim() ? results : suggestions.filter(m => !selectedIds.has(m.discord_id))
+  const selectedIds = new Set(arr.map(m => m.user_id))
+  const visibleList = query.trim() ? results : suggestions.filter(m => !selectedIds.has(m.user_id))
 
   return (
     <div>
       {arr.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mb-2">
           {arr.map(m => (
-            <span key={m.discord_id} className="inline-flex items-center gap-1 px-2.5 py-1 bg-orange/10 text-orange text-sm rounded-full">
+            <span key={m.user_id} className="inline-flex items-center gap-1 px-2.5 py-1 bg-orange/10 text-orange text-sm rounded-full">
               {m.display_name}
               {m.username && <span className="text-xs opacity-60">@{m.username}</span>}
-              <button type="button" onClick={() => onRemove(m.discord_id)} className="hover:text-red-500 transition"><X size={12} /></button>
+              <button type="button" onClick={() => onRemove(m.user_id)} className="hover:text-red-500 transition"><X size={12} /></button>
             </span>
           ))}
         </div>
@@ -75,7 +75,7 @@ function MemberSearch({ selected, multi, onSelect, onRemove, suggestions = [] })
                 <li className="px-3 pt-2 pb-1 text-xs text-warm-400 dark:text-disc-muted font-medium">{t('autoCalc.memberSearch.recentLabel')}</li>
               )}
               {visibleList.map(m => (
-                <li key={m.discord_id}>
+                <li key={m.user_id}>
                   <button type="button" onClick={() => pick(m)} className="w-full text-left px-3 py-2 hover:bg-warm-50 dark:hover:bg-disc-hover text-sm transition">
                     <span className="font-medium text-warm-900 dark:text-disc-text">{m.display_name}</span>
                     {m.username && <span className="ml-1.5 text-xs text-warm-400 dark:text-disc-muted">@{m.username}</span>}
@@ -413,7 +413,7 @@ export default function DocAutoCalc({ eventDate, eventEndDate, participantCount,
     setRecipients(prev => {
       const next = [...prev]
       if (proposal[i].isIndividual) {
-        if (!next[i].find(x => x.discord_id === m.discord_id)) next[i] = [...next[i], m]
+        if (!next[i].find(x => x.user_id === m.user_id)) next[i] = [...next[i], m]
       } else {
         next[i] = m
       }
@@ -421,10 +421,10 @@ export default function DocAutoCalc({ eventDate, eventEndDate, participantCount,
     })
   }
 
-  function removeRecipient(i, discordId) {
+  function removeRecipient(i, userId) {
     setRecipients(prev => {
       const next = [...prev]
-      if (proposal[i].isIndividual) next[i] = next[i].filter(x => x.discord_id !== discordId)
+      if (proposal[i].isIndividual) next[i] = next[i].filter(x => x.user_id !== userId)
       else next[i] = null
       return next
     })
@@ -435,18 +435,18 @@ export default function DocAutoCalc({ eventDate, eventEndDate, participantCount,
     for (let i = 0; i < proposal.length; i++) {
       const item = proposal[i]
       const r    = recipients[i]
-      // ไม่บังคับเลือกผู้รับ — สร้างได้เลย กำหนดผู้รับทีหลังใน DocEntryList ได้ (member_discord_id nullable)
+      // ไม่บังคับเลือกผู้รับ — สร้างได้เลย กำหนดผู้รับทีหลังใน DocEntryList ได้ (member_user_id nullable)
       const base = { itemType: item.itemType, description: item.description, amount: item.amount, overrideData: item.overrideData ?? undefined }
       if (item.noMember) {
-        entries.push({ memberDiscordId: null, ...base })
+        entries.push({ memberUserId: null, ...base })
       } else if (item.isIndividual) {
         if (r.length) {
-          for (const m of r) entries.push({ memberDiscordId: m.discord_id, ...base })
+          for (const m of r) entries.push({ memberUserId: m.user_id, ...base })
         } else {
-          entries.push({ memberDiscordId: null, ...base })
+          entries.push({ memberUserId: null, ...base })
         }
       } else {
-        entries.push({ memberDiscordId: r?.discord_id ?? null, ...base })
+        entries.push({ memberUserId: r?.user_id ?? null, ...base })
       }
     }
     const ok = await onSubmit(entries, parseInt(n))
