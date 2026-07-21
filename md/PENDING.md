@@ -73,7 +73,21 @@
 - ⚠️ RBAC page-access: email user เปิด /finance ได้เมื่อ resolve permission ผ่าน org_members.web_roles + scope org (ไม่ใช่ guild membership)
 </details>
 
-#### 📄 DOCS → org migration (feature ที่ 3 · grill เคาะ 2026-07-21 · ยังไม่เริ่มโค้ด)
+#### 📄 DOCS → org migration (feature ที่ 3 · grill เคาะ 2026-07-21)
+
+> **สถานะ (2026-07-21):**
+> - ✅ **Phase 1** commit `c73aaba` — schema org-scope (`docs-org-scope.sql`) + guild_id→org_id + person→users.id ใน db/route
+> - ✅ **Phase 2** commit `61afecd` — `id_card_image` org_members→`users` (1 คน 1 ใบ) + `isMemberOfOrg()` ปิดรู PDPA ข้าม org + flow เซ็นใช้ users.id
+> - ✅ **Phase 3** commit `c207d8f` (server) + `7514cf3` (client) — **ตัด bridge discord→users.id ทิ้งทั้งเส้น** · API รับ/คืน `user_id` ตรงๆ (`memberUserId`/`payerUserId`/`userId`) · `/api/docs/members(/recent)` คืน `user_id` (เดิมมีแต่ discord_id → คน email เลือกเป็นผู้รับไม่ได้) · client 5 ไฟล์คีย์ด้วย user_id · `member_discord_id` เหลือเป็น **display-only** สำหรับลิงก์โปรไฟล์ Discord เท่านั้น
+>   - 🐛 latent bug ที่เจอระหว่างทาง: `getPayersForEvent` dedup pool ด้วย `discord_id` → manual payer (ไม่มีฟิลด์นี้) และ payer ที่ล็อกอิน email (NULL) โดนทิ้งเงียบ · **ยังไม่เคยกัดจริง** (localhost มี docs_payers 1 แถว) แต่จะกัดทันทีที่มีตัวที่ 2 → เปลี่ยนเป็น dedup ด้วย user_id แล้ว
+>
+> **⬜ เหลือของ docs:**
+> - **เทสจริงในเบราว์เซอร์ครบ flow (write path)** แบบเดียวกับ calling Phase 3 — สร้างบิล → กำหนดผู้รับ/ผู้จ่าย → เซ็น → gen PDF แล้ว assert DB · ที่ทำไปคือ smoke test (ทุกหน้า 200 + PATCH entry 1 ครั้ง) ยังไม่ครบ flow
+> - rename index `docs_payers_guild_id_discord_id_key` (ชื่อหลอก — จริงๆ ครอบ `org_id, user_id` แล้ว) → ใส่ใน migration cutover
+> - dead code 2 จุดที่ repoint ถูกแล้วแต่ไม่มีใครเรียก: `changePayer()` ใน DocEntryList · `assignedPayers` ใน DocProjectView → ตัดทิ้งหรือต่อ UI ให้ครบ
+> - `queryPayersByPermission` อ่านแค่ `org_members.roles` (ชื่อ role Discord) ไม่อ่าน `web_roles` → **คนที่ได้ยศผ่านเว็บอย่างเดียวจะไม่โผล่เป็น role-based payer** (เกี่ยวกับงาน web_roles ที่ค้างอยู่ด้านบน)
+
+<details><summary>สเปกเดิมจาก grill (2026-07-21) — เก็บอ้างอิง</summary>
 > **ทำก่อน cutover** (เคาะ 2026-07-21 — user ค้านแผนเดิมที่จะ cutover ก่อนแล้วทำ docs ทีหลัง และมีเหตุผลแข็งกว่า): ขึ้น prod ครึ่งเดียว = จ่ายต้นทุน cutover 2 รอบ + prod มี 2 โมเดลพร้อมกัน (finance/calling=org, docs=guild) + **migration ก้อน docs จะไปรันกับ data ที่คนใช้จริง** แทนที่จะรันตอนยังไม่มีใครพึ่ง
 >
 > **ขนาดจริง (เล็กกว่า calling มาก):** projects 9 · payers 1 · attachments 3 · entries 29 · signatures 7 · guild เดียวทั้งหมด · **web อย่างเดียว — ไม่มีโค้ดฝั่งบอทเลย** (5 ไฟล์ `web/db/docs/`, 30 route, 5 page)
@@ -96,6 +110,10 @@
 > - ✅ ตรวจแล้วปลอดภัย: entries/signatures scope ผ่าน `docs_projects` ครบทุก read · `getEntryByToken` **ไม่มี scope โดยตั้งใจ** (token = ตัวสิทธิ์) ห้ามเผลอยัด org filter · docs ไม่มี `process.env.GUILD_ID` ฝังตรงไหนเลย (ต่างจาก calling) · `getGuildId` 10 route ที่ต้องเปลี่ยนเป็น `getOrgId`
 >
 > **บทเรียนที่ต้องใช้ (จาก calling — bug-029…032):** หลังแปลงชนิดคอลัมน์ต้อง grep หา `COALESCE(<col>, '')` · param text เทียบ column INT (`= $n` → ต้อง `::int`) · **ฟังก์ชันที่ signature ไม่มี orgId จะรอด sweep ทั้งดุ้น** (grep `process.env.GUILD_ID` ปิดท้าย) · client map ที่ยัง key ด้วย discord_id
+>
+> **+ บทเรียนใหม่จาก Phase 3 (2026-07-21):** เปลี่ยน key จาก **string (snowflake) → number (users.id)** แล้วโค้ด client ที่เรียกเมธอดของ string จะพังทันที — เจอจริง `key.startsWith('__')` = TypeError หน้าพังทั้งหน้า · ต้อง grep หา `.startsWith(` / `.includes(` / `.split(` บนตัวแปรที่เคยเป็น id · และ `<select>` คืน **string เสมอ** → ต้อง `Number()` ก่อนเทียบกับ user_id ไม่งั้น `!==` เป็นจริงตลอด
+
+</details>
 
 #### 📞 CALLING → org migration (feature ที่ 2 · grill เคาะ 2026-07-19 · WIP)
 > เคาะ: **calling ก่อน cases** (cases ROI ต่ำ Discord-bound — grill แยกทีหลัง) · depth = **full parity กับ finance**
