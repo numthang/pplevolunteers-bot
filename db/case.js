@@ -11,6 +11,9 @@ const crypto = require('crypto');
 const path = require('path');
 const pool = require('./index');
 const { getSetting } = require('./settings');
+// org-scope migration: cases/case_timeline/case_assignees/case_attachments ใช้ org_id (int) แทน guild_id (varchar)
+// caller ฝั่งบอทยังส่ง guildId เหมือนเดิม — แปลงที่ขอบฟังก์ชันด้วย orgIdOfGuild()/userIdByDiscord() (case_config ไม่เปลี่ยน ยังเป็น guild_id)
+const { orgIdOfGuild, userIdByDiscord } = require('./org');
 
 // source of truth เดียวกับ web/lib/provinceCode.js
 const PROVINCE_CODES = require(path.join(__dirname, '..', 'config', 'province-codes.json'));
@@ -96,16 +99,20 @@ async function createCase(data) {
     discord_thread_id = null, created_by = null, consent_at = null,
   } = data;
   const ref = await generateRef(guild_id, province);
+  // แปลงที่ขอบ: guild_id (varchar, จาก caller) → org_id (int, เขียนลง cases) · created_by (discord snowflake) → users.id
+  // guild_id ตัวเดิมยังเก็บไว้ที่ discord_guild_id = Discord artifact (thread ของเคสอยู่ forum ของ guild ไหน)
+  const orgId = await orgIdOfGuild(guild_id);
+  const createdByUserId = await userIdByDiscord(created_by);
   const { rows } = await pool.query(
     `INSERT INTO cases
-       (guild_id, ref, province, category, title, detail, source, status,
+       (org_id, discord_guild_id, ref, province, category, title, detail, source, status,
         complainant_name, complainant_phone, complainant_line_id,
         discord_thread_id, created_by, consent_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,'open',$8,$9,$10,$11,$12,$13)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'open',$9,$10,$11,$12,$13,$14)
      RETURNING *`,
-    [guild_id, ref, province, category, title, detail, source,
+    [orgId, guild_id, ref, province, category, title, detail, source,
      complainant_name, complainant_phone, complainant_line_id,
-     discord_thread_id, created_by, consent_at],
+     discord_thread_id, createdByUserId, consent_at],
   );
   return rows[0];
 }
@@ -125,26 +132,36 @@ async function setDiscordThreadId(caseId, threadId) {
 }
 
 async function addAssignee(caseId, guildId, discordId) {
+  // แปลงที่ขอบ: guildId → org_id, discordId → users.id · PK เปลี่ยนเป็น (case_id, user_id)
+  const orgId = await orgIdOfGuild(guildId);
+  const userId = await userIdByDiscord(discordId);
   await pool.query(
-    `INSERT INTO case_assignees (case_id, guild_id, discord_id)
-     VALUES ($1,$2,$3) ON CONFLICT (case_id, discord_id) DO NOTHING`,
-    [caseId, guildId, discordId],
+    `INSERT INTO case_assignees (case_id, org_id, user_id)
+     VALUES ($1,$2,$3) ON CONFLICT (case_id, user_id) DO NOTHING`,
+    [caseId, orgId, userId],
   );
 }
 
 async function getAssignees(caseId) {
+  // JOIN users เพื่อคืน discord_id (snowflake) เหมือนเดิม — บอทเอาไป mention/แสดงผลใน Discord ต้องใช้ snowflake จริง
   const { rows } = await pool.query(
-    `SELECT discord_id, assigned_at FROM case_assignees WHERE case_id = $1 ORDER BY assigned_at`,
+    `SELECT a.user_id, u.discord_id, a.assigned_at
+       FROM case_assignees a
+       JOIN users u ON u.id = a.user_id
+      WHERE a.case_id = $1
+      ORDER BY a.assigned_at`,
     [caseId],
   );
   return rows;
 }
 
 async function addNote(caseId, guildId, { author_discord_id = null, body, is_public = false }) {
+  // แปลงที่ขอบ: guildId → org_id · case_timeline ไม่มีคอลัมน์ author เก็บ (author_discord_id รับมาแต่ไม่ได้ใช้ เหมือน behavior เดิม)
+  const orgId = await orgIdOfGuild(guildId);
   const { rows } = await pool.query(
-    `INSERT INTO case_timeline (case_id, guild_id, source, body, is_public, occurred_at)
+    `INSERT INTO case_timeline (case_id, org_id, source, body, is_public, occurred_at)
      VALUES ($1,$2,'note',$3,$4,NOW()) RETURNING *`,
-    [caseId, guildId, body, is_public],
+    [caseId, orgId, body, is_public],
   );
   return rows[0];
 }
@@ -181,12 +198,14 @@ async function setLastSyncedMessageId(caseId, messageId) {
  * ถ้ามี discord_message_id จะ skip ถ้าชน (dedup incremental)
  */
 async function addTimelineEvents(caseId, guildId, events, source = 'ai') {
+  // แปลงที่ขอบ: guildId → org_id
+  const orgId = await orgIdOfGuild(guildId);
   for (const e of events) {
     await pool.query(
-      `INSERT INTO case_timeline (case_id, guild_id, discord_message_id, source, body, is_public, occurred_at)
+      `INSERT INTO case_timeline (case_id, org_id, discord_message_id, source, body, is_public, occurred_at)
        VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7, NOW()))
        ON CONFLICT (case_id, discord_message_id) WHERE discord_message_id IS NOT NULL DO NOTHING`,
-      [caseId, guildId, e.discord_message_id || null, source, e.body, e.is_public ?? false, e.occurred_at || null],
+      [caseId, orgId, e.discord_message_id || null, source, e.body, e.is_public ?? false, e.occurred_at || null],
     );
   }
 }

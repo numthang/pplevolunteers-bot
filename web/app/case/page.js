@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
 import { countByStatus } from '@/db/cases.js'
-import { getOrgGuildIds } from '@/lib/org.js'
+import { orgIdOfGuild } from '@/db/guilds.js'
 import { statusLabel } from '@/lib/caseOptions.js'
 import CaseRefLookup from '@/components/case/CaseRefLookup.jsx'
 import LocationButton from '@/components/case/LocationButton.jsx'
@@ -15,8 +15,8 @@ export default async function CasePublicHome() {
   const t = await getTranslations('case')
   let counts = {}
   try {
-    const orgGuildIds = await getOrgGuildIds(process.env.GUILD_ID) // public — guild หลัก + เครือ org เดียวกัน, ทุกจังหวัด
-    counts = await countByStatus(orgGuildIds)
+    const orgId = await orgIdOfGuild(process.env.GUILD_ID) // public — นับทั้ง org ของ guild หลัก, ทุกจังหวัด
+    counts = await countByStatus(orgId)
   } catch { counts = {} }
 
   const total = Object.values(counts).reduce((a, b) => a + b, 0)

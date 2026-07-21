@@ -12,7 +12,7 @@ export async function POST(req, { params }) {
   const { ref } = await params
   const gate = await gateCase(ref)
   if (gate.error) return gate.error
-  const { session, guildId, orgId, caseRow } = gate
+  const { session, orgId, caseRow } = gate
 
   const { status, close_reason, public_note } = await req.json().catch(() => ({}))
   if (!VALID_STATUS.includes(status)) return Response.json({ error: 'สถานะไม่ถูกต้อง' }, { status: 400 })
@@ -30,7 +30,7 @@ export async function POST(req, { params }) {
   await updateStatus(caseRow.id, status, NEEDS_REASON.includes(status) ? close_reason : null)
 
   if (public_note?.trim()) {
-    await addTimelineEvents(caseRow.id, guildId, [{
+    await addTimelineEvents(caseRow.id, orgId, [{
       body: public_note.trim(),
       is_public: true,
     }], 'human')

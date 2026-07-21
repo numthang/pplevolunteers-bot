@@ -17,12 +17,12 @@ export async function POST(req, { params }) {
   const { ref } = await params
   const gate = await gateCase(ref)
   if (gate.error) return gate.error
-  const { guildId, caseRow } = gate
+  const { orgId, caseRow } = gate
 
   const { body, is_public, occurred_at } = await req.json().catch(() => ({}))
   if (!body?.trim()) return Response.json({ error: 'กรุณาใส่ข้อความ' }, { status: 400 })
 
-  await addTimelineEvents(caseRow.id, guildId, [
+  await addTimelineEvents(caseRow.id, orgId, [
     { body: body.trim(), is_public: !!is_public, occurred_at: occurred_at || null },
   ], 'human')
 

@@ -82,10 +82,11 @@ export async function POST(req) {
   }
 
   const guildId = process.env.GUILD_ID  // public intake → guild หลัก (อาสาประชาชน)
+  const orgId = await orgIdOfGuild(guildId)
 
   let row
   try {
-    row = await createCase(guildId, {
+    row = await createCase(orgId, {
       province, category, title, detail, source: 'web',
       complainant_name: name, complainant_phone: phone, complainant_line_id: lineId,
       consent_at: new Date(), intake_ip: ip,
@@ -99,7 +100,7 @@ export async function POST(req) {
   for (const f of files) {
     try {
       const meta = await saveCaseFile(row.id, f)
-      await insertAttachment(row.id, guildId, meta)
+      await insertAttachment(row.id, orgId, meta)
     } catch (e) {
       console.error('[POST /api/case] attachment', e.message)
     }
@@ -135,7 +136,7 @@ export async function POST(req) {
     console.error('[POST /api/case] forum thread', e.message)
   }
 
-  logAction({ orgId: await orgIdOfGuild(guildId), app: 'cases', action: 'case.submitted', targetId: row.ref, meta: { province, category, source: 'web' } })
+  logAction({ orgId, app: 'cases', action: 'case.submitted', targetId: row.ref, meta: { province, category, source: 'web' } })
 
   return Response.json({ ok: true, ref: row.ref })
 }
