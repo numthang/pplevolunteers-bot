@@ -9,6 +9,8 @@
 **งานถัดไปคือ cutover ขึ้น prod** → `md/CUTOVER.md` (10 ขั้น · branch `org-core` นำ `master` 71 commit · prod ยังไม่เคยเห็นโค้ดชุดนี้)
 - ⛔ ค้าง 2 อย่างก่อน deploy: **user เทส docs+cases ในเบราว์เซอร์** · **ซ้อม migration กับ dump ของ prod** (CUTOVER §1.5 — ยังไม่เคยซ้อม = เสี่ยงสุด)
 
+**เอกสารกวาดตรง schema จริงแล้ว (2026-07-21)** — DATABASE.md regenerate จาก DB สด 58 ตาราง · CASE/DOCS/CALLING/CONTACT ตามมา · งานที่งอกจากรอบนี้ + **พรอมต์ audit RBAC พร้อมใช้** อยู่หัวข้อ 🧹 ท้ายไฟล์
+
 > ⚠️ หัวข้อข้างล่างเรียงตาม**ประวัติการทำงาน** ไม่ใช่ลำดับความสำคัญ · เช็ค `[x]/[ ]` ก่อนเชื่อว่ายังไม่ได้ทำ
 
 ---
@@ -844,6 +846,81 @@
   2. **Slash-command minigame แบบ RNG/สะสม** (เช่น ตกปลา) — loop ให้กลับมาเล่นทุกวัน ต้องออกแบบ economy
   3. **Event/quiz ประจำสัปดาห์** เกี่ยวกับองค์กร — spike engagement แต่ต้องมีคนคิด content ต่อเนื่อง
 - **สถานะ:** นึกไม่ออกว่าจะเลือกทางไหน — พับไว้ก่อน ไม่ต้อง scope ต่อจนกว่าจะมีทิศทางชัดขึ้น
+
+---
+
+## 🧹 งานค้างจาก session กวาดเอกสาร (2026-07-21)
+
+> เอกสารทุกฉบับที่ audit ต้องใช้ **ตรงกับ DB จริงแล้ว** (commit `a9d95c4` + `9810983`)
+
+- [ ] **⭐ ให้โมเดลอื่นตรวจ RBAC ทั้ง 4 แอปหลัง org-scope** — พรอมต์พร้อมใช้อยู่ใน `<details>` ข้างล่าง · วางใน session ใหม่ได้เลย (Fable = สลับ `/model` ก่อน · Opus session ว่างๆ ก็ได้ผลใกล้เคียงและถูกกว่า)
+  - ⚠️ `/code-review` ปกติดูแค่ diff ที่ยังไม่ commit → **ไม่ครอบ 71 commit ของ org migration** · ตัวที่ครอบทั้ง branch คือ `/code-review ultra` (คิดเงินแยก, ต้อง user สั่งเอง)
+- [ ] **🐛 เคสที่สงสัยอยู่ รอ audit ชี้ขาด** — [web/app/api/calling/members/route.js:85-90](web/app/api/calling/members/route.js#L85-L90) ลิสต์สมาชิกกรองด้วย scope เต็ม แต่การเห็นเบอร์/LINE กรองด้วย `session.user.primary_province` ตัวเดียว · ฟิลด์นี้ user แก้เองได้ที่ /profile → คนถือ 2 จังหวัดสลับค่าเองแล้วเห็นเบอร์อีกจังหวัดได้ = ไม่ได้กั้นจริง · ที่อื่นเขาใช้ `getUserScope(access, primary_province)` แบบ**เสริม** scope ไม่ใช่แทน
+- [ ] **สคริปต์ที่ยังอ้าง `dc_members`** (ไม่อยู่ใน runtime บอท/เว็บ ไม่บล็อก cutover)
+  - `scripts/data/backfill-intro-peoplesparty.js` — pg จริง INSERT INTO dc_members → **พังจาก rename** ถ้าจะใช้ต่อต้องแก้เป็น 2 จังหวะ (users → org_members) ตาม `db/members.js`
+  - `scripts/data/backfill-intro-ratchaburi.js` — `require('mysql2/promise')` ตายตั้งแต่ย้ายมา Postgres → ลบทิ้งได้
+  - `scripts/social/x-get-token.js:130` — `pool.execute` + `?` + คอลัมน์ `user_id` ยุค MySQL · พังอยู่แล้วก่อน migration · ท่อน insert token น่าจะยังใช้ได้ ถ้ายังต้องใช้ควรซ่อมไม่ใช่ลบ
+- [ ] **ฟีเจอร์ที่ ship แล้วแต่ไม่เคยมีเอกสาร** (agent ไม่กล้าเขียนเพราะไม่รู้เจตนา — ต้องคนที่รู้เขียน)
+  - **flow ผู้จ่ายเซ็น (docs)** — คอลัมน์มีจริง (`payer_sign_token`, `payer_signed_at`, `docs_signatures.role`) แต่ DOCS.md ไม่มีสักบรรทัด · ไม่รู้ว่าเมื่อไหร่ payer ระดับ entry ต่างจากระดับ project
+  - **ฟีเจอร์ SMS (calling)** — `/api/calling/sms`, `SmsModal.jsx`, status `sms_sent/delivered/failed` ยังไม่เคยถูกจด
+  - ~12 endpoint ของ docs ที่เอกสารเงียบ · ลายน้ำบัตร ปชช. ที่เอกสารบอก 30°+"สำเนาถูกต้อง" แต่โค้ดจริงเป็น cross-hatch + วันที่
+- [ ] **เก็บกวาด slash command** (คนละเรื่องกับโค้ด ทำเมื่อไหร่ก็ได้)
+  - ไฟล์ซ้ำ 2 ที่ เนื้อหาเหมือนกันเป๊ะ: `~/.claude/commands/` กับ `.claude/commands/` — `build` `code-simplify` `plan` `review` `ship` `spec` `test` · เก็บที่เดียวพอ (แนะนำ global)
+  - **`/review` ชนชื่อ built-in** ของ Claude Code (รีวิว GitHub PR) → ของเราทับอยู่ เรียก built-in ไม่ได้
+  - `.claude/commands/code-simplify.md:5` อ้าง skill ที่ไม่ได้ติดตั้ง (`agent-skills:code-simplification`, `code-review-and-quality`) = dead reference
+
+<details><summary>📋 พรอมต์ audit RBAC — copy ทั้งก้อนไปวางใน session ใหม่</summary>
+
+```
+ช่วยตรวจ RBAC ของทุกแอปหลัง identity + org-scope refactor ว่ายังทำงานถูกและตรง spec ไหม
+
+## บริบท
+repo: pple-volunteers · branch `org-core` (นำ master 71 commit, ยังไม่ deploy) เพิ่งทำ refactor 2 ชั้นซ้อน:
+
+**1. identity split** — `dc_members` (1 คน หลายแถว/guild) ถูกผ่าเป็น
+   - `users` = ตัวตน 1 แถว/คน (discord_id, email, google_id, phone, firstname/lastname, id_card_image)
+   - `org_members` = membership+profile ต่อ (org, guild) — user_id, org_id, guild_id, roles, web_roles, position, province, bank_*
+   - ตารางเดิม rename เป็น `_dc_members` (archive, โค้ดไม่ควรอ้างถึงแล้ว)
+   - rename อื่น: organizations→orgs · dc_user_identities→user_identities · ngs_member_cache→cache_pple_member · act_event_cache→cache_pple_event
+
+**2. org-scope** — tenant data เลิกเกาะ guild ย้ายมาเกาะ org:
+   - `guild_id`→`org_id`: finance_* · calling_* · cases/case_* · docs_* · audit_logs · cache_pple_member
+   - person-ref: discord snowflake (VARCHAR) → `users.id` (INT)
+   - **ตั้งใจคง `guild_id`** (Discord artifact ไม่ใช่ tenant data): finance_config · case_config · cache_pple_event · dc_* ทั้งหมด · cases.discord_guild_id
+
+## แหล่งความจริง
+1. **DB จริง** — `psql -c "\d <table>"` (ใช้ DB_* ใน .env) · **`md/DATABASE.md` regenerate จาก DB สดเมื่อ 2026-07-21 ครบ 58 ตาราง = เชื่อได้**
+2. **โค้ด**
+3. **md อื่น** — FINANCE/CALLING/CONTACT/DOCS/CASE กวาดให้ตรง schema แล้ว แต่กวาดเฉพาะ "กลไก" (ชื่อตาราง/คอลัมน์/path) · ส่วน "เจตนา/กฎธุรกิจ" ยังไม่มีใครตรวจ ถ้าเจอว่าเจตนาที่เขียนไว้ขัดกับโค้ด → นั่นแหละคือของที่ตามหา
+
+## ตรวจอะไร — แอปละ 4 ข้อ (finance · calling · docs · cases + /admin/roles)
+1. **gate ยังกันได้จริงไหม** — web/lib/{financeAccess,callingAccess,docsAccess,caseAccess,caseGate,orgAccess,roleAccess,permissions,resolveAccess,getEffectiveRoles}.js
+2. **ownership เทียบถูกชนิดไหม** — จุดที่เคยเทียบ discord snowflake (string) ตอนนี้ต้องเทียบ users.id (int) · `===` ข้ามชนิดจะ false เงียบๆ = คนถูกล็อกออกจากของตัวเอง หรือหลุดให้คนอื่นเห็น
+3. **query scope หลุดไหม** — ทุก SELECT/UPDATE/DELETE บน tenant table ต้องมี org filter · ตอน migrate finance เจอว่า getTransactions เดิมไม่ scope เลย (latent leak) → หาแบบเดียวกันในแอปอื่น
+4. **ตกสำรวจจาก bulk rename** — เคยพลาดว่า orgId ไหลเข้าตัวแปร/คอลัมน์ชื่อ guild_id (และกลับกัน) → หาจุดที่ชื่อตัวแปรกับค่าที่ใส่จริงไม่ตรงกัน
+
+**ฝั่งบอทด้วย** — build/test ของเว็บจับบั๊กบอทไม่ได้เลย · ไล่ db/ handlers/ commands/ services/ scripts/ ว่ายังมีที่อ่าน/เขียนตารางหรือคอลัมน์ที่ถูก rename ไปแล้วไหม
+
+## 🎯 เคสที่สงสัยอยู่แล้ว — ช่วยชี้ขาดให้ที
+`web/app/api/calling/members/route.js:85-90` — ลิสต์สมาชิกกรองด้วย scope เต็ม (ทุก role `province:` ที่ถือ) แต่การมองเห็นเบอร์/LINE กรองด้วย `session.user.primary_province` ตัวเดียว · และ `primary_province` เป็นฟิลด์ที่ผู้ใช้แก้เองได้จากหน้า /profile
+→ มันเป็นการกั้น PDPA จริง หรือเป็นแค่ default การแสดงผลที่หลงเหลือจากยุค "คนละ 1 จังหวัด"? ที่อื่นเขาใช้ `getUserScope(access, primary_province)` แบบเสริม scope ไม่ใช่แทน scope
+ถ้าเป็นรูจริง มีที่อื่นพลาดแบบเดียวกันอีกไหม (ฟิลด์ที่ user แก้เองได้ ถูกใช้เป็นตัวกั้นสิทธิ์)
+
+## รู้อยู่แล้ว ไม่ต้องรายงานซ้ำ
+- คน login email ยังเปิด /finance ไม่ได้ (page-access รอ unify login door) — ตั้งใจ
+- `web_roles` เติมแค่ permission ไม่เติม scopeGrants → คนตั้งยศผ่านเว็บไม่มี "พื้นที่" (resolveAccess.js:78) — รู้แล้ว รอแก้
+- `queryPayersByPermission` อ่านแค่ org_members.roles ไม่อ่าน web_roles — รู้แล้ว
+- Discord กับ email ไม่ auto-link = คนละแถว users — ตั้งใจ
+- `POST /api/docs/projects/[id]/set-payer` โหมด per-group ไม่มี client เรียกแล้ว — รู้แล้ว
+
+## กติกา
+- **ถามก่อนแก้เสมอ** — รายงานสิ่งที่เจอ + ความร้ายแรง + ทางแก้ที่เสนอ แล้วรอเคาะ ห้ามแก้เอง
+- verify ได้: `cd web && npm test` (~189 tests) · `npm run build` · psql localhost
+- .env ห้ามอ่าน ยกเว้น key ที่ขึ้นต้น DB_
+- เรียงผลตามความร้ายแรง (ข้อมูลรั่วข้าม org > สิทธิ์เกิน > คนถูกล็อกออกจากของตัวเอง > cosmetic)
+```
+
+</details>
 
 ---
 
