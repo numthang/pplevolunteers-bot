@@ -23,7 +23,7 @@ export async function GET(req) {
 
   const params = [orgId]
   let query = `
-    SELECT u.discord_id, om.display_name, u.username, om.member_id,
+    SELECT u.id AS user_id, u.discord_id, om.display_name, u.username, om.member_id,
            n.first_name, n.last_name
     FROM org_members om
     JOIN users u ON u.id = om.user_id

@@ -23,10 +23,10 @@ export async function GET(req) {
 
   try {
     const { rows } = await pool.query(
-      `SELECT discord_id, display_name, username, member_id, first_name, last_name
+      `SELECT user_id, discord_id, display_name, username, member_id, first_name, last_name
        FROM (
          SELECT DISTINCT ON (e.member_user_id)
-                u.discord_id, m.display_name, u.username, m.member_id,
+                u.id AS user_id, u.discord_id, m.display_name, u.username, m.member_id,
                 n.first_name, n.last_name,
                 e.id AS last_entry_id
          FROM docs_activity_entries e

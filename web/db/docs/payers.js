@@ -87,7 +87,7 @@ async function queryPayersByPermission(orgId, permission, eventProvince) {
          AND m.roles IS NOT NULL AND m.roles != ''
      ),
      has_permission AS (
-       SELECT DISTINCT mr.discord_id
+       SELECT DISTINCT mr.user_id
        FROM member_roles mr
        JOIN dc_guild_roles gr ON gr.guild_id IN (SELECT guild_id FROM dc_guilds WHERE org_id = $1) AND gr.role_name = mr.role_name
        WHERE gr.permission = $2
@@ -100,7 +100,7 @@ async function queryPayersByPermission(orgId, permission, eventProvince) {
      FROM member_roles mr
      JOIN dc_guild_roles gr ON gr.guild_id IN (SELECT guild_id FROM dc_guilds WHERE org_id = $1) AND gr.role_name = mr.role_name
      LEFT JOIN cache_pple_member n ON n.source_id = mr.member_id
-     WHERE mr.discord_id IN (SELECT discord_id FROM has_permission)
+     WHERE mr.user_id IN (SELECT user_id FROM has_permission)
      GROUP BY mr.user_id, mr.discord_id, mr.display_name, mr.primary_province, mr.firstname, mr.lastname, n.first_name, n.last_name`,
     [orgId, permission]
   )
@@ -137,7 +137,9 @@ async function queryPayersByPermission(orgId, permission, eventProvince) {
  *   1. province_coordinator + scope ครอบ (specific สุด — เรียงก่อน)
  *   2. regional_coordinator + scope ครอบ
  *   3. docs_payers manual list + scope ครอบ (safety net)
- *   deduplicate ด้วย discord_id ให้คนเดียวโชว์ครั้งเดียว
+ *   deduplicate ด้วย user_id ให้คนเดียวโชว์ครั้งเดียว
+ *   (ห้าม dedup ด้วย discord_id — payer ที่ล็อกอิน email มี discord_id = NULL ทุกคน
+ *    → Set จะเก็บ NULL ตัวแรกแล้วทิ้งคนที่เหลือทั้งหมดเงียบๆ)
  * ถ้า eventProvince เป็น null → คืน getPayers ทั้งหมด (หน้า settings ดูภาพรวม)
  */
 export async function getPayersForEvent(orgId, eventProvince) {
@@ -160,40 +162,39 @@ export async function getPayersForEvent(orgId, eventProvince) {
   const seen = new Set()
   const result = []
   for (const p of [...level1, ...level2, ...level3]) {
-    if (!seen.has(p.discord_id)) {
-      seen.add(p.discord_id)
+    if (!seen.has(p.user_id)) {
+      seen.add(p.user_id)
       result.push(p)
     }
   }
 
   // position = ยศสูงสุดที่คนนั้นถือ (ไม่ใช่ level ที่ qualify เข้า pool)
   // เช่น Jatsada เป็น province_coordinator แต่ถือ รองเลขาธิการ (regional) → แสดง รองเลขาธิการ
-  const positions = await getHighestPositions(orgId, result.map(p => p.discord_id))
+  const positions = await getHighestPositions(orgId, result.map(p => p.user_id))
   for (const p of result) {
-    if (positions[p.discord_id]) p.position = positions[p.discord_id]
+    if (positions[p.user_id]) p.position = positions[p.user_id]
   }
   return result
 }
 
 /**
- * คืน map discord_id → ชื่อ role ตำแหน่ง "ยศสูงสุด" ที่ถือ (จัดอันดับด้วย permission token)
+ * คืน map user_id → ชื่อ role ตำแหน่ง "ยศสูงสุด" ที่ถือ (จัดอันดับด้วย permission token)
  * secretary_general > regional_coordinator > province_coordinator > district_coordinator
  */
-async function getHighestPositions(orgId, discordIds) {
-  if (!discordIds.length) return {}
+async function getHighestPositions(orgId, userIds) {
+  if (!userIds.length) return {}
   const { rows } = await pool.query(
     `WITH mr AS (
-       SELECT u.discord_id, trim(unnest(string_to_array(m.roles, ','))) AS role_name
+       SELECT m.user_id, trim(unnest(string_to_array(m.roles, ','))) AS role_name
        FROM org_members m
-       JOIN users u ON u.id = m.user_id
        WHERE m.guild_id IN (SELECT guild_id FROM dc_guilds WHERE org_id = $1)
-         AND u.discord_id = ANY($2) AND m.roles IS NOT NULL
+         AND m.user_id = ANY($2::int[]) AND m.roles IS NOT NULL
      )
-     SELECT DISTINCT ON (mr.discord_id) mr.discord_id, gr.role_name
+     SELECT DISTINCT ON (mr.user_id) mr.user_id, gr.role_name
      FROM mr
      JOIN dc_guild_roles gr ON gr.guild_id IN (SELECT guild_id FROM dc_guilds WHERE org_id = $1) AND gr.role_name = mr.role_name
      WHERE gr.permission IN ('secretary_general','regional_coordinator','province_coordinator','district_coordinator')
-     ORDER BY mr.discord_id,
+     ORDER BY mr.user_id,
        CASE gr.permission
          WHEN 'secretary_general'    THEN 1
          WHEN 'regional_coordinator' THEN 2
@@ -201,9 +202,9 @@ async function getHighestPositions(orgId, discordIds) {
          WHEN 'district_coordinator' THEN 4
        END,
        gr.role_name`,
-    [orgId, discordIds]
+    [orgId, userIds]
   )
-  return Object.fromEntries(rows.map(r => [r.discord_id, r.role_name]))
+  return Object.fromEntries(rows.map(r => [r.user_id, r.role_name]))
 }
 
 export async function addPayer(orgId, { userId, displayName, position, sortOrder = 0 }) {

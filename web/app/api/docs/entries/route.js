@@ -1,5 +1,4 @@
 import { getServerSession } from 'next-auth'
-import pool from '@/db/index.js'
 import { authOptions } from '@/lib/auth-options.js'
 import { getEffectiveOrgIdentity } from '@/lib/orgAccess.js'
 import { canManageDocs } from '@/lib/docsAccess.js'
@@ -37,7 +36,7 @@ export async function POST(req) {
 
   try {
     const body = await req.json()
-    const { actEventCacheId, isMobile, projectName, participantCount, entries, tokenExpiresAt, payerDiscordId } = body
+    const { actEventCacheId, isMobile, projectName, participantCount, entries, tokenExpiresAt, payerUserId } = body
 
     if (!actEventCacheId || !Array.isArray(entries) || entries.length === 0) {
       return Response.json({ error: 'actEventCacheId and entries[] required' }, { status: 400 })
@@ -70,27 +69,17 @@ export async function POST(req) {
       }
     }
 
-    // frontend ยังส่ง memberDiscordId (Discord snowflake) — resolve เป็น users.id ก่อนเขียน DB
-    // (docs_activity_entries.member_user_id เป็น FK users.id แล้ว)
-    const discordIds = [...new Set(entries.map(e => e.memberDiscordId).filter(Boolean))]
-    let userIdByDiscord = {}
-    if (discordIds.length) {
-      const { rows: userRows } = await pool.query(`SELECT id, discord_id FROM users WHERE discord_id = ANY($1)`, [discordIds])
-      userIdByDiscord = Object.fromEntries(userRows.map(r => [r.discord_id, r.id]))
-    }
     await createEntries(entries.map(e => ({
       ...e,
       projectId,
-      memberUserId: e.memberDiscordId ? (userIdByDiscord[e.memberDiscordId] ?? null) : null,
+      memberUserId: e.memberUserId ? Number(e.memberUserId) : null,
     })))
     if (tokenExpiresAt) await setTokenExpiry(projectId, tokenExpiresAt)
 
     // payer: ถ้าผู้ใช้เลือกจาก dropdown บนสุด → set ทั้งโครงการ (project default + apply ทุก entry + auto-swap)
     //         ถ้าไม่ได้เลือก → auto-assign default (project default หรือ pool[0])
-    if (payerDiscordId) {
-      const { rows: payerRows } = await pool.query(`SELECT id FROM users WHERE discord_id = $1`, [payerDiscordId])
-      const payerUserId = payerRows[0]?.id
-      if (payerUserId) await setProjectPayer(projectId, payerUserId, orgId, project?.province ?? null)
+    if (payerUserId) {
+      await setProjectPayer(projectId, Number(payerUserId), orgId, project?.province ?? null)
     } else {
       await autoAssignPayers(projectId, orgId, project?.province ?? null)
     }

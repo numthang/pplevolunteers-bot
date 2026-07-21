@@ -4,7 +4,6 @@ import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import { canAccessEvent } from '@/lib/docsAccess.js'
 import { updateEntry, deleteEntry, getEntryByIdSimple, resetRecipientSignature, autoAssignPayers, reassignEntryPayer } from '@/db/docs/entries.js'
 import { getPayersForEvent } from '@/db/docs/payers.js'
-import { userIdByDiscord } from '@/db/guilds.js'
 import { getOrgId } from '@/lib/orgContext.js'
 
 /** PATCH /api/docs/entries/[id] — แก้ไขได้ทุกสถานะ (จำกัดด้วย scope จังหวัด) */
@@ -20,10 +19,9 @@ export async function PATCH(req, { params }) {
     if (!entry) return Response.json({ error: 'Not found' }, { status: 404 })
     if (!canAccessEvent(entry.province, access)) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
-    // client ยังส่ง discord snowflake มา (components ยังไม่ได้ repoint) → แปลงที่ขอบ
-    const { itemType, description, amount, memberDiscordId, payerDiscordId } = await req.json()
-    const memberUserId = memberDiscordId ? await userIdByDiscord(memberDiscordId) : null
-    const payerUserId  = payerDiscordId  ? await userIdByDiscord(payerDiscordId)  : null
+    const { itemType, description, amount, memberUserId: rawMemberUserId, payerUserId: rawPayerUserId } = await req.json()
+    const memberUserId = rawMemberUserId ? Number(rawMemberUserId) : null
+    const payerUserId  = rawPayerUserId  ? Number(rawPayerUserId)  : null
     const recipientChanged = memberUserId && memberUserId !== entry.member_user_id
     if (recipientChanged && entry.status === 'signed') {
       await resetRecipientSignature(id)

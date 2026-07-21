@@ -6,19 +6,15 @@ import { getPayersForEvent } from './payers.js'
  * - role-based payer (เช่น ผู้ประสานงานจังหวัด) ไม่มีแถวใน docs_payers → ต้องดึง position จาก role
  * - payer ที่หลุด pool แล้ว (role ถูกถอด) → คง fallback จาก JOIN (users/org_members/docs_payers)
  * rows ทุกแถวอยู่ project เดียว → ใช้ orgId/province ร่วมกัน
- * NOTE: pool จาก getPayersForEvent (payers.js) เป็น mixed shape — role-based (province/regional
- *       coordinator) คืน item ที่มีแค่ discord_id, manual list (docs_payers) คืน item ที่มีแค่ user_id
- *       ฟังก์ชันนี้ enrich "แสดงชื่อ/ตำแหน่ง" เท่านั้น (ไม่เขียน DB) จึงยัง match ด้วย discord_id ได้ตรงตามเจตนาเดิม —
- *       ใช้เติมข้อมูล role-based payer ที่ไม่มีแถวใน docs_payers · จึง select u_pm.discord_id AS payer_discord_id
- *       เพิ่มมา เพื่อ bridge จาก payer_user_id (คอลัมน์จริง) ไปหา pool ตัวนี้
+ * pool จาก getPayersForEvent key ด้วย user_id ทุก item (role-based + manual list เหมือนกันแล้ว)
  */
 async function enrichPayerInfo(rows, orgId, province) {
-  const payerIds = [...new Set(rows.map(r => r.payer_discord_id).filter(Boolean))]
+  const payerIds = [...new Set(rows.map(r => r.payer_user_id).filter(Boolean))]
   if (!payerIds.length || !province) return rows
   const payers = await getPayersForEvent(orgId, province)
-  const byId = Object.fromEntries(payers.map(p => [p.discord_id, p]))
+  const byId = Object.fromEntries(payers.map(p => [p.user_id, p]))
   for (const r of rows) {
-    const info = byId[r.payer_discord_id]
+    const info = byId[r.payer_user_id]
     if (info) {
       const realName = (info.firstname && info.lastname) ? `${info.firstname} ${info.lastname}` : null
       r.payer_display_name = realName ?? info.display_name ?? r.payer_display_name
@@ -34,7 +30,7 @@ export async function getEntriesByProject(projectId) {
        e.id, e.project_id, e.member_user_id, e.item_type,
        e.description, e.amount, e.override_data, e.status,
        e.sign_token, e.token_expires_at, e.signed_at, e.printed_at, e.pdf_url,
-       e.payer_user_id, u_pm.discord_id AS payer_discord_id, e.payer_sign_token, e.payer_signed_at,
+       e.payer_user_id, e.payer_sign_token, e.payer_signed_at,
        p.org_id, ev.province,
        m.display_name, u_m.username, u_m.firstname, u_m.lastname, m.member_id,
        n.first_name AS ngs_first_name, n.last_name AS ngs_last_name,
@@ -77,7 +73,6 @@ export async function getEntryByToken(token) {
   const { rows } = await pool.query(
     `SELECT
        e.*,
-       u_pm.discord_id AS payer_discord_id,
        CASE WHEN e.sign_token = $1 THEN 'recipient' ELSE 'payer' END AS signer_role,
        CASE WHEN e.sign_token = $1
             THEN e.token_expires_at
@@ -106,7 +101,6 @@ export async function getEntryByToken(token) {
        WHERE om.user_id = u_m.id AND om.org_id = p.org_id
        LIMIT 1
      ) m ON true
-     LEFT JOIN users u_pm ON u_pm.id = e.payer_user_id
      LEFT JOIN cache_pple_member n ON n.source_id = m.member_id
      WHERE e.sign_token = $1 OR e.payer_sign_token = $1`,
     [token]
@@ -146,10 +140,6 @@ export async function setTokenExpiry(projectId, expiresAt) {
  * ถ้า default == recipient ของกลุ่มนั้น → สลับไปคนถัดไปใน pool ที่ ≠ recipient
  * ข้าม entry ที่ยังไม่มีผู้รับ (member_user_id IS NULL) — resolve ตอนกำหนดผู้รับทีหลัง
  * เรียกอัตโนมัติหลังสร้าง entry + ตอนเปิดหน้า (idempotent)
- * ⚠️ payers.js (queryPayersByPermission/getHighestPositions) — pool ที่มาจาก role (province/regional
- *    coordinator) ยัง key ด้วย discord_id เท่านั้น ไม่มี user_id (มีแค่ manual list จาก getPayers ที่มี user_id)
- *    → entry ที่ default payer ตกไปอยู่ในกลุ่ม role-based ล้วนๆ (ไม่มีใครอยู่ docs_payers) จะ resolve เป็น
- *    undefined แล้วถูกข้าม (skip) จนกว่า payers.js จะเพิ่ม user_id ให้ query กลุ่ม role-based ด้วย (นอก scope ไฟล์นี้)
  * @param {number}      projectId
  * @param {number}      orgId
  * @param {string|null} eventProvince
@@ -273,9 +263,6 @@ export async function setRecipientGroupPayer(projectId, recipientUserId, payerUs
  * - ทุก entry ที่มีผู้รับ: payer = payerUserId · ถ้า == recipient → คนถัดไปใน pool (auto-swap)
  * - ข้าม entry ที่ไม่มีผู้รับ (member_user_id NULL)
  * - payer เปลี่ยน + เคยเซ็น → reset ลายเซ็น payer เดิม
- * ⚠️ payerPool (getPayersForEvent) — เฉพาะ manual list (docs_payers) เท่านั้นที่มี user_id ใน pool item
- *    role-based (province/regional coordinator) ยังมีแค่ discord_id → auto-swap จะข้าม (resolve เป็น null)
- *    ถ้าคนที่ต้องสลับไปเป็น role-based ล้วน จนกว่า payers.js จะเพิ่ม user_id ให้กลุ่มนี้ (นอก scope ไฟล์นี้)
  * @returns {Promise<Array<{id, payer_sign_token, payer_user_id}>>}
  */
 export async function setProjectPayer(projectId, payerUserId, orgId, eventProvince) {
@@ -405,7 +392,6 @@ export async function getEntryById(id) {
   const { rows } = await pool.query(
     `SELECT
        e.*,
-       u_pm.discord_id AS payer_discord_id,
        p.org_id, p.is_mobile, p.participant_count, p.budget, p.project_name,
        p.cache_pple_event_id,
        ev.name AS event_name, ev.province, ev.location,
