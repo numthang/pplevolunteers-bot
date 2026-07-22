@@ -586,6 +586,20 @@
 - **edge case guild-mismatch cookie (defer)** — user ที่ไม่ได้เป็น member ของ guild default แต่เป็น guild อื่น → ไม่มี cookie → `getGuildId` คืน default → Nav mismatch · RBAC กันข้อมูลอยู่ (`isMember=false`) · แก้ที่ดีต้อง middleware/cookie-on-login — ทำตอนเปิด guild ที่ 2 จริง
 - **(optional) `dc_members.role_ids` ขนาน `roles`** — แก้ปัญหา rename role แล้วสิทธิ์หายชั่วคราว (web match ด้วยชื่อ) · เพิ่ม column `role_ids` (id ทน rename) ใช้เช็ค permission · ยังไม่จำเป็น จดเผื่อเจอ bug
 
+### 🎯 เป้าหมาย: ใช้งานได้โดยไม่ต้องมี Discord (เคาะ 2026-07-21)
+
+> **Discord = ส่วนเสริม ถ้ามีก็ดี ไม่มีก็ใช้ได้** — เป็นเป้าหมายที่ user ยืนยัน · ระบบ docs อาจเป็นตัวแรกที่ออกแบบใหม่ให้รองรับ org ที่ยังไม่มี Discord
+
+**สภาพวันนี้ — ประตู email เปิดได้แค่ login ส่วนที่เหลือยังผูก Discord + PPLE ทั้งก้อน** (ยืนยันจากโค้ดจริง 2026-07-21):
+
+1. **`scopeGrants` (พื้นที่) มาจากยศ Discord ทางเดียว** — `resolveAccess()` อ่าน `scope_node` จาก `dc_guild_roles` เท่านั้น · `web_roles` เติมแค่ permission ไม่เติม scope ([resolveAccess.js:79](../web/lib/resolveAccess.js#L79)) · คน email (`guild_id` NULL) → query `WHERE guild_id = NULL` → 0 แถว → **scope ว่างเสมอ**
+   - ผลจริงต่อแอพ: calling = เด้ง `noAccess` เห็นศูนย์ · cases = ไม่เห็นเคสไหนเลย (ทุกเคสมีจังหวัด) · docs/finance = เห็นเฉพาะระดับประเทศที่ไม่ผูกจังหวัด · ยกเว้นได้ `admin`/`secretary_general` ที่ข้ามเรื่องพื้นที่
+2. **คำศัพท์ "พื้นที่" เป็นของ PPLE เอง** — [web/lib/geography.js](../web/lib/geography.js) hardcode จังหวัด→ภาค 77 จังหวัด โดยชื่อภาคคือ**ชื่อ role ทีม Discord ของ PPLE** (`'ราชบุรี' → 'ทีมภาคกลางตะวันตก'`) · ในไฟล์เขียนกำกับเองว่า *"ชุดข้อมูลนี้คือของ guild อาสาประชาชน — multi-guild geography เป็นงานทำต่อ"* · org อื่นอาจแบ่งเป็นเขต/สาขา/ทีม ไม่ใช่จังหวัดไทยด้วยซ้ำ
+
+**สิ่งที่ต้องมีก่อน (ยังไม่ออกแบบ — เป็นงานก้อนใหม่ ไม่ใช่แก้ของเดิม):** ให้ org **นิยาม "พื้นที่" ของตัวเองได้** แล้วผูกกับยศผ่านเว็บ
+
+**ข่าวดีเชิงโครงสร้าง:** 4 แอพ (finance/calling/docs/cases) ไม่รู้จัก Discord เลย — มันกินแค่ `{ permissions, scopeGrants }` ที่ `resolveAccess` คืนมา · **ปลด Discord = เติม "แหล่งที่ 2" ที่ผลิตรูปร่างเดียวกัน ไม่ต้องรื้อ 4 แอพ** · `resolveAccess()` คือตะเข็บที่ควรลงมือ
+
 ---
 
 ## 🗄️ Database / Infrastructure

@@ -1150,3 +1150,60 @@ ALTER TABLE IF EXISTS organizations RENAME TO orgs;
 
 -- 2026-07-16: rename dc_user_identities → user_identities (identity ข้าม provider = user-level ไม่ใช่ Discord-specific) · key ด้วย user_id repoint ทีหลัง
 ALTER TABLE IF EXISTS dc_user_identities RENAME TO user_identities;
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- 2026-07-22: ORG ACCESS REDESIGN ขั้น 1 — ปลดสิทธิ์/พื้นที่ออกจาก Discord
+-- แบบเต็ม: md/ORG_ACCESS_REDESIGN.md
+--
+-- เป้า: 4 แอพ (finance/calling/docs/cases) ใช้งานได้โดยไม่ต้องมี Discord
+-- แหล่งความจริงเดียว = org_member_roles · roles/web_roles เลิกใช้ตัดสินสิทธิ์
+-- ขั้นนี้ "สร้างอย่างเดียว ยังไม่มีใครอ่าน" — ของเดิมวิ่งปกติ ไม่กระทบอะไร
+-- ═══════════════════════════════════════════════════════════════════════════
+
+-- พื้นที่ของ org — ต้นไม้ทั่วไป ซ้อนกี่ชั้นก็ได้ org ตั้งชื่อเอง (แทน hardcode ใน web/lib/geography.js)
+-- PPLE ย้ายเข้าเป็น 3 ชั้น: ภาคใหญ่ → ภาคย่อย → จังหวัด · org อื่นสร้างเองกี่ชั้นก็ได้
+CREATE TABLE IF NOT EXISTS org_scope_nodes (
+  id         SERIAL PRIMARY KEY,
+  org_id     INT NOT NULL REFERENCES orgs(id) ON DELETE CASCADE,
+  parent_id  INT REFERENCES org_scope_nodes(id) ON DELETE CASCADE,
+  key        VARCHAR(80)  NOT NULL,          -- slug คงที่ ใช้อ้างใน grant (เช่น 'ราชบุรี')
+  label      VARCHAR(120) NOT NULL,          -- ชื่อที่คนอ่าน
+  sort_order INT NOT NULL DEFAULT 100,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT uq_org_scope_nodes_key UNIQUE (org_id, key),
+  CONSTRAINT ck_org_scope_nodes_no_self_parent CHECK (parent_id IS NULL OR parent_id <> id)
+);
+CREATE INDEX IF NOT EXISTS idx_org_scope_nodes_org    ON org_scope_nodes(org_id);
+CREATE INDEX IF NOT EXISTS idx_org_scope_nodes_parent ON org_scope_nodes(parent_id);
+
+-- ตำแหน่งของ org (แทน dc_guild_roles ที่ผูก guild) — permission มาจากคลังเดิม org_roles
+-- คงโมเดลเดิมของ PPLE ที่แยก 2 ใบ: ใบตำแหน่ง (scope_node_id NULL) + ใบพื้นที่ (permission NULL)
+CREATE TABLE IF NOT EXISTS org_role_defs (
+  id            SERIAL PRIMARY KEY,
+  org_id        INT NOT NULL REFERENCES orgs(id) ON DELETE CASCADE,
+  name          VARCHAR(100) NOT NULL,                      -- 'ผู้ประสานงานจังหวัด' / 'ทีมราชบุรี'
+  permission    VARCHAR(40)  REFERENCES org_roles(key),     -- NULL = ใบนี้ให้แต่พื้นที่
+  scope_node_id INT          REFERENCES org_scope_nodes(id) ON DELETE SET NULL,  -- NULL = ใบนี้ให้แต่ตำแหน่ง
+  is_active     BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT uq_org_role_defs_name UNIQUE (org_id, name)
+);
+CREATE INDEX IF NOT EXISTS idx_org_role_defs_org ON org_role_defs(org_id);
+
+-- ใครถือตำแหน่งอะไร — **แหล่งความจริงเดียวของสิทธิ์** (แทน org_members.roles + web_roles)
+-- source: 'discord' = บอทซิงค์เข้ามา · 'web' = ตั้งผ่านเว็บ
+--   → ถอดยศ Discord ลบเฉพาะแถว source='discord' ของที่ตั้งในเว็บไม่หาย
+CREATE TABLE IF NOT EXISTS org_member_roles (
+  org_id      INT NOT NULL REFERENCES orgs(id) ON DELETE CASCADE,
+  user_id     INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  role_def_id INT NOT NULL REFERENCES org_role_defs(id) ON DELETE CASCADE,
+  source      VARCHAR(20) NOT NULL DEFAULT 'web',
+  granted_by  INT REFERENCES users(id),
+  granted_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (org_id, user_id, role_def_id, source),
+  CONSTRAINT ck_org_member_roles_source CHECK (source IN ('web','discord'))
+);
+CREATE INDEX IF NOT EXISTS idx_org_member_roles_lookup ON org_member_roles(org_id, user_id);
+
+-- แปลยศ Discord → ตำแหน่งของ org (dc_guild_roles ลดบทบาทเหลือแค่ตารางแปล)
+ALTER TABLE dc_guild_roles ADD COLUMN IF NOT EXISTS org_role_def_id INT REFERENCES org_role_defs(id) ON DELETE SET NULL;
