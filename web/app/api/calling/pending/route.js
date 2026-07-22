@@ -3,6 +3,7 @@ import * as memberDB from '@/db/calling/members.js'
 import * as contactDB from '@/db/calling/contacts.js'
 import { authOptions } from '@/lib/auth-options.js'
 import { getOrgId } from '@/lib/orgContext.js'
+import { pickMemberFieldsAll } from '@/lib/callingFields.js'
 export async function GET(req) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.userId) {
@@ -31,7 +32,7 @@ export async function GET(req) {
       const rows = flat
         ? await memberDB.getMyCallHistoryFlat(orgId, session.user.userId, { name, limit, offset })
         : await memberDB.getMyCallHistory(orgId, session.user.userId, { name, limit, offset })
-      return Response.json({ success: true, data: rows, hasMore: rows.length === limit })
+      return Response.json({ success: true, data: pickMemberFieldsAll(rows), hasMore: rows.length === limit })
     }
 
     if (countOnly) {
@@ -81,7 +82,7 @@ export async function GET(req) {
 
     return Response.json({
       success: true,
-      data: members,
+      data: pickMemberFieldsAll(members),   // กันทะเบียนสมาชิกทั้งแถวหลุด (เลขบัตร ปชช./ที่อยู่/วันเกิด)
       hasMore: members.length === limit,
       limit,
       offset

@@ -3,6 +3,7 @@ import * as memberDB from '@/db/calling/members.js'
 import { canAccessMember, getUserScope, isAdmin, isRegionalCoordinator, canSeeContacts } from '@/lib/callingAccess.js'
 import { getEffectiveOrgIdentity } from '@/lib/orgAccess.js'
 import { getOrgId } from '@/lib/orgContext.js'
+import { pickMemberFieldsAll } from '@/lib/callingFields.js'
 import { authOptions } from '@/lib/auth-options.js'
 
 /**
@@ -100,7 +101,7 @@ export async function GET(req) {
 
     return Response.json({
       success: true,
-      data: rows,
+      data: pickMemberFieldsAll(rows),   // กันทะเบียนสมาชิกทั้งแถวหลุด (เลขบัตร ปชช./ที่อยู่/วันเกิด)
       contacts_hidden: !showContacts,
       hasMore: rows.length === limit,
       limit,
