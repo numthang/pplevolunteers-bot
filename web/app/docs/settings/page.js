@@ -83,16 +83,11 @@ function ScopeBadges({ nodes = [] }) {
       </span>
     )
   }
-  const labels = nodes.map(n => {
-    const i = n.indexOf(':')
-    if (i === -1) return null
-    const type = n.slice(0, i)
-    const val  = n.slice(i + 1)
-    if (type === 'province')  return { label: val, wide: false }
-    if (type === 'subregion') return { label: val.replace(/^ทีม/, ''), wide: true }
-    if (type === 'region')    return { label: val.replace(/^ทีม/, ''), wide: true }
-    return null
-  }).filter(Boolean)
+  // โครงใหม่ (org_scope_nodes) ไม่มี prefix type:value แล้ว — API ส่ง { key, label, wide } มาตรงๆ
+  // wide = node มีลูก (ภาค/ภาคย่อย) · ไม่มีลูก = ปลายกิ่ง (จังหวัด)
+  const labels = nodes
+    .filter(n => n?.label || n?.key)
+    .map(n => ({ label: (n.label || n.key).replace(/^ทีม/, ''), wide: !!n.wide }))
   if (!labels.length) return null
   return (
     <div className="flex flex-wrap gap-1 mt-1">
