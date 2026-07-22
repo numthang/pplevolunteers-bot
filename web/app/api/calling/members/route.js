@@ -82,17 +82,20 @@ export async function GET(req) {
     if (!showContacts) {
       rows = rows.map(({ mobile_number, line_id, ...rest }) => rest)
     } else if (!isUserAdmin && !isRegionalCoordinator(access)) {
-      // province/district coordinator: contacts scoped to primary_province only
-      const contactProvince = session.user.primary_province
-      if (!contactProvince) {
-        rows = rows.map(({ mobile_number, line_id, ...rest }) => rest)
-      } else {
-        rows = rows.map(m => {
-          if (m.home_province === contactProvince) return m
-          const { mobile_number, line_id, ...rest } = m
-          return rest
-        })
-      }
+      // province/district coordinator: เห็นเบอร์เฉพาะจังหวัดที่ตัวเองดูแล
+      // primary_province = field กรอกเองในโปรไฟล์ ซึ่งแทบไม่มีใครกรอก (2 จาก 7,339 แถว)
+      // → ไม่มีค่า = ตัดเบอร์ทิ้งหมด ทั้งที่มียศคุมจังหวัดอยู่ (bug-048)
+      // fallback ไปที่ scope จากยศแทน · row ถูกกรองด้วย userScope ไปแล้วข้างบน จึงไม่กว้างเกินสิทธิ์
+      const allowed = session.user.primary_province
+        ? [session.user.primary_province]
+        : (userScope || [])
+      // ตัดแล้วต้องบอกด้วยว่า "ไม่มีสิทธิ์เห็น" ไม่ใช่ปล่อยให้ UI เดาว่า "ไม่มีเบอร์"
+      // (roster query การันตี mobile_number IS NOT NULL อยู่แล้ว — เบอร์หาย = ถูกตัดเสมอ)
+      rows = rows.map(m => {
+        if (allowed.includes(m.home_province)) return m
+        const { mobile_number, line_id, ...rest } = m
+        return { ...rest, phone_hidden: true }
+      })
     }
 
     return Response.json({

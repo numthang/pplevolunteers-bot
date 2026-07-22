@@ -323,6 +323,7 @@
       "flagDoNotCall": "Do not call",
       "lifetimeMemberTitle": "Lifetime member",
       "noPhoneLabel": "No phone number",
+      "phoneHiddenLabel": "No permission to view",
       "loadingMoreLabel": "Loading more...",
       "showingAllContacts": "Showing all {count} contacts",
       "showingAllMembers": "Showing all {count} people",

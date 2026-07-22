@@ -323,6 +323,7 @@
       "flagDoNotCall": "อย่าโทร",
       "lifetimeMemberTitle": "สมาชิกตลอดชีพ",
       "noPhoneLabel": "ไม่มีเบอร์",
+      "phoneHiddenLabel": "ไม่มีสิทธิ์ดูเบอร์",
       "loadingMoreLabel": "กำลังโหลดเพิ่มเติม...",
       "showingAllContacts": "แสดงครบ {count} contact",
       "showingAllMembers": "แสดงครบ {count} คน",

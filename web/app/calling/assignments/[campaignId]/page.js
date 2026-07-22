@@ -473,7 +473,6 @@ export default function CampaignPage({ params }) {
     setFilterStatus('')
     setFilterSms('')
     setSelectedMembers(new Set())
-    setExpandedId(null)
   }
 
   const hasActiveFilters = !!(filterName || filterAmphure || filterSubdistricts.size > 0 || filterTier || filterAssignee || filterRsvp || filterExpiry || filterCalled || filterSort || filterStatus || filterSms)
@@ -771,7 +770,7 @@ export default function CampaignPage({ params }) {
                         )}
                         {expiryIcon && <expiryIcon.Icon title={expiryIcon.title} style={{ color: expiryIcon.color }} className="w-4 h-4 shrink-0 inline-block" />}
                         {catColor && <span className="md:hidden shrink-0 text-sm px-1.5 py-0.5 rounded font-medium" style={{ background: catColor.bg, color: catColor.text }}>{CATEGORY_LABELS[item.category] || item.category}</span>}
-                        {!hasPhone && <span className="shrink-0 text-base text-warm-400 dark:text-disc-muted font-normal">{t('assignment.noPhoneLabel')}</span>}
+                        {!hasPhone && <span className="shrink-0 text-base text-warm-400 dark:text-disc-muted font-normal">{t(item.phone_hidden ? 'assignment.phoneHiddenLabel' : 'assignment.noPhoneLabel')}</span>}
                       </div>
                       <div className="flex items-center gap-1.5 text-base text-warm-500 dark:text-disc-text truncate">
                         <span className="shrink-0 w-1.5 h-1.5 rounded-full inline-block" style={{ backgroundColor: badge.text }} />
