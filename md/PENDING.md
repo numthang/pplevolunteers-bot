@@ -63,7 +63,10 @@ gate = `admin` ใน org (owner ได้อัตโนมัติ) · verify
 **org migration ปิดจบแล้วทั้งหมด** — identity split + org core + org-scope ครบทั้ง 4 ฟีเจอร์ (finance · calling · docs · cases) + audit_logs · **ไม่เหลือ tenant data ที่ยัง guild-based**
 
 **งานถัดไปคือ cutover ขึ้น prod** → `md/CUTOVER.md` (10 ขั้น · branch `org-core` นำ `master` 71 commit · prod ยังไม่เคยเห็นโค้ดชุดนี้)
-- ⛔ ค้าง 2 อย่างก่อน deploy: **user เทส docs+cases ในเบราว์เซอร์** · **ซ้อม migration กับ dump ของ prod** — `./scripts/migration/org-scope/rehearse.sh <dump>` (CUTOVER §1.5 · ยังไม่เคยซ้อม = เสี่ยงสุด)
+- ✅ **ซ้อม migration กับ dump ของ prod — ผ่านแล้ว 2026-07-23** `./scripts/migration/org-scope/rehearse.sh backups/dump-pple_volunteers-202607230242.sql`
+  ครบ 13 ขั้น **7–14 วินาที** (= downtime จริง) · users 6615 · org_members 7345 · org_member_roles 6505 · scope_nodes 97 (มีแม่ 90) · ตัวตรวจ 6 บรรทัดได้ 0 ครบ
+  **เจอ 5 บั๊กที่ dev ไม่มีทางเจอ** (แก้+push แล้ว): `-1` หายจากคำสั่ง prod · `DEFAULT NULL::varchar` 4 คอลัมน์ใน calling · guild ที่ org_id NULL (NamWa/พันธมิตรชานม) · bash 3.2 บน macOS · dropdb ล้มแล้ววิ่งต่อ
+- ⛔ ค้างก่อน deploy: **user เทส docs+cases ในเบราว์เซอร์** · **ชี้เว็บไป `pple_rehearsal` แล้วกดใช้จริง** (migration ผ่าน ≠ แอปทำงานถูก)
 
 **เอกสารกวาดตรง schema จริงแล้ว (2026-07-21)** — DATABASE.md regenerate จาก DB สด 58 ตาราง · CASE/DOCS/CALLING/CONTACT ตามมา · งานที่งอกจากรอบนี้ + **พรอมต์ audit RBAC พร้อมใช้** อยู่หัวข้อ 🧹 ท้ายไฟล์
 
