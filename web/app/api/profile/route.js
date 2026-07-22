@@ -65,18 +65,14 @@ export async function GET() {
   } catch {}
 
   const row = rows[0] || {}
-  const roleProvinces = [...new Set(
-    (row.roles || '').split(',')
-      .map(r => {
-        r = r.trim()
-        if (!r.startsWith('ทีม')) return ''
-        const name = r.slice(3)
-        if (name.startsWith('กรุงเทพ')) return 'กรุงเทพมหานคร'
-        return name
-      })
-      .filter(p => PROVINCE_LIST.includes(p))
-  )]
-  const provinceOptions = roleProvinces.length > 0 ? roleProvinces : PROVINCE_LIST
+  // ช่องจังหวัด = จังหวัดของ "ที่อยู่" → ต้องเลือกได้ครบทุกจังหวัด
+  //
+  // เดิมจำกัดไว้เฉพาะจังหวัดที่เดาจากชื่อยศ Discord ('ทีม<จังหวัด>') ทำให้คนที่มียศ
+  // ทีมเดียวเลือกได้จังหวัดเดียว — กรอกที่อยู่จริงไม่ได้ถ้าอยู่คนละจังหวัดกับทีม
+  // และมันไม่ได้กันอะไรอยู่แล้ว: แผงเลือกจังหวัดบน Discord (handlers/provinceSelect.js)
+  // ให้กดได้ทั้ง 80 ปุ่ม ใครกดก็ติด ไม่ต้องมีคนอนุมัติ → การเปิดครบที่นี่คือทำให้ตรงกัน
+  // ไม่ใช่การเปิดสิทธิ์กว้างขึ้น (จังหวัดบอกแค่ "อยู่ไหน" การเห็นเบอร์ยังต้องมียศแต่งตั้ง)
+  const provinceOptions = PROVINCE_LIST
 
   return Response.json({ ...row, guild_id: guildId, guild, province_options: provinceOptions })
 }
