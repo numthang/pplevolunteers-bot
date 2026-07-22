@@ -234,3 +234,57 @@ export async function setRolesCopy(userId, guildId, roleName, mode) {
     [Array.from(set).join(',') || null, userId, guildId]
   )
 }
+
+/**
+ * พื้นที่ที่ "เจ้าตัวประกาศเอง" จากที่อยู่ในโปรไฟล์ — ของเทียบเท่า provinceSelect ของ Discord
+ *
+ * ⚠️ นี่ไม่ใช่การให้สิทธิ์ · พื้นที่บอกแค่ "อยู่ไหน" ส่วนการเห็นข้อมูลยังต้องมียศแต่งตั้ง
+ *    (seeContacts = กรรมการจังหวัดขึ้นไป) เหมือนเดิมทุกประการ — ตรงกับ Discord ที่
+ *    handlers/provinceSelect.js ให้ใครกดเลือกจังหวัดตัวเองก็ติดยศพื้นที่ได้ ไม่ต้องมีคนอนุมัติ
+ *
+ * แยกจาก grant ที่มาจากการแต่งตั้งด้วยรูปร่างของ role def:
+ *    แต่งตั้ง  = permission NOT NULL, scope_node_id NULL   (findOrCreatePermissionDef)
+ *    ประกาศเอง = permission NULL,     scope_node_id NOT NULL  ← ตัวนี้
+ * เปลี่ยนจังหวัดจึงถอดเฉพาะใบ "ประกาศเอง" ใบเก่า ไม่แตะยศที่คนอื่นแต่งตั้งไว้
+ *
+ * ยศพื้นที่ที่มาจาก Discord (source='discord') ก็ไม่ถูกแตะ — คนที่มีทั้งสองทางได้ทั้งคู่
+ * และ reduceRoleDefs ยุบ key ซ้ำให้เองอยู่แล้ว
+ */
+export async function setSelfDeclaredScope(orgId, userId, provinceName) {
+  // ถอดใบประกาศเองใบเก่าทิ้งก่อนเสมอ (เปลี่ยนจังหวัด/ลบที่อยู่)
+  await pool.query(
+    `DELETE FROM org_member_roles mr
+      USING org_role_defs d
+      WHERE d.id = mr.role_def_id
+        AND mr.org_id = $1 AND mr.user_id = $2 AND mr.source = 'web'
+        AND d.permission IS NULL AND d.scope_node_id IS NOT NULL`,
+    [orgId, userId]
+  )
+
+  const province = (provinceName || '').trim()
+  if (!province) return
+
+  const { rows: nr } = await pool.query(
+    `INSERT INTO org_scope_nodes (org_id, key, label)
+     VALUES ($1, $2, $2)
+     ON CONFLICT (org_id, key) DO UPDATE SET key = EXCLUDED.key
+     RETURNING id`,
+    [orgId, province]
+  )
+
+  // ชื่อ def ต้อง unique ต่อ org และต้องไม่ชนกับใบที่มาจาก Discord (เช่น 'ทีมราชบุรี')
+  const { rows: dr } = await pool.query(
+    `INSERT INTO org_role_defs (org_id, name, permission, scope_node_id)
+     VALUES ($1, $2, NULL, $3)
+     ON CONFLICT (org_id, name) DO UPDATE SET scope_node_id = EXCLUDED.scope_node_id
+     RETURNING id`,
+    [orgId, `พื้นที่: ${province}`, nr[0].id]
+  )
+
+  await pool.query(
+    `INSERT INTO org_member_roles (org_id, user_id, role_def_id, source)
+     VALUES ($1, $2, $3, 'web')
+     ON CONFLICT (org_id, user_id, role_def_id, source) DO NOTHING`,
+    [orgId, userId, dr[0].id]
+  )
+}

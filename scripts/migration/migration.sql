@@ -1240,3 +1240,24 @@ SELECT g.org_id, 'enabled_features',
  WHERE g.org_id IS NOT NULL
  GROUP BY g.org_id
 ON CONFLICT (org_id, key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW();
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- 2026-07-23 — ที่อยู่ในโปรไฟล์ (org-native) — ปูทางให้ org ที่ไม่มี Discord
+--
+-- ปัญหา: "พื้นที่ที่ตัวเองอยู่" มาจากยศ Discord ทางเดียว (handlers/provinceSelect.js
+-- กดเลือกจังหวัด → ติดยศ → org_scope_nodes) org ที่ไม่มี Discord จึงมี scopeGrants
+-- ว่างเปล่า → getUserScope() คืน [] → หน้า calling ตอบ noAccess ตั้งแต่ต้น ใช้ไม่ได้เลย
+--
+-- ⚠️ พื้นที่ = "เจ้าตัวบอกเอง" ไม่ใช่สิทธิ์ — ตรงกับ Discord ที่ใครกดก็ติดได้
+--    การเห็นเบอร์ยังต้องมียศแต่งตั้ง (seeContacts = กรรมการจังหวัดขึ้นไป) เหมือนเดิม
+--
+-- amphoe / primary_province มีอยู่แล้ว — เพิ่มเฉพาะส่วนที่ขาด
+-- primary_province คงเป็นช่อง "จังหวัด" ของที่อยู่ (แหล่งความจริงเดียว ไม่สร้างซ้ำ)
+-- ═══════════════════════════════════════════════════════════════════════════
+ALTER TABLE org_members
+  ADD COLUMN IF NOT EXISTS house_no VARCHAR(50),
+  ADD COLUMN IF NOT EXISTS moo      VARCHAR(20),
+  ADD COLUMN IF NOT EXISTS soi      VARCHAR(100),
+  ADD COLUMN IF NOT EXISTS road     VARCHAR(100),
+  ADD COLUMN IF NOT EXISTS tambon   VARCHAR(100),
+  ADD COLUMN IF NOT EXISTS zipcode  VARCHAR(10);

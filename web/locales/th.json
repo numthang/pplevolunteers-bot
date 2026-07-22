@@ -1174,5 +1174,19 @@
       "backToLoginLink": "กลับไปเข้าสู่ระบบ",
       "signingInMsg": "กำลังเข้าสู่ระบบ…"
     }
+  },
+  "profile": {
+    "address": {
+      "sectionTitle": "ที่อยู่",
+      "houseNoLabel": "บ้านเลขที่",
+      "mooLabel": "หมู่",
+      "soiLabel": "ซอย",
+      "roadLabel": "ถนน",
+      "tambonLabel": "ตำบล",
+      "amphoeLabel": "อำเภอ",
+      "provinceLabel": "จังหวัด",
+      "zipcodeLabel": "รหัสไปรษณีย์",
+      "unspecifiedOption": "— ไม่ระบุ —"
+    }
   }
 }

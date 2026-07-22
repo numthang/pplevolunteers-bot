@@ -2,9 +2,11 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import Image from 'next/image'
 import { Copy, Check, Link2, Unlink, KeyRound } from 'lucide-react'
 import { startRegistration } from '@simplewebauthn/browser'
+import geographyData from '@/lib/thailand-geography.json'
 
 const FIELDS = [
   { key: 'nickname',   label: 'ชื่อเล่น',              placeholder: 'เช่น แมว' },
@@ -12,7 +14,6 @@ const FIELDS = [
   { key: 'lastname',   label: 'นามสกุล',               placeholder: '' },
   { key: 'member_id',  label: 'หมายเลขสมาชิกพรรค',     placeholder: '' },
   { key: 'specialty',  label: 'ความเชี่ยวชาญ',          placeholder: 'เช่น กฎหมาย, การเงิน, IT' },
-  { key: 'amphoe',     label: 'อำเภอ',                  placeholder: '' },
   { key: 'phone',      label: 'เบอร์โทร',               placeholder: '08x-xxx-xxxx' },
   { key: 'line_id',    label: 'Line ID',                placeholder: '' },
   { key: 'google_id',  label: 'Google Email',           placeholder: '' },
@@ -24,9 +25,13 @@ const BANK_FIELDS = [
   { key: 'account_holder', label: 'ชื่อบัญชี',          placeholder: '' },
 ]
 
-const EMPTY = Object.fromEntries(FIELDS.map(f => [f.key, '']))
+// ที่อยู่: house_no/moo/soi/road/zipcode เป็น text ธรรมดา · amphoe/tambon ผูกกับ dropdown cascading (จังหวัดแยก state ชื่อ primaryProvince)
+const ADDRESS_KEYS = ['house_no', 'moo', 'soi', 'road', 'amphoe', 'tambon', 'zipcode']
+
+const EMPTY = Object.fromEntries([...FIELDS.map(f => f.key), ...ADDRESS_KEYS].map(k => [k, '']))
 
 export default function ProfilePage() {
+  const t = useTranslations('profile')
   const { data: session, status, update } = useSession()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -34,6 +39,8 @@ export default function ProfilePage() {
   const [readOnly, setReadOnly] = useState({})
   const [primaryProvince, setPrimaryProvince] = useState('')
   const [provinceOptions, setProvinceOptions] = useState([])
+  const [amphoeList, setAmphoeList] = useState([])
+  const [tambonList, setTambonList] = useState([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -61,7 +68,7 @@ export default function ProfilePage() {
       .then(data => {
         setForm(prev => {
           const next = { ...prev }
-          for (const f of FIELDS) next[f.key] = data[f.key] || ''
+          for (const key of Object.keys(EMPTY)) next[key] = data[key] || ''
           return next
         })
         setReadOnly({
@@ -77,6 +84,28 @@ export default function ProfilePage() {
         setLoading(false)
       })
       .catch(() => setLoading(false))
+  }
+
+  // Cascading จังหวัด → อำเภอ → ตำบล (ผูกกับ geographyData) — แค่รายชื่อ ไม่ล้างค่าที่ผู้ใช้เลือกไว้เอง
+  useEffect(() => {
+    if (!primaryProvince) { setAmphoeList([]); return }
+    const prov = geographyData.find(p => p.province === primaryProvince)
+    setAmphoeList(prov ? prov.amphoes.slice().sort((a, b) => a.amphoe.localeCompare(b.amphoe, 'th')) : [])
+  }, [primaryProvince])
+
+  useEffect(() => {
+    if (!form.amphoe || !amphoeList.length) { setTambonList([]); return }
+    const amp = amphoeList.find(a => a.amphoe.replace(/^อำเภอ/, '') === form.amphoe)
+    setTambonList(amp ? amp.tambons.slice().sort((a, b) => a.localeCompare(b, 'th')) : [])
+  }, [form.amphoe, amphoeList])
+
+  function handleProvinceChange(value) {
+    setPrimaryProvince(value)
+    setForm(f => ({ ...f, amphoe: '', tambon: '' }))
+  }
+
+  function handleAmphoeChange(value) {
+    setForm(f => ({ ...f, amphoe: value, tambon: '' }))
   }
 
   useEffect(() => {
@@ -256,22 +285,137 @@ export default function ProfilePage() {
               </div>
             ))}
 
-            {provinceOptions.length > 0 && (
-              <div>
-                <label className="block text-base font-medium text-warm-500 dark:text-disc-text mb-1">
-                  จังหวัดหลัก (Primary Province)
-                </label>
-                <select
-                  value={primaryProvince}
-                  onChange={e => setPrimaryProvince(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text text-base focus:outline-none focus:ring-2 focus:ring-brand-orange transition"
-                >
-                  <option value="">— ไม่ระบุ —</option>
-                  {provinceOptions.map(p => <option key={p} value={p}>{p}</option>)}
-                </select>
-                <p className="text-xs text-warm-400 dark:text-disc-muted mt-1">ใช้เป็นค่า default เมื่อเพิ่ม Contact ใหม่</p>
+            {/* ที่อยู่ */}
+            <div>
+              <h2 className="text-lg font-semibold text-warm-900 dark:text-disc-text mb-3 mt-2">
+                {t('address.sectionTitle')}
+              </h2>
+              <div className="flex flex-col gap-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-base font-medium text-warm-500 dark:text-disc-text mb-1">
+                      {t('address.houseNoLabel')}
+                    </label>
+                    <input
+                      type="text"
+                      value={form.house_no}
+                      onChange={e => setForm(f => ({ ...f, house_no: e.target.value }))}
+                      className="w-full px-3 py-2 rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text text-base placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-brand-orange transition"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-base font-medium text-warm-500 dark:text-disc-text mb-1">
+                      {t('address.mooLabel')}
+                    </label>
+                    <input
+                      type="text"
+                      value={form.moo}
+                      onChange={e => setForm(f => ({ ...f, moo: e.target.value }))}
+                      className="w-full px-3 py-2 rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text text-base placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-brand-orange transition"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-base font-medium text-warm-500 dark:text-disc-text mb-1">
+                      {t('address.soiLabel')}
+                    </label>
+                    <input
+                      type="text"
+                      value={form.soi}
+                      onChange={e => setForm(f => ({ ...f, soi: e.target.value }))}
+                      className="w-full px-3 py-2 rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text text-base placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-brand-orange transition"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-base font-medium text-warm-500 dark:text-disc-text mb-1">
+                      {t('address.roadLabel')}
+                    </label>
+                    <input
+                      type="text"
+                      value={form.road}
+                      onChange={e => setForm(f => ({ ...f, road: e.target.value }))}
+                      className="w-full px-3 py-2 rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text text-base placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-brand-orange transition"
+                    />
+                  </div>
+                </div>
+
+                {/* จังหวัด → อำเภอ → ตำบล — เรียงตามลำดับที่ต้องกรอก (ช่องขวาปลดล็อกหลังเลือกช่องซ้าย)
+                    ไม่เรียงแบบที่อยู่ไทย (ตำบล-อำเภอ-จังหวัด) เพราะช่องซ้ายสุดจะ disabled จนกว่าจะข้ามไปกรอกขวาสุดก่อน */}
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <div>
+                    <label className="block text-base font-medium text-warm-500 dark:text-disc-text mb-1">
+                      {t('address.provinceLabel')}
+                    </label>
+                    <select
+                      value={primaryProvince}
+                      onChange={e => handleProvinceChange(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text text-base focus:outline-none focus:ring-2 focus:ring-brand-orange transition"
+                    >
+                      <option value="">{t('address.unspecifiedOption')}</option>
+                      {provinceOptions.map(p => <option key={p} value={p}>{p}</option>)}
+                      {primaryProvince && !provinceOptions.includes(primaryProvince) && (
+                        <option value={primaryProvince}>{primaryProvince}</option>
+                      )}
+                    </select>
+                    <p className="text-xs text-warm-400 dark:text-disc-muted mt-1">ใช้เป็นค่า default เมื่อเพิ่ม Contact ใหม่</p>
+                  </div>
+                  <div>
+                    <label className="block text-base font-medium text-warm-500 dark:text-disc-text mb-1">
+                      {t('address.amphoeLabel')}
+                    </label>
+                    <select
+                      value={form.amphoe}
+                      onChange={e => handleAmphoeChange(e.target.value)}
+                      disabled={!amphoeList.length}
+                      className="w-full px-3 py-2 rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text text-base focus:outline-none focus:ring-2 focus:ring-brand-orange transition disabled:opacity-50"
+                    >
+                      <option value="">{t('address.unspecifiedOption')}</option>
+                      {amphoeList.map(a => {
+                        const name = a.amphoe.replace(/^อำเภอ/, '')
+                        return <option key={name} value={name}>{name}</option>
+                      })}
+                      {form.amphoe && !amphoeList.some(a => a.amphoe.replace(/^อำเภอ/, '') === form.amphoe) && (
+                        <option value={form.amphoe}>{form.amphoe}</option>
+                      )}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-base font-medium text-warm-500 dark:text-disc-text mb-1">
+                      {t('address.tambonLabel')}
+                    </label>
+                    <select
+                      value={form.tambon}
+                      onChange={e => setForm(f => ({ ...f, tambon: e.target.value }))}
+                      disabled={!tambonList.length}
+                      className="w-full px-3 py-2 rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text text-base focus:outline-none focus:ring-2 focus:ring-brand-orange transition disabled:opacity-50"
+                    >
+                      <option value="">{t('address.unspecifiedOption')}</option>
+                      {tambonList.map(tb => <option key={tb} value={tb}>{tb}</option>)}
+                      {form.tambon && !tambonList.includes(form.tambon) && (
+                        <option value={form.tambon}>{form.tambon}</option>
+                      )}
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-base font-medium text-warm-500 dark:text-disc-text mb-1">
+                    {t('address.zipcodeLabel')}
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={5}
+                    value={form.zipcode}
+                    onChange={e => setForm(f => ({ ...f, zipcode: e.target.value.replace(/\D/g, '').slice(0, 5) }))}
+                    placeholder="10110"
+                    className="w-full px-3 py-2 rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text text-base placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-brand-orange transition"
+                  />
+                </div>
               </div>
-            )}
+            </div>
           </div>
         )}
 

@@ -1174,5 +1174,19 @@
       "backToLoginLink": "Back to login",
       "signingInMsg": "Signing in…"
     }
+  },
+  "profile": {
+    "address": {
+      "sectionTitle": "Address",
+      "houseNoLabel": "House No.",
+      "mooLabel": "Moo",
+      "soiLabel": "Soi",
+      "roadLabel": "Road",
+      "tambonLabel": "Sub-district",
+      "amphoeLabel": "District",
+      "provinceLabel": "Province",
+      "zipcodeLabel": "Zip Code",
+      "unspecifiedOption": "— Not specified —"
+    }
   }
 }

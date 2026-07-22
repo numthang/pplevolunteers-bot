@@ -1,10 +1,32 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options'
 import { getGuildId } from '@/lib/guildContext.js'
+import { getOrgId } from '@/lib/orgContext.js'
+import { setSelfDeclaredScope } from '@/db/orgMemberRoles.js'
+import { clearScopeTreeCache } from '@/lib/resolveAccessV2.js'
 import pool from '@/db/index.js'
 import geographyData from '@/lib/thailand-geography.json'
 
 const PROVINCE_LIST = geographyData.map(p => p.province)
+
+/**
+ * หาแถวโปรไฟล์ของคนนี้ใน org ปัจจุบัน
+ *
+ * org ที่มี Discord: org_members เป็นแถวต่อ guild → เอาแถวของ guild ที่กำลังดูอยู่
+ * org ที่ไม่มี Discord: มีแถวเดียวต่อคน guild_id = NULL
+ * เดิม query ผูกกับ u.discord_id + guild_id ตรงๆ → คนที่ล็อกอินด้วย email ไม่มีทั้งคู่
+ * เปิดหน้าโปรไฟล์แล้วได้ค่าว่างเปล่า แก้อะไรก็ไม่ลง
+ */
+async function findProfileRowId(userId, orgId, guildId) {
+  const { rows } = await pool.query(
+    `SELECT id FROM org_members
+      WHERE user_id = $1 AND org_id = $2
+      ORDER BY COALESCE(guild_id = $3, false) DESC, (guild_id IS NULL) DESC, id
+      LIMIT 1`,
+    [userId, orgId, guildId || null]
+  )
+  return rows[0]?.id || null
+}
 
 export async function GET() {
   const session = await getServerSession(authOptions)
@@ -12,14 +34,17 @@ export async function GET() {
 
   const guildId = await getGuildId(session)
   // identity (firstname/lastname/phone/line_id/google_id/username) → users · ที่เหลือ → org_members
-  const { rows } = await pool.query(
+  const orgId = await getOrgId(session)
+  const rowId = await findProfileRowId(session.user.userId, orgId, guildId)
+  const { rows } = rowId ? await pool.query(
     `SELECT om.nickname, u.firstname, u.lastname, om.member_id, om.specialty, om.amphoe, om.province, om.region,
             u.phone, u.line_id, u.google_id, om.roles, om.interests, u.username, om.display_name, om.primary_province,
-            om.bank_name, om.account_no, om.account_holder
+            om.bank_name, om.account_no, om.account_holder,
+            om.house_no, om.moo, om.soi, om.road, om.tambon, om.zipcode
      FROM org_members om JOIN users u ON u.id = om.user_id
-     WHERE om.guild_id = $1 AND u.discord_id = $2`,
-    [guildId, session.user.discordId]
-  )
+     WHERE om.id = $1`,
+    [rowId]
+  ) : { rows: [] }
 
   let guild = null
   try {
@@ -66,7 +91,8 @@ export async function PATCH(req) {
 
   // identity fields → users (by discord_id) · profile fields → org_members (by user_id+guild)
   const USER_COLS   = ['firstname', 'lastname', 'phone', 'line_id', 'google_id']
-  const MEMBER_COLS = ['nickname', 'member_id', 'specialty', 'amphoe', 'primary_province', 'bank_name', 'account_no', 'account_holder']
+  const MEMBER_COLS = ['nickname', 'member_id', 'specialty', 'amphoe', 'primary_province', 'bank_name', 'account_no', 'account_holder',
+                       'house_no', 'moo', 'soi', 'road', 'tambon', 'zipcode']
 
   const userUpd = {}, memberUpd = {}
   for (const key of USER_COLS)   if (key in body) userUpd[key]   = body[key] || null
@@ -89,14 +115,24 @@ export async function PATCH(req) {
       [...Object.values(userUpd), discordId]
     )
   }
+  const orgId = await getOrgId(session)
   if (Object.keys(memberUpd).length > 0) {
+    const rowId = await findProfileRowId(session.user.userId, orgId, guildId)
+    if (!rowId) return Response.json({ error: 'ไม่พบโปรไฟล์ใน org นี้' }, { status: 404 })
     const keys = Object.keys(memberUpd)
     const setClause = keys.map((k, i) => `${k} = $${i + 1}`).join(', ')
     await pool.query(
-      `UPDATE org_members om SET ${setClause}
-       FROM users u WHERE om.user_id = u.id AND u.discord_id = $${keys.length + 1} AND om.guild_id = $${keys.length + 2}`,
-      [...Object.values(memberUpd), discordId, guildId]
+      `UPDATE org_members SET ${setClause} WHERE id = $${keys.length + 1}`,
+      [...Object.values(memberUpd), rowId]
     )
+  }
+
+  // จังหวัดในที่อยู่ = พื้นที่ที่เจ้าตัวประกาศเอง (ของเทียบเท่า provinceSelect ของ Discord)
+  // ไม่ให้สิทธิ์อะไร — แค่บอกว่าอยู่ไหน · การเห็นเบอร์ยังต้องมียศแต่งตั้งเหมือนเดิม
+  if ('primary_province' in memberUpd) {
+    await setSelfDeclaredScope(orgId, session.user.userId, memberUpd.primary_province)
+    // เพิ่ง INSERT node ใหม่ — ต้องล้าง cache ต้นไม้พื้นที่ (TTL 5 นาที) ไม่งั้นสิทธิ์ยังไม่มาจนกว่าจะหมดอายุ
+    clearScopeTreeCache(orgId)
   }
 
   return Response.json({ ok: true })
