@@ -223,7 +223,7 @@ user ลองแต่งตั้งยศให้ `somseed` (มี Discord,
 | ขั้น | ทำอะไร | เสี่ยง |
 |---|---|---|
 | ✅ 1 | สร้าง 3 ตารางใหม่ (ยังไม่มีใครอ่าน) — `migration.sql` 2026-07-22 | ต่ำ |
-| ✅ 2 | migration แปลงข้อมูล PPLE + **diff test** — `scripts/migration/org-access-redesign.sql` | ต่ำ (ยังไม่สลับ) |
+| ✅ 2 | migration แปลงข้อมูล PPLE + **diff test** — `scripts/migration/org-scope/12-org-access-redesign.sql` | ต่ำ (ยังไม่สลับ) |
 | ✅ 3 | `web/lib/resolveAccessV2.js` คู่ขนาน ยังไม่ใช้ + unit test 12 เคส | ต่ำ |
 | ✅ 4 | สลับ `getEffectiveOrgIdentity` + `getEffectiveIdentity` ไปเรียก V2 | **สูง — จุดตัดสิน** |
 | ✅ 5 | บอทเขียน `org_member_roles` (`source='discord'`) · `roles` ยังเขียนต่อในฐานะสำเนา · **เพิ่ม re-sync เมื่อการแมปเปลี่ยน** | กลาง |

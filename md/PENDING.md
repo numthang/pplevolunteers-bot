@@ -15,6 +15,24 @@
 - [x] `web/db/docs/payers.js` — ย้ายมาอ่าน `org_member_roles` แล้ว (2026-07-22)
 - [ ] ขั้น 6 — ลบ `web_roles` + `geography.js` (`roles` เก็บไว้เป็น log) · ทำหลังใช้จริงแล้วนิ่ง
 
+### 🗺️ ตัวจัดผังพื้นที่ org — เสร็จรอบแรก (2026-07-23) รอเทสในเบราว์เซอร์
+
+หน้า `/org/settings/roles` → `components/org/OrgScopeTree.jsx` · API `/api/org/scope-nodes` · db `web/db/orgScopeNodes.js`
+gate = `admin` ใน org (owner ได้อัตโนมัติ) · verify: build ผ่าน · live 7/7 · unit 206/206 · ⬜ **ยังไม่ได้เปิดดูจริงในเบราว์เซอร์**
+
+**ทำไมต้องมี:** `org_scope_nodes.parent_id` เดิมเซ็ตได้ทางเดียวคือผ่าน `parent_role_id` ของยศ Discord
+→ org ที่ไม่มี Discord ได้ node แบน → `reduceRoleDefs` ไล่ชั้นให้ `regional_coordinator` ไม่ได้
+
+**ที่จงใจกันไว้แน่นกว่า DDL** (DDL เป็น `parent_id CASCADE` + `scope_node_id SET NULL`):
+ลบ node ที่มีลูกหรือมียศผูก = บล็อก · ไม่งั้นกดลบ "ภาคกลาง" ครั้งเดียว = ทุกจังหวัดใต้มันหาย
+แล้วใบยศที่ชี้จังหวัดพวกนั้นกลายเป็น scope NULL พร้อมกัน กู้ไม่ได้
+
+**งานต่อที่ยังไม่ทำ:**
+- [ ] **ให้พื้นที่ตอนแต่งตั้ง** — ตอนนี้ admin ให้ได้แต่ "ตำแหน่ง" · พื้นที่มาจากเจ้าตัวกรอกที่อยู่เอง (`setSelfDeclaredScope`) เท่านั้น → `/api/org/appoint` ต้องรับ `scopeNodeId` ด้วย
+- [ ] **`org_role_defs.managed_by`** ก่อนจะเปิดให้ admin แก้ใบยศเอง — ตอนนี้ `syncRoleDefFromGuildRole` ทำ `ON CONFLICT (org_id,name) DO UPDATE SET permission, scope_node_id` → ถ้ามี writer ที่ 2 ชื่อชนเมื่อไหร่ Discord sync ทับทิ้งเงียบๆ
+- [ ] `WANT_SQL` ใน `db/orgMemberRoles.js` ไม่ filter `d.is_active` → ใบยศที่ปิดแล้วยังสะสมแถวใน `org_member_roles` (ไม่อันตราย อ่านกรองอยู่แล้ว แต่รกและงงตอนดูหน้าสมาชิก)
+- [ ] **อย่าเพิ่งลดบทบาท `/bot/roles` เหลือ dropdown** — `dc_guild_roles.scope_node` ยังถูกอ่านตรงๆ ที่ `db/members.js:58` + `scripts/calling/sync-discord-members.js:25` (บอท build ไม่จับ)
+
 ### ✅ เคาะแล้ว (2026-07-22) — guild "ทีมภูมิภาค" **ไม่แมป ปล่อยไว้แบบนี้**
 
 ยศในเกิลด์นี้ไม่ให้สิทธิ์ · ใครต้องการสิทธิ์ให้ตั้งผ่าน `/org/settings/members` หรือถือยศในเกิลด์อาสาประชาชน
@@ -45,7 +63,7 @@
 **org migration ปิดจบแล้วทั้งหมด** — identity split + org core + org-scope ครบทั้ง 4 ฟีเจอร์ (finance · calling · docs · cases) + audit_logs · **ไม่เหลือ tenant data ที่ยัง guild-based**
 
 **งานถัดไปคือ cutover ขึ้น prod** → `md/CUTOVER.md` (10 ขั้น · branch `org-core` นำ `master` 71 commit · prod ยังไม่เคยเห็นโค้ดชุดนี้)
-- ⛔ ค้าง 2 อย่างก่อน deploy: **user เทส docs+cases ในเบราว์เซอร์** · **ซ้อม migration กับ dump ของ prod** (CUTOVER §1.5 — ยังไม่เคยซ้อม = เสี่ยงสุด)
+- ⛔ ค้าง 2 อย่างก่อน deploy: **user เทส docs+cases ในเบราว์เซอร์** · **ซ้อม migration กับ dump ของ prod** — `./scripts/migration/org-scope/rehearse.sh <dump>` (CUTOVER §1.5 · ยังไม่เคยซ้อม = เสี่ยงสุด)
 
 **เอกสารกวาดตรง schema จริงแล้ว (2026-07-21)** — DATABASE.md regenerate จาก DB สด 58 ตาราง · CASE/DOCS/CALLING/CONTACT ตามมา · งานที่งอกจากรอบนี้ + **พรอมต์ audit RBAC พร้อมใช้** อยู่หัวข้อ 🧹 ท้ายไฟล์
 
@@ -102,7 +120,7 @@
 
 #### 💰 FINANCE org-scope — ✅ เสร็จ + verify 2026-07-17 (commit be4d8d3 บน org-core · localhost applied, prod ไม่แตะ)
 **สรุปที่ทำจริง (ต่างจาก spec เดิม 2 จุด — ดีกว่า):**
-- migration `scripts/migration/finance-org-scope.sql` (applied localhost): **in-place type convert** `guild_id→org_id` + `owner_id/updated_by` varchar discord→INT users.id **คงตำแหน่งคอลัมน์** (ไม่ใช่ rename tail col ที่กองท้าย) · ลบ tail col (org_id/owner_user_id/updated_by_user_id) ที่เติมช่วงออกแบบ · FK→users/orgs · gotcha: USING ห้าม subquery → ใช้ pg_temp helper fn `_g2o`/`_d2u`
+- migration `scripts/migration/org-scope/02-finance-org-scope.sql` (applied localhost): **in-place type convert** `guild_id→org_id` + `owner_id/updated_by` varchar discord→INT users.id **คงตำแหน่งคอลัมน์** (ไม่ใช่ rename tail col ที่กองท้าย) · ลบ tail col (org_id/owner_user_id/updated_by_user_id) ที่เติมช่วงออกแบบ · FK→users/orgs · gotcha: USING ห้าม subquery → ใช้ pg_temp helper fn `_g2o`/`_d2u`
 - **getOrgId = `orgIdOfGuild(getGuildId)` ไม่ใช่ active_org cookie** (ค้าน spec เดิม): access-control ยัง guild-keyed → derive org จาก guild เดียวกัน = data+access aligned ไม่มี seam · cookie-based เลื่อนไป org-switcher endgame (ขยับพร้อม RBAC-by-org)
 - getTransactions/summaries **เพิ่ม** org filter ผ่าน account join (เดิมไม่ scope เลย — latent leak) · financeAccess owner_id===userId · getEffectiveIdentity+useEffectiveRoles คืน userId (debug-null) · ลบ admin guild-picker ใน account form
 - verify: 57 tests + build + psql queries คืน data จริง + /finance 307
@@ -132,7 +150,7 @@
 > - ✅ **Phase 3** commit `c207d8f` (server) + `7514cf3` (client) — **ตัด bridge discord→users.id ทิ้งทั้งเส้น** · API รับ/คืน `user_id` ตรงๆ (`memberUserId`/`payerUserId`/`userId`) · `/api/docs/members(/recent)` คืน `user_id` (เดิมมีแต่ discord_id → คน email เลือกเป็นผู้รับไม่ได้) · client 5 ไฟล์คีย์ด้วย user_id · `member_discord_id` เหลือเป็น **display-only** สำหรับลิงก์โปรไฟล์ Discord เท่านั้น
 >   - 🐛 latent bug ที่เจอระหว่างทาง: `getPayersForEvent` dedup pool ด้วย `discord_id` → manual payer (ไม่มีฟิลด์นี้) และ payer ที่ล็อกอิน email (NULL) โดนทิ้งเงียบ · **ยังไม่เคยกัดจริง** (localhost มี docs_payers 1 แถว) แต่จะกัดทันทีที่มีตัวที่ 2 → เปลี่ยนเป็น dedup ด้วย user_id แล้ว
 >
-> - ✅ **เก็บกวาด** `scripts/migration/docs-index-rename.sql` (applied localhost, idempotent): index/constraint 4 ตัวชื่อหลอก `guild`/`discord_id` → `org`/`user_id` · ตัด dead code `changePayer()` + `assignedPayers` + state/prop ที่ค้าง (`payerSaving`, `eventId` ที่ DocEntryList ไม่ได้ใช้แล้ว)
+> - ✅ **เก็บกวาด** `scripts/migration/org-scope/07-docs-index-rename.sql` (applied localhost, idempotent): index/constraint 4 ตัวชื่อหลอก `guild`/`discord_id` → `org`/`user_id` · ตัด dead code `changePayer()` + `assignedPayers` + state/prop ที่ค้าง (`payerSaving`, `eventId` ที่ DocEntryList ไม่ได้ใช้แล้ว)
 >
 > **⬜ เหลือของ docs:**
 > - **เทสจริงในเบราว์เซอร์ครบ flow (write path)** — สร้างบิล → กำหนดผู้รับ/ผู้จ่าย → เซ็น → gen PDF · **user ขอเทสเอง (2026-07-21)** · ที่ verify ไปคือ smoke test authed (ทุกหน้า/API 200 + PATCH entry 1 ครั้ง assert DB)
@@ -199,10 +217,10 @@
 >
 > **Reframe สำคัญ:** calling ไม่ใช่ twin finance ตรงๆ. callee 2 ฝั่ง — `member`(99.9% ของ log) = roster จากระบบ **NGS** · `contact`(590) = CRM ของ org. campaigns = event จากระบบ **ACT**. หลักการปรับ (2026-07-19): **NGS data = ของ org (org-scope)** · **ACT/Discord event = guild artifact (คง guild)**. guildless org = contacts-only calling (roster/campaign เป็น PPLE-guild)
 >
-> **✅ Phase 1 — RENAME เสร็จ+commit 715cffa (2026-07-19):** `ngs_member_cache→cache_pple_member` · `act_event_cache→cache_pple_event` (สื่อว่าเป็น cache external-sync ต่อ tenant) · `scripts/migration/cache-rename.sql` (idempotent, prod cutover ต้องรันตอน merge) · 31 js + 5 md · ⚠️ column `docs_projects.act_event_cache_id` **คงชื่อเดิม** (rename column = docs scope creep) · cross-feature: rename แตะ docs ด้วย (docs ผูก 2 ตารางนี้หนัก) แต่ additive ไม่พัง · verify build exit0 139 pages + DB JOIN ผ่าน
+> **✅ Phase 1 — RENAME เสร็จ+commit 715cffa (2026-07-19):** `ngs_member_cache→cache_pple_member` · `act_event_cache→cache_pple_event` (สื่อว่าเป็น cache external-sync ต่อ tenant) · `scripts/migration/org-scope/03-cache-rename.sql` (idempotent, prod cutover ต้องรันตอน merge) · 31 js + 5 md · ⚠️ column `docs_projects.act_event_cache_id` **คงชื่อเดิม** (rename column = docs scope creep) · cross-feature: rename แตะ docs ด้วย (docs ผูก 2 ตารางนี้หนัก) แต่ additive ไม่พัง · verify build exit0 139 pages + DB JOIN ผ่าน
 >
 > **✅ Phase 2 — org-scope + full parity เสร็จ+verify 2026-07-19 (commit 1be4d48 + 137f99f):**
-> - `scripts/migration/calling-org-scope.sql` (dry-run BEGIN/ROLLBACK ผ่านก่อน → COMMIT, applied localhost) · **prod cutover ต้องรันตอน merge** คู่กับ cache-rename.sql
+> - `scripts/migration/org-scope/04-calling-org-scope.sql` (dry-run BEGIN/ROLLBACK ผ่านก่อน → COMMIT, applied localhost) · **prod cutover ต้องรันตอน merge** คู่กับ cache-rename.sql
 > - guild_id→org_id in-place 6 ตาราง (calling 5 + **cache_pple_member roster**) · person→users.id 7 คอลัมน์ · `calling_starred.user_discord_id`→`user_id` · 13 FK ใหม่ · person map 100% (14/14, 20/20, 2/2, 1/1) ไม่มี NULL surprise · `cache_pple_event` (campaign=ACT) คง guild-based · roster รับแค่ org_id (created_by/approved_by = user ระบบ NGS ไม่แตะ)
 > - code: db/calling 7 ไฟล์ + 17 route + 4 page + 5 component → `getOrgId`/`getEffectiveOrgIdentity`/`scope:'org'`
 > - **ปิด global-aggregate hole ครบ:** stats 5 query + `getTotalCallStats` + `getTodayCallCount` + `getCONTACTSCount` + **`getCampaigns`** (เดิมไม่ scope เลยทั้งหมด)
