@@ -7,7 +7,8 @@
     "build": "nice -n 19 ionice -c 2 -n 7 next build",
     "start": "next start",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:live": "vitest run --exclude '**/node_modules/**' lib/__tests__/*.live.test.js"
   },
   "dependencies": {
     "@napi-rs/canvas": "^1.0.0",

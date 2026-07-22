@@ -9,7 +9,6 @@
  */
 
 import { can } from './permissions.js'
-import { expandGrants } from './geography.js'
 import { normalizeAccess } from './roleAccess.js'
 
 /** Admin / เลขาธิการ — เห็นทุกจังหวัด */
@@ -34,22 +33,15 @@ export function isProvincialCoordinator(access = {}) {
  * Returns: ['ราชบุรี', ...] หรือ null ถ้า admin (ทุกจังหวัด)
  */
 export function getUserScope(access = {}) {
-  const { permissions = new Set(), scopeGrants = [] } = normalizeAccess(access)
+  const { scopeGrants = [] } = normalizeAccess(access)
 
   // Admin → all provinces
   if (isAdmin(access)) return null
 
-  // Regional → expand เฉพาะภาคย่อย (calling ไม่รู้จักภาคใหญ่)
-  if (permissions.has('regional_coordinator')) {
-    const subGrants = scopeGrants.filter(g => g.startsWith('subregion:'))
-    const provinces = expandGrants(subGrants, { mode: 'calling' })
-    return provinces.size > 0 ? Array.from(provinces) : []
-  }
-
-  // ทีมจังหวัด → ทุกจังหวัดที่ติดยศ
+  // resolveAccessV2 ไล่ชั้น + กั้นด้วยตำแหน่งมาให้แล้ว (ORG_ACCESS_REDESIGN ขั้น 4)
+  // เดิมที่นี่ expand เอง และ "ไม่รู้จักภาคใหญ่" → ผู้ประสานงานภาคที่ถือภาคใหญ่เห็นศูนย์
+  // ตอนนี้กติกาอยู่ที่ reduceRoleDefs ที่เดียว ทุกแอพเหมือนกัน
   return scopeGrants
-    .filter(g => g.startsWith('province:'))
-    .map(g => g.slice('province:'.length))
 }
 
 /**

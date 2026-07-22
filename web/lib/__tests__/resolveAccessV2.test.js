@@ -75,12 +75,6 @@ describe('reduceRoleDefs — รวมตำแหน่งที่ถือ', 
     expect(out.scopeGrants).toEqual(['ราชบุรี'])
   })
 
-  it('ใบเดียวที่มีทั้งตำแหน่งและพื้นที่ (โมเดลที่ org ใหม่จะใช้)', () => {
-    const out = reduceRoleDefs([{ permission: 'treasurer', scope_node_id: 2 }], TREE)
-    expect(out.permissions).toEqual(new Set(['treasurer']))
-    expect(new Set(out.scopeGrants)).toEqual(new Set(['ทีมภาคกลางตะวันตก', 'ราชบุรี', 'นครปฐม']))
-  })
-
   it('หลายตำแหน่ง → permission รวมกัน พื้นที่รวมกัน', () => {
     const defs = [
       { permission: 'treasurer', scope_node_id: 4 },
@@ -101,5 +95,59 @@ describe('reduceRoleDefs — รวมตำแหน่งที่ถือ', 
     const out = reduceRoleDefs([{ permission: 'admin', scope_node_id: null }], TREE)
     expect(out.permissions).toEqual(new Set(['admin']))
     expect(out.scopeGrants).toEqual([])
+  })
+})
+
+// กฎดั้งเดิมที่ user ยืนยัน 2026-07-22:
+//   ยศ "ทีม<ภาค>" ติดอัตโนมัติให้ทุกคนที่กดเลือกจังหวัด (addRoleWithParents)
+//   → การถือ node ที่มีลูก ไม่ได้แปลว่าดูแลทั้งกิ่ง
+//   → ไล่ชั้นได้เฉพาะคนที่มี "ตำแหน่งระดับภาค" พ่วง
+describe('การไล่ชั้น ถูกกั้นด้วยตำแหน่ง ไม่ใช่รูปร่างต้นไม้', () => {
+  const subregionOnly = [{ permission: null, scope_node_id: 2 }]  // ทีมภาคกลางตะวันตก
+
+  it('caseworker ถือยศภาค (ติดมาเอง) → ไม่ไล่ชั้น เห็นแค่ชื่อภาค ซึ่งไม่แมตช์จังหวัดใด', () => {
+    const out = reduceRoleDefs([...subregionOnly, { permission: 'caseworker', scope_node_id: null }], TREE)
+    expect(out.scopeGrants).toEqual(['ทีมภาคกลางตะวันตก'])
+    expect(out.scopeGrants).not.toContain('ราชบุรี')
+    expect(out.scopeGrants).not.toContain('นครปฐม')
+  })
+
+  it('province_coordinator ถือจังหวัด + ยศภาคที่ติดมาเอง → เห็นแค่จังหวัดตัวเอง', () => {
+    const defs = [
+      { permission: 'province_coordinator', scope_node_id: null },
+      { permission: null, scope_node_id: 4 },  // ราชบุรี
+      { permission: null, scope_node_id: 2 },  // ทีมภาคกลางตะวันตก (ติดอัตโนมัติ)
+    ]
+    const out = reduceRoleDefs(defs, TREE)
+    expect(out.scopeGrants).toContain('ราชบุรี')
+    expect(out.scopeGrants).not.toContain('นครปฐม')   // ← จังหวัดอื่นในภาคเดียวกัน ต้องไม่หลุด
+  })
+
+  it('regional_coordinator ถือภาคย่อย → ไล่ชั้นได้ เห็นทุกจังหวัดในภาค', () => {
+    const out = reduceRoleDefs([...subregionOnly, { permission: 'regional_coordinator', scope_node_id: null }], TREE)
+    expect(new Set(out.scopeGrants)).toEqual(new Set(['ทีมภาคกลางตะวันตก', 'ราชบุรี', 'นครปฐม']))
+  })
+
+  it('regional_coordinator ถือภาคใหญ่ → ไล่ลงถึงจังหวัด (ช่องว่างที่ calling/cases เดิมปิดไม่ได้)', () => {
+    const defs = [{ permission: 'regional_coordinator', scope_node_id: 1 }]  // ทีมภาคกลาง
+    const out = reduceRoleDefs(defs, TREE)
+    expect(out.scopeGrants).toContain('ราชบุรี')
+    expect(out.scopeGrants).toContain('นครปฐม')
+  })
+
+  it('เหรัญญิกถือภาคย่อย → ไม่ไล่ชั้น (ตำแหน่งการเงินไม่ใช่ระดับภาค)', () => {
+    const out = reduceRoleDefs([{ permission: 'treasurer', scope_node_id: 2 }], TREE)
+    expect(out.scopeGrants).toEqual(['ทีมภาคกลางตะวันตก'])
+    expect(out.scopeGrants).not.toContain('ราชบุรี')
+  })
+
+  it('ถือ regional พ่วงตำแหน่งอื่น → ไล่ชั้นได้ (สิทธิ์สูงสุดชนะ)', () => {
+    const defs = [
+      { permission: 'caseworker', scope_node_id: null },
+      { permission: 'regional_coordinator', scope_node_id: null },
+      { permission: null, scope_node_id: 2 },
+    ]
+    const out = reduceRoleDefs(defs, TREE)
+    expect(out.scopeGrants).toContain('ราชบุรี')
   })
 })

@@ -9,7 +9,7 @@
 // guildless org → resolveAccess(null,...) คืน permission จาก web_roles ล้วน (dc_guild_roles ว่าง)
 import { cookies } from 'next/headers'
 import pool from '@/db/index.js'
-import { resolveAccess } from './resolveAccess.js'
+import { resolveAccessV2 } from './resolveAccessV2.js'
 import { getOrgId } from './orgContext.js'
 import { getEffectiveIdentity } from './getEffectiveRoles.js'
 
@@ -27,28 +27,18 @@ export async function getEffectiveOrgIdentity(session) {
   const orgId = await getOrgId(session)
   if (!orgId) return { roles: [], discordId, userId, access: emptyAccess }
 
+  // ORG_ACCESS_REDESIGN ขั้น 4 — สิทธิ์มาจาก org_member_roles ที่เดียว (ไม่แตะ dc_guild_roles)
+  // เดิมต้อง loop org_members ทีละ guild แล้ว union เอง เพราะ catalog ผูกกับ guild
+  const access = await resolveAccessV2(orgId, userId)
+
+  // owner (membership role) = org superuser — คนสร้าง org เอง = เจ้าของสูงสุดใน org นั้น
+  // bounded ที่ org ตัวเอง (query filter org_id เดียว) → ไม่ elevate ข้าม org
   const { rows } = await pool.query(
-    `SELECT om.guild_id, om.roles, om.web_roles, om.role, om.status
-       FROM org_members om
-      WHERE om.org_id = $1 AND om.user_id = $2`,
+    `SELECT 1 FROM org_members
+      WHERE org_id = $1 AND user_id = $2 AND role = 'owner' AND status = 'active' LIMIT 1`,
     [orgId, userId]
   )
+  if (rows.length > 0) access.permissions.add('admin')   // god-mode ภายใน org ตัวเอง (Slack/Notion owner model)
 
-  const permissions = new Set()
-  const scopeGrants = []
-  let isMember = false
-  let isOwner = false
-  for (const r of rows) {
-    isMember = true
-    // owner (membership role) = org superuser — คนสร้าง org เอง = เจ้าของสูงสุดใน org นั้น
-    // bounded ที่ org ตัวเอง (query filter org_id เดียว) → ไม่ elevate ข้าม org
-    if (r.role === 'owner' && r.status === 'active') isOwner = true
-    const roles = (r.roles || '').split(',').map(s => s.trim()).filter(Boolean)
-    const webRoles = (r.web_roles || '').split(',').map(s => s.trim()).filter(Boolean)
-    const a = await resolveAccess(r.guild_id, roles, webRoles)
-    for (const p of a.permissions) permissions.add(p)
-    for (const g of a.scopeGrants) scopeGrants.push(g)
-  }
-  if (isOwner) permissions.add('admin')   // god-mode ภายใน org ตัวเอง (Slack/Notion owner model)
-  return { roles: [], discordId, userId, access: { isMember, permissions, scopeGrants } }
+  return { roles: [], discordId, userId, access }
 }

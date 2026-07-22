@@ -76,9 +76,22 @@ export function expandScope(nodeIds, tree) {
   return out
 }
 
+/** permission ที่ "ไล่ชั้นลงไปได้" — ดูแลทั้งกิ่งที่ถือ ไม่ใช่แค่ node นั้น */
+const EXPANDING_PERMISSIONS = ['regional_coordinator']
+
 /**
  * pure reducer — role def rows ที่ user ถือ → { permissions, scopeGrants }
  * แยกออกมาเพื่อ (ก) test ได้โดยไม่แตะ DB (ข) view-as-role ยัดยศสมมติเข้ามาได้
+ *
+ * ⚠️ **การไล่ชั้นถูกกั้นด้วยตำแหน่ง ไม่ใช่ด้วยรูปร่างต้นไม้** (user ยืนยัน 2026-07-22
+ *    ว่านี่คือกฎดั้งเดิม): ยศ "ทีม<ภาค>" บน Discord ติดอัตโนมัติให้ทุกคนที่กดเลือก
+ *    จังหวัด (addRoleWithParents ใน db/guildRoles.js) → มีกันเป็นพัน ถ้าไล่ชั้นให้ทุกคน
+ *    ที่ถือ node มีลูก คนที่แค่กดเลือกจังหวัดจะเห็นข้อมูลทั้งภาค (วัดแล้ว: caseworker
+ *    483/894 คนจะกว้างขึ้นเฉลี่ย 1.1→5.5 จังหวัด)
+ *    → ไล่ชั้นเฉพาะคนที่มีตำแหน่งระดับภาค (ผู้ประสานงานภาค / รองเลขาธิการ)
+ *    → คนอื่นได้เฉพาะ node ที่ถือตรงๆ · ชื่อภาคที่ติดมาเองอยู่ในเซ็ตได้ ไม่มีผล
+ *      เพราะไม่เคยแมตช์กับ "จังหวัด" ของข้อมูลจริง
+ *
  * @param {Array<{permission: string|null, scope_node_id: number|null}>} defs
  * @param {{byId: Map, childrenOf: Map}} tree
  */
@@ -89,7 +102,13 @@ export function reduceRoleDefs(defs, tree) {
     if (d.permission) permissions.add(d.permission)
     if (d.scope_node_id != null) nodeIds.push(d.scope_node_id)
   }
-  return { permissions, scopeGrants: Array.from(expandScope(nodeIds, tree)) }
+
+  const canExpand = EXPANDING_PERMISSIONS.some(p => permissions.has(p))
+  const keys = canExpand
+    ? expandScope(nodeIds, tree)
+    : new Set(nodeIds.map(id => tree.byId.get(id)?.key).filter(Boolean))
+
+  return { permissions, scopeGrants: Array.from(keys) }
 }
 
 /**

@@ -11,7 +11,6 @@
  */
 
 import { can } from './permissions.js'
-import { expandGrants } from './geography.js'
 import { normalizeAccess } from './roleAccess.js'
 
 // "หัวหน้าองค์กร" ที่ทำได้ทุกอย่างระดับ edit/internal (= isAdmin เดิม: Admin || เลขาธิการ)
@@ -19,11 +18,11 @@ function isOrgHead(permissions) {
   return permissions.has('admin') || permissions.has('secretary_general')
 }
 
-// จังหวัดจาก grant แบบ province: ดิบ (ไม่ expand ภาค) — ใช้กับ province-level (exact)
-function exactProvinces(scopeGrants) {
-  const s = new Set()
-  for (const g of scopeGrants) if (g.startsWith('province:')) s.add(g.slice('province:'.length))
-  return s
+// พื้นที่ที่เข้าถึงได้ — resolveAccessV2 ไล่ชั้นมาให้แล้ว (ORG_ACCESS_REDESIGN ขั้น 4)
+// เดิมที่นี่ต้องแยกเอง: regional → expandGrants 3 ชั้น · province-level → exact
+// ตอนนี้กติกาการไล่ชั้นอยู่ที่ reduceRoleDefs ที่เดียว (กั้นด้วยตำแหน่ง ไม่ใช่รูปร่างต้นไม้)
+function scopeSet(scopeGrants) {
+  return new Set(scopeGrants)
 }
 
 /**
@@ -40,15 +39,10 @@ export function canViewAccount(account, userId, access = {}) {
   if (owner || isOrgHead(permissions)) return true
 
   if (account.province) {
-    // ผู้ประสานงานภาค / รองเลขาธิการ → scope ภาค/ภาคย่อย/จังหวัด (expand 3 ชั้น)
-    if (permissions.has('regional_coordinator')) {
-      return expandGrants(scopeGrants, { mode: 'finance' }).has(account.province)
-    }
-    // เหรัญญิก / กรรมการจังหวัด / ผู้ประสานงานจังหวัด → ต้องมีทีมจังหวัดตรงๆ เท่านั้น
-    if (permissions.has('treasurer') || permissions.has('province_coordinator') || permissions.has('district_coordinator')) {
-      return exactProvinces(scopeGrants).has(account.province)
-    }
-    return false
+    // ตำแหน่งที่ดูบัญชีรายจังหวัดได้ — scope มาจาก resolveAccessV2 (ไล่ชั้นให้แล้วถ้ามีสิทธิ์)
+    const canScoped = permissions.has('regional_coordinator') || permissions.has('treasurer')
+      || permissions.has('province_coordinator') || permissions.has('district_coordinator')
+    return canScoped && scopeSet(scopeGrants).has(account.province)
   } else {
     // province = null → คนในองค์กรทุก permission ที่กำหนดดูได้
     return can('viewInternal', permissions)
@@ -65,7 +59,7 @@ export function canEditAccount(account, userId, access = {}) {
 
   if (account.province) {
     const hasTitle = permissions.has('treasurer') || permissions.has('province_coordinator') || permissions.has('district_coordinator')
-    return hasTitle && exactProvinces(scopeGrants).has(account.province)
+    return hasTitle && scopeSet(scopeGrants).has(account.province)
   } else {
     // province = null → เหรัญญิกแก้ไขได้
     return permissions.has('treasurer')
