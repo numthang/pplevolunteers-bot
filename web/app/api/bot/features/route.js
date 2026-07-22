@@ -5,8 +5,10 @@ import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import { getGuildId } from '@/lib/guildContext.js'
 import pool from '@/db/index.js'
 
-// features ที่ toggle ได้ — bot เปิดตลอด (ไม่อยู่ในนี้) · default ทุกตัว = ปิด
-const TOGGLEABLE = ['finance', 'calling', 'docs', 'cases', 'ai_mention']
+// features ที่ toggle ได้ราย guild — เหลือแค่ของที่ผูก Discord จริง (บอทอ่านเอง index.js:453)
+// finance/calling/docs/cases ย้ายไปเป็นสวิตช์ระดับ org แล้ว (2026-07-22) → /org/settings/features
+// เดิมสองระบบซ้อนกันแล้ว guild ชนะ ทำให้หน้าฝั่ง org กดไม่มีผล
+const TOGGLEABLE = ['ai_mention']
 
 async function authGuildAdmin(session) {
   const { discordId } = await getEffectiveIdentity(session)
@@ -55,7 +57,10 @@ export async function PATCH(req) {
   const set = new Set(cur)
   if (on) set.add(feature)
   else set.delete(feature)
-  const next = TOGGLEABLE.filter(f => set.has(f)) // เก็บลำดับคงที่ + ทิ้งค่าแปลกปลอม
+  // เก็บลำดับคงที่ · **ไม่ทิ้งคีย์ที่ย้ายไป org แล้ว** (finance/calling/docs/cases)
+  // ค่าเดิมเหล่านั้นเป็นต้นทางของ migration 2026-07-22 — ลบทิ้งแล้วรัน migration ซ้ำไม่ได้
+  const legacy = cur.filter(f => !TOGGLEABLE.includes(f))
+  const next = [...TOGGLEABLE.filter(f => set.has(f)), ...legacy]
 
   await pool.query(
     `INSERT INTO dc_guild_config (guild_id, "key", value) VALUES ($1, 'enabled_features', $2)

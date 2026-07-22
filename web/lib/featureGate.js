@@ -1,39 +1,22 @@
 import { notFound } from 'next/navigation'
-import { getGuildId } from '@/lib/guildContext.js'
-import { getEnabledFeatures, guildsOfOrg } from '@/db/guilds.js'
 import { resolveActiveOrg } from '@/lib/activeOrg.js'
 import { getOrgEnabledFeatures } from '@/lib/orgFeatures.js'
 
 /**
  * บล็อก direct link เข้า route ของ feature ที่ปิดอยู่ — 404
- * org-aware (mirror app/layout.js): guild org → per-guild config · guildless org → org-native features
- *   เดิม gate ด้วย guild เสมอ → หลัง seam fix (getGuildId email user→null) finance (org-native)
- *   จะ 404 ผิดสำหรับ guildless org · ต้องแตกสาขาเหมือน layout
- * guild org ไม่เปลี่ยนพฤติกรรม (ยัง getEnabledFeatures(getGuildId) เหมือนเดิม)
- * ใช้ใน layout.js ของแต่ละ app (finance/calling/docs)
+ * ใช้ใน layout.js ของแต่ละ app (finance/calling/docs/case)
+ *
+ * สวิตช์ฟีเจอร์อยู่ที่ org ที่เดียว (2026-07-22) — เดิมแตกสาขา guild/guildless
+ * แล้ว guild ชนะ ทำให้หน้า /org/settings/features ไม่มีผลกับ org ที่มี guild
+ * (ai_mention ยังราย guild แต่บอทอ่านเอง ไม่ผ่านตัวนี้)
  */
 export async function requireFeature(session, feature) {
-  const enabled = await enabledFeaturesFor(session)
-  if (!enabled.includes(feature)) notFound()
-}
-
-async function enabledFeaturesFor(session) {
   const userId = session?.user?.userId
-  if (userId) {
-    const { activeOrg } = await resolveActiveOrg(userId)
-    // guildless org → org-native features (finance ฯลฯ) · calling/docs guild-based ไม่อยู่ที่นี่ → 404 ถูกต้อง
-    if (activeOrg) {
-      const guilds = await guildsOfOrg(activeOrg.id)
-      if (guilds.length === 0) return getOrgEnabledFeatures(activeOrg.id)
-      // email member ของ guild-backed org: getGuildId=null (seam) → เดิมได้ [] = 404 ทุก feature
-      // ทั้งที่ API ตัวเดียวกันปล่อยผ่าน (bug-034) → ใช้ config ของ guild หลักของ org
-      // (prefer env.GUILD_ID เหมือน dual-write ของ org switcher) · Discord user ไม่เปลี่ยนพฤติกรรม
-      if (!(await getGuildId(session))) {
-        const primary = guilds.find(g => g.guild_id === process.env.GUILD_ID) || guilds[0]
-        return getEnabledFeatures(primary.guild_id)
-      }
-    }
-  }
-  // guild org / legacy (unauth/degenerate) → per-guild config เดิม
-  return getEnabledFeatures(await getGuildId(session))
+  if (!userId) notFound()
+
+  const { activeOrg } = await resolveActiveOrg(userId)
+  if (!activeOrg) notFound()
+
+  const enabled = await getOrgEnabledFeatures(activeOrg.id)
+  if (!enabled.includes(feature)) notFound()
 }

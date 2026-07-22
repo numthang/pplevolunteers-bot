@@ -3,7 +3,7 @@ import NextTopLoader from 'nextjs-toploader'
 import { NextIntlClientProvider } from 'next-intl'
 import { getLocale, getMessages } from 'next-intl/server'
 import { getSession } from '@/lib/auth.js'
-import { getUserGuilds, getEnabledFeatures, guildsOfOrg } from '@/db/guilds.js'
+import { getUserGuilds, guildsOfOrg } from '@/db/guilds.js'
 import { getGuildId } from '@/lib/guildContext.js'
 import { resolveActiveOrg } from '@/lib/activeOrg.js'
 import Providers from '@/components/Providers.jsx'
@@ -33,18 +33,16 @@ export default async function RootLayout({ children }) {
     orgs = allOrgs.filter(o => o.status === 'active')
     activeOrgId = activeOrg?.id ?? null
     if (activeOrg) {
+      // สวิตช์ฟีเจอร์อยู่ที่ org ที่เดียว (2026-07-22) — ไม่แตกสาขาตามว่ามี guild ไหมอีกแล้ว
+      enabledFeatures = await getOrgEnabledFeatures(activeOrg.id)
       const orgGuilds = await guildsOfOrg(activeOrg.id)
       if (orgGuilds.length > 0) {
-        // org มี guild → guild-based features ทำงาน (guild ที่ active ต้องอยู่ใน org นี้)
+        // guild switcher ยังต้องใช้ (Discord artifact: ยศ/ห้อง/ai_mention ยังราย guild)
         currentGuildId = await getGuildId(session)
-        enabledFeatures = await getEnabledFeatures(currentGuildId)
         guilds = session.user.discordId
           ? (await getUserGuilds(session.user.discordId, { all: session.user.isSuperAdmin }))
               .filter(g => g.org_id === activeOrg.id)
           : orgGuilds
-      } else {
-        // guildless org → org-native feature (config ต่อ org ที่หน้า ตั้งค่า > ฟีเจอร์) · Nav ซ่อน app guild-based
-        enabledFeatures = await getOrgEnabledFeatures(activeOrg.id)
       }
     }
   }

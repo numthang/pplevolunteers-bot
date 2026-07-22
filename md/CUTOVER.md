@@ -105,6 +105,11 @@ UNION ALL SELECT 'calling ไม่มี org',    count(*) FROM calling_logs WH
 | **9** | ⚠️ **บล็อก PROD ใน `cases-discord-guild-artifact.sql`** (ท้ายไฟล์ — 2 บรรทัด) | เพิ่ม `cases.discord_guild_id` แล้ว **copy ค่าจาก `guild_id` เดิม** | **ต้องรันก่อน #10 เท่านั้น** — ดูอันตรายข้างล่าง |
 | 10 | `scripts/migration/cases-org-scope.sql` | cases 5 ตาราง `guild_id`→`org_id` · `created_by` + assignee→`users.id` | ต้องผ่าน #1 และ **#9** |
 
+แล้วปิดท้ายด้วย `scripts/migration/migration.sql` (idempotent, `IF NOT EXISTS` ทั้งไฟล์) — มีบล็อกที่ต้องรันบน prod ด้วย:
+- **2026-07-22 org-access** — 3 ตาราง `org_scope_nodes`/`org_role_defs`/`org_member_roles` + `dc_guild_roles.org_role_def_id` · ตามด้วย `scripts/migration/org-access-redesign.sql` (ย้ายสิทธิ์เข้าโครงใหม่ + diff test)
+- **2026-07-22 feature toggle** — ย้าย `enabled_features` จาก `dc_guild_config` ขึ้น `org_config` (union ทุก guild ใน org)
+  ⚠️ **ต้องรันก่อน deploy code** ไม่งั้นช่วงคาบเกี่ยว org ที่ยังไม่มีแถวจะได้ default = **เปิดทุกฟีเจอร์**
+
 รันทีละไฟล์ ดู verify block ท้ายไฟล์ทุกครั้งก่อนไปตัวถัดไป:
 ```bash
 sudo -u www bash -c 'cd /www/wwwroot/pple-volunteers && psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f scripts/migration/identity-refactor.sql'

@@ -2,16 +2,13 @@
 import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { Loader2, Phone, Users, FileText, Bot, MessageSquareWarning, Wallet } from 'lucide-react'
+import Link from 'next/link'
+import { Loader2, Users, Bot } from 'lucide-react'
 
-// ฟีเจอร์ที่ toggle ได้ + คำอธิบาย (bot เปิดตลอด ไม่อยู่ที่นี่)
+// เหลือเฉพาะฟีเจอร์ที่ผูก Discord จริง — finance/calling/docs/cases ย้ายไปเป็นสวิตช์
+// ระดับ org แล้ว (2026-07-22) ที่ /org/settings/features
 const FEATURE_META = {
-  finance:    { label: 'Finance',    icon: Wallet,                desc: 'ระบบการเงิน — บัญชี รายรับรายจ่าย รายงาน' },
-  calling:    { label: 'Calling',    icon: Phone,                 desc: 'ระบบโทรหาสมาชิก — แคมเปญ, มอบหมาย, บันทึกการโทร' },
-  contacts:   { label: 'Contacts',   icon: Users,                 desc: 'ฐานข้อมูลผู้ติดต่อ (CRM)' },
-  docs:       { label: 'Docs',       icon: FileText,              desc: 'ใบสำคัญรับเงิน + e-signature สำหรับเบิกจ่ายกิจกรรม' },
-  cases:      { label: 'Cases',      icon: MessageSquareWarning,  desc: 'ระบบรับและติดตามเรื่องร้องเรียนจากประชาชน' },
-  ai_mention: { label: 'AI Mention', icon: Bot,                   desc: 'ตอบเมื่อถูก @mention — ดึงข้อมูล forum เป็น context + Claude ตอบ' },
+  ai_mention: { label: 'AI Mention', icon: Bot, desc: 'ตอบเมื่อถูก @mention — ดึงข้อมูล forum เป็น context + Claude ตอบ' },
 }
 
 function FeatureRow({ feature, enabled, saving, onToggle }) {
@@ -90,7 +87,12 @@ export default function FeaturesPage() {
       <div className="mb-5">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-disc-text">ฟีเจอร์</h1>
         <p className="text-sm text-gray-500 dark:text-disc-muted mt-1">
-          เปิด/ปิดระบบที่ใช้ใน guild นี้ — Bot เปิดตลอดทุก guild
+          เปิด/ปิดฟีเจอร์ที่ทำงานใน Discord ของ guild นี้
+        </p>
+        <p className="text-sm text-gray-500 dark:text-disc-muted mt-1">
+          ระบบการเงิน · โทรอาสา · เอกสาร · เรื่องร้องเรียน ย้ายไปเปิด/ปิดที่{' '}
+          <Link href="/org/settings/features" className="text-orange hover:underline">ตั้งค่าองค์กร → ฟีเจอร์</Link>
+          {' '}(ตั้งครั้งเดียวใช้ทั้งองค์กร ไม่ต้องตั้งทีละ guild)
         </p>
       </div>
 

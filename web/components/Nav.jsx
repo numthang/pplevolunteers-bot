@@ -116,7 +116,9 @@ const APPS = [
   { key: 'discord',  label: 'BOT',       href: '/bot/platforms',  icon: 'social' },
 ]
 
-const ORG_NATIVE_APP_KEYS = new Set(['home', 'finance'])   // app ที่ใช้ได้แม้ org ไม่มี guild
+// app ที่ใช้ได้แม้ org ไม่มี guild — ตอนนี้ org-native ครบทั้ง 4 แล้ว (calling 2026-07-19 ·
+// docs/cases Phase 2) เหลือแต่ BOT ที่ต้องมี Discord จริง · การเปิด/ปิดคุมด้วย featureOn
+const ORG_NATIVE_APP_KEYS = new Set(['home', 'finance', 'calling', 'docs', 'cases'])
 
 export default function Nav({ session, orgs = [], activeOrgId = null, guilds = [], currentGuildId = null, enabledFeatures = [] }) {
   const pathname = usePathname()

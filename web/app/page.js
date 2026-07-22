@@ -14,7 +14,7 @@ import { isAdmin } from '@/lib/roles.js'
 import { canManageCases } from '@/lib/caseAccess.js'
 import { can } from '@/lib/permissions.js'
 import pool from '@/db/index.js'
-import { getGuilds, getEnabledFeatures, guildsOfOrg } from '@/db/guilds.js'
+import { getGuilds, guildsOfOrg } from '@/db/guilds.js'
 import { getGuildId } from '@/lib/guildContext.js'
 import { getOrgId } from '@/lib/orgContext.js'
 import { getOrgEnabledFeatures } from '@/lib/orgFeatures.js'
@@ -288,7 +288,8 @@ export default async function HomePage() {
   const GUILD_ID = await getGuildId(session)
   // calling เป็น org-native แล้ว → query calling ต้องใช้ org_id (GUILD_ID เป็น snowflake คนละชนิด)
   const CALLING_ORG_ID = await getOrgId(session)
-  const enabledFeatures = await getEnabledFeatures(GUILD_ID)
+  // สวิตช์ฟีเจอร์อยู่ที่ org ที่เดียว (2026-07-22) — เดิมอ่าน getEnabledFeatures(GUILD_ID)
+  const enabledFeatures = await getOrgEnabledFeatures(CALLING_ORG_ID)
   const financeOn = enabledFeatures.includes('finance')
   const callingOn = enabledFeatures.includes('calling')
   const docsOn = enabledFeatures.includes('docs')

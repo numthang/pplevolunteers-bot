@@ -1207,3 +1207,36 @@ CREATE INDEX IF NOT EXISTS idx_org_member_roles_lookup ON org_member_roles(org_i
 
 -- แปลยศ Discord → ตำแหน่งของ org (dc_guild_roles ลดบทบาทเหลือแค่ตารางแปล)
 ALTER TABLE dc_guild_roles ADD COLUMN IF NOT EXISTS org_role_def_id INT REFERENCES org_role_defs(id) ON DELETE SET NULL;
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- 2026-07-22 — รวมสวิตช์เปิด/ปิดฟีเจอร์มาไว้ที่ org ที่เดียว
+--
+-- เดิมมี 2 ระบบซ้อนกันแล้ว "guild ชนะ": org ที่มี guild → อ่าน dc_guild_config
+-- (/bot/features) · org ที่ไม่มี guild → อ่าน org_config (/org/settings/features)
+-- → หน้า /org/settings/features กดยังไงก็ไม่มีผลกับ PPLE
+--
+-- ย้ายค่าขึ้น org = union ของทุก guild ใน org (คนที่เคยเปิดที่ไหนสักที่ = ยังเปิด)
+-- ai_mention ไม่ย้าย — ผูก Discord จริง (บอทอ่าน dc_guild_config เอง index.js:453)
+--
+-- ⚠️ เขียนแถวให้ทุก org ที่มี guild แม้ union จะว่าง — default ของสองที่ไม่เหมือนกัน
+--    (guild ไม่มี config = ปิดหมด · org ไม่มี config = เปิดหมด) ถ้าไม่เขียนแถว
+--    org ที่เคยปิดหมดจะกลายเป็นเปิดหมดเงียบๆ
+-- ═══════════════════════════════════════════════════════════════════════════
+INSERT INTO org_config (org_id, key, value)
+SELECT g.org_id, 'enabled_features',
+       COALESCE(
+         (SELECT jsonb_agg(f ORDER BY f)
+            FROM (
+              SELECT DISTINCT jsonb_array_elements_text(c.value::jsonb) AS f
+                FROM dc_guilds g2
+                JOIN dc_guild_config c ON c.guild_id = g2.guild_id AND c.key = 'enabled_features'
+               WHERE g2.org_id = g.org_id
+            ) u
+           WHERE f IN ('finance','calling','docs','cases')
+         )::text,
+         '[]'
+       )
+  FROM dc_guilds g
+ WHERE g.org_id IS NOT NULL
+ GROUP BY g.org_id
+ON CONFLICT (org_id, key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW();
