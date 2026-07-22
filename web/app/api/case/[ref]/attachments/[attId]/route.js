@@ -3,6 +3,7 @@ import { authOptions } from '@/lib/auth-options.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import { canManageCases, canAccessCaseProvince } from '@/lib/caseAccess.js'
 import { getAttachmentById } from '@/db/cases.js'
+import { getOrgId } from '@/lib/orgContext.js'
 import { readCaseFile } from '@/lib/caseUploads.js'
 
 /**
@@ -16,8 +17,11 @@ export async function GET(req, { params }) {
   const { access } = await getEffectiveIdentity(session)
   if (!canManageCases(access)) return new Response('Forbidden', { status: 403 })
 
+  const orgId = await getOrgId(session)
+  if (!orgId) return new Response('Forbidden', { status: 403 })
+
   const { ref, attId } = await params
-  const att = await getAttachmentById(attId)
+  const att = await getAttachmentById(orgId, attId)
   if (!att || att.ref !== ref) return new Response('Not found', { status: 404 })
 
   // scope: จังหวัดของเคสต้องอยู่ใน scope ของ user (admin เห็นทุกจังหวัด)

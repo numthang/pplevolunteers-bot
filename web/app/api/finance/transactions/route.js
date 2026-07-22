@@ -32,7 +32,7 @@ export async function GET(req) {
   const ORG_ID = await getOrgId(session)
 
   if (accountId) {
-    const account = await getAccountById(accountId)
+    const account = await getAccountById(ORG_ID, accountId)
     if (!account || !canViewAccount(account, effectiveUserId, access)) {
       return Response.json({ error: 'Forbidden' }, { status: 403 })
     }
@@ -48,16 +48,17 @@ export async function POST(req) {
 
   const data = await req.json()
 
+  const ORG_ID = await getOrgId(session)
+  if (!ORG_ID) return Response.json({ error: 'Forbidden' }, { status: 403 })
+
   let account = null
   if (data.account_id) {
-    account = await getAccountById(data.account_id)
+    account = await getAccountById(ORG_ID, data.account_id)
     const { userId: effectiveUserId, access } = await getEffectiveOrgIdentity(session)
     if (!account || !canEditAccount(account, effectiveUserId, access)) {
       return Response.json({ error: 'Forbidden' }, { status: 403 })
     }
   }
-
-  const ORG_ID = await getOrgId(session)
   const orgId = account?.org_id || ORG_ID
   const id = await createTransaction(orgId, data, session.user.userId)
   if (data.account_id)  await incrementAccount(data.account_id)

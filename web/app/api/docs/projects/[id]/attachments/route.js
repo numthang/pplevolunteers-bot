@@ -31,7 +31,7 @@ export async function POST(req, { params }) {
 
   const { id } = await params
   const orgId = await getOrgId(session)
-  const project = await getDocProjectById(id)
+  const project = await getDocProjectById(orgId, id)
   if (!project) return Response.json({ error: 'Not found' }, { status: 404 })
 
   const formData = await req.formData()

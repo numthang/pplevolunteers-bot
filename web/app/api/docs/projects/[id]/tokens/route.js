@@ -2,6 +2,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import { canManageDocs } from '@/lib/docsAccess.js'
+import { getOrgId } from '@/lib/orgContext.js'
 import { regenerateToken, getDocProjectById } from '@/db/docs/projects.js'
 
 /**
@@ -15,7 +16,7 @@ export async function POST(req, { params }) {
   if (!canManageDocs(access)) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
   const { id } = await params
-  const project = await getDocProjectById(id)
+  const project = await getDocProjectById(await getOrgId(session), id)
   if (!project) return Response.json({ error: 'Not found' }, { status: 404 })
 
   const result = await regenerateToken(id)
@@ -30,7 +31,7 @@ export async function GET(req, { params }) {
   if (!canManageDocs(access)) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
   const { id } = await params
-  const project = await getDocProjectById(id)
+  const project = await getDocProjectById(await getOrgId(session), id)
   if (!project) return Response.json({ error: 'Not found' }, { status: 404 })
 
   // auto-create token if missing

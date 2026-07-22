@@ -5,16 +5,20 @@ import { getAccountById } from '@/db/finance/accounts.js'
 import { incrementUsageCount as incrementCategory } from '@/db/finance/categories.js'
 import { canEditAccount } from '@/lib/financeAccess.js'
 import { getEffectiveOrgIdentity } from '@/lib/orgAccess.js'
+import { getOrgId } from '@/lib/orgContext.js'
 
 export async function PUT(req, { params }) {
   const { id } = await params
   const session = await getServerSession(authOptions)
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const txn = await getTransactionById(id)
+  const orgId = await getOrgId(session)
+  if (!orgId) return Response.json({ error: 'Forbidden' }, { status: 403 })
+
+  const txn = await getTransactionById(orgId, id)
   if (!txn) return Response.json({ error: 'Not found' }, { status: 404 })
 
-  const account = await getAccountById(txn.account_id)
+  const account = await getAccountById(orgId, txn.account_id)
   const { userId: effectiveUserId, access } = await getEffectiveOrgIdentity(session)
   if (!account || !canEditAccount(account, effectiveUserId, access)) {
     return Response.json({ error: 'Forbidden' }, { status: 403 })
@@ -35,10 +39,13 @@ export async function DELETE(req, { params }) {
   const session = await getServerSession(authOptions)
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const txn = await getTransactionById(id)
+  const orgId = await getOrgId(session)
+  if (!orgId) return Response.json({ error: 'Forbidden' }, { status: 403 })
+
+  const txn = await getTransactionById(orgId, id)
   if (!txn) return Response.json({ error: 'Not found' }, { status: 404 })
 
-  const account = await getAccountById(txn.account_id)
+  const account = await getAccountById(orgId, txn.account_id)
   const { userId: effectiveUserId, access } = await getEffectiveOrgIdentity(session)
   if (!account || !canEditAccount(account, effectiveUserId, access)) {
     return Response.json({ error: 'Forbidden' }, { status: 403 })

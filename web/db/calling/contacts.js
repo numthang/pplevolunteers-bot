@@ -1,7 +1,10 @@
 import pool from '../index.js'
 
-export async function getContactById(id) {
-  const { rows } = await pool.query(`SELECT * FROM calling_contacts WHERE id = $1`, [id])
+export async function getContactById(orgId, id) {
+  const { rows } = await pool.query(
+    `SELECT * FROM calling_contacts WHERE id = $1 AND org_id = $2`,
+    [id, orgId]
+  )
   return rows[0] || null
 }
 
@@ -309,16 +312,16 @@ export async function getMyAssignedContacts(userId, { campaignId, status, limit 
   return rows
 }
 
-export async function getContactLogs(contactId) {
+export async function getContactLogs(orgId, contactId) {
   const { rows } = await pool.query(
     `SELECT
        l.*,
        ec.name AS campaign_name
      FROM calling_logs l
      LEFT JOIN cache_pple_event ec ON ec.id = l.campaign_id AND ec.type IN ('campaign', 'event')
-     WHERE l.member_id = $1 AND l.contact_type = 'contact'
+     WHERE l.member_id = $1 AND l.contact_type = 'contact' AND l.org_id = $2
      ORDER BY l.called_at DESC`,
-    [contactId]
+    [contactId, orgId]
   )
   return rows
 }

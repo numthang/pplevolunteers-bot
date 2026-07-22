@@ -62,7 +62,10 @@ export async function POST(req) {
       )
     }
 
-    const campaign = await campaignDB.getCampaignById(campaign_id || 0)
+    const orgId = await getOrgId(session)
+    if (!orgId) return Response.json({ error: 'Forbidden' }, { status: 403 })
+
+    const campaign = await campaignDB.getCampaignById(orgId, campaign_id || 0)
     if (!campaign) {
       return Response.json({ error: 'Campaign not found' }, { status: 404 })
     }
@@ -72,7 +75,6 @@ export async function POST(req) {
       return Response.json({ error: `Forbidden: cannot assign in ${campaign.province}` }, { status: 403 })
     }
 
-    const orgId = await getOrgId(session)
     const affectedRows = await assignmentDB.bulkAssignMembers(
       orgId,
       member_ids,
@@ -114,7 +116,10 @@ export async function PUT(req) {
       )
     }
 
-    const campaign = await campaignDB.getCampaignById(campaign_id || 0)
+    const orgId = await getOrgId(session)
+    if (!orgId) return Response.json({ error: 'Forbidden' }, { status: 403 })
+
+    const campaign = await campaignDB.getCampaignById(orgId, campaign_id || 0)
     if (!campaign) {
       return Response.json({ error: 'Campaign not found' }, { status: 404 })
     }
@@ -124,7 +129,6 @@ export async function PUT(req) {
       return Response.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const orgId = await getOrgId(session)
     await assignmentDB.assignMember(orgId, parseInt(member_id), assigned_to, session.user.userId, campaign_id || 0)
 
     const assignment = await assignmentDB.getAssignment(parseInt(member_id), campaign_id || 0)
@@ -186,7 +190,10 @@ export async function DELETE(req) {
       )
     }
 
-    const campaign = await campaignDB.getCampaignById(campaign_id || 0)
+    const orgId = await getOrgId(session)
+    if (!orgId) return Response.json({ error: 'Forbidden' }, { status: 403 })
+
+    const campaign = await campaignDB.getCampaignById(orgId, campaign_id || 0)
     if (!campaign) {
       return Response.json({ error: 'Campaign not found' }, { status: 404 })
     }

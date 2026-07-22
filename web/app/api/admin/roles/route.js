@@ -2,7 +2,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import { getGuildId } from '@/lib/guildContext.js'
-import { can } from '@/lib/permissions.js'
+import { can, canAppoint } from '@/lib/permissions.js'
 import { clearAccessCache } from '@/lib/resolveAccess.js'
 import { addGuildRole, removeGuildRole } from '@/lib/discordRoles.js'
 import { logAction } from '@/db/auditLog.js'
@@ -25,7 +25,7 @@ async function gate() {
   if (!can('manageRoles', access.permissions)) return { error: 'Forbidden', status: 403 }
   const guildId = await getGuildId(session)
   const { rows } = await pool.query('SELECT org_id FROM dc_guilds WHERE guild_id = $1', [guildId])
-  return { actorId: session.user.userId, guildId, orgId: rows[0]?.org_id ?? null }
+  return { actorId: session.user.userId, guildId, orgId: rows[0]?.org_id ?? null, perms: access.permissions }
 }
 
 export async function GET(req) {
@@ -41,7 +41,10 @@ export async function GET(req) {
      ORDER BY role_name`,
     [g.guildId],
   )
-  const assignable = cat.map(c => ({ roleId: c.role_id, roleName: c.role_name, permission: c.permission }))
+  // FLOOR เดียวกับ /api/org/appoint — โชว์เฉพาะ role ที่ผู้แต่งตั้งมีอำนาจครอบคลุมจริง
+  const assignable = cat
+    .filter(c => canAppoint(g.perms, c.permission))
+    .map(c => ({ roleId: c.role_id, roleName: c.role_name, permission: c.permission }))
 
   let members = []
   if (q.length >= 2) {
@@ -89,6 +92,12 @@ async function mutate(req, mode) {
   const role = rr[0]
   if (!role || !role.permission || role.permission === 'admin')
     return Response.json({ error: 'role นี้ตั้งผ่านเว็บไม่ได้' }, { status: 400 })
+
+  // FLOOR: แต่งตั้ง/ถอดได้ไม่เกินอำนาจตัวเอง (lib/permissions.js canAppoint)
+  // ใช้กับ remove ด้วย — ถ้าตั้งไม่ได้ ก็ไม่ควรถอดของคนที่สูงกว่าตัวเองได้
+  // เดิมประตูนี้ไม่เรียก canAppoint เลย → moderator ตั้งตัวเองเป็น secretary_general ได้
+  if (!canAppoint(g.perms, role.permission))
+    return Response.json({ error: 'แต่งตั้งเกินอำนาจตัวเองไม่ได้' }, { status: 403 })
 
   // identity = users.id · roles/web_roles = org_members row ที่ตรง membership (guild สำหรับ Discord, org สำหรับ email)
   const { rows: mr } = await pool.query(

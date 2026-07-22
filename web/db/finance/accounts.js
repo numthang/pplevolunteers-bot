@@ -37,8 +37,13 @@ export async function archiveAccount(id, archived) {
   await pool.query(`UPDATE finance_accounts SET archived = $1 WHERE id = $2`, [archived ? 1 : 0, id])
 }
 
-export async function getAccountById(id) {
-  const { rows } = await pool.query(`SELECT * FROM finance_accounts WHERE id = $1`, [id])
+// org filter บังคับใน signature — access เป็น org-wide แล้ว ถ้าดึง row ข้าม org มาเทียบ
+// จะได้สิทธิ์ใน org ตัวเองไปตัดสินของ org อื่น (owner ของ org ใดก็ได้ = admin ใน org นั้น)
+export async function getAccountById(orgId, id) {
+  const { rows } = await pool.query(
+    `SELECT * FROM finance_accounts WHERE id = $1 AND org_id = $2`,
+    [id, orgId]
+  )
   return rows[0] || null
 }
 

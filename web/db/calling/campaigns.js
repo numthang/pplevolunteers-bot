@@ -1,13 +1,17 @@
 import pool from '../index.js'
 
-export async function getCampaignById(id) {
+// cache_pple_event คง guild-based (Discord/ACT artifact) → scope ผ่าน dc_guilds ของ org
+// (pattern เดียวกับ getCampaigns ด้านล่างและ db/docs/projects.js)
+export async function getCampaignById(orgId, id) {
   const { rows } = await pool.query(
     `SELECT id, name, province, description,
             TO_CHAR(event_date, 'YYYY-MM-DD"T"HH24:MI') AS event_date,
             TO_CHAR(event_end_date, 'YYYY-MM-DD"T"HH24:MI') AS event_end_date,
             created_at
-     FROM cache_pple_event WHERE id = $1 AND type IN ('campaign', 'event')`,
-    [id]
+     FROM cache_pple_event
+     WHERE id = $1 AND type IN ('campaign', 'event')
+       AND guild_id IN (SELECT guild_id FROM dc_guilds WHERE org_id = $2)`,
+    [id, orgId]
   )
   return rows[0] || null
 }

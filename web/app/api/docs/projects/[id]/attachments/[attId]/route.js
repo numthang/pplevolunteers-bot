@@ -2,6 +2,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import { canManageDocs } from '@/lib/docsAccess.js'
+import { getOrgId } from '@/lib/orgContext.js'
 import { getAttachmentById, deleteAttachment, getAttachmentsByProject } from '@/db/docs/attachments.js'
 import { removeFile, buildRegistrationPdf } from '@/lib/cropDocument.js'
 import { getDocProjectById } from '@/db/docs/projects.js'
@@ -21,7 +22,7 @@ export async function DELETE(req, { params }) {
   await removeFile(att.file_path).catch(() => {})
 
   // Rebuild registration PDF after deletion (fire-and-forget)
-  const project = await getDocProjectById(id)
+  const project = await getDocProjectById(await getOrgId(session), id)
   if (project) {
     const remaining = await getAttachmentsByProject(id)
     const projectName = project.project_name || project.event_name || `project_${id}`

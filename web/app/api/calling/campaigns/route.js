@@ -105,7 +105,7 @@ export async function POST(req) {
       session.user.userId
     )
 
-    const campaign = await campaignDB.getCampaignById(campaignId)
+    const campaign = await campaignDB.getCampaignById(await getOrgId(session), campaignId)
 
     return Response.json({ success: true, data: campaign }, { status: 201 })
   } catch (error) {

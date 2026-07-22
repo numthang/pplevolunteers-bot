@@ -159,12 +159,12 @@ export async function getAttachments(caseId) {
   return rows
 }
 
-export async function getAttachmentById(attId) {
+export async function getAttachmentById(orgId, attId) {
   const { rows } = await pool.query(
     `SELECT a.*, c.ref, c.province, c.org_id AS case_org_id
      FROM case_attachments a JOIN cases c ON c.id = a.case_id
-     WHERE a.id = $1`,
-    [attId],
+     WHERE a.id = $1 AND c.org_id = $2`,
+    [attId, orgId],
   )
   return rows[0] || null
 }

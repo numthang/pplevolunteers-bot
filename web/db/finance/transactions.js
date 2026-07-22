@@ -39,10 +39,10 @@ export async function getTransactions(orgId, { accountId, type, categoryId, noCa
   return rows
 }
 
-export async function getTransactionById(id) {
+export async function getTransactionById(orgId, id) {
   const { rows } = await pool.query(
-    `SELECT * FROM finance_transactions WHERE id = $1`,
-    [id]
+    `SELECT * FROM finance_transactions WHERE id = $1 AND org_id = $2`,
+    [id, orgId]
   )
   return rows[0] || null
 }

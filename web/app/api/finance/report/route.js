@@ -24,7 +24,7 @@ export async function GET(req) {
   const ORG_ID = await getOrgId(session)
 
   if (filter.accountId) {
-    const account = await getAccountById(filter.accountId)
+    const account = await getAccountById(ORG_ID, filter.accountId)
     if (!account || !canViewAccount(account, effectiveUserId, access)) {
       return Response.json({ error: 'Forbidden' }, { status: 403 })
     }

@@ -79,7 +79,7 @@ export async function upsertDocProject({ orgId, actEventCacheId, isMobile, parti
   return rows[0].id
 }
 
-export async function getDocProjectById(id) {
+export async function getDocProjectById(orgId, id) {
   const { rows } = await pool.query(
     `SELECT
        p.*, e.name AS event_name, e.province, e.image_url,
@@ -87,8 +87,8 @@ export async function getDocProjectById(id) {
        TO_CHAR(e.event_end_date, 'YYYY-MM-DD"T"HH24:MI') AS event_end_date
      FROM docs_projects p
      JOIN cache_pple_event e ON e.id = p.cache_pple_event_id
-     WHERE p.id = $1`,
-    [id]
+     WHERE p.id = $1 AND p.org_id = $2`,
+    [id, orgId]
   )
   return rows[0] || null
 }
