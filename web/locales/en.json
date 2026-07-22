@@ -1092,7 +1092,8 @@
       "tabs": {
         "general": "General",
         "members": "Members & Roles",
-        "features": "Features"
+        "features": "Features",
+        "roles": "Roles & areas"
       },
       "settingsLabel": "Settings: ",
       "pageHeading": "Organization Settings"
@@ -1173,6 +1174,24 @@
       "invalidLinkMsg": "Invalid or expired link",
       "backToLoginLink": "Back to login",
       "signingInMsg": "Signing in…"
+    },
+    "scope": {
+      "title": "Area tree",
+      "desc": "Nest areas to match your org structure, e.g. region → province. A regional coordinator sees data for every area beneath the one they hold.",
+      "loading": "Loading…",
+      "adminOnly": "Org admins only",
+      "empty": "No areas yet — add your first one",
+      "addRoot": "Add area",
+      "addChild": "Add sub-area",
+      "rename": "Edit",
+      "delete": "Delete",
+      "cancel": "Cancel",
+      "saveButton": "Add",
+      "noParent": "No parent (top level)",
+      "labelPlaceholder": "Area name, e.g. Ratchaburi",
+      "keyPlaceholder": "Key (blank = use name)",
+      "roleDefCount": "{count} roles",
+      "saveError": "Could not save"
     }
   },
   "profile": {

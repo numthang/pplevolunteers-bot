@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl'
 const TAB_HREFS = [
   { href: '/org/settings', key: 'general' },
   { href: '/org/settings/members', key: 'members' },
+  { href: '/org/settings/roles', key: 'roles' },
   { href: '/org/settings/features', key: 'features' },
 ]
 
