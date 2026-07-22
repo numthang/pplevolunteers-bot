@@ -1,6 +1,7 @@
 const pool = require('./index');
 const { getRolesByScopePrefix, getPickerRoles } = require('./guildRoles');
 const { orgIdOfGuild, upsertUserByDiscord } = require('./org');
+const { resyncDiscordRolesForUser } = require('./orgMemberRoles');
 
 // identity split (2026-07-16): dc_members ถูกแยกเป็น users (identity) + org_members (membership+profile per-guild)
 // bot write-path ทุกตัวจึงเป็น 2 จังหวะ: upsert users ก่อน (ได้ user_id) → upsert org_members
@@ -38,6 +39,9 @@ async function upsertMember(guildId, data) {
     ${setClause}`,
     values
   );
+
+  // roles เปลี่ยน → สิทธิ์จริงอยู่ที่ org_member_roles ต้องซิงค์ตาม (ORG_ACCESS_REDESIGN ขั้น 5)
+  if (cols.includes('roles')) await resyncDiscordRolesForUser(userId);
 }
 
 async function _deriveRoleFields(member) {
@@ -96,6 +100,8 @@ async function upsertMemberFromDiscord(member) {
     allRoles,
     interestRoles,
   ]);
+
+  await resyncDiscordRolesForUser(userId);
 }
 
 // คืน row รูปร่างเดิม (แบบ dc_members) ให้ caller ไม่ต้องแก้: profile จาก org_members + identity จาก users
@@ -115,13 +121,16 @@ async function syncMemberRoles(member) {
   const guildId = member.guild.id;
   const { allProvinces, allRoles, interestRoles } = await _deriveRoleFields(member);
 
-  await pool.query(
+  const { rows } = await pool.query(
     `UPDATE org_members om
         SET province = $1, roles = $2, interests = $3, roles_assigned_at = NOW()
        FROM users u
-      WHERE u.id = om.user_id AND om.guild_id = $4 AND u.discord_id = $5`,
+      WHERE u.id = om.user_id AND om.guild_id = $4 AND u.discord_id = $5
+    RETURNING om.user_id`,
     [allProvinces, allRoles || null, interestRoles, guildId, member.id]
   );
+
+  if (rows[0]) await resyncDiscordRolesForUser(rows[0].user_id);
 }
 
 module.exports = { upsertMember, upsertMemberFromDiscord, getMember, syncMemberRoles };

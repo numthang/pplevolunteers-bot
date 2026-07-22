@@ -196,6 +196,7 @@ function AppointSection({ orgId, onNote }) {
     })
     const d = await r.json().catch(() => ({}))
     if (!r.ok) return onNote(d.error || t('members.appointError'))
+    if (d.warning) onNote(d.warning)   // ถอดในเว็บสำเร็จ แต่ถอดยศ Discord ไม่สำเร็จ
     setResults(rs => rs && rs.map(x => x.id === m.id
       ? { ...x, permissions: hasIt ? x.permissions.filter(p => p !== role.key) : [...x.permissions, role.key] }
       : x))

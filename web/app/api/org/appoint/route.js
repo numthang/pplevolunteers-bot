@@ -7,16 +7,26 @@ import { canAppoint } from '@/lib/permissions.js'
 import { clearAccessCache } from '@/lib/resolveAccess.js'
 import { addGuildRole, removeGuildRole } from '@/lib/discordRoles.js'
 import { logAction } from '@/db/auditLog.js'
+import {
+  grantWebRole, revokeWebRole, getMemberPermissions,
+  listDiscordRoleTargets, setRolesCopy, resyncDiscordRolesForUser,
+} from '@/db/orgMemberRoles.js'
 import pool from '@/db/index.js'
 
 /**
  * แต่งตั้งยศ (permission role) ระดับ org — org-native (ใช้ได้กับ guildless org)
  *  GATE  = owner (เสมอ) หรือ permission ∈ org_config.appoint_policy   → getEffectiveOrgIdentity
  *  FLOOR = capability-subset (canAppoint) — แต่งตั้งไม่เกินอำนาจตัวเอง · admin ห้าม web-grant
- *  target Discord → สั่ง Discord role จริง + write-through org_members.roles (ชื่อ)
- *  target email   → org_members.web_roles (permission key)
  *
- *  GET    ?q=...              → ค้นสมาชิก (dedup per-guild) + catalog (org_roles ตัด admin + canGrant/floor)
+ * ⚠️ ขั้น 5 (2026-07-22) — เว็บเป็นแหล่งความจริง เขียนลง `org_member_roles` เสมอ
+ *    ไม่ว่า target จะมี Discord หรือไม่ · Discord = กระจกเงา ซิงค์ตามแบบ best-effort
+ *    เดิมเลือก guild ให้เองแบบเดา (DISTINCT ON ... ORDER BY guild_id) แล้วต้องมียศ
+ *    Discord รองรับก่อนถึงจะแต่งตั้งได้ → ทั้งสองอย่างหายไปแล้ว ตำแหน่งผูกกับ org
+ *
+ *    ตอนถอด **ต้องถอดยศ Discord ด้วย** ทุก guild ที่แมปสิทธิ์นี้ไว้ ไม่งั้นการซิงค์
+ *    รอบหน้าจะคืนสิทธิ์กลับมาเงียบๆ (source='discord' เป็นคนละแถวกับ source='web')
+ *
+ *  GET    ?q=...              → ค้นสมาชิก + catalog (org_roles ตัด admin + canGrant/floor)
  *  POST   {memberId,roleKey}  → แต่งตั้ง · DELETE {memberId,roleKey} → ถอด
  */
 
@@ -60,7 +70,7 @@ export async function GET(req) {
     const { rows } = await pool.query(
       `SELECT DISTINCT ON (u.id)
               u.id, u.discord_id, u.username, u.email,
-              om.guild_id, om.role AS membership_role, om.roles, om.web_roles
+              om.role AS membership_role
          FROM org_members om JOIN users u ON u.id = om.user_id
         WHERE om.org_id = $1
           AND (u.username ILIKE $2 OR u.email ILIKE $2 OR u.discord_id = $3)
@@ -69,22 +79,13 @@ export async function GET(req) {
       [g.orgId, like, q]
     )
     members = await Promise.all(rows.map(async r => {
-      // permission keys ที่ถืออยู่ตอนนี้: Discord = map role_name→permission (guild) · email = web_roles ตรงๆ
-      let permissions = []
-      if (r.discord_id) {
-        const names = (r.roles || '').split(',').map(s => s.trim()).filter(Boolean)
-        if (names.length && r.guild_id) {
-          const { rows: pm } = await pool.query(
-            `SELECT DISTINCT permission FROM dc_guild_roles
-              WHERE guild_id = $1 AND role_name = ANY($2) AND permission IS NOT NULL`,
-            [r.guild_id, names]
-          )
-          permissions = pm.map(x => x.permission)
-        }
-      } else {
-        permissions = (r.web_roles || '').split(',').map(s => s.trim()).filter(Boolean)
-      }
+      // สิทธิ์ที่ถืออยู่จริง = org_member_roles ที่เดียว (ไม่ต้องแปลจากยศ Discord ต่อ guild อีก)
+      const held = await getMemberPermissions(g.orgId, r.id)
+      const permissions = [...new Set(held.map(x => x.permission))]
+      // สิทธิ์ที่มาจาก Discord อย่างเดียว = ถอดจากเว็บได้ แต่ต้องถอดยศใน Discord ตาม
+      const fromDiscord = [...new Set(held.filter(x => x.source === 'discord').map(x => x.permission))]
       return {
+        fromDiscord,
         id: r.id,
         type: r.discord_id ? 'discord' : 'email',
         label: r.username || r.email || `#${r.id}`,
@@ -117,59 +118,51 @@ async function mutate(req, mode) {
   if (!canAppoint(g.perms, roleKey))
     return Response.json({ error: 'เกินอำนาจแต่งตั้งของคุณ' }, { status: 403 })
 
-  // target row ใน org นี้ (dedup per-guild: prefer owner แล้ว guild ก่อน null)
+  // target = user ที่เป็นสมาชิก org นี้ (ไม่ต้องเลือก guild — ตำแหน่งผูกกับ org)
   const { rows: mr } = await pool.query(
-    `SELECT DISTINCT ON (u.id) u.id, u.discord_id, om.guild_id, om.roles, om.web_roles
-       FROM users u JOIN org_members om ON om.user_id = u.id
-      WHERE u.id = $1 AND om.org_id = $2
-      ORDER BY u.id, (om.role = 'owner') DESC, om.guild_id NULLS LAST`,
+    `SELECT u.id, u.discord_id FROM users u
+      WHERE u.id = $1 AND EXISTS (SELECT 1 FROM org_members om WHERE om.user_id = u.id AND om.org_id = $2)`,
     [memberId, g.orgId]
   )
   const m = mr[0]
   if (!m) return Response.json({ error: 'ไม่พบสมาชิกใน org นี้' }, { status: 404 })
 
+  // ── 1. แหล่งความจริง: org_member_roles (source='web') ──
+  if (mode === 'add') await grantWebRole(g.orgId, m.id, roleKey, g.actorUserId)
+  else await revokeWebRole(g.orgId, m.id, roleKey)
+
+  // ── 2. กระจกเงา Discord: ทุก guild ของ user ที่แมปสิทธิ์นี้ไว้ ──
+  //    add = best-effort (พลาดก็ยังมีสิทธิ์จากข้อ 1)
+  //    remove = จำเป็น ถ้าพลาดต้องบอก ไม่งั้นซิงค์รอบหน้าคืนสิทธิ์กลับมา
+  const failed = []
   if (m.discord_id) {
-    // ── Discord target: หา role_id ใน guild ที่ permission ตรง แล้วสั่ง Discord จริง ──
-    const { rows: dr } = await pool.query(
-      `SELECT role_id, role_name FROM dc_guild_roles WHERE guild_id = $1 AND permission = $2 LIMIT 1`,
-      [m.guild_id, roleKey]
-    )
-    if (!dr[0])
-      return Response.json({ error: 'guild นี้ยังไม่มี Discord role สำหรับสิทธิ์นี้ (สร้าง+map ก่อน)' }, { status: 400 })
-
-    const ok = mode === 'add'
-      ? await addGuildRole(m.guild_id, m.discord_id, dr[0].role_id)
-      : await removeGuildRole(m.guild_id, m.discord_id, dr[0].role_id)
-    if (!ok) return Response.json({ error: 'สั่ง Discord ไม่สำเร็จ (เช็คสิทธิ์ bot / ลำดับ role)' }, { status: 502 })
-
-    const cur = (m.roles || '').split(',').map(s => s.trim()).filter(Boolean)
-    const set = new Set(cur)
-    if (mode === 'add') set.add(dr[0].role_name); else set.delete(dr[0].role_name)
-    await pool.query(
-      `UPDATE org_members SET roles = $1, roles_assigned_at = NOW() WHERE user_id = $2 AND guild_id = $3`,
-      [Array.from(set).join(','), m.id, m.guild_id]
-    )
-  } else {
-    // ── email target: web_roles (permission key ตรงๆ) ──
-    const cur = (m.web_roles || '').split(',').map(s => s.trim()).filter(Boolean)
-    const set = new Set(cur)
-    if (mode === 'add') set.add(roleKey); else set.delete(roleKey)
-    await pool.query(
-      `UPDATE org_members SET web_roles = $1, roles_assigned_at = NOW()
-        WHERE user_id = $2 AND org_id = $3 AND guild_id IS NULL`,
-      [Array.from(set).join(','), m.id, g.orgId]
-    )
+    const targets = await listDiscordRoleTargets(g.orgId, m.id, roleKey)
+    for (const t of targets) {
+      const ok = mode === 'add'
+        ? await addGuildRole(t.guild_id, m.discord_id, t.role_id)
+        : await removeGuildRole(t.guild_id, m.discord_id, t.role_id)
+      if (!ok) { failed.push(t.guild_id); continue }
+      await setRolesCopy(m.id, t.guild_id, t.role_name, mode)
+      clearAccessCache(t.guild_id)
+    }
+    await resyncDiscordRolesForUser(m.id)
   }
 
-  if (m.guild_id) clearAccessCache(m.guild_id)
   logAction({
     orgId: g.orgId,
     app: 'org',
     action: mode === 'add' ? 'role_grant' : 'role_revoke',
     actorId: g.actorUserId,
     targetId: m.discord_id || `u${m.id}`,
-    meta: { roleKey, via: m.discord_id ? 'discord' : 'web' },
+    meta: { roleKey, discordFailed: failed.length ? failed : undefined },
   })
 
+  if (failed.length && mode === 'remove') {
+    return Response.json({
+      ok: true,
+      warning: `ถอดสิทธิ์ในเว็บแล้ว แต่ถอดยศ Discord ไม่สำเร็จ ${failed.length} เซิร์ฟเวอร์ ` +
+               `— สิทธิ์จะกลับมาตอนซิงค์รอบหน้า (เช็คสิทธิ์ bot / ลำดับ role)`,
+    })
+  }
   return Response.json({ ok: true })
 }

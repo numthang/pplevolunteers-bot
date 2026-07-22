@@ -1,6 +1,8 @@
 # ORG_ACCESS_REDESIGN — ปลดสิทธิ์ออกจาก Discord
 
-> **สถานะ: ออกแบบ ยังไม่ลงมือ** · เคาะทิศทาง 2026-07-21 · ต้องผ่าน `/scrutinize` ก่อนเขียนโค้ด
+> **สถานะ: ขั้น 1–5 เสร็จ (2026-07-22)** — ทางอ่านและทางเขียนอยู่ที่ `org_member_roles` ทั้งคู่แล้ว
+> เหลือขั้น 6 (ลบ `web_roles` + `geography.js`) และ `web/db/docs/payers.js` ที่ยังเป็นเส้นทางแยก
+> เคาะทิศทาง 2026-07-21 · ผ่าน `/scrutinize` แล้ว 2026-07-22
 
 ## เป้าหมาย
 
@@ -224,7 +226,7 @@ user ลองแต่งตั้งยศให้ `somseed` (มี Discord,
 | ✅ 2 | migration แปลงข้อมูล PPLE + **diff test** — `scripts/migration/org-access-redesign.sql` | ต่ำ (ยังไม่สลับ) |
 | ✅ 3 | `web/lib/resolveAccessV2.js` คู่ขนาน ยังไม่ใช้ + unit test 12 เคส | ต่ำ |
 | ✅ 4 | สลับ `getEffectiveOrgIdentity` + `getEffectiveIdentity` ไปเรียก V2 | **สูง — จุดตัดสิน** |
-| 5 | บอทเขียน `org_member_roles` (`source='discord'`) · `roles` ยังเขียนต่อในฐานะสำเนา · **เพิ่ม re-sync เมื่อการแมปเปลี่ยน** | กลาง |
+| ✅ 5 | บอทเขียน `org_member_roles` (`source='discord'`) · `roles` ยังเขียนต่อในฐานะสำเนา · **เพิ่ม re-sync เมื่อการแมปเปลี่ยน** | กลาง |
 | 6 | ลบ `web_roles` + `geography.js` ทิ้ง · **`roles` เก็บไว้เป็น log** ไม่ลบ | ต่ำ (หลังนิ่ง) |
 
 ขั้น 2 คือของสำคัญ — **diff test** พิสูจน์ว่าย้ายแล้วสิทธิ์ไม่เพี้ยน ก่อนสลับจริง
@@ -303,3 +305,66 @@ admin / เลขาธิการ           → ทุกพื้นที่
 - `accessFromRoleNames(orgId, names)` = ทางดีบั๊ก (view-as-role) เรียก reducer ตัวเดียวกัน → preview ตรงกับของจริงเสมอ
 - คืน `scopeGrants` ที่ **ไล่ชั้นเสร็จแล้ว** (ไม่มี prefix `province:`) → ขั้น 4 ต้องแก้ `getUserScope` ใน `callingAccess`/`docsAccess`/`financeAccess` ให้เลิกเรียก `expandGrants` ด้วย
 - test 12 เคส (รวม 201 ทั้ง suite)
+
+## บันทึกผลขั้น 5 — ทางเขียนย้ายแล้ว (2026-07-22)
+
+ขั้น 4 สลับ "ทางอ่าน" ไป `org_member_roles` แต่ทางเขียนยังเขียนที่เดิม → **สิทธิ์แช่แข็ง**
+ขั้นนี้ปิดช่องนั้น · ตัวกลางคือฟังก์ชันเดียวที่ทุกทางเขียนเรียกร่วมกัน
+
+### แกน: recompute ไม่ใช่ diff
+
+`resyncDiscordRolesForUser(userId)` = คำนวณแถว `source='discord'` ใหม่ทั้งหมดจาก `org_members.roles`
+ของ user คนนั้น **ทุก guild ใน org** แล้วลบส่วนเกิน — SQL ตัวเดียวกับ migration ขั้น 2
+
+**ทำไมต้องข้าม guild ไม่ใช่ทีละ guild:** มี role_def ที่หลาย guild แมปร่วมกันจริง
+(`ทีมบรรณาธิการ`/editor = def 142 แมปทั้ง 2 guild) ถ้าลบตาม guild ที่กำลังซิงค์
+สิทธิ์จะหายๆ กลับๆ ตามลำดับการซิงค์ · แบบ recompute เป็น idempotent ลำดับไม่มีผล
+
+**หลักฐานว่าทางเขียนตรงกับทางอ่าน:** รัน recompute ทับ user ทั้งหมด (7,413 คู่) เทียบกับผล migration
+→ **lost 0 / gained 0** · ทางเขียนใหม่ reproduce ข้อมูลที่ทางอ่านใช้อยู่ได้เป๊ะ
+
+### สิ่งที่แก้
+
+| ไฟล์ | เปลี่ยนอะไร |
+|---|---|
+| `db/orgMemberRoles.js` (ใหม่, บอท) · `web/db/orgMemberRoles.js` (ใหม่, เว็บ) | ตัว recompute + ทางเขียนฝั่งเว็บ (แยก 2 ไฟล์เพราะคนละ pool คนละ module system เหมือน `db/guilds.js`) |
+| `db/members.js` | `upsertMember` (เฉพาะตอนส่ง `roles`) · `upsertMemberFromDiscord` · `syncMemberRoles` → เรียก resync ต่อท้าย |
+| `web/app/api/org/appoint/route.js` | เขียน `org_member_roles` เป็นหลัก · Discord = กระจกเงา · **ทิ้ง logic เดา guild** |
+| `web/app/api/bot/roles/route.js` | PATCH การแมป → `syncRoleDefFromGuildRole` + `resyncDiscordRolesForGuild` ทันที |
+| `web/app/admin/roles/` + `web/app/api/admin/roles/` | **ลบทิ้ง** — ซ้ำกับ `/org/settings/members` ที่ใหม่กว่า ไม่มีลิงก์ในเมนู (grep ยืนยันไม่มีที่อื่นเรียก) |
+
+### appoint เปลี่ยนความหมาย — เว็บเป็นแหล่งความจริงจริงๆ
+
+เดิม: target มี Discord → สั่ง Discord + เขียน `roles` · target email → `web_roles` · **เว็บเป็นรีโมท**
+ใหม่: เขียน `org_member_roles` (`source='web'`) **เสมอ** ไม่ว่า target แบบไหน · Discord ซิงค์ตามแบบ best-effort
+
+หายไปด้วย 2 บั๊กที่ `/scrutinize` จับได้:
+- ไม่ต้องเดา guild อีก (ตำแหน่งผูกกับ org) → คนอยู่หลาย guild แต่งตั้งได้ทุกสิทธิ์
+- ไม่ต้องมียศ Discord รองรับก่อน → error *"guild นี้ยังไม่มี Discord role สำหรับสิทธิ์นี้"* หายไป
+
+**⚠️ ตอนถอดต้องถอดยศ Discord ด้วย** — `source='web'` กับ `source='discord'` เป็นคนละแถว (source อยู่ใน PK)
+ถ้าลบแค่แถว web แล้วยศ Discord ยังอยู่ ซิงค์รอบหน้าจะคืนสิทธิ์กลับมาเงียบๆ
+→ route จึงถอดยศทุก guild ที่แมปสิทธิ์นั้น · ถอดไม่สำเร็จ = คืน `warning` ให้ UI แสดง ไม่กลืนเงียบ
+
+### verify
+
+| | ผล |
+|---|---|
+| `npm test` | 206 ผ่าน |
+| `npm run build` | ผ่าน (ต้อง `rm -rf .next` ก่อน — cache เก่าค้าง route ที่ลบไปแล้ว) |
+| `npm run test:live` | **9 ผ่าน** (เดิม 5 + ใหม่ 4) |
+| recompute ทับทั้ง org เทียบ migration | lost 0 / gained 0 |
+| `org_member_roles` หลังเทสจบ | 7,412 discord + 1 web = เท่าเดิมเป๊ะ (live test คืนค่าครบ) |
+
+live test ใหม่ (`web/lib/__tests__/orgMemberRoles.live.test.js`) พิสูจน์ 4 อย่าง:
+resync ซ้ำแล้วนิ่ง · **ถอดยศ → สิทธิ์หายจริง / ใส่กลับ → กลับมาจริง** (คือสิ่งที่ขั้น 4 ทำไม่ได้) ·
+`syncRoleDefFromGuildRole` ทับยศเดิม 40 ตัวแล้วไม่ขยับอะไร · สิทธิ์ที่ตั้งจากเว็บไม่ถูกซิงค์ Discord ลบทิ้ง
+
+> 🔧 พ่วง: `npm run test:live` **เดิมรันไม่ได้เลย** — vitest 4 merge `--exclude` จาก CLI เข้ากับ config
+> แทนที่จะแทนที่ → live test ถูก exclude ทิ้งทุกครั้ง (และไม่โหลด `.env` ด้วย)
+> แก้ด้วย `vitest.live.config.js` + `vitest.live.setup.js` แยก
+
+### ยังไม่ย้าย
+
+`web/db/docs/payers.js` — ยังคำนวณอำนาจลงนามเองจาก `dc_guild_roles` + `org_members.roles`
+**ไม่พัง** แต่ไม่เห็นสิทธิ์ที่ตั้งผ่านเว็บ · แยกเป็นงานรอบถัดไป (คนละเรื่องกับทางเขียน)
