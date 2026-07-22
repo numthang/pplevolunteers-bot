@@ -56,7 +56,15 @@ run() {
 step "เตรียม DB ซ้อม: $DB"
 dropdb --if-exists "$DB"
 createdb "$DB"
-pg_restore -d "$DB" --no-owner --no-privileges "$DUMP" 2>&1 | grep -v "^pg_restore: warning" || true
+
+# ดูจากเนื้อไฟล์ ไม่ใช่นามสกุล — dump ของ prod ชื่อ .sql แต่เป็น custom format (ขึ้นต้น PGDMP)
+if [[ "$(head -c 5 "$DUMP")" == "PGDMP" ]]; then
+  echo "   (custom format → pg_restore)"
+  pg_restore -d "$DB" --no-owner --no-privileges "$DUMP" 2>&1 | grep -v "^pg_restore: warning" || true
+else
+  echo "   (plain SQL → psql)"
+  psql -d "$DB" -q -f "$DUMP" 2>&1 | grep -viE "^(NOTICE|SET|CREATE|ALTER|COPY|GRANT)" || true
+fi
 
 TOTAL=$SECONDS
 

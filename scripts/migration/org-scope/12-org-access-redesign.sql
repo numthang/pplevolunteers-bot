@@ -28,7 +28,7 @@ SELECT DISTINCT g.org_id,
        CASE split_part(r.scope_node, ':', 1)
          WHEN 'region' THEN 10 WHEN 'subregion' THEN 20 ELSE 30 END
   FROM dc_guild_roles r
-  JOIN dc_guilds g ON g.guild_id = r.guild_id
+  JOIN dc_guilds g ON g.guild_id = r.guild_id AND g.org_id IS NOT NULL
  WHERE r.scope_node IS NOT NULL
 ON CONFLICT (org_id, key) DO NOTHING;
 
@@ -36,7 +36,7 @@ ON CONFLICT (org_id, key) DO NOTHING;
 UPDATE org_scope_nodes child
    SET parent_id = parent.id
   FROM dc_guild_roles cr
-  JOIN dc_guilds g       ON g.guild_id = cr.guild_id
+  JOIN dc_guilds g       ON g.guild_id = cr.guild_id AND g.org_id IS NOT NULL
   JOIN dc_guild_roles pr ON pr.guild_id = cr.guild_id AND pr.role_id = cr.parent_role_id
   JOIN org_scope_nodes parent ON parent.org_id = g.org_id
                              AND parent.key = split_part(pr.scope_node, ':', 2)
@@ -52,7 +52,7 @@ INSERT INTO org_role_defs (org_id, name, permission, scope_node_id)
 SELECT DISTINCT ON (g.org_id, r.role_name)
        g.org_id, r.role_name, r.permission, n.id
   FROM dc_guild_roles r
-  JOIN dc_guilds g ON g.guild_id = r.guild_id
+  JOIN dc_guilds g ON g.guild_id = r.guild_id AND g.org_id IS NOT NULL
   LEFT JOIN org_scope_nodes n ON n.org_id = g.org_id
                              AND n.key = split_part(r.scope_node, ':', 2)
  WHERE r.permission IS NOT NULL OR r.scope_node IS NOT NULL

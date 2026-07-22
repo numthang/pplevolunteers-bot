@@ -46,6 +46,17 @@ ALTER TABLE cache_pple_member    RENAME COLUMN guild_id TO org_id;
 
 -- ===== 2. person : VARCHAR discord → INT users.id (in-place) =================
 --  roster (cache_pple_member) ไม่แตะ person — created_by = NGS ภายนอก ไม่ใช่ user เรา
+--
+-- ⚠️ prod มี `DEFAULT NULL::character varying` บน 4 คอลัมน์นี้ (localhost ไม่มี) →
+--    ALTER TYPE พังที่ `default for column "called_by" cannot be cast automatically
+--    to type integer` · เจอตอนซ้อมกับ dump ของ prod 2026-07-23
+--    DROP DEFAULT ก่อนเสมอ — default เป็น NULL อยู่แล้ว ทิ้งได้ ไม่เสียความหมาย
+--    (กวาดครบทุกคอลัมน์ที่แปลงเป็น integer แล้ว — docs/cases/audit/finance ไม่มีปัญหานี้)
+ALTER TABLE calling_logs         ALTER COLUMN called_by  DROP DEFAULT;
+ALTER TABLE calling_contacts     ALTER COLUMN created_by DROP DEFAULT;
+ALTER TABLE calling_contacts     ALTER COLUMN updated_by DROP DEFAULT;
+ALTER TABLE calling_member_tiers ALTER COLUMN override_by DROP DEFAULT;
+
 ALTER TABLE calling_logs         ALTER COLUMN called_by       TYPE integer USING pg_temp._d2u(called_by);
 ALTER TABLE calling_assignments  ALTER COLUMN assigned_to     TYPE integer USING pg_temp._d2u(assigned_to);
 ALTER TABLE calling_assignments  ALTER COLUMN assigned_by     TYPE integer USING pg_temp._d2u(assigned_by);
