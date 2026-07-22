@@ -76,7 +76,8 @@ export default function ProfilePage() {
           display_name: data.display_name || '',
           province:     data.province || '',
           region:       data.region || '',
-          roles:        data.roles || '',
+          role_titles:  data.role_titles || [],
+          role_areas:   data.role_areas || [],
           interests:    data.interests || '',
         })
         setPrimaryProvince(data.primary_province || '')
@@ -234,15 +235,24 @@ export default function ProfilePage() {
                 )}
               </button>
             </div>
-            {readOnly.roles && (
+            {/* ตำแหน่ง + พื้นที่ มาจาก org_member_roles (ยศจริงระดับ org) ไม่ใช่สำเนายศ Discord
+                แยกบรรทัดเพราะใบพื้นที่มีได้เป็นสิบเป็นร้อยใบ รวมบรรทัดเดียวแล้วอ่านไม่ออก */}
+            {readOnly.role_titles?.length > 0 && (
+              <p className="text-base text-warm-500 dark:text-disc-text">
+                <span className="font-medium">ตำแหน่ง:</span> {readOnly.role_titles.join(' · ')}
+              </p>
+            )}
+            {readOnly.role_areas?.length > 0 && (
               <div className="flex items-center gap-2">
                 <p className={`text-base text-warm-500 dark:text-disc-text ${expandRoles ? '' : 'truncate'}`}>
-                  <span className="font-medium">ยศ:</span>{' '}
-                  {readOnly.roles.split(',').map(r => r.trim()).filter(Boolean).join(' · ')}
+                  <span className="font-medium">พื้นที่:</span>{' '}
+                  {expandRoles ? readOnly.role_areas.join(' · ') : `${readOnly.role_areas.length} พื้นที่`}
                 </p>
                 <button
                   type="button"
                   onClick={() => setExpandRoles(!expandRoles)}
+                  aria-expanded={expandRoles}
+                  aria-label={expandRoles ? 'ย่อรายชื่อพื้นที่' : 'กางรายชื่อพื้นที่'}
                   className="shrink-0 text-base text-brand-orange hover:text-brand-orange-light transition"
                 >
                   {expandRoles ? '▼' : '▶'}

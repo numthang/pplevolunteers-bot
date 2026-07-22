@@ -28,6 +28,34 @@ async function findProfileRowId(userId, orgId, guildId) {
   return rows[0]?.id || null
 }
 
+/**
+ * ยศที่โชว์ในโปรไฟล์ — อ่านจาก org_member_roles (แหล่งความจริง) ไม่ใช่ org_members.roles
+ *
+ * org_members.roles เป็นแค่สำเนาชื่อยศ Discord ที่ setRolesCopy เขียนไว้เป็น log
+ * และเป็นของ guild เดียว (findProfileRowId เลือกแถวเดียว) → คนอยู่หลาย guild เห็นไม่ครบ
+ * ที่นี่เป็น org-level เลยรวมทุก guild ให้เองอยู่แล้ว
+ *
+ * ⚠️ แยก 2 กองตามรูปร่างของ role def ห้ามรวมเป็นก้อนเดียว:
+ *    ตำแหน่ง = permission NOT NULL  ·  พื้นที่ = permission NULL + scope_node_id NOT NULL
+ *    คนทำงานส่วนกลางติดใบพื้นที่ไว้เยอะมาก (วัดแล้ว: มีคนถือ 94 ใบ) รวมกองเดียว
+ *    = โปรไฟล์กลายเป็นรายชื่อจังหวัดทั้งประเทศ อ่านไม่ออกว่าตำแหน่งจริงคืออะไร
+ */
+async function getProfileRoles(orgId, userId) {
+  if (!orgId || !userId) return { titles: [], areas: [] }
+  const { rows } = await pool.query(
+    `SELECT DISTINCT d.name, d.permission IS NOT NULL AS is_title
+       FROM org_member_roles mr
+       JOIN org_role_defs d ON d.id = mr.role_def_id AND d.is_active
+      WHERE mr.org_id = $1 AND mr.user_id = $2
+      ORDER BY d.name`,
+    [orgId, userId]
+  )
+  return {
+    titles: rows.filter(r => r.is_title).map(r => r.name),
+    areas:  rows.filter(r => !r.is_title).map(r => r.name),
+  }
+}
+
 export async function GET() {
   const session = await getServerSession(authOptions)
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
@@ -38,7 +66,7 @@ export async function GET() {
   const rowId = await findProfileRowId(session.user.userId, orgId, guildId)
   const { rows } = rowId ? await pool.query(
     `SELECT om.nickname, u.firstname, u.lastname, om.member_id, om.specialty, om.amphoe, om.province, om.region,
-            u.phone, u.line_id, u.google_id, om.roles, om.interests, u.username, om.display_name, om.primary_province,
+            u.phone, u.line_id, u.google_id, om.interests, u.username, om.display_name, om.primary_province,
             om.bank_name, om.account_no, om.account_holder,
             om.house_no, om.moo, om.soi, om.road, om.tambon, om.zipcode
      FROM org_members om JOIN users u ON u.id = om.user_id
@@ -73,8 +101,12 @@ export async function GET() {
   // ให้กดได้ทั้ง 80 ปุ่ม ใครกดก็ติด ไม่ต้องมีคนอนุมัติ → การเปิดครบที่นี่คือทำให้ตรงกัน
   // ไม่ใช่การเปิดสิทธิ์กว้างขึ้น (จังหวัดบอกแค่ "อยู่ไหน" การเห็นเบอร์ยังต้องมียศแต่งตั้ง)
   const provinceOptions = PROVINCE_LIST
+  const { titles, areas } = await getProfileRoles(orgId, session.user.userId)
 
-  return Response.json({ ...row, guild_id: guildId, guild, province_options: provinceOptions })
+  return Response.json({
+    ...row, guild_id: guildId, guild, province_options: provinceOptions,
+    role_titles: titles, role_areas: areas,
+  })
 }
 
 export async function PATCH(req) {
