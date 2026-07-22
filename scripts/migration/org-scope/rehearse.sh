@@ -45,17 +45,32 @@ step() { printf '\n\033[1;33m=== %s\033[0m\n' "$*"; }
 # ถ้าไม่มี -1 psql autocommit ทีละ statement → temp table หายทันทีหลังสร้าง
 # แล้วพังที่ `relation "_idmap" does not exist` (เจอตอนซ้อมจริง 2026-07-23)
 # ส่วน 02–10/12 ห่อ BEGIN/COMMIT เองแล้ว ใส่ -1 ซ้ำจะได้ warning เปล่าๆ
+#
+# ไม่ใช้ array ตรงนี้โดยตั้งใจ — macOS มาพร้อม bash 3.2 ซึ่งกาง "${arr[@]}" ที่ว่าง
+# ใต้ `set -u` แล้ว error `unbound variable` (แก้ใน bash 4.4) → แตกเป็น 2 บรรทัดแทน
 run() {
   step "$1"
-  local t0=$SECONDS single=()
-  grep -q '^BEGIN;' "$2" || single=(-1)
-  psql -d "$DB" -v ON_ERROR_STOP=1 -q "${single[@]}" -f "$2" || { echo "❌ พังที่ $1" >&2; exit 1; }
+  local t0=$SECONDS
+  if grep -q '^BEGIN;' "$2"; then
+    psql -d "$DB" -v ON_ERROR_STOP=1 -q    -f "$2" || { echo "❌ พังที่ $1" >&2; exit 1; }
+  else
+    psql -d "$DB" -v ON_ERROR_STOP=1 -q -1 -f "$2" || { echo "❌ พังที่ $1" >&2; exit 1; }
+  fi
   printf '   ⏱  %ss\n' "$((SECONDS - t0))"
 }
 
 step "เตรียม DB ซ้อม: $DB"
-dropdb --if-exists "$DB"
-createdb "$DB"
+
+# ไล่ connection ค้างก่อน — ถ้าเปิด DBeaver/psql/`npm run dev` ชี้มาที่ DB ซ้อมอยู่
+# dropdb จะล้มด้วย "is being accessed by other users"
+psql -d postgres -q -c "
+  SELECT pg_terminate_backend(pid) FROM pg_stat_activity
+   WHERE datname = '$DB' AND pid <> pg_backend_pid();" >/dev/null 2>&1 || true
+
+# ⚠️ ต้องเช็คว่า drop/create สำเร็จจริง — เดิมปล่อยผ่านแล้ววิ่งต่อ ทำให้ restore ทับ
+#    DB ที่ migrate ไปแล้ว = ผลซ้อม "ผ่าน" แบบมั่วโดยไม่มีใครรู้ (เจอ 2026-07-23)
+dropdb --if-exists "$DB" || { echo "❌ ลบ $DB ไม่ได้ — ปิดโปรแกรมที่ต่ออยู่ก่อน (DBeaver?)" >&2; exit 1; }
+createdb "$DB"                || { echo "❌ สร้าง $DB ไม่ได้" >&2; exit 1; }
 
 # ดูจากเนื้อไฟล์ ไม่ใช่นามสกุล — dump ของ prod ชื่อ .sql แต่เป็น custom format (ขึ้นต้น PGDMP)
 if [[ "$(head -c 5 "$DUMP")" == "PGDMP" ]]; then
