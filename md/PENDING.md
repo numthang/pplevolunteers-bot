@@ -66,7 +66,8 @@ gate = `admin` ใน org (owner ได้อัตโนมัติ) · verify
 - ✅ **ซ้อม migration กับ dump ของ prod — ผ่านแล้ว 2026-07-23** `./scripts/migration/org-scope/rehearse.sh backups/dump-pple_volunteers-202607230242.sql`
   ครบ 13 ขั้น **7–14 วินาที** (= downtime จริง) · users 6615 · org_members 7345 · org_member_roles 6505 · scope_nodes 97 (มีแม่ 90) · ตัวตรวจ 6 บรรทัดได้ 0 ครบ
   **เจอ 5 บั๊กที่ dev ไม่มีทางเจอ** (แก้+push แล้ว): `-1` หายจากคำสั่ง prod · `DEFAULT NULL::varchar` 4 คอลัมน์ใน calling · guild ที่ org_id NULL (NamWa/พันธมิตรชานม) · bash 3.2 บน macOS · dropdb ล้มแล้ววิ่งต่อ
-- ⛔ ค้างก่อน deploy: **user เทส docs+cases ในเบราว์เซอร์** · **ชี้เว็บไป `pple_rehearsal` แล้วกดใช้จริง** (migration ผ่าน ≠ แอปทำงานถูก)
+- ✅ **data-layer หลัง migrate = สะอาด (ตรวจ SQL บน pple_rehearsal 2026-07-23):** person ref ทุกช่อง→users 0 หลุด · FK valid หมด · RBAC 6505 ยศ/2332 คน ไม่มีกำพร้า · guild นอกองค์กร (NamWa/พันธมิตรชานม) 0 รั่วเข้า RBAC · cases thread รู้ guild 0 หลุด · โปรไฟล์แยกตำแหน่ง/พื้นที่ได้ (มีคนถือ 94 พื้นที่จริง) · scope tree 90/97 มีพ่อ 0 พ่อลอย
+- ⛔ **เหลือ UI smoke test เท่านั้น** (ต้องสายตาคน — query ผ่าน≠จอถูก): หน้าไม่ 500 · `/org/settings/roles` กดเพิ่ม/ลบ/ย้าย node · `/profile` 2 บรรทัด+ปุ่มกาง · finance/calling/docs/cases เปิดดูได้ · ชี้ `DB_NAME=pple_rehearsal`
 
 **เอกสารกวาดตรง schema จริงแล้ว (2026-07-21)** — DATABASE.md regenerate จาก DB สด 58 ตาราง · CASE/DOCS/CALLING/CONTACT ตามมา · งานที่งอกจากรอบนี้ + **พรอมต์ audit RBAC พร้อมใช้** อยู่หัวข้อ 🧹 ท้ายไฟล์
 
