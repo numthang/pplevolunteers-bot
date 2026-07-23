@@ -3,44 +3,59 @@
 > เขียน 2026-07-21 · **อัปเดตล่าสุด 2026-07-21 (รอบ docs/cases/audit)** · branch `org-core` นำ `master` อยู่ **71 commit** · prod ยังไม่เคยเห็นโค้ดชุดนี้เลย
 > งานทั้งชุด (identity split + org core + org-scope ครบทั้ง 4 ฟีเจอร์ **finance/calling/docs/cases** + audit + bot repoint) **ต้องลงพร้อมกัน** — ลงครึ่งเดียว = พัง
 > ⚠️ ยังไม่เคยซ้อมกับ DB ที่มี state เหมือน prod จริง (localhost migrate ไปแล้ว) → ต้องรัน §0 ก่อนตัดสินใจ
+> 🔴 **แก้ 2026-07-24: แอปนี้ไม่มี `$DATABASE_URL`** — ต่อ DB ด้วย `DB_HOST/DB_USER/DB_PASS/DB_NAME` ใน `.env` (db/index.js)
+>    ทุกคำสั่ง psql/pg_dump ข้างล่างจึงโหลด `DB_*` แล้ว map เป็น `PG*` ก่อน (เดิมอ้าง `$DATABASE_URL` ที่ว่าง → pg_dump ได้ไฟล์เปล่า/psql ต่อไม่ติด)
+
+---
+
+## 🔌 ต่อ DB — วางบรรทัดนี้นำหน้าทุกคำสั่ง psql/pg_dump บน prod
+
+ทุก `sudo -u www bash -c '...'` เป็น shell ใหม่ (env ไม่ค้าง) → แต่ละบล็อกต้องโหลดเอง:
+```bash
+cd /www/wwwroot/pple-volunteers
+set -a; . <(grep -E '^DB_(HOST|PORT|USER|PASS|NAME)=' .env); set +a
+export PGHOST=$DB_HOST PGPORT=${DB_PORT:-5432} PGUSER=$DB_USER PGPASSWORD=$DB_PASS PGDATABASE=$DB_NAME
+# ↑ หลังบรรทัดนี้ psql / pg_dump / pg_restore เปล่าๆ ต่อ prod DB ได้เลย ไม่ต้องใส่ -h -U -d
+```
 
 ---
 
 ## 0) PROBE — ดูก่อนว่า prod อยู่สถานะไหน (read-only, รันบนเครื่อง prod)
 
+ใช้ **heredoc ซ้อน** — เลี่ยงนรก quote (`''...''` ใน `bash -c '...'` ทำ single quote ของ SQL หาย
+→ `to_regclass(public.dc_members)` ไม่มี quote → error · บั๊กนี้อยู่ในรันบุ๊กเดิมมาตลอด เพิ่งจับได้ 2026-07-24):
 ```bash
-sudo -u www bash -c 'cd /www/wwwroot/pple-volunteers && psql "$DATABASE_URL" -c "
-SELECT
-  to_regclass(''public.dc_members'')       AS dc_members,
-  to_regclass(''public._dc_members'')      AS _dc_members,
-  to_regclass(''public.users'')            AS users,
-  to_regclass(''public.org_members'')      AS org_members,
-  to_regclass(''public.orgs'')             AS orgs,
-  to_regclass(''public.organizations'')    AS organizations_old,
-  to_regclass(''public.org_config'')       AS org_config,
-  to_regclass(''public.org_roles'')        AS org_roles,
-  to_regclass(''public.ngs_member_cache'') AS ngs_cache_old,
-  to_regclass(''public.cache_pple_member'')AS cache_new;
-"'
+sudo -u www bash <<'OUTER'
+cd /www/wwwroot/pple-volunteers
+set -a; . <(grep -E '^DB_(HOST|PORT|USER|PASS|NAME)=' .env); set +a
+export PGHOST=$DB_HOST PGPORT=${DB_PORT:-5432} PGUSER=$DB_USER PGPASSWORD=$DB_PASS PGDATABASE=$DB_NAME
+psql <<'SQL'
+SELECT to_regclass('public.dc_members')        AS dc_members,
+       to_regclass('public.users')             AS users_new,
+       to_regclass('public.org_roles')         AS org_roles,
+       to_regclass('public.cache_pple_member') AS cache_new;
+SELECT count(*) AS dc_members_count FROM dc_members;
+SELECT guild_id, name, org_id FROM dc_guilds ORDER BY org_id NULLS LAST;
+SQL
+OUTER
 ```
 
-**คาดว่า prod จะได้:** `dc_members` มี · `users`/`org_members`/`orgs`/`org_config` = NULL · `ngs_member_cache` มี · `cache_pple_member` = NULL
-→ ถ้าตรงตามนี้ = ต้องรันครบทั้ง 4 ไฟล์ตาม §2 · **ถ้าไม่ตรง หยุดก่อน** แล้วเทียบทีละไฟล์ว่าอันไหนเคยรันไปแล้ว
-
-เช็คเพิ่ม (ต้องมีก่อน migrate):
-```sql
-SELECT guild_id, name, org_id FROM dc_guilds;   -- org_id ต้องไม่ NULL ทุกแถว (ไม่งั้น backfill org ไม่ได้)
-SELECT count(*) FROM dc_members;                -- จำนวนตั้งต้น จดไว้เทียบหลัง migrate
-```
+**คาดว่า prod จะได้:** `dc_members` = ชื่อตาราง (มี) · `users_new`/`org_roles`/`cache_new` = NULL (ว่าง) · `dc_members_count` = ตัวเลข
+→ ตรงตามนี้ = ยังไม่เคย migrate ต้องรันครบ §2 · **ถ้า `users_new` ไม่ NULL = เคยรันบางส่วนแล้ว หยุด** เทียบทีละไฟล์
+→ `dc_guilds`: org 1 มี 3 guild (อาสาฯ/ราชบุรี/People's Party) · **NamWa + พันธมิตรชานม org_id = NULL** (ปกติ — guild นอกองค์กร #12 กันไว้แล้ว) · จด `dc_members_count` ไว้เทียบหลัง migrate
 
 ---
 
 ## 1) BACKUP (บังคับ — identity-refactor เป็น DESTRUCTIVE)
 
 ```bash
-sudo -u www bash -c 'pg_dump "$DATABASE_URL" -Fc -f /www/backup/pple_pre_orgcutover_$(date +%F_%H%M).dump'
+sudo -u www bash -c 'cd /www/wwwroot/pple-volunteers
+  set -a; . <(grep -E "^DB_(HOST|PORT|USER|PASS|NAME)=" .env); set +a
+  export PGHOST=$DB_HOST PGPORT=${DB_PORT:-5432} PGUSER=$DB_USER PGPASSWORD=$DB_PASS PGDATABASE=$DB_NAME
+  pg_dump -Fc -f /www/backup/pple_pre_orgcutover_$(date +%F_%H%M).dump'
 ```
-กู้: `pg_restore -c -d "$DATABASE_URL" <ไฟล์>`
+> ✅ **เช็ก backup ไม่เปล่า:** `ls -lh /www/backup/pple_pre_orgcutover_*.dump` ต้องหลาย MB ไม่ใช่ 0 (ของจริงตอนซ้อม ~5MB)
+กู้: โหลด `PG*` แบบเดียวกันแล้ว `pg_restore -c -d "$DB_NAME" <ไฟล์>`
 
 ---
 
@@ -53,7 +68,10 @@ sudo -u www bash -c 'pg_dump "$DATABASE_URL" -Fc -f /www/backup/pple_pre_orgcuto
 
 ```bash
 # 1. ดึง dump จาก prod (ทำบนเครื่อง prod) แล้วก๊อปมาเครื่อง dev
-sudo -u www bash -c 'pg_dump "$DATABASE_URL" -Fc -f /www/backup/rehearsal_$(date +%F).dump'
+sudo -u www bash -c 'cd /www/wwwroot/pple-volunteers
+  set -a; . <(grep -E "^DB_(HOST|PORT|USER|PASS|NAME)=" .env); set +a
+  export PGHOST=$DB_HOST PGPORT=${DB_PORT:-5432} PGUSER=$DB_USER PGPASSWORD=$DB_PASS PGDATABASE=$DB_NAME
+  pg_dump -Fc -f /www/backup/rehearsal_$(date +%F).dump'
 
 # 2. ซ้อมทั้งชุด — drop/restore DB ซ้อม + รัน 12 ขั้นตามลำดับ + จับเวลา + ตรวจผล
 ./scripts/migration/org-scope/rehearse.sh ~/Downloads/rehearsal_YYYY-MM-DD.dump
@@ -97,9 +115,18 @@ cd web && DB_NAME=pple_rehearsal npm run dev
 
 ⚠️ บล็อก **feature toggle** (อยู่ใน #11) **ต้องรันก่อน deploy code** ไม่งั้นช่วงคาบเกี่ยว org ที่ยังไม่มีแถวจะได้ default = **เปิดทุกฟีเจอร์**
 
-รันทีละไฟล์ ดู verify block ท้ายไฟล์ทุกครั้งก่อนไปตัวถัดไป:
+**รันทั้ง 12 ขั้นด้วยสคริปต์เดียว** (2026-07-24 — โครงเดียวกับ `rehearse.sh` ที่ซ้อมผ่าน แต่ยิงใส่ DB จริง ไม่ drop/create):
 ```bash
-sudo -u www bash -c 'cd /www/wwwroot/pple-volunteers && psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -1 -f scripts/migration/org-scope/01-identity-refactor.sql'
+sudo -u www bash -c 'cd /www/wwwroot/pple-volunteers && ./scripts/migration/org-scope/run-prod.sh'
+```
+- โหลด `DB_*` จาก `.env` เอง · เติม `-1` ให้ #00/#01/#11 อัตโนมัติ · ใช้บล็อก PROD ของ #09
+- `ON_ERROR_STOP` — พังขั้นไหนหยุดทันที (บอกให้ restore backup)
+- safety guard: ปฏิเสธถ้าไม่มี `dc_members` หรือมี `users` แล้ว (กันรันซ้ำ 01 = ข้อมูลหาย) + ถาม `yes` ก่อนเริ่ม
+- จบแล้วตรวจ 6 บรรทัดให้ = 0
+
+อยากรันทีละไฟล์เองก็ได้ (ดู verify block ท้ายไฟล์) — โหลด `PG*` ก่อน (บล็อก 🔌 บนสุด) แล้ว:
+```bash
+psql -v ON_ERROR_STOP=1 -1 -f scripts/migration/org-scope/01-identity-refactor.sql
 ```
 
 > 🔴 **`-1` ของ #01 และ #11 ห้ามลืม** (แก้ 2026-07-23 — คำสั่งในหน้านี้เดิม**ไม่มี** `-1` และพังจริงตอนซ้อม)
