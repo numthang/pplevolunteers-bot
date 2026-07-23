@@ -37,7 +37,7 @@ function calcSpeakerAmount(hours, type) {
   return calcSpeakerCeiling({ hours: Math.floor(hours), minutes: Math.round((hours % 1) * 60), isGovOfficer: type === 'government' })
 }
 
-export default function DocProjectView({ project: initialProject, initialEntries, canManage, currentDiscordId, eventId, eventName, eventDate, eventEndDate, participantCount, actEventId, eventProvince }) {
+export default function DocProjectView({ project: initialProject, initialEntries, canManage, currentUserId, eventId, eventName, eventDate, eventEndDate, participantCount, actEventId, eventProvince }) {
   const t = useTranslations('docs')
   function itemLabel(itemType) {
     return ALL_ITEMS.includes(itemType) ? t(`entryList.itemLabels.${itemType}`) : itemType
@@ -177,7 +177,7 @@ export default function DocProjectView({ project: initialProject, initialEntries
 
   // รายชื่อผู้จ่ายที่ scope ครอบคลุมจังหวัดโครงการ (pool) + payer ระดับโครงการที่เลือก (dropdown บนสุด)
   const [eligiblePayers, setEligiblePayers]   = useState([])
-  const [selectedPayer, setSelectedPayer]     = useState(null)   // discord_id ที่เลือกเป็น payer หลักของโครงการ
+  const [selectedPayer, setSelectedPayer]     = useState(null)   // user_id ที่เลือกเป็น payer หลักของโครงการ
   const [payerSavingTop, setPayerSavingTop]   = useState(false)
 
   useEffect(() => {
@@ -217,45 +217,45 @@ export default function DocProjectView({ project: initialProject, initialEntries
         setEligiblePayers(pool)
         // default = payer ที่โครงการตั้งไว้ (ถ้ามีและยังอยู่ใน pool) → ไม่งั้น pool[0] (ผู้ประสานงานจังหวัด)
         setSelectedPayer(prev => {
-          const projectPayer = project?.payer_discord_id
-          if (projectPayer && pool.some(p => p.discord_id === projectPayer)) return projectPayer
-          return prev && pool.some(p => p.discord_id === prev) ? prev : (pool[0]?.discord_id ?? null)
+          const projectPayer = project?.payer_user_id
+          if (projectPayer && pool.some(p => p.user_id === projectPayer)) return projectPayer
+          return prev && pool.some(p => p.user_id === prev) ? prev : (pool[0]?.user_id ?? null)
         })
       })
       .catch(() => setEligiblePayers([]))
-  }, [canManage, province, project?.payer_discord_id])
+  }, [canManage, province, project?.payer_user_id])
 
   function addMember(member) {
-    if (members.find(m => m.discordId === member.discord_id)) {
+    if (members.find(m => m.userId === member.user_id)) {
       setQuery(''); setShowDropdown(false); return
     }
     setMembers(prev => [...prev, {
-      discordId: member.discord_id,
-      name: member.display_name || `${member.first_name || ''} ${member.last_name || ''}`.trim() || member.discord_id,
+      userId: member.user_id,
+      name: member.display_name || `${member.first_name || ''} ${member.last_name || ''}`.trim() || member.username,
       items: [newItem(itemLabel('food'))],
     }])
     setQuery(''); setShowDropdown(false)
   }
 
-  function removeMember(discordId) {
-    setMembers(prev => prev.filter(m => m.discordId !== discordId))
+  function removeMember(userId) {
+    setMembers(prev => prev.filter(m => m.userId !== userId))
   }
 
-  function addItem(discordId) {
+  function addItem(userId) {
     setMembers(prev => prev.map(m =>
-      m.discordId === discordId ? { ...m, items: [...m.items, newItem(itemLabel('food'))] } : m
+      m.userId === userId ? { ...m, items: [...m.items, newItem(itemLabel('food'))] } : m
     ))
   }
 
-  function removeItem(discordId, itemId) {
+  function removeItem(userId, itemId) {
     setMembers(prev => prev.map(m =>
-      m.discordId === discordId ? { ...m, items: m.items.filter(i => i.id !== itemId) } : m
+      m.userId === userId ? { ...m, items: m.items.filter(i => i.id !== itemId) } : m
     ))
   }
 
-  function updateItem(discordId, itemId, field, value) {
+  function updateItem(userId, itemId, field, value) {
     setMembers(prev => prev.map(m =>
-      m.discordId === discordId
+      m.userId === userId
         ? { ...m, items: m.items.map(i => {
             if (i.id !== itemId) return i
             const next = { ...i, [field]: value }
@@ -285,9 +285,10 @@ export default function DocProjectView({ project: initialProject, initialEntries
       ? t('projectView.blockReason.needPayers', { province: province ?? t('projectView.blockReason.thisProvince') })
       : null
 
-  async function changeProjectPayer(payerDiscordId) {
-    if (!payerDiscordId || payerDiscordId === selectedPayer) return
-    setSelectedPayer(payerDiscordId)
+  async function changeProjectPayer(payerUserIdRaw) {
+    const payerUserId = Number(payerUserIdRaw)
+    if (!payerUserId || payerUserId === selectedPayer) return
+    setSelectedPayer(payerUserId)
     if (!project) return  // ยังไม่สร้างบิล — เก็บ state เฉยๆ
     if (entries.some(e => e.payer_signed_at) &&
         !confirm(t('projectView.payer.confirmResetPayerSignature'))) return
@@ -296,7 +297,7 @@ export default function DocProjectView({ project: initialProject, initialEntries
       const res = await fetch(`/api/docs/projects/${eventId}/set-payer`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ payerDiscordId }),
+        body:    JSON.stringify({ payerUserId }),
       })
       if (!res.ok) throw new Error((await res.json()).error)
       const r2 = await fetch(`/api/docs/entries?projectId=${project.id}`)
@@ -316,7 +317,7 @@ export default function DocProjectView({ project: initialProject, initialEntries
       for (const item of m.items) {
         if (!item.amount) continue
         payload.push({
-          memberDiscordId: m.discordId,
+          memberUserId:    m.userId,
           itemType:        item.itemType,
           description:     item.description || null,
           amount:          parseFloat(item.amount),
@@ -347,7 +348,7 @@ export default function DocProjectView({ project: initialProject, initialEntries
         participantCount: pCount ?? null,
         entries:          payload,
         tokenExpiresAt:   expiresAt.toISOString(),
-        payerDiscordId:   selectedPayer,   // payer ที่เลือกจาก dropdown บนสุด
+        payerUserId:      selectedPayer,   // payer ที่เลือกจาก dropdown บนสุด
       }),
     })
     const resData = await res.json()
@@ -387,20 +388,6 @@ export default function DocProjectView({ project: initialProject, initialEntries
   const signedCount  = entries.filter(e => e.status === 'signed').length
   const payerSignedCount = entries.filter(e => e.payer_signed_at).length
 
-  // ผู้จ่ายที่ระบบ auto-เลือกไว้ — map payer_discord_id ของ entries → ชื่อจาก eligiblePayers หรือ payer_display_name จาก entry
-  const payerById = Object.fromEntries(eligiblePayers.map(p => [p.discord_id, p]))
-  const assignedPayers = [...new Set(entries.map(e => e.payer_discord_id).filter(Boolean))]
-    .map(id => {
-      const info  = payerById[id]
-      const mine  = entries.filter(e => e.payer_discord_id === id)
-      return {
-        discord_id:   id,
-        display_name: info?.display_name ?? mine[0]?.payer_display_name ?? id,
-        position:     info?.position     ?? mine[0]?.payer_position     ?? '',
-        total:        mine.length,
-        signed:       mine.filter(e => e.payer_signed_at).length,
-      }
-    })
 
   const isMobile     = project?.is_mobile ?? false
   const allowedItems = isMobile ? MOBILE_ITEMS : ALL_ITEMS
@@ -532,7 +519,7 @@ export default function DocProjectView({ project: initialProject, initialEntries
                 className="h-10 border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-warm-900 dark:text-disc-text rounded-lg px-3 text-base focus:outline-none focus:ring-1 focus:ring-orange disabled:opacity-50 w-full sm:w-auto"
               >
                 {eligiblePayers.map(p => (
-                  <option key={p.discord_id} value={p.discord_id}>
+                  <option key={p.user_id} value={p.user_id}>
                     {(p.firstname && p.lastname) ? `${p.firstname} ${p.lastname}` : p.display_name}
                   </option>
                 ))}
@@ -711,7 +698,7 @@ export default function DocProjectView({ project: initialProject, initialEntries
               <ul className="absolute z-10 w-full mt-1 bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg shadow-lg max-h-56 overflow-y-auto">
                 {!query.trim() && <li className="px-4 pt-2 pb-1 text-xs text-warm-400 dark:text-disc-muted font-medium">{t('entryList.recent')}</li>}
                 {(query.trim() ? searchResults : recentMembers).map(m => (
-                  <li key={m.discord_id}>
+                  <li key={m.user_id}>
                     <button
                       type="button"
                       onClick={() => addMember(m)}
@@ -732,14 +719,14 @@ export default function DocProjectView({ project: initialProject, initialEntries
           {members.map(m => {
             const memberTotal = m.items.reduce((s, i) => s + (parseFloat(i.amount) || 0), 0)
             return (
-              <div key={m.discordId} className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg overflow-hidden">
+              <div key={m.userId} className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg overflow-hidden">
                 <div className="px-4 py-3 border-b border-warm-200 dark:border-disc-border flex items-center justify-between">
                   <span className="font-semibold text-warm-900 dark:text-disc-text">{m.name}</span>
                   <div className="flex items-center gap-3">
                     {memberTotal > 0 && (
                       <span className="text-sm text-warm-500 dark:text-disc-muted">{t('entryList.amount', { amount: memberTotal.toLocaleString() })}</span>
                     )}
-                    <button type="button" onClick={() => removeMember(m.discordId)} className="p-1 rounded hover:bg-warm-100 dark:hover:bg-disc-hover text-red-500 dark:text-red-400 transition-colors">
+                    <button type="button" onClick={() => removeMember(m.userId)} className="p-1 rounded hover:bg-warm-100 dark:hover:bg-disc-hover text-red-500 dark:text-red-400 transition-colors">
                       <X size={16} />
                     </button>
                   </div>
@@ -747,33 +734,33 @@ export default function DocProjectView({ project: initialProject, initialEntries
                 <div className="p-3 space-y-2">
                   {m.items.map(item => (
                     <div key={item.id} className="flex flex-wrap gap-2 items-center">
-                      <select value={item.itemType} onChange={e => updateItem(m.discordId, item.id, 'itemType', e.target.value)} className={`${inputCls} w-full sm:w-40 shrink-0`}>
+                      <select value={item.itemType} onChange={e => updateItem(m.userId, item.id, 'itemType', e.target.value)} className={`${inputCls} w-full sm:w-40 shrink-0`}>
                         {allowedItems.map(itemType => <option key={itemType} value={itemType}>{itemLabel(itemType)}</option>)}
                       </select>
                       {item.itemType === 'speaker' && (<>
-                        <select value={item.speakerHours} onChange={e => updateItem(m.discordId, item.id, 'speakerHours', Number(e.target.value))} className={`${inputCls} w-24 shrink-0`}>
+                        <select value={item.speakerHours} onChange={e => updateItem(m.userId, item.id, 'speakerHours', Number(e.target.value))} className={`${inputCls} w-24 shrink-0`}>
                           {[0.5,1,1.5,2,2.5,3,3.5,4,5,6].map(h => <option key={h} value={h}>{h} {t('projectView.manual.hoursUnit')}</option>)}
                         </select>
-                        <select value={item.speakerType} onChange={e => updateItem(m.discordId, item.id, 'speakerType', e.target.value)} className={`${inputCls} w-full sm:w-36 shrink-0`}>
+                        <select value={item.speakerType} onChange={e => updateItem(m.userId, item.id, 'speakerType', e.target.value)} className={`${inputCls} w-full sm:w-36 shrink-0`}>
                           <option value="general">{t('projectView.manual.speakerGeneralOption', { rate: SPEAKER_RULES.rates.general.toLocaleString() })}</option>
                           <option value="government">{t('projectView.manual.speakerGovernmentOption', { rate: SPEAKER_RULES.rates.government.toLocaleString() })}</option>
                         </select>
                       </>)}
                       {item.itemType === 'sound' && (
-                        <select value={item.soundHours} onChange={e => updateItem(m.discordId, item.id, 'soundHours', Number(e.target.value))} className={`${inputCls} w-24 shrink-0`}>
+                        <select value={item.soundHours} onChange={e => updateItem(m.userId, item.id, 'soundHours', Number(e.target.value))} className={`${inputCls} w-24 shrink-0`}>
                           {[1,2,3,4,5,6,7,8].map(h => <option key={h} value={h}>{h} {t('projectView.manual.hoursUnit')}</option>)}
                         </select>
                       )}
-                      <input type="text" value={item.description} onChange={e => updateItem(m.discordId, item.id, 'description', e.target.value)} placeholder={t('entryList.notePlaceholder')} className={`${inputCls} flex-1 min-w-28`} />
+                      <input type="text" value={item.description} onChange={e => updateItem(m.userId, item.id, 'description', e.target.value)} placeholder={t('entryList.notePlaceholder')} className={`${inputCls} flex-1 min-w-28`} />
                       <div className="flex gap-2 items-center shrink-0">
-                        <input type="number" min="0" step="0.01" value={item.amount} onChange={e => updateItem(m.discordId, item.id, 'amount', e.target.value)} placeholder={t('projectView.manual.amountPlaceholder')} className={`${inputCls} w-28`} />
-                        <button type="button" onClick={() => removeItem(m.discordId, item.id)} disabled={m.items.length === 1} className="p-1.5 rounded hover:bg-warm-100 dark:hover:bg-disc-hover text-warm-400 dark:text-disc-muted disabled:opacity-30 transition-colors shrink-0">
+                        <input type="number" min="0" step="0.01" value={item.amount} onChange={e => updateItem(m.userId, item.id, 'amount', e.target.value)} placeholder={t('projectView.manual.amountPlaceholder')} className={`${inputCls} w-28`} />
+                        <button type="button" onClick={() => removeItem(m.userId, item.id)} disabled={m.items.length === 1} className="p-1.5 rounded hover:bg-warm-100 dark:hover:bg-disc-hover text-warm-400 dark:text-disc-muted disabled:opacity-30 transition-colors shrink-0">
                           <Trash2 size={15} />
                         </button>
                       </div>
                     </div>
                   ))}
-                  <button type="button" onClick={() => addItem(m.discordId)} disabled={!canCreate} title={blockReason || undefined} className="flex items-center gap-1.5 text-sm text-teal hover:text-teal/80 disabled:opacity-40 disabled:cursor-not-allowed transition mt-1">
+                  <button type="button" onClick={() => addItem(m.userId)} disabled={!canCreate} title={blockReason || undefined} className="flex items-center gap-1.5 text-sm text-teal hover:text-teal/80 disabled:opacity-40 disabled:cursor-not-allowed transition mt-1">
                     <Plus size={14} /> {t('projectView.manual.addItemButton')}
                   </button>
                 </div>
@@ -797,10 +784,9 @@ export default function DocProjectView({ project: initialProject, initialEntries
         initialEntries={entries}
         isMobile={isMobile}
         canManage={canManage}
-        currentDiscordId={currentDiscordId}
+        currentUserId={currentUserId}
         onChange={setEntries}
         eligiblePayers={eligiblePayers}
-        eventId={eventId}
         recentMembers={recentMembers}
       />
 

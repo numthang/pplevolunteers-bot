@@ -2,7 +2,7 @@
  * สำเนาบัตรประชาชน — resize ให้พอดีพิมพ์ A4 + ลายน้ำกันใช้ผิดวัตถุประสงค์
  *
  * - processIdCardImage: รับไฟล์ upload → re-encode JPEG (strip EXIF) + ย่อให้ด้านยาวสุด ≤ MAX_EDGE
- *   เก็บลง dc_members.id_card_image (BYTEA). บัตร ISO ID-1 = 85.6×54mm ที่ 300dpi ≈ 1011×638px
+ *   เก็บลง users.id_card_image (BYTEA). บัตร ISO ID-1 = 85.6×54mm ที่ 300dpi ≈ 1011×638px
  * - buildWatermarkedIdCard: เติมลายน้ำ "ใช้สำหรับพรรคประชาชนเท่านั้น" เอียง ~30° จาง
  *   + "สำเนาถูกต้อง" สีน้ำเงิน → JPEG สำหรับ embed ลง PDF
  */

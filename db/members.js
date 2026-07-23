@@ -1,49 +1,47 @@
 const pool = require('./index');
 const { getRolesByScopePrefix, getPickerRoles } = require('./guildRoles');
+const { orgIdOfGuild, upsertUserByDiscord } = require('./org');
+const { resyncDiscordRolesForUser } = require('./orgMemberRoles');
+
+// identity split (2026-07-16): dc_members ถูกแยกเป็น users (identity) + org_members (membership+profile per-guild)
+// bot write-path ทุกตัวจึงเป็น 2 จังหวะ: upsert users ก่อน (ได้ user_id) → upsert org_members
+// key เดิม (guild_id, discord_id) → (user_id, guild_id) ผ่าน partial unique uq_om_user_guild
 
 async function upsertMember(guildId, data) {
-  const sql = `
-  INSERT INTO dc_members
-    (guild_id, discord_id, username, display_name, avatar, nickname, firstname, lastname, member_id, specialty, position, amphoe, province, region, roles, interests, referred_by)
-  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
-  ON CONFLICT (guild_id, discord_id) DO UPDATE SET
-    username = EXCLUDED.username,
-    display_name = EXCLUDED.display_name,
-    avatar = EXCLUDED.avatar,
-    nickname = EXCLUDED.nickname,
-    firstname = EXCLUDED.firstname,
-    lastname = EXCLUDED.lastname,
-    member_id = EXCLUDED.member_id,
-    specialty = EXCLUDED.specialty,
-    position = EXCLUDED.position,
-    amphoe = EXCLUDED.amphoe,
-    province = EXCLUDED.province,
-    region = EXCLUDED.region,
-    roles = EXCLUDED.roles,
-    interests = EXCLUDED.interests,
-    referred_by = EXCLUDED.referred_by,
-    updated_at = CURRENT_TIMESTAMP
-  `;
-  const values = [
-    guildId,
-    data.discord_id,
-    data.username,
-    data.display_name ?? null,
-    data.avatar ?? null,
-    data.nickname ?? null,
-    data.firstname ?? null,
-    data.lastname ?? null,
-    data.member_id ?? null,
-    data.specialty ?? null,
-    data.position ?? null,
-    data.amphoe ?? null,
-    data.province ?? null,
-    data.region ?? null,
-    data.roles ?? null,
-    data.interests ?? null,
-    data.referred_by ?? null,
-  ];
-  await pool.query(sql, values);
+  const userId = await upsertUserByDiscord(data.discord_id, {
+    username: data.username,
+    firstname: data.firstname,
+    lastname: data.lastname,
+  });
+  const orgId = await orgIdOfGuild(guildId);
+
+  // ⚠️ อัปเดต "เฉพาะคอลัมน์ที่ caller ส่งมาจริง" — ห้าม SET ทุกคอลัมน์รวด
+  // เดิม (dc_members) แต่ละ caller เขียน SQL ระบุคอลัมน์ของตัวเอง จึงไม่เคยแตะ field ของคนอื่น
+  // ตอนรวมเป็นฟังก์ชันเดียวแล้ว SET หมด → sync ที่ส่งแค่ display_name/province/roles
+  // ล้าง member_id/specialty/bank ฯลฯ เป็น NULL (พังจริงมาแล้ว 2026-07-21 ล้าง member_id 5 แถว)
+  const OPTIONAL_COLS = ['display_name', 'avatar', 'nickname', 'member_id', 'specialty',
+                         'position', 'amphoe', 'province', 'region', 'roles', 'interests', 'referred_by'];
+  const cols = OPTIONAL_COLS.filter(c => data[c] !== undefined);
+
+  const insertCols = ['user_id', 'org_id', 'guild_id', ...cols];
+  const values = [userId, orgId, guildId, ...cols.map(c => data[c] ?? null)];
+  const placeholders = insertCols.map((_, i) => `$${i + 1}`).join(', ');
+  const setClause = [
+    'org_id = COALESCE(EXCLUDED.org_id, org_members.org_id)',
+    ...cols.map(c => `${c} = EXCLUDED.${c}`),
+    'roles_assigned_at = NOW()',
+  ].join(',\n    ');
+
+  await pool.query(
+    `INSERT INTO org_members (${insertCols.join(', ')})
+     VALUES (${placeholders})
+     ON CONFLICT (user_id, guild_id) WHERE guild_id IS NOT NULL DO UPDATE SET
+    ${setClause}`,
+    values
+  );
+
+  // roles เปลี่ยน → สิทธิ์จริงอยู่ที่ org_member_roles ต้องซิงค์ตาม (ORG_ACCESS_REDESIGN ขั้น 5)
+  if (cols.includes('roles')) await resyncDiscordRolesForUser(userId);
 }
 
 async function _deriveRoleFields(member) {
@@ -78,32 +76,41 @@ async function upsertMemberFromDiscord(member) {
   await member.fetch();
   const { allProvinces, allRoles, interestRoles } = await _deriveRoleFields(member);
 
+  const userId = await upsertUserByDiscord(member.id, { username: member.user.username });
+  const orgId = await orgIdOfGuild(member.guild.id);
+
   const sql = `
-  INSERT INTO dc_members
-    (guild_id, discord_id, username, display_name, province, roles, interests)
+  INSERT INTO org_members
+    (user_id, org_id, guild_id, display_name, province, roles, interests)
   VALUES ($1, $2, $3, $4, $5, $6, $7)
-  ON CONFLICT (guild_id, discord_id) DO UPDATE SET
-    username = EXCLUDED.username,
+  ON CONFLICT (user_id, guild_id) WHERE guild_id IS NOT NULL DO UPDATE SET
+    org_id = COALESCE(EXCLUDED.org_id, org_members.org_id),
     display_name = EXCLUDED.display_name,
     province = EXCLUDED.province,
     roles = EXCLUDED.roles,
     interests = EXCLUDED.interests,
-    updated_at = CURRENT_TIMESTAMP
+    roles_assigned_at = NOW()
   `;
   await pool.query(sql, [
+    userId,
+    orgId,
     member.guild.id,
-    member.id,
-    member.user.username,
     member.displayName,
     allProvinces,
     allRoles,
     interestRoles,
   ]);
+
+  await resyncDiscordRolesForUser(userId);
 }
 
+// คืน row รูปร่างเดิม (แบบ dc_members) ให้ caller ไม่ต้องแก้: profile จาก org_members + identity จาก users
 async function getMember(guildId, discord_id) {
   const { rows } = await pool.query(
-    'SELECT * FROM dc_members WHERE guild_id = $1 AND discord_id = $2',
+    `SELECT om.*, u.discord_id, u.username, u.firstname, u.lastname, u.phone, u.phone_verified_at
+       FROM org_members om
+       JOIN users u ON u.id = om.user_id
+      WHERE om.guild_id = $1 AND u.discord_id = $2`,
     [guildId, discord_id]
   );
   return rows[0] ?? null;
@@ -114,10 +121,16 @@ async function syncMemberRoles(member) {
   const guildId = member.guild.id;
   const { allProvinces, allRoles, interestRoles } = await _deriveRoleFields(member);
 
-  await pool.query(
-    'UPDATE dc_members SET province = $1, roles = $2, interests = $3, updated_at = CURRENT_TIMESTAMP WHERE guild_id = $4 AND discord_id = $5',
+  const { rows } = await pool.query(
+    `UPDATE org_members om
+        SET province = $1, roles = $2, interests = $3, roles_assigned_at = NOW()
+       FROM users u
+      WHERE u.id = om.user_id AND om.guild_id = $4 AND u.discord_id = $5
+    RETURNING om.user_id`,
     [allProvinces, allRoles || null, interestRoles, guildId, member.id]
   );
+
+  if (rows[0]) await resyncDiscordRolesForUser(rows[0].user_id);
 }
 
 module.exports = { upsertMember, upsertMemberFromDiscord, getMember, syncMemberRoles };

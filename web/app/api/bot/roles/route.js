@@ -5,6 +5,8 @@ import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import { getAdminGuildIds } from '@/db/guilds.js'
 import { getGuildId } from '@/lib/guildContext.js'
 import { clearAccessCache } from '@/lib/resolveAccess.js'
+import { clearScopeTreeCache } from '@/lib/resolveAccessV2.js'
+import { syncRoleDefFromGuildRole, resyncDiscordRolesForGuild } from '@/db/orgMemberRoles.js'
 import { PERMISSIONS } from '@/lib/permissions.js'
 import pool from '@/db/index.js'
 
@@ -117,5 +119,14 @@ export async function PATCH(req) {
   if (!rowCount) return Response.json({ error: 'role not found' }, { status: 404 })
 
   clearAccessCache(guildId) // ให้ permission/scope ใหม่มีผลทันที (ไม่ต้องรอ cache TTL)
+
+  // แบบใหม่แปลความหมายยศ "ตอนเขียน" → แก้การแมปแล้วต้องซิงค์ใหม่ทั้ง guild ทันที
+  // ไม่งั้นสิทธิ์ของคนที่ซิงค์ไว้แล้วจะค้างแบบเงียบ (ORG_ACCESS_REDESIGN ขั้น 5)
+  const orgId = await syncRoleDefFromGuildRole(guildId, role_id)
+  if (orgId) {
+    clearScopeTreeCache(orgId)
+    await resyncDiscordRolesForGuild(guildId)
+  }
+
   return Response.json({ ok: true })
 }

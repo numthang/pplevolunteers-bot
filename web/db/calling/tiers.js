@@ -18,35 +18,35 @@ export async function getTiersByMembers(memberIds) {
   return rows
 }
 
-export async function getMembersByTier(guildId, tier) {
+export async function getMembersByTier(orgId, tier) {
   const { rows } = await pool.query(
     `SELECT m.*, t.tier
-     FROM ngs_member_cache m
+     FROM cache_pple_member m
      LEFT JOIN calling_member_tiers t ON t.member_id = m.source_id::text
-     WHERE m.guild_id = $1 AND COALESCE(t.tier::text, 'D') = $2
+     WHERE m.org_id = $1 AND COALESCE(t.tier::text, 'D') = $2
      ORDER BY m.first_name ASC`,
-    [guildId, tier]
+    [orgId, tier]
   )
   return rows
 }
 
-export async function upsertTier(guildId, memberId, tier, source = 'auto', contactType = 'member') {
+export async function upsertTier(orgId, memberId, tier, source = 'auto', contactType = 'member') {
   await pool.query(
     `INSERT INTO calling_member_tiers
-      (member_id, contact_type, tier, tier_source, guild_id, updated_at)
+      (member_id, contact_type, tier, tier_source, org_id, updated_at)
      VALUES ($1, $2, $3, $4, $5, NOW())
      ON CONFLICT (member_id, contact_type) DO UPDATE SET
       tier = EXCLUDED.tier,
       tier_source = EXCLUDED.tier_source,
       updated_at = NOW()`,
-    [memberId, contactType, tier, source, guildId]
+    [memberId, contactType, tier, source, orgId]
   )
 }
 
-export async function overrideTier(guildId, memberId, tier, overrideBy, reason, contactType = 'member') {
+export async function overrideTier(orgId, memberId, tier, overrideBy, reason, contactType = 'member') {
   await pool.query(
     `INSERT INTO calling_member_tiers
-      (member_id, contact_type, tier, tier_source, override_by, override_reason, guild_id, updated_at)
+      (member_id, contact_type, tier, tier_source, override_by, override_reason, org_id, updated_at)
      VALUES ($1, $2, $3, 'manual', $4, $5, $6, NOW())
      ON CONFLICT (member_id, contact_type) DO UPDATE SET
       tier = EXCLUDED.tier,
@@ -54,7 +54,7 @@ export async function overrideTier(guildId, memberId, tier, overrideBy, reason, 
       override_by = EXCLUDED.override_by,
       override_reason = EXCLUDED.override_reason,
       updated_at = NOW()`,
-    [memberId, contactType, tier, overrideBy, reason || null, guildId]
+    [memberId, contactType, tier, overrideBy, reason || null, orgId]
   )
 }
 
@@ -99,7 +99,7 @@ export async function getTierDistribution() {
   return rows
 }
 
-export async function getTierWithMemberInfo(guildId, memberId) {
+export async function getTierWithMemberInfo(orgId, memberId) {
   const { rows } = await pool.query(
     `SELECT
        m.*,
@@ -108,33 +108,33 @@ export async function getTierWithMemberInfo(guildId, memberId) {
        t.override_by,
        t.override_reason,
        t.updated_at AS tier_updated_at
-     FROM ngs_member_cache m
+     FROM cache_pple_member m
      LEFT JOIN calling_member_tiers t ON t.member_id = m.source_id::text
-     WHERE m.source_id = $1 AND m.guild_id = $2`,
-    [memberId, guildId]
+     WHERE m.source_id = $1 AND m.org_id = $2`,
+    [memberId, orgId]
   )
   return rows[0] || null
 }
 
-export async function updateFlag(guildId, memberId, flag, contactType = 'member') {
+export async function updateFlag(orgId, memberId, flag, contactType = 'member') {
   await pool.query(
-    `INSERT INTO calling_member_tiers (member_id, contact_type, tier, flag, guild_id, updated_at)
+    `INSERT INTO calling_member_tiers (member_id, contact_type, tier, flag, org_id, updated_at)
      VALUES ($1, $2, 'D', $3, $4, NOW())
      ON CONFLICT (member_id, contact_type) DO UPDATE SET
        flag = EXCLUDED.flag,
        updated_at = NOW()`,
-    [memberId, contactType, flag || null, guildId]
+    [memberId, contactType, flag || null, orgId]
   )
 }
 
-export async function clearOverride(guildId, memberId) {
+export async function clearOverride(orgId, memberId) {
   await pool.query(
     `UPDATE calling_member_tiers
      SET tier_source = 'auto',
          override_by = NULL,
          override_reason = NULL,
          updated_at = NOW()
-     WHERE member_id = $1 AND guild_id = $2`,
-    [memberId, guildId]
+     WHERE member_id = $1 AND org_id = $2`,
+    [memberId, orgId]
   )
 }

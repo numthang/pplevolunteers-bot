@@ -2,18 +2,324 @@
 
 > เก็บเฉพาะงานค้าง + design ที่ยังไม่ทำ · ของที่ทำเสร็จ+deploy แล้วย้ายไปอยู่ในโค้ด/`md/*` ตามระบบ
 
+## ✅ ปลดล็อกแล้ว — ORG_ACCESS_REDESIGN ขั้น 5 เสร็จ (2026-07-22)
+
+**สิทธิ์ไม่แช่แข็งแล้ว** — ทางเขียนย้ายมาที่ `org_member_roles` ครบทุกจุด (บอทซิงค์ยศ · `/api/org/appoint` · แก้การแมปยศ)
+ตั้งยศ/ถอดยศมีผลจริงทั้งทางเว็บและทาง Discord · `/admin/roles` ที่ซ้ำซ้อนถูกลบทิ้งแล้ว
+
+> บทเรียนที่แลกมา: ขั้น 4 (สลับทางอ่าน) กับขั้น 5 (ย้ายทางเขียน) **แยกกันไม่ได้** ต้องไปด้วยกัน
+> ปล่อยไว้ครึ่งทาง = สิทธิ์แช่แข็งเงียบๆ ไม่มี error ให้เห็น
+
+รายละเอียด + หลักฐาน verify อยู่ `md/ORG_ACCESS_REDESIGN.md` หัวข้อ "บันทึกผลขั้น 5"
+
+- [x] `web/db/docs/payers.js` — ย้ายมาอ่าน `org_member_roles` แล้ว (2026-07-22)
+- [ ] ขั้น 6 — ลบ `web_roles` + `geography.js` (`roles` เก็บไว้เป็น log) · ทำหลังใช้จริงแล้วนิ่ง
+
+### 🗺️ ตัวจัดผังพื้นที่ org — เสร็จรอบแรก (2026-07-23) รอเทสในเบราว์เซอร์
+
+หน้า `/org/settings/roles` → `components/org/OrgScopeTree.jsx` · API `/api/org/scope-nodes` · db `web/db/orgScopeNodes.js`
+gate = `admin` ใน org (owner ได้อัตโนมัติ) · verify: build ผ่าน · live 7/7 · unit 206/206 · ⬜ **ยังไม่ได้เปิดดูจริงในเบราว์เซอร์**
+
+**ทำไมต้องมี:** `org_scope_nodes.parent_id` เดิมเซ็ตได้ทางเดียวคือผ่าน `parent_role_id` ของยศ Discord
+→ org ที่ไม่มี Discord ได้ node แบน → `reduceRoleDefs` ไล่ชั้นให้ `regional_coordinator` ไม่ได้
+
+**ที่จงใจกันไว้แน่นกว่า DDL** (DDL เป็น `parent_id CASCADE` + `scope_node_id SET NULL`):
+ลบ node ที่มีลูกหรือมียศผูก = บล็อก · ไม่งั้นกดลบ "ภาคกลาง" ครั้งเดียว = ทุกจังหวัดใต้มันหาย
+แล้วใบยศที่ชี้จังหวัดพวกนั้นกลายเป็น scope NULL พร้อมกัน กู้ไม่ได้
+
+**งานต่อที่ยังไม่ทำ:**
+- [ ] **ให้พื้นที่ตอนแต่งตั้ง** — ตอนนี้ admin ให้ได้แต่ "ตำแหน่ง" · พื้นที่มาจากเจ้าตัวกรอกที่อยู่เอง (`setSelfDeclaredScope`) เท่านั้น → `/api/org/appoint` ต้องรับ `scopeNodeId` ด้วย
+- [ ] **`org_role_defs.managed_by`** ก่อนจะเปิดให้ admin แก้ใบยศเอง — ตอนนี้ `syncRoleDefFromGuildRole` ทำ `ON CONFLICT (org_id,name) DO UPDATE SET permission, scope_node_id` → ถ้ามี writer ที่ 2 ชื่อชนเมื่อไหร่ Discord sync ทับทิ้งเงียบๆ
+- [ ] `WANT_SQL` ใน `db/orgMemberRoles.js` ไม่ filter `d.is_active` → ใบยศที่ปิดแล้วยังสะสมแถวใน `org_member_roles` (ไม่อันตราย อ่านกรองอยู่แล้ว แต่รกและงงตอนดูหน้าสมาชิก)
+- [ ] **อย่าเพิ่งลดบทบาท `/bot/roles` เหลือ dropdown** — `dc_guild_roles.scope_node` ยังถูกอ่านตรงๆ ที่ `db/members.js:58` + `scripts/calling/sync-discord-members.js:25` (บอท build ไม่จับ)
+
+### ✅ เคาะแล้ว (2026-07-22) — guild "ทีมภูมิภาค" **ไม่แมป ปล่อยไว้แบบนี้**
+
+ยศในเกิลด์นี้ไม่ให้สิทธิ์ · ใครต้องการสิทธิ์ให้ตั้งผ่าน `/org/settings/members` หรือถือยศในเกิลด์อาสาประชาชน
+→ **ไม่ใช่บั๊ก อย่าไล่ "ซ่อม" ในเซสชันหน้า** · ข้อมูลประกอบการตัดสินใจอยู่ข้างล่าง
+
+<details><summary>ตัวเลขตอนที่เคาะ</summary>
+
+`1115613658408566844` มี **117 ยศ แมป permission ไว้ 0 ยศ** → ใครที่ถือตำแหน่งอยู่ในเกิลด์นี้ที่เดียว **ไม่มีสิทธิ์อะไรเลยตั้งแต่ขั้น 4** (เงียบ ไม่มี error)
+
+| ถือชื่อยศ | ไม่มีสิทธิ์นั้นเลยตอนนี้ |
+|---|---|
+| `ผู้ประสานงานจังหวัด` | **82 คน** |
+| `Admin` | 6 คน ← ตั้งใจไม่ให้ (bug-044) |
+| `moderator` / `treasurer` | 3 / 3 |
+| `regional_coordinator` | 1 |
+
+โผล่ตอนทำ diff test ของ payers: ของเดิมแมตช์ชื่อยศ **ข้าม guild** เลยยังเห็นคนกลุ่มนี้ · โค้ดใหม่แมตช์ต่อ guild ตาม migration → หายไป 25 คนจาก pool ผู้ลงนาม
+
+**ถ้าวันไหนเปลี่ยนใจอยากแมป:** ห้ามแมปทั้งก้อนด้วยชื่อ — จะลาก `Admin` 6 คนกลับมาด้วย
+ต้องแมปทีละยศแล้วยิง re-sync ทั้ง guild (`/api/bot/roles` PATCH ทำให้เองแล้วตั้งแต่ขั้น 5)
+
+</details>
+
 ---
 
-## 🌐 platformfor.org / CivicFlow — identity/tenant migration (design เสร็จ 2026-07-15, ทำ session หน้า)
+## 📍 อ่านตรงนี้ก่อน — สถานะ ณ 2026-07-21
+
+**org migration ปิดจบแล้วทั้งหมด** — identity split + org core + org-scope ครบทั้ง 4 ฟีเจอร์ (finance · calling · docs · cases) + audit_logs · **ไม่เหลือ tenant data ที่ยัง guild-based**
+
+**งานถัดไปคือ cutover ขึ้น prod** → `md/CUTOVER.md` (10 ขั้น · branch `org-core` นำ `master` 71 commit · prod ยังไม่เคยเห็นโค้ดชุดนี้)
+- ✅ **ซ้อม migration กับ dump ของ prod — ผ่านแล้ว 2026-07-23** `./scripts/migration/org-scope/rehearse.sh backups/dump-pple_volunteers-202607230242.sql`
+  ครบ 13 ขั้น **7–14 วินาที** (= downtime จริง) · users 6615 · org_members 7345 · org_member_roles 6505 · scope_nodes 97 (มีแม่ 90) · ตัวตรวจ 6 บรรทัดได้ 0 ครบ
+  **เจอ 5 บั๊กที่ dev ไม่มีทางเจอ** (แก้+push แล้ว): `-1` หายจากคำสั่ง prod · `DEFAULT NULL::varchar` 4 คอลัมน์ใน calling · guild ที่ org_id NULL (NamWa/พันธมิตรชานม) · bash 3.2 บน macOS · dropdb ล้มแล้ววิ่งต่อ
+- ✅ **data-layer หลัง migrate = สะอาด (ตรวจ SQL บน pple_rehearsal 2026-07-23):** person ref ทุกช่อง→users 0 หลุด · FK valid หมด · RBAC 6505 ยศ/2332 คน ไม่มีกำพร้า · guild นอกองค์กร (NamWa/พันธมิตรชานม) 0 รั่วเข้า RBAC · cases thread รู้ guild 0 หลุด · โปรไฟล์แยกตำแหน่ง/พื้นที่ได้ (มีคนถือ 94 พื้นที่จริง) · scope tree 90/97 มีพ่อ 0 พ่อลอย
+- ⛔ **เหลือ UI smoke test เท่านั้น** (ต้องสายตาคน — query ผ่าน≠จอถูก): หน้าไม่ 500 · `/org/settings/roles` กดเพิ่ม/ลบ/ย้าย node · `/profile` 2 บรรทัด+ปุ่มกาง · finance/calling/docs/cases เปิดดูได้ · ชี้ `DB_NAME=pple_rehearsal`
+
+**เอกสารกวาดตรง schema จริงแล้ว (2026-07-21)** — DATABASE.md regenerate จาก DB สด 58 ตาราง · CASE/DOCS/CALLING/CONTACT ตามมา · งานที่งอกจากรอบนี้ + **พรอมต์ audit RBAC พร้อมใช้** อยู่หัวข้อ 🧹 ท้ายไฟล์
+
+> ⚠️ หัวข้อข้างล่างเรียงตาม**ประวัติการทำงาน** ไม่ใช่ลำดับความสำคัญ · เช็ค `[x]/[ ]` ก่อนเชื่อว่ายังไม่ได้ทำ
+
+---
+
+## 🌐 platformfor.org / CivicFlow — identity/tenant migration (✅ เสร็จ 2026-07-21 · เหลือ cutover)
 
 > **แผน + สถาปัตยกรรมเต็มอยู่ที่ `md/civicflow/CIVICFLOW.md`** (อ่านก่อนเริ่ม) · rebrand → email-first multi-tenant, Discord = adapter เสริม · consult wedge กับ CivicFlow (US nonprofit, โจทย์ตรงกัน)
 
-- [ ] **Phase 0** — drop ตาราง `members` (+ ลบ block ใน migration.sql) · `dc_members` เพิ่ม `email`, ทำ `discord_id`+`guild_id` nullable
-- [ ] **Phase 1** — email-native login (Google + magic-link → dc_members by email) · แยก platform login จาก PPLE Discord login · **เริ่มที่ login ก่อน**
-- [ ] **Phase 2** — ownership migration ต่อ feature: เพิ่ม `user_id`(→dc_members.id) + `org_id`(→organizations.id) + backfill · **docs cluster ก่อน** → calling/case/config
-- [ ] **Phase 3 (deferred)** — extract `dc_user_guild` · rename `dc_members→users` (subagent, 112 refs) · เคาะ PPLE 3 guild
+- [x] **Phase 0 (2026-07-15)** — drop `members` (DB + migration block) · `dc_members` เพิ่ม `email` + partial-unique `uq_dc_members_email` · ปลด NOT NULL `discord_id`/`guild_id`/**`username`** (shell/email row ไม่มีทั้ง 3) · คง DEFAULT '' ของ guild_id (email-insert ใส่ NULL เอง)
+- [x] **Phase 1 (2026-07-15)** — email-native login เสร็จ + verify curl ครบ flow (login→org→dashboard + invite→claim) · **namespace = `org`** (ไม่ใช่ `platform` — เลี่ยงผูกชื่อแบรนด์)
+  - NextAuth **instance ที่ 2** แยกจาก PPLE: cookie `org-auth.*`, route `/api/org/auth/[...nextauth]`, options `web/lib/org-auth-options.js` · ⚠️ next-auth v4 `__NEXTAUTH` เป็น global → **ห้ามใช้ SessionProvider ซ้อน 2 basePath** → platform pages เป็น **server component** (getServerSession) + login trigger แบบ manual CSRF (`web/lib/orgSignIn.js`)
+  - magic-link + org invite = **ส่งเมลจริงได้แล้ว (2026-07-17)** ผ่าน `web/lib/sendEmail.js` (nodemailer SMTP generic + dev-stub fallback: ไม่ตั้ง env=log link เฉยๆ พฤติกรรมเดิม) · token ใน `org_login_tokens` (email-keyed, TTL 15 นาที) · reuse nonce→credentials pattern แทน NextAuth EmailProvider (เลี่ยง DB adapter)
+    - **เปิดส่งจริง:** ตั้ง env ใน `web/.env` → `SMTP_HOST/SMTP_PORT/SMTP_USER/SMTP_PASS/EMAIL_FROM` แล้ว restart · Gmail = App Password (เปิด 2FA ก่อน), host smtp.gmail.com port 465 · **prod แนะนำย้าย Resend + โดเมน pplevolunteers.org (SPF/DKIM/DMARC)** — โค้ด SMTP generic ย้ายเจ้าแค่เปลี่ยน env ไม่แตะโค้ด
+  - identity = `resolveOrgUser(email)` = findOrCreate `dc_members` by email + claim invites · org create self-serve (creator=owner) · invite = shell user + `org_members(status='invited')` → claim auto ตอน login email ตรง
+  - ⛔ **Google เลื่อน (bug-org-oauth-basepath):** next-auth v4 ล็อก basePath ทั้ง process จาก `NEXTAUTH_URL` → instance ที่ 2 บน subpath ส่ง `redirect_uri=/api/auth/callback/google` (path PPLE) → OAuth พัง. ปิดปุ่ม+provider แล้ว. **Google กลับมาตอน unify auth เป็น instance เดียว** (endgame ที่ user ยืนยัน — auth-options.js เดิม extend, Discord+Google+email+magic = ปุ่มบนบัญชีเดียว)
+  - ⚠️ **ข้อจำกัดที่ตั้งใจ (ไม่ใช่บั๊ก) — email login = สร้าง dc_members แถวใหม่ ไม่ reconcile กับบัญชี Discord เดิม** (user เคาะยอมรับ 2026-07-15). auto-merge ไม่ได้เพราะ (1) PPLE row ไม่มี email verified — `google_id` เป็น text พิมพ์เอง merge = account takeover (2) PPLE 1 คน = หลายแถว (per guild) ไม่มีแถวเดียวให้ email เกาะ. กัดเฉพาะคนซ้อน 2 โลก (target org = non-Discord ไม่กระทบ). **ทางแก้ทีหลัง:** (ก) link path — login Discord อยู่ → verify+เขียน email ลงแถวเดิม → email login เจอแถวนั้นเอง · (ข) เวอร์ชันสะอาด = Phase 3 identity unify (dc_members 1 คน 1 แถว) แล้ว email+discord_id อยู่แถวเดียว
+- [x] **Phase 2 — ownership migration ครบทั้ง 4 ฟีเจอร์ ✅ เสร็จ 2026-07-21** (finance `be4d8d3` → calling `1be4d48` → docs `c73aaba`/`61afecd`/`c207d8f` → cases `37c70d6`/`091c8cc` · + audit_logs `e2f2965`)
+  - **ไม่เหลือ tenant data ที่ยัง guild-based แล้ว** · ที่คง `guild_id` = Discord/ACT artifact โดยตั้งใจ: `case_config` · `finance_config` · `cache_pple_event` · `dc_*` ทั้งหมด
+  - รายละเอียดต่อฟีเจอร์อยู่ในหัวข้อย่อยข้างล่าง (FINANCE / CALLING / DOCS) · cutover runbook = `md/CUTOVER.md` (10 ขั้น)
+  <details><summary>spec เดิมของ Phase 2 (เก็บอ้างอิง — rule ที่ใช้จริงตลอดทั้ง 4 ฟีเจอร์)</summary>
+  - **order: cases + finance ก่อน** (งาน org ทั่วไป generic ไม่ผูก geography/ตำแหน่งพรรค + ตรง CivicFlow) → **docs ทีหลัง** (ยากสุด: ผูก Discord role + geography ในสิทธิ์เซ็น)
+  - **rule ไม่ใช่ swap ตรงๆ — judgment ทีละตาราง** (บทเรียนเดียวกับ "member 2 concept"):
+    - `user_id` แทน `discord_id` = ค่อนข้าง universal (ตัวตน/เจ้าของ: created_by, assignee, ผู้บันทึก)
+    - `org_id` แทน `guild_id` = **เฉพาะตาราง "data ของ tenant"** (transactions, cases)
+    - **⚠️ config/artifact ของ Discord server เอง (เช่น `finance_config`, channel/guild settings) → คง `guild_id`** ไม่ยุบเป็น org_id (มันคือตั้งค่าของเซิร์ฟเวอร์ ไม่ใช่ของ org) · email org (ไม่มี guild) → เก็บ config ที่ org_id หรือ table แยก เคาะตอน migrate จริง
+  - **discord_id → drop เป็น key** (ไม่ใช่ฆ่า Discord login): feature เลิกเกาะ discord_id → เกาะ user_id · `dc_members.discord_id` เหลือสถานะ **credential** (login Discord ยังใช้ → map เป็น user_id)
+  - ⚠️ **RBAC เป็นคนละส่วน:** เปลี่ยน column เจ้าของ = ง่าย แต่ "ใครมีสิทธิ์ทำ" (financeAccess/caseGate เช็ค Discord role) โลก email ต้องสลับใช้ `org_members.role` ด้วย = ส่วนหนึ่งของงาน
+  - ⚠️ org_members.user_id ชี้ dc_members.id ได้สะอาดเฉพาะ email row (guild_id NULL, 1/คน) — อย่า join PPLE per-guild row เข้า org_members
+  </details>
+- [x] **Phase 3 — identity split ✅ เสร็จ** (`93ef6de` สร้าง users+org_members · `1aeeb37` repoint บอท) — `dc_members` ถูก rename เป็น `_dc_members` (archive) แล้ว · เหลือแค่ **drop ทิ้งหลัง cutover นิ่ง** (ดู ④ ข้างล่าง)
+
+### 🎫 Web-native role grant (RBAC — โลก email + จัดยศผ่านเว็บ)
+
+- [x] **B — grant ยศคน Discord ผ่านเว็บ (2026-07-16, commit 6d534fb)** — หน้า `/admin/roles` (ค้นสมาชิก → chip ยศ toggle) → สั่ง Discord เพิ่ม/ถอดยศจริง (`lib/discordRoles.js` PUT/DELETE) + write-through `dc_members.roles` + `clearAccessCache` + audit · gate `manageRoles`=admin/moderator (permissions.js) · grantable = 9 role (ยกเว้น admin) · **Discord = one source, เว็บเป็นรีโมท** (ตอบโจทย์ "แก้ที่ไหนก็ตรงกันทั้ง Discord+web") · verify curl 403/200 + jest 189 ผ่าน · ⬜ ยังไม่กดเทสจริงในเบราว์เซอร์ (แตะ Discord side-effect)
+- [x] **web_roles — grant ยศคน email (guildless)** ✅ commit 98aef7d — เพิ่ม column `dc_members.web_roles TEXT` (CSV ของ **key** จาก `org_roles` เช่น `treasurer,editor` — ไม่ใช่ชื่อไทย) · resolveAccess union: `roles`(ชื่อ Discord→แปลผ่าน catalog) + `web_roles`(key เป็น permission ตรงๆ **ไม่ต้องพึ่ง guild catalog** → คน email guildless resolve ได้) · grant API/UI ตัด `discord_id IS NOT NULL` ออก → คน email โผล่ + branch (Discord→เขียน Discord, email→web_roles) · ⚠️ email ยังเปิดหน้า `/finance` ไม่ได้จนกว่า unify login door (ยศติด+resolve ได้ แต่ page-access รอ)
+- [ ] **⭐ migrate `dc_members.roles` (Discord CSV ชื่อ) → `web_roles` (key)** (user สั่งจด 2026-07-16) — แปลชื่อ Discord → permission key ผ่าน catalog `dc_guild_roles` เขียนลง web_roles → เป้าหมาย **web_roles = แหล่งรวม key ของทุกคน (Discord+email) ที่เดียว** · ⚠️ **decision คู่กัน:** ถ้าจะให้ web_roles เป็น source เดียวจริง ต้องให้ **Discord sync เขียน web_roles ด้วย** (แปล name→key ตอน sync ใน `db/members.js`) + resolveAccess อ่าน web_roles → ไม่งั้น `roles`(name) กับ `web_roles`(key) diverge ทุก sync (sync ทับ `roles` แต่ไม่ทับ `web_roles`)
+### 🧬 Identity/Membership split (2026-07-16) — ✅ **repoint เสร็จครบแล้ว 2026-07-21** (เหลือแค่ contract)
+
+- [x] **สร้าง `users` (lean identity) + `org_members` (membership+profile)** commit 93ef6de · script `scripts/migration/identity-split-expand.sql` (idempotent, prod-safe รันด้วย `-1`) · dedup dc_members หลายแถว/คน → users 1 แถว/คน (canonical = MIN(id) ต่อ discord_id) · verify localhost: **users 6573 (0 dup) · org_members 7295 (0 orphan) · dc_members ไม่แตะ**
+  - **users** = ตัวตน + contact: `discord_id·email·google_id·username·phone·phone_verified_at·line_id·firstname·lastname` (+ created/updated_at)
+  - **org_members** (id หน้าสุด) = ที่เหลือทั้งหมด: keys(`user_id`→users, `org_id`→orgs, `guild_id`) · membership(role/status/invited_by/joined_at/registered_at) · roles/web_roles/roles_assigned_at · position/member_id/serial · province/region · display_name/avatar/nickname/specialty · interests/referred_by · ย้ายจาก dc_members: amphoe/primary_province/bank_*/id_card_image
+  - **หลักแบ่ง:** contact(phone/line)+ชื่อจริง → users · เอกสาร/bank/ที่อยู่/roles → org_members · "จังหวัดรับผิดชอบจริง" มาจาก **roles(scope_node)** ไม่ใช่ province column (verify แล้ว)
+  - PK org_members = surrogate `id` · unique: Discord `(user_id,guild_id)` · email `(user_id,org_id)` (guild_id NULL)
+  - ⚠️ **ไม่ auto-link Discord↔email** → คนละ users · email พี่ (unnop@) อยู่ orphan `dc_members.id=17505`, แถว discord `id=1` email ว่าง
+- [x] **rename** `organizations`→`orgs` · `dc_user_identities`→`user_identities` (commit 93ef6de + update code refs: guilds/orgMembers/userIdentities/auth-options) · คง `dc_` เฉพาะ Discord-context (dc_members/dc_guilds/dc_guild_roles/dc_user_config/ratings/reports)
+- [x] **Nav org-layout** commit 1899a6b — org switcher (group guild→org, `getUserGuilds` +org_id) + app tabs กางบน topbar (ตัด sub-nav ซ้ำบน home) · Phase A commit 8919047
+- [x] **① repoint โค้ด ✅ เสร็จ** — ทุกฟีเจอร์อ่าน/เขียน `users`+`org_members` แล้ว (finance/calling/docs/cases) · `owner_id` re-backfill ผ่าน canonical + FK→users(id) เรียบร้อยตอน finance-org-scope · resolveAccess อ่าน `org_members.web_roles` แล้ว ([getEffectiveRoles.js:34](web/lib/getEffectiveRoles.js#L34))
+- [x] **② single-auth เทสได้แล้ว ✅** — ไม่ได้ merge 17505 ตามแผนเดิม แต่ใส่ email ให้ `users.id=1` โดยตรง แล้วลบ shell row ทิ้ง → magic-link login ได้ session ที่มี `discordId` ครบเทียบเท่า Discord OAuth (ใช้เป็น harness เทสมาตลอด — ดู [[reference_local_browser_test_login]])
+- [x] **③ bot sync ✅ เสร็จ** commit `1aeeb37` — `db/members.js` upsert 2 จังหวะ (users → org_members) เขียน `org_members.roles` แล้ว
+- [ ] **④ contract (เหลืออันเดียว)** — `DROP TABLE _dc_members` (7,298 แถว) + คอลัมน์ที่ไม่ใช้ · **ทำหลัง cutover ขึ้น prod แล้วนิ่ง** · ⚠️ `_dc_members` เป็น safety net จริง (2026-07-21 เคยใช้กู้ `member_id` ที่ถูกล้าง) — อย่าเพิ่งรีบลบ
+
+#### 💰 FINANCE org-scope — ✅ เสร็จ + verify 2026-07-17 (commit be4d8d3 บน org-core · localhost applied, prod ไม่แตะ)
+**สรุปที่ทำจริง (ต่างจาก spec เดิม 2 จุด — ดีกว่า):**
+- migration `scripts/migration/org-scope/02-finance-org-scope.sql` (applied localhost): **in-place type convert** `guild_id→org_id` + `owner_id/updated_by` varchar discord→INT users.id **คงตำแหน่งคอลัมน์** (ไม่ใช่ rename tail col ที่กองท้าย) · ลบ tail col (org_id/owner_user_id/updated_by_user_id) ที่เติมช่วงออกแบบ · FK→users/orgs · gotcha: USING ห้าม subquery → ใช้ pg_temp helper fn `_g2o`/`_d2u`
+- **getOrgId = `orgIdOfGuild(getGuildId)` ไม่ใช่ active_org cookie** (ค้าน spec เดิม): access-control ยัง guild-keyed → derive org จาก guild เดียวกัน = data+access aligned ไม่มี seam · cookie-based เลื่อนไป org-switcher endgame (ขยับพร้อม RBAC-by-org)
+- getTransactions/summaries **เพิ่ม** org filter ผ่าน account join (เดิมไม่ scope เลย — latent leak) · financeAccess owner_id===userId · getEffectiveIdentity+useEffectiveRoles คืน userId (debug-null) · ลบ admin guild-picker ใน account form
+- verify: 57 tests + build + psql queries คืน data จริง + /finance 307
+- ✅ **bot write-path เสร็จ 2026-07-18** (org-core, code-only ไม่มี schema change — finance schema convert เสร็จใน finance-org-scope.sql แล้ว) — emailPoller/smsWebhook/financeOCR INSERT `org_id` แทน `guild_id` (จาก `account.org_id`) · `updated_by`: email/sms income (automated) = `NULL` / OCR (user upload) = `userIdByDiscord(message.author.id)` (map discord→users.id ไม่ใช่ 'system'/snowflake) · finance_config lookup (notifyDiscord) ใช้ `env.GUILD_ID` (account ไม่มี guild_id แล้ว · finance_config คง guild-keyed = Discord artifact) · financeOCR SELECT accounts + dup-check → `org_id` · +helper `db/org.js` `orgIdOfGuild`/`userIdByDiscord` · verify: node --check ×4 + simulate INSERT org_id=1/updated_by=NULL ผ่าน schema + orgIdOfGuild(env)=1
+  - ⬜ ยังไม่ได้ trigger email/SMS/OCR จริง (verify ผ่าน SQL simulate เท่านั้น — ต้องเทสตอน deploy) · db/finance.js = finance_config (guild-based) ไม่ต้องแตะ
+- ⚠️ **ค้าง cutover ก่อน merge master:** RBAC email-user เปิด /finance ผ่าน org (guildless org ยังเข้าไม่ถึง — ตั้งใจ, เปิดตอน endgame)
+
+<details><summary>spec เดิม (grill 2026-07-17) — เก็บอ้างอิง</summary>
+
+หลักการ: **scope→org_id (ทิ้ง guild_id) · person→user_id (ทิ้ง discord snowflake) · Discord artifact→เก็บ guild-based**
+- **4 ตาราง data → org_id scope, drop guild_id:** `finance_accounts`, `finance_categories`, `finance_transactions`, `finance_incoming_log`
+  - backfill `org_id` จาก `dc_guilds` (guild→org · collapse 3 guild ของ org 1 → org_id=1) — org_id column มีแล้ว แค่ backfill + repoint query
+- **person-ref → ชื่อสั้น + user_id** (user เคาะ ไม่เอาชื่อยาว): **drop** `owner_id`/`updated_by` เก่า (VARCHAR discord) → **rename** `owner_user_id→owner_id`, `updated_by_user_id→updated_by` (INT → users.id)
+  - FK owner_id/updated_by remap `_dc_members` → `users(id)` + re-backfill **canonical** (map _dc_members.id → users.id via discord_id)
+  - code: `financeAccess` ownership `owner_id === discordId` → `owner_id === userId`
+- **เก็บ:** `finance_transactions.discord_msg_id` (artifact ข้อความ bot โพสต์ ใช้แก้/ลบ)
+- **finance_config = OUT OF SCOPE** — เป็น Discord dashboard config (channel/thread/dashboard_msg, bot-only: emailPoller/financeOCR/smsWebhook/db/finance.js) คง guild-based · **future bot-cleanup:** ยุบเข้า `dc_guild_config` (key 'finance_dashboard') — มันคือ guild config ไม่ใช่ finance data
+- **dependency:** ต้องมี `getOrgId(session)` resolver ในแอปหลัก (finance page เปลี่ยน getGuildId→getOrgId) · reuse logic `active_org` cookie จาก `lib/activeOrg.js` (/org shell) · = ชิ้นเล็กสุดของ org-switcher-endgame ที่ finance-first ดึงมา
+- ⚠️ RBAC page-access: email user เปิด /finance ได้เมื่อ resolve permission ผ่าน org_members.web_roles + scope org (ไม่ใช่ guild membership)
+</details>
+
+#### 📄 DOCS → org migration (feature ที่ 3 · grill เคาะ 2026-07-21)
+
+> **สถานะ (2026-07-21):**
+> - ✅ **Phase 1** commit `c73aaba` — schema org-scope (`docs-org-scope.sql`) + guild_id→org_id + person→users.id ใน db/route
+> - ✅ **Phase 2** commit `61afecd` — `id_card_image` org_members→`users` (1 คน 1 ใบ) + `isMemberOfOrg()` ปิดรู PDPA ข้าม org + flow เซ็นใช้ users.id
+> - ✅ **Phase 3** commit `c207d8f` (server) + `7514cf3` (client) — **ตัด bridge discord→users.id ทิ้งทั้งเส้น** · API รับ/คืน `user_id` ตรงๆ (`memberUserId`/`payerUserId`/`userId`) · `/api/docs/members(/recent)` คืน `user_id` (เดิมมีแต่ discord_id → คน email เลือกเป็นผู้รับไม่ได้) · client 5 ไฟล์คีย์ด้วย user_id · `member_discord_id` เหลือเป็น **display-only** สำหรับลิงก์โปรไฟล์ Discord เท่านั้น
+>   - 🐛 latent bug ที่เจอระหว่างทาง: `getPayersForEvent` dedup pool ด้วย `discord_id` → manual payer (ไม่มีฟิลด์นี้) และ payer ที่ล็อกอิน email (NULL) โดนทิ้งเงียบ · **ยังไม่เคยกัดจริง** (localhost มี docs_payers 1 แถว) แต่จะกัดทันทีที่มีตัวที่ 2 → เปลี่ยนเป็น dedup ด้วย user_id แล้ว
+>
+> - ✅ **เก็บกวาด** `scripts/migration/org-scope/07-docs-index-rename.sql` (applied localhost, idempotent): index/constraint 4 ตัวชื่อหลอก `guild`/`discord_id` → `org`/`user_id` · ตัด dead code `changePayer()` + `assignedPayers` + state/prop ที่ค้าง (`payerSaving`, `eventId` ที่ DocEntryList ไม่ได้ใช้แล้ว)
+>
+> **⬜ เหลือของ docs:**
+> - **เทสจริงในเบราว์เซอร์ครบ flow (write path)** — สร้างบิล → กำหนดผู้รับ/ผู้จ่าย → เซ็น → gen PDF · **user ขอเทสเอง (2026-07-21)** · ที่ verify ไปคือ smoke test authed (ทุกหน้า/API 200 + PATCH entry 1 ครั้ง assert DB)
+> - `POST /api/docs/projects/[id]/set-payer` **โหมด per-group (`recipientUserId`) ไม่มี client เรียกแล้ว** — UI ที่เคยใช้หายไปก่อนหน้านี้ (ตัว `changePayer` ที่เพิ่งลบเป็นซากของมัน) · เก็บ API ไว้ก่อน ถ้าไม่เอาจริงค่อยตัดทั้ง route mode + i18n key `entryList.confirmResetPayerSignature` ที่ลอยอยู่
+> - `queryPayersByPermission` อ่านแค่ `org_members.roles` (ชื่อ role Discord) ไม่อ่าน `web_roles` → ดู **"อำนาจลงนาม → org-generic"** ข้างล่าง (grill เคาะแล้ว รอลงมือหลัง user เทส)
+
+##### ✍️ อำนาจลงนาม (payer) → org-generic — grill เคาะ 2026-07-21 · **รอ user เทส docs ก่อนค่อยลงมือ**
+
+> **ทำไมยังไม่ทำทันที:** user ยังไม่ได้เทส docs migration เลย · เอา schema+UI ใหม่ไปทับก่อนเทส = เจอบั๊กแล้วแยกไม่ออกว่ามาจากไหน · และรูนี้**ยังไม่มีใครตกจริง** (ผู้จ่ายจริงในระบบ 3 คน เป็นคน Discord ครบ) · **ไม่มีลูกค้า/org รอใช้ docs (user ยืนยัน 2026-07-21)**
+
+**🔍 กลไกจริงที่ค้นเจอตอน grill (ก่อนหน้านี้เข้าใจผิด):**
+- scope ของผู้ลงนามมาจาก **Discord role 2 ใบคนละหน้าที่ ที่ต้องถือครบคู่**:
+  - **"ยศ"** เช่น `ผู้ประสานงานจังหวัด` → `dc_guild_roles.permission = province_coordinator` · **ไม่มี scope_node**
+  - **"ทีมพื้นที่"** เช่น `ทีมราชบุรี` → `scope_node = province:ราชบุรี` · **ไม่มี permission**
+  - ใน 392 role: 11 ใบเป็นยศ · 97 ใบเป็นทีมพื้นที่
+- [resolveAccess.js:78](web/lib/resolveAccess.js#L78) `web_roles` เติม **permission อย่างเดียว ไม่เติม scopeGrants** → คนที่ตั้งยศผ่านเว็บได้ "ยศ" แต่ไม่ได้ "พื้นที่" → `gatedScopeNodes` คืน `[]` → โดน `if (!scope_nodes.length) return false` คัดออก **ทั้ง role-based และ manual list** (docs_payers ก็คำนวณ scope จาก role catalog เหมือนกัน ไม่ได้มีของตัวเอง)
+- ตัวเลข org 1: มียศลงนาม 181 คน · มีทีมพื้นที่ 2,310 · **ครบคู่เซ็นได้จริง 110** · **เคยเป็นผู้จ่ายจริง 3 คน** (Tee 11 ใบ · Noom 7 · add_teerapon 3)
+
+**✅ เคาะแล้ว:**
+1. **ผู้ลงนามผูกกับ "ลิสต์ที่ org กรอกเอง" (`docs_payers` = แหล่งจริง)** ไม่ใช่ระบบยศ · ยศ Discord ลดชั้นเป็น **ทางลัดเติมลิสต์** (feature เสริมของ PPLE ปิดได้) · เหตุผล: `docs_payers` มี `display_name`/`position`/`signature_base64`/`sort_order` ของตัวเองครบอยู่แล้ว **ขาดแค่ scope** → เติมช่องเดียวจบ · org ใหม่ไม่ต้องมี Discord ไม่ต้องมียศพรรคก็ใช้ได้
+2. **งานที่ต้องทำ (เล็ก):** `+docs_payers.scope_nodes` (รูปแบบเดียวกับ `dc_guild_roles.scope_node` เช่น `province:ราชบุรี` เพื่อใช้ `expandGrants` ตัวเดิมได้) · หน้า `/docs/settings` เพิ่มช่องเลือกจังหวัด · `getPayers` ใช้ scope ของแถวตัวเองแทนการคำนวณจาก role catalog
+
+**❓ ยังไม่เคาะ (ไว้ตอนลงมือ จะรู้จาก usage จริงแล้ว):** ทางลัดจากยศ Discord เป็นแบบไหน — (ก) ปุ่ม "ดึงจากยศ" import ครั้งเดียวแล้วลิสต์เป็นเจ้าของ (แนะนำ — แหล่งเดียวจริง) · (ข) auto คำนวณสดทุกครั้ง (= 2 แหล่ง ขัดข้อ 1) · (ค) ไม่มีทางลัด กรอกมือล้วน (ใช้จริงแค่ 3 คน อาจพอ แต่จังหวัดใหม่จะ dropdown ว่าง)
+
+**🧱 กำแพงตัวจริงที่ใหญ่กว่า payer — "org สร้าง event เองไม่ได้" (blocker ของ docs generic ทั้งก้อน):**
+- `docs_projects.cache_pple_event_id` **NOT NULL + FK** → ทุกโครงการต้องเกาะ event ที่มีอยู่ก่อน
+- `cache_pple_event` = cache sync จากระบบ **ACT ของพรรค** · `guild_id` NOT NULL · เขียนได้จาก `scripts/data/sync-act-events.js` เท่านั้น — **ไม่มี UI สร้างงานบนเว็บเลย**
+- [projects.js:115](web/db/docs/projects.js#L115) ยัง `WHERE id = $1 AND guild_id = $2` → org ไม่มี guild query ได้ 0 แถว
+- → org ใหม่เปิด /docs = dropdown "เลือกงาน" **ว่างตลอดกาล** ไม่ว่า payer จะ generic แค่ไหน · `province` ที่ใช้กรอง payer ก็มาจาก event ตัวนี้
+- **ทำตอนมีลูกค้าจริง** — ก้อนใหญ่ (event CRUD + ตัด dependency ACT) และ **แตะ calling ด้วย** (ใช้ `cache_pple_event` เป็น campaign)
+
+**+ PPLE hardcode อีกจุด:** [generatePdf.js:136](web/lib/generatePdf.js#L136) ฝังชื่อโครงการพรรคไว้ในโค้ด (`'การจัดประชุมสมาชิกสัมพันธ์และผู้สนับสนุนพรรคทั่วประเทศ ปี 2569'`) → ต้องย้ายเป็น config ต่อ org ตอนทำ generic
+
+<details><summary>สเปกเดิมจาก grill (2026-07-21) — เก็บอ้างอิง</summary>
+> **ทำก่อน cutover** (เคาะ 2026-07-21 — user ค้านแผนเดิมที่จะ cutover ก่อนแล้วทำ docs ทีหลัง และมีเหตุผลแข็งกว่า): ขึ้น prod ครึ่งเดียว = จ่ายต้นทุน cutover 2 รอบ + prod มี 2 โมเดลพร้อมกัน (finance/calling=org, docs=guild) + **migration ก้อน docs จะไปรันกับ data ที่คนใช้จริง** แทนที่จะรันตอนยังไม่มีใครพึ่ง
+>
+> **ขนาดจริง (เล็กกว่า calling มาก):** projects 9 · payers 1 · attachments 3 · entries 29 · signatures 7 · guild เดียวทั้งหมด · **web อย่างเดียว — ไม่มีโค้ดฝั่งบอทเลย** (5 ไฟล์ `web/db/docs/`, 30 route, 5 page)
+>
+> **สเปกที่เคาะ:**
+> 1. **scope → org_id** 3 ตารางที่มี `guild_id`: `docs_projects` · `docs_payers` · `docs_project_attachments` · ⚠️ `docs_activity_entries` + `docs_signatures` **ไม่มี guild_id ของตัวเอง** → scope ผ่าน `project_id` (ต้องไล่ทุก query ว่า join ถึง project จริง ไม่งั้นหลุด scope)
+> 2. **person → users.id** 6 คอลัมน์: `projects.created_by` · `projects.payer_discord_id` · `entries.member_discord_id` · `entries.payer_discord_id` · `payers.discord_id` · `signatures.signed_by_discord_id`
+>    - **คนนอก (ไม่มีบัญชี Discord) = NULL เหมือนเดิม ไม่สร้าง shell user** — ตอนนี้ entries 8/29 แถวเป็นแบบนี้อยู่แล้ว (ผู้รับเงินที่เซ็นผ่านลิงก์) ชื่อ/ข้อมูลกรอกในเอกสารแทน = พฤติกรรมไม่เปลี่ยน
+>    - `projects.created_by` มี **1 แถว map ไม่ได้** (คนหายจากระบบ) → NULL + **log ค่า discord_id เดิมไว้ใน migration** ให้เห็นก่อนทิ้ง
+>    - ที่เหลือ map 100% (payer 7/7 · entries 21/21 · payers 1/1 · signatures 7/7)
+> 3. **rename column** `docs_projects.act_event_cache_id` → `cache_pple_event_id` (จงใจเว้นไว้ตอน calling rename เพราะไม่อยากลาม — ตอนนี้กำลังแตะ docs อยู่แล้ว = จังหวะที่ถูก) · ตัว `cache_pple_event` **ยังคง guild-based** (ACT/Discord artifact)
+> 4. **`id_card_image`: org_members → `users`** (1 คน 1 ใบ) — ที่มันอยู่ org_members เป็นมรดกจาก identity split ที่ลากตามสูตร ไม่ได้ตัดสินใจใหม่ · ของเดิมสมัย docs เคาะไว้ที่ `dc_members` per-guild โดยรู้ว่าซ้ำ · **PDPA ข้าม tenant** = เหตุผลเดียวที่ต้องระวัง → เก็บใบเดียวที่ users แต่ **ประตูเข้าถึงผูก org**: ผู้ขอต้องอยู่ org เดียวกับเจ้าของ + มีสิทธิ์ docs ใน org นั้น (`/api/docs/id-card/[discordId]` ตอนนี้เช็ค guild จาก session → เปลี่ยนเป็น org)
+> 5. client + route ใช้ `getOrgId` / `getEffectiveOrgIdentity` / `scope:'org'` เหมือน finance/calling
+>
+> **⚠️ scrutinize เจอเพิ่ม 2026-07-21 — ต้องทำ ไม่งั้นเปิดรูระหว่างทาง:**
+> - 🔴 **การเช็ค "อยู่ org เดียวกัน" ไม่เคยมีในระบบ** — [id-card/[discordId]/route.js:28-32](web/app/api/docs/id-card/[discordId]/route.js#L28-L32) เช็คแค่ `isOwner || canManageDocs` · ทุกวันนี้รอดเพราะ storage เป็น per-guild (คนดูแล guild A เห็นได้แค่สำเนาของ guild A) · **พอรวมเป็นใบเดียวที่ users ตัวกันนี้หายทันที** → ต้องเขียนเช็คสมาชิกภาพใหม่ (เจ้าของบัตรต้องมีแถว `org_members` ใน org ของผู้ขอ) + เปลี่ยนเป็น `getEffectiveOrgIdentity` · **เช็คต้องขึ้นก่อนย้าย storage**
+> - 🔴 **URL บัตรประกอบจาก discord_id ฝั่ง client** — [sign/[token]/page.js:90](web/app/docs/sign/[token]/page.js#L90) `/api/docs/id-card/${d.data.member_discord_id}` → พอเป็น `member_user_id` จะกลายเป็น `undefined` **รูปไม่ขึ้นเงียบๆ** = bug-032 ซ้ำ → เปลี่ยน route param + ไล่ caller พร้อมกัน (+ เช็ค join ใน `generatePdf.js:275`)
+> - 🟠 **`link-ngs` ผูก `member_id` แบบ per-guild** ([link-ngs/route.js:44-50](web/app/api/docs/sign/link-ngs/route.js#L44-L50)) แต่ verifyHandler (แก้ 2026-07-21) ผูกทั้ง org → สองมาตรฐาน · คอมเมนต์ยังอ้าง `unique (guild_id, member_id)` ที่ถูกแทนด้วย trigger ระดับ org แล้ว (bug-036) → ทำให้ตรงกัน
+> - 🟠 **อัปโหลดบัตรบังคับ `session.user.discordId`** ([id-card/route.js:17](web/app/api/docs/id-card/route.js#L17)) → คน email อัปไม่ได้ · และ 404 "ไม่พบข้อมูลสมาชิกใน guild นี้" จะหายไปเองหลังย้ายไป users = พฤติกรรมเปลี่ยน ต้องตั้งใจ ไม่ใช่หลุดมา
+> - ✅ ตรวจแล้วปลอดภัย: entries/signatures scope ผ่าน `docs_projects` ครบทุก read · `getEntryByToken` **ไม่มี scope โดยตั้งใจ** (token = ตัวสิทธิ์) ห้ามเผลอยัด org filter · docs ไม่มี `process.env.GUILD_ID` ฝังตรงไหนเลย (ต่างจาก calling) · `getGuildId` 10 route ที่ต้องเปลี่ยนเป็น `getOrgId`
+>
+> **บทเรียนที่ต้องใช้ (จาก calling — bug-029…032):** หลังแปลงชนิดคอลัมน์ต้อง grep หา `COALESCE(<col>, '')` · param text เทียบ column INT (`= $n` → ต้อง `::int`) · **ฟังก์ชันที่ signature ไม่มี orgId จะรอด sweep ทั้งดุ้น** (grep `process.env.GUILD_ID` ปิดท้าย) · client map ที่ยัง key ด้วย discord_id
+>
+> **+ บทเรียนใหม่จาก Phase 3 (2026-07-21):** เปลี่ยน key จาก **string (snowflake) → number (users.id)** แล้วโค้ด client ที่เรียกเมธอดของ string จะพังทันที — เจอจริง `key.startsWith('__')` = TypeError หน้าพังทั้งหน้า · ต้อง grep หา `.startsWith(` / `.includes(` / `.split(` บนตัวแปรที่เคยเป็น id · และ `<select>` คืน **string เสมอ** → ต้อง `Number()` ก่อนเทียบกับ user_id ไม่งั้น `!==` เป็นจริงตลอด
+
+</details>
+
+#### 📞 CALLING → org migration (feature ที่ 2 · grill เคาะ 2026-07-19 · WIP)
+> เคาะ: **calling ก่อน cases** (cases ROI ต่ำ Discord-bound — grill แยกทีหลัง) · depth = **full parity กับ finance**
+>
+> **Reframe สำคัญ:** calling ไม่ใช่ twin finance ตรงๆ. callee 2 ฝั่ง — `member`(99.9% ของ log) = roster จากระบบ **NGS** · `contact`(590) = CRM ของ org. campaigns = event จากระบบ **ACT**. หลักการปรับ (2026-07-19): **NGS data = ของ org (org-scope)** · **ACT/Discord event = guild artifact (คง guild)**. guildless org = contacts-only calling (roster/campaign เป็น PPLE-guild)
+>
+> **✅ Phase 1 — RENAME เสร็จ+commit 715cffa (2026-07-19):** `ngs_member_cache→cache_pple_member` · `act_event_cache→cache_pple_event` (สื่อว่าเป็น cache external-sync ต่อ tenant) · `scripts/migration/org-scope/03-cache-rename.sql` (idempotent, prod cutover ต้องรันตอน merge) · 31 js + 5 md · ⚠️ column `docs_projects.act_event_cache_id` **คงชื่อเดิม** (rename column = docs scope creep) · cross-feature: rename แตะ docs ด้วย (docs ผูก 2 ตารางนี้หนัก) แต่ additive ไม่พัง · verify build exit0 139 pages + DB JOIN ผ่าน
+>
+> **✅ Phase 2 — org-scope + full parity เสร็จ+verify 2026-07-19 (commit 1be4d48 + 137f99f):**
+> - `scripts/migration/org-scope/04-calling-org-scope.sql` (dry-run BEGIN/ROLLBACK ผ่านก่อน → COMMIT, applied localhost) · **prod cutover ต้องรันตอน merge** คู่กับ cache-rename.sql
+> - guild_id→org_id in-place 6 ตาราง (calling 5 + **cache_pple_member roster**) · person→users.id 7 คอลัมน์ · `calling_starred.user_discord_id`→`user_id` · 13 FK ใหม่ · person map 100% (14/14, 20/20, 2/2, 1/1) ไม่มี NULL surprise · `cache_pple_event` (campaign=ACT) คง guild-based · roster รับแค่ org_id (created_by/approved_by = user ระบบ NGS ไม่แตะ)
+> - code: db/calling 7 ไฟล์ + 17 route + 4 page + 5 component → `getOrgId`/`getEffectiveOrgIdentity`/`scope:'org'`
+> - **ปิด global-aggregate hole ครบ:** stats 5 query + `getTotalCallStats` + `getTodayCallCount` + `getCONTACTSCount` + **`getCampaigns`** (เดิมไม่ scope เลยทั้งหมด)
+> - `org_members` join → **LATERAL LIMIT 1** 4 จุด (กัน row multiplication จาก per-guild rows — บทเรียน dedup)
+> - cutover 3 import script (xlsx/member-csv/seed-contacts) เขียน org_id · docs `link-ngs` 1 query
+> - **verify live:** magic MRSJAN org8 guildless + เปิด calling ชั่วคราว → `/calling` `/calling/contacts` `/calling/campaigns` = **200** · campaigns/contacts/stats = ว่างทั้งหมด **ไม่ leak PPLE** (68 event / 590 contact / 5203 log) · data ครบไม่หาย · revert config org8 กลับ `["finance"]` แล้ว
+> - 🐛 bug ที่ transform สร้างเอง แล้วเก็บใน 137f99f: `/api/calling/users` ส่ง orgId เข้า `om.guild_id` · picker chain ยังใช้ discord_id ทั้งที่ `assigned_to`=users.id · `createContact` key mismatch · ownership พังเงียบ 2 จุด (ContactModal prop / RecordCallModal `called_by`)
+>
+> **✅ Phase 3 — เทสจริงในเบราว์เซอร์ (write path) เสร็จ 2026-07-20 (Playwright กดจริง + assert DB):**
+> - **วิธีเข้า org 1 แบบมี discordId:** ใส่ email จริงให้ `users.id=1` (เดิมว่าง) → magic-link login → auth เติม `discordId` จาก users ให้เอง = session เทียบเท่า Discord OAuth ทุกประการ (`{userId:1, discordId:1098…, isSuperAdmin:true}`) · ลบ users 17518 (shell row email เดียวกัน invited ค้างจาก org 8) ทิ้งก่อน · **harness ต้อง mint token ลง `org_login_tokens` ตรงๆ ห้ามยิง `/api/org/auth/magic`** (SMTP จริง → สแปมเมลตัวเอง, bug-033)
+> - **ผ่านหมด:** star toggle (org_id=1/user_id=1/member, กดซ้ำลบคืน) · record call ฝั่ง member (`called_by`=1) · record call ฝั่ง contact (`contact_type=contact`) · assign ผ่าน SplitModal ทั้ง member และ contact (POST ส่ง `assigned_to`=users.id, DB `1|1|1|member` / `…|contact`) · create/edit/delete contact (`created_by`/`updated_by`=1) · sweep 22 route/API = 200 ทั้งหมด · เทสเสร็จลบ test row คืนสภาพ (5203 logs / 8 stars เท่าเดิม)
+> - **🐛 เจอบั๊กจริง 4 ตัวที่ curl ไม่เจอ — แก้แล้ว (bug-029…032):** `COALESCE(assigned_to,'')` บน INT → **500 ทั้งหน้า assignments** · `assigned_to = $n` (text param) → `operator does not exist: integer = text` · **contacts.js 3 ฟังก์ชัน campaign-scope ตกหล่นจาก migration** ยังใช้ `process.env.GUILD_ID` เป็น org_id → 500 · client `usersMap` key ด้วย discord_id แต่ `assigned_to` เป็น users.id → โชว์เลข id + ลิงก์ Discord พัง
+>
+> - **✅ ownership (non-admin) เทสแล้ว 2026-07-20:** สร้าง test user `zztest.owner@localhost` (users 17559, org_members org 1, `web_roles=province_coordinator` — **ยังอยู่ใน DB localhost** ใช้ซ้ำได้/ลบทิ้งได้) → บันทึกการโทรได้ `called_by`=17559 · `PATCH /api/calling/logs` แก้ log ตัวเอง = 200 DB เปลี่ยนจริง · แก้ log ของ user 1 = **403** ไม่ถูกแตะ · `DELETE` ไม่มี permission `deleteLog` = **403** → ownership เทียบ users.id ถูกจริง ไม่ใช่ผ่านทางลัด admin
+>
+> **⬜ เหลือของ calling:**
+> - **✅ แก้แล้ว 2026-07-21 (bug-034): email member ของ org ที่มี guild เข้า feature ไม่ได้เลย (404 ทุกหน้า)** — `featureGate.enabledFeaturesFor` ตกสาขา `getEnabledFeatures(getGuildId)` แต่ email user ได้ `getGuildId=null` (seam 2026-07-18) → features ว่าง → 404 ทั้งที่ API ตัวเดียวกันปล่อยผ่าน (incoherent) · **fix:** org มี guild + ไม่มี guildId → ใช้ config ของ **guild หลักของ org** (prefer `env.GUILD_ID` เหมือน dual-write ของ switcher) · verify: email member org 1 = 200 ทุกหน้า เห็น data org 1 · **ไม่ regress** — MRSJAN org 8 (guildless) ยัง 404 calling/docs + 200 finance · Discord user 200 เหมือนเดิม · หมายเหตุ: docs ยัง guild-scoped → email user เปิดได้แต่ query ด้วย guildId=null = ว่าง (ไม่ leak) ค่อยจัดตอน docs→org
+> - `manageContacts` มี role set เท่ากับ `viewCalling` เป๊ะ → ใครเห็นหน้า contacts ก็ manage ได้ทั้งหมด → **ownership branch ของ contact (`created_by===userId`) เป็น dead code ในทางปฏิบัติ** · ถ้าตั้งใจให้มี "คนสร้าง contact ได้แต่แก้ได้เฉพาะของตัวเอง" ต้องแยก permission ก่อน
+> - ~~`calling` อยู่ทั้ง `ORG_FEATURES` และ enabled_features ต่อ guild~~ **✅ รวมทางเดียวแล้ว 2026-07-22** — สวิตช์อยู่ที่ org ที่เดียว
+> - `calling_assignments.org_id` อยู่ **ท้ายตาราง** (ตารางอื่น org_id อยู่หน้า) — ผิด convention เล็กน้อย ไว้จัดตอน cutover
+> - ~~`calling` อยู่ทั้ง `ORG_FEATURES` และ enabled_features ต่อ guild~~ **✅ รวมทางเดียวแล้ว 2026-07-22** — สวิตช์อยู่ที่ org ที่เดียว
+>
+> **(อ้างอิง) scrutinize findings ที่ทำครบแล้ว:**
+> - `+org_id` 6 ตาราง: calling_logs/assignments/member_tiers/contacts/starred + **cache_pple_member (roster)** · backfill=orgIdOfGuild · in-place type-convert แบบ finance (pg_temp `_g2o`/`_d2u`) → ไฟล์ `calling-org-scope.sql` (mirror finance-org-scope.sql)
+> - person→users.id: `called_by`/`assigned_to`/`assigned_by`/`override_by`/`created_by`/`updated_by`/`user_discord_id` · ⚠️ **roster รับแค่ org_id — ห้ามแตะ created_by/approved_by ของมัน** (นั่น user ของ NGS ภายนอก)
+> - `cache_pple_event` (campaigns) **คง guild-based** (ACT/Discord artifact)
+> - **scrutinize findings ที่ต้องทำ (ไม่งั้น org-native ไม่จริง):**
+>   1. person conversion มี consumer เดียว = [logs/route.js:96](web/app/api/calling/logs/route.js#L96) `called_by !== session.user.discordId` → **flip เป็น userId** (ไม่งั้น ownership พังเงียบ)
+>   2. rewire 3 จุดให้ guildless เข้า calling ได้: (a) เพิ่ม `calling` ใน `ORG_FEATURES`/getOrgEnabledFeatures (b) ปลด/แก้ bug-025 guildless guard ที่ /calling (c) [stats/route.js:12](web/app/api/calling/stats/route.js#L12) auth `!discordId`→ userId-based
+>   3. **contact_type landmine:** ทุก query ที่เติม `WHERE org_id` ต้อง **AND** contact_type ไม่ใช่แทนที่ (source_id≥55 overlap contact.id)
+> - scope ทุก query + **ปิด stats global-aggregate hole** · client scope=org (3 หน้าเหมือน finance) · cutover 2 import script เขียน org_id
+> - honest scope: data 100% org 1 → payoff = ปิด stats hole + วางราง · justify = ทำตอน calling เล็กถูกกว่าทีหลัง
+
+#### 🚪 ORG-SWITCHER SPINE — งานถัดไป (grill design เคาะ 2026-07-17 · = "ประตูเลือกองค์กร" + สิทธิ์แบบ org-keyed · เป็นหัวใจ ทำก่อน feature อื่น)
+> เหตุ: ตอนนี้ finance เทสจริงไม่ได้เพราะเข้าได้ทางเดียว (Discord→org 1). ต้องมี spine นี้ก่อน guildless org (MRSJAN) ถึงเข้า finance ได้ + เป็น harness ให้ calling/docs/cases ต่อไป
+
+**Design ที่เคาะแล้ว (org-access + appointment):**
+1. **สิทธิ์ระดับ org = union `roles` + `web_roles` ของทุกแถว `org_members` ใน org นั้น** (คน Discord→`roles`, คนเว็บ→`web_roles`, org หลาย guild→รวมทุกแถว) · ภาษากลาง = `permission` (`org_roles` key); `dc_guild_roles.permission` แปลง role_name→permission, web_roles เก็บ permission key ตรงๆ
+2. **ห้ามก๊อป `roles`→`web_roles` เป็น data** (ดริฟต์+clobber ตอน Discord sync) — สัมพันธ์กันผ่าน `permission` ไม่ใช่สำเนาซ้ำ
+3. **แต่งตั้งยศ = propagate ตอน action ไม่ใช่ mirror column:** คน Discord→หน้าเว็บสั่ง **Discord role จริง** (เลือกชื่อ role ตรงๆ) →บอท sync ลง `roles` (มีบางส่วนแล้ว) · คน email→เขียน `web_roles` (permission key) · 2 ทาง (เว็บ↔Discord) sync ผ่าน action จริง = ไม่ดริฟต์ · ข้อจำกัด: คนไม่อยู่ Discord→อยู่แค่ web_roles (ถูกต้อง) · บอทต้องรัน+role สูงกว่า
+4. **`position` (ตำแหน่งแสดง) ≠ `permission` (สิทธิ์):** รองเลขาธิการ vs ผู้ประสานงานภาค = position ต่าง แต่ permission เท่ากัน → **ไม่ต้องเพิ่ม permission ใหม่** (แก้ปัญหา 1-permission-2-role: คนแต่งตั้งชี้ role เจาะจงเอง ระบบไม่เดา)
+5. **อำนาจแต่งตั้ง = governance ต่อ org (config ได้ ไม่ hardcode)** · ⚠️ ตอนนี้ `moderator` แต่งตั้งได้ทุกคน = escalation hole (mod ตั้งตัวเองเป็น admin ได้) ต้องปิด · **floor บังคับเสมอ: แต่งตั้งไม่เกินอำนาจตัวเอง**
+
+**ต้อง grill/สร้างต่อ:** getEffectiveIdentity เปลี่ยนเป็น org-keyed (union ข้าม guild ใน org) · guildless org resolve จาก web_roles ตรงๆ · UI switcher อ่าน listUserOrgs · หน้าแต่งตั้ง (gate + floor + org-config)
+> ⚠️ **บทเรียน per-guild dedup (2026-07-17):** `org_members` เป็น per-guild → org หลาย guild (org 1 = 3) ให้ user คนเดียวมีหลายแถว · query ระดับ org ที่ทำ list ต้อง dedupe (GROUP BY / DISTINCT ON user_id) — เจอแล้วแก้: listUserOrgs, listOrgMembers, activeOwnerCount · **ตอนทำ ② หน้าแต่งตั้ง: `/admin/roles` (admin/roles/route.js) ที่ list สมาชิก+roles ต้อง dedup per-guild เหมือนกัน**
+
+**✅ SPINE CORE เสร็จ+verify 2026-07-17 (org-core, ยังไม่ commit) — ①③④ + Finding A:**
+- **① org-first switcher:** `getOrgId` = `resolveActiveOrg(userId).activeOrg.id` (org-first, cookie `active_org`) แทน `orgIdOfGuild(getGuildId)` → guildless org (MRSJAN org 8) เข้า finance ได้ · Nav อ่าน `orgs` (listUserOrgs) จริงแทน grouping guilds (ของเดิม fake — เห็นเฉพาะ guild) · layout.js feed orgs/activeOrgId ทุก session ที่มี userId (ไม่ใช่แค่ discordId) · switch route `/api/org/orgs/switch` **dual-write** `selected_guild`=guild หลักของ org (prefer env.GUILD_ID) → guild-based features (calling/docs/cases/bot) align กับ active_org เสมอ · `getGuildId` ไม่แตะ (blast radius 0)
+- **Finding B (guildless gating):** org ไม่มี guild → `enabledFeatures=['finance']` (ORG_NATIVE_FEATURES), Nav ซ่อน app guild-based (เหลือ home+finance) · เดิม email user ตกลง env.GUILD_ID = incoherent
+- **Finding A (owner=superuser):** `getEffectiveOrgIdentity` — row `role='owner' AND status='active'` → `permissions.add('admin')` (bounded org ตัวเอง, Slack/Notion model) · verify: ทั้ง DB มี 1 row trigger (MRSJAN), org 1 = 0 → ไม่ elevate ใคร · แก้ deadlock self-serve owner ไม่มีสิทธิ์
+- **③ client access org-aware:** `/api/me/access?scope=org` → getEffectiveOrgIdentity · `useEffectiveRoles(session,{scope:'org'})` · finance 3 client page (accounts/transactions/categories) ใช้ scope=org · feature อื่นคง guild-based
+- **④ เคาะ: ไม่ flip getEffectiveIdentity ทั้งระบบ** — ~50 route ยัง guild_id-scoped, flip access เป็น org-union = elevation (permission guild A ทำ guild B ใน org 1 = prod) · orgAccess finance-only, revisit ต่อ feature ตอน migrate
+- verify: node --check ครบ + dev curl (/=200, /finance=307, /finance/accounts=200, me/access?scope=org=401 auth, switch=401) ไม่มี 500 + SQL assert owner-superuser + finance isolation (org8=0 acct, org1=11)
+- **✅ LIVE LOGIN-FLOW TEST ผ่าน 2026-07-17 (session จริง via curl):** mint magic token MRSJAN → credentials sign-in → session {userId:17516,discordId:null} · /api/me/access?scope=org = `{isMember:true, permissions:['admin']}` (owner-superuser ทำงาน) · switch org 8 → active_org=8, selected_guild **ไม่** เขียน (guildless ✓) · finance accounts = `[]` (org 8 scoped, org 1 มี 11 = isolated) · create account → org_id=8 ✓
+  - 🔴 **เจอ + ปิด cross-tenant write hole (bug-383):** `POST /api/finance/accounts` line 31 `isAdmin && data.org_id` → owner=superuser ทำให้ MRSJAN ส่ง `org_id:1` เขียนเข้า org 1 ได้ (พิสูจน์แล้ว) · เหตุ: leftover admin guild-picker (ลบ UI แล้วแต่ server ยัง trust) · fix: scope=ORG_ID เสมอ, ลบ override+isAdmin import · re-test: attack org_id:1 → ลง org 8 ✓
+- ✅ **② หน้าแต่งตั้ง เสร็จ 2026-07-17** (org-core, commit ต่อจาก 02df5ac) — 3 เฟส:
+  - **A (backend infra):** `org_config` KV table (org_id,key,value) + `db/orgConfig.js` (`getAppointPolicy` default `[admin,secretary_general]`) · migration ใน `identity-refactor.sql` · ⚠️ **ไม่รีเนม dc_guild_config** (41/42 key เป็น Discord artifact — channel/msg/role — คง guild-keyed) · org_config = ของ org (รองรับ guildless)
+  - **B (API `/api/org/appoint`):** GATE = owner(เสมอ) หรือ permission ∈ appoint_policy (`getEffectiveOrgIdentity`) · **FLOOR = capability-subset** (`canAppoint` ใน permissions.js: caps ของ role เป้าหมาย ⊆ caps ผู้แต่งตั้ง → "แต่งตั้งไม่เกินตัว" · admin ห้าม web-grant · ปิดรู mod→treasurer) · Discord→role จริง+write-through roles / email→web_roles · audit · dedup per-guild
+  - **C (UI hub):** `/org/settings` เป็น hub มี sub-nav (nested route `layout.js` + `OrgSettingsNav`) — **ทั่วไป** (`/org/settings` ชื่อ org) · **สมาชิก & บทบาท** (`/org/settings/members`: Section A ทีมงาน+invite+search membership / Section B แต่งตั้ง permission role chips, gated ด้วย appoint probe, ชิปจางถ้าเกิน floor) · ลบ OrgSettings.jsx เก่า
+  - **verify:** floor unit 9/9 · authed curl (owner MRSJAN → grant treasurer→web_roles / admin=400 / revoke=ว่าง) · SSR /org/settings/members = 200 ไม่ 500 · gate 401/403
+  - ⬜ **ยังไม่กดจริงในเบราว์เซอร์** (tab switch, chip toggle UI, probe แสดง Section B หลัง hydrate)
+  - ✅ **org-config governance UI เสร็จ 2026-07-18** — `AppointPolicy.jsx` (owner-only, chips เลือกบทบาทที่แต่งตั้งได้) + `GET/PUT /api/org/orgs/[id]/appoint-policy` (กรอง admin/นอก catalog ออก, [] = owner-only ตั้งใจ) · gate appoint เพิ่ม `admin` god-mode เสมอ · getAppointPolicy respect [] · verify authed curl GET/PUT/filter ✓
+- [x] **feature-toggle (org-native) เสร็จ 2026-07-18** (org-core) — `lib/orgFeatures.js` (registry `ORG_FEATURES` + `getOrgEnabledFeatures` จาก org_config key `enabled_features`, default=all, [] ตั้งใจได้) · tab **ฟีเจอร์** `/org/settings/features` (OrgFeatures toggle switches, owner) · API `GET/PUT /api/org/orgs/[id]/features` (กรองนอก registry) · layout guildless branch อ่าน getOrgEnabledFeatures แทน hardcode `['finance']` → **คุม Nav app tabs/links จริง** (verify: PUT []→GET / nav gate)
+  - ✅ **รวมสวิตช์มาที่ org ที่เดียวแล้ว 2026-07-22** — `ORG_FEATURES` ครบ 4 (finance/calling/docs/cases) · `/bot/features` เหลือ `ai_mention` · `layout.js` + `featureGate.js` เลิกแตกสาขา guild/guildless · migration ย้ายค่าขึ้น org = union ของทุก guild (org 1 → ครบ 4) · `Nav.ORG_NATIVE_APP_KEYS` เปิดครบ 4 app ให้ org ที่ไม่มี guild
+  - เพิ่ม feature org-native ใหม่ = เพิ่มใน `ORG_FEATURES` โผล่เอง
+  - [x] **home org-scope เสร็จ 2026-07-18** (org-core) — `app/page.js` branch org-first (mirror layout.js): resolve `resolveActiveOrg` → `guildsOfOrg`. **guildless org** (MRSJAN org 8) → org-native dashboard: profile (org icon+ชื่อ+email) + FinanceCard (org-scoped อยู่แล้วผ่าน getFINANCESummary/getOrgId) gated ด้วย `getOrgEnabledFeatures` + การ์ดสมาชิกองค์กร (member_count จาก resolveActiveOrg) → `/org/settings/members` + ปุ่มไป `/org/settings` · **ซ่อน** Discord-bot/guild-list + REST-API integrations (PPLE-global) · **guild org (PPLE org 1) คงเดิมทุกอย่าง** (ตกไป guild dashboard เดิม) · guard: Discord user ที่ไม่มี org row → fall-through guild dashboard (ไม่ regress) · email user ไม่มี org → prompt สร้างองค์กร · extract `FinanceCard`/`OrgIcon` component (pure JSX move) · verify: build + curl magic-login MRSJAN→switch org8→home 200 มี members/settings/finance ไม่มี CALLING/REST/Discord-bot leak · ⬜ org 1 guild path ยังไม่ curl-test (ต้อง Discord session — เทสจริงในเบราว์เซอร์) · ⬜ i18n (string ไทย hardcode ตาม convention ไฟล์เดิม)
+
+- ✅ **BROWSER SMOKE-TEST spine เสร็จ 2026-07-18** (Playwright headless + inject MRSJAN session org 8, localhost) — **ทุกหน้า render + nav ผ่าน ไม่เจอ bug ใหม่:** home org 8 (org-native, ไม่มี PPLE leak) · org switcher dropdown (email+MRSJAN✓+สร้าง/จัดการ/โปรไฟล์/ออก) · /org/settings (ไอคอน preview+อีโมจิ+อัปโหลด+ชื่อ) · /org/settings/members (sidebar nav แนวตั้ง, ทีมงาน owner+invited, chips แต่งตั้ง, AppointPolicy) · /org/settings/features · ไม่มี console/4xx error จริง
+  - 🐛 **fix: OrgFeatures toggle switch เพี้ยน** (knob ล้นนอกราง) — [bug-023] knob span ไม่มี `left-0.5` (ใช้ translate-x-0.5) → `<button>` padding ดัน absolute · fix match sibling `bot/features` (`left-0.5` + off=no-translate) · **verify ด้วยตา: knob อยู่ในรางพอดี ✓**
+  - ✅ **INTERACTIVE WRITE-ACTIONS เทสครบ 2026-07-18** (Playwright กดจริง + DB assert ทุกขา, mutate org 8 แล้ว revert): emoji icon ✓ (fail แรก = hydration race ตอน dev first-compile ไม่ใช่ bug — retest หน้า warm ผ่าน) · upload icon ✓ · ลบไอคอน ✓ · **chip แต่งตั้ง grant→web_roles=secretary_general + revoke→ว่าง ✓** · **feature toggle off→FinanceCard หาย/on→กลับมา ✓** (DB PUT ทั้งคู่) · **create org + switch ไปกลับ ✓** (TESTORG_DEL org 12 — ลบทิ้งแล้ว) · ไม่เจอ product bug ใหม่
+    - 📝 minor: removeIcon ไม่ unlink ไฟล์บน disk (`public/uploads/org/` orphan สะสม) — จิ๋ว ไว้กวาดตอน endgame
+- ✅ **ORG-SCOPE SEAM AUDIT + fix cross-tenant leak 2026-07-18** (org-core) — audit ทุก page/route ที่ guildless org (email user, discordId null) เปิด URL guild-feature ตรงๆ:
+  - 🔴 **[bug-024] leak จริง: `/calling`** — guildless เห็น PPLE aggregate stats (5,166 member / 5,056 contact / campaigns) · root: [guildContext.js:18](web/lib/guildContext.js#L18) `if(!discordId) return env.GUILD_ID` → email user ตกไป PPLE guild + calling guard แค่ `if(!session)` (docs/case block ด้วย permission gate, calling ลืม) · **fix: เพิ่ม guildless guard** (getOrgId→guildsOfOrg, []→redirect) แบบ home · verify guildless=307/PPLE ผ่าน · severity ต่ำ (aggregate ไม่ใช่ PII, ราย-record API 401)
+  - ✅ ปลอดภัยแล้ว (ไม่ leak data): `/admin/roles` `/bot/features` `/bot/media/basket` = client-gate "ไม่มีสิทธิ์" + **API 403** (shell เปล่า) · `/docs` `/case/manage` = 307 block · `/calling/contacts` = client component + API 401 · `/case` `/case/new` = public intake (ตั้งใจ)
+  - ✅ **SYSTEMIC SEAM เสร็จ+verify+commit 4e8b6bb 2026-07-18 (org-core) — เคาะ ก (org-derived) → impl 1-liner หลัง scrutinize:**
+    - **root fix [guildContext.js:18]:** `if(!discordId) return userId ? null : fallback` — email user (มี userId ไม่มี discordId) → **null** (guildless, ไม่ผูก guild) · unauth/degenerate → คง `env.GUILD_ID` เดิม · Discord user ไม่แตะ (blast=0) · scrutinize เคาะ **ไม่ทำ org-derived machinery** (guildsOfOrg) เพราะ payoff=0 วันนี้ (0 email user ใน guild-backed org + [getEffectiveRoles.js:31] block web_roles-by-userId อยู่ดี) → upgrade org-derived คู่กับ getRealRoles fix
+    - **seam ทำให้ 2 consumer แตก → แก้ด้วย:** ① **requireFeature → org-aware** ([featureGate.js] mirror layout.js: guildless→`getOrgEnabledFeatures`, guild org→`getEnabledFeatures(getGuildId)` เดิม) เพราะ finance (org-native) เคยผ่าน gate ได้เพราะ fallback→PPLE บังเอิญ · หลัง seam=null → finance 404 ผิด → org-aware แก้ (guild org ไม่เปลี่ยนพฤติกรรม) · ② **calling guard คืน** (getMembersCount/getTotalCallStats = **global aggregate ไม่ scope guild**) → guildless layout 404 แล้วแต่ page render พร้อมกันฝัง stats ใน RSC payload ของ 404 → early redirect กัน query รัน [bug-025]
+    - **verify live (magic MRSJAN org8 guildless):** /calling=404 no-leak ✓ · /finance=200 org-isolated 0 acct ✓ · /docs=404 ✓ · guild org 1 config=`[finance,calling,docs,...]` → guild path byte-identical (browser confirm ยังค้างเหมือนเดิม — ต้อง Discord session)
+    - ℹ️ org 11 (ราชบุรี) ก็ guildless → ได้ org-native finance ด้วยอัตโนมัติ
+    - ⬜ follow-up: getRealRoles โหลด web_roles ด้วย userId (เปิด email member ของ guild-backed org) → แล้วค่อย upgrade getGuildId เป็น org-derived
+
+**🎨 Org switcher DRAFT (2026-07-17) — Notion/AppFlowy style · `components/OrgSwitcherMenu.jsx`:**
+- เมนู workspace hub: email header + org list (member_count + ✓) + สร้าง workspace + จัดการ/โปรไฟล์/ออก · เปิดได้เสมอแม้ org เดียว · icon ตัวหน้า = กลับหน้าแรก `/`, ชื่อ+chevron = เปิดเมนู
+- เอา app tabs ออกจาก topbar (เบียดกัน) → เข้าถึงผ่าน hamburger + การ์ด dashboard · title = **Platfor.ORG** (layout.js metadata)
+- [x] **org icon เสร็จ 2026-07-17** (org-core) — org มี icon ของตัวเอง (emoji หรือรูปอัปโหลด) ไม่ยืม guild:
+  1. ✅ `orgs.icon TEXT` (migration ใน identity-refactor.sql) — emoji string หรือ url `/uploads/org/xxx`
+  2. ✅ `/org/settings` (ทั่วไป, OrgGeneral): preview + ช่องอีโมจิ + อัปโหลดรูป + ลบไอคอน · owner เท่านั้น · upload route `POST /api/org/orgs/[id]/icon` gate ด้วย **org-owner** (ไม่ใช่ discordId — email owner ใช้ได้) · emoji ผ่าน PATCH `/api/org/orgs/[id]` (icon)
+  3. ✅ `OrgAvatar` (OrgSwitcherMenu): fallback `org.icon`(รูป→img / emoji→text) → `iconUrl`(guild) → letter · `isImgSrc` detect path
+  4. ✅ listUserOrgs + getOrg คืน icon (+ `setOrgIcon` ใน db) · verify: emoji/upload/remove authed curl ✓ + SSR 200
+  - ⬜ ยังไม่กดจริงในเบราว์เซอร์ · prod: `public/uploads/org/` route mkdir เอง (nginx `/uploads` block มีแล้ว)
+- [x] **i18n เสร็จ 2026-07-19** (ns `org` ใหม่ 111 keys, 13 sub-ns) — migrate 12 ไฟล์ org UI ครบ (Sonnet 4 ก้อน, Opus ตรวจ+render authed ทุกหน้า): OrgGeneral/Features/AppointPolicy · OrgMembers/SettingsNav · OrgSwitcherMenu(ลบ const T)/OrgHome(→async server)/CreateModal · OrgShell/NewOrgForm/login/personal/verify · th=en 111/111 · residual Thai เหลือแค่ comment · **defer: metadata `title` 5 หน้า** (browser tab — ทั้งแอป finance/calling ก็ hardcode → ทำรวมทีเดียวตอนหลัง ไม่งั้น inconsistent)
+- [ ] เทสจริงในเบราว์เซอร์ (dropdown เปิด/สลับ/สร้าง/ออก) — curl เทส trigger+data แล้ว dropdown เป็น client-only
+
 - [x] Portfolio consult (web page) เสร็จ — `web/app/tee/portfolio/` (เนื้อหาใน data/portfolio.json แก้เอง) + artifact · รอ deploy prod ให้ขึ้น pplevolunteers.org/tee/portfolio
-- ⚠️ **ตอนนี้ในโค้ดค้าง:** ตาราง `members` ถูกสร้างไปแล้ว (DB + migration.sql) — Phase 0 ต้อง drop
+- ⚠️ **org-core ยังไม่ merge เข้า master** (prod = master `2e81e6e` guild-based, ไม่แตะ) · deploy org = merge org-core→master เมื่อ org เสร็จ · **ก่อน deploy prod:** รัน migration.sql (rename orgs/user_identities + dc_members email/nullable + org_roles + web_roles) + `identity-split-expand.sql` · tag ของเก่า `layout-guild-v1`
 
 ---
 
@@ -341,6 +647,20 @@
 - **edge case guild-mismatch cookie (defer)** — user ที่ไม่ได้เป็น member ของ guild default แต่เป็น guild อื่น → ไม่มี cookie → `getGuildId` คืน default → Nav mismatch · RBAC กันข้อมูลอยู่ (`isMember=false`) · แก้ที่ดีต้อง middleware/cookie-on-login — ทำตอนเปิด guild ที่ 2 จริง
 - **(optional) `dc_members.role_ids` ขนาน `roles`** — แก้ปัญหา rename role แล้วสิทธิ์หายชั่วคราว (web match ด้วยชื่อ) · เพิ่ม column `role_ids` (id ทน rename) ใช้เช็ค permission · ยังไม่จำเป็น จดเผื่อเจอ bug
 
+### 🎯 เป้าหมาย: ใช้งานได้โดยไม่ต้องมี Discord (เคาะ 2026-07-21)
+
+> **Discord = ส่วนเสริม ถ้ามีก็ดี ไม่มีก็ใช้ได้** — เป็นเป้าหมายที่ user ยืนยัน · ระบบ docs อาจเป็นตัวแรกที่ออกแบบใหม่ให้รองรับ org ที่ยังไม่มี Discord
+
+**สภาพวันนี้ — ประตู email เปิดได้แค่ login ส่วนที่เหลือยังผูก Discord + PPLE ทั้งก้อน** (ยืนยันจากโค้ดจริง 2026-07-21):
+
+1. **`scopeGrants` (พื้นที่) มาจากยศ Discord ทางเดียว** — `resolveAccess()` อ่าน `scope_node` จาก `dc_guild_roles` เท่านั้น · `web_roles` เติมแค่ permission ไม่เติม scope ([resolveAccess.js:79](../web/lib/resolveAccess.js#L79)) · คน email (`guild_id` NULL) → query `WHERE guild_id = NULL` → 0 แถว → **scope ว่างเสมอ**
+   - ผลจริงต่อแอพ: calling = เด้ง `noAccess` เห็นศูนย์ · cases = ไม่เห็นเคสไหนเลย (ทุกเคสมีจังหวัด) · docs/finance = เห็นเฉพาะระดับประเทศที่ไม่ผูกจังหวัด · ยกเว้นได้ `admin`/`secretary_general` ที่ข้ามเรื่องพื้นที่
+2. **คำศัพท์ "พื้นที่" เป็นของ PPLE เอง** — [web/lib/geography.js](../web/lib/geography.js) hardcode จังหวัด→ภาค 77 จังหวัด โดยชื่อภาคคือ**ชื่อ role ทีม Discord ของ PPLE** (`'ราชบุรี' → 'ทีมภาคกลางตะวันตก'`) · ในไฟล์เขียนกำกับเองว่า *"ชุดข้อมูลนี้คือของ guild อาสาประชาชน — multi-guild geography เป็นงานทำต่อ"* · org อื่นอาจแบ่งเป็นเขต/สาขา/ทีม ไม่ใช่จังหวัดไทยด้วยซ้ำ
+
+**สิ่งที่ต้องมีก่อน (ยังไม่ออกแบบ — เป็นงานก้อนใหม่ ไม่ใช่แก้ของเดิม):** ให้ org **นิยาม "พื้นที่" ของตัวเองได้** แล้วผูกกับยศผ่านเว็บ
+
+**ข่าวดีเชิงโครงสร้าง:** 4 แอพ (finance/calling/docs/cases) ไม่รู้จัก Discord เลย — มันกินแค่ `{ permissions, scopeGrants }` ที่ `resolveAccess` คืนมา · **ปลด Discord = เติม "แหล่งที่ 2" ที่ผลิตรูปร่างเดียวกัน ไม่ต้องรื้อ 4 แอพ** · `resolveAccess()` คือตะเข็บที่ควรลงมือ
+
 ---
 
 ## 🗄️ Database / Infrastructure
@@ -601,6 +921,113 @@
   2. **Slash-command minigame แบบ RNG/สะสม** (เช่น ตกปลา) — loop ให้กลับมาเล่นทุกวัน ต้องออกแบบ economy
   3. **Event/quiz ประจำสัปดาห์** เกี่ยวกับองค์กร — spike engagement แต่ต้องมีคนคิด content ต่อเนื่อง
 - **สถานะ:** นึกไม่ออกว่าจะเลือกทางไหน — พับไว้ก่อน ไม่ต้อง scope ต่อจนกว่าจะมีทิศทางชัดขึ้น
+
+---
+
+## 🧹 งานค้างจาก session กวาดเอกสาร (2026-07-21)
+
+> เอกสารทุกฉบับที่ audit ต้องใช้ **ตรงกับ DB จริงแล้ว** (commit `a9d95c4` + `9810983`)
+
+- [ ] **⭐ ให้โมเดลอื่นตรวจ RBAC ทั้ง 4 แอปหลัง org-scope** — พรอมต์พร้อมใช้อยู่ใน `<details>` ข้างล่าง · วางใน session ใหม่ได้เลย (Fable = สลับ `/model` ก่อน · Opus session ว่างๆ ก็ได้ผลใกล้เคียงและถูกกว่า)
+  - ⚠️ `/code-review` ปกติดูแค่ diff ที่ยังไม่ commit → **ไม่ครอบ 71 commit ของ org migration** · ตัวที่ครอบทั้ง branch คือ `/code-review ultra` (คิดเงินแยก, ต้อง user สั่งเอง)
+- [ ] **🐛 เคสที่สงสัยอยู่ รอ audit ชี้ขาด** — [web/app/api/calling/members/route.js:85-90](web/app/api/calling/members/route.js#L85-L90) ลิสต์สมาชิกกรองด้วย scope เต็ม แต่การเห็นเบอร์/LINE กรองด้วย `session.user.primary_province` ตัวเดียว · ฟิลด์นี้ user แก้เองได้ที่ /profile → คนถือ 2 จังหวัดสลับค่าเองแล้วเห็นเบอร์อีกจังหวัดได้ = ไม่ได้กั้นจริง · ที่อื่นเขาใช้ `getUserScope(access, primary_province)` แบบ**เสริม** scope ไม่ใช่แทน
+- [ ] **สคริปต์ที่ยังอ้าง `dc_members`** (ไม่อยู่ใน runtime บอท/เว็บ ไม่บล็อก cutover)
+  - `scripts/data/backfill-intro-peoplesparty.js` — pg จริง INSERT INTO dc_members → **พังจาก rename** ถ้าจะใช้ต่อต้องแก้เป็น 2 จังหวะ (users → org_members) ตาม `db/members.js`
+  - `scripts/data/backfill-intro-ratchaburi.js` — `require('mysql2/promise')` ตายตั้งแต่ย้ายมา Postgres → ลบทิ้งได้
+  - `scripts/social/x-get-token.js:130` — `pool.execute` + `?` + คอลัมน์ `user_id` ยุค MySQL · พังอยู่แล้วก่อน migration · ท่อน insert token น่าจะยังใช้ได้ ถ้ายังต้องใช้ควรซ่อมไม่ใช่ลบ
+- [ ] **ฟีเจอร์ที่ ship แล้วแต่ไม่เคยมีเอกสาร** (agent ไม่กล้าเขียนเพราะไม่รู้เจตนา — ต้องคนที่รู้เขียน)
+  - **flow ผู้จ่ายเซ็น (docs)** — คอลัมน์มีจริง (`payer_sign_token`, `payer_signed_at`, `docs_signatures.role`) แต่ DOCS.md ไม่มีสักบรรทัด · ไม่รู้ว่าเมื่อไหร่ payer ระดับ entry ต่างจากระดับ project
+  - **ฟีเจอร์ SMS (calling)** — `/api/calling/sms`, `SmsModal.jsx`, status `sms_sent/delivered/failed` ยังไม่เคยถูกจด
+  - ~12 endpoint ของ docs ที่เอกสารเงียบ · ลายน้ำบัตร ปชช. ที่เอกสารบอก 30°+"สำเนาถูกต้อง" แต่โค้ดจริงเป็น cross-hatch + วันที่
+- [ ] **เก็บกวาด slash command** (คนละเรื่องกับโค้ด ทำเมื่อไหร่ก็ได้)
+  - ไฟล์ซ้ำ 2 ที่ เนื้อหาเหมือนกันเป๊ะ: `~/.claude/commands/` กับ `.claude/commands/` — `build` `code-simplify` `plan` `review` `ship` `spec` `test` · เก็บที่เดียวพอ (แนะนำ global)
+  - **`/review` ชนชื่อ built-in** ของ Claude Code (รีวิว GitHub PR) → ของเราทับอยู่ เรียก built-in ไม่ได้
+  - `.claude/commands/code-simplify.md:5` อ้าง skill ที่ไม่ได้ติดตั้ง (`agent-skills:code-simplification`, `code-review-and-quality`) = dead reference
+
+<details><summary>📋 พรอมต์ audit RBAC — copy ทั้งก้อนไปวางใน session ใหม่</summary>
+
+```
+ช่วยตรวจ RBAC ของทุกแอปหลัง identity + org-scope refactor ว่ายังทำงานถูกและตรง spec ไหม
+
+## บริบท
+repo: pple-volunteers · branch `org-core` (นำ master 71 commit, ยังไม่ deploy) เพิ่งทำ refactor 2 ชั้นซ้อน:
+
+**1. identity split** — `dc_members` (1 คน หลายแถว/guild) ถูกผ่าเป็น
+   - `users` = ตัวตน 1 แถว/คน (discord_id, email, google_id, phone, firstname/lastname, id_card_image)
+   - `org_members` = membership+profile ต่อ (org, guild) — user_id, org_id, guild_id, roles, web_roles, position, province, bank_*
+   - ตารางเดิม rename เป็น `_dc_members` (archive, โค้ดไม่ควรอ้างถึงแล้ว)
+   - rename อื่น: organizations→orgs · dc_user_identities→user_identities · ngs_member_cache→cache_pple_member · act_event_cache→cache_pple_event
+
+**2. org-scope** — tenant data เลิกเกาะ guild ย้ายมาเกาะ org:
+   - `guild_id`→`org_id`: finance_* · calling_* · cases/case_* · docs_* · audit_logs · cache_pple_member
+   - person-ref: discord snowflake (VARCHAR) → `users.id` (INT)
+   - **ตั้งใจคง `guild_id`** (Discord artifact ไม่ใช่ tenant data): finance_config · case_config · cache_pple_event · dc_* ทั้งหมด · cases.discord_guild_id
+
+## แหล่งความจริง
+1. **DB จริง** — `psql -c "\d <table>"` (ใช้ DB_* ใน .env) · **`md/DATABASE.md` regenerate จาก DB สดเมื่อ 2026-07-21 ครบ 58 ตาราง = เชื่อได้**
+2. **โค้ด**
+3. **md อื่น** — FINANCE/CALLING/CONTACT/DOCS/CASE กวาดให้ตรง schema แล้ว แต่กวาดเฉพาะ "กลไก" (ชื่อตาราง/คอลัมน์/path) · ส่วน "เจตนา/กฎธุรกิจ" ยังไม่มีใครตรวจ ถ้าเจอว่าเจตนาที่เขียนไว้ขัดกับโค้ด → นั่นแหละคือของที่ตามหา
+
+## ตรวจอะไร — แอปละ 4 ข้อ (finance · calling · docs · cases + /admin/roles)
+1. **gate ยังกันได้จริงไหม** — web/lib/{financeAccess,callingAccess,docsAccess,caseAccess,caseGate,orgAccess,roleAccess,permissions,resolveAccess,getEffectiveRoles}.js
+2. **ownership เทียบถูกชนิดไหม** — จุดที่เคยเทียบ discord snowflake (string) ตอนนี้ต้องเทียบ users.id (int) · `===` ข้ามชนิดจะ false เงียบๆ = คนถูกล็อกออกจากของตัวเอง หรือหลุดให้คนอื่นเห็น
+3. **query scope หลุดไหม** — ทุก SELECT/UPDATE/DELETE บน tenant table ต้องมี org filter · ตอน migrate finance เจอว่า getTransactions เดิมไม่ scope เลย (latent leak) → หาแบบเดียวกันในแอปอื่น
+4. **ตกสำรวจจาก bulk rename** — เคยพลาดว่า orgId ไหลเข้าตัวแปร/คอลัมน์ชื่อ guild_id (และกลับกัน) → หาจุดที่ชื่อตัวแปรกับค่าที่ใส่จริงไม่ตรงกัน
+
+**ฝั่งบอทด้วย** — build/test ของเว็บจับบั๊กบอทไม่ได้เลย · ไล่ db/ handlers/ commands/ services/ scripts/ ว่ายังมีที่อ่าน/เขียนตารางหรือคอลัมน์ที่ถูก rename ไปแล้วไหม
+
+## 🎯 เคสที่สงสัยอยู่แล้ว — ช่วยชี้ขาดให้ที
+`web/app/api/calling/members/route.js:85-90` — ลิสต์สมาชิกกรองด้วย scope เต็ม (ทุก role `province:` ที่ถือ) แต่การมองเห็นเบอร์/LINE กรองด้วย `session.user.primary_province` ตัวเดียว · และ `primary_province` เป็นฟิลด์ที่ผู้ใช้แก้เองได้จากหน้า /profile
+→ มันเป็นการกั้น PDPA จริง หรือเป็นแค่ default การแสดงผลที่หลงเหลือจากยุค "คนละ 1 จังหวัด"? ที่อื่นเขาใช้ `getUserScope(access, primary_province)` แบบเสริม scope ไม่ใช่แทน scope
+ถ้าเป็นรูจริง มีที่อื่นพลาดแบบเดียวกันอีกไหม (ฟิลด์ที่ user แก้เองได้ ถูกใช้เป็นตัวกั้นสิทธิ์)
+
+## รู้อยู่แล้ว ไม่ต้องรายงานซ้ำ
+- คน login email ยังเปิด /finance ไม่ได้ (page-access รอ unify login door) — ตั้งใจ
+- `web_roles` เติมแค่ permission ไม่เติม scopeGrants → คนตั้งยศผ่านเว็บไม่มี "พื้นที่" (resolveAccess.js:78) — รู้แล้ว รอแก้
+- `queryPayersByPermission` อ่านแค่ org_members.roles ไม่อ่าน web_roles — รู้แล้ว
+- Discord กับ email ไม่ auto-link = คนละแถว users — ตั้งใจ
+- `POST /api/docs/projects/[id]/set-payer` โหมด per-group ไม่มี client เรียกแล้ว — รู้แล้ว
+
+## กติกา
+- **ถามก่อนแก้เสมอ** — รายงานสิ่งที่เจอ + ความร้ายแรง + ทางแก้ที่เสนอ แล้วรอเคาะ ห้ามแก้เอง
+- verify ได้: `cd web && npm test` (~189 tests) · `npm run build` · psql localhost
+- .env ห้ามอ่าน ยกเว้น key ที่ขึ้นต้น DB_
+- เรียงผลตามความร้ายแรง (ข้อมูลรั่วข้าม org > สิทธิ์เกิน > คนถูกล็อกออกจากของตัวเอง > cosmetic)
+```
+
+</details>
+
+---
+
+## 🌩️ PPLE Platform (console.ppleth.ai) — ไอเดียอนาคต, ยังไม่เริ่ม (2026-07-22)
+
+พรรคมี internal PaaS ใหม่: Cloudflare Worker + Hono + D1 (SQLite) + R2 + `@pplethai/components`, auth = PPLE ID (OIDC, มี province-scope + delegation ในตัว), deploy คำสั่งเดียว `pple deploy` — mini-app รันใน "PPLE Today" · ลอง scaffold demo แล้วที่ `/home/tee/VSites/node/pple-demo` (นอก repo นี้) ใช้งานได้จริง
+
+**แนวคิด: เอาระบบ calling มา rewrite บนแพลตฟอร์มนี้** — user เห็นด้วยถ้า Claude เขียนใหม่ให้ (ไม่ใช่ port ตรงๆ)
+- **ไม่ใช่ migration — เป็น rewrite เต็ม:** Postgres→D1/SQLite, Next.js API routes→Hono Worker, Discord-guild RBAC→PPLE ID role/province
+- **ข้อดีที่เห็น:** province-scope + delegation ของ PPLE ID ตรงกับที่ calling ต้องการ (coordinator ดูแลเฉพาะจังหวัด) อยู่แล้ว — ไม่ต้องประกอบ RBAC เองแบบตอนนี้
+- **ต้องเช็คก่อนเริ่มจริง:** D1 storage/row limit รับข้อมูลปัจจุบันไหว (35 campaigns, 1,156+ logs และจะโตต่อ) ไหม
+- ยังไม่เคาะ scope/timeline — แค่บันทึกไอเดียไว้
+
+---
+
+## 🔐 Calling — งานค้างต่อจากรอบอุดเลขบัตรรั่ว (2026-07-23)
+
+**ที่แก้ไปแล้ว** (branch `org-core`, ยังไม่ commit): ปิดรูที่ payload ฝั่ง calling ส่ง `identification_number`
+(เลขบัตร ปชช. 13 หลัก · 2,009 ราย), `date_of_birth`, ที่อยู่บ้าน ไปถึงเบราว์เซอร์ทุกคนที่เปิดหน้า calling
+สาเหตุ = `SELECT m.*` จาก `cache_pple_member` ซึ่งเป็นสำเนาทะเบียนสมาชิกทั้งแถว → กันด้วย allowlist
+ที่ `web/lib/callingFields.js` ครอบ 2 route (`members`, `pending`) · **master ก็รั่วเหมือนกัน** (bug-049)
+
+- [ ] **แก้ที่ต้นทาง — เขียน SELECT ระบุคอลัมน์แทน `SELECT m.*` / `SELECT *`** ใน `web/db/calling/members.js`
+      (มี 4 จุด `m.*` + 4 จุด `SELECT *`) · allowlist ที่ API เป็นแค่ตาข่ายกันชั้นสอง ไม่ควรเป็นด่านเดียว
+- [ ] **hotfix ขึ้น master** — prod รั่วอยู่ตอนนี้ ไม่ต้องรอ cutover (patch ไม่พึ่งอะไรจาก org-core)
+- [ ] **เคาะเรื่องด่าน PDPA ฝั่ง assignee** — `/api/calling/pending` เช็คแค่ `a.assigned_to = ฉัน`
+      ไม่เช็คยศเลย ต่างจากหน้า roster ที่เช็ค `canSeeContacts` · และการ assign ต้องการแค่ `canSeeProvince`
+      → เหรัญญิกที่ระบบตั้งใจไม่ให้เห็นเบอร์ในหน้า roster สามารถ assign คนให้ตัวเองแล้วอ่านเบอร์ได้
+      (ยังไม่ได้ทดลองเดินทางนี้จริง — ต้องเขียนแถว assignment) · จะถือว่า "ถูกมอบหมาย = อนุญาตโดยปริยาย"
+      ก็ได้ แต่ต้องเป็นการตัดสินใจ ไม่ใช่ผลข้างเคียง
+- [ ] **ไล่ดูฟีเจอร์อื่นที่อ่าน `cache_pple_member`** ว่ามี `SELECT *` แบบเดียวกันไหม (docs/cases)
+      — ฝั่ง docs ระวังเรื่องนี้อยู่แล้ว (`ngs-search` ส่งแค่ boolean `has_id_number`) แต่ยังไม่ได้ตรวจครบ
 
 ---
 

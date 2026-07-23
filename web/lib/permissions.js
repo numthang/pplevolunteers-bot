@@ -54,6 +54,7 @@ export const CAPABILITIES = {
 
   // ── Admin ──
   viewServerLogs:      ['admin', 'moderator'],   // เดิม ['Admin','Moderator']
+  manageRoles:         ['admin', 'moderator'],   // ตั้ง/ถอด Discord role ผ่านเว็บ (ตาม Manage Roles ใน Discord)
 }
 
 /**
@@ -67,4 +68,34 @@ export function can(capability, permissions) {
   if (!allowed) throw new Error(`can: unknown capability '${capability}'`)
   const has = Array.isArray(permissions) ? (p => permissions.includes(p)) : (p => permissions.has(p))
   return allowed.some(has)
+}
+
+/**
+ * capabilities ทั้งหมดที่ permission ตัวนี้ปลดล็อก (inverse ของ CAPABILITIES)
+ * @param {string} permission
+ * @returns {string[]}
+ */
+export function capabilitiesOf(permission) {
+  return Object.keys(CAPABILITIES).filter(cap => CAPABILITIES[cap].includes(permission))
+}
+
+/**
+ * FLOOR การแต่งตั้ง (capability-subset) — "แต่งตั้งไม่เกินอำนาจตัวเอง"
+ * ผู้แต่งตั้ง (มี permissions หลายตัว) แต่งตั้ง role ที่ให้ `targetPermission` ได้ก็ต่อเมื่อ
+ * ทุก capability ของ targetPermission ⊆ capability รวมของผู้แต่งตั้ง
+ *   - `admin` แต่งตั้งผ่านเว็บไม่ได้เด็ดขาด (ได้ทางเดียว = เป็น owner ของ org)
+ *   - ผู้มี `admin` (รวม owner ที่ได้ admin) แต่งตั้ง non-admin role ได้ทุกตัว
+ * @param {Set<string>|string[]} appointerPerms  สิทธิ์ของผู้แต่งตั้ง
+ * @param {string} targetPermission  permission ที่ role เป้าหมายให้
+ * @returns {boolean}
+ */
+export function canAppoint(appointerPerms, targetPermission) {
+  if (targetPermission === 'admin') return false
+  const has = Array.isArray(appointerPerms) ? (p => appointerPerms.includes(p)) : (p => appointerPerms.has(p))
+  if (has('admin')) return true
+  const mine = new Set()
+  for (const cap of Object.keys(CAPABILITIES)) {
+    if (CAPABILITIES[cap].some(has)) mine.add(cap)
+  }
+  return capabilitiesOf(targetPermission).every(c => mine.has(c))
 }

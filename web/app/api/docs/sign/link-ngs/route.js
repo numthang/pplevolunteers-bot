@@ -8,12 +8,12 @@ const digits = (s) => String(s ?? '').replace(/\D/g, '')
 /**
  * POST /api/docs/sign/link-ngs
  * Body: { token, ngsSourceId, idNumber }
- * ผูก dc_members.member_id ของ user (login) กับ ngs_member_cache.source_id
+ * ผูก org_members.member_id ของ user (login) กับ cache_pple_member.source_id
  * — ต้องยืนยันเลขบัตร 13 หลักให้ตรงกับ record ที่เลือก เพื่อกันการแอบอ้างเป็นคนอื่น
  */
 export async function POST(req) {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.discordId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!session?.user?.userId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { token, ngsSourceId, idNumber } = await req.json()
   if (!token || !ngsSourceId) return Response.json({ error: 'token and ngsSourceId required' }, { status: 400 })
@@ -24,10 +24,12 @@ export async function POST(req) {
   const entry = await getEntryByToken(token)
   if (!entry) return Response.json({ error: 'ลิงก์ไม่ถูกต้อง' }, { status: 404 })
 
-  // ยืนยันตัวตน: เลขบัตรที่กรอกต้องตรงกับ record ที่เลือก (ใน guild เดียวกัน)
+  // ยืนยันตัวตน: เลขบัตรที่กรอกต้องตรงกับ record ที่เลือก (ใน org เดียวกัน)
+  // docs org-scoped แล้ว → entry.org_id ตรงๆ (เดิม resolve จาก entry.guild_id ที่ไม่มีคอลัมน์แล้ว)
+  const entryOrgId = entry.org_id
   const { rows } = await pool.query(
-    `SELECT identification_number FROM ngs_member_cache WHERE source_id = $1 AND guild_id = $2`,
-    [ngsSourceId, entry.guild_id]
+    `SELECT identification_number FROM cache_pple_member WHERE source_id = $1 AND org_id = $2`,
+    [ngsSourceId, entryOrgId]
   )
   if (!rows[0]) return Response.json({ error: 'ไม่พบข้อมูลในระบบสมาชิก' }, { status: 404 })
 
@@ -37,13 +39,16 @@ export async function POST(req) {
 
   try {
     const { rowCount } = await pool.query(
-      `UPDATE dc_members SET member_id = $1 WHERE discord_id = $2 AND guild_id = $3`,
-      [ngsSourceId, session.user.discordId, entry.guild_id]
+      // เลขสมาชิก = ข้อเท็จจริงระดับ org → เขียนทุกแถวของคนนี้ใน org (คนเดียว หลาย guild
+      // = เลขเดียว) · ให้ตรงกับ verifyHandler ฝั่งบอทที่แก้ 2026-07-21 ไม่งั้นสองมาตรฐาน
+      `UPDATE org_members om SET member_id = $1
+         WHERE om.user_id = $2 AND om.org_id = $3`,
+      [ngsSourceId, session.user.userId, entry.org_id]
     )
     if (rowCount === 0) return Response.json({ error: 'ไม่พบข้อมูลสมาชิก' }, { status: 404 })
     return Response.json({ success: true })
   } catch (err) {
-    // unique (guild_id, member_id) — รายชื่อนี้ถูกผูกกับบัญชีอื่นไปแล้ว
+    // trigger org_members_member_id_unique (ระดับ org) ยิง 23505 — ถูกผูกกับบัญชีอื่นแล้ว
     if (err.code === '23505') {
       return Response.json({ error: 'รายชื่อนี้ถูกผูกกับบัญชีอื่นแล้ว — ติดต่อแอดมิน' }, { status: 409 })
     }

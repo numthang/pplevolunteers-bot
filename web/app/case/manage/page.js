@@ -2,8 +2,7 @@ import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
 import { getSession } from '@/lib/auth.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
-import { getGuildId } from '@/lib/guildContext.js'
-import { getOrgGuildIds } from '@/lib/org.js'
+import { getOrgId } from '@/lib/orgContext.js'
 import { getUserScope } from '@/lib/caseAccess.js'
 import { listCases, countByStatus } from '@/db/cases.js'
 import { statusLabel } from '@/lib/caseOptions.js'
@@ -27,16 +26,15 @@ export default async function CaseManageList({ searchParams }) {
   const t = await getTranslations('case')
   const session = await getSession()
   const { access } = await getEffectiveIdentity(session)
-  const guildId = await getGuildId(session)
-  const orgGuildIds = await getOrgGuildIds(guildId)
+  const orgId = await getOrgId(session)
   const scope = getUserScope(access) // null = admin (ทุกจังหวัด)
 
   const sp = await searchParams
   const selectedProvince = sp?.province || ''
   const selectedStatus = sp?.status || ''
 
-  const all = await listCases(orgGuildIds, { provinces: scope, status: selectedStatus || null, limit: 300 })
-  const counts = await countByStatus(orgGuildIds, scope)
+  const all = await listCases(orgId, { provinces: scope, status: selectedStatus || null, limit: 300 })
+  const counts = await countByStatus(orgId, scope)
 
   const provinces = [...new Set(all.map(c => c.province).filter(Boolean))].sort()
   const cases = selectedProvince ? all.filter(c => c.province === selectedProvince) : all

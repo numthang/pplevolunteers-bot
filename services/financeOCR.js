@@ -15,6 +15,7 @@ const log    = require('../utils/logger')
 const { decodeQR, parseQRPayload, fetchBuffer } = require('./parsers/slipQR')
 
 const GUILD_ID  = process.env.GUILD_ID
+const { orgIdOfGuild, userIdByDiscord } = require('../db/org')
 const SLIP_PARSERS = [require('./parsers/kbankSlip'), require('./parsers/scbSlip')]
 
 async function downloadEvidence(url) {
@@ -135,6 +136,9 @@ async function processSlipImage(imageUrl, message) {
     const evidenceUrl = await downloadEvidence(imageUrl)
 
     const accounts = await matchAccount(slip)
+    // finance scope เป็น org_id + person-ref เป็น users.id แล้ว (ไม่ใช่ guild_id / discord snowflake)
+    const orgId = await orgIdOfGuild(GUILD_ID)
+    const authorUserId = await userIdByDiscord(message.author.id)
     log.info(`[financeOCR] matchAccount from_digits=${slip.from_digits} to_digits=${slip.to_digits} matched=${accounts.map(a=>a.name+'('+a._matchType+')').join(', ')||'none'}`)
     if (!accounts.length) {
       return `❌ ไม่พบบัญชีที่ตรงกับสลิปนี้ในระบบ\n` +
@@ -146,8 +150,8 @@ async function processSlipImage(imageUrl, message) {
     for (const account of accounts) {
       // 1) หาด้วย ref_id ก่อน
       let existing = (await pool.query(
-        `SELECT id, description FROM finance_transactions WHERE ref_id = $1 AND account_id = $2 AND guild_id = $3`,
-        [slip.ref_id, account.id, GUILD_ID]
+        `SELECT id, description FROM finance_transactions WHERE ref_id = $1 AND account_id = $2 AND org_id = $3`,
+        [slip.ref_id, account.id, orgId]
       )).rows
 
       // 2) fallback: หาด้วย amount + txn_at ±5 นาที
@@ -157,10 +161,10 @@ async function processSlipImage(imageUrl, message) {
         const txnAtStr = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:00`
         existing = (await pool.query(
           `SELECT id, description FROM finance_transactions
-           WHERE account_id = $1 AND guild_id = $2 AND amount = $3
+           WHERE account_id = $1 AND org_id = $2 AND amount = $3
              AND ABS(EXTRACT(EPOCH FROM (txn_at - $4::timestamp)) / 60) <= 5
              AND ref_id IS NULL`,
-          [account.id, GUILD_ID, slip.amount, txnAtStr]
+          [account.id, orgId, slip.amount, txnAtStr]
         )).rows
         if (existing.length) log.info(`[financeOCR] matched statement row id=${existing[0].id} by amount+txn_at`)
       }
@@ -180,7 +184,7 @@ async function processSlipImage(imageUrl, message) {
           [slip.ref_id, evidenceUrl,
            newDesc,
            slip.counterpart_name || null,
-           message.id, message.author.id, txn.id]
+           message.id, authorUserId, txn.id]
         )
         log.info(`[financeOCR] merged txn id=${txn.id} ref_id=${slip.ref_id}`)
         resultLines.push(buildReply('✅ รวมกับรายการเดิม', account, slip, txn.id, true))
@@ -195,13 +199,13 @@ async function processSlipImage(imageUrl, message) {
 
         const { rows } = await pool.query(
           `INSERT INTO finance_transactions
-            (guild_id, account_id, type, amount, description, counterpart_name, counterpart_bank,
+            (org_id, account_id, type, amount, description, counterpart_name, counterpart_bank,
              ref_id, evidence_url, discord_msg_id, txn_at, updated_by, updated_at)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW())
            RETURNING id`,
-          [GUILD_ID, account.id, type, slip.amount, description,
+          [orgId, account.id, type, slip.amount, description,
            slip.counterpart_name || null, slip.bank || null,
-           slip.ref_id, evidenceUrl, message.id, txnAtStr, message.author.id]
+           slip.ref_id, evidenceUrl, message.id, txnAtStr, authorUserId]
         )
         log.info(`[financeOCR] inserted txn id=${rows[0].id} ref_id=${slip.ref_id} type=${type}`)
         resultLines.push(buildReply('✅ บันทึกรายการใหม่', account, slip, rows[0].id, false))
@@ -260,7 +264,7 @@ async function enrichSlipFromOCR(imageUrl, qrData) {
 
 async function matchAccount(slip) {
   const { rows: accounts } = await pool.query(
-    `SELECT * FROM finance_accounts WHERE guild_id = $1`, [GUILD_ID]
+    `SELECT * FROM finance_accounts WHERE org_id = $1`, [await orgIdOfGuild(GUILD_ID)]
   )
 
   const matches = []

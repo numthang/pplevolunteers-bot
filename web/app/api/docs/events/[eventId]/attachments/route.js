@@ -1,8 +1,8 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
-import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
+import { getEffectiveOrgIdentity } from '@/lib/orgAccess.js'
 import { canManageDocs } from '@/lib/docsAccess.js'
-import { getGuildId } from '@/lib/guildContext.js'
+import { getOrgId } from '@/lib/orgContext.js'
 import { upsertDocProject, getDocProjectByEventId } from '@/db/docs/projects.js'
 import { getAttachmentsByProject, createAttachment } from '@/db/docs/attachments.js'
 import { cropAndSave, buildRegistrationPdf, getRegPdfPath, getUploadPath } from '@/lib/cropDocument.js'
@@ -10,7 +10,7 @@ import { mkdir, writeFile } from 'fs/promises'
 import path from 'path'
 
 async function authCheck(session) {
-  const { access } = await getEffectiveIdentity(session)
+  const { access } = await getEffectiveOrgIdentity(session)
   return canManageDocs(access)
 }
 
@@ -20,11 +20,11 @@ async function authCheck(session) {
  */
 export async function POST(req, { params }) {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.discordId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!session?.user?.userId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
   if (!await authCheck(session)) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
   const { eventId } = await params
-  const guildId = await getGuildId(session)
+  const orgId = await getOrgId(session)
 
   const formData = await req.formData()
   const file = formData.get('file')
@@ -38,12 +38,12 @@ export async function POST(req, { params }) {
 
   // find-or-create project
   const projectId = await upsertDocProject({
-    guildId,
+    orgId,
     actEventCacheId: parseInt(eventId),
-    createdBy: session.user.discordId,
+    createdBy: session.user.userId,
   })
 
-  const project = await getDocProjectByEventId(parseInt(eventId), guildId)
+  const project = await getDocProjectByEventId(parseInt(eventId), orgId)
   const projectName = project?.project_name || project?.event_name || `project_${projectId}`
 
   const bytes = await file.arrayBuffer()
@@ -60,7 +60,7 @@ export async function POST(req, { params }) {
 
     // Image upload — crop + save as attachment
     const filePath = await cropAndSave(buffer, projectId)
-    const attachment = await createAttachment(projectId, guildId, {
+    const attachment = await createAttachment(projectId, orgId, {
       originalName: file.name,
       filePath,
     })

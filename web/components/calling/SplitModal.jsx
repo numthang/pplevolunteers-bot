@@ -15,7 +15,7 @@ export default function SplitModal({ isOpen, unassignedCount, onClose, onConfirm
     if (assignees.length === 0) return
     setIsLoading(true)
     try {
-      await onConfirm(assignees.map(u => u.discord_id))
+      await onConfirm(assignees.map(u => u.user_id))
     } finally {
       setIsLoading(false)
       setAssignees([])
@@ -60,7 +60,7 @@ export default function SplitModal({ isOpen, unassignedCount, onClose, onConfirm
                   const from = i * perPerson + 1
                   const to = Math.min((i + 1) * perPerson, unassignedCount)
                   return (
-                    <div key={u.discord_id} className="flex items-center justify-between px-3 py-2.5">
+                    <div key={u.user_id} className="flex items-center justify-between px-3 py-2.5">
                       <span className="font-medium text-warm-900 dark:text-disc-text">{u.display_name}</span>
                       <span className="text-warm-400 dark:text-disc-muted">
                         {t('splitModal.rangeLabel', { count: to - from + 1, from, to })}

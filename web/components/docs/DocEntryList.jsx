@@ -16,13 +16,12 @@ const BADGE_MUTED_LINK = BADGE_MUTED + ' hover:bg-warm-200 dark:hover:bg-disc-bo
 const inputCls = 'h-8 border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-warm-900 dark:text-disc-text text-sm rounded px-2 focus:outline-none focus:ring-1 focus:ring-orange'
 const selectCls = inputCls + ' appearance-none pr-6'
 
-export default function DocEntryList({ initialEntries, isMobile, canManage, currentDiscordId, onAddClick, onChange, eligiblePayers = [], eventId, recentMembers = [] }) {
+export default function DocEntryList({ initialEntries, isMobile, canManage, currentUserId, onAddClick, onChange, eligiblePayers = [], recentMembers = [] }) {
   const t = useTranslations('docs')
   const [entries, setEntries] = useState(initialEntries)
   const [editingId, setEditingId] = useState(null)
   const [editForm, setEditForm]   = useState({})
   const [saving, setSaving]       = useState(false)
-  const [payerSaving, setPayerSaving] = useState(null)
   const [copiedKey, setCopiedKey]     = useState(null)
 
   function itemLabel(type) {
@@ -70,12 +69,12 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
   function startEdit(entry) {
     setEditingId(entry.id)
     setEditForm({
-      itemType:        entry.item_type,
-      description:     entry.description || '',
-      amount:          entry.amount,
-      memberDiscordId: entry.member_discord_id,
-      memberName:      entry.display_name || entry.member_discord_id,
-      payerDiscordId:  entry.payer_discord_id || '',
+      itemType:      entry.item_type,
+      description:   entry.description || '',
+      amount:        entry.amount,
+      memberUserId:  entry.member_user_id,
+      memberName:    entry.display_name || entry.member_user_id,
+      payerUserId:   entry.payer_user_id || '',
     })
     setMemberResults([])
     setMemberOpen(false)
@@ -84,7 +83,7 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
   function cancelEdit() { setEditingId(null); setEditForm({}); setMemberResults([]); setMemberOpen(false) }
 
   function onMemberQueryChange(q) {
-    setEditForm(f => ({ ...f, memberName: q, memberDiscordId: f.memberDiscordId }))
+    setEditForm(f => ({ ...f, memberName: q, memberUserId: f.memberUserId }))
     clearTimeout(debounceRef.current)
     if (!q.trim()) {
       setMemberResults([])
@@ -103,29 +102,29 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
 
   function selectMember(m) {
     const label = [m.first_name, m.last_name].filter(Boolean).join(' ') || m.display_name
-    setEditForm(f => ({ ...f, memberDiscordId: m.discord_id, memberName: m.display_name + (label !== m.display_name ? ` (${label})` : '') }))
+    setEditForm(f => ({ ...f, memberUserId: m.user_id, memberName: m.display_name + (label !== m.display_name ? ` (${label})` : '') }))
     setMemberOpen(false)
   }
 
   async function saveEdit(entryId) {
-    if (!editForm.memberDiscordId) { alert(t('entryList.recipientRequired')); return }
+    if (!editForm.memberUserId) { alert(t('entryList.recipientRequired')); return }
     const entry = entries.find(e => e.id === entryId)
-    const memberChanged = editForm.memberDiscordId !== entry?.member_discord_id
+    const memberChanged = editForm.memberUserId !== entry?.member_user_id
     if (memberChanged && entry?.status === 'signed') {
       if (!confirm(t('entryList.confirmResetRecipientSignature'))) return
     }
     setSaving(true)
     try {
-      const payerChanged = editForm.payerDiscordId && editForm.payerDiscordId !== entry?.payer_discord_id
+      const payerChanged = editForm.payerUserId && editForm.payerUserId !== entry?.payer_user_id
       const res = await fetch(`/api/docs/entries/${entryId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          itemType:        editForm.itemType,
-          description:     editForm.description || null,
-          amount:          parseFloat(editForm.amount),
-          memberDiscordId: editForm.memberDiscordId,
-          ...(payerChanged ? { payerDiscordId: editForm.payerDiscordId } : {}),
+          itemType:      editForm.itemType,
+          description:   editForm.description || null,
+          amount:        parseFloat(editForm.amount),
+          memberUserId:  editForm.memberUserId,
+          ...(payerChanged ? { payerUserId: editForm.payerUserId } : {}),
         }),
       })
       if (!res.ok) throw new Error((await res.json()).error)
@@ -133,7 +132,7 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
       const next = entries.map(e =>
         e.id === entryId
           ? { ...e, item_type: editForm.itemType, description: editForm.description || null, amount: editForm.amount,
-              member_discord_id: editForm.memberDiscordId, display_name: editForm.memberName.split(' (')[0],
+              member_user_id: editForm.memberUserId, display_name: editForm.memberName.split(' (')[0],
               ...(d.resetSignature ? { status: 'pending', signed_at: null } : {}) }
           : e
       )
@@ -168,47 +167,9 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
     }
   }
 
-  // เปลี่ยนผู้จ่ายของทุก entry ในกลุ่มผู้รับคนหนึ่ง (manual override)
-  async function changePayer(recipientDiscordId, payerDiscordId, groupItems) {
-    if (!payerDiscordId || !eventId) return
-    const curPayer = groupItems[0]?.payer_discord_id
-    if (payerDiscordId === curPayer) return
-    if (groupItems.some(e => e.payer_signed_at) &&
-        !confirm(t('entryList.confirmResetPayerSignature'))) return
-
-    setPayerSaving(recipientDiscordId)
-    try {
-      const res = await fetch(`/api/docs/projects/${eventId}/set-payer`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ recipientDiscordId, payerDiscordId }),
-      })
-      if (!res.ok) throw new Error((await res.json()).error)
-      const d = await res.json()
-      const tokenById = Object.fromEntries((d.data?.entries || []).map(t => [t.id, t]))
-      const info = eligiblePayers.find(p => p.discord_id === payerDiscordId)
-      const next = entries.map(e =>
-        e.member_discord_id === recipientDiscordId
-          ? { ...e,
-              payer_discord_id:   payerDiscordId,
-              payer_sign_token:   tokenById[e.id]?.payer_sign_token ?? e.payer_sign_token,
-              payer_signed_at:    null,
-              payer_display_name: info?.display_name ?? e.payer_display_name,
-              payer_position:     info?.position     ?? e.payer_position }
-          : e
-      )
-      setEntries(next)
-      onChange?.(next)
-    } catch (err) {
-      alert(t('entryList.errorPrefix', { message: err.message }))
-    } finally {
-      setPayerSaving(null)
-    }
-  }
-
   const byMember = []
   for (const e of entries) {
-    const key = e.member_discord_id ?? `__unassigned_${e.id}`
+    const key = e.member_user_id ?? `__unassigned_${e.id}`
     const existing = byMember.find(g => g.key === key)
     if (existing) {
       existing.items.push(e)
@@ -216,10 +177,12 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
       const realName = [e.ngs_first_name, e.ngs_last_name].filter(Boolean).join(' ')
       byMember.push({
         key,
-        name:         e.member_discord_id ? (e.display_name || e.member_discord_id) : null,
+        // display-only — คนที่ล็อกอิน email ไม่มี Discord → ไม่ต้องขึ้นลิงก์โปรไฟล์
+        discordId:    e.member_discord_id || null,
+        name:         e.display_name || null,
         username:     e.username || null,
         realName,
-        isUnassigned: !e.member_discord_id,
+        isUnassigned: !e.member_user_id,
         items:        [e],
       })
     }
@@ -242,7 +205,7 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
 
   return (
     <div className="space-y-4">
-      {byMember.map(({ key, name, username, realName, isUnassigned, items }) => {
+      {byMember.map(({ key, discordId, name, username, realName, isUnassigned, items }) => {
         const memberTotal  = items.reduce((s, e) => s + Number(e.amount || 0), 0)
         return (
           <div key={key} className={`bg-card-bg border ${isUnassigned ? 'border-orange' : 'border-warm-200 dark:border-disc-border'} rounded-lg ${items.some(e => editingId === e.id) ? 'overflow-visible' : 'overflow-hidden'}`}>
@@ -254,8 +217,8 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
               ) : (
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    {key && !key.startsWith('__') ? (
-                      <a href={`https://discord.com/users/${key}`} target="_blank" rel="noopener noreferrer"
+                    {discordId ? (
+                      <a href={`https://discord.com/users/${discordId}`} target="_blank" rel="noopener noreferrer"
                         className="font-semibold text-warm-900 dark:text-disc-text hover:text-orange transition">
                         {realName || (username ? `@${username}` : name)}
                       </a>
@@ -309,7 +272,7 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
                                     const realName = [m.first_name, m.last_name].filter(Boolean).join(' ')
                                     return (
                                       <li
-                                        key={m.discord_id}
+                                        key={m.user_id}
                                         onMouseDown={() => selectMember(m)}
                                         className="px-3 py-2 cursor-pointer hover:bg-warm-50 dark:hover:bg-disc-border text-sm"
                                       >
@@ -370,13 +333,13 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
                           <div className="flex items-center gap-2">
                             <span className="text-xs text-warm-600 dark:text-disc-text shrink-0">{t('entryList.payerLabel')}</span>
                             <select
-                              value={editForm.payerDiscordId || ''}
-                              onChange={e => setEditForm(f => ({ ...f, payerDiscordId: e.target.value }))}
+                              value={editForm.payerUserId || ''}
+                              onChange={e => setEditForm(f => ({ ...f, payerUserId: e.target.value ? Number(e.target.value) : '' }))}
                               className={`${selectCls} flex-1`}
                             >
                               <option value="">{t('entryList.selectPayerPlaceholder')}</option>
-                              {eligiblePayers.filter(p => p.discord_id !== editForm.memberDiscordId).map(p => (
-                                <option key={p.discord_id} value={p.discord_id}>
+                              {eligiblePayers.filter(p => p.user_id !== editForm.memberUserId).map(p => (
+                                <option key={p.user_id} value={p.user_id}>
                                   {p.display_name}{p.position ? ` · ${p.position}` : ''}
                                 </option>
                               ))}
@@ -405,7 +368,7 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
                           <span className="hidden sm:inline text-base font-medium text-warm-900 dark:text-disc-text">
                             {t('entryList.amount', { amount: Number(entry.amount).toLocaleString() })}
                           </span>
-                          {signBadge(t('entryList.signReceivedLabel'), entry.member_discord_id ? entry.sign_token : null, entry.status === 'signed')}
+                          {signBadge(t('entryList.signReceivedLabel'), entry.member_user_id ? entry.sign_token : null, entry.status === 'signed')}
                           {signBadge(t('entryList.signPaidLabel'), entry.payer_sign_token, !!entry.payer_signed_at)}
                           {canManage && entry.status === 'signed' && (
                             <a href={`/api/docs/entries/${entry.id}/pdf`} target="_blank" className="text-xs text-orange hover:underline">

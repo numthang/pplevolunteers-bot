@@ -4,8 +4,8 @@ import { getSession } from '@/lib/auth.js'
 import { redirect } from 'next/navigation'
 import { canManageDocs, getUserScope } from '@/lib/docsAccess.js'
 import { getDocEvents } from '@/db/docs/projects.js'
-import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
-import { getGuildId } from '@/lib/guildContext.js'
+import { getEffectiveOrgIdentity } from '@/lib/orgAccess.js'
+import { getOrgId } from '@/lib/orgContext.js'
 import DocProjectCard from '@/components/docs/DocProjectCard.jsx'
 import DocsProvinceFilter from '@/components/docs/DocsProvinceFilter.jsx'
 
@@ -19,12 +19,12 @@ export default async function DocsPage({ searchParams }) {
   const session = await getSession()
   if (!session) redirect('/')
 
-  const { access } = await getEffectiveIdentity(session)
+  const { access } = await getEffectiveOrgIdentity(session)
   if (!canManageDocs(access)) redirect('/docs/pending')
 
   const scope = getUserScope(access)
-  const guildId = await getGuildId(session)
-  const allProjects = await getDocEvents(guildId, scope)
+  const orgId = await getOrgId(session)
+  const allProjects = await getDocEvents(orgId, scope)
 
   const selectedProvince = (await searchParams)?.province || ''
 

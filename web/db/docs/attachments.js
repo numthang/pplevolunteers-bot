@@ -11,19 +11,19 @@ export async function getAttachmentsByProject(projectId) {
   return rows
 }
 
-export async function createAttachment(projectId, guildId, { originalName, filePath, sortOrder = 0 }) {
+export async function createAttachment(projectId, orgId, { originalName, filePath, sortOrder = 0 }) {
   const { rows } = await pool.query(
-    `INSERT INTO docs_project_attachments (project_id, guild_id, original_name, file_path, sort_order)
+    `INSERT INTO docs_project_attachments (project_id, org_id, original_name, file_path, sort_order)
      VALUES ($1, $2, $3, $4, $5)
      RETURNING id, original_name, file_path, sort_order, created_at`,
-    [projectId, guildId, originalName, filePath, sortOrder]
+    [projectId, orgId, originalName, filePath, sortOrder]
   )
   return rows[0]
 }
 
 export async function getAttachmentById(id, projectId) {
   const { rows } = await pool.query(
-    `SELECT id, project_id, guild_id, original_name, file_path
+    `SELECT id, project_id, org_id, original_name, file_path
      FROM docs_project_attachments
      WHERE id = $1 AND project_id = $2`,
     [id, projectId]

@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Pencil, Trash2, Plus, Check, X, ArrowLeft, ChevronUp, ChevronDown } from 'lucide-react'
 
-const EMPTY_FORM = { discordId: '', displayName: '', position: '', sortOrder: 0 }
+const EMPTY_FORM = { userId: '', displayName: '', position: '', sortOrder: 0 }
 
 function MemberSearch({ onSelect }) {
   const t = useTranslations('docs')
@@ -54,9 +54,9 @@ function MemberSearch({ onSelect }) {
       {open && results.length > 0 && (
         <ul className="absolute z-50 left-0 right-0 top-full mt-1 bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg shadow-lg overflow-hidden max-h-48 overflow-y-auto">
           {results.map(m => {
-            const name = m.display_name || `${m.first_name || ''} ${m.last_name || ''}`.trim() || m.discord_id
+            const name = m.display_name || `${m.first_name || ''} ${m.last_name || ''}`.trim() || m.username
             return (
-              <li key={m.discord_id}>
+              <li key={m.user_id}>
                 <button
                   type="button"
                   onClick={() => select(m)}
@@ -83,16 +83,11 @@ function ScopeBadges({ nodes = [] }) {
       </span>
     )
   }
-  const labels = nodes.map(n => {
-    const i = n.indexOf(':')
-    if (i === -1) return null
-    const type = n.slice(0, i)
-    const val  = n.slice(i + 1)
-    if (type === 'province')  return { label: val, wide: false }
-    if (type === 'subregion') return { label: val.replace(/^ทีม/, ''), wide: true }
-    if (type === 'region')    return { label: val.replace(/^ทีม/, ''), wide: true }
-    return null
-  }).filter(Boolean)
+  // โครงใหม่ (org_scope_nodes) ไม่มี prefix type:value แล้ว — API ส่ง { key, label, wide } มาตรงๆ
+  // wide = node มีลูก (ภาค/ภาคย่อย) · ไม่มีลูก = ปลายกิ่ง (จังหวัด)
+  const labels = nodes
+    .filter(n => n?.label || n?.key)
+    .map(n => ({ label: (n.label || n.key).replace(/^ทีม/, ''), wide: !!n.wide }))
   if (!labels.length) return null
   return (
     <div className="flex flex-wrap gap-1 mt-1">
@@ -360,17 +355,17 @@ export default function DocsSettingsPage() {
               <label className="block text-sm text-warm-500 dark:text-disc-muted mb-1">{t('settings.searchMemberLabel')}</label>
               {selectedMember ? (
                 <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-orange/40 bg-orange/5 text-base">
-                  <span className="flex-1 text-warm-900 dark:text-disc-text font-medium">{selectedMember.display_name || selectedMember.discord_id}</span>
-                  <button type="button" onClick={() => { setSelectedMember(null); setForm(f => ({ ...f, discordId: '', displayName: '' })) }}
+                  <span className="flex-1 text-warm-900 dark:text-disc-text font-medium">{selectedMember.display_name || selectedMember.username}</span>
+                  <button type="button" onClick={() => { setSelectedMember(null); setForm(f => ({ ...f, userId: '', displayName: '' })) }}
                     className="text-warm-400 hover:text-red-500 transition-colors">
                     <X size={15} />
                   </button>
                 </div>
               ) : (
                 <MemberSearch onSelect={m => {
-                  const name = m.display_name || `${m.first_name || ''} ${m.last_name || ''}`.trim() || m.discord_id
+                  const name = m.display_name || `${m.first_name || ''} ${m.last_name || ''}`.trim() || m.username
                   setSelectedMember(m)
-                  setForm(f => ({ ...f, discordId: m.discord_id, displayName: name }))
+                  setForm(f => ({ ...f, userId: m.user_id, displayName: name }))
                 }} />
               )}
             </div>

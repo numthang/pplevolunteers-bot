@@ -1,60 +1,60 @@
 import pool from '../index.js'
 
-export async function getFavorites(guildId, userDiscordId) {
+export async function getFavorites(orgId, userId) {
   const { rows } = await pool.query(
     `SELECT member_id, contact_type, note, created_at
      FROM calling_starred
-     WHERE guild_id = $1 AND user_discord_id = $2
+     WHERE org_id = $1 AND user_id = $2
      ORDER BY created_at DESC`,
-    [guildId, userDiscordId]
+    [orgId, userId]
   )
   return rows
 }
 
-export async function isFavorite(guildId, userDiscordId, memberId, contactType = 'member') {
+export async function isFavorite(orgId, userId, memberId, contactType = 'member') {
   const { rows } = await pool.query(
     `SELECT 1 FROM calling_starred
-     WHERE guild_id = $1 AND user_discord_id = $2 AND member_id = $3 AND contact_type = $4
+     WHERE org_id = $1 AND user_id = $2 AND member_id = $3 AND contact_type = $4
      LIMIT 1`,
-    [guildId, userDiscordId, String(memberId), contactType]
+    [orgId, userId, String(memberId), contactType]
   )
   return rows.length > 0
 }
 
-export async function getFavoriteSet(guildId, userDiscordId, contactType = 'member') {
+export async function getFavoriteSet(orgId, userId, contactType = 'member') {
   const { rows } = await pool.query(
     `SELECT member_id FROM calling_starred
-     WHERE guild_id = $1 AND user_discord_id = $2 AND contact_type = $3`,
-    [guildId, userDiscordId, contactType]
+     WHERE org_id = $1 AND user_id = $2 AND contact_type = $3`,
+    [orgId, userId, contactType]
   )
   return new Set(rows.map(r => String(r.member_id)))
 }
 
-export async function addFavorite(guildId, userDiscordId, memberId, contactType = 'member', note = null) {
+export async function addFavorite(orgId, userId, memberId, contactType = 'member', note = null) {
   await pool.query(
     `INSERT INTO calling_starred
-       (guild_id, user_discord_id, member_id, contact_type, note)
+       (org_id, user_id, member_id, contact_type, note)
      VALUES ($1, $2, $3, $4, $5)
      ON CONFLICT DO NOTHING`,
-    [guildId, userDiscordId, String(memberId), contactType, note]
+    [orgId, userId, String(memberId), contactType, note]
   )
 }
 
-export async function removeFavorite(guildId, userDiscordId, memberId, contactType = 'member') {
+export async function removeFavorite(orgId, userId, memberId, contactType = 'member') {
   await pool.query(
     `DELETE FROM calling_starred
-     WHERE guild_id = $1 AND user_discord_id = $2 AND member_id = $3 AND contact_type = $4`,
-    [guildId, userDiscordId, String(memberId), contactType]
+     WHERE org_id = $1 AND user_id = $2 AND member_id = $3 AND contact_type = $4`,
+    [orgId, userId, String(memberId), contactType]
   )
 }
 
-export async function getFavoritesEnriched(guildId, userDiscordId) {
+export async function getFavoritesEnriched(orgId, userId) {
   const { rows: favRows } = await pool.query(
     `SELECT member_id, contact_type, note, created_at
      FROM calling_starred
-     WHERE guild_id = $1 AND user_discord_id = $2
+     WHERE org_id = $1 AND user_id = $2
      ORDER BY created_at DESC`,
-    [guildId, userDiscordId]
+    [orgId, userId]
   )
   if (favRows.length === 0) return []
 
@@ -65,8 +65,8 @@ export async function getFavoritesEnriched(guildId, userDiscordId) {
     memberIds.length === 0 ? Promise.resolve({ rows: [] }) : pool.query(
       `SELECT source_id, first_name, last_name, mobile_number AS phone,
               home_province, home_amphure AS home_district, date_of_birth
-       FROM ngs_member_cache WHERE source_id = ANY($1) AND guild_id = $2`,
-      [memberIds, guildId]
+       FROM cache_pple_member WHERE source_id = ANY($1) AND org_id = $2`,
+      [memberIds, orgId]
     ),
     contactIds.length === 0 ? Promise.resolve({ rows: [] }) : pool.query(
       `SELECT id, first_name, last_name, phone, province, amphoe, category
@@ -90,11 +90,11 @@ export async function getFavoritesEnriched(guildId, userDiscordId) {
   })
 }
 
-export async function getFavoritesDisplay(guildId, userDiscordId, { name, limit = 100, offset = 0 } = {}) {
+export async function getFavoritesDisplay(orgId, userId, { name, limit = 100, offset = 0 } = {}) {
   const keyword = name || null
   const like = keyword ? `%${keyword}%` : null
 
-  const params = [guildId, guildId, userDiscordId]
+  const params = [orgId, orgId, userId]
   let nameFilter = ''
   if (keyword) {
     params.push(keyword, like)
@@ -118,19 +118,23 @@ export async function getFavoritesDisplay(guildId, userDiscordId, { name, limit 
        CASE WHEN f.contact_type = 'member' THEN m.home_province ELSE c.province END AS home_province,
        COALESCE(t.tier::text, 'D') AS tier,
        dc.avatar AS discord_avatar,
-       dc.discord_id,
+       u.discord_id,
        m.membership_type,
        c.category
      FROM calling_starred f
-     LEFT JOIN ngs_member_cache m
-       ON f.contact_type = 'member' AND m.source_id::text = f.member_id AND m.guild_id = $1
+     LEFT JOIN cache_pple_member m
+       ON f.contact_type = 'member' AND m.source_id::text = f.member_id AND m.org_id = $1
      LEFT JOIN calling_member_tiers t
        ON f.contact_type = 'member' AND t.member_id = f.member_id AND t.contact_type = 'member'
-     LEFT JOIN dc_members dc
-       ON f.contact_type = 'member' AND dc.serial = m.serial AND dc.guild_id = $1
+     LEFT JOIN LATERAL (
+       SELECT om.avatar, om.user_id FROM org_members om
+        WHERE f.contact_type = 'member' AND om.serial = m.serial AND om.org_id = $1
+        LIMIT 1
+     ) dc ON true
+     LEFT JOIN users u ON u.id = dc.user_id
      LEFT JOIN calling_contacts c
        ON f.contact_type = 'contact' AND c.id::text = f.member_id
-     WHERE f.guild_id = $2 AND f.user_discord_id = $3
+     WHERE f.org_id = $2 AND f.user_id = $3
      ${nameFilter}
      ORDER BY f.created_at DESC
      LIMIT $${params.length - 1} OFFSET $${params.length}`,
@@ -139,10 +143,10 @@ export async function getFavoritesDisplay(guildId, userDiscordId, { name, limit 
   return rows
 }
 
-export async function updateFavoriteNote(guildId, userDiscordId, memberId, contactType, note) {
+export async function updateFavoriteNote(orgId, userId, memberId, contactType, note) {
   await pool.query(
     `UPDATE calling_starred SET note = $1
-     WHERE guild_id = $2 AND user_discord_id = $3 AND member_id = $4 AND contact_type = $5`,
-    [note, guildId, userDiscordId, String(memberId), contactType]
+     WHERE org_id = $2 AND user_id = $3 AND member_id = $4 AND contact_type = $5`,
+    [note, orgId, userId, String(memberId), contactType]
   )
 }

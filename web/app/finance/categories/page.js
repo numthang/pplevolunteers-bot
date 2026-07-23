@@ -99,7 +99,7 @@ function IconPicker({ value, onChange }) {
 export default function CategoriesPage() {
   const t = useTranslations('finance')
   const { data: session } = useSession()
-  const { discordId: effectiveDiscordId, access } = useEffectiveRoles(session)
+  const { userId: effectiveUserId, access } = useEffectiveRoles(session, { scope: 'org' })
   const [cats, setCats]               = useState([])
   const [input, setInput]             = useState('')
   const [inputIcon, setInputIcon]     = useState('Folder')
@@ -112,7 +112,7 @@ export default function CategoriesPage() {
   const canEditGlobal = can('editGlobalCategory', access?.permissions || [])
 
   function canEdit(c) {
-    return c.is_global ? canEditGlobal : c.owner_id === effectiveDiscordId
+    return c.is_global ? canEditGlobal : c.owner_id === effectiveUserId
   }
 
   async function load() {

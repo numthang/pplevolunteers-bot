@@ -172,14 +172,15 @@ module.exports = {
 
       const { rows } = await pool.query(
         `SELECT
-          m.discord_id,
-          COALESCE(m.nickname, m.username) AS display_name,
+          u.discord_id,
+          COALESCE(om.nickname, u.username) AS display_name,
           ROUND(AVG(r.stars)::numeric, 1) AS avg_stars,
           COUNT(r.id)            AS total
-        FROM dc_members m
-        JOIN dc_user_ratings r ON r.guild_id = m.guild_id AND r.target_id = m.discord_id
-        WHERE m.guild_id = $1 AND m.discord_id = ANY($2)
-        GROUP BY m.discord_id, m.nickname, m.username
+        FROM org_members om
+        JOIN users u ON u.id = om.user_id
+        JOIN dc_user_ratings r ON r.guild_id = om.guild_id AND r.target_id = u.discord_id
+        WHERE om.guild_id = $1 AND u.discord_id = ANY($2)
+        GROUP BY u.discord_id, om.nickname, u.username
         HAVING COUNT(r.id) >= 1
         ORDER BY avg_stars DESC, total DESC
         LIMIT $3`,

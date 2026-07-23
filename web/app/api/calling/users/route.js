@@ -1,20 +1,20 @@
 import { getServerSession } from 'next-auth'
 import pool from '@/db/index.js'
 import { authOptions } from '@/lib/auth-options.js'
-import { getGuildId } from '@/lib/guildContext.js'
+import { getOrgId } from '@/lib/orgContext.js'
 
 /**
  * GET /api/calling/users
- * Return dc_members for the guild (for assignee combobox)
+ * Return org_members (+ users identity) for the guild (for assignee combobox)
  */
 export async function GET(req) {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.discordId) {
+  if (!session?.user?.userId) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const guildId = await getGuildId(session)
-  if (!guildId) {
+  const orgId = await getOrgId(session)
+  if (!orgId) {
     return Response.json({ error: 'GUILD_ID not configured' }, { status: 500 })
   }
 
@@ -24,15 +24,17 @@ export async function GET(req) {
 
   try {
     const { rows } = await pool.query(
-      `SELECT discord_id,
-              COALESCE(NULLIF(display_name, ''), username) AS display_name,
-              province
-       FROM dc_members
-       WHERE guild_id = $1
-         AND ($2 = '' OR display_name ILIKE $3 OR username ILIKE $3)
-       ORDER BY display_name ASC
+      `SELECT DISTINCT ON (u.id)
+              u.id AS user_id, u.discord_id,
+              COALESCE(NULLIF(om.display_name, ''), u.username) AS display_name,
+              om.province
+       FROM org_members om
+       JOIN users u ON u.id = om.user_id
+       WHERE om.org_id = $1
+         AND ($2 = '' OR om.display_name ILIKE $3 OR u.username ILIKE $3)
+       ORDER BY u.id, display_name ASC
        ${all ? '' : 'LIMIT 50'}`,
-      [guildId, q, `%${q}%`]
+      [orgId, q, `%${q}%`]
     )
     return Response.json({ success: true, data: rows })
   } catch (error) {

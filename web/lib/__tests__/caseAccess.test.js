@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest'
 import * as ca from '../caseAccess.js'
 
 // caseAccess รับ access object { permissions: Set, scopeGrants: [] } ตรงๆ
+// ⚠️ scopeGrants = ชื่อพื้นที่ล้วน ไล่ชั้นเสร็จแล้ว (ORG_ACCESS_REDESIGN ขั้น 4)
+//    เดิมเป็น grant ดิบมี prefix ('province:ราชบุรี') แล้ว getUserScope ตัด prefix เอง
 const acc = (permissions = [], scopeGrants = []) => ({
   isMember: true,
   permissions: new Set(permissions),
@@ -24,10 +26,10 @@ describe('canAccessCaseProvince', () => {
     expect(ca.canAccessCaseProvince('ราชบุรี', acc(['admin']))).toBe(true))
 
   it('caseworker จังหวัดตรง scope → เข้าได้', () =>
-    expect(ca.canAccessCaseProvince('ราชบุรี', acc(['caseworker'], ['province:ราชบุรี']))).toBe(true))
+    expect(ca.canAccessCaseProvince('ราชบุรี', acc(['caseworker'], ['ราชบุรี']))).toBe(true))
 
   it('caseworker จังหวัดนอก scope → เข้าไม่ได้', () =>
-    expect(ca.canAccessCaseProvince('นครปฐม', acc(['caseworker'], ['province:ราชบุรี']))).toBe(false))
+    expect(ca.canAccessCaseProvince('นครปฐม', acc(['caseworker'], ['ราชบุรี']))).toBe(false))
 
   it('caseworker ไม่มี scope เลย → เข้าไม่ได้', () =>
     expect(ca.canAccessCaseProvince('ราชบุรี', acc(['caseworker'], []))).toBe(false))
@@ -38,5 +40,5 @@ describe('getUserScope (re-export จาก callingAccess)', () => {
     expect(ca.getUserScope(acc(['admin']))).toBe(null))
 
   it('caseworker → array จังหวัดใน scope', () =>
-    expect(ca.getUserScope(acc(['caseworker'], ['province:ราชบุรี']))).toEqual(['ราชบุรี']))
+    expect(ca.getUserScope(acc(['caseworker'], ['ราชบุรี']))).toEqual(['ราชบุรี']))
 })

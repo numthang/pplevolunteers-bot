@@ -22,7 +22,7 @@ const PROVINCES = [
 
 const cls = "block w-full border dark:border-disc-border rounded px-2 py-1 mt-1 bg-white dark:bg-disc-hover text-gray-900 dark:text-disc-text text-sm"
 
-export default function AccountFormFields({ form, onChange, guilds = [] }) {
+export default function AccountFormFields({ form, onChange }) {
   const t = useTranslations('finance')
   return (
     <div className="space-y-3 text-sm text-gray-700 dark:text-disc-text">
@@ -30,15 +30,6 @@ export default function AccountFormFields({ form, onChange, guilds = [] }) {
         {t('accountForm.nameLabel')}
         <input className={cls} value={form.name || ''} onChange={e => onChange({ name: e.target.value })} />
       </label>
-      {guilds.length > 0 && (
-        <label className="block">
-          {t('accountForm.guildLabel')}
-          <select className={cls} value={form.guild_id || ''} onChange={e => onChange({ guild_id: e.target.value })}>
-            <option value="">{t('accountForm.defaultGuildOption')}</option>
-            {guilds.map(g => <option key={g.guild_id} value={g.guild_id}>{g.name}</option>)}
-          </select>
-        </label>
-      )}
       <label className="block">
         {t('accountForm.bankLabel')}
         <select className={cls} value={form.bank || ''} onChange={e => onChange({ bank: e.target.value })}>

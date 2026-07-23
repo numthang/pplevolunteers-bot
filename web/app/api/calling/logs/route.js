@@ -2,13 +2,13 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
 import { createLog, getLogsByCampaignMember, getLogById, updateLog, deleteLog } from '@/db/calling/logs.js'
 import { calculateTierFromSignals, upsertTier } from '@/db/calling/tiers.js'
-import { getGuildId } from '@/lib/guildContext.js'
-import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
+import { getOrgId } from '@/lib/orgContext.js'
+import { getEffectiveOrgIdentity } from '@/lib/orgAccess.js'
 import { can } from '@/lib/permissions.js'
 
 export async function GET(req) {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.discordId) {
+  if (!session?.user?.userId) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -36,7 +36,7 @@ export async function GET(req) {
 
 export async function POST(req) {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.discordId) {
+  if (!session?.user?.userId) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -48,12 +48,12 @@ export async function POST(req) {
       return Response.json({ error: 'member_id and status are required' }, { status: 400 })
     }
 
-    const guildId = await getGuildId(session)
-    const logId = await createLog(guildId, {
+    const orgId = await getOrgId(session)
+    const logId = await createLog(orgId, {
       campaign_id: campaign_id || 0,
       member_id,
       contact_type,
-      called_by: session.user.discordId,
+      called_by: session.user.userId,
       caller_name: session.user.nickname || session.user.name || null,
       caller_image: session.user.image || null,
       status,
@@ -69,7 +69,7 @@ export async function POST(req) {
     // Auto-calculate and update tier if signals are present (answered call หรือ พบปะ)
     if (status === 'answered' || status === 'met') {
       const tier = await calculateTierFromSignals(member_id, null, contact_type)
-      if (tier) await upsertTier(guildId, member_id, tier, 'auto', contact_type)
+      if (tier) await upsertTier(orgId, member_id, tier, 'auto', contact_type)
     }
 
     return Response.json({ success: true, data: { id: logId } }, { status: 201 })
@@ -81,7 +81,7 @@ export async function POST(req) {
 
 export async function PATCH(req) {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.discordId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!session?.user?.userId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
   try {
     const body = await req.json()
@@ -91,18 +91,18 @@ export async function PATCH(req) {
     const log = await getLogById(id)
     if (!log) return Response.json({ error: 'Not found' }, { status: 404 })
 
-    const { access } = await getEffectiveIdentity(session)
+    const { access } = await getEffectiveOrgIdentity(session)
     const isModerator = can('deleteLog', access.permissions)
-    if (log.called_by !== session.user.discordId && !isModerator) {
+    if (log.called_by !== session.user.userId && !isModerator) {
       return Response.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     await updateLog(id, { status, note, sig_overall, sig_location, sig_availability, sig_interest, sig_reachable })
 
     if (status === 'answered' || status === 'met' || log.status === 'answered' || log.status === 'met') {
-      const guildId = await getGuildId(session)
+      const orgId = await getOrgId(session)
       const tier = await calculateTierFromSignals(log.member_id, null, log.contact_type)
-      if (tier) await upsertTier(guildId, log.member_id, tier, 'auto', log.contact_type)
+      if (tier) await upsertTier(orgId, log.member_id, tier, 'auto', log.contact_type)
     }
 
     return Response.json({ success: true })
@@ -114,14 +114,14 @@ export async function PATCH(req) {
 
 export async function DELETE(req) {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.discordId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!session?.user?.userId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
   try {
     const { searchParams } = new URL(req.url)
     const id = parseInt(searchParams.get('id'))
     if (!id) return Response.json({ error: 'id is required' }, { status: 400 })
 
-    const { access } = await getEffectiveIdentity(session)
+    const { access } = await getEffectiveOrgIdentity(session)
     if (!can('deleteLog', access.permissions)) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
     await deleteLog(id)

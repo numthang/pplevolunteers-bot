@@ -1,4 +1,5 @@
 const pool = require('./index')
+const { orgIdOfGuild } = require('./org')
 
 async function getFinanceConfig(guildId) {
   const { rows } = await pool.query(
@@ -23,9 +24,12 @@ async function upsertFinanceConfig(guildId, data) {
   )
 }
 
+// finance_accounts เป็น org-scope แล้ว (finance-org-scope.sql) — caller ฝั่งบอทมีแต่ guildId
+// จาก Discord context จึงคง signature เดิมไว้ แล้วแปลงที่ขอบ (pattern เดียวกับ db/case.js)
 async function getAccountsSummary(guildId, accountIds = []) {
-  let where = `WHERE a.guild_id = $1`
-  const params = [guildId]
+  const orgId = await orgIdOfGuild(guildId)
+  let where = `WHERE a.org_id = $1`
+  const params = [orgId]
 
   if (accountIds.length) {
     params.push(accountIds)

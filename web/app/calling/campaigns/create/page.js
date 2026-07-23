@@ -37,7 +37,7 @@ export default function CreateCampaignPage() {
   const t = useTranslations('calling')
   const router = useRouter()
   const { data: session } = useSession()
-  const { roles } = useEffectiveRoles(session)
+  const { roles } = useEffectiveRoles(session, { scope: 'org' })
   const defaultProvince = session?.user?.primary_province || getProvinceFromRoles(roles)
 
   const [name, setName] = useState('')

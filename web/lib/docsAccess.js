@@ -10,7 +10,6 @@
  *   treasurer                  → exactProvinces เท่านั้น (เหมือน finance)
  */
 
-import { expandGrants } from './geography.js'
 import { normalizeAccess } from './roleAccess.js'
 
 const MANAGE_PERMISSIONS = new Set([
@@ -22,11 +21,6 @@ function isOrgHead(permissions) {
   return permissions.has('admin') || permissions.has('secretary_general')
 }
 
-function exactProvinces(scopeGrants) {
-  const s = new Set()
-  for (const g of scopeGrants) if (g.startsWith('province:')) s.add(g.slice('province:'.length))
-  return s
-}
 
 /** ใครจัดการเอกสารได้ (สร้าง/แก้/export) */
 export function canManageDocs(access = {}) {
@@ -43,22 +37,8 @@ export function getUserScope(access = {}) {
 
   if (isOrgHead(permissions)) return null
 
-  // regional → expand subregion (เหมือน calling)
-  if (permissions.has('regional_coordinator')) {
-    const subGrants = scopeGrants.filter(g => g.startsWith('subregion:'))
-    const provinces = expandGrants(subGrants, { mode: 'calling' })
-    return provinces.size > 0 ? Array.from(provinces) : []
-  }
-
-  // treasurer → exactProvinces (เหมือน finance)
-  if (permissions.has('treasurer')) {
-    return Array.from(exactProvinces(scopeGrants))
-  }
-
-  // province_coordinator / district_coordinator → จังหวัดที่ติดยศ
+  // resolveAccessV2 ไล่ชั้น + กั้นด้วยตำแหน่งมาให้แล้ว (ORG_ACCESS_REDESIGN ขั้น 4)
   return scopeGrants
-    .filter(g => g.startsWith('province:'))
-    .map(g => g.slice('province:'.length))
 }
 
 /**

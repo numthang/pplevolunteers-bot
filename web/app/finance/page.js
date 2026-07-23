@@ -2,8 +2,8 @@ import { requireAuth } from '@/lib/auth.js'
 import { getAccountsAll } from '@/db/finance/accounts.js'
 import { getAccountSummary } from '@/db/finance/transactions.js'
 import { canViewAccount, canEditAccount } from '@/lib/financeAccess.js'
-import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
-import { getGuildId } from '@/lib/guildContext.js'
+import { getEffectiveOrgIdentity } from '@/lib/orgAccess.js'
+import { getOrgId } from '@/lib/orgContext.js'
 import { can } from '@/lib/permissions.js'
 import { getTranslations } from 'next-intl/server'
 import Link from 'next/link'
@@ -16,14 +16,14 @@ function fmt(n) {
 export default async function FinancePage() {
   const t = await getTranslations('finance')
   const session = await requireAuth()
-  const { discordId, access } = await getEffectiveIdentity(session)
-  const GUILD_ID = await getGuildId(session)
-  const raw = await getAccountsAll(GUILD_ID, discordId, can('viewPrivateOther', access.permissions))
-  const accounts = raw.filter(a => canViewAccount(a, discordId, access))
+  const { userId, access } = await getEffectiveOrgIdentity(session)
+  const ORG_ID = await getOrgId(session)
+  const raw = await getAccountsAll(ORG_ID, userId, can('viewPrivateOther', access.permissions))
+  const accounts = raw.filter(a => canViewAccount(a, userId, access))
 
   const summaries = await Promise.all(
     accounts.map(async acc => {
-      const s = await getAccountSummary(GUILD_ID, acc.id)
+      const s = await getAccountSummary(ORG_ID, acc.id)
       return { ...acc, balance: Number(s.total_income || 0) - Number(s.total_expense || 0) }
     })
   )
@@ -61,7 +61,7 @@ export default async function FinancePage() {
                   </span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {group.map(acc => <AccountCard key={acc.id} account={{ ...acc, balance: acc.balance }} canEdit={canEditAccount(acc, discordId, access)} />)}
+                  {group.map(acc => <AccountCard key={acc.id} account={{ ...acc, balance: acc.balance }} canEdit={canEditAccount(acc, userId, access)} />)}
                 </div>
               </div>
             )

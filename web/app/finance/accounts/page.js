@@ -8,16 +8,15 @@ import AccountFormFields from '@/components/finance/AccountFormFields'
 import { canEditAccount } from '@/lib/financeAccess.js'
 import { useEffectiveRoles } from '@/lib/useEffectiveRoles.js'
 
-const EMPTY = { name: '', bank: '', account_no: '', visibility: 'private', province: '', notify_income: 1, notify_expense: 1, email_inbox: '', guild_id: '' }
+const EMPTY = { name: '', bank: '', account_no: '', visibility: 'private', province: '', notify_income: 1, notify_expense: 1, email_inbox: '' }
 
 export default function AccountsPage() {
   const t = useTranslations('finance')
   const { data: session } = useSession()
-  const { discordId: effectiveDiscordId, access: effectiveAccess } = useEffectiveRoles(session)
+  const { userId: effectiveUserId, access: effectiveAccess } = useEffectiveRoles(session, { scope: 'org' })
   const [accounts, setAccounts] = useState([])
   const [editing, setEditing] = useState(null)
   const [form, setForm] = useState(EMPTY)
-  const [guilds, setGuilds] = useState([])
 
   async function load() {
     const res = await fetch('/api/finance/accounts?all=1')
@@ -26,7 +25,6 @@ export default function AccountsPage() {
 
   useEffect(() => {
     load()
-    fetch('/api/admin/guilds').then(r => r.ok ? r.json() : []).then(setGuilds)
     window.addEventListener('guild-switched', load)
     return () => window.removeEventListener('guild-switched', load)
   }, [])
@@ -71,7 +69,7 @@ export default function AccountsPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {accounts.map(a => {
-          const canEdit = canEditAccount({ owner_id: a.owner_id, visibility: a.visibility, province: a.province }, effectiveDiscordId, effectiveAccess)
+          const canEdit = canEditAccount({ owner_id: a.owner_id, visibility: a.visibility, province: a.province }, effectiveUserId, effectiveAccess)
           return (
             <div key={a.id} className={`bg-card-bg rounded-xl shadow px-5 py-4 flex items-center justify-between gap-3 ${a.archived ? 'opacity-50' : ''}`}>
               <BankBadge bank={a.bank} size={40} />
@@ -101,7 +99,7 @@ export default function AccountsPage() {
 
       {editing !== null && (
         <Modal title={editing.id ? t('accounts.editAccount') : t('accounts.addAccount')} onClose={close} onSave={save}>
-          <AccountFormFields form={form} onChange={v => setForm(f => ({ ...f, ...v }))} guilds={guilds} />
+          <AccountFormFields form={form} onChange={v => setForm(f => ({ ...f, ...v }))} />
         </Modal>
       )}
     </div>

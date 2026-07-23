@@ -121,7 +121,7 @@ async function getEventDetail(actEventId) {
 
 async function upsert(actEventId, data) {
   await pool.query(
-    `INSERT INTO act_event_cache
+    `INSERT INTO cache_pple_event
        (type, act_event_id, name, province, description, location, map_url, event_date, event_end_date, image_url, guild_id, synced_at)
      VALUES ('event', $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
      ON CONFLICT (act_event_id) WHERE act_event_id IS NOT NULL
@@ -193,7 +193,7 @@ async function main() {
   cutoff.setMonth(cutoff.getMonth() - CUTOFF_MONTHS)
 
   const { rows: fresh } = await pool.query(
-    `SELECT act_event_id, event_date FROM act_event_cache
+    `SELECT act_event_id, event_date FROM cache_pple_event
      WHERE type = 'event' AND act_event_id IS NOT NULL AND synced_at > NOW() - INTERVAL '23 hours'`
   )
   const freshMap = new Map(fresh.map(r => [r.act_event_id, r.event_date]))

@@ -16,7 +16,7 @@ const contacts = [
 ]
 
 const [result] = await pool.query(
-  `INSERT INTO calling_contacts (guild_id, first_name, last_name, phone, line_id, category, province, amphoe, tambon, note) VALUES ?`,
+  `INSERT INTO calling_contacts (org_id, first_name, last_name, phone, line_id, category, province, amphoe, tambon, note) VALUES ?`,
   [contacts.map(c => [GUILD_ID, c.first_name, c.last_name, c.phone, c.line_id, c.category, c.province, c.amphoe, c.tambon, c.note])]
 )
 

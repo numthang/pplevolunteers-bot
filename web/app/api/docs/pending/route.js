@@ -1,6 +1,6 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
-import { getGuildId } from '@/lib/guildContext.js'
+import { getOrgId } from '@/lib/orgContext.js'
 import { getPendingSignaturesForUser } from '@/db/docs/entries.js'
 
 /**
@@ -10,10 +10,10 @@ import { getPendingSignaturesForUser } from '@/db/docs/entries.js'
  */
 export async function GET(req) {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.discordId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!session?.user?.userId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const guildId = await getGuildId(session)
-  const { recipient, payer } = await getPendingSignaturesForUser(session.user.discordId, guildId)
+  const orgId = await getOrgId(session)
+  const { recipient, payer } = await getPendingSignaturesForUser(session.user.userId, orgId)
 
   const { searchParams } = new URL(req.url)
   if (searchParams.get('count') === 'true') {

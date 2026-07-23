@@ -14,7 +14,7 @@ export async function POST(req, { params }) {
   const { ref } = await params
   const gate = await gateCase(ref)
   if (gate.error) return gate.error
-  const { guildId, caseRow } = gate
+  const { orgId, caseRow } = gate
 
   const letterFields = await req.json().catch(() => ({}))
   const required = ['subject', 'recipient_name', 'body']
@@ -22,7 +22,7 @@ export async function POST(req, { params }) {
     if (!letterFields[f]?.trim()) return Response.json({ error: `กรุณาใส่ ${f}` }, { status: 400 })
   }
 
-  const config = await getLetterConfig(guildId, caseRow.province)
+  const config = await getLetterConfig(orgId, caseRow.province)
   if (!config) return Response.json({ error: `ยังไม่มี config หนังสือสำหรับจังหวัด ${caseRow.province}` }, { status: 400 })
 
   const fields = {

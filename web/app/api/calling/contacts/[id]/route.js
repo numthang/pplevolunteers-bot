@@ -1,22 +1,41 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
-import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
-import { getUserScope, isProvincialCoordinator, isRegionalCoordinator, isAdmin } from '@/lib/callingAccess.js'
+import { getEffectiveOrgIdentity } from '@/lib/orgAccess.js'
+import { getUserScope, isProvincialCoordinator, isRegionalCoordinator, isAdmin, canSeeContacts } from '@/lib/callingAccess.js'
 import { getContactById, updateContact, deleteContact } from '@/db/calling/contacts.js'
+import { getOrgId } from '@/lib/orgContext.js'
 
-function canEdit(contact, access, discordId) {
+function canEdit(contact, access, userId) {
   if (isAdmin(access) || isRegionalCoordinator(access) || isProvincialCoordinator(access)) return true
-  return contact.created_by === discordId
+  return contact.created_by === userId
+}
+
+// จังหวัดของ contact ต้องอยู่ใน scope (admin = null scope = ทุกจังหวัด)
+function inScope(contact, access) {
+  const scope = getUserScope(access)
+  if (scope === null) return true
+  return scope.includes(contact.province)
 }
 
 export async function GET(req, { params }) {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.discordId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!session?.user?.userId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
+  const orgId = await getOrgId(session)
+  if (!orgId) return Response.json({ error: 'Forbidden' }, { status: 403 })
+
+  const { access } = await getEffectiveOrgIdentity(session)
   const { id } = await params
   try {
-    const contact = await getContactById(parseInt(id))
+    const contact = await getContactById(orgId, parseInt(id))
     if (!contact) return Response.json({ error: 'Not found' }, { status: 404 })
+    if (!inScope(contact, access)) return Response.json({ error: 'Forbidden' }, { status: 403 })
+
+    // เบอร์/email/LINE = PDPA → ต้องมีสิทธิ์ seeContacts ถึงจะได้ field พวกนี้
+    if (!canSeeContacts(access)) {
+      const { phone, email, line_id, ...rest } = contact
+      return Response.json({ data: rest, contacts_hidden: true })
+    }
     return Response.json({ data: contact })
   } catch (err) {
     console.error('[GET /api/calling/contacts/[id]]', err)
@@ -26,16 +45,19 @@ export async function GET(req, { params }) {
 
 export async function PUT(req, { params }) {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.discordId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!session?.user?.userId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { access, discordId } = await getEffectiveIdentity(session)
+  const orgId = await getOrgId(session)
+  if (!orgId) return Response.json({ error: 'Forbidden' }, { status: 403 })
+
+  const { access, userId } = await getEffectiveOrgIdentity(session)
   const { id } = await params
 
   try {
-    const contact = await getContactById(parseInt(id))
+    const contact = await getContactById(orgId, parseInt(id))
     if (!contact) return Response.json({ error: 'Not found' }, { status: 404 })
 
-    if (!canEdit(contact, access, discordId)) {
+    if (!canEdit(contact, access, userId) || !inScope(contact, access)) {
       return Response.json({ error: 'Forbidden' }, { status: 403 })
     }
 
@@ -48,7 +70,7 @@ export async function PUT(req, { params }) {
 
     await updateContact(parseInt(id), {
       first_name, last_name, phone, email, line_id, category, province, amphoe, tambon, note, specialty,
-      updated_by: session.user.discordId,
+      updated_by: session.user.userId,
     })
 
     return Response.json({ success: true })
@@ -60,16 +82,19 @@ export async function PUT(req, { params }) {
 
 export async function DELETE(req, { params }) {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.discordId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!session?.user?.userId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { access, discordId } = await getEffectiveIdentity(session)
+  const orgId = await getOrgId(session)
+  if (!orgId) return Response.json({ error: 'Forbidden' }, { status: 403 })
+
+  const { access, userId } = await getEffectiveOrgIdentity(session)
   const { id } = await params
 
   try {
-    const contact = await getContactById(parseInt(id))
+    const contact = await getContactById(orgId, parseInt(id))
     if (!contact) return Response.json({ error: 'Not found' }, { status: 404 })
 
-    if (!canEdit(contact, access, discordId)) {
+    if (!canEdit(contact, access, userId) || !inScope(contact, access)) {
       return Response.json({ error: 'Forbidden' }, { status: 403 })
     }
 

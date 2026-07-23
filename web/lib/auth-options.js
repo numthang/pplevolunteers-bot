@@ -4,9 +4,8 @@ import GoogleProvider from 'next-auth/providers/google'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import pool from '@/db/index.js'
 import { isSuperAdmin } from '@/lib/roles.js'
-import { findDiscordIdByProvider } from '@/db/userIdentities.js'
-
-const OAUTH_PROVIDERS = ['line', 'google']
+import { findUserIdByProvider, resolveUserByDiscord, discordIdByUserId, linkIdentityByUser } from '@/db/userIdentities.js'
+import { resolveOrgUser } from '@/db/orgMembers.js'
 
 // Passkey / Phone OTP — verify endpoint ออก nonce ลง dc_user_config แล้ว client แลก session ผ่าน credentials
 const nonceAuthorize = (nonceKey) => async (credentials) => {
@@ -21,11 +20,15 @@ const nonceAuthorize = (nonceKey) => async (credentials) => {
   return { id: rows[0].discord_id, discordId: rows[0].discord_id }
 }
 
+// อ่าน roles/profile จาก org_members (แกน membership) by user_id + guild · ชื่อจาก users
 async function loadMemberData(token) {
   try {
     const { rows } = await pool.query(
-      'SELECT nickname, username, roles, primary_province, avatar FROM dc_members WHERE guild_id = $1 AND discord_id = $2',
-      [process.env.GUILD_ID, token.discordId]
+      `SELECT om.nickname, u.username, om.roles, om.primary_province, om.avatar
+         FROM org_members om
+         JOIN users u ON u.id = om.user_id
+        WHERE om.user_id = $1 AND om.guild_id = $2`,
+      [token.userId, process.env.GUILD_ID]
     )
     if (rows[0]) {
       token.roles            = rows[0].roles ? rows[0].roles.split(',') : []
@@ -70,45 +73,92 @@ export const authOptions = {
       credentials: { nonce: { type: 'text' } },
       authorize: nonceAuthorize('phone_nonce'),
     }),
+    // magic-link (email) — token ออกจาก /api/org/auth/magic แล้ว client แลก session ผ่าน credentials
+    // ย้ายเข้า auth หลัก (unify) แทน NextAuth instance ที่ 2 เดิม
+    CredentialsProvider({
+      id: 'magic',
+      name: 'Magic Link',
+      credentials: { token: { type: 'text' } },
+      async authorize(credentials) {
+        const token = String(credentials?.token || '')
+        if (!token) return null
+        const { rows } = await pool.query(
+          `DELETE FROM org_login_tokens
+             WHERE token = $1 AND created_at > NOW() - INTERVAL '15 minutes'
+           RETURNING email`,
+          [token]
+        )
+        if (!rows[0]) return null
+        const user = await resolveOrgUser(rows[0].email)
+        return { id: String(user.id), userId: user.id, email: user.email, name: user.display_name || null }
+      },
+    }),
   ],
   callbacks: {
     async signIn({ account, profile }) {
       if (!account) return false
-      // LINE / Google: ต้องผูกกับ discord ก่อน ถ้าไม่มี mapping → block
-      if (OAUTH_PROVIDERS.includes(account.provider)) {
-        const discordId = await findDiscordIdByProvider(account.provider, profile.sub).catch(() => null)
-        if (!discordId) return '/login?error=NotLinked'
+      // LINE: ไม่การันตี email = เป็นตัวตนเองไม่ได้ → ต้องผูก user ก่อน (block ถ้าไม่มี link)
+      if (account.provider === 'line') {
+        const userId = await findUserIdByProvider('line', profile.sub).catch(() => null)
+        if (!userId) return '/login?error=NotLinked'
       }
+      // Google: ประตูสมัคร (email verified = ตัวตน) → ผ่านได้ · แต่ต้องมี email
+      if (account.provider === 'google' && !profile?.email) return false
       return true
     },
     async jwt({ token, account, profile, user, trigger }) {
       if (account) {
         if (account.provider === 'discord') {
+          // Discord = provider row · create-on-login ถ้ายังไม่มี users
           token.discordId = profile.id
+          token.userId    = await resolveUserByDiscord(profile.id, profile.username).catch(() => null)
           const avatarUrl = profile.avatar
             ? `https://cdn.discordapp.com/avatars/${profile.id}/${profile.avatar}.webp`
             : null
-          if (avatarUrl) {
+          if (avatarUrl && token.userId) {
             pool.query(
-              'UPDATE dc_members SET avatar = $1 WHERE guild_id = $2 AND discord_id = $3',
-              [avatarUrl, process.env.GUILD_ID, profile.id]
+              'UPDATE org_members SET avatar = $1 WHERE user_id = $2 AND guild_id = $3',
+              [avatarUrl, token.userId, process.env.GUILD_ID]
             ).catch(() => {})
           }
-        } else if (OAUTH_PROVIDERS.includes(account.provider)) {
-          // lookup discordId จาก dc_user_identities
-          token.discordId = await findDiscordIdByProvider(account.provider, profile.sub).catch(() => null)
+        } else if (account.provider === 'google') {
+          // google = ประตูสมัคร: เจอ link → ใช้ · ไม่เจอ → สร้าง/หา users จาก email + auto-link
+          let uid = await findUserIdByProvider('google', profile.sub).catch(() => null)
+          if (!uid && profile?.email) {
+            const u = await resolveOrgUser(profile.email, profile.name).catch(() => null)
+            if (u) {
+              uid = u.id
+              await linkIdentityByUser(u.id, 'google', profile.sub).catch(() => {})
+            }
+          }
+          token.userId = uid
+        } else if (account.provider === 'line') {
+          // line: resolve users.id (signIn block แล้วถ้าไม่มี link)
+          token.userId = await findUserIdByProvider('line', profile.sub).catch(() => null)
         } else if (account.provider === 'passkey' || account.provider === 'phone') {
-          // credentials authorize คืน user.discordId มาแล้ว
+          // credentials authorize คืน discordId มาแล้ว → resolve users.id
           token.discordId = user?.discordId || user?.id
+          token.userId    = await resolveUserByDiscord(token.discordId).catch(() => null)
+        } else if (account.provider === 'magic') {
+          // email door — authorize คืน userId มาแล้ว (ไม่มี discord)
+          token.userId = user?.userId || Number(user?.id) || null
+          token.email  = user?.email || null
+          token.name   = user?.name || null
+        }
+        // ประตู google/line/magic resolve เป็น userId แต่ยังไม่มี discordId →
+        // เติมจาก users ถ้าคนนั้นผูก discord ไว้ (feature code เช่น getUserGuilds ยัง key ด้วย discordId)
+        if (token.userId && !token.discordId) {
+          token.discordId = await discordIdByUserId(token.userId).catch(() => null)
         }
       }
-      if ((account || trigger === 'update') && token.discordId) {
+      if ((account || trigger === 'update') && token.userId) {
         token = await loadMemberData(token)
       }
       return token
     },
     async session({ session, token }) {
-      session.user.discordId        = token.discordId
+      session.user.userId           = token.userId || null
+      session.user.discordId        = token.discordId || null
       session.user.roles            = token.roles || []
       session.user.nickname         = token.nickname || session.user.name
       session.user.primary_province = token.primary_province || null

@@ -1,18 +1,21 @@
 import pool from '../index.js'
 
-export async function getContactById(id) {
-  const { rows } = await pool.query(`SELECT * FROM calling_contacts WHERE id = $1`, [id])
+export async function getContactById(orgId, id) {
+  const { rows } = await pool.query(
+    `SELECT * FROM calling_contacts WHERE id = $1 AND org_id = $2`,
+    [id, orgId]
+  )
   return rows[0] || null
 }
 
 export async function createContact(data) {
-  const { guild_id, first_name, last_name, phone, email, line_id, category, province, amphoe, tambon, note, specialty, created_by } = data
+  const { org_id, first_name, last_name, phone, email, line_id, category, province, amphoe, tambon, note, specialty, created_by } = data
   const { rows } = await pool.query(
     `INSERT INTO calling_contacts
-      (guild_id, first_name, last_name, phone, email, line_id, category, province, amphoe, tambon, note, specialty, created_by)
+      (org_id, first_name, last_name, phone, email, line_id, category, province, amphoe, tambon, note, specialty, created_by)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
      RETURNING id`,
-    [guild_id, first_name, last_name || null, phone || null, email || null, line_id || null,
+    [org_id, first_name, last_name || null, phone || null, email || null, line_id || null,
      category || null, province || null, amphoe || null, tambon || null, note || null, specialty || null, created_by || null]
   )
   return rows[0].id
@@ -34,32 +37,32 @@ export async function deleteContact(id) {
   await pool.query(`DELETE FROM calling_contacts WHERE id = $1`, [id])
 }
 
-export async function searchContacts(keyword, guildId, { limit = 50, offset = 0 } = {}) {
+export async function searchContacts(keyword, orgId, { limit = 50, offset = 0 } = {}) {
   const { rows } = await pool.query(
     `SELECT * FROM calling_contacts
-     WHERE guild_id = $1
+     WHERE org_id = $1
        AND ((first_name || ' ' || COALESCE(last_name, '')) ILIKE $2 OR phone ILIKE $2 OR email ILIKE $2)
      ORDER BY first_name ASC, last_name ASC
      LIMIT $3 OFFSET $4`,
-    [guildId, `%${keyword}%`, limit, offset]
+    [orgId, `%${keyword}%`, limit, offset]
   )
   return rows
 }
 
-export async function getContactsByProvince(province, guildId, { limit = 200, offset = 0 } = {}) {
+export async function getContactsByProvince(province, orgId, { limit = 200, offset = 0 } = {}) {
   const { rows } = await pool.query(
     `SELECT * FROM calling_contacts
-     WHERE guild_id = $1 AND province = $2
+     WHERE org_id = $1 AND province = $2
      ORDER BY amphoe ASC, first_name ASC
      LIMIT $3 OFFSET $4`,
-    [guildId, province, limit, offset]
+    [orgId, province, limit, offset]
   )
   return rows
 }
 
-export async function getContactsList(guildId, { province, provinces, keyword, limit = 100, offset = 0 } = {}) {
-  const params = [guildId]
-  let query = `SELECT * FROM calling_contacts WHERE guild_id = $1`
+export async function getContactsList(orgId, { province, provinces, keyword, limit = 100, offset = 0 } = {}) {
+  const params = [orgId]
+  let query = `SELECT * FROM calling_contacts WHERE org_id = $1`
 
   if (province) {
     params.push(province)
@@ -80,17 +83,17 @@ export async function getContactsList(guildId, { province, provinces, keyword, l
   return rows
 }
 
-export async function getContactsInCampaign(campaignId, filters = {}, limit = 100, offset = 0) {
+export async function getContactsInCampaign(orgId, campaignId, filters = {}, limit = 100, offset = 0) {
   const { amphoe, tier, status, assignedTo, name, called, sort, sms } = filters
 
-  const params = [process.env.GUILD_ID, campaignId]
+  const params = [orgId, campaignId]
 
   let query = `SELECT
      c.*,
      COALESCE(t.tier::text, 'D') AS tier,
      t.flag,
-     COALESCE(a.assigned_to, '') AS assigned_to,
-     COALESCE(a.assigned_by, '') AS assigned_by,
+     a.assigned_to,
+     a.assigned_by,
      a.created_at AS assignment_date,
      l.called_at AS last_called_at,
      l.status AS last_status,
@@ -99,8 +102,8 @@ export async function getContactsInCampaign(campaignId, filters = {}, limit = 10
      SUM(CASE WHEN l.status = 'answered' THEN 1 ELSE 0 END) AS answered_count,
      SUM(CASE WHEN l.status IN ('sms_sent', 'sms_delivered') THEN 1 ELSE 0 END) AS sms_count,
      CASE WHEN a.id IS NOT NULL THEN 'assigned' ELSE 'unassigned' END AS member_status
-   FROM act_event_cache cc
-   JOIN calling_contacts c ON c.guild_id = $1
+   FROM cache_pple_event cc
+   JOIN calling_contacts c ON c.org_id = $1
    LEFT JOIN calling_member_tiers t
      ON t.member_id = c.id::text AND t.contact_type = 'contact'
    LEFT JOIN calling_assignments a
@@ -130,7 +133,7 @@ export async function getContactsInCampaign(campaignId, filters = {}, limit = 10
      AND ($${statusIdx}::text IS NULL
           OR ($${statusIdx} = 'assigned' AND a.id IS NOT NULL)
           OR ($${statusIdx} = 'unassigned' AND a.id IS NULL))
-     AND ($${assignedToIdx}::text IS NULL OR a.assigned_to = $${assignedToIdx})
+     AND ($${assignedToIdx}::text IS NULL OR a.assigned_to = $${assignedToIdx}::int)
      AND ($${calledIdx}::text IS NULL
           OR ($${calledIdx} = 'called' AND COUNT(DISTINCT l.id) > 0)
           OR ($${calledIdx} = 'uncalled' AND COUNT(DISTINCT l.id) = 0 AND a.id IS NOT NULL))
@@ -149,20 +152,20 @@ export async function getContactsInCampaign(campaignId, filters = {}, limit = 10
   return rows
 }
 
-export async function getContactsInCampaignStats(campaignId, provinces = null) {
+export async function getContactsInCampaignStats(orgId, campaignId, provinces = null) {
   const hasProvinces = provinces && provinces.length > 0
   const scopeClause = hasProvinces ? `AND (c.province IS NULL OR c.province = ANY($4))` : ''
 
-  const params1 = [process.env.GUILD_ID, campaignId, campaignId]
+  const params1 = [orgId, campaignId, campaignId]
   if (hasProvinces) params1.push(provinces)
 
-  const params2 = [process.env.GUILD_ID, campaignId]
+  const params2 = [orgId, campaignId]
   if (hasProvinces) params2.push(null, provinces)  // placeholder $3 unused to keep $4 consistent
   // Actually for queries 2 and 3, the scopeClause has $4; we need params position $4 if exists
   // Let me redo this more carefully
 
   const buildQuery2or3 = (selectClause, groupOrderClause) => {
-    const p = [process.env.GUILD_ID, campaignId]
+    const p = [orgId, campaignId]
     let scope = ''
     if (hasProvinces) {
       p.push(provinces)
@@ -170,8 +173,8 @@ export async function getContactsInCampaignStats(campaignId, provinces = null) {
     }
     return {
       sql: `${selectClause}
-            FROM act_event_cache cc
-            JOIN calling_contacts c ON c.guild_id = $1
+            FROM cache_pple_event cc
+            JOIN calling_contacts c ON c.org_id = $1
             WHERE cc.id = $2 AND cc.type IN ('campaign', 'event') AND (cc.province IS NULL OR c.province = cc.province) ${scope}
             ${groupOrderClause}`,
       params: p,
@@ -185,13 +188,13 @@ export async function getContactsInCampaignStats(campaignId, provinces = null) {
 
   const q3 = {
     sql: `SELECT a.assigned_to, COUNT(DISTINCT c.id) AS count
-          FROM act_event_cache cc
-          JOIN calling_contacts c ON c.guild_id = $1
+          FROM cache_pple_event cc
+          JOIN calling_contacts c ON c.org_id = $1
           JOIN calling_assignments a
             ON a.campaign_id = cc.id AND a.member_id = c.id::text AND a.contact_type = 'contact'
           WHERE cc.id = $2 AND cc.type IN ('campaign', 'event') AND (cc.province IS NULL OR c.province = cc.province)${hasProvinces ? ` AND (c.province IS NULL OR c.province = ANY($3))` : ''}
           GROUP BY a.assigned_to`,
-    params: hasProvinces ? [process.env.GUILD_ID, campaignId, provinces] : [process.env.GUILD_ID, campaignId],
+    params: hasProvinces ? [orgId, campaignId, provinces] : [orgId, campaignId],
   }
 
   const mainSql = `SELECT
@@ -199,8 +202,8 @@ export async function getContactsInCampaignStats(campaignId, provinces = null) {
        SUM(CASE WHEN lc.log_count > 0 THEN 1 ELSE 0 END) AS called,
        SUM(CASE WHEN a.id IS NOT NULL THEN 1 ELSE 0 END) AS assigned,
        SUM(CASE WHEN a.id IS NULL THEN 1 ELSE 0 END) AS unassigned
-     FROM act_event_cache cc
-     JOIN calling_contacts c ON c.guild_id = $1
+     FROM cache_pple_event cc
+     JOIN calling_contacts c ON c.org_id = $1
      LEFT JOIN calling_assignments a
        ON a.campaign_id = cc.id AND a.member_id = c.id::text AND a.contact_type = 'contact'
      LEFT JOIN (
@@ -211,8 +214,8 @@ export async function getContactsInCampaignStats(campaignId, provinces = null) {
      WHERE cc.id = $3 AND cc.type IN ('campaign', 'event') AND (cc.province IS NULL OR c.province = cc.province)${hasProvinces ? ` AND (c.province IS NULL OR c.province = ANY($4))` : ''}`
 
   const mainParams = hasProvinces
-    ? [process.env.GUILD_ID, campaignId, campaignId, provinces]
-    : [process.env.GUILD_ID, campaignId, campaignId]
+    ? [orgId, campaignId, campaignId, provinces]
+    : [orgId, campaignId, campaignId]
 
   const [mainRes, amphoeRes, assigneeRes] = await Promise.all([
     pool.query(mainSql, mainParams),
@@ -236,18 +239,18 @@ export async function getContactsInCampaignStats(campaignId, provinces = null) {
   }
 }
 
-export async function getUnassignedContactIds(campaignId) {
+export async function getUnassignedContactIds(orgId, campaignId) {
   const { rows } = await pool.query(
     `SELECT c.id
-     FROM act_event_cache cc
-     JOIN calling_contacts c ON c.guild_id = $1
+     FROM cache_pple_event cc
+     JOIN calling_contacts c ON c.org_id = $1
      LEFT JOIN calling_assignments a
        ON a.campaign_id = cc.id AND a.member_id = c.id::text AND a.contact_type = 'contact'
      WHERE cc.id = $2 AND cc.type IN ('campaign', 'event')
      GROUP BY c.id
      HAVING MAX(a.id) IS NULL
      ORDER BY c.amphoe ASC, c.first_name ASC`,
-    [process.env.GUILD_ID, campaignId]
+    [orgId, campaignId]
   )
   return rows.map(r => r.id)
 }
@@ -263,7 +266,7 @@ export async function getContactCallHistory(contactId, campaignId = null) {
   return rows
 }
 
-export async function getMyAssignedContacts(discordId, { campaignId, status, limit = 200, offset = 0 } = {}) {
+export async function getMyAssignedContacts(userId, { campaignId, status, limit = 200, offset = 0 } = {}) {
   const { rows } = await pool.query(
     `SELECT * FROM (
        SELECT
@@ -281,7 +284,7 @@ export async function getMyAssignedContacts(discordId, { campaignId, status, lim
        FROM calling_assignments a
        JOIN calling_contacts c ON c.id::text = a.member_id
        LEFT JOIN calling_member_tiers t ON t.member_id = c.id::text AND t.contact_type = 'contact'
-       LEFT JOIN act_event_cache ec ON ec.id = a.campaign_id AND ec.type IN ('campaign', 'event')
+       LEFT JOIN cache_pple_event ec ON ec.id = a.campaign_id AND ec.type IN ('campaign', 'event')
        LEFT JOIN (
          SELECT campaign_id, member_id, COUNT(*) AS camp_calls
          FROM calling_logs WHERE contact_type = 'contact'
@@ -304,30 +307,30 @@ export async function getMyAssignedContacts(discordId, { campaignId, status, lim
        CASE WHEN call_status = 'pending' THEN 0 ELSE 1 END ASC,
        latest_called_at ASC
      LIMIT $4 OFFSET $5`,
-    [discordId, campaignId || null, status || null, limit, offset]
+    [userId, campaignId || null, status || null, limit, offset]
   )
   return rows
 }
 
-export async function getContactLogs(contactId) {
+export async function getContactLogs(orgId, contactId) {
   const { rows } = await pool.query(
     `SELECT
        l.*,
        ec.name AS campaign_name
      FROM calling_logs l
-     LEFT JOIN act_event_cache ec ON ec.id = l.campaign_id AND ec.type IN ('campaign', 'event')
-     WHERE l.member_id = $1 AND l.contact_type = 'contact'
+     LEFT JOIN cache_pple_event ec ON ec.id = l.campaign_id AND ec.type IN ('campaign', 'event')
+     WHERE l.member_id = $1 AND l.contact_type = 'contact' AND l.org_id = $2
      ORDER BY l.called_at DESC`,
-    [contactId]
+    [contactId, orgId]
   )
   return rows
 }
 
-export async function getContactPendingCount(discordId) {
+export async function getContactPendingCount(userId) {
   const { rows } = await pool.query(
     `SELECT COUNT(*) AS count
      FROM calling_assignments a
-     LEFT JOIN act_event_cache ec ON ec.id = a.campaign_id AND ec.type IN ('campaign', 'event')
+     LEFT JOIN cache_pple_event ec ON ec.id = a.campaign_id AND ec.type IN ('campaign', 'event')
      LEFT JOIN (
        SELECT campaign_id, member_id, COUNT(*) AS camp_calls
        FROM calling_logs WHERE contact_type = 'contact' GROUP BY campaign_id, member_id
@@ -335,7 +338,7 @@ export async function getContactPendingCount(discordId) {
      WHERE a.assigned_to = $1 AND a.contact_type = 'contact'
        AND (ec.event_date IS NULL OR ec.event_date >= CURRENT_DATE)
        AND COALESCE(cs.camp_calls, 0) = 0`,
-    [discordId]
+    [userId]
   )
   return Number(rows[0]?.count) || 0
 }

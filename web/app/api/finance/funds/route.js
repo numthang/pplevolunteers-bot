@@ -3,7 +3,8 @@ import { authOptions } from '@/lib/auth-options.js'
 import { getFunds, createFund, getFundBalances } from '@/db/finance/funds.js'
 import { getAccountById } from '@/db/finance/accounts.js'
 import { canViewAccount, canEditAccount } from '@/lib/financeAccess.js'
-import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
+import { getEffectiveOrgIdentity } from '@/lib/orgAccess.js'
+import { getOrgId } from '@/lib/orgContext.js'
 
 export async function GET(req) {
   const session = await getServerSession(authOptions)
@@ -13,9 +14,12 @@ export async function GET(req) {
   const accountId = searchParams.get('accountId')
   if (!accountId) return Response.json({ error: 'accountId required' }, { status: 400 })
 
-  const { discordId, access } = await getEffectiveIdentity(session)
-  const account = await getAccountById(accountId)
-  if (!account || !canViewAccount(account, discordId, access)) {
+  const orgId = await getOrgId(session)
+  if (!orgId) return Response.json({ error: 'Forbidden' }, { status: 403 })
+
+  const { userId, access } = await getEffectiveOrgIdentity(session)
+  const account = await getAccountById(orgId, accountId)
+  if (!account || !canViewAccount(account, userId, access)) {
     return Response.json({ error: 'Forbidden' }, { status: 403 })
   }
 
@@ -34,9 +38,12 @@ export async function POST(req) {
     return Response.json({ error: 'accountId and name required' }, { status: 400 })
   }
 
-  const { discordId, access } = await getEffectiveIdentity(session)
-  const account = await getAccountById(accountId)
-  if (!account || !canEditAccount(account, discordId, access)) {
+  const orgId = await getOrgId(session)
+  if (!orgId) return Response.json({ error: 'Forbidden' }, { status: 403 })
+
+  const { userId, access } = await getEffectiveOrgIdentity(session)
+  const account = await getAccountById(orgId, accountId)
+  if (!account || !canEditAccount(account, userId, access)) {
     return Response.json({ error: 'Forbidden' }, { status: 403 })
   }
 

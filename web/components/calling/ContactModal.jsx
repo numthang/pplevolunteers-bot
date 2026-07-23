@@ -30,7 +30,7 @@ function formatThaiDate(dateStr) {
   return `${d.getDate()} ${THAI_MONTHS[d.getMonth()]} ${(d.getFullYear() + 543).toString().slice(-2)}`
 }
 
-export default function ContactModal({ contactId, discordId, canManageAll, onClose, onDeleted, onSaved }) {
+export default function ContactModal({ contactId, userId, canManageAll, onClose, onDeleted, onSaved }) {
   const t = useTranslations('calling')
   const [contact, setContact] = useState(null)
   const [logs, setLogs] = useState([])
@@ -90,7 +90,7 @@ export default function ContactModal({ contactId, discordId, canManageAll, onClo
     } catch (e) { setError(e.message); setDeleting(false) }
   }
 
-  const canDelete = canManageAll || (contact?.created_by != null && contact.created_by === discordId)
+  const canDelete = canManageAll || (contact?.created_by != null && contact.created_by === userId)
   const cat = contact ? (CATEGORY_COLORS[contact.category] || CATEGORY_COLORS.other) : null
 
   return (

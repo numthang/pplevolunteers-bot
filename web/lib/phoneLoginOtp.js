@@ -1,6 +1,6 @@
 /**
  * Phone OTP login — shared helpers สำหรับ /api/auth/phone/request + verify
- * เบอร์เป็น login credential ได้เฉพาะ dc_members.phone ที่ phone_verified_at ไม่ NULL
+ * เบอร์เป็น login credential ได้เฉพาะ users.phone ที่ phone_verified_at ไม่ NULL
  * (verify ผ่าน OTP ใน Discord — handlers/verifyHandler.js · แก้เบอร์เองจาก profile = reset)
  */
 import pool from '@/db/index.js'
@@ -31,11 +31,11 @@ export function genRef() {
   return s
 }
 
-/** หาเจ้าของเบอร์ verified — dc_members per-guild มีหลายแถวได้ถ้าเป็นคนเดียวกัน
+/** หาเจ้าของเบอร์ verified — phone/phone_verified_at อยู่ users (identity, 1 แถว/คน)
  *  ต้องได้ discord_id เดียวเท่านั้น (หลายคนใช้เบอร์เดียว = ambiguous → null) */
 export async function findOwnerByVerifiedPhone(phone) {
   const { rows } = await pool.query(
-    `SELECT DISTINCT discord_id FROM dc_members
+    `SELECT DISTINCT discord_id FROM users
       WHERE phone = $1 AND phone_verified_at IS NOT NULL AND discord_id IS NOT NULL`,
     [phone]
   )

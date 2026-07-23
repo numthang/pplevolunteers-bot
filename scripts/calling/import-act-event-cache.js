@@ -79,7 +79,7 @@ async function main() {
   console.log(`✅ Mapped ${mapped.length} rows`)
 
   const sql = `
-    INSERT INTO act_event_cache
+    INSERT INTO cache_pple_event
     (id, parent_id, guild_id, type, name, province, description,
      user_id, serial_number, title, first_name, last_name, phone, national_id,
      address, subdistrict, district, postal_code, age, gender, account_no, bank, membership_status,

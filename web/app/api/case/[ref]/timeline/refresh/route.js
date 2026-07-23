@@ -58,7 +58,7 @@ export async function POST(req, { params }) {
   const { ref } = await params
   const gate = await gateCase(ref)
   if (gate.error) return gate.error
-  const { guildId, caseRow } = gate
+  const { orgId, caseRow } = gate
 
   if (!caseRow.discord_thread_id) {
     return Response.json({ error: 'เคสนี้ไม่มี Discord thread' }, { status: 400 })
@@ -80,7 +80,7 @@ export async function POST(req, { params }) {
     try {
       const events = JSON.parse(json)
       if (Array.isArray(events) && events.length) {
-        await addTimelineEvents(caseRow.id, guildId, events.filter(e => e?.body?.trim()).map(e => ({
+        await addTimelineEvents(caseRow.id, orgId, events.filter(e => e?.body?.trim()).map(e => ({
           body: String(e.body).trim(),
           is_public: e.is_public === true,
           occurred_at: e.occurred_at || null,

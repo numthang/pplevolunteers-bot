@@ -1,41 +1,42 @@
 import { getServerSession } from 'next-auth'
 import pool from '@/db/index.js'
 import { authOptions } from '@/lib/auth-options.js'
-import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
+import { getEffectiveOrgIdentity } from '@/lib/orgAccess.js'
 import { canManageDocs } from '@/lib/docsAccess.js'
-import { getGuildId } from '@/lib/guildContext.js'
+import { getOrgId } from '@/lib/orgContext.js'
 
 /**
  * GET /api/docs/members?q=&limit=20
- * Search dc_members for docs entry assignment
+ * Search users + org_members for docs entry assignment
  */
 export async function GET(req) {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.discordId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!session?.user?.userId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { access } = await getEffectiveIdentity(session)
+  const { access } = await getEffectiveOrgIdentity(session)
   if (!canManageDocs(access)) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
   const { searchParams } = new URL(req.url)
-  const q       = searchParams.get('q') || ''
-  const limit   = Math.min(parseInt(searchParams.get('limit') || '30'), 100)
-  const guildId = await getGuildId(session)
+  const q     = searchParams.get('q') || ''
+  const limit = Math.min(parseInt(searchParams.get('limit') || '30'), 100)
+  const orgId = await getOrgId(session)
 
-  const params = [guildId]
+  const params = [orgId]
   let query = `
-    SELECT m.discord_id, m.display_name, m.username, m.member_id,
+    SELECT u.id AS user_id, u.discord_id, om.display_name, u.username, om.member_id,
            n.first_name, n.last_name
-    FROM dc_members m
-    LEFT JOIN ngs_member_cache n ON n.source_id = m.member_id
-    WHERE m.guild_id = $1`
+    FROM org_members om
+    JOIN users u ON u.id = om.user_id
+    LEFT JOIN cache_pple_member n ON n.source_id = om.member_id
+    WHERE om.org_id = $1`
 
   if (q) {
     params.push(`%${q}%`)
-    query += ` AND (m.display_name ILIKE $${params.length} OR m.username ILIKE $${params.length} OR n.first_name ILIKE $${params.length} OR n.last_name ILIKE $${params.length})`
+    query += ` AND (om.display_name ILIKE $${params.length} OR u.username ILIKE $${params.length} OR n.first_name ILIKE $${params.length} OR n.last_name ILIKE $${params.length})`
   }
 
   params.push(limit)
-  query += ` ORDER BY m.display_name LIMIT $${params.length}`
+  query += ` ORDER BY om.display_name LIMIT $${params.length}`
 
   try {
     const { rows } = await pool.query(query, params)

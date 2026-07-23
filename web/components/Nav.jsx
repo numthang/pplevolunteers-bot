@@ -12,6 +12,7 @@ import { isAdmin } from '@/lib/roles.js'
 import { canManageDocs } from '@/lib/docsAccess.js'
 import { canManageCases } from '@/lib/caseAccess.js'
 import LocaleSwitcher from './LocaleSwitcher.jsx'
+import OrgSwitcherMenu from './OrgSwitcherMenu.jsx'
 
 function Ic({ d, className = 'w-4 h-4 shrink-0' }) {
   return (
@@ -115,12 +116,15 @@ const APPS = [
   { key: 'discord',  label: 'BOT',       href: '/bot/platforms',  icon: 'social' },
 ]
 
-export default function Nav({ session, guilds = [], currentGuildId = null, enabledFeatures = [] }) {
+// app ที่ใช้ได้แม้ org ไม่มี guild — ตอนนี้ org-native ครบทั้ง 4 แล้ว (calling 2026-07-19 ·
+// docs/cases Phase 2) เหลือแต่ BOT ที่ต้องมี Discord จริง · การเปิด/ปิดคุมด้วย featureOn
+const ORG_NATIVE_APP_KEYS = new Set(['home', 'finance', 'calling', 'docs', 'cases'])
+
+export default function Nav({ session, orgs = [], activeOrgId = null, guilds = [], currentGuildId = null, enabledFeatures = [] }) {
   const pathname = usePathname()
   const router = useRouter()
   const { dark, toggle } = useTheme()
   const [menuOpen, setMenuOpen] = useState(false)
-  const [guildOpen, setGuildOpen] = useState(false)
   const [switching, setSwitching] = useState(false)
   const [mediaOpen, setMediaOpen] = useState(false)
   const [campaignOpen, setCampaignOpen] = useState(false)
@@ -220,20 +224,27 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
     return true
   })
   const mediaLinks = visibleLinks.filter(l => l.mediaGroup)
-  const topLinks   = visibleLinks.filter(l => !l.menuOnly && !l.hamburgerOnly && !l.mediaGroup)
+  // home: app tabs ใหม่แทน DASHBOARD_LINKS แล้ว → ไม่ต้องโชว์ sub-nav ซ้ำ · app อื่นโชว์ sub-page จริง
+  const isHomeApp  = currentApp.key === 'home'
+  const topLinks   = isHomeApp ? [] : visibleLinks.filter(l => !l.menuOnly && !l.hamburgerOnly && !l.mediaGroup)
   const menuLinks  = visibleLinks
 
+  // guildless org (self-serve, ไม่มี Discord guild) → เห็นเฉพาะ app org-native (finance)
+  const isGuildless = guilds.length === 0
   const visibleApps = APPS.filter(a => {
+    if (isGuildless && !ORG_NATIVE_APP_KEYS.has(a.key)) return false
     if (!featureOn(a.feature)) return false
     // docs เปิดให้ทุกคน (คนทั่วไปเข้าได้ที่หน้ารอเซ็น) — gate ระดับ feature toggle พอ
     return true
   })
 
   const currentGuild = guilds.find(g => g.guild_id === currentGuildId) || guilds[0] || null
-  const canSwitchGuild = guilds.length > 1
+
+  // Org switcher (main nav) — OrgSwitcherMenu (desktop) · mobile ยังใช้ list ใน hamburger
+  const canSwitchOrg = orgs.length > 1
+  const canSwitchGuild = guilds.length > 1   // org หลาย guild (org 1) → เลือก guild ย่อยได้
 
   const switchGuild = async (gid) => {
-    setGuildOpen(false)
     setMenuOpen(false)
     if (gid === currentGuildId) return
     setSwitching(true)
@@ -248,6 +259,22 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
     setSwitching(false)
   }
 
+  // เลือก org → เก็บ active_org (switch route dual-write selected_guild ให้ guild-based features ตาม)
+  const switchOrg = async (orgId) => {
+    setMenuOpen(false)
+    if (orgId === activeOrgId) return
+    setSwitching(true)
+    try {
+      const res = await fetch('/api/org/orgs/switch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orgId }),
+      })
+      if (res.ok) { window.dispatchEvent(new Event('guild-switched')); router.refresh() }
+    } catch {}
+    setSwitching(false)
+  }
+
   const activeClass = 'bg-teal/10 dark:bg-teal/10 text-teal dark:text-teal font-medium'
   const inactiveClass = 'text-warm-500 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text hover:bg-warm-100 dark:hover:bg-disc-hover'
 
@@ -256,69 +283,24 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
     <nav className="bg-white dark:bg-disc-bg2 border-b border-warm-200 dark:border-disc-border shadow-sm sticky top-0 z-40">
       <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
 
-        {/* Guild Switcher */}
-        <div className="relative shrink-0">
-          <div className="flex items-center gap-1">
-            {session && currentGuild ? (
-              <div className="flex items-center gap-1">
-                <Link href="/" className="flex items-center gap-1.5 hover:opacity-80 transition">
-                  <GuildIcon guild={currentGuild} className="w-8 h-8" />
-                  <span className="hidden md:block font-bold text-base text-teal dark:text-teal truncate max-w-[160px]">
-                    {currentGuild.name}
-                  </span>
-                </Link>
-                {canSwitchGuild && (
-                  <button
-                    onClick={() => !switching && setGuildOpen(o => !o)}
-                    disabled={switching}
-                    className="flex items-center justify-center w-6 h-6 rounded-md hover:bg-warm-100 dark:hover:bg-disc-hover text-warm-400 dark:text-disc-muted hover:text-warm-700 dark:hover:text-disc-text transition-all disabled:pointer-events-none"
-                  >
-                    {switching ? (
-                      <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3"/>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z"/>
-                      </svg>
-                    ) : (
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" className={`w-4 h-4 transition-transform duration-200 ${guildOpen ? 'rotate-180' : ''}`}>
-                        <path d="M6 9l6 6 6-6"/>
-                      </svg>
-                    )}
-                  </button>
-                )}
-              </div>
-            ) : (
-              <Link href="/" className="hover:opacity-80 transition shrink-0">
-                <Image src="/logo.png" alt="PPLE" width={40} height={40} />
-              </Link>
-            )}
-          </div>
-
-          {guildOpen && canSwitchGuild && (
-            <>
-              <div className="fixed inset-0 z-10" onClick={() => setGuildOpen(false)} />
-              <div className="absolute left-0 top-full mt-1 z-20 bg-white dark:bg-disc-hover border border-warm-200 dark:border-disc-border rounded-lg shadow-lg py-1 min-w-[200px]">
-                {guilds.map(g => (
-                  <button
-                    key={g.guild_id}
-                    onClick={() => switchGuild(g.guild_id)}
-                    className={`w-full text-left flex items-center gap-2.5 px-4 py-2 text-sm transition ${
-                      g.guild_id === currentGuildId
-                        ? 'bg-teal/10 dark:bg-teal/10 text-teal dark:text-teal font-medium'
-                        : 'text-warm-900 dark:text-disc-muted hover:bg-warm-100 dark:hover:bg-disc-hover'
-                    }`}
-                  >
-                    <GuildIcon guild={g} className="w-6 h-6" />
-                    <span className="truncate">{g.name}</span>
-                    {g.guild_id === currentGuildId && <span className="ml-auto text-teal shrink-0">✓</span>}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
+        {/* Org Switcher (main nav) — Notion/AppFlowy style, เปิดเมนูได้เสมอแม้ org เดียว */}
+        {session ? (
+          <OrgSwitcherMenu
+            orgs={orgs}
+            activeOrgId={activeOrgId}
+            user={session.user}
+            activeIconUrl={currentGuild?.icon_url || null}
+          />
+        ) : (
+          <Link href="/" className="hover:opacity-80 transition shrink-0">
+            <Image src="/logo.png" alt="PPLE" width={40} height={40} />
+          </Link>
+        )}
 
 
-        {/* Nav links */}
+        {/* App tabs ย้ายออกจาก topbar (เบียดกัน) → เข้าถึงผ่าน hamburger + การ์ดหน้า dashboard */}
+
+        {/* Nav links (sub-nav ของ app ปัจจุบัน) */}
         <div className="flex items-center gap-0 ml-1">
           {/* สื่อ dropdown (quote + watermark) — เฉพาะ BOT section */}
           {isDiscordApp && mediaLinks.length > 0 && (
@@ -610,7 +592,31 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
                       </div>
                     </a>
 
-                    {/* Guild switcher (mobile) */}
+                    {/* Org switcher (mobile) */}
+                    {canSwitchOrg && (
+                      <>
+                        <div className="border-t border-warm-200 dark:border-disc-border my-1" />
+                        <div className="px-4 py-1 text-xs text-warm-400 dark:text-disc-muted">องค์กร</div>
+                        {orgs.map(o => (
+                          <button
+                            key={o.id}
+                            onClick={() => switchOrg(o.id)}
+                            disabled={switching}
+                            className={`w-full text-left flex items-center gap-2.5 px-4 py-2.5 text-base transition disabled:opacity-60 ${
+                              o.id === activeOrgId
+                                ? 'text-teal dark:text-teal font-medium bg-teal/10 dark:bg-teal/10'
+                                : 'text-warm-900 dark:text-disc-text hover:bg-warm-100 dark:hover:bg-disc-hover'
+                            }`}
+                          >
+                            <GuildIcon guild={{ name: o.name }} className="w-6 h-6" />
+                            <span className="truncate">{o.name}</span>
+                            {o.id === activeOrgId && <span className="ml-auto text-teal shrink-0">✓</span>}
+                          </button>
+                        ))}
+                      </>
+                    )}
+
+                    {/* Guild sub-switcher (mobile) — org หลาย guild เท่านั้น */}
                     {canSwitchGuild && (
                       <>
                         <div className="border-t border-warm-200 dark:border-disc-border my-1" />
@@ -619,7 +625,8 @@ export default function Nav({ session, guilds = [], currentGuildId = null, enabl
                           <button
                             key={g.guild_id}
                             onClick={() => { setMenuOpen(false); switchGuild(g.guild_id) }}
-                            className={`w-full text-left flex items-center gap-2.5 px-4 py-2.5 text-base transition ${
+                            disabled={switching}
+                            className={`w-full text-left flex items-center gap-2.5 px-4 py-2.5 text-base transition disabled:opacity-60 ${
                               g.guild_id === currentGuildId
                                 ? 'text-teal dark:text-teal font-medium bg-teal/10 dark:bg-teal/10'
                                 : 'text-warm-900 dark:text-disc-text hover:bg-warm-100 dark:hover:bg-disc-hover'

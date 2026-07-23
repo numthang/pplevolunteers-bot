@@ -5,7 +5,7 @@
  *    - getCaseByRefPublic  → เฉพาะ field ปลอดภัย (status + public notes) สำหรับหน้า public
  *    - getCaseByRefFull    → ทุก field (PII) เรียก "หลังผ่าน gate canManageCases + scope" เท่านั้น
  *
- * ทุก query filter ด้วย guild_id · province scope filter ที่ list/full
+ * ทุก query filter ด้วย org_id (ยกเว้น case_config ที่ยัง guild_id) · province scope filter ที่ list/full
  * ref format เดียวกับ db/case.js (bot): <รหัสมหาดไทย>-<พ.ศ.2หลัก>-<random4hex>
  */
 
@@ -33,23 +33,24 @@ export async function generateRef(province) {
  * สร้างเคสจาก public web form
  * @returns {object} แถวที่สร้าง (มี ref)
  */
-export async function createCase(guildId, data) {
+export async function createCase(orgId, data) {
   const {
     province, category = null, title = null, detail = null, source = 'web',
     complainant_name, complainant_phone, complainant_line_id = null,
     consent_at = null, intake_ip = null, created_by = null,
+    discord_guild_id = null,
   } = data
   const ref = await generateRef(province)
   const { rows } = await pool.query(
     `INSERT INTO cases
-       (guild_id, ref, province, category, title, detail, source, status,
+       (org_id, ref, province, category, title, detail, source, status,
         complainant_name, complainant_phone, complainant_line_id,
-        consent_at, intake_ip, created_by)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,'open',$8,$9,$10,$11,$12,$13)
+        consent_at, intake_ip, created_by, discord_guild_id)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,'open',$8,$9,$10,$11,$12,$13,$14)
      RETURNING *`,
-    [guildId, ref, province, category, title, detail, source,
+    [orgId, ref, province, category, title, detail, source,
      complainant_name, complainant_phone, complainant_line_id,
-     consent_at, intake_ip, created_by],
+     consent_at, intake_ip, created_by, discord_guild_id],
   )
   return rows[0]
 }
@@ -104,12 +105,12 @@ export async function getCaseByRefPublic(ref) {
 
 /**
  * 🔒 FULL — ทุก field รวม PII · เรียกหลังผ่าน gate (canManageCases + scope) เท่านั้น
- * @param {string[]} guildIds  org-scope — guild เจ้าของ session + guild ในเครือเดียวกัน (getOrgGuildIds)
+ * @param {number} orgId  org-scope
  */
-export async function getCaseByRefFull(guildIds, ref) {
+export async function getCaseByRefFull(orgId, ref) {
   const { rows } = await pool.query(
-    `SELECT * FROM cases WHERE guild_id = ANY($1) AND ref = $2`,
-    [guildIds, ref],
+    `SELECT * FROM cases WHERE org_id = $1 AND ref = $2`,
+    [orgId, ref],
   )
   return rows[0] || null
 }
@@ -117,27 +118,36 @@ export async function getCaseByRefFull(guildIds, ref) {
 
 export async function getAssignees(caseId) {
   const { rows } = await pool.query(
-    `SELECT discord_id, assigned_at FROM case_assignees WHERE case_id = $1 ORDER BY assigned_at`,
+    `SELECT a.user_id, u.discord_id, a.assigned_at
+     FROM case_assignees a
+     LEFT JOIN users u ON u.id = a.user_id
+     WHERE a.case_id = $1
+     ORDER BY a.assigned_at`,
     [caseId],
   )
   return rows
 }
 
 /**
- * assignees พร้อมชื่อ (JOIN dc_members) — สำหรับแสดงในหน้า workspace
- * @param {string[]} guildIds  org-scope — ผู้รับผิดชอบอาจเป็นสมาชิก guild ในเครือที่ไม่ใช่ guild เจ้าของเคส
+ * assignees พร้อมชื่อ (JOIN org_members) — สำหรับแสดงในหน้า workspace
+ * @param {number} orgId  org-scope — หาชื่อ/discord_id ของผู้รับผิดชอบ
  */
-export async function getAssigneesWithNames(caseId, guildIds) {
+export async function getAssigneesWithNames(caseId, orgId) {
   const { rows } = await pool.query(
-    `SELECT DISTINCT ON (a.discord_id) a.discord_id, a.assigned_at,
-            COALESCE(m.display_name, m.username, a.discord_id) AS name
+    `SELECT a.user_id, a.assigned_at, u.discord_id,
+            COALESCE(om.display_name, u.username, u.discord_id, a.user_id::text) AS name
      FROM case_assignees a
-     LEFT JOIN dc_members m ON m.discord_id = a.discord_id AND m.guild_id = ANY($2)
+     LEFT JOIN users u ON u.id = a.user_id
+     LEFT JOIN LATERAL (
+       SELECT display_name FROM org_members om2
+       WHERE om2.user_id = a.user_id AND om2.org_id = $2 AND om2.display_name IS NOT NULL
+       LIMIT 1
+     ) om ON true
      WHERE a.case_id = $1
-     ORDER BY a.discord_id, (m.display_name IS NULL), (m.username IS NULL)`,
-    [caseId, guildIds],
+     ORDER BY a.assigned_at`,
+    [caseId, orgId],
   )
-  return rows.sort((a, b) => new Date(a.assigned_at) - new Date(b.assigned_at))
+  return rows
 }
 
 export async function getAttachments(caseId) {
@@ -149,33 +159,33 @@ export async function getAttachments(caseId) {
   return rows
 }
 
-export async function getAttachmentById(attId) {
+export async function getAttachmentById(orgId, attId) {
   const { rows } = await pool.query(
-    `SELECT a.*, c.ref, c.province, c.guild_id AS case_guild_id
+    `SELECT a.*, c.ref, c.province, c.org_id AS case_org_id
      FROM case_attachments a JOIN cases c ON c.id = a.case_id
-     WHERE a.id = $1`,
-    [attId],
+     WHERE a.id = $1 AND c.org_id = $2`,
+    [attId, orgId],
   )
   return rows[0] || null
 }
 
-export async function insertAttachment(caseId, guildId, { file_path, original_name, mime }) {
+export async function insertAttachment(caseId, orgId, { file_path, original_name, mime }) {
   const { rows } = await pool.query(
-    `INSERT INTO case_attachments (case_id, guild_id, file_path, original_name, mime)
+    `INSERT INTO case_attachments (case_id, org_id, file_path, original_name, mime)
      VALUES ($1,$2,$3,$4,$5) RETURNING *`,
-    [caseId, guildId, file_path, original_name, mime],
+    [caseId, orgId, file_path, original_name, mime],
   )
   return rows[0]
 }
 
 /**
  * รายการเคส (scope-filtered) — provinces=null = admin (ทุกจังหวัด)
- * @param {string[]} guildIds  org-scope — getOrgGuildIds(session guild)
+ * @param {number} orgId  org-scope
  */
-export async function listCases(guildIds, { provinces = null, status = null, limit = 100, offset = 0 } = {}) {
-  const params = [guildIds]
+export async function listCases(orgId, { provinces = null, status = null, limit = 100, offset = 0 } = {}) {
+  const params = [orgId]
   let q = `SELECT id, ref, province, category, title, status, source, created_at, updated_at
-           FROM cases WHERE guild_id = ANY($1)`
+           FROM cases WHERE org_id = $1`
   if (Array.isArray(provinces)) {
     if (provinces.length === 0) return []
     params.push(provinces)
@@ -191,10 +201,10 @@ export async function listCases(guildIds, { provinces = null, status = null, lim
   return rows
 }
 
-/** นับเคสแยกสถานะ (dashboard) — provinces=null = ทุกจังหวัด · guildIds = org-scope */
-export async function countByStatus(guildIds, provinces = null) {
-  const params = [guildIds]
-  let q = `SELECT status, COUNT(*)::int AS n FROM cases WHERE guild_id = ANY($1)`
+/** นับเคสแยกสถานะ (dashboard) — provinces=null = ทุกจังหวัด · orgId = org-scope */
+export async function countByStatus(orgId, provinces = null) {
+  const params = [orgId]
+  let q = `SELECT status, COUNT(*)::int AS n FROM cases WHERE org_id = $1`
   if (Array.isArray(provinces)) {
     if (provinces.length === 0) return {}
     params.push(provinces)
@@ -205,28 +215,19 @@ export async function countByStatus(guildIds, provinces = null) {
   return Object.fromEntries(rows.map(r => [r.status, r.n]))
 }
 
-export async function addAssignee(caseId, guildId, discordId) {
+export async function addAssignee(caseId, orgId, userId) {
   await pool.query(
-    `INSERT INTO case_assignees (case_id, guild_id, discord_id)
-     VALUES ($1,$2,$3) ON CONFLICT (case_id, discord_id) DO NOTHING`,
-    [caseId, guildId, discordId],
+    `INSERT INTO case_assignees (case_id, org_id, user_id)
+     VALUES ($1,$2,$3) ON CONFLICT (case_id, user_id) DO NOTHING`,
+    [caseId, orgId, userId],
   )
 }
 
-export async function removeAssignee(caseId, discordId) {
+export async function removeAssignee(caseId, userId) {
   await pool.query(
-    `DELETE FROM case_assignees WHERE case_id = $1 AND discord_id = $2`,
-    [caseId, discordId],
+    `DELETE FROM case_assignees WHERE case_id = $1 AND user_id = $2`,
+    [caseId, userId],
   )
-}
-
-export async function addNote(caseId, guildId, { author_discord_id = null, body, is_public = false }) {
-  const { rows } = await pool.query(
-    `INSERT INTO case_notes (case_id, guild_id, author_discord_id, body, is_public)
-     VALUES ($1,$2,$3,$4,$5) RETURNING *`,
-    [caseId, guildId, author_discord_id, body, is_public],
-  )
-  return rows[0]
 }
 
 export async function updateStatus(caseId, status, closeReason = null) {
@@ -246,13 +247,13 @@ export async function setAiSummary(caseId, summary, lastSyncedMessageId = null) 
   )
 }
 
-export async function addTimelineEvents(caseId, guildId, events, source = 'ai') {
+export async function addTimelineEvents(caseId, orgId, events, source = 'ai') {
   for (const e of events) {
     await pool.query(
-      `INSERT INTO case_timeline (case_id, guild_id, discord_message_id, source, body, is_public, occurred_at)
+      `INSERT INTO case_timeline (case_id, org_id, discord_message_id, source, body, is_public, occurred_at)
        VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7, NOW()))
        ON CONFLICT (case_id, discord_message_id) WHERE discord_message_id IS NOT NULL DO NOTHING`,
-      [caseId, guildId, e.discord_message_id || null, source, e.body, e.is_public ?? false, e.occurred_at || null],
+      [caseId, orgId, e.discord_message_id || null, source, e.body, e.is_public ?? false, e.occurred_at || null],
     )
   }
 }

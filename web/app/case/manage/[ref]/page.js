@@ -3,8 +3,7 @@ import { redirect, notFound } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { getSession } from '@/lib/auth.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
-import { getGuildId } from '@/lib/guildContext.js'
-import { getOrgGuildIds } from '@/lib/org.js'
+import { getOrgId } from '@/lib/orgContext.js'
 import { canAccessCaseProvince } from '@/lib/caseAccess.js'
 import { getCaseByRefFull, getAssigneesWithNames, getAttachments, getTimeline } from '@/db/cases.js'
 import { getThreadName } from '@/lib/caseDiscord.js'
@@ -26,19 +25,19 @@ export default async function CaseManageDetail({ params }) {
   const t = await getTranslations('case')
   const session = await getSession()
   const { access } = await getEffectiveIdentity(session)
-  const guildId = await getGuildId(session)
-  const orgGuildIds = await getOrgGuildIds(guildId)
+  const orgId = await getOrgId(session)
 
-  const c = await getCaseByRefFull(orgGuildIds, ref)
+  const c = await getCaseByRefFull(orgId, ref)
   if (!c) notFound()
   if (!canAccessCaseProvince(c.province, access)) redirect('/case/manage')
 
   const [assignees, attachments, timeline, threadName] = await Promise.all([
-    getAssigneesWithNames(c.id, orgGuildIds), getAttachments(c.id), getTimeline(c.id),
+    getAssigneesWithNames(c.id, orgId), getAttachments(c.id), getTimeline(c.id),
     c.discord_thread_id ? getThreadName(c.discord_thread_id) : Promise.resolve(null),
   ])
-  const isAssigned = assignees.some(a => a.discord_id === session.user.discordId)
-  const threadUrl = c.discord_thread_id ? `https://discord.com/channels/${c.guild_id}/${c.discord_thread_id}` : null
+  const isAssigned = assignees.some(a => a.user_id === session.user.userId)
+  // ลิงก์ thread ต้องใช้ guild ที่เคสนี้อยู่จริง (artifact) ไม่ใช่ guild ที่กำลัง browse
+  const threadUrl = c.discord_thread_id && c.discord_guild_id ? `https://discord.com/channels/${c.discord_guild_id}/${c.discord_thread_id}` : null
 
   return (
     <div className="max-w-3xl mx-auto">

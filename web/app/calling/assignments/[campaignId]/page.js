@@ -131,6 +131,7 @@ export default function CampaignPage({ params }) {
   const [noAccess, setNoAccess] = useState(false)
   const [contactsHidden, setContactsHidden] = useState(false)
   const [usersMap, setUsersMap] = useState({})
+  const [discordIdMap, setDiscordIdMap] = useState({})
 
   const [selectedMembers, setSelectedMembers] = useState(new Set())
   const [filterName, setFilterName] = useState(() => searchParams.get('name') || '')
@@ -153,7 +154,7 @@ export default function CampaignPage({ params }) {
   const [filterStatus, setFilterStatus] = useState(() => searchParams.get('status') || '')
   const [filterSms, setFilterSms] = useState(() => searchParams.get('sms') || '')
   const { data: session } = useSession()
-  const { discordId: effectiveDiscordId, access } = useEffectiveRoles(session)
+  const { userId: effectiveUserId, access } = useEffectiveRoles(session, { scope: 'org' })
   const isModerator = can('deleteLog', access?.permissions || [])
   const canSendBulkSms = can('sendBulkSms', access?.permissions || [])
 
@@ -192,7 +193,7 @@ export default function CampaignPage({ params }) {
     }
   }, [subdistrictsOpen])
 
-  // subdistricts only for member tab (data from ngs_member_cache)
+  // subdistricts only for member tab (data from cache_pple_member)
   useEffect(() => {
     if (activeTab !== 'member' || !filterAmphure) {
       setAvailableSubdistricts([])
@@ -344,9 +345,15 @@ export default function CampaignPage({ params }) {
       if (cData.data) setCampaign(cData.data)
       const uData = await usersRes.json()
       if (uData.data) {
+        // assigned_to = users.id (org migration) → key ด้วย user_id
         const map = {}
-        for (const u of uData.data) map[u.discord_id] = u.display_name
+        const dmap = {}
+        for (const u of uData.data) {
+          map[u.user_id] = u.display_name
+          if (u.discord_id) dmap[u.user_id] = u.discord_id
+        }
         setUsersMap(map)
+        setDiscordIdMap(dmap)
       }
       const mStats = await memberStatsRes.json()
       const cStats = await contactStatsRes.json()
@@ -466,7 +473,6 @@ export default function CampaignPage({ params }) {
     setFilterStatus('')
     setFilterSms('')
     setSelectedMembers(new Set())
-    setExpandedId(null)
   }
 
   const hasActiveFilters = !!(filterName || filterAmphure || filterSubdistricts.size > 0 || filterTier || filterAssignee || filterRsvp || filterExpiry || filterCalled || filterSort || filterStatus || filterSms)
@@ -487,7 +493,7 @@ export default function CampaignPage({ params }) {
   }
 
   const assignees = (stats.assigneeCounts || [])
-    .map(a => ({ id: a.id, name: usersMap[a.id] || a.id, count: a.count }))
+    .map(a => ({ id: a.id, name: usersMap[a.id] || String(a.id), count: a.count }))
     .sort((a, b) => a.name.localeCompare(b.name))
 
   const isAllSelected = members.length > 0 && selectedMembers.size === members.length
@@ -764,7 +770,7 @@ export default function CampaignPage({ params }) {
                         )}
                         {expiryIcon && <expiryIcon.Icon title={expiryIcon.title} style={{ color: expiryIcon.color }} className="w-4 h-4 shrink-0 inline-block" />}
                         {catColor && <span className="md:hidden shrink-0 text-sm px-1.5 py-0.5 rounded font-medium" style={{ background: catColor.bg, color: catColor.text }}>{CATEGORY_LABELS[item.category] || item.category}</span>}
-                        {!hasPhone && <span className="shrink-0 text-base text-warm-400 dark:text-disc-muted font-normal">{t('assignment.noPhoneLabel')}</span>}
+                        {!hasPhone && <span className="shrink-0 text-base text-warm-400 dark:text-disc-muted font-normal">{t(item.phone_hidden ? 'assignment.phoneHiddenLabel' : 'assignment.noPhoneLabel')}</span>}
                       </div>
                       <div className="flex items-center gap-1.5 text-base text-warm-500 dark:text-disc-text truncate">
                         <span className="shrink-0 w-1.5 h-1.5 rounded-full inline-block" style={{ backgroundColor: badge.text }} />
@@ -793,7 +799,9 @@ export default function CampaignPage({ params }) {
                     </div>
                     <div className={`hidden md:block text-base truncate pr-2 ${dimmed}`}>
                       {item.assigned_to
-                        ? <a href={`https://discord.com/users/${item.assigned_to}`} target="_blank" rel="noopener noreferrer" className="text-teal hover:underline">{usersMap[item.assigned_to] || item.assigned_to}</a>
+                        ? (discordIdMap[item.assigned_to]
+                            ? <a href={`https://discord.com/users/${discordIdMap[item.assigned_to]}`} target="_blank" rel="noopener noreferrer" className="text-teal hover:underline">{usersMap[item.assigned_to] || item.assigned_to}</a>
+                            : <span className="text-warm-700 dark:text-disc-text">{usersMap[item.assigned_to] || item.assigned_to}</span>)
                         : <span className="inline-flex items-center gap-1" style={{ color: badge.text }}><UserMinus className="w-4 h-4" /><span className="text-sm font-medium">{badge.label}</span></span>}
                     </div>
                     <div className={`hidden md:block truncate pr-2 ${dimmed}`}>
@@ -876,7 +884,7 @@ export default function CampaignPage({ params }) {
         campaignId={parseInt(campaignId)}
         contactType={activeTab === 'contact' ? 'contact' : 'member'}
         memberIds={Array.from(selectedMembers)}
-        defaultMessage={buildSmsTemplate(campaign?.name, campaign?.event_date, campaignId)}
+        defaultMessage={buildSmsTemplate(campaign?.name, campaign?.event_date, campaign?.act_event_id)}
         onClose={() => setSmsModalOpen(false)}
         onDone={() => {
           setSmsModalOpen(false)

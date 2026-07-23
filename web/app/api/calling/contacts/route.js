@@ -1,15 +1,15 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
-import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
+import { getEffectiveOrgIdentity } from '@/lib/orgAccess.js'
 import { getUserScope, isAdmin, isProvincialCoordinator, isRegionalCoordinator } from '@/lib/callingAccess.js'
 import { getContactsList, createContact } from '@/db/calling/contacts.js'
-import { getGuildId } from '@/lib/guildContext.js'
+import { getOrgId } from '@/lib/orgContext.js'
 
 export async function GET(req) {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.discordId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!session?.user?.userId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { access } = await getEffectiveIdentity(session)
+  const { access } = await getEffectiveOrgIdentity(session)
   const scope = getUserScope(access, session.user.primary_province)
 
   const { searchParams } = new URL(req.url)
@@ -39,8 +39,8 @@ export async function GET(req) {
   }
 
   try {
-    const guildId = await getGuildId(session)
-    let contacts = await getContactsList(guildId, {
+    const orgId = await getOrgId(session)
+    let contacts = await getContactsList(orgId, {
       provinces: effectiveProvinces,
       keyword,
       limit,
@@ -58,9 +58,9 @@ export async function GET(req) {
 
 export async function POST(req) {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.discordId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!session?.user?.userId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { access } = await getEffectiveIdentity(session)
+  const { access } = await getEffectiveOrgIdentity(session)
   const scope = getUserScope(access, session.user.primary_province)
 
   if (scope !== null && scope.length === 0) {
@@ -80,9 +80,9 @@ export async function POST(req) {
       return Response.json({ error: 'Forbidden: province out of scope' }, { status: 403 })
     }
 
-    const guildId = await getGuildId(session)
+    const orgId = await getOrgId(session)
     const id = await createContact({
-      guild_id: guildId,
+      org_id: orgId,
       first_name,
       last_name,
       phone,
@@ -94,7 +94,7 @@ export async function POST(req) {
       tambon,
       note,
       specialty,
-      created_by: session.user.discordId,
+      created_by: session.user.userId,
     })
 
     return Response.json({ success: true, data: { id } }, { status: 201 })

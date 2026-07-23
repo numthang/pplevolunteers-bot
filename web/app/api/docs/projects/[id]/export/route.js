@@ -2,6 +2,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import { canManageDocs } from '@/lib/docsAccess.js'
+import { getOrgId } from '@/lib/orgContext.js'
 import { getDocProjectById } from '@/db/docs/projects.js'
 import { getEntriesByProject, getEntryById, getSignatureByEntryId } from '@/db/docs/entries.js'
 import { getAttachmentsByProject } from '@/db/docs/attachments.js'
@@ -31,7 +32,7 @@ export async function GET(req, { params }) {
   const onlySigned = new URL(req.url).searchParams.get('status') !== 'all'
 
   try {
-    const project = await getDocProjectById(id)
+    const project = await getDocProjectById(await getOrgId(session), id)
     if (!project) return Response.json({ error: 'Not found' }, { status: 404 })
 
     const entries = await getEntriesByProject(id)

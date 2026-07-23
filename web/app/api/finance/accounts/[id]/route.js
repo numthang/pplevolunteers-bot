@@ -3,13 +3,16 @@ import { authOptions } from '@/lib/auth-options.js'
 import { getAccountById, updateAccount, deleteAccount, archiveAccount } from '@/db/finance/accounts.js'
 import { canEditAccount } from '@/lib/financeAccess.js'
 import { isAdmin } from '@/lib/roles.js'
-import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
+import { getEffectiveOrgIdentity } from '@/lib/orgAccess.js'
+import { getOrgId } from '@/lib/orgContext.js'
 
 async function checkEditPermission(session, id) {
-  const account = await getAccountById(id)
+  const orgId = await getOrgId(session)
+  if (!orgId) return { error: 'Forbidden', status: 403 }
+  const account = await getAccountById(orgId, id)
   if (!account) return { error: 'Not found', status: 404 }
-  const { discordId, access } = await getEffectiveIdentity(session)
-  if (!canEditAccount(account, discordId, access)) return { error: 'Forbidden', status: 403 }
+  const { userId, access } = await getEffectiveOrgIdentity(session)
+  if (!canEditAccount(account, userId, access)) return { error: 'Forbidden', status: 403 }
   return { account, access }
 }
 
@@ -22,7 +25,7 @@ export async function PUT(req, { params }) {
   if (error) return Response.json({ error }, { status })
 
   const data = await req.json()
-  await updateAccount(id, data, session.user.discordId, isAdmin(access))
+  await updateAccount(id, data, session.user.userId, isAdmin(access))
   return Response.json({ ok: true })
 }
 

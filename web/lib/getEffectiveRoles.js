@@ -1,8 +1,9 @@
 import { cookies } from 'next/headers'
 import { isAdmin } from './roles.js'
 import { DEBUG_COMBOS } from './debugCombos.js'
-import { resolveAccess } from './resolveAccess.js'
+import { resolveAccessV2, accessFromRoleNames } from './resolveAccessV2.js'
 import { getGuildId } from './guildContext.js'
+import { getOrgId } from './orgContext.js'
 import pool from '@/db/index.js'
 
 const DEBUG_LABELS = DEBUG_COMBOS.map(c => c.label)
@@ -14,13 +15,25 @@ export async function getEffectiveRoles(session) {
 
 /**
  * คืน { roles, discordId, access } — roles/discordId คือ identity (debug-aware)
- * access = { isMember, permissions: Set, scopeGrants: [] } resolve จาก dc_guild_roles (DB จริง)
+ * access = { isMember, permissions: Set, scopeGrants: [] } จาก org_member_roles (ORG_ACCESS_REDESIGN ขั้น 4)
+ *
+ * `roles` (ชื่อยศ Discord) ยังคืนไว้เพื่อ "แสดงผล" — ไม่ใช้ตัดสินสิทธิ์อีกแล้ว
+ *
+ * 2 ทางที่ต้องแยก:
+ *   - ปกติ / impersonate คนจริง → resolveAccessV2(orgId, userId) = อ่านของจริง
+ *   - view-as-role (combo สมมติ) → accessFromRoleNames() เพราะไม่มี user จริงให้อ่าน
+ *     (ทั้งคู่วิ่งผ่าน reduceRoleDefs ตัวเดียวกัน → preview ตรงกับของจริงเสมอ)
  */
 export async function getEffectiveIdentity(session) {
   const guildId = await getGuildId(session)
-  const { roles, discordId } = await resolveIdentity(session, guildId)
-  const access = await resolveAccess(guildId, roles)
-  return { roles, discordId, access }
+  const orgId = await getOrgId(session)
+  const { roles, discordId, userId, comboRoles } = await resolveIdentity(session, guildId)
+
+  const access = comboRoles
+    ? await accessFromRoleNames(orgId, comboRoles)
+    : await resolveAccessV2(orgId, userId)
+
+  return { roles, discordId, userId, access }
 }
 
 /** อ่าน roles จริง (DB-fresh, bypass JWT cache) — ไม่ผ่าน debug/view-as-role */
@@ -30,7 +43,9 @@ async function getRealRoles(session, guildId) {
   if (realDiscordId) {
     try {
       const { rows } = await pool.query(
-        'SELECT roles FROM dc_members WHERE guild_id = $1 AND discord_id = $2',
+        `SELECT om.roles FROM org_members om
+           JOIN users u ON u.id = om.user_id
+          WHERE om.guild_id = $1 AND u.discord_id = $2`,
         [guildId, realDiscordId]
       )
       if (rows[0]?.roles) {
@@ -38,7 +53,7 @@ async function getRealRoles(session, guildId) {
       }
     } catch {}
   }
-  return { realRoles, realDiscordId }
+  return { realRoles, realDiscordId, realUserId: session?.user?.userId || null }
 }
 
 /**
@@ -46,42 +61,48 @@ async function getRealRoles(session, guildId) {
  * (getEffectiveIdentity คืน access ของ role ที่ถูก impersonate ซึ่งผิดสำหรับ gate พวกนี้)
  */
 export async function getRealAccess(session) {
-  const guildId = await getGuildId(session)
-  const { realRoles } = await getRealRoles(session, guildId)
-  return resolveAccess(guildId, realRoles)
+  return resolveAccessV2(await getOrgId(session), session?.user?.userId || null)
 }
 
-/** identity layer เดิม (อ่าน roles จาก DB + จัดการ debug/view-as-role) — แยกออกเพื่อ resolve access ครั้งเดียว */
+/**
+ * identity layer (อ่าน roles จาก DB + จัดการ debug/view-as-role)
+ * คืน `comboRoles` เมื่ออยู่โหมด view-as-role → caller ต้องคำนวณ access จากชื่อยศสมมติแทน user จริง
+ */
 async function resolveIdentity(session, guildId) {
-  const { realRoles, realDiscordId } = await getRealRoles(session, guildId)
+  const { realRoles, realDiscordId, realUserId } = await getRealRoles(session, guildId)
+  const real = { roles: realRoles, discordId: realDiscordId, userId: realUserId, comboRoles: null }
 
   // เฉพาะ admin จริงเท่านั้นที่ debug/view-as-role ได้ — เช็คด้วย real access (ไม่ใช่ effective)
-  const realAccess = await resolveAccess(guildId, realRoles)
-  if (!isAdmin(realAccess)) return { roles: realRoles, discordId: realDiscordId }
+  const realAccess = await resolveAccessV2(await getOrgId(session), realUserId)
+  if (!isAdmin(realAccess)) return real
 
   const cookieStore = await cookies()
 
-  // Mode 1: impersonate specific member — ใช้ roles จริงจาก DB
+  // Mode 1: impersonate คนจริง — อ่านสิทธิ์จริงของคนนั้นด้วย userId ของเขา
   const debugDiscordId = cookieStore.get('debug_discord_id')?.value
   if (debugDiscordId) {
     try {
       const { rows } = await pool.query(
-        'SELECT roles FROM dc_members WHERE guild_id = $1 AND discord_id = $2',
+        `SELECT u.id AS user_id, om.roles FROM org_members om
+           JOIN users u ON u.id = om.user_id
+          WHERE om.guild_id = $1 AND u.discord_id = $2`,
         [guildId, debugDiscordId]
       )
-      const roles = rows[0]?.roles ? rows[0].roles.split(',').map(r => r.trim()).filter(Boolean) : []
-      return { roles, discordId: null }
+      if (!rows[0]) return real
+      const roles = rows[0].roles ? rows[0].roles.split(',').map(r => r.trim()).filter(Boolean) : []
+      // discordId = null กัน ownership bypass ตอน debug · userId = ของคนที่ถูกสวมรอย (ใช้อ่านสิทธิ์)
+      return { roles, discordId: null, userId: rows[0].user_id, comboRoles: null }
     } catch {
-      return { roles: realRoles, discordId: realDiscordId }
+      return real
     }
   }
 
-  // Mode 2: predefined combo
+  // Mode 2: combo สมมติ — ไม่มี user จริง ต้องคำนวณจากชื่อยศ
   const debugLabel = cookieStore.get('debug_role')?.value
-  if (!debugLabel || !DEBUG_LABELS.includes(debugLabel)) return { roles: realRoles, discordId: realDiscordId }
+  if (!debugLabel || !DEBUG_LABELS.includes(debugLabel)) return real
 
   const combo = DEBUG_COMBOS.find(c => c.label === debugLabel)
-  if (!combo) return { roles: realRoles, discordId: realDiscordId }
+  if (!combo) return real
 
-  return { roles: combo.roles, discordId: null }
+  return { roles: combo.roles, discordId: null, userId: null, comboRoles: combo.roles }
 }

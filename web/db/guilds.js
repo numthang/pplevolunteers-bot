@@ -2,21 +2,43 @@ import pool from './index.js'
 
 export async function getGuilds() {
   const { rows } = await pool.query(
-    `SELECT guild_id, name, icon_url FROM dc_guilds ORDER BY name ASC`
+    `SELECT g.guild_id, g.name, g.icon_url, g.org_id, o.name AS org_name
+     FROM dc_guilds g
+     LEFT JOIN orgs o ON o.id = g.org_id
+     ORDER BY o.name ASC, g.name ASC`
+  )
+  return rows
+}
+
+// guild → org_id (dc_guilds mapping) · ใช้ resolve org-scope ของ feature จาก guild ที่ active อยู่
+export async function orgIdOfGuild(guildId) {
+  if (!guildId) return null
+  const { rows } = await pool.query(`SELECT org_id FROM dc_guilds WHERE guild_id = $1`, [guildId])
+  return rows[0]?.org_id ?? null
+}
+
+// org → guilds (Discord artifacts ของ org) · [] = guildless org (self-serve MRSJAN)
+// ใช้ตัดสินว่า org นี้เปิด guild-based features (calling/docs/cases/bot) ได้ไหม
+export async function guildsOfOrg(orgId) {
+  if (!orgId) return []
+  const { rows } = await pool.query(
+    `SELECT guild_id, name, icon_url, org_id FROM dc_guilds WHERE org_id = $1 ORDER BY name`,
+    [orgId]
   )
   return rows
 }
 
 // guild ที่ user ถือ role ซึ่ง map เป็น permission admin/secretary_general (permission-based, multi-tenant)
-// match ชื่อ role ใน dc_members.roles กับ dc_guild_roles.role_name ต่อ guild → ไม่ผูกชื่อ 'Admin'/'เลขาธิการ' ตายตัว
+// match ชื่อ role ใน org_members.roles กับ dc_guild_roles.role_name ต่อ guild → ไม่ผูกชื่อ 'Admin'/'เลขาธิการ' ตายตัว
 export async function getAdminGuildIds(discordId) {
   const { rows } = await pool.query(
-    `SELECT DISTINCT m.guild_id
-     FROM dc_members m
+    `SELECT DISTINCT om.guild_id
+     FROM org_members om
+     JOIN users u ON u.id = om.user_id
      JOIN dc_guild_roles r
-       ON r.guild_id = m.guild_id
-      AND (',' || m.roles || ',') LIKE ('%,' || r.role_name || ',%')
-     WHERE m.discord_id = $1
+       ON r.guild_id = om.guild_id
+      AND (',' || om.roles || ',') LIKE ('%,' || r.role_name || ',%')
+     WHERE u.discord_id = $1
        AND r.permission IN ('admin', 'secretary_general')`,
     [discordId]
   )
@@ -26,12 +48,13 @@ export async function getAdminGuildIds(discordId) {
 // guild ที่ user จัดการ social ได้ (admin + coordinators)
 export async function getSocialManagerGuildIds(discordId) {
   const { rows } = await pool.query(
-    `SELECT DISTINCT m.guild_id
-     FROM dc_members m
+    `SELECT DISTINCT om.guild_id
+     FROM org_members om
+     JOIN users u ON u.id = om.user_id
      JOIN dc_guild_roles r
-       ON r.guild_id = m.guild_id
-      AND (',' || m.roles || ',') LIKE ('%,' || r.role_name || ',%')
-     WHERE m.discord_id = $1
+       ON r.guild_id = om.guild_id
+      AND (',' || om.roles || ',') LIKE ('%,' || r.role_name || ',%')
+     WHERE u.discord_id = $1
        AND r.permission IN ('admin', 'secretary_general', 'province_coordinator', 'district_coordinator')`,
     [discordId]
   )
@@ -47,11 +70,13 @@ export async function getUserGuilds(discordId, { all = false } = {}) {
   if (all) return getGuilds()
   if (!discordId) return []
   const { rows } = await pool.query(
-    `SELECT g.guild_id, g.name, g.icon_url
-     FROM dc_members m
-     JOIN dc_guilds g ON g.guild_id = m.guild_id
-     WHERE m.discord_id = $1
-     ORDER BY g.name ASC`,
+    `SELECT g.guild_id, g.name, g.icon_url, g.org_id, o.name AS org_name
+     FROM org_members om
+     JOIN users u ON u.id = om.user_id
+     JOIN dc_guilds g ON g.guild_id = om.guild_id
+     LEFT JOIN orgs o ON o.id = g.org_id
+     WHERE u.discord_id = $1
+     ORDER BY o.name ASC, g.name ASC`,
     [discordId]
   )
   return rows
@@ -63,7 +88,9 @@ export async function getUserGuilds(discordId, { all = false } = {}) {
 export async function isGuildMember(discordId, guildId) {
   if (!discordId || !guildId) return false
   const { rows } = await pool.query(
-    `SELECT 1 FROM dc_members WHERE discord_id = $1 AND guild_id = $2 LIMIT 1`,
+    `SELECT 1 FROM org_members om
+      JOIN users u ON u.id = om.user_id
+     WHERE u.discord_id = $1 AND om.guild_id = $2 LIMIT 1`,
     [discordId, guildId]
   )
   return rows.length > 0
@@ -82,4 +109,12 @@ export async function getEnabledFeatures(guildId) {
   )
   const v = rows[0]?.value
   return Array.isArray(v) ? v : []
+}
+
+/** users.id จาก discord snowflake — ใช้ที่ขอบ route ที่ client ยังส่ง discord_id มา
+ *  (person ref ใน DB เป็น users.id หมดแล้วหลัง identity split) · null ถ้าไม่พบ */
+export async function userIdByDiscord(discordId) {
+  if (!discordId) return null
+  const { rows } = await pool.query('SELECT id FROM users WHERE discord_id = $1', [discordId])
+  return rows[0]?.id ?? null
 }

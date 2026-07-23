@@ -18,7 +18,7 @@ function TransactionsContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const { data: session } = useSession()
-  const { discordId: effectiveDiscordId, access: effectiveAccess } = useEffectiveRoles(session)
+  const { userId: effectiveUserId, access: effectiveAccess } = useEffectiveRoles(session, { scope: 'org' })
   const MONTHS = t.raw('filters.monthsShort')
 
   const [txns, setTxns]         = useState([])
@@ -178,7 +178,7 @@ function TransactionsContent() {
 
   const canEditAcc = (() => {
     const acc = accounts.find(a => String(a.id) === String(filter.accountId))
-    return acc ? canEditAccount({ owner_id: acc.owner_id, visibility: acc.visibility, province: acc.province }, effectiveDiscordId, effectiveAccess) : false
+    return acc ? canEditAccount({ owner_id: acc.owner_id, visibility: acc.visibility, province: acc.province }, effectiveUserId, effectiveAccess) : false
   })()
 
   // precomputed labels for use inside the transaction-list map below, where the loop
@@ -614,7 +614,7 @@ function TransactionsContent() {
                 )}
                 {canEditAccount(
                   { owner_id: t.account_owner_id, visibility: t.account_visibility, province: t.account_province },
-                  effectiveDiscordId,
+                  effectiveUserId,
                   effectiveAccess
                 ) && (
                   <div className="flex gap-2">
@@ -648,7 +648,7 @@ function TransactionsContent() {
           <TxnForm form={form} onChange={v => setForm(f => ({ ...f, ...v }))}
             accounts={accounts.filter(a => canEditAccount(
               { owner_id: a.owner_id, visibility: a.visibility, province: a.province },
-              effectiveDiscordId, effectiveAccess
+              effectiveUserId, effectiveAccess
             ))}
             categories={categories} />
         </Modal>

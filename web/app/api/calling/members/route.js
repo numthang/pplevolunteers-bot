@@ -1,8 +1,9 @@
 import { getServerSession } from 'next-auth'
 import * as memberDB from '@/db/calling/members.js'
 import { canAccessMember, getUserScope, isAdmin, isRegionalCoordinator, canSeeContacts } from '@/lib/callingAccess.js'
-import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
-import { getGuildId } from '@/lib/guildContext.js'
+import { getEffectiveOrgIdentity } from '@/lib/orgAccess.js'
+import { getOrgId } from '@/lib/orgContext.js'
+import { pickMemberFieldsAll } from '@/lib/callingFields.js'
 import { authOptions } from '@/lib/auth-options.js'
 
 /**
@@ -12,7 +13,7 @@ import { authOptions } from '@/lib/auth-options.js'
  */
 export async function GET(req) {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.discordId) {
+  if (!session?.user?.userId) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -40,14 +41,14 @@ export async function GET(req) {
   const filterSms = searchParams.get('sms') || null
 
   try {
-    const { access } = await getEffectiveIdentity(session)
-    const guildId = await getGuildId(session)
+    const { access } = await getEffectiveOrgIdentity(session)
+    const orgId = await getOrgId(session)
     const userScope = getUserScope(access)
     const isUserAdmin = isAdmin(access)
 
     // Stats-only request
     if (campaignId && statsOnly) {
-      const stats = await memberDB.getMembersInCampaignStats(guildId, parseInt(campaignId))
+      const stats = await memberDB.getMembersInCampaignStats(orgId, parseInt(campaignId))
       return Response.json({ success: true, data: stats })
     }
 
@@ -56,16 +57,16 @@ export async function GET(req) {
 
     if (campaignId) {
       const filters = { amphure: filterAmphure, subdistricts: filterSubdistricts, tier: filterTier, status: filterStatus, assignedTo: filterAssignedTo, rsvp: filterRsvp, name: filterName, expiry: filterExpiry, called: filterCalled, sort: filterSort, sms: filterSms }
-      rows = await memberDB.getMembersInCampaign(guildId, parseInt(campaignId), filters, limit, offset)
+      rows = await memberDB.getMembersInCampaign(orgId, parseInt(campaignId), filters, limit, offset)
     } else if (province) {
-      rows = await memberDB.getMembersByProvince(guildId, province, limit, offset)
+      rows = await memberDB.getMembersByProvince(orgId, province, limit, offset)
     } else if (district) {
-      rows = await memberDB.getMembersByDistrict(guildId, district, limit, offset)
+      rows = await memberDB.getMembersByDistrict(orgId, district, limit, offset)
     } else if (keyword) {
-      rows = await memberDB.searchMembers(guildId, keyword, limit, offset)
+      rows = await memberDB.searchMembers(orgId, keyword, limit, offset)
     } else {
-      rows = await memberDB.getAllMembers(guildId, limit, offset)
-      total = await memberDB.getMembersCount(guildId)
+      rows = await memberDB.getAllMembers(orgId, limit, offset)
+      total = await memberDB.getMembersCount(orgId)
     }
 
     // No calling roles at all → return noAccess flag
@@ -82,22 +83,25 @@ export async function GET(req) {
     if (!showContacts) {
       rows = rows.map(({ mobile_number, line_id, ...rest }) => rest)
     } else if (!isUserAdmin && !isRegionalCoordinator(access)) {
-      // province/district coordinator: contacts scoped to primary_province only
-      const contactProvince = session.user.primary_province
-      if (!contactProvince) {
-        rows = rows.map(({ mobile_number, line_id, ...rest }) => rest)
-      } else {
-        rows = rows.map(m => {
-          if (m.home_province === contactProvince) return m
-          const { mobile_number, line_id, ...rest } = m
-          return rest
-        })
-      }
+      // province/district coordinator: เห็นเบอร์เฉพาะจังหวัดที่ตัวเองดูแล
+      // primary_province = field กรอกเองในโปรไฟล์ ซึ่งแทบไม่มีใครกรอก (2 จาก 7,339 แถว)
+      // → ไม่มีค่า = ตัดเบอร์ทิ้งหมด ทั้งที่มียศคุมจังหวัดอยู่ (bug-048)
+      // fallback ไปที่ scope จากยศแทน · row ถูกกรองด้วย userScope ไปแล้วข้างบน จึงไม่กว้างเกินสิทธิ์
+      const allowed = session.user.primary_province
+        ? [session.user.primary_province]
+        : (userScope || [])
+      // ตัดแล้วต้องบอกด้วยว่า "ไม่มีสิทธิ์เห็น" ไม่ใช่ปล่อยให้ UI เดาว่า "ไม่มีเบอร์"
+      // (roster query การันตี mobile_number IS NOT NULL อยู่แล้ว — เบอร์หาย = ถูกตัดเสมอ)
+      rows = rows.map(m => {
+        if (allowed.includes(m.home_province)) return m
+        const { mobile_number, line_id, ...rest } = m
+        return { ...rest, phone_hidden: true }
+      })
     }
 
     return Response.json({
       success: true,
-      data: rows,
+      data: pickMemberFieldsAll(rows),   // กันทะเบียนสมาชิกทั้งแถวหลุด (เลขบัตร ปชช./ที่อยู่/วันเกิด)
       contacts_hidden: !showContacts,
       hasMore: rows.length === limit,
       limit,
