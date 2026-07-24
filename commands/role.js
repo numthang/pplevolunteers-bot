@@ -8,7 +8,7 @@ const {
   ActionRowBuilder,
   MessageFlags,
 } = require('discord.js');
-const { handleRoleMembersCmd } = require('../handlers/roleBulkHandler');
+const { handleRoleMembersCmd, handleRoleByRoleCmd } = require('../handlers/roleBulkHandler');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -50,6 +50,23 @@ module.exports = {
       sub.setName('recover')
         .setDescription('คืน role หลายอันให้สมาชิกคนเดียว — Admin เท่านั้น')
         .addUserOption(opt => opt.setName('user').setDescription('สมาชิกที่จะคืน role ให้').setRequired(true))
+    )
+
+    .addSubcommand(sub =>
+      sub.setName('by-role')
+        .setDescription('เลือกสมาชิกจาก role ที่ชื่อมี keyword แล้วเพิ่ม/ถอด/แทนที่ role')
+        .addStringOption(opt => opt.setName('keyword').setDescription('คำในชื่อ role ที่ใช้เลือกกลุ่มเป้าหมาย (เช่น นครปฐม)').setRequired(true))
+        .addStringOption(opt => opt.setName('action').setDescription('จะทำอะไรกับคนที่เข้าเงื่อนไข').setRequired(true)
+          .addChoices(
+            { name: 'เพิ่ม role', value: 'add' },
+            { name: 'ถอด role', value: 'remove' },
+            { name: 'แทนที่ (เพิ่ม role + ถอด role ที่ match keyword)', value: 'replace' },
+          ))
+        .addRoleOption(opt => opt.setName('role1').setDescription('Role ที่จะเพิ่ม/ถอด (อันที่ 1)').setRequired(true))
+        .addRoleOption(opt => opt.setName('role2').setDescription('Role ที่ 2').setRequired(false))
+        .addRoleOption(opt => opt.setName('role3').setDescription('Role ที่ 3').setRequired(false))
+        .addRoleOption(opt => opt.setName('role4').setDescription('Role ที่ 4').setRequired(false))
+        .addRoleOption(opt => opt.setName('role5').setDescription('Role ที่ 5').setRequired(false))
     ),
 
   async execute(interaction) {
@@ -124,6 +141,10 @@ module.exports = {
 
     if (sub === 'list') {
       return handleRoleMembersCmd(interaction);
+    }
+
+    if (sub === 'by-role') {
+      return handleRoleByRoleCmd(interaction);
     }
 
     if (sub === 'recover') {

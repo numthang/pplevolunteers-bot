@@ -10,5 +10,6 @@ data.ms/
 web/.next/
 #web/public/uploads/
 !web/public/uploads/**/.gitkeep
-.DS_Storescripts/.quote_cache.json
+.DS_Store
+scripts/.quote_cache.json
 web/public/media-temp/*.png

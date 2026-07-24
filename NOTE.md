@@ -8,10 +8,10 @@ PLATFOR{m}.ORG
 - ผมอาจจะเปลี่ยน /bot เป็น /dc แล้วก็ /dc/settings => มีพวก ai, watermark, platforms, quote, roles รวมอยู่ในนั้นอ่ะ ดีไหม
 - เรียงลำดับความอยากให้ login เรียงยังไงดี discord google line ดีไหม ไม่ต้องทำให้ discord เด่นก็ได้ หรือจะยังไงดี
 - ถ้า login ด้วย gmail อีเมล์ ไลน์ otp passkey ด้านในก็ต้องมีให้ผูกกับ discord ไหม 
-- ปุ่มเข้าสู่ระบบ มุมขวาบน เอาออกไปเลยป่ะ
 - ❌ Instagram: IG API: The caption was too long.
 - ❌ Threads: Threads API: An unknown error occurred
-- run-prod.sh นี่ เราต้อง pull org-core บน production ก่อน เนอะ แล้วต้อง merge org-core เข้า master ก่อนไหม 
+- งาน breaking the cycle เป็นกิจกรรมใหญ่ คนมาร่วมงานเกินร้อย ที่จัดปิดโรง ฉาย backdrop ในโรงหนัง และมีการเชิญผู้กำกับมาในงาน เป็นตัวจุดประกายให้จังหวัดอื่นๆ ได้ทำตามด้วยในครั้งนั้น ช่วยโปรโมทหนังไปในตัว 
+- งาน open call ratchaburi มีผู้สนใจการทำงานยุค AI ที่จะช่วยให้งานเครือข่ายไปต่อได้มากกว่านี้ โดยช่วยลดงานให้กับงานอาสาได้สารพัด
 
 CivicFlow
 - 
