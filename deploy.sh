@@ -46,6 +46,8 @@ git checkout -- package.json package-lock.json
 git fetch origin
 git reset --hard origin/master
 #git pull
+#git pull = fetch + merge → ถ้า prod มีแก้ค้าง (เช่น package.json) จะ conflict แล้วค้างกลางคัน
+#git reset --hard = โยนของบน prod ทิ้ง บังคับให้ตรง origin/master เป๊ะ ไม่มี conflict
 
 # Bot
 npm install --omit=dev

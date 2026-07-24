@@ -2,6 +2,16 @@
 
 > เก็บเฉพาะงานค้าง + design ที่ยังไม่ทำ · ของที่ทำเสร็จ+deploy แล้วย้ายไปอยู่ในโค้ด/`md/*` ตามระบบ
 
+## 🎉 CUTOVER org-core → master ขึ้น PROD สำเร็จ (2026-07-23 ~05:35)
+
+migration 12 ขั้นผ่านบน prod จริง **23 วินาที** · ตัวตรวจ 6 บรรทัด = 0 หมด · เว็บ+บอท online
+users 6616 · org_members 7346 · person ref map เข้า users ครบ · RBAC ย้ายครบ
+backup ก่อน cutover: `backups/pple_pre_orgcutover_2026-07-23_0533.dump` (4.9M)
+ลำดับที่ทำ: PROBE → backup → stop bot+web → reset master → run-prod.sh → build → start
+> ⬜ เหลือ smoke test หน้าจริงบน prod (finance/calling/docs/cases/roles/profile) + ดูบอทนิ่ง
+> ⬜ หลังนิ่งแล้ว rename `01-identity-refactor.sql` → `.applied.sql` กันรันซ้ำ (DESTRUCTIVE)
+
+
 ## ✅ ปลดล็อกแล้ว — ORG_ACCESS_REDESIGN ขั้น 5 เสร็จ (2026-07-22)
 
 **สิทธิ์ไม่แช่แข็งแล้ว** — ทางเขียนย้ายมาที่ `org_member_roles` ครบทุกจุด (บอทซิงค์ยศ · `/api/org/appoint` · แก้การแมปยศ)

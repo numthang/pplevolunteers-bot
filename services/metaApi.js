@@ -276,6 +276,16 @@ async function postToFacebook(guildId, userId, images, caption, scheduleTime = n
 
 // ─── Instagram ────────────────────────────────────────────────────────────────
 
+const IG_CAPTION_MAX = 2200; // Instagram hard limit
+
+// IG โพสต์เป็น caption เดียว (ไม่มี reply chain แบบ Threads) → ยาวเกินต้องตัด
+function truncateCaption(caption, max = IG_CAPTION_MAX) {
+  if (!caption || caption.length <= max) return caption || '';
+  const cut = caption.slice(0, max - 1);
+  console.warn(`[IG] caption truncated: ${caption.length} → ${max} chars`);
+  return cut.trimEnd() + '…';
+}
+
 async function igPost(urlPath, fields) {
   const { body, contentType } = buildMultipart(fields);
   const res = await httpsPost(urlPath, body, contentType);
@@ -285,6 +295,7 @@ async function igPost(urlPath, fields) {
 
 async function _igPostFromUrls(cfg, imageUrls, caption, scheduleTime = null, onProgress = null) {
   if (imageUrls.length > 10) imageUrls = imageUrls.slice(0, 10);
+  caption = truncateCaption(caption);
   // IG ใช้ User Token เท่านั้น — Page Token โดน Meta ปิด gate แล้ว
   const igToken = cfg.userToken;
   if (!igToken) throw new Error('ไม่พบ User Token สำหรับ IG — กรุณาเข้าไป reconnect Meta OAuth ใหม่');
@@ -387,8 +398,22 @@ function threadsPost(urlPath, fields) {
       res.on('end', () => {
         try {
           const json = JSON.parse(data);
-          if (json.error) reject(new Error(`Threads API: ${json.error.message}`));
-          else resolve(json);
+          if (json.error) {
+            const e = json.error;
+            console.error('[Threads API error]', urlPath, JSON.stringify({
+              status: res.statusCode,
+              message: e.message,
+              type: e.type,
+              code: e.code,
+              error_subcode: e.error_subcode,
+              error_user_title: e.error_user_title,
+              error_user_msg: e.error_user_msg,
+              fbtrace_id: e.fbtrace_id,
+            }));
+            const detail = e.error_user_msg || e.message || 'unknown error';
+            const codeStr = [e.code, e.error_subcode].filter(Boolean).join('/');
+            reject(new Error(`Threads API: ${detail}${codeStr ? ` (code ${codeStr})` : ''}`));
+          } else resolve(json);
         } catch { resolve({ raw: data }); }
       });
     });
@@ -401,9 +426,12 @@ function threadsPost(urlPath, fields) {
 async function waitForThreadsContainer(id, token, maxWaitMs = 30000, onProgress = null) {
   const start = Date.now();
   while (Date.now() - start < maxWaitMs) {
-    const res = await threadsGet(`/v1.0/${id}?fields=status&access_token=${token}`);
+    const res = await threadsGet(`/v1.0/${id}?fields=status,error_message&access_token=${token}`);
     if (res.status === 'FINISHED') return;
-    if (res.status === 'ERROR') throw new Error('Threads container error');
+    if (res.status === 'ERROR') {
+      console.error('[Threads container ERROR]', id, JSON.stringify(res));
+      throw new Error(`Threads container error: ${res.error_message || 'unknown'}`);
+    }
     const elapsed = Math.floor((Date.now() - start) / 1000);
     if (onProgress) onProgress(elapsed);
     await new Promise(r => setTimeout(r, 2000));
@@ -615,7 +643,7 @@ async function postReelsToInstagram(guildId, userId, videoDiscordUrl, caption, o
 
   if (onProgress) onProgress('📤 Instagram Reels: กำลังสร้าง container...');
   const { id: containerId, error: containerErr } = await igPost(`/v22.0/${cfg.socialId}/media`, {
-    media_type: 'REELS', video_url: videoUrl, caption, access_token: igToken,
+    media_type: 'REELS', video_url: videoUrl, caption: truncateCaption(caption), access_token: igToken,
   });
   if (containerErr) throw new Error(`IG Reels container: ${containerErr.message}`);
   console.log('[IG Reels container created] id:', containerId);

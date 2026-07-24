@@ -51,7 +51,7 @@ const smsWebhook  = require('./services/smsWebhook');
 const { upsertGuilds } = require('./db/guilds');
 const { syncGuildRolesCatalog, upsertGuildRole, deleteGuildRole, invalidateGuildRoleCache } = require('./db/guildRoles');
 const { handleSlipMessage } = require('./services/financeOCR');
-const { handleRoleAddModal, handleRoleRemoveModal, handleRoleRecoverModal } = require('./handlers/roleBulkHandler');
+const { handleRoleAddModal, handleRoleRemoveModal, handleRoleRecoverModal, handleRoleByRoleConfirm, handleRoleByRoleCancel } = require('./handlers/roleBulkHandler');
 const { handleHandraiseButton, handleHandraiseVoiceUpdate } = require('./handlers/handraiseHandler');
 const { buildRagContext } = require('./services/ragSearch');
 const { callAI, callAIWithHistory } = require('./services/aiSummarize');
@@ -257,6 +257,8 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.customId.startsWith('ai_thread_caption:')) return handleAiThreadAddCaption(interaction);
     if (interaction.customId.startsWith('ai_thread_public:'))  return handleAiThreadPublic(interaction);
     if (interaction.customId.startsWith('handraise_'))         return handleHandraiseButton(interaction);
+    if (interaction.customId.startsWith('byrole_confirm:'))    return handleRoleByRoleConfirm(interaction);
+    if (interaction.customId.startsWith('byrole_cancel:'))     return handleRoleByRoleCancel(interaction);
     return;
   }
 });

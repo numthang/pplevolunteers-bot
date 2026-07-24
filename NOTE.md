@@ -1,15 +1,19 @@
-Platfor.Org
-- อนาคต org_members จะ migrate มาจาก dc_members ให้รู้ว่าใครอยู่องค์กรไหน 
+/poll question:🗳️ ท่านเห็นควรให้เปิดรับผู้สม้คร นายก อบจ. ราชบุรี ครั้งหน้าหรือไม่?  anon:Semi-Anonymous choices::green_circle: 1. ส่ง + พร้อมลงแรงหน้างาน, :blue_circle: 2. ส่ง + ถ้าผู้สมัครมีความพร้อมตามเกณฑ์, :red_circle: 3. ไม่ส่ง เราไม่พร้อม ควรยุติการสรรหา, :yellow_circle: 4. ไม่แน่ใจ เป็นกองเชียร์/ช่วยประชาสัมพันธ์ description:⚠️ เกณฑ์ผู้สมัครประกอบการตัดสินใจ: ผู้สมัครควรมีทีม สจ. ของตัวเอง, มีทีมเดินหาเสียง 4-5 คน/เขตเลือกตั้ง (สส.) ระยะเวลา 2 เดือน (หากมติส่วนใหญ่เลือก "ส่ง" จะเข้าสู่ขั้นตอนการเปิดรับสมัครสาธารณะต่อไป) buttons:Yes time:7d
+
+PLATFOR{m}.ORG
 - ตอนนี้ถ้าจะดูว่าใครเป็น treasurer บนเว็บเพื่อมีสิทธแก้ไข finance ดูจากอะไร ค้นจาก dc_members.roles แล้วแมพ เหรัญญิก เพื่อหา treasurer เหรอ
-- หน้า http://localhost:3000/org/settings ตรง role ต้องแสดงให้หมดจากตาราง org_roles
-- หน้านี้ http://localhost:3000/org ขอ layout 100% แล้วก็ มีเมนูอะไรสำหรับ org ตอนนี้ช่วยแปะมาให้หมด ทำให้ หน้า /org นี้เป็น layout ใหม่ทั้งหมดสำหรับเว็บ org ได้ไหม ทั้ง top nav bar และ hamburgur ทั้งหมด แล้วใช้ 
-- ทำให้ทั้งระบบเป็น layout ใหม่หมดเลยได้ไหม เป็นระบบ org ทั้งหมดเลย ผมจะไม่ deploy code ใหม่แล้ว ถ้า org ไม่เสร็จ ผมอยากแก้หมดเลย ทั้ง topbar nav ทั้ง hamburgur เป็นระบบ org base ส่วนแบบเก่าก็อาจจะ tag version เก็บไว้ก่อน เอาไว้ดูตัวอย่างย้อนหลัง
-- ขอ rename organizations เป็น orgs ได้ไหม จะได้ consistancy ทีนี้ schema พร้อมจะได้แก้ทีเดียว
-- dc_user_identities ก็ต้องแก้เป็น user_identities ถูกไหม dc_user_config => user_config
-- ยกเลิก orgauth ไหม ขอใช้ auth เดียว auth เดิม ผ่านตาราง users กับ user_identities ถูกไหม
+- จัดระเบียบไฟล์ใน web/components หน่อย พวกของกลางใช้ร่วมกันคงไว้ได้
+- จัดระเบียบ setting ดูว่าตอนนี้เรามีอะไรบ้าง จะรวมหรือจะแยก ยังไงดี /org/settings ตอนนี้ consistancy ดีแล้วใช่ไหม 
+- ตอนนี้จะ config web_roles ให้สมาชิกยังไง แต่สำหรับ discord ตอนนี้ migrate มาก่อนได้
+- ผมอาจจะเปลี่ยน /bot เป็น /dc แล้วก็ /dc/settings => มีพวก ai, watermark, platforms, quote, roles รวมอยู่ในนั้นอ่ะ ดีไหม
+- เรียงลำดับความอยากให้ login เรียงยังไงดี discord google line ดีไหม ไม่ต้องทำให้ discord เด่นก็ได้ หรือจะยังไงดี
+- ถ้า login ด้วย gmail อีเมล์ ไลน์ otp passkey ด้านในก็ต้องมีให้ผูกกับ discord ไหม 
+- ❌ Instagram: IG API: The caption was too long.
+- ❌ Threads: Threads API: An unknown error occurred
+- งาน breaking the cycle เป็นกิจกรรมใหญ่ คนมาร่วมงานเกินร้อย ที่จัดปิดโรง ฉาย backdrop ในโรงหนัง และมีการเชิญผู้กำกับมาในงาน เป็นตัวจุดประกายให้จังหวัดอื่นๆ ได้ทำตามด้วยในครั้งนั้น ช่วยโปรโมทหนังไปในตัว 
+- งาน open call ratchaburi มีผู้สนใจการทำงานยุค AI ที่จะช่วยให้งานเครือข่ายไปต่อได้มากกว่านี้ โดยช่วยลดงานให้กับงานอาสาได้สารพัด
 
 CivicFlow
-- ทำไมผมเข้าระบบมาผมกลายเป็น admin ขององค์กรนึงไปเลยอ่ะ งงอยู่
 - 
 
 ข้อเสนอ: ย้าย CivicFlow จาก Vercel มาที่ VPS
@@ -22,6 +26,10 @@ CivicFlow
 - ไม่ผูกขากับเจ้าใดเจ้าหนึ่ง — ข้อมูลและระบบเป็นของ CivicFlow เต็มตัว ย้ายที่ไหนก็ได้ ไม่ถูก lock กับ Vercel/Supabase
 - พูดตรงๆ เรื่องที่ Vercel ดี (แต่ไม่ตรงกับเรา):
 - Vercel เหมาะกับทีมที่ ไม่มีคนเทคนิค และคาดว่าจะมี คนเข้าเว็บพุ่งมหาศาลกะทันหัน. CivicFlow ไม่ใช่ทั้งสองอย่าง — เรามีคนเทคนิค (ผม) และ traffic ระดับองค์กรที่คาดเดาได้. ข้อดีหลักของ Vercel เลยไม่ได้ใช้ ส่วนข้อจำกัดกลับมาขวางเรา
+- icon องค์กรขอบมันแตกๆ ไม่ smooth
+- menu ใน org switcher ทำ font ให้ใหญ่หน่อย เท่าใน hamburger ก็ได้ 
+- http://localhost:3000/profile เปลี่ยน tab เป็น dropdown และน่าจะเปลี่ยนเป็น /user/profile /user/settings ไหม แต่เอาไว้ก่อน ยังไม่แน่ใจว่าจะ setting อะไร ตอนนี้ มีแต่พวก quote
+- http://localhost:3000/profile ไม่แน่ใจว่าตอน switch org มันดึงข้อมูลถูก org 
 
 Re-positioning
 - workspacefor.org
@@ -37,6 +45,7 @@ Web
 
 Bot 
 - มีวิธีย้ายคนจาก stage ไปห้องประชุมธรรมดาทั้งหมดไหมครับ ผมอยากทำตอนปิดประชุม stage
+- ข้อความยาวๆใน modal ไม่มีทางแก้ได้แล้วใช่ไหม มันกี่ตัวอักษรนะ ข้อจำกัด
 
 Cooking
 - ย้าย cooking ออกจาก discord project เถอะ ไปทำเป็น personal ที่แบบ login หรือไม่ login ก็ได้ ไป schema ใหม่ไปเลยดีมะ ส่วน username เราก็แยกออกไปจาก แอพองค์กรไปเลยเนอะ ดีมะอ่ะ รอให้มี domain ของตัวเองก่อน
@@ -58,7 +67,7 @@ multi-language
 - ยังไม่หมด
 
 End of the Day
-วันที่ 10-13 ผมทำอะไรบ้าง ขอรายละเอียดแบบ non-technichal อ่านแล้วคนอื่นเข้าใจขอ format แบบนี้
+วันที่ 22-26 ผมทำอะไรบ้าง ขอรายละเอียดแบบ non-technichal อ่านแล้วคนอื่นเข้าใจขอ format แบบนี้
 - [วันที่] [เดือน] xxxxxxxxxxxxxxxxxxxxxxxxx, xxxx, xxxxx
 - [วันที่] [เดือน] xxxxxxxxxxxxxxxxxxxxxxxxx, xxxx, xxxxx
 - Update PENDING.md สิ่งที่อยากทำ สิ่งที่ทำไปแล้ว, อ่านส่วนที่แก้ไขแล้วเอาขึ้น git พร้อมข้อความแก้ไข พร้อม bump version ใน package.json ให้ถูกต้อง (เช็ค git log ก่อนว่า version ล่าสุดคืออะไร ใช้ semver — patch สำหรับแก้เล็กน้อย, minor สำหรับฟีเจอร์ใหม่) tag เฉพาะ minor ขึ้นไป และ push ด้วย
