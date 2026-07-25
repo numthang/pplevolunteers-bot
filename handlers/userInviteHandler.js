@@ -26,8 +26,10 @@ setInterval(() => {
 
 // แตก + ล้างขยะจากรายชื่อที่ paste มา (Excel/แชท): บรรทัด -, =, เบอร์โทร, @ นำหน้า ฯลฯ
 function cleanTokens(raw) {
+  // slash-command option รับ newline ไม่ได้ — paste จาก Excel จะกลายเป็นบรรทัดเดียวคั่นด้วยช่องว่างหลายตัว
+  // จึงแยกด้วย: comma / tab / ขึ้นบรรทัด / ช่องว่าง 2 ตัวขึ้นไป (ชื่อที่เว้นวรรคเดียวข้างใน เช่น "Pao Worrachit" ยังอยู่รวมกัน)
   return raw
-    .split(/[,\n\t]+/)
+    .split(/[,\n\t]+|\s{2,}/)
     .map(s => s.trim().replace(/^[@\-\s]+/, '').trim()) // ตัด @ / - / ช่องว่างนำหน้า
     .filter(s => s.length > 0)
     .filter(s => !/^[-=_.•·*\s]+$/.test(s))             // เส้น/placeholder ล้วน
