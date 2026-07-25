@@ -197,7 +197,8 @@ export default function CampaignPage({ params }) {
   useEffect(() => {
     if (activeTab !== 'member' || !filterAmphure) {
       setAvailableSubdistricts([])
-      setFilterSubdistricts(new Set())
+      // ว่างอยู่แล้วอย่าสร้าง Set ใหม่ — reference ใหม่จะ retrigger loadFirst แล้วล้าง checkbox ที่เพิ่งเลือก
+      setFilterSubdistricts(prev => prev.size === 0 ? prev : new Set())
       return
     }
     setLoadingSubdistricts(true)

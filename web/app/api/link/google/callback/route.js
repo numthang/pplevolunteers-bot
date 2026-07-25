@@ -1,5 +1,5 @@
 import { verifyLinkState } from '@/lib/linkState.js'
-import { linkIdentity } from '@/db/userIdentities.js'
+import { linkIdentityByUser } from '@/db/userIdentities.js'
 
 export async function GET(req) {
   const { searchParams } = new URL(req.url)
@@ -9,9 +9,9 @@ export async function GET(req) {
 
   if (!code || !state) return Response.redirect(`${base}/profile?link_error=missing_params`)
 
-  let discordId
+  let userId
   try {
-    discordId = verifyLinkState(state)
+    userId = verifyLinkState(state)
   } catch {
     return Response.redirect(`${base}/profile?link_error=invalid_state`)
   }
@@ -36,7 +36,7 @@ export async function GET(req) {
     const { sub } = JSON.parse(Buffer.from(payloadB64, 'base64url').toString())
     if (!sub) throw new Error('no sub in id_token')
 
-    await linkIdentity(discordId, 'google', sub)
+    await linkIdentityByUser(userId, 'google', sub)
     return Response.redirect(`${base}/profile?link_success=google`)
   } catch (err) {
     console.error('[link/google/callback]', err.message)

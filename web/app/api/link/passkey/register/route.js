@@ -2,26 +2,26 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
 import { generateRegistrationOptions, verifyRegistrationResponse } from '@simplewebauthn/server'
 import { findAuthenticatorById } from 'passkey-authenticator-aaguids'
-import { linkIdentity, getUserIdentities } from '@/db/userIdentities.js'
-import pool from '@/db/index.js'
+import { linkIdentityByUser, getUserIdentitiesByUser } from '@/db/userIdentities.js'
+import { putNonce, takeNonce } from '@/db/authNonces.js'
 
 const RP_NAME = 'PPLE Volunteers'
 const RP_ID   = process.env.PASSKEY_RP_ID || new URL(process.env.NEXTAUTH_URL).hostname
 
-// GET — สร้าง challenge
+// GET — สร้าง challenge (keyed by user_id → email-only ก็ลงทะเบียนได้)
 export async function GET() {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.discordId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  const userId = session?.user?.userId
+  if (!userId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const discordId = session.user.discordId
-  const existing  = await getUserIdentities(discordId)
+  const existing = await getUserIdentitiesByUser(userId)
   const existingPasskeys = existing.filter(i => i.provider === 'passkey')
 
   const options = await generateRegistrationOptions({
     rpName:               RP_NAME,
     rpID:                 RP_ID,
-    userID:               new TextEncoder().encode(discordId),
-    userName:             session.user.nickname || session.user.name || discordId,
+    userID:               new TextEncoder().encode(String(userId)),
+    userName:             session.user.nickname || session.user.name || session.user.email || String(userId),
     excludeCredentials:   existingPasskeys.map(p => ({
       id:         p.provider_id,
       type:       'public-key',
@@ -30,13 +30,7 @@ export async function GET() {
     authenticatorSelection: { residentKey: 'preferred', userVerification: 'preferred' },
   })
 
-  // บันทึก challenge ชั่วคราว
-  await pool.query(
-    `INSERT INTO dc_user_config (discord_id, "key", value)
-     VALUES ($1, 'passkey_reg_challenge', $2)
-     ON CONFLICT (discord_id, "key") DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
-    [discordId, JSON.stringify(options.challenge)]
-  )
+  await putNonce(`preg:${userId}`, { userId, purpose: 'passkey_reg_challenge', payload: options.challenge })
 
   return Response.json(options)
 }
@@ -44,20 +38,14 @@ export async function GET() {
 // POST — verify + บันทึก credential
 export async function POST(req) {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.discordId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  const userId = session?.user?.userId
+  if (!userId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const discordId = session.user.discordId
   const body = await req.json()
 
-  // ดึง challenge
-  const { rows } = await pool.query(
-    `DELETE FROM dc_user_config
-     WHERE discord_id = $1 AND "key" = 'passkey_reg_challenge' AND updated_at > NOW() - INTERVAL '2 minutes'
-     RETURNING value`,
-    [discordId]
-  )
-  if (!rows[0]) return Response.json({ error: 'challenge expired' }, { status: 400 })
-  const expectedChallenge = rows[0].value
+  const row = await takeNonce(`preg:${userId}`, 'passkey_reg_challenge')
+  if (!row) return Response.json({ error: 'challenge expired' }, { status: 400 })
+  const expectedChallenge = row.payload
 
   let verification
   try {
@@ -75,7 +63,7 @@ export async function POST(req) {
 
   const { credential, aaguid, credentialDeviceType } = verification.registrationInfo
   const deviceName = findAuthenticatorById({ authenticatorId: aaguid })?.name ?? null
-  await linkIdentity(discordId, 'passkey', credential.id, {
+  await linkIdentityByUser(userId, 'passkey', credential.id, {
     publicKey:  Buffer.from(credential.publicKey).toString('base64url'),
     counter:    credential.counter,
     deviceType: credentialDeviceType,

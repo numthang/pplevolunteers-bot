@@ -119,11 +119,15 @@ export default function ProfilePage() {
     if (success) {
       setIdentityMsg({ type: 'success', text: `ผูกบัญชี ${success.toUpperCase()} สำเร็จ` })
       setActiveTab('security')
+      // ผูก Discord แล้ว session ยังไม่มี discordId → trigger jwt update ให้เติม (feature code ยัง key ด้วย discordId)
+      if (success === 'discord') update()
     }
     if (linkErr) {
       const errText = linkErr === 'already_taken'
-        ? 'บัญชีนี้ถูกผูกกับ Discord account อื่นไปแล้ว'
-        : `ผูกบัญชีไม่สำเร็จ (${linkErr})`
+        ? 'บัญชีนี้ถูกผูกกับผู้ใช้อื่นไปแล้ว — ถ้าเป็นบัญชีของคุณ กรุณาติดต่อแอดมิน'
+        : linkErr === 'already_linked_other'
+          ? 'คุณผูก Discord อื่นไว้อยู่แล้ว — 1 บัญชีผูก Discord ได้ 1 อัน'
+          : `ผูกบัญชีไม่สำเร็จ (${linkErr})`
       setIdentityMsg({ type: 'error', text: errText })
       setActiveTab('security')
     }
@@ -139,6 +143,8 @@ export default function ProfilePage() {
     try {
       const optRes = await fetch('/api/link/passkey/register')
       const options = await optRes.json()
+      // ถ้า server ตอบ error (เช่น 401) options จะไม่มี challenge → กัน startRegistration crash (.replace undefined)
+      if (!optRes.ok || !options?.challenge) throw new Error(options?.error || 'เริ่มลงทะเบียน Passkey ไม่สำเร็จ')
       const attResp = await startRegistration({ optionsJSON: options })
       const verRes = await fetch('/api/link/passkey/register', {
         method: 'POST',
@@ -207,16 +213,24 @@ export default function ProfilePage() {
               {readOnly.display_name && readOnly.display_name !== session.user.name
                 ? readOnly.display_name
                 : session.user.name}
-              <span className="text-warm-500 dark:text-disc-muted ml-2">ID: {session.user.discordId}</span>
+              {session.user.discordId && (
+                <span className="text-warm-500 dark:text-disc-muted ml-2">ID: {session.user.discordId}</span>
+              )}
             </p>
             <div className="flex items-center gap-2 mt-1">
+              {/* Discord = แสดง @handle · ไม่มี Discord (email-only) = แสดง email แทน */}
+              {(() => {
+                const handle = session.user.discordId
+                  ? `@${session.user.name}`
+                  : (session.user.email || `@${session.user.name}`)
+                return <>
               <p className="text-base text-warm-500 dark:text-disc-muted">
-                @{session.user.name}
+                {handle}
               </p>
               <button
                 type="button"
                 onClick={() => {
-                  navigator.clipboard.writeText(session.user.name)
+                  navigator.clipboard.writeText(handle)
                   setCopied(true)
                   setTimeout(() => setCopied(false), 2000)
                 }}
@@ -234,6 +248,8 @@ export default function ProfilePage() {
                   </>
                 )}
               </button>
+                </>
+              })()}
             </div>
             {/* ตำแหน่ง + พื้นที่ มาจาก org_member_roles (ยศจริงระดับ org) ไม่ใช่สำเนายศ Discord
                 แยกบรรทัดเพราะใบพื้นที่มีได้เป็นสิบเป็นร้อยใบ รวมบรรทัดเดียวแล้วอ่านไม่ออก */}
@@ -261,6 +277,24 @@ export default function ProfilePage() {
             )}
           </div>
         </div>
+      )}
+
+      {/* Debug — ซ่อนไว้ใน <details> กดกางดูค่าที่ใช้ debug ได้ทั้งหมด */}
+      {session && (
+        <details className="mb-4 text-xs text-warm-400 dark:text-disc-muted">
+          <summary className="cursor-pointer select-none hover:text-warm-600 dark:hover:text-disc-text">🐞 debug</summary>
+          <div className="mt-2 p-3 rounded-lg bg-warm-50 dark:bg-disc-bg2 border border-warm-200 dark:border-disc-border font-mono space-y-0.5 break-all">
+            <div>user_id: {String(session.user.userId ?? '—')}</div>
+            <div>discord_id: {String(session.user.discordId ?? '—')}</div>
+            <div>email: {session.user.email || '—'}</div>
+            <div>name: {session.user.name || '—'}</div>
+            <div>nickname: {session.user.nickname || '—'}</div>
+            <div>isSuperAdmin: {String(session.user.isSuperAdmin)}</div>
+            <div>primary_province: {session.user.primary_province || '—'}</div>
+            <div>roles: {session.user.roles?.length ? session.user.roles.join(', ') : '—'}</div>
+            <div>guild_id: {readOnly.guild_id || '—'}</div>
+          </div>
+        </details>
       )}
 
       {/* Tabs */}
@@ -474,6 +508,42 @@ export default function ProfilePage() {
               {identityMsg.text}
             </div>
           )}
+
+          {/* Discord — ผูกได้จากทุก login · ยัง unlink ไม่ได้ในเฟสนี้ (discord_id เป็น key ของฟีเจอร์เยอะ) */}
+          {(() => {
+            const linked = identities.find(i => i.provider === 'discord')
+            const discordIcon = (
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="#5865F2">
+                <path d="M20.317 4.369a19.79 19.79 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.211.375-.444.865-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.369a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.1 13.1 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.291a.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.009c.12.099.246.198.373.292a.077.077 0 0 1-.006.127 12.3 12.3 0 0 1-1.873.891.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.84 19.84 0 0 0 6.002-3.03.077.077 0 0 0 .032-.056c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.331c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
+              </svg>
+            )
+            if (!linked) return (
+              <a href="/api/link/discord" className="flex items-center justify-between px-4 py-4 rounded-xl border border-warm-200 dark:border-disc-border bg-card-bg hover:bg-warm-50 dark:hover:bg-disc-hover transition cursor-pointer">
+                <div className="flex items-center gap-3">
+                  {discordIcon}
+                  <div>
+                    <p className="text-warm-900 dark:text-disc-text text-sm font-medium">Discord</p>
+                    <p className="text-brand-orange text-sm font-medium mt-0.5">ผูกบัญชี</p>
+                  </div>
+                </div>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" strokeWidth="2" stroke="currentColor" className="text-warm-400 dark:text-disc-muted"><path d="M9 18l6-6-6-6"/></svg>
+              </a>
+            )
+            return (
+              <div className="flex items-center justify-between px-4 py-4 rounded-xl border border-warm-200 dark:border-disc-border bg-card-bg">
+                <div className="flex items-center gap-3">
+                  <span className="flex items-center justify-center w-5 h-5 rounded-full bg-green-500 shrink-0">
+                    <Check size={11} strokeWidth={3} className="text-white" />
+                  </span>
+                  {discordIcon}
+                  <div>
+                    <p className="text-warm-900 dark:text-disc-text text-sm font-medium">Discord</p>
+                    <p className="text-green-500 dark:text-green-400 text-xs mt-0.5">ผูกแล้ว</p>
+                  </div>
+                </div>
+              </div>
+            )
+          })()}
 
           {/* LINE */}
           {(() => {

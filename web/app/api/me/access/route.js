@@ -18,12 +18,13 @@ export async function GET(req) {
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
   const scope = new URL(req.url).searchParams.get('scope')
-  const { roles, discordId, access } = scope === 'org'
+  const { roles, discordId, userId, access } = scope === 'org'
     ? await getEffectiveOrgIdentity(session)
     : await getEffectiveIdentity(session)
   const realAdmin = isAdmin(await getRealAccess(session))
   // effective discordId เป็น null ตอน debug combo → isSuperAdmin(null)=false → debug หลุด super
-  const superAdmin = isSuperAdmin(discordId)
+  // userId (email-only superadmin) มาจาก identity result หรือ fallback session
+  const superAdmin = isSuperAdmin(discordId, userId ?? session.user?.userId ?? null)
   return Response.json({
     roles,
     discordId,

@@ -6,8 +6,10 @@ import pool from '@/db/index.js'
 import { isSuperAdmin } from '@/lib/roles.js'
 import { findUserIdByProvider, resolveUserByDiscord, discordIdByUserId, linkIdentityByUser } from '@/db/userIdentities.js'
 import { resolveOrgUser } from '@/db/orgMembers.js'
+import { takeNonce } from '@/db/authNonces.js'
 
-// Passkey / Phone OTP — verify endpoint ออก nonce ลง dc_user_config แล้ว client แลก session ผ่าน credentials
+// Phone OTP — verify endpoint ออก nonce ลง dc_user_config (keyed discord_id) แล้ว client แลก session
+// (phone ยัง discord-based — Phase 4 ค่อย decouple)
 const nonceAuthorize = (nonceKey) => async (credentials) => {
   if (!credentials?.nonce) return null
   const { rows } = await pool.query(
@@ -20,14 +22,23 @@ const nonceAuthorize = (nonceKey) => async (credentials) => {
   return { id: rows[0].discord_id, discordId: rows[0].discord_id }
 }
 
+// Passkey — nonce keyed by user_id ใน auth_nonces (email-only ก็ login ได้)
+const userNonceAuthorize = (purpose) => async (credentials) => {
+  if (!credentials?.nonce) return null
+  const row = await takeNonce(credentials.nonce, purpose)
+  if (!row?.user_id) return null
+  return { id: String(row.user_id), userId: row.user_id }
+}
+
 // อ่าน roles/profile จาก org_members (แกน membership) by user_id + guild · ชื่อจาก users
 async function loadMemberData(token) {
   try {
+    // LEFT JOIN จาก users → email-only ที่ไม่มี org_members ใน guild นี้ ยังได้ username/avatar (session ไม่ว่าง)
     const { rows } = await pool.query(
       `SELECT om.nickname, u.username, om.roles, om.primary_province, om.avatar
-         FROM org_members om
-         JOIN users u ON u.id = om.user_id
-        WHERE om.user_id = $1 AND om.guild_id = $2`,
+         FROM users u
+         LEFT JOIN org_members om ON om.user_id = u.id AND om.guild_id = $2
+        WHERE u.id = $1`,
       [token.userId, process.env.GUILD_ID]
     )
     if (rows[0]) {
@@ -64,7 +75,7 @@ export const authOptions = {
       id: 'passkey',
       name: 'Passkey',
       credentials: { nonce: { type: 'text' } },
-      authorize: nonceAuthorize('passkey_nonce'),
+      authorize: userNonceAuthorize('passkey'),
     }),
     // Phone OTP login — nonce ออกจาก /api/auth/phone/verify (เบอร์ verified ผ่าน Discord เท่านั้น)
     CredentialsProvider({
@@ -135,8 +146,11 @@ export const authOptions = {
         } else if (account.provider === 'line') {
           // line: resolve users.id (signIn block แล้วถ้าไม่มี link)
           token.userId = await findUserIdByProvider('line', profile.sub).catch(() => null)
-        } else if (account.provider === 'passkey' || account.provider === 'phone') {
-          // credentials authorize คืน discordId มาแล้ว → resolve users.id
+        } else if (account.provider === 'passkey') {
+          // passkey authorize คืน userId มาแล้ว (auth_nonces) — discordId เติมทีหลังถ้ามี
+          token.userId = user?.userId ?? (user?.id ? Number(user.id) : null)
+        } else if (account.provider === 'phone') {
+          // phone ยัง discord-based (Phase 4) → authorize คืน discordId
           token.discordId = user?.discordId || user?.id
           token.userId    = await resolveUserByDiscord(token.discordId).catch(() => null)
         } else if (account.provider === 'magic') {
@@ -145,11 +159,11 @@ export const authOptions = {
           token.email  = user?.email || null
           token.name   = user?.name || null
         }
-        // ประตู google/line/magic resolve เป็น userId แต่ยังไม่มี discordId →
-        // เติมจาก users ถ้าคนนั้นผูก discord ไว้ (feature code เช่น getUserGuilds ยัง key ด้วย discordId)
-        if (token.userId && !token.discordId) {
-          token.discordId = await discordIdByUserId(token.userId).catch(() => null)
-        }
+      }
+      // ประตู google/line/magic resolve เป็น userId แต่ยังไม่มี discordId → เติมจาก users
+      // (feature code เช่น getUserGuilds ยัง key ด้วย discordId) · trigger update = หลังผูก Discord กลางคัน
+      if ((account || trigger === 'update') && token.userId && !token.discordId) {
+        token.discordId = await discordIdByUserId(token.userId).catch(() => null)
       }
       if ((account || trigger === 'update') && token.userId) {
         token = await loadMemberData(token)
@@ -159,10 +173,11 @@ export const authOptions = {
     async session({ session, token }) {
       session.user.userId           = token.userId || null
       session.user.discordId        = token.discordId || null
+      session.user.email            = token.email || session.user.email || null
       session.user.roles            = token.roles || []
       session.user.nickname         = token.nickname || session.user.name
       session.user.primary_province = token.primary_province || null
-      session.user.isSuperAdmin     = isSuperAdmin(token.discordId)
+      session.user.isSuperAdmin     = isSuperAdmin(token.discordId, token.userId)
       session.user.image            = token.avatar || token.picture || session.user.image || null
       return session
     },

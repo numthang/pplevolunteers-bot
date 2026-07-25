@@ -7,6 +7,7 @@ const { handleOpenVerifyModal, handleVerifyPhoneSubmit, handleOpenOtpModal, hand
 const { handleProvinceBtn, handleProvinceRegionSelect } = require('./handlers/provinceSelect');
 const { handleStarButton, handleModalSubmit: handleRateModalSubmit } = require('./handlers/rateStars');
 const { handlePageButton } = require('./handlers/ratingPage');
+const { handleInviteSelect, handleInviteConfirm, handleInviteCancel } = require('./handlers/userInviteHandler');
 const { getSetting } = require('./db/settings');
 const { refreshSticky } = require('./handlers/stickyHandler');
 const { handleReportStart, handleReportCategory, handleReportSubmit } = require('./handlers/reportHandler');
@@ -203,6 +204,7 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.customId === 'prov_region')                return handleProvinceRegionSelect(interaction);
     if (interaction.customId === 'basket_ai_mode')             return handleBasketAiModeSelect(interaction);
     if (interaction.customId === 'ai_thread_mode')             return handleAiThreadModeSelect(interaction);
+    if (interaction.customId.startsWith('invite_pick:'))       return handleInviteSelect(interaction);
     await handleInterestSelect(interaction);   // interest/skill
     if (interaction.customId.startsWith('report_category:'))   return handleReportCategory(interaction);
     return;
@@ -242,6 +244,8 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.customId.startsWith('prov_btn:'))       return handleProvinceBtn(interaction);
     if (interaction.customId.startsWith('rate_stars:'))      return handleStarButton(interaction);
     if (interaction.customId.startsWith('ratings_page:'))    return handlePageButton(interaction);
+    if (interaction.customId.startsWith('invite_confirm:'))  return handleInviteConfirm(interaction);
+    if (interaction.customId.startsWith('invite_cancel:'))   return handleInviteCancel(interaction);
     if (interaction.customId.startsWith('interest:') || interaction.customId.startsWith('skill:')) return handleInterestSelect(interaction);
     if (interaction.customId.startsWith('report_start:')) return handleReportStart(interaction);
     if (interaction.customId.startsWith('btn_gogo_signup')) return handleGogoSignup(interaction);

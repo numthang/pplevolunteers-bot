@@ -9,6 +9,7 @@ const {
   MessageFlags,
 } = require('discord.js');
 const { getRatingSummary, getRatingList, getRatingCount } = require('../db/ratings');
+const { startInvite } = require('../handlers/userInviteHandler');
 const pool = require('../db/index');
 
 const PER_PAGE = 5;
@@ -125,6 +126,18 @@ module.exports = {
         .addRoleOption(opt =>
           opt.setName('role5').setDescription('Role ที่ 5').setRequired(false)
         )
+    )
+
+    // --- mention ---
+    .addSubcommand(sub =>
+      sub.setName('mention')
+        .setDescription('mention สมาชิกในห้อง/เธรดนี้ — ค้นจากชื่อคร่าวๆ (พิมพ์ผิดได้)')
+        .addStringOption(opt =>
+          opt.setName('names')
+            .setDescription('ชื่อที่ต้องการ mention คั่นด้วย , หรือขึ้นบรรทัดใหม่ (username / ชื่อที่แสดง / ชื่อเล่นก็ได้)')
+            .setRequired(true)
+            .setMaxLength(1000)
+        )
     ),
 
   async autocomplete(interaction) {
@@ -139,6 +152,11 @@ module.exports = {
 
   async execute(interaction) {
     const sub = interaction.options.getSubcommand();
+
+    // ================================================================
+    if (sub === 'mention') {
+      return startInvite(interaction);
+    }
 
     // ================================================================
     if (sub === 'rating') {

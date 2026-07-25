@@ -2,10 +2,16 @@
 // ไม่เช็คชื่อ Discord role ตรงๆ อีกต่อไป → guild ที่ตั้งชื่อ role ต่างกันก็ทำงานถูก
 import { normalizeAccess } from '@/lib/roleAccess.js'
 
-// platform-level — env DEV_DISCORD_IDS (ไม่ขึ้นกับ guild/role)
-export function isSuperAdmin(discordId) {
-  const ids = (process.env.DEV_DISCORD_IDS || '').split(',').map(s => s.trim()).filter(Boolean)
-  return ids.includes(String(discordId))
+// platform-level — env DEV_DISCORD_IDS / DEV_USER_IDS (ไม่ขึ้นกับ guild/role)
+// รองรับทั้ง 2 key: discord superadmin เดิมยังใช้ได้ (arg เดียว) · email-only superadmin
+// ต้อง thread userId เข้ามาด้วย (คน login ไม่มี discord จะ match ได้ทาง DEV_USER_IDS)
+export function isSuperAdmin(discordId, userId = null) {
+  const parse = (v) => (v || '').split(',').map(s => s.trim()).filter(Boolean)
+  const dcIds = parse(process.env.DEV_DISCORD_IDS)
+  if (discordId != null && dcIds.includes(String(discordId))) return true
+  const userIds = parse(process.env.DEV_USER_IDS)
+  if (userId != null && userIds.includes(String(userId))) return true
+  return false
 }
 
 // org-level admin = admin (god-mode/technical) || secretary_general (เลขาธิการ)

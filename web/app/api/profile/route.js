@@ -114,7 +114,8 @@ export async function PATCH(req) {
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
   const guildId = await getGuildId(session)
-  const discordId = session.user.discordId
+  const userId = session.user.userId
+  if (!userId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
   const body = await req.json()
 
   // identity fields → users (by discord_id) · profile fields → org_members (by user_id+guild)
@@ -139,8 +140,8 @@ export async function PATCH(req) {
     const keys = Object.keys(userUpd)
     const setClause = keys.map((k, i) => `${k} = $${i + 1}`).join(', ')
     await pool.query(
-      `UPDATE users SET ${setClause} WHERE discord_id = $${keys.length + 1}`,
-      [...Object.values(userUpd), discordId]
+      `UPDATE users SET ${setClause} WHERE id = $${keys.length + 1}`,
+      [...Object.values(userUpd), userId]
     )
   }
   const orgId = await getOrgId(session)
