@@ -12,7 +12,7 @@ const {
 } = require('discord.js');
 
 const TTL_MS      = 5 * 60 * 1000; // preview อายุ 5 นาที
-const MAX_TOKENS  = 25;
+const MAX_TOKENS  = 40;
 const MAX_SELECTS = 4;             // เพดาน action row (เหลือ 1 row ให้ปุ่ม)
 const SKIP        = '__skip__';
 
@@ -23,6 +23,16 @@ setInterval(() => {
   const now = Date.now();
   for (const [id, s] of pending) if (now - s.createdAt > TTL_MS) pending.delete(id);
 }, 60 * 1000).unref?.();
+
+// แตก + ล้างขยะจากรายชื่อที่ paste มา (Excel/แชท): บรรทัด -, =, เบอร์โทร, @ นำหน้า ฯลฯ
+function cleanTokens(raw) {
+  return raw
+    .split(/[,\n\t]+/)
+    .map(s => s.trim().replace(/^[@\-\s]+/, '').trim()) // ตัด @ / - / ช่องว่างนำหน้า
+    .filter(s => s.length > 0)
+    .filter(s => !/^[-=_.•·*\s]+$/.test(s))             // เส้น/placeholder ล้วน
+    .slice(0, MAX_TOKENS);
+}
 
 // ---- fuzzy matching ----
 function normalize(s) {
@@ -88,6 +98,15 @@ function scoreMember(tokenNorm, m) {
 }
 
 function resolveToken(raw, members) {
+  // Discord user ID (snowflake 17–20 หลัก) → หาคนตรงๆ ไม่ต้อง fuzzy
+  const asId = raw.trim();
+  if (/^\d{17,20}$/.test(asId)) {
+    const m = members.find(mm => mm.id === asId);
+    return m
+      ? { status: 'confident', candidates: [{ id: m.id, label: `${m.displayName} (@${m.user.username})`, score: 1000 }], chosen: m.id }
+      : { status: 'notfound', candidates: [], chosen: null };
+  }
+
   const tokenNorm = normalize(raw);
   if (tokenNorm.length < 2) return { status: 'notfound', candidates: [], chosen: null };
 
@@ -163,9 +182,8 @@ function buildView(id, state) {
 async function startInvite(interaction) {
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-  const tokens = interaction.options.getString('names')
-    .split(/[,\n]/).map(s => s.trim()).filter(Boolean).slice(0, MAX_TOKENS);
-  if (!tokens.length) return interaction.editReply({ content: '❌ ใส่ชื่ออย่างน้อย 1 ชื่อครับ' });
+  const tokens = cleanTokens(interaction.options.getString('names'));
+  if (!tokens.length) return interaction.editReply({ content: '❌ ไม่พบชื่อที่ใช้ได้ (กรองบรรทัดว่าง/เครื่องหมาย/เบอร์โทรออกแล้ว)' });
 
   await interaction.guild.members.fetch().catch(() => {});
   const members = [...interaction.guild.members.cache.values()].filter(m => !m.user.bot);

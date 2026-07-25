@@ -136,7 +136,7 @@ module.exports = {
           opt.setName('names')
             .setDescription('ชื่อที่ต้องการ mention คั่นด้วย , หรือขึ้นบรรทัดใหม่ (username / ชื่อที่แสดง / ชื่อเล่นก็ได้)')
             .setRequired(true)
-            .setMaxLength(1000)
+            .setMaxLength(2000)
         )
     ),
 
