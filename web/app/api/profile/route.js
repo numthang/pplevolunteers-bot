@@ -66,7 +66,7 @@ export async function GET() {
   const rowId = await findProfileRowId(session.user.userId, orgId, guildId)
   const { rows } = rowId ? await pool.query(
     `SELECT om.nickname, u.firstname, u.lastname, om.member_id, om.specialty, om.amphoe, om.province, om.region,
-            u.phone, u.line_id, u.google_id, om.interests, u.username, om.display_name, om.primary_province,
+            u.phone, u.phone_verified_at, u.line_id, u.google_id, om.interests, u.username, om.display_name, om.primary_province,
             om.bank_name, om.account_no, om.account_holder,
             om.house_no, om.moo, om.soi, om.road, om.tambon, om.zipcode
      FROM org_members om JOIN users u ON u.id = om.user_id

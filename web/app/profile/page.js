@@ -4,7 +4,7 @@ import { useSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import Image from 'next/image'
-import { Copy, Check, Link2, Unlink, KeyRound } from 'lucide-react'
+import { Copy, Check, Link2, Unlink, KeyRound, Phone } from 'lucide-react'
 import { startRegistration } from '@simplewebauthn/browser'
 import geographyData from '@/lib/thailand-geography.json'
 
@@ -51,6 +51,14 @@ export default function ProfilePage() {
   const [identities, setIdentities] = useState([])
   const [identityMsg, setIdentityMsg] = useState(null)
   const [passkeyBusy, setPasskeyBusy] = useState(false)
+  const [phoneData, setPhoneData] = useState({ phone: '', verified: false })
+  const [phoneModal, setPhoneModal] = useState(false)
+  const [phoneStep, setPhoneStep] = useState('phone') // 'phone' | 'otp'
+  const [phoneInput, setPhoneInput] = useState('')
+  const [otpInput, setOtpInput] = useState('')
+  const [phoneRef, setPhoneRef] = useState('')
+  const [phoneBusy, setPhoneBusy] = useState(false)
+  const [phoneMsg, setPhoneMsg] = useState(null)
 
   useEffect(() => {
     if (status === 'unauthenticated') router.replace('/')
@@ -82,6 +90,7 @@ export default function ProfilePage() {
         })
         setPrimaryProvince(data.primary_province || '')
         setProvinceOptions(data.province_options || [])
+        setPhoneData({ phone: data.phone || '', verified: !!data.phone_verified_at })
         setLoading(false)
       })
       .catch(() => setLoading(false))
@@ -172,6 +181,50 @@ export default function ProfilePage() {
     if (!res.ok) { setIdentityMsg({ type: 'error', text: d.error }); return }
     setIdentityMsg({ type: 'success', text: `ยกเลิกการผูก ${provider.toUpperCase()} แล้ว` })
     loadIdentities()
+    load()                          // phone อยู่ใน /api/profile ไม่ใช่ /api/identities
+    if (provider === 'discord') update()  // session ยัง cache discordId → trigger jwt update ให้เคลียร์
+  }
+
+  const maskPhone = p => (p ? `${p.slice(0, 3)}xxx${p.slice(6)}` : '')
+
+  function openPhoneModal() {
+    setPhoneInput(phoneData.phone || '')
+    setOtpInput(''); setPhoneRef(''); setPhoneStep('phone'); setPhoneMsg(null)
+    setPhoneModal(true)
+  }
+
+  async function requestPhoneOtp() {
+    setPhoneBusy(true); setPhoneMsg(null)
+    try {
+      const res = await fetch('/api/profile/phone/request', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: phoneInput }),
+      })
+      const d = await res.json()
+      if (!res.ok) throw new Error(d.error || 'ขอรหัสไม่สำเร็จ')
+      setPhoneRef(d.ref || ''); setPhoneStep('otp')
+    } catch (err) {
+      setPhoneMsg({ type: 'error', text: err.message })
+    }
+    setPhoneBusy(false)
+  }
+
+  async function verifyPhoneOtp() {
+    setPhoneBusy(true); setPhoneMsg(null)
+    try {
+      const res = await fetch('/api/profile/phone/verify', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: phoneInput, otp: otpInput }),
+      })
+      const d = await res.json()
+      if (!res.ok) throw new Error(d.error || 'ยืนยันไม่สำเร็จ')
+      setPhoneModal(false)
+      setIdentityMsg({ type: 'success', text: 'ยืนยันเบอร์สำเร็จ — ใช้เบอร์นี้ login เข้าเว็บได้แล้ว' })
+      load()
+    } catch (err) {
+      setPhoneMsg({ type: 'error', text: err.message })
+    }
+    setPhoneBusy(false)
   }
 
   async function handleSubmit(e) {
@@ -509,6 +562,40 @@ export default function ProfilePage() {
             </div>
           )}
 
+          {/* เบอร์โทร — login identity ที่ verify ด้วย OTP (ผูกเองได้จากทุก login) */}
+          <div className="rounded-xl border border-warm-200 dark:border-disc-border bg-card-bg overflow-hidden">
+            {phoneData.verified ? (
+              <div className="flex items-center justify-between px-4 py-4">
+                <div className="flex items-center gap-3">
+                  <span className="flex items-center justify-center w-5 h-5 rounded-full bg-green-500 shrink-0">
+                    <Check size={11} strokeWidth={3} className="text-white" />
+                  </span>
+                  <Phone size={22} className="text-warm-400 dark:text-disc-muted" />
+                  <div>
+                    <p className="text-warm-900 dark:text-disc-text text-sm font-medium">เบอร์โทร</p>
+                    <p className="text-green-500 dark:text-green-400 text-xs mt-0.5">ยืนยันแล้ว · {maskPhone(phoneData.phone)}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button onClick={openPhoneModal} className="text-warm-400 dark:text-disc-muted text-xs hover:text-brand-orange transition">เปลี่ยนเบอร์</button>
+                  <button onClick={() => unlink('phone', null)} className="text-warm-400 dark:text-disc-muted text-xs hover:text-red-500 dark:hover:text-red-400 transition flex items-center gap-1"><Unlink size={12} /> ลบ</button>
+                </div>
+              </div>
+            ) : (
+              <button onClick={openPhoneModal}
+                className="w-full flex items-center justify-between px-4 py-4 hover:bg-warm-50 dark:hover:bg-disc-hover transition">
+                <div className="flex items-center gap-3">
+                  <Phone size={22} className="text-warm-400 dark:text-disc-muted" />
+                  <div className="text-left">
+                    <p className="text-warm-900 dark:text-disc-text text-sm font-medium">เบอร์โทร</p>
+                    <p className="text-brand-orange text-sm font-medium mt-0.5">เพิ่ม + ยืนยันเบอร์</p>
+                  </div>
+                </div>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" strokeWidth="2" stroke="currentColor" className="text-warm-400 dark:text-disc-muted"><path d="M9 18l6-6-6-6"/></svg>
+              </button>
+            )}
+          </div>
+
           {/* Discord — ผูกได้จากทุก login · ยัง unlink ไม่ได้ในเฟสนี้ (discord_id เป็น key ของฟีเจอร์เยอะ) */}
           {(() => {
             const linked = identities.find(i => i.provider === 'discord')
@@ -541,6 +628,7 @@ export default function ProfilePage() {
                     <p className="text-green-500 dark:text-green-400 text-xs mt-0.5">ผูกแล้ว</p>
                   </div>
                 </div>
+                <button onClick={() => unlink('discord', linked.provider_id)} className="text-warm-400 dark:text-disc-muted text-xs hover:text-red-500 dark:hover:text-red-400 transition flex items-center gap-1"><Unlink size={12} /> ยกเลิก</button>
               </div>
             )
           })()}
@@ -645,6 +733,67 @@ export default function ProfilePage() {
                 <button onClick={() => unlink('passkey', p.provider_id)} className="text-warm-400 dark:text-disc-muted text-xs hover:text-red-500 dark:hover:text-red-400 transition flex items-center gap-1"><Unlink size={11} /> ลบ</button>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Phone verify modal — ขอ OTP → กรอกรหัส → เขียนเบอร์ verified */}
+      {phoneModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setPhoneModal(false)}>
+          <div className="w-full max-w-sm rounded-xl bg-card-bg border border-warm-200 dark:border-disc-border p-5 flex flex-col gap-4" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-warm-900 dark:text-disc-text">
+              {phoneStep === 'phone' ? 'เพิ่ม / ยืนยันเบอร์โทร' : 'กรอกรหัส OTP'}
+            </h3>
+
+            {phoneMsg && (
+              <div className={`px-3 py-2 rounded-lg text-sm text-center ${
+                phoneMsg.type === 'success'
+                  ? 'bg-green-500/10 border border-green-500/20 text-green-400'
+                  : 'bg-red-500/10 border border-red-500/20 text-red-400'
+              }`}>{phoneMsg.text}</div>
+            )}
+
+            {phoneStep === 'phone' ? (
+              <>
+                <div>
+                  <label className="block text-base font-medium text-warm-500 dark:text-disc-text mb-1">เบอร์มือถือ</label>
+                  <input
+                    type="tel" inputMode="numeric" value={phoneInput}
+                    onChange={e => setPhoneInput(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                    placeholder="0812345678"
+                    className="w-full px-3 py-2 rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text text-base placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-brand-orange transition"
+                  />
+                  <p className="text-xs text-warm-400 dark:text-disc-muted mt-1">จะส่งรหัส 6 หลักไปที่เบอร์นี้เพื่อยืนยัน</p>
+                </div>
+                <button onClick={requestPhoneOtp} disabled={phoneBusy || phoneInput.length !== 10}
+                  className="bg-brand-orange hover:bg-brand-orange-light disabled:opacity-50 text-white font-semibold py-2 px-4 rounded-lg transition">
+                  {phoneBusy ? 'กำลังส่ง...' : 'ขอรหัส OTP'}
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-warm-500 dark:text-disc-muted">
+                  ส่งรหัสไปที่ {maskPhone(phoneInput)} แล้ว{phoneRef && <> · รหัสอ้างอิง <span className="font-mono font-semibold text-warm-900 dark:text-disc-text">{phoneRef}</span> (ต้องตรงกับใน SMS)</>}
+                </p>
+                <input
+                  type="text" inputMode="numeric" maxLength={6} value={otpInput}
+                  onChange={e => setOtpInput(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  placeholder="123456"
+                  className="w-full px-3 py-2 rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text text-lg tracking-widest text-center placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-brand-orange transition"
+                />
+                <button onClick={verifyPhoneOtp} disabled={phoneBusy || otpInput.length !== 6}
+                  className="bg-brand-orange hover:bg-brand-orange-light disabled:opacity-50 text-white font-semibold py-2 px-4 rounded-lg transition">
+                  {phoneBusy ? 'กำลังยืนยัน...' : 'ยืนยันเบอร์'}
+                </button>
+                <button onClick={() => { setPhoneStep('phone'); setPhoneMsg(null) }}
+                  className="text-warm-400 dark:text-disc-muted text-sm hover:text-warm-900 dark:hover:text-disc-text transition">
+                  ← แก้เบอร์ / ขอรหัสใหม่
+                </button>
+              </>
+            )}
+
+            <button onClick={() => setPhoneModal(false)}
+              className="text-warm-400 dark:text-disc-muted text-sm hover:text-warm-900 dark:hover:text-disc-text transition">ปิด</button>
           </div>
         </div>
       )}

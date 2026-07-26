@@ -275,6 +275,7 @@ export async function getMyAssignedContacts(userId, { campaignId, status, limit 
          a.campaign_id,
          a.created_at AS assigned_at,
          ec.name AS campaign_name,
+         ec.act_event_id,
          TO_CHAR(ec.event_date, 'YYYY-MM-DD') AS event_date,
          COALESCE(camp_stats.camp_calls, 0) AS camp_calls,
          CASE WHEN COALESCE(camp_stats.camp_calls, 0) > 0 THEN 'called' ELSE 'pending' END AS call_status,

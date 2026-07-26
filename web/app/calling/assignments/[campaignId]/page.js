@@ -170,6 +170,7 @@ export default function CampaignPage({ params }) {
     setRecordModalMember({
       ...item,
       campaign_id: parseInt(campaignId),
+      act_event_id: campaign?.act_event_id,
       campaign_name: campaign?.name,
       campaign_description: campaign?.description,
       event_date: campaign?.event_date,

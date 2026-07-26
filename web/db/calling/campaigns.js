@@ -4,7 +4,7 @@ import pool from '../index.js'
 // (pattern เดียวกับ getCampaigns ด้านล่างและ db/docs/projects.js)
 export async function getCampaignById(orgId, id) {
   const { rows } = await pool.query(
-    `SELECT id, name, province, description,
+    `SELECT id, act_event_id, name, province, description,
             TO_CHAR(event_date, 'YYYY-MM-DD"T"HH24:MI') AS event_date,
             TO_CHAR(event_end_date, 'YYYY-MM-DD"T"HH24:MI') AS event_end_date,
             created_at

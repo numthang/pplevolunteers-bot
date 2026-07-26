@@ -12,6 +12,26 @@ backup ก่อน cutover: `backups/pple_pre_orgcutover_2026-07-23_0533.dump` 
 > ⬜ หลังนิ่งแล้ว rename `01-identity-refactor.sql` → `.applied.sql` กันรันซ้ำ (DESTRUCTIVE)
 
 
+## 🔑 Phase 4 identity — บัญชีเดียว หลายช่องทาง login (2026-07-25 → 26)
+
+เป้า: ทุกช่องทาง (Discord/Google/LINE/passkey/magic-link/เบอร์) ลงที่ `users` แถวเดียว · **เบอร์ยืนเดี่ยวได้ ไม่เกาะ Discord**
+
+**เคาะแล้ว (2026-07-25):** ประตูสมัคร = เบอร์+OTP · Google · Discord · LINE (**passkey เพิ่มทีหลังเท่านั้น** — ไม่มี match key) · กันบัญชีซ้ำด้วย match-before-create จาก verified email + phone · เบอร์เก็บแบบ mirror email (column บน `users` + partial unique) ไม่ใช่แถวใน `user_identities`
+> **ตัด true-merge ออกจากสโคป** — `users.id` ถูก ~20 FK อ้าง = โปรเจกต์แยก · ชนแล้วให้ **block-on-claimed** แทน
+
+- [x] **`auth_nonces`** — nonce/challenge store keyed by `user_id` แทน `dc_user_config` (PK=discord_id) → คนที่ไม่มี Discord ใช้ passkey/OTP ได้ · `scripts/migration/migration.sql` บล็อก 2026-07-25
+- [x] **ผูก Discord เพิ่มเข้าบัญชีเดิมได้** `/api/link/discord/*` + passkey ย้ายมาใช้ auth_nonces (commit 6670b38)
+- [x] **slice 1 — ผูก+ยืนยันเบอร์เองจากหน้า `/profile`** (OTP 6 หลัก · TTL 5 นาที · 5 ครั้ง/วัน · cooldown 60 วิ · เก็บเป็น HMAC ไม่ใช่ sha256 เปล่า)
+- [x] **ถอดช่องทาง login ได้ทุกอันแล้ว รวม Discord + เบอร์** — กันถอดจนเหลือ 0 วิธี (นับ identity rows + เบอร์ verified + email) · ถอด Discord = เคลียร์ `users.discord_id` ด้วย
+- [ ] **decouple ประตู login เบอร์ออกจาก Discord** — `findOwnerByVerifiedPhone` ยังมี `AND discord_id IS NOT NULL` → คนที่มีแต่เบอร์ยัง login ไม่ได้ (นี่คือตัวปิดจ๊อบ "เบอร์ยืนเดี่ยว")
+- [ ] **เปิดสมัครด้วยเบอร์ (open signup)** — ⛔ ห้าม ship ก่อนมี **rate-limit ต่อเบอร์ + ต่อ IP**
+- [ ] **Discord email bridge** — อ่าน `profile.email` เฉพาะ `verified===true` มา match บัญชีเดิม (payload มีค่ามาอยู่แล้ว แต่ jwt branch ทิ้ง)
+- [ ] **UI ตอนชนกัน** ("เบอร์/อีเมลนี้มีเจ้าของแล้ว") — ตอนนี้ block เฉยๆ ยังไม่มีทางออกให้ user
+- [ ] **ยังไม่มี login ด้วย email บนหน้า `/login`** (มีแต่ฝั่ง org) + ยังไม่ได้เคาะลำดับปุ่ม login (จด NOTE.md 2026-07-26)
+- [ ] ⬜ **ยังไม่ได้กดเทสจริงในเบราว์เซอร์ + ยังไม่ได้รัน migration บน prod**
+
+---
+
 ## ✅ ปลดล็อกแล้ว — ORG_ACCESS_REDESIGN ขั้น 5 เสร็จ (2026-07-22)
 
 **สิทธิ์ไม่แช่แข็งแล้ว** — ทางเขียนย้ายมาที่ `org_member_roles` ครบทุกจุด (บอทซิงค์ยศ · `/api/org/appoint` · แก้การแมปยศ)
@@ -716,6 +736,11 @@ gate = `admin` ใน org (owner ได้อัตโนมัติ) · verify
 - columns ขั้นต่ำ: `first_name`, `last_name`, `phone`; optional: `line_id`, `province`, `amphoe`
 - ACT-specific fields = NULL; progress output ตาม convention
 - **หมายเหตุ:** งานนี้ทับ roster import ของ Amnesty onboarding — ทำรวมกันได้
+
+### ✅ แก้แล้ว (2026-07-26) — ลิงก์กิจกรรมหายจากกล่องส่ง SMS
+
+`buildSmsTemplate` เปลี่ยนไปใช้ `act_event_id` ตั้งแต่ commit `335cd65` (แก้เรื่องส่งลิงก์ผิด id) แต่เติม column ให้แค่ `getCampaigns` ลืม `getCampaignById` → หน้า `/calling/assignments/[id]` ได้ `undefined` → บรรทัดลงทะเบียนหายทั้งหน้า · อีกจุด `RecordCallModal` ยังส่ง `campaign_id` (id ภายใน) เป็น act id → ลิงก์ผิด
+> **บทเรียน:** เปลี่ยน field ที่ query หนึ่งแล้ว **ต้องไล่ทุก query ที่ป้อน component เดียวกัน** (list / byId / assigned) · ดู bug-058
 
 ### ยังเหลือ
 - [ ] เบอร์กลางโทรออก — แสดงเบอร์กลางองค์กรแทนเบอร์ส่วนตัว (ต้องการ provider/config เบอร์กลาง)

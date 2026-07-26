@@ -43,7 +43,8 @@ function normalize(s) {
     .replace(/[️‍]/g, '')              // variation selector / ZWJ
     .toLowerCase()
     .replace(/\s+/g, ' ')
-    .trim();
+    .trim()
+    .replace(/^@+\s*/, '');            // ตัด @ นำหน้า (บางคนใส่ @ ในชื่อ เช่น "@Phreaw Angthong")
 }
 
 function lev(a, b) {
@@ -81,16 +82,21 @@ function memberStrings(m) {
 
 function scoreMember(tokenNorm, m) {
   let best = 0;
+  const tl = tokenNorm.length;
   for (const s of memberStrings(m)) {
+    if (!s) continue;
+    const sl = s.length;
+    // ratio = ส่วนที่ตรงกันเทียบกับตัวที่ยาวกว่า — กันชื่อสั้นๆ ("p") ไปแมตช์ชื่อยาว ("phreaw...") ด้วยคะแนนสูง
+    const ratio = Math.min(sl, tl) / Math.max(sl, tl);
     let score = 0;
     if (s === tokenNorm) score = 1000;
     else if (s.startsWith(tokenNorm) || tokenNorm.startsWith(s))
-      score = 850 - Math.abs(s.length - tokenNorm.length) * 5;
+      score = Math.round(350 + 600 * ratio);   // prefix: ยาวใกล้กันยิ่งสูง
     else if (s.includes(tokenNorm) || tokenNorm.includes(s))
-      score = 700 - Math.abs(s.length - tokenNorm.length) * 3;
+      score = Math.round(250 + 500 * ratio);   // substring กลางคำ: อ่อนกว่า prefix
     else {
       const dist = lev(s, tokenNorm);
-      const maxLen = Math.max(s.length, tokenNorm.length);
+      const maxLen = Math.max(sl, tl);
       if (maxLen && dist <= Math.max(2, Math.floor(maxLen * 0.34)))
         score = Math.round(600 * (1 - dist / maxLen));
     }
@@ -114,7 +120,7 @@ function resolveToken(raw, members) {
 
   const scored = members
     .map(m => ({ id: m.id, label: `${m.displayName} (@${m.user.username})`, score: scoreMember(tokenNorm, m) }))
-    .filter(c => c.score >= 350)
+    .filter(c => c.score >= 400)
     .sort((a, b) => b.score - a.score)
     .slice(0, 8);
 
@@ -173,7 +179,7 @@ function buildView(id, state) {
   }
 
   rows.push(new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId(`invite_confirm:${id}`).setLabel('✅ ยืนยันโพสต์').setStyle(ButtonStyle.Success).setDisabled(nChosen === 0),
+    new ButtonBuilder().setCustomId(`invite_confirm:${id}`).setLabel('✅ ยืนยัน mention').setStyle(ButtonStyle.Success).setDisabled(nChosen === 0),
     new ButtonBuilder().setCustomId(`invite_cancel:${id}`).setLabel('ยกเลิก').setStyle(ButtonStyle.Secondary),
   ));
 

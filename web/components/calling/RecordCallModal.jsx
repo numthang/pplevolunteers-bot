@@ -288,7 +288,7 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
       campaignId={member.campaign_id || 0}
       contactType={contact_type}
       memberIds={[memberId]}
-      defaultMessage={buildSmsTemplate(member.campaign_name, member.event_date, member.campaign_id)}
+      defaultMessage={buildSmsTemplate(member.campaign_name, member.event_date, member.act_event_id)}
       onClose={() => setSmsModalOpen(false)}
       onDone={() => { setSmsModalOpen(false); loadHistory() }}
     />
