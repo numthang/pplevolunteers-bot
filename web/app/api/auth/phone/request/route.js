@@ -1,11 +1,11 @@
 import crypto from 'crypto'
 import { sendSms, smsConfigured, normalizePhone } from '@/lib/sendSms.js'
 import {
-  SESSION_KEY, OTP_TTL_MS, MAX_SENDS_PER_DAY, RESEND_COOLDOWN_MS,
-  hashOtp, validPhone, findOwnerByVerifiedPhone, getUserConfig, setUserConfig, genRef,
+  OTP_TTL_MS, MAX_SENDS_PER_DAY, RESEND_COOLDOWN_MS,
+  hashOtp, validPhone, genRef, findOwnerByVerifiedPhone, getLoginSession, saveLoginSession,
 } from '@/lib/phoneLoginOtp.js'
 
-// POST /api/auth/phone/request — ขอ OTP เข้าเบอร์ที่ verify ไว้แล้ว
+// POST /api/auth/phone/request — ขอ OTP เข้าเบอร์ที่ verify ไว้แล้ว (ไม่ต้องมี discord)
 // ตอบ generic เหมือนกันทุกกรณี (ไม่เจอ/quota เต็ม/cooldown/SMS พัง) — หน้า login เป็น public
 // ห้ามให้คนนอก enumerate ได้ว่าเบอร์ไหนเป็นสมาชิก (องค์กร movement — รายชื่อ sensitive)
 export async function POST(req) {
@@ -24,14 +24,13 @@ export async function POST(req) {
     return genericOk()
   }
 
-  const discordId = await findOwnerByVerifiedPhone(phone)
-  if (!discordId) return genericOk()
+  const userId = await findOwnerByVerifiedPhone(phone)
+  if (!userId) return genericOk()
 
-  // quota รายวันแชร์กับ bot verify flow (key otp_quota ต่อ discord_id)
+  // quota รายวัน + cooldown เก็บใน session payload (auth_nonces ต่อ user_id)
   const today = new Date().toISOString().slice(0, 10)
-  const quota = (await getUserConfig(discordId, 'otp_quota')) || {}
-  const sentToday = quota.day === today ? (quota.count || 0) : 0
-  const prev = await getUserConfig(discordId, SESSION_KEY)
+  const prev = await getLoginSession(userId)
+  const sentToday = prev?.day === today ? (prev.count || 0) : 0
 
   // ไม่ส่ง SMS ใหม่ (quota เต็ม / ยัง cooldown) → คืน ref ของ SMS ที่ส่งไปก่อนหน้า
   // เพื่อให้เลขบนจอตรงกับ SMS ที่ user ถืออยู่จริง ไม่ใช่ ref ใหม่ที่ไม่มีใน SMS ฉบับไหนเลย
@@ -48,15 +47,16 @@ export async function POST(req) {
     return genericOk()
   }
 
-  await setUserConfig(discordId, SESSION_KEY, {
+  await saveLoginSession(userId, {
     phone,
-    otp_hash: hashOtp(otp, discordId),
+    otp_hash: hashOtp(otp, userId),
     ref: newRef,
     attempts: 0,
     sent_at: Date.now(),
     expires_at: Date.now() + OTP_TTL_MS,
+    day: today,
+    count: sentToday + 1,
   })
-  await setUserConfig(discordId, 'otp_quota', { day: today, count: sentToday + 1 })
 
   return genericOk()
 }

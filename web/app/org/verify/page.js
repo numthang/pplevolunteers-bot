@@ -10,10 +10,14 @@ export default function OrgVerifyPage() {
   const [failed, setFailed] = useState(false)
 
   useEffect(() => {
-    const token = new URLSearchParams(window.location.search).get('token')
+    const params = new URLSearchParams(window.location.search)
+    const token = params.get('token')
     if (!token) { setFailed(true); return }
+    // callbackUrl ต้องเป็น path ภายในเท่านั้น (กัน open-redirect) · ไม่มี/ไม่ปลอดภัย → /org
+    const cb = params.get('callbackUrl')
+    const dest = cb && /^\/(?![/\\])/.test(cb) ? cb : '/org'
     signIn('magic', { token, redirect: false })
-      .then(res => { if (res?.ok) window.location.href = '/org'; else setFailed(true) })
+      .then(res => { if (res?.ok) window.location.href = dest; else setFailed(true) })
       .catch(() => setFailed(true))
   }, [])
 

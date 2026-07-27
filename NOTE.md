@@ -6,7 +6,9 @@ PLATFOR{m}.ORG
 - จัดระเบียบ setting ดูว่าตอนนี้เรามีอะไรบ้าง จะรวมหรือจะแยก ยังไงดี /org/settings ตอนนี้ consistancy ดีแล้วใช่ไหม 
 - ตอนนี้จะ config web_roles ให้สมาชิกยังไง แต่สำหรับ discord ตอนนี้ migrate มาก่อนได้
 - ผมอาจจะเปลี่ยน /bot เป็น /dc แล้วก็ /dc/settings => มีพวก ai, watermark, platforms, quote, roles รวมอยู่ในนั้นอ่ะ ดีไหม
-- เรียงลำดับความอยากให้ login เรียงยังไงดี discord google line ดีไหม ไม่ต้องทำให้ discord เด่นก็ได้ หรือจะยังไงดี และตอนนี้ยังไม่มี login by email
+
+# Bot
+
 
 # บน Mac (เครื่องนี้)
 cd /Users/tee/VSites/node/pple-volunteers
@@ -56,10 +58,8 @@ Cooking
 - ย้าย cooking ออกจาก discord project เถอะ ไปทำเป็น personal ที่แบบ login หรือไม่ login ก็ได้ ไป schema ใหม่ไปเลยดีมะ ส่วน username เราก็แยกออกไปจาก แอพองค์กรไปเลยเนอะ ดีมะอ่ะ รอให้มี domain ของตัวเองก่อน
 
 Calling
-- กล่องส่ง sms จาก calling ตอนนี้ไม่มีลิงก์กิจกรรม act ในข้อความอ่ะ ของเก่ามันเคยมีถูกไหม เหมือนจะหายไปตอนมันดึง act_id มาแสดงผิด มีแก้ไปรอบนึง ดันส่งเป็น campaign_id
 
 Case
-
 
 Project Management
 - ทำระบบจัดการโครงการ project management อย่าง notion, trello, appflowy

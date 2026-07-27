@@ -3,6 +3,12 @@ import pool from '@/db/index.js'
 import { normalizeEmail, isValidEmail } from '@/db/orgMembers.js'
 import { sendEmail } from '@/lib/sendEmail.js'
 
+// callbackUrl ต้องเป็น path ภายในเท่านั้น (กัน open-redirect ไป phishing)
+// อนุญาต '/x' · บล็อก '//host', '/\host', absolute URL, ค่าอื่นๆ → null (fallback /org ที่หน้า verify)
+export function safeCallback(cb) {
+  return typeof cb === 'string' && /^\/(?![/\\])/.test(cb) ? cb : null
+}
+
 // POST /api/org/auth/magic — ออก magic-link token ผูก email + ส่งเมล
 // มี RESEND_API_KEY/EMAIL_FROM → ส่งจริง · ไม่มี → stub (log link) · dev คืน devLink ให้ทดสอบ
 // prod: คืน generic เสมอ (กัน email enumeration)
@@ -20,7 +26,8 @@ export async function POST(req) {
   )
 
   const origin = new URL(req.url).origin
-  const link = `${origin}/org/verify?token=${token}`
+  const cb = safeCallback(body.callbackUrl)
+  const link = `${origin}/org/verify?token=${token}${cb ? `&callbackUrl=${encodeURIComponent(cb)}` : ''}`
   const dev = process.env.NODE_ENV !== 'production'
 
   await sendEmail({

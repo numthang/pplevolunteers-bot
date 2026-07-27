@@ -9,12 +9,14 @@ const {
   ButtonStyle,
   StringSelectMenuBuilder,
   MessageFlags,
+  PermissionFlagsBits,
 } = require('discord.js');
 
 const TTL_MS      = 5 * 60 * 1000; // preview อายุ 5 นาที
 const MAX_TOKENS  = 40;
 const MAX_SELECTS = 4;             // เพดาน action row (เหลือ 1 row ให้ปุ่ม)
 const SKIP        = '__skip__';
+const sleep       = ms => new Promise(r => setTimeout(r, ms));
 
 // invite-id -> { userId, channelId, tokens:[{raw,status,chosen,candidates}], createdAt }
 const pending = new Map();
@@ -259,4 +261,135 @@ async function handleInviteCancel(interaction) {
   return interaction.update({ content: '🚫 ยกเลิกแล้วครับ', embeds: [], components: [] });
 }
 
-module.exports = { startInvite, handleInviteSelect, handleInviteConfirm, handleInviteCancel };
+// ── /user kick-thread ─────────────────────────────────────────
+// เลือก role ตรงๆ (ไม่ต้องพิมพ์ keyword) → เอาสมาชิกที่ถือ role นั้นออกจากเธรดปัจจุบัน
+// (เอาออกจากเธรดเท่านั้น ไม่แตะ role ใน server)
+
+const pendingKick = new Map(); // token -> { userId, channelId, memberIds }
+const KICK_TTL_MS = 10 * 60 * 1000;
+
+async function handleKickThreadCmd(interaction) {
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+  const channel = interaction.channel;
+  if (!channel?.isThread()) {
+    return interaction.editReply({ content: '❌ คำสั่งนี้ใช้ได้เฉพาะในเธรดเท่านั้น' });
+  }
+
+  const guild = interaction.guild;
+  const roles = ['role1', 'role2', 'role3', 'role4', 'role5']
+    .map(k => interaction.options.getRole(k))
+    .filter(Boolean);
+
+  const botPerms = channel.permissionsFor(guild.members.me);
+  if (!botPerms?.has(PermissionFlagsBits.ManageThreads)) {
+    return interaction.editReply({ content: '❌ บอทไม่มีสิทธิ์ Manage Threads ในห้องนี้ เอาสมาชิกออกจากเธรดไม่ได้' });
+  }
+
+  let threadMembers;
+  try {
+    threadMembers = await channel.members.fetch();
+  } catch {
+    return interaction.editReply({ content: '❌ ดึงรายชื่อสมาชิกในเธรดไม่สำเร็จ' });
+  }
+
+  if (guild.members.cache.size < guild.memberCount) {
+    await guild.members.fetch().catch(() => null);
+  }
+
+  const roleIds = new Set(roles.map(r => r.id));
+  const matched = [...threadMembers.values()].filter(tm => {
+    if (tm.id === interaction.client.user.id) return false;
+    const gm = guild.members.cache.get(tm.id);
+    if (!gm || gm.user.bot) return false;
+    return gm.roles.cache.some(r => roleIds.has(r.id));
+  });
+
+  if (matched.length === 0) {
+    return interaction.editReply({ content: `📭 ไม่มีใครในเธรดนี้ที่ถือ role: ${roles.map(r => `**${r.name}**`).join(', ')}` });
+  }
+
+  const token = interaction.id;
+  pendingKick.set(token, {
+    userId: interaction.user.id,
+    channelId: channel.id,
+    memberIds: matched.map(tm => tm.id),
+  });
+  setTimeout(() => pendingKick.delete(token), KICK_TTL_MS);
+
+  const nameLines = matched
+    .map(tm => `<@${tm.id}>`)
+    .join(' ');
+
+  const embed = new EmbedBuilder()
+    .setColor(0xdf492e)
+    .setTitle('ยืนยันการเอาออกจากเธรด')
+    .setDescription([
+      `Role: ${roles.map(r => `**${r.name}**`).join(', ')}`,
+      '',
+      `👥 พบ **${matched.length}** คนในเธรดนี้ที่ถือ role ดังกล่าว:`,
+      nameLines.length > 1900 ? nameLines.slice(0, 1900) + ' ...' : nameLines,
+    ].join('\n'))
+    .setFooter({ text: 'เอาออกจากเธรดเท่านั้น ไม่ถอด role ใน server' });
+
+  const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId(`kickthread_confirm:${token}`).setLabel(`ยืนยัน (เอาออก ${matched.length} คน)`).setStyle(ButtonStyle.Danger),
+    new ButtonBuilder().setCustomId(`kickthread_cancel:${token}`).setLabel('ยกเลิก').setStyle(ButtonStyle.Secondary),
+  );
+
+  return interaction.editReply({ embeds: [embed], components: [row] });
+}
+
+async function handleKickThreadConfirm(interaction) {
+  const token = interaction.customId.split(':')[1];
+  const op = pendingKick.get(token);
+
+  if (!op) {
+    return interaction.update({ content: '⌛ คำสั่งหมดอายุหรือถูกใช้ไปแล้ว — สั่ง `/user kick-thread` ใหม่', embeds: [], components: [] });
+  }
+  if (interaction.user.id !== op.userId) {
+    return interaction.reply({ content: '❌ นี่ไม่ใช่คำสั่งของคุณ', flags: MessageFlags.Ephemeral });
+  }
+  pendingKick.delete(token);
+
+  const channel = await interaction.guild.channels.fetch(op.channelId).catch(() => null);
+  if (!channel) {
+    return interaction.update({ content: '❌ ไม่พบเธรดนี้แล้ว (อาจถูกลบ)', embeds: [], components: [] });
+  }
+
+  const total = op.memberIds.length;
+  await interaction.update({ content: `⏳ กำลังเอาออก 0/${total}...`, embeds: [], components: [] });
+
+  let success = 0, failed = 0;
+  for (let i = 0; i < op.memberIds.length; i++) {
+    try {
+      await channel.members.remove(op.memberIds[i], `kick-thread โดย ${interaction.user.tag}`);
+      success++;
+    } catch {
+      failed++;
+    }
+    if ((i + 1) % 10 === 0 && i + 1 < total) {
+      interaction.editReply({ content: `⏳ กำลังเอาออก ${i + 1}/${total}...` }).catch(() => {});
+    }
+    await sleep(300);
+  }
+
+  const lines = [
+    `✅ เอาออกจากเธรดเสร็จแล้ว`,
+    `✓ สำเร็จ: **${success}** คน`,
+    failed > 0 ? `❌ Error: **${failed}** คน` : null,
+  ].filter(Boolean);
+
+  return interaction.editReply({ content: lines.join('\n') });
+}
+
+async function handleKickThreadCancel(interaction) {
+  const token = interaction.customId.split(':')[1];
+  pendingKick.delete(token);
+  return interaction.update({ content: '❌ ยกเลิกแล้ว', embeds: [], components: [] });
+}
+
+module.exports = {
+  startInvite, handleInviteSelect, handleInviteConfirm, handleInviteCancel,
+  handleKickThreadCmd, handleKickThreadConfirm, handleKickThreadCancel,
+};

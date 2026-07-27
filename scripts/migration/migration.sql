@@ -35,3 +35,20 @@ UPDATE users SET phone = NULL WHERE phone = '';
 CREATE UNIQUE INDEX IF NOT EXISTS uq_users_phone
   ON users (phone)
   WHERE phone IS NOT NULL AND phone_verified_at IS NOT NULL;
+
+-- 2026-07-27: invite link เข้า org แบบ Notion (ลิงก์เดียวแชร์ได้ ใครเปิด+login ก็เข้าร่วม)
+-- ต่างจาก email invite (org_members status=invited ต่อคน): ลิงก์ไม่รู้ user_id ล่วงหน้า + มี token/uses/expiry
+CREATE TABLE IF NOT EXISTS org_invite_links (
+  org_id      integer      NOT NULL REFERENCES orgs(id) ON DELETE CASCADE,
+  created_by  integer      NOT NULL REFERENCES users(id),
+  token       text         PRIMARY KEY,
+  role        varchar(40)  NOT NULL DEFAULT 'member',
+  expires_at  timestamptz,           -- NULL = ไม่หมดอายุ
+  max_uses    integer,               -- NULL = ไม่จำกัดจำนวนครั้ง
+  uses        integer      NOT NULL DEFAULT 0,
+  revoked_at  timestamptz,           -- NULL = ยัง active
+  created_at  timestamptz  NOT NULL DEFAULT now()
+);
+-- 1 org มี active link ได้หลายอัน แต่ query หลักคือ "active link ล่าสุดของ org"
+CREATE INDEX IF NOT EXISTS idx_org_invite_links_active
+  ON org_invite_links (org_id, created_at DESC) WHERE revoked_at IS NULL;

@@ -9,7 +9,7 @@ const {
   MessageFlags,
 } = require('discord.js');
 const { getRatingSummary, getRatingList, getRatingCount } = require('../db/ratings');
-const { startInvite } = require('../handlers/userInviteHandler');
+const { startInvite, handleKickThreadCmd } = require('../handlers/userInviteHandler');
 const pool = require('../db/index');
 
 const PER_PAGE = 5;
@@ -138,6 +138,17 @@ module.exports = {
             .setRequired(true)
             .setMaxLength(2000)
         )
+    )
+
+    // --- kick-thread ---
+    .addSubcommand(sub =>
+      sub.setName('kick-thread')
+        .setDescription('เอาสมาชิกที่ถือ role ที่เลือกออกจากเธรดนี้ทั้งหมด (ไม่ถอด role)')
+        .addRoleOption(opt => opt.setName('role1').setDescription('Role ที่ 1').setRequired(true))
+        .addRoleOption(opt => opt.setName('role2').setDescription('Role ที่ 2').setRequired(false))
+        .addRoleOption(opt => opt.setName('role3').setDescription('Role ที่ 3').setRequired(false))
+        .addRoleOption(opt => opt.setName('role4').setDescription('Role ที่ 4').setRequired(false))
+        .addRoleOption(opt => opt.setName('role5').setDescription('Role ที่ 5').setRequired(false))
     ),
 
   async autocomplete(interaction) {
@@ -156,6 +167,11 @@ module.exports = {
     // ================================================================
     if (sub === 'mention') {
       return startInvite(interaction);
+    }
+
+    // ================================================================
+    if (sub === 'kick-thread') {
+      return handleKickThreadCmd(interaction);
     }
 
     // ================================================================

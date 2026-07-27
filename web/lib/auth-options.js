@@ -8,21 +8,7 @@ import { findUserIdByProvider, resolveUserByDiscord, discordIdByUserId, linkIden
 import { resolveOrgUser } from '@/db/orgMembers.js'
 import { takeNonce } from '@/db/authNonces.js'
 
-// Phone OTP — verify endpoint ออก nonce ลง dc_user_config (keyed discord_id) แล้ว client แลก session
-// (phone ยัง discord-based — Phase 4 ค่อย decouple)
-const nonceAuthorize = (nonceKey) => async (credentials) => {
-  if (!credentials?.nonce) return null
-  const { rows } = await pool.query(
-    `DELETE FROM dc_user_config WHERE "key" = $1 AND value::text = to_json($2::text)::text
-     AND updated_at > NOW() - INTERVAL '2 minutes'
-     RETURNING discord_id`,
-    [nonceKey, credentials.nonce]
-  )
-  if (!rows[0]) return null
-  return { id: rows[0].discord_id, discordId: rows[0].discord_id }
-}
-
-// Passkey — nonce keyed by user_id ใน auth_nonces (email-only ก็ login ได้)
+// Passkey + Phone — nonce keyed by user_id ใน auth_nonces (email-only ก็ login ได้)
 const userNonceAuthorize = (purpose) => async (credentials) => {
   if (!credentials?.nonce) return null
   const row = await takeNonce(credentials.nonce, purpose)
@@ -77,12 +63,12 @@ export const authOptions = {
       credentials: { nonce: { type: 'text' } },
       authorize: userNonceAuthorize('passkey'),
     }),
-    // Phone OTP login — nonce ออกจาก /api/auth/phone/verify (เบอร์ verified ผ่าน Discord เท่านั้น)
+    // Phone OTP login — nonce (keyed user_id) ออกจาก /api/auth/phone/verify · ไม่ผูก Discord แล้ว
     CredentialsProvider({
       id: 'phone',
       name: 'Phone OTP',
       credentials: { nonce: { type: 'text' } },
-      authorize: nonceAuthorize('phone_nonce'),
+      authorize: userNonceAuthorize('phone'),
     }),
     // magic-link (email) — token ออกจาก /api/org/auth/magic แล้ว client แลก session ผ่าน credentials
     // ย้ายเข้า auth หลัก (unify) แทน NextAuth instance ที่ 2 เดิม
@@ -120,9 +106,10 @@ export const authOptions = {
     async jwt({ token, account, profile, user, trigger }) {
       if (account) {
         if (account.provider === 'discord') {
-          // Discord = provider row · create-on-login ถ้ายังไม่มี users
+          // Discord = provider row · create-on-login/รวมบัญชี email verified ถ้ายังไม่มี users
           token.discordId = profile.id
-          token.userId    = await resolveUserByDiscord(profile.id, profile.username).catch(() => null)
+          token.email     = profile.email || token.email || null
+          token.userId    = await resolveUserByDiscord(profile.id, profile.username, profile.email, !!profile.verified).catch(() => null)
           const avatarUrl = profile.avatar
             ? `https://cdn.discordapp.com/avatars/${profile.id}/${profile.avatar}.webp`
             : null
@@ -150,9 +137,8 @@ export const authOptions = {
           // passkey authorize คืน userId มาแล้ว (auth_nonces) — discordId เติมทีหลังถ้ามี
           token.userId = user?.userId ?? (user?.id ? Number(user.id) : null)
         } else if (account.provider === 'phone') {
-          // phone ยัง discord-based (Phase 4) → authorize คืน discordId
-          token.discordId = user?.discordId || user?.id
-          token.userId    = await resolveUserByDiscord(token.discordId).catch(() => null)
+          // phone → authorize คืน userId (auth_nonces) · discordId เติมทีหลังถ้ามี (block ล่าง)
+          token.userId = user?.userId ?? (user?.id ? Number(user.id) : null)
         } else if (account.provider === 'magic') {
           // email door — authorize คืน userId มาแล้ว (ไม่มี discord)
           token.userId = user?.userId || Number(user?.id) || null

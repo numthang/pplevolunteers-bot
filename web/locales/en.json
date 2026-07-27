@@ -1034,6 +1034,20 @@
       "layoutTitle": "Sign Document"
     }
   },
+  "join": {
+    "invitedTo": "You're invited to join",
+    "joinButton": "Join",
+    "joining": "Joining...",
+    "loginToJoin": "Sign in to join",
+    "genericError": "Something went wrong, please try again",
+    "backLink": "Back to organizations",
+    "invalid": {
+      "not_found": "Invalid invite link",
+      "revoked": "This invite link has been turned off",
+      "expired": "This invite link has expired",
+      "full": "This invite link has reached its usage limit"
+    }
+  },
   "org": {
     "settings": {
       "iconTitle": "Organization Icon",
@@ -1079,6 +1093,16 @@
       "teamDesc": "Owner · pending invites · members with special roles — search below to manage other members",
       "inviteEmailPlaceholder": "Invite by email",
       "inviteButton": "Invite",
+      "inviteLink": {
+        "title": "Invite link",
+        "desc": "Anyone with this link can join the org after signing in (member role)",
+        "create": "Create invite link",
+        "copy": "Copy",
+        "copied": "Copied",
+        "reset": "Reset link",
+        "revoke": "Turn off",
+        "confirmRevoke": "Turn off this invite link? The current link will stop working."
+      },
       "searchTitle": "Search Members",
       "searchPlaceholder": "Name or email",
       "searching": "Searching…",

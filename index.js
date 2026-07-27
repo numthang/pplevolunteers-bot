@@ -7,7 +7,7 @@ const { handleOpenVerifyModal, handleVerifyPhoneSubmit, handleOpenOtpModal, hand
 const { handleProvinceBtn, handleProvinceRegionSelect } = require('./handlers/provinceSelect');
 const { handleStarButton, handleModalSubmit: handleRateModalSubmit } = require('./handlers/rateStars');
 const { handlePageButton } = require('./handlers/ratingPage');
-const { handleInviteSelect, handleInviteConfirm, handleInviteCancel } = require('./handlers/userInviteHandler');
+const { handleInviteSelect, handleInviteConfirm, handleInviteCancel, handleKickThreadConfirm, handleKickThreadCancel } = require('./handlers/userInviteHandler');
 const { getSetting } = require('./db/settings');
 const { refreshSticky } = require('./handlers/stickyHandler');
 const { handleReportStart, handleReportCategory, handleReportSubmit } = require('./handlers/reportHandler');
@@ -263,6 +263,8 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.customId.startsWith('handraise_'))         return handleHandraiseButton(interaction);
     if (interaction.customId.startsWith('byrole_confirm:'))    return handleRoleByRoleConfirm(interaction);
     if (interaction.customId.startsWith('byrole_cancel:'))     return handleRoleByRoleCancel(interaction);
+    if (interaction.customId.startsWith('kickthread_confirm:')) return handleKickThreadConfirm(interaction);
+    if (interaction.customId.startsWith('kickthread_cancel:'))  return handleKickThreadCancel(interaction);
     return;
   }
 });

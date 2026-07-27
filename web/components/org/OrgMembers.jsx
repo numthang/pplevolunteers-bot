@@ -120,6 +120,8 @@ export default function OrgMembers({ org, members: initial, me, myRole }) {
           </form>
         )}
 
+        {isOwner && <InviteLink orgId={org.id} />}
+
         <ul className="mt-3 divide-y divide-gray-100 dark:divide-disc-border">
           {members.map(memberRow)}
         </ul>
@@ -150,6 +152,73 @@ export default function OrgMembers({ org, members: initial, me, myRole }) {
       {isOwner && <AppointPolicy orgId={org.id} />}
 
       {note && <p className="text-sm text-gray-600 dark:text-disc-muted">{note}</p>}
+    </div>
+  )
+}
+
+// ── ลิงก์เชิญ (Notion-style): ลิงก์เดียวแชร์ได้ ใครเปิด+login ก็เข้าร่วม ──
+function InviteLink({ orgId }) {
+  const t = useTranslations('org')
+  const [link, setLink] = useState(undefined) // undefined=loading · null=ไม่มี · obj=active
+  const [busy, setBusy] = useState(false)
+  const [copied, setCopied] = useState(false)
+
+  useEffect(() => {
+    fetch(`/api/org/orgs/${orgId}/invite-link`)
+      .then(r => r.ok ? r.json() : { link: null })
+      .then(d => setLink(d.link))
+      .catch(() => setLink(null))
+  }, [orgId])
+
+  const url = link ? `${window.location.origin}/join/${link.token}` : ''
+
+  async function create() {
+    setBusy(true)
+    const r = await fetch(`/api/org/orgs/${orgId}/invite-link`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}',
+    })
+    if (r.ok) setLink((await r.json()).link)
+    setBusy(false)
+  }
+  async function revoke() {
+    if (!confirm(t('members.inviteLink.confirmRevoke'))) return
+    setBusy(true)
+    const r = await fetch(`/api/org/orgs/${orgId}/invite-link`, { method: 'DELETE' })
+    if (r.ok) setLink(null)
+    setBusy(false)
+  }
+  function copy() {
+    navigator.clipboard?.writeText(url)
+    setCopied(true); setTimeout(() => setCopied(false), 1500)
+  }
+
+  if (link === undefined) return null
+
+  return (
+    <div className="mt-3 rounded-lg border border-gray-200 dark:border-disc-border p-3">
+      <p className="text-xs font-medium text-gray-700 dark:text-disc-text">{t('members.inviteLink.title')}</p>
+      {link ? (
+        <>
+          <div className="mt-2 flex gap-2">
+            <input readOnly value={url} onFocus={e => e.target.select()}
+              className="flex-1 rounded-lg border border-gray-300 dark:border-disc-border bg-gray-50 dark:bg-disc-bg2 px-3 py-2 text-xs text-gray-900 dark:text-disc-text" />
+            <button onClick={copy}
+              className="shrink-0 rounded-lg bg-orange px-3 py-2 text-xs font-semibold text-white">
+              {copied ? t('members.inviteLink.copied') : t('members.inviteLink.copy')}
+            </button>
+          </div>
+          <div className="mt-2 flex gap-4 text-xs">
+            <button onClick={create} disabled={busy} className="text-gray-500 dark:text-disc-muted hover:underline disabled:opacity-40">{t('members.inviteLink.reset')}</button>
+            <button onClick={revoke} disabled={busy} className="text-red-accent hover:underline disabled:opacity-40">{t('members.inviteLink.revoke')}</button>
+          </div>
+        </>
+      ) : (
+        <button onClick={create} disabled={busy}
+          className="mt-2 rounded-lg bg-orange px-4 py-2 text-xs font-semibold text-white disabled:opacity-60">
+          {t('members.inviteLink.create')}
+        </button>
+      )}
+      <p className="mt-2 text-xs text-gray-400 dark:text-disc-muted">{t('members.inviteLink.desc')}</p>
     </div>
   )
 }
