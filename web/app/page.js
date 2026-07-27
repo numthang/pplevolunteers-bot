@@ -3,19 +3,15 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { getSession } from '@/lib/auth.js'
 import LoginPanel from '@/components/LoginPanel.jsx'
-import CopyButton from '@/components/CopyButton.jsx'
 import { getMembersCount, getPendingCallCount } from '@/db/calling/members.js'
 import { getContactPendingCount } from '@/db/calling/contacts.js'
 import { getCampaigns } from '@/db/calling/campaigns.js'
 import { getAccountsAll } from '@/db/finance/accounts.js'
 import { canViewAccount } from '@/lib/financeAccess.js'
-import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
-import { isAdmin } from '@/lib/roles.js'
 import { canManageCases } from '@/lib/caseAccess.js'
 import { can } from '@/lib/permissions.js'
 import pool from '@/db/index.js'
 import { getGuilds, guildsOfOrg } from '@/db/guilds.js'
-import { getGuildId } from '@/lib/guildContext.js'
 import { getOrgId } from '@/lib/orgContext.js'
 import { getOrgEnabledFeatures } from '@/lib/orgFeatures.js'
 import { resolveActiveOrg } from '@/lib/activeOrg.js'
@@ -81,16 +77,6 @@ async function getCONTACTSCount(orgId) {
     [orgId]
   )
   return Number(rows[0]?.count) || 0
-}
-
-async function getDisplayName(guildId, discordId) {
-  const { rows } = await pool.query(
-    `SELECT om.display_name FROM org_members om
-       JOIN users u ON u.id = om.user_id
-      WHERE om.guild_id = $1 AND u.discord_id = $2`,
-    [guildId, discordId]
-  )
-  return rows[0]?.display_name || null
 }
 
 
@@ -211,102 +197,47 @@ export default async function HomePage() {
     </svg>
   )
 
-  // org-first branch (mirror layout.js): resolve active org แล้วดูว่ามี guild ไหม
-  // guildless org (self-serve เช่น MRSJAN org 8) → org-native dashboard (ไม่ยืม env.GUILD_ID ของ PPLE)
-  if (userId) {
-    const { activeOrg } = await resolveActiveOrg(userId)
+  const { activeOrg } = userId ? await resolveActiveOrg(userId) : { activeOrg: null }
 
-    if (!activeOrg && !discordId) {
-      // email login แล้วแต่ยังไม่มีองค์กร (เช่น Google signup ก่อนสร้าง org)
-      // Discord user ที่ไม่มี org row → ตกไป guild dashboard เดิม (ไม่ regress PPLE)
-      return (
-        <div className="space-y-3">
-          <div className="bg-card-bg border border-brand-blue-light dark:border-disc-border rounded-xl px-6 py-10 text-center">
-            <h1 className="text-2xl font-bold text-warm-900 dark:text-disc-text mb-2">ยังไม่มีองค์กร</h1>
-            <p className="text-base text-warm-500 dark:text-disc-muted mb-6">สร้างองค์กรของคุณเพื่อเริ่มใช้งาน หรือรอรับคำเชิญทางอีเมล</p>
-            <Link href="/org/new" className="inline-block bg-brand-orange hover:bg-brand-orange-light text-white font-medium px-5 py-2.5 rounded-lg transition-colors">
-              + สร้างองค์กร
-            </Link>
-          </div>
+  // ยังไม่มีองค์กร (email signup ก่อนสร้าง org / Discord user ที่ไม่มี membership) → CTA
+  if (!activeOrg) {
+    return (
+      <div className="space-y-3">
+        <div className="bg-card-bg border border-brand-blue-light dark:border-disc-border rounded-xl px-6 py-10 text-center">
+          <h1 className="text-2xl font-bold text-warm-900 dark:text-disc-text mb-2">ยังไม่มีองค์กร</h1>
+          <p className="text-base text-warm-500 dark:text-disc-muted mb-6">สร้างองค์กรของคุณเพื่อเริ่มใช้งาน หรือรอรับคำเชิญทางอีเมล</p>
+          <Link href="/org/new" className="inline-block bg-brand-orange hover:bg-brand-orange-light text-white font-medium px-5 py-2.5 rounded-lg transition-colors">
+            + สร้างองค์กร
+          </Link>
         </div>
-      )
-    }
-
-    const orgGuilds = activeOrg ? await guildsOfOrg(activeOrg.id) : []
-    if (activeOrg && orgGuilds.length === 0) {
-      // guildless → finance (org-native) + สมาชิกองค์กร + ปุ่มไปตั้งค่า
-      const orgFeatures = await getOrgEnabledFeatures(activeOrg.id)
-      const financeOn = orgFeatures.includes('finance')
-      const finance = financeOn
-        ? await getFINANCESummary(session)
-        : { public: null, internal: null, private: null }
-
-      return (
-        <div className="space-y-3">
-          {/* Org profile */}
-          <div className="flex items-center gap-3 p-4 bg-card-bg rounded-xl border border-warm-200 dark:border-disc-border">
-            <OrgIcon icon={activeOrg.icon} name={activeOrg.name} />
-            <div className="min-w-0 flex-1">
-              <p className="font-semibold text-base text-warm-900 dark:text-disc-text truncate">{activeOrg.name}</p>
-              <p className="text-sm text-warm-500 dark:text-disc-muted truncate">{session.user.email || session.user.name}</p>
-            </div>
-            <Link href="/org/settings" className="shrink-0 text-sm text-brand-orange hover:text-brand-orange-light border border-brand-orange/30 hover:border-brand-orange px-3 py-1.5 rounded-lg transition-colors">
-              ตั้งค่าองค์กร
-            </Link>
-          </div>
-
-          {/* Feature cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {financeOn && <FinanceCard finance={finance} arrowIcon={arrowIcon} />}
-
-            {/* สมาชิกองค์กร */}
-            <Link href="/org/settings/members" className="flex flex-col bg-card-bg border border-brand-blue-light dark:border-disc-border rounded-lg p-5 hover:border-brand-orange transition-colors">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-9 h-9 rounded-lg bg-warm-100 dark:bg-disc-hover flex items-center justify-center shrink-0">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-brand-orange">
-                    <path d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
-                  </svg>
-                </div>
-                <p className="font-semibold text-base text-warm-900 dark:text-disc-text flex-1">สมาชิกองค์กร</p>
-                {arrowIcon}
-              </div>
-              <div className="flex justify-between text-base">
-                <span className="text-warm-500 dark:text-disc-muted">สมาชิกทั้งหมด</span>
-                <span className="font-medium text-warm-900 dark:text-disc-text">{Number(activeOrg.member_count || 0).toLocaleString('th-TH')} คน</span>
-              </div>
-            </Link>
-          </div>
-        </div>
-      )
-    }
-    // org มี guild → ตกไป guild dashboard เดิมด้านล่าง
+      </div>
+    )
   }
 
-  // --- Guild dashboard (PPLE org 1 และ org ที่ผูก Discord guild) ---
-  const { access } = await getEffectiveIdentity(session)
-  const userIsAdmin = isAdmin(access)
-  const GUILD_ID = await getGuildId(session)
-  // calling เป็น org-native แล้ว → query calling ต้องใช้ org_id (GUILD_ID เป็น snowflake คนละชนิด)
-  const CALLING_ORG_ID = await getOrgId(session)
-  // สวิตช์ฟีเจอร์อยู่ที่ org ที่เดียว (2026-07-22) — เดิมอ่าน getEnabledFeatures(GUILD_ID)
-  const enabledFeatures = await getOrgEnabledFeatures(CALLING_ORG_ID)
+  // --- Unified org-first dashboard (ทั้ง org ที่ผูก/ไม่ผูก Discord guild) ---
+  // การ์ด feature ทุกใบเป็น org-native → render จาก getOrgEnabledFeatures ที่เดียว
+  // ต่างกันแค่ INTEGRATIONS (Discord/API) ที่โชว์เฉพาะ org ที่มี guild
+  const orgGuilds = await guildsOfOrg(activeOrg.id)
+  const hasGuild = orgGuilds.length > 0
+
+  const { access } = await getEffectiveOrgIdentity(session)
+  const enabledFeatures = await getOrgEnabledFeatures(activeOrg.id)
   const financeOn = enabledFeatures.includes('finance')
   const callingOn = enabledFeatures.includes('calling')
   const docsOn = enabledFeatures.includes('docs')
   const casesOn = enabledFeatures.includes('cases') && canManageCases(access)
 
-  const [memberCount, guilds, guildMemberCounts, campaigns, todayCalls, pendingCount, finance, displayName, contactsCount, contactPending, identities] = await Promise.all([
-    getMembersCount(CALLING_ORG_ID),
-    getGuilds(),
-    getGuildMemberCounts(),
-    getCampaigns(CALLING_ORG_ID),
-    getTodayCallCount(CALLING_ORG_ID),
-    session.user.userId ? getPendingCallCount(session.user.userId) : Promise.resolve(0),
+  const [finance, memberCount, campaigns, todayCalls, pendingCount, contactsCount, contactPending, identities, guilds, guildMemberCounts] = await Promise.all([
     financeOn ? getFINANCESummary(session) : Promise.resolve({ public: null, internal: null, private: null }),
-    discordId ? getDisplayName(GUILD_ID, discordId) : Promise.resolve(null),
-    getCONTACTSCount(CALLING_ORG_ID),
-    session.user.userId ? getContactPendingCount(session.user.userId) : Promise.resolve(0),
+    callingOn ? getMembersCount(activeOrg.id) : Promise.resolve(0),
+    callingOn ? getCampaigns(activeOrg.id) : Promise.resolve([]),
+    callingOn ? getTodayCallCount(activeOrg.id) : Promise.resolve(0),
+    callingOn && userId ? getPendingCallCount(userId) : Promise.resolve(0),
+    callingOn ? getCONTACTSCount(activeOrg.id) : Promise.resolve(0),
+    callingOn && userId ? getContactPendingCount(userId) : Promise.resolve(0),
     discordId ? getUserIdentities(discordId) : Promise.resolve([]),
+    hasGuild ? getGuilds() : Promise.resolve([]),
+    hasGuild ? getGuildMemberCounts() : Promise.resolve([]),
   ])
 
   const fmt = (n) => Number(n || 0).toLocaleString('th-TH')
@@ -314,26 +245,18 @@ export default async function HomePage() {
   return (
     <div className="space-y-3">
 
-      {/* Link accounts banner */}
-      <LinkAccountsBanner linkedProviders={identities.map(i => i.provider)} />
+      {/* Link accounts banner — เฉพาะ login ด้วย Discord */}
+      {discordId && <LinkAccountsBanner linkedProviders={identities.map(i => i.provider)} />}
 
-      {/* Profile */}
+      {/* Org header */}
       <div className="flex items-center gap-3 p-4 bg-card-bg rounded-xl border border-warm-200 dark:border-disc-border">
-        {session.user.image && (
-          <Image src={session.user.image} alt="" width={48} height={48} className="rounded-full shrink-0" />
-        )}
+        <OrgIcon icon={activeOrg.icon} name={activeOrg.name} />
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1 min-w-0">
-            <span className="font-semibold text-base text-warm-900 dark:text-disc-text truncate">@{session.user.name}</span>
-            <CopyButton text={session.user.name} />
-          </div>
-          <p className="text-sm text-warm-500 dark:text-disc-muted truncate">ID: {session.user.discordId}</p>
-          {displayName && displayName !== session.user.name && (
-            <p className="text-sm text-warm-500 dark:text-disc-muted truncate">Display name: {displayName}</p>
-          )}
+          <p className="font-semibold text-base text-warm-900 dark:text-disc-text truncate">{activeOrg.name}</p>
+          <p className="text-sm text-warm-500 dark:text-disc-muted truncate">{session.user.email || session.user.name}</p>
         </div>
-        <Link href="/profile" className="shrink-0 text-sm text-brand-orange hover:text-brand-orange-light border border-brand-orange/30 hover:border-brand-orange px-3 py-1.5 rounded-lg transition-colors">
-          แก้ไขโปรไฟล์
+        <Link href="/org/settings" className="shrink-0 text-sm text-brand-orange hover:text-brand-orange-light border border-brand-orange/30 hover:border-brand-orange px-3 py-1.5 rounded-lg transition-colors">
+          ตั้งค่าองค์กร
         </Link>
       </div>
 
@@ -415,9 +338,27 @@ export default async function HomePage() {
         </Link>
         )}
 
+        {/* สมาชิกองค์กร — แสดงทุก org */}
+        <Link href="/org/settings/members" className="flex flex-col bg-card-bg border border-brand-blue-light dark:border-disc-border rounded-lg p-5 hover:border-brand-orange transition-colors">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-9 h-9 rounded-lg bg-warm-100 dark:bg-disc-hover flex items-center justify-center shrink-0">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-brand-orange">
+                <path d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+              </svg>
+            </div>
+            <p className="font-semibold text-base text-warm-900 dark:text-disc-text flex-1">สมาชิกองค์กร</p>
+            {arrowIcon}
+          </div>
+          <div className="flex justify-between text-base">
+            <span className="text-warm-500 dark:text-disc-muted">สมาชิกทั้งหมด</span>
+            <span className="font-medium text-warm-900 dark:text-disc-text">{fmt(activeOrg.member_count)} คน</span>
+          </div>
+        </Link>
+
       </div>
 
-      {/* INTEGRATIONS */}
+      {/* INTEGRATIONS — เฉพาะ org ที่ผูก Discord guild */}
+      {hasGuild && (
         <div className="flex flex-col bg-card-bg border border-brand-blue-light dark:border-disc-border rounded-lg p-5">
           <div className="flex items-center gap-2 mb-4">
             <div className="w-9 h-9 rounded-lg bg-warm-100 dark:bg-disc-hover flex items-center justify-center shrink-0">
@@ -458,6 +399,7 @@ export default async function HomePage() {
             </Link>
           </div>
         </div>
+      )}
 
     </div>
   )
