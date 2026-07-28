@@ -1,8 +1,10 @@
+import { BRAND_NAME } from '@/lib/brand.js'
+import { BASE_URL } from '@/lib/baseUrl.js'
 
 export const metadata = { title: 'Integrations' }
 
 const BOT_INVITE_URL = process.env.DISCORD_BOT_INVITE_URL
-const API_BASE = process.env.NEXTAUTH_URL || 'https://pplethai.org'
+const API_BASE = BASE_URL
 
 function Section({ title, children, id }) {
   return (
@@ -41,7 +43,7 @@ export default async function IntegrationsPage() {
 
       <div className="bg-card-bg border border-brand-blue-light dark:border-disc-border rounded-xl px-6 py-5">
         <h1 className="text-2xl font-bold text-warm-900 dark:text-disc-text">Integrations</h1>
-        <p className="text-base text-warm-500 dark:text-disc-muted mt-1">เชื่อมต่อ PPLE Volunteers กับระบบภายนอก</p>
+        <p className="text-base text-warm-500 dark:text-disc-muted mt-1">เชื่อมต่อ {BRAND_NAME} กับระบบภายนอก</p>
       </div>
 
       {/* Discord Bot */}
@@ -162,7 +164,7 @@ export default async function IntegrationsPage() {
       {/* API Access */}
       <Section title="API Access" id="api-access">
         <p className="text-base text-warm-500 dark:text-disc-muted mb-5">
-          REST API สำหรับระบบภายนอกที่ต้องการดึงข้อมูลจาก PPLE Volunteers
+          REST API สำหรับระบบภายนอกที่ต้องการดึงข้อมูลจาก {BRAND_NAME}
         </p>
 
         {/* Auth */}

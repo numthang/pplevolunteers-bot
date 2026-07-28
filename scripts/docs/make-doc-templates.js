@@ -5,7 +5,8 @@
 import PizZip from 'pizzip'
 import fs from 'fs'
 
-const DIR = '/home/tee/VSites/node/pple-volunteers/web/templates'
+// relative กับ cwd ตาม Usage ด้านบน (รันจาก web/) — ไม่ผูก absolute path กันพังตอนย้าย/เปลี่ยนชื่อโฟลเดอร์
+const DIR = process.env.TEMPLATES_DIR || 'templates'
 
 // ── helpers ──────────────────────────────────────────────────────
 function isDots(t) {

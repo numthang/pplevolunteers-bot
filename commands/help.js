@@ -5,6 +5,7 @@
 const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
 const fs   = require('fs');
 const path = require('path');
+const { BRAND_NAME } = require('../config/brand.js');
 
 // หมวดหมู่ตาม prefix/ชื่อ — เรียงตาม order ที่จะแสดงใน embed
 const CATEGORIES = [
@@ -89,7 +90,7 @@ module.exports = {
     const embed   = new EmbedBuilder()
       .setTitle('📖 รายการคำสั่งทั้งหมด')
       .setColor(0x5865F2)
-      .setFooter({ text: 'PPLE Volunteers Bot  •  <opt> = จำเป็น  [opt] = ไม่บังคับ' });
+      .setFooter({ text: `${BRAND_NAME} Bot  •  <opt> = จำเป็น  [opt] = ไม่บังคับ` });
 
     for (const cat of CATEGORIES) {
       const list = grouped[cat.name];

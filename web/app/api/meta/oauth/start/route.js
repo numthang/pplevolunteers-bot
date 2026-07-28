@@ -3,8 +3,9 @@ import { authOptions } from '@/lib/auth-options.js'
 import { canManageSocialGuild } from '@/lib/roles.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import pool from '@/db/index.js'
+import { BASE_URL } from '@/lib/baseUrl.js'
 
-const REDIRECT_URI = `${process.env.NEXTAUTH_URL || 'https://pplevolunteers.org'}/api/meta/oauth/callback`
+const REDIRECT_URI = `${BASE_URL}/api/meta/oauth/callback`
 const SCOPES      = [
   'pages_manage_posts',
   'pages_show_list',

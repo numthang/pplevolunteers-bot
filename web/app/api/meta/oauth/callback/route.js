@@ -1,6 +1,7 @@
 import pool from '@/db/index.js'
+import { BASE_URL } from '@/lib/baseUrl.js'
 
-const REDIRECT_URI = `${process.env.NEXTAUTH_URL || 'https://pplevolunteers.org'}/api/meta/oauth/callback`
+const REDIRECT_URI = `${BASE_URL}/api/meta/oauth/callback`
 
 async function getGuildMetaApp(guildId) {
   const { rows } = await pool.query(

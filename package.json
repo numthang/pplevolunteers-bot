@@ -1,5 +1,5 @@
 {
-  "name": "my-discord-bot",
+  "name": "platfor-bot",
   "version": "2.25.0",
   "main": "index.js",
   "scripts": {

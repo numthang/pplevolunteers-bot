@@ -4,9 +4,11 @@ import { generateRegistrationOptions, verifyRegistrationResponse } from '@simple
 import { findAuthenticatorById } from 'passkey-authenticator-aaguids'
 import { linkIdentityByUser, getUserIdentitiesByUser } from '@/db/userIdentities.js'
 import { putNonce, takeNonce } from '@/db/authNonces.js'
+import { BRAND_NAME } from '@/lib/brand.js'
+import { BASE_URL } from '@/lib/baseUrl.js'
 
-const RP_NAME = 'PPLE Volunteers'
-const RP_ID   = process.env.PASSKEY_RP_ID || new URL(process.env.NEXTAUTH_URL).hostname
+const RP_NAME = BRAND_NAME
+const RP_ID   = process.env.PASSKEY_RP_ID || new URL(BASE_URL).hostname
 
 // GET — สร้าง challenge (keyed by user_id → email-only ก็ลงทะเบียนได้)
 export async function GET() {

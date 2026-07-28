@@ -1,5 +1,5 @@
-// ⚠️  อัปเดต Callback URI ใน X Developer Portal ให้ชี้มาที่:
-//     https://pplevolunteers.org/api/x/oauth/callback
+// ⚠️  อัปเดต Callback URI ใน X Developer Portal ให้ชี้มาที่ <BASE_URL>/api/x/oauth/callback
+//     (BASE_URL = NEXTAUTH_URL ใน .env — ตอนนี้ https://pplevolunteers.org)
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
 import { canManageSocialGuild } from '@/lib/roles.js'
@@ -8,8 +8,8 @@ import { cookies } from 'next/headers'
 import pool from '@/db/index.js'
 import https from 'https'
 import crypto from 'crypto'
+import { BASE_URL } from '@/lib/baseUrl.js'
 
-const BASE_URL = process.env.NEXTAUTH_URL || 'https://pplevolunteers.org'
 const CALLBACK = `${BASE_URL}/api/x/oauth/callback`
 
 function pct(str) {

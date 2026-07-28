@@ -9,13 +9,14 @@ import { resolveActiveOrg } from '@/lib/activeOrg.js'
 import Providers from '@/components/Providers.jsx'
 import Nav from '@/components/Nav.jsx'
 import { getOrgEnabledFeatures } from '@/lib/orgFeatures.js'
+import { BRAND_NAME, BRAND_DOMAIN } from '@/lib/brand.js'
 
 export const metadata = {
   title: {
-    default: 'PLATFOR{m}.ORG',
-    template: '%s · PLATFOR{m}.ORG',
+    default: BRAND_NAME,
+    template: `%s · ${BRAND_NAME}`,
   },
-  description: 'platfor.org · แพลตฟอร์มบริหารองค์กรอาสาและเครือข่าย',
+  description: `${BRAND_DOMAIN} · แพลตฟอร์มบริหารองค์กรอาสาและเครือข่าย`,
 }
 
 export default async function RootLayout({ children }) {
