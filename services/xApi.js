@@ -14,9 +14,19 @@ async function getGuildXApp(guildId) {
   return { api_key: m.x_consumer_key, api_secret: m.x_consumer_secret };
 }
 
-async function getXConfig(guildId, userId = null, groupName = null) {
+// accountId = เลือกบัญชีเจาะจง (posts บนเว็บ) — ไม่ส่ง = พฤติกรรมเดิม
+// ⚠️ app creds (api_key/secret) ยังมาจาก dc_guild_config → org ที่ไม่มี guild ยังโพสต์ X ไม่ได้ (ค้างที่ PENDING)
+async function getXConfig(guildId, userId = null, groupName = null, accountId = null) {
   const app = await getGuildXApp(guildId);
   if (!app) return null;
+
+  if (accountId) {
+    const { rows } = await pool.query(
+      `SELECT social_id, access_token FROM dc_social_accounts WHERE id = $1 AND platform = 'x' LIMIT 1`,
+      [accountId]
+    );
+    return buildXCreds(app, rows[0]);
+  }
 
   const params = groupName ? [guildId, userId, groupName, userId] : [guildId, userId, userId];
   const groupClause = groupName ? 'AND group_name = $3' : '';
@@ -33,16 +43,21 @@ async function getXConfig(guildId, userId = null, groupName = null) {
      LIMIT 1`,
     params
   );
-  if (!rows.length) return null;
+  return buildXCreds(app, rows[0]);
+}
+
+// แปลงแถวบัญชี + app creds เป็นชุด key ที่ OAuth1 ใช้ — ใช้ร่วมทั้งทางเลือกอัตโนมัติและทาง accountId
+function buildXCreds(app, row) {
+  if (!row) return null;
   let creds;
-  try { creds = JSON.parse(rows[0].access_token); } catch { return null; }
+  try { creds = JSON.parse(row.access_token); } catch { return null; }
   if (!creds.access_token || !creds.access_token_secret) return null;
   return {
     x_api_key:             app.api_key,
     x_api_secret:          app.api_secret,
     x_access_token:        creds.access_token,
     x_access_token_secret: creds.access_token_secret,
-    username:              rows[0].social_id,
+    username:              row.social_id,
   };
 }
 
@@ -158,8 +173,8 @@ async function postSingleTweet(cfg, text, mediaIds, replyTo) {
 
 const URL_RE = /https?:\/\/\S+/g;
 
-async function postToX(guildId, userId, images, caption, groupName = null) {
-  const cfg = await getXConfig(guildId, userId, groupName);
+async function postToX(guildId, userId, images, caption, groupName = null, accountId = null) {
+  const cfg = await getXConfig(guildId, userId, groupName, accountId);
   if (!cfg) throw new Error('ไม่พบ X account — เพิ่ม X account ที่ /bot/social/accounts ก่อน');
 
   const fullText = (caption || '').trim();
@@ -312,8 +327,8 @@ async function pollXVideoStatus(cfg, mediaId, initialWaitSecs, maxWaitMs = 300_0
   throw new Error('X video: หมดเวลารอ processing');
 }
 
-async function postVideoToX(guildId, userId, videoDiscordUrl, caption, groupName = null) {
-  const cfg = await getXConfig(guildId, userId, groupName);
+async function postVideoToX(guildId, userId, videoDiscordUrl, caption, groupName = null, accountId = null) {
+  const cfg = await getXConfig(guildId, userId, groupName, accountId);
   if (!cfg) throw new Error('ไม่พบ X account — เพิ่ม X account ที่ /bot/social/accounts ก่อน');
 
   let buffer = await fetchBuffer(videoDiscordUrl);

@@ -58,7 +58,11 @@ async function refreshUserToken(guildId, rowId, userDiscordId, currentUserToken)
 
 // คืนค่า config ของ platform หนึ่งใน guild หนึ่ง
 // userId = Discord user id ของคนที่กำลังโพสต์ (เพื่อ filter private accounts)
-async function getConfig(guildId, platform, userId = null, groupName = null) {
+// accountId = เลือกบัญชีเจาะจง (posts บนเว็บส่งมา) — ไม่ส่ง = พฤติกรรมเดิมทุกประการ
+// ⚠️ ความเป็นเจ้าของบัญชี (org/สิทธิ์) ตรวจที่ชั้น API ตอนสร้างงานในคิว ไม่ใช่ที่นี่
+//    ตรงนี้เป็น internal call จาก publishPipeline เท่านั้น
+async function getConfig(guildId, platform, userId = null, groupName = null, accountId = null) {
+  if (accountId) return getConfigById(accountId, platform, guildId);
   const params = groupName ? [guildId, platform, userId, groupName, userId] : [guildId, platform, userId, userId];
   const groupClause = groupName ? 'AND group_name = $4' : '';
   const orderIdx = groupName ? '$5' : '$4';
@@ -75,8 +79,12 @@ async function getConfig(guildId, platform, userId = null, groupName = null) {
     params
   );
   if (!rows.length) return null;
-  const r = rows[0];
+  return finalizeConfig(rows[0], guildId, platform);
+}
 
+// ต่อ token ให้พร้อมใช้ (refresh ถ้าใกล้หมดอายุ) แล้วคืนรูปร่างที่ผู้เรียกคาดหวัง
+// แยกออกมาเพราะทั้ง getConfig (เลือกอัตโนมัติ) และ getConfigById (posts เลือกเอง) ต้องใช้เหมือนกัน
+async function finalizeConfig(r, guildId, platform) {
   let userToken = r.user_token || null;
   if (userToken && r.user_token_expires_at) {
     const msLeft = new Date(r.user_token_expires_at).getTime() - Date.now();
@@ -99,6 +107,17 @@ async function getConfig(guildId, platform, userId = null, groupName = null) {
     userToken,
     userDiscordId: r.user_discord_id,
   };
+}
+
+// เลือกบัญชีตาม id ตรงๆ — ใช้กับ posts (เว็บเลือกบัญชีเองแล้ว) · platform ต้องตรงกันเสมอ
+async function getConfigById(accountId, platform, guildId = null) {
+  const { rows } = await pool.query(
+    `SELECT id, user_discord_id, social_id, access_token, user_token, user_token_expires_at, name, visibility
+     FROM dc_social_accounts WHERE id = $1 AND platform = $2 LIMIT 1`,
+    [accountId, platform]
+  );
+  if (!rows.length) return null;
+  return finalizeConfig(rows[0], guildId, platform);
 }
 
 // คืน array ของ platforms ที่ user คนนี้สามารถใช้ใน guild นี้
@@ -240,8 +259,8 @@ async function fbUploadPhoto(pageId, token, buffer, ext, published, caption = ''
   return res;
 }
 
-async function postToFacebook(guildId, userId, images, caption, scheduleTime = null, groupName = null) {
-  const cfg = await getConfig(guildId, 'fb', userId, groupName);
+async function postToFacebook(guildId, userId, images, caption, scheduleTime = null, groupName = null, accountId = null) {
+  const cfg = await getConfig(guildId, 'fb', userId, groupName, accountId);
   if (!cfg) throw new Error('ไม่พบ Facebook config สำหรับ guild นี้');
 
   const scheduleFields = scheduleTime
@@ -365,8 +384,8 @@ function saveProcessedToTemp(images) {
   });
 }
 
-async function postToInstagram(guildId, userId, images, caption, scheduleTime = null, onProgress = null, groupName = null) {
-  const cfg = await getConfig(guildId, 'ig', userId, groupName);
+async function postToInstagram(guildId, userId, images, caption, scheduleTime = null, onProgress = null, groupName = null, accountId = null) {
+  const cfg = await getConfig(guildId, 'ig', userId, groupName, accountId);
   if (!cfg) throw new Error('ไม่พบ Instagram config สำหรับ guild นี้');
   if (!TEMP_URL.startsWith('http')) {
     throw new Error(`META_TEMP_URL หรือ WEB_BASE_URL ไม่ได้ set — ตอนนี้ TEMP_URL="${TEMP_URL}" ซึ่ง Instagram เข้าไม่ได้`);
@@ -457,8 +476,8 @@ function splitCaption(caption, maxLen = 500) {
   return chunks;
 }
 
-async function postToThreads(guildId, userId, images, caption, onProgress = null, groupName = null) {
-  const cfg = await getConfig(guildId, 'threads', userId, groupName);
+async function postToThreads(guildId, userId, images, caption, onProgress = null, groupName = null, accountId = null) {
+  const cfg = await getConfig(guildId, 'threads', userId, groupName, accountId);
   if (!cfg) throw new Error('ไม่พบ Threads config สำหรับ guild นี้');
   if (images.length && !TEMP_URL.startsWith('http')) {
     throw new Error(`WEB_BASE_URL ไม่ได้ set — Threads เข้า URL ไม่ได้`);
@@ -576,8 +595,8 @@ function httpsPostToUrl(fullUrl, body, headers) {
   });
 }
 
-async function postReelsToFacebook(guildId, userId, videoDiscordUrl, caption, onProgress = null, groupName = null, scheduleTime = null) {
-  const cfg = await getConfig(guildId, 'fb', userId, groupName);
+async function postReelsToFacebook(guildId, userId, videoDiscordUrl, caption, onProgress = null, groupName = null, scheduleTime = null, accountId = null) {
+  const cfg = await getConfig(guildId, 'fb', userId, groupName, accountId);
   if (!cfg) throw new Error('ไม่พบ Facebook config สำหรับ guild นี้');
 
   if (onProgress) onProgress('📤 Facebook Reels: กำลังดาวน์โหลดวิดีโอ...');
@@ -627,8 +646,8 @@ async function postReelsToFacebook(guildId, userId, videoDiscordUrl, caption, on
   return { id: postId, permalink };
 }
 
-async function postReelsToInstagram(guildId, userId, videoDiscordUrl, caption, onProgress = null, groupName = null) {
-  const cfg = await getConfig(guildId, 'ig', userId, groupName);
+async function postReelsToInstagram(guildId, userId, videoDiscordUrl, caption, onProgress = null, groupName = null, accountId = null) {
+  const cfg = await getConfig(guildId, 'ig', userId, groupName, accountId);
   if (!cfg) throw new Error('ไม่พบ Instagram config สำหรับ guild นี้');
   if (!TEMP_URL.startsWith('http')) {
     throw new Error(`META_TEMP_URL หรือ WEB_BASE_URL ไม่ได้ set — Instagram เข้าถึง URL ไม่ได้`);
@@ -664,8 +683,8 @@ async function postReelsToInstagram(guildId, userId, videoDiscordUrl, caption, o
   return { id: mediaId, permalink };
 }
 
-async function postReelsToThreads(guildId, userId, videoDiscordUrl, caption, onProgress = null, groupName = null) {
-  const cfg = await getConfig(guildId, 'threads', userId, groupName);
+async function postReelsToThreads(guildId, userId, videoDiscordUrl, caption, onProgress = null, groupName = null, accountId = null) {
+  const cfg = await getConfig(guildId, 'threads', userId, groupName, accountId);
   if (!cfg) throw new Error('ไม่พบ Threads config สำหรับ guild นี้');
   if (!TEMP_URL.startsWith('http')) {
     throw new Error(`META_TEMP_URL หรือ WEB_BASE_URL ไม่ได้ set — Threads เข้าถึง URL ไม่ได้`);
@@ -696,4 +715,4 @@ async function postReelsToThreads(guildId, userId, videoDiscordUrl, caption, onP
   return { id: mediaId, permalink: info.permalink || null };
 }
 
-module.exports = { getConfig, getAvailablePlatforms, getAvailableGroups, getGuildMetaApp, postToFacebook, postToInstagram, postToThreads, postReelsToInstagram, postReelsToFacebook, postReelsToThreads };
+module.exports = { getConfig, getConfigById, getAvailablePlatforms, getAvailableGroups, getGuildMetaApp, postToFacebook, postToInstagram, postToThreads, postReelsToInstagram, postReelsToFacebook, postReelsToThreads };
