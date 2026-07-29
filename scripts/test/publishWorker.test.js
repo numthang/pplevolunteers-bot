@@ -82,7 +82,16 @@ const cleanup = () => pool.query(`DELETE FROM post_social_history WHERE channel_
   r = await getJob(j7.id);
   ok('สื่อนอก storage/ → failed ไม่แตะไฟล์', r.status === 'failed' && /นอก storage/.test(r.last_error || ''), r.last_error);
 
-  // 8) accountId/orgId ส่งถึงท่อจริง
+  // 8) ลายน้ำ — ค่าในแถวงานคือ input จากภายนอก ต้องกันหลุดออกนอก assets/watermark
+  const { resolveWatermark } = require(ROOT + '/services/publishWorker');
+  const wmReal = 'path:1111998833652678757/ประชาชนราชบุรี/2. pplerb-white-orange.png';
+  ok('ลายน้ำที่มีจริง → คืน absolute path', (await resolveWatermark(wmReal))?.endsWith('2. pplerb-white-orange.png'));
+  ok('ไม่มีลายน้ำ / none → null', (await resolveWatermark(null)) === null && (await resolveWatermark('none')) === null);
+  ok('path traversal → null ไม่แตะไฟล์', (await resolveWatermark('path:../../../etc/passwd')) === null);
+  ok('token เก่าของตะกร้าดิสฯ → null (เว็บไม่ใช้)', (await resolveWatermark('guild:pple-orange.png')) === null);
+  ok('ไฟล์ไม่มีจริง → null (ไม่ล้มทั้งงาน)', (await resolveWatermark('path:1111998833652678757/ไม่มีจริง.png')) === null);
+
+  // 9) accountId/orgId ส่งถึงท่อจริง
   const withAcc = seen.find(s => s.platform === 'fb');
   ok('ส่ง orgId + guildId + caption เข้าท่อ', withAcc?.orgId === 1 && withAcc?.guildId === '1111998833652678757' && withAcc?.caption === 'ทดสอบ');
 

@@ -48,6 +48,8 @@ export default function PostPublishPanel({ postId, hasMedia = false }) {
   const [groups, setGroups] = useState([])
   const [newsReady, setNewsReady] = useState(false)
   const [group, setGroup] = useState('')
+  const [watermarks, setWatermarks] = useState([])
+  const [wmType, setWmType] = useState('none')
   const [scheduledAt, setScheduledAt] = useState('')
   const [minTime, setMinTime] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -92,6 +94,21 @@ export default function PostPublishPanel({ postId, hasMedia = false }) {
 
   const current = groups.find(g => g.name === group) || null
 
+  // ลายน้ำผูกกับกลุ่ม (โฟลเดอร์คนละชุด) → เปลี่ยนกลุ่มต้องโหลดใหม่ + รีเซ็ตค่าที่ค้าง
+  useEffect(() => {
+    if (!group) { setWatermarks([]); setWmType('none'); return }
+    let alive = true
+    fetch(`/api/posts/watermarks?group=${encodeURIComponent(group)}`)
+      .then(res => (res.ok ? res.json() : {}))
+      .then(data => {
+        if (!alive) return
+        setWatermarks(Array.isArray(data.options) ? data.options : [])
+        setWmType(data.default || 'none')          // ใช้ default ของกลุ่มเหมือนตะกร้าดิสฯ
+      })
+      .catch(() => {})
+    return () => { alive = false }
+  }, [group])
+
   // แพลตฟอร์มที่ติ๊กได้ = บัญชีที่กลุ่มนี้มีจริง (เหมือนตะกร้าดิสฯ ที่กรอง platform ตามกลุ่ม)
   // 'news' ไม่ใช่บัญชีโซเชียล — เป็นห้องใน Discord จึงขึ้นกับว่า guild ตั้งห้องข่าวไว้ไหม
   function blockedReason(key) {
@@ -126,6 +143,7 @@ export default function PostPublishPanel({ postId, hasMedia = false }) {
         body: JSON.stringify({
           platforms: selected,
           group: group || null,
+          wmType: hasMedia ? wmType : 'none',
           scheduledAt: scheduledAt || null,
         }),
       })
@@ -212,6 +230,22 @@ export default function PostPublishPanel({ postId, hasMedia = false }) {
           )
         })}
       </div>
+
+      {hasMedia && watermarks.length > 0 && (
+        <div className="flex flex-col gap-1">
+          <span className="text-sm text-warm-700 dark:text-disc-text">ลายน้ำ</span>
+          <select
+            value={wmType}
+            onChange={e => setWmType(e.target.value)}
+            className="w-full h-9 px-2 text-sm rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text focus:outline-none focus:ring-2 focus:ring-teal"
+          >
+            <option value="none">ไม่มีลายน้ำ</option>
+            {watermarks.map(w => (
+              <option key={w.value} value={w.value}>{w.label}</option>
+            ))}
+          </select>
+        </div>
+      )}
 
       <div className="flex flex-col gap-1">
         <span className="text-sm text-warm-700 dark:text-disc-text">ตั้งเวลา</span>

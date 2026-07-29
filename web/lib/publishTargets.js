@@ -50,7 +50,7 @@ export async function listPublishGroups({ orgId, userId, discordId }) {
 
 /**
  * แปลงชื่อกลุ่ม → บัญชีรายแพลตฟอร์ม (ตรวจสิทธิ์แล้ว) สำหรับเขียนลงแถวงาน
- * @returns {Promise<{ok:true, group, guildId, accountIds:Record<string,number>} | {ok:false, error:string}>}
+ * @returns {Promise<{ok:true, group, guildId, visibility, accountIds:Record<string,number>} | {ok:false, error:string}>}
  */
 export async function resolveGroupAccounts({ orgId, userId, discordId, group, platforms }) {
   const groups = await listPublishGroups({ orgId, userId, discordId })
@@ -66,7 +66,7 @@ export async function resolveGroupAccounts({ orgId, userId, discordId, group, pl
 
   const accountIds = {}
   for (const p of needAccount) accountIds[p] = found.accounts[p].id
-  return { ok: true, group: found.name, guildId: found.guildId, accountIds }
+  return { ok: true, group: found.name, guildId: found.guildId, visibility: found.visibility, accountIds }
 }
 
 /** guild นี้ตั้งห้องข่าวสารไว้หรือยัง — ไม่ได้ตั้ง = ติ๊ก 'ห้องข่าวสาร' ไปก็ล้มที่ worker เปล่าๆ */

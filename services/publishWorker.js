@@ -15,6 +15,7 @@ const BATCH   = 5;                       // หยิบทีละ 5 แถว
 const MAX_ATTEMPTS = 3;                  // ล้มครบ 3 ครั้ง = failed ถาวร (grill ข้อ 8)
 const GRACE_MS = 2 * 60 * 60 * 1000;     // เลยเวลาเกิน 2 ชม. = stale ไม่ยิงเอง (grill ข้อ 15)
 const REPO_ROOT = path.join(__dirname, '..');
+const WATERMARK_DIR = path.join(REPO_ROOT, 'assets', 'watermark');
 
 let timer = null;
 
@@ -49,6 +50,28 @@ async function claimJobs() {
     [BATCH]
   );
   return rows;
+}
+
+/**
+ * ลายน้ำของงาน — เว็บ resolve โฟลเดอร์ให้เสร็จแล้วเก็บมาเป็น `path:<relative จาก assets/watermark>`
+ * (ไม่ใช่ token `guild:`/`personal:` แบบตะกร้าดิสฯ เพราะกลุ่มที่เว็บเลือกอาจอยู่คนละ guild
+ *  กับ guild ที่ผู้ใช้อยู่ → ให้ฝั่งเว็บเป็นคนตัดสินโฟลเดอร์ ที่นี่แค่ต่อ path)
+ * ที่นี่ยังเช็คซ้ำว่าไม่หลุดออกนอก assets/watermark — ค่าในแถวงานคือ input ที่มาจากภายนอก
+ */
+async function resolveWatermark(wmType) {
+  if (!wmType || wmType === 'none' || !wmType.startsWith('path:')) return null;
+  const abs = path.resolve(WATERMARK_DIR, wmType.slice('path:'.length));
+  if (!abs.startsWith(WATERMARK_DIR + path.sep)) {
+    console.error('[publishWorker] ลายน้ำอยู่นอก assets/watermark:', wmType);
+    return null;
+  }
+  try {
+    await fs.access(abs);
+    return abs;
+  } catch {
+    console.error('[publishWorker] ไม่พบไฟล์ลายน้ำ:', wmType);   // ไฟล์หาย = โพสต์ต่อแบบไม่มีลายน้ำ ไม่ล้มทั้งงาน
+    return null;
+  }
 }
 
 /** สื่อของงานเป็น snapshot ตอนกดโพสต์ — path เก็บ relative จาก repo root (บอทกับเว็บอ่านดิสก์ก้อนเดียวกัน) */
@@ -128,9 +151,10 @@ async function runOnce(client) {
     touchedBatches.add(job.batch_id);
     try {
       const { images, videoUrl } = await loadMedia(job);
-      // ⚠️ ยังไม่ติดลายน้ำฝั่ง worker — resolveWatermarkPath ยังผูก guild (ค้างที่ PENDING)
-      //    เว็บจึงส่งรูปที่พร้อมโพสต์มาเลย · prepareImages ที่นี่ทำแค่ normalize (webp→jpg)
-      const { processed, errors } = images.length ? await prepareImages(images, {}) : { processed: [], errors: [] };
+      const watermarkPath = await resolveWatermark(job.wm_type);
+      const { processed, errors } = images.length
+        ? await prepareImages(images, { watermarkPath })
+        : { processed: [], errors: [] };
       if (images.length && !processed.length) throw new Error(errors.join(' · ') || 'เตรียมรูปไม่สำเร็จ');
 
       const guild = job.guild_id && client ? await client.guilds.fetch(job.guild_id).catch(() => null) : null;
@@ -185,4 +209,4 @@ function stopPublishWorker() {
   if (timer) { clearInterval(timer); timer = null; }
 }
 
-module.exports = { startPublishWorker, stopPublishWorker, runOnce, markStale, claimJobs };
+module.exports = { startPublishWorker, stopPublishWorker, runOnce, markStale, claimJobs, resolveWatermark };

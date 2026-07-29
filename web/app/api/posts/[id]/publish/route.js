@@ -5,6 +5,7 @@ import { getOrgConfig } from '@/db/orgConfig.js'
 import { listMedia } from '@/db/posts/media.js'
 import { createJobs, activePlatforms } from '@/db/posts/jobs.js'
 import { resolveGroupAccounts, hasNewsChannel, publisherIdentity } from '@/lib/publishTargets.js'
+import { resolveWatermarkRef } from '@/lib/watermarks.js'
 
 const VALID_PLATFORMS = ['fb', 'ig', 'threads', 'x', 'news']
 // IG/Threads โพสต์ข้อความล้วนไม่ได้ (ข้อจำกัดของ Graph API เอง) — ตัดตั้งแต่ต้นทาง ไม่ปล่อยให้ worker ล้ม
@@ -78,6 +79,7 @@ export async function POST(req, { params }) {
     const { userId: publisherUserId, discordId: publisherDiscordId } = await publisherIdentity(ctx.session)
     let accountIds = {}
     let groupName = null
+    let wmType = null
     const socialPlatforms = platforms.filter(p => p !== 'news')
     if (typeof body.group === 'string' && body.group.trim()) {
       const resolved = await resolveGroupAccounts({
@@ -90,6 +92,16 @@ export async function POST(req, { params }) {
       if (!resolved.ok) return Response.json({ error: resolved.error }, { status: 403 })
       accountIds = resolved.accountIds
       groupName = resolved.group
+
+      // ลายน้ำ: ค่าที่เก็บลงแถวงานต้องเป็นไฟล์จริงของกลุ่มนี้เท่านั้น (whitelist ตั้งแต่ขาเขียน)
+      // — ไม่งั้นค่าจาก client จะกลายเป็น path บนเครื่องบอทตอน worker หยิบไปใช้
+      wmType = await resolveWatermarkRef(body.wmType, {
+        guildId: resolved.guildId, group: resolved.group,
+        visibility: resolved.visibility, discordId: publisherDiscordId,
+      })
+      if (wmType === undefined) {
+        return Response.json({ error: 'ลายน้ำที่เลือกไม่ใช่ของกลุ่มนี้' }, { status: 400 })
+      }
     } else if (socialPlatforms.length) {
       // ไม่เลือกกลุ่ม = ปล่อยให้บอทเลือกบัญชีเอง ซึ่งอาจได้คนละตัวตนกันในแต่ละแพลตฟอร์ม → บังคับเลือก
       return Response.json({ error: 'ต้องเลือกกลุ่มที่จะโพสต์ในนามก่อน' }, { status: 400 })
@@ -131,7 +143,7 @@ export async function POST(req, { params }) {
       caption: ctx.post.body || '',
       media,
       scheduledAt,
-      wmType: typeof body.wmType === 'string' ? body.wmType : null,
+      wmType,
       createdBy: ctx.userId,
       createdByDiscordId: ctx.session?.user?.discordId || null,
     })

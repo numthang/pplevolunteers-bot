@@ -400,3 +400,9 @@ BEGIN
   -- ⚠️ ลำดับ deploy: รัน migration → **restart บอททันที** (โค้ดเก่าอ่านตารางนี้อยู่)
   DROP TABLE dc_media_history;
 END $$;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 2026-07-30 — posts: ลายน้ำจากเว็บเก็บเป็น path ที่ resolve แล้ว (`path:<guild>/<group>/<file>`)
+-- ไม่ใช่ token สั้นๆ แบบตะกร้าดิสฯ (`guild:<file>`) เพราะกลุ่มที่เว็บเลือกอาจอยู่คนละ guild
+-- กับ guild ที่ผู้ใช้อยู่ → varchar(50) สั้นเกิน (ชื่อกลุ่มไทย + ชื่อไฟล์ยาวได้)
+ALTER TABLE post_social_history ALTER COLUMN wm_type TYPE text;

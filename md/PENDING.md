@@ -86,10 +86,15 @@ spec + ดีไซน์ + ตารางทั้งหมดอยู่ `md
   - ขั้น 4a `7ddf6cc` — **worker** (`services/publishWorker.js`) poll 30 วิ · SKIP LOCKED · retry ≤3 · grace 2 ชม.→stale · **backlink กลับห้อง Discord** · เทส 10 เคส
   - ขั้น 4b — API เว็บ (`/publish` 202 · `/jobs` · retry/cancel) + กันกดซ้ำ 409 + UI กล่องเผยแพร่ใน `PostPublishPanel.jsx`
   - e2e ผ่าน: สร้างโพสต์ → เผยแพร่ → เข้าคิว → worker ยิง → done+URL · กดซ้ำ 409 · IG ไม่มีสื่อ 400 · ตั้งเวลาย้อนหลัง 400
+  - ขั้น 4c (2026-07-30) — **กล่องเผยแพร่เลือก "กลุ่ม" ไม่ใช่ "บัญชี"** (`lib/publishTargets.js` + `/api/posts/publish-targets`)
+    ปิดบั๊ก: เดิมเช็คแค่ `org_id` → คนใน org เดียวกันโพสต์ในนามบัญชี private ของคนอื่นได้ · news ต้องมี `news_channel_id` จริง
+  - ขั้น 4d (2026-07-30) — **ลายน้ำจากเว็บ** (`lib/watermarks.js` + `/api/posts/watermarks`) · เก็บเป็น `path:<guild>/<group>/<file>`
+    ที่ resolve แล้ว (ไม่ใช่ token `guild:` ของตะกร้าดิสฯ เพราะกลุ่มอาจอยู่คนละ guild กับที่ผู้ใช้อยู่) · `wm_type` → `text`
   - **⬜ ของค้างจากก้อนนี้:**
-    - worker **ยังไม่ติดลายน้ำ** (`resolveWatermarkPath` ยังผูก guild) → เว็บต้องส่งรูปที่พร้อมโพสต์
     - **คลิปใหญ่จากเว็บ**: IG/Threads ต้องดึงจาก **URL สาธารณะ** → ยังไม่มี signed URL route (ไฟล์ posts อยู่นอก `public/`)
-    - UI ยังไม่มี: เลือกห้องแจ้งกลับ (ใช้ `org_config.posts_notify_channel` เท่านั้น) · เลือกลายน้ำ · ชื่อบัญชีในการ์ดงาน
+    - UI ยังไม่มี: เลือกห้องแจ้งกลับ (ใช้ `org_config.posts_notify_channel` เท่านั้น) · ชื่อบัญชีในการ์ดงาน
+    - `job.guild_id` = guild ที่ผู้ใช้อยู่ตอนกด ซึ่งอาจไม่ใช่ guild ของกลุ่มที่เลือก (โพสต์ไม่พังเพราะบัญชีถูก pin แล้ว
+      และลายน้ำ resolve จากฝั่งเว็บ) — แต่ถ้าจะใช้ `guild_id` ทำอย่างอื่นต้องระวัง
     - **quiet hours ของ `news`** ยังไม่เคาะว่าเว็บต้องเข้าคิว 21:00–09:00 ไหม
 - [ ] **ก้อน 4c — ยุบตะกร้าดิสฯ เข้า `post_episodes`** (user เคาะ 2026-07-29: "ระบบเดียว จัดการง่าย debug ง่าย")
   - รายละเอียด + 6 จุดที่ต้องระวังอยู่ `md/posts/PLAN-4.md` §เคาะแล้ว · `post_basket_slots` · ล้างตะกร้า=archive · หมวด=ชื่อห้อง · รูปโหลดลงดิสก์ (ปิดบั๊กรูปหาย 24 ชม.) · `org_id` NULL = โผล่แค่ในดิสฯ
