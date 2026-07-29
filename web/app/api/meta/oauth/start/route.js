@@ -2,8 +2,8 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
 import { canManageSocialGuild } from '@/lib/roles.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
-import pool from '@/db/index.js'
 import { BASE_URL } from '@/lib/baseUrl.js'
+import { getMetaApp } from '@/lib/socialAppCreds.js'
 
 const REDIRECT_URI = `${BASE_URL}/api/meta/oauth/callback`
 const SCOPES      = [
@@ -13,14 +13,6 @@ const SCOPES      = [
   'instagram_content_publish',
   'business_management',
 ].join(',')
-
-async function getGuildMetaApp(guildId) {
-  const { rows } = await pool.query(
-    `SELECT "key", value FROM dc_guild_config WHERE guild_id = $1 AND "key" = 'meta_app_id'`,
-    [guildId]
-  )
-  return rows[0]?.value || null
-}
 
 export async function GET(req) {
   const session = await getServerSession(authOptions)
@@ -40,9 +32,10 @@ export async function GET(req) {
     return Response.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  const appId = await getGuildMetaApp(guildId)
-  if (!appId) {
-    return Response.json({ error: `Guild นี้ยังไม่ได้ตั้งค่า Meta App — ตั้งค่า meta_app_id ใน /bot/platforms ก่อน` }, { status: 400 })
+  // creds เป็นขององค์กร (org_config) — guild ใช้เพื่อหา org · fallback dc_guild_config อยู่ในตัว helper
+  const app = await getMetaApp({ guildId })
+  if (!app) {
+    return Response.json({ error: `องค์กรนี้ยังไม่ได้ตั้งค่า Meta App — ตั้ง Meta App ID + Secret ที่ /bot/platforms ก่อน` }, { status: 400 })
   }
 
   const state = Buffer.from(JSON.stringify({
@@ -53,7 +46,7 @@ export async function GET(req) {
   })).toString('base64url')
 
   const oauthUrl = new URL('https://www.facebook.com/v22.0/dialog/oauth')
-  oauthUrl.searchParams.set('client_id', appId)
+  oauthUrl.searchParams.set('client_id', app.app_id)
   oauthUrl.searchParams.set('redirect_uri', REDIRECT_URI)
   oauthUrl.searchParams.set('scope', SCOPES)
   oauthUrl.searchParams.set('state', state)

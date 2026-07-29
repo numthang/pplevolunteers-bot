@@ -227,7 +227,7 @@ export default function SocialAccountsPage() {
         {(canManage || superAdmin) && guildId && (
           <div>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-3">
-              {/* บัญชี public เป็นของ "องค์กร" (ทุก guild ในองค์กรเห็นชุดเดียวกัน) — ต่างจาก App Credentials ที่ยังตั้งรายเซิร์ฟเวอร์ */}
+              {/* บัญชี public + App Credentials เป็นของ "องค์กร" ทั้งคู่ (ทุก guild ในองค์กรใช้ชุดเดียวกัน) 2026-07-29 */}
               <h2 className="text-base font-semibold text-gray-700 dark:text-disc-muted uppercase tracking-wide">
                 บัญชีขององค์กร
               </h2>
@@ -263,7 +263,7 @@ export default function SocialAccountsPage() {
             <div className="bg-card-bg rounded-xl border border-warm-200 dark:border-disc-border p-4 mb-3">
               <div className="flex items-center gap-2 mb-3">
                 <Settings size={14} className="text-gray-500 dark:text-disc-muted" />
-                <span className="text-xs font-semibold text-gray-700 dark:text-disc-text uppercase tracking-wide">App Credentials — {guildName}</span>
+                <span className="text-xs font-semibold text-gray-700 dark:text-disc-text uppercase tracking-wide">App Credentials ขององค์กร</span>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 {[
@@ -289,6 +289,10 @@ export default function SocialAccountsPage() {
                   )
                 })}
               </div>
+              <p className="text-xs text-gray-400 dark:text-disc-muted mt-3">
+                Meta / X App ใช้ร่วมกันทั้งองค์กร — ตั้งครั้งเดียวใช้ได้ทุกเซิร์ฟเวอร์ ·
+                ห้องข่าวสารเป็นของเซิร์ฟเวอร์ {guildName} เท่านั้น
+              </p>
             </div>
 
             {guildAccounts.length === 0 ? (

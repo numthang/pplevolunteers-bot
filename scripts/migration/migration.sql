@@ -315,3 +315,30 @@ END $$;
 
 COMMENT ON TABLE user_config IS 'prefs ถาวรของ user (key=users.id) — เดิมคือ dc_user_config';
 COMMENT ON TABLE dc_user_config IS 'เหลือแค่ OTP state ชั่วคราว (otp_quota, otp_verify_<guildId>) ที่ยัง key ด้วย discord_id · prefs ย้ายไป user_config แล้ว 2026-07-29';
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- 2026-07-29 — app creds โซเชียล: dc_guild_config → org_config (ราย org)
+-- เดิม meta_app_id/secret + x_consumer_key/secret ผูกราย Discord guild
+--   → org ที่ไม่มี Discord "ถือครองบัญชีโซเชียลได้ แต่กด Connect บัญชีใหม่ไม่ได้"
+--   = ตัวบล็อกเป้าหมาย "ใช้ระบบได้โดยไม่ต้องมี Discord"
+-- ⚠️ คัดลอกอย่างเดียว **ไม่ลบ** แถวเดิมใน dc_guild_config — โค้ดอ่าน org ก่อนแล้ว fallback guild
+--    (เก็บเป็น fallback ช่วงเปลี่ยนผ่าน · ลบรอบหน้าเมื่อทุก org ย้ายครบ)
+-- ⚠️ ชนิดคอลัมน์ต่างกัน: dc_guild_config.value = json (ค่ามี " ครอบ) · org_config.value = text
+--    ต้องแกะด้วย #>> '{}' ไม่งั้นได้ค่าติดเครื่องหมายคำพูดไปด้วย
+-- DISTINCT ON (org_id, key): 2 guild ใน org เดียวกันค่าเหมือนกันเป๊ะ (md5 ตรงกัน) เอาแถวเดียวพอ
+-- news_channel_id ไม่ย้าย — เป็น Discord artifact (channel id) คงราย guild ตามหลักเดิม
+-- ═══════════════════════════════════════════════════════════════════════════
+INSERT INTO org_config (org_id, key, value, updated_at)
+SELECT DISTINCT ON (g.org_id, c."key")
+       g.org_id, c."key", c.value #>> '{}', now()
+  FROM dc_guild_config c
+  JOIN dc_guilds g ON g.guild_id = c.guild_id
+ WHERE c."key" IN ('meta_app_id', 'meta_app_secret', 'x_consumer_key', 'x_consumer_secret')
+   AND g.org_id IS NOT NULL
+   AND COALESCE(c.value #>> '{}', '') <> ''
+ ORDER BY g.org_id, c."key", c.updated_at DESC NULLS LAST
+ON CONFLICT (org_id, key) DO NOTHING;
+
+-- เศษที่ไม่มีผลแล้ว: feature toggle ย้ายขึ้น org_config key 'enabled_features' ตั้งแต่ 2026-07-22
+-- (web/lib/orgFeatures.js เป็นที่เดียวที่เปิด/ปิดฟีเจอร์แล้ว) เหลือ 2 แถวหลอกตาใน dc_guild_config
+DELETE FROM dc_guild_config WHERE "key" = 'enabled_features';

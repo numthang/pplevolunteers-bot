@@ -1,21 +1,40 @@
 const https  = require('https');
 const crypto = require('crypto');
 const pool   = require('../db/index');
+const { orgIdOfGuild } = require('../db/org');
 const { fetchBuffer } = require('../utils/watermarkImage');
 const { convertVideoIfNeeded } = require('../utils/videoUtils');
 
-async function getGuildXApp(guildId) {
-  const { rows } = await pool.query(
-    `SELECT "key", value FROM dc_guild_config WHERE guild_id = $1 AND "key" IN ('x_consumer_key', 'x_consumer_secret')`,
-    [guildId]
-  );
-  const m = Object.fromEntries(rows.map(r => [r.key, r.value]));
+// app creds อยู่ที่ org_config (ราย org) ตั้งแต่ 2026-07-29 — org ที่ไม่มี Discord ก็ Connect เองได้
+// อ่าน org ก่อน → เติมเฉพาะคีย์ที่ขาดจาก dc_guild_config (fallback ช่วงเปลี่ยนผ่าน · จะลบรอบหน้า)
+// orgId ส่งตรงได้เมื่อไม่มี guild เลย · ส่งแค่ guildId = พฤติกรรมเดิมเป๊ะ (แปลง guild→org ให้เอง)
+// ⚠️ org_config.value = text (ค่าดิบ) · dc_guild_config.value = json (pg parse ให้เป็น string แล้ว)
+// คู่แฝดฝั่งเว็บ: web/lib/socialAppCreds.js getXApp()
+async function getGuildXApp(guildId, orgId = null) {
+  const oid = orgId ?? (guildId ? await orgIdOfGuild(guildId) : null);
+  const m = {};
+
+  if (oid) {
+    const { rows } = await pool.query(
+      `SELECT key, value FROM org_config WHERE org_id = $1 AND key IN ('x_consumer_key', 'x_consumer_secret')`,
+      [oid]
+    );
+    for (const r of rows) if (r.value) m[r.key] = r.value;
+  }
+
+  if (guildId && (!m.x_consumer_key || !m.x_consumer_secret)) {
+    const { rows } = await pool.query(
+      `SELECT "key", value FROM dc_guild_config WHERE guild_id = $1 AND "key" IN ('x_consumer_key', 'x_consumer_secret')`,
+      [guildId]
+    );
+    for (const r of rows) if (r.value && !m[r.key]) m[r.key] = r.value;
+  }
+
   if (!m.x_consumer_key || !m.x_consumer_secret) return null;
   return { api_key: m.x_consumer_key, api_secret: m.x_consumer_secret };
 }
 
 // accountId = เลือกบัญชีเจาะจง (posts บนเว็บ) — ไม่ส่ง = พฤติกรรมเดิม
-// ⚠️ app creds (api_key/secret) ยังมาจาก dc_guild_config → org ที่ไม่มี guild ยังโพสต์ X ไม่ได้ (ค้างที่ PENDING)
 async function getXConfig(guildId, userId = null, groupName = null, accountId = null) {
   const app = await getGuildXApp(guildId);
   if (!app) return null;

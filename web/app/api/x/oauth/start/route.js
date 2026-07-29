@@ -5,7 +5,7 @@ import { authOptions } from '@/lib/auth-options.js'
 import { canManageSocialGuild } from '@/lib/roles.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import { cookies } from 'next/headers'
-import pool from '@/db/index.js'
+import { getXApp } from '@/lib/socialAppCreds.js'
 import https from 'https'
 import crypto from 'crypto'
 import { BASE_URL } from '@/lib/baseUrl.js'
@@ -47,16 +47,6 @@ function xPost(path, authHeader, body) {
   })
 }
 
-async function getGuildXApp(guildId) {
-  const { rows } = await pool.query(
-    `SELECT "key", value FROM dc_guild_config WHERE guild_id = $1 AND "key" IN ('x_consumer_key', 'x_consumer_secret')`,
-    [guildId]
-  )
-  const m = Object.fromEntries(rows.map(r => [r.key, r.value]))
-  if (!m.x_consumer_key || !m.x_consumer_secret) return null
-  return { api_key: m.x_consumer_key, api_secret: m.x_consumer_secret }
-}
-
 export async function GET(req) {
   const session = await getServerSession(authOptions)
   if (!session) return Response.redirect(`${BASE_URL}/login`)
@@ -77,9 +67,10 @@ export async function GET(req) {
     }
   }
 
-  const app = await getGuildXApp(guildId)
+  // creds เป็นขององค์กร (org_config) — guild ใช้เพื่อหา org · fallback dc_guild_config อยู่ในตัว helper
+  const app = await getXApp({ guildId })
   if (!app) {
-    return Response.json({ error: `Guild นี้ยังไม่ได้ตั้งค่า X App — ตั้งค่า x_consumer_key/x_consumer_secret ใน /bot/social/accounts ก่อน` }, { status: 400 })
+    return Response.json({ error: `องค์กรนี้ยังไม่ได้ตั้งค่า X App — ตั้ง X Consumer Key + Secret ที่ /bot/platforms ก่อน` }, { status: 400 })
   }
 
   const callbackEncoded = encodeURIComponent(CALLBACK)

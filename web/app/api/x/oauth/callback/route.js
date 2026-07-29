@@ -2,6 +2,7 @@ import { cookies } from 'next/headers'
 import pool from '@/db/index.js'
 import { orgIdOfGuild } from '@/db/guilds.js'
 import { findUserIdByProvider } from '@/db/userIdentities.js'
+import { getXApp } from '@/lib/socialAppCreds.js'
 import https from 'https'
 import crypto from 'crypto'
 
@@ -9,16 +10,6 @@ const BASE_URL = process.env.NEXTAUTH_URL || 'https://pplethai.org'
 
 function pct(str) {
   return encodeURIComponent(String(str)).replace(/[!'()*]/g, c => '%' + c.charCodeAt(0).toString(16).toUpperCase())
-}
-
-async function getGuildXApp(guildId) {
-  const { rows } = await pool.query(
-    `SELECT "key", value FROM dc_guild_config WHERE guild_id = $1 AND "key" IN ('x_consumer_key', 'x_consumer_secret')`,
-    [guildId]
-  )
-  const m = Object.fromEntries(rows.map(r => [r.key, r.value]))
-  if (!m.x_consumer_key || !m.x_consumer_secret) return null
-  return { api_key: m.x_consumer_key, api_secret: m.x_consumer_secret }
 }
 
 function buildAuthHeader(apiKey, apiSecret, oauthToken, oauthVerifier, tokenSecret) {
@@ -72,7 +63,8 @@ export async function GET(req) {
   const { token_secret, guild_id, discord_id, visibility } = state
 
   if (!guild_id) return Response.redirect(`${BASE_URL}/bot/platforms?error=no_guild`)
-  const app = await getGuildXApp(guild_id)
+  // creds เป็นขององค์กร (org_config) — หา org จาก guild ที่เริ่ม OAuth
+  const app = await getXApp({ guildId: guild_id })
   if (!app) return Response.redirect(`${BASE_URL}/bot/platforms?error=app_not_configured`)
 
   // แลก verifier เป็น access token

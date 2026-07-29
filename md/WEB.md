@@ -108,10 +108,13 @@ E-signature & document management for activity registration forms.
 Manage Meta (FB/IG/Threads) + X (Twitter) accounts ต่อ guild สำหรับ basket posting
 
 **Architecture (multi-tenant):**
-- **App credentials per guild** เก็บใน `dc_guild_config` (ไม่ใช่ `.env`)
+- **App credentials ราย org** เก็บใน `org_config` (ไม่ใช่ `.env` · ย้ายมาจาก `dc_guild_config` 2026-07-29)
   - `meta_app_id`, `meta_app_secret` — ใช้กับ FB + IG + Threads (Meta App เดียว)
   - `x_consumer_key`, `x_consumer_secret` — ใช้กับ X OAuth
-  - ทุก guild ต้อง set ทั้ง 4 keys ก่อนใช้ — ปุ่ม Connect/Add จะ disabled ถ้ายังไม่ set
+  - org ต้อง set ทั้ง 4 keys ก่อนใช้ — ปุ่ม Connect/Add จะ disabled ถ้ายังไม่ set (ตั้งครั้งเดียวใช้ได้ทุก guild ในองค์กร)
+  - อ่านผ่าน `web/lib/socialAppCreds.js` (`getMetaApp` / `getXApp` — org ก่อน แล้ว fallback `dc_guild_config` ช่วงเปลี่ยนผ่าน) · **ห้าม query เอง**
+  - ฝั่งบอท: `getGuildMetaApp(guildId, orgId)` / `getGuildXApp(guildId, orgId)` — ส่ง orgId ตรงได้เมื่อ org ไม่มี Discord
+  - `news_channel_id` ยังอยู่ `dc_guild_config` (Discord artifact ราย guild)
 - **Accounts** เก็บใน `dc_social_accounts`
   - `user_discord_id` + `guild_id` + `platform` + `social_id` (unique)
   - `visibility`: `public` (guild-wide) / `private` (เฉพาะ user เจ้าของ)

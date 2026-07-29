@@ -114,7 +114,8 @@ spec + ดีไซน์ + ตารางทั้งหมดอยู่ `md
 **⬜ เหลือ:**
 - [ ] **deploy prod** — `migration.sql` (idempotent แต่ rebuild ตาราง → ทำตอนบอทไม่ได้เขียน) + build เว็บ + smoke ตะกร้าสื่อในบอทของจริง
 - [ ] **เทสในเบราว์เซอร์** — `/bot/platforms` ตอนนี้โชว์บัญชี public ทั้งองค์กร (3 guild รวมกัน) ยังไม่ได้ดูด้วยตา ว่าอ่านออกไหมว่าอันไหนของแบรนด์ไหน (มีแต่ `group_name` เป็นตัวแยก)
-- [ ] **app creds ยังเป็นราย guild** (`dc_guild_config` → `meta_app_id`/`x_consumer_key`) → org ที่ไม่มี guild **ถือครองบัญชีได้ แต่กด Connect ใหม่ไม่ได้** · เคาะ 2026-07-29 ว่ายังไม่ย้าย — ถ้าจะให้ org self-serve ผูกเพจเองได้ ต้องย้าย creds ขึ้น `org_config` (~3 ไฟล์ + เส้น OAuth)
+- [x] ~~**app creds ยังเป็นราย guild**~~ → **ย้ายขึ้น `org_config` แล้ว 2026-07-29** · 4 คีย์ (`meta_app_id`/`meta_app_secret`/`x_consumer_key`/`x_consumer_secret`) อ่าน org ก่อน fallback guild · helper กลาง `web/lib/socialAppCreds.js` (เว็บ) + `getGuildMetaApp(guildId, orgId)` / `getGuildXApp(guildId, orgId)` (บอท) · หน้า `/bot/platforms` เขียนลง org
+  - [ ] เหลือ: ลบแถวเดิม 8 แถวใน `dc_guild_config` (fallback ช่วงเปลี่ยนผ่าน) + เอาโค้ด fallback ออก — ทำรอบหน้าเมื่อ prod ย้ายครบ
 - [ ] `/bot/*` ยังบล็อก org ที่ไม่มี guild ทั้งโซน → หน้าจัดการบัญชีโซเชียลควรย้ายออกจาก `/bot/` วันที่ posts มีหน้าของตัวเอง
 
 ---

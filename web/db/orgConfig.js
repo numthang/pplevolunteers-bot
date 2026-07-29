@@ -23,6 +23,10 @@ export async function setOrgConfig(orgId, key, value) {
   )
 }
 
+export async function deleteOrgConfig(orgId, key) {
+  await pool.query(`DELETE FROM org_config WHERE org_id = $1 AND key = $2`, [orgId, key])
+}
+
 // appoint_policy = permission keys ที่แต่งตั้งได้ (นอกจาก owner) · เก็บเป็น JSON array ใน value
 export async function getAppointPolicy(orgId) {
   const raw = await getOrgConfig(orgId, 'appoint_policy')

@@ -11,22 +11,42 @@ const TEMP_URL = process.env.META_TEMP_URL
   || `${process.env.WEB_BASE_URL || ''}/api/media-temp`;
 
 const pool = require('../db/index');
+const { orgIdOfGuild } = require('../db/org');
 
 const REFRESH_THRESHOLD_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
-async function getGuildMetaApp(guildId) {
-  const { rows } = await pool.query(
-    `SELECT "key", value FROM dc_guild_config WHERE guild_id = $1 AND "key" IN ('meta_app_id', 'meta_app_secret')`,
-    [guildId]
-  );
-  const m = Object.fromEntries(rows.map(r => [r.key, r.value]));
+// app creds อยู่ที่ org_config (ราย org) ตั้งแต่ 2026-07-29 — org ที่ไม่มี Discord ก็ Connect เองได้
+// อ่าน org ก่อน → เติมเฉพาะคีย์ที่ขาดจาก dc_guild_config (fallback ช่วงเปลี่ยนผ่าน · จะลบรอบหน้า)
+// orgId ส่งตรงได้เมื่อไม่มี guild เลย · ส่งแค่ guildId = พฤติกรรมเดิมเป๊ะ (แปลง guild→org ให้เอง)
+// ⚠️ org_config.value = text (ค่าดิบ) · dc_guild_config.value = json (pg parse ให้เป็น string แล้ว)
+// คู่แฝดฝั่งเว็บ: web/lib/socialAppCreds.js getMetaApp()
+async function getGuildMetaApp(guildId, orgId = null) {
+  const oid = orgId ?? (guildId ? await orgIdOfGuild(guildId) : null);
+  const m = {};
+
+  if (oid) {
+    const { rows } = await pool.query(
+      `SELECT key, value FROM org_config WHERE org_id = $1 AND key IN ('meta_app_id', 'meta_app_secret')`,
+      [oid]
+    );
+    for (const r of rows) if (r.value) m[r.key] = r.value;
+  }
+
+  if (guildId && (!m.meta_app_id || !m.meta_app_secret)) {
+    const { rows } = await pool.query(
+      `SELECT "key", value FROM dc_guild_config WHERE guild_id = $1 AND "key" IN ('meta_app_id', 'meta_app_secret')`,
+      [guildId]
+    );
+    for (const r of rows) if (r.value && !m[r.key]) m[r.key] = r.value;
+  }
+
   if (!m.meta_app_id || !m.meta_app_secret) return null;
   return { app_id: m.meta_app_id, app_secret: m.meta_app_secret };
 }
 
 async function refreshUserToken(guildId, rowId, userDiscordId, currentUserToken) {
   const app = await getGuildMetaApp(guildId);
-  if (!app) throw new Error(`Token refresh ล้มเหลว: guild ${guildId} ยังไม่ได้ set meta_app_id/secret ใน dc_guild_config`);
+  if (!app) throw new Error(`Token refresh ล้มเหลว: guild ${guildId} ยังไม่ได้ set meta_app_id/secret (org_config ขององค์กร หรือ dc_guild_config)`);
 
   const res = await httpsGet(
     `/oauth/access_token?grant_type=fb_exchange_token` +

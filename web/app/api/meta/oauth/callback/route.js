@@ -2,18 +2,9 @@ import pool from '@/db/index.js'
 import { BASE_URL } from '@/lib/baseUrl.js'
 import { orgIdOfGuild } from '@/db/guilds.js'
 import { findUserIdByProvider } from '@/db/userIdentities.js'
+import { getMetaApp } from '@/lib/socialAppCreds.js'
 
 const REDIRECT_URI = `${BASE_URL}/api/meta/oauth/callback`
-
-async function getGuildMetaApp(guildId) {
-  const { rows } = await pool.query(
-    `SELECT "key", value FROM dc_guild_config WHERE guild_id = $1 AND "key" IN ('meta_app_id', 'meta_app_secret')`,
-    [guildId]
-  )
-  const m = Object.fromEntries(rows.map(r => [r.key, r.value]))
-  if (!m.meta_app_id || !m.meta_app_secret) return null
-  return { app_id: m.meta_app_id, app_secret: m.meta_app_secret }
-}
 
 async function fbGet(url) {
   const res = await fetch(url)
@@ -75,9 +66,10 @@ export async function GET(req) {
     return html('❌ หมดเวลา', '<h1>❌ OAuth session หมดอายุ กรุณาลองใหม่</h1>')
   }
 
-  const app = await getGuildMetaApp(state.guildId)
+  // creds เป็นขององค์กร (org_config) — หา org จาก guild ที่เริ่ม OAuth
+  const app = await getMetaApp({ guildId: state.guildId })
   if (!app) {
-    return html('❌ Config ไม่ครบ', `<h1>❌ Guild ${state.guildId} ยังไม่ได้ตั้งค่า meta_app_id / meta_app_secret ใน dc_guild_config</h1>`)
+    return html('❌ Config ไม่ครบ', `<h1>❌ องค์กรของ guild ${state.guildId} ยังไม่ได้ตั้งค่า Meta App ID / Secret — ตั้งที่ /bot/platforms</h1>`)
   }
 
   try {
