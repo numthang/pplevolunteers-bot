@@ -7,9 +7,10 @@ import { getOrgId } from '@/lib/orgContext.js'
 import { canAccessCaseProvince } from '@/lib/caseAccess.js'
 import { getCaseByRefFull, getAssigneesWithNames, getAttachments, getTimeline } from '@/db/cases.js'
 import { getThreadName } from '@/lib/caseDiscord.js'
-import { statusLabel, CASE_CLOSE_REASONS } from '@/lib/caseOptions.js'
+import { statusLabel, CASE_CLOSE_REASONS, CASE_CATEGORIES } from '@/lib/caseOptions.js'
 import CaseManageActions from '@/components/case/CaseManageActions.jsx'
 import CaseTimeline from '@/components/case/CaseTimeline.jsx'
+import CaseEditButton from '@/components/case/CaseEditButton.jsx'
 
 export async function generateMetadata({ params }) {
   const { ref } = await params
@@ -40,7 +41,7 @@ export default async function CaseManageDetail({ params }) {
   const threadUrl = c.discord_thread_id && c.discord_guild_id ? `https://discord.com/channels/${c.discord_guild_id}/${c.discord_thread_id}` : null
 
   return (
-    <div className="max-w-3xl mx-auto">
+    <div>
       <Link href="/case/manage" className="text-orange hover:underline mb-5 block text-base">{t('manage.backToListLink')}</Link>
 
       {/* header */}
@@ -50,9 +51,24 @@ export default async function CaseManageDetail({ params }) {
             <p className="font-mono text-sm text-gray-400 dark:text-disc-muted mb-1">{c.ref}</p>
             <h1 className="text-xl font-bold text-gray-900 dark:text-disc-text">{c.title || t('manage.noTitle')}</h1>
           </div>
-          <span className="shrink-0 px-3 py-1.5 rounded-full text-sm font-semibold bg-gray-100 dark:bg-disc-hover text-gray-700 dark:text-disc-text">
-            {statusLabel(c.status)}{c.close_reason ? ` · ${c.close_reason}` : ''}
-          </span>
+          <div className="shrink-0 flex items-center gap-3">
+            <CaseEditButton
+              refId={c.ref}
+              categories={CASE_CATEGORIES}
+              initial={{
+                title: c.title,
+                detail: c.detail,
+                category: c.category,
+                province: c.province,
+                complainant_name: c.complainant_name,
+                complainant_phone: c.complainant_phone,
+                complainant_line_id: c.complainant_line_id,
+              }}
+            />
+            <span className="shrink-0 px-3 py-1.5 rounded-full text-sm font-semibold bg-gray-100 dark:bg-disc-hover text-gray-700 dark:text-disc-text">
+              {statusLabel(c.status)}{c.close_reason ? ` · ${c.close_reason}` : ''}
+            </span>
+          </div>
         </div>
         <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-base">
           <dt className="text-gray-400 dark:text-disc-muted">{t('manage.provinceLabel')}</dt>

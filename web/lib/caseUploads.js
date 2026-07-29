@@ -56,6 +56,31 @@ export async function saveCaseFile(caseId, file) {
   }
 }
 
+/**
+ * บันทึกไฟล์แนบจาก Buffer — ใช้กับไฟล์ที่ดึงมาจาก Discord CDN (ไม่มี File object)
+ *
+ * ⚠️ ต้องโหลด bytes มาเก็บเอง ห้ามเก็บแค่ URL ของ Discord — URL ของ CDN มี signature หมดอายุ
+ * @param {number|string} caseId
+ * @param {Buffer} buf
+ * @param {{ mime: string, originalName?: string }} meta
+ */
+export async function saveCaseBuffer(caseId, buf, { mime, originalName = null }) {
+  if (!isAllowedMime(mime)) throw new Error(`ชนิดไฟล์ไม่รองรับ: ${mime}`)
+  if (buf.length > MAX_FILE_SIZE) throw new Error(`ไฟล์เกิน 10MB: ${originalName || mime}`)
+
+  const dir = path.join(getCaseUploadDir(), String(caseId))
+  await mkdir(dir, { recursive: true })
+
+  const filename = `${randomUUID()}.${EXT_BY_MIME[mime]}`
+  await writeFile(path.join(dir, filename), buf)
+
+  return {
+    file_path: path.join(String(caseId), filename),
+    original_name: originalName,
+    mime,
+  }
+}
+
 /** อ่านไฟล์แนบ (absolute resolve จาก relative path) */
 export async function readCaseFile(relativePath) {
   const abs = path.join(getCaseUploadDir(), relativePath)

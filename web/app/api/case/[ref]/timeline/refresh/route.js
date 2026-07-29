@@ -1,8 +1,14 @@
 import { gateCase } from '@/lib/caseGate.js'
-import { addTimelineEvents, getTimeline } from '@/db/cases.js'
+import { addTimelineEvents, getTimeline, advanceSyncWatermark, advanceAttachmentWatermark } from '@/db/cases.js'
+import { importThreadAttachments } from '@/lib/caseAttachmentSync.js'
 import pool from '@/db/index.js'
 
 const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN
+
+/** กันเธรดยาวมาก (sync ครั้งแรก) ยัดเข้า prompt ก้อนเดียวจนเกิน context/ค่า AI พุ่ง */
+const MAX_SYNC_MESSAGES = 500
+/** จำนวน event เดิมที่ส่งให้ AI ดูเพื่อกันสกัดซ้ำ */
+const DEDUP_CONTEXT_ENTRIES = 30
 
 const AI_TIMELINE_SYSTEM = `วิเคราะห์บทสนทนา Discord แล้วสกัด event สำคัญออกมาเป็น timeline เรื่องร้องเรียน
 
@@ -11,6 +17,11 @@ const AI_TIMELINE_SYSTEM = `วิเคราะห์บทสนทนา Dis
 - event ที่ควรสกัด: แจ้งปัญหา / นัดหมาย / ลงพื้นที่ / ส่งเรื่องต่อ / ติดตามผล / แก้ไขแล้ว / คำตอบจากหน่วยงาน
 - ถ้าไม่มี event ที่ชัดเจนพอ ให้ return array ว่าง []
 - occurred_at: ถ้าบทสนทนาระบุวันที่ให้แปลงเป็น ISO 8601 ไม่งั้นใส่ null
+
+กฎกันซ้ำ (สำคัญ):
+- ถ้ามีหัวข้อ "timeline ที่บันทึกไว้แล้ว" ให้ถือว่า event เหล่านั้นบันทึกแล้ว **ห้ามสกัดออกมาซ้ำ**
+- บทสนทนามักพูดถึงเรื่องเดิมซ้ำ ("ตามที่ลงพื้นที่ไปเมื่อวาน…") — นั่นคือการอ้างถึง ไม่ใช่ event ใหม่
+- สกัดเฉพาะความคืบหน้าที่ยังไม่เคยถูกบันทึกเท่านั้น
 
 กฎ is_public:
 - true: ความคืบหน้าทั่วไป เช่น ลงพื้นที่ตรวจสอบแล้ว / ส่งเรื่องให้หน่วยงาน / แก้ไขแล้ว
@@ -30,7 +41,7 @@ async function discordFetch(path) {
 async function fetchMessagesAfter(threadId, afterId) {
   const msgs = []
   let after = afterId
-  while (true) {
+  while (msgs.length < MAX_SYNC_MESSAGES) {
     const qs = after ? `?after=${after}&limit=100` : '?limit=100'
     const batch = await discordFetch(`/channels/${threadId}/messages${qs}`)
     if (!batch.length) break
@@ -38,7 +49,8 @@ async function fetchMessagesAfter(threadId, afterId) {
     if (batch.length < 100) break
     after = batch.at(-1).id
   }
-  return msgs.sort((a, b) => a.id.localeCompare(b.id))
+  // เกิน cap → ตัดท้ายทิ้ง แล้วปล่อยให้ watermark หยุดตรงนั้น (กดซ้ำเพื่อ sync ต่อได้)
+  return msgs.sort((a, b) => a.id.localeCompare(b.id)).slice(0, MAX_SYNC_MESSAGES)
 }
 
 async function callAI(system, userContent) {
@@ -64,38 +76,89 @@ export async function POST(req, { params }) {
     return Response.json({ error: 'เคสนี้ไม่มี Discord thread' }, { status: 400 })
   }
 
+  // ── ① ไฟล์แนบ (watermark เส้นที่ 2) ──
+  // ต้องทำ **ก่อน** early-return ของ timeline: เคสเก่าที่ timeline sync ครบแล้วจะไม่มีข้อความใหม่
+  // ถ้าวางไว้ทีหลังจะไม่มีวัน backfill รูปเก่าที่เส้นแรกเลยไปแล้ว
+  // best-effort — ไฟล์พังไม่ควรทำให้ timeline sync ล้มทั้งยวง
+  let files = { imported: 0, skipped: 0, failed: 0 }
+  try {
+    const r = await importThreadAttachments({
+      threadId: caseRow.discord_thread_id,
+      caseId: caseRow.id,
+      orgId,
+      afterId: caseRow.last_attachment_message_id,
+    })
+    files = { imported: r.imported, skipped: r.skipped, failed: r.failed }
+    // มีไฟล์ที่พลาดชั่วคราว → ไม่เลื่อน watermark ปล่อยให้กดรอบหน้าเก็บตก
+    // (insert มี unique index กันซ้ำอยู่แล้ว กวาดทับของเดิมไม่เกิด duplicate)
+    if (r.lastMessageId && r.failed === 0) {
+      await advanceAttachmentWatermark(caseRow.id, caseRow.last_attachment_message_id, r.lastMessageId)
+    }
+  } catch (e) {
+    console.error('[case/timeline/refresh] นำเข้าไฟล์แนบไม่สำเร็จ', { ref }, e.message)
+  }
+
+  // ── ② timeline (watermark เส้นแรก) ──
   const msgs = await fetchMessagesAfter(caseRow.discord_thread_id, caseRow.last_synced_message_id)
-  if (!msgs.length) return Response.json({ ok: true, added: 0, entries: await getTimeline(caseRow.id) })
+  if (!msgs.length) return Response.json({ ok: true, added: 0, files, entries: await getTimeline(caseRow.id) })
 
   const text = msgs
     .filter(m => m.content?.trim() && !m.author?.bot)
     .map(m => `[${new Date(m.timestamp).toLocaleString('th-TH')}] ${m.author?.username}: ${m.content}`)
     .join('\n')
 
-  let added = 0
+  // ส่ง event เดิมไปด้วย ไม่งั้น AI สกัดเรื่องที่บันทึกแล้วซ้ำทุกครั้งที่ในเธรดพูดถึงอีก
+  const existing = await getTimeline(caseRow.id)
+  const dedupContext = existing.slice(-DEDUP_CONTEXT_ENTRIES).map(e => `- ${e.body}`).join('\n')
+
+  let events = []
   if (text.trim()) {
-    const prompt = `หัวข้อเรื่องร้องเรียน: ${caseRow.title}\n\nบทสนทนาใหม่:\n${text}`
+    const prompt = [
+      `หัวข้อเรื่องร้องเรียน: ${caseRow.title}`,
+      dedupContext && `\ntimeline ที่บันทึกไว้แล้ว (ห้ามสกัดซ้ำ):\n${dedupContext}`,
+      `\nบทสนทนาใหม่:\n${text}`,
+    ].filter(Boolean).join('\n')
     const raw = await callAI(AI_TIMELINE_SYSTEM, prompt)
     const json = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/, '').trim()
     try {
-      const events = JSON.parse(json)
-      if (Array.isArray(events) && events.length) {
-        await addTimelineEvents(caseRow.id, orgId, events.filter(e => e?.body?.trim()).map(e => ({
-          body: String(e.body).trim(),
-          is_public: e.is_public === true,
-          occurred_at: e.occurred_at || null,
-        })), 'ai')
-        added = events.length
-      }
-    } catch { /* ไม่มี event */ }
+      const parsed = JSON.parse(json)
+      // ⚠️ try ครอบเฉพาะ JSON.parse — ถ้าครอบ DB write ด้วย insert ที่พังจะถูกกลืน
+      //    แล้ว watermark เลื่อนต่อ = ข้อความชุดนั้นหายถาวร (กดซ้ำก็ไม่กลับมา)
+      if (Array.isArray(parsed)) events = parsed
+    } catch {
+      console.error('[case/timeline/refresh] AI คืนค่าที่ไม่ใช่ JSON', { ref, raw: raw.slice(0, 200) })
+    }
   }
 
-  // อัปเดต last_synced_message_id
+  // body อาจไม่ใช่ string (AI คืนตัวเลข/object ได้) — String() ก่อนเสมอ ไม่งั้น .trim() โยน
+  const toInsert = events
+    .map(e => ({ body: e?.body == null ? '' : String(e.body).trim(), is_public: e?.is_public === true, occurred_at: e?.occurred_at || null }))
+    .filter(e => e.body)
+
+  // insert + เลื่อน watermark ต้อง atomic:
+  //   insert พัง → rollback → watermark ไม่ขยับ → กดซ้ำได้ข้อความเดิมกลับมา
+  //   คนที่ 2 กดพร้อมกัน → watermark ไม่ตรง → rollback → ไม่เกิด timeline ซ้ำ
   const lastMsgId = msgs.at(-1)?.id
-  if (lastMsgId) {
-    await pool.query(`UPDATE cases SET last_synced_message_id = $2 WHERE id = $1`, [caseRow.id, lastMsgId])
+  const client = await pool.connect()
+  try {
+    await client.query('BEGIN')
+    if (lastMsgId) {
+      const ok = await advanceSyncWatermark(caseRow.id, caseRow.last_synced_message_id, lastMsgId, client)
+      if (!ok) {
+        await client.query('ROLLBACK')
+        return Response.json({ error: 'มีคนกำลัง sync เคสนี้อยู่ ลองใหม่อีกครั้ง' }, { status: 409 })
+      }
+    }
+    if (toInsert.length) await addTimelineEvents(caseRow.id, orgId, toInsert, 'ai', client)
+    await client.query('COMMIT')
+  } catch (e) {
+    await client.query('ROLLBACK').catch(() => {})
+    console.error('[case/timeline/refresh] บันทึก timeline ไม่สำเร็จ', { ref }, e.message)
+    return Response.json({ error: 'บันทึก timeline ไม่สำเร็จ' }, { status: 500 })
+  } finally {
+    client.release()
   }
 
   const entries = await getTimeline(caseRow.id)
-  return Response.json({ ok: true, added, entries })
+  return Response.json({ ok: true, added: toInsert.length, files, entries })
 }

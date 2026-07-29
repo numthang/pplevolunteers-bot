@@ -84,18 +84,25 @@ process.stderr.write(`Total data rows: ${rows.length - 1}\n`);
 process.stderr.write('Parsing...\n');
 
 const contacts = [];
+const seen = new Set();
 let skipped = 0;
+let duplicates = 0;
 
 for (let i = 1; i < rows.length; i++) {
   const row = rows[i];
   const fullName = colIdx.name >= 0 ? String(row[colIdx.name] ?? '').trim() : '';
   if (!fullName) { skipped++; continue; }
 
+  const phoneRaw = colIdx.phone >= 0 ? (String(row[colIdx.phone] ?? '').trim() || null) : null;
+  const dedupeKey = `${fullName}|${phoneRaw}`;
+  if (seen.has(dedupeKey)) { duplicates++; continue; }
+  seen.add(dedupeKey);
+
   const parts     = fullName.split(/\s+/);
   const firstName = parts[0] || '';
   const lastName  = parts.slice(1).join(' ') || null;
 
-  const phone    = colIdx.phone    >= 0 ? (String(row[colIdx.phone]    ?? '').trim() || null) : null;
+  const phone    = phoneRaw;
   const province = colIdx.province >= 0 ? (String(row[colIdx.province] ?? '').trim() || null) : null;
   const amphoe   = colIdx.amphoe   >= 0 ? (String(row[colIdx.amphoe]   ?? '').trim() || null) : null;
   const count    = colIdx.count    >= 0 ? row[colIdx.count]  : null;
@@ -109,7 +116,7 @@ for (let i = 1; i < rows.length; i++) {
   if (i % 100 === 0) process.stdout.write(`\r  ${i}/${rows.length - 1}`);
 }
 
-process.stdout.write(`\r  ${contacts.length}/${rows.length - 1} parsed (${skipped} skipped)\n`);
+process.stdout.write(`\r  ${contacts.length}/${rows.length - 1} parsed (${skipped} skipped, ${duplicates} duplicates removed)\n`);
 
 // ─── Generate SQL ──────────────────────────────────────────────────────────
 

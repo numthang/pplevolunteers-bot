@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
+import { useRouter } from 'next/navigation'
 
 function fmtDate(d) {
   return new Date(d).toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' })
@@ -16,6 +17,8 @@ export default function CaseTimeline({ refId, initialEntries, hasThread }) {
   const [refreshing, setRefreshing] = useState(false)
   const [deletingId, setDeletingId] = useState(null)
   const [error, setError] = useState(null)
+  const [filesMsg, setFilesMsg] = useState('')
+  const router = useRouter()
 
   async function addEntry(e) {
     e.preventDefault()
@@ -53,12 +56,17 @@ export default function CaseTimeline({ refId, initialEntries, hasThread }) {
   }
 
   async function refresh() {
-    setRefreshing(true); setError(null)
+    setRefreshing(true); setError(null); setFilesMsg('')
     const res = await fetch(`/api/case/${refId}/timeline/refresh`, { method: 'POST' })
     const d = await res.json().catch(() => ({}))
     setRefreshing(false)
     if (!res.ok) { setError(d.error || t('timeline.refreshFailedMsg')); return }
     setEntries(d.entries)
+    // ไฟล์แนบ render ฝั่ง server (การ์ดผู้ร้องเรียน) → ต้อง refresh route ถึงจะโผล่
+    if (d.files?.imported > 0) {
+      setFilesMsg(t('timeline.filesImported', { count: d.files.imported }))
+      router.refresh()
+    }
   }
 
   return (
@@ -72,6 +80,8 @@ export default function CaseTimeline({ refId, initialEntries, hasThread }) {
           </button>
         )}
       </div>
+
+      {filesMsg && <p className="text-sm text-orange mb-3">{filesMsg}</p>}
 
       {entries.length === 0 ? (
         <p className="text-base text-gray-400 dark:text-disc-muted mb-4">{t('timeline.emptyState')}</p>

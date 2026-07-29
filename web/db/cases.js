@@ -56,6 +56,38 @@ export async function createCase(orgId, data) {
 }
 
 /**
+ * field ที่ caseworker แก้ย้อนหลังได้ — **whitelist ห้ามเปิดกว้าง**
+ *
+ * ⚠️ `province` ไม่อยู่ในนี้โดยตั้งใจ: รหัสจังหวัดถูกฝังใน `ref` ตั้งแต่ generateRef()
+ *    และ ref ตัวนั้นส่ง SMS ออกไปแล้ว + เป็น URL หน้า public + เป็นชื่อ Discord thread
+ *    → เปลี่ยนจังหวัด = ref โกหกถาวร (regenerate ไม่ได้ ลิงก์สาธารณะจะพัง)
+ *    นอกจากนี้ gateCase() เช็ค scope จาก province **เดิม** เท่านั้น → ปล่อยให้แก้
+ *    = คนจังหวัด A ผลักเคสเข้าจังหวัด B ได้แล้วตัวเองหลุด scope ทันที
+ *    ถ้าจะย้ายจังหวัดจริง ต้องทำเป็น action "โอนเคส" แยก (เช็ค scope ทั้งต้นทาง+ปลายทาง)
+ */
+export const EDITABLE_CASE_FIELDS = [
+  'title', 'detail', 'category',
+  'complainant_name', 'complainant_phone', 'complainant_line_id',
+]
+
+/**
+ * แก้ข้อมูลเคส — อัปเดตเฉพาะ field ที่อยู่ใน whitelist และถูกส่งมาจริง
+ * @returns {object|null} แถวหลังอัปเดต · null ถ้าไม่มี field ที่แก้ได้ หรือ org ไม่ตรง
+ */
+export async function updateCaseFields(orgId, caseId, fields) {
+  const keys = Object.keys(fields).filter(k => EDITABLE_CASE_FIELDS.includes(k))
+  if (!keys.length) return null
+  const sets = keys.map((k, i) => `${k} = $${i + 3}`).join(', ')
+  const { rows } = await pool.query(
+    `UPDATE cases SET ${sets}, updated_at = NOW()
+     WHERE id = $1 AND org_id = $2
+     RETURNING *`,
+    [caseId, orgId, ...keys.map(k => fields[k])],
+  )
+  return rows[0] || null
+}
+
+/**
  * นับเคสที่ส่งจากเบอร์นี้ภายใน N ชั่วโมง (rate limit)
  */
 export async function countRecentByPhone(phone, hours = 24) {
@@ -169,13 +201,39 @@ export async function getAttachmentById(orgId, attId) {
   return rows[0] || null
 }
 
-export async function insertAttachment(caseId, orgId, { file_path, original_name, mime }) {
+/**
+ * @param {object} meta  { file_path, original_name, mime, discord_attachment_id?, discord_message_id? }
+ *   ใส่ discord_attachment_id เมื่อไฟล์มาจากเธรด Discord → unique index กัน sync ซ้ำ
+ *   (ON CONFLICT DO NOTHING → คืน undefined ถ้าไฟล์นี้เคยนำเข้าแล้ว)
+ */
+export async function insertAttachment(caseId, orgId, {
+  file_path, original_name, mime,
+  discord_attachment_id = null, discord_message_id = null,
+}) {
   const { rows } = await pool.query(
-    `INSERT INTO case_attachments (case_id, org_id, file_path, original_name, mime)
-     VALUES ($1,$2,$3,$4,$5) RETURNING *`,
-    [caseId, orgId, file_path, original_name, mime],
+    `INSERT INTO case_attachments
+       (case_id, org_id, file_path, original_name, mime, discord_attachment_id, discord_message_id)
+     VALUES ($1,$2,$3,$4,$5,$6,$7)
+     ON CONFLICT (discord_attachment_id) WHERE discord_attachment_id IS NOT NULL DO NOTHING
+     RETURNING *`,
+    [caseId, orgId, file_path, original_name, mime, discord_attachment_id, discord_message_id],
   )
   return rows[0]
+}
+
+/**
+ * เลื่อน watermark ของการนำเข้าไฟล์แนบ — **เส้นที่ 2 แยกจาก advanceSyncWatermark**
+ *
+ * เริ่มจาก NULL โดยตั้งใจ: รอบแรกกวาดตั้งแต่ข้อความแรกสุดของเธรด → ได้รูปเก่าที่เส้น
+ * timeline เลยไปแล้วกลับคืนมาทั้งหมด (backfill ฟรี ไม่ต้องเขียน script แยก)
+ */
+export async function advanceAttachmentWatermark(caseId, expectedId, newId, client = pool) {
+  const { rowCount } = await client.query(
+    `UPDATE cases SET last_attachment_message_id = $3
+     WHERE id = $1 AND last_attachment_message_id IS NOT DISTINCT FROM $2`,
+    [caseId, expectedId, newId],
+  )
+  return rowCount > 0
 }
 
 /**
@@ -247,9 +305,36 @@ export async function setAiSummary(caseId, summary, lastSyncedMessageId = null) 
   )
 }
 
-export async function addTimelineEvents(caseId, orgId, events, source = 'ai') {
+/**
+ * @param {object} [client]  pg client ถ้าต้องอยู่ใน transaction เดียวกับ advanceSyncWatermark
+ *   (sync จาก Discord ต้อง insert + เลื่อน watermark ให้ atomic — ดู advanceSyncWatermark)
+ */
+/**
+ * เลื่อน watermark ของ Discord sync แบบมีเงื่อนไข (optimistic lock)
+ *
+ * `last_synced_message_id` = ที่คั่นว่า sync ข้อความมาถึงไหนแล้ว · ครั้งถัดไปดึงเฉพาะที่ใหม่กว่า
+ * ⚠️ เลื่อนได้ต่อเมื่อค่าใน DB ยังเท่ากับตอนที่อ่านมา (`expectedId`) — กัน 2 คนกด refresh
+ *    พร้อมกันแล้ว insert timeline ซ้ำ · คนที่แพ้จะได้ rowCount 0 → ต้อง ROLLBACK
+ * ⚠️ ห้ามแตะ `updated_at` — หน้า public โชว์ค่านั้น sync เฉยๆ ไม่ควรทำให้ผู้ร้องเรียนเห็นว่ามีอัปเดต
+ *
+ * @returns {boolean} true = เลื่อนสำเร็จ · false = มีคนอื่น sync แซงไปแล้ว
+ */
+export async function advanceSyncWatermark(caseId, expectedId, newId, client = pool) {
+  const { rowCount } = await client.query(
+    `UPDATE cases SET last_synced_message_id = $3
+     WHERE id = $1 AND last_synced_message_id IS NOT DISTINCT FROM $2`,
+    [caseId, expectedId, newId],
+  )
+  return rowCount > 0
+}
+
+/**
+ * @param {object} [client]  pg client ถ้าต้องอยู่ใน transaction เดียวกับ advanceSyncWatermark
+ *   (sync จาก Discord ต้อง insert + เลื่อน watermark ให้ atomic — ดู advanceSyncWatermark)
+ */
+export async function addTimelineEvents(caseId, orgId, events, source = 'ai', client = pool) {
   for (const e of events) {
-    await pool.query(
+    await client.query(
       `INSERT INTO case_timeline (case_id, org_id, discord_message_id, source, body, is_public, occurred_at)
        VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7, NOW()))
        ON CONFLICT (case_id, discord_message_id) WHERE discord_message_id IS NOT NULL DO NOTHING`,
