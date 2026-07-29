@@ -24,10 +24,10 @@ export async function GET(req) {
   if (existsSync(dir)) {
     files = (await readdir(dir)).filter(f => /\.(png|jpe?g|webp)$/i.test(f))
   }
-  const { rows } = await pool.query(
-    `SELECT value FROM dc_user_config WHERE discord_id = $1 AND "key" = 'default_watermark'`,
-    [session.user.discordId]
-  )
+  const { rows } = session.user.userId ? await pool.query(
+    `SELECT value FROM user_config WHERE user_id = $1 AND "key" = 'default_watermark'`,
+    [session.user.userId]
+  ) : { rows: [] }
   const defaultWm = rows[0]?.value ?? null
   return Response.json({ files, default: defaultWm })
 }
@@ -37,19 +37,20 @@ export async function PATCH(req) {
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { default_watermark } = await req.json()
-  const discordId = session.user.discordId
+  const userId = session.user.userId          // prefs key = users.id (user_config) · โฟลเดอร์ไฟล์ยังใช้ discordId
+  if (!userId) return Response.json({ error: 'ไม่พบบัญชีผู้ใช้' }, { status: 400 })
 
   if (!default_watermark || default_watermark === 'none') {
     await pool.query(
-      `DELETE FROM dc_user_config WHERE discord_id = $1 AND "key" = 'default_watermark'`,
-      [discordId]
+      `DELETE FROM user_config WHERE user_id = $1 AND "key" = 'default_watermark'`,
+      [userId]
     )
   } else {
     await pool.query(
-      `INSERT INTO dc_user_config (discord_id, "key", value)
+      `INSERT INTO user_config (user_id, "key", value)
        VALUES ($1, 'default_watermark', $2)
-       ON CONFLICT (discord_id, "key") DO UPDATE SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP`,
-      [discordId, JSON.stringify(default_watermark)]
+       ON CONFLICT (user_id, "key") DO UPDATE SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP`,
+      [userId, JSON.stringify(default_watermark)]
     )
   }
   return Response.json({ ok: true })

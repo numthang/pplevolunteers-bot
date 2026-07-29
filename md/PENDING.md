@@ -11,6 +11,7 @@
 > รายละเอียด/ประวัติย้ายไป `md/org/AUTH.md` แล้ว — ที่เหลือคืองานค้าง
 - [ ] **decouple ประตู login เบอร์ออกจาก Discord** — `findOwnerByVerifiedPhone` ยังมี `AND discord_id IS NOT NULL` → คนที่มีแต่เบอร์ยัง login ไม่ได้ (นี่คือตัวปิดจ๊อบ "เบอร์ยืนเดี่ยว")
 - [ ] **เปิดสมัครด้วยเบอร์ (open signup)** — ⛔ ห้าม ship ก่อนมี **rate-limit ต่อเบอร์ + ต่อ IP**
+- [ ] **ทิ้ง `dc_user_config` ให้หมด** (ทำพร้อม decouple เบอร์ข้างบน) — 2026-07-29 prefs ย้ายไป `user_config` แล้ว เหลือแค่ OTP state (`otp_quota`, `otp_verify_<guildId>`) ที่ `db/otpSession.js` ถือไว้ · ย้ายเข้า `auth_nonces` ได้จริง (`user_id` **nullable** — คนที่ยังไม่มี users row เก็บได้) แค่ต้องแต่งคีย์เอง `otp:<guildId>:<discordId>` + payload เก็บ session · ทำแล้ว DROP ตารางได้เลย (ตอนนี้เหลือ 1 แถวค้างจาก 8 ก.ค.)
 - [ ] **Discord email bridge** — อ่าน `profile.email` เฉพาะ `verified===true` มา match บัญชีเดิม (payload มีค่ามาอยู่แล้ว แต่ jwt branch ทิ้ง)
 - [ ] **UI ตอนชนกัน** ("เบอร์/อีเมลนี้มีเจ้าของแล้ว") — ตอนนี้ block เฉยๆ ยังไม่มีทางออกให้ user
 - [ ] **ยังไม่มี login ด้วย email บนหน้า `/login`** (มีแต่ฝั่ง org) + ยังไม่ได้เคาะลำดับปุ่ม login (จด NOTE.md 2026-07-26)
@@ -43,6 +44,52 @@
 **เอกสารกวาดตรง schema จริงแล้ว (2026-07-21)** — DATABASE.md regenerate จาก DB สด 58 ตาราง · CASE/DOCS/CALLING/CONTACT ตามมา · งานที่งอกจากรอบนี้อยู่หัวข้อ 🧹 ท้ายไฟล์
 
 > ⚠️ หัวข้อข้างล่างเรียงตาม**ประวัติการทำงาน** ไม่ใช่ลำดับความสำคัญ · เช็ค `[x]/[ ]` ก่อนเชื่อว่ายังไม่ได้ทำ
+
+---
+
+## ✍️ POSTS — เครื่องมืองานสื่อ · ดีไซน์เคาะครบ 2026-07-29 ยังไม่เขียนโค้ดสักบรรทัด
+
+spec + ดีไซน์ + ตารางทั้งหมดอยู่ `md/posts/POSTS.md` (อ่านก่อนเสมอ ห้าม re-derive) · `/scrutinize` ผ่าน 2 รอบแล้ว
+
+**⬜ ทำตามลำดับ:**
+- [x] **`/grill`** ✅ 2026-07-29 — 16 กิ่งเคาะครบ อยู่ `md/posts/POSTS.md` §ผ่าน `/grill` (policy ราย org · job 1 แถว/แพลตฟอร์ม · ไฟล์นอก `public/` · optimistic lock · grace 2 ชม. · **ใช้ท่อโพสต์ร่วมกับตะกร้าดิสฯ ห้ามเขียนใหม่**)
+- [x] **ก้อน 1** ✅ 2026-07-29 (local — ยังไม่ deploy prod) — 7 ตาราง posts + `postsAccess.js` (62 tests ผ่าน) + `orgFeatures` key `posts`
+  - `dc_user_config` → `user_config` (key = users.id) เสร็จด้วย: prefs 7 แถวย้ายแล้ว · **OTP state ยังอยู่ `dc_user_config`** แยกเป็น `db/otpSession.js` เพราะตอนยืนยันตัวตน users row อาจยังไม่เกิด
+  - แก้ 3 route ที่ยิงตารางตรงๆ: `bot/quote-config` · `watermark/personal` · `docs/sign/self-info` (ใช้ `session.user.userId`)
+  - verify: `npm test` 268 ผ่าน · `npm run build` ผ่าน · smoke บอท read/write/delete prefs + อ่าน otp_quota ผ่าน
+  - ⏭️ prod: รัน 2 บล็อกท้าย `migration.sql` (additive ล้วน) แล้ว restart บอท+เว็บ
+- [ ] **ก้อน 2a** — editor 2 คอลัมน์ + autosave + สื่อ (อัป/ลาก/เรียง/paste) + AI จัดโครง & ร่างตอน → ใช้เขียนจริงได้
+- [ ] **ก้อน 2b** — quote studio (ธัมบ์เนล 20 สไตล์ · sync ต้นทาง · พื้นสี) + preview รายแพลตฟอร์ม + ซอยตอนแบบลากเส้น
+  - ⚠️ spike ก่อน (~20 นาที): เว็บ import `utils/quoteStyles.js` ข้าม package ได้ไหม (`web/package.json` มี `@napi-rs/canvas` + `outputFileTracingRoot` ชี้รากแล้ว) · ไม่ผ่าน → fallback ให้บอท render ผ่านคิว · **ห้าม copy renderer ไปฝั่งเว็บ**
+- [ ] **ก้อน 3** — อนุมัติ: สถานะ + revisions + review links (`noindex`, token ≥32 bytes) + comments + ล็อกหลังอนุมัติ
+- [ ] **ก้อน 4** — แยก `services/publishPipeline.js` ออกจาก `basketHandler` + param `accountId` + `post_social_history` (คิว+ประวัติรวมกัน) + worker (`FOR UPDATE SKIP LOCKED`, retry 3)
+  - ⚠️ **ตะกร้าดิสฯ ต้องเปลี่ยนมาเรียก pipeline ตัวใหม่ในรอบเดียวกัน** ห้ามก๊อปแล้วปล่อยของเดิม (กติกาข้อ 16)
+  - ❌ **ไม่ยุบ `dc_media_baskets` เข้า posts** (เคาะแล้วกลับคำ 2026-07-29) — ตะกร้าเป็น scratch pad ของ Discord ไม่ใช่ "ร่างที่ต้องอนุมัติ"
+    - จุดชนจริง: กติกาข้อ 11 บังคับ org series ต้อง `approved` ก่อนโพสต์ → ถ้าตะกร้าเป็น episode คนกดโพสต์ในดิสฯ จะโดนบล็อกรอบรรณาธิการ = พฤติกรรมที่ใช้ทุกวันเปลี่ยน · ทางเลี่ยงทั้ง 2 ทางไม่สวย (ยกเว้นตะกร้า = กลับไปมี 2 พันธุ์ในเชิงพฤติกรรม / เปลี่ยนพฤติกรรมดิสฯ = regression)
+    - พ่วงมาอีก: `seq`/`series_id` ไม่มีความหมายกับตะกร้า · ต้องเอาคีย์ `(guild_id, channel_id)` ไปแปะบน `post_episodes` เพื่อหา "ตะกร้าที่เปิดอยู่ของห้องนี้"
+    - ที่ยังรวมได้และทำอยู่: **ประวัติ** (ข้างล่าง) · ท่อโพสต์ `publishPipeline` ที่ใช้ร่วมกัน
+  - **ประวัติ = แถว `done` ใน `post_social_history`** (เคาะ 2026-07-29 รวมคิว+ประวัติ) → ย้าย 10 แถวจาก `dc_media_history` เข้ามา + แก้ `getHistory()`/`addHistory()` ฝั่งบอท แล้ว **drop `dc_media_history`** · ห้ามเขียนประวัติ 2 ที่
+    - ความเสี่ยงต่ำ: ไม่มี logic ไหนอ่านตารางนี้ไปตัดสินใจ — เขียน 2 จุด (`basketHandler` 766, 905) อ่านจุดเดียว (โชว์ "โพสต์ล่าสุด" ใน sticky ของตะกร้า) · พลาดแล้วเห็นทันที ไม่พังเงียบ
+    - ⚠️ รูปร่างแถวเปลี่ยน: เดิม 1 แถว = 1 โพสต์หลายแพลตฟอร์ม (`platform` = `'fb,ig,x'` แล้ว UI `.split(',')`) → ใหม่ 1 แถว = 1 แพลตฟอร์ม ⇒ โค้ดโชว์ประวัติต้อง `GROUP BY batch_id` · ตอน migrate ต้อง**แตก 10 แถวเก่าตาม comma** (~15 แถว) ให้รูปร่างเดียวกันหมด
+    - แมปคอลัมน์: `image_count`/`video_count` → นับจาก `media` jsonb · `posted_by` → `created_by_discord_id` · `schedule_time` (bigint unix) → `scheduled_at` (timestamptz) · `fb_url`/`ig_url`/`threads_url`/`x_url` → `result` jsonb
+- [ ] **ก้อน 5** — AI เกลาสำนวน + แคปชัน/ไอเดียภาพ
+- [ ] **ก้อน 6** — migrate `posts/*.md` เข้า DB (series D/E → `personal`) แล้วเลิกใช้โฟลเดอร์
+- [ ] **ถอด prefix `dc_` ออกจากตารางที่เป็น org แล้ว** (user สั่ง 2026-07-29 · ทำ **หลังก้อน 4**) — สำรวจแล้วเหลือจริง 3 ตัว:
+  - **หลักที่ user เคาะ 2026-07-29: prefix ต้องมีโมดูลจริงรองรับ** — ห้ามตั้ง prefix ลอยๆ ที่ไม่มีโฟลเดอร์/feature key รองรับ (เช่น `media_` ตกไปเพราะไม่มี `web/db/media/`) · `post_` ผ่านเพราะมี `web/db/posts/` + `orgFeatures` key `posts`
+  - `dc_social_accounts` → **`post_social_accounts`** (14 ไฟล์) — ⚠️ ต้องมีคอมเมนต์หัวตารางว่าตะกร้าสื่อ/ลายน้ำ/Meta-X OAuth ใช้ร่วม **ห้าม drop ตามโมดูล posts**
+  - `dc_orgchart_config` → `org_chart_config` (2) · `dc_orgchart_snapshot` → `org_chart_snapshot` (1) — มี `org_*` เป็นโมดูลรองรับอยู่แล้ว
+  - `dc_media_baskets` คง `dc_` ไว้ — เป็นฟีเจอร์ของ Discord จริงๆ (ไม่ยุบเข้า posts แล้ว)
+  - **ไม่ต้องแตะ** `dc_media_baskets` / `dc_media_history` / `dc_user_config` — ก้อน 4 ยุบหาย/รอ drop อยู่แล้ว (rename ตอนนี้ = เสียแรงฟรี)
+  - **คง `dc_` ไว้ 12 ตัวที่เป็น Discord จริง**: guilds · guild_config (channel/message id ล้วน) · guild_roles (392) · guild_role_groups · activity_daily/mentions (89k แถว) · forum_config/posts · gogo_entries · ai_modes · user_ratings/reports
+  - ⚠️ ทำ **ทีละตาราง ทีละ commit** grep แก้ด้วยตา — ห้าม sed รวด (เคย bulk-rename ตอน migrate calling แล้ว `orgId` ไหลเข้า `guild_id`)
+  - ⚠️ บอท/เว็บ deploy ไม่พร้อมกัน → rename แล้วสร้าง **view ชื่อเดิม** คร่อมไว้ (auto-updatable) → deploy → drop view
+- [ ] **บั๊กที่มีอยู่จริง (ไม่ผูกกับ posts): รูปในตะกร้าตายใน ~24 ชม.** — `dc_media_baskets.image_url` เป็น Discord signed URL (`?ex=&is=&hm=`) ตะกร้าที่ค้างข้ามวันแล้วกดโพสต์จะยิงไม่ออก (`fetchBuffer` ที่ `basketHandler` 783/801/1054 โยน · วิดีโอส่ง URL ให้ Meta ดึงเองที่ 711-756 ก็พังเหมือนกัน) · **รอเคาะว่าเอาทางไหน:**
+  - **B. รีเฟรช URL ตอนใช้ (เชียร์)** — `client.rest.post('/attachments/refresh-urls')` (discord.js 14.25 เรียกได้ ไม่ต้องอัป) · **แก้วิดีโอด้วย** เพราะ Meta ต้องดึงจาก URL ที่ยังไม่หมดอายุ · แตะ helper 1 ตัว + จุดเรียก 3-4 จุด · ไม่รอด ถ้าข้อความต้นทางถูกลบ
+  - **A. โหลดไฟล์ลงดิสก์ตอนหย่อนเข้าตะกร้า** — รอดแม้ข้อความถูกลบ · แต่ **แก้วิดีโอไม่ได้** (ไฟล์ในเครื่องเรา Meta เข้าไม่ถึง ต้องมี public URL อีกชั้น) · แตะ `addImages` + จุดอ่าน 4 จุด + หน้าเว็บตะกร้าต้องมี route เสิร์ฟรูป
+  - เติม A ทับ B ทีหลังได้ ไม่ขัดกัน
+  - ❌ **อย่าเอาไปรวมกับ `post_episode_media`** (คุยแล้ว 2026-07-29): `episode_id` เป็น FK NOT NULL → รับแถวตะกร้าต้องมีพ่อ 2 แบบ = polymorphic parent · และถ้าเลือกทาง B ตะกร้าไม่มีไฟล์เลย ไม่มีอะไรให้รวม · **ของที่ใช้ร่วมคือ logic (ลากเรียง/ลายน้ำ/แปลง buffer) ไม่ใช่ตาราง** — แบบเดียวกับที่ finance/docs เก็บไฟล์คนละตารางแต่ใช้ helper ตัวเดียว
+- [ ] ลายน้ำยังผูก guild (`resolveWatermarkPath`) → org ไม่มี guild ใช้ลายน้ำไม่ได้ · ต้องยกขึ้น org วันหลัง
+- [ ] จดไว้ทำทีหลัง: ดึงการ์ดที่ทำในดิสฯ เข้ามาเป็นสื่อของตอนบนเว็บ (ตอนนี้ทางฝั่งดิสฯ จบที่ตะกร้าซึ่งตัดออกแล้ว)
 
 ---
 

@@ -11,7 +11,8 @@ const {
 const crypto = require('crypto');
 const pool = require('../db/index');
 const { getSetting } = require('../db/settings');
-const { getUserSetting, setUserSetting, deleteUserSetting } = require('../db/userConfig');
+// OTP state ยัง key ด้วย discord_id (users row อาจยังไม่เกิดตอนยืนยันตัวตน) — prefs ย้ายไป user_config แล้ว
+const { getOtpState: getUserSetting, setOtpState: setUserSetting, deleteOtpState: deleteUserSetting } = require('../db/otpSession');
 const { upsertMemberFromDiscord, syncMemberRoles } = require('../db/members');
 const { sendSms, smsConfigured, normalizePhone } = require('../services/sms');
 const { parseSetting } = require('../utils/parseSetting');

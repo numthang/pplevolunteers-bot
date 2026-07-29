@@ -18,11 +18,12 @@ function isValidValue(key, value) {
   return false
 }
 
-// อ่าน config จาก dc_user_config (personal) / dc_guild_config (guild, global)
-async function readUser(discordId) {
+// อ่าน config จาก user_config (personal, key=users.id) / dc_guild_config (guild, global)
+async function readUser(userId) {
+  if (!userId) return {}
   const { rows } = await pool.query(
-    `SELECT "key", value FROM dc_user_config WHERE discord_id = $1 AND "key" = ANY($2)`,
-    [discordId, KEYS]
+    `SELECT "key", value FROM user_config WHERE user_id = $1 AND "key" = ANY($2)`,
+    [userId, KEYS]
   )
   return Object.fromEntries(rows.map(r => [r.key, r.value]))
 }
@@ -44,7 +45,7 @@ export async function GET() {
   const session = await getServerSession(authOptions)
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const realDiscordId = session.user.discordId               // personal config = ของจริงเสมอ
+  const realUserId = session.user.userId                     // personal config = ของจริงเสมอ (user_config key=users.id)
   const { access, discordId: effDiscordId } = await getEffectiveIdentity(session)  // gate = effective (debug-aware)
   const superAdmin = isSuperAdmin(effDiscordId)
 
@@ -58,7 +59,7 @@ export async function GET() {
       : []
 
   const guildCfg = await readGuild(adminGuildIds)
-  const personal = await readUser(realDiscordId)
+  const personal = await readUser(realUserId)
 
   const guilds = adminGuildIds.map(id => ({
     guild_id: id,
@@ -78,7 +79,7 @@ export async function PATCH(req) {
   const session = await getServerSession(authOptions)
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const realDiscordId = session.user.discordId               // personal config = ของจริงเสมอ
+  const realUserId = session.user.userId                     // personal config = ของจริงเสมอ (user_config key=users.id)
   const { discordId: effDiscordId } = await getEffectiveIdentity(session)  // gate = effective
   const superAdmin = isSuperAdmin(effDiscordId)
 
@@ -91,7 +92,7 @@ export async function PATCH(req) {
   if (!isValidValue(key, value)) return Response.json({ error: 'invalid value' }, { status: 400 })
 
   if (scope === 'personal') {
-    return await upsertUser(realDiscordId, key, value)
+    return await upsertUser(realUserId, key, value)
   }
 
   if (scope === 'guild') {
@@ -111,14 +112,15 @@ export async function PATCH(req) {
   return Response.json({ error: 'invalid scope' }, { status: 400 })
 }
 
-async function upsertUser(discordId, key, value) {
+async function upsertUser(userId, key, value) {
+  if (!userId) return Response.json({ error: 'ไม่พบบัญชีผู้ใช้' }, { status: 400 })
   if (value === null) {
-    await pool.query(`DELETE FROM dc_user_config WHERE discord_id = $1 AND "key" = $2`, [discordId, key])
+    await pool.query(`DELETE FROM user_config WHERE user_id = $1 AND "key" = $2`, [userId, key])
   } else {
     await pool.query(
-      `INSERT INTO dc_user_config (discord_id, "key", value) VALUES ($1, $2, $3)
-       ON CONFLICT (discord_id, "key") DO UPDATE SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP`,
-      [discordId, key, JSON.stringify(value)]
+      `INSERT INTO user_config (user_id, "key", value) VALUES ($1, $2, $3)
+       ON CONFLICT (user_id, "key") DO UPDATE SET value = EXCLUDED.value, updated_at = CURRENT_TIMESTAMP`,
+      [userId, key, JSON.stringify(value)]
     )
   }
   return Response.json({ ok: true })

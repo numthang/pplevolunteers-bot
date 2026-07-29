@@ -1,5 +1,5 @@
 // db/configResolver.js — รวม config 3 ระดับเป็นค่าเดียวตาม priority
-//   personal (dc_user_config) > guild (dc_guild_config) > global (dc_guild_config guild_id='global')
+//   personal (user_config) > guild (dc_guild_config) > global (dc_guild_config guild_id='global')
 // ใช้ร่วมกันได้ทุก feature ที่อยากได้ default per-user / per-guild / ทั้งระบบ
 const { getUserSetting } = require('./userConfig');
 const { getSetting }     = require('./settings');

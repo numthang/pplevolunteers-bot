@@ -3,7 +3,8 @@
 โมดูลช่วย **เขียน/ร่างคอนเทนต์ยาว ซอยเป็นตอน** แล้วส่งต่อเข้าท่อเผยแพร่เดิม (ตะกร้าสื่อ → FB/IG/Threads/X/Discord)
 เป็น org-native feature ตัวที่ 5 ต่อจาก finance / calling / docs / cases
 
-> สถานะ: **ยังไม่ implement** — เอกสารนี้คือ spec ที่คุยเคาะไว้ (2026-07-28) ยังไม่ผ่าน `/scrutinize`
+> **สถานะ 2026-07-29 (local ยังไม่ commit / ยังไม่ deploy):** `/scrutinize` 2 รอบ + `/grill` 16 กิ่ง ผ่านแล้ว · **ก้อน 1 เสร็จ** — 7 ตาราง posts ลง DB local · `web/lib/postsAccess.js` + 62 tests · `orgFeatures` key `posts` · `dc_user_config` → `user_config` · build + 268 tests เขียว
+> **ถัดไป: ก้อน 2a** (editor) — เริ่มไว้ 2 ไฟล์ที่ยังไม่มีใครเรียก: `web/lib/postsStorage.js`, `web/lib/ai.js`
 
 ---
 
@@ -132,7 +133,8 @@ convention ที่ใช้จริง: **prefix = โมดูลเจ้�
 **เปลี่ยน `dc_` → `social_` ดีไหม?** ตรงกว่าเมื่อเป็น org-native แล้ว แต่ **ยังไม่ทำ** — โดน 34+ จุดทั่ว repo · ตอน migrate calling เคยเจอ bulk-rename ทำ `orgId` ไหลเข้า `guild_id` มาแล้ว · ไม่ปลดล็อกอะไร · เอามารวมกับ migration จริง = เสี่ยงฟรี
 → ถ้าจะทำ ทำเป็นรอบแยกตอนไม่มีอะไรค้าง
 
-**ตารางใหม่ของ posts ใช้ `post_` ได้เต็มที่:** `post_series`, `post_episodes`, `post_publish_jobs`
+**ตารางใหม่ของ posts ใช้ `post_` ได้เต็มที่:** `post_series`, `post_episodes`, `post_social_history` (คิว+ประวัติ)
+→ `post_social_history` ใช้ prefix `post_` ได้ทั้งที่ตะกร้าดิสฯ ใช้ร่วม **เพราะก้อน 4 ยุบตะกร้าเป็น episode ของ posts แล้ว** — ไม่ใช่ของนอกโมดูลอีกต่อไป (ต่างจาก `dc_social_accounts` ที่ยัง shared จริง)
 
 ### ⏭️ ตอน deploy prod ต้องรู้
 - `migration.sql` บล็อกนี้ idempotent (เช็ค `org_id` มีแล้ว → ข้าม) แต่ **rebuild ตาราง** — ทำตอนบอทไม่ได้เขียน
@@ -152,6 +154,51 @@ convention ที่ใช้จริง: **prefix = โมดูลเจ้�
 | API | `web/app/api/posts/` |
 | สิทธิ์ | `web/lib/postsAccess.js` + test ใน `web/lib/__tests__/` |
 | เปิด/ปิดรายองค์กร | เพิ่ม 1 บรรทัดใน `web/lib/orgFeatures.js` → โผล่ใน Nav + หน้าฟีเจอร์เอง |
+| AI | `web/lib/ai.js` (wrapper บางๆ · model `claude-sonnet-5` เป็น constant ที่เดียว) |
+
+---
+
+## 🗂️ Data model (ผ่าน `/scrutinize` แล้ว 2026-07-29)
+
+| ตาราง | คอลัมน์หลัก |
+|---|---|
+| `post_series` | `org_id` · `owner_user_id` · `visibility` (`personal`/`org`) · title · summary · **`source_idea`** (ไอเดียดิบที่โยนเข้ามา — กด "จัดโครงใหม่" ได้ไม่ต้องพิมพ์ซ้ำ) · `created_via` (`ai`/`manual`) · archived_at |
+| `post_episodes` | `series_id` · `seq` (unique ต่อ series) · title · `body` · `bodies jsonb` (override รายแพลตฟอร์ม) · **`format`** (hint `text`/`image`/`quote` — ตั้ง default UI + ให้ AI แนะนำ ไม่บังคับ) · `status` (**draft/review/approved เท่านั้น** — เผยแพร่เป็น derived จาก jobs ดู §grill ข้อ 10) · approved_by · approved_at · `updated_at` (ใช้ทำ optimistic lock) |
+| `post_episode_media` | `episode_id` · `kind` (`upload`/`quote`) · `path` · `sort_order` · **`quote_text` · `quote_style` · `bg_path`** (เก็บ params ไม่ใช่แค่ PNG → แก้ข้อความแล้ว render ใหม่ได้) · added_by |
+| `post_revisions` | `episode_id` · title · body · `edited_by_user_id` (NULL = คนที่เข้ามาทางลิงก์) · `edited_by_name` |
+| `post_review_links` | `token` (≥32 bytes) · **`episode_id`** (1 ลิงก์ = 1 ตอน — แก้จาก series_id 2026-07-29) · created_by · `can_edit` · expires_at · revoked_at · uses |
+| `post_comments` | `episode_id` · `anchor` (ย่อหน้า, NULL = ทั้งตอน) · body · author_user_id/author_name · resolved_at |
+| **`post_social_history`** (เดิมชื่อ `post_publish_jobs` → `social_posts` → ชื่อนี้) | **คิว + ประวัติ ตารางเดียวกัน** (เคาะ 2026-07-29) — ⚠️ ชื่อ `history` แต่เก็บงานที่ยังไม่เกิดด้วย (`pending` = ตั้งเวลาไว้) — แถว `pending`/`running` = คิว · `done`/`failed` = ประวัติ · ตะกร้าดิสฯ เขียนแถว `done` หลังยิงเสร็จ → **ก้อน 4 ย้าย 10 แถวจาก `dc_media_history` เข้ามาแล้ว drop ทิ้ง** · คอลัมน์: org_id (NULL ได้) · episode_id (**NULL = มาจากตะกร้า ไม่ใช่ posts**) · `batch_id` · **`platform` เอกพจน์** · social_account_id · guild_id/channel_id (Discord artifact) · wm_type · caption + media snapshot · scheduled_at · status (`pending`/`running`/`done`/`failed`/`stale`/`canceled`) · attempts · last_error · result jsonb (แทน fb_url/ig_url เดิม) · created_by + created_by_discord_id · posted_at |
+
+**ทำไมสื่อไม่ใช้ `dc_media_baskets` ร่วม** (ถามตรงๆ 2026-07-29): key เป็น `(guild_id, channel_id)` · `image_url` เป็น **Discord signed URL หมดอายุ ~24 ชม.** (แถวจริงมี `?ex=&is=&hm=`) · เป็นถาดชั่วคราวที่ `clearBasket()` ล้างหลังโพสต์ · caption เป็น "แถวชนิดหนึ่ง"
+→ ร่างที่ค้างเป็นสัปดาห์รูปจะตาย · **ที่ใช้ร่วมจริงคือท่อโพสต์ ไม่ใช่ที่เก็บ**
+
+### เกี่ยวเนื่อง: `dc_user_config` → `user_config` (เคาะ 2026-07-29)
+
+ไม่สร้างตาราง prefs ใหม่ — **แปลงของเดิม in-place** (9 แถว 2 คน · 7 ไฟล์)
+`discord_id` → `user_id` (int, FK users) + rename ตาราง (ไม่ใช่ของ Discord อีกแล้ว)
+- **คีย์จริงมีตัวเดียว = `user_id`** · ห้ามให้เขียนได้ 2 คีย์ ไม่งั้นค่าจะแตกเป็น 2 ชุด (บอทเขียนใต้ discord · เว็บอ่านใต้ user) = ปัญหาเดิมที่ unify identity เพิ่งปิดไป
+- caller ฝั่งบอทไม่ต้องแก้ — แก้แค่ `db/userConfig.js` ให้ resolve discord→users.id ข้างใน (บอทมี upsert users ที่ `db/org.js:44` อยู่แล้ว)
+- **ย้ายออกจากตารางนี้:** `passkey_reg_challenge` (ตายแล้ว ย้ายไป `auth_nonces` ตั้งแต่ 2026-07-25) · `otp_quota` + verify session ของ `handlers/verifyHandler.js` (เป็น state ชั่วคราวมีวันหมดอายุ ควรอยู่ `auth_nonces`)
+→ เหลือแต่ prefs ถาวรจริงๆ = ไม่มีเคส "บอทเขียน config ให้คนที่ยังไม่มี users row"
+
+---
+
+## 🔐 สิทธิ์ — ใช้ permission เดิม ไม่เพิ่มคำใหม่
+
+ตรวจแล้ว `editor` (บรรณาธิการ/จัดการตะกร้าสื่อ) มีคนถือจริง — org 1 "ทีมบรรณาธิการ" 6 คน
+
+| | personal series | org series |
+|---|---|---|
+| เจ้าของ | อ่าน/แก้/ลบ | อ่าน/แก้ |
+| member ทั่วไป | ไม่เห็น | อ่าน |
+| `editor` · `secretary_general` | ไม่เห็น | อ่าน/แก้/**อนุมัติ** |
+| `admin` | เห็น (god-mode ตามนิยามใน `org_roles`) | ทุกอย่าง |
+| ลิงก์รีวิว | — | อ่าน+คอมเมนต์+อนุมัติ · แก้ได้ถ้า `can_edit` |
+
+- หลัง `approved` = ล็อก ต้องกด "ขอแก้" ถึงกลับเป็น `review`
+- **เขียน revision ก่อนทับทุกครั้งที่คนแก้เปลี่ยนคน** + snapshot แรกตอนสร้างตอน (ไม่ใช่ throttle อย่างเดียว ไม่งั้นต้นฉบับหายตอนเจ้าของแก้ทับบรรณาธิการ)
+- อนุมัติผ่านลิงก์ = **ความเห็นผู้ตรวจ ไม่ใช่ลายเซ็นผูกตัวตน** (ชื่อพิมพ์เอง) · หน้า `/review` ต้อง `noindex`
 
 ---
 
@@ -175,7 +222,7 @@ convention ที่ใช้จริง: **prefix = โมดูลเจ้�
 
 **กำแพงจริง:** `web/` ไม่เคย import `services/` เลยสักที่ (grep แล้ว 0) — บอทเป็นคนละโปรเซส คนละ package.json คนละ pool
 
-**เสนอ: ตารางคิวงาน `post_publish_jobs`** — เว็บเขียนแถว → บอทวนหยิบไปเรียก `metaApi` แบบเดิมเป๊ะ
+**เสนอ: ตารางคิวงาน `post_social_history`** — เว็บเขียนแถว → บอทวนหยิบไปเรียก `metaApi` แบบเดิมเป๊ะ
 
 | ทำไมเลือกอันนี้ | |
 |---|---|
@@ -189,7 +236,59 @@ convention ที่ใช้จริง: **prefix = โมดูลเจ้�
 
 ---
 
-## 🖥️ หน้าจอ — เอา `/bot/media/basket` เป็นแม่แบบ (เคาะ 2026-07-28)
+## 🖥️ หน้าจอ (ออกแบบใหม่ 2026-07-29 — **เลิกลอก flow ดิสฯ**)
+
+> "ไม่ได้จะลอกแบบเดิมบน discord เพราะมันมีข้อจำกัด บนเว็บออกแบบ flow ใหม่ที่ดีและลื่นไหลได้เลย"
+
+### `/posts` — หน้าแรกคือกล่องโยนไอเดีย ไม่ใช่ list
+
+```
+[ ส่วนตัว | องค์กร ]         ← จำค่าล่าสุด (user_config)
+┌────────────────────────────────────────┐
+│ โยนหัวข้อ/ไอเดีย หรือวางบทความยาวที่เขียนไว้ │
+└────────────────────────────────────────┘
+                        [ ให้ AI จัดโครง → ]
+ซีรีส์ที่มีอยู่ (การ์ด + สถานะแต่ละตอน)
+```
+- input สั้น = ไอเดีย → AI ขยาย · input ยาว = บทความ → AI ซอยตอน (แยกด้วยความยาว ไม่ต้องมี 2 ปุ่ม)
+- **AI คืนโครงก่อน (~5 วิ)** = ชื่อซีรีส์ + รายชื่อตอน + สาระต่อตอน → บันทึกเป็น draft ทันที → ค่อยกด "ร่างตอนนี้" ทีละตอน (ไม่ร่างเต็มรวดเดียว: ช้า + เสีย token ถ้าโครงผิด)
+- AI ล้ม → ยังได้ซีรีส์ที่มี `source_idea` อยู่
+
+### `/posts/[series]/[episode]` — จอเดียว 2 คอลัมน์ ไม่มีหน้าย่อย
+
+```
+┌─────────────────────────────┬──────────────────────────┐
+│  เนื้อหาตอนที่ 3            │  ● ของที่จะออกจริง        │
+│  พิมพ์ได้เลย autosave       │  [การ์ด][รูป][รูป] ลากเรียง│
+│  ไฮไลต์ประโยค →            │  ─────────────────────    │
+│  ┌──────────────────────┐   │  FB │ IG │ X │ Threads   │
+│  │ ✦ ทำการ์ด 💬 คอมเมนต์ │   │  ข้อความของแพลตฟอร์มนี้   │
+│  │ ✧ เกลาสำนวน          │   │  (ว่าง = ใช้เนื้อหาหลัก)   │
+│  └──────────────────────┘   │  บัญชี · เวลา · [ขออนุมัติ]│
+└─────────────────────────────┴──────────────────────────┘
+```
+
+**การ์ดคำคม = studio เปิดค้างข้างๆ ไม่ใช่ wizard 5 ชั้นแบบดิสฯ**
+- ไฮไลต์ → "ทำการ์ด" → การ์ดโผล่ในแถบสื่อทันที (ใช้ค่าล่าสุด) **ไม่มีขั้นยืนยัน** ไม่ชอบก็ลบ
+- คลิกการ์ด → panel: **ธัมบ์เนลสไตล์ของจริง 20 แบบ คลิกสลับเห็นผลทันที** · ลากรูปวางเป็นพื้นหลัง/หยิบรูปในตอน · slider ความอิ่มสี · ลายน้ำ · ปุ่ม "ย่อให้พอดี" = `shortenQuote()` เดิม
+- แก้บทความทีหลัง → การ์ดขึ้นป้าย **"ต้นทางเปลี่ยนแล้ว — อัปเดต?"** (เก็บ params ไว้)
+- ไม่มีรูปก็ทำการ์ดได้ (สไตล์พื้นสี) → โพสต์ข้อความล้วนลง IG ได้โดยไม่ต้องหารูป
+
+**ที่เว็บทำได้แต่ดิสฯ ทำไม่ได้ — เอาเข้าไปเลย:** วางรูปจาก clipboard · ลากหลายไฟล์ · **ซอยตอนแบบเห็นเส้นแบ่ง ลากปรับได้ก่อนยืนยัน** · preview รายแพลตฟอร์มของจริง (X ตัดที่ 280 ตัวให้เห็น) · ย้อนเวอร์ชันจาก `post_revisions` · คีย์ลัด
+
+**ข้อจำกัดจริงข้อเดียว:** การ์ด render ด้วย `@napi-rs/canvas` ฝั่ง server → เปลี่ยนสไตล์ = round-trip
+→ แก้ด้วย ธัมบ์เนล 256px render ครั้งเดียวตอนเปิด panel (cache ด้วย hash รูป+ข้อความ) + debounce ~300ms ตอนพิมพ์
+→ **ห้ามเขียน renderer ใหม่ให้รันในเบราว์เซอร์** จะได้การ์ด 2 หน้าตาที่ค่อยๆ เพี้ยนจากกัน
+
+### ไม่แยกเป็น "ชนิดโพสต์"
+
+โพสต์ข้อความ/ภาพ/โควต ต่างกันแค่ **สื่อ 0 ชิ้น / upload / quote** → 1 ตอน = ข้อความ + สื่อ 0..n ผสมกันได้
+(โพสต์จริงมักผสม: การ์ด 1 ใบ + ภาพ 2 รูป · ถ้าล็อกเป็น type พอเปลี่ยนใจต้องสร้างตอนใหม่)
+ตอนกดโพสต์ตรวจ: **IG/Threads ต้องมีสื่อ ≥1** → ไม่มีรูป ระบบเสนอ "สร้างการ์ดจากย่อหน้าแรก" (คือเหตุผลที่โพสต์โควตเกิดมาแต่แรก)
+
+---
+
+## 🗄️ (อ้างอิงเดิม) basket เป็นแม่แบบยังไง — เคาะ 2026-07-28
 
 > "ทำคล้ายๆ basket ใน media บนหน้าเว็บนั่นแหละ"
 
@@ -210,7 +309,7 @@ convention ที่ใช้จริง: **prefix = โมดูลเจ้�
 | `basket_platform` เลือกหลาย platform | multi-select platform **(ย้ายขึ้นเว็บ)** |
 | `basket_wm_type` ลายน้ำ | dropdown ลายน้ำ **(ย้ายขึ้นเว็บ)** |
 | modal ตั้งเวลา (ไทย, ต้อง ≥20 นาที) | ช่องตั้งเวลา **(ย้ายขึ้นเว็บ)** — กติกา ≥20 นาที เอาตามเดิม |
-| กด "สร้างโพสต์" ใน Discord | ปุ่มโพสต์บนเว็บ → เขียนลง `post_publish_jobs` |
+| กด "สร้างโพสต์" ใน Discord | ปุ่มโพสต์บนเว็บ → เขียนลง `post_social_history` |
 
 ### ที่ posts มีเพิ่มจาก basket
 - **series → ตอน** (basket เป็นก้อนเดียว ไม่มีลำดับตอน)
@@ -248,14 +347,71 @@ convention ที่ใช้จริง: **prefix = โมดูลเจ้�
 
 ---
 
+## 🔥 ผ่าน `/grill` แล้ว 2026-07-29 — 15 กิ่งที่เคาะ
+
+| # | กิ่ง | เคาะว่า |
+|---|---|---|
+| 1 | ย้าย `personal` → `org` | **ทางเดียว มีเงื่อนไข** — เจ้าของกด "เปิดให้ทีมเห็น" ได้เฉพาะตอนยังไม่มีคอมเมนต์/อนุมัติ/publish job · **ย้อนกลับไม่ได้** (คอมเมนต์+revision ของคนอื่นผูกอยู่แล้ว) · ทิศกลับใช้ "ก๊อปเป็นซีรีส์ใหม่" · เก็บ audit ใครเปิดเมื่อไหร่ |
+| 2 | ใครอ่าน org series | **ทุกคนในองค์กร** (2,724 คนใน org 1) — ยอมรับว่าร่างที่ยังไม่ผ่านบรรณาธิการรั่วออกได้ |
+| 3 | ใครแก้ org series | **เป็น policy ราย org ไม่ใช่กติกาตายตัว** |
+| 4 | รูปร่าง policy | `org_config` key **`posts_policy`** = `{"read":"org","write":"org","approval":"required"}` · ค่า scope มี 2 ระดับ: `org` (ทุกสมาชิก) / `team` (เจ้าของ+`editor`+admin/SG) · **default = org/org/required** · หน้า `/org/settings` มี 3 dropdown · `personal` ไม่เกี่ยวกับ policy เจ้าของคนเดียวเสมอ |
+| 5 | ไฟล์สื่ออยู่ไหน | **นอก `public/`** → `storage/posts/<uuid>` + เสิร์ฟผ่าน `/api/posts/media/[id]` ที่เช็ค `postsAccess` ก่อน stream (ไม่ลอก `public/uploads/` แบบ finance เพราะร่าง personal เป็นเนื้อหาการเมือง) · **worker ฝั่งบอทอ่านจากดิสก์เดียวกัน** (เก็บ path relative จาก repo root) |
+| 6 | ลบตอน/ซีรีส์ | ปุ่มปกติ = **archive** (`archived_at`) · เจ้าของ/admin ลบถาวรได้ → ลบแถว cascade แต่ **ไม่ unlink ทันที** · `scripts/posts/gc-media.js` เก็บกวาดไฟล์กำพร้าอายุ >7 วัน · **ห้ามลบถาวรถ้ายังมี job `pending`/`scheduled`** |
+| 7 | ยิง 3 แพลตฟอร์มล้ม 1 | **1 แถว job = 1 ตอน × 1 แพลตฟอร์ม** + `batch_id` มัดให้ UI แสดงเป็นก้อนเดียว → retry ต่อแพลตฟอร์ม ไม่มีทางโพสต์ซ้ำ · เลิกใช้คอลัมน์ `platforms` พหูพจน์ |
+| 8 | job ล้มถาวร (retry ครบ 3) | **ป้ายในเว็บเป็นหลัก** (การ์ดซีรีส์ + ปุ่มลองใหม่) + **DM Discord หาคนสั่งโพสต์แบบ best-effort** ถ้าผูก discord ไว้ (org ไม่มี Discord ก็ยังใช้ได้) |
+| 9 | แก้ตอนที่ published แล้ว | **แก้ได้ในระบบ ไม่ sync กลับแพลตฟอร์ม** — เขียน revision + ขึ้นป้าย "ต่างจากที่เผยแพร่แล้ว" (เทียบกับ snapshot ใน job) · อยากให้ออกจริง = กด "โพสต์อีกครั้ง" = job ใหม่ · เหตุผล: FB แก้ได้ แต่ IG/Threads/X แก้ไม่ได้ → ปุ่มเดียวจะมี 4 พฤติกรรม |
+| 10 | `episode.status` เก็บอะไร | **สถานะงานเขียนเท่านั้น** = `draft`/`review`/`approved` · `scheduled`/`published`/`failed` เป็น **derived จาก `post_social_history`** (หน้า list join เพิ่ม 1 ชั้น) — ไม่มี state เพี้ยนตอนตอนหนึ่งขึ้น FB แล้วแต่ X ล้ม |
+| 11 | อนุมัติเป็นประตูก่อนโพสต์ไหม | **บังคับสำหรับ org series** (ต้อง `approved` ถึงสร้าง job ได้) · **`personal` ข้ามเสมอ** — เจ้าของโพสต์ได้เลย · ปรับเป็น `optional` ได้รายองค์กรผ่าน `posts_policy.approval` |
+| 12 | ลิงก์รีวิวอนุมัติได้แค่ไหน | **อนุมัติเต็มตัว เท่ากับ editor กด · รายตอน** — ⚠️ แก้ 2026-07-29: **token ผูก `episode_id` ตรงๆ** (เดิมผูก series แล้วกดทีละตอน — ซับซ้อนเกินเหตุในเมื่ออนุมัติรายตอนอยู่แล้ว + เพิกถอนรายตอนไม่ได้) · ส่งหลายลิงก์ถ้าอยากให้ตรวจหลายตอน · default **หมดอายุ 7 วัน** · revoke ได้ · ต้องกรอกชื่อ · บันทึก `uses` + IP · หน้า `/review` `noindex` · **ความเสียหายจำกัดเพราะปุ่มโพสต์ยังต้อง login เสมอ** |
+| 13 | โควตา AI | **เพดานต่อคนต่อวัน** (เก็บใน `user_config` เช่น 30 ครั้ง/วัน) + **เรียกได้เฉพาะคนที่มีสิทธิ์เขียนตาม `posts_policy.write`** · เกินแล้วขึ้นข้อความตรงๆ · key เดียวของโปรเจกต์ (`ANTHROPIC_API_KEY` ผ่าน `getAgentConfig()`) จึงต้องกันบิลพุ่งจากสมาชิกหลักพัน |
+| 14 | 2 คนแก้ตอนเดียวกัน | **optimistic lock** — autosave ส่ง `updated_at` ที่โหลดมาด้วย ไม่ตรง → **409 + บล็อกการเซฟ** แล้วถาม "คนอื่นแก้ไปแล้ว โหลดใหม่ / เก็บฉบับของฉันเป็น revision" · ไม่ใช่ last-write-wins |
+| 15 | job เลยเวลาเพราะบอทดับ | **grace 2 ชม.** — เลยไม่เกิน 2 ชม. ยิงเลย · เกินกว่านั้น → `stale` + ป้ายในเว็บ + DM ถาม "โพสต์เลย / ตั้งเวลาใหม่" · กันโพสต์เช้าโผล่ตอน prime time ผิดช่วง |
+
+### ♻️ กติกาข้อ 16 — ใช้โค้ดร่วมกับตะกร้าสื่อของบอทให้มากที่สุด (user สั่ง 2026-07-29)
+
+> "ตอน publish หรืออื่นใด อยากให้ใช้ library เดียวกันกับ bot social share เวลาจะ bug จะได้แก้ที่เดียว"
+
+**หลัก: posts ห้ามมี logic การโพสต์เป็นของตัวเอง** — เป็นแค่คนสั่งงานท่อเดิม
+
+| ของกลาง | ใครใช้ | กติกา |
+|---|---|---|
+| `services/metaApi.js` · `services/xApi.js` | ตะกร้าดิสฯ + worker | **ห้ามแตะนอกจากเพิ่ม param `accountId`** · ห้ามเขียน HTTP call ไป Graph API ที่อื่นเด็ดขาด |
+| **`services/publishPipeline.js`** (ยกออกจาก `basketHandler` ก้อน 4) | ตะกร้าดิสฯ + worker | ลำดับ ติดลายน้ำ → เลือกบัญชี → ยิงทีละแพลตฟอร์ม → เก็บผล อยู่ที่นี่ที่เดียว · `basketHandler` ต้องเหลือแค่โค้ด UI ของ Discord · **ตะกร้าต้องเปลี่ยนมาเรียกตัวนี้ในรอบเดียวกัน ไม่ใช่ปล่อยของเดิมไว้แล้วก๊อป** ไม่งั้นได้ 2 ท่อที่ค่อยๆ เพี้ยน |
+| `utils/quoteStyles.js` · `utils/watermarkImage.js` · `shortenQuote()` | บอท + **เว็บ import ตรงจาก repo root** (`outputFileTracingRoot` ชี้รากแล้ว — [next.config.js:9](web/next.config.js#L9)) | **ห้าม copy/เขียน renderer ใหม่ฝั่งเว็บ** (ย้ำจาก §หน้าจอ) · spike ก้อน 2b เช็คแค่ว่า import ข้าม package ได้ไหม · ไม่ผ่าน → ให้บอท render ผ่านคิว ไม่ใช่เขียนใหม่ |
+| `services/newsShare.js` | ทั้งคู่ | `news` เป็น "แพลตฟอร์ม" หนึ่งใน job ได้เลย (เฉพาะ org ที่มี guild) — ไม่ต้องเขียนทางส่งเข้า Discord ใหม่ |
+| **ประวัติการโพสต์** | ทั้งคู่ | ⚠️ แก้ 2026-07-29: **ไม่ใช้ `dc_media_history` แล้ว** — คิวกับประวัติเป็นตารางเดียวกันคือ `post_social_history` (แถว done = ประวัติ) · ก้อน 4 ย้าย 10 แถวเข้ามาแล้ว drop ตารางเก่า + แก้ `getHistory()` ฝั่งบอทให้อ่านตารางใหม่ · **ห้ามเขียนประวัติ 2 ที่** |
+| `getConfig()` เลือกบัญชี (`metaApi`/`xApi`) | ทั้งคู่ | posts ส่ง `social_account_id` เข้าไป — ไม่มี query หาบัญชีเองใน `web/db/posts/` |
+
+**เส้นที่ยังต้องแยก:** เว็บไม่ import `services/` ที่แตะ discord.js/pool ของบอท (กำแพงเดิม grep แล้ว 0 จุด) → เว็บสั่งงานผ่านแถวใน `post_social_history` เท่านั้น · ของกลางที่เว็บ import ตรงได้ = **โมดูล pure ใน `utils/` เท่านั้น**
+
+**สิ่งที่ตามมากับ schema:** `post_social_history` (คิว+ประวัติรวมกัน) `.platform` เอกพจน์ + `batch_id` + status `stale` · `post_episodes.status` เหลือ 3 ค่า + ใช้ `updated_at` เป็น lock · `post_series` เพิ่ม audit ตอนเปลี่ยน visibility · `post_episode_media.path` ชี้ `storage/posts/`
+
+---
+
 ## ⏭️ ขั้นถัดไป
 
-0. ~~**Phase 0** — migrate `dc_social_accounts` → org-native~~ ✅ เสร็จ 2026-07-29 (ยังไม่ deploy prod)
-1. **เคาะ 2 ข้อที่ค้าง** — (ก) วิธีเชื่อมเว็บ→บอท (เสนอ `post_publish_jobs`) · (ข) ดึง "อนุมัติผ่านลิงก์" เข้า MVP ไหม
-2. เคาะ data model + หน้าจอ
-3. เขียน plan → **รัน `/scrutinize`** (บังคับตาม CLAUDE.md ก่อน implement)
-4. implement
-5. migrate เนื้อหาจาก `posts/` เข้า DB แล้วค่อยเลิกใช้โฟลเดอร์นั้น
+0. ~~**Phase 0** — `dc_social_accounts` → org-native~~ ✅ เสร็จ 2026-07-29 (ยังไม่ deploy prod)
+1. ~~เคาะวิธีเชื่อมเว็บ→บอท · อนุมัติผ่านลิงก์ · data model · หน้าจอ~~ ✅ เคาะครบ 2026-07-29 (ดูข้างบน)
+2. ~~`/scrutinize` แผน~~ ✅ รัน 2 รอบ (Phase 0 · แผน posts) — ของที่เจอแก้เข้าแผนแล้ว
+3. ~~`/grill` ก่อน implement~~ ✅ รัน 2026-07-29 — 16 กิ่งเคาะครบ (ดู §ผ่าน `/grill` ข้างบน) · **⬅️ ต่อตรงนี้: เริ่มก้อน 1 ได้**
+4. implement ตามก้อน 1-6 (ดู `md/PENDING.md` §POSTS)
+5. migrate เนื้อหาจาก `posts/` เข้า DB แล้วค่อยเลิกใช้โฟลเดอร์นั้น (series D/E → `personal`)
+
+### 🧾 สรุปสิ่งที่เคาะรอบ 2026-07-29
+
+| ประเด็น | เคาะว่า |
+|---|---|
+| เว็บ→บอท | **ตารางคิว `post_social_history`** (ได้ custom scheduler ของ X/IG มาฟรี) · รวมประวัติไว้ในตารางเดียวกัน |
+| อนุมัติ | **ลิงก์อนุมัติ ไม่ต้องมีบัญชี** เข้า MVP · ชั้นเดียว |
+| ประตูหลักเข้าโมดูล | **โยนไอเดีย → AI จัดโครง** (AI ขยับจากก้อน 5 → ก้อน 2) |
+| AI คืนอะไร | **โครงก่อน แล้วร่างทีละตอน** · model `claude-sonnet-5` |
+| ชนิดโพสต์ | **ไม่แยก type** — ข้อความ + สื่อ 0..n (`upload`/`quote`) |
+| สื่อ | ตาราง `post_episode_media` (ไม่ใช้ jsonb, ไม่ใช้ `dc_media_baskets` ร่วม) |
+| ส่งเข้าตะกร้าดิสฯ | **ตัดออก** (2026-07-29) |
+| prefs ผู้ใช้ | แปลง `dc_user_config` → `user_config` key ด้วย `user_id` (ไม่สร้างตารางใหม่) |
+| บัญชีที่โพสต์ | job เก็บ `social_account_id` + เพิ่ม param `accountId` ให้ `getConfig`/`postTo*` |
+| ตั้งเวลา | คิวเราถือเอง **ไม่ส่ง `scheduled_publish_time` ให้ FB** → กติกา ≥20 นาทีหายไป + ตั้งเวลา IG/X ได้ |
+| ท่อโพสต์ | **แยก `services/publishPipeline.js`** ออกจาก `basketHandler` ให้ตะกร้ากับ worker ใช้ร่วม |
 
 ---
 

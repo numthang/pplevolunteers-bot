@@ -7,7 +7,7 @@ import { getEntryByToken } from '@/db/docs/entries.js'
  * Self-fill ข้อมูลผู้รับเงินที่ไม่มีใน cache_pple_member (จังหวัดอื่นนอก roster)
  * - ชื่อ-นามสกุล → users (PDF ใช้ fallback ngs_first_name ?? firstname อยู่แล้ว)
  * - เลขบัตร + ที่อยู่ → override_data ของ entry (override ชนะ ngs ทุก field ใน buildData)
- * - จำทั้งชุดใน dc_user_config key docs_self_info → prefill ครั้งถัดไป
+ * - จำทั้งชุดใน user_config key docs_self_info → prefill ครั้งถัดไป
  * หลักฐานตัวตนจริง = สำเนาบัตรที่อัปโหลด + ลายเซ็น (เหมือน flow เดิม link-ngs เป็นแค่ pre-check)
  */
 
@@ -25,18 +25,18 @@ async function loadRecipientEntry(req, tokenFromBody) {
   if (entry.signer_role !== 'recipient' || session.user.discordId !== entry.member_discord_id) {
     return { error: Response.json({ error: 'เฉพาะผู้รับเงินของเอกสารนี้เท่านั้น' }, { status: 403 }) }
   }
-  return { entry, discordId: session.user.discordId }
+  return { entry, discordId: session.user.discordId, userId: session.user.userId }
 }
 
 /** GET /api/docs/sign/self-info?token= — ค่า prefill (ของเดิมใน entry > ที่เคยกรอกครั้งก่อน > users) */
 export async function GET(req) {
-  const { entry, discordId, error } = await loadRecipientEntry(req)
+  const { entry, userId, error } = await loadRecipientEntry(req)
   if (error) return error
 
-  const { rows } = await pool.query(
-    `SELECT value FROM dc_user_config WHERE discord_id = $1 AND "key" = 'docs_self_info'`,
-    [discordId]
-  )
+  const { rows } = userId ? await pool.query(
+    `SELECT value FROM user_config WHERE user_id = $1 AND "key" = 'docs_self_info'`,
+    [userId]
+  ) : { rows: [] }
   const saved = rows[0]?.value || {}
   const ov = entry.override_data || {}
 
@@ -105,9 +105,9 @@ export async function POST(req) {
 
     // จำไว้ prefill ครั้งหน้า
     await pool.query(
-      `INSERT INTO dc_user_config (discord_id, "key", value) VALUES ($1, 'docs_self_info', $2)
-       ON CONFLICT (discord_id, "key") DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
-      [discordId, JSON.stringify({ firstName, lastName, ...clean })]
+      `INSERT INTO user_config (user_id, "key", value) VALUES ($1, 'docs_self_info', $2)
+       ON CONFLICT (user_id, "key") DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
+      [userId, JSON.stringify({ firstName, lastName, ...clean })]
     )
 
     return Response.json({ success: true })

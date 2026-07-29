@@ -11,6 +11,7 @@ export const ORG_FEATURES = [
   { key: 'calling', label: 'โทรอาสา', desc: 'แคมเปญโทร ผู้ติดต่อ (CRM) สถิติการโทร' },
   { key: 'docs',    label: 'เอกสาร',  desc: 'ใบสำคัญรับเงิน ผู้มีอำนาจลงนาม' },
   { key: 'cases',   label: 'เรื่องร้องเรียน', desc: 'รับเรื่อง ติดตามสถานะ มอบหมายผู้รับผิดชอบ' },
+  { key: 'posts',   label: 'งานสื่อ',   desc: 'เขียนคอนเทนต์ซอยเป็นตอน อนุมัติ แล้วเผยแพร่ลงโซเชียล' },
 ]
 
 export const ORG_FEATURE_KEYS = ORG_FEATURES.map(f => f.key)
