@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { X, Upload, Loader2, ImageOff, Users } from 'lucide-react'
+import PostPublishPanel from './PostPublishPanel.jsx'
 
 const STATUS_LABEL = { draft: 'ฉบับร่าง', review: 'รอตรวจ', approved: 'อนุมัติแล้ว' }
 const ACCEPT = 'image/png,image/jpeg,image/webp,image/gif'
@@ -251,6 +252,8 @@ export default function PostMediaPanel({ id }) {
           {promoteError && <p className="text-sm text-red-500 mt-1.5">{promoteError}</p>}
         </div>
       )}
+
+      <PostPublishPanel postId={id} hasMedia={media.length > 0} />
     </div>
   )
 }

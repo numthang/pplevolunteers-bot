@@ -47,6 +47,10 @@
 
 ---
 
+## 🔴 เจอ 2026-07-30 — token Facebook เพจ "ราชบุรี" ใช้ไม่ได้แล้ว
+`Invalid OAuth access token - Cannot parse access token` ทั้ง page token และ user token → **โพสต์ FB จากระบบไม่ออกอยู่ตอนนี้** (ไม่เกี่ยวกับงาน posts) · ต้อง reconnect ที่ `/bot/platforms`
+⚠️ **เวลาเทสคิวโพสต์: ปิดบอทก่อน** — บอทที่รันอยู่จะหยิบงานในคิวไปยิงโซเชียล**จริง** (เจอตอน e2e 2026-07-30)
+
 ## ✍️ POSTS — เครื่องมืองานสื่อ · ดีไซน์เคาะครบ 2026-07-29 ยังไม่เขียนโค้ดสักบรรทัด
 
 spec + ดีไซน์ + ตารางทั้งหมดอยู่ `md/posts/POSTS.md` (อ่านก่อนเสมอ ห้าม re-derive) · `/scrutinize` ผ่าน 2 รอบแล้ว
@@ -75,16 +79,20 @@ spec + ดีไซน์ + ตารางทั้งหมดอยู่ `md
 - [ ] **ก้อน 2b** — quote studio (ธัมบ์เนล 20 สไตล์ · sync ต้นทาง · พื้นสี) + preview รายแพลตฟอร์ม + ซอยตอนแบบลากเส้น
   - ⚠️ spike ก่อน (~20 นาที): เว็บ import `utils/quoteStyles.js` ข้าม package ได้ไหม (`web/package.json` มี `@napi-rs/canvas` + `outputFileTracingRoot` ชี้รากแล้ว) · ไม่ผ่าน → fallback ให้บอท render ผ่านคิว · **ห้าม copy renderer ไปฝั่งเว็บ**
 - [ ] **ก้อน 3** — อนุมัติ: สถานะ + revisions + review links (`noindex`, token ≥32 bytes) + comments + ล็อกหลังอนุมัติ
-- [ ] **ก้อน 4** — แยก `services/publishPipeline.js` ออกจาก `basketHandler` + param `accountId` + `post_social_history` (คิว+ประวัติรวมกัน) + worker (`FOR UPDATE SKIP LOCKED`, retry 3)
-  - ⚠️ **ตะกร้าดิสฯ ต้องเปลี่ยนมาเรียก pipeline ตัวใหม่ในรอบเดียวกัน** ห้ามก๊อปแล้วปล่อยของเดิม (กติกาข้อ 16)
-  - ❌ **ไม่ยุบ `dc_media_baskets` เข้า posts** (เคาะแล้วกลับคำ 2026-07-29) — ตะกร้าเป็น scratch pad ของ Discord ไม่ใช่ "ร่างที่ต้องอนุมัติ"
-    - จุดชนจริง: กติกาข้อ 11 บังคับ org series ต้อง `approved` ก่อนโพสต์ → ถ้าตะกร้าเป็น episode คนกดโพสต์ในดิสฯ จะโดนบล็อกรอบรรณาธิการ = พฤติกรรมที่ใช้ทุกวันเปลี่ยน · ทางเลี่ยงทั้ง 2 ทางไม่สวย (ยกเว้นตะกร้า = กลับไปมี 2 พันธุ์ในเชิงพฤติกรรม / เปลี่ยนพฤติกรรมดิสฯ = regression)
-    - พ่วงมาอีก: `seq`/`series_id` ไม่มีความหมายกับตะกร้า · ต้องเอาคีย์ `(guild_id, channel_id)` ไปแปะบน `post_episodes` เพื่อหา "ตะกร้าที่เปิดอยู่ของห้องนี้"
-    - ที่ยังรวมได้และทำอยู่: **ประวัติ** (ข้างล่าง) · ท่อโพสต์ `publishPipeline` ที่ใช้ร่วมกัน
-  - **ประวัติ = แถว `done` ใน `post_social_history`** (เคาะ 2026-07-29 รวมคิว+ประวัติ) → ย้าย 10 แถวจาก `dc_media_history` เข้ามา + แก้ `getHistory()`/`addHistory()` ฝั่งบอท แล้ว **drop `dc_media_history`** · ห้ามเขียนประวัติ 2 ที่
-    - ความเสี่ยงต่ำ: ไม่มี logic ไหนอ่านตารางนี้ไปตัดสินใจ — เขียน 2 จุด (`basketHandler` 766, 905) อ่านจุดเดียว (โชว์ "โพสต์ล่าสุด" ใน sticky ของตะกร้า) · พลาดแล้วเห็นทันที ไม่พังเงียบ
-    - ⚠️ รูปร่างแถวเปลี่ยน: เดิม 1 แถว = 1 โพสต์หลายแพลตฟอร์ม (`platform` = `'fb,ig,x'` แล้ว UI `.split(',')`) → ใหม่ 1 แถว = 1 แพลตฟอร์ม ⇒ โค้ดโชว์ประวัติต้อง `GROUP BY batch_id` · ตอน migrate ต้อง**แตก 10 แถวเก่าตาม comma** (~15 แถว) ให้รูปร่างเดียวกันหมด
-    - แมปคอลัมน์: `image_count`/`video_count` → นับจาก `media` jsonb · `posted_by` → `created_by_discord_id` · `schedule_time` (bigint unix) → `scheduled_at` (timestamptz) · `fb_url`/`ig_url`/`threads_url`/`x_url` → `result` jsonb
+- [x] **ก้อน 4** ✅ 2026-07-30 (local · ยังไม่ deploy prod · **ยังไม่กดโพสต์จริงจากดิสฯ/เว็บ**)
+  - ขั้น 1 `3539ba5` — param `accountId` ใน metaApi/xApi (+ `orgId` ให้ X ใช้ app creds ของ org)
+  - ขั้น 2 `d8746f9` — **`services/publishPipeline.js`** (prepareImages/publishOne/publishBatch) + **สลับ basketHandler มาเรียกในรอบเดียวกัน** (processAndPost -215/+72 บรรทัด) · เทส `scripts/test/publishPipeline.test.js` 14 เคส
+  - ขั้น 3 `eb9d6c4` — รวมประวัติที่ `post_social_history` (10 แถวเก่า → 16 แถวรายแพลตฟอร์ม, batch_id คงที่) · `getHistory` GROUP BY batch_id · **drop `dc_media_history`**
+  - ขั้น 4a `7ddf6cc` — **worker** (`services/publishWorker.js`) poll 30 วิ · SKIP LOCKED · retry ≤3 · grace 2 ชม.→stale · **backlink กลับห้อง Discord** · เทส 10 เคส
+  - ขั้น 4b — API เว็บ (`/publish` 202 · `/jobs` · retry/cancel) + กันกดซ้ำ 409 + UI กล่องเผยแพร่ใน `PostPublishPanel.jsx`
+  - e2e ผ่าน: สร้างโพสต์ → เผยแพร่ → เข้าคิว → worker ยิง → done+URL · กดซ้ำ 409 · IG ไม่มีสื่อ 400 · ตั้งเวลาย้อนหลัง 400
+  - **⬜ ของค้างจากก้อนนี้:**
+    - worker **ยังไม่ติดลายน้ำ** (`resolveWatermarkPath` ยังผูก guild) → เว็บต้องส่งรูปที่พร้อมโพสต์
+    - **คลิปใหญ่จากเว็บ**: IG/Threads ต้องดึงจาก **URL สาธารณะ** → ยังไม่มี signed URL route (ไฟล์ posts อยู่นอก `public/`)
+    - UI ยังไม่มี: เลือกห้องแจ้งกลับ (ใช้ `org_config.posts_notify_channel` เท่านั้น) · เลือกลายน้ำ · ชื่อบัญชีในการ์ดงาน
+    - **quiet hours ของ `news`** ยังไม่เคาะว่าเว็บต้องเข้าคิว 21:00–09:00 ไหม
+- [ ] **ก้อน 4c — ยุบตะกร้าดิสฯ เข้า `post_episodes`** (user เคาะ 2026-07-29: "ระบบเดียว จัดการง่าย debug ง่าย")
+  - รายละเอียด + 6 จุดที่ต้องระวังอยู่ `md/posts/PLAN-4.md` §เคาะแล้ว · `post_basket_slots` · ล้างตะกร้า=archive · หมวด=ชื่อห้อง · รูปโหลดลงดิสก์ (ปิดบั๊กรูปหาย 24 ชม.) · `org_id` NULL = โผล่แค่ในดิสฯ
 - [ ] **ก้อน 5** — AI เกลาสำนวน + แคปชัน/ไอเดียภาพ
 - [ ] **ก้อน 6** — migrate `posts/*.md` เข้า DB (series D/E → `personal`) แล้วเลิกใช้โฟลเดอร์
 - [ ] **ถอด prefix `dc_` ออกจากตารางที่เป็น org แล้ว** (user สั่ง 2026-07-29 · ทำ **หลังก้อน 4**) — สำรวจแล้วเหลือจริง 3 ตัว:

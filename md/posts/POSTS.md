@@ -7,7 +7,9 @@
 > `/scrutinize` 2 รอบ + `/grill` 16 กิ่ง ผ่าน · **ก้อน 1 รื้อใหม่แล้ว** (ทิ้ง `post_series` → 6 ตาราง ดู §Data model)
 > **ก้อน 2a เสร็จ** — lib (`postsAccess` 66 tests · `postsGuard` · `postsAiQuota` · `postsStorage` · `ai`) · db (`web/db/posts/`) · API 13 ไฟล์ · UI `/posts` + `/posts/[id]` · Nav + feature gate
 > verify: 272 tests · `next build` · smoke DB จริง 15 เคส (lock 409 · revision attribution · rename หมวด · promote audit)
-> **เทสในเบราว์เซอร์จริงผ่านแล้ว** (autosave · reload · อัปรูป · gate ไฟล์ 401 · กล่อง 409 สองแท็บ) · ⬜ ยังไม่เทสปุ่ม AI/ลากเรียง/paste · ⬜ ยังไม่ต่อ publish (ก้อน 4)
+> **เทสในเบราว์เซอร์จริงผ่านแล้ว** (autosave · reload · อัปรูป · gate ไฟล์ 401 · กล่อง 409 สองแท็บ) · ⬜ ยังไม่เทสปุ่ม AI/ลากเรียง/paste
+> **ก้อน 4 เสร็จ 2026-07-30** — `services/publishPipeline.js` (ท่อร่วมกับตะกร้าดิสฯ) · `publishWorker` (คิว+retry+stale+backlink กลับห้อง) · ประวัติรวมที่ `post_social_history` (drop `dc_media_history`) · API `/publish` `/jobs` + UI กล่องเผยแพร่ · e2e ผ่าน
+> ⬜ ต่อไป: **ก้อน 4c ยุบตะกร้าดิสฯ เข้า post_episodes** (ดู `md/posts/PLAN-4.md`) · ก้อน 3 (อนุมัติ/review link) · ก้อน 2b (quote studio)
 
 ---
 

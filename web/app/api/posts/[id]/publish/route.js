@@ -1,0 +1,132 @@
+import { postContext } from '@/lib/postsGuard.js'
+import { canPublishPost, canWritePost } from '@/lib/postsAccess.js'
+import { getGuildId } from '@/lib/guildContext.js'
+import { getOrgConfig } from '@/db/orgConfig.js'
+import { listMedia } from '@/db/posts/media.js'
+import { createJobs, getSocialAccount, activePlatforms } from '@/db/posts/jobs.js'
+
+const VALID_PLATFORMS = ['fb', 'ig', 'threads', 'x', 'news']
+// IG/Threads โพสต์ข้อความล้วนไม่ได้ (ข้อจำกัดของ Graph API เอง) — ตัดตั้งแต่ต้นทาง ไม่ปล่อยให้ worker ล้ม
+const NEEDS_MEDIA = ['ig', 'threads']
+
+/**
+ * เวลาที่ผู้ใช้กรอกมาเป็นเวลาไทย (`"2026-07-30T21:00"` จาก input datetime-local ไม่มี timezone)
+ * → เติม +07:00 ให้ชัดเจน แล้วส่งสตริงนั้นให้ pg แปลงเอง (กันบั๊ก +7 ชม. แบบ txn_at ของ finance)
+ */
+function toTimestamptz(input) {
+  const s = String(input).trim()
+  const hasZone = /(Z|[+-]\d{2}:?\d{2})$/.test(s)
+  const normalized = hasZone ? s : `${s}+07:00`
+  const d = new Date(normalized)
+  if (Number.isNaN(d.getTime())) return null
+  return { value: normalized, ms: d.getTime() }
+}
+
+/**
+ * POST /api/posts/[id]/publish — สั่งโพสต์ (เว็บเขียนคิว บอทเป็นคนยิง)
+ * body { platforms:string[], accountId?:number, scheduledAt?:string|null, channelId?:string|null, wmType?:string }
+ */
+export async function POST(req, { params }) {
+  const { id } = await params
+  const ctx = await postContext(id)
+  if (ctx.error) return ctx.error
+
+  if (!canPublishPost(ctx.post, ctx.access, ctx.userId, ctx.policy)) {
+    // แยกเหตุผลให้ user รู้ว่าต้องทำอะไรต่อ — "ยังไม่อนุมัติ" แก้ได้เอง แต่ "ไม่มีสิทธิ์" แก้ไม่ได้
+    const reason = canWritePost(ctx.post, ctx.access, ctx.userId, ctx.policy)
+      ? 'โพสต์นี้ต้องได้รับอนุมัติก่อนจึงจะเผยแพร่ได้'
+      : 'ไม่มีสิทธิ์สั่งเผยแพร่โพสต์นี้'
+    return Response.json({ error: reason }, { status: 403 })
+  }
+
+  const body = await req.json().catch(() => ({}))
+
+  const platforms = [...new Set(Array.isArray(body.platforms) ? body.platforms : [])]
+  if (!platforms.length) return Response.json({ error: 'ต้องเลือกอย่างน้อย 1 แพลตฟอร์ม' }, { status: 400 })
+  const unknown = platforms.filter(p => !VALID_PLATFORMS.includes(p))
+  if (unknown.length) {
+    return Response.json({ error: `ไม่รู้จักแพลตฟอร์ม: ${unknown.join(', ')}` }, { status: 400 })
+  }
+
+  let scheduledAt = null
+  if (body.scheduledAt) {
+    const parsed = toTimestamptz(body.scheduledAt)
+    if (!parsed) return Response.json({ error: 'รูปแบบเวลาที่ตั้งไว้ไม่ถูกต้อง' }, { status: 400 })
+    if (parsed.ms < Date.now()) return Response.json({ error: 'ตั้งเวลาย้อนหลังไม่ได้' }, { status: 400 })
+    scheduledAt = parsed.value
+  }
+
+  try {
+    // snapshot สื่อ ณ ตอนกดโพสต์ — แก้สื่อทีหลังไม่กระทบงานที่เข้าคิวไปแล้ว (worker อ่านไฟล์จาก path นี้)
+    const media = (await listMedia(ctx.post.id)).map(m => ({ kind: m.kind, path: m.path }))
+    if (!media.length) {
+      const need = platforms.filter(p => NEEDS_MEDIA.includes(p))
+      if (need.length) {
+        return Response.json(
+          { error: `${need.join('/')} ต้องมีรูปอย่างน้อย 1 ชิ้น — แนบสื่อก่อนแล้วค่อยกดเผยแพร่` },
+          { status: 400 }
+        )
+      }
+    }
+
+    // ⚠️ ด่านความปลอดภัยเดียวของ accountId — ฝั่งบอทเชื่อค่าในแถวงานเลย (ดูคอมเมนต์ใน services/metaApi.js)
+    let accountPlatform = null
+    if (body.accountId != null) {
+      const accountId = Number(body.accountId)
+      if (!Number.isInteger(accountId)) {
+        return Response.json({ error: 'บัญชีที่เลือกไม่ถูกต้อง' }, { status: 400 })
+      }
+      const account = await getSocialAccount(accountId)
+      if (!account || account.org_id !== ctx.orgId) {
+        return Response.json({ error: 'บัญชีที่เลือกไม่ใช่ของหน่วยงานนี้' }, { status: 403 })
+      }
+      if (!platforms.includes(account.platform)) {
+        return Response.json(
+          { error: `บัญชีที่เลือกเป็นของ ${account.platform} แต่ไม่ได้เลือกแพลตฟอร์มนั้น` },
+          { status: 400 }
+        )
+      }
+      accountPlatform = account.platform
+    }
+
+    // กันกดซ้ำ/ดับเบิลคลิก — งานที่ยังไม่ยิงของแพลตฟอร์มเดียวกันมีอยู่แล้ว = ไม่สร้างเพิ่ม
+    // (ไม่งั้นโพสต์ออก 2 รอบ ซึ่งเรียกคืนไม่ได้)
+    const busy = await activePlatforms(ctx.post.id, platforms)
+    if (busy.length) {
+      return Response.json(
+        { error: `มีงานที่ยังไม่ได้ยิงค้างอยู่แล้ว (${busy.join(', ')}) — รอให้เสร็จหรือยกเลิกก่อน` },
+        { status: 409 }
+      )
+    }
+
+    const guildId = await getGuildId(ctx.session)
+    // 'news' = ส่งเข้าห้องข่าวสารใน Discord → org ที่ยังไม่เชื่อม Discord ทำไม่ได้ (worker จะล้มเปล่าๆ)
+    if (platforms.includes('news') && !guildId) {
+      return Response.json({ error: 'หน่วยงานนี้ยังไม่ได้เชื่อมกับ Discord จึงส่งเข้าห้องข่าวสารไม่ได้' }, { status: 400 })
+    }
+
+    // ห้องที่จะแจ้งผลกลับ: เลือกตอนกด > ค่า default ของ org > ไม่แจ้ง (org ไม่มี Discord = ข้ามเงียบ)
+    const channelId = body.channelId || (await getOrgConfig(ctx.orgId, 'posts_notify_channel')) || null
+
+    const jobs = await createJobs({
+      orgId: ctx.orgId,
+      episodeId: ctx.post.id,
+      platforms,
+      accountId: body.accountId != null ? Number(body.accountId) : null,
+      accountPlatform,
+      guildId,
+      channelId,
+      caption: ctx.post.body || '',
+      media,
+      scheduledAt,
+      wmType: typeof body.wmType === 'string' ? body.wmType : null,
+      createdBy: ctx.userId,
+      createdByDiscordId: ctx.session?.user?.discordId || null,
+    })
+
+    return Response.json({ success: true, data: { batchId: jobs[0]?.batch_id || null, jobs } }, { status: 202 })
+  } catch (error) {
+    console.error('[POST /api/posts/[id]/publish]', error)
+    return Response.json({ error: 'Internal Server Error' }, { status: 500 })
+  }
+}
