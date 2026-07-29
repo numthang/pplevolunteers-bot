@@ -1,75 +1,66 @@
-/poll question:🗳️ ท่านเห็นควรให้เปิดรับผู้สม้คร นายก อบจ. ราชบุรี ครั้งหน้าหรือไม่?  anon:Semi-Anonymous choices::green_circle: 1. ส่ง + พร้อมลงแรงหน้างาน, :blue_circle: 2. ส่ง + ถ้าผู้สมัครมีความพร้อมตามเกณฑ์, :red_circle: 3. ไม่ส่ง เราไม่พร้อม ควรยุติการสรรหา, :yellow_circle: 4. ไม่แน่ใจ เป็นกองเชียร์/ช่วยประชาสัมพันธ์ description:⚠️ เกณฑ์ผู้สมัครประกอบการตัดสินใจ: ผู้สมัครควรมีทีม สจ. ของตัวเอง, มีทีมเดินหาเสียง 4-5 คน/เขตเลือกตั้ง (สส.) ระยะเวลา 2 เดือน (หากมติส่วนใหญ่เลือก "ส่ง" จะเข้าสู่ขั้นตอนการเปิดรับสมัครสาธารณะต่อไป) buttons:Yes time:7d
+# Posts
+- พยายามใช้ร่วมกับ basket ไหม 
+- เปิดหน้าแรก posts มา โยนหัวข้อ ไอเดียเริ่มต้น ai เอาไปจัดเป็น draft ให้ก่อนเลย มีให้เลือก personal หรือ องค์กร ก่อนโยนไอเดีย save state การเลือกไว้ถ้าทำได้ไม่ลำบาก
+- มีให้อัพโหลดรูปด้วย
+- Draft list จะเรียงตามอะไรดี ความสมบูรณ์ของเนื้อหา ถ้ามี progress บอกก็ดีนะ หรือ วันที่ล่าสุดเอาล่าสุดก่อนก็ได้ 
+- เปิด draft list มาแต่ละตัว 
+- เปลี่ยนสีอัตลักษณ์ของหน้าการทำโควต
+- โพสต์มีหลายแบบ โพสต์โควต โพสต์ภาพ โพสต์ข้อความ flow เป็นแบบไหนดี 
 
-PLATFOR{m}.ORG
-- ตอนนี้ถ้าจะดูว่าใครเป็น treasurer บนเว็บเพื่อมีสิทธแก้ไข finance ดูจากอะไร ค้นจาก dc_members.roles แล้วแมพ เหรัญญิก เพื่อหา treasurer เหรอ
-- จัดระเบียบไฟล์ใน web/components หน่อย พวกของกลางใช้ร่วมกันคงไว้ได้
-- จัดระเบียบ setting ดูว่าตอนนี้เรามีอะไรบ้าง จะรวมหรือจะแยก ยังไงดี /org/settings ตอนนี้ consistancy ดีแล้วใช่ไหม 
-- ตอนนี้จะ config web_roles ให้สมาชิกยังไง แต่สำหรับ discord ตอนนี้ migrate มาก่อนได้
-- ผมอาจจะเปลี่ยน /bot เป็น /dc แล้วก็ /dc/settings => มีพวก ai, watermark, platforms, quote, roles รวมอยู่ในนั้นอ่ะ ดีไหม
-
-
-# Bot
-
-
-# บน Mac (เครื่องนี้)
-cd /Users/tee/VSites/node/pple-volunteers
-tar czf ~/wolf-mac-20260726.tgz .wolf/cerebrum.md .wolf/buglog.json .wolf/anatomy.md
-scp ~/wolf-mac-20260726.tgz tee@<linux>:~/
-
-# บน Linux — backup ก่อนเสมอ
-cd /path/to/pple-volunteers
-cp -r .wolf .wolf.bak-$(date +%F)
-tar xzf ~/wolf-mac-20260726.tgz    # overwrite 3 ไฟล์
-
-CivicFlow
-- 
-
-ข้อเสนอ: ย้าย CivicFlow จาก Vercel มาที่ VPS
+# CivicFlow
+- ข้อเสนอ: ย้าย CivicFlow จาก Vercel มาที่ VPS
 สรุป: แพลตฟอร์มนี้ควรรันบนเซิร์ฟเวอร์ของเราเอง (VPS) ไม่ใช่ Vercel — เพราะระบบที่เราจะสร้างมีส่วนที่ Vercel รันไม่ได้ และ VPS ถูกกว่า ยืดหยุ่นกว่า มีคนดูแลให้ (ผมเอง)
-
-ทำไมดีกว่าสำหรับ CivicFlow:
 - ทำได้ครบ ไม่มีเพดาน — ระบบจริงมีส่วนที่ต้องทำงานตลอดเวลา (แจ้งเตือน, งานเบื้องหลัง, เชื่อม Discord/แชท, ค้นหา). Vercel รันของพวกนี้ไม่ได้เลย ต้องไปหาบริการเสริมมาต่ออีกหลายเจ้า. VPS = จบในที่เดียว
 - ถูกกว่ามาก — Vercel + database ที่ต้องเช่าแยก (Supabase) = จ่ายรายเดือนหลายเจ้า และยิ่งโตยิ่งแพง. ผมมีเซิร์ฟเวอร์อยู่แล้วและมีทรัพยากรเหลือ — ต้นทุน hosting แทบไม่เพิ่ม
 - มีคนดูแลให้ ไม่ต้องเจอข้อจำกัดคนเดียว — บน Vercel เวลาติดข้อจำกัด ทีมที่ไม่รู้โค้ดจะไปต่อไม่ได้. บน VPS ผมดูแลทั้งหมดให้ — อัปเดต, สำรองข้อมูล, แก้ปัญหา
 - ไม่ผูกขากับเจ้าใดเจ้าหนึ่ง — ข้อมูลและระบบเป็นของ CivicFlow เต็มตัว ย้ายที่ไหนก็ได้ ไม่ถูก lock กับ Vercel/Supabase
 - พูดตรงๆ เรื่องที่ Vercel ดี (แต่ไม่ตรงกับเรา):
 - Vercel เหมาะกับทีมที่ ไม่มีคนเทคนิค และคาดว่าจะมี คนเข้าเว็บพุ่งมหาศาลกะทันหัน. CivicFlow ไม่ใช่ทั้งสองอย่าง — เรามีคนเทคนิค (ผม) และ traffic ระดับองค์กรที่คาดเดาได้. ข้อดีหลักของ Vercel เลยไม่ได้ใช้ ส่วนข้อจำกัดกลับมาขวางเรา
-- icon องค์กรขอบมันแตกๆ ไม่ smooth
-- menu ใน org switcher ทำ font ให้ใหญ่หน่อย เท่าใน hamburger ก็ได้ 
-- http://localhost:3000/profile เปลี่ยน tab เป็น dropdown และน่าจะเปลี่ยนเป็น /user/profile /user/settings ไหม แต่เอาไว้ก่อน ยังไม่แน่ใจว่าจะ setting อะไร ตอนนี้ มีแต่พวก quote
-- http://localhost:3000/profile ไม่แน่ใจว่าตอน switch org มันดึงข้อมูลถูก org 
 
-Re-positioning
+# PLATFOR{m}.ORG
 - workspacefor.org
 - ทำให้เว็บไซต์ หรือ sub-domain ภายนอกใช้ระบบเดียวกันได้แต่ใช้ชื่อของเขาเอง
 
-Web
+# Web
 - อยากได้หน้า dashboard ของ http://localhost:3000/bot/ ตอนนี้มันวิ่งไป http://localhost:3000/bot/platforms ดูแปลกๆ ไม่มี landing ทำแบบไหนดี เปลี่ยนเป็น config หรือ setting ดีไหม อันไหนดี
 - project หลังจากนี้ จะรู้ไหมว่าผมทำรองรับสองภาษาแล้วอ่ะ แล้วก็ไม่รู้ว่าเราต้อง cleaning memory.md, claude.md ที่บางอัน outdate อะไรบ้างไหม เพื่อลด context ตอนทำงาน
 - อยากทำ Project ย้ายจาก LINE กลุ่มมาใช้ discord เพื่อองค์กรกันเถอะ รายละเอียดยังไม่ได้คิด
 - guild switching ใน hamburger ไม่ต้องมีไหมอ่ะ
 - ต้องทำให้รองรับ config WEB_BASE_URL ที่ไม่ได้มาจาก .env แล้ว แต่ต้องสะท้อน จาก guild_config
 - dc_server_settings เราเลิกใช้แล้วใช่ไหม ถ้าใช่ลบทิ้งไปเลย
+- ตอนนี้ถ้าจะดูว่าใครเป็น treasurer บนเว็บเพื่อมีสิทธแก้ไข finance ดูจากอะไร ค้นจาก dc_members.roles แล้วแมพ เหรัญญิก เพื่อหา treasurer เหรอ
+- จัดระเบียบไฟล์ใน web/components หน่อย พวกของกลางใช้ร่วมกันคงไว้ได้
+- จัดระเบียบ setting ดูว่าตอนนี้เรามีอะไรบ้าง จะรวมหรือจะแยก ยังไงดี /org/settings ตอนนี้ consistancy ดีแล้วใช่ไหม 
+- ตอนนี้จะ config web_roles ให้สมาชิกยังไง แต่สำหรับ discord ตอนนี้ migrate มาก่อนได้
+- ผมอาจจะเปลี่ยน /bot เป็น /dc แล้วก็ /dc/settings => มีพวก ai, watermark, platforms, quote, roles รวมอยู่ในนั้นอ่ะ ดีไหม
+- icon องค์กรขอบมันแตกๆ ไม่ smooth
+- menu ใน org switcher ทำ font ให้ใหญ่หน่อย เท่าใน hamburger ก็ได้ 
+- http://localhost:3000/profile เปลี่ยน tab เป็น dropdown และน่าจะเปลี่ยนเป็น /user/profile /user/settings ไหม แต่เอาไว้ก่อน ยังไม่แน่ใจว่าจะ setting อะไร ตอนนี้ มีแต่พวก quote
+- http://localhost:3000/profile ไม่แน่ใจว่าตอน switch org มันดึงข้อมูลถูก org 
 
-Bot 
+# Docs
+- autocrop ใน docs ผมว่าทำงานไม่ค่อยสมบูรณ์ ภาพเบี้ยวบ้าง เพี้ยนบ้าง หรือเราทำ manual ด้วยมือคนแบบบัตรประชาชนดี แต่ถ้าอัพทีละเยอะๆ จะไหวไหม ขอ solution
+
+# Bot 
 - มีวิธีย้ายคนจาก stage ไปห้องประชุมธรรมดาทั้งหมดไหมครับ ผมอยากทำตอนปิดประชุม stage
 - ข้อความยาวๆใน modal ไม่มีทางแก้ได้แล้วใช่ไหม มันกี่ตัวอักษรนะ ข้อจำกัด
 
-Cooking
+# Cooking
 - ย้าย cooking ออกจาก discord project เถอะ ไปทำเป็น personal ที่แบบ login หรือไม่ login ก็ได้ ไป schema ใหม่ไปเลยดีมะ ส่วน username เราก็แยกออกไปจาก แอพองค์กรไปเลยเนอะ ดีมะอ่ะ รอให้มี domain ของตัวเองก่อน
+- Cooking ตอนสร้าง ai เมนู ถ้ากดปิดเลย ไม่กดแก้ไขอะไรสักอย่างมันจะไม่บันทึก ควรมีปุ่มบันทึกไหม แต่ตอนแรกสร้างมาแบบไม่มีปุ่ม เฉพาะเพิ่มเมนูใหม่ก็ได้ ตอนแก้ไขไม่ต้องมีปุ่ม หรือมีปุ่มก็ไม่เสียหาย
 
-Calling
+# Calling
 
-Case
+# Cases
 
-Project Management
+# Projects
 - ทำระบบจัดการโครงการ project management อย่าง notion, trello, appflowy
 - gogo panel อัพเกรด ให้กดลงชื่องานด้านต่างๆ แล้วลิงก์กับ project management
 
-Rag-AI
+# Rag-AI
 Tester bot ยัง respond กับการเมนชัน @everyone อยู่เลย แต่เหมือน bot PPLE จะไม่มีปัญหา
 
-multi-language
+# i18n
 - ยังไม่หมด
 
 End of the Day

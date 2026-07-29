@@ -46,6 +46,19 @@
 
 ---
 
+## 📱 SOCIAL ACCOUNTS org-native (Phase 0 ของ posts) — เสร็จ local 2026-07-29
+
+`dc_social_accounts` = ตารางสุดท้ายในท่อ publish ที่ยัง guild-based · rebuild ใส่ `org_id` + `owner_user_id` แล้ว
+รายละเอียด/กติกา + สิ่งที่ตั้งใจไม่แตะ อยู่ `md/posts/POSTS.md` §Phase 0
+
+**⬜ เหลือ:**
+- [ ] **deploy prod** — `migration.sql` (idempotent แต่ rebuild ตาราง → ทำตอนบอทไม่ได้เขียน) + build เว็บ + smoke ตะกร้าสื่อในบอทของจริง
+- [ ] **เทสในเบราว์เซอร์** — `/bot/platforms` ตอนนี้โชว์บัญชี public ทั้งองค์กร (3 guild รวมกัน) ยังไม่ได้ดูด้วยตา ว่าอ่านออกไหมว่าอันไหนของแบรนด์ไหน (มีแต่ `group_name` เป็นตัวแยก)
+- [ ] **app creds ยังเป็นราย guild** (`dc_guild_config` → `meta_app_id`/`x_consumer_key`) → org ที่ไม่มี guild **ถือครองบัญชีได้ แต่กด Connect ใหม่ไม่ได้** · เคาะ 2026-07-29 ว่ายังไม่ย้าย — ถ้าจะให้ org self-serve ผูกเพจเองได้ ต้องย้าย creds ขึ้น `org_config` (~3 ไฟล์ + เส้น OAuth)
+- [ ] `/bot/*` ยังบล็อก org ที่ไม่มี guild ทั้งโซน → หน้าจัดการบัญชีโซเชียลควรย้ายออกจาก `/bot/` วันที่ posts มีหน้าของตัวเอง
+
+---
+
 ## 📮 CASES — รอบ 2026-07-28
 > รายละเอียด/ประวัติย้ายไป `md/case/CASE.md` แล้ว — ที่เหลือคืองานค้าง
 **⬜ เหลือ:**
