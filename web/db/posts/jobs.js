@@ -21,21 +21,20 @@ const COLS = `
  * @param {string[]} o.platforms  'fb'|'ig'|'threads'|'x'|'news' (route ตรวจค่ามาแล้ว)
  * @param {Array<{kind:string, path:string}>} o.media  snapshot ตอนกดโพสต์ — worker อ่านไฟล์จาก path นี้
  * @param {string|Date|null} o.scheduledAt  ส่งสตริงเวลาไทยตรงๆ ให้ pg แปลง (DB timezone = Asia/Bangkok)
- * @param {number|null} o.accountId  บัญชีโซเชียลที่เลือกเอง — **route ต้องตรวจ org แล้วเท่านั้น**
- * @param {string|null} o.accountPlatform  แพลตฟอร์มของบัญชีนั้น · ใส่ = ผูก accountId เฉพาะแถวที่ตรงกัน
- *        (แถวแพลตฟอร์มอื่นปล่อย NULL ให้ฝั่งบอทเลือกบัญชีอัตโนมัติเหมือนเดิม ไม่งั้นได้ config ไม่ตรง = ล้มแน่)
+ * @param {Record<string, number>} o.accountIds  บัญชีที่ผูกกับแต่ละแพลตฟอร์ม เช่น `{ fb: 20, x: 63 }`
+ *        — **route ต้อง resolve จากกลุ่ม + ตรวจสิทธิ์มาแล้วเท่านั้น** (ดู lib/publishTargets.js)
+ *        แพลตฟอร์มที่ไม่มีใน map ปล่อย NULL = ฝั่งบอทเลือกบัญชีอัตโนมัติเหมือนเดิม
+ *        (เช่น 'news' ที่ไม่ใช่บัญชีโซเชียล)
  * @returns {Promise<object[]>} แถวที่เพิ่งสร้าง
  */
 export async function createJobs({
-  orgId, episodeId, platforms, accountId = null, accountPlatform = null,
+  orgId, episodeId, platforms, accountIds = {},
   guildId = null, channelId = null, caption = null, media = [],
   scheduledAt = null, wmType = null, groupName = null,
   createdBy = null, createdByDiscordId = null,
 }) {
   const batchId = randomUUID()
-  const accountIds = platforms.map(p =>
-    accountId && (!accountPlatform || p === accountPlatform) ? accountId : null
-  )
+  const accountIdList = platforms.map(p => accountIds?.[p] ?? null)
 
   const { rows } = await pool.query(
     `INSERT INTO post_social_history
@@ -47,7 +46,7 @@ export async function createJobs({
             'pending', 0
        FROM unnest($4::varchar[], $5::int[]) AS j(platform, account_id)
      RETURNING ${COLS}`,
-    [orgId || null, episodeId, batchId, platforms, accountIds, guildId || null, channelId || null,
+    [orgId || null, episodeId, batchId, platforms, accountIdList, guildId || null, channelId || null,
      wmType || null, caption || null, JSON.stringify(media || []), scheduledAt || null,
      groupName || null, createdBy || null, createdByDiscordId || null]
   )

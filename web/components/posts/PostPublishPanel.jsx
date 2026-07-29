@@ -45,8 +45,9 @@ function localNow() {
 
 export default function PostPublishPanel({ postId, hasMedia = false }) {
   const [selected, setSelected] = useState([])
-  const [accounts, setAccounts] = useState([])
-  const [accountId, setAccountId] = useState('')
+  const [groups, setGroups] = useState([])
+  const [newsReady, setNewsReady] = useState(false)
+  const [group, setGroup] = useState('')
   const [scheduledAt, setScheduledAt] = useState('')
   const [minTime, setMinTime] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -69,9 +70,15 @@ export default function PostPublishPanel({ postId, hasMedia = false }) {
 
   useEffect(() => {
     let alive = true
-    fetch('/api/social/accounts')
-      .then(res => (res.ok ? res.json() : []))
-      .then(rows => { if (alive) setAccounts(Array.isArray(rows) ? rows : []) })
+    fetch('/api/posts/publish-targets')
+      .then(res => (res.ok ? res.json() : {}))
+      .then(data => {
+        if (!alive) return
+        const list = Array.isArray(data.groups) ? data.groups : []
+        setGroups(list)
+        setNewsReady(!!data.news)
+        if (list.length === 1) setGroup(list[0].name)   // มีกลุ่มเดียวก็ไม่ต้องให้เลือก
+      })
       .catch(() => {})
     return () => { alive = false }
   }, [])
@@ -83,12 +90,26 @@ export default function PostPublishPanel({ postId, hasMedia = false }) {
     return () => clearTimeout(t)
   }, [jobs, loadJobs])
 
-  // API รับ accountId ตัวเดียว และต้องเป็นบัญชีของแพลตฟอร์มที่ติ๊กไว้ ไม่งั้น 400
-  const accountOptions = accounts.filter(a => selected.includes(a.platform))
-  // ติ๊กแพลตฟอร์มออกทีหลัง → บัญชีที่ค้างอยู่ในช่องจะไม่ตรงกับ platforms อีก (API ตอบ 400) → ล้างทิ้ง
+  const current = groups.find(g => g.name === group) || null
+
+  // แพลตฟอร์มที่ติ๊กได้ = บัญชีที่กลุ่มนี้มีจริง (เหมือนตะกร้าดิสฯ ที่กรอง platform ตามกลุ่ม)
+  // 'news' ไม่ใช่บัญชีโซเชียล — เป็นห้องใน Discord จึงขึ้นกับว่า guild ตั้งห้องข่าวไว้ไหม
+  function blockedReason(key) {
+    if (key === 'news') return newsReady ? null : 'เซิร์ฟเวอร์นี้ยังไม่ได้ตั้งห้องข่าวสาร'
+    if (!current) return 'เลือกกลุ่มก่อน'
+    if (!current.platforms.includes(key)) return `กลุ่มนี้ไม่มีบัญชี ${platformLabel(key)}`
+    if (NEEDS_MEDIA.includes(key) && !hasMedia) return 'ต้องมีสื่ออย่างน้อย 1 ชิ้น'
+    return null
+  }
+
+  // เปลี่ยนกลุ่มแล้วแพลตฟอร์มที่ติ๊กค้างอาจไม่มีในกลุ่มใหม่ → ถอดออก (ไม่งั้น API ตอบ 403)
   useEffect(() => {
-    setAccountId(prev => (prev && !accounts.some(a => String(a.id) === prev && selected.includes(a.platform)) ? '' : prev))
-  }, [accounts, selected])
+    if (!current) return
+    setSelected(prev => {
+      const kept = prev.filter(p => p === 'news' || current.platforms.includes(p))
+      return kept.length === prev.length ? prev : kept        // ไม่มีอะไรถูกถอด = คืน array เดิม กัน re-render เปล่า
+    })
+  }, [current])
 
   function togglePlatform(key) {
     setError('')
@@ -104,14 +125,13 @@ export default function PostPublishPanel({ postId, hasMedia = false }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           platforms: selected,
-          accountId: accountId ? Number(accountId) : null,
+          group: group || null,
           scheduledAt: scheduledAt || null,
         }),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) { setError(data.error || 'สั่งเผยแพร่ไม่สำเร็จ'); return }
       setSelected([])
-      setAccountId('')
       setScheduledAt('')
       setJobs(prev => [...(data.data?.jobs || []), ...prev])
     } catch {
@@ -146,9 +166,34 @@ export default function PostPublishPanel({ postId, hasMedia = false }) {
         เผยแพร่
       </h2>
 
+      <div className="flex flex-col gap-1">
+        <span className="text-sm text-warm-700 dark:text-disc-text">โพสต์ในนาม</span>
+        <select
+          value={group}
+          onChange={e => { setError(''); setGroup(e.target.value) }}
+          disabled={!groups.length}
+          className="w-full h-9 px-2 text-sm rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text focus:outline-none focus:ring-2 focus:ring-teal disabled:opacity-50"
+        >
+          <option value="">— เลือกกลุ่ม —</option>
+          {groups.map(g => (
+            <option key={g.name} value={g.name}>
+              {g.name}{g.visibility === 'private' ? ' 🔒' : ''}
+            </option>
+          ))}
+        </select>
+        {!groups.length && (
+          <span className="text-sm text-warm-500 dark:text-disc-muted">ยังไม่มีบัญชีโซเชียลที่ใช้ได้ — เชื่อมบัญชีที่ /bot/platforms ก่อน</span>
+        )}
+        {current && (
+          <span className="text-sm text-warm-500 dark:text-disc-muted">
+            {Object.entries(current.accounts).map(([p, name]) => `${platformLabel(p)}: ${name}`).join(' · ')}
+          </span>
+        )}
+      </div>
+
       <div className="flex flex-col gap-1.5">
         {PLATFORMS.map(p => {
-          const blocked = NEEDS_MEDIA.includes(p.key) && !hasMedia
+          const blocked = blockedReason(p.key)
           return (
             <label
               key={p.key}
@@ -157,32 +202,15 @@ export default function PostPublishPanel({ postId, hasMedia = false }) {
               <input
                 type="checkbox"
                 checked={selected.includes(p.key)}
-                disabled={blocked}
+                disabled={!!blocked}
                 onChange={() => togglePlatform(p.key)}
                 className="w-4 h-4 accent-orange disabled:cursor-not-allowed"
               />
               <span className="text-warm-900 dark:text-disc-text">{p.label}</span>
-              {blocked && <span className="text-sm text-warm-500 dark:text-disc-muted">— ต้องมีสื่ออย่างน้อย 1 ชิ้น</span>}
+              {blocked && <span className="text-sm text-warm-500 dark:text-disc-muted">— {blocked}</span>}
             </label>
           )
         })}
-      </div>
-
-      <div className="flex flex-col gap-1">
-        <span className="text-sm text-warm-700 dark:text-disc-text">บัญชี</span>
-        <select
-          value={accountId}
-          onChange={e => setAccountId(e.target.value)}
-          disabled={!accountOptions.length}
-          className="w-full h-9 px-2 text-sm rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text focus:outline-none focus:ring-2 focus:ring-teal disabled:opacity-50"
-        >
-          <option value="">ใช้บัญชีหลักอัตโนมัติ</option>
-          {accountOptions.map(a => (
-            <option key={a.id} value={a.id}>
-              {platformLabel(a.platform)} — {a.name}{a.group_name ? ` (${a.group_name})` : ''}
-            </option>
-          ))}
-        </select>
       </div>
 
       <div className="flex flex-col gap-1">
@@ -199,7 +227,7 @@ export default function PostPublishPanel({ postId, hasMedia = false }) {
 
       <button
         onClick={handlePublish}
-        disabled={submitting || !selected.length}
+        disabled={submitting || !selected.length || (selected.some(p => p !== 'news') && !group)}
         className="w-full flex items-center justify-center gap-1.5 px-3 py-2 text-sm rounded-lg bg-orange text-white hover:opacity-90 disabled:opacity-40 transition"
       >
         {submitting ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}

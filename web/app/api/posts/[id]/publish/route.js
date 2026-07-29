@@ -3,7 +3,8 @@ import { canPublishPost, canWritePost } from '@/lib/postsAccess.js'
 import { getGuildId } from '@/lib/guildContext.js'
 import { getOrgConfig } from '@/db/orgConfig.js'
 import { listMedia } from '@/db/posts/media.js'
-import { createJobs, getSocialAccount, activePlatforms } from '@/db/posts/jobs.js'
+import { createJobs, activePlatforms } from '@/db/posts/jobs.js'
+import { resolveGroupAccounts, hasNewsChannel, publisherIdentity } from '@/lib/publishTargets.js'
 
 const VALID_PLATFORMS = ['fb', 'ig', 'threads', 'x', 'news']
 // IG/Threads โพสต์ข้อความล้วนไม่ได้ (ข้อจำกัดของ Graph API เอง) — ตัดตั้งแต่ต้นทาง ไม่ปล่อยให้ worker ล้ม
@@ -24,7 +25,9 @@ function toTimestamptz(input) {
 
 /**
  * POST /api/posts/[id]/publish — สั่งโพสต์ (เว็บเขียนคิว บอทเป็นคนยิง)
- * body { platforms:string[], accountId?:number, scheduledAt?:string|null, channelId?:string|null, wmType?:string }
+ * body { platforms:string[], group:string, scheduledAt?:string|null, channelId?:string|null, wmType?:string }
+ *   group = `dc_social_accounts.group_name` — ตัวตนที่พาดข้ามแพลตฟอร์ม (เหมือนตะกร้าดิสฯ)
+ *   server แปลงเป็นบัญชีรายแพลตฟอร์มเอง ไม่รับ account id จาก client
  */
 export async function POST(req, { params }) {
   const { id } = await params
@@ -69,24 +72,27 @@ export async function POST(req, { params }) {
       }
     }
 
-    // ⚠️ ด่านความปลอดภัยเดียวของ accountId — ฝั่งบอทเชื่อค่าในแถวงานเลย (ดูคอมเมนต์ใน services/metaApi.js)
-    let accountPlatform = null
-    if (body.accountId != null) {
-      const accountId = Number(body.accountId)
-      if (!Number.isInteger(accountId)) {
-        return Response.json({ error: 'บัญชีที่เลือกไม่ถูกต้อง' }, { status: 400 })
-      }
-      const account = await getSocialAccount(accountId)
-      if (!account || account.org_id !== ctx.orgId) {
-        return Response.json({ error: 'บัญชีที่เลือกไม่ใช่ของหน่วยงานนี้' }, { status: 403 })
-      }
-      if (!platforms.includes(account.platform)) {
-        return Response.json(
-          { error: `บัญชีที่เลือกเป็นของ ${account.platform} แต่ไม่ได้เลือกแพลตฟอร์มนั้น` },
-          { status: 400 }
-        )
-      }
-      accountPlatform = account.platform
+    // ⚠️ ด่านความปลอดภัยเดียวของบัญชี — ฝั่งบอทเชื่อค่าในแถวงานเลย (ดูคอมเมนต์ใน services/metaApi.js)
+    // เลือกเป็น "กลุ่ม" แล้ว server แปลงเป็นบัญชีรายแพลตฟอร์มเอง — ไม่รับ id จาก client
+    // (รับ id ตรงๆ = คนใน org เดียวกันยิงในนามบัญชี private ของคนอื่นได้ เพราะ org_id ตรงกันหมด)
+    const { userId: publisherUserId, discordId: publisherDiscordId } = await publisherIdentity(ctx.session)
+    let accountIds = {}
+    let groupName = null
+    const socialPlatforms = platforms.filter(p => p !== 'news')
+    if (typeof body.group === 'string' && body.group.trim()) {
+      const resolved = await resolveGroupAccounts({
+        orgId: ctx.orgId,
+        userId: publisherUserId,
+        discordId: publisherDiscordId,
+        group: body.group.trim(),
+        platforms,
+      })
+      if (!resolved.ok) return Response.json({ error: resolved.error }, { status: 403 })
+      accountIds = resolved.accountIds
+      groupName = resolved.group
+    } else if (socialPlatforms.length) {
+      // ไม่เลือกกลุ่ม = ปล่อยให้บอทเลือกบัญชีเอง ซึ่งอาจได้คนละตัวตนกันในแต่ละแพลตฟอร์ม → บังคับเลือก
+      return Response.json({ error: 'ต้องเลือกกลุ่มที่จะโพสต์ในนามก่อน' }, { status: 400 })
     }
 
     // กันกดซ้ำ/ดับเบิลคลิก — งานที่ยังไม่ยิงของแพลตฟอร์มเดียวกันมีอยู่แล้ว = ไม่สร้างเพิ่ม
@@ -101,8 +107,14 @@ export async function POST(req, { params }) {
 
     const guildId = await getGuildId(ctx.session)
     // 'news' = ส่งเข้าห้องข่าวสารใน Discord → org ที่ยังไม่เชื่อม Discord ทำไม่ได้ (worker จะล้มเปล่าๆ)
-    if (platforms.includes('news') && !guildId) {
-      return Response.json({ error: 'หน่วยงานนี้ยังไม่ได้เชื่อมกับ Discord จึงส่งเข้าห้องข่าวสารไม่ได้' }, { status: 400 })
+    if (platforms.includes('news')) {
+      if (!guildId) {
+        return Response.json({ error: 'หน่วยงานนี้ยังไม่ได้เชื่อมกับ Discord จึงส่งเข้าห้องข่าวสารไม่ได้' }, { status: 400 })
+      }
+      // ไม่ได้ตั้ง news_channel_id ไว้ = job จะ retry 3 รอบแล้ว failed เปล่าๆ → ตัดตั้งแต่ต้นทาง
+      if (!(await hasNewsChannel(guildId))) {
+        return Response.json({ error: 'ยังไม่ได้ตั้งห้องข่าวสารของเซิร์ฟเวอร์นี้ (ตั้งที่ /bot/platforms)' }, { status: 400 })
+      }
     }
 
     // ห้องที่จะแจ้งผลกลับ: เลือกตอนกด > ค่า default ของ org > ไม่แจ้ง (org ไม่มี Discord = ข้ามเงียบ)
@@ -112,8 +124,8 @@ export async function POST(req, { params }) {
       orgId: ctx.orgId,
       episodeId: ctx.post.id,
       platforms,
-      accountId: body.accountId != null ? Number(body.accountId) : null,
-      accountPlatform,
+      accountIds,
+      groupName,
       guildId,
       channelId,
       caption: ctx.post.body || '',
