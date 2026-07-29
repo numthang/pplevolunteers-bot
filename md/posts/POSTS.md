@@ -3,8 +3,11 @@
 โมดูลช่วย **เขียน/ร่างคอนเทนต์ยาว ซอยเป็นตอน** แล้วส่งต่อเข้าท่อเผยแพร่เดิม (ตะกร้าสื่อ → FB/IG/Threads/X/Discord)
 เป็น org-native feature ตัวที่ 5 ต่อจาก finance / calling / docs / cases
 
-> **สถานะ 2026-07-29 (local ยังไม่ commit / ยังไม่ deploy):** `/scrutinize` 2 รอบ + `/grill` 16 กิ่ง ผ่านแล้ว · **ก้อน 1 เสร็จ** — 7 ตาราง posts ลง DB local · `web/lib/postsAccess.js` + 62 tests · `orgFeatures` key `posts` · `dc_user_config` → `user_config` · build + 268 tests เขียว
-> **ถัดไป: ก้อน 2a** (editor) — เริ่มไว้ 2 ไฟล์ที่ยังไม่มีใครเรียก: `web/lib/postsStorage.js`, `web/lib/ai.js`
+> **สถานะ 2026-07-29 เย็น (local · ยังไม่ commit · ยังไม่ deploy prod):**
+> `/scrutinize` 2 รอบ + `/grill` 16 กิ่ง ผ่าน · **ก้อน 1 รื้อใหม่แล้ว** (ทิ้ง `post_series` → 6 ตาราง ดู §Data model)
+> **ก้อน 2a เสร็จ** — lib (`postsAccess` 66 tests · `postsGuard` · `postsAiQuota` · `postsStorage` · `ai`) · db (`web/db/posts/`) · API 13 ไฟล์ · UI `/posts` + `/posts/[id]` · Nav + feature gate
+> verify: 272 tests · `next build` · smoke DB จริง 15 เคส (lock 409 · revision attribution · rename หมวด · promote audit)
+> **เทสในเบราว์เซอร์จริงผ่านแล้ว** (autosave · reload · อัปรูป · gate ไฟล์ 401 · กล่อง 409 สองแท็บ) · ⬜ ยังไม่เทสปุ่ม AI/ลากเรียง/paste · ⬜ ยังไม่ต่อ publish (ก้อน 4)
 
 ---
 
@@ -21,7 +24,8 @@
 
 ## 🔑 แนวคิดหลัก
 
-- **Core term:** `post` · โครงข้อมูล **series → episode** (1 series มีหลายตอน เรียงลำดับ)
+- **Core term:** `post` · **1 โพสต์ = 1 แถวใน `post_episodes`** ยืนเดี่ยว ไม่มีชุด/ลำดับตอน
+  จัดกลุ่มด้วยคอลัมน์ `category` (1 โพสต์ 1 หมวด) — ⛔ แนวคิด series ถูกทิ้งแล้ว 2026-07-29 เย็น ดู §Data model
 - **2 โหมดความเป็นเจ้าของ** — ต้องออกแบบตั้งแต่แรก ห้ามไปเติมทีหลัง:
   - `personal` — ร่างส่วนตัว เจ้าของเห็นคนเดียว (เช่น จุดยืนการเมือง/ค่าตอบแทน ที่ยังไม่พร้อมให้ทีมเห็น)
   - `org` — ร่างขององค์กร ทีมสื่อเห็นร่วมกัน
@@ -121,9 +125,15 @@ org ที่ไม่มี guild จึง **ถือครอง/เลื�
 | B. คง guild scope + เอา guild switcher กลับมา | สวนทางกับทิศทาง org-first ที่เพิ่งรวมไป |
 | **C. `org_id` เป็น scope หลัก + `guild_id` เป็น optional metadata** ✅ ทำแล้ว | posts เลือกบัญชีไหนก็ได้ในระดับ org · ตะกร้าสื่อ Discord ยังรู้ว่า guild นี้ใช้บัญชีชุดไหนเป็น default · **`group_name` ที่มีอยู่แล้วทำหน้าที่จัดกลุ่มให้คนอ่าน** (ราชบุรี / อาสาฯ) |
 
-### 🏷️ ชื่อตาราง — **ไม่เปลี่ยน** (เคาะ 2026-07-28)
+### 🏷️ ชื่อตาราง — ⚠️ **กลับคำแล้ว 2026-07-29: เปลี่ยนเป็น `post_social_accounts`**
 
-**อย่าเปลี่ยนเป็น `post_social_accounts`** — ตารางนี้ไม่ใช่ของ posts แต่เป็นโครงสร้างพื้นฐานที่ใช้ร่วมกัน:
+> user สั่ง 2026-07-29 · หลักที่เคาะ: **prefix ต้องมีโมดูลจริงรองรับ** — `post_` ผ่านเพราะมี `web/db/posts/` + `orgFeatures` key `posts` (ต่างจาก `media_` ที่ตกไปเพราะไม่มีโฟลเดอร์รองรับ)
+> **ทำหลังก้อน 4** · เงื่อนไขบังคับ: ใส่คอมเมนต์หัวตารางว่า **ตะกร้าสื่อ/ลายน้ำ/Meta-X OAuth ใช้ร่วม → ห้าม drop ตามโมดูล posts** · rename แล้วต้องสร้าง **view ชื่อเดิมคร่อมไว้** (บอท/เว็บ deploy ไม่พร้อมกัน) แล้วค่อย drop view · ทำทีละตารางทีละ commit **ห้าม sed รวด**
+> รายละเอียด + ตารางอื่นที่ถอด `dc_` พร้อมกันอยู่ `md/PENDING.md` §POSTS
+
+**ย่อหน้าข้างล่างนี้คือเหตุผลเดิมของวันที่ 28 ที่ถูกกลับคำ — เก็บไว้ดูที่มา ไม่ใช่คำสั่งปัจจุบัน:**
+
+~~อย่าเปลี่ยนเป็น `post_social_accounts`~~ — ตารางนี้ไม่ใช่ของ posts แต่เป็นโครงสร้างพื้นฐานที่ใช้ร่วมกัน:
 ตะกร้าสื่อใน Discord (มาก่อน posts) · guild-watermarks · Meta/X OAuth callback · แล้วค่อยมี posts
 
 ตั้ง prefix `post_` = อ้างสิทธิ์ของกลางให้โมดูลเดียว → วันหน้ามีคนคิดว่า "เลิกใช้ posts ก็ drop ได้" แล้วตะกร้าสื่อพัง
@@ -160,10 +170,26 @@ convention ที่ใช้จริง: **prefix = โมดูลเจ้�
 
 ## 🗂️ Data model (ผ่าน `/scrutinize` แล้ว 2026-07-29)
 
+### ⛔ 2026-07-29 (เย็น) — **ทิ้ง `post_series` แล้ว** หน่วยงานหลักคือ "ตอน" (episode) เดี่ยวๆ
+
+> user: *"ผมทำงานเป็น episode แล้วแยกด้วย category เอา · post_series มีไว้ทำไม จะแยกกลุ่มก็ใช้ category ใน column ก็ได้"*
+
+ของเดิม (series → episode) **ตายแล้ว อย่าเอากลับมา** · ที่เปลี่ยน:
+
+| เดิม | ใหม่ |
+|---|---|
+| `post_series` (ตาราง) | **ไม่มี** — จัดกลุ่มด้วยคอลัมน์ `post_episodes.category varchar(60)` (ไม่มีตาราง lookup) |
+| `series_id` · `seq` (unique ต่อ series) | **ทิ้งทั้งคู่** — ตอนไม่มีลำดับ เรียงตามเวลาที่แก้ล่าสุด |
+| `visibility`/`owner_user_id`/`org_id` อยู่บน series | **ย้ายลงมาที่ตอน** — แต่ละตอนตั้งเองว่าส่วนตัวหรือขององค์กร |
+| `source_idea`/`created_via` อยู่บน series | ย้ายลงมาที่ตอน |
+
+เคาะพร้อมกัน (3 ข้อ): **visibility อยู่ที่ตัวโพสต์** · **1 โพสต์ = 1 หมวด** (ไม่ใช่ tag หลายอัน) · **ไม่มีเลขลำดับตอน** เรียงตามเวลา
+ที่แลกไป: เปลี่ยนชื่อหมวด = `UPDATE` ทุกแถวของหมวดนั้น (ยอมรับได้ที่สเกลนี้ · ถ้าวันหน้าต้องมี setting ต่อหมวดค่อยยกเป็นตาราง)
+ไม่กระทบ: `post_episode_media` · `post_revisions` · `post_review_links` · `post_comments` · `post_social_history` — ทั้งหมดผูก `episode_id` อยู่แล้ว
+
 | ตาราง | คอลัมน์หลัก |
 |---|---|
-| `post_series` | `org_id` · `owner_user_id` · `visibility` (`personal`/`org`) · title · summary · **`source_idea`** (ไอเดียดิบที่โยนเข้ามา — กด "จัดโครงใหม่" ได้ไม่ต้องพิมพ์ซ้ำ) · `created_via` (`ai`/`manual`) · archived_at |
-| `post_episodes` | `series_id` · `seq` (unique ต่อ series) · title · `body` · `bodies jsonb` (override รายแพลตฟอร์ม) · **`format`** (hint `text`/`image`/`quote` — ตั้ง default UI + ให้ AI แนะนำ ไม่บังคับ) · `status` (**draft/review/approved เท่านั้น** — เผยแพร่เป็น derived จาก jobs ดู §grill ข้อ 10) · approved_by · approved_at · `updated_at` (ใช้ทำ optimistic lock) |
+| `post_episodes` | `org_id` · `owner_user_id` · `visibility` (`personal`/`org`) · **`category`** (varchar ว่างได้ = ยังไม่จัดหมวด) · title · `body` · `bodies jsonb` (override รายแพลตฟอร์ม) · **`format`** (hint `text`/`image`/`quote`) · **`source_idea`** (ไอเดียดิบที่โยนเข้ามา — กด "ร่างใหม่" ได้ไม่ต้องพิมพ์ซ้ำ) · `created_via` (`ai`/`manual`) · `status` (**draft/review/approved เท่านั้น** — เผยแพร่เป็น derived จาก jobs ดู §grill ข้อ 10) · approved_by · approved_at · `last_edited_by` · `updated_at` (ใช้ทำ optimistic lock) · archived_at |
 | `post_episode_media` | `episode_id` · `kind` (`upload`/`quote`) · `path` · `sort_order` · **`quote_text` · `quote_style` · `bg_path`** (เก็บ params ไม่ใช่แค่ PNG → แก้ข้อความแล้ว render ใหม่ได้) · added_by |
 | `post_revisions` | `episode_id` · title · body · `edited_by_user_id` (NULL = คนที่เข้ามาทางลิงก์) · `edited_by_name` |
 | `post_review_links` | `token` (≥32 bytes) · **`episode_id`** (1 ลิงก์ = 1 ตอน — แก้จาก series_id 2026-07-29) · created_by · `can_edit` · expires_at · revoked_at · uses |

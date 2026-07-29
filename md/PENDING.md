@@ -51,6 +51,9 @@
 
 spec + ดีไซน์ + ตารางทั้งหมดอยู่ `md/posts/POSTS.md` (อ่านก่อนเสมอ ห้าม re-derive) · `/scrutinize` ผ่าน 2 รอบแล้ว
 
+> ⛔ **2026-07-29 เย็น — ทิ้ง `post_series` ทั้งตาราง** (user เคาะ) หน่วยหลัก = ตอนเดี่ยวๆ จัดกลุ่มด้วยคอลัมน์ `post_episodes.category` · visibility อยู่ที่ตัวโพสต์ · 1 โพสต์ 1 หมวด · ไม่มีเลขลำดับตอน
+> → **ก้อน 1 ต้องรื้อก่อนทำ 2a ต่อ:** migration block ก้อน 1 · `postsAccess.js` + 62 tests · `web/db/posts/*` · `postsGuard.js` · `md/posts/API-2a.md` (ยังไม่ขึ้น prod → รื้อได้ฟรี) · รายละเอียดอยู่ `md/posts/POSTS.md` §Data model
+
 **⬜ ทำตามลำดับ:**
 - [x] **`/grill`** ✅ 2026-07-29 — 16 กิ่งเคาะครบ อยู่ `md/posts/POSTS.md` §ผ่าน `/grill` (policy ราย org · job 1 แถว/แพลตฟอร์ม · ไฟล์นอก `public/` · optimistic lock · grace 2 ชม. · **ใช้ท่อโพสต์ร่วมกับตะกร้าดิสฯ ห้ามเขียนใหม่**)
 - [x] **ก้อน 1** ✅ 2026-07-29 (local — ยังไม่ deploy prod) — 7 ตาราง posts + `postsAccess.js` (62 tests ผ่าน) + `orgFeatures` key `posts`
@@ -58,7 +61,17 @@ spec + ดีไซน์ + ตารางทั้งหมดอยู่ `md
   - แก้ 3 route ที่ยิงตารางตรงๆ: `bot/quote-config` · `watermark/personal` · `docs/sign/self-info` (ใช้ `session.user.userId`)
   - verify: `npm test` 268 ผ่าน · `npm run build` ผ่าน · smoke บอท read/write/delete prefs + อ่าน otp_quota ผ่าน
   - ⏭️ prod: รัน 2 บล็อกท้าย `migration.sql` (additive ล้วน) แล้ว restart บอท+เว็บ
-- [ ] **ก้อน 2a** — editor 2 คอลัมน์ + autosave + สื่อ (อัป/ลาก/เรียง/paste) + AI จัดโครง & ร่างตอน → ใช้เขียนจริงได้
+- [x] **ก้อน 2a** ✅ 2026-07-29 เย็น (local — ยังไม่ deploy prod · **เทสในเบราว์เซอร์จริงผ่านแล้ว**)
+  - schema รื้อใหม่: 6 ตาราง ไม่มี `post_series` · `post_episodes` ถือ org/owner/visibility/category เอง
+  - lib: `postsAccess.js` (post-centric, 66 tests) · `postsGuard.js` (`postsContext`/`postContext`) · `postsAiQuota.js` · `postsStorage.js` · `ai.js`
+  - db: `web/db/posts/episodes.js` (autosave + optimistic lock + revision-เมื่อคนแก้เปลี่ยนคน + category/rename) · `media.js`
+  - API 13 ไฟล์: `/api/posts` · `[id]` (GET/PATCH autosave/DELETE) · status · promote · revision(s) · categories · `[id]/media` · `media/[id]` (stream ผ่าน gate) · `ai/outline` · `ai/draft`
+  - UI: `/posts` (แท็บส่วนตัว-องค์กร + กล่องไอเดีย + แถบหมวด + การ์ด) · `/posts/[id]` (2 คอลัมน์ autosave + สื่อ paste/ลากเรียง + กล่อง 409) · Nav แท็บ POSTS + `app/posts/layout.js` feature gate
+  - verify: `npm test` 272 · `next build` · **smoke DB 15 เคส** (lock 409 ไม่ทับของเดิม · revision attribution ถูกคน · throttle · rename หมวด · promote audit · cascade)
+  - **เทสเบราว์เซอร์จริง (Playwright + magic login users.id=1):** สร้างโพสต์ → พิมพ์ → autosave PATCH 200 → reload เนื้อหายังอยู่ · อัปรูปขึ้นแถบสื่อ + แสดงผลได้ · **ยิงไฟล์สื่อแบบไม่ล็อกอิน = 401** · 2 แท็บแก้พร้อมกัน → กล่อง 409 โผล่ + ปุ่ม "เก็บฉบับของฉัน" ทำงาน
+  - ⚠️ เจอตอนเทส: **ต้องเปิด feature `posts` ที่ `/org/settings/features` ก่อน** ไม่งั้น `/posts` เด้ง 404 (เปิดให้ org 1 ใน DB local แล้ว) · bug ที่แก้: bug-066 (พรอมป์ AI ตอบ format `carousel` ชน CHECK)
+  - ⬜ ยังไม่ได้เทสจริง: ปุ่ม AI (ไม่อยากเสียเงิน) · ลากเรียงสื่อ · วางรูปจาก clipboard
+  - ⏭️ prod: รันบล็อก POSTS ใน `migration.sql` (additive) · `storage/posts/` สร้างเอง
 - [ ] **ก้อน 2b** — quote studio (ธัมบ์เนล 20 สไตล์ · sync ต้นทาง · พื้นสี) + preview รายแพลตฟอร์ม + ซอยตอนแบบลากเส้น
   - ⚠️ spike ก่อน (~20 นาที): เว็บ import `utils/quoteStyles.js` ข้าม package ได้ไหม (`web/package.json` มี `@napi-rs/canvas` + `outputFileTracingRoot` ชี้รากแล้ว) · ไม่ผ่าน → fallback ให้บอท render ผ่านคิว · **ห้าม copy renderer ไปฝั่งเว็บ**
 - [ ] **ก้อน 3** — อนุมัติ: สถานะ + revisions + review links (`noindex`, token ≥32 bytes) + comments + ล็อกหลังอนุมัติ

@@ -9,7 +9,7 @@ const OWNER = 10
 const OTHER = 20
 
 const personal = { owner_user_id: OWNER, visibility: 'personal' }
-const orgSeries = { owner_user_id: OWNER, visibility: 'org' }
+const orgPost = { owner_user_id: OWNER, visibility: 'org' }
 
 const P = pa.DEFAULT_POSTS_POLICY
 const teamRead  = pa.normalizePolicy({ read: 'team', write: 'team', approval: 'required' })
@@ -34,48 +34,48 @@ describe('normalizePolicy', () => {
   })
 })
 
-// ---- personal series ----
-describe('personal series — เจ้าของคนเดียว', () => {
-  it('เจ้าของอ่านได้',        () => expect(pa.canReadSeries(personal, acc('member'), OWNER, P)).toBe(true))
-  it('คนอื่นอ่านไม่ได้',      () => expect(pa.canReadSeries(personal, acc('member'), OTHER, P)).toBe(false))
-  it('editor ก็อ่านไม่ได้',   () => expect(pa.canReadSeries(personal, acc('editor'), OTHER, P)).toBe(false))
-  it('เลขาธิการอ่านไม่ได้',   () => expect(pa.canReadSeries(personal, acc('secretary_general'), OTHER, P)).toBe(false))
-  it('admin อ่านได้ (god-mode)', () => expect(pa.canReadSeries(personal, acc('admin'), OTHER, P)).toBe(true))
+// ---- personal post ----
+describe('personal post — เจ้าของคนเดียว', () => {
+  it('เจ้าของอ่านได้',        () => expect(pa.canReadPost(personal, acc('member'), OWNER, P)).toBe(true))
+  it('คนอื่นอ่านไม่ได้',      () => expect(pa.canReadPost(personal, acc('member'), OTHER, P)).toBe(false))
+  it('editor ก็อ่านไม่ได้',   () => expect(pa.canReadPost(personal, acc('editor'), OTHER, P)).toBe(false))
+  it('เลขาธิการอ่านไม่ได้',   () => expect(pa.canReadPost(personal, acc('secretary_general'), OTHER, P)).toBe(false))
+  it('admin อ่านได้ (god-mode)', () => expect(pa.canReadPost(personal, acc('admin'), OTHER, P)).toBe(true))
   it('policy org ก็ไม่เปิด personal ให้คนอื่น', () => {
-    expect(pa.canReadSeries(personal, acc('member'), OTHER, optional)).toBe(false)
+    expect(pa.canReadPost(personal, acc('member'), OTHER, optional)).toBe(false)
   })
-  it('เจ้าของแก้ได้',         () => expect(pa.canWriteSeries(personal, acc('member'), OWNER, P)).toBe(true))
-  it('editor แก้ไม่ได้',      () => expect(pa.canWriteSeries(personal, acc('editor'), OTHER, P)).toBe(false))
+  it('เจ้าของแก้ได้',         () => expect(pa.canWritePost(personal, acc('member'), OWNER, P)).toBe(true))
+  it('editor แก้ไม่ได้',      () => expect(pa.canWritePost(personal, acc('editor'), OTHER, P)).toBe(false))
 })
 
-// ---- org series · policy read/write = 'org' (default) ----
-describe('org series — policy default (ทุกสมาชิกอ่าน/เขียน)', () => {
-  it('member อ่านได้',  () => expect(pa.canReadSeries(orgSeries, acc('member'), OTHER, P)).toBe(true))
-  it('member แก้ได้',   () => expect(pa.canWriteSeries(orgSeries, acc('member'), OTHER, P)).toBe(true))
-  it('เจ้าของแก้ได้',   () => expect(pa.canWriteSeries(orgSeries, acc('member'), OWNER, P)).toBe(true))
+// ---- org post · policy read/write = 'org' (default) ----
+describe('org post — policy default (ทุกสมาชิกอ่าน/เขียน)', () => {
+  it('member อ่านได้',  () => expect(pa.canReadPost(orgPost, acc('member'), OTHER, P)).toBe(true))
+  it('member แก้ได้',   () => expect(pa.canWritePost(orgPost, acc('member'), OTHER, P)).toBe(true))
+  it('เจ้าของแก้ได้',   () => expect(pa.canWritePost(orgPost, acc('member'), OWNER, P)).toBe(true))
 })
 
-// ---- org series · policy = 'team' ----
-describe('org series — policy team (เฉพาะทีมสื่อ)', () => {
-  it('member อ่านไม่ได้',      () => expect(pa.canReadSeries(orgSeries, acc('member'), OTHER, teamRead)).toBe(false))
-  it('editor อ่านได้',         () => expect(pa.canReadSeries(orgSeries, acc('editor'), OTHER, teamRead)).toBe(true))
-  it('เลขาธิการอ่านได้',       () => expect(pa.canReadSeries(orgSeries, acc('secretary_general'), OTHER, teamRead)).toBe(true))
-  it('เจ้าของอ่านได้แม้ไม่มียศ', () => expect(pa.canReadSeries(orgSeries, acc('member'), OWNER, teamRead)).toBe(true))
-  it('member แก้ไม่ได้',       () => expect(pa.canWriteSeries(orgSeries, acc('member'), OTHER, teamRead)).toBe(false))
-  it('editor แก้ได้',          () => expect(pa.canWriteSeries(orgSeries, acc('editor'), OTHER, teamRead)).toBe(true))
+// ---- org post · policy = 'team' ----
+describe('org post — policy team (เฉพาะทีมสื่อ)', () => {
+  it('member อ่านไม่ได้',      () => expect(pa.canReadPost(orgPost, acc('member'), OTHER, teamRead)).toBe(false))
+  it('editor อ่านได้',         () => expect(pa.canReadPost(orgPost, acc('editor'), OTHER, teamRead)).toBe(true))
+  it('เลขาธิการอ่านได้',       () => expect(pa.canReadPost(orgPost, acc('secretary_general'), OTHER, teamRead)).toBe(true))
+  it('เจ้าของอ่านได้แม้ไม่มียศ', () => expect(pa.canReadPost(orgPost, acc('member'), OWNER, teamRead)).toBe(true))
+  it('member แก้ไม่ได้',       () => expect(pa.canWritePost(orgPost, acc('member'), OTHER, teamRead)).toBe(false))
+  it('editor แก้ได้',          () => expect(pa.canWritePost(orgPost, acc('editor'), OTHER, teamRead)).toBe(true))
 
   it('read:team + write:org → คนที่มองไม่เห็นต้องเขียนไม่ได้', () => {
     const mixed = pa.normalizePolicy({ read: 'team', write: 'org', approval: 'required' })
-    expect(pa.canReadSeries(orgSeries, acc('member'), OTHER, mixed)).toBe(false)
-    expect(pa.canWriteSeries(orgSeries, acc('member'), OTHER, mixed)).toBe(false)
+    expect(pa.canReadPost(orgPost, acc('member'), OTHER, mixed)).toBe(false)
+    expect(pa.canWritePost(orgPost, acc('member'), OTHER, mixed)).toBe(false)
   })
 })
 
 // ---- ownership + debug mode ----
 describe('userId = null (debug mode / ไม่ล็อกอิน)', () => {
-  it('personal อ่านไม่ได้',  () => expect(pa.canReadSeries(personal, acc('member'), null, P)).toBe(false))
-  it('org policy team อ่านไม่ได้', () => expect(pa.canReadSeries(orgSeries, acc('member'), null, teamRead)).toBe(false))
-  it('admin ยังผ่าน (role-based ไม่ใช่ ownership)', () => expect(pa.canReadSeries(personal, acc('admin'), null, P)).toBe(true))
+  it('personal อ่านไม่ได้',  () => expect(pa.canReadPost(personal, acc('member'), null, P)).toBe(false))
+  it('org policy team อ่านไม่ได้', () => expect(pa.canReadPost(orgPost, acc('member'), null, teamRead)).toBe(false))
+  it('admin ยังผ่าน (role-based ไม่ใช่ ownership)', () => expect(pa.canReadPost(personal, acc('admin'), null, P)).toBe(true))
 })
 
 // ---- canApprove ----
@@ -88,33 +88,35 @@ describe('canApprove', () => {
 })
 
 // ---- ล็อกหลังอนุมัติ ----
-describe('canEditEpisode / canRequestChanges', () => {
-  const draft = { status: 'draft' }
-  const review = { status: 'review' }
-  const approved = { status: 'approved' }
+describe('canEditPost / canRequestChanges', () => {
+  const draft = { ...orgPost, status: 'draft' }
+  const review = { ...orgPost, status: 'review' }
+  const approved = { ...orgPost, status: 'approved' }
 
-  it('draft แก้ได้',    () => expect(pa.canEditEpisode(orgSeries, draft, acc('member'), OTHER, P)).toBe(true))
-  it('review แก้ได้',   () => expect(pa.canEditEpisode(orgSeries, review, acc('member'), OTHER, P)).toBe(true))
-  it('approved ล็อก แม้เป็น editor', () => expect(pa.canEditEpisode(orgSeries, approved, acc('editor'), OTHER, P)).toBe(false))
-  it('approved ล็อก แม้เป็นเจ้าของ', () => expect(pa.canEditEpisode(orgSeries, approved, acc('member'), OWNER, P)).toBe(false))
-  it('admin ก็ล็อกเหมือนกัน (ต้องกดขอแก้ก่อน)', () => expect(pa.canEditEpisode(orgSeries, approved, acc('admin'), OTHER, P)).toBe(false))
+  it('draft แก้ได้',    () => expect(pa.canEditPost(draft, acc('member'), OTHER, P)).toBe(true))
+  it('review แก้ได้',   () => expect(pa.canEditPost(review, acc('member'), OTHER, P)).toBe(true))
+  it('approved ล็อก แม้เป็น editor', () => expect(pa.canEditPost(approved, acc('editor'), OTHER, P)).toBe(false))
+  it('approved ล็อก แม้เป็นเจ้าของ', () => expect(pa.canEditPost(approved, acc('member'), OWNER, P)).toBe(false))
+  it('admin ก็ล็อกเหมือนกัน (ต้องกดขอแก้ก่อน)', () => expect(pa.canEditPost(approved, acc('admin'), OTHER, P)).toBe(false))
 
-  it('ขอแก้ได้เมื่อ approved', () => expect(pa.canRequestChanges(orgSeries, approved, acc('member'), OTHER, P)).toBe(true))
-  it('draft ไม่มีอะไรให้ขอแก้', () => expect(pa.canRequestChanges(orgSeries, draft, acc('member'), OTHER, P)).toBe(false))
-  it('คนที่เขียนไม่ได้ ก็ขอแก้ไม่ได้', () => expect(pa.canRequestChanges(orgSeries, approved, acc('member'), OTHER, teamRead)).toBe(false))
+  it('ขอแก้ได้เมื่อ approved', () => expect(pa.canRequestChanges(approved, acc('member'), OTHER, P)).toBe(true))
+  it('draft ไม่มีอะไรให้ขอแก้', () => expect(pa.canRequestChanges(draft, acc('member'), OTHER, P)).toBe(false))
+  it('คนที่เขียนไม่ได้ ก็ขอแก้ไม่ได้', () => expect(pa.canRequestChanges(approved, acc('member'), OTHER, teamRead)).toBe(false))
 })
 
 // ---- ประตูก่อนโพสต์ ----
-describe('canPublishEpisode', () => {
-  const draft = { status: 'draft' }
-  const approved = { status: 'approved' }
+describe('canPublishPost', () => {
+  const draft = { ...orgPost, status: 'draft' }
+  const approved = { ...orgPost, status: 'approved' }
+  const personalDraft = { ...personal, status: 'draft' }
+  const personalApproved = { ...personal, status: 'approved' }
 
-  it('org + required + draft → โพสต์ไม่ได้', () => expect(pa.canPublishEpisode(orgSeries, draft, acc('editor'), OTHER, P)).toBe(false))
-  it('org + required + approved → โพสต์ได้',  () => expect(pa.canPublishEpisode(orgSeries, approved, acc('editor'), OTHER, P)).toBe(true))
-  it('org + optional + draft → โพสต์ได้',     () => expect(pa.canPublishEpisode(orgSeries, draft, acc('member'), OTHER, optional)).toBe(true))
-  it('personal + draft → เจ้าของโพสต์ได้เลย', () => expect(pa.canPublishEpisode(personal, draft, acc('member'), OWNER, P)).toBe(true))
-  it('personal ของคนอื่น → ไม่ได้',           () => expect(pa.canPublishEpisode(personal, approved, acc('editor'), OTHER, P)).toBe(false))
-  it('เขียนไม่ได้ → โพสต์ไม่ได้แม้ approved',  () => expect(pa.canPublishEpisode(orgSeries, approved, acc('member'), OTHER, teamRead)).toBe(false))
+  it('org + required + draft → โพสต์ไม่ได้', () => expect(pa.canPublishPost(draft, acc('editor'), OTHER, P)).toBe(false))
+  it('org + required + approved → โพสต์ได้',  () => expect(pa.canPublishPost(approved, acc('editor'), OTHER, P)).toBe(true))
+  it('org + optional + draft → โพสต์ได้',     () => expect(pa.canPublishPost(draft, acc('member'), OTHER, optional)).toBe(true))
+  it('personal + draft → เจ้าของโพสต์ได้เลย', () => expect(pa.canPublishPost(personalDraft, acc('member'), OWNER, P)).toBe(true))
+  it('personal ของคนอื่น → ไม่ได้',           () => expect(pa.canPublishPost(personalApproved, acc('editor'), OTHER, P)).toBe(false))
+  it('เขียนไม่ได้ → โพสต์ไม่ได้แม้ approved',  () => expect(pa.canPublishPost(approved, acc('member'), OTHER, teamRead)).toBe(false))
 })
 
 // ---- ย้าย personal → org ----
@@ -124,28 +126,57 @@ describe('canPromoteToOrg — ทางเดียว มีเงื่อน�
   it('เคยอนุมัติแล้ว → ไม่ได้',  () => expect(pa.canPromoteToOrg(personal, acc('member'), OWNER, { hasApprovals: true })).toBe(false))
   it('มี publish job → ไม่ได้',  () => expect(pa.canPromoteToOrg(personal, acc('member'), OWNER, { hasJobs: true })).toBe(false))
   it('คนอื่นกดไม่ได้',           () => expect(pa.canPromoteToOrg(personal, acc('editor'), OTHER, {})).toBe(false))
-  it('ซีรีส์ org อยู่แล้ว → ไม่ได้', () => expect(pa.canPromoteToOrg(orgSeries, acc('admin'), OWNER, {})).toBe(false))
+  it('โพสต์ org อยู่แล้ว → ไม่ได้', () => expect(pa.canPromoteToOrg(orgPost, acc('admin'), OWNER, {})).toBe(false))
   it('ย้อนกลับ org → personal ไม่มีทาง', () => expect(pa.canDemoteToPersonal()).toBe(false))
 })
 
 // ---- ลบ ----
-describe('canDeleteSeries', () => {
-  it('เจ้าของลบได้',        () => expect(pa.canDeleteSeries(orgSeries, acc('member'), OWNER)).toBe(true))
-  it('admin ลบได้',         () => expect(pa.canDeleteSeries(orgSeries, acc('admin'), OTHER)).toBe(true))
-  it('editor ลบไม่ได้',     () => expect(pa.canDeleteSeries(orgSeries, acc('editor'), OTHER)).toBe(false))
-  it('เลขาธิการลบไม่ได้',   () => expect(pa.canDeleteSeries(orgSeries, acc('secretary_general'), OTHER)).toBe(false))
+describe('canDeletePost', () => {
+  it('เจ้าของลบได้',        () => expect(pa.canDeletePost(orgPost, acc('member'), OWNER)).toBe(true))
+  it('admin ลบได้',         () => expect(pa.canDeletePost(orgPost, acc('admin'), OTHER)).toBe(true))
+  it('editor ลบไม่ได้',     () => expect(pa.canDeletePost(orgPost, acc('editor'), OTHER)).toBe(false))
+  it('เลขาธิการลบไม่ได้',   () => expect(pa.canDeletePost(orgPost, acc('secretary_general'), OTHER)).toBe(false))
 })
 
 // ---- AI ----
 describe('canUseAi', () => {
-  it('คนที่เขียนได้ เรียก AI ได้',   () => expect(pa.canUseAi(orgSeries, acc('member'), OTHER, P)).toBe(true))
-  it('คนที่อ่านอย่างเดียว เรียกไม่ได้', () => expect(pa.canUseAi(orgSeries, acc('member'), OTHER, teamRead)).toBe(false))
+  it('คนที่เขียนได้ เรียก AI ได้',   () => expect(pa.canUseAi(orgPost, acc('member'), OTHER, P)).toBe(true))
+  it('คนที่อ่านอย่างเดียว เรียกไม่ได้', () => expect(pa.canUseAi(orgPost, acc('member'), OTHER, teamRead)).toBe(false))
   it('personal ของคนอื่น เรียกไม่ได้', () => expect(pa.canUseAi(personal, acc('editor'), OTHER, P)).toBe(false))
 })
 
-// ---- series/episode ที่ไม่มีจริง ----
+// ---- post ที่ไม่มีจริง ----
 describe('input ว่าง', () => {
-  it('series null → อ่านไม่ได้',  () => expect(pa.canReadSeries(null, acc('admin'), OWNER, P)).toBe(false))
-  it('series null → เขียนไม่ได้', () => expect(pa.canWriteSeries(null, acc('admin'), OWNER, P)).toBe(false))
-  it('series null → ลบไม่ได้',    () => expect(pa.canDeleteSeries(null, acc('admin'), OWNER)).toBe(false))
+  it('post null → อ่านไม่ได้',  () => expect(pa.canReadPost(null, acc('admin'), OWNER, P)).toBe(false))
+  it('post null → เขียนไม่ได้', () => expect(pa.canWritePost(null, acc('admin'), OWNER, P)).toBe(false))
+  it('post null → ลบไม่ได้',    () => expect(pa.canDeletePost(null, acc('admin'), OWNER)).toBe(false))
+})
+
+// ---- category เป็นแค่ป้าย ไม่มีผลต่อสิทธิ์ ----
+describe('category ไม่มีผลต่อสิทธิ์', () => {
+  const postA = { ...orgPost, category: 'announcement' }
+  const postB = { ...orgPost, category: 'event' }
+
+  it('canReadPost ผลเหมือนกันไม่ว่า category ไหน', () => {
+    expect(pa.canReadPost(postA, acc('member'), OTHER, teamRead))
+      .toBe(pa.canReadPost(postB, acc('member'), OTHER, teamRead))
+  })
+  it('canWritePost ผลเหมือนกันไม่ว่า category ไหน', () => {
+    expect(pa.canWritePost(postA, acc('member'), OTHER, P))
+      .toBe(pa.canWritePost(postB, acc('member'), OTHER, P))
+  })
+  it('personal ต่าง category กัน — เจ้าของอ่านได้เท่ากันทั้งคู่', () => {
+    const pA = { ...personal, category: 'announcement' }
+    const pB = { ...personal, category: 'event' }
+    expect(pa.canReadPost(pA, acc('member'), OWNER, P)).toBe(true)
+    expect(pa.canReadPost(pB, acc('member'), OWNER, P)).toBe(true)
+  })
+})
+
+// ---- canEditPost กับโพสต์ approved ----
+describe('canEditPost — approved ล็อกแม้เป็นเจ้าของ', () => {
+  it('post.status = approved → เจ้าของแก้ไม่ได้', () => {
+    const approvedOwn = { ...orgPost, status: 'approved' }
+    expect(pa.canEditPost(approvedOwn, acc('member'), OWNER, P)).toBe(false)
+  })
 })

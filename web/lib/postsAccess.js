@@ -1,6 +1,9 @@
 /**
  * Posts Access Control — เครื่องมืองานสื่อ (spec: md/posts/POSTS.md §ผ่าน /grill)
  *
+ * ⛔ 2026-07-29 (เย็น): **ไม่มี series แล้ว** — หน่วยเดียวที่ตัดสินสิทธิ์คือ "โพสต์" (post_episodes)
+ *    แต่ละโพสต์ถือ visibility/owner_user_id ของตัวเอง · `category` เป็นแค่ป้ายจัดกลุ่ม **ไม่มีผลต่อสิทธิ์เลย**
+ *
  * ต่างจาก finance/calling: posts **ไม่มี geography scope** — ไม่มีการ ∩ จังหวัด
  * สิทธิ์มาจาก 2 ทางเท่านั้น: permission ของ user + `posts_policy` ของ org
  *
@@ -9,8 +12,8 @@
  *   'org'  = ทุกคนในองค์กร (default — user เคาะเอง ยอมรับว่าร่างรั่วออกได้)
  *   'team' = เจ้าของ + editor + secretary_general + admin
  *
- * ⚠️ ซีรีส์ `personal` ไม่ขึ้นกับ policy เลย — เจ้าของคนเดียว (+ admin god-mode)
- *    `secretary_general` ดู private ของคนอื่นไม่ได้ (ตามนิยามใน org_roles)
+ * ⚠️ โพสต์ `personal` ไม่ขึ้นกับ policy เลย — เจ้าของคนเดียว (+ admin god-mode)
+ *    `secretary_general` ดู personal ของคนอื่นไม่ได้ (ตามนิยามใน `org_roles`)
  *
  * ⚠️ userId = users.id ของ session · debug mode ("View as role") ส่ง null มา →
  *    ownership check ตกทั้งหมดโดยตั้งใจ เหมือน gotcha ใน CLAUDE.md
@@ -56,58 +59,59 @@ export function normalizePolicy(raw) {
   }
 }
 
-function isOwner(series, userId) {
-  return !!userId && !!series && series.owner_user_id === userId
+function isOwner(post, userId) {
+  return !!userId && !!post && post.owner_user_id === userId
 }
 
-function passesScope(scope, series, access, userId) {
-  if (scope === 'team') return isOwner(series, userId) || isMediaTeam(access)
+function passesScope(scope, post, access, userId) {
+  if (scope === 'team') return isOwner(post, userId) || isMediaTeam(access)
   return true   // 'org' — ทุกคนในองค์กร (caller ยืนยัน org แล้วผ่าน session)
 }
 
 /**
- * อ่านซีรีส์ได้ไหม
- * @param {{owner_user_id:number, visibility:'personal'|'org'}} series
+ * อ่านโพสต์ได้ไหม
+ * @param {{owner_user_id:number, visibility:'personal'|'org'}} post
  * @param {{permissions:Set<string>|string[]}} access
  * @param {number|null} userId  users.id
  * @param {object} policy  ผ่าน normalizePolicy มาแล้ว
  */
-export function canReadSeries(series, access, userId, policy = DEFAULT_POSTS_POLICY) {
-  if (!series) return false
+export function canReadPost(post, access, userId, policy = DEFAULT_POSTS_POLICY) {
+  if (!post) return false
   if (isAdmin(access)) return true
-  if (series.visibility === 'personal') return isOwner(series, userId)
-  return passesScope(policy.read, series, access, userId)
+  if (post.visibility === 'personal') return isOwner(post, userId)
+  return passesScope(policy.read, post, access, userId)
 }
 
-/** แก้เนื้อหาในซีรีส์ได้ไหม (ยังไม่นับสถานะตอน — ดู canEditEpisode) */
-export function canWriteSeries(series, access, userId, policy = DEFAULT_POSTS_POLICY) {
-  if (!series) return false
+/** แก้เนื้อหาโพสต์ได้ไหม **โดยยังไม่นับสถานะ** — ตัวที่ route ควรใช้จริงคือ canEditPost */
+export function canWritePost(post, access, userId, policy = DEFAULT_POSTS_POLICY) {
+  if (!post) return false
   if (isAdmin(access)) return true
-  if (series.visibility === 'personal') return isOwner(series, userId)
+  if (post.visibility === 'personal') return isOwner(post, userId)
   // เขียนได้ต้องอ่านได้ก่อน — org ที่ตั้ง read:'team' + write:'org' ไม่ควรเปิดช่องให้คนที่มองไม่เห็นเขียนได้
-  if (!canReadSeries(series, access, userId, policy)) return false
-  return passesScope(policy.write, series, access, userId)
-}
-
-/** ลบถาวร/เก็บเข้ากรุทั้งซีรีส์ = เจ้าของหรือ admin เท่านั้น (grill ข้อ 6) */
-export function canDeleteSeries(series, access, userId) {
-  if (!series) return false
-  return isAdmin(access) || isOwner(series, userId)
+  if (!canReadPost(post, access, userId, policy)) return false
+  return passesScope(policy.write, post, access, userId)
 }
 
 /**
- * แก้ตอนได้ไหม — approved = ล็อก ต้องกด "ขอแก้" (canRequestChanges) ให้กลับเป็น review ก่อน
- * published ไม่ล็อก: แก้ได้ในระบบแต่ไม่ sync กลับแพลตฟอร์ม (grill ข้อ 9) — สถานะเผยแพร่อยู่ที่ jobs ไม่ใช่ที่นี่
+ * แก้โพสต์ได้ไหม (ของจริงที่ route ใช้) — approved = ล็อก ต้องกด "ขอแก้" (canRequestChanges) ก่อน
+ * published ไม่ล็อก: แก้ได้ในระบบแต่ไม่ sync กลับแพลตฟอร์ม (grill ข้อ 9)
+ * — สถานะเผยแพร่อยู่ที่ post_social_history ไม่ใช่ที่นี่
  */
-export function canEditEpisode(series, episode, access, userId, policy = DEFAULT_POSTS_POLICY) {
-  if (!canWriteSeries(series, access, userId, policy)) return false
-  return episode?.status !== 'approved'
+export function canEditPost(post, access, userId, policy = DEFAULT_POSTS_POLICY) {
+  if (!canWritePost(post, access, userId, policy)) return false
+  return post?.status !== 'approved'
 }
 
-/** ปลดล็อกตอนที่อนุมัติแล้วกลับไป review */
-export function canRequestChanges(series, episode, access, userId, policy = DEFAULT_POSTS_POLICY) {
-  if (episode?.status !== 'approved') return false
-  return canWriteSeries(series, access, userId, policy)
+/** ลบถาวร/เก็บเข้ากรุ = เจ้าของหรือ admin เท่านั้น (grill ข้อ 6) */
+export function canDeletePost(post, access, userId) {
+  if (!post) return false
+  return isAdmin(access) || isOwner(post, userId)
+}
+
+/** ปลดล็อกโพสต์ที่อนุมัติแล้วกลับไป review */
+export function canRequestChanges(post, access, userId, policy = DEFAULT_POSTS_POLICY) {
+  if (post?.status !== 'approved') return false
+  return canWritePost(post, access, userId, policy)
 }
 
 /**
@@ -115,31 +119,34 @@ export function canRequestChanges(series, episode, access, userId, policy = DEFA
  *   personal → เจ้าของโพสต์ได้เลย ไม่มีขั้นอนุมัติ
  *   org      → policy.approval === 'required' ต้อง approved ก่อน
  */
-export function canPublishEpisode(series, episode, access, userId, policy = DEFAULT_POSTS_POLICY) {
-  if (!canWriteSeries(series, access, userId, policy)) return false
-  if (series.visibility === 'personal') return true
+export function canPublishPost(post, access, userId, policy = DEFAULT_POSTS_POLICY) {
+  if (!canWritePost(post, access, userId, policy)) return false
+  if (post.visibility === 'personal') return true
   if (policy.approval === 'optional') return true
-  return episode?.status === 'approved'
+  return post?.status === 'approved'
 }
 
 /**
- * เปิดซีรีส์ส่วนตัวให้ทีมเห็น — ทางเดียว มีเงื่อนไข (grill ข้อ 1)
+ * เปิดโพสต์ส่วนตัวให้ทีมเห็น — ทางเดียว มีเงื่อนไข (grill ข้อ 1)
  * @param {{hasComments?:boolean, hasApprovals?:boolean, hasJobs?:boolean}} usage
  */
-export function canPromoteToOrg(series, access, userId, usage = {}) {
-  if (!series || series.visibility !== 'personal') return false
-  if (!isOwner(series, userId) && !isAdmin(access)) return false
+export function canPromoteToOrg(post, access, userId, usage = {}) {
+  if (!post || post.visibility !== 'personal') return false
+  if (!isOwner(post, userId) && !isAdmin(access)) return false
   return !usage.hasComments && !usage.hasApprovals && !usage.hasJobs
 }
 
-/** ไม่มีทางกลับ — org → personal ทำไม่ได้ (คอมเมนต์/revision ของคนอื่นผูกอยู่แล้ว) ใช้ "ก๊อปเป็นซีรีส์ใหม่" แทน */
+/** ไม่มีทางกลับ — org → personal ทำไม่ได้ (คอมเมนต์/revision ของคนอื่นผูกอยู่แล้ว) ใช้ "ก๊อปเป็นโพสต์ใหม่" แทน */
 export function canDemoteToPersonal() {
   return false
 }
 
-/** เรียก AI ได้ = คนที่เขียนซีรีส์นี้ได้เท่านั้น (โควตาต่อวันเช็คแยกที่ชั้น API — grill ข้อ 13) */
-export function canUseAi(series, access, userId, policy = DEFAULT_POSTS_POLICY) {
-  return canWriteSeries(series, access, userId, policy)
+/**
+ * เรียก AI ได้ = คนที่เขียนโพสต์นี้ได้เท่านั้น (โควตาต่อวันเช็คแยกที่ชั้น API — grill ข้อ 13)
+ * ตอนสร้างโพสต์ใหม่ยังไม่มีแถวจริง → ส่ง `{ visibility, owner_user_id: userId }` เข้ามาได้
+ */
+export function canUseAi(post, access, userId, policy = DEFAULT_POSTS_POLICY) {
+  return canWritePost(post, access, userId, policy)
 }
 
 export const AI_DAILY_LIMIT = 30

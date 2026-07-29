@@ -57,6 +57,7 @@ const ICONS = {
   media:          'M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z',
   ai:             'M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z',
   docs:           'M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z',
+  pen:            'M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125',
   settings:       'M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z M15 12a3 3 0 11-6 0 3 3 0 016 0z',
 }
 
@@ -96,6 +97,10 @@ const CASE_LINKS = [
   { href: '/case/manage', label: 'Cases',      icon: 'logs',     exact: true },
 ]
 
+const POSTS_LINKS = [
+  { href: '/posts', label: 'Posts', icon: 'pen', exact: true },
+]
+
 const SOCIAL_LINKS = [
   { href: '/social', label: 'My Accounts', icon: 'social' },
 ]
@@ -105,6 +110,7 @@ const DASHBOARD_LINKS = [
   { href: '/calling',      label: 'CALLING',  icon: 'campaigns', feature: 'calling' },
   { href: '/docs',         label: 'DOCS',     icon: 'docs',      feature: 'docs', docsAccess: true },
   { href: '/case/manage',  label: 'CASES',    icon: 'logs',      feature: 'cases', casesAccess: true },
+  { href: '/posts',        label: 'POSTS',    icon: 'pen',       feature: 'posts' },
 ]
 
 const APPS = [
@@ -113,12 +119,13 @@ const APPS = [
   { key: 'calling',  label: 'CALLING',   href: '/calling',        icon: 'campaigns', feature: 'calling' },
   { key: 'docs',     label: 'DOCS',      href: '/docs',           icon: 'docs',      feature: 'docs' },
   { key: 'cases',    label: 'CASES',     href: '/case/manage',    icon: 'logs',      feature: 'cases', casesAccess: true },
+  { key: 'posts',    label: 'POSTS',     href: '/posts',          icon: 'pen',       feature: 'posts' },
   { key: 'discord',  label: 'BOT',       href: '/bot/platforms',  icon: 'social' },
 ]
 
 // app ที่ใช้ได้แม้ org ไม่มี guild — ตอนนี้ org-native ครบทั้ง 4 แล้ว (calling 2026-07-19 ·
 // docs/cases Phase 2) เหลือแต่ BOT ที่ต้องมี Discord จริง · การเปิด/ปิดคุมด้วย featureOn
-const ORG_NATIVE_APP_KEYS = new Set(['home', 'finance', 'calling', 'docs', 'cases'])
+const ORG_NATIVE_APP_KEYS = new Set(['home', 'finance', 'calling', 'docs', 'cases', 'posts'])
 
 export default function Nav({ session, orgs = [], activeOrgId = null, guilds = [], currentGuildId = null, enabledFeatures = [] }) {
   const pathname = usePathname()
@@ -143,6 +150,7 @@ export default function Nav({ session, orgs = [], activeOrgId = null, guilds = [
   const isDiscordApp   = pathname.startsWith('/bot')
   const isDocsApp      = pathname.startsWith('/docs')
   const isCaseApp      = pathname.startsWith('/case')
+  const isPostsApp     = pathname.startsWith('/posts')
   const isLinkActive = (href, exact = false) => {
     if (exact) return pathname === href
     return pathname === href || (href !== '/' && pathname.startsWith(href))
@@ -150,10 +158,10 @@ export default function Nav({ session, orgs = [], activeOrgId = null, guilds = [
   const appByKey = (key) => APPS.find(a => a.key === key)
   const currentApp = isDiscordApp ? appByKey('discord') : isDocsApp ? appByKey('docs')
     : isCallingApp ? appByKey('calling') : isFinanceApp ? appByKey('finance')
-    : isCaseApp ? appByKey('cases') : appByKey('home')
+    : isCaseApp ? appByKey('cases') : isPostsApp ? appByKey('posts') : appByKey('home')
   const links = isDiscordApp ? DISCORD_LINKS : isSocialApp ? SOCIAL_LINKS : isDocsApp ? DOCS_LINKS
     : isCallingApp ? CALLING_LINKS : isFinanceApp ? FINANCE_LINKS
-    : isCaseApp ? CASE_LINKS : DASHBOARD_LINKS
+    : isCaseApp ? CASE_LINKS : isPostsApp ? POSTS_LINKS : DASHBOARD_LINKS
 
   const campaignIdMatch = pathname.match(/^\/calling\/assignments\/(\d+)/)
   const activeCampaignId = campaignIdMatch ? parseInt(campaignIdMatch[1]) : null

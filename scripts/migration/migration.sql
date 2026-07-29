@@ -132,52 +132,48 @@ BEGIN
 END $$;
 
 -- ═══════════════════════════════════════════════════════════════════════════
--- 2026-07-29 — POSTS ก้อน 1: 7 ตารางของโมดูล posts (เครื่องมืองานสื่อ)
+-- 2026-07-29 — POSTS ก้อน 1: 6 ตารางของโมดูล posts (เครื่องมืองานสื่อ)
+-- ⛔ แก้ 2026-07-29 เย็น: ทิ้ง post_series (จาก 7 เหลือ 6) — หน่วยหลักคือ post_episodes + คอลัมน์ category
 -- spec + เหตุผลรายข้อ: md/posts/POSTS.md §ผ่าน /grill
 -- additive ล้วน (CREATE TABLE IF NOT EXISTS) — รันซ้ำได้ ไม่แตะตารางเดิม
 -- ═══════════════════════════════════════════════════════════════════════════
 
--- ซีรีส์ = คอนเทนต์ 1 ชุดที่ซอยเป็นตอน · visibility เคาะตั้งแต่แรก ห้ามเติมทีหลัง
-CREATE TABLE IF NOT EXISTS post_series (
-  id                    bigserial    PRIMARY KEY,
-  org_id                integer      NOT NULL REFERENCES orgs(id) ON DELETE CASCADE,
-  owner_user_id         integer      NOT NULL REFERENCES users(id),
-  visibility            varchar(10)  NOT NULL DEFAULT 'personal' CHECK (visibility IN ('personal','org')),
-  title                 varchar(200) NOT NULL,
-  summary               text,
-  source_idea           text,        -- ไอเดียดิบที่โยนเข้ามา → กด "จัดโครงใหม่" ได้ไม่ต้องพิมพ์ซ้ำ
-  created_via           varchar(10)  NOT NULL DEFAULT 'manual' CHECK (created_via IN ('ai','manual')),
-  -- audit ตอนเปิดให้ทีมเห็น (personal → org ทางเดียว ย้อนไม่ได้ — grill ข้อ 1)
-  visibility_changed_at timestamptz,
-  visibility_changed_by integer      REFERENCES users(id),
-  archived_at           timestamptz,
-  created_at            timestamptz  NOT NULL DEFAULT now(),
-  updated_at            timestamptz  NOT NULL DEFAULT now()
-);
-CREATE INDEX IF NOT EXISTS idx_post_series_org   ON post_series (org_id, visibility, archived_at);
-CREATE INDEX IF NOT EXISTS idx_post_series_owner ON post_series (owner_user_id);
-
--- ตอน · status เก็บแค่ "สถานะงานเขียน" — scheduled/published เป็น derived จาก post_publish_jobs (grill ข้อ 10)
+-- ═══ post_episodes — **หน่วยงานหลักของโมดูล** (1 แถว = 1 โพสต์) ═══
+-- ⛔ 2026-07-29 (เย็น) user เคาะ: **ทิ้ง post_series ทั้งตาราง** — "ผมทำงานเป็น episode
+--    แล้วแยกด้วย category เอา · จะแยกกลุ่มก็ใช้ category ใน column ก็ได้"
+--    → org_id/owner_user_id/visibility/source_idea/created_via ย้ายจาก series ลงมาที่นี่
+--    → ทิ้ง series_id + seq: ตอนไม่มีเลขลำดับ เรียงตามเวลาที่แก้ล่าสุด
+-- category = **คอลัมน์ ไม่ใช่ตาราง lookup** (rename หมวด = UPDATE ทุกแถวของหมวดนั้น — ยอมรับแล้ว)
+--    1 โพสต์ = 1 หมวด (ไม่ใช่ tag หลายอัน) · NULL = ยังไม่จัดหมวด
+-- status เก็บแค่ "สถานะงานเขียน" — scheduled/published เป็น derived จาก post_social_history (grill ข้อ 10)
 -- updated_at ใช้เป็น optimistic lock ของ autosave (grill ข้อ 14) — client ส่งค่าที่โหลดมา ไม่ตรง = 409
 CREATE TABLE IF NOT EXISTS post_episodes (
   id               bigserial    PRIMARY KEY,
-  series_id        bigint       NOT NULL REFERENCES post_series(id) ON DELETE CASCADE,
-  seq              integer      NOT NULL,
+  org_id           integer      NOT NULL REFERENCES orgs(id) ON DELETE CASCADE,
+  owner_user_id    integer      NOT NULL REFERENCES users(id),
+  visibility       varchar(10)  NOT NULL DEFAULT 'personal' CHECK (visibility IN ('personal','org')),
+  category         varchar(60),   -- ป้ายจัดกลุ่ม · NULL = ยังไม่จัดหมวด
   title            varchar(300),
   body             text,
   bodies           jsonb,       -- override รายแพลตฟอร์ม {"x":"...","fb":"..."} · ว่าง = ใช้ body
   format           varchar(10)  CHECK (format IS NULL OR format IN ('text','image','quote')),  -- hint เฉยๆ ไม่บังคับ
+  source_idea      text,        -- ไอเดียดิบที่โยนเข้ามา → กด "ร่างใหม่" ได้ไม่ต้องพิมพ์ซ้ำ
+  created_via      varchar(10)  NOT NULL DEFAULT 'manual' CHECK (created_via IN ('ai','manual')),
   status           varchar(10)  NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','review','approved')),
   approved_by      integer      REFERENCES users(id),
   approved_by_name varchar(100),  -- อนุมัติผ่านลิงก์ = ชื่อพิมพ์เอง ไม่ใช่ลายเซ็นผูกตัวตน
   approved_at      timestamptz,
+  last_edited_by   integer      REFERENCES users(id),  -- เนื้อหาที่อยู่ใน DB ตอนนี้เป็นของใคร → ใช้ตัดสินว่าต้องเขียน revision ก่อนทับไหม
+  -- audit ตอนเปิดร่างส่วนตัวให้ทีมเห็น (personal → org ทางเดียว ย้อนไม่ได้ — grill ข้อ 1)
+  visibility_changed_at timestamptz,
+  visibility_changed_by integer  REFERENCES users(id),
   archived_at      timestamptz,
   created_at       timestamptz  NOT NULL DEFAULT now(),
-  updated_at       timestamptz  NOT NULL DEFAULT now(),
-  -- ⚠️ สลับลำดับตอนต้อง 2 จังหวะ (update เป็นเลขลบก่อน) เพราะ unique นี้ไม่ deferrable
-  CONSTRAINT uq_post_episode_seq UNIQUE (series_id, seq)
+  updated_at       timestamptz  NOT NULL DEFAULT now()
 );
-CREATE INDEX IF NOT EXISTS idx_post_episodes_series ON post_episodes (series_id, seq);
+CREATE INDEX IF NOT EXISTS idx_post_episodes_org      ON post_episodes (org_id, visibility, archived_at);
+CREATE INDEX IF NOT EXISTS idx_post_episodes_owner    ON post_episodes (owner_user_id);
+CREATE INDEX IF NOT EXISTS idx_post_episodes_category ON post_episodes (org_id, category);
 
 -- สื่อของตอน · เก็บ params ของการ์ดคำคม ไม่ใช่แค่ PNG → แก้ข้อความแล้ว render ใหม่ได้
 -- path = relative จาก repo root เช่น 'storage/posts/<uuid>.jpg' (นอก public/ — grill ข้อ 5)
