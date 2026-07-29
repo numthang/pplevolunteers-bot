@@ -105,6 +105,54 @@ gate = `admin` ใน org (owner ได้อัตโนมัติ) · verify
 
 ---
 
+## 📮 CASES — รอบ 2026-07-28 (ยังไม่ commit)
+
+> เข้ามาจากคำถาม "ลบ/แก้ไข case ได้ไหม" แล้วลากไปเจอบั๊ก Discord sync · กลไก sync + ข้อจำกัดเขียนไว้ที่ `md/case/CASE.md` หัวข้อ "🔄 Discord sync"
+
+**✅ เสร็จรอบนี้ (ยังไม่ commit / ยังไม่เทสในเบราว์เซอร์):**
+- **แก้บั๊ก watermark sync** (bug-060/061) — insert+เลื่อน watermark เป็น transaction เดียว (เดิม insert พังแต่ที่คั่นเลื่อนต่อ = ข้อความหายถาวร) · optimistic lock กันกดพร้อมกัน · ส่ง timeline เดิมเข้า prompt กัน AI สกัดซ้ำ · cap 500 ข้อความ/ครั้ง
+- **แก้ไขข้อมูลเคส** — `PATCH /api/case/[ref]` + `CaseEditButton.jsx` (modal มุมขวาบน header) · แก้ได้: title/detail/category/ชื่อ/เบอร์/LINE · **province แก้ไม่ได้โดยตั้งใจ** (รหัสจังหวัดฝังใน `ref` ที่ส่ง SMS ไปแล้ว + `gateCase` เช็ค scope จากจังหวัดเดิม → ปล่อยแก้ = ผลักเคสข้ามจังหวัดแล้วตัวเองหลุด scope) · audit เก็บ**ชื่อ field เท่านั้น ไม่เก็บค่า** (`audit_logs` ไม่มี province gate = PII รั่วอ้อมกำแพง `getCaseByRefPublic/Full`)
+- gate ของการแก้ = เดียวกับเปลี่ยนสถานะ (`manageCases` + province scope) **ไม่ต้องรับเคสก่อน** — เคาะ 2026-07-28 เหตุผล: คนที่ผ่าน gate เห็น PII เต็มๆ อยู่แล้ว ห้ามแก้จึงกันความลับไม่ได้ กันได้แค่ integrity ซึ่ง audit log ทำแทน
+
+**⬜ เหลือ:**
+- [ ] **เทสในเบราว์เซอร์** — กดปุ่มแก้ไขจริง + กด refresh timeline บนเคสที่มีเธรด Discord จริง (ที่ verify ไปคือ production build ผ่าน + code review เท่านั้น)
+- [x] **นำเข้าไฟล์แนบ/รูปจากเธรด Discord ✅ เสร็จ 2026-07-28** — `lib/caseAttachmentSync.js` + watermark เส้นที่ 2 `cases.last_attachment_message_id` (เริ่ม NULL → รอบแรก backfill ทั้งเธรดเอง แก้ปมที่ watermark เส้นแรกเลยรูปเก่าไปแล้ว) · dedup `case_attachments.discord_attachment_id` partial unique index (**verify ด้วย SQL จริงแล้ว**: ยิงซ้ำ→0 rows ไม่ error, แถวฟอร์มเว็บ NULL ยังใส่ซ้ำได้) · โหลด bytes มาเก็บเอง (CDN URL หมดอายุ) ผ่าน `saveCaseBuffer()` ใหม่ · รวมกับปุ่ม refresh timeline เดิม · `failed>0` = ไม่เลื่อน watermark (บทเรียน bug-060) · **ผลพลอยได้: เคสที่เปิดจาก Discord ได้ไฟล์แนบด้วย ไม่ต้องแตะฝั่งบอท**
+- [ ] **"โอนเคสข้ามจังหวัด"** เป็น action แยก (admin-only, เช็ค scope ทั้งต้นทาง+ปลายทาง, ลง timeline) — ถ้ามีเคสจัดจังหวัดผิดจริง
+- [x] ~~ลบเคส~~ — **เคาะ 2026-07-28: ไม่ทำ** · "ปิดเรื่อง" ด้วยสถานะ `closed`/`rejected` + บังคับเหตุผล + public note ที่มีอยู่เพียงพอแล้ว · เคสร้องเรียนควรเก็บ record ไว้ตลอด ไม่ควรลบทิ้งได้อยู่แล้ว
+- [ ] cron auto-sync timeline (อยู่ใน V2 ของ CASE.md เดิมอยู่แล้ว) — ตอนนี้ sync ด้วยปุ่มกดมือเท่านั้น ไม่มีใครกด = timeline ค้าง
+- [ ] ข้อความที่ถูก **edit ทีหลัง** ใน Discord ไม่มีทางเข้าระบบ (`?after=` ดูแต่ ID ใหม่) — รู้ไว้เฉยๆ ยังไม่มีแผนแก้
+
+---
+
+## 🏷️ Rename โปรเจกต์ → platfor.org (เตรียมรางเสร็จ 2026-07-28 · **ยังไม่จดโดเมน**)
+
+> ชื่อเคาะแล้ว: **display = `PLATFOR{m}.ORG`** · **domain = `platfor.org`** (ยังไม่จด — ตอนนี้ยังใช้ `pplevolunteers.org` ทั้งระบบ)
+> ✅ commit `278a3a2` วางรางไว้แล้ว: ชื่อ/โดเมนอ่านจากที่เดียว ไม่มี hardcode กระจายอีก
+
+**วันเปลี่ยนจริง — แก้แค่ 2 บรรทัดนี้ก่อน:**
+1. `config/brand.js` → `BRAND_DOMAIN: 'platfor.org'`  (`BRAND_NAME` เป็น `PLATFOR{m}.ORG` อยู่แล้ว)
+2. `.env` → `NEXTAUTH_URL=https://platfor.org`
+   → ตกถึง `web/lib/baseUrl.js` → OAuth redirect_uri ทุกเจ้า + passkey RP_ID + title/footer ทั้งหมดอัตโนมัติ
+
+**แล้วตามด้วยของนอกโค้ด (ลืมไม่ได้):**
+- [ ] จดโดเมน + DNS + nginx `server_name` + SSL cert · เสิร์ฟโดเมนเก่า 301 ไปใหม่ไว้ก่อน
+- [ ] **`dc_guild_config` key `web_base_url`** — อยู่ใน DB ราย guild ไม่ใช่ .env (บอทใช้ทำลิงก์ใน SMS/Discord) → `UPDATE` ให้ครบทุก guild
+- [ ] **redirect URI ในคอนโซลข้างนอกทุกเจ้า:** Discord OAuth · Google · LINE · Meta · X
+- [ ] ⚠️ **passkey จะพังทั้งหมด** — `RP_ID` ผูก hostname → passkey ที่ลงทะเบียนไว้ใช้ไม่ได้ · **ยังไม่เคาะ**ว่าจะ pin `PASSKEY_RP_ID=pplevolunteers.org` (ต้องเสิร์ฟโดเมนเก่าตลอด) หรือให้ลงทะเบียนใหม่ (เช็คก่อนว่ามีกี่คน)
+
+**Rename folder / repo (แยกจากโดเมน ทำคนละวันได้):**
+- [ ] local `~/VSites/node/pple-volunteers` → `platfor.org` (พาไปด้วย: Claude memory dir, VSCode workspace, `.claude/settings.local.json`)
+- [ ] prod `/www/wwwroot/pple-volunteers` → `deploy.sh:44` เป็นบรรทัดเดียวที่รันจริง · อีก ~12 ไฟล์ใน `scripts/` เป็น comment วิธีรัน
+- [ ] GitHub repo `numthang/pplevolunteers-bot` → rename (GitHub redirect ให้อยู่แล้ว ไม่พังทันที)
+- [ ] 🔒 **git remote มี GitHub PAT plain text** (`ghp_...` ใน origin URL) → revoke + ออกใหม่ตอน rename repo
+- [ ] pm2 `pple-dcbot` / `pple-web` — จะเปลี่ยนก็ได้ ไม่ผูกอะไร
+- [ ] docs `md/*.md` + `CLAUDE.md` (~10 ไฟล์) — งาน mechanical ล้วน โยน subagent ได้
+
+**เคาะแล้วว่า “ไม่แตะ”:** DB `pple_volunteers` + user `pple_dcbot` (ต้องแก้ .env+scripts ทุกที่ ได้แค่ความสวย เสี่ยง downtime) · `.wolf/memory.md` (log ประวัติ) · `web/app/tee/portfolio/` (อ้างระบบเดิมถูกแล้ว) · `.claude/settings.local.json` (แค่ allowlist)
+**ทำก็ได้ไม่ทำก็ได้:** User-Agent 3 จุด (`CaseNewForm.jsx`, `LocationButton.jsx`, `sync-act-events.js`)
+
+---
+
 ## 🌐 platformfor.org / CivicFlow — identity/tenant migration (✅ เสร็จ 2026-07-21 · เหลือ cutover)
 
 > **แผน + สถาปัตยกรรมเต็มอยู่ที่ `md/civicflow/CIVICFLOW.md`** (อ่านก่อนเริ่ม) · rebrand → email-first multi-tenant, Discord = adapter เสริม · consult wedge กับ CivicFlow (US nonprofit, โจทย์ตรงกัน)
