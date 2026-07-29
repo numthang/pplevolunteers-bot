@@ -13,6 +13,10 @@ const SELECT = `SELECT id, user_discord_id, guild_id, name, group_name, platform
                 FROM dc_social_accounts`
 
 // GET → public accounts ของ guild ปัจจุบัน (cookie) + private accounts ของ user ทุก guild
+//
+// ⚠️ private account ไม่ scope ด้วย guild — มันเป็นของ "ผู้ใช้" ไม่ใช่ของ guild (bug-063)
+// guild_id ในแถว private เป็นแค่ร่องรอยว่าตอนเชื่อมบัญชี user อยู่ guild ไหน ไม่มีความหมายเชิงสิทธิ์
+// เดิมกรองด้วย guild ทำให้บัญชีส่วนตัวหายทุกครั้งที่สลับ guild/org (org เดียวมีได้หลาย guild)
 export async function GET() {
   const session = await getServerSession(authOptions)
   if (!session) return Response.json({ error: 'Forbidden' }, { status: 403 })
@@ -32,23 +36,23 @@ export async function GET() {
       if (!managerGuildIds.includes(guildId)) {
         // canManage แต่ไม่ใช่ manager ของ guild นี้ — เห็นแค่ private ของตัวเองใน guild นี้
         const r = await pool.query(
-          `${SELECT} WHERE user_discord_id = $1 AND guild_id = $2 AND visibility = 'private' ORDER BY platform, id`,
-          [discordId, guildId]
+          `${SELECT} WHERE user_discord_id = $1 AND visibility = 'private' ORDER BY platform, id`,
+          [discordId]
         )
         return Response.json(r.rows)
       }
     }
     const [pub, priv] = await Promise.all([
       pool.query(`${SELECT} WHERE guild_id = $1 AND visibility = 'public' ORDER BY platform, id`, [guildId]),
-      pool.query(`${SELECT} WHERE user_discord_id = $1 AND guild_id = $2 AND visibility = 'private' ORDER BY platform, id`, [discordId, guildId]),
+      pool.query(`${SELECT} WHERE user_discord_id = $1 AND visibility = 'private' ORDER BY platform, id`, [discordId]),
     ])
     publicRows  = pub.rows
     privateRows = priv.rows
   } else {
-    // regular user: เห็นแค่ private ของตัวเองใน guild นี้
+    // regular user: เห็นแค่ private ของตัวเอง (ทุก guild — เป็นของ user ไม่ใช่ของ guild)
     const r = await pool.query(
-      `${SELECT} WHERE user_discord_id = $1 AND guild_id = $2 AND visibility = 'private' ORDER BY platform, id`,
-      [discordId, guildId]
+      `${SELECT} WHERE user_discord_id = $1 AND visibility = 'private' ORDER BY platform, id`,
+      [discordId]
     )
     privateRows = r.rows
   }

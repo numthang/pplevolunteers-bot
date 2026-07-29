@@ -610,7 +610,8 @@
       "deleteButton": "ลบ",
       "addPlaceholder": "เพิ่ม timeline entry...",
       "publishToggleLabel": "เผยแพร่ให้ประชาชนเห็น",
-      "addButton": "เพิ่ม"
+      "addButton": "เพิ่ม",
+      "filesImported": "นำเข้าไฟล์แนบจาก Discord {count} ไฟล์"
     },
     "track": {
       "metaTitle": "ติดตามเรื่องร้องเรียน",
@@ -642,6 +643,25 @@
       "chooseManually": "เลือกจังหวัดเอง",
       "locating": "กำลังระบุตำแหน่ง...",
       "useMyLocation": "ใช้ตำแหน่งของฉัน"
+    },
+    "edit": {
+      "button": "แก้ไขข้อมูลเคส",
+      "heading": "แก้ไขข้อมูลเคส",
+      "titleLabel": "หัวข้อเรื่อง",
+      "categoryLabel": "ประเภท",
+      "categoryNone": "— ไม่ระบุ —",
+      "detailLabel": "รายละเอียด",
+      "provinceLabel": "จังหวัด",
+      "provinceLocked": "แก้ไม่ได้ เพราะรหัสจังหวัดฝังอยู่ในเลขอ้างอิงที่แจ้งผู้ร้องเรียนไปแล้ว",
+      "complainantSection": "ข้อมูลผู้ร้องเรียน",
+      "nameLabel": "ชื่อ",
+      "phoneLabel": "เบอร์โทร",
+      "lineLabel": "LINE ID",
+      "resendSms": "ส่ง SMS แจ้งลิงก์ติดตามซ้ำไปยังเบอร์ใหม่",
+      "saveButton": "บันทึก",
+      "savingButton": "กำลังบันทึก...",
+      "cancelButton": "ยกเลิก",
+      "smsSentAlert": "ส่ง SMS แจ้งลิงก์ติดตามไปยังเบอร์ใหม่แล้ว"
     }
   },
   "docs": {
@@ -1230,6 +1250,17 @@
       "provinceLabel": "จังหวัด",
       "zipcodeLabel": "รหัสไปรษณีย์",
       "unspecifiedOption": "— ไม่ระบุ —"
+    }
+  },
+  "bot": {
+    "guildBar": {
+      "label": "กำลังตั้งค่าเซิร์ฟเวอร์",
+      "switchAria": "เปลี่ยนเซิร์ฟเวอร์",
+      "hint": "การตั้งค่าในหมวดนี้แยกตามเซิร์ฟเวอร์"
+    },
+    "noGuild": {
+      "title": "องค์กรนี้ยังไม่ได้เชื่อมกับ Discord",
+      "body": "หน้าตั้งค่าบอททั้งหมดผูกกับเซิร์ฟเวอร์ Discord — เชิญบอทเข้าเซิร์ฟเวอร์แล้วผูกกับองค์กรนี้ก่อน จึงจะใช้งานส่วนนี้ได้"
     }
   }
 }

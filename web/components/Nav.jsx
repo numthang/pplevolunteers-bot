@@ -242,22 +242,7 @@ export default function Nav({ session, orgs = [], activeOrgId = null, guilds = [
 
   // Org switcher (main nav) — OrgSwitcherMenu (desktop) · mobile ยังใช้ list ใน hamburger
   const canSwitchOrg = orgs.length > 1
-  const canSwitchGuild = guilds.length > 1   // org หลาย guild (org 1) → เลือก guild ย่อยได้
-
-  const switchGuild = async (gid) => {
-    setMenuOpen(false)
-    if (gid === currentGuildId) return
-    setSwitching(true)
-    try {
-      const res = await fetch('/api/guild/switch', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ guildId: gid }),
-      })
-      if (res.ok) { window.dispatchEvent(new Event('guild-switched')); router.refresh() }
-    } catch {}
-    setSwitching(false)
-  }
+  // guild switcher ย้ายไป components/GuildSwitcherBar.jsx (แสดงในหมวด /bot/* เท่านั้น)
 
   // เลือก org → เก็บ active_org (switch route dual-write selected_guild ให้ guild-based features ตาม)
   const switchOrg = async (orgId) => {
@@ -270,7 +255,8 @@ export default function Nav({ session, orgs = [], activeOrgId = null, guilds = [
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orgId }),
       })
-      if (res.ok) { window.dispatchEvent(new Event('guild-switched')); router.refresh() }
+      // reload เต็มใบ — router.refresh() ไม่ล้าง Router Cache ให้จริง (เห็นหน้า org เดิมค้าง)
+      if (res.ok) { window.location.reload(); return }
     } catch {}
     setSwitching(false)
   }
@@ -616,29 +602,8 @@ export default function Nav({ session, orgs = [], activeOrgId = null, guilds = [
                       </>
                     )}
 
-                    {/* Guild sub-switcher (mobile) — org หลาย guild เท่านั้น */}
-                    {canSwitchGuild && (
-                      <>
-                        <div className="border-t border-warm-200 dark:border-disc-border my-1" />
-                        <div className="px-4 py-1 text-xs text-warm-400 dark:text-disc-muted">เซิร์ฟเวอร์</div>
-                        {guilds.map(g => (
-                          <button
-                            key={g.guild_id}
-                            onClick={() => { setMenuOpen(false); switchGuild(g.guild_id) }}
-                            disabled={switching}
-                            className={`w-full text-left flex items-center gap-2.5 px-4 py-2.5 text-base transition disabled:opacity-60 ${
-                              g.guild_id === currentGuildId
-                                ? 'text-teal dark:text-teal font-medium bg-teal/10 dark:bg-teal/10'
-                                : 'text-warm-900 dark:text-disc-text hover:bg-warm-100 dark:hover:bg-disc-hover'
-                            }`}
-                          >
-                            <GuildIcon guild={g} className="w-6 h-6" />
-                            <span className="truncate">{g.name}</span>
-                            {g.guild_id === currentGuildId && <span className="ml-auto text-teal shrink-0">✓</span>}
-                          </button>
-                        ))}
-                      </>
-                    )}
+                    {/* guild switcher ย้ายไปแถบบนสุดของ /bot/* แล้ว (GuildSwitcherBar, 2026-07-29)
+                        เหตุ: guild มีผลเฉพาะหมวด /bot/* — วางไว้ที่ nav ทำให้เข้าใจผิดว่ามีผลทั้งเว็บ (bug-063) */}
 
                     {/* App switcher */}
                     <div className="border-t border-warm-200 dark:border-disc-border my-1" />

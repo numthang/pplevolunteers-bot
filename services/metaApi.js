@@ -65,10 +65,12 @@ async function getConfig(guildId, platform, userId = null, groupName = null) {
   const { rows } = await pool.query(
     `SELECT id, user_discord_id, social_id, access_token, user_token, user_token_expires_at, name, visibility
      FROM dc_social_accounts
-     WHERE guild_id = $1 AND platform = $2
-       AND (visibility = 'public' OR (visibility = 'private' AND user_discord_id = $3))
+     WHERE platform = $2
+       AND ((visibility = 'public' AND guild_id = $1)
+            OR (visibility = 'private' AND user_discord_id = $3))
        ${groupClause}
-     ORDER BY CASE WHEN user_discord_id = ${orderIdx} THEN 0 ELSE 1 END, id ASC
+     ORDER BY CASE WHEN visibility = 'public' THEN 0 ELSE 1 END,
+              CASE WHEN user_discord_id = ${orderIdx} THEN 0 ELSE 1 END, id ASC
      LIMIT 1`,
     params
   );
@@ -105,8 +107,8 @@ async function getAvailablePlatforms(guildId, userId = null, groupName = null) {
   const groupClause = groupName ? 'AND group_name = $3' : '';
   const { rows } = await pool.query(
     `SELECT DISTINCT platform FROM dc_social_accounts
-     WHERE guild_id = $1
-       AND (visibility = 'public' OR (visibility = 'private' AND user_discord_id = $2))
+     WHERE ((visibility = 'public' AND guild_id = $1)
+            OR (visibility = 'private' AND user_discord_id = $2))
        ${groupClause}`,
     params
   );
@@ -117,8 +119,9 @@ async function getAvailablePlatforms(guildId, userId = null, groupName = null) {
 async function getAvailableGroups(guildId, userId = null) {
   const { rows } = await pool.query(
     `SELECT DISTINCT group_name FROM dc_social_accounts
-     WHERE guild_id = $1 AND group_name IS NOT NULL
-       AND (visibility = 'public' OR (visibility = 'private' AND user_discord_id = $2))
+     WHERE group_name IS NOT NULL
+       AND ((visibility = 'public' AND guild_id = $1)
+            OR (visibility = 'private' AND user_discord_id = $2))
      ORDER BY group_name`,
     [guildId, userId]
   );

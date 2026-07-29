@@ -24,10 +24,12 @@ async function getXConfig(guildId, userId = null, groupName = null) {
 
   const { rows } = await pool.query(
     `SELECT social_id, access_token FROM dc_social_accounts
-     WHERE guild_id = $1 AND platform = 'x'
-       AND (visibility = 'public' OR (visibility = 'private' AND user_discord_id = $2))
+     WHERE platform = 'x'
+       AND ((visibility = 'public' AND guild_id = $1)
+            OR (visibility = 'private' AND user_discord_id = $2))
        ${groupClause}
-     ORDER BY CASE WHEN user_discord_id = ${orderUserIdx} THEN 0 ELSE 1 END, id ASC
+     ORDER BY CASE WHEN visibility = 'public' THEN 0 ELSE 1 END,
+              CASE WHEN user_discord_id = ${orderUserIdx} THEN 0 ELSE 1 END, id ASC
      LIMIT 1`,
     params
   );

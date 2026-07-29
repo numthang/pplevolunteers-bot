@@ -68,7 +68,9 @@ export default function OrgSwitcherMenu({ orgs = [], activeOrgId, user, activeIc
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orgId: id }),
       })
-      if (res.ok) { window.dispatchEvent(new Event('guild-switched')); router.refresh() }
+      // reload เต็มใบ ไม่ใช่ router.refresh() — สลับ tenant เปลี่ยนทั้งหน้า
+      // router.refresh() ไม่ล้าง Router Cache ให้จริง → เห็นหน้า org เดิมค้างทั้งที่ server render ถูกแล้ว
+      if (res.ok) { window.location.reload(); return }
     } catch {}
     setBusy(false)
   }

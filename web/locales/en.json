@@ -610,7 +610,8 @@
       "deleteButton": "Delete",
       "addPlaceholder": "Add a timeline entry...",
       "publishToggleLabel": "Visible to the public",
-      "addButton": "Add"
+      "addButton": "Add",
+      "filesImported": "Imported {count} attachment(s) from Discord"
     },
     "track": {
       "metaTitle": "Track your complaint",
@@ -642,6 +643,25 @@
       "chooseManually": "Choose province manually",
       "locating": "Locating...",
       "useMyLocation": "Use my location"
+    },
+    "edit": {
+      "button": "Edit case",
+      "heading": "Edit case details",
+      "titleLabel": "Title",
+      "categoryLabel": "Category",
+      "categoryNone": "— None —",
+      "detailLabel": "Detail",
+      "provinceLabel": "Province",
+      "provinceLocked": "Cannot be changed — the province code is embedded in the reference number already sent to the complainant.",
+      "complainantSection": "Complainant information",
+      "nameLabel": "Name",
+      "phoneLabel": "Phone",
+      "lineLabel": "LINE ID",
+      "resendSms": "Resend tracking link SMS to the new number",
+      "saveButton": "Save",
+      "savingButton": "Saving...",
+      "cancelButton": "Cancel",
+      "smsSentAlert": "Tracking link SMS sent to the new number."
     }
   },
   "docs": {
@@ -1230,6 +1250,17 @@
       "provinceLabel": "Province",
       "zipcodeLabel": "Zip Code",
       "unspecifiedOption": "— Not specified —"
+    }
+  },
+  "bot": {
+    "guildBar": {
+      "label": "Configuring server",
+      "switchAria": "Switch server",
+      "hint": "Settings in this section are per-server"
+    },
+    "noGuild": {
+      "title": "This organization is not connected to Discord",
+      "body": "Bot settings are tied to a Discord server. Invite the bot and link a server to this organization first."
     }
   }
 }

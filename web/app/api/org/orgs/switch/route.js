@@ -29,10 +29,17 @@ export async function POST(req) {
   // dual-write: guild-based features (calling/docs/cases/bot) ยังใช้ selected_guild
   // → sync ให้ guild หลักของ org ที่เลือก (prefer env.GUILD_ID ถ้าอยู่ใน org) เพื่อ align กับ active_org
   // guildless org → ไม่แตะ (feature guild-based ถูกซ่อนใน Nav อยู่แล้ว)
+  //
+  // ⚠️ เขียนทับเฉพาะตอน guild ที่เลือกไว้ไม่ได้อยู่ใน org ใหม่ (bug-063)
+  // เดิมเขียนทับทุกครั้ง → org 1 มี 3 guild, เลือกราชบุรีไว้แล้วสลับ org กลับมา เด้งไปอาสาฯ เอง
   const orgGuilds = await guildsOfOrg(orgId)
   if (orgGuilds.length > 0) {
-    const primary = orgGuilds.find(g => g.guild_id === process.env.GUILD_ID) || orgGuilds[0]
-    jar.set(SELECTED_GUILD_COOKIE, primary.guild_id, opts)
+    const current = jar.get(SELECTED_GUILD_COOKIE)?.value
+    const stillInOrg = current && orgGuilds.some(g => g.guild_id === current)
+    if (!stillInOrg) {
+      const primary = orgGuilds.find(g => g.guild_id === process.env.GUILD_ID) || orgGuilds[0]
+      jar.set(SELECTED_GUILD_COOKIE, primary.guild_id, opts)
+    }
   }
   return Response.json({ ok: true, orgId })
 }
