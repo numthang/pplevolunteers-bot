@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Sparkles, Image as ImageIcon } from 'lucide-react'
+import { Sparkles, Image as ImageIcon, Trash2, RotateCcw, X } from 'lucide-react'
 
 const STATUS_LABELS = { draft: 'ร่าง', review: 'รอตรวจ', approved: 'อนุมัติแล้ว' }
 const STATUS_DOT = { draft: 'bg-gray-400', review: 'bg-amber-500', approved: 'bg-green-500' }
@@ -12,21 +12,36 @@ function fmtDateTime(d) {
   return new Date(d).toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' })
 }
 
-function PostCard({ post, onClick }) {
+function PostCard({ post, onClick, onDelete, onRestore }) {
   const excerpt = (post.body || '').replace(/\s+/g, ' ').trim()
+  const archived = !!post.archived_at
   return (
     <div
       onClick={onClick}
-      className="cursor-pointer bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-4 hover:border-teal hover:shadow-md transition flex flex-col gap-2"
+      className="group cursor-pointer bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-4 hover:border-teal hover:shadow-md transition flex flex-col gap-2"
     >
       <div className="flex items-start justify-between gap-2">
         <h3 className="text-base font-semibold text-warm-900 dark:text-disc-text line-clamp-1">
           {post.title || 'ไม่มีชื่อ'}
         </h3>
-        <span className="shrink-0 flex items-center gap-1.5 text-xs font-medium text-warm-500 dark:text-disc-muted">
-          <span className={`w-2 h-2 rounded-full ${STATUS_DOT[post.status] || 'bg-gray-400'}`} />
-          {STATUS_LABELS[post.status] || post.status}
-        </span>
+        <div className="shrink-0 flex items-center gap-2">
+          <span className="flex items-center gap-1.5 text-xs font-medium text-warm-500 dark:text-disc-muted">
+            <span className={`w-2 h-2 rounded-full ${STATUS_DOT[post.status] || 'bg-gray-400'}`} />
+            {STATUS_LABELS[post.status] || post.status}
+          </span>
+          {/* กดที่ปุ่มแล้วต้องไม่เปิดโพสต์ → stopPropagation */}
+          <button
+            onClick={(e) => { e.stopPropagation(); archived ? onRestore(post) : onDelete(post) }}
+            title={archived ? 'กู้คืนจากกรุ' : 'ลบโพสต์นี้'}
+            className={`p-1 rounded-lg transition opacity-0 group-hover:opacity-100 focus:opacity-100 ${
+              archived
+                ? 'text-warm-500 dark:text-disc-muted hover:text-teal hover:bg-warm-50 dark:hover:bg-disc-hover'
+                : 'text-warm-400 dark:text-disc-muted hover:text-red-500 hover:bg-red-50 dark:hover:bg-disc-hover'
+            }`}
+          >
+            {archived ? <RotateCcw size={15} /> : <Trash2 size={15} />}
+          </button>
+        </div>
       </div>
 
       {excerpt ? (
@@ -71,6 +86,10 @@ export default function PostsHome() {
   const [creating, setCreating] = useState(false)
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError] = useState('')
+  const [showArchived, setShowArchived] = useState(false)
+  const [confirmPost, setConfirmPost] = useState(null)   // โพสต์ที่กำลังถามยืนยันลบ
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
 
   // โหลด mode ที่จำไว้ล่าสุดจาก localStorage (client only)
   useEffect(() => {
@@ -83,15 +102,17 @@ export default function PostsHome() {
     try {
       const params = new URLSearchParams({ visibility: mode })
       if (category) params.set('category', category)
+      if (showArchived) params.set('archived', '1')      // API คืน "รวมของในกรุ" → กรองเหลือเฉพาะในกรุที่นี่
       const res = await fetch(`/api/posts?${params.toString()}`)
       const json = await res.json().catch(() => ({}))
-      setPosts(res.ok && json.success ? json.data : [])
+      const rows = res.ok && json.success ? json.data : []
+      setPosts(showArchived ? rows.filter(p => p.archived_at) : rows)
     } catch {
       setPosts([])
     } finally {
       setLoading(false)
     }
-  }, [mode, category])
+  }, [mode, category, showArchived])
 
   const loadCategories = useCallback(async () => {
     try {
@@ -105,6 +126,14 @@ export default function PostsHome() {
 
   useEffect(() => { loadPosts() }, [loadPosts])
   useEffect(() => { loadCategories() }, [loadCategories])
+
+  // ปิดกล่องยืนยันด้วย ESC (คู่กับปุ่ม X และคลิกนอกกล่อง)
+  useEffect(() => {
+    if (!confirmPost) return
+    const onKey = (e) => { if (e.key === 'Escape') setConfirmPost(null) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [confirmPost])
 
   function selectMode(next) {
     setMode(next)
@@ -134,6 +163,32 @@ export default function PostsHome() {
     } finally {
       setCreating(false)
     }
+  }
+
+  // ลบ: default = เก็บเข้ากรุ (กู้คืนได้) · permanent = ลบถาวรจาก DB
+  async function handleDelete(permanent) {
+    if (!confirmPost) return
+    setDeleting(true)
+    setDeleteError('')
+    try {
+      const res = await fetch(`/api/posts/${confirmPost.id}${permanent ? '?permanent=1' : ''}`, { method: 'DELETE' })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) { setDeleteError(json.error || 'ลบไม่สำเร็จ'); return }
+      setConfirmPost(null)
+      loadPosts()
+      loadCategories()
+    } catch {
+      setDeleteError('ลบไม่สำเร็จ')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  async function handleRestore(post) {
+    try {
+      const res = await fetch(`/api/posts/${post.id}/restore`, { method: 'POST' })
+      if (res.ok) { loadPosts(); loadCategories() }
+    } catch { /* กู้คืนไม่ได้ก็ยังเห็นการ์ดเดิมอยู่ ไม่ต้องเด้ง error */ }
   }
 
   async function handleAiOutline() {
@@ -244,6 +299,16 @@ export default function PostsHome() {
         >
           ยังไม่จัดหมวด
         </button>
+        <button
+          onClick={() => setShowArchived(v => !v)}
+          className={`px-3 py-1 rounded-full text-sm font-medium transition-colors border
+            ${showArchived
+              ? 'bg-warm-600 text-white border-warm-600'
+              : 'bg-card-bg text-warm-600 dark:text-disc-muted border-warm-200 dark:border-disc-border hover:border-warm-400'
+            }`}
+        >
+          🗄️ ในกรุ
+        </button>
         {categories.map((c) => (
           <button
             key={c.category}
@@ -266,13 +331,75 @@ export default function PostsHome() {
         </div>
       ) : posts.length === 0 ? (
         <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-10 text-center text-warm-400 dark:text-disc-muted">
-          ยังไม่มีโพสต์ — โยนไอเดียแล้วเริ่มเขียนได้เลย
+          {showArchived ? 'ไม่มีโพสต์ในกรุ' : 'ยังไม่มีโพสต์ — โยนไอเดียแล้วเริ่มเขียนได้เลย'}
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {posts.map((post) => (
-            <PostCard key={post.id} post={post} onClick={() => router.push(`/posts/${post.id}`)} />
+            <PostCard
+              key={post.id}
+              post={post}
+              onClick={() => router.push(`/posts/${post.id}`)}
+              onDelete={(p) => { setDeleteError(''); setConfirmPost(p) }}
+              onRestore={handleRestore}
+            />
           ))}
+        </div>
+      )}
+
+      {/* ยืนยันลบ — ปิดได้ 3 ทาง: ปุ่ม X · ESC · คลิกนอกกล่อง */}
+      {confirmPost && (
+        <div
+          onClick={() => setConfirmPost(null)}
+          className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-5 w-full max-w-md flex flex-col gap-3"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <h2 className="text-lg font-semibold text-warm-900 dark:text-disc-text">ลบโพสต์</h2>
+              <button
+                onClick={() => setConfirmPost(null)}
+                className="p-1 rounded-lg text-warm-500 dark:text-disc-muted hover:bg-warm-50 dark:hover:bg-disc-hover"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <p className="text-base text-warm-700 dark:text-disc-text break-words">
+              “{confirmPost.title || 'ไม่มีชื่อ'}”
+            </p>
+            <p className="text-sm text-warm-500 dark:text-disc-muted">
+              เก็บเข้ากรุแล้วกู้คืนได้ที่แถบ “ในกรุ” · ลบถาวรคือหายจากฐานข้อมูลจริง เอากลับไม่ได้
+            </p>
+
+            {deleteError && <p className="text-sm text-red-500">{deleteError}</p>}
+
+            <div className="flex flex-wrap gap-2 justify-end mt-1">
+              <button
+                onClick={() => setConfirmPost(null)}
+                disabled={deleting}
+                className="px-4 py-2 text-sm rounded-lg border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover disabled:opacity-50"
+              >
+                ยกเลิก
+              </button>
+              <button
+                onClick={() => handleDelete(true)}
+                disabled={deleting}
+                className="px-4 py-2 text-sm rounded-lg border border-red-500 text-red-500 hover:bg-red-50 dark:hover:bg-disc-hover disabled:opacity-50"
+              >
+                ลบถาวร
+              </button>
+              <button
+                onClick={() => handleDelete(false)}
+                disabled={deleting}
+                className="px-4 py-2 text-sm rounded-lg bg-orange text-white hover:opacity-90 disabled:opacity-50"
+              >
+                {deleting ? 'กำลังลบ...' : 'เก็บเข้ากรุ'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
