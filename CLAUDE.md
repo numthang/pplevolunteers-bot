@@ -18,9 +18,10 @@ Quick navigation to detailed docs for the entire pple-volunteers project (Bot + 
 | **Finance System** | [md/finance/FINANCE.md](md/finance/FINANCE.md) |
 | **Calling System** | [md/calling/CALLING.md](md/calling/CALLING.md) |
 | **Contacts (CRM)** | [md/calling/CONTACT.md](md/calling/CONTACT.md) |
+| **Auth & Identity** | [md/org/AUTH.md](md/org/AUTH.md) |
 | **Database Schema** | [md/DATABASE.md](md/DATABASE.md) |
 | **Production Deployment** | [md/DEPLOYMENT.md](md/DEPLOYMENT.md) |
-| **Cutover org-core→master** | [md/CUTOVER.md](md/CUTOVER.md) |
+| **Cutover org-core→master** | [md/archive/CUTOVER.md](md/archive/CUTOVER.md) |
 | **Case System** | [md/case/CASE.md](md/case/CASE.md) |
 | **Server Wizard** | [md/discord/SERVER_WIZARD.md](md/discord/SERVER_WIZARD.md) |
 | **RAG AI** | [md/discord/RAG.md](md/discord/RAG.md) |

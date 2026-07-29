@@ -1,5 +1,7 @@
 import { cookies } from 'next/headers'
 import pool from '@/db/index.js'
+import { orgIdOfGuild } from '@/db/guilds.js'
+import { findUserIdByProvider } from '@/db/userIdentities.js'
 import https from 'https'
 import crypto from 'crypto'
 
@@ -88,12 +90,18 @@ export async function GET(req) {
     access_token_secret:  accessTokenSecret,
   })
 
+  // scope = org ของ guild ที่เริ่ม OAuth · owner_user_id ตั้งเฉพาะบัญชี private (public = ของ org)
+  const orgId       = await orgIdOfGuild(guild_id)
+  const ownerUserId = visibility === 'private' && discord_id
+    ? await findUserIdByProvider('discord', discord_id)
+    : null
+
   await pool.query(
-    `INSERT INTO dc_social_accounts (user_discord_id, guild_id, name, platform, social_id, access_token, visibility)
-     VALUES ($1, $2, $3, 'x', $4, $5, $6)
-     ON CONFLICT (user_key, guild_id, platform, social_id) DO UPDATE SET
+    `INSERT INTO dc_social_accounts (org_id, owner_user_id, guild_id, user_discord_id, name, platform, social_id, access_token, visibility)
+     VALUES ($1, $2, $3, $4, $5, 'x', $6, $7, $8)
+     ON CONFLICT (COALESCE(org_id, 0), COALESCE(owner_user_id, 0), COALESCE(guild_id, ''), platform, social_id) DO UPDATE SET
        name = EXCLUDED.name, access_token = EXCLUDED.access_token, visibility = EXCLUDED.visibility`,
-    [discord_id, guild_id || null, `@${screenName}`, screenName, creds, visibility]
+    [orgId, ownerUserId, guild_id || null, discord_id || null, `@${screenName}`, screenName, creds, visibility]
   )
 
   // ล้าง cookie

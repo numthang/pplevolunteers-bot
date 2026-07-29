@@ -1,5 +1,7 @@
 import pool from '@/db/index.js'
 import { BASE_URL } from '@/lib/baseUrl.js'
+import { orgIdOfGuild } from '@/db/guilds.js'
+import { findUserIdByProvider } from '@/db/userIdentities.js'
 
 const REDIRECT_URI = `${BASE_URL}/api/meta/oauth/callback`
 
@@ -18,15 +20,17 @@ async function fbGet(url) {
   return res.json()
 }
 
-async function upsertSocialRow(userDiscordId, guildId, name, platform, socialId, accessToken, userToken, userTokenExpiresAt, visibility = 'public') {
+// scope = org ของ guild ที่เริ่ม OAuth · owner_user_id ตั้งเฉพาะบัญชี private (public = ของ org)
+async function upsertSocialRow(ctx, name, platform, socialId, accessToken, userToken, userTokenExpiresAt, visibility = 'public') {
   await pool.query(
-    `INSERT INTO dc_social_accounts (user_discord_id, guild_id, name, platform, social_id, access_token, user_token, user_token_expires_at, visibility)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-     ON CONFLICT (user_key, guild_id, platform, social_id) DO UPDATE SET
+    `INSERT INTO dc_social_accounts (org_id, owner_user_id, guild_id, user_discord_id, name, platform, social_id, access_token, user_token, user_token_expires_at, visibility)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+     ON CONFLICT (COALESCE(org_id, 0), COALESCE(owner_user_id, 0), COALESCE(guild_id, ''), platform, social_id) DO UPDATE SET
        name = EXCLUDED.name, access_token = EXCLUDED.access_token,
        user_token = EXCLUDED.user_token, user_token_expires_at = EXCLUDED.user_token_expires_at,
        visibility = EXCLUDED.visibility`,
-    [userDiscordId, guildId, name, platform, socialId, accessToken, userToken, userTokenExpiresAt, visibility]
+    [ctx.orgId, visibility === 'private' ? ctx.ownerUserId : null, ctx.guildId, ctx.userDiscordId,
+     name, platform, socialId, accessToken, userToken, userTokenExpiresAt, visibility]
   )
 }
 
@@ -109,10 +113,16 @@ export async function GET(req) {
 
     const userDiscordId = state.userId || null
     const visibility    = state.visibility || 'public'
+    const ctx = {
+      orgId:       await orgIdOfGuild(state.guildId),
+      ownerUserId: userDiscordId ? await findUserIdByProvider('discord', userDiscordId) : null,
+      guildId:     state.guildId,
+      userDiscordId,
+    }
 
     for (const page of pages) {
       // FB row: ใช้ page token, ไม่ต้องเก็บ user_token
-      await upsertSocialRow(userDiscordId, state.guildId, page.name, 'fb', page.id, page.access_token, null, null, visibility)
+      await upsertSocialRow(ctx, page.name, 'fb', page.id, page.access_token, null, null, visibility)
 
       // IG row (ถ้ามี): ใช้ user_token, access_token ใส่ null
       const igRes = await fbGet(
@@ -121,7 +131,7 @@ export async function GET(req) {
       )
       const igId = igRes.instagram_business_account?.id || null
       if (igId) {
-        await upsertSocialRow(userDiscordId, state.guildId, page.name, 'ig', igId, null, longRes.access_token, userTokenExpiresAt, visibility)
+        await upsertSocialRow(ctx, page.name, 'ig', igId, null, longRes.access_token, userTokenExpiresAt, visibility)
       }
 
       results.push(`✅ <b>${page.name}</b>${igId ? ` + Instagram` : ''}`)

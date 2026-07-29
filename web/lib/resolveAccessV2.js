@@ -1,6 +1,6 @@
 /**
  * resolveAccessV2 — สิทธิ์ + พื้นที่ จาก org (ไม่ผูก Discord)
- * แบบเต็ม: md/ORG_ACCESS_REDESIGN.md
+ * แบบเต็ม: md/org/ORG_ACCESS_REDESIGN.md
  *
  * ⚠️ ยังไม่ถูกใช้จริง — เขียนคู่ขนานกับ resolveAccess.js เดิม (ขั้น 3 ของแผน)
  *    สลับตอนขั้น 4 ที่ getEffectiveOrgIdentity

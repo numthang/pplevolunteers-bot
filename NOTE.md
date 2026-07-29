@@ -7,6 +7,7 @@ PLATFOR{m}.ORG
 - ตอนนี้จะ config web_roles ให้สมาชิกยังไง แต่สำหรับ discord ตอนนี้ migrate มาก่อนได้
 - ผมอาจจะเปลี่ยน /bot เป็น /dc แล้วก็ /dc/settings => มีพวก ai, watermark, platforms, quote, roles รวมอยู่ในนั้นอ่ะ ดีไหม
 
+
 # Bot
 
 

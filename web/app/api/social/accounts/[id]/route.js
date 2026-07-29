@@ -4,6 +4,18 @@ import { canManageSocialGuild } from '@/lib/roles.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import pool from '@/db/index.js'
 
+// เจ้าของบัญชี private = owner_user_id (user อีเมลก็เป็นเจ้าของได้)
+// fallback user_discord_id เผื่อ session เก่าที่ยังไม่มี userId · debug mode discordId = null → คืน false เสมอ
+async function isOwner(id, session) {
+  const { rows } = await pool.query(
+    `SELECT owner_user_id, user_discord_id FROM dc_social_accounts WHERE id = $1`, [id]
+  )
+  if (!rows.length) return false
+  const { owner_user_id, user_discord_id } = rows[0]
+  if (owner_user_id != null) return owner_user_id === session.user.userId
+  return !!user_discord_id && user_discord_id === session.user.discordId
+}
+
 export async function PATCH(req, { params }) {
   const session = await getServerSession(authOptions)
   if (!session) return Response.json({ error: 'Forbidden' }, { status: 403 })
@@ -28,10 +40,7 @@ export async function PATCH(req, { params }) {
     await pool.query(`UPDATE dc_social_accounts SET ${fields.join(', ')} WHERE id = $${values.length}`, values)
   } else {
     // owner เท่านั้น — แก้ได้แค่ group_name
-    const { rows } = await pool.query(
-      `SELECT user_discord_id FROM dc_social_accounts WHERE id = $1`, [id]
-    )
-    if (!rows.length || rows[0].user_discord_id !== session.user.discordId) {
+    if (!(await isOwner(id, session))) {
       return Response.json({ error: 'Forbidden' }, { status: 403 })
     }
     if (body.group_name === undefined) return Response.json({ error: 'nothing to update' }, { status: 400 })
@@ -52,10 +61,7 @@ export async function DELETE(req, { params }) {
   const { access } = await getEffectiveIdentity(session)
 
   if (!canManageSocialGuild(access)) {
-    const { rows } = await pool.query(
-      `SELECT user_discord_id FROM dc_social_accounts WHERE id = $1`, [id]
-    )
-    if (!rows.length || rows[0].user_discord_id !== session.user.discordId) {
+    if (!(await isOwner(id, session))) {
       return Response.json({ error: 'Forbidden' }, { status: 403 })
     }
   }

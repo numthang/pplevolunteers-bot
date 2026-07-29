@@ -236,3 +236,28 @@ Phase 2 (features) ยังไม่ทำ: #2 แยก 3 สี chip · #8 br
 - UI: กด "สุ่มให้เลย" → slot spin เดิม → grid การ์ดเล็ก 4 อัน (รูป h-32 + ชื่อ + reason) → แตะ → การ์ดเต็ม (รูปใหญ่ซ้าย/รายละเอียดขวา, เครื่องปรุง, วิธีทำกาง, lightbox, แชตเฉพาะตอนกาง) · ปุ่มล่าง "← กลับไปดู 4 อัน" (`setResult(null)`) + "ทำแล้ว ✓"
 - **ตัด side ("+ เมนูผัก") ออกจากการ์ด** (2026-07-11) — user งงว่าคืออะไร; logic side ใน buildMeal ยังคำนวณอยู่แต่ไม่ได้โชว์
 - `lastMainId` เหลือ vestigial (ไม่ได้ใช้ที่ไหนแล้ว) — ลบทีหลังได้
+
+## 🍳 /cooking — UI/UX ปรับปรุง (จดไว้ 2026-07-11) — ✅ เขียนโค้ดเสร็จ + เทสเบราว์เซอร์ผ่านแล้ว (2026-07-14) รอ commit + deploy
+> ย้ายมาจาก md/PENDING.md (2026-07-29)
+
+> spec หลัก: `md/cooking/COOKING.md` · 2 Sonnet subagent เขียน 2026-07-11 · build ผ่าน ยังไม่ commit ยังไม่เปิดจริงในเบราว์เซอร์
+
+- [x] **เพิ่มของในครัว — ตัด dropdown เลือกหมวดหมู่** → single-add เรียก AI (`guessGroupViaAI` → `/api/cooking/ingredients/bulk` ส่ง 1 รายการ) เดาหมวดให้ · fallback `seasoning` · bulk-confirm ยังส่ง grp เอง bypass AI
+- [x] **ย้ายแก้ไข/ลบ ingredient ไปหน้าใหม่ `/cooking/ingredients`** — chip ในหน้า /cooking เหลือแค่แตะสลับมี/หมด · หน้าใหม่ = CRUD wiki (group 5 หมวด, modal add/edit, delete + คำเตือน gate เมนู) `IngredientsClient.jsx` · ลิงก์ "จัดการวัตถุดิบ →" ที่หัวการ์ดของในครัว
+- [x] **ฟอนต์ chip ใหญ่ขึ้น** — `text-sm` → `text-base`
+- [x] **ปุ่มแก้ไขเมนู ที่การ์ดผลสุ่ม** — เปิด `MenuForm` (mode edit) modal · `handleMenuSaved` อัพเดตทั้ง menus + result.main ทันที
+- [x] **อัพโหลดรูปเมนูจริง** — route ใหม่ `POST /api/cooking/upload` (login-gated, mime jpeg/png/webp, ≤5MB, เขียน `web/public/uploads/cooking/{uuid}.ext` คืน url) · MenuForm เพิ่ม file input + preview thumbnail (คงช่องวาง URL เดิมไว้ด้วย)
+
+- [x] **เทสเบราว์เซอร์ครบทุก flow** (2026-07-14) — ไม่เจอปัญหา
+
+**เหลือ:** (1) commit (2) deploy prod — ต้อง `mkdir web/public/uploads/cooking` บน prod (dir เปล่า git ไม่ track) ให้สิทธิ์ www เขียนได้
+
+### 🎯 ส่ง Sonnet ทำเสร็จแล้ว (commit 12-13 ก.ค. — build ผ่าน + เทสเบราว์เซอร์ผ่านแล้ว 2026-07-14)
+
+- [x] **Combobox วัตถุดิบหลัก/เสริม + รสชาติ** — `ComboTagInput` (autocomplete dropdown + free-add ด้วย Enter) · core/optional เป็น array แล้ว · suggestion: วัตถุดิบ→`/api/cooking/ingredients` · รสชาติ→รส distinct · reuse 3 จุด
+- [x] **MenuForm → autosave ทั้งฟอร์ม เอาปุ่ม "บันทึก" ออก** — `idRef`/`savingRef`/`pendingRef` guard กัน double-create · `patchNow` (event ชัด: tag/chip/อัปโหลดรูป) vs `patchDebounced` ~1s (พิมพ์: ชื่อ/ขั้นตอน) · add-mode create-on-first-edit · ชื่อว่างไม่เซฟ · `SaveIndicator` บอกสถานะ
+- [x] **protein gate derive จาก wiki** — `getProteinEnum()` query `grp='protein'` สดทุก request (gates-suggest + import) · fallback `PROTEIN_ENUM_FALLBACK` · เพิ่มโปรตีน (ไข่/เนื้อวัว) = เพิ่มวัตถุดิบ 1 แถว โผล่เป็น chip + gate + AI รู้จักเอง
+- [x] **หมู่อาหาร (food_groups) รวม constant** — `web/lib/cookingConstants.js` (`FOOD_GROUPS`/`FOOD_GROUP_ENUM`) import ร่วม (ไม่ทำ user-extensible ตามที่เคาะ)
+
+**เหลือของทั้งโซน cooking:** (1) เปิดเบราว์เซอร์ทดสอบ combobox/autosave/slot จริง — โดยเฉพาะ add-mode พิมพ์ชื่อใหม่+สลับ chip รัวๆ ต้องไม่ create ซ้ำ (2) deploy prod (git pull + build + restart) — `mkdir web/public/uploads/cooking` + สิทธิ์ www + nginx `/uploads` block (ดู DEPLOYMENT.md)
+

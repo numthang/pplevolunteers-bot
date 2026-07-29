@@ -197,13 +197,16 @@ export default function SocialAccountsPage() {
   }
 
   const discordId    = session?.user?.discordId
+  const userId       = session?.user?.userId
   const guildId      = cfg?.guildId
   const guildName    = cfg?.guildName ?? guildId
   // รองรับทั้ง manager response (field จริง) และ member response (boolean flag)
   const hasMeta      = !!(cfg?.meta_app_id && cfg?.meta_app_secret) || !!cfg?.hasMeta
   const hasX         = !!(cfg?.x_consumer_key && cfg?.x_consumer_secret) || !!cfg?.hasX
   const guildAccounts = accounts.filter(a => a.visibility === 'public')
-  const myAccounts    = accounts.filter(a => a.visibility === 'private' && a.user_discord_id === discordId)
+  // เจ้าของ = owner_user_id (user อีเมลก็มี) · fallback discord id สำหรับแถวเก่าที่ยังไม่มี owner
+  const myAccounts    = accounts.filter(a => a.visibility === 'private' &&
+    (a.owner_user_id != null ? a.owner_user_id === userId : a.user_discord_id === discordId))
 
   return (
     <div>
@@ -224,8 +227,9 @@ export default function SocialAccountsPage() {
         {(canManage || superAdmin) && guildId && (
           <div>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-3">
+              {/* บัญชี public เป็นของ "องค์กร" (ทุก guild ในองค์กรเห็นชุดเดียวกัน) — ต่างจาก App Credentials ที่ยังตั้งรายเซิร์ฟเวอร์ */}
               <h2 className="text-base font-semibold text-gray-700 dark:text-disc-muted uppercase tracking-wide">
-                {guildName}
+                บัญชีขององค์กร
               </h2>
               <div className="flex items-center gap-2 flex-wrap">
                 {hasX ? (
@@ -259,7 +263,7 @@ export default function SocialAccountsPage() {
             <div className="bg-card-bg rounded-xl border border-warm-200 dark:border-disc-border p-4 mb-3">
               <div className="flex items-center gap-2 mb-3">
                 <Settings size={14} className="text-gray-500 dark:text-disc-muted" />
-                <span className="text-xs font-semibold text-gray-700 dark:text-disc-text uppercase tracking-wide">App Credentials</span>
+                <span className="text-xs font-semibold text-gray-700 dark:text-disc-text uppercase tracking-wide">App Credentials — {guildName}</span>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 {[

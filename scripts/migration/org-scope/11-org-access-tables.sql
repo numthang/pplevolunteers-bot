@@ -10,7 +10,7 @@
 
 -- ═══════════════════════════════════════════════════════════════════════════
 -- 2026-07-22: ORG ACCESS REDESIGN ขั้น 1 — ปลดสิทธิ์/พื้นที่ออกจาก Discord
--- แบบเต็ม: md/ORG_ACCESS_REDESIGN.md
+-- แบบเต็ม: md/org/ORG_ACCESS_REDESIGN.md
 --
 -- เป้า: 4 แอพ (finance/calling/docs/cases) ใช้งานได้โดยไม่ต้องมี Discord
 -- แหล่งความจริงเดียว = org_member_roles · roles/web_roles เลิกใช้ตัดสินสิทธิ์

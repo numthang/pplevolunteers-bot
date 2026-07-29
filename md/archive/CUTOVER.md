@@ -220,3 +220,12 @@ psql -v ON_ERROR_STOP=1 -1 -f scripts/migration/org-scope/01-identity-refactor.s
 - ~~docs ยัง guild-scoped~~ → docs → org เสร็จ 2026-07-21 (migration #5–#7)
 - cases → org เสร็จ 2026-07-21 (#9–#10) · audit_logs → org เสร็จ (#8)
 - **ไม่เหลือ tenant data ที่ยัง guild-based แล้ว** — ที่คง `guild_id` คือ Discord/ACT artifact โดยตั้งใจ: `case_config` · `finance_config` · `cache_pple_event` · `dc_*` ทั้งหมด
+
+## 🎉 CUTOVER org-core → master ขึ้น PROD สำเร็จ (2026-07-23 ~05:35)
+> ย้ายมาจาก md/PENDING.md (2026-07-29)
+
+migration 12 ขั้นผ่านบน prod จริง **23 วินาที** · ตัวตรวจ 6 บรรทัด = 0 หมด · เว็บ+บอท online
+users 6616 · org_members 7346 · person ref map เข้า users ครบ · RBAC ย้ายครบ
+backup ก่อน cutover: `backups/pple_pre_orgcutover_2026-07-23_0533.dump` (4.9M)
+ลำดับที่ทำ: PROBE → backup → stop bot+web → reset master → run-prod.sh → build → start
+
