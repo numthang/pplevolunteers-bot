@@ -35,8 +35,8 @@ async function getGuildXApp(guildId, orgId = null) {
 }
 
 // accountId = เลือกบัญชีเจาะจง (posts บนเว็บ) — ไม่ส่ง = พฤติกรรมเดิม
-async function getXConfig(guildId, userId = null, groupName = null, accountId = null) {
-  const app = await getGuildXApp(guildId);
+async function getXConfig(guildId, userId = null, groupName = null, accountId = null, orgId = null) {
+  const app = await getGuildXApp(guildId, orgId);
   if (!app) return null;
 
   if (accountId) {
@@ -192,8 +192,8 @@ async function postSingleTweet(cfg, text, mediaIds, replyTo) {
 
 const URL_RE = /https?:\/\/\S+/g;
 
-async function postToX(guildId, userId, images, caption, groupName = null, accountId = null) {
-  const cfg = await getXConfig(guildId, userId, groupName, accountId);
+async function postToX(guildId, userId, images, caption, groupName = null, accountId = null, orgId = null) {
+  const cfg = await getXConfig(guildId, userId, groupName, accountId, orgId);
   if (!cfg) throw new Error('ไม่พบ X account — เพิ่ม X account ที่ /bot/social/accounts ก่อน');
 
   const fullText = (caption || '').trim();
@@ -346,8 +346,8 @@ async function pollXVideoStatus(cfg, mediaId, initialWaitSecs, maxWaitMs = 300_0
   throw new Error('X video: หมดเวลารอ processing');
 }
 
-async function postVideoToX(guildId, userId, videoDiscordUrl, caption, groupName = null, accountId = null) {
-  const cfg = await getXConfig(guildId, userId, groupName, accountId);
+async function postVideoToX(guildId, userId, videoDiscordUrl, caption, groupName = null, accountId = null, orgId = null) {
+  const cfg = await getXConfig(guildId, userId, groupName, accountId, orgId);
   if (!cfg) throw new Error('ไม่พบ X account — เพิ่ม X account ที่ /bot/social/accounts ก่อน');
 
   let buffer = await fetchBuffer(videoDiscordUrl);

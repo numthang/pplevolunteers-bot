@@ -38,6 +38,7 @@ const {
   handleBasketEventOpen, handleBasketEventModal,
 } = require('./handlers/basketHandler');
 const { startAnnounceWorker } = require('./services/newsShare');
+const { startPublishWorker } = require('./services/publishWorker');
 const { indexThread, indexMessage, hybridSearch } = require('./services/forumIndexer');
 const { buildSearchResultEmbed, buildSearchComponents } = require('./handlers/forumSearch');
 const { forumChannelCache, dashboardThreadCache, searchChannelCache, addForumChannel, addDashboardThread, setSearchChannel } = require('./services/forumCache');
@@ -90,6 +91,7 @@ client.once('clientReady', async () => {
   emailPoller.init(client);
   smsWebhook.init(client);
   startAnnounceWorker(client); // ประกาศ event ที่ค้างคิวช่วง quiet hours
+  startPublishWorker(client);  // คิวโพสต์ของ posts (เว็บเขียนแถว → บอทยิง + แจ้งกลับห้องต้นทาง)
   // โหลด forum configs + sync role catalog ทุก guild ที่ bot อยู่
   for (const guild of client.guilds.cache.values()) {
     const synced = await syncGuildRolesCatalog(guild).catch(e => { console.error(`⚠️ role sync ${guild.id}:`, e.message); return 0; });

@@ -76,11 +76,12 @@ const PLATFORM_LABEL = { fb: 'Facebook', ig: 'Instagram', threads: '@ Threads', 
  * @param {string} [o.videoUrl]   โพสต์วิดีโอ — ต้องเป็น **URL สาธารณะ** (Meta เป็นคนไปดึงเอง)
  * @param {number|null} [o.scheduleTime] unix วินาที (FB เท่านั้น — เจ้าอื่นไม่รองรับ)
  * @param {number|null} [o.accountId] เลือกบัญชีเจาะจง (posts บนเว็บ) · null = เลือกอัตโนมัติเหมือนเดิม
+ * @param {number|null} [o.orgId] ใช้หา app creds ของ X เมื่อ org ไม่มี guild (Meta ใช้ token ที่ผูกไว้แล้ว)
  * @param {object} [o.guild] discord.js Guild — จำเป็นเฉพาะ platform 'news'
  * @returns {{platform:string, label:string, ok:boolean, url:string|null, error:string|null}}
  */
 async function publishOne({
-  platform, guildId, userDiscordId, accountId = null,
+  platform, guildId, orgId = null, userDiscordId, accountId = null,
   images = [], videoUrl = null, caption = '', scheduleTime = null,
   group = null, guild = null, onProgress = noop,
 }) {
@@ -113,8 +114,8 @@ async function publishOne({
       url = res?.permalink || null;
     } else if (platform === 'x') {
       const res = isVideo
-        ? await postVideoToX(guildId, userDiscordId, videoUrl, caption, group, accountId)
-        : await postToX(guildId, userDiscordId, images, caption, group, accountId);
+        ? await postVideoToX(guildId, userDiscordId, videoUrl, caption, group, accountId, orgId)
+        : await postToX(guildId, userDiscordId, images, caption, group, accountId, orgId);
       url = res?.url || null;
     } else if (platform === 'news') {
       if (!guild) throw new Error('ห้องข่าวสารต้องมี Discord guild');
