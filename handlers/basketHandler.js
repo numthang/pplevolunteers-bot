@@ -18,11 +18,11 @@ const {
 } = require('discord.js');
 const path = require('path');
 const fs = require('fs');
-const sharp = require('sharp');
 const { addImages, addVideo, setCaption, appendCaption, getBasket, clearBasket, clearBasketMedia, addHistory, getHistory } = require('../db/mediaBasket');
-const { fetchBuffer, applyWatermark, autoEnhance } = require('../utils/watermarkImage');
-const { postToFacebook, postToInstagram, postToThreads, postReelsToInstagram, postReelsToFacebook, postReelsToThreads, getAvailablePlatforms, getAvailableGroups } = require('../services/metaApi');
-const { postToX, postVideoToX } = require('../services/xApi');
+const { fetchBuffer } = require('../utils/watermarkImage');   // เหลือใช้จุดเดียว (พรีวิวรูปแรก) — ติดลายน้ำย้ายไป publishPipeline แล้ว
+const { getAvailablePlatforms, getAvailableGroups } = require('../services/metaApi');
+// ⚠️ ห้าม import postTo*/postReels* ตรงๆ ที่นี่ — การโพสต์ต้องผ่านท่อกลางเท่านั้น (กติกาข้อ 16)
+const { prepareImages, publishBatch } = require('../services/publishPipeline');
 const { getSetting, setSetting, deleteSetting } = require('../db/settings');
 const { getNewsChannelId, postNews, buildEventAnnouncement, sendOrQueueAnnouncement } = require('../services/newsShare');
 const { resolveConfig } = require('../db/configResolver');
@@ -687,232 +687,89 @@ async function handleBasketModal(interaction) {
 }
 
 // ─── Core: watermark + post ───────────────────────────────────────────────────
+// ลำดับยิงของเดิม — รูปเริ่มที่ FB, วิดีโอเริ่มที่ IG (IG ช้าสุด ยิงก่อนจะได้เห็นผลเร็ว)
+const ORDER_IMAGE = ['fb', 'ig', 'threads', 'x', 'news'];
+const ORDER_VIDEO = ['ig', 'fb', 'threads', 'x', 'news'];
+const sortPlatforms = (platforms, order) => order.filter(p => platforms.includes(p));
+
+// แปลงผลจาก pipeline เป็นบรรทัดข้อความของ Discord (หน้าที่เดียวที่เหลือของ handler คือ "พูด")
+function formatResultLine(r, { isVideo, scheduleTime }) {
+  const reels = isVideo && ['fb', 'ig', 'threads'].includes(r.platform) ? ' Reels' : '';
+  if (!r.ok) return `❌ ${r.label}${reels}: ${r.error}`;
+  const link  = r.url ? ` · 🔗 [ดูโพสต์](${r.url})` : '';
+  const sched = r.platform === 'fb' && scheduleTime ? ` (⏰ ตั้งเวลา ${formatScheduleThai(scheduleTime)} น.)` : '';
+  return `✅ ${r.label}${reels}${link}${sched}`;
+}
+
+// ตะกร้า → ท่อกลาง `services/publishPipeline.js` (กติกาข้อ 16: logic การโพสต์อยู่ที่นั่นที่เดียว)
+// ที่นี่เหลือแค่: อ่านตะกร้า → เตรียม input → เรียกท่อ → format ข้อความตอบใน Discord
 async function processAndPost(interaction, state) {
   const basket     = await getBasket(state.guildId, state.channelId);
   const imageItems = basket.filter(r => r.type === 'image');
   const videoItems = basket.filter(r => r.type === 'video');
-  const processed  = [];
-  const wmErrors   = [];
+  const isVideo    = videoItems.length > 0;
 
-  // ─── Video (Reels) path ──────────────────────────────────────────────────────
-  if (videoItems.length > 0) {
-    if (imageItems.length > 0) {
-      return interaction.editReply({ content: '❌ ตะกร้ามีทั้งรูปและวิดีโอ — ล้างแล้วโพสต์ทีละประเภท' });
-    }
-    const platforms   = state.platforms || [];
-    const { scheduleTime } = state;
-    const results = [];
-    let igUrl = null;
-
-    if (platforms.includes('ig')) {
-      await interaction.editReply({ content: '📤 กำลังโพสต์ Reels ไปยัง Instagram...' }).catch(() => {});
-      try {
-        const igProgress = msg => interaction.editReply({ content: msg }).catch(() => {});
-        const igRes = await postReelsToInstagram(state.guildId, interaction.user.id, videoItems[0].image_url, state.caption, igProgress, state.group);
-        igUrl = igRes?.permalink || null;
-        const igLink = igUrl ? ` · 🔗 [ดูโพสต์](${igUrl})` : '';
-        results.push(`✅ Instagram Reels${igLink}`);
-      } catch (err) {
-        results.push(`❌ Instagram Reels: ${err.message}`);
-      }
-    }
-    if (platforms.includes('fb')) {
-      await interaction.editReply({ content: '📤 กำลังโพสต์ Reels ไปยัง Facebook...' }).catch(() => {});
-      try {
-        const fbProgress = msg => interaction.editReply({ content: msg }).catch(() => {});
-        const fbRes = await postReelsToFacebook(state.guildId, interaction.user.id, videoItems[0].image_url, state.caption, fbProgress, state.group, scheduleTime);
-        const fbLink = fbRes?.permalink ? ` · 🔗 [ดูโพสต์](${fbRes.permalink})` : '';
-        const fbSched = scheduleTime ? ` (⏰ ตั้งเวลา ${formatScheduleThai(scheduleTime)} น.)` : '';
-        results.push(`✅ Facebook Reels${fbLink}${fbSched}`);
-      } catch (err) {
-        results.push(`❌ Facebook Reels: ${err.message}`);
-      }
-    }
-    if (platforms.includes('threads')) {
-      await interaction.editReply({ content: '📤 กำลังโพสต์ Reels ไปยัง Threads...' }).catch(() => {});
-      try {
-        const thProgress = msg => interaction.editReply({ content: msg }).catch(() => {});
-        const thRes = await postReelsToThreads(state.guildId, interaction.user.id, videoItems[0].image_url, state.caption, thProgress, state.group);
-        const thLink = thRes?.permalink ? ` · 🔗 [ดูโพสต์](${thRes.permalink})` : '';
-        results.push(`✅ @ Threads Reels${thLink}`);
-      } catch (err) {
-        results.push(`❌ Threads Reels: ${err.message}`);
-      }
-    }
-    if (platforms.includes('x')) {
-      await interaction.editReply({ content: '📤 กำลังโพสต์วิดีโอไปยัง X...' }).catch(() => {});
-      try {
-        const xRes = await postVideoToX(state.guildId, interaction.user.id, videoItems[0].image_url, state.caption, state.group);
-        const xLink = xRes?.url ? ` · 🔗 [ดูโพสต์](${xRes.url})` : '';
-        results.push(`✅ X (Twitter)${xLink}`);
-      } catch (err) {
-        results.push(`❌ X video: ${err.message}`);
-      }
-    }
-
-    if (platforms.includes('news')) {
-      await interaction.editReply({ content: '📤 กำลังแชร์ลงห้องข่าวสาร...' }).catch(() => {});
-      try {
-        const content = [state.caption, videoItems[0].image_url].filter(Boolean).join('\n');
-        const msg = await postNews(interaction.guild, { content });
-        results.push(`✅ ห้องข่าวสาร · 🔗 [ดูโพสต์](${msg.url})`);
-      } catch (err) {
-        results.push(`❌ ห้องข่าวสาร: ${err.message}`);
-      }
-    }
-
-    const overallStatus = results.every(r => r.startsWith('✅')) ? 'success'
-      : results.every(r => r.startsWith('❌')) ? 'failed' : 'partial';
-    await addHistory(state.guildId, state.channelId, interaction.user.id, {
-      platform: platforms.join(','), imageCount: 0, videoCount: 1,
-      wmType: null, caption: state.caption || null, scheduleTime: null,
-      fbUrl: null, igUrl, threadsUrl: null, xUrl: null, status: overallStatus,
-      groupName: state.group || null,
-    }).catch(() => {});
-    await interaction.followUp({ content: ['✅ โพสต์เสร็จแล้ว', ...results].join('\n') }).catch(() => {});
-    return;
-  }
-
-  if (imageItems.length > 0) {
-    if (state.wmType !== 'none') {
-      const total = imageItems.length;
-      await interaction.editReply({ content: `⏳ ติดลายน้ำ 0/${total} รูป...` });
-      const imagePath = resolveWatermarkPath(state.wmType, state.guildId, state.group, state.userId);
-      for (let i = 0; i < imageItems.length; i++) {
-        try {
-          let srcBuf = await fetchBuffer(imageItems[i].image_url);
-          // if (state.enhance) srcBuf = await autoEnhance(srcBuf);
-          const { buffer, ext } = await applyWatermark(srcBuf, {
-            imagePath, position: 'random', opacity: 0.8, size: 0.13,
-          });
-          processed.push({ buffer, ext });
-        } catch (err) {
-          wmErrors.push(`❌ รูป ${i + 1}: ${err.message}`);
-        }
-        interaction.editReply({ content: `⏳ ติดลายน้ำ ${i + 1}/${total} รูป...` }).catch(() => {});
-      }
-      if (!processed.length) {
-        return interaction.editReply({ content: `❌ ติดลายน้ำไม่สำเร็จ\n${wmErrors.join('\n')}` });
-      }
-    } else {
-      await interaction.editReply({ content: `⏳ กำลังดาวน์โหลดรูป...` });
-      for (let i = 0; i < imageItems.length; i++) {
-        try {
-          let buffer     = await fetchBuffer(imageItems[i].image_url);
-          // if (state.enhance) buffer = await autoEnhance(buffer);
-          const extMatch = imageItems[i].image_url.match(/\.(png|jpe?g|webp)/i);
-          let ext        = extMatch ? extMatch[1].replace('jpeg', 'jpg') : 'jpg';
-          if (ext === 'webp') {
-            buffer = await sharp(buffer).jpeg({ quality: 92 }).toBuffer();
-            ext    = 'jpg';
-          }
-          processed.push({ buffer, ext });
-        } catch (err) {
-          wmErrors.push(`❌ รูป ${i + 1}: ${err.message}`);
-        }
-      }
-      if (!processed.length) {
-        return interaction.editReply({ content: `❌ ดาวน์โหลดรูปไม่สำเร็จ\n${wmErrors.join('\n')}` });
-      }
-    }
+  if (isVideo && imageItems.length > 0) {
+    return interaction.editReply({ content: '❌ ตะกร้ามีทั้งรูปและวิดีโอ — ล้างแล้วโพสต์ทีละประเภท' });
   }
 
   const { scheduleTime } = state;
-  const results = [];
-  let fbUrl = null, igUrl = null, threadsUrl = null, xUrl = null;
-  const platforms = state.platforms || [];
-  const postFb      = platforms.includes('fb');
-  const postIg      = platforms.includes('ig');
-  const postThreads = platforms.includes('threads');
-  const postX       = platforms.includes('x');
+  const platforms = sortPlatforms(state.platforms || [], isVideo ? ORDER_VIDEO : ORDER_IMAGE);
+  const onProgress = msg => { interaction.editReply({ content: msg }).catch(() => {}); };
 
-  if (postFb) {
-    await interaction.editReply({ content: '📤 กำลังโพสต์ไปยัง Facebook...' }).catch(() => {});
-    try {
-      const res = await postToFacebook(state.guildId, interaction.user.id, processed, state.caption, scheduleTime, state.group);
-      if (res.id) {
-        const parts = res.id.split('_');
-        if (parts.length === 2) {
-          fbUrl = `https://www.facebook.com/permalink.php?story_fbid=${parts[1]}&id=${parts[0]}`;
-        }
-      }
-      const fbLinks = fbUrl ? ` · 🔗 [ดูโพสต์](${fbUrl})` : '';
-      const fbSched = scheduleTime ? ` (⏰ ตั้งเวลา ${formatScheduleThai(scheduleTime)} น.)` : '';
-      results.push(`✅ Facebook${fbLinks}${fbSched}`);
-    } catch (err) {
-      results.push(`❌ Facebook: ${err.message}`);
-    }
-  }
-  if (postIg) {
-    await interaction.editReply({ content: '📤 กำลังโพสต์ไปยัง Instagram...' }).catch(() => {});
-    try {
-      const igProgress = msg => interaction.editReply({ content: msg }).catch(() => {});
-      const igRes = await postToInstagram(state.guildId, interaction.user.id, processed, state.caption, null, igProgress, state.group);
-      igUrl = igRes?.permalink || null;
-      const igLink = igUrl ? ` · 🔗 [ดูโพสต์](${igUrl})` : '';
-      results.push(`✅ Instagram${igLink}`);
-    } catch (err) {
-      results.push(`❌ Instagram: ${err.message}`);
+  // เตรียมรูป (วิดีโอส่ง URL ของ Discord ให้ Meta ไปดึงเอง ไม่ต้องเตรียม)
+  let processed = [], wmErrors = [];
+  if (!isVideo && imageItems.length > 0) {
+    const watermarkPath = state.wmType !== 'none'
+      ? resolveWatermarkPath(state.wmType, state.guildId, state.group, state.userId)
+      : null;
+    if (watermarkPath) await interaction.editReply({ content: `⏳ ติดลายน้ำ 0/${imageItems.length} รูป...` });
+    else               await interaction.editReply({ content: '⏳ กำลังดาวน์โหลดรูป...' });
+
+    ({ processed, errors: wmErrors } = await prepareImages(
+      imageItems.map(it => ({ url: it.image_url })),
+      { watermarkPath, onProgress }
+    ));
+    if (!processed.length) {
+      const head = watermarkPath ? '❌ ติดลายน้ำไม่สำเร็จ' : '❌ ดาวน์โหลดรูปไม่สำเร็จ';
+      return interaction.editReply({ content: `${head}\n${wmErrors.map(e => `❌ ${e}`).join('\n')}` });
     }
   }
 
-  if (postThreads) {
-    await interaction.editReply({ content: '📤 กำลังโพสต์ไปยัง @ Threads...' }).catch(() => {});
-    try {
-      const thProgress = msg => interaction.editReply({ content: msg }).catch(() => {});
-      const thRes = await postToThreads(state.guildId, interaction.user.id, processed, state.caption, thProgress, state.group);
-      threadsUrl = thRes?.permalink || null;
-      const thLink = threadsUrl ? ` · 🔗 [ดูโพสต์](${threadsUrl})` : '';
-      results.push(`✅ @ Threads${thLink}`);
-    } catch (err) {
-      results.push(`❌ Threads: ${err.message}`);
-    }
-  }
+  const { results, status } = await publishBatch({
+    platforms,
+    guildId: state.guildId,
+    userDiscordId: interaction.user.id,
+    images: processed,
+    videoUrl: isVideo ? videoItems[0].image_url : null,
+    caption: state.caption,
+    scheduleTime: isVideo ? scheduleTime : scheduleTime,
+    group: state.group,
+    guild: interaction.guild,
+    onProgress,
+  });
 
-  if (postX) {
-    await interaction.editReply({ content: '📤 กำลังโพสต์ไปยัง X...' }).catch(() => {});
-    try {
-      const xRes = await postToX(state.guildId, interaction.user.id, processed, state.caption, state.group);
-      xUrl = xRes?.url || null;
-      const xLink = xUrl ? ` · 🔗 [ดูโพสต์](${xUrl})` : '';
-      results.push(`✅ X (Twitter)${xLink}`);
-    } catch (err) {
-      results.push(`❌ X: ${err.message}`);
-    }
-  }
+  const urlOf = p => results.find(r => r.platform === p && r.ok)?.url || null;
+  const fbUrl = urlOf('fb'), igUrl = urlOf('ig'), threadsUrl = urlOf('threads'), xUrl = urlOf('x');
 
-  if (platforms.includes('news')) {
-    await interaction.editReply({ content: '📤 กำลังแชร์ลงห้องข่าวสาร...' }).catch(() => {});
-    try {
-      // ส่ง buffer ที่ผ่านลายน้ำแล้ว — Discord จำกัด 10 ไฟล์/ข้อความ เกินให้ต่อข้อความถัดไป
-      const files = processed.map((p, i) => ({ attachment: p.buffer, name: `image_${i + 1}.${p.ext}` }));
-      let firstMsg = null;
-      for (let i = 0; i < files.length; i += 10) {
-        const msg = await postNews(interaction.guild, {
-          content: i === 0 ? (state.caption || undefined) : undefined,
-          files: files.slice(i, i + 10),
-        });
-        if (!firstMsg) firstMsg = msg;
-      }
-      results.push(`✅ ห้องข่าวสาร · 🔗 [ดูโพสต์](${firstMsg.url})`);
-    } catch (err) {
-      results.push(`❌ ห้องข่าวสาร: ${err.message}`);
-    }
-  }
-
-  const overallStatus = results.every(r => r.startsWith('✅')) ? 'success'
-    : results.every(r => r.startsWith('❌')) ? 'failed' : 'partial';
   await addHistory(state.guildId, state.channelId, interaction.user.id, {
-    platform:    platforms.join(','),
-    imageCount:  imageItems.length,
-    videoCount:  0,
-    wmType:      state.wmType !== 'none' ? state.wmType : null,
-    caption:     state.caption || null,
-    scheduleTime: state.scheduleTime || null,
+    platform:     platforms.join(','),
+    imageCount:   isVideo ? 0 : imageItems.length,
+    videoCount:   isVideo ? 1 : 0,
+    wmType:       !isVideo && state.wmType !== 'none' ? state.wmType : null,
+    caption:      state.caption || null,
+    scheduleTime: isVideo ? null : (state.scheduleTime || null),
     fbUrl, igUrl, threadsUrl, xUrl,
-    status:      overallStatus,
-    groupName:   state.group || null,
+    status,
+    groupName:    state.group || null,
   }).catch(() => {});
+
+  if (isVideo) {
+    await interaction.followUp({
+      content: ['✅ โพสต์เสร็จแล้ว', ...results.map(r => formatResultLine(r, { isVideo, scheduleTime }))].join('\n'),
+    }).catch(() => {});
+    return;
+  }
 
   await setSetting(state.guildId, `last_post_${state.channelId}`, { fbUrl, postedAt: new Date() }).catch(() => {});
   await deleteSetting(state.guildId, `pending_ig_${state.channelId}`).catch(() => {});
@@ -921,7 +778,7 @@ async function processAndPost(interaction, state) {
   const lines = [
     '✅ โพสต์เสร็จแล้ว',
     state.wmType !== 'none' && total > 0 ? `✅ ติดลายน้ำ ${processed.length}/${total} รูป` : null,
-    ...results,
+    ...results.map(r => formatResultLine(r, { isVideo, scheduleTime })),
     ...(wmErrors.length ? [`⚠️ ${wmErrors.join(', ')}`] : []),
   ].filter(Boolean);
 
