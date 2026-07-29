@@ -86,20 +86,27 @@ async function clearBasketMedia(guildId, channelId) {
   );
 }
 
-async function addHistory(guildId, channelId, postedBy, { platform, imageCount, videoCount, wmType, caption, scheduleTime, fbUrl, igUrl, threadsUrl, xUrl, status, groupName }) {
-  await pool.query(
-    `INSERT INTO dc_media_history (guild_id, channel_id, posted_by, platform, image_count, video_count, wm_type, caption, schedule_time, fb_url, ig_url, threads_url, x_url, status, group_name)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
-    [guildId, channelId, postedBy, platform, imageCount, videoCount || 0, wmType || null, caption || null, scheduleTime || null, fbUrl || null, igUrl || null, threadsUrl || null, xUrl || null, status, groupName || null]
-  );
-}
-
-async function getHistory(guildId, channelId) {
+// ประวัติการโพสต์ย้ายไป post_social_history แล้ว (ก้อน 4 ขั้น 3, 2026-07-29)
+// - เขียน: services/publishPipeline.js เป็นคนเขียน (addHistory เดิมถูกลบ — และมันพังเงียบมาตั้งแต่ มิ.ย.
+//   เพราะ INSERT ใส่คอลัมน์ group_name ที่ไม่มีอยู่จริง แล้ว .catch(()=>{}) กลืน error)
+// - อ่าน: ที่นี่ · 1 แถว = 1 แพลตฟอร์ม → **GROUP BY batch_id** ให้กลับเป็น "1 บรรทัด = 1 ครั้งที่โพสต์"
+async function getHistory(guildId, channelId, limit = 20) {
   const { rows } = await pool.query(
-    `SELECT * FROM dc_media_history WHERE guild_id = $1 AND channel_id = $2 ORDER BY created_at DESC`,
-    [guildId, channelId]
+    `SELECT h.batch_id,
+            MIN(h.created_at) AS created_at,
+            MAX(h.group_name) AS group_name,
+            MAX((SELECT COUNT(*)::int FROM jsonb_array_elements(h.media) e WHERE e->>'kind' = 'image')) AS image_count,
+            MAX((SELECT COUNT(*)::int FROM jsonb_array_elements(h.media) e WHERE e->>'kind' = 'video')) AS video_count,
+            jsonb_agg(jsonb_build_object('platform', h.platform, 'url', h.result->>'url', 'status', h.status)
+                      ORDER BY h.id) AS platforms
+       FROM post_social_history h
+      WHERE h.guild_id = $1 AND h.channel_id = $2
+      GROUP BY h.batch_id
+      ORDER BY MIN(h.created_at) DESC
+      LIMIT $3`,
+    [guildId, channelId, limit]
   );
   return rows;
 }
 
-module.exports = { addImages, addVideo, setCaption, appendCaption, getBasket, reorderImages, clearBasket, clearBasketMedia, addHistory, getHistory };
+module.exports = { addImages, addVideo, setCaption, appendCaption, getBasket, reorderImages, clearBasket, clearBasketMedia, getHistory };

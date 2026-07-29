@@ -12,6 +12,8 @@ const { fetchBuffer, applyWatermark } = require('../utils/watermarkImage');
 const { postToFacebook, postToInstagram, postToThreads, postReelsToFacebook, postReelsToInstagram, postReelsToThreads } = require('./metaApi');
 const { postToX, postVideoToX } = require('./xApi');
 const { postNews } = require('./newsShare');
+const pool = require('../db/index');
+const { randomUUID } = require('crypto');
 
 const noop = () => {};
 
@@ -143,19 +145,55 @@ async function publishOne({
 }
 
 /**
+ * เขียนประวัติ 1 แถวต่อ 1 แพลตฟอร์ม (คิวกับประวัติเป็นตารางเดียวกัน — แถว done/failed = ประวัติ)
+ * ล้มเหลวไม่โยนต่อ: ประวัติหายดีกว่าโพสต์ที่ยิงออกไปแล้วขึ้น error ให้ user
+ */
+async function recordHistory(row) {
+  try {
+    await pool.query(
+      `INSERT INTO post_social_history
+         (org_id, episode_id, batch_id, platform, social_account_id, guild_id, channel_id,
+          wm_type, caption, media, scheduled_at, status, result, group_name,
+          created_by, created_by_discord_id, posted_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16, now())`,
+      [row.orgId || null, row.episodeId || null, row.batchId, row.platform, row.accountId || null,
+       row.guildId || null, row.channelId || null, row.wmType || null, row.caption || null,
+       JSON.stringify(row.media || []), row.scheduledAt || null, row.status,
+       row.url ? JSON.stringify({ url: row.url }) : null, row.groupName || null,
+       row.createdBy || null, row.createdByDiscordId || null]
+    );
+  } catch (err) {
+    console.error('[publishPipeline] เขียนประวัติไม่สำเร็จ:', err.message);
+  }
+}
+
+/**
  * ยิงหลายแพลตฟอร์มทีละตัว — ตัวหนึ่งล้มไม่ทำให้ตัวอื่นล้ม (คืน result ครบทุกตัว)
  * ⚠️ ยิงเรียงตัว ไม่ขนาน — โควตา API ของ Meta/X เป็นราย token ยิงพร้อมกันเสี่ยงโดน throttle
  *    และ onProgress ที่พิมพ์ทับกันจะอ่านไม่รู้เรื่อง
  * @returns {{results: Array, status: 'success'|'partial'|'failed'}}
  */
-async function publishBatch({ platforms = [], ...ctx }) {
+async function publishBatch({ platforms = [], recordTo = null, ...ctx }) {
   const results = [];
+  const batchId = recordTo?.batchId || randomUUID();
   for (const platform of platforms) {
-    results.push(await publishOne({ platform, ...ctx }));
+    const r = await publishOne({ platform, ...ctx });
+    results.push(r);
+    // recordTo = บริบทที่ใช้เขียนประวัติ (ตะกร้าส่งมา) · ไม่ส่ง = ไม่เขียน (worker อัปเดตแถวเดิมเอง)
+    if (recordTo) {
+      await recordHistory({
+        ...recordTo, batchId, platform,
+        accountId: ctx.accountId || null,
+        caption: ctx.caption || null,
+        scheduledAt: recordTo.scheduledAt || null,
+        status: r.ok ? 'done' : 'failed',
+        url: r.url,
+      });
+    }
   }
   const okCount = results.filter(r => r.ok).length;
   const status = okCount === results.length ? 'success' : okCount === 0 ? 'failed' : 'partial';
-  return { results, status };
+  return { results, status, batchId };
 }
 
-module.exports = { prepareImages, publishOne, publishBatch, PLATFORM_LABEL };
+module.exports = { prepareImages, publishOne, publishBatch, recordHistory, PLATFORM_LABEL };

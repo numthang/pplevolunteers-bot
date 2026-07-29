@@ -18,7 +18,8 @@ const {
 } = require('discord.js');
 const path = require('path');
 const fs = require('fs');
-const { addImages, addVideo, setCaption, appendCaption, getBasket, clearBasket, clearBasketMedia, addHistory, getHistory } = require('../db/mediaBasket');
+const { addImages, addVideo, setCaption, appendCaption, getBasket, clearBasket, clearBasketMedia, getHistory } = require('../db/mediaBasket');
+const { orgIdOfGuild, userIdByDiscord } = require('../db/org');
 const { fetchBuffer } = require('../utils/watermarkImage');   // เหลือใช้จุดเดียว (พรีวิวรูปแรก) — ติดลายน้ำย้ายไป publishPipeline แล้ว
 const { getAvailablePlatforms, getAvailableGroups } = require('../services/metaApi');
 // ⚠️ ห้าม import postTo*/postReels* ตรงๆ ที่นี่ — การโพสต์ต้องผ่านท่อกลางเท่านั้น (กติกาข้อ 16)
@@ -297,15 +298,18 @@ async function buildBasketPayload(basket, guildId, channelId, userId, channelNam
 
   const history = await getHistory(guildId, channelId);
   if (history.length) {
+    // post_social_history เก็บ 1 แถว/แพลตฟอร์ม → getHistory GROUP BY batch_id มาให้แล้ว
+    // (1 บรรทัด = 1 ครั้งที่กดโพสต์ เหมือนเดิม แต่ตอนนี้รู้ผลรายแพลตฟอร์ม)
     const platformIcon = { fb: '📘', ig: '📷', threads: '🧵', x: '𝕏', news: '📢' };
+    const linkLabel    = { fb: 'FB', ig: 'IG', threads: '@', x: '𝕏', news: '📢' };
     const lines = history.map(h => {
-      const hPlats = (h.platform || '').split(',').filter(Boolean);
-      const icon = hPlats.length > 1 ? '📲' : (platformIcon[hPlats[0]] || '📤');
-      const grp  = h.group_name ? ` [${h.group_name}]` : '';
-      const imgs = h.image_count > 0 ? ` · ${h.image_count}` : (h.video_count > 0 ? ' · 🎬' : '');
-      const links = [h.fb_url && '[FB]('+h.fb_url+')', h.ig_url && '[IG]('+h.ig_url+')', h.threads_url && '[@]('+h.threads_url+')', h.x_url && '[𝕏]('+h.x_url+')'].filter(Boolean);
+      const plats = h.platforms || [];
+      const icon  = plats.length > 1 ? '📲' : (platformIcon[plats[0]?.platform] || '📤');
+      const grp   = h.group_name ? ` [${h.group_name}]` : '';
+      const imgs  = h.image_count > 0 ? ` · ${h.image_count}` : (h.video_count > 0 ? ' · 🎬' : '');
+      const links = plats.filter(p => p.url).map(p => `[${linkLabel[p.platform] || p.platform}](${p.url})`);
       const link  = links.length ? ` · ${links.join(' · ')}` : '';
-      const fail  = h.status !== 'success' ? ' ⚠️' : '';
+      const fail  = plats.some(p => p.status !== 'done') ? ' ⚠️' : '';
       return `${icon}${grp}${imgs}${link}${fail}`;
     });
     // Discord field value limit: 1024 chars — keep newest entries that fit
@@ -736,6 +740,15 @@ async function processAndPost(interaction, state) {
     }
   }
 
+  // บริบทสำหรับเขียนประวัติ — ท่อกลางเป็นคนเขียนลง post_social_history (1 แถว/แพลตฟอร์ม)
+  const [orgId, createdBy] = await Promise.all([
+    orgIdOfGuild(state.guildId).catch(() => null),
+    userIdByDiscord(interaction.user.id).catch(() => null),
+  ]);
+  const mediaSnapshot = isVideo
+    ? [{ kind: 'video', url: videoItems[0].image_url }]
+    : imageItems.map(it => ({ kind: 'image', url: it.image_url }));
+
   const { results, status } = await publishBatch({
     platforms,
     guildId: state.guildId,
@@ -747,22 +760,19 @@ async function processAndPost(interaction, state) {
     group: state.group,
     guild: interaction.guild,
     onProgress,
+    recordTo: {
+      orgId, guildId: state.guildId, channelId: state.channelId,
+      wmType: !isVideo && state.wmType !== 'none' ? state.wmType : null,
+      media: mediaSnapshot,
+      scheduledAt: !isVideo && state.scheduleTime ? new Date(state.scheduleTime * 1000) : null,
+      groupName: state.group || null,
+      createdBy, createdByDiscordId: interaction.user.id,
+    },
   });
 
   const urlOf = p => results.find(r => r.platform === p && r.ok)?.url || null;
   const fbUrl = urlOf('fb'), igUrl = urlOf('ig'), threadsUrl = urlOf('threads'), xUrl = urlOf('x');
 
-  await addHistory(state.guildId, state.channelId, interaction.user.id, {
-    platform:     platforms.join(','),
-    imageCount:   isVideo ? 0 : imageItems.length,
-    videoCount:   isVideo ? 1 : 0,
-    wmType:       !isVideo && state.wmType !== 'none' ? state.wmType : null,
-    caption:      state.caption || null,
-    scheduleTime: isVideo ? null : (state.scheduleTime || null),
-    fbUrl, igUrl, threadsUrl, xUrl,
-    status,
-    groupName:    state.group || null,
-  }).catch(() => {});
 
   if (isVideo) {
     await interaction.followUp({

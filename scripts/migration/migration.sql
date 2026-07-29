@@ -342,3 +342,61 @@ ON CONFLICT (org_id, key) DO NOTHING;
 -- เศษที่ไม่มีผลแล้ว: feature toggle ย้ายขึ้น org_config key 'enabled_features' ตั้งแต่ 2026-07-22
 -- (web/lib/orgFeatures.js เป็นที่เดียวที่เปิด/ปิดฟีเจอร์แล้ว) เหลือ 2 แถวหลอกตาใน dc_guild_config
 DELETE FROM dc_guild_config WHERE "key" = 'enabled_features';
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- 2026-07-29 — POSTS ก้อน 4 ขั้น 3: รวมประวัติการโพสต์ไว้ที่ post_social_history
+-- เดิมประวัติของตะกร้าสื่ออยู่ dc_media_history (1 แถว = 1 ครั้ง หลายแพลตฟอร์มรวมใน 'fb,ig,x')
+-- ใหม่: 1 แถว = 1 แพลตฟอร์ม มัดด้วย batch_id → retry รายแพลตฟอร์มได้ + ที่เก็บเดียวกับคิวของเว็บ
+-- 🐛 พบระหว่างทาง: addHistory() พังเงียบตั้งแต่ 2026-06-05 (INSERT ใส่คอลัมน์ group_name
+--    ที่ไม่มีอยู่จริง แล้วโดน .catch(()=>{}) กลืน) → ประวัติไม่ได้บันทึกมา 2 เดือน · แก้ด้วยการย้ายมาที่นี่
+-- ═══════════════════════════════════════════════════════════════════════════
+
+-- group_name = กลุ่มบัญชีที่ใช้โพสต์ (ตะกร้าเลือกบัญชีด้วยตัวนี้) — ของเดิมไม่เคยมีคอลัมน์นี้จริง
+ALTER TABLE post_social_history ADD COLUMN IF NOT EXISTS group_name varchar(100);
+
+DO $$
+BEGIN
+  IF to_regclass('public.dc_media_history') IS NULL THEN RETURN; END IF;
+
+  INSERT INTO post_social_history
+    (org_id, batch_id, platform, guild_id, channel_id, wm_type, caption, media,
+     scheduled_at, status, result, created_by, created_by_discord_id, group_name,
+     created_at, updated_at, posted_at)
+  SELECT
+    g.org_id,
+    -- batch_id คงที่ต่อแถวเดิม (ไม่สุ่ม) → รันซ้ำไม่ได้แถวซ้ำ + ยังมัดแพลตฟอร์มของครั้งเดียวกันไว้ด้วยกัน
+    ('00000000-0000-0000-0000-' || lpad(h.id::text, 12, '0'))::uuid,
+    p.platform,
+    h.guild_id, h.channel_id, h.wm_type, h.caption,
+    -- ⚠️ ต้อง COALESCE **ทั้งสองฝั่ง** ก่อน || : NULL || jsonb = NULL
+    --    (เจอตอนเทส: แถวที่มีแต่วิดีโอ image_count=0 → agg เป็น NULL → media หายทั้งก้อน)
+    COALESCE((SELECT jsonb_agg(jsonb_build_object('kind','image')) FROM generate_series(1, GREATEST(h.image_count,0))), '[]'::jsonb)
+    || COALESCE((SELECT jsonb_agg(jsonb_build_object('kind','video')) FROM generate_series(1, GREATEST(COALESCE(h.video_count,0),0))), '[]'::jsonb),
+    CASE WHEN h.schedule_time IS NOT NULL THEN to_timestamp(h.schedule_time) END,
+    CASE WHEN h.status = 'success' THEN 'done'
+         WHEN u.url IS NOT NULL     THEN 'done'
+         ELSE 'failed' END,
+    CASE WHEN u.url IS NOT NULL THEN jsonb_build_object('url', u.url) END,
+    (SELECT id FROM users WHERE discord_id = h.posted_by),
+    h.posted_by,
+    NULL,                       -- ของเดิมไม่เคยเก็บ group_name ได้จริง (คอลัมน์ไม่มี)
+    h.created_at, h.created_at, h.created_at
+  FROM dc_media_history h
+  LEFT JOIN dc_guilds g ON g.guild_id = h.guild_id
+  -- แตกคอลัมน์ platform ตาม comma · 'all'/'both' เป็นค่าเก่าสมัยมีแค่ FB+IG
+  CROSS JOIN LATERAL unnest(
+    CASE WHEN h.platform IN ('all','both') THEN ARRAY['fb','ig']
+         ELSE string_to_array(h.platform, ',') END
+  ) AS p(platform)
+  CROSS JOIN LATERAL (SELECT CASE p.platform
+      WHEN 'fb' THEN h.fb_url WHEN 'ig' THEN h.ig_url
+      WHEN 'threads' THEN h.threads_url WHEN 'x' THEN h.x_url END AS url) u
+  WHERE NOT EXISTS (
+    SELECT 1 FROM post_social_history x
+     WHERE x.batch_id = ('00000000-0000-0000-0000-' || lpad(h.id::text, 12, '0'))::uuid
+       AND x.platform = p.platform
+  );
+
+  -- ⚠️ ลำดับ deploy: รัน migration → **restart บอททันที** (โค้ดเก่าอ่านตารางนี้อยู่)
+  DROP TABLE dc_media_history;
+END $$;
