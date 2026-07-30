@@ -12,10 +12,70 @@ const { fetchBuffer, applyWatermark } = require('../utils/watermarkImage');
 const { postToFacebook, postToInstagram, postToThreads, postReelsToFacebook, postReelsToInstagram, postReelsToThreads } = require('./metaApi');
 const { postToX, postVideoToX } = require('./xApi');
 const { postNews } = require('./newsShare');
+const { saveMediaToTemp } = require('./metaApi');
+const storage = require('../utils/postsStorage');
 const pool = require('../db/index');
 const { randomUUID } = require('crypto');
 
 const noop = () => {};
+
+/**
+ * สื่อในรูปแบบที่เก็บไว้ (path บนดิสก์ / URL ของ Discord) → input ที่ publishOne กินได้
+ * **ที่เดียวที่รู้ว่าไฟล์บนดิสก์กลายเป็นอะไรตอนส่งให้แต่ละแพลตฟอร์ม** — ตะกร้าดิสฯ กับ worker ใช้ร่วมกัน
+ *
+ * @param {Array<{kind:'image'|'video', path?:string, url?:string}>} items
+ * @param {{refreshUrls?:function}} opts  refreshUrls = async (urls[]) => Map — ลิงก์ Discord หมดอายุ ~24 ชม.
+ * @returns {{images: Array<{buffer?:Buffer, ext?:string, url?:string}>, videoUrl: string|null}}
+ */
+async function loadMediaSources(items = [], { refreshUrls = null } = {}) {
+  const images = [];
+  let videoUrl = null;
+
+  // รีเฟรชเฉพาะแถวที่ยังไม่มีไฟล์บนดิสก์ (ไฟล์บนดิสก์ไม่มีวันหมดอายุ)
+  const stale = items.filter(m => !m.path && m.url).map(m => m.url);
+  if (stale.length && refreshUrls) {
+    try {
+      const fresh = await refreshUrls(stale);
+      if (fresh?.size) for (const m of items) if (m.url && fresh.has(m.url)) m.url = fresh.get(m.url);
+    } catch (err) {
+      console.error('[publishPipeline] รีเฟรชลิงก์ไม่สำเร็จ:', err.message);
+    }
+  }
+
+  for (const m of items) {
+    if (m.kind === 'video') {
+      // IG/Threads/Reels ไม่รับไฟล์อัปโหลดตรง — ต้องให้ URL แล้วเขามาดึงเอง
+      // ไฟล์ของเราอยู่นอกเน็ต → วางลง media-temp (โฟลเดอร์เดียวกับที่รูป IG ใช้อยู่แล้ว) แล้วส่ง URL นั้น
+      if (m.path) {
+        try {
+          const tmp = saveMediaToTemp(await storage.readFile(m.path), storage.extOfPath(m.path));
+          if (/^https?:\/\//.test(tmp)) { videoUrl = tmp; continue; }
+          // URL สัมพัทธ์ = Meta เข้าไม่ถึง → ตกไปใช้ลิงก์ Discord เดิมถ้ายังมี
+          if (!m.url) throw new Error('WEB_BASE_URL (หรือ META_TEMP_URL) ไม่ได้ตั้ง — ส่งวิดีโอให้ Meta ไม่ได้');
+          console.warn('[publishPipeline] media-temp ให้ URL สัมพัทธ์ — ใช้ลิงก์ Discord แทน');
+        } catch (err) {
+          if (!m.url) throw err;
+          console.error('[publishPipeline] อ่านวิดีโอจากดิสก์ไม่ได้ ใช้ลิงก์ Discord แทน:', err.message);
+        }
+      }
+      if (m.url) videoUrl = m.url;
+      continue;
+    }
+
+    if (m.path) {
+      try {
+        images.push({ buffer: await storage.readFile(m.path), ext: storage.extOfPath(m.path) });
+        continue;
+      } catch (err) {
+        if (!m.url) throw err;   // ไม่มีทางกลับแล้วจริงๆ
+        console.error('[publishPipeline] อ่านรูปจากดิสก์ไม่ได้ ใช้ลิงก์ต้นทางแทน:', err.message);
+      }
+    }
+    if (m.url) images.push({ url: m.url });
+  }
+
+  return { images, videoUrl };
+}
 
 /**
  * เตรียมรูปให้พร้อมยิง — โหลด buffer → ติดลายน้ำ (ถ้ามี) → webp เป็น jpg
@@ -197,4 +257,4 @@ async function publishBatch({ platforms = [], recordTo = null, ...ctx }) {
   return { results, status, batchId };
 }
 
-module.exports = { prepareImages, publishOne, publishBatch, recordHistory, PLATFORM_LABEL };
+module.exports = { prepareImages, loadMediaSources, publishOne, publishBatch, recordHistory, PLATFORM_LABEL };

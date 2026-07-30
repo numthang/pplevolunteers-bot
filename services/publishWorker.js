@@ -8,8 +8,8 @@
 const path = require('path');
 const fs = require('fs/promises');
 const pool = require('../db/index');
-const { prepareImages, publishOne, PLATFORM_LABEL } = require('./publishPipeline');
-const { saveMediaToTemp, cleanTempMedia } = require('./metaApi');
+const { prepareImages, loadMediaSources, publishOne, PLATFORM_LABEL } = require('./publishPipeline');
+const { cleanTempMedia } = require('./metaApi');
 const { refreshAttachmentUrls } = require('./discordAttachments');
 
 const POLL_MS = 30 * 1000;
@@ -78,47 +78,15 @@ async function resolveWatermark(wmType) {
   }
 }
 
-/** สื่อของงานเป็น snapshot ตอนกดโพสต์ — path เก็บ relative จาก repo root (บอทกับเว็บอ่านดิสก์ก้อนเดียวกัน) */
+/**
+ * สื่อของงานเป็น snapshot ตอนกดโพสต์ — path เก็บ relative จาก repo root (บอทกับเว็บอ่านดิสก์ก้อนเดียวกัน)
+ * ตัวแปลง path/URL → input ของ publishOne อยู่ที่ `publishPipeline.loadMediaSources` ที่เดียว
+ * (กติกาข้อ 16 · ตะกร้าดิสฯ ใช้ตัวเดียวกัน) — ที่นี่เหลือแค่ผูกตัวรีเฟรชลิงก์ที่ต้องใช้ discord client
+ */
 async function loadMedia(job, client = null) {
-  const items = Array.isArray(job.media) ? job.media : [];
-  const images = [];
-  let videoUrl = null;
-
-  // งานที่มาจากตะกร้าดิสฯ เก็บเป็นลิงก์ CDN ซึ่งหมดอายุ ~24 ชม. — งานตั้งเวลา/กดลองใหม่ทีหลัง
-  // จะดึงไม่ได้ถ้าไม่รีเฟรชก่อน (ลิงก์ของเว็บเป็น path ในดิสก์ ไม่เกี่ยว)
-  const discordUrls = items.map(m => m.url).filter(Boolean);
-  if (discordUrls.length && client) {
-    const fresh = await refreshAttachmentUrls(client, discordUrls);
-    if (fresh.size) for (const m of items) if (m.url && fresh.has(m.url)) m.url = fresh.get(m.url);
-  }
-
-  const safePath = (rel) => {
-    const abs = path.resolve(REPO_ROOT, rel);
-    if (!abs.startsWith(path.resolve(REPO_ROOT, 'storage') + path.sep)) {
-      throw new Error(`สื่ออยู่นอก storage/: ${rel}`);
-    }
-    return abs;
-  };
-
-  for (const m of items) {
-    // วิดีโอ: ตะกร้าดิสฯ ส่ง URL ของ Discord มาเลย · เว็บเก็บเป็นไฟล์ใน storage/ ซึ่งไม่มี URL สาธารณะ
-    // แต่ IG/Threads/Reels ไม่รับไฟล์อัปโหลดตรง ต้องให้ URL แล้วเขามาดึงเอง
-    // → วางลง media-temp (โฟลเดอร์เดียวกับที่รูป IG ใช้อยู่แล้ว) แล้วส่ง URL นั้นไป
-    if (m.kind === 'video') {
-      if (m.url) { videoUrl = m.url; continue; }
-      if (!m.path) continue;
-      videoUrl = saveMediaToTemp(await fs.readFile(safePath(m.path)), (m.path.split('.').pop() || 'mp4').toLowerCase());
-      // Meta ต้องเข้าถึง URL นี้ได้จากอินเทอร์เน็ต — URL สัมพัทธ์ = ยิงไปก็ล้มแบบงงๆ ฝั่งเขา
-      if (!/^https?:\/\//.test(videoUrl)) {
-        throw new Error('WEB_BASE_URL (หรือ META_TEMP_URL) ไม่ได้ตั้ง — ส่งวิดีโอจากเว็บให้ Meta ไม่ได้');
-      }
-      continue;
-    }
-    if (m.url && !m.path) { images.push({ url: m.url }); continue; }   // ตะกร้าดิสฯ (URL)
-    if (!m.path) continue;
-    images.push({ buffer: await fs.readFile(safePath(m.path)), ext: (m.path.split('.').pop() || 'jpg').toLowerCase() });
-  }
-  return { images, videoUrl };
+  return loadMediaSources(Array.isArray(job.media) ? job.media : [], {
+    refreshUrls: client ? (urls => refreshAttachmentUrls(client, urls)) : null,
+  });
 }
 
 async function finishJob(job, result) {

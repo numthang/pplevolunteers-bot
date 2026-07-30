@@ -14,6 +14,9 @@ require.cache[require.resolve(ROOT + '/services/metaApi')] = { exports: {
   postToFacebook: rec('postToFacebook'), postToInstagram: rec('postToInstagram'),
   postToThreads: rec('postToThreads'), postReelsToFacebook: rec('postReelsToFacebook'),
   postReelsToInstagram: rec('postReelsToInstagram'), postReelsToThreads: rec('postReelsToThreads'),
+  // loadMediaSources ใช้ตอนวิดีโออยู่บนดิสก์ — คืน URL สาธารณะปลอมให้เทสเดินต่อได้
+  saveMediaToTemp: (buf, ext) => { calls.push({ name: 'saveMediaToTemp', args: [buf.length, ext] });
+    return `https://temp.test/v.${ext}`; },
 }};
 require.cache[require.resolve(ROOT + '/services/xApi')] = { exports: {
   postToX: rec('postToX'), postVideoToX: rec('postVideoToX'),
@@ -22,7 +25,7 @@ require.cache[require.resolve(ROOT + '/services/newsShare')] = { exports: {
   postNews: async (guild, opts) => { calls.push({ name: 'postNews', args: [guild?.id, opts] }); return { url: 'https://discord.test/msg' }; },
 }};
 
-const { prepareImages, publishOne, publishBatch } = require(ROOT + '/services/publishPipeline');
+const { prepareImages, loadMediaSources, publishOne, publishBatch } = require(ROOT + '/services/publishPipeline');
 const ok = (label, cond, extra = '') => console.log(`${cond ? '✅' : '❌'} ${label}`, extra);
 
 (async () => {
@@ -74,4 +77,43 @@ const ok = (label, cond, extra = '') => console.log(`${cond ? '✅' : '❌'} ${l
   ok('ตัวหนึ่งล้ม ตัวอื่นยังยิง + status=partial',
      out2.status === 'partial' && out2.results.find(r => r.platform === 'fb').ok && !out2.results.find(r => r.platform === 'x').ok);
   ok('ข้อความ error ถูกเก็บไว้', out2.results.find(r => r.platform === 'x').error === 'X ล่ม');
+
+  // 5) loadMediaSources — ตัวแปลง "ของที่เก็บไว้" → input ของ publishOne (ตะกร้าดิสฯ + worker ใช้ร่วมกัน)
+  const fs = require('fs');
+  const tmpRel = 'storage/posts/__test_loadmedia.png';
+  fs.mkdirSync(path.join(ROOT, 'storage', 'posts'), { recursive: true });
+  fs.writeFileSync(path.join(ROOT, tmpRel), png);
+  try {
+    calls.length = 0;
+    let m = await loadMediaSources([{ kind: 'image', path: tmpRel, url: 'https://cdn.discord/a.png' }]);
+    ok('รูปมีไฟล์บนดิสก์ → อ่าน buffer ไม่แตะ URL', m.images[0]?.buffer?.length === png.length && !m.images[0].url);
+
+    m = await loadMediaSources([{ kind: 'image', url: 'https://cdn.discord/a.png' }]);
+    ok('รูปยังไม่มีไฟล์ (path NULL) → ตกไปใช้ URL ต้นทาง', m.images[0]?.url === 'https://cdn.discord/a.png');
+
+    m = await loadMediaSources([{ kind: 'image', path: 'storage/posts/__ไม่มีจริง.png', url: 'https://cdn.discord/a.png' }]);
+    ok('ไฟล์บนดิสก์หาย แต่มี URL → ไม่ล้ม ใช้ URL แทน', m.images[0]?.url === 'https://cdn.discord/a.png');
+
+    let threw = null;
+    await loadMediaSources([{ kind: 'image', path: '../../etc/passwd' }]).catch(e => { threw = e.message; });
+    ok('path นอก storage/ → โยน ไม่แตะไฟล์', /อยู่นอก storage/.test(threw || ''), threw);
+
+    m = await loadMediaSources([{ kind: 'video', path: tmpRel }]);
+    ok('วิดีโอบนดิสก์ → media-temp URL สาธารณะ', m.videoUrl === 'https://temp.test/v.png' && calls.some(c => c.name === 'saveMediaToTemp'));
+
+    m = await loadMediaSources([{ kind: 'video', url: 'https://cdn.discord/v.mp4' }]);
+    ok('วิดีโอที่ยังไม่โหลดลงดิสก์ → ส่งลิงก์ Discord ตรงๆ เหมือนเดิม', m.videoUrl === 'https://cdn.discord/v.mp4');
+
+    const fresh = new Map([['https://cdn.discord/old.png', 'https://cdn.discord/new.png']]);
+    m = await loadMediaSources([{ kind: 'image', url: 'https://cdn.discord/old.png' }],
+      { refreshUrls: async () => fresh });
+    ok('ลิงก์หมดอายุ → รีเฟรชก่อนใช้', m.images[0]?.url === 'https://cdn.discord/new.png');
+
+    let asked = null;
+    await loadMediaSources([{ kind: 'image', path: tmpRel, url: 'https://cdn.discord/old.png' }],
+      { refreshUrls: async urls => { asked = urls; return new Map(); } });
+    ok('มีไฟล์บนดิสก์แล้ว → ไม่ต้องไปรีเฟรชลิงก์ให้เปลือง', asked === null || asked.length === 0);
+  } finally {
+    fs.rmSync(path.join(ROOT, tmpRel), { force: true });
+  }
 })();

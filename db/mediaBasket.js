@@ -1,89 +1,242 @@
+// db/mediaBasket.js — ตะกร้าสื่อของ Discord
+//
+// ⚠️ ก้อน 4c (2026-07-30): **ตะกร้าไม่ใช่ตารางของตัวเองแล้ว** — ยุบเข้า post_episodes/post_episode_media
+//    "ตะกร้าที่เปิดอยู่ของห้อง" = แถวใน post_episodes ที่ `channel_id = ห้องนั้น AND archived_at IS NULL`
+//    (partial unique index `uq_open_basket_per_channel` บังคับให้เหลือใบเดียวที่ DB ไม่ใช่ที่โค้ด)
+//    ⛔ ห้ามสร้างตาราง slot มาคั่น — เคาะแล้ว 2026-07-30 (md/posts/PLAN-4.md)
+//
+// ไฟล์นี้เป็น **ตะเข็บ**: ข้างในเป็น post_* แต่ข้างนอกยังคืนรูปแบบแถวเดิม
+//   { id, type: 'image'|'video'|'caption', image_url, caption, message_id, sort_order, path }
+// เพื่อให้ handlers/basketHandler.js · basketAiHandler.js · aiThreadHandler.js ไม่ต้องรื้อ
+//
+// - caption ของตะกร้า = `post_episodes.body`  (ไม่ใช่ "แถวชนิดหนึ่ง" อีกแล้ว)
+// - รูป/วิดีโอ = `post_episode_media` · โหลดไฟล์ลงดิสก์ตอนหย่อน (background) แล้วเติม `path`
+//   `source_url` = ลิงก์ Discord เดิม — ใช้เป็น fallback ระหว่างไฟล์ยังโหลดไม่เสร็จ + ทางกลับถ้าไฟล์หาย
+// - ล้างตะกร้า = **archive โพสต์** ไม่ใช่ลบแถว (มันคือคอนเทนต์ · ยังรู้ว่ามาจากห้องไหน)
 const pool = require('./index');
+const storage = require('../utils/postsStorage');
 
-async function addImages(guildId, channelId, addedBy, images, messageId, channelName = null) {
+/** users.id ของคนหย่อน — ไม่มีแถวใน users ก็หย่อนได้ (ตะกร้าดิสฯ ไม่บังคับ login) */
+async function userIdOf(discordId) {
+  if (!discordId) return null;
+  const { rows } = await pool.query('SELECT id FROM users WHERE discord_id = $1', [String(discordId)]);
+  return rows[0]?.id ?? null;
+}
+
+/**
+ * ตะกร้าที่เปิดอยู่ของห้อง — ไม่มีก็เปิดใบใหม่
+ * category = ชื่อห้องต้นทาง (กันฟีดองค์กรรก — ใช้กลไกหมวดที่มีอยู่ ไม่เพิ่ม flag)
+ * org_id NULL = guild ที่ยังไม่ผูก org → โผล่แค่ในดิสฯ ไม่เข้าฟีดองค์กร
+ */
+async function ensureOpenEpisode(guildId, channelId, addedBy = null, channelName = null) {
+  const found = await getOpenEpisode(guildId, channelId);
+  if (found) {
+    // ห้องเปลี่ยนชื่อ / ตะกร้าเก่าที่ยังไม่มีชื่อห้อง → เติมให้ครั้งเดียว
+    if (channelName && !found.category) {
+      await pool.query('UPDATE post_episodes SET category = $2 WHERE id = $1', [found.id, channelName]);
+    }
+    return found.id;
+  }
+
+  const ownerUserId = await userIdOf(addedBy);
   const { rows } = await pool.query(
-    `SELECT COALESCE(MAX(sort_order), 0) AS m FROM dc_media_baskets
-     WHERE guild_id = $1 AND channel_id = $2 AND type = 'image'`,
+    `INSERT INTO post_episodes (org_id, owner_user_id, visibility, category, created_via, status, guild_id, channel_id)
+     SELECT g.org_id, $3, 'org', $4, 'manual', 'draft', $1, $2
+       FROM (SELECT $1::varchar AS gid) x
+       LEFT JOIN dc_guilds g ON g.guild_id = x.gid
+     ON CONFLICT DO NOTHING
+     RETURNING id`,
+    [guildId, channelId, ownerUserId, channelName || null]
+  );
+  if (rows[0]) return rows[0].id;
+
+  // ชนกับคนอื่นที่เพิ่งเปิดตะกร้าห้องเดียวกัน (unique index กันไว้) → ใช้ใบของเขา
+  const again = await getOpenEpisode(guildId, channelId);
+  if (!again) throw new Error('เปิดตะกร้าไม่สำเร็จ');
+  return again.id;
+}
+
+async function getOpenEpisode(guildId, channelId) {
+  const { rows } = await pool.query(
+    `SELECT id, org_id, category, body FROM post_episodes
+      WHERE channel_id = $2 AND guild_id = $1 AND archived_at IS NULL
+      LIMIT 1`,
     [guildId, channelId]
   );
-  let next = Number(rows[0].m);
+  return rows[0] || null;
+}
+
+/** แถวสื่อที่ยังไม่มีไฟล์บนดิสก์ — ตัวโหลด background หยิบจากที่นี่ */
+async function pendingDownloads(episodeId) {
+  const { rows } = await pool.query(
+    `SELECT id, source_url FROM post_episode_media
+      WHERE episode_id = $1 AND path IS NULL AND source_url IS NOT NULL
+      ORDER BY id`,
+    [episodeId]
+  );
+  return rows;
+}
+
+async function setMediaPath(id, path) {
+  await pool.query('UPDATE post_episode_media SET path = $2 WHERE id = $1', [id, path]);
+}
+
+/**
+ * โหลดไฟล์ที่ค้างลงดิสก์ — **เรียกแบบ fire-and-forget หลัง ack เสมอ** (ห้ามให้ interaction รอไฟล์)
+ * ปิดบั๊กรูปตายใน 24 ชม. + ทำให้ตะกร้าไม่พึ่ง Discord CDN เลยทั้งรูปและวิดีโอ
+ * @param {function} [refreshUrls] async (urls[]) => Map — รีเฟรชลิงก์ที่หมดอายุก่อนโหลด (ตะกร้าเก่า)
+ */
+async function downloadPending(episodeId, { refreshUrls = null } = {}) {
+  const rows = await pendingDownloads(episodeId);
+  if (!rows.length) return 0;
+
+  let fresh = new Map();
+  if (refreshUrls) {
+    try { fresh = await refreshUrls(rows.map(r => r.source_url)); } catch { /* ใช้ลิงก์เดิมต่อ */ }
+  }
+
+  let done = 0;
+  for (const r of rows) {
+    try {
+      const path = await storage.downloadToDisk(fresh.get(r.source_url) || r.source_url);
+      await setMediaPath(r.id, path);
+      done++;
+    } catch (err) {
+      // ล้มก็ไม่เป็นไร — แถวยังมี source_url ใช้โพสต์ได้ และรอบหน้าที่หย่อนจะลองใหม่ให้เอง
+      console.error(`[basket] โหลดสื่อ #${r.id} ลงดิสก์ไม่สำเร็จ:`, err.message);
+    }
+  }
+  if (done) console.log(`[basket] โหลดสื่อลงดิสก์ ${done}/${rows.length} ไฟล์ (ตอน #${episodeId})`);
+  return done;
+}
+
+async function addImages(guildId, channelId, addedBy, images, messageId, channelName = null) {
+  const episodeId = await ensureOpenEpisode(guildId, channelId, addedBy, channelName);
+  const userId = await userIdOf(addedBy);
   for (const img of images) {
-    next += 1;
     await pool.query(
-      `INSERT INTO dc_media_baskets (guild_id, channel_id, added_by, type, image_url, message_id, sort_order, channel_name)
-       VALUES ($1, $2, $3, 'image', $4, $5, $6, $7)`,
-      [guildId, channelId, addedBy, img.url, messageId, next, channelName]
+      `INSERT INTO post_episode_media (episode_id, kind, path, sort_order, source_url, source_message_id, added_by)
+       SELECT $1, 'upload', NULL, COALESCE(MAX(sort_order), -1) + 1, $2, $3, $4
+         FROM post_episode_media WHERE episode_id = $1`,
+      [episodeId, img.url, messageId || null, userId]
     );
   }
+  return episodeId;
 }
 
 async function addVideo(guildId, channelId, addedBy, videos, messageId, channelName = null) {
+  const episodeId = await ensureOpenEpisode(guildId, channelId, addedBy, channelName);
+  const userId = await userIdOf(addedBy);
   for (const vid of videos) {
     await pool.query(
-      `INSERT INTO dc_media_baskets (guild_id, channel_id, added_by, type, image_url, message_id, channel_name)
-       VALUES ($1, $2, $3, 'video', $4, $5, $6)`,
-      [guildId, channelId, addedBy, vid.url, messageId, channelName]
+      `INSERT INTO post_episode_media (episode_id, kind, path, sort_order, source_url, source_message_id, added_by)
+       SELECT $1, 'video', NULL, COALESCE(MAX(sort_order), -1) + 1, $2, $3, $4
+         FROM post_episode_media WHERE episode_id = $1`,
+      [episodeId, vid.url, messageId || null, userId]
     );
   }
+  return episodeId;
 }
 
 async function setCaption(guildId, channelId, addedBy, caption, messageId, channelName = null) {
+  const episodeId = await ensureOpenEpisode(guildId, channelId, addedBy, channelName);
   await pool.query(
-    `DELETE FROM dc_media_baskets WHERE guild_id = $1 AND channel_id = $2 AND type = 'caption'`,
-    [guildId, channelId]
+    'UPDATE post_episodes SET body = $2, last_edited_by = COALESCE($3, last_edited_by), updated_at = now() WHERE id = $1',
+    [episodeId, caption || null, await userIdOf(addedBy)]
   );
-  await pool.query(
-    `INSERT INTO dc_media_baskets (guild_id, channel_id, added_by, type, caption, message_id, channel_name)
-     VALUES ($1, $2, $3, 'caption', $4, $5, $6)`,
-    [guildId, channelId, addedBy, caption, messageId, channelName]
-  );
+  return episodeId;
 }
 
 // ต่อท้าย caption เดิม (ไม่มี → สร้างใหม่) — ใช้ตอนสะสมข้อความหลายอันก่อนให้ AI เรียบเรียง
 async function appendCaption(guildId, channelId, addedBy, text, messageId, channelName = null) {
-  const { rows } = await pool.query(
-    `SELECT caption FROM dc_media_baskets WHERE guild_id = $1 AND channel_id = $2 AND type = 'caption' LIMIT 1`,
-    [guildId, channelId]
-  );
-  const prev = rows[0]?.caption?.trim();
+  const episodeId = await ensureOpenEpisode(guildId, channelId, addedBy, channelName);
+  const { rows } = await pool.query('SELECT body FROM post_episodes WHERE id = $1', [episodeId]);
+  const prev = rows[0]?.body?.trim();
   const merged = prev ? `${prev}\n\n${text}` : text;
-  await setCaption(guildId, channelId, addedBy, merged, messageId, channelName);
+  return setCaption(guildId, channelId, addedBy, merged, messageId, channelName);
 }
 
+/**
+ * แถวของตะกร้าในรูปแบบเดิม — caption เป็นแถวสังเคราะห์จาก `post_episodes.body`
+ * `path` = ไฟล์บนดิสก์ (NULL = ยังโหลดไม่เสร็จ ให้ใช้ `image_url` ไปก่อน)
+ * การ์ดคำคมที่ทำบนเว็บ (kind='quote') นับเป็นรูปด้วย — ตะกร้ากับโพสต์เป็นของก้อนเดียวกันแล้ว
+ */
 async function getBasket(guildId, channelId) {
+  const ep = await getOpenEpisode(guildId, channelId);
+  if (!ep) return [];
+
   const { rows } = await pool.query(
-    `SELECT * FROM dc_media_baskets WHERE guild_id = $1 AND channel_id = $2
-     ORDER BY sort_order ASC, added_at ASC`,
-    [guildId, channelId]
+    `SELECT id, kind, path, source_url, source_message_id, sort_order, created_at
+       FROM post_episode_media
+      WHERE episode_id = $1
+      ORDER BY sort_order ASC, id ASC`,
+    [ep.id]
   );
-  return rows;
+
+  const out = rows.map(r => ({
+    id: r.id,
+    episode_id: ep.id,
+    type: r.kind === 'video' ? 'video' : 'image',
+    image_url: r.source_url,
+    path: r.path,
+    caption: null,
+    message_id: r.source_message_id,
+    sort_order: r.sort_order,
+    added_at: r.created_at,
+  }));
+
+  if (ep.body?.trim()) {
+    out.push({ id: null, episode_id: ep.id, type: 'caption', image_url: null, path: null,
+               caption: ep.body, message_id: null, sort_order: 0 });
+  }
+  return out;
 }
 
 // เรียงลำดับรูปใหม่ — orderedIds = array ของ id เรียงตามลำดับที่ต้องการ
 // scope ด้วย guild+channel กัน reorder ข้ามห้อง/ข้าม guild
 async function reorderImages(guildId, channelId, orderedIds) {
+  const ep = await getOpenEpisode(guildId, channelId);
+  if (!ep) return;
   for (let i = 0; i < orderedIds.length; i++) {
     await pool.query(
-      `UPDATE dc_media_baskets SET sort_order = $1
-       WHERE id = $2 AND guild_id = $3 AND channel_id = $4 AND type = 'image'`,
-      [i + 1, orderedIds[i], guildId, channelId]
+      `UPDATE post_episode_media SET sort_order = $1
+        WHERE id = $2 AND episode_id = $3 AND kind <> 'video'`,
+      [i, orderedIds[i], ep.id]
     );
   }
 }
 
+/** ล้างตะกร้า = **archive โพสต์** (ห้ามลบแถว — มันคือคอนเทนต์) → ห้องว่างพร้อมเปิดใบใหม่ */
 async function clearBasket(guildId, channelId) {
   await pool.query(
-    `DELETE FROM dc_media_baskets WHERE guild_id = $1 AND channel_id = $2`,
+    `UPDATE post_episodes SET archived_at = now(), updated_at = now()
+      WHERE channel_id = $2 AND guild_id = $1 AND archived_at IS NULL`,
     [guildId, channelId]
   );
 }
 
 // ล้างเฉพาะ media (รูป/วิดีโอ) — เก็บ caption ไว้ ใช้ตอนสลับชนิด media
 async function clearBasketMedia(guildId, channelId) {
-  await pool.query(
-    `DELETE FROM dc_media_baskets WHERE guild_id = $1 AND channel_id = $2 AND type IN ('image', 'video')`,
-    [guildId, channelId]
+  const ep = await getOpenEpisode(guildId, channelId);
+  if (!ep) return;
+  const { rows } = await pool.query(
+    `DELETE FROM post_episode_media WHERE episode_id = $1 AND kind IN ('upload', 'video') RETURNING path`,
+    [ep.id]
   );
+  for (const r of rows) await storage.deleteFile(r.path);
+}
+
+/** ลบสื่อทีละชิ้น (หน้าเว็บตะกร้ากดลบรูป) — ลบไฟล์บนดิสก์ด้วย */
+async function deleteBasketMedia(guildId, channelId, mediaId) {
+  const ep = await getOpenEpisode(guildId, channelId);
+  if (!ep) return false;
+  const { rows } = await pool.query(
+    `DELETE FROM post_episode_media WHERE id = $1 AND episode_id = $2 RETURNING path`,
+    [mediaId, ep.id]
+  );
+  if (!rows[0]) return false;
+  await storage.deleteFile(rows[0].path);
+  return true;
 }
 
 // ประวัติการโพสต์ย้ายไป post_social_history แล้ว (ก้อน 4 ขั้น 3, 2026-07-29)
@@ -109,4 +262,8 @@ async function getHistory(guildId, channelId, limit = 20) {
   return rows;
 }
 
-module.exports = { addImages, addVideo, setCaption, appendCaption, getBasket, reorderImages, clearBasket, clearBasketMedia, getHistory };
+module.exports = {
+  addImages, addVideo, setCaption, appendCaption, getBasket, reorderImages,
+  clearBasket, clearBasketMedia, deleteBasketMedia, getHistory,
+  getOpenEpisode, ensureOpenEpisode, pendingDownloads, setMediaPath, downloadPending,
+};
