@@ -13,3 +13,6 @@ web/.next/
 .DS_Store
 scripts/.quote_cache.json
 web/public/media-temp/*.png
+
+# ไฟล์ชั่วคราวที่ worker วางไว้ให้ Meta ดึง — ไม่ควรอยู่ใน repo (cleanTempMedia ลบให้วันละครั้ง)
+web/public/media-temp/
