@@ -24,6 +24,7 @@ const { fetchBuffer } = require('../utils/watermarkImage');   // เหลือ
 const { getAvailablePlatforms, getAvailableGroups } = require('../services/metaApi');
 // ⚠️ ห้าม import postTo*/postReels* ตรงๆ ที่นี่ — การโพสต์ต้องผ่านท่อกลางเท่านั้น (กติกาข้อ 16)
 const { prepareImages, publishBatch } = require('../services/publishPipeline');
+const { refreshAttachmentUrls, refreshUrlList } = require('../services/discordAttachments');
 const { getSetting, setSetting, deleteSetting } = require('../db/settings');
 const { getNewsChannelId, postNews, buildEventAnnouncement, sendOrQueueAnnouncement } = require('../services/newsShare');
 const { resolveConfig } = require('../db/configResolver');
@@ -713,6 +714,20 @@ async function processAndPost(interaction, state) {
   const videoItems = basket.filter(r => r.type === 'video');
   const isVideo    = videoItems.length > 0;
 
+  // ลิงก์ Discord มีลายเซ็นหมดอายุ ~24 ชม. — ตะกร้าที่ค้างข้ามวันต้องรีเฟรชก่อนใช้
+  // (รูปเราดาวน์โหลดเอง · วิดีโอ Meta เป็นคนไปดึง ยิ่งต้องเป็นลิงก์ที่ยังไม่หมดอายุ)
+  const fresh = await refreshAttachmentUrls(
+    interaction.client,
+    [...imageItems, ...videoItems].map(it => it.image_url)
+  );
+  if (fresh.size) {
+    for (const it of [...imageItems, ...videoItems]) {
+      const next = fresh.get(it.image_url);
+      if (next) it.image_url = next;
+    }
+    console.log(`[basket] รีเฟรชลิงก์หมดอายุ ${fresh.size} ไฟล์`);
+  }
+
   if (isVideo && imageItems.length > 0) {
     return interaction.editReply({ content: '❌ ตะกร้ามีทั้งรูปและวิดีโอ — ล้างแล้วโพสต์ทีละประเภท' });
   }
@@ -914,11 +929,12 @@ async function handleBasketEventModal(interaction) {
   const caption = basket.find(r => r.type === 'caption')?.caption
     || pendingPost.get(interaction.user.id)?.caption || '';
 
-  // รูปปกจากรูปแรกในตะกร้า — ลิงก์ CDN หมดอายุ/ดึงไม่ได้ = สร้างแบบไม่มีปก
+  // รูปปกจากรูปแรกในตะกร้า — รีเฟรชลิงก์ก่อน (ตะกร้าข้ามวัน) · ดึงไม่ได้จริงๆ = สร้างแบบไม่มีปก
   let image;
   const firstImage = basket.find(r => r.type === 'image');
   if (firstImage) {
-    try { image = await fetchBuffer(firstImage.image_url); } catch { image = undefined; }
+    const [url] = await refreshUrlList(interaction.client, [firstImage.image_url]);
+    try { image = await fetchBuffer(url); } catch { image = undefined; }
   }
 
   await interaction.editReply({ content: '📅 กำลังสร้าง Event...' }).catch(() => {});

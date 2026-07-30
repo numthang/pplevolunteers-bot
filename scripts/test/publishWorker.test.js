@@ -107,7 +107,25 @@ const cleanup = () => pool.query(`DELETE FROM post_social_history WHERE channel_
   ok('งานวิดีโอจบเป็น done', (await getJob(j9.id)).status === 'done');
   fs.unlinkSync(path.join(ROOT, vidRel));
 
-  // 10) accountId/orgId ส่งถึงท่อจริง
+  // 10) รีเฟรชลิงก์ Discord ที่หมดอายุ (บั๊กรูปตะกร้าตายใน 24 ชม.)
+  const { isSignedDiscordUrl, isExpiring, refreshAttachmentUrls } = require(ROOT + '/services/discordAttachments');
+  const hex = s => Math.floor(s).toString(16);
+  const past   = `https://cdn.discordapp.com/attachments/1/2/a.png?ex=${hex(Date.now() / 1000 - 3600)}&is=x&hm=y`;
+  const future = `https://cdn.discordapp.com/attachments/1/2/a.png?ex=${hex(Date.now() / 1000 + 86400)}&is=x&hm=y`;
+  ok('ลิงก์ Discord ที่มีลายเซ็น → รู้จัก', isSignedDiscordUrl(past) && !isSignedDiscordUrl('https://example.com/a.png'));
+  ok('หมดอายุแล้ว → ต้องรีเฟรช', isExpiring(past) === true);
+  ok('ยังไม่หมดอายุ → ไม่ต้องรีเฟรช', isExpiring(future) === false);
+  const restCalls = [];
+  const restClient = { rest: { post: async (route, opts) => {
+    restCalls.push({ route, urls: opts.body.attachment_urls });
+    return { refreshed_urls: opts.body.attachment_urls.map(u => ({ original: u, refreshed: u + '&NEW' })) };
+  } } };
+  const map = await refreshAttachmentUrls(restClient, [past, future, 'https://example.com/a.png']);
+  ok('ส่งเฉพาะลิงก์ที่หมดอายุไปขอใหม่', restCalls.length === 1 && restCalls[0].urls.length === 1 && restCalls[0].urls[0] === past);
+  ok('ได้ลิงก์ใหม่กลับมา map ถูกตัว', map.get(past) === past + '&NEW' && !map.has(future));
+  ok('ไม่มี client → ไม่พัง คืน map ว่าง', (await refreshAttachmentUrls(null, [past])).size === 0);
+
+  // 11) accountId/orgId ส่งถึงท่อจริง
   const withAcc = seen.find(s => s.platform === 'fb');
   ok('ส่ง orgId + guildId + caption เข้าท่อ', withAcc?.orgId === 1 && withAcc?.guildId === '1111998833652678757' && withAcc?.caption === 'ทดสอบ');
 

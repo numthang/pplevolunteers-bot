@@ -10,6 +10,7 @@ const fs = require('fs/promises');
 const pool = require('../db/index');
 const { prepareImages, publishOne, PLATFORM_LABEL } = require('./publishPipeline');
 const { saveMediaToTemp } = require('./metaApi');
+const { refreshAttachmentUrls } = require('./discordAttachments');
 
 const POLL_MS = 30 * 1000;
 const BATCH   = 5;                       // หยิบทีละ 5 แถว กัน API rate limit
@@ -76,10 +77,18 @@ async function resolveWatermark(wmType) {
 }
 
 /** สื่อของงานเป็น snapshot ตอนกดโพสต์ — path เก็บ relative จาก repo root (บอทกับเว็บอ่านดิสก์ก้อนเดียวกัน) */
-async function loadMedia(job) {
+async function loadMedia(job, client = null) {
   const items = Array.isArray(job.media) ? job.media : [];
   const images = [];
   let videoUrl = null;
+
+  // งานที่มาจากตะกร้าดิสฯ เก็บเป็นลิงก์ CDN ซึ่งหมดอายุ ~24 ชม. — งานตั้งเวลา/กดลองใหม่ทีหลัง
+  // จะดึงไม่ได้ถ้าไม่รีเฟรชก่อน (ลิงก์ของเว็บเป็น path ในดิสก์ ไม่เกี่ยว)
+  const discordUrls = items.map(m => m.url).filter(Boolean);
+  if (discordUrls.length && client) {
+    const fresh = await refreshAttachmentUrls(client, discordUrls);
+    if (fresh.size) for (const m of items) if (m.url && fresh.has(m.url)) m.url = fresh.get(m.url);
+  }
 
   const safePath = (rel) => {
     const abs = path.resolve(REPO_ROOT, rel);
@@ -167,7 +176,7 @@ async function runOnce(client) {
   for (const job of jobs) {
     touchedBatches.add(job.batch_id);
     try {
-      const { images, videoUrl } = await loadMedia(job);
+      const { images, videoUrl } = await loadMedia(job, client);
       const watermarkPath = await resolveWatermark(job.wm_type);
       const { processed, errors } = images.length
         ? await prepareImages(images, { watermarkPath })
