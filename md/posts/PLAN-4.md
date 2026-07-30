@@ -74,7 +74,25 @@ publishBatch({ platforms, ...เหมือนบน, episodeId, orgId, batchId
 - **backlink กลับห้องต้นทาง (user สั่ง)** — worker ยิงเสร็จส่งข้อความพร้อมลิงก์กลับห้องที่สั่ง
   เว็บล้วน → เลือกห้องตอนกดโพสต์ หรือ default ราย org (`posts_notify_channel`) · org ไม่มี Discord = ข้ามเงียบ
 - **ล้างตะกร้า = archive โพสต์ + ปลดล็อกห้อง** (ลบแถวไม่ได้แล้ว มันคือคอนเทนต์) · โพสต์เสร็จก็ปลดล็อกห้อง
-- **`post_basket_slots (guild_id, channel_id UNIQUE → episode_id)`** = หา "ตะกร้าที่เปิดของห้องนี้" (ไม่ยัด channel_id ลงตารางหลัก)
+- **ตารางชี้ตะกร้าที่เปิดอยู่ของห้อง** — คุยจบ 2026-07-30 (แก้จากแผนเดิม 2 จุด):
+  ```sql
+  CREATE TABLE dc_basket_slots (          -- ⚠️ ชื่อเดิมในแผนคือ post_basket_slots
+    channel_id  varchar(20) PRIMARY KEY,  -- channel id ของ Discord unique ทั้งโลกอยู่แล้ว
+    guild_id    varchar(20) NOT NULL,
+    episode_id  bigint NOT NULL REFERENCES post_episodes(id) ON DELETE CASCADE,
+    opened_by   varchar(20),
+    opened_at   timestamptz NOT NULL DEFAULT now()
+  );
+  ```
+  - **ทำไมต้องมี:** ยุบตะกร้าเข้า `post_episodes` แล้วโพสต์เป็นของ *องค์กร* ไม่ผูกห้อง
+    บอทจึงไม่รู้ว่า "ห้องนี้กำลังทำโพสต์ตัวไหน" — ต้องมีตัวชี้ · ล้างตะกร้า = archive โพสต์ + **ลบแถว slot**
+  - **ทำไมไม่ยัด `channel_id` ลง `post_episodes`** (ทำได้ด้วย partial unique index `WHERE archived_at IS NULL`):
+    `channel_id` เป็น Discord artifact ล้วน ขัดเป้าหมาย "ไม่มี Discord ก็ใช้ได้" · และ state ราย *ห้อง*
+    ยังมีอย่างอื่นตามมา (ล็อกห้อง, sticky message id) ซึ่งไม่ใช่คุณสมบัติของ "โพสต์"
+  - **ชื่อ `dc_` ไม่ใช่ `post_`** — ตามกฎที่เคาะ 2026-07-29: prefix ต้องมีโมดูลจริงรองรับ และของที่เป็น
+    Discord แท้ๆ คง `dc_` ไว้ (เหตุผลเดียวกับที่ `dc_media_baskets` ไม่เปลี่ยนชื่อ)
+  - **ยังไม่ย้ายตอนนี้:** `basket_state_<channelId>` (แพลตฟอร์ม/ลายน้ำ/กลุ่มที่เลือกไว้) ที่อยู่ใน
+    `dc_guild_config` แบบ JSON — ที่ถูกคือย้ายมาตารางนี้ แต่ทำพร้อม 4c จะบวมเกิน → รอบหน้า
 - **`category` ตั้งอัตโนมัติ = ชื่อห้องต้นทาง** กันฟีดองค์กรรก (ใช้กลไกหมวดที่มีอยู่ ไม่เพิ่ม flag)
 - **รูปโหลดลงดิสก์ตอนหย่อน** = ปิดบั๊กรูปหาย 24 ชม. · โหลด background หลัง ack (ห้ามให้ interaction รอไฟล์)
 - **วิดีโอเก็บ `source_url` (URL ดิสฯ) ไม่โหลดลงดิสก์** → เพิ่ม `kind='video'` ใน `post_episode_media`
