@@ -115,6 +115,27 @@ publishBatch({ platforms, ...เหมือนบน, episodeId, orgId, batchId
 - **วิดีโอเก็บ `source_url` (URL ดิสฯ) ไม่โหลดลงดิสก์** → เพิ่ม `kind='video'` ใน `post_episode_media`
 - **บอทห้าม query สื่อ/โพสต์เอง** — ต้องเรียกโมดูลเดียวกับเว็บผ่าน wrapper (บอท CJS / เว็บ ESM) ไม่งั้นรวมตารางแล้วยังมี 2 ทางเขียน
 
+---
+
+## ✅ ก้อน 4c ทำเสร็จแล้ว 2026-07-30 — สิ่งที่ต่างจากแผนข้างบน
+
+แผนข้างบนคงไว้เป็นบันทึกการตัดสินใจ · **ของจริงที่ลงมือแล้วอ่านที่นี่**
+
+| แผนไม่ได้พูดถึง | ที่ทำจริง | ทำไม |
+|---|---|---|
+| `post_episodes.org_id`/`owner_user_id` เป็น **NOT NULL** อยู่ | DROP NOT NULL ทั้งคู่ | guild ที่ไม่มี org / คนหย่อนที่ไม่มีแถวใน `users` จะ insert ไม่ได้เลย |
+| `post_episode_media.path` NOT NULL + `kind` check ไม่มี `video` | path nullable + เพิ่ม `video` | path NULL = "แถวมีแล้วแต่ไฟล์ยังโหลดไม่เสร็จ" — จำเป็นเพราะโหลด background |
+| แผนบอกแค่เพิ่ม `channel_id` | เพิ่ม **`guild_id`** ด้วย | ไม่มีมันแล้ว `/api/bot/basket` จะเช็ค scope ข้าม guild ไม่ได้ (query เดิม filter ทั้งคู่) · `post_social_history` ก็มี guild_id/channel_id อยู่แล้ว ไม่ผิดหลัก |
+| — | `web/db/posts/basket.js` **ฝาแฝดฝั่งเว็บ** ของ `db/mediaBasket.js` | บอท CJS + pool ของตัวเอง · เว็บ ESM + pool ของตัวเอง → import ข้ามกันไม่ได้จริงๆ **แก้ logic ที่ไหนต้องไล่ดูอีกฝั่ง** |
+| — | `/api/bot/basket/media/[id]` route ใหม่ | `/api/posts/media/[id]` เทียบ `row.org_id !== ctx.orgId` → ตะกร้าที่ `org_id` NULL ตก 404 ตลอด |
+| วิดีโอบนดิสก์ส่งให้ Meta ยังไง | `loadMediaSources()` → media-temp · **fallback ลิงก์ Discord ถ้า `WEB_BASE_URL` ไม่ได้ตั้ง** | ไม่มี fallback = วันดีคืนดีทีมสื่อโพสต์คลิปไม่ออกโดยไม่รู้สาเหตุ |
+| — | ฟีด `/posts` ซ่อนของจากดิสฯ + แท็บ "จากดิสฯ" | ทีมสื่อหย่อนวันละหลายใบ ไม่งั้นกลบโพสต์ที่เขียนจริง (user เคาะ) |
+| — | `services/postsRetention.js` คลิป 30 วัน / รูป 180 วัน | user ถามเรื่องดิสก์เต็ม — แก้ที่ "ไฟล์ยังมีค่าไหม" ไม่ใช่ "เก็บที่ไหน" · **ยังไม่ต่อ R2** |
+
+**โค้ดรีเฟรช URL:** ลบก๊อปในเว็บแล้ว (`fetchFreshUrls`/`isExpired`/`parseAttachmentId`)
+· ⚠️ **ตัวฝั่งบอทยังลบไม่ได้** (`services/discordAttachments.js`) — มีช่วงที่ `path` ยัง NULL
+(หย่อนเสร็จกดโพสต์ทันที / ตะกร้าเก่าที่ย้ายมา) ต้อง fallback ไป `source_url` เสมอ
+
 ## ที่ยังค้าง (ทำในก้อน 4)
 - **คลิปใหญ่จากเว็บ** (user อยากได้ — ดิสฯ อัปคลิปใหญ่ไม่ได้): X/FB อัปเป็น bytes ได้ · **IG/Threads บังคับดึงจาก URL สาธารณะ** → ต้องมี **signed URL หมดอายุสั้น** อีก 1 route (ไฟล์ posts อยู่นอก `public/` โดยตั้งใจ)
 - **ลายน้ำของ org ที่ไม่มี guild** — `resolveWatermarkPath` ยังผูก guild (ค้างที่ PENDING)

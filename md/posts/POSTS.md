@@ -198,8 +198,23 @@ convention ที่ใช้จริง: **prefix = โมดูลเจ้�
 | `post_comments` | `episode_id` · `anchor` (ย่อหน้า, NULL = ทั้งตอน) · body · author_user_id/author_name · resolved_at |
 | **`post_social_history`** (เดิมชื่อ `post_publish_jobs` → `social_posts` → ชื่อนี้) | **คิว + ประวัติ ตารางเดียวกัน** (เคาะ 2026-07-29) — ⚠️ ชื่อ `history` แต่เก็บงานที่ยังไม่เกิดด้วย (`pending` = ตั้งเวลาไว้) — แถว `pending`/`running` = คิว · `done`/`failed` = ประวัติ · ตะกร้าดิสฯ เขียนแถว `done` หลังยิงเสร็จ → **ก้อน 4 ย้าย 10 แถวจาก `dc_media_history` เข้ามาแล้ว drop ทิ้ง** · คอลัมน์: org_id (NULL ได้) · episode_id (**NULL = มาจากตะกร้า ไม่ใช่ posts**) · `batch_id` · **`platform` เอกพจน์** · social_account_id · guild_id/channel_id (Discord artifact) · wm_type · caption + media snapshot · scheduled_at · status (`pending`/`running`/`done`/`failed`/`stale`/`canceled`) · attempts · last_error · result jsonb (แทน fb_url/ig_url เดิม) · created_by + created_by_discord_id · posted_at |
 
+**⛔ 2026-07-30 — `dc_media_baskets` ตายแล้ว (ก้อน 4c)** ย่อหน้าข้างล่างนี้เก็บไว้เป็นบันทึกว่าเคยคิดยังไง **อย่าเอามาใช้ตัดสินใจต่อ**
+
+<details><summary>เหตุผลเดิมที่เคยแยกตาราง (ตกไปแล้ว)</summary>
+
 **ทำไมสื่อไม่ใช้ `dc_media_baskets` ร่วม** (ถามตรงๆ 2026-07-29): key เป็น `(guild_id, channel_id)` · `image_url` เป็น **Discord signed URL หมดอายุ ~24 ชม.** (แถวจริงมี `?ex=&is=&hm=`) · เป็นถาดชั่วคราวที่ `clearBasket()` ล้างหลังโพสต์ · caption เป็น "แถวชนิดหนึ่ง"
 → ร่างที่ค้างเป็นสัปดาห์รูปจะตาย · **ที่ใช้ร่วมจริงคือท่อโพสต์ ไม่ใช่ที่เก็บ**
+
+ข้อค้านทั้งหมดนี้ตายเพราะ 4c แก้ที่ต้นเหตุ: โหลดไฟล์ลงดิสก์ตอนหย่อน (ไม่มีอะไรหมดอายุ) · ล้างตะกร้า = archive ไม่ใช่ลบ · caption = `body`
+</details>
+
+### 🧺 ตะกร้าสื่อ Discord = โพสต์ (ก้อน 4c · เสร็จ 2026-07-30)
+
+- "ตะกร้าที่เปิดอยู่ของห้อง" = แถวใน `post_episodes` ที่ `channel_id = ห้องนั้น AND archived_at IS NULL`
+  บังคับด้วย partial unique index `uq_open_basket_per_channel` — **ที่ DB ไม่ใช่ที่โค้ด** · ⛔ ห้ามเพิ่มตาราง slot
+- `post_episodes` เพิ่ม `guild_id`/`channel_id` · `org_id`/`owner_user_id` **nullable** แล้ว
+- `post_episode_media` เพิ่ม `source_url`/`source_message_id` · `path` nullable (NULL = ไฟล์ยังโหลดไม่เสร็จ) · `kind` += `video`
+- **2 ตะเข็บที่ต้องแก้พร้อมกันเสมอ:** `db/mediaBasket.js` (บอท CJS) · `web/db/posts/basket.js` (เว็บ ESM)
 
 ### เกี่ยวเนื่อง: `dc_user_config` → `user_config` (เคาะ 2026-07-29)
 

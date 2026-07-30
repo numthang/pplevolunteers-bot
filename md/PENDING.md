@@ -100,17 +100,23 @@ spec + ดีไซน์ + ตารางทั้งหมดอยู่ `md
       (quiet hours 21:00–09:00 ใช้เฉพาะประกาศอีเวนต์ผ่าน `sendOrQueueAnnouncement` ซึ่งคนละเส้นกับ posts อยู่แล้ว)
     - `job.guild_id` = guild ที่ผู้ใช้อยู่ตอนกด ซึ่งอาจไม่ใช่ guild ของกลุ่มที่เลือก (โพสต์ไม่พังเพราะบัญชีถูก pin แล้ว
       และลายน้ำ resolve จากฝั่งเว็บ) — แต่ถ้าจะใช้ `guild_id` ทำอย่างอื่นต้องระวัง
-- [ ] **ก้อน 4c — ยุบตะกร้าดิสฯ เข้า `post_episodes`** (user เคาะ 2026-07-29: "ระบบเดียว จัดการง่าย debug ง่าย")
-  - รายละเอียด + จุดที่ต้องระวังอยู่ `md/posts/PLAN-4.md` §เคาะแล้ว
-  - **เคาะเพิ่ม 2026-07-30 (คุยจนจบแล้ว ห้าม re-derive):**
-    - **ไม่มีตาราง slot** — ตะกร้าที่เปิดของห้อง = `post_episodes.channel_id` + partial unique index
-      (`WHERE channel_id IS NOT NULL AND archived_at IS NULL`) · ⛔ `post_basket_slots`/`dc_basket_slots` **ยกเลิก**
-      เหตุผล: ยุบไป 1 เพิ่มกลับ 1 = ไม่ได้ยุบ · อ่านตะกร้าได้ด้วย query เดียว · เก็บ provenance ว่าโพสต์มาจากห้องไหน
-    - กู้คืนจากกรุเข้าห้องที่มีตะกร้าเปิดอยู่ → **ล้าง `channel_id` ทิ้ง** (กลายเป็นโพสต์เว็บ) ไม่ต้องตอบ error
-    - `post_episode_media.source_message_id` — เก็บไว้เพื่อลิงก์ "ดูต้นทาง" เท่านั้น (ไม่ได้ใช้กันลิงก์หมดอายุแล้ว)
-    - **โหลดวิดีโอลงดิสก์ด้วย** (กลับคำจากแผนเดิม) → ตะกร้าไม่พึ่ง Discord CDN เลย · แลกกับดิสก์ ~3GB/ปี
-    - หลัง 4c ลบโค้ดรีเฟรช URL ของเก่าใน `web/app/api/bot/basket/route.js` (ซ้ำกับ `services/discordAttachments.js`)
-  - ล้างตะกร้า=archive · หมวด=ชื่อห้อง · รูปโหลดลงดิสก์ (ปิดบั๊กรูปหาย 24 ชม.) · `org_id` NULL = โผล่แค่ในดิสฯ
+- [x] ~~**ก้อน 4c — ยุบตะกร้าดิสฯ เข้า `post_episodes`**~~ ✅ **เสร็จ local 2026-07-30** (5 commit: `4fcc7e6` schema → `27a19a5` ตะเข็บ db → `26a9276` basketHandler → `6220ae5` เว็บ → `d0c09d0` retention)
+  - **ทำไปจริงยังไง:** `db/mediaBasket.js` = ตะเข็บ (ข้างในเป็น `post_*` ข้างนอกคืนแถวรูปแบบเดิม) → `basketHandler` 12k tok ไม่ต้องรื้อ · ฝาแฝดฝั่งเว็บคือ `web/db/posts/basket.js` (CJS/ESM import ข้ามกันไม่ได้ — **แก้ logic ที่ไหนต้องไล่ดูอีกฝั่งเสมอ**)
+  - caption ของตะกร้า = `post_episodes.body` · ล้างตะกร้า = archive · หมวด = ชื่อห้อง · `org_id` NULL = โผล่แค่ในดิสฯ
+  - หย่อนแล้ว **ack ก่อน** โหลดไฟล์ลงดิสก์ background · พรีวิวในการ์ด = แนบไฟล์ (`attachment://`) ไม่ใช่ลิงก์ CDN
+  - `publishPipeline.loadMediaSources()` = ตัวแปลง path/URL → input ของ `publishOne` **ที่เดียว** (worker เลิกมีของตัวเอง)
+  - `/api/bot/basket/media/[id]` เสิร์ฟไฟล์ (ใช้ `/api/posts/media/[id]` ไม่ได้ — ตัวนั้นเทียบ `org_id` กับ session แล้วตะกร้า `org_id` NULL ตก 404)
+  - ฟีด `/posts` **ซ่อนของจากดิสฯ เป็น default** + แท็บ "จากดิสฯ" (`?source=discord`) — user เคาะ 2026-07-30
+  - เทส: `scripts/test/basketEpisode.test.js` (20) · pipeline 22 · worker 24
+  - **⬜ เหลือ (ทำหลัง deploy prod ครบทั้งบอทและเว็บ):**
+    - [ ] `DROP TABLE dc_media_baskets` (คอมเมนต์รออยู่ท้าย `migration.sql`) + ลบ `scripts/data/backfillBasketNames.js` ที่ตายตามไป
+    - [ ] ไฟล์ของตะกร้าที่ย้ายมา (16 แถว) ยัง `path` NULL — หย่อนอะไรเพิ่มในห้องนั้นครั้งหน้าถึงจะโหลดลงดิสก์ให้เอง (ระหว่างนี้ใช้ `source_url` ปกติ)
+    - [ ] ยังไม่ได้เทสด้วยตาในดิสฯ ของจริง (หย่อนรูป/คลิป → ดูการ์ด → กดโพสต์)
+- [ ] **ที่เก็บสื่อระยะยาว — ยังไม่ต้องทำ** (user ถาม 2026-07-30 "ดิสก์จะไม่พอไหม" · คุยจบแล้ว)
+  - **แก้ด้วย retention ไปแล้ว** (`services/postsRetention.js` — คลิป 30 วัน / รูป 180 วัน หลังโพสต์ออก) → ดิสก์นิ่งหลักร้อย MB ไม่โตเป็นเส้นตรง
+  - **R2 (Cloudflare) — ยังไม่ต่อ** · มีไว้เพื่อ URL สาธารณะให้ IG/Threads มาดึงคลิป ซึ่งตอนนี้ `saveMediaToTemp()` + `/api/media-temp/` ทำแทนได้แล้ว · ราคา ~$0.015/GB/เดือน (free 10 GB) egress ฟรี · ค่อยต่อวันที่ดิสก์เต็มจริง = งานครึ่งวัน เพราะทุกจุดที่แตะไฟล์ผ่าน `utils/postsStorage.js` อยู่แล้ว
+  - **Google Drive — ไม่เอาเป็นที่เก็บของระบบ** ลิงก์ Drive ให้ Meta ดึงไม่ได้ (redirect + rate limit + virus-scan interstitial) · เหมาะเป็น "คลังฟุตเทจให้คนเปิดดู" ซึ่งเป็นฟีเจอร์คนละตัว
+  - [ ] จดไว้ทำทีหลัง: **คลังฟุตเทจดิบของทีมสื่อ** (Drive) — ถ้าอยากได้จริงค่อยทำเป็นงานแยก
 - [x] ~~**ก้อน 5** — AI เกลาสำนวน + แคปชัน/ไอเดียภาพ~~ ✅ 2026-07-30 (`f92346b`) — `/api/posts/ai/polish` (3 โทน) + `/api/posts/ai/caption` (แคปชัน 3 + ไอเดียภาพ 3) · ไม่เขียนลง DB · snapshot revision ก่อนทับทุกครั้ง
 - [~] **ก้อน 6** — migrate `posts/*.md` เข้า DB: **seed แล้ว 22 ตอน** (`scripts/seedPostsFromFiles.js` idempotent) เหลือแค่เคาะว่าจะเลิกใช้โฟลเดอร์ `posts/` เลยไหม
 - [ ] **ถอด prefix `dc_` ออกจากตารางที่เป็น org แล้ว** (user สั่ง 2026-07-29 · ทำ **หลังก้อน 4**) — สำรวจแล้วเหลือจริง 3 ตัว:
