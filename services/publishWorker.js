@@ -9,17 +9,19 @@ const path = require('path');
 const fs = require('fs/promises');
 const pool = require('../db/index');
 const { prepareImages, publishOne, PLATFORM_LABEL } = require('./publishPipeline');
-const { saveMediaToTemp } = require('./metaApi');
+const { saveMediaToTemp, cleanTempMedia } = require('./metaApi');
 const { refreshAttachmentUrls } = require('./discordAttachments');
 
 const POLL_MS = 30 * 1000;
 const BATCH   = 5;                       // หยิบทีละ 5 แถว กัน API rate limit
 const MAX_ATTEMPTS = 3;                  // ล้มครบ 3 ครั้ง = failed ถาวร (grill ข้อ 8)
 const GRACE_MS = 2 * 60 * 60 * 1000;     // เลยเวลาเกิน 2 ชม. = stale ไม่ยิงเอง (grill ข้อ 15)
+const CLEANUP_MS = 24 * 60 * 60 * 1000;  // เก็บกวาด media-temp วันละครั้ง
 const REPO_ROOT = path.join(__dirname, '..');
 const WATERMARK_DIR = path.join(REPO_ROOT, 'assets', 'watermark');
 
 let timer = null;
+let cleanupTimer = null;
 
 /** งานที่เลยเวลามานานเกิน grace (บอทดับข้ามคืน) → ไม่ยิงเงียบๆ ให้คนตัดสินใจเอง */
 async function markStale() {
@@ -228,11 +230,16 @@ function startPublishWorker(client) {
   const tick = () => runOnce(client).catch(err => console.error('[publishWorker]', err.message));
   timer = setInterval(tick, POLL_MS);
   tick();
+  // เก็บกวาดไฟล์ media-temp วันละครั้ง (ไฟล์ที่ Meta ดึงไปแล้วไม่ได้ใช้ต่อ) — เกาะ worker ตัวนี้
+  // เพราะเป็นตัวเดียวที่สร้างไฟล์พวกนี้จากฝั่งเว็บ · ไม่ต้องตั้ง cron แยก
+  cleanupTimer = setInterval(() => { try { cleanTempMedia(); } catch { /* ปล่อยผ่าน */ } }, CLEANUP_MS);
+  try { cleanTempMedia(); } catch { /* ปล่อยผ่าน */ }
   console.log(`[publishWorker] เริ่มทำงาน (ทุก ${POLL_MS / 1000} วิ)`);
 }
 
 function stopPublishWorker() {
   if (timer) { clearInterval(timer); timer = null; }
+  if (cleanupTimer) { clearInterval(cleanupTimer); cleanupTimer = null; }
 }
 
 module.exports = { startPublishWorker, stopPublishWorker, runOnce, markStale, claimJobs, resolveWatermark };

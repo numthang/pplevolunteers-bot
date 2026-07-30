@@ -407,6 +407,26 @@ function saveMediaToTemp(buffer, ext = 'jpg') {
   return `${TEMP_URL}/${name}`;
 }
 
+/**
+ * ลบไฟล์เก่าในโฟลเดอร์ temp — ไฟล์ที่นี่มีไว้ให้ Meta ดึงตอนโพสต์เท่านั้น ดึงเสร็จก็ไม่ใช้แล้ว
+ * เก็บไว้ 24 ชม. เผื่องานตั้งเวลา/ลองใหม่ · ไม่มีตัวลบมาตั้งแต่แรก ไฟล์เลยสะสมไปเรื่อยๆ
+ */
+function cleanTempMedia(maxAgeMs = 24 * 60 * 60 * 1000) {
+  let removed = 0;
+  try {
+    const cutoff = Date.now() - maxAgeMs;
+    for (const name of fs.readdirSync(TEMP_DIR)) {
+      const p = path.join(TEMP_DIR, name);
+      try {
+        const st = fs.statSync(p);
+        if (st.isFile() && st.mtimeMs < cutoff) { fs.unlinkSync(p); removed++; }
+      } catch { /* ไฟล์หายระหว่างทาง = ไม่ต้องสน */ }
+    }
+  } catch { /* ยังไม่มีโฟลเดอร์ = ไม่มีอะไรให้ลบ */ }
+  if (removed) console.log(`[metaApi] ลบไฟล์ media-temp เก่า ${removed} ไฟล์`);
+  return removed;
+}
+
 function saveProcessedToTemp(images) {
   fs.mkdirSync(TEMP_DIR, { recursive: true });
   return images.map(img => {
@@ -747,4 +767,4 @@ async function postReelsToThreads(guildId, userId, videoDiscordUrl, caption, onP
   return { id: mediaId, permalink: info.permalink || null };
 }
 
-module.exports = { getConfig, getConfigById, getAvailablePlatforms, getAvailableGroups, getGuildMetaApp, saveMediaToTemp, postToFacebook, postToInstagram, postToThreads, postReelsToInstagram, postReelsToFacebook, postReelsToThreads };
+module.exports = { getConfig, getConfigById, getAvailablePlatforms, getAvailableGroups, getGuildMetaApp, saveMediaToTemp, cleanTempMedia, postToFacebook, postToInstagram, postToThreads, postReelsToInstagram, postReelsToFacebook, postReelsToThreads };
