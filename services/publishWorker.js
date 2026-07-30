@@ -11,6 +11,7 @@ const pool = require('../db/index');
 const { prepareImages, loadMediaSources, publishOne, PLATFORM_LABEL } = require('./publishPipeline');
 const { cleanTempMedia } = require('./metaApi');
 const { refreshAttachmentUrls } = require('./discordAttachments');
+const { runRetention } = require('./postsRetention');
 
 const POLL_MS = 30 * 1000;
 const BATCH   = 5;                       // หยิบทีละ 5 แถว กัน API rate limit
@@ -198,10 +199,15 @@ function startPublishWorker(client) {
   const tick = () => runOnce(client).catch(err => console.error('[publishWorker]', err.message));
   timer = setInterval(tick, POLL_MS);
   tick();
-  // เก็บกวาดไฟล์ media-temp วันละครั้ง (ไฟล์ที่ Meta ดึงไปแล้วไม่ได้ใช้ต่อ) — เกาะ worker ตัวนี้
-  // เพราะเป็นตัวเดียวที่สร้างไฟล์พวกนี้จากฝั่งเว็บ · ไม่ต้องตั้ง cron แยก
-  cleanupTimer = setInterval(() => { try { cleanTempMedia(); } catch { /* ปล่อยผ่าน */ } }, CLEANUP_MS);
-  try { cleanTempMedia(); } catch { /* ปล่อยผ่าน */ }
+  // เก็บกวาดวันละครั้ง — เกาะ worker ตัวนี้ เพราะเป็นตัวเดียวที่สร้างไฟล์พวกนี้ · ไม่ต้องตั้ง cron แยก
+  //   1. media-temp — ไฟล์ที่ Meta ดึงไปแล้วไม่ได้ใช้ต่อ
+  //   2. retention — ไฟล์ที่โพสต์ออกไปแล้วเกินกำหนด (คลิป 30 วัน / รูป 180 วัน) กันดิสก์โตไม่รู้จบ
+  const sweep = () => {
+    try { cleanTempMedia(); } catch { /* ปล่อยผ่าน */ }
+    runRetention().catch(err => console.error('[retention]', err.message));
+  };
+  cleanupTimer = setInterval(sweep, CLEANUP_MS);
+  sweep();
   console.log(`[publishWorker] เริ่มทำงาน (ทุก ${POLL_MS / 1000} วิ)`);
 }
 
