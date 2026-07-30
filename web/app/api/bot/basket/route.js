@@ -3,7 +3,14 @@ import { authOptions } from '@/lib/auth-options.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import { can } from '@/lib/permissions.js'
 import { isSuperAdmin } from '@/lib/roles.js'
+import { deletePostFile } from '@/lib/postsStorage.js'
+import * as basketDB from '@/db/posts/basket.js'
 import pool from '@/db/index.js'
+
+// ⚠️ ก้อน 4c (2026-07-30): ตะกร้าอยู่บน post_episodes/post_episode_media แล้ว (dc_media_baskets ตายแล้ว)
+//    โค้ดรีเฟรช Discord CDN URL ที่เคยอยู่ไฟล์นี้ (fetchFreshUrls/isExpired/parseAttachmentId) **ลบทิ้งแล้ว**
+//    — ไฟล์ถูกโหลดลงดิสก์ตอนหย่อน ไม่มีอะไรหมดอายุ · ตัวรีเฟรชที่ยังต้องใช้ฝั่งบอทอยู่ที่
+//    services/discordAttachments.js (ที่เดียว)
 
 const SNOWFLAKE = /^\d{15,20}$/
 
@@ -32,35 +39,6 @@ async function authEdit(guildId, channelId) {
   return a
 }
 
-// parse attachment_id จาก URL path — ไม่เปลี่ยนแม้ query string หมดอายุ
-function parseAttachmentId(url) {
-  return url?.match(/\/attachments\/\d+\/(\d+)\//)?.[1] || null
-}
-
-// Discord CDN URL มี ?ex=<hex unix timestamp> — เช็คว่าหมดอายุหรือยัง (buffer 5 นาที)
-function isExpired(url) {
-  const ex = url?.match(/[?&]ex=([0-9a-f]+)/i)?.[1]
-  if (!ex) return true
-  return Date.now() / 1000 > parseInt(ex, 16) - 300
-}
-
-// fetch fresh URLs จาก Discord API, คืน Map: attachment_id → fresh URL
-async function fetchFreshUrls(channelId, messageIds) {
-  const map = new Map()
-  await Promise.all([...messageIds].map(async msgId => {
-    try {
-      const res = await fetch(
-        `https://discord.com/api/v10/channels/${channelId}/messages/${msgId}`,
-        { headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}` } }
-      )
-      if (!res.ok) return
-      const msg = await res.json()
-      for (const att of msg.attachments || []) map.set(String(att.id), att.url)
-    } catch {}
-  }))
-  return map
-}
-
 // GET /api/bot/basket?guild=...&channel=...  → { images: [...], videos: [...], caption }
 export async function GET(req) {
   const { searchParams } = new URL(req.url)
@@ -69,33 +47,7 @@ export async function GET(req) {
   const a = await authView(guildId, channelId)
   if (!a.ok) return Response.json({ error: a.error }, { status: a.status })
 
-  const { rows } = await pool.query(
-    `SELECT id, type, image_url, caption, message_id, sort_order
-     FROM dc_media_baskets WHERE guild_id = $1 AND channel_id = $2
-     ORDER BY sort_order ASC, added_at ASC`,
-    [guildId, channelId]
-  )
-
-  const imageRows = rows.filter(r => r.type === 'image')
-
-  // เฉพาะรูปที่ URL หมดอายุแล้วเท่านั้นที่ fetch ใหม่
-  const expiredRows = imageRows.filter(r => isExpired(r.image_url) && r.message_id)
-  const msgIds = new Set(expiredRows.map(r => r.message_id))
-  const freshMap = msgIds.size ? await fetchFreshUrls(channelId, msgIds) : new Map()
-
-  // update DB + build response
-  const images = await Promise.all(imageRows.map(async r => {
-    if (!isExpired(r.image_url)) return { id: r.id, url: r.image_url, sort_order: r.sort_order }
-    const attId   = parseAttachmentId(r.image_url)
-    const freshUrl = attId ? freshMap.get(attId) : null
-    if (freshUrl) {
-      await pool.query(`UPDATE dc_media_baskets SET image_url = $1 WHERE id = $2`, [freshUrl, r.id])
-    }
-    return { id: r.id, url: freshUrl || r.image_url, sort_order: r.sort_order }
-  }))
-
-  const videos  = rows.filter(r => r.type === 'video').map(r => ({ id: r.id, url: r.image_url }))
-  const caption = rows.find(r => r.type === 'caption')?.caption || ''
+  const { images, videos, caption } = await basketDB.getBasketContent(guildId, channelId)
   return Response.json({ images, videos, caption })
 }
 
@@ -110,29 +62,12 @@ export async function PATCH(req) {
     const order = Array.isArray(body.order) ? body.order.map(Number).filter(Number.isInteger) : []
     if (!order.length) return Response.json({ error: 'order ว่าง' }, { status: 400 })
     // scope ด้วย guild+channel กัน reorder ข้ามห้อง/ข้าม guild
-    for (let i = 0; i < order.length; i++) {
-      await pool.query(
-        `UPDATE dc_media_baskets SET sort_order = $1
-         WHERE id = $2 AND guild_id = $3 AND channel_id = $4 AND type = 'image'`,
-        [i + 1, order[i], guildId, channelId]
-      )
-    }
+    await basketDB.reorderBasketImages(guildId, channelId, order)
     return Response.json({ ok: true })
   }
 
   if (action === 'caption') {
-    const caption = (body.caption ?? '').toString()
-    await pool.query(
-      `DELETE FROM dc_media_baskets WHERE guild_id = $1 AND channel_id = $2 AND type = 'caption'`,
-      [guildId, channelId]
-    )
-    if (caption.trim()) {
-      await pool.query(
-        `INSERT INTO dc_media_baskets (guild_id, channel_id, added_by, type, caption)
-         VALUES ($1, $2, $3, 'caption', $4)`,
-        [guildId, channelId, a.session.user.discordId, caption]
-      )
-    }
+    await basketDB.setBasketCaption(guildId, channelId, (body.caption ?? '').toString())
     return Response.json({ ok: true })
   }
 
@@ -140,7 +75,7 @@ export async function PATCH(req) {
 }
 
 // DELETE /api/bot/basket?guild=...&channel=...[&id=...]
-//   มี id → ลบรูปนั้นรูปเดียว, ไม่มี id → ล้างตะกร้าทั้งหมด
+//   มี id → ลบสื่อชิ้นนั้นชิ้นเดียว, ไม่มี id → ล้างตะกร้า (= archive โพสต์ ไม่ใช่ลบแถว)
 export async function DELETE(req) {
   const { searchParams } = new URL(req.url)
   const guildId   = searchParams.get('guild')
@@ -149,19 +84,15 @@ export async function DELETE(req) {
   const a = await authEdit(guildId, channelId)
   if (!a.ok) return Response.json({ error: a.error }, { status: a.status })
 
-  const id = Number(idParam)
   if (idParam != null) {
+    const id = Number(idParam)
     if (!Number.isInteger(id)) return Response.json({ error: 'invalid id' }, { status: 400 })
-    await pool.query(
-      `DELETE FROM dc_media_baskets WHERE id = $1 AND guild_id = $2 AND channel_id = $3 AND type IN ('image', 'video')`,
-      [id, guildId, channelId]
-    )
+    const deleted = await basketDB.deleteBasketMedia(guildId, channelId, id)
+    // ลบไฟล์ล้มไม่ทำให้ request พัง — แถวใน DB เป็นเจ้าของความจริง
+    if (deleted?.path) await deletePostFile(deleted.path).catch(e => console.error('[basket ลบไฟล์]', e.message))
     return Response.json({ ok: true })
   }
 
-  await pool.query(
-    `DELETE FROM dc_media_baskets WHERE guild_id = $1 AND channel_id = $2`,
-    [guildId, channelId]
-  )
+  await basketDB.clearBasket(guildId, channelId)
   return Response.json({ ok: true })
 }

@@ -94,13 +94,16 @@ export default function PostsHome() {
   // โหลด mode ที่จำไว้ล่าสุดจาก localStorage (client only)
   useEffect(() => {
     const saved = window.localStorage.getItem('posts_mode')
-    if (saved === 'personal' || saved === 'org') setMode(saved)
+    if (['personal', 'org', 'discord'].includes(saved)) setMode(saved)
   }, [])
 
   const loadPosts = useCallback(async () => {
     setLoading(true)
     try {
-      const params = new URLSearchParams({ visibility: mode })
+      // แท็บ "จากดิสฯ" = ตะกร้าสื่อที่ทีมสื่อหย่อนไว้ในห้อง Discord (ก้อน 4c) — ของ org เสมอ
+      const params = mode === 'discord'
+        ? new URLSearchParams({ visibility: 'org', source: 'discord' })
+        : new URLSearchParams({ visibility: mode })
       if (category) params.set('category', category)
       if (showArchived) params.set('archived', '1')      // API คืน "รวมของในกรุ" → กรองเหลือเฉพาะในกรุที่นี่
       const res = await fetch(`/api/posts?${params.toString()}`)
@@ -143,6 +146,8 @@ export default function PostsHome() {
 
   // หมวดที่กำลังเลือกอยู่ (ไม่นับ 'ทั้งหมด'/'ยังไม่จัดหมวด') ไว้ผูกกับโพสต์ใหม่/AI
   const activeCategory = category && category !== '__none__' ? category : undefined
+  // 'discord' เป็นแค่มุมมอง ไม่ใช่ค่า visibility จริง — เขียนโพสต์ใหม่จากแท็บนั้น = ของ org
+  const createVisibility = mode === 'discord' ? 'org' : mode
 
   async function handleCreateNew() {
     setCreating(true)
@@ -150,7 +155,7 @@ export default function PostsHome() {
       const res = await fetch('/api/posts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ visibility: mode, category: activeCategory }),
+        body: JSON.stringify({ visibility: createVisibility, category: activeCategory }),
       })
       const json = await res.json().catch(() => ({}))
       if (res.ok && json.success) {
@@ -199,7 +204,7 @@ export default function PostsHome() {
       const res = await fetch('/api/posts/ai/outline', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idea, visibility: mode, category: activeCategory }),
+        body: JSON.stringify({ idea, visibility: createVisibility, category: activeCategory }),
       })
       const json = await res.json().catch(() => ({}))
       if (res.ok && json.success) {
@@ -245,6 +250,16 @@ export default function PostsHome() {
           }`}
         >
           องค์กร
+        </button>
+        <button
+          onClick={() => selectMode('discord')}
+          className={`px-4 py-2 text-sm font-medium transition-colors border-l border-warm-200 dark:border-disc-border ${
+            mode === 'discord'
+              ? 'bg-teal text-white'
+              : 'bg-card-bg text-warm-700 dark:text-disc-muted hover:bg-warm-50 dark:hover:bg-disc-hover'
+          }`}
+        >
+          จากดิสฯ
         </button>
       </div>
 

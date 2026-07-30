@@ -3,7 +3,10 @@ import { canReadPost, canWritePost, isAdmin } from '@/lib/postsAccess.js'
 import * as postDB from '@/db/posts/episodes.js'
 
 /**
- * GET /api/posts?visibility=personal|org&category=<ชื่อ|__none__>&status=&archived=1
+ * GET /api/posts?visibility=personal|org&category=<ชื่อ|__none__>&status=&archived=1&source=discord|all
+ *
+ * `source` — ตะกร้าสื่อของ Discord เป็นโพสต์เหมือนกัน (ก้อน 4c) แต่หย่อนกันวันละหลายใบ
+ *   ไม่ส่ง = ฟีดหลัก (ซ่อนของจากดิสฯ) · `discord` = แท็บ "จากดิสฯ" · `all` = รวมทุกอย่าง
  */
 export async function GET(req) {
   const ctx = await postsContext()
@@ -15,10 +18,11 @@ export async function GET(req) {
   const category = categoryParam === '__none__' ? '' : categoryParam
   const status = searchParams.get('status') || null
   const includeArchived = searchParams.get('archived') === '1'
+  const source = ['discord', 'all'].includes(searchParams.get('source')) ? searchParams.get('source') : null
 
   try {
     const rows = await postDB.listPosts(ctx.orgId, ctx.userId, {
-      visibility, category, status, includeArchived,
+      visibility, category, status, includeArchived, source,
       includeAllPersonal: isAdmin(ctx.access),
     })
     // SQL กรองแค่ personal ของคนอื่น ยังไม่รู้เรื่อง policy.read='team' — กรองซ้ำที่นี่

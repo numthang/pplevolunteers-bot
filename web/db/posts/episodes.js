@@ -30,10 +30,14 @@ const OWNER_NAME = `COALESCE(NULLIF(TRIM(CONCAT_WS(' ', u.firstname, u.lastname)
  * personal ของคนอื่นถูกตัดใน SQL — admin god-mode ส่ง includeAllPersonal = true
  * (ชั้น API ยังต้องกรองด้วย canReadPost อีกที เมื่อ policy.read = 'team')
  */
-export async function listPosts(orgId, userId, { visibility = null, category = null, status = null, includeArchived = false, includeAllPersonal = false, limit = 200 } = {}) {
+export async function listPosts(orgId, userId, { visibility = null, category = null, status = null, includeArchived = false, includeAllPersonal = false, source = null, limit = 200 } = {}) {
   const params = [orgId, userId]
   let where = `e.org_id = $1 AND (e.visibility = 'org' OR e.owner_user_id = $2${includeAllPersonal ? ' OR TRUE' : ''})`
   if (!includeArchived) where += ` AND e.archived_at IS NULL`
+  // ตะกร้าสื่อของ Discord เป็นโพสต์เหมือนกัน (ก้อน 4c) แต่ทีมสื่อหย่อนวันละหลายใบ
+  // → **ซ่อนจากฟีดหลัก** ให้ไปดูที่แท็บ "จากดิสฯ" แทน (source='discord')
+  if (source === 'discord')   where += ` AND e.channel_id IS NOT NULL`
+  else if (source !== 'all')  where += ` AND e.channel_id IS NULL`
   if (visibility) { params.push(visibility); where += ` AND e.visibility = $${params.length}` }
   if (status)     { params.push(status);     where += ` AND e.status = $${params.length}` }
   // category = '' (สตริงว่าง) หมายถึง "ยังไม่จัดหมวด" — ต่างจาก null ที่แปลว่าไม่กรอง
@@ -62,6 +66,7 @@ export async function listCategories(orgId, userId, { includeAllPersonal = false
     `SELECT e.category, COUNT(*)::int AS post_count, MAX(e.updated_at) AS last_used_at
        FROM post_episodes e
       WHERE e.org_id = $1 AND e.archived_at IS NULL AND e.category IS NOT NULL
+        AND e.channel_id IS NULL   -- หมวดของตะกร้าดิสฯ = ชื่อห้อง ไม่เอามาปนตัวกรองหมวดหลัก
         AND (e.visibility = 'org' OR e.owner_user_id = $2${includeAllPersonal ? ' OR TRUE' : ''})
       GROUP BY e.category
       ORDER BY MAX(e.updated_at) DESC`,
@@ -221,10 +226,26 @@ export async function renameCategory(orgId, from, to) {
   return rowCount
 }
 
-/** ปุ่มลบปกติ = เก็บเข้ากรุ (grill ข้อ 6) · undo ได้ด้วย archived = false */
+/**
+ * ปุ่มลบปกติ = เก็บเข้ากรุ (grill ข้อ 6) · undo ได้ด้วย archived = false
+ *
+ * ⚠️ กู้คืนโพสต์ที่เคยเป็นตะกร้าของห้อง กลับเข้าห้องที่**มีตะกร้าใหม่เปิดอยู่แล้ว** —
+ * partial unique index จะบล็อก → **ล้าง `channel_id` ทิ้ง** (กลายเป็นโพสต์บนเว็บธรรมดา)
+ * เงียบกว่าและไม่บล็อกคนใช้ ดีกว่าตอบ error ว่า "ห้องนั้นมีตะกร้าเปิดอยู่" (เคาะ 2026-07-30)
+ */
 export async function archivePost(id, archived = true) {
+  if (archived) {
+    await pool.query(`UPDATE post_episodes SET archived_at = now(), updated_at = now() WHERE id = $1`, [id])
+    return
+  }
   await pool.query(
-    `UPDATE post_episodes SET archived_at = ${archived ? 'now()' : 'NULL'}, updated_at = now() WHERE id = $1`,
+    `UPDATE post_episodes e
+        SET archived_at = NULL, updated_at = now(),
+            channel_id = CASE WHEN EXISTS (
+                           SELECT 1 FROM post_episodes o
+                            WHERE o.channel_id = e.channel_id AND o.archived_at IS NULL AND o.id <> e.id
+                         ) THEN NULL ELSE e.channel_id END
+      WHERE e.id = $1`,
     [id]
   )
 }
