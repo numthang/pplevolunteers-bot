@@ -15,7 +15,9 @@ export async function GET(req, { params }) {
   const { id } = await params
   const mediaId = Number(id)
   const row = Number.isInteger(mediaId) ? await getMediaWithPost(mediaId) : null
-  if (!row) return Response.json({ error: 'ไม่พบไฟล์' }, { status: 404 })
+  // `path` เป็น nullable ตั้งแต่ก้อน 4c — NULL = สื่อจากตะกร้าดิสฯ ที่ยังโหลดไฟล์ไม่เสร็จ
+  // (ไม่กันตรงนี้ absPath(null) จะโยน TypeError แล้วตอบ 500)
+  if (!row?.path) return Response.json({ error: 'ไม่พบไฟล์' }, { status: 404 })
 
   // หา ctx (session/org/access/policy) จากโพสต์เจ้าของสื่อ
   const ctx = await postContext(row.episode_id)
