@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Loader2, Check, Sparkles, Send, Undo2, ThumbsUp, X, Trash2 } from 'lucide-react'
+import { Loader2, Check, Sparkles, Send, Undo2, ThumbsUp, X, Trash2, Wand2, Lightbulb, Copy } from 'lucide-react'
 import PostRevisions from './PostRevisions.jsx'
 
 const STATUS_LABEL = { draft: 'ฉบับร่าง', review: 'รอตรวจ', approved: 'อนุมัติแล้ว' }
@@ -74,6 +74,10 @@ export default function PostEditor({ id }) {
   const [keepingRevision, setKeepingRevision] = useState(false)
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError] = useState('')
+  const [polishing, setPolishing] = useState(false)
+  const [tone, setTone] = useState('polish')
+  const [suggesting, setSuggesting] = useState(false)
+  const [suggestions, setSuggestions] = useState(null)   // { captions[], imageIdeas[] }
   const [statusLoading, setStatusLoading] = useState(false)
   const [statusError, setStatusError] = useState('')
 
@@ -167,18 +171,67 @@ export default function PostEditor({ id }) {
     handleReload()
   }
 
-  // กู้คืนฉบับเก่า — เก็บฉบับปัจจุบันเป็น revision ก่อน แล้วค่อยใส่ของเก่าลงกล่อง (autosave เซฟต่อเอง)
-  async function handleRestoreRevision(rev) {
-    if (!confirm('กู้คืนฉบับนี้ทับเนื้อหาปัจจุบัน? (ฉบับปัจจุบันจะถูกเก็บไว้ในประวัติ)')) return
+  // เก็บฉบับที่เห็นอยู่ตอนนี้เป็น revision — เรียกก่อน "ทุกครั้ง" ที่จะเขียนทับเนื้อหาทั้งก้อน
+  // (AI ร่าง/เกลา, กู้คืนฉบับเก่า) เพราะ revision อัตโนมัติมีเว้นช่วง 15 นาที = ของที่ทับอาจไม่ถูกเก็บ
+  async function snapshotCurrent() {
     try {
       await fetch(`/api/posts/${id}/revision`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title, body }),
       })
-    } catch { /* เก็บไม่ได้ก็ยังกู้คืนต่อได้ — ของเก่ายังอยู่ใน revision อยู่ดี */ }
+      setSavedCount(c => c + 1)
+    } catch { /* เก็บไม่ได้ก็ทำงานต่อ — ไม่บล็อกคนใช้ */ }
+  }
+
+  // กู้คืนฉบับเก่า — เก็บฉบับปัจจุบันก่อน แล้วค่อยใส่ของเก่าลงกล่อง (autosave เซฟต่อเอง)
+  async function handleRestoreRevision(rev) {
+    if (!confirm('กู้คืนฉบับนี้ทับเนื้อหาปัจจุบัน? (ฉบับปัจจุบันจะถูกเก็บไว้ในประวัติ)')) return
+    await snapshotCurrent()
     setTitle(rev.title || '')
     setBody(rev.body || '')
+  }
+
+  // เกลาสำนวน — AI แตะแค่ภาษา ไม่เพิ่มประเด็น (ส่งของที่กำลังพิมพ์อยู่ไป ไม่ต้องรอ autosave)
+  async function handlePolish() {
+    if (!body.trim()) { setAiError('ยังไม่มีเนื้อหาให้เกลา'); return }
+    setPolishing(true)
+    setAiError('')
+    try {
+      const res = await fetch('/api/posts/ai/polish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postId: id, body, tone }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) { setAiError(data.error || 'เกลาสำนวนไม่สำเร็จ'); return }
+      await snapshotCurrent()
+      setBody(data.data.body)
+    } catch {
+      setAiError('เกลาสำนวนไม่สำเร็จ')
+    } finally {
+      setPolishing(false)
+    }
+  }
+
+  async function handleSuggest() {
+    if (!body.trim()) { setAiError('ยังไม่มีเนื้อหา — เขียนก่อนแล้วค่อยขอแคปชัน'); return }
+    setSuggesting(true)
+    setAiError('')
+    try {
+      const res = await fetch('/api/posts/ai/caption', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postId: id, body }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) { setAiError(data.error || 'ขอแคปชันไม่สำเร็จ'); return }
+      setSuggestions(data.data)
+    } catch {
+      setAiError('ขอแคปชันไม่สำเร็จ')
+    } finally {
+      setSuggesting(false)
+    }
   }
 
   async function handleDeletePost() {
@@ -190,7 +243,8 @@ export default function PostEditor({ id }) {
   }
 
   async function handleAiDraft() {
-    if (body.trim() && !confirm('มีเนื้อหาอยู่แล้ว — ให้ AI เขียนทับเนื้อหาเดิมเลยไหม?')) return
+    if (body.trim() && !confirm('มีเนื้อหาอยู่แล้ว — ให้ AI เขียนทับเนื้อหาเดิมเลยไหม? (ฉบับปัจจุบันจะถูกเก็บไว้ในประวัติ)')) return
+    if (body.trim()) await snapshotCurrent()
     setAiLoading(true)
     setAiError('')
     try {
@@ -283,6 +337,40 @@ export default function PostEditor({ id }) {
           </button>
         )}
 
+        {can.edit && (
+          <div className="flex items-center">
+            <select
+              value={tone}
+              onChange={e => setTone(e.target.value)}
+              title="แบบที่จะให้ AI เกลา"
+              className="h-9 px-2 text-sm rounded-l-lg border border-r-0 border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text focus:outline-none focus:ring-2 focus:ring-teal"
+            >
+              <option value="polish">เกลาสำนวน</option>
+              <option value="shorter">ย่อให้สั้น</option>
+              <option value="friendly">เป็นกันเองขึ้น</option>
+            </select>
+            <button
+              onClick={handlePolish}
+              disabled={polishing || !body.trim()}
+              className="flex items-center gap-1.5 h-9 px-3 text-sm rounded-r-lg border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover disabled:opacity-40 transition"
+            >
+              {polishing ? <Loader2 size={14} className="animate-spin" /> : <Wand2 size={14} />}
+              ให้ AI เกลา
+            </button>
+          </div>
+        )}
+
+        {can.edit && (
+          <button
+            onClick={handleSuggest}
+            disabled={suggesting || !body.trim()}
+            className="flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover disabled:opacity-40 transition"
+          >
+            {suggesting ? <Loader2 size={14} className="animate-spin" /> : <Lightbulb size={14} />}
+            แคปชัน + ไอเดียภาพ
+          </button>
+        )}
+
         {status === 'draft' && can.edit && (
           <button
             onClick={() => changeStatus('review')}
@@ -329,6 +417,44 @@ export default function PostEditor({ id }) {
 
       {aiError && <p className="text-sm text-red-500">{aiError}</p>}
       {statusError && <p className="text-sm text-red-500">{statusError}</p>}
+
+      {suggestions && (
+        <div className="rounded-lg border border-warm-200 dark:border-disc-border p-3 flex flex-col gap-3">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold text-warm-700 dark:text-disc-muted uppercase tracking-wide">
+              ข้อเสนอจาก AI
+            </h3>
+            <button
+              onClick={() => setSuggestions(null)}
+              className="p-1 rounded-lg text-warm-500 dark:text-disc-muted hover:bg-warm-50 dark:hover:bg-disc-hover"
+            >
+              <X size={16} />
+            </button>
+          </div>
+
+          {[
+            { label: '✏️ แคปชันสั้น', items: suggestions.captions },
+            { label: '📸 ไอเดียภาพประกอบ', items: suggestions.imageIdeas },
+          ].map(({ label, items }) => (items || []).length > 0 && (
+            <div key={label} className="flex flex-col gap-1.5">
+              <span className="text-sm text-warm-700 dark:text-disc-text">{label}</span>
+              {items.map((s, i) => (
+                <div key={i} className="flex items-start justify-between gap-2 rounded-lg bg-warm-50 dark:bg-disc-hover px-2 py-1.5">
+                  <span className="text-sm text-warm-900 dark:text-disc-text break-words">{s}</span>
+                  <button
+                    onClick={() => navigator.clipboard?.writeText(s)}
+                    title="คัดลอก"
+                    className="shrink-0 p-1 rounded text-warm-500 dark:text-disc-muted hover:text-teal"
+                  >
+                    <Copy size={13} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          ))}
+          <p className="text-sm text-warm-500 dark:text-disc-muted">ข้อเสนอไม่ได้ถูกบันทึกลงโพสต์ — คัดลอกไปใช้เอง</p>
+        </div>
+      )}
 
       <PostRevisions id={id} canEdit={!!can.edit} onRestore={handleRestoreRevision} refreshKey={savedCount} />
 
