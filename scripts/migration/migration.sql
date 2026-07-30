@@ -406,3 +406,79 @@ END $$;
 -- ไม่ใช่ token สั้นๆ แบบตะกร้าดิสฯ (`guild:<file>`) เพราะกลุ่มที่เว็บเลือกอาจอยู่คนละ guild
 -- กับ guild ที่ผู้ใช้อยู่ → varchar(50) สั้นเกิน (ชื่อกลุ่มไทย + ชื่อไฟล์ยาวได้)
 ALTER TABLE post_social_history ALTER COLUMN wm_type TYPE text;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 2026-07-30 — ก้อน 4c: ยุบตะกร้าสื่อ Discord (dc_media_baskets) เข้า post_episodes
+-- แผน: md/posts/PLAN-4.md §เคาะแล้ว 2026-07-30
+-- ⛔ ห้ามเพิ่มตาราง slot — "ตะกร้าที่เปิดอยู่ของห้อง" = post_episodes.channel_id + partial unique index
+--    (post_basket_slots / dc_basket_slots ยกเลิกถาวร ห้ามเอากลับมา)
+
+-- 1) post_episodes รับตะกร้าได้
+--    org_id NULL   = guild ที่ยังไม่ผูก org → โผล่แค่ในดิสฯ ไม่เข้าฟีดองค์กร (ห้ามมี fallback เส้นที่ 2)
+--    owner NULL    = คนหย่อนยังไม่มีแถวใน users (ตะกร้าดิสฯ ไม่บังคับ login)
+ALTER TABLE post_episodes ALTER COLUMN org_id        DROP NOT NULL;
+ALTER TABLE post_episodes ALTER COLUMN owner_user_id DROP NOT NULL;
+ALTER TABLE post_episodes ADD COLUMN IF NOT EXISTS guild_id   varchar(20);
+ALTER TABLE post_episodes ADD COLUMN IF NOT EXISTS channel_id varchar(20);
+
+-- invariant: 1 ห้อง เปิดตะกร้าได้ทีละใบ — บังคับที่ DB ไม่ใช่ที่โค้ด
+-- ล้างตะกร้า = archived_at = now() → หลุดจาก index เอง ห้องว่างพร้อมเปิดใบใหม่
+-- (และยังรู้ว่าโพสต์เก่ามาจากห้องไหน — ตารางแยกจะทิ้ง provenance นี้ตอนลบแถว)
+CREATE UNIQUE INDEX IF NOT EXISTS uq_open_basket_per_channel ON post_episodes (channel_id)
+  WHERE channel_id IS NOT NULL AND archived_at IS NULL;
+
+-- 2) post_episode_media รับสื่อจากดิสฯ
+--    path NULL = แถวมีแล้วแต่ยังโหลดไฟล์ไม่เสร็จ (โหลด background หลัง ack — ห้ามให้ interaction รอไฟล์)
+--    source_url/source_message_id = ทางกลับไปต้นทาง + fallback ตอน path ยัง NULL
+ALTER TABLE post_episode_media ALTER COLUMN path DROP NOT NULL;
+ALTER TABLE post_episode_media ADD COLUMN IF NOT EXISTS source_url        text;
+ALTER TABLE post_episode_media ADD COLUMN IF NOT EXISTS source_message_id varchar(20);
+ALTER TABLE post_episode_media DROP CONSTRAINT IF EXISTS post_episode_media_kind_check;
+ALTER TABLE post_episode_media ADD  CONSTRAINT post_episode_media_kind_check
+  CHECK (kind IN ('upload', 'quote', 'video'));
+
+-- 3) ย้ายตะกร้าที่ค้างอยู่ → เป็นโพสต์ (idempotent: ห้องที่มีตะกร้าเปิดแล้วข้าม)
+DO $$
+BEGIN
+  IF to_regclass('public.dc_media_baskets') IS NULL THEN RETURN; END IF;
+
+  INSERT INTO post_episodes (org_id, owner_user_id, visibility, category, body,
+                             created_via, status, guild_id, channel_id, created_at, updated_at)
+  SELECT g.org_id,
+         (SELECT u.id FROM users u WHERE u.discord_id = MIN(b.added_by)),
+         'org',
+         NULLIF(MAX(b.channel_name), ''),
+         MAX(CASE WHEN b.type = 'caption' THEN b.caption END),
+         'manual', 'draft',
+         b.guild_id, b.channel_id, MIN(b.added_at), MAX(b.added_at)
+    FROM dc_media_baskets b
+    LEFT JOIN dc_guilds g ON g.guild_id = b.guild_id
+   WHERE NOT EXISTS (
+     SELECT 1 FROM post_episodes e
+      WHERE e.channel_id = b.channel_id AND e.archived_at IS NULL
+   )
+   GROUP BY b.guild_id, b.channel_id, g.org_id;
+
+  -- รูป/วิดีโอ → post_episode_media (path NULL = ยังไม่มีไฟล์บนดิสก์ ใช้ source_url ไปก่อน)
+  -- sort_order เริ่มที่ 0 ตามของ post_episode_media (ของเดิมเริ่มที่ 1)
+  INSERT INTO post_episode_media (episode_id, kind, path, sort_order, source_url,
+                                  source_message_id, added_by, created_at)
+  SELECT e.id,
+         CASE b.type WHEN 'video' THEN 'video' ELSE 'upload' END,
+         NULL,
+         ROW_NUMBER() OVER (PARTITION BY b.channel_id, b.type
+                            ORDER BY b.sort_order NULLS LAST, b.added_at) - 1,
+         b.image_url, b.message_id,
+         (SELECT u.id FROM users u WHERE u.discord_id = b.added_by),
+         b.added_at
+    FROM dc_media_baskets b
+    JOIN post_episodes e ON e.channel_id = b.channel_id AND e.archived_at IS NULL
+   WHERE b.type IN ('image', 'video')
+     AND NOT EXISTS (
+       SELECT 1 FROM post_episode_media m
+        WHERE m.episode_id = e.id AND m.source_url = b.image_url
+     );
+END $$;
+
+-- ⚠️ DROP TABLE dc_media_baskets — ทำใน commit ถัดไป **หลัง deploy prod ครบทั้งบอทและเว็บ**
+--    (บอท/เว็บ deploy คนละรอบ · โค้ดเก่าฝั่งที่ยังไม่ deploy อ่านตารางนี้อยู่)
