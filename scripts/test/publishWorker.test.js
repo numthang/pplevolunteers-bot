@@ -1,6 +1,9 @@
 // เทส worker คิวโพสต์ — ไม่ยิงออกเน็ตจริง (stub publishOne) แต่ใช้ DB จริง แล้วลบข้อมูลทดสอบทิ้ง
 // รัน: node scripts/test/publishWorker.test.js
+// ตั้งก่อน require ทุกอย่าง — metaApi คำนวณ TEMP_URL ตอนโหลดโมดูล
+process.env.WEB_BASE_URL = process.env.WEB_BASE_URL || 'http://localhost:3000';
 const path = require('path');
+const fs = require('fs');
 const ROOT = path.join(__dirname, '..', '..');
 
 // stub ท่อโพสต์ก่อน require worker — คุมได้ว่าให้สำเร็จ/ล้ม แล้วดูว่า worker จัดการสถานะถูกไหม
@@ -91,7 +94,20 @@ const cleanup = () => pool.query(`DELETE FROM post_social_history WHERE channel_
   ok('token เก่าของตะกร้าดิสฯ → null (เว็บไม่ใช้)', (await resolveWatermark('guild:pple-orange.png')) === null);
   ok('ไฟล์ไม่มีจริง → null (ไม่ล้มทั้งงาน)', (await resolveWatermark('path:1111998833652678757/ไม่มีจริง.png')) === null);
 
-  // 9) accountId/orgId ส่งถึงท่อจริง
+  // 9) วิดีโอจากเว็บ (ไฟล์ใน storage/) ต้องกลายเป็น URL สาธารณะให้ Meta ดึง
+  const vidRel = 'storage/posts/__test_clip.mp4';
+  fs.mkdirSync(path.join(ROOT, 'storage', 'posts'), { recursive: true });
+  fs.writeFileSync(path.join(ROOT, vidRel), Buffer.from('fake-mp4'));
+  const seenBefore = seen.length;                       // เทสข้อ 10 ยังต้องใช้ของเก่าใน seen อยู่
+  const j9 = await addJob({ platform: 'ig', media: JSON.stringify([{ kind: 'video', path: vidRel }]) });
+  await runOnce(fakeClient);
+  const vidJob = seen.slice(seenBefore).find(s => s.platform === 'ig');
+  ok('วิดีโอจากเว็บ → ได้ URL media-temp ไม่ใช่ path ดิบ',
+     /^https?:\/\/.+\/media-temp\/[0-9a-f]{24}\.mp4$/.test(vidJob?.videoUrl || ''), vidJob?.videoUrl);
+  ok('งานวิดีโอจบเป็น done', (await getJob(j9.id)).status === 'done');
+  fs.unlinkSync(path.join(ROOT, vidRel));
+
+  // 10) accountId/orgId ส่งถึงท่อจริง
   const withAcc = seen.find(s => s.platform === 'fb');
   ok('ส่ง orgId + guildId + caption เข้าท่อ', withAcc?.orgId === 1 && withAcc?.guildId === '1111998833652678757' && withAcc?.caption === 'ทดสอบ');
 

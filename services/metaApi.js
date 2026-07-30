@@ -395,6 +395,18 @@ async function _igPostFromUrls(cfg, imageUrls, caption, scheduleTime = null, onP
 }
 
 // บันทึก buffer ลง temp dir แล้วคืน public URLs (ไม่ลบอัตโนมัติ — cleanup รายเดือน)
+/**
+ * วางไฟล์ลงโฟลเดอร์ temp สาธารณะแล้วคืน URL ที่ Meta ดึงได้
+ * (IG/Threads/Reels ไม่รับไฟล์อัปโหลดตรง — ต้องให้ URL แล้วเขามาดึงเอง)
+ * ใช้ร่วมกับ publishWorker: สื่อจากเว็บอยู่ใน storage/ ซึ่งไม่มี URL สาธารณะ
+ */
+function saveMediaToTemp(buffer, ext = 'jpg') {
+  fs.mkdirSync(TEMP_DIR, { recursive: true });
+  const name = `${crypto.randomBytes(12).toString('hex')}.${ext}`;
+  fs.writeFileSync(path.join(TEMP_DIR, name), buffer);
+  return `${TEMP_URL}/${name}`;
+}
+
 function saveProcessedToTemp(images) {
   fs.mkdirSync(TEMP_DIR, { recursive: true });
   return images.map(img => {
@@ -735,4 +747,4 @@ async function postReelsToThreads(guildId, userId, videoDiscordUrl, caption, onP
   return { id: mediaId, permalink: info.permalink || null };
 }
 
-module.exports = { getConfig, getConfigById, getAvailablePlatforms, getAvailableGroups, getGuildMetaApp, postToFacebook, postToInstagram, postToThreads, postReelsToInstagram, postReelsToFacebook, postReelsToThreads };
+module.exports = { getConfig, getConfigById, getAvailablePlatforms, getAvailableGroups, getGuildMetaApp, saveMediaToTemp, postToFacebook, postToInstagram, postToThreads, postReelsToInstagram, postReelsToFacebook, postReelsToThreads };

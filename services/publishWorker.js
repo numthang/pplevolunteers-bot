@@ -9,6 +9,7 @@ const path = require('path');
 const fs = require('fs/promises');
 const pool = require('../db/index');
 const { prepareImages, publishOne, PLATFORM_LABEL } = require('./publishPipeline');
+const { saveMediaToTemp } = require('./metaApi');
 
 const POLL_MS = 30 * 1000;
 const BATCH   = 5;                       // หยิบทีละ 5 แถว กัน API rate limit
@@ -80,15 +81,31 @@ async function loadMedia(job) {
   const images = [];
   let videoUrl = null;
 
+  const safePath = (rel) => {
+    const abs = path.resolve(REPO_ROOT, rel);
+    if (!abs.startsWith(path.resolve(REPO_ROOT, 'storage') + path.sep)) {
+      throw new Error(`สื่ออยู่นอก storage/: ${rel}`);
+    }
+    return abs;
+  };
+
   for (const m of items) {
-    if (m.kind === 'video') { videoUrl = m.url || null; continue; }
+    // วิดีโอ: ตะกร้าดิสฯ ส่ง URL ของ Discord มาเลย · เว็บเก็บเป็นไฟล์ใน storage/ ซึ่งไม่มี URL สาธารณะ
+    // แต่ IG/Threads/Reels ไม่รับไฟล์อัปโหลดตรง ต้องให้ URL แล้วเขามาดึงเอง
+    // → วางลง media-temp (โฟลเดอร์เดียวกับที่รูป IG ใช้อยู่แล้ว) แล้วส่ง URL นั้นไป
+    if (m.kind === 'video') {
+      if (m.url) { videoUrl = m.url; continue; }
+      if (!m.path) continue;
+      videoUrl = saveMediaToTemp(await fs.readFile(safePath(m.path)), (m.path.split('.').pop() || 'mp4').toLowerCase());
+      // Meta ต้องเข้าถึง URL นี้ได้จากอินเทอร์เน็ต — URL สัมพัทธ์ = ยิงไปก็ล้มแบบงงๆ ฝั่งเขา
+      if (!/^https?:\/\//.test(videoUrl)) {
+        throw new Error('WEB_BASE_URL (หรือ META_TEMP_URL) ไม่ได้ตั้ง — ส่งวิดีโอจากเว็บให้ Meta ไม่ได้');
+      }
+      continue;
+    }
     if (m.url && !m.path) { images.push({ url: m.url }); continue; }   // ตะกร้าดิสฯ (URL)
     if (!m.path) continue;
-    const abs = path.resolve(REPO_ROOT, m.path);
-    if (!abs.startsWith(path.resolve(REPO_ROOT, 'storage') + path.sep)) {
-      throw new Error(`สื่ออยู่นอก storage/: ${m.path}`);
-    }
-    images.push({ buffer: await fs.readFile(abs), ext: (m.path.split('.').pop() || 'jpg').toLowerCase() });
+    images.push({ buffer: await fs.readFile(safePath(m.path)), ext: (m.path.split('.').pop() || 'jpg').toLowerCase() });
   }
   return { images, videoUrl };
 }
