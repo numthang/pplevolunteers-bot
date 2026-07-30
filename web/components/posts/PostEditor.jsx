@@ -1,7 +1,9 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Loader2, Check, Sparkles, Send, Undo2, ThumbsUp, X } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Loader2, Check, Sparkles, Send, Undo2, ThumbsUp, X, Trash2 } from 'lucide-react'
+import PostRevisions from './PostRevisions.jsx'
 
 const STATUS_LABEL = { draft: 'ฉบับร่าง', review: 'รอตรวจ', approved: 'อนุมัติแล้ว' }
 
@@ -59,7 +61,9 @@ function ConflictDialog({ onReload, onKeepAsRevision, keeping }) {
 }
 
 export default function PostEditor({ id }) {
+  const router = useRouter()
   const [loading, setLoading] = useState(true)
+  const [savedCount, setSavedCount] = useState(0)   // ขยับทุกครั้งที่เซฟ → ให้ประวัติโหลดใหม่
   const [loadError, setLoadError] = useState('')
   const [post, setPost] = useState(null)
   const [can, setCan] = useState({})
@@ -74,6 +78,7 @@ export default function PostEditor({ id }) {
   const [statusError, setStatusError] = useState('')
 
   const lockTokenRef = useRef(null)
+  const loadedRef = useRef(false)      // เนื้อหาจริงเข้ากล่องแล้วหรือยัง — กัน autosave ยิงทับตอนยังว่าง
   const isFirstLoad = useRef(true)
   const blockedRef = useRef(false)
   const saveTimer = useRef(null)
@@ -82,11 +87,13 @@ export default function PostEditor({ id }) {
   async function load() {
     setLoading(true)
     setLoadError('')
+    loadedRef.current = false
     try {
       const res = await fetch(`/api/posts/${id}`)
       const data = await res.json().catch(() => ({}))
       if (!res.ok) { setLoadError(data.error || 'โหลดโพสต์ไม่สำเร็จ'); setLoading(false); return }
       isFirstLoad.current = true
+      loadedRef.current = true
       setPost(data.data.post)
       setCan(data.data.can || {})
       setTitle(data.data.post.title || '')
@@ -105,6 +112,7 @@ export default function PostEditor({ id }) {
   useEffect(() => {
     if (isFirstLoad.current) { isFirstLoad.current = false; return }
     if (blockedRef.current) return
+    if (!loadedRef.current) return          // ยังโหลดไม่เสร็จ = ค่าที่เห็นยังเป็นค่าว่าง ห้ามเซฟทับ
     clearTimeout(saveTimer.current)
     saveTimer.current = setTimeout(save, 800)
     return () => clearTimeout(saveTimer.current)
@@ -113,6 +121,7 @@ export default function PostEditor({ id }) {
 
   async function save() {
     if (blockedRef.current) return
+    if (!loadedRef.current || !lockTokenRef.current) return   // ด่านสุดท้ายก่อนยิง PATCH (ดู bug-071)
     setSaveState('saving')
     try {
       const res = await fetch(`/api/posts/${id}`, {
@@ -130,6 +139,7 @@ export default function PostEditor({ id }) {
       if (!res.ok) { setSaveState('idle'); return }
       lockTokenRef.current = data.data.post.lock_token
       setPost(data.data.post)
+      setSavedCount(c => c + 1)
       setSaveState('saved')
       setTimeout(() => setSaveState(s => (s === 'saved' ? 'idle' : s)), 1500)
       window.dispatchEvent(new CustomEvent('posts:changed', { detail: { id } }))
@@ -155,6 +165,28 @@ export default function PostEditor({ id }) {
     } catch { /* ไม่ให้ error ตรงนี้บล็อกการโหลดใหม่ */ }
     setKeepingRevision(false)
     handleReload()
+  }
+
+  // กู้คืนฉบับเก่า — เก็บฉบับปัจจุบันเป็น revision ก่อน แล้วค่อยใส่ของเก่าลงกล่อง (autosave เซฟต่อเอง)
+  async function handleRestoreRevision(rev) {
+    if (!confirm('กู้คืนฉบับนี้ทับเนื้อหาปัจจุบัน? (ฉบับปัจจุบันจะถูกเก็บไว้ในประวัติ)')) return
+    try {
+      await fetch(`/api/posts/${id}/revision`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, body }),
+      })
+    } catch { /* เก็บไม่ได้ก็ยังกู้คืนต่อได้ — ของเก่ายังอยู่ใน revision อยู่ดี */ }
+    setTitle(rev.title || '')
+    setBody(rev.body || '')
+  }
+
+  async function handleDeletePost() {
+    if (!confirm('เก็บโพสต์นี้เข้ากรุ? (กู้คืนได้ที่แถบ "ในกรุ" ในหน้ารายการ)')) return
+    try {
+      const res = await fetch(`/api/posts/${id}`, { method: 'DELETE' })
+      if (res.ok) router.push('/posts')
+    } catch { /* ลบไม่สำเร็จ = อยู่หน้าเดิม ผู้ใช้กดใหม่ได้ */ }
   }
 
   async function handleAiDraft() {
@@ -284,10 +316,21 @@ export default function PostEditor({ id }) {
         <span className="text-sm px-2.5 py-1 rounded-full border border-warm-200 dark:border-disc-border text-warm-700 dark:text-disc-text">
           {STATUS_LABEL[status] || status}
         </span>
+
+        {can.edit && (
+          <button
+            onClick={handleDeletePost}
+            className="ml-auto flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg text-warm-500 dark:text-disc-muted hover:text-red-500 hover:bg-red-50 dark:hover:bg-disc-hover transition"
+          >
+            <Trash2 size={14} /> เก็บเข้ากรุ
+          </button>
+        )}
       </div>
 
       {aiError && <p className="text-sm text-red-500">{aiError}</p>}
       {statusError && <p className="text-sm text-red-500">{statusError}</p>}
+
+      <PostRevisions id={id} canEdit={!!can.edit} onRestore={handleRestoreRevision} refreshKey={savedCount} />
 
       {conflict && (
         <ConflictDialog onReload={handleReload} onKeepAsRevision={handleKeepAsRevision} keeping={keepingRevision} />

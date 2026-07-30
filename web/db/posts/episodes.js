@@ -129,7 +129,11 @@ export async function updatePostContent(id, fields, { lockToken, editorUserId, e
     const before = cur[0]
     if (!before) { await client.query('ROLLBACK'); return { ok: false, notFound: true } }
 
-    if (lockToken && before.lock_token !== lockToken) {
+    // ⚠️ ไม่มี token = conflict เหมือนกัน **ห้ามปล่อยผ่าน** (bug-071 2026-07-30)
+    // เดิมเขียน `if (lockToken && …)` → คำขอที่ไม่ส่ง token มาเลยข้ามด่านนี้ทั้งด่าน
+    // editor ส่ง lockToken = null ตอนที่ยังโหลดเนื้อหาไม่เสร็จ (title/body ยังเป็น '')
+    // → PATCH ทับโพสต์ให้ว่างเปล่าแล้วตอบ 200 · เนื้อหาหายจริงมาแล้ว 3 ตอน
+    if (before.lock_token !== lockToken) {
       await client.query('ROLLBACK')
       return { ok: false, conflict: true, post: await getPost(id) }
     }

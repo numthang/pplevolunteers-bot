@@ -285,7 +285,12 @@ export default function PostPublishPanel({ postId, hasMedia = false }) {
                 className="rounded-lg border border-warm-200 dark:border-disc-border p-2 flex flex-col gap-1"
               >
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm text-warm-900 dark:text-disc-text">{platformLabel(job.platform)}</span>
+                  <span className="text-sm text-warm-900 dark:text-disc-text">
+                    {platformLabel(job.platform)}
+                    {job.group_name && (
+                      <span className="text-warm-500 dark:text-disc-muted"> · {job.group_name}</span>
+                    )}
+                  </span>
                   <span className={`text-sm ${meta.cls}`}>{meta.label}</span>
                 </div>
 

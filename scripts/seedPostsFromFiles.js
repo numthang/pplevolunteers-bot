@@ -50,19 +50,21 @@ function parseSeries(text) {
 
 async function upsert(ep, category) {
   const { rows: found } = await pool.query(
-    `SELECT id, body FROM post_episodes WHERE org_id = $1 AND owner_user_id = $2 AND title = $3 LIMIT 1`,
+    `SELECT id, title, body FROM post_episodes WHERE org_id = $1 AND owner_user_id = $2 AND title = $3 LIMIT 1`,
     [ORG_ID, OWNER_USER_ID, ep.title]
   );
 
   if (found[0]) {
     if (found[0].body === ep.body) return 'skip';     // เนื้อหาเดิม ไม่ต้องเขียน revision ซ้ำ
+    // ⚠️ เก็บ "ของเดิม" เป็น revision ก่อนทับ — ถ้าคนแก้ในเว็บไปแล้วจะได้ไม่หายถาวร
+    //    (เดิมเขียนของใหม่ลง revision ซึ่งไม่ช่วยอะไรเลย — ฉบับที่ถูกทับหายไปจริง 1 ครั้ง 2026-07-30)
+    await pool.query(
+      `INSERT INTO post_revisions (episode_id, title, body, edited_by_user_id) VALUES ($1, $2, $3, $4)`,
+      [found[0].id, found[0].title, found[0].body, OWNER_USER_ID]
+    );
     await pool.query(
       `UPDATE post_episodes SET body = $2, source_idea = $3, category = $4, updated_at = now() WHERE id = $1`,
       [found[0].id, ep.body, ep.sourceIdea, category]
-    );
-    await pool.query(
-      `INSERT INTO post_revisions (episode_id, title, body, edited_by_user_id) VALUES ($1, $2, $3, $4)`,
-      [found[0].id, ep.title, ep.body, OWNER_USER_ID]
     );
     return 'update';
   }
