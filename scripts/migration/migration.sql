@@ -420,6 +420,9 @@ ALTER TABLE post_episodes ALTER COLUMN org_id        DROP NOT NULL;
 ALTER TABLE post_episodes ALTER COLUMN owner_user_id DROP NOT NULL;
 ALTER TABLE post_episodes ADD COLUMN IF NOT EXISTS guild_id   varchar(20);
 ALTER TABLE post_episodes ADD COLUMN IF NOT EXISTS channel_id varchar(20);
+-- channel_name ต้องมาก่อน step 3 ข้างล่าง — ชื่อห้อง Discord ยาวได้ถึง 100 ตัวอักษร
+-- ห้ามยัดผ่าน category (varchar(60)) แม้ชั่วคราว: ของจริงบน prod มีชื่อห้อง >60 ตัวอักษร ทำ INSERT ล้ม (22001)
+ALTER TABLE post_episodes ADD COLUMN IF NOT EXISTS channel_name varchar(100);
 
 -- invariant: 1 ห้อง เปิดตะกร้าได้ทีละใบ — บังคับที่ DB ไม่ใช่ที่โค้ด
 -- ล้างตะกร้า = archived_at = now() → หลุดจาก index เอง ห้องว่างพร้อมเปิดใบใหม่
@@ -442,7 +445,7 @@ DO $$
 BEGIN
   IF to_regclass('public.dc_media_baskets') IS NULL THEN RETURN; END IF;
 
-  INSERT INTO post_episodes (org_id, owner_user_id, visibility, category, body,
+  INSERT INTO post_episodes (org_id, owner_user_id, visibility, channel_name, body,
                              created_via, status, guild_id, channel_id, created_at, updated_at)
   SELECT g.org_id,
          (SELECT u.id FROM users u WHERE u.discord_id = MIN(b.added_by)),
@@ -484,13 +487,12 @@ END $$;
 --    (บอท/เว็บ deploy คนละรอบ · โค้ดเก่าฝั่งที่ยังไม่ deploy อ่านตารางนี้อยู่)
 
 -- ═══════════════════════════════════════════════════════════════════════════
--- 2026-07-30: post_episodes.channel_name — แยกชื่อห้อง Discord ออกจาก `category`
+-- 2026-07-30: post_episodes.channel_name — เผื่อทำความสะอาด env ที่รัน ก้อน 4c เวอร์ชันแรกไปแล้ว
 -- ═══════════════════════════════════════════════════════════════════════════
--- ก้อน 4c ยัดชื่อห้อง (dc_media_baskets.channel_name) ลง `category` เพื่อไม่ต้องเพิ่มคอลัมน์
--- ผลคือ `category` ทำ 2 หน้าที่: taxonomy ที่คนตั้ง + ป้ายบอกที่มาที่ระบบตั้ง
---   → listCategories ต้องมี `AND channel_id IS NULL` คอยกันชื่อห้องไหลเข้าตัวกรองหมวด
---   → เปิดโพสต์จากดิสฯ แล้วเปลี่ยนหมวด = ชื่อห้องหายถาวร (ไม่ได้เก็บที่อื่นเลย)
--- คืนคอลัมน์เดิมกลับมา แล้วปล่อย `category` ให้เป็นของคนจัดล้วนๆ (โพสต์จากดิสฯ = ว่าง)
+-- ก้อน 4c แรกยัดชื่อห้อง (dc_media_baskets.channel_name) ลง `category` เพื่อไม่ต้องเพิ่มคอลัมน์
+-- ผลคือ `category` ทำ 2 หน้าที่: taxonomy ที่คนตั้ง + ป้ายบอกที่มาที่ระบบตั้ง แถมชื่อห้อง >60 ตัวอักษร
+-- ล้น varchar(60) (22001) → แก้ที่ต้นเหตุแล้ว: step 1 ข้างบนเพิ่ม channel_name ก่อน step 3 insert ตรงเข้าคอลัมน์นี้เลย
+-- เหลือ block นี้ไว้เป็น no-op safety net เฉพาะ env ที่เคยรันเวอร์ชันแรก (เช่น local dev) ที่ category ยังมีชื่อห้องค้างอยู่
 ALTER TABLE post_episodes ADD COLUMN IF NOT EXISTS channel_name VARCHAR(100) NULL;
 
 UPDATE post_episodes
