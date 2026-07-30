@@ -8,6 +8,7 @@ const {
   TextInputBuilder,
   TextInputStyle,
   EmbedBuilder,
+  AttachmentBuilder,
   MessageFlags,
   PermissionFlagsBits,
   LabelBuilder,
@@ -18,12 +19,14 @@ const {
 } = require('discord.js');
 const path = require('path');
 const fs = require('fs');
-const { addImages, addVideo, setCaption, appendCaption, getBasket, clearBasket, clearBasketMedia, getHistory } = require('../db/mediaBasket');
+const { addImages, addVideo, setCaption, appendCaption, getBasket, clearBasket, clearBasketMedia,
+        getHistory, getOpenEpisode, downloadPending } = require('../db/mediaBasket');
 const { orgIdOfGuild, userIdByDiscord } = require('../db/org');
 const { fetchBuffer } = require('../utils/watermarkImage');   // เหลือใช้จุดเดียว (พรีวิวรูปแรก) — ติดลายน้ำย้ายไป publishPipeline แล้ว
+const storage = require('../utils/postsStorage');
 const { getAvailablePlatforms, getAvailableGroups } = require('../services/metaApi');
 // ⚠️ ห้าม import postTo*/postReels* ตรงๆ ที่นี่ — การโพสต์ต้องผ่านท่อกลางเท่านั้น (กติกาข้อ 16)
-const { prepareImages, publishBatch } = require('../services/publishPipeline');
+const { prepareImages, loadMediaSources, publishBatch } = require('../services/publishPipeline');
 const { refreshAttachmentUrls, refreshUrlList } = require('../services/discordAttachments');
 const { getSetting, setSetting, deleteSetting } = require('../db/settings');
 const { getNewsChannelId, postNews, buildEventAnnouncement, sendOrQueueAnnouncement } = require('../services/newsShare');
@@ -249,9 +252,20 @@ async function buildBasketPayload(basket, guildId, channelId, userId, channelNam
   const videoMsgId = videos[0]?.message_id;
   if (videoMsgId) links.push(`[ดูวิดีโอต้นทาง 🎬](https://discord.com/channels/${guildId}/${channelId}/${videoMsgId})`);
 
-  const previewUrl = images.length
-    ? images[Math.floor(Math.random() * images.length)].image_url
-    : null;
+  // พรีวิว: **แนบไฟล์จากดิสก์** (ก้อน 4c) — ลิงก์ Discord หมดอายุ ~24 ชม. แล้วรูปในการ์ดจะหายเฉยๆ
+  // ไฟล์ยังโหลดไม่เสร็จ (path NULL) → ตกไปใช้ลิงก์ต้นทางเหมือนเดิม
+  const preview = images.length ? images[Math.floor(Math.random() * images.length)] : null;
+  const files = [];
+  let previewUrl = preview?.image_url || null;
+  if (preview?.path) {
+    try {
+      const name = `preview.${storage.extOfPath(preview.path)}`;
+      files.push(new AttachmentBuilder(await storage.readFile(preview.path), { name }));
+      previewUrl = `attachment://${name}`;
+    } catch (err) {
+      console.error('[basket] อ่านรูปพรีวิวจากดิสก์ไม่ได้:', err.message);
+    }
+  }
 
   const embed = buildBasketEmbed(imgCount, videoCount, caption, previewUrl);
   if (links.length) {
@@ -388,7 +402,7 @@ async function buildBasketPayload(basket, guildId, channelId, userId, channelNam
   })();
   components.push(...buildBasketButtons(imgCount, videoCount, !!caption, webUrl));
 
-  return { embeds: [embed], components };
+  return { embeds: [embed], components, files };
 }
 
 // ─── Add to basket ────────────────────────────────────────────────────────────
@@ -439,6 +453,19 @@ async function handleBasketAdd(interaction) {
 
   const payload = await buildBasketPayload(basket, guildId, channelId, interaction.user.id, interaction.channel?.name);
   await interaction.editReply({ content: `✅ เพิ่ม ${added} แล้ว`, ...payload });
+
+  // โหลดไฟล์ลงดิสก์ **หลัง ack เท่านั้น** — คลิป 10–50 MB ให้ interaction รอไม่ได้ (3 วิ ก็ตายแล้ว)
+  // ปิดบั๊กรูปตายใน 24 ชม. + ข้อความต้นทางถูกลบก็ยังโพสต์ได้
+  queueDownload(interaction.client, guildId, channelId);
+}
+
+/** โหลดสื่อของตะกร้าลงดิสก์แบบ fire-and-forget — ล้มก็ยังโพสต์ได้ด้วย source_url */
+function queueDownload(client, guildId, channelId) {
+  (async () => {
+    const ep = await getOpenEpisode(guildId, channelId);
+    if (!ep) return;
+    await downloadPending(ep.id, { refreshUrls: urls => refreshAttachmentUrls(client, urls) });
+  })().catch(err => console.error('[basket] โหลดสื่อลงดิสก์ล้ม:', err.message));
 }
 
 // ─── View basket ──────────────────────────────────────────────────────────────
@@ -714,41 +741,33 @@ async function processAndPost(interaction, state) {
   const videoItems = basket.filter(r => r.type === 'video');
   const isVideo    = videoItems.length > 0;
 
-  // ลิงก์ Discord มีลายเซ็นหมดอายุ ~24 ชม. — ตะกร้าที่ค้างข้ามวันต้องรีเฟรชก่อนใช้
-  // (รูปเราดาวน์โหลดเอง · วิดีโอ Meta เป็นคนไปดึง ยิ่งต้องเป็นลิงก์ที่ยังไม่หมดอายุ)
-  const fresh = await refreshAttachmentUrls(
-    interaction.client,
-    [...imageItems, ...videoItems].map(it => it.image_url)
-  );
-  if (fresh.size) {
-    for (const it of [...imageItems, ...videoItems]) {
-      const next = fresh.get(it.image_url);
-      if (next) it.image_url = next;
-    }
-    console.log(`[basket] รีเฟรชลิงก์หมดอายุ ${fresh.size} ไฟล์`);
-  }
-
   if (isVideo && imageItems.length > 0) {
     return interaction.editReply({ content: '❌ ตะกร้ามีทั้งรูปและวิดีโอ — ล้างแล้วโพสต์ทีละประเภท' });
   }
+
+  // path (ไฟล์บนดิสก์) → buffer · ไม่มีไฟล์ → ลิงก์ Discord ที่รีเฟรชแล้ว · วิดีโอ → URL สาธารณะ
+  // ตัวแปลงอยู่ในท่อกลางตัวเดียวกับ worker (กติกาข้อ 16) — ที่นี่แค่ผูก client ให้มันรีเฟรชลิงก์ได้
+  const { images: sources, videoUrl } = await loadMediaSources(
+    [...imageItems, ...videoItems].map(it => ({
+      kind: it.type === 'video' ? 'video' : 'image', path: it.path, url: it.image_url,
+    })),
+    { refreshUrls: urls => refreshAttachmentUrls(interaction.client, urls) }
+  );
 
   const { scheduleTime } = state;
   const platforms = sortPlatforms(state.platforms || [], isVideo ? ORDER_VIDEO : ORDER_IMAGE);
   const onProgress = msg => { interaction.editReply({ content: msg }).catch(() => {}); };
 
-  // เตรียมรูป (วิดีโอส่ง URL ของ Discord ให้ Meta ไปดึงเอง ไม่ต้องเตรียม)
+  // เตรียมรูป (วิดีโอส่ง URL ให้ Meta ไปดึงเอง ไม่ต้องเตรียม)
   let processed = [], wmErrors = [];
   if (!isVideo && imageItems.length > 0) {
     const watermarkPath = state.wmType !== 'none'
       ? resolveWatermarkPath(state.wmType, state.guildId, state.group, state.userId)
       : null;
     if (watermarkPath) await interaction.editReply({ content: `⏳ ติดลายน้ำ 0/${imageItems.length} รูป...` });
-    else               await interaction.editReply({ content: '⏳ กำลังดาวน์โหลดรูป...' });
+    else               await interaction.editReply({ content: '⏳ กำลังเตรียมรูป...' });
 
-    ({ processed, errors: wmErrors } = await prepareImages(
-      imageItems.map(it => ({ url: it.image_url })),
-      { watermarkPath, onProgress }
-    ));
+    ({ processed, errors: wmErrors } = await prepareImages(sources, { watermarkPath, onProgress }));
     if (!processed.length) {
       const head = watermarkPath ? '❌ ติดลายน้ำไม่สำเร็จ' : '❌ ดาวน์โหลดรูปไม่สำเร็จ';
       return interaction.editReply({ content: `${head}\n${wmErrors.map(e => `❌ ${e}`).join('\n')}` });
@@ -760,23 +779,24 @@ async function processAndPost(interaction, state) {
     orgIdOfGuild(state.guildId).catch(() => null),
     userIdByDiscord(interaction.user.id).catch(() => null),
   ]);
-  const mediaSnapshot = isVideo
-    ? [{ kind: 'video', url: videoItems[0].image_url }]
-    : imageItems.map(it => ({ kind: 'image', url: it.image_url }));
+  // snapshot ของสื่อ ณ ตอนกดโพสต์ — เก็บทั้ง path และ url เพื่อให้ "กดลองใหม่" ทีหลังยังหาไฟล์เจอ
+  const snapOf = it => ({ kind: it.type === 'video' ? 'video' : 'image', path: it.path || null, url: it.image_url || null });
+  const mediaSnapshot = isVideo ? [snapOf(videoItems[0])] : imageItems.map(snapOf);
 
   const { results, status } = await publishBatch({
     platforms,
     guildId: state.guildId,
     userDiscordId: interaction.user.id,
     images: processed,
-    videoUrl: isVideo ? videoItems[0].image_url : null,
+    videoUrl: isVideo ? videoUrl : null,
     caption: state.caption,
     scheduleTime: isVideo ? scheduleTime : scheduleTime,
     group: state.group,
     guild: interaction.guild,
     onProgress,
     recordTo: {
-      orgId, guildId: state.guildId, channelId: state.channelId,
+      orgId, episodeId: basket[0]?.episode_id || null,
+      guildId: state.guildId, channelId: state.channelId,
       wmType: !isVideo && state.wmType !== 'none' ? state.wmType : null,
       media: mediaSnapshot,
       scheduledAt: !isVideo && state.scheduleTime ? new Date(state.scheduleTime * 1000) : null,
@@ -929,10 +949,13 @@ async function handleBasketEventModal(interaction) {
   const caption = basket.find(r => r.type === 'caption')?.caption
     || pendingPost.get(interaction.user.id)?.caption || '';
 
-  // รูปปกจากรูปแรกในตะกร้า — รีเฟรชลิงก์ก่อน (ตะกร้าข้ามวัน) · ดึงไม่ได้จริงๆ = สร้างแบบไม่มีปก
+  // รูปปกจากรูปแรกในตะกร้า — ไฟล์บนดิสก์ก่อน · ไม่มีค่อยรีเฟรชลิงก์ · ไม่ได้จริงๆ = สร้างแบบไม่มีปก
   let image;
   const firstImage = basket.find(r => r.type === 'image');
-  if (firstImage) {
+  if (firstImage?.path) {
+    try { image = await storage.readFile(firstImage.path); } catch { image = undefined; }
+  }
+  if (!image && firstImage?.image_url) {
     const [url] = await refreshUrlList(interaction.client, [firstImage.image_url]);
     try { image = await fetchBuffer(url); } catch { image = undefined; }
   }
