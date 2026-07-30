@@ -8,7 +8,9 @@ import pool from '../index.js'
 
 export async function listMedia(episodeId) {
   const { rows } = await pool.query(
-    `SELECT id, episode_id, kind, path, sort_order, quote_text, quote_style, bg_path, source_hash, added_by, created_at
+    // source_url = ลิงก์ต้นทางบน Discord · ต้องคืนมาด้วยเสมอ เพราะสื่อที่ตัวโหลดพื้นหลังยังไม่ดึงลงดิสก์
+    // (path NULL) เสิร์ฟผ่าน /api/posts/media/[id] ไม่ได้ → UI ต้อง fallback ไป CDN ของ Discord แทน
+    `SELECT id, episode_id, kind, path, source_url, sort_order, quote_text, quote_style, bg_path, source_hash, added_by, created_at
        FROM post_episode_media
       WHERE episode_id = $1
       ORDER BY sort_order, id`,

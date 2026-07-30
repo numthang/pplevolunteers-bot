@@ -83,7 +83,7 @@ const DOCS_LINKS = [
 ]
 
 const DISCORD_LINKS = [
-  { href: '/bot/media/basket',     label: 'Basket',    icon: 'media',    mediaGroup: true },
+  // ตะกร้าสื่อไม่มีเมนูของตัวเองแล้ว (ยุบเข้า /posts + /posts/[id] 2026-07-30)
   { href: '/bot/media/quote',      label: 'Quote',     icon: 'quote',    mediaGroup: true },
   { href: '/bot/media/watermark',  label: 'Watermark', icon: 'droplet',  mediaGroup: true },
   { href: '/bot/platforms',        label: 'Platforms', icon: 'social',   menuOnly: true },

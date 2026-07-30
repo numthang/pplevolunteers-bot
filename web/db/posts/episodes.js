@@ -21,6 +21,10 @@ const COLS = `
   e.id, e.org_id, e.owner_user_id, e.visibility, e.category, e.title, e.body, e.bodies, e.format,
   e.source_idea, e.created_via, e.status, e.approved_by, e.approved_by_name, e.approved_at,
   e.last_edited_by, e.visibility_changed_at, e.archived_at, e.created_at, e.updated_at,
+  e.guild_id, e.channel_id, e.channel_name,   -- มีค่า = มาจากตะกร้าดิสฯ (badge + ลิงก์กลับเข้า Discord)
+  -- ⛔ channel_name เป็นคอลัมน์ของตัวเองแล้ว (2026-07-30) — ห้ามยัดชื่อห้องกลับลง category อีก
+  --    category = หมวดที่คนตั้งเอง · โพสต์จากดิสฯ เริ่มด้วยหมวดว่างเสมอ
+  --    (อยู่ในเทมเพลตสตริง — ห้ามใส่ backtick ในคอมเมนต์ SQL เด็ดขาด มันปิดสตริง)
   ${LOCK} AS lock_token`
 
 const OWNER_NAME = `COALESCE(NULLIF(TRIM(CONCAT_WS(' ', u.firstname, u.lastname)), ''), u.username)`
@@ -49,9 +53,24 @@ export async function listPosts(orgId, userId, { visibility = null, category = n
     `SELECT ${COLS}, ${OWNER_NAME} AS owner_name,
             (SELECT COUNT(*) FROM post_episode_media m WHERE m.episode_id = e.id) AS media_count,
             (SELECT COUNT(*) FROM post_social_history h WHERE h.episode_id = e.id AND h.status = 'done') AS published_count,
-            (SELECT COUNT(*) FROM post_social_history h WHERE h.episode_id = e.id AND h.status IN ('pending','running')) AS queued_count
+            (SELECT COUNT(*) FROM post_social_history h WHERE h.episode_id = e.id AND h.status IN ('pending','running')) AS queued_count,
+            g.name AS guild_name,   -- ชื่อเซิร์ฟเวอร์ Discord ต้นทาง (ใช้ทำ badge บนการ์ด)
+            -- thumbnail บนการ์ด: ไฟล์ในดิสก์ก่อน (เสิร์ฟผ่าน /api/posts/media/[id] ซึ่งเช็คสิทธิ์ให้)
+            (SELECT m.id FROM post_episode_media m
+              WHERE m.episode_id = e.id AND m.path IS NOT NULL
+                AND (lower(m.path) LIKE '%.jpg' OR lower(m.path) LIKE '%.jpeg'
+                  OR lower(m.path) LIKE '%.png' OR lower(m.path) LIKE '%.gif' OR lower(m.path) LIKE '%.webp')
+              ORDER BY m.sort_order, m.id LIMIT 1) AS thumb_media_id,
+            -- ไม่มีไฟล์ในดิสก์ (ของตะกร้าดิสฯ ที่ยังไม่โหลด) → ใช้ CDN ของ Discord ไปก่อน
+            -- ลิงก์พวกนี้มีลายเซ็นหมดอายุ (?ex=…) โหลดไม่ขึ้นได้ → ฝั่ง UI ซ่อนรูปเองเมื่อ error
+            (SELECT m.source_url FROM post_episode_media m
+              WHERE m.episode_id = e.id AND m.path IS NULL AND m.source_url IS NOT NULL
+                AND (lower(m.source_url) LIKE '%.jpg%' OR lower(m.source_url) LIKE '%.jpeg%'
+                  OR lower(m.source_url) LIKE '%.png%' OR lower(m.source_url) LIKE '%.webp%')
+              ORDER BY m.sort_order, m.id LIMIT 1) AS thumb_source_url
        FROM post_episodes e
        LEFT JOIN users u ON u.id = e.owner_user_id
+       LEFT JOIN dc_guilds g ON g.guild_id = e.guild_id
       WHERE ${where}
       ORDER BY e.updated_at DESC
       LIMIT $${params.length}`,
@@ -61,16 +80,22 @@ export async function listPosts(orgId, userId, { visibility = null, category = n
 }
 
 /** หมวดที่มีอยู่จริงของ org (นับจำนวนโพสต์ในหมวด) — ไม่มีตาราง lookup หมวดคือค่าที่เคยพิมพ์ไว้ */
-export async function listCategories(orgId, userId, { includeAllPersonal = false } = {}) {
+export async function listCategories(orgId, userId, { includeAllPersonal = false, visibility = null } = {}) {
+  const params = [orgId, userId]
+  // ต้องกรอง visibility ให้ตรงกับแท็บที่เปิดอยู่ ไม่งั้นแท็บส่วนตัวจะเห็นหมวดขององค์กร
+  // กดแล้วได้ 0 โพสต์ และตัวเลขบนชิปไม่ตรงกับจำนวนการ์ดที่แสดง
+  let extra = ''
+  if (visibility) { params.push(visibility); extra = ` AND e.visibility = $${params.length}` }
   const { rows } = await pool.query(
     `SELECT e.category, COUNT(*)::int AS post_count, MAX(e.updated_at) AS last_used_at
        FROM post_episodes e
+      -- ไม่ต้อง exclude channel_id แล้ว — ชื่อห้องย้ายไป channel_name (2026-07-30)
+      -- โพสต์จากดิสฯ ที่คน "จัดหมวดเอง" จึงโผล่ในตัวกรองได้ตามที่ควรเป็น
       WHERE e.org_id = $1 AND e.archived_at IS NULL AND e.category IS NOT NULL
-        AND e.channel_id IS NULL   -- หมวดของตะกร้าดิสฯ = ชื่อห้อง ไม่เอามาปนตัวกรองหมวดหลัก
-        AND (e.visibility = 'org' OR e.owner_user_id = $2${includeAllPersonal ? ' OR TRUE' : ''})
+        AND (e.visibility = 'org' OR e.owner_user_id = $2${includeAllPersonal ? ' OR TRUE' : ''})${extra}
       GROUP BY e.category
       ORDER BY MAX(e.updated_at) DESC`,
-    [orgId, userId]
+    params
   )
   return rows
 }

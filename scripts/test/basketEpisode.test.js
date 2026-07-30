@@ -22,7 +22,9 @@ const ok = (label, cond, extra = '') => { cond ? pass++ : fail++; console.log(`$
     const ep = await b.getOpenEpisode(GUILD, CH1);
     ok('หย่อนรูป → เปิดตะกร้าให้อัตโนมัติ', !!ep);
     ok('guild ที่ยังไม่ผูก org → org_id NULL (โผล่แค่ในดิสฯ)', ep.org_id === null, `org_id=${ep.org_id}`);
-    ok('category = ชื่อห้องต้นทาง', ep.category === 'ห้องทดสอบ', ep.category);
+    // 2026-07-30: ชื่อห้องอยู่ที่ channel_name แล้ว · category ต้อง "ว่าง" ไว้ให้คนจัดหมวดเอง
+    ok('channel_name = ชื่อห้องต้นทาง', ep.channel_name === 'ห้องทดสอบ', ep.channel_name);
+    ok('category ว่าง (ไม่ยัดชื่อห้อง)', ep.category == null, ep.category);
 
     // 2) รูปแบบแถวที่ handlers เดิมคาดหวัง
     let basket = await b.getBasket(GUILD, CH1);

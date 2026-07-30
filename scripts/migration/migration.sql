@@ -66,7 +66,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_case_attachments_discord
 -- เริ่มจาก NULL โดยตั้งใจ → รอบแรกกวาดตั้งแต่ข้อความแรกสุดของเธรด = backfill รูปเก่าที่เส้นแรกเลยไปแล้ว
 ALTER TABLE cases ADD COLUMN IF NOT EXISTS last_attachment_message_id VARCHAR(20) NULL;
 
-
+-- ทำถึงตรงนี้ production
 -- 2026-07-29: dc_social_accounts → org-native (Phase 0 ของโมดูล posts — md/posts/POSTS.md)
 --
 -- ตารางสุดท้ายในท่อ publish ที่ยังเป็น guild-only → org ที่ไม่มี guild / user ที่ล็อกอินด้วยอีเมล
@@ -482,3 +482,38 @@ END $$;
 
 -- ⚠️ DROP TABLE dc_media_baskets — ทำใน commit ถัดไป **หลัง deploy prod ครบทั้งบอทและเว็บ**
 --    (บอท/เว็บ deploy คนละรอบ · โค้ดเก่าฝั่งที่ยังไม่ deploy อ่านตารางนี้อยู่)
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- 2026-07-30: post_episodes.channel_name — แยกชื่อห้อง Discord ออกจาก `category`
+-- ═══════════════════════════════════════════════════════════════════════════
+-- ก้อน 4c ยัดชื่อห้อง (dc_media_baskets.channel_name) ลง `category` เพื่อไม่ต้องเพิ่มคอลัมน์
+-- ผลคือ `category` ทำ 2 หน้าที่: taxonomy ที่คนตั้ง + ป้ายบอกที่มาที่ระบบตั้ง
+--   → listCategories ต้องมี `AND channel_id IS NULL` คอยกันชื่อห้องไหลเข้าตัวกรองหมวด
+--   → เปิดโพสต์จากดิสฯ แล้วเปลี่ยนหมวด = ชื่อห้องหายถาวร (ไม่ได้เก็บที่อื่นเลย)
+-- คืนคอลัมน์เดิมกลับมา แล้วปล่อย `category` ให้เป็นของคนจัดล้วนๆ (โพสต์จากดิสฯ = ว่าง)
+ALTER TABLE post_episodes ADD COLUMN IF NOT EXISTS channel_name VARCHAR(100) NULL;
+
+UPDATE post_episodes
+   SET channel_name = category, category = NULL
+ WHERE channel_id IS NOT NULL AND channel_name IS NULL;
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- 2026-07-31: post_ai_suggestions — เก็บข้อเสนอ AI (แคปชัน/ไอเดียภาพ) ไว้อ่านซ้ำ
+-- ═══════════════════════════════════════════════════════════════════════════
+-- เดิม /api/posts/ai/caption ไม่เขียนลง DB เลย → ปิดกล่อง/รีเฟรชแล้วหาย ต้องกดใหม่
+-- ซึ่ง **กินโควตา AI รายวัน** ทุกครั้ง (postsAiQuota) = เสียของเปล่า
+--
+-- ⚠️ ห้ามเก็บเป็นคอลัมน์บน post_episodes — ทุก UPDATE ที่นั่น bump updated_at
+--    ทำให้ lockToken ของ PostEditor หมดอายุ แล้ว autosave เด้ง 409 ทุกครั้งที่ขอแคปชัน (bug-071)
+CREATE TABLE IF NOT EXISTS post_ai_suggestions (
+  id              BIGSERIAL PRIMARY KEY,
+  episode_id      BIGINT NOT NULL REFERENCES post_episodes(id) ON DELETE CASCADE,
+  kind            VARCHAR(20) NOT NULL,          -- 'caption' (เผื่อชนิดอื่นในอนาคต)
+  payload         JSONB NOT NULL,                -- { captions: [...], imageIdeas: [...] }
+  created_by_user_id INTEGER REFERENCES users(id),
+  created_by_name VARCHAR(100),
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_post_ai_suggestions_episode
+    ON post_ai_suggestions (episode_id, created_at DESC);

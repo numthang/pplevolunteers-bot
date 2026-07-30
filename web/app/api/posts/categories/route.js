@@ -3,14 +3,18 @@ import { canApprove, isAdmin } from '@/lib/postsAccess.js'
 import * as postDB from '@/db/posts/episodes.js'
 
 /**
- * GET /api/posts/categories
+ * GET /api/posts/categories?visibility=personal|org
+ * ไม่ส่ง visibility = หมวดของทุกอันที่มีสิทธิ์เห็น
  */
-export async function GET() {
+export async function GET(req) {
   const ctx = await postsContext()
   if (ctx.error) return ctx.error
 
+  const v = new URL(req.url).searchParams.get('visibility')
+  const visibility = ['personal', 'org'].includes(v) ? v : null
+
   try {
-    const data = await postDB.listCategories(ctx.orgId, ctx.userId, { includeAllPersonal: isAdmin(ctx.access) })
+    const data = await postDB.listCategories(ctx.orgId, ctx.userId, { includeAllPersonal: isAdmin(ctx.access), visibility })
     return Response.json({ success: true, data })
   } catch (error) {
     console.error('[GET /api/posts/categories]', error)

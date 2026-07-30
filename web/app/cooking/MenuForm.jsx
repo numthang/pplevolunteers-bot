@@ -310,14 +310,35 @@ export default function MenuForm({ mode, menu, onClose, onSaved }) {
   const savingRef = useRef(false)
   const pendingRef = useRef(null)
 
+  // ยังไม่มีแถวใน DB = โหมดสร้าง → **ห้าม autosave** ต้องกดปุ่มบันทึกเท่านั้น
+  // (กฎ CLAUDE.md §กฎการบันทึก · idRef เป็น ref จึงต้องมี state คู่ไว้ให้ UI รู้ว่าเปลี่ยนโหมดแล้ว)
+  const [savedId, setSavedId] = useState(menu?.id || null)
+  const isCreate = !savedId
+
+  // โหมดสร้างไม่มี autosave → ปิด/ออกจากหน้าทั้งที่พิมพ์ค้าง = งานหาย ต้องถามก่อนเสมอ
+  const unsaved = isCreate && !!form.name.trim()
+
+  function handleClose() {
+    if (unsaved && !window.confirm('ยังไม่ได้บันทึก — ปิดแล้วข้อมูลจะหาย ปิดเลยไหม?')) return
+    onClose()
+  }
+
+  useEffect(() => {
+    if (!unsaved) return
+    const onBeforeUnload = e => { e.preventDefault(); e.returnValue = '' }
+    window.addEventListener('beforeunload', onBeforeUnload)
+    return () => window.removeEventListener('beforeunload', onBeforeUnload)
+  }, [unsaved])
+
   // ESC ปิด modal
   useEffect(() => {
     const h = e => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') handleClose()
     }
     window.addEventListener('keydown', h)
     return () => window.removeEventListener('keydown', h)
-  }, [onClose])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onClose, unsaved])
 
   useEffect(() => {
     let cancelled = false
@@ -363,9 +384,9 @@ export default function MenuForm({ mode, menu, onClose, onSaved }) {
     setError(null)
     try {
       const payload = buildPayload(nextForm)
-      const isCreate = !idRef.current
-      const url = isCreate ? '/api/cooking/menus' : `/api/cooking/menus/${idRef.current}`
-      const method = isCreate ? 'POST' : 'PATCH'
+      const creating = !idRef.current
+      const url = creating ? '/api/cooking/menus' : `/api/cooking/menus/${idRef.current}`
+      const method = creating ? 'POST' : 'PATCH'
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
@@ -376,7 +397,7 @@ export default function MenuForm({ mode, menu, onClose, onSaved }) {
         setError(data.error || 'บันทึกไม่สำเร็จ')
         setSaveStatus('error')
       } else {
-        if (isCreate && data.menu?.id) idRef.current = data.menu.id
+        if (creating && data.menu?.id) { idRef.current = data.menu.id; setSavedId(data.menu.id) }
         setSaveStatus('saved')
         onSaved(data.menu)
       }
@@ -394,13 +415,21 @@ export default function MenuForm({ mode, menu, onClose, onSaved }) {
   }
 
   // ชื่อว่างห้ามเซฟ · ระหว่างมี save ค้างอยู่ ให้ queue เอาแค่ค่าล่าสุด (last-write-wins) ไม่ยิงซ้อน
-  function requestSave(nextForm) {
+  // force = มาจากปุ่มบันทึก · ไม่ force + ยังไม่มีแถวใน DB = autosave ในโหมดสร้าง → ไม่ทำ
+  function requestSave(nextForm, force = false) {
     if (!nextForm.name.trim()) return
+    if (!idRef.current && !force) return
     if (savingRef.current) {
       pendingRef.current = nextForm
       return
     }
     runSave(nextForm)
+  }
+
+  // ปุ่มบันทึก — โหมดสร้าง = ทางเดียวที่จะได้แถวใน DB · โหมดแก้ = ตัด debounce แล้วเซฟทันที
+  function handleSaveClick() {
+    clearTimeout(debounceTimer.current)
+    requestSave(form, true)
   }
 
   // discrete: tag add/remove, chip toggle, อัพโหลดรูปสำเร็จ, ปุ่ม AI เติม → เซฟทันที
@@ -483,7 +512,7 @@ export default function MenuForm({ mode, menu, onClose, onSaved }) {
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-8"
-      onClick={onClose}
+      onClick={handleClose}
     >
       <div
         className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6"
@@ -497,7 +526,7 @@ export default function MenuForm({ mode, menu, onClose, onSaved }) {
             <SaveIndicator status={saveStatus} />
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               className="text-warm-400 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text text-xl leading-none"
             >
               ✕
@@ -663,10 +692,24 @@ export default function MenuForm({ mode, menu, onClose, onSaved }) {
 
           {error && <p className="text-sm text-red-500">{error}</p>}
 
-          <div className="pt-2">
+          <div className="pt-2 flex flex-col gap-2">
+            {/* โหมดสร้าง: ปุ่มนี้คือทางเดียวที่จะได้แถวใน DB · โหมดแก้: ตัด debounce แล้วเซฟทันที */}
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleSaveClick}
+              disabled={!form.name.trim() || saveStatus === 'saving'}
+              className="w-full bg-teal hover:opacity-90 text-white rounded-lg text-base font-medium px-4 py-2 disabled:opacity-50 transition"
+            >
+              {saveStatus === 'saving' ? 'กำลังบันทึก...' : 'บันทึก'}
+            </button>
+            {isCreate && (
+              <p className="text-xs text-warm-400 dark:text-disc-muted text-center">
+                {form.name.trim() ? 'ยังไม่ได้บันทึก — กดบันทึกก่อนปิด' : 'ใส่ชื่อเมนูก่อนถึงจะบันทึกได้'}
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={handleClose}
               className="w-full border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover rounded-lg text-base font-medium px-4 py-2 transition"
             >
               ปิด

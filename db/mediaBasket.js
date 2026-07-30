@@ -25,22 +25,24 @@ async function userIdOf(discordId) {
 
 /**
  * ตะกร้าที่เปิดอยู่ของห้อง — ไม่มีก็เปิดใบใหม่
- * category = ชื่อห้องต้นทาง (กันฟีดองค์กรรก — ใช้กลไกหมวดที่มีอยู่ ไม่เพิ่ม flag)
+ * channel_name = ชื่อห้องต้นทาง · **ห้ามเขียนลง `category`** (เคยทำ แล้วพัง 2026-07-30)
+ *   `category` = หมวดที่คนตั้งเอง ปล่อยว่างไว้ให้เขาจัด — ยัดชื่อห้องลงไปแล้วเขาเปลี่ยนหมวด
+ *   ชื่อห้องหายถาวร และตัวกรองหมวดต้องคอย exclude ชื่อห้องทุก query
  * org_id NULL = guild ที่ยังไม่ผูก org → โผล่แค่ในดิสฯ ไม่เข้าฟีดองค์กร
  */
 async function ensureOpenEpisode(guildId, channelId, addedBy = null, channelName = null) {
   const found = await getOpenEpisode(guildId, channelId);
   if (found) {
     // ห้องเปลี่ยนชื่อ / ตะกร้าเก่าที่ยังไม่มีชื่อห้อง → เติมให้ครั้งเดียว
-    if (channelName && !found.category) {
-      await pool.query('UPDATE post_episodes SET category = $2 WHERE id = $1', [found.id, channelName]);
+    if (channelName && !found.channel_name) {
+      await pool.query('UPDATE post_episodes SET channel_name = $2 WHERE id = $1', [found.id, channelName]);
     }
     return found.id;
   }
 
   const ownerUserId = await userIdOf(addedBy);
   const { rows } = await pool.query(
-    `INSERT INTO post_episodes (org_id, owner_user_id, visibility, category, created_via, status, guild_id, channel_id)
+    `INSERT INTO post_episodes (org_id, owner_user_id, visibility, channel_name, created_via, status, guild_id, channel_id)
      SELECT g.org_id, $3, 'org', $4, 'manual', 'draft', $1, $2
        FROM (SELECT $1::varchar AS gid) x
        LEFT JOIN dc_guilds g ON g.guild_id = x.gid
@@ -58,7 +60,7 @@ async function ensureOpenEpisode(guildId, channelId, addedBy = null, channelName
 
 async function getOpenEpisode(guildId, channelId) {
   const { rows } = await pool.query(
-    `SELECT id, org_id, category, body FROM post_episodes
+    `SELECT id, org_id, channel_name, body FROM post_episodes
       WHERE channel_id = $2 AND guild_id = $1 AND archived_at IS NULL
       LIMIT 1`,
     [guildId, channelId]

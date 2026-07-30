@@ -215,6 +215,19 @@ convention ที่ใช้จริง: **prefix = โมดูลเจ้�
 - `post_episodes` เพิ่ม `guild_id`/`channel_id` · `org_id`/`owner_user_id` **nullable** แล้ว
 - `post_episode_media` เพิ่ม `source_url`/`source_message_id` · `path` nullable (NULL = ไฟล์ยังโหลดไม่เสร็จ) · `kind` += `video`
 - **2 ตะเข็บที่ต้องแก้พร้อมกันเสมอ:** `db/mediaBasket.js` (บอท CJS) · `web/db/posts/basket.js` (เว็บ ESM)
+- ⚠️ **อัปเดต 2026-07-30 (เย็น): หน้า `/bot/media/basket` ถูกยุบเข้า `/posts` + `/posts/[id]` แล้ว**
+  ลิสต์ตะกร้า = แท็บ "จากดิสฯ" · แก้ตะกร้า = หน้าโพสต์ปกติ · path เดิมเหลือเป็น route handler ที่ redirect
+  (ลิงก์ในข้อความ Discord เก่าแก้ย้อนหลังไม่ได้ · มันเซ็ต cookie `active_org` ให้ตรงโพสต์ก่อนเด้ง)
+  → API `/api/bot/basket*` ทั้ง 3 ตัวลบทิ้ง · `web/db/posts/basket.js` เหลือแค่ `getOpenBasket()`
+
+### 🤖 ข้อเสนอจาก AI เก็บถาวรแล้ว (2026-07-31)
+
+- **แก้จากสเปกเดิมที่เขียนว่า "ไม่เขียนลง DB"** — แคปชัน/ไอเดียภาพหายทุกครั้งที่รีเฟรช แล้วกดใหม่ = **เสียโควตา AI รายวันฟรี**
+- ตาราง `post_ai_suggestions` (`episode_id` · `kind` · `payload` jsonb · `created_by_user_id` · `created_at`)
+  · API `GET/DELETE /api/posts/[id]/ai-suggestions` · เก็บหลายชุด ขอใหม่ = ต่อท้าย ลบได้ทีละชุด
+- ⛔ **ห้ามย้ายไปเป็นคอลัมน์บน `post_episodes`** — ทุก UPDATE ที่นั่น bump `updated_at` = lockToken ของ
+  PostEditor หมดอายุ → ขอแคปชันทีไร autosave เด้ง 409 (bug-071)
+- **ไม่ปนกับ `post_revisions`** — ของพวกนี้ไม่เคยเข้าเนื้อหาโพสต์ และ revision มีปุ่ม "กู้คืนฉบับนี้"
 
 ### เกี่ยวเนื่อง: `dc_user_config` → `user_config` (เคาะ 2026-07-29)
 

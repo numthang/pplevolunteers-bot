@@ -36,6 +36,11 @@ export function mimeOfPath(path) {
   if (ext === 'png') return 'image/png'
   if (ext === 'webp') return 'image/webp'
   if (ext === 'gif') return 'image/gif'
+  // วิดีโอจากตะกร้าดิสฯ เสิร์ฟผ่าน route เดียวกับรูปแล้ว — ไม่มี 3 บรรทัดนี้ .mp4 จะตกเข้า default
+  // image/jpeg แล้วเบราว์เซอร์เล่นไม่ได้ (route เก่า /api/bot/basket/media/[id] เคย hardcode ไว้)
+  if (ext === 'mp4')  return 'video/mp4'
+  if (ext === 'mov')  return 'video/quicktime'
+  if (ext === 'webm') return 'video/webm'
   return 'image/jpeg'
 }
 

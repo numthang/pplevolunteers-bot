@@ -43,7 +43,9 @@ function localNow() {
   return d.toISOString().slice(0, 16)
 }
 
-export default function PostPublishPanel({ postId, hasMedia = false }) {
+export default function PostPublishPanel({ postId }) {
+  // การ์ดนี้แยกจากการ์ดสื่อแล้ว จึงต้องรู้จำนวนสื่อเอง (IG/Threads โพสต์ข้อความล้วนไม่ได้)
+  const [hasMedia, setHasMedia] = useState(false)
   const [selected, setSelected] = useState([])
   const [groups, setGroups] = useState([])
   const [newsReady, setNewsReady] = useState(false)
@@ -69,6 +71,22 @@ export default function PostPublishPanel({ postId, hasMedia = false }) {
 
   useEffect(() => { setMinTime(localNow()) }, [])
   useEffect(() => { loadJobs() }, [loadJobs])
+
+  // จำนวนสื่อ — โหลดเองตอนเปิด แล้วอัปเดตเมื่อการ์ดสื่อยิง event บอกว่ามีการเพิ่ม/ลบ
+  const loadHasMedia = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/posts/${postId}`)
+      const data = await res.json().catch(() => ({}))
+      if (res.ok) setHasMedia((data.data?.media || []).length > 0)
+    } catch { /* โหลดไม่ได้ = ถือว่ายังไม่มีสื่อ · API กันอีกชั้นตอนกดเผยแพร่อยู่แล้ว */ }
+  }, [postId])
+
+  useEffect(() => {
+    loadHasMedia()
+    function onMediaChanged(e) { if (e.detail?.id === postId) loadHasMedia() }
+    window.addEventListener('posts:media-changed', onMediaChanged)
+    return () => window.removeEventListener('posts:media-changed', onMediaChanged)
+  }, [postId, loadHasMedia])
 
   useEffect(() => {
     let alive = true
@@ -179,13 +197,12 @@ export default function PostPublishPanel({ postId, hasMedia = false }) {
   }
 
   return (
-    <div className="pt-3 border-t border-warm-200 dark:border-disc-border flex flex-col gap-3">
+    <div className="flex flex-col gap-3">
       <h2 className="text-sm font-semibold text-warm-700 dark:text-disc-muted uppercase tracking-wide">
         เผยแพร่
       </h2>
 
       <div className="flex flex-col gap-1">
-        <span className="text-sm text-warm-700 dark:text-disc-text">โพสต์ในนาม</span>
         <select
           value={group}
           onChange={e => { setError(''); setGroup(e.target.value) }}
@@ -202,19 +219,18 @@ export default function PostPublishPanel({ postId, hasMedia = false }) {
         {!groups.length && (
           <span className="text-sm text-warm-500 dark:text-disc-muted">ยังไม่มีบัญชีโซเชียลที่ใช้ได้ — เชื่อมบัญชีที่ /bot/platforms ก่อน</span>
         )}
-        {current && (
-          <span className="text-sm text-warm-500 dark:text-disc-muted">
-            {Object.entries(current.accounts).map(([p, name]) => `${platformLabel(p)}: ${name}`).join(' · ')}
-          </span>
-        )}
       </div>
 
+      {/* ชื่อบัญชีอยู่ต่อท้ายชื่อแพลตฟอร์มเลย (เช่น "Facebook: Unnop Sricharoenchai")
+          เหตุผลที่ติ๊กไม่ได้ไปอยู่ใน tooltip — ไม่รกบรรทัด */}
       <div className="flex flex-col gap-1.5">
         {PLATFORMS.map(p => {
           const blocked = blockedReason(p.key)
+          const account = current?.accounts?.[p.key]
           return (
             <label
               key={p.key}
+              title={blocked || undefined}
               className={`flex items-center gap-2 text-sm ${blocked ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
             >
               <input
@@ -224,8 +240,9 @@ export default function PostPublishPanel({ postId, hasMedia = false }) {
                 onChange={() => togglePlatform(p.key)}
                 className="w-4 h-4 accent-orange disabled:cursor-not-allowed"
               />
-              <span className="text-warm-900 dark:text-disc-text">{p.label}</span>
-              {blocked && <span className="text-sm text-warm-500 dark:text-disc-muted">— {blocked}</span>}
+              <span className="text-warm-900 dark:text-disc-text">
+                {p.label}{account ? `: ${account}` : ''}
+              </span>
             </label>
           )
         })}

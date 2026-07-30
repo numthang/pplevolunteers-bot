@@ -102,7 +102,10 @@ spec + ดีไซน์ + ตารางทั้งหมดอยู่ `md
       และลายน้ำ resolve จากฝั่งเว็บ) — แต่ถ้าจะใช้ `guild_id` ทำอย่างอื่นต้องระวัง
 - [x] ~~**ก้อน 4c — ยุบตะกร้าดิสฯ เข้า `post_episodes`**~~ ✅ **เสร็จ local 2026-07-30** (5 commit: `4fcc7e6` schema → `27a19a5` ตะเข็บ db → `26a9276` basketHandler → `6220ae5` เว็บ → `d0c09d0` retention)
   - **ทำไปจริงยังไง:** `db/mediaBasket.js` = ตะเข็บ (ข้างในเป็น `post_*` ข้างนอกคืนแถวรูปแบบเดิม) → `basketHandler` 12k tok ไม่ต้องรื้อ · ฝาแฝดฝั่งเว็บคือ `web/db/posts/basket.js` (CJS/ESM import ข้ามกันไม่ได้ — **แก้ logic ที่ไหนต้องไล่ดูอีกฝั่งเสมอ**)
-  - caption ของตะกร้า = `post_episodes.body` · ล้างตะกร้า = archive · หมวด = ชื่อห้อง · `org_id` NULL = โผล่แค่ในดิสฯ
+  - caption ของตะกร้า = `post_episodes.body` · ล้างตะกร้า = archive · `org_id` NULL = โผล่แค่ในดิสฯ
+  - ⚠️ **~~หมวด = ชื่อห้อง~~ ยกเลิกแล้ว 2026-07-30** — ชื่อห้องย้ายไปคอลัมน์ `post_episodes.channel_name` ของตัวเอง
+    (เดิมยัดลง `category` เพื่อไม่ต้องเพิ่มคอลัมน์ → `category` ทำ 2 หน้าที่ · `listCategories` ต้อง exclude ชื่อห้องทุก query
+     และพอ UI ให้แก้หมวดได้ **ชื่อห้องหายถาวร**) · migration + backfill อยู่ท้าย `migration.sql` · รันบน local แล้ว (10 แถว)
   - หย่อนแล้ว **ack ก่อน** โหลดไฟล์ลงดิสก์ background · พรีวิวในการ์ด = แนบไฟล์ (`attachment://`) ไม่ใช่ลิงก์ CDN
   - `publishPipeline.loadMediaSources()` = ตัวแปลง path/URL → input ของ `publishOne` **ที่เดียว** (worker เลิกมีของตัวเอง)
   - `/api/bot/basket/media/[id]` เสิร์ฟไฟล์ (ใช้ `/api/posts/media/[id]` ไม่ได้ — ตัวนั้นเทียบ `org_id` กับ session แล้วตะกร้า `org_id` NULL ตก 404)
@@ -118,6 +121,7 @@ spec + ดีไซน์ + ตารางทั้งหมดอยู่ `md
   - **Google Drive — ไม่เอาเป็นที่เก็บของระบบ** ลิงก์ Drive ให้ Meta ดึงไม่ได้ (redirect + rate limit + virus-scan interstitial) · เหมาะเป็น "คลังฟุตเทจให้คนเปิดดู" ซึ่งเป็นฟีเจอร์คนละตัว
   - [ ] จดไว้ทำทีหลัง: **คลังฟุตเทจดิบของทีมสื่อ** (Drive) — ถ้าอยากได้จริงค่อยทำเป็นงานแยก
 - [x] ~~**ก้อน 5** — AI เกลาสำนวน + แคปชัน/ไอเดียภาพ~~ ✅ 2026-07-30 (`f92346b`) — `/api/posts/ai/polish` (3 โทน) + `/api/posts/ai/caption` (แคปชัน 3 + ไอเดียภาพ 3) · ไม่เขียนลง DB · snapshot revision ก่อนทับทุกครั้ง
+- [ ] **i18n โซน posts — ยังเป็นไทย hardcode ทั้งโซน** (จด 2026-07-30 หลังรื้อ UI `/posts`) · `PostsHome.jsx` · `PostEditor.jsx` · `PostMediaPanel.jsx` · `PostMetaPanel.jsx` (ใหม่ 2026-07-30 ตอนยุบหน้าตะกร้า) · `PostPublishPanel.jsx` · `PostCreate.jsx` · `PostRevisions.jsx` → migrate ทีเดียวทั้งโซนเป็น `posts.*` ใน `web/locales/{th,en}.json` (งาน mechanical → `i18n-migrator` ทีละ 2-3 ไฟล์) · เหตุที่ยังไม่ทำตอนรื้อ: migrate ไฟล์เดียวจะได้สไตล์ไม่ตรงเพื่อนบ้าน แล้วต้องกลับมาแก้อีกรอบ
 - [~] **ก้อน 6** — migrate `posts/*.md` เข้า DB: **seed แล้ว 22 ตอน** (`scripts/seedPostsFromFiles.js` idempotent) เหลือแค่เคาะว่าจะเลิกใช้โฟลเดอร์ `posts/` เลยไหม
 - [ ] **ถอด prefix `dc_` ออกจากตารางที่เป็น org แล้ว** (user สั่ง 2026-07-29 · ทำ **หลังก้อน 4**) — สำรวจแล้วเหลือจริง 3 ตัว:
   - **หลักที่ user เคาะ 2026-07-29: prefix ต้องมีโมดูลจริงรองรับ** — ห้ามตั้ง prefix ลอยๆ ที่ไม่มีโฟลเดอร์/feature key รองรับ (เช่น `media_` ตกไปเพราะไม่มี `web/db/media/`) · `post_` ผ่านเพราะมี `web/db/posts/` + `orgFeatures` key `posts`

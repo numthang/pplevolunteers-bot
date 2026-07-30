@@ -1,24 +1,37 @@
 'use client'
 
+// การ์ด "สื่อ" — อยู่ล่างสุดของหน้าโพสต์ กว้าง 100% (ย้ายลงมาจากคอลัมน์ขวา 2026-07-30)
+//
+// ที่นี่คือที่เดียวที่จัดการรูปของโพสต์แล้ว — หน้า /bot/media/basket ถูกยุบเข้ามาทั้งใบ
+// ของที่ยกมาจากหน้านั้น: ปุ่ม ◀▶ เลื่อนลำดับ · รายการวิดีโอแยกจากรูป
+// (หมวด/สถานะ/เจ้าของ ย้ายไป PostMetaPanel.jsx คอลัมน์ขวา)
 import { useEffect, useRef, useState } from 'react'
-import { X, Upload, Loader2, ImageOff, Users } from 'lucide-react'
-import PostPublishPanel from './PostPublishPanel.jsx'
+import { X, Upload, Loader2, ImageOff, ChevronLeft, ChevronRight, Film } from 'lucide-react'
 
-const STATUS_LABEL = { draft: 'ฉบับร่าง', review: 'รอตรวจ', approved: 'อนุมัติแล้ว' }
 const ACCEPT = 'image/png,image/jpeg,image/webp,image/gif'
 
-export default function PostMediaPanel({ id }) {
+// ไฟล์ในดิสก์ (ผ่าน gate) ก่อน · ยังโหลดไม่เสร็จ (path NULL — ปกติของสื่อจากตะกร้าดิสฯ) ใช้ CDN Discord ไปก่อน
+// /api/posts/media/[id] ตอบ 404 เมื่อ path เป็น NULL → ไม่มี fallback นี้ = รูปแตกทั้งโพสต์
+const srcOf = m => (m.path ? `/api/posts/media/${m.id}` : m.source_url || null)
+
+// compact = อยู่ในรางขวา 360px (กริดแคบ) · false = การ์ดเต็มความกว้าง
+// แยกเป็น prop เพราะยังลองสลับที่วางอยู่ — ย้ายการ์ดในหน้า /posts/[id] แล้วสลับ flag ตามได้เลย
+const GRID = {
+  compact: 'grid grid-cols-2 gap-2',
+  wide:    'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3',
+}
+
+export default function PostMediaPanel({ id, compact = false }) {
+  const [lightbox, setLightbox] = useState(null)   // { src, index } — รูปที่กดดูเต็มจอ
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
-  const [post, setPost] = useState(null)
   const [can, setCan] = useState({})
   const [media, setMedia] = useState([])
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState('')
   const [dropHover, setDropHover] = useState(false)
   const [draggingId, setDraggingId] = useState(null)
-  const [promoteLoading, setPromoteLoading] = useState(false)
-  const [promoteError, setPromoteError] = useState('')
+  const [failedIds, setFailedIds] = useState([])   // ลิงก์ CDN ของ Discord หมดอายุได้ → ซ่อนรูปที่โหลดไม่ขึ้น
 
   const fileInputRef = useRef(null)
   const dragIndex = useRef(null)
@@ -31,7 +44,6 @@ export default function PostMediaPanel({ id }) {
       const res = await fetch(`/api/posts/${id}`)
       const data = await res.json().catch(() => ({}))
       if (!res.ok) { setLoadError(data.error || 'โหลดโพสต์ไม่สำเร็จ'); setLoading(false); return }
-      setPost(data.data.post)
       setCan(data.data.can || {})
       setMedia(data.data.media || [])
     } catch {
@@ -44,14 +56,23 @@ export default function PostMediaPanel({ id }) {
   useEffect(() => { load() }, [id])
   useEffect(() => { mediaRef.current = media }, [media])
 
-  // สถานะเปลี่ยนจากคอลัมน์ซ้าย (PostEditor) — sync ป้ายสถานะโดยไม่ต้องรีโหลดทั้งก้อน
+  // lightbox ปิดได้ 3 ทาง (กฎ CLAUDE.md) — ปุ่ม X + ESC + คลิกนอกรูป
+  useEffect(() => {
+    if (!lightbox) return
+    const onKey = e => { if (e.key === 'Escape') setLightbox(null) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [lightbox])
+
+  // สถานะเปลี่ยนจาก PostEditor (เช่น อนุมัติ → แก้ไม่ได้แล้ว) → can.edit ต้องตามไปด้วย
   useEffect(() => {
     function onChanged(e) {
-      if (e.detail?.id !== id) return
-      if (e.detail?.status) setPost(prev => (prev ? { ...prev, status: e.detail.status } : prev))
+      if (e.detail?.id !== id || !e.detail?.status) return
+      load()
     }
     window.addEventListener('posts:changed', onChanged)
     return () => window.removeEventListener('posts:changed', onChanged)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
   async function uploadFiles(files) {
@@ -65,6 +86,8 @@ export default function PostMediaPanel({ id }) {
       const data = await res.json().catch(() => ({}))
       if (!res.ok) { setUploadError(data.error || 'อัปโหลดไม่สำเร็จ'); return }
       setMedia(prev => [...prev, ...data.data])
+      // การ์ด "เผยแพร่" แยกออกไปแล้ว → บอกให้มันรู้ว่าตอนนี้มีสื่อกี่ชิ้น (IG/Threads ต้องมีสื่อ)
+      window.dispatchEvent(new CustomEvent('posts:media-changed', { detail: { id } }))
     } catch {
       setUploadError('อัปโหลดไม่สำเร็จ')
     } finally {
@@ -87,8 +110,11 @@ export default function PostMediaPanel({ id }) {
   async function removeMedia(mediaId) {
     setMedia(prev => prev.filter(m => m.id !== mediaId))
     await fetch(`/api/posts/media/${mediaId}`, { method: 'DELETE' }).catch(() => {})
+    window.dispatchEvent(new CustomEvent('posts:media-changed', { detail: { id } }))
   }
 
+  // ⚠️ ส่ง "ทุกชิ้น" ไม่ใช่เฉพาะรูป — reorderMedia() เขียน sort_order = ลำดับใน array ที่ส่งไป
+  // ถ้าส่งแต่รูป วิดีโอจะค้าง sort_order เก่าแล้วแทรกสลับตำแหน่งกับรูป
   function saveOrder(arr) {
     return fetch(`/api/posts/${id}/media`, {
       method: 'PATCH',
@@ -97,15 +123,26 @@ export default function PostMediaPanel({ id }) {
     }).catch(() => {})
   }
 
+  // เลื่อนทีละช่อง — ของคู่กับการลาก (จอสัมผัส/เมาส์ทีเดียวไม่พลาด) ยกมาจากหน้าตะกร้าเดิม
+  function move(i, dir) {
+    const imgs = media.filter(m => m.kind !== 'video')
+    const j = i + dir
+    if (j < 0 || j >= imgs.length) return
+    ;[imgs[i], imgs[j]] = [imgs[j], imgs[i]]
+    const next = [...imgs, ...media.filter(m => m.kind === 'video')]
+    setMedia(next)
+    saveOrder(next)
+  }
+
   function onDragStart(i, mediaId) { dragIndex.current = i; setDraggingId(mediaId) }
   function onDragEnterCell(i) {
     const from = dragIndex.current
     if (from === null || from === i) return
     setMedia(prev => {
-      const next = [...prev]
-      const [moved] = next.splice(from, 1)
-      next.splice(i, 0, moved)
-      return next
+      const imgs = prev.filter(m => m.kind !== 'video')
+      const [moved] = imgs.splice(from, 1)
+      imgs.splice(i, 0, moved)
+      return [...imgs, ...prev.filter(m => m.kind === 'video')]
     })
     dragIndex.current = i
   }
@@ -115,80 +152,67 @@ export default function PostMediaPanel({ id }) {
     dragIndex.current = null
   }
 
-  async function handlePromote() {
-    if (!confirm('เปิดร่างนี้ให้ทีมเห็น? ย้อนกลับเป็นส่วนตัวไม่ได้อีก')) return
-    setPromoteLoading(true)
-    setPromoteError('')
-    try {
-      const res = await fetch(`/api/posts/${id}/promote`, { method: 'POST' })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) { setPromoteError(data.error || 'เปิดให้ทีมเห็นไม่สำเร็จ'); return }
-      setPost(data.data.post)
-      load() // can.promote คำนวณจาก visibility ใหม่ — โหลดใหม่ให้ตรง
-    } catch {
-      setPromoteError('เปิดให้ทีมเห็นไม่สำเร็จ')
-    } finally {
-      setPromoteLoading(false)
-    }
-  }
-
   if (loading) return <p className="text-warm-500 dark:text-disc-muted text-sm">กำลังโหลด...</p>
   if (loadError) return <p className="text-red-500 text-sm">{loadError}</p>
-  if (!post) return null
 
   const canEdit = !!can.edit
+  // วิดีโอเล่นในกริดรูปไม่ได้ → แยกเป็นรายการข้างล่าง (ของเดิมยัดเข้า <img> แล้วขึ้นเป็นรูปแตก)
+  const images = media.filter(m => m.kind !== 'video')
+  const videos = media.filter(m => m.kind === 'video')
 
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <h2 className="text-sm font-semibold text-warm-700 dark:text-disc-muted uppercase tracking-wide mb-2">
-          สื่อ ({media.length})
-        </h2>
+      <h2 className="text-sm font-semibold text-warm-700 dark:text-disc-muted uppercase tracking-wide">
+        สื่อ ({media.length}){images.length > 1 && canEdit ? ' — ลากเรียง หรือกด ◀▶' : ''}
+      </h2>
 
-        {canEdit && (
-          <div
-            tabIndex={0}
-            onPaste={handlePaste}
-            onDrop={handleDrop}
-            onDragOver={e => e.preventDefault()}
-            onDragEnter={() => setDropHover(true)}
-            onDragLeave={() => setDropHover(false)}
-            className={`rounded-lg border border-dashed p-4 text-center mb-3 transition-colors ${
-              dropHover ? 'border-teal bg-warm-50' : 'border-warm-200 dark:border-disc-border'
-            }`}
+      {canEdit && (
+        <div
+          tabIndex={0}
+          onPaste={handlePaste}
+          onDrop={handleDrop}
+          onDragOver={e => e.preventDefault()}
+          onDragEnter={() => setDropHover(true)}
+          onDragLeave={() => setDropHover(false)}
+          className={`rounded-lg border border-dashed p-4 text-center transition-colors ${
+            dropHover ? 'border-teal bg-warm-50' : 'border-warm-200 dark:border-disc-border'
+          }`}
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={ACCEPT}
+            multiple
+            className="hidden"
+            onChange={e => { uploadFiles(Array.from(e.target.files || [])); e.target.value = '' }}
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="inline-flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg bg-orange text-white hover:opacity-90 disabled:opacity-40 transition"
           >
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept={ACCEPT}
-              multiple
-              className="hidden"
-              onChange={e => { uploadFiles(Array.from(e.target.files || [])); e.target.value = '' }}
-            />
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploading}
-              className="inline-flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg bg-orange text-white hover:opacity-90 disabled:opacity-40 transition"
-            >
-              {uploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
-              เลือกไฟล์
-            </button>
-            <p className="text-sm text-warm-500 dark:text-disc-muted mt-1.5">
-              หรือลากไฟล์มาวาง / คลิกแล้ววาง (Ctrl+V)
-            </p>
-          </div>
-        )}
+            {uploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+            เลือกไฟล์
+          </button>
+          <p className="text-sm text-warm-500 dark:text-disc-muted mt-1.5">
+            หรือลากไฟล์มาวาง / คลิกแล้ววาง (Ctrl+V)
+          </p>
+        </div>
+      )}
 
-        {uploadError && <p className="text-sm text-red-500 mb-2">{uploadError}</p>}
+      {uploadError && <p className="text-sm text-red-500">{uploadError}</p>}
 
-        {media.length === 0 ? (
-          <div className="flex items-center gap-2 text-warm-400 dark:text-disc-muted py-4">
-            <ImageOff size={18} />
-            <span className="text-sm">ยังไม่มีสื่อ</span>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 gap-2">
-            {media.map((m, i) => (
+      {media.length === 0 ? (
+        <div className="flex items-center gap-2 text-warm-400 dark:text-disc-muted py-4">
+          <ImageOff size={18} />
+          <span className="text-sm">ยังไม่มีสื่อ</span>
+        </div>
+      ) : images.length === 0 ? null : (
+        <div className={compact ? GRID.compact : GRID.wide}>
+          {images.map((m, i) => {
+            const src = srcOf(m)
+            const broken = !src || failedIds.includes(m.id)
+            return (
               <div
                 key={m.id}
                 draggable={canEdit}
@@ -196,12 +220,26 @@ export default function PostMediaPanel({ id }) {
                 onDragEnter={() => onDragEnterCell(i)}
                 onDragOver={e => e.preventDefault()}
                 onDragEnd={onDragEnd}
-                className={`relative group aspect-square rounded-lg overflow-hidden border bg-black transition-all duration-150 ${
+                className={`relative group aspect-[4/3] rounded-lg overflow-hidden border bg-black transition-all duration-150 ${
                   canEdit ? 'cursor-move' : ''
                 } ${draggingId === m.id ? 'opacity-40 ring-2 ring-teal border-teal scale-95' : 'border-warm-200 dark:border-disc-border'}`}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={`/api/posts/media/${m.id}`} alt={`สื่อ ${i + 1}`} className="w-full h-full object-cover" />
+                {broken ? (
+                  // ไฟล์ยังไม่ถูกดึงลงดิสก์ + ลิงก์ Discord หมดอายุ — ยังลบ/เรียงได้ แค่ดูรูปไม่ได้
+                  <div className="w-full h-full flex flex-col items-center justify-center gap-1 px-2 text-center text-warm-400 dark:text-disc-muted">
+                    <ImageOff size={20} />
+                    <span className="text-xs">{m.path ? 'ไฟล์หาย' : 'ยังไม่ได้โหลดไฟล์'}</span>
+                  </div>
+                ) : (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={src}
+                    alt={`สื่อ ${i + 1}`}
+                    onClick={() => setLightbox({ src, index: i })}   // กริดเป็น object-cover = เห็นไม่ครบภาพ ต้องกดดูเต็มได้
+                    onError={() => setFailedIds(prev => (prev.includes(m.id) ? prev : [...prev, m.id]))}
+                    className="w-full h-full object-cover cursor-zoom-in"
+                  />
+                )}
                 <span className="absolute top-1.5 left-1.5 w-5 h-5 flex items-center justify-center rounded-full bg-black/60 text-white text-xs font-bold">
                   {i + 1}
                 </span>
@@ -214,46 +252,106 @@ export default function PostMediaPanel({ id }) {
                     <X size={13} />
                   </button>
                 )}
+                {canEdit && images.length > 1 && (
+                  <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 flex gap-1.5 opacity-90">
+                    <button
+                      onClick={() => move(i, -1)}
+                      disabled={i === 0}
+                      title="เลื่อนไปข้างหน้า"
+                      className="w-6 h-6 flex items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80 disabled:opacity-30 transition"
+                    >
+                      <ChevronLeft size={14} />
+                    </button>
+                    <button
+                      onClick={() => move(i, 1)}
+                      disabled={i === images.length - 1}
+                      title="เลื่อนไปข้างหลัง"
+                      className="w-6 h-6 flex items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80 disabled:opacity-30 transition"
+                    >
+                      <ChevronRight size={14} />
+                    </button>
+                  </div>
+                )}
               </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="pt-3 border-t border-warm-200 dark:border-disc-border flex flex-col gap-1.5 text-sm">
-        <div className="flex justify-between">
-          <span className="text-warm-500 dark:text-disc-muted">หมวด</span>
-          <span className="text-warm-900 dark:text-disc-text">{post.category || 'ยังไม่จัดหมวด'}</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-warm-500 dark:text-disc-muted">สถานะ</span>
-          <span className="text-warm-900 dark:text-disc-text">{STATUS_LABEL[post.status] || post.status}</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-warm-500 dark:text-disc-muted">เจ้าของ</span>
-          <span className="text-warm-900 dark:text-disc-text">{post.owner_name || '—'}</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-warm-500 dark:text-disc-muted">การมองเห็น</span>
-          <span className="text-warm-900 dark:text-disc-text">{post.visibility === 'org' ? 'องค์กร' : 'ส่วนตัว'}</span>
-        </div>
-      </div>
-
-      {can.promote && (
-        <div>
-          <button
-            onClick={handlePromote}
-            disabled={promoteLoading}
-            className="w-full flex items-center justify-center gap-1.5 px-3 py-2 text-sm rounded-lg border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 disabled:opacity-40 transition"
-          >
-            {promoteLoading ? <Loader2 size={14} className="animate-spin" /> : <Users size={14} />}
-            เปิดให้ทีมเห็น
-          </button>
-          {promoteError && <p className="text-sm text-red-500 mt-1.5">{promoteError}</p>}
+            )
+          })}
         </div>
       )}
 
-      <PostPublishPanel postId={id} hasMedia={media.length > 0} />
+      {videos.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <h3 className="text-sm font-semibold text-warm-700 dark:text-disc-muted uppercase tracking-wide">
+            วิดีโอ ({videos.length})
+          </h3>
+          {videos.map(v => {
+            const src = srcOf(v)
+            return (
+              <div key={v.id} className="flex items-center gap-3 rounded-lg border border-warm-200 dark:border-disc-border p-2">
+                <Film size={16} className="shrink-0 text-warm-500 dark:text-disc-muted" />
+                {src ? (
+                  <a
+                    href={src}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 min-w-0 text-sm text-teal hover:underline truncate"
+                  >
+                    {v.path ? 'เปิดวิดีโอ' : 'เปิดวิดีโอ (ต้นทางบน Discord)'}
+                  </a>
+                ) : (
+                  <span className="flex-1 min-w-0 text-sm text-warm-400 dark:text-disc-muted">ยังโหลดไฟล์ไม่เสร็จ</span>
+                )}
+                {canEdit && (
+                  <button
+                    onClick={() => removeMedia(v.id)}
+                    title="ลบวิดีโอนี้"
+                    className="shrink-0 w-7 h-7 flex items-center justify-center rounded-full text-warm-400 dark:text-disc-muted hover:bg-red-100 hover:text-red-500 dark:hover:bg-red-900/30 dark:hover:text-red-400 transition"
+                  >
+                    <X size={15} />
+                  </button>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* ดูรูปเต็ม — ปิดได้ 3 ทาง: ปุ่ม X · ESC · คลิกพื้นหลัง (กฎ CLAUDE.md)
+          ◀▶ ที่นี่ = "เลื่อนดูรูปถัดไป" คนละเรื่องกับ ◀▶ บนกริดที่เป็นการสลับลำดับ */}
+      {lightbox && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 cursor-zoom-out"
+          onClick={e => { if (e.target === e.currentTarget) setLightbox(null) }}
+        >
+          <button
+            onClick={() => setLightbox(null)}
+            title="ปิด (ESC)"
+            className="absolute top-4 right-4 w-9 h-9 flex items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80 transition"
+          >
+            <X size={18} />
+          </button>
+          {images.length > 1 && (
+            <>
+              <button
+                onClick={() => { const j = (lightbox.index - 1 + images.length) % images.length; setLightbox({ src: srcOf(images[j]), index: j }) }}
+                className="absolute left-4 w-10 h-10 flex items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80 transition"
+              >
+                <ChevronLeft size={20} />
+              </button>
+              <button
+                onClick={() => { const j = (lightbox.index + 1) % images.length; setLightbox({ src: srcOf(images[j]), index: j }) }}
+                className="absolute right-4 w-10 h-10 flex items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80 transition"
+              >
+                <ChevronRight size={20} />
+              </button>
+              <span className="absolute bottom-4 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-black/60 text-white text-xs tabular-nums">
+                {lightbox.index + 1} / {images.length}
+              </span>
+            </>
+          )}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={lightbox.src} alt="" className="max-w-full max-h-full rounded-lg object-contain" />
+        </div>
+      )}
     </div>
   )
 }
