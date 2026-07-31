@@ -417,7 +417,7 @@ export default function PostsHome({ orgName = 'องค์กร' }) {
             className="flex items-center gap-1.5 bg-teal hover:opacity-90 text-white rounded-lg text-base font-medium px-4 py-2 disabled:opacity-50"
           >
             <Sparkles size={16} />
-            {aiLoading ? 'กำลังจัดชุดโพสต์...' : 'ให้ AI จัดชุดโพสต์ →'}
+            {aiLoading ? 'กำลังจัดชุดโพสต์...' : 'AI สร้างโพสต์ →'}
           </button>
           {/* ปุ่มรอง — ไม่ใช้ข้อความในกล่อง จึงลดระดับให้ไม่อ่านเหมือนสองทางเลือกที่เท่ากัน */}
           <button

@@ -113,16 +113,26 @@ export default async function CaseManageDetail({ params }) {
           {attachments.length > 0 && (
             <div className="mt-3">
               <p className="text-sm text-gray-400 dark:text-disc-muted mb-1">{t('manage.attachmentsCount', { count: attachments.length })}</p>
-              <ul className="space-y-1">
-                {attachments.map(a => (
-                  <li key={a.id}>
-                    <a href={`/api/case/${c.ref}/attachments/${a.id}`} target="_blank" rel="noreferrer"
-                      className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline">
+              <div className="flex flex-wrap gap-2">
+                {attachments.map(a => {
+                  const fileUrl = `/api/case/${c.ref}/attachments/${a.id}`
+                  if (a.mime?.startsWith('image/')) {
+                    return (
+                      <a key={a.id} href={fileUrl} target="_blank" rel="noreferrer"
+                        title={a.original_name || a.mime}
+                        className="block w-20 h-20 rounded-lg overflow-hidden border border-gray-200 dark:border-disc-border hover:opacity-80 transition">
+                        <img src={fileUrl} alt={a.original_name || ''} className="w-full h-full object-cover" />
+                      </a>
+                    )
+                  }
+                  return (
+                    <a key={a.id} href={fileUrl} target="_blank" rel="noreferrer"
+                      className="flex items-center gap-1 px-2 py-1.5 rounded-lg border border-gray-200 dark:border-disc-border text-sm text-indigo-600 dark:text-indigo-400 hover:underline">
                       📎 {a.original_name || a.mime}
                     </a>
-                  </li>
-                ))}
-              </ul>
+                  )
+                })}
+              </div>
             </div>
           )}
         </div>

@@ -66,7 +66,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_case_attachments_discord
 -- เริ่มจาก NULL โดยตั้งใจ → รอบแรกกวาดตั้งแต่ข้อความแรกสุดของเธรด = backfill รูปเก่าที่เส้นแรกเลยไปแล้ว
 ALTER TABLE cases ADD COLUMN IF NOT EXISTS last_attachment_message_id VARCHAR(20) NULL;
 
--- ทำถึงตรงนี้ production
 -- 2026-07-29: dc_social_accounts → org-native (Phase 0 ของโมดูล posts — md/posts/POSTS.md)
 --
 -- ตารางสุดท้ายในท่อ publish ที่ยังเป็น guild-only → org ที่ไม่มี guild / user ที่ล็อกอินด้วยอีเมล
@@ -519,3 +518,5 @@ CREATE TABLE IF NOT EXISTS post_ai_suggestions (
 
 CREATE INDEX IF NOT EXISTS idx_post_ai_suggestions_episode
     ON post_ai_suggestions (episode_id, created_at DESC);
+
+-- production ทำถึงตรงนี้ 

@@ -9,7 +9,8 @@
 > verify: 272 tests · `next build` · smoke DB จริง 15 เคส (lock 409 · revision attribution · rename หมวด · promote audit)
 > **เทสในเบราว์เซอร์จริงผ่านแล้ว** (autosave · reload · อัปรูป · gate ไฟล์ 401 · กล่อง 409 สองแท็บ) · ⬜ ยังไม่เทสปุ่ม AI/ลากเรียง/paste
 > **ก้อน 4 เสร็จ 2026-07-30** — `services/publishPipeline.js` (ท่อร่วมกับตะกร้าดิสฯ) · `publishWorker` (คิว+retry+stale+backlink กลับห้อง) · ประวัติรวมที่ `post_social_history` (drop `dc_media_history`) · API `/publish` `/jobs` + UI กล่องเผยแพร่ · e2e ผ่าน
-> ⬜ ต่อไป: **ก้อน 4c ยุบตะกร้าดิสฯ เข้า post_episodes** (ดู `md/posts/PLAN-4.md`) · ก้อน 3 (อนุมัติ/review link) · ก้อน 2b (quote studio)
+> **ก้อน 2b (Video/Quote Generator Modal) — ดีไซน์เคาะแล้ว 2026-07-31 ยังไม่เขียนโค้ด** (ดู §🎬 Media Section — Video/Quote Generator Modal) · ⚠️ ยังไม่รัน `/scrutinize` ตามกฎ CLAUDE.md — **ต้องรันก่อน implement รอบหน้า**
+> ⬜ ต่อไป: **ก้อน 4c ยุบตะกร้าดิสฯ เข้า post_episodes** (ดู `md/posts/PLAN-4.md`) · ก้อน 3 (อนุมัติ/review link) · ก้อน 2b (implement ตามดีไซน์ด้านล่าง)
 
 ---
 
@@ -341,6 +342,50 @@ convention ที่ใช้จริง: **prefix = โมดูลเจ้�
 โพสต์ข้อความ/ภาพ/โควต ต่างกันแค่ **สื่อ 0 ชิ้น / upload / quote** → 1 ตอน = ข้อความ + สื่อ 0..n ผสมกันได้
 (โพสต์จริงมักผสม: การ์ด 1 ใบ + ภาพ 2 รูป · ถ้าล็อกเป็น type พอเปลี่ยนใจต้องสร้างตอนใหม่)
 ตอนกดโพสต์ตรวจ: **IG/Threads ต้องมีสื่อ ≥1** → ไม่มีรูป ระบบเสนอ "สร้างการ์ดจากย่อหน้าแรก" (คือเหตุผลที่โพสต์โควตเกิดมาแต่แรก)
+
+---
+
+## 🎬 Media Section — Video/Quote Generator Modal (เคาะ 2026-07-31)
+
+> ดีไซน์ผ่านการคุยรอบเดียว (ยังไม่ผ่าน `/scrutinize`) — เก็บไว้ทำต่อวันหลัง **ห้าม implement ก่อนรัน `/scrutinize`** ตามกฎ CLAUDE.md
+
+### จุดเข้า — ปุ่มในโซนสื่อ ไม่ใช่ highlight ในบทความ
+
+`PostMediaPanel.jsx` (โซนสื่อหลักของหน้าตอน — upload/drag&drop/paste ทำไว้ครบแล้ว) เพิ่มปุ่มเสริม 2 ปุ่มข้าง "เลือกไฟล์": **`[ Video ]`** `[ Quote ]` → เปิด Modal ตรง ไม่ใช่ inline panel
+
+**หมายเหตุ:** §หน้าจอ ด้านบน (เคาะ 2026-07-29) เคยเขียนว่าการ์ดคำคมเป็น "studio เปิดค้างข้างๆ" ทริกเกอร์จากไฮไลต์ประโยคในบทความ — **ของเดิมยังไม่ได้ implement เลยสักบรรทัด** (เช็คแล้ว `PostEditor.jsx` มีแค่ AI text modes ไม่มี "ทำการ์ด") จึงไม่ใช่การรื้อของที่สร้างแล้ว สรุป:
+- **Modal จากปุ่มในโซนสื่อ = ทางเข้าหลัก** (ตัดสินใจ 2026-07-31)
+- ไฮไลต์ประโยค → ทำการ์ด (ของเดิม) = **shortcut เสริมทำทีหลังได้** พรีฟิลข้อความให้ Modal เดียวกัน ไม่ใช่ UI คนละชุด
+
+### 2.1 Video Generator Modal (2 step) — เขียนใหม่ทั้งก้อน ไม่มีของเดิม
+
+เช็คแล้ว `utils/videoUtils.js` มีแค่ `convertVideoIfNeeded` (mov→mp4) — **ไม่มี renderer overlay ข้อความบนวิดีโอเลย**
+
+**เทคนิคที่เคาะ 2026-07-31:** Canvas → PNG overlay (โปร่งใส) → ffmpeg composite — **ไม่ใช้ ffmpeg `drawtext`** (drawtext รองรับฟอนต์ไทย/ตัดคำแย่ ไม่มี grapheme segmentation)
+1. `ffprobe` หาขนาดเฟรมของคลิป
+2. render ข้อความเป็น PNG โปร่งใสด้วย `@napi-rs/canvas` ที่ขนาดเดียวกับเฟรม — **reuse ฟังก์ชันจาก `utils/quoteStyles.js` ตรงๆ** (`fitFont` / `wrapText` / `lsDraw` / `graphemes` — ตัวตัดคำไทยแบบ grapheme-aware ที่ทำไว้แล้ว) ตามตำแหน่ง บน/กลาง/ล่าง
+3. `ffmpeg -i clip -i overlay.png -filter_complex overlay -y out.mp4` — ข้อความนิ่งอยู่ตำแหน่งเดียวตลอดคลิป (ไม่ใช่ animated caption)
+
+**ไฟล์ใหม่ที่ต้องสร้าง:** `utils/videoQuoteOverlay.js` (หรือขยาย `videoUtils.js`) — export ฟังก์ชันรับ `(videoBuffer, quoteText, position)` คืน video buffer ที่ burn ข้อความแล้ว
+**API ใหม่:** `POST /api/posts/[id]/media/video-quote` — รับ clip (อัปโหลดใหม่/เลือกจากที่มีในสื่อ) + quote text (พิมพ์เอง/เลือกจาก `post_ai_suggestions`) + position → render → เซฟ `storage/posts/` → insert `post_episode_media` (`kind='video'`)
+
+**UI:**
+- Step 1 (ตั้งค่า): เลือกคลิป (อัปโหลด/เลือกจากที่มีในสื่อ) · ใส่ quote (พิมพ์เอง/เลือกจาก suggestions) · ตำแหน่ง `[บน][กลาง][ล่าง]` · ปุ่ม "ดูพรีวิว →"
+- Step 2 (ตรวจสอบ): player เล่นคลิปจริง + overlay ตามตำแหน่งที่เลือก · ปรับสีฟอนต์/ความโปร่งแถบหลังข้อความแบบเร็ว · ปุ่ม "⚡ ยืนยันสร้างวิดีโอ" → render จริง → ปิด modal → media item ใหม่โผล่ใน drag&drop ทันที
+
+**ยังไม่เคาะ (ทำต่อวันหลัง):** field เก็บ position/สไตล์ข้อความบน `post_episode_media` — จะ reuse คอลัมน์ `quote_text`/`quote_style`/`bg_path` เดิม (style เก็บเป็น position hint แทนชื่อสไตล์) หรือเพิ่มคอลัมน์ใหม่ ยังไม่ตัดสิน
+
+### 2.2 Quote Generator Modal — reuse renderer เดิม 100%, **ตัด multi-style grid ออก** (revised 2026-07-31)
+
+**เคาะรอบแรก (2026-07-31 เช้า):** เสนอ "Multi-Style Preview Grid" render 7 สไตล์พร้อมกันตอนเปิด step 2 (ไม่รวม `quote-1-ember-ai` ที่ยิง AI — กันไว้แบบเดียวกับ `RANDOM_KEYS` ใน `utils/quoteStyles.js:491-492`) แพงแค่ CPU ไม่ใช่ AI cost แต่...
+
+**กลับคำ (2026-07-31 บ่าย):** user ใช้จริงแค่ 1-2 สไตล์โปรด — grid 7 แบบเกินจำเป็น **ตัดออก** ใช้ pattern เดียวกับ default template ของบอท (`quote_default_template` ใน `resolveConfig` — personal > guild > AI/random) แทน:
+
+- **Step 1:** เลือก background (คลังสื่อ/อัปโหลดใหม่) + ใส่ quote text (พิมพ์เอง / เลือกจาก `post_ai_suggestions` / "✨ ให้ AI คิด Quote" → endpoint ใหม่คล้าย `/api/posts/ai/caption` เก็บผลลง `post_ai_suggestions`)
+- **Step 2:** **Preview เดียว** — render ทันทีด้วยสไตล์ default ของ user (จำค่าล่าสุดผ่าน `user_config` เหมือนฝั่งบอท) **ไม่ auto-render หลายแบบ** · มีปุ่ม/dropdown เล็ก "ลองสไตล์อื่น" สลับทีละแบบ render ตอนกดจริงเท่านั้น (ไม่ batch) · ตัวเลือก "✨ AI จัดให้" แยกไว้ท้ายสุด กดถึงยิง AI ครั้งเดียว
+- **Step 3:** fine-tune (ครอป 1:1/4:5/16:9 · สี saturation slider · ลายน้ำ) → **`[ Save & Add to Post ]`** → render จริง → เซฟ PNG ลง `storage/posts/` → insert `post_episode_media` (`kind='quote'`, `quote_text`/`quote_style`/`bg_path` ครบตามคอลัมน์ที่มีอยู่แล้ว) → ปิด modal → media item โผล่ใน drag&drop ทันที
+
+**ไฟล์ใหม่ที่ต้องสร้าง:** แค่ UI (`QuoteGeneratorModal.jsx`) + API เดียว `POST /api/posts/[id]/media/quote` — **renderer ไม่ต้องเขียนใหม่เลย** เรียก `renderQuoteStyle()` จาก `utils/quoteStyles.js` ตรงๆ ตามกติกาข้อ 16 (§ผ่าน `/grill`) ที่ห้าม copy/เขียน renderer ใหม่ฝั่งเว็บ
 
 ---
 

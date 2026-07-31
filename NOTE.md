@@ -4,10 +4,74 @@
 - หน้า http://localhost:3000/bot/platforms ถ้า platforms ไม่ขึ้น กับ guild แล้วก็เอา guild switcher ออกไปดีไหม เปลี่ยน url ด้วยไหม น่าจะต้องย้ายออกจาก bot ไปอยู่ใน /posts/settings ป่ะ
 
 # Posts
-- เปลี่ยนสีอัตลักษณ์ของหน้าการทำโควต เราจะเอา feature quote มาเติมตรงไหนดี
 - ai_suggestion มีปุ่มคัดลอกด้วย
-- ประวัติการแก้ไข ถ้ามัน auto-save แก้คำนึงไม่บันทึกกันบานไปเรื่อยๆ เหรอ 
-- ตอนนี้แบ่ง grid กี่เปอร์เซ็นระหว่าง 2 column
+- อันไหนโพสต์แล้วเอาออกจากหน้า posts/ ด้วย ให้มีแต่อันที่ยังไม่ได้โพสต์ ไม่รู้ดูได้จากไหนบ้าง เอาเท่าที่ได้
+- บนมือถือต้องจิ้ม posts card 2 ครั้ง ถึงจะเข้าหน้า editor
+- ประวัติการแก้ อยากให้มี expand ได้
+- อยากเติม feature quote ในหน้า https://pplevolunteers.org/posts/31 ลองดูตัวอย่าง bot quote image เอา function เดิมมาใช้ด้วย ไม่ต้องเขียนใหม่, quote สามารถ pick จาก ai ตรงแคปชัน+ไอเดียภาพ แก้เป็น โควต+ไอเดียภาพ จะเอามารวม function กันยังไงดี ให้ง่าย ไหลลื่น, background ภาพโควตจะเป็นยังไงดี, ขอไอเดียการใช้งาน
+
+## Posts: Posting Flow ใหม่
+ช่วยออกแบบ UI/UX และวาง Logic การทำงานของ **"ระบบโพสต์ Social Media"** ตาม Flow และเงื่อนไขด้านล่างนี้ให้หน่อย พยายามใช้ library หรือปรับแต่งของเดิมถ้าทำได้เช่นพวก social share post ส่วน video, image modal tool อาจจะเขียนใหม่ไหม ลองพิจารณาดู
+
+## 1. Main Posting Flow
+1. **จัดการสื่อ (Media Section):**
+* มีโซนอัปโหลดปกติ (Upload/Drag&Drop/Paste)
+* มีปุ่มทางเลือกเสริม (Optional Tool) ให้เลือก 2 ปุ่ม: **[ Video ]** และ **[ Quote ]**
+2. **ประมวลผล Optional (ถ้ามีการเลือก):** ทำตามขั้นตอนในข้อ 2.1 หรือ 2.2
+3. **ตรวจเนื้อหา (Content Validation):** ตรวจสอบ Caption / ข้อความ
+4. **เลือก Social Media ปลายทาง:** (เช่น FB, IG, X ฯลฯ)
+5. **ตั้งค่า Watermark:** เลือกลายน้ำ และเลือกตำแหน่ง (Default: Random)
+6. **Publish / Schedule:** โพสต์ทันทีหรือตั้งเวลา โดยระบบต้อง Detect ประเภทสื่อในกล่องให้อัตโนมัติเอง น่าจะ flow เดิมเหมือน bot socail share
+
+## 2. Media Option Logic
+### 2.1 ถ้าเลือก `[ Video ]`
+* แสดง Dropdown / Input สำหรับใส่ข้อความ Quote
+* เลือกแหล่งที่มาของ Quote ได้ 2 แบบ:
+1. AI Generated Quote
+2. Custom (กรอกเอง)
+* นำ Quote ไป Overlay/Burn ลงบนคลิปวิดีโอ
+
+### 🎬 Video Generator Modal (2-Step Flow)
+#### **Step 1: ตั้งค่า (Input)**
+* **เลือกคลิป:** อัปโหลดใหม่ หรือ เลือกจากที่มี
+* **ใส่ Quote:** พิมพ์เอง หรือ เลือกจากที่ post_ai_suggestions 
+* **เลือกตำแหน่งข้อความ:** `[ บน ]` | `[ กลาง ]` | `[ ล่าง ]`
+* **ปุ่ม Action:** `[ ดูพรีวิว ➔ ]`
+#### **Step 2: ตรวจสอบ (Preview & Confirm)**
+* **Player Preview:** ดูคลิปจริงพร้อมข้อความซ้อนตามตำแหน่งที่เลือก
+* **Quick Style:** ปรับสีฟอนต์ / ความโปร่งใสแถบหลังข้อความ
+* **ปุ่ม Action:** `[ ⚡ ยืนยันสร้างวิดีโอ ]`
+**Output:** เมื่อ Render เสร็จ Modal จะปิด และโยนไฟล์คลิปเข้ากล่อง **Drag & Drop** หลักทันทีครับ
+
+### 2.2 ถ้าเลือก `[ Quote ]` (Quote Generator Flow)
+1. **เลือก Background Image:** เลือกจากคลังรูปในระบบ หรือ อัปโหลดใหม่
+2. **ระบุ ข้อความ Quote:** พิมพ์เอง หรือ เลือกจากที่ post_ai_suggestions
+3. **Multi-Style Preview:** ระบบทำการ Render Template ทุกสไตล์พร้อมกัน แล้วแสดงผลเป็น **Grid View** ให้ผู้ใช้เลือก
+4. **Fine-Tune:** ผู้ใช้กดเลือกสไตล์ที่ชอบ ➔ ปรับแต่งสี (Color) / ครอปภาพ (Crop)
+5. **Output:** เมื่อตกลง ให้ Save ผลลัพธ์กลับมาเป็น **Media Item ใหม่** เพิ่มเข้าไปในกล่องสื่อ (Media Box) ของ Main Flow ทันที
+
+## 🎨 Detail UI Specification: Quote Generator Mode
+เมื่อผู้ใช้กดปุ่ม `[ + สร้าง Quote ]` เด้ง Modal เข้าสู่โหมดสร้าง Quote:
+### Step 1: Input & Background (แถบตั้งค่าด้านซ้าย/บน)
+* **1.1 เลือก Background (รูปพื้นหลัง):**
+* ปุ่ม `[ 📂 เลือกจากคลัง ]` (Media Library)
+* ปุ่ม `[ ⬆️ อัปโหลดรูปใหม่ ]`
+* **1.2 ใส่ข้อความ Quote:**
+* ช่อง Textarea สำหรับพิมพ์เอง
+* ปุ่ม Quick Action: `[ ✨ ให้ AI คิด Quote ให้ ]` (คลิกแล้วสุ่ม/เจนข้อความลง Textarea)
+### Step 2: Multi-Style Preview (แสดงผลสไตล์แบบ Grid)
+* **ระบบ Render อัตโนมัติ:** เมื่อมีทั้งข้อความและรูปพื้นหลังแล้ว ระบบจะดึง **Template / Style Preset** ต่างๆ (เช่น ตัวหนังสือขาวพื้นหลังมืด, ฟอนต์ลายมือ, ตัวหนังสือใส่กรอบ, ฟอนต์สไตล์ข่าว ฯลฯ) มาประกอบกับรูปและข้อความทันที
+* **UI Display:** แสดงเป็น **Grid 2x2 หรือ 3x3** ให้ผู้ใช้กวาดตามองแล้วคลิกเลือกสไตล์ที่ชอบที่สุดได้เลย
+### Step 3: Fine-Tune & Export (ปรับแต่งภาพสุดท้าย)
+เมื่อคลิกเลือกสไตล์จาก Grid ใน Step 2 จะเข้าสู่หน้าพรีวิวใหญ่เพื่อปรับรายละเอียด:
+* **ปรับแต่ง:**
+* สีข้อความ / สีพื้นหลัง (Text & Overlay Color)
+* ครอปภาพ (Crop 1:1, 4:5, 16:9 ตามแพลตฟอร์ม)
+* **ปุ่มยืนยัน:** กด **`[ Save & Add to Post ]`**
+* ระบบจะ Export รูป Quote เป็นไฟล์ภาพ
+* ปิดโหมด Quote Generator
+* **ส่งรูปภาพ Quote ที่สร้างเสร็จ เข้าไปอยู่ในกล่อง Drag & Drop หลักทันที**
+
 
 # CivicFlow
 - ข้อเสนอ: ย้าย CivicFlow จาก Vercel มาที่ VPS
@@ -50,6 +114,7 @@
 # Calling
 
 # Cases
+- หน้า https://pplevolunteers.org/case/manage/70-69-3DE5 case attachment ทำให้แสดง thumbnail
 
 # Projects
 - ทำระบบจัดการโครงการ project management อย่าง notion, trello, appflowy
