@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Loader2 } from 'lucide-react'
+import CategoryPicker from './CategoryPicker.jsx'
 
 function autoGrow(el) {
   if (!el) return
@@ -24,10 +25,18 @@ export default function PostCreate({ orgName = 'องค์กร', defaultVisi
   const [visibility, setVisibility] = useState(defaultVisibility === 'org' ? 'org' : 'personal')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [allCategories, setAllCategories] = useState([])  // หมวดที่เคยใช้ — เลือกซ้ำแทนพิมพ์ใหม่ (เหมือน PostMetaPanel.jsx)
 
   const dirty = !!(title.trim() || body.trim())
 
   useEffect(() => { autoGrow(bodyRef.current) }, [body])
+
+  useEffect(() => {
+    fetch('/api/posts/categories')
+      .then(res => (res.ok ? res.json() : { data: [] }))
+      .then(json => setAllCategories((json.data || []).map(c => c.category).filter(Boolean)))
+      .catch(() => {})
+  }, [])
 
   // ไม่มี autosave → ต้องเตือนก่อนออกจากหน้าเมื่อมีข้อความค้าง (กฎเดียวกันใน CLAUDE.md)
   useEffect(() => {
@@ -123,10 +132,10 @@ export default function PostCreate({ orgName = 'องค์กร', defaultVisi
 
           <div className="flex-1 min-w-[12rem]">
             <label className="block text-sm font-medium text-warm-700 dark:text-disc-muted mb-1">หมวด (ไม่ใส่ก็ได้)</label>
-            <input
+            <CategoryPicker
               value={category}
-              onChange={e => setCategory(e.target.value)}
-              placeholder="เช่น เลือกตั้ง"
+              onChange={setCategory}
+              categories={allCategories}
               className="w-full h-11 px-3 text-base rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-teal"
             />
           </div>

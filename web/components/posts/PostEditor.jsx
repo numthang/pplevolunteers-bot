@@ -12,7 +12,7 @@ const AI_MODES = [
   ['polish', 'เกลาสำนวน'],
   ['shorter', 'ย่อให้สั้น'],
   ['friendly', 'เป็นกันเองขึ้น'],
-  ['caption', 'แคปชัน + ไอเดียภาพ'],
+  ['caption', 'ให้คำแนะนำ'],
 ]
 
 function autoGrow(el) {
@@ -128,7 +128,7 @@ export default function PostEditor({ id }) {
   const [aiError, setAiError] = useState('')
   const [polishing, setPolishing] = useState(false)
   // AI ทุกแบบรวมเป็นเมนูเดียว — เดิมแยก 3 ปุ่มแล้วอ่านไม่ออกว่าต่างกันยังไง
-  const [aiMode, setAiMode] = useState('polish')  // draft | polish | shorter | friendly | caption
+  const [aiMode, setAiMode] = useState('caption')  // draft | polish | shorter | friendly | caption
   const [confirmAsk, setConfirmAsk] = useState(null)  // { title, message, confirmLabel, danger, onConfirm }
   const [suggesting, setSuggesting] = useState(false)
   // ข้อเสนอ AI ที่เก็บไว้ทั้งหมด (ใหม่สุดบน) — แต่ละชุด = { id, payload:{captions[],imageIdeas[]}, created_at, author_name }
@@ -321,7 +321,7 @@ export default function PostEditor({ id }) {
   }
 
   async function handleSuggest() {
-    if (!body.trim()) { setAiError('ยังไม่มีเนื้อหา — เขียนก่อนแล้วค่อยขอแคปชัน'); return }
+    if (!body.trim()) { setAiError('ยังไม่มีเนื้อหา — เขียนก่อนแล้วค่อยขอโควต/หัวข้อ'); return }
     setSuggesting(true)
     setAiError('')
     try {
@@ -331,17 +331,24 @@ export default function PostEditor({ id }) {
         body: JSON.stringify({ postId: id, body }),
       })
       const data = await res.json().catch(() => ({}))
-      if (!res.ok) { setAiError(data.error || 'ขอแคปชันไม่สำเร็จ'); return }
+      if (!res.ok) { setAiError(data.error || 'ขอโควต/หัวข้อไม่สำเร็จ'); return }
       // ต่อท้ายชุดใหม่ไว้บนสุด ไม่ทับของเก่า · `saved` = แถวจริงใน DB (null ถ้า insert ล้ม — ยังโชว์ให้ดูได้)
       const fresh = data.data.saved || {
         id: `tmp-${Date.now()}`,
-        payload: { captions: data.data.captions, imageIdeas: data.data.imageIdeas },
+        payload: {
+          quotes: data.data.quotes,
+          headlines: data.data.headlines,
+          imageIdeas: data.data.imageIdeas,
+          hashtags: data.data.hashtags,
+          cta: data.data.cta,
+          articleTips: data.data.articleTips,
+        },
         created_at: new Date().toISOString(),
       }
       setSuggestCollapsed(false)
       setSuggestions(prev => [fresh, ...prev])
     } catch {
-      setAiError('ขอแคปชันไม่สำเร็จ')
+      setAiError('ขอโควต/หัวข้อไม่สำเร็จ')
     } finally {
       setSuggesting(false)
     }
@@ -499,7 +506,7 @@ export default function PostEditor({ id }) {
             <button
               onClick={runAi}
               disabled={aiBusy || (aiMode !== 'draft' && !body.trim())}
-              title={aiMode === 'draft' ? 'เขียนใหม่ทั้งก้อน (ทับของเดิม)' : aiMode === 'caption' ? 'เสนอแคปชัน/ไอเดียภาพ ไม่แตะเนื้อหา' : 'ขัดภาษาของที่มีอยู่ ไม่เพิ่มประเด็นใหม่'}
+              title={aiMode === 'draft' ? 'เขียนใหม่ทั้งก้อน (ทับของเดิม)' : aiMode === 'caption' ? 'เสนอโควต/หัวข้อ/ไอเดียภาพ ไม่แตะเนื้อหา' : 'ขัดภาษาของที่มีอยู่ ไม่เพิ่มประเด็นใหม่'}
               className="flex items-center gap-1.5 h-9 px-3 text-sm font-medium rounded-r-lg bg-violet-600 text-white hover:opacity-90 disabled:opacity-40 transition"
             >
               {aiBusy ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
@@ -563,8 +570,13 @@ export default function PostEditor({ id }) {
               </div>
 
               {[
-                { label: '✏️ แคปชันสั้น', items: sg.payload?.captions },
+                { label: '💬 โควต', items: sg.payload?.quotes },
+                { label: '📰 หัวข้อ', items: sg.payload?.headlines },
                 { label: '📸 ไอเดียภาพประกอบ', items: sg.payload?.imageIdeas },
+                // hashtags มาเป็น array ของคำแยกๆ — รวมเป็นบรรทัดเดียวคั่นด้วยช่องว่างก่อนโชว์ (แปะใช้ทีเดียวได้เลย ไม่ต้องคัดลอกทีละคำ)
+                { label: '📌 Hashtag แนะนำ', items: sg.payload?.hashtags?.length ? [sg.payload.hashtags.join(' ')] : [] },
+                { label: '📣 ชวนแชร์/CTA', items: sg.payload?.cta },
+                { label: '📝 คำแนะนำสำหรับบทความ', items: sg.payload?.articleTips },
               ].map(({ label, items }) => (items || []).length > 0 && (
                 <div key={label} className="flex flex-col gap-1.5">
                   <span className="text-sm text-warm-700 dark:text-disc-text">{label}</span>

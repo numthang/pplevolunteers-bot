@@ -4,10 +4,10 @@
 // แยกออกมาจาก PostMediaPanel ตอนยุบหน้าตะกร้าสื่อ (2026-07-30): แผงสื่อย้ายลงล่างกว้าง 100%
 // แต่ข้อมูลพวกนี้ยังต้องอยู่ข้างบนคู่กับการ์ด "เผยแพร่"
 import { useEffect, useState } from 'react'
-import { Loader2, Users, Send, ThumbsUp, Undo2 } from 'lucide-react'
+import { Loader2, Users, Send, ThumbsUp, Undo2, Pencil, X } from 'lucide-react'
+import CategoryPicker from './CategoryPicker.jsx'
 
 const STATUS_LABEL = { draft: 'ฉบับร่าง', review: 'รอตรวจ', approved: 'อนุมัติแล้ว' }
-const NEW_CATEGORY = ' new'   // ค่าพิเศษของ <option> "หมวดใหม่" — ห้ามชนชื่อหมวดจริง
 const OUTLINE = 'border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover'
 
 export default function PostMetaPanel({ id }) {
@@ -19,7 +19,11 @@ export default function PostMetaPanel({ id }) {
   const [promoteLoading, setPromoteLoading] = useState(false)
   const [promoteError, setPromoteError] = useState('')
   const [allCategories, setAllCategories] = useState([])  // หมวดที่เคยใช้ — เลือกซ้ำแทนพิมพ์ใหม่
-  const [newCategory, setNewCategory] = useState(false)   // สลับ select → ช่องพิมพ์ชื่อหมวดใหม่
+  const [canManageCategories, setCanManageCategories] = useState(false)  // จาก GET /api/posts/categories — media team ขึ้นไปถึงจะรีเนม/ลบหมวดได้
+  const [renameOpen, setRenameOpen] = useState(false)     // กล่องแก้ไข/ลบชื่อหมวดทั้งกอง (มีผลกับทุกโพสต์ที่ใช้หมวดนี้ ไม่ใช่แค่ใบนี้)
+  const [renameTo, setRenameTo] = useState('')
+  const [renaming, setRenaming] = useState(false)
+  const [renameError, setRenameError] = useState('')
 
   async function load() {
     setLoading(true)
@@ -40,12 +44,23 @@ export default function PostMetaPanel({ id }) {
   useEffect(() => { load() }, [id])
 
   // หมวดที่เคยใช้ในองค์กร — ไว้ให้เลือกซ้ำแทนพิมพ์ใหม่ (ตั้งชื่อใหม่เองก็ยังได้)
+  async function loadCategories() {
+    try {
+      const res = await fetch('/api/posts/categories')
+      const json = await res.json().catch(() => ({}))
+      setAllCategories((json.data || []).map(c => c.category).filter(Boolean))
+      setCanManageCategories(!!json.canManage)
+    } catch { /* เลือกหมวดยังพิมพ์เองได้ แค่ไม่มีลิสต์เดิมให้เลือกซ้ำ */ }
+  }
+  useEffect(() => { loadCategories() }, [])
+
+  // กล่องแก้ไข/ลบชื่อหมวด — ปิดได้ 3 ทาง เหมือนกล่องอื่นในแอปนี้
   useEffect(() => {
-    fetch('/api/posts/categories')
-      .then(res => (res.ok ? res.json() : { data: [] }))
-      .then(json => setAllCategories((json.data || []).map(c => c.category).filter(Boolean)))
-      .catch(() => {})
-  }, [])
+    if (!renameOpen) return
+    const onKey = (e) => { if (e.key === 'Escape') setRenameOpen(false) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [renameOpen])
 
   // สถานะ/หมวดเปลี่ยนจากคอลัมน์ซ้าย (PostEditor) — sync โดยไม่ต้องรีโหลดทั้งก้อน
   // ยกเว้นสถานะ: `can` เปลี่ยนตามสถานะด้วย (approved = แก้ไม่ได้) → ต้องโหลดใหม่ ปุ่มถึงจะถูกชุด
@@ -73,6 +88,39 @@ export default function PostMetaPanel({ id }) {
   function applyCategory(value) {
     setPost(prev => (prev ? { ...prev, category: value } : prev))   // optimistic — ค่าจริงกลับมาทาง posts:changed
     window.dispatchEvent(new CustomEvent('posts:set-category', { detail: { id, category: value } }))
+  }
+
+  function openRenameCategory() {
+    if (!post.category) return
+    setRenameError('')
+    setRenameTo('')
+    setRenameOpen(true)
+  }
+
+  // เปลี่ยนชื่อ/ลบหมวดทั้งกอง — มีผลกับ "ทุกโพสต์" ที่ใช้หมวดนี้ ไม่ใช่แค่ใบนี้ (ต่างจาก applyCategory ข้างบน)
+  async function handleRenameCategory() {
+    const from = post.category
+    if (!from || renaming) return
+    setRenaming(true)
+    setRenameError('')
+    try {
+      const res = await fetch('/api/posts/categories', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ from, to: renameTo.trim() || undefined }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) { setRenameError(json.error || 'เปลี่ยนชื่อหมวดไม่สำเร็จ'); return }
+      setRenameOpen(false)
+      // endpoint นี้เขียน DB ตรงไม่ผ่าน lockToken (ไม่บัมพ์ updated_at) — ต้องบอก editor ฝั่งซ้ายเองว่าเปลี่ยนแล้ว
+      // ไม่งั้น autosave ครั้งถัดไปจะ PATCH ทับด้วยชื่อหมวดเก่าที่ยังค้างอยู่ใน state ของมัน
+      applyCategory(renameTo.trim() || '')
+      loadCategories()
+    } catch {
+      setRenameError('เปลี่ยนชื่อหมวดไม่สำเร็จ')
+    } finally {
+      setRenaming(false)
+    }
   }
 
   async function handlePromote() {
@@ -113,34 +161,24 @@ export default function PostMetaPanel({ id }) {
         <div className="flex justify-between items-center gap-2">
           <span className="text-warm-500 dark:text-disc-muted shrink-0">หมวด</span>
           {can.edit ? (
-            newCategory ? (
-              <input
-                autoFocus
+            <div className="flex items-center gap-1 min-w-0">
+              <CategoryPicker
                 value={post.category || ''}
-                onChange={e => applyCategory(e.target.value)}
-                onBlur={() => setNewCategory(false)}
-                onKeyDown={e => { if (e.key === 'Enter' || e.key === 'Escape') setNewCategory(false) }}
-                placeholder="ชื่อหมวดใหม่"
-                className="min-w-0 flex-1 max-w-[60%] h-8 px-2 text-sm rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-teal"
+                onChange={applyCategory}
+                categories={allCategories}
+                className="min-w-0 max-w-full h-8 px-2 text-sm rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-teal"
               />
-            ) : (
-              <select
-                value={post.category || ''}
-                onChange={e => {
-                  if (e.target.value === NEW_CATEGORY) { applyCategory(''); setNewCategory(true); return }
-                  applyCategory(e.target.value)
-                }}
-                className="min-w-0 max-w-[60%] h-8 pl-2 pr-7 text-sm rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text focus:outline-none focus:ring-2 focus:ring-teal cursor-pointer"
-              >
-                <option value="">ยังไม่จัดหมวด</option>
-                {/* ต้องมีหมวดปัจจุบันในลิสต์เสมอ — หมวดที่เพิ่งตั้งชื่อใหม่ยังไม่อยู่ใน /categories
-                    (ไม่งั้นพอกลับมาเป็น select แล้ว value ไม่ตรง option ไหนเลย → โชว์ว่าง) */}
-                {[...new Set([...allCategories, post.category].filter(Boolean))].map(c => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-                <option value={NEW_CATEGORY}>+ หมวดใหม่…</option>
-              </select>
-            )
+              {/* แก้ไข/ลบชื่อหมวดทั้งกอง — มีผลกับทุกโพสต์ที่ใช้หมวดนี้ ไม่ใช่แค่ใบนี้ (เฉพาะทีมสื่อขึ้นไป) */}
+              {canManageCategories && post.category && (
+                <button
+                  onClick={openRenameCategory}
+                  title="แก้ไข/ลบชื่อหมวด (มีผลกับทุกโพสต์ที่ใช้หมวดนี้)"
+                  className="shrink-0 p-1 rounded text-warm-400 dark:text-disc-muted hover:text-teal"
+                >
+                  <Pencil size={13} />
+                </button>
+              )}
+            </div>
           ) : (
             <span className="text-warm-900 dark:text-disc-text truncate">{post.category || 'ยังไม่จัดหมวด'}</span>
           )}
@@ -209,6 +247,64 @@ export default function PostMetaPanel({ id }) {
             )}
           </div>
           {promoteError && <p className="text-sm text-red-500">{promoteError}</p>}
+        </div>
+      )}
+
+      {/* แก้ไข/ลบชื่อหมวดทั้งกอง — ปิดได้ 3 ทาง เหมือนกล่องอื่นในแอปนี้ */}
+      {renameOpen && (
+        <div
+          onClick={() => setRenameOpen(false)}
+          className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-5 w-full max-w-md flex flex-col gap-3"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <h2 className="text-lg font-semibold text-warm-900 dark:text-disc-text">แก้ไข/ลบชื่อหมวด “{post.category}”</h2>
+              <button
+                onClick={() => setRenameOpen(false)}
+                className="p-1 rounded-lg text-warm-500 dark:text-disc-muted hover:bg-warm-50 dark:hover:bg-disc-hover"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <p className="text-sm text-warm-500 dark:text-disc-muted">
+              มีผลกับทุกโพสต์ที่ใช้หมวดนี้ ไม่ใช่แค่ใบนี้ · ตั้งชื่อซ้ำกับหมวดที่มีอยู่แล้ว = รวมเป็นหมวดเดียวกัน · เว้นชื่อใหม่ว่าง = ลบหมวดนี้ทิ้ง (โพสต์กลายเป็น "ยังไม่จัดหมวด")
+            </p>
+
+            <div>
+              <label className="block text-sm font-medium text-warm-700 dark:text-disc-muted mb-1">ชื่อใหม่ (เว้นว่าง = ลบหมวด)</label>
+              <input
+                autoFocus
+                value={renameTo}
+                onChange={(e) => setRenameTo(e.target.value)}
+                placeholder="พิมพ์ชื่อใหม่ หรือเว้นว่างไว้"
+                className="w-full h-10 px-3 text-sm rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-teal"
+              />
+            </div>
+
+            {renameError && <p className="text-sm text-red-500">{renameError}</p>}
+
+            <div className="flex flex-wrap gap-2 justify-end mt-1">
+              <button
+                onClick={() => setRenameOpen(false)}
+                disabled={renaming}
+                className="px-4 py-2 text-sm rounded-lg border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover disabled:opacity-50"
+              >
+                ยกเลิก
+              </button>
+              <button
+                onClick={handleRenameCategory}
+                disabled={renaming}
+                className="flex items-center gap-1.5 px-4 py-2 text-sm rounded-lg bg-orange text-white hover:opacity-90 disabled:opacity-50"
+              >
+                {renaming && <Loader2 size={14} className="animate-spin" />}
+                {renaming ? 'กำลังบันทึก...' : 'บันทึก'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

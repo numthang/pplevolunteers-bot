@@ -242,11 +242,16 @@ export async function setPostCategory(id, category) {
   return await getPost(id)
 }
 
-/** เปลี่ยนชื่อหมวดทั้งกอง — ไม่มีตาราง lookup จึงเป็น UPDATE หลายแถว (ต้นทุนที่ยอมรับตอนเคาะ) */
-export async function renameCategory(orgId, from, to) {
+/** เปลี่ยนชื่อหมวดทั้งกอง — ไม่มีตาราง lookup จึงเป็น UPDATE หลายแถว (ต้นทุนที่ยอมรับตอนเคาะ)
+ *  ต้อง scope visibility/owner เหมือน listCategories — ไม่งั้นแก้โพสต์ personal ของคนอื่นที่ตัวเองมองไม่เห็นได้ (/scrutinize 2026-08-01)
+ *  ห้ามแตะ updated_at — เป็น lock_token ของ editor ด้วย (bug-071) รีเนมทีเดียวหลายแถวจะทำ autosave ของคนอื่นเด้ง 409 */
+export async function renameCategory(orgId, userId, from, to, { includeAllPersonal = false } = {}) {
   const { rowCount } = await pool.query(
-    `UPDATE post_episodes SET category = $3, updated_at = now() WHERE org_id = $1 AND category = $2`,
-    [orgId, from, to || null]
+    `UPDATE post_episodes
+        SET category = $4
+      WHERE org_id = $1 AND category = $3
+        AND (visibility = 'org' OR owner_user_id = $2${includeAllPersonal ? ' OR TRUE' : ''})`,
+    [orgId, userId, from, to || null]
   )
   return rowCount
 }

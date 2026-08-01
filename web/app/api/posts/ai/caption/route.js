@@ -1,8 +1,8 @@
-// POST /api/posts/ai/caption — แคปชันสั้น + ไอเดียภาพประกอบ (ก้อน 5)
+// POST /api/posts/ai/caption — โควต + หัวข้อ + ไอเดียภาพประกอบ (ก้อน 5, ปรับ 2026-08-01)
 //
-// รูปแบบที่ user เขียนไว้ในไฟล์ซีรีส์จริงคือ 📸 ภาพประกอบ + ✏️ แคปชันสั้น ต่อ 1 ตอน
-// → คืนทั้ง 2 อย่างในครั้งเดียว (นับโควตาครั้งเดียว) และ **ไม่เขียนลง DB**
-//   ผู้ใช้เลือกคัดลอกไปใช้เองในกล่องโน้ต/ตอนทำภาพ
+// เดิมคืนแคปชัน (ประโยคที่ AI แต่งใหม่) — เปลี่ยนเป็นโควตที่ดึงจากเนื้อหาจริงแทน
+// เพื่อกันการ "แต่งคำพูด" ที่ผู้เขียนไม่ได้พูด → คืน 3 อย่างในครั้งเดียว (นับโควตาครั้งเดียว)
+// และ **ไม่เขียนทับเนื้อหาโพสต์** ผู้ใช้เลือกคัดลอกไปใช้เองในกล่องโน้ต/ตอนทำภาพ
 import { postContext, editorName } from '@/lib/postsGuard.js'
 import { canEditPost } from '@/lib/postsAccess.js'
 import { saveSuggestion } from '@/db/posts/aiSuggestions.js'
@@ -11,13 +11,18 @@ import { askAiJson, AiError } from '@/lib/ai.js'
 
 const SYSTEM_PROMPT = `คุณเป็นครีเอทีฟงานสื่อของพรรคการเมืองไทย
 จากเนื้อหาโพสต์ที่ให้มา ให้เสนอ:
-1. แคปชันสั้น 3 แบบ — ยาวไม่เกิน 1 บรรทัด ใช้เป็นข้อความเปิด/ข้อความบนภาพได้ ห้ามใช้ hashtag เกิน 1 อัน
-2. ไอเดียภาพประกอบ 3 แบบ — บอกว่าจะถ่าย/ทำกราฟิกอะไร ทำได้จริงด้วยงบน้อย (ห้ามเสนอภาพที่ต้องจ้างโปรดักชัน)
+1. โควต 3 แบบ — ต้องดึงมาจากเนื้อหาที่ให้มาเท่านั้น (ประโยค/คำพูดที่มีอยู่แล้วในเนื้อหา) ปรับถ้อยคำได้เล็กน้อยเพื่อให้สั้น/หวือหวา/น่าสนใจขึ้น แต่ห้ามเปลี่ยนความหมายหรือเติมข้อมูลที่ไม่มีในต้นฉบับ ยาวไม่เกิน 1-2 บรรทัด ใช้แปะบนภาพได้
+2. หัวข้อ 3 แบบ — ใช้หลักการพาดหัวให้น่าติดตาม (ตั้งคำถาม/ใช้ตัวเลข/ชี้ความขัดแย้ง/สร้างความอยากรู้) สั้น กระชับ
+3. ไอเดียภาพประกอบ 3 แบบ — ใช้หลักการเดียวกับหัวข้อ (ดึงดูดสายตา น่าติดตาม) บอกว่าจะถ่าย/ทำกราฟิกอะไร ทำได้จริงด้วยงบน้อย (ห้ามเสนอภาพที่ต้องจ้างโปรดักชัน) ควรโยงกับโควตหรือหัวข้อข้อใดข้อหนึ่งที่เสนอไป
+4. Hashtag แนะนำ 1 ชุด (2-3 คำในชุดเดียว) — เกาะกระแส/ประเด็นในเนื้อหา ไม่ใช้คำกว้างเกินไปจนไม่มีความหมาย
+5. ประโยคชวนแชร์/CTA 1 แบบ — ปิดท้ายให้คนแชร์/คอมเมนต์/ติดตามต่อ สั้น เป็นธรรมชาติ ไม่ยัดเยียด
+6. คำแนะนำสำหรับบทความ 1 ข้อ — เลือกจุดที่ควรแก้ที่สุดจุดเดียว (เช่น hook เปิดเรื่องอ่อน/ย่อหน้ายาวไป/ประเด็นไม่ชัด) อธิบายสั้นๆ ว่าทำไม แล้ว**ยกตัวอย่างประกอบ**ให้เห็นภาพว่าแก้แบบไหน (ตัวอย่างมีไว้ประกอบคำแนะนำเท่านั้น ไม่ใช่การเขียนทับบทความจริง)
 กติกา:
-- อ้างได้เฉพาะสิ่งที่มีในเนื้อหา ห้ามแต่งข้อมูล/ตัวเลข/คำพูดของใครขึ้นมาใหม่
+- โควตต้องมีที่มาในเนื้อหาจริงเสมอ ห้ามแต่งคำพูด/ตัวเลข/ชื่อที่ไม่มีในต้นฉบับ
+- หัวข้อ/ไอเดียภาพ/hashtag/CTA อ้างได้เฉพาะสิ่งที่มีในเนื้อหา ห้ามแต่งข้อมูลใหม่
 - ห้ามเสนอภาพที่มีหน้าคนจริงที่ระบุตัวได้ ถ้าเนื้อหาไม่ได้พูดถึงคนนั้น
 - ภาษาไทย กระชับ
-รูปแบบ JSON: {"captions":["...","...","..."],"imageIdeas":["...","...","..."]}`
+รูปแบบ JSON: {"quotes":["...","...","..."],"headlines":["...","...","..."],"imageIdeas":["...","...","..."],"hashtags":["...","..."],"cta":["..."],"articleTips":["..."]}`
 
 export async function POST(req) {
   const body = await req.json().catch(() => ({}))
@@ -29,7 +34,7 @@ export async function POST(req) {
   }
   const source = (body.body ?? ctx.post.body ?? '').trim()
   if (!source) {
-    return Response.json({ error: 'ยังไม่มีเนื้อหา — เขียนเนื้อหาก่อนแล้วค่อยขอแคปชัน' }, { status: 400 })
+    return Response.json({ error: 'ยังไม่มีเนื้อหา — เขียนเนื้อหาก่อนแล้วค่อยขอโควต/หัวข้อ' }, { status: 400 })
   }
 
   const quota = await consumeAiQuota(ctx.userId)
@@ -48,9 +53,15 @@ export async function POST(req) {
 
     // AI อาจคืนคีย์ไม่ตรง/ไม่ใช่ array — ตัดให้เหลือรูปร่างที่ UI ใช้ได้เท่านั้น
     const clean = v => (Array.isArray(v) ? v.filter(x => typeof x === 'string' && x.trim()).slice(0, 5) : [])
-    const captions = clean(out.captions)
+    const quotes = clean(out.quotes)
+    const headlines = clean(out.headlines)
     const imageIdeas = clean(out.imageIdeas)
-    if (!captions.length && !imageIdeas.length) throw new AiError('AI ตอบกลับมาไม่ครบ ลองอีกครั้ง')
+    const hashtags = clean(out.hashtags)
+    const cta = clean(out.cta).slice(0, 1)          // เหลือแค่ 1 แบบ — เยอะแล้วอ่านไม่ไหว เหมือน articleTips
+    const articleTips = clean(out.articleTips).slice(0, 1) // ขอแค่ 1 ข้อ แต่ต้องมีตัวอย่างประกอบ — เยอะแล้วอ่านไม่ไหว
+    if (!quotes.length && !headlines.length && !imageIdeas.length && !hashtags.length && !cta.length && !articleTips.length) {
+      throw new AiError('AI ตอบกลับมาไม่ครบ ลองอีกครั้ง')
+    }
 
     // เก็บไว้ให้เปิดมาอ่านซ้ำได้ (ตาราง post_ai_suggestions — ไม่แตะ post_episodes ไม่งั้น lockToken หมดอายุ)
     // insert ล้ม **ห้าม** ทำให้ request พัง ไม่งั้นเสียโควตา AI ฟรีทั้งที่ผลลัพธ์มาแล้ว
@@ -59,7 +70,7 @@ export async function POST(req) {
       saved = await saveSuggestion({
         episodeId: ctx.post.id,
         kind: 'caption',
-        payload: { captions, imageIdeas },
+        payload: { quotes, headlines, imageIdeas, hashtags, cta, articleTips },
         userId: ctx.userId,
         userName: editorName(ctx.session),
       })
@@ -67,7 +78,7 @@ export async function POST(req) {
       console.error('[caption saveSuggestion]', e.message)
     }
 
-    return Response.json({ success: true, data: { captions, imageIdeas, saved } })
+    return Response.json({ success: true, data: { quotes, headlines, imageIdeas, hashtags, cta, articleTips, saved } })
   } catch (error) {
     if (error instanceof AiError) return Response.json({ error: error.message }, { status: 502 })
     console.error('[POST /api/posts/ai/caption]', error)

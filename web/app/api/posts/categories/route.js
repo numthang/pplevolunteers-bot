@@ -15,7 +15,9 @@ export async function GET(req) {
 
   try {
     const data = await postDB.listCategories(ctx.orgId, ctx.userId, { includeAllPersonal: isAdmin(ctx.access), visibility })
-    return Response.json({ success: true, data })
+    // canManage: หน้า list ไม่มี per-post `can` ให้เช็ค (ไม่ผูกกับโพสต์ใดโพสต์หนึ่ง) — ส่งสิทธิ์เปลี่ยนชื่อหมวดมาด้วยเลย
+    // ให้ UI ซ่อนปุ่มได้ตรงกับ pattern เดิม (can.approve/can.promote) แทนที่จะโชว์ปุ่มให้ทุกคนแล้วรอ 403 (/scrutinize 2026-08-01)
+    return Response.json({ success: true, data, canManage: canApprove(ctx.access) })
   } catch (error) {
     console.error('[GET /api/posts/categories]', error)
     return Response.json({ error: 'Internal Server Error' }, { status: 500 })
@@ -37,7 +39,7 @@ export async function PATCH(req) {
   if (!from) return Response.json({ error: 'ต้องระบุหมวดเดิม' }, { status: 400 })
 
   try {
-    const updated = await postDB.renameCategory(ctx.orgId, from, to)
+    const updated = await postDB.renameCategory(ctx.orgId, ctx.userId, from, to, { includeAllPersonal: isAdmin(ctx.access) })
     return Response.json({ success: true, data: { updated } })
   } catch (error) {
     console.error('[PATCH /api/posts/categories]', error)

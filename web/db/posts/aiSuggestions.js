@@ -1,4 +1,4 @@
-// web/db/posts/aiSuggestions.js — ข้อเสนอจาก AI ที่เก็บไว้อ่านซ้ำได้ (แคปชัน + ไอเดียภาพ)
+// web/db/posts/aiSuggestions.js — ข้อเสนอจาก AI ที่เก็บไว้อ่านซ้ำได้ (โควต + หัวข้อ + ไอเดียภาพ)
 //
 // ทำไมต้องเป็นตารางแยก ไม่ใช่คอลัมน์บน post_episodes:
 //   ทุก UPDATE บน post_episodes bump `updated_at` = lockToken ของ PostEditor หมดอายุ
@@ -8,7 +8,7 @@
 // ที่มีปุ่ม "กู้คืนฉบับนี้" (กู้คืนแคปชันทับเนื้อหา = ไม่มีความหมาย)
 import pool from '../index.js'
 
-/** เก็บ 1 ชุด (1 ครั้งที่กดขอ) — payload = { captions: [...], imageIdeas: [...] } */
+/** เก็บ 1 ชุด (1 ครั้งที่กดขอ) — payload = { quotes, headlines, imageIdeas, hashtags, cta, articleTips } (ทุกฟิลด์เป็น array ของ string) */
 export async function saveSuggestion({ episodeId, kind = 'caption', payload, userId = null, userName = null }) {
   const { rows } = await pool.query(
     `INSERT INTO post_ai_suggestions (episode_id, kind, payload, created_by_user_id, created_by_name)

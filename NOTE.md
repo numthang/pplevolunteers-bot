@@ -9,6 +9,9 @@
 - บนมือถือต้องจิ้ม posts card 2 ครั้ง ถึงจะเข้าหน้า editor
 - ประวัติการแก้ อยากให้มี expand ได้
 - อยากเติม feature quote ในหน้า https://pplevolunteers.org/posts/31 ลองดูตัวอย่าง bot quote image เอา function เดิมมาใช้ด้วย ไม่ต้องเขียนใหม่, quote สามารถ pick จาก ai ตรงแคปชัน+ไอเดียภาพ แก้เป็น โควต+ไอเดียภาพ จะเอามารวม function กันยังไงดี ให้ง่าย ไหลลื่น, background ภาพโควตจะเป็นยังไงดี, ขอไอเดียการใช้งาน
+- https://pplevolunteers.org/posts/6 พอกลับไปหน้ารายการแล้ว มัน filter รวมเหมือนเดิมอยากให้จำ state ก่อนหน้าด้วย เช่น เลือก discord ไว้ กลับมาก็เจอ discord filter, หน้า edit ยังไม่มีให้ลบ มีแต่เก็บเข้ากรุ
+- อยากได้ Emoji หน้า posteditor
+- อยากได้ข้อความใหญ่ๆ บน Facebook อ่ะ อันนี้ยังติดอยู่เหมือน จะยิง api ไม่ได้ แต่เห็นมีบางเคสที่ตัวหนังสือใหญ่และพิมพ์ยาวๆ ได้ด้วย แบบอันนี้ https://www.facebook.com/OilTraderKP/posts/pfbid02CXQo1VuJcPCBntjGTpbSgfth41ayPuRGjH4frhMUs9m1BDuQVoH1tcpCBjvvJyQVl?rdid=aGbrOQObqjVcNBvm ไม่รู้ว่า api ได้ไหม
 
 ## Posts: Posting Flow ใหม่
 ช่วยออกแบบ UI/UX และวาง Logic การทำงานของ **"ระบบโพสต์ Social Media"** ตาม Flow และเงื่อนไขด้านล่างนี้ให้หน่อย พยายามใช้ library หรือปรับแต่งของเดิมถ้าทำได้เช่นพวก social share post ส่วน video, image modal tool อาจจะเขียนใหม่ไหม ลองพิจารณาดู
@@ -114,7 +117,8 @@
 # Calling
 
 # Cases
-- หน้า https://pplevolunteers.org/case/manage/70-69-3DE5 case attachment ทำให้แสดง thumbnail
+- https://pplevolunteers.org/case/manage ทำ filter สถานะเรื่องร้องเรียนให้เลือกเป็น dropdown
+- ดูเหมือน bot นำเข้าเคส จะยังไม่ได้ดึง attachment และหน้าเว็บยังไม่มีให้แนบไฟล์เพิ่ม
 
 # Projects
 - ทำระบบจัดการโครงการ project management อย่าง notion, trello, appflowy

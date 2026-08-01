@@ -164,6 +164,7 @@ spec + ดีไซน์ + ตารางทั้งหมดอยู่ `md
 - [ ] **"โอนเคสข้ามจังหวัด"** เป็น action แยก (admin-only, เช็ค scope ทั้งต้นทาง+ปลายทาง, ลง timeline) — ถ้ามีเคสจัดจังหวัดผิดจริง
 - [ ] cron auto-sync timeline (อยู่ใน V2 ของ CASE.md เดิมอยู่แล้ว) — ตอนนี้ sync ด้วยปุ่มกดมือเท่านั้น ไม่มีใครกด = timeline ค้าง
 - [ ] ข้อความที่ถูก **edit ทีหลัง** ใน Discord ไม่มีทางเข้าระบบ (`?after=` ดูแต่ ID ใหม่) — รู้ไว้เฉยๆ ยังไม่มีแผนแก้
+- [ ] **extract shared `<Lightbox>` component** — `CaseAttachmentGallery.jsx` (ใหม่, 2026-07-31) เป็น lightbox ที่ 4 ที่เขียนแยกกัน ซ้ำกับ `CookingClient.jsx`, `PostMediaPanel.jsx`, `DocProjectView.jsx` (state + ESC + click-outside + ปุ่ม X เกือบเหมือนกันทุกตัว, ต่างแค่ single-image vs multi-image+nav) — ยังไม่มี shared component ใดๆ ตอนนี้ ควรดึงออกมาเป็น `components/Lightbox.jsx` แล้วแทนที่ทั้ง 4 จุด
 
 ---
 
