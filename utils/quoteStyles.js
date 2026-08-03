@@ -2,6 +2,7 @@
 const sharp  = require('sharp');
 const { createCanvas, loadImage, GlobalFonts } = require('@napi-rs/canvas');
 const path   = require('path');
+const fs     = require('fs');
 const { analyzeLayout } = require('../services/aiLayout');
 
 GlobalFonts.registerFromPath(
@@ -24,10 +25,32 @@ GlobalFonts.registerFromPath(
 
 const QUOTE_DIR = path.join(__dirname, '..', 'assets', 'quote');
 const markCache = {};
+
+// bug-079: ชื่อใน pool ที่ไม่มีไฟล์จริงทำให้ loadImage() ตกไป branch "โหลดจาก remote URL"
+// แล้วโยน ERR_INVALID_URL ที่อ่านไม่ออกว่าเป็นเพราะไฟล์หาย (classic_open/classic_close หายไปจาก
+// assets/quote/ → quote พังแบบสุ่ม 25%) → เช็คก่อนเสมอ แล้วบอกให้ตรงว่าไฟล์ไหนหาย
+const markExistsCache = {};
+function markExists(name) {
+  if (markExistsCache[name] === undefined) {
+    markExistsCache[name] = fs.existsSync(path.join(QUOTE_DIR, `${name}.png`));
+  }
+  return markExistsCache[name];
+}
+
+// คัด pool ให้เหลือเฉพาะที่มีไฟล์จริง — เติมไฟล์ทีหลังแล้ว restart ก็กลับมาสุ่มได้เอง
+function existingMarks(names) {
+  return names.filter(markExists);
+}
+
 async function loadMark(name) {
+  if (!markExists(name)) throw new Error(`quoteStyles: ไม่พบไฟล์ mark "${name}.png" ใน assets/quote/`);
   if (!markCache[name]) markCache[name] = await loadImage(path.join(QUOTE_DIR, `${name}.png`));
   return markCache[name];
 }
+
+// เครื่องหมายคำพูดที่สุ่มหยิบมาวาง — ชื่อที่ไม่มีไฟล์จริงจะถูก existingMarks() คัดออกให้เอง
+const OPEN_MARKS  = ['double_open', 'classic_open', 'block_open', 'outline_open', 'big_open'];
+const CLOSE_MARKS = ['double_close', 'classic_close', 'block_close', 'outline_close'];
 
 const ORANGE = '#ff6a13';
 const WHITE  = '#ffffff';
@@ -207,8 +230,11 @@ async function renderVariant(buf, { quoteText, authorName, side = 'left', vertic
   const textX        = isRight ? W - maxW - pad - barW - barGap - 4 : pad + barW + barGap + 4;
   const barX         = isRight ? W - pad - barW : pad;
   const extraGap     = Math.round(pad * markExtraGap);
-  const effectMarkH  = noMark ? 0 : markH;
-  const effectGap    = noMark ? 0 : markGap + extraGap;
+  // pool คัดเฉพาะชื่อที่มีไฟล์จริง (bug-079) — ต้องรู้ก่อนคำนวณ layout ไม่งั้นเว้นที่ให้ mark ที่ไม่ได้วาด
+  const pool         = noMark ? [] : existingMarks(isRight ? CLOSE_MARKS : OPEN_MARKS);
+  const hasMark      = pool.length > 0;
+  const effectMarkH  = hasMark ? markH : 0;
+  const effectGap    = hasMark ? markGap + extraGap : 0;
   const markY        = isTop
     ? (markAfterText ? pad + textH + effectGap : pad)
     : H - pad - textH - effectGap - effectMarkH;
@@ -226,10 +252,8 @@ async function renderVariant(buf, { quoteText, authorName, side = 'left', vertic
   ctx.fillStyle = gV;
   ctx.fillRect(0, 0, W, H);
 
-  if (!noMark) {
-    const OPEN_MARKS  = ['double_open', 'classic_open', 'block_open', 'outline_open', 'big_open'];
-    const CLOSE_MARKS = ['double_close', 'classic_close', 'block_close', 'outline_close'];
-    const pool    = isRight ? CLOSE_MARKS : OPEN_MARKS;
+  // pool ว่าง = ยังวาดข้อความต่อได้ตามปกติ แค่ไม่มีเครื่องหมายคำพูด (ดีกว่าโยน error ทั้งใบ)
+  if (hasMark) {
     const markImg = await loadMark(pool[Math.floor(Math.random() * pool.length)]);
     const markW   = (markImg.width / markImg.height) * markH;
     const markX   = isRight ? textX + maxW - markW : pad;

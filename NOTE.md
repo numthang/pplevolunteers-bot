@@ -12,6 +12,8 @@
 - https://pplevolunteers.org/posts/6 พอกลับไปหน้ารายการแล้ว มัน filter รวมเหมือนเดิมอยากให้จำ state ก่อนหน้าด้วย เช่น เลือก discord ไว้ กลับมาก็เจอ discord filter, หน้า edit ยังไม่มีให้ลบ มีแต่เก็บเข้ากรุ
 - อยากได้ Emoji หน้า posteditor
 - อยากได้ข้อความใหญ่ๆ บน Facebook อ่ะ อันนี้ยังติดอยู่เหมือน จะยิง api ไม่ได้ แต่เห็นมีบางเคสที่ตัวหนังสือใหญ่และพิมพ์ยาวๆ ได้ด้วย แบบอันนี้ https://www.facebook.com/OilTraderKP/posts/pfbid02CXQo1VuJcPCBntjGTpbSgfth41ayPuRGjH4frhMUs9m1BDuQVoH1tcpCBjvvJyQVl?rdid=aGbrOQObqjVcNBvm ไม่รู้ว่า api ได้ไหม
+- ก่อนไป video เอาไว้ session หน้าก่อน จะคุยเรื่องคลังภาพ ไอเดียผมที่เคยทำ คือ มี folder ส่วนตัว กับส่วนรวม แต่อยากขอไอเดียใหม่ๆ จาก software ระดับโลกเขาทำกันยังไงก็ลอกมาเลยก็ได้
+- เรื่องคลิป
 
 ## Posts: Posting Flow ใหม่
 ช่วยออกแบบ UI/UX และวาง Logic การทำงานของ **"ระบบโพสต์ Social Media"** ตาม Flow และเงื่อนไขด้านล่างนี้ให้หน่อย พยายามใช้ library หรือปรับแต่งของเดิมถ้าทำได้เช่นพวก social share post ส่วน video, image modal tool อาจจะเขียนใหม่ไหม ลองพิจารณาดู

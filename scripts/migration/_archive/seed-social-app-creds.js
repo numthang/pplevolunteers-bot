@@ -16,7 +16,7 @@
  */
 
 require('dotenv').config();
-const pool = require('../../db/index');
+const pool = require('../../../db/index');
 
 const CREDS = {
   meta_app_id:       process.env.META_APP_ID,

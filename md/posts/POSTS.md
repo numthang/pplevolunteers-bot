@@ -357,7 +357,13 @@ convention ที่ใช้จริง: **prefix = โมดูลเจ้�
 - **Modal จากปุ่มในโซนสื่อ = ทางเข้าหลัก** (ตัดสินใจ 2026-07-31)
 - ไฮไลต์ประโยค → ทำการ์ด (ของเดิม) = **shortcut เสริมทำทีหลังได้** พรีฟิลข้อความให้ Modal เดียวกัน ไม่ใช่ UI คนละชุด
 
-### 2.1 Video Generator Modal (2 step) — เขียนใหม่ทั้งก้อน ไม่มีของเดิม
+### 2.1 Video Generator Modal — ⏸️ **พักไว้ก่อน (user เคาะ 2026-08-03: "video ถ้ายากเก็บไว้ก่อนได้ ผมเน้นภาพ")**
+
+> รอบนี้ทำ **เฉพาะ Quote (ภาพ)** · ของด้านล่างเก็บเป็นดีไซน์ที่คุยไว้แล้ว ยังไม่ตัดทิ้ง — ค่อยคุยกันใหม่ตอนจะทำจริง
+> **ยังไม่เคาะ:** จะ render sync ใน route (จำกัดความยาวคลิป) หรือทำเป็น job row + poll เหมือนคิวโพสต์
+> **Blocker 2 (storage รับวิดีโอ) เลื่อนตามไปด้วย** — ไม่ต้องแก้ `postsStorage.js` ในรอบนี้
+
+
 
 เช็คแล้ว `utils/videoUtils.js` มีแค่ `convertVideoIfNeeded` (mov→mp4) — **ไม่มี renderer overlay ข้อความบนวิดีโอเลย**
 
@@ -386,6 +392,77 @@ convention ที่ใช้จริง: **prefix = โมดูลเจ้�
 - **Step 3:** fine-tune (ครอป 1:1/4:5/16:9 · สี saturation slider · ลายน้ำ) → **`[ Save & Add to Post ]`** → render จริง → เซฟ PNG ลง `storage/posts/` → insert `post_episode_media` (`kind='quote'`, `quote_text`/`quote_style`/`bg_path` ครบตามคอลัมน์ที่มีอยู่แล้ว) → ปิด modal → media item โผล่ใน drag&drop ทันที
 
 **ไฟล์ใหม่ที่ต้องสร้าง:** แค่ UI (`QuoteGeneratorModal.jsx`) + API เดียว `POST /api/posts/[id]/media/quote` — **renderer ไม่ต้องเขียนใหม่เลย** เรียก `renderQuoteStyle()` จาก `utils/quoteStyles.js` ตรงๆ ตามกติกาข้อ 16 (§ผ่าน `/grill`) ที่ห้าม copy/เขียน renderer ใหม่ฝั่งเว็บ
+
+### 🔍 ผลตรวจ `/scrutinize` 2026-08-03 — **ต้องแก้ 2 ข้อก่อนเริ่มเขียน**
+
+#### ✅ spike ที่ค้างมาตั้งแต่ 2026-07-29 — ผ่านแล้ว
+
+กติกาข้อ 16 เขียนไว้ว่า *"spike ก้อน 2b เช็คแค่ว่า import ข้าม package ได้ไหม · ไม่ผ่าน → ให้บอท render ผ่านคิว"* — **รันจริงแล้ว ผ่าน ไม่ต้องถอยไปทางคิว**
+
+```
+IMPORT OK — renderQuoteStyle,parseStyle
+quoteStyles sees sharp  -> <root>/node_modules/sharp             (0.34.5)
+quoteStyles sees canvas -> <root>/node_modules/@napi-rs/canvas   (0.1.97)
+render: ember-top-left OK · pillar-left OK · frame-right OK · center OK
+```
+
+⚠️ **ที่ต้องระวังตลอดไป:** `web/node_modules/@napi-rs/canvas` เป็น **1.0.0** ซึ่ง `loadImage(absolute path)` **พังทั้งดุ้น** (`ERR_INVALID_URL` — ทดสอบแล้ว) ส่วน root เป็น 0.1.97 ที่ใช้ได้
+→ ที่รอดทุกวันนี้เพราะ `utils/quoteStyles.js` อยู่ที่ repo root จึง resolve ขึ้นไปเจอ root เสมอ
+→ **ห้ามย้าย/ก๊อป quoteStyles.js เข้า `web/`** และ **ห้ามเพิ่ม `@napi-rs/canvas` ลง `web/package.json`** — ทำเมื่อไหร่ quote ตายทั้งระบบ
+
+#### ✅ Blocker 1 — **แก้แล้ว 2026-08-03** (asset ที่ renderer สุ่มหยิบ หายไป 2 ไฟล์)
+
+> แก้ที่ `utils/quoteStyles.js` — `existingMarks()` คัด pool ให้เหลือเฉพาะชื่อที่มีไฟล์จริง (memoized) · คำนวณ pool **ก่อน** layout แล้วใช้ `hasMark` คุม `effectMarkH`/`effectGap` (ไม่งั้นเว้นที่ให้ mark ที่ไม่ได้วาด) · `loadMark()` โยน error ที่บอกชื่อไฟล์ตรงๆ แทน `ERR_INVALID_URL` · pool ว่าง = วาดข้อความต่อได้ ไม่ล้มทั้งใบ · เติมไฟล์ `classic_*.png` ทีหลังแล้ว restart จะกลับมาสุ่มได้เอง
+> **verify:** 7 สไตล์ × 40 = **280 render ล้ม 0** (ก่อนแก้ 25%/15%) · bot-side `random` ×30 ผ่าน · `npm test` 272 ผ่าน · `bug-079`
+
+<details><summary>อาการเดิม (เก็บไว้เป็นที่มา)</summary>
+
+
+`utils/quoteStyles.js:230-231` มี `classic_open` / `classic_close` ใน `OPEN_MARKS`/`CLOSE_MARKS` แต่ **ไม่มีไฟล์ใน `assets/quote/`**
+
+```
+bottom-left  (OPEN pool)  x40 → ok=30 fail=10 (25%)  ERR_INVALID_URL
+bottom-right (CLOSE pool) x40 → ok=34 fail=6  (15%)  ERR_INVALID_URL
+```
+
+- **บอทเจออาการนี้อยู่ตอนนี้** แค่ยังไม่มีใครโยงว่าทำไม quote พังเป็นบางครั้ง
+- ทำไมข้อความ error งง: `loadImage()` ไม่เจอไฟล์ → ตกไป branch "โหลดจาก URL" → parse path เป็น URL ไม่ได้ → `Invalid URL`
+- **กระทบดีไซน์ใหม่โดยตรง** — ตัด grid เหลือ preview เดียวแล้ว 1 ใน 4 ครั้งผู้ใช้เจอ error ทันทีตอนเปิด modal
+- **แก้:** เติม 2 ไฟล์ **หรือ** ถอด 2 ชื่อออกจาก pool + ให้ `loadMark()` ข้ามอันที่หายแทนที่จะ throw
+</details>
+
+⚠️ **`classic_open.png` / `classic_close.png` ยังไม่มีอยู่ดี** — ตอนนี้แค่ไม่พังแล้ว ถ้าอยากได้เครื่องหมายคำพูดครบ 5 แบบต้องหาไฟล์มาวางใน `assets/quote/`
+
+#### 🔴 Blocker 2 — Video Generator เซฟ output ไม่ได้ (storage layer บล็อกวิดีโอ) — ⏸️ **เลื่อนพร้อม Video 2026-08-03**
+
+`web/lib/postsStorage.js` — `EXT_BY_MIME` มีแต่รูป → `savePostFile()` โยน `'ชนิดไฟล์ไม่รองรับ'` ทันทีเมื่อเป็น `video/mp4` และ `api/posts/[id]/media/route.js` เช็ค `isAllowedMime()` ก่อนรับไฟล์
+
+ต้องแก้ **3 จุด** พร้อมกัน: `EXT_BY_MIME` (+mp4/mov/webm) · `MAX_FILE_SIZE` (12MB เล็กเกินสำหรับคลิป — ทั้งขาอัปโหลดต้นทางและขา output) · limit ราย kind
+🟢 ของที่พร้อมแล้วไม่ต้องแตะ: `mimeOfPath()` รองรับ mp4/mov/webm แล้ว · CHECK constraint รับ `'video'` แล้ว (`migration.sql:440`)
+
+#### 🟠 ต้องเคาะเพิ่มก่อน implement
+
+| # | เรื่อง | ปัญหา | ทางที่เสนอ |
+|---|---|---|---|
+| 3 | ~~`sharp` ไม่อยู่ใน `serverExternalPackages`~~ | native เหมือน canvas → webpack จะพยายาม bundle ตอน build | ✅ **แก้แล้ว 2026-08-03** — `web/next.config.js` เป็น `['@napi-rs/canvas', 'sharp']` + คอมเมนต์เตือนห้ามย้าย quoteStyles.js เข้า web/ |
+| 4 | ffmpeg render sync ใน API route | overlay **บังคับ re-encode** ทั้งคลิป (copy codec ไม่ได้) · คลิป 1 นาที 1080p = หลายสิบวินาที บล็อก route ไม่มี progress · เครื่องนี้ CPU ตึงอยู่แล้ว (`build` ยังต้อง `nice -n 19 ionice`) | เลือก: (ก) job row + poll เหมือน `post_social_history` หรือ (ข) sync แต่จำกัดความยาว/ความละเอียด — **ยังไม่เคาะ** |
+| 5 | `post_ai_suggestions` ไม่มี kind สำหรับ quote | `aiSuggestions.js:12` `kind='caption'` payload `{captions, imageIdeas}` = แคปชันโพสต์ **ไม่ใช่ประโยคคำคม** (คนละความยาว/น้ำเสียง) ถ้าดึง caption มาใส่การ์ด `fitFont` จะย่อจนอ่านไม่ออก | เพิ่ม `kind='quote'` + endpoint prompt ต่างหาก ผ่าน `consumeAiQuota()` เดิม |
+| 6 | ลายน้ำติด 2 ชั้น | Quote modal Step 3 มีลายน้ำ + `PostPublishPanel.jsx:251-265` มีอีกตัวที่ pipeline ติดตอนโพสต์ → การ์ดโดนแปะซ้ำ | **ตัดลายน้ำออกจาก Quote modal ทั้งอัน** ปล่อยเป็นหน้าที่กล่องเผยแพร่ที่เดียว (ตรงกับข้อ 16 "posts ไม่มี logic การโพสต์เป็นของตัวเอง") |
+| 7 | `source_hash` มีอยู่แล้วแต่สเปกไม่ใช้ | `addMedia()` รับ `sourceHash` อยู่แล้ว = ของที่รองรับป้าย "ต้นทางเปลี่ยนแล้ว — อัปเดต?" (บรรทัด 330) | ระบุให้ชัดว่าจะเก็บ hash หรือปล่อย null |
+
+#### 🟢 Video Step 2 — พรีวิวห้าม render ฝั่ง server
+
+สเปกเขียน *"Player Preview ดูคลิปจริงพร้อมข้อความซ้อน"* — ถ้าตีความว่า render วิดีโอพรีวิวออกมาจริง = จ่าย ffmpeg **2 รอบต่อ 1 คลิป**
+→ ทำเป็น `<video>` + `<div>` ข้อความซ้อนด้วย CSS ในเบราว์เซอร์ (ต้นทุน 0 · เห็นผลทันที · ปรับสี/ความโปร่งได้ real-time) แล้วจ่าย ffmpeg **ครั้งเดียว** ตอนกด "ยืนยันสร้างวิดีโอ"
+
+#### ✅ verify แล้วว่าไม่ใช่ปัญหา
+
+- **วิดีโอที่ render เองโพสต์ออกได้จริง** — เคยกังวลว่า Meta รับแต่ URL สาธารณะ แต่ `publishPipeline.js:49-54` วางไฟล์ลง media-temp แล้วส่ง public URL ให้อยู่แล้ว · `WEB_BASE_URL`/`META_TEMP_URL` ตั้งใน `.env` แล้ว
+- `ffmpeg` + `ffprobe` มีที่ `/usr/bin/` ✅
+- **`user_config` migration เสร็จแล้ว** — `api/bot/quote-config/route.js` อ่าน `user_config WHERE user_id` ได้เลย → ใช้ต่อสำหรับ default style ตามสเปกได้ ไม่ต้องเขียนใหม่
+- `post_episode_media` มี `quote_text`/`quote_style`/`bg_path`/`source_hash` ครบ
+
+**Verdict: fix-then-ship** — โครงถูก (reuse renderer + ท่อ publish เดิม) แต่ห้ามเริ่มเขียนจนแก้ Blocker 1-2
 
 ---
 

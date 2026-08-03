@@ -6,7 +6,9 @@
 // ของที่ยกมาจากหน้านั้น: ปุ่ม ◀▶ เลื่อนลำดับ · รายการวิดีโอแยกจากรูป
 // (หมวด/สถานะ/เจ้าของ ย้ายไป PostMetaPanel.jsx คอลัมน์ขวา)
 import { useEffect, useRef, useState } from 'react'
-import { X, Upload, Loader2, ImageOff, ChevronLeft, ChevronRight, Film } from 'lucide-react'
+import { useTranslations } from 'next-intl'
+import { X, Upload, Loader2, ImageOff, ChevronLeft, ChevronRight, Film, Quote } from 'lucide-react'
+import QuoteGeneratorModal from './QuoteGeneratorModal.jsx'
 
 const ACCEPT = 'image/png,image/jpeg,image/webp,image/gif'
 
@@ -22,6 +24,8 @@ const GRID = {
 }
 
 export default function PostMediaPanel({ id, compact = false }) {
+  const tq = useTranslations('posts.quoteModal')
+  const [quoteOpen, setQuoteOpen] = useState(false)
   const [lightbox, setLightbox] = useState(null)   // { src, index } — รูปที่กดดูเต็มจอ
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
@@ -174,7 +178,7 @@ export default function PostMediaPanel({ id, compact = false }) {
           onDragOver={e => e.preventDefault()}
           onDragEnter={() => setDropHover(true)}
           onDragLeave={() => setDropHover(false)}
-          className={`rounded-lg border border-dashed p-4 text-center transition-colors ${
+          className={`relative rounded-lg border border-dashed p-4 pb-9 text-center transition-colors ${
             dropHover ? 'border-teal bg-warm-50' : 'border-warm-200 dark:border-disc-border'
           }`}
         >
@@ -197,6 +201,18 @@ export default function PostMediaPanel({ id, compact = false }) {
           <p className="text-sm text-warm-500 dark:text-disc-muted mt-1.5">
             หรือลากไฟล์มาวาง / คลิกแล้ววาง (Ctrl+V)
           </p>
+
+          {/* เครื่องมือเสริม = สร้างสื่อใหม่ ไม่ใช่อัปของที่มีอยู่ → วางเป็นปุ่มเล็กมุมขวาล่าง
+              ให้เป็นรอง "เลือกไฟล์" ที่เป็นทางหลัก (ปุ่มวิดีโอจะมาต่อแถวนี้) */}
+          <div className="absolute bottom-2 right-2 flex items-center gap-1">
+            <button
+              onClick={() => setQuoteOpen(true)}
+              title={tq('openButton')}
+              className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded-md border border-warm-200 dark:border-disc-border text-warm-500 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover transition"
+            >
+              <Quote size={12} /> {tq('openButton')}
+            </button>
+          </div>
         </div>
       )}
 
@@ -313,6 +329,18 @@ export default function PostMediaPanel({ id, compact = false }) {
             )
           })}
         </div>
+      )}
+
+      {quoteOpen && (
+        <QuoteGeneratorModal
+          postId={id}
+          onClose={() => setQuoteOpen(false)}
+          onSaved={media => {
+            setMedia(prev => [...prev, media])
+            // กล่อง "เผยแพร่" นับสื่อเอง (IG/Threads ต้องมีสื่อ ≥1) — ต้องบอกให้รู้เหมือนตอนอัปไฟล์
+            window.dispatchEvent(new CustomEvent('posts:media-changed', { detail: { id } }))
+          }}
+        />
       )}
 
       {/* ดูรูปเต็ม — ปิดได้ 3 ทาง: ปุ่ม X · ESC · คลิกพื้นหลัง (กฎ CLAUDE.md)

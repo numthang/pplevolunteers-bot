@@ -20,7 +20,7 @@
 
 require('dotenv').config();
 const { Client, GatewayIntentBits } = require('discord.js');
-const pool = require('../../db/index');
+const pool = require('../../../db/index');
 const {
   ROLES, INTEREST_CONFIG, SKILL_CONFIG,
   PROVINCE_ROLES, SUB_REGION_ROLES, MAIN_REGION_ROLES,

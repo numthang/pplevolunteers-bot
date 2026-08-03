@@ -1,0 +1,113 @@
+/**
+ * สะพานไปหา renderer ของบอท — `utils/quoteStyles.js` ที่ **repo root**
+ *
+ * ⛔ ห้าม copy/เขียน renderer ใหม่ฝั่งเว็บ (กติกาข้อ 16 ใน md/posts/POSTS.md)
+ *    ไม่งั้นได้การ์ด 2 หน้าตาที่ค่อยๆ เพี้ยนจากกัน
+ *
+ * ⚠️ ใช้ createRequire แทน `import` ตรงๆ โดยตั้งใจ — 2 เหตุผล ห้ามเปลี่ยนเป็น import:
+ *
+ * 1. **webpack ห้ามแตะไฟล์นี้** — `utils/quoteStyles.js` → `services/aiLayout.js` ซึ่ง require
+ *    `@google/generative-ai` ที่ **ไม่มีใน `web/package.json`** (มีแต่ฝั่งบอท)
+ *    ถ้าปล่อยให้ bundle จะ Module not found ตอน `next build`
+ *
+ * 2. **ต้อง resolve จาก repo root เท่านั้น** — `web/node_modules/@napi-rs/canvas` เป็น **1.0.0**
+ *    ที่ `loadImage(<absolute path>)` โยน `ERR_INVALID_URL` ทั้งดุ้น ส่วนของราก 0.1.97 ใช้ได้
+ *    createRequire ที่ปักหมุดไว้ที่รากทำให้ `require('@napi-rs/canvas')` ข้างใน quoteStyles
+ *    วิ่งขึ้นไปเจอของรากเสมอ (ดู md/posts/POSTS.md §ผลตรวจ /scrutinize)
+ */
+import { resolve } from 'node:path'
+import { REPO_ROOT } from './postsStorage.js'
+import { QUOTE_AI_KEY, QUOTE_STYLE_KEYS, QUOTE_STYLE_OPTIONS } from './quoteStyles.js'
+
+/**
+ * ⛔ ห้ามเปลี่ยนเป็น `import { createRequire } from 'node:module'`
+ * webpack ของ Next แทนที่ createRequire ที่ import มาด้วย stub แล้วพังตอน runtime
+ * ("module.createRequire failed parsing argument" ตอน build → `requireFromRoot is not a function")
+ * `process.getBuiltinModule` เป็นแค่ property access ที่ webpack วิเคราะห์ไม่ได้ → ได้ของจริงจาก Node
+ */
+function nodeRequireFromRoot() {
+  if (typeof process.getBuiltinModule !== 'function') {
+    throw new QuoteRenderError('ต้องใช้ Node 22.3+ ขึ้นไป (process.getBuiltinModule)')
+  }
+  const { createRequire } = process.getBuiltinModule('node:module')
+  // ปักหมุดที่ package.json ของราก → resolve จากรากเสมอ ไม่ขึ้นกับ cwd
+  return createRequire(resolve(REPO_ROOT, 'package.json'))
+}
+
+// โหลดตอนเรียกจริง ไม่ใช่ตอน import โมดูล — native binary จะได้ไม่ถูกแตะตอน build/collect page data
+let _renderer = null
+function renderer() {
+  if (!_renderer) _renderer = nodeRequireFromRoot()('./utils/quoteStyles.js')
+  return _renderer
+}
+
+/** ระดับความอิ่มสีที่ UI ให้เลือก — ค่าเดียวกับ COLOR_OPTIONS ใน handlers/quoteHandler.js */
+export const SATURATION_CHOICES = [
+  { value: 1.0, label: 'สี' },
+  { value: 0.55, label: 'กลาง' },
+  { value: 0.15, label: 'ขาวดำ' },
+]
+
+export const MAX_QUOTE_LEN = 300     // เท่ากับ modal ของบอท (TextInput maxLength)
+export const MAX_AUTHOR_LEN = 35
+
+export class QuoteRenderError extends Error {}
+
+/**
+ * ตรวจ + normalize ค่าที่รับมาจาก client (อย่าเชื่อ client)
+ * @returns {{quoteText:string, authorName:string, style:string, saturation:number|null}}
+ */
+export function normalizeQuoteParams({ quoteText, authorName, style, saturation }) {
+  const text = String(quoteText ?? '').trim()
+  if (!text) throw new QuoteRenderError('ยังไม่ได้ใส่ข้อความ')
+  if (text.length > MAX_QUOTE_LEN) throw new QuoteRenderError(`ข้อความยาวเกิน ${MAX_QUOTE_LEN} ตัวอักษร`)
+
+  const author = String(authorName ?? '').trim()
+  if (author.length > MAX_AUTHOR_LEN) throw new QuoteRenderError(`ชื่อยาวเกิน ${MAX_AUTHOR_LEN} ตัวอักษร`)
+
+  // ไม่ส่งสไตล์มา = 'random' (renderQuoteStyle สุ่มให้เอง โดยไม่แตะ AI)
+  const styleKey = String(style ?? '').trim() || 'random'
+  if (!QUOTE_STYLE_KEYS.includes(styleKey)) throw new QuoteRenderError('ไม่รู้จักสไตล์นี้')
+
+  // null = ปล่อยให้ AI ตัดสิน (เฉพาะสไตล์ AI) · สไตล์ปกติ null → renderer ใช้ default ของมันเอง
+  let sat = null
+  if (saturation !== null && saturation !== undefined && saturation !== '') {
+    sat = Number(saturation)
+    if (!Number.isFinite(sat) || sat < 0 || sat > 1) throw new QuoteRenderError('ค่าความอิ่มสีไม่ถูกต้อง')
+  }
+
+  return { quoteText: text, authorName: author, style: styleKey, saturation: sat }
+}
+
+/** สไตล์นี้ยิง AI ไหม — ใช้กันไม่ให้ preview เผาโควตาโดยไม่ตั้งใจ */
+export function isAiStyle(style) {
+  return style === QUOTE_AI_KEY
+}
+
+/**
+ * render การ์ดคำคม 1 ใบ
+ * @param {Buffer} bgBuffer  รูปพื้นหลัง (ครอปมาแล้วจากฝั่ง client — renderer คำนวณ layout จากขนาดภาพ
+ *                           จึง **ต้องครอปก่อน render เสมอ** เหมือนที่ quoteHandler.js:329 ทำ)
+ * @returns {Promise<Buffer>} PNG
+ */
+export async function renderQuoteCard(bgBuffer, params) {
+  const { quoteText, authorName, style, saturation } = params
+  // null = "ไม่ได้เลือกสี" ซึ่งมีความหมายเฉพาะสไตล์ AI (ปล่อยให้ AI ตัดสิน)
+  // สไตล์ปกติส่ง null เข้าไป sharp จะโยน "Expected number above zero for saturation"
+  // → default 1.0 (สีเต็ม) เหมือนที่ handlers/quoteHandler.js:321 ทำ
+  const sat = saturation ?? (isAiStyle(style) ? null : 1.0)
+  try {
+    const { buffer } = await renderer().renderQuoteStyle(style, bgBuffer, {
+      quoteText,
+      authorName,
+      saturation: sat,
+      mimeType: 'image/jpeg',   // ใช้เฉพาะตอนส่งภาพให้ AI วิเคราะห์ layout
+    })
+    return buffer
+  } catch (error) {
+    console.error('[renderQuoteCard]', error)
+    throw new QuoteRenderError(`สร้างการ์ดไม่สำเร็จ: ${error.message}`)
+  }
+}
+
+export { QUOTE_AI_KEY, QUOTE_STYLE_OPTIONS, QUOTE_STYLE_KEYS }

@@ -1262,5 +1262,42 @@
       "title": "This organization is not connected to Discord",
       "body": "Bot settings are tied to a Discord server. Invite the bot and link a server to this organization first."
     }
+  },
+  "posts": {
+    "quoteModal": {
+      "title": "Create quote card",
+      "openButton": "Quote card",
+      "step1": "1. Background & text",
+      "step2": "2. Pick a style",
+      "bgLabel": "Background image",
+      "bgUpload": "Upload image",
+      "bgFromPost": "Use a photo from this post",
+      "bgFromPostEmpty": "This post has no photos yet",
+      "bgChange": "Change image",
+      "cropLabel": "Aspect ratio",
+      "cropHint": "Drag and zoom to frame the shot",
+      "textLabel": "Quote text",
+      "textPlaceholder": "Type the line to put on the image",
+      "authorLabel": "Name / title",
+      "authorPlaceholder": "e.g. Media team",
+      "aiQuotes": "AI suggestions",
+      "aiQuotesEmpty": "No AI suggestions yet — use \"Caption + image ideas\" in the editor first",
+      "aiQuotesUse": "Use this line",
+      "styleLabel": "Style",
+      "colorLabel": "Colour",
+      "colorFull": "Full colour",
+      "colorMid": "Muted",
+      "colorBw": "Black & white",
+      "rendering": "Rendering...",
+      "nextButton": "Preview",
+      "backButton": "Back",
+      "saveButton": "Add to post",
+      "saving": "Saving...",
+      "closeTitle": "Close (ESC)",
+      "needBg": "Choose a background image first",
+      "needText": "Enter the quote text first",
+      "loadFailed": "Could not load",
+      "aiStyleNote": "This style asks AI to analyse the image for placement and colour — uses 1 AI credit"
+    }
   }
 }

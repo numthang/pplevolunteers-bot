@@ -19,6 +19,18 @@ export async function listMedia(episodeId) {
   return rows
 }
 
+/**
+ * หาแถวที่อ้าง path นี้ — ใช้กันไม่ให้ยิง path ของโพสต์อื่นมาเป็นพื้นหลังการ์ด
+ * ไฟล์พื้นหลังที่เพิ่งอัป (ยังไม่มีแถว) จะคืน [] = ผ่าน ซึ่งถูกแล้ว
+ */
+export async function findMediaByPath(path) {
+  const { rows } = await pool.query(
+    `SELECT id, episode_id FROM post_episode_media WHERE path = $1`,
+    [path]
+  )
+  return rows
+}
+
 export async function countMedia(episodeId) {
   const { rows } = await pool.query(
     `SELECT COUNT(*)::int AS n FROM post_episode_media WHERE episode_id = $1`,

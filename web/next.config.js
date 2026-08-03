@@ -6,9 +6,16 @@ const withNextIntl = createNextIntlPlugin('./i18n/request.js')
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // แยกโฟลเดอร์ build ได้ด้วย env — ให้ server เทส (เช่น `NEXT_DIST_DIR=.next-test next dev -p 3100`)
+  // ไม่ไปชนกับ `next dev` ที่ dev เปิดค้างไว้ที่ :3000 · เคยชนแล้วได้ PageNotFoundError
+  // ("Cannot find module for page") เพราะ .next มี artifact ของ prod build ปนกับ dev
+  distDir: process.env.NEXT_DIST_DIR || '.next',
   outputFileTracingRoot: require('path').resolve(__dirname, '../'),
-  // @napi-rs/canvas มี native .node binary — ห้าม webpack bundle ให้ require ตอน runtime
-  serverExternalPackages: ['@napi-rs/canvas'],
+  // native .node binary — ห้าม webpack bundle ให้ require ตอน runtime
+  // sharp อยู่ด้วยเพราะ utils/quoteStyles.js (repo root) require มัน แล้วเว็บ import ไฟล์นั้นตรงๆ
+  // ⚠️ quoteStyles.js ต้องอยู่ที่ repo root เท่านั้น — resolve ขึ้นไปเจอ canvas 0.1.97 ของราก
+  //    ถ้าไปหยิบ web/node_modules/@napi-rs/canvas (1.0.0) จะพังทั้งระบบ: loadImage(path) โยน ERR_INVALID_URL
+  serverExternalPackages: ['@napi-rs/canvas', 'sharp'],
   images: {
     domains: ['cdn.discordapp.com'],
     unoptimized: true,

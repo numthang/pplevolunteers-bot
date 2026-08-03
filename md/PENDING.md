@@ -76,8 +76,35 @@ spec + ดีไซน์ + ตารางทั้งหมดอยู่ `md
   - ⚠️ เจอตอนเทส: **ต้องเปิด feature `posts` ที่ `/org/settings/features` ก่อน** ไม่งั้น `/posts` เด้ง 404 (เปิดให้ org 1 ใน DB local แล้ว) · bug ที่แก้: bug-066 (พรอมป์ AI ตอบ format `carousel` ชน CHECK)
   - ⬜ ยังไม่ได้เทสจริง: ปุ่ม AI (ไม่อยากเสียเงิน) · ลากเรียงสื่อ · วางรูปจาก clipboard
   - ⏭️ prod: รันบล็อก POSTS ใน `migration.sql` (additive) · `storage/posts/` สร้างเอง
-- [ ] **ก้อน 2b** — quote studio (ธัมบ์เนล 20 สไตล์ · sync ต้นทาง · พื้นสี) + preview รายแพลตฟอร์ม + ซอยตอนแบบลากเส้น
-  - ⚠️ spike ก่อน (~20 นาที): เว็บ import `utils/quoteStyles.js` ข้าม package ได้ไหม (`web/package.json` มี `@napi-rs/canvas` + `outputFileTracingRoot` ชี้รากแล้ว) · ไม่ผ่าน → fallback ให้บอท render ผ่านคิว · **ห้าม copy renderer ไปฝั่งเว็บ**
+- [ ] **ก้อน 2b** — Quote Generator Modal · **ดีไซน์ + `/scrutinize` เสร็จ 2026-08-03** ดู `md/posts/POSTS.md` §🎬 Media Section
+  - [x] ✅ **spike ผ่านแล้ว** — เว็บ import `utils/quoteStyles.js` ข้าม package ได้จริง render ครบทุกสไตล์ (ไม่ต้อง fallback ไปคิวบอท)
+    ⚠️ รอดเพราะไฟล์อยู่ **repo root** จึง resolve เจอ canvas 0.1.97 ของราก · `web/node_modules/@napi-rs/canvas` เป็น **1.0.0 ที่ `loadImage(path)` พัง** → **ห้ามย้าย/ก๊อป quoteStyles.js เข้า `web/`** และ **ห้ามใส่ `@napi-rs/canvas` ใน `web/package.json`**
+  - [x] ✅ Blocker: `bug-079` mark asset หาย → quote พังสุ่ม 25% (แก้แล้ว 280 render ล้ม 0) · `sharp` เข้า `serverExternalPackages` แล้ว
+  - [x] ~~`kind='quote'` ใน `post_ai_suggestions`~~ **ไม่ต้องทำ** — `/api/posts/ai/caption` คืน `quotes` (3 อัน ดึงจากเนื้อหาจริง "ใช้แปะบนภาพได้") + เก็บลง `post_ai_suggestions` อยู่แล้วตั้งแต่ 2026-08-01 → modal อ่าน `payload.quotes` จาก `GET /api/posts/[id]/ai-suggestions` ได้เลย
+  - [x] ✅ **API เสร็จ + เทสจริงผ่าน 2026-08-03**
+    - `web/lib/quoteRender.js` — สะพานไป `utils/quoteStyles.js` · `web/lib/quoteBg.js` — resolve พื้นหลัง 3 ทาง (ไฟล์ใหม่ / `bgMediaId` / `bgPath`) · `findMediaByPath()` ใน `web/db/posts/media.js`
+    - `POST /api/posts/[id]/media/quote/preview` — คืน PNG ดิบ + header `X-Bg-Path` **ไม่แตะ DB** (รอบแรกอัปไฟล์ → รอบต่อไปส่งแค่ path ไม่ต้องอัปซ้ำตอนสลับสไตล์)
+    - `POST /api/posts/[id]/media/quote` — render + `savePostFile` + `addMedia(kind='quote')` เก็บ `quote_text`/`quote_style`/`bg_path` ครบ
+    - **verify (curl + session จริง):** 7 สไตล์ + `random` = 200 ทุกตัว · preview 3 รอบไม่เกิดแถวใน DB สักแถว · save → 201 + ไฟล์ PNG 1080×1080 บนดิสก์ · ปฏิเสธถูกทุกเคส: ไม่ล็อกอิน 401 · ข้อความว่าง/สไตล์มั่ว/`bgPath=../../.env` 400 · `bgPath`+`bgMediaId` **ของโพสต์อื่น** 400 · `npm test` 272 ผ่าน · `next build` ผ่านไม่มี warning
+    - บั๊กที่เจอระหว่างทาง: `bug-080` (webpack stub `createRequire` → ใช้ `process.getBuiltinModule` แทน) · `bug-081` (BIGSERIAL คืนเป็น string เทียบ `===` ไม่ตรง)
+  - [ ] ⚠️ **ยังไม่มี gc ไฟล์กำพร้า** — พื้นหลังที่อัปแล้วผู้ใช้กดยกเลิก (หรือ render ล้มหลังเซฟ bg) ค้างบนดิสก์ถาวร · เทสรอบเดียวเหลือขยะ 5 ไฟล์ · ต้องเขียน `scripts/posts/gc-media.js` (grill ข้อ 6 วางไว้แล้วแต่ยังไม่มีไฟล์)
+  - [x] ✅ **`QuoteGeneratorModal.jsx` เสร็จ + เทสเบราว์เซอร์จริงผ่าน 2026-08-03**
+    - **2 ขั้นไม่ใช่ 3** — ขั้น 1 พื้นหลัง+ครอป+ข้อความ · ขั้น 2 สไตล์+สี+บันทึก (ครอปอยู่ขั้น 1 เพราะ renderer คิด layout จากขนาดภาพ)
+    - ปุ่ม `[สร้างการ์ดคำคม]` อยู่ข้าง `[เลือกไฟล์]` ใน `PostMediaPanel.jsx` · บันทึกแล้วการ์ดโผล่ในกริดทันที + ยิง `posts:media-changed` ให้กล่องเผยแพร่นับสื่อใหม่
+    - i18n ครบทั้งไฟล์ — ns `posts.quoteModal` 33 keys ใน `th.json` + `en.json`
+    - **เทส Playwright:** ครอป 4:5 → พรีวิว 720×900 ตรงสัดส่วน · สลับสไตล์/สี render ใหม่ได้ · **พรีวิว 3 รอบ สื่อใน DB ไม่เพิ่มสักแถว** เพิ่มเฉพาะตอนกดบันทึก · ปิดได้ครบ 3 ทาง (ESC/คลิกนอก/ปุ่ม X) · ไม่มี JS error
+    - กล่อง "ข้อความจาก AI" เทสกับโพสต์ 8 → ขึ้น 3 ข้อความ คลิกแล้วเติมลง textarea ได้
+    - ℹ️ **ตั้งใจอ่านเฉพาะ `payload.quotes` ไม่ fallback ไป `captions`** — `captions` (payload ก่อน 2026-08-01) คือประโยคที่ AI **แต่งเอง** ซึ่งเป็นสิ่งที่ตั้งใจเลิกใช้เพราะ "ห้ามแต่งคำพูดที่ผู้เขียนไม่ได้พูด" · โพสต์เก่าจะไม่เห็นกล่องนี้จนกว่าจะกดขอ AI ใหม่ = ถูกแล้ว
+    - ⚠️ เทสเบราว์เซอร์ต้องใช้ `next dev` — โหมด production ตั้ง cookie เป็น `Secure` แล้ว Chromium ไม่ส่งผ่าน http://localhost → next-auth ตอบ 400 (curl ไม่สนใจ flag นี้เลยผ่าน)
+  - **เคาะแล้ว:** crop ต้องมา**ก่อน** render เสมอ (renderer คำนวณ layout จากขนาดภาพ — บอททำแบบนี้อยู่ที่ `quoteHandler.js:329`) · **ไม่มีลายน้ำใน modal** ปล่อยให้กล่องเผยแพร่ทำที่เดียว (กันแปะซ้ำ 2 ชั้น) · bg เขียนลง `storage/posts/` แบบไม่สร้างแถวใน `post_episode_media` แล้วให้ gc เก็บ
+  - **i18n (เคาะ 2026-08-03):** modal ใหม่ใช้ `t()` สร้าง ns `posts` ใน `th.json`/`en.json` เฉพาะ key ของ modal · **ไฟล์เก่าทั้งโซนยัง hardcode ไทย** → ดู "migrate โซน posts" ข้างล่าง
+- [ ] **migrate i18n โซน posts** (หนี้จากก้อน 2b) — 6 ไฟล์: `PostsHome` · `PostEditor` · `PostMediaPanel` · `PostMetaPanel` · `PostPublishPanel` · `PostRevisions` · งาน mechanical ส่ง Sonnet subagent ได้ · ระหว่างยังไม่ทำ โซนนี้จะปน hardcode กับ `t()`
+- [ ] **🎨 คลังภาพ (media library) — ยังเป็นข้อเสนอ ยังไม่เคาะ** (user 2026-08-03: *"บางทีผมก็อยากมีคลังภาพใหญ่ ให้คนอัพโหลด เหมือน canva แต่ก็อยากให้มีคลังส่วนตัวด้วย"*)
+  - ⛔ **ห้ามทำคลัง = "รูปจากทุกโพสต์ใน org"** — `postsRetention.js` ลบไฟล์ `kind='upload'` **180 วันหลังเผยแพร่** (`path` → NULL) → คลังจะค่อยๆ เน่า ธัมบ์เนลแตกเงียบๆ · คลังกับสื่อแนบโพสต์เป็นคนละ lifecycle ต้องคนละตาราง
+  - เสนอ: ตาราง `post_assets` — `org_id` · `owner_user_id` · `visibility` ('personal'|'org') **ชุดเดียวกับ `post_episodes`** จึงได้คลังส่วนตัว+คลังองค์กรจากคอลัมน์เดียว · `path`/`mime`/`width`/`height`/`bytes`/`sha256` (dedupe) · `title`/`tags text[]` (ค้นได้ — Meilisearch มีอยู่แล้ว) · **ไม่มี retention**
+  - แม่แบบที่มีอยู่แล้ว: `assets/watermark/<guildId>/` vs `assets/watermark/user_<userId>/` = personal vs shared ที่ใช้งานจริงอยู่
+  - **ไม่บล็อกก้อน 2b** — modal เก็บ `bg_path` อยู่แล้ว มีคลังทีหลังแค่เพิ่มปุ่มที่ set `bg_path` ไม่ต้องแก้อย่างอื่น ไม่มี lock-in
+  - ดิสก์ยังไม่ใช่ข้อจำกัด (`storage/posts` 1.5 MB · ว่าง 115 GB) แต่ถ้าคลังโตจริงค่อยคุยเรื่อง R2 (ดู `decision_media_storage_retention`)
 - [ ] **ก้อน 3** — อนุมัติ: สถานะ + revisions + review links (`noindex`, token ≥32 bytes) + comments + ล็อกหลังอนุมัติ
 - [x] **ก้อน 4** ✅ 2026-07-30 (local · ยังไม่ deploy prod · **ยังไม่กดโพสต์จริงจากดิสฯ/เว็บ**)
   - ขั้น 1 `3539ba5` — param `accountId` ใน metaApi/xApi (+ `orgId` ให้ X ใช้ app creds ของ org)

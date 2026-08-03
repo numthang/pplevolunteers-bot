@@ -4,7 +4,7 @@
 // ปุ่มบน live message เก่ายังไม่มี sid → handler มี fallback (btnSid) รองรับอยู่แล้ว
 //   → repost ถัดไปจะใช้ config ที่ patch แล้ว ปุ่มถูกต้อง
 // รันครั้งเดียว: sudo -u www bash -c 'cd /www/wwwroot/pple-volunteers && node scripts/migration/gogo-session-backfill.js'
-const pool = require('../../db/index');
+const pool = require('../../../db/index');
 
 const GOGO_BTN_PREFIXES = ['btn_gogo_signup', 'btn_gogo_dm', 'btn_gogo_list'];
 const isGogoBtn = id => GOGO_BTN_PREFIXES.some(p => id === p || id.startsWith(p + ':'));
