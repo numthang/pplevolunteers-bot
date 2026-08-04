@@ -103,12 +103,36 @@ spec + ดีไซน์ + ตารางทั้งหมดอยู่ `md
   - **เคาะแล้ว:** crop ต้องมา**ก่อน** render เสมอ (renderer คำนวณ layout จากขนาดภาพ — บอททำแบบนี้อยู่ที่ `quoteHandler.js:329`) · **ไม่มีลายน้ำใน modal** ปล่อยให้กล่องเผยแพร่ทำที่เดียว (กันแปะซ้ำ 2 ชั้น) · bg เขียนลง `storage/posts/` แบบไม่สร้างแถวใน `post_episode_media` แล้วให้ gc เก็บ
   - **i18n (เคาะ 2026-08-03):** modal ใหม่ใช้ `t()` สร้าง ns `posts` ใน `th.json`/`en.json` เฉพาะ key ของ modal · **ไฟล์เก่าทั้งโซนยัง hardcode ไทย** → ดู "migrate โซน posts" ข้างล่าง
 - [ ] **migrate i18n โซน posts** (หนี้จากก้อน 2b) — 6 ไฟล์: `PostsHome` · `PostEditor` · `PostMediaPanel` · `PostMetaPanel` · `PostPublishPanel` · `PostRevisions` · งาน mechanical ส่ง Sonnet subagent ได้ · ระหว่างยังไม่ทำ โซนนี้จะปน hardcode กับ `t()`
-- [ ] **🎨 คลังภาพ (media library) — ยังเป็นข้อเสนอ ยังไม่เคาะ** (user 2026-08-03: *"บางทีผมก็อยากมีคลังภาพใหญ่ ให้คนอัพโหลด เหมือน canva แต่ก็อยากให้มีคลังส่วนตัวด้วย"*)
-  - ⛔ **ห้ามทำคลัง = "รูปจากทุกโพสต์ใน org"** — `postsRetention.js` ลบไฟล์ `kind='upload'` **180 วันหลังเผยแพร่** (`path` → NULL) → คลังจะค่อยๆ เน่า ธัมบ์เนลแตกเงียบๆ · คลังกับสื่อแนบโพสต์เป็นคนละ lifecycle ต้องคนละตาราง
-  - เสนอ: ตาราง `post_assets` — `org_id` · `owner_user_id` · `visibility` ('personal'|'org') **ชุดเดียวกับ `post_episodes`** จึงได้คลังส่วนตัว+คลังองค์กรจากคอลัมน์เดียว · `path`/`mime`/`width`/`height`/`bytes`/`sha256` (dedupe) · `title`/`tags text[]` (ค้นได้ — Meilisearch มีอยู่แล้ว) · **ไม่มี retention**
-  - แม่แบบที่มีอยู่แล้ว: `assets/watermark/<guildId>/` vs `assets/watermark/user_<userId>/` = personal vs shared ที่ใช้งานจริงอยู่
-  - **ไม่บล็อกก้อน 2b** — modal เก็บ `bg_path` อยู่แล้ว มีคลังทีหลังแค่เพิ่มปุ่มที่ set `bg_path` ไม่ต้องแก้อย่างอื่น ไม่มี lock-in
-  - ดิสก์ยังไม่ใช่ข้อจำกัด (`storage/posts` 1.5 MB · ว่าง 115 GB) แต่ถ้าคลังโตจริงค่อยคุยเรื่อง R2 (ดู `decision_media_storage_retention`)
+- [ ] **🎨 คลังภาพ (media library) — ✅ ดีไซน์เคาะแล้ว 2026-08-04 · ยังไม่เขียนโค้ด · ⚠️ ต้องรัน `/scrutinize` ก่อน**
+
+  ที่มา (user 2026-08-03): *"บางทีผมก็อยากมีคลังภาพใหญ่ ให้คนอัพโหลด เหมือน canva แต่ก็อยากให้มีคลังส่วนตัวด้วย"* + *"ขอไอเดียใหม่ๆ จาก software ระดับโลก ลอกมาเลยก็ได้"*
+
+  **⛔ 2 ข้อห้ามที่ต้องรู้ก่อนแตะ:**
+  - **ห้ามทำคลัง = "รูปจากทุกโพสต์ใน org"** — `postsRetention.js` ลบไฟล์ `kind='upload'` **180 วันหลังเผยแพร่** (เซ็ต `path=NULL`) → คลังจะเน่าเงียบๆ ธัมบ์เนลแตกทีหลัง · คลังกับสื่อแนบโพสต์ **คนละ lifecycle ต้องคนละตาราง**
+  - **ห้ามทำเป็น folder ซ้อน** — user เสนอ "folder ส่วนตัว/ส่วนรวม" แต่เคาะแล้วว่า **การแบ่งถูก แต่ folder เป็น primitive ที่ผิด**: สิทธิ์ซ้อน (folder ACL × org roles) ดูแลไม่ไหวใน multi-tenant · รูป 1 ใบอยู่ได้ folder เดียวทั้งที่ควรอยู่ทั้ง "ราชบุรี" และ "น้ำท่วม" · WordPress จงใจไม่มี folder ในคลังสื่อมาสิบปี ปลั๊กอินที่เติมให้เป็นแหล่งปัญหาคลาสสิก
+    → ใช้ **`visibility` + `tags[]` + smart view** แทน
+
+  **ที่ลอกมา (เรียงตามคุ้มค่า):** ① Canva "Uploads vs Brand Kit" = 2 กองที่*กติกาต่างกัน* ไม่ใช่ 2 โฟลเดอร์ · ② Figma/Google Photos smart view ("ใช้ล่าสุด/ของฉัน/ขององค์กร/ติดดาว/ยังไม่เคยใช้") · ③ Contentful/Bynder tag หลายอันต่อรูป · ④ Figma/Bynder "รูปนี้ถูกใช้ที่ไหนบ้าง" · ⑤ Dropbox dedupe ด้วย hash · ⑥ Bynder/Brandfolder สิทธิ์การใช้ภาพ+วันหมดอายุ
+  **ไม่ลอก:** folder ซ้อนลึก · versioning ของ asset · AI auto-tag (เปลืองโควตา) · approval workflow ของ asset (มีของโพสต์แล้ว อย่าทำ 2 ชั้น)
+
+  **✅ user เคาะ 2026-08-04:**
+  - **กองกลางเฉพาะ `editor`** — ใครก็อัปเข้ากองตัวเอง (`personal`) ได้ แต่ **เฉพาะ `editor` ที่เลื่อนรูปขึ้นกองกลาง (`org`) ได้** (กันกองกลางรกใน 3 เดือน · ใช้ role ที่มีอยู่แล้ว ไม่เพิ่มคำใหม่)
+  - **ใส่ `consent_note`/`usable_until` ตั้งแต่แรก** แม้ยังไม่ทำ UI — เป็นภาพคนจริงในงานพรรค เติมทีหลังต้องไล่ถามย้อนหลังทุกรูปซึ่งทำไม่ได้จริง
+
+  **ตาราง `post_assets` (คอลัมน์ชุด visibility เดียวกับ `post_episodes` — ไม่ต้องเรียนกลไกใหม่):**
+  ```
+  org_id · owner_user_id · visibility('personal'|'org')
+  path · mime · width · height · bytes · sha256      ← dedupe
+  title · tags text[]                                 ← แทน folder
+  uploaded_by · created_at
+  consent_note · usable_until
+  ```
+  - **ไม่มี retention** — คลังคือของที่ตั้งใจเก็บ (ต่างจาก `post_episode_media`)
+  - **"ถูกใช้ที่ไหน" ได้ฟรี** จาก `post_episode_media.path`/`bg_path` ที่ชี้ไฟล์เดียวกัน — ไม่ต้องมีตารางเชื่อม
+  - ⚠️ **`scripts/posts/gc-media.js` ต้องเพิ่ม `post_assets.path` เป็น reference ที่ 4** ไม่งั้น gc ลบรูปในคลังทิ้งทันทีที่ยังไม่มีโพสต์ไหนใช้
+  - แม่แบบ personal-vs-shared ที่ใช้จริงอยู่แล้ว: `assets/watermark/<guildId>/` vs `assets/watermark/user_<userId>/`
+  - **ไม่บล็อกอะไร** — `QuoteGeneratorModal` เก็บ `bg_path` อยู่แล้ว มีคลังทีหลังแค่เพิ่มปุ่มที่ set `bg_path` ไม่ต้องแก้ modal
+  - ดิสก์ยังไม่ใช่ข้อจำกัด (`storage/posts` 1.1 MB · ว่าง 115 GB) โตจริงค่อยคุย R2 (ดู `decision_media_storage_retention`)
 - [ ] **ก้อน 3** — อนุมัติ: สถานะ + revisions + review links (`noindex`, token ≥32 bytes) + comments + ล็อกหลังอนุมัติ
 - [x] **ก้อน 4** ✅ 2026-07-30 (local · ยังไม่ deploy prod · **ยังไม่กดโพสต์จริงจากดิสฯ/เว็บ**)
   - ขั้น 1 `3539ba5` — param `accountId` ใน metaApi/xApi (+ `orgId` ให้ X ใช้ app creds ของ org)
