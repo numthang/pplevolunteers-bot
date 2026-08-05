@@ -363,8 +363,17 @@ async function renderBorder(buf, { quoteText, authorName, saturation = 0.15, acc
 }
 
 // ── Style 8: quote_border_2 (top H + right V + bottom H — right frame) ───────
-// PNG 865x400 — C-shape: H-bar top y≈5%, V-bar right x≈97%, H-bar bottom y≈94%
-// content area height = 89% of pngH, aspect ratio = 865/400 = 2.1625
+// ค่าจริงของ assets/quote/frame_right.png (865x391) — **วัดจาก alpha ของไฟล์ 2026-08-06**
+// ไม่ใช่ค่าประมาณในคอมเมนต์เดิม (เขียนไว้ 5%/94%/865x400 ซึ่งคลาดจากของจริง ทำให้กรอบสูงเกิน
+// ~4% และช่องบน-ล่างไม่เท่ากัน):
+//   แถบบน  y 1–14   = 0.3%–3.6%      · แถบล่าง y 377–390 = 96.4%–99.7%
+//   แถบตั้งขวา x 851–864 = 98.4%–99.9%
+const FR = {
+  ratio:  865 / 391,
+  top:    14 / 391,     // ขอบล่างของแถบบน = ที่ที่เนื้อหาเริ่มได้
+  bottom: 377 / 391,    // ขอบบนของแถบล่าง
+};
+FR.inner = FR.bottom - FR.top;   // 0.928
 async function renderBorder2(buf, { quoteText, authorName, saturation = 0.15, accentColor }) {
   const accent = accentColor || ORANGE;
   const work = await sharp(buf).modulate({ saturation }).toBuffer();
@@ -386,21 +395,19 @@ async function renderBorder2(buf, { quoteText, authorName, saturation = 0.15, ac
   const maxTextW = maxW8;
   const textH = lines.length * lh + nsz * 1.8;
 
-  // ช่องว่างในกรอบ เหนือ/ใต้ข้อความ — **เท่ากันทั้งบนล่าง**
-  // ของเดิมคิดกรอบจาก textH ตรงๆ (content 89% = textH) แล้วเลื่อนกรอบขึ้นด้วย innerGap
-  // → เหลือช่องบนแค่ ~7.5% ของกรอบ บรรทัดแรกเลยเกือบชนเส้นบน (สระบน/วรรณยุกต์ไทยยิ่งชน)
-  const innerPad = Math.round(qszFit * 0.45);
+  // ช่องว่างในกรอบ เหนือ/ใต้ข้อความ — เท่ากันทั้งบนล่าง (บรรทัดแรกเคยเกือบชนเส้นบน)
+  const innerPad = Math.round(qszFit * 0.32);
   const contentH = textH + innerPad * 2;
 
-  // scale PNG so content area (5%–94% = 89% ของภาพ) = contentH
-  const pngH    = contentH / 0.89;
+  // ย่อ/ขยาย PNG ให้ **ช่องว่างระหว่างแถบบน-ล่าง (92.8%)** พอดีกับ contentH
+  const pngH    = contentH / FR.inner;
   // กรอบต้องไม่กว้างเกินภาพ — คำพูด 5 บรรทัดดันกรอบจนขอบซ้ายหลุดออกนอกเฟรม
   // บีบเฉพาะแนวนอน (ความสูงเท่าเดิม = ข้อความยังอยู่ในกรอบครบ) มุมโค้งเพี้ยนแค่นิดเดียว
-  const pngW    = Math.min(pngH * (865 / 400), W - pad * 2);
+  const pngW    = Math.min(pngH * FR.ratio, W - pad * 2);
   // ขอบล่างของกรอบชิดขอบล่างของภาพ (เว้น pad) แล้วค่อยวางข้อความลงในกรอบ
   const borderY = H - pad - pngH;
   const borderX = W - pad - pngW;
-  const textBlockTop = borderY + pngH * 0.05 + innerPad;
+  const textBlockTop = borderY + pngH * FR.top + innerPad;
 
   // text inside: left of V-bar (97%), right-aligned
   const contentX    = borderX + pngW * 0.02;
