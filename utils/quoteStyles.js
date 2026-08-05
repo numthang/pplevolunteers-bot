@@ -384,15 +384,21 @@ async function renderBorder2(buf, { quoteText, authorName, saturation = 0.15, ac
   const maxTextW = maxW8;
   const textH = lines.length * lh + nsz * 1.8;
 
-  // scale PNG so content area (89%) = textH
-  const pngH    = textH / 0.89;
-  const pngW    = pngH * (865 / 400);
-  const textBlockTop = H - pad - textH;
-  // content top (5%) aligns with textBlockTop, + small internal padding gap
-  const innerGap = pngH * 0.075;  // gap between frame line and text
-  const borderY  = textBlockTop - pngH * 0.05 - innerGap;
-  // right-align: right edge at W - pad
+  // ช่องว่างในกรอบ เหนือ/ใต้ข้อความ — **เท่ากันทั้งบนล่าง**
+  // ของเดิมคิดกรอบจาก textH ตรงๆ (content 89% = textH) แล้วเลื่อนกรอบขึ้นด้วย innerGap
+  // → เหลือช่องบนแค่ ~7.5% ของกรอบ บรรทัดแรกเลยเกือบชนเส้นบน (สระบน/วรรณยุกต์ไทยยิ่งชน)
+  const innerPad = Math.round(qszFit * 0.45);
+  const contentH = textH + innerPad * 2;
+
+  // scale PNG so content area (5%–94% = 89% ของภาพ) = contentH
+  const pngH    = contentH / 0.89;
+  // กรอบต้องไม่กว้างเกินภาพ — คำพูด 5 บรรทัดดันกรอบจนขอบซ้ายหลุดออกนอกเฟรม
+  // บีบเฉพาะแนวนอน (ความสูงเท่าเดิม = ข้อความยังอยู่ในกรอบครบ) มุมโค้งเพี้ยนแค่นิดเดียว
+  const pngW    = Math.min(pngH * (865 / 400), W - pad * 2);
+  // ขอบล่างของกรอบชิดขอบล่างของภาพ (เว้น pad) แล้วค่อยวางข้อความลงในกรอบ
+  const borderY = H - pad - pngH;
   const borderX = W - pad - pngW;
+  const textBlockTop = borderY + pngH * 0.05 + innerPad;
 
   // text inside: left of V-bar (97%), right-aligned
   const contentX    = borderX + pngW * 0.02;
