@@ -394,39 +394,7 @@ async function renderBorder(buf, { quoteText, authorName, saturation = 0.15, acc
   return { buffer: await toPng(cv), ext: 'png', vertical: 'bottom', side: 'left' };
 }
 
-// ── Style 8: quote_border_2 (top H + right V + bottom H — right frame) ───────
-// ⚠️ **วัดจากไฟล์ตอน runtime ห้าม hardcode** — ค่าคงที่ที่เขียนมือพังมาแล้ว 2 รอบ:
-// คอมเมนต์เดิมบอก 865x400/แถบ 5%–94% แต่ของจริงตอนนั้นคือ 865x391/3.6%–96.4%
-// แล้ววันเดียวกันไฟล์ก็ถูกเปลี่ยนเป็น 865x300 → สัดส่วนที่ hardcode ไว้ผิดอีกทันที
-// (2026-08-06) · ทีมสื่อเปลี่ยนไฟล์กรอบเมื่อไหร่ก็ได้ โค้ดต้องปรับตามเอง
-const frameCache = {};
-function frameMetrics(name, img) {
-  if (frameCache[name]) return frameCache[name];
-  const W = img.width, H = img.height;
-  const cv = createCanvas(W, H);
-  const c  = cv.getContext('2d');
-  c.drawImage(img, 0, 0);
-  const { data } = c.getImageData(0, 0, W, H);
-
-  // แถวที่มี pixel ทึบเกิน 5% ของความกว้าง = "แถบนอน" (เส้นตั้งด้านขวาบางกว่านั้น จึงไม่ติด)
-  const solid = [];
-  for (let y = 0; y < H; y++) {
-    let n = 0;
-    for (let x = 0; x < W; x++) if (data[(y * W + x) * 4 + 3] > 128) n++;
-    solid.push(n > W * 0.05);
-  }
-  let topEnd = solid.indexOf(true);
-  if (topEnd < 0) topEnd = 0;
-  while (topEnd + 1 < H && solid[topEnd + 1]) topEnd++;
-  let botStart = solid.lastIndexOf(true);
-  if (botStart < 0) botStart = H - 1;
-  while (botStart - 1 >= 0 && solid[botStart - 1]) botStart--;
-
-  const m = { ratio: W / H, top: (topEnd + 1) / H, bottom: botStart / H };
-  m.inner = Math.max(0.5, m.bottom - m.top);   // กันไฟล์แปลกๆ ที่วัดแล้วได้ค่าเพี้ยน
-  frameCache[name] = m;
-  return m;
-}
+// ── Style 8: quote_border_2 — กรอบตัว C ชิดขวา (แถบบน + เส้นตั้งขวา + แถบล่างสั้น)
 async function renderBorder2(buf, { quoteText, authorName, saturation = 0.15, accentColor }) {
   const accent = accentColor || ORANGE;
   const work = await sharp(buf).modulate({ saturation }).toBuffer();
@@ -440,56 +408,60 @@ async function renderBorder2(buf, { quoteText, authorName, saturation = 0.15, ac
   const qsz  = Math.max(36, Math.round(W * 0.065));
   const nsz  = Math.max(16, Math.round(W * 0.030));
 
-  const borderImg = await loadMark('frame_right');
-  const FR = frameMetrics('frame_right', borderImg);
-
   const maxW8   = W * 0.80;
   const { fontSize: qszFit, lines } = fitFont(ctx, quoteText, maxW8, qsz, 4, 'GSans');
   const lh      = qszFit * 1.2;
-  const maxTextW = maxW8;
-  // nsz * 2.6 = ช่องก่อนชื่อผู้พูด (1.4) + ความสูงบรรทัดชื่อเอง (~1.0) + หางล่าง
-  const textH = lines.length * lh + nsz * 2.1;
+  const textH   = lines.length * lh + nsz * 2.1;   // รวมช่องก่อนชื่อผู้พูด + ตัวบรรทัดชื่อ
 
-  // ช่องว่างในกรอบ — **บนมากกว่าล่าง** โดยตั้งใจ:
-  // บรรทัดบนเป็นตัวหนาเต็มความสูง + สระบน/วรรณยุกต์ไทยยื่นขึ้นไปอีก เลยดูชิดเส้นง่ายกว่า
-  // ส่วนล่างเป็นบรรทัดชื่อผู้พูดตัวเล็ก จึงเหลือช่องน้อยกว่าได้โดยไม่ดูอึดอัด
-  // (ตัวเลขนี้ปรับตามตาคน: 0.32 = ชิดไป · 0.45 เท่ากันบนล่าง = ล่างโหว่)
-  const padTop    = Math.round(qszFit * 0.45);
-  const padBottom = Math.round(qszFit * 0.20);
-  const contentH  = textH + padTop + padBottom;
+  // ── กรอบวาดเอง ไม่ใช้ assets/quote/frame_right.png แล้ว (เคาะ 2026-08-06) ──────
+  // เหตุผล: การย่อ/ขยาย PNG ให้พอดีเนื้อหาคุมตำแหน่งไม่ได้จริง — อัตราส่วนของไฟล์บังคับ
+  // ความสูงกรอบ พอความกว้างชนขอบภาพก็ต้องบีบ ทำให้เส้นหนาบางไม่คงที่และมุมเพี้ยน
+  // อีกทั้งไฟล์ถูกแก้บ่อย ค่าที่วัดไว้ก็ล้าสมัยทันที · วาดเองได้ตำแหน่งเป๊ะและได้สี CI ตรงๆ
+  // สัดส่วนยึดตามไฟล์เดิม: เส้นหนา ~1.6% ของความกว้างกรอบ · แถบล่างยาว 16% · มุมมน
+  const stroke  = Math.max(3, Math.round(W * 0.013));
+  const padTop  = Math.round(qszFit * 0.45);       // ช่องเหนือบรรทัดแรก (สระบนไทยยื่นสูง)
+  const padBot  = Math.round(qszFit * 0.20);       // ใต้ชื่อผู้พูด
+  const padX    = Math.round(qszFit * 0.55);       // ระยะจากเส้นตั้งถึงตัวอักษร
 
-  // ย่อ/ขยาย PNG ให้ **ช่องว่างระหว่างแถบบน-ล่าง (92.8%)** พอดีกับ contentH
-  const pngH    = contentH / FR.inner;
-  // กรอบต้องไม่กว้างเกินภาพ — คำพูด 5 บรรทัดดันกรอบจนขอบซ้ายหลุดออกนอกเฟรม
-  // บีบเฉพาะแนวนอน (ความสูงเท่าเดิม = ข้อความยังอยู่ในกรอบครบ) มุมโค้งเพี้ยนแค่นิดเดียว
-  const pngW    = Math.min(pngH * FR.ratio, W - pad * 2);
-  // ขอบล่างของกรอบชิดขอบล่างของภาพ (เว้น pad) แล้วค่อยวางข้อความลงในกรอบ
-  const borderY = H - pad - pngH;
-  const borderX = W - pad - pngW;
-  const textBlockTop = borderY + pngH * FR.top + padTop;
+  ctx.font = `bold ${qszFit}px GSans`;
+  const widest = Math.max(...lines.map(l => lsWidth(ctx, l, 1.0)));
 
-  // text inside: left of V-bar (97%), right-aligned
-  const contentX    = borderX + pngW * 0.02;
-  const contentMaxW = pngW * 0.93;
-  const authorMaxW  = pngW * 0.75;
+  const fRight  = W - pad - stroke / 2;            // เส้น stroke วาดคร่อมเส้นทาง → เผื่อครึ่งเส้น
+  const fBottom = H - pad - stroke / 2;
+  const fTop    = fBottom - padBot - textH - padTop;
+  const fLeft   = Math.max(pad + stroke / 2, fRight - stroke - padX * 2 - widest);
 
-  const gV = ctx.createLinearGradient(0, H, 0, borderY - H * 0.2);
+  const textRight    = fRight - stroke - padX;     // ข้อความชิดขวา เว้นจากเส้นตั้ง
+  const textBlockTop = fTop + padTop;
+
+  const gV = ctx.createLinearGradient(0, H, 0, fTop - H * 0.2);
   gV.addColorStop(0,   'rgba(0,5,12,0.95)');
   gV.addColorStop(0.4, 'rgba(0,5,12,0.80)');
   gV.addColorStop(1,   'rgba(0,5,12,0)');
   ctx.fillStyle = gV; ctx.fillRect(0, 0, W, H);
 
-  // ⚠️ กรอบเป็น PNG สีส้ม CI ที่ baked มาแล้ว — ต้องย้อมตาม accent เหมือน mark ของสไตล์ ember
-  //    ไม่ย้อม = ตั้งสี CI เองแล้วมีผลแค่ตัวหนังสือ กรอบยังส้มอยู่ (เจอ 2026-08-06)
-  drawTinted(ctx, borderImg, borderX, borderY, pngW, pngH, accent);
+  // รูปตัว C: แถบบนยาวเต็ม → มุมขวาบน → เส้นตั้งขวา → มุมขวาล่าง → แถบล่างสั้นๆ
+  const fW = fRight - fLeft;
+  const rad = Math.min(Math.round(fW * 0.03), Math.round((fBottom - fTop) * 0.22));
+  ctx.beginPath();
+  ctx.moveTo(fLeft, fTop);
+  ctx.lineTo(fRight - rad, fTop);
+  ctx.arcTo(fRight, fTop, fRight, fTop + rad, rad);
+  ctx.lineTo(fRight, fBottom - rad);
+  ctx.arcTo(fRight, fBottom, fRight - rad, fBottom, rad);
+  ctx.lineTo(fRight - fW * 0.16, fBottom);
+  ctx.strokeStyle = accent;
+  ctx.lineWidth = stroke;
+  ctx.lineJoin = 'round';
+  ctx.lineCap  = 'butt';
+  ctx.stroke();
 
   ctx.textBaseline = 'top';
   ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
   ctx.font = `bold ${qszFit}px GSans`;
   let ty = textBlockTop;
   for (const l of lines) {
-    const drawX = contentX + (contentMaxW - lsWidth(ctx, l, 1.0));
-    ctx.fillStyle = WHITE; lsDraw(ctx, l, drawX, ty, 1.0);
+    ctx.fillStyle = WHITE; lsDraw(ctx, l, textRight - lsWidth(ctx, l, 1.0), ty, 1.0);
     ty += lh;
   }
 
@@ -500,8 +472,10 @@ async function renderBorder2(buf, { quoteText, authorName, saturation = 0.15, ac
   // ⚠️ shadowBlur อย่างเดียวไม่มีผล — canvas default shadowColor เป็นดำโปร่งใส 100%
   ctx.shadowColor = 'rgba(0,0,0,0.55)';
   ctx.shadowBlur = 6; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 1;
-  const aw = lsWidth(ctx, `— ${authorName}`, 0.8);
-  lsDraw(ctx, `— ${authorName}`, contentX + (authorMaxW - aw), ty, 0.8);
+  // นำหน้าชื่อด้วย `>_` (เทอร์มินัลพรอมป์) แทนขีดยาว — user เคาะ 2026-08-06
+  const authorStr = `>_ ${authorName}`;
+  const aw = lsWidth(ctx, authorStr, 0.8);
+  lsDraw(ctx, authorStr, textRight - aw, ty, 0.8);
 
   ctx.shadowColor = 'rgba(0,0,0,0)';
   ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
