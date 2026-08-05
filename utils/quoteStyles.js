@@ -339,7 +339,9 @@ async function renderBorder(buf, { quoteText, authorName, saturation = 0.15, acc
   ctx.fillStyle = gV; ctx.fillRect(0, 0, W, H);
 
   // draw border PNG
-  ctx.drawImage(borderImg, borderX, borderY, pngW, pngH);
+  // ⚠️ กรอบเป็น PNG สีส้ม CI ที่ baked มาแล้ว — ต้องย้อมตาม accent เหมือน mark ของสไตล์ ember
+  //    ไม่ย้อม = ตั้งสี CI เองแล้วมีผลแค่ตัวหนังสือ กรอบยังส้มอยู่ (เจอ 2026-08-06)
+  drawTinted(ctx, borderImg, borderX, borderY, pngW, pngH, accent);
 
   // quote text
   ctx.textBaseline = 'top';
@@ -411,7 +413,9 @@ async function renderBorder2(buf, { quoteText, authorName, saturation = 0.15, ac
   gV.addColorStop(1,   'rgba(0,5,12,0)');
   ctx.fillStyle = gV; ctx.fillRect(0, 0, W, H);
 
-  ctx.drawImage(borderImg, borderX, borderY, pngW, pngH);
+  // ⚠️ กรอบเป็น PNG สีส้ม CI ที่ baked มาแล้ว — ต้องย้อมตาม accent เหมือน mark ของสไตล์ ember
+  //    ไม่ย้อม = ตั้งสี CI เองแล้วมีผลแค่ตัวหนังสือ กรอบยังส้มอยู่ (เจอ 2026-08-06)
+  drawTinted(ctx, borderImg, borderX, borderY, pngW, pngH, accent);
 
   ctx.textBaseline = 'top';
   ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;

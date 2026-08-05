@@ -88,9 +88,10 @@ export function isAiStyle(style) {
  * render การ์ดคำคม 1 ใบ
  * @param {Buffer} bgBuffer  รูปพื้นหลัง (ครอปมาแล้วจากฝั่ง client — renderer คำนวณ layout จากขนาดภาพ
  *                           จึง **ต้องครอปก่อน render เสมอ** เหมือนที่ quoteHandler.js:329 ทำ)
+ * @param {string|null} accentColor  สี CI '#rrggbb' — resolveQuoteAccent() หามาให้
  * @returns {Promise<Buffer>} PNG
  */
-export async function renderQuoteCard(bgBuffer, params) {
+export async function renderQuoteCard(bgBuffer, params, accentColor = null) {
   const { quoteText, authorName, style, saturation } = params
   // null = "ไม่ได้เลือกสี" ซึ่งมีความหมายเฉพาะสไตล์ AI (ปล่อยให้ AI ตัดสิน)
   // สไตล์ปกติส่ง null เข้าไป sharp จะโยน "Expected number above zero for saturation"
@@ -101,6 +102,8 @@ export async function renderQuoteCard(bgBuffer, params) {
       quoteText,
       authorName,
       saturation: sat,
+      // สี CI ของผู้ใช้/องค์กร — null = renderer ใช้ส้ม default (ดู lib/quoteAccent.js)
+      accentColor: accentColor || undefined,
       mimeType: 'image/jpeg',   // ใช้เฉพาะตอนส่งภาพให้ AI วิเคราะห์ layout
     })
     return buffer

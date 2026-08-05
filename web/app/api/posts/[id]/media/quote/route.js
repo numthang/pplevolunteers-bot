@@ -12,6 +12,7 @@ import { savePostFile, MAX_MEDIA_PER_EPISODE } from '@/lib/postsStorage.js'
 import { addMedia, countMedia } from '@/db/posts/media.js'
 import { resolveBackground, readQuoteForm, QuoteBgError } from '@/lib/quoteBg.js'
 import { normalizeQuoteParams, renderQuoteCard, QuoteRenderError } from '@/lib/quoteRender.js'
+import { resolveQuoteAccent } from '@/lib/quoteAccent.js'
 
 export async function POST(req, { params }) {
   const { id } = await params
@@ -43,7 +44,8 @@ export async function POST(req, { params }) {
     }
 
     const { buffer: bg, bgPath } = await resolveBackground(input, ctx.post.id)
-    const png = await renderQuoteCard(bg, quoteParams)
+    const accent = await resolveQuoteAccent(ctx.userId, ctx.orgId)
+    const png = await renderQuoteCard(bg, quoteParams, accent)
     const path = await savePostFile(png, 'image/png')
 
     const media = await addMedia({

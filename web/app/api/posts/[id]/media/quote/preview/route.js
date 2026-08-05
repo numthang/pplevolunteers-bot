@@ -12,6 +12,7 @@ import { postContext } from '@/lib/postsGuard.js'
 import { canEditPost } from '@/lib/postsAccess.js'
 import { resolveBackground, readQuoteForm, QuoteBgError } from '@/lib/quoteBg.js'
 import { normalizeQuoteParams, renderQuoteCard, QuoteRenderError } from '@/lib/quoteRender.js'
+import { resolveQuoteAccent } from '@/lib/quoteAccent.js'
 
 export async function POST(req, { params }) {
   const { id } = await params
@@ -33,7 +34,8 @@ export async function POST(req, { params }) {
     const input = readQuoteForm(form)
     const paramsOut = normalizeQuoteParams(input)
     const { buffer: bg, bgPath } = await resolveBackground(input, ctx.post.id)
-    const png = await renderQuoteCard(bg, paramsOut)
+    const accent = await resolveQuoteAccent(ctx.userId, ctx.orgId)
+    const png = await renderQuoteCard(bg, paramsOut, accent)
 
     return new Response(png, {
       status: 200,
