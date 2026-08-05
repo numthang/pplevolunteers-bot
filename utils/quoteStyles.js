@@ -395,9 +395,13 @@ async function renderBorder2(buf, { quoteText, authorName, saturation = 0.15, ac
   const maxTextW = maxW8;
   const textH = lines.length * lh + nsz * 1.8;
 
-  // ช่องว่างในกรอบ เหนือ/ใต้ข้อความ — เท่ากันทั้งบนล่าง (บรรทัดแรกเคยเกือบชนเส้นบน)
-  const innerPad = Math.round(qszFit * 0.32);
-  const contentH = textH + innerPad * 2;
+  // ช่องว่างในกรอบ — **บนมากกว่าล่าง** โดยตั้งใจ:
+  // บรรทัดบนเป็นตัวหนาเต็มความสูง + สระบน/วรรณยุกต์ไทยยื่นขึ้นไปอีก เลยดูชิดเส้นง่ายกว่า
+  // ส่วนล่างเป็นบรรทัดชื่อผู้พูดตัวเล็ก จึงเหลือช่องน้อยกว่าได้โดยไม่ดูอึดอัด
+  // (ตัวเลขนี้ปรับตามตาคน: 0.32 = ชิดไป · 0.45 เท่ากันบนล่าง = ล่างโหว่)
+  const padTop    = Math.round(qszFit * 0.62);
+  const padBottom = Math.round(qszFit * 0.38);
+  const contentH  = textH + padTop + padBottom;
 
   // ย่อ/ขยาย PNG ให้ **ช่องว่างระหว่างแถบบน-ล่าง (92.8%)** พอดีกับ contentH
   const pngH    = contentH / FR.inner;
@@ -407,7 +411,7 @@ async function renderBorder2(buf, { quoteText, authorName, saturation = 0.15, ac
   // ขอบล่างของกรอบชิดขอบล่างของภาพ (เว้น pad) แล้วค่อยวางข้อความลงในกรอบ
   const borderY = H - pad - pngH;
   const borderX = W - pad - pngW;
-  const textBlockTop = borderY + pngH * FR.top + innerPad;
+  const textBlockTop = borderY + pngH * FR.top + padTop;
 
   // text inside: left of V-bar (97%), right-aligned
   const contentX    = borderX + pngW * 0.02;
