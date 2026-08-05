@@ -1,9 +1,13 @@
 import { redirect } from 'next/navigation'
+import { getTranslations } from 'next-intl/server'
 import { getSession } from '@/lib/auth.js'
 import { resolveActiveOrg } from '@/lib/activeOrg.js'
 import PostCreate from '@/components/posts/PostCreate.jsx'
 
-export const metadata = { title: 'โพสต์ใหม่' }
+export async function generateMetadata() {
+  const t = await getTranslations('posts')
+  return { title: t('meta.new') }
+}
 
 // segment คงที่ 'new' ชนะ '[id]' ของ Next.js อยู่แล้ว → /posts/new ไม่หลุดไปหน้าแก้ไข
 export default async function NewPostPage({ searchParams }) {

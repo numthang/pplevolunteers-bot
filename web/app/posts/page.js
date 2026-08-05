@@ -1,9 +1,13 @@
 import { redirect } from 'next/navigation'
+import { getTranslations } from 'next-intl/server'
 import { getSession } from '@/lib/auth.js'
 import { resolveActiveOrg } from '@/lib/activeOrg.js'
 import PostsHome from '@/components/posts/PostsHome.jsx'
 
-export const metadata = { title: 'โพสต์ทั้งหมด' }
+export async function generateMetadata() {
+  const t = await getTranslations('posts')
+  return { title: t('meta.list') }
+}
 
 export default async function PostsPage() {
   const session = await getSession()

@@ -3,7 +3,10 @@ import { getTranslations } from 'next-intl/server'
 import { getSession } from '@/lib/auth.js'
 import AssetLibrary from '@/components/posts/AssetLibrary.jsx'
 
-export const metadata = { title: 'คลังภาพ' }
+export async function generateMetadata() {
+  const t = await getTranslations('posts')
+  return { title: t('meta.library') }
+}
 
 export default async function PostsLibraryPage() {
   const session = await getSession()

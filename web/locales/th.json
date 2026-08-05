@@ -230,7 +230,8 @@
       "sigLocation": "ที่อยู่: {value}",
       "sigAvailability": "เวลา: {value}",
       "sigInterest": "สนใจ: {value}",
-      "editModalTitle": "แก้ไข — {name}"
+      "editModalTitle": "แก้ไข — {name}",
+      "metaTitle": "รายละเอียดผู้ติดต่อ"
     },
     "campaigns": {
       "pageTitle": "Campaigns",
@@ -1217,7 +1218,8 @@
     "verify": {
       "invalidLinkMsg": "ลิงก์ไม่ถูกต้องหรือหมดอายุ",
       "backToLoginLink": "กลับไปเข้าสู่ระบบ",
-      "signingInMsg": "กำลังเข้าสู่ระบบ…"
+      "signingInMsg": "กำลังเข้าสู่ระบบ…",
+      "metaTitle": "ยืนยันการเข้าสู่ระบบ"
     },
     "scope": {
       "title": "ผังพื้นที่",
@@ -1336,6 +1338,12 @@
       "uploadFailed": "อัปโหลดไม่สำเร็จ",
       "saveFailed": "บันทึกไม่สำเร็จ",
       "deleteFailed": "ลบไม่สำเร็จ"
+    },
+    "meta": {
+      "list": "โพสต์ทั้งหมด",
+      "new": "เขียนโพสต์ใหม่",
+      "detail": "แก้ไขโพสต์",
+      "library": "คลังภาพ"
     }
   }
 }

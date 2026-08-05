@@ -230,7 +230,8 @@
       "sigLocation": "Location: {value}",
       "sigAvailability": "Availability: {value}",
       "sigInterest": "Interest: {value}",
-      "editModalTitle": "Edit — {name}"
+      "editModalTitle": "Edit — {name}",
+      "metaTitle": "Contact detail"
     },
     "campaigns": {
       "pageTitle": "Campaigns",
@@ -1217,7 +1218,8 @@
     "verify": {
       "invalidLinkMsg": "Invalid or expired link",
       "backToLoginLink": "Back to login",
-      "signingInMsg": "Signing in…"
+      "signingInMsg": "Signing in…",
+      "metaTitle": "Verifying sign-in"
     },
     "scope": {
       "title": "Area tree",
@@ -1336,6 +1338,12 @@
       "uploadFailed": "Upload failed",
       "saveFailed": "Could not save",
       "deleteFailed": "Could not delete"
+    },
+    "meta": {
+      "list": "All posts",
+      "new": "New post",
+      "detail": "Edit post",
+      "library": "Image library"
     }
   }
 }
