@@ -66,6 +66,38 @@ function contrastText(hex) {
   return lum > 0.179 ? BLACK : WHITE;
 }
 
+function _lum(hex) {
+  const lin = c => c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  const r = lin(parseInt(hex.slice(1, 3), 16) / 255);
+  const g = lin(parseInt(hex.slice(3, 5), 16) / 255);
+  const b = lin(parseInt(hex.slice(5, 7), 16) / 255);
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+/**
+ * สีที่อ่านออกบนพื้นเข้ม — ผสมขาวทีละ 10% จนคอนทราสต์ถึงเกณฑ์
+ *
+ * ที่มา: ชื่อผู้พูดวาดด้วยสี accent ทับ gradient ดำเข้ม 0.95 ที่ก้นภาพ · ส้ม CI (#ff6a13)
+ * สว่างพอเลยอ่านออกมาตลอด แต่พอผู้ใช้ตั้งสี CI เข้ม (เช่นน้ำเงิน #5865f3) ตัวอักษร
+ * **จมหายไปกับพื้น** (เจอ 2026-08-06) — กรอบเส้นหนายังใช้สีจริงได้ ไม่ต้องแก้
+ */
+// เกณฑ์ 6.2 = คอนทราสต์ของ**ส้ม CI เดิม (#ff6a13) = 6.31** บนพื้นเดียวกัน (เผื่อขอบนิดหน่อย
+// ให้ส้มไม่โดนแตะ) — ไม่ได้ตั้งลอยๆ แต่ยึดความอ่านง่ายที่คนคุ้นอยู่แล้วเป็นฐาน
+// เอาความอ่านง่ายที่คนคุ้นอยู่แล้วเป็นฐาน (น้ำเงิน #5865f3 ได้แค่ 3.94 → ผสมขาว 30%)
+function readableOnDark(hex, min = 6.2) {
+  const bg = 0.008;                                  // ≈ พื้นดำ 0.95 ที่ก้นภาพ
+  const ratio = l => (l + 0.05) / (bg + 0.05);
+  if (!/^#[0-9a-fA-F]{6}$/.test(hex) || ratio(_lum(hex)) >= min) return hex;
+
+  const [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
+  for (let t = 0.1; t <= 0.9; t += 0.1) {
+    const mix = [r, g, b].map(c => Math.round(c + (255 - c) * t));
+    const out = '#' + mix.map(c => c.toString(16).padStart(2, '0')).join('');
+    if (ratio(_lum(out)) >= min) return out;
+  }
+  return WHITE;
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const _segmenter = new Intl.Segmenter('th', { granularity: 'grapheme' });
@@ -354,7 +386,7 @@ async function renderBorder(buf, { quoteText, authorName, saturation = 0.15, acc
   }
 
   ty += nsz * 0.5;
-  ctx.font = `${nsz}px AnakotmaiLight`; ctx.fillStyle = accent;
+  ctx.font = `${nsz}px AnakotmaiLight`; ctx.fillStyle = readableOnDark(accent);
   ctx.shadowBlur = 4; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
   lsDraw(ctx, `— ${authorName}`, textX, ty, 0.8);
 
@@ -393,13 +425,14 @@ async function renderBorder2(buf, { quoteText, authorName, saturation = 0.15, ac
   const { fontSize: qszFit, lines } = fitFont(ctx, quoteText, maxW8, qsz, 4, 'GSans');
   const lh      = qszFit * 1.2;
   const maxTextW = maxW8;
-  const textH = lines.length * lh + nsz * 1.8;
+  // nsz * 2.6 = ช่องก่อนชื่อผู้พูด (1.4) + ความสูงบรรทัดชื่อเอง (~1.0) + หางล่าง
+  const textH = lines.length * lh + nsz * 2.6;
 
   // ช่องว่างในกรอบ — **บนมากกว่าล่าง** โดยตั้งใจ:
   // บรรทัดบนเป็นตัวหนาเต็มความสูง + สระบน/วรรณยุกต์ไทยยื่นขึ้นไปอีก เลยดูชิดเส้นง่ายกว่า
   // ส่วนล่างเป็นบรรทัดชื่อผู้พูดตัวเล็ก จึงเหลือช่องน้อยกว่าได้โดยไม่ดูอึดอัด
   // (ตัวเลขนี้ปรับตามตาคน: 0.32 = ชิดไป · 0.45 เท่ากันบนล่าง = ล่างโหว่)
-  const padTop    = Math.round(qszFit * 0.62);
+  const padTop    = Math.round(qszFit * 0.85);
   const padBottom = Math.round(qszFit * 0.38);
   const contentH  = textH + padTop + padBottom;
 
@@ -438,12 +471,17 @@ async function renderBorder2(buf, { quoteText, authorName, saturation = 0.15, ac
     ty += lh;
   }
 
-  ty += nsz * 0.5;
-  ctx.font = `${nsz}px AnakotmaiLight`; ctx.fillStyle = accent;
-  ctx.shadowBlur = 4; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
+  ty += nsz * 1.4;                    // ดันชื่อผู้พูดลงห่างจากบล็อกคำคม
+  ctx.font = `${nsz}px AnakotmaiLight`;
+  // สี accent เข้มๆ จมหายไปกับ gradient ดำก้นภาพ → ใช้เวอร์ชันที่อ่านออก (กรอบยังสีจริง)
+  ctx.fillStyle = readableOnDark(accent);
+  // ⚠️ shadowBlur อย่างเดียวไม่มีผล — canvas default shadowColor เป็นดำโปร่งใส 100%
+  ctx.shadowColor = 'rgba(0,0,0,0.55)';
+  ctx.shadowBlur = 6; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 1;
   const aw = lsWidth(ctx, `— ${authorName}`, 0.8);
   lsDraw(ctx, `— ${authorName}`, contentX + (authorMaxW - aw), ty, 0.8);
 
+  ctx.shadowColor = 'rgba(0,0,0,0)';
   ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
   return { buffer: await toPng(cv), ext: 'png', vertical: 'bottom', side: 'right' };
 }
