@@ -7,8 +7,9 @@
 // (หมวด/สถานะ/เจ้าของ ย้ายไป PostMetaPanel.jsx คอลัมน์ขวา)
 import { useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { X, Upload, Loader2, ImageOff, ChevronLeft, ChevronRight, Film, Quote } from 'lucide-react'
+import { X, Upload, Loader2, ImageOff, ChevronLeft, ChevronRight, Film, Quote, Images } from 'lucide-react'
 import QuoteGeneratorModal from './QuoteGeneratorModal.jsx'
+import AssetPickerModal from './AssetPickerModal.jsx'
 
 const ACCEPT = 'image/png,image/jpeg,image/webp,image/gif'
 
@@ -25,7 +26,9 @@ const GRID = {
 
 export default function PostMediaPanel({ id, compact = false }) {
   const tq = useTranslations('posts.quoteModal')
+  const tl = useTranslations('posts.library')
   const [quoteOpen, setQuoteOpen] = useState(false)
+  const [libraryOpen, setLibraryOpen] = useState(false)
   const [lightbox, setLightbox] = useState(null)   // { src, index } — รูปที่กดดูเต็มจอ
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
@@ -206,6 +209,13 @@ export default function PostMediaPanel({ id, compact = false }) {
               ให้เป็นรอง "เลือกไฟล์" ที่เป็นทางหลัก (ปุ่มวิดีโอจะมาต่อแถวนี้) */}
           <div className="absolute bottom-2 right-2 flex items-center gap-1">
             <button
+              onClick={() => setLibraryOpen(true)}
+              title={tl('pickTitle')}
+              className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded-md border border-warm-200 dark:border-disc-border text-warm-500 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover transition"
+            >
+              <Images size={12} /> {tl('fromLibrary')}
+            </button>
+            <button
               onClick={() => setQuoteOpen(true)}
               title={tq('openButton')}
               className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded-md border border-warm-200 dark:border-disc-border text-warm-500 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover transition"
@@ -329,6 +339,26 @@ export default function PostMediaPanel({ id, compact = false }) {
             )
           })}
         </div>
+      )}
+
+      {/* หยิบจากคลัง — server คัดลอกไฟล์ให้ใหม่ (ลบสื่อชิ้นนี้ทีหลังจะไม่ลากรูปในคลังหายไปด้วย) */}
+      {libraryOpen && (
+        <AssetPickerModal
+          onClose={() => setLibraryOpen(false)}
+          onPick={async asset => {
+            setUploadError('')
+            const res = await fetch(`/api/posts/${id}/media/from-asset`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ assetId: asset.id }),
+            })
+            const data = await res.json().catch(() => ({}))
+            if (!res.ok) { setUploadError(data.error || 'หยิบรูปจากคลังไม่สำเร็จ'); return }
+            setMedia(prev => [...prev, data.data])
+            window.dispatchEvent(new CustomEvent('posts:media-changed', { detail: { id } }))
+            setLibraryOpen(false)
+          }}
+        />
       )}
 
       {quoteOpen && (

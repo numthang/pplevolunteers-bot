@@ -1266,7 +1266,7 @@
   "posts": {
     "quoteModal": {
       "title": "Create quote card",
-      "openButton": "Quote card",
+      "openButton": "Quote",
       "step1": "1. Background & text",
       "step2": "2. Pick a style",
       "bgLabel": "Background image",
@@ -1298,6 +1298,44 @@
       "needText": "Enter the quote text first",
       "loadFailed": "Could not load",
       "aiStyleNote": "This style asks AI to analyse the image for placement and colour — uses 1 AI credit"
+    },
+    "library": {
+      "pageTitle": "Image library",
+      "pageSubtitle": "Images kept on purpose for reuse — your own pile and the shared org pile (never auto-deleted like post attachments)",
+      "pickTitle": "Pick an image from the library",
+      "fromLibrary": "Library",
+      "useThis": "Use this",
+      "pileAll": "All",
+      "pileMine": "Mine",
+      "pileOrg": "Shared",
+      "viewUnused": "Never used",
+      "searchPlaceholder": "Search by title",
+      "uploadButton": "Choose files",
+      "uploadHint": "or drag files here / click then paste (Ctrl+V)",
+      "metaShow": "Add title · tags · usage rights",
+      "metaHide": "Hide details",
+      "fieldTitle": "Title",
+      "fieldTags": "Tags",
+      "fieldTagsPlaceholder": "comma separated, e.g. ratchaburi, flood",
+      "fieldConsent": "Usage rights",
+      "fieldConsentPlaceholder": "who gave permission / how it was obtained",
+      "fieldUsableUntil": "Usable until",
+      "fieldToOrg": "Upload straight to the shared pile",
+      "badgeOrg": "Shared",
+      "badgeUsed": "used {n}",
+      "promoteTitle": "Move to shared pile",
+      "editTitle": "Edit image details",
+      "deleteTitle": "Delete from library",
+      "confirmDelete": "Delete this image from the library? Posts that already used it are unaffected.",
+      "closeTitle": "Close (ESC)",
+      "save": "Save",
+      "cancel": "Cancel",
+      "loading": "Loading...",
+      "empty": "No images in the library yet",
+      "loadFailed": "Could not load the library",
+      "uploadFailed": "Upload failed",
+      "saveFailed": "Could not save",
+      "deleteFailed": "Could not delete"
     }
   }
 }

@@ -40,13 +40,14 @@ export async function countMedia(episodeId) {
 }
 
 /** ต่อท้ายเสมอ (sort_order = MAX+1) — เรียงใหม่ทำผ่าน reorderMedia */
-export async function addMedia({ episodeId, kind = 'upload', path, quoteText = null, quoteStyle = null, bgPath = null, sourceHash = null, addedBy = null }) {
+export async function addMedia({ episodeId, kind = 'upload', path, quoteText = null, quoteStyle = null, bgPath = null, sourceHash = null, addedBy = null, sourceAssetId = null }) {
   const { rows } = await pool.query(
-    `INSERT INTO post_episode_media (episode_id, kind, path, sort_order, quote_text, quote_style, bg_path, source_hash, added_by)
-     SELECT $1, $2, $3, COALESCE(MAX(sort_order), -1) + 1, $4, $5, $6, $7, $8
+    // source_asset_id = หยิบมาจากคลังภาพใบไหน (ไฟล์เป็น**สำเนา**คนละใบกับคลัง — ดู db/posts/assets.js)
+    `INSERT INTO post_episode_media (episode_id, kind, path, sort_order, quote_text, quote_style, bg_path, source_hash, added_by, source_asset_id)
+     SELECT $1, $2, $3, COALESCE(MAX(sort_order), -1) + 1, $4, $5, $6, $7, $8, $9
        FROM post_episode_media WHERE episode_id = $1
-     RETURNING id, episode_id, kind, path, sort_order, quote_text, quote_style, bg_path, created_at`,
-    [episodeId, kind, path, quoteText, quoteStyle, bgPath, sourceHash, addedBy]
+     RETURNING id, episode_id, kind, path, sort_order, quote_text, quote_style, bg_path, source_asset_id, created_at`,
+    [episodeId, kind, path, quoteText, quoteStyle, bgPath, sourceHash, addedBy, sourceAssetId]
   )
   return rows[0]
 }

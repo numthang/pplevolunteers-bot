@@ -13,7 +13,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import Cropper from 'react-easy-crop'
-import { X, Upload, Loader2, Sparkles, ImageIcon, ChevronLeft } from 'lucide-react'
+import { X, Upload, Loader2, Sparkles, ImageIcon, ChevronLeft, Images } from 'lucide-react'
+import AssetPickerModal from './AssetPickerModal.jsx'
 import { QUOTE_AI_KEY, QUOTE_STYLE_OPTIONS } from '@/lib/quoteStyles.js'
 
 const ACCEPT = 'image/png,image/jpeg,image/webp'
@@ -70,6 +71,7 @@ async function cropToBlob(src, area) {
 
 export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
   const t = useTranslations('posts.quoteModal')
+  const tl = useTranslations('posts.library')
 
   const [step, setStep] = useState(1)
   const [error, setError] = useState('')
@@ -82,6 +84,7 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
   const [areaPixels, setAreaPixels] = useState(null)
   const [postMedia, setPostMedia] = useState([])
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [libraryOpen, setLibraryOpen] = useState(false)
 
   const [quoteText, setQuoteText] = useState(DEV_DEFAULTS.quoteText)
   const [authorName, setAuthorName] = useState(DEV_DEFAULTS.authorName)
@@ -279,6 +282,14 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
                   >
                     <ImageIcon size={14} /> {t('bgFromPost')}
                   </button>
+                  {/* จากคลังภาพ — เลือกแล้วครอปฝั่ง client แล้วอัปเป็นไฟล์ใหม่ (กิ่ง bgFile)
+                      ไฟล์ในคลังจึงไม่ถูกลากไปลบตอนลบการ์ดคำคมทีหลัง */}
+                  <button
+                    type="button" onClick={() => setLibraryOpen(true)}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover transition"
+                  >
+                    <Images size={14} /> {tl('fromLibrary')}
+                  </button>
                 </div>
 
                 {pickerOpen && postMedia.length > 0 && (
@@ -437,6 +448,21 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
           )}
         </div>
       </div>
+
+      {libraryOpen && (
+        <AssetPickerModal
+          onClose={() => setLibraryOpen(false)}
+          onPick={asset => {
+            setError('')
+            bgPathRef.current = null      // รูปใหม่ = path เดิมใช้ไม่ได้แล้ว
+            bgBlobRef.current = null
+            setSrcUrl(`/api/posts/assets/${asset.id}/file`)
+            setCrop({ x: 0, y: 0 })
+            setZoom(1)
+            setLibraryOpen(false)
+          }}
+        />
+      )}
     </div>
   )
 }

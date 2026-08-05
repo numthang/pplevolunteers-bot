@@ -13,8 +13,9 @@ import { authOptions } from './auth-options.js'
 import { getEffectiveOrgIdentity } from './orgAccess.js'
 import { getOrgId } from './orgContext.js'
 import { getOrgConfig } from '@/db/orgConfig.js'
-import { normalizePolicy, canReadPost, isAdmin } from './postsAccess.js'
+import { normalizePolicy, canReadPost, canReadAsset, isAdmin } from './postsAccess.js'
 import * as postDB from '@/db/posts/episodes.js'
+import * as assetDB from '@/db/posts/assets.js'
 
 export const err = (status, message) => Response.json({ error: message }, { status })
 
@@ -43,6 +44,22 @@ export async function postContext(postId) {
   if (!canReadPost(post, ctx.access, ctx.userId, ctx.policy)) return { ...ctx, error: err(404, 'ไม่พบโพสต์') }
 
   return { ...ctx, post }
+}
+
+/**
+ * รูปในคลัง (post_assets) — ต้องมีจริง + org เดียวกับ session + คนนี้เห็นได้
+ * ⚠️ คลัง**ไม่ผูกกับ posts_policy** (ดู postsAccess §คลังภาพ) จึงไม่ส่ง policy เข้า canReadAsset
+ */
+export async function assetContext(assetId) {
+  const ctx = await postsContext()
+  if (ctx.error) return ctx
+
+  const id = Number(assetId)
+  const asset = Number.isInteger(id) ? await assetDB.getAsset(id) : null
+  if (!asset || asset.org_id !== ctx.orgId) return { ...ctx, error: err(404, 'ไม่พบรูปนี้ในคลัง') }
+  if (!canReadAsset(asset, ctx.access, ctx.userId)) return { ...ctx, error: err(404, 'ไม่พบรูปนี้ในคลัง') }
+
+  return { ...ctx, asset }
 }
 
 /** ชื่อคนแก้ที่จะจดลง revision/comment (มีไว้ให้ทุก route ใช้ชื่อเดียวกัน) */

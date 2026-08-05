@@ -9,9 +9,9 @@
  * เพราะ worker ฝั่งบอทเป็นคนละโปรเซส คนละ cwd แต่อ่านดิสก์ก้อนเดียวกัน
  */
 
-import { writeFile, mkdir, unlink } from 'fs/promises'
+import { writeFile, mkdir, unlink, readFile } from 'fs/promises'
 import { join, resolve, sep } from 'path'
-import { randomUUID } from 'crypto'
+import { randomUUID, createHash } from 'crypto'
 
 // web/ อยู่ใต้ repo root → ../ คือรากที่บอทใช้เป็น cwd
 export const REPO_ROOT = resolve(process.cwd(), '..')
@@ -67,6 +67,39 @@ export async function savePostFile(buffer, mime) {
   await mkdir(resolve(REPO_ROOT, POSTS_DIR), { recursive: true })
   await writeFile(abs, buffer)
   return relPath
+}
+
+/**
+ * คัดลอกไฟล์เป็น uuid ใหม่ — ใช้ตอน**หยิบรูปจากคลังไปใช้ในโพสต์**
+ *
+ * ⛔ ทำไมต้องคัดลอก ไม่ใช้ path ร่วมกัน (เคาะ 2026-08-04 หลัง /scrutinize):
+ *    `/api/posts/media/[id]` DELETE และ `services/postsRetention.js` ลบ**ไฟล์จริง**จาก path
+ *    ของแถวโพสต์ → ถ้าแชร์ path กับ `post_assets` ไฟล์ในคลังจะหายจากดิสก์เงียบๆ
+ *    (แถวคลังยังอยู่ ชี้ path ที่ไม่มีไฟล์ = ธัมบ์เนลแตกทีหลังโดยไม่มีใครรู้)
+ *    สายสัมพันธ์เก็บที่ `post_episode_media.source_asset_id` แทน
+ */
+export async function copyPostFile(relPath) {
+  const buffer = await readFile(absPath(relPath))
+  return savePostFile(buffer, mimeOfPath(relPath))
+}
+
+export function sha256Hex(buffer) {
+  return createHash('sha256').update(buffer).digest('hex')
+}
+
+/**
+ * ขนาดภาพ — มีไว้โชว์ในคลัง ไม่ใช่ของจำเป็น พังแล้วคืน {} ไม่ทำให้อัปโหลดล้ม
+ * (sharp เป็น native module · import แบบ dynamic กัน bundler ลากเข้า client)
+ */
+export async function probeImage(buffer) {
+  try {
+    const { default: sharp } = await import('sharp')
+    const { width, height } = await sharp(buffer).metadata()
+    return { width: width ?? null, height: height ?? null }
+  } catch (err) {
+    console.error('[probeImage]', err.message)
+    return { width: null, height: null }
+  }
 }
 
 /**

@@ -520,3 +520,46 @@ CREATE INDEX IF NOT EXISTS idx_post_ai_suggestions_episode
     ON post_ai_suggestions (episode_id, created_at DESC);
 
 -- production ทำถึงตรงนี้ 
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- 2026-08-04: post_assets — คลังภาพ (media library) · ดีไซน์ md/PENDING.md §🎨 คลังภาพ
+-- ═══════════════════════════════════════════════════════════════════════════
+-- ⛔ ทำไมต้องเป็นตารางใหม่ ไม่ใช้ post_episode_media: `services/postsRetention.js` ลบไฟล์
+--    30/180 วันหลังเผยแพร่ (เซ็ต path=NULL) → คลังที่อ่านจากตารางนั้นจะเน่าเงียบๆ
+--    คลัง = ของที่ตั้งใจเก็บ **ไม่มี retention** · สื่อแนบโพสต์ = ของใช้แล้วทิ้ง คนละ lifecycle
+--
+-- ⛔ หยิบรูปจากคลังไปใช้ = **คัดลอกไฟล์เป็น uuid ใหม่ ห้ามแชร์ path เดียวกัน**
+--    เพราะ /api/posts/media/[id] DELETE และ postsRetention ลบไฟล์จาก path ของแถวโพสต์ตรงๆ
+--    แชร์ path เมื่อไหร่ = ไฟล์ในคลังหายจากดิสก์แต่แถวคลังยังชี้ path เดิม (ธัมบ์เนลแตกทีหลัง)
+--    "ถูกใช้ที่ไหน" ตอบด้วย post_episode_media.source_asset_id ข้างล่างแทน
+CREATE TABLE IF NOT EXISTS post_assets (
+  id            BIGSERIAL PRIMARY KEY,
+  org_id        INTEGER     NOT NULL REFERENCES orgs(id) ON DELETE CASCADE,
+  -- เจ้าของกอง = คนอัป · ไม่เปลี่ยนตอนเลื่อนขึ้นกองกลาง (คีย์ dedupe ต้องนิ่ง)
+  owner_user_id INTEGER     NOT NULL REFERENCES users(id),
+  visibility    VARCHAR(10) NOT NULL DEFAULT 'personal' CHECK (visibility IN ('personal','org')),
+  path          TEXT        NOT NULL,   -- storage/posts/<uuid>.<ext> (relative จาก repo root)
+  mime          VARCHAR(40) NOT NULL,
+  width         INTEGER,
+  height        INTEGER,
+  bytes         BIGINT,
+  sha256        VARCHAR(64),            -- dedupe **ในกองตัวเองเท่านั้น** (ดู unique ข้างล่าง)
+  title         VARCHAR(200),
+  tags          TEXT[]      NOT NULL DEFAULT '{}',   -- แทน folder (1 รูปอยู่ได้หลายเรื่อง)
+  consent_note  TEXT,                   -- ขอไว้ยังไง/ใครอนุญาต — ภาพคนจริงในงานพรรค
+  usable_until  DATE,                   -- ใช้ได้ถึงเมื่อไหร่ (NULL = ไม่จำกัด)
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_post_assets_org  ON post_assets (org_id, visibility, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_post_assets_tags ON post_assets USING GIN (tags);
+-- dedupe ต้องมีขอบเขต — ไฟล์เดียวกันคนละ org/คนละเจ้าของ = คนละใบ (กันแชร์ไฟล์ข้าม tenant)
+CREATE UNIQUE INDEX IF NOT EXISTS uq_post_assets_hash
+    ON post_assets (org_id, owner_user_id, sha256) WHERE sha256 IS NOT NULL;
+
+-- "รูปนี้ถูกใช้ที่ไหนบ้าง" + smart view "ยังไม่เคยใช้" · ON DELETE SET NULL = ลบรูปในคลัง
+-- ไม่กระทบสำเนาที่โพสต์ถืออยู่ (ไฟล์คนละใบ) แค่เสียสายสัมพันธ์
+ALTER TABLE post_episode_media ADD COLUMN IF NOT EXISTS source_asset_id BIGINT
+      REFERENCES post_assets(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_post_media_asset ON post_episode_media (source_asset_id)
+    WHERE source_asset_id IS NOT NULL;

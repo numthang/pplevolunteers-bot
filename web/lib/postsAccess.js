@@ -150,3 +150,41 @@ export function canUseAi(post, access, userId, policy = DEFAULT_POSTS_POLICY) {
 }
 
 export const AI_DAILY_LIMIT = 30
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * คลังภาพ (post_assets) — วัตถุดิบ ไม่ใช่ร่างโพสต์ จึง **ไม่ผูกกับ posts_policy**
+ *
+ * เหตุผล (เคาะ 2026-08-04 หลัง /scrutinize): org ที่ตั้ง policy.read='team' จะมองไม่เห็น
+ * คลังกลางทั้งที่คลังมีไว้แชร์ · policy คุม "ร่างที่ยังไม่พร้อมเผยแพร่" ไม่ใช่คุมรูปวัตถุดิบ
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/** กองกลาง = ทุกคนใน org · กองส่วนตัว = เจ้าของ (+admin god-mode) */
+export function canReadAsset(asset, access, userId) {
+  if (!asset) return false
+  if (asset.visibility === 'org') return true    // caller ยืนยัน org เดียวกันมาแล้ว
+  return isOwner(asset, userId) || isAdmin(access)
+}
+
+/** ใครก็อัปเข้ากองตัวเองได้ — แค่ต้องเป็นคนใน org ที่ login แล้ว (caller เช็คให้แล้ว) */
+export function canUploadAsset(access, userId) {
+  return !!userId
+}
+
+/**
+ * เลื่อนขึ้นกองกลาง — **ทีมสื่อเท่านั้น** (กันกองกลางรกใน 3 เดือน)
+ * ⚠️ ห้ามเขียนเป็น permissions.has('editor') ตรงๆ — admin จะทำไม่ได้ทั้งที่ควรได้
+ */
+export function canPublishAsset(access) {
+  return isMediaTeam(access)
+}
+
+/** แก้ชื่อ/แท็ก/สิทธิ์การใช้ = ผู้อัป หรือทีมสื่อ */
+export function canEditAsset(asset, access, userId) {
+  if (!asset) return false
+  return isOwner(asset, userId) || isMediaTeam(access)
+}
+
+/** ลบได้เท่าที่แก้ได้ — ปลอดภัยเพราะโพสต์ที่หยิบไปใช้ถือ**สำเนาไฟล์ของตัวเอง** */
+export function canDeleteAsset(asset, access, userId) {
+  return canEditAsset(asset, access, userId)
+}

@@ -12,6 +12,7 @@
 import { readFile } from 'fs/promises'
 import { absPath, savePostFile, isAllowedMime, MAX_FILE_SIZE } from './postsStorage.js'
 import { listMedia, findMediaByPath } from '@/db/posts/media.js'
+import { findAssetByPath } from '@/db/posts/assets.js'
 
 export class QuoteBgError extends Error {}
 
@@ -55,6 +56,13 @@ export async function resolveBackground({ bgFile, bgPath, bgMediaId }, episodeId
     if (owners.length && !owners.some(o => Number(o.episode_id) === Number(episodeId))) {
       throw new QuoteBgError('รูปนี้เป็นของโพสต์อื่น')
     }
+    // ⛔ path ของ **คลังภาพ** ห้ามผ่านทางนี้ (เคาะ 2026-08-04 หลัง /scrutinize) 2 เหตุผล:
+    //   1. `bg_path` โดน deletePostFile ตอนลบการ์ดคำคม → จะลากไฟล์ในคลังหายไปด้วย
+    //   2. findMediaByPath คืน [] ให้ asset เสมอ (ไม่มีแถวใน post_episode_media) ด่านบนจึงไม่กัน
+    //      → คนที่รู้ path ของรูป personal คนอื่นเอามาใช้ได้
+    // เลือกรูปจากคลังในกล่องนี้ ครอปฝั่ง client แล้วอัปเป็นไฟล์ใหม่เสมอ (กิ่ง 1 = สำเนาคนละใบ)
+    // path ของ asset จึงไม่มีทางมาถึงตรงนี้โดยชอบธรรม
+    if (await findAssetByPath(p)) throw new QuoteBgError('รูปในคลังต้องเลือกผ่านกล่องคลังภาพ')
     try {
       return { buffer: await readFile(absPath(p)), bgPath: p }
     } catch {

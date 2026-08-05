@@ -180,3 +180,35 @@ describe('canEditPost — approved ล็อกแม้เป็นเจ้า
     expect(pa.canEditPost(approvedOwn, acc('member'), OWNER, P)).toBe(false)
   })
 })
+
+// ═══ คลังภาพ (post_assets) — ไม่ผูกกับ posts_policy ═══
+const myAsset  = { owner_user_id: OWNER, visibility: 'personal' }
+const orgAsset = { owner_user_id: OWNER, visibility: 'org' }
+
+describe('canReadAsset', () => {
+  it('กองส่วนตัว — เจ้าของอ่านได้',   () => expect(pa.canReadAsset(myAsset, acc('member'), OWNER)).toBe(true))
+  it('กองส่วนตัว — คนอื่นอ่านไม่ได้', () => expect(pa.canReadAsset(myAsset, acc('member'), OTHER)).toBe(false))
+  it('กองส่วนตัว — editor ก็ไม่ได้',  () => expect(pa.canReadAsset(myAsset, acc('editor'), OTHER)).toBe(false))
+  it('กองส่วนตัว — admin god-mode',   () => expect(pa.canReadAsset(myAsset, acc('admin'), OTHER)).toBe(true))
+  it('กองกลาง — ทุกคนใน org อ่านได้', () => expect(pa.canReadAsset(orgAsset, acc('member'), OTHER)).toBe(true))
+  it('ไม่มีแถว → false',              () => expect(pa.canReadAsset(null, acc('admin'), OWNER)).toBe(false))
+})
+
+describe('canPublishAsset — เลื่อนขึ้นกองกลาง = ทีมสื่อ', () => {
+  it('member ไม่ได้',            () => expect(pa.canPublishAsset(acc('member'))).toBe(false))
+  it('editor ได้',               () => expect(pa.canPublishAsset(acc('editor'))).toBe(true))
+  it('secretary_general ได้',    () => expect(pa.canPublishAsset(acc('secretary_general'))).toBe(true))
+  it('admin ได้ (ห้ามเช็ค editor ตรงๆ)', () => expect(pa.canPublishAsset(acc('admin'))).toBe(true))
+})
+
+describe('canEditAsset / canDeleteAsset', () => {
+  it('ผู้อัปแก้ได้',              () => expect(pa.canEditAsset(myAsset, acc('member'), OWNER)).toBe(true))
+  it('คนอื่นแก้ไม่ได้',           () => expect(pa.canEditAsset(myAsset, acc('member'), OTHER)).toBe(false))
+  it('ทีมสื่อแก้ของกองกลางได้',   () => expect(pa.canEditAsset(orgAsset, acc('editor'), OTHER)).toBe(true))
+  it('ลบได้เท่าที่แก้ได้',        () => expect(pa.canDeleteAsset(orgAsset, acc('member'), OTHER)).toBe(false))
+})
+
+describe('canUploadAsset — ใครก็อัปเข้ากองตัวเองได้', () => {
+  it('member ได้',                 () => expect(pa.canUploadAsset(acc('member'), OWNER)).toBe(true))
+  it('debug mode (userId null) ไม่ได้', () => expect(pa.canUploadAsset(acc('admin'), null)).toBe(false))
+})

@@ -98,7 +98,8 @@ const CASE_LINKS = [
 ]
 
 const POSTS_LINKS = [
-  { href: '/posts', label: 'Posts', icon: 'pen', exact: true },
+  { href: '/posts',         label: 'Posts',   icon: 'pen',   exact: true },
+  { href: '/posts/library', label: 'Library', icon: 'media', exact: true },
 ]
 
 const SOCIAL_LINKS = [

@@ -15,12 +15,14 @@
 // แล้วกดยกเลิก → ไฟล์ถูกเขียนลงดิสก์ไปแล้วแต่ไม่มีแถวไหนอ้าง (ตั้งใจไม่สร้างแถว ตามกฎ
 // "ห้ามสร้าง record ก่อนกดบันทึก") · เทสรอบเดียวเคยเหลือขยะ 5 ไฟล์
 //
-// ⚠️ 3 ที่ที่ต้องนับเป็น "มีคนอ้าง" — ตกไปที่เดียวคือลบไฟล์ที่ยังใช้งานอยู่:
+// ⚠️ 4 ที่ที่ต้องนับเป็น "มีคนอ้าง" — ตกไปที่เดียวคือลบไฟล์ที่ยังใช้งานอยู่:
 //   1. post_episode_media.path      รูป/คลิป/การ์ดที่แนบโพสต์
 //   2. post_episode_media.bg_path   พื้นหลังของการ์ดคำคม — **ไม่มีแถวเป็นของตัวเอง**
 //                                   ลบทิ้ง = แก้ข้อความแล้ว render การ์ดใหม่ไม่ได้อีกเลย
 //   3. post_social_history.media[].path  snapshot ตอนสั่งโพสต์ — worker อ่านไฟล์จาก path นี้
 //                                   งานที่ยัง pending อ่านไม่เจอ = โพสต์ล้ม
+//   4. post_assets.path             คลังภาพ — **ไม่มี retention ไม่ผูกกับโพสต์ไหนเลย**
+//                                   ตกไป = รูปในคลังที่ยังไม่มีใครหยิบไปใช้โดนลบทิ้งใน 7 วัน
 const fs = require('fs/promises');
 const path = require('path');
 const pool = require('../../db/index');
@@ -49,6 +51,12 @@ async function collectReferenced() {
       WHERE m->>'path' IS NOT NULL`
   );
   for (const r of jobs) add(r.path);
+
+  // คลังภาพ — ไฟล์ที่ตั้งใจเก็บ ไม่มีโพสต์ไหนอ้าง จึงต้องนับตรงนี้เอง
+  const { rows: assets } = await pool.query(
+    `SELECT path FROM post_assets WHERE path IS NOT NULL`
+  );
+  for (const r of assets) add(r.path);
 
   return refs;
 }

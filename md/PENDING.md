@@ -103,7 +103,17 @@ spec + ดีไซน์ + ตารางทั้งหมดอยู่ `md
   - **เคาะแล้ว:** crop ต้องมา**ก่อน** render เสมอ (renderer คำนวณ layout จากขนาดภาพ — บอททำแบบนี้อยู่ที่ `quoteHandler.js:329`) · **ไม่มีลายน้ำใน modal** ปล่อยให้กล่องเผยแพร่ทำที่เดียว (กันแปะซ้ำ 2 ชั้น) · bg เขียนลง `storage/posts/` แบบไม่สร้างแถวใน `post_episode_media` แล้วให้ gc เก็บ
   - **i18n (เคาะ 2026-08-03):** modal ใหม่ใช้ `t()` สร้าง ns `posts` ใน `th.json`/`en.json` เฉพาะ key ของ modal · **ไฟล์เก่าทั้งโซนยัง hardcode ไทย** → ดู "migrate โซน posts" ข้างล่าง
 - [ ] **migrate i18n โซน posts** (หนี้จากก้อน 2b) — 6 ไฟล์: `PostsHome` · `PostEditor` · `PostMediaPanel` · `PostMetaPanel` · `PostPublishPanel` · `PostRevisions` · งาน mechanical ส่ง Sonnet subagent ได้ · ระหว่างยังไม่ทำ โซนนี้จะปน hardcode กับ `t()`
-- [ ] **🎨 คลังภาพ (media library) — ✅ ดีไซน์เคาะแล้ว 2026-08-04 · ยังไม่เขียนโค้ด · ⚠️ ต้องรัน `/scrutinize` ก่อน**
+- [x] **🎨 คลังภาพ (media library) — ✅ เขียนเสร็จ 2026-08-04** (local · ยังไม่ deploy prod · **ยังไม่เทสในเบราว์เซอร์จริง**)
+  - migration รันบน local แล้ว: `post_assets` + `post_episode_media.source_asset_id` (บล็อกท้าย `migration.sql` · additive ล้วน)
+  - lib: `postsAccess.js` +5 ฟังก์ชัน asset (**tests 82 ผ่าน** — เดิม 66) · `postsGuard.assetContext()` · `postsStorage`: `copyPostFile`/`sha256Hex`/`probeImage`
+  - db: `web/db/posts/assets.js` (list/smart view/tags/dedupe/usage) · `media.addMedia` รับ `sourceAssetId`
+  - API 4 ไฟล์: `/api/posts/assets` (GET list+tags · POST upload) · `assets/[id]` (GET+usage/PATCH/DELETE) · `assets/[id]/file` (stream ผ่าน gate) · `/api/posts/[id]/media/from-asset` (**คัดลอกไฟล์**)
+  - UI: `AssetLibrary.jsx` (กอง/ค้นหา/ชิปแท็ก/ยังไม่เคยใช้/อัปโหลด+ช่องสิทธิ์ภาพ/แก้/เลื่อนขึ้นกองกลาง/ลบ) · `AssetPickerModal.jsx` · หน้า `/posts/library` + เมนู Nav "Library" · ปุ่ม "จากคลัง" ใน `PostMediaPanel` + `QuoteGeneratorModal` · i18n ครบ ns `posts.library` (th+en)
+  - `gc-media.js` เพิ่ม reference ที่ 4 แล้ว
+  - verify: `npm test` **288 ผ่าน** · `next build` ผ่าน · **smoke DB 25 เคส** (ตัวสำคัญ: ลบสื่อของโพสต์แล้ว **ไฟล์ในคลังยังอยู่** · dedupe ไม่ข้ามเจ้าของ · used_count/unused · ลบ asset แล้ว `source_asset_id` → NULL)
+  - ⬜ **ยังไม่ได้ทำ:** เทสในเบราว์เซอร์จริง (อัป/เลือก/เลื่อนกอง) · เทส API ผ่าน HTTP จริงรวมเคส 403 · เพดานขนาดคลังต่อ org (`SUM(bytes)`) · ปุ่ม "รูปนี้ถูกใช้ที่ไหน" ยังมีแต่ API (`GET /api/posts/assets/[id]`) ยังไม่มี UI
+  - ⏭️ prod: รันบล็อก `2026-08-04: post_assets` ท้าย `migration.sql`
+  - รายละเอียดดีไซน์ + เหตุผลอยู่ข้างล่างนี้ (อ่านก่อนแก้ของเดิม)
 
   ที่มา (user 2026-08-03): *"บางทีผมก็อยากมีคลังภาพใหญ่ ให้คนอัพโหลด เหมือน canva แต่ก็อยากให้มีคลังส่วนตัวด้วย"* + *"ขอไอเดียใหม่ๆ จาก software ระดับโลก ลอกมาเลยก็ได้"*
 
@@ -122,17 +132,34 @@ spec + ดีไซน์ + ตารางทั้งหมดอยู่ `md
   **ตาราง `post_assets` (คอลัมน์ชุด visibility เดียวกับ `post_episodes` — ไม่ต้องเรียนกลไกใหม่):**
   ```
   org_id · owner_user_id · visibility('personal'|'org')
-  path · mime · width · height · bytes · sha256      ← dedupe
+  path · mime · width · height · bytes · sha256      ← dedupe (unique ต่อ org+เจ้าของ)
   title · tags text[]                                 ← แทน folder
   uploaded_by · created_at
   consent_note · usable_until
   ```
   - **ไม่มี retention** — คลังคือของที่ตั้งใจเก็บ (ต่างจาก `post_episode_media`)
-  - **"ถูกใช้ที่ไหน" ได้ฟรี** จาก `post_episode_media.path`/`bg_path` ที่ชี้ไฟล์เดียวกัน — ไม่ต้องมีตารางเชื่อม
-  - ⚠️ **`scripts/posts/gc-media.js` ต้องเพิ่ม `post_assets.path` เป็น reference ที่ 4** ไม่งั้น gc ลบรูปในคลังทิ้งทันทีที่ยังไม่มีโพสต์ไหนใช้
   - แม่แบบ personal-vs-shared ที่ใช้จริงอยู่แล้ว: `assets/watermark/<guildId>/` vs `assets/watermark/user_<userId>/`
-  - **ไม่บล็อกอะไร** — `QuoteGeneratorModal` เก็บ `bg_path` อยู่แล้ว มีคลังทีหลังแค่เพิ่มปุ่มที่ set `bg_path` ไม่ต้องแก้ modal
   - ดิสก์ยังไม่ใช่ข้อจำกัด (`storage/posts` 1.1 MB · ว่าง 115 GB) โตจริงค่อยคุย R2 (ดู `decision_media_storage_retention`)
+
+  **🔧 แก้ดีไซน์หลัง `/scrutinize` 2026-08-04 — 3 ข้อนี้ตัดสินหน้าตาโค้ด อ่านก่อนเขียน:**
+  1. ⛔ **หยิบรูปจากคลังไปใช้ = "คัดลอกไฟล์" ห้ามแชร์ `path` เดียวกัน** (ดีไซน์เดิมเขียนว่า usage tracking "ได้ฟรีจาก path เดียวกัน" — **ผิด**)
+     เพราะโค้ดที่มีอยู่แล้วลบไฟล์จาก path ของแถวโพสต์ตรงๆ 2 จุด → แชร์ path เมื่อไหร่ = ไฟล์ในคลังหายจากดิสก์เงียบๆ แถวคลังยังชี้ path เดิม:
+     - `web/app/api/posts/media/[id]/route.js:67-69` ลบสื่อ 1 ชิ้น → `deletePostFile(path)` **และ** `deletePostFile(bg_path)`
+     - `services/postsRetention.js:48` ลบไฟล์ 30/180 วันหลังเผยแพร่
+     → **แทนที่ด้วย:** คัดลอกเป็น uuid ใหม่ตอนหยิบไปใช้ + เพิ่มคอลัมน์ **`post_episode_media.source_asset_id bigint NULL`** เป็นตัวตอบ "ถูกใช้ที่ไหน"/"ยังไม่เคยใช้" · โค้ดลบเดิม**ไม่ต้องแก้สักบรรทัด** (ลบแค่สำเนาของโพสต์)
+  2. **ต้องมี route เสิร์ฟไฟล์ของคลังเอง** — `/api/posts/media/[id]` JOIN `post_episodes` (`web/db/posts/media.js:82-92`) asset ไม่มีโพสต์เจ้าของจึงใช้ไม่ได้ → `GET /api/posts/assets/[id]/file` ที่ gate เอง (ไฟล์อยู่นอก `public/`)
+  3. **`resolveBackground` มีรูตรงกิ่ง `bgPath`** (`web/lib/quoteBg.js`) — เช็คแค่ "ไม่ใช่ของโพสต์อื่น" ผ่าน `findMediaByPath` ซึ่ง asset **ไม่มีแถว → คืน [] = ผ่านทุกครั้ง** (รูป personal ของคนอื่นถ้ารู้ path ก็ใช้ได้)
+     → **ทำจริงแบบง่ายกว่าที่วางไว้ (2026-08-04):** ไม่ได้เพิ่มกิ่ง `bgAssetId` เพราะกล่องการ์ดคำคม**ครอปฝั่ง client แล้วอัปเป็นไฟล์ใหม่เสมอ** (กิ่ง `bgFile`) = ได้สำเนาคนละใบอยู่แล้ว · กิ่งใหม่จะเป็น dead code
+     → ที่ใส่แทนคือ **ปิดประตู**: กิ่ง `bgPath` เรียก `findAssetByPath()` แล้วปฏิเสธถ้า path นั้นเป็นของคลัง
+
+  **กติกาสิทธิ์ (เคาะเพิ่ม 2026-08-04 — ดีไซน์เดิมไม่ได้พูด):**
+  - เลื่อนขึ้นกองกลาง = **`isMediaTeam()`** (admin + secretary_general + editor) **ห้ามเช็ค `permissions.has('editor')` ตรงๆ** ไม่งั้น admin ทำไม่ได้
+  - **กองกลางทุกคนใน org อ่านได้เสมอ ไม่ผูกกับ `posts_policy.read`** — org ที่ตั้ง `'team'` จะมองไม่เห็นคลังกลางทั้งที่คลังมีไว้แชร์ (policy คุมร่าง ไม่ใช่คุมวัตถุดิบ) · `personal` = เจ้าของ + admin
+  - แก้/ลบ asset = ผู้อัป + `isMediaTeam` (ปลอดภัยเพราะโพสต์ถือสำเนาของตัวเองแล้ว)
+  - `sha256` dedupe **ต้องมีขอบเขต** — unique `(org_id, owner_user_id, sha256)` และค้นซ้ำเฉพาะกองที่คนนั้นเป็นเจ้าของ ไม่งั้นแชร์ไฟล์ข้าม tenant
+  - `consent_note`/`usable_until` **ใส่ input ในฟอร์มอัปเลย** (optional) — มีแต่คอลัมน์ = NULL ตลอด เหตุผลที่ยกมาไม่เกิดผลจริง
+
+  **อื่นๆ:** ⚠️ `scripts/posts/gc-media.js` เพิ่ม `post_assets.path` เป็น reference **ที่ 4** (+แก้คอมเมนต์หัวไฟล์ที่เขียนว่า "3 ที่") · เก็บไฟล์ใน `storage/posts/` เดิม ห้ามตั้งโฟลเดอร์ใหม่ (ต้องแก้ `absPath` ทั้งฝาแฝด web ESM + bot CJS + gc) · `tags` normalize ตอนเขียน (trim/lower/≤10) · **ไม่ต่อ Meilisearch** — `title ILIKE` + `tags && $1` + GIN พอสำหรับคลังที่เริ่มจาก 0 · ยังไม่มีเพดานขนาดต่อ org (คลังไม่มี retention = โตทางเดียว) ใส่เช็ค `SUM(bytes)` ตอนอัปได้ทีหลัง
 - [ ] **ก้อน 3** — อนุมัติ: สถานะ + revisions + review links (`noindex`, token ≥32 bytes) + comments + ล็อกหลังอนุมัติ
 - [x] **ก้อน 4** ✅ 2026-07-30 (local · ยังไม่ deploy prod · **ยังไม่กดโพสต์จริงจากดิสฯ/เว็บ**)
   - ขั้น 1 `3539ba5` — param `accountId` ใน metaApi/xApi (+ `orgId` ให้ X ใช้ app creds ของ org)
