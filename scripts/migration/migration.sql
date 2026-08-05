@@ -563,3 +563,19 @@ ALTER TABLE post_episode_media ADD COLUMN IF NOT EXISTS source_asset_id BIGINT
       REFERENCES post_assets(id) ON DELETE SET NULL;
 CREATE INDEX IF NOT EXISTS idx_post_media_asset ON post_episode_media (source_asset_id)
     WHERE source_asset_id IS NOT NULL;
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- 2026-08-04: เติมชื่อเรื่องให้ตะกร้าดิสฯ เก่า (บรรทัดแรกของ body)
+-- ═══════════════════════════════════════════════════════════════════════════
+-- ตะกร้าดิสฯ ไม่มีช่องกรอกชื่อ → โพสต์ที่มาจากดิสฯ ขึ้น "ไม่มีชื่อ" ทุกใบในหน้า /posts
+-- ตั้งแต่นี้ `db/mediaBasket.js:setCaption()` เติมให้ตอนหย่อนข้อความ · บล็อกนี้ตามเก็บของเก่า
+-- เฉพาะแถวที่มาจากดิสฯ (channel_id IS NOT NULL) และยังไม่มีชื่อ — ไม่แตะโพสต์ที่เขียนบนเว็บ
+UPDATE post_episodes
+   SET title = LEFT(
+         regexp_replace(
+           btrim((regexp_split_to_array(btrim(body), E'\n'))[1], E' \t'),
+           '^[#>*\-–—•[:space:]]+', ''
+         ), 120)
+ WHERE channel_id IS NOT NULL
+   AND COALESCE(btrim(title), '') = ''
+   AND COALESCE(btrim(body), '') <> '';

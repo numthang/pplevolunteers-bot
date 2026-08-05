@@ -16,6 +16,32 @@
 const pool = require('./index');
 const storage = require('../utils/postsStorage');
 
+/**
+ * ชื่อเรื่องจาก **บรรทัดแรก**ของแคปชัน — ตะกร้าดิสฯ ไม่มีช่องกรอกชื่อ (หย่อนข้อความอย่างเดียว)
+ * ไม่มีตัวนี้ โพสต์จากดิสฯ จะขึ้น "ไม่มีชื่อ" ทุกใบในหน้า /posts หาไม่เจอว่าใบไหนเป็นใบไหน
+ *
+ * ⚠️ ชื่อเรื่องเป็น**ป้ายในระบบเท่านั้น ไม่ถูกโพสต์ออกโซเชียล** — ตัวที่โพสต์คือ `body`
+ *    (`web/app/api/posts/[id]/publish/route.js` ส่ง `caption: post.body`) จึงไม่ซ้ำซ้อนกับเนื้อหา
+ */
+function firstLineTitle(text) {
+  const line = String(text || '')
+    .split('\n')
+    .map(s => s.trim())
+    .find(Boolean);
+  if (!line) return null;
+  const clean = line
+    // token ของ Discord — <@123> <@&123> <#123> <:emoji:123> อ่านไม่รู้เรื่องถ้าเอามาเป็นชื่อ
+    .replace(/<a?:(\w+):\d+>/g, '')
+    .replace(/<[@#][&!]?\d+>/g, '')
+    .replace(/^[#>*\-–—•═=─_~\s]+/, '')   // หัวข้อ markdown / bullet / เส้นคั่นตกแต่ง
+    .replace(/[═=─_]{3,}\s*$/, '')
+    .replace(/\*\*/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!clean) return null;
+  return clean.length > 120 ? `${clean.slice(0, 119)}…` : clean;
+}
+
 /** users.id ของคนหย่อน — ไม่มีแถวใน users ก็หย่อนได้ (ตะกร้าดิสฯ ไม่บังคับ login) */
 async function userIdOf(discordId) {
   if (!discordId) return null;
@@ -142,9 +168,20 @@ async function addVideo(guildId, channelId, addedBy, videos, messageId, channelN
 
 async function setCaption(guildId, channelId, addedBy, caption, messageId, channelName = null) {
   const episodeId = await ensureOpenEpisode(guildId, channelId, addedBy, channelName);
+
+  // ชื่อเรื่อง = บรรทัดแรก **แต่ห้ามทับชื่อที่คนตั้งเองบนเว็บ**
+  // ดูจาก: ชื่อปัจจุบันตรงกับบรรทัดแรกของ body เดิมไหม → ตรง = ของอัตโนมัติ (อัปเดตตามได้)
+  //                                                    ไม่ตรง + ไม่ว่าง = คนตั้งเอง (ปล่อยไว้)
+  const { rows } = await pool.query('SELECT body, title FROM post_episodes WHERE id = $1', [episodeId]);
+  const curTitle = (rows[0]?.title || '').trim();
+  const isManual = !!curTitle && curTitle !== firstLineTitle(rows[0]?.body);
+  const nextTitle = isManual ? (rows[0]?.title ?? null) : firstLineTitle(caption);
+
   await pool.query(
-    'UPDATE post_episodes SET body = $2, last_edited_by = COALESCE($3, last_edited_by), updated_at = now() WHERE id = $1',
-    [episodeId, caption || null, await userIdOf(addedBy)]
+    `UPDATE post_episodes
+        SET body = $2, title = $4, last_edited_by = COALESCE($3, last_edited_by), updated_at = now()
+      WHERE id = $1`,
+    [episodeId, caption || null, await userIdOf(addedBy), nextTitle]
   );
   return episodeId;
 }

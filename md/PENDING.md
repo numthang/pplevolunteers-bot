@@ -160,6 +160,12 @@ spec + ดีไซน์ + ตารางทั้งหมดอยู่ `md
   - `consent_note`/`usable_until` **ใส่ input ในฟอร์มอัปเลย** (optional) — มีแต่คอลัมน์ = NULL ตลอด เหตุผลที่ยกมาไม่เกิดผลจริง
 
   **อื่นๆ:** ⚠️ `scripts/posts/gc-media.js` เพิ่ม `post_assets.path` เป็น reference **ที่ 4** (+แก้คอมเมนต์หัวไฟล์ที่เขียนว่า "3 ที่") · เก็บไฟล์ใน `storage/posts/` เดิม ห้ามตั้งโฟลเดอร์ใหม่ (ต้องแก้ `absPath` ทั้งฝาแฝด web ESM + bot CJS + gc) · `tags` normalize ตอนเขียน (trim/lower/≤10) · **ไม่ต่อ Meilisearch** — `title ILIKE` + `tags && $1` + GIN พอสำหรับคลังที่เริ่มจาก 0 · ยังไม่มีเพดานขนาดต่อ org (คลังไม่มี retention = โตทางเดียว) ใส่เช็ค `SUM(bytes)` ตอนอัปได้ทีหลัง
+- [ ] **📅 สร้าง Discord Event จากโพสต์ (ฝั่งเว็บ) — ยังไม่เคยจด · user ถาม 2026-08-04** *"เลือก create event บน discord ตามกำหนดการของโพสต์ นอกจากแชร์ลงห้องข่าวสาร"*
+  - **มีแล้วเฉพาะฝั่งดิสฯ:** ปุ่ม 📅 หลังโพสต์ตะกร้า → modal (ชื่อ/เริ่ม/จบ default +2 ชม./ห้องประชุมหรือสถานที่) → `guild.scheduledEvents.create()` + ประกาศ @everyone เข้าห้องข่าวสาร (มี quiet hours 21:00–09:00) · `handlers/basketHandler.js:876-1010` · ดีไซน์เต็มอยู่ `md/discord/BOT.md` §Social share
+  - **ฝั่งเว็บยังไม่มีเลย** — `PostPublishPanel` มีแค่ platform `news` (ห้องข่าวสาร) ไม่มี event
+  - ⚠️ **ตัวติดจริงคือสถาปัตยกรรม ไม่ใช่ UI:** เว็บสร้าง Discord event เองไม่ได้ (ไม่มี discord client ในโปรเซสเว็บ) → ต้องส่งงานผ่าน `post_social_history` เหมือนเป็นเป้าหมายอีกตัว แล้วให้ `services/publishWorker.js` (ฝั่งบอท) เป็นคนสร้าง — และต้องแยก logic ออกจาก `basketHandler` เป็น service ก่อน (แบบเดียวกับที่ `publishPipeline.js` ทำกับการโพสต์)
+  - ⚠️ **"กำหนดการของโพสต์" ≠ `scheduled_at`** — `scheduled_at` คือ *เวลาที่โพสต์ออก* ส่วน event ต้องการ *เวลางานจริง* → ต้องมี `event_start`/`event_end`/`location` (คอลัมน์บน `post_episodes` หรือถามในกล่องตอนกด) · อย่าเอา `scheduled_at` มาใช้แทน
+  - ต้องเคาะเพิ่ม: โพสต์เป็น org-native แต่ **event เป็น guild artifact** → สร้างที่ guild ไหน (โพสต์ใบเดียวอาจไปหลาย guild) · เป็นติ๊กในกล่องเผยแพร่ หรือปุ่ม follow-up หลังโพสต์เหมือนดิสฯ · สิทธิ์ฝั่งเว็บใช้ `postsAccess` (ฝั่งดิสฯ ใช้ ManageMessages) · bot ต้องมี **Manage Events**
 - [ ] **ก้อน 3** — อนุมัติ: สถานะ + revisions + review links (`noindex`, token ≥32 bytes) + comments + ล็อกหลังอนุมัติ
 - [x] **ก้อน 4** ✅ 2026-07-30 (local · ยังไม่ deploy prod · **ยังไม่กดโพสต์จริงจากดิสฯ/เว็บ**)
   - ขั้น 1 `3539ba5` — param `accountId` ใน metaApi/xApi (+ `orgId` ให้ X ใช้ app creds ของ org)
