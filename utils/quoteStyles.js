@@ -411,28 +411,40 @@ async function renderBorder2(buf, { quoteText, authorName, saturation = 0.15, ac
   const maxW8   = W * 0.80;
   const { fontSize: qszFit, lines } = fitFont(ctx, quoteText, maxW8, qsz, 4, 'GSans');
   const lh      = qszFit * 1.2;
-  const textH   = lines.length * lh + nsz * 2.1;   // รวมช่องก่อนชื่อผู้พูด + ตัวบรรทัดชื่อ
 
-  // ── กรอบวาดเอง ไม่ใช้ assets/quote/frame_right.png แล้ว (เคาะ 2026-08-06) ──────
-  // เหตุผล: การย่อ/ขยาย PNG ให้พอดีเนื้อหาคุมตำแหน่งไม่ได้จริง — อัตราส่วนของไฟล์บังคับ
-  // ความสูงกรอบ พอความกว้างชนขอบภาพก็ต้องบีบ ทำให้เส้นหนาบางไม่คงที่และมุมเพี้ยน
-  // อีกทั้งไฟล์ถูกแก้บ่อย ค่าที่วัดไว้ก็ล้าสมัยทันที · วาดเองได้ตำแหน่งเป๊ะและได้สี CI ตรงๆ
-  // สัดส่วนยึดตามไฟล์เดิม: เส้นหนา ~1.6% ของความกว้างกรอบ · แถบล่างยาว 16% · มุมมน
+  // ── กรอบวาดเอง ไม่ใช้ assets/quote/frame_right.png (เคาะ 2026-08-06) ──────────
+  // เหตุผล: ย่อ/ขยาย PNG ให้พอดีเนื้อหาคุมตำแหน่งไม่ได้จริง — อัตราส่วนไฟล์บังคับความสูง
+  // พอความกว้างชนขอบภาพก็ต้องบีบ เส้นเลยหนาบางไม่คงที่ · ไฟล์ก็ถูกแก้ระหว่างทางบ่อย
+  //
+  // ⚠️ **เส้นล่างของกรอบ = บรรทัดชื่อผู้พูด** (user เคาะ 2026-08-06 พร้อมภาพตัวอย่าง)
+  //    ชื่อไม่ได้ "อยู่เหนือเส้น" แต่นั่งอยู่ **บนเส้นเดียวกัน** โดยเส้นล่างวิ่งต่อจากท้ายชื่อ
+  //    ไปจบที่มุมขวาล่าง → ต้องคิดตำแหน่งจากกึ่งกลางบรรทัดชื่อ ไม่ใช่จากขอบล่างกรอบ
   const stroke  = Math.max(3, Math.round(W * 0.013));
   const padTop  = Math.round(qszFit * 0.45);       // ช่องเหนือบรรทัดแรก (สระบนไทยยื่นสูง)
-  const padBot  = Math.round(qszFit * 0.20);       // ใต้ชื่อผู้พูด
   const padX    = Math.round(qszFit * 0.55);       // ระยะจากเส้นตั้งถึงตัวอักษร
+  const gapAuth = Math.round(nsz * 1.1);           // ช่องระหว่างบล็อกคำคมกับบรรทัดชื่อ
 
   ctx.font = `bold ${qszFit}px GSans`;
   const widest = Math.max(...lines.map(l => lsWidth(ctx, l, 1.0)));
 
-  const fRight  = W - pad - stroke / 2;            // เส้น stroke วาดคร่อมเส้นทาง → เผื่อครึ่งเส้น
-  const fBottom = H - pad - stroke / 2;
-  const fTop    = fBottom - padBot - textH - padTop;
-  const fLeft   = Math.max(pad + stroke / 2, fRight - stroke - padX * 2 - widest);
+  ctx.font = `${nsz}px AnakotmaiLight`;
+  const authorStr = `>_ ${authorName}`;            // `>_` แทนขีดยาว (user เคาะ)
+  const aw = lsWidth(ctx, authorStr, 0.8);
 
-  const textRight    = fRight - stroke - padX;     // ข้อความชิดขวา เว้นจากเส้นตั้ง
-  const textBlockTop = fTop + padTop;
+  const fRight   = W - pad - stroke / 2;           // stroke วาดคร่อมเส้นทาง → เผื่อครึ่งเส้น
+  const authorTop = H - pad - nsz;                 // ตัวอักษรล่างสุดชิด pad ล่าง
+  const fBottom   = Math.round(authorTop + nsz * 0.52);   // เส้นล่าง = กึ่งกลางบรรทัดชื่อ
+
+  const quoteTop = authorTop - gapAuth - lines.length * lh;
+  const fTop     = quoteTop - padTop;
+
+  const textRight = fRight - stroke - padX;        // คำคมชิดขวา เว้นจากเส้นตั้ง
+  // แถบล่างสั้นๆ ต่อจากท้ายชื่อไปมุมขวา — ชื่อจึงต้องจบก่อนแถบ
+  const fW0      = fRight - Math.max(pad, fRight - stroke - padX * 2 - widest);
+  const barLen   = Math.max(Math.round(fW0 * 0.15), stroke * 4);
+  const authorRight = fRight - barLen - Math.round(nsz * 0.7);
+  const fLeft    = Math.max(pad + stroke / 2,
+                            Math.min(textRight - widest - padX, authorRight - aw - padX));
 
   const gV = ctx.createLinearGradient(0, H, 0, fTop - H * 0.2);
   gV.addColorStop(0,   'rgba(0,5,12,0.95)');
@@ -440,16 +452,15 @@ async function renderBorder2(buf, { quoteText, authorName, saturation = 0.15, ac
   gV.addColorStop(1,   'rgba(0,5,12,0)');
   ctx.fillStyle = gV; ctx.fillRect(0, 0, W, H);
 
-  // รูปตัว C: แถบบนยาวเต็ม → มุมขวาบน → เส้นตั้งขวา → มุมขวาล่าง → แถบล่างสั้นๆ
-  const fW = fRight - fLeft;
-  const rad = Math.min(Math.round(fW * 0.03), Math.round((fBottom - fTop) * 0.22));
+  // ตัว C: แถบบน → มุมขวาบน → เส้นตั้งขวา → มุมขวาล่าง → แถบล่างที่จบตรงท้ายชื่อ
+  const rad = Math.min(Math.round((fRight - fLeft) * 0.03), Math.round((fBottom - fTop) * 0.22));
   ctx.beginPath();
   ctx.moveTo(fLeft, fTop);
   ctx.lineTo(fRight - rad, fTop);
   ctx.arcTo(fRight, fTop, fRight, fTop + rad, rad);
   ctx.lineTo(fRight, fBottom - rad);
   ctx.arcTo(fRight, fBottom, fRight - rad, fBottom, rad);
-  ctx.lineTo(fRight - fW * 0.16, fBottom);
+  ctx.lineTo(fRight - barLen, fBottom);
   ctx.strokeStyle = accent;
   ctx.lineWidth = stroke;
   ctx.lineJoin = 'round';
@@ -459,23 +470,19 @@ async function renderBorder2(buf, { quoteText, authorName, saturation = 0.15, ac
   ctx.textBaseline = 'top';
   ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
   ctx.font = `bold ${qszFit}px GSans`;
-  let ty = textBlockTop;
+  let ty = quoteTop;
   for (const l of lines) {
     ctx.fillStyle = WHITE; lsDraw(ctx, l, textRight - lsWidth(ctx, l, 1.0), ty, 1.0);
     ty += lh;
   }
 
-  ty += nsz * 1.0;                    // ดันชื่อผู้พูดลงห่างจากบล็อกคำคม
   ctx.font = `${nsz}px AnakotmaiLight`;
   // สี accent เข้มๆ จมหายไปกับ gradient ดำก้นภาพ → ใช้เวอร์ชันที่อ่านออก (กรอบยังสีจริง)
   ctx.fillStyle = readableOnDark(accent);
   // ⚠️ shadowBlur อย่างเดียวไม่มีผล — canvas default shadowColor เป็นดำโปร่งใส 100%
   ctx.shadowColor = 'rgba(0,0,0,0.55)';
   ctx.shadowBlur = 6; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 1;
-  // นำหน้าชื่อด้วย `>_` (เทอร์มินัลพรอมป์) แทนขีดยาว — user เคาะ 2026-08-06
-  const authorStr = `>_ ${authorName}`;
-  const aw = lsWidth(ctx, authorStr, 0.8);
-  lsDraw(ctx, authorStr, textRight - aw, ty, 0.8);
+  lsDraw(ctx, authorStr, authorRight - aw, authorTop, 0.8);
 
   ctx.shadowColor = 'rgba(0,0,0,0)';
   ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
