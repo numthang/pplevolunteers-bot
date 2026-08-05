@@ -448,14 +448,14 @@ async function renderBorder2(buf, { quoteText, authorName, saturation = 0.15, ac
   const lh      = qszFit * 1.2;
   const maxTextW = maxW8;
   // nsz * 2.6 = ช่องก่อนชื่อผู้พูด (1.4) + ความสูงบรรทัดชื่อเอง (~1.0) + หางล่าง
-  const textH = lines.length * lh + nsz * 2.6;
+  const textH = lines.length * lh + nsz * 2.1;
 
   // ช่องว่างในกรอบ — **บนมากกว่าล่าง** โดยตั้งใจ:
   // บรรทัดบนเป็นตัวหนาเต็มความสูง + สระบน/วรรณยุกต์ไทยยื่นขึ้นไปอีก เลยดูชิดเส้นง่ายกว่า
   // ส่วนล่างเป็นบรรทัดชื่อผู้พูดตัวเล็ก จึงเหลือช่องน้อยกว่าได้โดยไม่ดูอึดอัด
   // (ตัวเลขนี้ปรับตามตาคน: 0.32 = ชิดไป · 0.45 เท่ากันบนล่าง = ล่างโหว่)
-  const padTop    = Math.round(qszFit * 0.85);
-  const padBottom = Math.round(qszFit * 0.38);
+  const padTop    = Math.round(qszFit * 0.45);
+  const padBottom = Math.round(qszFit * 0.20);
   const contentH  = textH + padTop + padBottom;
 
   // ย่อ/ขยาย PNG ให้ **ช่องว่างระหว่างแถบบน-ล่าง (92.8%)** พอดีกับ contentH
@@ -493,7 +493,7 @@ async function renderBorder2(buf, { quoteText, authorName, saturation = 0.15, ac
     ty += lh;
   }
 
-  ty += nsz * 1.4;                    // ดันชื่อผู้พูดลงห่างจากบล็อกคำคม
+  ty += nsz * 1.0;                    // ดันชื่อผู้พูดลงห่างจากบล็อกคำคม
   ctx.font = `${nsz}px AnakotmaiLight`;
   // สี accent เข้มๆ จมหายไปกับ gradient ดำก้นภาพ → ใช้เวอร์ชันที่อ่านออก (กรอบยังสีจริง)
   ctx.fillStyle = readableOnDark(accent);
