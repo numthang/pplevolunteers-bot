@@ -395,17 +395,38 @@ async function renderBorder(buf, { quoteText, authorName, saturation = 0.15, acc
 }
 
 // ── Style 8: quote_border_2 (top H + right V + bottom H — right frame) ───────
-// ค่าจริงของ assets/quote/frame_right.png (865x391) — **วัดจาก alpha ของไฟล์ 2026-08-06**
-// ไม่ใช่ค่าประมาณในคอมเมนต์เดิม (เขียนไว้ 5%/94%/865x400 ซึ่งคลาดจากของจริง ทำให้กรอบสูงเกิน
-// ~4% และช่องบน-ล่างไม่เท่ากัน):
-//   แถบบน  y 1–14   = 0.3%–3.6%      · แถบล่าง y 377–390 = 96.4%–99.7%
-//   แถบตั้งขวา x 851–864 = 98.4%–99.9%
-const FR = {
-  ratio:  865 / 391,
-  top:    14 / 391,     // ขอบล่างของแถบบน = ที่ที่เนื้อหาเริ่มได้
-  bottom: 377 / 391,    // ขอบบนของแถบล่าง
-};
-FR.inner = FR.bottom - FR.top;   // 0.928
+// ⚠️ **วัดจากไฟล์ตอน runtime ห้าม hardcode** — ค่าคงที่ที่เขียนมือพังมาแล้ว 2 รอบ:
+// คอมเมนต์เดิมบอก 865x400/แถบ 5%–94% แต่ของจริงตอนนั้นคือ 865x391/3.6%–96.4%
+// แล้ววันเดียวกันไฟล์ก็ถูกเปลี่ยนเป็น 865x300 → สัดส่วนที่ hardcode ไว้ผิดอีกทันที
+// (2026-08-06) · ทีมสื่อเปลี่ยนไฟล์กรอบเมื่อไหร่ก็ได้ โค้ดต้องปรับตามเอง
+const frameCache = {};
+function frameMetrics(name, img) {
+  if (frameCache[name]) return frameCache[name];
+  const W = img.width, H = img.height;
+  const cv = createCanvas(W, H);
+  const c  = cv.getContext('2d');
+  c.drawImage(img, 0, 0);
+  const { data } = c.getImageData(0, 0, W, H);
+
+  // แถวที่มี pixel ทึบเกิน 5% ของความกว้าง = "แถบนอน" (เส้นตั้งด้านขวาบางกว่านั้น จึงไม่ติด)
+  const solid = [];
+  for (let y = 0; y < H; y++) {
+    let n = 0;
+    for (let x = 0; x < W; x++) if (data[(y * W + x) * 4 + 3] > 128) n++;
+    solid.push(n > W * 0.05);
+  }
+  let topEnd = solid.indexOf(true);
+  if (topEnd < 0) topEnd = 0;
+  while (topEnd + 1 < H && solid[topEnd + 1]) topEnd++;
+  let botStart = solid.lastIndexOf(true);
+  if (botStart < 0) botStart = H - 1;
+  while (botStart - 1 >= 0 && solid[botStart - 1]) botStart--;
+
+  const m = { ratio: W / H, top: (topEnd + 1) / H, bottom: botStart / H };
+  m.inner = Math.max(0.5, m.bottom - m.top);   // กันไฟล์แปลกๆ ที่วัดแล้วได้ค่าเพี้ยน
+  frameCache[name] = m;
+  return m;
+}
 async function renderBorder2(buf, { quoteText, authorName, saturation = 0.15, accentColor }) {
   const accent = accentColor || ORANGE;
   const work = await sharp(buf).modulate({ saturation }).toBuffer();
@@ -420,6 +441,7 @@ async function renderBorder2(buf, { quoteText, authorName, saturation = 0.15, ac
   const nsz  = Math.max(16, Math.round(W * 0.030));
 
   const borderImg = await loadMark('frame_right');
+  const FR = frameMetrics('frame_right', borderImg);
 
   const maxW8   = W * 0.80;
   const { fontSize: qszFit, lines } = fitFont(ctx, quoteText, maxW8, qsz, 4, 'GSans');
