@@ -394,6 +394,19 @@ async function renderBorder(buf, { quoteText, authorName, saturation = 0.15, acc
   return { buffer: await toPng(cv), ext: 'png', vertical: 'bottom', side: 'left' };
 }
 
+// ค่าปรับระยะของ frame-right — ทุกค่าเป็น "เท่าของขนาดฟอนต์" ยกเว้น stroke ที่เทียบความกว้างภาพ
+// แยกออกมาเพื่อให้ scripts/media/quoteFramePreview.js เรนเดอร์เทียบหลายค่าได้โดยไม่ต้องแก้โค้ด
+// (user เคาะชุดนี้จากพรีวิวจริง 2026-08-06 — อย่าเดาค่าเอง ให้เรนเดอร์เทียบแล้วให้คนเลือก)
+const FRAME_RIGHT = {
+  stroke:    0.013,   // ความหนาเส้น เทียบความกว้างภาพ
+  padTop:    0.80,    // ช่องเหนือบรรทัดคำคมแรก
+  padX:      0.55,    // ระยะจากเส้นตั้งขวาถึงตัวอักษร
+  gapAuth:   0.60,    // ช่องระหว่างบล็อกคำคมกับบรรทัดชื่อ (เท่าของ nsz)
+  authorTop: 2.6,     // ชื่อห่างจากขอบล่างภาพ (เท่าของ nsz)
+  line:      0.72,    // เส้นล่างอยู่ต่ำจากหัวตัวอักษรของชื่อเท่าไหร่ (เท่าของ nsz)
+  barLen:    0.15,    // ความยาวแถบล่างเทียบความกว้างกรอบ
+};
+
 // ── Style 8: quote_border_2 — กรอบตัว C ชิดขวา (แถบบน + เส้นตั้งขวา + แถบล่างสั้น)
 async function renderBorder2(buf, { quoteText, authorName, saturation = 0.15, accentColor }) {
   const accent = accentColor || ORANGE;
@@ -419,10 +432,10 @@ async function renderBorder2(buf, { quoteText, authorName, saturation = 0.15, ac
   // ⚠️ **เส้นล่างของกรอบ = บรรทัดชื่อผู้พูด** (user เคาะ 2026-08-06 พร้อมภาพตัวอย่าง)
   //    ชื่อไม่ได้ "อยู่เหนือเส้น" แต่นั่งอยู่ **บนเส้นเดียวกัน** โดยเส้นล่างวิ่งต่อจากท้ายชื่อ
   //    ไปจบที่มุมขวาล่าง → ต้องคิดตำแหน่งจากกึ่งกลางบรรทัดชื่อ ไม่ใช่จากขอบล่างกรอบ
-  const stroke  = Math.max(3, Math.round(W * 0.013));
-  const padTop  = Math.round(qszFit * 0.45);       // ช่องเหนือบรรทัดแรก (สระบนไทยยื่นสูง)
-  const padX    = Math.round(qszFit * 0.55);       // ระยะจากเส้นตั้งถึงตัวอักษร
-  const gapAuth = Math.round(nsz * 0.6);           // ช่องระหว่างบล็อกคำคมกับบรรทัดชื่อ
+  const stroke  = Math.max(3, Math.round(W * FRAME_RIGHT.stroke));
+  const padTop  = Math.round(qszFit * FRAME_RIGHT.padTop);       // ช่องเหนือบรรทัดแรก (สระบนไทยยื่นสูง)
+  const padX    = Math.round(qszFit * FRAME_RIGHT.padX);       // ระยะจากเส้นตั้งถึงตัวอักษร
+  const gapAuth = Math.round(nsz * FRAME_RIGHT.gapAuth);          // ช่องระหว่างบล็อกคำคมกับบรรทัดชื่อ
 
   ctx.font = `bold ${qszFit}px GSans`;
   const widest = Math.max(...lines.map(l => lsWidth(ctx, l, 1.0)));
@@ -432,8 +445,8 @@ async function renderBorder2(buf, { quoteText, authorName, saturation = 0.15, ac
   const aw = lsWidth(ctx, authorStr, 0.8);
 
   const fRight   = W - pad - stroke / 2;           // stroke วาดคร่อมเส้นทาง → เผื่อครึ่งเส้น
-  const authorTop = H - pad - Math.round(nsz * 1.25);   // ยกขึ้นจาก pad ล่างนิดหน่อย
-  const fBottom   = Math.round(authorTop + nsz * 0.52);   // เส้นล่าง = กึ่งกลางบรรทัดชื่อ
+  const authorTop = H - pad - Math.round(nsz * FRAME_RIGHT.authorTop);    // ยกขึ้นจาก pad ล่าง
+  const fBottom   = Math.round(authorTop + nsz * FRAME_RIGHT.line);   // เส้นล่าง = กึ่งกลางบรรทัดชื่อ (user เคาะจากพรีวิว)
 
   const quoteTop = authorTop - gapAuth - lines.length * lh;
   const fTop     = quoteTop - padTop;
@@ -441,7 +454,7 @@ async function renderBorder2(buf, { quoteText, authorName, saturation = 0.15, ac
   const textRight = fRight - stroke - padX;        // คำคมชิดขวา เว้นจากเส้นตั้ง
   // แถบล่างสั้นๆ ต่อจากท้ายชื่อไปมุมขวา — ชื่อจึงต้องจบก่อนแถบ
   const fW0      = fRight - Math.max(pad, fRight - stroke - padX * 2 - widest);
-  const barLen   = Math.max(Math.round(fW0 * 0.15), stroke * 4);
+  const barLen   = Math.max(Math.round(fW0 * FRAME_RIGHT.barLen), stroke * 4);
   const authorRight = fRight - barLen - Math.round(nsz * 0.7);
   const fLeft    = Math.max(pad + stroke / 2,
                             Math.min(textRight - widest - padX, authorRight - aw - padX));
@@ -595,4 +608,4 @@ function parseStyle(input) {
   return match || null;
 }
 
-module.exports = { renderQuoteStyle, parseStyle };
+module.exports = { renderQuoteStyle, parseStyle, FRAME_RIGHT };
