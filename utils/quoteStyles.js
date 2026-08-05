@@ -422,7 +422,7 @@ async function renderBorder2(buf, { quoteText, authorName, saturation = 0.15, ac
   const stroke  = Math.max(3, Math.round(W * 0.013));
   const padTop  = Math.round(qszFit * 0.45);       // ช่องเหนือบรรทัดแรก (สระบนไทยยื่นสูง)
   const padX    = Math.round(qszFit * 0.55);       // ระยะจากเส้นตั้งถึงตัวอักษร
-  const gapAuth = Math.round(nsz * 1.1);           // ช่องระหว่างบล็อกคำคมกับบรรทัดชื่อ
+  const gapAuth = Math.round(nsz * 0.6);           // ช่องระหว่างบล็อกคำคมกับบรรทัดชื่อ
 
   ctx.font = `bold ${qszFit}px GSans`;
   const widest = Math.max(...lines.map(l => lsWidth(ctx, l, 1.0)));
@@ -432,7 +432,7 @@ async function renderBorder2(buf, { quoteText, authorName, saturation = 0.15, ac
   const aw = lsWidth(ctx, authorStr, 0.8);
 
   const fRight   = W - pad - stroke / 2;           // stroke วาดคร่อมเส้นทาง → เผื่อครึ่งเส้น
-  const authorTop = H - pad - nsz;                 // ตัวอักษรล่างสุดชิด pad ล่าง
+  const authorTop = H - pad - Math.round(nsz * 1.25);   // ยกขึ้นจาก pad ล่างนิดหน่อย
   const fBottom   = Math.round(authorTop + nsz * 0.52);   // เส้นล่าง = กึ่งกลางบรรทัดชื่อ
 
   const quoteTop = authorTop - gapAuth - lines.length * lh;
