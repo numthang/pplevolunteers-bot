@@ -1282,6 +1282,7 @@
       "textPlaceholder": "Type the line to put on the image",
       "authorLabel": "Name / title",
       "authorPlaceholder": "e.g. Media team",
+      "authorOrgUse": "Use this as the speaker name",
       "aiQuotes": "AI suggestions",
       "aiQuotesEmpty": "No AI suggestions yet — use \"Caption + image ideas\" in the editor first",
       "aiQuotesUse": "Use this line",

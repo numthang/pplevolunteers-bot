@@ -36,14 +36,11 @@ const COLORS = [
 // ชื่อ/ตำแหน่งมักเป็นค่าเดิมทุกใบ → จำค่าล่าสุดไว้ในเครื่อง (ฝั่งบอทก็จำผ่าน quote_state เหมือนกัน)
 const AUTHOR_LS_KEY = 'posts.quoteAuthor'
 
-// ค่าตั้งต้นเวลารันโหมด dev เท่านั้น — ไว้กดเทสรัวๆ โดยไม่ต้องพิมพ์ซ้ำ
-// ⚠️ ห้ามให้หลุดขึ้น production (ผู้ใช้จริงต้องเจอช่องว่าง) จึงคุมด้วย NODE_ENV
-const DEV_DEFAULTS = process.env.NODE_ENV === 'production'
-  ? { quoteText: '', authorName: '' }
-  : {
-      quoteText: 'การเมืองที่ดีเริ่มจากการฟังเสียงประชาชน',
-      authorName: 'ทีมสื่อ พรรคประชาชน',
-    }
+// ⛔ ห้ามใส่ค่าตั้งต้นแบบ hardcode (เดิมมี DEV_DEFAULTS ไว้กดเทสรัวๆ — เอาออกแล้ว)
+//    ค่าตั้งต้นทุกตัวมาจากข้อมูลจริงของโพสต์ ถ้าเติมค่าปลอมทับไว้ guard `prev || x`
+//    ข้างล่างจะไม่ยิงเลยตอน dev = เทสของจริงไม่ได้จนกว่าจะ build production
+
+const AUTHOR_MAX = 35   // ต้องตรงกับ maxLength ของช่องผู้พูด — ชื่อองค์กรยาวกว่านี้ต้องตัดก่อนเติม
 
 const inputCls =
   'w-full px-3 py-2 text-sm rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg ' +
@@ -86,9 +83,10 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
   const [pickerOpen, setPickerOpen] = useState(false)
   const [libraryOpen, setLibraryOpen] = useState(false)
 
-  const [quoteText, setQuoteText] = useState(DEV_DEFAULTS.quoteText)
-  const [authorName, setAuthorName] = useState(DEV_DEFAULTS.authorName)
+  const [quoteText, setQuoteText] = useState('')
+  const [authorName, setAuthorName] = useState('')
   const [aiQuotes, setAiQuotes] = useState([])
+  const [orgName, setOrgName] = useState('')   // ตัวเลือกชื่อผู้พูด ไม่ใช่ค่า prefill — ดูหมายเหตุที่ปุ่มชิป
 
   // ── ขั้น 2: พรีวิว ────────────────────────────────────────────────────────
   const [style, setStyle] = useState(QUOTE_STYLE_OPTIONS[0].value)
@@ -123,13 +121,24 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
   }, [])
 
   // สื่อในโพสต์ (ไว้เลือกเป็นพื้นหลัง) + ข้อความที่ AI เคยเสนอไว้
+  //
+  // ⚠️ ค่าตั้งต้นทุกตัวในนี้มาถึงช้ากว่า mount → ต้อง set แบบ `prev => prev || ค่าใหม่` เสมอ
+  //    ยัดค่าตรงๆ = ทับชื่อผู้พูดจาก localStorage (effect ข้างบนที่รันไปแล้ว) และทับสิ่งที่
+  //    ผู้ใช้พิมพ์/เลือกระหว่างรอ fetch · เช็ค `if (!quoteText)` ข้างนอกไม่ช่วย เพราะ closure
+  //    ของ .then เห็นค่าตอน mount เสมอ
   useEffect(() => {
     let alive = true
     fetch(`/api/posts/${postId}`)
       .then(r => (r.ok ? r.json() : null))
       .then(d => {
         if (!alive || !d) return
-        setPostMedia((d.data?.media || []).filter(m => m.kind !== 'video' && m.path))
+        const media = (d.data?.media || []).filter(m => m.kind !== 'video' && m.path)
+        setPostMedia(media)
+        setOrgName(d.data?.post?.org_name || '')
+        // เลือกรูปแรกให้เลย ผู้ใช้แค่ครอปต่อ — ข้าม kind 'quote' เพราะการ์ดคำคมที่เคยทำไว้
+        // ก็เก็บใน post_episode_media เหมือนกัน เอามาเป็นพื้นหลังจะได้การ์ดซ้อนการ์ด
+        const first = media.find(m => m.kind !== 'quote')
+        if (first) setSrcUrl(prev => prev || `/api/posts/media/${first.id}`)
       })
       .catch(() => {})
 
@@ -139,7 +148,9 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
         if (!alive || !d) return
         // ชุดใหม่สุดอยู่ก่อน — รวม quotes ทุกชุดแล้วตัดซ้ำ
         const all = (d.data || []).flatMap(s => s.payload?.quotes || [])
-        setAiQuotes([...new Set(all.filter(Boolean))].slice(0, 12))
+        const list = [...new Set(all.filter(Boolean))].slice(0, 12)
+        setAiQuotes(list)
+        if (list[0]) setQuoteText(prev => prev || list[0])
       })
       .catch(() => {})
 
@@ -366,8 +377,22 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
                 <span className="text-sm font-medium text-warm-700 dark:text-disc-text">{t('authorLabel')}</span>
                 <input
                   value={authorName} onChange={e => setAuthorName(e.target.value)}
-                  maxLength={35} placeholder={t('authorPlaceholder')} className={inputCls}
+                  maxLength={AUTHOR_MAX} placeholder={t('authorPlaceholder')} className={inputCls}
                 />
+                {/* ⚠️ ชื่อองค์กรเป็น "ปุ่มให้กด" ไม่ใช่ค่า prefill โดยตั้งใจ —
+                    ช่องนี้คือ **ผู้พูด** ไม่ใช่คนทำการ์ด เติมชื่อองค์กรให้เองแปลว่าการ์ดใบแรก
+                    ของทุกคนตั้งต้นด้วยการยกคำพูดให้องค์กรทั้งที่ไม่ได้พูด กดผ่านเมื่อไหร่ = อ้างผิดคน */}
+                {orgName && authorName.trim() !== orgName.slice(0, AUTHOR_MAX) && (
+                  <div>
+                    <button
+                      type="button" onClick={() => setAuthorName(orgName.slice(0, AUTHOR_MAX))}
+                      title={t('authorOrgUse')}
+                      className="px-2.5 py-1 text-sm rounded-lg border border-warm-200 dark:border-disc-border text-warm-700 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover transition"
+                    >
+                      {orgName}
+                    </button>
+                  </div>
+                )}
               </div>
             </>
           ) : (
@@ -431,8 +456,10 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
             </button>
           )}
           {step === 1 ? (
+            /* ต้องรอ areaPixels ด้วย — auto-เลือกรูปแรกทำให้ srcUrl มาก่อนที่ Cropper จะยิง
+               onCropComplete กดเร็วๆ จะเจอ error "เลือกรูปพื้นหลังก่อน" ทั้งที่เลือกให้แล้ว */
             <button
-              type="button" onClick={goPreview} disabled={!srcUrl || !quoteText.trim()}
+              type="button" onClick={goPreview} disabled={!srcUrl || !areaPixels || !quoteText.trim()}
               className="px-5 py-2 bg-orange text-white text-sm font-semibold rounded-lg hover:bg-orange-light disabled:opacity-40 transition"
             >
               {t('nextButton')}

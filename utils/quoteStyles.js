@@ -53,6 +53,17 @@ const OPEN_MARKS  = ['double_open', 'classic_open', 'block_open', 'outline_open'
 const CLOSE_MARKS = ['double_close', 'classic_close', 'block_close', 'outline_close'];
 
 const ORANGE = '#ff6a13';
+
+// scrim (เงาก้นภาพ) ผสมสีแบรนด์เข้าหาดำเท่าไหร่ — 0 = ดำอมน้ำเงินแบบเดิม
+// 0.78 เคาะจากการเรนเดอร์เทียบ 2026-08-06: เห็นว่าอมสีแบรนด์ชัด แต่ขาว/พื้นยัง 16.25:1
+// (เกณฑ์ AA = 4.5) · ต่ำกว่านี้เงาจะเริ่มกลืนกับสีในรูปและคอนทราสต์ไหลลงเร็ว
+const SCRIM_MIX = 0.78;
+
+/** สีจริงของ scrim + luminance ที่ readableOnDark ต้องใช้ (บวกแสงรูปที่ลอดผ่าน ~5%) */
+function scrimOf(accent, mix = SCRIM_MIX) {
+  const hex = mix ? _mix(accent, BLACK, mix) : '#00050c';
+  return { hex, rgb: _rgbTriplet(hex), lum: _lum(hex) + 0.006 };
+}
 const WHITE  = '#ffffff';
 const BLACK  = '#000000';
 
@@ -84,8 +95,11 @@ function _lum(hex) {
 // เกณฑ์ 6.2 = คอนทราสต์ของ**ส้ม CI เดิม (#ff6a13) = 6.31** บนพื้นเดียวกัน (เผื่อขอบนิดหน่อย
 // ให้ส้มไม่โดนแตะ) — ไม่ได้ตั้งลอยๆ แต่ยึดความอ่านง่ายที่คนคุ้นอยู่แล้วเป็นฐาน
 // เอาความอ่านง่ายที่คนคุ้นอยู่แล้วเป็นฐาน (น้ำเงิน #5865f3 ได้แค่ 3.94 → ผสมขาว 30%)
-function readableOnDark(hex, min = 6.2) {
-  const bg = 0.008;                                  // ≈ พื้นดำ 0.95 ที่ก้นภาพ
+//
+// bgLum = luminance ของ scrim จริง — ต้องส่งมาเมื่อ scrim ถูกย้อมสีแบรนด์ (scrimLum())
+// เลข 0.008 เดิมคือค่าของดำ #00050c บวกแสงรูปที่ลอดผ่าน 5% — ตอนนี้คิดจากสีจริงแทน
+function readableOnDark(hex, min = 6.2, bgLum = 0.008) {
+  const bg = bgLum;
   const ratio = l => (l + 0.05) / (bg + 0.05);
   if (!/^#[0-9a-fA-F]{6}$/.test(hex) || ratio(_lum(hex)) >= min) return hex;
 
@@ -234,7 +248,7 @@ async function toPng(canvas) {
 // ── Core render ───────────────────────────────────────────────────────────────
 // markScale: relative size of mark (1.0 = default)
 // gradDark:  0.0–1.0 how dark the bottom gradient is
-async function renderVariant(buf, { quoteText, authorName, side = 'left', vertical = 'bottom', markScale = 1.0, gradDark = 0.95, saturation = 0.15, fontBold = 'GSans', fontLight = 'AnakotmaiLight', accentColor, markExtraGap = 0, markAfterText = false, noMark = false }) {
+async function renderVariant(buf, { quoteText, authorName, side = 'left', vertical = 'bottom', markScale = 1.0, gradDark = 0.95, saturation = 0.15, fontBold = 'GSans', fontLight = 'AnakotmaiLight', accentColor, markExtraGap = 0, markAfterText = false, noMark = false, scrimMix = SCRIM_MIX }) {
   const accent = accentColor || ORANGE;
   const isRight = side === 'right';
   const isTop   = vertical === 'top';
@@ -274,13 +288,18 @@ async function renderVariant(buf, { quoteText, authorName, side = 'left', vertic
     ? (markAfterText ? pad : pad + effectMarkH + effectGap)
     : H - pad - textH;
 
-  // gradient
+  // gradient — scrimMix = ผสม accent เข้าหาดำเท่าไหร่ (null/0 = ดำอมน้ำเงินเดิม 0,5,12)
+  //
+  // ⚠️ ที่ย้อมได้เพราะ**ผสมดำก่อนเสมอ** ไม่ใช่เอา accent ดิบมาใช้ · ยิ่ง scrimMix เข้าใกล้ 1
+  //    ยิ่งเข้ม = ปลอดภัยขึ้น · ต่ำกว่า ~0.7 เมื่อไหร่ luminance จะเริ่มไต่ขึ้นจน readableOnDark()
+  //    ที่ยึด bg = 0.008 เริ่มโกหก (ชื่อผู้พูดบางสียังอ่านออกแต่คอนทราสต์ต่ำกว่าเกณฑ์ที่ตั้งไว้)
+  const scrimRGB = scrimOf(accent, scrimMix).rgb;
   const gV = isTop
     ? ctx.createLinearGradient(0, 0, 0, (textBlockTop + textH) + H * 0.2)
     : ctx.createLinearGradient(0, H, 0, markY - H * 0.2);
-  gV.addColorStop(0,   `rgba(0,5,12,${gradDark})`);
-  gV.addColorStop(0.4, `rgba(0,5,12,${Math.round(gradDark * 0.84 * 100) / 100})`);
-  gV.addColorStop(1,   'rgba(0,5,12,0)');
+  gV.addColorStop(0,   `rgba(${scrimRGB},${gradDark})`);
+  gV.addColorStop(0.4, `rgba(${scrimRGB},${Math.round(gradDark * 0.84 * 100) / 100})`);
+  gV.addColorStop(1,   `rgba(${scrimRGB},0)`);
   ctx.fillStyle = gV;
   ctx.fillRect(0, 0, W, H);
 
@@ -364,10 +383,11 @@ async function renderBorder(buf, { quoteText, authorName, saturation = 0.15, acc
   const textGap   = pngW * 0.08;   // double the original 0.04
   const textX     = vBarRight + textGap;
 
+  const scrim = scrimOf(accent);
   const gV = ctx.createLinearGradient(0, H, 0, borderY - H * 0.2);
-  gV.addColorStop(0,   'rgba(0,5,12,0.95)');
-  gV.addColorStop(0.4, 'rgba(0,5,12,0.80)');
-  gV.addColorStop(1,   'rgba(0,5,12,0)');
+  gV.addColorStop(0,   `rgba(${scrim.rgb},0.95)`);
+  gV.addColorStop(0.4, `rgba(${scrim.rgb},0.80)`);
+  gV.addColorStop(1,   `rgba(${scrim.rgb},0)`);
   ctx.fillStyle = gV; ctx.fillRect(0, 0, W, H);
 
   // draw border PNG
@@ -386,7 +406,7 @@ async function renderBorder(buf, { quoteText, authorName, saturation = 0.15, acc
   }
 
   ty += nsz * 0.5;
-  ctx.font = `${nsz}px AnakotmaiLight`; ctx.fillStyle = readableOnDark(accent);
+  ctx.font = `${nsz}px AnakotmaiLight`; ctx.fillStyle = readableOnDark(accent, 6.2, scrim.lum);
   ctx.shadowBlur = 4; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
   lsDraw(ctx, `— ${authorName}`, textX, ty, 0.8);
 
@@ -459,10 +479,11 @@ async function renderBorder2(buf, { quoteText, authorName, saturation = 0.15, ac
   const fLeft    = Math.max(pad + stroke / 2,
                             Math.min(textRight - widest - padX, authorRight - aw - padX));
 
+  const scrim = scrimOf(accent);
   const gV = ctx.createLinearGradient(0, H, 0, fTop - H * 0.2);
-  gV.addColorStop(0,   'rgba(0,5,12,0.95)');
-  gV.addColorStop(0.4, 'rgba(0,5,12,0.80)');
-  gV.addColorStop(1,   'rgba(0,5,12,0)');
+  gV.addColorStop(0,   `rgba(${scrim.rgb},0.95)`);
+  gV.addColorStop(0.4, `rgba(${scrim.rgb},0.80)`);
+  gV.addColorStop(1,   `rgba(${scrim.rgb},0)`);
   ctx.fillStyle = gV; ctx.fillRect(0, 0, W, H);
 
   // ตัว C: แถบบน → มุมขวาบน → เส้นตั้งขวา → มุมขวาล่าง → แถบล่างที่จบตรงท้ายชื่อ
@@ -491,7 +512,7 @@ async function renderBorder2(buf, { quoteText, authorName, saturation = 0.15, ac
 
   ctx.font = `${nsz}px AnakotmaiLight`;
   // สี accent เข้มๆ จมหายไปกับ gradient ดำก้นภาพ → ใช้เวอร์ชันที่อ่านออก (กรอบยังสีจริง)
-  ctx.fillStyle = readableOnDark(accent);
+  ctx.fillStyle = readableOnDark(accent, 6.2, scrim.lum);
   // ⚠️ shadowBlur อย่างเดียวไม่มีผล — canvas default shadowColor เป็นดำโปร่งใส 100%
   ctx.shadowColor = 'rgba(0,0,0,0.55)';
   ctx.shadowBlur = 6; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 1;
@@ -501,6 +522,285 @@ async function renderBorder2(buf, { quoteText, authorName, saturation = 0.15, ac
   ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
   return { buffer: await toPng(cv), ext: 'png', vertical: 'bottom', side: 'right' };
 }
+
+// ── quote-3-panel: รูปครึ่งหนึ่ง + แถบทึบสี CI อีกครึ่ง ──────────────────────
+//
+// ที่มา (2026-08-06): สไตล์ที่มีอยู่ 6 ใน 8 เป็นเลย์เอาต์เดียวกันหมด (ขาวบน scrim ดำก้นภาพ)
+// ต่างกันแค่ซ้าย/ขวา/มีกรอบไม่มีกรอบ → การ์ดทุกใบหน้าตาเหมือนกัน
+//
+// ⛔ ห้ามแก้ให้ scrim ดำของสไตล์อื่นย้อมตามสี CI เพื่อแก้ปัญหานี้ — ระบบคอนทราสต์ทั้งชุด
+//    ยึด `bg = 0.008` ใน readableOnDark() และตัวคำคมวาดด้วย WHITE ตายตัว · พื้นสว่างขึ้น
+//    เมื่อไหร่ = อ่านไม่ออกทั้งใบ · สไตล์นี้จึง **ไม่มี gradient เลย** ความอ่านออกมาจากพื้นทึบ
+//    ที่คำนวณตรงๆ ได้ด้วย contrastText()
+//
+// รับสี base สีเดียว แล้วแตกเป็นชุดสีทั้งใบ — ห้ามเพิ่ม config สีแยกทีหลัง
+function panelPalette(base) {
+  const ink = contrastText(base);                       // ดำ/ขาว แล้วแต่ luminance ของ base (WCAG)
+  const rgb = ink === WHITE ? '255,255,255' : '0,0,0';
+  return { panel: base, ink, sub: `rgba(${rgb},0.72)` };
+}
+
+/** '#rrggbb' → 'r,g,b' สำหรับประกอบ rgba() */
+function _rgbTriplet(hex) {
+  return [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16)).join(',');
+}
+
+// fade = สัดส่วนของความสูงภาพที่ให้รูป "จาง" เข้าหาแถบสี (0 = ขอบตัดคม)
+// ⚠️ โซน fade อยู่**นอก**แถบทึบเสมอ ตัวหนังสือไม่เคยตกลงไปในโซนนี้ — คอนทราสต์จึงยัง
+//    คำนวณจากสีทึบล้วนเหมือนเดิม ถ้าวันไหนย้ายข้อความเข้าโซน fade ต้องคิดคอนทราสต์ใหม่ทั้งหมด
+async function renderPanel(buf, { quoteText, authorName, saturation = 1.0, accentColor, imgRatio = 0.65, panelAt = 'bottom', fade = 0, align = 'left' }) {
+  const accent = accentColor || ORANGE;
+  const { panel, ink, sub } = panelPalette(accent);
+
+  const meta = await sharp(buf).metadata();
+  const W = meta.width, H = meta.height;
+  const panelH = Math.round(H * (1 - imgRatio));
+  const imgH   = H - panelH;
+  const imgY   = panelAt === 'bottom' ? 0 : panelH;
+  const panelY = panelAt === 'bottom' ? imgH : 0;
+
+  // ครอปด้วย 'attention' ให้ sharp เลือกโซนที่น่าสนใจเอง — แถบทึบกินพื้นที่ไป 1/3
+  // ครอปกลางเฉยๆ มีสิทธิ์ตัดหัวคนทิ้ง
+  const work = await sharp(buf).modulate({ saturation })
+    .resize(W, imgH, { fit: 'cover', position: 'attention' }).toBuffer();
+  const img = await loadImage(work);
+
+  const cv  = createCanvas(W, H);
+  const ctx = cv.getContext('2d');
+  ctx.drawImage(img, 0, imgY, W, imgH);
+  ctx.fillStyle = panel;
+  ctx.fillRect(0, panelY, W, panelH);
+
+  // รอยต่อจาง — ไล่จากโปร่งใสฝั่งรูป ไปทึบสนิทตรงขอบแถบ
+  const fadeH = Math.round(H * fade);
+  if (fadeH > 0) {
+    const rgb = _rgbTriplet(panel);
+    const from = panelAt === 'bottom' ? panelY - fadeH : panelY + panelH + fadeH;
+    const to   = panelAt === 'bottom' ? panelY : panelY + panelH;
+    const g = ctx.createLinearGradient(0, from, 0, to);
+    g.addColorStop(0, `rgba(${rgb},0)`);
+    g.addColorStop(1, `rgba(${rgb},1)`);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, Math.min(from, to), W, fadeH);
+  }
+
+  const padX    = Math.round(W * 0.075);
+  const padY    = Math.round(panelH * 0.15);
+  const nsz     = Math.max(15, Math.round(W * 0.028));
+  const markH   = Math.round(panelH * 0.16);
+  const markGap = Math.round(panelH * 0.07);
+  const authGap = Math.round(nsz * 1.1);
+  const maxW    = W - padX * 2;
+
+  const pool    = existingMarks(OPEN_MARKS);
+  const hasMark = pool.length > 0;
+  const effMarkH = hasMark ? markH : 0;
+  const effMarkGap = hasMark ? markGap : 0;
+
+  // ย่อจนบล็อกทั้งก้อนลงแถบได้ — fitFont คุมความกว้าง ลูปนี้คุมความสูง
+  let qsz = Math.max(24, Math.round(W * 0.062));
+  let fit, lh, blockH;
+  for (;;) {
+    fit = fitFont(ctx, quoteText, maxW, qsz, 6, 'Anakotmai');
+    lh  = fit.fontSize * 1.24;
+    blockH = effMarkH + effMarkGap + fit.lines.length * lh + authGap + nsz;
+    if (blockH <= panelH - padY * 2 || qsz <= 20) break;
+    qsz = Math.round(qsz * 0.92);
+  }
+
+  const isRight = align === 'right';
+  const right   = W - padX;
+  ctx.textBaseline = 'top';
+  let ty = panelY + Math.round((panelH - blockH) / 2);
+
+  if (hasMark) {
+    const markImg = await loadMark(pool[Math.floor(Math.random() * pool.length)]);
+    const markW   = (markImg.width / markImg.height) * markH;
+    drawTinted(ctx, markImg, isRight ? right - markW : padX, ty, markW, markH, ink);
+    ty += markH + markGap;
+  }
+
+  ctx.font = `bold ${fit.fontSize}px Anakotmai`;
+  ctx.fillStyle = ink;
+  for (const l of fit.lines) {
+    lsDraw(ctx, l, isRight ? right - lsWidth(ctx, l, 1.0) : padX, ty, 1.0);
+    ty += lh;
+  }
+
+  ty += authGap;
+  ctx.font = `${nsz}px AnakotmaiLight`;
+  ctx.fillStyle = sub;
+  lsDraw(ctx, authorName, isRight ? right - lsWidth(ctx, authorName, 0.8) : padX, ty, 0.8);
+
+  return { buffer: await toPng(cv), ext: 'png', vertical: panelAt, side: align };
+}
+
+// ── ตระกูล panel: สไตล์อื่นที่ใช้ base สีเดียวกัน ─────────────────────────────
+//
+// กติกาของทั้งตระกูล — พื้นที่ที่ตัวหนังสือทับต้องเป็น**สีที่รู้ค่าแน่นอน**เสมอ (สีทึบ หรือ
+// ปลายเข้มของ gradient ที่ clamp ไว้แล้ว) ห้ามให้ตัวหนังสือทับรูปดิบ ๆ เพราะ contrastText()
+// คำนวณจากสีเดียว ไม่ได้ดูรูป
+
+/** ผสม hex เข้าหาสีเป้าหมาย t = 0..1 (ใช้บังคับให้ปลาย gradient เข้ม/อ่อนพอเสมอ) */
+function _mix(hex, toward, t) {
+  const a = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
+  const b = [1, 3, 5].map(i => parseInt(toward.slice(i, i + 2), 16));
+  return '#' + a.map((c, i) => Math.round(c + (b[i] - c) * t).toString(16).padStart(2, '0')).join('');
+}
+
+/**
+ * วางบล็อกคำคม (เครื่องหมาย + ข้อความ + ชื่อ) กึ่งกลางแนวตั้งในกล่องที่กำหนด
+ * สไตล์ใหม่ทุกตัวเรียกตัวนี้ — เพิ่มสไตล์ทีหลังจะได้เขียนแค่ "พื้นหลัง + กล่อง" ไม่ต้องทำ layout เอง
+ * (renderPanel ตัวแรกไม่ได้ใช้ตัวนี้โดยตั้งใจ — มันถูกเคาะหน้าตาไปแล้ว ไม่แตะให้เพี้ยน)
+ */
+// qFactor = ขนาดฟอนต์เริ่มต้นเทียบกับ**ความกว้างกล่อง** — กล่องแคบ (แถบข้าง) ต้องใช้ค่าสูงกว่า
+// ไม่งั้นได้ตัวหนังสือจิ๋วลอยอยู่กลางแถบสีใหญ่ๆ (เจอตอนทำแถบข้างครั้งแรก)
+async function drawQuoteBlock(ctx, { x, y, w, h, quoteText, authorName, ink, sub, align = 'left', maxLines = 6, qFactor = 0.073 }) {
+  const pool     = existingMarks(OPEN_MARKS);
+  const hasMark  = pool.length > 0;
+
+  let qsz = Math.max(22, Math.round(w * qFactor));
+  let fit, lh, markH, markGap, nsz, authGap, blockH;
+  for (;;) {
+    fit     = fitFont(ctx, quoteText, w, qsz, maxLines, 'Anakotmai');
+    lh      = fit.fontSize * 1.24;
+    markH   = hasMark ? Math.round(fit.fontSize * 0.95) : 0;
+    markGap = hasMark ? Math.round(fit.fontSize * 0.45) : 0;
+    nsz     = Math.max(14, Math.round(fit.fontSize * 0.42));
+    authGap = Math.round(nsz * 1.1);
+    blockH  = markH + markGap + fit.lines.length * lh + authGap + nsz;
+    if (blockH <= h || qsz <= 18) break;
+    qsz = Math.round(qsz * 0.92);
+  }
+
+  const lineX = txt => align === 'right' ? x + w - lsWidth(ctx, txt, 1.0) : x;
+  ctx.textBaseline = 'top';
+  let ty = y + Math.round((h - blockH) / 2);
+
+  if (hasMark) {
+    const markImg = await loadMark(pool[Math.floor(Math.random() * pool.length)]);
+    const markW   = (markImg.width / markImg.height) * markH;
+    drawTinted(ctx, markImg, align === 'right' ? x + w - markW : x, ty, markW, markH, ink);
+    ty += markH + markGap;
+  }
+
+  ctx.font = `bold ${fit.fontSize}px Anakotmai`;
+  ctx.fillStyle = ink;
+  for (const l of fit.lines) { lsDraw(ctx, l, lineX(l), ty, 1.0); ty += lh; }
+
+  ty += authGap;
+  ctx.font = `${nsz}px AnakotmaiLight`;
+  ctx.fillStyle = sub;
+  lsDraw(ctx, authorName, align === 'right' ? x + w - lsWidth(ctx, authorName, 0.8) : x, ty, 0.8);
+}
+
+/**
+ * duotone — ย้อมรูปทั้งใบเป็น 2 โทนที่แตกจาก base แล้วไล่เข้มที่ก้นภาพ
+ *
+ * นี่คือ "gradient สีเดียวกับ CI" ที่อยากได้ตั้งแต่แรก — ทำได้เพราะปลายเข้มถูก clamp ด้วย
+ * _mix(base, BLACK, 0.72) เสมอ ไม่ว่า user ใส่สีอะไรมา luminance ปลายนั้นก็ต่ำพอให้
+ * contrastText() ตัดสินได้จริง (ต่างจากการเอา base ดิบ ๆ ไปย้อม scrim ซึ่งพังทันทีถ้า base สว่าง)
+ */
+async function renderDuotone(buf, { quoteText, authorName, accentColor, side = 'left' }) {
+  const base = accentColor || ORANGE;
+  const dark = _mix(base, BLACK, 0.72);
+  const lite = _mix(base, WHITE, 0.62);
+  const ink  = contrastText(dark);
+  const rgb  = ink === WHITE ? '255,255,255' : '0,0,0';
+
+  const grey = await sharp(buf).greyscale().toBuffer();
+  const img  = await loadImage(grey);
+  const W = img.width, H = img.height;
+  const cv  = createCanvas(W, H);
+  const ctx = cv.getContext('2d');
+
+  ctx.drawImage(img, 0, 0, W, H);
+  // screen ด้วยสีเข้ม = ยกเงาขึ้นมาติดสี · multiply ด้วยสีอ่อน = ดึงไฮไลต์ลงมาติดสี
+  ctx.globalCompositeOperation = 'screen';
+  ctx.fillStyle = dark;  ctx.fillRect(0, 0, W, H);
+  ctx.globalCompositeOperation = 'multiply';
+  ctx.fillStyle = lite;  ctx.fillRect(0, 0, W, H);
+  ctx.globalCompositeOperation = 'source-over';
+
+  const pad  = Math.round(Math.min(W, H) * 0.075);
+  const boxH = Math.round(H * 0.42);
+  const boxY = H - pad - boxH;
+
+  const g = ctx.createLinearGradient(0, H, 0, boxY - H * 0.12);
+  g.addColorStop(0, _rgbaOf(dark, 1));
+  g.addColorStop(0.45, _rgbaOf(dark, 0.88));
+  g.addColorStop(1, _rgbaOf(dark, 0));
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+
+  await drawQuoteBlock(ctx, {
+    x: pad, y: boxY, w: W - pad * 2, h: boxH,
+    quoteText, authorName, ink, sub: `rgba(${rgb},0.75)`, align: side === 'right' ? 'right' : 'left',
+  });
+  return { buffer: await toPng(cv), ext: 'png', vertical: 'bottom', side };
+}
+
+/** แถบสีแนวตั้งข้างเดียว — รูปอยู่อีกฝั่ง ไม่มีอะไรทับรูปเลย */
+async function renderSideBand(buf, { quoteText, authorName, saturation = 1.0, accentColor, bandRatio = 0.42, side = 'left' }) {
+  const base = accentColor || ORANGE;
+  const { ink, sub } = panelPalette(base);
+
+  const meta = await sharp(buf).metadata();
+  const W = meta.width, H = meta.height;
+  const bandW = Math.round(W * bandRatio);
+  const imgW  = W - bandW;
+  const bandX = side === 'left' ? 0 : imgW;
+  const imgX  = side === 'left' ? bandW : 0;
+
+  const work = await sharp(buf).modulate({ saturation })
+    .resize(imgW, H, { fit: 'cover', position: 'attention' }).toBuffer();
+  const img = await loadImage(work);
+
+  const cv  = createCanvas(W, H);
+  const ctx = cv.getContext('2d');
+  ctx.drawImage(img, imgX, 0, imgW, H);
+  ctx.fillStyle = base;
+  ctx.fillRect(bandX, 0, bandW, H);
+
+  const pad = Math.round(bandW * 0.14);
+  await drawQuoteBlock(ctx, {
+    x: bandX + pad, y: pad, w: bandW - pad * 2, h: H - pad * 2,
+    quoteText, authorName, ink, sub, maxLines: 9, qFactor: 0.155,
+  });
+  return { buffer: await toPng(cv), ext: 'png', vertical: 'center', side };
+}
+
+/** matte — พื้นสีล้วน รูปลอยอยู่ข้างบนแบบมีขอบ คำคมอยู่ใต้รูป */
+async function renderMatte(buf, { quoteText, authorName, saturation = 1.0, accentColor, inset = 0.06 }) {
+  const base = accentColor || ORANGE;
+  const { ink, sub } = panelPalette(base);
+
+  const meta = await sharp(buf).metadata();
+  const W = meta.width, H = meta.height;
+  const m     = Math.round(W * inset);
+  const imgW  = W - m * 2;
+  const imgH  = Math.round(H * 0.52);
+
+  const work = await sharp(buf).modulate({ saturation })
+    .resize(imgW, imgH, { fit: 'cover', position: 'attention' }).toBuffer();
+  const img = await loadImage(work);
+
+  const cv  = createCanvas(W, H);
+  const ctx = cv.getContext('2d');
+  ctx.fillStyle = base;
+  ctx.fillRect(0, 0, W, H);
+  ctx.drawImage(img, m, m, imgW, imgH);
+
+  const boxY = m + imgH;
+  await drawQuoteBlock(ctx, {
+    x: m, y: boxY, w: imgW, h: H - boxY - m,
+    quoteText, authorName, ink, sub,
+  });
+  return { buffer: await toPng(cv), ext: 'png', vertical: 'bottom', side: 'left' };
+}
+
+/** '#rrggbb' + alpha → rgba() */
+function _rgbaOf(hex, a) { return `rgba(${_rgbTriplet(hex)},${a})`; }
 
 // ── Styles ───────────────────────────────────────────────────────────────────
 // โหมด AI: Claude ตัดสิน band (บน/ล่าง) = แถบโล่งคน + align + สี (3 ระดับ) — ล่ม → random
@@ -608,4 +908,10 @@ function parseStyle(input) {
   return match || null;
 }
 
-module.exports = { renderQuoteStyle, parseStyle, FRAME_RIGHT };
+// renderPanel/panelPalette ยัง**ไม่อยู่ใน STYLES** — ยังเป็นตัวอย่างให้ดูก่อนเคาะ
+// เคาะเมื่อไหร่ค่อยเติมคีย์ใน STYLES แล้วมันจะตกเข้า random pool เอง
+module.exports = {
+  renderQuoteStyle, parseStyle, FRAME_RIGHT,
+  renderPanel, renderDuotone, renderSideBand, renderMatte, panelPalette,
+  renderVariant, _mix,   // export ไว้ทดลอง scrimMix — ยังไม่มีสไตล์ไหนใน STYLES ใช้
+};

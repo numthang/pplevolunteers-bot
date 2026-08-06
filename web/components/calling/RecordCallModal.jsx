@@ -228,6 +228,13 @@ export default function RecordCallModal({ isOpen, member, contact_type = 'member
     if (isOpen && memberId) loadHistory()
   }, [memberId, isOpen, member?.flag])
 
+  useEffect(() => {
+    if (!isOpen) return
+    function onKey(e) { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [isOpen, onClose])
+
   const saveFlag = async (val) => {
     const next = val === memberFlag ? null : val
     setMemberFlag(next)

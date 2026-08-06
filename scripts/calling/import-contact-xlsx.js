@@ -21,6 +21,11 @@ require('dotenv').config();
 const XLSX = require('xlsx');
 const fs   = require('fs');
 const path = require('path');
+const pool = require('../../db/index.js');
+
+function normalizePhone(phone) {
+  return String(phone || '').replace(/[^0-9]/g, '');
+}
 
 const XLS_FILE = process.argv[2];
 const GUILD_ID = process.argv[3] || process.env.GUILD_ID;
@@ -61,8 +66,35 @@ function buildNote(count, amount, monthly) {
   return parts.length ? parts.join(' | ') : null;
 }
 
+async function main() {
+
 process.stderr.write(`Reading: ${XLS_FILE}\n`);
 process.stderr.write(`Guild: ${GUILD_ID}\n`);
+
+const { rows: [guildRow] } = await pool.query(
+  'SELECT org_id FROM dc_guilds WHERE guild_id = $1', [GUILD_ID]
+);
+if (!guildRow) {
+  console.error('Error: guild not found for GUILD_ID', GUILD_ID);
+  await pool.end();
+  process.exit(1);
+}
+const orgId = guildRow.org_id;
+
+const { rows: memberRows } = await pool.query(
+  `SELECT regexp_replace(mobile_number, '[^0-9]', '', 'g') AS norm
+     FROM cache_pple_member
+    WHERE org_id = $1 AND mobile_number IS NOT NULL`, [orgId]
+);
+const { rows: contactRows } = await pool.query(
+  `SELECT regexp_replace(phone, '[^0-9]', '', 'g') AS norm
+     FROM calling_contacts
+    WHERE org_id = $1 AND phone IS NOT NULL`, [orgId]
+);
+const existingPhones = new Set(
+  [...memberRows, ...contactRows].map(r => r.norm).filter(n => n)
+);
+process.stderr.write(`Existing phones on file (members + contacts): ${existingPhones.size}\n`);
 
 const wb   = XLSX.readFile(XLS_FILE);
 const ws   = wb.Sheets[wb.SheetNames[0]];
@@ -87,6 +119,7 @@ const contacts = [];
 const seen = new Set();
 let skipped = 0;
 let duplicates = 0;
+let alreadyOnFile = 0;
 
 for (let i = 1; i < rows.length; i++) {
   const row = rows[i];
@@ -97,6 +130,9 @@ for (let i = 1; i < rows.length; i++) {
   const dedupeKey = `${fullName}|${phoneRaw}`;
   if (seen.has(dedupeKey)) { duplicates++; continue; }
   seen.add(dedupeKey);
+
+  const normPhone = normalizePhone(phoneRaw);
+  if (normPhone && existingPhones.has(normPhone)) { alreadyOnFile++; continue; }
 
   const parts     = fullName.split(/\s+/);
   const firstName = parts[0] || '';
@@ -116,7 +152,7 @@ for (let i = 1; i < rows.length; i++) {
   if (i % 100 === 0) process.stdout.write(`\r  ${i}/${rows.length - 1}`);
 }
 
-process.stdout.write(`\r  ${contacts.length}/${rows.length - 1} parsed (${skipped} skipped, ${duplicates} duplicates removed)\n`);
+process.stdout.write(`\r  ${contacts.length}/${rows.length - 1} parsed (${skipped} skipped, ${duplicates} in-file duplicates, ${alreadyOnFile} already exist as member/contact)\n`);
 
 // ─── Generate SQL ──────────────────────────────────────────────────────────
 
@@ -128,7 +164,7 @@ lines.push('-- ============================================================');
 lines.push(`-- Contact Import — calling_contacts`);
 lines.push(`-- Source: ${XLS_FILE}`);
 lines.push(`-- Generated: ${new Date().toISOString()}`);
-lines.push(`-- Contacts: ${contacts.length}  |  Skipped: ${skipped}`);
+lines.push(`-- Contacts: ${contacts.length}  |  Skipped: ${skipped}  |  Already exist (member/contact): ${alreadyOnFile}`);
 lines.push(`-- Guild: ${GUILD_ID}  (→ org_id resolve ตอนรัน SQL)`);
 lines.push('-- Review before running!');
 lines.push('-- ============================================================');
@@ -150,3 +186,13 @@ fs.writeFileSync(out, lines.join('\n'), 'utf8');
 process.stderr.write(`\nSQL written to: ${out}\n`);
 process.stderr.write(`Review, then run:\n`);
 process.stderr.write(`  psql -U pple_dcbot pple_volunteers -f ${out}\n`);
+
+await pool.end();
+
+}
+
+main().catch(async (err) => {
+  console.error(err);
+  await pool.end();
+  process.exit(1);
+});

@@ -102,9 +102,12 @@ export async function listCategories(orgId, userId, { includeAllPersonal = false
 
 export async function getPost(id) {
   const { rows } = await pool.query(
-    `SELECT ${COLS}, ${OWNER_NAME} AS owner_name
+    // org_name — ชื่อองค์กรเจ้าของโพสต์ ใช้เป็นตัวเลือกชื่อผู้พูดในการ์ดคำคม
+    // (posts เป็น org-native ไม่มี guild เสมอไป → ห้ามดึงชื่อจาก dc_guilds)
+    `SELECT ${COLS}, ${OWNER_NAME} AS owner_name, o.name AS org_name
        FROM post_episodes e
        LEFT JOIN users u ON u.id = e.owner_user_id
+       LEFT JOIN orgs o ON o.id = e.org_id
       WHERE e.id = $1`,
     [id]
   )
