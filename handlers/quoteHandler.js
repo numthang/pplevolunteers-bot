@@ -15,7 +15,7 @@ const fs    = require('fs');
 const sharp = require('sharp');
 const { fetchBuffer, applyWatermark } = require('../utils/watermarkImage');
 const { renderQuoteStyle } = require('../utils/quoteStyles');
-const { QUOTE_STYLE_OPTIONS, QUOTE_STYLE_KEYS, QUOTE_AI_KEY } = require('../utils/quoteStyleKeys');
+const { QUOTE_STYLE_OPTIONS, QUOTE_STYLE_KEYS, QUOTE_AI_KEY, normalizeStyle } = require('../utils/quoteStyleKeys');
 const { resolveConfig } = require('../db/configResolver');
 const { getUserSetting, setUserSetting } = require('../db/userConfig');
 
@@ -120,7 +120,9 @@ async function handleQuoteCommand(interaction) {
   if (defaultStyle === null) {
     try {
       const { value } = await resolveConfig(interaction.user.id, interaction.guildId, QUOTE_KEY_TEMPLATE);
-      if (value && QUOTE_STYLE_KEYS.includes(value)) defaultStyle = value;
+      // ค่าใน DB อาจเป็นคีย์เก่าก่อน rename 2026-08-07 → normalize ก่อนเทียบ ไม่งั้นตกไป default เงียบๆ
+      const norm = normalizeStyle(value);
+      if (norm && QUOTE_STYLE_KEYS.includes(norm)) defaultStyle = norm;
     } catch (err) { console.error('[quoteHandler] resolve template default:', err.message); }
   }
 
@@ -310,7 +312,9 @@ async function handleQuoteModal(interaction) {
   if (!state.style) {
     try {
       const { value } = await resolveConfig(interaction.user.id, interaction.guildId, QUOTE_KEY_TEMPLATE);
-      if (value && QUOTE_STYLE_KEYS.includes(value)) defaultStyle = value;
+      // ค่าใน DB อาจเป็นคีย์เก่าก่อน rename 2026-08-07 → normalize ก่อนเทียบ ไม่งั้นตกไป default เงียบๆ
+      const norm = normalizeStyle(value);
+      if (norm && QUOTE_STYLE_KEYS.includes(norm)) defaultStyle = norm;
     } catch (err) {
       console.error('[quoteHandler] resolve template default:', err.message);
     }

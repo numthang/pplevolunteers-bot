@@ -15,7 +15,9 @@ import { useTranslations } from 'next-intl'
 import Cropper from 'react-easy-crop'
 import { X, Upload, Loader2, Sparkles, ImageIcon, ChevronLeft, Images } from 'lucide-react'
 import AssetPickerModal from './AssetPickerModal.jsx'
-import { QUOTE_AI_KEY, QUOTE_STYLE_OPTIONS } from '@/lib/quoteStyles.js'
+import {
+  QUOTE_AI_KEY, FINISHES, LAYOUTS, COMBOS, styleKey, comboExists, fallbackLayout,
+} from '@/lib/quoteStyles.js'
 
 const ACCEPT = 'image/png,image/jpeg,image/webp'
 
@@ -33,8 +35,23 @@ const COLORS = [
   { value: '0.15', key: 'colorBw' },
 ]
 
-// ชื่อ/ตำแหน่งมักเป็นค่าเดิมทุกใบ → จำค่าล่าสุดไว้ในเครื่อง (ฝั่งบอทก็จำผ่าน quote_state เหมือนกัน)
-const AUTHOR_LS_KEY = 'posts.quoteAuthor'
+// ค่าที่ตั้งไว้มักเป็นค่าเดิมทุกใบ → จำค่าล่าสุดไว้ในเครื่อง (ฝั่งบอทก็จำผ่าน quote_state เหมือนกัน)
+//
+// จำ: finish · layout · saturation · aspect · authorName
+// ไม่จำ: รูปพื้นหลัง · ครอป/ซูม · ข้อความคำคม (เป็นของเฉพาะใบนั้น จำไปก็ผิด)
+//
+// ⚠️ จำเฉพาะตอน **บันทึกสำเร็จ** เท่านั้น ไม่งั้นกดเล่นแล้วยกเลิกก็ติดไปด้วย
+// ⚠️ ค่าที่จำไว้ทับ `quote_default_template` ที่ตั้งใน /bot/media/quote → config นั้นจึงมีผล
+//    แค่ครั้งแรกของผู้ใช้แต่ละคน (ฝั่งบอทยังใช้ config ปกติ)
+const LAST_LS_KEY = 'posts.quoteLast'
+const AUTHOR_LS_KEY = 'posts.quoteAuthor'   // คีย์เดิม — อ่านต่อได้เพื่อไม่ให้ค่าที่เคยจำไว้หาย
+
+// AI ไม่ใช่ finish จริง (ไม่มี layout ให้เลือกคู่) แต่วางไว้แถวเดียวกันเพื่อไม่ให้มีตัวเลือกที่ 3
+const FINISH_CHIPS = [...FINISHES, { value: QUOTE_AI_KEY, label: '✨ AI', description: null }]
+
+function loadLast() {
+  try { return JSON.parse(localStorage.getItem(LAST_LS_KEY) || '{}') || {} } catch { return {} }
+}
 
 // ⛔ ห้ามใส่ค่าตั้งต้นแบบ hardcode (เดิมมี DEV_DEFAULTS ไว้กดเทสรัวๆ — เอาออกแล้ว)
 //    ค่าตั้งต้นทุกตัวมาจากข้อมูลจริงของโพสต์ ถ้าเติมค่าปลอมทับไว้ guard `prev || x`
@@ -89,7 +106,9 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
   const [orgName, setOrgName] = useState('')   // ตัวเลือกชื่อผู้พูด ไม่ใช่ค่า prefill — ดูหมายเหตุที่ปุ่มชิป
 
   // ── ขั้น 2: พรีวิว ────────────────────────────────────────────────────────
-  const [style, setStyle] = useState(QUOTE_STYLE_OPTIONS[0].value)
+  // สไตล์ = finish + layout · เก็บแยกกันใน state แล้วประกอบเป็นคีย์ตอนยิง API
+  const [finish, setFinish] = useState(FINISHES[0].value)
+  const [layout, setLayout] = useState(COMBOS[FINISHES[0].value][0])
   const [saturation, setSaturation] = useState('1.0')
   const [previewUrl, setPreviewUrl] = useState(null)
   const [rendering, setRendering] = useState(false)
@@ -112,11 +131,23 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
 
   useEffect(() => () => objectUrls.current.forEach(u => URL.revokeObjectURL(u)), [])
 
-  // ชื่อ/ตำแหน่งที่ใช้ล่าสุด — อ่านหลัง mount ไม่ใช่ใน useState เพราะ localStorage ไม่มีตอน SSR
+  // ค่าที่ใช้ล่าสุด — อ่านหลัง mount ไม่ใช่ใน useState เพราะ localStorage ไม่มีตอน SSR
   useEffect(() => {
+    const last = loadLast()
+    // finish/layout ต้องเช็คว่ายังมีอยู่จริง — สไตล์ถูกตัดออกได้ (เช่น 'ข้างซ้าย' ที่ตัดไป)
+    // ค่าที่จำไว้จะกลายเป็นคีย์ที่ไม่มีใน STYLES แล้วเรนเดอร์พังทั้งใบ
+    if (last.finish === QUOTE_AI_KEY || COMBOS[last.finish]) {
+      setFinish(last.finish)
+      if (last.finish !== QUOTE_AI_KEY) {
+        setLayout(comboExists(last.finish, last.layout) ? last.layout : fallbackLayout(last.finish))
+      }
+    }
+    if (COLORS.some(c => c.value === last.saturation)) setSaturation(last.saturation)
+    if (ASPECTS.some(a => a.value === last.aspect)) setAspect(last.aspect)
+
     try {
-      const last = localStorage.getItem(AUTHOR_LS_KEY)
-      if (last) setAuthorName(last)
+      const author = last.authorName || localStorage.getItem(AUTHOR_LS_KEY)
+      if (author) setAuthorName(author)
     } catch { /* โหมดส่วนตัว/ปิด storage — ไม่ใช่เรื่องคอขาดบาดตาย */ }
   }, [])
 
@@ -208,6 +239,10 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
     }
   }, [postId, quoteText, authorName, t])
 
+  // AI ไม่มี layout ให้จับคู่ — คีย์คือ 'ai' เดี่ยวๆ
+  const isAI  = finish === QUOTE_AI_KEY
+  const style = isAI ? QUOTE_AI_KEY : styleKey(finish, layout)
+
   async function goPreview() {
     if (!srcUrl || !areaPixels) { setError(t('needBg')); return }
     if (!quoteText.trim()) { setError(t('needText')); return }
@@ -217,9 +252,17 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
     render(style, saturation)
   }
 
-  function changeStyle(next) {
-    setStyle(next)
-    render(next, saturation)
+  function changeFinish(next) {
+    setFinish(next)
+    if (next === QUOTE_AI_KEY) { render(QUOTE_AI_KEY, saturation); return }
+    // layout เดิมอาจไม่มีใน finish ใหม่ (เช่น matte มีเฉพาะ 'ทึบ') → ย้ายไปตัวแรกที่ใช้ได้
+    const nextLayout = comboExists(next, layout) ? layout : fallbackLayout(next)
+    setLayout(nextLayout)
+    render(styleKey(next, nextLayout), saturation)
+  }
+  function changeLayout(next) {
+    setLayout(next)
+    render(styleKey(finish, next), saturation)
   }
   function changeColor(next) {
     setSaturation(next)
@@ -241,8 +284,13 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
       const res = await fetch(`/api/posts/${postId}/media/quote`, { method: 'POST', body: form })
       const d = await res.json().catch(() => ({}))
       if (!res.ok) { setError(d.error || t('loadFailed')); return }
-      // จำชื่อไว้ให้ใบถัดไป — จำเฉพาะตอนบันทึกสำเร็จ ไม่งั้นค่าที่พิมพ์เล่นแล้วยกเลิกก็ติดไปด้วย
-      try { if (authorName.trim()) localStorage.setItem(AUTHOR_LS_KEY, authorName.trim()) } catch { /* ไม่มี storage ก็ช่าง */ }
+      // จำค่าที่ตั้งไว้ให้ใบถัดไป — เฉพาะตอนบันทึกสำเร็จ ไม่งั้นค่าที่กดเล่นแล้วยกเลิกก็ติดไปด้วย
+      try {
+        localStorage.setItem(LAST_LS_KEY, JSON.stringify({
+          finish, layout, saturation, aspect, authorName: authorName.trim(),
+        }))
+        if (authorName.trim()) localStorage.setItem(AUTHOR_LS_KEY, authorName.trim())
+      } catch { /* ไม่มี storage ก็ช่าง */ }
       onSaved?.(d.data)
       onClose()
     } catch {
@@ -409,37 +457,72 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
                 )}
               </div>
 
+              {/* 2 ตัวเลือกแยกกัน: การลงสี × การวาง — สไตล์คือผลคูณของสองอันนี้
+                  (เดิมเป็น dropdown เดียวยาว 16 รายการ ผู้ใช้อ่านไม่ออกว่าอะไรต่างจากอะไร) */}
               <div className="flex flex-col gap-1.5">
-                <span className="text-sm font-medium text-warm-700 dark:text-disc-text">{t('styleLabel')}</span>
-                <select
-                  value={style} onChange={e => changeStyle(e.target.value)} disabled={rendering}
-                  className={inputCls + ' h-9 py-0 disabled:opacity-50'}
-                >
-                  {QUOTE_STYLE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                  <option value={QUOTE_AI_KEY}>✨ AI</option>
-                </select>
-                {style === QUOTE_AI_KEY && (
-                  <span className="text-sm text-warm-500 dark:text-disc-muted">{t('aiStyleNote')}</span>
-                )}
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <span className="text-sm font-medium text-warm-700 dark:text-disc-text">{t('colorLabel')}</span>
+                <span className="text-sm font-medium text-warm-700 dark:text-disc-text">{t('finishLabel')}</span>
                 <div className="flex flex-wrap gap-2">
-                  {COLORS.map(c => (
+                  {FINISH_CHIPS.map(f => (
                     <button
-                      key={c.value} type="button" onClick={() => changeColor(c.value)} disabled={rendering}
+                      key={f.value} type="button" onClick={() => changeFinish(f.value)}
+                      disabled={rendering} title={f.description}
                       className={`px-2.5 py-1 text-sm rounded-lg border transition disabled:opacity-50 ${
-                        saturation === c.value
+                        finish === f.value
                           ? 'border-orange bg-orange text-white'
                           : 'border-warm-200 dark:border-disc-border text-warm-700 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover'
                       }`}
                     >
-                      {t(c.key)}
+                      {f.label}
                     </button>
                   ))}
                 </div>
               </div>
+
+              <div className="flex flex-col gap-1.5">
+                <span className="text-sm font-medium text-warm-700 dark:text-disc-text">{t('layoutLabel')}</span>
+                <div className="flex flex-wrap gap-2">
+                  {LAYOUTS.map(l => {
+                    // คู่ที่เรนเดอร์ไม่ได้ = จางกดไม่ได้ ไม่ใช่ซ่อน ผู้ใช้จะได้รู้ว่ามีอยู่แต่คู่นี้ไม่มี
+                    const ok = isAI || comboExists(finish, l.value)
+                    return (
+                      <button
+                        key={l.value} type="button" onClick={() => changeLayout(l.value)}
+                        disabled={rendering || !ok || isAI}
+                        title={ok ? undefined : t('comboUnavailable')}
+                        className={`px-2.5 py-1 text-sm rounded-lg border transition disabled:cursor-not-allowed ${
+                          !isAI && layout === l.value
+                            ? 'border-orange bg-orange text-white'
+                            : 'border-warm-200 dark:border-disc-border text-warm-700 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover'
+                        } ${ok && !isAI ? '' : 'opacity-35'}`}
+                      >
+                        {l.label}
+                      </button>
+                    )
+                  })}
+                </div>
+                {isAI && <span className="text-sm text-warm-500 dark:text-disc-muted">{t('aiStyleNote')}</span>}
+              </div>
+
+              {/* ดูโอโทนแปลงรูปเป็นขาวดำก่อนย้อมอยู่แล้ว → ปุ่มสีภาพไม่มีผล ซ่อนทิ้งดีกว่าให้กดแล้วเงียบ */}
+              {finish !== 'duo' && (
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-sm font-medium text-warm-700 dark:text-disc-text">{t('colorLabel')}</span>
+                  <div className="flex flex-wrap gap-2">
+                    {COLORS.map(c => (
+                      <button
+                        key={c.value} type="button" onClick={() => changeColor(c.value)} disabled={rendering}
+                        className={`px-2.5 py-1 text-sm rounded-lg border transition disabled:opacity-50 ${
+                          saturation === c.value
+                            ? 'border-orange bg-orange text-white'
+                            : 'border-warm-200 dark:border-disc-border text-warm-700 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover'
+                        }`}
+                      >
+                        {t(c.key)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </>
           )}
 

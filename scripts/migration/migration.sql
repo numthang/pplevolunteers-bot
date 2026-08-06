@@ -519,7 +519,6 @@ CREATE TABLE IF NOT EXISTS post_ai_suggestions (
 CREATE INDEX IF NOT EXISTS idx_post_ai_suggestions_episode
     ON post_ai_suggestions (episode_id, created_at DESC);
 
--- production ทำถึงตรงนี้ 
 
 -- ═══════════════════════════════════════════════════════════════════════════
 -- 2026-08-04: post_assets — คลังภาพ (media library) · ดีไซน์ md/PENDING.md §🎨 คลังภาพ
@@ -579,3 +578,6 @@ UPDATE post_episodes
  WHERE channel_id IS NOT NULL
    AND COALESCE(btrim(title), '') = ''
    AND COALESCE(btrim(body), '') <> '';
+
+-- production ทำถึงตรงนี้ 
+

@@ -17,7 +17,7 @@
  */
 import { resolve } from 'node:path'
 import { REPO_ROOT } from './postsStorage.js'
-import { QUOTE_AI_KEY, QUOTE_STYLE_KEYS, QUOTE_STYLE_OPTIONS } from './quoteStyles.js'
+import { QUOTE_AI_KEY, QUOTE_STYLE_KEYS, QUOTE_STYLE_OPTIONS, normalizeStyle } from './quoteStyles.js'
 
 /**
  * ⛔ ห้ามเปลี่ยนเป็น `import { createRequire } from 'node:module'`
@@ -66,7 +66,9 @@ export function normalizeQuoteParams({ quoteText, authorName, style, saturation 
   if (author.length > MAX_AUTHOR_LEN) throw new QuoteRenderError(`ชื่อยาวเกิน ${MAX_AUTHOR_LEN} ตัวอักษร`)
 
   // ไม่ส่งสไตล์มา = 'random' (renderQuoteStyle สุ่มให้เอง โดยไม่แตะ AI)
-  const styleKey = String(style ?? '').trim() || 'random'
+  // normalizeStyle ก่อนเช็ค — การ์ดที่บันทึกไว้ก่อน rename 2026-08-07 เก็บคีย์เก่าใน
+  // post_episode_media.quote_style ถ้าไม่แปลงจะเรนเดอร์ซ้ำไม่ได้ ขึ้น 'ไม่รู้จักสไตล์นี้'
+  const styleKey = normalizeStyle(String(style ?? '').trim() || 'random')
   if (!QUOTE_STYLE_KEYS.includes(styleKey)) throw new QuoteRenderError('ไม่รู้จักสไตล์นี้')
 
   // null = ปล่อยให้ AI ตัดสิน (เฉพาะสไตล์ AI) · สไตล์ปกติ null → renderer ใช้ default ของมันเอง

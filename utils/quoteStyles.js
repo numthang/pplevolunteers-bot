@@ -64,6 +64,30 @@ function scrimOf(accent, mix = SCRIM_MIX) {
   const hex = mix ? _mix(accent, BLACK, mix) : '#00050c';
   return { hex, rgb: _rgbTriplet(hex), lum: _lum(hex) + 0.006 };
 }
+
+/**
+ * เตรียมรูปก่อนวาด — จุดเดียวที่ทุกสไตล์เรียก จะได้รองรับ duotone เหมือนกันหมด
+ *
+ * ⚠️ เคยใส่ duotone ไว้ใน renderVariant ตัวเดียว ผลคือดูโอโทนเลือกได้แค่ 4 มุม
+ *    ส่วน pillar/frame/center เลือกไม่ได้ทั้งที่ไม่มีเหตุผลทางดีไซน์ (แก้ 2026-08-07)
+ *    → renderer ใหม่ทุกตัวต้องเรียกตัวนี้ ห้ามเรียก sharp().modulate() ตรงๆ อีก
+ *
+ * duotone: ขาวดำ → screen ด้วยสีเข้ม (ยกเงามาติดสี) → multiply ด้วยสีอ่อน (ดึงไฮไลต์มาติดสี)
+ * ปลายเข้มใช้ scrimOf() ตัวเดียวกับเงา รูปกับเงาจึงเป็นสีเดียวกัน มองไม่เห็นรอยต่อ
+ */
+async function prepImage(buf, { saturation = 1.0, duotone = false, accent = ORANGE } = {}) {
+  if (!duotone) return await sharp(buf).modulate({ saturation }).toBuffer();
+
+  const img = await loadImage(await sharp(buf).greyscale().toBuffer());
+  const cv  = createCanvas(img.width, img.height);
+  const ctx = cv.getContext('2d');
+  ctx.drawImage(img, 0, 0);
+  ctx.globalCompositeOperation = 'screen';
+  ctx.fillStyle = scrimOf(accent).hex;       ctx.fillRect(0, 0, img.width, img.height);
+  ctx.globalCompositeOperation = 'multiply';
+  ctx.fillStyle = _mix(accent, WHITE, 0.62); ctx.fillRect(0, 0, img.width, img.height);
+  return cv.toBuffer('image/png');
+}
 const WHITE  = '#ffffff';
 const BLACK  = '#000000';
 
@@ -170,6 +194,33 @@ function wrapText(ctx, text, maxWidth) {
   return _wrapGreedy(ctx, text, hi);
 }
 
+/**
+ * ตัดบรรทัดที่ยาวเกินขอบทิ้งลงบรรทัดใหม่ **กลางคำ** — วาล์วนิรภัยของการจัดข้อความแบบเต็มขอบ
+ *
+ * ที่มา (2026-08-07): _wrapGreedy ตัดตามหน่วยคำ ถ้าหน่วยเดียวยาวกว่าทั้งบรรทัด (URL ยาวๆ
+ * หรือคำที่ Intl.Segmenter ตัดไม่ได้) มันจะล้นขอบ · ลูปหาไซซ์ในสไตล์แถบสีเห็นว่าไม่ fit
+ * แล้วย่อฟอนต์ลงเรื่อยๆ ผลคือคำคมทั้งใบตัวจิ๋วเพราะคำเดียว → ตัดกลางคำแทน
+ *
+ * ตัดด้วย graphemes() ไม่ใช่ตัวอักษรดิบ สระ/วรรณยุกต์ไทยจึงไม่หลุดจากพยัญชนะ
+ */
+function _breakLongLine(ctx, line, maxWidth, sp) {
+  if (lsWidth(ctx, line, sp) <= maxWidth) return [line];
+  const out = [];
+  let cur = '';
+  for (const g of graphemes(line)) {
+    const test = cur + g;
+    if (lsWidth(ctx, test, sp) > maxWidth && cur) { out.push(cur); cur = g; }
+    else cur = test;
+  }
+  if (cur) out.push(cur);
+  return out;
+}
+
+/** จัดข้อความให้เต็มขอบ: greedy อัดเต็มทุกบรรทัด แล้วตัดกลางคำเฉพาะบรรทัดที่ยังล้น */
+function _wrapFill(ctx, text, maxWidth, sp = 1.0) {
+  return _wrapGreedy(ctx, text, maxWidth).flatMap(l => _breakLongLine(ctx, l, maxWidth, sp));
+}
+
 function lsDraw(ctx, text, x, y, sp = 1.5) {
   let cx = x;
   for (const g of graphemes(text)) { ctx.fillText(g, cx, y); cx += ctx.measureText(g).width + sp; }
@@ -248,17 +299,19 @@ async function toPng(canvas) {
 // ── Core render ───────────────────────────────────────────────────────────────
 // markScale: relative size of mark (1.0 = default)
 // gradDark:  0.0–1.0 how dark the bottom gradient is
-async function renderVariant(buf, { quoteText, authorName, side = 'left', vertical = 'bottom', markScale = 1.0, gradDark = 0.95, saturation = 0.15, fontBold = 'GSans', fontLight = 'AnakotmaiLight', accentColor, markExtraGap = 0, markAfterText = false, noMark = false, scrimMix = SCRIM_MIX }) {
+async function renderVariant(buf, { quoteText, authorName, side = 'left', vertical = 'bottom', markScale = 1.0, gradDark = 0.95, saturation = 0.15, fontBold = 'GSans', fontLight = 'AnakotmaiLight', accentColor, markExtraGap = 0, markAfterText = false, noMark = false, scrimMix = SCRIM_MIX, duotone = false }) {
   const accent = accentColor || ORANGE;
   const isRight = side === 'right';
   const isTop   = vertical === 'top';
 
-  const work = await sharp(buf).modulate({ saturation }).toBuffer();
+  // ⚠️ saturation ไม่มีผลตอน duotone (รูปถูกทำขาวดำก่อนย้อมอยู่แล้ว) → UI ต้องซ่อนปุ่มสีภาพ
+  const work = await prepImage(buf, { saturation, duotone, accent });
   const img  = await loadImage(work);
   const W = img.width, H = img.height;
   const cv  = createCanvas(W, H);
   const ctx = cv.getContext('2d');
   ctx.drawImage(img, 0, 0, W, H);
+
 
   const pad    = Math.round(Math.min(W, H) * 0.055);
   const barW   = Math.max(2, Math.round(W * 0.0024));
@@ -348,9 +401,9 @@ async function renderVariant(buf, { quoteText, authorName, side = 'left', vertic
 
 // ── Style 7: quote_border (mark + H-bar + V-bar เป็นชิ้นเดียว) ───────────────
 // PNG 822x714 — V-bar spans y 32%–95%, text area starts at x 24%, y 32%
-async function renderBorder(buf, { quoteText, authorName, saturation = 0.15, accentColor }) {
+async function renderBorder(buf, { quoteText, authorName, saturation = 0.15, accentColor, duotone = false }) {
   const accent = accentColor || ORANGE;
-  const work = await sharp(buf).modulate({ saturation }).toBuffer();
+  const work = await prepImage(buf, { saturation, duotone, accent: accentColor || ORANGE });
   const img  = await loadImage(work);
   const W = img.width, H = img.height;
   const cv  = createCanvas(W, H);
@@ -428,9 +481,9 @@ const FRAME_RIGHT = {
 };
 
 // ── Style 8: quote_border_2 — กรอบตัว C ชิดขวา (แถบบน + เส้นตั้งขวา + แถบล่างสั้น)
-async function renderBorder2(buf, { quoteText, authorName, saturation = 0.15, accentColor }) {
+async function renderBorder2(buf, { quoteText, authorName, saturation = 0.15, accentColor, duotone = false }) {
   const accent = accentColor || ORANGE;
-  const work = await sharp(buf).modulate({ saturation }).toBuffer();
+  const work = await prepImage(buf, { saturation, duotone, accent: accentColor || ORANGE });
   const img  = await loadImage(work);
   const W = img.width, H = img.height;
   const cv  = createCanvas(W, H);
@@ -545,68 +598,73 @@ function _rgbTriplet(hex) {
   return [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16)).join(',');
 }
 
-// fade = สัดส่วนของความสูงภาพที่ให้รูป "จาง" เข้าหาแถบสี (0 = ขอบตัดคม)
-// ⚠️ โซน fade อยู่**นอก**แถบทึบเสมอ ตัวหนังสือไม่เคยตกลงไปในโซนนี้ — คอนทราสต์จึงยัง
-//    คำนวณจากสีทึบล้วนเหมือนเดิม ถ้าวันไหนย้ายข้อความเข้าโซน fade ต้องคิดคอนทราสต์ใหม่ทั้งหมด
-async function renderPanel(buf, { quoteText, authorName, saturation = 1.0, accentColor, imgRatio = 0.65, panelAt = 'bottom', fade = 0, align = 'left' }) {
+// ⛔ เคยมีโหมด fade (รูปไล่จางเข้าหาแถบสี) — **ตัดออกแล้ว 2026-08-07** user ตัดสินว่าไม่สวย
+//    อย่าใส่กลับโดยไม่ถามก่อน
+async function renderPanel(buf, { quoteText, authorName, saturation = 1.0, accentColor, imgRatio = 0.65, panelAt = 'bottom', align = 'left', panelAlpha = 0.90, inkOverride = null }) {
   const accent = accentColor || ORANGE;
-  const { panel, ink, sub } = panelPalette(accent);
+  const pal = panelPalette(accent);
+  // inkOverride = บังคับสีตัวอักษรแทนที่จะให้ contrastText() ตัดสิน — ไว้เทียบให้คนดูเท่านั้น
+  const panel = pal.panel;
+  const ink   = inkOverride || pal.ink;
+  const sub   = inkOverride
+    ? `rgba(${inkOverride === WHITE ? '255,255,255' : '0,0,0'},0.72)` : pal.sub;
 
   const meta = await sharp(buf).metadata();
   const W = meta.width, H = meta.height;
-  const panelH = Math.round(H * (1 - imgRatio));
-  const imgH   = H - panelH;
-  const imgY   = panelAt === 'bottom' ? 0 : panelH;
-  const panelY = panelAt === 'bottom' ? imgH : 0;
-
-  // ครอปด้วย 'attention' ให้ sharp เลือกโซนที่น่าสนใจเอง — แถบทึบกินพื้นที่ไป 1/3
-  // ครอปกลางเฉยๆ มีสิทธิ์ตัดหัวคนทิ้ง
-  const work = await sharp(buf).modulate({ saturation })
-    .resize(W, imgH, { fit: 'cover', position: 'attention' }).toBuffer();
-  const img = await loadImage(work);
 
   const cv  = createCanvas(W, H);
   const ctx = cv.getContext('2d');
-  ctx.drawImage(img, 0, imgY, W, imgH);
-  ctx.fillStyle = panel;
-  ctx.fillRect(0, panelY, W, panelH);
 
-  // รอยต่อจาง — ไล่จากโปร่งใสฝั่งรูป ไปทึบสนิทตรงขอบแถบ
-  const fadeH = Math.round(H * fade);
-  if (fadeH > 0) {
-    const rgb = _rgbTriplet(panel);
-    const from = panelAt === 'bottom' ? panelY - fadeH : panelY + panelH + fadeH;
-    const to   = panelAt === 'bottom' ? panelY : panelY + panelH;
-    const g = ctx.createLinearGradient(0, from, 0, to);
-    g.addColorStop(0, `rgba(${rgb},0)`);
-    g.addColorStop(1, `rgba(${rgb},1)`);
-    ctx.fillStyle = g;
-    ctx.fillRect(0, Math.min(from, to), W, fadeH);
-  }
+  const padX = Math.round(W * 0.055);
+  const padY = Math.round(W * 0.050);
+  const maxW = W - padX * 2;
 
-  const padX    = Math.round(W * 0.075);
-  const padY    = Math.round(panelH * 0.15);
-  const nsz     = Math.max(15, Math.round(W * 0.028));
-  const markH   = Math.round(panelH * 0.16);
-  const markGap = Math.round(panelH * 0.07);
-  const authGap = Math.round(nsz * 1.1);
-  const maxW    = W - padX * 2;
+  // ความสูงแถบ **ยืดตามข้อความ** ไม่ได้ตรึงที่ imgRatio แล้ว (เคาะ 2026-08-07)
+  //
+  // เหตุ: ตรึงความสูงไว้ = ตัวหนังสือโตได้แค่จนสูงเต็มแถบแล้วหยุด · พอหยุดเพราะความสูง
+  // ความกว้างก็เหลือ คำคมสั้นเลยดูแหว่งไปฝั่งตรงข้าม · ให้แถบยืดแทน ตัวหนังสือจะเต็มความกว้างเสมอ
+  // เพดาน 28-45% กันไม่ให้แต่ละใบสูงต่างกันจนดูคนละชุด
+  const MIN_PANEL = Math.round(H * 0.28);
+  const MAX_PANEL = Math.round(H * 0.45);
 
   const pool    = existingMarks(OPEN_MARKS);
   const hasMark = pool.length > 0;
-  const effMarkH = hasMark ? markH : 0;
-  const effMarkGap = hasMark ? markGap : 0;
 
-  // ย่อจนบล็อกทั้งก้อนลงแถบได้ — fitFont คุมความกว้าง ลูปนี้คุมความสูง
-  let qsz = Math.max(24, Math.round(W * 0.062));
-  let fit, lh, blockH;
-  for (;;) {
-    fit = fitFont(ctx, quoteText, maxW, qsz, 6, 'Anakotmai');
-    lh  = fit.fontSize * 1.24;
-    blockH = effMarkH + effMarkGap + fit.lines.length * lh + authGap + nsz;
-    if (blockH <= panelH - padY * 2 || qsz <= 20) break;
-    qsz = Math.round(qsz * 0.92);
+  // ⚠️ ใช้ _wrapGreedy ไม่ใช่ wrapText — wrapText บีบความกว้างลงจนได้บรรทัด "สมดุล" ซึ่งแปลว่า
+  //    สั้นกว่าที่ควร · แถบสีต้องการให้ข้อความเต็มขอบ จึงใช้ greedy ที่อัดเต็ม maxW ทุกบรรทัด
+  // ⚠️ ชื่อผู้พูดผูกกับ **ความกว้างการ์ด** ไม่ใช่ขนาดคำคม — เคยผูกกับขนาดคำคมแล้วคำคมยาว
+  //    (ฟอนต์เล็กลง) ทำให้ชื่อผู้พูดหดตามจนเล็กกว่าใบอื่นชัดเจน มันเป็นข้อมูลกำกับ ไม่ใช่พระเอก
+  //    ต้องเท่ากันทุกใบ (เจอ 2026-08-07)
+  const nsz     = Math.max(14, Math.round(W * 0.028));
+  const authGap = Math.round(nsz * 0.9);
+
+  let fit, lh, markH, markGap, blockH;
+  const MIN = Math.round(W * 0.030);
+  for (let sz = Math.round(W * 0.150); ; sz = Math.round(sz * 0.95)) {
+    ctx.font = `bold ${sz}px Anakotmai`;
+    const lines = _wrapFill(ctx, quoteText, maxW, 1.0);
+    lh      = sz * 1.18;
+    markH   = hasMark ? Math.round(sz * 0.80) : 0;
+    markGap = hasMark ? Math.round(sz * 0.30) : 0;
+    blockH  = markH + markGap + lines.length * lh + authGap + nsz;
+    const fitsW = lines.every(l => lsWidth(ctx, l, 1.0) <= maxW);
+    if ((fitsW && blockH + padY * 2 <= MAX_PANEL) || sz <= MIN) { fit = { fontSize: sz, lines }; break; }
   }
+
+  const panelH = Math.min(MAX_PANEL, Math.max(MIN_PANEL, blockH + padY * 2));
+  const panelY = panelAt === 'bottom' ? H - panelH : 0;
+
+  // รูปกินเต็มใบเสมอ แล้วค่อยเอาสีทับแถบ — เพราะแถบโปร่งแสง ต้องมีรูปอยู่ข้างหลังให้เห็น
+  const work = await sharp(buf).modulate({ saturation })
+    .resize(W, H, { fit: 'cover', position: 'attention' }).toBuffer();
+  ctx.drawImage(await loadImage(work), 0, 0, W, H);
+
+  // ⚠️ panelAlpha ต่ำกว่า 0.85 ไม่ได้ — รูปที่ลอดขึ้นมามีสีอะไรก็ได้ ยิ่งโปร่งยิ่งดึง luminance
+  //    ของพื้นออกจากค่าที่ contrastText() คำนวณไว้ · เคสแย่สุดคือพื้นสีเข้ม (ตัวหนังสือขาว)
+  //    เจอรูปสว่างจ้า · 0.90 คือค่าที่ใช้จริง (ลอง 0.85 แล้วถอยกลับ 2026-08-07 รูปลอดขึ้นมากวน)
+  //    ที่ 0.80 คอนทราสต์ตกต่ำกว่า AA 4.5 ห้ามลงต่อ
+  ctx.fillStyle = `rgba(${_rgbTriplet(panel)},${panelAlpha})`;
+  ctx.fillRect(0, panelY, W, panelH);
 
   const isRight = align === 'right';
   const right   = W - padX;
@@ -655,18 +713,20 @@ function _mix(hex, toward, t) {
  */
 // qFactor = ขนาดฟอนต์เริ่มต้นเทียบกับ**ความกว้างกล่อง** — กล่องแคบ (แถบข้าง) ต้องใช้ค่าสูงกว่า
 // ไม่งั้นได้ตัวหนังสือจิ๋วลอยอยู่กลางแถบสีใหญ่ๆ (เจอตอนทำแถบข้างครั้งแรก)
-async function drawQuoteBlock(ctx, { x, y, w, h, quoteText, authorName, ink, sub, align = 'left', maxLines = 6, qFactor = 0.073 }) {
-  const pool     = existingMarks(OPEN_MARKS);
+async function drawQuoteBlock(ctx, { x, y, w, h, quoteText, authorName, ink, sub, align = 'left', maxLines = 6, qFactor = 0.073, noMark = false }) {
+  const pool     = noMark ? [] : existingMarks(OPEN_MARKS);
   const hasMark  = pool.length > 0;
 
   let qsz = Math.max(22, Math.round(w * qFactor));
   let fit, lh, markH, markGap, nsz, authGap, blockH;
   for (;;) {
     fit     = fitFont(ctx, quoteText, w, qsz, maxLines, 'Anakotmai');
+    fit.lines = fit.lines.flatMap(l => _breakLongLine(ctx, l, w, 1.0));
     lh      = fit.fontSize * 1.24;
     markH   = hasMark ? Math.round(fit.fontSize * 0.95) : 0;
     markGap = hasMark ? Math.round(fit.fontSize * 0.45) : 0;
-    nsz     = Math.max(14, Math.round(fit.fontSize * 0.42));
+    // ผูกกับความกว้างกล่อง ไม่ใช่ขนาดคำคม — เหตุผลเดียวกับ renderPanel
+    nsz     = Math.max(14, Math.round(w * 0.033));
     authGap = Math.round(nsz * 1.1);
     blockH  = markH + markGap + fit.lines.length * lh + authGap + nsz;
     if (blockH <= h || qsz <= 18) break;
@@ -694,81 +754,12 @@ async function drawQuoteBlock(ctx, { x, y, w, h, quoteText, authorName, ink, sub
   lsDraw(ctx, authorName, align === 'right' ? x + w - lsWidth(ctx, authorName, 0.8) : x, ty, 0.8);
 }
 
-/**
- * duotone — ย้อมรูปทั้งใบเป็น 2 โทนที่แตกจาก base แล้วไล่เข้มที่ก้นภาพ
- *
- * นี่คือ "gradient สีเดียวกับ CI" ที่อยากได้ตั้งแต่แรก — ทำได้เพราะปลายเข้มถูก clamp ด้วย
- * _mix(base, BLACK, 0.72) เสมอ ไม่ว่า user ใส่สีอะไรมา luminance ปลายนั้นก็ต่ำพอให้
- * contrastText() ตัดสินได้จริง (ต่างจากการเอา base ดิบ ๆ ไปย้อม scrim ซึ่งพังทันทีถ้า base สว่าง)
- */
-async function renderDuotone(buf, { quoteText, authorName, accentColor, side = 'left' }) {
-  const base = accentColor || ORANGE;
-  const dark = _mix(base, BLACK, 0.72);
-  const lite = _mix(base, WHITE, 0.62);
-  const ink  = contrastText(dark);
-  const rgb  = ink === WHITE ? '255,255,255' : '0,0,0';
-
-  const grey = await sharp(buf).greyscale().toBuffer();
-  const img  = await loadImage(grey);
-  const W = img.width, H = img.height;
-  const cv  = createCanvas(W, H);
-  const ctx = cv.getContext('2d');
-
-  ctx.drawImage(img, 0, 0, W, H);
-  // screen ด้วยสีเข้ม = ยกเงาขึ้นมาติดสี · multiply ด้วยสีอ่อน = ดึงไฮไลต์ลงมาติดสี
-  ctx.globalCompositeOperation = 'screen';
-  ctx.fillStyle = dark;  ctx.fillRect(0, 0, W, H);
-  ctx.globalCompositeOperation = 'multiply';
-  ctx.fillStyle = lite;  ctx.fillRect(0, 0, W, H);
-  ctx.globalCompositeOperation = 'source-over';
-
-  const pad  = Math.round(Math.min(W, H) * 0.075);
-  const boxH = Math.round(H * 0.42);
-  const boxY = H - pad - boxH;
-
-  const g = ctx.createLinearGradient(0, H, 0, boxY - H * 0.12);
-  g.addColorStop(0, _rgbaOf(dark, 1));
-  g.addColorStop(0.45, _rgbaOf(dark, 0.88));
-  g.addColorStop(1, _rgbaOf(dark, 0));
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, W, H);
-
-  await drawQuoteBlock(ctx, {
-    x: pad, y: boxY, w: W - pad * 2, h: boxH,
-    quoteText, authorName, ink, sub: `rgba(${rgb},0.75)`, align: side === 'right' ? 'right' : 'left',
-  });
-  return { buffer: await toPng(cv), ext: 'png', vertical: 'bottom', side };
-}
-
-/** แถบสีแนวตั้งข้างเดียว — รูปอยู่อีกฝั่ง ไม่มีอะไรทับรูปเลย */
-async function renderSideBand(buf, { quoteText, authorName, saturation = 1.0, accentColor, bandRatio = 0.42, side = 'left' }) {
-  const base = accentColor || ORANGE;
-  const { ink, sub } = panelPalette(base);
-
-  const meta = await sharp(buf).metadata();
-  const W = meta.width, H = meta.height;
-  const bandW = Math.round(W * bandRatio);
-  const imgW  = W - bandW;
-  const bandX = side === 'left' ? 0 : imgW;
-  const imgX  = side === 'left' ? bandW : 0;
-
-  const work = await sharp(buf).modulate({ saturation })
-    .resize(imgW, H, { fit: 'cover', position: 'attention' }).toBuffer();
-  const img = await loadImage(work);
-
-  const cv  = createCanvas(W, H);
-  const ctx = cv.getContext('2d');
-  ctx.drawImage(img, imgX, 0, imgW, H);
-  ctx.fillStyle = base;
-  ctx.fillRect(bandX, 0, bandW, H);
-
-  const pad = Math.round(bandW * 0.14);
-  await drawQuoteBlock(ctx, {
-    x: bandX + pad, y: pad, w: bandW - pad * 2, h: H - pad * 2,
-    quoteText, authorName, ink, sub, maxLines: 9, qFactor: 0.155,
-  });
-  return { buffer: await toPng(cv), ext: 'png', vertical: 'center', side };
-}
+// ⛔ เคยมี renderDuotone แยกตัว — ยุบเข้า renderVariant เป็นแฟล็ก `duotone` แล้ว (2026-08-07)
+//    เหตุ: มันคือ layout เดียวกับ ember เป๊ะ ต่างแค่ย้อมรูปก่อน · แยกไว้ทำให้ duotone มีแค่
+//    ซ้าย/ขวา ทั้งที่ ember มีบน/ล่างด้วย · ยุบแล้ว duotone ได้ทุกการวางของ ember ฟรี
+//
+// ⛔ เคยมี renderSideBand (แถบสีแนวตั้งข้าง) — **ตัดทิ้ง 2026-08-07** user ตัดสินว่าไม่สวย
+//    (คอลัมน์แคบทำให้ตัวหนังสือเล็กกว่าใบอื่นชัดเจน) อย่าใส่กลับโดยไม่ถามก่อน
 
 /** matte — พื้นสีล้วน รูปลอยอยู่ข้างบนแบบมีขอบ คำคมอยู่ใต้รูป */
 async function renderMatte(buf, { quoteText, authorName, saturation = 1.0, accentColor, inset = 0.06 }) {
@@ -792,9 +783,11 @@ async function renderMatte(buf, { quoteText, authorName, saturation = 1.0, accen
   ctx.drawImage(img, m, m, imgW, imgH);
 
   const boxY = m + imgH;
+  // ไม่มีเครื่องหมายคำพูด — กรอบรูปที่ลอยอยู่ทำหน้าที่คั่นสายตาให้อยู่แล้ว
+  // ใส่เพิ่มกลายเป็นสองอย่างแย่งกันเป็นจุดเริ่มต้น (user เคาะ 2026-08-07)
   await drawQuoteBlock(ctx, {
     x: m, y: boxY, w: imgW, h: H - boxY - m,
-    quoteText, authorName, ink, sub,
+    quoteText, authorName, ink, sub, noMark: true,
   });
   return { buffer: await toPng(cv), ext: 'png', vertical: 'bottom', side: 'left' };
 }
@@ -826,19 +819,21 @@ const ember = (side, vertical, extra = {}) => (buf, opts) =>
 
 // ── quote-2-center: ข้อความกลางภาพ, BG หรี่ + ดำคลุม 75%, Google Sans (มีหัว) ──
 // supersample 2x แล้วย่อ = ขอบคม. ใช้ fitFont/lsDraw ตัวเดียวกับ quote-1
-async function renderCenter(buf, { quoteText, authorName, saturation = 1.0 }) {
+async function renderCenter(buf, { quoteText, authorName, saturation = 1.0, accentColor, duotone = false }) {
   const SS = 2, OVERLAY = 0.75;
   const meta = await sharp(buf).metadata();
   const W = meta.width, H = meta.height;
 
-  const work = await sharp(buf).modulate({ saturation }).resize(W * SS, H * SS, { fit: 'cover' }).toBuffer();
+  const prepped = await prepImage(buf, { saturation, duotone, accent: accentColor || ORANGE });
+  const work = await sharp(prepped).resize(W * SS, H * SS, { fit: 'cover' }).toBuffer();
   const img  = await loadImage(work);
   const cv   = createCanvas(W * SS, H * SS);
   const ctx  = cv.getContext('2d');
   ctx.scale(SS, SS);
 
   ctx.drawImage(img, 0, 0, W, H);
-  ctx.fillStyle = `rgba(0,0,0,${OVERLAY})`;
+  // ดำคลุมทั้งใบ — ย้อมสีแบรนด์ให้เข้าชุดกับ scrim ของสไตล์อื่น (ผสมดำ SCRIM_MIX ก่อนเสมอ)
+  ctx.fillStyle = `rgba(${scrimOf(accentColor || ORANGE).rgb},${OVERLAY})`;
   ctx.fillRect(0, 0, W, H);
 
   const padX = Math.round(W * 0.11);
@@ -877,24 +872,60 @@ async function renderCenter(buf, { quoteText, authorName, saturation = 1.0 }) {
   return { buffer: out, ext: 'png', vertical: 'center', side: 'center' };
 }
 
+// คีย์ = <finish>-<layout> · finish = shade (เงา) | solid (ทึบ) | duo (ดูโอโทน)
+//
+// ⚠️ คีย์เดิม 8 ตัว (quote-1-* / quote-2-*) ห้ามลบ — `post_episode_media.quote_style` ของการ์ด
+//    ที่ทำไปแล้วเก็บคีย์พวกนี้ไว้ · เก็บเป็น alias ชี้ไปคีย์ใหม่ที่ผลลัพธ์เหมือนกันเป๊ะ
 const STYLES = {
-  'quote-1-ember-bottom-left':  ember('left',  'bottom', { markExtraGap: 0.65, markScale: 0.84 }),
-  'quote-1-ember-bottom-right': ember('right', 'bottom', { markExtraGap: 0.65, markScale: 0.84 }),
-  'quote-1-ember-top-left':     ember('left',  'top',   { noMark: true }),
-  'quote-1-ember-top-right':    ember('right', 'top',   { noMark: true }),
-  'quote-1-pillar-left':        (buf, opts) => renderBorder(buf, opts),
-  'quote-1-frame-right':        (buf, opts) => renderBorder2(buf, opts),
-  'quote-1-ember-ai':           (buf, opts) => renderEmberAI(buf, opts),
-  'quote-2-center':             (buf, opts) => renderCenter(buf, opts),
+  // ── เงา (scrim ย้อมสีแบรนด์) ────────────────────────────────────────────────
+  'shade-bottom-left':  ember('left',  'bottom', { markExtraGap: 0.65, markScale: 0.84 }),
+  'shade-bottom-right': ember('right', 'bottom', { markExtraGap: 0.65, markScale: 0.84 }),
+  'shade-top-left':     ember('left',  'top',    { noMark: true }),
+  'shade-top-right':    ember('right', 'top',    { noMark: true }),
+  'shade-pillar':       (buf, opts) => renderBorder(buf, opts),
+  'shade-frame':        (buf, opts) => renderBorder2(buf, opts),
+  'shade-center':       (buf, opts) => renderCenter(buf, opts),
+
+  // ── ทึบ (แถบสีแบรนด์ opacity 0.90) ─────────────────────────────────────────
+  'solid-bottom-left':  (buf, opts) => renderPanel(buf, { ...opts, panelAt: 'bottom', align: 'left' }),
+  'solid-bottom-right': (buf, opts) => renderPanel(buf, { ...opts, panelAt: 'bottom', align: 'right' }),
+  'solid-top-left':     (buf, opts) => renderPanel(buf, { ...opts, panelAt: 'top',    align: 'left' }),
+  'solid-top-right':    (buf, opts) => renderPanel(buf, { ...opts, panelAt: 'top',    align: 'right' }),
+  'solid-matte':        (buf, opts) => renderMatte(buf, opts),
+
+  // ── ดูโอโทน (ย้อมรูปทั้งใบ) — layout ชุดเดียวกับเงา ────────────────────────
+  'duo-bottom-left':    ember('left',  'bottom', { markExtraGap: 0.65, markScale: 0.84, duotone: true }),
+  'duo-bottom-right':   ember('right', 'bottom', { markExtraGap: 0.65, markScale: 0.84, duotone: true }),
+  'duo-top-left':       ember('left',  'top',    { noMark: true, duotone: true }),
+  'duo-top-right':      ember('right', 'top',    { noMark: true, duotone: true }),
+  'duo-pillar':         (buf, opts) => renderBorder(buf,  { ...opts, duotone: true }),
+  'duo-frame':          (buf, opts) => renderBorder2(buf, { ...opts, duotone: true }),
+  'duo-center':         (buf, opts) => renderCenter(buf,  { ...opts, duotone: true }),
+
+  'ai': (buf, opts) => renderEmberAI(buf, opts),
+};
+
+// คีย์เก่า → คีย์ใหม่ · การ์ดเก่าเปิดได้เหมือนเดิม ห้ามลบแถวไหนออก
+const LEGACY_STYLE_ALIAS = {
+  'quote-1-ember-bottom-left':  'shade-bottom-left',
+  'quote-1-ember-bottom-right': 'shade-bottom-right',
+  'quote-1-ember-top-left':     'shade-top-left',
+  'quote-1-ember-top-right':    'shade-top-right',
+  'quote-1-pillar-left':        'shade-pillar',
+  'quote-1-frame-right':        'shade-frame',
+  'quote-2-center':             'shade-center',
+  'quote-1-ember-ai':           'ai',
 };
 // random pool ไม่รวม ember-ai — สุ่มจะได้ไม่เผลอยิง API
-const RANDOM_KEYS = Object.keys(STYLES).filter(k => k !== 'quote-1-ember-ai');
+// สุ่มไม่รวม 'ai' — จะได้ไม่เผลอยิง API
+const RANDOM_KEYS = Object.keys(STYLES).filter(k => k !== 'ai');
 const STYLE_KEYS  = Object.keys(STYLES);
 
 async function renderQuoteStyle(styleKey, sourceBuffer, opts) {
-  const key = (!styleKey || styleKey === 'random')
+  const raw = (!styleKey || styleKey === 'random')
     ? RANDOM_KEYS[Math.floor(Math.random() * RANDOM_KEYS.length)]
     : styleKey;
+  const key = LEGACY_STYLE_ALIAS[raw] || raw;   // การ์ดเก่าส่งคีย์เดิมมา แปลงก่อนเสมอ
   const fn = STYLES[key];
   if (!fn) throw new Error(`Unknown style: ${key}`);
   return fn(sourceBuffer, { ...opts, authorName: opts.authorName || '' });
@@ -904,7 +935,8 @@ function parseStyle(input) {
   const s = (input || '').trim();
   if (!s || s === 'สุ่ม' || s === 'สุม' || s === 'random')
     return RANDOM_KEYS[Math.floor(Math.random() * RANDOM_KEYS.length)];
-  const match = STYLE_KEYS.find(k => k.toLowerCase() === s.toLowerCase());
+  const aliased = LEGACY_STYLE_ALIAS[s] || s;
+  const match = STYLE_KEYS.find(k => k.toLowerCase() === aliased.toLowerCase());
   return match || null;
 }
 
@@ -912,6 +944,6 @@ function parseStyle(input) {
 // เคาะเมื่อไหร่ค่อยเติมคีย์ใน STYLES แล้วมันจะตกเข้า random pool เอง
 module.exports = {
   renderQuoteStyle, parseStyle, FRAME_RIGHT,
-  renderPanel, renderDuotone, renderSideBand, renderMatte, panelPalette,
+  renderPanel, renderMatte, panelPalette, LEGACY_STYLE_ALIAS,
   renderVariant, _mix,   // export ไว้ทดลอง scrimMix — ยังไม่มีสไตล์ไหนใน STYLES ใช้
 };

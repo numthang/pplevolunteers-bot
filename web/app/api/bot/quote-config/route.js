@@ -3,7 +3,7 @@ import { authOptions } from '@/lib/auth-options.js'
 import { isAdmin, isSuperAdmin } from '@/lib/roles.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import { getAdminGuildIds, getGuilds } from '@/db/guilds.js'
-import { QUOTE_STYLE_KEYS } from '@/lib/quoteStyles.js'
+import { QUOTE_STYLE_KEYS, normalizeStyle } from '@/lib/quoteStyles.js'
 import pool from '@/db/index.js'
 
 const KEYS = ['quote_default_template', 'quote_default_watermark', 'quote_ci_accent']
@@ -12,7 +12,8 @@ const GLOBAL_GUILD_ID = 'global'
 // value validators ต่อ key
 function isValidValue(key, value) {
   if (value === null) return true // ลบค่า
-  if (key === 'quote_default_template') return QUOTE_STYLE_KEYS.includes(value)
+  // รับคีย์เก่าได้ด้วย — config ที่ตั้งไว้ก่อน rename 2026-08-07 ยังส่งค่าเดิมกลับมาตอน PATCH
+  if (key === 'quote_default_template') return QUOTE_STYLE_KEYS.includes(normalizeStyle(value))
   if (key === 'quote_default_watermark') return /^(personal|guild):.+/.test(value)
   if (key === 'quote_ci_accent') return /^#[0-9a-fA-F]{6}$/.test(value)
   return false
