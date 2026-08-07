@@ -802,7 +802,8 @@ async function renderMatte(buf, { quoteText, authorName, saturation = 1.0, accen
 //
 // แบ่ง 2 ระดับด้วย **บรรทัดว่าง**: ก่อนบรรทัดว่าง = เกริ่น · หลังบรรทัดว่าง = ประโยคเด็ด
 // ไม่มีบรรทัดว่าง = ทั้งก้อนเป็นประโยคเด็ด · ชื่อผู้พูดขึ้นบรรทัดใหม่ได้ (บรรทัดแรก = ชื่อ ตัวหนา)
-async function renderSide(buf, { quoteText, authorName, saturation = 1.0, accentColor, duotone = false }) {
+async function renderSide(buf, { quoteText, authorName, saturation = 1.0, accentColor, duotone = false, align = 'right' }) {
+  const onRight = align !== 'left';
   const accent = accentColor || ORANGE;
   const scrim  = scrimOf(accent);
   const meta   = await sharp(buf).metadata();
@@ -816,7 +817,10 @@ async function renderSide(buf, { quoteText, authorName, saturation = 1.0, accent
 
   // scrim: บางทั้งใบ + เข้มขึ้นทางขวา (คอลัมน์ข้อความ) + ก้นภาพเข้มรองบล็อกชื่อ
   ctx.fillStyle = _rgbaOf(scrim.hex, 0.40); ctx.fillRect(0, 0, W, H);
-  const gx = ctx.createLinearGradient(W * 0.28, 0, W, 0);
+  // ไล่เข้มไปทางฝั่งที่วางคอลัมน์ข้อความ (กลับข้างตาม align)
+  const gx = onRight
+    ? ctx.createLinearGradient(W * 0.28, 0, W, 0)
+    : ctx.createLinearGradient(W * 0.72, 0, 0, 0);
   gx.addColorStop(0,    _rgbaOf(scrim.hex, 0));
   gx.addColorStop(0.45, _rgbaOf(scrim.hex, 0.70));
   gx.addColorStop(1,    _rgbaOf(scrim.hex, 0.92));
@@ -827,8 +831,8 @@ async function renderSide(buf, { quoteText, authorName, saturation = 1.0, accent
   ctx.fillStyle = gy; ctx.fillRect(0, 0, W, H);
 
   const pad  = Math.round(W * 0.055);
-  const colX = Math.round(W * 0.46);
-  const colW = W - pad - colX;
+  const colW = Math.round(W * 0.54) - pad;
+  const colX = onRight ? W - pad - colW : pad;
 
   // แบ่งเกริ่น/ประโยคเด็ด
   const blocks = String(quoteText || '').split(/\n\s*\n/).map(t => t.trim()).filter(Boolean);
@@ -890,20 +894,27 @@ async function renderSide(buf, { quoteText, authorName, saturation = 1.0, accent
 
   // ชื่อผู้พูด: ขีดสั้นสีแบรนด์ → ชื่อ (หนา) → ตำแหน่ง/บริบท (บาง)
   if (authorLines.length) {
+    // อยู่ฝั่งตรงข้ามคอลัมน์เสมอ (คอลัมน์ขวา → ชื่อล่างซ้าย และกลับกัน)
     let ay = H - pad - authorH;
+    const ruleW = Math.round(W * 0.06);
+    const ax = onRight ? pad : W - pad;                       // จุดอ้างอิง: ซ้ายชิดซ้าย · ขวาชิดขวา
+    const put = (text, sp) => {
+      const w = lsWidth(ctx, text, sp);
+      lsDraw(ctx, text, onRight ? ax : ax - w, ay, sp);
+    };
     ctx.fillStyle = readableOnDark(accent, 4.5, scrim.lum);
-    ctx.fillRect(pad, ay, Math.round(W * 0.06), ruleH);
+    ctx.fillRect(onRight ? ax : ax - ruleW, ay, ruleW, ruleH);
     ay += ruleH + Math.round(nameSz * 0.9);
     ctx.font = `bold ${nameSz}px GSans`;
     ctx.fillStyle = WHITE;
-    lsDraw(ctx, authorLines[0], pad, ay, 0.6);
+    put(authorLines[0], 0.6);
     ay += nameSz * 1.25;
     ctx.font = `${roleSz}px GSansLight`;
     ctx.fillStyle = 'rgba(255,255,255,0.78)';
-    for (const l of authorLines.slice(1)) { lsDraw(ctx, l, pad, ay, 0.5); ay += roleSz * 1.45; }
+    for (const l of authorLines.slice(1)) { put(l, 0.5); ay += roleSz * 1.45; }
   }
 
-  return { buffer: await toPng(cv), ext: 'png', vertical: 'top', side: 'right' };
+  return { buffer: await toPng(cv), ext: 'png', vertical: 'top', side: onRight ? 'right' : 'left' };
 }
 
 /** '#rrggbb' + alpha → rgba() */
@@ -999,7 +1010,8 @@ const STYLES = {
   'shade-pillar':       (buf, opts) => renderBorder(buf, opts),
   'shade-frame':        (buf, opts) => renderBorder2(buf, opts),
   'shade-center':       (buf, opts) => renderCenter(buf, opts),
-  'shade-side':         (buf, opts) => renderSide(buf, opts),
+  'shade-side-left':    (buf, opts) => renderSide(buf, { ...opts, align: 'left' }),
+  'shade-side-right':   (buf, opts) => renderSide(buf, { ...opts, align: 'right' }),
 
   // ── ทึบ (แถบสีแบรนด์ opacity 0.90) ─────────────────────────────────────────
   'solid-bottom-left':  (buf, opts) => renderPanel(buf, { ...opts, panelAt: 'bottom', align: 'left' }),
@@ -1016,7 +1028,8 @@ const STYLES = {
   'duo-pillar':         (buf, opts) => renderBorder(buf,  { ...opts, duotone: true }),
   'duo-frame':          (buf, opts) => renderBorder2(buf, { ...opts, duotone: true }),
   'duo-center':         (buf, opts) => renderCenter(buf,  { ...opts, duotone: true }),
-  'duo-side':           (buf, opts) => renderSide(buf,    { ...opts, duotone: true }),
+  'duo-side-left':      (buf, opts) => renderSide(buf,    { ...opts, duotone: true, align: 'left' }),
+  'duo-side-right':     (buf, opts) => renderSide(buf,    { ...opts, duotone: true, align: 'right' }),
 
   'ai': (buf, opts) => renderEmberAI(buf, opts),
 };

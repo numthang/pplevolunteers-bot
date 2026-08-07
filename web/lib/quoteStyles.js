@@ -22,14 +22,15 @@ export const LAYOUTS = [
   { value: 'pillar',       label: 'เสาซ้าย' },
   { value: 'frame',        label: 'กรอบขวา' },
   { value: 'matte',        label: 'รูปลอย' },
-  { value: 'side',         label: 'คอลัมน์ขวา' },
+  { value: 'side-left',    label: 'คอลัมน์ซ้าย' },
+  { value: 'side-right',   label: 'คอลัมน์ขวา' },
 ]
 
 // คู่ที่มีจริง — คู่ที่ไม่อยู่ในนี้ ปุ่มต้องจางกดไม่ได้ ไม่ใช่หายไป
 export const COMBOS = {
-  shade: ['bottom-left', 'bottom-right', 'top-left', 'top-right', 'pillar', 'frame', 'center', 'side'],
+  shade: ['bottom-left', 'bottom-right', 'top-left', 'top-right', 'pillar', 'frame', 'center', 'side-left', 'side-right'],
   solid: ['bottom-left', 'bottom-right', 'top-left', 'top-right', 'matte'],
-  duo:   ['bottom-left', 'bottom-right', 'top-left', 'top-right', 'pillar', 'frame', 'center', 'side'],
+  duo:   ['bottom-left', 'bottom-right', 'top-left', 'top-right', 'pillar', 'frame', 'center', 'side-left', 'side-right'],
 }
 
 export const styleKey = (finish, layout) => `${finish}-${layout}`
@@ -75,6 +76,8 @@ export const LEGACY_STYLE_ALIAS = {
   'quote-1-frame-right':        'shade-frame',
   'quote-2-center':             'shade-center',
   'quote-1-ember-ai':           'ai',
+  'shade-side':                'shade-side-right',
+  'duo-side':                  'duo-side-right',
 }
 
 /** คีย์ที่อ่านจาก DB/config อาจเป็นของเก่า — ผ่านตัวนี้ก่อนใช้เสมอ */
