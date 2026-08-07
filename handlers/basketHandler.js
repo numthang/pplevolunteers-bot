@@ -136,14 +136,17 @@ function buildBasketEmbed(imgCount, videoCount, caption, previewUrl = null) {
   else embed.setDescription('*ยังไม่มี caption*');
   if (previewUrl) embed.setImage(previewUrl);
   if (imgCount > 0 && videoCount > 0) {
-    embed.addFields({ name: '⚠️ ผสม media', value: 'มีทั้งรูปและวิดีโอ — ลบออกให้เหลือประเภทเดียวก่อนโพสต์', inline: false });
+    embed.addFields({ name: '⚠️ ผสม media', value: 'มีทั้งรูปและวิดีโอ — กด 🖼️ จัดการสื่อ ลบออกให้เหลือประเภทเดียวก่อนโพสต์', inline: false });
+  } else if (videoCount > 1) {
+    embed.addFields({ name: '⚠️ วิดีโอหลายคลิป', value: 'โพสต์ได้ครั้งละคลิปเดียว — กด 🖼️ จัดการสื่อ ลบให้เหลือคลิปเดียวก่อนโพสต์', inline: false });
   }
   return embed;
 }
 
 function buildBasketButtons(imgCount, videoCount, hasCaption = false, webUrl = null) {
   const empty = imgCount === 0 && videoCount === 0 && !hasCaption;
-  const mixed = imgCount > 0 && videoCount > 0;
+  // โพสต์ไม่ได้จนกว่าจะเหลือ "รูปล้วน" หรือ "คลิปเดียว" — ไปลบส่วนเกินที่ 🖼️ จัดการสื่อ
+  const mixed = (imgCount > 0 && videoCount > 0) || videoCount > 1;
   const row1 = [
     new ButtonBuilder()
       .setCustomId('basket_post')
@@ -163,10 +166,11 @@ function buildBasketButtons(imgCount, videoCount, hasCaption = false, webUrl = n
         .setStyle(ButtonStyle.Success),
     );
   }
-  if (webUrl && imgCount >= 1) {
+  // ต้องขึ้นเมื่อมีวิดีโอด้วย — ไม่งั้นตะกร้าที่มีแต่คลิป (หรือคลิปเกิน 1) ไม่มีทางลบทิ้งทีละชิ้นเลย
+  if (webUrl && imgCount + videoCount >= 1) {
     row1.push(
       new ButtonBuilder()
-        .setLabel('🖼️ จัดการรูป')
+        .setLabel('🖼️ จัดการสื่อ')
         .setStyle(ButtonStyle.Link)
         .setURL(webUrl),
     );
@@ -249,8 +253,10 @@ async function buildBasketPayload(basket, guildId, channelId, userId, channelNam
   const links  = msgIds.map((id, i) =>
     `[ดูรูปชุดที่ ${i + 1}](https://discord.com/channels/${guildId}/${channelId}/${id})`
   );
-  const videoMsgId = videos[0]?.message_id;
-  if (videoMsgId) links.push(`[ดูวิดีโอต้นทาง 🎬](https://discord.com/channels/${guildId}/${channelId}/${videoMsgId})`);
+  const videoMsgIds = [...new Set(videos.map(r => r.message_id).filter(Boolean))];
+  videoMsgIds.forEach((mid, i) => links.push(
+    `[ดูวิดีโอต้นทาง${videoMsgIds.length > 1 ? ` ${i + 1}` : ''} 🎬](https://discord.com/channels/${guildId}/${channelId}/${mid})`
+  ));
 
   // พรีวิว: **แนบไฟล์จากดิสก์** (ก้อน 4c) — ลิงก์ Discord หมดอายุ ~24 ชม. แล้วรูปในการ์ดจะหายเฉยๆ
   // ไฟล์ยังโหลดไม่เสร็จ (path NULL) → ตกไปใช้ลิงก์ต้นทางเหมือนเดิม
@@ -438,8 +444,9 @@ async function handleBasketAdd(interaction) {
   const addedBy = interaction.user.id;
   const channelName = interaction.channel?.name || null;
 
-  if (videos.length > 1) return interaction.editReply({ content: '❌ เพิ่มได้แค่ 1 วิดีโอต่อครั้ง' });
-
+  // หย่อนได้หมดก่อน แล้วค่อยไปลบส่วนเกินทีหลังที่ 🖼️ จัดการรูป (เหมือนรูป — เคาะ 2026-08-07)
+  // เดิมตีตกทั้งข้อความเมื่อมีคลิป >1 ทำให้รูปในข้อความเดียวกันหล่นหายไปด้วย
+  // ด่านกันของจริงอยู่ตอน "สร้างโพสต์" (handleBasketPost) ซึ่งเช็คทั้งผสมรูป+คลิป และคลิปเกิน 1
   if (images.length) await addImages(guildId, channelId, addedBy, images.map(a => ({ url: a.url })), msg.id, channelName);
   if (videos.length) await addVideo(guildId, channelId, addedBy, videos.map(a => ({ url: a.url })), msg.id, channelName);
   if (text && !images.length && !videos.length) await appendCaption(guildId, channelId, addedBy, text, msg.id, channelName);
@@ -447,7 +454,7 @@ async function handleBasketAdd(interaction) {
   const basket = await getBasket(guildId, channelId);
   const added = [
     images.length ? `🖼️ ${images.length} รูป` : null,
-    videos.length ? `🎬 1 วิดีโอ` : null,
+    videos.length ? `🎬 ${videos.length} วิดีโอ` : null,
     text && !images.length && !videos.length ? `📝 caption (ต่อท้าย)` : null,
   ].filter(Boolean).join(' + ');
 
@@ -526,7 +533,11 @@ async function handleBasketPost(interaction) {
   const hasImages = basket.some(r => r.type === 'image');
   const hasVideo  = basket.some(r => r.type === 'video');
   if (hasImages && hasVideo) {
-    return interaction.reply({ content: '❌ ตะกร้ามีทั้งรูปและวิดีโอ — ลบออกให้เหลือประเภทเดียวก่อน\nกด 🖼️ จัดการรูป หรือ 🗑️ ล้าง', flags: MessageFlags.Ephemeral });
+    return interaction.reply({ content: '❌ ตะกร้ามีทั้งรูปและวิดีโอ — ลบออกให้เหลือประเภทเดียวก่อน\nกด 🖼️ จัดการสื่อ หรือ 🗑️ ล้าง', flags: MessageFlags.Ephemeral });
+  }
+  // โพสต์ได้ครั้งละ 1 คลิป (ท่อโพสต์ส่ง videoItems[0] ตัวเดียว) — หย่อนหลายคลิปได้ แต่ต้องมาเหลือใบเดียวก่อนโพสต์
+  if (basket.filter(r => r.type === 'video').length > 1) {
+    return interaction.reply({ content: '❌ ตะกร้ามีวิดีโอมากกว่า 1 คลิป — โพสต์ได้ครั้งละคลิปเดียว\nกด 🖼️ จัดการสื่อ เพื่อลบคลิปที่ไม่เอาออก', flags: MessageFlags.Ephemeral });
   }
   const freshCaption = basket.find(r => r.type === 'caption')?.caption || '';
   state.caption = freshCaption;

@@ -579,5 +579,33 @@ UPDATE post_episodes
    AND COALESCE(btrim(title), '') = ''
    AND COALESCE(btrim(body), '') <> '';
 
+-- ═══════════════════════════════════════════════════════════════════════════
+-- 2026-08-07: แก้ case_timeline.occurred_at เพี้ยน +543 ปี (AI สกัด timeline)
+-- ═══════════════════════════════════════════════════════════════════════════
+-- root cause: services/caseTimeline.js + web timeline/refresh ป้อนข้อความให้ AI ด้วย
+-- new Date(m.timestamp).toLocaleString('th-TH') ซึ่ง default เป็นปี พ.ศ. (+543) —
+-- AI เห็นเลขปีนั้นแล้วยัดเป็น "ISO 8601" ตรงๆ โดยไม่รู้ว่าต้องลบ 543 กลับ → occurred_at
+-- ที่บันทึกจริงในนี้เพี้ยนไป +543 ปีจากของจริง (ฝั่งแสดงผล fmtDate ทำ th-TH ซ้ำอีกที
+-- ทำให้ที่ user เห็นบนจอเพี้ยนสะสม +1086 ปี — โค้ดฝั่งแสดงผลไม่ผิด ผิดที่ค่าที่บันทึกไว้)
+-- แก้ต้นตอแล้วที่โค้ด (calendar:'gregory') — บล็อกนี้แก้ข้อมูลเก่าที่บันทึกผิดไปแล้วเท่านั้น
+--
+-- วิธีคัดแถวที่ต้องแก้: source='ai' ที่ occurred_at ห่างจาก created_at เกิน 100 ปี
+-- (แถวที่ AI ไม่ได้สกัดวันที่ ตอน insert จะ COALESCE เป็น NOW() → occurred_at ใกล้ created_at เสมอ
+--  แถวที่ AI สกัดวันที่แต่เพี้ยน +543 ปี จะห่างจาก created_at มากผิดปกติ)
+--
+-- ⬇️ รันดูก่อนเสมอ (dry-run preview ไม่แก้อะไร):
+-- SELECT ct.id, c.ref, ct.body, ct.occurred_at AS before_fix,
+--        ct.occurred_at - interval '543 years' AS after_fix
+-- FROM case_timeline ct JOIN cases c ON c.id = ct.case_id
+-- WHERE ct.source = 'ai'
+--   AND EXTRACT(YEAR FROM ct.occurred_at) - EXTRACT(YEAR FROM ct.created_at) > 100
+-- ORDER BY ct.occurred_at;
+--
+-- ⬇️ แก้จริง (รันเฉพาะหลังเช็ค preview ข้างบนแล้วว่าตรงเคสนี้จริง):
+UPDATE case_timeline
+   SET occurred_at = occurred_at - interval '543 years'
+ WHERE source = 'ai'
+   AND EXTRACT(YEAR FROM occurred_at) - EXTRACT(YEAR FROM created_at) > 100;
+
 -- production ทำถึงตรงนี้ 
 

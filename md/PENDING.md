@@ -102,6 +102,12 @@ spec + ดีไซน์ + ตารางทั้งหมดอยู่ `md
     - ⚠️ เทสเบราว์เซอร์ต้องใช้ `next dev` — โหมด production ตั้ง cookie เป็น `Secure` แล้ว Chromium ไม่ส่งผ่าน http://localhost → next-auth ตอบ 400 (curl ไม่สนใจ flag นี้เลยผ่าน)
   - **เคาะแล้ว:** crop ต้องมา**ก่อน** render เสมอ (renderer คำนวณ layout จากขนาดภาพ — บอททำแบบนี้อยู่ที่ `quoteHandler.js:329`) · **ไม่มีลายน้ำใน modal** ปล่อยให้กล่องเผยแพร่ทำที่เดียว (กันแปะซ้ำ 2 ชั้น) · bg เขียนลง `storage/posts/` แบบไม่สร้างแถวใน `post_episode_media` แล้วให้ gc เก็บ
   - **i18n (เคาะ 2026-08-03):** modal ใหม่ใช้ `t()` สร้าง ns `posts` ใน `th.json`/`en.json` เฉพาะ key ของ modal · **ไฟล์เก่าทั้งโซนยัง hardcode ไทย** → ดู "migrate โซน posts" ข้างล่าง
+- [x] **🖼️ เครื่องมือแก้รูปในโพสต์ — ✅ เขียนเสร็จ 2026-08-07** (local · **ยังไม่เทสในเบราว์เซอร์จริง** · ยังไม่ deploy)
+  - `ImageEditorModal.jsx` — canvas ล้วนในเบราว์เซอร์: ครอบตัด (อิสระ/1:1/4:5/16:9) · หมุน 90° · **ทับหน้าคนด้วยพิกเซล/เบลอ** (ลากกรอบแล้วกดทับ ทำซ้ำได้) · ย้อนกลับ 5 ขั้น · ย่อรูปที่ใหญ่กว่า 2048px ก่อนแก้
+  - `PUT /api/posts/media/[id]` (multipart `file`) → `replaceMediaFile()` ทับไฟล์เดิม **id/sort_order เดิม** + `pathStillUsed()` เช็คก่อนลบไฟล์เก่า (ลบทันที ไม่รอ gc — ต้นฉบับที่ยังไม่เบลอค้างดิสก์ไม่ได้)
+  - ⚠️ ล้าง `source_url` ตอนแทนที่ ไม่งั้นไฟล์หายแล้ว UI จะ fallback ไปโชว์รูปดิสคอร์ดที่ยังไม่เบลอ · การ์ดคำคมที่ถูกแก้จะกลายเป็น `kind='upload'`
+  - ปุ่ม ✏️ ขึ้นเฉพาะสื่อที่มี `path` แล้ว (รูปที่ยังชี้ CDN ดิสคอร์ด = cross-origin → canvas taint, `toBlob()` ล้ม)
+  - i18n ครบ ns `posts.imageEditor` (th+en) · **หาใบหน้าอัตโนมัติยังไม่ทำ** — user เคาะให้เบลอเองด้วยมือก่อน (2026-08-07) ถ้าจะทำต่อ: TinyFaceDetector โมเดล ~200KB วางใน `public/` แล้วให้มันเติมกรอบให้ user ปรับ
 - [ ] **migrate i18n โซน posts** (หนี้จากก้อน 2b) — 6 ไฟล์: `PostsHome` · `PostEditor` · `PostMediaPanel` · `PostMetaPanel` · `PostPublishPanel` · `PostRevisions` · งาน mechanical ส่ง Sonnet subagent ได้ · ระหว่างยังไม่ทำ โซนนี้จะปน hardcode กับ `t()`
 - [x] **🎨 คลังภาพ (media library) — ✅ เขียนเสร็จ 2026-08-04** (local · ยังไม่ deploy prod · **ยังไม่เทสในเบราว์เซอร์จริง**)
   - migration รันบน local แล้ว: `post_assets` + `post_episode_media.source_asset_id` (บล็อกท้าย `migration.sql` · additive ล้วน)

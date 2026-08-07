@@ -8,6 +8,9 @@ function fmtDate(d) {
   return new Date(d).toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' })
 }
 
+// เกินความยาวนี้ → ย่อไว้ก่อน กดขยายดูทีหลัง (กันสรุป AI ยาวๆ ดันรายการอื่นตกจอ)
+const LONG_BODY_LENGTH = 180
+
 export default function CaseTimeline({ refId, initialEntries, hasThread }) {
   const t = useTranslations('case')
   const [entries, setEntries] = useState(initialEntries)
@@ -18,7 +21,16 @@ export default function CaseTimeline({ refId, initialEntries, hasThread }) {
   const [deletingId, setDeletingId] = useState(null)
   const [error, setError] = useState(null)
   const [filesMsg, setFilesMsg] = useState('')
+  const [expandedIds, setExpandedIds] = useState(() => new Set())
   const router = useRouter()
+
+  function toggleExpanded(id) {
+    setExpandedIds(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
 
   async function addEntry(e) {
     e.preventDefault()
@@ -107,7 +119,22 @@ export default function CaseTimeline({ refId, initialEntries, hasThread }) {
                   {t('timeline.deleteButton')}
                 </button>
               </div>
-              <p className="text-base text-gray-900 dark:text-disc-text whitespace-pre-wrap">{e.body}</p>
+              {(() => {
+                const isLong = e.body.length > LONG_BODY_LENGTH
+                const expanded = expandedIds.has(e.id)
+                const shown = isLong && !expanded ? e.body.slice(0, LONG_BODY_LENGTH).trimEnd() + '…' : e.body
+                return (
+                  <>
+                    <p className="text-base text-gray-900 dark:text-disc-text whitespace-pre-wrap">{shown}</p>
+                    {isLong && (
+                      <button onClick={() => toggleExpanded(e.id)}
+                        className="text-sm text-orange hover:underline mt-0.5">
+                        {expanded ? t('timeline.showLessButton') : t('timeline.showMoreButton')}
+                      </button>
+                    )}
+                  </>
+                )
+              })()}
             </li>
           ))}
         </ol>

@@ -89,8 +89,11 @@ export async function PATCH(req, { params }) {
   }
 
   const body = await req.json().catch(() => ({}))
-  const orderedIds = body.orderedIds
-  if (!Array.isArray(orderedIds) || !orderedIds.length || !orderedIds.every(n => Number.isInteger(n))) {
+  // id เป็น bigint → node-postgres คืนมาเป็น **string** ("12") ฝั่ง client จึงส่ง string กลับมา
+  // เดิมเช็ค Number.isInteger() ตรงๆ แล้วตกทุกครั้ง = ลากเรียงไม่เคยถูกบันทึกเลย (bug 2026-08-07)
+  const raw = body.orderedIds
+  const orderedIds = Array.isArray(raw) ? raw.map(Number) : null
+  if (!orderedIds || !orderedIds.length || !orderedIds.every(n => Number.isInteger(n) && n > 0)) {
     return Response.json({ error: 'ลำดับสื่อไม่ถูกต้อง' }, { status: 400 })
   }
 

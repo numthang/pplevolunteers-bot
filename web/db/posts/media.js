@@ -74,6 +74,38 @@ export async function reorderMedia(episodeId, orderedIds) {
   }
 }
 
+/**
+ * แทนที่ไฟล์ของสื่อชิ้นเดิม (ครอบตัด/เบลอหน้าจากหน้าเว็บ) — id และ sort_order คงเดิม
+ *
+ * ⚠️ ล้าง `source_url` ทิ้งเสมอ — ไม่งั้นวันที่ไฟล์บนดิสก์หาย UI จะ fallback ไปโชว์รูปต้นฉบับ
+ *    บน CDN ของ Discord ที่ **ยังไม่ได้เบลอหน้า** (จุดตายของฟีเจอร์นี้)
+ * ⚠️ การ์ดคำคมที่ถูกแก้พิกเซลแล้ว render จากพารามิเตอร์เดิมไม่ได้อีก → กลายเป็น kind='upload'
+ *    และล้าง quote_text/quote_style/bg_path ทิ้ง (ไม่แตะ **ไฟล์** พื้นหลัง — แถวอื่นอาจใช้อยู่)
+ */
+export async function replaceMediaFile(id, path) {
+  const { rows } = await pool.query(
+    `UPDATE post_episode_media
+        SET path = $2, kind = 'upload', source_url = NULL, source_hash = NULL,
+            quote_text = NULL, quote_style = NULL, bg_path = NULL
+      WHERE id = $1
+      RETURNING id, episode_id, kind, path, source_url, sort_order, quote_text, quote_style,
+                bg_path, source_hash, added_by, created_at`,
+    [id, path]
+  )
+  return rows[0] || null
+}
+
+/** ยังมีแถวอื่นอ้างไฟล์นี้อยู่ไหม (path หรือ bg_path) — เช็คก่อนลบไฟล์เก่าทิ้ง */
+export async function pathStillUsed(path, exceptId = null) {
+  const { rows } = await pool.query(
+    `SELECT 1 FROM post_episode_media
+      WHERE (path = $1 OR bg_path = $1) AND ($2::bigint IS NULL OR id <> $2)
+      LIMIT 1`,
+    [path, exceptId]
+  )
+  return rows.length > 0
+}
+
 export async function getMedia(id) {
   const { rows } = await pool.query(
     `SELECT id, episode_id, kind, path, sort_order, quote_text, quote_style, bg_path, created_at

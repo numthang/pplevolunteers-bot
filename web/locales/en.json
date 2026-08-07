@@ -612,7 +612,9 @@
       "addPlaceholder": "Add a timeline entry...",
       "publishToggleLabel": "Visible to the public",
       "addButton": "Add",
-      "filesImported": "Imported {count} attachment(s) from Discord"
+      "filesImported": "Imported {count} attachment(s) from Discord",
+      "showMoreButton": "Show more",
+      "showLessButton": "Show less"
     },
     "track": {
       "metaTitle": "Track your complaint",
@@ -1347,6 +1349,33 @@
       "new": "New post",
       "detail": "Edit post",
       "library": "Image library"
+    },
+    "imageEditor": {
+      "title": "Edit image",
+      "closeTitle": "Close (ESC)",
+      "toolMask": "Blur faces",
+      "toolCrop": "Crop",
+      "toolRotate": "Rotate 90°",
+      "undo": "Undo",
+      "maskStyle": "Style",
+      "maskPixel": "Pixelate",
+      "maskBlur": "Blur",
+      "cropRatio": "Ratio",
+      "free": "Free",
+      "a1x1": "1:1",
+      "a4x5": "4:5",
+      "a16x9": "16:9",
+      "applyMask": "Apply to selection",
+      "applyCrop": "Crop to selection",
+      "hintMask": "Drag over the faces you want hidden, then press “Apply to selection” — repeat as needed (this cannot be undone once saved).",
+      "hintCrop": "Drag a box around the part you want to keep, then press “Crop to selection”.",
+      "confirmDiscard": "Discard unsaved edits?",
+      "cancel": "Cancel",
+      "save": "Save image",
+      "loadFailed": "Could not load the image",
+      "saveFailed": "Could not save the image",
+      "prev": "Previous image",
+      "next": "Next image"
     }
   }
 }

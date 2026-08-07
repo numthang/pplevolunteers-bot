@@ -612,7 +612,9 @@
       "addPlaceholder": "เพิ่ม timeline entry...",
       "publishToggleLabel": "เผยแพร่ให้ประชาชนเห็น",
       "addButton": "เพิ่ม",
-      "filesImported": "นำเข้าไฟล์แนบจาก Discord {count} ไฟล์"
+      "filesImported": "นำเข้าไฟล์แนบจาก Discord {count} ไฟล์",
+      "showMoreButton": "แสดงเพิ่มเติม",
+      "showLessButton": "ย่อ"
     },
     "track": {
       "metaTitle": "ติดตามเรื่องร้องเรียน",
@@ -1347,6 +1349,33 @@
       "new": "เขียนโพสต์ใหม่",
       "detail": "แก้ไขโพสต์",
       "library": "คลังภาพ"
+    },
+    "imageEditor": {
+      "title": "แก้ไขรูป",
+      "closeTitle": "ปิด (ESC)",
+      "toolMask": "เบลอหน้า",
+      "toolCrop": "ครอบตัด",
+      "toolRotate": "หมุน 90°",
+      "undo": "ย้อนกลับ",
+      "maskStyle": "แบบ",
+      "maskPixel": "พิกเซล",
+      "maskBlur": "เบลอ",
+      "cropRatio": "สัดส่วน",
+      "free": "อิสระ",
+      "a1x1": "1:1",
+      "a4x5": "4:5",
+      "a16x9": "16:9",
+      "applyMask": "ทับกรอบนี้",
+      "applyCrop": "ครอบตัดตามกรอบ",
+      "hintMask": "ลากคลุมใบหน้าที่ไม่อยากให้เห็น แล้วกด “ทับกรอบนี้” — ทำซ้ำได้หลายจุด (ทับแล้วกู้รูปเดิมไม่ได้)",
+      "hintCrop": "ลากกรอบส่วนที่อยากเก็บไว้ แล้วกด “ครอบตัดตามกรอบ”",
+      "confirmDiscard": "ทิ้งการแก้ไขที่ยังไม่ได้บันทึก?",
+      "cancel": "ยกเลิก",
+      "save": "บันทึกรูป",
+      "loadFailed": "โหลดรูปไม่สำเร็จ",
+      "saveFailed": "บันทึกรูปไม่สำเร็จ",
+      "prev": "รูปก่อนหน้า",
+      "next": "รูปถัดไป"
     }
   }
 }
