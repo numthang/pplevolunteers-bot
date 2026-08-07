@@ -12,11 +12,22 @@
 //    (ฝั่ง server ก็ล้าง source_url ทิ้งด้วย ไม่งั้นไฟล์หายเมื่อไหร่จะตกไปโชว์ต้นฉบับที่ยังไม่เบลอ)
 import { useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { X, Crop, Droplets, RotateCw, Undo2, Loader2, ChevronLeft, ChevronRight } from 'lucide-react'
+import { X, Crop, Droplets, RotateCw, Undo2, Loader2, ChevronLeft, ChevronRight, Wand2 } from 'lucide-react'
 
 // รูปจากมือถือ 12MP เอามาทำ undo stack ในแท็บเดียวไม่ไหว และโซเชียลก็ย่อเหลือ ~2K อยู่ดี
 const MAX_SIDE = 2048
 const UNDO_LIMIT = 5
+
+// ── ไม้กายสิทธิ์: ค่าคงที่ของ computeAutoEnhance() ──────────────────────────────
+// เกณฑ์เหล่านี้เป็นค่าที่เคาะจากการทดลองเรนเดอร์เทียบ ไม่ใช่สูตรตายตัวจากตำรา —
+// ปรับได้ถ้าผลลัพธ์จริงดูจัดไป/จืดไป แต่ต้องคง 2 กลไกป้องกันไว้เสมอ (ดู computeAutoEnhance ด้านล่าง)
+const AUTO_LOW_PCT = 0.01, AUTO_HIGH_PCT = 0.99  // percentile ตัดหัว-ท้าย histogram กันหลุดเพราะ hot pixel
+const AUTO_MAX_STRETCH = 4        // เพดานยืดคอนทราสต์ — กันรูปมืด/สว่างจัดทั้งใบกลายเป็น noise
+const AUTO_TARGET_LUM = 0.47      // ความสว่างเฉลี่ยเป้าหมายหลัง auto-exposure (0-1)
+const AUTO_GAMMA_CLAMP = [0.7, 1.4]
+const AUTO_SAT_TARGET_CHROMA = 40 // ความจัดสีที่ถือว่า "พอแล้ว" — รูปจัดเกินนี้ไม่ดันเพิ่ม
+const AUTO_SAT_MAX_BOOST = 1.25
+const AUTO_STRIDE = 4             // สุ่มพิกเซลทุก N ตัวไว้ตั้ง histogram ไม่ต้องไล่ทุกพิกเซล
 
 const ASPECTS = [
   { key: 'free', value: null },
@@ -36,12 +47,18 @@ export default function ImageEditorModal({ media, src, onClose, onSaved, onNavig
   const canvasRef = useRef(null)
   const undoRef = useRef([])          // canvas สำเนา — ย้อนได้ UNDO_LIMIT ขั้น
   const dragRef = useRef(null)        // จุดเริ่มลาก (พิกัดในหน่วยพิกเซลของ canvas)
+  const enhanceBaseRef = useRef(null) // ImageData ต้นฉบับก่อนพรีวิวไม้กายสิทธิ์ (ไว้ blend กลับ + คืนตอนยกเลิก)
+  const enhanceFullRef = useRef(null) // ผลไม้กายสิทธิ์เต็ม 100% (คำนวณครั้งเดียวตอนเปิด แล้ว blend ตาม slider)
+  const enhanceRafRef = useRef(null)  // คุม requestAnimationFrame กันวาดรัวเกินตอนลาก slider เร็วๆ
+  const enhancePrevToolRef = useRef('crop') // เครื่องมือที่อยู่ก่อนกด "ปรับอัตโนมัติ" — commit/cancel แล้วกลับไปที่นี่
 
   const [ready, setReady] = useState(false)
-  const [tool, setTool] = useState('mask')      // 'mask' = เบลอ/พิกเซล · 'crop' = ครอบตัด
+  const [tool, setTool] = useState('crop')      // 'mask' | 'crop' | 'enhance'
   const [mask, setMask] = useState('pixel')     // 'pixel' | 'blur'
   const [aspect, setAspect] = useState(null)
   const [sel, setSel] = useState(null)          // กรอบที่เลือกอยู่ (หน่วยพิกเซลของ canvas)
+  const [enhanceStrength, setEnhanceStrength] = useState(100)  // 0-150% ของผลไม้กายสิทธิ์เต็ม
+  const [enhancing, setEnhancing] = useState(false)            // พรีวิวไม้กายสิทธิ์ทำงานอยู่ (ยังไม่ apply/cancel)
   const [steps, setSteps] = useState(0)         // จำนวนครั้งที่แก้ — คุมปุ่มย้อนกลับ/เตือนตอนปิด
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -67,11 +84,13 @@ export default function ImageEditorModal({ media, src, onClose, onSaved, onNavig
 
   // ปิดได้ 3 ทาง (กฎ CLAUDE.md): ปุ่ม X · ESC · คลิกพื้นหลัง — แก้ค้างอยู่ต้องถามก่อนทิ้ง
   function requestClose() {
+    if (enhancing) commitEnhance()   // ปกติ blur ของ slider commit ให้แล้ว เผื่อไว้กรณีปิดผ่าน ESC ที่ไม่ผ่าน blur
     if (steps > 0 && !confirm(t('confirmDiscard'))) return
     onClose()
   }
   // พลิกรูป = ทิ้งงานที่ยังไม่เซฟเหมือนปิดกล่อง → ถามก่อนเสมอ
   function go(dir) {
+    if (enhancing) commitEnhance()
     if (steps > 0 && !confirm(t('confirmDiscard'))) return
     onNavigate(dir)
   }
@@ -186,7 +205,16 @@ export default function ImageEditorModal({ media, src, onClose, onSaved, onNavig
     setSel(null)
   }
 
+  // ปกติคลิกปุ่มเครื่องมืออื่นจะ blur slider แล้ว commit ให้เองก่อนแล้ว (ดู onBlur ที่ตัว input)
+  // เผื่อไว้เป็น safety net เท่านั้น
+  function selectTool(name) {
+    if (enhancing) commitEnhance()
+    setTool(name)
+    setSel(null)
+  }
+
   function rotate() {
+    if (enhancing) commitEnhance()
     pushUndo()
     const c = canvasRef.current
     const tmp = document.createElement('canvas')
@@ -201,6 +229,169 @@ export default function ImageEditorModal({ media, src, onClose, onSaved, onNavig
     ctx.drawImage(tmp, -tmp.width / 2, -tmp.height / 2)
     ctx.setTransform(1, 0, 0, 1, 0, 0)
     setSel(null)
+  }
+
+  // ── ไม้กายสิทธิ์: ปรับสว่าง/คอนทราสต์/ความจัดสีอัตโนมัติจาก histogram ของรูปจริง ─────
+  //
+  // คำนวณเองจาก pixel data ล้วน ไม่ใช้ AI/API — auto-levels ต่อ channel (แก้ color cast
+  // ในตัว) + auto-exposure ด้วย gamma + saturation ที่ดันมากน้อยตามความจัดสีเดิมของรูป
+  //
+  // มี slider ปรับความแรง (0-150%) แบบ live preview เหมือน crop/mask — ลากดูผลก่อน แล้วกด
+  // "ใช้ค่านี้" ถึง commit จริง ไม่ auto-bake ตั้งแต่กดปุ่มแรก (ต่างจากเวอร์ชันแรกที่ทำไว้)
+  //
+  // ⚠️ saturation ในผลเต็ม 100% ตั้งใจ**ไม่ใช่ค่าคงที่** ต่างจาก CSS filter ธรรมดา — ถ้าดัน
+  //    เท่ากันทุกรูป รูปที่จัดอยู่แล้วจะโดนดันจนสีล้น → satFactor แปรผกผันกับความจัดสีปัจจุบัน
+  //    (เจอ 2026-08-08 ตอนทดสอบกดซ้ำ — ถ้าคงที่จะเพี้ยนสะสมไม่หยุด)
+  //
+  // ⚠️ ห้ามลบ 2 guard ใน computeAutoEnhance: (1) range<=0 → identity LUT กัน divide-by-zero
+  //    ตอนรูปเป็นสีเรียบ/ครอปจนเหลือพื้นเดียว (2) AUTO_MAX_STRETCH กันรูปมืดสนิท/สว่างจ้าทั้งใบ
+  //    ถูกยืดจน noise ระเบิด
+
+  /** คำนวณล้วน ไม่แตะ canvas/state — คืน Uint8ClampedArray RGBA ผลเต็ม 100% ยาวเท่า imageData.data */
+  function computeAutoEnhance(imageData) {
+    const data = imageData.data
+
+    // รอบสุ่มตัวอย่าง — ตั้ง histogram 3 channel + วัดความจัดสีเฉลี่ยของรูป (ไม่ต้องไล่ทุกพิกเซล
+    // เพราะ percentile/chroma เฉลี่ยนิ่งพอแล้วด้วยตัวอย่างหลักหมื่น)
+    const histR = new Uint32Array(256), histG = new Uint32Array(256), histB = new Uint32Array(256)
+    let chromaSum = 0, sampleCount = 0
+    for (let p = 0; p < data.length; p += 4 * AUTO_STRIDE) {
+      const r = data[p], g = data[p + 1], b = data[p + 2]
+      histR[r]++; histG[g]++; histB[b]++
+      const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b
+      chromaSum += Math.abs(r - lum) + Math.abs(g - lum) + Math.abs(b - lum)
+      sampleCount++
+    }
+    if (!sampleCount) return new Uint8ClampedArray(data)   // canvas ว่าง — คืนสำเนาต้นฉบับเฉยๆ
+
+    const bounds = hist => {
+      let cum = 0, low = 0, high = 255
+      for (let i = 0; i < 256; i++) { cum += hist[i]; if (cum >= sampleCount * AUTO_LOW_PCT) { low = i; break } }
+      cum = 0
+      for (let i = 255; i >= 0; i--) { cum += hist[i]; if (cum >= sampleCount * (1 - AUTO_HIGH_PCT)) { high = i; break } }
+      return { low, high }
+    }
+
+    // LUT คอนทราสต์ต่อ channel — identity ถ้าช่วงแคบเกิน (กัน div/0) · ยืดไม่เกิน AUTO_MAX_STRETCH เท่า
+    const contrastLUT = ({ low, high }) => {
+      const lut = new Uint8ClampedArray(256)
+      const range = high - low
+      if (range <= 0) { for (let i = 0; i < 256; i++) lut[i] = i; return lut }
+      const ratio = Math.min(255 / range, AUTO_MAX_STRETCH)
+      for (let i = 0; i < 256; i++) lut[i] = (i - low) * ratio
+      return lut
+    }
+    const lutR = contrastLUT(bounds(histR))
+    const lutG = contrastLUT(bounds(histG))
+    const lutB = contrastLUT(bounds(histB))
+
+    // ความสว่างเฉลี่ยหลังคอนทราสต์ — คำนวณจาก histogram ตรงๆ (E[LUT(X)]) ไม่ต้องไล่พิกเซลซ้ำรอบ
+    const meanOf = (lut, hist) => {
+      let sum = 0
+      for (let i = 0; i < 256; i++) sum += lut[i] * hist[i]
+      return sum / sampleCount
+    }
+    const meanLum = 0.2126 * meanOf(lutR, histR) + 0.7152 * meanOf(lutG, histG) + 0.0722 * meanOf(lutB, histB)
+
+    // gamma ดันความสว่างเฉลี่ยเข้าใกล้เป้าหมาย — ข้ามถ้ารูปมืด/สว่างสุดขั้วจนสูตรไม่เสถียร (ln(0))
+    let gamma = 1
+    if (meanLum > 2 && meanLum < 253) {
+      gamma = Math.log(AUTO_TARGET_LUM) / Math.log(meanLum / 255)
+      gamma = Math.min(AUTO_GAMMA_CLAMP[1], Math.max(AUTO_GAMMA_CLAMP[0], gamma))
+    }
+
+    // ผสม gamma เข้า LUT เดิม — ยังเป็น 256 entries ต่อ channel เท่าเดิม ไม่เพิ่มรอบพิกเซล
+    const finalLUT = lut => {
+      const out = new Uint8ClampedArray(256)
+      for (let i = 0; i < 256; i++) out[i] = 255 * Math.pow(lut[i] / 255, gamma)
+      return out
+    }
+    const fR = finalLUT(lutR), fG = finalLUT(lutG), fB = finalLUT(lutB)
+
+    // satFactor แปรผกผันกับความจัดสีปัจจุบัน — จัดอยู่แล้วดันน้อย/ไม่ดัน จืดอยู่แล้วดันมากขึ้น
+    const avgChroma = chromaSum / sampleCount
+    const satFactor = avgChroma >= AUTO_SAT_TARGET_CHROMA
+      ? 1
+      : 1 + (AUTO_SAT_MAX_BOOST - 1) * (1 - avgChroma / AUTO_SAT_TARGET_CHROMA)
+
+    // รอบจริง — ไล่ทุกพิกเซล (จำเป็น ต่างจากรอบสุ่มตัวอย่างข้างบน) LUT + saturation ในลูปเดียว
+    // เขียนลง buffer ใหม่ ไม่แตะ `data` เดิม — base ต้องสะอาดไว้ blend กับผลนี้ตาม strength
+    const out = new Uint8ClampedArray(data.length)
+    for (let p = 0; p < data.length; p += 4) {
+      const r = fR[data[p]], g = fG[data[p + 1]], b = fB[data[p + 2]]
+      const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b
+      out[p]     = lum + (r - lum) * satFactor
+      out[p + 1] = lum + (g - lum) * satFactor
+      out[p + 2] = lum + (b - lum) * satFactor
+      out[p + 3] = data[p + 3]   // alpha ไม่แตะ — เหลือเดิมเสมอ
+    }
+    return out
+  }
+
+  // เปิดโหมดพรีวิว — คำนวณผลเต็ม 100% ครั้งเดียว ที่เหลือแค่ blend เบาๆ ตาม slider
+  // คง enhanceStrength เดิมไว้ตอนเปิดซ้ำ (ไม่รีเซ็ตเป็น 100%) — กลับมาปรับต่อจากค่าที่ทิ้งไว้ล่าสุด
+  function startEnhance() {
+    if (!ready || enhancing) return
+    const c = canvasRef.current
+    const ctx = c.getContext('2d')
+    const base = ctx.getImageData(0, 0, c.width, c.height)
+    enhanceBaseRef.current = base
+    enhanceFullRef.current = computeAutoEnhance(base)
+    enhancePrevToolRef.current = tool   // จำเครื่องมือก่อนหน้าไว้ กลับไปที่นี่ตอน commit/cancel
+    setSel(null)
+    setTool('enhance')
+    setEnhancing(true)
+    drawEnhancePreview(enhanceStrength)
+  }
+
+  // blend base↔full ตาม strength แล้ววาดลง canvas จริง (ยังไม่ commit เข้า undo)
+  function drawEnhancePreview(strength) {
+    const base = enhanceBaseRef.current, full = enhanceFullRef.current
+    if (!base || !full) return
+    const c = canvasRef.current
+    const ctx = c.getContext('2d')
+    const t = strength / 100
+    const out = ctx.createImageData(base.width, base.height)
+    const bd = base.data
+    for (let p = 0; p < bd.length; p += 4) {
+      out.data[p]     = bd[p]     + (full[p]     - bd[p])     * t
+      out.data[p + 1] = bd[p + 1] + (full[p + 1] - bd[p + 1]) * t
+      out.data[p + 2] = bd[p + 2] + (full[p + 2] - bd[p + 2]) * t
+      out.data[p + 3] = bd[p + 3]
+    }
+    ctx.putImageData(out, 0, 0)
+  }
+
+  // ⚠️ throttle ด้วย rAF — <input type=range> ยิง onChange ถี่มากตอนลาก ถ้า putImageData
+  //    เต็ม canvas ทุก tick (~10-40ms/ครั้งบนรูป 2048px) จะหน่วงจนลากแล้วสะดุด
+  function onEnhanceSlider(v) {
+    setEnhanceStrength(v)
+    if (enhanceRafRef.current) cancelAnimationFrame(enhanceRafRef.current)
+    enhanceRafRef.current = requestAnimationFrame(() => drawEnhancePreview(v))
+  }
+
+  // Commit ตอน slider เสีย focus (onBlur) — คลิกปุ่มเครื่องมืออื่น/พื้นหลัง/ปิดโมดัลจะ blur เองตามธรรมชาติ
+  // ระหว่างที่ยังโฟกัสอยู่ที่ slider (ลาก/กดคีย์ลูกศรถี่ๆ) ปรับกี่ทีก็ได้โดยยังไม่ commit จนกว่าจะย้ายโฟกัสจริง
+  // (เคาะ 2026-08-08: ปรับแล้วอย่าเพิ่งบังคับออกจาก tool — ต้องปรับซ้ำได้โดยไม่โดนเด้งกลับ crop/mask ทุกครั้ง)
+  // ฟังก์ชันอื่นที่ปิด/พลิก/สลับ tool ก็เรียกซ้ำเป็น safety net (เผื่อ ESC ที่ไม่ผ่าน blur)
+  //
+  // ⚠️ ต้องคืน canvas กลับเป็นต้นฉบับ**ก่อน**เรียก pushUndo() เสมอ — pushUndo() snapshot
+  //    จากสิ่งที่วาดอยู่ตอนนั้นตรงๆ ถ้า snapshot ตอนยังเป็นพรีวิวค้างอยู่ ปุ่มย้อนกลับจะพาไปที่
+  //    "พรีวิวค่าหนึ่ง" แทนที่จะเป็นต้นฉบับจริง (เจอตอนออกแบบ 2026-08-08)
+  function commitEnhance() {
+    if (!enhancing) return
+    const base = enhanceBaseRef.current
+    if (base) {
+      const c = canvasRef.current
+      const ctx = c.getContext('2d')
+      ctx.putImageData(base, 0, 0)         // คืนต้นฉบับก่อน
+      pushUndo()                           // แล้วค่อย snapshot ต้นฉบับจริงเข้า undo stack
+      drawEnhancePreview(enhanceStrength)  // วาดค่าที่เลือกไว้ทับกลับเข้าไป = ค่าที่ commit จริง
+    }
+    enhanceBaseRef.current = null
+    enhanceFullRef.current = null
+    setEnhancing(false)
+    setTool(enhancePrevToolRef.current)
   }
 
   // ── บันทึก ──────────────────────────────────────────────────────────────────
@@ -250,18 +441,27 @@ export default function ImageEditorModal({ media, src, onClose, onSaved, onNavig
         </div>
 
         <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-3">
+          {/* ลำดับ: ครอบตัด → ไม้กายสิทธิ์ → เบลอ → หมุน (เคาะ 2026-08-08) — undo แยกเป็นไอคอนล้วน
+              ไม่มีข้อความ กัน 5 ปุ่มล้นจอมือถือ (ตัวหนังสือไทยกว้างกว่าอังกฤษ wrap ง่ายกว่าที่คิด) */}
           <div className="flex flex-wrap items-center gap-2">
-            <button type="button" onClick={() => { setTool('mask'); setSel(null) }} className={`${TOOL_BTN} ${tool === 'mask' ? TOOL_ON : TOOL_OFF}`}>
-              <Droplets size={14} /> {t('toolMask')}
-            </button>
-            <button type="button" onClick={() => { setTool('crop'); setSel(null) }} className={`${TOOL_BTN} ${tool === 'crop' ? TOOL_ON : TOOL_OFF}`}>
+            <button type="button" onClick={() => selectTool('crop')} disabled={!ready} className={`${TOOL_BTN} ${tool === 'crop' ? TOOL_ON : TOOL_OFF} disabled:opacity-40`}>
               <Crop size={14} /> {t('toolCrop')}
+            </button>
+            {/* enhancing=true = พรีวิวเปิดค้างอยู่ ปุ่มนี้เอง disable ไปด้วยกันกดซ้อนตัวเองระหว่างลาก slider */}
+            <button type="button" onClick={startEnhance} disabled={!ready || enhancing} className={`${TOOL_BTN} ${tool === 'enhance' ? TOOL_ON : TOOL_OFF} disabled:opacity-40`}>
+              <Wand2 size={14} /> {t('toolEnhance')}
+            </button>
+            <button type="button" onClick={() => selectTool('mask')} disabled={!ready} className={`${TOOL_BTN} ${tool === 'mask' ? TOOL_ON : TOOL_OFF} disabled:opacity-40`}>
+              <Droplets size={14} /> {t('toolMask')}
             </button>
             <button type="button" onClick={rotate} disabled={!ready} className={`${TOOL_BTN} ${TOOL_OFF} disabled:opacity-40`}>
               <RotateCw size={14} /> {t('toolRotate')}
             </button>
-            <button type="button" onClick={undo} disabled={!steps} className={`${TOOL_BTN} ${TOOL_OFF} disabled:opacity-40 ml-auto`}>
-              <Undo2 size={14} /> {t('undo')}
+            <button
+              type="button" onClick={undo} disabled={!steps || enhancing} title={t('undo')}
+              className="ml-auto w-8 h-8 shrink-0 flex items-center justify-center rounded-lg border border-warm-200 dark:border-disc-border text-warm-700 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover disabled:opacity-40 transition"
+            >
+              <Undo2 size={15} />
             </button>
           </div>
 
@@ -279,7 +479,7 @@ export default function ImageEditorModal({ media, src, onClose, onSaved, onNavig
                   </button>
                 ))}
               </>
-            ) : (
+            ) : tool === 'crop' ? (
               <>
                 <span className="text-warm-500 dark:text-disc-muted">{t('cropRatio')}</span>
                 {ASPECTS.map(a => (
@@ -291,6 +491,20 @@ export default function ImageEditorModal({ media, src, onClose, onSaved, onNavig
                   </button>
                 ))}
               </>
+            ) : (
+              // enhance — slider 0-150% blend ระหว่างต้นฉบับ (0%) กับผลไม้กายสิทธิ์เต็ม (100%)
+              // เกิน 100% ได้ถึง 150% เผื่อรูปที่จืดมากอยากดันแรงกว่าค่าที่คำนวณให้อัตโนมัติ
+              // ยังโฟกัส slider อยู่ = ปรับซ้ำได้เรื่อยๆ ไม่ commit จนกว่าจะ blur (คลิกที่อื่น/ปุ่มอื่น)
+              <div className="flex items-center gap-3 w-full">
+                <span className="text-warm-500 dark:text-disc-muted shrink-0">{t('enhanceStrength')}</span>
+                <input
+                  type="range" min={0} max={150} value={enhanceStrength}
+                  onChange={e => onEnhanceSlider(Number(e.target.value))}
+                  onBlur={commitEnhance}
+                  className="flex-1 accent-teal"
+                />
+                <span className="text-warm-500 dark:text-disc-muted w-11 text-right shrink-0 tabular-nums">{enhanceStrength}%</span>
+              </div>
             )}
           </div>
 
@@ -334,13 +548,14 @@ export default function ImageEditorModal({ media, src, onClose, onSaved, onNavig
           </div>
 
           <p className="text-sm text-warm-500 dark:text-disc-muted">
-            {tool === 'mask' ? t('hintMask') : t('hintCrop')}
+            {tool === 'mask' ? t('hintMask') : tool === 'crop' ? t('hintCrop') : t('hintEnhance')}
           </p>
           {error && <p className="text-sm text-red-500">{error}</p>}
         </div>
 
         <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-warm-200 dark:border-disc-border shrink-0">
-          {sel && (
+          {/* enhance ไม่มีปุ่มในนี้แล้ว — commit เองตอนปล่อย slider (ดู commitEnhance) */}
+          {sel && !enhancing && (
             <button
               type="button"
               onClick={tool === 'crop' ? applyCrop : applyMask}
@@ -356,7 +571,7 @@ export default function ImageEditorModal({ media, src, onClose, onSaved, onNavig
             {t('cancel')}
           </button>
           <button
-            type="button" onClick={save} disabled={saving || !steps}
+            type="button" onClick={save} disabled={saving || !steps || enhancing}
             className="inline-flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg bg-orange text-white hover:opacity-90 disabled:opacity-40 transition"
           >
             {saving ? <Loader2 size={14} className="animate-spin" /> : null}

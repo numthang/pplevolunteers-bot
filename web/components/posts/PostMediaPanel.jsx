@@ -46,6 +46,7 @@ export default function PostMediaPanel({ id, compact = false }) {
 
   const fileInputRef = useRef(null)
   const dragIndex = useRef(null)
+  const pointerRef = useRef(null)   // นิ้ว/เมาส์ที่กำลังลากอยู่ — กันนิ้วที่สองมาป่วนกลางทาง
   const mediaRef = useRef([])
 
   async function load() {
@@ -172,26 +173,48 @@ export default function PostMediaPanel({ id, compact = false }) {
   }
 
   function onGripDown(e, i, mediaId) {
-    e.preventDefault()            // กันเบราว์เซอร์เริ่ม native drag / เลือกข้อความ
-    e.currentTarget.setPointerCapture?.(e.pointerId)
+    if (e.button > 0) return      // เมาส์: เอาเฉพาะปุ่มซ้าย
+    e.preventDefault()            // กันเบราว์เซอร์เริ่ม native drag / ลากคลุมข้อความ
     dragIndex.current = i
+    pointerRef.current = e.pointerId
     setDraggingId(mediaId)
   }
-  function onGripMove(e) {
-    if (dragIndex.current === null) return
-    // ที่จับจับ pointer ไว้แล้ว (capture) → หาช่องปลายทางด้วยการยิงพิกัดลงไปเอง
-    const cell = document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-media-idx]')
-    if (!cell) return
-    const to = Number(cell.dataset.mediaIdx)
-    if (!Number.isInteger(to) || to === dragIndex.current) return
-    moveTo(dragIndex.current, to)
-  }
-  function onGripUp() {
-    if (dragIndex.current === null) return
-    dragIndex.current = null
-    setDraggingId(null)
-    saveOrder(mediaRef.current)
-  }
+
+  // ⛔ ห้ามใช้ setPointerCapture บนที่จับ + onLostPointerCapture ปิดการลาก (ของเดิม แล้วมัน "หลุดมือ")
+  //    พอสลับลำดับสำเร็จ React ย้าย DOM node ของช่องนั้น (insertBefore = ถอดออกแล้วใส่กลับ)
+  //    → เบราว์เซอร์ปล่อย pointer capture ทันที → lostpointercapture ยิง → การลากจบตั้งแต่สลับครั้งแรก
+  //    ฟังที่ window แทน: DOM ในกริดจะสลับยังไงก็ไม่กระทบ event ที่วิ่งมาถึง window
+  useEffect(() => {
+    if (draggingId === null) return
+
+    function onMove(e) {
+      if (pointerRef.current !== null && e.pointerId !== pointerRef.current) return   // นิ้วที่สองไม่เกี่ยว
+      if (dragIndex.current === null) return
+      const cell = document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-media-idx]')
+      if (!cell) return
+      const to = Number(cell.dataset.mediaIdx)
+      if (!Number.isInteger(to) || to === dragIndex.current) return
+      moveTo(dragIndex.current, to)
+    }
+    function onEnd(e) {
+      if (e && pointerRef.current !== null && e.pointerId !== pointerRef.current) return
+      if (dragIndex.current === null) return
+      dragIndex.current = null
+      pointerRef.current = null
+      setDraggingId(null)
+      saveOrder(mediaRef.current)
+    }
+
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onEnd)
+    window.addEventListener('pointercancel', onEnd)
+    return () => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onEnd)
+      window.removeEventListener('pointercancel', onEnd)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draggingId])
 
   if (loading) return <p className="text-warm-500 dark:text-disc-muted text-sm">กำลังโหลด...</p>
   if (loadError) return <p className="text-red-500 text-sm">{loadError}</p>
@@ -270,7 +293,7 @@ export default function PostMediaPanel({ id, compact = false }) {
           <span className="text-sm">ยังไม่มีสื่อ</span>
         </div>
       ) : images.length === 0 ? null : (
-        <div className={compact ? GRID.compact : GRID.wide}>
+        <div className={`${compact ? GRID.compact : GRID.wide}${draggingId !== null ? ' select-none' : ''}`}>
           {images.map((m, i) => {
             const src = srcOf(m)
             const broken = !src || failedIds.includes(m.id)
@@ -279,7 +302,8 @@ export default function PostMediaPanel({ id, compact = false }) {
                 key={m.id}
                 data-media-idx={i}
                 className={`relative group aspect-[4/3] rounded-lg overflow-hidden border bg-black transition-all duration-150 ${
-                  draggingId === m.id ? 'opacity-40 ring-2 ring-teal border-teal scale-95' : 'border-warm-200 dark:border-disc-border'
+                  /* ห้ามย่อขนาด (scale) ตอนลาก — ช่องหดแล้วเกิดร่องว่าง จุดที่นิ้วชี้จะหลุดออกนอกช่องเป็นพักๆ */
+                  draggingId === m.id ? 'opacity-40 ring-2 ring-teal border-teal' : 'border-warm-200 dark:border-disc-border'
                 }`}
               >
                 {broken ? (
@@ -325,12 +349,9 @@ export default function PostMediaPanel({ id, compact = false }) {
                 {canEdit && images.length > 1 && (
                   <button
                     onPointerDown={e => onGripDown(e, i, m.id)}
-                    onPointerMove={onGripMove}
-                    onPointerUp={onGripUp}
-                    onPointerCancel={onGripUp}
-                    onLostPointerCapture={onGripUp}
+                    onContextMenu={e => e.preventDefault()}   // มือถือ: กดค้างแล้วเมนูเด้ง = ลากต่อไม่ได้
                     title="ลากเพื่อเรียงลำดับ"
-                    className="absolute bottom-1.5 right-1.5 w-7 h-7 flex items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80 transition touch-none cursor-grab active:cursor-grabbing"
+                    className="absolute bottom-1.5 right-1.5 w-8 h-8 flex items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80 transition touch-none select-none cursor-grab active:cursor-grabbing"
                   >
                     <GripVertical size={14} />
                   </button>
