@@ -792,6 +792,120 @@ async function renderMatte(buf, { quoteText, authorName, saturation = 1.0, accen
   return { buffer: await toPng(cv), ext: 'png', vertical: 'bottom', side: 'left' };
 }
 
+// ── Layout: side — คอลัมน์คำคมด้านขวา ทำมาเพื่อ "ข้อความยาว" โดยเฉพาะ ─────────
+// อ้างอิงการ์ดข่าวที่ user ส่งมา (2026-08-07): รูปคนเต็มใบย้อมเข้ม · ข้อความอยู่คอลัมน์ขวา
+// ~ครึ่งใบ แบ่ง 2 ระดับ (เกริ่นตัวบาง + ประโยคเด็ดตัวหนาใหญ่) · ชื่อผู้พูดมุมล่างซ้ายใต้รูป
+//
+// ⚠️ อย่าสับสนกับ "แถบสีแนวตั้ง" ที่ตัดทิ้งไปเพราะคอลัมน์แคบทำให้ตัวหนังสือเล็กกว่าใบอื่น —
+//    อันนี้ user ขอเองพร้อมตัวอย่าง โดยมีเงื่อนไขว่า **ต้องใหญ่** จึงกินความกว้างครึ่งใบ
+//    และตัวอักษรใหญ่กว่าสไตล์อื่น ไม่ใช่แถบแคบแบบเดิม
+//
+// แบ่ง 2 ระดับด้วย **บรรทัดว่าง**: ก่อนบรรทัดว่าง = เกริ่น · หลังบรรทัดว่าง = ประโยคเด็ด
+// ไม่มีบรรทัดว่าง = ทั้งก้อนเป็นประโยคเด็ด · ชื่อผู้พูดขึ้นบรรทัดใหม่ได้ (บรรทัดแรก = ชื่อ ตัวหนา)
+async function renderSide(buf, { quoteText, authorName, saturation = 1.0, accentColor, duotone = false }) {
+  const accent = accentColor || ORANGE;
+  const scrim  = scrimOf(accent);
+  const meta   = await sharp(buf).metadata();
+  const W = meta.width, H = meta.height;
+
+  const prepped = await prepImage(buf, { saturation, duotone, accent });
+  const img = await loadImage(await sharp(prepped).resize(W, H, { fit: 'cover', position: 'attention' }).toBuffer());
+  const cv  = createCanvas(W, H);
+  const ctx = cv.getContext('2d');
+  ctx.drawImage(img, 0, 0, W, H);
+
+  // scrim: บางทั้งใบ + เข้มขึ้นทางขวา (คอลัมน์ข้อความ) + ก้นภาพเข้มรองบล็อกชื่อ
+  ctx.fillStyle = _rgbaOf(scrim.hex, 0.40); ctx.fillRect(0, 0, W, H);
+  const gx = ctx.createLinearGradient(W * 0.28, 0, W, 0);
+  gx.addColorStop(0,    _rgbaOf(scrim.hex, 0));
+  gx.addColorStop(0.45, _rgbaOf(scrim.hex, 0.70));
+  gx.addColorStop(1,    _rgbaOf(scrim.hex, 0.92));
+  ctx.fillStyle = gx; ctx.fillRect(0, 0, W, H);
+  const gy = ctx.createLinearGradient(0, H, 0, H * 0.60);
+  gy.addColorStop(0, _rgbaOf(scrim.hex, 0.92));
+  gy.addColorStop(1, _rgbaOf(scrim.hex, 0));
+  ctx.fillStyle = gy; ctx.fillRect(0, 0, W, H);
+
+  const pad  = Math.round(W * 0.055);
+  const colX = Math.round(W * 0.46);
+  const colW = W - pad - colX;
+
+  // แบ่งเกริ่น/ประโยคเด็ด
+  const blocks = String(quoteText || '').split(/\n\s*\n/).map(t => t.trim()).filter(Boolean);
+  const intro  = blocks.length > 1 ? blocks.slice(0, -1).join('\n') : '';
+  const lead   = blocks.length ? blocks[blocks.length - 1] : '';
+
+  // บล็อกชื่อผู้พูดล่างซ้าย — กันพื้นที่ไว้ก่อนค่อยคิดความสูงคอลัมน์
+  const authorLines = String(authorName || '').split('\n').map(t => t.trim()).filter(Boolean);
+  const nameSz = Math.max(15, Math.round(W * 0.026));
+  const roleSz = Math.max(13, Math.round(W * 0.021));
+  const ruleH  = Math.max(3, Math.round(W * 0.005));
+  const authorH = authorLines.length
+    ? ruleH + Math.round(nameSz * 0.9) + nameSz * 1.25 + Math.max(0, authorLines.length - 1) * roleSz * 1.45
+    : 0;
+
+  const markH  = Math.round(W * 0.075);
+  const top    = Math.round(H * 0.11);
+  const avail  = H - top - pad - Math.round(authorH * 0.45);   // บล็อกชื่ออยู่ซ้าย ทับกันได้บางส่วน
+
+  // ย่อฟอนต์ทั้งชุดจนความสูงรวมพอดีคอลัมน์ (fitFont คุมแค่ความกว้าง)
+  let introSz0 = Math.max(20, Math.round(W * 0.038));
+  let leadSz0  = Math.max(28, Math.round(W * 0.060));
+  let introFit = null, leadFit = null, introLh = 0, leadLh = 0, total = 0;
+  for (let i = 0; i < 14; i++) {
+    introFit = intro ? fitFont(ctx, intro, colW, introSz0, 8, 'GSansLight') : { fontSize: introSz0, lines: [] };
+    leadFit  = lead  ? fitFont(ctx, lead,  colW, leadSz0,  8, 'GSans')      : { fontSize: leadSz0,  lines: [] };
+    introLh  = introFit.fontSize * 1.42;
+    leadLh   = leadFit.fontSize * 1.22;
+    total = markH + Math.round(leadSz0 * 0.5)
+          + introFit.lines.length * introLh
+          + (intro && lead ? Math.round(leadFit.fontSize * 0.75) : 0)
+          + leadFit.lines.length * leadLh;
+    if (total <= avail) break;
+    introSz0 = Math.round(introSz0 * 0.94);
+    leadSz0  = Math.round(leadSz0 * 0.94);
+  }
+
+  // ข้อความสั้นกว่าคอลัมน์มาก → จัดกลางแนวตั้ง ไม่งั้นค้างอยู่หัวใบแล้วเหลือช่องโหว่ครึ่งใบ
+  // (สไตล์นี้ทำมาเพื่อข้อความยาว แต่ผู้ใช้พิมพ์สั้นมาก็ต้องไม่พัง)
+  let ty = total < avail * 0.62
+    ? Math.max(pad, Math.round((H - Math.round(authorH * 0.5) - total) / 2))
+    : top;
+  const qm = await loadMark('double_open');
+  drawTinted(ctx, qm, colX, ty, (qm.width / qm.height) * markH, markH, _mix(accent, WHITE, 0.55));
+  ty += markH + Math.round(leadSz0 * 0.5);
+
+  ctx.textBaseline = 'top';
+  if (introFit.lines.length) {
+    ctx.font = `${introFit.fontSize}px GSansLight`;
+    ctx.fillStyle = 'rgba(255,255,255,0.90)';
+    for (const l of introFit.lines) { lsDraw(ctx, l, colX, ty, 0.6); ty += introLh; }
+    if (leadFit.lines.length) ty += Math.round(leadFit.fontSize * 0.75);
+  }
+  if (leadFit.lines.length) {
+    ctx.font = `bold ${leadFit.fontSize}px GSans`;
+    ctx.fillStyle = WHITE;
+    for (const l of leadFit.lines) { lsDraw(ctx, l, colX, ty, 0.8); ty += leadLh; }
+  }
+
+  // ชื่อผู้พูด: ขีดสั้นสีแบรนด์ → ชื่อ (หนา) → ตำแหน่ง/บริบท (บาง)
+  if (authorLines.length) {
+    let ay = H - pad - authorH;
+    ctx.fillStyle = readableOnDark(accent, 4.5, scrim.lum);
+    ctx.fillRect(pad, ay, Math.round(W * 0.06), ruleH);
+    ay += ruleH + Math.round(nameSz * 0.9);
+    ctx.font = `bold ${nameSz}px GSans`;
+    ctx.fillStyle = WHITE;
+    lsDraw(ctx, authorLines[0], pad, ay, 0.6);
+    ay += nameSz * 1.25;
+    ctx.font = `${roleSz}px GSansLight`;
+    ctx.fillStyle = 'rgba(255,255,255,0.78)';
+    for (const l of authorLines.slice(1)) { lsDraw(ctx, l, pad, ay, 0.5); ay += roleSz * 1.45; }
+  }
+
+  return { buffer: await toPng(cv), ext: 'png', vertical: 'top', side: 'right' };
+}
+
 /** '#rrggbb' + alpha → rgba() */
 function _rgbaOf(hex, a) { return `rgba(${_rgbTriplet(hex)},${a})`; }
 
@@ -885,6 +999,7 @@ const STYLES = {
   'shade-pillar':       (buf, opts) => renderBorder(buf, opts),
   'shade-frame':        (buf, opts) => renderBorder2(buf, opts),
   'shade-center':       (buf, opts) => renderCenter(buf, opts),
+  'shade-side':         (buf, opts) => renderSide(buf, opts),
 
   // ── ทึบ (แถบสีแบรนด์ opacity 0.90) ─────────────────────────────────────────
   'solid-bottom-left':  (buf, opts) => renderPanel(buf, { ...opts, panelAt: 'bottom', align: 'left' }),
@@ -901,6 +1016,7 @@ const STYLES = {
   'duo-pillar':         (buf, opts) => renderBorder(buf,  { ...opts, duotone: true }),
   'duo-frame':          (buf, opts) => renderBorder2(buf, { ...opts, duotone: true }),
   'duo-center':         (buf, opts) => renderCenter(buf,  { ...opts, duotone: true }),
+  'duo-side':           (buf, opts) => renderSide(buf,    { ...opts, duotone: true }),
 
   'ai': (buf, opts) => renderEmberAI(buf, opts),
 };
