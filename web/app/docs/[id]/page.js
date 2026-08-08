@@ -1,5 +1,5 @@
 import { getTranslations } from 'next-intl/server'
-import { getSession } from '@/lib/auth.js'
+import { getSession, redirectToLogin } from '@/lib/auth.js'
 import { redirect, notFound } from 'next/navigation'
 import { canManageDocs } from '@/lib/docsAccess.js'
 import { getEffectiveOrgIdentity } from '@/lib/orgAccess.js'
@@ -26,7 +26,7 @@ export async function generateMetadata({ params }) {
 export default async function DocProjectPage({ params }) {
   const { id: eventCacheId } = await params
   const session = await getSession()
-  if (!session) redirect('/')
+  if (!session) await redirectToLogin()
 
   const { access, userId } = await getEffectiveOrgIdentity(session)
   const canManage = canManageDocs(access)

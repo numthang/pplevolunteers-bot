@@ -1,5 +1,4 @@
-import { getSession } from '@/lib/auth.js'
-import { redirect } from 'next/navigation'
+import { getSession, redirectToLogin } from '@/lib/auth.js'
 import { Suspense } from 'react'
 import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
@@ -17,7 +16,7 @@ export async function generateMetadata() {
 
 export default async function CallingPage({ searchParams }) {
   const session = await getSession()
-  if (!session) redirect('/')
+  if (!session) await redirectToLogin()
 
   const t = await getTranslations('calling')
   const { access } = await getEffectiveOrgIdentity(session)

@@ -4,9 +4,6 @@
 - หน้า http://localhost:3000/bot/platforms ถ้า platforms ไม่ขึ้น กับ guild แล้วก็เอา guild switcher ออกไปดีไหม เปลี่ยน url ด้วยไหม น่าจะต้องย้ายออกจาก bot ไปอยู่ใน /posts/settings ป่ะ
 
 # Posts
-- https://pplevolunteers.org/posts/6 พอกลับไปหน้ารายการแล้ว มัน filter รวมเหมือนเดิมอยากให้จำ state ก่อนหน้าด้วย เช่น เลือก discord ไว้ กลับมาก็เจอ discord filter ทำเป็นเค้าเรียกอะไรนะ url query?
-- หน้า edit ยังไม่มีให้ลบบทความ มีแต่เก็บเข้ากรุ
-- อยากได้ Emoji หน้า posteditor
 - อยากได้ข้อความใหญ่ๆ บน Facebook อ่ะ อันนี้ยังติดอยู่เหมือน จะยิง api ไม่ได้ แต่เห็นมีบางเคสที่ตัวหนังสือใหญ่และพิมพ์ยาวๆ ได้ด้วย แบบอันนี้ https://www.facebook.com/OilTraderKP/posts/pfbid02CXQo1VuJcPCBntjGTpbSgfth41ayPuRGjH4frhMUs9m1BDuQVoH1tcpCBjvvJyQVl?rdid=aGbrOQObqjVcNBvm ไม่รู้ว่า api ได้ไหม
 - เรื่องคลิป
 

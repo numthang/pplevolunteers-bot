@@ -1,6 +1,6 @@
 export const dynamic = 'force-dynamic'
 
-import { getSession } from '@/lib/auth.js'
+import { getSession, redirectToLogin } from '@/lib/auth.js'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
@@ -83,7 +83,7 @@ function NavCard({ href, title, desc, Icon }) {
 
 export default async function CallingDashboard() {
   const session = await getSession()
-  if (!session) redirect('/')
+  if (!session) await redirectToLogin()
 
   // calling เป็น org-native แล้ว (ทุก query scope ด้วย org_id) → guildless org เข้าได้
   //   (roster/campaign มาจาก guild ขององค์กร — org ที่ไม่มี guild เห็น 0 แต่ใช้ contacts ได้)

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2, Check, Sparkles, X, Trash2, Copy, ChevronDown, ChevronUp } from 'lucide-react'
 import PostRevisions from './PostRevisions.jsx'
+import EmojiPicker from './EmojiPicker.jsx'
 
 
 // AI ทุกแบบอยู่ในเมนูเดียว — draft/caption ยิงคนละ endpoint · ที่เหลือคือ tone ของ polish
@@ -252,6 +253,22 @@ export default function PostEditor({ id }) {
     }
   }
 
+  // แทรกอิโมจิที่ตำแหน่ง cursor ปัจจุบัน — ไม่ต่อท้ายเฉยๆ เพราะคนมักแทรกกลางประโยคที่พิมพ์ค้างไว้
+  function insertEmoji(emoji) {
+    const el = bodyRef.current
+    const start = el?.selectionStart ?? body.length
+    const end = el?.selectionEnd ?? body.length
+    setBody(body.slice(0, start) + emoji + body.slice(end))
+    // ต้องรอ React commit ค่าใหม่ลง textarea ก่อน ไม่งั้น setSelectionRange ยิงใส่ค่าเก่า
+    requestAnimationFrame(() => {
+      if (!el) return
+      el.focus()
+      const pos = start + emoji.length
+      el.setSelectionRange(pos, pos)
+      autoGrow(el)
+    })
+  }
+
   function handleReload() {
     blockedRef.current = false
     setConflict(false)
@@ -376,7 +393,9 @@ export default function PostEditor({ id }) {
       onConfirm: async () => {
         try {
           const res = await fetch(`/api/posts/${id}`, { method: 'DELETE' })
-          if (res.ok) router.push('/posts')
+          // back() แทน push('/posts') ตรงๆ — กลับไปที่ query string เดิม (filter/สถานะที่เลือกไว้)
+          // ไม่มีประวัติในแท็บ (เช่น เปิดลิงก์ตรงมา) → fallback ไป /posts เฉยๆ
+          if (res.ok) window.history.length > 1 ? router.back() : router.push('/posts')
         } catch { /* ลบไม่สำเร็จ = อยู่หน้าเดิม ผู้ใช้กดใหม่ได้ */ }
       },
     })
@@ -490,6 +509,8 @@ export default function PostEditor({ id }) {
             {saveState === 'saved' && <><Check size={14} className="text-green-600" /> บันทึกแล้ว</>}
           </span>
         )}
+
+        {can.edit && <EmojiPicker onPick={insertEmoji} />}
 
         {/* AI ปุ่มเดียว — เลือกว่าจะให้ทำอะไรจาก dropdown (เดิมแยก 3 ปุ่มแล้วอ่านไม่ออกว่าต่างกันยังไง) */}
         {can.edit && (

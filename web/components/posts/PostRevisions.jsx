@@ -53,18 +53,12 @@ export default function PostRevisions({ id, canEdit = false, onRestore, refreshK
             return (
               <div key={r.id} className="rounded-lg border border-warm-200 dark:border-disc-border p-2 flex flex-col gap-1">
                 <div className="flex items-center justify-between gap-2">
-                  <button
-                    onClick={() => setExpandedId(expanded ? null : r.id)}
-                    className="flex items-center gap-1 min-w-0 text-sm text-warm-700 dark:text-disc-text hover:text-teal transition"
-                  >
-                    {expanded ? <ChevronDown size={13} className="shrink-0" /> : <ChevronRight size={13} className="shrink-0" />}
-                    <span className="truncate">
-                      {fmt(r.created_at)}
-                      {(r.editor_name || r.edited_by_name) && (
-                        <span className="text-warm-500 dark:text-disc-muted"> · {r.editor_name || r.edited_by_name}</span>
-                      )}
-                    </span>
-                  </button>
+                  <span className="min-w-0 truncate text-sm text-warm-700 dark:text-disc-text">
+                    {fmt(r.created_at)}
+                    {(r.editor_name || r.edited_by_name) && (
+                      <span className="text-warm-500 dark:text-disc-muted"> · {r.editor_name || r.edited_by_name}</span>
+                    )}
+                  </span>
                   {canEdit && (
                     <button
                       onClick={() => onRestore?.(r)}
@@ -86,7 +80,13 @@ export default function PostRevisions({ id, canEdit = false, onRestore, refreshK
                     {r.title ? `${r.title} — ` : ''}{(r.body || '').replace(/\s+/g, ' ').trim() || '(ไม่มีเนื้อหา)'}
                   </p>
                 )}
-                <span className="text-sm text-warm-400 dark:text-disc-muted">{(r.body || '').length} ตัวอักษร</span>
+                <button
+                  onClick={() => setExpandedId(expanded ? null : r.id)}
+                  className="self-start inline-flex items-center gap-1 text-sm text-warm-400 dark:text-disc-muted underline underline-offset-4 hover:text-teal transition"
+                >
+                  {(r.body || '').length} ตัวอักษร
+                  {expanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+                </button>
               </div>
             )
           })}

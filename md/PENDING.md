@@ -108,7 +108,7 @@ spec + ดีไซน์ + ตารางทั้งหมดอยู่ `md
   - ⚠️ ล้าง `source_url` ตอนแทนที่ ไม่งั้นไฟล์หายแล้ว UI จะ fallback ไปโชว์รูปดิสคอร์ดที่ยังไม่เบลอ · การ์ดคำคมที่ถูกแก้จะกลายเป็น `kind='upload'`
   - ปุ่ม ✏️ ขึ้นเฉพาะสื่อที่มี `path` แล้ว (รูปที่ยังชี้ CDN ดิสคอร์ด = cross-origin → canvas taint, `toBlob()` ล้ม)
   - i18n ครบ ns `posts.imageEditor` (th+en) · **หาใบหน้าอัตโนมัติยังไม่ทำ** — user เคาะให้เบลอเองด้วยมือก่อน (2026-08-07) ถ้าจะทำต่อ: TinyFaceDetector โมเดล ~200KB วางใน `public/` แล้วให้มันเติมกรอบให้ user ปรับ
-- [ ] **migrate i18n โซน posts** (หนี้จากก้อน 2b) — 6 ไฟล์: `PostsHome` · `PostEditor` · `PostMediaPanel` · `PostMetaPanel` · `PostPublishPanel` · `PostRevisions` · งาน mechanical ส่ง Sonnet subagent ได้ · ระหว่างยังไม่ทำ โซนนี้จะปน hardcode กับ `t()`
+- [ ] **migrate i18n โซน posts** (หนี้จากก้อน 2b) — 7 ไฟล์: `PostsHome` · `PostEditor` · `PostMediaPanel` · `PostMetaPanel` · `PostPublishPanel` · `PostRevisions` · `EmojiPicker` (ใหม่ 2026-08-08 — hardcode ไทยตาม sibling ในโซนเดิม) · งาน mechanical ส่ง Sonnet subagent ได้ · ระหว่างยังไม่ทำ โซนนี้จะปน hardcode กับ `t()`
 - [x] **🎨 คลังภาพ (media library) — ✅ เขียนเสร็จ 2026-08-04** (local · ยังไม่ deploy prod · **ยังไม่เทสในเบราว์เซอร์จริง**)
   - migration รันบน local แล้ว: `post_assets` + `post_episode_media.source_asset_id` (บล็อกท้าย `migration.sql` · additive ล้วน)
   - lib: `postsAccess.js` +5 ฟังก์ชัน asset (**tests 82 ผ่าน** — เดิม 66) · `postsGuard.assetContext()` · `postsStorage`: `copyPostFile`/`sha256Hex`/`probeImage`
@@ -234,6 +234,18 @@ spec + ดีไซน์ + ตารางทั้งหมดอยู่ `md
   - ❌ **อย่าเอาไปรวมกับ `post_episode_media`** (คุยแล้ว 2026-07-29): `episode_id` เป็น FK NOT NULL → รับแถวตะกร้าต้องมีพ่อ 2 แบบ = polymorphic parent · และถ้าเลือกทาง B ตะกร้าไม่มีไฟล์เลย ไม่มีอะไรให้รวม · **ของที่ใช้ร่วมคือ logic (ลากเรียง/ลายน้ำ/แปลง buffer) ไม่ใช่ตาราง** — แบบเดียวกับที่ finance/docs เก็บไฟล์คนละตารางแต่ใช้ helper ตัวเดียว</details>
 - [ ] ลายน้ำยังผูก guild (`resolveWatermarkPath`) → org ไม่มี guild ใช้ลายน้ำไม่ได้ · ต้องยกขึ้น org วันหลัง
 - [ ] จดไว้ทำทีหลัง: ดึงการ์ดที่ทำในดิสฯ เข้ามาเป็นสื่อของตอนบนเว็บ (ตอนนี้ทางฝั่งดิสฯ จบที่ตะกร้าซึ่งตัดออกแล้ว)
+
+---
+
+## 🔐 ไม่ล็อกอินแล้วเจอ 404 — แก้แล้ว local 2026-08-08 (ยังไม่ deploy)
+
+`requireFeature()` เดิม `notFound()` ทั้งเคส "ไม่มี session" และ "org ปิดฟีเจอร์" → เปิด `/posts/55` ตอนไม่ล็อกอินเจอ 404 ลอยๆ
+แก้เป็น: ไม่มี session → `redirectToLogin()` (`lib/auth.js` — พาไป `/?callbackUrl=<path เดิม>`) · org ปิดฟีเจอร์ → 404 เหมือนเดิม
+เพิ่ม **`web/middleware.js`** (ไฟล์ middleware ตัวแรกของโปรเจกต์) ยิง header `x-pathname` เพราะ App Router ไม่มี API ให้ server component รู้ pathname ตัวเอง
+
+**⬜ เหลือ:**
+- [ ] **deploy prod** — กระทบทุกโซน (`posts`/`finance`/`calling`/`docs`/`case`) · prod ตอนนี้ยัง 404 อยู่ · middleware ตัวใหม่ต้องมาพร้อม build
+- [ ] เทสในเบราว์เซอร์จริง: ล็อกอินเสร็จเด้งกลับหน้าเดิมจริงไหมทั้ง 4 provider (ตอนนี้ verify ด้วย `curl` เห็นแค่ 307 + callbackUrl)
 
 ---
 

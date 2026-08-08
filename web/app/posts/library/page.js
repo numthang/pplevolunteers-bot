@@ -1,6 +1,5 @@
-import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
-import { getSession } from '@/lib/auth.js'
+import { getSession, redirectToLogin } from '@/lib/auth.js'
 import AssetLibrary from '@/components/posts/AssetLibrary.jsx'
 
 export async function generateMetadata() {
@@ -10,7 +9,7 @@ export async function generateMetadata() {
 
 export default async function PostsLibraryPage() {
   const session = await getSession()
-  if (!session) redirect('/')
+  if (!session) await redirectToLogin()
 
   const t = await getTranslations('posts.library')
 

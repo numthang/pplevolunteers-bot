@@ -1,4 +1,4 @@
-import { getSession } from '@/lib/auth.js'
+import { getSession, redirectToLogin } from '@/lib/auth.js'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
@@ -13,7 +13,7 @@ export async function generateMetadata() {
 // gate ด่านเดียว: ทุกหน้าใต้ /case/manage ต้อง login + feature เปิด + canManageCases
 export default async function CaseManageLayout({ children }) {
   const session = await getSession()
-  if (!session) redirect('/')
+  if (!session) await redirectToLogin()
   await requireFeature(session, 'cases')
   const { access } = await getEffectiveIdentity(session)
   if (!canManageCases(access)) redirect('/case')

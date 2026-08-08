@@ -1,6 +1,6 @@
-import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
 import { postContext } from '@/lib/postsGuard.js'
+import BackToPosts from '@/components/posts/BackToPosts.jsx'
 import PostEditor from '@/components/posts/PostEditor.jsx'
 import PostMediaPanel from '@/components/posts/PostMediaPanel.jsx'
 import PostMetaPanel from '@/components/posts/PostMetaPanel.jsx'
@@ -23,9 +23,7 @@ export default async function PostDetailPage({ params }) {
 
   return (
     <div>
-      <Link href="/posts" className="inline-block text-base text-teal hover:underline mb-4">
-        ← กลับไปหน้ารายการ
-      </Link>
+      <BackToPosts />
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6">
         <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-5">

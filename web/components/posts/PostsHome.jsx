@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback, useMemo } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { Sparkles, Image as ImageIcon, Trash2, RotateCcw, X, Check } from 'lucide-react'
 
 const STATUS_LABELS = { draft: 'ร่าง', review: 'รอตรวจ', approved: 'อนุมัติแล้ว' }
@@ -189,14 +189,19 @@ function PostRow({ post, orgName, onClick, onDelete, onRestore }) {
 
 export default function PostsHome({ orgName = 'องค์กร' }) {
   const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
 
-  // ฟีดเดียวปนทุกแหล่ง เรียงตามแก้ล่าสุด — filter เป็นแค่ "แว่นมอง" ไม่ใช่ปลายทางของของใหม่
-  const [filter, setFilter] = useState('all')       // all | personal | org | discord
-  const [createAs, setCreateAs] = useState('personal') // ปลายทางของโพสต์ใหม่ (แยกจาก filter)
-  const [view, setView] = useState('main')          // มุมมองพิเศษ (อ่านอย่างเดียว): main | archived
-  const [category, setCategory] = useState('') // '' = ทั้งหมด, '__none__' = ยังไม่จัดหมวด, อื่นๆ = ชื่อหมวด
-  const [status, setStatus] = useState('')     // '' = ทุกสถานะ
-  const [sort, setSort] = useState('updated') // progress = ใกล้เสร็จก่อน · updated = แก้ล่าสุด (ลำดับที่ API ส่งมา) — default เคาะ 2026-08-08 เอาโพสต์ที่เพิ่งแก้ขึ้นบนสุด
+  // ตัวกรองทั้งหมด (ยกเว้น createAs/idea ที่เป็น draft ชั่วคราว) เก็บใน URL query string
+  // → กด back จากหน้ารายละเอียดโพสต์แล้วได้ตัวกรองเดิมกลับมา (เคาะ 2026-08-08)
+  // อ่านค่าเริ่มต้นจาก query แค่ครั้งแรกตอน mount (useState lazy init) ไม่ sync กลับจาก URL อีกทีหลัง mount
+  const [filter, setFilter] = useState(() => searchParams.get('filter') || 'all')       // all | personal | org | discord
+  const [createAs, setCreateAs] = useState('personal') // ปลายทางของโพสต์ใหม่ (แยกจาก filter, ไม่เก็บ URL)
+  // pending = ยังไม่โพสต์ (default, ตรงกับที่ API กรองให้ default อยู่แล้ว) · posted = โพสต์ครบแล้ว · archived = ในกรุ
+  const [postState, setPostState] = useState(() => searchParams.get('state') || 'pending')
+  const [category, setCategory] = useState(() => searchParams.get('category') || '') // '' = ทั้งหมด, '__none__' = ยังไม่จัดหมวด, อื่นๆ = ชื่อหมวด
+  const [status, setStatus] = useState(() => searchParams.get('status') || '')     // '' = ทุกสถานะ
+  const [sort, setSort] = useState(() => searchParams.get('sort') || 'updated') // progress = ใกล้เสร็จก่อน · updated = แก้ล่าสุด
   const [idea, setIdea] = useState('')
   const [posts, setPosts] = useState([])
   const [categories, setCategories] = useState([])
@@ -223,9 +228,9 @@ export default function PostsHome({ orgName = 'องค์กร' }) {
       else if (filter === 'all') params.set('source', 'all')
       else params.set('visibility', filter)
 
-      // มุมมองพิเศษ (archived/posted) ต้องขอมาแบบไม่กรองทั้งคู่ก่อน ไม่งั้น default exclusion ของอีกฝั่ง
+      // postState = posted/archived ต้องขอมาแบบไม่กรองทั้งคู่ก่อน ไม่งั้น default exclusion ของอีกฝั่ง
       // จะหลุดมากรองซ้ำโดยไม่ตั้งใจ (เช่น โพสต์ในกรุที่โพสต์แล้วด้วยจะหายไปจากมุมมอง "ในกรุ")
-      if (view === 'archived' || view === 'posted') { params.set('archived', '1'); params.set('posted', '1') }
+      if (postState === 'archived' || postState === 'posted') { params.set('archived', '1'); params.set('posted', '1') }
       if (category) params.set('category', category)
       if (status) params.set('status', status)
 
@@ -234,8 +239,8 @@ export default function PostsHome({ orgName = 'องค์กร' }) {
       const rows = res.ok && json.success ? json.data : []
       const isFullyPosted = (p) => Number(p.published_count) > 0 && Number(p.queued_count) === 0
       setPosts(
-        view === 'archived' ? rows.filter(p => p.archived_at) :
-        view === 'posted'   ? rows.filter(isFullyPosted) :
+        postState === 'archived' ? rows.filter(p => p.archived_at) :
+        postState === 'posted'   ? rows.filter(isFullyPosted) :
         rows
       )
     } catch {
@@ -243,7 +248,7 @@ export default function PostsHome({ orgName = 'องค์กร' }) {
     } finally {
       setLoading(false)
     }
-  }, [filter, view, category, status])
+  }, [filter, postState, category, status])
 
   const loadCategories = useCallback(async () => {
     try {
@@ -259,6 +264,19 @@ export default function PostsHome({ orgName = 'องค์กร' }) {
 
   useEffect(() => { loadPosts() }, [loadPosts])
   useEffect(() => { loadCategories() }, [loadCategories])
+
+  // sync ตัวกรองลง URL query string — ใช้ replace (ไม่ใช่ push) กันตัวกรองแต่ละคลิกไปกองใน history
+  // ไม่ sync กลับจาก URL → state (ตัวเดียว ทางเดียว: state เป็นความจริง, URL แค่สะท้อนไว้ให้ back/reload ใช้)
+  useEffect(() => {
+    const qs = new URLSearchParams()
+    if (filter !== 'all') qs.set('filter', filter)
+    if (postState !== 'pending') qs.set('state', postState)
+    if (status) qs.set('status', status)
+    if (category) qs.set('category', category)
+    if (sort !== 'updated') qs.set('sort', sort)
+    const next = qs.toString()
+    router.replace(next ? `${pathname}?${next}` : pathname, { scroll: false })
+  }, [filter, postState, status, category, sort, pathname, router])
 
   // API เรียงตาม updated_at DESC มาแล้ว → โหมด 'updated' ใช้ตามนั้นเลย
   // โหมด 'progress': % มากก่อน แต่ **ใบที่ครบ 100% จมไปท้ายสุด** — มันจบแล้ว ไม่ใช่ของที่ต้อง focus
@@ -286,13 +304,6 @@ export default function PostsHome({ orgName = 'องค์กร' }) {
   function selectCreateAs(next) {
     setCreateAs(next)
     window.localStorage.setItem('posts_mode', next)
-  }
-
-  // มุมมองพิเศษ (ในกรุ) = อ่านอย่างเดียว ไม่มีกล่องสร้างงาน ไม่มีตัวกรอง → ล้างตัวกรองทิ้งตอนเข้า/ออก
-  function selectView(next) {
-    setView(next)
-    setCategory('')
-    setStatus('')
   }
 
   // หมวดที่กำลังเลือกอยู่ (ไม่นับ 'ทั้งหมด'/'ยังไม่จัดหมวด') ไว้ผูกกับโพสต์ใหม่/AI
@@ -361,161 +372,133 @@ export default function PostsHome({ orgName = 'องค์กร' }) {
 
   return (
     <div className="space-y-5">
-      {view !== 'main' ? (
-        /* มุมมองพิเศษ = อ่านอย่างเดียว: ไม่มีแท็บ ไม่มีกล่องสร้างงาน ไม่มีตัวกรอง */
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-bold text-warm-900 dark:text-disc-text mb-1">
-              {view === 'archived' ? 'ในกรุ' : 'โพสต์แล้ว'}
-            </h1>
-            <p className="text-base text-warm-500 dark:text-disc-muted">
-              {view === 'archived'
-                ? 'โพสต์ที่เก็บเข้ากรุไว้ — กู้คืนได้จากไอคอนบนการ์ด'
-                : 'โพสต์ที่เผยแพร่ครบทุกช่องทางแล้ว ไม่มีคิวค้าง'}
-            </p>
-          </div>
-          <button
-            onClick={() => selectView('main')}
-            className="shrink-0 border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover rounded-lg text-base font-medium px-4 py-2"
-          >
-            ← กลับ
-          </button>
-        </div>
-      ) : (
-        <>
-          <div>
-            <h1 className="text-2xl font-bold text-warm-900 dark:text-disc-text mb-1">โพสต์</h1>
-            <p className="text-base text-warm-500 dark:text-disc-muted">โยนไอเดีย ให้ AI ช่วยจัดชุด แล้วเขียนต่อจนพร้อมเผยแพร่</p>
-          </div>
+      <div>
+        <h1 className="text-2xl font-bold text-warm-900 dark:text-disc-text mb-1">โพสต์</h1>
+        <p className="text-base text-warm-500 dark:text-disc-muted">โยนไอเดีย ให้ AI ช่วยจัดชุด แล้วเขียนต่อจนพร้อมเผยแพร่</p>
+      </div>
 
-          {/* ของใคร — ส่วนตัว/องค์กร */}
-          {/* กล่องโยนไอเดีย */}
-          <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-4">
-        {/* ปลายทางของของใหม่ — แยกจากตัวกรองด้านล่าง เพราะ "ที่กำลังดู" ≠ "ที่จะไปลง" */}
-        <div className="flex flex-wrap items-center gap-2 mt-3 text-sm">
-          <div className="inline-flex rounded-lg border border-warm-200 dark:border-disc-border overflow-hidden">
-            {[['personal', 'ส่วนตัว'], ['org', orgName]].map(([v, label], i) => (
-              <button
-                key={v}
-                onClick={() => selectCreateAs(v)}
-                className={`px-3 py-1 text-sm font-medium transition-colors max-w-[12rem] truncate ${
-                  i > 0 ? 'border-l border-warm-200 dark:border-disc-border' : ''
-                } ${
-                  createAs === v
-                    ? 'bg-teal text-white'
-                    : 'bg-card-bg text-warm-700 dark:text-disc-muted hover:bg-warm-50 dark:hover:bg-disc-hover'
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-          <span className="text-warm-500 dark:text-disc-muted">
-            {activeCategory
-              ? <>· หมวด <span className="font-medium text-warm-700 dark:text-disc-text">{activeCategory}</span></>
-              : '· ยังไม่ได้เลือกหมวด (AI จะตั้งให้)'}
-          </span>
-        </div>
-        <br></br>
-        <textarea
-          value={idea}
-          onChange={(e) => setIdea(e.target.value)}
-          placeholder="โยนหัวข้อ/ไอเดีย หรือวางบทความยาวที่เขียนไว้"
-          rows={4}
-          className="w-full px-3 py-2 text-base rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-teal resize-none"
-        />
-        
-        {aiError && <p className="text-sm text-red-500 dark:text-red-400 mt-2">{aiError}</p>}
-        <div className="flex flex-wrap items-center gap-4 mt-3">
-          <button
-            onClick={handleAiOutline}
-            disabled={aiLoading || !idea.trim()}
-            className="flex items-center gap-1.5 bg-teal hover:opacity-90 text-white rounded-lg text-base font-medium px-4 py-2 disabled:opacity-50"
-          >
-            <Sparkles size={16} />
-            {aiLoading ? 'กำลังจัดชุดโพสต์...' : 'AI สร้างโพสต์ →'}
-          </button>
-          {/* ปุ่มรอง — ไม่ใช้ข้อความในกล่อง จึงลดระดับให้ไม่อ่านเหมือนสองทางเลือกที่เท่ากัน */}
-          <button
-            onClick={handleCreateNew}
-            className="text-base text-warm-500 dark:text-disc-muted underline underline-offset-4 hover:text-teal"
-          >
-            สร้างโพสต์เปล่า
-          </button>
-        </div>
-            
-          </div>
-
-          {/* ตัวกรอง — แหล่ง / สถานะ / หมวด · dropdown แถวเดียว (ชิป 3 แถวรกเกินไป — user เคาะ 2026-07-30) */}
-          <div className="flex flex-wrap items-center gap-2">
-            <select value={filter} onChange={(e) => selectFilter(e.target.value)} className={selectCls}>
-              <option value="all">ทุกแหล่ง</option>
-              <option value="personal">ส่วนตัว</option>
-              <option value="org">{orgName}</option>
-              <option value="discord">💬 จากดิสคอร์ด</option>
-            </select>
-
-            <select value={status} onChange={(e) => setStatus(e.target.value)} className={selectCls}>
-              <option value="">ทุกสถานะ</option>
-              {Object.entries(STATUS_LABELS).map(([v, label]) => (
-                <option key={v} value={v}>{label}</option>
+      {/* กล่องโยนไอเดีย — ซ่อนตอนกำลังดู "โพสต์แล้ว"/"ในกรุ" เพราะเป็นมุมมองย้อนดู ไม่ใช่ที่สร้างของใหม่ */}
+      {postState === 'pending' && (
+        <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-4">
+          {/* ปลายทางของของใหม่ — แยกจากตัวกรองด้านล่าง เพราะ "ที่กำลังดู" ≠ "ที่จะไปลง" */}
+          <div className="flex flex-wrap items-center gap-2 mt-3 text-sm">
+            <div className="inline-flex rounded-lg border border-warm-200 dark:border-disc-border overflow-hidden">
+              {[['personal', 'ส่วนตัว'], ['org', orgName]].map(([v, label], i) => (
+                <button
+                  key={v}
+                  onClick={() => selectCreateAs(v)}
+                  className={`px-3 py-1 text-sm font-medium transition-colors max-w-[12rem] truncate ${
+                    i > 0 ? 'border-l border-warm-200 dark:border-disc-border' : ''
+                  } ${
+                    createAs === v
+                      ? 'bg-teal text-white'
+                      : 'bg-card-bg text-warm-700 dark:text-disc-muted hover:bg-warm-50 dark:hover:bg-disc-hover'
+                  }`}
+                >
+                  {label}
+                </button>
               ))}
-            </select>
-
-            <select value={category} onChange={(e) => setCategory(e.target.value)} className={selectCls}>
-              <option value="">ทุกหมวด</option>
-              <option value="__none__">ยังไม่จัดหมวด</option>
-              {categories.map((c) => (
-                <option key={c.category} value={c.category}>{c.category} ({c.post_count})</option>
-              ))}
-            </select>
-
-            {/* ตัวกรองที่ค้างอยู่มองไม่เห็นเท่าชิป → ต้องมีทางล้างทีเดียวให้เห็นชัด */}
-            {(filter !== 'all' || status || category) && (
-              <button
-                onClick={() => { setFilter('all'); setStatus(''); setCategory('') }}
-                className="text-sm text-warm-500 dark:text-disc-muted underline underline-offset-4 hover:text-teal"
-              >
-                ล้างตัวกรอง
-              </button>
-            )}
+            </div>
+            <span className="text-warm-500 dark:text-disc-muted">
+              {activeCategory
+                ? <>· หมวด <span className="font-medium text-warm-700 dark:text-disc-text">{activeCategory}</span></>
+                : '· ยังไม่ได้เลือกหมวด (AI จะตั้งให้)'}
+            </span>
           </div>
-        </>
+          <br></br>
+          <textarea
+            value={idea}
+            onChange={(e) => setIdea(e.target.value)}
+            placeholder="โยนหัวข้อ/ไอเดีย หรือวางบทความยาวที่เขียนไว้"
+            rows={4}
+            className="w-full px-3 py-2 text-base rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-teal resize-none"
+          />
+
+          {aiError && <p className="text-sm text-red-500 dark:text-red-400 mt-2">{aiError}</p>}
+          <div className="flex flex-wrap items-center gap-4 mt-3">
+            <button
+              onClick={handleAiOutline}
+              disabled={aiLoading || !idea.trim()}
+              className="flex items-center gap-1.5 bg-teal hover:opacity-90 text-white rounded-lg text-base font-medium px-4 py-2 disabled:opacity-50"
+            >
+              <Sparkles size={16} />
+              {aiLoading ? 'กำลังจัดชุดโพสต์...' : 'AI สร้างโพสต์ →'}
+            </button>
+            {/* ปุ่มรอง — ไม่ใช้ข้อความในกล่อง จึงลดระดับให้ไม่อ่านเหมือนสองทางเลือกที่เท่ากัน */}
+            <button
+              onClick={handleCreateNew}
+              className="text-base text-warm-500 dark:text-disc-muted underline underline-offset-4 hover:text-teal"
+            >
+              สร้างโพสต์เปล่า
+            </button>
+          </div>
+        </div>
       )}
 
-      {/* หัวรายการ + ตัวเรียง + ทางเข้ามุมมองพิเศษ */}
+      {/* ตัวกรอง — แหล่ง / สถานะ / ระยะ(ยังไม่โพสต์-โพสต์แล้ว-ในกรุ) / หมวด · dropdown แถวเดียว
+          (ชิป 3 แถวรกเกินไป — user เคาะ 2026-07-30 · postState เดิมเป็นปุ่มมุมมองพิเศษแยก ย้ายมารวมเป็น
+          dropdown ตัวที่ 4 แทน — user เคาะ 2026-08-08 จะได้ผสมกับตัวกรองอื่นได้ เช่น โพสต์แล้ว+หมวด X) */}
+      <div className="flex flex-wrap items-center gap-2">
+        <select value={filter} onChange={(e) => selectFilter(e.target.value)} className={selectCls}>
+          <option value="all">ทุกแหล่ง</option>
+          <option value="personal">ส่วนตัว</option>
+          <option value="org">{orgName}</option>
+          <option value="discord">💬 จากดิสคอร์ด</option>
+        </select>
+
+        <select value={status} onChange={(e) => setStatus(e.target.value)} className={selectCls}>
+          <option value="">ทุกสถานะ</option>
+          {Object.entries(STATUS_LABELS).map(([v, label]) => (
+            <option key={v} value={v}>{label}</option>
+          ))}
+        </select>
+
+        <select value={postState} onChange={(e) => setPostState(e.target.value)} className={selectCls}>
+          <option value="pending">ยังไม่โพสต์</option>
+          <option value="posted">✅ โพสต์แล้ว</option>
+          <option value="archived">🗄️ ในกรุ</option>
+        </select>
+
+        <select value={category} onChange={(e) => setCategory(e.target.value)} className={selectCls}>
+          <option value="">ทุกหมวด</option>
+          <option value="__none__">ยังไม่จัดหมวด</option>
+          {categories.map((c) => (
+            <option key={c.category} value={c.category}>{c.category} ({c.post_count})</option>
+          ))}
+        </select>
+
+        {/* ตัวกรองที่ค้างอยู่มองไม่เห็นเท่าชิป → ต้องมีทางล้างทีเดียวให้เห็นชัด */}
+        {(filter !== 'all' || status || category || postState !== 'pending') && (
+          <button
+            onClick={() => { setFilter('all'); setStatus(''); setCategory(''); setPostState('pending') }}
+            className="text-sm text-warm-500 dark:text-disc-muted underline underline-offset-4 hover:text-teal"
+          >
+            ล้างตัวกรอง
+          </button>
+        )}
+      </div>
+
+      {/* หัวรายการ + ตัวเรียง */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-base font-semibold text-warm-900 dark:text-disc-text">
           {loading ? 'กำลังโหลด...' : `${posts.length} โพสต์`}
         </h2>
-        <div className="flex items-center gap-3">
-          <div className="inline-flex rounded-lg border border-warm-200 dark:border-disc-border overflow-hidden">
-            {[['progress', 'ใกล้เสร็จก่อน'], ['updated', 'แก้ล่าสุด']].map(([v, label], i) => (
-              <button
-                key={v}
-                onClick={() => setSort(v)}
-                className={`px-3 py-1 text-sm font-medium transition-colors ${
-                  i > 0 ? 'border-l border-warm-200 dark:border-disc-border' : ''
-                } ${
-                  sort === v
-                    ? 'bg-teal text-white'
-                    : 'bg-card-bg text-warm-700 dark:text-disc-muted hover:bg-warm-50 dark:hover:bg-disc-hover'
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-          {view === 'main' && (
-            <>
-              <button onClick={() => selectView('posted')} className="text-sm text-warm-500 dark:text-disc-muted hover:text-teal">
-                ✅ โพสต์แล้ว
-              </button>
-              <button onClick={() => selectView('archived')} className="text-sm text-warm-500 dark:text-disc-muted hover:text-teal">
-                🗄️ ในกรุ
-              </button>
-            </>
-          )}
+        <div className="inline-flex rounded-lg border border-warm-200 dark:border-disc-border overflow-hidden">
+          {[['progress', 'ใกล้เสร็จก่อน'], ['updated', 'แก้ล่าสุด']].map(([v, label], i) => (
+            <button
+              key={v}
+              onClick={() => setSort(v)}
+              className={`px-3 py-1 text-sm font-medium transition-colors ${
+                i > 0 ? 'border-l border-warm-200 dark:border-disc-border' : ''
+              } ${
+                sort === v
+                  ? 'bg-teal text-white'
+                  : 'bg-card-bg text-warm-700 dark:text-disc-muted hover:bg-warm-50 dark:hover:bg-disc-hover'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -526,9 +509,9 @@ export default function PostsHome({ orgName = 'องค์กร' }) {
         </div>
       ) : posts.length === 0 ? (
         <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-10 text-center text-warm-400 dark:text-disc-muted">
-          {view === 'archived'
+          {postState === 'archived'
             ? 'ไม่มีโพสต์ในกรุ'
-            : view === 'posted'
+            : postState === 'posted'
               ? 'ยังไม่มีโพสต์ที่เผยแพร่ครบทุกช่องทาง'
               : filter === 'discord'
                 ? 'ยังไม่มีสื่อที่หย่อนจากดิสคอร์ด'

@@ -10,6 +10,7 @@
 import { NextResponse } from 'next/server'
 import { getOpenBasket } from '@/db/posts/basket.js'
 import { ACTIVE_ORG_COOKIE } from '@/lib/activeOrg.js'
+import { BASE_URL } from '@/lib/baseUrl.js'
 
 export async function GET(req) {
   const { searchParams } = new URL(req.url)
@@ -18,7 +19,11 @@ export async function GET(req) {
 
   const ep = guild && channel ? await getOpenBasket(guild, channel) : null
   // ไม่เจอ = ตะกร้าถูกล้าง/archive ไปแล้ว (หรือเรียกมาโดยไม่มีพารามิเตอร์) → ส่งไปหน้ารายการ
-  const res = NextResponse.redirect(new URL(ep ? `/posts/${ep.id}` : '/posts', req.url))
+  //
+  // ⛔ ห้ามใช้ req.url เป็น base (บั๊กที่แก้ 2026-08-08) — หลัง reverse proxy บนเซิร์ฟเวอร์จริง
+  // req.url คือ origin ภายใน (http://localhost:3000) → Location เด้งผู้ใช้ไป localhost
+  // BASE_URL อ่านจาก NEXTAUTH_URL ใน .env เหมือน redirect อื่นทั้งโปรเจกต์
+  const res = NextResponse.redirect(new URL(ep ? `/posts/${ep.id}` : '/posts', BASE_URL))
   if (ep?.org_id) res.cookies.set(ACTIVE_ORG_COOKIE, String(ep.org_id), { path: '/' })
   return res
 }

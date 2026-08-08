@@ -1,6 +1,6 @@
 import { Suspense } from 'react'
 import { getTranslations } from 'next-intl/server'
-import { getSession } from '@/lib/auth.js'
+import { getSession, redirectToLogin } from '@/lib/auth.js'
 import { redirect } from 'next/navigation'
 import { canManageDocs, getUserScope } from '@/lib/docsAccess.js'
 import { getDocEvents } from '@/db/docs/projects.js'
@@ -17,7 +17,7 @@ export async function generateMetadata() {
 export default async function DocsPage({ searchParams }) {
   const t = await getTranslations('docs')
   const session = await getSession()
-  if (!session) redirect('/')
+  if (!session) await redirectToLogin()
 
   const { access } = await getEffectiveOrgIdentity(session)
   if (!canManageDocs(access)) redirect('/docs/pending')

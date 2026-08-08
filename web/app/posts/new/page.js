@@ -1,6 +1,5 @@
-import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
-import { getSession } from '@/lib/auth.js'
+import { getSession, redirectToLogin } from '@/lib/auth.js'
 import { resolveActiveOrg } from '@/lib/activeOrg.js'
 import PostCreate from '@/components/posts/PostCreate.jsx'
 
@@ -12,7 +11,7 @@ export async function generateMetadata() {
 // segment คงที่ 'new' ชนะ '[id]' ของ Next.js อยู่แล้ว → /posts/new ไม่หลุดไปหน้าแก้ไข
 export default async function NewPostPage({ searchParams }) {
   const session = await getSession()
-  if (!session) redirect('/')
+  if (!session) await redirectToLogin()
 
   const { as, category } = await searchParams
   const { activeOrg } = await resolveActiveOrg(session.user.userId)

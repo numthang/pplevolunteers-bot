@@ -5,9 +5,9 @@
 // (ของเดิมกด "เขียนโพสต์ใหม่" แล้วยิง POST ทันที → กดเล่นทีไรได้ร่างเปล่าค้าง DB ทุกครั้ง)
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { Loader2 } from 'lucide-react'
 import CategoryPicker from './CategoryPicker.jsx'
+import BackToPosts from './BackToPosts.jsx'
 
 function autoGrow(el) {
   if (!el) return
@@ -74,9 +74,7 @@ export default function PostCreate({ orgName = 'องค์กร', defaultVisi
 
   return (
     <div>
-      <Link href="/posts" className="inline-block text-base text-teal hover:underline mb-4">
-        ← กลับไปหน้ารายการ
-      </Link>
+      <BackToPosts />
 
       <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-5 flex flex-col gap-4 max-w-3xl">
         <div>

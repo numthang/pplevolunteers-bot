@@ -395,17 +395,14 @@ async function buildBasketPayload(basket, guildId, channelId, userId, channelNam
     //     ])
     // ));
   }
-  const webUrl = (() => {
-    if (!process.env.WEB_BASE_URL) return null;
-    const base = `${process.env.WEB_BASE_URL}/bot/media/basket?guild=${guildId}&channel=${channelId}`;
-    if (!channelName) return base;
-    const budget = 512 - base.length - 6; // 6 = len('&name=')
-    let encoded = encodeURIComponent(channelName);
-    if (encoded.length > budget) {
-      encoded = encoded.slice(0, budget).replace(/%[0-9A-F]?$/i, ''); // ไม่ตัดกลาง %XX
-    }
-    return `${base}&name=${encoded}`;
-  })();
+  // ลิงก์ตรงไปหน้าโพสต์เลย ไม่ผ่าน /bot/media/basket (2026-08-08)
+  // ตะกร้า 1 ใบ = โพสต์ 1 แถวใน post_episodes อยู่แล้ว (ก้อน 4c) → ทุกแถวใน basket ถือ episode_id มาให้
+  // เหตุที่เลิก redirect: route เดิมสร้าง Location จาก req.url ซึ่งหลัง reverse proxy = origin ภายใน
+  // (localhost:3000) → ปุ่มบนเซิร์ฟเวอร์จริงเด้งไป localhost · ลิงก์ตรงไม่มีปัญหานี้เพราะไม่ต้องเดา origin
+  const episodeId = basket.find(r => r.episode_id)?.episode_id ?? null;
+  const webUrl = process.env.WEB_BASE_URL && episodeId
+    ? `${process.env.WEB_BASE_URL}/posts/${episodeId}`
+    : null;
   components.push(...buildBasketButtons(imgCount, videoCount, !!caption, webUrl));
 
   return { embeds: [embed], components, files };
