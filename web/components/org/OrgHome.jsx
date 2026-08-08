@@ -2,14 +2,24 @@
 import { getTranslations } from 'next-intl/server'
 import CreateOrgButton from './CreateOrgButton.jsx'
 
-export default async function OrgHome({ orgs, activeOrg }) {
+export default async function OrgHome({ orgs, activeOrg, hasDiscord = true }) {
   const t = await getTranslations('org')
   const invited = orgs.filter(o => o.status === 'invited')
 
   // ยังไม่มีองค์กร active → onboarding (soft CTA เด่น)
   if (!activeOrg) {
     return (
-      <div className="mx-auto max-w-md text-center">
+      <div className="mx-auto max-w-md text-center space-y-3">
+        {/* คนเดิมที่เคยอยู่ในดิสคอร์ดแต่หลง login ประตูใหม่ → บัญชีเปล่า · ผูกแล้วระบบยุบรวมคืนให้เอง */}
+        {!hasDiscord && (
+          <div className="rounded-2xl border border-gray-200 dark:border-disc-border bg-white dark:bg-card-bg p-6">
+            <p className="text-base font-semibold text-gray-900 dark:text-disc-text">{t('home.linkExistingTitle')}</p>
+            <p className="mt-1 text-sm text-gray-500 dark:text-disc-muted">{t('home.linkExistingDesc')}</p>
+            <a href="/api/link/discord" className="mt-4 inline-block rounded-lg bg-[#5865F2] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#4752c4]">
+              {t('home.linkExistingButton')}
+            </a>
+          </div>
+        )}
         <div className="rounded-2xl border border-gray-200 dark:border-disc-border bg-white dark:bg-card-bg p-8">
           <div className="text-3xl">🏢</div>
           <h1 className="mt-3 text-lg font-semibold text-gray-900 dark:text-disc-text">{t('home.noOrgTitle')}</h1>

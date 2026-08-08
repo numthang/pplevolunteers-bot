@@ -1169,7 +1169,10 @@
       "connectDiscordDesc": "เปิดใช้ระบบการเงิน/โทร/เอกสาร (เร็วๆ นี้)",
       "soonBadge": "เร็วๆ นี้",
       "invitedTitle": "คำเชิญ",
-      "invitedAutoConfirmSuffix": " — ยืนยันอัตโนมัติเมื่อคุณเข้าสู่ระบบด้วยอีเมลที่ถูกเชิญ"
+      "invitedAutoConfirmSuffix": " — ยืนยันอัตโนมัติเมื่อคุณเข้าสู่ระบบด้วยอีเมลที่ถูกเชิญ",
+      "linkExistingTitle": "เคยใช้ Discord กับที่นี่ไหม?",
+      "linkExistingDesc": "ถ้าเคย ให้ผูกบัญชี Discord — ยศ องค์กร และสิทธิ์เดิมของคุณจะกลับมาครบทันที",
+      "linkExistingButton": "ผูกบัญชี Discord"
     },
     "createModal": {
       "createError": "สร้างองค์กรไม่สำเร็จ",

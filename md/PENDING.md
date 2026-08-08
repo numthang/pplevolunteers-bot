@@ -797,3 +797,8 @@ spec + ดีไซน์ + ตารางทั้งหมดอยู่ `md
 ## 🔗 References
 
 - [addyosmani/agent-skills](https://github.com/addyosmani/agent-skills) — Production-grade engineering skills for AI coding agents
+
+## i18n ค้าง — `web/components/LoginPanel.jsx` (2026-08-08)
+รื้อ block render ใหม่ทั้งก้อน (สลับลำดับเป็น Discord → Google → ซ่อนอีเมล) = เข้าเกณฑ์ "โค้ดใหม่" ต้อง migrate เป็น `t()` ทั้งไฟล์
+แต่ทั้งโซน login ยังไม่ migrate เลย (ไฟล์นี้ไม่มี `useTranslations` สักตัว) → เลี่ยงไว้ก่อน จดตามกติกา
+มี ~30 string: ปุ่ม provider, ERROR_MESSAGES, ฟอร์ม OTP, หน้า "ตรวจอีเมลของคุณ" · ทำพร้อมกันทั้งโซน login ทีเดียวจะคุ้มกว่า

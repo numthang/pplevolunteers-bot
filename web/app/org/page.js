@@ -12,6 +12,7 @@ export default async function OrgDashboard() {
       user={{ email: session.user.email, name: session.user.name }}
       orgs={orgs}
       activeOrg={activeOrg}
+      hasDiscord={!!session.user.discordId}
     />
   )
 }

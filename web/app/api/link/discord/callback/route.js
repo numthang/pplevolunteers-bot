@@ -37,13 +37,17 @@ export async function GET(req) {
     const me = await meRes.json()
     if (!meRes.ok || !me.id) throw new Error('failed to fetch discord user')
 
-    // merge policy = BLOCK: ถ้า discord นี้เป็นของ user อื่นอยู่แล้ว โยน already_taken
-    await linkDiscordToUser(userId, me.id, me.username || null)
+    // discord นี้เป็นของบัญชีเก่าอยู่แล้ว → ยุบบัญชีปัจจุบันเข้าไป (ไม่ block แล้ว)
+    const { merged } = await linkDiscordToUser(userId, me.id, me.username || null)
+
+    // merged = users.id ของเขาเปลี่ยนไปแล้ว แต่ JWT ยังถือ id เดิมที่เพิ่งถูกลบ
+    // → ต้องผ่านหน้าที่สั่ง refresh session ก่อน ห้ามส่งกลับ /profile ตรงๆ ไม่งั้นเจอ user ผี
+    if (merged) return Response.redirect(`${base}/link/merged`)
     return Response.redirect(`${base}/profile?link_success=discord`)
   } catch (err) {
     console.error('[link/discord/callback]', err.message)
-    const errKey = err.code === 'already_taken'        ? 'already_taken'
-                 : err.code === 'already_linked_other' ? 'already_linked_other'
+    const errKey = err.code === 'already_linked_other' ? 'already_linked_other'
+                 : String(err.message || '').startsWith('merge_') ? 'merge_failed'
                  : 'discord_failed'
     return Response.redirect(`${base}/profile?link_error=${errKey}`)
   }

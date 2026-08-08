@@ -638,3 +638,20 @@ CREATE INDEX IF NOT EXISTS idx_ale_identity ON auth_login_events (identity, at D
 CREATE INDEX IF NOT EXISTS idx_ale_outcome  ON auth_login_events (outcome, at DESC);
 
 -- retention 90 วัน — ลบให้เองแบบ opportunistic ใน db/authLog.js (ไม่ต้องตั้ง cron)
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- 2026-08-08 — user_merges: log การยุบบัญชีที่แตกร่าง (web/db/userMerge.js)
+-- ═══════════════════════════════════════════════════════════════════════════
+-- merge ย้อนไม่ได้ (ย้าย FK 40 คอลัมน์ + DELETE users) → เก็บ snapshot ของแถวที่ลบไว้เป็น jsonb
+-- เพื่อให้กู้มือได้ถ้ารวมผิดคน · keep_id ไม่ผูก FK ไป users โดยตั้งใจ (ถ้าวันหน้าแถวนั้นถูกลบ log ต้องไม่หาย)
+CREATE TABLE IF NOT EXISTS user_merges (
+  id          BIGSERIAL PRIMARY KEY,
+  at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  keep_id     INTEGER     NOT NULL,
+  drop_id     INTEGER     NOT NULL,
+  reason      VARCHAR(40) NOT NULL DEFAULT 'link_discord',
+  dropped_row JSONB
+);
+CREATE INDEX IF NOT EXISTS idx_user_merges_keep ON user_merges (keep_id, at DESC);
+-- ตาม id ที่ถูกยุบ → id ปลายทาง (followMerge) ตอน refresh session
+CREATE INDEX IF NOT EXISTS idx_user_merges_drop ON user_merges (drop_id, at DESC);

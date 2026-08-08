@@ -30,19 +30,26 @@ export async function linkIdentityByUser(userId, provider, providerId, credentia
   )
 }
 
-// ผูก Discord เข้ากับ user ที่ login อยู่ (ทุกวิธี login) — merge policy = BLOCK ไม่ auto-merge
-// snowflake ผูกกับ user อื่นอยู่แล้ว (identity row หรือ users.discord_id) → โยน already_taken
+// ผูก Discord เข้ากับ user ที่ login อยู่ (ทุกวิธี login)
+//
+// snowflake เป็นของ user อื่นอยู่แล้ว = คนเดิมที่เผลอสร้างบัญชีใหม่ตอน login ด้วย Google/อีเมล
+// (แถวเก่าฝั่ง Discord มี email = NULL ประตูอีเมลเลยหาไม่เจอ) → **ยุบรวมให้เลย ไม่ block แล้ว**
+// ปลอดภัยเพราะเขาเพิ่งพิสูจน์ตัวตนครบทั้งสองฝั่ง: login อยู่ในบัญชีนี้ + ผ่าน Discord OAuth มาสดๆ
+// keeper = แถวฝั่ง Discord เสมอ (ข้อมูลบอท key ด้วย discord_id ไม่ใช่ users.id)
+//
+// คืน { merged, userId } — userId คือ id ที่ควรใช้ต่อ (เปลี่ยนไปเมื่อ merged = true)
 export async function linkDiscordToUser(userId, snowflake, username = null) {
   const { rows: idRows } = await pool.query(
     `SELECT user_id FROM user_identities WHERE provider = 'discord' AND provider_id = $1`,
     [snowflake]
   )
-  if (idRows[0] && idRows[0].user_id !== userId) {
-    throw Object.assign(new Error('already_taken'), { code: 'already_taken' })
-  }
   const { rows: uRows } = await pool.query(`SELECT id FROM users WHERE discord_id = $1`, [snowflake])
-  if (uRows[0] && uRows[0].id !== userId) {
-    throw Object.assign(new Error('already_taken'), { code: 'already_taken' })
+  const owner = idRows[0]?.user_id ?? uRows[0]?.id ?? null
+
+  if (owner && owner !== userId) {
+    const { mergeUsers } = await import('@/db/userMerge.js')
+    await mergeUsers(owner, userId, 'link_discord')
+    return { merged: true, userId: owner }
   }
   // user นี้ผูก discord อื่นอยู่แล้ว → block (1 user ผูกได้ 1 discord)
   const { rows: curRows } = await pool.query(`SELECT discord_id FROM users WHERE id = $1`, [userId])
@@ -59,6 +66,7 @@ export async function linkDiscordToUser(userId, snowflake, username = null) {
      ON CONFLICT (provider, provider_id) DO UPDATE SET user_id = EXCLUDED.user_id`,
     [userId, snowflake, snowflake]
   )
+  return { merged: false, userId }
 }
 
 // list identities ของ user (แกน user_id — ใช้ได้กับ email-only ที่ไม่มี discord_id)

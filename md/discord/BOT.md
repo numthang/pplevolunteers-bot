@@ -386,3 +386,30 @@ Code เสร็จ + mock smoke test ผ่าน (7 เคส) — ยัง�
 - 📅 Event = ปุ่ม follow-up หลังโพสต์ → modal เดียว (ชื่อ prefill/เริ่ม/จบ default +2 ชม./ห้องประชุม **หรือ** สถานที่ free text — ห้องชนะ) → ประกาศแยกใน ห้องข่าวสาร + **@everyone** template อัตโนมัติ (เชิญชวน+เวลา+สถานที่+กดกระดิ่ง)
 - quiet hours 21:00–09:00 ไทย → อั้นประกาศส่ง 09:00 (event ตัวจริงสร้างทันที)
 
+
+---
+
+## 📧 ผูกอีเมล — `/panel email` (2026-08-08)
+
+วางปุ่มให้สมาชิกผูกอีเมลกับบัญชี Discord ตัวเอง · handler: `handlers/emailBindHandler.js`
+
+**ทำไมต้องมี:** `users` แถวเก่าฝั่ง Discord มี `email = NULL` เกือบทั้งหมด (prod 6,679/6,685)
+พอคนเดิมไป login เว็บด้วย Google/อีเมล ระบบหาอีเมลนั้นไม่เจอ → สร้างบัญชีใหม่ = แตกเป็น 2 ใบ ยศหาย
+panel นี้ให้เขากรอกเอง ประกาศครั้งเดียวถึงทุกคน ไม่ต้องไล่ `UPDATE users SET email` ทีละคน
+
+**flow:** ปุ่ม `btn_open_email_modal` → modal กรอกอีเมล → OTP 6 หลักทางอีเมล (10 นาที)
+→ ปุ่ม `btn_open_email_otp` → modal กรอกรหัส → `bindEmail()`
+
+**`bindEmail()` ตัดสิน 3 ทาง:**
+| สถานะอีเมล | ผล |
+|---|---|
+| ไม่มีใครใช้ | `UPDATE users SET email` ลงแถวของ discord คนนั้น (ไม่มีแถว = สร้างให้) |
+| มีเจ้าของ **ที่ไม่มี discord_id** | = บัญชีที่เขาเผลอสร้างบนเว็บ → เรียก `mergeUsers()` ยุบเข้าแถว discord |
+| มีเจ้าของ **ที่มี discord_id อื่น** | ปฏิเสธ (`email_taken_by_other_discord`) — กรอกอีเมลคนอื่น |
+
+**ปลอดภัยเพราะพิสูจน์ครบสองฝั่ง:** กดปุ่มในดิสคอร์ด = ตัวตน Discord · ใส่ OTP = เจ้าของอีเมล
+
+- session/quota: `dc_user_config` key `otp_email` / `otp_email_quota` (แยกจาก `otp_quota` ของ SMS — อีเมลไม่มีค่าส่ง โควตา 10/วัน)
+- ส่งเมล: `services/email.js` (nodemailer, env `SMTP_*` ชุดเดียวกับเว็บ) · ไม่ตั้ง env = stub log ลง console
+- `mergeUsers` อยู่ฝั่งเว็บ (ESM) บอทเรียกผ่าน `await import('../web/db/userMerge.js')` — ไฟล์นั้นจึงต้อง import pool แบบ relative ห้ามใช้ alias `@/`
+- ⚠️ เพิ่ม subcommand ใหม่ → ต้อง `node deploy-commands.js` ก่อนถึงจะเห็น `/panel email`

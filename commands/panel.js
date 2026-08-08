@@ -133,12 +133,45 @@ module.exports = {
     .addSubcommand(sub =>
       sub.setName('handraise')
         .setDescription('เปิดคิวยกมือขอพูดสำหรับ Voice Channel ที่คุณอยู่')
+    )
+
+    // --- email (ผูกอีเมลเข้าบัญชี Discord) ---
+    .addSubcommand(sub =>
+      sub.setName('email')
+        .setDescription('วางปุ่มให้สมาชิกผูกอีเมลกับบัญชี Discord (กันบัญชีแตกเป็น 2 ใบตอน login เว็บ)')
+        .addStringOption(o => o.setName('title').setDescription('หัวข้อ embed').setRequired(false))
+        .addStringOption(o => o.setName('description').setDescription('ข้อความ embed (ใช้ \\n)').setRequired(false))
+        .addStringOption(o => o.setName('button_label').setDescription('ข้อความปุ่ม').setRequired(false))
+        .addStringOption(o => o.setName('color').setDescription('สี hex').setRequired(false))
     ),
 
   async execute(interaction) {
     const sub      = interaction.options.getSubcommand();
     const isPublic  = interaction.options.getBoolean('public') ?? false;
     const replyFlag = isPublic ? undefined : MessageFlags.Ephemeral;
+
+    // ================================================================
+    // ผูกอีเมล — ประกาศครั้งเดียวถึงทุกคนในเซิร์ฟเวอร์ แทนการไล่ใส่อีเมลให้ทีละคนเอง
+    if (sub === 'email') {
+      const title       = interaction.options.getString('title') ?? '📧 ผูกอีเมลกับบัญชีของคุณ';
+      const description = (interaction.options.getString('description')
+        ?? 'ผูกอีเมลไว้ เพื่อให้เข้าเว็บด้วยอีเมลหรือ Google ได้โดยยศและสิทธิ์เดิมยังอยู่ครบ\n\nถ้าไม่ผูกไว้ แล้วไป login เว็บด้วยอีเมล ระบบจะนับว่าเป็นคนใหม่ ทำให้เห็นหน้าเปล่า'
+      ).replace(/\\n/g, '\n');
+      const buttonLabel = interaction.options.getString('button_label') ?? '📧 ผูกอีเมล';
+      const color       = interaction.options.getString('color')
+        ? parseInt(interaction.options.getString('color').replace('#', ''), 16)
+        : 0xff6a13;
+
+      const embed = new EmbedBuilder().setTitle(title).setDescription(description).setColor(color);
+      const row   = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId('btn_open_email_modal')
+          .setLabel(buttonLabel)
+          .setStyle(ButtonStyle.Primary)
+      );
+      await interaction.channel.send({ embeds: [embed], components: [row] });
+      return interaction.reply({ content: '✅ วาง panel ผูกอีเมลแล้ว', flags: MessageFlags.Ephemeral });
+    }
 
     // ================================================================
     if (sub === 'interest') {

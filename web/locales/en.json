@@ -1169,7 +1169,10 @@
       "connectDiscordDesc": "Enable finance/calling/docs (coming soon)",
       "soonBadge": "Coming soon",
       "invitedTitle": "Invitations",
-      "invitedAutoConfirmSuffix": " — auto-confirmed when you sign in with the invited email"
+      "invitedAutoConfirmSuffix": " — auto-confirmed when you sign in with the invited email",
+      "linkExistingTitle": "Used Discord here before?",
+      "linkExistingDesc": "Link your Discord account and your existing roles, organisation and permissions come straight back.",
+      "linkExistingButton": "Link Discord account"
     },
     "createModal": {
       "createError": "Failed to create organization",

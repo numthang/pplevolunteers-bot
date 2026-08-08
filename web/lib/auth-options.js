@@ -8,6 +8,7 @@ import { findUserIdByProvider, resolveUserByDiscord, discordIdByUserId, linkIden
 import { resolveOrgUser } from '@/db/orgMembers.js'
 import { takeNonce } from '@/db/authNonces.js'
 import { logLogin } from '@/db/authLog.js'
+import { followMerge } from '@/db/userMerge.js'
 
 // Passkey + Phone — nonce keyed by user_id ใน auth_nonces (email-only ก็ login ได้)
 const userNonceAuthorize = (purpose) => async (credentials) => {
@@ -175,6 +176,16 @@ export const authOptions = {
           identity: profile?.email || profile?.id || profile?.sub || token.email || null,
           meta:     token.discordId ? { discordId: token.discordId } : null,
         })
+      }
+      // บัญชีถูกยุบรวมไปแล้ว (ผูก Discord แล้วเจอว่าเป็นคนเดียวกับบัญชีเก่า) → id ใน token ถูกลบไปแล้ว
+      // ตามไปหา id ปลายทางจาก user_merges ก่อนทำอย่างอื่น ไม่งั้นทุก query ข้างล่างหา user ไม่เจอ
+      // ทำเฉพาะตอน update/login — ไม่ใช่ทุกครั้งที่อ่าน session (จะกลายเป็น query ต่อ request)
+      if (trigger === 'update' && token.userId) {
+        const merged = await followMerge(token.userId).catch(() => token.userId)
+        if (merged && merged !== token.userId) {
+          token.userId = merged
+          token.discordId = null   // ให้บล็อกล่างเติมใหม่จากบัญชีปลายทาง
+        }
       }
       // ประตู google/line/magic resolve เป็น userId แต่ยังไม่มี discordId → เติมจาก users
       // (feature code เช่น getUserGuilds ยัง key ด้วย discordId) · trigger update = หลังผูก Discord กลางคัน

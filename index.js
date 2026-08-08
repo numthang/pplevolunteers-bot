@@ -4,6 +4,11 @@ const { Client, GatewayIntentBits, Collection, MessageFlags, ChannelType } = req
 const { handleInterestSelect } = require('./handlers/interestSelect');
 const { handleModalSubmit, handleRegisterConfirm, handleDeleteLog, handleOpenRegisterModal } = require('./handlers/registerHandler');
 const { handleOpenVerifyModal, handleVerifyPhoneSubmit, handleOpenOtpModal, handleVerifyOtpSubmit } = require('./handlers/verifyHandler');
+// ผูกอีเมล — ชื่อฟังก์ชันชนกับ verifyHandler (OTP เหมือนกันคนละช่องทาง) ต้อง alias
+const {
+  handleOpenEmailModal, handleEmailSubmit,
+  handleOpenOtpModal: handleOpenEmailOtpModal, handleOtpSubmit: handleEmailOtpSubmit,
+} = require('./handlers/emailBindHandler');
 const { handleProvinceBtn, handleProvinceRegionSelect } = require('./handlers/provinceSelect');
 const { handleStarButton, handleModalSubmit: handleRateModalSubmit } = require('./handlers/rateStars');
 const { handlePageButton } = require('./handlers/ratingPage');
@@ -178,6 +183,8 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.customId.startsWith('role_recover_modal:'))       return handleRoleRecoverModal(interaction);
     if (interaction.customId === 'modal_verify_phone')                return handleVerifyPhoneSubmit(interaction);
     if (interaction.customId === 'modal_verify_otp')                  return handleVerifyOtpSubmit(interaction);
+    if (interaction.customId === 'modal_bind_email')                  return handleEmailSubmit(interaction);
+    if (interaction.customId.startsWith('modal_bind_email_otp'))      return handleEmailOtpSubmit(interaction);
     if (interaction.customId.startsWith('anon_submit:')) {
       const channelId = interaction.customId.split(':')[1];
       const text      = interaction.fields.getTextInputValue('anon_text');
@@ -242,6 +249,8 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.customId === 'btn_register_confirm')    return handleRegisterConfirm(interaction);
     if (interaction.customId === 'btn_open_verify_modal')   return handleOpenVerifyModal(interaction);
     if (interaction.customId === 'btn_open_verify_otp')     return handleOpenOtpModal(interaction);
+    if (interaction.customId === 'btn_open_email_modal')    return handleOpenEmailModal(interaction);
+    if (interaction.customId === 'btn_open_email_otp')      return handleOpenEmailOtpModal(interaction);
     if (interaction.customId === 'delete_log')              return handleDeleteLog(interaction);
     if (interaction.customId.startsWith('prov_btn:'))       return handleProvinceBtn(interaction);
     if (interaction.customId.startsWith('rate_stars:'))      return handleStarButton(interaction);
