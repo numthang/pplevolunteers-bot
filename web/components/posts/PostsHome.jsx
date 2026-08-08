@@ -72,7 +72,9 @@ function PostRow({ post, orgName, onClick, onDelete, onRestore }) {
   return (
     <div
       onClick={onClick}
-      className="group cursor-pointer bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-3 hover:border-teal hover:shadow-md transition flex gap-3"
+      // hover ต้องอยู่ในเงื่อนไข @media(hover:hover) เท่านั้น — ถ้าไม่กัน มือถือจะเจอบั๊ก iOS Safari
+      // "แตะครั้งแรกกลายเป็น hover ต้องแตะซ้ำถึงจะ click จริง" เพราะ element เดียวกันมีทั้ง onClick + :hover
+      className="group cursor-pointer bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-3 [@media(hover:hover)]:hover:border-teal [@media(hover:hover)]:hover:shadow-md transition flex gap-3"
     >
       {/* ช่องรูปกว้างคงที่เสมอ แม้ไม่มีรูป — ไม่งั้นข้อความแต่ละแถวเริ่มไม่ตรงกัน กวาดตาไม่ติด */}
       <div className="shrink-0 w-20 h-20 rounded-lg overflow-hidden bg-warm-100 dark:bg-disc-hover flex items-center justify-center">
@@ -91,7 +93,7 @@ function PostRow({ post, orgName, onClick, onDelete, onRestore }) {
 
       <div className="flex-1 min-w-0 flex flex-col gap-1.5">
         <div className="flex items-start justify-between gap-2">
-          <h3 className="min-w-0 text-base font-semibold text-warm-900 dark:text-disc-text truncate group-hover:text-teal transition">
+          <h3 className="min-w-0 text-base font-semibold text-warm-900 dark:text-disc-text truncate [@media(hover:hover)]:group-hover:text-teal transition">
             {post.title || 'ไม่มีชื่อ'}
           </h3>
           <div className="shrink-0 flex items-center gap-2">
@@ -102,11 +104,14 @@ function PostRow({ post, orgName, onClick, onDelete, onRestore }) {
             <span className="text-xs text-warm-400 dark:text-disc-muted hidden sm:inline">
               {fmtDateTime(post.updated_at)}
             </span>
-            {/* กดที่ปุ่มแล้วต้องไม่เปิดโพสต์ → stopPropagation */}
+            {/* กดที่ปุ่มแล้วต้องไม่เปิดโพสต์ → stopPropagation
+                มือถือไม่มี hover จริง — เดิม opacity-0 group-hover:opacity-100 เลยกลายเป็นปุ่มโปร่งใส
+                แต่ยังกดได้ตลอด (dead zone ที่มุมขวาบนของการ์ด กินการแตะไปเงียบๆ) → โชว์ปุ่มถาวรบนมือถือ
+                ซ่อนจนกว่าจะ hover เฉพาะอุปกรณ์ที่มี hover จริงเท่านั้น */}
             <button
               onClick={(e) => { e.stopPropagation(); archived ? onRestore(post) : onDelete(post) }}
               title={archived ? 'กู้คืนจากกรุ' : 'ลบโพสต์นี้'}
-              className={`p-1 rounded-lg transition opacity-0 group-hover:opacity-100 focus:opacity-100 ${
+              className={`p-1 rounded-lg transition opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:focus:opacity-100 ${
                 archived
                   ? 'text-warm-500 dark:text-disc-muted hover:text-teal hover:bg-warm-50 dark:hover:bg-disc-hover'
                   : 'text-warm-400 dark:text-disc-muted hover:text-red-500 hover:bg-red-50 dark:hover:bg-disc-hover'
@@ -191,7 +196,7 @@ export default function PostsHome({ orgName = 'องค์กร' }) {
   const [view, setView] = useState('main')          // มุมมองพิเศษ (อ่านอย่างเดียว): main | archived
   const [category, setCategory] = useState('') // '' = ทั้งหมด, '__none__' = ยังไม่จัดหมวด, อื่นๆ = ชื่อหมวด
   const [status, setStatus] = useState('')     // '' = ทุกสถานะ
-  const [sort, setSort] = useState('progress') // progress = ใกล้เสร็จก่อน · updated = แก้ล่าสุด (ลำดับที่ API ส่งมา)
+  const [sort, setSort] = useState('updated') // progress = ใกล้เสร็จก่อน · updated = แก้ล่าสุด (ลำดับที่ API ส่งมา) — default เคาะ 2026-08-08 เอาโพสต์ที่เพิ่งแก้ขึ้นบนสุด
   const [idea, setIdea] = useState('')
   const [posts, setPosts] = useState([])
   const [categories, setCategories] = useState([])
@@ -218,14 +223,21 @@ export default function PostsHome({ orgName = 'องค์กร' }) {
       else if (filter === 'all') params.set('source', 'all')
       else params.set('visibility', filter)
 
-      if (view === 'archived') params.set('archived', '1')  // API คืน "รวมของในกรุ" → กรองเหลือเฉพาะในกรุที่นี่
+      // มุมมองพิเศษ (archived/posted) ต้องขอมาแบบไม่กรองทั้งคู่ก่อน ไม่งั้น default exclusion ของอีกฝั่ง
+      // จะหลุดมากรองซ้ำโดยไม่ตั้งใจ (เช่น โพสต์ในกรุที่โพสต์แล้วด้วยจะหายไปจากมุมมอง "ในกรุ")
+      if (view === 'archived' || view === 'posted') { params.set('archived', '1'); params.set('posted', '1') }
       if (category) params.set('category', category)
       if (status) params.set('status', status)
 
       const res = await fetch(`/api/posts?${params.toString()}`)
       const json = await res.json().catch(() => ({}))
       const rows = res.ok && json.success ? json.data : []
-      setPosts(view === 'archived' ? rows.filter(p => p.archived_at) : rows)
+      const isFullyPosted = (p) => Number(p.published_count) > 0 && Number(p.queued_count) === 0
+      setPosts(
+        view === 'archived' ? rows.filter(p => p.archived_at) :
+        view === 'posted'   ? rows.filter(isFullyPosted) :
+        rows
+      )
     } catch {
       setPosts([])
     } finally {
@@ -353,9 +365,13 @@ export default function PostsHome({ orgName = 'องค์กร' }) {
         /* มุมมองพิเศษ = อ่านอย่างเดียว: ไม่มีแท็บ ไม่มีกล่องสร้างงาน ไม่มีตัวกรอง */
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold text-warm-900 dark:text-disc-text mb-1">ในกรุ</h1>
+            <h1 className="text-2xl font-bold text-warm-900 dark:text-disc-text mb-1">
+              {view === 'archived' ? 'ในกรุ' : 'โพสต์แล้ว'}
+            </h1>
             <p className="text-base text-warm-500 dark:text-disc-muted">
-              โพสต์ที่เก็บเข้ากรุไว้ — กู้คืนได้จากไอคอนบนการ์ด
+              {view === 'archived'
+                ? 'โพสต์ที่เก็บเข้ากรุไว้ — กู้คืนได้จากไอคอนบนการ์ด'
+                : 'โพสต์ที่เผยแพร่ครบทุกช่องทางแล้ว ไม่มีคิวค้าง'}
             </p>
           </div>
           <button
@@ -491,9 +507,14 @@ export default function PostsHome({ orgName = 'องค์กร' }) {
             ))}
           </div>
           {view === 'main' && (
-            <button onClick={() => selectView('archived')} className="text-sm text-warm-500 dark:text-disc-muted hover:text-teal">
-              🗄️ ในกรุ
-            </button>
+            <>
+              <button onClick={() => selectView('posted')} className="text-sm text-warm-500 dark:text-disc-muted hover:text-teal">
+                ✅ โพสต์แล้ว
+              </button>
+              <button onClick={() => selectView('archived')} className="text-sm text-warm-500 dark:text-disc-muted hover:text-teal">
+                🗄️ ในกรุ
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -507,9 +528,11 @@ export default function PostsHome({ orgName = 'องค์กร' }) {
         <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-10 text-center text-warm-400 dark:text-disc-muted">
           {view === 'archived'
             ? 'ไม่มีโพสต์ในกรุ'
-            : filter === 'discord'
-              ? 'ยังไม่มีสื่อที่หย่อนจากดิสคอร์ด'
-              : 'ยังไม่มีโพสต์ — โยนไอเดียแล้วเริ่มเขียนได้เลย'}
+            : view === 'posted'
+              ? 'ยังไม่มีโพสต์ที่เผยแพร่ครบทุกช่องทาง'
+              : filter === 'discord'
+                ? 'ยังไม่มีสื่อที่หย่อนจากดิสคอร์ด'
+                : 'ยังไม่มีโพสต์ — โยนไอเดียแล้วเริ่มเขียนได้เลย'}
         </div>
       ) : (
         <div className="flex flex-col gap-2">

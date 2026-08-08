@@ -34,10 +34,18 @@ const OWNER_NAME = `COALESCE(NULLIF(TRIM(CONCAT_WS(' ', u.firstname, u.lastname)
  * personal ของคนอื่นถูกตัดใน SQL — admin god-mode ส่ง includeAllPersonal = true
  * (ชั้น API ยังต้องกรองด้วย canReadPost อีกที เมื่อ policy.read = 'team')
  */
-export async function listPosts(orgId, userId, { visibility = null, category = null, status = null, includeArchived = false, includeAllPersonal = false, source = null, limit = 200 } = {}) {
+export async function listPosts(orgId, userId, { visibility = null, category = null, status = null, includeArchived = false, includePosted = false, includeAllPersonal = false, source = null, limit = 200 } = {}) {
   const params = [orgId, userId]
   let where = `e.org_id = $1 AND (e.visibility = 'org' OR e.owner_user_id = $2${includeAllPersonal ? ' OR TRUE' : ''})`
   if (!includeArchived) where += ` AND e.archived_at IS NULL`
+  // "โพสต์แล้วครบทุกช่องที่คิว" (เผยแพร่จบ ไม่มีคิวค้าง) = ซ่อนจากฟีดหลักโดย default (เคาะ 2026-08-08)
+  // เช็คจาก post_social_history ไม่ใช่ status ของ e — published/queued เป็น derived state คนละแกนกับ draft/review/approved
+  if (!includePosted) {
+    where += ` AND NOT (
+      EXISTS (SELECT 1 FROM post_social_history h WHERE h.episode_id = e.id AND h.status = 'done')
+      AND NOT EXISTS (SELECT 1 FROM post_social_history h WHERE h.episode_id = e.id AND h.status IN ('pending','running'))
+    )`
+  }
   // ตะกร้าสื่อของ Discord เป็นโพสต์เหมือนกัน (ก้อน 4c) แต่ทีมสื่อหย่อนวันละหลายใบ
   // → **ซ่อนจากฟีดหลัก** ให้ไปดูที่แท็บ "จากดิสฯ" แทน (source='discord')
   if (source === 'discord')   where += ` AND e.channel_id IS NOT NULL`
