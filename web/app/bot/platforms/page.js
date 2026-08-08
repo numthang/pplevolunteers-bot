@@ -41,7 +41,14 @@ function AccountRow({ acc, accounts, onToggleVisibility, onSetGroup, onRemove, d
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium text-gray-900 dark:text-disc-text truncate">{acc.name}</p>
           <p className="text-xs text-gray-400 dark:text-disc-muted font-mono truncate">{acc.social_id}</p>
-          {acc.platform === 'ig' && <TokenExpiry expiresAt={acc.user_token_expires_at} />}
+          {/* threads เก็บ token ที่ access_token (ไม่ใช่ user_token) แต่ใช้ user_token_expires_at
+              เป็นที่จดวันหมดอายุร่วมกัน — เดิมช่องนี้โชว์แค่ ig เลยไม่มีใครเห็นว่า Threads ตาย (2026-08-08) */}
+          {['ig', 'threads'].includes(acc.platform) && <TokenExpiry expiresAt={acc.user_token_expires_at} />}
+          {acc.platform === 'threads' && !acc.user_token_expires_at && (
+            <span className="flex items-center gap-1 text-xs text-orange-500">
+              <AlertTriangle size={12} /> ไม่รู้วันหมดอายุ — กด Connect Threads ใหม่เพื่อเริ่มนับ
+            </span>
+          )}
           {acc.platform === 'ig' && !acc.has_user_token && (
             <span className="flex items-center gap-1 text-xs text-red-500 dark:text-red-400">
               <AlertTriangle size={12} /> ไม่มี User Token — กด Connect ใหม่
@@ -150,6 +157,7 @@ export default function SocialAccountsPage() {
     return () => window.removeEventListener('keydown', h)
   }, [editConfig])
 
+
   async function saveConfig() {
     if (!editConfig) return
     setSavingConfig(true)
@@ -203,6 +211,8 @@ export default function SocialAccountsPage() {
   // รองรับทั้ง manager response (field จริง) และ member response (boolean flag)
   const hasMeta      = !!(cfg?.meta_app_id && cfg?.meta_app_secret) || !!cfg?.hasMeta
   const hasX         = !!(cfg?.x_consumer_key && cfg?.x_consumer_secret) || !!cfg?.hasX
+  // Threads มี creds ของตัวเอง — ไม่ยืมของ Meta (getThreadsApp ไม่ fallback แล้ว)
+  const hasThreads   = !!(cfg?.threads_app_id && cfg?.threads_app_secret) || !!cfg?.hasThreads
   const guildAccounts = accounts.filter(a => a.visibility === 'public')
   // เจ้าของ = owner_user_id (user อีเมลก็มี) · fallback discord id สำหรับแถวเก่าที่ยังไม่มี owner
   const myAccounts    = accounts.filter(a => a.visibility === 'private' &&
@@ -247,6 +257,7 @@ export default function SocialAccountsPage() {
                 {hasMeta ? (
                   <a
                     href={`/api/meta/oauth/start?guild_id=${guildId}`}
+                    title="Facebook + Instagram (Threads เป็น OAuth คนละตัว ใช้ปุ่มถัดไป)"
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange text-white text-sm hover:opacity-90 transition"
                   >
                     <RefreshCw size={14} /> Connect Meta OAuth
@@ -254,6 +265,19 @@ export default function SocialAccountsPage() {
                 ) : (
                   <button disabled title="ตั้งค่า Meta App ID/Secret ก่อน" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange text-white text-sm opacity-30 cursor-not-allowed">
                     <RefreshCw size={14} /> Connect Meta OAuth
+                  </button>
+                )}
+                {/* Threads แยกปุ่ม: authorize ที่ threads.net + creds คนละชุด → รวมกับปุ่ม Meta ไม่ได้ */}
+                {hasThreads ? (
+                  <a
+                    href={`/api/threads/oauth/start?guild_id=${guildId}`}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-800 dark:bg-gray-700 text-white text-sm hover:opacity-90 transition"
+                  >
+                    <RefreshCw size={14} /> Connect Threads
+                  </a>
+                ) : (
+                  <button disabled title="ตั้งค่า Threads App ID/Secret ก่อน (คนละชุดกับ Meta)" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-800 dark:bg-gray-700 text-white text-sm opacity-30 cursor-not-allowed">
+                    <RefreshCw size={14} /> Connect Threads
                   </button>
                 )}
               </div>
@@ -269,6 +293,9 @@ export default function SocialAccountsPage() {
                 {[
                   { key: 'meta_app_id',       label: 'Meta App ID',       secret: false },
                   { key: 'meta_app_secret',   label: 'Meta App Secret',   secret: true  },
+                  // Threads ใช้ App ID/Secret คนละชุดกับ Facebook (Dashboard → use case "Threads API")
+                  { key: 'threads_app_id',    label: 'Threads App ID',    secret: false },
+                  { key: 'threads_app_secret', label: 'Threads App Secret', secret: true },
                   { key: 'x_consumer_key',    label: 'X Consumer Key',    secret: false },
                   { key: 'x_consumer_secret', label: 'X Consumer Secret', secret: true  },
                   { key: 'news_channel_id',   label: '📢 ห้องข่าวสาร (Channel ID)', secret: false },
@@ -302,7 +329,8 @@ export default function SocialAccountsPage() {
                 {guildAccounts.map(acc => (
                   <AccountRow key={acc.id} acc={acc} accounts={accounts}
                     onToggleVisibility={toggleVisibility} onSetGroup={setGroup}
-                    onRemove={remove} deleting={deleting} />
+                    onRemove={remove} deleting={deleting}
+                    />
                 ))}
               </div>
             )}
@@ -365,7 +393,7 @@ export default function SocialAccountsPage() {
           <div className="bg-white dark:bg-disc-bg2 rounded-2xl shadow-xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-base font-bold text-gray-900 dark:text-disc-text">
-                {{ meta_app_id: 'Meta App ID', meta_app_secret: 'Meta App Secret', x_consumer_key: 'X Consumer Key', x_consumer_secret: 'X Consumer Secret', news_channel_id: '📢 ห้องข่าวสาร (Channel ID)' }[editConfig.key]}
+                {{ meta_app_id: 'Meta App ID', meta_app_secret: 'Meta App Secret', threads_app_id: 'Threads App ID', threads_app_secret: 'Threads App Secret', x_consumer_key: 'X Consumer Key', x_consumer_secret: 'X Consumer Secret', news_channel_id: '📢 ห้องข่าวสาร (Channel ID)' }[editConfig.key]}
               </h2>
               <button onClick={() => setEditConfig(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-disc-text"><X size={18} /></button>
             </div>
@@ -381,7 +409,9 @@ export default function SocialAccountsPage() {
               <p className="text-xs text-gray-400 dark:text-disc-muted">
                 {editConfig.key === 'news_channel_id'
                   ? 'คลิกขวาที่ห้องข่าวสารใน Discord → Copy Channel ID (ต้องเปิด Developer Mode) — ตั้งแล้วตะกร้าสื่อจะมีตัวเลือกแชร์ลงห้องนี้'
-                  : `ดูค่าได้จาก ${editConfig.key.startsWith('meta_') ? 'Meta Developer Portal → My Apps' : 'X Developer Portal → Keys and Tokens'}`}
+                  : editConfig.key.startsWith('threads_')
+                    ? 'Meta Developer Portal → My Apps → use case "Threads API" → Settings — คนละชุดกับ Meta App ID/Secret ด้านบน'
+                    : `ดูค่าได้จาก ${editConfig.key.startsWith('meta_') ? 'Meta Developer Portal → My Apps' : 'X Developer Portal → Keys and Tokens'}`}
               </p>
               <div className="flex justify-end gap-2 mt-2">
                 <button type="button" onClick={() => setEditConfig(null)} className="px-4 py-2 text-sm rounded-lg text-gray-500 dark:text-disc-muted hover:bg-gray-100 dark:hover:bg-disc-hover transition">ยกเลิก</button>

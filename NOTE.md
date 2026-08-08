@@ -2,11 +2,12 @@
 - workspacefor.org
 - ทำให้เว็บไซต์ หรือ sub-domain ภายนอกใช้ระบบเดียวกันได้แต่ใช้ชื่อของเขาเอง
 - หน้า http://localhost:3000/bot/platforms ถ้า platforms ไม่ขึ้น กับ guild แล้วก็เอา guild switcher ออกไปดีไหม เปลี่ยน url ด้วยไหม น่าจะต้องย้ายออกจาก bot ไปอยู่ใน /posts/settings ป่ะ
-- ทำให้ login by discord เด่นสุด แล้ว เข้าด้วยวิธีอื่น เอาไปซ่อนไว้งี้ป่ะ
 
 # Posts
 - อยากได้ข้อความใหญ่ๆ บน Facebook อ่ะ อันนี้ยังติดอยู่เหมือน จะยิง api ไม่ได้ แต่เห็นมีบางเคสที่ตัวหนังสือใหญ่และพิมพ์ยาวๆ ได้ด้วย แบบอันนี้ https://www.facebook.com/OilTraderKP/posts/pfbid02CXQo1VuJcPCBntjGTpbSgfth41ayPuRGjH4frhMUs9m1BDuQVoH1tcpCBjvvJyQVl?rdid=aGbrOQObqjVcNBvm ไม่รู้ว่า api ได้ไหม
 - เรื่องคลิป
+- Threads API: Error validating access token: Session has expired on Thursday, 16-Jul-26 01:00:58 PDT. The current time is Saturday, 08-Aug-26 06:36:59 PDT. (code 190)
+- posts ลองโพสต์บนเว็บแล้ว แต่ bot ไม่ได้ส่ง link back เข้า thread อ่ะ เหมือนตอนใช้ bot ส่ง
 
 # CivicFlow
 - ข้อเสนอ: ย้าย CivicFlow จาก Vercel มาที่ VPS

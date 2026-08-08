@@ -51,6 +51,38 @@
 `Invalid OAuth access token - Cannot parse access token` ทั้ง page token และ user token → **โพสต์ FB จากระบบไม่ออกอยู่ตอนนี้** (ไม่เกี่ยวกับงาน posts) · ต้อง reconnect ที่ `/bot/platforms`
 ⚠️ **เวลาเทสคิวโพสต์: ปิดบอทก่อน** — บอทที่รันอยู่จะหยิบงานในคิวไปยิงโซเชียล**จริง** (เจอตอน e2e 2026-07-30)
 
+## 🔴 เจอ 2026-08-08 — Threads token ตายเงียบ + ไม่มีกลไกต่ออายุทั้งระบบ
+
+โพสต์ Threads ล้ม `code 190 Session has expired on 16-Jul-26` — ตายมา 3 สัปดาห์โดยไม่มีใครรู้
+
+**อายุ token แต่ละแพลตฟอร์ม (ตรวจจาก prod แล้ว):** `fb` Page token = ไม่มีวันหมด · `x` OAuth 1.0a = ไม่มีวันหมด · `ig` 60 วัน มี refresh-on-use ทำงานจริง · **`threads` 60 วัน ไม่มีโค้ดต่ออายุเลย**
+
+**ทำแล้ว 2026-08-08 (local ยังไม่ deploy):**
+- `metaApi.js:66` เติม `AND platform IN ('fb','ig')` — กัน IG refresh เขียนทับ Threads token
+- `scripts/social/threads-token.js` — แปะ token ใหม่ (แทน `meta-setup.js` ที่เป็นโค้ด MySQL **ตายแล้ว ห้ามรัน**)
+
+**ทำเพิ่ม 2026-08-08 (รอบ 2) — Connect Threads OAuth บนเว็บ (user เคาะ: OAuth อย่างเดียว ไม่เอาช่องแปะ token)**
+
+เหตุผลที่ไม่เอาช่องแปะ: หน้า `/bot/platforms` มีโมเดล **1 ปุ่ม = 1 OAuth flow** อยู่แล้ว (FB+IG ปุ่มเดียวเพราะดันซ์เดียวกัน · X แยกปุ่ม) — ช่องแปะ token รายบัญชีเป็นรูปแบบที่ 3 ที่ไม่มีในหน้านั้น
+- `GET /api/threads/oauth/start` + `callback` — authorize ที่ `threads.net/oauth/authorize` (คนละ host กับ FB) · scope `threads_basic,threads_content_publish` · code → short → long-lived 60 วัน
+- **`threads_app_id` / `threads_app_secret`** เพิ่มใน App Credentials — Threads มี creds ของตัวเอง **ห้าม fallback ไปใช้ของ Meta** (`getThreadsApp` คืน null ถ้าไม่ครบ) ไม่งั้นได้ error client_secret ที่อ่านไม่ออก
+- callback **UPDATE แถวเดิมที่ `social_id` ตรงกันก่อนเสมอ** INSERT เฉพาะบัญชีใหม่ — กันปัญหา id น้อยสุดชนะ
+- `TokenExpiry` เดิมโชว์แค่ `ig` → ปลดล็อกให้ `threads` ด้วย (นี่คือเหตุผลที่ไม่มีใครเห็นว่ามันตาย)
+- ⛔ ลบทิ้ง: `scripts/social/threads-token.js` + `POST /api/social/accounts/[id]/token` (ทางแปะ token ที่ทำไปแล้วถอดออกตามที่เคาะ)
+- ⚠️ **i18n ค้าง:** `web/app/bot/platforms/page.js` hardcode ไทยทั้งไฟล์ รอบนี้เพิ่มข้อความใหม่ ~5 ประโยค = เข้าเกณฑ์ "โค้ดใหม่" ที่ต้อง migrate ทั้งไฟล์เป็น `t()` **แต่ยังไม่ได้ทำ** (ทั้งโซน `/bot/` ยังไม่ migrate) — จดตามกฎ CLAUDE.md §i18n
+
+**🔜 ก่อนเทสจริงต้องทำที่ Meta Dashboard:** เพิ่ม `https://pplevolunteers.org/api/threads/oauth/callback` ใน **Redirect Callback URLs** ของ use case "Threads API" + เอา Threads App ID/Secret มากรอกที่ `/bot/platforms`
+
+**ค้าง:**
+- [ ] **auto-refresh Threads** — เกาะ `sweep()` ใน `services/publishWorker.js:205` (วันละครั้งอยู่แล้ว ไม่ต้องตั้ง cron) · แตกสาขา platform ใน `finalizeConfig` เพราะ `refreshUserToken` hardcode `graph.facebook.com` ⚠️ `sweep()` ยิงตอนบอท start ทุกครั้ง + Threads บังคับ token อายุ ≥24 ชม. → ต้องกันด้วย threshold
+- [ ] **แจ้งเตือนเข้า Discord เมื่อต่อ token ไม่สำเร็จ** — สำคัญกว่าตัว refresh เอง (รอบนี้เจ็บเพราะตายเงียบ) · ยังไม่เคาะว่าใช้ห้องไหน
+- [ ] **ระวัง `ig` แถวกลุ่ม Somseed** — 8 ส.ค. เหลือ 8 วัน อยู่นอกหน้าต่าง refresh 7 วันพอดี ถ้าไม่มีใครโพสต์กลุ่มนี้จะตายแบบเดียวกัน
+- [ ] (เลื่อน — ทำ auto-refresh แล้วอาจไม่ต้องใช้) **Connect Threads OAuth บนเว็บ** · `/api/meta/oauth/*` ยิง facebook.com ขอ scope FB/IG ล้วน ไม่รองรับ Threads
+- [ ] ยังไม่พิสูจน์: **Threads ใช้ App ID/Secret ชุดเดียวกับ FB หรือคนละชุด** (org_config มีแค่ `meta_app_id`/`meta_app_secret`) — `threads-token.js` แยก error ให้แล้ว รู้ผลตอนรันจริง
+
+⚠️ **แถวซ้ำใน `dc_social_accounts` ตัว id น้อยสุดชนะเสมอ** (`publishTargets.js:45` + `metaApi.js:97`) → เชื่อมบัญชีใหม่ต้อง **UPDATE แถวเดิม ห้าม INSERT** ไม่งั้นแถวเก่าที่ตายแล้วบังตลอด · ซ้ำร้าย `upsertSocialRow` ใน meta oauth callback **ไม่เขียน `group_name`** แถวใหม่เลยหายจากกล่องเผยแพร่
+ℹ️ Threads มีบัญชีเดียวใช้ร่วม 2 กลุ่ม (`social_id` เดียวกันทั้ง id 4/5) = **ตั้งใจ** ไม่ใช่บั๊ก (user ยืนยัน 2026-08-08)
+
 ## ✍️ POSTS — เครื่องมืองานสื่อ · ดีไซน์เคาะครบ 2026-07-29 ยังไม่เขียนโค้ดสักบรรทัด
 
 spec + ดีไซน์ + ตารางทั้งหมดอยู่ `md/posts/POSTS.md` (อ่านก่อนเสมอ ห้าม re-derive) · `/scrutinize` ผ่าน 2 รอบแล้ว

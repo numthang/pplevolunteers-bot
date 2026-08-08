@@ -41,8 +41,9 @@ export async function GET() {
     const creds = await getSocialAppCreds({ orgId, guildId })
     return Response.json({
       guildId,
-      hasMeta: !!(creds.meta_app_id && creds.meta_app_secret),
-      hasX:    !!(creds.x_consumer_key && creds.x_consumer_secret),
+      hasMeta:    !!(creds.meta_app_id && creds.meta_app_secret),
+      hasThreads: !!(creds.threads_app_id && creds.threads_app_secret),
+      hasX:       !!(creds.x_consumer_key && creds.x_consumer_secret),
     })
   }
 

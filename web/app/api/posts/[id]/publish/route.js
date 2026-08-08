@@ -129,8 +129,10 @@ export async function POST(req, { params }) {
       }
     }
 
-    // ห้องที่จะแจ้งผลกลับ: เลือกตอนกด > ค่า default ของ org > ไม่แจ้ง (org ไม่มี Discord = ข้ามเงียบ)
-    const channelId = body.channelId || (await getOrgConfig(ctx.orgId, 'posts_notify_channel')) || null
+    // ห้องที่จะแจ้งผลกลับ: เลือกตอนกด > เธรดต้นทาง (มาจากตะกร้าดิสฯ) > ค่า default ของ org > ไม่แจ้ง (org ไม่มี Discord = ข้ามเงียบ)
+    // ก่อนแก้: โพสต์ที่มาจากตะกร้าดิสฯ ไม่เคยส่งลิงก์กลับเธรดเลยเมื่อกดเผยแพร่จากเว็บ เพราะ ctx.post.channel_id ไม่เคยถูกอ่าน
+    const channelId = body.channelId || ctx.post.channel_id
+      || (await getOrgConfig(ctx.orgId, 'posts_notify_channel')) || null
 
     const jobs = await createJobs({
       orgId: ctx.orgId,

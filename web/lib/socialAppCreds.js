@@ -12,11 +12,16 @@
 import pool from '@/db/index.js'
 import { orgIdOfGuild } from '@/db/guilds.js'
 
-// 4 คีย์ที่เป็น app creds (org-scoped) — ต่างจาก news_channel_id ที่เป็น Discord artifact ราย guild
-export const SOCIAL_APP_KEYS = ['meta_app_id', 'meta_app_secret', 'x_consumer_key', 'x_consumer_secret']
+// คีย์ที่เป็น app creds (org-scoped) — ต่างจาก news_channel_id ที่เป็น Discord artifact ราย guild
+export const SOCIAL_APP_KEYS = [
+  'meta_app_id', 'meta_app_secret',
+  'threads_app_id', 'threads_app_secret',
+  'x_consumer_key', 'x_consumer_secret',
+]
 
-const META_KEYS = ['meta_app_id', 'meta_app_secret']
-const X_KEYS    = ['x_consumer_key', 'x_consumer_secret']
+const META_KEYS    = ['meta_app_id', 'meta_app_secret']
+const THREADS_KEYS = ['threads_app_id', 'threads_app_secret']
+const X_KEYS       = ['x_consumer_key', 'x_consumer_secret']
 
 // คืน map เฉพาะคีย์ที่ตั้งค่าแล้ว (org ชนะราย key) · ไม่ตั้งเลย = {}
 export async function getSocialAppCreds({ orgId = null, guildId = null, keys = SOCIAL_APP_KEYS } = {}) {
@@ -47,6 +52,19 @@ export async function getMetaApp({ orgId = null, guildId = null } = {}) {
   const m = await getSocialAppCreds({ orgId, guildId, keys: META_KEYS })
   if (!m.meta_app_id || !m.meta_app_secret) return null
   return { app_id: m.meta_app_id, app_secret: m.meta_app_secret }
+}
+
+/**
+ * { app_id, app_secret } ของ Threads — **คนละชุดกับ Facebook เสมอ** (ยืนยันกับ user 2026-08-08)
+ *
+ * Meta ออก Threads App ID/Secret แยกให้เมื่อเพิ่ม use case "Threads API" ในแอพเดียวกัน
+ * ⛔ ห้าม fallback ไปใช้ meta_app_id/secret — จะได้ error เรื่อง client_secret ที่อ่านไม่ออกว่าเกิดจากอะไร
+ *    ปล่อยให้ null แล้วบอกให้ไปกรอกช่อง Threads ตรงๆ ดีกว่า
+ */
+export async function getThreadsApp({ orgId = null, guildId = null } = {}) {
+  const m = await getSocialAppCreds({ orgId, guildId, keys: THREADS_KEYS })
+  if (!m.threads_app_id || !m.threads_app_secret) return null
+  return { app_id: m.threads_app_id, app_secret: m.threads_app_secret }
 }
 
 // { api_key, api_secret } — null ถ้ายังตั้งไม่ครบคู่

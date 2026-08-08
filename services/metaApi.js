@@ -61,9 +61,13 @@ async function refreshUserToken(guildId, rowId, userDiscordId, currentUserToken)
 
   // ถ้ามี user_discord_id → update ทุก row ของ user คนนั้น (1 user_token ใช้กับหลาย platform)
   // ถ้าไม่มี (rows migrated เดิม) → update เฉพาะ row นั้น
+  // ⚠️ `platform IN ('fb','ig')` บังคับเสมอ — token ตัวนี้มาจาก graph.facebook.com (fb_exchange_token)
+  //    ใช้กับ Threads ไม่ได้ (คนละ host คนละ grant) · ถ้าไม่กัน วันไหน Threads ย้ายมาเก็บที่ user_token
+  //    การ refresh ของ IG จะเขียนทับ Threads token ทิ้งทันที เพราะ user_discord_id เป็นคนเดียวกัน
   if (userDiscordId) {
     await pool.query(
-      `UPDATE dc_social_accounts SET user_token = $1, user_token_expires_at = $2 WHERE user_discord_id = $3 AND user_token IS NOT NULL`,
+      `UPDATE dc_social_accounts SET user_token = $1, user_token_expires_at = $2
+        WHERE user_discord_id = $3 AND user_token IS NOT NULL AND platform IN ('fb','ig')`,
       [res.access_token, expiresAt, userDiscordId]
     );
   } else {
