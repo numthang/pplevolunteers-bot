@@ -7,12 +7,17 @@ import { isSuperAdmin } from '@/lib/roles.js'
 import { findUserIdByProvider, resolveUserByDiscord, discordIdByUserId, linkIdentityByUser } from '@/db/userIdentities.js'
 import { resolveOrgUser } from '@/db/orgMembers.js'
 import { takeNonce } from '@/db/authNonces.js'
+import { logLogin } from '@/db/authLog.js'
 
 // Passkey + Phone — nonce keyed by user_id ใน auth_nonces (email-only ก็ login ได้)
 const userNonceAuthorize = (purpose) => async (credentials) => {
   if (!credentials?.nonce) return null
   const row = await takeNonce(credentials.nonce, purpose)
-  if (!row?.user_id) return null
+  if (!row?.user_id) {
+    // nonce ถูกใช้ไปแล้ว/หมดอายุ — ฝั่ง route ผ่านมาแล้วแต่มาตายตรงแลก session
+    await logLogin({ provider: purpose, outcome: 'nonce_invalid' })
+    return null
+  }
   return { id: String(row.user_id), userId: row.user_id }
 }
 
@@ -85,7 +90,11 @@ export const authOptions = {
            RETURNING email`,
           [token]
         )
-        if (!rows[0]) return null
+        if (!rows[0]) {
+          // token ผิด/ถูกใช้ไปแล้ว/เกิน 15 นาที — แยกจากกันไม่ได้เพราะ DELETE รวมเงื่อนไขเวลา
+          await logLogin({ provider: 'magic', outcome: 'token_invalid_or_expired' })
+          return null
+        }
         const user = await resolveOrgUser(rows[0].email)
         return { id: String(user.id), userId: user.id, email: user.email, name: user.display_name || null }
       },
@@ -93,14 +102,23 @@ export const authOptions = {
   ],
   callbacks: {
     async signIn({ account, profile }) {
-      if (!account) return false
+      if (!account) {
+        await logLogin({ provider: 'unknown', outcome: 'no_account' })
+        return false
+      }
       // LINE: ไม่การันตี email = เป็นตัวตนเองไม่ได้ → ต้องผูก user ก่อน (block ถ้าไม่มี link)
       if (account.provider === 'line') {
         const userId = await findUserIdByProvider('line', profile.sub).catch(() => null)
-        if (!userId) return '/login?error=NotLinked'
+        if (!userId) {
+          await logLogin({ provider: 'line', outcome: 'not_linked', identity: profile?.sub })
+          return '/login?error=NotLinked'
+        }
       }
       // Google: ประตูสมัคร (email verified = ตัวตน) → ผ่านได้ · แต่ต้องมี email
-      if (account.provider === 'google' && !profile?.email) return false
+      if (account.provider === 'google' && !profile?.email) {
+        await logLogin({ provider: 'google', outcome: 'no_email', identity: profile?.sub })
+        return false
+      }
       return true
     },
     async jwt({ token, account, profile, user, trigger }) {
@@ -145,6 +163,18 @@ export const authOptions = {
           token.email  = user?.email || null
           token.name   = user?.name || null
         }
+
+        // จุดเดียวที่ทุกประตูมารวมกันหลัง resolve เสร็จ — log ที่นี่ทีเดียวครบทุก provider
+        // (`account` มีค่าเฉพาะตอน login จริง · refresh token ปกติจะไม่เข้าบล็อกนี้ → ไม่ log ซ้ำ)
+        // userId ว่าง = resolve ไม่ผ่าน เช่น resolveUserByDiscord throw แล้วโดน .catch(()=>null) กลืน
+        // ซึ่งเดิมเงียบสนิท (bug-059 แฝงอยู่นานเพราะเหตุนี้)
+        await logLogin({
+          provider: account.provider,
+          outcome:  token.userId ? 'ok' : 'resolve_failed',
+          userId:   token.userId || null,
+          identity: profile?.email || profile?.id || profile?.sub || token.email || null,
+          meta:     token.discordId ? { discordId: token.discordId } : null,
+        })
       }
       // ประตู google/line/magic resolve เป็น userId แต่ยังไม่มี discordId → เติมจาก users
       // (feature code เช่น getUserGuilds ยัง key ด้วย discordId) · trigger update = หลังผูก Discord กลางคัน

@@ -609,3 +609,32 @@ UPDATE case_timeline
 
 -- production ทำถึงตรงนี้ 
 
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- 2026-08-08 — auth_login_events: บันทึกทุกความพยายาม login (สำเร็จ + ไม่สำเร็จ)
+-- ═══════════════════════════════════════════════════════════════════════════
+-- ทำไม: ก่อนหน้านี้ระบบไม่จดการ login เลยสักบรรทัด → ตอบไม่ได้ว่าใครเข้ามาทางไหนตอนไหน
+-- เคสจริง: user บอกว่า "ลอง login ด้วยเบอร์แล้วไม่ได้" แต่ไล่ย้อนไม่ได้เพราะ
+--   (1) auth_nonces ถูก DELETE ทั้งตอนขอ OTP ใหม่และตอนสำเร็จ → ไม่เหลือร่องรอย
+--   (2) เบอร์ที่ไม่มีเจ้าของ → request route คืน genericOk() (กัน enumeration) ไม่ส่ง SMS เงียบๆ
+--   (3) org_login_tokens ของ magic link ก็ DELETE...RETURNING ตอนใช้ → คลิกช้าเกิน 15 นาทีก็ไม่มีร่องรอย
+--
+-- user_id เป็น ON DELETE SET NULL โดยตั้งใจ — log ต้องไม่ไปบล็อกการลบ user
+-- (เคสรวมบัญชีที่แตกร่าง ต้อง DELETE FROM users ได้) · ตัวตนยังไล่ได้จากคอลัมน์ identity
+CREATE TABLE IF NOT EXISTS auth_login_events (
+  id         BIGSERIAL PRIMARY KEY,
+  at         TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+  provider   VARCHAR(20)  NOT NULL,   -- discord/google/magic/phone/line/passkey
+  outcome    VARCHAR(30)  NOT NULL,   -- ok | no_owner | bad_otp | sms_failed | token_expired | ...
+  user_id    INTEGER      REFERENCES users(id) ON DELETE SET NULL,
+  identity   VARCHAR(255),            -- ค่าที่เขาพยายามใช้: อีเมล / เบอร์ / snowflake
+  ip         VARCHAR(64),
+  user_agent TEXT,
+  meta       JSONB
+);
+CREATE INDEX IF NOT EXISTS idx_ale_at       ON auth_login_events (at DESC);
+CREATE INDEX IF NOT EXISTS idx_ale_user     ON auth_login_events (user_id, at DESC) WHERE user_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_ale_identity ON auth_login_events (identity, at DESC) WHERE identity IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_ale_outcome  ON auth_login_events (outcome, at DESC);
+
+-- retention 90 วัน — ลบให้เองแบบ opportunistic ใน db/authLog.js (ไม่ต้องตั้ง cron)

@@ -46,6 +46,10 @@ function localNow() {
 export default function PostPublishPanel({ postId }) {
   // การ์ดนี้แยกจากการ์ดสื่อแล้ว จึงต้องรู้จำนวนสื่อเอง (IG/Threads โพสต์ข้อความล้วนไม่ได้)
   const [hasMedia, setHasMedia] = useState(false)
+  // สิทธิ์เผยแพร่ — API กันอยู่แล้ว (publish/route.js) แต่ก่อนหน้านี้ UI ไม่รู้เลย เลยกางปุ่มส้มให้ทุกคน
+  // ที่เปิดอ่านได้ กดแล้วค่อยเด้ง 403 (แจ้ง 2026-08-08) → โชว์การ์ดเหมือนเดิมแต่ปุ่มเทา + บอกเหตุผล
+  const [canPublish, setCanPublish] = useState(false)
+  const [postStatus, setPostStatus] = useState(null)
   const [selected, setSelected] = useState([])
   const [groups, setGroups] = useState([])
   const [newsReady, setNewsReady] = useState(false)
@@ -72,21 +76,31 @@ export default function PostPublishPanel({ postId }) {
   useEffect(() => { setMinTime(localNow()) }, [])
   useEffect(() => { loadJobs() }, [loadJobs])
 
-  // จำนวนสื่อ — โหลดเองตอนเปิด แล้วอัปเดตเมื่อการ์ดสื่อยิง event บอกว่ามีการเพิ่ม/ลบ
-  const loadHasMedia = useCallback(async () => {
+  // จำนวนสื่อ + สิทธิ์เผยแพร่ — คำขอเดียวกัน (GET /api/posts/[id] คืน can มาให้อยู่แล้ว)
+  const loadPost = useCallback(async () => {
     try {
       const res = await fetch(`/api/posts/${postId}`)
       const data = await res.json().catch(() => ({}))
-      if (res.ok) setHasMedia((data.data?.media || []).length > 0)
+      if (!res.ok) return
+      setHasMedia((data.data?.media || []).length > 0)
+      setCanPublish(!!data.data?.can?.publish)
+      setPostStatus(data.data?.post?.status ?? null)
     } catch { /* โหลดไม่ได้ = ถือว่ายังไม่มีสื่อ · API กันอีกชั้นตอนกดเผยแพร่อยู่แล้ว */ }
   }, [postId])
 
   useEffect(() => {
-    loadHasMedia()
-    function onMediaChanged(e) { if (e.detail?.id === postId) loadHasMedia() }
+    loadPost()
+    function onMediaChanged(e) { if (e.detail?.id === postId) loadPost() }
+    // อนุมัติ/ถอนอนุมัติจากคอลัมน์ซ้าย → can.publish พลิกทันที ต้องโหลดใหม่ ปุ่มถึงจะถูกชุด
+    // (แพทเทิร์นเดียวกับ PostMetaPanel ที่ reload เมื่อ detail.status มา)
+    function onChanged(e) { if (e.detail?.id === postId && e.detail?.status) loadPost() }
     window.addEventListener('posts:media-changed', onMediaChanged)
-    return () => window.removeEventListener('posts:media-changed', onMediaChanged)
-  }, [postId, loadHasMedia])
+    window.addEventListener('posts:changed', onChanged)
+    return () => {
+      window.removeEventListener('posts:media-changed', onMediaChanged)
+      window.removeEventListener('posts:changed', onChanged)
+    }
+  }, [postId, loadPost])
 
   useEffect(() => {
     let alive = true
@@ -111,6 +125,13 @@ export default function PostPublishPanel({ postId }) {
   }, [jobs, loadJobs])
 
   const current = groups.find(g => g.name === group) || null
+
+  // สะท้อนเหตุผลชุดเดียวกับที่ publish/route.js ตอบตอน 403 — ยังไม่อนุมัติ = แก้ได้เอง · ไม่มีสิทธิ์ = แก้ไม่ได้
+  const publishBlockReason = canPublish || postStatus === null
+    ? null
+    : postStatus !== 'approved'
+      ? 'ต้องได้รับอนุมัติก่อนจึงจะเผยแพร่ได้ — กด "ส่งตรวจ" ที่การ์ดรายละเอียด แล้วรอบรรณาธิการอนุมัติ'
+      : 'ไม่มีสิทธิ์สั่งเผยแพร่โพสต์นี้'
 
   // ลายน้ำผูกกับกลุ่ม (โฟลเดอร์คนละชุด) → เปลี่ยนกลุ่มต้องโหลดใหม่ + รีเซ็ตค่าที่ค้าง
   useEffect(() => {
@@ -278,12 +299,18 @@ export default function PostPublishPanel({ postId }) {
 
       <button
         onClick={handlePublish}
-        disabled={submitting || !selected.length || (selected.some(p => p !== 'news') && !group)}
-        className="w-full flex items-center justify-center gap-1.5 px-3 py-2 text-sm rounded-lg bg-orange text-white hover:opacity-90 disabled:opacity-40 transition"
+        disabled={!canPublish || submitting || !selected.length || (selected.some(p => p !== 'news') && !group)}
+        title={!canPublish ? publishBlockReason : undefined}
+        className="w-full flex items-center justify-center gap-1.5 px-3 py-2 text-sm rounded-lg bg-orange text-white hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition"
       >
         {submitting ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
         เผยแพร่
       </button>
+
+      {/* เหตุผลที่กดไม่ได้ — ต้องบอกตรงนี้ ไม่ใช่ปล่อยให้กดแล้วค่อยเจอ 403 */}
+      {!canPublish && publishBlockReason && (
+        <p className="text-sm text-amber-600 dark:text-disc-muted">{publishBlockReason}</p>
+      )}
 
       {error && <p className="text-sm text-red-500">{error}</p>}
 

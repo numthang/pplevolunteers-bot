@@ -98,3 +98,49 @@
 - เก็บ JSONB (ไม่ใช่ EAV) — PG query/index `extra->>'key'` ได้ · field common → เลื่อนเป็น native column
 - **web `/join/<slug>` + SMS blast** สำหรับกลุ่มที่ยังไม่มี Discord เลย (ต้องเขียน custom OAuth + `guilds.join` scope) · Magic Link email เป็น fallback
 
+
+---
+
+## 🔎 Login Tracking — `auth_login_events` (2026-08-08)
+
+จดทุกความพยายาม login **ทั้งที่สำเร็จและไม่สำเร็จ** · logger: `web/db/authLog.js` → `logLogin({ provider, outcome, userId, identity, meta, req })`
+
+**ทำไมต้องจดฝั่งที่ไม่สำเร็จ:** ประตู login หลายทางออกแบบให้เงียบเพื่อกัน enumeration → user บอกว่าเข้าไม่ได้ แต่ไล่ย้อนไม่ได้เลย
+- เบอร์ไม่มีเจ้าของ → `genericOk()` โชว์ "ส่ง OTP แล้ว" ทั้งที่ไม่ได้ส่ง
+- `auth_nonces` ถูก DELETE ทั้งตอนขอ OTP ใหม่และตอนสำเร็จ
+- `org_login_tokens` ถูก `DELETE...RETURNING` ตอนใช้
+
+**จุดที่จด:** `lib/auth-options.js` (signIn + jwt จุดรวมทุก provider + magic authorize + nonce) · `api/auth/phone/request` · `api/auth/phone/verify` · `api/org/auth/magic`
+
+| outcome | หมายถึง |
+|---|---|
+| `ok` | ได้ session จริง |
+| `resolve_failed` | provider ผ่านแต่หา users.id ไม่ได้ (เดิมเงียบสนิท — bug-059 แฝงเพราะเหตุนี้) |
+| `no_owner` | เบอร์นั้นไม่มีเจ้าของ verified |
+| `otp_sent` / `otp_ok` / `bad_otp` / `otp_expired` / `too_many_attempts` / `cooldown` / `quota_exceeded` / `sms_failed` | phone flow |
+| `link_sent` | magic link ส่งแล้ว (`meta.known` = อีเมลนี้มีในระบบไหม, `meta.hasDiscord` = row นั้นผูก discord ไหม) |
+| `token_invalid_or_expired` | magic token ผิด/ถูกใช้แล้ว/เกิน 15 นาที |
+| `not_linked` | LINE ที่ยังไม่ผูก user |
+| `nonce_invalid` | passkey/phone แลก session ไม่ผ่าน |
+
+**หมายเหตุ:** `user_id` เป็น `ON DELETE SET NULL` โดยตั้งใจ — log ต้องไม่บล็อกการลบ user (เคสรวมบัญชีที่แตกร่าง) · ตัวตนยังไล่ได้จาก `identity` · retention 90 วัน ลบเองแบบ opportunistic ใน `authLog.js` (ไม่ต้องตั้ง cron) · ip อ่านจาก `x-forwarded-for` เท่านั้น (prod อยู่หลัง reverse proxy)
+
+### query ที่ใช้บ่อย
+
+```sql
+-- คนนี้ login อะไรมาบ้าง (ใส่อีเมล / เบอร์ / discord snowflake)
+SELECT at, provider, outcome, ip, meta FROM auth_login_events
+ WHERE identity = 'xxx@gmail.com' ORDER BY at DESC LIMIT 50;
+
+-- ใครเข้าไม่ได้บ้างวันนี้
+SELECT at, provider, outcome, identity, ip FROM auth_login_events
+ WHERE outcome <> 'ok' AND at > NOW() - INTERVAL '1 day' ORDER BY at DESC;
+
+-- คนย้ายไป email login เยอะแค่ไหนแล้ว
+SELECT provider, outcome, count(*) FROM auth_login_events
+ WHERE at > NOW() - INTERVAL '30 days' GROUP BY 1,2 ORDER BY 3 DESC;
+
+-- คนเก่าที่กำลังจะแตกร่าง (ขอ magic link ด้วยอีเมลที่ไม่มีในระบบ)
+SELECT at, identity, ip FROM auth_login_events
+ WHERE provider = 'magic' AND meta->>'known' = 'false' ORDER BY at DESC;
+```

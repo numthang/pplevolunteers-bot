@@ -2,6 +2,7 @@
 - workspacefor.org
 - ทำให้เว็บไซต์ หรือ sub-domain ภายนอกใช้ระบบเดียวกันได้แต่ใช้ชื่อของเขาเอง
 - หน้า http://localhost:3000/bot/platforms ถ้า platforms ไม่ขึ้น กับ guild แล้วก็เอา guild switcher ออกไปดีไหม เปลี่ยน url ด้วยไหม น่าจะต้องย้ายออกจาก bot ไปอยู่ใน /posts/settings ป่ะ
+- ทำให้ login by discord เด่นสุด แล้ว เข้าด้วยวิธีอื่น เอาไปซ่อนไว้งี้ป่ะ
 
 # Posts
 - อยากได้ข้อความใหญ่ๆ บน Facebook อ่ะ อันนี้ยังติดอยู่เหมือน จะยิง api ไม่ได้ แต่เห็นมีบางเคสที่ตัวหนังสือใหญ่และพิมพ์ยาวๆ ได้ด้วย แบบอันนี้ https://www.facebook.com/OilTraderKP/posts/pfbid02CXQo1VuJcPCBntjGTpbSgfth41ayPuRGjH4frhMUs9m1BDuQVoH1tcpCBjvvJyQVl?rdid=aGbrOQObqjVcNBvm ไม่รู้ว่า api ได้ไหม
@@ -68,6 +69,22 @@ End of the Day
 - Update PENDING.md สิ่งที่อยากทำ สิ่งที่ทำไปแล้ว, อ่านส่วนที่แก้ไขแล้วเอาขึ้น git พร้อมข้อความแก้ไข พร้อม bump version ใน package.json ให้ถูกต้อง (เช็ค git log ก่อนว่า version ล่าสุดคืออะไร ใช้ semver — patch สำหรับแก้เล็กน้อย, minor สำหรับฟีเจอร์ใหม่) tag เฉพาะ minor ขึ้นไป และ push ด้วย
 
 ===
+BEGIN;
+
+-- 1) ลบบัตรใหม่ (ระบุด้วย email)
+DELETE FROM org_members
+ WHERE user_id = (SELECT id FROM users WHERE email = '<อีเมล>' AND discord_id IS NULL);
+
+DELETE FROM users
+ WHERE email = '<อีเมล>' AND discord_id IS NULL;
+
+-- 2) ใส่ email ลงบัตรเก่า
+UPDATE users SET email = '<อีเมล>', updated_at = NOW()
+ WHERE discord_id = '<discord_id>';
+
+COMMIT;
+
+
 Panel Forum: 
 /panel forum channel:#💬┆กระทู้-ทั่วไป
 

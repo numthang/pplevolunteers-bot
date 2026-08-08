@@ -2,6 +2,7 @@ import crypto from 'crypto'
 import pool from '@/db/index.js'
 import { normalizeEmail, isValidEmail } from '@/db/orgMembers.js'
 import { sendEmail } from '@/lib/sendEmail.js'
+import { logLogin } from '@/db/authLog.js'
 
 // callbackUrl ต้องเป็น path ภายในเท่านั้น (กัน open-redirect ไป phishing)
 // อนุญาต '/x' · บล็อก '//host', '/\host', absolute URL, ค่าอื่นๆ → null (fallback /org ที่หน้า verify)
@@ -25,6 +26,15 @@ export async function POST(req) {
     [token, email]
   )
 
+  // ตั๋วที่ไม่มีใครคลิกจะค้างตลอดไป (ตอนใช้จริงถูก DELETE...RETURNING ทิ้ง แต่ที่ไม่ถูกใช้ไม่มีใครเก็บ)
+  pool.query(`DELETE FROM org_login_tokens WHERE created_at < NOW() - INTERVAL '1 day'`).catch(() => {})
+
+  // known=false คือคนที่ไม่เคยมีในระบบ → คลิกลิงก์แล้วจะได้บัญชีใหม่เลย (ประตูนี้เป็น create-on-login)
+  // เก็บไว้ดูว่ามีใครสมัครเข้ามาเองบ้าง · และเป็นสัญญาณ "คนเก่าที่ยังไม่ได้ผูกอีเมล" ที่กำลังจะแตกร่าง
+  const { rows: known } = await pool.query(
+    `SELECT id, discord_id FROM users WHERE email = $1`, [email]
+  ).catch(() => ({ rows: [] }))
+
   const origin = new URL(req.url).origin
   const cb = safeCallback(body.callbackUrl)
   const link = `${origin}/org/verify?token=${token}${cb ? `&callbackUrl=${encodeURIComponent(cb)}` : ''}`
@@ -37,6 +47,12 @@ export async function POST(req) {
     html: `<p>เข้าสู่ระบบด้วยลิงก์นี้ (หมดอายุใน 15 นาที):</p>
 <p><a href="${link}">เข้าสู่ระบบ →</a></p>
 <p style="color:#888;font-size:13px">ถ้าคุณไม่ได้ขอเข้าสู่ระบบ ละเว้นอีเมลนี้ได้เลย</p>`,
+  })
+
+  await logLogin({
+    provider: 'magic', outcome: 'link_sent', req,
+    userId: known[0]?.id || null, identity: email,
+    meta: { known: known.length > 0, hasDiscord: !!known[0]?.discord_id },
   })
 
   return Response.json(dev ? { ok: true, devLink: link } : { ok: true })
