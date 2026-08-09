@@ -104,6 +104,25 @@ export async function replaceMediaFile(id, path) {
   return rows[0] || null
 }
 
+/**
+ * ทับไฟล์คลิปด้วยตัวที่เบิร์นคำคมแล้ว — id/sort_order เดิม (ยังนับเป็น 1 คลิปของโพสต์)
+ *
+ * ⛔ ใช้ `replaceMediaFile()` แทนไม่ได้ — ตัวนั้น hardcode `kind = 'upload'` จะทำให้คลิป
+ *    กลายเป็นรูปในสายตาของ UI และท่อโพสต์ทันที
+ * ℹ️ ล้าง `source_url` ด้วย: ไฟล์นี้เป็นของที่เรา render เอง ไม่ใช่ของที่โหลดมาจาก Discord
+ *    ผลพลอยได้คือ `postsRetention` จะไม่ลบให้ (มันลบเฉพาะคลิปที่ยังมีต้นทางให้กลับไปหา)
+ */
+export async function replaceVideoFile(id, path, quoteText) {
+  const { rows } = await pool.query(
+    `UPDATE post_episode_media
+        SET path = $2, quote_text = $3, source_url = NULL, source_hash = NULL
+      WHERE id = $1 AND kind = 'video'
+      RETURNING id, episode_id, kind, path, source_url, sort_order, quote_text, created_at`,
+    [id, path, quoteText]
+  )
+  return rows[0] || null
+}
+
 /** ยังมีแถวอื่นอ้างไฟล์นี้อยู่ไหม (path หรือ bg_path) — เช็คก่อนลบไฟล์เก่าทิ้ง */
 export async function pathStillUsed(path, exceptId = null) {
   const { rows } = await pool.query(

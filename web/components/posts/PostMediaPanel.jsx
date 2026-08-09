@@ -9,6 +9,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { X, Upload, Loader2, ImageOff, ChevronLeft, ChevronRight, Film, Quote, Images, GripVertical, Pencil } from 'lucide-react'
 import QuoteGeneratorModal from './QuoteGeneratorModal.jsx'
+import VideoQuoteModal from './VideoQuoteModal.jsx'
 import AssetPickerModal from './AssetPickerModal.jsx'
 import ImageEditorModal from './ImageEditorModal.jsx'
 
@@ -32,7 +33,9 @@ const GRID = {
 export default function PostMediaPanel({ id, compact = false }) {
   const tq = useTranslations('posts.quoteModal')
   const tl = useTranslations('posts.library')
+  const tv = useTranslations('posts.videoQuote')
   const [quoteOpen, setQuoteOpen] = useState(false)
+  const [burnVideoId, setBurnVideoId] = useState(null)   // คลิปที่กำลังใส่คำคม
   const [libraryOpen, setLibraryOpen] = useState(false)
   const [lightbox, setLightbox] = useState(null)   // { src, index } — รูปที่กดดูเต็มจอ
   const [editing, setEditing] = useState(null)     // แถวสื่อที่กำลังแก้ (ครอบตัด/เบลอหน้า)
@@ -93,13 +96,33 @@ export default function PostMediaPanel({ id, compact = false }) {
     if (!files.length) return
     setUploading(true)
     setUploadError('')
-    const form = new FormData()
-    files.forEach(f => form.append('files', f))
+    // ⚠️ คลิปไปคนละทางกับรูป: `/media` ใช้ formData() ที่อมทั้งไฟล์ใน RAM (ดีกับรูปหลายใบ)
+    //    ส่วนคลิปยิง body ดิบเข้า `/media/video` ที่สตรีมลงดิสก์ — คลิป 200MB ผ่าน formData
+    //    = ~400MB ต่อ request · ที่นี่ยิงทีละไฟล์เพราะ body ดิบมีไฟล์เดียวได้
+    const videos = files.filter(f => f.type.startsWith('video/'))
+    const images = files.filter(f => !f.type.startsWith('video/'))
     try {
-      const res = await fetch(`/api/posts/${id}/media`, { method: 'POST', body: form })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) { setUploadError(data.error || 'อัปโหลดไม่สำเร็จ'); return }
-      setMedia(prev => [...prev, ...data.data])
+      const added = []
+      for (const v of videos) {
+        const res = await fetch(`/api/posts/${id}/media/video`, {
+          method: 'POST',
+          headers: { 'Content-Type': v.type },
+          body: v,
+        })
+        const data = await res.json().catch(() => ({}))
+        if (!res.ok) { setUploadError(data.error || 'อัปโหลดคลิปไม่สำเร็จ'); return }
+        added.push(data.data)
+      }
+
+      if (images.length) {
+        const form = new FormData()
+        images.forEach(f => form.append('files', f))
+        const res = await fetch(`/api/posts/${id}/media`, { method: 'POST', body: form })
+        const data = await res.json().catch(() => ({}))
+        if (!res.ok) { setUploadError(data.error || 'อัปโหลดไม่สำเร็จ'); return }
+        added.push(...data.data)
+      }
+      setMedia(prev => [...prev, ...added])
       // การ์ด "เผยแพร่" แยกออกไปแล้ว → บอกให้มันรู้ว่าตอนนี้มีสื่อกี่ชิ้น (IG/Threads ต้องมีสื่อ)
       window.dispatchEvent(new CustomEvent('posts:media-changed', { detail: { id } }))
     } catch {
@@ -263,7 +286,7 @@ export default function PostMediaPanel({ id, compact = false }) {
             เลือกไฟล์
           </button>
           <p className="text-sm text-warm-500 dark:text-disc-muted mt-1.5">
-            หรือลากไฟล์มาวาง / คลิกแล้ววาง (Ctrl+V) · รูปไม่เกิน 12MB · คลิป 64MB (โพสต์ละ 1 คลิป)
+            หรือลากไฟล์มาวาง / คลิกแล้ววาง (Ctrl+V) · รูปไม่เกิน 12MB · คลิป 200MB (โพสต์ละ 1 คลิป)
           </p>
 
           {/* เครื่องมือเสริม = สร้างสื่อใหม่ ไม่ใช่อัปของที่มีอยู่ → วางเป็นปุ่มเล็กมุมขวาล่าง
@@ -398,6 +421,15 @@ export default function PostMediaPanel({ id, compact = false }) {
                   <span className="flex-1 min-w-0 text-sm text-warm-700 dark:text-disc-text truncate">
                     {!src ? 'ยังโหลดไฟล์ไม่เสร็จ' : v.path ? 'คลิปในโพสต์นี้' : 'คลิป (ต้นทางบน Discord)'}
                   </span>
+                  {canEdit && v.path && (
+                    <button
+                      onClick={() => setBurnVideoId(v.id)}
+                      title={tv('title')}
+                      className="shrink-0 inline-flex items-center gap-1 px-2 py-1 text-xs rounded-md border border-warm-200 dark:border-disc-border text-warm-500 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover transition"
+                    >
+                      <Quote size={12} /> {tv('title')}
+                    </button>
+                  )}
                   {canEdit && (
                     <button
                       onClick={() => removeMedia(v.id)}
@@ -472,6 +504,18 @@ export default function PostMediaPanel({ id, compact = false }) {
             setMedia(prev => [...prev, media])
             // กล่อง "เผยแพร่" นับสื่อเอง (IG/Threads ต้องมีสื่อ ≥1) — ต้องบอกให้รู้เหมือนตอนอัปไฟล์
             window.dispatchEvent(new CustomEvent('posts:media-changed', { detail: { id } }))
+          }}
+        />
+      )}
+
+      {burnVideoId && (
+        <VideoQuoteModal
+          mediaId={burnVideoId}
+          onClose={() => setBurnVideoId(null)}
+          onDone={updated => {
+            // ทับแถวเดิม (id เดิม) → ต้อง map ไม่ใช่ push · `v` = กันแคช เพราะ route เสิร์ฟด้วย
+            // Cache-Control 1 ชม. ไม่งั้นเบราว์เซอร์ยังเล่นคลิปก่อนใส่คำคมต่ออีกนาน
+            setMedia(prev => prev.map(m => (m.id === updated.id ? { ...m, ...updated, v: Date.now() } : m)))
           }}
         />
       )}

@@ -25,6 +25,10 @@ import { QUOTE_AI_KEY, QUOTE_STYLE_KEYS, QUOTE_STYLE_OPTIONS, normalizeStyle } f
  * ("module.createRequire failed parsing argument" ตอน build → `requireFromRoot is not a function")
  * `process.getBuiltinModule` เป็นแค่ property access ที่ webpack วิเคราะห์ไม่ได้ → ได้ของจริงจาก Node
  */
+export function requireFromRoot(modPath) {
+  return nodeRequireFromRoot()(modPath)
+}
+
 function nodeRequireFromRoot() {
   if (typeof process.getBuiltinModule !== 'function') {
     throw new QuoteRenderError('ต้องใช้ Node 22.3+ ขึ้นไป (process.getBuiltinModule)')

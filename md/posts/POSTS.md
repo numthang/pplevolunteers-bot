@@ -473,6 +473,45 @@ bottom-right (CLOSE pool) x40 → ok=34 fail=6  (15%)  ERR_INVALID_URL
 
 ---
 
+## 🎬 คลิป: คำคมบนคลิป (ก้อน B — เสร็จ 2026-08-09)
+
+**เคาะสำคัญ: ไม่มีตารางคิว ไม่มี worker** — เดิมวางแผนไว้เป็น `post_video_jobs` + poll แต่ user ค้านว่า
+"เพิ่มตารางอีกแล้วเหรอ" แล้วพอไล่ดูของเดิมจริงๆ ก็พบว่าไม่ต้องมี:
+
+| ที่เคยจะสร้างใหม่ | ของเดิมที่ใช้แทน |
+|---|---|
+| ตาราง job + สถานะ | render จบใน request เดียว · แลกด้วย nginx `proxy_read_timeout 300s` **1 บรรทัด** |
+| worker ฝั่งบอท | เว็บ render เองได้อยู่แล้ว (`QuoteGeneratorModal` เรียก canvas+sharp ผ่าน `lib/quoteRender.js` ทุกวันนี้) · ffmpeg เป็น child process ไม่บล็อก event loop |
+| poll endpoint + UI polling | ไม่ต้องมี — ได้ error จริงกลับหน้าจอด้วย ซึ่งคิวให้ไม่ได้ |
+| แถวสื่อชิ้นใหม่ | `replaceVideoFile()` ทับแถวเดิม id/sort_order เดิม → ยังเป็น 1 คลิป/โพสต์ ไม่ชนกฎก้อน A |
+| กลไก undo | ไม่ลบไฟล์ต้นฉบับทันที ปล่อยเป็นกำพร้าให้ `scripts/posts/gc-media.js` เก็บหลัง 7 วัน = หน้าต่างกู้คืนฟรี |
+
+**ตัวเลขที่ใช้ตัดสิน (วัดบนเครื่องนี้ i5-6500 4 คอร์):** overlay re-encode = **0.68 × ความยาวคลิป**
+(คลิป 30 วิ 1080p 18Mbps → 20.4 วิ) → เพดาน 90 วิ (= เพดาน Reels ของ IG/FB) ≈ 61 วิ ยังอยู่ใน `proxy_read_timeout 300s`
+
+**ไฟล์:**
+- `utils/quoteStyles.js` — เพิ่ม `renderQuoteOverlay(w,h,opts)` คืน PNG โปร่งใส · **ต้องอยู่ในไฟล์นี้** เพราะ `fitFont`/`wrapText`/`graphemes`/`lsDraw` เป็น private ทั้งหมด (`/scrutinize` จับได้ว่าแผนเดิมที่เขียนว่า "reuse ตรงๆ" ทำไม่ได้จริง)
+- `utils/videoQuoteOverlay.js` — `probeVideo()` + `renderVideoQuote()` · **คืนขนาดที่ตาเห็น ไม่ใช่ขนาด coded**
+- `web/lib/videoRender.js` — สะพานไปราก (ใช้ `requireFromRoot` ตัวเดียวกับการ์ดคำคม)
+- API: `GET/POST /api/posts/media/[id]/quote-burn` + `POST .../preview` (PNG · ไม่แตะ ffmpeg ไม่แตะ DB)
+- `VideoQuoteModal.jsx` — พรีวิวคือ **PNG ตัวจริงที่จะถูกเบิร์น** วางทับ `<video>` ไม่ใช่ `<div>` ข้อความ (CSS จะให้ผลคนละอย่างกับ `fitFont`)
+
+**ขาอัปโหลดเปลี่ยนด้วย:** คลิปไปทาง `POST /api/posts/[id]/media/video` ที่ **สตรีมลงดิสก์**
+(`savePostFileFromStream`) → ยกเพดานจาก 64MB เป็น **200MB** ได้อย่างปลอดภัย · ทาง `/media` เดิมรับแต่รูป
+เพราะ `req.formData()` อมทั้งไฟล์ใน RAM (คลิป 200MB = ~400MB/request)
+
+**verify (curl บน production build จริง port 3100):** อัปสตรีม 201 · probe คืน 640×480/3วิ/hasAudio ·
+พรีวิว PNG 200 15.9KB · เบิร์นจริง 0.37 วิ แถว id เดิม `kind=video` `quote_text` ครบ · ผลลัพธ์ h264+aac ครบ ·
+ดึงเฟรมออกมาดู ข้อความไทยตัดคำถูก · Range 206 บนคลิปใหม่ · คลิปที่ 2 บล็อก · รูปเข้าทางคลิปบล็อก ·
+คลิปเข้าทาง multipart บล็อก · เบิร์นบนแถวรูปบล็อก · ข้อความว่างบล็อก · คลิป 95 วิ → `tooLong` + ปฏิเสธ ·
+ไฟล์ 250MB → 413 · `npm test` 288 · pipeline 25 เคส
+
+⚠️ **ยังไม่ได้ทดสอบกับคลิปมือถือจริง (rotation)** — ffmpeg บนเครื่องนี้เป็น 4.4.2 สังเคราะห์ไฟล์ที่มี
+display matrix ไม่ได้ (`-display_rotation` เป็นของ 6+) · โค้ดอ่าน rotation จากทั้ง tag และ side_data
+(เครื่องหมายกลับกัน — เทส 6 เคสแล้ว) แล้วใส่ `transpose` เอง + ล้าง metadata กันหมุนซ้ำ **แต่ต้องลองของจริงก่อนใช้งานจริง**
+
+---
+
 ## 🎬 คลิป: อัปจากเว็บ (ก้อน A — เสร็จ 2026-08-09)
 
 เดิมคลิปเข้าโพสต์ได้ทางเดียวคือหย่อนในตะกร้าดิสฯ · ตอนนี้ลากไฟล์ใส่โซนสื่อบนเว็บได้ตรงๆ

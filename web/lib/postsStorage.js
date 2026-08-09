@@ -10,6 +10,9 @@
  */
 
 import { writeFile, mkdir, unlink, readFile } from 'fs/promises'
+import { createWriteStream } from 'fs'
+import { Readable, Transform } from 'stream'
+import { pipeline } from 'stream/promises'
 import { join, resolve, sep } from 'path'
 import { randomUUID, createHash } from 'crypto'
 
@@ -20,9 +23,11 @@ export const POSTS_DIR = join('storage', 'posts')
 export const MAX_FILE_SIZE = 12 * 1024 * 1024   // 12 MB — รูปจากมือถือสมัยนี้ 8–10 MB ได้
 export const MAX_MEDIA_PER_EPISODE = 20
 
-// คลิปใหญ่กว่ารูปมาก แต่ห้ามใหญ่เกินไป: `req.formData()` อมทั้งไฟล์ไว้ใน RAM แล้ว
-// `Buffer.from(arrayBuffer)` ก็อีกชุด → 64 MB = ~128 MB ต่อ request บนเครื่องที่ CPU/RAM ตึงอยู่แล้ว
-export const MAX_VIDEO_SIZE = 64 * 1024 * 1024
+// 200 MB ≈ คลิปมือถือดิบ 1080p ยาว ~90 วิ (เพดานความยาวของ Reels)
+// เพดานนี้ปลอดภัยได้เพราะขาอัปโหลดวิดีโอ **สตรีมลงดิสก์** (savePostFileFromStream)
+// ⛔ ห้ามเปลี่ยนขาวิดีโอกลับไปใช้ `req.formData()` — ตัวนั้นอมทั้งไฟล์ใน RAM แล้ว
+//    `Buffer.from(arrayBuffer)` อีกชุด = 400 MB ต่อ request บนเครื่องที่ RAM/CPU ตึงอยู่แล้ว
+export const MAX_VIDEO_SIZE = 200 * 1024 * 1024
 export const MAX_VIDEO_PER_EPISODE = 1   // publishPipeline เก็บ videoUrl ได้ตัวเดียว (ตัวหลังทับตัวหน้า)
 
 const EXT_BY_MIME = {
@@ -97,6 +102,44 @@ export async function savePostFile(buffer, mime) {
   await mkdir(resolve(REPO_ROOT, POSTS_DIR), { recursive: true })
   await writeFile(abs, buffer)
   return relPath
+}
+
+/**
+ * เขียนไฟล์จาก **สตรีม** ลงดิสก์ตรงๆ — ไม่มีจังหวะไหนที่ทั้งไฟล์อยู่ใน RAM
+ *
+ * ใช้กับวิดีโอ (200 MB) · รูปยังใช้ `savePostFile()` ต่อไปได้เพราะเล็กและมาเป็น multipart หลายไฟล์
+ * ตัดขนาดระหว่างไหล ไม่รอ Content-Length เพราะ client ปลอมได้ · เกินเมื่อไหร่ลบไฟล์ทิ้งทันที
+ *
+ * @param {ReadableStream} webStream  `req.body` ของ route handler
+ * @returns {Promise<{relPath:string, bytes:number}>}
+ */
+export async function savePostFileFromStream(webStream, mime, maxBytes) {
+  const ext = EXT_BY_MIME[mime] || VIDEO_EXT_BY_MIME[mime]
+  if (!ext) throw new Error('postsStorage: ชนิดไฟล์ไม่รองรับ')
+  const relPath = join(POSTS_DIR, `${randomUUID()}.${ext}`)
+  const abs = absPath(relPath)
+  await mkdir(resolve(REPO_ROOT, POSTS_DIR), { recursive: true })
+
+  let bytes = 0
+  const limiter = new Transform({
+    transform(chunk, _enc, cb) {
+      bytes += chunk.length
+      if (bytes > maxBytes) return cb(Object.assign(new Error('ไฟล์ใหญ่เกินกำหนด'), { code: 'TOO_LARGE' }))
+      cb(null, chunk)
+    },
+  })
+
+  try {
+    await pipeline(Readable.fromWeb(webStream), limiter, createWriteStream(abs))
+  } catch (err) {
+    await unlink(abs).catch(() => {})   // ไฟล์ครึ่งๆ ห้ามค้างไว้ให้ gc มาเดาทีหลัง
+    throw err
+  }
+  if (!bytes) {
+    await unlink(abs).catch(() => {})
+    throw Object.assign(new Error('ไฟล์ว่าง'), { code: 'EMPTY' })
+  }
+  return { relPath, bytes }
 }
 
 /**

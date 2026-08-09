@@ -47,8 +47,9 @@
 
 ---
 
-## 🔴 เจอ 2026-07-30 — token Facebook เพจ "ราชบุรี" ใช้ไม่ได้แล้ว
-`Invalid OAuth access token - Cannot parse access token` ทั้ง page token และ user token → **โพสต์ FB จากระบบไม่ออกอยู่ตอนนี้** (ไม่เกี่ยวกับงาน posts) · ต้อง reconnect ที่ `/bot/platforms`
+## ✅ ปิดแล้ว — token Facebook เพจ "ราชบุรี" (เจอ 2026-07-30 · **user ยืนยันโพสต์ได้ปกติบน prod 2026-08-09**)
+เดิม: `Invalid OAuth access token - Cannot parse access token` ทั้ง page token และ user token → โพสต์ FB ไม่ออก · แก้ด้วยการ reconnect ที่ `/bot/platforms`
+⚠️ **สถานะ token บน prod เช็คจากเครื่อง dev ไม่ได้** — prod ไม่ได้อยู่เครื่องนี้ (ไม่มี `/www/wwwroot`, ไม่มี user `www`) · หัวข้อ token ในไฟล์นี้เป็น**บันทึกตอนนั้น** ห้ามอ่านเป็นสถานะปัจจุบัน ต้องถาม user หรือดูที่ prod เอง
 ⚠️ **เวลาเทสคิวโพสต์: ปิดบอทก่อน** — บอทที่รันอยู่จะหยิบงานในคิวไปยิงโซเชียล**จริง** (เจอตอน e2e 2026-07-30)
 
 ## 🔴 เจอ 2026-08-08 — Threads token ตายเงียบ + ไม่มีกลไกต่ออายุทั้งระบบ
@@ -152,7 +153,11 @@ spec + ดีไซน์ + ตารางทั้งหมดอยู่ `md
   - ⚠️ **`isAllowedMime()` ยังเป็นของรูปล้วนเหมือนเดิม โดยตั้งใจ** — วิดีโอมี `isAllowedVideoMime()` แยก เพราะคลังภาพ + PUT แก้รูป ใช้ predicate ตัวเดียวกัน
   - ⚠️ **`GET /api/posts/media/[id]` เป็น stream + Range แล้ว** (ไม่ใช่ `readFile` ทั้งก้อน) — ใครจะแก้ route นี้ต่อ อย่าถอยกลับไปเป็น buffer ไม่งั้น Safari เล่นคลิปไม่ได้
   - 🔜 **ก่อน deploy prod: ตั้ง nginx `client_max_body_size 100m;` ของไซต์แล้ว reload** — default 1MB → อัปคลิปเด้ง 413 เป็นหน้า error ดิบของ nginx (local ไม่มี nginx คั่น จึงเทสไม่เจอ)
-  - ยังไม่ทำ: **Video Generator (ซ้อนคำคมบนคลิป)** — พักไว้ตั้งแต่ 2026-08-03 · ข้อที่ยังไม่เคาะคือ ffmpeg render sync ใน route หรือ job row + poll
+- [x] **🎬 คำคมบนคลิป (ก้อน B) — ✅ เสร็จ + verify 2026-08-09** (local · ยังไม่ deploy) · รายละเอียด `md/posts/POSTS.md` §🎬 คลิป: คำคมบนคลิป
+  - **ไม่มีตารางคิว ไม่มี worker** — render จบใน request เดียว (วัดได้ 0.68 × ความยาวคลิป · เพดาน 90 วิ = เพดาน Reels)
+  - เพดานอัปโหลดคลิป 64MB → **200MB** เพราะเปลี่ยนขาอัปเป็นสตรีมลงดิสก์ (`POST /api/posts/[id]/media/video`)
+  - 🔜 **nginx ต้องมี 2 บรรทัด:** `client_max_body_size 200m;` + `proxy_read_timeout 300s;` — ขาดตัวหลัง = เบิร์นคลิปยาวๆ ถูกตัดกลางคัน
+  - ⚠️ **rotation ยังไม่ผ่านคลิปมือถือจริง** — ffmpeg บนเครื่อง dev เป็น 4.4.2 สังเคราะห์ไฟล์ที่มี display matrix ไม่ได้ · **ต้องลองคลิปแนวตั้งจากมือถือ 1 อันก่อนใช้จริง** ถ้าพลาด = คลิปออกไปนอนตะแคง
 - [ ] **migrate i18n โซน posts** (หนี้จากก้อน 2b) — 7 ไฟล์: `PostsHome` · `PostEditor` · `PostMediaPanel` · `PostMetaPanel` · `PostPublishPanel` · `PostRevisions` · `EmojiPicker` (ใหม่ 2026-08-08 — hardcode ไทยตาม sibling ในโซนเดิม) · งาน mechanical ส่ง Sonnet subagent ได้ · ระหว่างยังไม่ทำ โซนนี้จะปน hardcode กับ `t()`
 - [x] **🎨 คลังภาพ (media library) — ✅ เขียนเสร็จ 2026-08-04** (local · ยังไม่ deploy prod · **ยังไม่เทสในเบราว์เซอร์จริง**)
   - migration รันบน local แล้ว: `post_assets` + `post_episode_media.source_asset_id` (บล็อกท้าย `migration.sql` · additive ล้วน)

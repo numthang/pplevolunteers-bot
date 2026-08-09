@@ -1382,6 +1382,30 @@
       "saveFailed": "Could not save the image",
       "prev": "Previous image",
       "next": "Next image"
+    },
+    "videoQuote": {
+      "title": "Add quote to clip",
+      "closeTitle": "Close",
+      "loadFailed": "Could not read clip info",
+      "previewFailed": "Preview failed",
+      "renderFailed": "Could not create clip",
+      "previewing": "Updating preview…",
+      "clipInfo": "{seconds}s clip · {w}×{h}",
+      "noAudio": "no audio",
+      "tooLong": "Clip is longer than {max}s — cannot burn text (over the Reels limit anyway)",
+      "textLabel": "Text",
+      "textPlaceholder": "Type the quote to overlay on the clip",
+      "authorLabel": "Speaker",
+      "authorPlaceholder": "e.g. — Full Name",
+      "positionLabel": "Text position",
+      "position_top": "Top",
+      "position_center": "Middle",
+      "position_bottom": "Bottom",
+      "replaceHint": "The result replaces the existing clip in this post",
+      "renderingHint": "Rendering — do not close this tab",
+      "cancel": "Cancel",
+      "render": "Create clip",
+      "rendering": "Creating…"
     }
   }
 }
