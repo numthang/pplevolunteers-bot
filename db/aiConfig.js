@@ -4,6 +4,7 @@
 const pool = require('./index');
 const { getSetting } = require('./settings');
 const { AI_MODES } = require('../config/aiModes');
+const { getAiCreds } = require('./aiCreds');
 
 const GLOBAL = 'global';
 
@@ -44,12 +45,9 @@ async function getMode(guildId, value) {
   return modes.find(m => m.value === value) || null;
 }
 
-// key กลางจาก .env — ราย provider (org ที่กรอก key เองจะมาแทนที่ตรงนี้ในขั้นถัดไป)
-const SHARED_KEY = { claude: 'ANTHROPIC_API_KEY', gemini: 'GEMINI_API_KEY' };
-
-// agent config — { provider, model, maxTokens, apiKey }
-// ctx = { orgId, guildId } · ตอนนี้ยังอ่านแถว global อย่างเดียว (ยังไม่ใช้ ctx)
-// ขั้นถัดไปจะใช้ ctx เลือก key/model ราย org — call site ทุกตัวส่ง ctx มาแล้ว ไม่ต้องไล่แก้ซ้ำ
+// agent config — { provider, model, maxTokens, apiKey, source }
+// ctx = { orgId, guildId, task } · key/โมเดลมาจาก db/aiCreds.js (org ก่อน → ยืม key กลางตามโควตา)
+// แถว global ใน dc_guild_config ยังเป็นค่าตั้งต้นของทั้งระบบ — org ที่ไม่ตั้งอะไรเลยได้ค่านี้เหมือนเดิม
 async function getAgentConfig(ctx = {}) {
   let provider, model, maxTokens;
   try {
@@ -61,12 +59,17 @@ async function getAgentConfig(ctx = {}) {
   } catch (err) {
     console.error('[aiConfig] getAgentConfig failed, using defaults:', err.message);
   }
-  const p = provider || DEFAULTS.provider;
+  // โยน AiCredsError ต่อขึ้นไปเลย (no_key / quota) — เส้นเรียกเอาข้อความไปแสดงให้ผู้ใช้ได้ตรงๆ
+  const creds = await getAiCreds({
+    orgId: ctx.orgId ?? null,
+    guildId: ctx.guildId ?? null,
+    task: ctx.task === 'writing' ? 'writing' : 'light',
+    legacy: { provider, model },
+  });
+
   return {
-    provider: p,
-    model: model || DEFAULT_MODEL[p] || DEFAULT_MODEL.claude,
+    ...creds,
     maxTokens: Number(maxTokens) || DEFAULTS.maxTokens,
-    apiKey: process.env[SHARED_KEY[p]] || null,
   };
 }
 

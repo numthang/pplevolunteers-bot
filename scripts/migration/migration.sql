@@ -677,3 +677,14 @@ DELETE FROM dc_guild_config c
      SELECT 1 FROM org_config o
       WHERE o.org_id = g.org_id AND o.key = c."key" AND o.value IS NOT NULL
    );
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 2026-08-10 · AI per-org (BYO-key) — seed โควตายืม key กลางให้ org ที่มีอยู่
+--
+-- org ทุกเจ้าวันนี้ใช้ key กลางจาก .env อยู่ · ถ้าไม่ seed แล้ว deploy โค้ดใหม่
+-- ทุก org จะตกไปใช้โควตา default (30 ครั้ง/วัน) ทันที = AI ดับกลางวันโดยไม่มีใครทำอะไรผิด
+-- org ที่สร้าง "หลังจากนี้" ไม่มีแถวนี้ → ได้ default 30 ตามเจตนา (ทดลองใช้แล้วต้องกรอก key เอง)
+-- ตัวเลขนี้แก้ทีหลังได้ที่ org_config — 0 = ยืมไม่ได้เลย
+INSERT INTO org_config (org_id, key, value, updated_at)
+SELECT id, 'ai_shared_quota_daily', '100000', now() FROM orgs
+ON CONFLICT (org_id, key) DO NOTHING;

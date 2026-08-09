@@ -80,7 +80,8 @@ export async function POST(req) {
 
     return Response.json({ success: true, data: { quotes, headlines, imageIdeas, hashtags, cta, articleTips, saved } })
   } catch (error) {
-    if (error instanceof AiError) return Response.json({ error: error.message }, { status: 502 })
+    // โควตายืม key กลางหมด = 429 (ผู้ใช้แก้เองได้ด้วยการใส่ key องค์กร) · AI ล่มจริง = 502
+    if (error instanceof AiError) return Response.json({ error: error.message }, { status: error.code === 'quota' ? 429 : 502 })
     console.error('[POST /api/posts/ai/caption]', error)
     return Response.json({ error: 'Internal Server Error' }, { status: 500 })
   }

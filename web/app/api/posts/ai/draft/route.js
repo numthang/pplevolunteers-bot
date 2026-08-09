@@ -48,7 +48,8 @@ export async function POST(req) {
     const draftBody = await askAi(SYSTEM_PROMPT, userLines.join('\n'), { orgId: ctx.orgId })
     return Response.json({ success: true, data: { body: draftBody } })
   } catch (error) {
-    if (error instanceof AiError) return Response.json({ error: error.message }, { status: 502 })
+    // โควตายืม key กลางหมด = 429 (ผู้ใช้แก้เองได้ด้วยการใส่ key องค์กร) · AI ล่มจริง = 502
+    if (error instanceof AiError) return Response.json({ error: error.message }, { status: error.code === 'quota' ? 429 : 502 })
     console.error('[POST /api/posts/ai/draft]', error)
     return Response.json({ error: 'Internal Server Error' }, { status: 500 })
   }

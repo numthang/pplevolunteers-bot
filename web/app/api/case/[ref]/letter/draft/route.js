@@ -43,10 +43,11 @@ export async function POST(req, { params }) {
       model: 'claude-haiku-4-5-20251001',
       maxTokens: 1500,
       orgId,
+      task: 'light',
     })
   } catch (e) {
     console.error('[letter/draft] AI error:', e.message)
-    return Response.json({ error: e instanceof AiError ? e.message : 'AI ไม่สำเร็จ' }, { status: 502 })
+    return Response.json({ error: e instanceof AiError ? e.message : 'AI ไม่สำเร็จ' }, { status: e?.code === 'quota' ? 429 : 502 })
   }
 
   return Response.json({

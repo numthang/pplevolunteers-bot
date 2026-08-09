@@ -7,6 +7,10 @@
  * โควตาต่อคนต่อวันอยู่ที่ `lib/postsAiQuota.js` ไม่ใช่ที่นี่ — ที่นี่ยิงอย่างเดียว
  */
 
+import { getAiCreds, AiCredsError } from './aiCreds.js'
+
+export { AiCredsError }
+
 export const AI_MODEL = 'claude-sonnet-5'
 const MAX_TOKENS = 8000          // ไทยกิน token เยอะ (~1 token/ตัวอักษร) — ซีรีส์ยาวต้องมี headroom
 const TIMEOUT_MS = 120 * 1000
@@ -22,21 +26,39 @@ export class AiError extends Error {}
  *   model/maxTokens ปรับได้เฉพาะงานที่ไม่ใช่ posts (posts ปัก AI_MODEL ไว้ตามหัวไฟล์)
  */
 export async function askAi(system, user, opts = {}) {
-  if (!process.env.ANTHROPIC_API_KEY) throw new AiError('ยังไม่ได้ตั้งค่า ANTHROPIC_API_KEY')
+  // key/โมเดลของ org นี้ — ไม่มี key ของตัวเอง = ยืม key กลางตามโควตา (โยน AiCredsError ถ้าหมด)
+  // opts.model ที่ส่งมาเป็นแค่ "ค่าตั้งต้นของงานนี้" — org ที่จ่ายเองเลือกทับได้
+  let creds
+  try {
+    creds = await getAiCreds({
+      orgId: opts.orgId ?? null,
+      task: opts.task === 'light' ? 'light' : 'writing',
+      legacy: { model: opts.model || AI_MODEL },
+    })
+  } catch (err) {
+    // แปลงเป็น AiError เพื่อให้ route ที่ catch อยู่แล้วจับได้ — พก code ต่อไปให้ตอบ 429 ตอนโควตาหมด
+    if (err instanceof AiCredsError) throw Object.assign(new AiError(err.message), { code: err.code })
+    throw err
+  }
+  if (creds.provider !== 'claude') {
+    throw new AiError('งานนี้รองรับเฉพาะ Claude — เปลี่ยนค่ายที่ ตั้งค่าองค์กร > AI หรือใส่ API key ของ Claude')
+  }
 
   const { default: Anthropic } = await import('@anthropic-ai/sdk')
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY, timeout: TIMEOUT_MS })
+  const client = new Anthropic({ apiKey: creds.apiKey, timeout: TIMEOUT_MS })
 
   let res
   try {
     res = await client.messages.create({
-      model: opts.model || AI_MODEL,
+      model: creds.model,
       max_tokens: opts.maxTokens || MAX_TOKENS,
       system,
       messages: [{ role: 'user', content: user }],
     })
   } catch (err) {
-    throw new AiError(err?.message || 'เรียก AI ไม่สำเร็จ')
+    // ห้ามโยน err.message ดิบ — error บางแบบของ SDK echo header/คีย์กลับมาด้วย
+    console.error('[askAi]', creds.source, err?.status || '', err?.message)
+    throw new AiError('เรียก AI ไม่สำเร็จ — ตรวจ API key ขององค์กรหรือลองใหม่อีกครั้ง')
   }
 
   const text = (res.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n').trim()

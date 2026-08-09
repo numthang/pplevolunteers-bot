@@ -117,10 +117,10 @@ export async function POST(req, { params }) {
     // (กลืน = watermark เลื่อนต่อทั้งที่ยังไม่ได้สกัด → ข้อความชุดนั้นหายถาวร กดซ้ำก็ไม่กลับมา)
     let raw
     try {
-      raw = await askAi(AI_TIMELINE_SYSTEM, prompt, { model: TIMELINE_MODEL, maxTokens: 1024, orgId })
+      raw = await askAi(AI_TIMELINE_SYSTEM, prompt, { model: TIMELINE_MODEL, maxTokens: 1024, orgId, task: 'light' })
     } catch (e) {
       console.error('[case/timeline/refresh] AI ล่ม', { ref }, e.message)
-      return Response.json({ error: 'AI ประมวลผลไม่สำเร็จ ลองใหม่อีกครั้ง' }, { status: 502 })
+      return Response.json({ error: e?.message || 'AI ประมวลผลไม่สำเร็จ ลองใหม่อีกครั้ง' }, { status: e?.code === 'quota' ? 429 : 502 })
     }
     const json = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/, '').trim()
     try {
