@@ -4,6 +4,7 @@ import { getUserGuilds, guildsOfOrg } from '@/db/guilds.js'
 import { getGuildId } from '@/lib/guildContext.js'
 import { resolveActiveOrg } from '@/lib/activeOrg.js'
 import GuildSwitcherBar from '@/components/GuildSwitcherBar.jsx'
+import BotSettingsNav from '@/components/bot/BotSettingsNav.jsx'
 
 export const metadata = { title: { template: '%s — Bot', default: 'Bot Settings' } }
 
@@ -43,11 +44,18 @@ export default async function BotLayout({ children }) {
     )
   }
 
+  // โครงเดียวกับ /org/settings (sidebar ซ้าย + เนื้อหาขวา, mobile = dropdown ทับบน)
+  // ต่างกันแค่มี GuildSwitcherBar เพราะทั้งหมวดนี้ scope ด้วย guild ที่เลือก
   return (
     <div className="-mx-3 sm:-mx-4 -mt-6 min-h-screen bg-warm-50 dark:bg-disc-bg2">
       <div className="max-w-5xl mx-auto px-1 sm:px-4 py-4">
         <GuildSwitcherBar guilds={guilds} currentGuildId={currentGuildId} />
-        {children}
+        <div className="md:grid md:grid-cols-[180px_minmax(0,1fr)] md:gap-8">
+          <aside className="mb-4 md:mb-0">
+            <BotSettingsNav />
+          </aside>
+          <div className="min-w-0">{children}</div>
+        </div>
       </div>
     </div>
   )

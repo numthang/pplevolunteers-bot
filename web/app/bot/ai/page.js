@@ -4,6 +4,7 @@ import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { Check, Loader2, Plus, Trash2, ChevronUp, ChevronDown, Cpu, Sparkles } from 'lucide-react'
 import { useEffectiveRoles } from '@/lib/useEffectiveRoles.js'
+import AiMentionToggle from '@/components/bot/AiMentionToggle.jsx'
 import { isEditor } from '@/lib/roles.js'
 
 const INPUT_CLS =
@@ -289,6 +290,8 @@ export default function AiConfigPage() {
         <p className="text-sm text-gray-500 dark:text-disc-muted mt-1">ตั้งค่าโมเดลและ prompt ที่ระบบ AI ใช้</p>
       </div>
       <div className="flex flex-col gap-6">
+        {/* ai_mention = สวิตช์ราย guild · API เป็น superadmin-only เหมือน AgentSection */}
+        {superAdmin && <AiMentionToggle />}
         {superAdmin && <AgentSection />}
         <ModesSection />
       </div>

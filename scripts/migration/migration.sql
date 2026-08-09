@@ -655,3 +655,25 @@ CREATE TABLE IF NOT EXISTS user_merges (
 CREATE INDEX IF NOT EXISTS idx_user_merges_keep ON user_merges (keep_id, at DESC);
 -- ตาม id ที่ถูกยุบ → id ปลายทาง (followMerge) ตอน refresh session
 CREATE INDEX IF NOT EXISTS idx_user_merges_drop ON user_merges (drop_id, at DESC);
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- 2026-08-09 — ลบ app creds ที่ค้างใน dc_guild_config (fallback ช่วงเปลี่ยนผ่าน)
+-- ═══════════════════════════════════════════════════════════════════════════
+-- creds ย้ายขึ้น org_config ตั้งแต่ 2026-07-29 · web/lib/socialAppCreds.js อ่าน org ก่อน
+-- แล้วเติมเฉพาะคีย์ที่ขาดจาก dc_guild_config (fallback ที่ตั้งใจให้ชั่วคราว)
+--
+-- เช็คก่อนลบแล้ว (2026-08-09): 8 แถว ของ 2 guild ใน org 1 · ค่าตรงกับ org_config ทุกแถว
+-- และไม่มีคีย์ไหนที่ guild มีแต่ org ไม่มี → ลบทิ้งได้ไม่กระทบ
+--
+-- ⚠️ DELETE นี้ปลอดภัยเฉพาะเมื่อ org ของ guild นั้นมีคีย์ครบแล้ว — เงื่อนไข NOT EXISTS
+-- ด้านล่างบังคับไว้ในตัว ถ้ามี guild ไหนที่ org ยังไม่มีคีย์ แถวนั้นจะถูกเก็บไว้
+DELETE FROM dc_guild_config c
+ USING dc_guilds g
+ WHERE g.guild_id = c.guild_id
+   AND c."key" IN ('meta_app_id', 'meta_app_secret',
+                   'threads_app_id', 'threads_app_secret',
+                   'x_consumer_key', 'x_consumer_secret')
+   AND EXISTS (
+     SELECT 1 FROM org_config o
+      WHERE o.org_id = g.org_id AND o.key = c."key" AND o.value IS NOT NULL
+   );

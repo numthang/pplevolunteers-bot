@@ -88,7 +88,7 @@ id · org_id · owner_user_id · guild_id · user_discord_id · name · group_na
 | `api/social/accounts/route.js` | GET: public scope `guild_id` → `org_id` (เห็นบัญชีทุก guild ในองค์กร) · private ยึด `owner_user_id` · POST: org มาจาก session เสมอ + เช็ค guild ∈ org + ทิ้ง `getSocialManagerGuildIds` |
 | `api/social/accounts/[id]/route.js` | ownership → `owner_user_id` (user อีเมลก็เป็นเจ้าของได้) |
 | `api/meta/oauth/callback` · `api/x/oauth/callback` | เขียน `org_id`/`owner_user_id` + ON CONFLICT คีย์ใหม่ |
-| `app/bot/platforms/page.js` | หัวข้อ "บัญชีขององค์กร" (public เป็น org-wide แล้ว) · App Credentials ยังเป็นรายเซิร์ฟเวอร์ · filter บัญชีตัวเองใช้ `owner_user_id` |
+| `components/org/OrgSocialAccounts.jsx` | หัวข้อ "บัญชีขององค์กร" (public เป็น org-wide แล้ว) · App Credentials ยังเป็นรายเซิร์ฟเวอร์ · filter บัญชีตัวเองใช้ `owner_user_id` |
 
 **ตั้งใจไม่แตะ:** `services/metaApi.js` · `services/xApi.js` · `handlers/basketHandler.js` · `api/bot/guild-watermarks`
 → ตะกร้าสื่อ/ลายน้ำเป็น guild-based โดยธรรมชาติ · ถ้าเปลี่ยนเป็น org scope ทันที basket ราชบุรีจะเห็นบัญชีอาสาฯ แล้ว `LIMIT 1` อาจหยิบผิดแบรนด์
@@ -117,7 +117,7 @@ org ที่ไม่มี guild จึง **ถือครอง/เลื�
 | guild switcher ย้ายจาก hamburger → แถบบนสุดของ `/bot/*` | `components/GuildSwitcherBar.jsx` (ใหม่) · `Nav.jsx` |
 | สลับ org/guild ใช้ `window.location.reload()` แทน `router.refresh()` | `OrgSwitcherMenu.jsx` · `Nav.jsx` · `GuildSwitcherBar.jsx` |
 
-**ที่มา (bug-063, 2026-07-28):** บัญชีส่วนตัวหายจาก `/bot/platforms` เพราะ org 1 มี 3 guild แต่ตารางยัง scope ด้วย `guild_id`
+**ที่มา (bug-063, 2026-07-28):** บัญชีส่วนตัวหายจาก `/org/settings/social` เพราะ org 1 มี 3 guild แต่ตารางยัง scope ด้วย `guild_id`
 และ org switcher ปัก `selected_guild` ไว้ที่อาสาประชาชนเสมอ → บัญชีที่อยู่ใต้ราชบุรีหายหมด · guild switcher ก็เพิ่งถูกถอดตอนรวมเป็น org-first
 รอบเช้าแก้อาการ (query/UX) · รอบบ่ายแก้ราก (schema + สิทธิ์)
 
@@ -488,6 +488,9 @@ bottom-right (CLOSE pool) x40 → ok=34 fail=6  (15%)  ERR_INVALID_URL
 
 **ตัวเลขที่ใช้ตัดสิน (วัดบนเครื่องนี้ i5-6500 4 คอร์):** overlay re-encode = **0.68 × ความยาวคลิป**
 (คลิป 30 วิ 1080p 18Mbps → 20.4 วิ) → เพดาน 90 วิ (= เพดาน Reels ของ IG/FB) ≈ 61 วิ ยังอยู่ใน `proxy_read_timeout 300s`
+
+**ของจริงเร็วกว่านั้นมาก** — คลิปแนวตั้งจริง 540×716 ยาว 46 วิ ใช้ **7.8 วิ = 0.17×**
+(2026-08-09 · `Downloads/test-clip.mp4`) · 0.68× คือ worst case ของ 1080p bitrate สูง ไม่ใช่ค่าปกติ
 
 **ไฟล์:**
 - `utils/quoteStyles.js` — เพิ่ม `renderQuoteOverlay(w,h,opts)` คืน PNG โปร่งใส · **ต้องอยู่ในไฟล์นี้** เพราะ `fitFont`/`wrapText`/`graphemes`/`lsDraw` เป็น private ทั้งหมด (`/scrutinize` จับได้ว่าแผนเดิมที่เขียนว่า "reuse ตรงๆ" ทำไม่ได้จริง)

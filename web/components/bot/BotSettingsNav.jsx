@@ -1,0 +1,63 @@
+'use client'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import { useState } from 'react'
+
+// sidebar ของ /bot — pattern เดียวกับ components/org/OrgSettingsNav.jsx โดยตั้งใจ:
+// settings ทั้งสองต้นหน้าตาเหมือนกัน ต่างกันแค่ scope (org vs Discord guild) (2026-08-09)
+//
+// ยังไม่ผ่าน t() เพราะโซน /bot ทั้งโซนยังไม่ migrate — จดไว้ที่ md/PENDING.md แล้ว
+const TABS = [
+  { href: '/bot',                 label: 'ภาพรวม' },
+  { href: '/bot/roles',           label: 'ยศ Discord' },
+  { href: '/bot/ai',              label: 'AI' },
+  { href: '/bot/media/quote',     label: 'Quote' },
+  { href: '/bot/media/watermark', label: 'Watermark' },
+]
+
+export default function BotSettingsNav() {
+  const path = usePathname()
+  const [open, setOpen] = useState(false)
+  const current = TABS.find(tab => tab.href === path) || TABS[0]
+
+  const linkCls = (active) =>
+    `block rounded-lg px-3 py-2 text-sm font-medium ${
+      active
+        ? 'bg-orange/10 text-orange'
+        : 'text-gray-600 dark:text-disc-muted hover:bg-gray-100 dark:hover:bg-disc-hover'
+    }`
+
+  return (
+    <>
+      {/* mobile: dropdown */}
+      <div className="relative md:hidden">
+        <button type="button" onClick={() => setOpen(o => !o)}
+          className="flex w-full items-center justify-between rounded-lg border border-gray-300 dark:border-disc-border bg-white dark:bg-card-bg px-4 py-2.5 text-sm font-semibold text-gray-900 dark:text-disc-text">
+          <span><span className="text-xs font-normal text-gray-400 dark:text-disc-muted">ตั้งค่าบอท · </span>{current.label}</span>
+          <span className={`text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`}>▾</span>
+        </button>
+        {open && (
+          <>
+            <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+            <nav className="absolute left-0 right-0 z-20 mt-1 flex flex-col gap-0.5 rounded-lg border border-gray-200 dark:border-disc-border bg-white dark:bg-card-bg p-1 shadow-lg">
+              {TABS.map(tab => (
+                <Link key={tab.href} href={tab.href} onClick={() => setOpen(false)} className={linkCls(path === tab.href)}>
+                  {tab.label}
+                </Link>
+              ))}
+            </nav>
+          </>
+        )}
+      </div>
+
+      {/* desktop: sidebar */}
+      <nav className="hidden md:flex md:flex-col md:gap-0.5">
+        {TABS.map(tab => (
+          <Link key={tab.href} href={tab.href} className={linkCls(path === tab.href)}>
+            {tab.label}
+          </Link>
+        ))}
+      </nav>
+    </>
+  )
+}

@@ -48,7 +48,7 @@
 ---
 
 ## ✅ ปิดแล้ว — token Facebook เพจ "ราชบุรี" (เจอ 2026-07-30 · **user ยืนยันโพสต์ได้ปกติบน prod 2026-08-09**)
-เดิม: `Invalid OAuth access token - Cannot parse access token` ทั้ง page token และ user token → โพสต์ FB ไม่ออก · แก้ด้วยการ reconnect ที่ `/bot/platforms`
+เดิม: `Invalid OAuth access token - Cannot parse access token` ทั้ง page token และ user token → โพสต์ FB ไม่ออก · แก้ด้วยการ reconnect ที่ `/org/settings/social`
 ⚠️ **สถานะ token บน prod เช็คจากเครื่อง dev ไม่ได้** — prod ไม่ได้อยู่เครื่องนี้ (ไม่มี `/www/wwwroot`, ไม่มี user `www`) · หัวข้อ token ในไฟล์นี้เป็น**บันทึกตอนนั้น** ห้ามอ่านเป็นสถานะปัจจุบัน ต้องถาม user หรือดูที่ prod เอง
 ⚠️ **เวลาเทสคิวโพสต์: ปิดบอทก่อน** — บอทที่รันอยู่จะหยิบงานในคิวไปยิงโซเชียล**จริง** (เจอตอน e2e 2026-07-30)
 
@@ -64,21 +64,21 @@
 
 **ทำเพิ่ม 2026-08-08 (รอบ 2) — Connect Threads OAuth บนเว็บ (user เคาะ: OAuth อย่างเดียว ไม่เอาช่องแปะ token)**
 
-เหตุผลที่ไม่เอาช่องแปะ: หน้า `/bot/platforms` มีโมเดล **1 ปุ่ม = 1 OAuth flow** อยู่แล้ว (FB+IG ปุ่มเดียวเพราะดันซ์เดียวกัน · X แยกปุ่ม) — ช่องแปะ token รายบัญชีเป็นรูปแบบที่ 3 ที่ไม่มีในหน้านั้น
+เหตุผลที่ไม่เอาช่องแปะ: หน้า `/org/settings/social` มีโมเดล **1 ปุ่ม = 1 OAuth flow** อยู่แล้ว (FB+IG ปุ่มเดียวเพราะดันซ์เดียวกัน · X แยกปุ่ม) — ช่องแปะ token รายบัญชีเป็นรูปแบบที่ 3 ที่ไม่มีในหน้านั้น
 - `GET /api/threads/oauth/start` + `callback` — authorize ที่ `threads.net/oauth/authorize` (คนละ host กับ FB) · scope `threads_basic,threads_content_publish` · code → short → long-lived 60 วัน
 - **`threads_app_id` / `threads_app_secret`** เพิ่มใน App Credentials — Threads มี creds ของตัวเอง **ห้าม fallback ไปใช้ของ Meta** (`getThreadsApp` คืน null ถ้าไม่ครบ) ไม่งั้นได้ error client_secret ที่อ่านไม่ออก
 - callback **UPDATE แถวเดิมที่ `social_id` ตรงกันก่อนเสมอ** INSERT เฉพาะบัญชีใหม่ — กันปัญหา id น้อยสุดชนะ
 - `TokenExpiry` เดิมโชว์แค่ `ig` → ปลดล็อกให้ `threads` ด้วย (นี่คือเหตุผลที่ไม่มีใครเห็นว่ามันตาย)
 - ⛔ ลบทิ้ง: `scripts/social/threads-token.js` + `POST /api/social/accounts/[id]/token` (ทางแปะ token ที่ทำไปแล้วถอดออกตามที่เคาะ)
-- ⚠️ **i18n ค้าง:** `web/components/org/OrgSocialAccounts.jsx` (ย้ายมาจาก `web/app/bot/platforms/page.js` เมื่อ 2026-08-09) hardcode ไทยทั้งไฟล์ = เข้าเกณฑ์ "โค้ดใหม่" ที่ต้อง migrate ทั้งไฟล์เป็น `t()` **แต่ยังไม่ได้ทำ** — การย้ายรอบ 2026-08-09 เป็น relocation ล้วน (ไม่ได้รื้อ render ใหม่) จึงเลื่อนไว้ · ตอนนี้ไฟล์อยู่โซน `org/` ที่ migrate แล้ว → **ควรทำให้จบ ไม่ควรค้างต่อ** — จดตามกฎ CLAUDE.md §i18n
+- ⚠️ **i18n ค้าง:** `web/components/org/OrgSocialAccounts.jsx` (ย้ายมาจาก `web/components/org/OrgSocialAccounts.jsx` เมื่อ 2026-08-09) hardcode ไทยทั้งไฟล์ = เข้าเกณฑ์ "โค้ดใหม่" ที่ต้อง migrate ทั้งไฟล์เป็น `t()` **แต่ยังไม่ได้ทำ** — การย้ายรอบ 2026-08-09 เป็น relocation ล้วน (ไม่ได้รื้อ render ใหม่) จึงเลื่อนไว้ · ตอนนี้ไฟล์อยู่โซน `org/` ที่ migrate แล้ว → **ควรทำให้จบ ไม่ควรค้างต่อ** — จดตามกฎ CLAUDE.md §i18n
 
-**🔜 ก่อนเทสจริงต้องทำที่ Meta Dashboard:** เพิ่ม `https://pplevolunteers.org/api/threads/oauth/callback` ใน **Redirect Callback URLs** ของ use case "Threads API" + เอา Threads App ID/Secret มากรอกที่ `/bot/platforms`
+**🔜 ก่อนเทสจริงต้องทำที่ Meta Dashboard:** เพิ่ม `https://pplevolunteers.org/api/threads/oauth/callback` ใน **Redirect Callback URLs** ของ use case "Threads API" + เอา Threads App ID/Secret มากรอกที่ `/org/settings/social`
 
 **ทำเพิ่ม 2026-08-09 (รอบ 3) — auto-refresh + แจ้งเตือน ✅ เสร็จ local:**
 - `refreshThreadsToken()` ใน `services/metaApi.js` — `graph.threads.net/refresh_access_token?grant_type=th_refresh_token` (คนละ host/grant กับ FB)
 - `finalizeConfig` **แตกสาขาตาม platform** — เดิมเช็คแค่ `user_token` ส่วน Threads เก็บที่ `access_token` จึงไม่เคยเข้าเงื่อนไข (นี่คือตัวบั๊ก bug-393)
 - `refreshExpiringTokens()` + `sweepTokens()` **เกาะ `sweep()` เดิมใน publishWorker (ไม่ตั้ง cron)** · แยก `ok`/`failed`/`dead` — ที่หมดอายุแล้วกู้ด้วยโค้ดไม่ได้ ต้องรายงานให้คนไปกด Connect เอง
-- ห้องแจ้งเตือน: key ใหม่ `social_alert_channel_id` (fallback `antispam_mod_channel_id`) + ช่องตั้งค่าที่ `/bot/platforms`
+- ห้องแจ้งเตือน: key ใหม่ `social_alert_channel_id` (fallback `antispam_mod_channel_id`) + ช่องตั้งค่าที่ `/org/settings/social`
 
 **ค้าง:**
 - [x] ~~**auto-refresh Threads**~~ — เสร็จแล้ว (ยังไม่ deploy)
@@ -306,8 +306,8 @@ spec + ดีไซน์ + ตารางทั้งหมดอยู่ `md
 
 **⬜ เหลือ:**
 - [ ] **deploy prod** — `migration.sql` (idempotent แต่ rebuild ตาราง → ทำตอนบอทไม่ได้เขียน) + build เว็บ + smoke ตะกร้าสื่อในบอทของจริง
-- [ ] **เทสในเบราว์เซอร์** — `/bot/platforms` ตอนนี้โชว์บัญชี public ทั้งองค์กร (3 guild รวมกัน) ยังไม่ได้ดูด้วยตา ว่าอ่านออกไหมว่าอันไหนของแบรนด์ไหน (มีแต่ `group_name` เป็นตัวแยก)
-- [x] ~~**app creds ยังเป็นราย guild**~~ → **ย้ายขึ้น `org_config` แล้ว 2026-07-29** · 4 คีย์ (`meta_app_id`/`meta_app_secret`/`x_consumer_key`/`x_consumer_secret`) อ่าน org ก่อน fallback guild · helper กลาง `web/lib/socialAppCreds.js` (เว็บ) + `getGuildMetaApp(guildId, orgId)` / `getGuildXApp(guildId, orgId)` (บอท) · หน้า `/bot/platforms` เขียนลง org
+- [ ] **เทสในเบราว์เซอร์** — `/org/settings/social` ตอนนี้โชว์บัญชี public ทั้งองค์กร (3 guild รวมกัน) ยังไม่ได้ดูด้วยตา ว่าอ่านออกไหมว่าอันไหนของแบรนด์ไหน (มีแต่ `group_name` เป็นตัวแยก)
+- [x] ~~**app creds ยังเป็นราย guild**~~ → **ย้ายขึ้น `org_config` แล้ว 2026-07-29** · 4 คีย์ (`meta_app_id`/`meta_app_secret`/`x_consumer_key`/`x_consumer_secret`) อ่าน org ก่อน fallback guild · helper กลาง `web/lib/socialAppCreds.js` (เว็บ) + `getGuildMetaApp(guildId, orgId)` / `getGuildXApp(guildId, orgId)` (บอท) · หน้า `/org/settings/social` เขียนลง org
   - [ ] เหลือ: ลบแถวเดิม 8 แถวใน `dc_guild_config` (fallback ช่วงเปลี่ยนผ่าน) + เอาโค้ด fallback ออก — ทำรอบหน้าเมื่อ prod ย้ายครบ
 - [ ] `/bot/*` ยังบล็อก org ที่ไม่มี guild ทั้งโซน → หน้าจัดการบัญชีโซเชียลควรย้ายออกจาก `/bot/` วันที่ posts มีหน้าของตัวเอง
 
@@ -868,3 +868,21 @@ spec + ดีไซน์ + ตารางทั้งหมดอยู่ `md
 รื้อ block render ใหม่ทั้งก้อน (สลับลำดับเป็น Discord → Google → ซ่อนอีเมล) = เข้าเกณฑ์ "โค้ดใหม่" ต้อง migrate เป็น `t()` ทั้งไฟล์
 แต่ทั้งโซน login ยังไม่ migrate เลย (ไฟล์นี้ไม่มี `useTranslations` สักตัว) → เลี่ยงไว้ก่อน จดตามกติกา
 มี ~30 string: ปุ่ม provider, ERROR_MESSAGES, ฟอร์ม OTP, หน้า "ตรวจอีเมลของคุณ" · ทำพร้อมกันทั้งโซน login ทีเดียวจะคุ้มกว่า
+
+---
+
+## 🗂 จัด IA /bot + /org/settings (2026-08-09)
+
+**ทำแล้ว:** OAuth 3 เส้นเลิกผูก guild → scope เป็น org · ย้ายบัญชีโซเชียลไป `/org/settings/social` · หน้าแรก `/bot` (สถานะ + สิ่งที่ยังไม่ได้ตั้ง) · sidebar `/bot` แบบเดียวกับ `/org/settings` · ยุบ `/bot/features` เข้า `/bot/ai` · เอา BOT ออกจากแถวแอป ไปอยู่เมนู org · ลบ dead code `SOCIAL_LINKS` / `/social`
+
+### ค้างอยู่
+
+- [ ] **รัน migration ลบ creds ค้าง** — `scripts/migration/migration.sql` ท้ายไฟล์ · dry-run แล้ว 8 แถว (2 guild ใน org 1) ค่าตรงกับ `org_config` ทุกแถว · **ยังไม่ได้รันจริง**
+- [ ] **guild กำพร้า `506440360600535050`** — มี 4 แถวใน `dc_guild_roles` แต่ไม่มีใน `dc_guilds` → `orgIdOfGuild()` คืน null · หน้า `/bot` มองไม่เห็นตลอดกาล · ต้องเคาะว่าลบยศทิ้งหรือ map เข้า org
+- [ ] **เทสในเบราว์เซอร์** — smoke test ผ่านแล้ว (`/bot` 200 · `/bot/platforms` 307 พก query string ครบ · `/org/settings/social` 307 ไป login) แต่ **ยังไม่ได้ดูด้วยตาแบบล็อกอินจริง** โดยเฉพาะ sidebar บนมือถือ + ปุ่ม Connect ที่ไม่มี guild แล้ว
+- [ ] **ลบ fallback `orgIdFromState()`** — `web/lib/socialOAuthScope.js` มี fallback ให้ OAuth flow ที่ค้างกลางทางตอน deploy · ลบได้หลัง deploy เกิน 10 นาที (อายุ state)
+
+### ไอเดียที่ยังไม่ทำ
+
+- **AI config ควรเป็น per-org** — ตอนนี้ `dc_guild_config guild_id='global'` + `dc_ai_modes.guild_id='global'` = ทุก org ใช้โมเดล/prompt ชุดเดียวกัน · `dc_ai_modes` มีคอลัมน์ `guild_id` รออยู่แล้ว · พอ rebrand เป็น multi-tenant แต่ละ org ควรเลือกเอง (+ จ่ายเอง) — เป็นการเปลี่ยน scope ไม่ใช่ย้ายหน้า จึงไม่ได้ทำในรอบ IA
+- **`/admin` เกือบตาย** — มีหน้าเดียว (`/admin/logs`) ไม่มีลิงก์ไปหาจากที่ไหนเลย gate ที่ `admin/moderator` · ต้องเคาะว่าปลุกเป็นโซน superadmin จริง หรือย้าย logs ไปที่อื่นแล้วลบทิ้ง

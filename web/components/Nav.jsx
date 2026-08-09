@@ -82,15 +82,9 @@ const DOCS_LINKS = [
   { href: '/docs/settings', label: 'Settings', icon: 'settings', adminOnly: true },
 ]
 
-const DISCORD_LINKS = [
-  // ตะกร้าสื่อไม่มีเมนูของตัวเองแล้ว (ยุบเข้า /posts + /posts/[id] 2026-07-30)
-  { href: '/bot/media/quote',      label: 'Quote',     icon: 'quote',    mediaGroup: true },
-  { href: '/bot/media/watermark',  label: 'Watermark', icon: 'droplet',  mediaGroup: true },
-  { href: '/org/settings/social',        label: 'Platforms', icon: 'social',   menuOnly: true },
-  { href: '/bot/features',         label: 'Features',  icon: 'overview', menuOnly: true, superAdminOnly: true },
-  { href: '/bot/roles',            label: 'Roles',     icon: 'logs',     menuOnly: true, adminOnly: true },
-  { href: '/bot/ai',               label: 'AI',        icon: 'ai',       menuOnly: true },
-]
+// /bot มี sidebar ของตัวเองแล้ว (components/bot/BotSettingsNav.jsx 2026-08-09) —
+// เมนูซ้ำใน Nav ถูกถอดออก · ทางเข้าอยู่ที่เมนู org ข้าง "ตั้งค่าองค์กร"
+// (ตะกร้าสื่อยุบเข้า /posts ตั้งแต่ 2026-07-30 · Platforms ย้ายไป /org/settings/social)
 
 const CASE_LINKS = [
   { href: '/case',        label: 'Complaints', icon: 'overview', exact: true },
@@ -102,9 +96,8 @@ const POSTS_LINKS = [
   { href: '/posts/library', label: 'Library', icon: 'media', exact: true },
 ]
 
-const SOCIAL_LINKS = [
-  { href: '/social', label: 'My Accounts', icon: 'social' },
-]
+// SOCIAL_LINKS ถูกลบ 2026-08-09 — ชี้ /social ที่ไม่เคยมี app/social/ อยู่จริง
+// isSocialApp เลย false ตลอด = dead code ทั้งก้อน · บัญชีโซเชียลอยู่ /org/settings/social
 
 const DASHBOARD_LINKS = [
   { href: '/finance',      label: 'FINANCE',  icon: 'transactions', feature: 'finance' },
@@ -121,7 +114,8 @@ const APPS = [
   { key: 'docs',     label: 'DOCS',      href: '/docs',           icon: 'docs',      feature: 'docs' },
   { key: 'cases',    label: 'CASES',     href: '/case/manage',    icon: 'logs',      feature: 'cases', casesAccess: true },
   { key: 'posts',    label: 'POSTS',     href: '/posts',          icon: 'pen',       feature: 'posts' },
-  { key: 'discord',  label: 'BOT',       href: '/org/settings/social',  icon: 'social' },
+  // BOT ออกจากแถวแอป 2026-08-09 — ทุกหน้าใต้ /bot เป็น settings ไม่ใช่ที่ทำงาน
+  // (ตัวที่เคยเป็นที่ทำงานคือตะกร้าสื่อ ยุบเข้า /posts ไปแล้ว) → ทางเข้าอยู่เมนู org
 ]
 
 // app ที่ใช้ได้แม้ org ไม่มี guild — ตอนนี้ org-native ครบทั้ง 4 แล้ว (calling 2026-07-19 ·
@@ -134,10 +128,8 @@ export default function Nav({ session, orgs = [], activeOrgId = null, guilds = [
   const { dark, toggle } = useTheme()
   const [menuOpen, setMenuOpen] = useState(false)
   const [switching, setSwitching] = useState(false)
-  const [mediaOpen, setMediaOpen] = useState(false)
   const [campaignOpen, setCampaignOpen] = useState(false)
   const [docOpen, setDocOpen] = useState(false)
-  const mediaRef = useRef(null)
   const [campaigns, setCampaigns] = useState([])
   const [docProjects, setDocProjects] = useState([])
   const [pendingCount, setPendingCount] = useState(0)
@@ -147,8 +139,7 @@ export default function Nav({ session, orgs = [], activeOrgId = null, guilds = [
 
   const isCallingApp   = pathname.startsWith('/calling')
   const isFinanceApp   = pathname.startsWith('/finance')
-  const isSocialApp    = pathname.startsWith('/social')
-  const isDiscordApp   = pathname.startsWith('/bot')
+  // /bot ไม่ใช่แอปแล้ว (2026-08-09) — เป็น settings ที่มี sidebar ของตัวเอง Nav จึงไม่ต้องรู้จัก
   const isDocsApp      = pathname.startsWith('/docs')
   const isCaseApp      = pathname.startsWith('/case')
   const isPostsApp     = pathname.startsWith('/posts')
@@ -157,10 +148,10 @@ export default function Nav({ session, orgs = [], activeOrgId = null, guilds = [
     return pathname === href || (href !== '/' && pathname.startsWith(href))
   }
   const appByKey = (key) => APPS.find(a => a.key === key)
-  const currentApp = isDiscordApp ? appByKey('discord') : isDocsApp ? appByKey('docs')
+  const currentApp = isDocsApp ? appByKey('docs')
     : isCallingApp ? appByKey('calling') : isFinanceApp ? appByKey('finance')
     : isCaseApp ? appByKey('cases') : isPostsApp ? appByKey('posts') : appByKey('home')
-  const links = isDiscordApp ? DISCORD_LINKS : isSocialApp ? SOCIAL_LINKS : isDocsApp ? DOCS_LINKS
+  const links = isDocsApp ? DOCS_LINKS
     : isCallingApp ? CALLING_LINKS : isFinanceApp ? FINANCE_LINKS
     : isCaseApp ? CASE_LINKS : isPostsApp ? POSTS_LINKS : DASHBOARD_LINKS
 
@@ -204,15 +195,14 @@ export default function Nav({ session, orgs = [], activeOrgId = null, guilds = [
   }, [session, enabledFeatures, pathname])
 
   useEffect(() => {
-    if (!campaignOpen && !mediaOpen && !docOpen) return
+    if (!campaignOpen && !docOpen) return
     const handleClickOutside = (e) => {
       if (campaignRef.current && !campaignRef.current.contains(e.target)) setCampaignOpen(false)
       if (docRef.current && !docRef.current.contains(e.target)) setDocOpen(false)
-      if (mediaRef.current && !mediaRef.current.contains(e.target)) setMediaOpen(false)
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [campaignOpen, mediaOpen, docOpen])
+  }, [campaignOpen, docOpen])
 
   const activeCampaign = campaigns.find(c => c.id === activeCampaignId)
 
@@ -232,7 +222,6 @@ export default function Nav({ session, orgs = [], activeOrgId = null, guilds = [
     if (l.casesAccess) return canManageCases(access)
     return true
   })
-  const mediaLinks = visibleLinks.filter(l => l.mediaGroup)
   // home: app tabs ใหม่แทน DASHBOARD_LINKS แล้ว → ไม่ต้องโชว์ sub-nav ซ้ำ · app อื่นโชว์ sub-page จริง
   const isHomeApp  = currentApp.key === 'home'
   const topLinks   = isHomeApp ? [] : visibleLinks.filter(l => !l.menuOnly && !l.hamburgerOnly && !l.mediaGroup)
@@ -297,43 +286,7 @@ export default function Nav({ session, orgs = [], activeOrgId = null, guilds = [
 
         {/* Nav links (sub-nav ของ app ปัจจุบัน) */}
         <div className="flex items-center gap-0 ml-1">
-          {/* สื่อ dropdown (quote + watermark) — เฉพาะ BOT section */}
-          {isDiscordApp && mediaLinks.length > 0 && (
-            <div className="relative" ref={mediaRef}>
-              <button
-                onClick={() => setMediaOpen(o => !o)}
-                className={`flex items-center gap-1 px-1 py-1 rounded-md text-base transition ${
-                  mediaLinks.some(l => isLinkActive(l.href))
-                    ? activeClass
-                    : inactiveClass
-                }`}
-              >
-                <Ic d={ICONS.quote} className="w-7 h-7 shrink-0" />
-                <span className="hidden md:inline">Media</span>
-                <svg className={`w-3 h-3 transition-transform hidden md:block ${mediaOpen ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.17l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
-                </svg>
-              </button>
-              {mediaOpen && (
-                <>
-                  <div className="fixed inset-0 z-10" onClick={() => setMediaOpen(false)} />
-                  <div className="absolute left-0 top-full mt-1 z-20 bg-white dark:bg-disc-hover border border-warm-200 dark:border-disc-border rounded-lg shadow-lg py-1 min-w-[160px]">
-                    {mediaLinks.map(l => (
-                      <Link key={l.href} href={l.href} onClick={() => setMediaOpen(false)}
-                        className={`flex items-center gap-2 px-4 py-2.5 text-base transition ${
-                          isLinkActive(l.href)
-                            ? 'text-teal dark:text-teal font-medium bg-teal/10 dark:bg-teal/10'
-                            : 'text-warm-900 dark:text-disc-muted hover:bg-warm-100 dark:hover:bg-disc-hover'
-                        }`}>
-                        <Ic d={ICONS[l.icon]} className="w-4 h-4 shrink-0" />
-                        {l.label}
-                      </Link>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
-          )}
+          {/* สื่อ dropdown ถูกลบ 2026-08-09 — quote/watermark ย้ายไป sidebar ของ /bot */}
           {topLinks.map(l => {
             if (l.href === '/docs' && isDocsApp && docProjects.length > 0) {
               const isActive = pathname === '/docs' || !!activeDocId
@@ -473,7 +426,7 @@ export default function Nav({ session, orgs = [], activeOrgId = null, guilds = [
                   <div className="absolute right-0 top-full mt-2 z-20 bg-white dark:bg-disc-hover border border-warm-200 dark:border-disc-border rounded-xl shadow-lg py-2 w-64 max-h-[80vh] overflow-y-auto flex flex-col gap-0.5">
 
                     {/* Nav links for current app — ซ่อนเมื่ออยู่ home (ซ้ำกับ app switcher) */}
-                    {(isFinanceApp || isCallingApp || isDocsApp || isDiscordApp || isCaseApp || isSocialApp) && menuLinks.map(l => {
+                    {(isFinanceApp || isCallingApp || isDocsApp || isCaseApp) && menuLinks.map(l => {
                       if (l.href === '/docs' && isDocsApp && docProjects.length > 0) {
                         return (
                           <div key={l.href}>
