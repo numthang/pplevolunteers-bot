@@ -884,5 +884,13 @@ spec + ดีไซน์ + ตารางทั้งหมดอยู่ `md
 
 ### ไอเดียที่ยังไม่ทำ
 
-- **AI config ควรเป็น per-org** — ตอนนี้ `dc_guild_config guild_id='global'` + `dc_ai_modes.guild_id='global'` = ทุก org ใช้โมเดล/prompt ชุดเดียวกัน · `dc_ai_modes` มีคอลัมน์ `guild_id` รออยู่แล้ว · พอ rebrand เป็น multi-tenant แต่ละ org ควรเลือกเอง (+ จ่ายเอง) — เป็นการเปลี่ยน scope ไม่ใช่ย้ายหน้า จึงไม่ได้ทำในรอบ IA
+- **AI เป็น per-org แบบ BYO-key** ← **ทิศที่เคาะไว้ 2026-08-09 (ยังไม่เริ่ม)**
+  - ตอนนี้ `dc_guild_config guild_id='global'` (ai.provider/ai.model/ai.max_tokens) + `dc_ai_modes.guild_id='global'` = ทุก org ใช้โมเดล/prompt ชุดเดียวกัน · API key อยู่ `.env` ของเซิร์ฟเวอร์ = **เจ้าของระบบจ่ายให้ทุก org**
+  - **ทางที่เลือก:** ให้แต่ละ org ใส่ API key เอง → บิลวิ่งไปหาเขา → **ไม่ต้องทำ usage tracking เลย** (metering มีไว้ตอบว่า "ใครติดเงินเรา" ซึ่งหมดคำถามถ้าเขาจ่ายเอง) · งานน้อยกว่าทาง global+metering
+  - **ค้างคิด:** org เล็กที่ไม่มีบัญชี Anthropic จะ onboard ยาก → เสนอ BYO-key เป็นตัวเลือก ไม่ใส่ก็ใช้ key กลางแต่มีโควต้า
+  - **ตะเข็บที่ต้องแก้ก่อนอะไรทั้งนั้น:** `services/aiSummarize.js` — `callAI()` / `callAIWithHistory()` **ไม่ได้รับ guildId** (`processMessages(guildId,...)` มีแต่ไม่ส่งต่อ) → ผูก call กับ org ไม่ได้เลยไม่ว่าจะทางไหน
+  - pattern ที่ลอกได้: `web/lib/socialAppCreds.js` (org-first + fallback) · `dc_ai_modes` มีคอลัมน์ `guild_id` รออยู่แล้ว
+  - ถ้าวันหน้ากลับไปทาง key กลาง: ต้อง log ครบ 4 ช่อง (`input_tokens` / `cache_read_input_tokens` / `cache_creation_input_tokens` / `output_tokens`) — โค้ดใช้ prompt caching อยู่ `input_tokens` จึงเป็นแค่ส่วนที่ไม่โดนแคช ไม่ใช่ยอดรวม · เก็บ token อย่าเก็บเงิน คิดตอนอ่าน
+
+- ~~AI config ควรเป็น per-org (แบบ config-split)~~ → เปลี่ยนเป็น BYO-key ด้านบน · เดิมคิดว่า — ตอนนี้ `dc_guild_config guild_id='global'` + `dc_ai_modes.guild_id='global'` = ทุก org ใช้โมเดล/prompt ชุดเดียวกัน · `dc_ai_modes` มีคอลัมน์ `guild_id` รออยู่แล้ว · พอ rebrand เป็น multi-tenant แต่ละ org ควรเลือกเอง (+ จ่ายเอง) — เป็นการเปลี่ยน scope ไม่ใช่ย้ายหน้า จึงไม่ได้ทำในรอบ IA
 - **`/admin` เกือบตาย** — มีหน้าเดียว (`/admin/logs`) ไม่มีลิงก์ไปหาจากที่ไหนเลย gate ที่ `admin/moderator` · ต้องเคาะว่าปลุกเป็นโซน superadmin จริง หรือย้าย logs ไปที่อื่นแล้วลบทิ้ง
