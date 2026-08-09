@@ -1,6 +1,6 @@
 {
   "name": "platfor-bot",
-  "version": "2.25.0",
+  "version": "2.26.0",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
