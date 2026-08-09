@@ -499,6 +499,10 @@ bottom-right (CLOSE pool) x40 → ok=34 fail=6  (15%)  ERR_INVALID_URL
 - API: `GET/POST /api/posts/media/[id]/quote-burn` + `POST .../preview` (PNG · ไม่แตะ ffmpeg ไม่แตะ DB)
 - `VideoQuoteModal.jsx` — พรีวิวคือ **PNG ตัวจริงที่จะถูกเบิร์น** วางทับ `<video>` ไม่ใช่ `<div>` ข้อความ (CSS จะให้ผลคนละอย่างกับ `fitFont`)
 
+**safe area (2026-08-09):** ตำแหน่ง `bottom` ร่นกล่องข้อความขึ้น **12% ของความสูง** · `top` ร่นลง 6%
+— Reels/TikTok เอาแคปชันกับปุ่มไลก์ทับขอบล่าง ถ้าไม่ร่น ข้อความจะไปนอนใต้ UI ของแอป
+⚠️ **ร่นเฉพาะกล่องข้อความ แถบมืดยังลากถึงขอบ** — ถ้าร่นแถบด้วยจะเห็นเป็นเส้นตัดกลางจอ
+
 **ขาอัปโหลดเปลี่ยนด้วย:** คลิปไปทาง `POST /api/posts/[id]/media/video` ที่ **สตรีมลงดิสก์**
 (`savePostFileFromStream`) → ยกเพดานจาก 64MB เป็น **200MB** ได้อย่างปลอดภัย · ทาง `/media` เดิมรับแต่รูป
 เพราะ `req.formData()` อมทั้งไฟล์ใน RAM (คลิป 200MB = ~400MB/request)
