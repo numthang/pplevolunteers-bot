@@ -70,7 +70,7 @@
 - callback **UPDATE แถวเดิมที่ `social_id` ตรงกันก่อนเสมอ** INSERT เฉพาะบัญชีใหม่ — กันปัญหา id น้อยสุดชนะ
 - `TokenExpiry` เดิมโชว์แค่ `ig` → ปลดล็อกให้ `threads` ด้วย (นี่คือเหตุผลที่ไม่มีใครเห็นว่ามันตาย)
 - ⛔ ลบทิ้ง: `scripts/social/threads-token.js` + `POST /api/social/accounts/[id]/token` (ทางแปะ token ที่ทำไปแล้วถอดออกตามที่เคาะ)
-- ⚠️ **i18n ค้าง:** `web/app/bot/platforms/page.js` hardcode ไทยทั้งไฟล์ รอบนี้เพิ่มข้อความใหม่ ~5 ประโยค = เข้าเกณฑ์ "โค้ดใหม่" ที่ต้อง migrate ทั้งไฟล์เป็น `t()` **แต่ยังไม่ได้ทำ** (ทั้งโซน `/bot/` ยังไม่ migrate) — จดตามกฎ CLAUDE.md §i18n
+- ⚠️ **i18n ค้าง:** `web/components/org/OrgSocialAccounts.jsx` (ย้ายมาจาก `web/app/bot/platforms/page.js` เมื่อ 2026-08-09) hardcode ไทยทั้งไฟล์ = เข้าเกณฑ์ "โค้ดใหม่" ที่ต้อง migrate ทั้งไฟล์เป็น `t()` **แต่ยังไม่ได้ทำ** — การย้ายรอบ 2026-08-09 เป็น relocation ล้วน (ไม่ได้รื้อ render ใหม่) จึงเลื่อนไว้ · ตอนนี้ไฟล์อยู่โซน `org/` ที่ migrate แล้ว → **ควรทำให้จบ ไม่ควรค้างต่อ** — จดตามกฎ CLAUDE.md §i18n
 
 **🔜 ก่อนเทสจริงต้องทำที่ Meta Dashboard:** เพิ่ม `https://pplevolunteers.org/api/threads/oauth/callback` ใน **Redirect Callback URLs** ของ use case "Threads API" + เอา Threads App ID/Secret มากรอกที่ `/bot/platforms`
 

@@ -3,7 +3,7 @@
 const pool = require('../db/index');
 const { getSetting, setSetting, deleteSetting } = require('../db/settings');
 
-const CONFIG_KEY = 'news_channel_id';             // string — ตั้งค่าที่หน้าเว็บ /bot/platforms
+const CONFIG_KEY = 'news_channel_id';             // string — ตั้งค่าที่หน้าเว็บ /bot (ราย guild)
 const QUEUE_KEY  = 'pending_event_announcements'; // [{ channelId, content, sendAt }]
 const QUIET_START = 21; // ชั่วโมงไทย
 const QUIET_END   = 9;

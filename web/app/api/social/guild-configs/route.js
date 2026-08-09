@@ -1,4 +1,4 @@
-// config ของหน้า /bot/platforms — 2 ชั้นในเส้นเดียว (2026-07-29):
+// config ของหน้า /org/settings/social — 2 ชั้นในเส้นเดียว (2026-07-29):
 //   app creds 4 คีย์  → org_config (ราย org) · org ที่ไม่มี Discord ต้องตั้งเองได้
 //   news_channel_id   → dc_guild_config (Discord artifact = channel id คงราย guild)
 import { getServerSession } from 'next-auth'

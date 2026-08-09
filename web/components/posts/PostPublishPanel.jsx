@@ -245,7 +245,7 @@ export default function PostPublishPanel({ postId }) {
           ))}
         </select>
         {!groups.length && (
-          <span className="text-sm text-warm-500 dark:text-disc-muted">ยังไม่มีบัญชีโซเชียลที่ใช้ได้ — เชื่อมบัญชีที่ /bot/platforms ก่อน</span>
+          <span className="text-sm text-warm-500 dark:text-disc-muted">ยังไม่มีบัญชีโซเชียลที่ใช้ได้ — เชื่อมบัญชีที่ /org/settings/social ก่อน</span>
         )}
       </div>
 

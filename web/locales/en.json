@@ -1140,7 +1140,8 @@
         "general": "General",
         "members": "Members & Roles",
         "features": "Features",
-        "roles": "Roles & areas"
+        "roles": "Roles & areas",
+        "social": "Social accounts"
       },
       "settingsLabel": "Settings: ",
       "pageHeading": "Organization Settings"

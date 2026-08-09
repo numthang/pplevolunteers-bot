@@ -67,10 +67,10 @@ export async function GET(req) {
     return html('❌ หมดเวลา', '<h1>❌ OAuth session หมดอายุ กรุณาลองใหม่</h1>')
   }
 
-  // creds เป็นขององค์กร (org_config) — หา org จาก guild ที่เริ่ม OAuth
+  // creds เป็นขององค์กร (org_config) · guildId เป็น fallback ให้ state เก่าที่ยังไม่มี orgId
   const app = await getMetaApp({ orgId: state.orgId ?? null, guildId: state.guildId || null })
   if (!app) {
-    return html('❌ Config ไม่ครบ', `<h1>❌ องค์กรของ guild ${state.guildId} ยังไม่ได้ตั้งค่า Meta App ID / Secret — ตั้งที่ /bot/platforms</h1>`)
+    return html('❌ Config ไม่ครบ', `<h1>❌ องค์กรนี้ยังไม่ได้ตั้งค่า Meta App ID / Secret — ตั้งที่ /org/settings/social</h1>`)
   }
 
   try {

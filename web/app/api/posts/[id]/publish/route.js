@@ -125,7 +125,7 @@ export async function POST(req, { params }) {
       }
       // ไม่ได้ตั้ง news_channel_id ไว้ = job จะ retry 3 รอบแล้ว failed เปล่าๆ → ตัดตั้งแต่ต้นทาง
       if (!(await hasNewsChannel(guildId))) {
-        return Response.json({ error: 'ยังไม่ได้ตั้งห้องข่าวสารของเซิร์ฟเวอร์นี้ (ตั้งที่ /bot/platforms)' }, { status: 400 })
+        return Response.json({ error: 'ยังไม่ได้ตั้งห้องข่าวสารของเซิร์ฟเวอร์นี้ (ตั้งที่ /bot)' }, { status: 400 })
       }
     }
 

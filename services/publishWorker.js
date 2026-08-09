@@ -211,7 +211,7 @@ async function sweepTokens(client) {
   if (!client) return;
 
   const lines = [];
-  if (dead.length)   lines.push(`💀 **หมดอายุแล้ว — ต้องกด Connect ใหม่ที่ /bot/platforms**\n${dead.map(d => `• ${d}`).join('\n')}`);
+  if (dead.length)   lines.push(`💀 **หมดอายุแล้ว — ต้องกด Connect ใหม่ที่ /org/settings/social**\n${dead.map(d => `• ${d}`).join('\n')}`);
   if (failed.length) lines.push(`⚠️ **ต่ออายุไม่สำเร็จ**\n${failed.map(f => `• ${f}`).join('\n')}`);
 
   // แจ้งทีละ guild ที่ตั้งห้องไว้ — บัญชีเป็นของ org แต่ห้องแจ้งเตือนเป็น artifact ของ Discord ราย guild

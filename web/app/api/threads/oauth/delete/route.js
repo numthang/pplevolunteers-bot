@@ -63,7 +63,7 @@ export async function POST(req) {
     }
 
     return Response.json({
-      url: `${BASE_URL}/bot/platforms`,
+      url: `${BASE_URL}/org/settings/social`,
       confirmation_code: confirmationCode,
     })
   } catch (err) {

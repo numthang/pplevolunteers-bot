@@ -19,7 +19,7 @@ import pool from '@/db/index.js'
 
 const REDIRECT_URI = `${BASE_URL}/api/threads/oauth/callback`
 const THREADS_API  = 'https://graph.threads.net'
-const back = q => Response.redirect(`${BASE_URL}/bot/platforms?${q}`)
+const back = q => Response.redirect(`${BASE_URL}/org/settings/social?${q}`)
 
 export async function GET(req) {
   const { searchParams } = new URL(req.url)
@@ -93,7 +93,7 @@ export async function GET(req) {
     )
 
     if (!upd.rows.length) {
-      // บัญชีใหม่ที่ยังไม่เคยผูก — group_name ปล่อยว่างไว้ให้ไปเลือกเองในหน้า /bot/platforms
+      // บัญชีใหม่ที่ยังไม่เคยผูก — group_name ปล่อยว่างไว้ให้ไปเลือกเองในหน้า /org/settings/social
       // (แถวจะโผล่ในลิสต์บัญชี แต่ยังไม่โผล่ในกล่องเผยแพร่จนกว่าจะตั้งกลุ่ม — ตั้งใจ)
       await pool.query(
         `INSERT INTO dc_social_accounts

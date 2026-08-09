@@ -38,7 +38,7 @@ export async function GET(req) {
   // creds เป็นขององค์กร (org_config) — guild ส่งไปด้วยเพื่อ fallback dc_guild_config ช่วงเปลี่ยนผ่าน
   const app = await getMetaApp({ orgId, guildId })
   if (!app) {
-    return Response.json({ error: `องค์กรนี้ยังไม่ได้ตั้งค่า Meta App — ตั้ง Meta App ID + Secret ที่ /bot/platforms ก่อน` }, { status: 400 })
+    return Response.json({ error: `องค์กรนี้ยังไม่ได้ตั้งค่า Meta App — ตั้ง Meta App ID + Secret ที่ /org/settings/social ก่อน` }, { status: 400 })
   }
 
   const state = Buffer.from(JSON.stringify({

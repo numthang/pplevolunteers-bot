@@ -9,6 +9,8 @@ const TAB_HREFS = [
   { href: '/org/settings/members', key: 'members' },
   { href: '/org/settings/roles', key: 'roles' },
   { href: '/org/settings/features', key: 'features' },
+  // บัญชีโซเชียล + app creds ย้ายมาจาก /bot/platforms (2026-08-09) — เป็นของ org ไม่ผูก guild
+  { href: '/org/settings/social', key: 'social' },
 ]
 
 // desktop = sidebar (list แนวตั้ง) · mobile = dropdown overlay (ไม่ดันเนื้อหาลง, เมนูโตได้ไม่จำกัด)

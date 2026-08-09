@@ -71,7 +71,7 @@ export async function GET(req) {
   // creds เป็นขององค์กร (org_config) — guild ใช้เพื่อหา org · fallback dc_guild_config อยู่ในตัว helper
   const app = await getXApp({ orgId, guildId })
   if (!app) {
-    return Response.json({ error: `องค์กรนี้ยังไม่ได้ตั้งค่า X App — ตั้ง X Consumer Key + Secret ที่ /bot/platforms ก่อน` }, { status: 400 })
+    return Response.json({ error: `องค์กรนี้ยังไม่ได้ตั้งค่า X App — ตั้ง X Consumer Key + Secret ที่ /org/settings/social ก่อน` }, { status: 400 })
   }
 
   const callbackEncoded = encodeURIComponent(CALLBACK)

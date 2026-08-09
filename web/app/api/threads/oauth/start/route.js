@@ -4,7 +4,7 @@
  * ทำไมแยกจาก /api/meta/oauth/* : Threads เป็น **OAuth คนละดันซ์** ไม่ใช่แค่ scope ที่ขาด —
  * authorize ที่ threads.net (ไม่ใช่ facebook.com/dialog/oauth) · แลก token ที่ graph.threads.net
  * · คนกดอนุมัติในฐานะ "บัญชี Threads" ไม่ใช่ในฐานะเพจ FB → ยัดรวมปุ่ม Connect Meta ไม่ได้
- * (โมเดลของหน้า /bot/platforms คือ 1 ปุ่ม = 1 OAuth flow · X ก็แยกด้วยเหตุผลเดียวกัน)
+ * (โมเดลของหน้า /org/settings/social คือ 1 ปุ่ม = 1 OAuth flow · X ก็แยกด้วยเหตุผลเดียวกัน)
  */
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
@@ -39,7 +39,7 @@ export async function GET(req) {
   const app = await getThreadsApp({ orgId, guildId })
   if (!app) {
     return Response.json(
-      { error: 'ยังไม่ได้ตั้ง Threads App ID + Threads App Secret — ตั้งที่ /bot/platforms (คนละชุดกับ Meta App ID/Secret)' },
+      { error: 'ยังไม่ได้ตั้ง Threads App ID + Threads App Secret — ตั้งที่ /org/settings/social (คนละชุดกับ Meta App ID/Secret)' },
       { status: 400 }
     )
   }

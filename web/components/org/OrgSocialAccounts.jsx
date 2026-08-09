@@ -105,7 +105,11 @@ function AccountRow({ acc, accounts, onToggleVisibility, onSetGroup, onRemove, d
   )
 }
 
-export default function SocialAccountsPage() {
+// บัญชีโซเชียลขององค์กร — ย้ายมาจาก /bot/platforms (2026-08-09)
+// เดิมอยู่ใต้ /bot เพราะ creds เคยผูก Discord guild · ตอนนี้ทั้ง creds (org_config) และ
+// ตัวบัญชี (dc_social_accounts.org_id) เป็นของ org แล้ว → ไม่ต้องมี guild ก็ใช้ได้ครบ
+// ⚠️ ห้องข่าวสาร/ห้องแจ้งเตือน (Discord artifact ราย guild) ไม่ได้ย้ายมาด้วย — อยู่ที่ /bot
+export default function OrgSocialAccounts() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -161,10 +165,12 @@ export default function SocialAccountsPage() {
   async function saveConfig() {
     if (!editConfig) return
     setSavingConfig(true)
+    // หน้านี้แก้เฉพาะ app creds ที่เป็นของ org → ไม่ส่ง guild_id (ส่งไปจะโดนด่าน manager ราย guild
+    // ซึ่ง user ที่ไม่มี Discord ผ่านไม่ได้) · คีย์ราย guild ย้ายไปอยู่หน้า /bot แล้ว
     const res = await fetch('/api/social/guild-configs', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ guild_id: cfg.guildId, key: editConfig.key, value: editConfig.value }),
+      body: JSON.stringify({ key: editConfig.key, value: editConfig.value }),
     })
     if (res.ok) {
       setCfg(prev => ({ ...prev, [editConfig.key]: editConfig.value || undefined }))
@@ -206,8 +212,6 @@ export default function SocialAccountsPage() {
 
   const discordId    = session?.user?.discordId
   const userId       = session?.user?.userId
-  const guildId      = cfg?.guildId
-  const guildName    = cfg?.guildName ?? guildId
   // รองรับทั้ง manager response (field จริง) และ member response (boolean flag)
   const hasMeta      = !!(cfg?.meta_app_id && cfg?.meta_app_secret) || !!cfg?.hasMeta
   const hasX         = !!(cfg?.x_consumer_key && cfg?.x_consumer_secret) || !!cfg?.hasX
@@ -221,8 +225,9 @@ export default function SocialAccountsPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-disc-text">แพลตฟอร์ม</h1>
-        <p className="text-sm text-gray-500 dark:text-disc-muted mt-1">บัญชี Facebook / Instagram / Threads / X ที่เชื่อมต่อกับ bot</p>
+        <p className="text-sm text-gray-500 dark:text-disc-muted">
+          บัญชี Facebook / Instagram / Threads / X ขององค์กร — ใช้โพสต์จาก /posts และจากบอท
+        </p>
       </div>
 
       {banner && (
@@ -233,8 +238,8 @@ export default function SocialAccountsPage() {
       )}
 
       <div className="flex flex-col gap-8">
-        {/* Guild section — manager/superadmin only */}
-        {(canManage || superAdmin) && guildId && (
+        {/* บัญชีขององค์กร — manager/superadmin only · ไม่ผูก guild แล้ว org ที่ไม่มี Discord ก็เห็น */}
+        {(canManage || superAdmin) && (
           <div>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-3">
               {/* บัญชี public + App Credentials เป็นของ "องค์กร" ทั้งคู่ (ทุก guild ในองค์กรใช้ชุดเดียวกัน) 2026-07-29 */}
@@ -244,7 +249,7 @@ export default function SocialAccountsPage() {
               <div className="flex items-center gap-2 flex-wrap">
                 {hasX ? (
                   <a
-                    href={`/api/x/oauth/start?guild_id=${guildId}&visibility=private`}
+                    href={`/api/x/oauth/start?visibility=private`}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black text-white text-sm hover:opacity-80 transition"
                   >
                     <Globe size={14} /> Connect X
@@ -256,7 +261,7 @@ export default function SocialAccountsPage() {
                 )}
                 {hasMeta ? (
                   <a
-                    href={`/api/meta/oauth/start?guild_id=${guildId}`}
+                    href={`/api/meta/oauth/start`}
                     title="Facebook + Instagram (Threads เป็น OAuth คนละตัว ใช้ปุ่มถัดไป)"
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange text-white text-sm hover:opacity-90 transition"
                   >
@@ -270,7 +275,7 @@ export default function SocialAccountsPage() {
                 {/* Threads แยกปุ่ม: authorize ที่ threads.net + creds คนละชุด → รวมกับปุ่ม Meta ไม่ได้ */}
                 {hasThreads ? (
                   <a
-                    href={`/api/threads/oauth/start?guild_id=${guildId}`}
+                    href={`/api/threads/oauth/start`}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-800 dark:bg-gray-700 text-white text-sm hover:opacity-90 transition"
                   >
                     <RefreshCw size={14} /> Connect Threads
@@ -298,8 +303,6 @@ export default function SocialAccountsPage() {
                   { key: 'threads_app_secret', label: 'Threads App Secret', secret: true },
                   { key: 'x_consumer_key',    label: 'X Consumer Key',    secret: false },
                   { key: 'x_consumer_secret', label: 'X Consumer Secret', secret: true  },
-                  { key: 'news_channel_id',   label: '📢 ห้องข่าวสาร (Channel ID)', secret: false },
-                  { key: 'social_alert_channel_id', label: '🔑 ห้องแจ้งเตือน Token', secret: false },
                 ].map(({ key, label, secret }) => {
                   const val = cfg?.[key]
                   const display = !val ? '—' : secret ? '••••••••' : (val.length > 24 ? val.slice(0, 12) + '…' + val.slice(-6) : val)
@@ -318,8 +321,7 @@ export default function SocialAccountsPage() {
                 })}
               </div>
               <p className="text-xs text-gray-400 dark:text-disc-muted mt-3">
-                Meta / X App ใช้ร่วมกันทั้งองค์กร — ตั้งครั้งเดียวใช้ได้ทุกเซิร์ฟเวอร์ ·
-                ห้องข่าวสารเป็นของเซิร์ฟเวอร์ {guildName} เท่านั้น
+                Meta / X App ใช้ร่วมกันทั้งองค์กร — ตั้งครั้งเดียวใช้ได้ทุกเซิร์ฟเวอร์
               </p>
             </div>
 
@@ -344,11 +346,11 @@ export default function SocialAccountsPage() {
             <h2 className="text-base font-semibold text-gray-700 dark:text-disc-muted uppercase tracking-wide">
               Personal
             </h2>
-            {guildId && (
+            {(
               <div className="flex items-center gap-2 flex-wrap">
                 {hasX ? (
                   <a
-                    href={`/api/x/oauth/start?guild_id=${guildId}&visibility=private`}
+                    href={`/api/x/oauth/start?visibility=private`}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black text-white text-sm hover:opacity-80 transition"
                   >
                     <Globe size={14} /> Connect X
@@ -360,7 +362,7 @@ export default function SocialAccountsPage() {
                 )}
                 {hasMeta ? (
                   <a
-                    href={`/api/meta/oauth/start?guild_id=${guildId}&visibility=private`}
+                    href={`/api/meta/oauth/start?visibility=private`}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange text-white text-sm hover:opacity-90 transition"
                   >
                     <RefreshCw size={14} /> Connect Meta
@@ -394,7 +396,7 @@ export default function SocialAccountsPage() {
           <div className="bg-white dark:bg-disc-bg2 rounded-2xl shadow-xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-base font-bold text-gray-900 dark:text-disc-text">
-                {{ meta_app_id: 'Meta App ID', meta_app_secret: 'Meta App Secret', threads_app_id: 'Threads App ID', threads_app_secret: 'Threads App Secret', x_consumer_key: 'X Consumer Key', x_consumer_secret: 'X Consumer Secret', news_channel_id: '📢 ห้องข่าวสาร (Channel ID)', social_alert_channel_id: '🔑 ห้องแจ้งเตือน Token' }[editConfig.key]}
+                {{ meta_app_id: 'Meta App ID', meta_app_secret: 'Meta App Secret', threads_app_id: 'Threads App ID', threads_app_secret: 'Threads App Secret', x_consumer_key: 'X Consumer Key', x_consumer_secret: 'X Consumer Secret' }[editConfig.key]}
               </h2>
               <button onClick={() => setEditConfig(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-disc-text"><X size={18} /></button>
             </div>
@@ -408,13 +410,9 @@ export default function SocialAccountsPage() {
                 className="w-full px-3 py-2 text-sm rounded-lg border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-gray-900 dark:text-disc-text placeholder-gray-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-orange/40"
               />
               <p className="text-xs text-gray-400 dark:text-disc-muted">
-                {editConfig.key === 'social_alert_channel_id'
-                  ? 'ห้องที่บอทจะเตือนเมื่อ token โซเชียลใกล้หมดอายุหรือต่ออายุไม่สำเร็จ — ควรเป็นห้องทีมงาน · ไม่ตั้ง = ใช้ห้องม็อดของ antispam แทน'
-                  : editConfig.key === 'news_channel_id'
-                  ? 'คลิกขวาที่ห้องข่าวสารใน Discord → Copy Channel ID (ต้องเปิด Developer Mode) — ตั้งแล้วตะกร้าสื่อจะมีตัวเลือกแชร์ลงห้องนี้'
-                  : editConfig.key.startsWith('threads_')
-                    ? 'Meta Developer Portal → My Apps → use case "Threads API" → Settings — คนละชุดกับ Meta App ID/Secret ด้านบน'
-                    : `ดูค่าได้จาก ${editConfig.key.startsWith('meta_') ? 'Meta Developer Portal → My Apps' : 'X Developer Portal → Keys and Tokens'}`}
+                {editConfig.key.startsWith('threads_')
+                  ? 'Meta Developer Portal → My Apps → use case "Threads API" → Settings — คนละชุดกับ Meta App ID/Secret ด้านบน'
+                  : `ดูค่าได้จาก ${editConfig.key.startsWith('meta_') ? 'Meta Developer Portal → My Apps' : 'X Developer Portal → Keys and Tokens'}`}
               </p>
               <div className="flex justify-end gap-2 mt-2">
                 <button type="button" onClick={() => setEditConfig(null)} className="px-4 py-2 text-sm rounded-lg text-gray-500 dark:text-disc-muted hover:bg-gray-100 dark:hover:bg-disc-hover transition">ยกเลิก</button>

@@ -86,7 +86,7 @@ const DISCORD_LINKS = [
   // ตะกร้าสื่อไม่มีเมนูของตัวเองแล้ว (ยุบเข้า /posts + /posts/[id] 2026-07-30)
   { href: '/bot/media/quote',      label: 'Quote',     icon: 'quote',    mediaGroup: true },
   { href: '/bot/media/watermark',  label: 'Watermark', icon: 'droplet',  mediaGroup: true },
-  { href: '/bot/platforms',        label: 'Platforms', icon: 'social',   menuOnly: true },
+  { href: '/org/settings/social',        label: 'Platforms', icon: 'social',   menuOnly: true },
   { href: '/bot/features',         label: 'Features',  icon: 'overview', menuOnly: true, superAdminOnly: true },
   { href: '/bot/roles',            label: 'Roles',     icon: 'logs',     menuOnly: true, adminOnly: true },
   { href: '/bot/ai',               label: 'AI',        icon: 'ai',       menuOnly: true },
@@ -121,7 +121,7 @@ const APPS = [
   { key: 'docs',     label: 'DOCS',      href: '/docs',           icon: 'docs',      feature: 'docs' },
   { key: 'cases',    label: 'CASES',     href: '/case/manage',    icon: 'logs',      feature: 'cases', casesAccess: true },
   { key: 'posts',    label: 'POSTS',     href: '/posts',          icon: 'pen',       feature: 'posts' },
-  { key: 'discord',  label: 'BOT',       href: '/bot/platforms',  icon: 'social' },
+  { key: 'discord',  label: 'BOT',       href: '/org/settings/social',  icon: 'social' },
 ]
 
 // app ที่ใช้ได้แม้ org ไม่มี guild — ตอนนี้ org-native ครบทั้ง 4 แล้ว (calling 2026-07-19 ·
