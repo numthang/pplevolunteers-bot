@@ -11,6 +11,27 @@ async function fbGet(url) {
   return res.json()
 }
 
+/**
+ * ดึง edge แบบ paginated ให้ครบทุกหน้า — คืน { data } หรือ { error }
+ *
+ * ⚠️ Graph API default `limit=25` · ไม่วน paging = แอดมินที่ถือเพจเกิน 25 จะต่อได้แค่ 25 เพจแรก
+ *    **ที่เหลือหายเงียบ ไม่มี error** (เคสจริง: แอดมินกลางที่ถือเพจรายจังหวัดครบทุกจังหวัด)
+ * `paging.next` ที่ Meta คืนมามี access_token + fields ครบอยู่แล้ว ยิงตรงได้เลย
+ */
+async function fbGetAll(url, maxPages = 20) {
+  const all = []
+  let next = url
+
+  for (let i = 0; i < maxPages && next; i++) {
+    const res = await fbGet(next)
+    if (res.error) return res
+    all.push(...(res.data || []))
+    next = res.paging?.next || null
+  }
+
+  return { data: all }
+}
+
 // scope = org ที่เริ่ม OAuth (guild เป็น metadata · null ได้ถ้า org ไม่มี Discord)
 // owner_user_id ตั้งเฉพาะบัญชี private (public = ของ org)
 async function upsertSocialRow(ctx, name, platform, socialId, accessToken, userToken, userTokenExpiresAt, visibility = 'public') {
@@ -95,9 +116,9 @@ export async function GET(req) {
       .toISOString().slice(0, 19).replace('T', ' ')
 
     // 3. Get all page accounts + their tokens
-    const accountsRes = await fbGet(
+    const accountsRes = await fbGetAll(
       `https://graph.facebook.com/v22.0/me/accounts` +
-      `?fields=id,name,access_token&access_token=${longRes.access_token}`
+      `?fields=id,name,access_token&limit=100&access_token=${longRes.access_token}`
     )
     if (accountsRes.error) throw new Error(`Accounts: ${accountsRes.error.message}`)
 

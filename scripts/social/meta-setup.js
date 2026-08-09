@@ -51,6 +51,23 @@ function get(url) {
   });
 }
 
+// ดึง edge แบบ paginated ให้ครบทุกหน้า — Graph API default limit=25
+// ไม่วน paging = แอดมินที่ถือเพจเกิน 25 จะเห็นแค่ 25 เพจแรก **โดยไม่มี error**
+// (คู่แฝด: fbGetAll() ใน web/app/api/meta/oauth/callback/route.js)
+async function getAll(url, maxPages = 20) {
+  const all = [];
+  let next = url;
+
+  for (let i = 0; i < maxPages && next; i++) {
+    const res = await get(next);
+    if (res.error) return res;
+    all.push(...(res.data || []));
+    next = res.paging?.next || null;
+  }
+
+  return { data: all };
+}
+
 async function upsertFb(guildId, name, pageId, token, igId) {
   await pool.execute(
     `INSERT INTO dc_social_accounts (owner_type, owner_id, name, platform, page_id, access_token, ig_id)
@@ -125,9 +142,9 @@ async function main() {
 
   // 2. ดึง Page Access Tokens ทุก Page
   console.log('📄 ดึง Page list...');
-  const accountsRes = await get(
+  const accountsRes = await getAll(
     `https://graph.facebook.com/v22.0/me/accounts` +
-    `?fields=id,name,access_token` +
+    `?fields=id,name,access_token&limit=100` +
     `&access_token=${longToken}`
   );
   if (accountsRes.error) throw new Error(`Accounts failed: ${accountsRes.error.message}`);
