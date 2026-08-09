@@ -25,11 +25,13 @@ const noop = () => {};
  *
  * @param {Array<{kind:'image'|'video', path?:string, url?:string}>} items
  * @param {{refreshUrls?:function}} opts  refreshUrls = async (urls[]) => Map — ลิงก์ Discord หมดอายุ ~24 ชม.
- * @returns {{images: Array<{buffer?:Buffer, ext?:string, url?:string}>, videoUrl: string|null}}
+ * @returns {{images: Array<{buffer?:Buffer, ext?:string, url?:string}>, videoUrl: string|null, videoPath: string|null}}
  */
 async function loadMediaSources(items = [], { refreshUrls = null } = {}) {
   const images = [];
   let videoUrl = null;
+  // ไฟล์ต้นฉบับบนดิสก์ — มีไว้ให้ห้องข่าว Discord แนบไฟล์ตรง (ลิงก์ media-temp ตายใน 24 ชม.)
+  let videoPath = null;
 
   // รีเฟรชเฉพาะแถวที่ยังไม่มีไฟล์บนดิสก์ (ไฟล์บนดิสก์ไม่มีวันหมดอายุ)
   const stale = items.filter(m => !m.path && m.url).map(m => m.url);
@@ -47,6 +49,7 @@ async function loadMediaSources(items = [], { refreshUrls = null } = {}) {
       // IG/Threads/Reels ไม่รับไฟล์อัปโหลดตรง — ต้องให้ URL แล้วเขามาดึงเอง
       // ไฟล์ของเราอยู่นอกเน็ต → วางลง media-temp (โฟลเดอร์เดียวกับที่รูป IG ใช้อยู่แล้ว) แล้วส่ง URL นั้น
       if (m.path) {
+        videoPath = m.path;
         try {
           const tmp = saveMediaToTemp(await storage.readFile(m.path), storage.extOfPath(m.path));
           if (/^https?:\/\//.test(tmp)) { videoUrl = tmp; continue; }
@@ -74,7 +77,7 @@ async function loadMediaSources(items = [], { refreshUrls = null } = {}) {
     if (m.url) images.push({ url: m.url });
   }
 
-  return { images, videoUrl };
+  return { images, videoUrl, videoPath };
 }
 
 /**
@@ -128,6 +131,17 @@ async function prepareImages(sources, { watermarkPath = null, onProgress = noop 
 const PLATFORM_LABEL = { fb: 'Facebook', ig: 'Instagram', threads: '@ Threads', x: 'X (Twitter)', news: 'ห้องข่าวสาร' };
 
 /**
+ * เพดานอัปโหลดไฟล์ของเซิร์ฟเวอร์ Discord (ไบต์) — โตตามระดับบูสต์
+ * discord.js v14 ไม่มี getter ให้ ต้องแปลงจาก `premiumTier` เอง
+ */
+function discordUploadLimit(guild) {
+  const MB = 1024 * 1024;
+  if (guild?.premiumTier === 3) return 100 * MB;
+  if (guild?.premiumTier === 2) return 50 * MB;
+  return 10 * MB;
+}
+
+/**
  * ยิง 1 แพลตฟอร์ม — **ที่เดียวที่รู้ว่าแต่ละแพลตฟอร์มต้องเรียกฟังก์ชันไหน**
  *
  * @param {object} o
@@ -142,7 +156,7 @@ const PLATFORM_LABEL = { fb: 'Facebook', ig: 'Instagram', threads: '@ Threads', 
  */
 async function publishOne({
   platform, guildId, orgId = null, userDiscordId, accountId = null,
-  images = [], videoUrl = null, caption = '', scheduleTime = null,
+  images = [], videoUrl = null, videoPath = null, caption = '', scheduleTime = null,
   group = null, guild = null, onProgress = noop,
 }) {
   const label = PLATFORM_LABEL[platform] || platform;
@@ -180,7 +194,24 @@ async function publishOne({
     } else if (platform === 'news') {
       if (!guild) throw new Error('ห้องข่าวสารต้องมี Discord guild');
       if (isVideo) {
-        const msg = await postNews(guild, { content: [caption, videoUrl].filter(Boolean).join('\n') });
+        // แนบไฟล์ตรงถ้ายังมีต้นฉบับบนดิสก์และไม่เกินเพดานของเซิร์ฟเวอร์
+        // (ส่งเป็น "ลิงก์" ไม่ได้แล้ว — videoUrl ชี้ media-temp ที่ cleanTempMedia ลบทิ้งใน 24 ชม.
+        //  ข้อความในห้องข่าวจะเหลือลิงก์ตาย · ลิงก์ CDN ของ Discord เองยังใช้ได้จึงตกกลับไปใช้ได้)
+        let msg = null;
+        if (videoPath) {
+          try {
+            const buffer = await storage.readFile(videoPath);
+            if (buffer.length <= discordUploadLimit(guild)) {
+              msg = await postNews(guild, {
+                content: caption || undefined,
+                files: [{ attachment: buffer, name: `video.${storage.extOfPath(videoPath)}` }],
+              });
+            }
+          } catch (err) {
+            console.error('[publishPipeline] แนบคลิปเข้าห้องข่าวไม่สำเร็จ ใช้ลิงก์แทน:', err.message);
+          }
+        }
+        if (!msg) msg = await postNews(guild, { content: [caption, videoUrl].filter(Boolean).join('\n') });
         url = msg?.url || null;
       } else {
         // Discord จำกัด 10 ไฟล์/ข้อความ → เกินให้ต่อข้อความถัดไป · ลิงก์ที่คืนคือข้อความแรก

@@ -1,4 +1,6 @@
-import { readFile } from 'fs/promises'
+import { createReadStream } from 'fs'
+import { stat } from 'fs/promises'
+import { Readable } from 'stream'
 import { postContext } from '@/lib/postsGuard.js'
 import { canReadPost, canEditPost } from '@/lib/postsAccess.js'
 import { absPath, mimeOfPath, deletePostFile, savePostFile, isAllowedMime, MAX_FILE_SIZE } from '@/lib/postsStorage.js'
@@ -29,12 +31,36 @@ export async function GET(req, { params }) {
   }
 
   try {
-    const buffer = await readFile(absPath(row.path))
-    return new Response(buffer, {
-      headers: {
-        'Content-Type': mimeOfPath(row.path),
-        'Cache-Control': 'private, max-age=3600',
-      },
+    const abs = absPath(row.path)
+    const { size } = await stat(abs)
+    const headers = {
+      'Content-Type': mimeOfPath(row.path),
+      'Cache-Control': 'private, max-age=3600',
+      // 🎬 ไม่มีบรรทัดนี้ + 206 = `<video>` เล่นคลิปไม่ได้จริง:
+      //    Safari/iOS **ปฏิเสธเล่นทันที** ถ้าเซิร์ฟเวอร์ไม่ตอบ range · Chrome เล่นได้แต่เลื่อน timeline ไม่ได้
+      //    และการ readFile ทั้งก้อนแบบเดิมคือดูดคลิป 60MB เข้า RAM ทุกครั้งที่มีคนกดเล่น
+      'Accept-Ranges': 'bytes',
+    }
+
+    const range = req.headers.get('range')
+    const m = range && /^bytes=(\d*)-(\d*)$/.exec(range.trim())
+    if (m) {
+      // `bytes=-500` = ท้ายไฟล์ 500 ไบต์ (ไม่ใช่ start=0) — เบราว์เซอร์ใช้จริงตอนหา moov atom ของ mp4
+      const suffix = m[1] === ''
+      const start = suffix ? Math.max(0, size - Number(m[2])) : Number(m[1])
+      const end = suffix || m[2] === '' ? size - 1 : Math.min(Number(m[2]), size - 1)
+
+      if (!Number.isFinite(start) || start >= size || end < start) {
+        return new Response(null, { status: 416, headers: { 'Content-Range': `bytes */${size}` } })
+      }
+      return new Response(Readable.toWeb(createReadStream(abs, { start, end })), {
+        status: 206,
+        headers: { ...headers, 'Content-Range': `bytes ${start}-${end}/${size}`, 'Content-Length': String(end - start + 1) },
+      })
+    }
+
+    return new Response(Readable.toWeb(createReadStream(abs)), {
+      headers: { ...headers, 'Content-Length': String(size) },
     })
   } catch (error) {
     if (error.code === 'ENOENT') return Response.json({ error: 'ไม่พบไฟล์' }, { status: 404 })

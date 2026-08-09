@@ -1,7 +1,12 @@
 import { postContext } from '@/lib/postsGuard.js'
 import { canEditPost } from '@/lib/postsAccess.js'
-import { savePostFile, isAllowedMime, MAX_FILE_SIZE, MAX_MEDIA_PER_EPISODE } from '@/lib/postsStorage.js'
-import { listMedia, countMedia, addMedia, reorderMedia } from '@/db/posts/media.js'
+import {
+  savePostFile, isAllowedMime, isAllowedVideoMime, kindOfMime, maxSizeOfMime,
+  MAX_MEDIA_PER_EPISODE, MAX_VIDEO_PER_EPISODE,
+} from '@/lib/postsStorage.js'
+import { listMedia, countMedia, countVideos, addMedia, reorderMedia } from '@/db/posts/media.js'
+
+const mb = bytes => Math.round(bytes / (1024 * 1024))
 
 /**
  * GET /api/posts/[id]/media — [id] = id ของโพสต์
@@ -44,11 +49,12 @@ export async function POST(req, { params }) {
   if (!files.length) return Response.json({ error: 'ไม่พบไฟล์ที่จะอัปโหลด' }, { status: 400 })
 
   for (const f of files) {
-    if (!isAllowedMime(f.type)) {
+    if (!isAllowedMime(f.type) && !isAllowedVideoMime(f.type)) {
       return Response.json({ error: `ชนิดไฟล์ไม่รองรับ: ${f.type}` }, { status: 400 })
     }
-    if (f.size > MAX_FILE_SIZE) {
-      return Response.json({ error: 'ไฟล์ใหญ่เกินไป (จำกัด 12MB ต่อไฟล์)' }, { status: 400 })
+    const max = maxSizeOfMime(f.type)
+    if (f.size > max) {
+      return Response.json({ error: `ไฟล์ใหญ่เกินไป (จำกัด ${mb(max)}MB ต่อไฟล์)` }, { status: 400 })
     }
   }
 
@@ -61,11 +67,24 @@ export async function POST(req, { params }) {
       )
     }
 
+    // 1 โพสต์ = 1 คลิป — `loadMediaSources()` เก็บ videoUrl ตัวเดียว ตัวหลังทับตัวหน้า
+    // ถ้าปล่อยให้แนบหลายคลิป ตัวที่ไม่ใช่ชิ้นสุดท้ายจะ**หายเงียบ**ตอนโพสต์ ไม่มี error ให้เห็น
+    const incomingVideos = files.filter(f => isAllowedVideoMime(f.type)).length
+    if (incomingVideos) {
+      const haveVideos = await countVideos(ctx.post.id)
+      if (haveVideos + incomingVideos > MAX_VIDEO_PER_EPISODE) {
+        return Response.json(
+          { error: `แนบคลิปได้โพสต์ละ ${MAX_VIDEO_PER_EPISODE} ชิ้นเท่านั้น — ลบคลิปเดิมก่อน` },
+          { status: 400 }
+        )
+      }
+    }
+
     const uploaded = []
     for (const f of files) {
       const buffer = Buffer.from(await f.arrayBuffer())
       const path = await savePostFile(buffer, f.type)
-      const media = await addMedia({ episodeId: ctx.post.id, kind: 'upload', path, addedBy: ctx.userId })
+      const media = await addMedia({ episodeId: ctx.post.id, kind: kindOfMime(f.type), path, addedBy: ctx.userId })
       uploaded.push(media)
     }
 

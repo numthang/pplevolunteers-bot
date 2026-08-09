@@ -39,7 +39,11 @@ async function runRetention({ dryRun = false } = {}) {
           AND NOT EXISTS (
             SELECT 1 FROM post_social_history h2
              WHERE h2.episode_id = m.episode_id AND h2.status IN ('pending', 'running')
-          )`,
+          )
+          -- ⛔ ลบเฉพาะของที่ยังมี "ต้นฉบับ" อยู่ที่อื่น (เคาะ 2026-08-09 ตอนเปิดให้อัปคลิปจากเว็บ)
+          --    คลิปจากตะกร้าดิสฯ มี source_url/source_message_id กลับไปหาไฟล์เดิมใน Discord ได้
+          --    ส่วนคลิปที่อัปจากเว็บ **ไม่มีที่อื่นเก็บ** — ลบแล้วคือหายจริง จึงไม่แตะ
+          AND (m.kind <> 'video' OR m.source_url IS NOT NULL)`,
       [kind, days]
     );
 

@@ -12,7 +12,9 @@ import QuoteGeneratorModal from './QuoteGeneratorModal.jsx'
 import AssetPickerModal from './AssetPickerModal.jsx'
 import ImageEditorModal from './ImageEditorModal.jsx'
 
-const ACCEPT = 'image/png,image/jpeg,image/webp,image/gif'
+// ต้องตรงกับ EXT_BY_MIME + VIDEO_EXT_BY_MIME ใน web/lib/postsStorage.js (ฝั่ง server เช็คซ้ำอยู่แล้ว)
+// ⚠️ กล่องนี้เท่านั้นที่รับวิดีโอ — คลังภาพ (`AssetPickerModal`) กับปุ่มแก้รูปยังรับเฉพาะรูป
+const ACCEPT = 'image/png,image/jpeg,image/webp,image/gif,video/mp4,video/quicktime,video/webm'
 
 // ไฟล์ในดิสก์ (ผ่าน gate) ก่อน · ยังโหลดไม่เสร็จ (path NULL — ปกติของสื่อจากตะกร้าดิสฯ) ใช้ CDN Discord ไปก่อน
 // /api/posts/media/[id] ตอบ 404 เมื่อ path เป็น NULL → ไม่มี fallback นี้ = รูปแตกทั้งโพสต์
@@ -261,7 +263,7 @@ export default function PostMediaPanel({ id, compact = false }) {
             เลือกไฟล์
           </button>
           <p className="text-sm text-warm-500 dark:text-disc-muted mt-1.5">
-            หรือลากไฟล์มาวาง / คลิกแล้ววาง (Ctrl+V)
+            หรือลากไฟล์มาวาง / คลิกแล้ววาง (Ctrl+V) · รูปไม่เกิน 12MB · คลิป 64MB (โพสต์ละ 1 คลิป)
           </p>
 
           {/* เครื่องมือเสริม = สร้างสื่อใหม่ ไม่ใช่อัปของที่มีอยู่ → วางเป็นปุ่มเล็กมุมขวาล่าง
@@ -390,28 +392,31 @@ export default function PostMediaPanel({ id, compact = false }) {
           {videos.map(v => {
             const src = srcOf(v)
             return (
-              <div key={v.id} className="flex items-center gap-3 rounded-lg border border-warm-200 dark:border-disc-border p-2">
-                <Film size={16} className="shrink-0 text-warm-500 dark:text-disc-muted" />
-                {src ? (
-                  <a
-                    href={src}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex-1 min-w-0 text-sm text-teal hover:underline truncate"
-                  >
-                    {v.path ? 'เปิดวิดีโอ' : 'เปิดวิดีโอ (ต้นทางบน Discord)'}
-                  </a>
-                ) : (
-                  <span className="flex-1 min-w-0 text-sm text-warm-400 dark:text-disc-muted">ยังโหลดไฟล์ไม่เสร็จ</span>
-                )}
-                {canEdit && (
-                  <button
-                    onClick={() => removeMedia(v.id)}
-                    title="ลบวิดีโอนี้"
-                    className="shrink-0 w-7 h-7 flex items-center justify-center rounded-full text-warm-400 dark:text-disc-muted hover:bg-red-100 hover:text-red-500 dark:hover:bg-red-900/30 dark:hover:text-red-400 transition"
-                  >
-                    <X size={15} />
-                  </button>
+              <div key={v.id} className="flex flex-col gap-2 rounded-lg border border-warm-200 dark:border-disc-border p-2">
+                <div className="flex items-center gap-2">
+                  <Film size={16} className="shrink-0 text-warm-500 dark:text-disc-muted" />
+                  <span className="flex-1 min-w-0 text-sm text-warm-700 dark:text-disc-text truncate">
+                    {!src ? 'ยังโหลดไฟล์ไม่เสร็จ' : v.path ? 'คลิปในโพสต์นี้' : 'คลิป (ต้นทางบน Discord)'}
+                  </span>
+                  {canEdit && (
+                    <button
+                      onClick={() => removeMedia(v.id)}
+                      title="ลบวิดีโอนี้"
+                      className="shrink-0 w-7 h-7 flex items-center justify-center rounded-full text-warm-400 dark:text-disc-muted hover:bg-red-100 hover:text-red-500 dark:hover:bg-red-900/30 dark:hover:text-red-400 transition"
+                    >
+                      <X size={15} />
+                    </button>
+                  )}
+                </div>
+                {/* preload="metadata" — ดึงแค่หัวไฟล์มาทำแถบเวลา ไม่ลากคลิปทั้งก้อนมาตอนเปิดหน้า
+                    (route เสิร์ฟแบบ range/206 แล้ว จึงเลื่อน timeline ได้และ Safari ยอมเล่น) */}
+                {src && (
+                  <video
+                    src={src}
+                    controls
+                    preload="metadata"
+                    className="w-full max-h-64 rounded-md bg-black"
+                  />
                 )}
               </div>
             )

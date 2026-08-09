@@ -10,6 +10,7 @@
 > **เทสในเบราว์เซอร์จริงผ่านแล้ว** (autosave · reload · อัปรูป · gate ไฟล์ 401 · กล่อง 409 สองแท็บ) · ⬜ ยังไม่เทสปุ่ม AI/ลากเรียง/paste
 > **ก้อน 4 เสร็จ 2026-07-30** — `services/publishPipeline.js` (ท่อร่วมกับตะกร้าดิสฯ) · `publishWorker` (คิว+retry+stale+backlink กลับห้อง) · ประวัติรวมที่ `post_social_history` (drop `dc_media_history`) · API `/publish` `/jobs` + UI กล่องเผยแพร่ · e2e ผ่าน
 > **ก้อน 2b (Video/Quote Generator Modal) — ดีไซน์เคาะแล้ว 2026-07-31 ยังไม่เขียนโค้ด** (ดู §🎬 Media Section — Video/Quote Generator Modal) · ⚠️ ยังไม่รัน `/scrutinize` ตามกฎ CLAUDE.md — **ต้องรันก่อน implement รอบหน้า**
+> **ก้อน A (อัปคลิปจากเว็บ) เสร็จ 2026-08-09** — ดู §🎬 คลิป: อัปจากเว็บ · ⏳ deploy prod ต้องตั้ง nginx `client_max_body_size` ก่อน
 > ⬜ ต่อไป: **ก้อน 4c ยุบตะกร้าดิสฯ เข้า post_episodes** (ดู `md/posts/PLAN-4.md`) · ก้อน 3 (อนุมัติ/review link) · ก้อน 2b (implement ตามดีไซน์ด้านล่าง)
 
 ---
@@ -433,12 +434,18 @@ bottom-right (CLOSE pool) x40 → ok=34 fail=6  (15%)  ERR_INVALID_URL
 
 ⚠️ **`classic_open.png` / `classic_close.png` ยังไม่มีอยู่ดี** — ตอนนี้แค่ไม่พังแล้ว ถ้าอยากได้เครื่องหมายคำพูดครบ 5 แบบต้องหาไฟล์มาวางใน `assets/quote/`
 
-#### 🔴 Blocker 2 — Video Generator เซฟ output ไม่ได้ (storage layer บล็อกวิดีโอ) — ⏸️ **เลื่อนพร้อม Video 2026-08-03**
+#### ✅ Blocker 2 — **แก้แล้ว 2026-08-09** (ก้อน A) — storage รับวิดีโอแล้ว
+
+> ทางเข้าที่รับวิดีโอมี**ที่เดียว** คือ `POST /api/posts/[id]/media` · ดู §🎬 คลิป: อัปจากเว็บ ด้านล่างว่าแก้อะไรบ้างและทำไม
+> ⚠️ Video **Generator** (ซ้อนคำคมบนคลิป) ยังพักอยู่เหมือนเดิม — ที่ปลดล็อกคือ "อัปคลิปแล้วโพสต์ออก" เท่านั้น
+
+<details><summary>อาการเดิม (เก็บไว้เป็นที่มา)</summary>
 
 `web/lib/postsStorage.js` — `EXT_BY_MIME` มีแต่รูป → `savePostFile()` โยน `'ชนิดไฟล์ไม่รองรับ'` ทันทีเมื่อเป็น `video/mp4` และ `api/posts/[id]/media/route.js` เช็ค `isAllowedMime()` ก่อนรับไฟล์
 
 ต้องแก้ **3 จุด** พร้อมกัน: `EXT_BY_MIME` (+mp4/mov/webm) · `MAX_FILE_SIZE` (12MB เล็กเกินสำหรับคลิป — ทั้งขาอัปโหลดต้นทางและขา output) · limit ราย kind
 🟢 ของที่พร้อมแล้วไม่ต้องแตะ: `mimeOfPath()` รองรับ mp4/mov/webm แล้ว · CHECK constraint รับ `'video'` แล้ว (`migration.sql:440`)
+</details>
 
 #### 🟠 ต้องเคาะเพิ่มก่อน implement
 
@@ -463,6 +470,29 @@ bottom-right (CLOSE pool) x40 → ok=34 fail=6  (15%)  ERR_INVALID_URL
 - `post_episode_media` มี `quote_text`/`quote_style`/`bg_path`/`source_hash` ครบ
 
 **Verdict: fix-then-ship** — โครงถูก (reuse renderer + ท่อ publish เดิม) แต่ห้ามเริ่มเขียนจนแก้ Blocker 1-2
+
+---
+
+## 🎬 คลิป: อัปจากเว็บ (ก้อน A — เสร็จ 2026-08-09)
+
+เดิมคลิปเข้าโพสต์ได้ทางเดียวคือหย่อนในตะกร้าดิสฯ · ตอนนี้ลากไฟล์ใส่โซนสื่อบนเว็บได้ตรงๆ
+ท่อโพสต์ (`publishPipeline` → Reels FB/IG/Threads/X) **ไม่ได้แก้อะไร** — มันรองรับไฟล์บนดิสก์อยู่แล้ว
+
+**สิ่งที่แก้ (ผ่าน `/scrutinize` 2026-08-09):**
+
+| จุด | ทำอะไร | ทำไมถึงต้องระวัง |
+|---|---|---|
+| `web/lib/postsStorage.js` | เพิ่ม `isAllowedVideoMime()` / `kindOfMime()` / `maxSizeOfMime()` · `MAX_VIDEO_SIZE` 64MB | ⛔ **ห้ามยัดวิดีโอเข้า `EXT_BY_MIME`/`isAllowedMime()`** — คลังภาพ (`/api/posts/assets`) กับปุ่มแก้รูป (`PUT /api/posts/media/[id]`) ใช้ predicate ตัวเดียวกัน · ขยายรวมเมื่อไหร่ = mp4 ไหลเข้าคลังภาพ (sharp อ่านไม่ได้ → ธัมบ์เนลแตก) และ PUT ทับแถวรูปด้วย mp4 ได้ |
+| `POST /api/posts/[id]/media` | รับวิดีโอ · `kind='video'` ตาม mime · **จำกัด 1 คลิป/โพสต์** | `loadMediaSources()` เก็บ `videoUrl` ตัวเดียว ตัวหลังทับตัวหน้า → คลิปที่ 2 ขึ้นไปจะหายเงียบตอนโพสต์ |
+| `GET /api/posts/media/[id]` | สตรีมด้วย `createReadStream` + รองรับ `Range` (206/416) | ไม่มี `Accept-Ranges` = **Safari/iOS ไม่ยอมเล่นเลย** · Chrome เล่นได้แต่เลื่อน timeline ไม่ได้ · และ `readFile` แบบเดิมดูดคลิปทั้งก้อนเข้า RAM ทุกครั้งที่กดเล่น |
+| `PostMediaPanel.jsx` | `accept` รับวิดีโอ · โชว์ `<video controls preload="metadata">` แทนลิงก์ | — |
+| `PostPublishPanel.jsx` | ป้ายเตือน "มีคลิป → รูป N รูปจะไม่ถูกส่ง" · ซ่อนตัวเลือกลายน้ำเมื่อมีคลิป | `publishOne()` เช็ค `isVideo` ก่อน แล้วทิ้ง `images` ทั้งชุด · ลายน้ำแปะได้แต่บนรูป |
+| `services/postsRetention.js` | ลบคลิปอัตโนมัติ**เฉพาะที่มี `source_url`** | คลิปจากตะกร้ามีต้นฉบับใน Discord ให้กลับไปหา · คลิปที่อัปจากเว็บไม่มี → 30 วันแล้วลบ = หายจริง |
+| `publishPipeline` + `publishWorker` + `basketHandler` | `loadMediaSources()` คืน `videoPath` เพิ่ม · ห้องข่าว Discord **แนบไฟล์ตรง** (เกินเพดานบูสต์/อ่านไฟล์ไม่ได้ = ตกกลับไปใช้ลิงก์) | ลิงก์ที่ส่งคือ media-temp ที่ `cleanTempMedia` ลบใน 24 ชม. → ข้อความในห้องข่าวจะเหลือลิงก์ตาย |
+
+**verify:** `publishPipeline.test.js` (เพิ่ม 3 เคส) · `npm test` 288 ผ่าน · `next build` ผ่าน · curl บน build จริง (port 3100): อัปคลิป 201 `kind=video` · คลิปที่ 2 โดนบล็อก · mp4 เข้าคลังภาพโดนบล็อก · PUT mp4 ทับแถวรูปโดนบล็อก · `Range: bytes=0-499` → 206 `video/mp4` · `bytes=-100` → ท้ายไฟล์ · เกินไฟล์ → 416
+
+**⏳ ก่อน deploy prod:** nginx ของไซต์ต้องตั้ง `client_max_body_size 100m;` (ค่า default 1MB → อัปคลิปเด้ง **413** ตั้งแต่ยังไม่ถึงโค้ด และเห็นเป็นหน้า error ดิบของ nginx ไม่ใช่ข้อความไทยของเรา)
 
 ---
 

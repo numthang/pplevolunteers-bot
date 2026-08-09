@@ -147,6 +147,12 @@ spec + ดีไซน์ + ตารางทั้งหมดอยู่ `md
   - ⚠️ ล้าง `source_url` ตอนแทนที่ ไม่งั้นไฟล์หายแล้ว UI จะ fallback ไปโชว์รูปดิสคอร์ดที่ยังไม่เบลอ · การ์ดคำคมที่ถูกแก้จะกลายเป็น `kind='upload'`
   - ปุ่ม ✏️ ขึ้นเฉพาะสื่อที่มี `path` แล้ว (รูปที่ยังชี้ CDN ดิสคอร์ด = cross-origin → canvas taint, `toBlob()` ล้ม)
   - i18n ครบ ns `posts.imageEditor` (th+en) · **หาใบหน้าอัตโนมัติยังไม่ทำ** — user เคาะให้เบลอเองด้วยมือก่อน (2026-08-07) ถ้าจะทำต่อ: TinyFaceDetector โมเดล ~200KB วางใน `public/` แล้วให้มันเติมกรอบให้ user ปรับ
+- [x] **🎬 อัปคลิปจากเว็บ (ก้อน A) — ✅ เสร็จ + verify 2026-08-09** (local · ยังไม่ deploy) · รายละเอียดเต็ม `md/posts/POSTS.md` §🎬 คลิป: อัปจากเว็บ
+  - ลากคลิปใส่โซนสื่อได้ตรงๆ ไม่ต้องอ้อมตะกร้าดิสฯ · พรีวิว `<video>` ในหน้าโพสต์ · โพสต์ออก Reels FB/IG/Threads/X ได้ (ท่อเดิมไม่ได้แก้)
+  - ⚠️ **`isAllowedMime()` ยังเป็นของรูปล้วนเหมือนเดิม โดยตั้งใจ** — วิดีโอมี `isAllowedVideoMime()` แยก เพราะคลังภาพ + PUT แก้รูป ใช้ predicate ตัวเดียวกัน
+  - ⚠️ **`GET /api/posts/media/[id]` เป็น stream + Range แล้ว** (ไม่ใช่ `readFile` ทั้งก้อน) — ใครจะแก้ route นี้ต่อ อย่าถอยกลับไปเป็น buffer ไม่งั้น Safari เล่นคลิปไม่ได้
+  - 🔜 **ก่อน deploy prod: ตั้ง nginx `client_max_body_size 100m;` ของไซต์แล้ว reload** — default 1MB → อัปคลิปเด้ง 413 เป็นหน้า error ดิบของ nginx (local ไม่มี nginx คั่น จึงเทสไม่เจอ)
+  - ยังไม่ทำ: **Video Generator (ซ้อนคำคมบนคลิป)** — พักไว้ตั้งแต่ 2026-08-03 · ข้อที่ยังไม่เคาะคือ ffmpeg render sync ใน route หรือ job row + poll
 - [ ] **migrate i18n โซน posts** (หนี้จากก้อน 2b) — 7 ไฟล์: `PostsHome` · `PostEditor` · `PostMediaPanel` · `PostMetaPanel` · `PostPublishPanel` · `PostRevisions` · `EmojiPicker` (ใหม่ 2026-08-08 — hardcode ไทยตาม sibling ในโซนเดิม) · งาน mechanical ส่ง Sonnet subagent ได้ · ระหว่างยังไม่ทำ โซนนี้จะปน hardcode กับ `t()`
 - [x] **🎨 คลังภาพ (media library) — ✅ เขียนเสร็จ 2026-08-04** (local · ยังไม่ deploy prod · **ยังไม่เทสในเบราว์เซอร์จริง**)
   - migration รันบน local แล้ว: `post_assets` + `post_episode_media.source_asset_id` (บล็อกท้าย `migration.sql` · additive ล้วน)

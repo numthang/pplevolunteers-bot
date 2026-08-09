@@ -100,6 +100,20 @@ const ok = (label, cond, extra = '') => console.log(`${cond ? '✅' : '❌'} ${l
 
     m = await loadMediaSources([{ kind: 'video', path: tmpRel }]);
     ok('วิดีโอบนดิสก์ → media-temp URL สาธารณะ', m.videoUrl === 'https://temp.test/v.png' && calls.some(c => c.name === 'saveMediaToTemp'));
+    ok('วิดีโอบนดิสก์ → คืน videoPath ไว้ให้ห้องข่าวแนบไฟล์ตรง', m.videoPath === tmpRel);
+
+    // ห้องข่าว Discord: ลิงก์ media-temp ตายใน 24 ชม. → ต้องแนบไฟล์ตรงถ้ายังมีต้นฉบับ
+    calls.length = 0;
+    await publishBatch({ platforms: ['news'], guildId: 'G1', userDiscordId: 'U1',
+      videoUrl: 'https://temp.test/v.png', videoPath: tmpRel, caption: 'CAP', guild: { id: 'G1', premiumTier: 0 } });
+    ok('news(วิดีโอ): มีไฟล์บนดิสก์ → แนบไฟล์ตรง ไม่ส่งลิงก์ที่จะตาย',
+       !!byName('postNews')?.[1]?.files && byName('postNews')?.[1]?.content === 'CAP');
+
+    calls.length = 0;
+    await publishBatch({ platforms: ['news'], guildId: 'G1', userDiscordId: 'U1',
+      videoUrl: 'https://cdn.discord/v.mp4', videoPath: 'storage/posts/__ไม่มีจริง.mp4', caption: 'CAP', guild: { id: 'G1' } });
+    ok('news(วิดีโอ): อ่านไฟล์ไม่ได้ → ไม่ล้ม ตกกลับไปใช้ลิงก์',
+       byName('postNews')?.[1]?.content?.includes('https://cdn.discord/v.mp4') && !byName('postNews')?.[1]?.files);
 
     m = await loadMediaSources([{ kind: 'video', url: 'https://cdn.discord/v.mp4' }]);
     ok('วิดีโอที่ยังไม่โหลดลงดิสก์ → ส่งลิงก์ Discord ตรงๆ เหมือนเดิม', m.videoUrl === 'https://cdn.discord/v.mp4');

@@ -39,6 +39,15 @@ export async function countMedia(episodeId) {
   return rows[0].n
 }
 
+/** นับเฉพาะคลิป — โพสต์หนึ่งมีได้ชิ้นเดียว (ท่อ publish เก็บ videoUrl ตัวเดียว) */
+export async function countVideos(episodeId) {
+  const { rows } = await pool.query(
+    `SELECT COUNT(*)::int AS n FROM post_episode_media WHERE episode_id = $1 AND kind = 'video'`,
+    [episodeId]
+  )
+  return rows[0].n
+}
+
 /** ต่อท้ายเสมอ (sort_order = MAX+1) — เรียงใหม่ทำผ่าน reorderMedia */
 export async function addMedia({ episodeId, kind = 'upload', path, quoteText = null, quoteStyle = null, bgPath = null, sourceHash = null, addedBy = null, sourceAssetId = null }) {
   const { rows } = await pool.query(

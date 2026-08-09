@@ -755,7 +755,7 @@ async function processAndPost(interaction, state) {
 
   // path (ไฟล์บนดิสก์) → buffer · ไม่มีไฟล์ → ลิงก์ Discord ที่รีเฟรชแล้ว · วิดีโอ → URL สาธารณะ
   // ตัวแปลงอยู่ในท่อกลางตัวเดียวกับ worker (กติกาข้อ 16) — ที่นี่แค่ผูก client ให้มันรีเฟรชลิงก์ได้
-  const { images: sources, videoUrl } = await loadMediaSources(
+  const { images: sources, videoUrl, videoPath } = await loadMediaSources(
     [...imageItems, ...videoItems].map(it => ({
       kind: it.type === 'video' ? 'video' : 'image', path: it.path, url: it.image_url,
     })),
@@ -797,6 +797,7 @@ async function processAndPost(interaction, state) {
     userDiscordId: interaction.user.id,
     images: processed,
     videoUrl: isVideo ? videoUrl : null,
+    videoPath: isVideo ? videoPath : null,   // ห้องข่าว Discord แนบไฟล์ตรงถ้ายังมีต้นฉบับบนดิสก์
     caption: state.caption,
     scheduleTime: isVideo ? scheduleTime : scheduleTime,
     group: state.group,

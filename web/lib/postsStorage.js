@@ -20,6 +20,11 @@ export const POSTS_DIR = join('storage', 'posts')
 export const MAX_FILE_SIZE = 12 * 1024 * 1024   // 12 MB — รูปจากมือถือสมัยนี้ 8–10 MB ได้
 export const MAX_MEDIA_PER_EPISODE = 20
 
+// คลิปใหญ่กว่ารูปมาก แต่ห้ามใหญ่เกินไป: `req.formData()` อมทั้งไฟล์ไว้ใน RAM แล้ว
+// `Buffer.from(arrayBuffer)` ก็อีกชุด → 64 MB = ~128 MB ต่อ request บนเครื่องที่ CPU/RAM ตึงอยู่แล้ว
+export const MAX_VIDEO_SIZE = 64 * 1024 * 1024
+export const MAX_VIDEO_PER_EPISODE = 1   // publishPipeline เก็บ videoUrl ได้ตัวเดียว (ตัวหลังทับตัวหน้า)
+
 const EXT_BY_MIME = {
   'image/png': 'png',
   'image/jpeg': 'jpg',
@@ -27,8 +32,33 @@ const EXT_BY_MIME = {
   'image/gif': 'gif',
 }
 
+// ⛔ แยกจาก EXT_BY_MIME **โดยตั้งใจ** — `isAllowedMime()` ถูกใช้โดยคลังภาพ (`/api/posts/assets`)
+//    และปุ่มแก้รูป (`PUT /api/posts/media/[id]`) ด้วย · ถ้าเอาวิดีโอยัดรวมในนั้น
+//    mp4 จะไหลเข้าคลังภาพได้ (probeImage/sharp คืนค่าว่าง → ธัมบ์เนลแตก)
+//    และ PUT ทับแถวรูปด้วย mp4 ได้โดย kind ยังเป็น 'upload' → pipeline ส่งคลิปเข้าช่องรูป
+const VIDEO_EXT_BY_MIME = {
+  'video/mp4': 'mp4',
+  'video/quicktime': 'mov',
+  'video/webm': 'webm',
+}
+
+/** รูปเท่านั้น — ทางเข้าที่รับวิดีโอด้วยต้องเรียก `isAllowedVideoMime()` เพิ่มเอง */
 export function isAllowedMime(mime) {
   return Object.hasOwn(EXT_BY_MIME, mime)
+}
+
+export function isAllowedVideoMime(mime) {
+  return Object.hasOwn(VIDEO_EXT_BY_MIME, mime)
+}
+
+/** mime → `kind` ที่เก็บใน `post_episode_media` (retention กับ UI แยกกันด้วยคอลัมน์นี้) */
+export function kindOfMime(mime) {
+  return isAllowedVideoMime(mime) ? 'video' : 'upload'
+}
+
+/** ขนาดสูงสุดของไฟล์ชนิดนี้ (ไบต์) — ข้อความ error ต้องดึงตัวเลขจากตรงนี้ ห้าม hardcode */
+export function maxSizeOfMime(mime) {
+  return isAllowedVideoMime(mime) ? MAX_VIDEO_SIZE : MAX_FILE_SIZE
 }
 
 export function mimeOfPath(path) {
@@ -60,7 +90,7 @@ export function absPath(relPath) {
  * @param {string} mime
  */
 export async function savePostFile(buffer, mime) {
-  const ext = EXT_BY_MIME[mime]
+  const ext = EXT_BY_MIME[mime] || VIDEO_EXT_BY_MIME[mime]
   if (!ext) throw new Error('postsStorage: ชนิดไฟล์ไม่รองรับ')
   const relPath = join(POSTS_DIR, `${randomUUID()}.${ext}`)
   const abs = absPath(relPath)

@@ -46,6 +46,10 @@ function localNow() {
 export default function PostPublishPanel({ postId }) {
   // การ์ดนี้แยกจากการ์ดสื่อแล้ว จึงต้องรู้จำนวนสื่อเอง (IG/Threads โพสต์ข้อความล้วนไม่ได้)
   const [hasMedia, setHasMedia] = useState(false)
+  // มีคลิป = ทั้งโพสต์กลายเป็นโพสต์วิดีโอ · `publishOne()` เช็ค `isVideo = !!videoUrl` ก่อนเสมอ
+  // แล้ว**ทิ้งรูปทั้งหมด**ไปเงียบๆ → ต้องบอกตรงนี้ก่อนกด ไม่ใช่ให้ไปงงตอนเห็นโพสต์จริง
+  const [hasVideo, setHasVideo] = useState(false)
+  const [imageCount, setImageCount] = useState(0)
   // สิทธิ์เผยแพร่ — API กันอยู่แล้ว (publish/route.js) แต่ก่อนหน้านี้ UI ไม่รู้เลย เลยกางปุ่มส้มให้ทุกคน
   // ที่เปิดอ่านได้ กดแล้วค่อยเด้ง 403 (แจ้ง 2026-08-08) → โชว์การ์ดเหมือนเดิมแต่ปุ่มเทา + บอกเหตุผล
   const [canPublish, setCanPublish] = useState(false)
@@ -82,7 +86,10 @@ export default function PostPublishPanel({ postId }) {
       const res = await fetch(`/api/posts/${postId}`)
       const data = await res.json().catch(() => ({}))
       if (!res.ok) return
-      setHasMedia((data.data?.media || []).length > 0)
+      const media = data.data?.media || []
+      setHasMedia(media.length > 0)
+      setHasVideo(media.some(m => m.kind === 'video'))
+      setImageCount(media.filter(m => m.kind !== 'video').length)
       setCanPublish(!!data.data?.can?.publish)
       setPostStatus(data.data?.post?.status ?? null)
     } catch { /* โหลดไม่ได้ = ถือว่ายังไม่มีสื่อ · API กันอีกชั้นตอนกดเผยแพร่อยู่แล้ว */ }
@@ -182,7 +189,7 @@ export default function PostPublishPanel({ postId }) {
         body: JSON.stringify({
           platforms: selected,
           group: group || null,
-          wmType: hasMedia ? wmType : 'none',
+          wmType: hasMedia && !hasVideo ? wmType : 'none',
           scheduledAt: scheduledAt || null,
         }),
       })
@@ -269,7 +276,15 @@ export default function PostPublishPanel({ postId }) {
         })}
       </div>
 
-      {hasMedia && watermarks.length > 0 && (
+      {hasVideo && (
+        <p className="text-sm rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-200 px-3 py-2">
+          🎬 โพสต์นี้มีคลิป จะถูกส่งเป็นโพสต์วิดีโอ
+          {imageCount > 0 ? ` — รูป ${imageCount} รูปในโพสต์จะไม่ถูกส่งไปด้วย` : ''}
+        </p>
+      )}
+
+      {/* ลายน้ำแปะบน "รูป" เท่านั้น (`prepareImages`) — โพสต์วิดีโอเลือกไปก็ไม่มีผล ซ่อนทิ้งดีกว่าให้เข้าใจผิด */}
+      {hasMedia && !hasVideo && watermarks.length > 0 && (
         <div className="flex flex-col gap-1">
           <span className="text-sm text-warm-700 dark:text-disc-text">ลายน้ำ</span>
           <select
