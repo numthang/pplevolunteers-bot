@@ -1071,8 +1071,59 @@ function parseStyle(input) {
 
 // renderPanel/panelPalette ยัง**ไม่อยู่ใน STYLES** — ยังเป็นตัวอย่างให้ดูก่อนเคาะ
 // เคาะเมื่อไหร่ค่อยเติมคีย์ใน STYLES แล้วมันจะตกเข้า random pool เอง
+/**
+ * ชั้นข้อความ **โปร่งใส** ขนาดเท่าเฟรมวิดีโอ — สำหรับ ffmpeg เอาไปซ้อนบนคลิป
+ *
+ * ทำไมต้องอยู่ในไฟล์นี้ ไม่ใช่ไฟล์ใหม่: ตัวจัดข้อความจริง (`fitFont` ย่อฟอนต์ให้พอบรรทัด ·
+ * `wrapText`/`graphemes` ตัดคำไทยแบบ grapheme-aware · `lsDraw` letter-spacing) เป็น private
+ * ของโมดูลนี้ทั้งหมด · ถ้าไปเขียนใหม่ข้างนอก = renderer ตัวที่สอง ที่จะเพี้ยนจากการ์ดคำคมทันที
+ * ที่ใครสักคนแก้ไฟล์นี้ (กติกาข้อ 16: renderer มีตัวเดียว)
+ *
+ * ต่างจาก `renderQuoteStyle()` ตรงที่ตัวนั้นรับ **รูปพื้นหลัง** แล้วคืนการ์ดทึบ
+ * ส่วนตัวนี้ไม่มีพื้นหลัง — คืน PNG ที่โปร่งทุกที่ยกเว้นแถบมืดหลังข้อความ
+ *
+ * @param {number} width   ต้องเป็นขนาด**ที่ตาเห็น** ไม่ใช่ขนาด coded (คลิปแนวตั้งจากมือถือ
+ * @param {number} height  เก็บ rotation ไว้ใน metadata — ดู utils/videoQuoteOverlay.js)
+ * @param {{quoteText:string, authorName?:string, position?:'top'|'center'|'bottom',
+ *          scrimAlpha?:number, noMark?:boolean}} opts
+ * @returns {Promise<Buffer>} PNG โปร่งใส
+ */
+async function renderQuoteOverlay(width, height, {
+  quoteText, authorName = '', position = 'bottom', scrimAlpha = 0.62, noMark = false,
+} = {}) {
+  const canvas = createCanvas(width, height);
+  const ctx = canvas.getContext('2d');
+
+  const pad = Math.round(width * 0.07);
+  const bandH = Math.round(height * 0.34);
+  const bandY = position === 'top' ? 0
+    : position === 'center' ? Math.round((height - bandH) / 2)
+    : height - bandH;
+
+  // แถบมืดหลังข้อความ — คลิปมีภาพเคลื่อนไหว ตัวอักษรขาวล้วนอ่านไม่ออกเป็นช่วงๆ
+  // ขอบด้านที่ติดกลางเฟรมไล่จาง ไม่ให้เห็นเป็นเส้นตัดตรงๆ
+  const grad = ctx.createLinearGradient(0, bandY, 0, bandY + bandH);
+  const stops = position === 'top'
+    ? [[0, scrimAlpha], [0.65, scrimAlpha * 0.75], [1, 0]]
+    : position === 'center'
+      ? [[0, 0], [0.25, scrimAlpha], [0.75, scrimAlpha], [1, 0]]
+      : [[0, 0], [0.35, scrimAlpha * 0.75], [1, scrimAlpha]];
+  for (const [at, a] of stops) grad.addColorStop(at, `rgba(0,0,0,${a})`);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, bandY, width, bandH);
+
+  await drawQuoteBlock(ctx, {
+    x: pad, y: bandY, w: width - pad * 2, h: bandH,
+    quoteText, authorName,
+    ink: '#ffffff', sub: 'rgba(255,255,255,0.82)',
+    align: 'left', maxLines: 4, noMark,
+  });
+
+  return toPng(canvas);
+}
+
 module.exports = {
-  renderQuoteStyle, parseStyle, FRAME_RIGHT,
+  renderQuoteStyle, parseStyle, FRAME_RIGHT, renderQuoteOverlay,
   renderPanel, renderMatte, panelPalette, LEGACY_STYLE_ALIAS,
   renderVariant, _mix,   // export ไว้ทดลอง scrimMix — ยังไม่มีสไตล์ไหนใน STYLES ใช้
 };
