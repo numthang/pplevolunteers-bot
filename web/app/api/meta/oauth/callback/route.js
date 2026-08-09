@@ -1,8 +1,8 @@
 import pool from '@/db/index.js'
 import { BASE_URL } from '@/lib/baseUrl.js'
-import { orgIdOfGuild } from '@/db/guilds.js'
 import { findUserIdByProvider } from '@/db/userIdentities.js'
 import { getMetaApp } from '@/lib/socialAppCreds.js'
+import { orgIdFromState } from '@/lib/socialOAuthScope.js'
 
 const REDIRECT_URI = `${BASE_URL}/api/meta/oauth/callback`
 
@@ -11,7 +11,8 @@ async function fbGet(url) {
   return res.json()
 }
 
-// scope = org ของ guild ที่เริ่ม OAuth · owner_user_id ตั้งเฉพาะบัญชี private (public = ของ org)
+// scope = org ที่เริ่ม OAuth (guild เป็น metadata · null ได้ถ้า org ไม่มี Discord)
+// owner_user_id ตั้งเฉพาะบัญชี private (public = ของ org)
 async function upsertSocialRow(ctx, name, platform, socialId, accessToken, userToken, userTokenExpiresAt, visibility = 'public') {
   await pool.query(
     `INSERT INTO dc_social_accounts (org_id, owner_user_id, guild_id, user_discord_id, name, platform, social_id, access_token, user_token, user_token_expires_at, visibility)
@@ -67,7 +68,7 @@ export async function GET(req) {
   }
 
   // creds เป็นขององค์กร (org_config) — หา org จาก guild ที่เริ่ม OAuth
-  const app = await getMetaApp({ guildId: state.guildId })
+  const app = await getMetaApp({ orgId: state.orgId ?? null, guildId: state.guildId || null })
   if (!app) {
     return html('❌ Config ไม่ครบ', `<h1>❌ องค์กรของ guild ${state.guildId} ยังไม่ได้ตั้งค่า Meta App ID / Secret — ตั้งที่ /bot/platforms</h1>`)
   }
@@ -105,10 +106,12 @@ export async function GET(req) {
 
     const userDiscordId = state.userId || null
     const visibility    = state.visibility || 'public'
+    const orgId = await orgIdFromState(state)
+    if (!orgId) throw new Error('หา org ของ OAuth flow นี้ไม่เจอ — ลองกด Connect ใหม่')
     const ctx = {
-      orgId:       await orgIdOfGuild(state.guildId),
+      orgId,
       ownerUserId: userDiscordId ? await findUserIdByProvider('discord', userDiscordId) : null,
-      guildId:     state.guildId,
+      guildId:     state.guildId || null,
       userDiscordId,
     }
 
@@ -132,7 +135,7 @@ export async function GET(req) {
     const summary = results.map(r => `<li style="margin-bottom:8px">${r}</li>`).join('')
     return html('✅ Meta OAuth สำเร็จ', `
       <h1>✅ เชื่อมต่อ Meta สำเร็จ</h1>
-      <p>เชื่อมต่อ ${pages.length} Page กับ guild ${state.guildId} แล้ว:</p>
+      <p>เชื่อมต่อ ${pages.length} Page เข้าองค์กรแล้ว:</p>
       <ul>${summary}</ul>
       <p><a href="/">← กลับหน้าหลัก</a></p>
     `)

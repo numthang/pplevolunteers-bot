@@ -12,6 +12,7 @@ import { canManageSocialGuild } from '@/lib/roles.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import { BASE_URL } from '@/lib/baseUrl.js'
 import { getThreadsApp } from '@/lib/socialAppCreds.js'
+import { resolveOAuthScope } from '@/lib/socialOAuthScope.js'
 
 const REDIRECT_URI = `${BASE_URL}/api/threads/oauth/callback`
 const SCOPES = ['threads_basic', 'threads_content_publish'].join(',')
@@ -21,10 +22,12 @@ export async function GET(req) {
   if (!session) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
   const { searchParams } = new URL(req.url)
-  const guildId    = searchParams.get('guild_id')
   const visibility = searchParams.get('visibility') || 'public'
 
-  if (!guildId) return Response.json({ error: 'guild_id required' }, { status: 400 })
+  // scope = org (จาก session) · guild_id เป็น metadata ที่ไม่ส่งก็ได้
+  const scope = await resolveOAuthScope(session, searchParams.get('guild_id'))
+  if (scope.error) return Response.json({ error: scope.error }, { status: scope.status })
+  const { orgId, guildId } = scope
 
   const { access } = await getEffectiveIdentity(session)
   // public account → ต้องเป็น manager · private → ทุกคน connect ได้ (ตรงกับ /api/meta/oauth/start)
@@ -33,7 +36,7 @@ export async function GET(req) {
   }
 
   // ⚠️ Threads ใช้ App ID/Secret คนละชุดกับ Facebook — หาที่ Dashboard → use case "Threads API" → Settings
-  const app = await getThreadsApp({ guildId })
+  const app = await getThreadsApp({ orgId, guildId })
   if (!app) {
     return Response.json(
       { error: 'ยังไม่ได้ตั้ง Threads App ID + Threads App Secret — ตั้งที่ /bot/platforms (คนละชุดกับ Meta App ID/Secret)' },
@@ -42,6 +45,7 @@ export async function GET(req) {
   }
 
   const state = Buffer.from(JSON.stringify({
+    orgId,
     guildId,
     userId: session.user.discordId,
     visibility,

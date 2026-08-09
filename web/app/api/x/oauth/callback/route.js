@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers'
 import pool from '@/db/index.js'
-import { orgIdOfGuild } from '@/db/guilds.js'
+import { orgIdFromState } from '@/lib/socialOAuthScope.js'
 import { findUserIdByProvider } from '@/db/userIdentities.js'
 import { getXApp } from '@/lib/socialAppCreds.js'
 import https from 'https'
@@ -60,11 +60,13 @@ export async function GET(req) {
   let state
   try { state = JSON.parse(raw) } catch { return Response.redirect(`${BASE_URL}/bot/platforms?error=invalid`) }
 
-  const { token_secret, guild_id, discord_id, visibility } = state
+  const { token_secret, org_id, guild_id, discord_id, visibility } = state
 
-  if (!guild_id) return Response.redirect(`${BASE_URL}/bot/platforms?error=no_guild`)
-  // creds เป็นขององค์กร (org_config) — หา org จาก guild ที่เริ่ม OAuth
-  const app = await getXApp({ guildId: guild_id })
+  // scope = org · guild เป็น metadata (null ได้) · cookie เก่าก่อน deploy ยังไม่มี org_id → derive จาก guild
+  const orgId = await orgIdFromState({ orgId: org_id ?? null, guildId: guild_id || null })
+  if (!orgId) return Response.redirect(`${BASE_URL}/bot/platforms?error=no_org`)
+
+  const app = await getXApp({ orgId, guildId: guild_id || null })
   if (!app) return Response.redirect(`${BASE_URL}/bot/platforms?error=app_not_configured`)
 
   // แลก verifier เป็น access token
@@ -82,8 +84,7 @@ export async function GET(req) {
     access_token_secret:  accessTokenSecret,
   })
 
-  // scope = org ของ guild ที่เริ่ม OAuth · owner_user_id ตั้งเฉพาะบัญชี private (public = ของ org)
-  const orgId       = await orgIdOfGuild(guild_id)
+  // owner_user_id ตั้งเฉพาะบัญชี private (public = ของ org) · orgId resolve ไว้ตอนอ่าน cookie แล้ว
   const ownerUserId = visibility === 'private' && discord_id
     ? await findUserIdByProvider('discord', discord_id)
     : null

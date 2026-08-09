@@ -4,6 +4,7 @@ import { canManageSocialGuild } from '@/lib/roles.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import { BASE_URL } from '@/lib/baseUrl.js'
 import { getMetaApp } from '@/lib/socialAppCreds.js'
+import { resolveOAuthScope } from '@/lib/socialOAuthScope.js'
 
 const REDIRECT_URI = `${BASE_URL}/api/meta/oauth/callback`
 const SCOPES      = [
@@ -19,10 +20,12 @@ export async function GET(req) {
   if (!session) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
   const { searchParams } = new URL(req.url)
-  const guildId   = searchParams.get('guild_id')
   const visibility = searchParams.get('visibility') || 'public'
 
-  if (!guildId) return Response.json({ error: 'guild_id required' }, { status: 400 })
+  // scope = org (จาก session) · guild_id เป็น metadata ที่ไม่ส่งก็ได้ — org ที่ไม่มี Discord ต้อง connect ได้
+  const scope = await resolveOAuthScope(session, searchParams.get('guild_id'))
+  if (scope.error) return Response.json({ error: scope.error }, { status: scope.status })
+  const { orgId, guildId } = scope
 
   const { access } = await getEffectiveIdentity(session)
   const canManage = canManageSocialGuild(access)
@@ -32,13 +35,14 @@ export async function GET(req) {
     return Response.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  // creds เป็นขององค์กร (org_config) — guild ใช้เพื่อหา org · fallback dc_guild_config อยู่ในตัว helper
-  const app = await getMetaApp({ guildId })
+  // creds เป็นขององค์กร (org_config) — guild ส่งไปด้วยเพื่อ fallback dc_guild_config ช่วงเปลี่ยนผ่าน
+  const app = await getMetaApp({ orgId, guildId })
   if (!app) {
     return Response.json({ error: `องค์กรนี้ยังไม่ได้ตั้งค่า Meta App — ตั้ง Meta App ID + Secret ที่ /bot/platforms ก่อน` }, { status: 400 })
   }
 
   const state = Buffer.from(JSON.stringify({
+    orgId,
     guildId,
     userId: session.user.discordId,
     visibility,

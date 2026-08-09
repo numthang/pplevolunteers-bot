@@ -6,6 +6,7 @@ import { canManageSocialGuild } from '@/lib/roles.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import { cookies } from 'next/headers'
 import { getXApp } from '@/lib/socialAppCreds.js'
+import { resolveOAuthScope } from '@/lib/socialOAuthScope.js'
 import https from 'https'
 import crypto from 'crypto'
 import { BASE_URL } from '@/lib/baseUrl.js'
@@ -52,12 +53,12 @@ export async function GET(req) {
   if (!session) return Response.redirect(`${BASE_URL}/login`)
 
   const { searchParams } = new URL(req.url)
-  const guildId    = searchParams.get('guild_id') || ''
   const visibility = searchParams.get('visibility') || 'private'
 
-  if (!guildId) {
-    return Response.json({ error: 'guild_id required' }, { status: 400 })
-  }
+  // scope = org (จาก session) · guild_id เป็น metadata ที่ไม่ส่งก็ได้
+  const scope = await resolveOAuthScope(session, searchParams.get('guild_id'))
+  if (scope.error) return Response.json({ error: scope.error }, { status: scope.status })
+  const { orgId, guildId } = scope
 
   // public account → ต้องเป็น manager; private → ทุกคน connect ได้
   if (visibility === 'public') {
@@ -68,7 +69,7 @@ export async function GET(req) {
   }
 
   // creds เป็นขององค์กร (org_config) — guild ใช้เพื่อหา org · fallback dc_guild_config อยู่ในตัว helper
-  const app = await getXApp({ guildId })
+  const app = await getXApp({ orgId, guildId })
   if (!app) {
     return Response.json({ error: `องค์กรนี้ยังไม่ได้ตั้งค่า X App — ตั้ง X Consumer Key + Secret ที่ /bot/platforms ก่อน` }, { status: 400 })
   }
@@ -88,6 +89,7 @@ export async function GET(req) {
   const cookieStore = await cookies()
   cookieStore.set('x_oauth_pending', JSON.stringify({
     token_secret: oauth_token_secret,
+    org_id:       orgId,
     guild_id:     guildId,
     discord_id:   session.user.discordId,
     visibility,

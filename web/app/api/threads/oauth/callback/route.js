@@ -14,7 +14,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
 import { BASE_URL } from '@/lib/baseUrl.js'
 import { getThreadsApp } from '@/lib/socialAppCreds.js'
-import { orgIdOfGuild } from '@/db/guilds.js'
+import { orgIdFromState } from '@/lib/socialOAuthScope.js'
 import pool from '@/db/index.js'
 
 const REDIRECT_URI = `${BASE_URL}/api/threads/oauth/callback`
@@ -39,10 +39,10 @@ export async function GET(req) {
   const session = await getServerSession(authOptions)
   if (!session) return back('error=session')
 
-  const orgId = await orgIdOfGuild(state.guildId)
+  const orgId = await orgIdFromState(state)
   if (!orgId) return back('error=no_org')
 
-  const app = await getThreadsApp({ orgId, guildId: state.guildId })
+  const app = await getThreadsApp({ orgId, guildId: state.guildId || null })
   if (!app) return back('error=app_not_configured')
 
   try {
