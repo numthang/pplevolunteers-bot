@@ -15,7 +15,7 @@ const fs    = require('fs');
 const sharp = require('sharp');
 const { fetchBuffer, applyWatermark } = require('../utils/watermarkImage');
 const { renderQuoteStyle } = require('../utils/quoteStyles');
-const { QUOTE_STYLE_OPTIONS, QUOTE_STYLE_KEYS, QUOTE_AI_KEY, normalizeStyle } = require('../utils/quoteStyleKeys');
+const { QUOTE_STYLE_OPTIONS, QUOTE_STYLE_KEYS, normalizeStyle } = require('../utils/quoteStyleKeys');
 const { resolveConfig } = require('../db/configResolver');
 const { getUserSetting, setUserSetting } = require('../db/userConfig');
 
@@ -211,7 +211,7 @@ async function handleQuoteCommand(interaction) {
   );
 
   await interaction.reply({
-    content: '💬 **Quote Image** — ไม่เลือกอะไร = ✨ AI จัดให้ทั้งหมด',
+    content: '💬 **Quote Image** — ไม่เลือกอะไร = 🎲 สุ่มสไตล์ให้',
     components,
     flags: MessageFlags.Ephemeral,
   });
@@ -319,10 +319,8 @@ async function handleQuoteModal(interaction) {
       console.error('[quoteHandler] resolve template default:', err.message);
     }
   }
-  // สี: ember-ai ปล่อย null ให้ AI ตัดสิน, manual → null = สี
   const styleKey   = state.style ?? defaultStyle;
-  const isAI       = styleKey === QUOTE_AI_KEY;
-  const saturation = isAI ? state.saturation : (state.saturation ?? 1.0);
+  const saturation = state.saturation ?? 1.0;
 
   pending.delete(interaction.user.id);
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
@@ -332,7 +330,7 @@ async function handleQuoteModal(interaction) {
     const raw = await fetchBuffer(state.url);
     const buf = await cropSquare(raw, state.crop ?? 'auto'); // 1:1, auto=attention เก็บคน
 
-    await interaction.editReply({ content: isAI ? '✨ AI กำลังจัดตำแหน่งและสี...' : `🎨 กำลัง render...` });
+    await interaction.editReply({ content: '🎨 กำลัง render...' });
     let ciAccent;
     try {
       const { value: raw } = await resolveConfig(interaction.user.id, interaction.guildId, KEY_CI_ACCENT);

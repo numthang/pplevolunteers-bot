@@ -333,6 +333,14 @@ spec + ดีไซน์ + ตารางทั้งหมดอยู่ `md
   - [ ] เหลือ: ลบแถวเดิม 8 แถวใน `dc_guild_config` (fallback ช่วงเปลี่ยนผ่าน) + เอาโค้ด fallback ออก — ทำรอบหน้าเมื่อ prod ย้ายครบ
 - [ ] `/bot/*` ยังบล็อก org ที่ไม่มี guild ทั้งโซน → หน้าจัดการบัญชีโซเชียลควรย้ายออกจาก `/bot/` วันที่ posts มีหน้าของตัวเอง
 
+**📊 เพดานจำนวนบัญชีต่อ app creds ชุดเดียว (ถามกัน 2026-08-10 · user เคาะ "ยังไม่เกิด ใช้ไปก่อน")**
+- FB Page / IG / Threads = **ไม่มีเพดานจำนวนบัญชี** — rate limit ของ Meta เป็น per-asset (เพจละถัง) ไม่ใช่ per-app → app id เดียวแบก 70 เพจได้
+- **X = มีเพดานจริง** — โควต้าโพสต์เป็น **per-app รายเดือน** (Free 500/เดือน · Basic 3,000/เดือน) ทุกบัญชีในองค์กรกินถังเดียวกัน → @1 โพสต์/วัน ได้ ~16 บัญชี (Free) / ~100 บัญชี (Basic) · เสี่ยง noisy neighbor: บัญชีเดียวยิงเพลิน = ทั้ง org โพสต์ไม่ได้จนขึ้นเดือนใหม่
+- ✅ **แก้แล้ว local 2026-08-10 — เพจเกิน 25 หายเงียบ** · เดิม `/me/accounts` ไม่ paginate (Graph API default `limit=25`) · **เพดานนับที่ "คนที่กด Connect" ไม่ใช่ที่ org** → แอดมินกลางของพรรคที่ถือเพจรายจังหวัดครบทุกจังหวัดจะต่อได้แค่ 25 เพจแรก โดยไม่มี error ให้เห็น
+  - เติม `fbGetAll()` / `getAll()` (วน `paging.next`, cap 20 หน้า) + `limit=100` ทั้ง 2 ที่: `web/app/api/meta/oauth/callback/route.js` · `scripts/social/meta-setup.js` — **แก้คู่กันเสมอ ทั้งคู่เรียก edge เดียวกัน**
+  - build เว็บผ่าน + `node --check` script ผ่าน · ⬜ ยังไม่ได้เทสกับบัญชีที่ถือเกิน 25 เพจจริง
+- ทางออกวันที่ org ไหนใหญ่ผิดปกติ: ให้ org นั้นใช้ app id ของตัวเอง — รองรับอยู่แล้ว creds เป็น org-scoped ไม่ได้ hardcode ใน env
+
 ---
 
 ## 📮 CASES — รอบ 2026-07-28
@@ -929,7 +937,7 @@ spec + ดีไซน์ + ตารางทั้งหมดอยู่ `md
 
   **ความคืบหน้า**
   - [x] **ขั้น 1a — ปิดตะเข็บ ctx (2026-08-10)** ไม่เปลี่ยนพฤติกรรม: `callAI/callAIWithHistory(system, user, ctx)` · `getAgentConfig(ctx)` คืน `apiKey` มาด้วย (provider adapter เลิกอ่าน `process.env` เอง) · `generateTimeline(title, messages, ctx)` · ส่ง ctx ครบทุก call site ฝั่งบอท · ฝั่งเว็บ `askAi/askAiJson(system, user, { model, maxTokens, orgId })` + ยุบ callAI ที่ก๊อปในหน้า case timeline และ letter/draft เข้ามาใช้ตัวกลาง
-  - [ ] **ขั้น 1b — เส้น aiLayout/quote** (เปราะ ต้องเทสการ์ดคำคมจริงทั้งฝั่งบอทและเว็บ)
+  - [x] ~~**ขั้น 1b — เส้น aiLayout/quote**~~ → **ไม่ต้องทำแล้ว: ถอด AI ออกจากการ์ดคำคมทิ้งเลย 2026-08-10** (user เคาะ: "ใช้วิจารณญาณมนุษย์ดีกว่า เหมือนไม่ค่อยช่วยอะไร") · AI ตัดสินแค่ band/align/สี ซึ่งคนเลือกเองอยู่แล้วจาก 24 สไตล์ + ปุ่มสุ่ม · ลบ `renderEmberAI` + `analyzeLayout` + สไตล์ `'ai'` + ชิป "✨ AI" ในโมดัล · คีย์เก่า `'ai'`/`'quote-1-ember-ai'` alias → `shade-bottom-left` **ทั้ง 3 ที่** (`utils/quoteStyleKeys.js`, `utils/quoteStyles.js` ที่มี alias map ของตัวเอง, `web/lib/quoteStyles.js`) — ลืมที่ไหนที่หนึ่ง = การ์ดเก่าพัง "Unknown style" · `services/aiLayout.js` เหลือแค่ `shortenQuote` (สคริปต์ทดสอบใช้)
   - [ ] **ขั้น 2 — resolver** `getAiCreds({orgId, guildId})` org-first + โควต้ารายวัน (ลอก `web/lib/socialAppCreds.js`)
   - [ ] **ขั้น 3 — UI** `/org/settings/ai` · `dc_ai_modes` (prompt สรุปแชท) คงไว้ที่ `/bot/ai` ไม่แตะ
   - ถ้าวันหน้ากลับไปทาง key กลาง+คิดเงิน: ต้อง log ครบ 4 ช่อง (`input_tokens` / `cache_read_input_tokens` / `cache_creation_input_tokens` / `output_tokens`) — โค้ดใช้ prompt caching อยู่ `input_tokens` จึงเป็นแค่ส่วนที่ไม่โดนแคช ไม่ใช่ยอดรวม · เก็บ token อย่าเก็บเงิน คิดตอนอ่าน

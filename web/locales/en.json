@@ -1362,8 +1362,7 @@
       "closeTitle": "Close (ESC)",
       "needBg": "Choose a background image first",
       "needText": "Enter the quote text first",
-      "loadFailed": "Could not load",
-      "aiStyleNote": "This style asks AI to analyse the image for placement and colour — uses 1 AI credit"
+      "loadFailed": "Could not load"
     },
     "library": {
       "pageTitle": "Image library",

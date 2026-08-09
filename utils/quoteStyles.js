@@ -3,7 +3,6 @@ const sharp  = require('sharp');
 const { createCanvas, loadImage, GlobalFonts } = require('@napi-rs/canvas');
 const path   = require('path');
 const fs     = require('fs');
-const { analyzeLayout } = require('../services/aiLayout');
 
 GlobalFonts.registerFromPath(
   path.join(__dirname, '..', 'assets', 'fonts', 'Anakotmai-Bold.ttf'),
@@ -921,24 +920,6 @@ async function renderSide(buf, { quoteText, authorName, saturation = 1.0, accent
 function _rgbaOf(hex, a) { return `rgba(${_rgbTriplet(hex)},${a})`; }
 
 // ── Styles ───────────────────────────────────────────────────────────────────
-// โหมด AI: Claude ตัดสิน band (บน/ล่าง) = แถบโล่งคน + align + สี (3 ระดับ) — ล่ม → random
-// honor การเลือกสีเองจาก opts.saturation (ถ้าไม่ null = user เลือกเอง)
-const SATS = [1.0, 0.55, 0.15];
-const SAT_LEVEL = { full: 1.0, mid: 0.55, bw: 0.15 };
-async function renderEmberAI(buf, opts) {
-  const layout   = await analyzeLayout(buf, opts.mimeType || 'image/jpeg', 'claude');
-  const fallback = layout.reasoning === 'fallback defaults';
-  // AI ตัดสินแค่ band (บน/ล่าง) = แถบที่โล่งคนสุด + align (ซ้าย/ขวา) = ฝั่งที่ว่าง
-  const side     = fallback ? (Math.random() < 0.5 ? 'left' : 'right') : layout.align;
-  const vertical = fallback ? (Math.random() < 0.5 ? 'top' : 'bottom') : layout.band;
-  // สี: เลือกเอง > AI > random (ตอน fallback)
-  const saturation = opts.saturation != null ? opts.saturation
-                   : fallback ? SATS[Math.floor(Math.random() * SATS.length)]
-                   : SAT_LEVEL[layout.saturationLevel];
-  console.log('[ember-ai]', fallback ? 'AI ล่ม→random' : `band=${layout.band} align=${layout.align}`, '→', side, vertical, 'sat', saturation, '|', layout.reasoning);
-  return renderVariant(buf, { ...opts, side, vertical, saturation, markScale: 0.7, gradDark: 0.98 });
-}
-
 const ember = (side, vertical, extra = {}) => (buf, opts) =>
   renderVariant(buf, { ...opts, side, vertical, markScale: 0.7, gradDark: 0.98, ...extra });
 
@@ -1031,7 +1012,6 @@ const STYLES = {
   'duo-side-left':      (buf, opts) => renderSide(buf,    { ...opts, duotone: true, align: 'left' }),
   'duo-side-right':     (buf, opts) => renderSide(buf,    { ...opts, duotone: true, align: 'right' }),
 
-  'ai': (buf, opts) => renderEmberAI(buf, opts),
 };
 
 // คีย์เก่า → คีย์ใหม่ · การ์ดเก่าเปิดได้เหมือนเดิม ห้ามลบแถวไหนออก
@@ -1043,11 +1023,11 @@ const LEGACY_STYLE_ALIAS = {
   'quote-1-pillar-left':        'shade-pillar',
   'quote-1-frame-right':        'shade-frame',
   'quote-2-center':             'shade-center',
-  'quote-1-ember-ai':           'ai',
+  // สไตล์ AI ถอดออก 2026-08-10 — คีย์เก่าตกเป็นสไตล์คงที่ ไม่ใช่สุ่ม (render ซ้ำต้องได้ผลเดิม)
+  'quote-1-ember-ai':           'shade-bottom-left',
+  'ai':                         'shade-bottom-left',
 };
-// random pool ไม่รวม ember-ai — สุ่มจะได้ไม่เผลอยิง API
-// สุ่มไม่รวม 'ai' — จะได้ไม่เผลอยิง API
-const RANDOM_KEYS = Object.keys(STYLES).filter(k => k !== 'ai');
+const RANDOM_KEYS = Object.keys(STYLES);
 const STYLE_KEYS  = Object.keys(STYLES);
 
 async function renderQuoteStyle(styleKey, sourceBuffer, opts) {

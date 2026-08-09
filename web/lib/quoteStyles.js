@@ -5,8 +5,6 @@
 // คำเรียก (เคาะ 2026-08-07):
 //   style = คีย์รวมที่เก็บใน DB · layout = การวาง · finish = การลงสี · style = finish + '-' + layout
 
-export const QUOTE_AI_KEY = 'ai'
-
 export const FINISHES = [
   { value: 'shade', label: 'เงา',     description: 'เงาสีแบรนด์ทับบนรูป — รูปยังเห็นสีจริง' },
   { value: 'solid', label: 'ทึบ',     description: 'แถบสีแบรนด์ วางคำคมในแถบ' },
@@ -59,12 +57,11 @@ export const QUOTE_STYLE_OPTIONS = Object.entries(COMBOS).flatMap(([finish, layo
 )
 
 export const QUOTE_TEMPLATE_CHOICES = [
-  { value: QUOTE_AI_KEY, label: '✨ AI จัดให้', description: 'AI เลือกตำแหน่ง+สีเอง (ยิง API)' },
-  { value: 'random',     label: '🎲 สุ่ม',      description: 'สุ่มสไตล์จากทั้งหมด' },
+  { value: 'random', label: '🎲 สุ่ม', description: 'สุ่มสไตล์จากทั้งหมด' },
   ...QUOTE_STYLE_OPTIONS,
 ]
 
-export const QUOTE_STYLE_KEYS = [QUOTE_AI_KEY, 'random', ...QUOTE_STYLE_OPTIONS.map(o => o.value)]
+export const QUOTE_STYLE_KEYS = ['random', ...QUOTE_STYLE_OPTIONS.map(o => o.value)]
 
 // คีย์เก่าก่อนเปลี่ยนชื่อ 2026-08-07 — ห้ามลบ การ์ดที่ทำไปแล้วยังอ้างคีย์พวกนี้อยู่
 export const LEGACY_STYLE_ALIAS = {
@@ -75,7 +72,10 @@ export const LEGACY_STYLE_ALIAS = {
   'quote-1-pillar-left':        'shade-pillar',
   'quote-1-frame-right':        'shade-frame',
   'quote-2-center':             'shade-center',
-  'quote-1-ember-ai':           'ai',
+  // สไตล์ AI ถอดออก 2026-08-10 (AI เลือกแค่ตำแหน่ง+สี ซึ่งคนเลือกเองอยู่แล้ว)
+  // การ์ด/config ที่เก็บคีย์ 'ai' ไว้ยัง render ได้ แต่ตกเป็นสไตล์คงที่ ไม่สุ่ม (กด render ซ้ำต้องได้ผลเดิม)
+  'quote-1-ember-ai':           'shade-bottom-left',
+  'ai':                         'shade-bottom-left',
   'shade-side':                'shade-side-right',
   'duo-side':                  'duo-side-right',
 }

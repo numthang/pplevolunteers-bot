@@ -16,7 +16,7 @@ import Cropper from 'react-easy-crop'
 import { X, Upload, Loader2, Sparkles, ImageIcon, ChevronLeft, Images } from 'lucide-react'
 import AssetPickerModal from './AssetPickerModal.jsx'
 import {
-  QUOTE_AI_KEY, FINISHES, LAYOUTS, COMBOS, styleKey, comboExists, fallbackLayout,
+  FINISHES, LAYOUTS, COMBOS, styleKey, comboExists, fallbackLayout,
 } from '@/lib/quoteStyles.js'
 
 const ACCEPT = 'image/png,image/jpeg,image/webp'
@@ -46,8 +46,7 @@ const COLORS = [
 const LAST_LS_KEY = 'posts.quoteLast'
 const AUTHOR_LS_KEY = 'posts.quoteAuthor'   // คีย์เดิม — อ่านต่อได้เพื่อไม่ให้ค่าที่เคยจำไว้หาย
 
-// AI ไม่ใช่ finish จริง (ไม่มี layout ให้เลือกคู่) แต่วางไว้แถวเดียวกันเพื่อไม่ให้มีตัวเลือกที่ 3
-const FINISH_CHIPS = [...FINISHES, { value: QUOTE_AI_KEY, label: '✨ AI', description: null }]
+const FINISH_CHIPS = [...FINISHES]
 
 function loadLast() {
   try { return JSON.parse(localStorage.getItem(LAST_LS_KEY) || '{}') || {} } catch { return {} }
@@ -136,11 +135,9 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
     const last = loadLast()
     // finish/layout ต้องเช็คว่ายังมีอยู่จริง — สไตล์ถูกตัดออกได้ (เช่น 'ข้างซ้าย' ที่ตัดไป)
     // ค่าที่จำไว้จะกลายเป็นคีย์ที่ไม่มีใน STYLES แล้วเรนเดอร์พังทั้งใบ
-    if (last.finish === QUOTE_AI_KEY || COMBOS[last.finish]) {
+    if (COMBOS[last.finish]) {
       setFinish(last.finish)
-      if (last.finish !== QUOTE_AI_KEY) {
-        setLayout(comboExists(last.finish, last.layout) ? last.layout : fallbackLayout(last.finish))
-      }
+      setLayout(comboExists(last.finish, last.layout) ? last.layout : fallbackLayout(last.finish))
     }
     if (COLORS.some(c => c.value === last.saturation)) setSaturation(last.saturation)
     if (ASPECTS.some(a => a.value === last.aspect)) setAspect(last.aspect)
@@ -239,9 +236,7 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
     }
   }, [postId, quoteText, authorName, t])
 
-  // AI ไม่มี layout ให้จับคู่ — คีย์คือ 'ai' เดี่ยวๆ
-  const isAI  = finish === QUOTE_AI_KEY
-  const style = isAI ? QUOTE_AI_KEY : styleKey(finish, layout)
+  const style = styleKey(finish, layout)
 
   async function goPreview() {
     if (!srcUrl || !areaPixels) { setError(t('needBg')); return }
@@ -254,7 +249,6 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
 
   function changeFinish(next) {
     setFinish(next)
-    if (next === QUOTE_AI_KEY) { render(QUOTE_AI_KEY, saturation); return }
     // layout เดิมอาจไม่มีใน finish ใหม่ (เช่น matte มีเฉพาะ 'ทึบ') → ย้ายไปตัวแรกที่ใช้ได้
     const nextLayout = comboExists(next, layout) ? layout : fallbackLayout(next)
     setLayout(nextLayout)
@@ -483,24 +477,23 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
                 <div className="flex flex-wrap gap-2">
                   {LAYOUTS.map(l => {
                     // คู่ที่เรนเดอร์ไม่ได้ = จางกดไม่ได้ ไม่ใช่ซ่อน ผู้ใช้จะได้รู้ว่ามีอยู่แต่คู่นี้ไม่มี
-                    const ok = isAI || comboExists(finish, l.value)
+                    const ok = comboExists(finish, l.value)
                     return (
                       <button
                         key={l.value} type="button" onClick={() => changeLayout(l.value)}
-                        disabled={rendering || !ok || isAI}
+                        disabled={rendering || !ok}
                         title={ok ? undefined : t('comboUnavailable')}
                         className={`px-2.5 py-1 text-sm rounded-lg border transition disabled:cursor-not-allowed ${
-                          !isAI && layout === l.value
+                          layout === l.value
                             ? 'border-orange bg-orange text-white'
                             : 'border-warm-200 dark:border-disc-border text-warm-700 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover'
-                        } ${ok && !isAI ? '' : 'opacity-35'}`}
+                        } ${ok ? '' : 'opacity-35'}`}
                       >
                         {l.label}
                       </button>
                     )
                   })}
                 </div>
-                {isAI && <span className="text-sm text-warm-500 dark:text-disc-muted">{t('aiStyleNote')}</span>}
               </div>
 
               {/* ดูโอโทนแปลงรูปเป็นขาวดำก่อนย้อมอยู่แล้ว → ปุ่มสีภาพไม่มีผล ซ่อนทิ้งดีกว่าให้กดแล้วเงียบ */}

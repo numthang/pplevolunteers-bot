@@ -17,7 +17,7 @@
  */
 import { resolve } from 'node:path'
 import { REPO_ROOT } from './postsStorage.js'
-import { QUOTE_AI_KEY, QUOTE_STYLE_KEYS, QUOTE_STYLE_OPTIONS, normalizeStyle } from './quoteStyles.js'
+import { QUOTE_STYLE_KEYS, QUOTE_STYLE_OPTIONS, normalizeStyle } from './quoteStyles.js'
 
 /**
  * ⛔ ห้ามเปลี่ยนเป็น `import { createRequire } from 'node:module'`
@@ -85,11 +85,6 @@ export function normalizeQuoteParams({ quoteText, authorName, style, saturation 
   return { quoteText: text, authorName: author, style: styleKey, saturation: sat }
 }
 
-/** สไตล์นี้ยิง AI ไหม — ใช้กันไม่ให้ preview เผาโควตาโดยไม่ตั้งใจ */
-export function isAiStyle(style) {
-  return style === QUOTE_AI_KEY
-}
-
 /**
  * render การ์ดคำคม 1 ใบ
  * @param {Buffer} bgBuffer  รูปพื้นหลัง (ครอปมาแล้วจากฝั่ง client — renderer คำนวณ layout จากขนาดภาพ
@@ -99,10 +94,8 @@ export function isAiStyle(style) {
  */
 export async function renderQuoteCard(bgBuffer, params, accentColor = null) {
   const { quoteText, authorName, style, saturation } = params
-  // null = "ไม่ได้เลือกสี" ซึ่งมีความหมายเฉพาะสไตล์ AI (ปล่อยให้ AI ตัดสิน)
-  // สไตล์ปกติส่ง null เข้าไป sharp จะโยน "Expected number above zero for saturation"
-  // → default 1.0 (สีเต็ม) เหมือนที่ handlers/quoteHandler.js:321 ทำ
-  const sat = saturation ?? (isAiStyle(style) ? null : 1.0)
+  // null เข้า sharp จะโยน "Expected number above zero for saturation" → default 1.0 (สีเต็ม)
+  const sat = saturation ?? 1.0
   try {
     const { buffer } = await renderer().renderQuoteStyle(style, bgBuffer, {
       quoteText,
@@ -110,7 +103,6 @@ export async function renderQuoteCard(bgBuffer, params, accentColor = null) {
       saturation: sat,
       // สี CI ของผู้ใช้/องค์กร — null = renderer ใช้ส้ม default (ดู lib/quoteAccent.js)
       accentColor: accentColor || undefined,
-      mimeType: 'image/jpeg',   // ใช้เฉพาะตอนส่งภาพให้ AI วิเคราะห์ layout
     })
     return buffer
   } catch (error) {
@@ -119,4 +111,4 @@ export async function renderQuoteCard(bgBuffer, params, accentColor = null) {
   }
 }
 
-export { QUOTE_AI_KEY, QUOTE_STYLE_OPTIONS, QUOTE_STYLE_KEYS }
+export { QUOTE_STYLE_OPTIONS, QUOTE_STYLE_KEYS }

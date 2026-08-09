@@ -342,7 +342,7 @@
       "note": "ปลายทาง log กลาง — bot เก็บ channel-id ลง dc_guild_config"
     },
     "welcome_dm": "ยินดีต้อนรับสู่ {{org_name}}!\n- แนะนำตัว — บอกให้ทีมรู้ว่าคุณคือใคร\n- ติดยศ — เลือกบทบาทเพื่อเข้าถึงห้องที่เกี่ยวข้อง\n- สอบถามปัญหาการใช้งาน — ติดปัญหาอะไรถามได้เลย",
-    "quote_default_template": "quote-1-ember-ai",
+    "quote_default_template": "shade-bottom-left",
     "sticky_register": true
   },
 
