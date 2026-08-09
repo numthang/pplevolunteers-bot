@@ -18,10 +18,11 @@ async function resolveMode(guildId, modeValue, customPrompt) {
 
 // ── AI provider adapter ──────────────────────────────────────────────────────
 // system = system prompt (mode.prompt), userContent = เนื้อหาที่ให้ประมวลผล
+// apiKey มาจาก getAgentConfig() เสมอ — ห้ามอ่าน process.env ตรงนี้ ไม่งั้น key ราย org ไม่มีผล
 const PROVIDERS = {
-  claude: async (system, userContent, model, maxTokens) => {
+  claude: async (system, userContent, { model, maxTokens, apiKey }) => {
     const Anthropic = require('@anthropic-ai/sdk');
-    const client = new Anthropic.default({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const client = new Anthropic.default({ apiKey });
     const res = await client.messages.create({
       model,
       max_tokens: maxTokens, // ไทยกิน token เยอะ (~1 token/ตัวอักษร) — โพสต์ยาวต้องมี headroom
@@ -31,9 +32,9 @@ const PROVIDERS = {
     return res.content.find(b => b.type === 'text')?.text ?? 'ประมวลผลไม่สำเร็จ';
   },
 
-  gemini: async (system, userContent, model, maxTokens) => {
+  gemini: async (system, userContent, { model, maxTokens, apiKey }) => {
     const { GoogleGenerativeAI } = require('@google/generative-ai');
-    const client = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    const client = new GoogleGenerativeAI(apiKey);
     const gen = client.getGenerativeModel({
       model,
       systemInstruction: system,
@@ -44,23 +45,25 @@ const PROVIDERS = {
   },
 };
 
-// core — เลือก provider/model จาก agent config แล้วยิง
-async function callAI(system, userContent) {
-  const { provider, model, maxTokens } = await getAgentConfig();
-  const fn = PROVIDERS[provider];
-  if (!fn) throw new Error(`AI provider ไม่รองรับ: ${provider}`);
-  return fn(system, userContent, model, maxTokens);
+// core — เลือก provider/model/key จาก agent config แล้วยิง
+// ⚠️ ctx = { orgId, guildId } — **ต้องส่งเสมอ** ทุก call site ถึงจะผูก call กับองค์กรเจ้าของ key ได้
+//    (ปล่อยว่างได้เฉพาะงานของเจ้าของระบบเอง เช่น /cooking หรือ script รันมือ)
+async function callAI(system, userContent, ctx = {}) {
+  const cfg = await getAgentConfig(ctx);
+  const fn = PROVIDERS[cfg.provider];
+  if (!fn) throw new Error(`AI provider ไม่รองรับ: ${cfg.provider}`);
+  return fn(system, userContent, cfg);
 }
 
 // multi-turn — ส่ง messages[] (user/assistant turns) โดยตรง ใช้กับ mention handler
-async function callAIWithHistory(system, messages) {
-  const { provider, model, maxTokens } = await getAgentConfig();
-  if (provider === 'claude') {
+async function callAIWithHistory(system, messages, ctx = {}) {
+  const cfg = await getAgentConfig(ctx);
+  if (cfg.provider === 'claude') {
     const Anthropic = require('@anthropic-ai/sdk');
-    const client = new Anthropic.default({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const client = new Anthropic.default({ apiKey: cfg.apiKey });
     const res = await client.messages.create({
-      model,
-      max_tokens: maxTokens,
+      model: cfg.model,
+      max_tokens: cfg.maxTokens,
       system: [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }],
       messages,
     });
@@ -68,9 +71,9 @@ async function callAIWithHistory(system, messages) {
   }
   // Fallback สำหรับ provider อื่น: flatten เป็น text
   const flat = messages.map(m => `${m.role === 'assistant' ? '[บอท]' : '[ผู้ใช้]'}: ${m.content}`).join('\n');
-  const fn = PROVIDERS[provider];
-  if (!fn) throw new Error(`AI provider ไม่รองรับ: ${provider}`);
-  return fn(system, flat, model, maxTokens);
+  const fn = PROVIDERS[cfg.provider];
+  if (!fn) throw new Error(`AI provider ไม่รองรับ: ${cfg.provider}`);
+  return fn(system, flat, cfg);
 }
 
 // ── ประมวลผลจาก messages[] (ใช้โดย /message fetch + thread context menu) ───────
@@ -89,7 +92,7 @@ async function processMessages(guildId, messages, modeValue, title = null, custo
     : ` (${capped.length} ข้อความ)`;
   const titleLine = title ? `หัวข้อ/เรื่องหลัก: ${title}\n\n` : '';
 
-  const output = await callAI(mode.prompt, `${titleLine}บทสนทนาจาก Discord${countNote}:\n\n${text}`);
+  const output = await callAI(mode.prompt, `${titleLine}บทสนทนาจาก Discord${countNote}:\n\n${text}`, { guildId });
   return { mode, output, truncated: messages.length > MAX_MESSAGES };
 }
 
@@ -98,7 +101,7 @@ async function processText(guildId, text, modeValue, customPrompt = null, prompt
   let mode = await resolveMode(guildId, modeValue, customPrompt);
   if (promptSuffix && !customPrompt) mode = { ...mode, prompt: mode.prompt + '\n\n' + promptSuffix };
   if (!text?.trim()) return { mode, output: 'ไม่มีข้อความที่ประมวลผลได้' };
-  const output = await callAI(mode.prompt, `เนื้อหา:\n\n${text}`);
+  const output = await callAI(mode.prompt, `เนื้อหา:\n\n${text}`, { guildId });
   return { mode, output };
 }
 

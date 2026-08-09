@@ -153,8 +153,8 @@ function messagesToText(msgs) {
           try {
             const prompt = `หัวข้อกระทู้: ${t.name}\n\nบทสนทนา:\n${text}`;
             const [genTitle, genSummary] = await Promise.all([
-              callAI(AI_TITLE_SYSTEM, prompt),
-              callAI(AI_SUMMARY_SYSTEM, prompt),
+              callAI(AI_TITLE_SYSTEM, prompt, { guildId: guild_id }),
+              callAI(AI_SUMMARY_SYSTEM, prompt, { guildId: guild_id }),
             ]);
             if (genTitle?.trim()) title = genTitle.trim().slice(0, 300);
             aiSummary = genSummary || null;
@@ -174,7 +174,7 @@ function messagesToText(msgs) {
 
         // AI timeline
         try {
-          const events = await generateTimeline(title, msgs);
+          const events = await generateTimeline(title, msgs, { guildId: guild_id });
           if (events.length) await caseDb.addTimelineEvents(row.id, guild_id, events, 'ai');
         } catch (e) { console.error(`\n  [timeline] thread ${t.id}:`, e.message); }
 

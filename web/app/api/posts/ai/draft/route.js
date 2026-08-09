@@ -45,7 +45,7 @@ export async function POST(req) {
   if (otherTitles.length) userLines.push(`โพสต์อื่นในหมวดเดียวกัน (ห้ามพูดซ้ำ): ${otherTitles.join(', ')}`)
 
   try {
-    const draftBody = await askAi(SYSTEM_PROMPT, userLines.join('\n'))
+    const draftBody = await askAi(SYSTEM_PROMPT, userLines.join('\n'), { orgId: ctx.orgId })
     return Response.json({ success: true, data: { body: draftBody } })
   } catch (error) {
     if (error instanceof AiError) return Response.json({ error: error.message }, { status: 502 })

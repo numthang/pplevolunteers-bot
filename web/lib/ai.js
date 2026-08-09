@@ -17,8 +17,11 @@ export class AiError extends Error {}
  * ยิง Anthropic แล้วคืน text ล้วน
  * @param {string} system
  * @param {string} user
+ * @param {{ model?: string, maxTokens?: number, orgId?: number }} [opts]
+ *   orgId = องค์กรเจ้าของ key ที่จะยิง — **ทุก call site ต้องส่ง** (ยังไม่มีผลจนกว่าจะทำ BYO-key)
+ *   model/maxTokens ปรับได้เฉพาะงานที่ไม่ใช่ posts (posts ปัก AI_MODEL ไว้ตามหัวไฟล์)
  */
-export async function askAi(system, user) {
+export async function askAi(system, user, opts = {}) {
   if (!process.env.ANTHROPIC_API_KEY) throw new AiError('ยังไม่ได้ตั้งค่า ANTHROPIC_API_KEY')
 
   const { default: Anthropic } = await import('@anthropic-ai/sdk')
@@ -27,8 +30,8 @@ export async function askAi(system, user) {
   let res
   try {
     res = await client.messages.create({
-      model: AI_MODEL,
-      max_tokens: MAX_TOKENS,
+      model: opts.model || AI_MODEL,
+      max_tokens: opts.maxTokens || MAX_TOKENS,
       system,
       messages: [{ role: 'user', content: user }],
     })
@@ -45,8 +48,8 @@ export async function askAi(system, user) {
  * เหมือน askAi แต่บังคับให้ผลเป็น JSON
  * โมเดลชอบห่อ ```json → ปอกให้ก่อน parse (เจอบ่อยพอที่จะกันไว้ ไม่ใช่ป้องกันเผื่อ)
  */
-export async function askAiJson(system, user) {
-  const raw = await askAi(`${system}\n\nตอบเป็น JSON ล้วนเท่านั้น ห้ามมีข้อความอื่นนอก JSON`, user)
+export async function askAiJson(system, user, opts = {}) {
+  const raw = await askAi(`${system}\n\nตอบเป็น JSON ล้วนเท่านั้น ห้ามมีข้อความอื่นนอก JSON`, user, opts)
   const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim()
   try {
     return JSON.parse(cleaned)

@@ -906,13 +906,33 @@ spec + ดีไซน์ + ตารางทั้งหมดอยู่ `md
 
 ### ไอเดียที่ยังไม่ทำ
 
-- **AI เป็น per-org แบบ BYO-key** ← **ทิศที่เคาะไว้ 2026-08-09 (ยังไม่เริ่ม)**
-  - ตอนนี้ `dc_guild_config guild_id='global'` (ai.provider/ai.model/ai.max_tokens) + `dc_ai_modes.guild_id='global'` = ทุก org ใช้โมเดล/prompt ชุดเดียวกัน · API key อยู่ `.env` ของเซิร์ฟเวอร์ = **เจ้าของระบบจ่ายให้ทุก org**
-  - **ทางที่เลือก:** ให้แต่ละ org ใส่ API key เอง → บิลวิ่งไปหาเขา → **ไม่ต้องทำ usage tracking เลย** (metering มีไว้ตอบว่า "ใครติดเงินเรา" ซึ่งหมดคำถามถ้าเขาจ่ายเอง) · งานน้อยกว่าทาง global+metering
-  - **ค้างคิด:** org เล็กที่ไม่มีบัญชี Anthropic จะ onboard ยาก → เสนอ BYO-key เป็นตัวเลือก ไม่ใส่ก็ใช้ key กลางแต่มีโควต้า
-  - **ตะเข็บที่ต้องแก้ก่อนอะไรทั้งนั้น:** `services/aiSummarize.js` — `callAI()` / `callAIWithHistory()` **ไม่ได้รับ guildId** (`processMessages(guildId,...)` มีแต่ไม่ส่งต่อ) → ผูก call กับ org ไม่ได้เลยไม่ว่าจะทางไหน
-  - pattern ที่ลอกได้: `web/lib/socialAppCreds.js` (org-first + fallback) · `dc_ai_modes` มีคอลัมน์ `guild_id` รออยู่แล้ว
-  - ถ้าวันหน้ากลับไปทาง key กลาง: ต้อง log ครบ 4 ช่อง (`input_tokens` / `cache_read_input_tokens` / `cache_creation_input_tokens` / `output_tokens`) — โค้ดใช้ prompt caching อยู่ `input_tokens` จึงเป็นแค่ส่วนที่ไม่โดนแคช ไม่ใช่ยอดรวม · เก็บ token อย่าเก็บเงิน คิดตอนอ่าน
+- **AI เป็น per-org แบบ BYO-key** ← **สเปคเคาะครบ 2026-08-10 · ขั้น 1a เสร็จแล้ว**
+
+  **เป้า:** แต่ละ org กรอก API key เอง + เลือกโมเดลเอง → บิลวิ่งไปหา org นั้น → **ไม่ต้องทำ metering** (การนับมีไว้ตอบว่า "ใครติดเงินเรา" ซึ่งหมดคำถามเมื่อเขาจ่ายเอง)
+
+  **org ที่ไม่กรอก key — เคาะแล้ว: โควต้าตัวเลขช่องเดียว ไม่ใช่สวิตช์เปิด/ปิด**
+  - `org_config` คีย์เดียว = โควต้ายืม key กลางต่อวัน · `0` = ยืมไม่ได้ · `30` (default) = ทดลองใช้ · `9999` = ยืมได้เต็มที่ (org ของเจ้าของระบบ)
+  - **เหตุผลที่ไม่เอาสวิตช์:** สวิตช์ต้องรอเจ้าของระบบนึกได้เองว่าต้องไปกดปิด org ไหน = ไม่ต่างจากไม่มีสวิตช์ · โควต้าบังคับตัวเองอัตโนมัติ · ตัวเลขเดียวทำงานแทนได้ทั้งสวิตช์และเพดาน
+  - โควต้าหมด → ข้อความ "โควต้าทดลองวันนี้หมดแล้ว — ใส่ API key ขององค์กรใน `/org/settings/ai`" พร้อมลิงก์
+  - นับแค่ **จำนวนครั้งต่อวัน** ไม่ใช่ token/เงิน · ลอก `web/lib/postsAiQuota.js` (นับรายคน→เปลี่ยนเป็นรายองค์กร)
+
+  **ที่ scrutinize จับได้ (2026-08-10) — inventory เดิมนับผิด มี 9 จุดไม่ใช่ 4:**
+  - `services/aiLayout.js` (4 จุดใช้ key) = การ์ดคำคม · เส้นเรียกลึกข้ามฝั่ง: `api/posts/[id]/media/quote` → `web/lib/quoteRender.js` → `utils/quoteStyles.js:929` → `analyzeLayout` · **เป็นตัวกำหนดขนาดงานจริง แยกเป็นขั้น 1b**
+  - `web/app/api/cooking/*` 4 route = แอพส่วนตัว **ไม่มี org และจะไม่มี** → ประกาศเป็นโซนที่ใช้ key เจ้าของระบบเสมอ ห้ามยัด orgId ให้มัน
+  - `web/app/api/case/[ref]/letter/draft` = ยิง REST ตรง (ยุบเข้า `askAi` แล้วในขั้น 1a)
+
+  **ต้องมีตอน deploy ขั้นที่ใช้จริง:** seed โควต้าสูงให้ org ที่มีอยู่ทุกตัวก่อน ไม่งั้น AI ดับทุก org ทันทีที่ deploy (ทุก org วันนี้ใช้ key กลางอยู่)
+
+  **key:** แยกราย provider (`ai_api_key_claude` / `ai_api_key_gemini`) ไม่ใช่ช่องเดียว — เลือก gemini แล้วกรอก key Anthropic = 401 ที่อ่านไม่ออก · resolver ต้องเช็ค key **ของ provider ที่เลือก** · เข้ารหัส AES-256-GCM ด้วย master key ใน `.env` (API key ยิงเงินได้ด้วยตัวมันเอง ต่างจาก `meta_app_secret` ที่ต้องมี OAuth flow ประกอบ — เทียบกันไม่ได้) · API คืนเฉพาะ mask · ห้ามโยน `err.message` ดิบจาก SDK ขึ้นหน้าจอ
+
+  **โมเดล:** 2 ช่องแยก — "งานเบา" (สรุปแชท/case timeline/ร่างจดหมาย) กับ "งานเขียน" (posts) · dropdown = รุ่นที่ทดสอบแล้ว + ช่องพิมพ์เองใต้ป้ายว่าไม่รับประกันผล · posts ที่บังคับ JSON ถ้า parse ไม่ผ่านให้ retry ด้วยโมเดล default 1 ครั้งแล้วแจ้ง — ไม่บล็อกตั้งแต่หน้าตั้งค่า
+
+  **ความคืบหน้า**
+  - [x] **ขั้น 1a — ปิดตะเข็บ ctx (2026-08-10)** ไม่เปลี่ยนพฤติกรรม: `callAI/callAIWithHistory(system, user, ctx)` · `getAgentConfig(ctx)` คืน `apiKey` มาด้วย (provider adapter เลิกอ่าน `process.env` เอง) · `generateTimeline(title, messages, ctx)` · ส่ง ctx ครบทุก call site ฝั่งบอท · ฝั่งเว็บ `askAi/askAiJson(system, user, { model, maxTokens, orgId })` + ยุบ callAI ที่ก๊อปในหน้า case timeline และ letter/draft เข้ามาใช้ตัวกลาง
+  - [ ] **ขั้น 1b — เส้น aiLayout/quote** (เปราะ ต้องเทสการ์ดคำคมจริงทั้งฝั่งบอทและเว็บ)
+  - [ ] **ขั้น 2 — resolver** `getAiCreds({orgId, guildId})` org-first + โควต้ารายวัน (ลอก `web/lib/socialAppCreds.js`)
+  - [ ] **ขั้น 3 — UI** `/org/settings/ai` · `dc_ai_modes` (prompt สรุปแชท) คงไว้ที่ `/bot/ai` ไม่แตะ
+  - ถ้าวันหน้ากลับไปทาง key กลาง+คิดเงิน: ต้อง log ครบ 4 ช่อง (`input_tokens` / `cache_read_input_tokens` / `cache_creation_input_tokens` / `output_tokens`) — โค้ดใช้ prompt caching อยู่ `input_tokens` จึงเป็นแค่ส่วนที่ไม่โดนแคช ไม่ใช่ยอดรวม · เก็บ token อย่าเก็บเงิน คิดตอนอ่าน
 
 - ~~AI config ควรเป็น per-org (แบบ config-split)~~ → เปลี่ยนเป็น BYO-key ด้านบน · เดิมคิดว่า — ตอนนี้ `dc_guild_config guild_id='global'` + `dc_ai_modes.guild_id='global'` = ทุก org ใช้โมเดล/prompt ชุดเดียวกัน · `dc_ai_modes` มีคอลัมน์ `guild_id` รออยู่แล้ว · พอ rebrand เป็น multi-tenant แต่ละ org ควรเลือกเอง (+ จ่ายเอง) — เป็นการเปลี่ยน scope ไม่ใช่ย้ายหน้า จึงไม่ได้ทำในรอบ IA
 - **`/admin` เกือบตาย** — มีหน้าเดียว (`/admin/logs`) ไม่มีลิงก์ไปหาจากที่ไหนเลย gate ที่ `admin/moderator` · ต้องเคาะว่าปลุกเป็นโซน superadmin จริง หรือย้าย logs ไปที่อื่นแล้วลบทิ้ง

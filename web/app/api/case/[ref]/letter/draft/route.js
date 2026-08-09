@@ -1,6 +1,7 @@
 import { gateCase } from '@/lib/caseGate.js'
 import { getTimeline } from '@/db/cases.js'
 import { getLetterConfig } from '@/db/caseLetterConfig.js'
+import { askAiJson, AiError } from '@/lib/ai.js'
 
 const SYSTEM = `คุณช่วยร่างหนังสือร้องเรียนทางราชการภาษาไทยสำหรับทีมงานพรรคการเมือง
 ตอบเป็น JSON เท่านั้น ไม่มีข้อความอื่น:
@@ -35,39 +36,17 @@ export async function POST(req, { params }) {
     timeline.length ? `ความคืบหน้า:\n${timeline.map(e => `- ${e.body}`).join('\n')}` : '',
   ].filter(Boolean).join('\n')
 
-  const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'x-api-key': process.env.ANTHROPIC_API_KEY,
-      'anthropic-version': '2023-06-01',
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 1500,
-      system: SYSTEM,
-      messages: [{ role: 'user', content: `ร่างหนังสือร้องเรียนจากข้อมูลนี้:\n\n${caseContext}` }],
-    }),
-  })
-
-  if (!aiRes.ok) {
-    const errText = await aiRes.text()
-    console.error('[letter/draft] AI error:', aiRes.status, errText)
-    return Response.json({ error: 'AI ไม่สำเร็จ' }, { status: 500 })
-  }
-
-  const aiJson = await aiRes.json()
-  const rawText = aiJson.content?.[0]?.text || ''
-
-  // AI มักห่อ JSON ด้วย ```json ... ``` — strip ออกก่อน parse
-  const cleaned = rawText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim()
-
+  // งานเบา — ร่างจดหมายจาก template ไม่ต้องใช้โมเดลตัวใหญ่
   let draft
   try {
-    draft = JSON.parse(cleaned)
-  } catch {
-    console.error('[letter/draft] JSON parse failed. raw:', rawText.slice(0, 500))
-    return Response.json({ error: 'AI ตอบผิดรูปแบบ' }, { status: 500 })
+    draft = await askAiJson(SYSTEM, `ร่างหนังสือร้องเรียนจากข้อมูลนี้:\n\n${caseContext}`, {
+      model: 'claude-haiku-4-5-20251001',
+      maxTokens: 1500,
+      orgId,
+    })
+  } catch (e) {
+    console.error('[letter/draft] AI error:', e.message)
+    return Response.json({ error: e instanceof AiError ? e.message : 'AI ไม่สำเร็จ' }, { status: 502 })
   }
 
   return Response.json({

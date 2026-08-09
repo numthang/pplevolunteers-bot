@@ -49,7 +49,7 @@ export async function POST(req) {
 
   let ai
   try {
-    ai = await askAiJson(SYSTEM_PROMPT, idea)
+    ai = await askAiJson(SYSTEM_PROMPT, idea, { orgId: ctx.orgId })
   } catch (error) {
     if (error instanceof AiError) return Response.json({ error: error.message }, { status: 502 })
     console.error('[POST /api/posts/ai/compose]', error)

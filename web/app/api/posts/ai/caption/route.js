@@ -49,7 +49,7 @@ export async function POST(req) {
       '',
       'เนื้อหา:',
       source,
-    ].join('\n'))
+    ].join('\n'), { orgId: ctx.orgId })
 
     // AI อาจคืนคีย์ไม่ตรง/ไม่ใช่ array — ตัดให้เหลือรูปร่างที่ UI ใช้ได้เท่านั้น
     const clean = v => (Array.isArray(v) ? v.filter(x => typeof x === 'string' && x.trim()).slice(0, 5) : [])

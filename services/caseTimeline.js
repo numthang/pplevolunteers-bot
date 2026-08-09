@@ -20,9 +20,10 @@ const AI_TIMELINE_SYSTEM = `วิเคราะห์บทสนทนา Dis
 /**
  * Generate timeline events from Discord messages
  * messages = [{ id, content, author: { username, bot }, timestamp }]
+ * ctx = { orgId, guildId } — องค์กรเจ้าของ key ที่จะยิง AI (ดู callAI ใน aiSummarize.js)
  * Returns [{ body, is_public, occurred_at }] or []
  */
-async function generateTimeline(title, messages) {
+async function generateTimeline(title, messages, ctx = {}) {
   const text = messages
     .filter(m => m.content?.trim() && !m.author?.bot)
     // calendar: 'gregory' กันปี พ.ศ. หลุดเข้าไปในข้อความที่ป้อนให้ AI (default th-TH ใช้ปี พ.ศ.
@@ -35,7 +36,7 @@ async function generateTimeline(title, messages) {
   const prompt = `หัวข้อเรื่องร้องเรียน: ${title}\n\nบทสนทนา:\n${text}`;
   let raw;
   try {
-    raw = await callAI(AI_TIMELINE_SYSTEM, prompt);
+    raw = await callAI(AI_TIMELINE_SYSTEM, prompt, ctx);
   } catch (e) {
     console.error('[caseTimeline] AI error:', e.message);
     return [];

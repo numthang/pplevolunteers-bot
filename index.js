@@ -510,7 +510,7 @@ client.on('messageCreate', async (message) => {
           ragContext ? `ข้อมูลจากกระทู้ Discord ที่เกี่ยวข้อง (ใช้อ้างอิงได้ถ้าตรงกับคำถาม):\n${ragContext}` : '',
         ].filter(Boolean).join('\n\n');
 
-        const answer = await callAIWithHistory(systemPrompt, messagesArr);
+        const answer = await callAIWithHistory(systemPrompt, messagesArr, { guildId: message.guildId });
         await message.reply(answer);
       } catch (err) {
         console.error('[mentionAI]', err);

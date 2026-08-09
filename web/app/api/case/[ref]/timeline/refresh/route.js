@@ -1,6 +1,7 @@
 import { gateCase } from '@/lib/caseGate.js'
 import { addTimelineEvents, getTimeline, advanceSyncWatermark, advanceAttachmentWatermark } from '@/db/cases.js'
 import { importThreadAttachments } from '@/lib/caseAttachmentSync.js'
+import { askAi } from '@/lib/ai.js'
 import pool from '@/db/index.js'
 
 const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN
@@ -54,17 +55,8 @@ async function fetchMessagesAfter(threadId, afterId) {
   return msgs.sort((a, b) => a.id.localeCompare(b.id)).slice(0, MAX_SYNC_MESSAGES)
 }
 
-async function callAI(system, userContent) {
-  const Anthropic = (await import('@anthropic-ai/sdk')).default
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-  const res = await client.messages.create({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 1024,
-    system,
-    messages: [{ role: 'user', content: userContent }],
-  })
-  return res.content.find(b => b.type === 'text')?.text ?? ''
-}
+/** งานเบา — สกัด event สั้นๆ ไม่ต้องใช้โมเดลตัวใหญ่ (posts ถึงจะปัก AI_MODEL) */
+const TIMELINE_MODEL = 'claude-haiku-4-5-20251001'
 
 /** POST /api/case/[ref]/timeline/refresh — ดึง Discord message ใหม่ → AI generate timeline */
 export async function POST(req, { params }) {
@@ -121,7 +113,15 @@ export async function POST(req, { params }) {
       dedupContext && `\ntimeline ที่บันทึกไว้แล้ว (ห้ามสกัดซ้ำ):\n${dedupContext}`,
       `\nบทสนทนาใหม่:\n${text}`,
     ].filter(Boolean).join('\n')
-    const raw = await callAI(AI_TIMELINE_SYSTEM, prompt)
+    // AI ล่ม → ต้องเด้งออกก่อนถึงท่อน watermark เสมอ ห้ามกลืนเป็น events = []
+    // (กลืน = watermark เลื่อนต่อทั้งที่ยังไม่ได้สกัด → ข้อความชุดนั้นหายถาวร กดซ้ำก็ไม่กลับมา)
+    let raw
+    try {
+      raw = await askAi(AI_TIMELINE_SYSTEM, prompt, { model: TIMELINE_MODEL, maxTokens: 1024, orgId })
+    } catch (e) {
+      console.error('[case/timeline/refresh] AI ล่ม', { ref }, e.message)
+      return Response.json({ error: 'AI ประมวลผลไม่สำเร็จ ลองใหม่อีกครั้ง' }, { status: 502 })
+    }
     const json = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/, '').trim()
     try {
       const parsed = JSON.parse(json)

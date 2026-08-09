@@ -3,7 +3,7 @@
 - ทำให้เว็บไซต์ หรือ sub-domain ภายนอกใช้ระบบเดียวกันได้แต่ใช้ชื่อของเขาเอง
 
 # Posts
-
+- ตอนนี้่ 1 org มีได้หลาย group social แล้วถ้าเกิด org เดียวกัน มีหลาย group soical จะใช้ meta app id, x consumer key เดียวกัน ไหวไหม เช่น สมมติ FB Page มี 70 pages แล้วใช้ meta app id เดียวกัน ไหวไหม แม้จะไปถึงเงื่อนไขนั้นยากก็ตามเถอะ
 
 # CivicFlow
 - ข้อเสนอ: ย้าย CivicFlow จาก Vercel มาที่ VPS

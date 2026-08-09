@@ -44,8 +44,13 @@ async function getMode(guildId, value) {
   return modes.find(m => m.value === value) || null;
 }
 
-// agent config global — { provider, model, maxTokens }
-async function getAgentConfig() {
+// key กลางจาก .env — ราย provider (org ที่กรอก key เองจะมาแทนที่ตรงนี้ในขั้นถัดไป)
+const SHARED_KEY = { claude: 'ANTHROPIC_API_KEY', gemini: 'GEMINI_API_KEY' };
+
+// agent config — { provider, model, maxTokens, apiKey }
+// ctx = { orgId, guildId } · ตอนนี้ยังอ่านแถว global อย่างเดียว (ยังไม่ใช้ ctx)
+// ขั้นถัดไปจะใช้ ctx เลือก key/model ราย org — call site ทุกตัวส่ง ctx มาแล้ว ไม่ต้องไล่แก้ซ้ำ
+async function getAgentConfig(ctx = {}) {
   let provider, model, maxTokens;
   try {
     [provider, model, maxTokens] = await Promise.all([
@@ -61,6 +66,7 @@ async function getAgentConfig() {
     provider: p,
     model: model || DEFAULT_MODEL[p] || DEFAULT_MODEL.claude,
     maxTokens: Number(maxTokens) || DEFAULTS.maxTokens,
+    apiKey: process.env[SHARED_KEY[p]] || null,
   };
 }
 

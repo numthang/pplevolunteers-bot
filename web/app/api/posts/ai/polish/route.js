@@ -50,7 +50,7 @@ export async function POST(req) {
       '',
       'ต้นฉบับ:',
       source,
-    ].join('\n'))
+    ].join('\n'), { orgId: ctx.orgId })
     return Response.json({ success: true, data: { body: polished, tone } })
   } catch (error) {
     if (error instanceof AiError) return Response.json({ error: error.message }, { status: 502 })

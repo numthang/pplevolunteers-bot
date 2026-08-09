@@ -83,7 +83,7 @@ async function handleCaseImportModal(interaction) {
     const messages = await fetchAllMessages(thread);
     if (messages.length) lastMsgId = messages[messages.length - 1].id;
     const text = messagesToPlainText(messages);
-    if (text.trim()) aiSummary = await callAI(AI_SYSTEM, `หัวข้อ: ${title}\n\nบทสนทนา:\n\n${text}`);
+    if (text.trim()) aiSummary = await callAI(AI_SYSTEM, `หัวข้อ: ${title}\n\nบทสนทนา:\n\n${text}`, { guildId: interaction.guildId });
   } catch (e) {
     console.error('[caseImport] ai summary', e.message);
   }
@@ -99,7 +99,7 @@ async function handleCaseImportModal(interaction) {
   // AI timeline (best-effort)
   try {
     const messages = await fetchAllMessages(thread);
-    const events = await generateTimeline(title, messages);
+    const events = await generateTimeline(title, messages, { guildId: interaction.guildId });
     if (events.length) await caseDb.addTimelineEvents(row.id, interaction.guildId, events, 'ai');
   } catch (e) {
     console.error('[caseImport] timeline', e.message);
@@ -147,7 +147,7 @@ async function handleThreadCreate(thread) {
         detail = messages[0].content || null;
         lastMsgId = messages[messages.length - 1].id;
         const text = messagesToPlainText(messages);
-        if (text.trim()) aiSummary = await callAI(AI_SYSTEM, `หัวข้อ: ${title}\n\nบทสนทนา:\n\n${text}`);
+        if (text.trim()) aiSummary = await callAI(AI_SYSTEM, `หัวข้อ: ${title}\n\nบทสนทนา:\n\n${text}`, { guildId: thread.guildId });
       }
     } catch (e) {
       console.error('[caseImport] threadCreate ai', e.message);
@@ -164,7 +164,7 @@ async function handleThreadCreate(thread) {
     // AI timeline (best-effort)
     try {
       if (messages?.length) {
-        const events = await generateTimeline(title, messages);
+        const events = await generateTimeline(title, messages, { guildId: thread.guildId });
         if (events.length) await caseDb.addTimelineEvents(row.id, thread.guildId, events, 'ai');
       }
     } catch (e) { console.error('[caseImport] threadCreate timeline', e.message); }
