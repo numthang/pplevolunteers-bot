@@ -1100,6 +1100,12 @@ async function renderQuoteOverlay(width, height, {
     : position === 'center' ? Math.round((height - bandH) / 2)
     : height - bandH;
 
+  // เขตที่แพลตฟอร์มเอา UI มาทับ — Reels/TikTok วางแคปชัน+ปุ่มไลก์ที่ขอบล่าง
+  // และเวลา/แบตเตอรี่อยู่ขอบบน · **แถบมืดยังลากถึงขอบเหมือนเดิม** (ไม่งั้นเห็นเป็นเส้นตัด)
+  // แต่ร่นเฉพาะ "กล่องข้อความ" เข้ามา ข้อความจึงไม่ไปนอนใต้ปุ่มของแอป
+  const safeBottom = position === 'bottom' ? Math.round(height * 0.12) : 0;
+  const safeTop = position === 'top' ? Math.round(height * 0.06) : 0;
+
   // แถบมืดหลังข้อความ — คลิปมีภาพเคลื่อนไหว ตัวอักษรขาวล้วนอ่านไม่ออกเป็นช่วงๆ
   // ขอบด้านที่ติดกลางเฟรมไล่จาง ไม่ให้เห็นเป็นเส้นตัดตรงๆ
   const grad = ctx.createLinearGradient(0, bandY, 0, bandY + bandH);
@@ -1113,7 +1119,7 @@ async function renderQuoteOverlay(width, height, {
   ctx.fillRect(0, bandY, width, bandH);
 
   await drawQuoteBlock(ctx, {
-    x: pad, y: bandY, w: width - pad * 2, h: bandH,
+    x: pad, y: bandY + safeTop, w: width - pad * 2, h: bandH - safeBottom - safeTop,
     quoteText, authorName,
     ink: '#ffffff', sub: 'rgba(255,255,255,0.82)',
     align: 'left', maxLines: 4, noMark,

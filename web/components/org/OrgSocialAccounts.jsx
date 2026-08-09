@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { Trash2, RefreshCw, Globe, Lock, AlertTriangle, X, Settings, Check } from 'lucide-react'
 import { canManageSocialGuild } from '@/lib/roles.js'
 import { useEffectiveRoles } from '@/lib/useEffectiveRoles.js'
+import { useTranslations } from 'next-intl'
 
 const PLATFORM_LABEL = { fb: 'Facebook', ig: 'Instagram', threads: '@ (Threads)', x: 'X (Twitter)' }
 const PLATFORM_COLOR = {
@@ -14,24 +15,24 @@ const PLATFORM_COLOR = {
   x:       'bg-black text-white',
 }
 
-function TokenExpiry({ expiresAt }) {
+function TokenExpiry({ expiresAt, t }) {
   if (!expiresAt) return null
   const msLeft = new Date(expiresAt).getTime() - Date.now()
   const days = Math.floor(msLeft / 86400000)
   if (days < 0) return (
     <span className="flex items-center gap-1 text-xs text-red-500 dark:text-red-400 font-medium">
-      <AlertTriangle size={12} /> Token หมดอายุแล้ว
+      <AlertTriangle size={12} /> {t('social.token.expired')}
     </span>
   )
   if (days <= 7) return (
     <span className="flex items-center gap-1 text-xs text-orange-500 font-medium">
-      <AlertTriangle size={12} /> หมดอายุใน {days} วัน
+      <AlertTriangle size={12} /> {t('social.token.expiringIn', { days })}
     </span>
   )
-  return <span className="text-xs text-green-600 dark:text-green-400">Token อีก {days} วัน</span>
+  return <span className="text-xs text-green-600 dark:text-green-400">{t('social.token.daysLeft', { days })}</span>
 }
 
-function AccountRow({ acc, accounts, onToggleVisibility, onSetGroup, onRemove, deleting }) {
+function AccountRow({ acc, accounts, onToggleVisibility, onSetGroup, onRemove, deleting, t }) {
   return (
     <div className="bg-card-bg rounded-xl px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3 border border-warm-200 dark:border-disc-border">
       <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -43,15 +44,15 @@ function AccountRow({ acc, accounts, onToggleVisibility, onSetGroup, onRemove, d
           <p className="text-xs text-gray-400 dark:text-disc-muted font-mono truncate">{acc.social_id}</p>
           {/* threads เก็บ token ที่ access_token (ไม่ใช่ user_token) แต่ใช้ user_token_expires_at
               เป็นที่จดวันหมดอายุร่วมกัน — เดิมช่องนี้โชว์แค่ ig เลยไม่มีใครเห็นว่า Threads ตาย (2026-08-08) */}
-          {['ig', 'threads'].includes(acc.platform) && <TokenExpiry expiresAt={acc.user_token_expires_at} />}
+          {['ig', 'threads'].includes(acc.platform) && <TokenExpiry expiresAt={acc.user_token_expires_at} t={t} />}
           {acc.platform === 'threads' && !acc.user_token_expires_at && (
             <span className="flex items-center gap-1 text-xs text-orange-500">
-              <AlertTriangle size={12} /> ไม่รู้วันหมดอายุ — กด Connect Threads ใหม่เพื่อเริ่มนับ
+              <AlertTriangle size={12} /> {t('social.token.threadsUnknown')}
             </span>
           )}
           {acc.platform === 'ig' && !acc.has_user_token && (
             <span className="flex items-center gap-1 text-xs text-red-500 dark:text-red-400">
-              <AlertTriangle size={12} /> ไม่มี User Token — กด Connect ใหม่
+              <AlertTriangle size={12} /> {t('social.token.igMissing')}
             </span>
           )}
         </div>
@@ -62,26 +63,26 @@ function AccountRow({ acc, accounts, onToggleVisibility, onSetGroup, onRemove, d
           value={acc.group_name || ''}
           onChange={async e => {
             if (e.target.value === '__new__') {
-              const name = prompt('ชื่อกลุ่มใหม่:')?.trim()
+              const name = prompt(t('social.group.prompt'))?.trim()
               if (name) await onSetGroup(acc, name)
             } else {
               await onSetGroup(acc, e.target.value || null)
             }
           }}
-          title="กลุ่มโพสต์"
+          title={t('social.group.title')}
           className="text-xs px-2 py-1 rounded-md bg-gray-100 dark:bg-disc-hover text-gray-700 dark:text-disc-text border border-warm-200 dark:border-disc-border focus:outline-none focus:ring-2 focus:ring-orange/40"
         >
-          <option value="">(ไม่มีกลุ่ม)</option>
+          <option value="">{t('social.group.none')}</option>
           {[...new Set(accounts.map(a => a.group_name).filter(Boolean))].map(g => (
             <option key={g} value={g}>{g}</option>
           ))}
-          <option value="__new__">+ สร้างกลุ่มใหม่</option>
+          <option value="__new__">{t('social.group.create')}</option>
         </select>
 
         {onToggleVisibility && (
           <button
             onClick={() => onToggleVisibility(acc)}
-            title={acc.visibility === 'public' ? 'สาธารณะ' : 'ส่วนตัว'}
+            title={acc.visibility === 'public' ? t('social.visibility.public') : t('social.visibility.private')}
             className={`flex items-center gap-1 text-xs px-2 py-1 rounded-md transition ${
               acc.visibility === 'public'
                 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50'
@@ -89,7 +90,7 @@ function AccountRow({ acc, accounts, onToggleVisibility, onSetGroup, onRemove, d
             }`}
           >
             {acc.visibility === 'public' ? <Globe size={12} /> : <Lock size={12} />}
-            {acc.visibility === 'public' ? 'สาธารณะ' : 'ส่วนตัว'}
+            {acc.visibility === 'public' ? t('social.visibility.public') : t('social.visibility.private')}
           </button>
         )}
 
@@ -110,6 +111,7 @@ function AccountRow({ acc, accounts, onToggleVisibility, onSetGroup, onRemove, d
 // ตัวบัญชี (dc_social_accounts.org_id) เป็นของ org แล้ว → ไม่ต้องมี guild ก็ใช้ได้ครบ
 // ⚠️ ห้องข่าวสาร/ห้องแจ้งเตือน (Discord artifact ราย guild) ไม่ได้ย้ายมาด้วย — อยู่ที่ /bot
 export default function OrgSocialAccounts() {
+  const t = useTranslations('org')
   const { data: session, status } = useSession()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -149,10 +151,10 @@ export default function OrgSocialAccounts() {
     const connected = searchParams.get('connected')
     const account   = searchParams.get('account')
     const error     = searchParams.get('error')
-    if (connected) setBanner({ type: 'success', msg: `เชื่อมต่อ @${account} สำเร็จแล้ว` })
-    if (error === 'denied') setBanner({ type: 'error', msg: 'ยกเลิก OAuth' })
-    if (error && error !== 'denied') setBanner({ type: 'error', msg: `เชื่อมต่อไม่สำเร็จ (${error})` })
-  }, [searchParams])
+    if (connected) setBanner({ type: 'success', msg: t('social.banner.connected', { account }) })
+    if (error === 'denied') setBanner({ type: 'error', msg: t('social.banner.denied') })
+    if (error && error !== 'denied') setBanner({ type: 'error', msg: t('social.banner.failed', { code: error }) })
+  }, [searchParams, t])
 
   useEffect(() => {
     if (!editConfig) return
@@ -199,7 +201,7 @@ export default function OrgSocialAccounts() {
   }
 
   async function remove(id) {
-    if (!confirm('ลบ account นี้?')) return
+    if (!confirm(t('social.confirmDelete'))) return
     setDeleting(id)
     await fetch(`/api/social/accounts/${id}`, { method: 'DELETE' })
     setAccounts(prev => prev.filter(a => a.id !== id))
@@ -207,7 +209,7 @@ export default function OrgSocialAccounts() {
   }
 
   if (status === 'loading' || loading) {
-    return <p className="text-warm-500 dark:text-disc-muted text-sm">กำลังโหลด...</p>
+    return <p className="text-warm-500 dark:text-disc-muted text-sm">{t('social.loading')}</p>
   }
 
   const discordId    = session?.user?.discordId
@@ -226,7 +228,7 @@ export default function OrgSocialAccounts() {
     <div>
       <div className="mb-6">
         <p className="text-sm text-gray-500 dark:text-disc-muted">
-          บัญชี Facebook / Instagram / Threads / X ขององค์กร — ใช้โพสต์จาก /posts และจากบอท
+          {t('social.subtitle')}
         </p>
       </div>
 
@@ -244,7 +246,7 @@ export default function OrgSocialAccounts() {
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-3">
               {/* บัญชี public + App Credentials เป็นของ "องค์กร" ทั้งคู่ (ทุก guild ในองค์กรใช้ชุดเดียวกัน) 2026-07-29 */}
               <h2 className="text-base font-semibold text-gray-700 dark:text-disc-muted uppercase tracking-wide">
-                บัญชีขององค์กร
+                {t('social.orgHeading')}
               </h2>
               <div className="flex items-center gap-2 flex-wrap">
                 {hasX ? (
@@ -252,24 +254,24 @@ export default function OrgSocialAccounts() {
                     href={`/api/x/oauth/start?visibility=private`}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black text-white text-sm hover:opacity-80 transition"
                   >
-                    <Globe size={14} /> Connect X
+                    <Globe size={14} /> {t('social.connect.x')}
                   </a>
                 ) : (
-                  <button disabled title="ตั้งค่า X Consumer Key/Secret ก่อน" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black text-white text-sm opacity-30 cursor-not-allowed">
-                    <Globe size={14} /> Connect X
+                  <button disabled title={t('social.connect.needX')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black text-white text-sm opacity-30 cursor-not-allowed">
+                    <Globe size={14} /> {t('social.connect.x')}
                   </button>
                 )}
                 {hasMeta ? (
                   <a
                     href={`/api/meta/oauth/start`}
-                    title="Facebook + Instagram (Threads เป็น OAuth คนละตัว ใช้ปุ่มถัดไป)"
+                    title={t('social.connect.metaTitle')}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange text-white text-sm hover:opacity-90 transition"
                   >
-                    <RefreshCw size={14} /> Connect Meta OAuth
+                    <RefreshCw size={14} /> {t('social.connect.meta')}
                   </a>
                 ) : (
-                  <button disabled title="ตั้งค่า Meta App ID/Secret ก่อน" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange text-white text-sm opacity-30 cursor-not-allowed">
-                    <RefreshCw size={14} /> Connect Meta OAuth
+                  <button disabled title={t('social.connect.needMeta')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange text-white text-sm opacity-30 cursor-not-allowed">
+                    <RefreshCw size={14} /> {t('social.connect.meta')}
                   </button>
                 )}
                 {/* Threads แยกปุ่ม: authorize ที่ threads.net + creds คนละชุด → รวมกับปุ่ม Meta ไม่ได้ */}
@@ -278,11 +280,11 @@ export default function OrgSocialAccounts() {
                     href={`/api/threads/oauth/start`}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-800 dark:bg-gray-700 text-white text-sm hover:opacity-90 transition"
                   >
-                    <RefreshCw size={14} /> Connect Threads
+                    <RefreshCw size={14} /> {t('social.connect.threads')}
                   </a>
                 ) : (
-                  <button disabled title="ตั้งค่า Threads App ID/Secret ก่อน (คนละชุดกับ Meta)" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-800 dark:bg-gray-700 text-white text-sm opacity-30 cursor-not-allowed">
-                    <RefreshCw size={14} /> Connect Threads
+                  <button disabled title={t('social.connect.needThreads')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-800 dark:bg-gray-700 text-white text-sm opacity-30 cursor-not-allowed">
+                    <RefreshCw size={14} /> {t('social.connect.threads')}
                   </button>
                 )}
               </div>
@@ -292,7 +294,7 @@ export default function OrgSocialAccounts() {
             <div className="bg-card-bg rounded-xl border border-warm-200 dark:border-disc-border p-4 mb-3">
               <div className="flex items-center gap-2 mb-3">
                 <Settings size={14} className="text-gray-500 dark:text-disc-muted" />
-                <span className="text-xs font-semibold text-gray-700 dark:text-disc-text uppercase tracking-wide">App Credentials ขององค์กร</span>
+                <span className="text-xs font-semibold text-gray-700 dark:text-disc-text uppercase tracking-wide">{t('social.creds.heading')}</span>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 {[
@@ -314,25 +316,25 @@ export default function OrgSocialAccounts() {
                         onClick={() => setEditConfig({ key, value: val || '' })}
                         className="text-xs text-orange hover:underline shrink-0"
                       >
-                        {val ? 'แก้ไข' : 'ตั้งค่า'}
+                        {val ? t('social.creds.edit') : t('social.creds.set')}
                       </button>
                     </div>
                   )
                 })}
               </div>
               <p className="text-xs text-gray-400 dark:text-disc-muted mt-3">
-                Meta / X App ใช้ร่วมกันทั้งองค์กร — ตั้งครั้งเดียวใช้ได้ทุกเซิร์ฟเวอร์
+                {t('social.creds.note')}
               </p>
             </div>
 
             {guildAccounts.length === 0 ? (
-              <p className="text-sm text-gray-400 dark:text-disc-muted pl-1">ยังไม่มีบัญชี</p>
+              <p className="text-sm text-gray-400 dark:text-disc-muted pl-1">{t('social.emptyOrg')}</p>
             ) : (
               <div className="flex flex-col gap-2">
                 {guildAccounts.map(acc => (
                   <AccountRow key={acc.id} acc={acc} accounts={accounts}
                     onToggleVisibility={toggleVisibility} onSetGroup={setGroup}
-                    onRemove={remove} deleting={deleting}
+                    onRemove={remove} deleting={deleting} t={t}
                     />
                 ))}
               </div>
@@ -344,7 +346,7 @@ export default function OrgSocialAccounts() {
         <div>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-3">
             <h2 className="text-base font-semibold text-gray-700 dark:text-disc-muted uppercase tracking-wide">
-              Personal
+              {t('social.personalHeading')}
             </h2>
             {(
               <div className="flex items-center gap-2 flex-wrap">
@@ -353,11 +355,11 @@ export default function OrgSocialAccounts() {
                     href={`/api/x/oauth/start?visibility=private`}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black text-white text-sm hover:opacity-80 transition"
                   >
-                    <Globe size={14} /> Connect X
+                    <Globe size={14} /> {t('social.connect.x')}
                   </a>
                 ) : (
-                  <button disabled title="ยังไม่มี X App Credentials — ติดต่อ admin" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black text-white text-sm opacity-30 cursor-not-allowed">
-                    <Globe size={14} /> Connect X
+                  <button disabled title={t('social.connect.noXAdmin')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black text-white text-sm opacity-30 cursor-not-allowed">
+                    <Globe size={14} /> {t('social.connect.x')}
                   </button>
                 )}
                 {hasMeta ? (
@@ -365,25 +367,25 @@ export default function OrgSocialAccounts() {
                     href={`/api/meta/oauth/start?visibility=private`}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange text-white text-sm hover:opacity-90 transition"
                   >
-                    <RefreshCw size={14} /> Connect Meta
+                    <RefreshCw size={14} /> {t('social.connect.metaShort')}
                   </a>
                 ) : (
-                  <button disabled title="ยังไม่มี Meta App Credentials — ติดต่อ admin" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange text-white text-sm opacity-30 cursor-not-allowed">
-                    <RefreshCw size={14} /> Connect Meta
+                  <button disabled title={t('social.connect.noMetaAdmin')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange text-white text-sm opacity-30 cursor-not-allowed">
+                    <RefreshCw size={14} /> {t('social.connect.metaShort')}
                   </button>
                 )}
               </div>
             )}
           </div>
           {myAccounts.length === 0 ? (
-            <p className="text-sm text-gray-400 dark:text-disc-muted pl-1">ยังไม่มีบัญชีส่วนตัว</p>
+            <p className="text-sm text-gray-400 dark:text-disc-muted pl-1">{t('social.emptyPersonal')}</p>
           ) : (
             <div className="flex flex-col gap-2">
               {myAccounts.map(acc => (
                 <AccountRow key={acc.id} acc={acc} accounts={accounts}
                   onToggleVisibility={canManage || superAdmin ? toggleVisibility : null}
                   onSetGroup={setGroup}
-                  onRemove={remove} deleting={deleting} />
+                  onRemove={remove} deleting={deleting} t={t} />
               ))}
             </div>
           )}
@@ -405,19 +407,21 @@ export default function OrgSocialAccounts() {
                 type={editConfig.key.endsWith('_secret') ? 'password' : 'text'}
                 value={editConfig.value}
                 onChange={e => setEditConfig(prev => ({ ...prev, value: e.target.value }))}
-                placeholder="ใส่ค่าที่นี่ (ปล่อยว่างเพื่อลบ)"
+                placeholder={t('social.creds.placeholder')}
                 autoFocus
                 className="w-full px-3 py-2 text-sm rounded-lg border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-gray-900 dark:text-disc-text placeholder-gray-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-orange/40"
               />
               <p className="text-xs text-gray-400 dark:text-disc-muted">
                 {editConfig.key.startsWith('threads_')
-                  ? 'Meta Developer Portal → My Apps → use case "Threads API" → Settings — คนละชุดกับ Meta App ID/Secret ด้านบน'
-                  : `ดูค่าได้จาก ${editConfig.key.startsWith('meta_') ? 'Meta Developer Portal → My Apps' : 'X Developer Portal → Keys and Tokens'}`}
+                  ? t('social.creds.hintThreads')
+                  : editConfig.key.startsWith('meta_')
+                    ? t('social.creds.hintMeta')
+                    : t('social.creds.hintX')}
               </p>
               <div className="flex justify-end gap-2 mt-2">
-                <button type="button" onClick={() => setEditConfig(null)} className="px-4 py-2 text-sm rounded-lg text-gray-500 dark:text-disc-muted hover:bg-gray-100 dark:hover:bg-disc-hover transition">ยกเลิก</button>
+                <button type="button" onClick={() => setEditConfig(null)} className="px-4 py-2 text-sm rounded-lg text-gray-500 dark:text-disc-muted hover:bg-gray-100 dark:hover:bg-disc-hover transition">{t('common.cancel')}</button>
                 <button type="submit" disabled={savingConfig} className="flex items-center gap-1.5 px-4 py-2 text-sm rounded-lg bg-orange text-white hover:opacity-90 transition disabled:opacity-40">
-                  <Check size={14} />{savingConfig ? 'กำลังบันทึก...' : 'บันทึก'}
+                  <Check size={14} />{savingConfig ? t('common.saving') : t('common.save')}
                 </button>
               </div>
             </form>

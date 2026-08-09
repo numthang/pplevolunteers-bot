@@ -7,7 +7,8 @@
     "edit": "Edit",
     "loading": "Loading...",
     "error": "Something went wrong, please try again",
-    "language": "Language"
+    "language": "Language",
+    "saving": "Saving..."
   },
   "finance": {
     "common": {
@@ -1244,6 +1245,60 @@
       "keyPlaceholder": "Key (blank = use name)",
       "roleDefCount": "{count} roles",
       "saveError": "Could not save"
+    },
+    "social": {
+      "subtitle": "Organization Facebook / Instagram / Threads / X accounts — used by /posts and the bot",
+      "loading": "Loading...",
+      "orgHeading": "Organization accounts",
+      "personalHeading": "Personal",
+      "emptyOrg": "No accounts yet",
+      "emptyPersonal": "No personal accounts yet",
+      "confirmDelete": "Delete this account?",
+      "banner": {
+        "connected": "Connected @{account}",
+        "denied": "OAuth cancelled",
+        "failed": "Connection failed ({code})"
+      },
+      "connect": {
+        "x": "Connect X",
+        "meta": "Connect Meta OAuth",
+        "metaShort": "Connect Meta",
+        "threads": "Connect Threads",
+        "metaTitle": "Facebook + Instagram (Threads uses a separate OAuth — use the next button)",
+        "needX": "Set X Consumer Key/Secret first",
+        "needMeta": "Set Meta App ID/Secret first",
+        "needThreads": "Set Threads App ID/Secret first (separate from Meta)",
+        "noXAdmin": "No X App credentials yet — contact an admin",
+        "noMetaAdmin": "No Meta App credentials yet — contact an admin"
+      },
+      "creds": {
+        "heading": "Organization app credentials",
+        "note": "Meta / X apps are shared org-wide — set once, works for every server",
+        "edit": "Edit",
+        "set": "Set",
+        "empty": "—",
+        "placeholder": "Enter value (leave blank to clear)",
+        "hintThreads": "Meta Developer Portal → My Apps → use case \"Threads API\" → Settings — separate from Meta App ID/Secret above",
+        "hintMeta": "Find these in Meta Developer Portal → My Apps",
+        "hintX": "Find these in X Developer Portal → Keys and Tokens"
+      },
+      "token": {
+        "expired": "Token expired",
+        "expiringIn": "Expires in {days} days",
+        "daysLeft": "{days} days left",
+        "threadsUnknown": "Expiry unknown — reconnect Threads to start counting",
+        "igMissing": "No user token — reconnect"
+      },
+      "group": {
+        "title": "Post group",
+        "none": "(no group)",
+        "create": "+ New group",
+        "prompt": "New group name:"
+      },
+      "visibility": {
+        "public": "Public",
+        "private": "Private"
+      }
     }
   },
   "profile": {

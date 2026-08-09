@@ -7,7 +7,8 @@
     "edit": "แก้ไข",
     "loading": "กำลังโหลด...",
     "error": "เกิดข้อผิดพลาด กรุณาลองใหม่",
-    "language": "ภาษา"
+    "language": "ภาษา",
+    "saving": "กำลังบันทึก..."
   },
   "finance": {
     "common": {
@@ -1244,6 +1245,60 @@
       "keyPlaceholder": "รหัส (เว้นว่าง = ใช้ชื่อ)",
       "roleDefCount": "{count} ยศ",
       "saveError": "บันทึกไม่สำเร็จ"
+    },
+    "social": {
+      "subtitle": "บัญชี Facebook / Instagram / Threads / X ขององค์กร — ใช้โพสต์จาก /posts และจากบอท",
+      "loading": "กำลังโหลด...",
+      "orgHeading": "บัญชีขององค์กร",
+      "personalHeading": "ส่วนตัว",
+      "emptyOrg": "ยังไม่มีบัญชี",
+      "emptyPersonal": "ยังไม่มีบัญชีส่วนตัว",
+      "confirmDelete": "ลบ account นี้?",
+      "banner": {
+        "connected": "เชื่อมต่อ @{account} สำเร็จแล้ว",
+        "denied": "ยกเลิก OAuth",
+        "failed": "เชื่อมต่อไม่สำเร็จ ({code})"
+      },
+      "connect": {
+        "x": "Connect X",
+        "meta": "Connect Meta OAuth",
+        "metaShort": "Connect Meta",
+        "threads": "Connect Threads",
+        "metaTitle": "Facebook + Instagram (Threads เป็น OAuth คนละตัว ใช้ปุ่มถัดไป)",
+        "needX": "ตั้งค่า X Consumer Key/Secret ก่อน",
+        "needMeta": "ตั้งค่า Meta App ID/Secret ก่อน",
+        "needThreads": "ตั้งค่า Threads App ID/Secret ก่อน (คนละชุดกับ Meta)",
+        "noXAdmin": "ยังไม่มี X App Credentials — ติดต่อ admin",
+        "noMetaAdmin": "ยังไม่มี Meta App Credentials — ติดต่อ admin"
+      },
+      "creds": {
+        "heading": "App Credentials ขององค์กร",
+        "note": "Meta / X App ใช้ร่วมกันทั้งองค์กร — ตั้งครั้งเดียวใช้ได้ทุกเซิร์ฟเวอร์",
+        "edit": "แก้ไข",
+        "set": "ตั้งค่า",
+        "empty": "—",
+        "placeholder": "ใส่ค่าที่นี่ (ปล่อยว่างเพื่อลบ)",
+        "hintThreads": "Meta Developer Portal → My Apps → use case \"Threads API\" → Settings — คนละชุดกับ Meta App ID/Secret ด้านบน",
+        "hintMeta": "ดูค่าได้จาก Meta Developer Portal → My Apps",
+        "hintX": "ดูค่าได้จาก X Developer Portal → Keys and Tokens"
+      },
+      "token": {
+        "expired": "Token หมดอายุแล้ว",
+        "expiringIn": "หมดอายุใน {days} วัน",
+        "daysLeft": "Token อีก {days} วัน",
+        "threadsUnknown": "ไม่รู้วันหมดอายุ — กด Connect Threads ใหม่เพื่อเริ่มนับ",
+        "igMissing": "ไม่มี User Token — กด Connect ใหม่"
+      },
+      "group": {
+        "title": "กลุ่มโพสต์",
+        "none": "(ไม่มีกลุ่ม)",
+        "create": "+ สร้างกลุ่มใหม่",
+        "prompt": "ชื่อกลุ่มใหม่:"
+      },
+      "visibility": {
+        "public": "สาธารณะ",
+        "private": "ส่วนตัว"
+      }
     }
   },
   "profile": {

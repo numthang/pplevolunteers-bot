@@ -70,7 +70,7 @@
 - callback **UPDATE แถวเดิมที่ `social_id` ตรงกันก่อนเสมอ** INSERT เฉพาะบัญชีใหม่ — กันปัญหา id น้อยสุดชนะ
 - `TokenExpiry` เดิมโชว์แค่ `ig` → ปลดล็อกให้ `threads` ด้วย (นี่คือเหตุผลที่ไม่มีใครเห็นว่ามันตาย)
 - ⛔ ลบทิ้ง: `scripts/social/threads-token.js` + `POST /api/social/accounts/[id]/token` (ทางแปะ token ที่ทำไปแล้วถอดออกตามที่เคาะ)
-- ⚠️ **i18n ค้าง:** `web/components/org/OrgSocialAccounts.jsx` (ย้ายมาจาก `web/components/org/OrgSocialAccounts.jsx` เมื่อ 2026-08-09) hardcode ไทยทั้งไฟล์ = เข้าเกณฑ์ "โค้ดใหม่" ที่ต้อง migrate ทั้งไฟล์เป็น `t()` **แต่ยังไม่ได้ทำ** — การย้ายรอบ 2026-08-09 เป็น relocation ล้วน (ไม่ได้รื้อ render ใหม่) จึงเลื่อนไว้ · ตอนนี้ไฟล์อยู่โซน `org/` ที่ migrate แล้ว → **ควรทำให้จบ ไม่ควรค้างต่อ** — จดตามกฎ CLAUDE.md §i18n
+- [x] ~~**i18n ค้างของหน้าบัญชีโซเชียล**~~ → **migrate แล้ว 2026-08-09** · `web/components/org/OrgSocialAccounts.jsx` ผ่าน `t()` ทั้งไฟล์ · key อยู่ `org.social.*` (th + en ครบทั้งคู่) + เพิ่ม `common.saving`
 
 **🔜 ก่อนเทสจริงต้องทำที่ Meta Dashboard:** เพิ่ม `https://pplevolunteers.org/api/threads/oauth/callback` ใน **Redirect Callback URLs** ของ use case "Threads API" + เอา Threads App ID/Secret มากรอกที่ `/org/settings/social`
 
@@ -877,7 +877,7 @@ spec + ดีไซน์ + ตารางทั้งหมดอยู่ `md
 
 ### ค้างอยู่
 
-- [ ] **รัน migration ลบ creds ค้าง** — `scripts/migration/migration.sql` ท้ายไฟล์ · dry-run แล้ว 8 แถว (2 guild ใน org 1) ค่าตรงกับ `org_config` ทุกแถว · **ยังไม่ได้รันจริง**
+- [x] ~~**รัน migration ลบ creds ค้าง**~~ → **รันแล้ว 2026-08-09** · `DELETE 8` · เช็คหลังลบ: `dc_guild_config` ไม่เหลือคีย์ creds เลย ส่วน `org_config` ครบ 4 คีย์เหมือนเดิม · สำรอง 8 แถวไว้ที่ scratchpad ของ session (มี secret จึงไม่เก็บใน repo)
 - [ ] **guild กำพร้า `506440360600535050`** — มี 4 แถวใน `dc_guild_roles` แต่ไม่มีใน `dc_guilds` → `orgIdOfGuild()` คืน null · หน้า `/bot` มองไม่เห็นตลอดกาล · ต้องเคาะว่าลบยศทิ้งหรือ map เข้า org
 - [ ] **เทสในเบราว์เซอร์** — smoke test ผ่านแล้ว (`/bot` 200 · `/bot/platforms` 307 พก query string ครบ · `/org/settings/social` 307 ไป login) แต่ **ยังไม่ได้ดูด้วยตาแบบล็อกอินจริง** โดยเฉพาะ sidebar บนมือถือ + ปุ่ม Connect ที่ไม่มี guild แล้ว
 - [ ] **ลบ fallback `orgIdFromState()`** — `web/lib/socialOAuthScope.js` มี fallback ให้ OAuth flow ที่ค้างกลางทางตอน deploy · ลบได้หลัง deploy เกิน 10 นาที (อายุ state)
