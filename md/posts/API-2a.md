@@ -100,18 +100,21 @@ body `{ orderedIds:number[] }` → `reorderMedia(id, orderedIds)` · ต้อ�
 ทั้ง 2 route: guard → เช็คสิทธิ์เขียน → `consumeAiQuota(userId)` **ก่อน** ยิง AI
 เต็มโควตา → **429** `{ error:'ใช้ AI ครบโควตาวันนี้แล้ว (30 ครั้ง/วัน)' }` · `AiError` → **502** `{ error: err.message }`
 
-### `POST /api/posts/ai/outline` — ประตูหลักเข้าโมดูล
-body `{ idea, visibility='personal', category? }` (idea = ไอเดียสั้น **หรือ** บทความยาวที่วางมา)
+### `POST /api/posts/ai/compose` — ประตูหลักเข้าโมดูล
+body `{ idea, visibility='personal', category? }` (idea = ไอเดียสั้น **หรือ** ความคิด/บทความที่พิมพ์รัวๆ มา)
 - ต้องผ่าน `canWritePost({ visibility, owner_user_id:userId }, access, userId, policy)`
-- `askAiJson(system, user)` → คาดหวัง `{ category, posts:[{ title, gist, format? }] }`
-  - validate: `posts` เป็น array 1–12 ตัว · ตัวไหนไม่มี `title` ทิ้ง · รูปร่างไม่ผ่าน → 502 `{ error:'AI ตอบกลับมาไม่ตรงรูปแบบที่ต้องการ' }`
-- สร้างโพสต์ทีละตัวด้วย `createPost({ ..., category: body.category || ai.category, body: gist, sourceIdea: idea, createdVia:'ai' })`
-  → **ทุกโพสต์ในรอบนั้นได้ `category` เดียวกัน** = สิ่งที่มาแทน series
-- → 201 `{ success:true, data:{ category, posts } }`
+- `askAiJson(system, user)` → คาดหวัง `{ category, title, body, format? }` — **โพสต์เดียวเสมอ**
+  - validate: ไม่มี `body` ที่ใช้ได้ → 502 `{ error:'AI ตอบกลับมาไม่ตรงรูปแบบที่ต้องการ' }` · `format` ที่ไม่ใช่ text/image/quote ทิ้งเป็น null
+- `createPost({ ..., title, body: aiBody, sourceIdea: idea, createdVia:'ai', originalRevision:{ body: idea } })`
+  → **ข้อความดิบที่ user พิมพ์กลายเป็น revision แรก** (เวลาถอย 1 วิ) แล้วตามด้วย snapshot ฉบับ AI → กด "กู้คืน" กลับไปหาต้นฉบับได้
+- → 201 `{ success:true, data:{ post } }` · UI พาเข้า `/posts/[id]` ต่อทันที
 - **AI ล้มห้ามให้ idea หาย** — ตอบ error เฉยๆ (UI เก็บ idea ไว้ในช่องเดิม ไม่เคลียร์)
 
-prompt: ผู้ช่วยบรรณาธิการงานสื่อการเมืองไทย · ภาษาไทย · แต่ละโพสต์ ~1 ประเด็น โพสต์โซเชียลได้จริง
-· input สั้น = ขยายเป็นชุดโพสต์ · input ยาว = ซอยของที่มีอยู่ **ห้ามแต่งเนื้อหาใหม่** · เสนอชื่อหมวดสั้นๆ 1 ชื่อ
+prompt: ผู้ช่วยบรรณาธิการงานสื่อการเมืองไทย · ภาษาไทย · **1 โพสต์เท่านั้น ห้ามซอยเป็นชุด ห้ามทำเป็นโครงหัวข้อย่อย**
+· เก็บประเด็นจากต้นฉบับให้ครบ ตัดคำฟุ่มเฟือย · **ห้ามเพิ่มข้อเท็จจริงที่ไม่มีในต้นฉบับ** · เสนอชื่อหมวดสั้นๆ 1 ชื่อ
+
+> **แก้ทิศ 2026-08-09** — ของเดิมชื่อ `ai/outline` ซอยไอเดีย/บทความออกเป็นชุดโพสต์ 4–12 อัน
+> user เคาะว่าไม่ใช่สิ่งที่ต้องการ: โยนบทความในหัวมายาวๆ ต้องได้ **โพสต์เดียวที่สรุปมาแล้ว** · endpoint เดิมถูกลบ
 
 ### `POST /api/posts/ai/draft` — ร่างโพสต์เดียว
 body `{ postId }` → ต้อง `canEditPost`
@@ -123,6 +126,6 @@ body `{ postId }` → ต้อง `canEditPost`
 
 ## UI contract (ฝั่งหน้าเว็บ)
 
-- `/posts` — แท็บ `ส่วนตัว | องค์กร` (จำค่าล่าสุดใน localStorage `posts_mode`) · กล่องโยนไอเดีย + ปุ่ม "ให้ AI จัดชุดโพสต์ →" + ปุ่ม "เขียนโพสต์ใหม่" · **แถบหมวด** (จาก `/api/posts/categories` + "ทั้งหมด"/"ยังไม่จัดหมวด") · การ์ดโพสต์เรียงตามแก้ล่าสุด
+- `/posts` — แท็บ `ส่วนตัว | องค์กร` (จำค่าล่าสุดใน localStorage `posts_mode`) · กล่องโยนของดิบ + ปุ่ม "AI เรียบเรียงเป็นโพสต์ →" (ได้โพสต์เดียว แล้วเด้งเข้าหน้าแก้ไข) + ปุ่ม "สร้างโพสต์เปล่า" · **แถบหมวด** (จาก `/api/posts/categories` + "ทั้งหมด"/"ยังไม่จัดหมวด") · การ์ดโพสต์เรียงตามแก้ล่าสุด
 - `/posts/[id]` — 2 คอลัมน์: ซ้าย = ชื่อ + เนื้อหา (autosave debounce 800ms, ป้าย "บันทึกแล้ว/กำลังบันทึก/ชน") · ขวา = สื่อ (อัป/วางจาก clipboard/ลากเรียง/ลบ) + หมวด + สถานะ
 - ชน 409 → กล่องถาม 2 ทาง: **โหลดใหม่** (ทิ้งของฉัน) / **เก็บฉบับของฉันเป็น revision** แล้วโหลดใหม่

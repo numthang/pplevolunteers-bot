@@ -175,6 +175,11 @@ spec + ดีไซน์ + ตารางทั้งหมดอยู่ `md
   - เพดานอัปโหลดคลิป 64MB → **200MB** เพราะเปลี่ยนขาอัปเป็นสตรีมลงดิสก์ (`POST /api/posts/[id]/media/video`)
   - 🔜 **nginx ต้องมี 2 บรรทัด:** `client_max_body_size 200m;` + `proxy_read_timeout 300s;` — ขาดตัวหลัง = เบิร์นคลิปยาวๆ ถูกตัดกลางคัน
   - ⚠️ **rotation ยังไม่ผ่านคลิปมือถือจริง** — ffmpeg บนเครื่อง dev เป็น 4.4.2 สังเคราะห์ไฟล์ที่มี display matrix ไม่ได้ · **ต้องลองคลิปแนวตั้งจากมือถือ 1 อันก่อนใช้จริง** ถ้าพลาด = คลิปออกไปนอนตะแคง
+- [x] **🤖 AI สร้างโพสต์ = "เรียบเรียงเป็นโพสต์เดียว" ไม่ใช่ซอยเป็นชุด — ✅ เสร็จ 2026-08-09** (local · ยังไม่ deploy)
+  - user โยนบทความยาว 1 เรื่องเข้าไป → ได้ร่าง 4-5 อันแตกออกมา = เข้าใจไม่ตรงกันตั้งแต่ดีไซน์แรก · ที่ต้องการคือ **พิมพ์ในหัวเร็วๆ → AI สรุปให้ 1 โพสต์**
+  - `POST /api/posts/ai/outline` (สร้างหลายแถว) **ถูกลบ** → `POST /api/posts/ai/compose` คืน `{category,title,body,format}` สร้างแถวเดียว แล้ว UI เด้งเข้า `/posts/[id]` ทันที
+  - **ข้อความดิบที่ user พิมพ์ = revision แรก** ผ่าน `createPost({ originalRevision })` (เวลาถอย 1 วิ กันชนกับ snapshot ฉบับ AI) + `listRevisions` เพิ่ม tiebreak `r.id DESC`
+  - ⬜ **ยังไม่เทสในเบราว์เซอร์จริง** (build ผ่าน) · ⬜ i18n: `PostsHome.jsx` ยัง hardcode ไทยตามโซน — เข้าคิวข้อล่างนี้
 - [ ] **migrate i18n โซน posts** (หนี้จากก้อน 2b) — 7 ไฟล์: `PostsHome` · `PostEditor` · `PostMediaPanel` · `PostMetaPanel` · `PostPublishPanel` · `PostRevisions` · `EmojiPicker` (ใหม่ 2026-08-08 — hardcode ไทยตาม sibling ในโซนเดิม) · งาน mechanical ส่ง Sonnet subagent ได้ · ระหว่างยังไม่ทำ โซนนี้จะปน hardcode กับ `t()`
 - [x] **🎨 คลังภาพ (media library) — ✅ เขียนเสร็จ 2026-08-04** (local · ยังไม่ deploy prod · **ยังไม่เทสในเบราว์เซอร์จริง**)
   - migration รันบน local แล้ว: `post_assets` + `post_episode_media.source_asset_id` (บล็อกท้าย `migration.sql` · additive ล้วน)

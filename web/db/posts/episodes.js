@@ -122,8 +122,13 @@ export async function getPost(id) {
   return rows[0] || null
 }
 
-/** สร้างโพสต์ + snapshot แรกทันที (ต้นฉบับต้องไม่หายแม้บรรณาธิการเข้ามาทับ) */
-export async function createPost({ orgId, ownerUserId, visibility = 'personal', category = null, title = null, body = null, format = null, sourceIdea = null, createdVia = 'manual' }) {
+/**
+ * สร้างโพสต์ + snapshot แรกทันที (ต้นฉบับต้องไม่หายแม้บรรณาธิการเข้ามาทับ)
+ *
+ * `originalRevision` = ฉบับที่ "มาก่อน" เนื้อหาที่กำลังบันทึก — ใช้ตอน AI เรียบเรียง (`ai/compose`)
+ * เพื่อเก็บข้อความดิบที่ user พิมพ์เองไว้เป็น revision แรก แล้วค่อยตามด้วยฉบับ AI
+ */
+export async function createPost({ orgId, ownerUserId, visibility = 'personal', category = null, title = null, body = null, format = null, sourceIdea = null, createdVia = 'manual', originalRevision = null }) {
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
@@ -134,6 +139,15 @@ export async function createPost({ orgId, ownerUserId, visibility = 'personal', 
        RETURNING id`,
       [orgId, ownerUserId, visibility, category, title, body, format, sourceIdea, createdVia]
     )
+    if (originalRevision && (originalRevision.title || originalRevision.body)) {
+      // ถอยเวลา 1 วินาที — ทั้ง 2 แถวอยู่ transaction เดียวจึงได้ now() เท่ากันเป๊ะ
+      // ในลิสต์ประวัติจะกลายเป็นเวลาเดียวกัน 2 บรรทัด แยกไม่ออกว่าอันไหนต้นฉบับ
+      await client.query(
+        `INSERT INTO post_revisions (episode_id, title, body, edited_by_user_id, created_at)
+         VALUES ($1, $2, $3, $4, now() - interval '1 second')`,
+        [rows[0].id, originalRevision.title ?? null, originalRevision.body ?? null, ownerUserId]
+      )
+    }
     await client.query(
       `INSERT INTO post_revisions (episode_id, title, body, edited_by_user_id) VALUES ($1, $2, $3, $4)`,
       [rows[0].id, title, body, ownerUserId]
@@ -335,7 +349,9 @@ export async function listRevisions(episodeId, limit = 30) {
        FROM post_revisions r
        LEFT JOIN users u ON u.id = r.edited_by_user_id
       WHERE r.episode_id = $1
-      ORDER BY r.created_at DESC
+      -- id เป็นตัวตัดสินเสมอกัน: 2 revision ที่ insert ใน transaction เดียว (ai/compose = ต้นฉบับ+ฉบับ AI)
+      -- ได้ created_at เท่ากันเป๊ะ (now() = เวลาเริ่ม transaction) → ไม่มี tiebreak = ลำดับสลับมั่ว
+      ORDER BY r.created_at DESC, r.id DESC
       LIMIT $2`,
     [episodeId, limit]
   )

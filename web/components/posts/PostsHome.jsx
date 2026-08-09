@@ -344,12 +344,14 @@ export default function PostsHome({ orgName = 'องค์กร' }) {
     } catch { /* กู้คืนไม่ได้ก็ยังเห็นการ์ดเดิมอยู่ ไม่ต้องเด้ง error */ }
   }
 
-  async function handleAiOutline() {
+  // โยนของดิบ → AI เรียบเรียงเป็น "โพสต์เดียว" แล้วพาเข้าหน้าแก้ไขเลย
+  // (ของเดิมซอยเป็นชุดโพสต์หลายอันแล้วทิ้งไว้ในฟีด — user เคาะ 2026-08-09 ว่าไม่ใช่)
+  async function handleAiCompose() {
     if (!idea.trim()) return
     setAiLoading(true)
     setAiError('')
     try {
-      const res = await fetch('/api/posts/ai/outline', {
+      const res = await fetch('/api/posts/ai/compose', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ idea, visibility: createVisibility, category: activeCategory }),
@@ -357,14 +359,13 @@ export default function PostsHome({ orgName = 'องค์กร' }) {
       const json = await res.json().catch(() => ({}))
       if (res.ok && json.success) {
         setIdea('')
-        loadPosts()
-        loadCategories()
+        router.push(`/posts/${json.data.post.id}`)
       } else {
         // ล้มเหลวห้ามล้างข้อความในกล่อง
-        setAiError(json.error || 'ให้ AI จัดชุดโพสต์ไม่สำเร็จ')
+        setAiError(json.error || 'ให้ AI เรียบเรียงไม่สำเร็จ')
       }
     } catch {
-      setAiError('ให้ AI จัดชุดโพสต์ไม่สำเร็จ')
+      setAiError('ให้ AI เรียบเรียงไม่สำเร็จ')
     } finally {
       setAiLoading(false)
     }
@@ -374,7 +375,7 @@ export default function PostsHome({ orgName = 'องค์กร' }) {
     <div className="space-y-5">
       <div>
         <h1 className="text-2xl font-bold text-warm-900 dark:text-disc-text mb-1">โพสต์</h1>
-        <p className="text-base text-warm-500 dark:text-disc-muted">โยนไอเดีย ให้ AI ช่วยจัดชุด แล้วเขียนต่อจนพร้อมเผยแพร่</p>
+        <p className="text-base text-warm-500 dark:text-disc-muted">โยนความคิดดิบๆ ให้ AI เรียบเรียงเป็นโพสต์ แล้วเขียนต่อจนพร้อมเผยแพร่</p>
       </div>
 
       {/* กล่องโยนไอเดีย — ซ่อนตอนกำลังดู "โพสต์แล้ว"/"ในกรุ" เพราะเป็นมุมมองย้อนดู ไม่ใช่ที่สร้างของใหม่ */}
@@ -409,7 +410,7 @@ export default function PostsHome({ orgName = 'องค์กร' }) {
           <textarea
             value={idea}
             onChange={(e) => setIdea(e.target.value)}
-            placeholder="โยนหัวข้อ/ไอเดีย หรือวางบทความยาวที่เขียนไว้"
+            placeholder="พิมพ์รัวๆ ไม่ต้องเรียบเรียง หรือวางบทความยาวที่เขียนไว้ — AI จะสรุปให้เป็นโพสต์เดียว"
             rows={4}
             className="w-full px-3 py-2 text-base rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-teal resize-none"
           />
@@ -417,12 +418,12 @@ export default function PostsHome({ orgName = 'องค์กร' }) {
           {aiError && <p className="text-sm text-red-500 dark:text-red-400 mt-2">{aiError}</p>}
           <div className="flex flex-wrap items-center gap-4 mt-3">
             <button
-              onClick={handleAiOutline}
+              onClick={handleAiCompose}
               disabled={aiLoading || !idea.trim()}
               className="flex items-center gap-1.5 bg-teal hover:opacity-90 text-white rounded-lg text-base font-medium px-4 py-2 disabled:opacity-50"
             >
               <Sparkles size={16} />
-              {aiLoading ? 'กำลังจัดชุดโพสต์...' : 'AI สร้างโพสต์ →'}
+              {aiLoading ? 'กำลังเรียบเรียง...' : 'AI เรียบเรียงเป็นโพสต์ →'}
             </button>
             {/* ปุ่มรอง — ไม่ใช้ข้อความในกล่อง จึงลดระดับให้ไม่อ่านเหมือนสองทางเลือกที่เท่ากัน */}
             <button
