@@ -80,6 +80,31 @@ async function refreshUserToken(guildId, rowId, userDiscordId, currentUserToken)
   return res.access_token;
 }
 
+/**
+ * ต่ออายุ Threads token — **คนละ endpoint กับ FB สิ้นเชิง** (นี่คือเหตุผลที่ Threads ตายเงียบ 3 สัปดาห์)
+ *   FB/IG : graph.facebook.com  + grant_type=fb_exchange_token  → เก็บที่ user_token
+ *   Threads: graph.threads.net  + grant_type=th_refresh_token   → เก็บที่ access_token
+ *
+ * เงื่อนไขของ Meta: token ต้องอายุ ≥24 ชม. **และยังไม่หมดอายุ**
+ * (ข้อ ≥24 ชม. ผ่านเองอยู่แล้ว เพราะเราต่อเมื่อเหลือ <7 วันจาก 60 วัน = token อายุ ~53 วันแล้ว)
+ * เลย 60 วัน = กู้ด้วยโค้ดไม่ได้ ต้องกด Connect Threads ใหม่บนเว็บ
+ */
+async function refreshThreadsToken(rowId, currentToken) {
+  const res = await threadsGet(
+    `/refresh_access_token?grant_type=th_refresh_token&access_token=${encodeURIComponent(currentToken)}`
+  );
+  if (!res.access_token) {
+    throw new Error(res.error?.message || res.error_message || 'Threads refresh ไม่สำเร็จ');
+  }
+  const expiresAt = new Date(Date.now() + (res.expires_in || 60 * 24 * 60 * 60) * 1000);
+  await pool.query(
+    `UPDATE dc_social_accounts SET access_token = $1, user_token_expires_at = $2 WHERE id = $3`,
+    [res.access_token, expiresAt, rowId]
+  );
+  console.log('[refreshThreadsToken] row:', rowId, 'expires_at:', expiresAt.toISOString());
+  return res.access_token;
+}
+
 // คืนค่า config ของ platform หนึ่งใน guild หนึ่ง
 // userId = Discord user id ของคนที่กำลังโพสต์ (เพื่อ filter private accounts)
 // accountId = เลือกบัญชีเจาะจง (posts บนเว็บส่งมา) — ไม่ส่ง = พฤติกรรมเดิมทุกประการ
@@ -110,15 +135,29 @@ async function getConfig(guildId, platform, userId = null, groupName = null, acc
 // แยกออกมาเพราะทั้ง getConfig (เลือกอัตโนมัติ) และ getConfigById (posts เลือกเอง) ต้องใช้เหมือนกัน
 async function finalizeConfig(r, guildId, platform) {
   let userToken = r.user_token || null;
-  if (userToken && r.user_token_expires_at) {
-    const msLeft = new Date(r.user_token_expires_at).getTime() - Date.now();
-    if (msLeft < REFRESH_THRESHOLD_MS) {
-      console.log('[getConfig]', guildId, platform, 'user_token expires in', Math.round(msLeft / 86400000), 'days — refreshing');
-      try {
-        userToken = await refreshUserToken(guildId, r.id, r.user_discord_id, userToken) || userToken;
-      } catch (err) {
-        console.error('[getConfig] refresh failed:', err.message);
-      }
+  let accessToken = r.access_token;
+  const msLeft = r.user_token_expires_at
+    ? new Date(r.user_token_expires_at).getTime() - Date.now()
+    : null;
+  const nearExpiry = msLeft !== null && msLeft < REFRESH_THRESHOLD_MS && msLeft > 0;
+
+  if (userToken && nearExpiry) {
+    console.log('[getConfig]', guildId, platform, 'user_token expires in', Math.round(msLeft / 86400000), 'days — refreshing');
+    try {
+      userToken = await refreshUserToken(guildId, r.id, r.user_discord_id, userToken) || userToken;
+    } catch (err) {
+      console.error('[getConfig] refresh failed:', err.message);
+    }
+  }
+
+  // Threads เก็บ token ที่ access_token (ไม่ใช่ user_token) → เงื่อนไขข้างบนไม่เคยจับได้เลย
+  // นี่คือบั๊กที่ทำให้ token ตายเงียบ (bug-393) — ต้องแยกสาขาตาม platform
+  if (platform === 'threads' && accessToken && nearExpiry) {
+    console.log('[getConfig]', guildId, 'threads token expires in', Math.round(msLeft / 86400000), 'days — refreshing');
+    try {
+      accessToken = await refreshThreadsToken(r.id, accessToken) || accessToken;
+    } catch (err) {
+      console.error('[getConfig] threads refresh failed:', err.message);
     }
   }
 
@@ -127,7 +166,7 @@ async function finalizeConfig(r, guildId, platform) {
     rowId: r.id,
     name: r.name,
     socialId: r.social_id,
-    token: r.access_token,
+    token: accessToken,
     userToken,
     userDiscordId: r.user_discord_id,
   };
@@ -771,4 +810,52 @@ async function postReelsToThreads(guildId, userId, videoDiscordUrl, caption, onP
   return { id: mediaId, permalink: info.permalink || null };
 }
 
-module.exports = { getConfig, getConfigById, getAvailablePlatforms, getAvailableGroups, getGuildMetaApp, saveMediaToTemp, cleanTempMedia, postToFacebook, postToInstagram, postToThreads, postReelsToInstagram, postReelsToFacebook, postReelsToThreads };
+/**
+ * กวาดต่ออายุ token ทุกบัญชีที่ใกล้หมด — เรียกจากรอบกวาดวันละครั้งของ publishWorker
+ *
+ * ทำไมต้องมีทั้งที่มี refresh-on-use อยู่แล้ว (bug-393): refresh-on-use ทำงานเฉพาะตอน "มีคนโพสต์"
+ * ซึ่งไม่การันตีว่าจะเกิดในหน้าต่าง 7 วันสุดท้าย → กลุ่มที่ไม่ได้โพสต์ช่วงนั้น token ตายเงียบ
+ *
+ * ⚠️ fb (Page token) กับ x (OAuth 1.0a) **ไม่มีวันหมดอายุ** → ไม่มี expires_at จึงไม่ถูกเลือกมาเอง
+ * ⚠️ ต่อได้เฉพาะ token ที่ **ยังไม่หมดอายุ** — ที่หมดแล้วกู้ด้วยโค้ดไม่ได้ ต้องกด Connect ใหม่
+ *    จึงคืนมาในรายการ `dead` เพื่อให้คนไปกดเอง ไม่ใช่เงียบ
+ *
+ * @returns {Promise<{ok:Array, failed:Array, dead:Array}>}
+ */
+async function refreshExpiringTokens() {
+  const { rows } = await pool.query(
+    `SELECT id, platform, name, group_name, guild_id, org_id, access_token, user_token,
+            user_discord_id, user_token_expires_at
+       FROM dc_social_accounts
+      WHERE user_token_expires_at IS NOT NULL
+        AND user_token_expires_at < now() + ($1 || ' milliseconds')::interval
+      ORDER BY user_token_expires_at`,
+    [REFRESH_THRESHOLD_MS]
+  );
+
+  const ok = [], failed = [], dead = [];
+  for (const r of rows) {
+    const label = `${r.platform} · ${r.group_name || r.name || r.id}`;
+    // หมดอายุไปแล้ว = refresh ไม่ได้ทั้ง FB และ Threads (ทั้งคู่ต้องใช้ token ที่ยังไม่หมด)
+    if (new Date(r.user_token_expires_at).getTime() <= Date.now()) {
+      dead.push(label);
+      continue;
+    }
+    try {
+      if (r.platform === 'threads') {
+        if (!r.access_token) { dead.push(label); continue; }
+        await refreshThreadsToken(r.id, r.access_token);
+      } else if (r.user_token) {
+        await refreshUserToken(r.guild_id, r.id, r.user_discord_id, r.user_token);
+      } else {
+        continue;   // ไม่มี token ให้ต่อ (fb page token ฯลฯ) — ไม่ใช่ความผิดพลาด
+      }
+      ok.push(label);
+    } catch (err) {
+      failed.push(`${label} — ${err.message}`);
+    }
+  }
+  return { ok, failed, dead };
+}
+
+module.exports = { getConfig, getConfigById, getAvailablePlatforms, getAvailableGroups, getGuildMetaApp, refreshExpiringTokens, saveMediaToTemp, cleanTempMedia, postToFacebook, postToInstagram, postToThreads, postReelsToInstagram, postReelsToFacebook, postReelsToThreads };

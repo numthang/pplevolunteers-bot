@@ -299,6 +299,7 @@ export default function SocialAccountsPage() {
                   { key: 'x_consumer_key',    label: 'X Consumer Key',    secret: false },
                   { key: 'x_consumer_secret', label: 'X Consumer Secret', secret: true  },
                   { key: 'news_channel_id',   label: '📢 ห้องข่าวสาร (Channel ID)', secret: false },
+                  { key: 'social_alert_channel_id', label: '🔑 ห้องแจ้งเตือน Token', secret: false },
                 ].map(({ key, label, secret }) => {
                   const val = cfg?.[key]
                   const display = !val ? '—' : secret ? '••••••••' : (val.length > 24 ? val.slice(0, 12) + '…' + val.slice(-6) : val)
@@ -393,7 +394,7 @@ export default function SocialAccountsPage() {
           <div className="bg-white dark:bg-disc-bg2 rounded-2xl shadow-xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-base font-bold text-gray-900 dark:text-disc-text">
-                {{ meta_app_id: 'Meta App ID', meta_app_secret: 'Meta App Secret', threads_app_id: 'Threads App ID', threads_app_secret: 'Threads App Secret', x_consumer_key: 'X Consumer Key', x_consumer_secret: 'X Consumer Secret', news_channel_id: '📢 ห้องข่าวสาร (Channel ID)' }[editConfig.key]}
+                {{ meta_app_id: 'Meta App ID', meta_app_secret: 'Meta App Secret', threads_app_id: 'Threads App ID', threads_app_secret: 'Threads App Secret', x_consumer_key: 'X Consumer Key', x_consumer_secret: 'X Consumer Secret', news_channel_id: '📢 ห้องข่าวสาร (Channel ID)', social_alert_channel_id: '🔑 ห้องแจ้งเตือน Token' }[editConfig.key]}
               </h2>
               <button onClick={() => setEditConfig(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-disc-text"><X size={18} /></button>
             </div>
@@ -407,7 +408,9 @@ export default function SocialAccountsPage() {
                 className="w-full px-3 py-2 text-sm rounded-lg border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-gray-900 dark:text-disc-text placeholder-gray-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-orange/40"
               />
               <p className="text-xs text-gray-400 dark:text-disc-muted">
-                {editConfig.key === 'news_channel_id'
+                {editConfig.key === 'social_alert_channel_id'
+                  ? 'ห้องที่บอทจะเตือนเมื่อ token โซเชียลใกล้หมดอายุหรือต่ออายุไม่สำเร็จ — ควรเป็นห้องทีมงาน · ไม่ตั้ง = ใช้ห้องม็อดของ antispam แทน'
+                  : editConfig.key === 'news_channel_id'
                   ? 'คลิกขวาที่ห้องข่าวสารใน Discord → Copy Channel ID (ต้องเปิด Developer Mode) — ตั้งแล้วตะกร้าสื่อจะมีตัวเลือกแชร์ลงห้องนี้'
                   : editConfig.key.startsWith('threads_')
                     ? 'Meta Developer Portal → My Apps → use case "Threads API" → Settings — คนละชุดกับ Meta App ID/Secret ด้านบน'

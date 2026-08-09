@@ -12,7 +12,7 @@ import { getSocialAppCreds, SOCIAL_APP_KEYS } from '@/lib/socialAppCreds.js'
 import { setOrgConfig, deleteOrgConfig } from '@/db/orgConfig.js'
 import pool from '@/db/index.js'
 
-const GUILD_KEYS   = ['news_channel_id']
+const GUILD_KEYS   = ['news_channel_id', 'social_alert_channel_id']
 const ALLOWED_KEYS = [...SOCIAL_APP_KEYS, ...GUILD_KEYS]
 
 async function getGuildKeys(guildId) {

@@ -1,13 +1,9 @@
 # PLATFOR{m}.ORG
 - workspacefor.org
 - ทำให้เว็บไซต์ หรือ sub-domain ภายนอกใช้ระบบเดียวกันได้แต่ใช้ชื่อของเขาเอง
-- หน้า http://localhost:3000/bot/platforms ถ้า platforms ไม่ขึ้น กับ guild แล้วก็เอา guild switcher ออกไปดีไหม เปลี่ยน url ด้วยไหม น่าจะต้องย้ายออกจาก bot ไปอยู่ใน /posts/settings ป่ะ
 
 # Posts
-- อยากได้ข้อความใหญ่ๆ บน Facebook อ่ะ อันนี้ยังติดอยู่เหมือน จะยิง api ไม่ได้ แต่เห็นมีบางเคสที่ตัวหนังสือใหญ่และพิมพ์ยาวๆ ได้ด้วย แบบอันนี้ https://www.facebook.com/OilTraderKP/posts/pfbid02CXQo1VuJcPCBntjGTpbSgfth41ayPuRGjH4frhMUs9m1BDuQVoH1tcpCBjvvJyQVl?rdid=aGbrOQObqjVcNBvm ไม่รู้ว่า api ได้ไหม
-- เรื่องคลิป
-- Threads API: Error validating access token: Session has expired on Thursday, 16-Jul-26 01:00:58 PDT. The current time is Saturday, 08-Aug-26 06:36:59 PDT. (code 190)
-- posts ลองโพสต์บนเว็บแล้ว แต่ bot ไม่ได้ส่ง link back เข้า thread อ่ะ เหมือนตอนใช้ bot ส่ง
+
 
 # CivicFlow
 - ข้อเสนอ: ย้าย CivicFlow จาก Vercel มาที่ VPS
@@ -20,7 +16,7 @@
 - Vercel เหมาะกับทีมที่ ไม่มีคนเทคนิค และคาดว่าจะมี คนเข้าเว็บพุ่งมหาศาลกะทันหัน. CivicFlow ไม่ใช่ทั้งสองอย่าง — เรามีคนเทคนิค (ผม) และ traffic ระดับองค์กรที่คาดเดาได้. ข้อดีหลักของ Vercel เลยไม่ได้ใช้ ส่วนข้อจำกัดกลับมาขวางเรา
 
 # Web
-- อยากได้หน้า dashboard ของ http://localhost:3000/bot/ ตอนนี้มันวิ่งไป http://localhost:3000/bot/platforms ดูแปลกๆ ไม่มี landing ทำแบบไหนดี เปลี่ยนเป็น config หรือ setting ดีไหม อันไหนดี
+- อยากได้หน้า dashboard ของ http://localhost:3000/bot/ ตอนนี้มันวิ่งไป http://localhost:3000/bot/platforms ดูแปลกๆ ไม่มี landing ทำแบบไหนดี ควรเปลี่ยนเป็น bot/settings ดีไหม และอาจะต้องย้ายหรือลบ setting ส่วน bot นี้ไปอยู่ใน org/settings/ เอาตรงๆ ยังงงๆ อยู่ แต่เห็นความซ้ำซ้อนและ ไม่เป็นที่เป็นทางบางอย่างอยู่ กับ https://localhost:3000/org/settings
 - project หลังจากนี้ จะรู้ไหมว่าผมทำรองรับสองภาษาแล้วอ่ะ แล้วก็ไม่รู้ว่าเราต้อง cleaning memory.md, claude.md ที่บางอัน outdate อะไรบ้างไหม เพื่อลด context ตอนทำงาน
 - อยากทำ Project ย้ายจาก LINE กลุ่มมาใช้ discord เพื่อองค์กรกันเถอะ รายละเอียดยังไม่ได้คิด
 - guild switching ใน hamburger ไม่ต้องมีไหมอ่ะ
@@ -37,7 +33,7 @@
 - http://localhost:3000/profile ไม่แน่ใจว่าตอน switch org มันดึงข้อมูลถูก org 
 
 # Docs
-- autocrop ใน docs ผมว่าทำงานไม่ค่อยสมบูรณ์ ภาพเบี้ยวบ้าง เพี้ยนบ้าง หรือเราทำ manual ด้วยมือคนแบบบัตรประชาชนดี แต่ถ้าอัพทีละเยอะๆ จะไหวไหม ขอ solution
+
 
 # Bot 
 - มีวิธีย้ายคนจาก stage ไปห้องประชุมธรรมดาทั้งหมดไหมครับ ผมอยากทำตอนปิดประชุม stage

@@ -9,7 +9,8 @@ const path = require('path');
 const fs = require('fs/promises');
 const pool = require('../db/index');
 const { prepareImages, loadMediaSources, publishOne, PLATFORM_LABEL } = require('./publishPipeline');
-const { cleanTempMedia } = require('./metaApi');
+const { cleanTempMedia, refreshExpiringTokens } = require('./metaApi');
+const { getSetting } = require('../db/settings');
 const { refreshAttachmentUrls } = require('./discordAttachments');
 const { runRetention } = require('./postsRetention');
 
@@ -147,7 +148,7 @@ async function runOnce(client) {
   for (const job of jobs) {
     touchedBatches.add(job.batch_id);
     try {
-      const { images, videoUrl } = await loadMedia(job, client);
+      const { images, videoUrl, videoPath } = await loadMedia(job, client);
       const watermarkPath = await resolveWatermark(job.wm_type);
       const { processed, errors } = images.length
         ? await prepareImages(images, { watermarkPath })
@@ -163,6 +164,7 @@ async function runOnce(client) {
         accountId: job.social_account_id,
         images: processed,
         videoUrl,
+        videoPath,
         caption: job.caption || '',
         group: job.group_name,
         guild,
@@ -193,6 +195,40 @@ async function runOnce(client) {
   for (const batchId of touchedBatches) await notifyBatchDone(client, batchId);
 }
 
+/**
+ * ต่ออายุ token โซเชียลที่ใกล้หมด แล้ว**แจ้งเตือนเมื่อต่อไม่สำเร็จ**
+ *
+ * ตัวแจ้งเตือนสำคัญกว่าตัวต่ออายุ: รอบที่ Threads ตาย (bug-393) เจ็บเพราะ**ไม่มีใครรู้ 3 สัปดาห์**
+ * ไม่ใช่เพราะต่อไม่ได้ · ห้องที่ใช้ = `social_alert_channel_id` → fallback ห้องม็อดของ antispam
+ * (ไม่ตั้งเลย = เงียบ แต่ยัง log ลง console เสมอ)
+ */
+async function sweepTokens(client) {
+  const { ok, failed, dead } = await refreshExpiringTokens();
+  if (ok.length) console.log(`[tokenSweep] ต่ออายุสำเร็จ ${ok.length}: ${ok.join(', ')}`);
+  if (!failed.length && !dead.length) return;
+
+  console.error(`[tokenSweep] ต้องแก้มือ — ล้ม ${failed.length}, ตายแล้ว ${dead.length}`);
+  if (!client) return;
+
+  const lines = [];
+  if (dead.length)   lines.push(`💀 **หมดอายุแล้ว — ต้องกด Connect ใหม่ที่ /bot/platforms**\n${dead.map(d => `• ${d}`).join('\n')}`);
+  if (failed.length) lines.push(`⚠️ **ต่ออายุไม่สำเร็จ**\n${failed.map(f => `• ${f}`).join('\n')}`);
+
+  // แจ้งทีละ guild ที่ตั้งห้องไว้ — บัญชีเป็นของ org แต่ห้องแจ้งเตือนเป็น artifact ของ Discord ราย guild
+  const guildIds = [...client.guilds.cache.keys()];
+  for (const guildId of guildIds) {
+    try {
+      const channelId = (await getSetting(guildId, 'social_alert_channel_id'))
+        || (await getSetting(guildId, 'antispam_mod_channel_id'));
+      if (!channelId) continue;
+      const channel = await client.channels.fetch(channelId).catch(() => null);
+      if (channel?.isTextBased?.()) await channel.send(`🔑 **Token โซเชียล**\n${lines.join('\n\n')}`);
+    } catch (err) {
+      console.error('[tokenSweep] แจ้งเตือน guild', guildId, 'ไม่สำเร็จ:', err.message);
+    }
+  }
+}
+
 /** เรียกจาก index.js หลังบอท ready — รับ client ไว้แจ้งกลับห้อง Discord */
 function startPublishWorker(client) {
   if (timer) return;
@@ -202,9 +238,13 @@ function startPublishWorker(client) {
   // เก็บกวาดวันละครั้ง — เกาะ worker ตัวนี้ เพราะเป็นตัวเดียวที่สร้างไฟล์พวกนี้ · ไม่ต้องตั้ง cron แยก
   //   1. media-temp — ไฟล์ที่ Meta ดึงไปแล้วไม่ได้ใช้ต่อ
   //   2. retention — ไฟล์ที่โพสต์ออกไปแล้วเกินกำหนด (คลิป 30 วัน / รูป 180 วัน) กันดิสก์โตไม่รู้จบ
+  //   3. token — ต่ออายุ ig/threads ที่ใกล้หมด (refresh-on-use อย่างเดียวไม่พอ · bug-393)
+  //      ⚠️ sweep ถูกเรียกตอน start ด้วย → บอท restart บ่อยๆ จะยิงซ้ำ
+  //      กันด้วย threshold ใน refreshExpiringTokens เอง (ต่อเฉพาะที่เหลือ <7 วัน ซึ่งพอต่อแล้วเด้งเป็น 60 วัน)
   const sweep = () => {
     try { cleanTempMedia(); } catch { /* ปล่อยผ่าน */ }
     runRetention().catch(err => console.error('[retention]', err.message));
+    sweepTokens(client).catch(err => console.error('[tokenSweep]', err.message));
   };
   cleanupTimer = setInterval(sweep, CLEANUP_MS);
   sweep();
