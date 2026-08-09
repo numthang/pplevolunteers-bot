@@ -121,9 +121,13 @@ docs_signatures
 
 - **Table:** `docs_project_attachments` (id, project_id, org_id, original_name, file_path, sort_order)
 - **Storage:** `DOCS_UPLOAD_DIR` env (default: `uploads/docs/`) — นอก web/public
-- **Auto-crop:** `scripts/docs/crop_document.py` (OpenCV — grayscale→Canny→contour→perspective transform → 2480×3508px A4)
+- **Auto-crop:** `scripts/docs/crop_document.py` (OpenCV — grayscale→threshold/Canny→contour→perspective transform → วางกลางหน้า A4 1240×1754px)
+  - **ห้ามยืด** — ทุกทางออกผ่าน `fit_to_a4()` ที่รักษาสัดส่วนแล้วเติมขอบขาว (เดิม `cv2.resize` เป็น A4 ตรงๆ = ต้นตออาการภาพเพี้ยน แก้ 2026-08-09)
+  - **guard 2 ชั้นกันครอบมั่ว** — quad กินเกิน 92% ของเฟรม (จับขอบโต๊ะ/ทั้งรูป) หรือสัดส่วนหลุด 1.05–1.95 → ทิ้ง ใช้รูปเต็มแทน · exit 1 = ไม่ครอบ (caller ถือว่าปกติ)
+  - **ตอนไม่ครอบห้ามเดาหมุน 90°** — ไม่รู้ว่าเอกสารวางแนวไหน เดาผิดคือรูปตะแคง (EXIF จัดการการหมุนของกล้องให้แล้ว)
+- **ต้นฉบับ:** เก็บคู่ไว้เสมอที่ `<uuid>.orig.<ext>` ข้างไฟล์ที่ครอบแล้ว — ไว้ครอบใหม่/ตรวจว่า autocrop พลาดตรงไหน · `removeFile()` ลบให้พร้อมกัน
 - **API:** `GET/POST /api/docs/projects/[id]/attachments` · `DELETE /api/docs/projects/[id]/attachments/[attId]` · `GET /api/docs/projects/[id]/attachments/[attId]/image` (auth-gated)
-- **Export:** ต่อท้าย entry PDFs ด้วย `merged.embedJpg()` + `page.drawImage()` (A4 595×842pt)
+- **Export:** ต่อท้าย entry PDFs ด้วย `merged.embedJpg()` + `page.drawImage()` (A4 595×842pt) — วางกลางหน้ารักษาสัดส่วน (เดิมยัดเต็มหน้า = ยืด แก้ 2026-08-09)
 
 ---
 

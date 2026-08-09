@@ -93,7 +93,10 @@ export async function GET(req, { params }) {
         const buf = await readFile(path.join(getUploadPath(), att.file_path))
         const img = await merged.embedJpg(buf)
         const page = merged.addPage([A4_W, A4_H])
-        page.drawImage(img, { x: 0, y: 0, width: A4_W, height: A4_H })
+        // วางกลางหน้าแบบรักษาสัดส่วน — เดิมยัดเต็มหน้า A4 ทุกใบ รูปที่ไม่ใช่สัดส่วน A4 จึงถูกยืด
+        const s = Math.min(A4_W / img.width, A4_H / img.height)
+        const w = img.width * s, h = img.height * s
+        page.drawImage(img, { x: (A4_W - w) / 2, y: (A4_H - h) / 2, width: w, height: h })
       } catch (err) {
         console.error(`[export] attachment ${att.id}:`, err.message)
       }

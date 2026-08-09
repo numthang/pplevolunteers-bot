@@ -45,7 +45,7 @@ export async function POST(req, { params }) {
   const buffer = Buffer.from(bytes)
 
   try {
-    const filePath = await cropAndSave(buffer, project.id)
+    const filePath = await cropAndSave(buffer, project.id, file.type)
     const attachment = await createAttachment(project.id, orgId, {
       originalName: file.name,
       filePath,

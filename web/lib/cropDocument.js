@@ -1,5 +1,5 @@
 import path from 'path'
-import { writeFile, readFile as fsReadFile, unlink, mkdir, access } from 'fs/promises'
+import { writeFile, readFile as fsReadFile, unlink, mkdir, access, readdir } from 'fs/promises'
 import { execFile } from 'child_process'
 import { promisify } from 'util'
 import { randomUUID } from 'crypto'
@@ -26,24 +26,35 @@ export function getRegPdfPath(projectId, projectName) {
   return path.join(getUploadPath(), String(projectId), getRegPdfFilename(projectName))
 }
 
-export async function cropAndSave(buffer, projectId) {
+const EXT_OF_MIME = {
+  'image/jpeg': 'jpg',
+  'image/png':  'png',
+  'image/webp': 'webp',
+  'image/heic': 'heic',
+  'image/heif': 'heif',
+}
+
+/**
+ * เก็บ**ต้นฉบับ**ไว้คู่กับไฟล์ที่ครอบแล้วเสมอ (`<uuid>.orig.<ext>`)
+ * เดิมลบทิ้งทันทีหลังครอบ → ย้อนดูไม่ได้เลยว่า autocrop ทำพลาดตรงไหน และครอบใหม่ก็ไม่ได้
+ * (เจอตอนแก้อาการภาพเพี้ยน 2026-08-09) · ลบพร้อมกันตอนลบไฟล์แนบใน removeFile()
+ */
+export async function cropAndSave(buffer, projectId, mimeType = 'image/jpeg') {
   const uploadDir = path.join(getUploadPath(), String(projectId))
   await mkdir(uploadDir, { recursive: true })
 
   const uuid = randomUUID()
-  const tmpIn  = path.join(uploadDir, `tmp_${uuid}_in.jpg`)
+  const origPath = path.join(uploadDir, `${uuid}.orig.${EXT_OF_MIME[mimeType] || 'jpg'}`)
   const outName = `${uuid}.jpg`
   const outPath = path.join(uploadDir, outName)
 
-  await writeFile(tmpIn, buffer)
+  await writeFile(origPath, buffer)
 
   try {
-    await execFileAsync(PYTHON, [CROP_SCRIPT, tmpIn, outPath], { timeout: 30000 })
+    await execFileAsync(PYTHON, [CROP_SCRIPT, origPath, outPath], { timeout: 30000 })
   } catch (err) {
     // exit code 1 = no document detected, script wrote resized fallback — OK
     if (err.code !== 1) throw err
-  } finally {
-    await unlink(tmpIn).catch(() => {})
   }
 
   // If script failed to write output (e.g. missing cv2), save original buffer as fallback
@@ -75,4 +86,14 @@ export async function readFile(absolutePath) {
 export async function removeFile(relativePath) {
   const full = path.join(getUploadPath(), relativePath)
   await unlink(full)
+
+  // ลบต้นฉบับที่เก็บคู่ไว้ด้วย (`<uuid>.orig.<ext>`) — ไฟล์เก่าที่อัปก่อน 2026-08-09 ไม่มี ก็ข้ามไป
+  const dir = path.dirname(full)
+  const base = path.basename(full).replace(/\.[^.]+$/, '')
+  const siblings = await readdir(dir).catch(() => [])
+  await Promise.all(
+    siblings
+      .filter(f => f.startsWith(`${base}.orig.`))
+      .map(f => unlink(path.join(dir, f)).catch(() => {}))
+  )
 }

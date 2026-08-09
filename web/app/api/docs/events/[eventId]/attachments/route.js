@@ -59,7 +59,7 @@ export async function POST(req, { params }) {
     }
 
     // Image upload — crop + save as attachment
-    const filePath = await cropAndSave(buffer, projectId)
+    const filePath = await cropAndSave(buffer, projectId, file.type)
     const attachment = await createAttachment(projectId, orgId, {
       originalName: file.name,
       filePath,

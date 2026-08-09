@@ -73,8 +73,15 @@
 
 **🔜 ก่อนเทสจริงต้องทำที่ Meta Dashboard:** เพิ่ม `https://pplevolunteers.org/api/threads/oauth/callback` ใน **Redirect Callback URLs** ของ use case "Threads API" + เอา Threads App ID/Secret มากรอกที่ `/bot/platforms`
 
+**ทำเพิ่ม 2026-08-09 (รอบ 3) — auto-refresh + แจ้งเตือน ✅ เสร็จ local:**
+- `refreshThreadsToken()` ใน `services/metaApi.js` — `graph.threads.net/refresh_access_token?grant_type=th_refresh_token` (คนละ host/grant กับ FB)
+- `finalizeConfig` **แตกสาขาตาม platform** — เดิมเช็คแค่ `user_token` ส่วน Threads เก็บที่ `access_token` จึงไม่เคยเข้าเงื่อนไข (นี่คือตัวบั๊ก bug-393)
+- `refreshExpiringTokens()` + `sweepTokens()` **เกาะ `sweep()` เดิมใน publishWorker (ไม่ตั้ง cron)** · แยก `ok`/`failed`/`dead` — ที่หมดอายุแล้วกู้ด้วยโค้ดไม่ได้ ต้องรายงานให้คนไปกด Connect เอง
+- ห้องแจ้งเตือน: key ใหม่ `social_alert_channel_id` (fallback `antispam_mod_channel_id`) + ช่องตั้งค่าที่ `/bot/platforms`
+
 **ค้าง:**
-- [ ] **auto-refresh Threads** — เกาะ `sweep()` ใน `services/publishWorker.js:205` (วันละครั้งอยู่แล้ว ไม่ต้องตั้ง cron) · แตกสาขา platform ใน `finalizeConfig` เพราะ `refreshUserToken` hardcode `graph.facebook.com` ⚠️ `sweep()` ยิงตอนบอท start ทุกครั้ง + Threads บังคับ token อายุ ≥24 ชม. → ต้องกันด้วย threshold
+- [x] ~~**auto-refresh Threads**~~ — เสร็จแล้ว (ยังไม่ deploy)
+- [ ] เดิม: **auto-refresh Threads** — เกาะ `sweep()` ใน `services/publishWorker.js:205` (วันละครั้งอยู่แล้ว ไม่ต้องตั้ง cron) · แตกสาขา platform ใน `finalizeConfig` เพราะ `refreshUserToken` hardcode `graph.facebook.com` ⚠️ `sweep()` ยิงตอนบอท start ทุกครั้ง + Threads บังคับ token อายุ ≥24 ชม. → ต้องกันด้วย threshold
 - [ ] **แจ้งเตือนเข้า Discord เมื่อต่อ token ไม่สำเร็จ** — สำคัญกว่าตัว refresh เอง (รอบนี้เจ็บเพราะตายเงียบ) · ยังไม่เคาะว่าใช้ห้องไหน
 - [ ] **ระวัง `ig` แถวกลุ่ม Somseed** — 8 ส.ค. เหลือ 8 วัน อยู่นอกหน้าต่าง refresh 7 วันพอดี ถ้าไม่มีใครโพสต์กลุ่มนี้จะตายแบบเดียวกัน
 - [ ] (เลื่อน — ทำ auto-refresh แล้วอาจไม่ต้องใช้) **Connect Threads OAuth บนเว็บ** · `/api/meta/oauth/*` ยิง facebook.com ขอ scope FB/IG ล้วน ไม่รองรับ Threads
@@ -608,6 +615,22 @@ spec + ดีไซน์ + ตารางทั้งหมดอยู่ `md
 - **Docs token consolidation — ✅ implement เสร็จ local 2026-07-05 · ยังไม่ deploy prod**
   - `project_token` ตัวเดียวแทน `pdf_token`/`export_token` · แยกเอกสารด้วย path `/receipt` vs `/registration`
   - **ก่อน deploy prod:** รัน `migration.sql` แล้ว restart ทันที (โค้ดเก่า INSERT column เก่า — window ไม่กี่วินาที) · backfill จาก `export_token` → **ลิงก์ registration (แนบท้าย 3) ที่แชร์ไปแล้วพัง ต้อง copy ใหม่** ลิงก์ receipt เดิมใช้ได้ต่อ
+
+### ✂️ Attachment autocrop — ก้อน 1 เสร็จ local 2026-08-09 · ก้อน 2 (editor แก้มือ) ยังไม่เริ่ม
+
+**ก้อน 1 (ทำแล้ว):** เลิกยืดภาพ — `fit_to_a4()` รักษาสัดส่วน + guard 2 ชั้น (quad เกิน 92% เฟรม / สัดส่วนหลุด 1.05–1.95 → ไม่ครอบ) + เลิกเดาหมุน 90° ตอน fallback + export route วางกลางหน้าไม่ยืด + เก็บต้นฉบับ `<uuid>.orig.<ext>`
+- [ ] **ยังไม่ได้ลองกับรูปถ่ายจริง** — verify ที่ผ่านคือ build + เทสรูปสังเคราะห์ 5 เคส · ต้องอัปรูปเอกสารจริง 10-20 ใบดูว่าเหลือเพี้ยนแค่ไหน แล้วค่อยตัดสินว่าต้องลงก้อน 2 ไหม
+
+**ก้อน 2 — ยกเครื่องมือแก้รูปของ posts มาใช้กับไฟล์แนบ ACT** (ยังไม่เริ่ม · scrutinize ผ่านแล้ว 2026-08-09)
+- [ ] ย้าย `web/components/posts/ImageEditorModal.jsx` → `web/components/ImageEditorModal.jsx` + ย้าย i18n `posts.imageEditor` → `common.imageEditor` (th+en) · รับ prop: `onSaveBlob`, `aspects` (docs ต้องได้ A4 0.707 ไม่ใช่ 4:5/16:9 ของโซเชียล), บังคับ output JPEG (export ใช้ `embedJpg`)
+- [ ] `PUT /api/docs/projects/[id]/attachments/[attId]/image` — ทับไฟล์เดิม + rebuild registration PDF · **ต้องใช้ `getEffectiveOrgIdentity` + `userId`** ไม่ใช่ `getEffectiveIdentity`+`discordId` แบบ DELETE/image route ข้างๆ (คนที่มีแต่อีเมลจะโดน 401)
+- [ ] `DocProjectView.jsx` — คลิก thumbnail = เปิด editor แทน lightbox + **cache-bust `?v=Date.now()` หลังเซฟ** (route เสิร์ฟ `max-age=3600` URL ไม่เปลี่ยน → ไม่ทำแล้วเปิดแก้ซ้ำจะได้รูปก่อนเบลอกลับมา แบบที่ posts เคยเจอ)
+- [ ] ครอบใหม่จากต้นฉบับ (`.orig.`) ได้ด้วย ไม่ใช่แก้จากรูปที่ครอบพลาดไปแล้ว
+
+**เจอระหว่างทาง (ยังไม่แก้):**
+- [ ] **HEIC/HEIF พังเงียบ** — `accept` + allowed list รับไว้ แต่ไม่มีตัวถอดทั้งสองฝั่ง (sharp 0.34.5 รองรับ heif เฉพาะ `.avif` · python ไม่มี `pillow_heif`) → `cv2.imread` คืน None → 500 "Upload failed" · ถอดออกจาก `accept` แล้ว iOS Safari จะแปลงเป็น JPEG ให้เอง
+- [ ] `DocProjectView.jsx:606` อัปหลายไฟล์ยิงขนานผ่าน `forEach` → `upsertDocProject` find-or-create แข่งกัน
+- [ ] `debug_role` ทำให้ `discordId` = null → image route + DELETE ของไฟล์แนบตอบ 401 ทั้งแท็บ ACT ใน debug mode
 
 ### 🐛 Bug — Internal Server Error ตอนสร้าง bill — **น่าจะเจอ root cause แล้ว 2026-07-06**
 - **สาเหตุที่คาดว่าใช่:** prod DB ยังไม่ได้รัน `ALTER TABLE docs_activity_entries ALTER COLUMN member_discord_id DROP NOT NULL` (migration.sql:672) → สร้างบิลแบบ individual mode/ยังไม่กำหนดผู้รับ (`member_discord_id = NULL`) ชน NOT NULL constraint → error ถูกกลืนเป็น "Internal Server Error" ที่ `web/app/api/docs/entries/route.js:87` (catch-all ไม่ log detail ให้ client)
