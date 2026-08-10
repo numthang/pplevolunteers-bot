@@ -7,7 +7,7 @@ export const metadata = { title: 'ตั้งค่าของฉัน' }
 export default async function ProfileSettingsLayout({ children }) {
   const t = await getTranslations('profile')
   return (
-    <div className="max-w-5xl mx-auto px-4 py-6">
+    <div>
       <h1 className="text-xl font-bold text-gray-900 dark:text-disc-text mb-4">{t('settingsNav.pageHeading')}</h1>
       <div className="md:grid md:grid-cols-[200px_minmax(0,1fr)] md:gap-8">
         <aside className="mb-4 md:mb-0">

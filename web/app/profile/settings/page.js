@@ -252,8 +252,10 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="max-w-lg mx-auto py-8 px-4">
-      <h1 className="text-3xl font-bold mb-6 text-warm-900 dark:text-disc-text">แก้ไขโปรไฟล์</h1>
+    <div>
+      {/* ไม่คาปความกว้าง/ไม่มี py — layout ของโซน settings กับ root main จัดกรอบให้แล้ว
+          (เดิมเป็น max-w-lg mx-auto py-8 สมัยยังเป็นหน้าเดี่ยวที่ /profile) */}
+      <h2 className="text-2xl font-bold mb-6 text-warm-900 dark:text-disc-text">แก้ไขโปรไฟล์</h2>
 
       {/* Discord info */}
       {session && (

@@ -16,7 +16,7 @@ export default async function ProfileHomePage() {
   const cardCls = 'rounded-2xl border border-gray-200 dark:border-disc-border bg-white dark:bg-card-bg p-5 hover:border-orange/40'
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-6">
+    <div>
       <h1 className="text-xl font-bold text-gray-900 dark:text-disc-text">{t('hub.title')}</h1>
       <p className="mt-1 text-sm text-gray-500 dark:text-disc-muted">{t('hub.subtitle')}</p>
 
