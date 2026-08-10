@@ -1142,7 +1142,8 @@
         "members": "Members & Roles",
         "features": "Features",
         "roles": "Roles & areas",
-        "social": "Social accounts"
+        "social": "Social accounts",
+        "ai": "AI"
       },
       "settingsLabel": "Settings: ",
       "pageHeading": "Organization Settings"
@@ -1299,6 +1300,37 @@
         "public": "Public",
         "private": "Private"
       }
+    },
+    "ai": {
+      "loading": "Loading…",
+      "ownerOnly": "Only the organisation owner can change AI settings",
+      "description": "Add your own API key to use AI without limits — charges go straight to your account",
+      "serverNotReady": "The server has no storage key configured (AI_KEY_SECRET), so API keys cannot be saved yet — contact your system administrator",
+      "providerLabel": "AI provider",
+      "provider": {
+        "claude": "Claude (Anthropic)",
+        "gemini": "Gemini (Google)"
+      },
+      "keyLabel": "Organisation API key",
+      "keySetNote": "Already set — enter a new value to replace it (the existing key is never shown)",
+      "keyEmptyNote": "Not set — currently running on the system trial quota",
+      "keyPlaceholder": "Paste your API key here",
+      "keyPlaceholderReplace": "Enter a new value to replace the current key",
+      "removeKey": "Remove key (back to trial quota)",
+      "removeKeyConfirm": "Remove the organisation API key? You will go back to the system trial quota.",
+      "removeKeySuccess": "Key removed",
+      "modelNote": "You can pick models once your own API key is set — leave blank to use the system default",
+      "modelLightLabel": "Model for light tasks",
+      "modelLightHint": "Chat summaries · case timelines · letter drafts — short jobs, a cheaper model is fine",
+      "modelWritingLabel": "Model for writing tasks",
+      "modelWritingHint": "Post outlines/drafts/polish/captions — a model that is too small may produce broken output",
+      "modelLockedNote": "Model choice is locked while running on the trial quota — the administrator's model is used",
+      "quotaTitle": "Trial quota today: {used} of {limit} used",
+      "quotaNote": "This cap is set by the system administrator — add your own API key for unlimited use",
+      "save": "Save",
+      "saving": "Saving…",
+      "saveSuccess": "Saved",
+      "saveError": "Could not save"
     }
   },
   "profile": {

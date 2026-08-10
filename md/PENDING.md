@@ -956,7 +956,12 @@ spec + ดีไซน์ + ตารางทั้งหมดอยู่ `md
     - โควตาหมด → `AiCredsError` code `quota` → ฝั่งเว็บตอบ **429**, AI ล่มจริงตอบ 502 · guild กำพร้าที่ยังไม่ map เข้า org → ยืมได้แต่นับไม่ได้
     - migration seed โควตา `100000` ให้ org ที่มีอยู่ (รันบน local แล้ว 4 แถว) — **ยังไม่ได้รันบน prod**
     - เทสแล้ว: เข้ารหัส/ถอดกลับตรง · master key ผิด → คืน null ไม่ระเบิด · org มี key เอง → ใช้ของตัวเอง+ไม่นับโควตา · โควตา 2 ครั้ง ยิงครั้งที่ 3 โดนบล็อก · โควตา 0 = ยืมไม่ได้
-  - [ ] **ขั้น 3 — UI** `/org/settings/ai` · `dc_ai_modes` (prompt สรุปแชท) คงไว้ที่ `/bot/ai` ไม่แตะ
+  - [x] **ขั้น 3 — UI `/org/settings/ai` (2026-08-10)** — `web/app/org/settings/ai/page.js` + `components/org/OrgAi.jsx` + `api/org/orgs/[id]/ai` (owner only) · เพิ่มแท็บใน `OrgSettingsNav` · i18n ครบทั้ง th/en
+    - **ไม่ autosave โดยตั้งใจ** — ช่อง API key พิมพ์ทีละตัว autosave จะยิงค่าครึ่งๆ ลง DB → ใช้ปุ่มบันทึกตามกติกา Create vs Update
+    - **`ai_shared_quota_daily` แก้ผ่าน UI ไม่ได้โดยตั้งใจ** — org ตั้งเองได้ = ไม่มีโควตา · หน้าเว็บโชว์อ่านอย่างเดียว แก้ที่ `org_config` ตรงๆ
+    - GET ไม่คืนตัว key ไม่ว่ากรณีใด คืนแค่ `hasKey: {claude, gemini}` · ช่องเลือกโมเดลจะ disabled จนกว่า org จะใส่ key ของตัวเอง
+    - ⬜ **ยังไม่ได้ดูด้วยตาแบบล็อกอินจริง** — smoke ผ่านแค่ gate (`/org/settings/ai` → 307 login · API → 401) + build ผ่าน
+    - `dc_ai_modes` (prompt สรุปแชท) กับ provider/model ระดับระบบ ยังอยู่ `/bot/ai` เหมือนเดิม = ค่าตั้งต้นที่ org ยืม key กลางจะได้รับ
   - ถ้าวันหน้ากลับไปทาง key กลาง+คิดเงิน: ต้อง log ครบ 4 ช่อง (`input_tokens` / `cache_read_input_tokens` / `cache_creation_input_tokens` / `output_tokens`) — โค้ดใช้ prompt caching อยู่ `input_tokens` จึงเป็นแค่ส่วนที่ไม่โดนแคช ไม่ใช่ยอดรวม · เก็บ token อย่าเก็บเงิน คิดตอนอ่าน
 
 - ~~AI config ควรเป็น per-org (แบบ config-split)~~ → เปลี่ยนเป็น BYO-key ด้านบน · เดิมคิดว่า — ตอนนี้ `dc_guild_config guild_id='global'` + `dc_ai_modes.guild_id='global'` = ทุก org ใช้โมเดล/prompt ชุดเดียวกัน · `dc_ai_modes` มีคอลัมน์ `guild_id` รออยู่แล้ว · พอ rebrand เป็น multi-tenant แต่ละ org ควรเลือกเอง (+ จ่ายเอง) — เป็นการเปลี่ยน scope ไม่ใช่ย้ายหน้า จึงไม่ได้ทำในรอบ IA
