@@ -253,9 +253,9 @@ export default function ProfilePage() {
 
   return (
     <div>
-      {/* ไม่คาปความกว้าง/ไม่มี py — layout ของโซน settings กับ root main จัดกรอบให้แล้ว
-          (เดิมเป็น max-w-lg mx-auto py-8 สมัยยังเป็นหน้าเดี่ยวที่ /profile) */}
-      <h2 className="text-2xl font-bold mb-6 text-warm-900 dark:text-disc-text">แก้ไขโปรไฟล์</h2>
+      {/* ไม่มีหัวข้อ/ไม่คาปความกว้าง/ไม่มี py — ตามคอนเวนชันของโซน settings:
+          หัวข้อหน้าอยู่ที่ layout และ sidebar บอกอยู่แล้วว่าอยู่แท็บไหน
+          (หน้าลูกทุกหน้าใน app/org/settings/* ก็ไม่มีหัวข้อของตัวเองเลย) */}
 
       {/* Discord info */}
       {session && (
