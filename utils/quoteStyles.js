@@ -51,6 +51,7 @@ async function loadMark(name) {
 const OPEN_MARKS  = ['double_open', 'classic_open', 'block_open', 'outline_open', 'big_open'];
 const CLOSE_MARKS = ['double_close', 'classic_close', 'block_close', 'outline_close'];
 
+const GREY_TINT = '#9aa0a6';   // เทากลาง — ลายน้ำบนพื้นสี CI ย้อมสีนี้ ไม่ใช่ดำ (ดำ = อ่านเป็นเงา)
 const ORANGE = '#ff6a13';
 
 // scrim (เงาก้นภาพ) ผสมสีแบรนด์เข้าหาดำเท่าไหร่ — 0 = ดำอมน้ำเงินแบบเดิม
@@ -1031,8 +1032,19 @@ async function renderPlain({
     const ph = wide ? Math.round(W * 0.78 * (patternImg.height / patternImg.width))
                     : Math.round(H * 0.52);
     const pw = Math.round((patternImg.width / patternImg.height) * ph);
-    ctx.globalAlpha = 0.12;
-    drawTinted(ctx, patternImg, W - Math.round(pw * 0.62), H - Math.round(ph * 0.72), pw, ph, ink);
+
+    // ให้เห็นโลโก้ ~70% (เดิมโผล่แค่เสี้ยวมุม 38%×28% เลยดูเหมือนคราบเงามากกว่าโลโก้)
+    const SHOW = 0.70;
+    // เครื่องหมายคำพูดยังย้อมสีตัวอักษร (มันเป็นองค์ประกอบของงานพิมพ์)
+    // ส่วน**ลายน้ำย้อมเทา** — ย้อมดำบนพื้น CI แล้วอ่านเป็น "เงา" ไม่ใช่โลโก้ (user เคาะ 2026-08-10)
+    const isLogo = !patternName;
+    ctx.globalAlpha = isLogo ? 0.22 : 0.12;
+    drawTinted(
+      ctx, patternImg,
+      W - Math.round(pw * SHOW), H - Math.round(ph * SHOW),
+      pw, ph,
+      isLogo ? GREY_TINT : ink
+    );
     ctx.globalAlpha = 1;
   }
 
