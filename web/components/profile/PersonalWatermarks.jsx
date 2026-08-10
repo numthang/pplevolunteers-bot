@@ -83,33 +83,8 @@ export default function PersonalWatermarks() {
     <>
       <p className="mb-4 text-sm text-gray-500 dark:text-disc-muted">{t('brand.description')}</p>
 
-      <div
-        onDragOver={e => { e.preventDefault(); setDragging(true) }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={onDrop}
-        onClick={() => canUpload && fileRef.current?.click()}
-        className={`relative mb-6 rounded-2xl border-2 border-dashed p-8 text-center transition-colors ${
-          canUpload ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'
-        } ${
-          dragging
-            ? 'border-orange bg-orange/5 dark:bg-orange/10'
-            : 'border-warm-300 dark:border-disc-border hover:border-orange dark:hover:border-orange bg-white dark:bg-disc-hover'
-        }`}
-      >
-        <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden"
-          onChange={e => upload(e.target.files?.[0])} disabled={!canUpload} />
-        <Upload size={28} className="mx-auto mb-3 text-gray-400 dark:text-disc-muted" />
-        {uploading ? (
-          <p className="text-sm font-medium text-orange">{t('brand.uploading')}</p>
-        ) : files.length >= PERSONAL_MAX ? (
-          <p className="text-sm text-gray-500 dark:text-disc-muted">{t('brand.full', { max: PERSONAL_MAX })}</p>
-        ) : (
-          <>
-            <p className="text-sm font-medium text-gray-700 dark:text-disc-text">{t('brand.dropHint')}</p>
-            <p className="mt-1 text-xs text-gray-400 dark:text-disc-muted">{t('brand.fileHint')}</p>
-          </>
-        )}
-      </div>
+      <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden"
+        onChange={e => upload(e.target.files?.[0])} disabled={!canUpload} />
 
       {error && (
         <div className="mb-4 flex items-center justify-between rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400">
@@ -118,10 +93,29 @@ export default function PersonalWatermarks() {
         </div>
       )}
 
-      <p className="mb-3 text-xs text-gray-400 dark:text-disc-muted">{t('brand.count', { used: files.length, max: PERSONAL_MAX })}</p>
+      <p className="mb-3 text-xs text-gray-400 dark:text-disc-muted">
+        {t('brand.count', { used: files.length, max: PERSONAL_MAX })}
+        {uploading && <span className="ml-2 font-medium text-orange">{t('brand.uploading')}</span>}
+        {!uploading && files.length >= PERSONAL_MAX && <span className="ml-2">{t('brand.full', { max: PERSONAL_MAX })}</span>}
+      </p>
 
+      {/* ⚠️ ยังไม่มีไฟล์ = ตารางไม่ถูก render → ต้องมีปุ่มอัปโหลดของตัวเอง ไม่งั้นตันสนิท
+          (ตั้งแต่ยกกล่อง dropzone ใหญ่ออก 2026-08-10) */}
       {files.length === 0 ? (
-        <p className="py-8 text-center text-sm text-gray-400 dark:text-disc-muted">{t('brand.empty')}</p>
+        <button
+          type="button"
+          onClick={() => canUpload && fileRef.current?.click()}
+          onDragOver={e => { e.preventDefault(); setDragging(true) }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={onDrop}
+          className={`flex w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed py-10 text-gray-400 transition dark:text-disc-muted ${
+            dragging ? 'border-orange bg-orange/5 dark:bg-orange/10' : 'border-warm-300 hover:border-orange dark:border-disc-border dark:hover:border-orange'
+          }`}
+        >
+          <Upload size={24} />
+          <span className="text-sm font-medium text-gray-700 dark:text-disc-text">{t('brand.dropHint')}</span>
+          <span className="text-xs">{t('brand.fileHint')}</span>
+        </button>
       ) : (
         <>
           {defaultWm && (
@@ -129,7 +123,16 @@ export default function PersonalWatermarks() {
               ⭐ {t('brand.currentDefault', { file: stripExt(defaultWm.replace('personal:', '')) })}
             </p>
           )}
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          {/* ตารางเป็นตัวรับลากวางเอง — เดิมมีกล่อง dropzone ใหญ่แยกอีกอัน ซึ่งซ้ำกับปุ่ม
+              Upload ในตาราง (เรียก fileRef.click() ตัวเดียวกัน) เลยยกออก 2026-08-10 */}
+          <div
+            onDragOver={e => { e.preventDefault(); setDragging(true) }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={onDrop}
+            className={`grid grid-cols-2 gap-3 rounded-xl sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 ${
+              dragging ? 'outline-dashed outline-2 outline-offset-4 outline-orange' : ''
+            }`}
+          >
             {files.map(filename => {
               const isDefault = defaultWm === `personal:${filename}`
               return (
@@ -166,6 +169,7 @@ export default function PersonalWatermarks() {
                 className="flex aspect-square flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-warm-300 text-gray-400 transition hover:border-orange hover:text-orange dark:border-disc-border dark:text-disc-muted dark:hover:border-orange">
                 <Upload size={24} />
                 <span className="text-xs">{t('brand.upload')}</span>
+                <span className="px-2 text-center text-[10px] leading-tight text-gray-400 dark:text-disc-muted">{t('brand.fileHint')}</span>
               </button>
             )}
           </div>
