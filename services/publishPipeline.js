@@ -9,6 +9,7 @@
 // (ตะกร้าส่ง editReply เข้ามา · worker ส่ง noop) เพื่อให้ฝั่งเว็บเรียกได้โดยไม่ต้องมี Discord
 const sharp = require('sharp');
 const { fetchBuffer, applyWatermark } = require('../utils/watermarkImage');
+const { pickWatermarkPos } = require('../utils/quoteStyleKeys');
 const { postToFacebook, postToInstagram, postToThreads, postReelsToFacebook, postReelsToInstagram, postReelsToThreads } = require('./metaApi');
 const { postToX, postVideoToX } = require('./xApi');
 const { postNews } = require('./newsShare');
@@ -67,14 +68,14 @@ async function loadMediaSources(items = [], { refreshUrls = null } = {}) {
 
     if (m.path) {
       try {
-        images.push({ buffer: await storage.readFile(m.path), ext: storage.extOfPath(m.path) });
+        images.push({ buffer: await storage.readFile(m.path), ext: storage.extOfPath(m.path), quoteStyle: m.quote_style || null });
         continue;
       } catch (err) {
         if (!m.url) throw err;   // ไม่มีทางกลับแล้วจริงๆ
         console.error('[publishPipeline] อ่านรูปจากดิสก์ไม่ได้ ใช้ลิงก์ต้นทางแทน:', err.message);
       }
     }
-    if (m.url) images.push({ url: m.url });
+    if (m.url) images.push({ url: m.url, quoteStyle: m.quote_style || null });
   }
 
   return { images, videoUrl, videoPath };
@@ -83,14 +84,16 @@ async function loadMediaSources(items = [], { refreshUrls = null } = {}) {
 /**
  * เตรียมรูปให้พร้อมยิง — โหลด buffer → ติดลายน้ำ (ถ้ามี) → webp เป็น jpg
  *
- * @param {Array<{url?:string, buffer?:Buffer, ext?:string}>} sources
+ * @param {Array<{url?:string, buffer?:Buffer, ext?:string, quoteStyle?:string|null}>} sources
  *        `url` = โหลดจากเน็ต (Discord CDN) · `buffer` = มีอยู่แล้ว (เว็บอ่านจากดิสก์มาให้)
- * @param {{watermarkPath?:string|null, onProgress?:function}} opts
+ *        `quoteStyle` = คีย์สไตล์ถ้ารูปนั้นเป็นการ์ดคำคม — ใช้กันลายน้ำทับตัวหนังสือ
+ * @param {{watermarkPath?:string|null, wmPos?:string|null, onProgress?:function}} opts
  *        watermarkPath = path ที่ resolve มาแล้ว — **pipeline ไม่รู้เรื่องโครงโฟลเดอร์ลายน้ำ**
  *        (ผู้เรียกเป็นคนรู้ว่าลายน้ำของ guild/กลุ่ม/ส่วนตัวอยู่ไหน)
+ *        wmPos = ตำแหน่งที่ผู้ใช้เลือก · ว่าง/'random' = สุ่มเลี่ยงข้อความของการ์ด (ดู pickWatermarkPos)
  * @returns {{processed: Array<{buffer:Buffer, ext:string}>, errors: string[]}}
  */
-async function prepareImages(sources, { watermarkPath = null, onProgress = noop } = {}) {
+async function prepareImages(sources, { watermarkPath = null, wmPos = null, onProgress = noop } = {}) {
   const processed = [];
   const errors = [];
   const total = sources.length;
@@ -100,9 +103,12 @@ async function prepareImages(sources, { watermarkPath = null, onProgress = noop 
       let buffer = sources[i].buffer || await fetchBuffer(sources[i].url);
       let ext = sources[i].ext || null;
 
-      if (watermarkPath) {
+      // ตำแหน่งเลือกต่อรูป ไม่ใช่ต่องาน — การ์ดคำคมคนละสไตล์มีที่ว่างคนละมุม
+      // null = รูปนี้ห้ามแปะ (การ์ดพื้นสีมีโลโก้อยู่ในดีไซน์แล้ว)
+      const pos = watermarkPath ? pickWatermarkPos(wmPos, sources[i].quoteStyle) : null;
+      if (watermarkPath && pos) {
         const out = await applyWatermark(buffer, {
-          imagePath: watermarkPath, position: 'random', opacity: 0.8, size: 0.13,
+          imagePath: watermarkPath, position: pos, opacity: 0.8, size: 0.13,
         });
         buffer = out.buffer;
         ext = out.ext;

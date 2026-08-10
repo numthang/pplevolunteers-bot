@@ -107,5 +107,9 @@ export const LEGACY_STYLE_ALIAS = {
   'duo-side':                  'duo-side-right',
 }
 
+// 6 จุดที่ลายน้ำลงได้ (คู่กับ WM_SPOTS ใน utils/quoteStyleKeys.js — แก้ต้องแก้คู่กัน)
+// เว็บใช้แค่ validate ค่าจาก client + ทำ dropdown · ตรรกะเลี่ยงข้อความอยู่ฝั่งบอทที่แปะจริง
+export const WM_SPOTS = ['top-left', 'top-center', 'top-right', 'bottom-left', 'bottom-center', 'bottom-right']
+
 /** คีย์ที่อ่านจาก DB/config อาจเป็นของเก่า — ผ่านตัวนี้ก่อนใช้เสมอ */
 export const normalizeStyle = key => LEGACY_STYLE_ALIAS[key] || key

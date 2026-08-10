@@ -151,7 +151,7 @@ async function runOnce(client) {
       const { images, videoUrl, videoPath } = await loadMedia(job, client);
       const watermarkPath = await resolveWatermark(job.wm_type);
       const { processed, errors } = images.length
-        ? await prepareImages(images, { watermarkPath })
+        ? await prepareImages(images, { watermarkPath, wmPos: job.wm_pos })
         : { processed: [], errors: [] };
       if (images.length && !processed.length) throw new Error(errors.join(' · ') || 'เตรียมรูปไม่สำเร็จ');
 

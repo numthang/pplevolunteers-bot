@@ -11,7 +11,7 @@ import pool from '../index.js'
 
 const COLS = `
   id, org_id, episode_id, batch_id, platform, social_account_id, guild_id, channel_id,
-  wm_type, caption, media, scheduled_at, status, attempts, last_error, result, group_name,
+  wm_type, wm_pos, caption, media, scheduled_at, status, attempts, last_error, result, group_name,
   created_by, created_by_discord_id, created_at, updated_at, posted_at`
 
 /**
@@ -30,7 +30,7 @@ const COLS = `
 export async function createJobs({
   orgId, episodeId, platforms, accountIds = {},
   guildId = null, channelId = null, caption = null, media = [],
-  scheduledAt = null, wmType = null, groupName = null,
+  scheduledAt = null, wmType = null, wmPos = null, groupName = null,
   createdBy = null, createdByDiscordId = null,
 }) {
   const batchId = randomUUID()
@@ -39,16 +39,16 @@ export async function createJobs({
   const { rows } = await pool.query(
     `INSERT INTO post_social_history
        (org_id, episode_id, batch_id, platform, social_account_id, guild_id, channel_id,
-        wm_type, caption, media, scheduled_at, group_name, created_by, created_by_discord_id,
+        wm_type, wm_pos, caption, media, scheduled_at, group_name, created_by, created_by_discord_id,
         status, attempts)
      SELECT $1, $2, $3, j.platform, j.account_id, $6, $7,
-            $8, $9, $10::jsonb, $11::timestamptz, $12, $13, $14,
+            $8, $15, $9, $10::jsonb, $11::timestamptz, $12, $13, $14,
             'pending', 0
        FROM unnest($4::varchar[], $5::int[]) AS j(platform, account_id)
      RETURNING ${COLS}`,
     [orgId || null, episodeId, batchId, platforms, accountIdList, guildId || null, channelId || null,
      wmType || null, caption || null, JSON.stringify(media || []), scheduledAt || null,
-     groupName || null, createdBy || null, createdByDiscordId || null]
+     groupName || null, createdBy || null, createdByDiscordId || null, wmPos || null]
   )
   // unnest ไม่การันตีลำดับ RETURNING → เรียงตาม platforms ที่ผู้เรียกส่งมาเพื่อให้ UI แสดงตามที่กด
   return platforms.map(p => rows.find(r => r.platform === p)).filter(Boolean)

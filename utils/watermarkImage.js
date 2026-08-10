@@ -44,6 +44,9 @@ function calcPos(imgW, imgH, wmW, wmH, position) {
     case 'bottom-left':   return { x: pad,              y: imgH - wmH - pad };
     case 'bottom-center': return { x: cx,               y: imgH - wmH - pad };
     case 'center':        return { x: cx,               y: (imgH - wmH) / 2 };
+    // เขียน case ไว้ชัดๆ ไม่อาศัย default — ผู้เรียกส่ง 'bottom-right' มาจริง (pickWatermarkPos)
+    // ถ้าใครเติม case ใหม่แล้วเผลอทับ default ตำแหน่งนี้จะเพี้ยนแบบเงียบๆ
+    case 'bottom-right':  return { x: imgW - wmW - pad, y: imgH - wmH - pad };
     default:              return { x: imgW - wmW - pad, y: imgH - wmH - pad }; // bottom-right
   }
 }

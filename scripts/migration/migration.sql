@@ -607,7 +607,6 @@ UPDATE case_timeline
  WHERE source = 'ai'
    AND EXTRACT(YEAR FROM occurred_at) - EXTRACT(YEAR FROM created_at) > 100;
 
--- production ทำถึงตรงนี้ 
 
 
 -- ═══════════════════════════════════════════════════════════════════════════
@@ -655,6 +654,9 @@ CREATE TABLE IF NOT EXISTS user_merges (
 CREATE INDEX IF NOT EXISTS idx_user_merges_keep ON user_merges (keep_id, at DESC);
 -- ตาม id ที่ถูกยุบ → id ปลายทาง (followMerge) ตอน refresh session
 CREATE INDEX IF NOT EXISTS idx_user_merges_drop ON user_merges (drop_id, at DESC);
+
+
+-- production ทำถึงตรงนี้ 
 
 -- ═══════════════════════════════════════════════════════════════════════════
 -- 2026-08-09 — ลบ app creds ที่ค้างใน dc_guild_config (fallback ช่วงเปลี่ยนผ่าน)
@@ -711,3 +713,8 @@ SELECT DISTINCT ON (g.org_id, c."key")
    AND g.org_id IS NOT NULL
  ORDER BY g.org_id, c."key", c.guild_id
 ON CONFLICT (org_id, key) DO NOTHING;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 2026-08-10 · ตำแหน่งลายน้ำที่ผู้ใช้เลือกตอนกดเผยแพร่
+-- NULL = สุ่ม (พฤติกรรมเดิม) — งานที่เข้าคิวไว้ก่อน deploy จึงไม่เปลี่ยนพฤติกรรม
+ALTER TABLE post_social_history ADD COLUMN IF NOT EXISTS wm_pos VARCHAR(20);

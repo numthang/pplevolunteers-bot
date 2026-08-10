@@ -88,8 +88,59 @@ const LEGACY_STYLE_ALIAS = {
 /** คีย์ที่อ่านจาก DB/config อาจเป็นของเก่า — ผ่านตัวนี้ก่อนเทียบกับ QUOTE_STYLE_KEYS เสมอ */
 const normalizeStyle = key => LEGACY_STYLE_ALIAS[key] || key;
 
+// ── ตำแหน่งลายน้ำ (2026-08-10) ───────────────────────────────────────────────
+// 6 จุดที่ utils/watermarkImage.js calcPos() วางลายน้ำได้ · เรียงเป็นตาราง 2 แถว × 3 คอลัมน์
+const WM_SPOTS = ['top-left', 'top-center', 'top-right', 'bottom-left', 'bottom-center', 'bottom-right'];
+const PLAIN_PREFIX = 'plain-';
+
+/**
+ * ช่องที่ลายน้ำลงได้โดย**ไม่ทับตัวหนังสือ**ของการ์ดคำคม
+ *
+ * @param {string|null} quoteStyle คีย์สไตล์จาก post_episode_media.quote_style · null = ไม่ใช่การ์ดคำคม
+ * @returns {string[]} ช่องที่ว่าง · **[] = ห้ามแปะลายน้ำเลย**
+ *
+ * ตำแหน่งข้อความยืนยันกับ renderer จริงใน utils/quoteStyles.js แล้วทุกแถว — อย่าเดาจากชื่อ layout:
+ *   pillar/frame ชื่อบอกว่าเสาซ้าย/กรอบขวา แต่ **ข้อความอยู่ล่างทั้งคู่** (renderBorder/renderBorder2
+ *   วางที่ `H - pad - textH`) ส่วนเสา/กรอบเป็นแค่ภาพประกอบเหนือข้อความ
+ *   matte: รูปกินบน 52% กล่องข้อความอยู่ใต้รูป (renderMatte)
+ */
+function watermarkSpotsFor(quoteStyle) {
+  if (!quoteStyle) return WM_SPOTS;                    // รูปธรรมดา ไม่ใช่การ์ด → ลงได้ทุกช่อง
+  const key = normalizeStyle(String(quoteStyle));
+
+  // การ์ดพื้นสีมีโลโก้วาดอยู่ในดีไซน์ตั้งแต่ตอนสร้าง (renderPlainCard) — แปะซ้ำ = โลโก้ 2 อัน
+  if (key.startsWith(PLAIN_PREFIX)) return [];
+
+  const { layout } = splitStyle(key);
+  if (!layout) return WM_SPOTS;
+
+  if (layout === 'center') return WM_SPOTS;            // ข้อความอยู่กลางภาพ ไม่ชนขอบ
+  if (layout === 'side-left')  return WM_SPOTS.filter(s => !s.endsWith('-left'));
+  if (layout === 'side-right') return WM_SPOTS.filter(s => !s.endsWith('-right'));
+  if (layout.startsWith('top')) return WM_SPOTS.filter(s => !s.startsWith('top-'));
+  if (layout.startsWith('bottom') || ['pillar', 'frame', 'matte'].includes(layout)) {
+    return WM_SPOTS.filter(s => !s.startsWith('bottom-'));
+  }
+  return WM_SPOTS;                                     // layout ที่ยังไม่รู้จัก = ไม่ตัดอะไร
+}
+
+/**
+ * ตำแหน่งจริงที่จะใช้กับรูปหนึ่งใบ
+ * @param {string|null} wmPos ค่าที่ผู้ใช้เลือก · 'random'/ว่าง = สุ่ม (ค่าเริ่มต้นของระบบ)
+ * @returns {string|null} null = ไม่ต้องแปะลายน้ำรูปนี้
+ */
+function pickWatermarkPos(wmPos, quoteStyle) {
+  const allowed = watermarkSpotsFor(quoteStyle);
+  if (!allowed.length) return null;
+  if (wmPos && wmPos !== 'random') return wmPos;       // เลือกเอง = เคารพเสมอ แม้จะทับข้อความ
+  return allowed[Math.floor(Math.random() * allowed.length)];
+}
+
 module.exports = {
   normalizeStyle,
+  WM_SPOTS,
+  watermarkSpotsFor,
+  pickWatermarkPos,
   FINISHES,
   LAYOUTS,
   COMBOS,

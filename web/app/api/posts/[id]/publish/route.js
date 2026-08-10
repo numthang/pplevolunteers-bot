@@ -6,6 +6,7 @@ import { listMedia } from '@/db/posts/media.js'
 import { createJobs, activePlatforms } from '@/db/posts/jobs.js'
 import { resolveGroupAccounts, hasNewsChannel, publisherIdentity } from '@/lib/publishTargets.js'
 import { resolveWatermarkRef } from '@/lib/watermarks.js'
+import { WM_SPOTS } from '@/lib/quoteStyles.js'
 
 const VALID_PLATFORMS = ['fb', 'ig', 'threads', 'x', 'news']
 // IG/Threads โพสต์ข้อความล้วนไม่ได้ (ข้อจำกัดของ Graph API เอง) — ตัดตั้งแต่ต้นทาง ไม่ปล่อยให้ worker ล้ม
@@ -26,7 +27,8 @@ function toTimestamptz(input) {
 
 /**
  * POST /api/posts/[id]/publish — สั่งโพสต์ (เว็บเขียนคิว บอทเป็นคนยิง)
- * body { platforms:string[], group:string, scheduledAt?:string|null, channelId?:string|null, wmType?:string }
+ * body { platforms:string[], group:string, scheduledAt?:string|null, channelId?:string|null,
+ *        wmType?:string, wmPos?:string }
  *   group = `dc_social_accounts.group_name` — ตัวตนที่พาดข้ามแพลตฟอร์ม (เหมือนตะกร้าดิสฯ)
  *   server แปลงเป็นบัญชีรายแพลตฟอร์มเอง ไม่รับ account id จาก client
  */
@@ -62,7 +64,8 @@ export async function POST(req, { params }) {
 
   try {
     // snapshot สื่อ ณ ตอนกดโพสต์ — แก้สื่อทีหลังไม่กระทบงานที่เข้าคิวไปแล้ว (worker อ่านไฟล์จาก path นี้)
-    const media = (await listMedia(ctx.post.id)).map(m => ({ kind: m.kind, path: m.path }))
+    // quote_style ติดไปด้วยเพื่อให้ตอนแปะลายน้ำรู้ว่าตัวหนังสือของการ์ดอยู่มุมไหน (กันทับ)
+    const media = (await listMedia(ctx.post.id)).map(m => ({ kind: m.kind, path: m.path, quote_style: m.quote_style || null }))
     if (!media.length) {
       const need = platforms.filter(p => NEEDS_MEDIA.includes(p))
       if (need.length) {
@@ -80,6 +83,7 @@ export async function POST(req, { params }) {
     let accountIds = {}
     let groupName = null
     let wmType = null
+    let wmPos = null
     const socialPlatforms = platforms.filter(p => p !== 'news')
     if (typeof body.group === 'string' && body.group.trim()) {
       const resolved = await resolveGroupAccounts({
@@ -101,6 +105,13 @@ export async function POST(req, { params }) {
       })
       if (wmType === undefined) {
         return Response.json({ error: 'ลายน้ำที่เลือกไม่ใช่ของกลุ่มนี้' }, { status: 400 })
+      }
+      // ตำแหน่งลายน้ำ — ว่าง/'random' = สุ่ม (เก็บ null ให้ worker ตีความเป็นสุ่มเหมือนงานเก่า)
+      if (body.wmPos && body.wmPos !== 'random') {
+        if (!WM_SPOTS.includes(body.wmPos)) {
+          return Response.json({ error: 'ตำแหน่งลายน้ำไม่ถูกต้อง' }, { status: 400 })
+        }
+        wmPos = body.wmPos
       }
     } else if (socialPlatforms.length) {
       // ไม่เลือกกลุ่ม = ปล่อยให้บอทเลือกบัญชีเอง ซึ่งอาจได้คนละตัวตนกันในแต่ละแพลตฟอร์ม → บังคับเลือก
@@ -146,6 +157,7 @@ export async function POST(req, { params }) {
       media,
       scheduledAt,
       wmType,
+      wmPos,
       createdBy: ctx.userId,
       createdByDiscordId: ctx.session?.user?.discordId || null,
     })

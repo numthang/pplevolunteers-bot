@@ -15,6 +15,17 @@ const PLATFORMS = [
 // IG/Threads โพสต์ข้อความล้วนไม่ได้ — API กันอีกชั้น (NEEDS_MEDIA ใน route)
 const NEEDS_MEDIA = ['ig', 'threads']
 
+// ตำแหน่งลายน้ำ — ค่าต้องตรงกับ WM_SPOTS (lib/quoteStyles.js) ที่ API ใช้ validate
+const WM_POS_OPTIONS = [
+  { value: 'random',        label: '🎲 สุ่ม (เลี่ยงตัวหนังสือ)' },
+  { value: 'top-left',      label: 'บนซ้าย' },
+  { value: 'top-center',    label: 'บนกลาง' },
+  { value: 'top-right',     label: 'บนขวา' },
+  { value: 'bottom-left',   label: 'ล่างซ้าย' },
+  { value: 'bottom-center', label: 'ล่างกลาง' },
+  { value: 'bottom-right',  label: 'ล่างขวา' },
+]
+
 const JOB_STATUS = {
   pending: { label: 'รอคิว', cls: 'text-warm-500 dark:text-disc-muted' },
   running: { label: 'กำลังยิง', cls: 'text-orange' },
@@ -60,6 +71,7 @@ export default function PostPublishPanel({ postId }) {
   const [group, setGroup] = useState('')
   const [watermarks, setWatermarks] = useState([])
   const [wmType, setWmType] = useState('none')
+  const [wmPos, setWmPos] = useState('random')
   const [scheduledAt, setScheduledAt] = useState('')
   const [minTime, setMinTime] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -190,6 +202,7 @@ export default function PostPublishPanel({ postId }) {
           platforms: selected,
           group: group || null,
           wmType: hasMedia && !hasVideo ? wmType : 'none',
+          wmPos: hasMedia && !hasVideo ? wmPos : 'random',
           scheduledAt: scheduledAt || null,
         }),
       })
@@ -297,6 +310,28 @@ export default function PostPublishPanel({ postId }) {
               <option key={w.value} value={w.value}>{w.label}</option>
             ))}
           </select>
+
+          {/* ตำแหน่ง — สุ่มเป็นค่าเริ่มต้น และ "สุ่ม" ฝั่งบอทจะเลี่ยงมุมที่ตัวหนังสือของการ์ดคำคมอยู่
+              (ดู pickWatermarkPos ใน utils/quoteStyleKeys.js) · เลือกเองแล้วทับข้อความได้ = ตั้งใจของผู้ใช้ */}
+          {wmType !== 'none' && (
+            <>
+              <span className="mt-1 text-sm text-warm-700 dark:text-disc-text">ตำแหน่งลายน้ำ</span>
+              <select
+                value={wmPos}
+                onChange={e => setWmPos(e.target.value)}
+                className="w-full h-9 px-2 text-sm rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text focus:outline-none focus:ring-2 focus:ring-teal"
+              >
+                {WM_POS_OPTIONS.map(o => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+              {wmPos === 'random' && (
+                <span className="text-xs text-warm-500 dark:text-disc-muted">
+                  สุ่มให้ใหม่ทุกใบ และเลี่ยงมุมที่มีตัวหนังสือของการ์ดคำคมอยู่แล้ว
+                </span>
+              )}
+            </>
+          )}
         </div>
       )}
 
