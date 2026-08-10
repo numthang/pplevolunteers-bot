@@ -10,6 +10,7 @@
  * → ไฟล์กำพร้าตอนผู้ใช้กดยกเลิก เป็นหน้าที่ของ gc เก็บทีหลัง (grill ข้อ 6)
  */
 import { readFile } from 'fs/promises'
+import { HEX_RE } from './quoteStyles.js'
 import { absPath, savePostFile, isAllowedMime, MAX_FILE_SIZE } from './postsStorage.js'
 import { listMedia, findMediaByPath } from '@/db/posts/media.js'
 import { findAssetByPath } from '@/db/posts/assets.js'
@@ -93,5 +94,13 @@ export function readQuoteForm(form) {
     // ฟอนต์/ขนาดตัวอักษรของการ์ดแบบไม่มีรูป — ค่าที่ไม่รู้จักตกเป็น default ที่ normalizeQuoteParams
     font: str('font'),
     textSize: str('textSize'),
+    // สีที่ผู้ใช้เลือกเองจาก color picker — ไม่ส่งมา = ใช้สี CI ขององค์กร (ดู resolveQuoteAccent)
+    accent: str('accent'),
   }
+}
+
+/** สีจาก color picker → '#rrggbb' หรือ null (ไม่ได้เลือก/รูปแบบผิด = ตกไปใช้สี CI) */
+export function pickedAccent(value) {
+  const s = String(value ?? '').trim()
+  return HEX_RE.test(s) ? s.toLowerCase() : null
 }

@@ -90,6 +90,10 @@ export const plainBgOf = key =>
 /** การ์ดขนาดเดียว 4:5 (เคาะ 2026-08-10) — ไม่มีรูป จึงไม่มีขนาดมาจากไฟล์ ต้องตรึงเอง */
 export const PLAIN_SIZE = { width: 1080, height: 1350 }
 
+/** ส้ม CI ของ renderer — ต้องตรงกับ `ORANGE` ใน `utils/quoteStyles.js` (ใช้ตอนไม่มีใครตั้งสีไว้) */
+export const DEFAULT_ACCENT = '#ff6a13'
+export const HEX_RE = /^#[0-9a-fA-F]{6}$/
+
 // ⚠️ คีย์ต้องตรงกับ PLAIN_FONTS / PLAIN_SIZES ใน `utils/quoteStyles.js` (renderer ตัวจริง)
 export const PLAIN_FONTS = [
   { value: 'anakotmai', label: 'อนาคตใหม่', description: 'ฟอนต์แบรนด์ — ไม่มีหัว' },

@@ -94,7 +94,7 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
   const [srcUrl, setSrcUrl] = useState(null)      // objectURL หรือ /api/posts/media/<id>
   const [crop, setCrop] = useState({ x: 0, y: 0 })
   const [zoom, setZoom] = useState(1)
-  const [aspect, setAspect] = useState(ASPECTS[0].value)
+  const [aspect, setAspect] = useState(ASPECTS[1].value)   // 4:5 (เคาะ 2026-08-11 — ลง IG/FB ได้หมด)
   const [areaPixels, setAreaPixels] = useState(null)
   const [postMedia, setPostMedia] = useState([])
   const [pickerOpen, setPickerOpen] = useState(false)
@@ -120,6 +120,11 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
   const [wmType, setWmType] = useState('')
   const [plainFont, setPlainFont] = useState(PLAIN_FONTS[0].value)
   const [textSize, setTextSize] = useState('m')
+
+  // สีการ์ด — ตั้งต้นที่สี CI ขององค์กรเสมอ (โหลดจาก /api/posts/quote-accent)
+  // `ciAccent` เก็บไว้เทียบว่าผู้ใช้เปลี่ยนสีเองหรือยัง (ไว้โชว์ปุ่มรีเซ็ต)
+  const [ciAccent, setCiAccent] = useState('')
+  const [accent, setAccent] = useState('')
   const [previewUrl, setPreviewUrl] = useState(null)
   const [rendering, setRendering] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -129,6 +134,7 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
   const fileInputRef = useRef(null)
   const objectUrls = useRef([])
   const reqSeq = useRef(0)            // กันผลลัพธ์เก่ามาทับใหม่ตอนกดสลับสไตล์รัวๆ
+  const accentTimer = useRef(null)    // หน่วง color picker (ดู changeAccent)
 
   const trackUrl = url => { objectUrls.current.push(url); return url }
 
@@ -139,7 +145,10 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
 
-  useEffect(() => () => objectUrls.current.forEach(u => URL.revokeObjectURL(u)), [])
+  useEffect(() => () => {
+    objectUrls.current.forEach(u => URL.revokeObjectURL(u))
+    clearTimeout(accentTimer.current)      // ปิดโมดัลตอนหน่วงสีอยู่ = ไม่ต้องยิง render ทิ้ง
+  }, [])
 
   // ค่าที่ใช้ล่าสุด — อ่านหลัง mount ไม่ใช่ใน useState เพราะ localStorage ไม่มีตอน SSR
   useEffect(() => {
@@ -183,6 +192,16 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
         // ก็เก็บใน post_episode_media เหมือนกัน เอามาเป็นพื้นหลังจะได้การ์ดซ้อนการ์ด
         const first = media.find(m => m.kind !== 'quote')
         if (first) setSrcUrl(prev => prev || `/api/posts/media/${first.id}`)
+      })
+      .catch(() => {})
+
+    // สี CI ขององค์กร — ต้องรู้ก่อนเปิด color picker ไม่งั้น picker ตั้งต้นเป็นสีดำ
+    fetch('/api/posts/quote-accent')
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => {
+        if (!alive || !d?.accent) return
+        setCiAccent(d.accent)
+        setAccent(prev => prev || d.accent)
       })
       .catch(() => {})
 
@@ -243,6 +262,8 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
       form.append('authorName', authorName)
       form.append('style', styleKey)
       if (sat && !isPlainStyle(styleKey)) form.append('saturation', sat)
+      const ac = opts.accent ?? accent
+      if (ac) form.append('accent', ac)
 
       const res = await fetch(`/api/posts/${postId}/media/quote/preview`, { method: 'POST', body: form })
       if (seq !== reqSeq.current) return                     // มีคำขอใหม่กว่าแล้ว ทิ้งผลนี้
@@ -259,7 +280,7 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
     } finally {
       if (seq === reqSeq.current) setRendering(false)
     }
-  }, [postId, quoteText, authorName, plainFont, textSize, t])
+  }, [postId, quoteText, authorName, plainFont, textSize, accent, t])
 
   const style = noBg ? plainKey(plainBg) : styleKey(finish, layout)
 
@@ -294,6 +315,15 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
   function changeWatermark(next) {
     setWmType(next)
     render(plainKey(plainBg), null, next)
+  }
+
+  // ⚠️ `<input type="color">` ยิง onChange รัวมากตอนลากเลือกสี — ถ้า render ทุกครั้ง
+  //    = ยิง /preview เป็นสิบรอบต่อการเลือกสีครั้งเดียว (แต่ละรอบ = เรนเดอร์ PNG จริงบน server)
+  //    หน่วงไว้ 350ms แล้วค่อยยิงรอบเดียว
+  function changeAccent(next) {
+    setAccent(next)
+    clearTimeout(accentTimer.current)
+    accentTimer.current = setTimeout(() => render(style, saturation, wmType, { accent: next }), 350)
   }
   function changePlainFont(next) {
     setPlainFont(next)
@@ -338,6 +368,7 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
       form.append('authorName', authorName)
       form.append('style', style)
       if (!noBg) form.append('saturation', saturation)
+      if (accent) form.append('accent', accent)
 
       const res = await fetch(`/api/posts/${postId}/media/quote`, { method: 'POST', body: form })
       const d = await res.json().catch(() => ({}))
@@ -543,6 +574,30 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
                   </div>
                 )}
               </div>
+
+              {/* สีการ์ด — ใช้ทั้ง 2 โหมด (สีนี้คุมทั้งพื้นของการ์ดไม่มีรูป และเงา/แถบสีของการ์ดที่มีรูป)
+                  ตั้งต้นที่สี CI ขององค์กรเสมอ · เปลี่ยนแล้วมีปุ่มกลับไปสี CI ให้กด */}
+              {accent && (
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-sm font-medium text-warm-700 dark:text-disc-text">{t('accentLabel')}</span>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color" value={accent} onChange={e => changeAccent(e.target.value)}
+                      disabled={rendering} title={t('accentLabel')}
+                      className="h-9 w-14 rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg p-1 cursor-pointer disabled:opacity-50"
+                    />
+                    <span className="text-sm text-warm-500 dark:text-disc-muted font-mono">{accent}</span>
+                    {ciAccent && accent.toLowerCase() !== ciAccent.toLowerCase() && (
+                      <button
+                        type="button" onClick={() => changeAccent(ciAccent)} disabled={rendering}
+                        className="px-2.5 py-1 text-sm rounded-lg border border-warm-200 dark:border-disc-border text-warm-700 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover disabled:opacity-50 transition"
+                      >
+                        {t('accentReset')}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* โหมดไม่มีรูป: ไม่มีการวางให้เลือก (กลางการ์ดอย่างเดียว) และไม่มีสีภาพให้ปรับ
                   เหลือแค่ "พื้นหลัง" + ลายน้ำ — จึงสลับทั้งท่อนแทนที่จะจางปุ่มทิ้งไว้ 3 แถว */}

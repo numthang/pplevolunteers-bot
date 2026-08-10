@@ -1458,6 +1458,8 @@
       "aiQuotesEmpty": "ยังไม่มีข้อความจาก AI — กด \"แคปชัน + ไอเดียภาพ\" ในกล่องเขียนก่อน",
       "aiQuotesUse": "ใช้ข้อความนี้",
       "finishLabel": "ธีม",
+      "accentLabel": "สีการ์ด",
+      "accentReset": "กลับไปสี CI",
       "layoutLabel": "การวาง",
       "comboUnavailable": "การลงสีนี้ไม่มีการวางแบบนี้",
       "filterLabel": "ฟิลเตอร์",

@@ -10,7 +10,7 @@
  */
 import { postContext } from '@/lib/postsGuard.js'
 import { canEditPost } from '@/lib/postsAccess.js'
-import { resolveBackground, readQuoteForm, QuoteBgError } from '@/lib/quoteBg.js'
+import { resolveBackground, readQuoteForm, pickedAccent, QuoteBgError } from '@/lib/quoteBg.js'
 import {
   normalizeQuoteParams, renderQuoteCard, renderPlainCard, isPlainStyle, QuoteRenderError,
 } from '@/lib/quoteRender.js'
@@ -36,7 +36,8 @@ export async function POST(req, { params }) {
   try {
     const input = readQuoteForm(form)
     const paramsOut = normalizeQuoteParams(input)
-    const accent = await resolveQuoteAccent(ctx.userId, ctx.orgId)
+    // สีที่เลือกเองชนะสี CI — ไม่ได้เลือก (หรือกดรีเซ็ต) ค่อยไปหาสีขององค์กร
+    const accent = pickedAccent(input.accent) || await resolveQuoteAccent(ctx.userId, ctx.orgId)
 
     // การ์ดไม่มีรูป — ข้าม resolveBackground ทั้งดุ้น (ไม่มีไฟล์พื้นหลัง = ไม่มี X-Bg-Path ให้คืน)
     let png, bgPath = null

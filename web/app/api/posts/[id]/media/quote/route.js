@@ -10,7 +10,7 @@ import { postContext } from '@/lib/postsGuard.js'
 import { canEditPost } from '@/lib/postsAccess.js'
 import { savePostFile, MAX_MEDIA_PER_EPISODE } from '@/lib/postsStorage.js'
 import { addMedia, countMedia } from '@/db/posts/media.js'
-import { resolveBackground, readQuoteForm, QuoteBgError } from '@/lib/quoteBg.js'
+import { resolveBackground, readQuoteForm, pickedAccent, QuoteBgError } from '@/lib/quoteBg.js'
 import {
   normalizeQuoteParams, renderQuoteCard, renderPlainCard, isPlainStyle, QuoteRenderError,
 } from '@/lib/quoteRender.js'
@@ -46,7 +46,8 @@ export async function POST(req, { params }) {
       )
     }
 
-    const accent = await resolveQuoteAccent(ctx.userId, ctx.orgId)
+    // สีที่เลือกเองชนะสี CI (เหมือน /preview เป๊ะ — ไม่งั้นพรีวิวกับของที่บันทึกคนละสี)
+    const accent = pickedAccent(input.accent) || await resolveQuoteAccent(ctx.userId, ctx.orgId)
 
     // การ์ดไม่มีรูป — ไม่มีไฟล์พื้นหลัง จึงเก็บ `bg_path` เป็น NULL
     // (ไม่เก็บ ref ของลายน้ำลง bg_path ด้วย: คอลัมน์นั้นถูก deletePostFile ตอนลบการ์ด
