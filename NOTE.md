@@ -3,9 +3,10 @@
 - ทำให้เว็บไซต์ หรือ sub-domain ภายนอกใช้ระบบเดียวกันได้แต่ใช้ชื่อของเขาเอง
 
 # Posts
-- ได้ละ พอ reload ก็มาแล้วๆ แต่ตำแหน่งผมอยากให้ แสดงภาพลายน้ำมากกว่านี้สัก 70% และ ทำให้เป็น grey transparency พอ ไม่ใช่มีแต่เงา
-- แล้ว personal watermark จะอยู่ตรงไหนดี
-
+- http://localhost:3000/org/settings/social ผมใช้ member องค์กร มันควรจะเพิ่ม personal account ได้ใช่ป่าว แต่ปุ่มมัน disable อ่ะ
+- quote no image เลื่อนตัวหนังสือขึ้นไปเถอะ เราต้องการ space สำหรับติดลายน้ำด้านล่าง
+- ขนาด font กลาง ใหญ่ ต่างกันน้อยมาก
+- quote image ทำให้เลือกฟอนต์ ขนาดฟอนต์ ได้
 
 # CivicFlow
 - ข้อเสนอ: ย้าย CivicFlow จาก Vercel มาที่ VPS

@@ -656,7 +656,6 @@ CREATE INDEX IF NOT EXISTS idx_user_merges_keep ON user_merges (keep_id, at DESC
 CREATE INDEX IF NOT EXISTS idx_user_merges_drop ON user_merges (drop_id, at DESC);
 
 
--- production ทำถึงตรงนี้ 
 
 -- ═══════════════════════════════════════════════════════════════════════════
 -- 2026-08-09 — ลบ app creds ที่ค้างใน dc_guild_config (fallback ช่วงเปลี่ยนผ่าน)
@@ -718,3 +717,7 @@ ON CONFLICT (org_id, key) DO NOTHING;
 -- 2026-08-10 · ตำแหน่งลายน้ำที่ผู้ใช้เลือกตอนกดเผยแพร่
 -- NULL = สุ่ม (พฤติกรรมเดิม) — งานที่เข้าคิวไว้ก่อน deploy จึงไม่เปลี่ยนพฤติกรรม
 ALTER TABLE post_social_history ADD COLUMN IF NOT EXISTS wm_pos VARCHAR(20);
+
+-- production ทำถึงตรงนี้ 
+
+
