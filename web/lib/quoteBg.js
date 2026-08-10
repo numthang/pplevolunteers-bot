@@ -96,6 +96,8 @@ export function readQuoteForm(form) {
     textSize: str('textSize'),
     // สีที่ผู้ใช้เลือกเองจาก color picker — ไม่ส่งมา = ใช้สี CI ขององค์กร (ดู resolveQuoteAccent)
     accent: str('accent'),
+    // สัดส่วนการ์ดแบบไม่มีรูป ('1:1'/'4:5'/'16:9') — การ์ดที่มีรูปเอาสัดส่วนจากไฟล์ที่ครอปมาแล้ว
+    aspect: str('aspect'),
   }
 }
 

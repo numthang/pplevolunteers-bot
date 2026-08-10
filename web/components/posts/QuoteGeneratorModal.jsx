@@ -23,11 +23,15 @@ import {
 const ACCEPT = 'image/png,image/jpeg,image/webp'
 
 // สัดส่วนตามที่แต่ละแพลตฟอร์มใช้จริง
+// ⚠️ `key` ต้องตรงกับ `PLAIN_SIZES_BY_ASPECT` ใน lib/quoteStyles.js — การ์ดไม่มีรูปใช้คีย์นี้
+//    บอกขนาด canvas (ไม่มีไฟล์ให้เอาสัดส่วนมา) ส่วนการ์ดที่มีรูปใช้แค่คุม Cropper
 const ASPECTS = [
   { key: '1:1', label: '1:1', value: 1 },
   { key: '4:5', label: '4:5', value: 4 / 5 },
   { key: '16:9', label: '16:9', value: 16 / 9 },
 ]
+
+const aspectKeyOf = value => ASPECTS.find(a => a.value === value)?.key || '4:5'
 
 // ค่าเดียวกับ COLOR_OPTIONS ของบอท (handlers/quoteHandler.js)
 const COLORS = [
@@ -253,6 +257,7 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
         if (wm) form.append('wmType', wm)
         form.append('font', opts.font ?? plainFont)
         form.append('textSize', opts.textSize ?? textSize)
+        form.append('aspect', aspectKeyOf(aspect))
       } else if (bgPathRef.current) {
         form.append('bgPath', bgPathRef.current)
       } else {
@@ -280,7 +285,7 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
     } finally {
       if (seq === reqSeq.current) setRendering(false)
     }
-  }, [postId, quoteText, authorName, plainFont, textSize, accent, t])
+  }, [postId, quoteText, authorName, plainFont, textSize, accent, aspect, t])
 
   const style = noBg ? plainKey(plainBg) : styleKey(finish, layout)
 
@@ -359,6 +364,7 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
         if (wmType) form.append('wmType', wmType)
         form.append('font', plainFont)
         form.append('textSize', textSize)
+        form.append('aspect', aspectKeyOf(aspect))
       } else if (bgPathRef.current) {
         form.append('bgPath', bgPathRef.current)
       } else {
@@ -475,8 +481,26 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
                 )}
               </div>
 
+              {/* ไม่มีรูป = ไม่มีสัดส่วนมาจากไฟล์ → เลือกเองเหมือนตอนครอป (ชุดเดียวกันเป๊ะ) */}
               {noBg && (
-                <p className="text-sm text-warm-500 dark:text-disc-muted">{t('plainHint')}</p>
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm text-warm-700 dark:text-disc-text">{t('cropLabel')}</span>
+                    {ASPECTS.map(a => (
+                      <button
+                        key={a.key} type="button" onClick={() => setAspect(a.value)}
+                        className={`px-2.5 py-1 text-sm rounded-lg border transition ${
+                          aspect === a.value
+                            ? 'border-orange bg-orange text-white'
+                            : 'border-warm-200 dark:border-disc-border text-warm-700 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover'
+                        }`}
+                      >
+                        {a.label}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-sm text-warm-500 dark:text-disc-muted">{t('plainHint')}</p>
+                </div>
               )}
 
               {srcUrl && !noBg && (

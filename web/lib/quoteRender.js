@@ -19,7 +19,8 @@ import { resolve } from 'node:path'
 import { REPO_ROOT } from './postsStorage.js'
 import {
   QUOTE_STYLE_KEYS, QUOTE_STYLE_OPTIONS, normalizeStyle,
-  PLAIN_SIZE, isPlainStyle, plainBgOf, isPlainFont, isPlainTextSize,
+  plainSizeOf, PLAIN_SIZES_BY_ASPECT, DEFAULT_ASPECT,
+  isPlainStyle, plainBgOf, isPlainFont, isPlainTextSize,
 } from './quoteStyles.js'
 
 /**
@@ -64,7 +65,7 @@ export class QuoteRenderError extends Error {}
  * ตรวจ + normalize ค่าที่รับมาจาก client (อย่าเชื่อ client)
  * @returns {{quoteText:string, authorName:string, style:string, saturation:number|null}}
  */
-export function normalizeQuoteParams({ quoteText, authorName, style, saturation, font, textSize }) {
+export function normalizeQuoteParams({ quoteText, authorName, style, saturation, font, textSize, aspect }) {
   const text = String(quoteText ?? '').trim()
   if (!text) throw new QuoteRenderError('ยังไม่ได้ใส่ข้อความ')
   if (text.length > MAX_QUOTE_LEN) throw new QuoteRenderError(`ข้อความยาวเกิน ${MAX_QUOTE_LEN} ตัวอักษร`)
@@ -81,10 +82,12 @@ export function normalizeQuoteParams({ quoteText, authorName, style, saturation,
     // ไม่ใช่ความถูกต้อง (ต่างจากสไตล์ที่ผิดแล้วเรนเดอร์ไม่ออก) การ์ดยังออกมาใช้ได้
     const f = String(font ?? '').trim()
     const ts = String(textSize ?? '').trim()
+    const ar = String(aspect ?? '').trim()
     return {
       quoteText: text, authorName: author, style: plainRaw, saturation: null,
       font: isPlainFont(f) ? f : 'anakotmai',
       textSize: isPlainTextSize(ts) ? ts : 'm',
+      aspect: PLAIN_SIZES_BY_ASPECT[ar] ? ar : DEFAULT_ASPECT,
     }
   }
 
@@ -149,7 +152,7 @@ export async function renderPlainCard(params, accentColor = null, watermarkPath 
       textSize: params.textSize,
       accentColor: accentColor || undefined,
       watermarkPath,
-      ...PLAIN_SIZE,
+      ...plainSizeOf(params.aspect),
     })
     return buffer
   } catch (error) {

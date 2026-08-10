@@ -87,8 +87,15 @@ export const PLAIN_STYLE_KEYS = PLAIN_BGS.map(b => plainKey(b.value))
 export const plainBgOf = key =>
   PLAIN_BGS.find(b => plainKey(b.value) === key)?.bg || null
 
-/** การ์ดขนาดเดียว 4:5 (เคาะ 2026-08-10) — ไม่มีรูป จึงไม่มีขนาดมาจากไฟล์ ต้องตรึงเอง */
-export const PLAIN_SIZE = { width: 1080, height: 1350 }
+// ขนาดการ์ดไม่มีรูป — ไม่มีไฟล์ให้เอาสัดส่วนมา ผู้ใช้จึงเลือกเองเหมือนตอนครอปรูป (2026-08-11)
+// คีย์ต้องตรงกับ `ASPECTS` ใน QuoteGeneratorModal.jsx
+export const PLAIN_SIZES_BY_ASPECT = {
+  '1:1':  { width: 1080, height: 1080 },
+  '4:5':  { width: 1080, height: 1350 },
+  '16:9': { width: 1920, height: 1080 },
+}
+export const DEFAULT_ASPECT = '4:5'
+export const plainSizeOf = key => PLAIN_SIZES_BY_ASPECT[key] || PLAIN_SIZES_BY_ASPECT[DEFAULT_ASPECT]
 
 /** ส้ม CI ของ renderer — ต้องตรงกับ `ORANGE` ใน `utils/quoteStyles.js` (ใช้ตอนไม่มีใครตั้งสีไว้) */
 export const DEFAULT_ACCENT = '#ff6a13'
