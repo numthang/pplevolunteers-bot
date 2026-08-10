@@ -68,7 +68,7 @@ export const QUOTE_STYLE_KEYS = ['random', ...QUOTE_STYLE_OPTIONS.map(o => o.val
 // ⛔ **ห้ามยัดเข้า COMBOS/QUOTE_STYLE_KEYS** แม้คีย์จะหน้าตาเหมือนกัน — 3 เหตุผล:
 //   1. `renderQuoteStyle()` สุ่มจาก STYLES ทั้งกอง · plain หลุดเข้าไป = คนกดคำคมจากรูปในดิสฯ
 //      แล้วสุ่มได้การ์ดพื้นสี รูปที่เลือกมาโดนทิ้งเงียบๆ
-//   2. `/api/bot/quote-config` validate `quote_default_template` ด้วย QUOTE_STYLE_KEYS —
+//   2. `/api/org/orgs/[id]/brand` validate `quote_default_template` ด้วย QUOTE_STYLE_KEYS —
 //      ตั้ง plain เป็น default เมื่อไหร่ บอทเรนเดอร์ไม่ได้เลย (STYLES ไม่มีคีย์นี้)
 //   3. signature คนละแบบ: STYLES เป็น (buf, opts) ส่วน renderPlain ไม่รับ buffer
 export const PLAIN_BGS = [

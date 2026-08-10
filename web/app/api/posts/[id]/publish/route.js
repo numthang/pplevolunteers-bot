@@ -96,8 +96,8 @@ export async function POST(req, { params }) {
       // ลายน้ำ: ค่าที่เก็บลงแถวงานต้องเป็นไฟล์จริงของกลุ่มนี้เท่านั้น (whitelist ตั้งแต่ขาเขียน)
       // — ไม่งั้นค่าจาก client จะกลายเป็น path บนเครื่องบอทตอน worker หยิบไปใช้
       wmType = await resolveWatermarkRef(body.wmType, {
-        guildId: resolved.guildId, group: resolved.group,
-        visibility: resolved.visibility, discordId: publisherDiscordId,
+        orgId: ctx.orgId, group: resolved.group,
+        visibility: resolved.visibility, userId: publisherUserId,
       })
       if (wmType === undefined) {
         return Response.json({ error: 'ลายน้ำที่เลือกไม่ใช่ของกลุ่มนี้' }, { status: 400 })

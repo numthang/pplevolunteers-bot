@@ -13,6 +13,8 @@ const TAB_HREFS = [
   { href: '/org/settings/social', key: 'social' },
   // API key + โมเดล AI ของ org (2026-08-10) — org จ่ายค่า AI เอง ดู md/PENDING.md
   { href: '/org/settings/ai', key: 'ai' },
+  // ลายน้ำ + สี CI + สไตล์การ์ด ย้ายมาจาก /bot/media/* (2026-08-10) — เป็นอัตลักษณ์ของแบรนด์ ไม่ผูก guild
+  { href: '/org/settings/brand', key: 'brand' },
 ]
 
 // desktop = sidebar (list แนวตั้ง) · mobile = dropdown overlay (ไม่ดันเนื้อหาลง, เมนูโตได้ไม่จำกัด)

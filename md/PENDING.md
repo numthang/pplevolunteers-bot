@@ -918,6 +918,30 @@ spec + ดีไซน์ + ตารางทั้งหมดอยู่ `md
 
 ---
 
+## 🎨 ลายน้ำ/อัตลักษณ์ ย้ายจาก guild → org (2026-08-10) — เสร็จ local
+
+**เหตุผล:** ลายน้ำถูกอ่านโดยทั้งบอทและเว็บ = ไม่ใช่ค่าตั้งของบอทและไม่ใช่ของ posts แต่เป็น **อัตลักษณ์ของแบรนด์ = กลุ่มโซเชียล** · ของเดิมเก็บเป็น `<guild_id>/<group>/` ทำให้ org ที่มีหลาย guild เห็นลายน้ำไม่ครบ (บั๊กจริง: org 1 มี 2 guild)
+
+**โครงใหม่:** `assets/watermark/org_<org_id>/<group>/` + `assets/watermark/user_<users.id>/` — **guild หลุดจากสมการทั้งหมด**
+
+- **หน้าใหม่:** `/org/settings/brand` (owner only) รวมลายน้ำรายกลุ่ม + สี CI + สไตล์การ์ด · ของส่วนตัวไป `/org/personal/brand`
+- **ลบทิ้ง:** `/bot/media/quote`, `/bot/media/watermark`, `api/bot/{guild-watermarks,quote-watermarks,quote-config}`, `WatermarkPanel.jsx`, `QuotePanel.jsx`
+- **ตัวแปลงที่ขอบ:** `services/watermarkPaths.js` (บอท) แปลง guild→org / discord→users.id มี cache 5 นาที · `web/lib/watermarks.js` (เว็บ) รับ `orgId/userId` ตรงๆ — ⛔ ห้ามเอา guildId กลับเข้าไปในสองไฟล์นี้
+- **ส่วนตัวเลิกใช้ Discord ID** — email-only user ใช้ลายน้ำส่วนตัวได้แล้ว และ debug mode (discordId=null) ไม่ทำของส่วนตัวหายอีก
+- **กติกาที่เคาะ:** โหมดส่วนตัว **ไม่เห็น**ลายน้ำ org (แยกถังเด็ดขาด) · `resolveWatermarkRef()` เช็คกับโฟลเดอร์ของกลุ่มที่เลือกตอนเผยแพร่ จึงข้ามถังไม่ได้โดยโครงสร้าง
+- **ยังไม่ทำ (ตั้งใจ):** ตาราง `social_groups` — `group_name` เป็น string ต่อไป · ทำเมื่ออยากเปลี่ยนชื่อกลุ่มโดยของเก่าไม่พัง / ให้สิทธิ์รายกลุ่ม / ค่าตั้งต่อกลุ่มเกิน 3 ตัว
+
+**สิ่งที่ต้องทำตอน deploy prod (ตามลำดับ):**
+1. `sudo -u www bash -c 'cd /www/wwwroot/pple-volunteers && node scripts/migration/moveWatermarksToOrg.js --dry-run'` — ต้องไม่มี ❌ ก่อนรันจริง
+2. รันจริง (ไม่มี `--dry-run`) · local ย้าย 17 ไฟล์ ลบซ้ำ 2
+3. รัน SQL ท้าย `scripts/migration/migration.sql` (ย้าย `default_watermark_group:*` → `org_config`)
+4. ⚠️ สคริปต์**หยุดเอง**ถ้าเจอไฟล์ชื่อซ้ำเนื้อต่างกัน หรือ guild ที่ไม่มี org — ไม่เขียนทับเงียบๆ · guild กำพร้า `506440360600535050` จะถูกรายงาน
+
+**เทสแล้ว (local, ล็อกอินเป็น owner จริง):** `/org/settings/brand` 200 · API คืนกลุ่มครบ 2 + ไฟล์ + default ที่ย้ายมา · preview รูปผ่าน · PATCH สี/สไตล์ + validate ค่าผิดคืน 400 · path traversal โดนบล็อก · `/api/posts/watermarks` เห็น 17 ไฟล์ · ฝั่งบอทเข้าจาก guild ไหนของ org 1 ก็เห็นครบ 11 ไฟล์เท่ากัน (บั๊กเดิมหาย) · หน้า/API เก่าคืน 404
+**⬜ ยังไม่ได้ทดสอบ:** ตะกร้าดิสฯ + `/quote` ในดิสคอร์ดจริง (ต้องรันบอท) · หน้าจอบนมือถือ
+
+---
+
 ## 🗂 จัด IA /bot + /org/settings (2026-08-09)
 
 **ทำแล้ว:** OAuth 3 เส้นเลิกผูก guild → scope เป็น org · ย้ายบัญชีโซเชียลไป `/org/settings/social` · หน้าแรก `/bot` (สถานะ + สิ่งที่ยังไม่ได้ตั้ง) · sidebar `/bot` แบบเดียวกับ `/org/settings` · ยุบ `/bot/features` เข้า `/bot/ai` · เอา BOT ออกจากแถวแอป ไปอยู่เมนู org · ลบ dead code `SOCIAL_LINKS` / `/social`

@@ -32,6 +32,7 @@ const { getSetting, setSetting, deleteSetting } = require('../db/settings');
 const { getNewsChannelId, postNews, buildEventAnnouncement, sendOrQueueAnnouncement } = require('../services/newsShare');
 const { resolveConfig } = require('../db/configResolver');
 const pool = require('../db/index');
+const wm = require('../services/watermarkPaths');
 
 const KEY_WATERMARK = 'default_watermark'; // ค่ากลาง — ตั้งที่หน้าเว็บ /bot/media/settings (ใช้ร่วม quote)
 const groupWmKey = groupName => `default_watermark_group:${groupName}`;
@@ -51,40 +52,25 @@ async function clearBasketState(guildId, channelId) {
   await deleteSetting(guildId, stateKey(channelId));
 }
 
-const ASSETS_DIR = path.join(__dirname, '..', 'assets', 'watermark');
 const SUPPORTED_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp']);
 const VIDEO_TYPES = new Set(['video/mp4', 'video/quicktime']);
 
 const pendingPost = new Map(); // userId → { guildId, channelId, wmType, platform, caption?, scheduleTime? }
 
-function getGroupWatermarkDir(guildId, groupName) {
-  return path.join(ASSETS_DIR, guildId, groupName);
+// ลายน้ำผูกกับ org/users.id แล้ว ไม่ใช่ guild/Discord ID — แปลงที่ services/watermarkPaths.js
+// token ที่เก็บในสถานะตะกร้ายังเป็น 'guild:<ไฟล์>' เหมือนเดิม (อ่านว่า "ของกลุ่ม/องค์กร")
+
+async function getGroupWatermarkFiles(guildId, groupName) {
+  return wm.listImgs(wm.groupDir(await wm.orgIdOf(guildId), groupName));
 }
 
-function getGroupWatermarkFiles(guildId, groupName) {
-  try {
-    return fs.readdirSync(getGroupWatermarkDir(guildId, groupName)).filter(f => /\.(png|jpg|jpeg|webp)$/i.test(f));
-  } catch { return []; }
+/** ยังไม่ได้เลือกกลุ่ม → รวมลายน้ำของทั้ง org (root + ทุกกลุ่ม) · เดิมคือไฟล์ที่ root ของ guild */
+async function getOrgAllFiles(guildId) {
+  return wm.listImgsRec(wm.orgDir(await wm.orgIdOf(guildId)));
 }
 
-function getGuildRootFiles(guildId) {
-  try {
-    const dir = path.join(ASSETS_DIR, guildId);
-    return fs.readdirSync(dir).filter(f => {
-      if (!/\.(png|jpg|jpeg|webp)$/i.test(f)) return false;
-      return fs.statSync(path.join(dir, f)).isFile();
-    });
-  } catch { return []; }
-}
-
-function getPersonalDir(userId) {
-  return path.join(ASSETS_DIR, `user_${userId}`);
-}
-
-function getPersonalFiles(userId) {
-  try {
-    return fs.readdirSync(getPersonalDir(userId)).filter(f => /\.(png|jpg|jpeg|webp)$/i.test(f));
-  } catch { return []; }
+async function getPersonalFiles(discordId) {
+  return wm.listImgs(wm.personalDir(await wm.userIdOf(discordId)));
 }
 
 async function isPersonalGroup(guildId, groupName) {
@@ -96,13 +82,18 @@ async function isPersonalGroup(guildId, groupName) {
   return parseInt(rows[0].cnt) === 0;
 }
 
-function resolveWatermarkPath(wmType, guildId, groupName, userId) {
+async function resolveWatermarkPath(wmType, guildId, groupName, discordId) {
   if (!wmType || wmType === 'none') return null;
-  if (wmType.startsWith('personal:')) return path.join(getPersonalDir(userId), wmType.slice('personal:'.length));
+  if (wmType.startsWith('personal:')) {
+    const dir = wm.personalDir(await wm.userIdOf(discordId));
+    return dir ? path.join(dir, wmType.slice('personal:'.length)) : null;
+  }
   const filename = wmType.startsWith('guild:') ? wmType.slice('guild:'.length) : wmType;
-  return groupName
-    ? path.join(getGroupWatermarkDir(guildId, groupName), filename)
-    : path.join(ASSETS_DIR, guildId, filename);
+  const orgId = await wm.orgIdOf(guildId);
+  if (!orgId) return null;
+  // ไม่ได้เลือกกลุ่ม → ค่าอาจเป็น '<กลุ่ม>/<ไฟล์>' จาก getOrgAllFiles() ต่อจาก org dir ตรงๆ ได้เลย
+  const dir = groupName ? wm.groupDir(orgId, groupName) : wm.orgDir(orgId);
+  return path.join(dir, filename);
 }
 
 function stripExt(f) {
@@ -308,7 +299,7 @@ async function buildBasketPayload(basket, guildId, channelId, userId, channelNam
         if (value) resolved = value;
       }
       if (resolved) {
-        const p = resolveWatermarkPath(resolved, guildId, currentGroup, userId);
+        const p = await resolveWatermarkPath(resolved, guildId, currentGroup, userId);
         if (p && fs.existsSync(p)) defaultWmType = resolved;
       }
     } catch (err) {
@@ -362,8 +353,8 @@ async function buildBasketPayload(basket, guildId, channelId, userId, channelNam
   if (imgCount > 0 && canShowWatermark) {
     const isPersonal = currentGroup ? await isPersonalGroup(guildId, currentGroup) : false;
     const wmFiles = currentGroup
-      ? (isPersonal ? getPersonalFiles(userId) : getGroupWatermarkFiles(guildId, currentGroup))
-      : getGuildRootFiles(guildId);
+      ? (isPersonal ? await getPersonalFiles(userId) : await getGroupWatermarkFiles(guildId, currentGroup))
+      : await getOrgAllFiles(guildId);
     if (wmFiles.length) {
       const currentWm = pendingPost.get(userId)?.wmType || 'none';
       const prefix = isPersonal ? 'personal' : 'guild';
@@ -770,7 +761,7 @@ async function processAndPost(interaction, state) {
   let processed = [], wmErrors = [];
   if (!isVideo && imageItems.length > 0) {
     const watermarkPath = state.wmType !== 'none'
-      ? resolveWatermarkPath(state.wmType, state.guildId, state.group, state.userId)
+      ? await resolveWatermarkPath(state.wmType, state.guildId, state.group, state.userId)
       : null;
     if (watermarkPath) await interaction.editReply({ content: `⏳ ติดลายน้ำ 0/${imageItems.length} รูป...` });
     else               await interaction.editReply({ content: '⏳ กำลังเตรียมรูป...' });

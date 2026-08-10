@@ -1,13 +1,18 @@
 /**
  * watermarks — ลายน้ำของกล่องเผยแพร่ (posts) · ใช้ไฟล์ชุดเดียวกับตะกร้าดิสฯ
  *
- * โครงโฟลเดอร์ (ตั้งที่หน้า /bot/media/settings — handlers/basketHandler.js อ่านที่เดียวกัน):
- *   assets/watermark/<guild_id>/<group_name>/*.png   ← กลุ่ม public
- *   assets/watermark/user_<discord_id>/*.png         ← กลุ่ม private (ลายน้ำส่วนตัว)
+ * โครงโฟลเดอร์ (ตั้งที่ /org/settings/brand — handlers/basketHandler.js อ่านที่เดียวกัน):
+ *   assets/watermark/org_<org_id>/<group_name>/*.png   ← กลุ่มของ org (public)
+ *   assets/watermark/user_<users.id>/*.png             ← ลายน้ำส่วนตัว (private)
+ *
+ * ⚠️ **guild ไม่เกี่ยวกับลายน้ำแล้ว** (ย้าย 2026-08-10) — ลายน้ำเป็นอัตลักษณ์ของแบรนด์ = กลุ่มโซเชียล
+ *    ของเดิมเก็บเป็น `<guild_id>/<group>/` ทำให้ org ที่มีหลาย guild เห็นลายน้ำไม่ครบ
+ *    ⛔ ห้ามใส่ guildId กลับเข้ามาในไฟล์นี้ · ฝั่งบอทแปลง guild→org ที่ขอบด้วย orgIdOfGuild()
+ * ⚠️ ส่วนตัวคีย์ด้วย `users.id` ไม่ใช่ Discord ID — คนที่ล็อกอินด้วยอีเมลอย่างเดียวก็ต้องใช้ได้
+ *    และ debug mode ทำ discordId เป็น null (ดู CLAUDE.md) ของส่วนตัวจะหายทั้งกล่อง
  *
  * ⚠️ ค่าที่เก็บลงแถวงานเป็น `path:<relative>` (resolve เสร็จแล้ว) ไม่ใช่ token `guild:`/`personal:`
- *    แบบตะกร้าดิสฯ เพราะเว็บเป็น org-scope: กลุ่มที่เลือกอาจอยู่คนละ guild กับ guild ที่ผู้ใช้อยู่
- *    → ให้ที่นี่เป็นคนตัดสิน guild/โฟลเดอร์ แล้ว worker แค่ต่อ path (+ เช็คว่าไม่หลุดออกนอกโฟลเดอร์)
+ *    แบบตะกร้าดิสฯ → ให้ที่นี่เป็นคนตัดสินโฟลเดอร์ แล้ว worker แค่ต่อ path
  *    ผลพลอยได้: whitelist ตั้งแต่ตอนเขียน — client ส่ง `../../` มาก็ไม่ผ่าน
  */
 import { existsSync, readdirSync, statSync } from 'fs'
@@ -21,9 +26,9 @@ const IMG_RE = /\.(png|jpe?g|webp)$/i
 const label = f => f.replace(/\.[^.]+$/, '')
 
 /** โฟลเดอร์ลายน้ำของกลุ่มนี้ (relative จาก ASSETS_DIR) — private ใช้โฟลเดอร์ส่วนตัวของเจ้าของ */
-function groupDir({ guildId, group, visibility, discordId }) {
-  if (visibility === 'private') return discordId ? `user_${discordId}` : null
-  return guildId && group ? `${guildId}/${group}` : null
+function groupDir({ orgId, group, visibility, userId }) {
+  if (visibility === 'private') return userId ? `user_${userId}` : null
+  return orgId && group ? `org_${orgId}/${group}` : null
 }
 
 function listImgs(rel) {
@@ -35,30 +40,33 @@ function listImgs(rel) {
   } catch { return [] }
 }
 
-/** ค่า default ที่ตะกร้าดิสฯ ใช้: ของกลุ่มก่อน แล้วค่อยของ guild (เก็บเป็น token `guild:<ไฟล์>`) */
-async function defaultFile(guildId, group) {
-  if (!guildId) return null
+/**
+ * ค่า default ของกลุ่ม: คีย์ของกลุ่มก่อน แล้วค่อยค่ากลางของ org
+ * ค่าเก่าที่ย้ายมาจาก dc_guild_config เคยเก็บเป็น token `guild:<ไฟล์>` — ถอด prefix เผื่อไว้
+ */
+async function defaultFile(orgId, group) {
+  if (!orgId) return null
   const { rows } = await pool.query(
-    `SELECT "key", value FROM dc_guild_config
-      WHERE guild_id = $1 AND "key" IN ($2, 'default_watermark')`,
-    [guildId, `default_watermark_group:${group}`]
+    `SELECT key, value FROM org_config
+      WHERE org_id = $1 AND key IN ($2, 'default_watermark')`,
+    [orgId, `default_watermark_group:${group}`]
   )
   const byKey = Object.fromEntries(rows.map(r => [r.key, r.value]))
   const raw = byKey[`default_watermark_group:${group}`] || byKey.default_watermark || null
   if (typeof raw !== 'string' || !raw || raw === 'none') return null
-  return raw.replace(/^(guild|personal):/, '')            // เก็บเป็น token ในตารางเดิม เอาแค่ชื่อไฟล์
+  return raw.replace(/^(guild|personal):/, '')
 }
 
 /**
  * ตัวเลือกลายน้ำของกลุ่มหนึ่ง
  * @returns {Promise<{options: Array<{value:string,label:string}>, default: string|null}>}
  */
-export async function listWatermarks({ guildId, group, visibility, discordId }) {
-  const rel = groupDir({ guildId, group, visibility, discordId })
+export async function listWatermarks({ orgId, group, visibility, userId }) {
+  const rel = groupDir({ orgId, group, visibility, userId })
   const files = listImgs(rel)
   const options = files.map(f => ({ value: `path:${rel}/${f}`, label: label(f) }))
 
-  const def = visibility === 'private' ? null : await defaultFile(guildId, group)
+  const def = visibility === 'private' ? null : await defaultFile(orgId, group)
   const match = def && files.includes(def) ? `path:${rel}/${def}` : null
   return { options, default: match }
 }
@@ -89,7 +97,7 @@ export async function listAllWatermarks({ orgId, userId, discordId }) {
   const byValue = new Map()
   for (const g of groups) {
     const { options } = await listWatermarks({
-      guildId: g.guildId, group: g.name, visibility: g.visibility, discordId,
+      orgId, group: g.name, visibility: g.visibility, userId,
     })
     for (const o of options) {
       if (!byValue.has(o.value)) byValue.set(o.value, { ...o, group: g.name })

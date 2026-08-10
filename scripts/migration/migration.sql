@@ -688,3 +688,26 @@ DELETE FROM dc_guild_config c
 INSERT INTO org_config (org_id, key, value, updated_at)
 SELECT id, 'ai_shared_quota_daily', '100000', now() FROM orgs
 ON CONFLICT (org_id, key) DO NOTHING;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 2026-08-10 · ลายน้ำ/อัตลักษณ์ ย้ายจาก guild → org (คู่กับ scripts/migration/moveWatermarksToOrg.js)
+--
+-- ย้ายเฉพาะ `default_watermark_group:<กลุ่ม>` — คีย์นี้ไม่ชนกันเพราะชื่อกลุ่มต่างกันต่อแบรนด์
+-- แปลง json → text และถอด prefix `guild:` ทิ้ง (org_config.value เป็น text ล้วน)
+--
+-- ⛔ **ไม่ย้าย** `default_watermark` ราย guild โดยตั้งใจ — org เดียวมีหลาย guild และแต่ละ guild
+--    ตั้งค่าคนละไฟล์ (ราชบุรี='pple-orange.png' · อาสาฯ='asa-no-txt.png') ยัดเข้า org เดียว
+--    ต้องเลือกทิ้งอันหนึ่งแบบมั่ว · ทุกกลุ่มมี default ของตัวเองครบแล้ว จึงไม่กระทบการใช้งาน
+-- ⛔ **ไม่ย้าย** `quote_default_template` ราย guild — ค่าเท่ากับแถว global อยู่แล้ว (ผลลัพธ์เท่าเดิม)
+INSERT INTO org_config (org_id, key, value, updated_at)
+SELECT DISTINCT ON (g.org_id, c."key")
+       g.org_id,
+       c."key",
+       regexp_replace(c.value #>> '{}', '^(guild|personal):', ''),
+       now()
+  FROM dc_guild_config c
+  JOIN dc_guilds g ON g.guild_id = c.guild_id
+ WHERE c."key" LIKE 'default_watermark_group:%'
+   AND g.org_id IS NOT NULL
+ ORDER BY g.org_id, c."key", c.guild_id
+ON CONFLICT (org_id, key) DO NOTHING;

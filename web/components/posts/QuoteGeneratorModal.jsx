@@ -42,7 +42,7 @@ const COLORS = [
 // ไม่จำ: รูปพื้นหลัง · ครอป/ซูม · ข้อความคำคม (เป็นของเฉพาะใบนั้น จำไปก็ผิด)
 //
 // ⚠️ จำเฉพาะตอน **บันทึกสำเร็จ** เท่านั้น ไม่งั้นกดเล่นแล้วยกเลิกก็ติดไปด้วย
-// ⚠️ ค่าที่จำไว้ทับ `quote_default_template` ที่ตั้งใน /bot/media/quote → config นั้นจึงมีผล
+// ⚠️ ค่าที่จำไว้ทับ `quote_default_template` ที่ตั้งใน /org/settings/brand → config นั้นจึงมีผล
 //    แค่ครั้งแรกของผู้ใช้แต่ละคน (ฝั่งบอทยังใช้ config ปกติ)
 const LAST_LS_KEY = 'posts.quoteLast'
 const AUTHOR_LS_KEY = 'posts.quoteAuthor'   // คีย์เดิม — อ่านต่อได้เพื่อไม่ให้ค่าที่เคยจำไว้หาย

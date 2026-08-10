@@ -14,35 +14,20 @@ const {
 const path = require('path');
 const fs = require('fs');
 const { fetchBuffer, applyWatermark, autoEnhance } = require('../utils/watermarkImage');
+const wm = require('../services/watermarkPaths');
 
-const ASSETS_DIR = path.join(__dirname, '..', 'assets', 'watermark');
 const SUPPORTED_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif']);
 
 const pending = new Map(); // userId → { type, pos, opacity, messageId }
 
-function getWatermarkDir(guildId) {
-  const guildDir = path.join(ASSETS_DIR, guildId);
-  return fs.existsSync(guildDir) ? guildDir : ASSETS_DIR;
+// ลายน้ำผูกกับ org/users.id แล้ว ไม่ใช่ guild/Discord ID — แปลงที่ services/watermarkPaths.js
+// ไฟล์ของ org รวมทุกกลุ่ม (ลง subfolder 1 ชั้น) เพราะเมนูนี้ไม่ได้เลือกกลุ่ม
+async function getOrgFiles(guildId) {
+  return wm.listImgsRec(wm.orgDir(await wm.orgIdOf(guildId)));
 }
 
-function getPersonalDir(userId) {
-  return path.join(ASSETS_DIR, `user_${userId}`);
-}
-
-function getWatermarkFiles(guildId) {
-  try {
-    return fs.readdirSync(getWatermarkDir(guildId)).filter(f => /\.(png|jpg|jpeg|webp)$/i.test(f));
-  } catch {
-    return [];
-  }
-}
-
-function getPersonalFiles(userId) {
-  try {
-    return fs.readdirSync(getPersonalDir(userId)).filter(f => /\.(png|jpg|jpeg|webp)$/i.test(f));
-  } catch {
-    return [];
-  }
+async function getPersonalFiles(discordId) {
+  return wm.listImgs(wm.personalDir(await wm.userIdOf(discordId)));
 }
 
 function stripExt(filename) {
@@ -141,8 +126,8 @@ async function handleWatermarkCommand(interaction) {
 
   const { guildId } = interaction;
   const userId = interaction.user.id;
-  const personalFiles = getPersonalFiles(userId);
-  const guildFiles = getWatermarkFiles(guildId);
+  const personalFiles = await getPersonalFiles(userId);
+  const guildFiles = await getOrgFiles(guildId);
 
   if (personalFiles.length === 0 && guildFiles.length === 0) {
     return interaction.reply({
@@ -188,8 +173,8 @@ async function handleWatermarkEnhance(interaction) {
   const state = pending.get(interaction.user.id);
   if (!state) return interaction.deferUpdate();
   state.enhance = !state.enhance;
-  const personalFiles = getPersonalFiles(state.userId);
-  const guildFiles = getWatermarkFiles(state.guildId);
+  const personalFiles = await getPersonalFiles(state.userId);
+  const guildFiles = await getOrgFiles(state.guildId);
   await interaction.update({ components: buildComponents(personalFiles, guildFiles, state.enhance) });
 }
 
@@ -261,10 +246,12 @@ async function processWatermark(interaction, state, customText) {
   let imagePath = null;
   if (state.type && state.type !== 'custom') {
     if (state.type.startsWith('personal:')) {
-      imagePath = path.join(getPersonalDir(state.userId), state.type.slice('personal:'.length));
+      const dir = wm.personalDir(await wm.userIdOf(state.userId));
+      imagePath = dir ? path.join(dir, state.type.slice('personal:'.length)) : null;
     } else {
       const filename = state.type.startsWith('guild:') ? state.type.slice('guild:'.length) : state.type;
-      imagePath = path.join(getWatermarkDir(state.guildId), filename);
+      const dir = wm.orgDir(await wm.orgIdOf(state.guildId));
+      imagePath = dir ? path.join(dir, filename) : null;
     }
   }
 

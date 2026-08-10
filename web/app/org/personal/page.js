@@ -19,6 +19,11 @@ export default async function PersonalPage() {
           <h2 className="mt-2 font-semibold text-gray-900 dark:text-disc-text">Cooking</h2>
           <p className="text-sm text-gray-500 dark:text-disc-muted">{t('personal.cookingDesc')}</p>
         </a>
+        <a href="/org/personal/brand" className="rounded-2xl border border-gray-200 dark:border-disc-border bg-white dark:bg-card-bg p-5 hover:border-orange/40">
+          <div className="text-2xl">💧</div>
+          <h2 className="mt-2 font-semibold text-gray-900 dark:text-disc-text">{t('personalBrand.title')}</h2>
+          <p className="text-sm text-gray-500 dark:text-disc-muted">{t('personalBrand.subtitle')}</p>
+        </a>
       </div>
     </div>
   )

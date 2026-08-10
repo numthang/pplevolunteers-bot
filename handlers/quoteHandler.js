@@ -16,6 +16,7 @@ const sharp = require('sharp');
 const { fetchBuffer, applyWatermark } = require('../utils/watermarkImage');
 const { renderQuoteStyle } = require('../utils/quoteStyles');
 const { QUOTE_STYLE_OPTIONS, QUOTE_STYLE_KEYS, normalizeStyle } = require('../utils/quoteStyleKeys');
+const wm = require('../services/watermarkPaths');
 const { resolveConfig } = require('../db/configResolver');
 const { getUserSetting, setUserSetting } = require('../db/userConfig');
 
@@ -46,7 +47,6 @@ async function cropSquare(buf, pos) {
   return sharp(buf).resize(1080, 1080, { fit: 'cover', position: CROP_POS[pos] ?? sharp.strategy.attention }).toBuffer();
 }
 
-const ASSETS_DIR = path.join(__dirname, '..', 'assets', 'watermark');
 const SUPPORTED  = new Set(['image/png', 'image/jpeg', 'image/webp']);
 const pending    = new Map(); // userId → { url, mimeType, filename, style, saturation, crop, watermark }
 
@@ -55,42 +55,26 @@ const pending    = new Map(); // userId → { url, mimeType, filename, style, sa
 const STYLE_OPTIONS = QUOTE_STYLE_OPTIONS;
 
 
-// ── Watermark helpers (server + personal รวมกัน) ─────────────────────────────
-function getWatermarkDir(guildId) {
-  const guildDir = path.join(ASSETS_DIR, guildId);
-  return fs.existsSync(guildDir) ? guildDir : ASSETS_DIR;
-}
-function getPersonalDir(userId) {
-  return path.join(ASSETS_DIR, `user_${userId}`);
-}
-const IMG_RE = /\.(png|jpg|jpeg|webp)$/i;
-// คืน relative path ของไฟล์ภาพ — ไฟล์ชั้นบนสุด + ลง subfolder 1 ชั้น (เช่น "กลุ่ม/1. logo.png")
-function listFilesRec(dir) {
-  const out = [];
-  let entries;
-  try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return out; }
-  for (const e of entries) {
-    if (e.isFile() && IMG_RE.test(e.name)) out.push(e.name);
-    else if (e.isDirectory()) {
-      for (const f of (fs.readdirSync(path.join(dir, e.name)).filter(x => IMG_RE.test(x))))
-        out.push(path.join(e.name, f));
-    }
-  }
-  return out;
-}
+// ── Watermark helpers (ขององค์กร + ส่วนตัว รวมกัน) ───────────────────────────
+// โฟลเดอร์ผูกกับ org/users.id ไม่ใช่ guild/Discord ID แล้ว — แปลงที่ services/watermarkPaths.js
+// token ยังเป็น 'guild:<rel>' เหมือนเดิมเพื่อไม่ให้ค่าที่เก็บไว้ใน config พัง (อ่านว่า "ขององค์กร")
 function stripExt(f) {
   return path.basename(f).replace(/\.[^.]+$/, '').replace(/^\d+\.?\s*/, '');
 }
 // คืน [{ value:'personal:rel'|'guild:rel', label, emoji }] — รวม subfolder
-function getWatermarkChoices(guildId, userId) {
-  const personal = listFilesRec(getPersonalDir(userId)).map(f => ({ value: `personal:${f}`, label: stripExt(f), emoji: '🔒' }));
-  const guild    = listFilesRec(getWatermarkDir(guildId)).map(f => ({ value: `guild:${f}`,    label: stripExt(f) }));
-  return [...personal, ...guild].slice(0, 24); // Discord select cap 25 (เผื่อ "ไม่ใส่")
+async function getWatermarkChoices(guildId, discordId) {
+  const [orgId, userId] = await Promise.all([wm.orgIdOf(guildId), wm.userIdOf(discordId)]);
+  const personal = wm.listImgsRec(wm.personalDir(userId)).map(f => ({ value: `personal:${f}`, label: stripExt(f), emoji: '🔒' }));
+  const org      = wm.listImgsRec(wm.orgDir(orgId)).map(f => ({ value: `guild:${f}`,    label: stripExt(f) }));
+  return [...personal, ...org].slice(0, 24); // Discord select cap 25 (เผื่อ "ไม่ใส่")
 }
-function resolveWatermarkPath(watermark, guildId, userId) {
+async function resolveWatermarkPath(watermark, guildId, discordId) {
   if (!watermark) return null;
   const [scope, file] = [watermark.slice(0, watermark.indexOf(':')), watermark.slice(watermark.indexOf(':') + 1)];
-  const dir = scope === 'personal' ? getPersonalDir(userId) : getWatermarkDir(guildId);
+  const dir = scope === 'personal'
+    ? wm.personalDir(await wm.userIdOf(discordId))
+    : wm.orgDir(await wm.orgIdOf(guildId));
+  if (!dir) return null;
   const full = path.join(dir, file);
   return fs.existsSync(full) ? full : null;
 }
@@ -111,7 +95,7 @@ async function handleQuoteCommand(interaction) {
     });
   }
 
-  const wmChoices = getWatermarkChoices(interaction.guildId, interaction.user.id);
+  const wmChoices = await getWatermarkChoices(interaction.guildId, interaction.user.id);
 
   // โหลด saved state ก่อน แล้วค่อย fallback config > hard default
   const saved = await getQuoteState(interaction.user.id).catch(() => null);
@@ -130,7 +114,7 @@ async function handleQuoteCommand(interaction) {
   if (defaultWatermark === null) {
     try {
       const { value } = await resolveConfig(interaction.user.id, interaction.guildId, KEY_WATERMARK);
-      if (value && resolveWatermarkPath(value, interaction.guildId, interaction.user.id)) defaultWatermark = value;
+      if (value && await resolveWatermarkPath(value, interaction.guildId, interaction.user.id)) defaultWatermark = value;
     } catch (err) { console.error('[quoteHandler] resolve watermark default:', err.message); }
   }
 
@@ -343,7 +327,7 @@ async function handleQuoteModal(interaction) {
     });
 
     // ลายน้ำ: center → สุ่ม, อื่นๆ → ฝั่งเดียวกับ quote แนวนอน คนละแถบแนวตั้ง (บนซ้าย→ล่างซ้าย)
-    const wmPath = resolveWatermarkPath(state.watermark, interaction.guildId, interaction.user.id);
+    const wmPath = await resolveWatermarkPath(state.watermark, interaction.guildId, interaction.user.id);
     if (wmPath) {
       const wmPos  = vertical === 'center'
         ? 'random'

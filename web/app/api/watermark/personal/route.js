@@ -11,17 +11,19 @@ const MAX_SIZE     = 5 * 1024 * 1024 // 5 MB
 const ALLOWED_MIME = new Set(['image/png', 'image/jpeg', 'image/webp'])
 const ALLOWED_EXT  = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' }
 
-function userDir(discordId) {
-  return join(ASSETS_DIR, `user_${discordId}`)
+// โฟลเดอร์ส่วนตัวคีย์ด้วย users.id ไม่ใช่ Discord ID (ย้าย 2026-08-10)
+// เหตุผล: คนที่ล็อกอินด้วยอีเมลอย่างเดียวไม่มี discordId · debug mode ก็ทำ discordId เป็น null
+function userDir(userId) {
+  return userId ? join(ASSETS_DIR, `user_${userId}`) : null
 }
 
 export async function GET(req) {
   const session = await getServerSession(authOptions)
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const dir = userDir(session.user.discordId)
+  const dir = userDir(session.user.userId)
   let files = []
-  if (existsSync(dir)) {
+  if (dir && existsSync(dir)) {
     files = (await readdir(dir)).filter(f => /\.(png|jpe?g|webp)$/i.test(f))
   }
   const { rows } = session.user.userId ? await pool.query(
@@ -37,7 +39,7 @@ export async function PATCH(req) {
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { default_watermark } = await req.json()
-  const userId = session.user.userId          // prefs key = users.id (user_config) · โฟลเดอร์ไฟล์ยังใช้ discordId
+  const userId = session.user.userId          // ทั้ง prefs (user_config) และโฟลเดอร์ไฟล์ใช้ users.id
   if (!userId) return Response.json({ error: 'ไม่พบบัญชีผู้ใช้' }, { status: 400 })
 
   if (!default_watermark || default_watermark === 'none') {
@@ -74,7 +76,8 @@ export async function POST(req) {
     return Response.json({ error: 'ไฟล์ต้องไม่เกิน 5 MB' }, { status: 400 })
   }
 
-  const dir = userDir(session.user.discordId)
+  const dir = userDir(session.user.userId)
+  if (!dir) return Response.json({ error: 'ไม่พบบัญชีผู้ใช้' }, { status: 400 })
   if (!existsSync(dir)) await mkdir(dir, { recursive: true })
 
   const existing = (await readdir(dir)).filter(f => /\.(png|jpe?g|webp)$/i.test(f))

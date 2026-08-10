@@ -17,8 +17,8 @@ const TABS = [
   { href: '/bot/roles',           label: 'ยศ Discord', gate: 'admin' },
   // /bot/ai แสดงต่อ superadmin (โมเดล+ai_mention) และ editor (โหมด/prompt) — ตรงกับ page.js
   { href: '/bot/ai',              label: 'AI',         gate: 'editor' },
-  { href: '/bot/media/quote',     label: 'Quote' },
-  { href: '/bot/media/watermark', label: 'Watermark' },
+  // ลายน้ำ + สไตล์การ์ดคำคม ย้ายไป /org/settings/brand แล้ว (2026-08-10) — เป็นอัตลักษณ์ของแบรนด์
+  // ไม่ใช่ค่าตั้งของบอท · ของส่วนตัวอยู่ /org/personal/brand
 ]
 
 export default function BotSettingsNav() {

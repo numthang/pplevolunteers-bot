@@ -1143,7 +1143,8 @@
         "features": "Features",
         "roles": "Roles & areas",
         "social": "Social accounts",
-        "ai": "AI"
+        "ai": "AI",
+        "brand": "Brand"
       },
       "settingsLabel": "Settings: ",
       "pageHeading": "Organization Settings"
@@ -1331,6 +1332,53 @@
       "saving": "Saving…",
       "saveSuccess": "Saved",
       "saveError": "Could not save"
+    },
+    "brand": {
+      "loading": "Loading…",
+      "ownerOnly": "Only the organisation owner can change brand settings",
+      "description": "Watermarks and brand colour — shared by both the bot and the web app · watermarks belong to social groups, no longer tied to a Discord server",
+      "orgWide": "Organisation-wide watermarks",
+      "orgWideHint": "Used when no group is selected",
+      "groupHint": "Watermarks for this group",
+      "upload": "Upload",
+      "uploadSuccess": "Uploaded",
+      "empty": "No watermarks in this group yet",
+      "setDefault": "Set as default",
+      "isDefault": "✓ Default",
+      "defaultSuccess": "Default updated",
+      "delete": "Delete",
+      "deleteConfirm": "Delete \"{file}\"?",
+      "deleteSuccess": "Deleted",
+      "quoteTitle": "Quote cards",
+      "accentLabel": "Brand colour",
+      "accentDefault": "Not set (system orange)",
+      "accentReset": "Clear",
+      "templateLabel": "Default card style",
+      "templateNone": "Unset (use system default)",
+      "save": "Save",
+      "saving": "Saving…",
+      "saveSuccess": "Saved",
+      "saveError": "Could not save"
+    },
+    "personalBrand": {
+      "title": "Personal watermarks",
+      "subtitle": "For work you publish under your own name — separate from the organisation's watermarks",
+      "loading": "Loading…",
+      "description": "Personal watermarks apply wherever you work under your own name · to use the organisation's watermarks, switch to organisation mode when publishing",
+      "uploading": "Uploading…",
+      "uploadError": "Upload failed",
+      "upload": "Upload",
+      "full": "You have {max} files already — delete one before uploading",
+      "dropHint": "Drop an image here, or click to choose a file",
+      "fileHint": "PNG / JPG / WebP — max 5 MB",
+      "count": "{used} / {max} files",
+      "empty": "No watermarks yet",
+      "currentDefault": "Default: {file}",
+      "setDefault": "Set as default",
+      "unsetDefault": "Unset default",
+      "delete": "Delete",
+      "deleteConfirm": "Delete \"{file}\"?",
+      "dismissError": "Dismiss error"
     }
   },
   "profile": {
