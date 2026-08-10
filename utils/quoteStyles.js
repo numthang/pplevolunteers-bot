@@ -17,6 +17,11 @@ GlobalFonts.registerFromPath(
   path.join(__dirname, '..', 'assets', 'fonts', 'GoogleSans-Bold.ttf'),
   'GSans'
 );
+// TH Sarabun (มีหัว ทรงราชการ) — ตัวเลือกฟอนต์ของการ์ดคำคมแบบไม่มีรูป
+GlobalFonts.registerFromPath(
+  path.join(__dirname, '..', 'assets', 'fonts', 'THSarabunNew-Bold.ttf'),
+  'Sarabun'
+);
 GlobalFonts.registerFromPath(
   path.join(__dirname, '..', 'assets', 'fonts', 'GoogleSans-Regular.ttf'),
   'GSansLight'
@@ -992,10 +997,34 @@ async function renderCenter(buf, { quoteText, authorName, saturation = 1.0, acce
 // ⚠️ ทิศ gradient ต้องวิ่ง **หนี** สีตัวอักษรเสมอ: ink ขาว → ปลายเข้มลง · ink ดำ → ปลายสว่างขึ้น
 //    ไล่ผิดทาง = สี CI อ่อน (ink ดำ) เจอปลายเข้ม แล้วตัวหนังสือจม (เหตุผลเดียวกับ panelPalette:
 //    contrastText() คำนวณจากสีเดียว มันไม่รู้ว่าปลาย gradient ไปทางไหน)
+// ลายพื้นมุมขวาล่าง — ค่าที่ user เคาะจากตัวอย่างที่ทำมาให้ดูเอง (2026-08-11):
+// **ทั้งดวงอยู่ในกรอบ ไม่โดนขอบตัด · opacity 10% · สีจริงของไฟล์ ไม่ย้อมสี**
+// (ก่อนนี้ลองย้อมเทา/ย้อมสีตัวอักษร + โผล่จากขอบ → user ตีตกทั้งชุด "อ่านเป็นเงา")
+const WM = { scale: 0.45, alpha: 0.10, margin: 0.06 };
+
+// แถบว่างก้นการ์ดที่กันไว้ให้ลายน้ำ — ข้อความจัดกลางเฉพาะพื้นที่**เหนือแถบนี้**
+// (user เคาะ 2026-08-11: ตัวหนังสือเดิมเต็มใบเกินไป ไม่เหลือที่แปะลายน้ำกลางล่าง)
+const WM_BAND = 0.16;
+
+// ฟอนต์ของคำคม — คีย์ที่ผู้ใช้เลือกได้ (ค่าใน STYLES ที่มีรูปยังใช้ของเดิม ไม่เกี่ยวกัน)
+const PLAIN_FONTS = {
+  anakotmai: { quote: 'Anakotmai', author: 'AnakotmaiLight' },  // ไม่มีหัว — ฟอนต์แบรนด์
+  gsans:     { quote: 'GSans',     author: 'GSansLight' },      // มีหัว ทันสมัย
+  sarabun:   { quote: 'Sarabun',   author: 'Sarabun' },         // มีหัว ทรงราชการ
+};
+
+// ขนาดตัวอักษร = สัดส่วนต่อความกว้างการ์ด (เป็น **จุดตั้งต้น** — ข้อความยาวยังถูกย่อลงอีกได้)
+const PLAIN_SIZES = { s: 0.072, m: 0.092, l: 0.115 };
+
+/** สุ่ม 1 ตัวจาก array · array ว่าง = null */
+const pickRandom = arr => (arr.length ? arr[Math.floor(Math.random() * arr.length)] : null);
+
 async function renderPlain({
   quoteText, authorName = '', accentColor, width = 1080, height = 1350, bg = 'solid',
-  watermarkPath = null,
+  watermarkPath = null, font = 'anakotmai', textSize = 'm',
 }) {
+  const fonts = PLAIN_FONTS[font] || PLAIN_FONTS.anakotmai;
+  const sizeFactor = PLAIN_SIZES[textSize] || PLAIN_SIZES.m;
   const SS = 2;                               // supersample แล้วย่อ = ขอบตัวอักษรคม (เหมือน renderCenter)
   const base = accentColor || ORANGE;
   const { ink, sub } = panelPalette(base);
@@ -1018,46 +1047,37 @@ async function renderPlain({
   }
   ctx.fillRect(0, 0, W, H);
 
-  // ลายพื้นมุมล่างขวา — **ลายพื้น** ไม่ใช่ตัวคั่นสายตา (ตัวคั่นคือเครื่องหมายเล็กเหนือข้อความ)
-  // 0.12 คือเพดานที่ตัวหนังสือทับแล้วคอนทราสต์ยังไม่ตก — สูงกว่านี้มันแย่งเป็นพระเอก
-  // ย้อมเป็นสีตัวอักษรทั้งคู่ (ทั้งเครื่องหมายและลายน้ำ) — ลายน้ำสีจริงทับพื้น CI แล้วสีตีกัน
-  const patternName = bg === 'mark' ? existingMarks(['big_open', ...OPEN_MARKS])[0] : null;
+  // ลายพื้นมุมขวาล่าง — **ทั้งดวงอยู่ในกรอบ ไม่โดนขอบตัด · opacity 10% · สีจริงไม่ย้อม**
+  // (user เคาะ 2026-08-11 จากตัวอย่างที่ทำมาให้ดูเอง — แบบย้อมสี/โผล่จากขอบถูกตีตกหมด)
+  //
+  // bg='mark' = เครื่องหมายคำพูด (สุ่มทุกใบ ตามที่ user สั่ง 2026-08-11) · bg='logo' = ลายน้ำองค์กร
+  const patternName = bg === 'mark' ? pickRandom(existingMarks(['big_open', ...OPEN_MARKS])) : null;
   const patternImg =
     patternName ? await loadMark(patternName)
-    : bg === 'logo' && watermarkPath ? await loadImage(watermarkPath).catch(() => null)
+    // ⛔ ห้าม .catch(() => null) ตรงนี้ — เคยเขียนแบบนั้นแล้วไฟล์ลายน้ำที่ path เพี้ยน
+    //    (โครงโฟลเดอร์เปลี่ยนเป็น org_<id>/ 2026-08-10) ทำให้ได้การ์ด**พื้นสีเปล่า**เงียบๆ
+    //    ผู้ใช้เลือก "ลายน้ำ" มาแล้ว ได้การ์ดไม่มีลายน้ำ = ผิดกว่าขึ้น error ให้เห็น
+    : bg === 'logo' && watermarkPath ? await loadImage(watermarkPath)
     : null;
-  if (patternImg) {
-    // ลายน้ำมักเป็นโลโก้แนวนอน ยึด**ความกว้าง** · เครื่องหมายเป็นทรงตั้ง ยึดความสูง
-    const wide = patternImg.width >= patternImg.height;
-    const ph = wide ? Math.round(W * 0.78 * (patternImg.height / patternImg.width))
-                    : Math.round(H * 0.52);
-    const pw = Math.round((patternImg.width / patternImg.height) * ph);
 
-    // ให้เห็นโลโก้ ~70% (เดิมโผล่แค่เสี้ยวมุม 38%×28% เลยดูเหมือนคราบเงามากกว่าโลโก้)
-    const SHOW = 0.70;
-    // เครื่องหมายคำพูดยังย้อมสีตัวอักษร (มันเป็นองค์ประกอบของงานพิมพ์)
-    // ส่วน**ลายน้ำย้อมเทา** — ย้อมดำบนพื้น CI แล้วอ่านเป็น "เงา" ไม่ใช่โลโก้ (user เคาะ 2026-08-10)
-    const isLogo = !patternName;
-    ctx.globalAlpha = isLogo ? 0.22 : 0.12;
-    drawTinted(
-      ctx, patternImg,
-      W - Math.round(pw * SHOW), H - Math.round(ph * SHOW),
-      pw, ph,
-      isLogo ? GREY_TINT : ink
-    );
+  if (patternImg) {
+    const m  = Math.round(W * WM.margin);
+    const pw = Math.round(W * WM.scale);
+    const ph = Math.round(pw * (patternImg.height / patternImg.width));
+    ctx.globalAlpha = WM.alpha;
+    ctx.drawImage(patternImg, W - pw - m, H - ph - m, pw, ph);
     ctx.globalAlpha = 1;
   }
 
-  // ── ข้อความกลางการ์ด ──────────────────────────────────────────────────────
-  // ไม่มีรูปแย่งพื้นที่ ตัวหนังสือจึงใหญ่กว่าสไตล์อื่นได้ (0.098W เทียบกับ 0.085W ของ shade-center)
+  // ── ข้อความ — จัดกลางเฉพาะพื้นที่**เหนือแถบลายน้ำ** ────────────────────────
   const padX = Math.round(W * 0.10);
   const padY = Math.round(H * 0.07);
+  const band = Math.round(H * WM_BAND);     // ที่ว่างก้นการ์ดไว้แปะโลโก้
   const maxW = W - padX * 2;
-  const maxH = H - padY * 2;
+  const maxH = H - padY * 2 - band;
 
-  // ⚠️ **ไม่สุ่ม** เครื่องหมายเหมือนสไตล์ที่มีรูป — การ์ดไม่มีรูปเหลือองค์ประกอบแค่สี+ตัวอักษร+
-  //    เครื่องหมาย สุ่มเมื่อไหร่ = สองใบที่ตั้งค่าเหมือนกันเป๊ะออกมาคนละหน้า (outline กลวงกับทึบ
-  //    ต่างกันคนละเรื่อง) · ตรึงไว้ตัวเดียวให้ชุดเดียวกันหน้าเหมือนกันเสมอ
+  // ⚠️ **ไม่สุ่ม** เครื่องหมายนำหน้าข้อความ — ตัวนี้เป็นองค์ประกอบของงานพิมพ์ ต้องนิ่ง
+  //    (ที่สุ่มคือ **ลายพื้น** ด้านหลัง ซึ่งเป็นคนละตัวกัน)
   const pool    = existingMarks(['double_open', ...OPEN_MARKS]);
   const markImg = pool.length ? await loadMark(pool[0]) : null;
 
@@ -1068,8 +1088,8 @@ async function renderPlain({
   // ที่ 4:5 จึงล้นก้นการ์ดได้ · ย่อ startSz ต่อเองจนบล็อกสูงไม่เกินกรอบ (สไตล์ที่มีรูปไม่เจอปัญหานี้
   // เพราะกล่องข้อความเล็กกว่าและ drawQuoteBlock มีลูปย่อของมันเอง)
   let qsz, lines, lh, markH, markGap, blockH;
-  for (let start = Math.max(40, Math.round(W * 0.098)); ; start = Math.round(start * 0.92)) {
-    ({ fontSize: qsz, lines } = fitFont(ctx, quoteText, maxW, start, 6, 'Anakotmai'));
+  for (let start = Math.max(40, Math.round(W * sizeFactor)); ; start = Math.round(start * 0.92)) {
+    ({ fontSize: qsz, lines } = fitFont(ctx, quoteText, maxW, start, 6, fonts.quote));
     lh      = qsz * 1.24;
     markH   = markImg ? Math.round(qsz * 1.05) : 0;
     markGap = markImg ? Math.round(qsz * 0.55) : 0;
@@ -1078,7 +1098,7 @@ async function renderPlain({
   }
 
   ctx.textBaseline = 'top';
-  let ty = Math.round((H - blockH) / 2);
+  let ty = Math.round((H - band - blockH) / 2);   // ขยับขึ้น เว้นก้นการ์ดไว้แปะโลโก้
 
   if (markImg) {
     const markW = Math.round((markImg.width / markImg.height) * markH);
@@ -1086,7 +1106,7 @@ async function renderPlain({
     ty += markH + markGap;
   }
 
-  ctx.font = `bold ${qsz}px Anakotmai`;
+  ctx.font = `bold ${qsz}px ${fonts.quote}`;
   ctx.fillStyle = ink;
   for (const l of lines) {
     lsDraw(ctx, l, (W - lsWidth(ctx, l, 1.0)) / 2, ty, 1.0);
@@ -1095,7 +1115,7 @@ async function renderPlain({
 
   if (authorName) {
     ty += authGap;
-    ctx.font = `${nsz}px AnakotmaiLight`;
+    ctx.font = `${nsz}px ${fonts.author}`;
     ctx.fillStyle = sub;
     lsDraw(ctx, authorName, (W - lsWidth(ctx, authorName, 0.8)) / 2, ty, 0.8);
   }

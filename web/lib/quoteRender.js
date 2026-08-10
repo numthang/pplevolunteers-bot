@@ -19,7 +19,7 @@ import { resolve } from 'node:path'
 import { REPO_ROOT } from './postsStorage.js'
 import {
   QUOTE_STYLE_KEYS, QUOTE_STYLE_OPTIONS, normalizeStyle,
-  PLAIN_SIZE, isPlainStyle, plainBgOf,
+  PLAIN_SIZE, isPlainStyle, plainBgOf, isPlainFont, isPlainTextSize,
 } from './quoteStyles.js'
 
 /**
@@ -64,7 +64,7 @@ export class QuoteRenderError extends Error {}
  * ตรวจ + normalize ค่าที่รับมาจาก client (อย่าเชื่อ client)
  * @returns {{quoteText:string, authorName:string, style:string, saturation:number|null}}
  */
-export function normalizeQuoteParams({ quoteText, authorName, style, saturation }) {
+export function normalizeQuoteParams({ quoteText, authorName, style, saturation, font, textSize }) {
   const text = String(quoteText ?? '').trim()
   if (!text) throw new QuoteRenderError('ยังไม่ได้ใส่ข้อความ')
   if (text.length > MAX_QUOTE_LEN) throw new QuoteRenderError(`ข้อความยาวเกิน ${MAX_QUOTE_LEN} ตัวอักษร`)
@@ -77,7 +77,15 @@ export function normalizeQuoteParams({ quoteText, authorName, style, saturation 
   const plainRaw = String(style ?? '').trim()
   if (isPlainStyle(plainRaw)) {
     if (!plainBgOf(plainRaw)) throw new QuoteRenderError('ไม่รู้จักสไตล์นี้')
-    return { quoteText: text, authorName: author, style: plainRaw, saturation: null }
+    // ฟอนต์/ขนาด: ค่าที่ไม่รู้จัก **ตกเป็น default เงียบๆ ไม่ throw** — มันเป็นความสวยงาม
+    // ไม่ใช่ความถูกต้อง (ต่างจากสไตล์ที่ผิดแล้วเรนเดอร์ไม่ออก) การ์ดยังออกมาใช้ได้
+    const f = String(font ?? '').trim()
+    const ts = String(textSize ?? '').trim()
+    return {
+      quoteText: text, authorName: author, style: plainRaw, saturation: null,
+      font: isPlainFont(f) ? f : 'anakotmai',
+      textSize: isPlainTextSize(ts) ? ts : 'm',
+    }
   }
 
   // ไม่ส่งสไตล์มา = 'random' (renderQuoteStyle สุ่มให้เอง โดยไม่แตะ AI)
@@ -137,6 +145,8 @@ export async function renderPlainCard(params, accentColor = null, watermarkPath 
       quoteText: params.quoteText,
       authorName: params.authorName,
       bg: plainBgOf(params.style),
+      font: params.font,
+      textSize: params.textSize,
       accentColor: accentColor || undefined,
       watermarkPath,
       ...PLAIN_SIZE,

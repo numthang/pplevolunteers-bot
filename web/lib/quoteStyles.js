@@ -90,6 +90,21 @@ export const plainBgOf = key =>
 /** การ์ดขนาดเดียว 4:5 (เคาะ 2026-08-10) — ไม่มีรูป จึงไม่มีขนาดมาจากไฟล์ ต้องตรึงเอง */
 export const PLAIN_SIZE = { width: 1080, height: 1350 }
 
+// ⚠️ คีย์ต้องตรงกับ PLAIN_FONTS / PLAIN_SIZES ใน `utils/quoteStyles.js` (renderer ตัวจริง)
+export const PLAIN_FONTS = [
+  { value: 'anakotmai', label: 'อนาคตใหม่', description: 'ฟอนต์แบรนด์ — ไม่มีหัว' },
+  { value: 'gsans',     label: 'Google Sans', description: 'มีหัว ทันสมัย' },
+  { value: 'sarabun',   label: 'สารบรรณ',    description: 'มีหัว ทรงราชการ' },
+]
+export const PLAIN_TEXT_SIZES = [
+  { value: 's', label: 'เล็ก' },
+  { value: 'm', label: 'กลาง' },
+  { value: 'l', label: 'ใหญ่' },
+]
+
+export const isPlainFont = v => PLAIN_FONTS.some(f => f.value === v)
+export const isPlainTextSize = v => PLAIN_TEXT_SIZES.some(s => s.value === v)
+
 // คีย์เก่าก่อนเปลี่ยนชื่อ 2026-08-07 — ห้ามลบ การ์ดที่ทำไปแล้วยังอ้างคีย์พวกนี้อยู่
 export const LEGACY_STYLE_ALIAS = {
   'quote-1-ember-bottom-left':  'shade-bottom-left',

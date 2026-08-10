@@ -17,7 +17,7 @@ import { X, Upload, Loader2, Sparkles, ImageIcon, ChevronLeft, Images } from 'lu
 import AssetPickerModal from './AssetPickerModal.jsx'
 import {
   FINISHES, LAYOUTS, COMBOS, styleKey, comboExists, fallbackLayout,
-  PLAIN_BGS, plainKey, isPlainStyle,
+  PLAIN_BGS, PLAIN_FONTS, PLAIN_TEXT_SIZES, plainKey, isPlainStyle,
 } from '@/lib/quoteStyles.js'
 
 const ACCEPT = 'image/png,image/jpeg,image/webp'
@@ -118,6 +118,8 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
   const [plainBg, setPlainBg] = useState(PLAIN_BGS[0].value)
   const [watermarks, setWatermarks] = useState([])   // ลายน้ำทุกกลุ่มที่โพสต์ในนามได้
   const [wmType, setWmType] = useState('')
+  const [plainFont, setPlainFont] = useState(PLAIN_FONTS[0].value)
+  const [textSize, setTextSize] = useState('m')
   const [previewUrl, setPreviewUrl] = useState(null)
   const [rendering, setRendering] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -153,6 +155,8 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
     // จำเฉพาะ "ตั้งค่าไว้ยังไง" ไม่จำ "โหมดไหน" — ดูหมายเหตุตอนเขียนค่าใน save()
     if (PLAIN_BGS.some(b => b.value === last.plainBg)) setPlainBg(last.plainBg)
     if (typeof last.wmType === 'string') setWmType(last.wmType)
+    if (PLAIN_FONTS.some(f => f.value === last.plainFont)) setPlainFont(last.plainFont)
+    if (PLAIN_TEXT_SIZES.some(s => s.value === last.textSize)) setTextSize(last.textSize)
 
     try {
       const author = last.authorName || localStorage.getItem(AUTHOR_LS_KEY)
@@ -218,7 +222,8 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
   }
 
   /** ยิง preview — ส่งไฟล์เฉพาะรอบแรก รอบต่อไปส่ง bgPath ที่ server คืนมา */
-  const render = useCallback(async (styleKey, sat, wm = '') => {
+  // ฟอนต์/ขนาดส่งเป็น override ได้ — ตอนกดชิปเปลี่ยนค่า state ยังไม่ทันอัปเดตในรอบนั้น
+  const render = useCallback(async (styleKey, sat, wm = '', opts = {}) => {
     const seq = ++reqSeq.current
     setRendering(true)
     setError('')
@@ -227,6 +232,8 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
       // ไม่มีรูป = ไม่แตะ bg เลย · แตะเมื่อไหร่ FormData.append(name, null) โยนทิ้งตั้งแต่ฝั่ง client
       if (isPlainStyle(styleKey)) {
         if (wm) form.append('wmType', wm)
+        form.append('font', opts.font ?? plainFont)
+        form.append('textSize', opts.textSize ?? textSize)
       } else if (bgPathRef.current) {
         form.append('bgPath', bgPathRef.current)
       } else {
@@ -252,7 +259,7 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
     } finally {
       if (seq === reqSeq.current) setRendering(false)
     }
-  }, [postId, quoteText, authorName, t])
+  }, [postId, quoteText, authorName, plainFont, textSize, t])
 
   const style = noBg ? plainKey(plainBg) : styleKey(finish, layout)
 
@@ -288,6 +295,14 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
     setWmType(next)
     render(plainKey(plainBg), null, next)
   }
+  function changePlainFont(next) {
+    setPlainFont(next)
+    render(plainKey(plainBg), null, wmType, { font: next })
+  }
+  function changeTextSize(next) {
+    setTextSize(next)
+    render(plainKey(plainBg), null, wmType, { textSize: next })
+  }
 
   function changeFinish(next) {
     setFinish(next)
@@ -312,6 +327,8 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
       const form = new FormData()
       if (noBg) {
         if (wmType) form.append('wmType', wmType)
+        form.append('font', plainFont)
+        form.append('textSize', textSize)
       } else if (bgPathRef.current) {
         form.append('bgPath', bgPathRef.current)
       } else {
@@ -330,7 +347,8 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
         // ⚠️ **ไม่จำโหมด `noBg`** โดยตั้งใจ — โมดัลเลือกรูปแรกของโพสต์ให้อัตโนมัติอยู่แล้ว
         //    จำโหมดไว้ = คราวหน้าเปิดมาเจอพื้นสีล้วนทั้งที่มีรูปรออยู่ตรงหน้า · จำแค่ค่าที่ตั้งไว้
         localStorage.setItem(LAST_LS_KEY, JSON.stringify({
-          finish, layout, saturation, aspect, plainBg, wmType, authorName: authorName.trim(),
+          finish, layout, saturation, aspect, plainBg, wmType, plainFont, textSize,
+          authorName: authorName.trim(),
         }))
         if (authorName.trim()) localStorage.setItem(AUTHOR_LS_KEY, authorName.trim())
       } catch { /* ไม่มี storage ก็ช่าง */ }
@@ -539,6 +557,44 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
                           }`}
                         >
                           {b.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-sm font-medium text-warm-700 dark:text-disc-text">{t('fontLabel')}</span>
+                    <div className="flex flex-wrap gap-2">
+                      {PLAIN_FONTS.map(f => (
+                        <button
+                          key={f.value} type="button" onClick={() => changePlainFont(f.value)}
+                          disabled={rendering} title={f.description}
+                          className={`px-2.5 py-1 text-sm rounded-lg border transition disabled:opacity-50 ${
+                            plainFont === f.value
+                              ? 'border-orange bg-orange text-white'
+                              : 'border-warm-200 dark:border-disc-border text-warm-700 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover'
+                          }`}
+                        >
+                          {f.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-sm font-medium text-warm-700 dark:text-disc-text">{t('textSizeLabel')}</span>
+                    <div className="flex flex-wrap gap-2">
+                      {PLAIN_TEXT_SIZES.map(s => (
+                        <button
+                          key={s.value} type="button" onClick={() => changeTextSize(s.value)}
+                          disabled={rendering}
+                          className={`px-2.5 py-1 text-sm rounded-lg border transition disabled:opacity-50 ${
+                            textSize === s.value
+                              ? 'border-orange bg-orange text-white'
+                              : 'border-warm-200 dark:border-disc-border text-warm-700 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover'
+                          }`}
+                        >
+                          {s.label}
                         </button>
                       ))}
                     </div>

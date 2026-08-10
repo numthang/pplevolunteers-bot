@@ -1444,6 +1444,8 @@
       "modePlain": "No image (brand color)",
       "plainHint": "Brand-color card, 4:5 — text centered",
       "plainBgLabel": "Background",
+      "fontLabel": "Font",
+      "textSizeLabel": "Text size",
       "watermarkLabel": "Watermark",
       "cropLabel": "Aspect ratio",
       "cropHint": "Drag and zoom to frame the shot",
