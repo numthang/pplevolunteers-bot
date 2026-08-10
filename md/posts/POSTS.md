@@ -548,6 +548,41 @@ display matrix ไม่ได้ (`-display_rotation` เป็นของ 6+)
 
 ---
 
+## 🎨 การ์ดคำคม **แบบไม่มีรูป** (เสร็จ 2026-08-10)
+
+โควตที่ไม่ต้องหารูปมาก่อน — พื้นเป็น **สี CI** (`quote_ci_accent` · personal > guild > global)
+ข้อความอยู่กลางการ์ด ขนาด **4:5 (1080×1350) อย่างเดียว** (ไม่มีรูป = ไม่มีสัดส่วนมาจากไฟล์ ต้องตรึงเอง)
+
+**พื้นหลัง 4 แบบ** (คีย์ที่เก็บใน `post_episode_media.quote_style`):
+
+| คีย์ | เห็นเป็นอะไร |
+|---|---|
+| `plain-flat` | สีแบรนด์ล้วน |
+| `plain-fade` | สีแบรนด์ไล่เข้ม |
+| `plain-mark` | สีแบรนด์ + เครื่องหมายคำพูดยักษ์จางมุมล่างขวา |
+| `plain-logo` | สีแบรนด์ + **ลายน้ำขององค์กร** จางมุมล่างขวา (ย้อมเป็นสีตัวอักษร) |
+
+**สิ่งที่แก้ (ผ่าน `/scrutinize` ก่อนเขียน):**
+
+| จุด | ทำอะไร | ทำไมถึงต้องระวัง |
+|---|---|---|
+| `utils/quoteStyles.js` | `renderPlain({quoteText, authorName, accentColor, width, height, bg, watermarkPath})` | **ไม่รับ buffer** — signature คนละแบบกับ `STYLES` จึงอยู่นอกกอง และ **ห้ามตกใน random pool** ไม่งั้นคนกดคำคมจากรูปในดิสฯ แล้วสุ่มได้พื้นสี = รูปที่เลือกมาโดนทิ้งเงียบๆ |
+| `web/lib/quoteStyles.js` | `PLAIN_BGS` / `PLAIN_STYLE_KEYS` แยกจาก `COMBOS` | ⛔ ยัดเข้า `QUOTE_STYLE_KEYS` เมื่อไหร่ = ตั้ง `quote_default_template` เป็น plain ได้ แล้วบอทเรนเดอร์ไม่ออก (`STYLES` ไม่มีคีย์นี้) |
+| `web/lib/quoteWatermark.js` (ใหม่) | แปลง `wmType` → path สัมบูรณ์ ผ่าน whitelist `listAllWatermarks()` | `wmType` มาจาก client · ต่อ path ตรงๆ = อ่านไฟล์อะไรก็ได้บนเครื่อง |
+| `GET /api/posts/watermarks` | **ไม่ส่ง `group`** = รวมลายน้ำของทุกกลุ่มที่ผู้ใช้โพสต์ในนามได้ | ลายน้ำผูกกับกลุ่ม แต่ตอนทำการ์ดยังไม่ได้เลือกกลุ่ม (เลือกทีหลังตอนเผยแพร่) · บังคับเลือกกลุ่มก่อน = เพิ่มขั้นให้คนที่แค่อยากได้การ์ด |
+| `POST …/media/quote` + `/preview` | style เป็น `plain-*` → ข้าม `resolveBackground()` · `bg_path = NULL` | **ห้ามเก็บ ref ลายน้ำลง `bg_path`** — คอลัมน์นั้นโดน `deletePostFile()` ตอนลบการ์ด = ลากไฟล์ลายน้ำขององค์กรหายไปด้วย |
+| `QuoteGeneratorModal.jsx` | "ไม่ใช้รูป" เป็น **โหมด** (`noBg`) ไม่ใช่ finish ตัวที่ 4 | เป็นชิป finish = กดสลับกลับไป 'เงา' ได้ทั้งที่ไม่เคยเลือกรูป → `FormData.append('bg', null)` โยนตั้งแต่ client · เป็นโหมดแล้ว `COMBOS`/localStorage ไม่ต้องแตะเลย |
+| ~localStorage `posts.quoteLast`~ | จำ `plainBg`/`wmType` แต่ **ไม่จำโหมด** | โมดัลเลือกรูปแรกของโพสต์ให้อัตโนมัติ · จำโหมดไว้ = คราวหน้าเปิดมาเจอพื้นสีล้วนทั้งที่มีรูปรออยู่ |
+
+**ที่ตรวจแล้วว่า `bg_path = NULL` ไม่พัง:** `DELETE /api/posts/media/[id]` เช็ค `if (deleted.bg_path)` · `gc-media` ข้าม null · `isPathReferenced` (`path = $1 OR bg_path = $1`) ไม่แมตช์ NULL
+การ์ด plain ยัง render ใหม่ได้จาก `quote_text` + `quote_style` ล้วน — ทนกว่าการ์ดที่มีรูปด้วยซ้ำ
+
+**verify:** `next build` ผ่าน · curl บน dev จริง (port 3101, login ด้วย magic token): `plain-flat` → 200 PNG ไม่มี header `X-Bg-Path` · `plain-logo` + ลายน้ำจริง → 200 · `wmType=path:../../../etc/passwd` → 400 · ลายน้ำของ guild ที่ไม่มีสิทธิ์ → 400 · `plain-nope` → 400 · บันทึกจริง → 201 `bg_path=null` · ลบการ์ด → 200 ไฟล์หายจริง · regression สไตล์ที่มีรูป → 200 + `X-Bg-Path` ยังมาเหมือนเดิม · ข้อความยาว 287 ตัว (เพดาน 300) ไม่ล้นกรอบ
+
+**ยังไม่ได้ทำ:** re-render การ์ด `plain-logo` ทีหลังจะไม่รู้ว่าเคยเลือกลายน้ำไฟล์ไหน (ไม่ได้เก็บไว้ที่ไหนเลย) — ตอนนี้ยังไม่มีฟีเจอร์ re-render จึงยังไม่กระทบ
+
+---
+
 ## 🗄️ (อ้างอิงเดิม) basket เป็นแม่แบบยังไง — เคาะ 2026-07-28
 
 > "ทำคล้ายๆ basket ใน media บนหน้าเว็บนั่นแหละ"

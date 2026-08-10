@@ -17,6 +17,7 @@ import { X, Upload, Loader2, Sparkles, ImageIcon, ChevronLeft, Images } from 'lu
 import AssetPickerModal from './AssetPickerModal.jsx'
 import {
   FINISHES, LAYOUTS, COMBOS, styleKey, comboExists, fallbackLayout,
+  PLAIN_BGS, plainKey, isPlainStyle,
 } from '@/lib/quoteStyles.js'
 
 const ACCEPT = 'image/png,image/jpeg,image/webp'
@@ -109,6 +110,14 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
   const [finish, setFinish] = useState(FINISHES[0].value)
   const [layout, setLayout] = useState(COMBOS[FINISHES[0].value][0])
   const [saturation, setSaturation] = useState('1.0')
+
+  // การ์ดไม่มีรูป — เป็น **โหมด** ไม่ใช่ finish ตัวที่ 4 โดยตั้งใจ: ถ้าเป็นชิปใน finish
+  // ผู้ใช้กดสลับกลับไปหา 'เงา' ได้ทั้งที่ไม่เคยเลือกรูป แล้วพังทั้งฝั่ง client (bgBlob เป็น null)
+  // และฝั่ง server (400 'ยังไม่ได้เลือกรูปพื้นหลัง') · เป็นโหมดแล้ว COMBOS/localStorage ไม่ต้องแตะเลย
+  const [noBg, setNoBg] = useState(false)
+  const [plainBg, setPlainBg] = useState(PLAIN_BGS[0].value)
+  const [watermarks, setWatermarks] = useState([])   // ลายน้ำทุกกลุ่มที่โพสต์ในนามได้
+  const [wmType, setWmType] = useState('')
   const [previewUrl, setPreviewUrl] = useState(null)
   const [rendering, setRendering] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -141,6 +150,9 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
     }
     if (COLORS.some(c => c.value === last.saturation)) setSaturation(last.saturation)
     if (ASPECTS.some(a => a.value === last.aspect)) setAspect(last.aspect)
+    // จำเฉพาะ "ตั้งค่าไว้ยังไง" ไม่จำ "โหมดไหน" — ดูหมายเหตุตอนเขียนค่าใน save()
+    if (PLAIN_BGS.some(b => b.value === last.plainBg)) setPlainBg(last.plainBg)
+    if (typeof last.wmType === 'string') setWmType(last.wmType)
 
     try {
       const author = last.authorName || localStorage.getItem(AUTHOR_LS_KEY)
@@ -206,18 +218,24 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
   }
 
   /** ยิง preview — ส่งไฟล์เฉพาะรอบแรก รอบต่อไปส่ง bgPath ที่ server คืนมา */
-  const render = useCallback(async (styleKey, sat) => {
+  const render = useCallback(async (styleKey, sat, wm = '') => {
     const seq = ++reqSeq.current
     setRendering(true)
     setError('')
     try {
       const form = new FormData()
-      if (bgPathRef.current) form.append('bgPath', bgPathRef.current)
-      else form.append('bg', bgBlobRef.current, 'bg.jpg')
+      // ไม่มีรูป = ไม่แตะ bg เลย · แตะเมื่อไหร่ FormData.append(name, null) โยนทิ้งตั้งแต่ฝั่ง client
+      if (isPlainStyle(styleKey)) {
+        if (wm) form.append('wmType', wm)
+      } else if (bgPathRef.current) {
+        form.append('bgPath', bgPathRef.current)
+      } else {
+        form.append('bg', bgBlobRef.current, 'bg.jpg')
+      }
       form.append('quoteText', quoteText)
       form.append('authorName', authorName)
       form.append('style', styleKey)
-      if (sat) form.append('saturation', sat)
+      if (sat && !isPlainStyle(styleKey)) form.append('saturation', sat)
 
       const res = await fetch(`/api/posts/${postId}/media/quote/preview`, { method: 'POST', body: form })
       if (seq !== reqSeq.current) return                     // มีคำขอใหม่กว่าแล้ว ทิ้งผลนี้
@@ -236,15 +254,39 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
     }
   }, [postId, quoteText, authorName, t])
 
-  const style = styleKey(finish, layout)
+  const style = noBg ? plainKey(plainBg) : styleKey(finish, layout)
 
   async function goPreview() {
-    if (!srcUrl || !areaPixels) { setError(t('needBg')); return }
     if (!quoteText.trim()) { setError(t('needText')); return }
+    if (noBg) { setStep(2); render(style, null, wmType); return }
+    if (!srcUrl || !areaPixels) { setError(t('needBg')); return }
     bgBlobRef.current = await cropToBlob(srcUrl, areaPixels)   // ครอปก่อน render เสมอ
     bgPathRef.current = null
     setStep(2)
     render(style, saturation)
+  }
+
+  /** สลับโหมด "ไม่ใช้รูป" — โหลดรายการลายน้ำครั้งแรกที่เปิดโหมดนี้เท่านั้น */
+  function toggleNoBg(next) {
+    setNoBg(next)
+    setError('')
+    if (!next || watermarks.length) return
+    fetch('/api/posts/watermarks')
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => setWatermarks(Array.isArray(d?.options) ? d.options : []))
+      .catch(() => {})
+  }
+
+  function changePlainBg(next) {
+    setPlainBg(next)
+    // เลือก "ลายน้ำ" แต่ยังไม่ได้เลือกไฟล์ = หยิบตัวแรกให้เลย ไม่งั้นกดแล้วได้พื้นสีล้วนเฉยๆ
+    const wm = next === 'logo' ? (wmType || watermarks[0]?.value || '') : wmType
+    if (wm !== wmType) setWmType(wm)
+    render(plainKey(next), null, wm)
+  }
+  function changeWatermark(next) {
+    setWmType(next)
+    render(plainKey(plainBg), null, next)
   }
 
   function changeFinish(next) {
@@ -268,20 +310,27 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
     setError('')
     try {
       const form = new FormData()
-      if (bgPathRef.current) form.append('bgPath', bgPathRef.current)
-      else form.append('bg', bgBlobRef.current, 'bg.jpg')
+      if (noBg) {
+        if (wmType) form.append('wmType', wmType)
+      } else if (bgPathRef.current) {
+        form.append('bgPath', bgPathRef.current)
+      } else {
+        form.append('bg', bgBlobRef.current, 'bg.jpg')
+      }
       form.append('quoteText', quoteText)
       form.append('authorName', authorName)
       form.append('style', style)
-      form.append('saturation', saturation)
+      if (!noBg) form.append('saturation', saturation)
 
       const res = await fetch(`/api/posts/${postId}/media/quote`, { method: 'POST', body: form })
       const d = await res.json().catch(() => ({}))
       if (!res.ok) { setError(d.error || t('loadFailed')); return }
       // จำค่าที่ตั้งไว้ให้ใบถัดไป — เฉพาะตอนบันทึกสำเร็จ ไม่งั้นค่าที่กดเล่นแล้วยกเลิกก็ติดไปด้วย
       try {
+        // ⚠️ **ไม่จำโหมด `noBg`** โดยตั้งใจ — โมดัลเลือกรูปแรกของโพสต์ให้อัตโนมัติอยู่แล้ว
+        //    จำโหมดไว้ = คราวหน้าเปิดมาเจอพื้นสีล้วนทั้งที่มีรูปรออยู่ตรงหน้า · จำแค่ค่าที่ตั้งไว้
         localStorage.setItem(LAST_LS_KEY, JSON.stringify({
-          finish, layout, saturation, aspect, authorName: authorName.trim(),
+          finish, layout, saturation, aspect, plainBg, wmType, authorName: authorName.trim(),
         }))
         if (authorName.trim()) localStorage.setItem(AUTHOR_LS_KEY, authorName.trim())
       } catch { /* ไม่มี storage ก็ช่าง */ }
@@ -317,11 +366,28 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
             <>
               <div className="flex flex-col gap-2">
                 <span className="text-sm font-medium text-warm-700 dark:text-disc-text">{t('bgLabel')}</span>
+
+                {/* มีรูป / ไม่มีรูป — เลือกตั้งแต่ต้นทาง เพราะทั้ง 2 ทางใช้ renderer คนละตัว */}
+                <div className="flex flex-wrap gap-2">
+                  {[[false, t('modeImage')], [true, t('modePlain')]].map(([v, label]) => (
+                    <button
+                      key={String(v)} type="button" onClick={() => toggleNoBg(v)}
+                      className={`px-2.5 py-1 text-sm rounded-lg border transition ${
+                        noBg === v
+                          ? 'border-orange bg-orange text-white'
+                          : 'border-warm-200 dark:border-disc-border text-warm-700 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+
                 <input
                   ref={fileInputRef} type="file" accept={ACCEPT} className="hidden"
                   onChange={e => { pickFile(e.target.files?.[0]); e.target.value = '' }}
                 />
-                <div className="flex flex-wrap gap-2">
+                <div className={`flex-wrap gap-2 ${noBg ? 'hidden' : 'flex'}`}>
                   <button
                     type="button" onClick={() => fileInputRef.current?.click()}
                     className="inline-flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover transition"
@@ -360,7 +426,11 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
                 )}
               </div>
 
-              {srcUrl && (
+              {noBg && (
+                <p className="text-sm text-warm-500 dark:text-disc-muted">{t('plainHint')}</p>
+              )}
+
+              {srcUrl && !noBg && (
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-sm text-warm-700 dark:text-disc-text">{t('cropLabel')}</span>
@@ -451,6 +521,45 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
                 )}
               </div>
 
+              {/* โหมดไม่มีรูป: ไม่มีการวางให้เลือก (กลางการ์ดอย่างเดียว) และไม่มีสีภาพให้ปรับ
+                  เหลือแค่ "พื้นหลัง" + ลายน้ำ — จึงสลับทั้งท่อนแทนที่จะจางปุ่มทิ้งไว้ 3 แถว */}
+              {noBg ? (
+                <>
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-sm font-medium text-warm-700 dark:text-disc-text">{t('plainBgLabel')}</span>
+                    <div className="flex flex-wrap gap-2">
+                      {PLAIN_BGS.filter(b => b.value !== 'logo' || watermarks.length).map(b => (
+                        <button
+                          key={b.value} type="button" onClick={() => changePlainBg(b.value)}
+                          disabled={rendering} title={b.description}
+                          className={`px-2.5 py-1 text-sm rounded-lg border transition disabled:opacity-50 ${
+                            plainBg === b.value
+                              ? 'border-orange bg-orange text-white'
+                              : 'border-warm-200 dark:border-disc-border text-warm-700 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover'
+                          }`}
+                        >
+                          {b.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {plainBg === 'logo' && watermarks.length > 0 && (
+                    <div className="flex flex-col gap-1.5">
+                      <span className="text-sm font-medium text-warm-700 dark:text-disc-text">{t('watermarkLabel')}</span>
+                      <select
+                        value={wmType} onChange={e => changeWatermark(e.target.value)}
+                        disabled={rendering} className={inputCls}
+                      >
+                        {watermarks.map(w => (
+                          <option key={w.value} value={w.value}>{w.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
               {/* 2 ตัวเลือกแยกกัน: การลงสี × การวาง — สไตล์คือผลคูณของสองอันนี้
                   (เดิมเป็น dropdown เดียวยาว 16 รายการ ผู้ใช้อ่านไม่ออกว่าอะไรต่างจากอะไร) */}
               <div className="flex flex-col gap-1.5">
@@ -516,6 +625,8 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
                   </div>
                 </div>
               )}
+                </>
+              )}
             </>
           )}
 
@@ -535,7 +646,8 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
             /* ต้องรอ areaPixels ด้วย — auto-เลือกรูปแรกทำให้ srcUrl มาก่อนที่ Cropper จะยิง
                onCropComplete กดเร็วๆ จะเจอ error "เลือกรูปพื้นหลังก่อน" ทั้งที่เลือกให้แล้ว */
             <button
-              type="button" onClick={goPreview} disabled={!srcUrl || !areaPixels || !quoteText.trim()}
+              type="button" onClick={goPreview}
+              disabled={!quoteText.trim() || (!noBg && (!srcUrl || !areaPixels))}
               className="px-5 py-2 bg-orange text-white text-sm font-semibold rounded-lg hover:bg-orange-light disabled:opacity-40 transition"
             >
               {t('nextButton')}

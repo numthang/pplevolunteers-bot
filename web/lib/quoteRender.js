@@ -17,7 +17,10 @@
  */
 import { resolve } from 'node:path'
 import { REPO_ROOT } from './postsStorage.js'
-import { QUOTE_STYLE_KEYS, QUOTE_STYLE_OPTIONS, normalizeStyle } from './quoteStyles.js'
+import {
+  QUOTE_STYLE_KEYS, QUOTE_STYLE_OPTIONS, normalizeStyle,
+  PLAIN_SIZE, isPlainStyle, plainBgOf,
+} from './quoteStyles.js'
 
 /**
  * ⛔ ห้ามเปลี่ยนเป็น `import { createRequire } from 'node:module'`
@@ -69,6 +72,14 @@ export function normalizeQuoteParams({ quoteText, authorName, style, saturation 
   const author = String(authorName ?? '').trim()
   if (author.length > MAX_AUTHOR_LEN) throw new QuoteRenderError(`ชื่อยาวเกิน ${MAX_AUTHOR_LEN} ตัวอักษร`)
 
+  // การ์ดไม่มีรูป — คีย์ `plain-*` ไม่ได้อยู่ใน QUOTE_STYLE_KEYS โดยตั้งใจ (ดู lib/quoteStyles.js)
+  // จึงต้องแยกสาขาก่อน · ไม่มีรูป = ไม่มีอะไรให้ปรับความอิ่มสี → saturation ตกไปเสมอ
+  const plainRaw = String(style ?? '').trim()
+  if (isPlainStyle(plainRaw)) {
+    if (!plainBgOf(plainRaw)) throw new QuoteRenderError('ไม่รู้จักสไตล์นี้')
+    return { quoteText: text, authorName: author, style: plainRaw, saturation: null }
+  }
+
   // ไม่ส่งสไตล์มา = 'random' (renderQuoteStyle สุ่มให้เอง โดยไม่แตะ AI)
   // normalizeStyle ก่อนเช็ค — การ์ดที่บันทึกไว้ก่อน rename 2026-08-07 เก็บคีย์เก่าใน
   // post_episode_media.quote_style ถ้าไม่แปลงจะเรนเดอร์ซ้ำไม่ได้ ขึ้น 'ไม่รู้จักสไตล์นี้'
@@ -111,4 +122,30 @@ export async function renderQuoteCard(bgBuffer, params, accentColor = null) {
   }
 }
 
-export { QUOTE_STYLE_OPTIONS, QUOTE_STYLE_KEYS }
+/**
+ * render การ์ดคำคม **แบบไม่มีรูป** — พื้นเป็นสี CI
+ *
+ * แยกจาก renderQuoteCard เพราะ renderer คนละตัว (`renderPlain` ไม่รับ buffer)
+ * ขนาดตรึงที่ 4:5 — ไม่มีรูปให้เอาสัดส่วนมา และ user เคาะว่าเอาขนาดเดียวพอ
+ *
+ * @param {string|null} watermarkPath  path **สัมบูรณ์** ของไฟล์ลายน้ำ (สไตล์ plain-logo เท่านั้น)
+ *                                     ผู้เรียกต้อง whitelist มาก่อนแล้ว — ที่นี่ไม่ตรวจ path
+ */
+export async function renderPlainCard(params, accentColor = null, watermarkPath = null) {
+  try {
+    const { buffer } = await renderer().renderPlain({
+      quoteText: params.quoteText,
+      authorName: params.authorName,
+      bg: plainBgOf(params.style),
+      accentColor: accentColor || undefined,
+      watermarkPath,
+      ...PLAIN_SIZE,
+    })
+    return buffer
+  } catch (error) {
+    console.error('[renderPlainCard]', error)
+    throw new QuoteRenderError(`สร้างการ์ดไม่สำเร็จ: ${error.message}`)
+  }
+}
+
+export { QUOTE_STYLE_OPTIONS, QUOTE_STYLE_KEYS, isPlainStyle }

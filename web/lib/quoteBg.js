@@ -87,5 +87,8 @@ export function readQuoteForm(form) {
     authorName: str('authorName'),
     style: str('style'),
     saturation: str('saturation'),
+    // ลายน้ำของการ์ดแบบไม่มีรูป (`plain-logo`) — ไม่เกี่ยวกับ 3 ทางข้างบน
+    // ต้องผ่าน resolvePlainWatermark() ก่อนเสมอ ห้ามเอาค่านี้ไปต่อ path ตรงๆ
+    wmType: str('wmType'),
   }
 }

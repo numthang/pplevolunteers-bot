@@ -11,8 +11,11 @@
 import { postContext } from '@/lib/postsGuard.js'
 import { canEditPost } from '@/lib/postsAccess.js'
 import { resolveBackground, readQuoteForm, QuoteBgError } from '@/lib/quoteBg.js'
-import { normalizeQuoteParams, renderQuoteCard, QuoteRenderError } from '@/lib/quoteRender.js'
+import {
+  normalizeQuoteParams, renderQuoteCard, renderPlainCard, isPlainStyle, QuoteRenderError,
+} from '@/lib/quoteRender.js'
 import { resolveQuoteAccent } from '@/lib/quoteAccent.js'
+import { resolvePlainWatermark } from '@/lib/quoteWatermark.js'
 
 export async function POST(req, { params }) {
   const { id } = await params
@@ -33,16 +36,26 @@ export async function POST(req, { params }) {
   try {
     const input = readQuoteForm(form)
     const paramsOut = normalizeQuoteParams(input)
-    const { buffer: bg, bgPath } = await resolveBackground(input, ctx.post.id)
     const accent = await resolveQuoteAccent(ctx.userId, ctx.orgId)
-    const png = await renderQuoteCard(bg, paramsOut, accent)
+
+    // การ์ดไม่มีรูป — ข้าม resolveBackground ทั้งดุ้น (ไม่มีไฟล์พื้นหลัง = ไม่มี X-Bg-Path ให้คืน)
+    let png, bgPath = null
+    if (isPlainStyle(paramsOut.style)) {
+      const wm = await resolvePlainWatermark(input.wmType, ctx)
+      png = await renderPlainCard(paramsOut, accent, wm)
+    } else {
+      const bg = await resolveBackground(input, ctx.post.id)
+      bgPath = bg.bgPath
+      png = await renderQuoteCard(bg.buffer, paramsOut, accent)
+    }
 
     return new Response(png, {
       status: 200,
       headers: {
         'Content-Type': 'image/png',
         'Content-Length': String(png.length),
-        'X-Bg-Path': bgPath,           // client เก็บไว้ส่งกลับมารอบหน้า แทนการอัปไฟล์ซ้ำ
+        // client เก็บไว้ส่งกลับมารอบหน้า แทนการอัปไฟล์ซ้ำ (การ์ดไม่มีรูปไม่ส่งหัวนี้เลย)
+        ...(bgPath ? { 'X-Bg-Path': bgPath } : {}),
         'X-Quote-Style': paramsOut.style,
         'Cache-Control': 'no-store',
       },

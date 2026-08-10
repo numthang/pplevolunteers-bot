@@ -13,6 +13,7 @@
 import { existsSync, readdirSync, statSync } from 'fs'
 import { join } from 'path'
 import pool from '@/db/index.js'
+import { listPublishGroups } from './publishTargets.js'
 
 const ASSETS_DIR = join(process.cwd(), '..', 'assets', 'watermark')
 const IMG_RE = /\.(png|jpe?g|webp)$/i
@@ -70,4 +71,37 @@ export async function resolveWatermarkRef(wmType, ctx) {
   if (!wmType || wmType === 'none') return null
   const { options } = await listWatermarks(ctx)
   return options.some(o => o.value === wmType) ? wmType : undefined   // undefined = ค่าไม่ถูกต้อง
+}
+
+/**
+ * ลายน้ำ**ทุกกลุ่ม**ที่คนนี้โพสต์ในนามได้ — สำหรับจุดที่ยังไม่รู้ว่าจะโพสต์กลุ่มไหน
+ *
+ * ที่มา: การ์ดคำคมพื้นสี CI เลือกลายน้ำเป็นลายพื้นได้ (2026-08-10) แต่ตอนทำการ์ดอยู่ในโมดัล
+ * ยังไม่ได้เลือกกลุ่ม (เลือกทีหลังตอนกดเผยแพร่) · จะบังคับให้เลือกกลุ่มก่อน = เพิ่มขั้นตอนให้
+ * คนที่แค่อยากได้การ์ด → รวมลายน้ำของทุกกลุ่มที่เขาใช้ได้มาให้เลือกแทน
+ *
+ * ยังเป็น whitelist เหมือนเดิม: ตัวเลือกมาจาก listWatermarks() ของกลุ่มที่ผ่านสิทธิ์แล้วเท่านั้น
+ * (ไฟล์ซ้ำข้ามกลุ่มถูกยุบด้วย value ที่เป็น path — ป้ายกำกับใช้ของกลุ่มแรกที่เจอ)
+ */
+export async function listAllWatermarks({ orgId, userId, discordId }) {
+  const groups = await listPublishGroups({ orgId, userId, discordId })
+
+  const byValue = new Map()
+  for (const g of groups) {
+    const { options } = await listWatermarks({
+      guildId: g.guildId, group: g.name, visibility: g.visibility, discordId,
+    })
+    for (const o of options) {
+      if (!byValue.has(o.value)) byValue.set(o.value, { ...o, group: g.name })
+    }
+  }
+  return { options: [...byValue.values()], default: null }
+}
+
+/** คู่กับ listAllWatermarks — คืน path สัมบูรณ์ให้ renderer · undefined = ค่าไม่ถูกต้อง */
+export async function resolveAnyWatermarkPath(wmType, ctx) {
+  if (!wmType || wmType === 'none') return null
+  const { options } = await listAllWatermarks(ctx)
+  if (!options.some(o => o.value === wmType)) return undefined
+  return join(ASSETS_DIR, wmType.replace(/^path:/, ''))
 }

@@ -11,8 +11,11 @@ import { canEditPost } from '@/lib/postsAccess.js'
 import { savePostFile, MAX_MEDIA_PER_EPISODE } from '@/lib/postsStorage.js'
 import { addMedia, countMedia } from '@/db/posts/media.js'
 import { resolveBackground, readQuoteForm, QuoteBgError } from '@/lib/quoteBg.js'
-import { normalizeQuoteParams, renderQuoteCard, QuoteRenderError } from '@/lib/quoteRender.js'
+import {
+  normalizeQuoteParams, renderQuoteCard, renderPlainCard, isPlainStyle, QuoteRenderError,
+} from '@/lib/quoteRender.js'
 import { resolveQuoteAccent } from '@/lib/quoteAccent.js'
+import { resolvePlainWatermark } from '@/lib/quoteWatermark.js'
 
 export async function POST(req, { params }) {
   const { id } = await params
@@ -43,9 +46,20 @@ export async function POST(req, { params }) {
       )
     }
 
-    const { buffer: bg, bgPath } = await resolveBackground(input, ctx.post.id)
     const accent = await resolveQuoteAccent(ctx.userId, ctx.orgId)
-    const png = await renderQuoteCard(bg, quoteParams, accent)
+
+    // การ์ดไม่มีรูป — ไม่มีไฟล์พื้นหลัง จึงเก็บ `bg_path` เป็น NULL
+    // (ไม่เก็บ ref ของลายน้ำลง bg_path ด้วย: คอลัมน์นั้นถูก deletePostFile ตอนลบการ์ด
+    //  = จะลากไฟล์ลายน้ำขององค์กรหายไปด้วย · การ์ด plain re-render ใหม่ได้จาก quote_text+style อยู่แล้ว)
+    let png, bgPath = null
+    if (isPlainStyle(quoteParams.style)) {
+      const wm = await resolvePlainWatermark(input.wmType, ctx)
+      png = await renderPlainCard(quoteParams, accent, wm)
+    } else {
+      const bg = await resolveBackground(input, ctx.post.id)
+      bgPath = bg.bgPath
+      png = await renderQuoteCard(bg.buffer, quoteParams, accent)
+    }
     const path = await savePostFile(png, 'image/png')
 
     const media = await addMedia({

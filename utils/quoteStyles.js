@@ -978,6 +978,120 @@ async function renderCenter(buf, { quoteText, authorName, saturation = 1.0, acce
   return { buffer: out, ext: 'png', vertical: 'center', side: 'center' };
 }
 
+// ── plain — การ์ดคำคม **ไม่มีรูป** พื้นเป็นสี CI ล้วน (2026-08-10) ─────────────
+//
+// ต่างจากสไตล์อื่นทุกตัวตรงที่ **ไม่รับ buffer** — ไม่มีรูป = ไม่มีขนาดมาจากไฟล์
+// ผู้เรียกต้องบอก width/height เอง (ฝั่งเว็บให้ผู้ใช้เลือกสัดส่วน 1:1 / 4:5 / 9:16)
+// → มันจึงอยู่นอก STYLES ที่ signature เป็น (buf, opts) และห้ามตกใน random pool
+//   ไม่งั้นคนกดคำคมจากรูปแล้วสุ่มได้ plain = รูปที่เลือกมาโดนทิ้งเงียบๆ
+//
+// bg: 'solid' = สีทึบล้วน · 'gradient' = ไล่เฉด · 'mark' = ทึบ + เครื่องหมายคำพูดจางเป็นลาย
+//     'logo' = ทึบ + **ลายน้ำขององค์กร** จางเป็นลาย (ต้องส่ง watermarkPath มาด้วย ไม่งั้นตกเป็น solid)
+//
+// ⚠️ ทิศ gradient ต้องวิ่ง **หนี** สีตัวอักษรเสมอ: ink ขาว → ปลายเข้มลง · ink ดำ → ปลายสว่างขึ้น
+//    ไล่ผิดทาง = สี CI อ่อน (ink ดำ) เจอปลายเข้ม แล้วตัวหนังสือจม (เหตุผลเดียวกับ panelPalette:
+//    contrastText() คำนวณจากสีเดียว มันไม่รู้ว่าปลาย gradient ไปทางไหน)
+async function renderPlain({
+  quoteText, authorName = '', accentColor, width = 1080, height = 1350, bg = 'solid',
+  watermarkPath = null,
+}) {
+  const SS = 2;                               // supersample แล้วย่อ = ขอบตัวอักษรคม (เหมือน renderCenter)
+  const base = accentColor || ORANGE;
+  const { ink, sub } = panelPalette(base);
+  const W = Math.round(width), H = Math.round(height);
+
+  const cv  = createCanvas(W * SS, H * SS);
+  const ctx = cv.getContext('2d');
+  ctx.scale(SS, SS);
+
+  if (bg === 'gradient') {
+    // ไล่ลง**เข้ม**เสมอ (ไม่ไล่ไปหาขาว — พื้นสีอ่อนไล่ไปขาวแล้วการ์ดดูซีดไม่มีสี)
+    // ระยะต่างกันตามสีตัวอักษร: ink ขาวเข้มได้เต็มที่ · ink ดำเข้มได้แค่ 0.16 ก่อนคอนทราสต์หลุด AA
+    // (#ff6a13 ที่ 0.16 → 5.3:1 · ที่ 0.25 เหลือ 4.3 = ต่ำกว่า 4.5 แล้ว — อย่าดันขึ้น)
+    const grad = ctx.createLinearGradient(0, 0, W, H);
+    grad.addColorStop(0, _mix(base, WHITE, ink === WHITE ? 0.00 : 0.06));
+    grad.addColorStop(1, _mix(base, BLACK, ink === WHITE ? 0.42 : 0.16));
+    ctx.fillStyle = grad;
+  } else {
+    ctx.fillStyle = base;
+  }
+  ctx.fillRect(0, 0, W, H);
+
+  // ลายพื้นมุมล่างขวา — **ลายพื้น** ไม่ใช่ตัวคั่นสายตา (ตัวคั่นคือเครื่องหมายเล็กเหนือข้อความ)
+  // 0.12 คือเพดานที่ตัวหนังสือทับแล้วคอนทราสต์ยังไม่ตก — สูงกว่านี้มันแย่งเป็นพระเอก
+  // ย้อมเป็นสีตัวอักษรทั้งคู่ (ทั้งเครื่องหมายและลายน้ำ) — ลายน้ำสีจริงทับพื้น CI แล้วสีตีกัน
+  const patternName = bg === 'mark' ? existingMarks(['big_open', ...OPEN_MARKS])[0] : null;
+  const patternImg =
+    patternName ? await loadMark(patternName)
+    : bg === 'logo' && watermarkPath ? await loadImage(watermarkPath).catch(() => null)
+    : null;
+  if (patternImg) {
+    // ลายน้ำมักเป็นโลโก้แนวนอน ยึด**ความกว้าง** · เครื่องหมายเป็นทรงตั้ง ยึดความสูง
+    const wide = patternImg.width >= patternImg.height;
+    const ph = wide ? Math.round(W * 0.78 * (patternImg.height / patternImg.width))
+                    : Math.round(H * 0.52);
+    const pw = Math.round((patternImg.width / patternImg.height) * ph);
+    ctx.globalAlpha = 0.12;
+    drawTinted(ctx, patternImg, W - Math.round(pw * 0.62), H - Math.round(ph * 0.72), pw, ph, ink);
+    ctx.globalAlpha = 1;
+  }
+
+  // ── ข้อความกลางการ์ด ──────────────────────────────────────────────────────
+  // ไม่มีรูปแย่งพื้นที่ ตัวหนังสือจึงใหญ่กว่าสไตล์อื่นได้ (0.098W เทียบกับ 0.085W ของ shade-center)
+  const padX = Math.round(W * 0.10);
+  const padY = Math.round(H * 0.07);
+  const maxW = W - padX * 2;
+  const maxH = H - padY * 2;
+
+  // ⚠️ **ไม่สุ่ม** เครื่องหมายเหมือนสไตล์ที่มีรูป — การ์ดไม่มีรูปเหลือองค์ประกอบแค่สี+ตัวอักษร+
+  //    เครื่องหมาย สุ่มเมื่อไหร่ = สองใบที่ตั้งค่าเหมือนกันเป๊ะออกมาคนละหน้า (outline กลวงกับทึบ
+  //    ต่างกันคนละเรื่อง) · ตรึงไว้ตัวเดียวให้ชุดเดียวกันหน้าเหมือนกันเสมอ
+  const pool    = existingMarks(['double_open', ...OPEN_MARKS]);
+  const markImg = pool.length ? await loadMark(pool[0]) : null;
+
+  const nsz     = Math.max(16, Math.round(W * 0.030));
+  const authGap = Math.round(nsz * 1.3);
+
+  // fitFont ย่อฟอนต์ได้แค่ 65% แล้วหยุด (ที่เหลือมันปล่อยให้บรรทัดงอกแทน) — คำคมยาวสุด 300 ตัว
+  // ที่ 4:5 จึงล้นก้นการ์ดได้ · ย่อ startSz ต่อเองจนบล็อกสูงไม่เกินกรอบ (สไตล์ที่มีรูปไม่เจอปัญหานี้
+  // เพราะกล่องข้อความเล็กกว่าและ drawQuoteBlock มีลูปย่อของมันเอง)
+  let qsz, lines, lh, markH, markGap, blockH;
+  for (let start = Math.max(40, Math.round(W * 0.098)); ; start = Math.round(start * 0.92)) {
+    ({ fontSize: qsz, lines } = fitFont(ctx, quoteText, maxW, start, 6, 'Anakotmai'));
+    lh      = qsz * 1.24;
+    markH   = markImg ? Math.round(qsz * 1.05) : 0;
+    markGap = markImg ? Math.round(qsz * 0.55) : 0;
+    blockH  = markH + markGap + lines.length * lh + (authorName ? authGap + nsz : 0);
+    if (blockH <= maxH || start <= 24) break;
+  }
+
+  ctx.textBaseline = 'top';
+  let ty = Math.round((H - blockH) / 2);
+
+  if (markImg) {
+    const markW = Math.round((markImg.width / markImg.height) * markH);
+    drawTinted(ctx, markImg, Math.round((W - markW) / 2), ty, markW, markH, ink);
+    ty += markH + markGap;
+  }
+
+  ctx.font = `bold ${qsz}px Anakotmai`;
+  ctx.fillStyle = ink;
+  for (const l of lines) {
+    lsDraw(ctx, l, (W - lsWidth(ctx, l, 1.0)) / 2, ty, 1.0);
+    ty += lh;
+  }
+
+  if (authorName) {
+    ty += authGap;
+    ctx.font = `${nsz}px AnakotmaiLight`;
+    ctx.fillStyle = sub;
+    lsDraw(ctx, authorName, (W - lsWidth(ctx, authorName, 0.8)) / 2, ty, 0.8);
+  }
+
+  const out = await sharp(await toPng(cv)).resize(W, H).png().toBuffer();
+  return { buffer: out, ext: 'png', vertical: 'center', side: 'center' };
+}
+
 // คีย์ = <finish>-<layout> · finish = shade (เงา) | solid (ทึบ) | duo (ดูโอโทน)
 //
 // ⚠️ คีย์เดิม 8 ตัว (quote-1-* / quote-2-*) ห้ามลบ — `post_episode_media.quote_style` ของการ์ด
@@ -1110,6 +1224,7 @@ async function renderQuoteOverlay(width, height, {
 
 module.exports = {
   renderQuoteStyle, parseStyle, FRAME_RIGHT, renderQuoteOverlay,
+  renderPlain,           // ไม่มีรูป — signature ต่างจาก STYLES (ไม่รับ buffer) จึงเรียกตรง
   renderPanel, renderMatte, panelPalette, LEGACY_STYLE_ALIAS,
   renderVariant, _mix,   // export ไว้ทดลอง scrimMix — ยังไม่มีสไตล์ไหนใน STYLES ใช้
 };

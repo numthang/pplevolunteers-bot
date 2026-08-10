@@ -63,6 +63,33 @@ export const QUOTE_TEMPLATE_CHOICES = [
 
 export const QUOTE_STYLE_KEYS = ['random', ...QUOTE_STYLE_OPTIONS.map(o => o.value)]
 
+// ── การ์ดแบบไม่มีรูป (2026-08-10) ─────────────────────────────────────────────
+//
+// ⛔ **ห้ามยัดเข้า COMBOS/QUOTE_STYLE_KEYS** แม้คีย์จะหน้าตาเหมือนกัน — 3 เหตุผล:
+//   1. `renderQuoteStyle()` สุ่มจาก STYLES ทั้งกอง · plain หลุดเข้าไป = คนกดคำคมจากรูปในดิสฯ
+//      แล้วสุ่มได้การ์ดพื้นสี รูปที่เลือกมาโดนทิ้งเงียบๆ
+//   2. `/api/bot/quote-config` validate `quote_default_template` ด้วย QUOTE_STYLE_KEYS —
+//      ตั้ง plain เป็น default เมื่อไหร่ บอทเรนเดอร์ไม่ได้เลย (STYLES ไม่มีคีย์นี้)
+//   3. signature คนละแบบ: STYLES เป็น (buf, opts) ส่วน renderPlain ไม่รับ buffer
+export const PLAIN_BGS = [
+  { value: 'flat', bg: 'solid',    label: 'สีทึบ',   description: 'พื้นสีแบรนด์ล้วน' },
+  { value: 'fade', bg: 'gradient', label: 'ไล่เฉด',  description: 'พื้นสีแบรนด์ไล่เข้ม' },
+  { value: 'mark', bg: 'mark',     label: 'ลายคำพูด', description: 'พื้นสีแบรนด์ + เครื่องหมายคำพูดจางเป็นลาย' },
+  { value: 'logo', bg: 'logo',     label: 'ลายน้ำ',  description: 'พื้นสีแบรนด์ + ลายน้ำขององค์กรจางเป็นลาย' },
+]
+
+export const PLAIN_PREFIX = 'plain-'
+export const plainKey = v => `${PLAIN_PREFIX}${v}`
+export const isPlainStyle = key => typeof key === 'string' && key.startsWith(PLAIN_PREFIX)
+export const PLAIN_STYLE_KEYS = PLAIN_BGS.map(b => plainKey(b.value))
+
+/** คีย์ `plain-<v>` → ค่า `bg` ที่ renderPlain กิน · null = ไม่ใช่คีย์ plain ที่รู้จัก */
+export const plainBgOf = key =>
+  PLAIN_BGS.find(b => plainKey(b.value) === key)?.bg || null
+
+/** การ์ดขนาดเดียว 4:5 (เคาะ 2026-08-10) — ไม่มีรูป จึงไม่มีขนาดมาจากไฟล์ ต้องตรึงเอง */
+export const PLAIN_SIZE = { width: 1080, height: 1350 }
+
 // คีย์เก่าก่อนเปลี่ยนชื่อ 2026-08-07 — ห้ามลบ การ์ดที่ทำไปแล้วยังอ้างคีย์พวกนี้อยู่
 export const LEGACY_STYLE_ALIAS = {
   'quote-1-ember-bottom-left':  'shade-bottom-left',
