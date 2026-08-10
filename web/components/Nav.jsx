@@ -524,8 +524,9 @@ export default function Nav({ session, orgs = [], activeOrgId = null, guilds = [
 
                     {/* User info */}
                     <div className="border-t border-warm-200 dark:border-disc-border my-1" />
+                    {/* กดที่ตัวเอง = เข้า hub ของฉัน · ส่วน "แก้ไขโปรไฟล์" ด้านล่างเข้าฟอร์มตรงๆ */}
                     <a
-                      href="/profile/settings"
+                      href="/profile"
                       onClick={() => setMenuOpen(false)}
                       className="flex items-center gap-3 px-4 py-2.5 hover:bg-warm-100 dark:hover:bg-disc-hover transition"
                     >
@@ -606,16 +607,6 @@ export default function Nav({ session, orgs = [], activeOrgId = null, guilds = [
                       </span>
                     </button>
                     <LocaleSwitcher onSwitch={() => setMenuOpen(false)} />
-                    {/* พื้นที่ส่วนตัว — ของที่เป็นของ "ฉัน" ไม่ใช่ขององค์กร (ลายน้ำส่วนตัว ฯลฯ)
-                        อยู่ระดับเดียวกับแอปอื่น ไม่ซ้อนใต้ /org เพราะ /org = จัดการองค์กร (2026-08-10) */}
-                    <Link
-                      href="/profile"
-                      onClick={() => setMenuOpen(false)}
-                      className="flex items-center gap-2 px-4 py-2.5 text-base text-warm-900 dark:text-disc-muted hover:bg-warm-100 dark:hover:bg-disc-hover transition"
-                    >
-                      <span className="w-7 h-7 shrink-0 grid place-items-center text-lg">🙂</span>
-                      ของฉัน
-                    </Link>
                     <Link
                       href="/profile/settings"
                       onClick={() => setMenuOpen(false)}
