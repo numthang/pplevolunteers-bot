@@ -527,10 +527,15 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
             </>
           ) : (
             <>
-              <div className="relative rounded-lg overflow-hidden bg-black min-h-[240px] flex items-center justify-center">
+              {/* ⚠️ `shrink-0` ห้ามเอาออก — body เป็น `flex flex-col` ความสูงคงที่ ลูกทุกตัว
+                  flex-shrink:1 โดย default · กล่องนี้เลยโดนบีบให้เตี้ยกว่ารูปข้างใน แล้ว
+                  `overflow-hidden` หั่นการ์ดหัวท้าย (ยิ่งชิปเยอะยิ่งโดนบีบ) — เจอ 2026-08-11 */}
+              <div className="relative shrink-0 rounded-lg overflow-hidden bg-black min-h-[240px] flex items-center justify-center">
                 {previewUrl && (
                   /* eslint-disable-next-line @next/next/no-img-element */
-                  <img src={previewUrl} alt="" className="w-full h-auto max-h-[46vh] object-contain" />
+                  /* ให้ **ความสูงเป็นตัวคุม** แล้วความกว้างวิ่งตามสัดส่วน — การ์ด 4:5 กับ 16:9
+                     จึงพอดีกรอบทั้งคู่ (`w-full` เดิมบังคับกว้างเต็มกล่องเสมอ) */
+                  <img src={previewUrl} alt="" className="w-auto max-w-full max-h-[52vh] object-contain" />
                 )}
                 {rendering && (
                   <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/50 text-white text-sm">
@@ -662,23 +667,19 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
               </div>
 
               {/* ดูโอโทนแปลงรูปเป็นขาวดำก่อนย้อมอยู่แล้ว → ปุ่มสีภาพไม่มีผล ซ่อนทิ้งดีกว่าให้กดแล้วเงียบ */}
+              {/* ฟิลเตอร์เป็น dropdown ไม่ใช่ชิป — user จะเพิ่มฟิลเตอร์อีกในอนาคต (เคาะ 2026-08-11)
+                  ชิปแถวยาวขึ้นเรื่อยๆ แล้วตกบรรทัดกินที่พรีวิว · dropdown ยาวเท่าไหร่ก็สูงเท่าเดิม */}
               {finish !== 'duo' && (
                 <div className="flex flex-col gap-1.5">
-                  <span className="text-sm font-medium text-warm-700 dark:text-disc-text">{t('colorLabel')}</span>
-                  <div className="flex flex-wrap gap-2">
+                  <span className="text-sm font-medium text-warm-700 dark:text-disc-text">{t('filterLabel')}</span>
+                  <select
+                    value={saturation} onChange={e => changeColor(e.target.value)}
+                    disabled={rendering} className={inputCls}
+                  >
                     {COLORS.map(c => (
-                      <button
-                        key={c.value} type="button" onClick={() => changeColor(c.value)} disabled={rendering}
-                        className={`px-2.5 py-1 text-sm rounded-lg border transition disabled:opacity-50 ${
-                          saturation === c.value
-                            ? 'border-orange bg-orange text-white'
-                            : 'border-warm-200 dark:border-disc-border text-warm-700 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover'
-                        }`}
-                      >
-                        {t(c.key)}
-                      </button>
+                      <option key={c.value} value={c.value}>{t(c.key)}</option>
                     ))}
-                  </div>
+                  </select>
                 </div>
               )}
                 </>
