@@ -52,7 +52,7 @@ export default function OrgShell({ user, orgs, activeOrg, children }) {
 
             {open && (
               <div className="absolute left-0 mt-1 w-64 rounded-xl border border-gray-200 dark:border-disc-border bg-white dark:bg-card-bg py-1 shadow-lg">
-                <a href="/org/personal" className={`flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-white/5 ${pathname.startsWith('/org/personal') ? 'text-orange font-medium' : 'text-gray-700 dark:text-disc-text'}`}>
+                <a href="/profile" className={`flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-white/5 ${pathname.startsWith('/profile') ? 'text-orange font-medium' : 'text-gray-700 dark:text-disc-text'}`}>
                   <span className="grid h-6 w-6 place-items-center rounded bg-blue-light/40 text-xs">🙂</span> {t('shell.personalSpace')}
                 </a>
                 <div className="my-1 border-t border-gray-100 dark:border-disc-border" />

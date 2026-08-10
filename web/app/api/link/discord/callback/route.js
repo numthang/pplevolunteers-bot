@@ -7,13 +7,13 @@ export async function GET(req) {
   const state = searchParams.get('state')
   const base  = process.env.NEXTAUTH_URL
 
-  if (!code || !state) return Response.redirect(`${base}/profile?link_error=missing_params`)
+  if (!code || !state) return Response.redirect(`${base}/profile/settings?link_error=missing_params`)
 
   let userId
   try {
     userId = verifyLinkState(state)
   } catch {
-    return Response.redirect(`${base}/profile?link_error=invalid_state`)
+    return Response.redirect(`${base}/profile/settings?link_error=invalid_state`)
   }
 
   try {
@@ -43,12 +43,12 @@ export async function GET(req) {
     // merged = users.id ของเขาเปลี่ยนไปแล้ว แต่ JWT ยังถือ id เดิมที่เพิ่งถูกลบ
     // → ต้องผ่านหน้าที่สั่ง refresh session ก่อน ห้ามส่งกลับ /profile ตรงๆ ไม่งั้นเจอ user ผี
     if (merged) return Response.redirect(`${base}/link/merged`)
-    return Response.redirect(`${base}/profile?link_success=discord`)
+    return Response.redirect(`${base}/profile/settings?link_success=discord`)
   } catch (err) {
     console.error('[link/discord/callback]', err.message)
     const errKey = err.code === 'already_linked_other' ? 'already_linked_other'
                  : String(err.message || '').startsWith('merge_') ? 'merge_failed'
                  : 'discord_failed'
-    return Response.redirect(`${base}/profile?link_error=${errKey}`)
+    return Response.redirect(`${base}/profile/settings?link_error=${errKey}`)
   }
 }

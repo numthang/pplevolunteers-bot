@@ -1219,11 +1219,6 @@
       "sendLinkButton": "ส่งลิงก์เข้าสู่ระบบ",
       "devLinkLabel": "dev: คลิกลิงก์เพื่อเข้าสู่ระบบ"
     },
-    "personal": {
-      "title": "พื้นที่ส่วนตัว",
-      "subtitle": "แอพส่วนตัวของคุณ — ผูกกับบัญชี ไม่ใช่องค์กร",
-      "cookingDesc": "ผู้ช่วยครัว — สุ่มเมนูจากของในครัว"
-    },
     "verify": {
       "invalidLinkMsg": "ลิงก์ไม่ถูกต้องหรือหมดอายุ",
       "backToLoginLink": "กลับไปเข้าสู่ระบบ",
@@ -1359,10 +1354,39 @@
       "saving": "กำลังบันทึก…",
       "saveSuccess": "บันทึกแล้ว",
       "saveError": "บันทึกไม่สำเร็จ"
+    }
+  },
+  "profile": {
+    "address": {
+      "sectionTitle": "ที่อยู่",
+      "houseNoLabel": "บ้านเลขที่",
+      "mooLabel": "หมู่",
+      "soiLabel": "ซอย",
+      "roadLabel": "ถนน",
+      "tambonLabel": "ตำบล",
+      "amphoeLabel": "อำเภอ",
+      "provinceLabel": "จังหวัด",
+      "zipcodeLabel": "รหัสไปรษณีย์",
+      "unspecifiedOption": "— ไม่ระบุ —"
     },
-    "personalBrand": {
-      "title": "ลายน้ำส่วนตัว",
-      "subtitle": "ใช้กับงานที่ทำในนามตัวเอง — แยกจากลายน้ำขององค์กร",
+    "hub": {
+      "title": "ของฉัน",
+      "subtitle": "ของที่ติดตัวคุณไปทุกองค์กร — ข้อมูลส่วนตัว ลายน้ำ และแอปส่วนตัว",
+      "settingsTitle": "ข้อมูลส่วนตัว",
+      "settingsDesc": "ชื่อ เบอร์โทร ที่อยู่ วิธีเข้าสู่ระบบ และบัญชีที่ผูกไว้",
+      "cookingDesc": "ผู้ช่วยครัว — สุ่มเมนูจากของในครัว"
+    },
+    "settingsNav": {
+      "pageHeading": "ตั้งค่าของฉัน",
+      "settingsLabel": "ตั้งค่า: ",
+      "tabs": {
+        "account": "ข้อมูลส่วนตัว",
+        "brand": "ลายน้ำ & การ์ด"
+      }
+    },
+    "brand": {
+      "title": "ลายน้ำ & การ์ดของฉัน",
+      "subtitle": "ใช้กับงานที่ทำในนามตัวเอง — แยกจากของขององค์กร",
       "loading": "กำลังโหลด…",
       "description": "ลายน้ำส่วนตัวใช้ได้ทุกที่ที่คุณทำงานในนามตัวเอง · จะใช้ลายน้ำขององค์กรต้องสลับไปโหมดองค์กรตอนโพสต์",
       "uploading": "กำลังอัปโหลด…",
@@ -1379,20 +1403,19 @@
       "delete": "ลบ",
       "deleteConfirm": "ลบ \"{file}\" ใช่ไหม",
       "dismissError": "ปิดข้อความแจ้งเตือน"
-    }
-  },
-  "profile": {
-    "address": {
-      "sectionTitle": "ที่อยู่",
-      "houseNoLabel": "บ้านเลขที่",
-      "mooLabel": "หมู่",
-      "soiLabel": "ซอย",
-      "roadLabel": "ถนน",
-      "tambonLabel": "ตำบล",
-      "amphoeLabel": "อำเภอ",
-      "provinceLabel": "จังหวัด",
-      "zipcodeLabel": "รหัสไปรษณีย์",
-      "unspecifiedOption": "— ไม่ระบุ —"
+    },
+    "quotePrefs": {
+      "title": "การ์ดคำคมของฉัน",
+      "description": "ค่าที่ตั้งไว้ที่นี่ชนะค่าขององค์กร — เว้นว่าง = ใช้ของที่องค์กรตั้งไว้",
+      "accentLabel": "สีที่ฉันชอบ",
+      "accentDefault": "ยังไม่ได้ตั้ง (ใช้ของทีม)",
+      "reset": "ล้างค่า",
+      "templateLabel": "สไตล์การ์ดเริ่มต้น",
+      "templateNone": "ไม่กำหนด (ใช้ของทีม)",
+      "save": "บันทึก",
+      "saving": "กำลังบันทึก…",
+      "saveSuccess": "บันทึกแล้ว",
+      "saveError": "บันทึกไม่สำเร็จ"
     }
   },
   "bot": {

@@ -1219,11 +1219,6 @@
       "sendLinkButton": "Send Login Link",
       "devLinkLabel": "dev: click the link to log in"
     },
-    "personal": {
-      "title": "Personal Space",
-      "subtitle": "Your personal apps — tied to your account, not an organization",
-      "cookingDesc": "Kitchen assistant — random menu ideas from what's in your kitchen"
-    },
     "verify": {
       "invalidLinkMsg": "Invalid or expired link",
       "backToLoginLink": "Back to login",
@@ -1359,10 +1354,39 @@
       "saving": "Saving…",
       "saveSuccess": "Saved",
       "saveError": "Could not save"
+    }
+  },
+  "profile": {
+    "address": {
+      "sectionTitle": "Address",
+      "houseNoLabel": "House No.",
+      "mooLabel": "Moo",
+      "soiLabel": "Soi",
+      "roadLabel": "Road",
+      "tambonLabel": "Sub-district",
+      "amphoeLabel": "District",
+      "provinceLabel": "Province",
+      "zipcodeLabel": "Zip Code",
+      "unspecifiedOption": "— Not specified —"
     },
-    "personalBrand": {
-      "title": "Personal watermarks",
-      "subtitle": "For work you publish under your own name — separate from the organisation's watermarks",
+    "hub": {
+      "title": "Mine",
+      "subtitle": "What follows you across every organisation — your details, watermarks and personal apps",
+      "settingsTitle": "Personal details",
+      "settingsDesc": "Name, phone, address, sign-in methods and linked accounts",
+      "cookingDesc": "Kitchen helper — pick a dish from what you have"
+    },
+    "settingsNav": {
+      "pageHeading": "My settings",
+      "settingsLabel": "Settings: ",
+      "tabs": {
+        "account": "Personal details",
+        "brand": "Watermarks & cards"
+      }
+    },
+    "brand": {
+      "title": "My watermarks & cards",
+      "subtitle": "For work you publish under your own name — separate from the organisation's",
       "loading": "Loading…",
       "description": "Personal watermarks apply wherever you work under your own name · to use the organisation's watermarks, switch to organisation mode when publishing",
       "uploading": "Uploading…",
@@ -1379,20 +1403,19 @@
       "delete": "Delete",
       "deleteConfirm": "Delete \"{file}\"?",
       "dismissError": "Dismiss error"
-    }
-  },
-  "profile": {
-    "address": {
-      "sectionTitle": "Address",
-      "houseNoLabel": "House No.",
-      "mooLabel": "Moo",
-      "soiLabel": "Soi",
-      "roadLabel": "Road",
-      "tambonLabel": "Sub-district",
-      "amphoeLabel": "District",
-      "provinceLabel": "Province",
-      "zipcodeLabel": "Zip Code",
-      "unspecifiedOption": "— Not specified —"
+    },
+    "quotePrefs": {
+      "title": "My quote cards",
+      "description": "These override your organisation's settings — leave blank to use the organisation's",
+      "accentLabel": "My colour",
+      "accentDefault": "Not set (using the team's)",
+      "reset": "Clear",
+      "templateLabel": "Default card style",
+      "templateNone": "Unset (use the team's)",
+      "save": "Save",
+      "saving": "Saving…",
+      "saveSuccess": "Saved",
+      "saveError": "Could not save"
     }
   },
   "bot": {

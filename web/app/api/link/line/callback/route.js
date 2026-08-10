@@ -7,13 +7,13 @@ export async function GET(req) {
   const state = searchParams.get('state')
   const base  = process.env.NEXTAUTH_URL
 
-  if (!code || !state) return Response.redirect(`${base}/profile?link_error=missing_params`)
+  if (!code || !state) return Response.redirect(`${base}/profile/settings?link_error=missing_params`)
 
   let userId
   try {
     userId = verifyLinkState(state)
   } catch {
-    return Response.redirect(`${base}/profile?link_error=invalid_state`)
+    return Response.redirect(`${base}/profile/settings?link_error=invalid_state`)
   }
 
   try {
@@ -38,10 +38,10 @@ export async function GET(req) {
     if (!sub) throw new Error('no sub in id_token')
 
     await linkIdentityByUser(userId, 'line', sub)
-    return Response.redirect(`${base}/profile?link_success=line`)
+    return Response.redirect(`${base}/profile/settings?link_success=line`)
   } catch (err) {
     console.error('[link/line/callback]', err.message)
     const errKey = err.code === 'already_taken' ? 'already_taken' : 'line_failed'
-    return Response.redirect(`${base}/profile?link_error=${errKey}`)
+    return Response.redirect(`${base}/profile/settings?link_error=${errKey}`)
   }
 }

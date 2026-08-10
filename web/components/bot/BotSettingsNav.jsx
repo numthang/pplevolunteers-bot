@@ -18,7 +18,7 @@ const TABS = [
   // /bot/ai แสดงต่อ superadmin (โมเดล+ai_mention) และ editor (โหมด/prompt) — ตรงกับ page.js
   { href: '/bot/ai',              label: 'AI',         gate: 'editor' },
   // ลายน้ำ + สไตล์การ์ดคำคม ย้ายไป /org/settings/brand แล้ว (2026-08-10) — เป็นอัตลักษณ์ของแบรนด์
-  // ไม่ใช่ค่าตั้งของบอท · ของส่วนตัวอยู่ /org/personal/brand
+  // ไม่ใช่ค่าตั้งของบอท · ของส่วนตัวอยู่ /profile/settings/brand
 ]
 
 export default function BotSettingsNav() {

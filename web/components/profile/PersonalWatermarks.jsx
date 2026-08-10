@@ -4,6 +4,7 @@ import { Trash2, Upload, ImageIcon, X, Star } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 
 // ลายน้ำส่วนตัว — ยกมาจาก PersonalPanel ใน components/config/WatermarkPanel.jsx (2026-08-10)
+// อยู่ใต้ /profile/settings/brand — ของที่ตามคนข้าม org (ไม่ใช่ /org/settings/brand ที่เป็นของแบรนด์องค์กร)
 // ตอนย้ายลายน้ำออกจาก guild · ไฟล์เก็บที่ assets/watermark/user_<users.id>/ (ไม่ใช่ Discord ID แล้ว)
 //
 // แยกถังกับลายน้ำขององค์กรเด็ดขาด (เคาะ 2026-08-10): ที่นี่เห็นเฉพาะของตัวเอง
@@ -13,7 +14,7 @@ const PERSONAL_MAX = 10
 const stripExt = name => name.replace(/\.[^.]+$/, '').replace(/^\d+-/, '')
 
 export default function PersonalWatermarks() {
-  const t = useTranslations('org')
+  const t = useTranslations('profile')
   const fileRef = useRef(null)
   const [files,      setFiles]      = useState([])
   const [defaultWm,  setDefaultWm]  = useState(null)
@@ -55,13 +56,13 @@ export default function PersonalWatermarks() {
     form.append('file', file)
     const res = await fetch('/api/watermark/personal', { method: 'POST', body: form })
     const data = await res.json().catch(() => ({}))
-    if (!res.ok) setError(data.error || t('personalBrand.uploadError'))
+    if (!res.ok) setError(data.error || t('brand.uploadError'))
     else await load()
     setUploading(false)
   }
 
   async function remove(filename) {
-    if (!confirm(t('personalBrand.deleteConfirm', { file: filename }))) return
+    if (!confirm(t('brand.deleteConfirm', { file: filename }))) return
     setDeleting(filename)
     await fetch(`/api/watermark/personal/${encodeURIComponent(filename)}`, { method: 'DELETE' })
     setFiles(prev => prev.filter(f => f !== filename))
@@ -74,13 +75,13 @@ export default function PersonalWatermarks() {
     if (file) upload(file)
   }
 
-  if (loading) return <p className="text-sm text-gray-400 dark:text-disc-muted">{t('personalBrand.loading')}</p>
+  if (loading) return <p className="text-sm text-gray-400 dark:text-disc-muted">{t('brand.loading')}</p>
 
   const canUpload = files.length < PERSONAL_MAX && !uploading
 
   return (
     <>
-      <p className="mb-4 text-sm text-gray-500 dark:text-disc-muted">{t('personalBrand.description')}</p>
+      <p className="mb-4 text-sm text-gray-500 dark:text-disc-muted">{t('brand.description')}</p>
 
       <div
         onDragOver={e => { e.preventDefault(); setDragging(true) }}
@@ -99,13 +100,13 @@ export default function PersonalWatermarks() {
           onChange={e => upload(e.target.files?.[0])} disabled={!canUpload} />
         <Upload size={28} className="mx-auto mb-3 text-gray-400 dark:text-disc-muted" />
         {uploading ? (
-          <p className="text-sm font-medium text-orange">{t('personalBrand.uploading')}</p>
+          <p className="text-sm font-medium text-orange">{t('brand.uploading')}</p>
         ) : files.length >= PERSONAL_MAX ? (
-          <p className="text-sm text-gray-500 dark:text-disc-muted">{t('personalBrand.full', { max: PERSONAL_MAX })}</p>
+          <p className="text-sm text-gray-500 dark:text-disc-muted">{t('brand.full', { max: PERSONAL_MAX })}</p>
         ) : (
           <>
-            <p className="text-sm font-medium text-gray-700 dark:text-disc-text">{t('personalBrand.dropHint')}</p>
-            <p className="mt-1 text-xs text-gray-400 dark:text-disc-muted">{t('personalBrand.fileHint')}</p>
+            <p className="text-sm font-medium text-gray-700 dark:text-disc-text">{t('brand.dropHint')}</p>
+            <p className="mt-1 text-xs text-gray-400 dark:text-disc-muted">{t('brand.fileHint')}</p>
           </>
         )}
       </div>
@@ -113,19 +114,19 @@ export default function PersonalWatermarks() {
       {error && (
         <div className="mb-4 flex items-center justify-between rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400">
           {error}
-          <button onClick={() => setError(null)} className="ml-3 opacity-60 hover:opacity-100" aria-label={t('personalBrand.dismissError')}><X size={14} /></button>
+          <button onClick={() => setError(null)} className="ml-3 opacity-60 hover:opacity-100" aria-label={t('brand.dismissError')}><X size={14} /></button>
         </div>
       )}
 
-      <p className="mb-3 text-xs text-gray-400 dark:text-disc-muted">{t('personalBrand.count', { used: files.length, max: PERSONAL_MAX })}</p>
+      <p className="mb-3 text-xs text-gray-400 dark:text-disc-muted">{t('brand.count', { used: files.length, max: PERSONAL_MAX })}</p>
 
       {files.length === 0 ? (
-        <p className="py-8 text-center text-sm text-gray-400 dark:text-disc-muted">{t('personalBrand.empty')}</p>
+        <p className="py-8 text-center text-sm text-gray-400 dark:text-disc-muted">{t('brand.empty')}</p>
       ) : (
         <>
           {defaultWm && (
             <p className="mb-3 text-xs text-amber-600 dark:text-amber-400">
-              ⭐ {t('personalBrand.currentDefault', { file: stripExt(defaultWm.replace('personal:', '')) })}
+              ⭐ {t('brand.currentDefault', { file: stripExt(defaultWm.replace('personal:', '')) })}
             </p>
           )}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
@@ -146,12 +147,12 @@ export default function PersonalWatermarks() {
                       <button
                         onClick={() => setPersonalDefault(isDefault ? null : filename)}
                         disabled={settingDef}
-                        title={isDefault ? t('personalBrand.unsetDefault') : t('personalBrand.setDefault')}
+                        title={isDefault ? t('brand.unsetDefault') : t('brand.setDefault')}
                         className={`rounded p-1 transition disabled:opacity-40 ${isDefault ? 'text-amber-500 hover:text-amber-600' : 'text-gray-300 dark:text-disc-muted hover:text-amber-400'}`}>
                         <Star size={14} fill={isDefault ? 'currentColor' : 'none'} />
                       </button>
                       <button onClick={() => remove(filename)} disabled={deleting === filename}
-                        title={t('personalBrand.delete')}
+                        title={t('brand.delete')}
                         className="rounded p-1 text-red-400 transition hover:bg-red-50 disabled:opacity-40 dark:hover:bg-red-900/30">
                         <Trash2 size={14} />
                       </button>
@@ -164,7 +165,7 @@ export default function PersonalWatermarks() {
               <button onClick={() => fileRef.current?.click()}
                 className="flex aspect-square flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-warm-300 text-gray-400 transition hover:border-orange hover:text-orange dark:border-disc-border dark:text-disc-muted dark:hover:border-orange">
                 <Upload size={24} />
-                <span className="text-xs">{t('personalBrand.upload')}</span>
+                <span className="text-xs">{t('brand.upload')}</span>
               </button>
             )}
           </div>
