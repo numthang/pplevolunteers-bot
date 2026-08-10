@@ -3,7 +3,9 @@
 - ทำให้เว็บไซต์ หรือ sub-domain ภายนอกใช้ระบบเดียวกันได้แต่ใช้ชื่อของเขาเอง
 
 # Posts
-- ตอนนี้่ 1 org มีได้หลาย group social แล้วถ้าเกิด org เดียวกัน มีหลาย group soical จะใช้ meta app id, x consumer key เดียวกัน ไหวไหม เช่น สมมติ FB Page มี 70 pages แล้วใช้ meta app id เดียวกัน ไหวไหม แม้จะไปถึงเงื่อนไขนั้นยากก็ตามเถอะ
+- ได้ละ พอ reload ก็มาแล้วๆ แต่ตำแหน่งผมอยากให้ แสดงภาพลายน้ำมากกว่านี้สัก 70% และ ทำให้เป็น grey transparency พอ ไม่ใช่มีแต่เงา
+- แล้ว personal watermark จะอยู่ตรงไหนดี
+
 
 # CivicFlow
 - ข้อเสนอ: ย้าย CivicFlow จาก Vercel มาที่ VPS
