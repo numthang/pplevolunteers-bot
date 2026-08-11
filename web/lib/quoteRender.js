@@ -104,7 +104,16 @@ export function normalizeQuoteParams({ quoteText, authorName, style, saturation,
     if (!Number.isFinite(sat) || sat < 0 || sat > 1) throw new QuoteRenderError('ค่าความอิ่มสีไม่ถูกต้อง')
   }
 
-  return { quoteText: text, authorName: author, style: styleKey, saturation: sat }
+  // ฟอนต์/ขนาด: เลือกได้ตั้งแต่ 2026-08-11 เหมือนการ์ดไม่มีรูป — ค่าที่ไม่รู้จักตกเป็น
+  // undefined เงียบๆ (ไม่ throw) ให้ renderer ใช้ default ของสไตล์นั้นเอง (ดู utils/quoteStyles.js)
+  const f = String(font ?? '').trim()
+  const ts = String(textSize ?? '').trim()
+
+  return {
+    quoteText: text, authorName: author, style: styleKey, saturation: sat,
+    font: isPlainFont(f) ? f : undefined,
+    textSize: isPlainTextSize(ts) ? ts : undefined,
+  }
 }
 
 /**
@@ -115,7 +124,7 @@ export function normalizeQuoteParams({ quoteText, authorName, style, saturation,
  * @returns {Promise<Buffer>} PNG
  */
 export async function renderQuoteCard(bgBuffer, params, accentColor = null) {
-  const { quoteText, authorName, style, saturation } = params
+  const { quoteText, authorName, style, saturation, font, textSize } = params
   // null เข้า sharp จะโยน "Expected number above zero for saturation" → default 1.0 (สีเต็ม)
   const sat = saturation ?? 1.0
   try {
@@ -125,6 +134,9 @@ export async function renderQuoteCard(bgBuffer, params, accentColor = null) {
       saturation: sat,
       // สี CI ของผู้ใช้/องค์กร — null = renderer ใช้ส้ม default (ดู lib/quoteAccent.js)
       accentColor: accentColor || undefined,
+      // undefined = renderer ใช้ฟอนต์/ขนาดเดิมของสไตล์นั้น (ดู utils/quoteStyles.js)
+      font,
+      textSize,
     })
     return buffer
   } catch (error) {

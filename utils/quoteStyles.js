@@ -56,6 +56,21 @@ async function loadMark(name) {
 const OPEN_MARKS  = ['double_open', 'classic_open', 'block_open', 'outline_open', 'big_open'];
 const CLOSE_MARKS = ['double_close', 'classic_close', 'block_close', 'outline_close'];
 
+// ฟอนต์ของคำคม — คีย์ที่ผู้ใช้เลือกได้ ใช้ร่วมกันทั้งการ์ด "ไม่มีรูป" (renderPlain)
+// และการ์ด "มีรูป" (ember/pillar/frame/panel/matte/side/center) ตั้งแต่ 2026-08-11
+// แต่ละสไตล์ที่มีรูปยังมี**ฟอนต์เดิม**เป็นค่า default ของตัวเอง (ไม่ใช่ anakotmai ทุกตัว) —
+// คีย์นี้จะเข้ามาแทนก็ต่อเมื่อผู้ใช้ส่ง `font` มาเท่านั้น ไม่งั้นการ์ดเก่าหน้าตาเปลี่ยนเงียบๆ
+const PLAIN_FONTS = {
+  anakotmai: { quote: 'Anakotmai', author: 'AnakotmaiLight' },  // ไม่มีหัว — ฟอนต์แบรนด์
+  gsans:     { quote: 'GSans',     author: 'GSansLight' },      // มีหัว ทันสมัย
+  sarabun:   { quote: 'Sarabun',   author: 'Sarabun' },         // มีหัว ทรงราชการ
+};
+
+// ตัวคูณขนาดฟอนต์ต่อ preset สำหรับการ์ด "มีรูป" — คูณเข้ากับ**จุดตั้งต้น**ของแต่ละสไตล์เอง
+// (ไม่ใช่สัดส่วนตายตัวแบบ PLAIN_SIZES เพราะแต่ละสไตล์มี baseline ที่เคาะมาต่างกันอยู่แล้ว)
+// m = 1.0 คือพฤติกรรมเดิมเป๊ะ — ไม่กระทบการ์ดที่ไม่ได้ส่ง textSize มา
+const QUOTE_SIZE_SCALE = { s: 0.82, m: 1.0, l: 1.22 };
+
 const GREY_TINT = '#9aa0a6';   // เทากลาง — ลายน้ำบนพื้นสี CI ย้อมสีนี้ ไม่ใช่ดำ (ดำ = อ่านเป็นเงา)
 const ORANGE = '#ff6a13';
 
@@ -304,10 +319,13 @@ async function toPng(canvas) {
 // ── Core render ───────────────────────────────────────────────────────────────
 // markScale: relative size of mark (1.0 = default)
 // gradDark:  0.0–1.0 how dark the bottom gradient is
-async function renderVariant(buf, { quoteText, authorName, side = 'left', vertical = 'bottom', markScale = 1.0, gradDark = 0.95, saturation = 0.15, fontBold = 'GSans', fontLight = 'AnakotmaiLight', accentColor, markExtraGap = 0, markAfterText = false, noMark = false, scrimMix = SCRIM_MIX, duotone = false }) {
+async function renderVariant(buf, { quoteText, authorName, side = 'left', vertical = 'bottom', markScale = 1.0, gradDark = 0.95, saturation = 0.15, fontBold = 'GSans', fontLight = 'AnakotmaiLight', font = null, textSize = 'm', accentColor, markExtraGap = 0, markAfterText = false, noMark = false, scrimMix = SCRIM_MIX, duotone = false }) {
   const accent = accentColor || ORANGE;
   const isRight = side === 'right';
   const isTop   = vertical === 'top';
+  // font (preset key) ทับ fontBold/fontLight เฉพาะตอนผู้ใช้เลือกมาจริง — ไม่งั้นคงฟอนต์เดิมของสไตล์
+  if (font && PLAIN_FONTS[font]) { fontBold = PLAIN_FONTS[font].quote; fontLight = PLAIN_FONTS[font].author; }
+  const sizeScale = QUOTE_SIZE_SCALE[textSize] ?? 1;
 
   // ⚠️ saturation ไม่มีผลตอน duotone (รูปถูกทำขาวดำก่อนย้อมอยู่แล้ว) → UI ต้องซ่อนปุ่มสีภาพ
   const work = await prepImage(buf, { saturation, duotone, accent });
@@ -321,7 +339,7 @@ async function renderVariant(buf, { quoteText, authorName, side = 'left', vertic
   const pad    = Math.round(Math.min(W, H) * 0.055);
   const barW   = Math.max(2, Math.round(W * 0.0024));
   const barGap = Math.round(pad * 0.5);
-  const qsz    = Math.max(36, Math.round(W * 0.065));
+  const qsz    = Math.max(36, Math.round(W * 0.065 * sizeScale));
   const nsz    = Math.max(16, Math.round(W * 0.030));
   const markH  = Math.max(54, Math.round(W * 0.090 * markScale));
   const markGap = Math.round(pad * 0.25);
@@ -406,8 +424,11 @@ async function renderVariant(buf, { quoteText, authorName, side = 'left', vertic
 
 // ── Style 7: quote_border (mark + H-bar + V-bar เป็นชิ้นเดียว) ───────────────
 // PNG 822x714 — V-bar spans y 32%–95%, text area starts at x 24%, y 32%
-async function renderBorder(buf, { quoteText, authorName, saturation = 0.15, accentColor, duotone = false }) {
+async function renderBorder(buf, { quoteText, authorName, saturation = 0.15, accentColor, duotone = false, font = null, textSize = 'm' }) {
   const accent = accentColor || ORANGE;
+  const fontBold  = font && PLAIN_FONTS[font] ? PLAIN_FONTS[font].quote  : 'GSans';
+  const fontLight = font && PLAIN_FONTS[font] ? PLAIN_FONTS[font].author : 'AnakotmaiLight';
+  const sizeScale = QUOTE_SIZE_SCALE[textSize] ?? 1;
   const work = await prepImage(buf, { saturation, duotone, accent: accentColor || ORANGE });
   const img  = await loadImage(work);
   const W = img.width, H = img.height;
@@ -416,14 +437,14 @@ async function renderBorder(buf, { quoteText, authorName, saturation = 0.15, acc
   ctx.drawImage(img, 0, 0, W, H);
 
   const pad  = Math.round(Math.min(W, H) * 0.055);
-  const qsz  = Math.max(36, Math.round(W * 0.065));
+  const qsz  = Math.max(36, Math.round(W * 0.065 * sizeScale));
   const nsz  = Math.max(16, Math.round(W * 0.030));
 
   // quote_border.png 698x591 — V-bar spans y 25%–100%, text area x ≈ 24%
   const borderImg = await loadMark('frame_left');
 
   const maxW7   = W * 0.80;
-  const { fontSize: qszFit, lines } = fitFont(ctx, quoteText, maxW7, qsz, 4, 'GSans');
+  const { fontSize: qszFit, lines } = fitFont(ctx, quoteText, maxW7, qsz, 4, fontBold);
   const lh      = qszFit * 1.2;
   const textH   = lines.length * lh + nsz * 1.8;
   const maxTextW = maxW7;
@@ -456,7 +477,7 @@ async function renderBorder(buf, { quoteText, authorName, saturation = 0.15, acc
   // quote text
   ctx.textBaseline = 'top';
   ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
-  ctx.font = `bold ${qszFit}px GSans`;
+  ctx.font = `bold ${qszFit}px ${fontBold}`;
   let ty = textBlockTop;
   for (const l of lines) {
     ctx.fillStyle = WHITE; lsDraw(ctx, l, textX, ty, 1.0);
@@ -464,7 +485,7 @@ async function renderBorder(buf, { quoteText, authorName, saturation = 0.15, acc
   }
 
   ty += nsz * 0.5;
-  ctx.font = `${nsz}px AnakotmaiLight`; ctx.fillStyle = readableOnDark(accent, 6.2, scrim.lum);
+  ctx.font = `${nsz}px ${fontLight}`; ctx.fillStyle = readableOnDark(accent, 6.2, scrim.lum);
   ctx.shadowBlur = 4; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
   lsDraw(ctx, `— ${authorName}`, textX, ty, 0.8);
 
@@ -486,8 +507,11 @@ const FRAME_RIGHT = {
 };
 
 // ── Style 8: quote_border_2 — กรอบตัว C ชิดขวา (แถบบน + เส้นตั้งขวา + แถบล่างสั้น)
-async function renderBorder2(buf, { quoteText, authorName, saturation = 0.15, accentColor, duotone = false }) {
+async function renderBorder2(buf, { quoteText, authorName, saturation = 0.15, accentColor, duotone = false, font = null, textSize = 'm' }) {
   const accent = accentColor || ORANGE;
+  const fontBold  = font && PLAIN_FONTS[font] ? PLAIN_FONTS[font].quote  : 'GSans';
+  const fontLight = font && PLAIN_FONTS[font] ? PLAIN_FONTS[font].author : 'AnakotmaiLight';
+  const sizeScale = QUOTE_SIZE_SCALE[textSize] ?? 1;
   const work = await prepImage(buf, { saturation, duotone, accent: accentColor || ORANGE });
   const img  = await loadImage(work);
   const W = img.width, H = img.height;
@@ -496,11 +520,11 @@ async function renderBorder2(buf, { quoteText, authorName, saturation = 0.15, ac
   ctx.drawImage(img, 0, 0, W, H);
 
   const pad  = Math.round(Math.min(W, H) * 0.055);
-  const qsz  = Math.max(36, Math.round(W * 0.065));
+  const qsz  = Math.max(36, Math.round(W * 0.065 * sizeScale));
   const nsz  = Math.max(16, Math.round(W * 0.030));
 
   const maxW8   = W * 0.80;
-  const { fontSize: qszFit, lines } = fitFont(ctx, quoteText, maxW8, qsz, 4, 'GSans');
+  const { fontSize: qszFit, lines } = fitFont(ctx, quoteText, maxW8, qsz, 4, fontBold);
   const lh      = qszFit * 1.2;
 
   // ── กรอบวาดเอง ไม่ใช้ assets/quote/frame_right.png (เคาะ 2026-08-06) ──────────
@@ -515,10 +539,10 @@ async function renderBorder2(buf, { quoteText, authorName, saturation = 0.15, ac
   const padX    = Math.round(qszFit * FRAME_RIGHT.padX);       // ระยะจากเส้นตั้งถึงตัวอักษร
   const gapAuth = Math.round(nsz * FRAME_RIGHT.gapAuth);          // ช่องระหว่างบล็อกคำคมกับบรรทัดชื่อ
 
-  ctx.font = `bold ${qszFit}px GSans`;
+  ctx.font = `bold ${qszFit}px ${fontBold}`;
   const widest = Math.max(...lines.map(l => lsWidth(ctx, l, 1.0)));
 
-  ctx.font = `${nsz}px AnakotmaiLight`;
+  ctx.font = `${nsz}px ${fontLight}`;
   const authorStr = `>_ ${authorName}`;            // `>_` แทนขีดยาว (user เคาะ)
   const aw = lsWidth(ctx, authorStr, 0.8);
 
@@ -561,14 +585,14 @@ async function renderBorder2(buf, { quoteText, authorName, saturation = 0.15, ac
 
   ctx.textBaseline = 'top';
   ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
-  ctx.font = `bold ${qszFit}px GSans`;
+  ctx.font = `bold ${qszFit}px ${fontBold}`;
   let ty = quoteTop;
   for (const l of lines) {
     ctx.fillStyle = WHITE; lsDraw(ctx, l, textRight - lsWidth(ctx, l, 1.0), ty, 1.0);
     ty += lh;
   }
 
-  ctx.font = `${nsz}px AnakotmaiLight`;
+  ctx.font = `${nsz}px ${fontLight}`;
   // สี accent เข้มๆ จมหายไปกับ gradient ดำก้นภาพ → ใช้เวอร์ชันที่อ่านออก (กรอบยังสีจริง)
   ctx.fillStyle = readableOnDark(accent, 6.2, scrim.lum);
   // ⚠️ shadowBlur อย่างเดียวไม่มีผล — canvas default shadowColor เป็นดำโปร่งใส 100%
@@ -605,8 +629,11 @@ function _rgbTriplet(hex) {
 
 // ⛔ เคยมีโหมด fade (รูปไล่จางเข้าหาแถบสี) — **ตัดออกแล้ว 2026-08-07** user ตัดสินว่าไม่สวย
 //    อย่าใส่กลับโดยไม่ถามก่อน
-async function renderPanel(buf, { quoteText, authorName, saturation = 1.0, accentColor, imgRatio = 0.65, panelAt = 'bottom', align = 'left', panelAlpha = 0.90, inkOverride = null }) {
+async function renderPanel(buf, { quoteText, authorName, saturation = 1.0, accentColor, imgRatio = 0.65, panelAt = 'bottom', align = 'left', panelAlpha = 0.90, inkOverride = null, font = null, textSize = 'm' }) {
   const accent = accentColor || ORANGE;
+  const fontBold  = font && PLAIN_FONTS[font] ? PLAIN_FONTS[font].quote  : 'Anakotmai';
+  const fontLight = font && PLAIN_FONTS[font] ? PLAIN_FONTS[font].author : 'AnakotmaiLight';
+  const sizeScale = QUOTE_SIZE_SCALE[textSize] ?? 1;
   const pal = panelPalette(accent);
   // inkOverride = บังคับสีตัวอักษรแทนที่จะให้ contrastText() ตัดสิน — ไว้เทียบให้คนดูเท่านั้น
   const panel = pal.panel;
@@ -644,9 +671,12 @@ async function renderPanel(buf, { quoteText, authorName, saturation = 1.0, accen
   const authGap = Math.round(nsz * 0.9);
 
   let fit, lh, markH, markGap, blockH;
-  const MIN = Math.round(W * 0.030);
-  for (let sz = Math.round(W * 0.150); ; sz = Math.round(sz * 0.95)) {
-    ctx.font = `bold ${sz}px Anakotmai`;
+  const startSz = Math.round(W * 0.150 * sizeScale);
+  // floor ผูกกับ startSz ของ preset เอง (ไม่ใช่ค่าคงที่) — กัน s/m/l บรรจบกันตอนคำคมยาว
+  // เหมือน bug ที่เจอใน renderPlain (2026-08-11)
+  const MIN = Math.round(startSz * 0.6);
+  for (let sz = startSz; ; sz = Math.round(sz * 0.95)) {
+    ctx.font = `bold ${sz}px ${fontBold}`;
     const lines = _wrapFill(ctx, quoteText, maxW, 1.0);
     lh      = sz * 1.18;
     markH   = hasMark ? Math.round(sz * 0.80) : 0;
@@ -683,7 +713,7 @@ async function renderPanel(buf, { quoteText, authorName, saturation = 1.0, accen
     ty += markH + markGap;
   }
 
-  ctx.font = `bold ${fit.fontSize}px Anakotmai`;
+  ctx.font = `bold ${fit.fontSize}px ${fontBold}`;
   ctx.fillStyle = ink;
   for (const l of fit.lines) {
     lsDraw(ctx, l, isRight ? right - lsWidth(ctx, l, 1.0) : padX, ty, 1.0);
@@ -691,7 +721,7 @@ async function renderPanel(buf, { quoteText, authorName, saturation = 1.0, accen
   }
 
   ty += authGap;
-  ctx.font = `${nsz}px AnakotmaiLight`;
+  ctx.font = `${nsz}px ${fontLight}`;
   ctx.fillStyle = sub;
   lsDraw(ctx, authorName, isRight ? right - lsWidth(ctx, authorName, 0.8) : padX, ty, 0.8);
 
@@ -718,14 +748,18 @@ function _mix(hex, toward, t) {
  */
 // qFactor = ขนาดฟอนต์เริ่มต้นเทียบกับ**ความกว้างกล่อง** — กล่องแคบ (แถบข้าง) ต้องใช้ค่าสูงกว่า
 // ไม่งั้นได้ตัวหนังสือจิ๋วลอยอยู่กลางแถบสีใหญ่ๆ (เจอตอนทำแถบข้างครั้งแรก)
-async function drawQuoteBlock(ctx, { x, y, w, h, quoteText, authorName, ink, sub, align = 'left', maxLines = 6, qFactor = 0.073, noMark = false }) {
+async function drawQuoteBlock(ctx, { x, y, w, h, quoteText, authorName, ink, sub, align = 'left', maxLines = 6, qFactor = 0.073, noMark = false, fontBold = 'Anakotmai', fontLight = 'AnakotmaiLight' }) {
   const pool     = noMark ? [] : existingMarks(OPEN_MARKS);
   const hasMark  = pool.length > 0;
 
-  let qsz = Math.max(22, Math.round(w * qFactor));
+  const qszMax = Math.max(22, Math.round(w * qFactor));
+  // floor ผูกกับ qszMax เอง (ไม่ใช่ 18px คงที่) — กัน textSize preset บรรจบกันตอนคำคมยาว
+  // เหมือน bug ที่เจอใน renderPlain (2026-08-11)
+  const qszFloor = Math.round(qszMax * 0.6);
+  let qsz = qszMax;
   let fit, lh, markH, markGap, nsz, authGap, blockH;
   for (;;) {
-    fit     = fitFont(ctx, quoteText, w, qsz, maxLines, 'Anakotmai');
+    fit     = fitFont(ctx, quoteText, w, qsz, maxLines, fontBold);
     fit.lines = fit.lines.flatMap(l => _breakLongLine(ctx, l, w, 1.0));
     lh      = fit.fontSize * 1.24;
     markH   = hasMark ? Math.round(fit.fontSize * 0.95) : 0;
@@ -734,7 +768,7 @@ async function drawQuoteBlock(ctx, { x, y, w, h, quoteText, authorName, ink, sub
     nsz     = Math.max(14, Math.round(w * 0.033));
     authGap = Math.round(nsz * 1.1);
     blockH  = markH + markGap + fit.lines.length * lh + authGap + nsz;
-    if (blockH <= h || qsz <= 18) break;
+    if (blockH <= h || qsz <= qszFloor) break;
     qsz = Math.round(qsz * 0.92);
   }
 
@@ -749,12 +783,12 @@ async function drawQuoteBlock(ctx, { x, y, w, h, quoteText, authorName, ink, sub
     ty += markH + markGap;
   }
 
-  ctx.font = `bold ${fit.fontSize}px Anakotmai`;
+  ctx.font = `bold ${fit.fontSize}px ${fontBold}`;
   ctx.fillStyle = ink;
   for (const l of fit.lines) { lsDraw(ctx, l, lineX(l), ty, 1.0); ty += lh; }
 
   ty += authGap;
-  ctx.font = `${nsz}px AnakotmaiLight`;
+  ctx.font = `${nsz}px ${fontLight}`;
   ctx.fillStyle = sub;
   lsDraw(ctx, authorName, align === 'right' ? x + w - lsWidth(ctx, authorName, 0.8) : x, ty, 0.8);
 }
@@ -767,8 +801,11 @@ async function drawQuoteBlock(ctx, { x, y, w, h, quoteText, authorName, ink, sub
 //    (คอลัมน์แคบทำให้ตัวหนังสือเล็กกว่าใบอื่นชัดเจน) อย่าใส่กลับโดยไม่ถามก่อน
 
 /** matte — พื้นสีล้วน รูปลอยอยู่ข้างบนแบบมีขอบ คำคมอยู่ใต้รูป */
-async function renderMatte(buf, { quoteText, authorName, saturation = 1.0, accentColor, inset = 0.06 }) {
+async function renderMatte(buf, { quoteText, authorName, saturation = 1.0, accentColor, inset = 0.06, font = null, textSize = 'm' }) {
   const base = accentColor || ORANGE;
+  const fontBold  = font && PLAIN_FONTS[font] ? PLAIN_FONTS[font].quote  : 'Anakotmai';
+  const fontLight = font && PLAIN_FONTS[font] ? PLAIN_FONTS[font].author : 'AnakotmaiLight';
+  const sizeScale = QUOTE_SIZE_SCALE[textSize] ?? 1;
   const { ink, sub } = panelPalette(base);
 
   const meta = await sharp(buf).metadata();
@@ -793,6 +830,7 @@ async function renderMatte(buf, { quoteText, authorName, saturation = 1.0, accen
   await drawQuoteBlock(ctx, {
     x: m, y: boxY, w: imgW, h: H - boxY - m,
     quoteText, authorName, ink, sub, noMark: true,
+    qFactor: 0.073 * sizeScale, fontBold, fontLight,
   });
   return { buffer: await toPng(cv), ext: 'png', vertical: 'bottom', side: 'left' };
 }
@@ -807,9 +845,13 @@ async function renderMatte(buf, { quoteText, authorName, saturation = 1.0, accen
 //
 // แบ่ง 2 ระดับด้วย **บรรทัดว่าง**: ก่อนบรรทัดว่าง = เกริ่น · หลังบรรทัดว่าง = ประโยคเด็ด
 // ไม่มีบรรทัดว่าง = ทั้งก้อนเป็นประโยคเด็ด · ชื่อผู้พูดขึ้นบรรทัดใหม่ได้ (บรรทัดแรก = ชื่อ ตัวหนา)
-async function renderSide(buf, { quoteText, authorName, saturation = 1.0, accentColor, duotone = false, align = 'right' }) {
+async function renderSide(buf, { quoteText, authorName, saturation = 1.0, accentColor, duotone = false, align = 'right', font = null, textSize = 'm' }) {
   const onRight = align !== 'left';
   const accent = accentColor || ORANGE;
+  // 2 ระดับตัวพิมพ์: lead/ชื่อ = ตัวหนา (fontBold) · intro/ตำแหน่ง = ตัวบาง (fontLight)
+  const fontBold  = font && PLAIN_FONTS[font] ? PLAIN_FONTS[font].quote  : 'GSans';
+  const fontLight = font && PLAIN_FONTS[font] ? PLAIN_FONTS[font].author : 'GSansLight';
+  const sizeScale = QUOTE_SIZE_SCALE[textSize] ?? 1;
   const scrim  = scrimOf(accent);
   const meta   = await sharp(buf).metadata();
   const W = meta.width, H = meta.height;
@@ -846,8 +888,8 @@ async function renderSide(buf, { quoteText, authorName, saturation = 1.0, accent
 
   // บล็อกชื่อผู้พูดล่างซ้าย — กันพื้นที่ไว้ก่อนค่อยคิดความสูงคอลัมน์
   const authorLines = String(authorName || '').split('\n').map(t => t.trim()).filter(Boolean);
-  const nameSz = Math.max(15, Math.round(W * 0.026));
-  const roleSz = Math.max(13, Math.round(W * 0.021));
+  const nameSz = Math.max(15, Math.round(W * 0.026 * sizeScale));
+  const roleSz = Math.max(13, Math.round(W * 0.021 * sizeScale));
   const ruleH  = Math.max(3, Math.round(W * 0.005));
   const authorH = authorLines.length
     ? ruleH + Math.round(nameSz * 0.9) + nameSz * 1.25 + Math.max(0, authorLines.length - 1) * roleSz * 1.45
@@ -858,12 +900,12 @@ async function renderSide(buf, { quoteText, authorName, saturation = 1.0, accent
   const avail  = H - top - pad - Math.round(authorH * 0.45);   // บล็อกชื่ออยู่ซ้าย ทับกันได้บางส่วน
 
   // ย่อฟอนต์ทั้งชุดจนความสูงรวมพอดีคอลัมน์ (fitFont คุมแค่ความกว้าง)
-  let introSz0 = Math.max(20, Math.round(W * 0.038));
-  let leadSz0  = Math.max(28, Math.round(W * 0.060));
+  let introSz0 = Math.max(20, Math.round(W * 0.038 * sizeScale));
+  let leadSz0  = Math.max(28, Math.round(W * 0.060 * sizeScale));
   let introFit = null, leadFit = null, introLh = 0, leadLh = 0, total = 0;
   for (let i = 0; i < 14; i++) {
-    introFit = intro ? fitFont(ctx, intro, colW, introSz0, 8, 'GSansLight') : { fontSize: introSz0, lines: [] };
-    leadFit  = lead  ? fitFont(ctx, lead,  colW, leadSz0,  8, 'GSans')      : { fontSize: leadSz0,  lines: [] };
+    introFit = intro ? fitFont(ctx, intro, colW, introSz0, 8, fontLight) : { fontSize: introSz0, lines: [] };
+    leadFit  = lead  ? fitFont(ctx, lead,  colW, leadSz0,  8, fontBold)  : { fontSize: leadSz0,  lines: [] };
     introLh  = introFit.fontSize * 1.42;
     leadLh   = leadFit.fontSize * 1.22;
     total = markH + Math.round(leadSz0 * 0.5)
@@ -886,13 +928,13 @@ async function renderSide(buf, { quoteText, authorName, saturation = 1.0, accent
 
   ctx.textBaseline = 'top';
   if (introFit.lines.length) {
-    ctx.font = `${introFit.fontSize}px GSansLight`;
+    ctx.font = `${introFit.fontSize}px ${fontLight}`;
     ctx.fillStyle = 'rgba(255,255,255,0.90)';
     for (const l of introFit.lines) { lsDraw(ctx, l, colX, ty, 0.6); ty += introLh; }
     if (leadFit.lines.length) ty += Math.round(leadFit.fontSize * 0.75);
   }
   if (leadFit.lines.length) {
-    ctx.font = `bold ${leadFit.fontSize}px GSans`;
+    ctx.font = `bold ${leadFit.fontSize}px ${fontBold}`;
     ctx.fillStyle = WHITE;
     for (const l of leadFit.lines) { lsDraw(ctx, l, colX, ty, 0.8); ty += leadLh; }
   }
@@ -910,11 +952,11 @@ async function renderSide(buf, { quoteText, authorName, saturation = 1.0, accent
     ctx.fillStyle = readableOnDark(accent, 4.5, scrim.lum);
     ctx.fillRect(onRight ? ax : ax - ruleW, ay, ruleW, ruleH);
     ay += ruleH + Math.round(nameSz * 0.9);
-    ctx.font = `bold ${nameSz}px GSans`;
+    ctx.font = `bold ${nameSz}px ${fontBold}`;
     ctx.fillStyle = WHITE;
     put(authorLines[0], 0.6);
     ay += nameSz * 1.25;
-    ctx.font = `${roleSz}px GSansLight`;
+    ctx.font = `${roleSz}px ${fontLight}`;
     ctx.fillStyle = 'rgba(255,255,255,0.78)';
     for (const l of authorLines.slice(1)) { put(l, 0.5); ay += roleSz * 1.45; }
   }
@@ -931,7 +973,10 @@ const ember = (side, vertical, extra = {}) => (buf, opts) =>
 
 // ── quote-2-center: ข้อความกลางภาพ, BG หรี่ + ดำคลุม 75%, Google Sans (มีหัว) ──
 // supersample 2x แล้วย่อ = ขอบคม. ใช้ fitFont/lsDraw ตัวเดียวกับ quote-1
-async function renderCenter(buf, { quoteText, authorName, saturation = 1.0, accentColor, duotone = false }) {
+async function renderCenter(buf, { quoteText, authorName, saturation = 1.0, accentColor, duotone = false, font = null, textSize = 'm' }) {
+  const fontBold  = font && PLAIN_FONTS[font] ? PLAIN_FONTS[font].quote  : 'GSans';
+  const fontLight = font && PLAIN_FONTS[font] ? PLAIN_FONTS[font].author : 'AnakotmaiLight';
+  const sizeScale = QUOTE_SIZE_SCALE[textSize] ?? 1;
   const SS = 2, OVERLAY = 0.75;
   const meta = await sharp(buf).metadata();
   const W = meta.width, H = meta.height;
@@ -949,8 +994,8 @@ async function renderCenter(buf, { quoteText, authorName, saturation = 1.0, acce
   ctx.fillRect(0, 0, W, H);
 
   const padX = Math.round(W * 0.11);
-  const startSz = Math.max(40, Math.round(W * 0.085));
-  const { fontSize: qsz, lines } = fitFont(ctx, quoteText, W - padX * 2, startSz, 6, 'GSans');
+  const startSz = Math.max(40, Math.round(W * 0.085 * sizeScale));
+  const { fontSize: qsz, lines } = fitFont(ctx, quoteText, W - padX * 2, startSz, 6, fontBold);
   const lh    = qsz * 1.22;
   const nsz   = Math.max(16, Math.round(W * 0.028));
   const qmsz  = Math.round(W * 0.11);
@@ -965,7 +1010,7 @@ async function renderCenter(buf, { quoteText, authorName, saturation = 1.0, acce
   ty += qmsz + qmGap;
 
   // quote กลาง
-  ctx.font = `bold ${qsz}px GSans`;
+  ctx.font = `bold ${qsz}px ${fontBold}`;
   for (const l of lines) {
     const w = lsWidth(ctx, l, 1.0);
     ctx.fillStyle = WHITE;
@@ -975,7 +1020,7 @@ async function renderCenter(buf, { quoteText, authorName, saturation = 1.0, acce
 
   // author กลาง
   ty += nsz * 0.6;
-  ctx.font = `${nsz}px AnakotmaiLight`; ctx.fillStyle = 'rgba(255,255,255,0.85)';   // author ไม่มีหัวเสมอ
+  ctx.font = `${nsz}px ${fontLight}`; ctx.fillStyle = 'rgba(255,255,255,0.85)';   // author ไม่มีหัวเสมอ
   const aw = lsWidth(ctx, authorName, 0.8);
   lsDraw(ctx, authorName, (W - aw) / 2, ty, 0.8);
 
@@ -1007,15 +1052,12 @@ const WM = { scale: 0.45, alpha: 0.10, margin: 0.06 };
 //    (ดู QuoteGeneratorModal — `w-full` บนการ์ด 4:5) ไม่ใช่ตำแหน่งข้อความ · ข้อความกลับไปกลางการ์ด
 //    → อย่าเพิ่มแถบกลับโดยไม่ถามก่อน
 
-// ฟอนต์ของคำคม — คีย์ที่ผู้ใช้เลือกได้ (ค่าใน STYLES ที่มีรูปยังใช้ของเดิม ไม่เกี่ยวกัน)
-const PLAIN_FONTS = {
-  anakotmai: { quote: 'Anakotmai', author: 'AnakotmaiLight' },  // ไม่มีหัว — ฟอนต์แบรนด์
-  gsans:     { quote: 'GSans',     author: 'GSansLight' },      // มีหัว ทันสมัย
-  sarabun:   { quote: 'Sarabun',   author: 'Sarabun' },         // มีหัว ทรงราชการ
-};
-
 // ขนาดตัวอักษร = สัดส่วนต่อความกว้างการ์ด (เป็น **จุดตั้งต้น** — ข้อความยาวยังถูกย่อลงอีกได้)
 const PLAIN_SIZES = { s: 0.072, m: 0.092, l: 0.115 };
+
+// จำนวนบรรทัดสูงสุดต่อ preset — ตัวใหญ่ต้องรับบรรทัดเยอะกว่าได้ ไม่งั้นคำคมยาว (>~90 ตัว) จะโดน
+// fitFont หรี่ลงจนชน 6 บรรทัดเท่ากันหมดทุก preset (m กับ l ออกมาเท่ากันเป๊ะ — bug ที่ user เจอ 2026-08-11)
+const PLAIN_MAX_LINES = { s: 5, m: 6, l: 7 };
 
 /** สุ่ม 1 ตัวจาก array · array ว่าง = null */
 const pickRandom = arr => (arr.length ? arr[Math.floor(Math.random() * arr.length)] : null);
@@ -1026,6 +1068,7 @@ async function renderPlain({
 }) {
   const fonts = PLAIN_FONTS[font] || PLAIN_FONTS.anakotmai;
   const sizeFactor = PLAIN_SIZES[textSize] || PLAIN_SIZES.m;
+  const maxLines = PLAIN_MAX_LINES[textSize] || PLAIN_MAX_LINES.m;
   const SS = 2;                               // supersample แล้วย่อ = ขอบตัวอักษรคม (เหมือน renderCenter)
   const base = accentColor || ORANGE;
   const { ink, sub } = panelPalette(base);
@@ -1061,6 +1104,9 @@ async function renderPlain({
     : bg === 'logo' && watermarkPath ? await loadImage(watermarkPath)
     : null;
 
+  // จองพื้นที่ก้นการ์ดไว้ให้ลายน้ำ **ก่อน** จัดกลางข้อความ — เดิม maxH หารเท่า H ทั้งใบ
+  // ทำให้ข้อความยาวๆ ไหลไปทับลายน้ำมุมขวาล่างได้ (2026-08-11 user สั่งเลื่อนขึ้น)
+  let wmReserve = 0;
   if (patternImg) {
     const m  = Math.round(W * WM.margin);
     const pw = Math.round(W * WM.scale);
@@ -1068,13 +1114,14 @@ async function renderPlain({
     ctx.globalAlpha = WM.alpha;
     ctx.drawImage(patternImg, W - pw - m, H - ph - m, pw, ph);
     ctx.globalAlpha = 1;
+    wmReserve = ph + m * 2;
   }
 
   // ── ข้อความ — จัดกลางเฉพาะพื้นที่**เหนือแถบลายน้ำ** ────────────────────────
   const padX = Math.round(W * 0.10);
   const padY = Math.round(H * 0.07);
   const maxW = W - padX * 2;
-  const maxH = H - padY * 2;
+  const maxH = H - padY * 2 - wmReserve;
 
   // ⚠️ **ไม่สุ่ม** เครื่องหมายนำหน้าข้อความ — ตัวนี้เป็นองค์ประกอบของงานพิมพ์ ต้องนิ่ง
   //    (ที่สุ่มคือ **ลายพื้น** ด้านหลัง ซึ่งเป็นคนละตัวกัน)
@@ -1087,18 +1134,25 @@ async function renderPlain({
   // fitFont ย่อฟอนต์ได้แค่ 65% แล้วหยุด (ที่เหลือมันปล่อยให้บรรทัดงอกแทน) — คำคมยาวสุด 300 ตัว
   // ที่ 4:5 จึงล้นก้นการ์ดได้ · ย่อ startSz ต่อเองจนบล็อกสูงไม่เกินกรอบ (สไตล์ที่มีรูปไม่เจอปัญหานี้
   // เพราะกล่องข้อความเล็กกว่าและ drawQuoteBlock มีลูปย่อของมันเอง)
+  //
+  // ⛔ floor เดิมเป็นค่าคงที่ 24px เท่ากันทุก textSize — คำคมยาวดันให้ลูปนี้หดจน m กับ l
+  //    มาบรรจบที่ค่าเดียวกัน (เลือก l ก็ได้ตัวเท่า m) เพราะ start ถูกหดทบไปเรื่อยๆ ไม่มีเพดานกันตาม
+  //    preset ที่เลือกไว้ต้นทาง → ผูก floor กับ sizeFactor เอง กันไม่ให้ preset ถูกบีบจนเท่ากัน
+  //    (2026-08-11 user สังเกตว่า m/l ต่างกันน้อยมาก)
+  const startMax   = Math.max(40, Math.round(W * sizeFactor));
+  const startFloor = Math.round(startMax * 0.6);
   let qsz, lines, lh, markH, markGap, blockH;
-  for (let start = Math.max(40, Math.round(W * sizeFactor)); ; start = Math.round(start * 0.92)) {
-    ({ fontSize: qsz, lines } = fitFont(ctx, quoteText, maxW, start, 6, fonts.quote));
+  for (let start = startMax; ; start = Math.round(start * 0.92)) {
+    ({ fontSize: qsz, lines } = fitFont(ctx, quoteText, maxW, start, maxLines, fonts.quote));
     lh      = qsz * 1.24;
     markH   = markImg ? Math.round(qsz * 1.05) : 0;
     markGap = markImg ? Math.round(qsz * 0.55) : 0;
     blockH  = markH + markGap + lines.length * lh + (authorName ? authGap + nsz : 0);
-    if (blockH <= maxH || start <= 24) break;
+    if (blockH <= maxH || start <= startFloor) break;
   }
 
   ctx.textBaseline = 'top';
-  let ty = Math.round((H - blockH) / 2);
+  let ty = Math.round((H - wmReserve - blockH) / 2);
 
   if (markImg) {
     const markW = Math.round((markImg.width / markImg.height) * markH);

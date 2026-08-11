@@ -91,7 +91,7 @@ export function readQuoteForm(form) {
     // ลายน้ำของการ์ดแบบไม่มีรูป (`plain-logo`) — ไม่เกี่ยวกับ 3 ทางข้างบน
     // ต้องผ่าน resolvePlainWatermark() ก่อนเสมอ ห้ามเอาค่านี้ไปต่อ path ตรงๆ
     wmType: str('wmType'),
-    // ฟอนต์/ขนาดตัวอักษรของการ์ดแบบไม่มีรูป — ค่าที่ไม่รู้จักตกเป็น default ที่ normalizeQuoteParams
+    // ฟอนต์/ขนาดตัวอักษร — ใช้ได้ทั้งการ์ดมีรูปและไม่มีรูป (2026-08-11) ค่าที่ไม่รู้จักตกเป็น default ที่ normalizeQuoteParams
     font: str('font'),
     textSize: str('textSize'),
     // สีที่ผู้ใช้เลือกเองจาก color picker — ไม่ส่งมา = ใช้สี CI ขององค์กร (ดู resolveQuoteAccent)

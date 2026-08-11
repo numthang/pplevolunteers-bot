@@ -255,14 +255,15 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
       // ไม่มีรูป = ไม่แตะ bg เลย · แตะเมื่อไหร่ FormData.append(name, null) โยนทิ้งตั้งแต่ฝั่ง client
       if (isPlainStyle(styleKey)) {
         if (wm) form.append('wmType', wm)
-        form.append('font', opts.font ?? plainFont)
-        form.append('textSize', opts.textSize ?? textSize)
         form.append('aspect', aspectKeyOf(aspect))
       } else if (bgPathRef.current) {
         form.append('bgPath', bgPathRef.current)
       } else {
         form.append('bg', bgBlobRef.current, 'bg.jpg')
       }
+      // ฟอนต์/ขนาด: ใช้ได้ทั้ง 2 โหมดตั้งแต่ 2026-08-11 (เดิมส่งเฉพาะโหมดไม่มีรูป)
+      form.append('font', opts.font ?? plainFont)
+      form.append('textSize', opts.textSize ?? textSize)
       form.append('quoteText', quoteText)
       form.append('authorName', authorName)
       form.append('style', styleKey)
@@ -332,11 +333,11 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
   }
   function changePlainFont(next) {
     setPlainFont(next)
-    render(plainKey(plainBg), null, wmType, { font: next })
+    render(style, saturation, wmType, { font: next })
   }
   function changeTextSize(next) {
     setTextSize(next)
-    render(plainKey(plainBg), null, wmType, { textSize: next })
+    render(style, saturation, wmType, { textSize: next })
   }
 
   function changeFinish(next) {
@@ -362,14 +363,14 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
       const form = new FormData()
       if (noBg) {
         if (wmType) form.append('wmType', wmType)
-        form.append('font', plainFont)
-        form.append('textSize', textSize)
         form.append('aspect', aspectKeyOf(aspect))
       } else if (bgPathRef.current) {
         form.append('bgPath', bgPathRef.current)
       } else {
         form.append('bg', bgBlobRef.current, 'bg.jpg')
       }
+      form.append('font', plainFont)
+      form.append('textSize', textSize)
       form.append('quoteText', quoteText)
       form.append('authorName', authorName)
       form.append('style', style)
@@ -742,6 +743,45 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
                       </button>
                     )
                   })}
+                </div>
+              </div>
+
+              {/* ฟอนต์/ขนาดตัวอักษร — ชุดเดียวกับโหมดไม่มีรูป (เคาะ 2026-08-11) */}
+              <div className="flex flex-col gap-1.5">
+                <span className="text-sm font-medium text-warm-700 dark:text-disc-text">{t('fontLabel')}</span>
+                <div className="flex flex-wrap gap-2">
+                  {PLAIN_FONTS.map(f => (
+                    <button
+                      key={f.value} type="button" onClick={() => changePlainFont(f.value)}
+                      disabled={rendering} title={f.description}
+                      className={`px-2.5 py-1 text-sm rounded-lg border transition disabled:opacity-50 ${
+                        plainFont === f.value
+                          ? 'border-orange bg-orange text-white'
+                          : 'border-warm-200 dark:border-disc-border text-warm-700 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover'
+                      }`}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <span className="text-sm font-medium text-warm-700 dark:text-disc-text">{t('textSizeLabel')}</span>
+                <div className="flex flex-wrap gap-2">
+                  {PLAIN_TEXT_SIZES.map(s => (
+                    <button
+                      key={s.value} type="button" onClick={() => changeTextSize(s.value)}
+                      disabled={rendering}
+                      className={`px-2.5 py-1 text-sm rounded-lg border transition disabled:opacity-50 ${
+                        textSize === s.value
+                          ? 'border-orange bg-orange text-white'
+                          : 'border-warm-200 dark:border-disc-border text-warm-700 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover'
+                      }`}
+                    >
+                      {s.label}
+                    </button>
+                  ))}
                 </div>
               </div>
 
