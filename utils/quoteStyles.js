@@ -349,7 +349,7 @@ async function renderVariant(buf, { quoteText, authorName, side = 'left', vertic
   const barW   = Math.max(2, Math.round(W * 0.0024));
   const barGap = Math.round(pad * 0.5);
   const qsz    = Math.max(36, Math.round(W * 0.065 * sizeScale));
-  const nsz    = Math.max(16, Math.round(W * 0.030));
+  const nsz    = Math.max(16, Math.round(W * 0.036));
   const markH  = Math.max(54, Math.round(W * 0.090 * markScale));
   const markGap = Math.round(pad * 0.25);
 
@@ -411,7 +411,7 @@ async function renderVariant(buf, { quoteText, authorName, side = 'left', vertic
 
   ty += nsz * 0.5;
   ctx.font = `${nsz}px ${fontLight}`;
-  const authorStr = `— ${authorName}`;
+  const authorStr = `>_ ${authorName}`;   // `>_` แทนขีดยาว — ให้ตรงกับ renderBorder2 (user เคาะ)
   const aw = lsWidth(ctx, authorStr, 0.8);
   const ax = isRight ? textX + (maxW - aw) : textX;
 
@@ -447,7 +447,7 @@ async function renderBorder(buf, { quoteText, authorName, saturation = 0.15, acc
 
   const pad  = Math.round(Math.min(W, H) * 0.055);
   const qsz  = Math.max(36, Math.round(W * 0.065 * sizeScale));
-  const nsz  = Math.max(16, Math.round(W * 0.030));
+  const nsz  = Math.max(16, Math.round(W * 0.036));
 
   // quote_border.png 698x591 — V-bar spans y 25%–100%, text area x ≈ 24%
   const borderImg = await loadMark('frame_left');
@@ -496,7 +496,7 @@ async function renderBorder(buf, { quoteText, authorName, saturation = 0.15, acc
   ty += nsz * 0.5;
   ctx.font = `${nsz}px ${fontLight}`; ctx.fillStyle = readableOnDark(accent, 6.2, scrim.lum);
   ctx.shadowBlur = 4; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
-  lsDraw(ctx, `— ${authorName}`, textX, ty, 0.8);
+  lsDraw(ctx, `>_ ${authorName}`, textX, ty, 0.8);   // `>_` แทนขีดยาว — ให้ตรงกับ renderBorder2
 
   ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
   return { buffer: await toPng(cv), ext: 'png', vertical: 'bottom', side: 'left' };
@@ -530,7 +530,7 @@ async function renderBorder2(buf, { quoteText, authorName, saturation = 0.15, ac
 
   const pad  = Math.round(Math.min(W, H) * 0.055);
   const qsz  = Math.max(36, Math.round(W * 0.065 * sizeScale));
-  const nsz  = Math.max(16, Math.round(W * 0.030));
+  const nsz  = Math.max(16, Math.round(W * 0.036));
 
   const maxW8   = W * 0.80;
   const { fontSize: qszFit, lines } = fitFont(ctx, quoteText, maxW8, qsz, scaledMaxLines(4, textSize), fontBold);
@@ -676,7 +676,7 @@ async function renderPanel(buf, { quoteText, authorName, saturation = 1.0, accen
   // ⚠️ ชื่อผู้พูดผูกกับ **ความกว้างการ์ด** ไม่ใช่ขนาดคำคม — เคยผูกกับขนาดคำคมแล้วคำคมยาว
   //    (ฟอนต์เล็กลง) ทำให้ชื่อผู้พูดหดตามจนเล็กกว่าใบอื่นชัดเจน มันเป็นข้อมูลกำกับ ไม่ใช่พระเอก
   //    ต้องเท่ากันทุกใบ (เจอ 2026-08-07)
-  const nsz     = Math.max(14, Math.round(W * 0.028));
+  const nsz     = Math.max(14, Math.round(W * 0.034));
   const authGap = Math.round(nsz * 0.9);
 
   let fit, lh, markH, markGap, blockH;
@@ -774,7 +774,7 @@ async function drawQuoteBlock(ctx, { x, y, w, h, quoteText, authorName, ink, sub
     markH   = hasMark ? Math.round(fit.fontSize * 0.95) : 0;
     markGap = hasMark ? Math.round(fit.fontSize * 0.45) : 0;
     // ผูกกับความกว้างกล่อง ไม่ใช่ขนาดคำคม — เหตุผลเดียวกับ renderPanel
-    nsz     = Math.max(14, Math.round(w * 0.033));
+    nsz     = Math.max(14, Math.round(w * 0.039));
     authGap = Math.round(nsz * 1.1);
     blockH  = markH + markGap + fit.lines.length * lh + authGap + nsz;
     if (blockH <= h || qsz <= qszFloor) break;
@@ -897,7 +897,7 @@ async function renderSide(buf, { quoteText, authorName, saturation = 1.0, accent
 
   // บล็อกชื่อผู้พูดล่างซ้าย — กันพื้นที่ไว้ก่อนค่อยคิดความสูงคอลัมน์
   const authorLines = String(authorName || '').split('\n').map(t => t.trim()).filter(Boolean);
-  const nameSz = Math.max(15, Math.round(W * 0.026 * sizeScale));
+  const nameSz = Math.max(15, Math.round(W * 0.031 * sizeScale));
   const roleSz = Math.max(13, Math.round(W * 0.021 * sizeScale));
   const ruleH  = Math.max(3, Math.round(W * 0.005));
   const authorH = authorLines.length
@@ -1006,7 +1006,7 @@ async function renderCenter(buf, { quoteText, authorName, saturation = 1.0, acce
   const startSz = Math.max(40, Math.round(W * 0.085 * sizeScale));
   const { fontSize: qsz, lines } = fitFont(ctx, quoteText, W - padX * 2, startSz, scaledMaxLines(6, textSize), fontBold);
   const lh    = qsz * 1.22;
-  const nsz   = Math.max(16, Math.round(W * 0.028));
+  const nsz   = Math.max(16, Math.round(W * 0.034));
   const qmsz  = Math.round(W * 0.11);
   const qmGap = Math.round(qsz * 0.5);
   const blockH = qmsz + qmGap + lines.length * lh + nsz * 2.2;
@@ -1138,7 +1138,7 @@ async function renderPlain({
   const pool    = existingMarks(['double_open', ...OPEN_MARKS]);
   const markImg = pool.length ? await loadMark(pool[0]) : null;
 
-  const nsz     = Math.max(16, Math.round(W * 0.030));
+  const nsz     = Math.max(16, Math.round(W * 0.036));
   const authGap = Math.round(nsz * 1.3);
 
   // fitFont ย่อฟอนต์ได้แค่ 65% แล้วหยุด (ที่เหลือมันปล่อยให้บรรทัดงอกแทน) — คำคมยาวสุด 300 ตัว
