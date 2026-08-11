@@ -2,6 +2,27 @@
 
 > เก็บเฉพาะงานค้าง + design ที่ยังไม่ทำ · ของที่ทำเสร็จ+deploy แล้วย้ายไปอยู่ในโค้ด/`md/*` ตามระบบ
 
+## 🔗 ย้ายลิงก์ในโพสต์ FB ไปคอมเมนต์แรก (เริ่ม 2026-08-11 · commit 38e9075)
+
+FB กด reach ของโพสต์ที่พาคนออกนอกแพลตฟอร์ม — เลยโพสต์เนื้อหาเปล่าแล้วหย่อนลิงก์ไว้คอมเมนต์แรกแทน
+
+**ทำแล้ว (local, ยังไม่ deploy)**
+- `config/linkLabels.js` + `services/linkToComment.js` (pure) + เทส 18 เคสผ่าน
+- `oauth/start`: เพิ่ม `pages_manage_engagement` + `auth_type=rerequest`
+- `scripts/checkMetaScopes.js` — เช็ค scope ที่ได้มาจริง ไม่ต้องเปิด Meta Dashboard
+
+**ค้าง — ต้องทำตามลำดับนี้**
+- [ ] **deploy ก่อน** แล้ว **กด reconnect FB บน prod** ที่ `/org/settings/social` (ติ๊กเพจให้ครบทั้ง 3) — สิทธิ์คอมเมนต์ไม่เคยถูกขอมาก่อน token เดิมทุกตัวจึงคอมเมนต์ไม่ได้
+- [ ] รัน `sudo -u www bash -c 'cd /www/wwwroot/pple-volunteers && node scripts/checkMetaScopes.js'` ยืนยันว่าได้ `pages_manage_engagement` มาจริง
+- [ ] ต่อ `POST /v22.0/{postId}/comments` เข้า `postToFacebook()` — ใช้ `res.id` เต็ม (`pageId_postId`) ไม่ใช่ `parts[1]`
+  - ⚠️ **ต้อง best-effort ห้าม throw** — `publishOne` คืน `{ok:false}` แล้ว worker คืนสถานะเป็น `pending` retry ใหม่ = **โพสต์ซ้ำบนเพจ** (`publishWorker.js:178-183`)
+  - ⚠️ **โพสต์ตั้งเวลา (`scheduleTime`) ห้ามแปลง caption** — `published:false` ยังคอมเมนต์ไม่ได้ ไม่งั้นโพสต์บอก "ใต้โพสต์" แล้วไม่มีอะไรอยู่ (เส้นนี้ใช้จริงจากตะกร้าดิสฯ)
+  - ถ้าคอมเมนต์ล้มจนหมดทางแล้ว → ต่อท้ายข้อความแจ้งกลับห้อง Discord (`notifyBatchDone`) ให้คนไปแปะเอง
+- [ ] ทดสอบกับเพจ **"Unnop Sricharoenchai"** (row 59) ก่อน อย่าเอาเพจพรรคเป็นหนูทดลอง
+- [ ] Reels + IG ไม่แตะรอบนี้ — ตัดสินใจแล้วว่า IG ไม่ต้องทำ (ลิงก์ใน caption กดไม่ได้อยู่แล้ว ไม่มี penalty แบบ FB)
+
+**หมายเหตุ:** token FB/IG บน **local ตายทั้งหมด** (code 190/460) — prod ยังใช้ได้ · local จึงเทสยิงจริงไม่ได้ และกด connect ไม่ได้ด้วย (redirect URI ผูกโดเมน prod)
+
 ## 🚀 v2.26.0 — 7–9 ส.ค. 2026
 
 **ทำไปแล้ว**
