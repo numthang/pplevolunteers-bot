@@ -1110,6 +1110,10 @@ async function renderPlain({
 
   // จองพื้นที่ก้นการ์ดไว้ให้ลายน้ำ **ก่อน** จัดกลางข้อความ — เดิม maxH หารเท่า H ทั้งใบ
   // ทำให้ข้อความยาวๆ ไหลไปทับลายน้ำมุมขวาล่างได้ (2026-08-11 user สั่งเลื่อนขึ้น)
+  //
+  // ⛔ จองเต็ม ph+margin*2 รอบแรกดันบล็อกขึ้นสูงเกิน — ลายน้ำอยู่แค่มุมขวาล่าง ไม่ได้กินเต็มความกว้าง
+  //    การ์ด จึงไม่ต้องกันพื้นที่เท่าความสูงจริงของมัน (user บ่นว่าเหลือพื้นที่ว่างล่างเยอะเกิน)
+  //    ครึ่งเดียวก็พอกันไม่ให้ข้อความยาวไหลไปชน (2026-08-11 รอบ 2)
   let wmReserve = 0;
   if (patternImg) {
     const m  = Math.round(W * WM.margin);
@@ -1118,7 +1122,7 @@ async function renderPlain({
     ctx.globalAlpha = WM.alpha;
     ctx.drawImage(patternImg, W - pw - m, H - ph - m, pw, ph);
     ctx.globalAlpha = 1;
-    wmReserve = ph + m * 2;
+    wmReserve = Math.round((ph + m * 2) * 0.5);
   }
 
   // ── ข้อความ — จัดกลางเฉพาะพื้นที่**เหนือแถบลายน้ำ** ────────────────────────
@@ -1155,8 +1159,10 @@ async function renderPlain({
     if (blockH <= maxH || start <= startFloor) break;
   }
 
+  // จุดกึ่งกลางเป๊ะ (0.5) รู้สึกลอยขึ้นบนเสมอ — เครื่องหมายคำพูดมีที่ว่างในไฟล์ภาพเหนือเนื้อ
+  // ตัวจริง ตาจึงอ่านบล็อกว่า "เริ่มต่ำกว่าที่คำนวณ" ถ่วงลงนิดด้วย 0.56 (user บ่นเหลือที่ว่างล่างเยอะ)
   ctx.textBaseline = 'top';
-  let ty = Math.round((H - wmReserve - blockH) / 2);
+  let ty = Math.round((H - wmReserve - blockH) * 0.56);
 
   if (markImg) {
     const markW = Math.round((markImg.width / markImg.height) * markH);
