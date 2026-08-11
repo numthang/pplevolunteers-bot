@@ -165,6 +165,11 @@ module.exports = {
             .setDescription('คำค้น คั่นด้วย , (ไม่ระบุ = ใช้ค่าเริ่มต้น: ราชบุรี + ชื่ออำเภอ)')
             .setRequired(false)
         )
+        .addBooleanOption(o =>
+          o.setName('stop')
+            .setDescription('หยุดส่งข่าวลงห้องนี้ (เอาชุดนี้ออก)')
+            .setRequired(false)
+        )
     ),
 
   async execute(interaction) {
@@ -190,8 +195,23 @@ module.exports = {
 
       // 1 ปลายทาง = 1 ชุดคำค้น — ตั้งซ้ำที่เดิมคือ "แก้ชุดเดิม" ไม่ใช่เพิ่มชุดใหม่
       const prev  = await getSetting(interaction.guildId, 'news_watch_feeds');
-      const feeds = (Array.isArray(prev) ? prev : []).filter(f => f?.channelId && f.channelId !== channel.id);
-      feeds.push({ channelId: channel.id, keywords });
+      const rest  = (Array.isArray(prev) ? prev : []).filter(f => f?.channelId && f.channelId !== channel.id);
+
+      // หยุดส่งลงห้องนี้ — เอาชุดออกจากรายการ
+      // ⚠️ ไม่ลบแถวใน news_watch_seen ทิ้ง เพราะถ้าเปิดใหม่อีกทีจะได้ไม่ยิงข่าวเก่าซ้ำรวดเดียว
+      //    (แถวเก่าหลุดเองด้วย pruneSeen 30 วัน) · panel เดิมค้างอยู่ในห้อง ลบเองได้ ปุ่มจะตอบว่ายังไม่ได้ตั้งค่า
+      if (interaction.options.getBoolean('stop')) {
+        const existed = (Array.isArray(prev) ? prev : []).some(f => f?.channelId === channel.id);
+        await setSetting(interaction.guildId, 'news_watch_feeds', rest);
+        return interaction.reply({
+          content: existed
+            ? t('newsWatch.stopped', { channel: `<#${channel.id}>`, count: rest.length })
+            : t('newsWatch.stopNotFound', { channel: `<#${channel.id}>` }),
+          flags: MessageFlags.Ephemeral,
+        });
+      }
+
+      const feeds = [...rest, { channelId: channel.id, keywords }];
       await setSetting(interaction.guildId, 'news_watch_feeds', feeds);
 
       const embed = new EmbedBuilder()
