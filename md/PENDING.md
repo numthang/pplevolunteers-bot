@@ -11,15 +11,23 @@ FB กด reach ของโพสต์ที่พาคนออกนอก�
 - `oauth/start`: เพิ่ม `pages_manage_engagement` + `auth_type=rerequest`
 - `scripts/checkMetaScopes.js` — เช็ค scope ที่ได้มาจริง ไม่ต้องเปิด Meta Dashboard
 
-**ค้าง — ต้องทำตามลำดับนี้**
-- [ ] **deploy ก่อน** แล้ว **กด reconnect FB บน prod** ที่ `/org/settings/social` (ติ๊กเพจให้ครบทั้ง 3) — สิทธิ์คอมเมนต์ไม่เคยถูกขอมาก่อน token เดิมทุกตัวจึงคอมเมนต์ไม่ได้
-- [ ] รัน `sudo -u www bash -c 'cd /www/wwwroot/pple-volunteers && node scripts/checkMetaScopes.js'` ยืนยันว่าได้ `pages_manage_engagement` มาจริง
-- [ ] ต่อ `POST /v22.0/{postId}/comments` เข้า `postToFacebook()` — ใช้ `res.id` เต็ม (`pageId_postId`) ไม่ใช่ `parts[1]`
-  - ⚠️ **ต้อง best-effort ห้าม throw** — `publishOne` คืน `{ok:false}` แล้ว worker คืนสถานะเป็น `pending` retry ใหม่ = **โพสต์ซ้ำบนเพจ** (`publishWorker.js:178-183`)
-  - ⚠️ **โพสต์ตั้งเวลา (`scheduleTime`) ห้ามแปลง caption** — `published:false` ยังคอมเมนต์ไม่ได้ ไม่งั้นโพสต์บอก "ใต้โพสต์" แล้วไม่มีอะไรอยู่ (เส้นนี้ใช้จริงจากตะกร้าดิสฯ)
-  - ถ้าคอมเมนต์ล้มจนหมดทางแล้ว → ต่อท้ายข้อความแจ้งกลับห้อง Discord (`notifyBatchDone`) ให้คนไปแปะเอง
-- [ ] ทดสอบกับเพจ **"Unnop Sricharoenchai"** (row 59) ก่อน อย่าเอาเพจพรรคเป็นหนูทดลอง
-- [ ] Reels + IG ไม่แตะรอบนี้ — ตัดสินใจแล้วว่า IG ไม่ต้องทำ (ลิงก์ใน caption กดไม่ได้อยู่แล้ว ไม่มี penalty แบบ FB)
+**⛔ ทางคอมเมนต์อัตโนมัติ = ตายแล้ว (สรุป 2026-08-11) — อย่าไล่ซ้ำ**
+
+บอท**คอมเมนต์ในนามเพจไม่ได้** เพราะขอ `pages_manage_engagement` ไม่ผ่าน — ใส่ใน SCOPES แล้วหน้าขอสิทธิ์ FB พังทั้งหน้า
+(`Invalid Scopes: pages_read_user_content` — ชื่อ legacy ที่ Meta ผูกไว้เอง ไม่ใช่ของที่เราส่ง)
+
+พิสูจน์ครบแล้ว: `pages_show_list` เดี่ยว ✅ · ชุดเดิม 5 ตัว ✅ · +`pages_manage_engagement` ❌ · ไม่มี `auth_type=rerequest` ❌ · dialog v23.0 ❌
+ใน dashboard ขึ้น "Ready for testing" แต่เมนู Actions มีแค่ "Go to App Review" / "Remove" — ไม่มีปุ่มเปิดสิทธิ์
+→ ทางเดียวคือส่ง App Review (อัดวิดีโอ + รอเป็นสัปดาห์) **เคาะแล้วว่าไม่คุ้ม**
+→ โค้ดถอยกลับชุด 5 ตัวแล้ว (commit 159d8c8) · รายละเอียดเต็มใน `.wolf/cerebrum.md`
+
+**ค้าง — แผนสำรอง "เตรียมข้อความให้คนแปะเอง"**
+- [ ] แปลง caption ตอน publish ขา FB เหมือนเดิม (ใช้ `services/linkToComment.js` ที่เขียนเสร็จแล้ว)
+- [ ] เก็บข้อความคอมเมนต์ลง `post_social_history.result` jsonb (ตอนนี้มีแค่ `{url}`)
+- [ ] `notifyBatchDone` (`publishWorker.js:112-138`) ต่อท้ายข้อความแจ้งกลับห้อง Discord: ลิงก์โพสต์ + บล็อกข้อความพร้อมคัดลอก + "เอาไปแปะคอมเมนต์แรก"
+  - ⚠️ ความเสี่ยงเดียว: ถ้าคนลืมแปะ โพสต์จะบอก "ลิงก์ใต้โพสต์" แล้วไม่มีอะไรอยู่ → ข้อความเตือนต้องเด่น
+  - ⚠️ **โพสต์ตั้งเวลา (`scheduleTime`) ห้ามแปลง caption** — เส้นนี้ใช้จริงจากตะกร้าดิสฯ (`publishPipeline.js:278`)
+- [ ] Reels + IG ไม่แตะ — IG ไม่ต้องทำ (ลิงก์ใน caption กดไม่ได้อยู่แล้ว ไม่มี penalty แบบ FB)
 
 **หมายเหตุ:** token FB/IG บน **local ตายทั้งหมด** (code 190/460) — prod ยังใช้ได้ · local จึงเทสยิงจริงไม่ได้ และกด connect ไม่ได้ด้วย (redirect URI ผูกโดเมน prod)
 
