@@ -8,7 +8,7 @@ const calls = [];
 let failX = false;
 const rec = name => (...args) => { calls.push({ name, args });
   if (name === 'postToX' && failX) throw new Error('X ล่ม');
-  if (name.includes('Facebook') && !name.includes('Reels')) return { id: '123_456' };
+  if (name.includes('Facebook') && !name.includes('Reels')) return { id: '123_456', linkComment: '📝 ลงทะเบียน: https://x.test/r' };
   return { permalink: 'https://x.test/p', url: 'https://x.test/p' }; };
 require.cache[require.resolve(ROOT + '/services/metaApi')] = { exports: {
   postToFacebook: rec('postToFacebook'), postToInstagram: rec('postToInstagram'),
@@ -55,6 +55,11 @@ const ok = (label, cond, extra = '') => console.log(`${cond ? '✅' : '❌'} ${l
   ok('x(รูป): (…,caption,group,accountId)',
      byName('postToX')?.[4] === 'GRP' && byName('postToX')?.[5] === 77);
   ok('news: ส่ง guild + files + caption', !!byName('postNews')?.[1]?.files && byName('postNews')?.[1]?.content === 'CAP');
+  // linkComment ต้องไหลจาก postToFacebook → publishOne → ตัวเรียก (worker/ตะกร้าเอาไปแสดงให้คนแปะเอง)
+  ok('fb: linkComment ไหลออกมาถึง result',
+     out.results.find(r => r.platform === 'fb')?.linkComment === '📝 ลงทะเบียน: https://x.test/r');
+  ok('แพลตฟอร์มอื่นไม่มี linkComment',
+     out.results.filter(r => r.platform !== 'fb').every(r => !r.linkComment));
   ok('fb: ประกอบ permalink จาก id "123_456"',
      out.results.find(r => r.platform === 'fb').url === 'https://www.facebook.com/permalink.php?story_fbid=456&id=123');
   ok('status = success เมื่อผ่านหมด', out.status === 'success');

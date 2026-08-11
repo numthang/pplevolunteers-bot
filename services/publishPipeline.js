@@ -171,6 +171,8 @@ async function publishOne({
 
   try {
     let url = null;
+    // ข้อความคอมเมนต์ที่รอคนเอาไปแปะ (FB เท่านั้น · null = โพสต์นี้ไม่มีลิงก์ให้ย้าย)
+    let linkComment = null;
 
     if (platform === 'fb') {
       if (isVideo) {
@@ -178,6 +180,7 @@ async function publishOne({
         url = res?.permalink || null;
       } else {
         const res = await postToFacebook(guildId, userDiscordId, images, caption, scheduleTime, group, accountId);
+        linkComment = res?.linkComment || null;
         // FB คืน id รูปแบบ "<pageId>_<postId>" → ประกอบเป็นลิงก์เอง (API ไม่คืน permalink มาให้)
         const parts = (res?.id || '').split('_');
         if (parts.length === 2) url = `https://www.facebook.com/permalink.php?story_fbid=${parts[1]}&id=${parts[0]}`;
@@ -236,9 +239,9 @@ async function publishOne({
       throw new Error(`ไม่รู้จักแพลตฟอร์ม ${platform}`);
     }
 
-    return { platform, label, ok: true, url, error: null };
+    return { platform, label, ok: true, url, error: null, linkComment };
   } catch (err) {
-    return { platform, label, ok: false, url: null, error: err.message };
+    return { platform, label, ok: false, url: null, error: err.message, linkComment: null };
   }
 }
 
@@ -257,7 +260,10 @@ async function recordHistory(row) {
       [row.orgId || null, row.episodeId || null, row.batchId, row.platform, row.accountId || null,
        row.guildId || null, row.channelId || null, row.wmType || null, row.caption || null,
        JSON.stringify(row.media || []), row.scheduledAt || null, row.status,
-       row.url ? JSON.stringify({ url: row.url }) : null, row.groupName || null,
+       row.url || row.linkComment
+         ? JSON.stringify({ url: row.url || null, linkComment: row.linkComment || null })
+         : null,
+       row.groupName || null,
        row.createdBy || null, row.createdByDiscordId || null]
     );
   } catch (err) {
@@ -286,6 +292,7 @@ async function publishBatch({ platforms = [], recordTo = null, ...ctx }) {
         scheduledAt: recordTo.scheduledAt || null,
         status: r.ok ? 'done' : 'failed',
         url: r.url,
+        linkComment: r.linkComment,
       });
     }
   }

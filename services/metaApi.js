@@ -4,6 +4,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { fetchBuffer } = require('../utils/watermarkImage');
 const { convertVideoIfNeeded } = require('../utils/videoUtils');
+const { splitLinks } = require('./linkToComment');
 
 const TEMP_DIR = process.env.META_TEMP_DIR
   || path.join(__dirname, '..', 'web', 'public', 'media-temp');
@@ -332,12 +333,21 @@ async function postToFacebook(guildId, userId, images, caption, scheduleTime = n
 
   const noButtonCta = JSON.stringify({ type: 'NO_BUTTON' });
 
+  // ย้ายลิงก์ออกจากเนื้อโพสต์ → คนเอา `linkComment` ไปแปะเป็นคอมเมนต์แรกเอง
+  // (FB กด reach ของโพสต์ที่พาคนออกนอกแพลตฟอร์ม · บอทคอมเมนต์เองไม่ได้ — ขอ pages_manage_engagement
+  //  ไม่ผ่าน ดู .wolf/cerebrum.md 2026-08-11) · ตัวเรียกมีหน้าที่เอา linkComment ไปแสดงให้คนเห็น
+  // ⚠️ โพสต์ตั้งเวลาไม่แปลง — ตอน FB ปล่อยโพสต์จริงไม่มีใครอยู่แปะคอมเมนต์ให้
+  //    ปล่อยลิงก์คาในเนื้อดีกว่าโพสต์ที่บอก "ใต้โพสต์" แล้วไม่มีอะไรอยู่
+  const split = scheduleTime ? null : splitLinks(caption);
+  const message = split?.changed ? split.caption : caption;
+  const linkComment = split?.changed ? split.comment : null;
+
   // caption-only post
   if (!images.length) {
-    const { body, contentType } = buildMultipart({ message: caption, access_token: cfg.token, call_to_action: noButtonCta, ...scheduleFields });
+    const { body, contentType } = buildMultipart({ message, access_token: cfg.token, call_to_action: noButtonCta, ...scheduleFields });
     const res = await httpsPost(`/v22.0/${cfg.socialId}/feed`, body, contentType);
     if (res.error) throw new Error(`FB feed post: ${res.error.message}`);
-    return res;
+    return { ...res, linkComment };
   }
 
   // upload each photo as unpublished → create feed post (ให้ได้ pageId_postId เสมอ)
@@ -348,7 +358,7 @@ async function postToFacebook(guildId, userId, images, caption, scheduleTime = n
   }
 
   const { body, contentType } = buildMultipart({
-    message: caption,
+    message,
     attached_media: JSON.stringify(photoIds),
     access_token: cfg.token,
     call_to_action: noButtonCta,
@@ -356,7 +366,7 @@ async function postToFacebook(guildId, userId, images, caption, scheduleTime = n
   });
   const res = await httpsPost(`/v22.0/${cfg.socialId}/feed`, body, contentType);
   if (res.error) throw new Error(`FB feed post: ${res.error.message}`);
-  return res;
+  return { ...res, linkComment };
 }
 
 // ─── Instagram ────────────────────────────────────────────────────────────────

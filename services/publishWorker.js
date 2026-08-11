@@ -100,7 +100,10 @@ async function finishJob(job, result) {
             posted_at = CASE WHEN $5 THEN now() ELSE posted_at END,
             updated_at = now()
       WHERE id = $1`,
-    [job.id, result.status, result.url ? JSON.stringify({ url: result.url }) : null,
+    [job.id, result.status,
+     result.url || result.linkComment
+       ? JSON.stringify({ url: result.url || null, linkComment: result.linkComment || null })
+       : null,
      result.error || null, result.status === 'done']
   );
 }
@@ -130,8 +133,16 @@ async function notifyBatchDone(client, batchId) {
     });
     const head = rows[0].caption ? `📤 โพสต์ออกแล้ว — ${rows[0].caption.slice(0, 80)}` : '📤 โพสต์ออกแล้ว';
 
+    // ลิงก์ที่ถูกย้ายออกจากเนื้อโพสต์ — บอทคอมเมนต์เองไม่ได้ ต้องให้คนแปะ (ดู services/linkToComment.js)
+    // หลายเพจใน batch เดียวได้ caption ก้อนเดียวกัน → ข้อความคอมเมนต์ซ้ำกัน ตัดซ้ำก่อนแสดง
+    const comments = [...new Set(rows.filter(r => r.result?.linkComment).map(r => r.result.linkComment))];
+    const tail = comments.length
+      ? ['', '⚠️ **ลิงก์ถูกย้ายออกจากเนื้อโพสต์แล้ว — ก๊อปไปแปะเป็นคอมเมนต์แรก**',
+         ...comments.map(c => '```\n' + c + '\n```')]
+      : [];
+
     const channel = await client.channels.fetch(channelId).catch(() => null);
-    if (channel?.isTextBased?.()) await channel.send([head, ...lines].join('\n'));
+    if (channel?.isTextBased?.()) await channel.send([head, ...lines, ...tail].join('\n'));
   } catch (err) {
     console.error('[publishWorker] แจ้งกลับห้องไม่สำเร็จ:', err.message);
   }
@@ -171,7 +182,7 @@ async function runOnce(client) {
       });
 
       if (r.ok) {
-        await finishJob(job, { status: 'done', url: r.url });
+        await finishJob(job, { status: 'done', url: r.url, linkComment: r.linkComment });
       } else if (job.attempts >= MAX_ATTEMPTS) {
         await finishJob(job, { status: 'failed', error: r.error });
         console.error(`[publishWorker] job ${job.id} (${job.platform}) ล้มถาวรหลัง ${job.attempts} ครั้ง: ${r.error}`);

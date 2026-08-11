@@ -808,10 +808,18 @@ async function processAndPost(interaction, state) {
   const urlOf = p => results.find(r => r.platform === p && r.ok)?.url || null;
   const fbUrl = urlOf('fb'), igUrl = urlOf('ig'), threadsUrl = urlOf('threads'), xUrl = urlOf('x');
 
+  // ลิงก์ที่ถูกย้ายออกจากเนื้อโพสต์ FB — บอทคอมเมนต์เองไม่ได้ ต้องให้คนแปะเอง
+  // (ดู services/linkToComment.js · ตัดซ้ำเผื่อยิงหลายเพจจาก caption ก้อนเดียวกัน)
+  const linkComments = [...new Set(results.filter(r => r.ok && r.linkComment).map(r => r.linkComment))];
+  const linkCommentLines = linkComments.length
+    ? ['⚠️ **ลิงก์ถูกย้ายออกจากเนื้อโพสต์แล้ว — ก๊อปไปแปะเป็นคอมเมนต์แรก**',
+       ...linkComments.map(c => '```\n' + c + '\n```')]
+    : [];
+
 
   if (isVideo) {
     await interaction.followUp({
-      content: ['✅ โพสต์เสร็จแล้ว', ...results.map(r => formatResultLine(r, { isVideo, scheduleTime }))].join('\n'),
+      content: ['✅ โพสต์เสร็จแล้ว', ...results.map(r => formatResultLine(r, { isVideo, scheduleTime })), ...linkCommentLines].join('\n'),
     }).catch(() => {});
     return;
   }
@@ -825,6 +833,7 @@ async function processAndPost(interaction, state) {
     state.wmType !== 'none' && total > 0 ? `✅ ติดลายน้ำ ${processed.length}/${total} รูป` : null,
     ...results.map(r => formatResultLine(r, { isVideo, scheduleTime })),
     ...(wmErrors.length ? [`⚠️ ${wmErrors.join(', ')}`] : []),
+    ...linkCommentLines,
   ].filter(Boolean);
 
   await interaction.followUp({ content: lines.join('\n') }).catch(() => {});

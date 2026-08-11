@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { Loader2, Send, RotateCcw, XCircle, ExternalLink } from 'lucide-react'
+import { Loader2, Send, RotateCcw, XCircle, ExternalLink, Copy, Check } from 'lucide-react'
 
 // ค่าเดียวกับ VALID_PLATFORMS ใน app/api/posts/[id]/publish/route.js
 const PLATFORMS = [
@@ -70,6 +70,7 @@ export default function PostPublishPanel({ postId }) {
   const [newsReady, setNewsReady] = useState(false)
   const [group, setGroup] = useState('')
   const [watermarks, setWatermarks] = useState([])
+  const [copiedId, setCopiedId] = useState(null)
   const [wmType, setWmType] = useState('none')
   const [wmPos, setWmPos] = useState('random')
   const [scheduledAt, setScheduledAt] = useState('')
@@ -373,6 +374,9 @@ export default function PostPublishPanel({ postId }) {
           {jobs.map(job => {
             const meta = JOB_STATUS[job.status] || { label: job.status, cls: 'text-warm-500 dark:text-disc-muted' }
             const url = job.result?.url
+            // ลิงก์ที่ถูกย้ายออกจากเนื้อโพสต์ FB — บอทคอมเมนต์เองไม่ได้ ต้องให้คนก๊อปไปแปะ
+            // แสดงเป็นปุ่มเดียวไม่กางข้อความ กันแถวงานรก (ดู services/linkToComment.js)
+            const linkComment = job.result?.linkComment
             return (
               <div
                 key={job.id}
@@ -395,15 +399,37 @@ export default function PostPublishPanel({ postId }) {
                   <span className="text-sm text-warm-500 dark:text-disc-muted">โพสต์เมื่อ {fmtTime(job.posted_at)}</span>
                 )}
 
-                {url && (
-                  <a
-                    href={url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-sm text-teal hover:underline break-all"
-                  >
-                    <ExternalLink size={13} /> ดูโพสต์
-                  </a>
+                {(url || linkComment) && (
+                  <div className="flex items-center gap-3 flex-wrap">
+                    {url && (
+                      <a
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-sm text-teal hover:underline break-all"
+                      >
+                        <ExternalLink size={13} /> ดูโพสต์
+                      </a>
+                    )}
+                    {linkComment && (
+                      <button
+                        type="button"
+                        title={linkComment}
+                        onClick={async () => {
+                          try {
+                            await navigator.clipboard.writeText(linkComment)
+                            setCopiedId(job.id)
+                            setTimeout(() => setCopiedId(c => (c === job.id ? null : c)), 2000)
+                          } catch { /* เบราว์เซอร์ไม่ให้เข้า clipboard — title มีข้อความเต็มให้ลากคัดลอกเอง */ }
+                        }}
+                        className="inline-flex items-center gap-1 text-sm text-amber-600 dark:text-amber-500 hover:underline"
+                      >
+                        {copiedId === job.id
+                          ? <><Check size={13} /> คัดลอกแล้ว</>
+                          : <><Copy size={13} /> ก๊อปลิงก์ไปแปะคอมเมนต์</>}
+                      </button>
+                    )}
+                  </div>
                 )}
 
                 {job.last_error && <p className="text-sm text-red-500 break-words">{job.last_error}</p>}
