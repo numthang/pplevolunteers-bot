@@ -3,10 +3,7 @@
 - ทำให้เว็บไซต์ หรือ sub-domain ภายนอกใช้ระบบเดียวกันได้แต่ใช้ชื่อของเขาเอง
 
 # Posts
-- http://localhost:3000/org/settings/social ผมใช้ member องค์กร มันควรจะเพิ่ม personal account ได้ใช่ป่าว แต่ปุ่มมัน disable อ่ะ
-- quote no image เลื่อนตัวหนังสือขึ้นไปเถอะ เราต้องการ space สำหรับติดลายน้ำด้านล่าง
-- ขนาด font กลาง ใหญ่ ต่างกันน้อยมาก
-- quote image ทำให้เลือกฟอนต์ ขนาดฟอนต์ ได้
+- quote noimage แบบ ลายน้ำ background ทำเป็นขาวดำได้ไหม
 
 # CivicFlow
 - ข้อเสนอ: ย้าย CivicFlow จาก Vercel มาที่ VPS

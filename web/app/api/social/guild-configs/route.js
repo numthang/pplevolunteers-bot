@@ -5,7 +5,6 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
 import { canManageSocialGuild, isSuperAdmin } from '@/lib/roles.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
-import { getSocialManagerGuildIds } from '@/db/guilds.js'
 import { getGuildId } from '@/lib/guildContext.js'
 import { getOrgId } from '@/lib/orgContext.js'
 import { getSocialAppCreds, SOCIAL_APP_KEYS } from '@/lib/socialAppCreds.js'
@@ -47,11 +46,6 @@ export async function GET() {
     })
   }
 
-  if (!superAdmin && guildId) {
-    const managerGuildIds = await getSocialManagerGuildIds(effDiscordId)
-    if (!managerGuildIds.includes(guildId)) return Response.json({ guildId, guildName: null })
-  }
-
   const [creds, guildKeys, guildRes] = await Promise.all([
     getSocialAppCreds({ orgId, guildId }),
     getGuildKeys(guildId),
@@ -80,12 +74,6 @@ export async function PATCH(req) {
 
   if (!key) return Response.json({ error: 'key required' }, { status: 400 })
   if (!ALLOWED_KEYS.includes(key)) return Response.json({ error: 'invalid key' }, { status: 400 })
-
-  // ส่ง guild_id มา (คีย์ราย guild / หน้าเว็บที่มี guild context) → ต้องเป็น manager ของ guild นั้นจริง
-  if (guild_id && !superAdmin) {
-    const adminGuildIds = await getSocialManagerGuildIds(effDiscordId)
-    if (!adminGuildIds.includes(guild_id)) return Response.json({ error: 'Forbidden' }, { status: 403 })
-  }
 
   const isEmpty = value === null || value === ''
 
