@@ -11,9 +11,11 @@ const SCOPES      = [
   'pages_manage_posts',
   'pages_show_list',
   'pages_manage_metadata',
-  // คอมเมนต์ในนามเพจ — ใช้หย่อนลิงก์ไว้คอมเมนต์แรกแทนฝังในเนื้อโพสต์ (FB กด reach โพสต์ที่มีลิงก์ออกนอก)
-  // ได้ Standard Access อัตโนมัติสำหรับคนที่มี role ในแอป ไม่ต้องผ่าน App Review
-  'pages_manage_engagement',
+  // ⛔ ห้ามใส่ 'pages_manage_engagement' จนกว่าแอปจะได้รับสิทธิ์ตัวนี้ใน Meta App Dashboard ก่อน
+  //    (2026-08-11: ใส่แล้วหน้าขอสิทธิ์ FB พังทั้งหน้า "This content isn't available at the moment
+  //     · Invalid Scopes: pages_read_user_content" — ชื่อเก่าที่ Meta ผูกไว้ภายใน ไม่ใช่ของที่เราส่ง)
+  //    พิสูจน์ด้วยการยิง dialog ทีละ scope: ชุด 5 ตัวนี้ผ่าน · เติมตัวที่ 6 เข้าไปพังทันที
+  //    ต้องใช้ตอนย้ายลิงก์ไปคอมเมนต์แรก — รายละเอียดที่ md/PENDING.md
   'instagram_content_publish',
   'business_management',
 ].join(',')
@@ -58,9 +60,6 @@ export async function GET(req) {
   oauthUrl.searchParams.set('scope', SCOPES)
   oauthUrl.searchParams.set('state', state)
   oauthUrl.searchParams.set('response_type', 'code')
-  // บังคับให้ FB โชว์หน้าขอสิทธิ์ใหม่ทุกครั้ง — ไม่งั้นสิทธิ์ที่ "เคยถูกปฏิเสธ" จะถูกข้ามเงียบๆ
-  // แล้ว token ใหม่จะขาด scope โดยไม่มีใครรู้ (เจอตอนเพิ่ม pages_manage_engagement)
-  oauthUrl.searchParams.set('auth_type', 'rerequest')
 
   return Response.redirect(oauthUrl.toString())
 }
