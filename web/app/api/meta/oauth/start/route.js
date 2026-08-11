@@ -11,6 +11,9 @@ const SCOPES      = [
   'pages_manage_posts',
   'pages_show_list',
   'pages_manage_metadata',
+  // คอมเมนต์ในนามเพจ — ใช้หย่อนลิงก์ไว้คอมเมนต์แรกแทนฝังในเนื้อโพสต์ (FB กด reach โพสต์ที่มีลิงก์ออกนอก)
+  // ได้ Standard Access อัตโนมัติสำหรับคนที่มี role ในแอป ไม่ต้องผ่าน App Review
+  'pages_manage_engagement',
   'instagram_content_publish',
   'business_management',
 ].join(',')
@@ -55,6 +58,9 @@ export async function GET(req) {
   oauthUrl.searchParams.set('scope', SCOPES)
   oauthUrl.searchParams.set('state', state)
   oauthUrl.searchParams.set('response_type', 'code')
+  // บังคับให้ FB โชว์หน้าขอสิทธิ์ใหม่ทุกครั้ง — ไม่งั้นสิทธิ์ที่ "เคยถูกปฏิเสธ" จะถูกข้ามเงียบๆ
+  // แล้ว token ใหม่จะขาด scope โดยไม่มีใครรู้ (เจอตอนเพิ่ม pages_manage_engagement)
+  oauthUrl.searchParams.set('auth_type', 'rerequest')
 
   return Response.redirect(oauthUrl.toString())
 }
