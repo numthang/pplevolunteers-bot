@@ -153,8 +153,12 @@ module.exports = {
       sub.setName('news')
         .setDescription('ตั้งห้องรับสรุปข่าวในพื้นที่ วันละ 2 รอบ 8:00/17:00 (Manage Channels)')
         .addChannelOption(o =>
-          o.setName('channel').setDescription('ห้องที่จะให้ส่งสรุปข่าวลง').setRequired(true)
-            .addChannelTypes(ChannelType.GuildText)
+          o.setName('channel').setDescription('ปลายทาง: ห้องแชท / เธรด / ห้อง Forum (Forum = แยกกระทู้ทุกรอบ)').setRequired(true)
+            .addChannelTypes(
+              ChannelType.GuildText, ChannelType.GuildAnnouncement,
+              ChannelType.PublicThread, ChannelType.PrivateThread, ChannelType.AnnouncementThread,
+              ChannelType.GuildForum,
+            )
         )
         .addStringOption(o =>
           o.setName('keywords')
@@ -184,8 +188,11 @@ module.exports = {
         ? rawKw.split(',').map(s => s.trim()).filter(Boolean)
         : DEFAULT_KEYWORDS;
 
-      await setSetting(interaction.guildId, 'news_watch_channel_id', channel.id);
-      await setSetting(interaction.guildId, 'news_watch_keywords', keywords);
+      // 1 ปลายทาง = 1 ชุดคำค้น — ตั้งซ้ำที่เดิมคือ "แก้ชุดเดิม" ไม่ใช่เพิ่มชุดใหม่
+      const prev  = await getSetting(interaction.guildId, 'news_watch_feeds');
+      const feeds = (Array.isArray(prev) ? prev : []).filter(f => f?.channelId && f.channelId !== channel.id);
+      feeds.push({ channelId: channel.id, keywords });
+      await setSetting(interaction.guildId, 'news_watch_feeds', feeds);
 
       const embed = new EmbedBuilder()
         .setTitle(t('newsWatch.panelTitle'))
@@ -199,9 +206,20 @@ module.exports = {
           .setStyle(ButtonStyle.Primary)
       );
 
-      await channel.send({ embeds: [embed], components: [row] });
+      // ห้อง Forum รับข้อความลอยๆ ไม่ได้ → วาง panel ไว้ห้องที่พิมพ์คำสั่งแทน
+      const panelTarget = channel.type === ChannelType.GuildForum ? interaction.channel : channel;
+      let placedElsewhere = false;
+      try {
+        await panelTarget.send({ embeds: [embed], components: [row] });
+        placedElsewhere = panelTarget.id !== channel.id;
+      } catch (err) {
+        // วาง panel ไม่ได้ ไม่ถือว่าตั้งค่าล้ม — feed บันทึกไปแล้ว รอบถัดไปยังส่งปกติ
+        console.error('[newsWatch] วาง panel ไม่สำเร็จ:', err.message);
+      }
+
+      const done = t('newsWatch.setupDone', { channel: `<#${channel.id}>`, count: feeds.length });
       return interaction.reply({
-        content: t('newsWatch.setupDone', { channel: `<#${channel.id}>` }),
+        content: placedElsewhere ? `${done}\n${t('newsWatch.panelElsewhere')}` : done,
         flags: MessageFlags.Ephemeral,
       });
     }

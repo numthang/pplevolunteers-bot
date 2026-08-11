@@ -726,11 +726,14 @@ ALTER TABLE post_social_history ADD COLUMN IF NOT EXISTS wm_pos VARCHAR(20);
 -- 2026-08-12 · newsWatch — จำว่าข่าวชิ้นไหนส่งเข้าห้องไปแล้ว
 -- ถ้าไม่มีตารางนี้ digest รอบ 17:00 จะซ้ำกับรอบ 8:00 ทั้งหมด
 -- item_key = sha1 ของ guid จาก RSS (guid ดิบยาวเฉลี่ย 360 ตัวอักษร สูงสุด 1,425 → hash กันดัชนีบวม)
+-- ⚠️ channel_id อยู่ใน PK ด้วย เพราะ 1 guild มีได้หลาย feed (คนละห้อง คนละคำค้น)
+--    ถ้าคีย์แค่ guild_id ห้องที่สองจะไม่เห็นข่าวที่ห้องแรกส่งไปแล้ว ทั้งที่คนละกลุ่มผู้อ่าน
 CREATE TABLE IF NOT EXISTS news_watch_seen (
-  guild_id  VARCHAR(20)  NOT NULL,
-  item_key  VARCHAR(40)  NOT NULL,
-  title     TEXT,
-  seen_at   TIMESTAMPTZ  NOT NULL DEFAULT now(),
-  PRIMARY KEY (guild_id, item_key)
+  guild_id   VARCHAR(20)  NOT NULL,
+  channel_id VARCHAR(20)  NOT NULL,
+  item_key   VARCHAR(40)  NOT NULL,
+  title      TEXT,
+  seen_at    TIMESTAMPTZ  NOT NULL DEFAULT now(),
+  PRIMARY KEY (guild_id, channel_id, item_key)
 );
 CREATE INDEX IF NOT EXISTS idx_news_watch_seen_at ON news_watch_seen (seen_at);

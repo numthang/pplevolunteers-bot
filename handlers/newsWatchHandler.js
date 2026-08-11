@@ -3,8 +3,7 @@
 // ทำไมต้องมีปุ่มนี้: ถ้ารอรอบ 8:00/17:00 อย่างเดียว กว่าจะรู้ว่าข่าวที่ได้มีประโยชน์พอทำคอนเทนต์ไหม
 // ต้องรอครึ่งวัน — ปุ่มนี้ทำให้ลองแล้วเห็นผลทันที ซึ่งเป็นเหตุผลทั้งหมดของรอบนี้ (spike วัดของจริง)
 const { MessageFlags, PermissionFlagsBits } = require('discord.js');
-const { getSetting } = require('../db/settings');
-const { runForGuild } = require('../services/newsWatch');
+const { runForGuild, getFeeds } = require('../services/newsWatch');
 const { getT } = require('../services/i18n');
 
 const COOLDOWN_MS = 60 * 1000;
@@ -27,16 +26,20 @@ async function handleNewsWatchRun(interaction) {
         });
     }
 
-    if (!await getSetting(interaction.guildId, 'news_watch_channel_id')) {
+    const feeds = await getFeeds(interaction.guildId);
+    if (!feeds.length) {
         return interaction.reply({ content: t('newsWatch.notConfigured'), flags: MessageFlags.Ephemeral });
     }
+
+    // ปุ่มอยู่ห้องไหน = รันชุดของห้องนั้น · ถ้า panel ไม่ได้อยู่ที่ปลายทาง (เคส Forum) → รันทุกชุด
+    const only = feeds.some(f => f.channelId === interaction.channelId) ? interaction.channelId : null;
 
     // ยิง RSS หลายคำค้นเรียงกัน ~6 วิ — เกินเพดาน 3 วิของ Discord ต้อง defer ก่อนเสมอ
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     lastRun.set(interaction.guildId, Date.now());
 
     try {
-        const { sent, scanned } = await runForGuild(interaction.client, interaction.guildId);
+        const { sent, scanned } = await runForGuild(interaction.client, interaction.guildId, only);
         return interaction.editReply(sent
             ? t('newsWatch.runDone', { sent, scanned })
             : t('newsWatch.runEmpty', { scanned }));

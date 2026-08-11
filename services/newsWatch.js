@@ -7,9 +7,10 @@
 // และดัชนีโพสต์ "เพจข่าวท้องถิ่นบน Facebook" ให้ด้วย (30% ของผลที่ได้) ซึ่งเป็นของที่มีค่าที่สุดสำหรับงานพื้นที่
 //
 // config ต่อ guild อยู่ใน dc_guild_config:
-//   news_watch_channel_id · news_watch_keywords (array) · news_watch_last_slot (กันส่งซ้ำตอนบอทรีสตาร์ท)
+//   news_watch_feeds = [{ channelId, keywords }] — 1 guild มีได้หลายชุด (คนละห้อง คนละคำค้น)
+//   news_watch_last_slot — กันส่งซ้ำตอนบอทรีสตาร์ท (ทุก feed ยิงในรอบเดียวกัน จึงเก็บระดับ guild)
 const crypto = require('crypto');
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, ChannelType } = require('discord.js');
 const { getSetting, setSetting } = require('../db/settings');
 const { getSeenKeys, markSeen, hasSeenAny, pruneSeen } = require('../db/newsWatch');
 const { getT } = require('./i18n');
@@ -190,11 +191,29 @@ function buildEmbeds(header, items) {
         .setTitle(i === 0 ? header : null));
 }
 
-// ── งานหลัก ─────────────────────────────────────────────────────────────────
-async function collectFor(guildId) {
-    const kwSetting = await getSetting(guildId, 'news_watch_keywords');
-    const keywords = Array.isArray(kwSetting) && kwSetting.length ? kwSetting : DEFAULT_KEYWORDS;
+// ── ส่งของ ──────────────────────────────────────────────────────────────────
+/**
+ * ส่ง embed ลงปลายทาง — รองรับ 3 ชนิด
+ *   Forum  → เปิดกระทู้ใหม่ 1 กระทู้ต่อรอบ (ห้อง Forum ส่งข้อความลอยๆ ไม่ได้ ทุกข้อความต้องอยู่ในกระทู้)
+ *   เธรด   → ถ้าเธรดหลับ (archived) ต้องปลุกก่อน ไม่งั้น Discord ปฏิเสธข้อความ
+ *   ห้องแชท → ส่งตรงๆ
+ */
+async function deliver(channel, embeds, header) {
+    if (channel.type === ChannelType.GuildForum) {
+        const day = new Intl.DateTimeFormat('th-TH', { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short' }).format(new Date());
+        const thread = await channel.threads.create({
+            name: `${header} · ${day}`.slice(0, 100),
+            message: { embeds: [embeds[0]] },
+        });
+        for (const e of embeds.slice(1)) await thread.send({ embeds: [e] });
+        return;
+    }
+    if (channel.isThread?.() && channel.archived) await channel.setArchived(false);
+    for (const e of embeds) await channel.send({ embeds: [e] });
+}
 
+// ── งานหลัก ─────────────────────────────────────────────────────────────────
+async function collectFor(keywords) {
     const seenInBatch = new Set();
     const all = [];
     for (const kw of keywords) {
@@ -214,19 +233,26 @@ async function collectFor(guildId) {
     return all;
 }
 
+/** feed ทั้งหมดของ guild — [{ channelId, keywords }] · 1 ปลายทาง = 1 ชุดคำค้น */
+async function getFeeds(guildId) {
+    const v = await getSetting(guildId, 'news_watch_feeds');
+    return Array.isArray(v) ? v.filter(f => f?.channelId) : [];
+}
+
 /**
- * รัน 1 รอบให้ 1 guild
+ * รัน 1 รอบให้ 1 feed (1 ปลายทาง)
  * @returns {{sent:number, scanned:number, firstRun:boolean}}
  */
-async function runForGuild(client, guildId) {
-    const channelId = await getSetting(guildId, 'news_watch_channel_id');
-    if (!channelId) return { sent: 0, scanned: 0, firstRun: false };
+async function runFeed(client, guildId, feed) {
+    const { channelId } = feed;
+    const keywords = Array.isArray(feed.keywords) && feed.keywords.length ? feed.keywords : DEFAULT_KEYWORDS;
 
-    const scanned = await collectFor(guildId);
+    const scanned = await collectFor(keywords);
     if (!scanned.length) return { sent: 0, scanned: 0, firstRun: false };
 
-    const firstRun = !(await hasSeenAny(guildId));
-    const seen = await getSeenKeys(guildId, scanned.map(i => i.key));
+    // seen แยกตามปลายทาง — 2 ห้องที่คำค้นทับกันต้องได้ข่าวครบทั้งคู่ (คนละกลุ่มผู้อ่าน)
+    const firstRun = !(await hasSeenAny(guildId, channelId));
+    const seen = await getSeenKeys(guildId, channelId, scanned.map(i => i.key));
 
     const fresh = scanned
         .filter(i => !seen.has(i.key) && !isBlocked(i.title))
@@ -236,8 +262,10 @@ async function runForGuild(client, guildId) {
 
     if (picked.length) {
         const channel = await client.channels.fetch(channelId).catch(() => null);
-        if (!channel?.isTextBased?.()) {
-            console.error(`[newsWatch] guild ${guildId}: ห้อง ${channelId} หาไม่เจอหรือส่งข้อความไม่ได้`);
+        // ⚠️ isTextBased() คืน false สำหรับห้อง Forum — ต้องเช็คแยก ไม่งั้น Forum ถูกตีว่าส่งไม่ได้
+        const usable = channel?.isTextBased?.() || channel?.type === ChannelType.GuildForum;
+        if (!usable) {
+            console.error(`[newsWatch] guild ${guildId}: ปลายทาง ${channelId} หาไม่เจอหรือส่งข้อความไม่ได้`);
             return { sent: 0, scanned: scanned.length, firstRun };
         }
         const t = await getT(guildId);
@@ -245,27 +273,45 @@ async function runForGuild(client, guildId) {
         const header = t('newsWatch.digestTitle', {
             round: t(hour < 12 ? 'newsWatch.roundMorning' : 'newsWatch.roundEvening'),
         });
-        // ส่งทีละ embed ต่อ 1 ข้อความ — เพดานรวมของ Discord คือ 6000 ตัวอักษร/ข้อความ
-        // ซึ่งลิงก์ยาวๆ ทำให้เกินได้ง่ายถ้ายัดหลาย embed
-        for (const embed of buildEmbeds(header, picked)) {
-            await channel.send({ embeds: [embed] });
+        try {
+            // ส่งทีละ embed ต่อ 1 ข้อความ — เพดานรวมของ Discord คือ 6000 ตัวอักษร/ข้อความ
+            // ซึ่งลิงก์ยาวๆ ทำให้เกินได้ง่ายถ้ายัดหลาย embed
+            await deliver(channel, buildEmbeds(header, picked), header);
+        } catch (err) {
+            // เคสที่เจอบ่อยสุด: ห้อง Forum ที่ตั้งให้ "บังคับติดแท็ก" → สร้างกระทู้ไม่ผ่าน
+            console.error(`[newsWatch] ส่งลง ${channelId} ไม่สำเร็จ:`, err.message);
+            return { sent: 0, scanned: scanned.length, firstRun };
         }
     }
 
     // จำ "ทุกชิ้นที่เห็น" รวมที่ถูกกรองทิ้ง ไม่งั้นรอบหน้ามันกลับมาใหม่
-    await markSeen(guildId, scanned);
+    await markSeen(guildId, channelId, scanned);
     return { sent: picked.length, scanned: scanned.length, firstRun };
 }
 
-/** เรียกตอนถึงรอบ (8:00/17:00) — ไล่ทุก guild ที่ตั้งห้องไว้ */
+/** รันทุก feed ของ guild — feed เดียวล้มไม่ควรทำให้ feed อื่นไม่ได้ข่าว */
+async function runForGuild(client, guildId, only = null) {
+    const feeds = (await getFeeds(guildId)).filter(f => !only || f.channelId === only);
+    let sent = 0, scanned = 0;
+    for (const feed of feeds) {
+        try {
+            const r = await runFeed(client, guildId, feed);
+            sent += r.sent; scanned += r.scanned;
+        } catch (err) {
+            console.error(`[newsWatch] feed ${feed.channelId}:`, err.message);
+        }
+    }
+    return { sent, scanned, feeds: feeds.length };
+}
+
+/** เรียกตอนถึงรอบ (8:00/17:00) — ไล่ทุก guild ที่ตั้ง feed ไว้ */
 async function runOnce(client) {
     const slot = currentSlot();
     if (!slot) return;   // ยังไม่ถึงรอบแรกของวัน
 
     for (const guildId of client.guilds.cache.keys()) {
         try {
-            const channelId = await getSetting(guildId, 'news_watch_channel_id');
-            if (!channelId) continue;
+            if (!(await getFeeds(guildId)).length) continue;
             if (await getSetting(guildId, 'news_watch_last_slot') === slot) continue;
 
             await runForGuild(client, guildId);
@@ -291,6 +337,6 @@ function stopNewsWatch() {
 }
 
 module.exports = {
-    startNewsWatch, stopNewsWatch, runOnce, runForGuild,
-    currentSlot, bkkNow, cluster, similar, parseItems, buildEmbeds,
+    startNewsWatch, stopNewsWatch, runOnce, runForGuild, runFeed, getFeeds,
+    currentSlot, bkkNow, cluster, similar, parseItems, buildEmbeds, deliver,
 };

@@ -1,5 +1,6 @@
 // config/newsWatch.js — คำค้น default + คำที่ไม่เอา สำหรับ digest ข่าวท้องถิ่น
-// ตั้งทับต่อ guild ได้ที่ dc_guild_config key `news_watch_keywords` (ผ่าน /panel news keywords:)
+// ค่านี้ใช้เมื่อ feed ไม่ได้ระบุคำค้นเอง · ตั้งทับได้ที่ `/panel news channel:<ห้อง> keywords:<คั่นด้วย ,>`
+// ซึ่งเก็บลง dc_guild_config key `news_watch_feeds` = [{ channelId, keywords }]
 
 // ⚠️ ห้ามยัด OR กับ "คำกว้าง" ในคำค้นเดียว — Google News จะคืนข่าวระดับชาติมั่วมา
 //    (เทส 2026-08-12: `ราชบุรี เทศบาล OR อบต.` คืนข่าวฮั้ว สว.นครศรีฯ + จีนเทา)
