@@ -30,5 +30,22 @@
     "saveFailed": "❌ Could not save. Try again or contact an admin",
     "success": "✅ **{email}** is now linked to your account — you can sign in with email or Google",
     "successMerged": "✅ **{email}** linked, and the account you created on the website was merged into this one — your roles and permissions are intact"
+  },
+  "newsWatch": {
+    "digestTitle": "📰 Local news · {round} round",
+    "roundMorning": "morning",
+    "roundEvening": "evening",
+    "panelTitle": "📰 Local news watch",
+    "panelDescription": "Posts a digest of local news outlets and pages here **twice a day — 8:00 and 17:00.**\nUse it to spot topics worth turning into content.",
+    "panelKeywords": "Search terms",
+    "runButton": "🔄 Fetch now",
+    "setupDone": "✅ News will be posted to {channel} · next round at 8:00 or 17:00 (or press the button on the panel to fetch now)",
+    "noPermission": "❌ You need the Manage Channels permission to do that",
+    "notConfigured": "❌ This channel is not set up yet — run `/panel news` first",
+    "cooldown": "⏳ Just fetched a moment ago — wait {seconds}s",
+    "running": "⏳ Fetching news…",
+    "runDone": "✅ Posted {sent} stories (scanned {scanned})",
+    "runEmpty": "No new stories right now (scanned {scanned} — all seen before)",
+    "runFailed": "❌ Could not fetch news: {error}"
   }
 }

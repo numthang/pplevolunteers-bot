@@ -44,6 +44,8 @@ const {
 } = require('./handlers/basketHandler');
 const { startAnnounceWorker } = require('./services/newsShare');
 const { startPublishWorker } = require('./services/publishWorker');
+const { startNewsWatch } = require('./services/newsWatch');
+const { handleNewsWatchRun } = require('./handlers/newsWatchHandler');
 const { indexThread, indexMessage, hybridSearch } = require('./services/forumIndexer');
 const { buildSearchResultEmbed, buildSearchComponents } = require('./handlers/forumSearch');
 const { forumChannelCache, dashboardThreadCache, searchChannelCache, addForumChannel, addDashboardThread, setSearchChannel } = require('./services/forumCache');
@@ -97,6 +99,7 @@ client.once('clientReady', async () => {
   smsWebhook.init(client);
   startAnnounceWorker(client); // ประกาศ event ที่ค้างคิวช่วง quiet hours
   startPublishWorker(client);  // คิวโพสต์ของ posts (เว็บเขียนแถว → บอทยิง + แจ้งกลับห้องต้นทาง)
+  startNewsWatch(client);      // สรุปข่าวในพื้นที่ลงห้อง วันละ 2 รอบ (เฉพาะ guild ที่ตั้ง /panel news ไว้)
   // โหลด forum configs + sync role catalog ทุก guild ที่ bot อยู่
   for (const guild of client.guilds.cache.values()) {
     const synced = await syncGuildRolesCatalog(guild).catch(e => { console.error(`⚠️ role sync ${guild.id}:`, e.message); return 0; });
@@ -222,6 +225,7 @@ client.on('interactionCreate', async (interaction) => {
   // --- Buttons ---
   if (interaction.isButton()) {
     if (interaction.customId.startsWith('quote_confirm:'))      return handleQuoteConfirm(interaction);
+    if (interaction.customId === 'btn_newswatch_run')       return handleNewsWatchRun(interaction);
     if (interaction.customId === 'wm_confirm')              return handleWatermarkConfirm(interaction);
     if (interaction.customId === 'wm_enhance')              return handleWatermarkEnhance(interaction);
     if (interaction.customId.startsWith('basket_')) {

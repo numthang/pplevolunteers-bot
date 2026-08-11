@@ -721,3 +721,16 @@ ALTER TABLE post_social_history ADD COLUMN IF NOT EXISTS wm_pos VARCHAR(20);
 -- production ทำถึงตรงนี้ 
 
 
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 2026-08-12 · newsWatch — จำว่าข่าวชิ้นไหนส่งเข้าห้องไปแล้ว
+-- ถ้าไม่มีตารางนี้ digest รอบ 17:00 จะซ้ำกับรอบ 8:00 ทั้งหมด
+-- item_key = sha1 ของ guid จาก RSS (guid ดิบยาวเฉลี่ย 360 ตัวอักษร สูงสุด 1,425 → hash กันดัชนีบวม)
+CREATE TABLE IF NOT EXISTS news_watch_seen (
+  guild_id  VARCHAR(20)  NOT NULL,
+  item_key  VARCHAR(40)  NOT NULL,
+  title     TEXT,
+  seen_at   TIMESTAMPTZ  NOT NULL DEFAULT now(),
+  PRIMARY KEY (guild_id, item_key)
+);
+CREATE INDEX IF NOT EXISTS idx_news_watch_seen_at ON news_watch_seen (seen_at);

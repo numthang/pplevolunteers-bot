@@ -7,9 +7,12 @@ const {
   EmbedBuilder,
   MessageFlags,
   ChannelType,
+  PermissionFlagsBits,
 } = require('discord.js');
 const { getSetting, setSetting } = require('../db/settings');
 const { parseSetting } = require('../utils/parseSetting');
+const { getT } = require('../services/i18n');
+const { DEFAULT_KEYWORDS } = require('../config/newsWatch');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -143,12 +146,65 @@ module.exports = {
         .addStringOption(o => o.setName('description').setDescription('ข้อความ embed (ใช้ \\n)').setRequired(false))
         .addStringOption(o => o.setName('button_label').setDescription('ข้อความปุ่ม').setRequired(false))
         .addStringOption(o => o.setName('color').setDescription('สี hex').setRequired(false))
+    )
+
+    // --- news (สรุปข่าวในพื้นที่จาก Google News RSS) ---
+    .addSubcommand(sub =>
+      sub.setName('news')
+        .setDescription('ตั้งห้องรับสรุปข่าวในพื้นที่ วันละ 2 รอบ 8:00/17:00 (Manage Channels)')
+        .addChannelOption(o =>
+          o.setName('channel').setDescription('ห้องที่จะให้ส่งสรุปข่าวลง').setRequired(true)
+            .addChannelTypes(ChannelType.GuildText)
+        )
+        .addStringOption(o =>
+          o.setName('keywords')
+            .setDescription('คำค้น คั่นด้วย , (ไม่ระบุ = ใช้ค่าเริ่มต้น: ราชบุรี + ชื่ออำเภอ)')
+            .setRequired(false)
+        )
     ),
 
   async execute(interaction) {
     const sub      = interaction.options.getSubcommand();
     const isPublic  = interaction.options.getBoolean('public') ?? false;
     const replyFlag = isPublic ? undefined : MessageFlags.Ephemeral;
+
+    // ================================================================
+    // ข่าวในพื้นที่ — ผูกห้อง + วาง panel ที่มีปุ่มดึงเดี๋ยวนี้
+    if (sub === 'news') {
+      const t = await getT(interaction.guildId);
+      // ⚠️ /panel ทั้งคำสั่งไม่มี setDefaultMemberPermissions (ต่างจาก sticky/role/channel)
+      //    subcommand นี้เขียน config ของ guild → กันสิทธิ์ตรงนี้เอง
+      if (!interaction.memberPermissions?.has(PermissionFlagsBits.ManageChannels)) {
+        return interaction.reply({ content: t('newsWatch.noPermission'), flags: MessageFlags.Ephemeral });
+      }
+
+      const channel  = interaction.options.getChannel('channel');
+      const rawKw    = interaction.options.getString('keywords');
+      const keywords = rawKw
+        ? rawKw.split(',').map(s => s.trim()).filter(Boolean)
+        : DEFAULT_KEYWORDS;
+
+      await setSetting(interaction.guildId, 'news_watch_channel_id', channel.id);
+      await setSetting(interaction.guildId, 'news_watch_keywords', keywords);
+
+      const embed = new EmbedBuilder()
+        .setTitle(t('newsWatch.panelTitle'))
+        .setDescription(t('newsWatch.panelDescription'))
+        .addFields({ name: t('newsWatch.panelKeywords'), value: keywords.map(k => `• ${k}`).join('\n').slice(0, 1024) })
+        .setColor(0xff6a13);
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId('btn_newswatch_run')
+          .setLabel(t('newsWatch.runButton'))
+          .setStyle(ButtonStyle.Primary)
+      );
+
+      await channel.send({ embeds: [embed], components: [row] });
+      return interaction.reply({
+        content: t('newsWatch.setupDone', { channel: `<#${channel.id}>` }),
+        flags: MessageFlags.Ephemeral,
+      });
+    }
 
     // ================================================================
     // ผูกอีเมล — ประกาศครั้งเดียวถึงทุกคนในเซิร์ฟเวอร์ แทนการไล่ใส่อีเมลให้ทีละคนเอง
