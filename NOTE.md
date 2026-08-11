@@ -3,7 +3,7 @@
 - ทำให้เว็บไซต์ หรือ sub-domain ภายนอกใช้ระบบเดียวกันได้แต่ใช้ชื่อของเขาเอง
 
 # Posts
-- quote noimage แบบ ลายน้ำ background ทำเป็นขาวดำได้ไหม
+
 
 # CivicFlow
 - ข้อเสนอ: ย้าย CivicFlow จาก Vercel มาที่ VPS
