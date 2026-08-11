@@ -10,7 +10,7 @@
 //   news_watch_feeds = [{ channelId, keywords }] — 1 guild มีได้หลายชุด (คนละห้อง คนละคำค้น)
 //   news_watch_last_slot — กันส่งซ้ำตอนบอทรีสตาร์ท (ทุก feed ยิงในรอบเดียวกัน จึงเก็บระดับ guild)
 const crypto = require('crypto');
-const { EmbedBuilder, ChannelType } = require('discord.js');
+const { ChannelType, MessageFlags } = require('discord.js');
 const { getSetting, setSetting } = require('../db/settings');
 const { getSeenKeys, markSeen, hasSeenAny, pruneSeen } = require('../db/newsWatch');
 const { getT } = require('./i18n');
@@ -22,8 +22,7 @@ const {
 const TICK_MS = 5 * 60 * 1000;      // เช็คทุก 5 นาทีว่าถึงรอบหรือยัง (ไม่ใช่ยิงข่าวทุก 5 นาที)
 const FETCH_TIMEOUT_MS = 15 * 1000;
 const GAP_MS = 400;                 // เว้นระหว่างคำค้น ไม่รัวใส่ Google
-const EMBED_CHARS = 3900;           // เพดานจริง 4096 — เผื่อไว้
-const BRAND_ORANGE = 0xff6a13;
+const MSG_CHARS = 1900;             // เพดานข้อความธรรมดาของ Discord คือ 2,000 — เผื่อไว้
 
 let timer = null;
 
@@ -102,6 +101,52 @@ function parseItems(xml) {
     }).filter(i => i.title && i.link);
 }
 
+// ── แปลงลิงก์ Google News → URL จริงของข่าว ─────────────────────────────────
+// ⚠️ ลิงก์ใน RSS (`news.google.com/rss/articles/CBMi…`) **เปิดแล้วไม่เจอเนื้อข่าว**
+//    (user เจอเองตอนกดจริง 2026-08-12) — Google ซ่อน URL ปลายทางไว้หลัง JS ทั้งหมด:
+//    decode base64 ไม่ได้ · ตาม redirect ก็วนอยู่ที่ news.google.com · ในหน้าไม่มี URL สำนักข่าวเลย
+//    ทางเดียวที่ได้ผลคือหยิบ signature/timestamp จากหน้า แล้วยิง batchexecute ต่อ (เทส 6/6 ผ่าน · 0.4 วิ/ข่าว)
+//    ของแถม: URL จริงสั้นกว่า ~8 เท่า (50 ตัวอักษร เทียบกับ 398) ข้อความเลยไม่ชนเพดาน 2,000 อีก
+// ⚠️ นี่คือ endpoint ภายในของ Google — พังได้ทุกเมื่อ · ถ้าพังต้อง **ตกกลับไปใช้ลิงก์เดิม** ไม่ใช่ทิ้งข่าว
+const BROWSER_UA = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+
+async function resolveLink(link) {
+    const id = link.split('/articles/')[1]?.split('?')[0];
+    if (!id) return link;
+
+    const page = await (await fetch(link, {
+        headers: { 'User-Agent': BROWSER_UA }, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    })).text();
+    const sg = page.match(/data-n-a-sg="([^"]+)"/)?.[1];
+    const ts = page.match(/data-n-a-ts="([^"]+)"/)?.[1];
+    if (!sg || !ts) return link;
+
+    const req = JSON.stringify([[['Fbv4je', JSON.stringify(['garturlreq',
+        [['X', 'X', ['X', 'X'], null, null, 1, 1, 'US:en', null, 1, null, null, null, null, null, 0, 1],
+            'en-US', 'US', 1, [2, 3, 4, 8], 1, 0, '655000234', 0, 0, null, 0],
+        id, Number(ts), sg]), null, '1']]]);
+
+    const res = await fetch('https://news.google.com/_/DotsSplashUi/data/batchexecute', {
+        method: 'POST',
+        headers: { 'User-Agent': BROWSER_UA, 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+        body: new URLSearchParams({ 'f.req': req }),
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    });
+    const found = (await res.text()).match(/https?:\/\/(?!(?:www\.)?(?:google|gstatic))[^\s\\"]+/);
+    return found ? found[0] : link;
+}
+
+/** แปลงลิงก์ให้เฉพาะข่าวที่จะส่งจริง (5 ชิ้น) — ตัวไหนแปลงไม่ได้ก็ใช้ลิงก์เดิมไป ไม่ทิ้งข่าว */
+async function resolveLinks(items) {
+    return Promise.all(items.map(async it => ({
+        ...it,
+        link: await resolveLink(it.link).catch(err => {
+            console.error('[newsWatch] แปลงลิงก์ไม่ได้:', err.message);
+            return it.link;
+        }),
+    })));
+}
+
 // ── กรอง + ยุบข่าวซ้ำ ────────────────────────────────────────────────────────
 const isBlocked = title => BLOCKLIST.some(w => title.includes(w));
 
@@ -162,33 +207,49 @@ function sourceLabel(src) {
     return /facebook\.com/i.test(src) ? 'Facebook' : src;
 }
 
-function line(item) {
-    const title = item.title.length > TITLE_MAX ? `${item.title.slice(0, TITLE_MAX)}…` : item.title;
-    // escape ] กับ ) ที่จะทำให้ markdown link แตก
-    const safe = title.replace(/[[\]]/g, '').replace(/\)/g, '）');
-    const meta = [sourceLabel(item.source), fmtTime(item.pubDate)].filter(Boolean).join(' · ');
-    const dup = item.dupes ? ` (+${item.dupes})` : '';
-    return `• [${safe}](${item.link})\n　${meta}${dup}`;
+/** ตัด " - ชื่อสำนัก" ท้ายหัวข้อ — ซ้ำกับชื่อสำนักที่โชว์ในบรรทัดล่างอยู่แล้ว */
+function stripSourceSuffix(title, source) {
+    if (!source) return title;
+    const tail = title.match(/\s+-\s+([^-]{1,30})$/);
+    return tail && tail[1].trim().toLowerCase() === source.trim().toLowerCase()
+        ? title.slice(0, tail.index)
+        : title;
 }
 
-/** หั่นเป็นหลาย embed — บรรทัดละ ~500 ตัวอักษรเพราะลิงก์ Google News ยาวมาก */
-function buildEmbeds(header, items) {
-    const embeds = [];
+/**
+ * ลิงก์โพสต์ Facebook มี slug ภาษาไทยที่ถูก percent-encode จนยาว ~500 ตัวอักษร
+ * (กินโควตาข้อความไปหนึ่งในสาม) — เหลือแค่เลข id ก็เปิดได้เหมือนกัน
+ */
+function shortenLink(url) {
+    return url.replace(/^(https:\/\/(?:www\.)?facebook\.com\/[^/]+\/posts\/).*?(\d{10,})\/?$/, '$1$2');
+}
+
+/** หัวข้อข่าวคือตัวสรุปอยู่แล้ว (RSS ไม่ได้ให้เนื้อข่าวมา) → ตัวหนาเป็นสรุป · ลิงก์เล็กๆ ต่อท้าย */
+function line(item) {
+    const full = stripSourceSuffix(item.title, item.source);
+    const title = full.length > TITLE_MAX ? `${full.slice(0, TITLE_MAX)}…` : full;
+    // ตัด * ` _ ที่จะทำให้ markdown ตัวหนาแตก
+    const safe = title.replace(/[*`_]/g, '');
+    const meta = [sourceLabel(item.source), fmtTime(item.pubDate)].filter(Boolean).join(' · ');
+    const dup = item.dupes ? ` (+${item.dupes})` : '';
+    return `**${safe}**\n-# ${meta} · [ลิงก์](${shortenLink(item.link)})${dup}`;
+}
+
+/** หั่นเป็นหลายข้อความ — เพดานข้อความธรรมดาของ Discord คือ 2,000 ตัวอักษร */
+function buildMessages(header, items) {
+    const msgs = [];
     let buf = [];
     let len = 0;
     for (const it of items) {
         const l = line(it);
-        if (len + l.length > EMBED_CHARS && buf.length) {
-            embeds.push(buf.join('\n'));
+        if (len + l.length > MSG_CHARS && buf.length) {
+            msgs.push(buf.join('\n'));
             buf = []; len = 0;
         }
-        buf.push(l); len += l.length + 1;
+        buf.push(l); len += l.length + 2;
     }
-    if (buf.length) embeds.push(buf.join('\n'));
-    return embeds.map((desc, i) => new EmbedBuilder()
-        .setColor(BRAND_ORANGE)
-        .setDescription(desc)
-        .setTitle(i === 0 ? header : null));
+    if (buf.length) msgs.push(buf.join('\n\n'));
+    return msgs.map((body, i) => (i === 0 ? `## ${header}\n\n${body}` : body));
 }
 
 // ── ส่งของ ──────────────────────────────────────────────────────────────────
@@ -198,18 +259,22 @@ function buildEmbeds(header, items) {
  *   เธรด   → ถ้าเธรดหลับ (archived) ต้องปลุกก่อน ไม่งั้น Discord ปฏิเสธข้อความ
  *   ห้องแชท → ส่งตรงๆ
  */
-async function deliver(channel, embeds, header) {
+async function deliver(channel, messages, header) {
+    // ⚠️ SuppressEmbeds เสมอ — ข้อความธรรมดาที่มีลิงก์ Discord จะแปะการ์ดพรีวิวให้เอง
+    //    5 ลิงก์ = การ์ดรก 5 ใบ กลบเนื้อหาที่ตั้งใจให้อ่าน
+    const opts = body => ({ content: body, flags: MessageFlags.SuppressEmbeds });
+
     if (channel.type === ChannelType.GuildForum) {
         const day = new Intl.DateTimeFormat('th-TH', { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short' }).format(new Date());
         const thread = await channel.threads.create({
             name: `${header} · ${day}`.slice(0, 100),
-            message: { embeds: [embeds[0]] },
+            message: opts(messages[0]),
         });
-        for (const e of embeds.slice(1)) await thread.send({ embeds: [e] });
+        for (const m of messages.slice(1)) await thread.send(opts(m));
         return;
     }
     if (channel.isThread?.() && channel.archived) await channel.setArchived(false);
-    for (const e of embeds) await channel.send({ embeds: [e] });
+    for (const m of messages) await channel.send(opts(m));
 }
 
 // ── งานหลัก ─────────────────────────────────────────────────────────────────
@@ -274,9 +339,9 @@ async function runFeed(client, guildId, feed) {
             round: t(hour < 12 ? 'newsWatch.roundMorning' : 'newsWatch.roundEvening'),
         });
         try {
-            // ส่งทีละ embed ต่อ 1 ข้อความ — เพดานรวมของ Discord คือ 6000 ตัวอักษร/ข้อความ
-            // ซึ่งลิงก์ยาวๆ ทำให้เกินได้ง่ายถ้ายัดหลาย embed
-            await deliver(channel, buildEmbeds(header, picked), header);
+            // แปลงลิงก์ **หลังคัดเหลือ 5 ชิ้นแล้วเท่านั้น** — ยิง 2 request ต่อข่าว
+            // ถ้าไปแปลงตั้งแต่ตอนสแกน (36 ชิ้น) = 72 request ทิ้งเปล่าทุกรอบ
+            await deliver(channel, buildMessages(header, await resolveLinks(picked)), header);
         } catch (err) {
             // เคสที่เจอบ่อยสุด: ห้อง Forum ที่ตั้งให้ "บังคับติดแท็ก" → สร้างกระทู้ไม่ผ่าน
             console.error(`[newsWatch] ส่งลง ${channelId} ไม่สำเร็จ:`, err.message);
@@ -338,5 +403,5 @@ function stopNewsWatch() {
 
 module.exports = {
     startNewsWatch, stopNewsWatch, runOnce, runForGuild, runFeed, getFeeds,
-    currentSlot, bkkNow, cluster, similar, parseItems, buildEmbeds, deliver,
+    currentSlot, bkkNow, cluster, similar, parseItems, buildMessages, deliver, resolveLink,
 };
