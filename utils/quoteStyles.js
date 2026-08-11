@@ -66,12 +66,19 @@ const PLAIN_FONTS = {
   sarabun:   { quote: 'Sarabun',   author: 'Sarabun' },         // มีหัว ทรงราชการ
 };
 
-// ตัวคูณขนาดฟอนต์ต่อ preset สำหรับการ์ด "มีรูป" — คูณเข้ากับ**จุดตั้งต้น**ของแต่ละสไตล์เอง
-// (ไม่ใช่สัดส่วนตายตัวแบบ PLAIN_SIZES เพราะแต่ละสไตล์มี baseline ที่เคาะมาต่างกันอยู่แล้ว)
-// m = 1.0 คือพฤติกรรมเดิมเป๊ะ — ไม่กระทบการ์ดที่ไม่ได้ส่ง textSize มา
-// ⚠️ เดิม {0.82, 1.0, 1.22} = ห่างกันแค่ ~20% — user บอกว่า "กลาง กับ ใหญ่ ยังไม่ต่างกันมาก"
-//    (2026-08-11 หลัง deploy รอบแรก) → ดันช่องห่างขึ้นเป็น ~38-40% ต่อขั้น
-const QUOTE_SIZE_SCALE = { s: 0.68, m: 1.0, l: 1.40 };
+// ขนาดฟอนต์ — จาก 3 ปุ่ม (s/m/l) เปลี่ยนเป็น slider % ต่อเนื่อง (2026-08-11 รอบ 3)
+// เหตุผล: ปุ่ม 3 ระดับยังโดน fitFont/blockH-fit หรี่ตัวเองกลับมาบรรจบกันได้อยู่ดีสำหรับคำคม
+// บางความยาว (ตัวคูณคงที่แค่ "จุดตั้งต้น" ไม่ใช่ตัวชี้ขาดผลลัพธ์สุดท้ายเสมอ) · slider ให้ผู้ใช้
+// ลากเห็นผลจริงต่อเนื่อง ตรงไปตรงมากว่า — 100% = ขนาดฐานเดิม (เท่า preset 'm' เก่า)
+const TEXT_SIZE_MIN = 60, TEXT_SIZE_MAX = 140, TEXT_SIZE_DEFAULT = 100;
+const clampTextSize = pct => {
+  const p = Number(pct);
+  return Number.isFinite(p) ? Math.min(TEXT_SIZE_MAX, Math.max(TEXT_SIZE_MIN, p)) : TEXT_SIZE_DEFAULT;
+};
+const sizeScaleOf = pct => clampTextSize(pct) / 100;
+// ยิ่งลากไซส์ใหญ่ ยิ่งต้องยอมให้บรรทัดเยอะขึ้นตาม ไม่งั้น fitFont หรี่ฟอนต์กลับลงมาเอง
+// ให้พอดี maxLines เดิม (นี่คือบัคที่ทำให้ preset 'm'/'l' เก่าหน้าตาเหมือนกันสำหรับคำคมยาว)
+const scaledMaxLines = (baseLines, pct) => Math.max(3, Math.round(baseLines * sizeScaleOf(pct)));
 
 const GREY_TINT = '#9aa0a6';   // เทากลาง — ลายน้ำบนพื้นสี CI ย้อมสีนี้ ไม่ใช่ดำ (ดำ = อ่านเป็นเงา)
 const ORANGE = '#ff6a13';
@@ -321,13 +328,13 @@ async function toPng(canvas) {
 // ── Core render ───────────────────────────────────────────────────────────────
 // markScale: relative size of mark (1.0 = default)
 // gradDark:  0.0–1.0 how dark the bottom gradient is
-async function renderVariant(buf, { quoteText, authorName, side = 'left', vertical = 'bottom', markScale = 1.0, gradDark = 0.95, saturation = 0.15, fontBold = 'GSans', fontLight = 'AnakotmaiLight', font = null, textSize = 'm', accentColor, markExtraGap = 0, markAfterText = false, noMark = false, scrimMix = SCRIM_MIX, duotone = false }) {
+async function renderVariant(buf, { quoteText, authorName, side = 'left', vertical = 'bottom', markScale = 1.0, gradDark = 0.95, saturation = 0.15, fontBold = 'GSans', fontLight = 'AnakotmaiLight', font = null, textSize = TEXT_SIZE_DEFAULT, accentColor, markExtraGap = 0, markAfterText = false, noMark = false, scrimMix = SCRIM_MIX, duotone = false }) {
   const accent = accentColor || ORANGE;
   const isRight = side === 'right';
   const isTop   = vertical === 'top';
   // font (preset key) ทับ fontBold/fontLight เฉพาะตอนผู้ใช้เลือกมาจริง — ไม่งั้นคงฟอนต์เดิมของสไตล์
   if (font && PLAIN_FONTS[font]) { fontBold = PLAIN_FONTS[font].quote; fontLight = PLAIN_FONTS[font].author; }
-  const sizeScale = QUOTE_SIZE_SCALE[textSize] ?? 1;
+  const sizeScale = sizeScaleOf(textSize);
 
   // ⚠️ saturation ไม่มีผลตอน duotone (รูปถูกทำขาวดำก่อนย้อมอยู่แล้ว) → UI ต้องซ่อนปุ่มสีภาพ
   const work = await prepImage(buf, { saturation, duotone, accent });
@@ -347,7 +354,7 @@ async function renderVariant(buf, { quoteText, authorName, side = 'left', vertic
   const markGap = Math.round(pad * 0.25);
 
   const maxW  = W * 0.80;
-  const { fontSize: qszFit, lines } = fitFont(ctx, quoteText, maxW - barW - barGap - 4, qsz, 4, fontBold);
+  const { fontSize: qszFit, lines } = fitFont(ctx, quoteText, maxW - barW - barGap - 4, qsz, scaledMaxLines(4, textSize), fontBold);
   const lh    = qszFit * 1.2;
   const textH = lines.length * lh + nsz * 1.8;
 
@@ -426,11 +433,11 @@ async function renderVariant(buf, { quoteText, authorName, side = 'left', vertic
 
 // ── Style 7: quote_border (mark + H-bar + V-bar เป็นชิ้นเดียว) ───────────────
 // PNG 822x714 — V-bar spans y 32%–95%, text area starts at x 24%, y 32%
-async function renderBorder(buf, { quoteText, authorName, saturation = 0.15, accentColor, duotone = false, font = null, textSize = 'm' }) {
+async function renderBorder(buf, { quoteText, authorName, saturation = 0.15, accentColor, duotone = false, font = null, textSize = TEXT_SIZE_DEFAULT }) {
   const accent = accentColor || ORANGE;
   const fontBold  = font && PLAIN_FONTS[font] ? PLAIN_FONTS[font].quote  : 'GSans';
   const fontLight = font && PLAIN_FONTS[font] ? PLAIN_FONTS[font].author : 'AnakotmaiLight';
-  const sizeScale = QUOTE_SIZE_SCALE[textSize] ?? 1;
+  const sizeScale = sizeScaleOf(textSize);
   const work = await prepImage(buf, { saturation, duotone, accent: accentColor || ORANGE });
   const img  = await loadImage(work);
   const W = img.width, H = img.height;
@@ -446,7 +453,7 @@ async function renderBorder(buf, { quoteText, authorName, saturation = 0.15, acc
   const borderImg = await loadMark('frame_left');
 
   const maxW7   = W * 0.80;
-  const { fontSize: qszFit, lines } = fitFont(ctx, quoteText, maxW7, qsz, 4, fontBold);
+  const { fontSize: qszFit, lines } = fitFont(ctx, quoteText, maxW7, qsz, scaledMaxLines(4, textSize), fontBold);
   const lh      = qszFit * 1.2;
   const textH   = lines.length * lh + nsz * 1.8;
   const maxTextW = maxW7;
@@ -509,11 +516,11 @@ const FRAME_RIGHT = {
 };
 
 // ── Style 8: quote_border_2 — กรอบตัว C ชิดขวา (แถบบน + เส้นตั้งขวา + แถบล่างสั้น)
-async function renderBorder2(buf, { quoteText, authorName, saturation = 0.15, accentColor, duotone = false, font = null, textSize = 'm' }) {
+async function renderBorder2(buf, { quoteText, authorName, saturation = 0.15, accentColor, duotone = false, font = null, textSize = TEXT_SIZE_DEFAULT }) {
   const accent = accentColor || ORANGE;
   const fontBold  = font && PLAIN_FONTS[font] ? PLAIN_FONTS[font].quote  : 'GSans';
   const fontLight = font && PLAIN_FONTS[font] ? PLAIN_FONTS[font].author : 'AnakotmaiLight';
-  const sizeScale = QUOTE_SIZE_SCALE[textSize] ?? 1;
+  const sizeScale = sizeScaleOf(textSize);
   const work = await prepImage(buf, { saturation, duotone, accent: accentColor || ORANGE });
   const img  = await loadImage(work);
   const W = img.width, H = img.height;
@@ -526,7 +533,7 @@ async function renderBorder2(buf, { quoteText, authorName, saturation = 0.15, ac
   const nsz  = Math.max(16, Math.round(W * 0.030));
 
   const maxW8   = W * 0.80;
-  const { fontSize: qszFit, lines } = fitFont(ctx, quoteText, maxW8, qsz, 4, fontBold);
+  const { fontSize: qszFit, lines } = fitFont(ctx, quoteText, maxW8, qsz, scaledMaxLines(4, textSize), fontBold);
   const lh      = qszFit * 1.2;
 
   // ── กรอบวาดเอง ไม่ใช้ assets/quote/frame_right.png (เคาะ 2026-08-06) ──────────
@@ -631,11 +638,11 @@ function _rgbTriplet(hex) {
 
 // ⛔ เคยมีโหมด fade (รูปไล่จางเข้าหาแถบสี) — **ตัดออกแล้ว 2026-08-07** user ตัดสินว่าไม่สวย
 //    อย่าใส่กลับโดยไม่ถามก่อน
-async function renderPanel(buf, { quoteText, authorName, saturation = 1.0, accentColor, imgRatio = 0.65, panelAt = 'bottom', align = 'left', panelAlpha = 0.90, inkOverride = null, font = null, textSize = 'm' }) {
+async function renderPanel(buf, { quoteText, authorName, saturation = 1.0, accentColor, imgRatio = 0.65, panelAt = 'bottom', align = 'left', panelAlpha = 0.90, inkOverride = null, font = null, textSize = TEXT_SIZE_DEFAULT }) {
   const accent = accentColor || ORANGE;
   const fontBold  = font && PLAIN_FONTS[font] ? PLAIN_FONTS[font].quote  : 'Anakotmai';
   const fontLight = font && PLAIN_FONTS[font] ? PLAIN_FONTS[font].author : 'AnakotmaiLight';
-  const sizeScale = QUOTE_SIZE_SCALE[textSize] ?? 1;
+  const sizeScale = sizeScaleOf(textSize);
   const pal = panelPalette(accent);
   // inkOverride = บังคับสีตัวอักษรแทนที่จะให้ contrastText() ตัดสิน — ไว้เทียบให้คนดูเท่านั้น
   const panel = pal.panel;
@@ -803,11 +810,11 @@ async function drawQuoteBlock(ctx, { x, y, w, h, quoteText, authorName, ink, sub
 //    (คอลัมน์แคบทำให้ตัวหนังสือเล็กกว่าใบอื่นชัดเจน) อย่าใส่กลับโดยไม่ถามก่อน
 
 /** matte — พื้นสีล้วน รูปลอยอยู่ข้างบนแบบมีขอบ คำคมอยู่ใต้รูป */
-async function renderMatte(buf, { quoteText, authorName, saturation = 1.0, accentColor, inset = 0.06, font = null, textSize = 'm' }) {
+async function renderMatte(buf, { quoteText, authorName, saturation = 1.0, accentColor, inset = 0.06, font = null, textSize = TEXT_SIZE_DEFAULT }) {
   const base = accentColor || ORANGE;
   const fontBold  = font && PLAIN_FONTS[font] ? PLAIN_FONTS[font].quote  : 'Anakotmai';
   const fontLight = font && PLAIN_FONTS[font] ? PLAIN_FONTS[font].author : 'AnakotmaiLight';
-  const sizeScale = QUOTE_SIZE_SCALE[textSize] ?? 1;
+  const sizeScale = sizeScaleOf(textSize);
   const { ink, sub } = panelPalette(base);
 
   const meta = await sharp(buf).metadata();
@@ -832,7 +839,7 @@ async function renderMatte(buf, { quoteText, authorName, saturation = 1.0, accen
   await drawQuoteBlock(ctx, {
     x: m, y: boxY, w: imgW, h: H - boxY - m,
     quoteText, authorName, ink, sub, noMark: true,
-    qFactor: 0.073 * sizeScale, fontBold, fontLight,
+    qFactor: 0.073 * sizeScale, maxLines: scaledMaxLines(6, textSize), fontBold, fontLight,
   });
   return { buffer: await toPng(cv), ext: 'png', vertical: 'bottom', side: 'left' };
 }
@@ -847,13 +854,13 @@ async function renderMatte(buf, { quoteText, authorName, saturation = 1.0, accen
 //
 // แบ่ง 2 ระดับด้วย **บรรทัดว่าง**: ก่อนบรรทัดว่าง = เกริ่น · หลังบรรทัดว่าง = ประโยคเด็ด
 // ไม่มีบรรทัดว่าง = ทั้งก้อนเป็นประโยคเด็ด · ชื่อผู้พูดขึ้นบรรทัดใหม่ได้ (บรรทัดแรก = ชื่อ ตัวหนา)
-async function renderSide(buf, { quoteText, authorName, saturation = 1.0, accentColor, duotone = false, align = 'right', font = null, textSize = 'm' }) {
+async function renderSide(buf, { quoteText, authorName, saturation = 1.0, accentColor, duotone = false, align = 'right', font = null, textSize = TEXT_SIZE_DEFAULT }) {
   const onRight = align !== 'left';
   const accent = accentColor || ORANGE;
   // 2 ระดับตัวพิมพ์: lead/ชื่อ = ตัวหนา (fontBold) · intro/ตำแหน่ง = ตัวบาง (fontLight)
   const fontBold  = font && PLAIN_FONTS[font] ? PLAIN_FONTS[font].quote  : 'GSans';
   const fontLight = font && PLAIN_FONTS[font] ? PLAIN_FONTS[font].author : 'GSansLight';
-  const sizeScale = QUOTE_SIZE_SCALE[textSize] ?? 1;
+  const sizeScale = sizeScaleOf(textSize);
   const scrim  = scrimOf(accent);
   const meta   = await sharp(buf).metadata();
   const W = meta.width, H = meta.height;
@@ -975,10 +982,10 @@ const ember = (side, vertical, extra = {}) => (buf, opts) =>
 
 // ── quote-2-center: ข้อความกลางภาพ, BG หรี่ + ดำคลุม 75%, Google Sans (มีหัว) ──
 // supersample 2x แล้วย่อ = ขอบคม. ใช้ fitFont/lsDraw ตัวเดียวกับ quote-1
-async function renderCenter(buf, { quoteText, authorName, saturation = 1.0, accentColor, duotone = false, font = null, textSize = 'm' }) {
+async function renderCenter(buf, { quoteText, authorName, saturation = 1.0, accentColor, duotone = false, font = null, textSize = TEXT_SIZE_DEFAULT }) {
   const fontBold  = font && PLAIN_FONTS[font] ? PLAIN_FONTS[font].quote  : 'GSans';
   const fontLight = font && PLAIN_FONTS[font] ? PLAIN_FONTS[font].author : 'AnakotmaiLight';
-  const sizeScale = QUOTE_SIZE_SCALE[textSize] ?? 1;
+  const sizeScale = sizeScaleOf(textSize);
   const SS = 2, OVERLAY = 0.75;
   const meta = await sharp(buf).metadata();
   const W = meta.width, H = meta.height;
@@ -997,7 +1004,7 @@ async function renderCenter(buf, { quoteText, authorName, saturation = 1.0, acce
 
   const padX = Math.round(W * 0.11);
   const startSz = Math.max(40, Math.round(W * 0.085 * sizeScale));
-  const { fontSize: qsz, lines } = fitFont(ctx, quoteText, W - padX * 2, startSz, 6, fontBold);
+  const { fontSize: qsz, lines } = fitFont(ctx, quoteText, W - padX * 2, startSz, scaledMaxLines(6, textSize), fontBold);
   const lh    = qsz * 1.22;
   const nsz   = Math.max(16, Math.round(W * 0.028));
   const qmsz  = Math.round(W * 0.11);
@@ -1054,25 +1061,20 @@ const WM = { scale: 0.45, alpha: 0.10, margin: 0.06 };
 //    (ดู QuoteGeneratorModal — `w-full` บนการ์ด 4:5) ไม่ใช่ตำแหน่งข้อความ · ข้อความกลับไปกลางการ์ด
 //    → อย่าเพิ่มแถบกลับโดยไม่ถามก่อน
 
-// ขนาดตัวอักษร = สัดส่วนต่อความกว้างการ์ด (เป็น **จุดตั้งต้น** — ข้อความยาวยังถูกย่อลงอีกได้)
-// เดิม {0.072, 0.092, 0.115} ห่างกันแค่ ~25-28% — user บอกว่ายังต่างกันน้อย ดันขึ้นเป็น ~40-48%
-// ให้สัดส่วนตรงกับ QUOTE_SIZE_SCALE ของการ์ดมีรูป (2026-08-11)
-const PLAIN_SIZES = { s: 0.062, m: 0.092, l: 0.130 };
-
-// จำนวนบรรทัดสูงสุดต่อ preset — ตัวใหญ่ต้องรับบรรทัดเยอะกว่าได้ ไม่งั้นคำคมยาว (>~90 ตัว) จะโดน
-// fitFont หรี่ลงจนชน 6 บรรทัดเท่ากันหมดทุก preset (m กับ l ออกมาเท่ากันเป๊ะ — bug ที่ user เจอ 2026-08-11)
-const PLAIN_MAX_LINES = { s: 5, m: 6, l: 7 };
+// ขนาดตัวอักษร = สัดส่วนต่อความกว้างการ์ด ที่ 100% (เป็น **จุดตั้งต้น** — ข้อความยาวยังถูกย่อลงอีกได้)
+// เดิมเป็น 3 preset (s/m/l) — เปลี่ยนเป็น slider ต่อเนื่องแล้ว (ดู sizeScaleOf ด้านบน)
+const PLAIN_SIZE_BASE = 0.092;
 
 /** สุ่ม 1 ตัวจาก array · array ว่าง = null */
 const pickRandom = arr => (arr.length ? arr[Math.floor(Math.random() * arr.length)] : null);
 
 async function renderPlain({
   quoteText, authorName = '', accentColor, width = 1080, height = 1350, bg = 'solid',
-  watermarkPath = null, font = 'anakotmai', textSize = 'm',
+  watermarkPath = null, font = 'anakotmai', textSize = TEXT_SIZE_DEFAULT,
 }) {
   const fonts = PLAIN_FONTS[font] || PLAIN_FONTS.anakotmai;
-  const sizeFactor = PLAIN_SIZES[textSize] || PLAIN_SIZES.m;
-  const maxLines = PLAIN_MAX_LINES[textSize] || PLAIN_MAX_LINES.m;
+  const sizeFactor = PLAIN_SIZE_BASE * sizeScaleOf(textSize);
+  const maxLines = scaledMaxLines(6, textSize);
   const SS = 2;                               // supersample แล้วย่อ = ขอบตัวอักษรคม (เหมือน renderCenter)
   const base = accentColor || ORANGE;
   const { ink, sub } = panelPalette(base);

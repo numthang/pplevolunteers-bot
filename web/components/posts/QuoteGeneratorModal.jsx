@@ -17,7 +17,8 @@ import { X, Upload, Loader2, Sparkles, ImageIcon, ChevronLeft, Images } from 'lu
 import AssetPickerModal from './AssetPickerModal.jsx'
 import {
   FINISHES, LAYOUTS, COMBOS, styleKey, comboExists, fallbackLayout,
-  PLAIN_BGS, PLAIN_FONTS, PLAIN_TEXT_SIZES, plainKey, isPlainStyle,
+  PLAIN_BGS, PLAIN_FONTS, TEXT_SIZE_MIN, TEXT_SIZE_MAX, TEXT_SIZE_DEFAULT, TEXT_SIZE_STEP,
+  plainKey, isPlainStyle,
 } from '@/lib/quoteStyles.js'
 
 const ACCEPT = 'image/png,image/jpeg,image/webp'
@@ -123,7 +124,7 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
   const [watermarks, setWatermarks] = useState([])   // ลายน้ำทุกกลุ่มที่โพสต์ในนามได้
   const [wmType, setWmType] = useState('')
   const [plainFont, setPlainFont] = useState(PLAIN_FONTS[0].value)
-  const [textSize, setTextSize] = useState('m')
+  const [textSize, setTextSize] = useState(TEXT_SIZE_DEFAULT)
 
   // สีการ์ด — ตั้งต้นที่สี CI ขององค์กรเสมอ (โหลดจาก /api/posts/quote-accent)
   // `ciAccent` เก็บไว้เทียบว่าผู้ใช้เปลี่ยนสีเองหรือยัง (ไว้โชว์ปุ่มรีเซ็ต)
@@ -139,6 +140,7 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
   const objectUrls = useRef([])
   const reqSeq = useRef(0)            // กันผลลัพธ์เก่ามาทับใหม่ตอนกดสลับสไตล์รัวๆ
   const accentTimer = useRef(null)    // หน่วง color picker (ดู changeAccent)
+  const sizeTimer = useRef(null)      // หน่วง slider ขนาดฟอนต์ (ดู changeTextSize) — ลากรัวเหมือนสี
 
   const trackUrl = url => { objectUrls.current.push(url); return url }
 
@@ -152,6 +154,7 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
   useEffect(() => () => {
     objectUrls.current.forEach(u => URL.revokeObjectURL(u))
     clearTimeout(accentTimer.current)      // ปิดโมดัลตอนหน่วงสีอยู่ = ไม่ต้องยิง render ทิ้ง
+    clearTimeout(sizeTimer.current)
   }, [])
 
   // ค่าที่ใช้ล่าสุด — อ่านหลัง mount ไม่ใช่ใน useState เพราะ localStorage ไม่มีตอน SSR
@@ -169,7 +172,9 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
     if (PLAIN_BGS.some(b => b.value === last.plainBg)) setPlainBg(last.plainBg)
     if (typeof last.wmType === 'string') setWmType(last.wmType)
     if (PLAIN_FONTS.some(f => f.value === last.plainFont)) setPlainFont(last.plainFont)
-    if (PLAIN_TEXT_SIZES.some(s => s.value === last.textSize)) setTextSize(last.textSize)
+    if (Number.isFinite(last.textSize) && last.textSize >= TEXT_SIZE_MIN && last.textSize <= TEXT_SIZE_MAX) {
+      setTextSize(last.textSize)
+    }
 
     try {
       const author = last.authorName || localStorage.getItem(AUTHOR_LS_KEY)
@@ -335,9 +340,11 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
     setPlainFont(next)
     render(style, saturation, wmType, { font: next })
   }
+  // slider ลากรัวเหมือนสี — หน่วงเหตุผลเดียวกับ changeAccent
   function changeTextSize(next) {
     setTextSize(next)
-    render(style, saturation, wmType, { textSize: next })
+    clearTimeout(sizeTimer.current)
+    sizeTimer.current = setTimeout(() => render(style, saturation, wmType, { textSize: next }), 350)
   }
 
   function changeFinish(next) {
@@ -668,20 +675,13 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
 
                   <div className="flex flex-col gap-1.5">
                     <span className="text-sm font-medium text-warm-700 dark:text-disc-text">{t('textSizeLabel')}</span>
-                    <div className="flex flex-wrap gap-2">
-                      {PLAIN_TEXT_SIZES.map(s => (
-                        <button
-                          key={s.value} type="button" onClick={() => changeTextSize(s.value)}
-                          disabled={rendering}
-                          className={`px-2.5 py-1 text-sm rounded-lg border transition disabled:opacity-50 ${
-                            textSize === s.value
-                              ? 'border-orange bg-orange text-white'
-                              : 'border-warm-200 dark:border-disc-border text-warm-700 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover'
-                          }`}
-                        >
-                          {s.label}
-                        </button>
-                      ))}
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="range" min={TEXT_SIZE_MIN} max={TEXT_SIZE_MAX} step={TEXT_SIZE_STEP}
+                        value={textSize} onChange={e => changeTextSize(Number(e.target.value))}
+                        disabled={rendering} className="flex-1 accent-orange disabled:opacity-50"
+                      />
+                      <span className="text-sm text-warm-500 dark:text-disc-muted w-11 text-right shrink-0 tabular-nums">{textSize}%</span>
                     </div>
                   </div>
 
@@ -768,20 +768,13 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
 
               <div className="flex flex-col gap-1.5">
                 <span className="text-sm font-medium text-warm-700 dark:text-disc-text">{t('textSizeLabel')}</span>
-                <div className="flex flex-wrap gap-2">
-                  {PLAIN_TEXT_SIZES.map(s => (
-                    <button
-                      key={s.value} type="button" onClick={() => changeTextSize(s.value)}
-                      disabled={rendering}
-                      className={`px-2.5 py-1 text-sm rounded-lg border transition disabled:opacity-50 ${
-                        textSize === s.value
-                          ? 'border-orange bg-orange text-white'
-                          : 'border-warm-200 dark:border-disc-border text-warm-700 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover'
-                      }`}
-                    >
-                      {s.label}
-                    </button>
-                  ))}
+                <div className="flex items-center gap-3">
+                  <input
+                    type="range" min={TEXT_SIZE_MIN} max={TEXT_SIZE_MAX} step={TEXT_SIZE_STEP}
+                    value={textSize} onChange={e => changeTextSize(Number(e.target.value))}
+                    disabled={rendering} className="flex-1 accent-orange disabled:opacity-50"
+                  />
+                  <span className="text-sm text-warm-500 dark:text-disc-muted w-11 text-right shrink-0 tabular-nums">{textSize}%</span>
                 </div>
               </div>
 

@@ -101,20 +101,26 @@ export const plainSizeOf = key => PLAIN_SIZES_BY_ASPECT[key] || PLAIN_SIZES_BY_A
 export const DEFAULT_ACCENT = '#ff6a13'
 export const HEX_RE = /^#[0-9a-fA-F]{6}$/
 
-// ⚠️ คีย์ต้องตรงกับ PLAIN_FONTS / PLAIN_SIZES ใน `utils/quoteStyles.js` (renderer ตัวจริง)
+// ⚠️ คีย์ต้องตรงกับ PLAIN_FONTS ใน `utils/quoteStyles.js` (renderer ตัวจริง)
 export const PLAIN_FONTS = [
   { value: 'anakotmai', label: 'อนาคตใหม่', description: 'ฟอนต์แบรนด์ — ไม่มีหัว' },
   { value: 'gsans',     label: 'Google Sans', description: 'มีหัว ทันสมัย' },
   { value: 'sarabun',   label: 'สารบรรณ',    description: 'มีหัว ทรงราชการ' },
 ]
-export const PLAIN_TEXT_SIZES = [
-  { value: 's', label: 'เล็ก' },
-  { value: 'm', label: 'กลาง' },
-  { value: 'l', label: 'ใหญ่' },
-]
+
+// ขนาดฟอนต์ — slider % ต่อเนื่อง (เดิมเป็น 3 ปุ่ม s/m/l ตัดเป็น slider แล้ว 2026-08-11
+// เพราะ preset แค่ 3 ระดับยังโดน fitFont หรี่ตัวเองกลับมาบรรจบกันได้สำหรับคำคมบางความยาว)
+// ⚠️ ค่าต้องตรงกับ TEXT_SIZE_MIN/MAX/DEFAULT ใน `utils/quoteStyles.js`
+export const TEXT_SIZE_MIN = 60
+export const TEXT_SIZE_MAX = 140
+export const TEXT_SIZE_DEFAULT = 100
+export const TEXT_SIZE_STEP = 5
 
 export const isPlainFont = v => PLAIN_FONTS.some(f => f.value === v)
-export const isPlainTextSize = v => PLAIN_TEXT_SIZES.some(s => s.value === v)
+export const isPlainTextSize = v => {
+  const n = Number(v)
+  return Number.isFinite(n) && n >= TEXT_SIZE_MIN && n <= TEXT_SIZE_MAX
+}
 
 // คีย์เก่าก่อนเปลี่ยนชื่อ 2026-08-07 — ห้ามลบ การ์ดที่ทำไปแล้วยังอ้างคีย์พวกนี้อยู่
 export const LEGACY_STYLE_ALIAS = {

@@ -20,7 +20,7 @@ import { REPO_ROOT } from './postsStorage.js'
 import {
   QUOTE_STYLE_KEYS, QUOTE_STYLE_OPTIONS, normalizeStyle,
   plainSizeOf, PLAIN_SIZES_BY_ASPECT, DEFAULT_ASPECT,
-  isPlainStyle, plainBgOf, isPlainFont, isPlainTextSize,
+  isPlainStyle, plainBgOf, isPlainFont, isPlainTextSize, TEXT_SIZE_DEFAULT,
 } from './quoteStyles.js'
 
 /**
@@ -81,12 +81,11 @@ export function normalizeQuoteParams({ quoteText, authorName, style, saturation,
     // ฟอนต์/ขนาด: ค่าที่ไม่รู้จัก **ตกเป็น default เงียบๆ ไม่ throw** — มันเป็นความสวยงาม
     // ไม่ใช่ความถูกต้อง (ต่างจากสไตล์ที่ผิดแล้วเรนเดอร์ไม่ออก) การ์ดยังออกมาใช้ได้
     const f = String(font ?? '').trim()
-    const ts = String(textSize ?? '').trim()
     const ar = String(aspect ?? '').trim()
     return {
       quoteText: text, authorName: author, style: plainRaw, saturation: null,
       font: isPlainFont(f) ? f : 'anakotmai',
-      textSize: isPlainTextSize(ts) ? ts : 'm',
+      textSize: isPlainTextSize(textSize) ? Number(textSize) : TEXT_SIZE_DEFAULT,
       aspect: PLAIN_SIZES_BY_ASPECT[ar] ? ar : DEFAULT_ASPECT,
     }
   }
@@ -107,12 +106,11 @@ export function normalizeQuoteParams({ quoteText, authorName, style, saturation,
   // ฟอนต์/ขนาด: เลือกได้ตั้งแต่ 2026-08-11 เหมือนการ์ดไม่มีรูป — ค่าที่ไม่รู้จักตกเป็น
   // undefined เงียบๆ (ไม่ throw) ให้ renderer ใช้ default ของสไตล์นั้นเอง (ดู utils/quoteStyles.js)
   const f = String(font ?? '').trim()
-  const ts = String(textSize ?? '').trim()
 
   return {
     quoteText: text, authorName: author, style: styleKey, saturation: sat,
     font: isPlainFont(f) ? f : undefined,
-    textSize: isPlainTextSize(ts) ? ts : undefined,
+    textSize: isPlainTextSize(textSize) ? Number(textSize) : undefined,
   }
 }
 
