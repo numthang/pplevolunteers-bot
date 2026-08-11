@@ -411,7 +411,9 @@ async function renderVariant(buf, { quoteText, authorName, side = 'left', vertic
 
   ty += nsz * 0.5;
   ctx.font = `${nsz}px ${fontLight}`;
-  const authorStr = `>_ ${authorName}`;   // `>_` แทนขีดยาว — ให้ตรงกับ renderBorder2 (user เคาะ)
+  // ไม่เติมคำนำหน้าตายตัว — authorName มาจากช่องกรอกตรงๆ (ค่าจำไว้ล่าสุดใน localStorage
+  // ฝั่งเว็บอยู่แล้ว) ผู้ใช้อยากได้ ">_"/"—" นำหน้าก็พิมพ์เองในช่องได้ (user เคาะ 2026-08-11)
+  const authorStr = authorName;
   const aw = lsWidth(ctx, authorStr, 0.8);
   const ax = isRight ? textX + (maxW - aw) : textX;
 
@@ -496,7 +498,7 @@ async function renderBorder(buf, { quoteText, authorName, saturation = 0.15, acc
   ty += nsz * 0.5;
   ctx.font = `${nsz}px ${fontLight}`; ctx.fillStyle = readableOnDark(accent, 6.2, scrim.lum);
   ctx.shadowBlur = 4; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
-  lsDraw(ctx, `>_ ${authorName}`, textX, ty, 0.8);   // `>_` แทนขีดยาว — ให้ตรงกับ renderBorder2
+  lsDraw(ctx, authorName, textX, ty, 0.8);   // ไม่เติมคำนำหน้าตายตัว — authorName มาจากช่องกรอกตรงๆ
 
   ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
   return { buffer: await toPng(cv), ext: 'png', vertical: 'bottom', side: 'left' };
@@ -552,7 +554,8 @@ async function renderBorder2(buf, { quoteText, authorName, saturation = 0.15, ac
   const widest = Math.max(...lines.map(l => lsWidth(ctx, l, 1.0)));
 
   ctx.font = `${nsz}px ${fontLight}`;
-  const authorStr = `>_ ${authorName}`;            // `>_` แทนขีดยาว (user เคาะ)
+  // ไม่เติมคำนำหน้าตายตัว — authorName มาจากช่องกรอกตรงๆ (user เคาะ 2026-08-11)
+  const authorStr = authorName;
   const aw = lsWidth(ctx, authorStr, 0.8);
 
   const fRight   = W - pad - stroke / 2;           // stroke วาดคร่อมเส้นทาง → เผื่อครึ่งเส้น
