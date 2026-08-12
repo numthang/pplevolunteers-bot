@@ -13,6 +13,7 @@
 import pool from '@/db/index.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import { listGuildChannels } from '@/lib/discordChannels.js'
+import { guildsOfOrg } from '@/db/guilds.js'
 
 const SELECT_VISIBLE = `
   SELECT id, platform, group_name, guild_id, name, visibility, news_channel_id
@@ -73,13 +74,19 @@ export async function listPublishGroups({ orgId, userId, discordId }) {
  *                private: **ไม่ fallback** — กลุ่มส่วนตัวยิงเข้าห้องข่าวขององค์กรได้เฉพาะเมื่อ
  *                ทีมสื่อตั้งห้องให้เท่านั้น (ด่านอยู่ที่ endpoint ตั้งค่า ไม่ต้องเช็คยศตอนกดโพสต์)
  */
-export async function attachNewsReady(groups) {
-  const needFallback = groups.filter(g => !g.newsChannelId && g.visibility === 'public')
-  const guildNews = await guildNewsChannels(needFallback.map(g => g.guildId))
+export async function attachNewsReady(groups, { orgId = null } = {}) {
+  // ทะเบียนห้องข่าวของ **ทุกเซิร์ฟใน org** — ต้องได้ทั้งก้อนเพราะห้องของกลุ่มอาจอยู่คนละเซิร์ฟกับกลุ่ม
+  // (user เคาะ: ข้ามเซิร์ฟใน org ได้ · ข้ามออกนอก org ไม่ได้) → ใช้ map channel → guild เพื่อรู้ว่าห้องอยู่เซิร์ฟไหน
+  const orgGuildIds = orgId ? (await guildsOfOrg(orgId)).map(g => g.guild_id) : []
+  const registry = await guildNewsChannels([...orgGuildIds, ...groups.map(g => g.guildId)])
+  const homeOf = new Map([...registry].map(([gid, ch]) => [ch, gid]))
+
   for (const g of groups) {
-    const fallback = g.visibility === 'public' ? guildNews.get(g.guildId) || null : null
+    const fallback = g.visibility === 'public' ? registry.get(g.guildId) || null : null
     // ปลายทางจริง — ใช้ทั้งตัดสิน newsReady และหาชื่อห้องมาโชว์ในกล่องเผยแพร่
     g.newsTargetId = g.newsChannelId === NEWS_OFF ? null : (g.newsChannelId || fallback)
+    // เซิร์ฟของ "ห้อง" ไม่ใช่ของกลุ่ม — ใช้ดึงชื่อห้อง ถ้าไม่รู้จักก็เดาว่าเป็นเซิร์ฟของกลุ่ม
+    g.newsTargetGuildId = g.newsTargetId ? (homeOf.get(g.newsTargetId) || g.guildId) : null
     g.newsSource = g.newsChannelId && g.newsChannelId !== NEWS_OFF ? 'group' : g.newsTargetId ? 'guild' : null
     g.newsReady = !!g.newsTargetId
   }
@@ -91,15 +98,17 @@ export async function attachNewsReady(groups) {
  * ห้องเปลี่ยนชื่อในดิสคอร์ดแล้วชื่อที่โชว์เปลี่ยนตามเอง · ดึงไม่ได้ = ปล่อยชื่อเป็น null (UI โชว์ป้ายเปล่า)
  */
 export async function attachNewsChannelName(groups) {
+  // ดึงชื่อจากเซิร์ฟของ "ห้อง" (newsTargetGuildId) ไม่ใช่เซิร์ฟของกลุ่ม
+  // ถ้าใช้เซิร์ฟของกลุ่ม ห้องที่อยู่คนละเซิร์ฟจะได้ชื่อเป็น null ทั้งที่ตั้งไว้ถูก
   const byGuild = new Map()
   for (const g of groups) {
-    if (g.newsTargetId && g.guildId) byGuild.set(g.guildId, null)
+    if (g.newsTargetId && g.newsTargetGuildId) byGuild.set(g.newsTargetGuildId, null)
   }
   await Promise.all([...byGuild.keys()].map(async gid => {
     byGuild.set(gid, await listGuildChannels(gid))
   }))
   for (const g of groups) {
-    const list = g.newsTargetId && g.guildId ? byGuild.get(g.guildId) : null
+    const list = g.newsTargetGuildId ? byGuild.get(g.newsTargetGuildId) : null
     g.newsChannelName = list?.find(c => c.id === g.newsTargetId)?.name || null
   }
   return groups
@@ -125,7 +134,7 @@ export async function resolveGroupAccounts({ orgId, userId, discordId, group, pl
   for (const p of needAccount) accountIds[p] = found.accounts[p].id
 
   // ห้องข่าวสาร: ตัดสินด้วยกฎชุดเดียวกับที่กล่องเผยแพร่ใช้โชว์ป้าย (ไม่งั้น UI เทา/ไม่เทา ไม่ตรงกับ API)
-  if (platforms.includes('news')) await attachNewsReady([found])
+  if (platforms.includes('news')) await attachNewsReady([found], { orgId })
 
   return {
     ok: true, group: found.name, guildId: found.guildId, visibility: found.visibility,

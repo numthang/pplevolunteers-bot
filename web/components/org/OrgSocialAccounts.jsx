@@ -66,7 +66,7 @@ function NewsRow({ g, groupOptions, onMove, onRemove, canSetNews, busy, t }) {
           <p className="text-sm font-medium text-gray-900 dark:text-disc-text truncate">
             {off ? t('social.news.off') : g.newsChannelName ? `#${g.newsChannelName}` : t('social.news.unknownChannel')}
           </p>
-          <p className="text-xs text-gray-400 dark:text-disc-muted truncate">{g.guildName || g.guildId || ''}</p>
+          <p className="text-xs text-gray-400 dark:text-disc-muted truncate">{g.newsGuildName || ''}</p>
         </div>
       </div>
 
@@ -190,7 +190,7 @@ export default function OrgSocialAccounts() {
   // ห้องข่าวสาร Discord ผูกรายกลุ่ม (2026-08-12) — ปลายทางอีกอันของกลุ่ม เคียงกับ FB/IG/X
   const [groups, setGroups]     = useState([])
   const [canSetNews, setCanSetNews] = useState(false)
-  const [newsModal, setNewsModal]   = useState(null)   // 'public' | 'private' = โซนที่กดมา
+  const [newsModal, setNewsModal]   = useState(false)  // เปิด modal ผูกห้อง (เห็นทุกกลุ่ม ไม่แยกโซน)
   const [newsBusy, setNewsBusy]     = useState(false)
 
   const { access, superAdmin } = useEffectiveRoles(session)  // effective — สะท้อน view-as-role
@@ -403,8 +403,8 @@ export default function OrgSocialAccounts() {
                 )}
                 <NewsButton
                   enabled={canSetNews}
-                  hasGroups={orgGroups.length > 0}
-                  onClick={() => setNewsModal('public')}
+                  hasGroups={groups.length > 0}
+                  onClick={() => setNewsModal(true)}
                   t={t}
                 />
               </div>
@@ -458,7 +458,7 @@ export default function OrgSocialAccounts() {
                     />
                 ))}
                 {newsRows(orgGroups).map(g => (
-                  <NewsRow key={g.name} g={g} groupOptions={orgGroups.map(x => x.name)}
+                  <NewsRow key={g.name} g={g} groupOptions={groups.map(x => x.name)}
                     onMove={moveNews} onRemove={clearNews} canSetNews={canSetNews}
                     busy={newsBusy} t={t} />
                 ))}
@@ -503,8 +503,8 @@ export default function OrgSocialAccounts() {
                 )}
                 <NewsButton
                   enabled={canSetNews}
-                  hasGroups={personalGroups.length > 0}
-                  onClick={() => setNewsModal('private')}
+                  hasGroups={groups.length > 0}
+                  onClick={() => setNewsModal(true)}
                   t={t}
                 />
               </div>
@@ -521,7 +521,7 @@ export default function OrgSocialAccounts() {
                   onRemove={remove} deleting={deleting} t={t} />
               ))}
               {newsRows(personalGroups).map(g => (
-                <NewsRow key={g.name} g={g} groupOptions={personalGroups.map(x => x.name)}
+                <NewsRow key={g.name} g={g} groupOptions={groups.map(x => x.name)}
                   onMove={moveNews} onRemove={clearNews} canSetNews={canSetNews}
                   busy={newsBusy} t={t} />
               ))}
@@ -532,7 +532,7 @@ export default function OrgSocialAccounts() {
 
       {newsModal && (
         <NewsChannelModal
-          groups={newsModal === 'public' ? orgGroups : personalGroups}
+          groups={groups}
           onClose={() => setNewsModal(null)}
           onSaved={load}
         />

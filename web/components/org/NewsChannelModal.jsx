@@ -21,8 +21,6 @@ export default function NewsChannelModal({ groups, onClose, onSaved }) {
   const [error, setError]   = useState(null)
 
   const current = groups.find(g => g.name === group) || null
-  // ห้องต้องอยู่เซิร์ฟเดียวกับกลุ่ม — บอท fetch guild ของกลุ่มแล้วหาห้องในนั้น ข้ามเซิร์ฟจะหาไม่เจอ
-  const usable = (rooms || []).filter(r => r.guildId === current?.guildId)
 
   useEffect(() => {
     const h = e => { if (e.key === 'Escape') onClose() }
@@ -85,15 +83,13 @@ export default function NewsChannelModal({ groups, onClose, onSaved }) {
             >
               <option value="">{t('social.news.pickGroup')}</option>
               {groups.map(g => (
-                <option key={g.name} value={g.name}>{g.name}</option>
+                <option key={g.name} value={g.name}>{g.name}{g.visibility === 'private' ? ' 🔒' : ''}</option>
               ))}
             </select>
           </label>
 
-          {/* ห้อง — เฉพาะที่ลงทะเบียนไว้ที่ /bot ของเซิร์ฟที่กลุ่มนี้สังกัด */}
-          {!current ? null : !current.guildId ? (
-            <p className="text-xs text-orange-500">{t('social.news.noServer')}</p>
-          ) : rooms === null ? (
+          {/* ห้อง — ห้องที่ลงทะเบียนไว้ที่ /bot ของทุกเซิร์ฟในองค์กร (เลือกข้ามเซิร์ฟได้) */}
+          {!current ? null : rooms === null ? (
             <p className="flex items-center gap-1 text-xs text-gray-500 dark:text-disc-muted">
               <Loader2 size={12} className="animate-spin" /> {t('social.news.loadingChannels')}
             </p>
@@ -109,7 +105,7 @@ export default function NewsChannelModal({ groups, onClose, onSaved }) {
                   muted
                 />
                 <Choice checked={value === NEWS_OFF} onSelect={() => setValue(NEWS_OFF)} label={t('social.news.off')} muted />
-                {usable.map(r => (
+                {rooms.map(r => (
                   <Choice
                     key={r.channelId}
                     checked={value === r.channelId}
@@ -120,8 +116,8 @@ export default function NewsChannelModal({ groups, onClose, onSaved }) {
                   />
                 ))}
               </div>
-              {!usable.length && (
-                <p className="text-xs text-orange-500">{t('social.news.noRoomForServer', { server: serverName(rooms, current) })}</p>
+              {!rooms.length && (
+                <p className="text-xs text-orange-500">{t('social.news.noRoomAnywhere')}</p>
               )}
               <a href="/bot#channels" className="text-xs text-orange hover:underline self-start">
                 {t('social.news.openBotSettings')}
@@ -149,18 +145,16 @@ export default function NewsChannelModal({ groups, onClose, onSaved }) {
   )
 }
 
-/** ชื่อเซิร์ฟของกลุ่ม — เอาจาก rooms ถ้ามี ไม่มีก็ปล่อยว่าง (ข้อความยังอ่านรู้เรื่อง) */
-function serverName(rooms, group) {
-  return rooms.find(r => r.guildId === group.guildId)?.guildName || ''
-}
-
-function Choice({ checked, onSelect, label, hint, muted, icon }) {
+function Choice({ checked, onSelect, label, hint, muted, icon, disabled, title }) {
   return (
     <button
       type="button"
       onClick={onSelect}
+      disabled={disabled}
+      title={title}
       className={`flex items-center gap-2 text-left text-sm px-2 py-1.5 rounded-md transition ${
-        checked ? 'bg-orange/10 text-orange' : 'hover:bg-gray-100 dark:hover:bg-disc-hover text-gray-700 dark:text-disc-text'
+        disabled ? 'opacity-40 cursor-not-allowed'
+          : checked ? 'bg-orange/10 text-orange' : 'hover:bg-gray-100 dark:hover:bg-disc-hover text-gray-700 dark:text-disc-text'
       }`}
     >
       <span className={`w-3.5 h-3.5 rounded-full border shrink-0 ${checked ? 'border-orange bg-orange' : 'border-warm-200 dark:border-disc-border'}`} />

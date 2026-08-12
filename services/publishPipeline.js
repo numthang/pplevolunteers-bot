@@ -12,7 +12,7 @@ const { fetchBuffer, applyWatermark } = require('../utils/watermarkImage');
 const { pickWatermarkPos } = require('../utils/quoteStyleKeys');
 const { postToFacebook, postToInstagram, postToThreads, postReelsToFacebook, postReelsToInstagram, postReelsToThreads } = require('./metaApi');
 const { postToX, postVideoToX } = require('./xApi');
-const { postNews } = require('./newsShare');
+const { postNews, fetchNewsChannel } = require('./newsShare');
 const { saveMediaToTemp } = require('./metaApi');
 const storage = require('../utils/postsStorage');
 const pool = require('../db/index');
@@ -157,13 +157,14 @@ function discordUploadLimit(guild) {
  * @param {number|null} [o.scheduleTime] unix วินาที (FB เท่านั้น — เจ้าอื่นไม่รองรับ)
  * @param {number|null} [o.accountId] เลือกบัญชีเจาะจง (posts บนเว็บ) · null = เลือกอัตโนมัติเหมือนเดิม
  * @param {number|null} [o.orgId] ใช้หา app creds ของ X เมื่อ org ไม่มี guild (Meta ใช้ token ที่ผูกไว้แล้ว)
- * @param {object} [o.guild] discord.js Guild — จำเป็นเฉพาะ platform 'news'
+ * @param {object} [o.client] discord.js Client — จำเป็นเฉพาะ platform 'news' (หาห้องด้วย channel id
+ *   ไม่ผ่าน guild → ส่งข้ามเซิร์ฟในองค์กรเดียวกันได้)
  * @returns {{platform:string, label:string, ok:boolean, url:string|null, error:string|null}}
  */
 async function publishOne({
   platform, guildId, orgId = null, userDiscordId, accountId = null,
   images = [], videoUrl = null, videoPath = null, caption = '', scheduleTime = null,
-  group = null, guild = null, onProgress = noop,
+  group = null, client = null, onProgress = noop,
 }) {
   const label = PLATFORM_LABEL[platform] || platform;
   const isVideo = !!videoUrl;
@@ -201,7 +202,10 @@ async function publishOne({
         : await postToX(guildId, userDiscordId, images, caption, group, accountId, orgId);
       url = res?.url || null;
     } else if (platform === 'news') {
-      if (!guild) throw new Error('ห้องข่าวสารต้องมี Discord guild');
+      if (!client) throw new Error('ห้องข่าวสารต้องมี Discord client');
+      // resolve ห้องครั้งเดียวที่นี่ — ห้องอาจอยู่คนละเซิร์ฟกับกลุ่ม เพดานอัปโหลดจึงต้องคิดจากเซิร์ฟของ "ห้อง"
+      const channel = await fetchNewsChannel(client, { guildId, group, userDiscordId });
+      if (!channel) throw new Error('ยังไม่ได้ตั้งค่าห้องข่าวสาร');
       if (isVideo) {
         // แนบไฟล์ตรงถ้ายังมีต้นฉบับบนดิสก์และไม่เกินเพดานของเซิร์ฟเวอร์
         // (ส่งเป็น "ลิงก์" ไม่ได้แล้ว — videoUrl ชี้ media-temp ที่ cleanTempMedia ลบทิ้งใน 24 ชม.
@@ -210,28 +214,26 @@ async function publishOne({
         if (videoPath) {
           try {
             const buffer = await storage.readFile(videoPath);
-            if (buffer.length <= discordUploadLimit(guild)) {
-              msg = await postNews(guild, {
+            if (buffer.length <= discordUploadLimit(channel.guild)) {
+              msg = await postNews(channel, {
                 content: caption || undefined,
                 files: [{ attachment: buffer, name: `video.${storage.extOfPath(videoPath)}` }],
-                group,
               });
             }
           } catch (err) {
             console.error('[publishPipeline] แนบคลิปเข้าห้องข่าวไม่สำเร็จ ใช้ลิงก์แทน:', err.message);
           }
         }
-        if (!msg) msg = await postNews(guild, { content: [caption, videoUrl].filter(Boolean).join('\n'), group });
+        if (!msg) msg = await postNews(channel, { content: [caption, videoUrl].filter(Boolean).join('\n') });
         url = msg?.url || null;
       } else {
         // Discord จำกัด 10 ไฟล์/ข้อความ → เกินให้ต่อข้อความถัดไป · ลิงก์ที่คืนคือข้อความแรก
         const files = images.map((p, i) => ({ attachment: p.buffer, name: `image_${i + 1}.${p.ext}` }));
         let firstMsg = null;
         for (let i = 0; i < files.length; i += 10) {
-          const msg = await postNews(guild, {
+          const msg = await postNews(channel, {
             content: i === 0 ? (caption || undefined) : undefined,
             files: files.slice(i, i + 10),
-            group,
           });
           if (!firstMsg) firstMsg = msg;
         }

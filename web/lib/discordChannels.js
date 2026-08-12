@@ -45,13 +45,3 @@ export async function listGuildChannels(guildId) {
     return null
   }
 }
-
-/**
- * channel นี้เป็นห้องของ guild นี้จริงไหม
- * ดึงลิสต์ไม่ได้ = คืน true (ปล่อยผ่าน) — ไม่งั้นบอทล่มแล้วตั้งค่าอะไรไม่ได้เลยทั้งหน้า
- */
-export async function channelBelongsToGuild(guildId, channelId) {
-  const list = await listGuildChannels(guildId)
-  if (list === null) return true
-  return list.some(c => c.id === channelId)
-}

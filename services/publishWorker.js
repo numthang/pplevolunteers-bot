@@ -166,7 +166,6 @@ async function runOnce(client) {
         : { processed: [], errors: [] };
       if (images.length && !processed.length) throw new Error(errors.join(' · ') || 'เตรียมรูปไม่สำเร็จ');
 
-      const guild = job.guild_id && client ? await client.guilds.fetch(job.guild_id).catch(() => null) : null;
       const r = await publishOne({
         platform: job.platform,
         guildId: job.guild_id,
@@ -178,7 +177,7 @@ async function runOnce(client) {
         videoPath,
         caption: job.caption || '',
         group: job.group_name,
-        guild,
+        client,   // 'news' หาห้องด้วย channel id เอง — ไม่ต้อง fetch guild ให้ (ห้องอาจอยู่คนละเซิร์ฟกับกลุ่ม)
       });
 
       if (r.ok) {

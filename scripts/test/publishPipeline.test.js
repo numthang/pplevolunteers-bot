@@ -22,7 +22,10 @@ require.cache[require.resolve(ROOT + '/services/xApi')] = { exports: {
   postToX: rec('postToX'), postVideoToX: rec('postVideoToX'),
 }};
 require.cache[require.resolve(ROOT + '/services/newsShare')] = { exports: {
-  postNews: async (guild, opts) => { calls.push({ name: 'postNews', args: [guild?.id, opts] }); return { url: 'https://discord.test/msg' }; },
+  // ห้องข่าวสาร resolve ด้วย channel id (ข้ามเซิร์ฟในองค์กรเดียวกันได้) → คืน channel ปลอมที่มี guild ติดมา
+  fetchNewsChannel: async (client, o) => { calls.push({ name: 'fetchNewsChannel', args: [!!client, o] });
+    return { id: 'CH1', guild: { id: 'G-OTHER', premiumTier: 0 } }; },
+  postNews: async (channel, opts) => { calls.push({ name: 'postNews', args: [channel?.id, opts] }); return { url: 'https://discord.test/msg' }; },
 }};
 
 const { prepareImages, loadMediaSources, publishOne, publishBatch } = require(ROOT + '/services/publishPipeline');
@@ -43,7 +46,7 @@ const ok = (label, cond, extra = '') => console.log(`${cond ? '✅' : '❌'} ${l
   const out = await publishBatch({
     platforms: ['fb', 'ig', 'threads', 'x', 'news'],
     guildId: 'G1', userDiscordId: 'U1', accountId: 77, images: imgs,
-    caption: 'CAP', scheduleTime: 1700000000, group: 'GRP', guild: { id: 'G1' },
+    caption: 'CAP', scheduleTime: 1700000000, group: 'GRP', client: { id: 'C1' },
   });
   const byName = n => calls.find(c => c.name === n)?.args;
   ok('fb(รูป): (guildId,userId,images,caption,scheduleTime,group,accountId)',
@@ -54,7 +57,10 @@ const ok = (label, cond, extra = '') => console.log(`${cond ? '✅' : '❌'} ${l
      byName('postToThreads')?.[5] === 'GRP' && byName('postToThreads')?.[6] === 77);
   ok('x(รูป): (…,caption,group,accountId)',
      byName('postToX')?.[4] === 'GRP' && byName('postToX')?.[5] === 77);
-  ok('news: ส่ง guild + files + caption', !!byName('postNews')?.[1]?.files && byName('postNews')?.[1]?.content === 'CAP');
+  ok('news: ส่ง channel + files + caption', !!byName('postNews')?.[1]?.files && byName('postNews')?.[1]?.content === 'CAP');
+  ok('news: resolve ห้องด้วย (guildId, group, userDiscordId) ไม่ใช่ guild object',
+     byName('fetchNewsChannel')?.[1]?.guildId === 'G1' && byName('fetchNewsChannel')?.[1]?.group === 'GRP'
+     && byName('fetchNewsChannel')?.[1]?.userDiscordId === 'U1');
   // linkComment ต้องไหลจาก postToFacebook → publishOne → ตัวเรียก (worker/ตะกร้าเอาไปแสดงให้คนแปะเอง)
   ok('fb: linkComment ไหลออกมาถึง result',
      out.results.find(r => r.platform === 'fb')?.linkComment === '📝 ลงทะเบียน: https://x.test/r');
@@ -67,7 +73,7 @@ const ok = (label, cond, extra = '') => console.log(`${cond ? '✅' : '❌'} ${l
   // 3) วิดีโอ: ต้องเข้า postReels*/postVideoToX และส่ง URL
   calls.length = 0;
   await publishBatch({ platforms: ['ig', 'fb', 'threads', 'x', 'news'], guildId: 'G1', userDiscordId: 'U1',
-    videoUrl: 'https://cdn.discord/v.mp4', caption: 'CAP', scheduleTime: 1700000000, group: 'GRP', guild: { id: 'G1' } });
+    videoUrl: 'https://cdn.discord/v.mp4', caption: 'CAP', scheduleTime: 1700000000, group: 'GRP', client: { id: 'C1' } });
   ok('วิดีโอเข้า Reels ทั้ง 3 เจ้า + postVideoToX',
      ['postReelsToInstagram','postReelsToFacebook','postReelsToThreads','postVideoToX'].every(n => calls.some(c => c.name === n)));
   ok('fb Reels: scheduleTime อยู่ตำแหน่ง 7 · accountId ตำแหน่ง 8',
@@ -78,7 +84,7 @@ const ok = (label, cond, extra = '') => console.log(`${cond ? '✅' : '❌'} ${l
   // 4) แพลตฟอร์มพัง 1 ตัว → ตัวอื่นยังไป + status partial
   calls.length = 0;
   failX = true;
-  const out2 = await publishBatch({ platforms: ['fb', 'x'], guildId: 'G1', userDiscordId: 'U1', images: imgs, caption: 'C', guild: { id: 'G1' } });
+  const out2 = await publishBatch({ platforms: ['fb', 'x'], guildId: 'G1', userDiscordId: 'U1', images: imgs, caption: 'C', client: { id: 'C1' } });
   ok('ตัวหนึ่งล้ม ตัวอื่นยังยิง + status=partial',
      out2.status === 'partial' && out2.results.find(r => r.platform === 'fb').ok && !out2.results.find(r => r.platform === 'x').ok);
   ok('ข้อความ error ถูกเก็บไว้', out2.results.find(r => r.platform === 'x').error === 'X ล่ม');
@@ -110,13 +116,13 @@ const ok = (label, cond, extra = '') => console.log(`${cond ? '✅' : '❌'} ${l
     // ห้องข่าว Discord: ลิงก์ media-temp ตายใน 24 ชม. → ต้องแนบไฟล์ตรงถ้ายังมีต้นฉบับ
     calls.length = 0;
     await publishBatch({ platforms: ['news'], guildId: 'G1', userDiscordId: 'U1',
-      videoUrl: 'https://temp.test/v.png', videoPath: tmpRel, caption: 'CAP', guild: { id: 'G1', premiumTier: 0 } });
+      videoUrl: 'https://temp.test/v.png', videoPath: tmpRel, caption: 'CAP', client: { id: 'C1' } });
     ok('news(วิดีโอ): มีไฟล์บนดิสก์ → แนบไฟล์ตรง ไม่ส่งลิงก์ที่จะตาย',
        !!byName('postNews')?.[1]?.files && byName('postNews')?.[1]?.content === 'CAP');
 
     calls.length = 0;
     await publishBatch({ platforms: ['news'], guildId: 'G1', userDiscordId: 'U1',
-      videoUrl: 'https://cdn.discord/v.mp4', videoPath: 'storage/posts/__ไม่มีจริง.mp4', caption: 'CAP', guild: { id: 'G1' } });
+      videoUrl: 'https://cdn.discord/v.mp4', videoPath: 'storage/posts/__ไม่มีจริง.mp4', caption: 'CAP', client: { id: 'C1' } });
     ok('news(วิดีโอ): อ่านไฟล์ไม่ได้ → ไม่ล้ม ตกกลับไปใช้ลิงก์',
        byName('postNews')?.[1]?.content?.includes('https://cdn.discord/v.mp4') && !byName('postNews')?.[1]?.files);
 

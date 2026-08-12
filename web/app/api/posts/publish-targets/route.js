@@ -24,7 +24,7 @@ export async function GET() {
     // ห้องข่าวสารเป็นของ "กลุ่ม" ไม่ใช่ของ guild ที่กำลังเปิดหน้าอยู่
     // (org เดียวมีหลาย guild → เลือกกลุ่มข้ามเซิร์ฟได้ ถ้าตัดสินด้วย session guild จะลงผิดห้อง)
     // ชื่อห้องดึงจาก Discord ตาม id (ไม่เก็บลง DB) → ช่องติ๊กบอกได้ว่าจะลงห้องไหนก่อนกด
-    await attachNewsChannelName(await attachNewsReady(groups))
+    await attachNewsChannelName(await attachNewsReady(groups, { orgId: ctx.orgId }))
 
     return Response.json({
       groups: groups.map(g => ({

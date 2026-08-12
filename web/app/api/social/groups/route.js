@@ -13,9 +13,8 @@ import { isMediaTeam } from '@/lib/postsAccess.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import { getOrgId } from '@/lib/orgContext.js'
 import { orgIdOfGuild, guildsOfOrg } from '@/db/guilds.js'
-import { listPublishGroups, attachNewsReady, attachNewsChannelName, publisherIdentity, NEWS_OFF }
+import { listPublishGroups, attachNewsReady, attachNewsChannelName, publisherIdentity, guildNewsChannels, NEWS_OFF }
   from '@/lib/publishTargets.js'
-import { channelBelongsToGuild } from '@/lib/discordChannels.js'
 import pool from '@/db/index.js'
 
 /** GET — กลุ่มทั้งหมดที่คนนี้เห็น + ค่าที่ตั้งไว้ (ให้หน้า /org/settings/social วาดการ์ดรายกลุ่ม) */
@@ -27,7 +26,7 @@ export async function GET() {
     const orgId = await getOrgId(session)
     const { userId, discordId } = await publisherIdentity(session)
     const groups = await listPublishGroups({ orgId, userId, discordId })
-    await attachNewsChannelName(await attachNewsReady(groups))
+    await attachNewsChannelName(await attachNewsReady(groups, { orgId }))
 
     // ชื่อเซิร์ฟ — แถวห้องข่าวสารต้องบอกได้ว่าห้องนี้อยู่เซิร์ฟไหน (ห้องข่าวของ 2 เซิร์ฟชื่อซ้ำกันได้)
     const guildName = new Map((await guildsOfOrg(orgId)).map(g => [g.guild_id, g.name]))
@@ -41,6 +40,7 @@ export async function GET() {
         visibility: g.visibility,
         guildId: g.guildId,
         guildName: guildName.get(g.guildId) || null,
+        newsGuildName: guildName.get(g.newsTargetGuildId) || null,   // เซิร์ฟของ "ห้อง" (อาจคนละเซิร์ฟกับกลุ่ม)
         platforms: Object.keys(g.accounts),
         newsChannelId: g.newsChannelId,       // null = ยังไม่ตั้ง · 'off' = ปิด
         newsChannelName: g.newsChannelName,
@@ -57,6 +57,14 @@ export async function GET() {
   }
 }
 
+
+/** channel นี้เป็น "ห้องข่าวที่ลงทะเบียนไว้" (ตั้งที่ /bot) ของเซิร์ฟไหนใน org นี้ — ไม่ใช่ = null */
+async function guildOfNewsChannel(orgId, channelId) {
+  const guilds = await guildsOfOrg(orgId)
+  const configured = await guildNewsChannels(guilds.map(g => g.guild_id))
+  for (const [gid, ch] of configured) if (ch === channelId) return gid
+  return null
+}
 /**
  * PATCH { group, guild_id?, news_channel_id? } → เขียนลงทุกแถวของกลุ่มนั้น
  *   guild_id        : เซิร์ฟที่กลุ่มสังกัด (ตะกร้าดิสฯ ใช้หาบัญชี) — ต้องเป็น guild ขององค์กรตัวเอง
@@ -115,12 +123,15 @@ export async function PATCH(req) {
         if (!/^\d{17,20}$/.test(channel)) {
           return Response.json({ error: 'channel id ต้องเป็นตัวเลข 17-20 หลัก' }, { status: 400 })
         }
-        if (!guildId) {
-          return Response.json({ error: 'ต้องผูกเซิร์ฟเวอร์ให้กลุ่มนี้ก่อนจึงจะตั้งห้องข่าวสารได้' }, { status: 400 })
-        }
-        // ห้องต้องอยู่ในเซิร์ฟของกลุ่ม ไม่งั้นบอท fetch guild แล้วหาห้องไม่เจอ = job ล้มเปล่าๆ
-        if (!(await channelBelongsToGuild(guildId, channel))) {
-          return Response.json({ error: 'ห้องนี้ไม่ได้อยู่ในเซิร์ฟเวอร์ของกลุ่ม' }, { status: 400 })
+        // ⚠️ ด่านเดียวที่เหลือ = **เส้นแบ่ง org** (user เคาะ 2026-08-12: ข้ามเซิร์ฟใน org ได้ · ข้ามออกนอก org ไม่ได้)
+        // ห้องต้องเป็นห้องข่าวที่ลงทะเบียนไว้ (ตั้งที่ /bot) ของเซิร์ฟใดเซิร์ฟหนึ่งใน org นี้
+        // ไม่ต้องเช็คว่าอยู่เซิร์ฟเดียวกับกลุ่มไหม — บอทหาห้องด้วย channel id ตรงๆ (services/newsShare.js)
+        // จึงยิงข้ามเซิร์ฟได้ และ guild_id ของกลุ่มไม่ถูกแตะจากการตั้งห้อง
+        if (!(await guildOfNewsChannel(orgId, channel))) {
+          return Response.json(
+            { error: 'ห้องนี้ไม่ได้ถูกตั้งเป็นห้องข่าวสารของเซิร์ฟเวอร์ในหน่วยงานคุณ (ตั้งที่หน้า /bot ก่อน)' },
+            { status: 400 }
+          )
         }
       }
       values.push(channel); fields.push(`news_channel_id = $${values.length}`)
