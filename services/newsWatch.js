@@ -148,7 +148,11 @@ async function resolveLinks(items) {
 }
 
 // ── กรอง + ยุบข่าวซ้ำ ────────────────────────────────────────────────────────
-const isBlocked = title => BLOCKLIST.some(w => title.includes(w));
+// เทียบแบบไม่สนตัวพิมพ์ — คำอังกฤษในสแปม (UFABET / Pre-Season) เขียนสลับเคสตลอด
+const isBlocked = title => {
+    const t = title.toLowerCase();
+    return BLOCKLIST.some(w => t.includes(w.toLowerCase()));
+};
 
 // ⚠️ ยุบข่าวซ้ำด้วย trigram ของตัวอักษร ไม่ใช่ "เทียบ N คำแรก"
 //    เพราะภาษาไทยไม่เว้นวรรคระหว่างคำ การตัดคำด้วย space ใช้ไม่ได้
