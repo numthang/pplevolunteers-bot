@@ -175,11 +175,10 @@ export default function PostPublishPanel({ postId }) {
   // แพลตฟอร์มที่ติ๊กได้ = บัญชีที่กลุ่มนี้มีจริง (เหมือนตะกร้าดิสฯ ที่กรอง platform ตามกลุ่ม)
   // 'news' ไม่ใช่บัญชีโซเชียล — เป็นห้องใน Discord ของเซิร์ฟที่กลุ่มนั้นสังกัด (ไม่ใช่เซิร์ฟที่เปิดหน้าอยู่)
   function blockedReason(key) {
-    if (key === 'news') {
-      if (newsReady) return null
-      return current ? 'เซิร์ฟเวอร์ของกลุ่มนี้ยังไม่ได้ตั้งห้องข่าวสาร' : 'เซิร์ฟเวอร์นี้ยังไม่ได้ตั้งห้องข่าวสาร'
-    }
     if (!current) return 'เลือกกลุ่มก่อน'
+    if (key === 'news') {
+      return newsReady ? null : 'เซิร์ฟเวอร์ของกลุ่มนี้ยังไม่ได้ตั้งห้องข่าวสาร'
+    }
     if (!current.platforms.includes(key)) return `กลุ่มนี้ไม่มีบัญชี ${platformLabel(key)}`
     if (NEEDS_MEDIA.includes(key) && !hasMedia) return 'ต้องมีสื่ออย่างน้อย 1 ชิ้น'
     return null

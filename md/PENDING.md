@@ -238,6 +238,13 @@ spec + ดีไซน์ + ตารางทั้งหมดอยู่ `md
   - ⛔ **`bg_path` ของการ์ด plain เป็น NULL เสมอ ห้ามเอา ref ลายน้ำไปใส่** — คอลัมน์นั้นโดน `deletePostFile()` ตอนลบการ์ด = ลากไฟล์ลายน้ำขององค์กรหายไปด้วย
   - รอบแต่ง 2026-08-11: ลายพื้นมุมล่างขวา **สีจริง opacity 10% ทั้งดวงไม่โดนขอบตัด** · `plain-mark` สุ่มลายทุกใบ · ข้อความอยู่กลางการ์ด · เลือก **ฟอนต์ (อนาคตใหม่/Google Sans/สารบรรณ) + ขนาด (เล็ก/กลาง/ใหญ่)** ได้ในโมดัล
   - รอบแต่ง 2026-08-11 (รอบ 2): **color picker เลือกสีการ์ดเองได้ทั้ง 2 โหมด** ตั้งต้นที่สี CI + ปุ่มกลับไปสี CI · ครอปตั้งต้นเป็น **4:5** · การ์ดไม่มีรูปเลือกสัดส่วนได้ 1:1 / 4:5 / 16:9 เหมือนกัน · "การลงสี"→**ธีม** · "สี"→**ฟิลเตอร์** (เป็น dropdown แล้ว รองรับเพิ่มฟิลเตอร์ในอนาคต)
+  - **รอบแต่ง 2026-08-13: สีตัวอักษรคำคม + ช่องพิมพ์ hex + สลับลำดับสี CI ตามบริบท** (local · ยังไม่ deploy)
+    - **สีตัวอักษรคำคมเลือกเองได้** — คุมแค่ **headline เท่านั้น ไม่ใช่ชื่อผู้พูด** (scope เคาะ 2026-08-13) · ไม่เลือก = `null` = auto ของสไตล์นั้นเหมือนเดิม · ไหลผ่าน `textColor` ตั้งแต่ `readQuoteForm` → `renderQuoteCard/renderPlainCard` → ทุก `render*` ใน `utils/quoteStyles.js`
+    - ⚠️ `renderPlain` เดิมแตกกิ่งพื้นหลังด้วย `ink === WHITE` (เทียบ string) — พอ ink รับสีที่ผู้ใช้เลือกได้ ไม่ใช่แค่ผลลัพธ์ WHITE/BLACK จาก `contrastText()` ต้องเปลี่ยนเป็นเทียบ **luminance** (`_lum(ink) > 0.5`) ไม่งั้นสีอ่อนที่ไม่ใช่ `#ffffff` เป๊ะๆ ตกกิ่ง "เข้ม" ผิด
+    - ถอด `inkOverride` ของ `renderPanel` ทิ้ง (ของไว้เทียบตอน dev — `textColor` แทนที่ครบแล้ว ไม่เหลือ ref ในโค้ด)
+    - **ช่องพิมพ์/วาง hex code** ข้าง color picker ทั้ง 3 ที่ (`QuoteGeneratorModal` · `OrgBrand` · `PersonalQuotePrefs`) — helper กลาง `web/lib/hexColor.js` (`normalizeHex`: เติม `#`, ขยาย 3 หลัก `#f80`→`#ff8800`) · commit ตอน **blur/Enter** เท่านั้น ไม่ใช่ทุกตัวอักษร (ไม่งั้นค่ากลางๆ ระหว่างพิมพ์ยิง render ทิ้ง) · พิมพ์ผิด = เด้งกลับค่าที่ใช้อยู่จริง
+    - 🐛 **สี CI ขององค์กรไม่มีผล** — `/org/settings/brand` เซฟลง `org_config` ตั้งแต่ migration 2026-08-10 แต่ตัวอ่านยังชี้ `dc_guild_config` (คนละตาราง) · แก้ทั้ง 2 ฝั่ง: `web/lib/quoteAccent.js` (เว็บ) + `resolveConfigOrgFirst()` ใหม่ใน `db/configResolver.js` (บอท) — อ่าน org ก่อน แล้ว fallback guild · **คู่แฝด แก้คู่กันเสมอ** · ดู [[project_org_config_vs_guild_config]]
+    - **ลำดับสีสลับตามบริบท** (เคาะ 2026-08-12) — โพสต์ `personal` → personal ชนะ · โพสต์ org / สั่งจากดิสฯ → **org ชนะ** · เหตุ: guild ไม่เคยตั้งสีเอง + ใครตั้งสีส่วนตัวไว้จะเห็นสีตัวเองทับสีองค์กรตลอดไป · คำสั่งในดิสฯ ไม่มีแนวคิด "โพสต์ personal" จึงถือเป็นบริบทองค์กรเสมอ · `/api/posts/quote-accent` รับ `?postId=` เพื่อรู้ `visibility`
   - 🐛 บทเรียน: อาการ "ข้อความวางต่ำไป" จริงๆ คือ **พรีวิวในโมดัลโดนหั่นหัวท้าย** (`w-full` บนการ์ด 4:5) ไม่ใช่ layout — แก้ที่พรีวิวแล้ว ห้ามเว้นแถบก้นการ์ดกลับมา
   - 🔜 ถ้าทำ **re-render การ์ดเก่า** ทีหลัง: จะไม่รู้ค่าลายน้ำ/ฟอนต์/ขนาดที่เคยเลือก (เก็บแค่พื้นหลังใน `quote_style`) — ต้องเพิ่มที่เก็บก่อน (คอลัมน์ใหม่ ไม่ใช่ `bg_path`)
 - [x] **🤖 AI สร้างโพสต์ = "เรียบเรียงเป็นโพสต์เดียว" ไม่ใช่ซอยเป็นชุด — ✅ เสร็จ 2026-08-09** (local · ยังไม่ deploy)
@@ -245,6 +252,11 @@ spec + ดีไซน์ + ตารางทั้งหมดอยู่ `md
   - `POST /api/posts/ai/outline` (สร้างหลายแถว) **ถูกลบ** → `POST /api/posts/ai/compose` คืน `{category,title,body,format}` สร้างแถวเดียว แล้ว UI เด้งเข้า `/posts/[id]` ทันที
   - **ข้อความดิบที่ user พิมพ์ = revision แรก** ผ่าน `createPost({ originalRevision })` (เวลาถอย 1 วิ กันชนกับ snapshot ฉบับ AI) + `listRevisions` เพิ่ม tiebreak `r.id DESC`
   - ⬜ **ยังไม่เทสในเบราว์เซอร์จริง** (build ผ่าน) · ⬜ i18n: `PostsHome.jsx` ยัง hardcode ไทยตามโซน — เข้าคิวข้อล่างนี้
+  - **2026-08-12/13 — Series กลับมาเป็นตัวเลือกที่ user กดเอง (2 รอบ)** · รายละเอียดเต็ม `md/posts/POSTS.md`
+    - รอบแรก: ปุ่ม **[1 ตอน | Series]** + ช่องกรอกจำนวนตอน (2-12) · รอบสอง (**ค่าปัจจุบัน**): ถอดช่องกรอกออก — **AI ตัดสินใจจำนวนตอนเอง (1-12) จากเนื้อหา** เพราะ user มักระบุจำนวนไว้ในข้อความที่พิมพ์อยู่แล้ว · ต่างจาก auto-split ที่ถูกตัดทิ้ง 2026-08-09 ตรงที่ **ยังต้องกดปุ่ม Series เองก่อน** ไม่ใช่ AI ซอยเงียบๆ
+    - client ส่ง `series: true` (เลิกส่ง `episodeCount`) — route `ai/compose` รับ `series` อยู่แล้ว ไม่ต้องแก้
+    - 🐛 **`MAX_TOKENS` 8000 → 32000** (`web/lib/ai.js`) · ซีรีส์ 12 ตอนเนื้อหาเต็มโดนตัดกลางคัน (`stop_reason: max_tokens`) → JSON ขาดครึ่ง → user เห็น error กำกวม "ไม่ใช่ JSON ที่อ่านได้"
+    - ⚠️ **ต้องใช้ `.stream().finalMessage()` ไม่ใช่ `.create()`** — max_tokens สูงแบบไม่ stream เสี่ยง SDK ชน HTTP timeout เอง · เพิ่มเช็ค `stop_reason === 'max_tokens'` ก่อน parse เพื่อโยน error ที่อ่านรู้เรื่อง
 - [ ] **migrate i18n โซน posts** (หนี้จากก้อน 2b) — 7 ไฟล์: `PostsHome` · `PostEditor` · `PostMediaPanel` · `PostMetaPanel` · `PostPublishPanel` · `PostRevisions` · `EmojiPicker` (ใหม่ 2026-08-08 — hardcode ไทยตาม sibling ในโซนเดิม) · งาน mechanical ส่ง Sonnet subagent ได้ · ระหว่างยังไม่ทำ โซนนี้จะปน hardcode กับ `t()`
   - **หนี้เพิ่ม 2026-08-12:** `PostEditor.jsx` เพิ่ม block ใหม่ทั้งก้อน (`ReviewResult` + `RISK_LABEL` 9 ป้าย + `SEVERITY_STYLE` 3 ป้าย) เข้าข่าย "โค้ดใหม่" ตามกฎ CLAUDE.md แต่เขียน hardcode ไทยตาม sibling ทั้งโซน — จดตามข้อยกเว้นที่กฎกำหนดไว้ ตอน migrate จริงอย่าลืมก้อนนี้
 - [x] **🎨 คลังภาพ (media library) — ✅ เขียนเสร็จ 2026-08-04** (local · ยังไม่ deploy prod · **ยังไม่เทสในเบราว์เซอร์จริง**)
@@ -357,13 +369,14 @@ spec + ดีไซน์ + ตารางทั้งหมดอยู่ `md
 - [~] **ก้อน 6** — migrate `posts/*.md` เข้า DB: **seed แล้ว 22 ตอน** (`scripts/seedPostsFromFiles.js` idempotent) เหลือแค่เคาะว่าจะเลิกใช้โฟลเดอร์ `posts/` เลยไหม
 - [ ] **ถอด prefix `dc_` ออกจากตารางที่เป็น org แล้ว** (user สั่ง 2026-07-29 · ทำ **หลังก้อน 4**) — สำรวจแล้วเหลือจริง 3 ตัว:
   - **หลักที่ user เคาะ 2026-07-29: prefix ต้องมีโมดูลจริงรองรับ** — ห้ามตั้ง prefix ลอยๆ ที่ไม่มีโฟลเดอร์/feature key รองรับ (เช่น `media_` ตกไปเพราะไม่มี `web/db/media/`) · `post_` ผ่านเพราะมี `web/db/posts/` + `orgFeatures` key `posts`
-  - `dc_social_accounts` → **`post_social_accounts`** (14 ไฟล์) — ⚠️ ต้องมีคอมเมนต์หัวตารางว่าตะกร้าสื่อ/ลายน้ำ/Meta-X OAuth ใช้ร่วม **ห้าม drop ตามโมดูล posts**
+  - `dc_social_accounts` → **`post_social_accounts`** (**26 ไฟล์โค้ด** — grep ใหม่ 2026-08-13: บอท 5 `handlers/basketHandler.js` `services/{metaApi,newsShare,xApi}.js` · scripts 7 · web 14 · เดิมจด 14 ไฟล์ **ประเมินต่ำไป**) — ⚠️ ต้องมีคอมเมนต์หัวตารางว่าตะกร้าสื่อ/ลายน้ำ/Meta-X OAuth ใช้ร่วม **ห้าม drop ตามโมดูล posts**
   - `dc_orgchart_config` → `org_chart_config` (2) · `dc_orgchart_snapshot` → `org_chart_snapshot` (1) — มี `org_*` เป็นโมดูลรองรับอยู่แล้ว
   - `dc_media_baskets` คง `dc_` ไว้ — เป็นฟีเจอร์ของ Discord จริงๆ (ไม่ยุบเข้า posts แล้ว)
   - **ไม่ต้องแตะ** `dc_media_baskets` / `dc_media_history` / `dc_user_config` — ก้อน 4 ยุบหาย/รอ drop อยู่แล้ว (rename ตอนนี้ = เสียแรงฟรี)
   - **คง `dc_` ไว้ 12 ตัวที่เป็น Discord จริง**: guilds · guild_config (channel/message id ล้วน) · guild_roles (392) · guild_role_groups · activity_daily/mentions (89k แถว) · forum_config/posts · gogo_entries · ai_modes · user_ratings/reports
   - ⚠️ ทำ **ทีละตาราง ทีละ commit** grep แก้ด้วยตา — ห้าม sed รวด (เคย bulk-rename ตอน migrate calling แล้ว `orgId` ไหลเข้า `guild_id`)
   - ⚠️ บอท/เว็บ deploy ไม่พร้อมกัน → rename แล้วสร้าง **view ชื่อเดิม** คร่อมไว้ (auto-updatable) → deploy → drop view
+  - 🕐 **ถามอีกรอบ 2026-08-13 "ทำไหม" → ตอบ ยังไม่ทำ** · เหตุ: ต้อง deploy บอท+เว็บพร้อมกัน แต่ตอนนี้มีกองรอ deploy ซ้อนกันหลายชั้น (ก้อน 4c · Phase 0 social accounts ที่ rebuild ตารางนี้ทั้งตัว · middleware/auth 404 · AI prompt backoffice) — วางทับกองที่ยังไม่ deploy พอพังจะแยกไม่ออกว่าอะไรพัง · **ได้ 0 กับผู้ใช้** (งานความสะอาดล้วน) → รอ prod นิ่งก่อน แล้วทำเป็น session เดี่ยว ไม่ปนงานอื่น (`/scrutinize` ก่อนตามกฎโปรเจกต์)
 - [x] ~~**บั๊กที่มีอยู่จริง: รูปในตะกร้าตายใน ~24 ชม.**~~ ✅ 2026-07-30 (`f682283`) — **เลือกทาง B** `services/discordAttachments.js` รีเฟรชลิงก์ตอนใช้ (basketHandler + worker) · ข้อจำกัดที่เหลือ: ข้อความต้นทางถูกลบ = จบ · เติมทาง A ทับได้ทีหลัง
   - <details><summary>บันทึกการตัดสินใจเดิม</summary> — `dc_media_baskets.image_url` เป็น Discord signed URL (`?ex=&is=&hm=`) ตะกร้าที่ค้างข้ามวันแล้วกดโพสต์จะยิงไม่ออก (`fetchBuffer` ที่ `basketHandler` 783/801/1054 โยน · วิดีโอส่ง URL ให้ Meta ดึงเองที่ 711-756 ก็พังเหมือนกัน) · **รอเคาะว่าเอาทางไหน:**
   - **B. รีเฟรช URL ตอนใช้ (เชียร์)** — `client.rest.post('/attachments/refresh-urls')` (discord.js 14.25 เรียกได้ ไม่ต้องอัป) · **แก้วิดีโอด้วย** เพราะ Meta ต้องดึงจาก URL ที่ยังไม่หมดอายุ · แตะ helper 1 ตัว + จุดเรียก 3-4 จุด · ไม่รอด ถ้าข้อความต้นทางถูกลบ
@@ -836,6 +849,7 @@ user เปรยว่า "น่าจะมี social listening เอาไ�
 **แก้แล้ว:**
 - [x] **เพิ่ม `stop:true`** — `/panel search stop:true` ลบ setting + เคลียร์ cache (`clearSearchChannel()` ใหม่ใน `forumCache.js`), `channel` option เปลี่ยนเป็น optional
 - [x] **ต้องเมนชันบอทถึงจะทำงาน** — เดิมพิมพ์อะไรในห้องก็ลบ+ค้น+ตอบหมด (รก) เปลี่ยนเป็นเช็ค `message.mentions.has(client.user)` เหมือน `ai_mention` แล้ว strip mention ออกเป็น keyword — พิมพ์เฉยๆ ไม่โดนแตะ, เมนชันไม่มี keyword ก็ไม่ทำอะไร
+- [x] 🐛 **`mentions.has()` ต้องใส่ `{ ignoreRoles: true }`** (2026-08-13) — default ของ discord.js นับ **ยศที่บอทถืออยู่** เป็น mention ด้วย · เมนชันยศที่บอทก็มี (เช่น @ทีมงาน) = เข้าเงื่อนไขทั้งที่ไม่ได้เรียกบอท → ห้องค้นโดนลบข้อความ + RAG AI เด้งตอบเอง · แก้ทั้ง **2 จุดใน `index.js`** (search channel + `ai_mention`) — จุดเดียวไม่พอ
 
 ---
 

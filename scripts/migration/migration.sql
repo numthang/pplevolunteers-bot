@@ -735,7 +735,6 @@ CREATE TABLE IF NOT EXISTS news_watch_seen (
 );
 CREATE INDEX IF NOT EXISTS idx_news_watch_seen_at ON news_watch_seen (seen_at);
 
--- production ทำถึงตรงนี้
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 2026-08-12 · ห้องข่าวสารผูกรายกลุ่ม social (เดิมผูกราย guild ที่ dc_guild_config)
@@ -794,3 +793,5 @@ ON CONFLICT DO NOTHING;
 -- ⚠️ DROP ทีหลังสุด และ **บอท + เว็บต้อง deploy พร้อมกัน** — db/aiConfig.js (โปรเซสบอท)
 --    กับ web/app/api/bot/ai-modes/route.js ยิงตารางนี้ทั้งคู่ ปล่อยฝั่งเดียวไป = บอทพังเงียบ
 DROP TABLE IF EXISTS dc_ai_modes;
+
+-- production ทำถึงตรงนี้
