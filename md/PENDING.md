@@ -1173,3 +1173,13 @@ user เปรยว่า "น่าจะมี social listening เอาไ�
 
 - ~~AI config ควรเป็น per-org (แบบ config-split)~~ → เปลี่ยนเป็น BYO-key ด้านบน · เดิมคิดว่า — ตอนนี้ `dc_guild_config guild_id='global'` + `dc_ai_modes.guild_id='global'` = ทุก org ใช้โมเดล/prompt ชุดเดียวกัน · `dc_ai_modes` มีคอลัมน์ `guild_id` รออยู่แล้ว · พอ rebrand เป็น multi-tenant แต่ละ org ควรเลือกเอง (+ จ่ายเอง) — เป็นการเปลี่ยน scope ไม่ใช่ย้ายหน้า จึงไม่ได้ทำในรอบ IA
 - **`/admin` เกือบตาย** — มีหน้าเดียว (`/admin/logs`) ไม่มีลิงก์ไปหาจากที่ไหนเลย gate ที่ `admin/moderator` · ต้องเคาะว่าปลุกเป็นโซน superadmin จริง หรือย้าย logs ไปที่อื่นแล้วลบทิ้ง
+
+## 🤖 AI prompt backoffice (org_ai_prompts) — เขียนเสร็จ 2026-08-13 (local · ยังไม่ deploy)
+
+- [x] **ก้อน A** — โหมด "ตรวจก่อนเผยแพร่" (AI บรรณาธิการ 9 หมวดเสี่ยง) `/api/posts/ai/review` + `ReviewResult` ใน `PostEditor.jsx` (`913a1bb`)
+- [x] **ก้อน B** — `org_ai_prompts` แทน `dc_ai_modes` · reader 2 ฝั่ง · 8 call site · หน้าแก้ที่ `/org/settings/ai` (`8c91fee` → `58a87c5`)
+- ⬜ **ยังไม่เทสในเบราว์เซอร์จริงทั้ง A และ B** (build + DB test ผ่านแล้วเท่านั้น) — ต้องกดจริงว่า AI ตรวจแล้วทักมากเกินไปไหม + หน้าแก้ prompt ใช้งานได้จริง
+- ⚠️ **deploy: บอท + เว็บต้องขึ้นพร้อมกัน** — `db/aiConfig.js` (โปรเซสบอท) กับ `web/app/api/bot/ai-modes/route.js` ยิง `org_ai_prompts` ทั้งคู่ ปล่อยฝั่งเดียวไป = บอทพังเงียบเพราะ `dc_ai_modes` ถูก DROP แล้ว
+- ⚠️ **migration ยังไม่รันบน prod** — บล็อก `2026-08-12 · org_ai_prompts` ท้าย `migration.sql` (สร้างตาราง → ย้าย 2 แถว → DROP ของเก่า)
+- [ ] **โควตา AI 30/วัน/คน อาจไม่พอ** — `consumeAiQuota` นับที่คนกด ซึ่งฟีเจอร์ตรวจเนื้อหาคนกดคือบรรณาธิการ (คนน้อย ตรวจงานทั้ง org) ต่างจากคนเขียนที่ใช้ของตัวเองไม่กี่ครั้ง · ถ้าเจอเพดานจริง: แยกเพดานของ `kind='review'` หรือขึ้น limit เฉพาะ `isMediaTeam`
+- [ ] **ชุดกลาง (org_id IS NULL) ของ slot ยังแก้จากเว็บไม่ได้** — ตั้งใจ (ค่าตั้งต้นอยู่ใน `config/aiPrompts.js`) ถ้าอยากแก้จากเว็บต้องทำหน้า superadmin แยก
