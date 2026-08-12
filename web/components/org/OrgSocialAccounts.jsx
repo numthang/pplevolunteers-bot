@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Trash2, RefreshCw, Globe, Lock, AlertTriangle, X, Settings, Check, Megaphone } from 'lucide-react'
+import { Trash2, RefreshCw, Globe, Lock, AlertTriangle, X, Settings, Check, Megaphone, AtSign } from 'lucide-react'
 import { canManageSocialGuild } from '@/lib/roles.js'
 import { useEffectiveRoles } from '@/lib/useEffectiveRoles.js'
 import { useTranslations } from 'next-intl'
@@ -39,44 +39,58 @@ function NewsButton({ enabled, hasGroups, onClick, t }) {
   const reason = !hasGroups ? t('social.news.needGroup') : !enabled ? t('social.news.needMediaTeam') : null
   if (reason) {
     return (
-      <button disabled title={reason} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-sm opacity-30 cursor-not-allowed">
-        <Megaphone size={14} /> {t('social.news.button')}
+      <button disabled title={reason} aria-label={reason} className="flex items-center justify-center p-2 rounded-lg bg-indigo-600 text-white text-sm opacity-30 cursor-not-allowed">
+        <Megaphone size={16} />
       </button>
     )
   }
   return (
-    <button onClick={onClick} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-sm hover:opacity-90 transition">
-      <Megaphone size={14} /> {t('social.news.button')}
+    <button onClick={onClick} title={t('social.news.title')} aria-label={t('social.news.title')} className="flex items-center justify-center p-2 rounded-lg bg-indigo-600 text-white text-sm hover:opacity-90 transition">
+      <Megaphone size={16} />
     </button>
   )
 }
 
-// บรรทัดสรุปว่ากลุ่มไหนยิงเข้าห้องไหน — ต่อจากแถวปุ่ม ไม่ใช่การ์ดใหม่
-function NewsBindings({ groups, canSetNews, onEdit, onClear, t }) {
-  const bound = groups.filter(g => g.newsReady || g.newsChannelId === 'off')
-  if (!bound.length) return null
+// แถว "ห้องข่าวสาร Discord" — แสดงเหมือนแถวบัญชีโซเชียล เพราะมันคือปลายทางอีกอันของกลุ่ม
+// 1 กลุ่ม = 1 แถว · เพิ่มได้เรื่อยๆ ตามจำนวนกลุ่ม (พฤติกรรมเดียวกับการเชื่อมบัญชี)
+// ไม่โชว์กลุ่มที่ใช้ค่า default ของเซิร์ฟ (newsSource === 'guild') — นั่นไม่ใช่แถวที่ใครสร้าง
+function NewsRow({ g, groupOptions, onMove, onRemove, canSetNews, busy, t }) {
+  const off = g.newsChannelId === 'off'
   return (
-    <div className="flex flex-wrap items-center gap-2 mb-3 text-xs">
-      <span className="flex items-center gap-1 text-gray-500 dark:text-disc-muted">
-        <Megaphone size={12} /> {t('social.news.boundLabel')}
-      </span>
-      {bound.map(g => (
-        <span key={g.name} className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-gray-100 dark:bg-disc-hover text-gray-700 dark:text-disc-text">
-          <button onClick={() => onEdit(g)} className="hover:underline" disabled={!canSetNews}>
-            {g.name} → {g.newsChannelId === 'off'
-              ? t('social.news.off')
-              : g.newsChannelName ? `#${g.newsChannelName}` : t('social.news.unknownChannel')}
-          </button>
-          {/* ค่าที่ตกมาจากเซิร์ฟไม่ใช่ของกลุ่ม → ไม่มีอะไรให้ถอด แสดงป้ายบอกที่มาแทน */}
-          {g.newsSource === 'guild'
-            ? <span className="text-gray-400 dark:text-disc-muted">({t('social.news.fromServer')})</span>
-            : canSetNews && (
-              <button onClick={() => onClear(g)} title={t('social.news.unbind')} className="text-gray-400 hover:text-red-500">
-                <X size={11} />
-              </button>
-            )}
+    <div className="bg-card-bg rounded-xl px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3 border border-warm-200 dark:border-disc-border">
+      <div className="flex items-center gap-3 min-w-0 flex-1">
+        <span className="shrink-0 text-xs font-bold px-2 py-0.5 rounded-md bg-indigo-600 text-white">
+          {t('social.news.badge')}
         </span>
-      ))}
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium text-gray-900 dark:text-disc-text truncate">
+            {off ? t('social.news.off') : g.newsChannelName ? `#${g.newsChannelName}` : t('social.news.unknownChannel')}
+          </p>
+          <p className="text-xs text-gray-400 dark:text-disc-muted truncate">{g.guildName || g.guildId || ''}</p>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2 flex-wrap shrink-0">
+        <select
+          value={g.name}
+          disabled={!canSetNews || busy}
+          onChange={e => onMove(g, e.target.value)}
+          title={t('social.group.title')}
+          className="text-xs px-2 py-1 rounded-md bg-gray-100 dark:bg-disc-hover text-gray-700 dark:text-disc-text border border-warm-200 dark:border-disc-border focus:outline-none focus:ring-2 focus:ring-orange/40 disabled:opacity-50"
+        >
+          {groupOptions.map(name => (
+            <option key={name} value={name}>{name}</option>
+          ))}
+        </select>
+
+        <button
+          onClick={() => onRemove(g)}
+          disabled={!canSetNews || busy}
+          className="p-1.5 rounded text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition disabled:opacity-40"
+        >
+          <Trash2 size={15} />
+        </button>
+      </div>
     </div>
   )
 }
@@ -177,6 +191,7 @@ export default function OrgSocialAccounts() {
   const [groups, setGroups]     = useState([])
   const [canSetNews, setCanSetNews] = useState(false)
   const [newsModal, setNewsModal]   = useState(null)   // 'public' | 'private' = โซนที่กดมา
+  const [newsBusy, setNewsBusy]     = useState(false)
 
   const { access, superAdmin } = useEffectiveRoles(session)  // effective — สะท้อน view-as-role
   const canManage  = canManageSocialGuild(access)
@@ -250,14 +265,35 @@ export default function OrgSocialAccounts() {
     setAccounts(prev => prev.map(a => a.id === acc.id ? { ...a, group_name: newGroup || null } : a))
   }
 
-  // ถอดห้องข่าวสารของกลุ่ม → กลุ่ม public ตกกลับไปใช้ห้องของเซิร์ฟ · private = ส่งไม่ได้
-  async function clearNews(g) {
-    await fetch('/api/social/groups', {
+  async function patchNews(group, channel) {
+    return fetch('/api/social/groups', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ group: g.name, news_channel_id: null }),
+      body: JSON.stringify({ group, news_channel_id: channel }),
     })
+  }
+
+  // ถอดแถวห้องข่าวสาร → กลุ่ม public ตกกลับไปใช้ห้องของเซิร์ฟ · private = ส่งไม่ได้
+  async function clearNews(g) {
+    setNewsBusy(true)
+    await patchNews(g.name, null)
     await load()
+    setNewsBusy(false)
+  }
+
+  // ย้ายแถวไปกลุ่มอื่น = ถอดของกลุ่มเดิมแล้วตั้งให้กลุ่มใหม่ (ห้องเดียวกัน)
+  // กลุ่มใหม่ต้องอยู่เซิร์ฟเดียวกับห้อง ไม่งั้น API ตอบ 400 — ปล่อยให้ error ขึ้นตามจริง
+  async function moveNews(g, toGroup) {
+    if (!toGroup || toGroup === g.name) return
+    setNewsBusy(true)
+    const res = await patchNews(toGroup, g.newsChannelId)
+    if (res.ok) await patchNews(g.name, null)
+    else {
+      const data = await res.json().catch(() => ({}))
+      setBanner({ type: 'error', msg: data.error || t('social.news.saveFailed') })
+    }
+    await load()
+    setNewsBusy(false)
   }
 
   async function toggleVisibility(acc) {
@@ -289,6 +325,9 @@ export default function OrgSocialAccounts() {
   const hasX         = !!(cfg?.x_consumer_key && cfg?.x_consumer_secret) || !!cfg?.hasX
   // Threads มี creds ของตัวเอง — ไม่ยืมของ Meta (getThreadsApp ไม่ fallback แล้ว)
   const hasThreads   = !!(cfg?.threads_app_id && cfg?.threads_app_secret) || !!cfg?.hasThreads
+  // แถวห้องข่าวสาร = กลุ่มที่ตั้งห้องเอง (channel id หรือ 'off') · ค่าที่ตกมาจากเซิร์ฟไม่นับเป็นแถว
+  const newsRows = list => list.filter(g => g.newsSource === 'group' || g.newsChannelId === 'off')
+
   // กลุ่มแยกตามโซน — ปุ่ม/ป้ายในโซนไหนก็เห็นแต่กลุ่มของโซนนั้น
   const orgGroups      = groups.filter(g => g.visibility === 'public')
   const personalGroups = groups.filter(g => g.visibility === 'private')
@@ -325,26 +364,41 @@ export default function OrgSocialAccounts() {
                 {hasX ? (
                   <a
                     href={`/api/x/oauth/start?visibility=private`}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black text-white text-sm hover:opacity-80 transition"
+                    title={t('social.connect.titleX')} aria-label={t('social.connect.titleX')}
+                    className="flex items-center justify-center p-2 rounded-lg bg-black text-white text-sm hover:opacity-80 transition"
                   >
-                    <Globe size={14} /> {t('social.connect.x')}
+                    <Globe size={16} />
                   </a>
                 ) : (
-                  <button disabled title={t('social.connect.needX')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black text-white text-sm opacity-30 cursor-not-allowed">
-                    <Globe size={14} /> {t('social.connect.x')}
+                  <button disabled title={t('social.connect.needX')} aria-label={t('social.connect.needX')} className="flex items-center justify-center p-2 rounded-lg bg-black text-white text-sm opacity-30 cursor-not-allowed">
+                    <Globe size={16} />
                   </button>
                 )}
                 {hasMeta ? (
                   <a
                     href={`/api/meta/oauth/start`}
-                    title={t('social.connect.metaTitle')}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange text-white text-sm hover:opacity-90 transition"
+                    title={t('social.connect.metaTitle')} aria-label={t('social.connect.metaTitle')}
+                    className="flex items-center justify-center p-2 rounded-lg bg-orange text-white text-sm hover:opacity-90 transition"
                   >
-                    <RefreshCw size={14} /> {t('social.connect.meta')}
+                    <RefreshCw size={16} />
                   </a>
                 ) : (
-                  <button disabled title={t('social.connect.needMeta')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange text-white text-sm opacity-30 cursor-not-allowed">
-                    <RefreshCw size={14} /> {t('social.connect.meta')}
+                  <button disabled title={t('social.connect.needMeta')} aria-label={t('social.connect.needMeta')} className="flex items-center justify-center p-2 rounded-lg bg-orange text-white text-sm opacity-30 cursor-not-allowed">
+                    <RefreshCw size={16} />
+                  </button>
+                )}
+                {/* Threads แยกปุ่ม: authorize ที่ threads.net + creds คนละชุด → รวมกับปุ่ม Meta ไม่ได้ */}
+                {hasThreads ? (
+                  <a
+                    href={`/api/threads/oauth/start`}
+                    title={t('social.connect.titleThreads')} aria-label={t('social.connect.titleThreads')}
+                    className="flex items-center justify-center p-2 rounded-lg bg-gray-800 dark:bg-gray-700 text-white text-sm hover:opacity-90 transition"
+                  >
+                    <AtSign size={16} />
+                  </a>
+                ) : (
+                  <button disabled title={t('social.connect.needThreads')} aria-label={t('social.connect.needThreads')} className="flex items-center justify-center p-2 rounded-lg bg-gray-800 dark:bg-gray-700 text-white text-sm opacity-30 cursor-not-allowed">
+                    <AtSign size={16} />
                   </button>
                 )}
                 <NewsButton
@@ -353,24 +407,8 @@ export default function OrgSocialAccounts() {
                   onClick={() => setNewsModal('public')}
                   t={t}
                 />
-                {/* Threads แยกปุ่ม: authorize ที่ threads.net + creds คนละชุด → รวมกับปุ่ม Meta ไม่ได้ */}
-                {hasThreads ? (
-                  <a
-                    href={`/api/threads/oauth/start`}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-800 dark:bg-gray-700 text-white text-sm hover:opacity-90 transition"
-                  >
-                    <RefreshCw size={14} /> {t('social.connect.threads')}
-                  </a>
-                ) : (
-                  <button disabled title={t('social.connect.needThreads')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-800 dark:bg-gray-700 text-white text-sm opacity-30 cursor-not-allowed">
-                    <RefreshCw size={14} /> {t('social.connect.threads')}
-                  </button>
-                )}
               </div>
             </div>
-
-            <NewsBindings groups={orgGroups} canSetNews={canSetNews}
-              onEdit={() => setNewsModal('public')} onClear={clearNews} t={t} />
 
             {/* App Credentials */}
             <div className="bg-card-bg rounded-xl border border-warm-200 dark:border-disc-border p-4 mb-3">
@@ -419,6 +457,11 @@ export default function OrgSocialAccounts() {
                     onRemove={remove} deleting={deleting} t={t}
                     />
                 ))}
+                {newsRows(orgGroups).map(g => (
+                  <NewsRow key={g.name} g={g} groupOptions={orgGroups.map(x => x.name)}
+                    onMove={moveNews} onRemove={clearNews} canSetNews={canSetNews}
+                    busy={newsBusy} t={t} />
+                ))}
               </div>
             )}
           </div>
@@ -435,25 +478,27 @@ export default function OrgSocialAccounts() {
                 {hasX ? (
                   <a
                     href={`/api/x/oauth/start?visibility=private`}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black text-white text-sm hover:opacity-80 transition"
+                    title={t('social.connect.titleX')} aria-label={t('social.connect.titleX')}
+                    className="flex items-center justify-center p-2 rounded-lg bg-black text-white text-sm hover:opacity-80 transition"
                   >
-                    <Globe size={14} /> {t('social.connect.x')}
+                    <Globe size={16} />
                   </a>
                 ) : (
-                  <button disabled title={t('social.connect.noXAdmin')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black text-white text-sm opacity-30 cursor-not-allowed">
-                    <Globe size={14} /> {t('social.connect.x')}
+                  <button disabled title={t('social.connect.noXAdmin')} aria-label={t('social.connect.noXAdmin')} className="flex items-center justify-center p-2 rounded-lg bg-black text-white text-sm opacity-30 cursor-not-allowed">
+                    <Globe size={16} />
                   </button>
                 )}
                 {hasMeta ? (
                   <a
                     href={`/api/meta/oauth/start?visibility=private`}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange text-white text-sm hover:opacity-90 transition"
+                    title={t('social.connect.titleMeta')} aria-label={t('social.connect.titleMeta')}
+                    className="flex items-center justify-center p-2 rounded-lg bg-orange text-white text-sm hover:opacity-90 transition"
                   >
-                    <RefreshCw size={14} /> {t('social.connect.metaShort')}
+                    <RefreshCw size={16} />
                   </a>
                 ) : (
-                  <button disabled title={t('social.connect.noMetaAdmin')} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange text-white text-sm opacity-30 cursor-not-allowed">
-                    <RefreshCw size={14} /> {t('social.connect.metaShort')}
+                  <button disabled title={t('social.connect.noMetaAdmin')} aria-label={t('social.connect.noMetaAdmin')} className="flex items-center justify-center p-2 rounded-lg bg-orange text-white text-sm opacity-30 cursor-not-allowed">
+                    <RefreshCw size={16} />
                   </button>
                 )}
                 <NewsButton
@@ -465,9 +510,6 @@ export default function OrgSocialAccounts() {
               </div>
             )}
           </div>
-          <NewsBindings groups={personalGroups} canSetNews={canSetNews}
-            onEdit={() => setNewsModal('private')} onClear={clearNews} t={t} />
-
           {myAccounts.length === 0 ? (
             <p className="text-sm text-gray-400 dark:text-disc-muted pl-1">{t('social.emptyPersonal')}</p>
           ) : (
@@ -477,6 +519,11 @@ export default function OrgSocialAccounts() {
                   onToggleVisibility={canManage || superAdmin ? toggleVisibility : null}
                   onSetGroup={setGroup}
                   onRemove={remove} deleting={deleting} t={t} />
+              ))}
+              {newsRows(personalGroups).map(g => (
+                <NewsRow key={g.name} g={g} groupOptions={personalGroups.map(x => x.name)}
+                  onMove={moveNews} onRemove={clearNews} canSetNews={canSetNews}
+                  busy={newsBusy} t={t} />
               ))}
             </div>
           )}

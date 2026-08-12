@@ -1257,16 +1257,15 @@
         "failed": "เชื่อมต่อไม่สำเร็จ ({code})"
       },
       "connect": {
-        "x": "Connect X",
-        "meta": "Connect Meta OAuth",
-        "metaShort": "Connect Meta",
-        "threads": "Connect Threads",
         "metaTitle": "Facebook + Instagram (Threads เป็น OAuth คนละตัว ใช้ปุ่มถัดไป)",
         "needX": "ตั้งค่า X Consumer Key/Secret ก่อน",
         "needMeta": "ตั้งค่า Meta App ID/Secret ก่อน",
         "needThreads": "ตั้งค่า Threads App ID/Secret ก่อน (คนละชุดกับ Meta)",
         "noXAdmin": "ยังไม่มี X App Credentials — ติดต่อ admin",
-        "noMetaAdmin": "ยังไม่มี Meta App Credentials — ติดต่อ admin"
+        "noMetaAdmin": "ยังไม่มี Meta App Credentials — ติดต่อ admin",
+        "titleX": "เชื่อมบัญชี X (Twitter)",
+        "titleMeta": "เชื่อมเพจ Facebook / Instagram ผ่าน Meta OAuth",
+        "titleThreads": "เชื่อมบัญชี Threads"
       },
       "creds": {
         "heading": "App Credentials ขององค์กร",
@@ -1297,7 +1296,6 @@
         "private": "ส่วนตัว"
       },
       "news": {
-        "button": "+ Discord News",
         "title": "ห้องข่าวสาร Discord",
         "subtitle": "เลือกว่ากลุ่มนี้จะให้โพสต์วิ่งเข้าห้องไหน · ห้องที่เลือกได้คือห้องที่ตั้งไว้ที่หน้า /bot ของแต่ละเซิร์ฟเวอร์",
         "group": "กลุ่ม",
@@ -1310,13 +1308,11 @@
         "saveFailed": "บันทึกไม่สำเร็จ",
         "needGroup": "ยังไม่มีกลุ่มในโซนนี้ — จัดบัญชีเข้ากลุ่มก่อน",
         "needMediaTeam": "เฉพาะทีมสื่อหรือผู้ดูแลโซเชียลที่ตั้งห้องข่าวสารได้",
-        "boundLabel": "ห้องข่าวสาร:",
-        "fromServer": "ค่าของเซิร์ฟเวอร์",
-        "unbind": "ถอดห้องข่าวสารออกจากกลุ่มนี้",
         "unknownChannel": "ตั้งไว้แล้ว (ดึงชื่อห้องไม่ได้)",
         "channel": "ห้องข่าวสาร",
         "noRoomForServer": "เซิร์ฟเวอร์ของกลุ่มนี้ {server} ยังไม่ได้ตั้งห้องข่าวสาร — ไปตั้งที่หน้า /bot ก่อน (สลับเซิร์ฟเวอร์ที่ตัวสลับด้านบนของหน้า)",
-        "openBotSettings": "ตั้งห้องข่าวสารของเซิร์ฟเวอร์ที่หน้า /bot →"
+        "openBotSettings": "ตั้งห้องข่าวสารของเซิร์ฟเวอร์ที่หน้า /bot →",
+        "badge": "📢 ห้องข่าวสาร"
       }
     },
     "ai": {

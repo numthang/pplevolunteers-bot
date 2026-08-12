@@ -12,7 +12,7 @@ import { canManageSocialGuild } from '@/lib/roles.js'
 import { isMediaTeam } from '@/lib/postsAccess.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import { getOrgId } from '@/lib/orgContext.js'
-import { orgIdOfGuild } from '@/db/guilds.js'
+import { orgIdOfGuild, guildsOfOrg } from '@/db/guilds.js'
 import { listPublishGroups, attachNewsReady, attachNewsChannelName, publisherIdentity, NEWS_OFF }
   from '@/lib/publishTargets.js'
 import { channelBelongsToGuild } from '@/lib/discordChannels.js'
@@ -29,6 +29,9 @@ export async function GET() {
     const groups = await listPublishGroups({ orgId, userId, discordId })
     await attachNewsChannelName(await attachNewsReady(groups))
 
+    // ชื่อเซิร์ฟ — แถวห้องข่าวสารต้องบอกได้ว่าห้องนี้อยู่เซิร์ฟไหน (ห้องข่าวของ 2 เซิร์ฟชื่อซ้ำกันได้)
+    const guildName = new Map((await guildsOfOrg(orgId)).map(g => [g.guild_id, g.name]))
+
     const { access } = await getEffectiveIdentity(session)
     return Response.json({
       canManage: canManageSocialGuild(access),
@@ -37,6 +40,7 @@ export async function GET() {
         name: g.name,
         visibility: g.visibility,
         guildId: g.guildId,
+        guildName: guildName.get(g.guildId) || null,
         platforms: Object.keys(g.accounts),
         newsChannelId: g.newsChannelId,       // null = ยังไม่ตั้ง · 'off' = ปิด
         newsChannelName: g.newsChannelName,

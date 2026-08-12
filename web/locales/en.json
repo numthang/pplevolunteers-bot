@@ -1257,16 +1257,15 @@
         "failed": "Connection failed ({code})"
       },
       "connect": {
-        "x": "Connect X",
-        "meta": "Connect Meta OAuth",
-        "metaShort": "Connect Meta",
-        "threads": "Connect Threads",
         "metaTitle": "Facebook + Instagram (Threads uses a separate OAuth — use the next button)",
         "needX": "Set X Consumer Key/Secret first",
         "needMeta": "Set Meta App ID/Secret first",
         "needThreads": "Set Threads App ID/Secret first (separate from Meta)",
         "noXAdmin": "No X App credentials yet — contact an admin",
-        "noMetaAdmin": "No Meta App credentials yet — contact an admin"
+        "noMetaAdmin": "No Meta App credentials yet — contact an admin",
+        "titleX": "Connect an X (Twitter) account",
+        "titleMeta": "Connect Facebook / Instagram pages via Meta OAuth",
+        "titleThreads": "Connect a Threads account"
       },
       "creds": {
         "heading": "Organization app credentials",
@@ -1297,7 +1296,6 @@
         "private": "Private"
       },
       "news": {
-        "button": "+ Discord News",
         "title": "Discord news channel",
         "subtitle": "Pick where this group's posts go · the options are the news channels configured on the /bot page of each server",
         "group": "Group",
@@ -1310,13 +1308,11 @@
         "saveFailed": "Could not save",
         "needGroup": "No group in this section yet — put accounts into a group first",
         "needMediaTeam": "Only the media team or social managers can set the news channel",
-        "boundLabel": "News channel:",
-        "fromServer": "server default",
-        "unbind": "Unlink the news channel from this group",
         "unknownChannel": "set (channel name unavailable)",
         "channel": "News channel",
         "noRoomForServer": "This group's server {server} has no news channel configured yet — set it on the /bot page first (switch servers with the switcher at the top)",
-        "openBotSettings": "Configure a server's news channel on /bot →"
+        "openBotSettings": "Configure a server's news channel on /bot →",
+        "badge": "📢 News channel"
       }
     },
     "ai": {
