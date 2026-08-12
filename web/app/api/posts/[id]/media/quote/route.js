@@ -48,6 +48,8 @@ export async function POST(req, { params }) {
 
     // สีที่เลือกเองชนะสี CI (เหมือน /preview เป๊ะ — ไม่งั้นพรีวิวกับของที่บันทึกคนละสี)
     const accent = pickedAccent(input.accent) || await resolveQuoteAccent(ctx.userId, ctx.orgId)
+    // สีตัวอักษรคำคม — เหมือน /preview เป๊ะ ไม่งั้นพรีวิวกับที่บันทึกคนละสี
+    const textColor = pickedAccent(input.textColor)
 
     // การ์ดไม่มีรูป — ไม่มีไฟล์พื้นหลัง จึงเก็บ `bg_path` เป็น NULL
     // (ไม่เก็บ ref ของลายน้ำลง bg_path ด้วย: คอลัมน์นั้นถูก deletePostFile ตอนลบการ์ด
@@ -55,11 +57,11 @@ export async function POST(req, { params }) {
     let png, bgPath = null
     if (isPlainStyle(quoteParams.style)) {
       const wm = await resolvePlainWatermark(input.wmType, ctx)
-      png = await renderPlainCard(quoteParams, accent, wm)
+      png = await renderPlainCard(quoteParams, accent, wm, textColor)
     } else {
       const bg = await resolveBackground(input, ctx.post.id)
       bgPath = bg.bgPath
-      png = await renderQuoteCard(bg.buffer, quoteParams, accent)
+      png = await renderQuoteCard(bg.buffer, quoteParams, accent, textColor)
     }
     const path = await savePostFile(png, 'image/png')
 

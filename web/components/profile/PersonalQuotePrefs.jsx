@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
+import { normalizeHex } from '@/lib/hexColor.js'
 
 // ค่าตั้งการ์ดคำคมของฉัน — ชนะค่าขององค์กร (personal > guild/org > global)
 // ไม่ autosave: เป็นช่องกรอก 2 ช่อง → ปุ่มบันทึกตามกติกา Create vs Update ใน CLAUDE.md
@@ -8,6 +9,7 @@ export default function PersonalQuotePrefs() {
   const t = useTranslations('profile')
   const [data, setData] = useState(null)
   const [accent, setAccent] = useState('')
+  const [accentInput, setAccentInput] = useState('')   // ข้อความในกล่องพิมพ์/วาง hex — sync กับ accent เมื่อค่าถูกต้อง
   const [template, setTemplate] = useState('')
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState('')
@@ -18,12 +20,20 @@ export default function PersonalQuotePrefs() {
       .then(d => {
         setData(d)
         setAccent(d.quote_ci_accent || '')
+        setAccentInput(d.quote_ci_accent || '')
         setTemplate(d.quote_default_template || '')
       })
       .catch(() => setData(false))
   }, [])
 
   if (data === null || data === false) return null   // โหลดไม่ได้ = ซ่อนทิ้ง ไม่ขวางหน้าลายน้ำ
+
+  // พิมพ์/วาง hex code เอง — commit ตอน blur/Enter เท่านั้น ไม่ใช่ทุกตัวอักษรที่พิมพ์
+  function commitAccentText() {
+    const hex = normalizeHex(accentInput)
+    if (hex) { setAccent(hex); setAccentInput(hex) }
+    else setAccentInput(accent)   // พิมพ์ไม่ครบ/ผิดรูปแบบ → คืนค่าที่ใช้อยู่จริง
+  }
 
   async function save() {
     setBusy(true); setNote('')
@@ -49,11 +59,16 @@ export default function PersonalQuotePrefs() {
         <label className={labelCls} htmlFor="my-accent">{t('quotePrefs.accentLabel')}</label>
         <div className="flex items-center gap-2">
           <input id="my-accent" type="color" value={accent || '#ff6a13'} disabled={busy}
-            onChange={e => setAccent(e.target.value)}
+            onChange={e => { setAccent(e.target.value); setAccentInput(e.target.value) }}
             className="h-9 w-14 cursor-pointer rounded-lg border border-gray-300 dark:border-disc-border bg-white dark:bg-card-bg" />
-          <span className="text-sm text-gray-600 dark:text-disc-muted">{accent || t('quotePrefs.accentDefault')}</span>
+          <input
+            type="text" value={accentInput} disabled={busy} placeholder="#ff6a13"
+            onChange={e => setAccentInput(e.target.value)} onBlur={commitAccentText}
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur() } }}
+            maxLength={7} spellCheck={false}
+            className="w-24 rounded-lg border border-gray-300 dark:border-disc-border bg-white dark:bg-card-bg px-2 py-1.5 text-sm font-mono text-gray-600 dark:text-disc-muted disabled:opacity-60" />
           {accent && (
-            <button type="button" onClick={() => setAccent('')} disabled={busy}
+            <button type="button" onClick={() => { setAccent(''); setAccentInput('') }} disabled={busy}
               className="text-xs text-gray-500 dark:text-disc-muted hover:underline disabled:opacity-60">
               {t('quotePrefs.reset')}
             </button>

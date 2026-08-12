@@ -38,16 +38,18 @@ export async function POST(req, { params }) {
     const paramsOut = normalizeQuoteParams(input)
     // สีที่เลือกเองชนะสี CI — ไม่ได้เลือก (หรือกดรีเซ็ต) ค่อยไปหาสีขององค์กร
     const accent = pickedAccent(input.accent) || await resolveQuoteAccent(ctx.userId, ctx.orgId)
+    // สีตัวอักษรคำคม — ไม่มี fallback แบบ accent (ไม่ได้เลือก = null = renderer ใช้ auto ของสไตล์นั้นเอง)
+    const textColor = pickedAccent(input.textColor)
 
     // การ์ดไม่มีรูป — ข้าม resolveBackground ทั้งดุ้น (ไม่มีไฟล์พื้นหลัง = ไม่มี X-Bg-Path ให้คืน)
     let png, bgPath = null
     if (isPlainStyle(paramsOut.style)) {
       const wm = await resolvePlainWatermark(input.wmType, ctx)
-      png = await renderPlainCard(paramsOut, accent, wm)
+      png = await renderPlainCard(paramsOut, accent, wm, textColor)
     } else {
       const bg = await resolveBackground(input, ctx.post.id)
       bgPath = bg.bgPath
-      png = await renderQuoteCard(bg.buffer, paramsOut, accent)
+      png = await renderQuoteCard(bg.buffer, paramsOut, accent, textColor)
     }
 
     return new Response(png, {

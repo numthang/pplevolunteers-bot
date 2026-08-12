@@ -96,6 +96,10 @@ export function readQuoteForm(form) {
     textSize: str('textSize'),
     // สีที่ผู้ใช้เลือกเองจาก color picker — ไม่ส่งมา = ใช้สี CI ขององค์กร (ดู resolveQuoteAccent)
     accent: str('accent'),
+    // สีตัวอักษรคำคม (headline เท่านั้น ไม่ใช่ชื่อผู้พูด) ที่ผู้ใช้เลือกเอง — ไม่ส่งมา = auto
+    // ของแต่ละสไตล์ (ดู utils/quoteStyles.js) · validate ด้วย pickedAccent() ตัวเดียวกัน
+    // เพราะเป็น hex parser เดียวกันเป๊ะ ไม่ต้องมีฟังก์ชันซ้ำ
+    textColor: str('textColor'),
     // สัดส่วนการ์ดแบบไม่มีรูป ('1:1'/'4:5'/'16:9') — การ์ดที่มีรูปเอาสัดส่วนจากไฟล์ที่ครอปมาแล้ว
     aspect: str('aspect'),
   }

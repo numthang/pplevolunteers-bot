@@ -121,7 +121,7 @@ export function normalizeQuoteParams({ quoteText, authorName, style, saturation,
  * @param {string|null} accentColor  สี CI '#rrggbb' — resolveQuoteAccent() หามาให้
  * @returns {Promise<Buffer>} PNG
  */
-export async function renderQuoteCard(bgBuffer, params, accentColor = null) {
+export async function renderQuoteCard(bgBuffer, params, accentColor = null, textColor = null) {
   const { quoteText, authorName, style, saturation, font, textSize } = params
   // null เข้า sharp จะโยน "Expected number above zero for saturation" → default 1.0 (สีเต็ม)
   const sat = saturation ?? 1.0
@@ -132,6 +132,8 @@ export async function renderQuoteCard(bgBuffer, params, accentColor = null) {
       saturation: sat,
       // สี CI ของผู้ใช้/องค์กร — null = renderer ใช้ส้ม default (ดู lib/quoteAccent.js)
       accentColor: accentColor || undefined,
+      // สีตัวอักษรคำคมที่ผู้ใช้เลือกเอง — undefined = renderer ใช้ auto ของสไตล์นั้น (ขาว/ตัดกับพื้น)
+      textColor: textColor || undefined,
       // undefined = renderer ใช้ฟอนต์/ขนาดเดิมของสไตล์นั้น (ดู utils/quoteStyles.js)
       font,
       textSize,
@@ -152,7 +154,7 @@ export async function renderQuoteCard(bgBuffer, params, accentColor = null) {
  * @param {string|null} watermarkPath  path **สัมบูรณ์** ของไฟล์ลายน้ำ (สไตล์ plain-logo เท่านั้น)
  *                                     ผู้เรียกต้อง whitelist มาก่อนแล้ว — ที่นี่ไม่ตรวจ path
  */
-export async function renderPlainCard(params, accentColor = null, watermarkPath = null) {
+export async function renderPlainCard(params, accentColor = null, watermarkPath = null, textColor = null) {
   try {
     const { buffer } = await renderer().renderPlain({
       quoteText: params.quoteText,
@@ -161,6 +163,7 @@ export async function renderPlainCard(params, accentColor = null, watermarkPath 
       font: params.font,
       textSize: params.textSize,
       accentColor: accentColor || undefined,
+      textColor: textColor || undefined,
       watermarkPath,
       ...plainSizeOf(params.aspect),
     })

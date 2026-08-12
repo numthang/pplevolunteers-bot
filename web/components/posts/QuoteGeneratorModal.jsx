@@ -20,6 +20,7 @@ import {
   PLAIN_BGS, PLAIN_FONTS, TEXT_SIZE_MIN, TEXT_SIZE_MAX, TEXT_SIZE_DEFAULT, TEXT_SIZE_STEP,
   plainKey, isPlainStyle,
 } from '@/lib/quoteStyles.js'
+import { normalizeHex } from '@/lib/hexColor.js'
 
 const ACCEPT = 'image/png,image/jpeg,image/webp'
 
@@ -130,6 +131,12 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
   // `ciAccent` เก็บไว้เทียบว่าผู้ใช้เปลี่ยนสีเองหรือยัง (ไว้โชว์ปุ่มรีเซ็ต)
   const [ciAccent, setCiAccent] = useState('')
   const [accent, setAccent] = useState('')
+  const [accentInput, setAccentInput] = useState('')   // ข้อความในกล่องพิมพ์/วาง hex — sync กับ accent เมื่อค่าถูกต้อง
+
+  // สีตัวอักษรคำคม (headline เท่านั้น — ไม่ใช่ชื่อผู้พูด) — ตั้งต้นว่างเสมอ = auto ตามสไตล์
+  // (ต่างจาก accent ที่ตั้งต้นจากสี CI องค์กร) ไม่มี ciX ให้ reset กลับ แค่กลับเป็น '' = auto
+  const [textColor, setTextColor] = useState('')
+  const [textColorInput, setTextColorInput] = useState('')
   const [previewUrl, setPreviewUrl] = useState(null)
   const [rendering, setRendering] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -140,6 +147,7 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
   const objectUrls = useRef([])
   const reqSeq = useRef(0)            // กันผลลัพธ์เก่ามาทับใหม่ตอนกดสลับสไตล์รัวๆ
   const accentTimer = useRef(null)    // หน่วง color picker (ดู changeAccent)
+  const textColorTimer = useRef(null) // หน่วง color picker สีตัวอักษร เหตุผลเดียวกับ accentTimer
   const sizeTimer = useRef(null)      // หน่วง slider ขนาดฟอนต์ (ดู changeTextSize) — ลากรัวเหมือนสี
 
   const trackUrl = url => { objectUrls.current.push(url); return url }
@@ -154,6 +162,7 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
   useEffect(() => () => {
     objectUrls.current.forEach(u => URL.revokeObjectURL(u))
     clearTimeout(accentTimer.current)      // ปิดโมดัลตอนหน่วงสีอยู่ = ไม่ต้องยิง render ทิ้ง
+    clearTimeout(textColorTimer.current)
     clearTimeout(sizeTimer.current)
   }, [])
 
@@ -204,13 +213,15 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
       })
       .catch(() => {})
 
-    // สี CI ขององค์กร — ต้องรู้ก่อนเปิด color picker ไม่งั้น picker ตั้งต้นเป็นสีดำ
-    fetch('/api/posts/quote-accent')
+    // สี CI — ต้องรู้ก่อนเปิด color picker ไม่งั้น picker ตั้งต้นเป็นสีดำ
+    // ส่ง postId ไปด้วยเพื่อให้ route รู้ว่าโพสต์นี้ personal หรือ org แล้วสลับลำดับ personal/guild ให้ถูก
+    fetch(`/api/posts/quote-accent?postId=${postId}`)
       .then(r => (r.ok ? r.json() : null))
       .then(d => {
         if (!alive || !d?.accent) return
         setCiAccent(d.accent)
         setAccent(prev => prev || d.accent)
+        setAccentInput(prev => prev || d.accent)
       })
       .catch(() => {})
 
@@ -275,6 +286,8 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
       if (sat && !isPlainStyle(styleKey)) form.append('saturation', sat)
       const ac = opts.accent ?? accent
       if (ac) form.append('accent', ac)
+      const tc = opts.textColor ?? textColor
+      if (tc) form.append('textColor', tc)
 
       const res = await fetch(`/api/posts/${postId}/media/quote/preview`, { method: 'POST', body: form })
       if (seq !== reqSeq.current) return                     // มีคำขอใหม่กว่าแล้ว ทิ้งผลนี้
@@ -291,7 +304,7 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
     } finally {
       if (seq === reqSeq.current) setRendering(false)
     }
-  }, [postId, quoteText, authorName, plainFont, textSize, accent, aspect, t])
+  }, [postId, quoteText, authorName, plainFont, textSize, accent, textColor, aspect, t])
 
   const style = noBg ? plainKey(plainBg) : styleKey(finish, layout)
 
@@ -333,8 +346,29 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
   //    หน่วงไว้ 350ms แล้วค่อยยิงรอบเดียว
   function changeAccent(next) {
     setAccent(next)
+    setAccentInput(next)
     clearTimeout(accentTimer.current)
     accentTimer.current = setTimeout(() => render(style, saturation, wmType, { accent: next }), 350)
+  }
+  // พิมพ์/วาง hex code เอง — ระหว่างพิมพ์แค่เก็บ text ไว้เฉยๆ ไม่ยิง render ทุกตัวอักษร
+  // commit จริงตอน blur/Enter เท่านั้น (ไม่งั้นค่ากลางๆ ระหว่างพิมพ์ เช่น "#f" ทำให้ error/เพี้ยน)
+  function commitAccentText() {
+    const hex = normalizeHex(accentInput)
+    if (hex) changeAccent(hex)
+    else setAccentInput(accent)   // พิมพ์ไม่ครบ/ผิดรูปแบบ → คืนค่าที่ใช้อยู่จริง
+  }
+  // สีตัวอักษรคำคม — debounce/commit เหตุผลเดียวกับ accent ทุกประการ ต่างแค่ reset กลับ '' (auto)
+  // แทนที่จะกลับไปสี CI (ไม่มี CI ให้กลับ — ไม่ใช่สีคุมทั้งการ์ด)
+  function changeTextColor(next) {
+    setTextColor(next)
+    setTextColorInput(next)
+    clearTimeout(textColorTimer.current)
+    textColorTimer.current = setTimeout(() => render(style, saturation, wmType, { textColor: next }), 350)
+  }
+  function commitTextColorText() {
+    const hex = normalizeHex(textColorInput)
+    if (hex) changeTextColor(hex)
+    else setTextColorInput(textColor)   // พิมพ์ไม่ครบ/ผิดรูปแบบ → คืนค่าที่ใช้อยู่จริง
   }
   function changePlainFont(next) {
     setPlainFont(next)
@@ -383,6 +417,7 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
       form.append('style', style)
       if (!noBg) form.append('saturation', saturation)
       if (accent) form.append('accent', accent)
+      if (textColor) form.append('textColor', textColor)
 
       const res = await fetch(`/api/posts/${postId}/media/quote`, { method: 'POST', body: form })
       const d = await res.json().catch(() => ({}))
@@ -618,7 +653,13 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
                       disabled={rendering} title={t('accentLabel')}
                       className="h-9 w-14 rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg p-1 cursor-pointer disabled:opacity-50"
                     />
-                    <span className="text-sm text-warm-500 dark:text-disc-muted font-mono">{accent}</span>
+                    <input
+                      type="text" value={accentInput} onChange={e => setAccentInput(e.target.value)}
+                      onBlur={commitAccentText}
+                      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur() } }}
+                      disabled={rendering} placeholder="#ff6a13" maxLength={7} spellCheck={false}
+                      className="w-24 rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg px-2 py-1.5 text-sm font-mono text-warm-700 dark:text-disc-text disabled:opacity-50"
+                    />
                     {ciAccent && accent.toLowerCase() !== ciAccent.toLowerCase() && (
                       <button
                         type="button" onClick={() => changeAccent(ciAccent)} disabled={rendering}
@@ -630,6 +671,38 @@ export default function QuoteGeneratorModal({ postId, onClose, onSaved }) {
                   </div>
                 </div>
               )}
+
+              {/* สีตัวอักษรคำคม (headline เท่านั้น — ไม่ใช่ชื่อผู้พูด) — ใช้ทั้ง 2 โหมดเหมือน accent
+                  ไม่มีสี CI ให้ตั้งต้น จึงว่างเสมอจนกว่าจะเลือกเอง (auto = ขาว/ตัดกับพื้นตามสไตล์) */}
+              <div className="flex flex-col gap-1.5">
+                <span className="text-sm font-medium text-warm-700 dark:text-disc-text">{t('textColorLabel')}</span>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color" value={textColor || '#ffffff'} onChange={e => changeTextColor(e.target.value)}
+                    disabled={rendering} title={t('textColorLabel')}
+                    className="h-9 w-14 rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg p-1 cursor-pointer disabled:opacity-50"
+                  />
+                  <input
+                    type="text" value={textColorInput} onChange={e => setTextColorInput(e.target.value)}
+                    onBlur={commitTextColorText}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur() } }}
+                    disabled={rendering} placeholder="#ffffff" maxLength={7} spellCheck={false}
+                    className="w-24 rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg px-2 py-1.5 text-sm font-mono text-warm-700 dark:text-disc-text disabled:opacity-50"
+                  />
+                  {textColor ? (
+                    <button
+                      type="button" onClick={() => changeTextColor('')} disabled={rendering}
+                      className="px-2.5 py-1 text-sm rounded-lg border border-warm-200 dark:border-disc-border text-warm-700 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover disabled:opacity-50 transition"
+                    >
+                      {t('textColorReset')}
+                    </button>
+                  ) : (
+                    // สวอตช์ข้างบนโชว์ขาวไว้ตาย ๆ ระหว่างยังไม่เลือก — ทั้งที่สไตล์บางตัว auto เป็นดำ
+                    // ใส่ป้ายกันไว้ ไม่งั้นดูเหมือนสีที่ใช้จริงตอนนี้คือขาวเสมอ
+                    <span className="text-sm text-warm-500 dark:text-disc-muted">{t('textColorAuto')}</span>
+                  )}
+                </div>
+              </div>
 
               {/* โหมดไม่มีรูป: ไม่มีการวางให้เลือก (กลางการ์ดอย่างเดียว) และไม่มีสีภาพให้ปรับ
                   เหลือแค่ "พื้นหลัง" + ลายน้ำ — จึงสลับทั้งท่อนแทนที่จะจางปุ่มทิ้งไว้ 3 แถว */}

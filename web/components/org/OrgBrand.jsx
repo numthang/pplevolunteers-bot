@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import { useTranslations } from 'next-intl'
+import { normalizeHex } from '@/lib/hexColor.js'
 
 // อัตลักษณ์ขององค์กร — ลายน้ำรายกลุ่มโซเชียล + สี CI + สไตล์การ์ดคำคม (owner only)
 // ย้ายมาจาก /bot/media/watermark + /bot/media/quote (2026-08-10) ตอนที่ลายน้ำเลิกผูกกับ guild
@@ -11,6 +12,7 @@ export default function OrgBrand({ orgId }) {
   const t = useTranslations('org')
   const [data, setData] = useState(null)     // null=loading · false=ไม่มีสิทธิ์
   const [accent, setAccent] = useState('')
+  const [accentInput, setAccentInput] = useState('')   // ข้อความในกล่องพิมพ์/วาง hex — sync กับ accent เมื่อค่าถูกต้อง
   const [template, setTemplate] = useState('')
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState('')
@@ -25,6 +27,7 @@ export default function OrgBrand({ orgId }) {
     const d = await r.json()
     setData(d)
     setAccent(d.quote?.quote_ci_accent || '')
+    setAccentInput(d.quote?.quote_ci_accent || '')
     setTemplate(d.quote?.quote_default_template || '')
   }
   useEffect(() => { load() }, [orgId])   // eslint-disable-line react-hooks/exhaustive-deps
@@ -42,6 +45,13 @@ export default function OrgBrand({ orgId }) {
       await load()
       return true
     } finally { setBusy(false) }
+  }
+
+  // พิมพ์/วาง hex code เอง — commit ตอน blur/Enter เท่านั้น ไม่ใช่ทุกตัวอักษรที่พิมพ์
+  function commitAccentText() {
+    const hex = normalizeHex(accentInput)
+    if (hex) { setAccent(hex); setAccentInput(hex) }
+    else setAccentInput(accent)   // พิมพ์ไม่ครบ/ผิดรูปแบบ → คืนค่าที่ใช้อยู่จริง
   }
 
   function pickFile(group) {
@@ -147,11 +157,16 @@ export default function OrgBrand({ orgId }) {
           <label className={labelCls} htmlFor="brand-accent">{t('brand.accentLabel')}</label>
           <div className="flex items-center gap-2">
             <input id="brand-accent" type="color" value={accent || '#ff6a13'} disabled={busy}
-              onChange={e => setAccent(e.target.value)}
+              onChange={e => { setAccent(e.target.value); setAccentInput(e.target.value) }}
               className="h-9 w-14 cursor-pointer rounded-lg border border-gray-300 dark:border-disc-border bg-white dark:bg-card-bg" />
-            <span className="text-sm text-gray-600 dark:text-disc-muted">{accent || t('brand.accentDefault')}</span>
+            <input
+              type="text" value={accentInput} disabled={busy} placeholder="#ff6a13"
+              onChange={e => setAccentInput(e.target.value)} onBlur={commitAccentText}
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur() } }}
+              maxLength={7} spellCheck={false}
+              className="w-24 rounded-lg border border-gray-300 dark:border-disc-border bg-white dark:bg-card-bg px-2 py-1.5 text-sm font-mono text-gray-600 dark:text-disc-muted disabled:opacity-60" />
             {accent && (
-              <button type="button" onClick={() => setAccent('')} disabled={busy}
+              <button type="button" onClick={() => { setAccent(''); setAccentInput('') }} disabled={busy}
                 className="text-xs text-gray-500 dark:text-disc-muted hover:underline disabled:opacity-60">
                 {t('brand.accentReset')}
               </button>

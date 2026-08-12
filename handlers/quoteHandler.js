@@ -17,7 +17,7 @@ const { fetchBuffer, applyWatermark } = require('../utils/watermarkImage');
 const { renderQuoteStyle } = require('../utils/quoteStyles');
 const { QUOTE_STYLE_OPTIONS, QUOTE_STYLE_KEYS, normalizeStyle } = require('../utils/quoteStyleKeys');
 const wm = require('../services/watermarkPaths');
-const { resolveConfig } = require('../db/configResolver');
+const { resolveConfig, resolveConfigOrgFirst } = require('../db/configResolver');
 const { getUserSetting, setUserSetting } = require('../db/userConfig');
 
 const QUOTE_STATE_KEY = 'quote_state';
@@ -34,7 +34,7 @@ async function setQuoteStatePartial(userId, patch) {
 
 const QUOTE_KEY_TEMPLATE  = 'quote_default_template'; // template = เฉพาะ quote
 const KEY_WATERMARK       = 'quote_default_watermark'; // watermark default เฉพาะ quote (basket ใช้ default_watermark แยก)
-const KEY_CI_ACCENT       = 'quote_ci_accent';         // CI accent color (#rrggbb) — user > guild > default orange
+const KEY_CI_ACCENT       = 'quote_ci_accent';         // CI accent color (#rrggbb) — org > guild > user > default orange (สั่งในดิสฯ = บริบทองค์กรเสมอ)
 
 // crop เป็น 1:1 ตายตัว — เลือกตำแหน่ง: auto (attention หาโซนคน) / แนวนอน left-center-right / แนวตั้ง top-bottom
 const CROP_POS = {
@@ -317,7 +317,7 @@ async function handleQuoteModal(interaction) {
     await interaction.editReply({ content: '🎨 กำลัง render...' });
     let ciAccent;
     try {
-      const { value: raw } = await resolveConfig(interaction.user.id, interaction.guildId, KEY_CI_ACCENT);
+      const { value: raw } = await resolveConfigOrgFirst(interaction.user.id, interaction.guildId, KEY_CI_ACCENT);
       let value = raw;
       if (typeof raw === 'string') { try { value = JSON.parse(raw); } catch { /* keep raw */ } }
       if (value && /^#[0-9a-fA-F]{6}$/.test(value)) ciAccent = value;

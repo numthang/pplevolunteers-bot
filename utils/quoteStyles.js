@@ -328,7 +328,7 @@ async function toPng(canvas) {
 // ── Core render ───────────────────────────────────────────────────────────────
 // markScale: relative size of mark (1.0 = default)
 // gradDark:  0.0–1.0 how dark the bottom gradient is
-async function renderVariant(buf, { quoteText, authorName, side = 'left', vertical = 'bottom', markScale = 1.0, gradDark = 0.95, saturation = 0.15, fontBold = 'GSans', fontLight = 'AnakotmaiLight', font = null, textSize = TEXT_SIZE_DEFAULT, accentColor, markExtraGap = 0, markAfterText = false, noMark = false, scrimMix = SCRIM_MIX, duotone = false }) {
+async function renderVariant(buf, { quoteText, authorName, side = 'left', vertical = 'bottom', markScale = 1.0, gradDark = 0.95, saturation = 0.15, fontBold = 'GSans', fontLight = 'AnakotmaiLight', font = null, textSize = TEXT_SIZE_DEFAULT, accentColor, textColor = null, markExtraGap = 0, markAfterText = false, noMark = false, scrimMix = SCRIM_MIX, duotone = false }) {
   const accent = accentColor || ORANGE;
   const isRight = side === 'right';
   const isTop   = vertical === 'top';
@@ -405,7 +405,7 @@ async function renderVariant(buf, { quoteText, authorName, side = 'left', vertic
   let ty = textBlockTop;
   for (const l of lines) {
     const drawX = isRight ? textX + (maxW - lsWidth(ctx, l, 1.0)) : textX;
-    ctx.fillStyle = WHITE; lsDraw(ctx, l, drawX, ty, 1.0);
+    ctx.fillStyle = textColor || WHITE; lsDraw(ctx, l, drawX, ty, 1.0);
     ty += lh;
   }
 
@@ -435,7 +435,7 @@ async function renderVariant(buf, { quoteText, authorName, side = 'left', vertic
 
 // ── Style 7: quote_border (mark + H-bar + V-bar เป็นชิ้นเดียว) ───────────────
 // PNG 822x714 — V-bar spans y 32%–95%, text area starts at x 24%, y 32%
-async function renderBorder(buf, { quoteText, authorName, saturation = 0.15, accentColor, duotone = false, font = null, textSize = TEXT_SIZE_DEFAULT }) {
+async function renderBorder(buf, { quoteText, authorName, saturation = 0.15, accentColor, textColor = null, duotone = false, font = null, textSize = TEXT_SIZE_DEFAULT }) {
   const accent = accentColor || ORANGE;
   const fontBold  = font && PLAIN_FONTS[font] ? PLAIN_FONTS[font].quote  : 'GSans';
   const fontLight = font && PLAIN_FONTS[font] ? PLAIN_FONTS[font].author : 'AnakotmaiLight';
@@ -491,7 +491,7 @@ async function renderBorder(buf, { quoteText, authorName, saturation = 0.15, acc
   ctx.font = `bold ${qszFit}px ${fontBold}`;
   let ty = textBlockTop;
   for (const l of lines) {
-    ctx.fillStyle = WHITE; lsDraw(ctx, l, textX, ty, 1.0);
+    ctx.fillStyle = textColor || WHITE; lsDraw(ctx, l, textX, ty, 1.0);
     ty += lh;
   }
 
@@ -518,7 +518,7 @@ const FRAME_RIGHT = {
 };
 
 // ── Style 8: quote_border_2 — กรอบตัว C ชิดขวา (แถบบน + เส้นตั้งขวา + แถบล่างสั้น)
-async function renderBorder2(buf, { quoteText, authorName, saturation = 0.15, accentColor, duotone = false, font = null, textSize = TEXT_SIZE_DEFAULT }) {
+async function renderBorder2(buf, { quoteText, authorName, saturation = 0.15, accentColor, textColor = null, duotone = false, font = null, textSize = TEXT_SIZE_DEFAULT }) {
   const accent = accentColor || ORANGE;
   const fontBold  = font && PLAIN_FONTS[font] ? PLAIN_FONTS[font].quote  : 'GSans';
   const fontLight = font && PLAIN_FONTS[font] ? PLAIN_FONTS[font].author : 'AnakotmaiLight';
@@ -600,7 +600,7 @@ async function renderBorder2(buf, { quoteText, authorName, saturation = 0.15, ac
   ctx.font = `bold ${qszFit}px ${fontBold}`;
   let ty = quoteTop;
   for (const l of lines) {
-    ctx.fillStyle = WHITE; lsDraw(ctx, l, textRight - lsWidth(ctx, l, 1.0), ty, 1.0);
+    ctx.fillStyle = textColor || WHITE; lsDraw(ctx, l, textRight - lsWidth(ctx, l, 1.0), ty, 1.0);
     ty += lh;
   }
 
@@ -641,17 +641,17 @@ function _rgbTriplet(hex) {
 
 // ⛔ เคยมีโหมด fade (รูปไล่จางเข้าหาแถบสี) — **ตัดออกแล้ว 2026-08-07** user ตัดสินว่าไม่สวย
 //    อย่าใส่กลับโดยไม่ถามก่อน
-async function renderPanel(buf, { quoteText, authorName, saturation = 1.0, accentColor, imgRatio = 0.65, panelAt = 'bottom', align = 'left', panelAlpha = 0.90, inkOverride = null, font = null, textSize = TEXT_SIZE_DEFAULT }) {
+async function renderPanel(buf, { quoteText, authorName, saturation = 1.0, accentColor, textColor = null, imgRatio = 0.65, panelAt = 'bottom', align = 'left', panelAlpha = 0.90, font = null, textSize = TEXT_SIZE_DEFAULT }) {
   const accent = accentColor || ORANGE;
   const fontBold  = font && PLAIN_FONTS[font] ? PLAIN_FONTS[font].quote  : 'Anakotmai';
   const fontLight = font && PLAIN_FONTS[font] ? PLAIN_FONTS[font].author : 'AnakotmaiLight';
   const sizeScale = sizeScaleOf(textSize);
   const pal = panelPalette(accent);
-  // inkOverride = บังคับสีตัวอักษรแทนที่จะให้ contrastText() ตัดสิน — ไว้เทียบให้คนดูเท่านั้น
+  // textColor = ผู้ใช้เลือกสีคำคมเอง — คุมแค่ ink (headline) ชื่อผู้พูด (sub) ยัง auto
+  // ตาม contrastText() เสมอ ไม่ตามสีที่เลือก (scope เคาะ 2026-08-13: เฉพาะคำคม ไม่ใช่ byline)
   const panel = pal.panel;
-  const ink   = inkOverride || pal.ink;
-  const sub   = inkOverride
-    ? `rgba(${inkOverride === WHITE ? '255,255,255' : '0,0,0'},0.72)` : pal.sub;
+  const ink   = textColor || pal.ink;
+  const sub   = pal.sub;
 
   const meta = await sharp(buf).metadata();
   const W = meta.width, H = meta.height;
@@ -813,12 +813,15 @@ async function drawQuoteBlock(ctx, { x, y, w, h, quoteText, authorName, ink, sub
 //    (คอลัมน์แคบทำให้ตัวหนังสือเล็กกว่าใบอื่นชัดเจน) อย่าใส่กลับโดยไม่ถามก่อน
 
 /** matte — พื้นสีล้วน รูปลอยอยู่ข้างบนแบบมีขอบ คำคมอยู่ใต้รูป */
-async function renderMatte(buf, { quoteText, authorName, saturation = 1.0, accentColor, inset = 0.06, font = null, textSize = TEXT_SIZE_DEFAULT }) {
+async function renderMatte(buf, { quoteText, authorName, saturation = 1.0, accentColor, textColor = null, inset = 0.06, font = null, textSize = TEXT_SIZE_DEFAULT }) {
   const base = accentColor || ORANGE;
   const fontBold  = font && PLAIN_FONTS[font] ? PLAIN_FONTS[font].quote  : 'Anakotmai';
   const fontLight = font && PLAIN_FONTS[font] ? PLAIN_FONTS[font].author : 'AnakotmaiLight';
   const sizeScale = sizeScaleOf(textSize);
-  const { ink, sub } = panelPalette(base);
+  const pal = panelPalette(base);
+  // textColor คุมแค่ ink (headline) — sub (ชื่อผู้พูด) auto เหมือน renderPanel
+  const ink = textColor || pal.ink;
+  const sub = pal.sub;
 
   const meta = await sharp(buf).metadata();
   const W = meta.width, H = meta.height;
@@ -857,7 +860,7 @@ async function renderMatte(buf, { quoteText, authorName, saturation = 1.0, accen
 //
 // แบ่ง 2 ระดับด้วย **บรรทัดว่าง**: ก่อนบรรทัดว่าง = เกริ่น · หลังบรรทัดว่าง = ประโยคเด็ด
 // ไม่มีบรรทัดว่าง = ทั้งก้อนเป็นประโยคเด็ด · ชื่อผู้พูดขึ้นบรรทัดใหม่ได้ (บรรทัดแรก = ชื่อ ตัวหนา)
-async function renderSide(buf, { quoteText, authorName, saturation = 1.0, accentColor, duotone = false, align = 'right', font = null, textSize = TEXT_SIZE_DEFAULT }) {
+async function renderSide(buf, { quoteText, authorName, saturation = 1.0, accentColor, textColor = null, duotone = false, align = 'right', font = null, textSize = TEXT_SIZE_DEFAULT }) {
   const onRight = align !== 'left';
   const accent = accentColor || ORANGE;
   // 2 ระดับตัวพิมพ์: lead/ชื่อ = ตัวหนา (fontBold) · intro/ตำแหน่ง = ตัวบาง (fontLight)
@@ -939,15 +942,16 @@ async function renderSide(buf, { quoteText, authorName, saturation = 1.0, accent
   ty += markH + Math.round(leadSz0 * 0.5);
 
   ctx.textBaseline = 'top';
+  // intro/lead เป็นเนื้อคำคมเดียวกันแค่แบ่ง 2 ระดับตัวพิมพ์ — textColor คุมทั้งคู่
   if (introFit.lines.length) {
     ctx.font = `${introFit.fontSize}px ${fontLight}`;
-    ctx.fillStyle = 'rgba(255,255,255,0.90)';
+    ctx.fillStyle = textColor || 'rgba(255,255,255,0.90)';
     for (const l of introFit.lines) { lsDraw(ctx, l, colX, ty, 0.6); ty += introLh; }
     if (leadFit.lines.length) ty += Math.round(leadFit.fontSize * 0.75);
   }
   if (leadFit.lines.length) {
     ctx.font = `bold ${leadFit.fontSize}px ${fontBold}`;
-    ctx.fillStyle = WHITE;
+    ctx.fillStyle = textColor || WHITE;
     for (const l of leadFit.lines) { lsDraw(ctx, l, colX, ty, 0.8); ty += leadLh; }
   }
 
@@ -985,7 +989,7 @@ const ember = (side, vertical, extra = {}) => (buf, opts) =>
 
 // ── quote-2-center: ข้อความกลางภาพ, BG หรี่ + ดำคลุม 75%, Google Sans (มีหัว) ──
 // supersample 2x แล้วย่อ = ขอบคม. ใช้ fitFont/lsDraw ตัวเดียวกับ quote-1
-async function renderCenter(buf, { quoteText, authorName, saturation = 1.0, accentColor, duotone = false, font = null, textSize = TEXT_SIZE_DEFAULT }) {
+async function renderCenter(buf, { quoteText, authorName, saturation = 1.0, accentColor, textColor = null, duotone = false, font = null, textSize = TEXT_SIZE_DEFAULT }) {
   const fontBold  = font && PLAIN_FONTS[font] ? PLAIN_FONTS[font].quote  : 'GSans';
   const fontLight = font && PLAIN_FONTS[font] ? PLAIN_FONTS[font].author : 'AnakotmaiLight';
   const sizeScale = sizeScaleOf(textSize);
@@ -1025,7 +1029,7 @@ async function renderCenter(buf, { quoteText, authorName, saturation = 1.0, acce
   ctx.font = `bold ${qsz}px ${fontBold}`;
   for (const l of lines) {
     const w = lsWidth(ctx, l, 1.0);
-    ctx.fillStyle = WHITE;
+    ctx.fillStyle = textColor || WHITE;
     lsDraw(ctx, l, (W - w) / 2, ty, 1.0);
     ty += lh;
   }
@@ -1074,7 +1078,7 @@ const PLAIN_SIZE_BASE = 0.092;
 const pickRandom = arr => (arr.length ? arr[Math.floor(Math.random() * arr.length)] : null);
 
 async function renderPlain({
-  quoteText, authorName = '', accentColor, width = 1080, height = 1350, bg = 'solid',
+  quoteText, authorName = '', accentColor, textColor = null, width = 1080, height = 1350, bg = 'solid',
   watermarkPath = null, font = 'anakotmai', textSize = TEXT_SIZE_DEFAULT,
 }) {
   const fonts = PLAIN_FONTS[font] || PLAIN_FONTS.anakotmai;
@@ -1082,7 +1086,11 @@ async function renderPlain({
   const maxLines = scaledMaxLines(6, textSize);
   const SS = 2;                               // supersample แล้วย่อ = ขอบตัวอักษรคม (เหมือน renderCenter)
   const base = accentColor || ORANGE;
-  const { ink, sub } = panelPalette(base);
+  const pal = panelPalette(base);
+  // textColor คุมแค่ ink (headline + ไอคอนเครื่องหมายคำพูดที่ tint ตาม ink อยู่แล้ว)
+  // sub (ชื่อผู้พูด) auto เหมือนสไตล์ตระกูล panel อื่นๆ
+  const ink = textColor || pal.ink;
+  const sub = pal.sub;
   const W = Math.round(width), H = Math.round(height);
 
   const cv  = createCanvas(W * SS, H * SS);
@@ -1093,9 +1101,13 @@ async function renderPlain({
     // ไล่ลง**เข้ม**เสมอ (ไม่ไล่ไปหาขาว — พื้นสีอ่อนไล่ไปขาวแล้วการ์ดดูซีดไม่มีสี)
     // ระยะต่างกันตามสีตัวอักษร: ink ขาวเข้มได้เต็มที่ · ink ดำเข้มได้แค่ 0.16 ก่อนคอนทราสต์หลุด AA
     // (#ff6a13 ที่ 0.16 → 5.3:1 · ที่ 0.25 เหลือ 4.3 = ต่ำกว่า 4.5 แล้ว — อย่าดันขึ้น)
+    // ⚠️ เทียบด้วย luminance ไม่ใช่ `ink === WHITE` ตรงๆ — ตั้งแต่ ink รับ textColor ที่ผู้ใช้
+    // เลือกเองได้ (ไม่ใช่แค่ผลลัพธ์ WHITE/BLACK จาก contrastText() เหมือนเดิม) เทียบ string เป๊ะ
+    // จะพลาดสีอ่อนที่ไม่ใช่ #ffffff เป๊ะๆ (เช่นเหลืองอ่อน) ตกไปกิ่ง "เข้ม" ทั้งที่ควรเป็นกิ่ง "อ่อน"
+    const inkIsLight = _lum(ink) > 0.5;
     const grad = ctx.createLinearGradient(0, 0, W, H);
-    grad.addColorStop(0, _mix(base, WHITE, ink === WHITE ? 0.00 : 0.06));
-    grad.addColorStop(1, _mix(base, BLACK, ink === WHITE ? 0.42 : 0.16));
+    grad.addColorStop(0, _mix(base, WHITE, inkIsLight ? 0.00 : 0.06));
+    grad.addColorStop(1, _mix(base, BLACK, inkIsLight ? 0.42 : 0.16));
     ctx.fillStyle = grad;
   } else {
     ctx.fillStyle = base;
