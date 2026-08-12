@@ -167,38 +167,48 @@ function normalizeTitle(s) {
         .slice(0, 60);                        // เอาแค่ท่อนหัวข้อ ส่วนท้ายเป็นรายละเอียดที่ต่างกันเอง
 }
 
-function trigrams(s) {
+// ⛔ **เคยใช้ trigram Jaccard แล้วไม่พอ — อย่าถอยกลับไป** (user เจอของจริง 2026-08-12:
+//    "เปิดแล้วมีแต่ข่าวขยะ" เพราะข่าวเดียวกันโผล่ซ้ำ 5 บรรทัด)
+//    วัดจากกองจริง 37 ข่าว: ต่อให้ลดเกณฑ์ trigram ลงสุดๆ ถึง 0.12 ข่าว "เนวิน-บุญยิ่ง"
+//    ก็ยังแตกเป็น 6 กลุ่ม เพราะแต่ละสำนักพาดหัวคนละสำนวนสิ้นเชิง
+//    ("สะพัด เนวิน พบ บุญยิ่ง" vs "อนุทิน งง งูเขียว เข้า ภท.") ตัวอักษรแทบไม่ซ้ำกันเลย
+//
+// วิธีที่ใช้แทน: จับกลุ่มด้วย **n-gram ที่หายากในกองนั้น** — ชื่อเฉพาะอย่าง "เนวิน"/"บุญยิ่ง"/"งูเขียว"
+// โผล่ไม่กี่ข่าว (หายาก = มีความหมาย) ส่วน "ราชบุรี" โผล่แทบทุกข่าว (ไม่มีความหมาย ตัดทิ้ง)
+// ผลบนกองเดียวกัน: 26 ข่าว → 7 กลุ่ม (trigram ได้ 21 กลุ่ม) และยุบ "เนวิน" 8 ชิ้นเป็นก้อนเดียวได้
+const GRAM_LEN = 5;        // grid search แล้ว 5 ดีกว่า 6 (6 ยุบไม่ค่อยลง)
+const MIN_SHARED = 4;      // แชร์ n-gram หายากกี่ตัวถึงนับเป็นข่าวเดียวกัน · 3 = ยุบผิด (เอาข่าวจับคนไปรวมกับไฟไหม้)
+const RARE_RATIO = 0.35;   // n-gram ที่โผล่เกิน 35% ของกอง = คำพื้นๆ ของกองนั้น ตัดทิ้ง
+
+function grams(s) {
+    const c = normalizeTitle(s);
     const out = new Set();
-    for (let i = 0; i + 3 <= s.length; i++) out.add(s.slice(i, i + 3));
+    for (let i = 0; i + GRAM_LEN <= c.length; i++) out.add(c.slice(i, i + GRAM_LEN));
     return out;
 }
 
-/** Jaccard บน union — ห้ามใช้ min() เป็นตัวหาร ไม่งั้นหัวข้อสั้นที่อยู่ในหัวข้อยาวจะได้ 1.0 ทันที */
-function similar(a, b) {
-    const A = trigrams(normalizeTitle(a)), B = trigrams(normalizeTitle(b));
-    if (!A.size || !B.size) return 0;
-    let hit = 0;
-    for (const g of A) if (B.has(g)) hit++;
-    return hit / (A.size + B.size - hit);
-}
-
-// วัดจากข้อมูลจริง 2026-08-12:
-//   ควรยุบ → 0.173 (ไฟไหม้โรงงาน 2 สำนวน) · 0.181 (ศพบนราง) · 0.365 (GI) · 0.60 (พาดหัวใกล้กันมาก)
-//   ห้ามยุบ → 0.00–0.12 (คนละข่าวจากเพจเดียวกัน) · 0.00–0.045 (คนละเรื่องคนละสำนัก)
-// ⚠️ จงใจตั้งสูงไว้ที่ 0.35 ทั้งที่ทำให้ยุบไม่ครบ — ลดเป็น 0.15 จะกวาดได้หมดแต่เหลือระยะห่างจากเคส
-//    "ห้ามยุบ" แค่ 0.03 = เปราะเกินไป · ยุบผิด = ข่าวหายจาก digest แบบเงียบๆ (แย่)
-//    ยุบไม่ครบ = เห็นข่าวซ้ำ 2 บรรทัด (มองออกด้วยตา ไม่เสียหาย)
-const SIMILAR_THRESHOLD = 0.35;
-
-/** [{...item, dupes: n}] — เก็บชิ้นแรก (ใหม่สุด) เป็นตัวแทน แล้วนับที่เหลือเป็น dupes */
+/**
+ * [{...item, dupes: n}] — เก็บชิ้นแรก (ใหม่สุด) เป็นตัวแทน แล้วนับที่เหลือเป็น dupes
+ * "หายาก" คิดจากกองที่ส่งเข้ามารอบนั้นๆ ไม่ใช่ค่าคงที่ — คำที่พบบ่อยในกองย่อมไม่ช่วยแยกข่าว
+ */
 function cluster(items) {
+    const sets = items.map(i => grams(i.title));
+    const df = new Map();
+    for (const s of sets) for (const g of s) df.set(g, (df.get(g) ?? 0) + 1);
+    const rareMax = Math.ceil(items.length * RARE_RATIO);
+
     const groups = [];
-    for (const it of items) {
-        const hit = groups.find(g => similar(g.title, it.title) >= SIMILAR_THRESHOLD);
+    items.forEach((it, idx) => {
+        const mine = [...sets[idx]].filter(g => df.get(g) <= rareMax);
+        const hit = groups.find(g => {
+            let n = 0;
+            for (const x of mine) if (g.keys.has(x) && ++n >= MIN_SHARED) return true;
+            return false;
+        });
         if (hit) hit.dupes++;
-        else groups.push({ ...it, dupes: 0 });
-    }
-    return groups;
+        else groups.push({ ...it, dupes: 0, keys: new Set(mine) });
+    });
+    return groups.map(({ keys, ...rest }) => rest);
 }
 
 // ── ประกอบข้อความ ───────────────────────────────────────────────────────────
@@ -403,5 +413,5 @@ function stopNewsWatch() {
 
 module.exports = {
     startNewsWatch, stopNewsWatch, runOnce, runForGuild, runFeed, getFeeds,
-    currentSlot, bkkNow, cluster, similar, parseItems, buildMessages, deliver, resolveLink,
+    currentSlot, bkkNow, cluster, parseItems, buildMessages, deliver, resolveLink,
 };
