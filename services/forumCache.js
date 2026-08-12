@@ -21,4 +21,8 @@ function setSearchChannel(guildId, channelId) {
   searchChannelCache.set(guildId, channelId);
 }
 
-module.exports = { forumChannelCache, dashboardThreadCache, searchChannelCache, addForumChannel, addDashboardThread, setSearchChannel };
+function clearSearchChannel(guildId) {
+  searchChannelCache.delete(guildId);
+}
+
+module.exports = { forumChannelCache, dashboardThreadCache, searchChannelCache, addForumChannel, addDashboardThread, setSearchChannel, clearSearchChannel };

@@ -718,9 +718,6 @@ ON CONFLICT (org_id, key) DO NOTHING;
 -- NULL = สุ่ม (พฤติกรรมเดิม) — งานที่เข้าคิวไว้ก่อน deploy จึงไม่เปลี่ยนพฤติกรรม
 ALTER TABLE post_social_history ADD COLUMN IF NOT EXISTS wm_pos VARCHAR(20);
 
--- production ทำถึงตรงนี้ 
-
-
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 2026-08-12 · newsWatch — จำว่าข่าวชิ้นไหนส่งเข้าห้องไปแล้ว
@@ -737,3 +734,6 @@ CREATE TABLE IF NOT EXISTS news_watch_seen (
   PRIMARY KEY (guild_id, channel_id, item_key)
 );
 CREATE INDEX IF NOT EXISTS idx_news_watch_seen_at ON news_watch_seen (seen_at);
+
+-- production ทำถึงตรงนี้ 
+

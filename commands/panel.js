@@ -9,7 +9,7 @@ const {
   ChannelType,
   PermissionFlagsBits,
 } = require('discord.js');
-const { getSetting, setSetting } = require('../db/settings');
+const { getSetting, setSetting, deleteSetting } = require('../db/settings');
 const { parseSetting } = require('../utils/parseSetting');
 const { getT } = require('../services/i18n');
 const { DEFAULT_KEYWORDS } = require('../config/newsWatch');
@@ -117,9 +117,10 @@ module.exports = {
       sub.setName('search')
         .setDescription('ตั้งค่า channel สำหรับค้นหากระทู้ + thread ทุกช่อง (Moderator)')
         .addChannelOption(opt =>
-          opt.setName('channel').setDescription('channel ที่ใช้เป็นห้องค้นหา').setRequired(true)
+          opt.setName('channel').setDescription('channel ที่ใช้เป็นห้องค้นหา').setRequired(false)
             .addChannelTypes(ChannelType.GuildText)
         )
+        .addBooleanOption(o => o.setName('stop').setDescription('ปิด search channel').setRequired(false))
     )
 
     // --- case (เรื่องร้องเรียน) ---
@@ -585,12 +586,21 @@ await refreshDashboard(thread, interaction.guildId, ids, existing.dashboard_msg_
     // ================================================================
     if (sub === 'search') {
       await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+      if (interaction.options.getBoolean('stop')) {
+        await deleteSetting(interaction.guildId, 'search_channel');
+        const { clearSearchChannel } = require('../services/forumCache');
+        clearSearchChannel(interaction.guildId);
+        return interaction.editReply({ content: '✅ ปิด search channel แล้วครับ' });
+      }
       const channelOpt = interaction.options.getChannel('channel');
+      if (!channelOpt) {
+        return interaction.editReply({ content: '❌ ระบุ channel ด้วยครับ (หรือใช้ stop:true เพื่อปิด)' });
+      }
       await setSetting(interaction.guildId, 'search_channel', channelOpt.id);
       const { setSearchChannel } = require('../services/forumCache');
       setSearchChannel(interaction.guildId, channelOpt.id);
       return interaction.editReply({
-        content: `✅ ตั้งค่า search channel เป็น <#${channelOpt.id}> แล้วครับ\nพิมพ์ keyword ใน channel นั้นได้เลย — ค้นข้ามทุก forum + thread`,
+        content: `✅ ตั้งค่า search channel เป็น <#${channelOpt.id}> แล้วครับ\nเมนชันบอทพร้อม keyword ใน channel นั้นได้เลย — ค้นข้ามทุก forum + thread`,
       });
     }
   },

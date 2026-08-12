@@ -208,6 +208,10 @@ export default function PostsHome({ orgName = 'องค์กร' }) {
   const [loading, setLoading] = useState(true)
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError] = useState('')
+  const [aiNotice, setAiNotice] = useState('')
+  // single = โพสต์เดียว (default) · series = user ระบุจำนวนตอนเอง ให้ AI ร่างเต็มทุกตอนทันที (เคาะ 2026-08-12)
+  const [composeMode, setComposeMode] = useState('single')
+  const [episodeCount, setEpisodeCount] = useState(3)
   const [confirmPost, setConfirmPost] = useState(null)   // โพสต์ที่กำลังถามยืนยันลบ
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState('')
@@ -344,22 +348,35 @@ export default function PostsHome({ orgName = 'องค์กร' }) {
     } catch { /* กู้คืนไม่ได้ก็ยังเห็นการ์ดเดิมอยู่ ไม่ต้องเด้ง error */ }
   }
 
-  // โยนของดิบ → AI เรียบเรียงเป็น "โพสต์เดียว" แล้วพาเข้าหน้าแก้ไขเลย
-  // (ของเดิมซอยเป็นชุดโพสต์หลายอันแล้วทิ้งไว้ในฟีด — user เคาะ 2026-08-09 ว่าไม่ใช่)
+  // โยนของดิบ → AI เรียบเรียงเป็น "โพสต์เดียว" (default) แล้วพาเข้าหน้าแก้ไขเลย
+  // composeMode === 'series' → user ระบุจำนวนตอนเอง, AI ร่างเต็มทุกตอนทันที, กลับมาที่หน้านี้กรองตามหมวดที่ได้ (เคาะ 2026-08-12)
   async function handleAiCompose() {
     if (!idea.trim()) return
     setAiLoading(true)
     setAiError('')
+    setAiNotice('')
+    const isSeries = composeMode === 'series'
     try {
       const res = await fetch('/api/posts/ai/compose', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idea, visibility: createVisibility, category: activeCategory }),
+        body: JSON.stringify({
+          idea,
+          visibility: createVisibility,
+          category: activeCategory,
+          ...(isSeries ? { episodeCount } : {}),
+        }),
       })
       const json = await res.json().catch(() => ({}))
       if (res.ok && json.success) {
         setIdea('')
-        router.push(`/posts/${json.data.post.id}`)
+        if (isSeries) {
+          // หลายตอน ไม่มีหน้าเดียวให้พาไป — กรองฟีดตามหมวดที่ AI ตั้งให้ เพื่อเห็นตอนที่เพิ่งสร้างทั้งหมด
+          setAiNotice(`สร้างซีรีส์ "${json.data.seriesName}" แล้ว ${json.data.posts.length} ตอน ในหมวด "${json.data.category || 'ไม่ระบุ'}"`)
+          setCategory(json.data.category || '__none__')
+        } else {
+          router.push(`/posts/${json.data.post.id}`)
+        }
       } else {
         // ล้มเหลวห้ามล้างข้อความในกล่อง
         setAiError(json.error || 'ให้ AI เรียบเรียงไม่สำเร็จ')
@@ -381,7 +398,7 @@ export default function PostsHome({ orgName = 'องค์กร' }) {
       {/* กล่องโยนไอเดีย — ซ่อนตอนกำลังดู "โพสต์แล้ว"/"ในกรุ" เพราะเป็นมุมมองย้อนดู ไม่ใช่ที่สร้างของใหม่ */}
       {postState === 'pending' && (
         <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-4">
-          {/* ปลายทางของของใหม่ — แยกจากตัวกรองด้านล่าง เพราะ "ที่กำลังดู" ≠ "ที่จะไปลง" */}
+          {/* ปลายทาง + จำนวนตอน อยู่แถวเดียวกัน — แยกกลุ่มด้วย "·" ไม่ใช่คนละแถว (เคาะ 2026-08-12 ลดความรก) */}
           <div className="flex flex-wrap items-center gap-2 mt-3 text-sm">
             <div className="inline-flex rounded-lg border border-warm-200 dark:border-disc-border overflow-hidden">
               {[['personal', 'ส่วนตัว'], ['org', orgName]].map(([v, label], i) => (
@@ -400,22 +417,59 @@ export default function PostsHome({ orgName = 'องค์กร' }) {
                 </button>
               ))}
             </div>
-            <span className="text-warm-500 dark:text-disc-muted">
-              {activeCategory
-                ? <>· หมวด <span className="font-medium text-warm-700 dark:text-disc-text">{activeCategory}</span></>
-                : '· ยังไม่ได้เลือกหมวด (AI จะตั้งให้)'}
-            </span>
+
+            <span className="text-warm-300 dark:text-disc-border">·</span>
+
+            {/* single = โพสต์เดียว (default) · series = user ระบุจำนวนตอนเอง แล้ว AI ร่างเต็มทุกตอนทันที */}
+            <div className="inline-flex rounded-lg border border-warm-200 dark:border-disc-border overflow-hidden">
+              {[['single', '1 ตอน'], ['series', 'Series']].map(([v, label], i) => (
+                <button
+                  key={v}
+                  onClick={() => setComposeMode(v)}
+                  className={`px-3 py-1 text-sm font-medium transition-colors ${
+                    i > 0 ? 'border-l border-warm-200 dark:border-disc-border' : ''
+                  } ${
+                    composeMode === v
+                      ? 'bg-teal text-white'
+                      : 'bg-card-bg text-warm-700 dark:text-disc-muted hover:bg-warm-50 dark:hover:bg-disc-hover'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {composeMode === 'series' && (
+              <input
+                type="number"
+                min={2}
+                max={12}
+                value={episodeCount}
+                onChange={(e) => setEpisodeCount(Math.min(12, Math.max(2, Number(e.target.value) || 2)))}
+                className="w-14 px-2 py-1 text-sm rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text focus:outline-none focus:ring-2 focus:ring-teal"
+              />
+            )}
+
+            {activeCategory && (
+              <span className="text-warm-500 dark:text-disc-muted">
+                · หมวด <span className="font-medium text-warm-700 dark:text-disc-text">{activeCategory}</span>
+              </span>
+            )}
           </div>
           <br></br>
           <textarea
             value={idea}
             onChange={(e) => setIdea(e.target.value)}
-            placeholder="พิมพ์รัวๆ ไม่ต้องเรียบเรียง หรือวางบทความยาวที่เขียนไว้ — AI จะสรุปให้เป็นโพสต์เดียว"
+            placeholder={
+              composeMode === 'series'
+                ? `พิมพ์รัวๆ หรือวางบทความยาว — AI จะแบ่งให้เป็น ${episodeCount} ตอน ต่อกันเป็นซีรีย์`
+                : 'พิมพ์รัวๆ ไม่ต้องเรียบเรียง หรือวางบทความยาวที่เขียนไว้ — AI จะสรุปให้เป็นโพสต์เดียว'
+            }
             rows={4}
             className="w-full px-3 py-2 text-base rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-teal resize-none"
           />
 
           {aiError && <p className="text-sm text-red-500 dark:text-red-400 mt-2">{aiError}</p>}
+          {aiNotice && <p className="text-sm text-teal mt-2">{aiNotice}</p>}
           <div className="flex flex-wrap items-center gap-4 mt-3">
             <button
               onClick={handleAiCompose}
@@ -423,7 +477,9 @@ export default function PostsHome({ orgName = 'องค์กร' }) {
               className="flex items-center gap-1.5 bg-teal hover:opacity-90 text-white rounded-lg text-base font-medium px-4 py-2 disabled:opacity-50"
             >
               <Sparkles size={16} />
-              {aiLoading ? 'กำลังเรียบเรียง...' : 'AI เรียบเรียงเป็นโพสต์ →'}
+              {aiLoading
+                ? 'กำลังเรียบเรียง...'
+                : composeMode === 'series' ? `AI แบ่งเป็น ${episodeCount} ตอน →` : 'AI เรียบเรียงเป็นโพสต์ →'}
             </button>
             {/* ปุ่มรอง — ไม่ใช้ข้อความในกล่อง จึงลดระดับให้ไม่อ่านเหมือนสองทางเลือกที่เท่ากัน */}
             <button

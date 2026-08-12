@@ -35,6 +35,7 @@ const { handleQuoteModal, handleQuoteStyleSelect, handleQuoteColorSelect, handle
 const { handleBasketAiStart, handleBasketAiModeSelect, handleBasketAiCustomModal, handleBasketAiReplace, handleBasketAiReplaceModal, handleBasketAiAppend, handleBasketAiAppendModal } = require('./handlers/basketAiHandler');
 const { handleAiThreadModeSelect, handleAiThreadCustomModal, handleAiThreadAddCaption, handleAiThreadPublic } = require('./handlers/aiThreadHandler');
 const { handleCaseImportModal, handleThreadCreate: handleCaseThreadCreate } = require('./handlers/caseImportHandler');
+const { handlePostImportModal } = require('./handlers/postImportHandler');
 const {
   handleBasketView, handleBasketClear,
   handleBasketPost, handleBasketRetry, handleBasketSelect, handleBasketModal,
@@ -172,6 +173,7 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.customId.startsWith('rate_submit:'))   return handleRateModalSubmit(interaction);
     if (interaction.customId.startsWith('report_submit:')) return handleReportSubmit(interaction);
     if (interaction.customId.startsWith('case_import_modal:')) return handleCaseImportModal(interaction);
+    if (interaction.customId.startsWith('post_import_modal:')) return handlePostImportModal(interaction);
     if (interaction.customId === 'wm_custom_text')          return handleWatermarkModal(interaction);
     if (interaction.customId.startsWith('quote_modal:'))    return handleQuoteModal(interaction);
     if (interaction.customId.startsWith('basket_schedule_modal'))      return handleBasketModal(interaction);
@@ -425,17 +427,20 @@ client.on('messageCreate', async (message) => {
   // slip OCR — อ่านสลิปใน finance thread
   handleSlipMessage(message).catch(err => console.error('[financeOCR]', err));
 
-  // search channel — universal search ข้ามทุก forum/thread
-  if (!message.author.bot && searchChannelCache.get(message.guildId) === message.channelId && message.content?.trim()) {
-    const keyword = message.content.trim();
-    await message.delete().catch(() => {});
-    const results    = await hybridSearch(keyword, { guildId: message.guildId });
-    const totalPages = Math.max(1, Math.ceil(results.length / 10));
-    const embed      = buildSearchResultEmbed(results.slice(0, 10), { keyword, page: 1, totalPages, sort: 'relevant' });
-    const components = buildSearchComponents({ sort: 'relevant', page: 1, totalPages });
-    await message.channel.send({ embeds: [embed], components }).catch(err =>
-      console.error('[searchChannel] send:', err)
-    );
+  // search channel — universal search ข้ามทุก forum/thread (ต้องเมนชันบอท)
+  if (!message.author.bot && searchChannelCache.get(message.guildId) === message.channelId
+      && !message.mentions.everyone && message.mentions.has(client.user)) {
+    const keyword = message.content.replace(/<@!?\d+>/g, '').trim();
+    if (keyword) {
+      await message.delete().catch(() => {});
+      const results    = await hybridSearch(keyword, { guildId: message.guildId });
+      const totalPages = Math.max(1, Math.ceil(results.length / 10));
+      const embed      = buildSearchResultEmbed(results.slice(0, 10), { keyword, page: 1, totalPages, sort: 'relevant' });
+      const components = buildSearchComponents({ sort: 'relevant', page: 1, totalPages });
+      await message.channel.send({ embeds: [embed], components }).catch(err =>
+        console.error('[searchChannel] send:', err)
+      );
+    }
     return;
   }
 

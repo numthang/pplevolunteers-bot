@@ -800,15 +800,15 @@ user เปรยว่า "น่าจะมี social listening เอาไ�
 
 ---
 
-## 🔍 `/panel search` — universal search channel ยังไม่ครบ (จด 2026-08-12 · หยุดพัฒนาไปกลางคัน)
+## 🔍 `/panel search` — universal search channel — ✅ แก้เสร็จ local 2026-08-12
 
-> ตั้งใจทำเป็น "ห้องรู้รอบ" ค้นข้าม forum/thread ทั้งเซิร์ฟเวอร์ เพราะ forum search ปกติต้องเข้า topic ทีละอันค้นไม่ได้ — แต่หยุดพัฒนาไปเฉยๆ ยังไม่ครบ
+> "ห้องรู้รอบ" ค้นข้าม forum/thread ทั้งเซิร์ฟเวอร์ เพราะ forum search ปกติต้องเข้า topic ทีละอันค้นไม่ได้
 
-**ไฟล์:** `commands/panel.js` (sub `search`) · `index.js:425-436` (handler) · `services/forumCache.js` (`searchChannelCache`) · เก็บค่าที่ `dc_guild_config` key `search_channel`
+**ไฟล์:** `commands/panel.js` (sub `search`) · `index.js` (handler) · `services/forumCache.js` (`searchChannelCache`) · เก็บค่าที่ `dc_guild_config` key `search_channel`
 
-**ปัญหาที่เจอ:**
-- [ ] **ไม่มีทางปิด** — sub `search` set อย่างเดียว (`channel` required) ไม่มี `off`/`remove` ทั้งที่ `deleteSetting()` มีอยู่แล้วใน `db/settings.js`
-- [ ] **ตอบทุกข้อความไม่กรอง** — `index.js:425` เช็คแค่ `message.content?.trim()` ไม่ว่าง ก็ลบ+ค้น+ตอบเสมอ ไม่แยกว่าเป็นคำค้นจริงหรือแค่คุยเล่น → รกห้อง
+**แก้แล้ว:**
+- [x] **เพิ่ม `stop:true`** — `/panel search stop:true` ลบ setting + เคลียร์ cache (`clearSearchChannel()` ใหม่ใน `forumCache.js`), `channel` option เปลี่ยนเป็น optional
+- [x] **ต้องเมนชันบอทถึงจะทำงาน** — เดิมพิมพ์อะไรในห้องก็ลบ+ค้น+ตอบหมด (รก) เปลี่ยนเป็นเช็ค `message.mentions.has(client.user)` เหมือน `ai_mention` แล้ว strip mention ออกเป็น keyword — พิมพ์เฉยๆ ไม่โดนแตะ, เมนชันไม่มี keyword ก็ไม่ทำอะไร
 
 ---
 
