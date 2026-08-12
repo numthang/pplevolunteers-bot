@@ -120,9 +120,13 @@ Manage Meta (FB/IG/Threads) + X (Twitter) accounts ต่อ guild สำหร�
   - `visibility`: `public` (guild-wide) / `private` (เฉพาะ user เจ้าของ)
   - `group_name`: ชื่อกลุ่มสำหรับ basket Row 1 (เช่น "ปชช.ราชบุรี", "Unnop ส่วนตัว")
   - `news_channel_id`: ห้องข่าวสารของกลุ่ม (2026-08-12) — ค่าระดับกลุ่มที่เก็บซ้ำทุกแถวเหมือน `guild_id`/`visibility`
+  - X stores creds เป็น JSON `{access_token, access_token_secret}` ใน `access_token` column (consumer key/secret มาจาก guild_config)
+  - IG/Threads ใช้ `user_token` (Meta ปิด Page Token สำหรับ IG)
 
 **ห้องข่าวสาร (platform `news` ในกล่องเผยแพร่ + ตะกร้าดิสฯ) — ผูกรายกลุ่ม ไม่ใช่ราย guild (2026-08-12):**
-- **1 กลุ่ม = 1 เซิร์ฟ = 1 ห้อง** · ตั้งที่ `/org/settings/social` การ์ด "การตั้งค่ารายกลุ่ม" (dropdown ดึงชื่อห้องจาก Discord)
+- **1 กลุ่ม = 1 เซิร์ฟ = 1 ห้อง** · ตั้งที่ `/org/settings/social` → ปุ่ม **`+ Discord News`** (แถวเดียวกับปุ่ม Connect ทั้งโซนองค์กรและโซนส่วนตัว) → modal เลือกกลุ่ม + ห้อง (มีกล่องค้นหา · ห้องที่ชื่อมี ข่าว/ประชาสัมพันธ์/news ขึ้นก่อน เพราะเซิร์ฟใหญ่มี 70+ ห้อง) · ใต้แถวปุ่มมีป้ายบอก กลุ่ม→ห้อง + ปุ่มถอด
+- **ผูกห้อง = ผูกเซิร์ฟให้กลุ่มไปด้วย** (ห้องอยู่เซิร์ฟไหน กลุ่มก็สังกัดเซิร์ฟนั้น) → ไม่มีช่องเลือกเซิร์ฟแยก และปิดบั๊ก "ตะกร้าดิสฯ หากลุ่มไม่เจอเพราะ guild_id ว่าง" ในทางเดียวกัน
+- **ไม่มีคำสั่งบอทสำหรับตั้งห้องข่าวสาร** (เคยคิดทำ `/panel newsroom` แล้วตัดออก — /bot + modal พอ) · `/panel news` เป็น digest ข่าวท้องถิ่น เก็บคีย์ `news_watch_feeds` คนละเรื่องกัน
 - ลำดับตัดสินปลายทาง — **ต้องตรงกันทั้ง 2 ฝั่ง** (`attachNewsReady` ใน `web/lib/publishTargets.js` ↔ `getNewsChannelId` ใน `services/newsShare.js`):
   | `dc_social_accounts.news_channel_id` | ผล |
   |---|---|
@@ -135,8 +139,6 @@ Manage Meta (FB/IG/Threads) + X (Twitter) accounts ต่อ guild สำหร�
 - **ห้าม `UPDATE ... WHERE group_name = $1`** — `group_name` เป็น free text ซ้ำข้าม org/เจ้าของได้ → fan-out ต้องเอา id จาก `listPublishGroups()` แล้ว `WHERE id = ANY($n)` (`web/app/api/social/groups/route.js`)
 - ย้ายบัญชีเข้ากลุ่มทีหลังจะ inherit `guild_id` + `news_channel_id` จากแถวพี่ให้เอง (`inheritGroupFields` ใน `accounts/[id]/route.js`) — ไม่งั้นแถวใหม่ `guild_id` ว่าง แล้วตะกร้าดิสฯ มองไม่เห็น
 - ประกาศกิจกรรม (@everyone) ยังเป็นของ guild — เรียก `getNewsChannelId(guildId)` โดยไม่ส่งชื่อกลุ่ม
-  - X stores creds เป็น JSON `{access_token, access_token_secret}` ใน `access_token` column (consumer key/secret มาจาก guild_config)
-  - IG/Threads ใช้ `user_token` (Meta ปิด Page Token สำหรับ IG)
 
 **Token storage by platform:**
 | Platform | `access_token` | `user_token` |

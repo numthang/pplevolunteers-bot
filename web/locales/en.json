@@ -1296,21 +1296,28 @@
         "public": "Public",
         "private": "Private"
       },
-      "groups": {
-        "heading": "Per-group settings",
-        "subtitle": "One group = one server · the news channel belongs to the group, not to the server you are currently viewing",
-        "server": "Discord server of this group",
-        "noServer": "(no server linked)",
-        "newsChannel": "News channel",
-        "useServerDefault": "(use the server's news channel)",
-        "notSet": "(not set — cannot post)",
+      "news": {
+        "button": "+ Discord News",
+        "title": "Discord news channel",
+        "subtitle": "Pick where this group's posts go · linking a channel also binds the group to that channel's server",
+        "group": "Group",
+        "pickGroup": "— pick a group —",
+        "noServer": "No account in this group is linked to a server yet — connect an account inside the server first",
+        "loadingChannels": "Loading channels…",
+        "channelsUnavailable": "Cannot read channel names from Discord (bot not in the server, or missing permission) — enter the channel ID instead",
+        "channelIdPlaceholder": "Paste channel ID",
+        "searchChannel": "Type to search channels",
+        "useServerDefault": "Use the server's news channel (set at /bot)",
+        "none": "Not set — cannot post to a news channel",
         "off": "Do not post to a news channel",
-        "channelIdPlaceholder": "Paste channel ID (channel names unavailable)",
-        "saved": "Saved",
+        "noMatch": "No channel matches your search",
         "saveFailed": "Could not save",
-        "noServerWarning": "No server linked — Discord share will not show this group",
-        "mixedGuildsWarning": "Accounts in this group sit on different servers — pick one server to align them",
-        "usingServerNews": "Using the server's channel: #{channel}"
+        "needGroup": "No group in this section yet — put accounts into a group first",
+        "needMediaTeam": "Only the media team or social managers can set the news channel",
+        "boundLabel": "News channel:",
+        "fromServer": "server default",
+        "unbind": "Unlink the news channel from this group",
+        "unknownChannel": "set (channel name unavailable)"
       }
     },
     "ai": {

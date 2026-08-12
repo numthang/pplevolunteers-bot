@@ -2,10 +2,11 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Trash2, RefreshCw, Globe, Lock, AlertTriangle, X, Settings, Check } from 'lucide-react'
+import { Trash2, RefreshCw, Globe, Lock, AlertTriangle, X, Settings, Check, Megaphone } from 'lucide-react'
 import { canManageSocialGuild } from '@/lib/roles.js'
 import { useEffectiveRoles } from '@/lib/useEffectiveRoles.js'
 import { useTranslations } from 'next-intl'
+import NewsChannelModal from './NewsChannelModal.jsx'
 
 const PLATFORM_LABEL = { fb: 'Facebook', ig: 'Instagram', threads: '@ (Threads)', x: 'X (Twitter)' }
 const PLATFORM_COLOR = {
@@ -30,6 +31,54 @@ function TokenExpiry({ expiresAt, t }) {
     </span>
   )
   return <span className="text-xs text-green-600 dark:text-green-400">{t('social.token.daysLeft', { days })}</span>
+}
+
+// ปุ่ม + Discord News — วางแถวเดียวกับปุ่ม Connect เพราะห้องข่าวสารก็เป็นปลายทางของกลุ่มเหมือนกัน
+// ไม่มีสิทธิ์ตั้ง = เทา + tooltip บอกเหตุ (แบบเดียวกับปุ่ม Connect ตอนยังไม่มี app creds)
+function NewsButton({ enabled, hasGroups, onClick, t }) {
+  const reason = !hasGroups ? t('social.news.needGroup') : !enabled ? t('social.news.needMediaTeam') : null
+  if (reason) {
+    return (
+      <button disabled title={reason} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-sm opacity-30 cursor-not-allowed">
+        <Megaphone size={14} /> {t('social.news.button')}
+      </button>
+    )
+  }
+  return (
+    <button onClick={onClick} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-sm hover:opacity-90 transition">
+      <Megaphone size={14} /> {t('social.news.button')}
+    </button>
+  )
+}
+
+// บรรทัดสรุปว่ากลุ่มไหนยิงเข้าห้องไหน — ต่อจากแถวปุ่ม ไม่ใช่การ์ดใหม่
+function NewsBindings({ groups, canSetNews, onEdit, onClear, t }) {
+  const bound = groups.filter(g => g.newsReady || g.newsChannelId === 'off')
+  if (!bound.length) return null
+  return (
+    <div className="flex flex-wrap items-center gap-2 mb-3 text-xs">
+      <span className="flex items-center gap-1 text-gray-500 dark:text-disc-muted">
+        <Megaphone size={12} /> {t('social.news.boundLabel')}
+      </span>
+      {bound.map(g => (
+        <span key={g.name} className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-gray-100 dark:bg-disc-hover text-gray-700 dark:text-disc-text">
+          <button onClick={() => onEdit(g)} className="hover:underline" disabled={!canSetNews}>
+            {g.name} → {g.newsChannelId === 'off'
+              ? t('social.news.off')
+              : g.newsChannelName ? `#${g.newsChannelName}` : t('social.news.unknownChannel')}
+          </button>
+          {/* ค่าที่ตกมาจากเซิร์ฟไม่ใช่ของกลุ่ม → ไม่มีอะไรให้ถอด แสดงป้ายบอกที่มาแทน */}
+          {g.newsSource === 'guild'
+            ? <span className="text-gray-400 dark:text-disc-muted">({t('social.news.fromServer')})</span>
+            : canSetNews && (
+              <button onClick={() => onClear(g)} title={t('social.news.unbind')} className="text-gray-400 hover:text-red-500">
+                <X size={11} />
+              </button>
+            )}
+        </span>
+      ))}
+    </div>
+  )
 }
 
 function AccountRow({ acc, accounts, onToggleVisibility, onSetGroup, onRemove, deleting, t }) {
@@ -123,17 +172,27 @@ export default function OrgSocialAccounts() {
   const [loading, setLoading]   = useState(true)
   const [deleting, setDeleting] = useState(null)
   const [banner, setBanner]     = useState(null)
+  // ห้องข่าวสาร Discord ผูกรายกลุ่ม (2026-08-12) — ปลายทางอีกอันของกลุ่ม เคียงกับ FB/IG/X
+  const [groups, setGroups]     = useState([])
+  const [canSetNews, setCanSetNews] = useState(false)
+  const [newsModal, setNewsModal]   = useState(null)   // 'public' | 'private' = โซนที่กดมา
 
   const { access, superAdmin } = useEffectiveRoles(session)  // effective — สะท้อน view-as-role
   const canManage  = canManageSocialGuild(access)
 
   const load = useCallback(async () => {
-    const [accRes, cfgRes] = await Promise.all([
+    const [accRes, cfgRes, grpRes] = await Promise.all([
       fetch('/api/social/accounts'),
       fetch('/api/social/guild-configs'),
+      fetch('/api/social/groups'),
     ])
     if (accRes.ok) setAccounts(await accRes.json())
     if (cfgRes.ok) setCfg(await cfgRes.json())
+    if (grpRes.ok) {
+      const data = await grpRes.json()
+      setGroups(Array.isArray(data.groups) ? data.groups : [])
+      setCanSetNews(!!data.canSetNews)
+    }
     setLoading(false)
   }, [])
 
@@ -190,6 +249,16 @@ export default function OrgSocialAccounts() {
     setAccounts(prev => prev.map(a => a.id === acc.id ? { ...a, group_name: newGroup || null } : a))
   }
 
+  // ถอดห้องข่าวสารของกลุ่ม → กลุ่ม public ตกกลับไปใช้ห้องของเซิร์ฟ · private = ส่งไม่ได้
+  async function clearNews(g) {
+    await fetch('/api/social/groups', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ group: g.name, news_channel_id: null }),
+    })
+    await load()
+  }
+
   async function toggleVisibility(acc) {
     const next = acc.visibility === 'public' ? 'private' : 'public'
     await fetch(`/api/social/accounts/${acc.id}`, {
@@ -219,6 +288,9 @@ export default function OrgSocialAccounts() {
   const hasX         = !!(cfg?.x_consumer_key && cfg?.x_consumer_secret) || !!cfg?.hasX
   // Threads มี creds ของตัวเอง — ไม่ยืมของ Meta (getThreadsApp ไม่ fallback แล้ว)
   const hasThreads   = !!(cfg?.threads_app_id && cfg?.threads_app_secret) || !!cfg?.hasThreads
+  // กลุ่มแยกตามโซน — ปุ่ม/ป้ายในโซนไหนก็เห็นแต่กลุ่มของโซนนั้น
+  const orgGroups      = groups.filter(g => g.visibility === 'public')
+  const personalGroups = groups.filter(g => g.visibility === 'private')
   const guildAccounts = accounts.filter(a => a.visibility === 'public')
   // เจ้าของ = owner_user_id (user อีเมลก็มี) · fallback discord id สำหรับแถวเก่าที่ยังไม่มี owner
   const myAccounts    = accounts.filter(a => a.visibility === 'private' &&
@@ -274,6 +346,12 @@ export default function OrgSocialAccounts() {
                     <RefreshCw size={14} /> {t('social.connect.meta')}
                   </button>
                 )}
+                <NewsButton
+                  enabled={canSetNews}
+                  hasGroups={orgGroups.length > 0}
+                  onClick={() => setNewsModal('public')}
+                  t={t}
+                />
                 {/* Threads แยกปุ่ม: authorize ที่ threads.net + creds คนละชุด → รวมกับปุ่ม Meta ไม่ได้ */}
                 {hasThreads ? (
                   <a
@@ -289,6 +367,9 @@ export default function OrgSocialAccounts() {
                 )}
               </div>
             </div>
+
+            <NewsBindings groups={orgGroups} canSetNews={canSetNews}
+              onEdit={() => setNewsModal('public')} onClear={clearNews} t={t} />
 
             {/* App Credentials */}
             <div className="bg-card-bg rounded-xl border border-warm-200 dark:border-disc-border p-4 mb-3">
@@ -374,9 +455,18 @@ export default function OrgSocialAccounts() {
                     <RefreshCw size={14} /> {t('social.connect.metaShort')}
                   </button>
                 )}
+                <NewsButton
+                  enabled={canSetNews}
+                  hasGroups={personalGroups.length > 0}
+                  onClick={() => setNewsModal('private')}
+                  t={t}
+                />
               </div>
             )}
           </div>
+          <NewsBindings groups={personalGroups} canSetNews={canSetNews}
+            onEdit={() => setNewsModal('private')} onClear={clearNews} t={t} />
+
           {myAccounts.length === 0 ? (
             <p className="text-sm text-gray-400 dark:text-disc-muted pl-1">{t('social.emptyPersonal')}</p>
           ) : (
@@ -391,6 +481,14 @@ export default function OrgSocialAccounts() {
           )}
         </div>
       </div>
+
+      {newsModal && (
+        <NewsChannelModal
+          groups={newsModal === 'public' ? orgGroups : personalGroups}
+          onClose={() => setNewsModal(null)}
+          onSaved={load}
+        />
+      )}
 
       {/* Edit config modal */}
       {editConfig && (
