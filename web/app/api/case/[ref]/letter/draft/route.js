@@ -2,21 +2,7 @@ import { gateCase } from '@/lib/caseGate.js'
 import { getTimeline } from '@/db/cases.js'
 import { getLetterConfig } from '@/db/caseLetterConfig.js'
 import { askAiJson, AiError } from '@/lib/ai.js'
-
-const SYSTEM = `คุณช่วยร่างหนังสือร้องเรียนทางราชการภาษาไทยสำหรับทีมงานพรรคการเมือง
-ตอบเป็น JSON เท่านั้น ไม่มีข้อความอื่น:
-{
-  "subject": "หัวข้อเรื่องที่กระชับ ไม่เกิน 1 บรรทัด",
-  "recipient_title": "ตำแหน่งผู้รับ เช่น ผู้อำนวยการ / นายอำเภอ / นายก อบต.",
-  "recipient_name": "ชื่อหน่วยงาน/บุคคลที่ส่งถึง",
-  "body": "เนื้อหาหนังสือ 2-4 ย่อหน้า ภาษาราชการสุภาพ ย่อหน้าคั่นด้วย \\n\\n",
-  "attachments": "รายการเอกสารแนบ คั่นด้วย \\n- หรือ - ถ้าไม่มีใส่ -"
-}
-
-กฎ:
-- ใช้ภาษาราชการไทยสุภาพ
-- recipient ให้เดาจากประเภทปัญหา (ที่ดิน→กรมป่าไม้/สำนักงานที่ดิน, ถนน→แขวงทาง/อบจ, น้ำ/ไฟ→ อบต./PEA/PWA, สิทธิ/สวัสดิการ→พัฒนาสังคม)
-- body ขึ้นต้นด้วย "ด้วย..." หรือ "ตามที่..." และลงท้ายด้วย "จึงเรียนมาเพื่อโปรดพิจารณา"`
+import { getPrompt } from '@/db/orgAiPrompts.js'
 
 export async function POST(req, { params }) {
   const { ref } = await params
@@ -39,7 +25,7 @@ export async function POST(req, { params }) {
   // งานเบา — ร่างจดหมายจาก template ไม่ต้องใช้โมเดลตัวใหญ่
   let draft
   try {
-    draft = await askAiJson(SYSTEM, `ร่างหนังสือร้องเรียนจากข้อมูลนี้:\n\n${caseContext}`, {
+    draft = await askAiJson(await getPrompt('case.letter_draft', orgId), `ร่างหนังสือร้องเรียนจากข้อมูลนี้:\n\n${caseContext}`, {
       model: 'claude-haiku-4-5-20251001',
       maxTokens: 1500,
       orgId,

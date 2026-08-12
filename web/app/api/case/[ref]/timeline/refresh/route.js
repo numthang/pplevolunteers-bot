@@ -3,6 +3,7 @@ import { addTimelineEvents, getTimeline, advanceSyncWatermark, advanceAttachment
 import { importThreadAttachments } from '@/lib/caseAttachmentSync.js'
 import { askAi } from '@/lib/ai.js'
 import pool from '@/db/index.js'
+import { getPrompt } from '@/db/orgAiPrompts.js'
 
 const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN
 
@@ -10,27 +11,6 @@ const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN
 const MAX_SYNC_MESSAGES = 500
 /** จำนวน event เดิมที่ส่งให้ AI ดูเพื่อกันสกัดซ้ำ */
 const DEDUP_CONTEXT_ENTRIES = 30
-
-const AI_TIMELINE_SYSTEM = `วิเคราะห์บทสนทนา Discord แล้วสกัด event สำคัญออกมาเป็น timeline เรื่องร้องเรียน
-
-กฎการสกัด:
-- สกัดเฉพาะ event ที่เกิดขึ้นจริงหรือพูดถึงในบทสนทนา ห้ามแต่งเติม
-- event ที่ควรสกัด: แจ้งปัญหา / นัดหมาย / ลงพื้นที่ / ส่งเรื่องต่อ / ติดตามผล / แก้ไขแล้ว / คำตอบจากหน่วยงาน
-- ถ้าไม่มี event ที่ชัดเจนพอ ให้ return array ว่าง []
-- occurred_at: ถ้าบทสนทนาระบุวันที่ให้แปลงเป็น ISO 8601 **ปี ค.ศ. (Gregorian) เท่านั้น** ไม่งั้นใส่ null
-- body: สรุปให้ครบใจความ (เหตุ → ดำเนินการ → ผลลัพธ์) ไม่ต้องรวบสั้นจนขาดบริบทที่จำเป็น เขียนได้ 1-3 ประโยคถ้าเรื่องซับซ้อน
-
-กฎกันซ้ำ (สำคัญ):
-- ถ้ามีหัวข้อ "timeline ที่บันทึกไว้แล้ว" ให้ถือว่า event เหล่านั้นบันทึกแล้ว **ห้ามสกัดออกมาซ้ำ**
-- บทสนทนามักพูดถึงเรื่องเดิมซ้ำ ("ตามที่ลงพื้นที่ไปเมื่อวาน…") — นั่นคือการอ้างถึง ไม่ใช่ event ใหม่
-- สกัดเฉพาะความคืบหน้าที่ยังไม่เคยถูกบันทึกเท่านั้น
-
-กฎ is_public:
-- true: ความคืบหน้าทั่วไป เช่น ลงพื้นที่ตรวจสอบแล้ว / ส่งเรื่องให้หน่วยงาน / แก้ไขแล้ว
-- false: ชื่อ/เบอร์/ที่อยู่เต็มของบุคคล / นัดหมายภายในทีม / ข้อมูลที่กระทบบุคคลที่สาม
-
-ตอบเป็น JSON array เท่านั้น ห้ามมี markdown หรือข้อความอื่น:
-[{"body":"...","is_public":true,"occurred_at":null}]`
 
 async function discordFetch(path) {
   const res = await fetch(`https://discord.com/api/v10${path}`, {
@@ -117,7 +97,7 @@ export async function POST(req, { params }) {
     // (กลืน = watermark เลื่อนต่อทั้งที่ยังไม่ได้สกัด → ข้อความชุดนั้นหายถาวร กดซ้ำก็ไม่กลับมา)
     let raw
     try {
-      raw = await askAi(AI_TIMELINE_SYSTEM, prompt, { model: TIMELINE_MODEL, maxTokens: 1024, orgId, task: 'light' })
+      raw = await askAi(await getPrompt('case.timeline', orgId), prompt, { model: TIMELINE_MODEL, maxTokens: 1024, orgId, task: 'light' })
     } catch (e) {
       console.error('[case/timeline/refresh] AI ล่ม', { ref }, e.message)
       return Response.json({ error: e?.message || 'AI ประมวลผลไม่สำเร็จ ลองใหม่อีกครั้ง' }, { status: e?.code === 'quota' ? 429 : 502 })

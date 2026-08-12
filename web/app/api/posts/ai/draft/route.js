@@ -3,14 +3,7 @@ import { canEditPost } from '@/lib/postsAccess.js'
 import { consumeAiQuota } from '@/lib/postsAiQuota.js'
 import { askAi, AiError } from '@/lib/ai.js'
 import * as postDB from '@/db/posts/episodes.js'
-
-const SYSTEM_PROMPT = `คุณเป็นผู้ช่วยบรรณาธิการงานสื่อของพรรคการเมืองไทย
-งานของคุณคือเขียนเนื้อหาโพสต์โซเชียล 1 โพสต์ให้เต็มจากโครง/ไอเดียที่ให้มา
-กติกา:
-- ถ้าโครงที่ให้มาสั้น (แค่หัวข้อ) → ขยายเป็นเนื้อหาโพสต์ที่โพสต์ได้จริง
-- ถ้ามีเนื้อหาอยู่แล้ว → ปรับ/ขัดเกลาให้สมบูรณ์ ห้ามแต่งประเด็นใหม่ที่ไม่มีในต้นฉบับ
-- ห้ามพูดซ้ำประเด็นที่ถูกใช้ไปแล้วในโพสต์อื่นของหมวดเดียวกัน (ถ้ามีให้ดู)
-- ตอบเป็นเนื้อหาโพสต์ล้วนๆ ห้ามมีหัวข้อ/คำอธิบาย/markdown ครอบ`
+import { getPrompt } from '@/db/orgAiPrompts.js'
 
 /**
  * POST /api/posts/ai/draft — ร่างโพสต์เดียว (ไม่เขียนลง DB)
@@ -45,7 +38,7 @@ export async function POST(req) {
   if (otherTitles.length) userLines.push(`โพสต์อื่นในหมวดเดียวกัน (ห้ามพูดซ้ำ): ${otherTitles.join(', ')}`)
 
   try {
-    const draftBody = await askAi(SYSTEM_PROMPT, userLines.join('\n'), { orgId: ctx.orgId })
+    const draftBody = await askAi(await getPrompt('posts.draft', ctx.orgId), userLines.join('\n'), { orgId: ctx.orgId })
     return Response.json({ success: true, data: { body: draftBody } })
   } catch (error) {
     // โควตายืม key กลางหมด = 429 (ผู้ใช้แก้เองได้ด้วยการใส่ key องค์กร) · AI ล่มจริง = 502
