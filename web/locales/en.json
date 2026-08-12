@@ -1371,6 +1371,25 @@
       "saving": "Saving…",
       "saveSuccess": "Saved",
       "saveError": "Could not save"
+    },
+    "prompts": {
+      "loading": "Loading…",
+      "title": "AI instructions (prompts)",
+      "description": "Tune how the AI behaves at each step. Leave a prompt untouched to use the system default. Changes apply to this organisation only.",
+      "surface": {
+        "posts": "Posts module",
+        "case": "Complaint cases"
+      },
+      "isDefault": "Default",
+      "isCustom": "Customised",
+      "requiredKeys": "Keep these keys in the text, or the system cannot read the AI reply: {keys}",
+      "save": "Save",
+      "saving": "Saving…",
+      "saveSuccess": "Saved",
+      "saveError": "Could not save",
+      "reset": "Reset to default",
+      "resetSuccess": "Reset to default",
+      "unsaved": "Unsaved changes"
     }
   },
   "profile": {
@@ -1477,6 +1496,9 @@
       "finishLabel": "Theme",
       "accentLabel": "Card colour",
       "accentReset": "Back to CI colour",
+      "textColorLabel": "Quote text colour",
+      "textColorReset": "Back to auto",
+      "textColorAuto": "Auto",
       "layoutLabel": "Placement",
       "comboUnavailable": "Not available for this finish",
       "filterLabel": "Filter",
