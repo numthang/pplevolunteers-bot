@@ -12,9 +12,10 @@ import { getAiCreds, AiCredsError } from './aiCreds.js'
 export { AiCredsError }
 
 export const AI_MODEL = 'claude-sonnet-5'
-// ไทยกิน token เยอะ (~1 token/ตัวอักษร) — ซีรีส์ยาว (สูงสุด 12 ตอน เนื้อหาเต็มทุกตอน) กิน token มากกว่าที่ 8000 เดิมรองรับไหว
-// เคยตั้ง 8000 แล้วโดนตัดกลางคัน (stop_reason: max_tokens) → JSON ขาดครึ่ง parse ไม่ผ่าน → error "ไม่ใช่ JSON ที่อ่านได้" ที่ดูงงๆ (เคาะ 2026-08-12)
-const MAX_TOKENS = 32000
+// ไทยกิน token เยอะ (~1 token/ตัวอักษร) — ซีรีส์เนื้อหาเต็มทุกตอนกิน token มากกว่าที่ 8000 เดิมรองรับไหว
+// 8000 → โดนตัดกลางคัน (stop_reason: max_tokens) JSON ขาดครึ่ง · 32000 → พอ แต่ generate นานจน request
+// วิ่งเกิน timeout ของ nginx บน prod · 16000 = จุดที่พอสำหรับ 6 ตอน (ดู MAX_EPISODES) โดยไม่ลากยาวเกินไป
+const MAX_TOKENS = 16000
 const TIMEOUT_MS = 120 * 1000
 
 export class AiError extends Error {}

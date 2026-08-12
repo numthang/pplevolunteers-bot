@@ -12,7 +12,10 @@ import { getPrompt } from '@/db/orgAiPrompts.js'
 //  จึงให้ AI อ่านจากเนื้อหาแทนที่จะมีช่องกรอกเลขซ้ำซ้อน) ต่างจาก outline เดิมตรงที่ series mode นี้ร่าง body เต็มทุกตอนทันที ไม่ใช่แค่ gist)
 const FORMATS = ['text', 'image', 'quote']
 const MIN_EPISODES = 1
-const MAX_EPISODES = 12
+// ลดจาก 12 → 6 (2026-08-12) เพราะเวลา generate โตตามจำนวนตอน แล้ว request วิ่งเกิน timeout ของ nginx บน prod
+// (server สร้างโพสต์สำเร็จ แต่ response ไม่ทันกลับถึงเบราว์เซอร์ → user เห็น error แล้วกดซ้ำจนได้โพสต์ซ้ำ)
+// ต้องคู่กับข้อความ "1-6 ตอน" ใน config/aiPrompts.js — แก้ที่เดียวไม่พอ AI จะออกเกินแล้วโดน 502
+const MAX_EPISODES = 6
 
 // series mode: AI เป็นคนตัดสินใจจำนวนตอนเอง (1-12) จากเนื้อหาที่ได้รับ — ไม่มีช่องกรอกเลขในหน้าเว็บ
 // user มักพิมพ์ระบุจำนวนตอนที่ต้องการไว้ในเนื้อหาเองอยู่แล้ว (เช่น "แบ่งเป็น 5 ตอน") ให้ AI อ่านจากตรงนั้น
@@ -40,6 +43,21 @@ export async function POST(req) {
   }
 
   const isSeries = body.series === true
+
+  // กดซ้ำด้วยข้อความเดิมภายใน 15 นาที = คืนของที่สร้างไว้แล้ว ไม่สร้างใหม่/ไม่ยิง AI ซ้ำ
+  // เช็คก่อนทุกอย่างเพื่อให้ retry เร็วและไม่กิน quota — ดูเหตุผลเต็มที่ db/posts/episodes.js: findRecentAiPosts
+  const existing = await postDB.findRecentAiPosts({
+    orgId: ctx.orgId, ownerUserId: ctx.userId, sourceIdea: idea,
+  })
+  if (existing.length) {
+    return Response.json({
+      success: true,
+      duplicate: true,
+      data: existing.length > 1 || isSeries
+        ? { category: existing[0].category, seriesName: null, posts: existing }
+        : { post: existing[0] },
+    }, { status: 200 })
+  }
 
   const quota = await consumeAiQuota(ctx.userId)
   if (!quota.ok) {

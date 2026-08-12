@@ -212,6 +212,9 @@ export default function PostsHome({ orgName = 'องค์กร' }) {
   // single = โพสต์เดียว (default) · series = AI ตัดสินใจจำนวนตอนเอง (1-12) จากเนื้อหา แล้วร่างเต็มทุกตอนทันที
   // (ไม่มีช่องกรอกจำนวนตอน — user มักระบุจำนวนไว้ในเนื้อหาที่พิมพ์เองอยู่แล้ว · เคาะ 2026-08-12)
   const [composeMode, setComposeMode] = useState('single')
+  // บังคับให้ฟีดโหลดใหม่แม้ตัวกรองไม่เปลี่ยน — setCategory ด้วยค่าเดิม React จะ bail out ไม่ re-render
+  // (เคสจริง: สร้างซีรีส์ที่ 2 ในหมวดเดิม แล้วรายการด้านล่างไม่ขยับ ดูเหมือนไม่ได้สร้าง)
+  const [reloadNonce, setReloadNonce] = useState(0)
   const [confirmPost, setConfirmPost] = useState(null)   // โพสต์ที่กำลังถามยืนยันลบ
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState('')
@@ -252,7 +255,7 @@ export default function PostsHome({ orgName = 'องค์กร' }) {
     } finally {
       setLoading(false)
     }
-  }, [filter, postState, category, status])
+  }, [filter, postState, category, status, reloadNonce])
 
   const loadCategories = useCallback(async () => {
     try {
@@ -264,7 +267,7 @@ export default function PostsHome({ orgName = 'องค์กร' }) {
     } catch {
       setCategories([])
     }
-  }, [filter])
+  }, [filter, reloadNonce])
 
   useEffect(() => { loadPosts() }, [loadPosts])
   useEffect(() => { loadCategories() }, [loadCategories])
@@ -370,10 +373,17 @@ export default function PostsHome({ orgName = 'องค์กร' }) {
       const json = await res.json().catch(() => ({}))
       if (res.ok && json.success) {
         setIdea('')
-        if (isSeries) {
-          // หลายตอน ไม่มีหน้าเดียวให้พาไป — กรองฟีดตามหมวดที่ AI ตั้งให้ เพื่อเห็นตอนที่เพิ่งสร้างทั้งหมด
-          setAiNotice(`สร้างซีรีส์ "${json.data.seriesName}" แล้ว ${json.data.posts.length} ตอน ในหมวด "${json.data.category || 'ไม่ระบุ'}"`)
+        // duplicate = ข้อความนี้เคยสร้างไปแล้วเมื่อกี้ (ครั้งก่อนสำเร็จฝั่ง server แต่ response ไม่ถึงเบราว์เซอร์)
+        // → พาไปดูของเดิม ไม่สร้างใหม่ · ต้องบอกให้ชัดไม่งั้น user งงว่าทำไมกดแล้วไม่มีอะไรเพิ่ม
+        if (json.data.posts) {
+          const name = json.data.seriesName ? `"${json.data.seriesName}" ` : ''
+          setAiNotice(json.duplicate
+            ? `ข้อความนี้สร้างไปแล้วเมื่อสักครู่ (${json.data.posts.length} ตอน) — แสดงของเดิมให้แทนการสร้างซ้ำ`
+            : `สร้างซีรีส์ ${name}แล้ว ${json.data.posts.length} ตอน ในหมวด "${json.data.category || 'ไม่ระบุ'}"`)
+          // ตัวกรอง "แหล่ง" ต้องตรงกับที่เพิ่งสร้าง ไม่งั้นดูอยู่ฝั่ง personal แต่สร้างเข้า org = ฟีดว่างทั้งที่สร้างสำเร็จ
+          if (filter !== 'all' && filter !== createVisibility) setFilter(createVisibility)
           setCategory(json.data.category || '__none__')
+          setReloadNonce(n => n + 1)   // การันตีว่าโหลดใหม่แม้หมวด/แหล่งเดิมเป๊ะ
         } else {
           router.push(`/posts/${json.data.post.id}`)
         }
@@ -382,7 +392,9 @@ export default function PostsHome({ orgName = 'องค์กร' }) {
         setAiError(json.error || 'ให้ AI เรียบเรียงไม่สำเร็จ')
       }
     } catch {
-      setAiError('ให้ AI เรียบเรียงไม่สำเร็จ')
+      // ส่วนใหญ่คือ request ใช้เวลานานจนถูกตัดกลางทาง — งานฝั่ง server อาจสำเร็จไปแล้ว
+      // บอกให้กดซ้ำได้เลย ระบบกันซ้ำให้ (route เช็ค source_idea ย้อนหลัง 15 นาที)
+      setAiError('การเชื่อมต่อหลุดระหว่างรอ AI — กดปุ่มเดิมซ้ำได้เลย ระบบจะไม่สร้างโพสต์ซ้ำให้')
     } finally {
       setAiLoading(false)
     }

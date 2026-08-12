@@ -123,6 +123,31 @@ export async function getPost(id) {
 }
 
 /**
+ * โพสต์ที่ AI เพิ่งสร้างจากต้นฉบับเดียวกัน — กันสร้างซ้ำตอน request แรกสำเร็จฝั่ง server แต่ response ไม่ถึงเบราว์เซอร์
+ *
+ * เคสจริง (prod 2026-08-12): series ใช้เวลานานเกิน timeout ของ nginx → user เห็น error → กดใหม่ →
+ * ได้ 20 ตอนจาก 4 ครั้งทั้งที่ตั้งใจสร้างชุดเดียว · เทียบด้วย `source_idea` เพราะเป็นข้อความดิบที่ user พิมพ์
+ * (ตรงกันเป๊ะ = กดปุ่มซ้ำด้วยข้อความเดิม) · จำกัดหน้าต่างเวลาไว้ ไม่งั้นตั้งใจสร้างใหม่วันหลังจะโดนบล็อก
+ */
+export async function findRecentAiPosts({ orgId, ownerUserId, sourceIdea, withinMinutes = 15 }) {
+  if (!sourceIdea) return []
+  const { rows } = await pool.query(
+    `SELECT ${COLS}, ${OWNER_NAME} AS owner_name
+       FROM post_episodes e
+       LEFT JOIN users u ON u.id = e.owner_user_id
+      WHERE e.owner_user_id = $1
+        AND e.org_id IS NOT DISTINCT FROM $2
+        AND e.source_idea = $3
+        AND e.created_via = 'ai'
+        AND e.archived_at IS NULL
+        AND e.created_at > now() - ($4 || ' minutes')::interval
+      ORDER BY e.id ASC`,
+    [ownerUserId, orgId, sourceIdea, String(withinMinutes)]
+  )
+  return rows
+}
+
+/**
  * สร้างโพสต์ + snapshot แรกทันที (ต้นฉบับต้องไม่หายแม้บรรณาธิการเข้ามาทับ)
  *
  * `originalRevision` = ฉบับที่ "มาก่อน" เนื้อหาที่กำลังบันทึก — ใช้ตอน AI เรียบเรียง (`ai/compose`)

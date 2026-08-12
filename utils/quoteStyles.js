@@ -1142,7 +1142,17 @@ async function renderPlain({
     const pw = Math.round(W * WM.scale);
     const ph = Math.round(pw * (patternImg.height / patternImg.width));
     ctx.globalAlpha = WM.alpha;
-    ctx.drawImage(patternImg, W - pw - m, H - ph - m, pw, ph);
+    if (patternName) {
+      // bg='mark' — ไฟล์ .png baked สีส้มแบรนด์ตายตัว (#ff6a13) ชนกับพื้นสีส้ม default จนมองไม่เห็น
+      // เลย (เจอ 2026-08-13 — ส้มบน 10% alpha ทับส้ม = แทบไม่เปลี่ยนพิกเซล) → ย้อมตาม ink แทน
+      // (สีตัวอักษรที่ auto-contrast กับพื้นอยู่แล้ว) เหมือน mark icon อื่นในไฟล์นี้ (drawQuoteBlock/
+      // renderPanel) การันตีเห็นทุกพื้นหลัง ไม่ผูกกับสีไฟล์ตายตัวอีกต่อไป
+      drawTinted(ctx, patternImg, W - pw - m, H - ph - m, pw, ph, ink);
+    } else {
+      // bg='logo' — desaturate มาแล้วตอนโหลด (เก็บน้ำหนักอ่อน-เข้มของโลโก้จริงไว้ครบ 2026-08-12)
+      // ห้าม tint ซ้ำด้วย ink — จะแบนเหลือสีเดียวทั้งดวง เสียรายละเอียดโลโก้ที่ตั้งใจรักษาไว้
+      ctx.drawImage(patternImg, W - pw - m, H - ph - m, pw, ph);
+    }
     ctx.globalAlpha = 1;
     wmReserve = Math.round((ph + m * 2) * 0.5);
   }
