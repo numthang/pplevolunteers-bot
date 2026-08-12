@@ -280,7 +280,8 @@ async function buildBasketPayload(basket, guildId, channelId, userId, channelNam
   const currentGroup = saved?.group && groups.includes(saved.group) ? saved.group : (groups[0] || null);
 
   const availablePlatforms = await getAvailablePlatforms(guildId, userId, currentGroup);
-  if (await getNewsChannelId(guildId)) availablePlatforms.push('news');
+  // ห้องข่าวสารผูกรายกลุ่ม (2026-08-12) — กลุ่มที่ไม่ได้ตั้งห้อง/ตั้งว่า 'off' จะไม่มีตัวเลือกนี้
+  if (await getNewsChannelId(guildId, currentGroup)) availablePlatforms.push('news');
   // saved.platforms must be subset of available; otherwise default = all available
   const savedPlatforms = Array.isArray(saved?.platforms) ? saved.platforms.filter(p => availablePlatforms.includes(p)) : [];
   const selectedPlatforms = savedPlatforms.length ? savedPlatforms : [...availablePlatforms];
@@ -491,7 +492,7 @@ async function rehydrateState(interaction) {
   const groups = await getAvailableGroups(guildId, userId);
   const group = saved?.group && groups.includes(saved.group) ? saved.group : (groups[0] || null);
   const availablePlatforms = await getAvailablePlatforms(guildId, userId, group);
-  if (await getNewsChannelId(guildId)) availablePlatforms.push('news');
+  if (await getNewsChannelId(guildId, group)) availablePlatforms.push('news');
   const savedPlatforms = Array.isArray(saved?.platforms) ? saved.platforms.filter(p => availablePlatforms.includes(p)) : [];
   const platforms = savedPlatforms.length ? savedPlatforms : [...availablePlatforms];
   const basket = await getBasket(guildId, channelId);

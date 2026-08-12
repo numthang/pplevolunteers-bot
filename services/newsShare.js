@@ -3,18 +3,44 @@
 const pool = require('../db/index');
 const { getSetting, setSetting, deleteSetting } = require('../db/settings');
 
-const CONFIG_KEY = 'news_channel_id';             // string — ตั้งค่าที่หน้าเว็บ /bot (ราย guild)
+const CONFIG_KEY = 'news_channel_id';             // string — ค่าราย guild (ตั้งที่ /bot) = fallback ของกลุ่ม public
 const QUEUE_KEY  = 'pending_event_announcements'; // [{ channelId, content, sendAt }]
 const QUIET_START = 21; // ชั่วโมงไทย
 const QUIET_END   = 9;
+const NEWS_OFF = 'off';                           // ค่าที่กลุ่มตั้งว่า "ไม่ส่งเข้าห้องข่าวสาร"
 
-async function getNewsChannelId(guildId) {
+/**
+ * ห้องข่าวสารของกลุ่มนี้ — ต้องตรงกับ attachNewsReady ฝั่งเว็บ (web/lib/publishTargets.js)
+ *   dc_social_accounts.news_channel_id = 'off' → null (ปิด)
+ *   มีค่า                                      → ห้องนั้น
+ *   ว่าง + กลุ่ม public                        → fallback dc_guild_config (ของเดิมก่อนมีคอลัมน์นี้)
+ *   ว่าง + กลุ่ม private                       → null — กลุ่มส่วนตัวยิงเข้าห้องข่าวขององค์กรได้
+ *                                               เฉพาะเมื่อทีมสื่อตั้งห้องให้ (ด่านอยู่ที่หน้าตั้งค่า)
+ * ไม่ส่ง groupName = ของเดิมทั้งหมด (ประกาศกิจกรรม / เส้นที่ไม่รู้จักกลุ่ม) → ใช้ค่าราย guild
+ */
+async function getNewsChannelId(guildId, groupName = null) {
+  if (groupName) {
+    const { rows } = await pool.query(
+      `SELECT news_channel_id, visibility FROM dc_social_accounts
+        WHERE guild_id = $1 AND group_name = $2
+        ORDER BY (news_channel_id IS NULL), id
+        LIMIT 1`,
+      [guildId, groupName]
+    );
+    const row = rows[0];
+    if (row) {
+      const v = (row.news_channel_id || '').trim();
+      if (v === NEWS_OFF) return null;
+      if (v) return v;
+      if (row.visibility === 'private') return null;
+    }
+  }
   const v = await getSetting(guildId, CONFIG_KEY);
   return (typeof v === 'string' && v.trim()) ? v.trim() : null;
 }
 
-async function fetchNewsChannel(guild) {
-  const channelId = await getNewsChannelId(guild.id);
+async function fetchNewsChannel(guild, groupName = null) {
+  const channelId = await getNewsChannelId(guild.id, groupName);
   if (!channelId) return null;
   return guild.channels.cache.get(channelId) || guild.channels.fetch(channelId);
 }
@@ -32,9 +58,9 @@ function nextReleaseUnix() {
   return Math.floor((rel > now ? rel : rel + 24 * 3600 * 1000) / 1000);
 }
 
-// โพสต์ข่าว (ไม่ ping) — คืน Message
-async function postNews(guild, { content, files }) {
-  const channel = await fetchNewsChannel(guild);
+// โพสต์ข่าว (ไม่ ping) — คืน Message · group = กลุ่ม social ที่โพสต์ในนาม (ตัวเลือกห้อง)
+async function postNews(guild, { content, files, group = null }) {
+  const channel = await fetchNewsChannel(guild, group);
   if (!channel) throw new Error('ยังไม่ได้ตั้งค่าห้องข่าวสาร');
   return channel.send({ content: content || undefined, files, allowedMentions: { parse: [] } });
 }

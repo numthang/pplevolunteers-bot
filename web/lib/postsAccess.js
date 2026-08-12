@@ -26,8 +26,8 @@ export const DEFAULT_POSTS_POLICY = { read: 'org', write: 'org', approval: 'requ
 const SCOPES = ['org', 'team']
 const APPROVALS = ['required', 'optional']
 
-/** ทีมสื่อ = คนที่แก้/อนุมัติได้เสมอไม่ว่า policy จะตั้งยังไง */
-function isMediaTeam(access) {
+/** ทีมสื่อ = คนที่แก้/อนุมัติได้เสมอไม่ว่า policy จะตั้งยังไง (ใช้เป็นด่านตั้งห้องข่าวสารรายกลุ่มด้วย) */
+export function isMediaTeam(access) {
   const p = normalizeAccess(access).permissions
   return p.has('admin') || p.has('secretary_general') || p.has('editor')
 }

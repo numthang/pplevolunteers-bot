@@ -2,6 +2,25 @@
 
 > เก็บเฉพาะงานค้าง + design ที่ยังไม่ทำ · ของที่ทำเสร็จ+deploy แล้วย้ายไปอยู่ในโค้ด/`md/*` ตามระบบ
 
+## 📢 ห้องข่าวสารผูกรายกลุ่ม social — เสร็จ local (2026-08-12) ยังไม่ deploy
+
+**ที่แก้:** platform `news` ในกล่องเผยแพร่เคยเดินตาม guild ที่เปิดหน้าอยู่ (cookie `selected_guild`) ไม่ใช่กลุ่มที่เลือก
+→ อยู่เซิร์ฟอาสาฯ เลือกกลุ่มราชบุรี = โพสต์ในนามราชบุรีลงห้องข่าวเซิร์ฟอาสาฯ เงียบๆ · ตอนนี้ผูกที่กลุ่มแล้ว
+
+**⚠️ ก่อน deploy prod**
+1. รัน migration: `ALTER TABLE dc_social_accounts ADD COLUMN IF NOT EXISTS news_channel_id VARCHAR(20);` (อยู่ท้าย `scripts/migration/migration.sql`)
+2. restart bot (`services/newsShare.js`, `handlers/basketHandler.js`, `services/publishPipeline.js` เปลี่ยน signature)
+3. เข้า /org/settings/social → การ์ด "การตั้งค่ารายกลุ่ม" ตั้งเซิร์ฟ + ห้องข่าวสารให้ทุกกลุ่ม
+   (ยังไม่ตั้ง = กลุ่ม public ใช้ค่าเดิมของเซิร์ฟต่อ ไม่พัง · กลุ่ม private จะส่งไม่ได้จนทีมสื่อตั้งให้)
+4. ยังไม่ได้ทดสอบ "ยิงจริง" ทางเว็บ (จะเป็นการโพสต์ลงห้องข่าวจริง) — ทำตอน deploy แล้วเช็ค
+   `SELECT platform, guild_id, group_name FROM post_social_history ORDER BY id DESC LIMIT 5;`
+
+**ตั้งค่าไว้แล้วบน dev DB:** กลุ่ม "ประชาชนราชบุรี" → ห้อง `📢┆ข่าวสารประชาชนราชบุรี` (1150289942203879526)
+
+**ค้างไว้ (ไม่ทำในรอบนี้)**
+- `/bot` การ์ด "ห้องที่บอทใช้" ยังเป็นช่องกรอก channel ID ดิบ — น่าเปลี่ยนเป็น dropdown เหมือนหน้ากลุ่ม (มี `lib/discordChannels.js` + `/api/discord/guilds/[id]/channels` พร้อมใช้แล้ว)
+- ตะกร้าดิสฯ ยังไม่โชว์ชื่อห้องปลายทางตอนติ๊ก 📢 (เว็บโชว์แล้ว)
+
 ## 🔗 ย้ายลิงก์ในโพสต์ FB ไปคอมเมนต์แรก (เริ่ม 2026-08-11 · commit 38e9075)
 
 FB กด reach ของโพสต์ที่พาคนออกนอกแพลตฟอร์ม — เลยโพสต์เนื้อหาเปล่าแล้วหย่อนลิงก์ไว้คอมเมนต์แรกแทน

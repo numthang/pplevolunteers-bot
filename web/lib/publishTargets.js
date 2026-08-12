@@ -12,15 +12,19 @@
  */
 import pool from '@/db/index.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
+import { listGuildChannels } from '@/lib/discordChannels.js'
 
 const SELECT_VISIBLE = `
-  SELECT id, platform, group_name, guild_id, name, visibility
+  SELECT id, platform, group_name, guild_id, name, visibility, news_channel_id
     FROM dc_social_accounts
    WHERE group_name IS NOT NULL AND group_name <> ''
      AND ( (visibility = 'public'  AND org_id = $1)
         OR (visibility = 'private' AND (owner_user_id = $2
              OR ($3::varchar IS NOT NULL AND user_discord_id = $3))) )
    ORDER BY group_name, platform, id`
+
+/** ค่าพิเศษของ news_channel_id = "กลุ่มนี้ไม่ส่งเข้าห้องข่าวสาร" (ต่างจาก NULL ที่ยัง fallback ไปห้องของ guild) */
+export const NEWS_OFF = 'off'
 
 /** ตัวตนที่ใช้ตัดสินสิทธิ์บัญชี — debug mode คืน discordId = null (บัญชีส่วนตัวจึงหายไปเอง) */
 export async function publisherIdentity(session) {
@@ -38,14 +42,67 @@ export async function listPublishGroups({ orgId, userId, discordId }) {
   const byName = new Map()
   for (const r of rows) {
     if (!byName.has(r.group_name)) {
-      byName.set(r.group_name, { name: r.group_name, guildId: r.guild_id, visibility: r.visibility, accounts: {} })
+      byName.set(r.group_name, {
+        name: r.group_name, guildId: r.guild_id, visibility: r.visibility,
+        newsChannelId: r.news_channel_id || null,
+        accounts: {}, rowIds: [], guildIds: new Set(),
+      })
     }
     const g = byName.get(r.group_name)
     // 1 กลุ่มควรมี 1 บัญชีต่อแพลตฟอร์ม — ถ้าซ้ำ (ไม่มี constraint กันใน DB) ยึดตัว id น้อยสุดตาม ORDER BY
     if (!g.accounts[r.platform]) g.accounts[r.platform] = { id: r.id, name: r.name }
+    g.rowIds.push(r.id)              // ทุกแถวของกลุ่ม — ใช้เป็นขอบเขตตอน fan-out ตั้งค่ารายกลุ่ม
+    if (r.guild_id) g.guildIds.add(r.guild_id)
+    // ค่าระดับกลุ่มซ้ำทุกแถวอยู่แล้ว → ยึด non-null ตัวแรก (แถวที่เพิ่มเข้ากลุ่มทีหลังอาจยังว่าง)
     if (!g.guildId) g.guildId = r.guild_id
+    if (!g.newsChannelId) g.newsChannelId = r.news_channel_id || null
   }
-  return [...byName.values()]
+  const list = [...byName.values()]
+  // กลุ่มที่บัญชีกระจายอยู่หลายเซิร์ฟ = ตะกร้าดิสฯ (หาด้วย guild_id) จะเห็นกลุ่มนี้ไม่ครบทุกแพลตฟอร์ม
+  for (const g of list) g.mixedGuilds = g.guildIds.size > 1
+  return list
+}
+
+/**
+ * เติม `newsReady` ให้ทุกกลุ่ม — "กลุ่มนี้ติ๊กห้องข่าวสารได้ไหม"
+ *
+ * ลำดับตัดสิน (ต้องตรงกับ getNewsChannelId ฝั่งบอท — services/newsShare.js):
+ *   'off'      → ไม่ส่ง
+ *   มี channel → ส่งเข้าห้องนั้น
+ *   ว่าง       → public: fallback ห้องของ guild (ของเดิมก่อนมีคอลัมน์นี้ ต้องไม่พังตอน deploy)
+ *                private: **ไม่ fallback** — กลุ่มส่วนตัวยิงเข้าห้องข่าวขององค์กรได้เฉพาะเมื่อ
+ *                ทีมสื่อตั้งห้องให้เท่านั้น (ด่านอยู่ที่ endpoint ตั้งค่า ไม่ต้องเช็คยศตอนกดโพสต์)
+ */
+export async function attachNewsReady(groups) {
+  const needFallback = groups.filter(g => !g.newsChannelId && g.visibility === 'public')
+  const guildNews = await guildNewsChannels(needFallback.map(g => g.guildId))
+  for (const g of groups) {
+    const fallback = g.visibility === 'public' ? guildNews.get(g.guildId) || null : null
+    // ปลายทางจริง — ใช้ทั้งตัดสิน newsReady และหาชื่อห้องมาโชว์ในกล่องเผยแพร่
+    g.newsTargetId = g.newsChannelId === NEWS_OFF ? null : (g.newsChannelId || fallback)
+    g.newsSource = g.newsChannelId && g.newsChannelId !== NEWS_OFF ? 'group' : g.newsTargetId ? 'guild' : null
+    g.newsReady = !!g.newsTargetId
+  }
+  return groups
+}
+
+/**
+ * เติมชื่อห้องให้กลุ่มที่พร้อมส่ง — ดึงจาก Discord ตาม channel id (ไม่เก็บชื่อลง DB)
+ * ห้องเปลี่ยนชื่อในดิสคอร์ดแล้วชื่อที่โชว์เปลี่ยนตามเอง · ดึงไม่ได้ = ปล่อยชื่อเป็น null (UI โชว์ป้ายเปล่า)
+ */
+export async function attachNewsChannelName(groups) {
+  const byGuild = new Map()
+  for (const g of groups) {
+    if (g.newsTargetId && g.guildId) byGuild.set(g.guildId, null)
+  }
+  await Promise.all([...byGuild.keys()].map(async gid => {
+    byGuild.set(gid, await listGuildChannels(gid))
+  }))
+  for (const g of groups) {
+    const list = g.newsTargetId && g.guildId ? byGuild.get(g.guildId) : null
+    g.newsChannelName = list?.find(c => c.id === g.newsTargetId)?.name || null
+  }
+  return groups
 }
 
 /**
@@ -66,7 +123,14 @@ export async function resolveGroupAccounts({ orgId, userId, discordId, group, pl
 
   const accountIds = {}
   for (const p of needAccount) accountIds[p] = found.accounts[p].id
-  return { ok: true, group: found.name, guildId: found.guildId, visibility: found.visibility, accountIds }
+
+  // ห้องข่าวสาร: ตัดสินด้วยกฎชุดเดียวกับที่กล่องเผยแพร่ใช้โชว์ป้าย (ไม่งั้น UI เทา/ไม่เทา ไม่ตรงกับ API)
+  if (platforms.includes('news')) await attachNewsReady([found])
+
+  return {
+    ok: true, group: found.name, guildId: found.guildId, visibility: found.visibility,
+    accountIds, newsChannelId: found.newsChannelId || null, newsReady: !!found.newsReady,
+  }
 }
 
 /** guild นี้ตั้งห้องข่าวสารไว้หรือยัง — ไม่ได้ตั้ง = ติ๊ก 'ห้องข่าวสาร' ไปก็ล้มที่ worker เปล่าๆ */
@@ -77,4 +141,19 @@ export async function hasNewsChannel(guildId) {
     [guildId]
   )
   return !!rows[0]?.value
+}
+
+/**
+ * ห้องข่าวสารราย guild (ค่าเดิมก่อนมีคอลัมน์รายกลุ่ม) — คืน Map guild_id → channel_id
+ * ใช้ตอบทุกกลุ่มในนัดเดียว (1 query ไม่ใช่ N) และใช้หาชื่อห้องต่อ
+ */
+export async function guildNewsChannels(guildIds) {
+  const ids = [...new Set((guildIds || []).filter(Boolean))]
+  if (!ids.length) return new Map()
+  const { rows } = await pool.query(
+    `SELECT guild_id, value FROM dc_guild_config
+      WHERE guild_id = ANY($1) AND "key" = 'news_channel_id'`,
+    [ids]
+  )
+  return new Map(rows.filter(r => r.value).map(r => [r.guild_id, String(r.value)]))
 }

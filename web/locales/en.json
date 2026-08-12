@@ -1295,6 +1295,22 @@
       "visibility": {
         "public": "Public",
         "private": "Private"
+      },
+      "groups": {
+        "heading": "Per-group settings",
+        "subtitle": "One group = one server · the news channel belongs to the group, not to the server you are currently viewing",
+        "server": "Discord server of this group",
+        "noServer": "(no server linked)",
+        "newsChannel": "News channel",
+        "useServerDefault": "(use the server's news channel)",
+        "notSet": "(not set — cannot post)",
+        "off": "Do not post to a news channel",
+        "channelIdPlaceholder": "Paste channel ID (channel names unavailable)",
+        "saved": "Saved",
+        "saveFailed": "Could not save",
+        "noServerWarning": "No server linked — Discord share will not show this group",
+        "mixedGuildsWarning": "Accounts in this group sit on different servers — pick one server to align them",
+        "usingServerNews": "Using the server's channel: #{channel}"
       }
     },
     "ai": {

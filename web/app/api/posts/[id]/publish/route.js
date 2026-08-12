@@ -82,6 +82,8 @@ export async function POST(req, { params }) {
     const { userId: publisherUserId, discordId: publisherDiscordId } = await publisherIdentity(ctx.session)
     let accountIds = {}
     let groupName = null
+    let groupGuildId = null
+    let groupNewsReady = false
     let wmType = null
     let wmPos = null
     const socialPlatforms = platforms.filter(p => p !== 'news')
@@ -96,6 +98,8 @@ export async function POST(req, { params }) {
       if (!resolved.ok) return Response.json({ error: resolved.error }, { status: 403 })
       accountIds = resolved.accountIds
       groupName = resolved.group
+      groupGuildId = resolved.guildId || null
+      groupNewsReady = resolved.newsReady
 
       // ลายน้ำ: ค่าที่เก็บลงแถวงานต้องเป็นไฟล์จริงของกลุ่มนี้เท่านั้น (whitelist ตั้งแต่ขาเขียน)
       // — ไม่งั้นค่าจาก client จะกลายเป็น path บนเครื่องบอทตอน worker หยิบไปใช้
@@ -128,14 +132,33 @@ export async function POST(req, { params }) {
       )
     }
 
-    const guildId = await getGuildId(ctx.session)
+    // guild ของงาน = guild ที่ "กลุ่มที่โพสต์ในนาม" สังกัด ไม่ใช่ guild ที่กำลังเปิดหน้าอยู่
+    // (org เดียวมีหลาย guild → เลือกกลุ่มข้ามเซิร์ฟได้ · เดิมใช้ session guild ทำให้ห้องข่าวสารลงผิดเซิร์ฟเงียบๆ)
+    // ไม่เลือกกลุ่ม (ติ๊กห้องข่าวสารอย่างเดียว) = ยึด session guild เหมือนเดิม
+    const guildId = groupGuildId || (await getGuildId(ctx.session))
     // 'news' = ส่งเข้าห้องข่าวสารใน Discord → org ที่ยังไม่เชื่อม Discord ทำไม่ได้ (worker จะล้มเปล่าๆ)
     if (platforms.includes('news')) {
       if (!guildId) {
         return Response.json({ error: 'หน่วยงานนี้ยังไม่ได้เชื่อมกับ Discord จึงส่งเข้าห้องข่าวสารไม่ได้' }, { status: 400 })
       }
-      // ไม่ได้ตั้ง news_channel_id ไว้ = job จะ retry 3 รอบแล้ว failed เปล่าๆ → ตัดตั้งแต่ต้นทาง
-      if (!(await hasNewsChannel(guildId))) {
+      // ไม่มีปลายทาง = job จะ retry 3 รอบแล้ว failed เปล่าๆ → ตัดตั้งแต่ต้นทาง
+      // เลือกกลุ่ม → ใช้คำตอบรายกลุ่ม (ห้องของกลุ่ม / fallback ห้องของ guild / 'off')
+      // ไม่เลือกกลุ่ม → ห้องของ guild ที่เปิดหน้าอยู่เหมือนเดิม
+      if (groupName) {
+        if (!groupNewsReady) {
+          return Response.json(
+            { error: `กลุ่ม "${groupName}" ยังไม่ได้ตั้งห้องข่าวสาร (ตั้งที่ /org/settings/social)` },
+            { status: 400 }
+          )
+        }
+        // ห้องเป็น artifact ของเซิร์ฟ — บอทต้อง fetch guild ให้ตรงกับห้อง ไม่งั้นหาห้องไม่เจอตอนยิง
+        if (!groupGuildId) {
+          return Response.json(
+            { error: `กลุ่ม "${groupName}" ยังไม่ได้ผูกเซิร์ฟเวอร์ (ตั้งที่ /org/settings/social)` },
+            { status: 400 }
+          )
+        }
+      } else if (!(await hasNewsChannel(guildId))) {
         return Response.json({ error: 'ยังไม่ได้ตั้งห้องข่าวสารของเซิร์ฟเวอร์นี้ (ตั้งที่ /bot)' }, { status: 400 })
       }
     }

@@ -214,13 +214,14 @@ async function publishOne({
               msg = await postNews(guild, {
                 content: caption || undefined,
                 files: [{ attachment: buffer, name: `video.${storage.extOfPath(videoPath)}` }],
+                group,
               });
             }
           } catch (err) {
             console.error('[publishPipeline] แนบคลิปเข้าห้องข่าวไม่สำเร็จ ใช้ลิงก์แทน:', err.message);
           }
         }
-        if (!msg) msg = await postNews(guild, { content: [caption, videoUrl].filter(Boolean).join('\n') });
+        if (!msg) msg = await postNews(guild, { content: [caption, videoUrl].filter(Boolean).join('\n'), group });
         url = msg?.url || null;
       } else {
         // Discord จำกัด 10 ไฟล์/ข้อความ → เกินให้ต่อข้อความถัดไป · ลิงก์ที่คืนคือข้อความแรก
@@ -230,6 +231,7 @@ async function publishOne({
           const msg = await postNews(guild, {
             content: i === 0 ? (caption || undefined) : undefined,
             files: files.slice(i, i + 10),
+            group,
           });
           if (!firstMsg) firstMsg = msg;
         }

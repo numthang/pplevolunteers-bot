@@ -67,7 +67,9 @@ export default function PostPublishPanel({ postId }) {
   const [postStatus, setPostStatus] = useState(null)
   const [selected, setSelected] = useState([])
   const [groups, setGroups] = useState([])
-  const [newsReady, setNewsReady] = useState(false)
+  // ห้องข่าวสารเป็นของ guild ที่กลุ่มสังกัด → ค่าจริงมาจาก `current.newsReady` รายกลุ่ม
+  // ตัวนี้เป็นค่าของ guild ที่เปิดหน้าอยู่ ใช้เฉพาะตอนยังไม่เลือกกลุ่ม (ติ๊กห้องข่าวสารอย่างเดียว)
+  const [sessionNewsReady, setSessionNewsReady] = useState(false)
   const [group, setGroup] = useState('')
   const [watermarks, setWatermarks] = useState([])
   const [copiedId, setCopiedId] = useState(null)
@@ -130,7 +132,7 @@ export default function PostPublishPanel({ postId }) {
         if (!alive) return
         const list = Array.isArray(data.groups) ? data.groups : []
         setGroups(list)
-        setNewsReady(!!data.news)
+        setSessionNewsReady(!!data.news)
         if (list.length === 1) setGroup(list[0].name)   // มีกลุ่มเดียวก็ไม่ต้องให้เลือก
       })
       .catch(() => {})
@@ -145,6 +147,8 @@ export default function PostPublishPanel({ postId }) {
   }, [jobs, loadJobs])
 
   const current = groups.find(g => g.name === group) || null
+  // เลือกกลุ่มแล้ว = ยึดห้องข่าวสารของเซิร์ฟที่กลุ่มนั้นสังกัด (ตรงกับที่ publish/route.js ตัดสิน)
+  const newsReady = current ? !!current.newsReady : sessionNewsReady
 
   // สะท้อนเหตุผลชุดเดียวกับที่ publish/route.js ตอบตอน 403 — ยังไม่อนุมัติ = แก้ได้เอง · ไม่มีสิทธิ์ = แก้ไม่ได้
   const publishBlockReason = canPublish || postStatus === null
@@ -169,9 +173,12 @@ export default function PostPublishPanel({ postId }) {
   }, [group])
 
   // แพลตฟอร์มที่ติ๊กได้ = บัญชีที่กลุ่มนี้มีจริง (เหมือนตะกร้าดิสฯ ที่กรอง platform ตามกลุ่ม)
-  // 'news' ไม่ใช่บัญชีโซเชียล — เป็นห้องใน Discord จึงขึ้นกับว่า guild ตั้งห้องข่าวไว้ไหม
+  // 'news' ไม่ใช่บัญชีโซเชียล — เป็นห้องใน Discord ของเซิร์ฟที่กลุ่มนั้นสังกัด (ไม่ใช่เซิร์ฟที่เปิดหน้าอยู่)
   function blockedReason(key) {
-    if (key === 'news') return newsReady ? null : 'เซิร์ฟเวอร์นี้ยังไม่ได้ตั้งห้องข่าวสาร'
+    if (key === 'news') {
+      if (newsReady) return null
+      return current ? 'เซิร์ฟเวอร์ของกลุ่มนี้ยังไม่ได้ตั้งห้องข่าวสาร' : 'เซิร์ฟเวอร์นี้ยังไม่ได้ตั้งห้องข่าวสาร'
+    }
     if (!current) return 'เลือกกลุ่มก่อน'
     if (!current.platforms.includes(key)) return `กลุ่มนี้ไม่มีบัญชี ${platformLabel(key)}`
     if (NEEDS_MEDIA.includes(key) && !hasMedia) return 'ต้องมีสื่ออย่างน้อย 1 ชิ้น'
@@ -182,7 +189,8 @@ export default function PostPublishPanel({ postId }) {
   useEffect(() => {
     if (!current) return
     setSelected(prev => {
-      const kept = prev.filter(p => p === 'news' || current.platforms.includes(p))
+      // 'news' ก็ต้องถอดด้วยถ้ากลุ่มใหม่อยู่เซิร์ฟที่ไม่ได้ตั้งห้องข่าวสาร (ไม่งั้นกดแล้วเด้ง 400)
+      const kept = prev.filter(p => (p === 'news' ? !!current.newsReady : current.platforms.includes(p)))
       return kept.length === prev.length ? prev : kept        // ไม่มีอะไรถูกถอด = คืน array เดิม กัน re-render เปล่า
     })
   }, [current])
@@ -284,6 +292,9 @@ export default function PostPublishPanel({ postId }) {
               />
               <span className="text-warm-900 dark:text-disc-text">
                 {p.label}{account ? `: ${account}` : ''}
+                {/* ห้องข่าวสารไม่มี "บัญชี" → บอกชื่อห้องปลายทางแทน (ดึงสดจาก Discord ตาม channel id)
+                    ไม่มีชื่อ = ดึงจาก Discord ไม่ได้ ไม่ใช่ว่าไม่มีห้อง → ไม่โชว์อะไรดีกว่าโชว์ผิด */}
+                {p.key === 'news' && newsReady && current?.newsChannelName ? `: #${current.newsChannelName}` : ''}
               </span>
             </label>
           )

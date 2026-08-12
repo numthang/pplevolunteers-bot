@@ -16,6 +16,37 @@ async function isOwner(id, session) {
   return !!user_discord_id && user_discord_id === session.user.discordId
 }
 
+/**
+ * ย้ายบัญชีเข้ากลุ่มแล้วรับ "ค่าระดับกลุ่ม" ที่ว่างอยู่ไปด้วย — เซิร์ฟเวอร์ + ห้องข่าวสาร
+ *
+ * ทำไมต้องมี: flow จริงคือต่อ OAuth ก่อน (ยังไม่มีกลุ่ม) แล้วค่อยตั้ง group_name ทีหลัง
+ * แถวใหม่จึงไม่มี guild_id → ตะกร้าดิสฯ ที่หาด้วย `visibility='public' AND guild_id=$1`
+ * (services/metaApi.js) จะเห็นกลุ่มนั้นไม่ครบทุกแพลตฟอร์ม = "กดแชร์แล้วหาไม่เจอ" ทีละแถว
+ *
+ * scope ด้วย org_id + owner_user_id เพราะ group_name เป็น free text ซ้ำข้าม tenant ได้
+ */
+async function inheritGroupFields(id, groupName) {
+  if (!groupName) return
+  await pool.query(
+    `UPDATE dc_social_accounts a
+        SET guild_id        = COALESCE(a.guild_id, s.guild_id),
+            news_channel_id = COALESCE(a.news_channel_id, s.news_channel_id)
+       FROM (
+         SELECT b.guild_id, b.news_channel_id
+           FROM dc_social_accounts b, dc_social_accounts me
+          WHERE me.id = $1 AND b.id <> me.id
+            AND b.group_name = $2
+            AND COALESCE(b.org_id, 0)        = COALESCE(me.org_id, 0)
+            AND COALESCE(b.owner_user_id, 0) = COALESCE(me.owner_user_id, 0)
+            AND (b.guild_id IS NOT NULL OR b.news_channel_id IS NOT NULL)
+          ORDER BY b.id
+          LIMIT 1
+       ) s
+      WHERE a.id = $1`,
+    [id, groupName]
+  )
+}
+
 export async function PATCH(req, { params }) {
   const session = await getServerSession(authOptions)
   if (!session) return Response.json({ error: 'Forbidden' }, { status: 403 })
@@ -38,6 +69,7 @@ export async function PATCH(req, { params }) {
 
     values.push(id)
     await pool.query(`UPDATE dc_social_accounts SET ${fields.join(', ')} WHERE id = $${values.length}`, values)
+    if (group_name) await inheritGroupFields(id, group_name)
   } else {
     // owner เท่านั้น — แก้ได้แค่ group_name
     if (!(await isOwner(id, session))) {
@@ -48,6 +80,7 @@ export async function PATCH(req, { params }) {
       `UPDATE dc_social_accounts SET group_name = $1 WHERE id = $2`,
       [body.group_name || null, id]
     )
+    if (body.group_name) await inheritGroupFields(id, body.group_name)
   }
 
   return Response.json({ ok: true })

@@ -735,5 +735,16 @@ CREATE TABLE IF NOT EXISTS news_watch_seen (
 );
 CREATE INDEX IF NOT EXISTS idx_news_watch_seen_at ON news_watch_seen (seen_at);
 
--- production ทำถึงตรงนี้ 
+-- production ทำถึงตรงนี้
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 2026-08-12 · ห้องข่าวสารผูกรายกลุ่ม social (เดิมผูกราย guild ที่ dc_guild_config)
+-- เหตุ: กล่องเผยแพร่ /posts เลือก "กลุ่ม" ข้ามเซิร์ฟได้ แต่ห้องข่าวสารเดินตาม guild ที่เปิดหน้าอยู่
+--       → โพสต์ในนามเพจราชบุรีไปลงห้องข่าวของเซิร์ฟอาสาฯ เงียบๆ
+-- เก็บที่ dc_social_accounts เพราะตารางนี้เก็บค่าระดับกลุ่มซ้ำทุกแถวอยู่แล้ว (group_name/guild_id/visibility)
+--       ห้ามเก็บเป็นแถว platform='news' — ตารางนี้ถูกอ้าง 23 ไฟล์ จะกลายเป็น "บัญชีปลอมไม่มี token"
+-- ค่า 3 สถานะ: NULL = ใช้ห้องของ guild (ของเดิม, เฉพาะกลุ่ม public) · '<channel id>' = ห้องนี้ · 'off' = ไม่ส่ง
+ALTER TABLE dc_social_accounts ADD COLUMN IF NOT EXISTS news_channel_id VARCHAR(20);
+COMMENT ON COLUMN dc_social_accounts.news_channel_id IS
+  'ห้องข่าวสาร Discord ของกลุ่มนี้ · NULL = fallback dc_guild_config (public เท่านั้น) · off = ไม่ส่ง'; 
 

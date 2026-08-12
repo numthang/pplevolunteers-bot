@@ -376,7 +376,10 @@ Code เสร็จ + mock smoke test ผ่าน (7 เคส) — ยัง�
 > โค้ดเสร็จ ยังไม่ทดสอบ dev / ยังไม่ deploy · files: `services/newsShare.js`, `handlers/basketHandler.js`, `index.js`, `web/components/org/OrgSocialAccounts.jsx` + guild-configs API
 
 ### ⚠️ ก่อน deploy prod
-1. ตั้ง `news_channel_id` ต่อ guild — หน้าเว็บ /bot (การ์ด "ห้องที่บอทใช้") หรือ INSERT `dc_guild_config`
+1. ตั้งห้องข่าวสาร — **ตั้งรายกลุ่มที่ /org/settings/social** (การ์ด "การตั้งค่ารายกลุ่ม") ตั้งแต่ 2026-08-12
+   · ค่าราย guild ที่ /bot (`dc_guild_config.news_channel_id`) เหลือเป็น fallback ของกลุ่ม `public` ที่ยังไม่ได้ตั้งเอง
+   · กลุ่ม `private` ไม่ fallback — ไม่ตั้งให้ = ส่งไม่ได้
+   · ลำดับตัดสินเต็มๆ อยู่ที่ [md/WEB.md](../WEB.md) §ห้องข่าวสาร — `getNewsChannelId(guildId, groupName)` ใน `services/newsShare.js`
 2. ให้สิทธิ์ bot ในห้องข่าวสาร: **Send Messages + Mention Everyone** และระดับ guild: **Manage Events**
 3. ทดสอบ dev ก่อน: โพสต์ตะกร้า (เลือก 📢) → กดปุ่ม 📅 → modal (มี channel select — feature ใหม่ discord.js 14.25) → event เกิด + ประกาศเข้าห้องข่าวสาร
 4. ทดสอบ quiet hours: สร้าง event หลัง 21:00 → ประกาศต้องเข้าคิว (`dc_guild_config` key `pending_event_announcements`) แล้วส่ง 09:00
