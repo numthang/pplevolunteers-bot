@@ -1382,14 +1382,14 @@
       },
       "isDefault": "Default",
       "isCustom": "Customised",
-      "requiredKeys": "Keep these keys in the text, or the system cannot read the AI reply: {keys}",
       "save": "Save",
       "saving": "Saving…",
       "saveSuccess": "Saved",
       "saveError": "Could not save",
       "reset": "Reset to default",
       "resetSuccess": "Reset to default",
-      "unsaved": "Unsaved changes"
+      "unsaved": "Unsaved changes",
+      "lockedNote": "The system always appends this and it cannot be edited — it is the format used to read the AI reply."
     }
   },
   "profile": {

@@ -30,7 +30,7 @@ export default function OrgPrompts({ orgId }) {
     setErr(''); setNote('')
     if (open === p.value) { setOpen(''); return }
     setOpen(p.value)
-    setDraft(p.prompt)
+    setDraft(p.head)   // แก้ได้เฉพาะ head — format ไม่เคยเข้า textarea เลย
   }
 
   async function call(method, body, okMsg) {
@@ -47,7 +47,7 @@ export default function OrgPrompts({ orgId }) {
     setPrompts(d.prompts)
     setNote(okMsg)
     const fresh = d.prompts.find(x => x.value === body.value)
-    if (fresh) setDraft(fresh.prompt)
+    if (fresh) setDraft(fresh.head)
   }
 
   const surfaces = [...new Set(prompts.map(p => p.surface))]
@@ -85,16 +85,20 @@ export default function OrgPrompts({ orgId }) {
                   <textarea value={draft} onChange={e => setDraft(e.target.value)} disabled={busy} rows={14}
                     className={areaCls} />
 
-                  {/* คีย์ที่ห้ามหาย — บอกไว้ก่อน ดีกว่าให้เจอตอนกดบันทึกแล้วโดนปฏิเสธ */}
-                  {p.requiredKeys.length > 0 && (
-                    <p className="text-xs text-gray-400 dark:text-disc-muted">
-                      {t('prompts.requiredKeys', { keys: p.requiredKeys.join(', ') })}
-                    </p>
+                  {/* ส่วนล็อก — โชว์ให้เห็นว่าระบบต่อท้ายอะไรให้ แต่ไม่มีทางแก้
+                      ไม่ใช่ textarea disabled: ค่านี้ไม่เคยถูกส่งกลับไป API เลย */}
+                  {p.format && (
+                    <div className="space-y-1">
+                      <p className="text-xs text-gray-400 dark:text-disc-muted">{t('prompts.lockedNote')}</p>
+                      <pre className="overflow-x-auto rounded-lg border border-dashed border-gray-300 dark:border-disc-border bg-gray-50 dark:bg-disc-hover px-3 py-2 text-xs text-gray-500 dark:text-disc-muted whitespace-pre-wrap break-words">
+                        {p.format}
+                      </pre>
+                    </div>
                   )}
 
                   <div className="flex items-center gap-3 flex-wrap">
-                    <button type="button" disabled={busy || draft.trim() === p.prompt.trim()}
-                      onClick={() => call('PUT', { value: p.value, prompt: draft }, t('prompts.saveSuccess'))}
+                    <button type="button" disabled={busy || draft.trim() === p.head.trim()}
+                      onClick={() => call('PUT', { value: p.value, head: draft }, t('prompts.saveSuccess'))}
                       className="rounded-lg bg-orange px-4 py-2 text-sm font-medium text-white hover:bg-orange-light disabled:opacity-60">
                       {busy ? t('prompts.saving') : t('prompts.save')}
                     </button>
@@ -107,7 +111,7 @@ export default function OrgPrompts({ orgId }) {
                       </button>
                     )}
 
-                    {draft.trim() !== p.prompt.trim() && (
+                    {draft.trim() !== p.head.trim() && (
                       <span className="text-xs text-amber-600 dark:text-amber-500">{t('prompts.unsaved')}</span>
                     )}
                   </div>

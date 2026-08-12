@@ -25,26 +25,23 @@ export async function GET(req, { params }) {
   return Response.json({ prompts: await listPrompts(g.orgId) })
 }
 
-// PUT { value, prompt } — แก้ทับช่องนี้ของ org นี้
+// PUT { value, head } — แก้ทับ **เฉพาะ head** ของช่องนี้
+//
+// ⛔ ไม่รับ `format` จาก client ไม่ว่าจะส่งมาหรือไม่ — บล็อกประกาศรูปแบบ JSON มาจาก
+//    config/aiPrompts.js เสมอ นี่คือด่านที่ทำให้ผู้ใช้ทำ prompt พังไม่ได้ตั้งแต่ต้นทาง
+//    (ไม่ใช่ validate ทีหลัง — ค่าที่ส่งมาถูกโยนทิ้งเฉยๆ ถ้าไม่ใช่ head)
 export async function PUT(req, { params }) {
   const g = await ownerGate(params)
   if (g.error) return Response.json({ error: g.error }, { status: g.status })
 
   const body = await req.json().catch(() => ({}))
   const value = String(body.value || '').trim()
-  const prompt = String(body.prompt || '').trim()
+  const head = String(body.head || '').trim()
   if (!value) return Response.json({ error: 'ไม่ได้ระบุว่าจะแก้ช่องไหน' }, { status: 400 })
-  if (!prompt) return Response.json({ error: 'prompt ว่าง — ถ้าอยากกลับไปใช้ค่าตั้งต้น กด "คืนค่าเดิม"' }, { status: 400 })
+  if (!head) return Response.json({ error: 'คำสั่งว่าง — ถ้าอยากกลับไปใช้ค่าตั้งต้น กด "คืนค่าเดิม"' }, { status: 400 })
 
-  const res = await setPrompt(g.orgId, value, prompt, g.userId)
+  const res = await setPrompt(g.orgId, value, head, g.userId)
   if (res.unknown) return Response.json({ error: 'ไม่รู้จักช่องนี้' }, { status: 404 })
-  if (!res.ok) {
-    // เช็คตั้งแต่ตอนเซฟ ไม่ปล่อยให้ไปพังตอนยิง AI (error ตรงนั้นเดาสาเหตุไม่ได้เลย)
-    return Response.json({
-      error: `prompt นี้ต้องพูดถึงคีย์เหล่านี้ให้ครบ ไม่งั้นระบบอ่านคำตอบของ AI ไม่ได้: ${res.missing.join(', ')}`,
-      missing: res.missing,
-    }, { status: 400 })
-  }
   return Response.json({ prompts: await listPrompts(g.orgId) })
 }
 

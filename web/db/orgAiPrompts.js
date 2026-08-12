@@ -1,19 +1,26 @@
 // web/db/orgAiPrompts.js — อ่าน/เขียน prompt ฝั่ง **เว็บ** (ESM) จาก org_ai_prompts
 // คู่แฝดฝั่งบอทคือ db/aiPrompts.js (CommonJS) — แก้ที่นึงต้องดูอีกที่ด้วยเสมอ
 //
-// สายการอ่าน: แถวของ org → แถวกลาง (org_id IS NULL) → ค่าใน config/aiPrompts.js
-// DB ล่ม/ตารางว่าง → ค่าโค้ด (AI ต้องไม่พังเพราะ config เสีย)
+// ⛔ แถวใน DB เก็บแค่ **head** (ส่วนที่ org แก้ได้) · **format ต่อท้ายจากโค้ดเสมอ**
+//    ประกาศรูปแบบ JSON ที่ route ไป parse จึงลบทิ้งไม่ได้ไม่ว่า org จะทำอะไร —
+//    ไม่ใช่เพราะ validate ผ่าน แต่เพราะ **ไม่มีที่ให้เก็บทับตั้งแต่แรก**
+//
+// สายการอ่าน: head ของ org → head ในโค้ด · แล้วต่อ format จากโค้ดท้ายสุด
+// DB ล่ม/ตารางว่าง → ค่าโค้ดทั้งหมด (AI ต้องไม่พังเพราะ config เสีย)
 import pool from './index.js'
 import aiPrompts from '@/../config/aiPrompts.js'
 
-const { AI_PROMPTS, defaultPrompt } = aiPrompts
+const { AI_PROMPTS, defaultParts, assemble } = aiPrompts
 
 /**
- * prompt ของช่องที่ผูกกับโค้ด (kind='slot')
+ * prompt ของช่องที่ผูกกับโค้ด — ประกอบเสร็จพร้อมยิง AI
  * @returns {Promise<string|null>} null = ไม่รู้จักช่องนี้ (สะกดผิด)
  */
 export async function getPrompt(value, orgId = null) {
-  const fallback = defaultPrompt(value)?.prompt ?? null
+  const def = defaultParts(value)
+  if (!def) return null
+
+  let head = def.head
   try {
     const { rows } = await pool.query(
       // org_id ASC NULLS LAST → แถวของ org มาก่อนแถวกลางเสมอ · orgId=null แมตช์เฉพาะแถวกลาง
@@ -23,16 +30,17 @@ export async function getPrompt(value, orgId = null) {
         LIMIT 1`,
       [value, orgId]
     )
-    return rows[0]?.prompt ?? fallback
+    if (rows[0]?.prompt) head = rows[0].prompt
   } catch (err) {
     console.error('[orgAiPrompts] getPrompt failed, fallback to code:', err.message)
-    return fallback
   }
+  return assemble(head, def.format)
 }
 
 /**
  * ทุกช่องพร้อมสถานะ สำหรับหน้า backoffice
- * `prompt` = ค่าที่ใช้จริงตอนนี้ · `isDefault` = ยังไม่เคยแก้ทับ (ปุ่ม "คืนค่าเดิม" ควรจาง)
+ * `head` = ที่แก้ได้ (ค่าปัจจุบัน) · `format` = ที่ล็อก ส่งไปโชว์อย่างเดียว ไม่รับกลับ
+ * `isDefault` = ยังไม่เคยแก้ทับ (ปุ่ม "คืนค่าเดิม" ควรซ่อน)
  */
 export async function listPrompts(orgId) {
   let overrides = new Map()
@@ -54,9 +62,9 @@ export async function listPrompts(orgId) {
       value: p.value,
       label: p.label,
       surface: p.surface,
-      requiredKeys: p.requiredKeys,
-      defaultPrompt: p.prompt,
-      prompt: row?.prompt ?? p.prompt,
+      defaultHead: p.head,
+      head: row?.prompt ?? p.head,
+      format: p.format || '',     // '' = slot ที่คืนข้อความล้วน ไม่มีอะไรล็อก
       isDefault: !row,
       updatedAt: row?.updated_at ?? null,
     }
@@ -64,25 +72,21 @@ export async function listPrompts(orgId) {
 }
 
 /**
- * แก้ทับ prompt ของ org นี้
- * ⛔ ต้องเช็ค requiredKeys ก่อนเสมอ — ผู้ใช้ลบบรรทัด "รูปแบบ JSON: {...}" ทิ้งเมื่อไหร่
- *    route ที่ parse ผลลัพธ์จะพังทั้งเส้น โดยขึ้น error ว่า "AI ตอบกลับมาไม่ใช่ JSON ที่อ่านได้"
- *    ซึ่งไม่มีทางเดาได้เลยว่าสาเหตุมาจากที่นี่ → กันตั้งแต่ตอนเซฟ ไม่ใช่ตอนยิง AI
- * @returns {Promise<{ok:true} | {ok:false, missing:string[]}>}
+ * แก้ทับ **head** ของ org นี้ (format แก้ไม่ได้ — ไม่มีคอลัมน์เก็บ)
+ *
+ * ⛔ ไม่เช็ค requiredKeys ที่นี่โดยตั้งใจ — คีย์พวกนั้นอยู่ใน format ซึ่งล็อกอยู่แล้ว
+ *    ถ้าเผลอเช็ค จะไปปฏิเสธการแก้ head ที่ถูกต้องทุกครั้งที่ผู้ใช้ไม่ได้พิมพ์ชื่อคีย์ลงในกฎ
  */
-export async function setPrompt(orgId, value, prompt, userId = null) {
-  const def = defaultPrompt(value)
-  if (!def) return { ok: false, missing: [], unknown: true }
-
-  const missing = def.requiredKeys.filter(k => !prompt.includes(k))
-  if (missing.length) return { ok: false, missing }
+export async function setPrompt(orgId, value, head, userId = null) {
+  const def = defaultParts(value)
+  if (!def) return { ok: false, unknown: true }
 
   await pool.query(
     `INSERT INTO org_ai_prompts (org_id, kind, value, label, prompt, updated_by, updated_at)
      VALUES ($1, 'slot', $2, $3, $4, $5, now())
      ON CONFLICT (org_id, value) WHERE org_id IS NOT NULL
      DO UPDATE SET prompt = EXCLUDED.prompt, updated_by = EXCLUDED.updated_by, updated_at = now()`,
-    [orgId, value, def.label, prompt, userId]
+    [orgId, value, def.label, head, userId]
   )
   return { ok: true }
 }
