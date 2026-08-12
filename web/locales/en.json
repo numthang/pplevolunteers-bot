@@ -1299,25 +1299,24 @@
       "news": {
         "button": "+ Discord News",
         "title": "Discord news channel",
-        "subtitle": "Pick where this group's posts go · linking a channel also binds the group to that channel's server",
+        "subtitle": "Pick where this group's posts go · the options are the news channels configured on the /bot page of each server",
         "group": "Group",
         "pickGroup": "— pick a group —",
         "noServer": "No account in this group is linked to a server yet — connect an account inside the server first",
         "loadingChannels": "Loading channels…",
-        "channelsUnavailable": "Cannot read channel names from Discord (bot not in the server, or missing permission) — enter the channel ID instead",
-        "channelIdPlaceholder": "Paste channel ID",
-        "searchChannel": "Type to search channels",
         "useServerDefault": "Use the server's news channel (set at /bot)",
         "none": "Not set — cannot post to a news channel",
         "off": "Do not post to a news channel",
-        "noMatch": "No channel matches your search",
         "saveFailed": "Could not save",
         "needGroup": "No group in this section yet — put accounts into a group first",
         "needMediaTeam": "Only the media team or social managers can set the news channel",
         "boundLabel": "News channel:",
         "fromServer": "server default",
         "unbind": "Unlink the news channel from this group",
-        "unknownChannel": "set (channel name unavailable)"
+        "unknownChannel": "set (channel name unavailable)",
+        "channel": "News channel",
+        "noRoomForServer": "This group's server {server} has no news channel configured yet — set it on the /bot page first (switch servers with the switcher at the top)",
+        "openBotSettings": "Configure a server's news channel on /bot →"
       }
     },
     "ai": {

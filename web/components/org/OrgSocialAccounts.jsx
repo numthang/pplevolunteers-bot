@@ -160,7 +160,8 @@ function AccountRow({ acc, accounts, onToggleVisibility, onSetGroup, onRemove, d
 // ตัวบัญชี (dc_social_accounts.org_id) เป็นของ org แล้ว → ไม่ต้องมี guild ก็ใช้ได้ครบ
 // ⚠️ ห้องข่าวสาร/ห้องแจ้งเตือน (Discord artifact ราย guild) ไม่ได้ย้ายมาด้วย — อยู่ที่ /bot
 export default function OrgSocialAccounts() {
-  const t = useTranslations('org')
+  const t  = useTranslations('org')
+  const tc = useTranslations('common')   // คีย์ common อยู่ top-level ไม่ใช่ใต้ org (bug เดิม: org.common.* ว่าง)
   const { data: session, status } = useSession()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -517,9 +518,9 @@ export default function OrgSocialAccounts() {
                     : t('social.creds.hintX')}
               </p>
               <div className="flex justify-end gap-2 mt-2">
-                <button type="button" onClick={() => setEditConfig(null)} className="px-4 py-2 text-sm rounded-lg text-gray-500 dark:text-disc-muted hover:bg-gray-100 dark:hover:bg-disc-hover transition">{t('common.cancel')}</button>
+                <button type="button" onClick={() => setEditConfig(null)} className="px-4 py-2 text-sm rounded-lg text-gray-500 dark:text-disc-muted hover:bg-gray-100 dark:hover:bg-disc-hover transition">{tc('cancel')}</button>
                 <button type="submit" disabled={savingConfig} className="flex items-center gap-1.5 px-4 py-2 text-sm rounded-lg bg-orange text-white hover:opacity-90 transition disabled:opacity-40">
-                  <Check size={14} />{savingConfig ? t('common.saving') : t('common.save')}
+                  <Check size={14} />{savingConfig ? tc('saving') : tc('save')}
                 </button>
               </div>
             </form>
