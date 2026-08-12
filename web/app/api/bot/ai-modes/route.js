@@ -4,9 +4,13 @@ import { isSuperAdmin, isEditor } from '@/lib/roles.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import pool from '@/db/index.js'
 
-// AI prompt modes — backoffice แก้ชุดกลาง (guild_id='global'); bot resolver รองรับ per-guild ในอนาคต
-// superadmin เท่านั้น (กระทบทุก guild)
-const GLOBAL = 'global'
+// AI prompt modes ของบอท — backoffice แก้ **ชุดกลาง** (org_ai_prompts ที่ org_id IS NULL)
+// superadmin/editor เท่านั้น (กระทบทุก org ที่ไม่ได้แก้ทับ)
+//
+// ⚠️ ย้ายจาก dc_ai_modes → org_ai_prompts แล้ว (2026-08-12) · ตารางเดียวเก็บ prompt 2 ชนิด
+//    **ทุก query ที่นี่ต้องมี kind = 'mode' เสมอ** — หน้านี้เป็น CRUD ที่ลบแถวได้
+//    ถ้าหลุดไปโดนแถว kind='slot' = ลบ prompt ที่ /api/posts/ai/* ต้องใช้ทิ้ง แล้ว route นั้นตกไปใช้
+//    ค่าโค้ดเงียบๆ (ไม่พัง แต่ค่าที่ org แก้ไว้หายหมดโดยไม่มีใครรู้)
 const VALUE_RE = /^[a-z0-9_]{2,50}$/ // mode key เป็น snake_case — bot ใช้อ้างอิง ต้องนิ่ง
 
 async function authAdmin() {
@@ -25,7 +29,8 @@ export async function GET() {
 
   const { rows } = await pool.query(
     `SELECT id, value, label, prompt, sort_order, enabled
-     FROM dc_ai_modes WHERE guild_id = $1 ORDER BY sort_order ASC, id ASC`, [GLOBAL]
+     FROM org_ai_prompts WHERE org_id IS NULL AND kind = 'mode'
+     ORDER BY sort_order ASC, id ASC`
   )
   return Response.json({ modes: rows })
 }
@@ -44,19 +49,20 @@ export async function POST(req) {
   if (!prompt) return Response.json({ error: 'prompt ว่าง' }, { status: 400 })
 
   const { rows: maxRows } = await pool.query(
-    `SELECT COALESCE(MAX(sort_order), 0) AS m FROM dc_ai_modes WHERE guild_id = $1`, [GLOBAL]
+    `SELECT COALESCE(MAX(sort_order), 0) AS m FROM org_ai_prompts WHERE org_id IS NULL AND kind = 'mode'`
   )
   const sort = Number(maxRows[0].m) + 1
   try {
     const { rows } = await pool.query(
-      `INSERT INTO dc_ai_modes (guild_id, value, label, prompt, sort_order, enabled)
-       VALUES ($1, $2, $3, $4, $5, TRUE)
+      `INSERT INTO org_ai_prompts (org_id, kind, value, label, prompt, sort_order, enabled)
+       VALUES (NULL, 'mode', $1, $2, $3, $4, TRUE)
        RETURNING id, value, label, prompt, sort_order, enabled`,
-      [GLOBAL, value, label, prompt, sort]
+      [value, label, prompt, sort]
     )
     return Response.json({ mode: rows[0] })
   } catch (err) {
-    if (err.code === '23505') return Response.json({ error: 'value ซ้ำกับ mode ที่มีอยู่' }, { status: 409 })
+    // unique index ครอบทั้งตารางฝั่ง org_id IS NULL → ชนกับ slot ที่ชื่อซ้ำได้ด้วย
+    if (err.code === '23505') return Response.json({ error: 'value ซ้ำกับ prompt ที่มีอยู่' }, { status: 409 })
     throw err
   }
 }
@@ -75,8 +81,8 @@ export async function PATCH(req) {
     if (!order.length) return Response.json({ error: 'order ว่าง' }, { status: 400 })
     for (let i = 0; i < order.length; i++) {
       await pool.query(
-        `UPDATE dc_ai_modes SET sort_order = $1, updated_at = CURRENT_TIMESTAMP
-         WHERE id = $2 AND guild_id = $3`, [i + 1, order[i], GLOBAL]
+        `UPDATE org_ai_prompts SET sort_order = $1, updated_at = CURRENT_TIMESTAMP
+         WHERE id = $2 AND org_id IS NULL AND kind = 'mode'`, [i + 1, order[i]]
       )
     }
     return Response.json({ ok: true })
@@ -101,10 +107,10 @@ export async function PATCH(req) {
   }
   if (!sets.length) return Response.json({ error: 'ไม่มีอะไรให้แก้' }, { status: 400 })
 
-  vals.push(id, GLOBAL)
+  vals.push(id)
   await pool.query(
-    `UPDATE dc_ai_modes SET ${sets.join(', ')}, updated_at = CURRENT_TIMESTAMP
-     WHERE id = $${vals.length - 1} AND guild_id = $${vals.length}`, vals
+    `UPDATE org_ai_prompts SET ${sets.join(', ')}, updated_at = CURRENT_TIMESTAMP
+     WHERE id = $${vals.length} AND org_id IS NULL AND kind = 'mode'`, vals
   )
   return Response.json({ ok: true })
 }
@@ -116,6 +122,7 @@ export async function DELETE(req) {
 
   const id = Number(new URL(req.url).searchParams.get('id'))
   if (!Number.isInteger(id)) return Response.json({ error: 'invalid id' }, { status: 400 })
-  await pool.query(`DELETE FROM dc_ai_modes WHERE id = $1 AND guild_id = $2`, [id, GLOBAL])
+  // kind='mode' ใน WHERE = ด่านสุดท้ายกัน slot ถูกลบผ่านหน้านี้
+  await pool.query(`DELETE FROM org_ai_prompts WHERE id = $1 AND org_id IS NULL AND kind = 'mode'`, [id])
   return Response.json({ ok: true })
 }

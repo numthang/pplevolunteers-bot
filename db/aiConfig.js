@@ -1,10 +1,11 @@
 // db/aiConfig.js
-// อ่าน AI config จาก DB — modes (dc_ai_modes) + agent (provider/model/max_tokens ใน dc_guild_config global)
+// อ่าน AI config จาก DB — modes (org_ai_prompts kind='mode') + agent (provider/model/max_tokens ใน dc_guild_config global)
 // fallback เป็นค่า hardcode ใน config/aiModes.js เสมอ ถ้า DB ว่าง/ล่ม → AI ไม่พัง
 const pool = require('./index');
 const { getSetting } = require('./settings');
 const { AI_MODES } = require('../config/aiModes');
 const { getAiCreds } = require('./aiCreds');
+const { orgIdOfGuild } = require('./org');
 
 const GLOBAL = 'global';
 
@@ -12,16 +13,21 @@ const GLOBAL = 'global';
 const DEFAULTS = { provider: 'claude', maxTokens: 4096 };
 const DEFAULT_MODEL = { claude: 'claude-haiku-4-5-20251001', gemini: 'gemini-2.0-flash' };
 
-// modes ที่ enabled — guild row override global row ตาม value; ถ้า DB ว่าง → code AI_MODES
-// (column guild_id รองรับ per-guild ในอนาคต — ตอนนี้ backoffice แก้เฉพาะ global)
+// modes ที่ enabled — แถวของ org override แถวกลาง (org_id IS NULL) ตาม value; DB ว่าง → code AI_MODES
+//
+// ⚠️ ย้ายจาก dc_ai_modes → org_ai_prompts แล้ว (2026-08-12) · คีย์เปลี่ยนจาก guild_id เป็น org_id
+//    ตารางนี้เก็บ prompt 2 ชนิด — **ต้องกรอง kind='mode' เสมอ** ไม่งั้น prompt ของ posts/case
+//    (kind='slot') จะโผล่เป็นเมนูให้เลือกในบอท
 async function getModes(guildId) {
   let rows;
   try {
+    const orgId = guildId ? await orgIdOfGuild(guildId) : null;
     ({ rows } = await pool.query(
-      `SELECT guild_id, value, label, prompt, sort_order, enabled
-       FROM dc_ai_modes WHERE guild_id IN ($1, $2)
+      `SELECT org_id, value, label, prompt, sort_order, enabled
+       FROM org_ai_prompts
+       WHERE kind = 'mode' AND (org_id = $1 OR org_id IS NULL)
        ORDER BY sort_order ASC, id ASC`,
-      [guildId || GLOBAL, GLOBAL]
+      [orgId]
     ));
   } catch (err) {
     console.error('[aiConfig] getModes failed, fallback to code:', err.message);
@@ -32,7 +38,7 @@ async function getModes(guildId) {
   const byVal = new Map();
   for (const r of rows) {
     const cur = byVal.get(r.value);
-    if (!cur || (r.guild_id !== GLOBAL && cur.guild_id === GLOBAL)) byVal.set(r.value, r);
+    if (!cur || (r.org_id !== null && cur.org_id === null)) byVal.set(r.value, r);
   }
   return [...byVal.values()]
     .filter(r => r.enabled)

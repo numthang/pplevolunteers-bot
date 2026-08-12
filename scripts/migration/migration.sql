@@ -748,3 +748,49 @@ ALTER TABLE dc_social_accounts ADD COLUMN IF NOT EXISTS news_channel_id VARCHAR(
 COMMENT ON COLUMN dc_social_accounts.news_channel_id IS
   'ห้องข่าวสาร Discord ของกลุ่มนี้ · NULL = fallback dc_guild_config (public เท่านั้น) · off = ไม่ส่ง'; 
 
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 2026-08-12 · org_ai_prompts — prompt ของ AI ทุกจุด แก้ได้จาก backoffice ระดับ org
+--              (แทนที่ dc_ai_modes ซึ่งคีย์ด้วย guild_id ทั้งที่ไม่เคย per-guild จริง)
+-- ─────────────────────────────────────────────────────────────────────────────
+-- ⛔ ทำไมไม่สร้างตารางใหม่แยกจาก dc_ai_modes: ทั้งคู่คือ "prompt ที่มีชื่อ" เหมือนกัน
+--    ต่างแค่ lifecycle → คุมด้วยคอลัมน์ `kind` แทนการมีตาราง prompt 2 ใบให้สับสน
+--      kind='mode' = รายการที่ผู้ใช้สร้าง/ลบเองได้ โผล่เป็นเมนูในบอท (มี label/sort_order/enabled)
+--      kind='slot' = ช่องผูกกับโค้ด (`/api/posts/ai/caption` ต้องการ prompt ตัวนั้นตัวเดียว)
+--                    **ลบไม่ได้** — ลบแล้ว route ไม่มี prompt ใช้ · enabled ไม่มีความหมาย
+--
+-- ⛔ ไม่ seed แถว kind='slot' ลง DB เลย — ค่าตั้งต้นอยู่ใน config/aiPrompts.js (โค้ด)
+--    เหตุ: คัดลอก prompt ยาวๆ มาแปะใน SQL = เสี่ยงพิมพ์ตกแล้ว AI เปลี่ยนพฤติกรรมเงียบๆ
+--    แถวใน DB จึงมีเฉพาะ "ที่ org แก้ทับ" · ไม่มีแถว = ใช้ค่าโค้ด (เหมือน getModes เดิม fallback AI_MODES)
+--
+-- ⚠️ org_id NULL = ชุดกลางใช้ทุก org · PostgreSQL 14 **ไม่มี** UNIQUE NULLS NOT DISTINCT (PG15+)
+--    UNIQUE (org_id, value) เฉยๆ จะปล่อยให้มีแถว org_id=NULL ซ้ำ value ได้ → ต้องแยก 2 partial index
+CREATE TABLE IF NOT EXISTS org_ai_prompts (
+  id         BIGSERIAL PRIMARY KEY,
+  org_id     INTEGER      REFERENCES orgs(id) ON DELETE CASCADE,  -- NULL = ชุดกลางของทั้งระบบ
+  kind       VARCHAR(10)  NOT NULL DEFAULT 'mode' CHECK (kind IN ('mode','slot')),
+  value      VARCHAR(50)  NOT NULL,   -- slot: 'posts.caption' · mode: 'summary'
+  label      VARCHAR(100) NOT NULL,
+  prompt     TEXT         NOT NULL,
+  sort_order INT          NOT NULL DEFAULT 0,
+  enabled    BOOLEAN      NOT NULL DEFAULT TRUE,
+  updated_by INTEGER      REFERENCES users(id),
+  updated_at TIMESTAMPTZ  NOT NULL DEFAULT now()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_org_ai_prompts_org
+    ON org_ai_prompts (org_id, value) WHERE org_id IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_org_ai_prompts_global
+    ON org_ai_prompts (value) WHERE org_id IS NULL;
+
+-- ย้าย mode เดิมของบอทมาทั้งดุ้น (ทุกแถวเป็น guild_id='global' อยู่แล้ว → org_id NULL)
+-- ⚠️ ต้องย้ายค่าจาก DB ไม่ใช่ re-seed จาก config/aiModes.js — สองที่นี้ **diverge กันแล้ว**
+--    (getModes เดิมคืนแถว DB ถ้ามี → prompt ที่บอทใช้จริงวันนี้คือของใน DB ไม่ใช่ของในโค้ด)
+INSERT INTO org_ai_prompts (org_id, kind, value, label, prompt, sort_order, enabled)
+SELECT NULL, 'mode', value, label, prompt, sort_order, enabled
+  FROM dc_ai_modes WHERE guild_id = 'global'
+ON CONFLICT DO NOTHING;
+
+-- ⚠️ DROP ทีหลังสุด และ **บอท + เว็บต้อง deploy พร้อมกัน** — db/aiConfig.js (โปรเซสบอท)
+--    กับ web/app/api/bot/ai-modes/route.js ยิงตารางนี้ทั้งคู่ ปล่อยฝั่งเดียวไป = บอทพังเงียบ
+DROP TABLE IF EXISTS dc_ai_modes;
