@@ -7,14 +7,97 @@ import PostRevisions from './PostRevisions.jsx'
 import EmojiPicker from './EmojiPicker.jsx'
 
 
-// AI ทุกแบบอยู่ในเมนูเดียว — draft/caption ยิงคนละ endpoint · ที่เหลือคือ tone ของ polish
+// AI ทุกแบบอยู่ในเมนูเดียว — draft/caption/review ยิงคนละ endpoint · ที่เหลือคือ tone ของ polish
 const AI_MODES = [
   ['draft', 'ร่างใหม่ทั้งหมด'],
   ['polish', 'เกลาสำนวน'],
   ['shorter', 'ย่อให้สั้น'],
   ['friendly', 'เป็นกันเองขึ้น'],
   ['caption', 'ให้คำแนะนำ'],
+  ['review', 'ตรวจก่อนเผยแพร่'],
 ]
+
+// ป้ายหมวดความเสี่ยงจาก /api/posts/ai/review — key ต้องตรงกับ RISK_CATEGORIES ฝั่ง route
+const RISK_LABEL = {
+  defamation: 'พาดพิง/หมิ่นประมาท',
+  factual_risk: 'ข้อมูลไม่มีที่มา',
+  privacy: 'ข้อมูลส่วนบุคคล',
+  attack_tone: 'น้ำเสียงโจมตี',
+  sexual_harassment: 'เนื้อหาเชิงเพศ',
+  victim_blaming: 'โทษผู้เสียหาย',
+  vulnerable_group: 'กลุ่มเปราะบาง',
+  divisive: 'สร้างความแตกแยก',
+  party_tone: 'ภาพลักษณ์พรรค',
+}
+
+// สีตามระดับ — high ต้องสะดุดตากว่าที่เหลือชัดเจน ไม่งั้นบรรณาธิการกวาดตาผ่าน
+const SEVERITY_STYLE = {
+  high: { label: 'ควรแก้ก่อนเผยแพร่', className: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' },
+  medium: { label: 'ควรพิจารณา', className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' },
+  low: { label: 'สังเกตไว้', className: 'bg-warm-100 text-warm-600 dark:bg-disc-hover dark:text-disc-muted' },
+}
+
+/**
+ * ผลตรวจจาก AI บรรณาธิการ (kind='review') — โครงคนละแบบกับ caption สิ้นเชิง
+ * caption เป็น array ของ string ล้วน · ที่นี่เป็น object มี severity/excerpt จึงต้องแยก render
+ * (ถ้าปล่อยให้ตกไปที่ list ของ caption จะได้การ์ดเปล่าที่มีแต่วันที่ — ผู้ใช้เสียโควตาฟรี)
+ *
+ * ⛔ ห้ามเติมป้าย "ผ่าน/ไม่ผ่าน" ตรงนี้เด็ดขาด — ฟีเจอร์นี้คือผู้ช่วยตรวจ ไม่ใช่ผู้อนุมัติ
+ *    ปุ่มอนุมัติจริงอยู่การ์ดขวา (PostMetaPanel) และต้องเป็นคนกดเสมอ
+ */
+function ReviewResult({ payload, stale }) {
+  const risks = Array.isArray(payload?.risks) ? payload.risks : []
+  const counts = payload?.counts || {}
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-sm text-warm-700 dark:text-disc-text">🔍 ผลตรวจก่อนเผยแพร่</span>
+        {risks.length > 0 && (
+          <span className="text-xs text-warm-500 dark:text-disc-muted">
+            พบ {risks.length} จุด
+            {counts.high ? ` · ควรแก้ก่อน ${counts.high}` : ''}
+          </span>
+        )}
+      </div>
+
+      {stale && (
+        <p className="text-sm rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-200 px-3 py-2">
+          ตรวจกับเนื้อหาฉบับก่อนหน้า — เนื้อหาถูกแก้หลังจากนี้แล้ว ถ้าจะใช้ตัดสินใจ ควรกดตรวจใหม่
+        </p>
+      )}
+
+      {risks.length === 0 ? (
+        // ⛔ ถ้อยคำตรงนี้สำคัญ — ห้ามเขียนว่า "ผ่าน" หรือ "ปลอดภัย" เพราะจะกลายเป็นไฟเขียวจาก AI
+        <p className="text-sm text-warm-500 dark:text-disc-muted">
+          AI ไม่พบจุดที่ต้องทัก — ไม่ได้แปลว่าโพสต์นี้ปลอดภัย ยังต้องใช้วิจารณญาณของบรรณาธิการเหมือนเดิม
+        </p>
+      ) : risks.map((r, i) => {
+        const sev = SEVERITY_STYLE[r.severity] || SEVERITY_STYLE.medium
+        return (
+          <div key={i} className="flex flex-col gap-1 rounded-lg bg-warm-50 dark:bg-disc-hover px-2 py-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className={`text-xs px-1.5 py-0.5 rounded ${sev.className}`}>{sev.label}</span>
+              <span className="text-sm font-medium text-warm-900 dark:text-disc-text">
+                {RISK_LABEL[r.category] || r.category}
+              </span>
+            </div>
+            {/* excerpt ที่หาไม่เจอในต้นฉบับถูกตัดเป็นสตริงว่างมาจาก server แล้ว (กัน AI กุคำพูด) */}
+            {r.excerpt && (
+              <p className="text-sm text-warm-700 dark:text-disc-text border-l-2 border-warm-300 dark:border-disc-border pl-2 italic break-words">
+                “{r.excerpt}”
+              </p>
+            )}
+            <p className="text-sm text-warm-700 dark:text-disc-text break-words">{r.reason}</p>
+            {r.suggestion && (
+              <p className="text-sm text-warm-500 dark:text-disc-muted break-words">แนะนำ: {r.suggestion}</p>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
 
 function autoGrow(el) {
   if (!el) return
@@ -129,9 +212,10 @@ export default function PostEditor({ id }) {
   const [aiError, setAiError] = useState('')
   const [polishing, setPolishing] = useState(false)
   // AI ทุกแบบรวมเป็นเมนูเดียว — เดิมแยก 3 ปุ่มแล้วอ่านไม่ออกว่าต่างกันยังไง
-  const [aiMode, setAiMode] = useState('caption')  // draft | polish | shorter | friendly | caption
+  const [aiMode, setAiMode] = useState('caption')  // draft | polish | shorter | friendly | caption | review
   const [confirmAsk, setConfirmAsk] = useState(null)  // { title, message, confirmLabel, danger, onConfirm }
   const [suggesting, setSuggesting] = useState(false)
+  const [reviewing, setReviewing] = useState(false)
   // ข้อเสนอ AI ที่เก็บไว้ทั้งหมด (ใหม่สุดบน) — แต่ละชุด = { id, payload:{captions[],imageIdeas[]}, created_at, author_name }
   const [suggestions, setSuggestions] = useState([])
   const [suggestCollapsed, setSuggestCollapsed] = useState(false)
@@ -371,6 +455,36 @@ export default function PostEditor({ id }) {
     }
   }
 
+  // AI ตรวจเนื้อหาก่อนเผยแพร่ — ผลเก็บใน post_ai_suggestions kind='review' เหมือน caption
+  // ⛔ ไม่แตะสถานะโพสต์เลย · ผลตรวจเป็นข้อมูลให้บรรณาธิการอ่าน คนกดอนุมัติยังเป็นคนเหมือนเดิม
+  async function handleReview() {
+    if (!body.trim()) { setAiError('ยังไม่มีเนื้อหา — เขียนก่อนแล้วค่อยให้ AI ตรวจ'); return }
+    setReviewing(true)
+    setAiError('')
+    try {
+      const res = await fetch('/api/posts/ai/review', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postId: id, body }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) { setAiError(data.error || 'ตรวจเนื้อหาไม่สำเร็จ'); return }
+      // `saved` = แถวจริงใน DB (null ถ้า insert ล้ม — ยังโชว์ผลให้ดูได้ ไม่เสียโควตาฟรี)
+      const fresh = data.data.saved || {
+        id: `tmp-${Date.now()}`,
+        kind: 'review',
+        payload: { risks: data.data.risks, counts: data.data.counts, reviewedAt: data.data.reviewedAt },
+        created_at: new Date().toISOString(),
+      }
+      setSuggestCollapsed(false)
+      setSuggestions(prev => [fresh, ...prev])
+    } catch {
+      setAiError('ตรวจเนื้อหาไม่สำเร็จ')
+    } finally {
+      setReviewing(false)
+    }
+  }
+
   function handleDeleteSuggestion(sid) {
     setConfirmAsk({
       title: 'ลบข้อเสนอชุดนี้?',
@@ -435,6 +549,7 @@ export default function PostEditor({ id }) {
   function runAi() {
     if (aiMode === 'draft') return handleAiDraft()
     if (aiMode === 'caption') return handleSuggest()
+    if (aiMode === 'review') return handleReview()
     return handlePolish(aiMode)   // polish | shorter | friendly
   }
 
@@ -466,7 +581,7 @@ export default function PostEditor({ id }) {
 
   const readOnly = !can.edit
   const status = post.status
-  const aiBusy = aiLoading || polishing || suggesting
+  const aiBusy = aiLoading || polishing || suggesting || reviewing
 
   return (
     <div className="flex flex-col gap-3">
@@ -590,7 +705,18 @@ export default function PostEditor({ id }) {
                 )}
               </div>
 
-              {[
+              {sg.kind === 'review' ? (
+                <ReviewResult
+                  payload={sg.payload}
+                  /* เนื้อหาถูกแก้หลังตรวจไหม — autosave setPost ทุกครั้ง post.updated_at จึงสดเสมอ
+                     pendingSave = พิมพ์แล้วแต่ debounce ยังไม่ยิง ก็ถือว่าเนื้อหาเปลี่ยนแล้วเหมือนกัน
+                     over-report ได้ (แก้หมวดก็ bump updated_at) แต่เตือนเกินปลอดภัยกว่าเตือนขาด */
+                  stale={
+                    !!sg.payload?.reviewedAt &&
+                    (pendingSave || new Date(post.updated_at) > new Date(sg.payload.reviewedAt))
+                  }
+                />
+              ) : [
                 { label: '💬 โควต', items: sg.payload?.quotes },
                 { label: '📰 หัวข้อ', items: sg.payload?.headlines },
                 { label: '📸 ไอเดียภาพประกอบ', items: sg.payload?.imageIdeas },

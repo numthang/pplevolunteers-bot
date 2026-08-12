@@ -246,6 +246,7 @@ spec + ดีไซน์ + ตารางทั้งหมดอยู่ `md
   - **ข้อความดิบที่ user พิมพ์ = revision แรก** ผ่าน `createPost({ originalRevision })` (เวลาถอย 1 วิ กันชนกับ snapshot ฉบับ AI) + `listRevisions` เพิ่ม tiebreak `r.id DESC`
   - ⬜ **ยังไม่เทสในเบราว์เซอร์จริง** (build ผ่าน) · ⬜ i18n: `PostsHome.jsx` ยัง hardcode ไทยตามโซน — เข้าคิวข้อล่างนี้
 - [ ] **migrate i18n โซน posts** (หนี้จากก้อน 2b) — 7 ไฟล์: `PostsHome` · `PostEditor` · `PostMediaPanel` · `PostMetaPanel` · `PostPublishPanel` · `PostRevisions` · `EmojiPicker` (ใหม่ 2026-08-08 — hardcode ไทยตาม sibling ในโซนเดิม) · งาน mechanical ส่ง Sonnet subagent ได้ · ระหว่างยังไม่ทำ โซนนี้จะปน hardcode กับ `t()`
+  - **หนี้เพิ่ม 2026-08-12:** `PostEditor.jsx` เพิ่ม block ใหม่ทั้งก้อน (`ReviewResult` + `RISK_LABEL` 9 ป้าย + `SEVERITY_STYLE` 3 ป้าย) เข้าข่าย "โค้ดใหม่" ตามกฎ CLAUDE.md แต่เขียน hardcode ไทยตาม sibling ทั้งโซน — จดตามข้อยกเว้นที่กฎกำหนดไว้ ตอน migrate จริงอย่าลืมก้อนนี้
 - [x] **🎨 คลังภาพ (media library) — ✅ เขียนเสร็จ 2026-08-04** (local · ยังไม่ deploy prod · **ยังไม่เทสในเบราว์เซอร์จริง**)
   - migration รันบน local แล้ว: `post_assets` + `post_episode_media.source_asset_id` (บล็อกท้าย `migration.sql` · additive ล้วน)
   - lib: `postsAccess.js` +5 ฟังก์ชัน asset (**tests 82 ผ่าน** — เดิม 66) · `postsGuard.assetContext()` · `postsStorage`: `copyPostFile`/`sha256Hex`/`probeImage`
