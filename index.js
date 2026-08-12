@@ -429,7 +429,7 @@ client.on('messageCreate', async (message) => {
 
   // search channel — universal search ข้ามทุก forum/thread (ต้องเมนชันบอท)
   if (!message.author.bot && searchChannelCache.get(message.guildId) === message.channelId
-      && !message.mentions.everyone && message.mentions.has(client.user)) {
+      && !message.mentions.everyone && message.mentions.has(client.user, { ignoreRoles: true })) {
     const keyword = message.content.replace(/<@!?\d+>/g, '').trim();
     if (keyword) {
       await message.delete().catch(() => {});
@@ -476,7 +476,7 @@ client.on('messageCreate', async (message) => {
   }
 
   // mention → RAG AI reply
-  if (!message.author.bot && message.guild && !message.mentions.everyone && message.mentions.has(client.user)) {
+  if (!message.author.bot && message.guild && !message.mentions.everyone && message.mentions.has(client.user, { ignoreRoles: true })) {
     const features = await getEnabledFeatures(message.guildId);
     if (features.includes('ai_mention')) {
       const question = message.content.replace(/<@!?\d+>/g, '').trim();

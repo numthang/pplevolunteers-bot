@@ -12,7 +12,9 @@ import { getAiCreds, AiCredsError } from './aiCreds.js'
 export { AiCredsError }
 
 export const AI_MODEL = 'claude-sonnet-5'
-const MAX_TOKENS = 8000          // ไทยกิน token เยอะ (~1 token/ตัวอักษร) — ซีรีส์ยาวต้องมี headroom
+// ไทยกิน token เยอะ (~1 token/ตัวอักษร) — ซีรีส์ยาว (สูงสุด 12 ตอน เนื้อหาเต็มทุกตอน) กิน token มากกว่าที่ 8000 เดิมรองรับไหว
+// เคยตั้ง 8000 แล้วโดนตัดกลางคัน (stop_reason: max_tokens) → JSON ขาดครึ่ง parse ไม่ผ่าน → error "ไม่ใช่ JSON ที่อ่านได้" ที่ดูงงๆ (เคาะ 2026-08-12)
+const MAX_TOKENS = 32000
 const TIMEOUT_MS = 120 * 1000
 
 export class AiError extends Error {}
@@ -49,16 +51,24 @@ export async function askAi(system, user, opts = {}) {
 
   let res
   try {
-    res = await client.messages.create({
+    // .stream().finalMessage() ไม่ใช่ .create() ตรงๆ — max_tokens สูง (32000) ต้อง stream กัน SDK
+    // hit HTTP timeout เอง (เกิน ~16000 แบบไม่ stream เสี่ยงมาก อ้างอิงเอกสาร Anthropic)
+    res = await client.messages.stream({
       model: creds.model,
       max_tokens: opts.maxTokens || MAX_TOKENS,
       system,
       messages: [{ role: 'user', content: user }],
-    })
+    }).finalMessage()
   } catch (err) {
     // ห้ามโยน err.message ดิบ — error บางแบบของ SDK echo header/คีย์กลับมาด้วย
     console.error('[askAi]', creds.source, err?.status || '', err?.message)
     throw new AiError('เรียก AI ไม่สำเร็จ — ตรวจ API key ขององค์กรหรือลองใหม่อีกครั้ง')
+  }
+
+  // โดนตัดกลางคันเพราะ max_tokens ไม่พอ — ต้องเช็คก่อน parse ไม่งั้น error ที่ user เห็นคือ
+  // "AI ตอบกลับมาไม่ใช่ JSON ที่อ่านได้" ซึ่งงงว่าเกิดจากอะไร ทั้งที่จริงคือเนื้อหายาวเกิน max_tokens
+  if (res.stop_reason === 'max_tokens') {
+    throw new AiError('เนื้อหาที่ AI สร้างยาวเกินไป ลองย่อไอเดียหรือลดจำนวนตอนก่อน')
   }
 
   const text = (res.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n').trim()

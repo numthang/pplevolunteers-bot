@@ -209,9 +209,9 @@ export default function PostsHome({ orgName = 'องค์กร' }) {
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError] = useState('')
   const [aiNotice, setAiNotice] = useState('')
-  // single = โพสต์เดียว (default) · series = user ระบุจำนวนตอนเอง ให้ AI ร่างเต็มทุกตอนทันที (เคาะ 2026-08-12)
+  // single = โพสต์เดียว (default) · series = AI ตัดสินใจจำนวนตอนเอง (1-12) จากเนื้อหา แล้วร่างเต็มทุกตอนทันที
+  // (ไม่มีช่องกรอกจำนวนตอน — user มักระบุจำนวนไว้ในเนื้อหาที่พิมพ์เองอยู่แล้ว · เคาะ 2026-08-12)
   const [composeMode, setComposeMode] = useState('single')
-  const [episodeCount, setEpisodeCount] = useState(3)
   const [confirmPost, setConfirmPost] = useState(null)   // โพสต์ที่กำลังถามยืนยันลบ
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState('')
@@ -349,7 +349,7 @@ export default function PostsHome({ orgName = 'องค์กร' }) {
   }
 
   // โยนของดิบ → AI เรียบเรียงเป็น "โพสต์เดียว" (default) แล้วพาเข้าหน้าแก้ไขเลย
-  // composeMode === 'series' → user ระบุจำนวนตอนเอง, AI ร่างเต็มทุกตอนทันที, กลับมาที่หน้านี้กรองตามหมวดที่ได้ (เคาะ 2026-08-12)
+  // composeMode === 'series' → AI ตัดสินใจจำนวนตอนเอง, ร่างเต็มทุกตอนทันที, กลับมาที่หน้านี้กรองตามหมวดที่ได้ (เคาะ 2026-08-12)
   async function handleAiCompose() {
     if (!idea.trim()) return
     setAiLoading(true)
@@ -364,7 +364,7 @@ export default function PostsHome({ orgName = 'องค์กร' }) {
           idea,
           visibility: createVisibility,
           category: activeCategory,
-          ...(isSeries ? { episodeCount } : {}),
+          ...(isSeries ? { series: true } : {}),
         }),
       })
       const json = await res.json().catch(() => ({}))
@@ -438,17 +438,6 @@ export default function PostsHome({ orgName = 'องค์กร' }) {
                 </button>
               ))}
             </div>
-            {composeMode === 'series' && (
-              <input
-                type="number"
-                min={2}
-                max={12}
-                value={episodeCount}
-                onChange={(e) => setEpisodeCount(Math.min(12, Math.max(2, Number(e.target.value) || 2)))}
-                className="w-14 px-2 py-1 text-sm rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text focus:outline-none focus:ring-2 focus:ring-teal"
-              />
-            )}
-
             {activeCategory && (
               <span className="text-warm-500 dark:text-disc-muted">
                 · หมวด <span className="font-medium text-warm-700 dark:text-disc-text">{activeCategory}</span>
@@ -461,7 +450,7 @@ export default function PostsHome({ orgName = 'องค์กร' }) {
             onChange={(e) => setIdea(e.target.value)}
             placeholder={
               composeMode === 'series'
-                ? `พิมพ์รัวๆ หรือวางบทความยาว — AI จะแบ่งให้เป็น ${episodeCount} ตอน ต่อกันเป็นซีรีย์`
+                ? 'พิมพ์รัวๆ หรือวางบทความยาว — AI จะแบ่งเป็นหลายตอนให้เอง (ระบุจำนวนตอนในเนื้อหาได้เลยถ้าต้องการ)'
                 : 'พิมพ์รัวๆ ไม่ต้องเรียบเรียง หรือวางบทความยาวที่เขียนไว้ — AI จะสรุปให้เป็นโพสต์เดียว'
             }
             rows={4}
@@ -479,7 +468,7 @@ export default function PostsHome({ orgName = 'องค์กร' }) {
               <Sparkles size={16} />
               {aiLoading
                 ? 'กำลังเรียบเรียง...'
-                : composeMode === 'series' ? `AI แบ่งเป็น ${episodeCount} ตอน →` : 'AI เรียบเรียงเป็นโพสต์ →'}
+                : composeMode === 'series' ? 'AI แบ่งเป็นซีรีส์ →' : 'AI เรียบเรียงเป็นโพสต์ →'}
             </button>
             {/* ปุ่มรอง — ไม่ใช้ข้อความในกล่อง จึงลดระดับให้ไม่อ่านเหมือนสองทางเลือกที่เท่ากัน */}
             <button
