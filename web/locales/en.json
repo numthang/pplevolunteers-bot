@@ -241,7 +241,8 @@
       "noCampaigns": "No campaigns",
       "noActiveCampaigns": "No active campaigns",
       "generalGroup": "General",
-      "pastEvents": "Past events ({count})"
+      "pastEvents": "Past events ({count})",
+      "importButton": "Import from Excel"
     },
     "campaignCard": {
       "deleteConfirm": "Delete campaign \"{name}\"?\n\nRelated assignments and call logs may be affected",
@@ -480,6 +481,34 @@
     "starredStar": {
       "addTitle": "Add to Favorites",
       "removeTitle": "Remove from Favorites"
+    },
+    "importXlsx": {
+      "metaTitle": "Import campaign from Excel",
+      "adminOnly": "This page is admin-only.",
+      "title": "Import campaign from Excel",
+      "subtitle": "Upload a province .xlsx file — members and call results will be imported into a campaign (always previewed before writing).",
+      "fileLabel": ".xlsx file *",
+      "provinceLabel": "Province *",
+      "provincePlaceholder": "-- Select province --",
+      "campaignIdLabel": "Campaign ID *",
+      "campaignIdPlaceholder": "e.g. 70",
+      "campaignIdHint": "Use an existing campaign_id to add to it, or a new number to create a new campaign.",
+      "dateLabel": "Call date",
+      "previewButton": "Preview before import",
+      "previewing": "Reading file...",
+      "previewTitle": "Preview: {name}",
+      "summaryMembers": "{count} members",
+      "summaryLogs": "{count} call logs",
+      "summaryTiers": "{count} tiers",
+      "sampleLogsTitle": "Sample call logs (first 5)",
+      "sampleCaller": "Caller",
+      "sampleNote": "Note",
+      "confirmButton": "Confirm import",
+      "committing": "Saving...",
+      "doneTitle": "Import complete",
+      "goToCampaign": "Go to campaign",
+      "importAnother": "Import another file",
+      "errorGeneric": "Something went wrong, please try again"
     }
   },
   "case": {

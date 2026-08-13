@@ -60,14 +60,24 @@ export default async function CallingPage({ searchParams }) {
             {t('campaigns.subtitle')}
           </p>
         </div>
-        {canCreate && (
-          <Link
-            href="/calling/campaigns/create"
-            className="shrink-0 inline-flex items-center gap-2 px-4 py-2.5 bg-orange text-white text-base font-medium rounded-lg hover:bg-orange-light transition"
-          >
-            <span>+</span> {t('campaigns.createButton')}
-          </Link>
-        )}
+        <div className="shrink-0 flex items-center gap-2">
+          {isUserAdmin && (
+            <Link
+              href="/calling/campaigns/import"
+              className="inline-flex items-center gap-2 px-4 py-2.5 border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text text-base font-medium rounded-lg hover:bg-warm-50 dark:hover:bg-disc-hover transition"
+            >
+              {t('campaigns.importButton')}
+            </Link>
+          )}
+          {canCreate && (
+            <Link
+              href="/calling/campaigns/create"
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-orange text-white text-base font-medium rounded-lg hover:bg-orange-light transition"
+            >
+              <span>+</span> {t('campaigns.createButton')}
+            </Link>
+          )}
+        </div>
       </div>
 
       {provinces.length > 1 && (

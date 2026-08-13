@@ -241,7 +241,8 @@
       "noCampaigns": "ไม่มีแคมเปญ",
       "noActiveCampaigns": "ไม่มีแคมเปญที่กำลังดำเนินการ",
       "generalGroup": "ทั่วไป",
-      "pastEvents": "กิจกรรมที่ผ่านแล้ว ({count})"
+      "pastEvents": "กิจกรรมที่ผ่านแล้ว ({count})",
+      "importButton": "นำเข้าจาก Excel"
     },
     "campaignCard": {
       "deleteConfirm": "ลบแคมเปญ \"{name}\" ?\n\nข้อมูลการมอบหมายและบันทึกการโทรที่เกี่ยวข้องอาจได้รับผลกระทบ",
@@ -480,6 +481,34 @@
     "starredStar": {
       "addTitle": "เพิ่มเข้า Favorites",
       "removeTitle": "เอาออกจาก Favorites"
+    },
+    "importXlsx": {
+      "metaTitle": "นำเข้าแคมเปญจาก Excel",
+      "adminOnly": "หน้านี้สำหรับแอดมินเท่านั้น",
+      "title": "นำเข้าแคมเปญจาก Excel",
+      "subtitle": "อัปโหลดไฟล์ .xlsx ของจังหวัด ระบบจะดึงรายชื่อสมาชิก + ผลการโทรเข้าแคมเปญ (พรีวิวก่อนบันทึกจริงเสมอ)",
+      "fileLabel": "ไฟล์ .xlsx *",
+      "provinceLabel": "จังหวัด *",
+      "provincePlaceholder": "-- เลือกจังหวัด --",
+      "campaignIdLabel": "Campaign ID *",
+      "campaignIdPlaceholder": "เช่น 70",
+      "campaignIdHint": "ใช้ campaign_id เดิมถ้าจะเติมข้อมูลแคมเปญที่มีอยู่แล้ว หรือใส่เลขใหม่เพื่อสร้างแคมเปญใหม่",
+      "dateLabel": "วันที่โทร",
+      "previewButton": "พรีวิวก่อนนำเข้า",
+      "previewing": "กำลังอ่านไฟล์...",
+      "previewTitle": "พรีวิว: {name}",
+      "summaryMembers": "สมาชิก {count} คน",
+      "summaryLogs": "บันทึกการโทร {count} รายการ",
+      "summaryTiers": "TIER {count} รายการ",
+      "sampleLogsTitle": "ตัวอย่างบันทึกการโทร (5 แถวแรก)",
+      "sampleCaller": "ผู้โทร",
+      "sampleNote": "หมายเหตุ",
+      "confirmButton": "ยืนยันนำเข้า",
+      "committing": "กำลังบันทึก...",
+      "doneTitle": "นำเข้าสำเร็จ",
+      "goToCampaign": "ไปที่แคมเปญ",
+      "importAnother": "นำเข้าไฟล์อื่น",
+      "errorGeneric": "เกิดข้อผิดพลาด กรุณาลองใหม่"
     }
   },
   "case": {
