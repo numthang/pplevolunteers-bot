@@ -109,9 +109,8 @@ module.exports = {
         .addBooleanOption(o => o.setName('province_select').setDescription('ให้เลือกจังหวัดหลัง register (ไม่ระบุ = ค่าเดิม, เริ่มต้น: ปิด)').setRequired(false))
         .addBooleanOption(o => o.setName('interest_select').setDescription('ให้เลือก interest/skill หลัง register (ไม่ระบุ = ค่าเดิม, เริ่มต้น: ปิด)').setRequired(false))
         .addRoleOption(o => o.setName('member_role').setDescription('ยศที่ติดให้อัตโนมัติหลัง register').setRequired(false))
-        .addBooleanOption(o => o.setName('verify_phone').setDescription('เพิ่มปุ่มยืนยันตัวตนด้วย SMS OTP (เช็คเบอร์กับทะเบียนสมาชิก)').setRequired(false))
-        .addBooleanOption(o => o.setName('bind_email').setDescription('เพิ่มปุ่มผูกอีเมล (OTP ทางเมล — เข้าเว็บด้วยอีเมล/Google ได้)').setRequired(false))
-        .addBooleanOption(o => o.setName('verify_phone_roster').setDescription('ให้ยืนยันเบอร์ต้องตรงกับทะเบียนสมาชิก + ติดยศให้ (เริ่มต้น: ปิด = ผูกเบอร์เฉยๆ)').setRequired(false))
+        .addBooleanOption(o => o.setName('verify_phone').setDescription('ปุ่มยืนยันเบอร์ด้วย SMS OTP (เริ่มต้น: เปิด)').setRequired(false))
+        .addBooleanOption(o => o.setName('bind_email').setDescription('ปุ่มผูกอีเมล — OTP ทางเมล เข้าเว็บด้วยอีเมล/Google ได้ (เริ่มต้น: เปิด)').setRequired(false))
     )
 
     // --- search channel ---
@@ -524,7 +523,7 @@ await refreshDashboard(thread, interaction.guildId, ids, existing.dashboard_msg_
     if (sub === 'register') {
       await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-      const title       = interaction.options.getString('title') ?? '📋 แนะนำตัวสมาชิก อาสาประชาชน';
+      const title       = interaction.options.getString('title') ?? `📋 แนะนำตัวสมาชิก ${interaction.guild.name}`;
       const description = (interaction.options.getString('description') ?? 'กดปุ่มด้านล่างเพื่อแนะนำตัวหรืออัปเดตข้อมูลของคุณได้เลย').replace(/\\n/g, '\n');
       const buttonLabel = interaction.options.getString('button_label') ?? '📋 แนะนำตัว/แก้ไขข้อมูล';
       const color       = interaction.options.getString('color')
@@ -555,18 +554,20 @@ await refreshDashboard(thread, interaction.guildId, ids, existing.dashboard_msg_
           .setLabel(buttonLabel)
           .setStyle(ButtonStyle.Primary),
       ];
-      if (regConfig.verify_phone) {
+      // default เปิดทั้งคู่ — `!== false` ไม่ใช่ truthy check เพราะ config เก่าไม่มี key นี้ (undefined = เปิด)
+      // ปิดได้ด้วยการสั่ง verify_phone:false / bind_email:false ตรงๆ เท่านั้น
+      if (regConfig.verify_phone !== false) {
         buttons.push(new ButtonBuilder()
           .setCustomId('btn_open_verify_modal')
-          .setLabel('✅ ยืนยันตัวตนสมาชิก')
+          .setLabel('📱 ยืนยันเบอร์โทร')
           .setStyle(ButtonStyle.Success));
       }
       // customId เดียวกับ /panel email — ใช้ handler เดิม (handlers/emailBindHandler.js) ไม่ต้องแยก flow
-      if (regConfig.bind_email) {
+      if (regConfig.bind_email !== false) {
         buttons.push(new ButtonBuilder()
           .setCustomId('btn_open_email_modal')
           .setLabel('📧 ผูกอีเมล')
-          .setStyle(ButtonStyle.Secondary));
+          .setStyle(ButtonStyle.Primary));
       }
       const row = new ActionRowBuilder().addComponents(...buttons);
 
@@ -583,8 +584,8 @@ await refreshDashboard(thread, interaction.guildId, ids, existing.dashboard_msg_
           `Province select → ${regConfig.province_select ? '✅' : '❌'}`,
           `Interest select → ${regConfig.interest_select ? '✅' : '❌'}`,
           `Member role → ${regConfig.member_role_id ? `<@&${regConfig.member_role_id}>` : '❌'}`,
-          `Verify phone (OTP) → ${regConfig.verify_phone ? '✅' : '❌'}`,
-          `Bind email (OTP) → ${regConfig.bind_email ? '✅' : '❌'}`,
+          `Verify phone (OTP) → ${regConfig.verify_phone !== false ? '✅' : '❌'}`,
+          `Bind email (OTP) → ${regConfig.bind_email !== false ? '✅' : '❌'}`,
         ].join('\n'),
       });
     }

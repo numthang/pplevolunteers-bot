@@ -51,7 +51,7 @@ function genRef() {
 async function handleOpenVerifyModal(interaction) {
   const modal = new ModalBuilder()
     .setCustomId('modal_verify_phone')
-    .setTitle('ยืนยันตัวตนสมาชิก');
+    .setTitle('ยืนยันเบอร์โทร');
   const phoneInput = new TextInputBuilder()
     .setCustomId('field_phone')
     .setLabel('เบอร์มือถือของคุณ')
@@ -98,7 +98,7 @@ async function handleVerifyPhoneSubmit(interaction) {
   // เงื่อนไขนี้ต้องมี member_id ด้วย → คนที่ผูกเบอร์แบบ soft (ไม่เจอ roster) ยังกดซ้ำได้
   // ตั้งใจ: roster ครบขึ้นทีหลังแล้วเขากดใหม่ = ได้ member_id + ยศ · quota 5 ครั้ง/วัน คุมค่า SMS อยู่แล้ว
   if (meRows.length) {
-    return interaction.editReply('✅ บัญชีของคุณยืนยันตัวตนไว้แล้ว');
+    return interaction.editReply('✅ เบอร์ของคุณยืนยันไว้แล้ว');
   }
 
   // quota รายวัน + cooldown ระหว่างส่ง
@@ -203,7 +203,7 @@ async function handleOpenOtpModal(interaction) {
   const session = await getUserSetting(interaction.user.id, sessionKey(interaction.guildId));
   if (!session || Date.now() > session.expires_at) {
     return interaction.reply({
-      content: '❌ รหัสหมดอายุแล้ว — กดปุ่ม "ยืนยันตัวตนสมาชิก" เพื่อขอรหัสใหม่',
+      content: '❌ รหัสหมดอายุแล้ว — กดปุ่ม "ยืนยันเบอร์โทร" เพื่อขอรหัสใหม่',
       flags: MessageFlags.Ephemeral,
     });
   }
@@ -231,7 +231,7 @@ async function handleVerifyOtpSubmit(interaction) {
 
   const session = await getUserSetting(discordId, key);
   if (!session || Date.now() > session.expires_at) {
-    return interaction.editReply('❌ รหัสหมดอายุแล้ว — กดปุ่ม "ยืนยันตัวตนสมาชิก" เพื่อขอรหัสใหม่');
+    return interaction.editReply('❌ รหัสหมดอายุแล้ว — กดปุ่ม "ยืนยันเบอร์โทร" เพื่อขอรหัสใหม่');
   }
 
   const otp = interaction.fields.getTextInputValue('field_otp').trim();
@@ -239,7 +239,7 @@ async function handleVerifyOtpSubmit(interaction) {
     session.attempts = (session.attempts || 0) + 1;
     if (session.attempts >= MAX_ATTEMPTS) {
       await deleteUserSetting(discordId, key);
-      return interaction.editReply('❌ กรอกผิดเกินจำนวนครั้งที่กำหนด — กดปุ่ม "ยืนยันตัวตนสมาชิก" เพื่อขอรหัสใหม่');
+      return interaction.editReply('❌ กรอกผิดเกินจำนวนครั้งที่กำหนด — กดปุ่ม "ยืนยันเบอร์โทร" เพื่อขอรหัสใหม่');
     }
     await setUserSetting(discordId, key, session);
     return interaction.editReply(`❌ รหัสไม่ถูกต้อง (เหลือ ${MAX_ATTEMPTS - session.attempts} ครั้ง) — กดปุ่ม "กรอกรหัส OTP" เพื่อลองใหม่`);
