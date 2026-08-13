@@ -110,6 +110,8 @@ module.exports = {
         .addBooleanOption(o => o.setName('interest_select').setDescription('ให้เลือก interest/skill หลัง register (ไม่ระบุ = ค่าเดิม, เริ่มต้น: ปิด)').setRequired(false))
         .addRoleOption(o => o.setName('member_role').setDescription('ยศที่ติดให้อัตโนมัติหลัง register').setRequired(false))
         .addBooleanOption(o => o.setName('verify_phone').setDescription('เพิ่มปุ่มยืนยันตัวตนด้วย SMS OTP (เช็คเบอร์กับทะเบียนสมาชิก)').setRequired(false))
+        .addBooleanOption(o => o.setName('bind_email').setDescription('เพิ่มปุ่มผูกอีเมล (OTP ทางเมล — เข้าเว็บด้วยอีเมล/Google ได้)').setRequired(false))
+        .addBooleanOption(o => o.setName('verify_phone_roster').setDescription('ให้ยืนยันเบอร์ต้องตรงกับทะเบียนสมาชิก + ติดยศให้ (เริ่มต้น: ปิด = ผูกเบอร์เฉยๆ)').setRequired(false))
     )
 
     // --- search channel ---
@@ -533,6 +535,7 @@ await refreshDashboard(thread, interaction.guildId, ids, existing.dashboard_msg_
       const interestSelect = interaction.options.getBoolean('interest_select');
       const memberRole     = interaction.options.getRole('member_role');
       const verifyPhone    = interaction.options.getBoolean('verify_phone');
+      const bindEmail      = interaction.options.getBoolean('bind_email');
 
       const regConfig = parseSetting(await getSetting(interaction.guildId, 'config_register'));
 
@@ -541,6 +544,7 @@ await refreshDashboard(thread, interaction.guildId, ids, existing.dashboard_msg_
       if (interestSelect !== null) regConfig.interest_select = interestSelect;
       if (memberRole !== null) regConfig.member_role_id = memberRole.id;
       if (verifyPhone !== null) regConfig.verify_phone = verifyPhone;
+      if (bindEmail !== null) regConfig.bind_email = bindEmail;
 
       await setSetting(interaction.guildId, 'config_register', regConfig);
 
@@ -556,6 +560,13 @@ await refreshDashboard(thread, interaction.guildId, ids, existing.dashboard_msg_
           .setCustomId('btn_open_verify_modal')
           .setLabel('✅ ยืนยันตัวตนสมาชิก')
           .setStyle(ButtonStyle.Success));
+      }
+      // customId เดียวกับ /panel email — ใช้ handler เดิม (handlers/emailBindHandler.js) ไม่ต้องแยก flow
+      if (regConfig.bind_email) {
+        buttons.push(new ButtonBuilder()
+          .setCustomId('btn_open_email_modal')
+          .setLabel('📧 ผูกอีเมล')
+          .setStyle(ButtonStyle.Secondary));
       }
       const row = new ActionRowBuilder().addComponents(...buttons);
 
@@ -573,6 +584,7 @@ await refreshDashboard(thread, interaction.guildId, ids, existing.dashboard_msg_
           `Interest select → ${regConfig.interest_select ? '✅' : '❌'}`,
           `Member role → ${regConfig.member_role_id ? `<@&${regConfig.member_role_id}>` : '❌'}`,
           `Verify phone (OTP) → ${regConfig.verify_phone ? '✅' : '❌'}`,
+          `Bind email (OTP) → ${regConfig.bind_email ? '✅' : '❌'}`,
         ].join('\n'),
       });
     }

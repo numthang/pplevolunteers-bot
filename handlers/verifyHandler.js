@@ -1,6 +1,9 @@
 // handlers/verifyHandler.js — ยืนยันตัวตนสมาชิกด้วย SMS OTP (Member Onboarding จังหวะ 1)
-// flow: ปุ่ม [ยืนยันตัวตน] → modal เบอร์ → match cache_pple_member + ส่ง OTP
+// flow: ปุ่ม [ยืนยันตัวตน] → modal เบอร์ → match cache_pple_member (soft) + ส่ง OTP
 //       → ปุ่ม [กรอกรหัส] → modal OTP → ผูก org_members.member_id + users.phone + ติดยศ
+// soft match (2026-08-13): roster มีไม่ครบทุกจังหวัด → ไม่เจอเบอร์ในทะเบียน = ยังส่ง OTP ได้
+//   เจอ    → member_id + users.phone + ติดยศ (พฤติกรรมเดิม)
+//   ไม่เจอ → users.phone อย่างเดียว ไม่แตะ member_id ไม่ติดยศ · กัน claim ซ้ำที่ users.phone แทน roster
 // OTP session: dc_user_config key `otp_verify_<guildId>` (guild-scoped ใน key เพราะ PK ไม่มีมิติ guild)
 // TTL 5 นาทีผ่าน expires_at ใน value (pattern เดียวกับ passkey nonce)
 const {
@@ -51,7 +54,7 @@ async function handleOpenVerifyModal(interaction) {
     .setTitle('ยืนยันตัวตนสมาชิก');
   const phoneInput = new TextInputBuilder()
     .setCustomId('field_phone')
-    .setLabel('เบอร์มือถือที่ลงทะเบียนไว้กับองค์กร')
+    .setLabel('เบอร์มือถือของคุณ')
     .setPlaceholder('08xxxxxxxx')
     .setStyle(TextInputStyle.Short)
     .setMinLength(9)
@@ -92,6 +95,8 @@ async function handleVerifyPhoneSubmit(interaction) {
       LIMIT 1`,
     [orgGuilds, discordId]
   );
+  // เงื่อนไขนี้ต้องมี member_id ด้วย → คนที่ผูกเบอร์แบบ soft (ไม่เจอ roster) ยังกดซ้ำได้
+  // ตั้งใจ: roster ครบขึ้นทีหลังแล้วเขากดใหม่ = ได้ member_id + ยศ · quota 5 ครั้ง/วัน คุมค่า SMS อยู่แล้ว
   if (meRows.length) {
     return interaction.editReply('✅ บัญชีของคุณยืนยันตัวตนไว้แล้ว');
   }
@@ -141,7 +146,18 @@ async function handleVerifyPhoneSubmit(interaction) {
     if (claimed.length) {
       return interaction.editReply('❌ เบอร์นี้ถูกผูกกับบัญชี Discord อื่นแล้ว — ติดต่อแอดมินหากคิดว่าไม่ถูกต้อง');
     }
-    return interaction.editReply('❌ ไม่พบเบอร์นี้ในทะเบียนสมาชิก — ตรวจสอบเบอร์อีกครั้ง หรือติดต่อแอดมิน');
+    // ไม่เจอใน roster ≠ ไม่ใช่คนของเรา — roster มีไม่ครบทุกจังหวัด → ปล่อยผ่านเป็น "ผูกเบอร์เฉยๆ"
+    // (source_id = null → ตอน verify จะเขียนแค่ users.phone ไม่แตะ member_id และไม่ติดยศ)
+    // เบอร์นี้ไม่มี roster กัน claim ให้ → ต้องกันเองที่ users.phone ที่ยืนยันแล้ว
+    const { rows: phoneTaken } = await pool.query(
+      `SELECT 1 FROM users
+        WHERE phone = $1 AND phone_verified_at IS NOT NULL AND discord_id <> $2
+        LIMIT 1`,
+      [phone, discordId]
+    );
+    if (phoneTaken.length) {
+      return interaction.editReply('❌ เบอร์นี้ถูกผูกกับบัญชี Discord อื่นแล้ว — ติดต่อแอดมินหากคิดว่าไม่ถูกต้อง');
+    }
   }
   if (rows.length > 1) {
     return interaction.editReply('❌ เบอร์นี้ตรงกับทะเบียนมากกว่า 1 รายชื่อ — ติดต่อแอดมินเพื่อยืนยันด้วยตนเอง');
@@ -162,7 +178,7 @@ async function handleVerifyPhoneSubmit(interaction) {
     phone,
     otp_hash: hashOtp(otp, discordId, guildId),
     ref,
-    source_id: rows[0].source_id,
+    source_id: rows[0]?.source_id ?? null,   // null = ไม่เจอใน roster → โหมดผูกเบอร์อย่างเดียว
     org_id: orgId,
     attempts: 0,
     sent_at: Date.now(),
@@ -232,30 +248,44 @@ async function handleVerifyOtpSubmit(interaction) {
   // เลขสมาชิก = ข้อเท็จจริงระดับ org (roster เป็น org-scope) → เขียนลง org_members ทุกแถวของคนนี้ใน org นั้น
   // (คนเดียวอยู่หลาย guild ในเครือ = สมาชิกเลขเดียวกัน) · trigger uq_om_org_member กันคนอื่น claim เลขซ้ำ (23505)
   // identity split: member_id → org_members (per-guild rows), phone/phone_verified_at → users (identity)
+  // roster มีไม่ครบทุกจังหวัด → ไม่เจอ = ผูกเบอร์อย่างเดียว (users.phone) ไม่แตะ member_id และไม่ติดยศ
   const orgId = session.org_id;
+  const matchedRoster = session.source_id != null;
   try {
-    let { rowCount } = await pool.query(
-      `UPDATE org_members om SET member_id = $1, roles_assigned_at = NOW()
-         FROM users u
-        WHERE u.id = om.user_id AND om.org_id = $2 AND u.discord_id = $3`,
-      [session.source_id, orgId, discordId]
-    );
-    if (rowCount === 0) {
-      // ยังไม่มีแถวใน org นี้เลย (sync พลาด) → สร้างจาก guild ที่กดปุ่มก่อน แล้วเขียนซ้ำ
-      await upsertMemberFromDiscord(interaction.member);
-      ({ rowCount } = await pool.query(
+    if (matchedRoster) {
+      let { rowCount } = await pool.query(
         `UPDATE org_members om SET member_id = $1, roles_assigned_at = NOW()
            FROM users u
           WHERE u.id = om.user_id AND om.org_id = $2 AND u.discord_id = $3`,
         [session.source_id, orgId, discordId]
-      ));
+      );
+      if (rowCount === 0) {
+        // ยังไม่มีแถวใน org นี้เลย (sync พลาด) → สร้างจาก guild ที่กดปุ่มก่อน แล้วเขียนซ้ำ
+        await upsertMemberFromDiscord(interaction.member);
+        ({ rowCount } = await pool.query(
+          `UPDATE org_members om SET member_id = $1, roles_assigned_at = NOW()
+             FROM users u
+            WHERE u.id = om.user_id AND om.org_id = $2 AND u.discord_id = $3`,
+          [session.source_id, orgId, discordId]
+        ));
+      }
+      if (rowCount === 0) throw new Error('org_members row not found after upsert');
     }
-    if (rowCount === 0) throw new Error('org_members row not found after upsert');
 
-    await pool.query(
+    // โหมดผูกเบอร์อย่างเดียวไม่ผ่าน upsert ข้างบน — users row อาจยังไม่เกิด ต้องเช็ค rowCount เอง
+    // ไม่งั้นเบอร์หายเงียบ (UPDATE ที่ไม่โดนแถวไหนไม่ error)
+    let { rowCount: userRows } = await pool.query(
       'UPDATE users SET phone = $1, phone_verified_at = NOW() WHERE discord_id = $2',
       [session.phone, discordId]
     );
+    if (userRows === 0) {
+      await upsertMemberFromDiscord(interaction.member);
+      ({ rowCount: userRows } = await pool.query(
+        'UPDATE users SET phone = $1, phone_verified_at = NOW() WHERE discord_id = $2',
+        [session.phone, discordId]
+      ));
+    }
+    if (userRows === 0) throw new Error('users row not found after upsert');
   } catch (err) {
     if (err.code === '23505') {
       await deleteUserSetting(discordId, key);
@@ -268,9 +298,10 @@ async function handleVerifyOtpSubmit(interaction) {
   await deleteUserSetting(discordId, key);
 
   // ติดยศ (member_role เดียวกับ register panel) — fail ต้องบอก user เพราะยศคือผลลัพธ์หลักของ flow นี้
+  // ติดยศเฉพาะคนที่ match ทะเบียนจริง — ไม่เจอ roster = ยังไม่ได้พิสูจน์ว่าเป็นสมาชิก ให้แอดมินติดยศเอง
   const regConfig = parseSetting(await getSetting(guildId, 'config_register'));
   let roleNote = '';
-  if (regConfig?.member_role_id) {
+  if (matchedRoster && regConfig?.member_role_id) {
     const ok = await interaction.member.roles.add(regConfig.member_role_id)
       .then(() => true)
       .catch(err => {
@@ -288,9 +319,11 @@ async function handleVerifyOtpSubmit(interaction) {
 
   return interaction.editReply({
     embeds: [new EmbedBuilder()
-      .setTitle('🎉 ยืนยันตัวตนสำเร็จ')
-      .setDescription(`ระบบผูกบัญชี Discord ของคุณกับทะเบียนสมาชิกเรียบร้อยแล้ว${roleNote}`)
-      .setColor(0x57f287)],
+      .setTitle(matchedRoster ? '🎉 ยืนยันตัวตนสำเร็จ' : '📱 ยืนยันเบอร์เรียบร้อย')
+      .setDescription(matchedRoster
+        ? `ระบบผูกบัญชี Discord ของคุณกับทะเบียนสมาชิกเรียบร้อยแล้ว${roleNote}`
+        : 'ผูกเบอร์กับบัญชี Discord ของคุณเรียบร้อยแล้ว — ใช้เบอร์นี้เข้าเว็บได้\n\nยังไม่พบชื่อคุณในทะเบียนสมาชิก (ทะเบียนยังมีไม่ครบทุกจังหวัด) — ถ้าต้องการยศสมาชิก แจ้งแอดมินได้เลย')
+      .setColor(matchedRoster ? 0x57f287 : 0xff6a13)],
   });
 }
 

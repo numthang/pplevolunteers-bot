@@ -1197,3 +1197,15 @@ user เปรยว่า "น่าจะมี social listening เอาไ�
 - ⚠️ **migration ยังไม่รันบน prod** — บล็อก `2026-08-12 · org_ai_prompts` ท้าย `migration.sql` (สร้างตาราง → ย้าย 2 แถว → DROP ของเก่า)
 - [ ] **โควตา AI 30/วัน/คน อาจไม่พอ** — `consumeAiQuota` นับที่คนกด ซึ่งฟีเจอร์ตรวจเนื้อหาคนกดคือบรรณาธิการ (คนน้อย ตรวจงานทั้ง org) ต่างจากคนเขียนที่ใช้ของตัวเองไม่กี่ครั้ง · ถ้าเจอเพดานจริง: แยกเพดานของ `kind='review'` หรือขึ้น limit เฉพาะ `isMediaTeam`
 - [ ] **ชุดกลาง (org_id IS NULL) ของ slot ยังแก้จากเว็บไม่ได้** — ตั้งใจ (ค่าตั้งต้นอยู่ใน `config/aiPrompts.js`) ถ้าอยากแก้จากเว็บต้องทำหน้า superadmin แยก
+
+## 📱📧 Register panel — ปุ่มผูกอีเมล + soft roster match (2026-08-13 · local ยังไม่ deploy)
+
+- [x] **ปุ่มผูกอีเมลใน `/panel register`** — option `bind_email` → ปุ่ม `btn_open_email_modal` (customId เดียวกับ `/panel email` ใช้ handler เดิม ไม่ต้องแยก flow) · `commands/panel.js`
+- [x] **`verifyHandler.js` เปลี่ยนเป็น soft roster match** — เดิมไม่เจอเบอร์ใน `cache_pple_member` = เด้ง "ไม่พบเบอร์นี้ในทะเบียนสมาชิก" ซึ่งพังเพราะ **roster มีไม่ครบทุกจังหวัด**
+  - เจอ → `member_id` + `users.phone` + ติดยศ (พฤติกรรมเดิมเป๊ะ)
+  - ไม่เจอ → `users.phone` อย่างเดียว **ไม่ติดยศ ไม่แตะ member_id** (user เคาะ: ยศต้องมาจากปุ่มแนะนำตัว/แอดมิน)
+  - เจอ >1 รายชื่อ / เบอร์ถูก discord อื่นผูก → ยังเด้งเหมือนเดิม · โหมด soft กัน claim ซ้ำที่ `users.phone WHERE phone_verified_at IS NOT NULL` แทน roster
+  - คนที่ผูกแบบ soft ยังกดซ้ำได้ (เช็ค "ยืนยันแล้ว" ต้องมี `member_id` ด้วย) — ตั้งใจ: roster ครบทีหลังแล้วกดใหม่ = ได้ยศ · quota 5/วัน คุมค่า SMS
+- ⚠️ **ต้องรัน `node deploy-commands.js` ก่อนใช้** — เพิ่ม option `bind_email` ใน `/panel register`
+- ⬜ **ยังไม่เทสจริงบน Discord** (syntax check ผ่านอย่างเดียว)
+- [ ] **i18n ค้าง — `handlers/verifyHandler.js` + `commands/panel.js`** ยัง hardcode ไทยทั้งไฟล์ (โซน bot ยังไม่ migrate เลย) · รอบนี้เพิ่ม/แก้ข้อความที่ user เห็น ~4 จุด (label modal, embed ผลลัพธ์โหมด soft, ปุ่ม/สรุป panel) ตาม pattern เดิมของไฟล์ — จดตามกติกา CLAUDE.md
