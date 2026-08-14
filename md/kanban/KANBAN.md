@@ -295,7 +295,7 @@ kanban_card_labels       card_id · label_id
 | ก้อน | ขอบเขต |
 |---|---|
 | **0** ✅ | ✅ grill 13 ข้อ · ✅ `/scrutinize` · ✅ ตอบช่องโหว่ 6 ข้อ · ✅ **เช็คข้อมูลจริงบน Linux แล้ว** — ผ่าน เริ่มก้อน 1 ได้ (ดู §🔍 ผลรีวิว ข้อ 1) |
-| **1** ⭐ | 🔄 กำลังทำ · ✅ 3 ตาราง (รันบน local แล้ว) · ✅ `lib/kanbanAccess.js` + 57 เทส · ✅ `db/kanban/cards.js` + smoke 27 เคสกับฐานจริง · ✅ `lib/kanbanGuard.js` + 4 API routes · ⬜ หน้า `/kanban` · ⬜ modal รายละเอียดการ์ด (checklist/คนช่วย/autosave) |
+| **1** ⭐ | ✅ **เสร็จ 2026-08-15** · 3 ตาราง · `lib/kanbanAccess.js` + 57 เทส · `db/kanban/cards.js` + smoke 27 เคส · `lib/kanbanGuard.js` + 4 API routes · หน้า `/kanban` + `CardModal` · ทดสอบผ่าน session จริงในเบราว์เซอร์แล้ว · **ยังไม่ deploy** |
 | **2** | Discord: context menu `📌 สร้างเป็นการบ้าน` + DM สรุปเช้า + ปุ่มในแชท → ทดสอบว่ามีคนใช้จริงไหม |
 | — | 🚦 **จุดตัดสินใจ: ถ้าก้อน 1-2 ไม่มีคนใช้ หยุดตรงนี้** ไม่ต้องจ่ายค่ากระดาน |
 | **3** | กระดาน: `kanban_boards` + `kanban_columns` + สิทธิ์ (ยศ/เชิญ) + ลาก + template |
