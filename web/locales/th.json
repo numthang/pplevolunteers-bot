@@ -1702,6 +1702,30 @@
       "titleRequired": "กรุณากรอกชื่องาน",
       "saveFailed": "บันทึกไม่สำเร็จ",
       "assignToMe": "งานนี้ฉันทำเอง"
-    }
+    },
+    "modal": {
+      "title": "รายละเอียดการบ้าน",
+      "closeTitle": "ปิด (ESC)",
+      "saving": "กำลังบันทึก…",
+      "saved": "บันทึกแล้ว",
+      "conflict": "มีคนแก้การบ้านใบนี้ไปแล้ว การแก้ของคุณยังไม่ถูกบันทึก",
+      "reload": "โหลดฉบับล่าสุด",
+      "confirmCloseUnsaved": "ยังบันทึกไม่เสร็จ ปิดเลยไหม?",
+      "confirmArchive": "เก็บการบ้านใบนี้เข้ากรุ?",
+      "statusLabel": "สถานะ",
+      "ownerLabel": "เจ้าภาพ",
+      "noOwner": "ยังไม่มีเจ้าภาพ",
+      "blockedLabel": "ติดปัญหาอยู่",
+      "blockedReasonPlaceholder": "ติดตรงไหน",
+      "helpersLabel": "คนช่วย",
+      "noHelpers": "ยังไม่มีคนช่วย",
+      "joinAsHelper": "ลงมือด้วย",
+      "checklistLabel": "งานย่อย",
+      "addItem": "เพิ่ม",
+      "addItemPlaceholder": "เพิ่มงานย่อย",
+      "removeItem": "ลบงานย่อยนี้",
+      "archive": "เก็บเข้ากรุ"
+    },
+    "saveFailed": "บันทึกไม่สำเร็จ"
   }
 }

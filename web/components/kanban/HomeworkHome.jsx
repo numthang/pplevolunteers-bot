@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { Plus, X, Clock, User, ListChecks, AlertTriangle } from 'lucide-react'
 import { formatRef } from '@/lib/kanbanAccess.js'
+import CardModal from './CardModal.jsx'
 
 // สี dot ต่อประเภทสถานะ — ตัวอักษรผ่าน t('status.<key>') เสมอ ที่นี่เก็บแค่สี (ไม่ใช่ข้อความ)
 const STATUS_DOT = {
@@ -37,13 +38,19 @@ function dueState(dueAt) {
   return 'upcoming'
 }
 
-function HomeworkRow({ card, t, showClaim, onClaim, onDone, busy }) {
+function HomeworkRow({ card, t, showClaim, onClaim, onDone, onOpen, busy }) {
   const state = dueState(card.due_at)
   const checklistTotal = Number(card.checklist_total) || 0
   const checklistDone = Number(card.checklist_done) || 0
 
   return (
-    <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-3 flex flex-col gap-2">
+    <div
+      onClick={() => onOpen(card)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(card) } }}
+      className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-3 flex flex-col gap-2 cursor-pointer hover:border-teal focus:outline-none focus:ring-2 focus:ring-teal"
+    >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex items-baseline gap-2">
           <span className="shrink-0 text-xs text-warm-400 dark:text-disc-muted">{formatRef(card.ref_no)}</span>
@@ -91,7 +98,7 @@ function HomeworkRow({ card, t, showClaim, onClaim, onDone, busy }) {
       <div className="flex justify-end">
         {showClaim ? (
           <button
-            onClick={() => onClaim(card)}
+            onClick={(e) => { e.stopPropagation(); onClaim(card) }}
             disabled={busy}
             className="px-3 py-1.5 text-sm rounded-lg bg-teal hover:opacity-90 text-white font-medium disabled:opacity-50"
           >
@@ -99,7 +106,7 @@ function HomeworkRow({ card, t, showClaim, onClaim, onDone, busy }) {
           </button>
         ) : (
           <button
-            onClick={() => onDone(card)}
+            onClick={(e) => { e.stopPropagation(); onDone(card) }}
             disabled={busy}
             className="px-3 py-1.5 text-sm rounded-lg border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover font-medium disabled:opacity-50"
           >
@@ -139,6 +146,7 @@ export default function HomeworkHome() {
   const [loadError, setLoadError] = useState('')
   const [busyIds, setBusyIds] = useState(new Set())
   const [actionError, setActionError] = useState('')
+  const [openCardId, setOpenCardId] = useState(null)   // การ์ดที่เปิด modal อยู่
 
   // ฟอร์ม "เพิ่มการบ้าน" — เปิดเป็น inline panel เท่านั้น ไม่ POST จนกว่าจะกดบันทึก (กฎ CLAUDE.md §Create vs Update)
   const [formOpen, setFormOpen] = useState(false)
@@ -394,22 +402,26 @@ export default function HomeworkHome() {
         <>
           <Section title={t('sections.mine')} emphasize emptyText={t('empty.mine')} rows={mine}>
             {mine.map((card) => (
-              <HomeworkRow key={card.id} card={card} t={t} showClaim={false} onDone={handleDone} busy={busyIds.has(card.id)} />
+              <HomeworkRow key={card.id} card={card} t={t} showClaim={false} onDone={handleDone} onOpen={(c) => setOpenCardId(c.id)} busy={busyIds.has(card.id)} />
             ))}
           </Section>
 
           <Section title={t('sections.helping')} emptyText={t('empty.helping')} rows={helping}>
             {helping.map((card) => (
-              <HomeworkRow key={card.id} card={card} t={t} showClaim={false} onDone={handleDone} busy={busyIds.has(card.id)} />
+              <HomeworkRow key={card.id} card={card} t={t} showClaim={false} onDone={handleDone} onOpen={(c) => setOpenCardId(c.id)} busy={busyIds.has(card.id)} />
             ))}
           </Section>
 
           <Section title={t('sections.unassigned')} emptyText={t('empty.unassigned')} rows={unassigned}>
             {unassigned.map((card) => (
-              <HomeworkRow key={card.id} card={card} t={t} showClaim onClaim={handleClaim} busy={busyIds.has(card.id)} />
+              <HomeworkRow key={card.id} card={card} t={t} showClaim onClaim={handleClaim} onOpen={(c) => setOpenCardId(c.id)} busy={busyIds.has(card.id)} />
             ))}
           </Section>
         </>
+      )}
+
+      {openCardId && (
+        <CardModal cardId={openCardId} onClose={() => setOpenCardId(null)} onChanged={loadAll} />
       )}
     </div>
   )

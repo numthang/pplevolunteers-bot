@@ -1702,6 +1702,30 @@
       "titleRequired": "Please enter a task name",
       "saveFailed": "Could not save",
       "assignToMe": "Assign to me"
-    }
+    },
+    "modal": {
+      "title": "Homework detail",
+      "closeTitle": "Close (ESC)",
+      "saving": "Saving…",
+      "saved": "Saved",
+      "conflict": "Someone else edited this homework — your changes were not saved",
+      "reload": "Load latest version",
+      "confirmCloseUnsaved": "Still saving. Close anyway?",
+      "confirmArchive": "Archive this homework?",
+      "statusLabel": "Status",
+      "ownerLabel": "Owner",
+      "noOwner": "No owner yet",
+      "blockedLabel": "Blocked",
+      "blockedReasonPlaceholder": "What is blocking it",
+      "helpersLabel": "Helpers",
+      "noHelpers": "No helpers yet",
+      "joinAsHelper": "Join in",
+      "checklistLabel": "Subtasks",
+      "addItem": "Add",
+      "addItemPlaceholder": "Add a subtask",
+      "removeItem": "Remove this subtask",
+      "archive": "Archive"
+    },
+    "saveFailed": "Save failed"
   }
 }

@@ -27,6 +27,11 @@ export async function GET(_req, { params }) {
       edit:    canEditCard(ctx.card, ctx.access, ctx.userId),
       archive: canArchiveCard(ctx.card, ctx.access, ctx.userId),
       claim:   canClaimCard(ctx.card, ctx.access, ctx.userId),
+      // join = ปุ่ม "ลงมือด้วย" ควรโผล่ไหม — claim อย่างเดียวไม่พอ
+      // เจ้าภาพ/คนช่วยอยู่แล้วไม่ควรเห็นปุ่มนี้ (จะกลายเป็นเพิ่มตัวเองเป็นคนช่วยของงานตัวเอง)
+      join:    canClaimCard(ctx.card, ctx.access, ctx.userId)
+               && ctx.card.owner_user_id !== ctx.userId
+               && !(ctx.card.helper_ids || []).includes(ctx.userId),
     },
   })
 }
