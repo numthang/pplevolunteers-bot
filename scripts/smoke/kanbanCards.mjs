@@ -81,6 +81,17 @@ try {
   ok('งานที่ฉันช่วยเข้ากอง helping',    my.helping.some(r => r.id === a.id))
   ok('ไม่ปนกัน', !my.mine.some(r => r.id === a.id))
 
+  console.log('\n── ปล่อยงานคืนกอง (backlog ต้องถอดเจ้าภาพ) ──')
+  const rel = await db.createCard(ORG, { title: 'สโมค: ปล่อยคืน', ownerUserId: BOB }, ALICE)
+  made.push(rel.id)
+  ok('เริ่มต้นมีเจ้าภาพ + doing', rel.owner_user_id === BOB && rel.status_type === 'doing')
+  const back = await db.setCardStatus(ORG, rel.id, 'backlog')
+  ok('ย้ายมา backlog → เจ้าภาพหลุด', back.owner_user_id === null, `owner=${back.owner_user_id}`)
+  const pool2 = await db.listCards(ORG, { unassigned: true })
+  ok('โผล่ในกอง "ยังไม่มีคนรับ"', pool2.some(r => String(r.id) === String(rel.id)))
+  const myAfter = await db.listMyCards(ORG, BOB)
+  ok('หายจากกอง "ต้องส่ง" ของคนเดิม', !myAfter.mine.some(r => String(r.id) === String(rel.id)))
+
   console.log('\n── กันข้าม org ──')
   ok('org อื่นอ่านการ์ดนี้ไม่เห็น', (await db.getCard(8, b.id)) === null)
   ok('เก็บเข้ากรุข้าม org ไม่ได้', (await db.archiveCard(8, b.id)) === false)

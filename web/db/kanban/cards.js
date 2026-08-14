@@ -200,11 +200,16 @@ export async function updateCard(orgId, id, fields, { lockToken }) {
 export async function setCardStatus(orgId, id, statusType) {
   // ⚠️ ต้อง cast $3 ให้ชัด — พารามิเตอร์ตัวเดียวถูกใช้ 2 บริบท (ค่าที่เซ็ต + เงื่อนไขใน CASE)
   //    ถ้าไม่ cast pg เดาชนิดไม่ตรงกันแล้วโยน 42P08 "inconsistent types deduced" (เจอตอน smoke test)
+  // ⭐ backlog = "รอรับ — ยังไม่มีเจ้าภาพ" (ดีไซน์ §ประเภทสถานะ) → ย้ายมา backlog = ปล่อยงานคืนกอง
+  //    ต้องถอดเจ้าภาพออกด้วย ไม่งั้นได้สภาพขัดกันเอง: การ์ด "รอรับ" ที่มีเจ้าภาพ
+  //    → ไม่โผล่ในกอง "ยังไม่มีคนรับ" (กรองด้วย owner IS NULL) แต่ก็ไม่ควรอยู่ในกอง "ต้องส่ง"
+  //    บังคับที่นี่ ไม่ใช่ที่ route — ทุกทางเข้า (เว็บ/บอท/cron) ต้องได้กติกาเดียวกัน
   const { rows } = await pool.query(
     `UPDATE kanban_cards
-        SET status_type  = $3::varchar,
-            completed_at = CASE WHEN $3::varchar IN ('done','cancelled') THEN now() ELSE NULL END,
-            updated_at   = now()
+        SET status_type   = $3::varchar,
+            owner_user_id = CASE WHEN $3::varchar = 'backlog' THEN NULL ELSE owner_user_id END,
+            completed_at  = CASE WHEN $3::varchar IN ('done','cancelled') THEN now() ELSE NULL END,
+            updated_at    = now()
       WHERE org_id = $1 AND id = $2
       RETURNING id`,
     [orgId, id, statusType]

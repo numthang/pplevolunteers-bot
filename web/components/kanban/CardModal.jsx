@@ -42,7 +42,13 @@ export default function CardModal({ cardId, onClose, onChanged }) {
 
   const lockToken = useRef(null)
   const saveTimer = useRef(null)
-  const loadedOnce = useRef(false)
+  // ค่าที่ "ตรงกับ DB ตอนนี้" — autosave ยิงต่อเมื่อค่าปัจจุบันต่างจากนี้เท่านั้น
+  //
+  // ⛔ ห้ามใช้ ref แบบ loadedOnce แทน (เคยเขียนแบบนั้นแล้วพัง 2026-08-15):
+  //    ref ถูกเซ็ตใน load() ทันที แต่ effect ที่เฝ้า title/detail ทำงานหลัง React commit ค่า
+  //    → ตอน effect ทำงาน guard ผ่านไปแล้ว = เปิดการ์ดเฉยๆ ก็ยิง PATCH + ขยับ updated_at
+  //      (ทำให้คนอื่นที่เปิดค้างอยู่โดน 409 ฟรีๆ)
+  const baseline = useRef(null)
 
   // timestamptz จาก API → ค่าที่ input datetime-local รับได้ (เวลาไทย ไม่ใช่ UTC)
   function toLocalInput(iso) {
@@ -63,12 +69,18 @@ export default function CardModal({ cardId, onClose, onChanged }) {
       setCan(json.can || {})
       lockToken.current = json.card.lock_token
       // เขียนทับช่องกรอกเฉพาะตอนโหลดครั้งแรก/กดโหลดใหม่ — ไม่งั้นทับสิ่งที่กำลังพิมพ์
-      setTitle(json.card.title || '')
-      setDetail(json.card.detail || '')
-      setDueAt(toLocalInput(json.card.due_at))
-      setBlockedReason(json.card.blocked_reason || '')
+      const fresh = {
+        title: json.card.title || '',
+        detail: json.card.detail || '',
+        dueAt: toLocalInput(json.card.due_at),
+        blockedReason: json.card.blocked_reason || '',
+      }
+      baseline.current = fresh
+      setTitle(fresh.title)
+      setDetail(fresh.detail)
+      setDueAt(fresh.dueAt)
+      setBlockedReason(fresh.blockedReason)
       setConflict(false)
-      loadedOnce.current = true
     } catch {
       setLoadError(t('loadFailed'))
     } finally {
@@ -105,6 +117,8 @@ export default function CardModal({ cardId, onClose, onChanged }) {
       if (res.status === 409) { setConflict(true); setSaveState('idle'); return }
       if (!res.ok) { setActionError(json.error || t('saveFailed')); setSaveState('idle'); return }
       lockToken.current = json.card.lock_token
+      // ค่าที่เพิ่งเซฟสำเร็จ = baseline ใหม่ ไม่งั้น effect เห็นว่ายัง dirty แล้ววนเซฟไม่จบ
+      baseline.current = { title, detail, dueAt, blockedReason }
       setCard(json.card)
       setSaveState('saved')
       setTimeout(() => setSaveState((s) => (s === 'saved' ? 'idle' : s)), 1500)
@@ -114,15 +128,20 @@ export default function CardModal({ cardId, onClose, onChanged }) {
     }
   }, [card, can.edit, cardId, title, detail, dueAt, blockedReason, t, onChanged])
 
-  // autosave — ไม่ยิงตอนโหลดครั้งแรก (ไม่งั้นเปิดกล่องเฉยๆ ก็เขียน DB)
+  // autosave — ยิงต่อเมื่อค่าต่างจากที่โหลดมาจริงๆ
+  // (เปิดกล่องเฉยๆ / กดโหลดใหม่ / พิมพ์แล้วลบกลับเป็นค่าเดิม = ไม่ยิง)
   useEffect(() => {
-    if (!loadedOnce.current || !can.edit) return
+    if (!can.edit || !baseline.current) return
+    const b = baseline.current
+    const dirty = title !== b.title || detail !== b.detail || dueAt !== b.dueAt || blockedReason !== b.blockedReason
+    if (!dirty) { setPendingSave(false); return }
+
     clearTimeout(saveTimer.current)
     setPendingSave(true)
     saveTimer.current = setTimeout(save, AUTOSAVE_MS)
     return () => clearTimeout(saveTimer.current)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [title, detail, dueAt, blockedReason])
+  }, [title, detail, dueAt, blockedReason, can.edit])
 
   // ไม่มีปุ่มบันทึก → ด่านเดียวที่กันงานหายคือตรงนี้ (กฎ CLAUDE.md §กฎการบันทึก)
   useEffect(() => {
