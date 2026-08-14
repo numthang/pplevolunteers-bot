@@ -1642,5 +1642,66 @@
       "render": "Create clip",
       "rendering": "Creating…"
     }
+  },
+  "kanban": {
+    "meta": {
+      "list": "My Homework"
+    },
+    "page": {
+      "title": "My Homework",
+      "subtitle": "What you need to deliver, what you're helping with, and what nobody has claimed yet"
+    },
+    "sections": {
+      "mine": "I need to deliver",
+      "helping": "I'm helping",
+      "unassigned": "Unclaimed"
+    },
+    "empty": {
+      "mine": "Nothing to deliver yet",
+      "helping": "You're not helping with anything yet",
+      "unassigned": "Nothing unclaimed right now"
+    },
+    "loading": "Loading...",
+    "loadFailed": "Failed to load the list",
+    "status": {
+      "backlog": "Unclaimed",
+      "doing": "In progress",
+      "review": "In review",
+      "ready": "Ready",
+      "done": "Done",
+      "cancelled": "Cancelled"
+    },
+    "row": {
+      "overdue": "Overdue",
+      "dueToday": "Due today",
+      "blocked": "Blocked"
+    },
+    "actions": {
+      "claim": "Claim this",
+      "claiming": "Claiming...",
+      "claimFailed": "Could not claim this",
+      "done": "Mark done",
+      "marking": "Saving...",
+      "doneFailed": "Could not update status"
+    },
+    "addButton": "+ Add homework",
+    "form": {
+      "title": "Add homework",
+      "titleLabel": "Task name",
+      "titlePlaceholder": "e.g. Prepare banners for Saturday's event",
+      "detailLabel": "Detail",
+      "detailPlaceholder": "More detail (optional)",
+      "dueAtLabel": "Due",
+      "priorityLabel": "Priority",
+      "priorityNormal": "Normal",
+      "priorityHigh": "High",
+      "priorityUrgent": "Urgent",
+      "cancelButton": "Cancel",
+      "saveButton": "Save",
+      "saving": "Saving...",
+      "titleRequired": "Please enter a task name",
+      "saveFailed": "Could not save",
+      "assignToMe": "Assign to me"
+    }
   }
 }

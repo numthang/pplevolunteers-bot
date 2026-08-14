@@ -1642,5 +1642,66 @@
       "render": "สร้างคลิป",
       "rendering": "กำลังสร้าง…"
     }
+  },
+  "kanban": {
+    "meta": {
+      "list": "การบ้านของฉัน"
+    },
+    "page": {
+      "title": "การบ้านของฉัน",
+      "subtitle": "งานที่คุณต้องส่ง งานที่คุณช่วย และงานที่ยังไม่มีใครรับ"
+    },
+    "sections": {
+      "mine": "งานที่ฉันต้องส่ง",
+      "helping": "งานที่ฉันช่วย",
+      "unassigned": "ยังไม่มีคนรับ"
+    },
+    "empty": {
+      "mine": "ยังไม่มีงานที่ต้องส่ง",
+      "helping": "ยังไม่มีงานที่คุณช่วย",
+      "unassigned": "ตอนนี้ไม่มีงานที่ยังไม่มีคนรับ"
+    },
+    "loading": "กำลังโหลด...",
+    "loadFailed": "โหลดรายการไม่สำเร็จ",
+    "status": {
+      "backlog": "รอรับ",
+      "doing": "กำลังทำ",
+      "review": "รอตรวจ",
+      "ready": "พร้อมส่ง",
+      "done": "เสร็จ",
+      "cancelled": "ยกเลิก"
+    },
+    "row": {
+      "overdue": "เลยกำหนด",
+      "dueToday": "ครบกำหนดวันนี้",
+      "blocked": "ติดปัญหา"
+    },
+    "actions": {
+      "claim": "รับงานนี้",
+      "claiming": "กำลังรับงาน...",
+      "claimFailed": "รับงานไม่สำเร็จ",
+      "done": "ทำเสร็จแล้ว",
+      "marking": "กำลังบันทึก...",
+      "doneFailed": "บันทึกสถานะไม่สำเร็จ"
+    },
+    "addButton": "+ เพิ่มการบ้าน",
+    "form": {
+      "title": "เพิ่มการบ้าน",
+      "titleLabel": "ชื่องาน",
+      "titlePlaceholder": "เช่น เตรียมป้ายกิจกรรมวันเสาร์",
+      "detailLabel": "รายละเอียด",
+      "detailPlaceholder": "รายละเอียดเพิ่มเติม (ถ้ามี)",
+      "dueAtLabel": "กำหนดส่ง",
+      "priorityLabel": "ความสำคัญ",
+      "priorityNormal": "ปกติ",
+      "priorityHigh": "สำคัญ",
+      "priorityUrgent": "ด่วน",
+      "cancelButton": "ยกเลิก",
+      "saveButton": "บันทึก",
+      "saving": "กำลังบันทึก...",
+      "titleRequired": "กรุณากรอกชื่องาน",
+      "saveFailed": "บันทึกไม่สำเร็จ",
+      "assignToMe": "งานนี้ฉันทำเอง"
+    }
   }
 }

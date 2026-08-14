@@ -37,7 +37,9 @@ export async function POST(req) {
   if (title.length > 200) return err(400, 'ชื่อการบ้านยาวเกิน 200 ตัวอักษร')
   if (body.statusType && !STATUS_TYPES.includes(body.statusType)) return err(400, 'สถานะไม่ถูกต้อง')
 
-  const ownerUserId = body.ownerUserId ? Number(body.ownerUserId) : null
+  // assignToMe = ทางลัดของหน้า "การบ้านของฉัน" — client ไม่ต้องรู้ userId ตัวเอง
+  // (เคสปกติที่สุดคือจดงานของตัวเอง → ต้องเข้ากอง "ต้องส่ง" ทันที ไม่ใช่ไปกองรอรับแล้วกดรับซ้ำ)
+  const ownerUserId = body.assignToMe ? ctx.userId : (body.ownerUserId ? Number(body.ownerUserId) : null)
   // ไม่มีเจ้าภาพ = อยู่ backlog เท่านั้น — กันไม่ให้ client ยัด status มาชน CHECK ของ DB
   if (!ownerUserId && body.statusType && body.statusType !== 'backlog') {
     return err(400, 'ต้องมีเจ้าภาพก่อนถึงจะย้ายออกจากช่องรอรับได้')
