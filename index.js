@@ -36,6 +36,7 @@ const { handleBasketAiStart, handleBasketAiModeSelect, handleBasketAiCustomModal
 const { handleAiThreadModeSelect, handleAiThreadCustomModal, handleAiThreadAddCaption, handleAiThreadPublic } = require('./handlers/aiThreadHandler');
 const { handleCaseImportModal, handleThreadCreate: handleCaseThreadCreate } = require('./handlers/caseImportHandler');
 const { handlePostImportModal } = require('./handlers/postImportHandler');
+const { handleKanbanImportModal } = require('./handlers/kanbanImportHandler');
 const {
   handleBasketView, handleBasketClear,
   handleBasketPost, handleBasketRetry, handleBasketSelect, handleBasketModal,
@@ -174,6 +175,7 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.customId.startsWith('report_submit:')) return handleReportSubmit(interaction);
     if (interaction.customId.startsWith('case_import_modal:')) return handleCaseImportModal(interaction);
     if (interaction.customId.startsWith('post_import_modal:')) return handlePostImportModal(interaction);
+    if (interaction.customId.startsWith('kanban_card_modal:')) return handleKanbanImportModal(interaction);
     if (interaction.customId === 'wm_custom_text')          return handleWatermarkModal(interaction);
     if (interaction.customId.startsWith('quote_modal:'))    return handleQuoteModal(interaction);
     if (interaction.customId.startsWith('basket_schedule_modal'))      return handleBasketModal(interaction);

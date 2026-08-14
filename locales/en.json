@@ -50,5 +50,22 @@
     "runDone": "✅ Posted {sent} stories (scanned {scanned})",
     "runEmpty": "No new stories right now (scanned {scanned} — all seen before)",
     "runFailed": "❌ Could not fetch news: {error}"
+  },
+  "kanban": {
+    "import": {
+      "modalTitle": "Create homework",
+      "titleLabel": "Task name",
+      "detailLabel": "Details (optional)",
+      "dueLabel": "Due (optional)",
+      "duePlaceholder": "2026-08-20 or 2026-08-20 17:00",
+      "mineLabel": "Assign to me?",
+      "minePlaceholder": "yes / no — blank = yes",
+      "noText": "❌ This message has no text to use as a task name",
+      "needTitle": "❌ Task name is required",
+      "badDue": "❌ Due must look like 2026-08-20 or 2026-08-20 17:00",
+      "createdMine": "✅ Created {ref} — **{title}**\nIt is now in your \"To submit\" list",
+      "createdPool": "✅ Created {ref} — **{title}**\nIt is in the \"Unclaimed\" pool",
+      "failed": "❌ Could not create the homework"
+    }
   }
 }
