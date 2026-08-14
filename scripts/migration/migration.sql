@@ -795,3 +795,70 @@ ON CONFLICT DO NOTHING;
 DROP TABLE IF EXISTS dc_ai_modes;
 
 -- production ทำถึงตรงนี้
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- 2026-08-14 — kanban ก้อน 1: "การบ้านของฉัน" (3 ตาราง · ยังไม่มีกระดาน)
+--
+-- ดีไซน์เต็ม: md/kanban/KANBAN.md · ก้อน 0 ปิดแล้ว (grill 13 + /scrutinize + เช็คข้อมูลจริง)
+-- ก้อนนี้ตั้งใจ **ไม่มี** kanban_boards / kanban_columns / การลาก / auto-mirror
+-- เหตุผล: ความเสี่ยงอันดับ 1 คือ "ไม่มีใครใช้" → พิสูจน์ด้วย 3 ตารางก่อนจ่ายค่ากระดาน
+--
+-- 2 จุดที่ต่างจากเอกสารดีไซน์ (เกิดจากการสลับลำดับก้อน — บันทึกไว้กันงงตอนถึงก้อน 3):
+--   1. ref เป็นเลขรันต่อ **org** ไม่ผูกกระดาน (ดีไซน์เดิม = <board.key>-<เลขรัน>)
+--      เพราะกระดานมาทีหลัง + ย้ายกระดานแล้วเลขต้องไม่เปลี่ยน ไม่งั้นลิงก์ที่แชร์ใน Discord ตาย
+--   2. status_type อยู่บน **การ์ด** (ดีไซน์เดิมอยู่บน kanban_columns)
+--      ก้อนนี้ไม่มีช่อง การ์ดเลยต้องถือสถานะเอง · ถึงก้อน 3 ช่องเป็นแค่ "การจัดกลุ่มบนจอ"
+--      ⛔ ห้ามให้ช่องกลายเป็นแหล่งสถานะที่ 2 — ลากเข้าช่อง = เขียน status_type ของการ์ด
+--      ⛔ ก้อน 4 การ์ดที่ผูกเคส/โพสต์ **ห้ามอ่าน status_type คอลัมน์นี้** ต้องคำนวณสดจาก entity
+-- ═══════════════════════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS kanban_cards (
+  id             BIGSERIAL PRIMARY KEY,
+  org_id         INTEGER      NOT NULL REFERENCES orgs(id) ON DELETE CASCADE,
+  ref_no         INTEGER      NOT NULL,               -- เลขรันต่อ org · แสดงผลเป็น K-42
+  title          VARCHAR(200) NOT NULL,
+  detail         TEXT,
+  status_type    VARCHAR(12)  NOT NULL DEFAULT 'backlog'
+                 CHECK (status_type IN ('backlog','doing','review','ready','done','cancelled')),
+  owner_user_id  INTEGER      REFERENCES users(id) ON DELETE SET NULL,   -- เจ้าภาพ · NULL = ยังไม่มีคนรับ
+  due_at         TIMESTAMPTZ,                         -- ⚠️ local Thai time จากฟอร์ม — ห้าม toISOString() (เคสเดียวกับ txn_at)
+  priority       SMALLINT     NOT NULL DEFAULT 0,     -- 0 ปกติ · 1 สำคัญ · 2 ด่วน
+  blocked        BOOLEAN      NOT NULL DEFAULT FALSE, -- "ติดปัญหา" เป็นธง ไม่ใช่สถานะ (ดีไซน์ §ประเภทสถานะ)
+  blocked_reason TEXT,
+  created_by     INTEGER      NOT NULL REFERENCES users(id),
+  created_at     TIMESTAMPTZ  NOT NULL DEFAULT now(),
+  updated_at     TIMESTAMPTZ  NOT NULL DEFAULT now(), -- optimistic lock token ของ autosave (เคสเดียวกับ post_episodes)
+  completed_at   TIMESTAMPTZ,
+  archived_at    TIMESTAMPTZ,                         -- soft delete — ไม่มี hard delete ในโมดูลนี้
+
+  -- ดีไซน์ §ช่องโหว่ข้อ 5: การ์ดไม่มีเจ้าภาพ อยู่ได้ที่ backlog เท่านั้น (บังคับที่ DB ไม่ใช่แค่ UI)
+  CONSTRAINT kanban_cards_owner_required
+    CHECK (owner_user_id IS NOT NULL OR status_type = 'backlog')
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_kanban_cards_ref  ON kanban_cards (org_id, ref_no);
+CREATE INDEX IF NOT EXISTS idx_kanban_cards_owner      ON kanban_cards (org_id, owner_user_id) WHERE archived_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_kanban_cards_due        ON kanban_cards (org_id, due_at)        WHERE archived_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_kanban_cards_status     ON kanban_cards (org_id, status_type)   WHERE archived_at IS NULL;
+
+-- คนช่วย — กี่คนก็ได้ (เจ้าภาพอยู่บนการ์ด ไม่ต้องมีแถวที่นี่ซ้ำ)
+CREATE TABLE IF NOT EXISTS kanban_card_helpers (
+  card_id   BIGINT      NOT NULL REFERENCES kanban_cards(id) ON DELETE CASCADE,
+  user_id   INTEGER     NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  joined_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (card_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_kanban_helpers_user ON kanban_card_helpers (user_id);
+
+-- งานย่อยในการ์ด (user เคาะเพิ่มจาก grill ข้อ 11 — งานอีเวนต์/ลงพื้นที่ต้องใช้จริง)
+CREATE TABLE IF NOT EXISTS kanban_card_checklist (
+  id         BIGSERIAL PRIMARY KEY,
+  card_id    BIGINT       NOT NULL REFERENCES kanban_cards(id) ON DELETE CASCADE,
+  text       VARCHAR(300) NOT NULL,
+  done       BOOLEAN      NOT NULL DEFAULT FALSE,
+  sort_order INT          NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ  NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_kanban_checklist_card ON kanban_card_checklist (card_id, sort_order);
