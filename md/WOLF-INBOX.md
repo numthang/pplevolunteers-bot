@@ -48,6 +48,16 @@
   โพสต์ `approved` ถูกล็อกแก้ ต้องผ่าน `canRequestChanges()` ก่อน (บรรทัด 100, 112)
   → ฟีเจอร์ใหม่ที่เปลี่ยนสถานะโพสต์ทางอ้อม (เช่น ลากการ์ด kanban) **ต้องผ่านด่านเดิม ไม่ใช่ด่านของตัวเอง**
 
+- **`setPostCategory` (`web/db/posts/episodes.js:287`) เป็น dead code — ไม่มีใครเรียกทั้ง repo**
+  คอมเมนต์บอกว่า *"ลากการ์ดข้ามหมวดในหน้า list"* แต่ UI นั้นไม่เคยถูกสร้าง
+  → อย่าเชื่อคอมเมนต์ว่าฟีเจอร์มีอยู่จริง · `grep -rn` หา caller ก่อนเสมอ (ตรงกับบทเรียน 2026-06-30 เรื่อง `_roles-archive.js`)
+
+- **โพสต์ลบได้ 2 แบบ** — `archivePost` = soft (`archived_at`) · `deletePost` (`episodes.js:334`) = **hard `DELETE FROM post_episodes`** เรียกจาก `api/posts/[id]/route.js:91`
+  ส่วน **เคสไม่มี hard delete** (ไล่ทั้ง repo ไม่เจอ `DELETE FROM cases`) → FK ที่ชี้ไป post ต้องคิดเรื่อง CASCADE, ที่ชี้ไป case ไม่ต้อง
+
+- **`setPostStatus` (`episodes.js:274`) bump `updated_at` โดยไม่เช็ค lock** — และ `updated_at` คือ optimistic lock token ของ autosave (`episodes.js:15`)
+  → ฟีเจอร์ใดที่เปลี่ยนสถานะโพสต์จากนอกหน้า `/posts` จะทำให้คนที่กำลังพิมพ์อยู่โดน 409 เซฟไม่ลง
+
 ### → `cerebrum.md` §User Preferences
 
 - **user ชอบชื่อโมดูลที่มีเมตาฟอร์/เล่นคำ** (มี `cooking`, `dojo` อยู่แล้ว) แต่ต้องเป็นคำที่**สื่อความหมายของสิ่งนั้นจริง** ไม่ใช่ชื่อสวยลอยๆ
@@ -59,6 +69,21 @@
   ดีไซน์เต็มผ่าน grill 13 ข้อ อยู่ที่ [`md/kanban/KANBAN.md`](kanban/KANBAN.md) · **ยังไม่รัน `/scrutinize` ห้ามเขียนโค้ด**
   แก่นที่ห้ามลืม: **การ์ดที่ผูกเคส/โพสต์ ห้ามเก็บสถานะเอง** ต้องคำนวณสดจาก entity ทุกครั้งที่แสดง
   ไม่งั้นบอร์ดโกหก → คนเลิกเชื่อ → กลายเป็น "ที่เก็บงานที่ 6" ซึ่งแย่กว่าไม่ทำ
+
+### ⬜ ต้องตรวจสอบบน Linux (ยังไม่รู้คำตอบ)
+
+- **`.env` บนแมคชี้ `DB_NAME=platfor` แต่ `CLAUDE.md` เขียนว่าฐานข้อมูลชื่อ `pple_volunteers`**
+  บนแมคมี DB ทั้ง 2 ตัว — `platfor` มี 75 ตาราง/ข้อมูลจริง ส่วน `pple_volunteers` ว่าง
+  → เช็คบน Linux ว่าชื่อจริงคืออะไร แล้ว**แก้ `CLAUDE.md` ให้ตรง** (ตอนนี้เอกสารกับของจริงไม่ตรงกันอย่างน้อย 1 เครื่อง)
+
+- **นับข้อมูลโพสต์จริงก่อนเริ่มก้อนแรกของ kanban** (blocker ที่ `/scrutinize` เจอ — รายละเอียดใน `md/kanban/KANBAN.md` §ผลรีวิว)
+  ```sql
+  SELECT count(*) FILTER (WHERE channel_id IS NULL)   AS เขียนบนเว็บ,
+         count(*) FILTER (WHERE category IS NOT NULL) AS จัดหมวดแล้ว,
+         count(*) AS ทั้งหมด
+    FROM post_episodes WHERE archived_at IS NULL;
+  ```
+  บนแมคได้ 0 / 0 / 27 → ถ้า Linux ก็ 0 เหมือนกัน ต้องทบทวน grill ข้อ 1 (ทีมสื่อเป็นคนใช้แรก)
 
 ### → `anatomy.md`
 
