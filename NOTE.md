@@ -1,13 +1,11 @@
-ก่อนใช้งาน
-- คนโทรไปติดยศจังหวัดตัวเองก่อนที่ https://discord.com/channels/1340903354037178410/1341436765533372489/1498017778374803618
-- เข้า https://pplevolunteers.org/calling/campaigns จะเห็น campaign ของจังหวัดตัวเอง และต้อง login ด้วย discord ถ้าอยาก login ด้วยวิธีอื่นให้เข้าไปผูกอีเมล์ตัวเองกับ discord ก่อนที่ https://discord.com/channels/1340903354037178410/1340903354871582756
-
 # PLATFOR{m}.ORG
 - workspacefor.org
 - ทำให้เว็บไซต์ หรือ sub-domain ภายนอกใช้ระบบเดียวกันได้แต่ใช้ชื่อของเขาเอง
 
-# Posts
+# Projects
+- อยากทำ project management เหมือน appflowy notion trello จุดประสงค์ตอนนี้งานกระจัดกระจายมาก บน discord ตอนนี้เรามี posts สำหรับ content เรามี cases สำหรับร้องเรียน แต่เรายังไม่มี project management แต่ไอเดียผมยังไม่ค่อยออก ลองร่างดราฟต์ให้ดูหน่อย มีตัวอย่างอื่นๆ software ระดับโลก ที่เข้าจุดประสงค์นี้ของผมอีกบ้างไหม 
 
+# Posts
 
 # CivicFlow
 - ข้อเสนอ: ย้าย CivicFlow จาก Vercel มาที่ VPS
@@ -23,7 +21,6 @@
 - อยากได้หน้า dashboard ของ http://localhost:3000/bot/ ตอนนี้มันวิ่งไป http://localhost:3000/bot/platforms ดูแปลกๆ ไม่มี landing ทำแบบไหนดี ควรเปลี่ยนเป็น bot/settings ดีไหม และอาจะต้องย้ายหรือลบ setting ส่วน bot นี้ไปอยู่ใน org/settings/ เอาตรงๆ ยังงงๆ อยู่ แต่เห็นความซ้ำซ้อนและ ไม่เป็นที่เป็นทางบางอย่างอยู่ กับ https://localhost:3000/org/settings
 - project หลังจากนี้ จะรู้ไหมว่าผมทำรองรับสองภาษาแล้วอ่ะ แล้วก็ไม่รู้ว่าเราต้อง cleaning memory.md, claude.md ที่บางอัน outdate อะไรบ้างไหม เพื่อลด context ตอนทำงาน
 - อยากทำ Project ย้ายจาก LINE กลุ่มมาใช้ discord เพื่อองค์กรกันเถอะ รายละเอียดยังไม่ได้คิด
-- guild switching ใน hamburger ไม่ต้องมีไหมอ่ะ
 - ต้องทำให้รองรับ config WEB_BASE_URL ที่ไม่ได้มาจาก .env แล้ว แต่ต้องสะท้อน จาก guild_config
 - dc_server_settings เราเลิกใช้แล้วใช่ไหม ถ้าใช่ลบทิ้งไปเลย
 - ตอนนี้ถ้าจะดูว่าใครเป็น treasurer บนเว็บเพื่อมีสิทธแก้ไข finance ดูจากอะไร ค้นจาก dc_members.roles แล้วแมพ เหรัญญิก เพื่อหา treasurer เหรอ
@@ -41,7 +38,6 @@
 
 # Bot 
 - มีวิธีย้ายคนจาก stage ไปห้องประชุมธรรมดาทั้งหมดไหมครับ ผมอยากทำตอนปิดประชุม stage
-- ข้อความยาวๆใน modal ไม่มีทางแก้ได้แล้วใช่ไหม มันกี่ตัวอักษรนะ ข้อจำกัด
 
 # Cooking
 - ย้าย cooking ออกจาก discord project- Update PENDING.md สิ่งที่อยากทำ สิ่งที่ทำไปแล้วลบทิ้งไหม, อ่านส่วนที่แก้ไขแล้วเอาขึ้น git พร้อมข้อความแก้ไข พร้อม bump version ใน package.json ให้ถูกต้อง (เช็ค git log ก่อนว่า version ล่าสุดคืออะไร ใช้ semver — patch สำหรับแก้เล็กน้อย, minor สำหรับฟีเจอร์ใหม่) tag เฉพาะ minor ขึ้นไป และ push ด้วย เถอะ ไปทำเป็น personal ที่แบบ login หรือไม่ login ก็ได้ ไป schema ใหม่ไปเลยดีมะ ส่วน username เราก็แยกออกไปจาก แอพองค์กรไปเลยเนอะ ดีมะอ่ะ รอให้มี domain ของตัวเองก่อน
