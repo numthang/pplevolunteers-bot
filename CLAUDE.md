@@ -23,6 +23,7 @@ Quick navigation to detailed docs for the entire pple-volunteers project (Bot + 
 | **Production Deployment** | [md/DEPLOYMENT.md](md/DEPLOYMENT.md) |
 | **Cutover org-core→master** | [md/archive/CUTOVER.md](md/archive/CUTOVER.md) |
 | **Case System** | [md/case/CASE.md](md/case/CASE.md) |
+| **Kanban (การบ้าน)** | [md/kanban/KANBAN.md](md/kanban/KANBAN.md) |
 | **Server Wizard** | [md/discord/SERVER_WIZARD.md](md/discord/SERVER_WIZARD.md) |
 | **RAG AI** | [md/discord/RAG.md](md/discord/RAG.md) |
 
