@@ -20,7 +20,7 @@ const DISPLAY_NAME = `COALESCE(NULLIF(TRIM(CONCAT_WS(' ', u.firstname, u.lastnam
 
 const COLS = `
   c.id, c.org_id, c.ref_no, c.title, c.detail, c.status_type,
-  c.owner_user_id, c.due_at, c.priority, c.blocked, c.blocked_reason,
+  c.owner_user_id, c.start_at, c.due_at, c.priority, c.blocked, c.blocked_reason,
   c.created_by, c.created_at, c.updated_at, c.completed_at, c.archived_at,
   ${LOCK} AS lock_token`
 
@@ -30,7 +30,11 @@ const AGG = `
               FROM kanban_card_helpers h JOIN users u ON u.id = h.user_id
              WHERE h.card_id = c.id), '[]'::json) AS helpers,
   COALESCE((SELECT count(*) FROM kanban_card_checklist k WHERE k.card_id = c.id), 0)                  AS checklist_total,
-  COALESCE((SELECT count(*) FROM kanban_card_checklist k WHERE k.card_id = c.id AND k.done), 0)       AS checklist_done`
+  COALESCE((SELECT count(*) FROM kanban_card_checklist k WHERE k.card_id = c.id AND k.done), 0)       AS checklist_done,
+  COALESCE((SELECT json_agg(json_build_object('id', l.id, 'name', l.name, 'group', l.group_name, 'color', l.color)
+                            ORDER BY l.group_name, l.sort_order, l.name)
+              FROM kanban_card_labels cl JOIN kanban_labels l ON l.id = cl.label_id
+             WHERE cl.card_id = c.id AND l.archived_at IS NULL), '[]'::json) AS labels`
 
 const OWNER = `(SELECT ${DISPLAY_NAME} FROM users u WHERE u.id = c.owner_user_id) AS owner_name`
 
@@ -115,19 +119,25 @@ export async function listCards(orgId, { status = null, ownerUserId = null, unas
  *    → ห้ามมีใครเรียกฟังก์ชันนี้ตอนกดปุ่ม "เพิ่มการบ้าน" เพื่อเปิดฟอร์มเปล่า
  *      (เคสจริงที่เคยพลาด: /posts กด "เขียนโพสต์ใหม่" แล้ว POST ทันที = ร่างเปล่าค้าง DB)
  */
-export async function createCard(orgId, { title, detail = null, ownerUserId = null, dueAt = null, priority = 0, statusType = null }, createdBy) {
+export async function createCard(orgId, { title, detail = null, ownerUserId = null, startAt = null, dueAt = null, priority = 0, statusType = null }, createdBy) {
   // ไม่มีเจ้าภาพ = อยู่ backlog เท่านั้น (DB มี CHECK กันอีกชั้น — ที่นี่กันไม่ให้ยิงไปแล้วพัง)
-  const status = statusType || (ownerUserId ? 'doing' : 'backlog')
+  let status = statusType || (ownerUserId ? 'doing' : 'backlog')
+
+  // ⭐ อีกด้านของกฎเดียวกัน: backlog = "รอรับ — ยังไม่มีเจ้าภาพ" → มีเจ้าภาพแล้วอยู่ backlog ไม่ได้
+  //    DB CHECK กันได้ทางเดียว (ไม่มีเจ้าภาพห้ามออกจาก backlog) แต่ไม่กันทางนี้
+  //    ถ้าปล่อยไว้จะสร้างสภาพขัดกันเองแบบ bug-406 ตั้งแต่แถวแรก — เจอตอน import ข้อมูล AppFlowy
+  //    (setCardStatus อุดฝั่งแก้ไขแล้ว ที่นี่คืออุดฝั่งสร้าง)
+  if (ownerUserId && status === 'backlog') status = 'doing'
 
   for (let attempt = 0; attempt < 5; attempt++) {
     try {
       const { rows } = await pool.query(
-        `INSERT INTO kanban_cards (org_id, ref_no, title, detail, status_type, owner_user_id, due_at, priority, created_by)
+        `INSERT INTO kanban_cards (org_id, ref_no, title, detail, status_type, owner_user_id, start_at, due_at, priority, created_by)
          VALUES ($1,
                  (SELECT COALESCE(MAX(ref_no), 0) + 1 FROM kanban_cards WHERE org_id = $1),
-                 $2, $3, $4, $5, $6, $7, $8)
+                 $2, $3, $4, $5, $6, $7, $8, $9)
          RETURNING id`,
-        [orgId, title, detail, status, ownerUserId, dueAt || null, priority, createdBy]
+        [orgId, title, detail, status, ownerUserId, startAt || null, dueAt || null, priority, createdBy]
       )
       return await getCard(orgId, rows[0].id)
     } catch (e) {
@@ -141,6 +151,7 @@ export async function createCard(orgId, { title, detail = null, ownerUserId = nu
 const EDITABLE = {
   title:          'title',
   detail:         'detail',
+  start_at:       'start_at',      // ⚠️ ส่งดิบ ห้ามแปลง timezone
   due_at:         'due_at',        // ⚠️ ส่งดิบ ห้ามแปลง timezone
   priority:       'priority',
   blocked:        'blocked',

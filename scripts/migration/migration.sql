@@ -862,3 +862,48 @@ CREATE TABLE IF NOT EXISTS kanban_card_checklist (
 );
 
 CREATE INDEX IF NOT EXISTS idx_kanban_checklist_card ON kanban_card_checklist (card_id, sort_order);
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- 2026-08-15 — kanban: ป้าย (มีกลุ่ม) + ช่วงวันที่
+--
+-- ที่มา: วิเคราะห์ backups/kanban/kanban_import.xlsx (83 การ์ดจาก AppFlowy ของราชบุรี)
+-- เจอ 3 field ที่หน้าตาการใช้งานเหมือนกันเป๊ะ (เลือกได้หลายค่าจากรายการ):
+--     category 13 ค่า · อำเภอ 11 ค่า · อุปกรณ์ 22 ค่า
+--   → ยุบเป็นกลไกเดียว = ป้ายที่มี "กลุ่ม" กำกับ (md/kanban/CUSTOM-FIELDS.md)
+--
+-- ⛔ ห้ามเพิ่มคอลัมน์ district/area ลง kanban_cards เด็ดขาด
+--    "อำเภอ" เป็นคำของ PPLE ราชบุรีเท่านั้น — org กรุงเทพใช้เขต ทีมชาติใช้ภาค
+--    และในข้อมูลจริงมีค่า "ทีมจังหวัด" ปนอยู่ ซึ่งไม่ใช่อำเภอด้วยซ้ำ
+--    → ทุกอย่างต้องเป็นข้อมูลที่ org ตั้งเอง ไม่มีชื่อพื้นที่ใดๆ ใน schema
+-- ═══════════════════════════════════════════════════════════════════════════
+
+ALTER TABLE kanban_cards ADD COLUMN IF NOT EXISTS start_at TIMESTAMPTZ;
+COMMENT ON COLUMN kanban_cards.start_at IS
+  'วันเริ่มงาน — งานอีเวนต์กินหลายวัน (ข้อมูลจริง 4/52 ใบเป็นช่วง) · NULL = งานจุดเดียวใช้ due_at พอ';
+
+CREATE TABLE IF NOT EXISTS kanban_labels (
+  id         BIGSERIAL PRIMARY KEY,
+  org_id     INTEGER      NOT NULL REFERENCES orgs(id) ON DELETE CASCADE,
+  group_name VARCHAR(60),              -- 'สายงาน' · 'พื้นที่' · 'อุปกรณ์' · NULL = ไม่จัดกลุ่ม
+                                       -- ("group" เป็นคำสงวนของ SQL จึงใช้ group_name)
+  name       VARCHAR(60)  NOT NULL,
+  color      VARCHAR(20),              -- token สีของ UI · NULL = ให้ UI เลือกเอง
+  sort_order INT          NOT NULL DEFAULT 0,
+  archived_at TIMESTAMPTZ,             -- ซ่อน ไม่ใช่ลบ — ลบป้ายที่ติดการ์ดอยู่ = ข้อมูลหายเงียบ
+  created_at TIMESTAMPTZ  NOT NULL DEFAULT now()
+);
+
+-- ชื่อซ้ำได้ถ้าอยู่คนละกลุ่ม ("เมือง" เป็นได้ทั้งพื้นที่และสายงาน)
+-- COALESCE เพราะ NULL ไม่เท่ากับ NULL ใน unique index — ไม่งั้นป้ายไม่จัดกลุ่มซ้ำได้ไม่จำกัด
+CREATE UNIQUE INDEX IF NOT EXISTS uq_kanban_labels_name
+    ON kanban_labels (org_id, COALESCE(group_name, ''), name);
+CREATE INDEX IF NOT EXISTS idx_kanban_labels_org
+    ON kanban_labels (org_id, group_name, sort_order) WHERE archived_at IS NULL;
+
+CREATE TABLE IF NOT EXISTS kanban_card_labels (
+  card_id  BIGINT NOT NULL REFERENCES kanban_cards(id)  ON DELETE CASCADE,
+  label_id BIGINT NOT NULL REFERENCES kanban_labels(id) ON DELETE CASCADE,
+  PRIMARY KEY (card_id, label_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_kanban_card_labels_label ON kanban_card_labels (label_id);
