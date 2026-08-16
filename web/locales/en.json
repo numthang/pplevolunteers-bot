@@ -1496,7 +1496,7 @@
     "orgchart": {
       "title": "Team Map",
       "subtitle": "Who is most active in each role — bigger circle = higher engagement",
-      "hint": "Bigger node = higher engagement · Drag nodes to rearrange · Click to see Top 5",
+      "hint": "Click a role to expand its people · Drag nodes to arrange · Drag background / scroll to pan-zoom",
       "searchPlaceholder": "Search roles…",
       "daysLabel": "Last {days} days",
       "viewNetwork": "Network",
@@ -1528,7 +1528,17 @@
       "backToRoles": "Back to roles",
       "rankLabel": "Rank {rank}",
       "scoreLabel": "{score} pts",
-      "expandHint": "Click a role to expand its people"
+      "expandHint": "Click a role to expand its people",
+      "expandAll": "Expand all roles",
+      "collapseAll": "Collapse all",
+      "fitView": "Fit to view",
+      "showAll": "Show all groups",
+      "hideAll": "Hide all groups",
+      "nodeCount": "{count} nodes",
+      "topPerGroup": "Top {n}/group",
+      "allRoles": "All",
+      "rolesShown": "Showing {shown} of {total} active roles",
+      "hiddenInactive": "Roles with no activity are hidden"
     }
   },
   "posts": {

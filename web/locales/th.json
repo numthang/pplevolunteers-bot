@@ -1496,7 +1496,7 @@
     "orgchart": {
       "title": "ผังทีม",
       "subtitle": "ใครแอคทีฟสุดในแต่ละบทบาท — วงกลมใหญ่ = engagement สูง",
-      "hint": "โหนดใหญ่ = engagement สูง · ลากโหนดเพื่อจัดผังใหม่ · คลิกเพื่อดู Top 5",
+      "hint": "คลิกบทบาท = แตกเป็นรายคน · ลากโหนดจัดผังเอง · ลากพื้นหลัง/สกรอลล์ = เลื่อน-ซูม",
       "searchPlaceholder": "ค้นหาบทบาท…",
       "daysLabel": "ย้อนหลัง {days} วัน",
       "viewNetwork": "เครือข่าย",
@@ -1528,7 +1528,17 @@
       "backToRoles": "กลับไปบทบาท",
       "rankLabel": "อันดับ {rank}",
       "scoreLabel": "{score} คะแนน",
-      "expandHint": "คลิกบทบาทเพื่อแตกเป็นรายคน"
+      "expandHint": "คลิกบทบาทเพื่อแตกเป็นรายคน",
+      "expandAll": "แตกทุกบทบาท",
+      "collapseAll": "ยุบทั้งหมด",
+      "fitView": "พอดีจอ",
+      "showAll": "เปิดทุกกลุ่ม",
+      "hideAll": "ปิดทุกกลุ่ม",
+      "nodeCount": "{count} โหนด",
+      "topPerGroup": "Top {n}/กลุ่ม",
+      "allRoles": "ทั้งหมด",
+      "rolesShown": "แสดง {shown} จาก {total} บทบาทที่มีความเคลื่อนไหว",
+      "hiddenInactive": "ซ่อนบทบาทที่ไม่มีใครแอคทีฟแล้ว"
     }
   },
   "posts": {
