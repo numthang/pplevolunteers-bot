@@ -64,8 +64,12 @@ function avatarMarkup(name, r) {
     <circle class="oc-avatar-border" r="${r}"/>`
 }
 
+function pillWidth(title, sub) {
+  return Math.max(48, Math.max(title.length * 7.3, sub ? sub.length * 6.1 : 0) + 24)
+}
+
 function pillNode(topY, { title, sub, bg, titleColor, subColor }) {
-  const w = Math.max(48, Math.max(title.length * 7.3, sub ? sub.length * 6.1 : 0) + 24)
+  const w = pillWidth(title, sub)
   const h = sub ? 34 : 23
   const g = el('g', {})
   g.appendChild(el('rect', { class: 'oc-pill', x: -w / 2, y: topY, width: w, height: h, rx: sub ? 9 : h / 2, fill: bg }))
@@ -83,43 +87,53 @@ function pillNode(topY, { title, sub, bg, titleColor, subColor }) {
 
 // วาง node เป็นวงรอบ hub แล้วคลายด้วย physics — deterministic (ไม่มี Math.random)
 // ผลลัพธ์จึงเหมือนเดิมทุกครั้งที่โหลด ผู้ใช้จำผังได้
+//
+// ⚠️ ผลักกันแบบ "กล่อง" ไม่ใช่ "วงกลม": ป้ายชื่อบทบาทไทยยาวกว่าวงกลมมาก (บางอัน 200px)
+// ถ้าคิดแค่รัศมีวงกลม ป้ายจะทับกันเละแม้วงกลมไม่ชน
 function layoutNodes(items, seedKey) {
   const n = items.length
-  const ringR = Math.max(150, 42 * Math.sqrt(n) + 90)
+  const ringR = Math.max(170, 46 * Math.sqrt(n) + 100)
   const nodes = items.map((item, i) => {
     const a = (i / Math.max(1, n)) * Math.PI * 2 - Math.PI / 2
-    const jitter = ((hash(seedKey + item.id) % 100) / 100 - 0.5) * 46
+    const jitter = ((hash(seedKey + item.id) % 100) / 100 - 0.5) * 50
     return { ...item, x: Math.cos(a) * (ringR + jitter), y: Math.sin(a) * (ringR + jitter) }
   })
 
   let step = 1
-  for (let it = 0; it < 340; it++) {
+  for (let it = 0; it < 420; it++) {
     const disp = nodes.map(() => ({ x: 0, y: 0 }))
     for (let i = 0; i < nodes.length; i++) {
-      // ผลักกันเองไม่ให้ทับ (รวมเผื่อที่ของป้ายใต้โหนด)
       for (let j = i + 1; j < nodes.length; j++) {
         const A = nodes[i], B = nodes[j]
-        const dx = A.x - B.x, dy = A.y - B.y
-        const d = Math.hypot(dx, dy) || 0.01
-        const minD = A.r + B.r + 52
-        if (d < minD * 2.4) {
-          const f = (2400 * (A.r + B.r)) / (d * d)
-          disp[i].x += (dx / d) * f; disp[i].y += (dy / d) * f
-          disp[j].x -= (dx / d) * f; disp[j].y -= (dy / d) * f
+        const dx = B.x - A.x, dy = B.y - A.y
+        // ระยะที่ยอมให้เข้าใกล้กันได้ตามแกน = ครึ่งกล่องรวมกัน + ช่องไฟ
+        const needX = (A.halfW + B.halfW) + 14
+        const needY = (A.halfH + B.halfH) + 10
+        const overlapX = needX - Math.abs(dx)
+        const overlapY = needY - Math.abs(dy)
+        if (overlapX > 0 && overlapY > 0) {
+          // ดันออกทางแกนที่ทับน้อยกว่า — ขยับสั้นสุดที่ทำให้หายทับ
+          if (overlapX < overlapY) {
+            const push = (overlapX / 2) * (dx < 0 ? -1 : 1)
+            disp[i].x -= push; disp[j].x += push
+          } else {
+            const push = (overlapY / 2) * (dy < 0 ? -1 : 1)
+            disp[i].y -= push; disp[j].y += push
+          }
         }
       }
       // สปริงดึงกลับวงแหวนรอบ hub (แทนเส้นเชื่อม hub→node)
       const A = nodes[i]
       const d = Math.hypot(A.x, A.y) || 0.01
-      const want = HUB_R + A.r + ringR * 0.42
+      const want = HUB_R + A.halfH + ringR * 0.45
       const pull = (d - want) * 0.05
       disp[i].x -= (A.x / d) * pull; disp[i].y -= (A.y / d) * pull
     }
     nodes.forEach((nd, i) => {
-      nd.x += Math.max(-14, Math.min(14, disp[i].x)) * step
-      nd.y += Math.max(-14, Math.min(14, disp[i].y)) * step
+      nd.x += Math.max(-16, Math.min(16, disp[i].x)) * step
+      nd.y += Math.max(-16, Math.min(16, disp[i].y)) * step
     })
-    step *= 0.985
+    step *= 0.99
   }
   return nodes
 }
@@ -183,18 +197,30 @@ export default function OrgChartClient() {
     if (activeGroup) {
       const roles = activeGroup.roles.filter(r => !q || r.roleName.toLowerCase().includes(q))
       const scores = roles.map(r => r.totalScore)
-      return roles.map(r => ({
-        kind: 'role', id: r.roleId, label: r.roleName, group: activeGroup.groupName,
-        r: scaleR(r.totalScore, scores), role: r,
-      }))
+      return roles.map(r => {
+        const rad = scaleR(r.totalScore, scores)
+        const sub = r.top[0] ? `🔥 ${r.top[0].name}` : t('noActivity')
+        return {
+          kind: 'role', id: r.roleId, label: r.roleName, group: activeGroup.groupName, role: r,
+          r: rad,
+          halfW: Math.max(rad, pillWidth(r.roleName, sub) / 2),
+          halfH: (rad + rad + 10 + 34) / 2,   // วงกลม + ช่องไฟ + ป้าย 2 บรรทัด
+        }
+      })
     }
     const scores = groups.map(g => g.roles.reduce((s, r) => s + r.totalScore, 0))
     return groups
       .filter(g => !q || (t(`groups.${g.groupName}`) || g.groupName).toLowerCase().includes(q))
-      .map((g, i) => ({
-        kind: 'group', id: g.groupName, label: t(`groups.${g.groupName}`), group: g.groupName,
-        r: scaleR(scores[i], scores), groupData: g,
-      }))
+      .map((g, i) => {
+        const label = t(`groups.${g.groupName}`)
+        const rad = scaleR(scores[i], scores)
+        return {
+          kind: 'group', id: g.groupName, label, group: g.groupName, groupData: g,
+          r: rad,
+          halfW: Math.max(rad, pillWidth(label) / 2),
+          halfH: (rad + rad + 12 + 23) / 2,
+        }
+      })
   }, [activeGroup, groups, query, t])
 
   const layoutKey = `${data?.guildId || ''}:${openGroup || 'root'}:${items.length}`
@@ -241,8 +267,8 @@ export default function OrgChartClient() {
 
     let minX = -HUB_R, maxX = HUB_R, minY = -HUB_R, maxY = HUB_R
     nodes.forEach(n => {
-      minX = Math.min(minX, n.x - n.r - 60); maxX = Math.max(maxX, n.x + n.r + 60)
-      minY = Math.min(minY, n.y - n.r); maxY = Math.max(maxY, n.y + n.r + 50)
+      minX = Math.min(minX, n.x - n.halfW); maxX = Math.max(maxX, n.x + n.halfW)
+      minY = Math.min(minY, n.y - n.r); maxY = Math.max(maxY, n.y + n.r + (n.kind === 'role' ? 46 : 36))
     })
     const pad = 40
     svg.setAttribute('viewBox', `${minX - pad} ${minY - pad} ${maxX - minX + pad * 2} ${maxY - minY + pad * 2}`)
@@ -280,7 +306,16 @@ export default function OrgChartClient() {
         tabindex: '0', role: 'button', 'aria-label': n.label,
       })
 
+      // hit area โปร่งใสคลุมทั้งวงกลม+ป้าย — ไม่งั้นช่องว่างระหว่างสองอันกดไม่ติด
+      const hit = (pillTop, pillH, title, sub) => {
+        const w = Math.max(n.r * 2, pillWidth(title, sub))
+        wrap.appendChild(el('rect', {
+          class: 'oc-hit', x: -w / 2, y: -n.r, width: w, height: n.r + pillTop + pillH,
+        }))
+      }
+
       if (n.kind === 'group') {
+        hit(n.r + 12, 23, n.label)
         wrap.appendChild(el('circle', { r: n.r, fill: color, class: 'oc-fill' }))
         const emo = el('text', { y: n.r * 0.14, 'text-anchor': 'middle', 'font-size': n.r * 0.85 })
         emo.textContent = GROUP_EMOJI[n.group] || '📋'
@@ -288,11 +323,12 @@ export default function OrgChartClient() {
         wrap.appendChild(pillNode(n.r + 12, { title: n.label, bg: color, titleColor: '#fff' }))
       } else {
         const top1 = n.role.top[0]
+        const sub = top1 ? `🔥 ${top1.name}` : t('noActivity')
         wrap.innerHTML = avatarMarkup(top1?.name || n.label, n.r)
+        hit(n.r + 10, 34, n.label, sub)
         wrap.appendChild(el('circle', { r: n.r, class: 'oc-sel-ring' }))
         wrap.appendChild(pillNode(n.r + 10, {
-          title: n.label,
-          sub: top1 ? `🔥 ${top1.name}` : t('noActivity'),
+          title: n.label, sub,
           bg: `color-mix(in srgb, ${color} 16%, var(--card-bg))`,
           titleColor: 'currentColor', subColor: 'currentColor',
         }))
@@ -405,6 +441,7 @@ export default function OrgChartClient() {
         .dark .oc-edge { stroke: #5c5b56; }
         .oc-node { cursor: pointer; }
         .oc-node.is-dragging { cursor: grabbing; }
+        .oc-hit { fill: transparent; }
         .oc-avatar-border { fill: none; stroke: var(--card-bg); stroke-width: 2.5; }
         .oc-sel-ring { fill: none; stroke: currentColor; stroke-width: 2.5; opacity: 0; }
         .oc-node.is-selected .oc-sel-ring { opacity: 1; }
