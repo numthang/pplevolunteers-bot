@@ -105,7 +105,7 @@ const DASHBOARD_LINKS = [
   { href: '/docs',         label: 'DOCS',     icon: 'docs',      feature: 'docs', docsAccess: true },
   { href: '/case/manage',  label: 'CASES',    icon: 'logs',      feature: 'cases', casesAccess: true },
   { href: '/posts',        label: 'POSTS',    icon: 'pen',       feature: 'posts' },
-  { href: '/kanban',       label: 'KANBAN',   icon: 'logs',      feature: 'kanban' },
+  { href: '/kanban',       label: 'KANBAN',   icon: 'pending',   feature: 'kanban' },
 ]
 
 const APPS = [
@@ -115,7 +115,7 @@ const APPS = [
   { key: 'docs',     label: 'DOCS',      href: '/docs',           icon: 'docs',      feature: 'docs' },
   { key: 'cases',    label: 'CASES',     href: '/case/manage',    icon: 'logs',      feature: 'cases', casesAccess: true },
   { key: 'posts',    label: 'POSTS',     href: '/posts',          icon: 'pen',       feature: 'posts' },
-  { key: 'kanban',   label: 'KANBAN',    href: '/kanban',         icon: 'logs',      feature: 'kanban' },
+  { key: 'kanban',   label: 'KANBAN',    href: '/kanban',         icon: 'pending',   feature: 'kanban' },
   // BOT ออกจากแถวแอป 2026-08-09 — ทุกหน้าใต้ /bot เป็น settings ไม่ใช่ที่ทำงาน
   // (ตัวที่เคยเป็นที่ทำงานคือตะกร้าสื่อ ยุบเข้า /posts ไปแล้ว) → ทางเข้าอยู่เมนู org
 ]

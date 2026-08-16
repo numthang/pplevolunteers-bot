@@ -1492,6 +1492,39 @@
     "noGuild": {
       "title": "This organization is not connected to Discord",
       "body": "Bot settings are tied to a Discord server. Invite the bot and link a server to this organization first."
+    },
+    "orgchart": {
+      "title": "Team Map",
+      "subtitle": "Who is most active in each role — bigger circle = higher engagement",
+      "hint": "Bigger node = higher engagement · Drag nodes to rearrange · Click to see Top 5",
+      "searchPlaceholder": "Search roles…",
+      "daysLabel": "Last {days} days",
+      "viewNetwork": "Network",
+      "viewTable": "Table",
+      "backToGroups": "All groups",
+      "resetLayout": "Reset layout",
+      "loading": "Loading…",
+      "loadFailed": "Failed to load",
+      "empty": "No team map configured for this server yet",
+      "emptyHint": "Ask an admin to run /orgchart scan in Discord, then come back to this page.",
+      "railEmpty": "Click a node to see the Top 5 most active members of that role",
+      "noActivity": "No activity in this period yet",
+      "memberCount": "{count} members",
+      "roleCount": "{count} roles",
+      "formula": "Score = messages×10 + voice seconds + mentions×20",
+      "colRole": "Role",
+      "colMembers": "Members",
+      "colScore": "Total score",
+      "colTop": "Most active",
+      "orgHub": "Organization",
+      "groups": {
+        "main": "Core teams",
+        "skill": "Skill teams",
+        "region": "Regional teams",
+        "province": "Province teams",
+        "district": "District teams",
+        "other": "Ungrouped"
+      }
     }
   },
   "posts": {

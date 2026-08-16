@@ -51,11 +51,11 @@ git reset --hard origin/master
 
 # Bot
 npm install --omit=dev
-if [ -n "$GUILD_ARG" ]; then
-  node deploy-commands.js $GUILD_ARG
-else
-  node deploy-commands.js --global
-fi
+# guild-level เท่านั้น — ห้ามกลับไปใช้ --global
+# global กับ guild-level อยู่คนละ scope Discord ไม่ merge ให้ ถ้ามีทั้งคู่ = เมนูเบิ้ลทุก client
+# แถม global รอ propagate ถึง 1 ชม. ส่วน guild-level เปลี่ยนทันที
+# guild ทั้งหมดมาจาก dc_guilds ซึ่ง upsertGuilds() ใน index.js sync ให้เองตอนบอท ready
+node deploy-commands.js $GUILD_ARG
 pm2 restart pple-dcbot --time
 
 if [ "$BOT_ONLY" = "false" ]; then
