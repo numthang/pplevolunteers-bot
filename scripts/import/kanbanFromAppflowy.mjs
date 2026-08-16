@@ -213,7 +213,7 @@ async function main() {
   }
   if (!importerId) throw new Error(`org ${ORG} ไม่มีสมาชิกเลย — สร้างการ์ดไม่ได้`)
 
-  const stat = { created: 0, labels: 0, noOwner: 0, helpers: 0, bumped: 0, skipped: 0, errors: 0 }
+  const stat = { created: 0, labels: 0, noOwner: 0, helpers: 0, bumped: 0, provenance: 0, skipped: 0, errors: 0 }
   const labelCache = new Map()
 
   async function labelId(groupName, name) {
@@ -228,7 +228,9 @@ async function main() {
   for (const [i, r] of target.entries()) {
     const title = String(r.Title).trim()
     try {
-      const owners = splitList(r['ผู้รับผิดชอบ']).map(n => people[n]).filter(Boolean)
+      const rawOwners = splitList(r['ผู้รับผิดชอบ'])
+      const unmapped = rawOwners.filter(n => !people[n])
+      const owners = rawOwners.map(n => people[n]).filter(Boolean)
       const ownerUserId = owners[0] || null          // คนแรกในลิสต์ = เจ้าภาพ
       const helperIds = [...new Set(owners.slice(1))]
       if (!ownerUserId) stat.noOwner++
@@ -236,6 +238,15 @@ async function main() {
       const { start, due } = parseDate(r.Date)
       // "สิ่งที่ต้องทำ" + มีเจ้าภาพ = สภาพที่ 6 ประเภทของเราไม่มี (assigned แต่ยังไม่เริ่ม)
       // เลือกเก็บ "ใครถือ" ไว้ เพราะมีค่ากว่าการแยก เริ่มแล้ว/ยังไม่เริ่ม → createCard เลื่อนเป็น doing ให้เอง
+      // คนที่จับคู่ไม่ได้ (ลาออก/ไม่ active) — เก็บชื่อเดิมไว้เป็น "บันทึกที่มา" ในรายละเอียด
+      // ⛔ ไม่ทำเป็นคอลัมน์ owner แบบข้อความ — จะกลายเป็นเจ้าภาพ 2 ที่ (id กับ text)
+      //    ซึ่งเป็นกับดักเดียวกับ "สถานะอยู่ 2 ที่" ที่ทั้งดีไซน์พยายามเลี่ยง
+      //    ข้อมูลนี้เป็น display-only → ตามกฎใน CUSTOM-FIELDS.md ไม่เข้าข่ายคอลัมน์จริง
+      const provenance = unmapped.length
+        ? `\n\n— นำเข้าจาก AppFlowy · ผู้รับผิดชอบเดิมที่ยังไม่ได้ผูกบัญชี: ${unmapped.join(', ')}`
+        : ''
+      if (unmapped.length) stat.provenance++
+
       const status = ownerUserId ? (STATUS_MAP[r.Status] || 'backlog') : 'backlog'
       if (ownerUserId && status === 'backlog') stat.bumped++
 
@@ -255,7 +266,7 @@ async function main() {
 
       const card = await cardDB.createCard(ORG, {
         title,
-        detail: r.Description ? String(r.Description).trim() : null,
+        detail: ((r.Description ? String(r.Description).trim() : '') + provenance) || null,
         ownerUserId, startAt: start, dueAt: due, statusType: status,
       }, importerId)
 
@@ -271,6 +282,7 @@ async function main() {
   }
 
   console.log(`\n\nสรุป: การ์ด ${stat.created} · ป้าย ${stat.labels} · คนช่วย ${stat.helpers} · ไม่มีเจ้าภาพ ${stat.noOwner} · error ${stat.errors}`)
+  if (stat.provenance) console.log(`  📝 ${stat.provenance} ใบจดชื่อผู้รับผิดชอบเดิมไว้ในรายละเอียด (คนที่ยังไม่ได้ผูกบัญชี)`)
   if (stat.bumped) console.log(`  ⚠️ ${stat.bumped} ใบเป็น "สิ่งที่ต้องทำ" แต่มีเจ้าภาพ → เลื่อนเป็น "กำลังทำ" (6 ประเภทไม่มีสภาพ assigned-แต่ยังไม่เริ่ม)`)
   if (!COMMIT) console.log('\n🔵 DRY-RUN — ยังไม่เขียนอะไรลง DB · ใส่ --commit เพื่อเขียนจริง')
 }
