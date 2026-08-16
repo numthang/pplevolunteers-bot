@@ -52,13 +52,10 @@ export default async function BotHomePage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-disc-text">{guild.name}</h1>
-        <p className="text-sm text-gray-500 dark:text-disc-muted mt-1">
-          ตั้งค่าที่ผูกกับเซิร์ฟเวอร์ Discord นี้โดยเฉพาะ ·{' '}
-          <Link href="/org/settings" className="text-orange hover:underline">ตั้งค่าระดับองค์กรอยู่อีกที่</Link>
-        </p>
-      </div>
+      <p className="text-sm text-gray-500 dark:text-disc-muted min-w-0">
+        ตั้งค่าที่ผูกกับเซิร์ฟเวอร์ Discord นี้โดยเฉพาะ ·{' '}
+        <Link href="/org/settings" className="text-orange hover:underline">ตั้งค่าระดับองค์กรอยู่อีกที่</Link>
+      </p>
 
       {todos.length > 0 ? (
         <div className="rounded-xl border border-orange/30 bg-orange/5 dark:bg-orange/10 p-4">

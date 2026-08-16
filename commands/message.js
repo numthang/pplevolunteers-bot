@@ -2,15 +2,12 @@
 const {
   SlashCommandBuilder,
   AttachmentBuilder,
-  ModalBuilder,
-  TextInputBuilder,
-  TextInputStyle,
-  ActionRowBuilder,
   MessageFlags,
 } = require('discord.js');
 const { fetchAllMessages, buildFile } = require('../services/fetchMessages');
 const { processMessages } = require('../services/aiSummarize');
 const { getModes } = require('../db/aiConfig');
+const { showAnonModal } = require('../handlers/anonHandler');
 
 const REPLY_LIMIT = 1800; // กัน Discord 2000-char limit
 
@@ -150,23 +147,7 @@ module.exports = {
         return interaction.deferReply({ flags: MessageFlags.Ephemeral }).then(() => interaction.deleteReply());
       }
 
-      const modal = new ModalBuilder()
-        .setCustomId(`anon_submit:${interaction.channelId}`)
-        .setTitle('ส่งข้อความแบบไม่ระบุตัวตน');
-
-      modal.addComponents(
-        new ActionRowBuilder().addComponents(
-          new TextInputBuilder()
-            .setCustomId('anon_text')
-            .setLabel('ข้อความ')
-            .setStyle(TextInputStyle.Paragraph)
-            .setPlaceholder('พิมพ์หรือ copy แปะข้อความที่นี่...')
-            .setRequired(true)
-            .setMaxLength(2000)
-        )
-      );
-
-      await interaction.showModal(modal);
+      await showAnonModal(interaction);
     }
   },
 };

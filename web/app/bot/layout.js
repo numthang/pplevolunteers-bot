@@ -33,7 +33,7 @@ export default async function BotLayout({ children }) {
   if (!guilds.length) {
     const t = await getTranslations('bot.noGuild')
     return (
-      <div className="-mx-3 sm:-mx-4 -mt-6 min-h-screen bg-warm-50 dark:bg-disc-bg2">
+      <div className="-mx-1 sm:-mx-4 -mt-6 min-h-screen bg-warm-50 dark:bg-disc-bg2">
         <div className="max-w-5xl mx-auto px-1 sm:px-4 py-4">
           <div className="rounded-xl border border-warm-200 dark:border-disc-border bg-card-bg p-8 text-center">
             <p className="text-base font-semibold text-warm-900 dark:text-disc-text">{t('title')}</p>
@@ -47,14 +47,16 @@ export default async function BotLayout({ children }) {
   // โครงเดียวกับ /org/settings (sidebar ซ้าย + เนื้อหาขวา, mobile = dropdown ทับบน)
   // ต่างกันแค่มี GuildSwitcherBar เพราะทั้งหมวดนี้ scope ด้วย guild ที่เลือก
   return (
-    <div className="-mx-3 sm:-mx-4 -mt-6 min-h-screen bg-warm-50 dark:bg-disc-bg2">
+    <div className="-mx-1 sm:-mx-4 -mt-6 min-h-screen bg-warm-50 dark:bg-disc-bg2">
       <div className="max-w-5xl mx-auto px-1 sm:px-4 py-4">
-        <GuildSwitcherBar guilds={guilds} currentGuildId={currentGuildId} />
         <div className="md:grid md:grid-cols-[180px_minmax(0,1fr)] md:gap-8">
           <aside className="mb-4 md:mb-0">
             <BotSettingsNav />
           </aside>
-          <div className="min-w-0">{children}</div>
+          <div className="min-w-0">
+            <GuildSwitcherBar guilds={guilds} currentGuildId={currentGuildId} />
+            {children}
+          </div>
         </div>
       </div>
     </div>

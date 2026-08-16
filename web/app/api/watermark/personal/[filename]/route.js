@@ -25,10 +25,11 @@ export async function GET(req, { params }) {
   const session = await getServerSession(authOptions)
   if (!session) return new Response('Unauthorized', { status: 401 })
 
-  const filePath = safePath(session.user.userId, params.filename)
+  const { filename } = await params
+  const filePath = safePath(session.user.userId, filename)
   if (!filePath || !existsSync(filePath)) return new Response('Not Found', { status: 404 })
 
-  const ext  = params.filename.split('.').pop().toLowerCase()
+  const ext  = filename.split('.').pop().toLowerCase()
   const mime = MIME[ext] || 'application/octet-stream'
   const buf  = await readFile(filePath)
   return new Response(buf, {
@@ -43,7 +44,8 @@ export async function DELETE(req, { params }) {
   const session = await getServerSession(authOptions)
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const filePath = safePath(session.user.userId, params.filename)
+  const { filename } = await params
+  const filePath = safePath(session.user.userId, filename)
   if (!filePath || !existsSync(filePath)) return Response.json({ error: 'Not Found' }, { status: 404 })
 
   await unlink(filePath)

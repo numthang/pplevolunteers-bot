@@ -30,8 +30,6 @@ const { handleRefresh } = require('./handlers/forumDashboard');
 const { handleFinanceRefresh } = require('./handlers/financeDashboard');
 const { handleOpenSearch, handleSearchModal, handleResultPage } = require('./handlers/forumSearch');
 const { handleGogoSignup, handleGogoModal, handleGogoDMButton, handleGogoDMModal, handleGogoEventButton, handleGogoEventSelect, handleGogoEventModal, handleGogoListButton } = require('./handlers/gogoHandler');
-const { handleWatermarkSelect, handleWatermarkEnhance, handleWatermarkConfirm, handleWatermarkModal } = require('./handlers/watermarkHandler');
-const { handleQuoteModal, handleQuoteStyleSelect, handleQuoteColorSelect, handleQuoteCropSelect, handleQuoteWatermarkSelect, handleQuoteConfirm } = require('./handlers/quoteHandler');
 const { handleBasketAiStart, handleBasketAiModeSelect, handleBasketAiCustomModal, handleBasketAiReplace, handleBasketAiReplaceModal, handleBasketAiAppend, handleBasketAiAppendModal } = require('./handlers/basketAiHandler');
 const { handleAiThreadModeSelect, handleAiThreadCustomModal, handleAiThreadAddCaption, handleAiThreadPublic } = require('./handlers/aiThreadHandler');
 const { handleCaseImportModal, handleThreadCreate: handleCaseThreadCreate } = require('./handlers/caseImportHandler');
@@ -176,8 +174,6 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.customId.startsWith('case_import_modal:')) return handleCaseImportModal(interaction);
     if (interaction.customId.startsWith('post_import_modal:')) return handlePostImportModal(interaction);
     if (interaction.customId.startsWith('kanban_card_modal:')) return handleKanbanImportModal(interaction);
-    if (interaction.customId === 'wm_custom_text')          return handleWatermarkModal(interaction);
-    if (interaction.customId.startsWith('quote_modal:'))    return handleQuoteModal(interaction);
     if (interaction.customId.startsWith('basket_schedule_modal'))      return handleBasketModal(interaction);
     if (interaction.customId.startsWith('basket_event_modal'))         return handleBasketEventModal(interaction);
     if (interaction.customId.startsWith('basket_caption_edit_modal')) return handleBasketCaptionEditModal(interaction);
@@ -204,15 +200,10 @@ client.on('interactionCreate', async (interaction) => {
 
   // --- Select Menus ---
   if (interaction.isStringSelectMenu()) {
-    if (interaction.customId === 'quote_style_select')            return handleQuoteStyleSelect(interaction);
-    if (interaction.customId === 'quote_color_select')            return handleQuoteColorSelect(interaction);
-    if (interaction.customId === 'quote_crop_select')             return handleQuoteCropSelect(interaction);
-    if (interaction.customId === 'quote_wm_select')               return handleQuoteWatermarkSelect(interaction);
     if (interaction.customId.startsWith('orgchart_group'))           return handleOrgchartGroupSelect(interaction);
     if (interaction.customId.startsWith('orgchart_province_region')) return handleOrgchartProvinceSelect(interaction);
     if (interaction.customId.startsWith('orgchart_role'))            return handleOrgchartRoleSelect(interaction);
     if (interaction.customId.startsWith('orgchart_days'))            return handleOrgchartDaysSelect(interaction);
-    if (interaction.customId.startsWith('wm_'))                 return handleWatermarkSelect(interaction);
     if (interaction.customId.startsWith('basket_wm_') || interaction.customId === 'basket_platform' || interaction.customId === 'basket_group' || interaction.customId === 'basket_enhance') { handleBasketSelect(interaction); return; }
     if (interaction.customId === 'select_gogo_event')           return handleGogoEventSelect(interaction);
     if (interaction.customId.startsWith('stat_top:'))          return handleStatTopSelect(interaction);
@@ -228,10 +219,7 @@ client.on('interactionCreate', async (interaction) => {
 
   // --- Buttons ---
   if (interaction.isButton()) {
-    if (interaction.customId.startsWith('quote_confirm:'))      return handleQuoteConfirm(interaction);
     if (interaction.customId === 'btn_newswatch_run')       return handleNewsWatchRun(interaction);
-    if (interaction.customId === 'wm_confirm')              return handleWatermarkConfirm(interaction);
-    if (interaction.customId === 'wm_enhance')              return handleWatermarkEnhance(interaction);
     if (interaction.customId.startsWith('basket_')) {
       return (async () => {
         try {

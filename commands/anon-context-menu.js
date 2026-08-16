@@ -1,13 +1,13 @@
-// commands/quote-context-menu.js
+// commands/anon-context-menu.js
 const { ContextMenuCommandBuilder, ApplicationCommandType } = require('discord.js');
-const { handleQuoteCommand } = require('../handlers/quoteHandler');
+const { showAnonModal } = require('../handlers/anonHandler');
 
 module.exports = {
   data: new ContextMenuCommandBuilder()
-    .setName('💬 Quote Image')
+    .setName('🎭 ข้อความไม่ระบุตัวตน')
     .setType(ApplicationCommandType.Message),
 
   async execute(interaction) {
-    await handleQuoteCommand(interaction);
+    await showAnonModal(interaction);
   },
 };

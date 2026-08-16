@@ -4,7 +4,7 @@
 //   node --env-file=.env scripts/import/kanbanFromAppflowy.mjs              → DRY-RUN (ไม่เขียน DB)
 //   node --env-file=.env scripts/import/kanbanFromAppflowy.mjs --commit     → เขียนจริง
 //   ... --all        → เอาทั้ง 83 ใบ (ปกติเอาเฉพาะ 33 ใบที่ยังไม่จบ)
-//   ... --file <path> --org <id>
+//   ... --file <path> --org <id> --guild <guildId>   (--guild ช่วยตัดชื่อซ้ำ)
 //
 // ⚠️ **รอบแรกเอาเฉพาะงานที่ยังไม่จบ** (md/kanban/CUSTOM-FIELDS.md)
 //    งานที่จบแล้ว 50 ใบใช้ อำเภอ/งบประมาณ หนักกว่ามาก รอ custom field ก่อนค่อยเอาเข้า
@@ -33,6 +33,7 @@ const FILE = val('--file', 'backups/kanban/kanban_import.xlsx')
 const ORG = Number(val('--org', 1))
 const COMMIT = has('--commit')
 const ALL = has('--all')
+const GUILD = val('--guild', null)   // เซิร์ฟของทีม — ใช้ตัดตอนชื่อซ้ำ ไม่ hardcode ในโค้ด
 const MAP_FILE = path.join(path.dirname(FILE), 'people-map.json')
 
 // AppFlowy → ประเภทสถานะ 6 แบบของเรา (md/kanban/KANBAN.md §ประเภทสถานะ)
@@ -75,53 +76,68 @@ async function writeMapTemplate(rows) {
   const names = new Set()
   rows.forEach(r => splitList(r['ผู้รับผิดชอบ']).forEach(n => names.add(n)))
 
-  // ⚠️ DISTINCT ON จำเป็น — org_members มี 1 แถวต่อ (คน × เซิร์ฟ) และ org นี้มี 3 เซิร์ฟ
-  //    คนที่อยู่ครบ 3 เซิร์ฟจะมี 3 แถว → ถ้าไม่ตัดซ้ำ เงื่อนไข "เจอคนเดียวถึงเติมให้"
-  //    จะเป็นเท็จตลอดสำหรับคนที่อยู่หลายเซิร์ฟ = auto-fill หายเงียบ (เจอจริง 2026-08-16)
-  //
-  // nickname/display_name ของ org_members เป็นตัวจับคู่ที่ดีที่สุด — ชื่อเล่นใน AppFlowy
-  // คือชื่อเล่นชุดเดียวกับที่คนกรอกไว้ในระบบ (Tee → user 1, Bank → user 46)
-  const { rows: users } = await pool.query(
-    `SELECT DISTINCT ON (u.id)
-            u.id, u.username,
-            NULLIF(TRIM(m.nickname), '')     AS nickname,
+  // ⚠️ **ห้ามใช้ DISTINCT ON (u.id) ตอนค้นชื่อ** — display_name/nickname เก็บ "ต่อเซิร์ฟ"
+  //    คนคนเดียวมีชื่อแสดงคนละอย่างในแต่ละเซิร์ฟ · DISTINCT ON เลือกมาแถวเดียวแล้วทิ้งที่เหลือ
+  //    → ชื่อที่ตรงอยู่ในแถวที่ถูกทิ้ง = หาไม่เจอทั้งที่มีอยู่จริง (เจอ 2026-08-17: Milk, Ti หายไปแบบนี้)
+  //    ค้นทุกแถวก่อน แล้วค่อยยุบเป็นรายคนทีหลัง
+  const { rows: memberRows } = await pool.query(
+    `SELECT m.user_id AS id, m.guild_id, m.display_name, m.nickname,
+            u.username, u.firstname,
             COALESCE(NULLIF(TRIM(m.display_name), ''),
                      NULLIF(TRIM(CONCAT_WS(' ', u.firstname, u.lastname)), ''),
-                     u.username)             AS display
-       FROM users u JOIN org_members m ON m.user_id = u.id
-      WHERE m.org_id = $1
-      ORDER BY u.id, (m.nickname IS NULL), m.id`, [ORG])
+                     u.username) AS display
+       FROM org_members m JOIN users u ON u.id = m.user_id
+      WHERE m.org_id = $1`, [ORG])
 
-  // ⚠️ **ห้ามเดาด้วย "ชื่อมีคำนี้อยู่"** — ชื่อเล่นสั้น 2-3 ตัวอักษรจะแมตช์มั่วทันที
-  //    ของจริงที่เจอ 2026-08-16: Nu → "moonut5376" · Ti → "artidaksorn" · Nuu → "dr.aswin…nuu…"
-  //    เติมให้อัตโนมัติแบบนั้น = การ์ดไปอยู่กับอาสาที่ไม่เกี่ยวข้องเลย แล้วไม่มีใครรู้ตัว
-  //    → เติมให้เฉพาะที่ "มั่นใจจริง" ที่เหลือปล่อย null แล้วแนบตัวเลือกให้คนเลือกเอง
   const norm = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9ก-๙]/g, '')
   const words = (s) => String(s || '').toLowerCase().split(/[\s._-]+/).filter(Boolean)
 
-  const strong = (nick, u) => {
-    const n = norm(nick)
-    return norm(u.nickname) === n                  // ชื่อเล่นที่เจ้าตัวกรอกไว้ ← สัญญาณดีที่สุด
-        || norm(u.username) === n                  // username ตรงเป๊ะ
-        || words(u.display).includes(nick.toLowerCase())  // เป็น "คำ" เต็มคำในชื่อที่แสดง
+  // ยุบรายคน เก็บชื่อทุกแบบที่คนนี้เคยใช้ (ทุกเซิร์ฟ) ไว้เทียบ
+  const byUser = new Map()
+  for (const r of memberRows) {
+    if (!byUser.has(r.id)) byUser.set(r.id, { id: r.id, display: r.display, username: r.username, guilds: new Set(), nicknames: new Set(), displays: new Set(), firstnames: new Set() })
+    const u = byUser.get(r.id)
+    if (r.guild_id) u.guilds.add(r.guild_id)
+    if (r.nickname) u.nicknames.add(norm(r.nickname))
+    if (r.display_name) u.displays.add(norm(r.display_name))
+    if (r.firstname) u.firstnames.add(norm(r.firstname))
   }
-  // ตัวเลือกให้คนดู — หลวมได้ เพราะคนเป็นคนตัดสิน ไม่ใช่สคริปต์
-  const candidates = (nick) => {
-    const n = norm(nick)
-    return users
-      .filter(u => norm(u.nickname).startsWith(n) || norm(u.username).startsWith(n) || norm(u.display).includes(n))
-      .slice(0, 5)
-      .map(u => `${u.id} = ${u.display}${u.nickname ? ` [${u.nickname}]` : ''} (@${u.username})`)
+  const users = [...byUser.values()]
+
+  // ⚠️ **ไล่เป็นลำดับชั้น ห้ามกองรวมกัน** — เดิมเอาทุกเงื่อนไขมา OR กันแล้วเช็ค "เจอคนเดียวไหม"
+  //    ผลคือชื่อที่ตรงเป๊ะ 1 คน แต่มีคนอื่นเข้าเงื่อนไขหลวมด้วย → กลายเป็น "ซ้ำ" แล้วไม่เติมให้
+  //    ชั้นบนชนะเสมอ: ชื่อเล่นที่กรอกเอง > ชื่อที่แสดง > username > ชื่อจริง > คำในชื่อ
+  const TIERS = [
+    (n, u) => u.nicknames.has(norm(n)),
+    (n, u) => u.displays.has(norm(n)),
+    (n, u) => norm(u.username) === norm(n),
+    (n, u) => u.firstnames.has(norm(n)),
+    (n, u) => words(u.display).includes(n.toLowerCase()),
+  ]
+
+  const resolve = (nick) => {
+    for (const test of TIERS) {
+      const hit = users.filter(u => test(nick, u))
+      if (!hit.length) continue
+      if (hit.length === 1) return { pick: hit[0], hit }
+      // ยังซ้ำ → ถ้าบอกเซิร์ฟของทีมมา ใช้ตัดต่อ (ไม่ hardcode เซิร์ฟไหนในโค้ด)
+      if (GUILD) {
+        const inGuild = hit.filter(u => u.guilds.has(GUILD))
+        if (inGuild.length === 1) return { pick: inGuild[0], hit }
+      }
+      return { pick: null, hit }
+    }
+    return { pick: null, hit: [] }
   }
 
   const map = {}
   const hints = {}
   for (const n of [...names].sort()) {
-    const hit = users.filter(u => strong(n, u))
-    if (hit.length === 1) { map[n] = hit[0].id; continue }   // มั่นใจเฉพาะตอนเจอคนเดียว
-    map[n] = null
-    const c = candidates(n)
-    if (c.length) hints[n] = c
+    const { pick, hit } = resolve(n)
+    map[n] = pick ? pick.id : null
+    if (!pick && hit.length) {
+      hints[n] = hit.slice(0, 6).map(u => `${u.id} = ${u.display} (@${u.username})${u.guilds.has(GUILD) ? ' ★อยู่เซิร์ฟที่ระบุ' : ''}`)
+    }
   }
   const sure = Object.values(map).filter(Boolean).length
 
