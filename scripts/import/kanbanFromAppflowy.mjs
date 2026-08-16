@@ -142,7 +142,7 @@ async function writeMapTemplate(rows) {
   const sure = Object.values(map).filter(Boolean).length
 
   fs.writeFileSync(MAP_FILE, JSON.stringify({
-    _readme: 'ใส่ users.id ของแต่ละชื่อเล่นใน "map" · null = ข้าม (การ์ดจะไม่มีเจ้าภาพ อยู่ช่องรอรับ)',
+    _readme: 'ใส่ users.id (เลข) หรือ discord_id (สตริง 17-20 หลัก) ก็ได้ · null = ข้าม (การ์ดจะไม่มีเจ้าภาพ อยู่ช่องรอรับ)',
     _warning: 'เติมให้อัตโนมัติเฉพาะที่ตรงเป๊ะเท่านั้น — ที่เหลือดู candidates แล้วเลือกเอง อย่าเชื่อลำดับใน candidates',
     _org: ORG,
     map,
@@ -156,9 +156,38 @@ async function writeMapTemplate(rows) {
   console.log(`  (คนใน org นี้มี ${users.length} คน — ตัดซ้ำข้ามเซิร์ฟแล้ว)`)
 }
 
-function loadMap() {
+/**
+ * อ่านไฟล์จับคู่ + แปลง discord_id → users.id ให้เอง
+ *
+ * รับได้ 2 แบบในช่องเดียวกัน — คนกรอกไม่ต้องแปลงเอง:
+ *   "Tee": 1                      ← users.id (เลขน้อย)
+ *   "Tee": "1098111730015543386"  ← discord_id (snowflake 17-20 หลัก เป็นสตริง)
+ * discord_id แม่นกว่าเพราะเป็น "ตัวระบุ" ไม่ใช่ชื่อที่ซ้ำกันได้
+ */
+async function loadMap() {
   if (!fs.existsSync(MAP_FILE)) return {}
-  try { return JSON.parse(fs.readFileSync(MAP_FILE, 'utf8')).map || {} } catch { return {} }
+  let raw
+  try { raw = JSON.parse(fs.readFileSync(MAP_FILE, 'utf8')).map || {} } catch { return {} }
+
+  const out = {}
+  const unresolved = []
+  for (const [nick, v] of Object.entries(raw)) {
+    if (v == null || v === '') { out[nick] = null; continue }
+    const str = String(v).trim()
+    if (/^\d{15,}$/.test(str)) {          // snowflake = discord_id
+      const { rows } = await pool.query(`SELECT id FROM users WHERE discord_id = $1`, [str])
+      if (rows[0]) out[nick] = rows[0].id
+      else { out[nick] = null; unresolved.push(`${nick} (discord_id ${str} ไม่มีใน users)`) }
+    } else {
+      out[nick] = Number(str) || null
+    }
+  }
+  if (unresolved.length) {
+    console.log('⚠️ แปลง discord_id ไม่ได้:')
+    unresolved.forEach(u => console.log('   ' + u))
+    console.log('   (คนนั้นยังไม่เคยเข้าเว็บ/ยังไม่มีแถวใน users — การ์ดจะไม่มีเจ้าภาพ)\n')
+  }
+  return out
 }
 
 async function main() {
@@ -167,7 +196,7 @@ async function main() {
   if (has('--map')) { await writeMapTemplate(rows); return }
 
   const target = ALL ? rows : rows.filter(r => LIVE.includes(r.Status))
-  const people = loadMap()
+  const people = await loadMap()
   const mappedCount = Object.values(people).filter(Boolean).length
 
   console.log(`ไฟล์: ${FILE}`)
