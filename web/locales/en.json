@@ -1524,7 +1524,11 @@
         "province": "Province teams",
         "district": "District teams",
         "other": "Ungrouped"
-      }
+      },
+      "backToRoles": "Back to roles",
+      "rankLabel": "Rank {rank}",
+      "scoreLabel": "{score} pts",
+      "expandHint": "Click a role to expand its people"
     }
   },
   "posts": {

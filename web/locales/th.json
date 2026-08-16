@@ -1524,7 +1524,11 @@
         "province": "ทีมจังหวัด",
         "district": "ทีมอำเภอ",
         "other": "ยังไม่จัดกลุ่ม"
-      }
+      },
+      "backToRoles": "กลับไปบทบาท",
+      "rankLabel": "อันดับ {rank}",
+      "scoreLabel": "{score} คะแนน",
+      "expandHint": "คลิกบทบาทเพื่อแตกเป็นรายคน"
     }
   },
   "posts": {

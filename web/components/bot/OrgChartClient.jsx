@@ -146,6 +146,7 @@ export default function OrgChartClient() {
   const [error, setError] = useState(null)
   const [days, setDays] = useState(180)
   const [openGroup, setOpenGroup] = useState(null)
+  const [openRole, setOpenRole] = useState(null)   // ชั้นที่ 3: แตกบทบาทเป็นรายคน
   const [selected, setSelected] = useState(null)
   const [query, setQuery] = useState('')
   const [view, setView] = useState('chart')
@@ -168,7 +169,10 @@ export default function OrgChartClient() {
     setLoading(true); setError(null)
     fetch(`/api/bot/orgchart?days=${days}`)
       .then(r => r.json().then(d => ({ ok: r.ok, d })))
-      .then(({ ok, d }) => { if (ok) setData(d); else setError(d.error || t('loadFailed')) })
+      .then(({ ok, d }) => {
+        // ข้อมูลชุดใหม่ → snapshot ของบทบาท/คนที่เปิดค้างไว้เก่าแล้ว ต้องปิดลงมา
+        if (ok) { setData(d); setOpenRole(null); setSelected(null) } else setError(d.error || t('loadFailed'))
+      })
       .catch(() => setError(t('loadFailed')))
       .finally(() => setLoading(false))
   }, [days, t])
@@ -191,9 +195,22 @@ export default function OrgChartClient() {
     [groups, openGroup]
   )
 
-  // items ที่จะวาดตอนนี้ — ชั้นกลุ่ม หรือชั้น role ในกลุ่มที่เปิดอยู่
+  // items ที่จะวาดตอนนี้ — 3 ชั้น: กลุ่ม → บทบาท → รายคน
   const items = useMemo(() => {
     const q = query.trim().toLowerCase()
+    if (openRole) {
+      const scores = openRole.top.map(m => m.score)
+      return openRole.top.map((m, i) => {
+        const rad = scaleR(m.score, scores)
+        const sub = t('scoreLabel', { score: fmtInt(m.score) })
+        return {
+          kind: 'person', id: `p:${m.userId}`, label: m.name, group: openRole._group, person: m, rank: i + 1,
+          r: rad,
+          halfW: Math.max(rad, pillWidth(m.name, sub) / 2),
+          halfH: (rad + rad + 10 + 34) / 2,
+        }
+      })
+    }
     if (activeGroup) {
       const roles = activeGroup.roles.filter(r => !q || r.roleName.toLowerCase().includes(q))
       const scores = roles.map(r => r.totalScore)
@@ -221,14 +238,15 @@ export default function OrgChartClient() {
           halfH: (rad + rad + 12 + 23) / 2,
         }
       })
-  }, [activeGroup, groups, query, t])
+  }, [openRole, activeGroup, groups, query, t])
 
-  const layoutKey = `${data?.guildId || ''}:${openGroup || 'root'}:${items.length}`
+  const level = openRole ? `role:${openRole.roleId}` : (openGroup || 'root')
+  const layoutKey = `${data?.guildId || ''}:${level}:${items.length}`
 
   // ตำแหน่งที่ผู้ใช้ลากเอง — เก็บเฉพาะเบราว์เซอร์นี้ (ไม่ใช่ผังกลางขององค์กร)
   const storageKey = useMemo(
-    () => (data?.guildId ? `orgchart-pos:${data.guildId}:${openGroup || 'root'}` : null),
-    [data?.guildId, openGroup]
+    () => (data?.guildId ? `orgchart-pos:${data.guildId}:${level}` : null),
+    [data?.guildId, level]
   )
 
   useEffect(() => {
@@ -243,7 +261,7 @@ export default function OrgChartClient() {
     nodesRef.current = nodes
     draw()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [layoutKey, storageKey, isDark, selected, days])
+  }, [layoutKey, storageKey, isDark, selected, days, openRole])
 
   function savePositions() {
     if (!storageKey) return
@@ -286,14 +304,18 @@ export default function OrgChartClient() {
     // hub
     const hub = el('g', { class: 'oc-node', tabindex: '0', role: 'button' })
     hub.appendChild(el('circle', { r: HUB_R, class: 'oc-hub' }))
-    const hubT = el('text', { y: activeGroup ? -2 : 4, class: 'oc-hub-text', 'text-anchor': 'middle' })
-    hubT.textContent = activeGroup ? t(`groups.${activeGroup.groupName}`) : t('orgHub')
+    const drilled = openRole || activeGroup
+    const hubT = el('text', { y: drilled ? -2 : 4, class: 'oc-hub-text', 'text-anchor': 'middle' })
+    hubT.textContent = openRole ? openRole.roleName
+      : activeGroup ? t(`groups.${activeGroup.groupName}`) : t('orgHub')
     hub.appendChild(hubT)
-    if (activeGroup) {
+    if (drilled) {
       const hubS = el('text', { y: 12, class: 'oc-hub-sub', 'text-anchor': 'middle' })
-      hubS.textContent = t('backToGroups')
+      hubS.textContent = openRole ? t('backToRoles') : t('backToGroups')
       hub.appendChild(hubS)
-      hub.addEventListener('click', () => { setOpenGroup(null); setSelected(null) })
+      const up = () => { if (openRole) setOpenRole(null); else { setOpenGroup(null); setSelected(null) } }
+      hub.addEventListener('click', up)
+      hub.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); up() } })
     }
     svg.appendChild(hub)
 
@@ -314,7 +336,24 @@ export default function OrgChartClient() {
         }))
       }
 
-      if (n.kind === 'group') {
+      if (n.kind === 'person') {
+        const sub = t('scoreLabel', { score: fmtInt(n.person.score) })
+        wrap.innerHTML = avatarMarkup(n.person.name, n.r)
+        hit(n.r + 10, 34, n.label, sub)
+        // เหรียญอันดับมุมบนขวาของ avatar
+        const badge = el('g', { transform: `translate(${n.r * 0.72} ${-n.r * 0.72})` })
+        badge.appendChild(el('circle', { r: 9, fill: color, class: 'oc-rank-dot' }))
+        const bt = el('text', { y: 3.2, 'text-anchor': 'middle', 'font-size': 10, 'font-weight': 800, fill: '#fff' })
+        bt.textContent = String(n.rank)
+        badge.appendChild(bt)
+        wrap.appendChild(badge)
+        wrap.appendChild(pillNode(n.r + 10, {
+          title: n.label, sub,
+          bg: `color-mix(in srgb, ${color} 16%, var(--card-bg))`,
+          titleColor: 'currentColor', subColor: 'currentColor',
+        }))
+        wrap.classList.add('oc-person-node')
+      } else if (n.kind === 'group') {
         hit(n.r + 12, 23, n.label)
         wrap.appendChild(el('circle', { r: n.r, fill: color, class: 'oc-fill' }))
         const emo = el('text', { y: n.r * 0.14, 'text-anchor': 'middle', 'font-size': n.r * 0.85 })
@@ -398,8 +437,11 @@ export default function OrgChartClient() {
   }
 
   function onNodeClick(node) {
-    if (node.kind === 'group') { setOpenGroup(node.group); setSelected(null) }
-    else setSelected(node.role)
+    if (node.kind === 'group') { setOpenGroup(node.group); setSelected(null); return }
+    if (node.kind === 'person') return          // ชั้นล่างสุดแล้ว — คลิกคนไม่ต้องไปไหนต่อ
+    setSelected(node.role)
+    // แตกบทบาทเป็นรายคนเฉพาะเมื่อมีคนให้แตกจริง
+    if (node.role.top.length) setOpenRole({ ...node.role, _group: node.group })
   }
 
   const tableRows = useMemo(() => {
@@ -442,6 +484,7 @@ export default function OrgChartClient() {
         .oc-node { cursor: pointer; }
         .oc-node.is-dragging { cursor: grabbing; }
         .oc-hit { fill: transparent; }
+        .oc-rank-dot { stroke: var(--card-bg); stroke-width: 2; }
         .oc-avatar-border { fill: none; stroke: var(--card-bg); stroke-width: 2.5; }
         .oc-sel-ring { fill: none; stroke: currentColor; stroke-width: 2.5; opacity: 0; }
         .oc-node.is-selected .oc-sel-ring { opacity: 1; }
@@ -492,14 +535,21 @@ export default function OrgChartClient() {
       </div>
 
       {activeGroup && (
-        <div className="flex items-center gap-2 -mb-1">
-          <button type="button" onClick={() => { setOpenGroup(null); setSelected(null) }}
-            className="flex items-center gap-1 text-sm font-medium text-orange hover:opacity-80">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 -mb-1 text-sm">
+          <button type="button" onClick={() => { setOpenGroup(null); setOpenRole(null); setSelected(null) }}
+            className="flex items-center gap-1 font-medium text-orange hover:opacity-80">
             <ChevronLeft size={15} /> {t('backToGroups')}
           </button>
-          <span className="text-sm text-warm-500 dark:text-disc-muted">
-            {GROUP_EMOJI[activeGroup.groupName]} {t(`groups.${activeGroup.groupName}`)} ·{' '}
-            {t('roleCount', { count: activeGroup.roles.length })}
+          <span className="text-warm-500 dark:text-disc-muted">
+            {GROUP_EMOJI[activeGroup.groupName]}{' '}
+            {openRole ? (
+              <button type="button" onClick={() => setOpenRole(null)} className="font-medium text-orange hover:opacity-80">
+                {t(`groups.${activeGroup.groupName}`)}
+              </button>
+            ) : t(`groups.${activeGroup.groupName}`)}
+            {openRole
+              ? <> › <span className="text-warm-900 dark:text-disc-text font-semibold">{openRole.roleName}</span> · {t('memberCount', { count: openRole.memberCount })}</>
+              : <> · {t('roleCount', { count: activeGroup.roles.length })}</>}
           </span>
         </div>
       )}
@@ -509,7 +559,7 @@ export default function OrgChartClient() {
           <div className={`${CARD} relative p-2 min-h-[520px] flex flex-col`}>
             <svg ref={svgRef} className="w-full flex-1 max-h-[560px] text-warm-900 dark:text-disc-text" role="img" aria-label={t('title')} />
             <div className="flex items-center justify-between gap-2 px-2 pb-1">
-              <p className="text-xs text-warm-500 dark:text-disc-muted">{t('hint')}</p>
+              <p className="text-xs text-warm-500 dark:text-disc-muted">{openRole ? t('hint') : t('expandHint')}</p>
               <button type="button" onClick={resetLayout}
                 className="flex items-center gap-1 text-xs font-medium text-warm-500 dark:text-disc-muted hover:text-orange shrink-0">
                 <RotateCcw size={12} /> {t('resetLayout')}
