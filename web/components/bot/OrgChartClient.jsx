@@ -35,14 +35,21 @@ const GROUP_ICON = {
   other: [['path', { d: 'm6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2' }]],
 }
 // สีตามกลุ่ม — ผ่าน validator ของ dataviz (CVD + contrast) ทั้ง light/dark
+// พาสเทลจากคลังสีของ user (reference_pastel_palettes) — ไม่ได้คิดเฉดเอง
+// เลือกชุดที่ผ่าน normal-vision floor ΔE 15.4 (ทุกคู่แยกออกด้วยตาปกติ)
+// CVD อยู่ในช่วง warn 7.9 → ใช้ได้เพราะมี secondary encoding 3 ชั้น:
+// ไอคอน lucide ต่างกันทุกกลุ่ม + ป้ายชื่อทุกโหนด + แต่ละกลุ่มอยู่คนละส่วนมุม
+// พาสเทลจางเกินเกณฑ์ contrast บนพื้นสว่าง → relief = ป้ายชื่อที่มองเห็นเสมอ (มีอยู่แล้ว)
 const GROUP_COLOR = {
-  main:     { light: '#ff6a13', dark: '#e6620f' },
-  skill:    { light: '#189f74', dark: '#199e70' },
-  region:   { light: '#2a78d6', dark: '#3987e5' },
-  province: { light: '#e0699a', dark: '#d55181' },
-  district: { light: '#d99400', dark: '#c98500' },
-  other:    { light: '#a9a69c', dark: '#7f7d78' },
+  main:     '#ED9A73',   // ส้มพาสเทล — ชุด "น้ำตาลอ่อน"
+  skill:    '#BBEAA6',   // เขียวอ่อน — ชุด "ชมพูอ่อน"
+  region:   '#84A6D6',   // ฟ้า — ชุด "ม่วง"
+  province: '#E688A1',   // ชมพู — ชุด "ชมพูอ่อน"
+  district: '#FFC75F',   // เหลืองอำพัน — ชุด "น้ำเงินเข้ม"
+  other:    '#CECBDA',   // เทาอมม่วง — ชุด "ชมพูแดง"
 }
+// หมึกบนพื้นพาสเทล — พาสเทลสว่าง ตัวอักษร/ไอคอนสีขาวจะจม ต้องใช้สีเข้ม
+const ON_PASTEL = '#2b2924'
 const DAYS_OPTIONS = [30, 60, 90, 180, 365]
 const LIMIT_OPTIONS = [5, 10, 0]        // 0 = ทั้งหมด
 const AVATAR_BG = ['#5865F2', '#57A55A', '#EAA83A', '#D8548A', '#DA4B48', '#7C6FE0', '#1F9AA0', '#E8804A']
@@ -356,10 +363,9 @@ export default function OrgChartClient() {
     return () => window.removeEventListener('guild-switched', load)
   }, [load])
 
-  const colorOf = useCallback(
-    g => GROUP_COLOR[g]?.[isDark ? 'dark' : 'light'] || GROUP_COLOR.other[isDark ? 'dark' : 'light'],
-    [isDark]
-  )
+  const colorOf = useCallback(g => GROUP_COLOR[g] || GROUP_COLOR.other, [])
+  const guildIcon = data?.guildIcon || null
+  const guildName = data?.guildName || null
 
   // บทบาทที่ "มีความเคลื่อนไหวจริง" เท่านั้น — ไม่มีใครแอคทีฟ = ไม่ต้องขึ้นกราฟเลย
   const activeGroups = useMemo(() => {
@@ -416,18 +422,21 @@ export default function OrgChartClient() {
     viewRef.current = null
     draw()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [layoutKey, storageKey, isDark, selected])
+  }, [layoutKey, storageKey, isDark, selected, guildIcon])
 
   function fitView() {
     const nodes = nodesRef.current
     if (!nodes.length) return
-    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity
+    const hub = nodes.find(n => n.kind === 'hub') || { x: 0, y: 0 }
+    // กรอบสมมาตรรอบ hub → hub อยู่กึ่งกลางจอเสมอ (ไม่เลื่อนตามการกระจายของกลุ่ม)
+    let halfW = 120, halfH = 120
     for (const n of nodes) {
-      minX = Math.min(minX, n.x - n.halfW); maxX = Math.max(maxX, n.x + n.halfW)
-      minY = Math.min(minY, n.y - n.r); maxY = Math.max(maxY, n.y + n.halfH + 20)
+      halfW = Math.max(halfW, Math.abs(n.x - hub.x) + n.halfW)
+      halfH = Math.max(halfH, Math.abs(n.y - hub.y) + n.halfH + 10)
     }
-    const pad = 46
-    viewRef.current = { x: minX - pad, y: minY - pad, w: (maxX - minX) + pad * 2, h: (maxY - minY) + pad * 2 }
+    const pad = 40
+    halfW += pad; halfH += pad
+    viewRef.current = { x: hub.x - halfW, y: hub.y - halfH, w: halfW * 2, h: halfH * 2 }
     applyView()
   }
   function applyView() {
@@ -456,7 +465,7 @@ export default function OrgChartClient() {
       const wrap = el('g', {
         class: `oc-node oc-${n.kind}-node${isSel ? ' is-selected' : ''}`,
         transform: `translate(${n.x} ${n.y})`,
-        tabindex: n.kind === 'hub' ? '-1' : '0',
+        tabindex: '0',
         role: 'button', 'aria-label': n.label || 'hub',
       })
       const hit = (pillTop, pillH) => {
@@ -465,15 +474,24 @@ export default function OrgChartClient() {
       }
 
       if (n.kind === 'hub') {
+        // ไอคอน guild อย่างเดียว — ไม่ใส่ข้อความ ให้เป็นจุดยึดสายตาเฉยๆ
+        const clip = `oc-hubclip`
+        wrap.appendChild(el('clipPath', { id: clip })).appendChild(el('circle', { r: HUB_R }))
         wrap.appendChild(el('circle', { r: HUB_R, class: 'oc-hub' }))
-        const a = el('text', { y: 2, class: 'oc-hub-text', 'text-anchor': 'middle' })
-        a.textContent = t('orgHub'); wrap.appendChild(a)
-        const b = el('text', { y: 15, class: 'oc-hub-sub', 'text-anchor': 'middle' })
-        b.textContent = t('nodeCount', { count: nodes.length - 1 }); wrap.appendChild(b)
+        if (guildIcon) {
+          wrap.appendChild(el('image', {
+            href: guildIcon, x: -HUB_R, y: -HUB_R, width: HUB_R * 2, height: HUB_R * 2,
+            'clip-path': `url(#${clip})`, preserveAspectRatio: 'xMidYMid slice',
+          }))
+        } else {
+          const a = el('text', { y: 5, class: 'oc-hub-text', 'text-anchor': 'middle' })
+          a.textContent = (guildName || t('orgHub')).slice(0, 8); wrap.appendChild(a)
+        }
+        wrap.appendChild(el('circle', { r: HUB_R, class: 'oc-hub-ring' }))
       } else if (n.kind === 'group') {
         hit(n.r + 11, 21)
         wrap.appendChild(el('circle', { r: n.r, fill: color, class: 'oc-fill' }))
-        wrap.appendChild(drawIcon(n.group, n.r, '#fff'))
+        wrap.appendChild(drawIcon(n.group, n.r, ON_PASTEL))
         if (n.collapsed) {
           const more = el('g', { transform: `translate(${n.r * 0.72} ${n.r * 0.78})` })
           more.appendChild(el('circle', { r: 9, class: 'oc-more' }))
@@ -481,7 +499,7 @@ export default function OrgChartClient() {
           mt.textContent = `+${n.roleCount}`; more.appendChild(mt)
           wrap.appendChild(more)
         }
-        wrap.appendChild(pillNode(n.r + 11, { title: n.label, bg: color, titleColor: '#fff', fs: 11 }))
+        wrap.appendChild(pillNode(n.r + 11, { title: n.label, bg: color, titleColor: ON_PASTEL, fs: 11 }))
       } else if (n.kind === 'role') {
         wrap.innerHTML = avatarMarkup(n.role.top[0]?.name || n.label, n.r, n.role.top[0]?.avatar)
         hit(n.r + 10, 32)
@@ -490,7 +508,7 @@ export default function OrgChartClient() {
           // เลข 1 = รูปกลางนี้คืออันดับหนึ่งของบทบาท (ไม่มีโหนดลูกซ้ำอีก)
           const badge = el('g', { transform: `translate(${n.r * 0.72} ${-n.r * 0.72})` })
           badge.appendChild(el('circle', { r: 8, fill: color, class: 'oc-rank-dot' }))
-          const bt = el('text', { y: 2.9, 'text-anchor': 'middle', 'font-size': 9, 'font-weight': 800, fill: '#fff' })
+          const bt = el('text', { y: 2.9, 'text-anchor': 'middle', 'font-size': 9, 'font-weight': 800, fill: ON_PASTEL })
           bt.textContent = '1'; badge.appendChild(bt)
           wrap.appendChild(badge)
         }
@@ -512,7 +530,7 @@ export default function OrgChartClient() {
         hit(n.r + 10, 32)
         const badge = el('g', { transform: `translate(${n.r * 0.72} ${-n.r * 0.72})` })
         badge.appendChild(el('circle', { r: 8, fill: color, class: 'oc-rank-dot' }))
-        const bt = el('text', { y: 2.9, 'text-anchor': 'middle', 'font-size': 9, 'font-weight': 800, fill: '#fff' })
+        const bt = el('text', { y: 2.9, 'text-anchor': 'middle', 'font-size': 9, 'font-weight': 800, fill: ON_PASTEL })
         bt.textContent = String(n.rank); badge.appendChild(bt)
         wrap.appendChild(badge)
         wrap.appendChild(pillNode(n.r + 10, {
@@ -522,7 +540,7 @@ export default function OrgChartClient() {
         }))
       }
 
-      if (n.kind !== 'hub') attachDrag(wrap, n)
+      attachDrag(wrap, n, n.kind !== 'hub')
       svg.appendChild(wrap)
       n._g = wrap
     }
@@ -533,6 +551,11 @@ export default function OrgChartClient() {
   function tipHtml(n) {
     const esc = v => String(v).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]))
     const row = (label, val) => `<div class="oc-tip-row"><span>${label}</span><b>${val}</b></div>`
+    if (n.kind === 'hub') {
+      return `<div class="oc-tip-title">${esc(guildName || t('orgHub'))}</div>`
+        + row(t('nodeCount', { count: '' }).trim(), fmtInt(nodesRef.current.length - 1))
+        + `<div class="oc-tip-hint">${esc(t('tipClickCollapseAll'))}</div>`
+    }
     if (n.kind === 'group') {
       const roles = n.groupData.roles
       const score = roles.reduce((a, r) => a + r.totalScore, 0)
@@ -598,11 +621,11 @@ export default function OrgChartClient() {
 
   // ลากโหนด: เขียน transform ลง DOM ตรงๆ ไม่ผ่าน state (ไม่งั้น re-render ทุกเฟรม)
   // แยกลากจากคลิกด้วยระยะสะสม < 4px = ถือว่าคลิก
-  function attachDrag(g, node) {
+  function attachDrag(g, node, moveKids = true) {
     g.addEventListener('pointerdown', e => {
       if (e.button !== 0) return
       const pt = clientToSvg(e.clientX, e.clientY)
-      const kids = descendantsOf(node).map(k => ({ k, x0: k.x, y0: k.y }))
+      const kids = moveKids ? descendantsOf(node).map(k => ({ k, x0: k.x, y0: k.y })) : []
       dragRef.current = { node, dx: node.x - pt.x, dy: node.y - pt.y, moved: 0,
                           ox: node.x, oy: node.y, kids }
       g.setPointerCapture(e.pointerId)
@@ -666,6 +689,12 @@ export default function OrgChartClient() {
   }
 
   function onNodeClick(node) {
+    if (node.kind === 'hub') {
+      // ยุบทุกกลุ่มรวดเดียว (กดซ้ำ = กางกลับ)
+      setCollapsedGroups(prev =>
+        prev.size === visibleGroups.length ? new Set() : new Set(visibleGroups.map(g => g.groupName)))
+      return
+    }
     if (node.kind === 'group') {
       // คลิกหัวกลุ่ม = ยุบทั้งกลุ่ม (บทบาทกับคนหายหมด เหลือหัวกลุ่มไว้กดกลับ)
       setCollapsedGroups(prev => {
@@ -762,11 +791,6 @@ export default function OrgChartClient() {
     }
   }, [])
 
-  const expandableRoleIds = useMemo(
-    () => visibleGroups.flatMap(g => g.roles.filter(r => r.top.length > 1).map(r => r.roleId)),
-    [visibleGroups]
-  )
-  const allExpanded = expandableRoleIds.length > 0 && expandableRoleIds.every(id => effExpanded.has(id))
 
   const tableRows = useMemo(() => {
     const rows = []
@@ -816,10 +840,10 @@ export default function OrgChartClient() {
         .oc-more-text { fill: #fff; }
         .oc-fill, .oc-pill { transition: filter .12s ease; }
         .oc-node:hover .oc-fill, .oc-node:hover .oc-pill { filter: brightness(1.08); }
-        .oc-hub { fill: #0b2b45; }
-        .dark .oc-hub { fill: #14395a; }
-        .oc-hub-text { fill: #fdf8f2; font-size: 12px; font-weight: 800; }
-        .oc-hub-sub { fill: #fdf8f2; opacity: .7; font-size: 8px; font-weight: 700; }
+        .oc-hub { fill: var(--card-bg); }
+        .oc-hub-ring { fill: none; stroke: #b9b3a5; stroke-width: 2.5; }
+        .dark .oc-hub-ring { stroke: #5c5b56; }
+        .oc-hub-text { fill: currentColor; font-size: 12px; font-weight: 800; }
         .oc-node:fullscreen, .oc-canvas:fullscreen { background: var(--card-bg); }
         :fullscreen { background: var(--card-bg); }
         .oc-tip {
@@ -902,17 +926,6 @@ export default function OrgChartClient() {
             </button>
           )
         })}
-        <span className="mx-1 h-4 w-px bg-warm-200 dark:bg-disc-border" />
-        <button type="button"
-          onClick={() => setHiddenGroups(hiddenGroups.size ? new Set() : new Set(activeGroups.map(g => g.groupName)))}
-          className="rounded-full px-2.5 py-1.5 text-xs font-semibold text-warm-500 dark:text-disc-muted hover:text-orange">
-          {hiddenGroups.size ? t('showAll') : t('hideAll')}
-        </button>
-        <button type="button"
-          onClick={() => { setAutoExpand(!allExpanded); setExpandedRoles(allExpanded ? new Set() : new Set(expandableRoleIds)) }}
-          className="rounded-full px-2.5 py-1.5 text-xs font-semibold text-warm-500 dark:text-disc-muted hover:text-orange">
-          {allExpanded ? t('collapseAll') : t('expandAll')}
-        </button>
       </div>
 
       <div ref={tipRef} className="oc-tip" role="tooltip" aria-hidden="true" />
