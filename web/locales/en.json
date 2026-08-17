@@ -1542,7 +1542,11 @@
       "fullscreen": "Fullscreen",
       "exitFullscreen": "Exit fullscreen",
       "hideRail": "Hide panel",
-      "showRail": "Show panel"
+      "showRail": "Show panel",
+      "tipClickExpandGroup": "Click to expand this group",
+      "tipClickCollapseGroup": "Click to collapse the group",
+      "tipClickExpandRole": "Click to show ranks 2-5",
+      "tipClickCollapseRole": "Click to collapse"
     }
   },
   "posts": {

@@ -1,7 +1,15 @@
 'use client'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { Search, RotateCcw, Loader2, Maximize2, Minimize2, PanelRightClose, PanelRightOpen } from 'lucide-react'
+import {
+  Search, RotateCcw, Loader2, Maximize2, Minimize2, PanelRightClose, PanelRightOpen,
+  Star, Wrench, Map as MapIcon, MapPin, Building2, FolderOpen, Users, MessageSquare, Mic, AtSign, Flame,
+} from 'lucide-react'
+
+// ไอคอนเดียวกับที่วาดบนกราฟ แต่เป็น component สำหรับชิป/แผงขวา
+const GROUP_LUCIDE = {
+  main: Star, skill: Wrench, region: MapIcon, province: MapPin, district: Building2, other: FolderOpen,
+}
 
 // ผังทีมแบบเครือข่าย — เวอร์ชันเว็บของ /orgchart (ดิสคอร์ด)
 //
@@ -16,7 +24,16 @@ import { Search, RotateCcw, Loader2, Maximize2, Minimize2, PanelRightClose, Pane
 // วาด SVG ผ่าน ref ไม่ผ่าน React state ต่อโหนด — ตอนลาก/แพนต้องได้ 60fps
 
 const GROUP_ORDER = ['main', 'skill', 'region', 'province', 'district', 'other']
-const GROUP_EMOJI = { main: '🌟', skill: '🛠️', region: '🗺️', province: '📍', district: '🏘️', other: '🗂️' }
+// ไอคอนกลุ่ม — path จาก lucide-react (ชุดเดียวกับทั้งเว็บ เช่น /finance/categories)
+// ต้องฝัง path เองเพราะกราฟวาด SVG ด้วย DOM API ไม่ได้ผ่าน React จึงใช้ component ตรงๆ ไม่ได้
+const GROUP_ICON = {
+  main: [['path', { d: 'M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z' }]],
+  skill: [['path', { d: 'M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.106-3.105c.32-.322.863-.22.983.218a6 6 0 0 1-8.259 7.057l-7.91 7.91a1 1 0 0 1-2.999-3l7.91-7.91a6 6 0 0 1 7.057-8.259c.438.12.54.662.219.984z' }]],
+  region: [['path', { d: 'M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z' }], ['path', { d: 'M15 5.764v15' }], ['path', { d: 'M9 3.236v15' }]],
+  province: [['path', { d: 'M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0' }], ['circle', { cx: '12', cy: '10', r: '3' }]],
+  district: [['path', { d: 'M10 12h4' }], ['path', { d: 'M10 8h4' }], ['path', { d: 'M14 21v-3a2 2 0 0 0-4 0v3' }], ['path', { d: 'M6 10H4a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-2' }], ['path', { d: 'M6 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16' }]],
+  other: [['path', { d: 'm6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2' }]],
+}
 // สีตามกลุ่ม — ผ่าน validator ของ dataviz (CVD + contrast) ทั้ง light/dark
 const GROUP_COLOR = {
   main:     { light: '#ff6a13', dark: '#e6620f' },
@@ -51,6 +68,20 @@ function scaleR(v, all, range) {
   const t = max > min ? (v - min) / (max - min) : 0.5
   return range[0] + (range[1] - range[0]) * Math.sqrt(t)
 }
+// วาดไอคอน lucide (viewBox 24x24, เส้น stroke) ให้พอดีวงกลมรัศมี r
+function drawIcon(group, r, color) {
+  const nodes = GROUP_ICON[group] || GROUP_ICON.other
+  const scale = (r * 1.15) / 24
+  const g = el('g', { transform: `translate(${-r * 0.575} ${-r * 0.575}) scale(${scale})` })
+  g.setAttribute('fill', 'none')
+  g.setAttribute('stroke', color)
+  g.setAttribute('stroke-width', '2')
+  g.setAttribute('stroke-linecap', 'round')
+  g.setAttribute('stroke-linejoin', 'round')
+  for (const [tag, attrs] of nodes) g.appendChild(el(tag, attrs))
+  return g
+}
+
 function pillWidth(title, sub) {
   return Math.max(46, Math.max((title || '').length * 7.1, sub ? sub.length * 5.9 : 0) + 22)
 }
@@ -112,7 +143,7 @@ function descendantsOf(node) {
   return out
 }
 
-function buildLayout(visibleGroups, expandedRoles, t) {
+function buildLayout(visibleGroups, expandedRoles, collapsedGroups, t) {
   const nodes = []
   const edges = []
   const hub = { id: '__hub', kind: 'hub', x: 0, y: 0, r: HUB_R, halfW: HUB_R, halfH: HUB_R, fixed: true }
@@ -123,6 +154,10 @@ function buildLayout(visibleGroups, expandedRoles, t) {
 
   const GAP = 26
   const groupPlans = visibleGroups.map((g, gi) => {
+    if (collapsedGroups.has(g.groupName)) {
+      // ยุบอยู่ → จองที่แค่หัวกลุ่ม ไม่สร้างบทบาท/คน
+      return { group: g, gi, roles: [], collapsed: true, width: 210 }
+    }
     const roles = g.roles.map(role => {
       const rad = scaleR(role.totalScore, allRoleScores, ROLE_R)
       const sub = role.top[0] ? `🔥 ${role.top[0].name}` : t('noActivity')
@@ -170,7 +205,7 @@ function buildLayout(visibleGroups, expandedRoles, t) {
       label: gLabel,
       x: Math.cos(mid) * groupRing, y: Math.sin(mid) * groupRing,
       r: gr, halfW: Math.max(gr, pillWidth(gLabel) / 2), halfH: (gr * 2 + 11 + 21) / 2,
-      homeR: groupRing,
+      homeR: groupRing, collapsed: !!plan.collapsed, roleCount: plan.group.roles.length,
     }
     nodes.push(gNode)
     edges.push({ a: hub, b: gNode })
@@ -275,6 +310,7 @@ export default function OrgChartClient() {
   const [days, setDays] = useState(180)
   const [perGroup, setPerGroup] = useState(5)       // Top N บทบาทต่อกลุ่ม (0 = ทั้งหมด)
   const [hiddenGroups, setHiddenGroups] = useState(() => new Set())
+  const [collapsedGroups, setCollapsedGroups] = useState(() => new Set())   // ยุบทั้งกลุ่ม (ต่างจากชิปที่ซ่อนหัวกลุ่มด้วย)
   const [expandedRoles, setExpandedRoles] = useState(() => new Set())
   const [autoExpand, setAutoExpand] = useState(true)   // default: แตกทุกบทบาทที่แสดงอยู่
   const [selected, setSelected] = useState(null)
@@ -282,13 +318,14 @@ export default function OrgChartClient() {
   const [view, setView] = useState('chart')
   const [isDark, setIsDark] = useState(false)
   const [isFull, setIsFull] = useState(false)
-  const [railOpen, setRailOpen] = useState(true)
+  const [railOpen, setRailOpen] = useState(false)   // ค่าเริ่มต้น: ปิด ให้กราฟได้พื้นที่เต็ม
 
   const cardRef = useRef(null)
   const svgRef = useRef(null)
   const nodesRef = useRef([])
   const edgesRef = useRef([])
   const dragRef = useRef(null)
+  const tipRef = useRef(null)
   const viewRef = useRef(null)
   const panRef = useRef(null)
 
@@ -360,14 +397,14 @@ export default function OrgChartClient() {
   const layoutKey = useMemo(() => [
     data?.guildId || '', days, perGroup, query.trim(),
     visibleGroups.map(g => `${g.groupName}:${g.roles.length}`).join('|'),
-    [...effExpanded].sort().join(','),
-  ].join('#'), [data?.guildId, days, perGroup, query, visibleGroups, effExpanded])
+    [...effExpanded].sort().join(','), [...collapsedGroups].sort().join(','),
+  ].join('#'), [data?.guildId, days, perGroup, query, visibleGroups, effExpanded, collapsedGroups])
 
   const storageKey = data?.guildId ? `orgchart-pos:${data.guildId}` : null
 
   useEffect(() => {
     if (!visibleGroups.length) { nodesRef.current = []; edgesRef.current = []; return }
-    const { nodes, edges } = buildLayout(visibleGroups, effExpanded, t)
+    const { nodes, edges } = buildLayout(visibleGroups, effExpanded, collapsedGroups, t)
     if (storageKey) {
       try {
         const saved = JSON.parse(localStorage.getItem(storageKey) || '{}')
@@ -436,8 +473,14 @@ export default function OrgChartClient() {
       } else if (n.kind === 'group') {
         hit(n.r + 11, 21)
         wrap.appendChild(el('circle', { r: n.r, fill: color, class: 'oc-fill' }))
-        const emo = el('text', { y: n.r * 0.15, 'text-anchor': 'middle', 'font-size': n.r * 0.85 })
-        emo.textContent = GROUP_EMOJI[n.group] || '📋'; wrap.appendChild(emo)
+        wrap.appendChild(drawIcon(n.group, n.r, '#fff'))
+        if (n.collapsed) {
+          const more = el('g', { transform: `translate(${n.r * 0.72} ${n.r * 0.78})` })
+          more.appendChild(el('circle', { r: 9, class: 'oc-more' }))
+          const mt = el('text', { y: 3, 'text-anchor': 'middle', 'font-size': 8.5, 'font-weight': 800, class: 'oc-more-text' })
+          mt.textContent = `+${n.roleCount}`; more.appendChild(mt)
+          wrap.appendChild(more)
+        }
         wrap.appendChild(pillNode(n.r + 11, { title: n.label, bg: color, titleColor: '#fff', fs: 11 }))
       } else if (n.kind === 'role') {
         wrap.innerHTML = avatarMarkup(n.role.top[0]?.name || n.label, n.r, n.role.top[0]?.avatar)
@@ -487,6 +530,52 @@ export default function OrgChartClient() {
     if (!viewRef.current) fitView(); else applyView()
   }
 
+  function tipHtml(n) {
+    const esc = v => String(v).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]))
+    const row = (label, val) => `<div class="oc-tip-row"><span>${label}</span><b>${val}</b></div>`
+    if (n.kind === 'group') {
+      const roles = n.groupData.roles
+      const score = roles.reduce((a, r) => a + r.totalScore, 0)
+      return `<div class="oc-tip-title">${esc(n.label)}</div>`
+        + row(t('colRole'), fmtInt(roles.length))
+        + row(t('colScore'), fmtInt(score))
+        + `<div class="oc-tip-hint">${esc(n.collapsed ? t('tipClickExpandGroup') : t('tipClickCollapseGroup'))}</div>`
+    }
+    if (n.kind === 'role') {
+      const top1 = n.role.top[0]
+      return `<div class="oc-tip-title">${esc(n.role.roleName)}</div>`
+        + row(t('colMembers'), fmtInt(n.role.memberCount))
+        + row(t('colScore'), fmtInt(n.role.totalScore))
+        + (top1 ? row(t('colTop'), esc(top1.name)) : '')
+        + `<div class="oc-tip-hint">${esc(n.expanded ? t('tipClickCollapseRole') : t('tipClickExpandRole'))}</div>`
+    }
+    const m = n.person
+    return `<div class="oc-tip-title">${esc(m.name)}</div>`
+      + row(t('rankLabel', { rank: n.rank }), fmtInt(m.score))
+      + row('💬', fmtInt(m.messages))
+      + row('🔊', fmtVoice(m.voiceSeconds))
+      + row('📣', fmtInt(m.mentions))
+      + `<div class="oc-tip-hint">${esc(n.role.roleName)}</div>`
+  }
+
+  function showTip(n, e) {
+    const tip = tipRef.current
+    if (!tip) return
+    tip.innerHTML = tipHtml(n)
+    tip.classList.add('is-on')
+    moveTip(e)
+  }
+  function moveTip(e) {
+    const tip = tipRef.current
+    if (!tip || !tip.classList.contains('is-on')) return
+    const w = tip.offsetWidth, h = tip.offsetHeight
+    // กันล้นขอบจอ — พลิกไปอีกด้านเมื่อชนขวา/บน
+    const x = Math.min(e.clientX + 14, window.innerWidth - w - 8)
+    const y = e.clientY - h - 14 < 8 ? e.clientY + 18 : e.clientY - h - 14
+    tip.style.transform = `translate(${Math.max(8, x)}px, ${y}px)`
+  }
+  function hideTip() { tipRef.current?.classList.remove('is-on') }
+
   function positionEdges() {
     for (const e of edgesRef.current) {
       if (!e._line) continue
@@ -517,6 +606,7 @@ export default function OrgChartClient() {
       dragRef.current = { node, dx: node.x - pt.x, dy: node.y - pt.y, moved: 0,
                           ox: node.x, oy: node.y, kids }
       g.setPointerCapture(e.pointerId)
+      hideTip()
       e.stopPropagation()      // อย่าให้กลายเป็นแพนพื้นหลัง
       e.preventDefault()
     })
@@ -549,6 +639,14 @@ export default function OrgChartClient() {
     g.addEventListener('keydown', e => {
       if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onNodeClick(node) }
     })
+    g.addEventListener('pointerenter', e => showTip(node, e))
+    g.addEventListener('pointermove', e => { if (!dragRef.current) moveTip(e) })
+    g.addEventListener('pointerleave', hideTip)
+    g.addEventListener('focus', () => {
+      const r = g.getBoundingClientRect()
+      showTip(node, { clientX: r.left + r.width / 2, clientY: r.top })
+    })
+    g.addEventListener('blur', hideTip)
   }
 
   function savePositions() {
@@ -561,7 +659,7 @@ export default function OrgChartClient() {
 
   function resetLayout() {
     if (storageKey) { try { localStorage.removeItem(storageKey) } catch { /* ไม่มีอะไรให้ลบ */ } }
-    const { nodes, edges } = buildLayout(visibleGroups, effExpanded, t)
+    const { nodes, edges } = buildLayout(visibleGroups, effExpanded, collapsedGroups, t)
     nodesRef.current = nodes; edgesRef.current = edges
     viewRef.current = null
     draw()
@@ -569,12 +667,12 @@ export default function OrgChartClient() {
 
   function onNodeClick(node) {
     if (node.kind === 'group') {
-      // คลิกกลุ่ม = แตก/ยุบทุกบทบาทที่แสดงอยู่ในกลุ่มนั้นรวดเดียว
-      const ids = visibleGroups.find(g => g.groupName === node.group)?.roles.map(r => r.roleId) || []
-      const base = new Set(effExpanded)
-      const allOn = ids.length > 0 && ids.every(id => base.has(id))
-      ids.forEach(id => allOn ? base.delete(id) : base.add(id))
-      setAutoExpand(false); setExpandedRoles(base)
+      // คลิกหัวกลุ่ม = ยุบทั้งกลุ่ม (บทบาทกับคนหายหมด เหลือหัวกลุ่มไว้กดกลับ)
+      setCollapsedGroups(prev => {
+        const next = new Set(prev)
+        next.has(node.group) ? next.delete(node.group) : next.add(node.group)
+        return next
+      })
       return
     }
     if (node.kind === 'role') {
@@ -629,6 +727,7 @@ export default function OrgChartClient() {
     const onDown = e => {
       if (dragRef.current || !viewRef.current) return
       panRef.current = { cx: e.clientX, cy: e.clientY, v: { ...viewRef.current } }
+      hideTip()
       svg.classList.add('is-panning')
       svg.setPointerCapture?.(e.pointerId)
     }
@@ -723,6 +822,18 @@ export default function OrgChartClient() {
         .oc-hub-sub { fill: #fdf8f2; opacity: .7; font-size: 8px; font-weight: 700; }
         .oc-node:fullscreen, .oc-canvas:fullscreen { background: var(--card-bg); }
         :fullscreen { background: var(--card-bg); }
+        .oc-tip {
+          position: fixed; top: 0; left: 0; z-index: 60; pointer-events: none;
+          opacity: 0; transition: opacity .1s ease; max-width: 250px;
+          background: #1c1a16; color: #f5f3ef; border-radius: 10px; padding: 9px 11px;
+          font-size: 12px; line-height: 1.45; box-shadow: 0 12px 28px -12px rgba(0,0,0,.55);
+        }
+        .dark .oc-tip { background: #34322d; }
+        .oc-tip.is-on { opacity: 1; }
+        .oc-tip-title { font-weight: 800; margin-bottom: 3px; }
+        .oc-tip-row { display: flex; justify-content: space-between; gap: 14px; font-variant-numeric: tabular-nums; }
+        .oc-tip-row span { opacity: .65; }
+        .oc-tip-hint { margin-top: 5px; padding-top: 5px; border-top: 1px solid rgba(255,255,255,.15); opacity: .6; font-size: 10.5px; }
         .oc-canvas { touch-action: none; cursor: grab; }
         .oc-canvas.is-panning { cursor: grabbing; }
         .oc-node:focus-visible { outline: 2px solid var(--brand-orange); outline-offset: 2px; }
@@ -785,7 +896,8 @@ export default function OrgChartClient() {
                    : 'border-warm-200 dark:border-disc-border text-warm-400 dark:text-disc-muted opacity-60'}`}
               style={on ? { background: `color-mix(in srgb, ${c} 18%, var(--card-bg))` } : undefined}>
               <span className="w-2 h-2 rounded-full shrink-0" style={{ background: on ? c : 'currentColor' }} />
-              {GROUP_EMOJI[g.groupName]} {t(`groups.${g.groupName}`)}
+              {(() => { const I = GROUP_LUCIDE[g.groupName] || FolderOpen; return <I size={13} /> })()}
+              {t(`groups.${g.groupName}`)}
               <span className="tabular-nums opacity-60">{g.roles.length}</span>
             </button>
           )
@@ -802,6 +914,8 @@ export default function OrgChartClient() {
           {allExpanded ? t('collapseAll') : t('expandAll')}
         </button>
       </div>
+
+      <div ref={tipRef} className="oc-tip" role="tooltip" aria-hidden="true" />
 
       <div className={`grid gap-4 items-start ${
         railOpen && !isFull ? 'lg:grid-cols-[minmax(0,1.6fr)_minmax(280px,340px)]' : 'grid-cols-1'}`}>

@@ -1542,7 +1542,11 @@
       "fullscreen": "เต็มจอ",
       "exitFullscreen": "ออกจากเต็มจอ",
       "hideRail": "ซ่อนแผงขวา",
-      "showRail": "แสดงแผงขวา"
+      "showRail": "แสดงแผงขวา",
+      "tipClickExpandGroup": "คลิกเพื่อกางกลุ่มนี้",
+      "tipClickCollapseGroup": "คลิกเพื่อยุบทั้งกลุ่ม",
+      "tipClickExpandRole": "คลิกเพื่อดูอันดับ 2-5",
+      "tipClickCollapseRole": "คลิกเพื่อยุบ"
     }
   },
   "posts": {
