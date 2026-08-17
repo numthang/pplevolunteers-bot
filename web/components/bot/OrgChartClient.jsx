@@ -177,19 +177,18 @@ function buildLayout(visibleGroups, expandedRoles, collapsedGroups, t, aspect = 
   const allRoleScores = visibleGroups.flatMap(g => g.roles.map(r => r.totalScore))
   const groupScores = visibleGroups.map(g => g.roles.reduce((s, r) => s + r.totalScore, 0))
 
+  // ⚠️ ความกว้างที่ใช้แบ่งส่วนมุม คิดจาก "ป้ายของบทบาทเอง" เท่านั้น
+  // ห้ามเอาขนาดดอกคนมาบวก ไม่งั้นกางบทบาทเดียว = ตัวหารเปลี่ยน = ทุกกลุ่มขยับทั้งผัง (user: "กดทีเด้งที")
+  // กลุ่มที่ยุบอยู่ก็ยังจองส่วนมุมเท่าเดิม แค่ไม่สร้างโหนดบทบาท — ยุบแล้วของที่เหลือต้องอยู่ที่เดิม
   const GAP = 26
   const groupPlans = visibleGroups.map((g, gi) => {
-    if (collapsedGroups.has(g.groupName)) {
-      // ยุบอยู่ → จองที่แค่หัวกลุ่ม ไม่สร้างบทบาท/คน
-      return { group: g, gi, roles: [], collapsed: true, width: 210 }
-    }
+    const collapsed = collapsedGroups.has(g.groupName)
     const roles = g.roles.map(role => {
       const rad = scaleR(role.totalScore, allRoleScores, ROLE_R)
       const sub = role.top[0] ? `🔥 ${role.top[0].name}` : t('noActivity')
-      const own = Math.max(rad * 2, pillWidth(role.roleName, sub))
       // อันดับ 1 = รูปกลางของบทบาทเอง → แตกออกเฉพาะอันดับ 2 ลงไป (ไม่งั้นคนเดิมโผล่ 2 ที่)
       const rest = role.top.slice(1)
-      const expanded = expandedRoles.has(role.roleId) && rest.length > 0
+      const expanded = !collapsed && expandedRoles.has(role.roleId) && rest.length > 0
       let people = []
       if (expanded) {
         const pScores = rest.map(m => m.score)
@@ -199,16 +198,10 @@ function buildLayout(visibleGroups, expandedRoles, collapsedGroups, t, aspect = 
           return { person: m, rank: i + 2, r: pr, sub: psub, w: Math.max(pr * 2, pillWidth(m.name, psub)) }
         })
       }
-      // คนของบทบาทวางเป็น "ดอกไม้" รอบบทบาทตัวเอง ไม่ใช่กางออกบนวงใหญ่
-      // (ถ้าเอาความกว้างคนไปบวกในส่วนมุม วงจะพองจนบทบาทกับคนอยู่รัศมีเดียวกัน = อ่านไม่ออก)
-      const clusterR = people.length
-        ? Math.max(rad + Math.max(...people.map(p => p.r)) + 46, people.reduce((s, p) => s + p.w, 0) / (Math.PI * 2))
-        : 0
-      const clusterW = people.length ? (clusterR + Math.max(...people.map(p => p.w)) / 2) * 2 : 0
-      return { role, rad, sub, expanded, people, clusterR, hiddenCount: rest.length,
-               width: Math.max(own, clusterW) + GAP }
+      return { role, rad, sub, expanded, people, hiddenCount: rest.length,
+               width: Math.max(rad * 2, pillWidth(role.roleName, sub)) + GAP }
     })
-    return { group: g, gi, roles, width: roles.reduce((s, r) => s + r.width, 0) }
+    return { group: g, gi, roles, collapsed, width: roles.reduce((s, r) => s + r.width, 0) }
   })
 
   const totalWidth = groupPlans.reduce((s, p) => s + p.width, 0) || 1
@@ -244,6 +237,9 @@ function buildLayout(visibleGroups, expandedRoles, collapsedGroups, t, aspect = 
       const rMid = rc + rSpan / 2
       rc += rSpan
       const rNode = {
+        // กลุ่มที่ยุบ: ยังสร้างโหนดไว้ให้ "ดันที่" ตอนคลายทับ แต่ไม่วาดและไม่มีเส้น
+        // (ถ้าเอาออกจากการคำนวณเลย เพื่อนบ้านจะไม่ถูกดันเหมือนเดิม = ยุบทีขยับที)
+        hidden: plan.collapsed,
         id: `r:${rp.role.roleId}`, kind: 'role', group: plan.group.groupName, role: rp.role,
         label: rp.role.roleName, sub: rp.sub, expanded: rp.expanded, hiddenCount: rp.hiddenCount,
         x: Math.cos(rMid) * roleRing * kx, y: Math.sin(rMid) * roleRing * ky,
@@ -252,22 +248,27 @@ function buildLayout(visibleGroups, expandedRoles, collapsedGroups, t, aspect = 
         ringX: roleRing * kx, ringY: roleRing * ky,
       }
       nodes.push(rNode)
-      edges.push({ a: gNode, b: rNode })
+      if (!rNode.hidden) edges.push({ a: gNode, b: rNode })
 
-      // คนของบทบาทที่แตกแล้ว — วงกลมเล็กๆ รอบบทบาทตัวเอง (อันดับ 1 อยู่ด้านนอกสุด)
+      // คนของบทบาทที่แตกแล้ว — กางออก "ด้านนอก" ของวง ไม่ใช่ล้อมรอบทุกทิศ
+      // ด้านนอกคือที่ว่างจริง (เส้นรอบวงยิ่งออกยิ่งยาว) จึงไม่ต้องเบียดเพื่อนบ้าน
       if (rp.expanded) {
         const n = rp.people.length
+        const outward = Math.atan2(rNode.y, rNode.x)
+        const maxPr = Math.max(...rp.people.map(p => p.r))
+        const need = rp.people.reduce((s, p) => s + p.w + 14, 0)
+        const SPREAD = Math.PI * 0.85          // พัดออกด้านนอกเป็นรูปพัด ไม่อ้อมกลับไปฝั่งวงใน
+        const clusterR = Math.max(rp.rad + maxPr + 52, need / SPREAD)
+        const arc = Math.min(SPREAD, need / clusterR)
         rp.people.forEach((p, i) => {
-          const a = rMid + (i / n) * Math.PI * 2
-          const px = rNode.x + Math.cos(a) * rp.clusterR
-          const py = rNode.y + Math.sin(a) * rp.clusterR
+          const a = outward + (n === 1 ? 0 : -arc / 2 + (i / (n - 1)) * arc)
           nodes.push({
             id: `p:${rp.role.roleId}:${p.person.userId}`, kind: 'person', group: plan.group.groupName,
             person: p.person, rank: p.rank, role: rp.role, label: p.person.name, sub: p.sub,
-            x: px, y: py,
+            x: rNode.x + Math.cos(a) * clusterR, y: rNode.y + Math.sin(a) * clusterR,
             r: p.r, halfW: Math.max(p.r, pillWidth(p.person.name, p.sub) / 2), halfH: (p.r * 2 + 10 + 32) / 2,
             // ยึดกับบทบาทแม่ ไม่ใช่ hub — คลายทับแล้วต้องไม่หลุดออกจากดอกของตัวเอง
-            anchor: rNode, anchorR: rp.clusterR,
+            anchor: rNode, anchorR: clusterR,
           })
           edges.push({ a: rNode, b: nodes[nodes.length - 1] })
         })
@@ -275,15 +276,23 @@ function buildLayout(visibleGroups, expandedRoles, collapsedGroups, t, aspect = 
     }
   }
 
-  // ขนาดโหนดองค์กร = ตามจำนวนโหนดลูกทั้งหมด (รู้ได้ตอนนี้เพราะสร้างครบแล้ว)
-  hub.r = hubRadius(nodes.length - 1)
+  // ขนาดโหนดองค์กรนับจาก "ช่องที่จองไว้" ทั้งหมด ไม่ใช่โหนดที่วาดจริง
+  // (นับโหนดจริงแล้ว hub จะหดตอนยุบกลุ่ม/กางคน → ขอบ hub ขยับ → เพื่อนบ้านถูกดันตาม = ผังไม่นิ่ง)
+  const core = nodes.filter(n => n.kind !== 'person')
+  hub.r = hubRadius(groupPlans.reduce((s, p) => s + p.roles.length, 0) + groupPlans.length)
   hub.halfW = hub.r; hub.halfH = hub.r
 
   // ดัชนีลูก — ลากพ่อแล้วต้องยกทั้งก้อนตามไป (กลุ่ม → บทบาท → คน)
   for (const e of edges) (e.a._kids ||= []).push(e.b)
 
-  relax(nodes)
-  return { nodes, edges }
+  // คลายทับ 2 จังหวะ: กลุ่ม/บทบาทก่อน (ผลลัพธ์เท่าเดิมทุกครั้งเพราะ input ไม่ขึ้นกับการกาง)
+  // แล้วตรึงไว้ ค่อยคลายเฉพาะ "คน" — คนจึงดันบทบาทไม่ได้ ผังหลักอยู่นิ่งตลอด
+  relax(core)
+  for (const n of core) n.fixed = true
+  if (core.length < nodes.length) relax(nodes)
+  for (const n of core) if (n.kind !== 'hub') n.fixed = false
+  // โหนดที่จองที่ไว้เฉยๆ ไม่ต้องส่งออกไปวาด (และไม่ต้องนับในกรอบพอดีจอ)
+  return { nodes: nodes.filter(n => !n.hidden), edges }
 }
 
 // คลายทับแบบ "กล่อง" — ป้ายชื่อไทยกว้างกว่าวงกลมมาก คิดแค่รัศมีป้ายจะทับกันเละ
@@ -295,8 +304,9 @@ function relax(nodes) {
   const cell = 150
 
   for (let it = 0; it < iterations; it++) {
+    // กริดใส่ "ทุกโหนด" รวมตัวที่ตรึงไว้ด้วย — ตัวที่ขยับได้ต้องหลบตัวที่ตรึงเป็น
     const grid = new Map()
-    for (const n of movable) {
+    for (const n of nodes) {
       const key = `${Math.round(n.x / cell)},${Math.round(n.y / cell)}`
       let bucket = grid.get(key)
       if (!bucket) { bucket = []; grid.set(key, bucket) }
@@ -308,14 +318,22 @@ function relax(nodes) {
         const bucket = grid.get(`${gx + dx},${gy + dy}`)
         if (!bucket) continue
         for (const m of bucket) {
-          if (m === n || m.id <= n.id) continue
+          // คู่ที่ขยับได้ทั้งคู่ คิดครั้งเดียว · ตัวที่ตรึงคิดได้เสมอ (มันไม่ขยับอยู่แล้ว)
+          if (m === n || (!m.fixed && m.id <= n.id)) continue
           const ddx = m.x - n.x, ddy = m.y - n.y
           const ovX = (n.halfW + m.halfW + 12) - Math.abs(ddx)
           const ovY = (n.halfH + m.halfH + 8) - Math.abs(ddy)
           if (ovX > 0 && ovY > 0) {
             // ดันออกทางแกนที่ทับน้อยกว่า = ขยับสั้นสุดที่ทำให้หายทับ
-            if (ovX < ovY) { const p = (ovX / 2) * (ddx < 0 ? -1 : 1); n.x -= p; m.x += p }
-            else { const p = (ovY / 2) * (ddy < 0 ? -1 : 1); n.y -= p; m.y += p }
+            // ถ้าอีกฝั่งตรึงอยู่ ฝ่ายที่ขยับได้ต้องหลบเต็มระยะคนเดียว
+            const share = m.fixed ? 1 : 0.5
+            if (ovX < ovY) {
+              const p = ovX * (ddx < 0 ? -1 : 1)
+              n.x -= p * share; if (!m.fixed) m.x += p * share
+            } else {
+              const p = ovY * (ddy < 0 ? -1 : 1)
+              n.y -= p * share; if (!m.fixed) m.y += p * share
+            }
           }
         }
       }
@@ -366,6 +384,8 @@ export default function OrgChartClient() {
   const tipRef = useRef(null)
   const viewRef = useRef(null)
   const panRef = useRef(null)
+  const camKeyRef = useRef(null)        // กล้องตั้งต้นแล้วสำหรับชุดข้อมูลไหน (filterKey)
+  const lastRectRef = useRef(null)      // ขนาดกรอบล่าสุด — ใช้คงระดับซูมตอนกรอบเปลี่ยน
 
   useEffect(() => {
     const read = () => setIsDark(document.documentElement.classList.contains('dark'))
@@ -431,11 +451,16 @@ export default function OrgChartClient() {
     [autoExpand, shownRoleIds, expandedRoles]
   )
 
-  const layoutKey = useMemo(() => [
+  // filterKey = "ชุดข้อมูลที่ดูอยู่" (guild/ช่วงวัน/Top N/คำค้น/ชิปกลุ่ม) — เปลี่ยนแล้วจัดกล้องใหม่ได้
+  // layoutKey = filterKey + สิ่งที่กางอยู่ — ใช้แค่ตัดสินว่าต้องสร้างโหนดใหม่ ไม่แตะกล้อง
+  const filterKey = useMemo(() => [
     data?.guildId || '', days, perGroup, query.trim(),
     visibleGroups.map(g => `${g.groupName}:${g.roles.length}`).join('|'),
-    [...effExpanded].sort().join(','), [...collapsedGroups].sort().join(','),
-  ].join('#'), [data?.guildId, days, perGroup, query, visibleGroups, effExpanded, collapsedGroups])
+  ].join('#'), [data?.guildId, days, perGroup, query, visibleGroups])
+
+  const layoutKey = useMemo(
+    () => [filterKey, [...effExpanded].sort().join(','), [...collapsedGroups].sort().join(',')].join('#'),
+    [filterKey, effExpanded, collapsedGroups])
 
   const storageKey = data?.guildId ? `orgchart-pos:${data.guildId}` : null
 
@@ -460,23 +485,60 @@ export default function OrgChartClient() {
     }
     nodesRef.current = nodes
     edgesRef.current = edges
-    viewRef.current = null
+    // จัดกล้องใหม่เฉพาะตอนเปลี่ยน "ชุดข้อมูลที่ดู" (guild/ช่วงวัน/Top N/คำค้น/ชิป)
+    // กด กาง ยุบ ลาก = ภาพต้องนิ่งสนิท ไม่เลื่อนไม่ย่อเอง
+    if (camKeyRef.current !== filterKey) { camKeyRef.current = filterKey; viewRef.current = null }
     draw()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [layoutKey, storageKey, isDark, selected, guildIcon])
+  }, [layoutKey, filterKey, storageKey, isDark, selected, guildIcon])
+
+  // กรอบจากขอบจริงของผัง ไม่ใช่สมมาตรรอบ hub — โหนดหลุดไปมุมเดียวไม่ควรทำให้กรอบโต 2 เท่าทั้งวง
+  function bounds() {
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity
+    for (const n of nodesRef.current) {
+      minX = Math.min(minX, n.x - n.halfW); maxX = Math.max(maxX, n.x + n.halfW)
+      minY = Math.min(minY, n.y - n.halfH); maxY = Math.max(maxY, n.y + n.halfH + 10)
+    }
+    const pad = 24
+    return { minX: minX - pad, maxX: maxX + pad, minY: minY - pad, maxY: maxY + pad }
+  }
+
+  // ค่าเริ่มต้น = ซูม 100% (โหนดขนาดจริง) เล็งกลางผัง — user เคาะ 2026-08-17
+  // แต่ห้ามเกินพอดีจอ: โหมด "ทั้งหมด" (49 บทบาท) ผังกว้าง 2 เท่าจอ ถ้าเริ่มที่ 100%
+  // จะเห็นแค่ hub กับเส้นวิ่งออกนอกจอ = ดูเหมือนหน้าพัง จึงถอยมาพอดีจอเมื่อผังใหญ่เกิน
+  function initialView() {
+    const svg = svgRef.current
+    if (!svg || !nodesRef.current.length) return
+    const rect = svg.getBoundingClientRect()
+    if (!rect.width) return
+    fitView()
+    const v = viewRef.current
+    if (v && v.w < rect.width) {
+      const cx = v.x + v.w / 2, cy = v.y + v.h / 2
+      viewRef.current = { x: cx - rect.width / 2, y: cy - rect.height / 2, w: rect.width, h: rect.height }
+      applyView()
+    }
+  }
+
+  // ขนาดกรอบเปลี่ยน (ย่อหน้าต่าง/เต็มจอ/พับแผงขวา) → คงระดับซูมกับจุดที่เล็งอยู่ ไม่กระตุกกลับ
+  function reflowCamera() {
+    const svg = svgRef.current, v = viewRef.current, last = lastRectRef.current
+    if (!svg || !v || !last?.w) { initialView(); return }
+    const rect = svg.getBoundingClientRect()
+    if (!rect.width) return
+    const unitsPerPx = v.w / last.w
+    const cx = v.x + v.w / 2, cy = v.y + v.h / 2
+    const w = rect.width * unitsPerPx, h = rect.height * unitsPerPx
+    viewRef.current = { x: cx - w / 2, y: cy - h / 2, w, h }
+    applyView()
+  }
 
   function fitView() {
     const nodes = nodesRef.current
     const svg = svgRef.current
     if (!nodes.length || !svg) return
-    // กรอบจากขอบจริงของผัง ไม่ใช่สมมาตรรอบ hub — โหนดหลุดไปมุมเดียวไม่ควรทำให้กรอบโต 2 เท่าทั้งวง
-    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity
-    for (const n of nodes) {
-      minX = Math.min(minX, n.x - n.halfW); maxX = Math.max(maxX, n.x + n.halfW)
-      minY = Math.min(minY, n.y - n.halfH); maxY = Math.max(maxY, n.y + n.halfH + 10)
-    }
-    const pad = 24
-    minX -= pad; maxX += pad; minY -= pad; maxY += pad
+    const b = bounds()
+    const minX = b.minX, maxX = b.maxX, minY = b.minY, maxY = b.maxY
     const cw = Math.max(240, maxX - minX), ch = Math.max(240, maxY - minY)
     // viewBox ต้องอัตราส่วนเดียวกับกรอบจริง ไม่งั้น preserveAspectRatio จะ letterbox ทิ้งพื้นที่ครึ่งจอ
     // กันแถบล่างไว้ให้เครื่องมือที่ลอยทับผัง — ไม่งั้นโหนดล่างสุดโดนบัง
@@ -492,7 +554,11 @@ export default function OrgChartClient() {
   }
   function applyView() {
     const v = viewRef.current
-    if (v && svgRef.current) svgRef.current.setAttribute('viewBox', `${v.x} ${v.y} ${v.w} ${v.h}`)
+    const svg = svgRef.current
+    if (!v || !svg) return
+    svg.setAttribute('viewBox', `${v.x} ${v.y} ${v.w} ${v.h}`)
+    const rect = svg.getBoundingClientRect()
+    if (rect.width) lastRectRef.current = { w: rect.width, h: rect.height }
   }
 
   function draw() {
@@ -598,7 +664,7 @@ export default function OrgChartClient() {
       n._g = wrap
     }
 
-    if (!viewRef.current) fitView(); else applyView()
+    if (!viewRef.current) initialView(); else applyView()
   }
 
   function tipHtml(n) {
@@ -623,7 +689,10 @@ export default function OrgChartClient() {
         + row(t('colMembers'), fmtInt(n.role.memberCount))
         + row(t('colScore'), fmtInt(n.role.totalScore))
         + (top1 ? row(t('colTop'), esc(top1.name)) : '')
-        + `<div class="oc-tip-hint">${esc(n.expanded ? t('tipClickCollapseRole') : t('tipClickExpandRole'))}</div>`
+        // บทบาทที่มีคนแอคทีฟคนเดียว กดแล้วไม่มีอะไรกาง — อย่าไปชวนให้กด
+        + (n.hiddenCount > 0
+            ? `<div class="oc-tip-hint">${esc(n.expanded ? t('tipClickCollapseRole') : t('tipClickExpandRole'))}</div>`
+            : '')
     }
     const m = n.person
     return `<div class="oc-tip-title">${esc(m.name)}</div>`
@@ -773,8 +842,8 @@ export default function OrgChartClient() {
     const onChange = () => {
       const on = document.fullscreenElement === cardRef.current
       setIsFull(on)
-      // ขนาด svg เปลี่ยน → viewBox เดิมจะเพี้ยนสัดส่วน ต้องจัดกรอบใหม่
-      requestAnimationFrame(() => fitView())
+      // ขนาด svg เปลี่ยน → คงระดับซูมเดิมไว้ ไม่ดีดกลับไปพอดีจอเอง
+      requestAnimationFrame(() => reflowCamera())
     }
     document.addEventListener('fullscreenchange', onChange)
     return () => document.removeEventListener('fullscreenchange', onChange)
@@ -788,8 +857,8 @@ export default function OrgChartClient() {
     } catch { /* เบราว์เซอร์ไม่ให้ (iframe/permission) — ปล่อยผ่าน ไม่ต้องพัง */ }
   }
 
-  // พับแผงขวา/สลับมุมมอง → กว้างของ svg เปลี่ยน ต้องจัดกรอบใหม่
-  useEffect(() => { requestAnimationFrame(() => fitView()) // eslint-disable-next-line react-hooks/exhaustive-deps
+  // พับแผงขวา/สลับมุมมอง → กว้างของ svg เปลี่ยน แต่ระดับซูมต้องเท่าเดิม
+  useEffect(() => { requestAnimationFrame(() => reflowCamera()) // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [railOpen, view])
 
   // ── zoom / pan บนพื้นหลัง ───────────────────────────────────────────────────
@@ -846,9 +915,9 @@ export default function OrgChartClient() {
     // svg ยัง mount ไม่เสร็จตอน loading — deps ว่างจะผูก listener ไม่ติดเลย (zoom/pan ตายเงียบ)
   }, [loading, error, view])
 
-  // ย่อ/ขยายหน้าต่าง → อัตราส่วนกรอบเปลี่ยน viewBox เดิมจะเหลือขอบว่าง
+  // ย่อ/ขยายหน้าต่าง → อัตราส่วนกรอบเปลี่ยน ต้องปรับ viewBox ตามโดยคงระดับซูม
   useEffect(() => {
-    const onResize = () => fitView()
+    const onResize = () => reflowCamera()
     window.addEventListener('resize', onResize)
     return () => window.removeEventListener('resize', onResize)
     // eslint-disable-next-line react-hooks/exhaustive-deps
