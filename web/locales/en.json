@@ -1549,7 +1549,8 @@
       "tipClickCollapseRole": "Click to collapse",
       "tipClickCollapseAll": "Click to collapse all groups",
       "expandAllPeople": "Expand all people",
-      "collapseAllPeople": "Collapse all people"
+      "collapseAllPeople": "Collapse all people",
+      "peoplePerRole": "{n} people/role"
     }
   },
   "posts": {

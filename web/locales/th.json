@@ -1549,7 +1549,8 @@
       "tipClickCollapseRole": "คลิกเพื่อยุบ",
       "tipClickCollapseAll": "คลิกเพื่อยุบทุกกลุ่ม",
       "expandAllPeople": "กางรายคนทั้งหมด",
-      "collapseAllPeople": "ปิดรายคนทั้งหมด"
+      "collapseAllPeople": "ปิดรายคนทั้งหมด",
+      "peoplePerRole": "คน {n}/บทบาท"
     }
   },
   "posts": {
