@@ -59,6 +59,7 @@ const HUB_SCALE_AT = 120      // จำนวนลูกที่ถือว�
 const ROLE_R = [14, 30]
 const PERSON_R = [11, 22]
 const GROUP_R = [26, 44]
+const TOOLBAR_H = 34           // ความสูงแถบเครื่องมือที่ลอยทับผังด้านล่าง
 const NS = 'http://www.w3.org/2000/svg'
 
 function hash(str) { let h = 0; for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0; return h }
@@ -157,7 +158,17 @@ function descendantsOf(node) {
   return out
 }
 
-function buildLayout(visibleGroups, expandedRoles, collapsedGroups, t) {
+// เส้นรอบวงของวงรี (Ramanujan) หารด้วยรัศมีฐาน — วงกลม (kx=ky=1) ได้ 2π ตามเดิม
+function ringPerimeter(kx, ky) {
+  return Math.PI * (3 * (kx + ky) - Math.sqrt((3 * kx + ky) * (kx + 3 * ky)))
+}
+
+// aspect = กว้าง/สูงของกรอบวาดจริง — วางเป็นวงกลมในกรอบแบน 2.7:1 จะเหลือที่ว่างซ้ายขวาครึ่งจอ
+// จึงยืดวงเป็นวงรีให้อัตราส่วนเท่ากรอบ (คงพื้นที่เดิม: kx*ky = 1) โหนดจึงโตขึ้นราว 1.5 เท่า
+function buildLayout(visibleGroups, expandedRoles, collapsedGroups, t, aspect = 1) {
+  const kx = Math.sqrt(Math.min(3, Math.max(1, aspect)))
+  const ky = 1 / kx
+  const perim = ringPerimeter(kx, ky)
   const nodes = []
   const edges = []
   const hub = { id: '__hub', kind: 'hub', x: 0, y: 0, r: HUB_R[0], halfW: HUB_R[0], halfH: HUB_R[0], fixed: true }
@@ -202,9 +213,10 @@ function buildLayout(visibleGroups, expandedRoles, collapsedGroups, t) {
 
   const totalWidth = groupPlans.reduce((s, p) => s + p.width, 0) || 1
   // รัศมีวงบทบาท: เส้นรอบวงต้องยาวพอใส่ทุกอันโดยไม่เบียด
-  const roleRing = Math.max(280, (totalWidth * 1.22) / (Math.PI * 2))
+  const roleRing = Math.max(280, (totalWidth * 0.95) / perim)
   // เผื่อรัศมี hub ที่ใหญ่สุด + ครึ่งความสูงของโหนดกลุ่ม ไม่งั้นกลุ่มจะทับโหนดกลาง
-  const groupRing = Math.max(HUB_R[1] + 78, roleRing * 0.42)
+  // (คิดจากแกนสั้นของวงรี = ky ไม่งั้นกลุ่มบน/ล่างจะเบียด hub)
+  const groupRing = Math.max((HUB_R[1] + 78) / ky, roleRing * 0.42)
 
   let cursor = -Math.PI / 2
   for (const plan of groupPlans) {
@@ -218,9 +230,10 @@ function buildLayout(visibleGroups, expandedRoles, collapsedGroups, t) {
     const gNode = {
       id: `g:${plan.group.groupName}`, kind: 'group', group: plan.group.groupName, groupData: plan.group,
       label: gLabel,
-      x: Math.cos(mid) * groupRing, y: Math.sin(mid) * groupRing,
+      x: Math.cos(mid) * groupRing * kx, y: Math.sin(mid) * groupRing * ky,
       r: gr, halfW: Math.max(gr, pillWidth(gLabel) / 2), halfH: (gr * 2 + 11 + 21) / 2,
-      homeR: groupRing, collapsed: !!plan.collapsed, roleCount: plan.group.roles.length,
+      ringX: groupRing * kx, ringY: groupRing * ky,
+      collapsed: !!plan.collapsed, roleCount: plan.group.roles.length,
     }
     nodes.push(gNode)
     edges.push({ a: hub, b: gNode })
@@ -233,10 +246,10 @@ function buildLayout(visibleGroups, expandedRoles, collapsedGroups, t) {
       const rNode = {
         id: `r:${rp.role.roleId}`, kind: 'role', group: plan.group.groupName, role: rp.role,
         label: rp.role.roleName, sub: rp.sub, expanded: rp.expanded, hiddenCount: rp.hiddenCount,
-        x: Math.cos(rMid) * roleRing, y: Math.sin(rMid) * roleRing,
+        x: Math.cos(rMid) * roleRing * kx, y: Math.sin(rMid) * roleRing * ky,
         r: rp.rad, halfW: Math.max(rp.rad, pillWidth(rp.role.roleName, rp.sub) / 2),
         halfH: (rp.rad * 2 + 10 + 32) / 2,
-        homeR: roleRing,
+        ringX: roleRing * kx, ringY: roleRing * ky,
       }
       nodes.push(rNode)
       edges.push({ a: gNode, b: rNode })
@@ -308,14 +321,18 @@ function relax(nodes) {
       }
     }
     for (const n of movable) {
-      // คนยึดกับบทบาทแม่ · ที่เหลือยึดรัศมีบ้านของตัวเองรอบ hub
-      const ox = n.anchor ? n.anchor.x : 0
-      const oy = n.anchor ? n.anchor.y : 0
-      const want = n.anchor ? n.anchorR : n.homeR
-      const dx = n.x - ox, dy = n.y - oy
-      const d = Math.hypot(dx, dy) || 0.01
-      const pull = (d - want) * (n.anchor ? 0.16 : 0.08)
-      n.x -= (dx / d) * pull; n.y -= (dy / d) * pull
+      if (n.anchor) {
+        // คนยึดเป็นวงกลมรอบบทบาทแม่ — ดอกเล็ก ไม่ต้องยืดตามจอ
+        const dx = n.x - n.anchor.x, dy = n.y - n.anchor.y
+        const d = Math.hypot(dx, dy) || 0.01
+        const pull = (d - n.anchorR) * 0.16
+        n.x -= (dx / d) * pull; n.y -= (dy / d) * pull
+      } else {
+        // กลุ่ม/บทบาทยึดกับวงรีบ้านของตัวเอง — d=1 คืออยู่บนวงพอดี
+        const d = Math.hypot(n.x / n.ringX, n.y / n.ringY) || 0.01
+        const pull = (1 - 1 / d) * 0.08
+        n.x -= n.x * pull; n.y -= n.y * pull
+      }
     }
   }
 }
@@ -331,7 +348,9 @@ export default function OrgChartClient() {
   const [hiddenGroups, setHiddenGroups] = useState(() => new Set())
   const [collapsedGroups, setCollapsedGroups] = useState(() => new Set())   // ยุบทั้งกลุ่ม (ต่างจากชิปที่ซ่อนหัวกลุ่มด้วย)
   const [expandedRoles, setExpandedRoles] = useState(() => new Set())
-  const [autoExpand, setAutoExpand] = useState(true)   // default: แตกทุกบทบาทที่แสดงอยู่
+  // กางรายคนทุกบทบาทพร้อมกัน = ~100 โหนด กระจายกว้างจนย่อแล้วอ่านไม่ออก
+  // ค่าเริ่มต้นจึงโชว์แค่ชั้นบทบาท แล้วกดทีละอันเพื่อแตกคน (user 2026-08-17)
+  const [autoExpand, setAutoExpand] = useState(false)
   const [selected, setSelected] = useState(null)
   const [query, setQuery] = useState('')
   const [view, setView] = useState('chart')
@@ -362,7 +381,7 @@ export default function OrgChartClient() {
       .then(r => r.json().then(d => ({ ok: r.ok, d })))
       .then(({ ok, d }) => {
         // ข้อมูลชุดใหม่ → สิ่งที่แตกไว้เป็น snapshot เก่าแล้ว ปิดลงให้หมด
-        if (ok) { setData(d); setExpandedRoles(new Set()); setAutoExpand(true); setSelected(null) }
+        if (ok) { setData(d); setExpandedRoles(new Set()); setAutoExpand(false); setSelected(null) }
         else setError(d.error || t('loadFailed'))
       })
       .catch(() => setError(t('loadFailed')))
@@ -420,9 +439,15 @@ export default function OrgChartClient() {
 
   const storageKey = data?.guildId ? `orgchart-pos:${data.guildId}` : null
 
+  function canvasAspect() {
+    const rect = svgRef.current?.getBoundingClientRect()
+    if (!rect?.width || !rect?.height) return 1
+    return rect.width / Math.max(80, rect.height - TOOLBAR_H)
+  }
+
   useEffect(() => {
     if (!visibleGroups.length) { nodesRef.current = []; edgesRef.current = []; return }
-    const { nodes, edges } = buildLayout(visibleGroups, effExpanded, collapsedGroups, t)
+    const { nodes, edges } = buildLayout(visibleGroups, effExpanded, collapsedGroups, t, canvasAspect())
     if (storageKey) {
       try {
         const saved = JSON.parse(localStorage.getItem(storageKey) || '{}')
@@ -438,17 +463,27 @@ export default function OrgChartClient() {
 
   function fitView() {
     const nodes = nodesRef.current
-    if (!nodes.length) return
-    const hub = nodes.find(n => n.kind === 'hub') || { x: 0, y: 0 }
-    // กรอบสมมาตรรอบ hub → hub อยู่กึ่งกลางจอเสมอ (ไม่เลื่อนตามการกระจายของกลุ่ม)
-    let halfW = 120, halfH = 120
+    const svg = svgRef.current
+    if (!nodes.length || !svg) return
+    // กรอบจากขอบจริงของผัง ไม่ใช่สมมาตรรอบ hub — โหนดหลุดไปมุมเดียวไม่ควรทำให้กรอบโต 2 เท่าทั้งวง
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity
     for (const n of nodes) {
-      halfW = Math.max(halfW, Math.abs(n.x - hub.x) + n.halfW)
-      halfH = Math.max(halfH, Math.abs(n.y - hub.y) + n.halfH + 10)
+      minX = Math.min(minX, n.x - n.halfW); maxX = Math.max(maxX, n.x + n.halfW)
+      minY = Math.min(minY, n.y - n.halfH); maxY = Math.max(maxY, n.y + n.halfH + 10)
     }
-    const pad = 40
-    halfW += pad; halfH += pad
-    viewRef.current = { x: hub.x - halfW, y: hub.y - halfH, w: halfW * 2, h: halfH * 2 }
+    const pad = 24
+    minX -= pad; maxX += pad; minY -= pad; maxY += pad
+    const cw = Math.max(240, maxX - minX), ch = Math.max(240, maxY - minY)
+    // viewBox ต้องอัตราส่วนเดียวกับกรอบจริง ไม่งั้น preserveAspectRatio จะ letterbox ทิ้งพื้นที่ครึ่งจอ
+    // กันแถบล่างไว้ให้เครื่องมือที่ลอยทับผัง — ไม่งั้นโหนดล่างสุดโดนบัง
+    const rect = svg.getBoundingClientRect()
+    const usableH = Math.max(80, rect.height - TOOLBAR_H)
+    const aspect = rect.width > 0 ? rect.width / usableH : cw / ch
+    let w = cw, h = ch
+    if (cw / ch < aspect) w = ch * aspect
+    else h = cw / aspect
+    const reserved = TOOLBAR_H * (h / usableH)
+    viewRef.current = { x: (minX + maxX) / 2 - w / 2, y: (minY + maxY) / 2 - h / 2, w, h: h + reserved }
     applyView()
   }
   function applyView() {
@@ -697,7 +732,7 @@ export default function OrgChartClient() {
 
   function resetLayout() {
     if (storageKey) { try { localStorage.removeItem(storageKey) } catch { /* ไม่มีอะไรให้ลบ */ } }
-    const { nodes, edges } = buildLayout(visibleGroups, effExpanded, collapsedGroups, t)
+    const { nodes, edges } = buildLayout(visibleGroups, effExpanded, collapsedGroups, t, canvasAspect())
     nodesRef.current = nodes; edgesRef.current = edges
     viewRef.current = null
     draw()
@@ -804,6 +839,15 @@ export default function OrgChartClient() {
       svg.removeEventListener('pointerup', onUp)
       svg.removeEventListener('pointercancel', onUp)
     }
+    // svg ยัง mount ไม่เสร็จตอน loading — deps ว่างจะผูก listener ไม่ติดเลย (zoom/pan ตายเงียบ)
+  }, [loading, error, view])
+
+  // ย่อ/ขยายหน้าต่าง → อัตราส่วนกรอบเปลี่ยน viewBox เดิมจะเหลือขอบว่าง
+  useEffect(() => {
+    const onResize = () => fitView()
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
 
@@ -838,7 +882,7 @@ export default function OrgChartClient() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3">
       <style jsx global>{`
         .oc-edge { stroke: #b9b3a5; stroke-width: 1.4; }
         .oc-edge-hub { stroke-width: 2; }
@@ -878,9 +922,21 @@ export default function OrgChartClient() {
         .oc-node:focus-visible { outline: 2px solid var(--brand-orange); outline-offset: 2px; }
       `}</style>
 
-      <div>
-        <h1 className="text-xl font-bold text-warm-900 dark:text-disc-text">{t('title')}</h1>
-        <p className="mt-1 text-sm text-warm-500 dark:text-disc-muted">{t('subtitle')}</p>
+      {/* หัวเรื่อง + สลับมุมมองอยู่แถวเดียวกัน — ทุก 50px ที่ประหยัดได้คือผังที่ใหญ่ขึ้น */}
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <div className="flex flex-wrap items-baseline gap-x-3">
+          <h1 className="text-xl font-bold text-warm-900 dark:text-disc-text">{t('title')}</h1>
+          <p className="text-sm text-warm-500 dark:text-disc-muted">{t('subtitle')}</p>
+        </div>
+        <div className={`${CARD} flex gap-0.5 p-1`}>
+          {['chart', 'table'].map(v => (
+            <button key={v} type="button" onClick={() => setView(v)}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-lg ${
+                v === view ? 'bg-warm-900 dark:bg-disc-text text-white dark:text-disc-bg2' : 'text-warm-500 dark:text-disc-muted'}`}>
+              {v === 'chart' ? t('viewNetwork') : t('viewTable')}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -907,19 +963,7 @@ export default function OrgChartClient() {
             </button>
           ))}
         </div>
-        <div className={`${CARD} flex gap-0.5 p-1 ml-auto`}>
-          {['chart', 'table'].map(v => (
-            <button key={v} type="button" onClick={() => setView(v)}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-lg ${
-                v === view ? 'bg-warm-900 dark:bg-disc-text text-white dark:text-disc-bg2' : 'text-warm-500 dark:text-disc-muted'}`}>
-              {v === 'chart' ? t('viewNetwork') : t('viewTable')}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* ชิปกรองกลุ่ม — กดเปิด/ปิดกลุ่มบนกราฟ */}
-      <div className="flex flex-wrap items-center gap-1.5">
+        {/* ชิปกรองกลุ่ม — กดเปิด/ปิดกลุ่มบนกราฟ · อยู่แถวเดียวกับตัวกรองเพื่อไม่กินความสูงของผัง */}
         {activeGroups.map(g => {
           const on = !hiddenGroups.has(g.groupName)
           const c = colorOf(g.groupName)
@@ -948,14 +992,15 @@ export default function OrgChartClient() {
       <div className={`grid gap-4 items-start ${
         railOpen && !isFull ? 'lg:grid-cols-[minmax(0,1.6fr)_minmax(280px,340px)]' : 'grid-cols-1'}`}>
         {view === 'chart' ? (
-          <div ref={cardRef} className={`${CARD} relative p-2 flex flex-col ${isFull ? 'rounded-none border-0' : ''}`}>
+          <div ref={cardRef} className={`${CARD} relative p-2 ${isFull ? 'rounded-none border-0' : ''}`}>
             <svg ref={svgRef}
               className={`oc-canvas w-full text-warm-900 dark:text-disc-text ${
-                isFull ? 'h-[calc(100vh-52px)]' : 'h-[calc(100vh-320px)] min-h-[560px]'}`}
+                isFull ? 'h-[calc(100vh-16px)]' : 'h-[calc(100vh-285px)] min-h-[440px]'}`}
               role="img" aria-label={t('title')} />
-            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-2 pt-1">
+            {/* เครื่องมือลอยทับผัง ไม่กินความสูง — แถบใต้ผังเดิมกินไป ~66px ทุกจอ */}
+            <div className="pointer-events-none absolute inset-x-3 bottom-2 flex flex-wrap items-end justify-between gap-x-3 gap-y-1">
               <p className="text-xs text-warm-500 dark:text-disc-muted">{t('hint')}</p>
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="pointer-events-auto flex items-center gap-2 shrink-0 rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg/85 backdrop-blur-sm px-2 py-1">
                 <span className="text-xs text-warm-400 dark:text-disc-muted tabular-nums">
                   {t('rolesShown', { shown: shownRoles, total: totalActiveRoles })}
                 </span>
