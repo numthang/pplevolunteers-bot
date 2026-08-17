@@ -1696,7 +1696,8 @@
   },
   "kanban": {
     "meta": {
-      "list": "My Homework"
+      "list": "My Homework",
+      "board": "Homework board"
     },
     "page": {
       "title": "My Homework",
@@ -1790,6 +1791,16 @@
       "searchPeopleHint": "Type at least 2 characters",
       "noPeopleFound": "No one found"
     },
-    "saveFailed": "Save failed"
+    "saveFailed": "Save failed",
+    "board": {
+      "title": "Homework board",
+      "subtitle": "All work in the organization by status — drag a card to another column to change its status",
+      "viewBoard": "Board",
+      "viewList": "List",
+      "emptyColumn": "Nothing in this column",
+      "moreCards": "{count} more",
+      "moveFailed": "Could not move the card",
+      "dragHint": "Drag cards on desktop; on mobile open a card and use the status buttons"
+    }
   }
 }

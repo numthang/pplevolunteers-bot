@@ -24,6 +24,11 @@ export async function GET(req) {
   if (view === 'unassigned') {
     return Response.json({ cards: await cardDB.listCards(ctx.orgId, { unassigned: true, includeClosed: false }) })
   }
+  // กระดาน — ต้องได้ช่อง "เสร็จ"/"ยกเลิก" มาด้วย ไม่งั้นลากเข้าแล้วการ์ดหายต่อหน้า
+  // limit สูงกว่าปกติเพราะกองงานที่จบแล้วสะสมเรื่อยๆ (UI ตัดแสดงเองต่อช่อง)
+  if (view === 'board') {
+    return Response.json({ cards: await cardDB.listCards(ctx.orgId, { includeClosed: true, limit: 500 }) })
+  }
   return Response.json({ cards: await cardDB.listCards(ctx.orgId, { includeClosed: false }) })
 }
 

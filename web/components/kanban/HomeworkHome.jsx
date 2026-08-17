@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { Plus, X, Clock, User, ListChecks, AlertTriangle } from 'lucide-react'
+import { Plus, X, Clock, User, ListChecks, AlertTriangle, Columns3 } from 'lucide-react'
+import Link from 'next/link'
 import { formatRef } from '@/lib/kanbanAccess.js'
 import CardModal from './CardModal.jsx'
 import LabelChips from './LabelChips.jsx'
@@ -292,13 +293,22 @@ export default function HomeworkHome() {
           <h1 className="text-2xl font-bold text-warm-900 dark:text-disc-text mb-1">{t('page.title')}</h1>
           <p className="text-base text-warm-500 dark:text-disc-muted">{t('page.subtitle')}</p>
         </div>
-        <button
-          onClick={openForm}
-          className="flex items-center gap-1.5 bg-teal hover:opacity-90 text-white rounded-lg text-base font-medium px-4 py-2"
-        >
-          <Plus size={16} />
-          {t('addButton')}
-        </button>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/kanban/board"
+            className="flex items-center gap-1.5 border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover rounded-lg text-base font-medium px-4 py-2"
+          >
+            <Columns3 size={16} />
+            {t('board.viewBoard')}
+          </Link>
+          <button
+            onClick={openForm}
+            className="flex items-center gap-1.5 bg-teal hover:opacity-90 text-white rounded-lg text-base font-medium px-4 py-2"
+          >
+            <Plus size={16} />
+            {t('addButton')}
+          </button>
+        </div>
       </div>
 
       {formOpen && (
