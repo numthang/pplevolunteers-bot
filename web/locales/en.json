@@ -1806,10 +1806,10 @@
       "moreCards": "{count} more",
       "moveFailed": "Could not move the card",
       "dragHint": "Drag cards on desktop; on mobile open a card and use the status buttons",
-      "showClosed": "Show closed",
-      "hideClosed": "Hide closed",
+      "showClosed": "Show finished",
+      "hideClosed": "Hide finished",
       "recentWindow": "(last {days} days)",
-      "olderHidden": "{count} older ones hidden — tap to show"
+      "olderHidden": "{count} finished earlier — tap to show"
     }
   },
   "team": {
