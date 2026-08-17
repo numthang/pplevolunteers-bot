@@ -126,11 +126,11 @@ function avatarMarkup(name, r, url) {
     <circle class="oc-avatar-border" r="${r}"/>`
 }
 
-function pillNode(topY, { title, sub, bg, titleColor, subColor, fs = 10 }) {
+function pillNode(topY, { title, sub, bg, titleColor, subColor, fs = 10, cls = '' }) {
   const w = pillWidth(title, sub)
   const h = sub ? 32 : 21
   const g = el('g', {})
-  g.appendChild(el('rect', { class: 'oc-pill', x: -w / 2, y: topY, width: w, height: h, rx: sub ? 8 : h / 2, fill: bg }))
+  g.appendChild(el('rect', { class: `oc-pill ${cls}`.trim(), x: -w / 2, y: topY, width: w, height: h, rx: sub ? 8 : h / 2, fill: bg }))
   if (sub) {
     const t1 = el('text', { y: topY + 13.5, 'text-anchor': 'middle', 'font-size': fs, 'font-weight': 700, fill: titleColor })
     t1.textContent = title; g.appendChild(t1)
@@ -646,6 +646,8 @@ export default function OrgChartClient() {
       } else if (n.kind === 'role') {
         wrap.innerHTML = avatarMarkup(n.role.top[0]?.name || n.label, n.r, n.role.top[0]?.avatar)
         hit(n.r + 10, 32)
+        // วงแหวนสีกลุ่ม = เครื่องหมายว่านี่คือ "หัวบทบาท" (พ่อ) ไม่ใช่คนในบทบาท (ลูก)
+        wrap.appendChild(el('circle', { r: n.r + 2, class: 'oc-parent-ring', stroke: color }))
         wrap.appendChild(el('circle', { r: n.r, class: 'oc-sel-ring' }))
         if (n.role.top.length) {
           // เลข 1 = รูปกลางนี้คืออันดับหนึ่งของบทบาท (ไม่มีโหนดลูกซ้ำอีก)
@@ -663,22 +665,24 @@ export default function OrgChartClient() {
           mt.textContent = `+${n.hiddenCount}`; more.appendChild(mt)
           wrap.appendChild(more)
         }
+        // พ่อ = ป้ายสีกลุ่มเต็ม (ชุดเดียวกับหัวกลุ่ม) · ลูก = ป้ายพื้นเรียบ
+        // เดิมลูกผสมสีเข้มกว่าพ่อ (22% vs 16%) เลยแยกไม่ออกว่าอันไหนพ่ออันไหนลูก
         wrap.appendChild(pillNode(n.r + 10, {
-          title: n.label, sub: n.sub,
-          bg: `color-mix(in srgb, ${color} 16%, var(--card-bg))`,
-          titleColor: 'currentColor', subColor: 'currentColor',
+          title: n.label, sub: n.sub, bg: color,
+          titleColor: ON_PASTEL, subColor: ON_PASTEL,
         }))
       } else {
         wrap.innerHTML = avatarMarkup(n.person.name, n.r, n.person.avatar)
         hit(n.r + 10, 32)
+        // ลูก: ป้ายลำดับเป็นชิปกลางๆ ไม่ใช่สีกลุ่ม — สีกลุ่มสงวนไว้ให้ชั้นพ่อ
         const badge = el('g', { transform: `translate(${n.r * 0.72} ${-n.r * 0.72})` })
-        badge.appendChild(el('circle', { r: 8, fill: color, class: 'oc-rank-dot' }))
-        const bt = el('text', { y: 2.9, 'text-anchor': 'middle', 'font-size': 9, 'font-weight': 800, fill: ON_PASTEL })
+        badge.appendChild(el('circle', { r: 8, class: 'oc-more' }))
+        const bt = el('text', { y: 2.9, 'text-anchor': 'middle', 'font-size': 9, 'font-weight': 800, class: 'oc-more-text' })
         bt.textContent = String(n.rank); badge.appendChild(bt)
         wrap.appendChild(badge)
         wrap.appendChild(pillNode(n.r + 10, {
-          title: n.label, sub: n.sub,
-          bg: `color-mix(in srgb, ${color} 22%, var(--card-bg))`,
+          title: n.label, sub: n.sub, cls: 'oc-pill-child',
+          bg: 'var(--card-bg)',
           titleColor: 'currentColor', subColor: 'currentColor', fs: 9.5,
         }))
       }
@@ -992,6 +996,9 @@ export default function OrgChartClient() {
         .oc-hit { fill: transparent; }
         .oc-avatar-border { fill: none; stroke: var(--card-bg); stroke-width: 2.5; }
         .oc-sel-ring { fill: none; stroke: currentColor; stroke-width: 2.5; opacity: 0; }
+        .oc-parent-ring { fill: none; stroke-width: 3; }
+        .oc-pill-child { stroke: #ddd7c9; stroke-width: 1; }
+        .dark .oc-pill-child { stroke: #4c4a45; }
         .oc-node.is-selected .oc-sel-ring { opacity: 1; }
         .oc-rank-dot { stroke: var(--card-bg); stroke-width: 2; }
         .oc-more { fill: #3f3d38; stroke: var(--card-bg); stroke-width: 2; }
