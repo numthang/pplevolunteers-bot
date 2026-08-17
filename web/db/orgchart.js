@@ -80,14 +80,15 @@ SELECT rb.role_id, rb.role_name, rb.role_color, rb.group_name,
        r.messages, r.voice_seconds, r.mentions, r.score, r.rnk
   FROM role_base rb
   LEFT JOIN role_summary rs ON rs.role_id = rb.role_id
-  LEFT JOIN ranked r        ON r.role_id = rb.role_id AND r.rnk <= 5
+  LEFT JOIN ranked r        ON r.role_id = rb.role_id AND r.rnk <= 10
   LEFT JOIN users u         ON u.id = r.user_id
   LEFT JOIN org_members om  ON om.user_id = r.user_id AND om.guild_id = $1
  ORDER BY rb.group_name, rb.role_id, r.rnk NULLS LAST
 `
 
 /**
- * ทุก role ที่ config ไว้ (dc_orgchart_config) ของ guild นี้ พร้อม top-5 คนแอคทีฟสุดต่อ role
+ * ทุก role ที่ config ไว้ (dc_orgchart_config) ของ guild นี้ พร้อม top-10 คนแอคทีฟสุดต่อ role
+ * (10 คน = เท่ากับ /panel orgchart ในดิสคอร์ด — ตัวเลขสองฝั่งต้องตรงกัน)
  * คืนเป็น groups: [{ groupName, roles: [{ roleId, roleName, roleColor, memberCount, totalScore, top: [...] }] }]
  * role ที่ยังไม่มีใครแอคทีฟเลยก็ยังอยู่ในผลลัพธ์ (memberCount อาจ > 0 แต่ top ว่าง)
  */
