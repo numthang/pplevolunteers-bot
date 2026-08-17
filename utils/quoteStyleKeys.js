@@ -91,13 +91,18 @@ const normalizeStyle = key => LEGACY_STYLE_ALIAS[key] || key;
 // ── ตำแหน่งลายน้ำ (2026-08-10) ───────────────────────────────────────────────
 // 6 จุดที่ utils/watermarkImage.js calcPos() วางลายน้ำได้ · เรียงเป็นตาราง 2 แถว × 3 คอลัมน์
 const WM_SPOTS = ['top-left', 'top-center', 'top-right', 'bottom-left', 'bottom-center', 'bottom-right'];
-const PLAIN_PREFIX = 'plain-';
 
 /**
  * ช่องที่ลายน้ำลงได้โดย**ไม่ทับตัวหนังสือ**ของการ์ดคำคม
  *
  * @param {string|null} quoteStyle คีย์สไตล์จาก post_episode_media.quote_style · null = ไม่ใช่การ์ดคำคม
- * @returns {string[]} ช่องที่ว่าง · **[] = ห้ามแปะลายน้ำเลย**
+ * @returns {string[]} ช่องที่ว่าง — **ต้องไม่คืน [] เด็ดขาด** (ดูกฎข้างล่าง)
+ *
+ * ⛔ **ห้ามเพิ่มเงื่อนไข "รูปแบบนี้ไม่ต้องแปะลายน้ำ" ที่นี่** (user เคาะ 2026-08-17)
+ *    ที่นี่ตอบได้แค่ "ลงมุมไหนแล้วไม่ทับตัวหนังสือ" ไม่ใช่ที่ตัดสินว่า *ควร* แปะไหม — คนเลือกเอง
+ *    เคสจริง: เคยตัด `plain-*` ทิ้งทั้งกลุ่มเพราะการ์ด `plain-logo` เอาลายน้ำไปทำลายพื้นอยู่แล้ว
+ *    ผลคือ `plain-flat/fade/mark` ที่ไม่มีโลโก้เลยก็โดนด้วย → เลือกลายน้ำแล้วไม่มีอะไรขึ้น
+ *    ไม่มี error ไม่มี log (bug-416) · อยากเตือนเรื่องโลโก้ซ้ำ = ไปเตือนใน UI ตอนเลือก
  *
  * ตำแหน่งข้อความยืนยันกับ renderer จริงใน utils/quoteStyles.js แล้วทุกแถว — อย่าเดาจากชื่อ layout:
  *   pillar/frame ชื่อบอกว่าเสาซ้าย/กรอบขวา แต่ **ข้อความอยู่ล่างทั้งคู่** (renderBorder/renderBorder2
@@ -107,9 +112,6 @@ const PLAIN_PREFIX = 'plain-';
 function watermarkSpotsFor(quoteStyle) {
   if (!quoteStyle) return WM_SPOTS;                    // รูปธรรมดา ไม่ใช่การ์ด → ลงได้ทุกช่อง
   const key = normalizeStyle(String(quoteStyle));
-
-  // การ์ดพื้นสีมีโลโก้วาดอยู่ในดีไซน์ตั้งแต่ตอนสร้าง (renderPlainCard) — แปะซ้ำ = โลโก้ 2 อัน
-  if (key.startsWith(PLAIN_PREFIX)) return [];
 
   const { layout } = splitStyle(key);
   if (!layout) return WM_SPOTS;
@@ -131,7 +133,7 @@ function watermarkSpotsFor(quoteStyle) {
  */
 function pickWatermarkPos(wmPos, quoteStyle) {
   const allowed = watermarkSpotsFor(quoteStyle);
-  if (!allowed.length) return null;
+  if (!allowed.length) return null;                    // กันพลาดเฉยๆ — watermarkSpotsFor ห้ามคืน []
   if (wmPos && wmPos !== 'random') return wmPos;       // เลือกเอง = เคารพเสมอ แม้จะทับข้อความ
   return allowed[Math.floor(Math.random() * allowed.length)];
 }
