@@ -28,13 +28,17 @@ import LabelChips from './LabelChips.jsx'
 // แสดงต่อช่องสูงสุดเท่านี้ — ช่อง "เสร็จ" โตไม่มีเพดาน ไม่ควรวาดหมดทุกใบ
 const MAX_PER_COLUMN = 40
 
-const COLUMN_ACCENT = {
-  backlog: 'border-t-gray-400',
-  doing: 'border-t-blue-500',
-  review: 'border-t-amber-500',
-  ready: 'border-t-purple-500',
-  done: 'border-t-green-500',
-  cancelled: 'border-t-gray-300',
+// แถบสีหัวช่อง — เป็น **element ของตัวเอง (พื้นหลัง) ไม่ใช่ border-t-<สี>**
+// เดิมใช้ border-t-4 + สี แล้วดาร์กโหมดกลายเป็นเทาหมด เพราะ `dark:border-disc-border`
+// เป็น variant ที่ออกมาทีหลังใน stylesheet → ทับสีขอบบนทิ้ง (ลำดับ CSS ไม่ใช่ลำดับ class ใน HTML)
+// ใช้ bg แยกชิ้นแล้วไม่ต้องลุ้น cascade อีก · สีชุดเดียวใช้ได้ทั้ง 2 โหมด (500 เข้มพอบนพื้นดำ)
+const COLUMN_BAR = {
+  backlog: 'bg-gray-400',
+  doing: 'bg-blue-500',
+  review: 'bg-amber-500',
+  ready: 'bg-purple-500',
+  done: 'bg-green-500',
+  cancelled: 'bg-gray-300 dark:bg-gray-500',   // เทาอ่อนบนพื้นดำจางเกินจนดูเหมือนไม่มีแถบ
 }
 
 function dueState(dueAt) {
@@ -201,16 +205,18 @@ export default function BoardView() {
                   setDraggingId(null)
                   moveTo(e.dataTransfer.getData('text/plain'), status)
                 }}
-                className={`shrink-0 w-72 rounded-lg border-t-4 ${COLUMN_ACCENT[status]} border border-warm-200 dark:border-disc-border p-2 flex flex-col gap-2 ${
+                className={`shrink-0 w-72 rounded-lg border border-warm-200 dark:border-disc-border overflow-hidden flex flex-col ${
                   overColumn === status ? 'bg-teal/5 dark:bg-teal/10' : 'bg-warm-50/50 dark:bg-white/[0.02]'
                 }`}
               >
-                <div className="flex items-center justify-between px-1">
+                <div className={`h-1 w-full ${COLUMN_BAR[status]}`} />
+
+                <div className="flex items-center justify-between px-3 pt-2">
                   <h2 className="text-base font-semibold text-warm-900 dark:text-disc-text">{t(`status.${status}`)}</h2>
                   <span className="text-base text-warm-400 dark:text-disc-muted">{list.length}</span>
                 </div>
 
-                <div className="flex flex-col gap-2 min-h-[4rem]">
+                <div className="flex flex-col gap-2 min-h-[4rem] p-2">
                   {shown.map((card) => (
                     <BoardCard
                       key={card.id}
