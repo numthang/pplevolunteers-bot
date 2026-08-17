@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl'
 import { Plus, X, Clock, User, ListChecks, AlertTriangle } from 'lucide-react'
 import { formatRef } from '@/lib/kanbanAccess.js'
 import CardModal from './CardModal.jsx'
+import LabelChips from './LabelChips.jsx'
 
 // สี dot ต่อประเภทสถานะ — ตัวอักษรผ่าน t('status.<key>') เสมอ ที่นี่เก็บแค่สี (ไม่ใช่ข้อความ)
 const STATUS_DOT = {
@@ -94,6 +95,9 @@ function HomeworkRow({ card, t, showClaim, onClaim, onDone, onOpen, busy }) {
           </span>
         )}
       </div>
+
+      {/* ป้าย — แถวของตัวเอง ไม่ปนแถว meta (กำหนดส่ง/เจ้าภาพ) ไม่งั้นบรรทัดยาวจนอ่านไม่ออกบนมือถือ */}
+      <LabelChips labels={card.labels} />
 
       <div className="flex justify-end">
         {showClaim ? (

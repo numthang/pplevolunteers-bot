@@ -228,10 +228,27 @@ export async function setCardStatus(orgId, id, statusType) {
   return rows[0] ? await getCard(orgId, id) : null
 }
 
-/** ตั้ง/ถอดเจ้าภาพ · ถอดเจ้าภาพออกจากงานที่ไม่ได้อยู่ backlog ไม่ได้ (DB CHECK จะเตะ) */
+/**
+ * ตั้ง/ถอดเจ้าภาพ — สถานะขยับตามให้เอง ทั้ง 2 ทาง
+ *
+ * ⭐ กติกาเดียวกับ setCardStatus/createCard: "backlog = รอรับ ยังไม่มีเจ้าภาพ"
+ *    - ตั้งเจ้าภาพให้การ์ดที่อยู่ backlog → ต้องขยับเป็น doing
+ *      (ไม่งั้นได้ "รอรับ + มีเจ้าภาพ" = สภาพขัดกันเองแบบ bug-406 · ไม่โผล่ทั้งกอง "ยังไม่มีคนรับ"
+ *       เพราะกรอง owner IS NULL และก็ไม่ควรอยู่กอง "ต้องส่ง")
+ *    - ถอดเจ้าภาพ → ต้องกลับ backlog + ล้าง completed_at ไม่งั้นชน DB CHECK
+ *    บังคับที่นี่ที่เดียว ไม่ใช่ที่ route — ทุกทางเข้า (เว็บ/บอท/cron) ต้องได้กติกาเดียวกัน
+ */
 export async function setCardOwner(orgId, id, ownerUserId) {
+  // ⚠️ cast $3 ให้ชัด — พารามิเตอร์ตัวเดียวถูกใช้ทั้งค่าที่เซ็ตและเงื่อนไขใน CASE (42P08 แบบเดียวกับ setCardStatus)
   const { rows } = await pool.query(
-    `UPDATE kanban_cards SET owner_user_id = $3, updated_at = now()
+    `UPDATE kanban_cards
+        SET owner_user_id = $3::int,
+            status_type = CASE
+              WHEN $3::int IS NULL           THEN 'backlog'
+              WHEN status_type = 'backlog'   THEN 'doing'
+              ELSE status_type END,
+            completed_at = CASE WHEN $3::int IS NULL THEN NULL ELSE completed_at END,
+            updated_at = now()
       WHERE org_id = $1 AND id = $2 RETURNING id`,
     [orgId, id, ownerUserId]
   )

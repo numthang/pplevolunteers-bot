@@ -65,8 +65,8 @@ export async function PATCH(req, { params }) {
   if (body.ownerUserId !== undefined) {
     if (!canAssignOwner(card, access, userId)) return err(403, 'ไม่มีสิทธิ์เปลี่ยนเจ้าภาพ')
     const next = body.ownerUserId ? Number(body.ownerUserId) : null
-    // ถอดเจ้าภาพออก = ต้องกลับไปช่องรอรับด้วย ไม่งั้นชน CHECK ของ DB
-    if (!next && card.status_type !== 'backlog') await cardDB.setCardStatus(orgId, card.id, 'backlog')
+    // สถานะขยับตามเจ้าภาพให้เองใน setCardOwner (ถอด → backlog · ตั้งให้การ์ด backlog → doing)
+    // ห้ามย้ายกติกานี้กลับมาไว้ที่นี่ — บอท/cron เรียก db ตรงๆ ไม่ผ่าน route
     return Response.json({ card: await cardDB.setCardOwner(orgId, card.id, next) })
   }
 

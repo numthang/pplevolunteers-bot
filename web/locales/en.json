@@ -1771,7 +1771,20 @@
       "addItem": "Add",
       "addItemPlaceholder": "Add a subtask",
       "removeItem": "Remove this subtask",
-      "archive": "Archive"
+      "archive": "Archive",
+      "labelsLabel": "Labels",
+      "noLabels": "No labels yet",
+      "editLabels": "Edit labels",
+      "doneEditingLabels": "Done",
+      "noLabelsInOrg": "This organization has no labels yet",
+      "ungrouped": "Ungrouped",
+      "assignOwner": "Assign",
+      "changeOwner": "Change owner",
+      "removeOwner": "Remove owner",
+      "confirmRemoveOwner": "Remove the owner? This homework goes back to the backlog for someone else to pick up.",
+      "searchPeoplePlaceholder": "Type a name to assign",
+      "searchPeopleHint": "Type at least 2 characters",
+      "noPeopleFound": "No one found"
     },
     "saveFailed": "Save failed"
   }

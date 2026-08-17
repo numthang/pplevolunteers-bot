@@ -16,6 +16,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { X, Loader2, Check, Trash2, Plus, AlertTriangle, UserPlus } from 'lucide-react'
 import { formatRef, STATUS_TYPES } from '@/lib/kanbanAccess.js'
+import LabelPicker from './LabelPicker.jsx'
+import OwnerPicker from './OwnerPicker.jsx'
 
 const AUTOSAVE_MS = 800
 
@@ -292,12 +294,13 @@ export default function CardModal({ cardId, onClose, onChanged }) {
                     className="h-11 px-3 text-base rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text focus:outline-none focus:ring-2 focus:ring-teal disabled:opacity-60"
                   />
                 </div>
-                <div className="min-w-[10rem]">
-                  <label className="block text-sm font-medium text-warm-700 dark:text-disc-muted mb-1">{t('modal.ownerLabel')}</label>
-                  <p className="h-11 flex items-center text-base text-warm-900 dark:text-disc-text">
-                    {card.owner_name || t('modal.noOwner')}
-                  </p>
-                </div>
+                <OwnerPicker
+                  card={card}
+                  canEdit={can.edit}
+                  canClaim={can.claim}
+                  onError={setActionError}
+                  onPatch={patch}
+                />
               </div>
 
               {/* สถานะ — ปุ่มเรียงตามลำดับงานจริง ไม่ใช่ dropdown (แตะง่ายบนมือถือ) */}
@@ -344,6 +347,19 @@ export default function CardModal({ cardId, onClose, onChanged }) {
                   />
                 )}
               </div>
+
+              {/* ป้าย — ติด/ถอดยิงทันที ไม่ผ่าน lockToken (ไม่ใช่ช่องพิมพ์ที่ autosave) */}
+              <LabelPicker
+                cardId={cardId}
+                labels={card.labels || []}
+                readOnly={readOnly}
+                onError={setActionError}
+                onCardChanged={(fresh) => {
+                  setCard(fresh)
+                  lockToken.current = fresh.lock_token
+                  onChanged?.()
+                }}
+              />
 
               {/* คนช่วย */}
               <div>

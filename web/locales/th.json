@@ -1771,7 +1771,20 @@
       "addItem": "เพิ่ม",
       "addItemPlaceholder": "เพิ่มงานย่อย",
       "removeItem": "ลบงานย่อยนี้",
-      "archive": "เก็บเข้ากรุ"
+      "archive": "เก็บเข้ากรุ",
+      "labelsLabel": "ป้าย",
+      "noLabels": "ยังไม่มีป้าย",
+      "editLabels": "แก้ป้าย",
+      "doneEditingLabels": "เสร็จแล้ว",
+      "noLabelsInOrg": "องค์กรนี้ยังไม่มีป้ายให้เลือก",
+      "ungrouped": "ไม่มีกลุ่ม",
+      "assignOwner": "มอบหมาย",
+      "changeOwner": "เปลี่ยนเจ้าภาพ",
+      "removeOwner": "ถอดเจ้าภาพ",
+      "confirmRemoveOwner": "ถอดเจ้าภาพออก? การบ้านใบนี้จะกลับไปอยู่ช่อง รอรับ ให้คนอื่นมารับ",
+      "searchPeoplePlaceholder": "พิมพ์ชื่อคนที่จะมอบหมาย",
+      "searchPeopleHint": "พิมพ์อย่างน้อย 2 ตัวอักษร",
+      "noPeopleFound": "ไม่พบคนที่ค้นหา"
     },
     "saveFailed": "บันทึกไม่สำเร็จ"
   }
