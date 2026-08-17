@@ -61,7 +61,7 @@ async function resyncGuild(guild) {
   const inDb = new Map(rows.map(r => [r.discord_id, r.roles]));
   console.log(`[${guild.name}] Fetched ${total} members (ในฐาน ${inDb.size}), comparing...`);
 
-  let changed = 0, missing = 0, same = 0, errors = 0, done = 0;
+  let changed = 0, missing = 0, same = 0, reordered = 0, errors = 0, done = 0;
   const samples = [];
 
   for (const member of members.values()) {
@@ -71,11 +71,15 @@ async function resyncGuild(guild) {
       const has = inDb.has(member.id);
       const before = has ? inDb.get(member.id) : null;
 
-      if (has && before === after) { same++; }
-      else {
+      // ⚠️ เทียบเป็น "ชุดยศ" ไม่ใช่ข้อความตรงๆ — ลำดับที่ Discord คืนมาไม่ตรงกับลำดับที่เก็บไว้
+      // เทียบข้อความจะนับคนที่ยศเหมือนเดิมเป๊ะว่า "ไม่ตรง" (เจอตอน dry run 2026-08-18)
+      const d = diffRoles(before, after);
+      if (has && !d.added.length && !d.removed.length) {
+        if (before !== after) reordered++;   // ชุดเดียวกัน แค่เรียงคนละแบบ = ไม่ต้องเขียน
+        else same++;
+      } else {
         if (!has) missing++; else changed++;
         if (samples.length < 5) {
-          const d = diffRoles(before, after);
           samples.push(`    ${member.displayName}${has ? '' : ' (ยังไม่มีในฐาน)'}` +
             (d.added.length ? ` +[${d.added.join(', ')}]` : '') +
             (d.removed.length ? ` -[${d.removed.join(', ')}]` : ''));
@@ -94,7 +98,7 @@ async function resyncGuild(guild) {
   process.stdout.write('\n');
   if (samples.length) console.log('  ตัวอย่างที่จะเปลี่ยน:\n' + samples.join('\n'));
   console.log(`[${guild.name}] Done: ${changed} ยศไม่ตรง, ${missing} ยังไม่มีในฐาน, ` +
-              `${same} ตรงอยู่แล้ว, ${errors} errors${DRY ? ' (DRY RUN)' : ''}`);
+              `${same + reordered} ตรงอยู่แล้ว (ในนั้น ${reordered} แค่ลำดับต่าง), ${errors} errors${DRY ? ' (DRY RUN)' : ''}`);
   return { changed, missing, errors };
 }
 
