@@ -19,7 +19,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { Clock, User, ListChecks, AlertTriangle, LayoutList } from 'lucide-react'
+import { Clock, User, ListChecks, AlertTriangle, LayoutList, ChevronDown, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import { STATUS_TYPES } from '@/lib/kanbanAccess.js'
 import CardModal from './CardModal.jsx'
@@ -116,6 +116,9 @@ export default function BoardView() {
   const [openCardId, setOpenCardId] = useState(null)
   const [draggingId, setDraggingId] = useState(null)
   const [overColumn, setOverColumn] = useState(null)
+  // พับ/กางรายสถานะ — มีผลเฉพาะจอต่ำกว่า xl (จอใหญ่เป็นกระดาน 6 ช่อง กางเสมอ)
+  // ค่าที่ไม่ได้กดเอง = auto: ช่องที่มีการ์ดกางไว้ ช่องว่างพับเก็บ
+  const [openState, setOpenState] = useState({})
 
   const load = useCallback(async () => {
     setLoadError('')
@@ -192,13 +195,16 @@ export default function BoardView() {
           {t('loading')}
         </div>
       ) : (
-        // มือถือ = ปัดดูทีละช่อง (ลากด้วยนิ้วไม่ได้ ให้เปิดการ์ดแล้วกดปุ่มสถานะแทน)
-        // xl ขึ้นไป: 6 ช่องหารความกว้างจอพอดี ไม่มีแถบเลื่อนแนวนอน (user ไม่เอาของที่ล้นจอ)
-        // จอเล็กกว่านั้น: กลับไปโหมดปัดแนวนอน เพราะ 6 ช่องบนจอ 1,000px = ช่องละ 160px อ่านไม่ออก
-        <div className="flex gap-2 overflow-x-auto pb-3 xl:grid xl:grid-cols-6 xl:overflow-x-visible">
+        // 2 โหมดเท่านั้น — **ไม่มีการปัดแนวนอนที่ไหนเลย** (user เกลียดการปัด · เคยทำ snap แบบ Trello แล้วไม่เอา)
+        //   xl (≥1280): กระดาน 6 ช่องหารความกว้างจอ
+        //   เล็กกว่านั้น: กระดานพับลงเป็นแถวแนวตั้งซ้อนกัน หัวข้อละสถานะ กดพับ/กางได้
+        //                 (แนวเดียวกับ Notion/Linear/Asana บนมือถือ) เลื่อนขึ้นลงอย่างเดียว
+        // ⚠️ มือถือลากการ์ดไม่ได้ (HTML5 DnD) — เปลี่ยนสถานะโดยเปิดการ์ดแล้วกดปุ่ม (dragHint บอกไว้)
+        <div className="flex flex-col gap-3 xl:grid xl:grid-cols-6 xl:gap-2">
           {STATUS_TYPES.map((status) => {
             const list = cards.filter((c) => c.status_type === status)
             const shown = list.slice(0, MAX_PER_COLUMN)
+            const isOpen = openState[status] ?? list.length > 0
             return (
               <div
                 key={status}
@@ -210,18 +216,28 @@ export default function BoardView() {
                   setDraggingId(null)
                   moveTo(e.dataTransfer.getData('text/plain'), status)
                 }}
-                className={`shrink-0 w-64 xl:w-auto xl:min-w-0 rounded-lg border border-warm-200 dark:border-disc-border overflow-hidden flex flex-col ${
+                className={`w-full xl:min-w-0 rounded-lg border border-warm-200 dark:border-disc-border overflow-hidden flex flex-col ${
                   overColumn === status ? 'bg-teal/5 dark:bg-teal/10' : 'bg-warm-50/50 dark:bg-white/[0.02]'
                 }`}
               >
                 <div className={`h-1 w-full ${COLUMN_BAR[status]}`} />
 
-                <div className="flex items-center justify-between px-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setOpenState((s) => ({ ...s, [status]: !isOpen }))}
+                  className="flex items-center justify-between gap-2 px-3 pt-2 pb-1 text-left xl:cursor-default"
+                >
                   <h2 className="text-base font-semibold text-warm-900 dark:text-disc-text truncate">{t(`status.${status}`)}</h2>
-                  <span className="text-base text-warm-400 dark:text-disc-muted">{list.length}</span>
-                </div>
+                  <span className="flex items-center gap-1 shrink-0 text-base text-warm-400 dark:text-disc-muted">
+                    {list.length}
+                    {/* ลูกศรมีความหมายเฉพาะตอนพับได้ = จอเล็ก · จอใหญ่กางเสมอเลยซ่อนทิ้ง */}
+                    {isOpen
+                      ? <ChevronDown size={16} className="xl:hidden" />
+                      : <ChevronRight size={16} className="xl:hidden" />}
+                  </span>
+                </button>
 
-                <div className="flex flex-col gap-2 min-h-[4rem] p-2">
+                <div className={`${isOpen ? 'flex' : 'hidden'} xl:flex flex-col gap-2 min-h-[4rem] p-2`}>
                   {shown.map((card) => (
                     <BoardCard
                       key={card.id}
