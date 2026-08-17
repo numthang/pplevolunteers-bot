@@ -21,7 +21,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { Clock, User, ListChecks, AlertTriangle, LayoutList } from 'lucide-react'
 import Link from 'next/link'
-import { STATUS_TYPES, formatRef } from '@/lib/kanbanAccess.js'
+import { STATUS_TYPES } from '@/lib/kanbanAccess.js'
 import CardModal from './CardModal.jsx'
 import LabelChips from './LabelChips.jsx'
 
@@ -67,12 +67,10 @@ function BoardCard({ card, t, onOpen, onDragStart, dragging }) {
         dragging ? 'opacity-40' : ''
       }`}
     >
-      <div className="flex items-baseline gap-1.5">
-        <span className="shrink-0 text-[11px] text-warm-400 dark:text-disc-muted">{formatRef(card.ref_no)}</span>
-        <h3 className="min-w-0 text-sm font-medium text-warm-900 dark:text-disc-text line-clamp-2">{card.title}</h3>
-      </div>
+      {/* ไม่มีรหัส K-42 บนหน้าการ์ด — ดูที่หัว CardModal (ยังใช้อ้างถึงการบ้านในดิสฯ อยู่) */}
+      <h3 className="text-sm font-medium text-warm-900 dark:text-disc-text line-clamp-2">{card.title}</h3>
 
-      {/* ชื่อกลุ่มไม่ต้องขึ้นบนกระดาน — การ์ดแคบ สีบอกกลุ่มอยู่แล้ว (ชื่อเต็มอยู่ใน title ตอน hover) */}
+      {/* ชื่อกลุ่มไม่ต้องขึ้นบนกระดาน — การ์ดแคบเกิน (ชื่อกลุ่มเต็มอยู่ใน tooltip ของชิป) */}
       <LabelChips labels={card.labels} showGroupName={false} max={3} />
 
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-warm-500 dark:text-disc-muted">

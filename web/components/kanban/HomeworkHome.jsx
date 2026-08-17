@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { Plus, X, Clock, User, ListChecks, AlertTriangle, Columns3 } from 'lucide-react'
 import Link from 'next/link'
-import { formatRef } from '@/lib/kanbanAccess.js'
 import CardModal from './CardModal.jsx'
 import LabelChips from './LabelChips.jsx'
 
@@ -54,10 +53,9 @@ function HomeworkRow({ card, t, showClaim, onClaim, onDone, onOpen, busy }) {
       className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-3 flex flex-col gap-2 cursor-pointer hover:border-teal focus:outline-none focus:ring-2 focus:ring-teal"
     >
       <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0 flex items-baseline gap-2">
-          <span className="shrink-0 text-xs text-warm-400 dark:text-disc-muted">{formatRef(card.ref_no)}</span>
-          <h3 className="min-w-0 text-base font-semibold text-warm-900 dark:text-disc-text truncate">{card.title}</h3>
-        </div>
+        {/* รหัส K-42 ไม่ขึ้นหน้าการ์ด (user 2026-08-17) — ยังใช้จริงตอนอ้างถึงการบ้านในดิสฯ
+            เลยเหลือไว้ในหัว CardModal ที่เดียว ไม่ได้เลิกใช้ทั้งระบบ */}
+        <h3 className="min-w-0 text-base font-semibold text-warm-900 dark:text-disc-text truncate">{card.title}</h3>
         <span className="shrink-0 flex items-center gap-1.5 text-xs font-medium text-warm-500 dark:text-disc-muted">
           <span className={`w-2 h-2 rounded-full ${STATUS_DOT[card.status_type] || 'bg-gray-400'}`} />
           {t(`status.${card.status_type}`)}

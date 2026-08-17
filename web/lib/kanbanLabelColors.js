@@ -8,15 +8,22 @@
  * ⚠️ class ต้องเขียนเต็มสตริง — Tailwind สแกน source แบบ static ถ้าต่อ `bg-${c}-100` เอาเองจะไม่มี CSS ออกมา
  */
 
+// พาสเทลจาง-ตัวหนังสือเข้ม แบบ AppFlowy/Notion (ตามภาพที่ user ส่งมา 2026-08-17)
+// 12 เฉด — พอให้ป้าย 29 อันไม่ซ้ำกันจนแยกไม่ออกในสายตา แต่ไม่เยอะจนดูมั่ว
+// dark: พื้นเข้มหม่น + ตัวหนังสือจางของเฉดเดียวกัน (พาสเทลจางบนพื้นดำ = แสบตา อ่านไม่ออก)
 const CHIP_PALETTE = [
-  'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
-  'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
-  'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
-  'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300',
-  'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300',
-  'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300',
-  'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300',
-  'bg-lime-100 text-lime-700 dark:bg-lime-900/40 dark:text-lime-300',
+  'bg-[#F3E5F5] text-[#6A1B9A] dark:bg-[#4A2E52]/60 dark:text-[#E1BEE7]',  // ม่วง
+  'bg-[#FCE4EC] text-[#AD1457] dark:bg-[#52293A]/60 dark:text-[#F8BBD0]',  // ชมพู
+  'bg-[#FFEBEE] text-[#C62828] dark:bg-[#532B2B]/60 dark:text-[#FFCDD2]',  // แดง
+  'bg-[#FFF3E0] text-[#E65100] dark:bg-[#4F3520]/60 dark:text-[#FFE0B2]',  // ส้ม
+  'bg-[#FFF8E1] text-[#F57F17] dark:bg-[#4C4020]/60 dark:text-[#FFF59D]',  // เหลือง
+  'bg-[#F1F8E9] text-[#558B2F] dark:bg-[#33461F]/60 dark:text-[#DCEDC8]',  // เขียวอ่อน
+  'bg-[#E8F5E9] text-[#2E7D32] dark:bg-[#24452A]/60 dark:text-[#C8E6C9]',  // เขียว
+  'bg-[#E0F2F1] text-[#00695C] dark:bg-[#1E4541]/60 dark:text-[#B2DFDB]',  // เขียวน้ำทะเล
+  'bg-[#E0F7FA] text-[#00838F] dark:bg-[#1D454B]/60 dark:text-[#B2EBF2]',  // ฟ้าอมเขียว
+  'bg-[#E3F2FD] text-[#1565C0] dark:bg-[#1E3A52]/60 dark:text-[#BBDEFB]',  // ฟ้า
+  'bg-[#E8EAF6] text-[#283593] dark:bg-[#2A2F52]/60 dark:text-[#C5CAE9]',  // น้ำเงิน
+  'bg-[#EFEBE9] text-[#5D4037] dark:bg-[#43352F]/60 dark:text-[#D7CCC8]',  // น้ำตาล
 ]
 
 // ป้ายที่ไม่มีกลุ่ม — สีกลางๆ ไม่แย่งสายตากับกลุ่มที่ตั้งใจแยกสี
@@ -28,12 +35,20 @@ function hash(str) {
   return Math.abs(h)
 }
 
-/** class ของชิป 1 ใบ — ป้ายที่ตั้งสีเองใน DB ชนะเสมอ (color เก็บเป็น class เต็มสตริง) */
+/**
+ * class ของชิป 1 ใบ — ป้ายที่ตั้งสีเองใน DB ชนะเสมอ (color เก็บเป็น class เต็มสตริง)
+ *
+ * ⭐ สีผูกกับ **ชื่อป้าย** ไม่ใช่ชื่อกลุ่ม (เปลี่ยน 2026-08-17 ตามภาพตัวอย่างที่ user ส่งมา)
+ *    รอบแรกทำสีต่อกลุ่ม — อ่านกลุ่มง่ายก็จริง แต่บนกระดานที่ไม่โชว์ชื่อกลุ่ม
+ *    ป้ายทั้งกองกลายเป็นสีเดียวกันหมด แยกไม่ออกว่าใบไหนคือใบไหน
+ *    ใส่ชื่อกลุ่มเป็นเกลือด้วย — ชื่อป้ายซ้ำข้ามกลุ่มจะได้ไม่ได้สีเดียวกันโดยบังเอิญ
+ */
 export function chipClass(label) {
   if (label?.color) return label.color
-  const group = label?.group ?? label?.group_name
-  if (!group) return NO_GROUP_CHIP
-  return CHIP_PALETTE[hash(String(group)) % CHIP_PALETTE.length]
+  const name = label?.name
+  if (!name) return NO_GROUP_CHIP
+  const group = label?.group ?? label?.group_name ?? ''
+  return CHIP_PALETTE[hash(`${group}/${name}`) % CHIP_PALETTE.length]
 }
 
 /**

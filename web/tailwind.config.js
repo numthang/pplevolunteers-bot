@@ -1,7 +1,9 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   darkMode: 'class',
-  content: ['./app/**/*.{js,jsx}', './components/**/*.{js,jsx}'],
+  // ⚠️ ต้องมี lib/ ด้วย — คลาสที่ประกาศไว้ใน lib (เช่น จานสีชิปป้ายใน lib/kanbanLabelColors.js)
+  //    ถ้าไม่สแกน = CSS ไม่ถูก generate = ชิปไม่มีสีพื้นเลยทั้งที่โค้ดถูก (เจอ 2026-08-17)
+  content: ['./app/**/*.{js,jsx}', './components/**/*.{js,jsx}', './lib/**/*.{js,jsx}'],
   theme: {
     extend: {
       colors: {
