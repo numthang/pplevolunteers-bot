@@ -1538,7 +1538,11 @@
       "topPerGroup": "Top {n}/กลุ่ม",
       "allRoles": "ทั้งหมด",
       "rolesShown": "แสดง {shown} จาก {total} บทบาทที่มีความเคลื่อนไหว",
-      "hiddenInactive": "ซ่อนบทบาทที่ไม่มีใครแอคทีฟแล้ว"
+      "hiddenInactive": "ซ่อนบทบาทที่ไม่มีใครแอคทีฟแล้ว",
+      "fullscreen": "เต็มจอ",
+      "exitFullscreen": "ออกจากเต็มจอ",
+      "hideRail": "ซ่อนแผงขวา",
+      "showRail": "แสดงแผงขวา"
     }
   },
   "posts": {

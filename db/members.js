@@ -79,16 +79,23 @@ async function upsertMemberFromDiscord(member) {
   const userId = await upsertUserByDiscord(member.id, { username: member.user.username });
   const orgId = await orgIdOfGuild(member.guild.id);
 
+  // เก็บเฉพาะรูปที่ตั้งเองจริง — displayAvatarURL คืน default avatar ให้คนที่ไม่ได้ตั้งด้วย
+  // ซึ่งไม่มีประโยชน์ (ผังทีมบนเว็บวาด placeholder เองอยู่แล้ว) · COALESCE กันล้างของเดิมเป็น NULL
+  const avatar = member.user.avatar
+    ? member.user.displayAvatarURL({ extension: 'webp', size: 256 })
+    : null;
+
   const sql = `
   INSERT INTO org_members
-    (user_id, org_id, guild_id, display_name, province, roles, interests)
-  VALUES ($1, $2, $3, $4, $5, $6, $7)
+    (user_id, org_id, guild_id, display_name, province, roles, interests, avatar)
+  VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
   ON CONFLICT (user_id, guild_id) WHERE guild_id IS NOT NULL DO UPDATE SET
     org_id = COALESCE(EXCLUDED.org_id, org_members.org_id),
     display_name = EXCLUDED.display_name,
     province = EXCLUDED.province,
     roles = EXCLUDED.roles,
     interests = EXCLUDED.interests,
+    avatar = COALESCE(EXCLUDED.avatar, org_members.avatar),
     roles_assigned_at = NOW()
   `;
   await pool.query(sql, [
@@ -99,6 +106,7 @@ async function upsertMemberFromDiscord(member) {
     allProvinces,
     allRoles,
     interestRoles,
+    avatar,
   ]);
 
   await resyncDiscordRolesForUser(userId);

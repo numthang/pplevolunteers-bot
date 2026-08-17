@@ -1,7 +1,7 @@
 'use client'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { Search, RotateCcw, Loader2, Maximize2 } from 'lucide-react'
+import { Search, RotateCcw, Loader2, Maximize2, Minimize2, PanelRightClose, PanelRightOpen } from 'lucide-react'
 
 // ผังทีมแบบเครือข่าย — เวอร์ชันเว็บของ /orgchart (ดิสคอร์ด)
 //
@@ -55,12 +55,20 @@ function pillWidth(title, sub) {
   return Math.max(46, Math.max((title || '').length * 7.1, sub ? sub.length * 5.9 : 0) + 22)
 }
 
-// avatar จริงของ Discord โหลดไม่ได้ (CSP / ไม่ได้ตั้ง remotePatterns ให้ next/image)
-// → วาดวงกลมสีจากชื่อแบบ deterministic ให้ยังแยกคนออกจากกันด้วยสีได้
-function avatarMarkup(name, r) {
+// รูปโปรไฟล์: ใช้ avatar จริงจาก Discord ถ้ามี (cdn.discordapp.com อนุญาตแล้วใน next.config)
+// แต่ org_members.avatar ยังว่างเกือบทั้งหมด (3/5550 ตอนเขียน — รอ backfillAvatars.js)
+// → วาดวงกลมสีจากชื่อไว้ข้างใต้เสมอ เป็นทั้ง placeholder และ fallback ตอนรูปโหลดไม่ขึ้น
+function escAttr(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+function avatarMarkup(name, r, url) {
   const seed = hash(name || '?')
   const bg = AVATAR_BG[seed % AVATAR_BG.length]
   const clipId = `oc-c${seed}-${Math.round(r * 10)}`
+  const photo = url
+    ? `<image href="${escAttr(url)}" x="${-r}" y="${-r}" width="${r * 2}" height="${r * 2}"
+             clip-path="url(#${clipId})" preserveAspectRatio="xMidYMid slice" />`
+    : ''
   return `
     <clipPath id="${clipId}"><circle r="${r}"/></clipPath>
     <g clip-path="url(#${clipId})">
@@ -68,6 +76,7 @@ function avatarMarkup(name, r) {
       <circle cy="${-r * 0.14}" r="${r * 0.33}" fill="#fff" opacity="0.94"/>
       <ellipse cy="${r * 0.68}" rx="${r * 0.56}" ry="${r * 0.5}" fill="#fff" opacity="0.94"/>
     </g>
+    ${photo}
     <circle class="oc-avatar-border" r="${r}"/>`
 }
 
@@ -250,11 +259,15 @@ export default function OrgChartClient() {
   const [perGroup, setPerGroup] = useState(5)       // Top N บทบาทต่อกลุ่ม (0 = ทั้งหมด)
   const [hiddenGroups, setHiddenGroups] = useState(() => new Set())
   const [expandedRoles, setExpandedRoles] = useState(() => new Set())
+  const [autoExpand, setAutoExpand] = useState(true)   // default: แตกทุกบทบาทที่แสดงอยู่
   const [selected, setSelected] = useState(null)
   const [query, setQuery] = useState('')
   const [view, setView] = useState('chart')
   const [isDark, setIsDark] = useState(false)
+  const [isFull, setIsFull] = useState(false)
+  const [railOpen, setRailOpen] = useState(true)
 
+  const cardRef = useRef(null)
   const svgRef = useRef(null)
   const nodesRef = useRef([])
   const edgesRef = useRef([])
@@ -276,7 +289,7 @@ export default function OrgChartClient() {
       .then(r => r.json().then(d => ({ ok: r.ok, d })))
       .then(({ ok, d }) => {
         // ข้อมูลชุดใหม่ → สิ่งที่แตกไว้เป็น snapshot เก่าแล้ว ปิดลงให้หมด
-        if (ok) { setData(d); setExpandedRoles(new Set()); setSelected(null) }
+        if (ok) { setData(d); setExpandedRoles(new Set()); setAutoExpand(true); setSelected(null) }
         else setError(d.error || t('loadFailed'))
       })
       .catch(() => setError(t('loadFailed')))
@@ -320,17 +333,24 @@ export default function OrgChartClient() {
 
   const shownRoles = useMemo(() => visibleGroups.reduce((s, g) => s + g.roles.length, 0), [visibleGroups])
 
+  const shownRoleIds = useMemo(() => visibleGroups.flatMap(g => g.roles.map(r => r.roleId)), [visibleGroups])
+  // ชุดที่ "แตกอยู่จริง" — โหมด auto = ทุกบทบาทที่แสดงอยู่
+  const effExpanded = useMemo(
+    () => (autoExpand ? new Set(shownRoleIds) : expandedRoles),
+    [autoExpand, shownRoleIds, expandedRoles]
+  )
+
   const layoutKey = useMemo(() => [
     data?.guildId || '', days, perGroup, query.trim(),
     visibleGroups.map(g => `${g.groupName}:${g.roles.length}`).join('|'),
-    [...expandedRoles].sort().join(','),
-  ].join('#'), [data?.guildId, days, perGroup, query, visibleGroups, expandedRoles])
+    [...effExpanded].sort().join(','),
+  ].join('#'), [data?.guildId, days, perGroup, query, visibleGroups, effExpanded])
 
   const storageKey = data?.guildId ? `orgchart-pos:${data.guildId}` : null
 
   useEffect(() => {
     if (!visibleGroups.length) { nodesRef.current = []; edgesRef.current = []; return }
-    const { nodes, edges } = buildLayout(visibleGroups, expandedRoles, t)
+    const { nodes, edges } = buildLayout(visibleGroups, effExpanded, t)
     if (storageKey) {
       try {
         const saved = JSON.parse(localStorage.getItem(storageKey) || '{}')
@@ -403,7 +423,7 @@ export default function OrgChartClient() {
         emo.textContent = GROUP_EMOJI[n.group] || '📋'; wrap.appendChild(emo)
         wrap.appendChild(pillNode(n.r + 11, { title: n.label, bg: color, titleColor: '#fff', fs: 11 }))
       } else if (n.kind === 'role') {
-        wrap.innerHTML = avatarMarkup(n.role.top[0]?.name || n.label, n.r)
+        wrap.innerHTML = avatarMarkup(n.role.top[0]?.name || n.label, n.r, n.role.top[0]?.avatar)
         hit(n.r + 10, 32)
         wrap.appendChild(el('circle', { r: n.r, class: 'oc-sel-ring' }))
         // จุดมุมบนขวา = คลิกแล้วแตกคนได้ / กำลังแตกอยู่
@@ -415,7 +435,7 @@ export default function OrgChartClient() {
           titleColor: 'currentColor', subColor: 'currentColor',
         }))
       } else {
-        wrap.innerHTML = avatarMarkup(n.person.name, n.r)
+        wrap.innerHTML = avatarMarkup(n.person.name, n.r, n.person.avatar)
         hit(n.r + 10, 32)
         const badge = el('g', { transform: `translate(${n.r * 0.72} ${-n.r * 0.72})` })
         badge.appendChild(el('circle', { r: 8, fill: color, class: 'oc-rank-dot' }))
@@ -503,7 +523,7 @@ export default function OrgChartClient() {
 
   function resetLayout() {
     if (storageKey) { try { localStorage.removeItem(storageKey) } catch { /* ไม่มีอะไรให้ลบ */ } }
-    const { nodes, edges } = buildLayout(visibleGroups, expandedRoles, t)
+    const { nodes, edges } = buildLayout(visibleGroups, effExpanded, t)
     nodesRef.current = nodes; edgesRef.current = edges
     viewRef.current = null
     draw()
@@ -513,25 +533,45 @@ export default function OrgChartClient() {
     if (node.kind === 'group') {
       // คลิกกลุ่ม = แตก/ยุบทุกบทบาทที่แสดงอยู่ในกลุ่มนั้นรวดเดียว
       const ids = visibleGroups.find(g => g.groupName === node.group)?.roles.map(r => r.roleId) || []
-      setExpandedRoles(prev => {
-        const next = new Set(prev)
-        const allOn = ids.length > 0 && ids.every(id => next.has(id))
-        ids.forEach(id => allOn ? next.delete(id) : next.add(id))
-        return next
-      })
+      const base = new Set(effExpanded)
+      const allOn = ids.length > 0 && ids.every(id => base.has(id))
+      ids.forEach(id => allOn ? base.delete(id) : base.add(id))
+      setAutoExpand(false); setExpandedRoles(base)
       return
     }
     if (node.kind === 'role') {
       setSelected(node.role)
-      setExpandedRoles(prev => {
-        const next = new Set(prev)
-        next.has(node.role.roleId) ? next.delete(node.role.roleId) : next.add(node.role.roleId)
-        return next
-      })
+      const base = new Set(effExpanded)
+      base.has(node.role.roleId) ? base.delete(node.role.roleId) : base.add(node.role.roleId)
+      setAutoExpand(false); setExpandedRoles(base)
       return
     }
     if (node.kind === 'person') setSelected(node.role)
   }
+
+  // ── เต็มจอ (Fullscreen API) — layout ของ /bot บีบไว้ที่ max-w-5xl จึงขยายในหน้าไม่ได้จริง
+  useEffect(() => {
+    const onChange = () => {
+      const on = document.fullscreenElement === cardRef.current
+      setIsFull(on)
+      // ขนาด svg เปลี่ยน → viewBox เดิมจะเพี้ยนสัดส่วน ต้องจัดกรอบใหม่
+      requestAnimationFrame(() => fitView())
+    }
+    document.addEventListener('fullscreenchange', onChange)
+    return () => document.removeEventListener('fullscreenchange', onChange)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  async function toggleFullscreen() {
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen()
+      else await cardRef.current?.requestFullscreen()
+    } catch { /* เบราว์เซอร์ไม่ให้ (iframe/permission) — ปล่อยผ่าน ไม่ต้องพัง */ }
+  }
+
+  // พับแผงขวา/สลับมุมมอง → กว้างของ svg เปลี่ยน ต้องจัดกรอบใหม่
+  useEffect(() => { requestAnimationFrame(() => fitView()) // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [railOpen, view])
 
   // ── zoom / pan บนพื้นหลัง ───────────────────────────────────────────────────
   useEffect(() => {
@@ -585,8 +625,7 @@ export default function OrgChartClient() {
     }
   }, [])
 
-  const shownRoleIds = useMemo(() => visibleGroups.flatMap(g => g.roles.map(r => r.roleId)), [visibleGroups])
-  const allExpanded = shownRoleIds.length > 0 && shownRoleIds.every(id => expandedRoles.has(id))
+  const allExpanded = shownRoleIds.length > 0 && shownRoleIds.every(id => effExpanded.has(id))
 
   const tableRows = useMemo(() => {
     const rows = []
@@ -639,6 +678,8 @@ export default function OrgChartClient() {
         .dark .oc-hub { fill: #14395a; }
         .oc-hub-text { fill: #fdf8f2; font-size: 12px; font-weight: 800; }
         .oc-hub-sub { fill: #fdf8f2; opacity: .7; font-size: 8px; font-weight: 700; }
+        .oc-node:fullscreen, .oc-canvas:fullscreen { background: var(--card-bg); }
+        :fullscreen { background: var(--card-bg); }
         .oc-canvas { touch-action: none; cursor: grab; }
         .oc-canvas.is-panning { cursor: grabbing; }
         .oc-node:focus-visible { outline: 2px solid var(--brand-orange); outline-offset: 2px; }
@@ -713,16 +754,19 @@ export default function OrgChartClient() {
           {hiddenGroups.size ? t('showAll') : t('hideAll')}
         </button>
         <button type="button"
-          onClick={() => setExpandedRoles(allExpanded ? new Set() : new Set(shownRoleIds))}
+          onClick={() => { setAutoExpand(!allExpanded); setExpandedRoles(allExpanded ? new Set() : new Set(shownRoleIds)) }}
           className="rounded-full px-2.5 py-1.5 text-xs font-semibold text-warm-500 dark:text-disc-muted hover:text-orange">
           {allExpanded ? t('collapseAll') : t('expandAll')}
         </button>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(280px,340px)] items-start">
+      <div className={`grid gap-4 items-start ${
+        railOpen && !isFull ? 'lg:grid-cols-[minmax(0,1.6fr)_minmax(280px,340px)]' : 'grid-cols-1'}`}>
         {view === 'chart' ? (
-          <div className={`${CARD} relative p-2 flex flex-col`}>
-            <svg ref={svgRef} className="oc-canvas w-full h-[620px] text-warm-900 dark:text-disc-text"
+          <div ref={cardRef} className={`${CARD} relative p-2 flex flex-col ${isFull ? 'rounded-none border-0' : ''}`}>
+            <svg ref={svgRef}
+              className={`oc-canvas w-full text-warm-900 dark:text-disc-text ${
+                isFull ? 'h-[calc(100vh-52px)]' : 'h-[calc(100vh-320px)] min-h-[560px]'}`}
               role="img" aria-label={t('title')} />
             <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-2 pt-1">
               <p className="text-xs text-warm-500 dark:text-disc-muted">{t('hint')}</p>
@@ -733,6 +777,18 @@ export default function OrgChartClient() {
                 <button type="button" onClick={fitView}
                   className="flex items-center gap-1 text-xs font-medium text-warm-500 dark:text-disc-muted hover:text-orange">
                   <Maximize2 size={12} /> {t('fitView')}
+                </button>
+                {!isFull && (
+                  <button type="button" onClick={() => setRailOpen(o => !o)}
+                    className="hidden lg:flex items-center gap-1 text-xs font-medium text-warm-500 dark:text-disc-muted hover:text-orange">
+                    {railOpen ? <PanelRightClose size={12} /> : <PanelRightOpen size={12} />}
+                    {railOpen ? t('hideRail') : t('showRail')}
+                  </button>
+                )}
+                <button type="button" onClick={toggleFullscreen}
+                  className="flex items-center gap-1 text-xs font-semibold text-orange hover:opacity-80">
+                  {isFull ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
+                  {isFull ? t('exitFullscreen') : t('fullscreen')}
                 </button>
                 <button type="button" onClick={resetLayout}
                   className="flex items-center gap-1 text-xs font-medium text-warm-500 dark:text-disc-muted hover:text-orange">
@@ -770,6 +826,7 @@ export default function OrgChartClient() {
           </div>
         )}
 
+        {railOpen && !isFull && (
         <div className={`${CARD} p-4 min-h-[400px] flex flex-col`}>
           {!selected ? (
             <div className="m-auto text-center px-4">
@@ -789,7 +846,7 @@ export default function OrgChartClient() {
                   {selected.top.map((m, i) => (
                     <li key={m.userId} className="grid grid-cols-[20px_30px_1fr_auto] items-center gap-2 p-1.5 rounded-lg hover:bg-warm-50 dark:hover:bg-disc-hover">
                       <span className={`text-xs font-bold text-center tabular-nums ${i === 0 ? 'text-orange' : 'text-warm-400 dark:text-disc-muted'}`}>{i + 1}</span>
-                      <svg viewBox="-18 -18 36 36" className="w-[30px] h-[30px]" dangerouslySetInnerHTML={{ __html: avatarMarkup(m.name, 18) }} />
+                      <svg viewBox="-18 -18 36 36" className="w-[30px] h-[30px]" dangerouslySetInnerHTML={{ __html: avatarMarkup(m.name, 18, m.avatar) }} />
                       <div className="min-w-0">
                         <div className="text-sm font-semibold truncate text-warm-900 dark:text-disc-text">{m.name}</div>
                         <div className="h-1 rounded-full bg-warm-100 dark:bg-disc-border mt-1 overflow-hidden">
@@ -815,6 +872,7 @@ export default function OrgChartClient() {
             </>
           )}
         </div>
+        )}
       </div>
     </div>
   )

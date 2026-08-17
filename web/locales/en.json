@@ -1538,7 +1538,11 @@
       "topPerGroup": "Top {n}/group",
       "allRoles": "All",
       "rolesShown": "Showing {shown} of {total} active roles",
-      "hiddenInactive": "Roles with no activity are hidden"
+      "hiddenInactive": "Roles with no activity are hidden",
+      "fullscreen": "Fullscreen",
+      "exitFullscreen": "Exit fullscreen",
+      "hideRail": "Hide panel",
+      "showRail": "Show panel"
     }
   },
   "posts": {
