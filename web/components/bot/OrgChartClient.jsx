@@ -451,7 +451,11 @@ export default function OrgChartClient() {
     if (storageKey) {
       try {
         const saved = JSON.parse(localStorage.getItem(storageKey) || '{}')
-        nodes.forEach(n => { if (saved[n.id]) { n.x = saved[n.id].x; n.y = saved[n.id].y } })
+        // ⚠️ ใช้ตำแหน่งที่ลากไว้ได้เฉพาะเมื่อ "โครงผังเดิมเป๊ะ" เท่านั้น
+        // ถ้าเอาของผังเก่ามาปนผังใหม่ โหนดลูกจะไปนั่งที่เดิมของผังคนละแบบ = เส้นลากยาวข้ามจอ
+        if (saved.key === layoutKey && saved.pos) {
+          nodes.forEach(n => { if (saved.pos[n.id]) { n.x = saved.pos[n.id].x; n.y = saved.pos[n.id].y } })
+        }
       } catch { /* ค่าที่เก็บไว้เสีย → ใช้ผังที่คำนวณใหม่ */ }
     }
     nodesRef.current = nodes
@@ -724,10 +728,10 @@ export default function OrgChartClient() {
 
   function savePositions() {
     if (!storageKey) return
-    let saved = {}
-    try { saved = JSON.parse(localStorage.getItem(storageKey) || '{}') } catch { saved = {} }
-    for (const n of nodesRef.current) saved[n.id] = { x: Math.round(n.x), y: Math.round(n.y) }
-    try { localStorage.setItem(storageKey, JSON.stringify(saved)) } catch { /* โควตาเต็ม — ไม่ critical */ }
+    // เก็บคู่กับ layoutKey เสมอ — ของผังเก่าใช้กับผังใหม่ไม่ได้ ต้องทิ้งไปทั้งชุด
+    const pos = {}
+    for (const n of nodesRef.current) pos[n.id] = { x: Math.round(n.x), y: Math.round(n.y) }
+    try { localStorage.setItem(storageKey, JSON.stringify({ key: layoutKey, pos })) } catch { /* โควตาเต็ม — ไม่ critical */ }
   }
 
   function resetLayout() {
@@ -755,10 +759,10 @@ export default function OrgChartClient() {
       return
     }
     if (node.kind === 'role') {
+      // เปิดได้ทีละบทบาท (accordion) — กางหลายอันพร้อมกันแล้วผังพองจนย่อลงไปอ่านไม่ออก
       setSelected(node.role)
-      const base = new Set(effExpanded)
-      base.has(node.role.roleId) ? base.delete(node.role.roleId) : base.add(node.role.roleId)
-      setAutoExpand(false); setExpandedRoles(base)
+      setAutoExpand(false)
+      setExpandedRoles(effExpanded.has(node.role.roleId) ? new Set() : new Set([node.role.roleId]))
       return
     }
     if (node.kind === 'person') setSelected(node.role)
