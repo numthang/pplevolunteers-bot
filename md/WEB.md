@@ -220,6 +220,28 @@ See: [FINANCE.md - RBAC](FINANCE.md#access-control-rbac) | [CALLING.md - Permiss
 
 ---
 
+### ความกว้างของหน้า — ค่าเริ่มต้น 1024px · โซนไหนอยากเต็มจอให้ประกาศ `data-wide`
+
+`app/layout.js` ครอบ `<main>` ไว้ที่ `max-w-5xl` (1024px) เป็นค่าเริ่มต้นของทั้งแอพ
+
+⛔ **`-mx-4` แหกกรอบไม่ได้** — negative margin หักล้างได้แค่ *padding* ของพ่อ ทะลุ `max-width` ไม่ได้
+(นี่คือเหตุผลที่ `max-w-7xl` ใน `app/calling|posts|docs/layout.js` เป็น dead code มาตลอด — เจอ 2026-08-17)
+
+**วิธีทำให้โซนเต็มจอ — เติมคำเดียวที่ layout ของโซน:**
+```jsx
+<div data-wide className="-mx-1 sm:-mx-4 -mt-3 min-h-screen bg-warm-50 dark:bg-disc-bg2">
+```
+`app/globals.css` มี 2 กฎที่เกาะ attribute นี้อยู่แล้ว → เนื้อหา **และ** แถบ nav ยืดตามเอง
+ไม่ต้องแก้ `globals.css` ไม่ต้องแก้ `Nav.jsx`
+
+| ใช้กับ | ความกว้าง |
+|---|---|
+| canvas แนวนอน (กระดาน kanban · ผังทีม) | **เต็มจอ** — `data-wide` |
+| ตาราง/รายการหลายคอลัมน์ | 1280px — `data-wide` แล้วครอบ `max-w-7xl` ในหน้านั้นเอง |
+| ฟอร์ม · ข้อความยาว · หน้าตั้งค่า | **ปล่อยค่าเริ่มต้น 1024px** (กว้างกว่านี้ตาต้องกวาดไกล อ่านยากกว่าเดิม) |
+
+ตอนนี้ประกาศ `data-wide` แล้ว 2 โซน: `app/kanban/layout.js` · `app/team/layout.js`
+
 ### Type scale — ใช้ 5 ขนาดนี้เท่านั้นทั้งโปรเจกต์
 
 > เขียนกฎนี้ 2026-08-17 เพราะโซนใหม่ (kanban) เดาสเกลเองแล้วหลุดทั้งโซน — user ต้องมาไล่แก้ซ้ำทุกครั้งที่ทำแอพใหม่
