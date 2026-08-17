@@ -1535,8 +1535,6 @@
       "showAll": "เปิดทุกกลุ่ม",
       "hideAll": "ปิดทุกกลุ่ม",
       "nodeCount": "{count} โหนด",
-      "topPerGroup": "บทบาท {n}/กลุ่ม",
-      "allRoles": "ทั้งหมด",
       "rolesShown": "แสดง {shown} จาก {total} บทบาทที่มีความเคลื่อนไหว",
       "hiddenInactive": "ซ่อนบทบาทที่ไม่มีใครแอคทีฟแล้ว",
       "fullscreen": "เต็มจอ",

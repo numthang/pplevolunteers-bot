@@ -1535,8 +1535,6 @@
       "showAll": "Show all groups",
       "hideAll": "Hide all groups",
       "nodeCount": "{count} nodes",
-      "topPerGroup": "{n} roles/group",
-      "allRoles": "All",
       "rolesShown": "Showing {shown} of {total} active roles",
       "hiddenInactive": "Roles with no activity are hidden",
       "fullscreen": "Fullscreen",

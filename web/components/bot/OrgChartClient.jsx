@@ -51,7 +51,6 @@ const GROUP_COLOR = {
 // หมึกบนพื้นพาสเทล — พาสเทลสว่าง ตัวอักษร/ไอคอนสีขาวจะจม ต้องใช้สีเข้ม
 const ON_PASTEL = '#2b2924'
 const DAYS_OPTIONS = [30, 60, 90, 180, 365]
-const LIMIT_OPTIONS = [5, 10, 0]        // บทบาทต่อกลุ่ม · 0 = ทั้งหมด
 const PEOPLE_OPTIONS = [5, 10]          // คนต่อบทบาท — SQL ดึงมาสูงสุด 10 แล้วตัดฝั่ง client
 const AVATAR_BG = ['#5865F2', '#57A55A', '#EAA83A', '#D8548A', '#DA4B48', '#7C6FE0', '#1F9AA0', '#E8804A']
 
@@ -373,7 +372,6 @@ export default function OrgChartClient() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [days, setDays] = useState(180)
-  const [perGroup, setPerGroup] = useState(5)       // Top N บทบาทต่อกลุ่ม (0 = ทั้งหมด)
   const [perRole, setPerRole] = useState(10)        // Top N คนต่อบทบาท (เท่า /panel orgchart)
   const [hiddenGroups, setHiddenGroups] = useState(() => new Set())
   const [collapsedGroups, setCollapsedGroups] = useState(() => new Set())   // ยุบทั้งกลุ่ม (ต่างจากชิปที่ซ่อนหัวกลุ่มด้วย)
@@ -447,13 +445,14 @@ export default function OrgChartClient() {
     return activeGroups
       .filter(g => !hiddenGroups.has(g.groupName))
       .map(g => {
-        let roles = q ? g.roles.filter(r => r.roleName.toLowerCase().includes(q)) : g.roles
-        if (perGroup > 0 && !q) roles = roles.slice(0, perGroup)   // ค้นหาอยู่ = ไม่ตัด ให้เจอของที่ค้น
+        // โชว์ทุกบทบาทที่มีความเคลื่อนไหว — จำกัดจำนวนไม่มีประโยชน์แล้วตั้งแต่ผังไม่ย่อให้พอดีจอ
+        // (วัด 2026-08-18: 49 บทบาท 216 โหนด วาดใหม่ 293ms) · จะกรองให้น้อยลงใช้ชิปกลุ่ม/ค้นหา
+        const roles = q ? g.roles.filter(r => r.roleName.toLowerCase().includes(q)) : g.roles
         // ตัดจำนวนคนฝั่ง client — API ส่งมา 10 คนเสมอ กดสลับ 5/10 จึงไม่ต้องโหลดใหม่
         return { ...g, roles: roles.map(r => (r.top.length > perRole ? { ...r, top: r.top.slice(0, perRole) } : r)) }
       })
       .filter(g => g.roles.length > 0)
-  }, [activeGroups, hiddenGroups, query, perGroup, perRole])
+  }, [activeGroups, hiddenGroups, query, perRole])
 
   const shownRoles = useMemo(() => visibleGroups.reduce((s, g) => s + g.roles.length, 0), [visibleGroups])
 
@@ -473,9 +472,9 @@ export default function OrgChartClient() {
   // filterKey = "ชุดข้อมูลที่ดูอยู่" (guild/ช่วงวัน/Top N/คำค้น/ชิปกลุ่ม) — เปลี่ยนแล้วจัดกล้องใหม่ได้
   // layoutKey = filterKey + สิ่งที่กางอยู่ — ใช้แค่ตัดสินว่าต้องสร้างโหนดใหม่ ไม่แตะกล้อง
   const filterKey = useMemo(() => [
-    data?.guildId || '', days, perGroup, perRole, query.trim(),
+    data?.guildId || '', days, perRole, query.trim(),
     visibleGroups.map(g => `${g.groupName}:${g.roles.length}`).join('|'),
-  ].join('#'), [data?.guildId, days, perGroup, perRole, query, visibleGroups])
+  ].join('#'), [data?.guildId, days, perRole, query, visibleGroups])
 
   const layoutKey = useMemo(
     () => [filterKey, [...effExpanded].sort().join(','), [...collapsedGroups].sort().join(',')].join('#'),
@@ -1070,15 +1069,6 @@ export default function OrgChartClient() {
               className={`px-2.5 py-1.5 text-xs font-semibold rounded-lg ${
                 n === perRole ? 'bg-orange text-white' : 'text-warm-500 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text'}`}>
               {t('peoplePerRole', { n })}
-            </button>
-          ))}
-        </div>
-        <div className={`${CARD} flex gap-0.5 p-1`}>
-          {LIMIT_OPTIONS.map(n => (
-            <button key={n} type="button" onClick={() => setPerGroup(n)}
-              className={`px-2.5 py-1.5 text-xs font-semibold rounded-lg ${
-                n === perGroup ? 'bg-orange text-white' : 'text-warm-500 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text'}`}>
-              {n === 0 ? t('allRoles') : t('topPerGroup', { n })}
             </button>
           ))}
         </div>
