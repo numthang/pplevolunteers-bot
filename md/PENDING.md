@@ -2,6 +2,18 @@
 
 > เก็บเฉพาะงานค้าง + design ที่ยังไม่ทำ · ของที่ทำเสร็จ+deploy แล้วย้ายไปอยู่ในโค้ด/`md/*` ตามระบบ
 
+## 🗄️ Postgres ยังไม่อยู่ใต้ aaPanel — backup ตอนนี้เป็น workaround (2026-08-17)
+
+Production Postgres ลงด้วย `sudo apt install postgresql` ตรง ๆ (ไม่ผ่าน aaPanel PgSQL Manager plugin) → ปลั๊กอินไม่รู้จัก instance นี้เลย
+(DB List ว่าง, ปุ่มมีแต่ "Install version" ซึ่งจะไปชน port 5432 ของเดิมแน่ ๆ ถ้ากด)
+
+**วันนี้แก้ด้วย:** สร้าง db เปล่า `pple_dcbot` (ให้ handshake ผ่าน default-db-name-เท่ากับ-username ของ Postgres) แล้วใช้ "Remote DB" ต่อเข้าไปแบบ read-only/browse — แต่ฟีเจอร์นี้ไม่ผูกกับ cron+backup อัตโนมัติของ panel จริง
+→ backup เลยต้องใช้ Cron "Shell script" (pg_dump) + Cron "Backup: Directory" (ดันขึ้น Drive) แทน ไม่ใช่ Cron "Backup: Database" แบบ native
+
+**อยากได้ในอนาคต (user เคาะ 2026-08-17):** "ยุ่งจริง อยากใช้ gui aapanel ง่ายๆ" — ย้าย Postgres มาให้ aaPanel PgSQL Manager ติดตั้ง/manage เต็มรูปแบบ จะได้ backup ผ่าน Database type ตรง ๆ เหมือน DB อื่น
+- ต้องทำตอน maintenance window เท่านั้น (ห้ามรันคู่ขนานบน 5432 เดิม) — แผนคร่าว ๆ: ลง pgsql ผ่าน panel บน port อื่นก่อน → `pg_dump`/`pg_restore` ย้ายข้อมูล → สลับ `.env` DB_HOST/PORT → ปิด apt postgres เดิม → ค่อยย้าย panel instance ไป 5432
+- ต้องเช็ค `pg_hba.conf`/`postgresql.conf` ของ panel-managed instance ใหม่ให้อนุญาต password auth เหมือนที่ตั้งไว้วันนี้ด้วย
+
 ## 🏷️ Kanban — ป้าย (2026-08-17) · ชิป + ติด/ถอด เสร็จ local ยังไม่ deploy
 
 ชิปบนแถวการ์ด (`LabelChips.jsx`) + กล่องเลือกใน CardModal (`LabelPicker.jsx`) + API 2 เส้น
@@ -13,14 +25,26 @@
 **กระดานย่อ (2026-08-17):** `/kanban/board` — ช่อง = `status_type` 6 แบบ ไม่มีตารางใหม่ · ลาก = `PATCH { statusType }`
 ⚠️ **ไม่ใช่ก้อน 3** — บอร์ด/ช่องตั้งเอง/สิทธิ์บอร์ด ยังอยู่หลังจุดตัดสินใจตามแผนเดิม
 
+**เพิ่ม 2026-08-17 (รอบเย็น) — สร้าง/จัดการ/กรองป้าย · เสร็จ local ยังไม่ deploy**
+- **สร้างป้ายใหม่จากในกล่อง** — ช่องพิมพ์อยู่ในกองของกลุ่มนั้น (ไม่ต้องเลือกกลุ่ม) · `POST /api/kanban/labels`
+  ทุกคนใน org สร้างได้ **แต่ตั้งกลุ่มใหม่ไม่ได้** (กลุ่มต้องมีอยู่แล้ว) — org มี 7,376 คน และป้ายลบไม่ได้ ซ่อนได้อย่างเดียว
+- **หน้าจัดการป้าย** `/kanban/labels` (admin) — เปลี่ยนชื่อ/ย้ายกลุ่ม/ตั้งสีจากคลัง 12 สี/ซ่อน-เลิกซ่อน + จำนวนการ์ด
+  autosave + ป้ายสถานะ ไม่มีปุ่มบันทึก (กฎ Update) · ทางเข้าอยู่ในกล่องเลือกป้าย โชว์เฉพาะ admin (`canManage` ติดมากับ GET)
+- **กรองด้วยป้ายในหน้า /kanban** — `web/lib/kanbanLabelFilter.js` (pure + เทส 19 ข้อ) · **OR ในกลุ่ม · AND ข้ามกลุ่ม**
+  ชิปกรองสร้างจากป้ายที่มีจริงบนการ์ดที่โหลดมา ไม่ใช่ทั้งคลัง (ไม่งั้นได้ปุ่มกดแล้วว่าง)
+- ⚠️ 2 กับดักที่ `/scrutinize` จับได้ และ**แก้ไปแล้ว** — smoke `scripts/smoke/kanbanLabels.mjs` เฝ้าไว้ 22 ข้อ
+  1. เปลี่ยนชื่อ/ย้ายกลุ่ม = สีชิปเด้งทั้งระบบ (สี hash จาก `กลุ่ม/ชื่อ`) → `updateLabel` แช่สีเดิมลง DB ก่อนเปลี่ยนชื่อ
+  2. ซ่อนป้าย → ชิปหายจากการ์ด → ใครแก้ป้ายบนการ์ดนั้นต่อ = ความสัมพันธ์เดิมหายถาวร → `setCardLabels` ลบเฉพาะป้ายที่ไม่ถูกซ่อน
+- ❌ **แก้ความเข้าใจผิดที่เคยจดไว้:** สีเก็บเป็น **hex ได้ตรงๆ** ไม่ต้องเป็น class เต็มสตริง — `chipProps()` ส่ง hex เข้า CSS var `--kb` ให้ `.kb-tint` ผสมเอง ไม่พึ่ง Tailwind scan (bug-409 แก้ทางนี้ไปแล้ว)
+
 **ค้างไว้ (ไม่ทำในรอบนี้)**
 - **กระดานบนมือถือลากไม่ได้** (HTML5 DnD) — ถ้าจะเอาจริงต้องลง dnd lib หรือทำเมนู "ย้ายไป…" บนการ์ด
-- **สร้างป้ายใหม่จากในกล่อง** — `ensureLabel()` ใน `web/db/kanban/labels.js` พร้อมแล้ว เหลือช่องพิมพ์ + POST
 - **มอบหมายจากหน้ารายการ** (ตอนนี้ต้องเปิดการ์ดก่อน) · **เพิ่มคนช่วยที่เป็นคนอื่น** ยังไม่มี UI (API `POST helpers { userId }` มีแล้ว — ใช้ `OwnerPicker` ซ้ำได้)
 - **10 ใบที่ import มามีชื่อผู้รับผิดชอบเดิมอยู่ในช่องรายละเอียด** (จับคู่บัญชีไม่ได้) — ตอนนี้มอบหมายมือได้แล้ว ยังไม่มีใครไล่ทำ
-- **หน้าจัดการป้าย** (เปลี่ยนชื่อ/ตั้งสีเอง/ซ่อน/ดูว่าติดกี่การ์ด) — `archiveLabel` + `countCardsWithLabel` เขียนรอไว้แล้ว
-- **กรองการ์ดด้วยป้าย** ในหน้า /kanban — ตอนนี้เห็นป้ายได้แต่กรองไม่ได้ (ป้าย 29 อัน 3 กลุ่มบนของจริง)
-- `kanban_labels.color` ยัง null ทั้ง 29 แถว → สีมาจาก hash ล้วน · ถ้าจะให้ตั้งสีเอง ต้องเก็บเป็น **class เต็มสตริง** ไม่ใช่ hex (Tailwind สแกน static)
+- **ตัวกรองยังไม่มีในหน้ากระดาน** `/kanban/board` — มีเฉพาะหน้า /kanban
+- **ตัวกรองจะโกหกเมื่อการ์ดทะลุ limit 200** (กรองฝั่ง client จากที่โหลดมา) — ตอนนี้ 34 ใบยังตรง · ถึงตอนนั้นต้องย้ายไปกรองใน SQL
+- **เรียงลำดับป้ายเอง** (`sort_order` มีคอลัมน์แล้ว แต่ยังไม่มี UI ลาก)
+- ⚠️ **ก้อน 3 ต้องใช้ `/kanban/b/[board]`** — segment คงที่ (`/kanban/board`, `/kanban/labels`) ชนะ dynamic เสมอใน Next.js
 
 ## 📢 ห้องข่าวสารผูกรายกลุ่ม social — เสร็จ local (2026-08-12) ยังไม่ deploy
 
@@ -549,6 +573,9 @@ user เปรยว่า "น่าจะมี social listening เอาไ�
 - [ ] **`dc_guild_config` key `web_base_url`** — อยู่ใน DB ราย guild ไม่ใช่ .env (บอทใช้ทำลิงก์ใน SMS/Discord) → `UPDATE` ให้ครบทุก guild
 - [ ] **redirect URI ในคอนโซลข้างนอกทุกเจ้า:** Discord OAuth · Google · LINE · Meta · X
 - [ ] ⚠️ **passkey จะพังทั้งหมด** — `RP_ID` ผูก hostname → passkey ที่ลงทะเบียนไว้ใช้ไม่ได้ · **ยังไม่เคาะ**ว่าจะ pin `PASSKEY_RP_ID=pplevolunteers.org` (ต้องเสิร์ฟโดเมนเก่าตลอด) หรือให้ลงทะเบียนใหม่ (เช็คก่อนว่ามีกี่คน)
+
+**เปลี่ยนชื่อ database ด้วยไหม (จดไว้ 2026-08-17):** ชื่อ DB จริงตอนนี้ยังเป็น `pple_volunteers` — user เอ่ยว่าเปลี่ยน domain ทีคงต้องเปลี่ยนทุกอย่างพร้อมกัน ให้พิจารณา rename DB ตามไปด้วยรอบเดียวกัน (`ALTER DATABASE pple_volunteers RENAME TO ...` + อัปเดต `DB_NAME`/`DATABASE_URL` ใน `.env` + restart bot/web) — ยังไม่เคาะชื่อใหม่
+→ pg_dump script ใน aaPanel Cron (Shell script content, ไม่มีไฟล์แยกในโปรเจกต์) ดึง `DB_NAME` จาก `.env` เองแล้ว แก้ `.env` ที่เดียวพอ ไม่ต้องแก้ cron content
 
 **Rename folder / repo (แยกจากโดเมน ทำคนละวันได้):**
 - [ ] local `~/VSites/node/pple-volunteers` → `platfor.org` (พาไปด้วย: Claude memory dir, VSCode workspace, `.claude/settings.local.json`)

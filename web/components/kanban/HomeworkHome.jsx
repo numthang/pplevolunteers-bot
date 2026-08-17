@@ -1,11 +1,13 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { Plus, X, Clock, User, ListChecks, AlertTriangle, Columns3 } from 'lucide-react'
+import { Plus, X, Clock, User, ListChecks, AlertTriangle, Columns3, Tag } from 'lucide-react'
 import Link from 'next/link'
 import CardModal from './CardModal.jsx'
 import LabelChips from './LabelChips.jsx'
+import { chipProps } from '@/lib/kanbanLabelColors.js'
+import { collectFilterGroups, filterCards } from '@/lib/kanbanLabelFilter.js'
 
 // สี dot ต่อประเภทสถานะ — ตัวอักษรผ่าน t('status.<key>') เสมอ ที่นี่เก็บแค่สี (ไม่ใช่ข้อความ)
 const STATUS_DOT = {
@@ -121,6 +123,63 @@ function HomeworkRow({ card, t, showClaim, onClaim, onDone, onOpen, busy }) {
   )
 }
 
+/**
+ * แถบกรองด้วยป้าย — ชิปมาจากป้ายที่มีอยู่จริงบนการ์ดที่โหลดมา (lib/kanbanLabelFilter.js)
+ * OR ในกลุ่มเดียวกัน · AND ข้ามกลุ่ม — บอกกติกาไว้ใต้แถบ ไม่งั้นคนคิดว่าตัวกรองพัง
+ */
+function LabelFilterBar({ groups, selected, onToggle, onClear, t }) {
+  if (!groups.length) return null
+  const selectedIds = new Set(selected.map((l) => String(l.id)))
+
+  return (
+    <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg p-4 flex flex-col gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="flex items-center gap-1.5 text-base font-semibold text-warm-900 dark:text-disc-text">
+          <Tag size={16} /> {t('filter.title')}
+        </h2>
+        {selected.length > 0 && (
+          <button
+            onClick={onClear}
+            className="flex items-center gap-1 px-4 py-2 text-base rounded-lg border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover font-medium transition"
+          >
+            <X size={16} /> {t('filter.clear')}
+          </button>
+        )}
+      </div>
+
+      {groups.map(({ group, labels }) => (
+        <div key={group || '_'}>
+          {/* ชื่อกลุ่มมาจาก DB — ห้ามแปลผ่าน t() */}
+          <p className="text-sm text-warm-400 dark:text-disc-muted mb-1">{group || t('modal.ungrouped')}</p>
+          <div className="flex flex-wrap gap-1.5">
+            {labels.map((l) => {
+              const on = selectedIds.has(String(l.id))
+              const tint = chipProps(l)
+              return (
+                <button
+                  key={l.id}
+                  onClick={() => onToggle(l)}
+                  style={on ? tint.style : undefined}
+                  className={`flex items-center gap-1 px-3 py-1 text-sm rounded-full font-medium border ${
+                    on
+                      ? `${tint.className} border-transparent ring-1 ring-teal`
+                      : 'border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover'
+                  }`}
+                >
+                  {l.name}
+                  <span className="text-warm-400 dark:text-disc-muted">{l.count}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      ))}
+
+      <p className="text-sm text-warm-400 dark:text-disc-muted">{t('filter.hint')}</p>
+    </div>
+  )
+}
+
 // กองว่าง = ขึ้นข้อความว่าง ไม่ใช่ซ่อนหัวข้อทั้งกอง (ดีไซน์: อย่าโชว์หัวข้อโล่งๆ แต่ก็อย่าซ่อนจนดูเหมือนหาย)
 function Section({ title, emphasize, emptyText, rows, children }) {
   return (
@@ -150,6 +209,8 @@ export default function HomeworkHome() {
   const [busyIds, setBusyIds] = useState(new Set())
   const [actionError, setActionError] = useState('')
   const [openCardId, setOpenCardId] = useState(null)   // การ์ดที่เปิด modal อยู่
+  // ป้ายที่เลือกกรองอยู่ — เก็บทั้ง object (ต้องใช้ group ตัดสิน OR/AND ไม่ใช่แค่ id)
+  const [labelFilter, setLabelFilter] = useState([])
 
   // ฟอร์ม "เพิ่มการบ้าน" — เปิดเป็น inline panel เท่านั้น ไม่ POST จนกว่าจะกดบันทึก (กฎ CLAUDE.md §Create vs Update)
   const [formOpen, setFormOpen] = useState(false)
@@ -236,6 +297,22 @@ export default function HomeworkHome() {
     } finally {
       setCreating(false)
     }
+  }
+
+  // ชิปกรองมาจากป้ายที่มีจริงบนการ์ดทั้ง 3 กอง — ป้ายในคลังที่ไม่มีใครใช้จะได้ไม่กลายเป็นปุ่มกดแล้วว่าง
+  const filterGroups = useMemo(
+    () => collectFilterGroups([...mine, ...helping, ...unassigned]),
+    [mine, helping, unassigned]
+  )
+  const shownMine       = useMemo(() => filterCards(mine, labelFilter),       [mine, labelFilter])
+  const shownHelping    = useMemo(() => filterCards(helping, labelFilter),    [helping, labelFilter])
+  const shownUnassigned = useMemo(() => filterCards(unassigned, labelFilter), [unassigned, labelFilter])
+
+  function toggleLabelFilter(label) {
+    setLabelFilter((prev) => {
+      const id = String(label.id)
+      return prev.some((l) => String(l.id) === id) ? prev.filter((l) => String(l.id) !== id) : [...prev, label]
+    })
   }
 
   function setBusy(id, on) {
@@ -412,20 +489,29 @@ export default function HomeworkHome() {
         </div>
       ) : (
         <>
-          <Section title={t('sections.mine')} emphasize emptyText={t('empty.mine')} rows={mine}>
-            {mine.map((card) => (
+          <LabelFilterBar
+            groups={filterGroups}
+            selected={labelFilter}
+            onToggle={toggleLabelFilter}
+            onClear={() => setLabelFilter([])}
+            t={t}
+          />
+
+          {/* กองว่างเพราะตัวกรอง ต้องบอกว่า "ไม่ตรงตัวกรอง" ไม่ใช่ "ไม่มีงาน" — ไม่งั้นดูเหมือนงานหาย */}
+          <Section title={t('sections.mine')} emphasize emptyText={labelFilter.length ? t('filter.noMatch') : t('empty.mine')} rows={shownMine}>
+            {shownMine.map((card) => (
               <HomeworkRow key={card.id} card={card} t={t} showClaim={false} onDone={handleDone} onOpen={(c) => setOpenCardId(c.id)} busy={busyIds.has(card.id)} />
             ))}
           </Section>
 
-          <Section title={t('sections.helping')} emptyText={t('empty.helping')} rows={helping}>
-            {helping.map((card) => (
+          <Section title={t('sections.helping')} emptyText={labelFilter.length ? t('filter.noMatch') : t('empty.helping')} rows={shownHelping}>
+            {shownHelping.map((card) => (
               <HomeworkRow key={card.id} card={card} t={t} showClaim={false} onDone={handleDone} onOpen={(c) => setOpenCardId(c.id)} busy={busyIds.has(card.id)} />
             ))}
           </Section>
 
-          <Section title={t('sections.unassigned')} emptyText={t('empty.unassigned')} rows={unassigned}>
-            {unassigned.map((card) => (
+          <Section title={t('sections.unassigned')} emptyText={labelFilter.length ? t('filter.noMatch') : t('empty.unassigned')} rows={shownUnassigned}>
+            {shownUnassigned.map((card) => (
               <HomeworkRow key={card.id} card={card} t={t} showClaim onClaim={handleClaim} onOpen={(c) => setOpenCardId(c.id)} busy={busyIds.has(card.id)} />
             ))}
           </Section>

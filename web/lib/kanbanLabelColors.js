@@ -47,6 +47,22 @@ function hash(str) {
   return Math.abs(h)
 }
 
+/** จานสีที่ให้เลือกเองในหน้าจัดการป้าย — ชุดเดียวกับที่ hash หยิบใช้ ไม่มีเฉดนอกคลัง */
+export const LABEL_PALETTE = CHIP_PALETTE
+
+/**
+ * สีที่ป้ายนี้ได้ "โดยอัตโนมัติ" ถ้าไม่ได้ตั้งสีเอง — คำนวณจากชื่อ
+ *
+ * ⚠️ ผูกกับชื่อ+กลุ่ม แปลว่า **เปลี่ยนชื่อหรือย้ายกลุ่ม = สีเด้งทั้งระบบ**
+ *    หน้าจัดการป้ายจึงต้องแช่สีนี้ลง DB ก่อนแก้ชื่อ (db/kanban/labels.js §updateLabel)
+ */
+export function autoColor(label) {
+  const name = label?.name
+  const group = label?.group ?? label?.group_name ?? ''
+  if (!name) return NO_GROUP_COLOR
+  return CHIP_PALETTE[hash(`${group}/${name}`) % CHIP_PALETTE.length]
+}
+
 /**
  * props ของชิป 1 ใบ — ใช้เป็น {...chipProps(l)} บน element ได้เลย
  *
@@ -54,11 +70,8 @@ function hash(str) {
  *    ใส่ชื่อกลุ่มเป็นเกลือด้วย — ชื่อป้ายซ้ำข้ามกลุ่มจะได้ไม่ได้สีเดียวกันโดยบังเอิญ
  */
 export function chipProps(label) {
-  const name = label?.name
-  const group = label?.group ?? label?.group_name ?? ''
   // ป้ายที่ตั้งสีเองใน DB ชนะเสมอ (เก็บเป็น hex ตัวเดียว ไม่ใช่คลาส)
-  const color = label?.color
-    || (name ? CHIP_PALETTE[hash(`${group}/${name}`) % CHIP_PALETTE.length] : NO_GROUP_COLOR)
+  const color = label?.color || autoColor(label)
   return { className: 'kb-tint', style: { '--kb': color } }
 }
 
