@@ -3,16 +3,14 @@
 - ทำให้เว็บไซต์ หรือ sub-domain ภายนอกใช้ระบบเดียวกันได้แต่ใช้ชื่อของเขาเอง
 - JotForm ลอกมาเลยครับ มีแบบให้ login และ public ลองดู spec ก่อน แต่ feature ยากไม่จำเป็น ตัดทิ้ง แต่ให้ถามก่อน
 - Poll anonymous, semi-anon, public ลอก pollbotplus มาเลย แต่อาจจะอัพเกรดนิดหน่อย ลองดูว่าควรอัพเกรดอะไร อย่างน้อยผมว่า max 7 วันควรเพิ่มได้อีก
-- (ได้แล้ว) ผมทดลองเอายศ ผู้ประสานงานจังหวัด ของ didtha ออกบน discord แต่เหมือน บนเว็บ หน้านี้ มันไม่ออกไปด้วย https://pplevolunteers.org/org/settings/members
 
 # Kanban
-- ไม่รู้ไอเดียดีไหม แต่อยากให้ http://localhost:3000/kanban แสดงเหมือนหน้า /board เพียงแต่แสดงงานของตัวเอง ย้าย /board แล้วอาศัย กด filter เอาว่าจะแสดงแต่ของตัวเองหรือทั้งหมด default ที่ของตัวเอง ทำไมต้องมีซ้ำซ้อน 2 หน้า ผมอยากให้คนคุ้นเคยรูปแบบเดียวจบ ปรึกษาหน่อย
 - ตรง user ควรเป็นลิงก์คลิกได้ คลิกไปไหนดียังไม่รู้ แต่ปกติควรไปที่หน้า profile ของ user นั้นไหม
 - user ควรแสดง display name เป็นอะไรดี เรียงลำดับ ที่เรามี discord display name -> nickname -> firstname?
-- mark30260 เหมือนจะผิดคน ของจริงคือ discord_id คือ 799340183849533440 username marx.1818 
+- mark30260 เหมือนจะผิดคน ของจริงคือ discord_id คือ 1227989001697493016 username undermek 
 - แล้วก็แสดง progress checklist สำคัญมาก checklist เป็น field ถาวร 1 field ใช่ไหม หรือเราทำให้ custom form ได้เรื่อยๆ 
 - มันควรมี repeat task ไหมหว่า ประจำเดือน ประจำสัปดาห์ ประมาณนี้
-- ลิงก์ calendar 
+- ลิงก์ google calendar แสดง deadline 
 
 # Posts
 - ai suggestion ยังไม่มีโหมด บก ตรวจงาน ตาม redflag 

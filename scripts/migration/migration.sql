@@ -914,7 +914,6 @@ ALTER TABLE kanban_cards DROP CONSTRAINT IF EXISTS kanban_cards_owner_required;
 ALTER TABLE kanban_cards ADD CONSTRAINT kanban_cards_owner_required
   CHECK (owner_user_id IS NOT NULL OR status_type IN ('backlog', 'cancelled'));
 
--- production ทำถึงตรงนี้
 
 -- 2026-08-18 · avatar ย้ายมาอยู่ที่ users (เป็นของบัญชี ไม่ใช่ของ guild)
 -- เดิมเก็บที่ org_members ต่อ guild → คนเดียวกันต้อง backfill ซ้ำทุก guild (prod มี 5 guild)
@@ -930,3 +929,7 @@ UPDATE users u
          WHERE avatar IS NOT NULL AND user_id IS NOT NULL
          ORDER BY user_id, roles_assigned_at DESC NULLS LAST) s
  WHERE s.user_id = u.id AND u.avatar IS NULL;
+
+ -- production ทำถึงตรงนี้
+
+
