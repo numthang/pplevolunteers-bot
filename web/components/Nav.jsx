@@ -272,7 +272,8 @@ export default function Nav({ session, orgs = [], activeOrgId = null, guilds = [
   return (
     <>
     <nav className="bg-white dark:bg-disc-bg2 border-b border-warm-200 dark:border-disc-border shadow-sm sticky top-0 z-40">
-      <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
+      {/* nav-shell = จุดที่ globals.css ปลดความกว้างให้ตอนอยู่โซนเต็มจอ (ดู main:has([data-wide])) */}
+      <div className="nav-shell max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
 
         {/* Org Switcher (main nav) — Notion/AppFlowy style, เปิดเมนูได้เสมอแม้ org เดียว */}
         {session ? (
