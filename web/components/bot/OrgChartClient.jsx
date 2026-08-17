@@ -54,7 +54,8 @@ const DAYS_OPTIONS = [30, 60, 90, 180, 365]
 const LIMIT_OPTIONS = [5, 10, 0]        // 0 = ทั้งหมด
 const AVATAR_BG = ['#5865F2', '#57A55A', '#EAA83A', '#D8548A', '#DA4B48', '#7C6FE0', '#1F9AA0', '#E8804A']
 
-const HUB_R = 40
+const HUB_R = [52, 88]        // โหนดองค์กร — โตตามจำนวนโหนดลูก แต่ใหญ่กว่ากลุ่มเสมอ (GROUP_R สูงสุด 44)
+const HUB_SCALE_AT = 120      // จำนวนลูกที่ถือว่าเต็มสเกล
 const ROLE_R = [14, 30]
 const PERSON_R = [11, 22]
 const GROUP_R = [26, 44]
@@ -87,6 +88,12 @@ function drawIcon(group, r, color) {
   g.setAttribute('stroke-linejoin', 'round')
   for (const [tag, attrs] of nodes) g.appendChild(el(tag, attrs))
   return g
+}
+
+// โหนดองค์กรโตตามจำนวนโหนดลูก — ใช้ sqrt เหมือนโหนดอื่น (พื้นที่วงกลมโตตามค่า ไม่ใช่รัศมี)
+function hubRadius(childCount) {
+  const t = Math.min(1, Math.sqrt(childCount) / Math.sqrt(HUB_SCALE_AT))
+  return HUB_R[0] + (HUB_R[1] - HUB_R[0]) * t
 }
 
 function pillWidth(title, sub) {
@@ -153,7 +160,7 @@ function descendantsOf(node) {
 function buildLayout(visibleGroups, expandedRoles, collapsedGroups, t) {
   const nodes = []
   const edges = []
-  const hub = { id: '__hub', kind: 'hub', x: 0, y: 0, r: HUB_R, halfW: HUB_R, halfH: HUB_R, fixed: true }
+  const hub = { id: '__hub', kind: 'hub', x: 0, y: 0, r: HUB_R[0], halfW: HUB_R[0], halfH: HUB_R[0], fixed: true }
   nodes.push(hub)
 
   const allRoleScores = visibleGroups.flatMap(g => g.roles.map(r => r.totalScore))
@@ -196,7 +203,8 @@ function buildLayout(visibleGroups, expandedRoles, collapsedGroups, t) {
   const totalWidth = groupPlans.reduce((s, p) => s + p.width, 0) || 1
   // รัศมีวงบทบาท: เส้นรอบวงต้องยาวพอใส่ทุกอันโดยไม่เบียด
   const roleRing = Math.max(280, (totalWidth * 1.22) / (Math.PI * 2))
-  const groupRing = Math.max(140, roleRing * 0.42)
+  // เผื่อรัศมี hub ที่ใหญ่สุด + ครึ่งความสูงของโหนดกลุ่ม ไม่งั้นกลุ่มจะทับโหนดกลาง
+  const groupRing = Math.max(HUB_R[1] + 78, roleRing * 0.42)
 
   let cursor = -Math.PI / 2
   for (const plan of groupPlans) {
@@ -253,6 +261,10 @@ function buildLayout(visibleGroups, expandedRoles, collapsedGroups, t) {
       }
     }
   }
+
+  // ขนาดโหนดองค์กร = ตามจำนวนโหนดลูกทั้งหมด (รู้ได้ตอนนี้เพราะสร้างครบแล้ว)
+  hub.r = hubRadius(nodes.length - 1)
+  hub.halfW = hub.r; hub.halfH = hub.r
 
   // ดัชนีลูก — ลากพ่อแล้วต้องยกทั้งก้อนตามไป (กลุ่ม → บทบาท → คน)
   for (const e of edges) (e.a._kids ||= []).push(e.b)
@@ -476,18 +488,18 @@ export default function OrgChartClient() {
       if (n.kind === 'hub') {
         // ไอคอน guild อย่างเดียว — ไม่ใส่ข้อความ ให้เป็นจุดยึดสายตาเฉยๆ
         const clip = `oc-hubclip`
-        wrap.appendChild(el('clipPath', { id: clip })).appendChild(el('circle', { r: HUB_R }))
-        wrap.appendChild(el('circle', { r: HUB_R, class: 'oc-hub' }))
+        wrap.appendChild(el('clipPath', { id: clip })).appendChild(el('circle', { r: n.r }))
+        wrap.appendChild(el('circle', { r: n.r, class: 'oc-hub' }))
         if (guildIcon) {
           wrap.appendChild(el('image', {
-            href: guildIcon, x: -HUB_R, y: -HUB_R, width: HUB_R * 2, height: HUB_R * 2,
+            href: guildIcon, x: -n.r, y: -n.r, width: n.r * 2, height: n.r * 2,
             'clip-path': `url(#${clip})`, preserveAspectRatio: 'xMidYMid slice',
           }))
         } else {
           const a = el('text', { y: 5, class: 'oc-hub-text', 'text-anchor': 'middle' })
           a.textContent = (guildName || t('orgHub')).slice(0, 8); wrap.appendChild(a)
         }
-        wrap.appendChild(el('circle', { r: HUB_R, class: 'oc-hub-ring' }))
+        wrap.appendChild(el('circle', { r: n.r, class: 'oc-hub-ring' }))
       } else if (n.kind === 'group') {
         hit(n.r + 11, 21)
         wrap.appendChild(el('circle', { r: n.r, fill: color, class: 'oc-fill' }))
