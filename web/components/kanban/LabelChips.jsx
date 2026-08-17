@@ -24,19 +24,20 @@ export default function LabelChips({ labels = [], showGroupName = true, max = 0 
         return (
           <div key={group || '_'} className="flex flex-wrap items-center gap-1">
             {showGroupName && group && (
-              <span className="text-[11px] text-warm-400 dark:text-disc-muted">{group}</span>
+              <span className="text-sm text-warm-400 dark:text-disc-muted">{group}</span>
             )}
             {shown.map((l) => (
               <span
                 key={l.id}
                 title={group ? `${group} · ${l.name}` : l.name}
-                className={`px-2 py-0.5 text-[11px] leading-5 rounded-full font-medium ${chipClass(l)}`}
+                // ขนาด badge มาตรฐานของโปรเจกต์ (เทียบ components/docs/DocEntryList.jsx · app/case/[ref]/page.js)
+                className={`px-3 py-1 text-sm font-medium rounded-full ${chipClass(l)}`}
               >
                 {l.name}
               </span>
             ))}
             {hidden > 0 && (
-              <span className="text-[11px] text-warm-400 dark:text-disc-muted">+{hidden}</span>
+              <span className="text-sm text-warm-400 dark:text-disc-muted">+{hidden}</span>
             )}
           </div>
         )

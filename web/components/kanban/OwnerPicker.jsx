@@ -79,14 +79,14 @@ export default function OwnerPicker({ card, canEdit, canClaim, onPatch, onError 
         <span className={`text-base ${card.owner_name ? 'text-warm-900 dark:text-disc-text' : 'text-warm-400 dark:text-disc-muted'}`}>
           {card.owner_name || t('modal.noOwner')}
         </span>
-        {busy && <Loader2 size={14} className="animate-spin text-warm-400 dark:text-disc-muted" />}
+        {busy && <Loader2 size={16} className="animate-spin text-warm-400 dark:text-disc-muted" />}
 
         {canEdit && !open && (
           <button
             onClick={() => setOpen(true)}
-            className="flex items-center gap-1 px-2 py-1 text-sm rounded-lg border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover"
+            className="flex items-center gap-1 px-4 py-2 text-base rounded-lg border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover transition"
           >
-            <UserCog size={14} /> {card.owner_user_id ? t('modal.changeOwner') : t('modal.assignOwner')}
+            <UserCog size={16} /> {card.owner_user_id ? t('modal.changeOwner') : t('modal.assignOwner')}
           </button>
         )}
 
@@ -94,7 +94,7 @@ export default function OwnerPicker({ card, canEdit, canClaim, onPatch, onError 
         {!card.owner_user_id && canClaim && !canEdit && (
           <button
             onClick={async () => { setBusy(true); await onPatch({ claim: true }); setBusy(false) }}
-            className="px-2 py-1 text-sm rounded-lg bg-teal text-white font-medium hover:opacity-90"
+            className="px-4 py-2 text-base rounded-lg bg-teal text-white font-medium hover:opacity-90 transition"
           >
             {t('actions.claim')}
           </button>
@@ -105,7 +105,7 @@ export default function OwnerPicker({ card, canEdit, canClaim, onPatch, onError 
         <div className="mt-2 rounded-lg border border-warm-200 dark:border-disc-border p-3 flex flex-col gap-2">
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-warm-400 dark:text-disc-muted" />
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-warm-400 dark:text-disc-muted" />
               <input
                 type="text"
                 autoFocus
@@ -126,11 +126,11 @@ export default function OwnerPicker({ card, canEdit, canClaim, onPatch, onError 
           </div>
 
           {q.trim().length < 2 && (
-            <p className="text-sm text-warm-400 dark:text-disc-muted">{t('modal.searchPeopleHint')}</p>
+            <p className="text-base text-warm-400 dark:text-disc-muted">{t('modal.searchPeopleHint')}</p>
           )}
-          {searching && <p className="text-sm text-warm-400 dark:text-disc-muted">{t('loading')}</p>}
+          {searching && <p className="text-base text-warm-400 dark:text-disc-muted">{t('loading')}</p>}
           {!searching && q.trim().length >= 2 && people.length === 0 && (
-            <p className="text-sm text-warm-400 dark:text-disc-muted">{t('modal.noPeopleFound')}</p>
+            <p className="text-base text-warm-400 dark:text-disc-muted">{t('modal.noPeopleFound')}</p>
           )}
 
           <div className="flex flex-col max-h-56 overflow-y-auto">
@@ -159,7 +159,7 @@ export default function OwnerPicker({ card, canEdit, canClaim, onPatch, onError 
               <button
                 onClick={removeOwner}
                 disabled={busy}
-                className="px-3 py-1.5 text-sm rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-disc-hover font-medium disabled:opacity-50"
+                className="px-4 py-2 text-base rounded-lg text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-disc-hover font-medium transition disabled:opacity-50"
               >
                 {t('modal.removeOwner')}
               </button>

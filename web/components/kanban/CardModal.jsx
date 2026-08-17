@@ -221,17 +221,17 @@ export default function CardModal({ cardId, onClose, onChanged }) {
       className="fixed inset-0 z-50 bg-black/50 flex items-start sm:items-center justify-center p-3 overflow-y-auto"
       onMouseDown={(e) => { if (e.target === e.currentTarget) requestClose() }}
     >
-      <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl w-full max-w-2xl my-auto">
-        <div className="flex items-start justify-between gap-2 p-4 border-b border-warm-200 dark:border-disc-border">
+      <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg shadow-lg w-full max-w-2xl my-auto">
+        <div className="flex items-start justify-between gap-2 p-6 border-b border-warm-200 dark:border-disc-border">
           <div className="min-w-0">
-            <span className="text-xs text-warm-400 dark:text-disc-muted">{card ? formatRef(card.ref_no) : ''}</span>
-            <h2 className="text-lg font-bold text-warm-900 dark:text-disc-text">{t('modal.title')}</h2>
+            <span className="text-sm text-warm-400 dark:text-disc-muted">{card ? formatRef(card.ref_no) : ''}</span>
+            <h2 className="text-lg font-medium text-warm-900 dark:text-disc-text">{t('modal.title')}</h2>
           </div>
           <div className="flex items-center gap-3 shrink-0">
             {/* ป้ายสถานะการเซฟ — แทนปุ่มบันทึกที่ถูกยกเลิกไปตามกฎ 2026-07-30 */}
-            <span className="flex items-center gap-1 text-xs text-warm-500 dark:text-disc-muted">
-              {saveState === 'saving' && <><Loader2 size={14} className="animate-spin" /> {t('modal.saving')}</>}
-              {saveState === 'saved' && <><Check size={14} className="text-green-600" /> {t('modal.saved')}</>}
+            <span className="flex items-center gap-1 text-base text-warm-500 dark:text-disc-muted">
+              {saveState === 'saving' && <><Loader2 size={16} className="animate-spin" /> {t('modal.saving')}</>}
+              {saveState === 'saved' && <><Check size={16} className="text-green-600" /> {t('modal.saved')}</>}
             </span>
             {/* ปิด 3 ทาง — ทางที่ 3: ปุ่ม X */}
             <button
@@ -245,9 +245,9 @@ export default function CardModal({ cardId, onClose, onChanged }) {
           </div>
         </div>
 
-        <div className="p-4 flex flex-col gap-4">
-          {loading && <p className="text-sm text-warm-400 dark:text-disc-muted">{t('loading')}</p>}
-          {loadError && <p className="text-sm text-red-500 dark:text-red-400">{loadError}</p>}
+        <div className="p-6 flex flex-col gap-4">
+          {loading && <p className="text-base text-warm-400 dark:text-disc-muted">{t('loading')}</p>}
+          {loadError && <p className="text-base text-red-500 dark:text-red-400">{loadError}</p>}
 
           {conflict && (
             <div className="rounded-lg border border-amber-400 bg-amber-50 dark:bg-transparent p-3 text-sm flex flex-wrap items-center gap-2">
@@ -312,7 +312,7 @@ export default function CardModal({ cardId, onClose, onChanged }) {
                       key={s}
                       disabled={readOnly}
                       onClick={() => patch({ statusType: s })}
-                      className={`px-3 py-1.5 text-sm rounded-lg border font-medium disabled:opacity-50 ${
+                      className={`px-4 py-2 text-base rounded-lg border font-medium disabled:opacity-50 transition ${
                         card.status_type === s
                           ? 'bg-teal text-white border-transparent'
                           : 'border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover'
@@ -366,10 +366,10 @@ export default function CardModal({ cardId, onClose, onChanged }) {
                 <label className="block text-sm font-medium text-warm-700 dark:text-disc-muted mb-1">{t('modal.helpersLabel')}</label>
                 <div className="flex flex-wrap items-center gap-2">
                   {(card.helpers || []).length === 0 && (
-                    <span className="text-sm text-warm-400 dark:text-disc-muted">{t('modal.noHelpers')}</span>
+                    <span className="text-base text-warm-400 dark:text-disc-muted">{t('modal.noHelpers')}</span>
                   )}
                   {(card.helpers || []).map((h) => (
-                    <span key={h.user_id} className="flex items-center gap-1 px-2 py-1 text-sm rounded-lg border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text">
+                    <span key={h.user_id} className="flex items-center gap-1 px-4 py-2 text-base rounded-lg border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text">
                       {h.name}
                     </span>
                   ))}
@@ -382,9 +382,9 @@ export default function CardModal({ cardId, onClose, onChanged }) {
                         if (!res.ok) { setActionError(json.error || t('saveFailed')); return }
                         setCard(json.card); onChanged?.()
                       }}
-                      className="flex items-center gap-1 px-2 py-1 text-sm rounded-lg border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover"
+                      className="flex items-center gap-1 px-4 py-2 text-base rounded-lg border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover transition"
                     >
-                      <UserPlus size={14} /> {t('modal.joinAsHelper')}
+                      <UserPlus size={16} /> {t('modal.joinAsHelper')}
                     </button>
                   )}
                 </div>
@@ -416,7 +416,7 @@ export default function CardModal({ cardId, onClose, onChanged }) {
                           title={t('modal.removeItem')}
                           className="p-1 rounded text-warm-400 dark:text-disc-muted hover:text-red-500"
                         >
-                          <Trash2 size={14} />
+                          <Trash2 size={16} />
                         </button>
                       )}
                     </div>
@@ -431,19 +431,19 @@ export default function CardModal({ cardId, onClose, onChanged }) {
                       placeholder={t('modal.addItemPlaceholder')}
                       className="flex-1 h-11 px-3 text-base rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-teal"
                     />
-                    <button type="submit" className="flex items-center gap-1 px-3 rounded-lg bg-teal text-white text-sm font-medium hover:opacity-90">
+                    <button type="submit" className="flex items-center gap-1 px-4 rounded-lg bg-teal text-white text-base font-medium hover:opacity-90 transition">
                       <Plus size={16} /> {t('modal.addItem')}
                     </button>
                   </form>
                 )}
               </div>
 
-              {actionError && <p className="text-sm text-red-500 dark:text-red-400">{actionError}</p>}
+              {actionError && <p className="text-base text-red-500 dark:text-red-400">{actionError}</p>}
 
               {can.archive && (
                 <div className="pt-2 border-t border-warm-200 dark:border-disc-border flex justify-end">
-                  <button onClick={archive} className="flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-disc-hover font-medium">
-                    <Trash2 size={14} /> {t('modal.archive')}
+                  <button onClick={archive} className="flex items-center gap-1 px-4 py-2 text-base rounded-lg text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-disc-hover font-medium transition">
+                    <Trash2 size={16} /> {t('modal.archive')}
                   </button>
                 </div>
               )}

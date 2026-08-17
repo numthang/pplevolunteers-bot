@@ -63,35 +63,35 @@ function BoardCard({ card, t, onOpen, onDragStart, dragging }) {
       role="button"
       tabIndex={0}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(card) } }}
-      className={`bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg p-2.5 flex flex-col gap-1.5 cursor-pointer hover:border-teal focus:outline-none focus:ring-2 focus:ring-teal ${
+      className={`bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg p-4 flex flex-col gap-2 cursor-pointer hover:border-teal focus:outline-none focus:ring-2 focus:ring-teal ${
         dragging ? 'opacity-40' : ''
       }`}
     >
       {/* ไม่มีรหัส K-42 บนหน้าการ์ด — ดูที่หัว CardModal (ยังใช้อ้างถึงการบ้านในดิสฯ อยู่) */}
-      <h3 className="text-sm font-medium text-warm-900 dark:text-disc-text line-clamp-2">{card.title}</h3>
+      <h3 className="text-base font-semibold text-warm-900 dark:text-disc-text line-clamp-2">{card.title}</h3>
 
       {/* ชื่อกลุ่มไม่ต้องขึ้นบนกระดาน — การ์ดแคบเกิน (ชื่อกลุ่มเต็มอยู่ใน tooltip ของชิป) */}
       <LabelChips labels={card.labels} showGroupName={false} max={3} />
 
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-warm-500 dark:text-disc-muted">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-warm-500 dark:text-disc-muted">
         {card.due_at && (
           <span className={`flex items-center gap-1 ${
             state === 'overdue' ? 'text-red-500 font-medium' : state === 'today' ? 'text-orange font-medium' : ''
           }`}>
-            <Clock size={11} /> {fmtDueShort(card.due_at)}
+            <Clock size={16} /> {fmtDueShort(card.due_at)}
           </span>
         )}
         {card.owner_name && (
           <span className="flex items-center gap-1 min-w-0">
-            <User size={11} /> <span className="truncate max-w-[7rem]">{card.owner_name}</span>
+            <User size={16} /> <span className="truncate max-w-[9rem]">{card.owner_name}</span>
           </span>
         )}
         {total > 0 && (
-          <span className="flex items-center gap-1"><ListChecks size={11} /> {done}/{total}</span>
+          <span className="flex items-center gap-1"><ListChecks size={16} /> {done}/{total}</span>
         )}
         {card.blocked && (
           <span className="flex items-center gap-1 text-red-500 font-medium">
-            <AlertTriangle size={11} /> {t('row.blocked')}
+            <AlertTriangle size={16} /> {t('row.blocked')}
           </span>
         )}
       </div>
@@ -177,11 +177,11 @@ export default function BoardView() {
         </Link>
       </div>
 
-      {loadError && <p className="text-sm text-red-500 dark:text-red-400">{loadError}</p>}
-      {actionError && <p className="text-sm text-red-500 dark:text-red-400">{actionError}</p>}
+      {loadError && <p className="text-base text-red-500 dark:text-red-400">{loadError}</p>}
+      {actionError && <p className="text-base text-red-500 dark:text-red-400">{actionError}</p>}
 
       {loading ? (
-        <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-10 text-center text-warm-400 dark:text-disc-muted">
+        <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg p-10 text-center text-base text-warm-400 dark:text-disc-muted">
           {t('loading')}
         </div>
       ) : (
@@ -201,13 +201,13 @@ export default function BoardView() {
                   setDraggingId(null)
                   moveTo(e.dataTransfer.getData('text/plain'), status)
                 }}
-                className={`shrink-0 w-64 rounded-xl border-t-4 ${COLUMN_ACCENT[status]} border border-warm-200 dark:border-disc-border p-2 flex flex-col gap-2 ${
+                className={`shrink-0 w-72 rounded-lg border-t-4 ${COLUMN_ACCENT[status]} border border-warm-200 dark:border-disc-border p-2 flex flex-col gap-2 ${
                   overColumn === status ? 'bg-teal/5 dark:bg-teal/10' : 'bg-warm-50/50 dark:bg-white/[0.02]'
                 }`}
               >
                 <div className="flex items-center justify-between px-1">
-                  <h2 className="text-sm font-semibold text-warm-900 dark:text-disc-text">{t(`status.${status}`)}</h2>
-                  <span className="text-xs text-warm-400 dark:text-disc-muted">{list.length}</span>
+                  <h2 className="text-base font-semibold text-warm-900 dark:text-disc-text">{t(`status.${status}`)}</h2>
+                  <span className="text-base text-warm-400 dark:text-disc-muted">{list.length}</span>
                 </div>
 
                 <div className="flex flex-col gap-2 min-h-[4rem]">
@@ -222,12 +222,12 @@ export default function BoardView() {
                     />
                   ))}
                   {list.length > shown.length && (
-                    <p className="text-xs text-warm-400 dark:text-disc-muted px-1">
+                    <p className="text-sm text-warm-400 dark:text-disc-muted px-1">
                       {t('board.moreCards', { count: list.length - shown.length })}
                     </p>
                   )}
                   {list.length === 0 && (
-                    <p className="text-xs text-warm-400 dark:text-disc-muted px-1 py-3 text-center">{t('board.emptyColumn')}</p>
+                    <p className="text-sm text-warm-400 dark:text-disc-muted px-1 py-3 text-center">{t('board.emptyColumn')}</p>
                   )}
                 </div>
               </div>
@@ -236,7 +236,7 @@ export default function BoardView() {
         </div>
       )}
 
-      <p className="text-xs text-warm-400 dark:text-disc-muted">{t('board.dragHint')}</p>
+      <p className="text-sm text-warm-400 dark:text-disc-muted">{t('board.dragHint')}</p>
 
       {openCardId && (
         <CardModal cardId={openCardId} onClose={() => setOpenCardId(null)} onChanged={load} />

@@ -90,31 +90,31 @@ export default function LabelPicker({ cardId, labels = [], readOnly, onCardChang
 
       <div className="flex flex-wrap items-center gap-2">
         {labels.length === 0 && !open && (
-          <span className="text-sm text-warm-400 dark:text-disc-muted">{t('modal.noLabels')}</span>
+          <span className="text-base text-warm-400 dark:text-disc-muted">{t('modal.noLabels')}</span>
         )}
         <LabelChips labels={labels} />
         {!readOnly && !open && (
           <button
             onClick={openPicker}
-            className="flex items-center gap-1 px-2 py-1 text-sm rounded-lg border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover"
+            className="flex items-center gap-1 px-4 py-2 text-base rounded-lg border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover transition"
           >
-            <Tag size={14} /> {t('modal.editLabels')}
+            <Tag size={16} /> {t('modal.editLabels')}
           </button>
         )}
-        {saving && <Loader2 size={14} className="animate-spin text-warm-400 dark:text-disc-muted" />}
+        {saving && <Loader2 size={16} className="animate-spin text-warm-400 dark:text-disc-muted" />}
       </div>
 
       {open && (
         <div className="mt-2 rounded-lg border border-warm-200 dark:border-disc-border p-3 flex flex-col gap-3">
-          {loading && <p className="text-sm text-warm-400 dark:text-disc-muted">{t('loading')}</p>}
+          {loading && <p className="text-base text-warm-400 dark:text-disc-muted">{t('loading')}</p>}
           {!loading && groups.length === 0 && (
-            <p className="text-sm text-warm-400 dark:text-disc-muted">{t('modal.noLabelsInOrg')}</p>
+            <p className="text-base text-warm-400 dark:text-disc-muted">{t('modal.noLabelsInOrg')}</p>
           )}
 
           {groups.map(({ group, labels: list }) => (
             <div key={group || '_'}>
               {/* ชื่อกลุ่มมาจาก DB — ห้ามแปลผ่าน t() */}
-              <p className="text-xs text-warm-400 dark:text-disc-muted mb-1">{group || t('modal.ungrouped')}</p>
+              <p className="text-sm text-warm-400 dark:text-disc-muted mb-1">{group || t('modal.ungrouped')}</p>
               <div className="flex flex-wrap gap-1.5">
                 {list.map((l) => {
                   const on = selected.has(String(l.id))
@@ -122,13 +122,13 @@ export default function LabelPicker({ cardId, labels = [], readOnly, onCardChang
                     <button
                       key={l.id}
                       onClick={() => toggle(l.id)}
-                      className={`flex items-center gap-1 px-2 py-1 text-sm rounded-full font-medium border ${
+                      className={`flex items-center gap-1 px-3 py-1 text-sm rounded-full font-medium border ${
                         on
                           ? `${chipClass({ ...l, group: l.group_name })} border-transparent ring-1 ring-teal`
                           : 'border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover'
                       }`}
                     >
-                      {on && <Check size={12} />}
+                      {on && <Check size={16} />}
                       {l.name}
                     </button>
                   )
@@ -140,7 +140,7 @@ export default function LabelPicker({ cardId, labels = [], readOnly, onCardChang
           <div className="flex justify-end">
             <button
               onClick={() => setOpen(false)}
-              className="px-3 py-1.5 text-sm rounded-lg border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover font-medium"
+              className="px-4 py-2 text-base rounded-lg border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover font-medium transition"
             >
               {t('modal.doneEditingLabels')}
             </button>

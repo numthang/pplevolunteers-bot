@@ -220,6 +220,33 @@ See: [FINANCE.md - RBAC](FINANCE.md#access-control-rbac) | [CALLING.md - Permiss
 
 ---
 
+### Type scale — ใช้ 5 ขนาดนี้เท่านั้นทั้งโปรเจกต์
+
+> เขียนกฎนี้ 2026-08-17 เพราะโซนใหม่ (kanban) เดาสเกลเองแล้วหลุดทั้งโซน — user ต้องมาไล่แก้ซ้ำทุกครั้งที่ทำแอพใหม่
+> **ตัวเลขอ้างอิงของจริง:** `components/calling/` ใช้ `text-base` 74 จุด · `text-sm` 28 · `text-lg` 6 · `text-2xl` 5
+
+| ใช้กับ | class |
+|---|---|
+| หัวหน้าเพจ (h1) | `text-2xl font-bold` |
+| หัวข้อกอง / หัว modal (h2) | `text-lg font-medium` (กองในหน้า list ใช้ `font-semibold` ได้) |
+| ชื่อการ์ด / หัวข้อย่อย (h3) | `text-base font-semibold` |
+| **เนื้อความ · meta · ปุ่ม · input · ข้อความ error — ค่าเริ่มต้นของทุกอย่าง** | `text-base` |
+| label ฟอร์ม · badge/chip · ตัวเลขกำกับ · hint | `text-sm` |
+
+❌ **ห้ามใช้ `text-xs` และห้ามใช้ขนาดกำหนดเอง** (`text-[11px]`, `text-[13px]`) — เล็กสุดของโปรเจกต์คือ `text-sm`
+❌ ห้ามใช้ `rounded-xl` กับการ์ด/กล่อง — การ์ดทั้งโปรเจกต์เป็น `rounded-lg`
+❌ ปุ่มห้ามเป็น `px-3 py-1.5 text-sm` — ปุ่มมีขนาดเดียวคือ `px-4 py-2 text-base` (ดู §Primary button)
+✅ ไอคอน `lucide-react` ใช้ `size={16}` เป็นค่าเริ่มต้น (18-20 เฉพาะปุ่มปิด/ไอคอนเดี่ยว)
+
+**ก่อนเขียน component ใหม่:** เปิดไฟล์ใน `components/calling/` (เช่น `CampaignCard.jsx`, `SmsModal.jsx`) มาวางข้างจอแล้ว **ลอกคลาสมาตรงๆ** — ห้ามเขียนสเกลขึ้นเอง
+
+#### Badge / Chip
+```
+px-3 py-1 text-sm font-medium rounded-full
+```
+
+---
+
 ### Component Patterns
 
 #### Input / Select

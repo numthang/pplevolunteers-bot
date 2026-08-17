@@ -50,26 +50,26 @@ function HomeworkRow({ card, t, showClaim, onClaim, onDone, onOpen, busy }) {
       role="button"
       tabIndex={0}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(card) } }}
-      className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-3 flex flex-col gap-2 cursor-pointer hover:border-teal focus:outline-none focus:ring-2 focus:ring-teal"
+      className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg p-4 flex flex-col gap-2 cursor-pointer hover:border-teal focus:outline-none focus:ring-2 focus:ring-teal"
     >
       <div className="flex items-start justify-between gap-2">
         {/* รหัส K-42 ไม่ขึ้นหน้าการ์ด (user 2026-08-17) — ยังใช้จริงตอนอ้างถึงการบ้านในดิสฯ
             เลยเหลือไว้ในหัว CardModal ที่เดียว ไม่ได้เลิกใช้ทั้งระบบ */}
         <h3 className="min-w-0 text-base font-semibold text-warm-900 dark:text-disc-text truncate">{card.title}</h3>
-        <span className="shrink-0 flex items-center gap-1.5 text-xs font-medium text-warm-500 dark:text-disc-muted">
+        <span className="shrink-0 flex items-center gap-1.5 text-base font-medium text-warm-500 dark:text-disc-muted">
           <span className={`w-2 h-2 rounded-full ${STATUS_DOT[card.status_type] || 'bg-gray-400'}`} />
           {t(`status.${card.status_type}`)}
         </span>
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-warm-500 dark:text-disc-muted">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-base text-warm-500 dark:text-disc-muted">
         {card.due_at && (
           <span
             className={`flex items-center gap-1 ${
               state === 'overdue' ? 'text-red-500 font-medium' : state === 'today' ? 'text-orange font-medium' : ''
             }`}
           >
-            <Clock size={12} />
+            <Clock size={16} />
             {fmtDue(card.due_at)}
             {state === 'overdue' && ` · ${t('row.overdue')}`}
             {state === 'today' && ` · ${t('row.dueToday')}`}
@@ -77,19 +77,19 @@ function HomeworkRow({ card, t, showClaim, onClaim, onDone, onOpen, busy }) {
         )}
         {card.owner_name && (
           <span className="flex items-center gap-1">
-            <User size={12} />
+            <User size={16} />
             {card.owner_name}
           </span>
         )}
         {checklistTotal > 0 && (
           <span className="flex items-center gap-1">
-            <ListChecks size={12} />
+            <ListChecks size={16} />
             {checklistDone}/{checklistTotal}
           </span>
         )}
         {card.blocked && (
           <span className="flex items-center gap-1 text-red-500 font-medium">
-            <AlertTriangle size={12} />
+            <AlertTriangle size={16} />
             {t('row.blocked')}
           </span>
         )}
@@ -103,7 +103,7 @@ function HomeworkRow({ card, t, showClaim, onClaim, onDone, onOpen, busy }) {
           <button
             onClick={(e) => { e.stopPropagation(); onClaim(card) }}
             disabled={busy}
-            className="px-3 py-1.5 text-sm rounded-lg bg-teal hover:opacity-90 text-white font-medium disabled:opacity-50"
+            className="px-4 py-2 text-base rounded-lg bg-teal hover:opacity-90 text-white font-medium disabled:opacity-50 transition"
           >
             {busy ? t('actions.claiming') : t('actions.claim')}
           </button>
@@ -111,7 +111,7 @@ function HomeworkRow({ card, t, showClaim, onClaim, onDone, onOpen, busy }) {
           <button
             onClick={(e) => { e.stopPropagation(); onDone(card) }}
             disabled={busy}
-            className="px-3 py-1.5 text-sm rounded-lg border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover font-medium disabled:opacity-50"
+            className="px-4 py-2 text-base rounded-lg border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover font-medium disabled:opacity-50 transition"
           >
             {busy ? t('actions.marking') : t('actions.done')}
           </button>
@@ -129,7 +129,7 @@ function Section({ title, emphasize, emptyText, rows, children }) {
         {title}
       </h2>
       {rows.length === 0 ? (
-        <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-6 text-center text-sm text-warm-400 dark:text-disc-muted">
+        <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg p-6 text-center text-base text-warm-400 dark:text-disc-muted">
           {emptyText}
         </div>
       ) : (
@@ -312,7 +312,7 @@ export default function HomeworkHome() {
       {formOpen && (
         <form
           onSubmit={handleCreate}
-          className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-4 flex flex-col gap-3"
+          className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg p-6 flex flex-col gap-4"
         >
           <div className="flex items-start justify-between gap-2">
             <h2 className="text-lg font-semibold text-warm-900 dark:text-disc-text">{t('form.title')}</h2>
@@ -371,7 +371,7 @@ export default function HomeworkHome() {
             </div>
           </div>
 
-          <label className="flex items-center gap-2 text-sm text-warm-700 dark:text-disc-muted cursor-pointer">
+          <label className="flex items-center gap-2 text-base text-warm-700 dark:text-disc-muted cursor-pointer">
             <input
               type="checkbox"
               checked={form.assignToMe}
@@ -381,7 +381,7 @@ export default function HomeworkHome() {
             {t('form.assignToMe')}
           </label>
 
-          {createError && <p className="text-sm text-red-500 dark:text-red-400">{createError}</p>}
+          {createError && <p className="text-base text-red-500 dark:text-red-400">{createError}</p>}
 
           <div className="flex justify-end gap-2">
             <button
@@ -403,11 +403,11 @@ export default function HomeworkHome() {
         </form>
       )}
 
-      {loadError && <p className="text-sm text-red-500 dark:text-red-400">{loadError}</p>}
-      {actionError && <p className="text-sm text-red-500 dark:text-red-400">{actionError}</p>}
+      {loadError && <p className="text-base text-red-500 dark:text-red-400">{loadError}</p>}
+      {actionError && <p className="text-base text-red-500 dark:text-red-400">{actionError}</p>}
 
       {loading ? (
-        <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-10 text-center text-warm-400 dark:text-disc-muted">
+        <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg p-10 text-center text-base text-warm-400 dark:text-disc-muted">
           {t('loading')}
         </div>
       ) : (
