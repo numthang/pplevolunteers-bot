@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import {
   Search, RotateCcw, Loader2, Maximize2, Minimize2, PanelRightClose, PanelRightOpen,
-  Star, Wrench, Map as MapIcon, MapPin, Building2, FolderOpen, Users, MessageSquare, Mic, AtSign, Flame,
+  Star, Wrench, Map as MapIcon, MapPin, Building2, FolderOpen, Users, User, UsersRound, MessageSquare, Mic, AtSign, Flame,
 } from 'lucide-react'
 
 // ไอคอนเดียวกับที่วาดบนกราฟ แต่เป็น component สำหรับชิป/แผงขวา
@@ -158,6 +158,19 @@ function descendantsOf(node) {
   return out
 }
 
+// คนของบทบาทเรียงเป็น "ตารางยื่นออกด้านนอกวง" (2 คอลัมน์) ไม่ใช่กางเป็นพัดกว้าง
+// เพราะที่จองต้องคิดด้านข้าง: พัด 153° กินด้านข้าง ~500 หน่วย/บทบาท วงเลยบานจนกลางผังโล่ง
+// ตาราง 2 คอลัมน์กินด้านข้างคงที่ ~2 ป้าย แล้วยาวออกด้านนอกซึ่งเป็นที่ว่างฟรี
+function fanGeometry(roleR, people) {
+  if (!people.length) return { cols: 0, cellW: 0, cellH: 0, r0: 0, chord: 0 }
+  const maxPr = Math.max(...people.map(p => p.r))
+  const maxPw = Math.max(...people.map(p => p.w))
+  const cols = Math.min(2, people.length)
+  const cellW = maxPw + 16
+  const cellH = maxPr * 2 + 48
+  return { cols, cellW, cellH, r0: roleR + maxPr + 44, chord: cols * cellW }
+}
+
 // เส้นรอบวงของวงรี (Ramanujan) หารด้วยรัศมีฐาน — วงกลม (kx=ky=1) ได้ 2π ตามเดิม
 function ringPerimeter(kx, ky) {
   return Math.PI * (3 * (kx + ky) - Math.sqrt((3 * kx + ky) * (kx + 3 * ky)))
@@ -189,17 +202,17 @@ function buildLayout(visibleGroups, expandedRoles, collapsedGroups, t, aspect = 
       // อันดับ 1 = รูปกลางของบทบาทเอง → แตกออกเฉพาะอันดับ 2 ลงไป (ไม่งั้นคนเดิมโผล่ 2 ที่)
       const rest = role.top.slice(1)
       const expanded = !collapsed && expandedRoles.has(role.roleId) && rest.length > 0
-      let people = []
-      if (expanded) {
-        const pScores = rest.map(m => m.score)
-        people = rest.map((m, i) => {
-          const pr = scaleR(m.score, pScores, PERSON_R)
-          const psub = t('scoreLabel', { score: fmtInt(m.score) })
-          return { person: m, rank: i + 2, r: pr, sub: psub, w: Math.max(pr * 2, pillWidth(m.name, psub)) }
-        })
-      }
-      return { role, rad, sub, expanded, people, hiddenCount: rest.length,
-               width: Math.max(rad * 2, pillWidth(role.roleName, sub)) + GAP }
+      // คิด "ดอกคน" ทุกบทบาทเสมอ ไม่ว่ากางอยู่หรือไม่ — จองที่ไว้ล่วงหน้า (user 2026-08-17)
+      // กาง/ปิดทีหลังจึงไม่ต้องเบียดใคร เพราะที่ของมันถูกกันไว้ตั้งแต่แรกแล้ว
+      const pScores = rest.map(m => m.score)
+      const people = rest.map((m, i) => {
+        const pr = scaleR(m.score, pScores, PERSON_R)
+        const psub = t('scoreLabel', { score: fmtInt(m.score) })
+        return { person: m, rank: i + 2, r: pr, sub: psub, w: Math.max(pr * 2, pillWidth(m.name, psub)) }
+      })
+      const fan = fanGeometry(rad, people)
+      return { role, rad, sub, expanded, people, fan, hiddenCount: rest.length,
+               width: Math.max(rad * 2, pillWidth(role.roleName, sub), fan.chord) + GAP }
     })
     return { group: g, gi, roles, collapsed, width: roles.reduce((s, r) => s + r.width, 0) }
   })
@@ -250,27 +263,26 @@ function buildLayout(visibleGroups, expandedRoles, collapsedGroups, t, aspect = 
       nodes.push(rNode)
       if (!rNode.hidden) edges.push({ a: gNode, b: rNode })
 
-      // คนของบทบาทที่แตกแล้ว — กางออก "ด้านนอก" ของวง ไม่ใช่ล้อมรอบทุกทิศ
-      // ด้านนอกคือที่ว่างจริง (เส้นรอบวงยิ่งออกยิ่งยาว) จึงไม่ต้องเบียดเพื่อนบ้าน
+      // คนของบทบาทที่แตกแล้ว — ตารางยื่นออก "ด้านนอก" วง (แกน u = ออกจากศูนย์กลาง, v = ด้านข้าง)
       if (rp.expanded) {
-        const n = rp.people.length
-        const outward = Math.atan2(rNode.y, rNode.x)
-        const maxPr = Math.max(...rp.people.map(p => p.r))
-        const need = rp.people.reduce((s, p) => s + p.w + 14, 0)
-        const SPREAD = Math.PI * 0.85          // พัดออกด้านนอกเป็นรูปพัด ไม่อ้อมกลับไปฝั่งวงใน
-        const clusterR = Math.max(rp.rad + maxPr + 52, need / SPREAD)
-        const arc = Math.min(SPREAD, need / clusterR)
+        const { cols, cellW, cellH, r0 } = rp.fan
+        const a0 = Math.atan2(rNode.y, rNode.x)
+        const ux = Math.cos(a0), uy = Math.sin(a0)
         rp.people.forEach((p, i) => {
-          const a = outward + (n === 1 ? 0 : -arc / 2 + (i / (n - 1)) * arc)
+          const row = Math.floor(i / cols), col = i % cols
+          const rowN = Math.min(cols, rp.people.length - row * cols)   // แถวสุดท้ายไม่เต็มก็ให้อยู่กลาง
+          const out = r0 + row * cellH
+          const side = (col - (rowN - 1) / 2) * cellW
           nodes.push({
             id: `p:${rp.role.roleId}:${p.person.userId}`, kind: 'person', group: plan.group.groupName,
             person: p.person, rank: p.rank, role: rp.role, label: p.person.name, sub: p.sub,
-            x: rNode.x + Math.cos(a) * clusterR, y: rNode.y + Math.sin(a) * clusterR,
+            x: rNode.x + ux * out - uy * side, y: rNode.y + uy * out + ux * side,
             r: p.r, halfW: Math.max(p.r, pillWidth(p.person.name, p.sub) / 2), halfH: (p.r * 2 + 10 + 32) / 2,
-            // ยึดกับบทบาทแม่ ไม่ใช่ hub — คลายทับแล้วต้องไม่หลุดออกจากดอกของตัวเอง
-            anchor: rNode, anchorR: clusterR,
           })
-          edges.push({ a: rNode, b: nodes[nodes.length - 1] })
+          // ยึดกับ "ช่องของตัวเอง" ไม่ใช่รัศมี — คลายทับแล้วต้องกลับเข้าตาราง ไม่ไหลไปรอบบทบาท
+          const me = nodes[nodes.length - 1]
+          me.homeX = me.x; me.homeY = me.y
+          edges.push({ a: rNode, b: me })
         })
       }
     }
@@ -339,12 +351,10 @@ function relax(nodes) {
       }
     }
     for (const n of movable) {
-      if (n.anchor) {
-        // คนยึดเป็นวงกลมรอบบทบาทแม่ — ดอกเล็ก ไม่ต้องยืดตามจอ
-        const dx = n.x - n.anchor.x, dy = n.y - n.anchor.y
-        const d = Math.hypot(dx, dy) || 0.01
-        const pull = (d - n.anchorR) * 0.16
-        n.x -= (dx / d) * pull; n.y -= (dy / d) * pull
+      if (n.homeX !== undefined) {
+        // คนดึงกลับเข้า "ช่องในตาราง" ของตัวเอง — โดนดันแล้วต้องคืนรูป ไม่ใช่ไหลไปเรื่อยๆ
+        n.x += (n.homeX - n.x) * 0.2
+        n.y += (n.homeY - n.y) * 0.2
       } else {
         // กลุ่ม/บทบาทยึดกับวงรีบ้านของตัวเอง — d=1 คืออยู่บนวงพอดี
         const d = Math.hypot(n.x / n.ringX, n.y / n.ringY) || 0.01
@@ -366,9 +376,9 @@ export default function OrgChartClient() {
   const [hiddenGroups, setHiddenGroups] = useState(() => new Set())
   const [collapsedGroups, setCollapsedGroups] = useState(() => new Set())   // ยุบทั้งกลุ่ม (ต่างจากชิปที่ซ่อนหัวกลุ่มด้วย)
   const [expandedRoles, setExpandedRoles] = useState(() => new Set())
-  // กางรายคนทุกบทบาทพร้อมกัน = ~100 โหนด กระจายกว้างจนย่อแล้วอ่านไม่ออก
-  // ค่าเริ่มต้นจึงโชว์แค่ชั้นบทบาท แล้วกดทีละอันเพื่อแตกคน (user 2026-08-17)
-  const [autoExpand, setAutoExpand] = useState(false)
+  // กางรายคนทุกบทบาทเป็นค่าเริ่มต้น — ที่ของทุกคนถูกจองไว้ในผังอยู่แล้ว
+  // กาง/ปิดทีหลังจึงไม่มีอะไรขยับ (user 2026-08-17: "expand all ไปเลย จะได้จองที่ไว้เลย")
+  const [autoExpand, setAutoExpand] = useState(true)
   const [selected, setSelected] = useState(null)
   const [query, setQuery] = useState('')
   const [view, setView] = useState('chart')
@@ -401,7 +411,7 @@ export default function OrgChartClient() {
       .then(r => r.json().then(d => ({ ok: r.ok, d })))
       .then(({ ok, d }) => {
         // ข้อมูลชุดใหม่ → สิ่งที่แตกไว้เป็น snapshot เก่าแล้ว ปิดลงให้หมด
-        if (ok) { setData(d); setExpandedRoles(new Set()); setAutoExpand(false); setSelected(null) }
+        if (ok) { setData(d); setExpandedRoles(new Set()); setAutoExpand(true); setSelected(null) }
         else setError(d.error || t('loadFailed'))
       })
       .catch(() => setError(t('loadFailed')))
@@ -450,6 +460,12 @@ export default function OrgChartClient() {
     () => (autoExpand ? new Set(shownRoleIds) : expandedRoles),
     [autoExpand, shownRoleIds, expandedRoles]
   )
+
+  const allExpanded = autoExpand || (shownRoleIds.length > 0 && shownRoleIds.every(id => effExpanded.has(id)))
+  function toggleAllPeople() {
+    if (allExpanded) { setAutoExpand(false); setExpandedRoles(new Set()) }
+    else setAutoExpand(true)
+  }
 
   // filterKey = "ชุดข้อมูลที่ดูอยู่" (guild/ช่วงวัน/Top N/คำค้น/ชิปกลุ่ม) — เปลี่ยนแล้วจัดกล้องใหม่ได้
   // layoutKey = filterKey + สิ่งที่กางอยู่ — ใช้แค่ตัดสินว่าต้องสร้างโหนดใหม่ ไม่แตะกล้อง
@@ -513,11 +529,21 @@ export default function OrgChartClient() {
     if (!rect.width) return
     fitView()
     const v = viewRef.current
-    if (v && v.w < rect.width) {
+    if (!v) return
+    if (v.w <= rect.width) {
+      // ผังเล็กกว่าจอ → หยุดที่ 100% ไม่ต้องซูมเข้าให้เกินขนาดจริง
       const cx = v.x + v.w / 2, cy = v.y + v.h / 2
       viewRef.current = { x: cx - rect.width / 2, y: cy - rect.height / 2, w: rect.width, h: rect.height }
-      applyView()
+    } else {
+      // ผังใหญ่กว่าจอ → เริ่มที่ 100% แต่ "เล็งชิดซ้าย" ไม่ใช่กลางผัง
+      // กลางผังคือที่ว่างในวง เปิดมาจะเจอแต่ hub กับเส้น — ชิดซ้ายเจอโหนดเต็มจอตั้งแต่แรก
+      const b = bounds()
+      viewRef.current = {
+        x: b.minX, y: (b.minY + b.maxY) / 2 - rect.height / 2,
+        w: rect.width, h: rect.height,
+      }
     }
+    applyView()
   }
 
   // ขนาดกรอบเปลี่ยน (ย่อหน้าต่าง/เต็มจอ/พับแผงขวา) → คงระดับซูมกับจุดที่เล็งอยู่ ไม่กระตุกกลับ
@@ -828,10 +854,11 @@ export default function OrgChartClient() {
       return
     }
     if (node.kind === 'role') {
-      // เปิดได้ทีละบทบาท (accordion) — กางหลายอันพร้อมกันแล้วผังพองจนย่อลงไปอ่านไม่ออก
+      // กาง/ปิดเฉพาะอันที่กด — ที่ถูกจองไว้แล้ว กางหลายอันพร้อมกันก็ไม่เบียดใคร
       setSelected(node.role)
-      setAutoExpand(false)
-      setExpandedRoles(effExpanded.has(node.role.roleId) ? new Set() : new Set([node.role.roleId]))
+      const next = new Set(effExpanded)
+      next.has(node.role.roleId) ? next.delete(node.role.roleId) : next.add(node.role.roleId)
+      setAutoExpand(false); setExpandedRoles(next)
       return
     }
     if (node.kind === 'person') setSelected(node.role)
@@ -1077,6 +1104,12 @@ export default function OrgChartClient() {
                 <span className="text-xs text-warm-400 dark:text-disc-muted tabular-nums">
                   {t('rolesShown', { shown: shownRoles, total: totalActiveRoles })}
                 </span>
+                <button type="button" onClick={toggleAllPeople} aria-pressed={allExpanded}
+                  className={`flex items-center gap-1 text-xs font-semibold ${
+                    allExpanded ? 'text-orange' : 'text-warm-500 dark:text-disc-muted hover:text-orange'}`}>
+                  {allExpanded ? <UsersRound size={12} /> : <User size={12} />}
+                  {allExpanded ? t('collapseAllPeople') : t('expandAllPeople')}
+                </button>
                 <button type="button" onClick={fitView}
                   className="flex items-center gap-1 text-xs font-medium text-warm-500 dark:text-disc-muted hover:text-orange">
                   <Maximize2 size={12} /> {t('fitView')}

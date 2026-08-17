@@ -1547,7 +1547,9 @@
       "tipClickCollapseGroup": "Click to collapse the group",
       "tipClickExpandRole": "Click to show ranks 2-5",
       "tipClickCollapseRole": "Click to collapse",
-      "tipClickCollapseAll": "Click to collapse all groups"
+      "tipClickCollapseAll": "Click to collapse all groups",
+      "expandAllPeople": "Expand all people",
+      "collapseAllPeople": "Collapse all people"
     }
   },
   "posts": {

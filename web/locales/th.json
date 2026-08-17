@@ -1547,7 +1547,9 @@
       "tipClickCollapseGroup": "คลิกเพื่อยุบทั้งกลุ่ม",
       "tipClickExpandRole": "คลิกเพื่อดูอันดับ 2-5",
       "tipClickCollapseRole": "คลิกเพื่อยุบ",
-      "tipClickCollapseAll": "คลิกเพื่อยุบทุกกลุ่ม"
+      "tipClickCollapseAll": "คลิกเพื่อยุบทุกกลุ่ม",
+      "expandAllPeople": "กางรายคนทั้งหมด",
+      "collapseAllPeople": "ปิดรายคนทั้งหมด"
     }
   },
   "posts": {
