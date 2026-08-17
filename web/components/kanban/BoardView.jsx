@@ -19,7 +19,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { Clock, User, ListChecks, AlertTriangle, LayoutList, Eye, EyeOff } from 'lucide-react'
+import { Clock, User, ListChecks, AlertTriangle, LayoutList } from 'lucide-react'
 import Link from 'next/link'
 import { STATUS_TYPES } from '@/lib/kanbanAccess.js'
 import CardModal from './CardModal.jsx'
@@ -28,20 +28,9 @@ import LabelChips from './LabelChips.jsx'
 // แสดงต่อช่องสูงสุดเท่านี้ — ช่อง "เสร็จ" โตไม่มีเพดาน ไม่ควรวาดหมดทุกใบ
 const MAX_PER_COLUMN = 40
 
-// 6 ช่องเรียงกันแล้วแหกจอ (6 × 288px = 1,788px) + งานที่ปิดแล้วไม่ใช่ของที่อยากเห็นทุกวัน
-// → ค่าเริ่มต้นเหลือ 5 ช่อง แล้วมีปุ่มเปิดดูของที่ปิดแล้วทั้งหมด (user 2026-08-17)
-//   - "ยกเลิก" ซ่อนทั้งช่อง — ของหายาก เปลี่ยนสถานะผ่านการ์ดเอา
-//   - "เสร็จ" **ไม่ซ่อนทั้งช่อง** เพราะจะลากการ์ดให้จบไม่ได้เลย (ต้องเปิดการ์ดกดทุกครั้ง = ช้ากว่าเดิม)
-//     แต่โชว์เฉพาะที่เพิ่งจบใน 7 วัน — ช่องไม่บวมตามเวลา และได้เห็นว่าอาทิตย์นี้ทีมปิดอะไรไปบ้าง
-const HIDDEN_BY_DEFAULT = ['cancelled']
-const DONE_WINDOW_DAYS = 7
-
-function isRecentlyDone(card) {
-  const at = card.completed_at || card.updated_at
-  if (!at) return false
-  return Date.now() - new Date(at).getTime() < DONE_WINDOW_DAYS * 86400000
-}
-
+// ⛔ เคยลองซ่อนช่อง "ยกเลิก" + กรอง "เสร็จ" เหลือ 7 วัน เพื่อให้พอดีจอ — **user ไม่เอา** (2026-08-17)
+//    "ผมมีปัญหากับการใส่อะไรแล้วไม่ฟิตหน้าจอพอดี" → แก้ที่ layout ให้ 6 ช่องหารความกว้างจอเอา
+//    ไม่ใช่ซ่อนข้อมูลแล้วให้คนไปกดหา · อย่าเอากลับมาใส่อีก
 // แถบสีหัวช่อง — เป็น **element ของตัวเอง (พื้นหลัง) ไม่ใช่ border-t-<สี>**
 // เดิมใช้ border-t-4 + สี แล้วดาร์กโหมดกลายเป็นเทาหมด เพราะ `dark:border-disc-border`
 // เป็น variant ที่ออกมาทีหลังใน stylesheet → ทับสีขอบบนทิ้ง (ลำดับ CSS ไม่ใช่ลำดับ class ใน HTML)
@@ -127,7 +116,6 @@ export default function BoardView() {
   const [openCardId, setOpenCardId] = useState(null)
   const [draggingId, setDraggingId] = useState(null)
   const [overColumn, setOverColumn] = useState(null)
-  const [showClosed, setShowClosed] = useState(false)   // เปิดดูงานที่ปิดแล้วทั้งหมด (ยกเลิก + เสร็จย้อนหลัง)
 
   const load = useCallback(async () => {
     setLoadError('')
@@ -188,21 +176,12 @@ export default function BoardView() {
           <h1 className="text-2xl font-bold text-warm-900 dark:text-disc-text mb-1">{t('board.title')}</h1>
           <p className="text-base text-warm-500 dark:text-disc-muted">{t('board.subtitle')}</p>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowClosed(v => !v)}
-            className="flex items-center gap-1.5 border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover rounded-lg text-base font-medium px-4 py-2 transition"
-          >
-            {showClosed ? <EyeOff size={16} /> : <Eye size={16} />}
-            {showClosed ? t('board.hideClosed') : t('board.showClosed')}
-          </button>
-          <Link
-            href="/kanban"
-            className="flex items-center gap-1.5 border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover rounded-lg text-base font-medium px-4 py-2"
-          >
-            <LayoutList size={16} /> {t('board.viewList')}
-          </Link>
-        </div>
+        <Link
+          href="/kanban"
+          className="flex items-center gap-1.5 border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover rounded-lg text-base font-medium px-4 py-2"
+        >
+          <LayoutList size={16} /> {t('board.viewList')}
+        </Link>
       </div>
 
       {loadError && <p className="text-base text-red-500 dark:text-red-400">{loadError}</p>}
@@ -214,12 +193,11 @@ export default function BoardView() {
         </div>
       ) : (
         // มือถือ = ปัดดูทีละช่อง (ลากด้วยนิ้วไม่ได้ ให้เปิดการ์ดแล้วกดปุ่มสถานะแทน)
-        <div className="flex gap-3 overflow-x-auto pb-3">
-          {STATUS_TYPES.filter(s => showClosed || !HIDDEN_BY_DEFAULT.includes(s)).map((status) => {
-            const all = cards.filter((c) => c.status_type === status)
-            // ช่อง "เสร็จ" กรองเหลือของใหม่ ยกเว้นกดเปิดดูทั้งหมด
-            const list = status === 'done' && !showClosed ? all.filter(isRecentlyDone) : all
-            const olderHidden = all.length - list.length
+        // xl ขึ้นไป: 6 ช่องหารความกว้างจอพอดี ไม่มีแถบเลื่อนแนวนอน (user ไม่เอาของที่ล้นจอ)
+        // จอเล็กกว่านั้น: กลับไปโหมดปัดแนวนอน เพราะ 6 ช่องบนจอ 1,000px = ช่องละ 160px อ่านไม่ออก
+        <div className="flex gap-2 overflow-x-auto pb-3 xl:grid xl:grid-cols-6 xl:overflow-x-visible">
+          {STATUS_TYPES.map((status) => {
+            const list = cards.filter((c) => c.status_type === status)
             const shown = list.slice(0, MAX_PER_COLUMN)
             return (
               <div
@@ -232,21 +210,14 @@ export default function BoardView() {
                   setDraggingId(null)
                   moveTo(e.dataTransfer.getData('text/plain'), status)
                 }}
-                className={`shrink-0 w-64 rounded-lg border border-warm-200 dark:border-disc-border overflow-hidden flex flex-col ${
+                className={`shrink-0 w-64 xl:w-auto xl:min-w-0 rounded-lg border border-warm-200 dark:border-disc-border overflow-hidden flex flex-col ${
                   overColumn === status ? 'bg-teal/5 dark:bg-teal/10' : 'bg-warm-50/50 dark:bg-white/[0.02]'
                 }`}
               >
                 <div className={`h-1 w-full ${COLUMN_BAR[status]}`} />
 
                 <div className="flex items-center justify-between px-3 pt-2">
-                  <h2 className="text-base font-semibold text-warm-900 dark:text-disc-text">
-                    {t(`status.${status}`)}
-                    {olderHidden > 0 && (
-                      <span className="ml-1.5 text-sm font-normal text-warm-400 dark:text-disc-muted">
-                        {t('board.recentWindow', { days: DONE_WINDOW_DAYS })}
-                      </span>
-                    )}
-                  </h2>
+                  <h2 className="text-base font-semibold text-warm-900 dark:text-disc-text truncate">{t(`status.${status}`)}</h2>
                   <span className="text-base text-warm-400 dark:text-disc-muted">{list.length}</span>
                 </div>
 
@@ -265,14 +236,6 @@ export default function BoardView() {
                     <p className="text-sm text-warm-400 dark:text-disc-muted px-1">
                       {t('board.moreCards', { count: list.length - shown.length })}
                     </p>
-                  )}
-                  {olderHidden > 0 && (
-                    <button
-                      onClick={() => setShowClosed(true)}
-                      className="text-sm text-warm-400 dark:text-disc-muted px-1 text-left hover:text-teal"
-                    >
-                      {t('board.olderHidden', { count: olderHidden })}
-                    </button>
                   )}
                   {list.length === 0 && (
                     <p className="text-sm text-warm-400 dark:text-disc-muted px-1 py-3 text-center">{t('board.emptyColumn')}</p>

@@ -1805,11 +1805,7 @@
       "emptyColumn": "Nothing in this column",
       "moreCards": "{count} more",
       "moveFailed": "Could not move the card",
-      "dragHint": "Drag cards on desktop; on mobile open a card and use the status buttons",
-      "showClosed": "Show finished",
-      "hideClosed": "Hide finished",
-      "recentWindow": "(last {days} days)",
-      "olderHidden": "{count} finished earlier — tap to show"
+      "dragHint": "Drag cards on desktop; on mobile open a card and use the status buttons"
     }
   },
   "team": {
