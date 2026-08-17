@@ -127,7 +127,8 @@ export async function getFavoritesDisplay(orgId, userId, { name, limit = 100, of
      LEFT JOIN calling_member_tiers t
        ON f.contact_type = 'member' AND t.member_id = f.member_id AND t.contact_type = 'member'
      LEFT JOIN LATERAL (
-       SELECT om.avatar, om.user_id FROM org_members om
+       SELECT COALESCE(u.avatar, om.avatar) AS avatar, om.user_id FROM org_members om
+         LEFT JOIN users u ON u.id = om.user_id
         WHERE f.contact_type = 'member' AND om.serial = m.serial AND om.org_id = $1
         LIMIT 1
      ) dc ON true

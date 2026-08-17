@@ -120,7 +120,7 @@ export async function getMembersInCampaign(orgId, campaignId, filters = {}, limi
        FROM calling_logs WHERE contact_type = 'member'
        GROUP BY campaign_id, member_id
      ) ls ON ls.campaign_id = cc.id AND ls.member_id = m.source_id::text
-     LEFT JOIN LATERAL (SELECT om.avatar, om.user_id FROM org_members om WHERE om.serial = m.serial AND om.org_id = $1 LIMIT 1) dc ON true
+     LEFT JOIN LATERAL (SELECT COALESCE(u.avatar, om.avatar) AS avatar, om.user_id FROM org_members om LEFT JOIN users u ON u.id = om.user_id WHERE om.serial = m.serial AND om.org_id = $1 LIMIT 1) dc ON true
      LEFT JOIN users u ON u.id = dc.user_id${needAllTimeCalls ? `
      LEFT JOIN (SELECT member_id, COUNT(*) AS all_time_calls FROM calling_logs WHERE contact_type = 'member' GROUP BY member_id) atl
        ON atl.member_id = m.source_id::text` : ''}
@@ -350,7 +350,7 @@ export async function getMyAssignedMembers(orgId, userId, { campaignId, status, 
        JOIN cache_pple_member m ON m.source_id::text = a.member_id AND m.org_id = $1
        LEFT JOIN calling_member_tiers t ON t.member_id = a.member_id AND t.contact_type = 'member'
        LEFT JOIN cache_pple_event ec ON ec.id = a.campaign_id AND ec.type IN ('campaign', 'event')
-       LEFT JOIN LATERAL (SELECT om.avatar, om.user_id FROM org_members om WHERE om.serial = m.serial AND om.org_id = $1 LIMIT 1) dc ON true
+       LEFT JOIN LATERAL (SELECT COALESCE(u.avatar, om.avatar) AS avatar, om.user_id FROM org_members om LEFT JOIN users u ON u.id = om.user_id WHERE om.serial = m.serial AND om.org_id = $1 LIMIT 1) dc ON true
        LEFT JOIN users u ON u.id = dc.user_id
        LEFT JOIN (
          SELECT member_id,
@@ -455,7 +455,7 @@ export async function getMyCallHistoryFlat(orgId, userId, { name, limit = 60, of
        ec.name AS campaign_name
      FROM calling_logs l
      JOIN cache_pple_member m ON m.source_id::text = l.member_id AND m.org_id = $1
-     LEFT JOIN LATERAL (SELECT om.avatar, om.user_id FROM org_members om WHERE om.serial = m.serial AND om.org_id = $1 LIMIT 1) dc ON true
+     LEFT JOIN LATERAL (SELECT COALESCE(u.avatar, om.avatar) AS avatar, om.user_id FROM org_members om LEFT JOIN users u ON u.id = om.user_id WHERE om.serial = m.serial AND om.org_id = $1 LIMIT 1) dc ON true
      LEFT JOIN users u ON u.id = dc.user_id
      LEFT JOIN calling_member_tiers t ON t.member_id = l.member_id AND t.contact_type = 'member'
      LEFT JOIN cache_pple_event ec ON ec.id = l.campaign_id AND ec.type IN ('campaign', 'event')

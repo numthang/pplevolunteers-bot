@@ -1,8 +1,8 @@
 // scripts/data/backfill-avatars.js
-// เติม org_members.avatar จาก Discord — ผังทีมบนเว็บ (/bot/orgchart) ใช้รูปนี้แสดงโหนดคน
+// เติม users.avatar จาก Discord — ผังทีมบนเว็บ (/team) ใช้รูปนี้แสดงโหนดคน
 //
-// ทำไมต้องมี: avatar ถูกเขียนเฉพาะตอนสมัครผ่าน registerHandler เท่านั้น
-// สมาชิกที่เข้ามาก่อนหน้า/ไม่ได้สมัครผ่านฟอร์มจึงว่างทั้งหมด (วัดจริง 2026-08-17: มี 3 จาก 5,550)
+// ทำไมต้องมี: avatar ถูกเขียนตอนสมัคร/เข้าใหม่/ยศเปลี่ยน/เปลี่ยนรูป (userUpdate) เท่านั้น
+// สมาชิกเก่าที่ไม่ได้ทำอะไรเลยจึงว่าง — สคริปต์นี้ไล่เติมย้อนหลังให้ทีเดียว
 //
 // Usage:
 //   node scripts/data/backfill-avatars.js                 → ทุก guild ที่บอทอยู่
@@ -44,15 +44,12 @@ async function backfillGuild(guild) {
       if (!url) { skipped++; }
       else if (DRY) { updated++; }
       else {
+        // ลงที่ users (ของบัญชี) ไม่ใช่ org_members ต่อ guild — ตั้งแต่ 2026-08-18
+        // คนที่อยู่หลาย guild จึงเติมรอบเดียวจบ ไม่ต้องรันซ้ำทุก guild
         const { rowCount } = await pool.query(
-          `UPDATE org_members om
-              SET avatar = $1
-             FROM users u
-            WHERE u.id = om.user_id
-              AND u.discord_id = $2
-              AND om.guild_id = $3
-              AND om.avatar IS DISTINCT FROM $1`,
-          [url, member.id, guild.id]
+          `UPDATE users SET avatar = $1, updated_at = NOW()
+            WHERE discord_id = $2 AND avatar IS DISTINCT FROM $1`,
+          [url, member.id]
         );
         if (rowCount > 0) updated++; else skipped++;
       }

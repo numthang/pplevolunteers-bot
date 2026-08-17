@@ -8,10 +8,12 @@ const { resyncDiscordRolesForUser } = require('./orgMemberRoles');
 // key เดิม (guild_id, discord_id) → (user_id, guild_id) ผ่าน partial unique uq_om_user_guild
 
 async function upsertMember(guildId, data) {
+  // avatar ไปลงที่ users (ของบัญชี ไม่ใช่ของ guild) — caller เดิมยังส่งมาใน data ได้เหมือนเดิม
   const userId = await upsertUserByDiscord(data.discord_id, {
     username: data.username,
     firstname: data.firstname,
     lastname: data.lastname,
+    avatar: data.avatar,
   });
   const orgId = await orgIdOfGuild(guildId);
 
@@ -19,7 +21,7 @@ async function upsertMember(guildId, data) {
   // เดิม (dc_members) แต่ละ caller เขียน SQL ระบุคอลัมน์ของตัวเอง จึงไม่เคยแตะ field ของคนอื่น
   // ตอนรวมเป็นฟังก์ชันเดียวแล้ว SET หมด → sync ที่ส่งแค่ display_name/province/roles
   // ล้าง member_id/specialty/bank ฯลฯ เป็น NULL (พังจริงมาแล้ว 2026-07-21 ล้าง member_id 5 แถว)
-  const OPTIONAL_COLS = ['display_name', 'avatar', 'nickname', 'member_id', 'specialty',
+  const OPTIONAL_COLS = ['display_name', 'nickname', 'member_id', 'specialty',
                          'position', 'amphoe', 'province', 'region', 'roles', 'interests', 'referred_by'];
   const cols = OPTIONAL_COLS.filter(c => data[c] !== undefined);
 
@@ -76,26 +78,26 @@ async function upsertMemberFromDiscord(member) {
   await member.fetch();
   const { allProvinces, allRoles, interestRoles } = await _deriveRoleFields(member);
 
-  const userId = await upsertUserByDiscord(member.id, { username: member.user.username });
-  const orgId = await orgIdOfGuild(member.guild.id);
-
   // เก็บเฉพาะรูปที่ตั้งเองจริง — displayAvatarURL คืน default avatar ให้คนที่ไม่ได้ตั้งด้วย
-  // ซึ่งไม่มีประโยชน์ (ผังทีมบนเว็บวาด placeholder เองอยู่แล้ว) · COALESCE กันล้างของเดิมเป็น NULL
+  // ซึ่งไม่มีประโยชน์ (ผังทีมบนเว็บวาด placeholder เองอยู่แล้ว)
+  // ⚠️ ลงที่ users ไม่ใช่ org_members — รูปเป็นของบัญชี Discord ไม่ใช่ของ guild (2026-08-18)
   const avatar = member.user.avatar
     ? member.user.displayAvatarURL({ extension: 'webp', size: 256 })
     : null;
 
+  const userId = await upsertUserByDiscord(member.id, { username: member.user.username, avatar });
+  const orgId = await orgIdOfGuild(member.guild.id);
+
   const sql = `
   INSERT INTO org_members
-    (user_id, org_id, guild_id, display_name, province, roles, interests, avatar)
-  VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    (user_id, org_id, guild_id, display_name, province, roles, interests)
+  VALUES ($1, $2, $3, $4, $5, $6, $7)
   ON CONFLICT (user_id, guild_id) WHERE guild_id IS NOT NULL DO UPDATE SET
     org_id = COALESCE(EXCLUDED.org_id, org_members.org_id),
     display_name = EXCLUDED.display_name,
     province = EXCLUDED.province,
     roles = EXCLUDED.roles,
     interests = EXCLUDED.interests,
-    avatar = COALESCE(EXCLUDED.avatar, org_members.avatar),
     roles_assigned_at = NOW()
   `;
   await pool.query(sql, [
@@ -106,7 +108,6 @@ async function upsertMemberFromDiscord(member) {
     allProvinces,
     allRoles,
     interestRoles,
-    avatar,
   ]);
 
   await resyncDiscordRolesForUser(userId);

@@ -38,20 +38,36 @@ async function userIdByDiscord(discordId) {
 // users row จาก discord_id — create-on-first-sight (identity split: dc_members → users + org_members)
 // เขียนเฉพาะคอลัมน์ identity · profile/roles ทั้งหมดอยู่ org_members (per-guild)
 // COALESCE กัน field ที่ไม่ได้ส่งมาลบของเดิมทิ้ง
-async function upsertUserByDiscord(discordId, { username, firstname, lastname } = {}) {
+async function upsertUserByDiscord(discordId, { username, firstname, lastname, avatar } = {}) {
   if (!discordId) return null;
   const { rows } = await pool.query(
-    `INSERT INTO users (discord_id, username, firstname, lastname)
-     VALUES ($1, $2, $3, $4)
+    `INSERT INTO users (discord_id, username, firstname, lastname, avatar)
+     VALUES ($1, $2, $3, $4, $5)
      ON CONFLICT (discord_id) WHERE discord_id IS NOT NULL DO UPDATE SET
        username   = COALESCE(EXCLUDED.username, users.username),
        firstname  = COALESCE(EXCLUDED.firstname, users.firstname),
        lastname   = COALESCE(EXCLUDED.lastname, users.lastname),
+       avatar     = COALESCE(EXCLUDED.avatar, users.avatar),
        updated_at = NOW()
      RETURNING id`,
-    [discordId, username ?? null, firstname ?? null, lastname ?? null]
+    [discordId, username ?? null, firstname ?? null, lastname ?? null, avatar ?? null]
   );
   return rows[0].id;
 }
 
-module.exports = { getOrgGuildIds, orgIdOfGuild, userIdByDiscord, upsertUserByDiscord };
+// เปลี่ยนรูปโปรไฟล์ Discord → ต้องเขียนทับตรงๆ ไม่ใช่ COALESCE
+// (ถอดรูปออก = ต้องกลายเป็น NULL จริงๆ ไม่งั้นค้าง URL เก่าที่ 404 ไปตลอด)
+//
+// ⚠️ วันหน้าถ้าเว็บมี "อัปโหลดรูปเอง" — ห้ามเก็บลงคอลัมน์ users.avatar นี้
+// ฟังก์ชันนี้ทับมันทุกครั้งที่เจ้าตัวเปลี่ยนรูปใน Discord รูปที่อัปเองจะหายเงียบ
+// ให้แยกคอลัมน์ users.avatar_custom แล้วอ่านเป็น COALESCE(avatar_custom, avatar, om.avatar) — ดู md/PENDING.md
+async function setUserAvatar(discordId, avatar) {
+  if (!discordId) return;
+  await pool.query(
+    `UPDATE users SET avatar = $2, updated_at = NOW()
+      WHERE discord_id = $1 AND avatar IS DISTINCT FROM $2`,
+    [discordId, avatar ?? null]
+  );
+}
+
+module.exports = { getOrgGuildIds, orgIdOfGuild, userIdByDiscord, upsertUserByDiscord, setUserAvatar };

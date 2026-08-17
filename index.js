@@ -331,6 +331,17 @@ client.on('guildMemberUpdate', async (oldMember, newMember) => {
   await upsertMemberFromDiscord(newMember).catch(err => console.error('[memberUpdate] upsert:', err));
 });
 
+// เปลี่ยนรูปโปรไฟล์ = เหตุการณ์ระดับ user ไม่ใช่ระดับ guild → guildMemberUpdate ไม่ยิง
+// ถ้าไม่ดักตรงนี้ URL ที่เก็บไว้ (ฝัง hash) จะกลายเป็น 404 เงียบๆ ทีละคน แล้วต้องมารัน backfill ซ้ำ
+client.on('userUpdate', async (oldUser, newUser) => {
+  if (oldUser.avatar === newUser.avatar) return;
+  const { setUserAvatar } = require('./db/org');
+  const url = newUser.avatar
+    ? newUser.displayAvatarURL({ extension: 'webp', size: 256 })
+    : null;   // ถอดรูปออก → ล้างเป็น NULL ให้เว็บวาด placeholder แทน
+  await setUserAvatar(newUser.id, url).catch(err => console.error('[userUpdate] avatar:', err));
+});
+
 // ─── Forum indexing ──────────────────────────────────────────────────────────
 // forumChannelCache และ dashboardThreadCache import มาจาก services/forumCache.js
 

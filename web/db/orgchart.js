@@ -76,7 +76,7 @@ ranked AS (
 SELECT rb.role_id, rb.role_name, rb.role_color, rb.group_name,
        COALESCE(rs.member_count, 0) AS member_count,
        COALESCE(rs.total_score, 0)  AS total_score,
-       r.user_id, u.discord_id, om.display_name, om.avatar,
+       r.user_id, u.discord_id, om.display_name, COALESCE(u.avatar, om.avatar) AS avatar,
        r.messages, r.voice_seconds, r.mentions, r.score, r.rnk
   FROM role_base rb
   LEFT JOIN role_summary rs ON rs.role_id = rb.role_id

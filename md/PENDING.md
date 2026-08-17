@@ -2,6 +2,25 @@
 
 > เก็บเฉพาะงานค้าง + design ที่ยังไม่ทำ · ของที่ทำเสร็จ+deploy แล้วย้ายไปอยู่ในโค้ด/`md/*` ตามระบบ
 
+## 🖼️ avatar ย้ายมาที่ `users` แล้ว (2026-08-18) — ยังไม่ deploy + ยังไม่มีรูปที่ตั้งเองบนเว็บ
+
+**ทำไปแล้ว (local):** `users.avatar` เป็นแหล่งจริง · อ่านทุกที่เป็น `COALESCE(u.avatar, om.avatar)` ·
+บอทเขียนตอน register/memberAdd/memberUpdate + `userUpdate` (เปลี่ยนรูปแล้วตามเอง) ·
+`org_members.avatar` เหลือเป็น fallback ของเก่า ยังไม่ DROP
+
+**ต้องทำตอน deploy:**
+1. รัน migration (`ALTER TABLE users ADD COLUMN avatar` + UPDATE ยกของเดิม) — อยู่ท้าย `scripts/migration/migration.sql`
+2. ขึ้นบอทกับเว็บ**พร้อมกัน** (เว็บอ่าน `u.avatar`, บอทเขียน `u.avatar`)
+3. รัน `node scripts/data/backfill-avatars.js` เติมคนเก่า (dry run 2026-08-18 บน prod: 6,034 แถวเป็นเพดานบน)
+
+**ถ้าจะทำ "รูปที่ผู้ใช้อัปโหลดเองบนเว็บ" — ห้ามใช้คอลัมน์ `users.avatar`**
+บอทเขียนทับคอลัมน์นี้ทุกครั้งที่เจ้าตัวเปลี่ยนรูปใน Discord (`userUpdate`) → รูปที่อัปเองจะหายเงียบ
+ให้เพิ่มคอลัมน์แยก `users.avatar_custom` แล้วไล่แก้ลำดับการอ่านเป็น
+`COALESCE(u.avatar_custom, u.avatar, om.avatar)` ที่ 5 จุด:
+`web/db/orgchart.js` (1) · `web/db/calling/members.js` (3) · `web/db/calling/starred.js` (1)
+
+**ค้างอยู่:** DROP `org_members.avatar` ทิ้งหลัง deploy นิ่งแล้ว
+
 ## 🗄️ Postgres ยังไม่อยู่ใต้ aaPanel — backup ตอนนี้เป็น workaround (2026-08-17)
 
 Production Postgres ลงด้วย `sudo apt install postgresql` ตรง ๆ (ไม่ผ่าน aaPanel PgSQL Manager plugin) → ปลั๊กอินไม่รู้จัก instance นี้เลย

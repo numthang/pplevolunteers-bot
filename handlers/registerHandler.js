@@ -114,7 +114,11 @@ async function handleModalSubmit(interaction) {
     discord_id: interaction.user.id,
     username: interaction.user.username,
     display_name: interaction.member.displayName,
-    avatar: interaction.user.displayAvatarURL({ size: 256 }),
+    // เก็บเฉพาะรูปที่ตั้งเองจริง — displayAvatarURL คืน default avatar ให้คนที่ไม่ได้ตั้งด้วย
+    // (เดิมตรงนี้เก็บ default ปนมา ไม่ตรงกับ write-path อื่น) · ปลายทางคือ users.avatar
+    avatar: interaction.user.avatar
+      ? interaction.user.displayAvatarURL({ extension: 'webp', size: 256 })
+      : null,
     nickname: name,
     specialty: interest,
     position: position || null,

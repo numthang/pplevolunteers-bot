@@ -794,8 +794,6 @@ ON CONFLICT DO NOTHING;
 --    กับ web/app/api/bot/ai-modes/route.js ยิงตารางนี้ทั้งคู่ ปล่อยฝั่งเดียวไป = บอทพังเงียบ
 DROP TABLE IF EXISTS dc_ai_modes;
 
--- production ทำถึงตรงนี้
-
 -- ═══════════════════════════════════════════════════════════════════════════
 -- 2026-08-14 — kanban ก้อน 1: "การบ้านของฉัน" (3 ตาราง · ยังไม่มีกระดาน)
 --
@@ -915,3 +913,20 @@ CREATE INDEX IF NOT EXISTS idx_kanban_card_labels_label ON kanban_card_labels (l
 ALTER TABLE kanban_cards DROP CONSTRAINT IF EXISTS kanban_cards_owner_required;
 ALTER TABLE kanban_cards ADD CONSTRAINT kanban_cards_owner_required
   CHECK (owner_user_id IS NOT NULL OR status_type IN ('backlog', 'cancelled'));
+
+-- production ทำถึงตรงนี้
+
+-- 2026-08-18 · avatar ย้ายมาอยู่ที่ users (เป็นของบัญชี ไม่ใช่ของ guild)
+-- เดิมเก็บที่ org_members ต่อ guild → คนเดียวกันต้อง backfill ซ้ำทุก guild (prod มี 5 guild)
+-- และไม่มีใครอัปเดตตอนเจ้าตัวเปลี่ยนรูป (URL ฝัง hash ไว้ → ของเก่ากลายเป็น 404 เงียบๆ)
+-- ตั้งแต่นี้ users.avatar คือแหล่งจริง · org_members.avatar เหลือไว้เป็น fallback ของเก่าเท่านั้น
+ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar TEXT;
+
+-- ยกของเดิมขึ้นมา: เอาแถวที่ sync ล่าสุดของแต่ละคน
+UPDATE users u
+   SET avatar = s.avatar
+  FROM (SELECT DISTINCT ON (user_id) user_id, avatar
+          FROM org_members
+         WHERE avatar IS NOT NULL AND user_id IS NOT NULL
+         ORDER BY user_id, roles_assigned_at DESC NULLS LAST) s
+ WHERE s.user_id = u.id AND u.avatar IS NULL;
