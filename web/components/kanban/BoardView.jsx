@@ -31,17 +31,19 @@ const MAX_PER_COLUMN = 40
 // ⛔ เคยลองซ่อนช่อง "ยกเลิก" + กรอง "เสร็จ" เหลือ 7 วัน เพื่อให้พอดีจอ — **user ไม่เอา** (2026-08-17)
 //    "ผมมีปัญหากับการใส่อะไรแล้วไม่ฟิตหน้าจอพอดี" → แก้ที่ layout ให้ 6 ช่องหารความกว้างจอเอา
 //    ไม่ใช่ซ่อนข้อมูลแล้วให้คนไปกดหา · อย่าเอากลับมาใส่อีก
-// แถบสีหัวช่อง — เป็น **element ของตัวเอง (พื้นหลัง) ไม่ใช่ border-t-<สี>**
-// เดิมใช้ border-t-4 + สี แล้วดาร์กโหมดกลายเป็นเทาหมด เพราะ `dark:border-disc-border`
-// เป็น variant ที่ออกมาทีหลังใน stylesheet → ทับสีขอบบนทิ้ง (ลำดับ CSS ไม่ใช่ลำดับ class ใน HTML)
-// ใช้ bg แยกชิ้นแล้วไม่ต้องลุ้น cascade อีก · สีชุดเดียวใช้ได้ทั้ง 2 โหมด (500 เข้มพอบนพื้นดำ)
-const COLUMN_BAR = {
-  backlog: 'bg-gray-400',
-  doing: 'bg-blue-500',
-  review: 'bg-amber-500',
-  ready: 'bg-purple-500',
-  done: 'bg-green-500',
-  cancelled: 'bg-gray-300 dark:bg-gray-500',   // เทาอ่อนบนพื้นดำจางเกินจนดูเหมือนไม่มีแถบ
+// หัวช่อง = พื้นพาสเทลของสถานะนั้น · **ช่องไม่มีขอบ** (user 2026-08-17: "ไม่ชอบขอบซ้อนขอบ ตาลาย")
+// เหลือขอบชั้นเดียวที่ตัวการ์ด → โครงของช่องอ่านได้จากแถบสีหัว ไม่ต้องมีกรอบอีกชั้น
+//
+// ⚠️ ห้ามกลับไปใช้ border-t-<สี> เพื่อทำแถบสี — `dark:border-disc-border` เป็น variant ที่ออก
+//    ทีหลังใน stylesheet แล้วทับสีขอบบนทิ้ง = ดาร์กโหมดเทาหมด (เจอมาแล้ว) · ใช้พื้นหลังเท่านั้น
+// โทนเดียวกับชิปป้ายใน lib/kanbanLabelColors.js (พื้นจาง ตัวหนังสือเข้ม · ดาร์ก = พื้นเข้มหม่น)
+const COLUMN_HEAD = {
+  backlog:   'bg-[#EEEEEE] text-[#424242] dark:bg-[#3A3A3E]/70 dark:text-[#E0E0E0]',
+  doing:     'bg-[#E3F2FD] text-[#1565C0] dark:bg-[#1E3A52]/70 dark:text-[#BBDEFB]',
+  review:    'bg-[#FFF8E1] text-[#EF6C00] dark:bg-[#4C4020]/70 dark:text-[#FFE0B2]',
+  ready:     'bg-[#F3E5F5] text-[#6A1B9A] dark:bg-[#4A2E52]/70 dark:text-[#E1BEE7]',
+  done:      'bg-[#E8F5E9] text-[#2E7D32] dark:bg-[#24452A]/70 dark:text-[#C8E6C9]',
+  cancelled: 'bg-[#FAFAFA] text-[#9E9E9E] dark:bg-[#2E2E32]/70 dark:text-[#9E9E9E]',
 }
 
 function dueState(dueAt) {
@@ -216,19 +218,17 @@ export default function BoardView() {
                   setDraggingId(null)
                   moveTo(e.dataTransfer.getData('text/plain'), status)
                 }}
-                className={`w-full xl:min-w-0 rounded-lg border border-warm-200 dark:border-disc-border overflow-hidden flex flex-col ${
-                  overColumn === status ? 'bg-teal/5 dark:bg-teal/10' : 'bg-warm-50/50 dark:bg-white/[0.02]'
+                className={`w-full xl:min-w-0 rounded-lg overflow-hidden flex flex-col ${
+                  overColumn === status ? 'bg-teal/10 dark:bg-teal/15' : ''
                 }`}
               >
-                <div className={`h-1 w-full ${COLUMN_BAR[status]}`} />
-
                 <button
                   type="button"
                   onClick={() => setOpenState((s) => ({ ...s, [status]: !isOpen }))}
-                  className="flex items-center justify-between gap-2 px-3 pt-2 pb-1 text-left xl:cursor-default"
+                  className={`flex items-center justify-between gap-2 px-3 py-2 text-left xl:cursor-default ${COLUMN_HEAD[status]}`}
                 >
-                  <h2 className="text-base font-semibold text-warm-900 dark:text-disc-text truncate">{t(`status.${status}`)}</h2>
-                  <span className="flex items-center gap-1 shrink-0 text-base text-warm-400 dark:text-disc-muted">
+                  <h2 className="text-base font-semibold truncate">{t(`status.${status}`)}</h2>
+                  <span className="flex items-center gap-1 shrink-0 text-base opacity-70">
                     {list.length}
                     {/* ลูกศรมีความหมายเฉพาะตอนพับได้ = จอเล็ก · จอใหญ่กางเสมอเลยซ่อนทิ้ง */}
                     {isOpen
