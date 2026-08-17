@@ -1,15 +1,7 @@
-import { getTranslations } from 'next-intl/server'
-import { getSession, redirectToLogin } from '@/lib/auth.js'
-import BoardView from '@/components/kanban/BoardView.jsx'
+import { redirect } from 'next/navigation'
 
-export async function generateMetadata() {
-  const t = await getTranslations('kanban')
-  return { title: t('meta.board') }
-}
-
-export default async function KanbanBoardPage() {
-  const session = await getSession()
-  if (!session) await redirectToLogin()
-
-  return <BoardView />
+// 2026-08-18: กระดานย้ายไปรวมกับหน้าแรกแล้ว (ปุ่ม "จัดกลุ่ม: ตามสถานะ" คือหน้านี้)
+// เก็บ route ไว้เพราะลิงก์เก่าถูกแชร์ในดิสฯ ไปแล้ว — เหมือน /bot/orgchart → /team
+export default function KanbanBoardRedirect() {
+  redirect('/kanban')
 }

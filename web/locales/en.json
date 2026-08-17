@@ -1703,22 +1703,11 @@
   },
   "kanban": {
     "meta": {
-      "list": "My Homework",
-      "board": "Homework board"
+      "list": "Homework"
     },
     "page": {
-      "title": "My Homework",
-      "subtitle": "What you need to deliver, what you're helping with, and what nobody has claimed yet"
-    },
-    "sections": {
-      "mine": "I need to deliver",
-      "helping": "I'm helping",
-      "unassigned": "Unclaimed"
-    },
-    "empty": {
-      "mine": "Nothing to deliver yet",
-      "helping": "You're not helping with anything yet",
-      "unassigned": "Nothing unclaimed right now"
+      "title": "Homework",
+      "subtitle": "Starts with your homework and anything nobody has picked up · switch to \"Everyone\" for the whole org"
     },
     "loading": "Loading...",
     "loadFailed": "Failed to load the list",
@@ -1731,17 +1720,12 @@
       "cancelled": "Parked"
     },
     "row": {
-      "overdue": "Overdue",
-      "dueToday": "Due today",
       "blocked": "Blocked"
     },
     "actions": {
       "claim": "Claim this",
       "claiming": "Claiming...",
-      "claimFailed": "Could not claim this",
-      "done": "Mark done",
-      "marking": "Saving...",
-      "doneFailed": "Could not update status"
+      "claimFailed": "Could not claim this"
     },
     "addButton": "+ Add homework",
     "form": {
@@ -1804,14 +1788,26 @@
     },
     "saveFailed": "Save failed",
     "board": {
-      "title": "Homework board",
-      "subtitle": "All work in the organization by status — drag a card to another column to change its status",
-      "viewBoard": "Board",
-      "viewList": "List",
       "emptyColumn": "Nothing in this column",
       "moreCards": "{count} more",
       "moveFailed": "Could not move the card",
       "dragHint": "Drag cards on desktop; on mobile open a card and use the status buttons"
+    },
+    "controls": {
+      "showLabel": "Show",
+      "scopeMine": "Mine",
+      "scopeAll": "Everyone",
+      "groupLabel": "Group by",
+      "groupStatus": "Status",
+      "groupDue": "Due date",
+      "dueModeNote": "Due-date mode hides finished and shelved homework · move between statuses in \"Status\" mode"
+    },
+    "due": {
+      "overdue": "Overdue",
+      "today": "Today",
+      "week": "Next 7 days",
+      "later": "Later",
+      "none": "No due date"
     },
     "filter": {
       "title": "Filter by label",

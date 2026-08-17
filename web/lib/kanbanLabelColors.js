@@ -41,6 +41,18 @@ export const STATUS_COLOR = {
   cancelled: '#B2B2B2', // เทาเข้ม — ยกเลิก
 }
 
+/**
+ * หัวกองของโหมด "ตามกำหนดส่ง" — ไล่จากเร่งสุดไปเบาสุด
+ * ⛔ หยิบจากคลังพาสเทลชุดเดียวกับชิปเท่านั้น ห้ามคิดเฉดใหม่
+ */
+export const DUE_COLOR = {
+  overdue: '#F14668', // แดง — เลยกำหนดแล้ว
+  today:   '#ED9A73', // ส้ม — วันนี้
+  week:    '#E3C878', // เหลือง — อีก 7 วัน
+  later:   '#84A6D6', // ฟ้า — ยังมีเวลา
+  none:    '#DCDBD9', // เทา — ยังไม่กำหนดวัน
+}
+
 function hash(str) {
   let h = 0
   for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) | 0
@@ -75,9 +87,12 @@ export function chipProps(label) {
   return { className: 'kb-tint', style: { '--kb': color } }
 }
 
-/** props ของหัวช่องบนกระดาน (เข้มกว่าชิปนิดนึง) */
-export function columnHeadProps(status) {
-  return { className: 'kb-tint-strong', style: { '--kb': STATUS_COLOR[status] || NO_GROUP_COLOR } }
+/**
+ * props ของหัวกองบนหน้า /kanban (เข้มกว่าชิปนิดนึง)
+ * รับได้ทั้งคีย์สถานะ (backlog…) และคีย์กองกำหนดส่ง (overdue…) — 2 โหมดใช้หัวกองตัวเดียวกัน
+ */
+export function columnHeadProps(key) {
+  return { className: 'kb-tint-strong', style: { '--kb': STATUS_COLOR[key] || DUE_COLOR[key] || NO_GROUP_COLOR } }
 }
 
 /**

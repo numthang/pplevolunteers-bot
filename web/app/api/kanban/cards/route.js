@@ -24,10 +24,16 @@ export async function GET(req) {
   if (view === 'unassigned') {
     return Response.json({ cards: await cardDB.listCards(ctx.orgId, { unassigned: true, includeClosed: false }) })
   }
-  // กระดาน — ต้องได้ช่อง "เสร็จ"/"ยกเลิก" มาด้วย ไม่งั้นลากเข้าแล้วการ์ดหายต่อหน้า
-  // limit สูงกว่าปกติเพราะกองงานที่จบแล้วสะสมเรื่อยๆ (UI ตัดแสดงเองต่อช่อง)
+  // หน้า /kanban (หน้าเดียวของโมดูลตั้งแต่ 2026-08-18) — ต้องได้กอง "เสร็จ"/"กรุ" มาด้วย
+  // ไม่งั้นลากเข้าแล้วการ์ดหายต่อหน้า · limit สูงกว่าปกติเพราะงานที่จบแล้วสะสมเรื่อยๆ (UI ตัดแสดงเองต่อกอง)
+  //
+  // ⭐ viewerUserId ติดไปด้วย — ตัวกรอง "ของฉัน" ตัดสินฝั่ง client จากชุดข้อมูลก้อนเดียวกันนี้
+  //    (ไม่ยิง /api/me เพิ่ม และ **ห้ามให้ client เดา userId ตัวเองจาก session** — debug mode คืน null ตั้งใจ)
   if (view === 'board') {
-    return Response.json({ cards: await cardDB.listCards(ctx.orgId, { includeClosed: true, limit: 500 }) })
+    return Response.json({
+      cards: await cardDB.listCards(ctx.orgId, { includeClosed: true, limit: 500 }),
+      viewerUserId: ctx.userId ?? null,
+    })
   }
   return Response.json({ cards: await cardDB.listCards(ctx.orgId, { includeClosed: false }) })
 }
