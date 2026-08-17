@@ -15,7 +15,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { Tag, Check, Loader2 } from 'lucide-react'
-import { chipClass } from '@/lib/kanbanLabelColors.js'
+import { chipProps } from '@/lib/kanbanLabelColors.js'
 import LabelChips from './LabelChips.jsx'
 
 export default function LabelPicker({ cardId, labels = [], readOnly, onCardChanged, onError }) {
@@ -118,13 +118,15 @@ export default function LabelPicker({ cardId, labels = [], readOnly, onCardChang
               <div className="flex flex-wrap gap-1.5">
                 {list.map((l) => {
                   const on = selected.has(String(l.id))
+                  const tint = chipProps({ ...l, group: l.group_name })
                   return (
                     <button
                       key={l.id}
                       onClick={() => toggle(l.id)}
+                      style={on ? tint.style : undefined}
                       className={`flex items-center gap-1 px-3 py-1 text-sm rounded-full font-medium border ${
                         on
-                          ? `${chipClass({ ...l, group: l.group_name })} border-transparent ring-1 ring-teal`
+                          ? `${tint.className} border-transparent ring-1 ring-teal`
                           : 'border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover'
                       }`}
                     >

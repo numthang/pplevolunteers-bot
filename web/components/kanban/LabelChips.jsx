@@ -9,7 +9,7 @@
  * ⛔ ชื่อกลุ่มมาจาก DB ล้วน — ห้ามใส่ผ่าน t() (เป็นข้อมูลที่ org ตั้งเอง ไม่ใช่ข้อความ UI)
  */
 
-import { chipClass, groupCardLabels } from '@/lib/kanbanLabelColors.js'
+import { chipProps, groupCardLabels } from '@/lib/kanbanLabelColors.js'
 
 export default function LabelChips({ labels = [], showGroupName = true, max = 0 }) {
   if (!labels.length) return null
@@ -26,16 +26,21 @@ export default function LabelChips({ labels = [], showGroupName = true, max = 0 
             {showGroupName && group && (
               <span className="text-sm text-warm-400 dark:text-disc-muted">{group}</span>
             )}
-            {shown.map((l) => (
-              <span
-                key={l.id}
-                title={group ? `${group} · ${l.name}` : l.name}
-                // ขนาด badge มาตรฐานของโปรเจกต์ (เทียบ components/docs/DocEntryList.jsx · app/case/[ref]/page.js)
-                className={`px-3 py-1 text-sm font-medium rounded-full ${chipClass(l)}`}
-              >
-                {l.name}
-              </span>
-            ))}
+            {/* ขนาด badge มาตรฐานของโปรเจกต์ (เทียบ components/docs/DocEntryList.jsx · app/case/[ref]/page.js)
+                สีมาจากคลังสีพาสเทลของ user ผ่าน --kb + .kb-tint ใน globals.css */}
+            {shown.map((l) => {
+              const tint = chipProps(l)
+              return (
+                <span
+                  key={l.id}
+                  title={group ? `${group} · ${l.name}` : l.name}
+                  style={tint.style}
+                  className={`px-3 py-1 text-sm font-medium rounded-full ${tint.className}`}
+                >
+                  {l.name}
+                </span>
+              )
+            })}
             {hidden > 0 && (
               <span className="text-sm text-warm-400 dark:text-disc-muted">+{hidden}</span>
             )}

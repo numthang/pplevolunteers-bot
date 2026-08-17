@@ -48,3 +48,27 @@ main:has([data-wide]) {
 body:has(main [data-wide]) .nav-shell {
   max-width: none;
 }
+
+/* ชิปป้าย + หัวช่องของ kanban — สีมาจาก "คลังสีพาสเทลของ user" (3 ชุด: เทา · ชมพูอ่อน · ม่วง)
+ * ⛔ ห้ามคิดเฉดขึ้นเอง — user มีคลังสีตั้งชื่อไว้ 21 ชุด ให้หยิบจากที่นั่นเสมอ (memory: reference_pastel_palettes)
+ *
+ * hex ตัวเดียวต่อ 1 ป้าย/สถานะ ส่งเข้ามาทาง --kb แล้วผสมเอาที่นี่:
+ *   พื้น  = ผสมกับ --card-bg → ได้พาสเทลจางที่ **พลิกตามธีมเอง** (light/dark ใช้ตัวแปรเดียวกัน)
+ *   ตัวอักษร = ผสมกับดำ (light) / ขาว (dark) → คอนทราสต์พอทั้ง 2 โหมดโดยไม่ต้องมี hex ชุดที่ 2 */
+.kb-tint {
+  background: color-mix(in srgb, var(--kb) 22%, var(--card-bg));
+  color: color-mix(in srgb, var(--kb) 55%, #1c1917);
+}
+.dark .kb-tint {
+  background: color-mix(in srgb, var(--kb) 26%, var(--card-bg));
+  color: color-mix(in srgb, var(--kb) 62%, #ffffff);
+}
+/* หัวช่องบนกระดาน — เข้มกว่าชิปนิดนึงเพื่อให้อ่านออกว่าเป็นหัวข้อ ไม่ใช่ป้ายอีกใบ */
+.kb-tint-strong {
+  background: color-mix(in srgb, var(--kb) 34%, var(--card-bg));
+  color: color-mix(in srgb, var(--kb) 62%, #1c1917);
+}
+.dark .kb-tint-strong {
+  background: color-mix(in srgb, var(--kb) 30%, var(--card-bg));
+  color: color-mix(in srgb, var(--kb) 70%, #ffffff);
+}

@@ -22,6 +22,7 @@ import { useTranslations } from 'next-intl'
 import { Clock, User, ListChecks, AlertTriangle, LayoutList, ChevronDown, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import { STATUS_TYPES } from '@/lib/kanbanAccess.js'
+import { columnHeadProps } from '@/lib/kanbanLabelColors.js'
 import CardModal from './CardModal.jsx'
 import LabelChips from './LabelChips.jsx'
 
@@ -31,20 +32,9 @@ const MAX_PER_COLUMN = 40
 // ⛔ เคยลองซ่อนช่อง "ยกเลิก" + กรอง "เสร็จ" เหลือ 7 วัน เพื่อให้พอดีจอ — **user ไม่เอา** (2026-08-17)
 //    "ผมมีปัญหากับการใส่อะไรแล้วไม่ฟิตหน้าจอพอดี" → แก้ที่ layout ให้ 6 ช่องหารความกว้างจอเอา
 //    ไม่ใช่ซ่อนข้อมูลแล้วให้คนไปกดหา · อย่าเอากลับมาใส่อีก
-// หัวช่อง = พื้นพาสเทลของสถานะนั้น · **ช่องไม่มีขอบ** (user 2026-08-17: "ไม่ชอบขอบซ้อนขอบ ตาลาย")
-// เหลือขอบชั้นเดียวที่ตัวการ์ด → โครงของช่องอ่านได้จากแถบสีหัว ไม่ต้องมีกรอบอีกชั้น
-//
-// ⚠️ ห้ามกลับไปใช้ border-t-<สี> เพื่อทำแถบสี — `dark:border-disc-border` เป็น variant ที่ออก
-//    ทีหลังใน stylesheet แล้วทับสีขอบบนทิ้ง = ดาร์กโหมดเทาหมด (เจอมาแล้ว) · ใช้พื้นหลังเท่านั้น
-// โทนเดียวกับชิปป้ายใน lib/kanbanLabelColors.js (พื้นจาง ตัวหนังสือเข้ม · ดาร์ก = พื้นเข้มหม่น)
-const COLUMN_HEAD = {
-  backlog:   'bg-[#EEEEEE] text-[#424242] dark:bg-[#3A3A3E]/70 dark:text-[#E0E0E0]',
-  doing:     'bg-[#E3F2FD] text-[#1565C0] dark:bg-[#1E3A52]/70 dark:text-[#BBDEFB]',
-  review:    'bg-[#FFF8E1] text-[#EF6C00] dark:bg-[#4C4020]/70 dark:text-[#FFE0B2]',
-  ready:     'bg-[#F3E5F5] text-[#6A1B9A] dark:bg-[#4A2E52]/70 dark:text-[#E1BEE7]',
-  done:      'bg-[#E8F5E9] text-[#2E7D32] dark:bg-[#24452A]/70 dark:text-[#C8E6C9]',
-  cancelled: 'bg-[#FAFAFA] text-[#9E9E9E] dark:bg-[#2E2E32]/70 dark:text-[#9E9E9E]',
-}
+// หัวช่อง = พื้นพาสเทลของสถานะนั้น — สีมาจากคลังสีของ user (STATUS_COLOR ใน lib/kanbanLabelColors.js)
+// **ช่องไม่มีขอบ** (user: "ไม่ชอบขอบซ้อนขอบ ตาลาย") → โครงของช่องอ่านจากแถบสีหัว ไม่ต้องมีกรอบอีกชั้น
+// ⚠️ ห้ามกลับไปทำแถบสีด้วย border-t-<สี> — `dark:border-disc-border` ทับสีขอบบนทิ้งในดาร์กโหมด
 
 function dueState(dueAt) {
   if (!dueAt) return 'none'
@@ -225,7 +215,8 @@ export default function BoardView() {
                 <button
                   type="button"
                   onClick={() => setOpenState((s) => ({ ...s, [status]: !isOpen }))}
-                  className={`flex items-center justify-between gap-2 px-3 py-2 text-left xl:cursor-default ${COLUMN_HEAD[status]}`}
+                  style={columnHeadProps(status).style}
+                  className={`flex items-center justify-between gap-2 px-3 py-2 text-left xl:cursor-default ${columnHeadProps(status).className}`}
                 >
                   <h2 className="text-base font-semibold truncate">{t(`status.${status}`)}</h2>
                   <span className="flex items-center gap-1 shrink-0 text-base opacity-70">
@@ -237,7 +228,9 @@ export default function BoardView() {
                   </span>
                 </button>
 
-                <div className={`${isOpen ? 'flex' : 'hidden'} xl:flex flex-col gap-2 min-h-[4rem] p-2`}>
+                {/* ไม่มี padding ในช่อง — การ์ดชิดขอบช่องพอดีแนวเดียวกับแถบหัวสี (user 2026-08-17)
+                    เหลือแค่ช่องไฟระหว่างการ์ด ไม่งั้นการ์ดติดกันเป็นก้อนเดียว */}
+                <div className={`${isOpen ? 'flex' : 'hidden'} xl:flex flex-col gap-2 min-h-[4rem] pt-2`}>
                   {shown.map((card) => (
                     <BoardCard
                       key={card.id}

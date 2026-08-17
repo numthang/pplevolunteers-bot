@@ -1,33 +1,45 @@
 /**
- * สีของชิปป้าย — เลือกจากชื่อกลุ่มแบบ deterministic
+ * สีของชิปป้าย + หัวช่องกระดาน
  *
- * ⛔ ห้าม hardcode ชื่อกลุ่ม ('พื้นที่'/'สายงาน') ที่นี่เด็ดขาด — กลุ่มเป็นข้อมูลที่ org ตั้งเอง
- *    (กติกาเดียวกับหัวไฟล์ web/db/kanban/labels.js) → ใช้ hash ของชื่อเลือกช่องในจาน
- *    ผลลัพธ์: ป้ายในกลุ่มเดียวกันสีเดียวกันเสมอ · org ไหนตั้งกลุ่มชื่ออะไรก็ได้สีทันทีโดยไม่ต้องแก้โค้ด
+ * ⛔ **ห้ามคิดเฉดสีขึ้นเอง** — user มีคลังสีพาสเทลตั้งชื่อไว้ 21 ชุด ชุดละ 5 hex ให้หยิบจากที่นั่นเสมอ
+ *    (เคยพลาดมาแล้ว 2026-08-17: ไปหยิบโทน AppFlowy/Material มาใช้ user ทักว่า "เดาสุ่มหรือเปล่า")
+ *    โซน kanban ใช้ 3 ชุดผสมกัน — เทา · ชมพูอ่อน · ม่วง (user เคาะ 2026-08-17)
  *
- * ⚠️ class ต้องเขียนเต็มสตริง — Tailwind สแกน source แบบ static ถ้าต่อ `bg-${c}-100` เอาเองจะไม่มี CSS ออกมา
+ * ⛔ ห้าม hardcode ชื่อกลุ่มป้าย ('พื้นที่'/'สายงาน') — กลุ่มเป็นข้อมูลที่ org ตั้งเอง
+ *
+ * วิธีลงสี: ส่ง hex เดียวเข้า CSS var `--kb` แล้วให้ `.kb-tint` ใน globals.css ผสมเอง
+ * (พื้น = ผสม card-bg · ตัวอักษร = ผสมดำ/ขาว) → ได้ทั้ง light/dark จาก hex ชุดเดียว
+ * ข้อดีอีกอย่าง: ไม่ต้องพึ่ง Tailwind scan คลาสสีอีก (เคยพลาดเพราะ lib/ ไม่ได้อยู่ใน content — bug-409)
  */
 
-// พาสเทลจาง-ตัวหนังสือเข้ม แบบ AppFlowy/Notion (ตามภาพที่ user ส่งมา 2026-08-17)
-// 12 เฉด — พอให้ป้าย 29 อันไม่ซ้ำกันจนแยกไม่ออกในสายตา แต่ไม่เยอะจนดูมั่ว
-// dark: พื้นเข้มหม่น + ตัวหนังสือจางของเฉดเดียวกัน (พาสเทลจางบนพื้นดำ = แสบตา อ่านไม่ออก)
+// เทา · ชมพูอ่อน · ม่วง — คัดเอาเฉดที่แยกกันออกด้วยตาเปล่า (ตัดเทาซ้ำกับฟ้าจางเกือบขาวทิ้ง)
 const CHIP_PALETTE = [
-  'bg-[#F3E5F5] text-[#6A1B9A] dark:bg-[#4A2E52]/60 dark:text-[#E1BEE7]',  // ม่วง
-  'bg-[#FCE4EC] text-[#AD1457] dark:bg-[#52293A]/60 dark:text-[#F8BBD0]',  // ชมพู
-  'bg-[#FFEBEE] text-[#C62828] dark:bg-[#532B2B]/60 dark:text-[#FFCDD2]',  // แดง
-  'bg-[#FFF3E0] text-[#E65100] dark:bg-[#4F3520]/60 dark:text-[#FFE0B2]',  // ส้ม
-  'bg-[#FFF8E1] text-[#F57F17] dark:bg-[#4C4020]/60 dark:text-[#FFF59D]',  // เหลือง
-  'bg-[#F1F8E9] text-[#558B2F] dark:bg-[#33461F]/60 dark:text-[#DCEDC8]',  // เขียวอ่อน
-  'bg-[#E8F5E9] text-[#2E7D32] dark:bg-[#24452A]/60 dark:text-[#C8E6C9]',  // เขียว
-  'bg-[#E0F2F1] text-[#00695C] dark:bg-[#1E4541]/60 dark:text-[#B2DFDB]',  // เขียวน้ำทะเล
-  'bg-[#E0F7FA] text-[#00838F] dark:bg-[#1D454B]/60 dark:text-[#B2EBF2]',  // ฟ้าอมเขียว
-  'bg-[#E3F2FD] text-[#1565C0] dark:bg-[#1E3A52]/60 dark:text-[#BBDEFB]',  // ฟ้า
-  'bg-[#E8EAF6] text-[#283593] dark:bg-[#2A2F52]/60 dark:text-[#C5CAE9]',  // น้ำเงิน
-  'bg-[#EFEBE9] text-[#5D4037] dark:bg-[#43352F]/60 dark:text-[#D7CCC8]',  // น้ำตาล
+  '#CAE7E3', // เทา — มิ้นต์
+  '#EEB8C5', // เทา — ชมพูนวล
+  '#FEC7BB', // เทา — ส้มพีช
+  '#BBEAA6', // ชมพูอ่อน — เขียวอ่อน
+  '#E3C878', // ชมพูอ่อน — เหลืองอำพัน
+  '#ED9A73', // ชมพูอ่อน — ส้ม
+  '#E688A1', // ชมพูอ่อน — ชมพูเข้ม
+  '#F14668', // ชมพูอ่อน — แดง
+  '#84A6D6', // ม่วง — ฟ้าหม่น
+  '#4382BB', // ม่วง — น้ำเงิน
+  '#E4CEE0', // ม่วง — ม่วงนวล
+  '#A15D98', // ม่วง — ม่วงเข้ม
 ]
 
-// ป้ายที่ไม่มีกลุ่ม — สีกลางๆ ไม่แย่งสายตากับกลุ่มที่ตั้งใจแยกสี
-const NO_GROUP_CHIP = 'bg-warm-100 text-warm-700 dark:bg-white/10 dark:text-disc-text'
+// ป้ายที่ไม่มีกลุ่ม — เทากลางๆ ของชุด "เทา" ไม่แย่งสายตากับกลุ่มที่ตั้งใจแยกสี
+const NO_GROUP_COLOR = '#DCDBD9'
+
+/** หัวช่องกระดาน — จับคู่ตามความหมายของสถานะ ไม่ใช่ไล่ตามลำดับในจาน */
+export const STATUS_COLOR = {
+  backlog:   '#DCDBD9', // เทา — ยังไม่เริ่ม
+  doing:     '#84A6D6', // ฟ้า — กำลังเดิน
+  review:    '#E3C878', // เหลือง — รอคนตรวจ
+  ready:     '#A15D98', // ม่วง — ผ่านแล้วรอคิว
+  done:      '#BBEAA6', // เขียว — จบ
+  cancelled: '#B2B2B2', // เทาเข้ม — ยกเลิก
+}
 
 function hash(str) {
   let h = 0
@@ -36,19 +48,23 @@ function hash(str) {
 }
 
 /**
- * class ของชิป 1 ใบ — ป้ายที่ตั้งสีเองใน DB ชนะเสมอ (color เก็บเป็น class เต็มสตริง)
+ * props ของชิป 1 ใบ — ใช้เป็น {...chipProps(l)} บน element ได้เลย
  *
- * ⭐ สีผูกกับ **ชื่อป้าย** ไม่ใช่ชื่อกลุ่ม (เปลี่ยน 2026-08-17 ตามภาพตัวอย่างที่ user ส่งมา)
- *    รอบแรกทำสีต่อกลุ่ม — อ่านกลุ่มง่ายก็จริง แต่บนกระดานที่ไม่โชว์ชื่อกลุ่ม
- *    ป้ายทั้งกองกลายเป็นสีเดียวกันหมด แยกไม่ออกว่าใบไหนคือใบไหน
+ * ⭐ สีผูกกับ **ชื่อป้าย** ไม่ใช่ชื่อกลุ่ม (ตามภาพตัวอย่างที่ user ส่งมา: กลุ่มเดียวกันคนละสี)
  *    ใส่ชื่อกลุ่มเป็นเกลือด้วย — ชื่อป้ายซ้ำข้ามกลุ่มจะได้ไม่ได้สีเดียวกันโดยบังเอิญ
  */
-export function chipClass(label) {
-  if (label?.color) return label.color
+export function chipProps(label) {
   const name = label?.name
-  if (!name) return NO_GROUP_CHIP
   const group = label?.group ?? label?.group_name ?? ''
-  return CHIP_PALETTE[hash(`${group}/${name}`) % CHIP_PALETTE.length]
+  // ป้ายที่ตั้งสีเองใน DB ชนะเสมอ (เก็บเป็น hex ตัวเดียว ไม่ใช่คลาส)
+  const color = label?.color
+    || (name ? CHIP_PALETTE[hash(`${group}/${name}`) % CHIP_PALETTE.length] : NO_GROUP_COLOR)
+  return { className: 'kb-tint', style: { '--kb': color } }
+}
+
+/** props ของหัวช่องบนกระดาน (เข้มกว่าชิปนิดนึง) */
+export function columnHeadProps(status) {
+  return { className: 'kb-tint-strong', style: { '--kb': STATUS_COLOR[status] || NO_GROUP_COLOR } }
 }
 
 /**
