@@ -14,8 +14,8 @@ import { isAdmin, isEditor } from '@/lib/roles.js'
 // ยังไม่ผ่าน t() เพราะโซน /bot ทั้งโซนยังไม่ migrate — จดไว้ที่ md/PENDING.md แล้ว
 const TABS = [
   { href: '/bot',                 label: 'ภาพรวม' },
-  // ผังทีม = อ่านอย่างเดียว เปิดให้สมาชิกทุกคนในกิลด์ (ไม่มี gate) — ตรงกับ API /api/bot/orgchart
-  { href: '/bot/orgchart',        label: 'ผังทีม' },
+  // ผังทีมย้ายออกไปโซน /team แล้ว (2026-08-17) — เป็นของอ่านอย่างเดียวเปิดให้ทุกคน
+  // ไม่ใช่ค่าตั้งของบอทที่เหลือทั้งเมนูซึ่งเป็นของแอดมิน (/bot/orgchart redirect ไป /team)
   { href: '/bot/roles',           label: 'ยศ Discord', gate: 'admin' },
   // /bot/ai แสดงต่อ superadmin (โมเดล+ai_mention) และ editor (โหมด/prompt) — ตรงกับ page.js
   { href: '/bot/ai',              label: 'AI',         gate: 'editor' },

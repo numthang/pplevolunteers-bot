@@ -285,7 +285,7 @@ export default function HomeworkHome() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 max-w-5xl mx-auto">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-warm-900 dark:text-disc-text mb-1">{t('page.title')}</h1>

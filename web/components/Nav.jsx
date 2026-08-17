@@ -116,6 +116,9 @@ const APPS = [
   { key: 'cases',    label: 'CASES',     href: '/case/manage',    icon: 'logs',      feature: 'cases', casesAccess: true },
   { key: 'posts',    label: 'POSTS',     href: '/posts',          icon: 'pen',       feature: 'posts' },
   { key: 'kanban',   label: 'KANBAN',    href: '/kanban',         icon: 'pending',   feature: 'kanban' },
+  // TEAM = ผังทีม (ย้ายมาจาก /bot/orgchart 2026-08-17) · อ่านอย่างเดียว เปิดให้ทุกคน
+  // ไม่มี feature key เพราะไม่ใช่ของที่เปิด/ปิดราย org — แต่ต้องมี guild (ไม่อยู่ ORG_NATIVE_APP_KEYS)
+  { key: 'team',     label: 'TEAM',      href: '/team',           icon: 'contacts' },
   // BOT ออกจากแถวแอป 2026-08-09 — ทุกหน้าใต้ /bot เป็น settings ไม่ใช่ที่ทำงาน
   // (ตัวที่เคยเป็นที่ทำงานคือตะกร้าสื่อ ยุบเข้า /posts ไปแล้ว) → ทางเข้าอยู่เมนู org
 ]
@@ -145,6 +148,7 @@ export default function Nav({ session, orgs = [], activeOrgId = null, guilds = [
   const isDocsApp      = pathname.startsWith('/docs')
   const isCaseApp      = pathname.startsWith('/case')
   const isPostsApp     = pathname.startsWith('/posts')
+  const isTeamApp      = pathname.startsWith('/team')
   const isLinkActive = (href, exact = false) => {
     if (exact) return pathname === href
     return pathname === href || (href !== '/' && pathname.startsWith(href))
@@ -152,7 +156,8 @@ export default function Nav({ session, orgs = [], activeOrgId = null, guilds = [
   const appByKey = (key) => APPS.find(a => a.key === key)
   const currentApp = isDocsApp ? appByKey('docs')
     : isCallingApp ? appByKey('calling') : isFinanceApp ? appByKey('finance')
-    : isCaseApp ? appByKey('cases') : isPostsApp ? appByKey('posts') : appByKey('home')
+    : isCaseApp ? appByKey('cases') : isPostsApp ? appByKey('posts')
+    : isTeamApp ? appByKey('team') : appByKey('home')
   const links = isDocsApp ? DOCS_LINKS
     : isCallingApp ? CALLING_LINKS : isFinanceApp ? FINANCE_LINKS
     : isCaseApp ? CASE_LINKS : isPostsApp ? POSTS_LINKS : DASHBOARD_LINKS
@@ -225,7 +230,7 @@ export default function Nav({ session, orgs = [], activeOrgId = null, guilds = [
     return true
   })
   // home: app tabs ใหม่แทน DASHBOARD_LINKS แล้ว → ไม่ต้องโชว์ sub-nav ซ้ำ · app อื่นโชว์ sub-page จริง
-  const isHomeApp  = currentApp.key === 'home'
+  const isHomeApp  = currentApp.key === 'home' || currentApp.key === 'team'
   const topLinks   = isHomeApp ? [] : visibleLinks.filter(l => !l.menuOnly && !l.hamburgerOnly && !l.mediaGroup)
   const menuLinks  = visibleLinks
 

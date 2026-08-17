@@ -1,7 +1,6 @@
-import OrgChartClient from '@/components/bot/OrgChartClient.jsx'
+import { redirect } from 'next/navigation'
 
-export const metadata = { title: 'ผังทีม' }
-
-export default function OrgChartPage() {
-  return <OrgChartClient />
+// ผังทีมย้ายไป /team แล้ว (2026-08-17) — คงเส้นทางเดิมไว้ไม่ให้ลิงก์/บุ๊กมาร์กที่แชร์กันไว้ตาย
+export default function OrgChartMoved() {
+  redirect('/team')
 }

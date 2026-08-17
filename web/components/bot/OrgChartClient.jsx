@@ -552,7 +552,9 @@ export default function OrgChartClient() {
         }))
       }
 
-      attachDrag(wrap, n, n.kind !== 'hub')
+      // hub ลากได้เหมือนโหนดอื่น และลากแล้วผังตามไปทั้งยวง (user 2026-08-17)
+      // เดิมส่ง moveKids=false ให้ hub → ลากหัวองค์กรแล้วมันหลุดออกจากผังตัวเอง
+      attachDrag(wrap, n)
       svg.appendChild(wrap)
       n._g = wrap
     }
@@ -633,11 +635,12 @@ export default function OrgChartClient() {
 
   // ลากโหนด: เขียน transform ลง DOM ตรงๆ ไม่ผ่าน state (ไม่งั้น re-render ทุกเฟรม)
   // แยกลากจากคลิกด้วยระยะสะสม < 4px = ถือว่าคลิก
-  function attachDrag(g, node, moveKids = true) {
+  function attachDrag(g, node) {
     g.addEventListener('pointerdown', e => {
       if (e.button !== 0) return
       const pt = clientToSvg(e.clientX, e.clientY)
-      const kids = moveKids ? descendantsOf(node).map(k => ({ k, x0: k.x, y0: k.y })) : []
+      // ลูกทุกชั้นขยับตามเสมอ รวมถึงตอนลาก hub (= ยกผังทั้งอันไปวางที่ใหม่)
+      const kids = descendantsOf(node).map(k => ({ k, x0: k.x, y0: k.y }))
       dragRef.current = { node, dx: node.x - pt.x, dy: node.y - pt.y, moved: 0,
                           ox: node.x, oy: node.y, kids }
       g.setPointerCapture(e.pointerId)

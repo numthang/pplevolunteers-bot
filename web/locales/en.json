@@ -1807,5 +1807,11 @@
       "moveFailed": "Could not move the card",
       "dragHint": "Drag cards on desktop; on mobile open a card and use the status buttons"
     }
+  },
+  "team": {
+    "noGuild": {
+      "title": "This organization is not linked to Discord yet",
+      "body": "The team map is built from Discord roles and activity — invite the bot to a server and link it to this organization first."
+    }
   }
 }
