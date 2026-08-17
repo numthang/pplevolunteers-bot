@@ -3,14 +3,21 @@
 - ทำให้เว็บไซต์ หรือ sub-domain ภายนอกใช้ระบบเดียวกันได้แต่ใช้ชื่อของเขาเอง
 - JotForm ลอกมาเลยครับ มีแบบให้ login และ public ลองดู spec ก่อน แต่ feature ยากไม่จำเป็น ตัดทิ้ง แต่ให้ถามก่อน
 - Poll anonymous, semi-anon, public ลอก pollbotplus มาเลย แต่อาจจะอัพเกรดนิดหน่อย ลองดูว่าควรอัพเกรดอะไร อย่างน้อยผมว่า max 7 วันควรเพิ่มได้อีก
-
-
+- (ได้แล้ว) ผมทดลองเอายศ ผู้ประสานงานจังหวัด ของ didtha ออกบน discord แต่เหมือน บนเว็บ หน้านี้ มันไม่ออกไปด้วย https://pplevolunteers.org/org/settings/members
 
 # Kanban
-
+- ไม่รู้ไอเดียดีไหม แต่อยากให้ http://localhost:3000/kanban แสดงเหมือนหน้า /board เพียงแต่แสดงงานของตัวเอง ย้าย /board แล้วอาศัย กด filter เอาว่าจะแสดงแต่ของตัวเองหรือทั้งหมด default ที่ของตัวเอง ทำไมต้องมีซ้ำซ้อน 2 หน้า ผมอยากให้คนคุ้นเคยรูปแบบเดียวจบ ปรึกษาหน่อย
+- ตรง user ควรเป็นลิงก์คลิกได้ คลิกไปไหนดียังไม่รู้ แต่ปกติควรไปที่หน้า profile ของ user นั้นไหม
+- user ควรแสดง display name เป็นอะไรดี เรียงลำดับ ที่เรามี discord display name -> nickname -> firstname?
+- mark30260 เหมือนจะผิดคน ของจริงคือ discord_id คือ 799340183849533440 username marx.1818 
+- แล้วก็แสดง progress checklist สำคัญมาก checklist เป็น field ถาวร 1 field ใช่ไหม หรือเราทำให้ custom form ได้เรื่อยๆ 
+- มันควรมี repeat task ไหมหว่า ประจำเดือน ประจำสัปดาห์ ประมาณนี้
+- ลิงก์ calendar 
 
 # Posts
-
+- ai suggestion ยังไม่มีโหมด บก ตรวจงาน ตาม redflag 
+- Quote หัวข้อ ไอเดียภาพ hashtag ทำเป็น toggle, ชวนแชร์ ตัดทิ้ง
+- posteditor บนมือถือ ตรงตั้งเวลาพอกดแล้ว ลบเวลาไม่ได้
 
 # Web
 - อยากได้หน้า dashboard ของ http://localhost:3000/bot/ ตอนนี้มันวิ่งไป http://localhost:3000/bot/platforms ดูแปลกๆ ไม่มี landing ทำแบบไหนดี ควรเปลี่ยนเป็น bot/settings ดีไหม และอาจะต้องย้ายหรือลบ setting ส่วน bot นี้ไปอยู่ใน org/settings/ เอาตรงๆ ยังงงๆ อยู่ แต่เห็นความซ้ำซ้อนและ ไม่เป็นที่เป็นทางบางอย่างอยู่ กับ https://localhost:3000/org/settings
@@ -43,6 +50,8 @@
 # Cases
 - https://pplevolunteers.org/case/manage ทำ filter สถานะเรื่องร้องเรียนให้เลือกเป็น dropdown
 - ดูเหมือน bot นำเข้าเคส จะยังไม่ได้ดึง attachment และหน้าเว็บยังไม่มีให้แนบไฟล์เพิ่ม
+- เหมือนปี ร้องเรียนจะผิด https://pplevolunteers.org/case/manage/70-69-6D9F
+- ผมอ่านแล้วสรุปไทมไลนไม่ค่อยละเอียดนะ ถ้ายาวควรทำเป็น toggle ไม่ใช่ตัดหายไปเฉยๆ อย่างกรณีนี้ทำให้มันสรุปใหม่ทำยังไง หรือลบไทมไลนทั้งหมดออกก่อน 
 
 # Projects
 - ทำระบบจัดการโครงการ project management อย่าง notion, trello, appflowy
@@ -118,3 +127,23 @@ https://discord.com/invite/CjheHjvPVS
 13. สงวนสิทธิ์การใช้งานบางอย่างสำหรับผู้ที่ยังไม่ได้เป็นสมาชิกพรรค แนะนำให้ [สมัครสมาชิกพรรคประชาชน](https://accounts.peoplesparty.or.th/account/register) เพื่อช่วยเหลือพรรคการเมืองและเป็นเจ้าของพรรคร่วมกัน
 
 หากจนท.ตักเตือนและท่านไม่ทำตาม เราจะลงโทษตามความรุนแรง เช่น Time out หรือ  Ban กรณีที่ท่านต้องการอุธรณ์หรือต้องการร้องเรียนสามารถแจ้งที่ https://discord.com/channels/1340903354037178410/1397146590694871100
+
+Tech Stack
+Framework	Next.js 15.5 (App Router)
+UI	React 19 + JSX (ไม่มี TypeScript)
+Styling	Tailwind CSS 3.4 + CSS
+Runtime	Node.js — self-hosted VPS (next start ผ่าน sudo -u www)
+Backend / Data	PostgreSQL ตรง ๆ ผ่าน pg (ไม่มี Supabase, ไม่มี RLS)
+Auth	NextAuth v4 — Discord OAuth (ไม่ใช่ Google/email OTP)
+i18n	next-intl
+Testing	Vitest
+Companion process	Discord bot (discord.js v14) รันแยกที่ root repo
+
+Tech stack
+Framework : Next.js 15.5
+UI : React 18.3 + JSX (ไม่มี TypeScript)
+Styling : CSS
+Runtime : Node.js serverless
+Backend / Data : Supabase (Postgres + Auth + Storage + RLS)
+Supabase Auth: Google OAuth + email OTP
+Vercel : Region: sin1 (สิงคโปร์)
