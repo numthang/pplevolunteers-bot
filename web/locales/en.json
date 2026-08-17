@@ -1726,7 +1726,7 @@
       "review": "In review",
       "ready": "Ready",
       "done": "Done",
-      "cancelled": "Cancelled"
+      "cancelled": "Parked"
     },
     "row": {
       "overdue": "Overdue",
@@ -1768,7 +1768,7 @@
       "conflict": "Someone else edited this homework — your changes were not saved",
       "reload": "Load latest version",
       "confirmCloseUnsaved": "Still saving. Close anyway?",
-      "confirmArchive": "Archive this homework?",
+      "confirmArchive": "Delete this homework? It disappears everywhere and you cannot restore it yourself — to just set it aside, move it to Parked instead.",
       "statusLabel": "Status",
       "ownerLabel": "Owner",
       "noOwner": "No owner yet",
@@ -1781,7 +1781,7 @@
       "addItem": "Add",
       "addItemPlaceholder": "Add a subtask",
       "removeItem": "Remove this subtask",
-      "archive": "Archive",
+      "archive": "Delete this homework",
       "labelsLabel": "Labels",
       "noLabels": "No labels yet",
       "editLabels": "Edit labels",

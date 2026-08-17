@@ -111,6 +111,12 @@ describe('checkStatusTransition', () => {
     () => expect(ka.checkStatusTransition(noOwner(), 'done')).toEqual({ ok: false, reason: 'needOwner' }))
   it('ไม่มีเจ้าภาพ → backlog ได้ (อยู่ที่เดิม)',
     () => expect(ka.checkStatusTransition(noOwner(), 'backlog')).toEqual({ ok: true, reason: null }))
+  // 'cancelled' = ช่อง "กรุ" (พักไว้ รอปัดฝุ่น · 2026-08-17) — งานที่ยังไม่มีใครรับก็พักได้
+  // ไม่ต้องบังคับหาเจ้าภาพก่อน (DB CHECK ผ่อนให้แล้วใน migration วันเดียวกัน)
+  it('ไม่มีเจ้าภาพ → กรุ ได้ (ไม่ต้องหาเจ้าภาพก่อนพัก)',
+    () => expect(ka.checkStatusTransition(noOwner(), 'cancelled')).toEqual({ ok: true, reason: null }))
+  it('มีเจ้าภาพ → กรุ ได้',
+    () => expect(ka.checkStatusTransition(card(), 'cancelled')).toEqual({ ok: true, reason: null }))
   it('สถานะที่ระบบไม่รู้จัก → ไม่ได้',
     () => expect(ka.checkStatusTransition(card(), 'blocked')).toEqual({ ok: false, reason: 'unknownStatus' }))
   it('"ติดปัญหา" ไม่ใช่สถานะ เป็นธงบนการ์ด',

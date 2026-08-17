@@ -219,7 +219,8 @@ export async function setCardStatus(orgId, id, statusType) {
     `UPDATE kanban_cards
         SET status_type   = $3::varchar,
             owner_user_id = CASE WHEN $3::varchar = 'backlog' THEN NULL ELSE owner_user_id END,
-            completed_at  = CASE WHEN $3::varchar IN ('done','cancelled') THEN now() ELSE NULL END,
+            -- 'cancelled' = ช่อง "กรุ" (พักไว้ รอปัดฝุ่น) ไม่ใช่งานที่ทำจบ → ห้ามตั้ง completed_at
+            completed_at  = CASE WHEN $3::varchar = 'done' THEN now() ELSE NULL END,
             updated_at    = now()
       WHERE org_id = $1 AND id = $2
       RETURNING id`,

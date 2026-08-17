@@ -120,7 +120,9 @@ export function checkStatusTransition(card, nextStatus) {
     return { ok: false, reason: 'unknownStatus' }
   }
   // ดีไซน์ §ช่องโหว่ข้อ 5 — ไม่มีเจ้าภาพ ออกจาก backlog ไม่ได้ (DB ก็มี CHECK กันอีกชั้น)
-  if (!card?.owner_user_id && nextStatus !== 'backlog') {
+  // ยกเว้น 'cancelled' = ช่อง "กรุ" (พักไว้ รอปัดฝุ่น · 2026-08-17) — งานที่ยังไม่มีใครรับ
+  // ก็พักได้ ไม่ต้องบังคับหาเจ้าภาพก่อนถึงจะเก็บเข้ากรุ (migration ผ่อน CHECK ให้แล้ว)
+  if (!card?.owner_user_id && nextStatus !== 'backlog' && nextStatus !== 'cancelled') {
     return { ok: false, reason: 'needOwner' }
   }
   return { ok: true, reason: null }

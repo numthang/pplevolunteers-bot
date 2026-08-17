@@ -907,3 +907,11 @@ CREATE TABLE IF NOT EXISTS kanban_card_labels (
 );
 
 CREATE INDEX IF NOT EXISTS idx_kanban_card_labels_label ON kanban_card_labels (label_id);
+
+-- 2026-08-17 · kanban: ช่อง "ยกเลิก" → "กรุ" (พักไว้ รอปัดฝุ่น)
+-- user ไม่ใช้ "ยกเลิก" เลย (0 ใบ — งานที่ไม่เอาเขาลบทิ้ง) แต่ต้องการที่พักงานที่ยังไม่ทำตอนนี้
+-- ป้ายเปลี่ยนที่ i18n · ฝั่ง DB ต้องผ่อน CHECK เพราะ "งานที่ยังไม่มีเจ้าภาพ" ต้องเข้ากรุได้
+-- (ของเดิม: ไม่มีเจ้าภาพ = อยู่ได้แค่ backlog เท่านั้น)
+ALTER TABLE kanban_cards DROP CONSTRAINT IF EXISTS kanban_cards_owner_required;
+ALTER TABLE kanban_cards ADD CONSTRAINT kanban_cards_owner_required
+  CHECK (owner_user_id IS NOT NULL OR status_type IN ('backlog', 'cancelled'));
