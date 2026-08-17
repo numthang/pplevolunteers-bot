@@ -101,6 +101,17 @@ function pillNode(topY, { title, sub, bg, titleColor, subColor, fs = 10 }) {
 // วางแบบ "แบ่งส่วนมุม": แต่ละกลุ่มได้อาณาเขตเชิงมุมตามความกว้างรวมของลูกตัวเอง
 // วางไม่ให้ทับตั้งแต่แรกด้วยเรขาคณิต แล้วค่อยคลายที่เหลือด้วย relaxation สั้นๆ
 // (ปล่อยให้ physics จัดล้วนๆ จะช้าและผลลัพธ์ไม่นิ่งเมื่อโหนดเยอะ)
+function descendantsOf(node) {
+  const out = []
+  const stack = [...(node._kids || [])]
+  while (stack.length) {
+    const n = stack.pop()
+    out.push(n)
+    if (n._kids) stack.push(...n._kids)
+  }
+  return out
+}
+
 function buildLayout(visibleGroups, expandedRoles, t) {
   const nodes = []
   const edges = []
@@ -116,14 +127,16 @@ function buildLayout(visibleGroups, expandedRoles, t) {
       const rad = scaleR(role.totalScore, allRoleScores, ROLE_R)
       const sub = role.top[0] ? `🔥 ${role.top[0].name}` : t('noActivity')
       const own = Math.max(rad * 2, pillWidth(role.roleName, sub))
-      const expanded = expandedRoles.has(role.roleId) && role.top.length > 0
+      // อันดับ 1 = รูปกลางของบทบาทเอง → แตกออกเฉพาะอันดับ 2 ลงไป (ไม่งั้นคนเดิมโผล่ 2 ที่)
+      const rest = role.top.slice(1)
+      const expanded = expandedRoles.has(role.roleId) && rest.length > 0
       let people = []
       if (expanded) {
-        const pScores = role.top.map(m => m.score)
-        people = role.top.map((m, i) => {
+        const pScores = rest.map(m => m.score)
+        people = rest.map((m, i) => {
           const pr = scaleR(m.score, pScores, PERSON_R)
           const psub = t('scoreLabel', { score: fmtInt(m.score) })
-          return { person: m, rank: i + 1, r: pr, sub: psub, w: Math.max(pr * 2, pillWidth(m.name, psub)) }
+          return { person: m, rank: i + 2, r: pr, sub: psub, w: Math.max(pr * 2, pillWidth(m.name, psub)) }
         })
       }
       // คนของบทบาทวางเป็น "ดอกไม้" รอบบทบาทตัวเอง ไม่ใช่กางออกบนวงใหญ่
@@ -132,7 +145,8 @@ function buildLayout(visibleGroups, expandedRoles, t) {
         ? Math.max(rad + Math.max(...people.map(p => p.r)) + 46, people.reduce((s, p) => s + p.w, 0) / (Math.PI * 2))
         : 0
       const clusterW = people.length ? (clusterR + Math.max(...people.map(p => p.w)) / 2) * 2 : 0
-      return { role, rad, sub, expanded, people, clusterR, width: Math.max(own, clusterW) + GAP }
+      return { role, rad, sub, expanded, people, clusterR, hiddenCount: rest.length,
+               width: Math.max(own, clusterW) + GAP }
     })
     return { group: g, gi, roles, width: roles.reduce((s, r) => s + r.width, 0) }
   })
@@ -168,7 +182,7 @@ function buildLayout(visibleGroups, expandedRoles, t) {
       rc += rSpan
       const rNode = {
         id: `r:${rp.role.roleId}`, kind: 'role', group: plan.group.groupName, role: rp.role,
-        label: rp.role.roleName, sub: rp.sub, expanded: rp.expanded,
+        label: rp.role.roleName, sub: rp.sub, expanded: rp.expanded, hiddenCount: rp.hiddenCount,
         x: Math.cos(rMid) * roleRing, y: Math.sin(rMid) * roleRing,
         r: rp.rad, halfW: Math.max(rp.rad, pillWidth(rp.role.roleName, rp.sub) / 2),
         halfH: (rp.rad * 2 + 10 + 32) / 2,
@@ -197,6 +211,9 @@ function buildLayout(visibleGroups, expandedRoles, t) {
       }
     }
   }
+
+  // ดัชนีลูก — ลากพ่อแล้วต้องยกทั้งก้อนตามไป (กลุ่ม → บทบาท → คน)
+  for (const e of edges) (e.a._kids ||= []).push(e.b)
 
   relax(nodes)
   return { nodes, edges }
@@ -426,9 +443,22 @@ export default function OrgChartClient() {
         wrap.innerHTML = avatarMarkup(n.role.top[0]?.name || n.label, n.r, n.role.top[0]?.avatar)
         hit(n.r + 10, 32)
         wrap.appendChild(el('circle', { r: n.r, class: 'oc-sel-ring' }))
-        // จุดมุมบนขวา = คลิกแล้วแตกคนได้ / กำลังแตกอยู่
-        const dot = el('circle', { r: 5.5, cx: n.r * 0.74, cy: -n.r * 0.74, class: n.expanded ? 'oc-exp on' : 'oc-exp' })
-        dot.setAttribute('fill', color); wrap.appendChild(dot)
+        if (n.role.top.length) {
+          // เลข 1 = รูปกลางนี้คืออันดับหนึ่งของบทบาท (ไม่มีโหนดลูกซ้ำอีก)
+          const badge = el('g', { transform: `translate(${n.r * 0.72} ${-n.r * 0.72})` })
+          badge.appendChild(el('circle', { r: 8, fill: color, class: 'oc-rank-dot' }))
+          const bt = el('text', { y: 2.9, 'text-anchor': 'middle', 'font-size': 9, 'font-weight': 800, fill: '#fff' })
+          bt.textContent = '1'; badge.appendChild(bt)
+          wrap.appendChild(badge)
+        }
+        if (n.hiddenCount > 0 && !n.expanded) {
+          // +N = ยังมีอีกกี่คนที่ซ่อนอยู่ กดแล้วกางออก
+          const more = el('g', { transform: `translate(${n.r * 0.72} ${n.r * 0.78})` })
+          more.appendChild(el('circle', { r: 8.5, class: 'oc-more' }))
+          const mt = el('text', { y: 3, 'text-anchor': 'middle', 'font-size': 8.5, 'font-weight': 800, class: 'oc-more-text' })
+          mt.textContent = `+${n.hiddenCount}`; more.appendChild(mt)
+          wrap.appendChild(more)
+        }
         wrap.appendChild(pillNode(n.r + 10, {
           title: n.label, sub: n.sub,
           bg: `color-mix(in srgb, ${color} 16%, var(--card-bg))`,
@@ -483,7 +513,9 @@ export default function OrgChartClient() {
     g.addEventListener('pointerdown', e => {
       if (e.button !== 0) return
       const pt = clientToSvg(e.clientX, e.clientY)
-      dragRef.current = { node, dx: node.x - pt.x, dy: node.y - pt.y, moved: 0 }
+      const kids = descendantsOf(node).map(k => ({ k, x0: k.x, y0: k.y }))
+      dragRef.current = { node, dx: node.x - pt.x, dy: node.y - pt.y, moved: 0,
+                          ox: node.x, oy: node.y, kids }
       g.setPointerCapture(e.pointerId)
       e.stopPropagation()      // อย่าให้กลายเป็นแพนพื้นหลัง
       e.preventDefault()
@@ -496,6 +528,12 @@ export default function OrgChartClient() {
       drag.moved += Math.hypot(nx - node.x, ny - node.y)
       node.x = nx; node.y = ny
       g.setAttribute('transform', `translate(${nx} ${ny})`)
+      // ลูกทุกชั้นขยับด้วย delta เดียวกับพ่อ — รูปทรงของก้อนคงเดิม
+      const ddx = nx - drag.ox, ddy = ny - drag.oy
+      for (const { k, x0, y0 } of drag.kids) {
+        k.x = x0 + ddx; k.y = y0 + ddy
+        k._g?.setAttribute('transform', `translate(${k.x} ${k.y})`)
+      }
       positionEdges()
     })
     const end = e => {
@@ -625,7 +663,11 @@ export default function OrgChartClient() {
     }
   }, [])
 
-  const allExpanded = shownRoleIds.length > 0 && shownRoleIds.every(id => effExpanded.has(id))
+  const expandableRoleIds = useMemo(
+    () => visibleGroups.flatMap(g => g.roles.filter(r => r.top.length > 1).map(r => r.roleId)),
+    [visibleGroups]
+  )
+  const allExpanded = expandableRoleIds.length > 0 && expandableRoleIds.every(id => effExpanded.has(id))
 
   const tableRows = useMemo(() => {
     const rows = []
@@ -670,8 +712,9 @@ export default function OrgChartClient() {
         .oc-sel-ring { fill: none; stroke: currentColor; stroke-width: 2.5; opacity: 0; }
         .oc-node.is-selected .oc-sel-ring { opacity: 1; }
         .oc-rank-dot { stroke: var(--card-bg); stroke-width: 2; }
-        .oc-exp { stroke: var(--card-bg); stroke-width: 2; opacity: .4; }
-        .oc-exp.on { opacity: 1; }
+        .oc-more { fill: #3f3d38; stroke: var(--card-bg); stroke-width: 2; }
+        .dark .oc-more { fill: #6b6862; }
+        .oc-more-text { fill: #fff; }
         .oc-fill, .oc-pill { transition: filter .12s ease; }
         .oc-node:hover .oc-fill, .oc-node:hover .oc-pill { filter: brightness(1.08); }
         .oc-hub { fill: #0b2b45; }
@@ -754,7 +797,7 @@ export default function OrgChartClient() {
           {hiddenGroups.size ? t('showAll') : t('hideAll')}
         </button>
         <button type="button"
-          onClick={() => { setAutoExpand(!allExpanded); setExpandedRoles(allExpanded ? new Set() : new Set(shownRoleIds)) }}
+          onClick={() => { setAutoExpand(!allExpanded); setExpandedRoles(allExpanded ? new Set() : new Set(expandableRoleIds)) }}
           className="rounded-full px-2.5 py-1.5 text-xs font-semibold text-warm-500 dark:text-disc-muted hover:text-orange">
           {allExpanded ? t('collapseAll') : t('expandAll')}
         </button>
