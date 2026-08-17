@@ -62,7 +62,7 @@ function BoardCard({ card, t, onOpen, onDragStart, dragging }) {
       role="button"
       tabIndex={0}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(card) } }}
-      className={`bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg p-4 flex flex-col gap-2 cursor-pointer hover:border-teal focus:outline-none focus:ring-2 focus:ring-teal ${
+      className={`bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg p-4 flex flex-col gap-2 cursor-pointer hover:border-teal focus:outline-none focus:ring-2 focus:ring-inset focus:ring-teal ${
         dragging ? 'opacity-40' : ''
       }`}
     >
@@ -208,7 +208,7 @@ export default function BoardView() {
                   setDraggingId(null)
                   moveTo(e.dataTransfer.getData('text/plain'), status)
                 }}
-                className={`w-full xl:min-w-0 rounded-lg overflow-hidden flex flex-col ${
+                className={`w-full xl:min-w-0 rounded-lg flex flex-col ${
                   overColumn === status ? 'bg-teal/10 dark:bg-teal/15' : ''
                 }`}
               >
@@ -216,7 +216,7 @@ export default function BoardView() {
                   type="button"
                   onClick={() => setOpenState((s) => ({ ...s, [status]: !isOpen }))}
                   style={columnHeadProps(status).style}
-                  className={`flex items-center justify-between gap-2 px-3 py-2 text-left xl:cursor-default ${columnHeadProps(status).className}`}
+                  className={`flex items-center justify-between gap-2 px-3 py-2 text-left rounded-t-lg xl:cursor-default ${columnHeadProps(status).className}`}
                 >
                   <h2 className="text-base font-semibold truncate">{t(`status.${status}`)}</h2>
                   <span className="flex items-center gap-1 shrink-0 text-base opacity-70">
