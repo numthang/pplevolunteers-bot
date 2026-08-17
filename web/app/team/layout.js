@@ -34,7 +34,7 @@ export default async function TeamLayout({ children }) {
   if (!guilds.length) {
     const t = await getTranslations('team.noGuild')
     return (
-      <div className="-mx-1 sm:-mx-4 -mt-3 min-h-screen bg-warm-50 dark:bg-disc-bg2">
+      <div data-wide className="-mx-1 sm:-mx-4 -mt-3 min-h-screen bg-warm-50 dark:bg-disc-bg2">
         <div className="max-w-5xl mx-auto px-3 sm:px-4 py-4">
           <div className="rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg p-8 text-center">
             <p className="text-base font-semibold text-warm-900 dark:text-disc-text">{t('title')}</p>
@@ -46,7 +46,7 @@ export default async function TeamLayout({ children }) {
   }
 
   return (
-    <div className="-mx-1 sm:-mx-4 -mt-3 min-h-screen bg-warm-50 dark:bg-disc-bg2">
+    <div data-wide className="-mx-1 sm:-mx-4 -mt-3 min-h-screen bg-warm-50 dark:bg-disc-bg2">
       <div className="px-3 sm:px-4 py-4">
         <GuildSwitcherBar guilds={guilds} currentGuildId={currentGuildId} />
         {children}

@@ -28,3 +28,16 @@ html {
   .tier-c { @apply bg-[#faeeda] text-[#854f0b] dark:bg-[#3a2308] dark:text-[#d4953e]; }
   .tier-d { @apply bg-[#fcebeb] text-[#a32d2d] dark:bg-[#3a1212] dark:text-[#d47373]; }
 }
+
+/* โซนที่ขอเต็มจอ — ปลด max-w-5xl ของ <main> ใน app/layout.js เฉพาะหน้าที่ประกาศตัว
+ *
+ * ทำไมต้องมีกฎนี้: layout ของโซน (calling/posts/docs/kanban/team) ใช้ `-mx-4` กัน
+ * แต่ negative margin หักล้างได้แค่ *padding* ของ main — **ทะลุ max-width ของพ่อไม่ได้**
+ * ทุกโซนเลยยังโดนบีบที่ 1024px เหมือนเดิมทั้งที่เขียน max-w-7xl ไว้ (เจอ 2026-08-17)
+ *
+ * วิธีใช้: ใส่ data-wide ที่ div ชั้นนอกสุดของ layout โซนนั้น
+ * เลือก :has() แทน `w-screen + mx-[calc(50%-50vw)]` เพราะสูตรนั้นคิดจาก 50vw ซึ่ง**รวมแถบเลื่อน**
+ * → ล้นออกทางขวาไม่กี่ px แล้วได้แถบเลื่อนแนวนอนทั้งหน้า */
+main:has([data-wide]) {
+  max-width: none;
+}

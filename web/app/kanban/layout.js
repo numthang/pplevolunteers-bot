@@ -15,7 +15,7 @@ export default async function KanbanLayout({ children }) {
   await requireFeature(session, 'kanban')
 
   return (
-    <div className="-mx-1 sm:-mx-4 -mt-3 min-h-screen bg-warm-50 dark:bg-disc-bg2">
+    <div data-wide className="-mx-1 sm:-mx-4 -mt-3 min-h-screen bg-warm-50 dark:bg-disc-bg2">
       <div className="px-3 sm:px-4 py-4">
         {children}
       </div>
