@@ -53,7 +53,7 @@ export async function POST(req) {
   const ownerUserId = body.assignToMe ? ctx.userId : (body.ownerUserId ? Number(body.ownerUserId) : null)
   // ไม่มีเจ้าภาพ = อยู่ backlog เท่านั้น — กันไม่ให้ client ยัด status มาชน CHECK ของ DB
   if (!ownerUserId && body.statusType && body.statusType !== 'backlog') {
-    return err(400, 'ต้องมีเจ้าภาพก่อนถึงจะย้ายออกจากช่องรอรับได้')
+    return err(400, 'ต้องมีเจ้าภาพก่อนถึงจะย้ายออกจากช่องรอทำได้')
   }
 
   const card = await cardDB.createCard(ctx.orgId, {

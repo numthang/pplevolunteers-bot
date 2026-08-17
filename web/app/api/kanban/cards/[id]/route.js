@@ -12,7 +12,7 @@ import {
 import * as cardDB from '@/db/kanban/cards.js'
 
 const REASON_TEXT = {
-  needOwner:     'ต้องมีเจ้าภาพก่อนถึงจะย้ายออกจากช่องรอรับได้',
+  needOwner:     'ต้องมีเจ้าภาพก่อนถึงจะย้ายออกจากช่องรอทำได้',
   unknownStatus: 'สถานะไม่ถูกต้อง',
 }
 
