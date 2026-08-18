@@ -18,6 +18,7 @@ import { X, Loader2, Check, Trash2, Plus, AlertTriangle, UserPlus, Archive, Arch
 import { formatRef, STATUS_TYPES } from '@/lib/kanbanAccess.js'
 import LabelPicker from './LabelPicker.jsx'
 import OwnerPicker from './OwnerPicker.jsx'
+import CardFieldsBox from './CardFieldsBox.jsx'
 
 const AUTOSAVE_MS = 800
 
@@ -26,7 +27,7 @@ export default function CardModal({ cardId, onClose, onChanged }) {
 
   const [card, setCard] = useState(null)
   const [checklist, setChecklist] = useState([])
-  const [can, setCan] = useState({ edit: false, archive: false, restore: false, claim: false })
+  const [can, setCan] = useState({ edit: false, archive: false, restore: false, claim: false, manageFields: false })
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
 
@@ -464,6 +465,21 @@ export default function CardModal({ cardId, onClose, onChanged }) {
                   </form>
                 )}
               </div>
+
+              {/* ข้อมูลของทีม — custom field ก้อน 2 แยกกายภาพจากของระบบข้างบน */}
+              <CardFieldsBox
+                cardId={cardId}
+                fields={card.fields || []}
+                readOnly={readOnly}
+                canManage={can.manageFields}
+                onError={setActionError}
+                onCardChanged={(fresh) => {
+                  setCard(fresh)
+                  lockToken.current = fresh.lock_token
+                  onChanged?.()
+                }}
+                t={t}
+              />
 
               {actionError && <p className="text-base text-red-500 dark:text-red-400">{actionError}</p>}
 

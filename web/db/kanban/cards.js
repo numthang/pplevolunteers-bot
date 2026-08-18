@@ -35,7 +35,21 @@ const AGG = `
   COALESCE((SELECT json_agg(json_build_object('id', l.id, 'name', l.name, 'group', l.group_name, 'color', l.color)
                             ORDER BY l.group_name, l.sort_order, l.name)
               FROM kanban_card_labels cl JOIN kanban_labels l ON l.id = cl.label_id
-             WHERE cl.card_id = c.id AND l.archived_at IS NULL), '[]'::json) AS labels`
+             WHERE cl.card_id = c.id AND l.archived_at IS NULL), '[]'::json) AS labels,
+  -- ทุก field ที่ยังไม่ถูกซ่อนของ org นี้ (ไม่ใช่แค่ที่กรอกแล้ว) — ให้ UI วาดเป็นฟอร์มครบชุด ค่าที่ยังไม่กรอกเป็น null
+  -- ⚠️ d.board_id IS NULL ฮาร์ดโค้ดไว้เพราะยังไม่มีกระดานจริง — ก้อน 3 ต้องแก้เป็น (d.board_id IS NULL OR d.board_id = c.board_id)
+  COALESCE((SELECT json_agg(json_build_object(
+              'field_id', d.id, 'key', d.key, 'label', d.label, 'type', d.type,
+              'value', CASE d.type
+                         WHEN 'number'   THEN to_jsonb(v.value_num)
+                         WHEN 'date'     THEN to_jsonb(v.value_date)
+                         WHEN 'checkbox' THEN to_jsonb(v.value_bool)
+                         ELSE to_jsonb(v.value_text)
+                       END
+            ) ORDER BY d.sort_order, d.id)
+              FROM kanban_field_defs d
+              LEFT JOIN kanban_card_field_values v ON v.card_id = c.id AND v.field_id = d.id
+             WHERE d.org_id = c.org_id AND d.archived_at IS NULL AND d.board_id IS NULL), '[]'::json) AS fields`
 
 const OWNER = `(SELECT ${DISPLAY_NAME} FROM users u WHERE u.id = c.owner_user_id) AS owner_name`
 

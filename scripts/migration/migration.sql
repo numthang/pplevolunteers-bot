@@ -947,3 +947,41 @@ ALTER TABLE kanban_cards ADD COLUMN IF NOT EXISTS source_url        text;
 ALTER TABLE kanban_cards ADD COLUMN IF NOT EXISTS source_message_id varchar(20);
 
 
+-- 2026-08-18 · kanban ขั้น 2: แกน custom field (5 ชนิดสเกลาร์)
+-- ดีไซน์: md/kanban/CUSTOM-FIELDS.md · แผนเต็ม ~/.claude/plans/reactive-churning-falcon.md
+-- type_options เก็บไว้เผื่ออนาคต (ลอก AppFlowy design) — รอบนี้ยังไม่มี config อะไรใช้จริง เก็บ '{}' เฉยๆ
+CREATE TABLE IF NOT EXISTS kanban_field_defs (
+  id          BIGSERIAL PRIMARY KEY,
+  org_id      INTEGER      NOT NULL REFERENCES orgs(id) ON DELETE CASCADE,
+  board_id    BIGINT,                    -- NULL = ใช้ทุกกระดาน (ยังไม่มีกระดานจริง — ก้อน 3 ค่อยเปิดให้เลือก)
+  key         VARCHAR(60)  NOT NULL,     -- ชื่อในโค้ด — ห้ามเปลี่ยนหลังสร้าง (label เปลี่ยนได้)
+  label       VARCHAR(100) NOT NULL,
+  help_text   TEXT,
+  type        VARCHAR(20)  NOT NULL,     -- ก้อน 3 ค่อยเพิ่ม 'select'/'multi_select' เข้า CHECK นี้
+  type_options jsonb       NOT NULL DEFAULT '{}'::jsonb,
+  sort_order  INT          NOT NULL DEFAULT 0,
+  archived_at TIMESTAMPTZ,
+  created_at  TIMESTAMPTZ  NOT NULL DEFAULT now(),
+  CONSTRAINT kanban_field_defs_type_check CHECK (type IN ('text','number','url','date','checkbox'))
+);
+
+-- COALESCE(board_id, 0) กัน NULL≠NULL ของ unique index (แนวเดียวกับ uq_kanban_labels_name)
+CREATE UNIQUE INDEX IF NOT EXISTS uq_kanban_field_defs_key
+    ON kanban_field_defs (org_id, COALESCE(board_id, 0), key);
+CREATE INDEX IF NOT EXISTS idx_kanban_field_defs_org
+    ON kanban_field_defs (org_id, sort_order) WHERE archived_at IS NULL;
+
+-- คอลัมน์แยกตามชนิด ไม่ใช่ jsonb ก้อนเดียว — ต้อง WHERE/SUM ด้วย SQL จริงได้ (ต่างจาก AppFlowy ที่คำนวณในเครื่องบน CRDT)
+CREATE TABLE IF NOT EXISTS kanban_card_field_values (
+  card_id    BIGINT NOT NULL REFERENCES kanban_cards(id)      ON DELETE CASCADE,
+  field_id   BIGINT NOT NULL REFERENCES kanban_field_defs(id) ON DELETE CASCADE,
+  value_text TEXT,
+  value_num  NUMERIC(18,4),
+  value_date DATE,
+  value_bool BOOLEAN,
+  PRIMARY KEY (card_id, field_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_kanban_card_field_values_field ON kanban_card_field_values (field_id);
+
+

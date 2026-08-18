@@ -7,7 +7,7 @@
 import { cardContext, err } from '@/lib/kanbanGuard.js'
 import {
   canEditCard, canArchiveCard, canChangeStatus, canAssignOwner, canClaimCard,
-  checkStatusTransition, formatRef,
+  checkStatusTransition, formatRef, isKanbanAdmin,
 } from '@/lib/kanbanAccess.js'
 import * as cardDB from '@/db/kanban/cards.js'
 
@@ -34,6 +34,8 @@ export async function GET(_req, { params }) {
       join:    canClaimCard(ctx.card, ctx.access, ctx.userId)
                && ctx.card.owner_user_id !== ctx.userId
                && !(ctx.card.helper_ids || []).includes(ctx.userId),
+      // ทางเข้าหน้า /kanban/fields ในกล่อง "ข้อมูลของทีม" — โชว์เฉพาะแอดมิน (แนวเดียวกับ manageLabels)
+      manageFields: isKanbanAdmin(ctx.access),
     },
   })
 }
