@@ -16,7 +16,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import {
   AlertTriangle, AlignLeft, Archive, ArchiveRestore, Calendar, Check, CircleDot,
-  Copy, ExternalLink, Loader2, Tag, UserCircle, Users, X,
+  ExternalLink, Loader2, Tag, UserCircle, Users, X,
 } from 'lucide-react'
 import { formatRef, STATUS_TYPES } from '@/lib/kanbanAccess.js'
 import DeleteChoiceDialog from './DeleteChoiceDialog.jsx'
@@ -27,12 +27,11 @@ import CardFieldsBox from './CardFieldsBox.jsx'
 
 const AUTOSAVE_MS = 800
 
-export default function CardModal({ cardId, onClose, onChanged, onOpenCard }) {
+export default function CardModal({ cardId, onClose, onChanged }) {
   const t = useTranslations('kanban')
 
   const [card, setCard] = useState(null)
   const [can, setCan] = useState({ edit: false, archive: false, restore: false, claim: false, purge: false })
-  const [duplicating, setDuplicating] = useState(false)
   const [confirmRemove, setConfirmRemove] = useState(false)
   // ตัวเลือกสถานะตายตัว 6 แบบ — ป้ายมาจาก t() จึงคำนวณที่นี่ ไม่ใช่ค่าคงที่นอก component
   const STATUS_OPTIONS = STATUS_TYPES.map((s) => ({ id: s, name: t(`status.${s}`) }))
@@ -163,77 +162,6 @@ export default function CardModal({ cardId, onClose, onChanged, onOpenCard }) {
       if (!window.confirm(t('modal.confirmCloseUnsaved'))) return
     }
     onClose()
-  }
-
-  /**
-   * ทำสำเนาการ์ด — ใช้แทน "ชุดตั้งต้น" ของเช็คลิสต์ (user เคาะ: duplicate การ์ดกิจกรรมคล้ายกันมาแทน)
-   * ลอกมาหมด ยกเว้นเลข ref · เครื่องหมายติ๊ก · ธงติดปัญหา → เปิดการ์ดใบใหม่ทันทีที่เสร็จ
-   */
-  async function duplicate() {
-    setActionError('')
-    if (!window.confirm(t('actions.duplicateConfirm', { title: card?.title || '' }))) return
-    setDuplicating(true)
-    try {
-      const res = await fetch(`/api/kanban/cards/${cardId}/duplicate`, { method: 'POST' })
-      const json = await res.json().catch(() => ({}))
-      if (!res.ok || !json.card) { setActionError(json.error || t('actions.duplicateFailed')); return }
-      onChanged?.()
-      // ⚠️ ห้ามเรียก onOpenCard แล้วต่อด้วย onClose — onClose ตั้ง openCardId เป็น null
-      //    จะปิดการ์ดที่เพิ่งเปิดทิ้งทันที (กดแล้วเหมือนไม่มีอะไรเกิดขึ้น)
-      if (onOpenCard) onOpenCard(json.card.id)   // สลับไปใบใหม่ในกล่องเดิม
-      else onClose()                             // ไม่มีตัวรับ → ปิดเฉยๆ ใบใหม่โผล่ในรายการอยู่ดี
-    } catch {
-      setActionError(t('actions.duplicateFailed'))
-    } finally {
-      setDuplicating(false)
-    }
-  }
-
-  /** ค้นคนใน org ให้ combobox ของเจ้าภาพ/คนช่วย — ⚠️ ค้นเท่านั้น ห้าม dump (org มี 7,376 คน) */
-  const searchPeople = useCallback(async (q) => {
-    if (!q || q.trim().length < 2) return []
-    const res = await fetch(`/api/kanban/people?q=${encodeURIComponent(q.trim())}`)
-    if (!res.ok) return []
-    const json = await res.json()
-    return (json.people || []).map((p) => ({
-      id: String(p.userId),
-      name: p.orgName ? `${p.name} (${p.orgName})` : p.name,
-    }))
-  }, [])
-
-  /**
-   * คนช่วย — combobox ส่ง "ชุดใหม่ทั้งชุด" มา แต่ API มีแค่เพิ่ม/ถอดทีละคน
-   * → เทียบกับชุดเดิมแล้วยิงเฉพาะส่วนต่าง (ยิงทั้งชุดทุกครั้ง = ถอดแล้วเพิ่มคนเดิมซ้ำ)
-   */
-  async function commitHelpers(ids) {
-    setActionError('')
-    const before = new Set((card.helpers || []).map((h) => String(h.user_id)))
-    const after = new Set(ids.map(String))
-    const added = [...after].filter((id) => !before.has(id))
-    const removed = [...before].filter((id) => !after.has(id))
-
-    let latest = null
-    try {
-      for (const id of added) {
-        const res = await fetch(`/api/kanban/cards/${cardId}/helpers`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: Number(id) }),
-        })
-        const json = await res.json().catch(() => ({}))
-        if (!res.ok) { setActionError(json.error || t('saveFailed')); return }
-        latest = json.card
-      }
-      for (const id of removed) {
-        const res = await fetch(`/api/kanban/cards/${cardId}/helpers?userId=${id}`, { method: 'DELETE' })
-        const json = await res.json().catch(() => ({}))
-        if (!res.ok) { setActionError(json.error || t('saveFailed')); return }
-        latest = json.card
-      }
-      if (latest) { setCard(latest); onChanged?.() }
-    } catch {
-      setActionError(t('saveFailed'))
-    }
   }
 
   async function patch(body) {
@@ -482,19 +410,11 @@ export default function CardModal({ cardId, onClose, onChanged, onOpenCard }) {
 
               {/* เก็บเข้ากรุ = archive (กู้คืนได้จาก "แสดง: กรุ") · ลบถาวรอยู่ในโหมดกรุเท่านั้น ไม่ใช่ที่นี่
                   การ์ดที่อยู่ในกรุอยู่แล้ว can.archive เป็น false และได้ can.restore แทน
-                  "ทำสำเนา" อยู่แถวเดียวกันแต่แยกฝั่ง — เห็นการ์ดได้ก็ก๊อปได้ ไม่ต้องเป็นเจ้าภาพ */}
+                  ⛔ ปุ่ม "ทำสำเนา" ย้ายไปเมนู "..." บนการ์ดในกระดานแล้ว (user สั่ง 2026-08-19) */}
               {/* ปุ่มนี้โผล่เสมอเมื่อโหลดการ์ดได้ — API ใช้ด่าน canViewCard (เห็นได้ = ก๊อปได้)
                   ไม่ผูกกับ can.edit เพราะสำเนาเป็นการ์ดใบใหม่ของคนกด ไม่ได้แตะต้นฉบับ */}
               {(
                 <div className="pt-2 border-t border-warm-200 dark:border-disc-border flex flex-wrap items-center justify-between gap-2">
-                  <button
-                    onClick={duplicate}
-                    disabled={duplicating}
-                    className="flex items-center gap-1 px-4 py-2 text-base rounded-lg text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover font-medium disabled:opacity-50 transition"
-                  >
-                    {duplicating ? <Loader2 size={16} className="animate-spin" /> : <Copy size={16} />}
-                    {duplicating ? t('actions.duplicating') : t('actions.duplicate')}
-                  </button>
                   {can.restore ? (
                     <button onClick={restore} className="flex items-center gap-1 px-4 py-2 text-base rounded-lg text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover font-medium transition">
                       <ArchiveRestore size={16} /> {t('actions.restore')}

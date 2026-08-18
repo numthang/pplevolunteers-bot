@@ -1729,6 +1729,9 @@
       "restore": "เอาออกจากกรุ",
       "restoring": "กำลังเอาออก…",
       "restoreFailed": "เอาออกจากกรุไม่สำเร็จ",
+      "renameTitle": "แก้ชื่อ",
+      "cardMenu": "เมนูการบ้าน",
+      "delete": "ลบ",
       "duplicate": "ทำสำเนา",
       "duplicating": "กำลังทำสำเนา…",
       "duplicateFailed": "ทำสำเนาไม่สำเร็จ",
@@ -1837,6 +1840,7 @@
     },
     "saveFailed": "บันทึกไม่สำเร็จ",
     "board": {
+      "addCardHere": "เพิ่มการบ้านในกองนี้",
       "emptyColumn": "ไม่มีงานในช่องนี้",
       "moreCards": "อีก {count} ใบ",
       "moveFailed": "ย้ายการ์ดไม่สำเร็จ",

@@ -1729,6 +1729,9 @@
       "restore": "Unarchive",
       "restoring": "Unarchiving…",
       "restoreFailed": "Could not unarchive",
+      "renameTitle": "Rename",
+      "cardMenu": "Task menu",
+      "delete": "Delete",
       "duplicate": "Duplicate",
       "duplicating": "Duplicating…",
       "duplicateFailed": "Could not duplicate",
@@ -1837,6 +1840,7 @@
     },
     "saveFailed": "Save failed",
     "board": {
+      "addCardHere": "Add a task here",
       "emptyColumn": "Nothing in this column",
       "moreCards": "{count} more",
       "moveFailed": "Could not move the card",

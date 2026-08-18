@@ -22,7 +22,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import {
-  Plus, X, Clock, User, ListChecks, Tag,
+  Plus, X, Clock, User, ListChecks, Tag, MoreHorizontal, Pencil, Copy,
   ChevronDown, ChevronRight, Loader2, ArchiveRestore, Trash2,
 } from 'lucide-react'
 import { STATUS_TYPES } from '@/lib/kanbanAccess.js'
@@ -30,6 +30,7 @@ import { columnHeadProps, chipProps } from '@/lib/kanbanLabelColors.js'
 import { groupCards, sortCards, isMyCard } from '@/lib/kanbanGrouping.js'
 import { collectFilterGroups, filterCards } from '@/lib/kanbanLabelFilter.js'
 import CardModal from './CardModal.jsx'
+import DeleteChoiceDialog from './DeleteChoiceDialog.jsx'
 import LabelChips from './LabelChips.jsx'
 
 // แสดงต่อกองสูงสุดเท่านี้ — กอง "เสร็จ" โตไม่มีเพดาน ไม่ควรวาดหมดทุกใบ
@@ -74,7 +75,57 @@ function Segmented({ options, value, onChange }) {
   )
 }
 
-function KanbanCard({ card, t, onOpen, onDragStart, dragging, draggable, onClaim, claiming, onRestore, restoring, onPurge, purging, canPurge }) {
+/** ช่องพิมพ์ชื่อการ์ดใหม่ในกอง — Enter สร้าง · ESC/คลิกออกโดยไม่พิมพ์ = ปิด */
+function NewCardInline({ t, busy, onCreate, onCancel }) {
+  const [title, setTitle] = useState('')
+
+  async function submit(e) {
+    e.preventDefault()
+    const clean = title.trim()
+    if (!clean || busy) return
+    const ok = await onCreate(clean)
+    if (ok) setTitle('')
+  }
+
+  return (
+    <form onSubmit={submit} className="bg-card-bg border border-teal rounded-lg p-2">
+      <input
+        autoFocus
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        onKeyDown={(e) => { if (e.key === 'Escape') onCancel() }}
+        onBlur={() => { if (!title.trim()) onCancel() }}
+        placeholder={t('form.titleLabel')}
+        maxLength={200}
+        disabled={busy}
+        className="w-full text-base bg-transparent text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none disabled:opacity-60"
+      />
+      {busy && <Loader2 size={14} className="animate-spin text-warm-400 dark:text-disc-muted mt-1" />}
+    </form>
+  )
+}
+
+function KanbanCard({ card, t, onOpen, onDragStart, dragging, draggable, onClaim, claiming, onRestore, restoring, onPurge, purging, canPurge, onDuplicate, onDelete, onRename }) {
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [renaming, setRenaming] = useState(false)
+  const [draftTitle, setDraftTitle] = useState(card.title)
+
+  // ปิดเมนูเมื่อคลิกที่อื่น — เมนูลอยทับการ์ดใบอื่น ถ้าไม่ปิดจะค้างซ้อนกันหลายอัน
+  useEffect(() => {
+    if (!menuOpen) return
+    const close = () => setMenuOpen(false)
+    document.addEventListener('click', close)
+    return () => document.removeEventListener('click', close)
+  }, [menuOpen])
+
+  async function commitRename() {
+    const clean = draftTitle.trim()
+    setRenaming(false)
+    if (!clean || clean === card.title) { setDraftTitle(card.title); return }
+    const ok = await onRename(card, clean)
+    if (!ok) setDraftTitle(card.title)
+  }
+
   const state = dueState(card.due_at)
   // เช็คลิสต์กลายเป็น custom field แล้ว (2026-08-18 รอบเย็น) — การ์ดมีได้หลายเช็คลิสต์ รวมยอดทุกอันเป็นตัวเลขเดียว
   const checklistFields = (card.fields || []).filter((f) => f.type === 'checklist')
@@ -89,12 +140,73 @@ function KanbanCard({ card, t, onOpen, onDragStart, dragging, draggable, onClaim
       role="button"
       tabIndex={0}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(card) } }}
-      className={`bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg p-4 flex flex-col gap-2 cursor-pointer hover:border-teal focus:outline-none focus:ring-2 focus:ring-inset focus:ring-teal ${
+      className={`group bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg p-4 flex flex-col gap-2 cursor-pointer hover:border-teal focus:outline-none focus:ring-2 focus:ring-inset focus:ring-teal ${
         dragging ? 'opacity-40' : ''
       }`}
     >
       {/* ไม่มีรหัส K-42 บนหน้าการ์ด — ดูที่หัว CardModal (ยังใช้อ้างถึงการบ้านในดิสฯ อยู่) */}
-      <h3 className="text-base font-semibold text-warm-900 dark:text-disc-text line-clamp-2">{card.title}</h3>
+      <div className="flex items-start gap-1">
+        {renaming ? (
+          <input
+            autoFocus
+            value={draftTitle}
+            onClick={(e) => e.stopPropagation()}
+            onChange={(e) => setDraftTitle(e.target.value)}
+            onKeyDown={(e) => {
+              e.stopPropagation()
+              if (e.key === 'Enter') { e.preventDefault(); commitRename() }
+              if (e.key === 'Escape') { setDraftTitle(card.title); setRenaming(false) }
+            }}
+            onBlur={commitRename}
+            maxLength={200}
+            className="flex-1 min-w-0 text-base font-semibold rounded border border-teal bg-card-bg px-1 text-warm-900 dark:text-disc-text focus:outline-none"
+          />
+        ) : (
+          <h3 className="flex-1 min-w-0 text-base font-semibold text-warm-900 dark:text-disc-text line-clamp-2">{card.title}</h3>
+        )}
+
+        {!card.archived_at && !renaming && (
+          <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 focus-within:opacity-100">
+            <button
+              onClick={(e) => { e.stopPropagation(); setDraftTitle(card.title); setRenaming(true) }}
+              aria-label={t('actions.renameTitle')}
+              title={t('actions.renameTitle')}
+              className="p-1 rounded text-warm-400 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover"
+            >
+              <Pencil size={14} />
+            </button>
+            <div className="relative">
+              <button
+                onClick={(e) => { e.stopPropagation(); setMenuOpen((v) => !v) }}
+                aria-label={t('actions.cardMenu')}
+                title={t('actions.cardMenu')}
+                className="p-1 rounded text-warm-400 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover"
+              >
+                <MoreHorizontal size={14} />
+              </button>
+              {menuOpen && (
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  className="absolute right-0 top-full z-20 mt-1 min-w-[9rem] bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg shadow-lg py-1"
+                >
+                  <button
+                    onClick={() => { setMenuOpen(false); onDuplicate(card) }}
+                    className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover"
+                  >
+                    <Copy size={14} /> {t('actions.duplicate')}
+                  </button>
+                  <button
+                    onClick={() => { setMenuOpen(false); onDelete(card) }}
+                    className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left text-red-500 hover:bg-red-50 dark:hover:bg-disc-hover"
+                  >
+                    <Trash2 size={14} /> {t('actions.delete')}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* ชื่อกลุ่มไม่ต้องขึ้น — การ์ดในคอลัมน์แคบเกิน (ชื่อกลุ่มเต็มอยู่ใน tooltip ของชิป) */}
       <LabelChips labels={card.labels} showGroupName={false} max={3} />
@@ -172,6 +284,10 @@ export default function KanbanHome() {
   const [claimingId, setClaimingId] = useState(null)
   const [restoringId, setRestoringId] = useState(null)
   const [purgingId, setPurgingId] = useState(null)
+  const [confirmCard, setConfirmCard] = useState(null)   // การ์ดที่กำลังถามว่าจะเข้ากรุหรือลบถาวร
+  const [archivingId, setArchivingId] = useState(null)
+  const [addingIn, setAddingIn] = useState(null)     // กองที่กำลังพิมพ์ชื่อการ์ดใหม่อยู่
+  const [creatingIn, setCreatingIn] = useState(null)
   const [canPurge, setCanPurge] = useState(false)   // มาจาก API โหมดกรุ — client ห้ามเดาสิทธิ์ตัวเอง
 
   // 2 ปุ่มควบคุมที่แทนที่การมี 2 หน้า
@@ -298,22 +414,104 @@ export default function KanbanHome() {
   }
 
   /**
-   * ลบการ์ดถาวร — admin เท่านั้น (ปุ่มไม่โผล่ให้คนอื่นด้วยซ้ำ) และการ์ดต้องอยู่ในกรุแล้ว
-   * ⚠️ ต้องยืนยันก่อนเสมอ และบอกให้ชัดว่าอะไรจะหายบ้าง — ย้อนไม่ได้ ไม่มีถังขยะชั้นสอง
+   * ลบการ์ดถาวร — admin เท่านั้น (ปุ่มไม่โผล่ให้คนอื่นด้วยซ้ำ)
+   * ⚠️ ไม่ถามเองแล้ว — DeleteChoiceDialog เป็นคนถามและแยกปุ่ม "เข้ากรุ" กับ "ลบถาวร" ให้ชัดอยู่แล้ว
    */
   async function handlePurge(card) {
     setActionError('')
-    if (!window.confirm(t('actions.purgeConfirm', { title: card.title }))) return
     setPurgingId(card.id)
     try {
       const res = await fetch(`/api/kanban/cards/${card.id}?purge=1`, { method: 'DELETE' })
       const json = await res.json().catch(() => ({}))
       if (!res.ok) { setActionError(json.error || t('actions.purgeFailed')); return }
       setCards((prev) => prev.filter((c) => c.id !== card.id))
+      setConfirmCard(null)
     } catch {
       setActionError(t('actions.purgeFailed'))
     } finally {
       setPurgingId(null)
+    }
+  }
+
+  /** เก็บเข้ากรุจากเมนูบนการ์ด — ย้อนได้ (โหมด "แสดง: กรุ" มีปุ่มเอาออก) */
+  async function archiveCard(card) {
+    setActionError('')
+    setArchivingId(card.id)
+    try {
+      const res = await fetch(`/api/kanban/cards/${card.id}`, { method: 'DELETE' })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) { setActionError(json.error || t('saveFailed')); return }
+      setCards((prev) => prev.filter((c) => c.id !== card.id))
+      setConfirmCard(null)
+    } catch {
+      setActionError(t('saveFailed'))
+    } finally {
+      setArchivingId(null)
+    }
+  }
+
+  /** แก้ชื่อจากบนการ์ด (ปุ่มปากกา) — autosave ของ modal ใช้ lockToken แต่ตรงนี้ยิงตรง */
+  async function renameCard(card, title) {
+    setActionError('')
+    try {
+      const res = await fetch(`/api/kanban/cards/${card.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lockToken: card.lock_token, title }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) { setActionError(json.error || t('saveFailed')); return false }
+      setCards((prev) => prev.map((c) => (c.id === card.id ? json.card : c)))
+      return true
+    } catch {
+      setActionError(t('saveFailed'))
+      return false
+    }
+  }
+
+  /** ทำสำเนาจากเมนูบนการ์ด (ย้ายมาจาก CardModal — user สั่ง 2026-08-19) */
+  async function duplicateCard(card) {
+    setActionError('')
+    try {
+      const res = await fetch(`/api/kanban/cards/${card.id}/duplicate`, { method: 'POST' })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) { setActionError(json.error || t('actions.duplicateFailed')); return }
+      await load()
+    } catch {
+      setActionError(t('actions.duplicateFailed'))
+    }
+  }
+
+  /**
+   * สร้างการ์ดจากในกองเลย (ปุ่ม + บนหัวกอง) — พิมพ์ชื่อแล้ว Enter จบ
+   *
+   * ⚠️ กองที่ไม่ใช่ "รอทำ" ต้องมีเจ้าภาพ (DB CHECK: ไม่มีเจ้าภาพห้ามออกจาก backlog)
+   *    → ใช้ `assignToMe` ที่ API มีอยู่แล้ว = คนกดเป็นเจ้าภาพ
+   *    (ตรงกับเจตนา "ฉันกำลังเพิ่มงานที่ขั้นนี้" และเป็นทางลัดเดิมของหน้าการบ้านของฉัน)
+   */
+  async function createCardIn(statusType, title) {
+    setActionError('')
+    setCreatingIn(statusType)
+    try {
+      const res = await fetch('/api/kanban/cards', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title,
+          statusType,
+          assignToMe: statusType !== 'backlog',
+        }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) { setActionError(json.error || t('saveFailed')); return false }
+      setAddingIn(null)
+      await load()
+      return true
+    } catch {
+      setActionError(t('saveFailed'))
+      return false
+    } finally {
+      setCreatingIn(null)
     }
   }
 
@@ -611,25 +809,54 @@ export default function KanbanHome() {
                   overColumn === key ? 'bg-teal/10 dark:bg-teal/15' : ''
                 }`}
               >
-                <button
-                  type="button"
-                  onClick={() => setOpenState((s) => ({ ...s, [key]: !isOpen }))}
+                {/* ⚠️ หัวกองเป็น div ไม่ใช่ button แล้ว — มีปุ่ม + ซ้อนอยู่ (button ซ้อน button = HTML ผิด) */}
+                <div
                   style={columnHeadProps(key).style}
-                  className={`flex items-center justify-between gap-2 px-3 py-2 text-left rounded-t-lg xl:cursor-default ${columnHeadProps(key).className}`}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-t-lg ${columnHeadProps(key).className}`}
                 >
-                  <h2 className="text-base font-semibold truncate">{head}</h2>
-                  <span className="flex items-center gap-1 shrink-0 text-base opacity-70">
-                    {sorted.length}
-                    {/* ลูกศรมีความหมายเฉพาะตอนพับได้ = จอเล็ก · จอใหญ่กางเสมอเลยซ่อนทิ้ง */}
-                    {isOpen
-                      ? <ChevronDown size={16} className="xl:hidden" />
-                      : <ChevronRight size={16} className="xl:hidden" />}
-                  </span>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => setOpenState((s) => ({ ...s, [key]: !isOpen }))}
+                    className="flex-1 min-w-0 flex items-center justify-between gap-2 text-left xl:cursor-default"
+                  >
+                    <h2 className="text-base font-semibold truncate">{head}</h2>
+                    <span className="flex items-center gap-1 shrink-0 text-base opacity-70">
+                      {sorted.length}
+                      {/* ลูกศรมีความหมายเฉพาะตอนพับได้ = จอเล็ก · จอใหญ่กางเสมอเลยซ่อนทิ้ง */}
+                      {isOpen
+                        ? <ChevronDown size={16} className="xl:hidden" />
+                        : <ChevronRight size={16} className="xl:hidden" />}
+                    </span>
+                  </button>
+                  {/*
+                    เพิ่มการ์ดลงกองนี้เลย — โผล่เฉพาะโหมด "ตามสถานะ"
+                    ⛔ โหมดกำหนดส่งไม่มี เพราะ key เป็นช่วงวัน ไม่ใช่สถานะ (จะสร้างการ์ดสถานะอะไร?)
+                    ⛔ ในกรุไม่มี — สร้างการ์ดใหม่เข้ากรุเลยไม่มีความหมาย
+                  */}
+                  {groupBy === 'status' && !inArchive && (
+                    <button
+                      type="button"
+                      onClick={() => { setAddingIn(key); setOpenState((s) => ({ ...s, [key]: true })) }}
+                      aria-label={t('board.addCardHere')}
+                      title={t('board.addCardHere')}
+                      className="p-1 rounded shrink-0 opacity-70 hover:opacity-100 hover:bg-black/10 dark:hover:bg-white/10"
+                    >
+                      <Plus size={16} />
+                    </button>
+                  )}
+                </div>
 
                 {/* ไม่มี padding ในกอง — การ์ดชิดขอบพอดีแนวเดียวกับแถบหัวสี (user 2026-08-17)
                     เหลือแค่ช่องไฟระหว่างการ์ด ไม่งั้นการ์ดติดกันเป็นก้อนเดียว */}
                 <div className={`${isOpen ? 'flex' : 'hidden'} xl:flex flex-col gap-2 min-h-[4rem] pt-2`}>
+                  {addingIn === key && (
+                    <NewCardInline
+                      t={t}
+                      busy={creatingIn === key}
+                      onCancel={() => setAddingIn(null)}
+                      onCreate={(title) => createCardIn(key, title)}
+                    />
+                  )}
                   {shown.map((card) => (
                     <KanbanCard
                       key={card.id}
@@ -646,6 +873,9 @@ export default function KanbanHome() {
                       onPurge={handlePurge}
                       purging={purgingId === card.id}
                       canPurge={canPurge}
+                      onDuplicate={duplicateCard}
+                      onDelete={(c) => setConfirmCard(c)}
+                      onRename={renameCard}
                     />
                   ))}
                   {sorted.length > shown.length && (
@@ -669,13 +899,28 @@ export default function KanbanHome() {
         {inArchive ? t('controls.archiveNote') : groupBy === 'due' ? t('controls.dueModeNote') : t('board.dragHint')}
       </p>
 
+      {/* กล่อง "ลบ" จากเมนูบนการ์ด — ตัวเดียวกับที่ CardModal ใช้ (เข้ากรุ / ลบถาวร / ยกเลิก) */}
+      {confirmCard && (
+        <DeleteChoiceDialog
+          t={t}
+          heading={t('actions.deleteCardHeading')}
+          title={confirmCard.title}
+          impact={t('actions.cardImpactPlain')}
+          hideHint={t('actions.cardArchiveHint')}
+          hideLabel={t('actions.archive')}
+          canPurge={canPurge}
+          busy={purgingId === confirmCard.id || archivingId === confirmCard.id}
+          onClose={() => setConfirmCard(null)}
+          onHide={() => archiveCard(confirmCard)}
+          onPurge={() => handlePurge(confirmCard)}
+        />
+      )}
+
       {openCardId && (
         <CardModal
           cardId={openCardId}
           onClose={() => setOpenCardId(null)}
           onChanged={load}
-          // ทำสำเนาเสร็จ → เปิดใบใหม่ต่อทันที (CardModal เรียก onOpenCard ก่อน onClose)
-          onOpenCard={(id) => setOpenCardId(id)}
         />
       )}
     </div>
