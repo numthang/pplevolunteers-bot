@@ -1811,6 +1811,8 @@
       "optionColorLabel": "Color",
       "optionDelete": "Delete tag",
       "optionCreateFailed": "Could not create the option",
+      "fieldMoveUp": "Move up",
+      "fieldMoveDown": "Move down",
       "fieldDelete": "Delete this field",
       "fieldMenu": "Manage this field",
       "fieldRename": "Field name",

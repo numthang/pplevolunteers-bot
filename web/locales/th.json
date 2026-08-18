@@ -1811,6 +1811,8 @@
       "optionColorLabel": "สี",
       "optionDelete": "ลบตัวเลือก",
       "optionCreateFailed": "สร้างตัวเลือกไม่สำเร็จ",
+      "fieldMoveUp": "เลื่อนขึ้น",
+      "fieldMoveDown": "เลื่อนลง",
       "fieldDelete": "ลบช่องนี้",
       "fieldMenu": "จัดการช่องข้อมูลนี้",
       "fieldRename": "ชื่อช่องข้อมูล",

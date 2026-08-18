@@ -2,7 +2,8 @@
 //
 // GET             → { fields: [...ที่ยังไม่ถูกซ่อน] }  · อ่านได้ทุกคนใน org
 // GET ?archived=1  → { fields: [...เฉพาะที่ซ่อนไว้] }   · ใช้วาดหัวข้อ "ซ่อนอยู่" ในกล่องข้อมูลของทีม
-// POST → สร้าง field def ใหม่ (label + type) — key สร้างอัตโนมัติ ไม่ต้องกรอก
+// POST  → สร้าง field def ใหม่ (label + type) — key สร้างอัตโนมัติ ไม่ต้องกรอก
+// PATCH { reorder: [id] } → จัดลำดับใหม่ (ปุ่มขึ้น/ลง)
 //
 // ⛔ ไม่มี admin gate (เคาะ 2026-08-18 รอบเย็น: "ไม่ต้องมี field manager ให้ยุ่งยาก")
 //    ใครก็ตามที่อยู่ใน org สร้าง/แก้ได้จากใน CardModal ตรงๆ — เหมือนป้ายที่เปิดให้ทุกคนสร้างอยู่แล้ว
@@ -39,4 +40,19 @@ export async function POST(req) {
 
   const field = await fieldDB.createFieldDef(ctx.orgId, { label, helpText, type })
   return Response.json({ field }, { status: 201 })
+}
+
+/** จัดลำดับ field ใหม่ — ย้อนได้ (กดขึ้น/ลงกลับ) จึงไม่มี gate ยศ เหมือนการเปลี่ยนชื่อ */
+export async function PATCH(req) {
+  const ctx = await kanbanContext()
+  if (ctx.error) return ctx.error
+
+  const body = await req.json().catch(() => ({}))
+  if (!Array.isArray(body.reorder) || !body.reorder.length) return err(400, 'ต้องระบุลำดับใหม่')
+  // ⚠️ id เป็น BIGINT → มาเป็นสตริง ห้ามแปลงเป็น Number
+  const ids = body.reorder.map((v) => String(v).trim())
+  if (!ids.every((v) => /^\d+$/.test(v))) return err(400, 'ลำดับใหม่ไม่ถูกต้อง')
+
+  await fieldDB.reorderFieldDefs(ctx.orgId, ids)
+  return Response.json({ ok: true })
 }

@@ -342,6 +342,31 @@ export async function reorderFieldOptions(fieldId, orderedIds) {
   }
 }
 
+/**
+ * จัดลำดับ field ใหม่ (ปุ่มขึ้น/ลงในกล่องข้อมูลของทีม)
+ * orderedIds = ลำดับเต็มของ field ที่ยังไม่ถูกซ่อนทั้งหมด — แนวเดียวกับ reorderFieldOptions
+ * ⚠️ org_id อยู่ใน WHERE ทุกแถว — กันยิง id ข้าม tenant มาสลับลำดับของคนอื่น
+ */
+export async function reorderFieldDefs(orgId, orderedIds) {
+  const client = await pool.connect()
+  try {
+    await client.query('BEGIN')
+    for (let i = 0; i < orderedIds.length; i++) {
+      await client.query(
+        `UPDATE kanban_field_defs SET sort_order = $3 WHERE org_id = $1 AND id = $2`,
+        [orgId, orderedIds[i], i]
+      )
+    }
+    await client.query('COMMIT')
+    return true
+  } catch (e) {
+    await client.query('ROLLBACK')
+    throw e
+  } finally {
+    client.release()
+  }
+}
+
 // ── เช็คลิสต์ (custom field ชนิด checklist) ─────────────────────────────
 // ผูกกับ (card_id, field_id) คู่กัน — การ์ดเดียวมีได้หลายเช็คลิสต์ถ้า org สร้างหลาย field ชนิดนี้
 

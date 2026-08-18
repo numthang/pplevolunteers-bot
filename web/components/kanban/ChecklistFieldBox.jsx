@@ -18,7 +18,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Eye, EyeOff, GripVertical, ListChecks, Loader2, Plus, Trash2 } from 'lucide-react'
 
-export default function ChecklistFieldBox({ cardId, fieldId, fieldLabel, items = [], readOnly, onItemsChanged, onError, t }) {
+export default function ChecklistFieldBox({ cardId, fieldId, items = [], readOnly, onItemsChanged, onError, t }) {
   const [newText, setNewText] = useState('')
   const [adding, setAdding] = useState(false)
   const [pool, setPool] = useState([])            // คลังตัวเลือกของ field นี้ (โหลดครั้งเดียวตอน mount)
@@ -115,8 +115,8 @@ export default function ChecklistFieldBox({ cardId, fieldId, fieldLabel, items =
   return (
     <div>
       <div className="flex items-center gap-2 mb-1.5">
+        {/* ⚠️ ไม่วาดชื่อ field ที่นี่ — ชื่ออยู่ที่หัวแถวใน CardFieldsBox ซึ่งคลิกเข้าโหมดแก้ได้ */}
         <ListChecks size={16} className="text-warm-500 dark:text-disc-muted shrink-0" />
-        <span className="text-sm font-medium text-warm-900 dark:text-disc-text">{fieldLabel}</span>
         {total > 0 && (
           <>
             <div className="flex-1 h-1.5 rounded-full bg-warm-100 dark:bg-disc-hover overflow-hidden">
