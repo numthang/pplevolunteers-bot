@@ -29,7 +29,7 @@ const { getAvailablePlatforms, getAvailableGroups } = require('../services/metaA
 const { prepareImages, loadMediaSources, publishBatch } = require('../services/publishPipeline');
 const { refreshAttachmentUrls, refreshUrlList } = require('../services/discordAttachments');
 const { getSetting, setSetting, deleteSetting } = require('../db/settings');
-const { getNewsChannelId, postNews, buildEventAnnouncement, sendOrQueueAnnouncement } = require('../services/newsShare');
+const { getNewsChannelId, postNews } = require('../services/newsShare');
 const { resolveConfig } = require('../db/configResolver');
 const pool = require('../db/index');
 const wm = require('../services/watermarkPaths');
@@ -994,24 +994,8 @@ async function handleBasketEventModal(interaction) {
   }
 
   const eventUrl = `https://discord.com/events/${interaction.guildId}/${event.id}`;
-  const announcement = buildEventAnnouncement({
-    name,
-    startUnix: Math.floor(start.getTime() / 1000),
-    locationText: channelId ? `<#${channelId}>` : location,
-    eventUrl,
-  });
 
-  let announceLine;
-  try {
-    const res = await sendOrQueueAnnouncement(interaction.guild, announcement);
-    if (res.skipped)      announceLine = 'ℹ️ ยังไม่ได้ตั้งค่าห้องข่าวสาร — ข้ามการประกาศ';
-    else if (res.queued)  announceLine = `⏰ ช่วงนี้เป็นเวลาพัก — ประกาศ @everyone จะส่งเข้าห้องข่าวสาร <t:${res.releaseUnix}:f> น.`;
-    else                  announceLine = '📣 ส่งประกาศพร้อม @everyone เข้าห้องข่าวสารแล้ว';
-  } catch (err) {
-    announceLine = `⚠️ ส่งประกาศไม่สำเร็จ: ${err.message}`;
-  }
-
-  return interaction.editReply({ content: `✅ สร้าง Event "${name}" แล้ว\n${eventUrl}\n${announceLine}` });
+  return interaction.editReply({ content: `✅ สร้าง Event "${name}" แล้ว\n${eventUrl}\n(ยังไม่ได้ส่งประกาศเข้าห้องข่าวสาร — แชร์เองผ่านระบบแชร์ได้เลย)` });
 }
 
 module.exports = {
