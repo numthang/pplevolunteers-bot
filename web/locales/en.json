@@ -1720,8 +1720,7 @@
       "done": "Done",
       "cancelled": "Parked"
     },
-    "row": {
-    },
+    "row": {},
     "actions": {
       "claim": "Claim this",
       "claiming": "Claiming...",
@@ -1792,7 +1791,6 @@
       "checklistShowDone": "Show completed items",
       "checklistHideDone": "Hide completed items",
       "archive": "Archive",
-      "labelsLabel": "Labels",
       "noLabels": "No labels yet",
       "editLabels": "Edit labels",
       "doneEditingLabels": "Done",
@@ -1800,7 +1798,6 @@
       "newLabel": "New label",
       "newLabelPlaceholder": "Type a label name and press Enter",
       "createLabelFailed": "Could not create the label",
-      "manageLabels": "Manage label library",
       "teamDataLabel": "Team data",
       "noTeamFields": "No custom fields yet",
       "addField": "Add a field",
@@ -1872,31 +1869,6 @@
       "empty": "The loaded cards have no labels to filter by",
       "noMatch": "No task matches this filter",
       "showing": "{count} matching"
-    },
-    "labelsPage": {
-      "title": "Label library",
-      "subtitle": "Labels shared by everyone in the org — renaming or hiding one affects every task card immediately",
-      "manageLink": "Manage labels",
-      "backLink": "Back to Kanban",
-      "colName": "Label",
-      "colGroup": "Group",
-      "colColor": "Color",
-      "colCards": "In use",
-      "cardCount": "{count} cards",
-      "noGroup": "No group",
-      "hiddenSection": "Hidden labels",
-      "hiddenNote": "Hidden labels disappear from the label picker but stay attached to the cards that already have them — unhide and they come back",
-      "hide": "Hide",
-      "unhide": "Unhide",
-      "confirmHide": "Hide the label \"{name}\"? It leaves the picker but stays on the cards that already have it",
-      "colorAuto": "Automatic",
-      "colorAutoTitle": "Use the automatic color derived from the label name",
-      "editName": "Rename this label",
-      "saving": "Saving…",
-      "saved": "Saved",
-      "duplicate": "A label with this name already exists in this group",
-      "empty": "This org has no labels yet",
-      "adminOnly": "Admins only"
     },
     "fieldsPage": {
       "type_text": "Text",

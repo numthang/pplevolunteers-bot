@@ -5,7 +5,7 @@
 
 ## สถานะ
 
-**18 commit บน `master` เครื่อง dev — ยังไม่ push ยังไม่ deploy** (`bc44bf5` … `253ea71`)
+**20 commit บน `master` เครื่อง dev — ยังไม่ push ยังไม่ deploy** (`bc44bf5` … `253ea71`)
 
 | กลุ่ม | commit |
 |---|---|
@@ -30,27 +30,11 @@
 2. **`ALTER TABLE kanban_card_checklist ALTER COLUMN field_id SET NOT NULL` พังถ้า prod มีข้อมูลเช็คลิสต์**
    เช็คก่อน: `SELECT count(*) FROM kanban_card_checklist;` (dev มี 0 แถวตอนแปลง)
 3. **บอทกับเว็บต้องขึ้นพร้อมกัน** — `db/kanbanCards.js` เขียน `source_url`/`source_message_id`
-4. ⛔ **ห้ามเชื่อว่า prod อยู่สถานะไหนจากไฟล์นี้ — ถาม user เสมอ**
-
----
-
-## 🔴 ค้างรอ user เคาะ: เส้นบอกตำแหน่งตอนลาก **การ์ด**
-
-user ขอ "ลากการ์ดแล้วมีเส้นระบุตำแหน่งแบบ Notion" แต่ **ทำตรงๆ ไม่ได้**
-
-`kanban_cards` **ไม่มีคอลัมน์ `sort_order`** · `lib/kanbanGrouping.js` → `sortCards()` เรียงอัตโนมัติเสมอ
-(กำหนดส่ง → ความสำคัญ → วันที่สร้าง) · ลากได้แค่ **ข้ามกอง** = เปลี่ยน `status_type`
-
-**ใส่เส้นไปตอนนี้ = โกหก** (วางตรงไหนก็เด้งกลับตามลำดับที่ sort คำนวณ)
-
-| | ได้อะไร | ต้องทำ |
-|---|---|---|
-| **(ก) เพิ่มลำดับมือ** | ลากจัดลำดับในกองได้จริง | migration `sort_order` + API reorder + แก้ `sortCards` — **แลกกับเสียการเรียงตามกำหนดส่ง** |
-| **(ข) เส้นบอกแค่กอง** ← Opus เชียร์ | รู้ว่าจะตกกองไหน ไม่โกหกเรื่องตำแหน่ง | เล็ก |
-| **(ค) ไม่ทำ** | คงไฮไลต์ทั้งกองแบบตอนนี้ | — |
-
-> **เงาตอนลากการ์ดมีอยู่แล้ว** — `draggable` อยู่บนการ์ดทั้งใบ เบราว์เซอร์ถ่ายภาพให้เอง
-> (ต่างจาก field ที่ `draggable` อยู่บนหมุดจิ๋ว เลยต้องสั่ง `setDragImage` เอง)
+4. **DROP ตารางป้ายค้างไว้** — `kanban_labels` / `kanban_card_labels` ไม่มีโค้ดอ่านแล้วแต่ยังไม่ลบ
+   ตั้งใจ: ให้ deploy + ดู prod จนนิ่งก่อน แล้วค่อยลงเป็น DDL ใน migration.sql รอบถัดไป
+   บน prod ต้องรัน `scripts/migration/kanbanLabelsToFields.mjs --commit` **ก่อน** ขึ้นโค้ดใหม่
+   ไม่งั้นแท็กบนการ์ดจะหายไปต่อหน้า (โค้ดใหม่อ่านจาก field อย่างเดียว)
+5. ⛔ **ห้ามเชื่อว่า prod อยู่สถานะไหนจากไฟล์นี้ — ถาม user เสมอ**
 
 ---
 
@@ -63,16 +47,16 @@ user ขอ "ลากการ์ดแล้วมีเส้นระบุ�
 - ลาก field: เส้นเดียวตรงที่เมาส์อยู่ + แถวต้นทางจางลง
 - **ลองบนมือถือ ~390px ด้วย** (แถว 2 คอลัมน์ต้องพับเป็นบนล่าง)
 
-### 2. ⬜ ยุบป้าย → custom field (เคาะแล้วว่า "ยุบได้" แต่ยังไม่ทำ)
-filter ไม่ใช่ตัวค้ำแล้ว (user บอกกรองไม่บ่อย) · เรื่องสิทธิ์เคาะแล้ว
-**13 touch points:** `lib/kanbanLabelFilter.js` + เทส 19 ข้อ · `LabelChips` · `LabelManager` · `LabelPicker` ·
-`/kanban/labels` · `db/kanban/labels.js` ฯลฯ · ข้อมูล: **3 กลุ่ม → 3 field · 29 ป้าย → options · 84 เส้น → ค่า**
+### 2. ✅ ยุบป้าย → custom field — **เสร็จแล้ว 2026-08-19**
+ข้อมูลย้ายครบ **ตกหล่น 0** (พื้นที่ 13 · สายงาน 57 · อุปกรณ์ 16 เส้น) · ตารางป้ายยังอยู่ครบ ยังไม่ DROP
+สคริปต์: `node --env-file=.env scripts/migration/kanbanLabelsToFields.mjs [--commit]` — dry-run ก่อนเสมอ · รันซ้ำได้
+ทางเขียนแท็กจุดเดียว = `web/db/kanban/tags.js` · ทางแปลง field→ชิปจุดเดียว = `cardTags()` ใน `lib/kanbanTagFilter.js`
+⛔ **prod ไม่มี field พวกนี้** (user สร้างเองผ่าน UI บน dev) — สคริปต์สร้างให้เองจาก **ชื่อ** ห้ามอ้าง id/key
 
-⚠️ **ข้อนี้บล็อกข้อ 3**
-
-### 3. ⬜ import 82 ใบจาก xlsx (รอข้อ 2)
-xlsx มี 82 แถวมี Title · `เสร็จแล้ว` 50 ใบยังไม่เคยเข้า · DB ตอนนี้ 37 ใบ
-**สคริปต์ไม่มี dedupe** — รัน `--all` วันนี้ = ซ้ำทับของเดิม 32 ใบ
+### 3. ⬜ import 82 ใบจาก xlsx ← **งานถัดไป (user จะทำเอง session หน้า)**
+`node --env-file=.env scripts/import/kanbanFromAppflowy.mjs` (dry-run) → `--commit` → `--all` เอาที่จบแล้ว 50 ใบด้วย
+✅ สคริปต์ชี้ไป custom field แล้ว (ไม่ใช่ป้าย) · dry-run ล่าสุด: การ์ด 32 · แท็ก 76 · error 0
+⚠️ **ยังไม่มี dedupe** — รัน `--all` วันนี้ = ทับของเดิม 32 ใบ ต้องทำ dedupe ก่อน
 `Checklist` จาก AppFlowy **กู้ไม่ได้ถาวร** (export มาเป็น % ไม่มีตัวข้อความ)
 
 ### 4. ✅ ติดตั้ง ESLint — **เสร็จแล้ว 2026-08-19**
@@ -90,3 +74,5 @@ xlsx มี 82 แถวมี Title · `เสร็จแล้ว` 50 ใบ�
 - `.wolf/cerebrum.md` §Do-Not-Repeat 2026-08-18/19
 - `web/components/kanban/FieldRow.jsx` — **ของระบบกับ custom field ใช้แถวตัวนี้ตัวเดียวกัน ห้ามเขียน grid ซ้ำ**
 - `web/components/kanban/TagCombobox.jsx` — 3 โหมด (`field`/`static`/`search`) · โหมด field คือเส้นเดิม **ห้ามแตะ**
+- `web/db/kanban/tags.js` — **ทางเขียนแท็กจุดเดียว** (สคริปต์ import + สคริปต์ย้ายข้อมูล ใช้ตัวนี้ร่วมกัน)
+- `web/lib/kanbanTagFilter.js` §`cardTags()` — **ทางแปลง field → ชิปจุดเดียว** ห้ามเขียนซ้ำที่อื่น

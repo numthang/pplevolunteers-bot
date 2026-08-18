@@ -930,7 +930,6 @@ UPDATE users u
          ORDER BY user_id, roles_assigned_at DESC NULLS LAST) s
  WHERE s.user_id = u.id AND u.avatar IS NULL;
 
- -- production ทำถึงตรงนี้
 
 
 -- 2026-08-18 · คืน DEFAULT ให้ dc_orgchart_config.excluded
@@ -939,6 +938,7 @@ UPDATE users u
 -- ลายเซ็นของตารางที่เคยถูก DBeaver auto-create ตอนย้าย data (ทิ้ง DEFAULT)
 ALTER TABLE dc_orgchart_config ALTER COLUMN excluded SET DEFAULT FALSE;
 
+ -- production ทำถึงตรงนี้
 
 -- 2026-08-18 · kanban: ลิงก์ต้นทางดิสฯ — บอทเคยทิ้ง msg.id ไปเฉยๆ ตอนสร้างการ์ดจาก "📌 สร้างเป็นการบ้าน"
 -- บอท+importer เขียนเท่านั้น (ไม่ใช่ custom field ที่คนแก้ได้ — ดู md/kanban/CUSTOM-FIELDS.md §เส้นแบ่ง)

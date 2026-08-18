@@ -66,7 +66,7 @@ export const LABEL_PALETTE = CHIP_PALETTE
  * สีที่ป้ายนี้ได้ "โดยอัตโนมัติ" ถ้าไม่ได้ตั้งสีเอง — คำนวณจากชื่อ
  *
  * ⚠️ ผูกกับชื่อ+กลุ่ม แปลว่า **เปลี่ยนชื่อหรือย้ายกลุ่ม = สีเด้งทั้งระบบ**
- *    หน้าจัดการป้ายจึงต้องแช่สีนี้ลง DB ก่อนแก้ชื่อ (db/kanban/labels.js §updateLabel)
+ *    จุดที่แก้ชื่อจึงต้องแช่สีนี้ลง DB ก่อน (db/kanban/fields.js §updateFieldOption)
  */
 export function autoColor(label) {
   const name = label?.name

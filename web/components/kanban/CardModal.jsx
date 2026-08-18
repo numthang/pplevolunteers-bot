@@ -16,13 +16,12 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import {
   AlertTriangle, AlignLeft, Archive, ArchiveRestore, Calendar, Check, CircleDot,
-  ExternalLink, Loader2, Tag, UserCircle, Users, X,
+  ExternalLink, Loader2, UserCircle, Users, X,
 } from 'lucide-react'
 import { formatRef, STATUS_TYPES } from '@/lib/kanbanAccess.js'
 import DeleteChoiceDialog from './DeleteChoiceDialog.jsx'
 import FieldRow from './FieldRow.jsx'
 import TagCombobox from './TagCombobox.jsx'
-import LabelPicker from './LabelPicker.jsx'
 import CardFieldsBox from './CardFieldsBox.jsx'
 
 const AUTOSAVE_MS = 800
@@ -392,20 +391,9 @@ export default function CardModal({ cardId, onClose, onChanged }) {
                   />
                 </FieldRow>
 
-                {/* ป้าย — ติด/ถอดยิงทันที ไม่ผ่าน lockToken (ไม่ใช่ช่องพิมพ์ที่ autosave) */}
-                <FieldRow icon={Tag} label={t('modal.labelsLabel')}>
-                  <LabelPicker
-                    cardId={cardId}
-                    labels={card.labels || []}
-                    readOnly={readOnly}
-                    onError={setActionError}
-                    onCardChanged={(fresh) => {
-                      setCard(fresh)
-                      lockToken.current = fresh.lock_token
-                      onChanged?.()
-                    }}
-                  />
-                </FieldRow>
+                {/* ⛔ แถว "ป้าย" ถูกถอดออก 2026-08-19 — ยุบเข้า custom field แล้ว
+                    สายงาน/พื้นที่/อุปกรณ์ ขึ้นเป็นแถว field ปกติในกล่อง "ข้อมูลของทีม" ข้างล่างแทน
+                    อย่าเอากลับมา: มีที่เก็บ 2 ที่เมื่อไหร่ ข้อมูลใหม่จะแตกไปคนละทางทันที */}
 
                 {/* คนช่วย — multi_select ทรงเดียวกับ custom field · ตัวเลือกคือคนใน org ค้นเอา */}
                 <FieldRow icon={Users} label={t('modal.helpersLabel')}>

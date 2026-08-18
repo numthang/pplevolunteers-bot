@@ -23,7 +23,9 @@ const XLSX = require('xlsx')
 
 const pool = (await import('../../web/db/index.js')).default
 const cardDB = await import('../../web/db/kanban/cards.js')
-const labelDB = await import('../../web/db/kanban/labels.js')
+// ⭐ ป้ายถูกยุบเข้า custom field แล้ว 2026-08-19 — เขียนผ่าน tags.js ไม่ใช่ labels.js (ที่ลบทิ้งไปแล้ว)
+//    LABEL_GROUPS ข้างล่างยังใช้ชื่อเดิมได้: ชื่อกลุ่ม = ชื่อ field ตรงๆ (ไม่มีก็สร้างให้)
+const tagDB = await import('../../web/db/kanban/tags.js')
 
 const argv = process.argv.slice(2)
 const has = (f) => argv.includes(f)
@@ -216,13 +218,14 @@ async function main() {
   const stat = { created: 0, labels: 0, noOwner: 0, helpers: 0, bumped: 0, provenance: 0, skipped: 0, errors: 0 }
   const labelCache = new Map()
 
+  /** ชื่อกลุ่ม+ชื่อแท็ก → { fieldId, optionId, type } · cache กันยิงซ้ำทุกแถว */
   async function labelId(groupName, name) {
     const key = `${groupName}::${name}`
     if (labelCache.has(key)) return labelCache.get(key)
     if (!COMMIT) { labelCache.set(key, `(ใหม่)`); return `(ใหม่)` }
-    const l = await labelDB.ensureLabel(ORG, { name, groupName })
-    labelCache.set(key, l.id)
-    return l.id
+    const tg = await tagDB.ensureTag(ORG, groupName, name)
+    labelCache.set(key, tg)
+    return tg
   }
 
   for (const [i, r] of target.entries()) {
@@ -270,7 +273,9 @@ async function main() {
         ownerUserId, startAt: start, dueAt: due, statusType: status,
       }, importerId)
 
-      if (labelIds.length) await labelDB.setCardLabels(ORG, card.id, labelIds)
+      // ⚠️ addCardTags **เพิ่ม** ไม่ทับของเดิม (ต่างจาก setCardLabels ตัวเก่าที่เขียนทับทั้งชุด)
+      //    import ไม่ควรลบค่าที่คนกรอกเองในการ์ดที่มีอยู่แล้ว
+      if (labelIds.length) await tagDB.addCardTags(ORG, card.id, labelIds.filter(Boolean))
       for (const h of helperIds) await cardDB.addHelper(ORG, card.id, h)
 
       stat.created++; stat.labels += labelIds.length; stat.helpers += helperIds.length

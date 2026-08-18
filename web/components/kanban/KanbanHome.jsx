@@ -28,7 +28,7 @@ import {
 import { STATUS_TYPES } from '@/lib/kanbanAccess.js'
 import { columnHeadProps, chipProps } from '@/lib/kanbanLabelColors.js'
 import { groupCards, sortCards, isMyCard } from '@/lib/kanbanGrouping.js'
-import { collectFilterGroups, filterCards } from '@/lib/kanbanLabelFilter.js'
+import { collectFilterGroups, filterCards, cardTags } from '@/lib/kanbanTagFilter.js'
 import CardModal from './CardModal.jsx'
 import DeleteChoiceDialog from './DeleteChoiceDialog.jsx'
 import LabelChips from './LabelChips.jsx'
@@ -210,8 +210,9 @@ function KanbanCard({ card, t, onOpen, onDragStart, onDragEnd, dragging, draggab
         )}
       </div>
 
-      {/* ชื่อกลุ่มไม่ต้องขึ้น — การ์ดในคอลัมน์แคบเกิน (ชื่อกลุ่มเต็มอยู่ใน tooltip ของชิป) */}
-      <LabelChips labels={card.labels} showGroupName={false} max={3} />
+      {/* ชิปมาจากค่าใน custom field แล้ว (ยุบป้ายเข้า field 2026-08-19) — cardTags คือจุดแปลงจุดเดียว
+          ชื่อกลุ่มไม่ต้องขึ้น การ์ดในคอลัมน์แคบเกิน (ชื่อ field เต็มอยู่ใน tooltip ของชิป) */}
+      <LabelChips labels={cardTags(card)} showGroupName={false} max={3} />
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-warm-500 dark:text-disc-muted">
         {card.due_at && (

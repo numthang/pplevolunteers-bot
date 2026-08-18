@@ -32,10 +32,9 @@ const AGG = `
   COALESCE((SELECT json_agg(json_build_object('user_id', h.user_id, 'name', ${DISPLAY_NAME}) ORDER BY h.joined_at)
               FROM kanban_card_helpers h JOIN users u ON u.id = h.user_id
              WHERE h.card_id = c.id), '[]'::json) AS helpers,
-  COALESCE((SELECT json_agg(json_build_object('id', l.id, 'name', l.name, 'group', l.group_name, 'color', l.color)
-                            ORDER BY l.group_name, l.sort_order, l.name)
-              FROM kanban_card_labels cl JOIN kanban_labels l ON l.id = cl.label_id
-             WHERE cl.card_id = c.id AND l.archived_at IS NULL), '[]'::json) AS labels,
+  -- ⛔ เคยมีคอลัมน์ labels ตรงนี้ — ถอดออก 2026-08-19 ตอนยุบป้ายเข้า custom field
+  --    ชิปบนการ์ดสร้างจาก fields ข้างล่างผ่าน cardTags() ใน lib/kanbanTagFilter.js แทน
+  --    (ห้ามใส่ backtick ในคอมเมนต์นี้ — ทั้งก้อนเป็น template literal ของ JS จะโดนปิดกลางคัน)
   -- ทุก field ที่ยังไม่ถูกซ่อนของ org นี้ (ไม่ใช่แค่ที่กรอกแล้ว) — ให้ UI วาดเป็นฟอร์มครบชุด ค่าที่ยังไม่กรอกเป็น null/[]
   -- ⚠️ d.board_id IS NULL ฮาร์ดโค้ดไว้เพราะยังไม่มีกระดานจริง — ก้อน 3 ต้องแก้เป็น (d.board_id IS NULL OR d.board_id = c.board_id)
   COALESCE((SELECT json_agg(json_build_object(
@@ -240,11 +239,9 @@ export async function duplicateCard(orgId, sourceId, createdBy) {
       }
     }
 
-    // ── ลูกทั้ง 4 ตาราง: INSERT…SELECT ในทรานแซกชันเดียวกัน ──
-    await client.query(
-      `INSERT INTO kanban_card_labels (card_id, label_id)
-       SELECT $2, label_id FROM kanban_card_labels WHERE card_id = $1`, [s.id, newId])
-
+    // ── ลูก 3 ตาราง: INSERT…SELECT ในทรานแซกชันเดียวกัน ──
+    // ⛔ เคยลอก kanban_card_labels ด้วย — เลิกแล้ว 2026-08-19 (ป้ายยุบเข้า field)
+    //    ถ้าปล่อยไว้ = ทำสำเนาการ์ดแล้วป้ายฟื้นกลับมาแบบที่ UI มองไม่เห็น
     await client.query(
       `INSERT INTO kanban_card_helpers (card_id, user_id)
        SELECT $2, user_id FROM kanban_card_helpers WHERE card_id = $1`, [s.id, newId])
