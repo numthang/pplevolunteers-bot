@@ -33,6 +33,21 @@ Production Postgres ลงด้วย `sudo apt install postgresql` ตรง �
 - ต้องทำตอน maintenance window เท่านั้น (ห้ามรันคู่ขนานบน 5432 เดิม) — แผนคร่าว ๆ: ลง pgsql ผ่าน panel บน port อื่นก่อน → `pg_dump`/`pg_restore` ย้ายข้อมูล → สลับ `.env` DB_HOST/PORT → ปิด apt postgres เดิม → ค่อยย้าย panel instance ไป 5432
 - ต้องเช็ค `pg_hba.conf`/`postgresql.conf` ของ panel-managed instance ใหม่ให้อนุญาต password auth เหมือนที่ตั้งไว้วันนี้ด้วย
 
+## 🧩 Kanban — custom field + ลิงก์ต้นทางดิสฯ (เคาะ 2026-08-18 · ยังไม่เริ่มเขียนโค้ด)
+
+**แผนเต็มอยู่ที่** `~/.claude/plans/reactive-churning-falcon.md` (ไม่ได้อยู่ใน repo — ถ้าหายให้ไล่จาก `md/kanban/CUSTOM-FIELDS.md` §กลับคำ)
+
+user เคาะ: **ทำ custom field เลย ไม่ต้องรอ tripwire** — *"ไม่ต้องรอองค์กรนอกหรอก ผมนี่แหละ จะเริ่มเพิ่มแล้ว"*
+
+**ลำดับที่วางไว้**
+1. **ลิงก์ต้นทางดิสฯ** — `kanban_cards.source_url` + `source_message_id` · ⚠️ **บอท `📌 สร้างเป็นการบ้าน` ทิ้งลิงก์ต้นทางอยู่ตอนนี้** (`db/kanbanCards.js` ไม่เก็บ ทั้งที่ `msg.id` อยู่ใน customId แล้ว)
+2. **แกน custom field** — `kanban_field_defs` + `kanban_card_field_values` (คอลัมน์แยกตามชนิด ไม่ใช่ jsonb) · 5 ชนิด: text/number/url/date/checkbox · หน้า `/kanban/fields` ลอกโครง `LabelManager.jsx`
+3. **`select`/`multi_select` + ยุบป้ายเข้ามา** — 3 กลุ่มป้าย → 3 field · 29 ป้าย → options · 76 เส้น → ค่า (INSERT…SELECT)
+4. **importer เก็บของที่เคยทิ้ง** — Discord → `source_url` · FB Post → field url · งบประมาณ → field number
+   ⚠️ ตอนนี้ importer **ข้าม 3 คอลัมน์นี้แบบเงียบๆ ไม่มีบรรทัดเตือน** → import 50 ใบที่จบแล้วรอบหน้าจะหาย 5 Discord + 31 FB
+
+**กับดักที่จดไว้แล้ว ห้ามพลาดซ้ำ:** เขียนค่า field **ห้าม bump `kanban_cards.updated_at`** (เป็น lock token ของ autosave → คนที่เปิดค้างจะโดน 409) · `key` เปลี่ยนไม่ได้/`label` เปลี่ยนได้ · `label` เป็นข้อมูล org ห้ามผ่าน `t()` · ลบ field = `archived_at` เท่านั้น
+
 ## 🏷️ Kanban — ป้าย (2026-08-17) · ชิป + ติด/ถอด เสร็จ local ยังไม่ deploy
 
 ชิปบนแถวการ์ด (`LabelChips.jsx`) + กล่องเลือกใน CardModal (`LabelPicker.jsx`) + API 2 เส้น
