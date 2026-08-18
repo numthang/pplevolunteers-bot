@@ -413,6 +413,11 @@ export default function CardFieldsBox({ cardId, fields = [], readOnly, canPurge 
 
           /**
            * แถวเดียว 2 คอลัมน์แบบ Notion/AppFlowy: [หมุด · ไอคอน · ชื่อ] | [ค่า]
+           *
+           * ⛔ **ไม่มีเส้นบอก "จุดวาง" ตอนลาก** — เคยใส่ border-dashed แล้วมันขึ้นพร้อมกัน
+           *    ทุกแถว = ไม่ได้บอกว่าจะวางตรงไหน กลายเป็น noise (user: "ดูแล้วงง" 2026-08-19)
+           *    ภาพแถวที่ติดเมาส์ (setDragImage) + แถวต้นทางจางลง บอกได้ครบแล้ว
+           *    ถ้าจะเอากลับมา ต้องขึ้น **แถวเดียว** ที่เมาส์ลอยอยู่จริงเท่านั้น
            * (user ส่งภาพมาแล้วสั่ง "ลอกได้ลอก" 2026-08-18)
            * ⚠️ จอแคบ (มือถือ ~390px) ต้องพับเป็นบนล่าง — คอลัมน์ซ้ายกว้างคงที่บนจอ 390 = ค่าเหลือที่ไม่พอ
            * ⛔ ชื่อ field อยู่ที่นี่จุดเดียวทุกชนิด · ห้ามให้ ScalarInput/ChecklistFieldBox วาดชื่อเองอีก
@@ -424,7 +429,7 @@ export default function CardFieldsBox({ cardId, fields = [], readOnly, canPurge 
               onDragOver={(e) => { if (dragId) e.preventDefault() }}
               onDrop={() => onDropField(f.field_id)}
               data-field-row
-              className={`border-t-2 ${dragId && dragId !== f.field_id ? 'border-dashed border-teal/50' : 'border-transparent'} ${dragId === f.field_id ? 'opacity-40' : ''}`}
+              className={dragId === f.field_id ? 'opacity-40' : ''}
               handle={!readOnly && (
                 /* หมุดลาก — อยู่หน้าสุดก่อนไอคอนชนิด (user สั่ง 2026-08-18)
                    ลากได้เฉพาะตรงนี้ ไม่ใช่ทั้งแถว ไม่งั้นลากทับการเลือกข้อความในช่องกรอก */
