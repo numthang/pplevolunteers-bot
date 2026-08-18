@@ -3,14 +3,25 @@
 /**
  * ChecklistFieldBox — เช็คลิสต์ 1 field (ตรงสกรีนช็อตที่ user ส่งมา 2026-08-18 รอบเย็น: progress bar + %
  * + ลากจัดลำดับ + ปุ่มซ่อนงานที่เสร็จแล้ว) — การ์ดใบเดียวมีได้หลาย field ชนิดนี้ ผูกด้วย (cardId, fieldId)
+ *
+ * ⭐ ช่อง "เพิ่มรายการ" ดึงจาก **คลังตัวเลือกเดียวกับ multi_select** (`kanban_field_options`)
+ *   เคสจริง: `อุปกรณ์` — ไม่ต้องพิมพ์ "เต็นท์ โต๊ะ เก้าอี้ ลำโพง" ใหม่ทุกการ์ด หยิบจากคลังได้เลย
+ *   พิมพ์ชื่อใหม่ = server สร้างตัวเลือกลงคลังให้เอง (`ensureFieldOption`) เหมือน multi_select เป๊ะ
+ *
+ * ⛔ **ห้ามเอา TagCombobox มาใช้ตรงนี้** (ตรวจแล้ว 2026-08-18 — เก็บค่าคนละแบบ):
+ *   TagCombobox ถือ "Set ของ option id" แล้วเขียน value_options ทีเดียวทั้งก้อน
+ *   เช็คลิสต์เป็น "แถวจริง" ที่แต่ละแถวมี id/done/sort_order ของตัวเอง เขียนทีละแถว
+ *   Set แทน done กับลำดับรายตัวไม่ได้ → ยัดเข้าไปคือต้องรื้อ TagCombobox ให้รับ 2 value model
+ *   ที่ reuse จริงคือ **endpoint ฝั่ง server** ไม่ใช่ตัว component
  */
 
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Eye, EyeOff, GripVertical, ListChecks, Loader2, Plus, Trash2 } from 'lucide-react'
 
 export default function ChecklistFieldBox({ cardId, fieldId, fieldLabel, items = [], readOnly, onItemsChanged, onError, t }) {
   const [newText, setNewText] = useState('')
   const [adding, setAdding] = useState(false)
+  const [pool, setPool] = useState([])            // คลังตัวเลือกของ field นี้ (โหลดครั้งเดียวตอน mount)
   const [busyId, setBusyId] = useState(null)
   const [hideDone, setHideDone] = useState(false)
   const [dragId, setDragId] = useState(null)
@@ -19,6 +30,26 @@ export default function ChecklistFieldBox({ cardId, fieldId, fieldLabel, items =
   const done = items.filter((i) => i.done).length
   const pct = total ? Math.round((done / total) * 100) : 0
   const shown = hideDone ? items.filter((i) => !i.done) : items
+
+  // โหลดคลังไว้ทำรายการแนะนำ — ล้มก็ไม่เป็นไร ช่องยังพิมพ์เองได้ตามปกติ
+  const loadPool = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/kanban/fields/${fieldId}/options`)
+      if (!res.ok) return
+      const json = await res.json()
+      setPool(json.options || [])
+    } catch { /* เงียบได้ — เป็นแค่ตัวช่วย ไม่ใช่ทางเดียวที่เพิ่มรายการได้ */ }
+  }, [fieldId])
+
+  useEffect(() => { if (!readOnly) loadPool() }, [readOnly, loadPool])
+
+  // ตัวที่ยังไม่ได้อยู่บนการ์ดใบนี้ + ตรงกับที่พิมพ์ (ของที่มีอยู่แล้วไม่ต้องเสนอซ้ำ)
+  const used = new Set(items.map((i) => String(i.option_id)).filter((v) => v !== 'null'))
+  const q = newText.trim().toLowerCase()
+  const suggestions = pool
+    .filter((o) => !used.has(String(o.id)))
+    .filter((o) => !q || o.name.toLowerCase().includes(q))
+    .slice(0, 8)
 
   async function call(method, body, query = '') {
     const res = await fetch(`/api/kanban/cards/${cardId}/checklist${query}`, {
@@ -31,12 +62,22 @@ export default function ChecklistFieldBox({ cardId, fieldId, fieldLabel, items =
     return json
   }
 
+  /** พิมพ์ชื่อเอง — server จะ ensureFieldOption ให้ ชื่อใหม่จึงเข้าคลังอัตโนมัติ */
   async function addItem(e) {
     e.preventDefault()
     const text = newText.trim()
     if (!text || adding) return
     setAdding(true)
     const json = await call('POST', { fieldId, text })
+    if (json?.item) { onItemsChanged([...items, json.item]); setNewText(''); loadPool() }
+    setAdding(false)
+  }
+
+  /** หยิบจากคลัง — ไม่ต้องพิมพ์ */
+  async function addFromPool(option) {
+    if (adding) return
+    setAdding(true)
+    const json = await call('POST', { fieldId, optionId: option.id })
     if (json?.item) { onItemsChanged([...items, json.item]); setNewText('') }
     setAdding(false)
   }
@@ -130,6 +171,25 @@ export default function ChecklistFieldBox({ cardId, fieldId, fieldLabel, items =
         ))}
       </div>
 
+      {/* รายการแนะนำจากคลัง — กดหยิบได้เลยไม่ต้องพิมพ์ (หัวใจของก้อนนี้)
+          โชว์เฉพาะตัวที่การ์ดใบนี้ยังไม่มี · กรองตามที่พิมพ์ · ไม่มีคลัง = ไม่โผล่อะไรเลย ช่องพิมพ์ทำงานปกติ */}
+      {!readOnly && suggestions.length > 0 && (
+        <div className="mt-1.5 flex flex-wrap gap-1.5">
+          {suggestions.map((o) => (
+            <button
+              key={o.id}
+              type="button"
+              onClick={() => addFromPool(o)}
+              disabled={adding}
+              className="flex items-center gap-1 px-2 py-1 text-xs rounded-full border border-warm-200 dark:border-disc-border text-warm-700 dark:text-disc-muted hover:bg-warm-50 dark:hover:bg-disc-hover disabled:opacity-50 transition"
+            >
+              <Plus size={12} />
+              {o.name}
+            </button>
+          ))}
+        </div>
+      )}
+
       {!readOnly && (
         <form onSubmit={addItem} className="mt-1.5 flex gap-2">
           <input
@@ -137,7 +197,7 @@ export default function ChecklistFieldBox({ cardId, fieldId, fieldLabel, items =
             value={newText}
             onChange={(e) => setNewText(e.target.value)}
             placeholder={t('modal.addItemPlaceholder')}
-            maxLength={300}
+            maxLength={60}
             className="flex-1 h-9 px-3 text-sm rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-teal"
           />
           <button

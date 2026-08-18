@@ -3,7 +3,8 @@
 // ผูกกับ field_id เสมอ — การ์ดเดียวมีได้หลายเช็คลิสต์ถ้า org สร้างหลาย field ชนิดนี้ (2026-08-18 รอบเย็น)
 //
 // GET   ?fieldId=X                → { items }
-// POST  { fieldId, text }         → { item }
+// POST  { fieldId, text }         → { item }   พิมพ์ชื่อใหม่ = สร้างตัวเลือกในคลังให้เลย (เหมือน multi_select)
+// POST  { fieldId, optionId }     → { item }   หยิบจากคลังที่มีอยู่แล้ว
 // PATCH { itemId, done }          → { item }        ติ๊ก/เลิกติ๊ก
 // PATCH { fieldId, reorder:[id] } → { ok }           ลากจัดลำดับใหม่
 // DELETE ?itemId=X                → { ok }
@@ -28,11 +29,31 @@ export async function POST(req, { params }) {
   const body = await req.json().catch(() => ({}))
   if (!body.fieldId) return err(400, 'ต้องระบุ fieldId')
 
+  // หยิบจากคลัง — ตรวจว่า option นั้นเป็นของ field นี้จริง (กันส่ง id ข้าม field/ข้าม org)
+  if (body.optionId) {
+    const field = await fieldDB.getFieldDef(ctx.orgId, body.fieldId)
+    if (!field) return err(404, 'ไม่พบช่องข้อมูลนี้')
+    const opts = await fieldDB.listFieldOptions(field.id)
+    if (!opts.some((o) => String(o.id) === String(body.optionId))) return err(400, 'ไม่พบตัวเลือกนี้ในช่องข้อมูลนี้')
+
+    const item = await fieldDB.addChecklistItem(ctx.orgId, ctx.card.id, field.id, { optionId: body.optionId })
+    if (!item) return err(404, 'ไม่พบการบ้านใบนี้')
+    return Response.json({ item }, { status: 201 })
+  }
+
   const text = String(body.text || '').trim()
   if (!text) return err(400, 'ต้องมีข้อความ')
-  if (text.length > 300) return err(400, 'ข้อความยาวเกิน 300 ตัวอักษร')
+  // 60 = ความยาวสูงสุดของชื่อตัวเลือกในคลัง (kanban_field_options.name) — ยาวกว่านี้ลงคลังไม่ได้
+  if (text.length > 60) return err(400, 'ชื่อรายการยาวเกิน 60 ตัวอักษร')
 
-  const item = await fieldDB.addChecklistItem(ctx.orgId, ctx.card.id, body.fieldId, text)
+  // พิมพ์ชื่อใหม่ = ลงคลังให้เลย เหมือน multi_select (user เคาะ: "ต้องมีให้บันทึก option ด้วย")
+  // ensureFieldOption หาของเดิมก่อนเสมอ → พิมพ์ชื่อซ้ำไม่ได้สร้างตัวเลือกซ้ำ
+  const field = await fieldDB.getFieldDef(ctx.orgId, body.fieldId)
+  if (!field) return err(404, 'ไม่พบช่องข้อมูลนี้')
+  const option = await fieldDB.ensureFieldOption(field.id, text)
+
+  const item = await fieldDB.addChecklistItem(ctx.orgId, ctx.card.id, field.id,
+    option ? { optionId: option.id } : { text })
   if (!item) return err(404, 'ไม่พบการบ้านใบนี้')
   return Response.json({ item }, { status: 201 })
 }

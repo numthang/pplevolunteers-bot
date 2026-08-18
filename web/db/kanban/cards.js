@@ -53,9 +53,14 @@ const AGG = `
                             WHERE o.id = ANY(v.value_options) AND o.archived_at IS NULL
                          )
                          WHEN d.type = 'checklist' THEN (
-                           SELECT COALESCE(jsonb_agg(jsonb_build_object('id', i.id, 'text', i.text, 'done', i.done)
+                           -- ชื่อมาจากคลัง (option) ถ้าผูกไว้ — เปลี่ยนชื่อในคลังแล้วทุกการ์ดต้องเปลี่ยนตาม
+                           -- i.text ใช้เมื่อ option ถูกลบ (deleteFieldOption คัดชื่อลง text ให้) หรือของเก่าก่อนมีคลัง
+                           SELECT COALESCE(jsonb_agg(jsonb_build_object(
+                                    'id', i.id, 'text', COALESCE(o.name, i.text),
+                                    'option_id', i.option_id, 'done', i.done)
                                                      ORDER BY i.sort_order, i.id), '[]'::jsonb)
                              FROM kanban_card_checklist i
+                             LEFT JOIN kanban_field_options o ON o.id = i.option_id
                             WHERE i.card_id = c.id AND i.field_id = d.id
                          )
                          ELSE to_jsonb(v.value_text)

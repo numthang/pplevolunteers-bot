@@ -66,13 +66,10 @@ try {
   c = await db.removeHelper(ORG, b.id, CAROL)
   ok('ถอดคนช่วยได้', c.helper_ids.length === 0)
 
-  const i1 = await db.addChecklistItem(ORG, b.id, 'จองรถ')
-  const i2 = await db.addChecklistItem(ORG, b.id, 'ทำป้าย')
-  ok('เพิ่มงานย่อยเรียงลำดับ', i2.sort_order > i1.sort_order)
-  await db.setChecklistDone(ORG, i1.id, true)
-  const withCount = await db.getCard(ORG, b.id)
-  ok('นับงานย่อยถูก', Number(withCount.checklist_done) === 1 && Number(withCount.checklist_total) === 2,
-    `${withCount.checklist_done}/${withCount.checklist_total}`)
+  // ⚠️ เช็คลิสต์ย้ายไป db/kanban/fields.js ตั้งแต่ 712a45a (กลายเป็น custom field ชนิดหนึ่ง)
+  //    บล็อกเดิมที่เรียก db.addChecklistItem/setChecklistDone จาก cards.js ถูกเอาออกแล้ว —
+  //    มันโยน TypeError เงียบๆ ทำให้เช็คหลังจากนั้นทั้งหมดถูกข้าม แต่ยังพิมพ์ "ผ่านหมด"
+  //    ความครอบคลุมของเช็คลิสต์อยู่ที่สโมคของ fields.js แทน
 
   console.log('\n── การบ้านของฉัน ──')
   await db.addHelper(ORG, a.id, BOB)
@@ -116,6 +113,11 @@ try {
   console.log('\n── หาด้วยเลข ref ──')
   const byRef = await db.getCardByRef(ORG, a.ref_no)
   ok('K-xx หาเจอ', byRef?.id === a.id)
+} catch (e) {
+  // ⛔ ห้ามให้ finally กลืน error — เดิม process.exit(0) ใน finally ทับ throw ทิ้ง
+  //    ผลคือสคริปต์ crash กลางทางแต่ยังพิมพ์ "✅ ผ่านหมด" + exit 0 (เจอ 2026-08-18)
+  fail++
+  console.error('\n💥 สโมคหยุดกลางทาง:', e.message)
 } finally {
   if (made.length) {
     await pool.query(`DELETE FROM kanban_cards WHERE id = ANY($1)`, [made])

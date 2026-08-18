@@ -347,11 +347,17 @@ export async function reorderFieldOptions(fieldId, orderedIds) {
 // ผูกกับ (card_id, field_id) คู่กัน — การ์ดเดียวมีได้หลายเช็คลิสต์ถ้า org สร้างหลาย field ชนิดนี้
 
 /** item ของเช็คลิสต์ field นี้บนการ์ดใบนี้ */
+/**
+ * รายการในเช็คลิสต์ 1 field
+ * ⚠️ ชื่อที่โชว์ = `COALESCE(o.name, i.text)` — รายการที่ผูกกับคลัง (option_id) ต้องเปลี่ยนชื่อตามคลัง
+ *    ส่วน text ใช้เมื่อ option ถูกลบ (deleteFieldOption คัดชื่อลง text ให้แล้ว) หรือของเก่าก่อนมีคลัง
+ */
 export async function listChecklistItems(orgId, cardId, fieldId) {
   const { rows } = await pool.query(
-    `SELECT i.id, i.text, i.done, i.sort_order
+    `SELECT i.id, COALESCE(o.name, i.text) AS text, i.option_id, i.done, i.sort_order
        FROM kanban_card_checklist i
        JOIN kanban_cards c ON c.id = i.card_id
+       LEFT JOIN kanban_field_options o ON o.id = i.option_id
       WHERE c.org_id = $1 AND i.card_id = $2 AND i.field_id = $3
       ORDER BY i.sort_order, i.id`,
     [orgId, cardId, fieldId]
@@ -359,14 +365,20 @@ export async function listChecklistItems(orgId, cardId, fieldId) {
   return rows
 }
 
-export async function addChecklistItem(orgId, cardId, fieldId, text) {
+/**
+ * เพิ่มรายการในเช็คลิสต์ — ผูกกับคลัง (optionId) หรือเป็นข้อความลอย (text) อย่างใดอย่างหนึ่ง
+ * ปกติ route จะ ensureFieldOption() ให้ก่อนแล้วส่ง optionId มา (เหมือน multi_select)
+ * text เหลือไว้สำหรับของเก่า/กรณีที่ไม่อยากลงคลัง
+ */
+export async function addChecklistItem(orgId, cardId, fieldId, { text = null, optionId = null }) {
   const { rows } = await pool.query(
-    `INSERT INTO kanban_card_checklist (card_id, field_id, text, sort_order)
-     SELECT c.id, $3, $4,
+    `INSERT INTO kanban_card_checklist (card_id, field_id, text, option_id, sort_order)
+     SELECT c.id, $3, $4, $5,
             (SELECT COALESCE(MAX(sort_order), -1) + 1 FROM kanban_card_checklist WHERE card_id = c.id AND field_id = $3)
        FROM kanban_cards c WHERE c.org_id = $1 AND c.id = $2
-     RETURNING id, text, done, sort_order`,
-    [orgId, cardId, fieldId, text]
+     RETURNING id, option_id, done, sort_order,
+               COALESCE((SELECT name FROM kanban_field_options WHERE id = $5), text) AS text`,
+    [orgId, cardId, fieldId, text, optionId]
   )
   return rows[0] || null
 }
@@ -376,7 +388,8 @@ export async function setChecklistItemDone(orgId, itemId, done) {
     `UPDATE kanban_card_checklist i SET done = $3
        FROM kanban_cards c
       WHERE i.card_id = c.id AND c.org_id = $1 AND i.id = $2
-      RETURNING i.id, i.text, i.done, i.sort_order`,
+      RETURNING i.id, i.option_id, i.done, i.sort_order,
+                COALESCE((SELECT name FROM kanban_field_options WHERE id = i.option_id), i.text) AS text`,
     [orgId, itemId, done]
   )
   return rows[0] || null
