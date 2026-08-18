@@ -10,6 +10,7 @@ import SplitModal from '@/components/calling/SplitModal.jsx'
 import SmsModal from '@/components/calling/SmsModal.jsx'
 import RecordCallModal from '@/components/calling/RecordCallModal.jsx'
 import { CALL_STATUS_COLORS } from '@/lib/callingStatusColors.js'
+// eslint-disable-next-line no-shadow-restricted-names -- Infinity คือชื่อไอคอน lucide ไม่ได้ตั้งใจทับ global
 import { PhoneCall, PhoneOff, Clock, Minus, Users, MessageSquare, AlertTriangle, Timer, UserMinus, Infinity } from 'lucide-react'
 
 const STATUS_ICONS = {

@@ -60,7 +60,7 @@ export async function GET(req) {
 /** POST /api/docs/sign/self-info — บันทึกข้อมูลที่กรอกเอง */
 export async function POST(req) {
   const body = await req.json().catch(() => ({}))
-  const { entry, discordId, error } = await loadRecipientEntry(req, body.token)
+  const { entry, discordId, userId, error } = await loadRecipientEntry(req, body.token)
   if (error) return error
 
   const firstName = String(body.firstName ?? '').trim().slice(0, 100)
@@ -103,12 +103,14 @@ export async function POST(req) {
       })]
     )
 
-    // จำไว้ prefill ครั้งหน้า
-    await pool.query(
-      `INSERT INTO user_config (user_id, "key", value) VALUES ($1, 'docs_self_info', $2)
-       ON CONFLICT (user_id, "key") DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
-      [userId, JSON.stringify({ firstName, lastName, ...clean })]
-    )
+    // จำไว้ prefill ครั้งหน้า — session ที่ยังไม่มีแถวใน users จะไม่มี userId (เหมือนฝั่ง GET)
+    if (userId) {
+      await pool.query(
+        `INSERT INTO user_config (user_id, "key", value) VALUES ($1, 'docs_self_info', $2)
+         ON CONFLICT (user_id, "key") DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
+        [userId, JSON.stringify({ firstName, lastName, ...clean })]
+      )
+    }
 
     return Response.json({ success: true })
   } catch (err) {

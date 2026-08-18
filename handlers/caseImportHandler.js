@@ -141,8 +141,9 @@ async function handleThreadCreate(thread) {
     let detail = null;
     let aiSummary = null;
     let lastMsgId = null;
+    let messages = [];   // ต้องอยู่นอก try — ข้างล่างใช้ทำ AI timeline ต่อ
     try {
-      const messages = await fetchAllMessages(thread);
+      messages = await fetchAllMessages(thread);
       if (messages.length) {
         detail = messages[0].content || null;
         lastMsgId = messages[messages.length - 1].id;
