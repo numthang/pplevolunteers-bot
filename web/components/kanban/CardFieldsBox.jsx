@@ -92,6 +92,11 @@ const TYPE_ICON = {
   select: List, multi_select: Tags, checklist: ListChecks,
 }
 
+/** เส้นบอกจุดวางตอนลาก — **ขึ้นทีละเส้นเดียว** ตรงที่เมาส์ลอยอยู่จริง (ไม่ใช่ทุกแถวเหมือนรอบก่อน) */
+function DropLine() {
+  return <div className="h-0.5 -my-px bg-teal rounded-full" />
+}
+
 function ScalarInput({ field, value, readOnly, onCommit, emptyLabel }) {
   const [local, setLocal] = useState(value ?? '')
   useEffect(() => { setLocal(value ?? '') }, [value])
@@ -210,6 +215,7 @@ export default function CardFieldsBox({ cardId, fields = [], readOnly, canPurge 
   const [hiddenOpen, setHiddenOpen] = useState(false)
   const [confirmField, setConfirmField] = useState(null)   // { id, label, impact } — กล่องเลือกซ่อน/ลบถาวร
   const [dragId, setDragId] = useState(null)               // field ที่กำลังลากจัดลำดับ
+  const [dropAt, setDropAt] = useState(null)               // { id, above } — เส้นบอกจุดวาง **แถวเดียว**
 
   const loadHidden = useCallback(async () => {
     try {
@@ -259,13 +265,18 @@ export default function CardFieldsBox({ cardId, fields = [], readOnly, canPurge 
    * ส่งลำดับ**เต็มชุด**ไปเสมอ ไม่ใช่ส่งแค่คู่ที่สลับ (แนวเดียวกับ reorder ของตัวเลือก/เช็คลิสต์)
    */
   async function onDropField(targetId) {
+    const at = dropAt
+    setDropAt(null)
     if (!dragId || dragId === targetId) { setDragId(null); return }
     const ids = fields.map((f) => String(f.field_id))
     const from = ids.indexOf(String(dragId))
-    const to = ids.indexOf(String(targetId))
+    let to = ids.indexOf(String(targetId))
     setDragId(null)
     if (from === -1 || to === -1) return
+    // วางครึ่งล่างของแถว = แทรก "หลัง" แถวนั้น — ต้องบวก 1 ไม่งั้นเส้นกับผลลัพธ์ไม่ตรงกัน
+    if (at && at.id === targetId && !at.above) to += 1
     const [moved] = ids.splice(from, 1)
+    if (from < to) to -= 1        // ถอดตัวเองออกแล้ว index หลังจุดนั้นเลื่อนมา 1
     ids.splice(to, 0, moved)
 
     onError?.('')
@@ -440,17 +451,31 @@ export default function CardFieldsBox({ cardId, fields = [], readOnly, canPurge 
             <FieldRow
               key={f.field_id}
               icon={TypeIcon}
-              onDragOver={(e) => { if (dragId) e.preventDefault() }}
+              onDragOver={(e) => {
+                if (!dragId || dragId === f.field_id) return
+                e.preventDefault()
+                // ครึ่งบน = แทรกก่อนแถวนี้ · ครึ่งล่าง = แทรกหลัง — เส้นจะได้ตรงกับที่วางจริง
+                const r = e.currentTarget.getBoundingClientRect()
+                setDropAt({ id: f.field_id, above: e.clientY < r.top + r.height / 2 })
+              }}
+              onDragLeave={(e) => {
+                // ออกจากแถวจริงๆ เท่านั้น (ไม่ใช่แค่ย้ายเข้า element ลูก)
+                if (!e.currentTarget.contains(e.relatedTarget)) {
+                  setDropAt((d) => (d && d.id === f.field_id ? null : d))
+                }
+              }}
               onDrop={() => onDropField(f.field_id)}
               data-field-row
-              className={dragId === f.field_id ? 'opacity-40' : ''}
+              className={`relative ${dragId === f.field_id ? 'opacity-40' : ''}`}
+              footerBefore={dropAt?.id === f.field_id && dropAt.above && <DropLine />}
+              footerAfter={dropAt?.id === f.field_id && !dropAt.above && <DropLine />}
               handle={!readOnly && (
                 /* หมุดลาก — อยู่หน้าสุดก่อนไอคอนชนิด (user สั่ง 2026-08-18)
                    ลากได้เฉพาะตรงนี้ ไม่ใช่ทั้งแถว ไม่งั้นลากทับการเลือกข้อความในช่องกรอก */
                 <span
                   draggable
                   onDragStart={(e) => onDragStartField(e, f.field_id)}
-                  onDragEnd={() => setDragId(null)}
+                  onDragEnd={() => { setDragId(null); setDropAt(null) }}
                   title={t('modal.fieldDragHint')}
                   className="cursor-grab active:cursor-grabbing text-warm-300 dark:text-disc-muted opacity-0 group-hover:opacity-100 shrink-0"
                 >

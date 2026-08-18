@@ -15,9 +15,11 @@
 
 export const ROW_GRID = 'grid grid-cols-1 sm:grid-cols-[11rem_minmax(0,1fr)] gap-x-3 gap-y-0.5'
 
-export default function FieldRow({ icon: Icon, label, handle, children, footer, className = '', ...rest }) {
+export default function FieldRow({ icon: Icon, label, handle, children, footer, footerBefore, footerAfter, className = '', ...rest }) {
   return (
     <div className={`group ${ROW_GRID} ${className}`} {...rest}>
+      {/* เส้นบอกจุดวางตอนลาก — กินเต็มความกว้าง อยู่เหนือ/ใต้แถว */}
+      {footerBefore && <div className="sm:col-span-2">{footerBefore}</div>}
       <div className="flex items-center gap-1 min-w-0 sm:h-11">
         {/* หมุดลากอยู่หน้าสุด ก่อนไอคอนชนิด (user สั่ง 2026-08-18) */}
         {handle}
@@ -31,6 +33,7 @@ export default function FieldRow({ icon: Icon, label, handle, children, footer, 
 
       {/* แถวเสริมที่ต้องกินเต็มความกว้าง (เช่น แถวแก้ชื่อ field, เหตุผลที่ติดปัญหา) */}
       {footer && <div className="sm:col-span-2">{footer}</div>}
+      {footerAfter && <div className="sm:col-span-2">{footerAfter}</div>}
     </div>
   )
 }
