@@ -1721,7 +1721,6 @@
       "cancelled": "พักไว้"
     },
     "row": {
-      "blocked": "ติดปัญหา"
     },
     "actions": {
       "claim": "รับงานนี้",
@@ -1780,8 +1779,6 @@
       "statusLabel": "สถานะ",
       "ownerLabel": "เจ้าภาพ",
       "noOwner": "ยังไม่มีเจ้าภาพ",
-      "blockedLabel": "ติดปัญหาอยู่",
-      "blockedReasonPlaceholder": "ติดตรงไหน",
       "helpersLabel": "คนช่วย",
       "noHelpers": "ยังไม่มีคนช่วย",
       "joinAsHelper": "ลงมือด้วย",
@@ -1811,8 +1808,8 @@
       "optionColorLabel": "สี",
       "optionDelete": "ลบตัวเลือก",
       "optionCreateFailed": "สร้างตัวเลือกไม่สำเร็จ",
-      "fieldMoveUp": "เลื่อนขึ้น",
-      "fieldMoveDown": "เลื่อนลง",
+      "fieldDragHint": "ลากเพื่อจัดลำดับ",
+      "fieldEmpty": "ว่าง",
       "fieldDelete": "ลบช่องนี้",
       "fieldMenu": "จัดการช่องข้อมูลนี้",
       "fieldRename": "ชื่อช่องข้อมูล",

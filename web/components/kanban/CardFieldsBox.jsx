@@ -22,9 +22,13 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ChevronDown, ChevronUp, Eye, Loader2, Plus, Trash2 } from 'lucide-react'
+import {
+  Calendar, CheckSquare, ChevronDown, Eye, GripVertical, Hash, Link2,
+  List, ListChecks, Loader2, Plus, Tags, Trash2, Type,
+} from 'lucide-react'
 import { FIELD_TYPES } from '@/lib/kanbanFieldValue.js'
 import DeleteChoiceDialog from './DeleteChoiceDialog.jsx'
+import FieldRow from './FieldRow.jsx'
 import TagCombobox from './TagCombobox.jsx'
 import ChecklistFieldBox from './ChecklistFieldBox.jsx'
 
@@ -34,9 +38,10 @@ import ChecklistFieldBox from './ChecklistFieldBox.jsx'
  */
 /**
  * แถวแก้ field — กางในแถวเดิม ไม่ลอยออกนอกกล่อง (กับดักข้อ 1 ของ TagCombobox)
- * ทรง: [ช่องชื่อ] [↑] [↓] [🗑]  — ถังขยะเป็นไอคอนล้วน ไม่มีคำว่า "ลบช่องนี้" (user สั่ง 2026-08-18)
+ * ทรง: [ช่องชื่อ] [🗑]  — ถังขยะเป็นไอคอนล้วน ไม่มีคำว่า "ลบช่องนี้" (user สั่ง 2026-08-18)
+ * ⚠️ จัดลำดับใช้ **ลากที่หมุด ⣿ บนหัวแถว** ไม่ใช่ปุ่ม ↑↓ (user สั่งเปลี่ยน 2026-08-18)
  */
-function FieldEditor({ field, t, onRename, onDelete, onMove, canMoveUp, canMoveDown, busy }) {
+function FieldEditor({ field, t, onRename, onDelete, busy }) {
   const [name, setName] = useState(field.label)
   const ref = useRef(null)
 
@@ -51,8 +56,6 @@ function FieldEditor({ field, t, onRename, onDelete, onMove, canMoveUp, canMoveD
     const ok = await onRename(clean)
     if (!ok) setName(field.label)
   }
-
-  const iconBtn = 'p-2 rounded-lg text-warm-500 dark:text-disc-muted hover:bg-warm-50 dark:hover:bg-disc-hover disabled:opacity-30 shrink-0'
 
   return (
     <div ref={ref} className="mt-1 mb-1 flex items-center gap-1">
@@ -69,12 +72,6 @@ function FieldEditor({ field, t, onRename, onDelete, onMove, canMoveUp, canMoveD
         aria-label={t('modal.fieldRename')}
         className="flex-1 min-w-0 h-9 px-2 text-sm rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text focus:outline-none focus:ring-2 focus:ring-teal"
       />
-      <button type="button" onClick={() => onMove(-1)} disabled={!canMoveUp} aria-label={t('modal.fieldMoveUp')} title={t('modal.fieldMoveUp')} className={iconBtn}>
-        <ChevronUp size={16} />
-      </button>
-      <button type="button" onClick={() => onMove(1)} disabled={!canMoveDown} aria-label={t('modal.fieldMoveDown')} title={t('modal.fieldMoveDown')} className={iconBtn}>
-        <ChevronDown size={16} />
-      </button>
       <button
         type="button"
         onClick={onDelete}
@@ -89,11 +86,18 @@ function FieldEditor({ field, t, onRename, onDelete, onMove, canMoveUp, canMoveD
 }
 
 /** ⚠️ ไม่วาดชื่อ field เอง — ชื่ออยู่ที่หัวแถวใน CardFieldsBox ซึ่งคลิกเข้าโหมดแก้ได้ (จุดเดียวทุกชนิด) */
-function ScalarInput({ field, value, readOnly, onCommit }) {
+/** ไอคอนประจำชนิด — ให้แถวอ่านง่ายเหมือนหน้า property ของ Notion (ตามภาพที่ user ส่งมา) */
+const TYPE_ICON = {
+  text: Type, number: Hash, url: Link2, date: Calendar, checkbox: CheckSquare,
+  select: List, multi_select: Tags, checklist: ListChecks,
+}
+
+function ScalarInput({ field, value, readOnly, onCommit, emptyLabel }) {
   const [local, setLocal] = useState(value ?? '')
   useEffect(() => { setLocal(value ?? '') }, [value])
 
-  const inputClass = 'w-full h-11 px-3 text-base rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text focus:outline-none focus:ring-2 focus:ring-teal disabled:opacity-60'
+  // ทรง ghost แบบ Notion — ไม่มีกรอบจนกว่าจะ hover/focus ให้แถวอ่านเป็นตาราง label|ค่า
+  const inputClass = 'w-full h-11 px-2 -mx-2 text-base rounded-lg border border-transparent bg-transparent text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted hover:bg-warm-50 dark:hover:bg-disc-hover focus:outline-none focus:bg-card-bg focus:border-warm-200 dark:focus:border-disc-border focus:ring-2 focus:ring-teal disabled:opacity-60 transition'
 
   if (field.type === 'checkbox') {
     return (
@@ -123,7 +127,7 @@ function ScalarInput({ field, value, readOnly, onCommit }) {
         onChange={(e) => setLocal(e.target.value)}
         onBlur={commit}
         onKeyDown={onKeyDown}
-        placeholder={field.type === 'url' ? 'https://…' : undefined}
+        placeholder={field.type === 'url' ? 'https://…' : emptyLabel}
         className={inputClass}
       />
     </div>
@@ -191,6 +195,7 @@ export default function CardFieldsBox({ cardId, fields = [], readOnly, canPurge 
   const [hidden, setHidden] = useState([])           // field ที่ซ่อนไว้ (โหลดแยก — card AGG ไม่คืนมาให้)
   const [hiddenOpen, setHiddenOpen] = useState(false)
   const [confirmField, setConfirmField] = useState(null)   // { id, label, impact } — กล่องเลือกซ่อน/ลบถาวร
+  const [dragId, setDragId] = useState(null)               // field ที่กำลังลากจัดลำดับ
 
   const loadHidden = useCallback(async () => {
     try {
@@ -218,17 +223,21 @@ export default function CardFieldsBox({ cardId, fields = [], readOnly, canPurge 
   }
 
   /**
-   * สลับลำดับ field ขึ้น/ลง — ย้อนได้ (กดกลับ) จึงไม่มี gate ยศ
-   * ส่งลำดับ**เต็มชุด**ไปเสมอ ไม่ใช่ส่งแค่คู่ที่สลับ (แนวเดียวกับ reorder ของตัวเลือก)
+   * ลากจัดลำดับ field — ย้อนได้ (ลากกลับ) จึงไม่มี gate ยศ
+   * ส่งลำดับ**เต็มชุด**ไปเสมอ ไม่ใช่ส่งแค่คู่ที่สลับ (แนวเดียวกับ reorder ของตัวเลือก/เช็คลิสต์)
    */
-  async function moveField(index, delta) {
-    const target = index + delta
-    if (target < 0 || target >= fields.length) return
+  async function onDropField(targetId) {
+    if (!dragId || dragId === targetId) { setDragId(null); return }
     const ids = fields.map((f) => String(f.field_id))
-    ;[ids[index], ids[target]] = [ids[target], ids[index]]
+    const from = ids.indexOf(String(dragId))
+    const to = ids.indexOf(String(targetId))
+    setDragId(null)
+    if (from === -1 || to === -1) return
+    const [moved] = ids.splice(from, 1)
+    ids.splice(to, 0, moved)
 
     onError?.('')
-    setBusyId(fields[index].field_id)
+    setBusyId(dragId)
     try {
       const res = await fetch('/api/kanban/fields', {
         method: 'PATCH',
@@ -291,8 +300,9 @@ export default function CardFieldsBox({ cardId, fields = [], readOnly, canPurge 
   }
 
   /**
-   * ลบถาวร — admin เท่านั้น และ field ต้องซ่อนอยู่แล้ว (บังคับ 2 จังหวะ)
-   * ⚠️ ต้องนับความเสียหายจริงมาโชว์ก่อนถาม — ตัวเลขคือกลไกกันพลาดแทนการจำกัดสิทธิ์
+   * ลบถาวร — admin เท่านั้น · ลบได้เลย ไม่ต้องซ่อนก่อน (ลอกแบบ posts)
+   * ⚠️ ตัวเลขความเสียหายถูกนับไว้ตั้งแต่ askDeleteField() แล้วโชว์ในกล่อง — นั่นคือกลไกกันพลาด
+   *    ไม่ใช่การจำกัดสิทธิ์หรือการบังคับลำดับ
    */
   async function purgeField(field) {
     onError?.('')
@@ -383,40 +393,66 @@ export default function CardFieldsBox({ cardId, fields = [], readOnly, canPurge 
           // ⭐ ไม่มีปุ่ม "..." แล้ว (user สั่ง 2026-08-18) — **คลิกที่ชื่อ field = เข้าโหมดแก้**
           //    ชื่อถูกยกออกมาจาก ScalarInput/ChecklistFieldBox มาไว้ที่นี่จุดเดียว ทุกชนิดจึงคลิกได้เหมือนกันหมด
           const editing = menuFor === f.field_id
-          const idx = fields.findIndex((x) => x.field_id === f.field_id)
-          const head = (
-            <div>
-              {readOnly ? (
-                <span className="block text-sm font-medium text-warm-700 dark:text-disc-muted mb-1">{f.label}</span>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setMenuFor(editing ? null : f.field_id)}
-                  title={t('modal.fieldRename')}
-                  className="block text-left text-sm font-medium text-warm-700 dark:text-disc-muted mb-1 hover:text-warm-900 dark:hover:text-disc-text"
-                >
-                  {f.label}
-                </button>
-              )}
-              {editing && (
+          const TypeIcon = TYPE_ICON[f.type] || Type
+
+          /**
+           * แถวเดียว 2 คอลัมน์แบบ Notion/AppFlowy: [หมุด · ไอคอน · ชื่อ] | [ค่า]
+           * (user ส่งภาพมาแล้วสั่ง "ลอกได้ลอก" 2026-08-18)
+           * ⚠️ จอแคบ (มือถือ ~390px) ต้องพับเป็นบนล่าง — คอลัมน์ซ้ายกว้างคงที่บนจอ 390 = ค่าเหลือที่ไม่พอ
+           * ⛔ ชื่อ field อยู่ที่นี่จุดเดียวทุกชนิด · ห้ามให้ ScalarInput/ChecklistFieldBox วาดชื่อเองอีก
+           */
+          const row = (control) => (
+            <FieldRow
+              key={f.field_id}
+              icon={TypeIcon}
+              onDragOver={(e) => { if (dragId) e.preventDefault() }}
+              onDrop={() => onDropField(f.field_id)}
+              className={`border-t-2 ${dragId && dragId !== f.field_id ? 'border-dashed border-teal/50' : 'border-transparent'}`}
+              label={
+                <span className="flex items-center gap-1 min-w-0">
+                  {/* หมุดลาก — ลากได้เฉพาะตรงนี้ ไม่ใช่ทั้งแถว ไม่งั้นลากทับการเลือกข้อความในช่องกรอก */}
+                  {!readOnly && (
+                    <span
+                      draggable
+                      onDragStart={() => setDragId(f.field_id)}
+                      onDragEnd={() => setDragId(null)}
+                      title={t('modal.fieldDragHint')}
+                      className="cursor-grab active:cursor-grabbing text-warm-300 dark:text-disc-muted opacity-0 group-hover:opacity-100 shrink-0"
+                    >
+                      <GripVertical size={14} />
+                    </span>
+                  )}
+                  {readOnly ? (
+                    <span className="text-sm text-warm-500 dark:text-disc-muted min-w-0 truncate">{f.label}</span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setMenuFor(editing ? null : f.field_id)}
+                      title={t('modal.fieldRename')}
+                      className="text-left text-sm text-warm-500 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text min-w-0 truncate"
+                    >
+                      {f.label}
+                    </button>
+                  )}
+                </span>
+              }
+              footer={editing && (
                 <FieldEditor
                   field={{ id: f.field_id, label: f.label }}
                   t={t}
                   busy={busyId === f.field_id}
-                  canMoveUp={idx > 0}
-                  canMoveDown={idx < fields.length - 1}
-                  onMove={(delta) => moveField(idx, delta)}
                   onRename={(label) => renameField(f.field_id, label)}
                   onDelete={() => askDeleteField({ id: f.field_id, label: f.label })}
                 />
               )}
-            </div>
+            >
+              <div className="flex-1 min-w-0">{control}</div>
+              {busyId === f.field_id && <Loader2 size={16} className="animate-spin text-warm-400 dark:text-disc-muted shrink-0" />}
+            </FieldRow>
           )
 
           if (f.type === 'checklist') {
-            return (
-              <div key={f.field_id}>
-                {head}
+            return row(
               <ChecklistFieldBox
                 cardId={cardId}
                 fieldId={f.field_id}
@@ -426,43 +462,28 @@ export default function CardFieldsBox({ cardId, fields = [], readOnly, canPurge 
                 onError={onError}
                 t={t}
               />
-              </div>
             )
           }
           if (f.type === 'select' || f.type === 'multi_select') {
-            return (
-              <div key={f.field_id}>
-                {head}
-                <TagCombobox
-                  fieldId={f.field_id}
-                  type={f.type}
-                  value={f.value || []}
-                  readOnly={readOnly}
-                  onCommit={(ids) => commit(f.field_id, ids)}   // คืน promise — TagCombobox ใช้นับ inflight กันค่าหาย
-                  onError={onError}
-                  t={t}
-                />
-              </div>
+            return row(
+              <TagCombobox
+                fieldId={f.field_id}
+                type={f.type}
+                value={f.value || []}
+                readOnly={readOnly}
+                onCommit={(ids) => commit(f.field_id, ids)}   // คืน promise — TagCombobox ใช้นับ inflight กันค่าหาย
+                onError={onError}
+                t={t}
+              />
             )
           }
-          return (
-            <div key={f.field_id}>
-              {head}
-              <div className="flex items-center gap-2">
-                <div className="flex-1">
-                  <ScalarInput field={f} value={f.value} readOnly={readOnly} onCommit={(v) => commit(f.field_id, v)} />
-                </div>
-                {busyId === f.field_id && <Loader2 size={16} className="animate-spin text-warm-400 dark:text-disc-muted" />}
-              </div>
-            </div>
+          return row(
+            <ScalarInput field={f} value={f.value} readOnly={readOnly} emptyLabel={t('modal.fieldEmpty')} onCommit={(v) => commit(f.field_id, v)} />
           )
         })}
       </div>
 
-      {/*
-        ซ่อนอยู่ — ที่เดียวในระบบที่เห็น field ที่ถูกซ่อน และที่เดียวที่ลบถาวรได้
-        ⛔ ปุ่ม "ลบถาวร" ต้องอยู่ตรงนี้เท่านั้น (บังคับ ซ่อน → ค่อยลบ · ย้อนไม่ได้)
-      */}
+      {/* ซ่อนอยู่ — ที่เดียวในระบบที่เห็น field ที่ถูกซ่อน (เอากลับ / ลบถาวรได้จากตรงนี้) */}
       {!readOnly && hidden.length > 0 && (
         <div className="border-t border-warm-200 dark:border-disc-border pt-3">
           <button
@@ -481,7 +502,7 @@ export default function CardFieldsBox({ cardId, fields = [], readOnly, canPurge 
                   <span className="flex-1 min-w-0 truncate text-sm text-warm-500 dark:text-disc-muted">{f.label}</span>
                   <button
                     type="button"
-                    onClick={() => setFieldArchived(f.id, false, f.label)}
+                    onClick={() => setFieldArchived(f.id, false)}
                     className="flex items-center gap-1 text-sm text-warm-500 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text"
                   >
                     <Eye size={14} />

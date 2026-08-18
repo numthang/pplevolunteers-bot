@@ -14,9 +14,13 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { X, Loader2, Check, AlertTriangle, UserPlus, Archive, ArchiveRestore, ExternalLink, Copy } from 'lucide-react'
+import {
+  AlertTriangle, AlignLeft, Archive, ArchiveRestore, Calendar, Check, CircleDot,
+  Copy, ExternalLink, Loader2, Tag, UserCircle, UserPlus, Users, X,
+} from 'lucide-react'
 import { formatRef, STATUS_TYPES } from '@/lib/kanbanAccess.js'
 import DeleteChoiceDialog from './DeleteChoiceDialog.jsx'
+import FieldRow from './FieldRow.jsx'
 import LabelPicker from './LabelPicker.jsx'
 import OwnerPicker from './OwnerPicker.jsx'
 import CardFieldsBox from './CardFieldsBox.jsx'
@@ -38,7 +42,6 @@ export default function CardModal({ cardId, onClose, onChanged, onOpenCard }) {
   const [title, setTitle] = useState('')
   const [detail, setDetail] = useState('')
   const [dueAt, setDueAt] = useState('')
-  const [blockedReason, setBlockedReason] = useState('')
 
   const [saveState, setSaveState] = useState('idle')   // idle | saving | saved
   const [pendingSave, setPendingSave] = useState(false)
@@ -77,13 +80,11 @@ export default function CardModal({ cardId, onClose, onChanged, onOpenCard }) {
         title: json.card.title || '',
         detail: json.card.detail || '',
         dueAt: toLocalInput(json.card.due_at),
-        blockedReason: json.card.blocked_reason || '',
       }
       baseline.current = fresh
       setTitle(fresh.title)
       setDetail(fresh.detail)
       setDueAt(fresh.dueAt)
-      setBlockedReason(fresh.blockedReason)
       setConflict(false)
     } catch {
       setLoadError(t('loadFailed'))
@@ -114,7 +115,6 @@ export default function CardModal({ cardId, onClose, onChanged, onOpenCard }) {
           title,
           detail,
           dueAt: dueAt || null,        // ⚠️ ส่งดิบ ห้ามแปลงผ่าน toISOString()
-          blockedReason: blockedReason || null,
         }),
       })
       const json = await res.json().catch(() => ({}))
@@ -122,7 +122,7 @@ export default function CardModal({ cardId, onClose, onChanged, onOpenCard }) {
       if (!res.ok) { setActionError(json.error || t('saveFailed')); setSaveState('idle'); return }
       lockToken.current = json.card.lock_token
       // ค่าที่เพิ่งเซฟสำเร็จ = baseline ใหม่ ไม่งั้น effect เห็นว่ายัง dirty แล้ววนเซฟไม่จบ
-      baseline.current = { title, detail, dueAt, blockedReason }
+      baseline.current = { title, detail, dueAt }
       setCard(json.card)
       setSaveState('saved')
       setTimeout(() => setSaveState((s) => (s === 'saved' ? 'idle' : s)), 1500)
@@ -130,14 +130,14 @@ export default function CardModal({ cardId, onClose, onChanged, onOpenCard }) {
     } catch {
       setSaveState('idle')
     }
-  }, [card, can.edit, cardId, title, detail, dueAt, blockedReason, t, onChanged])
+  }, [card, can.edit, cardId, title, detail, dueAt, t, onChanged])
 
   // autosave — ยิงต่อเมื่อค่าต่างจากที่โหลดมาจริงๆ
   // (เปิดกล่องเฉยๆ / กดโหลดใหม่ / พิมพ์แล้วลบกลับเป็นค่าเดิม = ไม่ยิง)
   useEffect(() => {
     if (!can.edit || !baseline.current) return
     const b = baseline.current
-    const dirty = title !== b.title || detail !== b.detail || dueAt !== b.dueAt || blockedReason !== b.blockedReason
+    const dirty = title !== b.title || detail !== b.detail || dueAt !== b.dueAt
     if (!dirty) { setPendingSave(false); return }
 
     clearTimeout(saveTimer.current)
@@ -145,7 +145,7 @@ export default function CardModal({ cardId, onClose, onChanged, onOpenCard }) {
     saveTimer.current = setTimeout(save, AUTOSAVE_MS)
     return () => clearTimeout(saveTimer.current)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [title, detail, dueAt, blockedReason, can.edit])
+  }, [title, detail, dueAt, can.edit])
 
   // ไม่มีปุ่มบันทึก → ด่านเดียวที่กันงานหายคือตรงนี้ (กฎ CLAUDE.md §กฎการบันทึก)
   useEffect(() => {
@@ -302,133 +302,114 @@ export default function CardModal({ cardId, onClose, onChanged, onOpenCard }) {
                 </a>
               )}
 
-              <div>
-                <label className="block text-sm font-medium text-warm-700 dark:text-disc-muted mb-1">{t('form.titleLabel')}</label>
-                <input
-                  type="text"
-                  value={title}
-                  disabled={readOnly}
-                  onChange={(e) => setTitle(e.target.value)}
-                  className="w-full h-11 px-3 text-base rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text focus:outline-none focus:ring-2 focus:ring-teal disabled:opacity-60"
-                />
-              </div>
+              {/* ชื่อการบ้าน = หัวเรื่อง ไม่ใช่แถว label|ค่า (แนวเดียวกับ Notion ที่ title อยู่บนสุดตัวใหญ่) */}
+              <input
+                type="text"
+                value={title}
+                disabled={readOnly}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder={t('form.titleLabel')}
+                className="w-full px-0 text-2xl font-semibold rounded-lg bg-transparent text-warm-900 dark:text-disc-text placeholder-warm-300 dark:placeholder-disc-muted border-none focus:outline-none focus:ring-0 disabled:opacity-60"
+              />
 
-              <div>
-                <label className="block text-sm font-medium text-warm-700 dark:text-disc-muted mb-1">{t('form.detailLabel')}</label>
-                <textarea
-                  value={detail}
-                  disabled={readOnly}
-                  onChange={(e) => setDetail(e.target.value)}
-                  rows={4}
-                  className="w-full px-3 py-2 text-base rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text focus:outline-none focus:ring-2 focus:ring-teal resize-none disabled:opacity-60"
-                />
-              </div>
+              {/*
+                ทุกอย่างใต้นี้เป็นแถว `[ไอคอน · ชื่อ] | [ค่า]` ตัวเดียวกับ custom field (FieldRow.jsx)
+                user: "เปลี่ยนหมดทั้ง modal เลย" (2026-08-18)
+                ⛔ ห้ามเขียน grid ซ้ำเอง — คอลัมน์ซ้ายต้องกว้างเท่ากับของ CardFieldsBox เป๊ะ
+              */}
+              <div className="flex flex-col gap-0.5">
+                <FieldRow icon={AlignLeft} label={t('form.detailLabel')}>
+                  <textarea
+                    value={detail}
+                    disabled={readOnly}
+                    onChange={(e) => setDetail(e.target.value)}
+                    rows={3}
+                    placeholder={t('modal.fieldEmpty')}
+                    className="w-full px-2 -mx-2 py-2 text-base rounded-lg border border-transparent bg-transparent text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted hover:bg-warm-50 dark:hover:bg-disc-hover focus:outline-none focus:bg-card-bg focus:border-warm-200 dark:focus:border-disc-border focus:ring-2 focus:ring-teal resize-none disabled:opacity-60 transition"
+                  />
+                </FieldRow>
 
-              <div className="flex flex-wrap gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-warm-700 dark:text-disc-muted mb-1">{t('form.dueAtLabel')}</label>
+                <FieldRow icon={Calendar} label={t('form.dueAtLabel')}>
                   <input
                     type="datetime-local"
                     value={dueAt}
                     disabled={readOnly}
                     onChange={(e) => setDueAt(e.target.value)}
-                    className="h-11 px-3 text-base rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text focus:outline-none focus:ring-2 focus:ring-teal disabled:opacity-60"
+                    className="h-11 px-2 -mx-2 text-base rounded-lg border border-transparent bg-transparent text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover focus:outline-none focus:bg-card-bg focus:border-warm-200 dark:focus:border-disc-border focus:ring-2 focus:ring-teal disabled:opacity-60 transition"
                   />
-                </div>
-                <OwnerPicker
-                  card={card}
-                  canEdit={can.edit}
-                  canClaim={can.claim}
-                  onError={setActionError}
-                  onPatch={patch}
-                />
-              </div>
+                </FieldRow>
 
-              {/* สถานะ — ปุ่มเรียงตามลำดับงานจริง ไม่ใช่ dropdown (แตะง่ายบนมือถือ) */}
-              <div>
-                <label className="block text-sm font-medium text-warm-700 dark:text-disc-muted mb-1">{t('modal.statusLabel')}</label>
-                <div className="flex flex-wrap gap-1.5">
-                  {STATUS_TYPES.map((s) => (
-                    <button
-                      key={s}
-                      disabled={readOnly}
-                      onClick={() => patch({ statusType: s })}
-                      className={`px-4 py-2 text-base rounded-lg border font-medium disabled:opacity-50 transition ${
-                        card.status_type === s
-                          ? 'bg-teal text-white border-transparent'
-                          : 'border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover'
-                      }`}
-                    >
-                      {t(`status.${s}`)}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* ติดปัญหา — เป็นธง ไม่ใช่สถานะ (ดีไซน์ §ประเภทสถานะ) */}
-              <div>
-                <label className="flex items-center gap-2 text-sm text-warm-700 dark:text-disc-muted cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={Boolean(card.blocked)}
-                    disabled={readOnly}
-                    onChange={(e) => patch({ blocked: e.target.checked })}
-                    className="w-4 h-4 rounded border-warm-200 dark:border-disc-border accent-teal cursor-pointer"
+                <FieldRow icon={UserCircle} label={t('modal.ownerLabel')}>
+                  <OwnerPicker
+                    card={card}
+                    canEdit={can.edit}
+                    canClaim={can.claim}
+                    onError={setActionError}
+                    onPatch={patch}
                   />
-                  {t('modal.blockedLabel')}
-                </label>
-                {card.blocked && (
-                  <input
-                    type="text"
-                    value={blockedReason}
-                    disabled={readOnly}
-                    onChange={(e) => setBlockedReason(e.target.value)}
-                    placeholder={t('modal.blockedReasonPlaceholder')}
-                    className="mt-2 w-full h-11 px-3 text-base rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text focus:outline-none focus:ring-2 focus:ring-teal disabled:opacity-60"
+                </FieldRow>
+
+                {/* สถานะ — ปุ่มเรียงตามลำดับงานจริง ไม่ใช่ dropdown (แตะง่ายบนมือถือ) */}
+                <FieldRow icon={CircleDot} label={t('modal.statusLabel')}>
+                  <div className="flex flex-wrap gap-1.5 py-1">
+                    {STATUS_TYPES.map((s) => (
+                      <button
+                        key={s}
+                        disabled={readOnly}
+                        onClick={() => patch({ statusType: s })}
+                        className={`px-3 py-1.5 text-sm rounded-lg border font-medium disabled:opacity-50 transition ${
+                          card.status_type === s
+                            ? 'bg-teal text-white border-transparent'
+                            : 'border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover'
+                        }`}
+                      >
+                        {t(`status.${s}`)}
+                      </button>
+                    ))}
+                  </div>
+                </FieldRow>
+
+                {/* ป้าย — ติด/ถอดยิงทันที ไม่ผ่าน lockToken (ไม่ใช่ช่องพิมพ์ที่ autosave) */}
+                <FieldRow icon={Tag} label={t('modal.labelsLabel')}>
+                  <LabelPicker
+                    cardId={cardId}
+                    labels={card.labels || []}
+                    readOnly={readOnly}
+                    onError={setActionError}
+                    onCardChanged={(fresh) => {
+                      setCard(fresh)
+                      lockToken.current = fresh.lock_token
+                      onChanged?.()
+                    }}
                   />
-                )}
-              </div>
+                </FieldRow>
 
-              {/* ป้าย — ติด/ถอดยิงทันที ไม่ผ่าน lockToken (ไม่ใช่ช่องพิมพ์ที่ autosave) */}
-              <LabelPicker
-                cardId={cardId}
-                labels={card.labels || []}
-                readOnly={readOnly}
-                onError={setActionError}
-                onCardChanged={(fresh) => {
-                  setCard(fresh)
-                  lockToken.current = fresh.lock_token
-                  onChanged?.()
-                }}
-              />
-
-              {/* คนช่วย */}
-              <div>
-                <label className="block text-sm font-medium text-warm-700 dark:text-disc-muted mb-1">{t('modal.helpersLabel')}</label>
-                <div className="flex flex-wrap items-center gap-2">
-                  {(card.helpers || []).length === 0 && (
-                    <span className="text-base text-warm-400 dark:text-disc-muted">{t('modal.noHelpers')}</span>
-                  )}
-                  {(card.helpers || []).map((h) => (
-                    <span key={h.user_id} className="flex items-center gap-1 px-4 py-2 text-base rounded-lg border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text">
-                      {h.name}
-                    </span>
-                  ))}
-                  {can.join && (
-                    <button
-                      onClick={async () => {
-                        setActionError('')
-                        const res = await fetch(`/api/kanban/cards/${cardId}/helpers`, { method: 'POST' })
-                        const json = await res.json().catch(() => ({}))
-                        if (!res.ok) { setActionError(json.error || t('saveFailed')); return }
-                        setCard(json.card); onChanged?.()
-                      }}
-                      className="flex items-center gap-1 px-4 py-2 text-base rounded-lg border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover transition"
-                    >
-                      <UserPlus size={16} /> {t('modal.joinAsHelper')}
-                    </button>
-                  )}
-                </div>
+                <FieldRow icon={Users} label={t('modal.helpersLabel')}>
+                  <div className="flex flex-wrap items-center gap-2 py-1">
+                    {(card.helpers || []).length === 0 && (
+                      <span className="text-base text-warm-400 dark:text-disc-muted">{t('modal.noHelpers')}</span>
+                    )}
+                    {(card.helpers || []).map((h) => (
+                      <span key={h.user_id} className="flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text">
+                        {h.name}
+                      </span>
+                    ))}
+                    {can.join && (
+                      <button
+                        onClick={async () => {
+                          setActionError('')
+                          const res = await fetch(`/api/kanban/cards/${cardId}/helpers`, { method: 'POST' })
+                          const json = await res.json().catch(() => ({}))
+                          if (!res.ok) { setActionError(json.error || t('saveFailed')); return }
+                          setCard(json.card); onChanged?.()
+                        }}
+                        className="flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover transition"
+                      >
+                        <UserPlus size={16} /> {t('modal.joinAsHelper')}
+                      </button>
+                    )}
+                  </div>
+                </FieldRow>
               </div>
 
               {/* ข้อมูลของทีม — custom field (รวมเช็คลิสต์แล้ว 2026-08-18 รอบเย็น) แยกกายภาพจากของระบบข้างบน */}

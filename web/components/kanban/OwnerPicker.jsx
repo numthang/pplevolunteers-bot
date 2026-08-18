@@ -72,9 +72,8 @@ export default function OwnerPicker({ card, canEdit, canClaim, onPatch, onError 
   }
 
   return (
-    <div className="min-w-[14rem] flex-1">
-      <label className="block text-sm font-medium text-warm-700 dark:text-disc-muted mb-1">{t('modal.ownerLabel')}</label>
-
+    <div className="min-w-0 flex-1">
+      {/* ⚠️ ไม่วาดชื่อ "เจ้าภาพ" เองแล้ว — ชื่ออยู่ที่คอลัมน์ซ้ายของ FieldRow (2026-08-18) */}
       <div className="min-h-11 flex flex-wrap items-center gap-2">
         <span className={`text-base ${card.owner_name ? 'text-warm-900 dark:text-disc-text' : 'text-warm-400 dark:text-disc-muted'}`}>
           {card.owner_name || t('modal.noOwner')}

@@ -130,12 +130,9 @@ export default function LabelPicker({ cardId, labels = [], readOnly, onCardChang
   }
 
   return (
-    <div>
-      <label className="block text-sm font-medium text-warm-700 dark:text-disc-muted mb-1">
-        {t('modal.labelsLabel')}
-      </label>
-
-      <div className="flex flex-wrap items-center gap-2">
+    <div className="min-w-0 flex-1">
+      {/* ⚠️ ไม่วาดชื่อ "ป้าย" เองแล้ว — ชื่ออยู่ที่คอลัมน์ซ้ายของ FieldRow (2026-08-18) */}
+      <div className="flex flex-wrap items-center gap-2 py-1">
         {labels.length === 0 && !open && (
           <span className="text-base text-warm-400 dark:text-disc-muted">{t('modal.noLabels')}</span>
         )}

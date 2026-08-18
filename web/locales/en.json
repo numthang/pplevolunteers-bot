@@ -1721,7 +1721,6 @@
       "cancelled": "Parked"
     },
     "row": {
-      "blocked": "Blocked"
     },
     "actions": {
       "claim": "Claim this",
@@ -1780,8 +1779,6 @@
       "statusLabel": "Status",
       "ownerLabel": "Owner",
       "noOwner": "No owner yet",
-      "blockedLabel": "Blocked",
-      "blockedReasonPlaceholder": "What is blocking it",
       "helpersLabel": "Helpers",
       "noHelpers": "No helpers yet",
       "joinAsHelper": "Join in",
@@ -1811,8 +1808,8 @@
       "optionColorLabel": "Color",
       "optionDelete": "Delete tag",
       "optionCreateFailed": "Could not create the option",
-      "fieldMoveUp": "Move up",
-      "fieldMoveDown": "Move down",
+      "fieldDragHint": "Drag to reorder",
+      "fieldEmpty": "Empty",
       "fieldDelete": "Delete this field",
       "fieldMenu": "Manage this field",
       "fieldRename": "Field name",

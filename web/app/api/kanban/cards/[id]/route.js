@@ -1,7 +1,7 @@
 // /api/kanban/cards/[id] — อ่าน / แก้ (autosave) / เก็บเข้ากรุ / ลบถาวร
 //
 // PATCH รับ 3 แบบ แยกกันชัดเจน ห้ามปนใน request เดียว:
-//   { lockToken, title?, detail?, dueAt?, priority?, blocked?, blockedReason? }  ← autosave (ต้องมี token)
+//   { lockToken, title?, detail?, dueAt?, priority? }                           ← autosave (ต้องมี token)
 //   { statusType }                                                              ← ปุ่มเปลี่ยนสถานะ
 //   { ownerUserId } | { claim: true }                                           ← เจ้าภาพ
 import { cardContext, err } from '@/lib/kanbanGuard.js'
@@ -96,8 +96,6 @@ export async function PATCH(req, { params }) {
   if (body.detail !== undefined)        fields.detail = body.detail
   if (body.dueAt !== undefined)         fields.due_at = body.dueAt || null   // ⚠️ ส่งดิบ ห้ามแปลง timezone
   if (body.priority !== undefined)      fields.priority = Number(body.priority) || 0
-  if (body.blocked !== undefined)       fields.blocked = Boolean(body.blocked)
-  if (body.blockedReason !== undefined) fields.blocked_reason = body.blockedReason || null
   if (!Object.keys(fields).length)      return err(400, 'ไม่มีอะไรให้แก้')
 
   const res = await cardDB.updateCard(orgId, card.id, fields, { lockToken: body.lockToken })

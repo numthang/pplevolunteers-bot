@@ -193,7 +193,7 @@ export async function createCard(orgId, { title, detail = null, ownerUserId = nu
  *   1. `ref_no`  — ตัวระบุการ์ด ซ้ำไม่ได้ ต้องได้เลขใหม่
  *   2. `done` ในเช็คลิสต์ — ก๊อปงานที่เสร็จแล้วมาแล้วได้ "เตรียมของครบ 8/8" ทั้งที่ยังไม่เตรียม
  *      → **ลอกตัวรายการมาครบ แต่ติ๊กออกให้หมด**
- *   3. `blocked` + `blocked_reason` — อาการติดขัดของงานเก่า ไม่ใช่ของงานใหม่
+ *   (เดิมข้อ 3 คือ `blocked` + `blocked_reason` — ถอดฟีเจอร์ออกแล้ว 2026-08-18)
  *
  * ⚠️ **ห้ามเรียก createCard() ซ้ำ** — มันใช้ pool.query ตรงๆ (คนละ connection กับ transaction นี้)
  *    และ retry loop ของมันใช้ในทรานแซกชันไม่ได้: 23505 ทำให้ทั้ง transaction abort
@@ -276,8 +276,6 @@ const EDITABLE = {
   start_at:       'start_at',      // ⚠️ ส่งดิบ ห้ามแปลง timezone
   due_at:         'due_at',        // ⚠️ ส่งดิบ ห้ามแปลง timezone
   priority:       'priority',
-  blocked:        'blocked',
-  blocked_reason: 'blocked_reason',
 }
 
 /**

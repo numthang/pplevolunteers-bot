@@ -22,7 +22,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import {
-  Plus, X, Clock, User, ListChecks, AlertTriangle, Tag,
+  Plus, X, Clock, User, ListChecks, Tag,
   ChevronDown, ChevronRight, Loader2, ArchiveRestore, Trash2,
 } from 'lucide-react'
 import { STATUS_TYPES } from '@/lib/kanbanAccess.js'
@@ -114,11 +114,6 @@ function KanbanCard({ card, t, onOpen, onDragStart, dragging, draggable, onClaim
         )}
         {total > 0 && (
           <span className="flex items-center gap-1"><ListChecks size={16} /> {done}/{total}</span>
-        )}
-        {card.blocked && (
-          <span className="flex items-center gap-1 text-red-500 font-medium">
-            <AlertTriangle size={16} /> {t('row.blocked')}
-          </span>
         )}
       </div>
 
