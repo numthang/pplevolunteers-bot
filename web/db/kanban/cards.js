@@ -22,6 +22,7 @@ const COLS = `
   c.id, c.org_id, c.ref_no, c.title, c.detail, c.status_type,
   c.owner_user_id, c.start_at, c.due_at, c.priority, c.blocked, c.blocked_reason,
   c.created_by, c.created_at, c.updated_at, c.completed_at, c.archived_at,
+  c.source_url, c.source_message_id,
   ${LOCK} AS lock_token`
 
 // คนช่วย + งานย่อย ดึงมาด้วยเสมอ — การ์ดใบเดียวไม่มีทางใหญ่พอให้ต้อง lazy load

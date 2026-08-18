@@ -36,9 +36,11 @@ async function handleKanbanImportStart(interaction) {
     return interaction.reply({ content: t('kanban.import.noText'), flags: MessageFlags.Ephemeral });
   }
 
-  // timestamp ใน customId — Discord cache modal ตาม customId ถ้าซ้ำจะได้ค่า pre-fill เก่า
+  // channelId+msg.id ใน customId — ประกอบ source_url ตอน submit ไม่ได้ เพราะ modal submit
+  // เป็น interaction คนละก้อน ตัวแปร msg ของ scope นี้หายไปแล้ว (เก็บ URL เต็มไม่ได้ ยาวเกิน customId limit 100 ตัวอักษร)
+  // timestamp ท้ายสุด — Discord cache modal ตาม customId ถ้าซ้ำจะได้ค่า pre-fill เก่า
   const modal = new ModalBuilder()
-    .setCustomId(`kanban_card_modal:${msg.id}:${Date.now()}`)
+    .setCustomId(`kanban_card_modal:${msg.channelId}:${msg.id}:${Date.now()}`)
     .setTitle(t('kanban.import.modalTitle'));
 
   const titleInput = new TextInputBuilder()
@@ -91,6 +93,12 @@ async function handleKanbanImportModal(interaction) {
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
   const t = await getT(interaction.guildId);
 
+  // customId: kanban_card_modal:<channelId>:<messageId>:<timestamp>
+  const [, channelId, sourceMessageId] = interaction.customId.split(':');
+  const sourceUrl = channelId && sourceMessageId
+    ? `https://discord.com/channels/${interaction.guildId}/${channelId}/${sourceMessageId}`
+    : null;
+
   const title = interaction.fields.getTextInputValue('title').trim();
   const detail = interaction.fields.getTextInputValue('detail').trim() || null;
   const dueRaw = interaction.fields.getTextInputValue('due');
@@ -110,6 +118,7 @@ async function handleKanbanImportModal(interaction) {
       actorDiscordId: interaction.user.id,
       actorProfile: { username: interaction.user.username },
       title, detail, dueAt, assignToSelf,
+      sourceUrl, sourceMessageId,
     });
 
     await interaction.editReply({

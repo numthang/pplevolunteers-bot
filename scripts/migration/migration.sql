@@ -940,3 +940,10 @@ UPDATE users u
 ALTER TABLE dc_orgchart_config ALTER COLUMN excluded SET DEFAULT FALSE;
 
 
+-- 2026-08-18 · kanban: ลิงก์ต้นทางดิสฯ — บอทเคยทิ้ง msg.id ไปเฉยๆ ตอนสร้างการ์ดจาก "📌 สร้างเป็นการบ้าน"
+-- บอท+importer เขียนเท่านั้น (ไม่ใช่ custom field ที่คนแก้ได้ — ดู md/kanban/CUSTOM-FIELDS.md §เส้นแบ่ง)
+-- pattern เดียวกับ post_episode_media.source_url/source_message_id
+ALTER TABLE kanban_cards ADD COLUMN IF NOT EXISTS source_url        text;
+ALTER TABLE kanban_cards ADD COLUMN IF NOT EXISTS source_message_id varchar(20);
+
+

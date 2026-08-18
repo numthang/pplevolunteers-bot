@@ -14,7 +14,7 @@ const { orgIdOfGuild, userIdByDiscord, upsertUserByDiscord } = require('./org');
  * สร้างการบ้านจากข้อความในดิสฯ
  * @returns {{id: string, ref_no: number, title: string, status_type: string, owner_user_id: number|null}}
  */
-async function createCardFromDiscord({ guildId, actorDiscordId, actorProfile = {}, title, detail = null, dueAt = null, assignToSelf = true }) {
+async function createCardFromDiscord({ guildId, actorDiscordId, actorProfile = {}, title, detail = null, dueAt = null, assignToSelf = true, sourceUrl = null, sourceMessageId = null }) {
   const orgId = await orgIdOfGuild(guildId);
   if (!orgId) throw new Error('guild นี้ยังไม่ได้ผูกกับองค์กร');
 
@@ -29,12 +29,12 @@ async function createCardFromDiscord({ guildId, actorDiscordId, actorProfile = {
   for (let attempt = 0; attempt < 5; attempt++) {
     try {
       const { rows } = await pool.query(
-        `INSERT INTO kanban_cards (org_id, ref_no, title, detail, status_type, owner_user_id, due_at, created_by)
+        `INSERT INTO kanban_cards (org_id, ref_no, title, detail, status_type, owner_user_id, due_at, created_by, source_url, source_message_id)
          VALUES ($1,
                  (SELECT COALESCE(MAX(ref_no), 0) + 1 FROM kanban_cards WHERE org_id = $1),
-                 $2, $3, $4, $5, $6, $7)
+                 $2, $3, $4, $5, $6, $7, $8, $9)
          RETURNING id, ref_no, title, status_type, owner_user_id`,
-        [orgId, title, detail, status, ownerUserId, dueAt || null, userId]
+        [orgId, title, detail, status, ownerUserId, dueAt || null, userId, sourceUrl, sourceMessageId]
       );
       return rows[0];
     } catch (err) {

@@ -14,7 +14,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { X, Loader2, Check, Trash2, Plus, AlertTriangle, UserPlus, Archive, ArchiveRestore } from 'lucide-react'
+import { X, Loader2, Check, Trash2, Plus, AlertTriangle, UserPlus, Archive, ArchiveRestore, ExternalLink } from 'lucide-react'
 import { formatRef, STATUS_TYPES } from '@/lib/kanbanAccess.js'
 import LabelPicker from './LabelPicker.jsx'
 import OwnerPicker from './OwnerPicker.jsx'
@@ -277,6 +277,17 @@ export default function CardModal({ cardId, onClose, onChanged }) {
 
           {card && (
             <>
+              {card.source_url && (
+                <a
+                  href={card.source_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 w-fit text-sm text-warm-400 dark:text-disc-muted hover:text-teal hover:underline"
+                >
+                  <ExternalLink size={14} /> {t('modal.sourceLink')}
+                </a>
+              )}
+
               <div>
                 <label className="block text-sm font-medium text-warm-700 dark:text-disc-muted mb-1">{t('form.titleLabel')}</label>
                 <input

@@ -33,14 +33,18 @@ Production Postgres ลงด้วย `sudo apt install postgresql` ตรง �
 - ต้องทำตอน maintenance window เท่านั้น (ห้ามรันคู่ขนานบน 5432 เดิม) — แผนคร่าว ๆ: ลง pgsql ผ่าน panel บน port อื่นก่อน → `pg_dump`/`pg_restore` ย้ายข้อมูล → สลับ `.env` DB_HOST/PORT → ปิด apt postgres เดิม → ค่อยย้าย panel instance ไป 5432
 - ต้องเช็ค `pg_hba.conf`/`postgresql.conf` ของ panel-managed instance ใหม่ให้อนุญาต password auth เหมือนที่ตั้งไว้วันนี้ด้วย
 
-## 🧩 Kanban — custom field + ลิงก์ต้นทางดิสฯ (เคาะ 2026-08-18 · ยังไม่เริ่มเขียนโค้ด)
+## 🧩 Kanban — custom field + ลิงก์ต้นทางดิสฯ (เคาะ 2026-08-18)
 
 **แผนเต็มอยู่ที่** `~/.claude/plans/reactive-churning-falcon.md` (ไม่ได้อยู่ใน repo — ถ้าหายให้ไล่จาก `md/kanban/CUSTOM-FIELDS.md` §กลับคำ)
 
 user เคาะ: **ทำ custom field เลย ไม่ต้องรอ tripwire** — *"ไม่ต้องรอองค์กรนอกหรอก ผมนี่แหละ จะเริ่มเพิ่มแล้ว"*
 
-**ลำดับที่วางไว้**
-1. **ลิงก์ต้นทางดิสฯ** — `kanban_cards.source_url` + `source_message_id` · ⚠️ **บอท `📌 สร้างเป็นการบ้าน` ทิ้งลิงก์ต้นทางอยู่ตอนนี้** (`db/kanbanCards.js` ไม่เก็บ ทั้งที่ `msg.id` อยู่ใน customId แล้ว)
+**ขั้น 1 เสร็จ local (2026-08-18) ยังไม่ deploy** — ลิงก์ต้นทางดิสฯ `kanban_cards.source_url` + `source_message_id`
+- migration เพิ่มแล้วท้าย `scripts/migration/migration.sql` · `/scrutinize` เจอ blocker: customId เดิมมีแค่ `msg.id` ไม่พอสร้าง URL (ต้อง `channelId` ด้วย เพราะ modal submit เป็น interaction คนละก้อน หยิบ `msg` เดิมไม่ได้) → แก้เป็น `kanban_card_modal:<channelId>:<messageId>:<ts>`
+- `db/kanbanCards.js` + `handlers/kanbanImportHandler.js` เขียนแล้ว · `web/db/kanban/cards.js` COLS + `CardModal.jsx` แสดงลิงก์ "มาจากข้อความในดิสฯ" แล้ว
+- smoke test เขียน+อ่านกลับผ่าน DB จริงแล้ว (ลบทิ้งหลังเทส) · `npm test` 389 ข้อผ่าน · build ผ่าน
+
+**ลำดับที่เหลือ**
 2. **แกน custom field** — `kanban_field_defs` + `kanban_card_field_values` (คอลัมน์แยกตามชนิด ไม่ใช่ jsonb) · 5 ชนิด: text/number/url/date/checkbox · หน้า `/kanban/fields` ลอกโครง `LabelManager.jsx`
 3. **`select`/`multi_select` + ยุบป้ายเข้ามา** — 3 กลุ่มป้าย → 3 field · 29 ป้าย → options · 76 เส้น → ค่า (INSERT…SELECT)
 4. **importer เก็บของที่เคยทิ้ง** — Discord → `source_url` · FB Post → field url · งบประมาณ → field number

@@ -1752,6 +1752,7 @@
     },
     "modal": {
       "title": "Homework detail",
+      "sourceLink": "From a Discord message",
       "closeTitle": "Close (ESC)",
       "saving": "Saving…",
       "saved": "Saved",
