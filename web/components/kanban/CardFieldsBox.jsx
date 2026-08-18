@@ -223,6 +223,24 @@ export default function CardFieldsBox({ cardId, fields = [], readOnly, canPurge 
   }
 
   /**
+   * เริ่มลาก — ใช้ **ทั้งแถว** เป็นภาพที่ติดเมาส์ ไม่ใช่ไอคอนหมุดจิ๋วๆ
+   * (`draggable` อยู่ที่หมุด เบราว์เซอร์จึงถ่ายภาพแค่หมุดถ้าไม่สั่ง setDragImage เอง)
+   *
+   * ⚠️ ต้อง `setData` ด้วย ไม่งั้น **Firefox ไม่เริ่มลากเลย** (Chrome ปล่อยผ่าน)
+   */
+  function onDragStartField(e, fieldId) {
+    setDragId(fieldId)
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', String(fieldId))   // Firefox บังคับ
+    const row = e.currentTarget.closest('[data-field-row]')
+    // จับที่ตำแหน่งหมุดพอดี ภาพจะได้ไม่กระโดดไปอยู่มุมซ้ายบนของแถว
+    if (row) {
+      const r = row.getBoundingClientRect()
+      e.dataTransfer.setDragImage(row, e.clientX - r.left, e.clientY - r.top)
+    }
+  }
+
+  /**
    * ลากจัดลำดับ field — ย้อนได้ (ลากกลับ) จึงไม่มี gate ยศ
    * ส่งลำดับ**เต็มชุด**ไปเสมอ ไม่ใช่ส่งแค่คู่ที่สลับ (แนวเดียวกับ reorder ของตัวเลือก/เช็คลิสต์)
    */
@@ -405,13 +423,14 @@ export default function CardFieldsBox({ cardId, fields = [], readOnly, canPurge 
               icon={TypeIcon}
               onDragOver={(e) => { if (dragId) e.preventDefault() }}
               onDrop={() => onDropField(f.field_id)}
-              className={`border-t-2 ${dragId && dragId !== f.field_id ? 'border-dashed border-teal/50' : 'border-transparent'}`}
+              data-field-row
+              className={`border-t-2 ${dragId && dragId !== f.field_id ? 'border-dashed border-teal/50' : 'border-transparent'} ${dragId === f.field_id ? 'opacity-40' : ''}`}
               handle={!readOnly && (
                 /* หมุดลาก — อยู่หน้าสุดก่อนไอคอนชนิด (user สั่ง 2026-08-18)
                    ลากได้เฉพาะตรงนี้ ไม่ใช่ทั้งแถว ไม่งั้นลากทับการเลือกข้อความในช่องกรอก */
                 <span
                   draggable
-                  onDragStart={() => setDragId(f.field_id)}
+                  onDragStart={(e) => onDragStartField(e, f.field_id)}
                   onDragEnd={() => setDragId(null)}
                   title={t('modal.fieldDragHint')}
                   className="cursor-grab active:cursor-grabbing text-warm-300 dark:text-disc-muted opacity-0 group-hover:opacity-100 shrink-0"
