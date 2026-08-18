@@ -35,6 +35,14 @@ export async function GET(req) {
       viewerUserId: ctx.userId ?? null,
     })
   }
+  // กรุ (archive) — คนละเรื่องกับช่อง "พักไว้" ที่เป็น status_type
+  // แยก endpoint ไม่ใช่กรองในเครื่อง: การ์ดที่เก็บเข้ากรุแล้วต้องไม่ถูกดึงมาในโหมดปกติเลย
+  if (view === 'archived') {
+    return Response.json({
+      cards: await cardDB.listCards(ctx.orgId, { onlyArchived: true, includeClosed: true, limit: 500 }),
+      viewerUserId: ctx.userId ?? null,
+    })
+  }
   return Response.json({ cards: await cardDB.listCards(ctx.orgId, { includeClosed: false }) })
 }
 

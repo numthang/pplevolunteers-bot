@@ -25,7 +25,9 @@ export async function GET(_req, { params }) {
     checklist: await cardDB.listChecklist(ctx.orgId, ctx.card.id),
     can: {
       edit:    canEditCard(ctx.card, ctx.access, ctx.userId),
-      archive: canArchiveCard(ctx.card, ctx.access, ctx.userId),
+      // เก็บเข้ากรุ/เอาออกจากกรุ ใช้ด่านเดียวกัน — คนละปุ่มแต่เป็นการกระทำคู่กัน
+      archive: canArchiveCard(ctx.card, ctx.access, ctx.userId) && !ctx.card.archived_at,
+      restore: canArchiveCard(ctx.card, ctx.access, ctx.userId) && Boolean(ctx.card.archived_at),
       claim:   canClaimCard(ctx.card, ctx.access, ctx.userId),
       // join = ปุ่ม "ลงมือด้วย" ควรโผล่ไหม — claim อย่างเดียวไม่พอ
       // เจ้าภาพ/คนช่วยอยู่แล้วไม่ควรเห็นปุ่มนี้ (จะกลายเป็นเพิ่มตัวเองเป็นคนช่วยของงานตัวเอง)
@@ -49,6 +51,15 @@ export async function PATCH(req, { params }) {
     const gate = checkStatusTransition(card, body.statusType)
     if (!gate.ok) return err(400, REASON_TEXT[gate.reason] || 'ย้ายไม่ได้')
     return Response.json({ card: await cardDB.setCardStatus(orgId, card.id, body.statusType) })
+  }
+
+  // ── เอาออกจากกรุ ──
+  // ใช้ด่านเดียวกับตอนเก็บเข้ากรุ (canArchiveCard) — คนที่เก็บเข้าได้ต้องเอาออกได้
+  if (body.restore === true) {
+    if (!canArchiveCard(card, access, userId)) return err(403, 'เอาออกจากกรุได้เฉพาะคนที่สร้างการบ้านใบนี้')
+    const ok = await cardDB.unarchiveCard(orgId, card.id)
+    if (!ok) return err(400, 'การบ้านใบนี้ไม่ได้อยู่ในกรุ')
+    return Response.json({ card: await cardDB.getCard(orgId, card.id) })
   }
 
   // ── อาสาทำเอง (หลวมกว่า: ใครใน org ก็ได้) ──
@@ -97,6 +108,6 @@ export async function PATCH(req, { params }) {
 export async function DELETE(_req, { params }) {
   const ctx = await cardContext((await params).id)
   if (ctx.error) return ctx.error
-  if (!canArchiveCard(ctx.card, ctx.access, ctx.userId)) return err(403, 'ลบได้เฉพาะคนที่สร้างการบ้านใบนี้')
+  if (!canArchiveCard(ctx.card, ctx.access, ctx.userId)) return err(403, 'เก็บเข้ากรุได้เฉพาะคนที่สร้างการบ้านใบนี้')
   return Response.json({ ok: await cardDB.archiveCard(ctx.orgId, ctx.card.id) })
 }

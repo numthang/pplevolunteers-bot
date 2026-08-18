@@ -14,7 +14,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { X, Loader2, Check, Trash2, Plus, AlertTriangle, UserPlus } from 'lucide-react'
+import { X, Loader2, Check, Trash2, Plus, AlertTriangle, UserPlus, Archive, ArchiveRestore } from 'lucide-react'
 import { formatRef, STATUS_TYPES } from '@/lib/kanbanAccess.js'
 import LabelPicker from './LabelPicker.jsx'
 import OwnerPicker from './OwnerPicker.jsx'
@@ -26,7 +26,7 @@ export default function CardModal({ cardId, onClose, onChanged }) {
 
   const [card, setCard] = useState(null)
   const [checklist, setChecklist] = useState([])
-  const [can, setCan] = useState({ edit: false, archive: false, claim: false })
+  const [can, setCan] = useState({ edit: false, archive: false, restore: false, claim: false })
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
 
@@ -207,6 +207,22 @@ export default function CardModal({ cardId, onClose, onChanged }) {
     if (!res.ok) {
       const json = await res.json().catch(() => ({}))
       setActionError(json.error || t('saveFailed'))
+      return
+    }
+    onChanged?.()
+    onClose()
+  }
+
+  /** เอาออกจากกรุ — ไม่ต้องถามยืนยัน เป็นการกระทำที่ย้อนได้อยู่แล้ว */
+  async function restore() {
+    const res = await fetch(`/api/kanban/cards/${cardId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ restore: true }),
+    })
+    if (!res.ok) {
+      const json = await res.json().catch(() => ({}))
+      setActionError(json.error || t('actions.restoreFailed'))
       return
     }
     onChanged?.()
@@ -440,11 +456,19 @@ export default function CardModal({ cardId, onClose, onChanged }) {
 
               {actionError && <p className="text-base text-red-500 dark:text-red-400">{actionError}</p>}
 
-              {can.archive && (
+              {/* เก็บเข้ากรุ = archive (กู้คืนได้จาก "แสดง: กรุ") ไม่ใช่ลบถาวร — โมดูลนี้ไม่มี hard delete
+                  การ์ดที่อยู่ในกรุอยู่แล้ว can.archive เป็น false และได้ can.restore แทน */}
+              {(can.archive || can.restore) && (
                 <div className="pt-2 border-t border-warm-200 dark:border-disc-border flex justify-end">
-                  <button onClick={archive} className="flex items-center gap-1 px-4 py-2 text-base rounded-lg text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-disc-hover font-medium transition">
-                    <Trash2 size={16} /> {t('modal.archive')}
-                  </button>
+                  {can.restore ? (
+                    <button onClick={restore} className="flex items-center gap-1 px-4 py-2 text-base rounded-lg text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover font-medium transition">
+                      <ArchiveRestore size={16} /> {t('actions.restore')}
+                    </button>
+                  ) : (
+                    <button onClick={archive} className="flex items-center gap-1 px-4 py-2 text-base rounded-lg text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-disc-hover font-medium transition">
+                      <Archive size={16} /> {t('modal.archive')}
+                    </button>
+                  )}
                 </div>
               )}
             </>

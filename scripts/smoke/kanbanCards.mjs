@@ -96,11 +96,22 @@ try {
   ok('org อื่นอ่านการ์ดนี้ไม่เห็น', (await db.getCard(8, b.id)) === null)
   ok('เก็บเข้ากรุข้าม org ไม่ได้', (await db.archiveCard(8, b.id)) === false)
 
-  console.log('\n── เก็บเข้ากรุ ──')
+  console.log('\n── เก็บเข้ากรุ (archive) ──')
   ok('เก็บเข้ากรุได้', (await db.archiveCard(ORG, b.id)) === true)
   ok('เก็บซ้ำคืน false', (await db.archiveCard(ORG, b.id)) === false)
   const my2 = await db.listMyCards(ORG, BOB)
   ok('หายจากการบ้านของฉัน', !my2.mine.some(r => r.id === b.id))
+  ok('หายจากรายการปกติ', !(await db.listCards(ORG, { limit: 500 })).some(r => r.id === b.id))
+
+  console.log('\n── ⭐ กรุต้องเปิดดูและเอากลับมาได้ (ไม่ใช่ลบทิ้ง) ──')
+  const inArchive = await db.listCards(ORG, { onlyArchived: true, limit: 500 })
+  ok('เห็นในโหมดกรุ', inArchive.some(r => r.id === b.id))
+  ok('โหมดกรุไม่ปนการ์ดปกติ', inArchive.every(r => r.archived_at !== null))
+  ok('สถานะเดิมไม่ถูกแตะตอนเข้ากรุ', inArchive.find(r => r.id === b.id)?.status_type === b.status_type)
+  ok('เอาออกจากกรุได้', (await db.unarchiveCard(ORG, b.id)) === true)
+  ok('เอาออกซ้ำคืน false', (await db.unarchiveCard(ORG, b.id)) === false)
+  ok('กลับมาอยู่ในรายการปกติ', (await db.listCards(ORG, { limit: 500 })).some(r => r.id === b.id))
+  ok('เอาออกจากกรุข้าม org ไม่ได้', (await db.unarchiveCard(8, b.id)) === false)
 
   console.log('\n── หาด้วยเลข ref ──')
   const byRef = await db.getCardByRef(ORG, a.ref_no)

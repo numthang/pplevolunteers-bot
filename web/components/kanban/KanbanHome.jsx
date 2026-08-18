@@ -14,7 +14,7 @@
  * ⚠️ ลากด้วย HTML5 DnD = เดสก์ท็อปเท่านั้น และ **ลากได้เฉพาะโหมด "ตามสถานะ"**
  *    (โหมดกำหนดส่งลากแล้วกำกวม — เลื่อน due? เปลี่ยนสถานะ? → ปิดไปเลย)
  *
- * ⛔ เคยลองซ่อนช่อง "กรุ" + กรอง "เสร็จ" เหลือ 7 วัน เพื่อให้พอดีจอ — **user ไม่เอา** (2026-08-17)
+ * ⛔ เคยลองซ่อนช่อง "พักไว้" + กรอง "เสร็จ" เหลือ 7 วัน เพื่อให้พอดีจอ — **user ไม่เอา** (2026-08-17)
  *    "ผมมีปัญหากับการใส่อะไรแล้วไม่ฟิตหน้าจอพอดี" → แก้ที่ layout ไม่ใช่ซ่อนข้อมูล · อย่าเอากลับมาใส่อีก
  * ⚠️ ห้ามทำแถบสีหัวกองด้วย border-t-<สี> — `dark:border-disc-border` ทับสีขอบบนทิ้งในดาร์กโหมด
  */
@@ -23,7 +23,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import {
   Plus, X, Clock, User, ListChecks, AlertTriangle, Tag,
-  ChevronDown, ChevronRight, Loader2,
+  ChevronDown, ChevronRight, Loader2, ArchiveRestore,
 } from 'lucide-react'
 import { STATUS_TYPES } from '@/lib/kanbanAccess.js'
 import { columnHeadProps, chipProps } from '@/lib/kanbanLabelColors.js'
@@ -74,7 +74,7 @@ function Segmented({ options, value, onChange }) {
   )
 }
 
-function KanbanCard({ card, t, onOpen, onDragStart, dragging, draggable, onClaim, claiming }) {
+function KanbanCard({ card, t, onOpen, onDragStart, dragging, draggable, onClaim, claiming, onRestore, restoring }) {
   const state = dueState(card.due_at)
   const total = Number(card.checklist_total) || 0
   const done = Number(card.checklist_done) || 0
@@ -120,9 +120,19 @@ function KanbanCard({ card, t, onOpen, onDragStart, dragging, draggable, onClaim
         )}
       </div>
 
-      {/* งานที่ยังไม่มีเจ้าภาพ = รับได้จากหน้าการ์ดเลย ไม่ต้องเปิดกล่องก่อน
-          (กองรอทำโผล่ในตัวกรอง "ของฉัน" อยู่แล้ว — ต้องรับได้ในคลิกเดียว ไม่งั้นก็ค้างเหมือนเดิม) */}
-      {!card.owner_user_id && (
+      {/* อยู่ในกรุ = ปุ่มเดียวที่มีความหมายคือเอาออก (รับงานในกรุไม่ได้ ต้องเอาออกมาก่อน) */}
+      {card.archived_at ? (
+        <button
+          onClick={(e) => { e.stopPropagation(); onRestore(card) }}
+          disabled={restoring}
+          className="self-start flex items-center gap-1.5 px-4 py-2 text-base rounded-lg border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover font-medium disabled:opacity-50 transition"
+        >
+          <ArchiveRestore size={16} />
+          {restoring ? t('actions.restoring') : t('actions.restore')}
+        </button>
+      ) : !card.owner_user_id && (
+        /* งานที่ยังไม่มีเจ้าภาพ = รับได้จากหน้าการ์ดเลย ไม่ต้องเปิดกล่องก่อน
+           (กองรอทำโผล่ในตัวกรอง "ของฉัน" อยู่แล้ว — ต้องรับได้ในคลิกเดียว ไม่งั้นก็ค้างเหมือนเดิม) */
         <button
           onClick={(e) => { e.stopPropagation(); onClaim(card) }}
           disabled={claiming}
@@ -150,9 +160,10 @@ export default function KanbanHome() {
   // ค่าที่ไม่ได้กดเอง = auto: กองที่มีการ์ดกางไว้ กองว่างพับเก็บ
   const [openState, setOpenState] = useState({})
   const [claimingId, setClaimingId] = useState(null)
+  const [restoringId, setRestoringId] = useState(null)
 
   // 2 ปุ่มควบคุมที่แทนที่การมี 2 หน้า
-  const [scope, setScope] = useState('mine')     // 'mine' | 'all' — ตั้งต้นของฉัน
+  const [scope, setScope] = useState('mine')     // 'mine' | 'all' | 'archived' — ตั้งต้นของฉัน
   const [groupBy, setGroupBy] = useState('status') // 'status' | 'due'
   const [labelFilter, setLabelFilter] = useState([])
   const [filterOpen, setFilterOpen] = useState(false)
@@ -163,10 +174,13 @@ export default function KanbanHome() {
   const [creating, setCreating] = useState(false)
   const [createError, setCreateError] = useState('')
 
+  // กรุใช้ endpoint แยก — ของฉัน/ทั้งหมด กรองจากชุดเดียวกันในเครื่อง ไม่ต้องยิงใหม่
+  const inArchive = scope === 'archived'
+
   const load = useCallback(async () => {
     setLoadError('')
     try {
-      const res = await fetch('/api/kanban/cards?view=board')
+      const res = await fetch(`/api/kanban/cards?view=${inArchive ? 'archived' : 'board'}`)
       const json = await res.json().catch(() => ({}))
       if (!res.ok) { setLoadError(json.error || t('loadFailed')); setCards([]); return }
       setCards(json.cards || [])
@@ -177,9 +191,10 @@ export default function KanbanHome() {
     } finally {
       setLoading(false)
     }
-  }, [t])
+  }, [t, inArchive])
 
-  useEffect(() => { load() }, [load])
+  // สลับเข้า/ออกกรุ = คนละชุดข้อมูล ต้องโหลดใหม่ · สลับ ของฉัน↔ทั้งหมด ไม่ต้อง (กรองในเครื่อง)
+  useEffect(() => { setLoading(true); load() }, [load])
 
   // beforeunload เตือนถ้ามีข้อความค้างในฟอร์ม create ที่ยังไม่กดบันทึก (ห้าม autosave หน้า Create)
   useEffect(() => {
@@ -193,6 +208,7 @@ export default function KanbanHome() {
 
   // กรอง → จัดกอง · ลำดับนี้สำคัญ: ชิปกรองต้องสร้างจากการ์ดที่ "เห็นได้ตามขอบเขต" ไม่ใช่ทั้ง org
   const scoped = useMemo(
+    // ในกรุโชว์ทุกใบ ไม่แยกของใคร — ของที่เก็บเข้ากรุแล้วมีไม่เยอะ และคนตามหามักจำไม่ได้ว่าใครเก็บ
     () => (scope === 'mine' ? cards.filter((c) => isMyCard(c, viewerUserId)) : cards),
     [cards, scope, viewerUserId]
   )
@@ -201,7 +217,8 @@ export default function KanbanHome() {
   const groups = useMemo(() => groupCards(visible, groupBy), [visible, groupBy])
 
   const selectedIds = new Set(labelFilter.map((l) => String(l.id)))
-  const canDrag = groupBy === 'status'
+  // ในกรุลากไม่ได้ — ต้องเอาออกจากกรุก่อนถึงจะขยับสถานะได้ (ไม่งั้นได้การ์ดที่ "เสร็จ" ทั้งที่อยู่ในกรุ)
+  const canDrag = groupBy === 'status' && !inArchive
 
   function toggleLabelFilter(label) {
     setLabelFilter((prev) => {
@@ -266,6 +283,26 @@ export default function KanbanHome() {
     }
   }
 
+  /** เอาออกจากกรุ — การ์ดกลับไปกองเดิม แล้วหายจากโหมดกรุทันที */
+  async function handleRestore(card) {
+    setActionError('')
+    setRestoringId(card.id)
+    try {
+      const res = await fetch(`/api/kanban/cards/${card.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ restore: true }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) { setActionError(json.error || t('actions.restoreFailed')); return }
+      setCards((prev) => prev.filter((c) => c.id !== card.id))   // ออกจากกรุแล้ว = ไม่อยู่ในรายการนี้อีก
+    } catch {
+      setActionError(t('actions.restoreFailed'))
+    } finally {
+      setRestoringId(null)
+    }
+  }
+
   function closeForm() {
     setFormOpen(false)
     setCreateError('')
@@ -309,13 +346,16 @@ export default function KanbanHome() {
           <h1 className="text-2xl font-bold text-warm-900 dark:text-disc-text mb-1">{t('page.title')}</h1>
           <p className="text-base text-warm-500 dark:text-disc-muted">{t('page.subtitle')}</p>
         </div>
-        <button
-          onClick={() => { setCreateError(''); setFormOpen(true) }}
-          className="flex items-center gap-1.5 bg-teal hover:opacity-90 text-white rounded-lg text-base font-medium px-4 py-2"
-        >
-          <Plus size={16} />
-          {t('addButton')}
-        </button>
+        {/* ในกรุไม่มีปุ่มเพิ่ม — สร้างแล้วการ์ดใหม่จะไม่โผล่ในโหมดนี้ ดูเหมือนกดแล้วไม่เกิดอะไร */}
+        {!inArchive && (
+          <button
+            onClick={() => { setCreateError(''); setFormOpen(true) }}
+            className="flex items-center gap-1.5 bg-teal hover:opacity-90 text-white rounded-lg text-base font-medium px-4 py-2"
+          >
+            <Plus size={16} />
+            {t('addButton')}
+          </button>
+        )}
       </div>
 
       {/* แถบควบคุม — 2 ปุ่มนี้แทนที่การมี 2 หน้า */}
@@ -328,6 +368,7 @@ export default function KanbanHome() {
             options={[
               { value: 'mine', label: t('controls.scopeMine') },
               { value: 'all', label: t('controls.scopeAll') },
+              { value: 'archived', label: t('controls.scopeArchived') },
             ]}
           />
         </div>
@@ -505,6 +546,11 @@ export default function KanbanHome() {
         <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg p-10 text-center text-base text-warm-400 dark:text-disc-muted">
           {t('loading')}
         </div>
+      ) : inArchive && visible.length === 0 ? (
+        // กรุว่างต้องบอกตรงๆ ไม่ใช่โชว์ 6 กองเปล่าให้เดาเอง
+        <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg p-10 text-center text-base text-warm-400 dark:text-disc-muted">
+          {labelFilter.length ? t('filter.noMatch') : t('empty.archived')}
+        </div>
       ) : (
         // 2 โหมด layout เท่านั้น — **ไม่มีการปัดแนวนอนที่ไหนเลย** (user เกลียดการปัด · เคยทำ snap แบบ Trello แล้วไม่เอา)
         //   xl (≥1280): กองหารความกว้างจอเป็นคอลัมน์
@@ -561,6 +607,8 @@ export default function KanbanHome() {
                       dragging={draggingId === card.id}
                       onClaim={handleClaim}
                       claiming={claimingId === card.id}
+                      onRestore={handleRestore}
+                      restoring={restoringId === card.id}
                     />
                   ))}
                   {sorted.length > shown.length && (
@@ -581,7 +629,7 @@ export default function KanbanHome() {
       )}
 
       <p className="text-sm text-warm-400 dark:text-disc-muted">
-        {groupBy === 'due' ? t('controls.dueModeNote') : t('board.dragHint')}
+        {inArchive ? t('controls.archiveNote') : groupBy === 'due' ? t('controls.dueModeNote') : t('board.dragHint')}
       </p>
 
       {openCardId && (

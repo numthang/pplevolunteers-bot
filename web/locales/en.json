@@ -1726,7 +1726,10 @@
     "actions": {
       "claim": "Claim this",
       "claiming": "Claiming...",
-      "claimFailed": "Could not claim this"
+      "claimFailed": "Could not claim this",
+      "restore": "Unarchive",
+      "restoring": "Unarchiving…",
+      "restoreFailed": "Could not unarchive"
     },
     "addButton": "+ Add homework",
     "form": {
@@ -1755,7 +1758,7 @@
       "conflict": "Someone else edited this homework — your changes were not saved",
       "reload": "Load latest version",
       "confirmCloseUnsaved": "Still saving. Close anyway?",
-      "confirmArchive": "Delete this homework? It disappears everywhere and you cannot restore it yourself — to just set it aside, move it to Parked instead.",
+      "confirmArchive": "Archive this homework? It leaves every group but you can find it and bring it back from \"Show: Archive\"",
       "statusLabel": "Status",
       "ownerLabel": "Owner",
       "noOwner": "No owner yet",
@@ -1768,7 +1771,7 @@
       "addItem": "Add",
       "addItemPlaceholder": "Add a subtask",
       "removeItem": "Remove this subtask",
-      "archive": "Delete this homework",
+      "archive": "Archive",
       "labelsLabel": "Labels",
       "noLabels": "No labels yet",
       "editLabels": "Edit labels",
@@ -1801,7 +1804,9 @@
       "groupLabel": "Group by",
       "groupStatus": "Status",
       "groupDue": "Due date",
-      "dueModeNote": "Due-date mode hides finished and shelved homework · move between statuses in \"Status\" mode"
+      "dueModeNote": "Due-date mode hides finished and shelved homework · move between statuses in \"Status\" mode",
+      "scopeArchived": "Archive",
+      "archiveNote": "The archive holds homework nobody wants anymore — nothing is ever deleted for good, unarchive and it returns to its group"
     },
     "due": {
       "overdue": "Overdue",
@@ -1842,6 +1847,9 @@
       "duplicate": "A label with this name already exists in this group",
       "empty": "This org has no labels yet",
       "adminOnly": "Admins only"
+    },
+    "empty": {
+      "archived": "Nothing in the archive yet"
     }
   },
   "team": {

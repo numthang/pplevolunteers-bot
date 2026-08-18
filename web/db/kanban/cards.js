@@ -91,10 +91,12 @@ export async function listMyCards(orgId, userId, { includeClosed = false } = {})
 }
 
 /** งานทั้ง org — ก้อน 1 ใช้กับแท็บ "งานที่ยังไม่มีคนรับ" + หน้ารวม */
-export async function listCards(orgId, { status = null, ownerUserId = null, unassigned = false, includeArchived = false, includeClosed = true, limit = 200 } = {}) {
+export async function listCards(orgId, { status = null, ownerUserId = null, unassigned = false, includeArchived = false, onlyArchived = false, includeClosed = true, limit = 200 } = {}) {
   const params = [orgId]
   let where = `c.org_id = $1`
-  if (!includeArchived) where += ` AND c.archived_at IS NULL`
+  // onlyArchived = หน้าถังขยะ · includeArchived = เอาทั้งคู่ (ยังไม่มีใครใช้ เก็บไว้เผื่อ export)
+  if (onlyArchived)          where += ` AND c.archived_at IS NOT NULL`
+  else if (!includeArchived) where += ` AND c.archived_at IS NULL`
   if (!includeClosed)   where += ` AND c.status_type NOT IN ('done','cancelled')`
   if (status)           { params.push(status);      where += ` AND c.status_type = $${params.length}` }
   if (ownerUserId)      { params.push(ownerUserId); where += ` AND c.owner_user_id = $${params.length}` }
@@ -219,7 +221,7 @@ export async function setCardStatus(orgId, id, statusType) {
     `UPDATE kanban_cards
         SET status_type   = $3::varchar,
             owner_user_id = CASE WHEN $3::varchar = 'backlog' THEN NULL ELSE owner_user_id END,
-            -- 'cancelled' = ช่อง "กรุ" (พักไว้ รอปัดฝุ่น) ไม่ใช่งานที่ทำจบ → ห้ามตั้ง completed_at
+            -- 'cancelled' = ช่อง "พักไว้" (ยังจะทำ แต่ไม่ใช่ตอนนี้) ไม่ใช่งานที่ทำจบ → ห้ามตั้ง completed_at
             completed_at  = CASE WHEN $3::varchar = 'done' THEN now() ELSE NULL END,
             updated_at    = now()
       WHERE org_id = $1 AND id = $2
@@ -256,11 +258,28 @@ export async function setCardOwner(orgId, id, ownerUserId) {
   return rows[0] ? await getCard(orgId, id) : null
 }
 
-/** เก็บเข้ากรุ (soft delete) — โมดูลนี้ไม่มี hard delete */
+/**
+ * เก็บเข้ากรุ — โมดูลนี้ **ไม่มี hard delete เลย** ข้อมูลอยู่ครบเสมอ
+ *
+ * ⭐ "กรุ" = archive (`archived_at`) · คนละเรื่องกับช่อง **"พักไว้"** (`status_type='cancelled'`)
+ *    พักไว้ = ยังจะทำ แต่ไม่ใช่ตอนนี้ → ยังเห็นเป็นกองบนหน้า /kanban
+ *    กรุ    = ไม่เอาแล้ว/สร้างผิด → หายจากทุกกอง ไปโผล่ในโหมด "แสดง: กรุ" และเอากลับมาได้
+ *    (คำเคยแปะสลับกันจนงง — user แก้ 2026-08-18 · ห้ามสลับกลับ)
+ */
 export async function archiveCard(orgId, id) {
   const { rows } = await pool.query(
     `UPDATE kanban_cards SET archived_at = now(), updated_at = now()
       WHERE org_id = $1 AND id = $2 AND archived_at IS NULL RETURNING id`,
+    [orgId, id]
+  )
+  return Boolean(rows[0])
+}
+
+/** เอาออกจากกรุ — การ์ดกลับไปอยู่กองเดิม (status_type ไม่เคยถูกแตะตอนเข้ากรุ) */
+export async function unarchiveCard(orgId, id) {
+  const { rows } = await pool.query(
+    `UPDATE kanban_cards SET archived_at = NULL, updated_at = now()
+      WHERE org_id = $1 AND id = $2 AND archived_at IS NOT NULL RETURNING id`,
     [orgId, id]
   )
   return Boolean(rows[0])
