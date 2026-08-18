@@ -6,9 +6,10 @@ const pool = require('./index');
  */
 async function upsertChannel({ guildId, roleId, roleName, roleColor, channelId, channelName, channelType }) {
   await pool.query(
+    // ระบุ excluded ตรงๆ ไม่พึ่ง DEFAULT ของตาราง — prod เคย DEFAULT หายแล้ว scan ตายยกรอบ
     `INSERT INTO dc_orgchart_config
-       (guild_id, role_id, role_name, role_color, channel_id, channel_name, channel_type)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)
+       (guild_id, role_id, role_name, role_color, channel_id, channel_name, channel_type, excluded)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, FALSE)
      ON CONFLICT (guild_id, role_id, channel_id) DO UPDATE SET
        role_name    = EXCLUDED.role_name,
        role_color   = EXCLUDED.role_color,

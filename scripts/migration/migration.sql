@@ -933,3 +933,10 @@ UPDATE users u
  -- production ทำถึงตรงนี้
 
 
+-- 2026-08-18 · คืน DEFAULT ให้ dc_orgchart_config.excluded
+-- prod มีคอลัมน์ NOT NULL แต่ DEFAULT หาย (group_name ในแถวเดียวกันยังได้ 'other' ปกติ)
+-- → /orgchart scan ตายที่ role ใหม่ตัวแรกด้วย 23502 เพราะ INSERT ไม่ได้ระบุ excluded
+-- ลายเซ็นของตารางที่เคยถูก DBeaver auto-create ตอนย้าย data (ทิ้ง DEFAULT)
+ALTER TABLE dc_orgchart_config ALTER COLUMN excluded SET DEFAULT FALSE;
+
+

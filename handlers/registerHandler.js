@@ -324,10 +324,13 @@ async function handleDeleteLog(interaction) {
 async function handleOpenRegisterModal(interaction) {
   if (!interaction.isButton()) return;
   if (interaction.customId !== 'btn_open_register_modal') return;
-  // mode button ไม่มี existing data เพราะยังไม่ได้ดึง DB
-  // ถ้าต้องการ pre-fill ให้ดึงจาก DB ก่อน
+  // ดึงของเดิมมา pre-fill — แต่ showModal ต้องยิงภายใน 3 วิ และ defer ไม่ได้
+  // ถ้า DB อืด ให้ปล่อยเป็น modal เปล่าดีกว่าปล่อยให้ token หมดอายุ (10062 Unknown interaction)
   const {getMember} = require('../db/members');
-  const existing = await getMember(interaction.guildId, interaction.user.id);
+  const existing = await Promise.race([
+    getMember(interaction.guildId, interaction.user.id).catch(() => null),
+    new Promise(resolve => setTimeout(() => resolve(null), 1500)),
+  ]);
   await interaction.showModal(buildRegisterModal(existing));
 }
 
