@@ -51,7 +51,9 @@ const GROUP_COLOR = {
 // หมึกบนพื้นพาสเทล — พาสเทลสว่าง ตัวอักษร/ไอคอนสีขาวจะจม ต้องใช้สีเข้ม
 const ON_PASTEL = '#2b2924'
 const DAYS_OPTIONS = [30, 60, 90, 180, 365]
-const PEOPLE_OPTIONS = [5, 10]          // คนต่อบทบาท — SQL ดึงมาสูงสุด 10 แล้วตัดฝั่ง client
+// คนต่อบทบาท — ไม่มี "ทั้งหมด" เพราะบทบาทใหญ่สุดมี 54 คน กางแล้วเป็นแท่งยาวดันวงบานทั้งวง
+// (วัด 2026-08-18: รวม ~271 คน เฉลี่ย 6.3/บทบาท แต่ตัวมากสุดพังผัง) · อยากดูครบใช้แผงขวา
+const PEOPLE_OPTIONS = [5, 10]
 const AVATAR_BG = ['#5865F2', '#57A55A', '#EAA83A', '#D8548A', '#DA4B48', '#7C6FE0', '#1F9AA0', '#E8804A']
 
 const HUB_R = [52, 88]        // โหนดองค์กร — โตตามจำนวนโหนดลูก แต่ใหญ่กว่ากลุ่มเสมอ (GROUP_R สูงสุด 44)
@@ -408,7 +410,7 @@ export default function OrgChartClient() {
   const [view, setView] = useState('chart')
   const [isDark, setIsDark] = useState(false)
   const [isFull, setIsFull] = useState(false)
-  const [railOpen, setRailOpen] = useState(false)   // ค่าเริ่มต้น: ปิด ให้กราฟได้พื้นที่เต็ม
+  const [railOpen, setRailOpen] = useState(true)    // เปิดไว้ตั้งแต่แรก — เป็นที่เดียวที่อ่านคะแนนรายคนได้ครบ
 
   const cardRef = useRef(null)
   const svgRef = useRef(null)
@@ -431,6 +433,7 @@ export default function OrgChartClient() {
 
   const load = useCallback(() => {
     setLoading(true); setError(null)
+    // API ส่งมา 10 คน/บทบาทเสมอ แล้วตัดเหลือ 5 ฝั่ง client — กดสลับไม่ต้องโหลดใหม่
     fetch(`/api/bot/orgchart?days=${days}`)
       .then(r => r.json().then(d => ({ ok: r.ok, d })))
       .then(({ ok, d }) => {
@@ -943,14 +946,41 @@ export default function OrgChartClient() {
       viewRef.current = { x: p.x - (p.x - v.x) * (nw / v.w), y: p.y - (p.y - v.y) * (nh / v.h), w: nw, h: nh }
       applyView()
     }
+    // นิ้วที่แตะอยู่บนพื้นหลัง — 2 นิ้ว = หนีบซูม (มือถือไม่มีสกรอลล์วีล)
+    const pts = new Map()
+    let pinch = null
     const onDown = e => {
       if (dragRef.current || !viewRef.current) return
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY })
+      if (pts.size === 2) {
+        const [a, b] = [...pts.values()]
+        pinch = { d: Math.hypot(a.x - b.x, a.y - b.y) || 1, v: { ...viewRef.current } }
+        panRef.current = null                 // เปลี่ยนจากลากเป็นหนีบ อย่าแพนต่อ
+        svg.classList.remove('is-panning')
+        return
+      }
       panRef.current = { cx: e.clientX, cy: e.clientY, v: { ...viewRef.current } }
       hideTip()
       svg.classList.add('is-panning')
       svg.setPointerCapture?.(e.pointerId)
     }
     const onMove = e => {
+      if (pts.has(e.pointerId)) pts.set(e.pointerId, { x: e.clientX, y: e.clientY })
+      if (pinch && pts.size >= 2) {
+        const [a, b] = [...pts.values()]
+        const d = Math.hypot(a.x - b.x, a.y - b.y) || 1
+        const rect = svg.getBoundingClientRect()
+        const v0 = pinch.v
+        // ถ่างนิ้วออก (d โต) = viewBox เล็กลง = ซูมเข้า
+        const w = Math.max(240, Math.min(24000, v0.w * (pinch.d / d)))
+        const h = w * (v0.h / v0.w)
+        // จุดใต้กึ่งกลางนิ้วต้องอยู่กับที่
+        const fx = ((a.x + b.x) / 2 - rect.left) / rect.width
+        const fy = ((a.y + b.y) / 2 - rect.top) / rect.height
+        viewRef.current = { x: v0.x + fx * v0.w - fx * w, y: v0.y + fy * v0.h - fy * h, w, h }
+        applyView()
+        return
+      }
       const pan = panRef.current
       if (!pan) return
       const rect = svg.getBoundingClientRect()
@@ -962,6 +992,8 @@ export default function OrgChartClient() {
       applyView()
     }
     const onUp = e => {
+      pts.delete(e.pointerId)
+      if (pts.size < 2) pinch = null
       if (!panRef.current) return
       panRef.current = null
       svg.classList.remove('is-panning')
@@ -1083,7 +1115,7 @@ export default function OrgChartClient() {
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <div className={`${CARD} flex items-center gap-2 px-3 py-2 flex-1 min-w-[190px] max-w-xs`}>
+        <div className={`${CARD} flex items-center gap-2 px-3 py-2 w-[9.5rem] sm:w-[11rem] shrink-0`}>
           <Search size={14} className="text-warm-400 dark:text-disc-muted shrink-0" />
           <input value={query} onChange={e => setQuery(e.target.value)} placeholder={t('searchPlaceholder')}
             className="w-full bg-transparent text-sm text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none" />
@@ -1148,21 +1180,22 @@ export default function OrgChartClient() {
                 isFull ? 'h-[calc(100vh-16px)]' : 'h-[calc(100vh-285px)] min-h-[440px]'}`}
               role="img" aria-label={t('title')} />
             {/* เครื่องมือลอยทับผัง ไม่กินความสูง — แถบใต้ผังเดิมกินไป ~66px ทุกจอ */}
-            <div className="pointer-events-none absolute inset-x-3 bottom-2 flex flex-wrap items-end justify-between gap-x-3 gap-y-1">
-              <p className="text-xs text-warm-500 dark:text-disc-muted">{t('hint')}</p>
-              <div className="pointer-events-auto flex items-center gap-2 shrink-0 rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg/85 backdrop-blur-sm px-2 py-1">
-                <span className="text-xs text-warm-400 dark:text-disc-muted tabular-nums">
+            <div className="pointer-events-none absolute inset-x-2 bottom-2 flex flex-wrap items-end justify-between gap-x-3 gap-y-1">
+              <p className="hidden md:block text-xs text-warm-500 dark:text-disc-muted">{t('hint')}</p>
+              <div className="pointer-events-auto ml-auto flex max-w-full items-center gap-2.5 sm:gap-2 rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg/85 backdrop-blur-sm px-2 py-1.5">
+                <span className="hidden sm:inline text-xs text-warm-400 dark:text-disc-muted tabular-nums">
                   {t('rolesShown', { shown: shownRoles, total: totalActiveRoles })}
                 </span>
                 <button type="button" onClick={toggleAllPeople} aria-pressed={allExpanded}
+                  title={allExpanded ? t('collapseAllPeople') : t('expandAllPeople')}
                   className={`flex items-center gap-1 text-xs font-semibold ${
                     allExpanded ? 'text-orange' : 'text-warm-500 dark:text-disc-muted hover:text-orange'}`}>
-                  {allExpanded ? <UsersRound size={12} /> : <User size={12} />}
-                  {allExpanded ? t('collapseAllPeople') : t('expandAllPeople')}
+                  {allExpanded ? <UsersRound size={13} /> : <User size={13} />}
+                  <span className="hidden sm:inline">{allExpanded ? t('collapseAllPeople') : t('expandAllPeople')}</span>
                 </button>
-                <button type="button" onClick={fitView}
+                <button type="button" onClick={fitView} title={t('fitView')}
                   className="flex items-center gap-1 text-xs font-medium text-warm-500 dark:text-disc-muted hover:text-orange">
-                  <Maximize2 size={12} /> {t('fitView')}
+                  <Maximize2 size={13} /> <span className="hidden sm:inline">{t('fitView')}</span>
                 </button>
                 {!isFull && (
                   <button type="button" onClick={() => setRailOpen(o => !o)}
@@ -1171,14 +1204,14 @@ export default function OrgChartClient() {
                     {railOpen ? t('hideRail') : t('showRail')}
                   </button>
                 )}
-                <button type="button" onClick={toggleFullscreen}
+                <button type="button" onClick={toggleFullscreen} title={isFull ? t('exitFullscreen') : t('fullscreen')}
                   className="flex items-center gap-1 text-xs font-semibold text-orange hover:opacity-80">
-                  {isFull ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
-                  {isFull ? t('exitFullscreen') : t('fullscreen')}
+                  {isFull ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
+                  <span className="hidden sm:inline">{isFull ? t('exitFullscreen') : t('fullscreen')}</span>
                 </button>
-                <button type="button" onClick={resetLayout}
+                <button type="button" onClick={resetLayout} title={t('resetLayout')}
                   className="flex items-center gap-1 text-xs font-medium text-warm-500 dark:text-disc-muted hover:text-orange">
-                  <RotateCcw size={12} /> {t('resetLayout')}
+                  <RotateCcw size={13} /> <span className="hidden sm:inline">{t('resetLayout')}</span>
                 </button>
               </div>
             </div>

@@ -1548,7 +1548,7 @@
       "tipClickCollapseAll": "คลิกเพื่อยุบทุกกลุ่ม",
       "expandAllPeople": "กางรายคนทั้งหมด",
       "collapseAllPeople": "ปิดรายคนทั้งหมด",
-      "peoplePerRole": "{n} คน/บทบาท",
+      "peoplePerRole": "แสดง {n}",
       "noGroupSelected": "ยังไม่ได้เลือกกลุ่มไหนเลย — กดชิปกลุ่มด้านบนเพื่อแสดงผัง",
       "noRoleMatch": "ไม่พบบทบาทที่ตรงกับคำค้น"
     }
