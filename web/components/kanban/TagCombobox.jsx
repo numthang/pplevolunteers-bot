@@ -341,22 +341,39 @@ export default function TagCombobox({
 
   return (
     <div ref={boxRef} className="relative">
-      <button
-        type="button"
+      {/*
+        ⚠️ เป็น div ไม่ใช่ button — ข้างในมีปุ่ม × ของแต่ละชิป (button ซ้อน button = HTML ผิด เบราว์เซอร์แก้โครงเอง)
+        ปุ่ม × อยู่บนชิปตรงนี้เลย ตาม screenshot ที่ user ส่งมา — **ไม่มีชุดชิปให้ลบซ้ำข้างล่างอีกชุด**
+      */}
+      <div
+        role={readOnly ? undefined : 'button'}
+        tabIndex={readOnly ? undefined : 0}
         onClick={openBox}
-        disabled={readOnly}
-        className="w-full min-h-11 px-2 -mx-2 py-1.5 flex flex-wrap items-center gap-1.5 text-base rounded-lg border border-transparent bg-transparent hover:bg-warm-50 dark:hover:bg-disc-hover text-left disabled:opacity-60 transition"
+        onKeyDown={(e) => { if (!readOnly && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openBox() } }}
+        className={`w-full min-h-11 px-2 -mx-2 py-1.5 flex flex-wrap items-center gap-1.5 text-base rounded-lg border border-transparent bg-transparent text-left transition ${
+          readOnly ? 'opacity-60' : 'hover:bg-warm-50 dark:hover:bg-disc-hover cursor-pointer'
+        }`}
       >
         {shownChips.length === 0 && <span className="text-warm-400 dark:text-disc-muted">{placeholder || t('modal.tagPlaceholder')}</span>}
         {shownChips.map((v) => {
           const tint = chipProps(v)
           return (
-            <span key={v.id} style={tint.style} className={`px-2.5 py-0.5 text-sm font-medium rounded-md ${tint.className}`}>
+            <span key={v.id} style={tint.style} className={`flex items-center gap-1 pl-2.5 ${readOnly ? 'pr-2.5' : 'pr-1'} py-0.5 text-sm font-medium rounded-md ${tint.className}`}>
               {v.name}
+              {!readOnly && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); toggleOption(v.id) }}
+                  aria-label={t('modal.optionUnselect')}
+                  className="p-0.5 rounded hover:bg-black/10 dark:hover:bg-white/10"
+                >
+                  <X size={12} />
+                </button>
+              )}
             </span>
           )
         })}
-      </button>
+      </div>
 
       {open && (
         <div ref={popRef} className="mt-1 w-full bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg shadow-lg p-2">
@@ -437,18 +454,6 @@ export default function TagCombobox({
             )}
           </div>
 
-          {shownChips.length > 0 && (
-            <div className="flex flex-wrap gap-1 pt-2 mt-1 border-t border-warm-200 dark:border-disc-border">
-              {shownChips.map((v) => (
-                <span key={v.id} className="flex items-center gap-1 px-2 py-0.5 text-xs rounded-md border border-warm-200 dark:border-disc-border text-warm-500 dark:text-disc-muted">
-                  {v.name}
-                  <button type="button" onClick={() => toggleOption(v.id)} aria-label={t('modal.optionUnselect')}>
-                    <X size={12} />
-                  </button>
-                </span>
-              ))}
-            </div>
-          )}
         </div>
       )}
     </div>

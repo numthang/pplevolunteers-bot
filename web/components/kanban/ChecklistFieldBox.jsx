@@ -21,6 +21,7 @@ import { Eye, EyeOff, GripVertical, ListChecks, Loader2, Plus, Trash2 } from 'lu
 export default function ChecklistFieldBox({ cardId, fieldId, items = [], readOnly, onItemsChanged, onError, t }) {
   const [newText, setNewText] = useState('')
   const [adding, setAdding] = useState(false)
+  const [addOpen, setAddOpen] = useState(false)   // ช่องเพิ่มรายการกางอยู่ไหม (ปกติซ่อน เหลือแค่ปุ่ม)
   const [pool, setPool] = useState([])            // คลังตัวเลือกของ field นี้ (โหลดครั้งเดียวตอน mount)
   const [busyId, setBusyId] = useState(null)
   const [hideDone, setHideDone] = useState(false)
@@ -173,44 +174,66 @@ export default function ChecklistFieldBox({ cardId, fieldId, items = [], readOnl
 
       {/* รายการแนะนำจากคลัง — กดหยิบได้เลยไม่ต้องพิมพ์ (หัวใจของก้อนนี้)
           โชว์เฉพาะตัวที่การ์ดใบนี้ยังไม่มี · กรองตามที่พิมพ์ · ไม่มีคลัง = ไม่โผล่อะไรเลย ช่องพิมพ์ทำงานปกติ */}
-      {!readOnly && suggestions.length > 0 && (
-        <div className="mt-1.5 flex flex-wrap gap-1.5">
-          {suggestions.map((o) => (
-            <button
-              key={o.id}
-              type="button"
-              onClick={() => addFromPool(o)}
-              disabled={adding}
-              className="flex items-center gap-1 px-2 py-1 text-xs rounded-md border border-warm-200 dark:border-disc-border text-warm-700 dark:text-disc-muted hover:bg-warm-50 dark:hover:bg-disc-hover disabled:opacity-50 transition"
-            >
-              <Plus size={12} />
-              {o.name}
-            </button>
-          ))}
-        </div>
+      {/*
+        ⭐ ปกติซ่อนช่องพิมพ์ไว้ โชว์แค่ปุ่ม "เพิ่มรายการ" (user สั่ง 2026-08-19)
+        กดแล้วค่อยกางช่อง + รายการแนะนำจากคลัง — เช็คลิสต์ยาวๆ จะได้ไม่มีช่องว่างค้างท้ายทุกอัน
+      */}
+      {!readOnly && !addOpen && (
+        <button
+          type="button"
+          onClick={() => setAddOpen(true)}
+          className="mt-1.5 flex items-center gap-1 text-sm text-warm-400 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text"
+        >
+          <Plus size={14} />
+          {t('modal.addItemPlaceholder')}
+        </button>
       )}
 
-      {!readOnly && (
-        <form onSubmit={addItem} className="mt-1.5 flex gap-2">
-          <input
-            type="text"
-            value={newText}
-            onChange={(e) => setNewText(e.target.value)}
-            placeholder={t('modal.addItemPlaceholder')}
-            maxLength={60}
-            className="flex-1 h-9 px-3 text-sm rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-teal"
-          />
-          <button
-            type="submit"
-            disabled={adding || !newText.trim()}
-            aria-label={t('modal.addItem')}
-            title={t('modal.addItem')}
-            className="flex items-center gap-1 px-3 rounded-lg bg-teal text-white text-sm font-medium hover:opacity-90 disabled:opacity-50 transition"
-          >
-            {adding ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
-          </button>
-        </form>
+      {!readOnly && addOpen && (
+        <>
+          {suggestions.length > 0 && (
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {suggestions.map((o) => (
+                <button
+                  key={o.id}
+                  type="button"
+                  onClick={() => addFromPool(o)}
+                  disabled={adding}
+                  className="flex items-center gap-1 px-2 py-1 text-xs rounded-md border border-warm-200 dark:border-disc-border text-warm-700 dark:text-disc-muted hover:bg-warm-50 dark:hover:bg-disc-hover disabled:opacity-50 transition"
+                >
+                  <Plus size={12} />
+                  {o.name}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <form onSubmit={addItem} className="mt-1.5 flex gap-2">
+            <input
+              autoFocus
+              type="text"
+              value={newText}
+              onChange={(e) => setNewText(e.target.value)}
+              // ปิดเมื่อกด ESC หรือคลิกออกโดยยังไม่พิมพ์อะไร — ไม่งั้นช่องค้างเปิดตลอด
+              onKeyDown={(e) => { if (e.key === 'Escape') { setNewText(''); setAddOpen(false) } }}
+              onBlur={() => { if (!newText.trim()) setAddOpen(false) }}
+              placeholder={t('modal.addItemPlaceholder')}
+              maxLength={60}
+              className="flex-1 h-9 px-3 text-sm rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-teal"
+            />
+            <button
+              type="submit"
+              disabled={adding || !newText.trim()}
+              aria-label={t('modal.addItem')}
+              title={t('modal.addItem')}
+              className="flex items-center gap-1 px-3 rounded-lg bg-teal text-white text-sm font-medium hover:opacity-90 disabled:opacity-50 transition"
+            >
+              {adding ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+            </button>
+          </form>
+        </>
       )}
+
     </div>
   )
 }

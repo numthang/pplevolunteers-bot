@@ -134,6 +134,11 @@ function ScalarInput({ field, value, readOnly, onCommit, emptyLabel }) {
   )
 }
 
+/**
+ * ฟอร์มเพิ่ม field ใหม่ — ใช้ layout เดียวกับแถวอื่น (FieldRow)
+ * **ช่องชื่ออยู่คอลัมน์ซ้ายเหมือนชื่อ field ตัวอื่น** · ชนิด+ปุ่มอยู่คอลัมน์ขวาที่เป็นฝั่งค่า
+ * (user สั่ง 2026-08-19: "ใช้ layout เดียวกันเหมือนเพื่อน")
+ */
 function NewFieldForm({ onCreate, creating, t }) {
   const [open, setOpen] = useState(false)
   const [label, setLabel] = useState('')
@@ -144,7 +149,7 @@ function NewFieldForm({ onCreate, creating, t }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex items-center gap-1.5 text-sm text-warm-400 dark:text-disc-muted hover:text-teal"
+        className="flex items-center gap-1.5 text-sm text-warm-400 dark:text-disc-muted hover:text-teal mt-1"
       >
         <Plus size={14} /> {t('modal.addField')}
       </button>
@@ -157,33 +162,42 @@ function NewFieldForm({ onCreate, creating, t }) {
     if (ok) { setLabel(''); setType('text'); setOpen(false) }
   }
 
+  const inputBase = 'h-9 px-2 text-sm rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text focus:outline-none focus:ring-2 focus:ring-teal'
+
   return (
-    <form onSubmit={submit} className="flex flex-wrap items-center gap-2">
-      <input
-        autoFocus
-        value={label}
-        onChange={(e) => setLabel(e.target.value)}
-        placeholder={t('modal.newFieldPlaceholder')}
-        maxLength={100}
-        required
-        className="flex-1 min-w-[8rem] h-9 px-2 text-sm rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-teal"
-      />
-      <div className="relative">
-        <select
-          value={type}
-          onChange={(e) => setType(e.target.value)}
-          className="h-9 pl-2 pr-7 text-sm rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text focus:outline-none focus:ring-2 focus:ring-teal cursor-pointer appearance-none"
-        >
-          {FIELD_TYPES.map((ty) => <option key={ty} value={ty}>{t(`fieldsPage.type_${ty}`)}</option>)}
-        </select>
-        <ChevronDown size={14} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-warm-400 dark:text-disc-muted" />
-      </div>
-      <button type="submit" disabled={creating} className="flex items-center gap-1 h-9 px-3 rounded-lg bg-teal text-white text-sm font-medium hover:opacity-90 disabled:opacity-50">
-        {creating && <Loader2 size={14} className="animate-spin" />} {t('fieldsPage.createButton')}
-      </button>
-      <button type="button" onClick={() => setOpen(false)} className="h-9 px-3 rounded-lg border border-warm-200 dark:border-disc-border text-sm text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover">
-        {t('fieldsPage.cancelButton')}
-      </button>
+    <form onSubmit={submit}>
+      <FieldRow
+        icon={Plus}
+        label={
+          <input
+            autoFocus
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Escape') setOpen(false) }}
+            placeholder={t('modal.newFieldPlaceholder')}
+            maxLength={100}
+            required
+            className={`min-w-0 flex-1 ${inputBase} placeholder-warm-400 dark:placeholder-disc-muted`}
+          />
+        }
+      >
+        <div className="relative">
+          <select
+            value={type}
+            onChange={(e) => setType(e.target.value)}
+            className={`${inputBase} pr-7 cursor-pointer appearance-none`}
+          >
+            {FIELD_TYPES.map((ty) => <option key={ty} value={ty}>{t(`fieldsPage.type_${ty}`)}</option>)}
+          </select>
+          <ChevronDown size={14} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-warm-400 dark:text-disc-muted" />
+        </div>
+        <button type="submit" disabled={creating} className="flex items-center gap-1 h-9 px-3 rounded-lg bg-teal text-white text-sm font-medium hover:opacity-90 disabled:opacity-50 shrink-0">
+          {creating && <Loader2 size={14} className="animate-spin" />} {t('fieldsPage.createButton')}
+        </button>
+        <button type="button" onClick={() => setOpen(false)} className="h-9 px-3 rounded-lg border border-warm-200 dark:border-disc-border text-sm text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover shrink-0">
+          {t('fieldsPage.cancelButton')}
+        </button>
+      </FieldRow>
     </form>
   )
 }
