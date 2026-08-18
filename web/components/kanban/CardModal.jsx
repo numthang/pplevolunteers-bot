@@ -164,6 +164,53 @@ export default function CardModal({ cardId, onClose, onChanged }) {
     onClose()
   }
 
+  /** ค้นคนใน org ให้ combobox ของเจ้าภาพ/คนช่วย — ⚠️ ค้นเท่านั้น ห้าม dump (org มี 7,376 คน) */
+  const searchPeople = useCallback(async (q) => {
+    if (!q || q.trim().length < 2) return []
+    const res = await fetch(`/api/kanban/people?q=${encodeURIComponent(q.trim())}`)
+    if (!res.ok) return []
+    const json = await res.json()
+    return (json.people || []).map((p) => ({
+      id: String(p.userId),
+      name: p.orgName ? `${p.name} (${p.orgName})` : p.name,
+    }))
+  }, [])
+
+  /**
+   * คนช่วย — combobox ส่ง "ชุดใหม่ทั้งชุด" มา แต่ API มีแค่เพิ่ม/ถอดทีละคน
+   * → เทียบกับชุดเดิมแล้วยิงเฉพาะส่วนต่าง (ยิงทั้งชุดทุกครั้ง = ถอดแล้วเพิ่มคนเดิมซ้ำ)
+   */
+  async function commitHelpers(ids) {
+    setActionError('')
+    const before = new Set((card.helpers || []).map((h) => String(h.user_id)))
+    const after = new Set(ids.map(String))
+    const added = [...after].filter((id) => !before.has(id))
+    const removed = [...before].filter((id) => !after.has(id))
+
+    let latest = null
+    try {
+      for (const id of added) {
+        const res = await fetch(`/api/kanban/cards/${cardId}/helpers`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: Number(id) }),
+        })
+        const json = await res.json().catch(() => ({}))
+        if (!res.ok) { setActionError(json.error || t('saveFailed')); return }
+        latest = json.card
+      }
+      for (const id of removed) {
+        const res = await fetch(`/api/kanban/cards/${cardId}/helpers?userId=${id}`, { method: 'DELETE' })
+        const json = await res.json().catch(() => ({}))
+        if (!res.ok) { setActionError(json.error || t('saveFailed')); return }
+        latest = json.card
+      }
+      if (latest) { setCard(latest); onChanged?.() }
+    } catch {
+      setActionError(t('saveFailed'))
+    }
+  }
+
   async function patch(body) {
     setActionError('')
     try {
