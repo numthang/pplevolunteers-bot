@@ -117,7 +117,7 @@ function NewFieldForm({ onCreate, creating, t }) {
   )
 }
 
-export default function CardFieldsBox({ cardId, fields = [], readOnly, onCardChanged, onFieldValueChanged, onReload, onError, t }) {
+export default function CardFieldsBox({ cardId, fields = [], readOnly, onCardChanged, onFieldValueChanged, onFieldAdded, onError, t }) {
   const [busyId, setBusyId] = useState(null)
   const [creating, setCreating] = useState(false)
 
@@ -142,6 +142,14 @@ export default function CardFieldsBox({ cardId, fields = [], readOnly, onCardCha
 
   async function createField({ label, type }) {
     onError?.('')
+
+    // กันสร้างช่องชื่อซ้ำโดยไม่ตั้งใจ (กดพลาด/เน็ตช้ากดซ้ำ) — ช่องลบไม่ได้ ซ่อนได้อย่างเดียว
+    // เลยต้องกันตั้งแต่ก่อนสร้าง ไม่ใช่ไปตามลบทีหลัง
+    if (fields.some((f) => f.label.trim().toLowerCase() === label.trim().toLowerCase())) {
+      onError?.(t('modal.fieldDuplicate', { name: label.trim() }))
+      return false
+    }
+
     setCreating(true)
     try {
       const res = await fetch('/api/kanban/fields', {
@@ -150,8 +158,18 @@ export default function CardFieldsBox({ cardId, fields = [], readOnly, onCardCha
         body: JSON.stringify({ label, type }),
       })
       const json = await res.json().catch(() => ({}))
-      if (!res.ok) { onError?.(json.error || t('fieldsPage.createFailed')); return false }
-      await onReload?.()
+      if (!res.ok || !json.field) { onError?.(json.error || t('fieldsPage.createFailed')); return false }
+
+      // ⚠️ ห้ามเรียก load() ของ CardModal ที่นี่ — มันเขียนทับ title/detail/กำหนดส่ง ที่ยังพิมพ์ค้างไม่ได้เซฟ = งานหาย
+      //    ต่อ field ใหม่เข้า state ตรงๆ พอ (ของใหม่ยังไม่มีค่าอยู่แล้ว) shape ต้องตรงกับที่ AGG ใน cards.js คืนมา
+      const f = json.field
+      onFieldAdded?.({
+        field_id: f.id,
+        key: f.key,
+        label: f.label,
+        type: f.type,
+        value: ['checklist', 'select', 'multi_select'].includes(f.type) ? [] : null,
+      })
       return true
     } catch {
       onError?.(t('fieldsPage.createFailed'))
@@ -195,7 +213,8 @@ export default function CardFieldsBox({ cardId, fields = [], readOnly, onCardCha
                   type={f.type}
                   value={f.value || []}
                   readOnly={readOnly}
-                  onCommit={(ids) => commit(f.field_id, ids)}
+                  onCommit={(ids) => commit(f.field_id, ids)}   // คืน promise — TagCombobox ใช้นับ inflight กันค่าหาย
+                  onError={onError}
                   t={t}
                 />
               </div>

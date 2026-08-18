@@ -412,7 +412,10 @@ export default function CardModal({ cardId, onClose, onChanged }) {
                   // แจ้งหน้ารายการด้วย — ไม่งั้นป้าย checklist บนหน้ากระดาน (KanbanHome) ค้างเลขเดิมจนกว่าจะปิดเปิดการ์ดใหม่
                   onChanged?.()
                 }}
-                onReload={load}
+                onFieldAdded={(field) => {
+                  // ต่อเข้า state ตรงๆ — ห้ามเรียก load() เพราะจะเขียนทับช่องที่ยังพิมพ์ค้างไม่ได้เซฟ
+                  setCard((prev) => ({ ...prev, fields: [...(prev.fields || []), field] }))
+                }}
                 t={t}
               />
 
