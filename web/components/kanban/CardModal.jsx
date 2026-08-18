@@ -14,7 +14,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { X, Loader2, Check, AlertTriangle, UserPlus, Archive, ArchiveRestore, ExternalLink } from 'lucide-react'
+import { X, Loader2, Check, AlertTriangle, UserPlus, Archive, ArchiveRestore, ExternalLink, Copy } from 'lucide-react'
 import { formatRef, STATUS_TYPES } from '@/lib/kanbanAccess.js'
 import LabelPicker from './LabelPicker.jsx'
 import OwnerPicker from './OwnerPicker.jsx'
@@ -22,11 +22,12 @@ import CardFieldsBox from './CardFieldsBox.jsx'
 
 const AUTOSAVE_MS = 800
 
-export default function CardModal({ cardId, onClose, onChanged }) {
+export default function CardModal({ cardId, onClose, onChanged, onOpenCard }) {
   const t = useTranslations('kanban')
 
   const [card, setCard] = useState(null)
   const [can, setCan] = useState({ edit: false, archive: false, restore: false, claim: false, purge: false })
+  const [duplicating, setDuplicating] = useState(false)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
 
@@ -157,6 +158,30 @@ export default function CardModal({ cardId, onClose, onChanged }) {
       if (!window.confirm(t('modal.confirmCloseUnsaved'))) return
     }
     onClose()
+  }
+
+  /**
+   * ทำสำเนาการ์ด — ใช้แทน "ชุดตั้งต้น" ของเช็คลิสต์ (user เคาะ: duplicate การ์ดกิจกรรมคล้ายกันมาแทน)
+   * ลอกมาหมด ยกเว้นเลข ref · เครื่องหมายติ๊ก · ธงติดปัญหา → เปิดการ์ดใบใหม่ทันทีที่เสร็จ
+   */
+  async function duplicate() {
+    setActionError('')
+    if (!window.confirm(t('actions.duplicateConfirm', { title: card?.title || '' }))) return
+    setDuplicating(true)
+    try {
+      const res = await fetch(`/api/kanban/cards/${cardId}/duplicate`, { method: 'POST' })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || !json.card) { setActionError(json.error || t('actions.duplicateFailed')); return }
+      onChanged?.()
+      // ⚠️ ห้ามเรียก onOpenCard แล้วต่อด้วย onClose — onClose ตั้ง openCardId เป็น null
+      //    จะปิดการ์ดที่เพิ่งเปิดทิ้งทันที (กดแล้วเหมือนไม่มีอะไรเกิดขึ้น)
+      if (onOpenCard) onOpenCard(json.card.id)   // สลับไปใบใหม่ในกล่องเดิม
+      else onClose()                             // ไม่มีตัวรับ → ปิดเฉยๆ ใบใหม่โผล่ในรายการอยู่ดี
+    } catch {
+      setActionError(t('actions.duplicateFailed'))
+    } finally {
+      setDuplicating(false)
+    }
   }
 
   async function patch(body) {
@@ -425,10 +450,21 @@ export default function CardModal({ cardId, onClose, onChanged }) {
 
               {actionError && <p className="text-base text-red-500 dark:text-red-400">{actionError}</p>}
 
-              {/* เก็บเข้ากรุ = archive (กู้คืนได้จาก "แสดง: กรุ") ไม่ใช่ลบถาวร — โมดูลนี้ไม่มี hard delete
-                  การ์ดที่อยู่ในกรุอยู่แล้ว can.archive เป็น false และได้ can.restore แทน */}
-              {(can.archive || can.restore) && (
-                <div className="pt-2 border-t border-warm-200 dark:border-disc-border flex justify-end">
+              {/* เก็บเข้ากรุ = archive (กู้คืนได้จาก "แสดง: กรุ") · ลบถาวรอยู่ในโหมดกรุเท่านั้น ไม่ใช่ที่นี่
+                  การ์ดที่อยู่ในกรุอยู่แล้ว can.archive เป็น false และได้ can.restore แทน
+                  "ทำสำเนา" อยู่แถวเดียวกันแต่แยกฝั่ง — เห็นการ์ดได้ก็ก๊อปได้ ไม่ต้องเป็นเจ้าภาพ */}
+              {/* ปุ่มนี้โผล่เสมอเมื่อโหลดการ์ดได้ — API ใช้ด่าน canViewCard (เห็นได้ = ก๊อปได้)
+                  ไม่ผูกกับ can.edit เพราะสำเนาเป็นการ์ดใบใหม่ของคนกด ไม่ได้แตะต้นฉบับ */}
+              {(
+                <div className="pt-2 border-t border-warm-200 dark:border-disc-border flex flex-wrap items-center justify-between gap-2">
+                  <button
+                    onClick={duplicate}
+                    disabled={duplicating}
+                    className="flex items-center gap-1 px-4 py-2 text-base rounded-lg text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover font-medium disabled:opacity-50 transition"
+                  >
+                    {duplicating ? <Loader2 size={16} className="animate-spin" /> : <Copy size={16} />}
+                    {duplicating ? t('actions.duplicating') : t('actions.duplicate')}
+                  </button>
                   {can.restore ? (
                     <button onClick={restore} className="flex items-center gap-1 px-4 py-2 text-base rounded-lg text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover font-medium transition">
                       <ArchiveRestore size={16} /> {t('actions.restore')}

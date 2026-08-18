@@ -675,7 +675,13 @@ export default function KanbanHome() {
       </p>
 
       {openCardId && (
-        <CardModal cardId={openCardId} onClose={() => setOpenCardId(null)} onChanged={load} />
+        <CardModal
+          cardId={openCardId}
+          onClose={() => setOpenCardId(null)}
+          onChanged={load}
+          // ทำสำเนาเสร็จ → เปิดใบใหม่ต่อทันที (CardModal เรียก onOpenCard ก่อน onClose)
+          onOpenCard={(id) => setOpenCardId(id)}
+        />
       )}
     </div>
   )

@@ -179,6 +179,92 @@ export async function createCard(orgId, { title, detail = null, ownerUserId = nu
   }
 }
 
+/**
+ * ทำสำเนาการ์ด — **ลอกมาหมดทุกอย่าง** ยกเว้นของที่เป็น "ประวัติ" ไม่ใช่ "เนื้องาน"
+ *
+ * ลอก: ชื่อ · รายละเอียด · ป้าย · ค่า custom field ทุกช่อง · รายการเช็คลิสต์ · เจ้าภาพ · คนช่วย
+ *      · วันเริ่ม/กำหนดส่ง · สถานะ · ความสำคัญ
+ * ไม่ลอก 3 อย่าง:
+ *   1. `ref_no`  — ตัวระบุการ์ด ซ้ำไม่ได้ ต้องได้เลขใหม่
+ *   2. `done` ในเช็คลิสต์ — ก๊อปงานที่เสร็จแล้วมาแล้วได้ "เตรียมของครบ 8/8" ทั้งที่ยังไม่เตรียม
+ *      → **ลอกตัวรายการมาครบ แต่ติ๊กออกให้หมด**
+ *   3. `blocked` + `blocked_reason` — อาการติดขัดของงานเก่า ไม่ใช่ของงานใหม่
+ *
+ * ⚠️ **ห้ามเรียก createCard() ซ้ำ** — มันใช้ pool.query ตรงๆ (คนละ connection กับ transaction นี้)
+ *    และ retry loop ของมันใช้ในทรานแซกชันไม่ได้: 23505 ทำให้ทั้ง transaction abort
+ *    รอบถัดไปยิงอะไรก็ `current transaction is aborted` → ที่นี่ใช้ **SAVEPOINT** ครอบ retry แทน
+ *
+ * @returns {Promise<object|null>} การ์ดใบใหม่ · null = ไม่พบต้นฉบับ
+ */
+export async function duplicateCard(orgId, sourceId, createdBy) {
+  const client = await pool.connect()
+  try {
+    await client.query('BEGIN')
+
+    const { rows: src } = await client.query(
+      `SELECT * FROM kanban_cards WHERE org_id = $1 AND id = $2`, [orgId, sourceId]
+    )
+    if (!src[0]) { await client.query('ROLLBACK'); return null }
+    const s = src[0]
+
+    // กฎเดียวกับ createCard — มีเจ้าภาพแล้วอยู่ backlog ไม่ได้ (bug-406)
+    // DB CHECK อนุญาต (ผ่านเพราะมี owner) แต่โค้ดถือเป็นสภาพขัดกันเอง อย่าให้มี 2 มาตรฐาน
+    let status = s.status_type
+    if (s.owner_user_id && status === 'backlog') status = 'doing'
+
+    let newId = null
+    for (let attempt = 0; attempt < 5; attempt++) {
+      // ⚠️ SAVEPOINT ต่อรอบ — ไม่มีตัวนี้ 23505 จะพา transaction ทั้งก้อนตายตั้งแต่รอบแรก
+      await client.query('SAVEPOINT ref_try')
+      try {
+        const { rows } = await client.query(
+          `INSERT INTO kanban_cards
+             (org_id, ref_no, title, detail, status_type, owner_user_id, start_at, due_at, priority, created_by)
+           VALUES ($1,
+                   (SELECT COALESCE(MAX(ref_no), 0) + 1 FROM kanban_cards WHERE org_id = $1),
+                   $2, $3, $4, $5, $6, $7, $8, $9)
+           RETURNING id`,
+          [orgId, s.title, s.detail, status, s.owner_user_id, s.start_at, s.due_at, s.priority, createdBy]
+        )
+        newId = rows[0].id
+        await client.query('RELEASE SAVEPOINT ref_try')
+        break
+      } catch (e) {
+        await client.query('ROLLBACK TO SAVEPOINT ref_try')
+        if (e.code !== '23505' || attempt === 4) throw e   // ชนกันเอง → ลองใหม่ · อย่างอื่น → ปล่อยขึ้นไป
+      }
+    }
+
+    // ── ลูกทั้ง 4 ตาราง: INSERT…SELECT ในทรานแซกชันเดียวกัน ──
+    await client.query(
+      `INSERT INTO kanban_card_labels (card_id, label_id)
+       SELECT $2, label_id FROM kanban_card_labels WHERE card_id = $1`, [s.id, newId])
+
+    await client.query(
+      `INSERT INTO kanban_card_helpers (card_id, user_id)
+       SELECT $2, user_id FROM kanban_card_helpers WHERE card_id = $1`, [s.id, newId])
+
+    await client.query(
+      `INSERT INTO kanban_card_field_values (card_id, field_id, value_text, value_num, value_date, value_bool, value_options)
+       SELECT $2, field_id, value_text, value_num, value_date, value_bool, value_options
+         FROM kanban_card_field_values WHERE card_id = $1`, [s.id, newId])
+
+    // done = FALSE เสมอ — ลอกรายการมา แต่ยังไม่ได้เตรียมของ
+    await client.query(
+      `INSERT INTO kanban_card_checklist (card_id, field_id, option_id, text, done, sort_order)
+       SELECT $2, field_id, option_id, text, FALSE, sort_order
+         FROM kanban_card_checklist WHERE card_id = $1`, [s.id, newId])
+
+    await client.query('COMMIT')
+    return await getCard(orgId, newId)
+  } catch (e) {
+    await client.query('ROLLBACK')
+    throw e
+  } finally {
+    client.release()
+  }
+}
+
 const EDITABLE = {
   title:          'title',
   detail:         'detail',
