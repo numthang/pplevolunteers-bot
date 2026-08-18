@@ -365,6 +365,30 @@ function relax(nodes) {
   }
 }
 
+
+// คืนตำแหน่งที่ผู้ใช้ลากไว้ลงบนผังที่เพิ่งคำนวณใหม่
+// ⚠️ โหนดที่ "เพิ่งโผล่" (คนที่เพิ่งกาง / บทบาทในกลุ่มที่เพิ่งกางกลับ) จะไม่มีในของที่เก็บไว้
+// ถ้าปล่อยไว้เฉยๆ มันจะไปนั่งตำแหน่งที่คำนวณจากพ่อ "ก่อนถูกลาก" = ลูกหลุดจากพ่อ เส้นลากข้ามจอ
+// จึงต้องส่งต่อระยะที่พ่อถูกลาก (delta) ลงไปให้ลูกที่ยังไม่มีตำแหน่งของตัวเอง
+function applySaved(nodes, edges, pos) {
+  const delta = new Map()
+  for (const n of nodes) {
+    const p = pos[n.id]
+    if (!p) continue
+    delta.set(n, { dx: p.x - n.x, dy: p.y - n.y })
+    n.x = p.x; n.y = p.y
+  }
+  // edges เรียงจากบนลงล่างอยู่แล้ว (hub → กลุ่ม → บทบาท → คน) วนรอบเดียวพอ
+  for (const e of edges) {
+    if (delta.has(e.b)) continue                 // ลูกมีตำแหน่งของตัวเองอยู่แล้ว
+    const d = delta.get(e.a)
+    if (!d) continue
+    e.b.x += d.dx; e.b.y += d.dy
+    if (e.b.homeX !== undefined) { e.b.homeX += d.dx; e.b.homeY += d.dy }
+    delta.set(e.b, d)                            // ส่งต่อให้หลานด้วย
+  }
+}
+
 export default function OrgChartClient() {
   const t = useTranslations('bot.orgchart')
 
@@ -489,16 +513,21 @@ export default function OrgChartClient() {
   }
 
   useEffect(() => {
-    if (!visibleGroups.length) { nodesRef.current = []; edgesRef.current = []; return }
+    if (!visibleGroups.length) {
+      // ปิดชิปหมดทุกกลุ่ม = ไม่มีอะไรให้แสดง — ต้องล้างภาพที่วาดไว้ด้วย
+      // (เดิมล้างแต่ข้อมูล ผังเก่าเลยค้างบนจอทั้งที่ตัวนับบอกว่า 0 บทบาท)
+      nodesRef.current = []; edgesRef.current = []
+      if (svgRef.current) svgRef.current.innerHTML = ''
+      return
+    }
     const { nodes, edges } = buildLayout(visibleGroups, effExpanded, collapsedGroups, t, canvasAspect())
     if (storageKey) {
       try {
         const saved = JSON.parse(localStorage.getItem(storageKey) || '{}')
-        // ⚠️ ใช้ตำแหน่งที่ลากไว้ได้เฉพาะเมื่อ "โครงผังเดิมเป๊ะ" เท่านั้น
-        // ถ้าเอาของผังเก่ามาปนผังใหม่ โหนดลูกจะไปนั่งที่เดิมของผังคนละแบบ = เส้นลากยาวข้ามจอ
-        if (saved.key === layoutKey && saved.pos) {
-          nodes.forEach(n => { if (saved.pos[n.id]) { n.x = saved.pos[n.id].x; n.y = saved.pos[n.id].y } })
-        }
+        // ผูกกับ filterKey ไม่ใช่ layoutKey — กาง/ยุบไม่ใช่ "ผังคนละอัน" อีกแล้ว
+        // (ตำแหน่งกลุ่ม/บทบาทไม่ขึ้นกับสิ่งที่กางอยู่) ของที่ลากไว้จึงต้องอยู่ยงข้ามการกด
+        // เปลี่ยนตัวกรอง (ช่วงวัน/คำค้น/ชิป) ยังทิ้งเหมือนเดิม เพราะชุดโหนดคนละชุดจริงๆ
+        if (saved.key === filterKey && saved.pos) applySaved(nodes, edges, saved.pos)
       } catch { /* ค่าที่เก็บไว้เสีย → ใช้ผังที่คำนวณใหม่ */ }
     }
     nodesRef.current = nodes
@@ -829,10 +858,15 @@ export default function OrgChartClient() {
 
   function savePositions() {
     if (!storageKey) return
-    // เก็บคู่กับ layoutKey เสมอ — ของผังเก่าใช้กับผังใหม่ไม่ได้ ต้องทิ้งไปทั้งชุด
-    const pos = {}
+    // เก็บคู่กับ filterKey · merge ของเดิมไว้ ไม่เขียนทับทั้งก้อน
+    // (โหนดที่ยุบอยู่ตอนนี้ไม่มีใน nodesRef — ถ้าเขียนทับ ตำแหน่งที่เคยลากไว้จะหายตอนกางกลับ)
+    let pos = {}
+    try {
+      const prev = JSON.parse(localStorage.getItem(storageKey) || '{}')
+      if (prev.key === filterKey && prev.pos) pos = prev.pos
+    } catch { /* ของเก่าเสีย → เริ่มใหม่ */ }
     for (const n of nodesRef.current) pos[n.id] = { x: Math.round(n.x), y: Math.round(n.y) }
-    try { localStorage.setItem(storageKey, JSON.stringify({ key: layoutKey, pos })) } catch { /* โควตาเต็ม — ไม่ critical */ }
+    try { localStorage.setItem(storageKey, JSON.stringify({ key: filterKey, pos })) } catch { /* โควตาเต็ม — ไม่ critical */ }
   }
 
   function resetLayout() {
@@ -1102,6 +1136,13 @@ export default function OrgChartClient() {
         railOpen && !isFull ? 'lg:grid-cols-[minmax(0,1.6fr)_minmax(280px,340px)]' : 'grid-cols-1'}`}>
         {view === 'chart' ? (
           <div ref={cardRef} className={`${CARD} relative p-2 ${isFull ? 'rounded-none border-0' : ''}`}>
+            {!visibleGroups.length && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none px-6">
+                <p className="text-sm text-warm-500 dark:text-disc-muted text-center max-w-[32ch]">
+                  {query.trim() ? t('noRoleMatch') : t('noGroupSelected')}
+                </p>
+              </div>
+            )}
             <svg ref={svgRef}
               className={`oc-canvas w-full text-warm-900 dark:text-disc-text ${
                 isFull ? 'h-[calc(100vh-16px)]' : 'h-[calc(100vh-285px)] min-h-[440px]'}`}
