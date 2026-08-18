@@ -11,13 +11,74 @@
  *
  * เขียนค่าทันทีตอนออกจากช่อง/เปลี่ยนค่า (เหมือนธงติดปัญหา/ป้าย) — ไม่ผ่าน lockToken
  * เพราะ endpoint ไม่แตะ kanban_cards เลย (ไม่ว่าจะเป็น field value ทั่วไปหรือเช็คลิสต์)
+ *
+ * ⭐ เส้นแบ่งสิทธิ์ (เคาะ 2026-08-18 · ลอก Notion) — **ย้อนได้ = ทุกคน · ย้อนไม่ได้ = admin**
+ *   เปลี่ยนชื่อ · ซ่อน · เอากลับ · สร้าง  → ทุกคนใน org (Notion ไม่มีสิทธิ์ราย property เลย)
+ *   ลบถาวร                              → admin เท่านั้น และต้องซ่อนไว้ก่อน (2 จังหวะ)
+ *   ⛔ ห้ามเอา gate ไปคุมการเปลี่ยนชื่อ/ซ่อน — user ทักแล้วว่า "จำกัดแล้วใช้ยากอีก"
+ *
+ * ⛔ เมนูจัดการ field ต้องเป็น **inline expand** ห้ามเป็น popover ลอย
+ *   (กับดักข้อ 1 ใน TagCombobox.jsx — `absolute left-full` งอกนอกจอจนปุ่มลบกดไม่ได้ทั้ง desktop และมือถือ)
  */
 
-import { useEffect, useState } from 'react'
-import { ChevronDown, Loader2, Plus } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { ChevronDown, Eye, Loader2, MoreHorizontal, Plus, Trash2 } from 'lucide-react'
 import { FIELD_TYPES } from '@/lib/kanbanFieldValue.js'
 import TagCombobox from './TagCombobox.jsx'
 import ChecklistFieldBox from './ChecklistFieldBox.jsx'
+
+/**
+ * แถวจัดการ field — กางในแถวเดิม ไม่ลอยออกนอกกล่อง (กับดักข้อ 1 ของ TagCombobox)
+ * ลอกทรงมาจาก OptionEditor ใน TagCombobox.jsx ให้หน้าตาเป็นชุดเดียวกัน
+ */
+function FieldEditor({ field, t, canPurge, onRename, onHide, busy }) {
+  const [name, setName] = useState(field.label)
+  const ref = useRef(null)
+
+  useEffect(() => { setName(field.label) }, [field.label])
+  useEffect(() => { ref.current?.scrollIntoView({ block: 'nearest' }) }, [])
+
+  // ⚠️ ต้องรอผลจริงแล้วเด้งกลับถ้าไม่ผ่าน — ไม่งั้นช่องค้างโชว์ชื่อที่ DB ไม่เคยรับ (UI โกหก)
+  const commitName = async () => {
+    const clean = name.trim()
+    if (!clean) { setName(field.label); return }
+    if (clean === field.label) return
+    const ok = await onRename(clean)
+    if (!ok) setName(field.label)
+  }
+
+  return (
+    <div ref={ref} className="mt-1 p-2 rounded-lg border border-warm-200 dark:border-disc-border flex flex-col gap-2">
+      <div>
+        <p className="text-xs text-warm-400 dark:text-disc-muted mb-1">{t('modal.fieldRename')}</p>
+        <input
+          autoFocus
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onBlur={commitName}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') e.currentTarget.blur()
+            if (e.key === 'Escape') { setName(field.label); e.currentTarget.blur() }
+          }}
+          maxLength={100}
+          className="w-full h-9 px-2 text-sm rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text focus:outline-none focus:ring-2 focus:ring-teal"
+        />
+      </div>
+      <button
+        type="button"
+        onClick={onHide}
+        className="flex items-center gap-1.5 w-fit text-sm text-warm-500 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text font-medium"
+      >
+        {busy ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+        {t('modal.fieldHide')}
+      </button>
+      {/* ลบถาวรอยู่ใต้หัวข้อ "ซ่อนอยู่" เท่านั้น — ที่นี่บอกแค่ว่าต้องซ่อนก่อน ไม่ให้ทางลัดกดพลาด */}
+      {canPurge && (
+        <p className="text-xs text-warm-400 dark:text-disc-muted">{t('modal.fieldHide')} → {t('modal.fieldPurge')}</p>
+      )}
+    </div>
+  )
+}
 
 function ScalarInput({ field, value, readOnly, onCommit }) {
   const [local, setLocal] = useState(value ?? '')
@@ -117,9 +178,99 @@ function NewFieldForm({ onCreate, creating, t }) {
   )
 }
 
-export default function CardFieldsBox({ cardId, fields = [], readOnly, onCardChanged, onFieldValueChanged, onFieldAdded, onError, t }) {
+export default function CardFieldsBox({ cardId, fields = [], readOnly, canPurge = false, onCardChanged, onFieldValueChanged, onFieldAdded, onFieldsChanged, onError, t }) {
   const [busyId, setBusyId] = useState(null)
   const [creating, setCreating] = useState(false)
+  const [menuFor, setMenuFor] = useState(null)       // field_id ที่กางเมนูจัดการอยู่
+  const [hidden, setHidden] = useState([])           // field ที่ซ่อนไว้ (โหลดแยก — card AGG ไม่คืนมาให้)
+  const [hiddenOpen, setHiddenOpen] = useState(false)
+
+  const loadHidden = useCallback(async () => {
+    try {
+      const res = await fetch('/api/kanban/fields?archived=1')
+      if (!res.ok) return
+      const json = await res.json()
+      setHidden(json.fields || [])
+    } catch { /* โหลดไม่ได้ = ไม่ต้องโชว์หัวข้อ ไม่ใช่เรื่องคอขาดบาดตาย */ }
+  }, [])
+
+  useEffect(() => { if (!readOnly) loadHidden() }, [readOnly, loadHidden])
+
+  /** เปลี่ยนชื่อ field — ทุกคนทำได้ (ย้อนได้) @returns {Promise<boolean>} */
+  async function renameField(fieldId, label) {
+    onError?.('')
+    setBusyId(fieldId)
+    try {
+      const res = await fetch(`/api/kanban/fields/${fieldId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ label }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) { onError?.(json.error || t('saveFailed')); return false }
+      onFieldsChanged?.()
+      return true
+    } catch {
+      onError?.(t('saveFailed'))
+      return false
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  /** ซ่อน/เอากลับ — ย้อนได้ทั้งคู่ จึงไม่มี gate ยศ · ค่าที่กรอกไว้ไม่เคยถูกแตะ */
+  async function setFieldArchived(fieldId, archived, name) {
+    onError?.('')
+    if (archived && !window.confirm(t('modal.fieldHideConfirm', { name }))) return
+    setBusyId(fieldId)
+    try {
+      const res = await fetch(`/api/kanban/fields/${fieldId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ archived }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) { onError?.(json.error || t('saveFailed')); return }
+      setMenuFor(null)
+      await loadHidden()
+      onFieldsChanged?.()
+    } catch {
+      onError?.(t('saveFailed'))
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  /**
+   * ลบถาวร — admin เท่านั้น และ field ต้องซ่อนอยู่แล้ว (บังคับ 2 จังหวะ)
+   * ⚠️ ต้องนับความเสียหายจริงมาโชว์ก่อนถาม — ตัวเลขคือกลไกกันพลาดแทนการจำกัดสิทธิ์
+   */
+  async function purgeField(field) {
+    onError?.('')
+    let impact = { cards: 0, options: 0, checklistItems: 0 }
+    try {
+      const r = await fetch(`/api/kanban/fields/${field.id}?impact=1`)
+      if (r.ok) impact = (await r.json()).impact || impact
+    } catch { /* นับไม่ได้ → ยังถามต่อ แค่เลขเป็น 0 */ }
+
+    const ok = window.confirm(t('modal.fieldPurgeConfirm', {
+      name: field.label, cards: impact.cards, options: impact.options, items: impact.checklistItems,
+    }))
+    if (!ok) return
+
+    setBusyId(field.id)
+    try {
+      const res = await fetch(`/api/kanban/fields/${field.id}`, { method: 'DELETE' })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) { onError?.(json.error || t('saveFailed')); return }
+      await loadHidden()
+      onFieldsChanged?.()
+    } catch {
+      onError?.(t('saveFailed'))
+    } finally {
+      setBusyId(null)
+    }
+  }
 
   async function commit(fieldId, value) {
     onError?.('')
@@ -189,10 +340,37 @@ export default function CardFieldsBox({ cardId, fields = [], readOnly, onCardCha
 
       <div className="flex flex-col gap-3">
         {fields.map((f) => {
+          // แถบเครื่องมือต่อ field — ปุ่ม "..." กางเมนูจัดการแบบ inline (ห้าม popover ลอย)
+          const tools = readOnly ? null : (
+            <div className="flex flex-col">
+              <div className="flex justify-end -mb-1">
+                <button
+                  type="button"
+                  onClick={() => setMenuFor(menuFor === f.field_id ? null : f.field_id)}
+                  aria-label={t('modal.fieldMenu')}
+                  className="p-1 rounded text-warm-400 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text"
+                >
+                  <MoreHorizontal size={16} />
+                </button>
+              </div>
+              {menuFor === f.field_id && (
+                <FieldEditor
+                  field={{ id: f.field_id, label: f.label }}
+                  t={t}
+                  canPurge={canPurge}
+                  busy={busyId === f.field_id}
+                  onRename={(label) => renameField(f.field_id, label)}
+                  onHide={() => setFieldArchived(f.field_id, true, f.label)}
+                />
+              )}
+            </div>
+          )
+
           if (f.type === 'checklist') {
             return (
+              <div key={f.field_id}>
+                {tools}
               <ChecklistFieldBox
-                key={f.field_id}
                 cardId={cardId}
                 fieldId={f.field_id}
                 fieldLabel={f.label}
@@ -202,11 +380,13 @@ export default function CardFieldsBox({ cardId, fields = [], readOnly, onCardCha
                 onError={onError}
                 t={t}
               />
+              </div>
             )
           }
           if (f.type === 'select' || f.type === 'multi_select') {
             return (
               <div key={f.field_id}>
+                {tools}
                 <label className="block text-sm font-medium text-warm-700 dark:text-disc-muted mb-1">{f.label}</label>
                 <TagCombobox
                   fieldId={f.field_id}
@@ -221,15 +401,64 @@ export default function CardFieldsBox({ cardId, fields = [], readOnly, onCardCha
             )
           }
           return (
-            <div key={f.field_id} className="flex items-center gap-2">
-              <div className="flex-1">
-                <ScalarInput field={f} value={f.value} readOnly={readOnly} onCommit={(v) => commit(f.field_id, v)} />
+            <div key={f.field_id}>
+              {tools}
+              <div className="flex items-center gap-2">
+                <div className="flex-1">
+                  <ScalarInput field={f} value={f.value} readOnly={readOnly} onCommit={(v) => commit(f.field_id, v)} />
+                </div>
+                {busyId === f.field_id && <Loader2 size={16} className="animate-spin text-warm-400 dark:text-disc-muted" />}
               </div>
-              {busyId === f.field_id && <Loader2 size={16} className="animate-spin text-warm-400 dark:text-disc-muted" />}
             </div>
           )
         })}
       </div>
+
+      {/*
+        ซ่อนอยู่ — ที่เดียวในระบบที่เห็น field ที่ถูกซ่อน และที่เดียวที่ลบถาวรได้
+        ⛔ ปุ่ม "ลบถาวร" ต้องอยู่ตรงนี้เท่านั้น (บังคับ ซ่อน → ค่อยลบ · ย้อนไม่ได้)
+      */}
+      {!readOnly && hidden.length > 0 && (
+        <div className="border-t border-warm-200 dark:border-disc-border pt-3">
+          <button
+            type="button"
+            onClick={() => setHiddenOpen((v) => !v)}
+            className="flex items-center gap-1 text-sm text-warm-500 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text"
+          >
+            <ChevronDown size={14} className={hiddenOpen ? '' : '-rotate-90'} />
+            {t('modal.fieldHidden', { count: hidden.length })}
+          </button>
+
+          {hiddenOpen && (
+            <div className="flex flex-col gap-2 mt-2">
+              {hidden.map((f) => (
+                <div key={f.id} className="flex items-center gap-2 flex-wrap">
+                  <span className="flex-1 min-w-0 truncate text-sm text-warm-500 dark:text-disc-muted">{f.label}</span>
+                  <button
+                    type="button"
+                    onClick={() => setFieldArchived(f.id, false, f.label)}
+                    className="flex items-center gap-1 text-sm text-warm-500 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text"
+                  >
+                    <Eye size={14} />
+                    {t('modal.fieldUnhide')}
+                  </button>
+                  {/* admin เท่านั้น — คนอื่นไม่เห็นปุ่มเลย ไม่ใช่กดแล้วเด้ง 403 */}
+                  {canPurge && (
+                    <button
+                      type="button"
+                      onClick={() => purgeField(f)}
+                      className="flex items-center gap-1 text-sm text-red-500 hover:text-red-600 font-medium"
+                    >
+                      {busyId === f.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                      {t('modal.fieldPurge')}
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {!readOnly && <NewFieldForm onCreate={createField} creating={creating} t={t} />}
     </div>

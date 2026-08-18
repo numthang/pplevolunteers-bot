@@ -1,9 +1,13 @@
-// /api/kanban/fields/[id]/options/[optionId] — แก้/ซ่อนตัวเลือก 1 ตัว
+// /api/kanban/fields/[id]/options/[optionId] — แก้ / ลบตัวเลือกถาวร 1 ตัว
 //
-// PATCH { name?, color?, archived? } → { option }
+// PATCH  { name?, color? }  → { option }
+// GET    ?impact=1          → { impact }   นับว่าใช้อยู่กี่การ์ด (เติมตัวเลขในกล่องยืนยัน)
+// DELETE                    → { ok }       **ลบถาวรจริง** ไม่มี gate ยศ
 //
-// ⚠️ "ลบตัวเลือก" ในกล่อง (เมนู "...") = archive จริงๆ ไม่ใช่ลบถาวร — กันการ์ดที่เลือกไว้แล้วข้อมูลหายเงียบ
-//    (บทเรียนเดียวกับป้าย) ผลลัพธ์ที่ผู้ใช้เห็นเหมือนกัน: ตัวเลือกหายจากรายการให้เลือกทันที
+// ⚠️ **กลับคำ 2026-08-18:** เดิม "ลบตัวเลือก" = archive ด้วยเหตุผล "กันข้อมูลการ์ดหายเงียบ"
+//    แต่ cards.js มี `AND o.archived_at IS NULL` ใน JOIN อยู่แล้ว → ซ่อนก็ทำให้ชิปหายจากทุกการ์ดทันทีเหมือนกัน
+//    archive จึงไม่ได้ป้องกันอะไรเลย ได้แค่แถวตายที่มองไม่เห็นและเอากลับไม่ได้ (ไม่มี unarchive ด้วยซ้ำ)
+// ⛔ ห้ามใส่ canPurge ที่นี่ — ลบตัวเลือกเป็นงานประจำวัน คุมแล้ว flow "พิมพ์ชื่อใหม่ = สร้างตัวเลือก" พังทันที
 import { kanbanContext, err } from '@/lib/kanbanGuard.js'
 import { LABEL_PALETTE } from '@/lib/kanbanLabelColors.js'
 import * as fieldDB from '@/db/kanban/fields.js'
@@ -21,12 +25,6 @@ export async function PATCH(req, { params }) {
   if (!field) return err(404, 'ไม่พบช่องข้อมูลนี้')
 
   const body = await req.json().catch(() => ({}))
-
-  if (body.archived !== undefined) {
-    const ok = body.archived ? await fieldDB.archiveFieldOption(field.id, optId) : false
-    if (!ok) return err(404, 'ไม่พบตัวเลือกนี้ หรือถูกซ่อนไปแล้ว')
-    return Response.json({ ok: true })
-  }
 
   const patch = {}
   if (body.name !== undefined) {
@@ -46,4 +44,38 @@ export async function PATCH(req, { params }) {
   if (res.notFound)  return err(404, 'ไม่พบตัวเลือกนี้')
   if (res.duplicate) return err(409, 'มีตัวเลือกชื่อนี้อยู่แล้ว')
   return Response.json({ option: res.option })
+}
+
+export async function GET(req, { params }) {
+  const ctx = await kanbanContext()
+  if (ctx.error) return ctx.error
+
+  const { id, optionId } = await params
+  const fieldId = String(id || '').trim()
+  const optId = String(optionId || '').trim()
+  if (!/^\d+$/.test(fieldId) || !/^\d+$/.test(optId)) return err(404, 'ไม่พบตัวเลือกนี้')
+  if (new URL(req.url).searchParams.get('impact') !== '1') return err(400, 'ต้องระบุ impact=1')
+
+  const field = await fieldDB.getFieldDef(ctx.orgId, fieldId)
+  if (!field) return err(404, 'ไม่พบช่องข้อมูลนี้')
+
+  return Response.json({ impact: await fieldDB.countOptionUsage(field.id, optId) })
+}
+
+/** ลบตัวเลือกถาวร — ใครแก้การ์ดได้ก็ลบได้ (ไม่มี gate ยศ · ดูหัวไฟล์) */
+export async function DELETE(_req, { params }) {
+  const ctx = await kanbanContext()
+  if (ctx.error) return ctx.error
+
+  const { id, optionId } = await params
+  const fieldId = String(id || '').trim()
+  const optId = String(optionId || '').trim()
+  if (!/^\d+$/.test(fieldId) || !/^\d+$/.test(optId)) return err(404, 'ไม่พบตัวเลือกนี้')
+
+  const field = await fieldDB.getFieldDef(ctx.orgId, fieldId)
+  if (!field) return err(404, 'ไม่พบช่องข้อมูลนี้')
+
+  const ok = await fieldDB.deleteFieldOption(field.id, optId)
+  if (!ok) return err(404, 'ไม่พบตัวเลือกนี้')
+  return Response.json({ ok: true })
 }

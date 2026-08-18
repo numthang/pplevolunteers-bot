@@ -44,6 +44,17 @@ export function isKanbanAdmin(access = {}) {
 }
 
 /**
+ * ลบถาวร (เทถังขยะ) — **admin เท่านั้น** แคบกว่า isKanbanAdmin ที่รวมเลขาธิการด้วย
+ *
+ * ใช้แค่ 2 ที่: ลบ field ถาวร · ลบการ์ดถาวร — ทั้งคู่ย้อนไม่ได้และกระทบทั้งกระดาน
+ * ⛔ **ห้ามเอาไปคุม option** — ลบตัวเลือกเป็นงานประจำวัน ใครแก้การ์ดได้ก็ลบได้ (ดีไซน์ §A0)
+ *    ตั้ง gate ตรงนั้นเมื่อไหร่ = flow "พิมพ์ชื่อใหม่ = สร้างตัวเลือก" ใช้ไม่ได้ทันที
+ */
+export function canPurge(access = {}) {
+  return (normalizeAccess(access).permissions || new Set()).has('admin')
+}
+
+/**
  * คนที่ "เกี่ยวข้อง" กับการ์ดใบนี้ — เจ้าภาพ · คนช่วย · คนสร้าง
  * @param {object} card  { owner_user_id, created_by, helper_ids? }
  * @param {number|null} userId

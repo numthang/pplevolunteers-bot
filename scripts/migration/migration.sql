@@ -1030,3 +1030,23 @@ CREATE INDEX IF NOT EXISTS idx_kanban_checklist_card_field
 -- → ทุกครั้งที่ batch กลับมาจบครบอีกรอบ (กดลองใหม่ / worker คืนแถวเข้าคิว) จะแจ้งซ้ำทั้งชุด
 -- NULL = ยังไม่เคยแจ้ง · แถวเก่าทั้งหมดเป็น NULL ตั้งต้น (แจ้งไปแล้วแต่ batch จบไปนานแล้ว ไม่ถูกแตะอีก)
 ALTER TABLE post_social_history ADD COLUMN IF NOT EXISTS notified_at TIMESTAMPTZ;
+
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- 2026-08-18 (รอบดึก) · kanban: checklist ดึงรายการจากคลัง option + ลบตัวเลือกถาวร
+--
+-- ทำไมต้องมาก่อนโค้ดลบตัวเลือก: deleteFieldOption() ต้องคัดชื่อลง checklist.text
+-- ก่อน DELETE ไม่งั้นรายการที่ติ๊กไว้กลายเป็นบรรทัดว่าง → ต้องมีคอลัมน์นี้ก่อน
+--
+-- option_id มีค่า  → แสดงชื่อจาก kanban_field_options (เปลี่ยนชื่อในคลัง = ทุกการ์ดเปลี่ยนตาม)
+-- option_id = NULL → ใช้ text (ของเดิม + รายการครั้งเดียวที่ไม่อยากลงคลัง)
+-- ⚠️ SET NULL ไม่ใช่ CASCADE — ลบตัวเลือกออกจากคลังแล้วรายการบนการ์ดต้องยังอยู่
+-- ═══════════════════════════════════════════════════════════════════════════
+ALTER TABLE kanban_card_checklist
+  ADD COLUMN IF NOT EXISTS option_id BIGINT REFERENCES kanban_field_options(id) ON DELETE SET NULL;
+
+-- text ว่างได้แล้ว เพราะชื่ออาจมาจาก option แทน
+ALTER TABLE kanban_card_checklist ALTER COLUMN text DROP NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_kanban_checklist_option ON kanban_card_checklist (option_id)
+    WHERE option_id IS NOT NULL;

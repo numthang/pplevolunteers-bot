@@ -8,7 +8,7 @@
 // ⛔ POST นี้ต้องถูกเรียก "ตอนกดปุ่มบันทึก" เท่านั้น — ห้ามยิงตอนกดปุ่ม "เพิ่มการบ้าน" เพื่อเปิดฟอร์ม
 //    (CLAUDE.md 2026-07-30 · เคสจริง /posts เคยทำแล้วได้ร่างเปล่าค้าง DB 5 แถว)
 import { kanbanContext, err } from '@/lib/kanbanGuard.js'
-import { STATUS_TYPES, formatRef } from '@/lib/kanbanAccess.js'
+import { STATUS_TYPES, formatRef, canPurge } from '@/lib/kanbanAccess.js'
 import * as cardDB from '@/db/kanban/cards.js'
 
 export async function GET(req) {
@@ -41,6 +41,9 @@ export async function GET(req) {
     return Response.json({
       cards: await cardDB.listCards(ctx.orgId, { onlyArchived: true, includeClosed: true, limit: 500 }),
       viewerUserId: ctx.userId ?? null,
+      // ปุ่ม "ลบถาวร" โผล่เฉพาะ admin — ส่งมากับชุดข้อมูลนี้เลย ไม่ต้องยิง /api/me เพิ่ม
+      // (แนวเดียวกับ viewerUserId ข้างบน — client ห้ามเดาสิทธิ์ตัวเองจาก session)
+      canPurge: canPurge(ctx.access),
     })
   }
   return Response.json({ cards: await cardDB.listCards(ctx.orgId, { includeClosed: false }) })

@@ -3,7 +3,7 @@
 /**
  * TagCombobox — ตัวเลือกของ select/multi_select field (ตรงสกรีนช็อตที่ user ส่งมา 2026-08-18 รอบเย็น)
  *
- * จัดการตัวเลือกทั้งหมด (สร้าง/เปลี่ยนชื่อ/สี/ซ่อน/จัดลำดับ) จาก**ในกล่องนี้เลย** — ไม่มีหน้าแอดมินแยก
+ * จัดการตัวเลือกทั้งหมด (สร้าง/เปลี่ยนชื่อ/สี/ลบถาวร/จัดลำดับ) จาก**ในกล่องนี้เลย** — ไม่มีหน้าแอดมินแยก
  *
  * ⚠️ options (ตัวเลือกทั้งหมดของ field) กับ value (ที่การ์ดใบนี้เลือกไว้) เป็นคนละชุดข้อมูล —
  *    ต้องยิง GET แยกตอนเปิดกล่องครั้งแรก การ์ด AGG คืนมาแค่ตัวที่เลือกไว้เท่านั้น
@@ -227,14 +227,36 @@ export default function TagCombobox({ fieldId, type, value = [], readOnly, onCom
     }
   }
 
+  /**
+   * ลบตัวเลือกถาวร — **ลบจริง ไม่ใช่ซ่อน** (กลับคำ 2026-08-18)
+   * เดิมยิง PATCH { archived: true } ซึ่งได้ผลเหมือนลบอยู่แล้ว (ชิปหายจากทุกการ์ด)
+   * แต่ทิ้งแถวตายที่มองไม่เห็นและเอากลับไม่ได้ไว้ใน DB — user: "จะมีขยะเต็มไปหมด"
+   *
+   * ⚠️ ถามก่อนเสมอ และ**ต้องบอกจำนวนการ์ดที่ใช้อยู่จริง** — ตัวเลขคือกลไกกันพลาด
+   *    แทนการจำกัดสิทธิ์ (ตรงนี้ไม่มี gate ยศ ใครแก้การ์ดได้ก็ลบได้)
+   */
   async function deleteOption(optId) {
+    const opt = (options || []).find((o) => String(o.id) === String(optId))
+    const name = opt?.name || ''
+
+    // นับก่อนถาม — นับไม่ได้ก็ยังถามต่อ (ห้ามเงียบแล้วลบเลย) แค่ไม่มีตัวเลขให้ดู
+    let used = null
+    try {
+      const r = await fetch(`/api/kanban/fields/${fieldId}/options/${optId}?impact=1`)
+      if (r.ok) {
+        const j = await r.json()
+        used = Number(j.impact?.picked || 0) + Number(j.impact?.checklist || 0)
+      }
+    } catch { /* นับไม่ได้ → ถามแบบไม่มีตัวเลข */ }
+
+    const msg = used
+      ? t('modal.optionDeleteConfirm', { name, count: used })
+      : t('modal.optionDeleteConfirmUnused', { name })
+    if (!window.confirm(msg)) return
+
     setBusyOpt(optId)
     try {
-      const res = await fetch(`/api/kanban/fields/${fieldId}/options/${optId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ archived: true }),
-      })
+      const res = await fetch(`/api/kanban/fields/${fieldId}/options/${optId}`, { method: 'DELETE' })
       const json = await res.json().catch(() => ({}))
       if (!res.ok) { onError?.(json.error || t('saveFailed')); return }
       setOptions((prev) => (prev || []).filter((o) => String(o.id) !== String(optId)))

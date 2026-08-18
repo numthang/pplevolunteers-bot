@@ -26,7 +26,7 @@ export default function CardModal({ cardId, onClose, onChanged }) {
   const t = useTranslations('kanban')
 
   const [card, setCard] = useState(null)
-  const [can, setCan] = useState({ edit: false, archive: false, restore: false, claim: false })
+  const [can, setCan] = useState({ edit: false, archive: false, restore: false, claim: false, purge: false })
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
 
@@ -398,7 +398,11 @@ export default function CardModal({ cardId, onClose, onChanged }) {
                 cardId={cardId}
                 fields={card.fields || []}
                 readOnly={readOnly}
+                canPurge={Boolean(can.purge)}
                 onError={setActionError}
+                // ซ่อน/เอากลับ/เปลี่ยนชื่อ/ลบ field → รายการ field ของการ์ดเปลี่ยนไปทั้งชุด ต้องโหลดการ์ดใหม่
+                // (แก้ค่าเฉยๆ ใช้ onFieldValueChanged ที่เบากว่า — ตรงนี้คือโครงเปลี่ยน ไม่ใช่ค่าเปลี่ยน)
+                onFieldsChanged={() => { load(); onChanged?.() }}
                 onCardChanged={(fresh) => {
                   setCard(fresh)
                   lockToken.current = fresh.lock_token

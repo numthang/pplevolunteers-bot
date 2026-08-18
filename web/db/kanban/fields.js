@@ -113,6 +113,42 @@ export async function unarchiveFieldDef(orgId, fieldId) {
   return Boolean(rows[0])
 }
 
+/**
+ * นับความเสียหายก่อนลบ field ถาวร — เอาไปเติมตัวเลขในกล่องยืนยัน
+ * ⛔ ห้ามถามว่า "แน่ใจไหม" ลอยๆ — ตัวเลขจริงคือกลไกกันพลาดหลัก แทนการจำกัดสิทธิ์ (ดีไซน์ §A4)
+ */
+export async function countFieldImpact(orgId, fieldId) {
+  const { rows } = await pool.query(
+    `SELECT (SELECT count(*) FROM kanban_card_field_values v
+               JOIN kanban_cards c ON c.id = v.card_id
+              WHERE v.field_id = $2 AND c.org_id = $1)          AS cards,
+            (SELECT count(*) FROM kanban_field_options
+              WHERE field_id = $2)                              AS options,
+            (SELECT count(*) FROM kanban_card_checklist ci
+               JOIN kanban_cards c ON c.id = ci.card_id
+              WHERE ci.field_id = $2 AND c.org_id = $1)         AS checklist_items`,
+    [orgId, fieldId]
+  )
+  const r = rows[0]
+  return { cards: Number(r.cards), options: Number(r.options), checklistItems: Number(r.checklist_items) }
+}
+
+/**
+ * ลบ field ถาวร — **ต้องซ่อนไว้ก่อนเท่านั้น** (`archived_at IS NOT NULL`)
+ *
+ * บังคับ 2 จังหวะ (ซ่อน → ค่อยลบ) เพราะย้อนไม่ได้ · ปุ่มเดียวจบคือกดพลาดแล้วจบเลย
+ * FK 3 ตัวเป็น ON DELETE CASCADE อยู่แล้ว (card_field_values · card_checklist · field_options)
+ * → ค่าที่การ์ดกรอกไว้หายตามหมด ไม่ต้องกวาดเอง แต่ต้องบอกจำนวนก่อนถาม (countFieldImpact)
+ */
+export async function deleteFieldDef(orgId, fieldId) {
+  const { rows } = await pool.query(
+    `DELETE FROM kanban_field_defs
+      WHERE org_id = $1 AND id = $2 AND archived_at IS NOT NULL RETURNING id`,
+    [orgId, fieldId]
+  )
+  return Boolean(rows[0])
+}
+
 // ── ค่าของการ์ด (scalar + select/multi_select) ─────────────────────────
 
 /**
@@ -218,14 +254,72 @@ export async function updateFieldOption(fieldId, optionId, { name, color } = {})
   }
 }
 
-/** ซ่อนตัวเลือก (ปุ่ม "ลบ" ในกล่อง — ไม่ลบถาวรจริง กันการ์ดที่เลือกไว้แล้วข้อมูลหายเงียบ) */
-export async function archiveFieldOption(fieldId, optionId) {
+/**
+ * นับว่าตัวเลือกนี้ถูกใช้อยู่กี่การ์ด — เอาไปเติมตัวเลขในกล่องยืนยันก่อนลบ
+ * (select/multi_select นับจาก value_options · checklist นับจากแถวใน kanban_card_checklist)
+ */
+export async function countOptionUsage(fieldId, optionId) {
   const { rows } = await pool.query(
-    `UPDATE kanban_field_options SET archived_at = now()
-      WHERE field_id = $1 AND id = $2 AND archived_at IS NULL RETURNING id`,
+    `SELECT (SELECT count(*) FROM kanban_card_field_values
+              WHERE field_id = $1 AND $2 = ANY(value_options))      AS picked,
+            (SELECT count(*) FROM kanban_card_checklist
+              WHERE option_id = $2)                                 AS checklist`,
     [fieldId, optionId]
   )
-  return Boolean(rows[0])
+  return { picked: Number(rows[0].picked), checklist: Number(rows[0].checklist) }
+}
+
+/**
+ * ลบตัวเลือกถาวร (ปุ่ม "ลบ" ในกล่อง) — **ลบจริง ไม่ใช่ซ่อน** (กลับคำ 2026-08-18)
+ *
+ * เดิมเป็น archiveFieldOption() ด้วยเหตุผล "กันการ์ดที่เลือกไว้แล้วข้อมูลหายเงียบ"
+ * แต่เหตุผลนั้นใช้ไม่ได้จริง — cards.js มี `AND o.archived_at IS NULL` ใน JOIN อยู่แล้ว
+ * → ซ่อนก็ทำให้ชิปหายจากทุกการ์ดทันทีเหมือนกัน ได้แค่ทิ้งแถวตาย + id ค้างในอาร์เรย์
+ *
+ * ⚠️ value_options เป็น BIGINT[] **ไม่ใช่ FK** → ต้องกวาดเองใน transaction เดียวกัน
+ *    ลำดับสำคัญ: คัดชื่อลง checklist.text ก่อน ไม่งั้น ON DELETE SET NULL ทิ้งบรรทัดว่างไว้
+ */
+export async function deleteFieldOption(fieldId, optionId) {
+  const client = await pool.connect()
+  try {
+    await client.query('BEGIN')
+
+    // 1) เก็บชื่อไว้ในแถว checklist ก่อน — รายการที่ติ๊กไว้ต้องไม่กลายเป็นบรรทัดว่าง
+    //
+    // ⛔ **ห้ามใส่ `ci.field_id = $1` เป็นเงื่อนไขร่วม** — เคยพลาดมาแล้ว 2026-08-18:
+    //    ถ้าแถวเช็คลิสต์อ้าง option ของ field อื่น เงื่อนไขนี้ไม่แมตช์ → ไม่ได้คัดชื่อ
+    //    แล้ว FK ON DELETE SET NULL เข้ามาล้าง option_id ทีหลัง = ได้บรรทัดว่างเปล่า
+    //    option_id เป็น id ที่ unique ทั้งตารางอยู่แล้ว กรองด้วยตัวมันตัวเดียวถูกต้องและปลอดภัยกว่า
+    await client.query(
+      `UPDATE kanban_card_checklist ci
+          SET text = COALESCE(ci.text, o.name), option_id = NULL
+         FROM kanban_field_options o
+        WHERE o.id = $1 AND ci.option_id = $1`,
+      [optionId]
+    )
+
+    // 2) ถอน id ออกจากอาร์เรย์ของทุกการ์ด (select/multi_select)
+    await client.query(
+      `UPDATE kanban_card_field_values
+          SET value_options = array_remove(value_options, $2::bigint)
+        WHERE field_id = $1 AND $2 = ANY(value_options)`,
+      [fieldId, optionId]
+    )
+
+    // 3) ค่อยลบตัวเลือกจริง
+    const { rows } = await client.query(
+      `DELETE FROM kanban_field_options WHERE field_id = $1 AND id = $2 RETURNING id`,
+      [fieldId, optionId]
+    )
+
+    await client.query('COMMIT')
+    return Boolean(rows[0])
+  } catch (e) {
+    await client.query('ROLLBACK')
+    throw e
+  } finally {
+    client.release()
+  }
 }
 
 /** ลากจัดลำดับใหม่ในกล่อง — orderedIds คือลำดับเต็มของตัวเลือกที่ยังไม่ซ่อนทั้งหมด */

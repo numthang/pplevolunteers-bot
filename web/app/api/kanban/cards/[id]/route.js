@@ -1,4 +1,4 @@
-// /api/kanban/cards/[id] — อ่าน / แก้ (autosave) / เก็บเข้ากรุ
+// /api/kanban/cards/[id] — อ่าน / แก้ (autosave) / เก็บเข้ากรุ / ลบถาวร
 //
 // PATCH รับ 3 แบบ แยกกันชัดเจน ห้ามปนใน request เดียว:
 //   { lockToken, title?, detail?, dueAt?, priority?, blocked?, blockedReason? }  ← autosave (ต้องมี token)
@@ -7,7 +7,7 @@
 import { cardContext, err } from '@/lib/kanbanGuard.js'
 import {
   canEditCard, canArchiveCard, canChangeStatus, canAssignOwner, canClaimCard,
-  checkStatusTransition, formatRef,
+  checkStatusTransition, formatRef, canPurge,
 } from '@/lib/kanbanAccess.js'
 import * as cardDB from '@/db/kanban/cards.js'
 
@@ -33,6 +33,9 @@ export async function GET(_req, { params }) {
       join:    canClaimCard(ctx.card, ctx.access, ctx.userId)
                && ctx.card.owner_user_id !== ctx.userId
                && !(ctx.card.helper_ids || []).includes(ctx.userId),
+      // ลบถาวร (การ์ด + custom field) — admin เท่านั้น · UI ซ่อนปุ่มไปเลยถ้าไม่มีสิทธิ์
+      // ⚠️ ไม่เกี่ยวกับ edit/archive — คนสร้างการ์ดเก็บเข้ากรุได้ แต่ลบถาวรไม่ได้ถ้าไม่ใช่ admin
+      purge:   canPurge(ctx.access),
     },
   })
 }
@@ -104,9 +107,26 @@ export async function PATCH(req, { params }) {
   return Response.json({ card: res.card })
 }
 
-export async function DELETE(_req, { params }) {
+/**
+ * DELETE            → เก็บเข้ากรุ (archive · ย้อนได้ด้วย PATCH { restore: true })
+ * DELETE ?purge=1   → ลบถาวร (admin เท่านั้น · การ์ดต้องอยู่ในกรุแล้ว)
+ *
+ * ⚠️ ค่าตั้งต้นยังเป็น "เก็บเข้ากรุ" เหมือนเดิมเป๊ะ — ห้ามสลับความหมาย
+ *    commit 37dd5e6 เคยพลาดตรงนี้: ปุ่มเขียน "เก็บเข้ากรุ" แต่ลบถาวรจริง
+ */
+export async function DELETE(req, { params }) {
   const ctx = await cardContext((await params).id)
   if (ctx.error) return ctx.error
+
+  if (new URL(req.url).searchParams.get('purge') === '1') {
+    if (!canPurge(ctx.access)) return err(403, 'ลบถาวรได้เฉพาะแอดมิน')
+    // ต้องเข้ากรุก่อน — บังคับ 2 จังหวะเพราะย้อนไม่ได้
+    if (!ctx.card.archived_at) return err(400, 'ต้องเก็บการบ้านใบนี้เข้ากรุก่อนถึงจะลบถาวรได้')
+    const ok = await cardDB.deleteCard(ctx.orgId, ctx.card.id)
+    if (!ok) return err(404, 'ไม่พบการบ้านใบนี้ในกรุ')
+    return Response.json({ ok: true, purged: true })
+  }
+
   if (!canArchiveCard(ctx.card, ctx.access, ctx.userId)) return err(403, 'เก็บเข้ากรุได้เฉพาะคนที่สร้างการบ้านใบนี้')
   return Response.json({ ok: await cardDB.archiveCard(ctx.orgId, ctx.card.id) })
 }

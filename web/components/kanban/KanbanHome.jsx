@@ -23,7 +23,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import {
   Plus, X, Clock, User, ListChecks, AlertTriangle, Tag,
-  ChevronDown, ChevronRight, Loader2, ArchiveRestore,
+  ChevronDown, ChevronRight, Loader2, ArchiveRestore, Trash2,
 } from 'lucide-react'
 import { STATUS_TYPES } from '@/lib/kanbanAccess.js'
 import { columnHeadProps, chipProps } from '@/lib/kanbanLabelColors.js'
@@ -74,7 +74,7 @@ function Segmented({ options, value, onChange }) {
   )
 }
 
-function KanbanCard({ card, t, onOpen, onDragStart, dragging, draggable, onClaim, claiming, onRestore, restoring }) {
+function KanbanCard({ card, t, onOpen, onDragStart, dragging, draggable, onClaim, claiming, onRestore, restoring, onPurge, purging, canPurge }) {
   const state = dueState(card.due_at)
   // เช็คลิสต์กลายเป็น custom field แล้ว (2026-08-18 รอบเย็น) — การ์ดมีได้หลายเช็คลิสต์ รวมยอดทุกอันเป็นตัวเลขเดียว
   const checklistFields = (card.fields || []).filter((f) => f.type === 'checklist')
@@ -122,16 +122,29 @@ function KanbanCard({ card, t, onOpen, onDragStart, dragging, draggable, onClaim
         )}
       </div>
 
-      {/* อยู่ในกรุ = ปุ่มเดียวที่มีความหมายคือเอาออก (รับงานในกรุไม่ได้ ต้องเอาออกมาก่อน) */}
+      {/* อยู่ในกรุ = เอาออก · และ (admin เท่านั้น) ลบถาวร — ที่เดียวในระบบที่ลบการ์ดจริงได้ */}
       {card.archived_at ? (
-        <button
-          onClick={(e) => { e.stopPropagation(); onRestore(card) }}
-          disabled={restoring}
-          className="self-start flex items-center gap-1.5 px-4 py-2 text-base rounded-lg border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover font-medium disabled:opacity-50 transition"
-        >
-          <ArchiveRestore size={16} />
-          {restoring ? t('actions.restoring') : t('actions.restore')}
-        </button>
+        <div className="self-start flex flex-wrap items-center gap-2">
+          <button
+            onClick={(e) => { e.stopPropagation(); onRestore(card) }}
+            disabled={restoring}
+            className="flex items-center gap-1.5 px-4 py-2 text-base rounded-lg border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover font-medium disabled:opacity-50 transition"
+          >
+            <ArchiveRestore size={16} />
+            {restoring ? t('actions.restoring') : t('actions.restore')}
+          </button>
+          {/* คนที่ไม่ใช่ admin ไม่เห็นปุ่มนี้เลย — ไม่ใช่กดแล้วเด้ง 403 */}
+          {canPurge && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onPurge(card) }}
+              disabled={purging}
+              className="flex items-center gap-1.5 px-4 py-2 text-base rounded-lg border border-red-300 dark:border-red-500/40 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 font-medium disabled:opacity-50 transition"
+            >
+              <Trash2 size={16} />
+              {purging ? t('actions.purging') : t('actions.purge')}
+            </button>
+          )}
+        </div>
       ) : !card.owner_user_id && (
         /* งานที่ยังไม่มีเจ้าภาพ = รับได้จากหน้าการ์ดเลย ไม่ต้องเปิดกล่องก่อน
            (กองรอทำโผล่ในตัวกรอง "ของฉัน" อยู่แล้ว — ต้องรับได้ในคลิกเดียว ไม่งั้นก็ค้างเหมือนเดิม) */
@@ -163,6 +176,8 @@ export default function KanbanHome() {
   const [openState, setOpenState] = useState({})
   const [claimingId, setClaimingId] = useState(null)
   const [restoringId, setRestoringId] = useState(null)
+  const [purgingId, setPurgingId] = useState(null)
+  const [canPurge, setCanPurge] = useState(false)   // มาจาก API โหมดกรุ — client ห้ามเดาสิทธิ์ตัวเอง
 
   // 2 ปุ่มควบคุมที่แทนที่การมี 2 หน้า
   const [scope, setScope] = useState('mine')     // 'mine' | 'all' | 'archived' — ตั้งต้นของฉัน
@@ -187,6 +202,8 @@ export default function KanbanHome() {
       if (!res.ok) { setLoadError(json.error || t('loadFailed')); setCards([]); return }
       setCards(json.cards || [])
       setViewerUserId(json.viewerUserId ?? null)
+      // ส่งมาเฉพาะโหมดกรุ — โหมดปกติไม่มีปุ่มลบถาวรอยู่แล้ว
+      setCanPurge(Boolean(json.canPurge))
     } catch {
       setLoadError(t('loadFailed'))
       setCards([])
@@ -282,6 +299,26 @@ export default function KanbanHome() {
       setActionError(t('actions.claimFailed'))
     } finally {
       setClaimingId(null)
+    }
+  }
+
+  /**
+   * ลบการ์ดถาวร — admin เท่านั้น (ปุ่มไม่โผล่ให้คนอื่นด้วยซ้ำ) และการ์ดต้องอยู่ในกรุแล้ว
+   * ⚠️ ต้องยืนยันก่อนเสมอ และบอกให้ชัดว่าอะไรจะหายบ้าง — ย้อนไม่ได้ ไม่มีถังขยะชั้นสอง
+   */
+  async function handlePurge(card) {
+    setActionError('')
+    if (!window.confirm(t('actions.purgeConfirm', { title: card.title }))) return
+    setPurgingId(card.id)
+    try {
+      const res = await fetch(`/api/kanban/cards/${card.id}?purge=1`, { method: 'DELETE' })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) { setActionError(json.error || t('actions.purgeFailed')); return }
+      setCards((prev) => prev.filter((c) => c.id !== card.id))
+    } catch {
+      setActionError(t('actions.purgeFailed'))
+    } finally {
+      setPurgingId(null)
     }
   }
 
@@ -611,6 +648,9 @@ export default function KanbanHome() {
                       claiming={claimingId === card.id}
                       onRestore={handleRestore}
                       restoring={restoringId === card.id}
+                      onPurge={handlePurge}
+                      purging={purgingId === card.id}
+                      canPurge={canPurge}
                     />
                   ))}
                   {sorted.length > shown.length && (
