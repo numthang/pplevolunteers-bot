@@ -409,6 +409,8 @@ export default function CardModal({ cardId, onClose, onChanged }) {
                     ...prev,
                     fields: (prev.fields || []).map((f) => (f.field_id === fieldId ? { ...f, value } : f)),
                   }))
+                  // แจ้งหน้ารายการด้วย — ไม่งั้นป้าย checklist บนหน้ากระดาน (KanbanHome) ค้างเลขเดิมจนกว่าจะปิดเปิดการ์ดใหม่
+                  onChanged?.()
                 }}
                 onReload={load}
                 t={t}

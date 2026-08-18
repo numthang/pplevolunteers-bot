@@ -42,8 +42,10 @@ export default function ChecklistFieldBox({ cardId, fieldId, fieldLabel, items =
   }
 
   async function toggleDone(item) {
+    // ⚠️ ไม่ optimistic — onItemsChanged เรียก onChanged() ของหน้ารายการด้วย ยิง 2 ครั้ง (ก่อน/หลัง await)
+    //    แข่งกันเองแล้วรายการ (badge x/y) ค้างค่าเก่าได้ถ้า response สลับลำดับ (เจอจาก browser test)
+    //    รอบเดียวหลัง await พอ — การ์ดเช็คลิสต์ 1 ทีไม่มีดีเลย์ที่คนสังเกตออก (แนวเดียวกับโค้ดเดิมก่อนกลับคำ)
     setBusyId(item.id)
-    onItemsChanged(items.map((i) => (i.id === item.id ? { ...i, done: !item.done } : i)))   // optimistic
     const json = await call('PATCH', { itemId: item.id, done: !item.done })
     if (json?.item) onItemsChanged(items.map((i) => (i.id === item.id ? json.item : i)))
     setBusyId(null)
