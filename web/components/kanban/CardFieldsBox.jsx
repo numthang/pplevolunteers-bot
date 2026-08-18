@@ -24,6 +24,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ChevronDown, Eye, Loader2, MoreHorizontal, Plus, Trash2 } from 'lucide-react'
 import { FIELD_TYPES } from '@/lib/kanbanFieldValue.js'
+import DeleteChoiceDialog from './DeleteChoiceDialog.jsx'
 import TagCombobox from './TagCombobox.jsx'
 import ChecklistFieldBox from './ChecklistFieldBox.jsx'
 
@@ -31,7 +32,7 @@ import ChecklistFieldBox from './ChecklistFieldBox.jsx'
  * แถวจัดการ field — กางในแถวเดิม ไม่ลอยออกนอกกล่อง (กับดักข้อ 1 ของ TagCombobox)
  * ลอกทรงมาจาก OptionEditor ใน TagCombobox.jsx ให้หน้าตาเป็นชุดเดียวกัน
  */
-function FieldEditor({ field, t, canPurge, onRename, onHide, busy }) {
+function FieldEditor({ field, t, onRename, onDelete, busy }) {
   const [name, setName] = useState(field.label)
   const ref = useRef(null)
 
@@ -64,18 +65,16 @@ function FieldEditor({ field, t, canPurge, onRename, onHide, busy }) {
           className="w-full h-9 px-2 text-sm rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text focus:outline-none focus:ring-2 focus:ring-teal"
         />
       </div>
+      {/* ปุ่มเดียว — ไปเลือกในกล่องว่าจะซ่อนหรือลบถาวร (ลอกแบบ posts)
+          ⛔ ห้ามกลับไปทำ 2 จังหวะ "ซ่อนก่อนแล้วค่อยลบ" — user บอกอ่านไม่รู้เรื่อง 2026-08-18 */}
       <button
         type="button"
-        onClick={onHide}
-        className="flex items-center gap-1.5 w-fit text-sm text-warm-500 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text font-medium"
+        onClick={onDelete}
+        className="flex items-center gap-1.5 w-fit text-sm text-red-500 hover:text-red-600 font-medium"
       >
         {busy ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
-        {t('modal.fieldHide')}
+        {t('modal.fieldDelete')}
       </button>
-      {/* ลบถาวรอยู่ใต้หัวข้อ "ซ่อนอยู่" เท่านั้น — ที่นี่บอกแค่ว่าต้องซ่อนก่อน ไม่ให้ทางลัดกดพลาด */}
-      {canPurge && (
-        <p className="text-xs text-warm-400 dark:text-disc-muted">{t('modal.fieldHide')} → {t('modal.fieldPurge')}</p>
-      )}
     </div>
   )
 }
@@ -184,6 +183,7 @@ export default function CardFieldsBox({ cardId, fields = [], readOnly, canPurge 
   const [menuFor, setMenuFor] = useState(null)       // field_id ที่กางเมนูจัดการอยู่
   const [hidden, setHidden] = useState([])           // field ที่ซ่อนไว้ (โหลดแยก — card AGG ไม่คืนมาให้)
   const [hiddenOpen, setHiddenOpen] = useState(false)
+  const [confirmField, setConfirmField] = useState(null)   // { id, label, impact } — กล่องเลือกซ่อน/ลบถาวร
 
   const loadHidden = useCallback(async () => {
     try {
@@ -195,6 +195,20 @@ export default function CardFieldsBox({ cardId, fields = [], readOnly, canPurge 
   }, [])
 
   useEffect(() => { if (!readOnly) loadHidden() }, [readOnly, loadHidden])
+
+  /**
+   * เปิดกล่อง "ลบช่องข้อมูล" — นับความเสียหายจริงก่อนเปิด แล้วให้เลือกเองว่าซ่อนหรือลบถาวร
+   * นับไม่ได้ก็เปิดกล่องต่อ (แค่ไม่มีตัวเลข) ห้ามเงียบแล้วไม่ให้ลบ
+   */
+  async function askDeleteField(field) {
+    onError?.('')
+    let impact = null
+    try {
+      const r = await fetch(`/api/kanban/fields/${field.id}?impact=1`)
+      if (r.ok) impact = (await r.json()).impact || null
+    } catch { /* ไม่มีตัวเลขก็ยังถามได้ */ }
+    setConfirmField({ ...field, impact })
+  }
 
   /** เปลี่ยนชื่อ field — ทุกคนทำได้ (ย้อนได้) @returns {Promise<boolean>} */
   async function renameField(fieldId, label) {
@@ -219,9 +233,8 @@ export default function CardFieldsBox({ cardId, fields = [], readOnly, canPurge 
   }
 
   /** ซ่อน/เอากลับ — ย้อนได้ทั้งคู่ จึงไม่มี gate ยศ · ค่าที่กรอกไว้ไม่เคยถูกแตะ */
-  async function setFieldArchived(fieldId, archived, name) {
+  async function setFieldArchived(fieldId, archived) {
     onError?.('')
-    if (archived && !window.confirm(t('modal.fieldHideConfirm', { name }))) return
     setBusyId(fieldId)
     try {
       const res = await fetch(`/api/kanban/fields/${fieldId}`, {
@@ -232,6 +245,7 @@ export default function CardFieldsBox({ cardId, fields = [], readOnly, canPurge 
       const json = await res.json().catch(() => ({}))
       if (!res.ok) { onError?.(json.error || t('saveFailed')); return }
       setMenuFor(null)
+      setConfirmField(null)
       await loadHidden()
       onFieldsChanged?.()
     } catch {
@@ -247,22 +261,13 @@ export default function CardFieldsBox({ cardId, fields = [], readOnly, canPurge 
    */
   async function purgeField(field) {
     onError?.('')
-    let impact = { cards: 0, options: 0, checklistItems: 0 }
-    try {
-      const r = await fetch(`/api/kanban/fields/${field.id}?impact=1`)
-      if (r.ok) impact = (await r.json()).impact || impact
-    } catch { /* นับไม่ได้ → ยังถามต่อ แค่เลขเป็น 0 */ }
-
-    const ok = window.confirm(t('modal.fieldPurgeConfirm', {
-      name: field.label, cards: impact.cards, options: impact.options, items: impact.checklistItems,
-    }))
-    if (!ok) return
-
     setBusyId(field.id)
     try {
       const res = await fetch(`/api/kanban/fields/${field.id}`, { method: 'DELETE' })
       const json = await res.json().catch(() => ({}))
       if (!res.ok) { onError?.(json.error || t('saveFailed')); return }
+      setConfirmField(null)
+      setMenuFor(null)
       await loadHidden()
       onFieldsChanged?.()
     } catch {
@@ -357,10 +362,9 @@ export default function CardFieldsBox({ cardId, fields = [], readOnly, canPurge 
                 <FieldEditor
                   field={{ id: f.field_id, label: f.label }}
                   t={t}
-                  canPurge={canPurge}
                   busy={busyId === f.field_id}
                   onRename={(label) => renameField(f.field_id, label)}
-                  onHide={() => setFieldArchived(f.field_id, true, f.label)}
+                  onDelete={() => askDeleteField({ id: f.field_id, label: f.label })}
                 />
               )}
             </div>
@@ -446,7 +450,7 @@ export default function CardFieldsBox({ cardId, fields = [], readOnly, canPurge 
                   {canPurge && (
                     <button
                       type="button"
-                      onClick={() => purgeField(f)}
+                      onClick={() => askDeleteField(f)}
                       className="flex items-center gap-1 text-sm text-red-500 hover:text-red-600 font-medium"
                     >
                       {busyId === f.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
@@ -461,6 +465,28 @@ export default function CardFieldsBox({ cardId, fields = [], readOnly, canPurge 
       )}
 
       {!readOnly && <NewFieldForm onCreate={createField} creating={creating} t={t} />}
+
+      {confirmField && (
+        <DeleteChoiceDialog
+          t={t}
+          heading={t('actions.deleteFieldHeading')}
+          title={confirmField.label}
+          impact={confirmField.impact
+            ? t('actions.fieldImpact', {
+                cards: confirmField.impact.cards,
+                options: confirmField.impact.options,
+                items: confirmField.impact.checklistItems,
+              })
+            : null}
+          hideHint={t('actions.fieldHideHint')}
+          hideLabel={t('actions.hide')}
+          canPurge={canPurge}
+          busy={busyId === confirmField.id}
+          onClose={() => setConfirmField(null)}
+          onHide={() => setFieldArchived(confirmField.id, true)}
+          onPurge={() => purgeField(confirmField)}
+        />
+      )}
     </div>
   )
 }

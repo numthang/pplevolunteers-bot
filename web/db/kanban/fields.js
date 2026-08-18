@@ -134,16 +134,15 @@ export async function countFieldImpact(orgId, fieldId) {
 }
 
 /**
- * ลบ field ถาวร — **ต้องซ่อนไว้ก่อนเท่านั้น** (`archived_at IS NOT NULL`)
+ * ลบ field ถาวร — ลบได้เลย ไม่ต้องซ่อนก่อน (ลอกแบบ posts: ปุ่ม "ลบ" เดียว แล้วเลือกในกล่องว่าซ่อนหรือลบถาวร)
  *
- * บังคับ 2 จังหวะ (ซ่อน → ค่อยลบ) เพราะย้อนไม่ได้ · ปุ่มเดียวจบคือกดพลาดแล้วจบเลย
+ * ด่านกันพลาดคือ **กล่องยืนยันที่บอกจำนวนจริง + ปุ่มลบถาวรแยกจากปุ่มซ่อน** ไม่ใช่การบังคับ 2 จังหวะ
  * FK 3 ตัวเป็น ON DELETE CASCADE อยู่แล้ว (card_field_values · card_checklist · field_options)
  * → ค่าที่การ์ดกรอกไว้หายตามหมด ไม่ต้องกวาดเอง แต่ต้องบอกจำนวนก่อนถาม (countFieldImpact)
  */
 export async function deleteFieldDef(orgId, fieldId) {
   const { rows } = await pool.query(
-    `DELETE FROM kanban_field_defs
-      WHERE org_id = $1 AND id = $2 AND archived_at IS NOT NULL RETURNING id`,
+    `DELETE FROM kanban_field_defs WHERE org_id = $1 AND id = $2 RETURNING id`,
     [orgId, fieldId]
   )
   return Boolean(rows[0])

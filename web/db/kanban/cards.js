@@ -406,10 +406,10 @@ export async function unarchiveCard(orgId, id) {
 }
 
 /**
- * ลบการ์ดถาวร — **ต้องอยู่ในกรุก่อนเท่านั้น** (`archived_at IS NOT NULL`)
+ * ลบการ์ดถาวร — ลบได้เลย ไม่ต้องเข้ากรุก่อน (ลอกแบบ posts)
  *
  * ⛔ ตัวเดียวในโมดูลที่ทำ DELETE บน kanban_cards · ด่านคือ canPurge() = admin เท่านั้น
- *    บังคับ 2 จังหวะ (เข้ากรุ → ค่อยลบ) เพราะย้อนไม่ได้
+ *    ด่านกันพลาดคือกล่องยืนยันที่แยกปุ่ม "เก็บเข้ากรุ" กับ "ลบถาวร" ออกจากกันชัดเจน
  * ⚠️ ห้ามเอาไปผูกกับปุ่ม "เก็บเข้ากรุ" เด็ดขาด — commit 37dd5e6 เคยพลาดแบบนั้นมาแล้ว
  *    (ปุ่มเขียน "เก็บเข้ากรุ" แต่ทำงานเป็นลบถาวร = โกหกผู้ใช้)
  *    ตารางลูกครบ 4 ตัวเป็น ON DELETE CASCADE (ตรวจกับ information_schema แล้ว 2026-08-18):
@@ -418,8 +418,7 @@ export async function unarchiveCard(orgId, id) {
  */
 export async function deleteCard(orgId, id) {
   const { rows } = await pool.query(
-    `DELETE FROM kanban_cards
-      WHERE org_id = $1 AND id = $2 AND archived_at IS NOT NULL RETURNING id`,
+    `DELETE FROM kanban_cards WHERE org_id = $1 AND id = $2 RETURNING id`,
     [orgId, id]
   )
   return Boolean(rows[0])

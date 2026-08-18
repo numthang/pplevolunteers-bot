@@ -109,7 +109,7 @@ export async function PATCH(req, { params }) {
 
 /**
  * DELETE            → เก็บเข้ากรุ (archive · ย้อนได้ด้วย PATCH { restore: true })
- * DELETE ?purge=1   → ลบถาวร (admin เท่านั้น · การ์ดต้องอยู่ในกรุแล้ว)
+ * DELETE ?purge=1   → ลบถาวร (admin เท่านั้น · ลบได้เลย ไม่ต้องเข้ากรุก่อน — ลอกแบบ posts)
  *
  * ⚠️ ค่าตั้งต้นยังเป็น "เก็บเข้ากรุ" เหมือนเดิมเป๊ะ — ห้ามสลับความหมาย
  *    commit 37dd5e6 เคยพลาดตรงนี้: ปุ่มเขียน "เก็บเข้ากรุ" แต่ลบถาวรจริง
@@ -120,10 +120,8 @@ export async function DELETE(req, { params }) {
 
   if (new URL(req.url).searchParams.get('purge') === '1') {
     if (!canPurge(ctx.access)) return err(403, 'ลบถาวรได้เฉพาะแอดมิน')
-    // ต้องเข้ากรุก่อน — บังคับ 2 จังหวะเพราะย้อนไม่ได้
-    if (!ctx.card.archived_at) return err(400, 'ต้องเก็บการบ้านใบนี้เข้ากรุก่อนถึงจะลบถาวรได้')
     const ok = await cardDB.deleteCard(ctx.orgId, ctx.card.id)
-    if (!ok) return err(404, 'ไม่พบการบ้านใบนี้ในกรุ')
+    if (!ok) return err(404, 'ไม่พบการบ้านใบนี้')
     return Response.json({ ok: true, purged: true })
   }
 

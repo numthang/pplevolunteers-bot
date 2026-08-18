@@ -16,6 +16,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { X, Loader2, Check, AlertTriangle, UserPlus, Archive, ArchiveRestore, ExternalLink, Copy } from 'lucide-react'
 import { formatRef, STATUS_TYPES } from '@/lib/kanbanAccess.js'
+import DeleteChoiceDialog from './DeleteChoiceDialog.jsx'
 import LabelPicker from './LabelPicker.jsx'
 import OwnerPicker from './OwnerPicker.jsx'
 import CardFieldsBox from './CardFieldsBox.jsx'
@@ -28,6 +29,8 @@ export default function CardModal({ cardId, onClose, onChanged, onOpenCard }) {
   const [card, setCard] = useState(null)
   const [can, setCan] = useState({ edit: false, archive: false, restore: false, claim: false, purge: false })
   const [duplicating, setDuplicating] = useState(false)
+  const [confirmRemove, setConfirmRemove] = useState(false)
+  const [removing, setRemoving] = useState(false)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
 
@@ -202,16 +205,26 @@ export default function CardModal({ cardId, onClose, onChanged, onOpenCard }) {
     }
   }
 
-  async function archive() {
-    if (!window.confirm(t('modal.confirmArchive'))) return
-    const res = await fetch(`/api/kanban/cards/${cardId}`, { method: 'DELETE' })
-    if (!res.ok) {
-      const json = await res.json().catch(() => ({}))
-      setActionError(json.error || t('saveFailed'))
-      return
+  /**
+   * เก็บเข้ากรุ / ลบถาวร — เลือกในกล่องเดียวกัน (ลอกแบบ posts · user สั่ง 2026-08-18)
+   * ⛔ ห้ามกลับไปบังคับ "เข้ากรุก่อนแล้วค่อยลบ"
+   */
+  async function removeCard(permanent) {
+    setActionError('')
+    setRemoving(true)
+    try {
+      const res = await fetch(`/api/kanban/cards/${cardId}${permanent ? '?purge=1' : ''}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}))
+        setActionError(json.error || t('saveFailed'))
+        return
+      }
+      setConfirmRemove(false)
+      onChanged?.()
+      onClose()
+    } finally {
+      setRemoving(false)
     }
-    onChanged?.()
-    onClose()
   }
 
   /** เอาออกจากกรุ — ไม่ต้องถามยืนยัน เป็นการกระทำที่ย้อนได้อยู่แล้ว */
@@ -470,7 +483,7 @@ export default function CardModal({ cardId, onClose, onChanged, onOpenCard }) {
                       <ArchiveRestore size={16} /> {t('actions.restore')}
                     </button>
                   ) : (
-                    <button onClick={archive} className="flex items-center gap-1 px-4 py-2 text-base rounded-lg text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-disc-hover font-medium transition">
+                    <button onClick={() => setConfirmRemove(true)} className="flex items-center gap-1 px-4 py-2 text-base rounded-lg text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-disc-hover font-medium transition">
                       <Archive size={16} /> {t('modal.archive')}
                     </button>
                   )}
@@ -480,6 +493,22 @@ export default function CardModal({ cardId, onClose, onChanged, onOpenCard }) {
           )}
         </div>
       </div>
+
+      {confirmRemove && (
+        <DeleteChoiceDialog
+          t={t}
+          heading={t('actions.deleteCardHeading')}
+          title={card?.title || ''}
+          impact={t('actions.cardImpactPlain')}
+          hideHint={t('actions.cardArchiveHint')}
+          hideLabel={t('actions.archive')}
+          canPurge={Boolean(can.purge)}
+          busy={removing}
+          onClose={() => setConfirmRemove(false)}
+          onHide={() => removeCard(false)}
+          onPurge={() => removeCard(true)}
+        />
+      )}
     </div>
   )
 }
