@@ -7,7 +7,7 @@
 import { cardContext, err } from '@/lib/kanbanGuard.js'
 import {
   canEditCard, canArchiveCard, canChangeStatus, canAssignOwner, canClaimCard,
-  checkStatusTransition, formatRef, isKanbanAdmin,
+  checkStatusTransition, formatRef,
 } from '@/lib/kanbanAccess.js'
 import * as cardDB from '@/db/kanban/cards.js'
 
@@ -22,7 +22,6 @@ export async function GET(_req, { params }) {
   return Response.json({
     card: ctx.card,
     ref: formatRef(ctx.card.ref_no),
-    checklist: await cardDB.listChecklist(ctx.orgId, ctx.card.id),
     can: {
       edit:    canEditCard(ctx.card, ctx.access, ctx.userId),
       // เก็บเข้ากรุ/เอาออกจากกรุ ใช้ด่านเดียวกัน — คนละปุ่มแต่เป็นการกระทำคู่กัน
@@ -34,8 +33,6 @@ export async function GET(_req, { params }) {
       join:    canClaimCard(ctx.card, ctx.access, ctx.userId)
                && ctx.card.owner_user_id !== ctx.userId
                && !(ctx.card.helper_ids || []).includes(ctx.userId),
-      // ทางเข้าหน้า /kanban/fields ในกล่อง "ข้อมูลของทีม" — โชว์เฉพาะแอดมิน (แนวเดียวกับ manageLabels)
-      manageFields: isKanbanAdmin(ctx.access),
     },
   })
 }

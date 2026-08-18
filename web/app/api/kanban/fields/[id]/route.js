@@ -1,17 +1,16 @@
-// /api/kanban/fields/[id] — แก้ field def 1 ตัว (หน้าจัดการช่องข้อมูล) · admin เท่านั้น
+// /api/kanban/fields/[id] — แก้ field def 1 ตัว
 //
 // PATCH { label?, helpText?, archived? } → { field }
 //
 // ⛔ key และ type เปลี่ยนไม่ได้ในรอบนี้ — ไม่รับพารามิเตอร์นี้เข้ามาด้วยซ้ำ (กันแก้ผิดที่)
+// ⛔ ไม่มี admin gate (เคาะ 2026-08-18 รอบเย็น) — ใครก็ตามที่อยู่ใน org แก้ได้จากใน CardModal
 // ⚠️ ไม่มีทางลบ field ถาวร — ซ่อนอย่างเดียว ค่าที่การ์ดกรอกไว้แล้วห้ามหายเงียบ
 import { kanbanContext, err } from '@/lib/kanbanGuard.js'
-import { isKanbanAdmin } from '@/lib/kanbanAccess.js'
 import * as fieldDB from '@/db/kanban/fields.js'
 
 export async function PATCH(req, { params }) {
   const ctx = await kanbanContext()
   if (ctx.error) return ctx.error
-  if (!isKanbanAdmin(ctx.access)) return err(403, 'ต้องเป็นแอดมินถึงจะจัดการช่องข้อมูลได้')
 
   // ⚠️ id เป็น BIGINT → มาเป็นสตริง ห้ามแปลงเป็น Number
   const { id } = await params
@@ -20,7 +19,7 @@ export async function PATCH(req, { params }) {
 
   const body = await req.json().catch(() => ({}))
 
-  // ซ่อน/เลิกซ่อน เป็น action เดี่ยว ไม่ปนกับการแก้ชื่อ (แนวเดียวกับป้าย)
+  // ซ่อน/เลิกซ่อน เป็น action เดี่ยว ไม่ปนกับการแก้ชื่อ
   if (body.archived !== undefined) {
     const ok = body.archived
       ? await fieldDB.archiveFieldDef(ctx.orgId, fieldId)

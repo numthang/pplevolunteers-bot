@@ -985,3 +985,42 @@ CREATE TABLE IF NOT EXISTS kanban_card_field_values (
 CREATE INDEX IF NOT EXISTS idx_kanban_card_field_values_field ON kanban_card_field_values (field_id);
 
 
+-- 2026-08-18 (รอบเย็น) · kanban: select/multi_select + checklist เป็น custom field type
+-- กลับคำรอบที่ 3 ของโมดูลนี้ (ดู md/kanban/CUSTOM-FIELDS.md §กลับคำ):
+--   1) "งานย่อย" เดิมเคาะไว้เป็นคอลัมน์จริง (เส้นแบ่งตอนต้นแผน) → ตอนนี้เป็น custom field type แทน
+--      ไม่มีข้อมูลจริงใน kanban_card_checklist เลย (โมดูลยังไม่เคย deploy) — replace ได้เต็มๆ ไม่ต้อง migrate
+--   2) ตัดเรื่อง admin gate ทั้งชุดของ custom field (fields+options+checklist) — user เคาะ "ไม่ต้องมี field
+--      manager ให้ยุ่งยาก" ทุกอย่าง manage ได้จากในการ์ดที่กำลังแก้เลย (เหมือน canEditCard) ไม่ใช่หน้าแอดมินแยก
+ALTER TABLE kanban_field_defs DROP CONSTRAINT IF EXISTS kanban_field_defs_type_check;
+ALTER TABLE kanban_field_defs ADD CONSTRAINT kanban_field_defs_type_check
+  CHECK (type IN ('text','number','url','date','checkbox','select','multi_select','checklist'));
+
+-- ตัวเลือกของ select/multi_select ผูกกับ field เดียว (ต่างจาก kanban_labels ที่เป็นคำศัพท์กลางทั้ง org)
+-- ⛔ ห้ามลบถาวร — archived_at เท่านั้น (บทเรียนเดียวกับป้าย: ตัวเลือกที่ติดค่าการ์ดอยู่ห้ามหายเงียบ)
+CREATE TABLE IF NOT EXISTS kanban_field_options (
+  id          BIGSERIAL PRIMARY KEY,
+  field_id    BIGINT       NOT NULL REFERENCES kanban_field_defs(id) ON DELETE CASCADE,
+  name        VARCHAR(60)  NOT NULL,
+  color       VARCHAR(20),              -- NULL = สีอัตโนมัติจากชื่อ (แนวเดียวกับ kanban_labels.color)
+  sort_order  INT          NOT NULL DEFAULT 0,
+  archived_at TIMESTAMPTZ,
+  created_at  TIMESTAMPTZ  NOT NULL DEFAULT now()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_kanban_field_options_name ON kanban_field_options (field_id, name);
+CREATE INDEX IF NOT EXISTS idx_kanban_field_options_field
+    ON kanban_field_options (field_id, sort_order) WHERE archived_at IS NULL;
+
+-- select ใช้ array ยาว ≤1 · multi_select ยาวเท่าไหร่ก็ได้ — คอลัมน์เดียวพอ ไม่ต้องแยกตามชนิด
+ALTER TABLE kanban_card_field_values ADD COLUMN IF NOT EXISTS value_options BIGINT[];
+
+-- checklist ย้ายจาก "1 การ์ด 1 เช็คลิสต์ตายตัว" → ผูกกับ field แทน (1 การ์ดมีได้หลายเช็คลิสต์ ถ้า org สร้างหลาย field)
+-- 0 แถวตอนนี้ (ยังไม่เคย deploy) → ใส่ NOT NULL ตรงๆ ไม่ต้อง backfill
+ALTER TABLE kanban_card_checklist ADD COLUMN field_id BIGINT REFERENCES kanban_field_defs(id) ON DELETE CASCADE;
+ALTER TABLE kanban_card_checklist ALTER COLUMN field_id SET NOT NULL;
+
+DROP INDEX IF EXISTS idx_kanban_checklist_card;
+CREATE INDEX IF NOT EXISTS idx_kanban_checklist_card_field
+    ON kanban_card_checklist (card_id, field_id, sort_order);
+
+

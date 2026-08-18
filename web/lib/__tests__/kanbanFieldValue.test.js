@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { validateFieldValue, isValidFieldKey, FIELD_TYPE_COLUMN, FIELD_TYPES } from '../kanbanFieldValue.js'
+import { validateFieldValue, isValidFieldKey, slugifyFieldKey, FIELD_TYPE_COLUMN, FIELD_TYPES } from '../kanbanFieldValue.js'
 
 describe('validateFieldValue — text', () => {
   it('ตัดช่องว่างหัวท้าย', () => {
@@ -64,18 +64,65 @@ describe('validateFieldValue — checkbox', () => {
   })
 })
 
-describe('validateFieldValue — ชนิดไม่รู้จัก', () => {
+describe('validateFieldValue — select', () => {
+  it('เลือกได้ค่าเดียว — แปลง id เป็นตัวเลข', () => {
+    expect(validateFieldValue('select', [5])).toEqual({ ok: true, value: [5] })
+    expect(validateFieldValue('select', ['5'])).toEqual({ ok: true, value: [5] })
+  })
+  it('เลือกเกิน 1 ค่า → error', () => {
+    expect(validateFieldValue('select', [1, 2]).ok).toBe(false)
+  })
+  it('array ว่าง/ไม่ใช่ array → null (ลบแถว)', () => {
+    expect(validateFieldValue('select', [])).toEqual({ ok: true, value: null })
+    expect(validateFieldValue('select', null)).toEqual({ ok: true, value: null })
+  })
+})
+
+describe('validateFieldValue — multi_select', () => {
+  it('เลือกได้หลายค่า ตัดซ้ำทิ้ง', () => {
+    expect(validateFieldValue('multi_select', [1, 2, 2, '3'])).toEqual({ ok: true, value: [1, 2, 3] })
+  })
+  it('array ว่าง → null', () => {
+    expect(validateFieldValue('multi_select', [])).toEqual({ ok: true, value: null })
+  })
+})
+
+describe('validateFieldValue — checklist ไม่ผ่านทางนี้', () => {
+  it('คืน error ไม่ throw — checklist เขียนผ่าน endpoint เช็คลิสต์แยกต่างหาก', () => {
+    expect(validateFieldValue('checklist', 'x').ok).toBe(false)
+  })
+})
+
+describe('validateFieldValue — ชนิดไม่รู้จักจริงๆ', () => {
   it('คืน error ไม่ throw', () => {
-    expect(validateFieldValue('select', 'x').ok).toBe(false)
+    expect(validateFieldValue('bogus_type', 'x').ok).toBe(false)
   })
 })
 
 describe('FIELD_TYPE_COLUMN', () => {
-  it('ครบทุกชนิดใน FIELD_TYPES', () => {
-    for (const t of FIELD_TYPES) expect(FIELD_TYPE_COLUMN[t]).toBeTruthy()
+  it('ครบทุกชนิดใน FIELD_TYPES ยกเว้น checklist (ไม่มีคอลัมน์เดี่ยว — แยกตาราง)', () => {
+    for (const t of FIELD_TYPES) {
+      if (t === 'checklist') { expect(FIELD_TYPE_COLUMN[t]).toBeUndefined(); continue }
+      expect(FIELD_TYPE_COLUMN[t]).toBeTruthy()
+    }
   })
   it('text กับ url ใช้คอลัมน์เดียวกัน', () => {
     expect(FIELD_TYPE_COLUMN.text).toBe(FIELD_TYPE_COLUMN.url)
+  })
+  it('select กับ multi_select ใช้คอลัมน์เดียวกัน', () => {
+    expect(FIELD_TYPE_COLUMN.select).toBe(FIELD_TYPE_COLUMN.multi_select)
+  })
+})
+
+describe('slugifyFieldKey', () => {
+  it('label อังกฤษ → slug + suffix', () => {
+    expect(slugifyFieldKey('Budget', 42)).toBe('budget_42')
+  })
+  it('label ไทยล้วน slug ไม่ได้ → fallback field_<suffix>', () => {
+    expect(slugifyFieldKey('งบประมาณ', 42)).toBe('field_42')
+  })
+  it('suffix ต่างกัน key ต่างกันเสมอ (กันชนกัน)', () => {
+    expect(slugifyFieldKey('Budget', 1)).not.toBe(slugifyFieldKey('Budget', 2))
   })
 })
 

@@ -25,25 +25,39 @@ const COLS = `
   c.source_url, c.source_message_id,
   ${LOCK} AS lock_token`
 
-// คนช่วย + งานย่อย ดึงมาด้วยเสมอ — การ์ดใบเดียวไม่มีทางใหญ่พอให้ต้อง lazy load
+// คนช่วยดึงมาด้วยเสมอ — การ์ดใบเดียวไม่มีทางใหญ่พอให้ต้อง lazy load
+// ⚠️ งานย่อย (checklist) ไม่ได้อยู่ตรงนี้แล้ว — กลายเป็น custom field ชนิด checklist ไปแล้ว (2026-08-18 รอบเย็น)
+//    อยู่ใน fields array ข้างล่างเหมือนชนิดอื่น ไม่มี checklist_total/checklist_done แบบเดิมอีกต่อไป
 const AGG = `
   COALESCE((SELECT json_agg(json_build_object('user_id', h.user_id, 'name', ${DISPLAY_NAME}) ORDER BY h.joined_at)
               FROM kanban_card_helpers h JOIN users u ON u.id = h.user_id
              WHERE h.card_id = c.id), '[]'::json) AS helpers,
-  COALESCE((SELECT count(*) FROM kanban_card_checklist k WHERE k.card_id = c.id), 0)                  AS checklist_total,
-  COALESCE((SELECT count(*) FROM kanban_card_checklist k WHERE k.card_id = c.id AND k.done), 0)       AS checklist_done,
   COALESCE((SELECT json_agg(json_build_object('id', l.id, 'name', l.name, 'group', l.group_name, 'color', l.color)
                             ORDER BY l.group_name, l.sort_order, l.name)
               FROM kanban_card_labels cl JOIN kanban_labels l ON l.id = cl.label_id
              WHERE cl.card_id = c.id AND l.archived_at IS NULL), '[]'::json) AS labels,
-  -- ทุก field ที่ยังไม่ถูกซ่อนของ org นี้ (ไม่ใช่แค่ที่กรอกแล้ว) — ให้ UI วาดเป็นฟอร์มครบชุด ค่าที่ยังไม่กรอกเป็น null
+  -- ทุก field ที่ยังไม่ถูกซ่อนของ org นี้ (ไม่ใช่แค่ที่กรอกแล้ว) — ให้ UI วาดเป็นฟอร์มครบชุด ค่าที่ยังไม่กรอกเป็น null/[]
   -- ⚠️ d.board_id IS NULL ฮาร์ดโค้ดไว้เพราะยังไม่มีกระดานจริง — ก้อน 3 ต้องแก้เป็น (d.board_id IS NULL OR d.board_id = c.board_id)
   COALESCE((SELECT json_agg(json_build_object(
               'field_id', d.id, 'key', d.key, 'label', d.label, 'type', d.type,
-              'value', CASE d.type
-                         WHEN 'number'   THEN to_jsonb(v.value_num)
-                         WHEN 'date'     THEN to_jsonb(v.value_date)
-                         WHEN 'checkbox' THEN to_jsonb(v.value_bool)
+              'value', CASE
+                         WHEN d.type = 'number'   THEN to_jsonb(v.value_num)
+                         WHEN d.type = 'date'     THEN to_jsonb(v.value_date)
+                         WHEN d.type = 'checkbox' THEN to_jsonb(v.value_bool)
+                         WHEN d.type IN ('select', 'multi_select') THEN (
+                           -- jsonb_agg ไม่ใช่ json_agg — CASE ต้องคืนชนิดเดียวกันทุกกิ่ง (to_jsonb ข้างบนเป็น jsonb)
+                           -- ผสม json/jsonb ใน CASE เดียวกัน = 42846 "could not convert type json to jsonb" (เจอจาก smoke test)
+                           SELECT COALESCE(jsonb_agg(jsonb_build_object('id', o.id, 'name', o.name, 'color', o.color)
+                                                      ORDER BY o.sort_order, o.id), '[]'::jsonb)
+                             FROM kanban_field_options o
+                            WHERE o.id = ANY(v.value_options) AND o.archived_at IS NULL
+                         )
+                         WHEN d.type = 'checklist' THEN (
+                           SELECT COALESCE(jsonb_agg(jsonb_build_object('id', i.id, 'text', i.text, 'done', i.done)
+                                                     ORDER BY i.sort_order, i.id), '[]'::jsonb)
+                             FROM kanban_card_checklist i
+                            WHERE i.card_id = c.id AND i.field_id = d.id
+                         )
                          ELSE to_jsonb(v.value_text)
                        END
             ) ORDER BY d.sort_order, d.id)
@@ -322,48 +336,5 @@ export async function removeHelper(orgId, cardId, userId) {
   return await getCard(orgId, cardId)
 }
 
-// ── งานย่อย (checklist) ─────────────────────────────────────────────
-
-export async function listChecklist(orgId, cardId) {
-  const { rows } = await pool.query(
-    `SELECT k.id, k.text, k.done, k.sort_order
-       FROM kanban_card_checklist k JOIN kanban_cards c ON c.id = k.card_id
-      WHERE c.org_id = $1 AND k.card_id = $2
-      ORDER BY k.sort_order, k.id`,
-    [orgId, cardId]
-  )
-  return rows
-}
-
-export async function addChecklistItem(orgId, cardId, text) {
-  const { rows } = await pool.query(
-    `INSERT INTO kanban_card_checklist (card_id, text, sort_order)
-     SELECT $2, $3, COALESCE((SELECT MAX(sort_order) + 1 FROM kanban_card_checklist WHERE card_id = $2), 0)
-       FROM kanban_cards c WHERE c.org_id = $1 AND c.id = $2
-     RETURNING id, text, done, sort_order`,
-    [orgId, cardId, text]
-  )
-  return rows[0] || null
-}
-
-export async function setChecklistDone(orgId, itemId, done) {
-  const { rows } = await pool.query(
-    `UPDATE kanban_card_checklist k SET done = $3
-       FROM kanban_cards c
-      WHERE k.card_id = c.id AND c.org_id = $1 AND k.id = $2
-      RETURNING k.id, k.text, k.done, k.sort_order`,
-    [orgId, itemId, done]
-  )
-  return rows[0] || null
-}
-
-export async function deleteChecklistItem(orgId, itemId) {
-  const { rows } = await pool.query(
-    `DELETE FROM kanban_card_checklist k
-      USING kanban_cards c
-      WHERE k.card_id = c.id AND c.org_id = $1 AND k.id = $2
-      RETURNING k.id`,
-    [orgId, itemId]
-  )
-  return Boolean(rows[0])
-}
+// งานย่อย (checklist) ย้ายไป db/kanban/fields.js แล้ว — ผูกกับ field_id ไม่ใช่ card_id เฉยๆ อีกต่อไป
+// (checklist กลายเป็น custom field ชนิดหนึ่ง 2026-08-18 รอบเย็น ดู md/kanban/CUSTOM-FIELDS.md §กลับคำ)

@@ -14,7 +14,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { X, Loader2, Check, Trash2, Plus, AlertTriangle, UserPlus, Archive, ArchiveRestore, ExternalLink } from 'lucide-react'
+import { X, Loader2, Check, AlertTriangle, UserPlus, Archive, ArchiveRestore, ExternalLink } from 'lucide-react'
 import { formatRef, STATUS_TYPES } from '@/lib/kanbanAccess.js'
 import LabelPicker from './LabelPicker.jsx'
 import OwnerPicker from './OwnerPicker.jsx'
@@ -26,8 +26,7 @@ export default function CardModal({ cardId, onClose, onChanged }) {
   const t = useTranslations('kanban')
 
   const [card, setCard] = useState(null)
-  const [checklist, setChecklist] = useState([])
-  const [can, setCan] = useState({ edit: false, archive: false, restore: false, claim: false, manageFields: false })
+  const [can, setCan] = useState({ edit: false, archive: false, restore: false, claim: false })
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
 
@@ -41,7 +40,6 @@ export default function CardModal({ cardId, onClose, onChanged }) {
   const [pendingSave, setPendingSave] = useState(false)
   const [conflict, setConflict] = useState(false)
   const [actionError, setActionError] = useState('')
-  const [newItem, setNewItem] = useState('')
 
   const lockToken = useRef(null)
   const saveTimer = useRef(null)
@@ -68,7 +66,6 @@ export default function CardModal({ cardId, onClose, onChanged }) {
       const json = await res.json().catch(() => ({}))
       if (!res.ok) { setLoadError(json.error || t('loadFailed')); return }
       setCard(json.card)
-      setChecklist(json.checklist || [])
       setCan(json.can || {})
       lockToken.current = json.card.lock_token
       // เขียนทับช่องกรอกเฉพาะตอนโหลดครั้งแรก/กดโหลดใหม่ — ไม่งั้นทับสิ่งที่กำลังพิมพ์
@@ -178,28 +175,6 @@ export default function CardModal({ cardId, onClose, onChanged }) {
     } catch {
       setActionError(t('saveFailed'))
     }
-  }
-
-  async function checklistCall(method, body, query = '') {
-    setActionError('')
-    const res = await fetch(`/api/kanban/cards/${cardId}/checklist${query}`, {
-      method,
-      headers: body ? { 'Content-Type': 'application/json' } : undefined,
-      body: body ? JSON.stringify(body) : undefined,
-    })
-    const json = await res.json().catch(() => ({}))
-    if (!res.ok) { setActionError(json.error || t('saveFailed')); return null }
-    const list = await fetch(`/api/kanban/cards/${cardId}/checklist`).then((r) => r.json()).catch(() => ({}))
-    setChecklist(list.items || [])
-    onChanged?.()
-    return json
-  }
-
-  async function addItem(e) {
-    e.preventDefault()
-    const text = newItem.trim()
-    if (!text) return
-    if (await checklistCall('POST', { text })) setNewItem('')
   }
 
   async function archive() {
@@ -418,66 +393,24 @@ export default function CardModal({ cardId, onClose, onChanged }) {
                 </div>
               </div>
 
-              {/* งานย่อย */}
-              <div>
-                <label className="block text-sm font-medium text-warm-700 dark:text-disc-muted mb-1">
-                  {t('modal.checklistLabel')}
-                  {checklist.length > 0 && ` · ${checklist.filter((i) => i.done).length}/${checklist.length}`}
-                </label>
-                <div className="flex flex-col gap-1.5">
-                  {checklist.map((item) => (
-                    <div key={item.id} className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={item.done}
-                        disabled={readOnly}
-                        onChange={(e) => checklistCall('PATCH', { itemId: item.id, done: e.target.checked })}
-                        className="w-4 h-4 rounded border-warm-200 dark:border-disc-border accent-teal cursor-pointer"
-                      />
-                      <span className={`flex-1 text-base ${item.done ? 'line-through text-warm-400 dark:text-disc-muted' : 'text-warm-900 dark:text-disc-text'}`}>
-                        {item.text}
-                      </span>
-                      {!readOnly && (
-                        <button
-                          onClick={() => checklistCall('DELETE', null, `?itemId=${item.id}`)}
-                          aria-label={t('modal.removeItem')}
-                          title={t('modal.removeItem')}
-                          className="p-1 rounded text-warm-400 dark:text-disc-muted hover:text-red-500"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-                {!readOnly && (
-                  <form onSubmit={addItem} className="mt-2 flex gap-2">
-                    <input
-                      type="text"
-                      value={newItem}
-                      onChange={(e) => setNewItem(e.target.value)}
-                      placeholder={t('modal.addItemPlaceholder')}
-                      className="flex-1 h-11 px-3 text-base rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-teal"
-                    />
-                    <button type="submit" className="flex items-center gap-1 px-4 rounded-lg bg-teal text-white text-base font-medium hover:opacity-90 transition">
-                      <Plus size={16} /> {t('modal.addItem')}
-                    </button>
-                  </form>
-                )}
-              </div>
-
-              {/* ข้อมูลของทีม — custom field ก้อน 2 แยกกายภาพจากของระบบข้างบน */}
+              {/* ข้อมูลของทีม — custom field (รวมเช็คลิสต์แล้ว 2026-08-18 รอบเย็น) แยกกายภาพจากของระบบข้างบน */}
               <CardFieldsBox
                 cardId={cardId}
                 fields={card.fields || []}
                 readOnly={readOnly}
-                canManage={can.manageFields}
                 onError={setActionError}
                 onCardChanged={(fresh) => {
                   setCard(fresh)
                   lockToken.current = fresh.lock_token
                   onChanged?.()
                 }}
+                onFieldValueChanged={(fieldId, value) => {
+                  setCard((prev) => ({
+                    ...prev,
+                    fields: (prev.fields || []).map((f) => (f.field_id === fieldId ? { ...f, value } : f)),
+                  }))
+                }}
+                onReload={load}
                 t={t}
               />
 

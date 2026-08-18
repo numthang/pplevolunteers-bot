@@ -76,8 +76,10 @@ function Segmented({ options, value, onChange }) {
 
 function KanbanCard({ card, t, onOpen, onDragStart, dragging, draggable, onClaim, claiming, onRestore, restoring }) {
   const state = dueState(card.due_at)
-  const total = Number(card.checklist_total) || 0
-  const done = Number(card.checklist_done) || 0
+  // เช็คลิสต์กลายเป็น custom field แล้ว (2026-08-18 รอบเย็น) — การ์ดมีได้หลายเช็คลิสต์ รวมยอดทุกอันเป็นตัวเลขเดียว
+  const checklistFields = (card.fields || []).filter((f) => f.type === 'checklist')
+  const total = checklistFields.reduce((sum, f) => sum + (f.value || []).length, 0)
+  const done = checklistFields.reduce((sum, f) => sum + (f.value || []).filter((i) => i.done).length, 0)
 
   return (
     <div

@@ -44,11 +44,17 @@ user เคาะ: **ทำ custom field เลย ไม่ต้องรอ t
 - `db/kanbanCards.js` + `handlers/kanbanImportHandler.js` เขียนแล้ว · `web/db/kanban/cards.js` COLS + `CardModal.jsx` แสดงลิงก์ "มาจากข้อความในดิสฯ" แล้ว
 - smoke test เขียน+อ่านกลับผ่าน DB จริงแล้ว (ลบทิ้งหลังเทส) · `npm test` 389 ข้อผ่าน · build ผ่าน
 
-**ลำดับที่เหลือ**
-2. **แกน custom field** — `kanban_field_defs` + `kanban_card_field_values` (คอลัมน์แยกตามชนิด ไม่ใช่ jsonb) · 5 ชนิด: text/number/url/date/checkbox · หน้า `/kanban/fields` ลอกโครง `LabelManager.jsx`
-3. **`select`/`multi_select` + ยุบป้ายเข้ามา** — 3 กลุ่มป้าย → 3 field · 29 ป้าย → options · 76 เส้น → ค่า (INSERT…SELECT)
-4. **importer เก็บของที่เคยทิ้ง** — Discord → `source_url` · FB Post → field url · งบประมาณ → field number
-   ⚠️ ตอนนี้ importer **ข้าม 3 คอลัมน์นี้แบบเงียบๆ ไม่มีบรรทัดเตือน** → import 50 ใบที่จบแล้วรอบหน้าจะหาย 5 Discord + 31 FB
+**ขั้น 2 เสร็จ local (2026-08-18 รอบเย็น) ยังไม่ deploy** — custom field ครบ 8 ชนิด (text/number/url/date/checkbox/select/multi_select/checklist) เร่งมารวมกับ select/multi_select ตามสกรีนช็อตจริงของ AppFlowy ที่ user ส่งมา + checklist กลับคำจาก "คอลัมน์จริง" → เป็น custom field type (ดู `md/kanban/CUSTOM-FIELDS.md` §กลับคำรอบเย็น)
+- **ไม่มีหน้าแอดมินจัดการ field/option แยกอีกต่อไป** (`/kanban/fields` + `FieldManager.jsx` ถูกลบ) — สร้าง/แก้/ซ่อนทุกอย่างทำจากกล่อง "ข้อมูลของทีม" ในการ์ดตรงๆ ไม่มี `isKanbanAdmin` gate เลยในระบบนี้
+- ไฟล์ใหม่หลัก: `web/lib/kanbanFieldValue.js` (validate/slugifyFieldKey + เทส 30 ข้อ) · `web/db/kanban/fields.js` (field/option/checklist CRUD) · `web/components/kanban/{TagCombobox,ChecklistFieldBox,CardFieldsBox}.jsx`
+- `kanban_card_checklist` เพิ่ม `field_id` แล้ว (0 แถวตอนกลับคำ → replace เต็มๆ ไม่ต้อง migrate) — การ์ดมีได้หลายเช็คลิสต์ถ้า org สร้างหลาย field ชนิดนี้
+- smoke test ครบ (สร้าง field ทุกชนิด → เขียน/อ่าน/reorder/rename/archive option → checklist add/toggle/reorder/delete → ยืนยัน `updated_at` ไม่ขยับตลอด) · `npm test` 419 ข้อผ่าน · build ผ่าน
+- ⚠️ เจอบั๊กจาก smoke test ก่อน build: AGG ผสม `json_agg`/`to_jsonb` ในตัวเดียวกัน (CASE ต้องชนิดเดียวกันทุกกิ่ง) → error 42846 "could not convert type json to jsonb" แก้เป็น `jsonb_agg`/`'[]'::jsonb` ให้ตรงกับ `to_jsonb()` ที่ใช้ใน CASE อื่น
+
+**ค้างต่อจากที่วางแผนไว้เดิม**
+- **ยุบป้ายเข้า custom field จริง** — กลไก select/multi_select พร้อมแล้ว แต่ยังไม่ได้ migrate ข้อมูลจริง (3 กลุ่มป้าย → 3 field · 29 ป้าย → options · 76 เส้น → ค่า) `kanban_labels`/`kanban_card_labels` ยังอยู่เหมือนเดิม ยังไม่แตะ
+- **importer เก็บของที่เคยทิ้ง** — Discord → `source_url` · FB Post → field url · งบประมาณ → field number
+  ⚠️ ตอนนี้ importer **ข้าม 3 คอลัมน์นี้แบบเงียบๆ ไม่มีบรรทัดเตือน** → import 50 ใบที่จบแล้วรอบหน้าจะหาย 5 Discord + 31 FB
 
 **กับดักที่จดไว้แล้ว ห้ามพลาดซ้ำ:** เขียนค่า field **ห้าม bump `kanban_cards.updated_at`** (เป็น lock token ของ autosave → คนที่เปิดค้างจะโดน 409) · `key` เปลี่ยนไม่ได้/`label` เปลี่ยนได้ · `label` เป็นข้อมูล org ห้ามผ่าน `t()` · ลบ field = `archived_at` เท่านั้น
 
