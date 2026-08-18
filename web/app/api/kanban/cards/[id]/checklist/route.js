@@ -6,6 +6,7 @@
 // POST  { fieldId, text }         → { item }   พิมพ์ชื่อใหม่ = สร้างตัวเลือกในคลังให้เลย (เหมือน multi_select)
 // POST  { fieldId, optionId }     → { item }   หยิบจากคลังที่มีอยู่แล้ว
 // PATCH { itemId, done }          → { item }        ติ๊ก/เลิกติ๊ก
+// PATCH { itemId, fieldId, text }  → { item }        แก้ข้อความงานย่อย (เฉพาะการ์ดใบนี้)
 // PATCH { fieldId, reorder:[id] } → { ok }           ลากจัดลำดับใหม่
 // DELETE ?itemId=X                → { ok }
 import { cardContext, err } from '@/lib/kanbanGuard.js'
@@ -72,6 +73,23 @@ export async function PATCH(req, { params }) {
     const ok = await fieldDB.reorderChecklistItems(ctx.orgId, ctx.card.id, body.fieldId, orderedIds)
     if (!ok) return err(404, 'ไม่พบการบ้านใบนี้')
     return Response.json({ ok: true })
+  }
+
+  // แก้ข้อความงานย่อย — **เฉพาะการ์ดใบนี้** ไม่ rename ตัวเลือกในคลัง (user เคาะ 2026-08-19)
+  // ชื่อใหม่เข้าคลังให้เหมือนตอนพิมพ์เพิ่ม แล้วชี้ item ไปตัวใหม่ · ชื่อเก่ายังอยู่ การ์ดใบอื่นไม่สะเทือน
+  if (body.itemId && body.text !== undefined) {
+    if (!body.fieldId) return err(400, 'ต้องระบุ fieldId')
+    const text = String(body.text || '').trim()
+    if (!text) return err(400, 'ต้องมีข้อความ')
+    if (text.length > 60) return err(400, 'ชื่อรายการยาวเกิน 60 ตัวอักษร')
+
+    const field = await fieldDB.getFieldDef(ctx.orgId, body.fieldId)
+    if (!field) return err(404, 'ไม่พบช่องข้อมูลนี้')
+    const option = await fieldDB.ensureFieldOption(field.id, text)
+
+    const item = await fieldDB.setChecklistItemText(ctx.orgId, body.itemId, field.id,
+      option ? { optionId: option.id } : { text })
+    return item ? Response.json({ item }) : err(404, 'ไม่พบงานย่อยนี้')
   }
 
   // ติ๊ก/เลิกติ๊ก

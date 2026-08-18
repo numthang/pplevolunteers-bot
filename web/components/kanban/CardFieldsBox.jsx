@@ -28,20 +28,21 @@ import {
 } from 'lucide-react'
 import { FIELD_TYPES } from '@/lib/kanbanFieldValue.js'
 import DeleteChoiceDialog from './DeleteChoiceDialog.jsx'
-import FieldRow from './FieldRow.jsx'
+import FieldRow, { DropLine } from './FieldRow.jsx'
 import TagCombobox from './TagCombobox.jsx'
 import ChecklistFieldBox from './ChecklistFieldBox.jsx'
 
 /**
- * แถวจัดการ field — กางในแถวเดิม ไม่ลอยออกนอกกล่อง (กับดักข้อ 1 ของ TagCombobox)
- * ลอกทรงมาจาก OptionEditor ใน TagCombobox.jsx ให้หน้าตาเป็นชุดเดียวกัน
- */
-/**
- * แถวแก้ field — กางในแถวเดิม ไม่ลอยออกนอกกล่อง (กับดักข้อ 1 ของ TagCombobox)
- * ทรง: [ช่องชื่อ] [🗑]  — ถังขยะเป็นไอคอนล้วน ไม่มีคำว่า "ลบช่องนี้" (user สั่ง 2026-08-18)
+ * ช่องแก้ชื่อ field — **อยู่ในคอลัมน์ซ้ายตรงที่ชื่อเดิมอยู่** ไม่ใช่แถวใหม่เต็มความกว้างข้างล่าง
+ *
+ * ⭐ เดิมกางเป็น `footer` ของ FieldRow = กินเต็ม 2 คอลัมน์ → แถวโดนดันลง ค่าที่เป็นชิปหายไปจากสายตา
+ *    user ทัก 2026-08-19: "กดแก้ label ให้มันขึ้นภายใน column มันเลยได้ไหม"
+ *    → แก้ตรงที่ชื่ออยู่ · ค่ายังเห็นตลอด · **ถังขยะย้ายไปท้ายแถวขวาสุด** (user เคาะ) ช่องพิมพ์จะได้กินคอลัมน์เต็ม
+ *
+ * ⚠️ ตอนแก้ต้องซ่อนหมุดลาก + ไอคอนชนิด ไม่งั้นเหลือที่พิมพ์แค่ ~140px จาก 176px
  * ⚠️ จัดลำดับใช้ **ลากที่หมุด ⣿ บนหัวแถว** ไม่ใช่ปุ่ม ↑↓ (user สั่งเปลี่ยน 2026-08-18)
  */
-function FieldEditor({ field, t, onRename, onDelete, busy }) {
+function FieldNameInput({ field, t, onRename, onClose }) {
   const [name, setName] = useState(field.label)
   const ref = useRef(null)
 
@@ -57,31 +58,24 @@ function FieldEditor({ field, t, onRename, onDelete, busy }) {
     if (!ok) setName(field.label)
   }
 
+  // คลิกที่อื่น = บันทึกแล้ว **ปิดช่องด้วย** (user ทัก 2026-08-19: เดิมบันทึกแล้วช่องค้างเปิด)
+  const commitAndClose = async () => { await commitName(); onClose() }
+
   return (
-    <div ref={ref} className="mt-1 mb-1 flex items-center gap-1">
-      <input
-        autoFocus
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        onBlur={commitName}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') e.currentTarget.blur()
-          if (e.key === 'Escape') { setName(field.label); e.currentTarget.blur() }
-        }}
-        maxLength={100}
-        aria-label={t('modal.fieldRename')}
-        className="flex-1 min-w-0 h-9 px-2 text-sm rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text focus:outline-none focus:ring-2 focus:ring-teal"
-      />
-      <button
-        type="button"
-        onClick={onDelete}
-        aria-label={t('modal.fieldDelete')}
-        title={t('modal.fieldDelete')}
-        className="p-2 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-disc-hover shrink-0"
-      >
-        {busy ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
-      </button>
-    </div>
+    <input
+      ref={ref}
+      autoFocus
+      value={name}
+      onChange={(e) => setName(e.target.value)}
+      onBlur={commitAndClose}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') e.currentTarget.blur()
+        if (e.key === 'Escape') { setName(field.label); e.currentTarget.blur() }
+      }}
+      maxLength={100}
+      aria-label={t('modal.fieldRename')}
+      className="w-full min-w-0 h-9 px-2 text-sm rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text focus:outline-none focus:ring-2 focus:ring-teal"
+    />
   )
 }
 
@@ -90,11 +84,6 @@ function FieldEditor({ field, t, onRename, onDelete, busy }) {
 const TYPE_ICON = {
   text: Type, number: Hash, url: Link2, date: Calendar, checkbox: CheckSquare,
   select: List, multi_select: Tags, checklist: ListChecks,
-}
-
-/** เส้นบอกจุดวางตอนลาก — **ขึ้นทีละเส้นเดียว** ตรงที่เมาส์ลอยอยู่จริง (ไม่ใช่ทุกแถวเหมือนรอบก่อน) */
-function DropLine() {
-  return <div className="h-0.5 -my-px bg-teal rounded-full" />
 }
 
 function ScalarInput({ field, value, readOnly, onCommit, emptyLabel }) {
@@ -450,7 +439,8 @@ export default function CardFieldsBox({ cardId, fields = [], readOnly, canPurge 
           const row = (control) => (
             <FieldRow
               key={f.field_id}
-              icon={TypeIcon}
+              /* ตอนแก้ชื่อ ซ่อนไอคอนชนิด — ยกที่ทั้ง 176px ให้ช่องพิมพ์ */
+              icon={editing ? null : TypeIcon}
               onDragOver={(e) => {
                 if (!dragId || dragId === f.field_id) return
                 e.preventDefault()
@@ -469,7 +459,7 @@ export default function CardFieldsBox({ cardId, fields = [], readOnly, canPurge 
               className={`relative ${dragId === f.field_id ? 'opacity-40' : ''}`}
               footerBefore={dropAt?.id === f.field_id && dropAt.above && <DropLine />}
               footerAfter={dropAt?.id === f.field_id && !dropAt.above && <DropLine />}
-              handle={!readOnly && (
+              handle={!readOnly && !editing && (
                 /* หมุดลาก — อยู่หน้าสุดก่อนไอคอนชนิด (user สั่ง 2026-08-18)
                    ลากได้เฉพาะตรงนี้ ไม่ใช่ทั้งแถว ไม่งั้นลากทับการเลือกข้อความในช่องกรอก */
                 <span
@@ -483,13 +473,22 @@ export default function CardFieldsBox({ cardId, fields = [], readOnly, canPurge 
                 </span>
               )}
               label={
-                <span className="flex items-center gap-1 min-w-0">
+                <span className="flex items-center gap-1 min-w-0 flex-1">
                   {readOnly ? (
                     <span className="text-sm text-warm-500 dark:text-disc-muted min-w-0 truncate">{f.label}</span>
+                  ) : editing ? (
+                    <FieldNameInput
+                      field={{ id: f.field_id, label: f.label }}
+                      t={t}
+                      onRename={(label) => renameField(f.field_id, label)}
+                      /* ⚠️ ปิดเฉพาะถ้ายังแก้แถวนี้อยู่ — คลิกจากชื่อ field นี้ไปชื่ออีกอันโดยตรง
+                         blur จะ commit (async) แล้วค่อยกลับมาปิด ถ้าปิดทื่อๆ = ไปปิดแถวใหม่ที่เพิ่งเปิด */
+                      onClose={() => setMenuFor((cur) => (cur === f.field_id ? null : cur))}
+                    />
                   ) : (
                     <button
                       type="button"
-                      onClick={() => setMenuFor(editing ? null : f.field_id)}
+                      onClick={() => setMenuFor(f.field_id)}
                       title={t('modal.fieldRename')}
                       className="text-left text-sm text-warm-500 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text min-w-0 truncate"
                     >
@@ -498,18 +497,24 @@ export default function CardFieldsBox({ cardId, fields = [], readOnly, canPurge 
                   )}
                 </span>
               }
-              footer={editing && (
-                <FieldEditor
-                  field={{ id: f.field_id, label: f.label }}
-                  t={t}
-                  busy={busyId === f.field_id}
-                  onRename={(label) => renameField(f.field_id, label)}
-                  onDelete={() => askDeleteField({ id: f.field_id, label: f.label })}
-                />
-              )}
             >
               <div className="flex-1 min-w-0">{control}</div>
-              {busyId === f.field_id && <Loader2 size={16} className="animate-spin text-warm-400 dark:text-disc-muted shrink-0" />}
+              {/* ตอนแก้ชื่อ ตัวหมุนอยู่บนถังขยะแล้ว — ไม่ต้องมี 2 อัน */}
+              {busyId === f.field_id && !editing && <Loader2 size={16} className="animate-spin text-warm-400 dark:text-disc-muted shrink-0" />}
+              {/* ถังขยะท้ายแถวขวาสุด — โผล่เฉพาะตอนแก้ชื่อ (user เคาะ 2026-08-19)
+                  ⚠️ preventDefault ตอน mousedown: ไม่งั้น blur ปิดช่องก่อน click จะทำงาน = กดลบไม่ติด */}
+              {editing && (
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => askDeleteField({ id: f.field_id, label: f.label })}
+                  aria-label={t('modal.fieldDelete')}
+                  title={t('modal.fieldDelete')}
+                  className="p-2 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-disc-hover shrink-0"
+                >
+                  {busyId === f.field_id ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                </button>
+              )}
             </FieldRow>
           )
 

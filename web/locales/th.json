@@ -1787,6 +1787,7 @@
       "joinAsHelper": "ลงมือด้วย",
       "addItem": "เพิ่ม",
       "addItemPlaceholder": "เพิ่มงานย่อย",
+      "renameItem": "แก้ข้อความงานย่อย",
       "removeItem": "ลบงานย่อยนี้",
       "checklistShowDone": "แสดงงานที่เสร็จแล้ว",
       "checklistHideDone": "ซ่อนงานที่เสร็จแล้ว",

@@ -33,6 +33,9 @@ export async function GET(req) {
     return Response.json({
       cards: await cardDB.listCards(ctx.orgId, { includeClosed: true, limit: 500 }),
       viewerUserId: ctx.userId ?? null,
+      // ⭐ ต้องส่งในโหมดกระดานด้วย (2026-08-19) — ก้อน B เพิ่มเมนู ⋯ → ลบ บนการ์ดในกระดาน
+      //    เดิมส่งเฉพาะโหมดกรุ กล่องลบบนกระดานเลยไม่มีปุ่ม "ลบถาวร" ให้ admin เลย
+      canPurge: canPurge(ctx.access),
     })
   }
   // กรุ (archive) — คนละเรื่องกับช่อง "พักไว้" ที่เป็น status_type

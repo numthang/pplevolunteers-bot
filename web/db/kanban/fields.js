@@ -419,6 +419,27 @@ export async function setChecklistItemDone(orgId, itemId, done) {
   return rows[0] || null
 }
 
+/**
+ * แก้ข้อความงานย่อย — **เฉพาะการ์ดใบนี้** (user เคาะ 2026-08-19)
+ *
+ * ⭐ ไม่ได้ rename ตัวเลือกในคลัง — ชี้ item ไปที่ตัวเลือก "ชื่อใหม่" แทน (route ensureFieldOption ให้ก่อน)
+ *    ชื่อเก่ายังอยู่ในคลัง การ์ดใบอื่นที่ใช้อยู่จึงไม่สะเทือน
+ *    (ต่างจาก multi_select ที่แก้ชิป = rename ตัวเลือกทั้งระบบ — คนละเจตนากัน จงใจให้ต่าง)
+ *
+ * ⚠️ ผูก i.field_id = $3 ไว้ด้วย — กันส่ง itemId ของ field อื่นมาให้ชี้ option ข้าม field
+ */
+export async function setChecklistItemText(orgId, itemId, fieldId, { optionId = null, text = null }) {
+  const { rows } = await pool.query(
+    `UPDATE kanban_card_checklist i SET option_id = $4, text = $5
+       FROM kanban_cards c
+      WHERE i.card_id = c.id AND c.org_id = $1 AND i.id = $2 AND i.field_id = $3
+      RETURNING i.id, i.option_id, i.done, i.sort_order,
+                COALESCE((SELECT name FROM kanban_field_options WHERE id = i.option_id), i.text) AS text`,
+    [orgId, itemId, fieldId, optionId, text]
+  )
+  return rows[0] || null
+}
+
 export async function deleteChecklistItem(orgId, itemId) {
   const { rows } = await pool.query(
     `DELETE FROM kanban_card_checklist i

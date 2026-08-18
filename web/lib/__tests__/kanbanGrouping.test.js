@@ -108,6 +108,16 @@ describe('sortCards', () => {
     expect(sortCards(cards).map(c => c.id)).toEqual([2, 1])
   })
 
+  // user ทัก 2026-08-19: เพิ่มการ์ดในกองแล้วมันไปโผล่ล่างสุด ทั้งที่ช่องพิมพ์อยู่บนสุด
+  it('กำหนดส่ง+ความสำคัญเท่ากัน → ของใหม่ขึ้นก่อน', () => {
+    const cards = [
+      card({ id: 1, due_at: null, created_at: at('2026-08-01T09:00:00+07:00') }),
+      card({ id: 2, due_at: null, created_at: at('2026-08-19T09:00:00+07:00') }),
+      card({ id: 3, due_at: null, created_at: at('2026-08-10T09:00:00+07:00') }),
+    ]
+    expect(sortCards(cards).map(c => c.id)).toEqual([2, 3, 1])
+  })
+
   it('ไม่แก้ array เดิม', () => {
     const cards = [card({ id: 1, due_at: at('2026-08-25T09:00:00+07:00') }), card({ id: 2, due_at: null })]
     const copy = [...cards]

@@ -17,6 +17,52 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { Eye, EyeOff, GripVertical, ListChecks, Loader2, Plus, Trash2 } from 'lucide-react'
+import { DropLine } from './FieldRow.jsx'
+
+/**
+ * แท่งความคืบหน้าของเช็คลิสต์ — ใช้ทั้งในกล่องนี้ (คู่กับ %) และบนการ์ดในกระดาน
+ * (user สั่ง 2026-08-19: บนการ์ดเอาแท่งแทนตัวเลข x/y) — ห้ามลอก markup ไปเขียนซ้ำ
+ */
+export function ChecklistBar({ done, total, className = '' }) {
+  const pct = total ? Math.round((done / total) * 100) : 0
+  return (
+    <div className={`h-1.5 rounded-full bg-warm-100 dark:bg-disc-hover overflow-hidden ${className}`}>
+      <div className="h-full bg-teal transition-all" style={{ width: `${pct}%` }} />
+    </div>
+  )
+}
+
+/**
+ * ช่องแก้ข้อความงานย่อย — ทรงเดียวกับ FieldNameInput ใน CardFieldsBox
+ * ⚠️ blur = บันทึกแล้วปิด · ต้องรอผลจริงแล้วเด้งกลับถ้าไม่ผ่าน ไม่งั้นโชว์ชื่อที่ DB ไม่เคยรับ
+ */
+function ItemTextInput({ item, t, onRename, onClose }) {
+  const [text, setText] = useState(item.text)
+  useEffect(() => { setText(item.text) }, [item.text])
+
+  const commit = async () => {
+    const clean = text.trim()
+    if (!clean || clean === item.text) { setText(item.text); return }
+    const ok = await onRename(clean)
+    if (!ok) setText(item.text)
+  }
+
+  return (
+    <input
+      autoFocus
+      value={text}
+      onChange={(e) => setText(e.target.value)}
+      onBlur={async () => { await commit(); onClose() }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') e.currentTarget.blur()
+        if (e.key === 'Escape') { setText(item.text); e.currentTarget.blur() }
+      }}
+      maxLength={60}
+      aria-label={t('modal.renameItem')}
+      className="flex-1 min-w-0 h-8 px-2 text-base rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text focus:outline-none focus:ring-2 focus:ring-teal"
+    />
+  )
+}
 
 export default function ChecklistFieldBox({ cardId, fieldId, items = [], readOnly, onItemsChanged, onError, t }) {
   const [newText, setNewText] = useState('')
@@ -24,8 +70,10 @@ export default function ChecklistFieldBox({ cardId, fieldId, items = [], readOnl
   const [addOpen, setAddOpen] = useState(false)   // ช่องเพิ่มรายการกางอยู่ไหม (ปกติซ่อน เหลือแค่ปุ่ม)
   const [pool, setPool] = useState([])            // คลังตัวเลือกของ field นี้ (โหลดครั้งเดียวตอน mount)
   const [busyId, setBusyId] = useState(null)
+  const [editingId, setEditingId] = useState(null)  // งานย่อยที่กำลังแก้ข้อความอยู่
   const [hideDone, setHideDone] = useState(false)
   const [dragId, setDragId] = useState(null)
+  const [dropAt, setDropAt] = useState(null)   // { id, above } — เส้นบอกจุดวาง ขึ้นทีละเส้นเดียว
 
   const total = items.length
   const done = items.filter((i) => i.done).length
@@ -93,6 +141,19 @@ export default function ChecklistFieldBox({ cardId, fieldId, items = [], readOnl
     setBusyId(null)
   }
 
+  /**
+   * แก้ข้อความงานย่อย — **เฉพาะการ์ดใบนี้** (user เคาะ 2026-08-19)
+   * ชื่อใหม่เข้าคลังให้เหมือนตอนพิมพ์เพิ่ม · ชื่อเก่ายังอยู่ในคลัง การ์ดใบอื่นที่ใช้อยู่ไม่เปลี่ยนตาม
+   * @returns {Promise<boolean>} สำเร็จไหม — ช่องเด้งค่าเดิมกลับเองถ้า false (ห้ามให้ UI โชว์ชื่อที่ DB ไม่รับ)
+   */
+  async function renameItem(item, text) {
+    setBusyId(item.id)
+    const json = await call('PATCH', { itemId: item.id, fieldId, text })
+    if (json?.item) { onItemsChanged(items.map((i) => (i.id === item.id ? json.item : i))); loadPool() }
+    setBusyId(null)
+    return Boolean(json?.item)
+  }
+
   async function removeItem(itemId) {
     setBusyId(itemId)
     const json = await call('DELETE', null, `?itemId=${itemId}`)
@@ -100,16 +161,25 @@ export default function ChecklistFieldBox({ cardId, fieldId, items = [], readOnl
     setBusyId(null)
   }
 
+  /**
+   * วางงานย่อยที่ลากมา — index ต้องตรงกับ **เส้นที่วาดไว้** เป๊ะ ไม่งั้นวางแล้วเด้งไปคนละที่
+   * ⭐ ลอกสูตรจาก onDropField ใน CardFieldsBox ตัวเดียวกัน (ครึ่งล่าง = แทรกหลัง → +1
+   *    แล้วชดเชย -1 เพราะถอดตัวเองออกจาก array ไปก่อนแล้ว)
+   */
   async function onDropReorder(targetId) {
+    const at = dropAt
+    setDropAt(null)
     if (!dragId || dragId === targetId) { setDragId(null); return }
     const list = [...items]
     const from = list.findIndex((i) => i.id === dragId)
-    const to = list.findIndex((i) => i.id === targetId)
-    if (from === -1 || to === -1) { setDragId(null); return }
+    let to = list.findIndex((i) => i.id === targetId)
+    setDragId(null)
+    if (from === -1 || to === -1) return
+    if (at && at.id === targetId && !at.above) to += 1
     const [moved] = list.splice(from, 1)
+    if (from < to) to -= 1
     list.splice(to, 0, moved)
     onItemsChanged(list)
-    setDragId(null)
     await call('PATCH', { fieldId, reorder: list.map((i) => i.id) })
   }
 
@@ -120,9 +190,7 @@ export default function ChecklistFieldBox({ cardId, fieldId, items = [], readOnl
         <ListChecks size={16} className="text-warm-500 dark:text-disc-muted shrink-0" />
         {total > 0 && (
           <>
-            <div className="flex-1 h-1.5 rounded-full bg-warm-100 dark:bg-disc-hover overflow-hidden">
-              <div className="h-full bg-teal transition-all" style={{ width: `${pct}%` }} />
-            </div>
+            <ChecklistBar done={done} total={total} className="flex-1" />
             <span className="text-xs text-warm-400 dark:text-disc-muted shrink-0">{pct}%</span>
             <button
               type="button"
@@ -138,14 +206,29 @@ export default function ChecklistFieldBox({ cardId, fieldId, items = [], readOnl
 
       <div className="flex flex-col gap-1">
         {shown.map((item) => (
-          <div
-            key={item.id}
-            className="flex items-center gap-2 group"
-            draggable={!readOnly}
-            onDragStart={() => setDragId(item.id)}
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={() => onDropReorder(item.id)}
-          >
+          <div key={item.id}>
+            {/* เส้นบอกจุดวาง — เส้นเดียวตรงที่เมาส์ลอยอยู่จริง (ทรงเดียวกับตอนลาก field) */}
+            {dropAt?.id === item.id && dropAt.above && <DropLine />}
+            <div
+              className={`flex items-center gap-2 group ${dragId === item.id ? 'opacity-40' : ''}`}
+              draggable={!readOnly}
+              onDragStart={() => setDragId(item.id)}
+              onDragEnd={() => { setDragId(null); setDropAt(null) }}
+              onDragOver={(e) => {
+                if (!dragId || dragId === item.id) return
+                e.preventDefault()
+                // ครึ่งบน = แทรกก่อนแถวนี้ · ครึ่งล่าง = แทรกหลัง — เส้นจะได้ตรงกับที่วางจริง
+                const r = e.currentTarget.getBoundingClientRect()
+                setDropAt({ id: item.id, above: e.clientY < r.top + r.height / 2 })
+              }}
+              onDragLeave={(e) => {
+                // ออกจากแถวจริงๆ เท่านั้น ไม่ใช่แค่ย้ายเข้า element ลูก
+                if (!e.currentTarget.contains(e.relatedTarget)) {
+                  setDropAt((d) => (d && d.id === item.id ? null : d))
+                }
+              }}
+              onDrop={() => onDropReorder(item.id)}
+            >
             {!readOnly && <GripVertical size={14} className="text-warm-300 dark:text-disc-muted cursor-grab shrink-0" />}
             <input
               type="checkbox"
@@ -154,9 +237,29 @@ export default function ChecklistFieldBox({ cardId, fieldId, items = [], readOnl
               onChange={() => toggleDone(item)}
               className="w-4 h-4 rounded border-warm-200 dark:border-disc-border accent-teal cursor-pointer shrink-0"
             />
-            <span className={`flex-1 text-base ${item.done ? 'line-through text-warm-400 dark:text-disc-muted' : 'text-warm-900 dark:text-disc-text'}`}>
-              {item.text}
-            </span>
+            {/* คลิกที่ข้อความ = แก้ตรงนั้น (user ทัก 2026-08-19: เดิมแก้ไม่ได้เลย มีแค่ติ๊ก/ลาก/ลบ)
+                ทรงเดียวกับชื่อ field: Enter/คลิกออก = บันทึกแล้วปิด · ESC = ทิ้ง */}
+            {editingId === item.id ? (
+              <ItemTextInput
+                item={item}
+                t={t}
+                onRename={(text) => renameItem(item, text)}
+                onClose={() => setEditingId((cur) => (cur === item.id ? null : cur))}
+              />
+            ) : readOnly ? (
+              <span className={`flex-1 text-base ${item.done ? 'line-through text-warm-400 dark:text-disc-muted' : 'text-warm-900 dark:text-disc-text'}`}>
+                {item.text}
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setEditingId(item.id)}
+                title={t('modal.renameItem')}
+                className={`flex-1 min-w-0 text-left text-base ${item.done ? 'line-through text-warm-400 dark:text-disc-muted' : 'text-warm-900 dark:text-disc-text'}`}
+              >
+                {item.text}
+              </button>
+            )}
             {busyId === item.id && <Loader2 size={14} className="animate-spin text-warm-400 dark:text-disc-muted shrink-0" />}
             {!readOnly && (
               <button
@@ -168,6 +271,8 @@ export default function ChecklistFieldBox({ cardId, fieldId, items = [], readOnl
                 <Trash2 size={14} />
               </button>
             )}
+            </div>
+            {dropAt?.id === item.id && !dropAt.above && <DropLine />}
           </div>
         ))}
       </div>
@@ -197,6 +302,10 @@ export default function ChecklistFieldBox({ cardId, fieldId, items = [], readOnl
                 <button
                   key={o.id}
                   type="button"
+                  /* ⚠️ ห้ามตัดออก — ช่องพิมพ์ข้างล่าง onBlur ปิดตัวเองเมื่อยังไม่ได้พิมพ์อะไร
+                     กดชิปตอนช่องว่าง = mousedown → blur → ชิปหายไปก่อน click จะทำงาน = กดไม่ติด
+                     (user เจอจริง 2026-08-19: "กดแล้วก็ไม่กลับเข้ามา") */
+                  onMouseDown={(e) => e.preventDefault()}
                   onClick={() => addFromPool(o)}
                   disabled={adding}
                   className="flex items-center gap-1 px-2 py-1 text-xs rounded-md border border-warm-200 dark:border-disc-border text-warm-700 dark:text-disc-muted hover:bg-warm-50 dark:hover:bg-disc-hover disabled:opacity-50 transition"

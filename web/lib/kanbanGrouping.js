@@ -70,13 +70,22 @@ export function groupCards(cards = [], mode = 'status', now = new Date()) {
   }))
 }
 
-/** เรียงในกอง: ใกล้ครบกำหนดก่อน · ไม่มีกำหนดไปท้าย · เท่ากันใช้ความสำคัญแล้วค่อยของเก่าก่อน */
+/**
+ * เรียงในกอง: ใกล้ครบกำหนดก่อน · ไม่มีกำหนดไปท้าย · เท่ากันใช้ความสำคัญ แล้วค่อย **ของใหม่ก่อน**
+ *
+ * ⭐ ตัวตัดสินสุดท้ายเป็น created_at **มากไปน้อย** (2026-08-19 — user ทัก)
+ *    เดิมเป็นของเก่าก่อน → เพิ่มการ์ดใหม่ในกองแล้วมันไปโผล่ล่างสุด ทั้งที่ช่องพิมพ์อยู่บนสุด
+ *    ของใหม่ก่อนตรงกับที่คนคาด: เพิ่มตรงไหน เห็นตรงนั้น
+ *
+ * ⛔ ยังไม่มีลำดับที่ลากจัดเองได้ (`kanban_cards` ไม่มี `sort_order`) — การ์ดที่มีกำหนดส่ง
+ *    ยังขึ้นก่อนการ์ดใหม่ที่ไม่มีกำหนดเสมอ ถ้าอยากได้ลำดับมือจริงๆ ต้องเพิ่มคอลัมน์
+ */
 export function sortCards(cards = []) {
   return [...cards].sort((a, b) => {
     const at = a.due_at ? new Date(a.due_at).getTime() : Infinity
     const bt = b.due_at ? new Date(b.due_at).getTime() : Infinity
     if (at !== bt) return at - bt
     if ((b.priority || 0) !== (a.priority || 0)) return (b.priority || 0) - (a.priority || 0)
-    return new Date(a.created_at || 0) - new Date(b.created_at || 0)
+    return new Date(b.created_at || 0) - new Date(a.created_at || 0)
   })
 }

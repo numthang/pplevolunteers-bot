@@ -32,6 +32,7 @@ import { collectFilterGroups, filterCards } from '@/lib/kanbanLabelFilter.js'
 import CardModal from './CardModal.jsx'
 import DeleteChoiceDialog from './DeleteChoiceDialog.jsx'
 import LabelChips from './LabelChips.jsx'
+import { ChecklistBar } from './ChecklistFieldBox.jsx'
 
 // แสดงต่อกองสูงสุดเท่านี้ — กอง "เสร็จ" โตไม่มีเพดาน ไม่ควรวาดหมดทุกใบ
 const MAX_PER_COLUMN = 40
@@ -105,7 +106,7 @@ function NewCardInline({ t, busy, onCreate, onCancel }) {
   )
 }
 
-function KanbanCard({ card, t, onOpen, onDragStart, dragging, draggable, onClaim, claiming, onRestore, restoring, onPurge, purging, canPurge, onDuplicate, onDelete, onRename }) {
+function KanbanCard({ card, t, onOpen, onDragStart, onDragEnd, dragging, draggable, onClaim, claiming, onRestore, restoring, onPurge, purging, canPurge, onDuplicate, onDelete, onRename }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [renaming, setRenaming] = useState(false)
   const [draftTitle, setDraftTitle] = useState(card.title)
@@ -136,6 +137,7 @@ function KanbanCard({ card, t, onOpen, onDragStart, dragging, draggable, onClaim
     <div
       draggable={draggable}
       onDragStart={(e) => onDragStart(e, card)}
+      onDragEnd={onDragEnd}
       onClick={() => onOpen(card)}
       role="button"
       tabIndex={0}
@@ -224,10 +226,17 @@ function KanbanCard({ card, t, onOpen, onDragStart, dragging, draggable, onClaim
             <User size={16} /> <span className="truncate max-w-[9rem]">{card.owner_name}</span>
           </span>
         )}
-        {total > 0 && (
-          <span className="flex items-center gap-1"><ListChecks size={16} /> {done}/{total}</span>
-        )}
       </div>
+
+      {/* ความคืบหน้าเช็คลิสต์เป็น **แท่ง** ไม่ใช่ตัวเลข x/y (user สั่ง 2026-08-19)
+          อยู่บรรทัดของตัวเอง — ยัดในแถว meta แล้วแท่งแคบจนอ่านไม่ออกบนคอลัมน์แคบ
+          ตัวเลขจริงย้ายไป title ให้เอาเมาส์ชี้ดูได้ ไม่ได้หายไปเฉยๆ */}
+      {total > 0 && (
+        <div className="flex items-center gap-1.5 text-warm-500 dark:text-disc-muted" title={`${done}/${total}`}>
+          <ListChecks size={16} className="shrink-0" />
+          <ChecklistBar done={done} total={total} className="flex-1" />
+        </div>
+      )}
 
       {/* อยู่ในกรุ = เอาออก · และ (admin เท่านั้น) ลบถาวร — ที่เดียวในระบบที่ลบการ์ดจริงได้ */}
       {card.archived_at ? (
@@ -313,7 +322,7 @@ export default function KanbanHome() {
       if (!res.ok) { setLoadError(json.error || t('loadFailed')); setCards([]); return }
       setCards(json.cards || [])
       setViewerUserId(json.viewerUserId ?? null)
-      // ส่งมาเฉพาะโหมดกรุ — โหมดปกติไม่มีปุ่มลบถาวรอยู่แล้ว
+      // ทั้งกระดานและกรุส่งมา — กระดานก็มีเมนู ⋯ → ลบ แล้ว (ก้อน B)
       setCanPurge(Boolean(json.canPurge))
     } catch {
       setLoadError(t('loadFailed'))
@@ -362,6 +371,12 @@ export default function KanbanHome() {
     setDraggingId(card.id)
     e.dataTransfer.effectAllowed = 'move'
     e.dataTransfer.setData('text/plain', String(card.id))   // Firefox ไม่เริ่มลากถ้าไม่ setData
+  }
+
+  /** ปล่อยนอกกองหรือกด ESC — ต้องคืนสภาพเอง ไม่งั้นการ์ดค้างจาง + กองค้างไฮไลต์ */
+  function onDragEnd() {
+    setDraggingId(null)
+    setOverColumn(null)
   }
 
   async function moveTo(cardId, statusType) {
@@ -797,7 +812,11 @@ export default function KanbanHome() {
               <div
                 key={key}
                 onDragOver={(e) => { if (!canDrag) return; e.preventDefault(); setOverColumn(key) }}
-                onDragLeave={() => setOverColumn((s) => (s === key ? null : s))}
+                onDragLeave={(e) => {
+                  // ออกจากกองจริงๆ เท่านั้น — ไม่งั้นย้ายเมาส์ข้ามการ์ดในกองเดียวกันไฮไลต์กระพริบ
+                  if (e.currentTarget.contains(e.relatedTarget)) return
+                  setOverColumn((s) => (s === key ? null : s))
+                }}
                 onDrop={(e) => {
                   if (!canDrag) return
                   e.preventDefault()
@@ -805,8 +824,11 @@ export default function KanbanHome() {
                   setDraggingId(null)
                   moveTo(e.dataTransfer.getData('text/plain'), key)
                 }}
-                className={`w-full xl:min-w-0 rounded-lg flex flex-col ${
-                  overColumn === key ? 'bg-teal/10 dark:bg-teal/15' : ''
+                /* ไฮไลต์ทั้งกองตอนลาก — user เคาะ 2026-08-19 ว่าเอาแบบนี้ก่อน ไม่ต้องมีเส้นบอกตำแหน่งในกอง
+                   (ลำดับในกองคำนวณจาก กำหนดส่ง→ความสำคัญ→ใหม่ก่อน · ยังไม่มี sort_order ให้ลากจัดเอง)
+                   ⚠️ ใช้ ring ไม่ใช่ border — border ทำให้กองขยับ 2px ตอนไฮไลต์ */
+                className={`w-full xl:min-w-0 rounded-lg flex flex-col transition-colors ${
+                  overColumn === key ? 'bg-teal/15 dark:bg-teal/20 ring-2 ring-teal ring-inset' : ''
                 }`}
               >
                 {/* ⚠️ หัวกองเป็น div ไม่ใช่ button แล้ว — มีปุ่ม + ซ้อนอยู่ (button ซ้อน button = HTML ผิด) */}
@@ -865,6 +887,7 @@ export default function KanbanHome() {
                       draggable={canDrag}
                       onOpen={(c) => setOpenCardId(c.id)}
                       onDragStart={onDragStart}
+                      onDragEnd={onDragEnd}
                       dragging={draggingId === card.id}
                       onClaim={handleClaim}
                       claiming={claimingId === card.id}

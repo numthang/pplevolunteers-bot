@@ -1787,6 +1787,7 @@
       "joinAsHelper": "Join in",
       "addItem": "Add",
       "addItemPlaceholder": "Add a subtask",
+      "renameItem": "Edit this subtask",
       "removeItem": "Remove this subtask",
       "checklistShowDone": "Show completed items",
       "checklistHideDone": "Hide completed items",
