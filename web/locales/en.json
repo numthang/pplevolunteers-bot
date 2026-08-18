@@ -1704,11 +1704,11 @@
   },
   "kanban": {
     "meta": {
-      "list": "Homework"
+      "list": "Kanban"
     },
     "page": {
-      "title": "Homework",
-      "subtitle": "Starts with your homework and anything nobody has picked up · switch to \"Everyone\" for the whole org"
+      "title": "Kanban",
+      "subtitle": "Starts with your tasks and anything nobody has picked up · switch to \"Everyone\" for the whole org"
     },
     "loading": "Loading...",
     "loadFailed": "Failed to load the list",
@@ -1747,9 +1747,9 @@
       "purgeFailed": "Could not delete permanently",
       "purgeConfirm": "Delete \"{title}\" permanently?\n\nThis task and everything in it (labels, team data, checklists, helpers) will be gone.\n\nThis cannot be undone."
     },
-    "addButton": "+ Add homework",
+    "addButton": "Add task",
     "form": {
-      "title": "Add homework",
+      "title": "Add task",
       "titleLabel": "Task name",
       "titlePlaceholder": "e.g. Prepare banners for Saturday's event",
       "detailLabel": "Detail",
@@ -1767,15 +1767,15 @@
       "assignToMe": "Assign to me"
     },
     "modal": {
-      "title": "Homework detail",
+      "title": "Task detail",
       "sourceLink": "From a Discord message",
       "closeTitle": "Close (ESC)",
       "saving": "Saving…",
       "saved": "Saved",
-      "conflict": "Someone else edited this homework — your changes were not saved",
+      "conflict": "Someone else edited this task — your changes were not saved",
       "reload": "Load latest version",
       "confirmCloseUnsaved": "Still saving. Close anyway?",
-      "confirmArchive": "Archive this homework? It leaves every group but you can find it and bring it back from \"Show: Archive\"",
+      "confirmArchive": "Archive this task? It leaves every group but you can find it and bring it back from \"Show: Archive\"",
       "statusLabel": "Status",
       "ownerLabel": "Owner",
       "noOwner": "No owner yet",
@@ -1830,7 +1830,7 @@
       "assignOwner": "Assign",
       "changeOwner": "Change owner",
       "removeOwner": "Remove owner",
-      "confirmRemoveOwner": "Remove the owner? This homework goes back to the backlog for someone else to pick up.",
+      "confirmRemoveOwner": "Remove the owner? This task goes back to the backlog for someone else to pick up.",
       "searchPeoplePlaceholder": "Type a name to assign",
       "searchPeopleHint": "Type at least 2 characters",
       "noPeopleFound": "No one found"
@@ -1849,9 +1849,9 @@
       "groupLabel": "Group by",
       "groupStatus": "Status",
       "groupDue": "Due date",
-      "dueModeNote": "Due-date mode hides finished and shelved homework · move between statuses in \"Status\" mode",
+      "dueModeNote": "Due-date mode hides finished and shelved tasks · move between statuses in \"Status\" mode",
       "scopeArchived": "Archive",
-      "archiveNote": "The archive holds homework nobody wants anymore — nothing is ever deleted for good, unarchive and it returns to its group"
+      "archiveNote": "The archive holds tasks nobody wants anymore — nothing is ever deleted for good, unarchive and it returns to its group"
     },
     "due": {
       "overdue": "Overdue",
@@ -1865,14 +1865,14 @@
       "clear": "Clear filter",
       "hint": "Several labels in one group = any of them · across groups = must have all",
       "empty": "The loaded cards have no labels to filter by",
-      "noMatch": "No homework matches this filter",
+      "noMatch": "No task matches this filter",
       "showing": "{count} matching"
     },
     "labelsPage": {
       "title": "Label library",
-      "subtitle": "Labels shared by everyone in the org — renaming or hiding one affects every homework card immediately",
+      "subtitle": "Labels shared by everyone in the org — renaming or hiding one affects every task card immediately",
       "manageLink": "Manage labels",
-      "backLink": "Back to my homework",
+      "backLink": "Back to Kanban",
       "colName": "Label",
       "colGroup": "Group",
       "colColor": "Color",
