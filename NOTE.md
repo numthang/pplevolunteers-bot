@@ -1,3 +1,70 @@
+มี error log 2 ตัว ตัวนึงเมื่อวันที่ 14 ไม่แน่ใจว่าอะไร แต่วันที่ 17 ตอนสั่งรัน orgchart scan ส่วน emailPoller นี่ยังไงนะ ยังใช้ได้อยู่ไหม
+0|pple-dcb | 2026-07-15T20:39:59: [2026-07-15 20:39:59] [ERROR] [emailPoller] error: Failed to establish connection in required time
+0|pple-dcb | 2026-07-17T00:40:30: [2026-07-17 00:40:30] [ERROR] [emailPoller] imap error: Socket timeout
+0|pple-dcb | 2026-07-17T00:40:30: [2026-07-17 00:40:30] [ERROR] [emailPoller] error: Unexpected close
+0|pple-dcb | 2026-07-17T00:40:30: [2026-07-17 00:40:30] [ERROR] [emailPoller] imap error: Connection not available
+0|pple-dcb | 2026-07-17T00:49:30: [2026-07-17 00:49:30] [ERROR] [emailPoller] imap error: Socket timeout
+0|pple-dcb | 2026-07-17T00:49:30: [2026-07-17 00:49:30] [ERROR] [emailPoller] error: Unexpected close
+0|pple-dcb | 2026-07-17T00:49:30: [2026-07-17 00:49:30] [ERROR] [emailPoller] imap error: Connection not available
+0|pple-dcb | 2026-07-17T00:58:30: [2026-07-17 00:58:30] [ERROR] [emailPoller] imap error: Socket timeout
+0|pple-dcb | 2026-07-17T00:58:30: [2026-07-17 00:58:30] [ERROR] [emailPoller] error: Unexpected close
+0|pple-dcb | 2026-07-17T00:58:30: [2026-07-17 00:58:30] [ERROR] [emailPoller] imap error: Connection not available
+0|pple-dcb | 2026-07-17T01:07:30: [2026-07-17 01:07:30] [ERROR] [emailPoller] imap error: Socket timeout
+0|pple-dcb | 2026-07-17T01:07:30: [2026-07-17 01:07:30] [ERROR] [emailPoller] error: Unexpected close
+0|pple-dcb | 2026-07-17T01:07:30: [2026-07-17 01:07:30] [ERROR] [emailPoller] imap error: Connection not available
+0|pple-dcb | 2026-07-21T13:15:44: [Threads] carousel truncated: 26 → 20 images
+0|pple-dcb | 2026-07-31T09:21:19: [caseImport] timeline date/time field value out of range: "2568-12-00T00:00:00+07:00"
+0|pple-dcb | 2026-08-03T06:37:06: [2026-08-03 06:37:06] [ERROR] [emailPoller] error: Failed to receive greeting from server in required time
+0|pple-dcb | 2026-08-03T06:37:09: [2026-08-03 06:37:09] [ERROR] [emailPoller] imap error: Already logged out
+0|pple-dcb | 2026-08-03T13:06:25: [Threads API error] /v1.0/25380902714941643/threads {"status":500,"message":"An unknown error occurred","code":1}
+0|pple-dcb | 2026-08-05T23:23:52: [2026-08-05 23:23:52] [ERROR] [smsWebhook] error: Unexpected token '<', "<soap:Enve"... is not valid JSON
+0|pple-dcb | 2026-08-07T07:34:32: [caseImport] timeline date/time field value out of range: "2568-08-00T00:00:00+07:00"
+0|pple-dcb | 2026-08-07T20:38:28: [2026-08-07 20:38:28] [ERROR] [emailPoller] error: getaddrinfo EAI_AGAIN imap.gmail.com
+0|pple-dcb | 2026-08-08T13:36:59: [Threads API error] /v1.0/25380902714941643/threads {"status":400,"message":"Error validating access token: Session has expired on Thursday, 16-Jul-26 01:00:58 PDT. The current time is Saturday, 08-Aug-26 06:36:59 PDT.","type":"OAuthException","code":190,"error_subcode":0,"fbtrace_id":"AynI-VAdWljWSuz3bTbfCxX"}
+0|pple-dcb | 2026-08-08T13:37:27: [Threads API error] /v1.0/25380902714941643/threads {"status":400,"message":"Error validating access token: Session has expired on Thursday, 16-Jul-26 01:00:58 PDT. The current time is Saturday, 08-Aug-26 06:37:27 PDT.","type":"OAuthException","code":190,"error_subcode":0,"fbtrace_id":"Alsye5fjPG1pk1C4l2CSy_9"}
+0|pple-dcb | 2026-08-08T13:37:57: [Threads API error] /v1.0/25380902714941643/threads {"status":400,"message":"Error validating access token: Session has expired on Thursday, 16-Jul-26 01:00:58 PDT. The current time is Saturday, 08-Aug-26 06:37:56 PDT.","type":"OAuthException","code":190,"error_subcode":0,"fbtrace_id":"Ah3mBsSmeivq3wnfwWyZ5yv"}
+0|pple-dcb | 2026-08-08T13:37:57: [publishWorker] job 87 (threads) ล้มถาวรหลัง 3 ครั้ง: Threads API: Error validating access token: Session has expired on Thursday, 16-Jul-26 01:00:58 PDT. The current time is Saturday, 08-Aug-26 06:37:56 PDT. (code 190)
+0|pple-dcb | 2026-08-12T02:33:36: [2026-08-12 02:33:36] [ERROR] [emailPoller] error: Connection not available
+0|pple-dcb | 2026-08-14T12:57:47: DiscordAPIError[10062]: Unknown interaction
+0|pple-dcb | 2026-08-14T12:57:47:     at handleErrors (/www/wwwroot/pple-volunteers/node_modules/@discordjs/rest/dist/index.js:762:13)
+0|pple-dcb | 2026-08-14T12:57:47:     at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+0|pple-dcb | 2026-08-14T12:57:47:     at async BurstHandler.runRequest (/www/wwwroot/pple-volunteers/node_modules/@discordjs/rest/dist/index.js:866:23)
+0|pple-dcb | 2026-08-14T12:57:47:     at async _REST.request (/www/wwwroot/pple-volunteers/node_modules/@discordjs/rest/dist/index.js:1307:22)
+0|pple-dcb | 2026-08-14T12:57:47:     at async ButtonInteraction.showModal (/www/wwwroot/pple-volunteers/node_modules/discord.js/src/structures/interfaces/InteractionResponses.js:399:22)
+0|pple-dcb | 2026-08-14T12:57:47:     at async handleOpenRegisterModal (/www/wwwroot/pple-volunteers/handlers/registerHandler.js:327:3) {
+0|pple-dcb | 2026-08-14T12:57:47:   requestBody: { files: undefined, json: { type: 9, data: [Object] } },
+0|pple-dcb | 2026-08-14T12:57:47:   rawError: { message: 'Unknown interaction', code: 10062 },
+0|pple-dcb | 2026-08-14T12:57:47:   code: 10062,
+0|pple-dcb | 2026-08-14T12:57:47:   status: 404,
+0|pple-dcb | 2026-08-14T12:57:47:   method: 'POST',
+0|pple-dcb | 2026-08-14T12:57:47:   url: 'https://discord.com/api/v10/interactions/1537807428693925918/aW50ZXJhY3Rpb246MTUzNzgwNzQyODY5MzkyNTkxODpsZ0VuT0VMbU51Zm13Z0pGNzZFeEt4Y084anpGM3FDUWpZSWx0aW01dDJoeVJXUVduOG5QNWtyMkRmZ2o3NHBWZGZJMGdjVjJYU1NYdHZxR252cnBzWldXTnhSQ0prME9ua3NKZ2dUSmJGUDdjaGo2anF1Tnd2TjFtYmVhOFFrQg/callback?with_response=false'
+0|pple-dcb | 2026-08-14T12:57:47: }
+0|pple-dcb | 2026-08-17T19:24:47: error: null value in column "excluded" of relation "dc_orgchart_config" violates not-null constraint
+0|pple-dcb | 2026-08-17T19:24:47:     at /www/wwwroot/pple-volunteers/node_modules/pg-pool/index.js:45:11
+0|pple-dcb | 2026-08-17T19:24:47:     at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+0|pple-dcb | 2026-08-17T19:24:47:     at async upsertChannel (/www/wwwroot/pple-volunteers/db/orgchartConfig.js:8:3)
+0|pple-dcb | 2026-08-17T19:24:47:     at async Object.execute (/www/wwwroot/pple-volunteers/commands/orgchart.js:243:36)
+0|pple-dcb | 2026-08-17T19:24:47:     at async Client.<anonymous> (/www/wwwroot/pple-volunteers/index.js:153:7) {
+0|pple-dcb | 2026-08-17T19:24:47:   length: 360,
+0|pple-dcb | 2026-08-17T19:24:47:   severity: 'ERROR',
+0|pple-dcb | 2026-08-17T19:24:47:   code: '23502',
+0|pple-dcb | 2026-08-17T19:24:47:   detail: 'Failing row contains (1340903354037178410, 1511737004671373535, Youth worker, #9b59b6, 1517769642377084978, 🌳┆youth-worker-อีสาน, text, null, other).',
+0|pple-dcb | 2026-08-17T19:24:47:   hint: undefined,
+0|pple-dcb | 2026-08-17T19:24:47:   position: undefined,
+0|pple-dcb | 2026-08-17T19:24:47:   internalPosition: undefined,
+0|pple-dcb | 2026-08-17T19:24:47:   internalQuery: undefined,
+0|pple-dcb | 2026-08-17T19:24:47:   where: undefined,
+0|pple-dcb | 2026-08-17T19:24:47:   schema: 'public',
+0|pple-dcb | 2026-08-17T19:24:47:   table: 'dc_orgchart_config',
+0|pple-dcb | 2026-08-17T19:24:47:   column: 'excluded',
+0|pple-dcb | 2026-08-17T19:24:47:   dataType: undefined,
+0|pple-dcb | 2026-08-17T19:24:47:   constraint: undefined,
+0|pple-dcb | 2026-08-17T19:24:47:   file: 'execMain.c',
+0|pple-dcb | 2026-08-17T19:24:47:   line: '1907',
+0|pple-dcb | 2026-08-17T19:24:47:   routine: 'ExecConstraints'
+0|pple-dcb | 2026-08-17T19:24:47: }
+
+
 # PLATFOR{m}.ORG
 - platfor.org
 - ทำให้เว็บไซต์ หรือ sub-domain ภายนอกใช้ระบบเดียวกันได้แต่ใช้ชื่อของเขาเอง
