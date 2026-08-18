@@ -39,6 +39,14 @@ Production Postgres ลงด้วย `sudo apt install postgresql` ตรง �
 
 user เคาะ: **ทำ custom field เลย ไม่ต้องรอ tripwire** — *"ไม่ต้องรอองค์กรนอกหรอก ผมนี่แหละ จะเริ่มเพิ่มแล้ว"*
 
+⚠️ **บั๊กเดิมที่เจอระหว่างเทสใน browser จริง (2026-08-18 รอบเย็น) — ไม่เกี่ยวกับ custom field เลย ยังไม่แก้:**
+เช็คบ็อกซ์ "ติดปัญหาอยู่" ใน CardModal ยิง `patch({ blocked: e.target.checked })` **ไม่ส่ง `lockToken`**
+แต่ server (`/api/kanban/cards/[id]/route.js` PATCH) เส้น `blocked` ตกไปอยู่สาขา "autosave เนื้อหา" ที่บังคับเทียบ
+`lockToken` เสมอ → `undefined !== token จริง` ชนกันทุกครั้ง = **กดติ๊ก "ติดปัญหาอยู่" ไม่เคยเซฟติดเลยสักครั้ง**
+(`patch()` เห็น `!res.ok` ก็ขึ้น error "มีคนแก้การบ้านใบนี้ไปแล้ว" ทุกครั้งที่กด — ผู้ใช้เห็น error แต่คงเข้าใจผิดว่าเป็นคนอื่นชนกัน
+ทั้งที่จริงเป็นบั๊กโค้ด) เป็นบั๊กจากก้อน 1 (ตั้งแต่สร้าง CardModal) ไม่ใช่จากรอบนี้ — แก้ตรงๆ คือให้ `patch()` ส่ง `lockToken.current`
+ไปด้วยเมื่อ body มี `blocked`/`blockedReason` หรือย้าย `blocked` ไปเป็น action แยกไม่ผ่าน lockToken เหมือน statusType
+
 **ขั้น 1 เสร็จ local (2026-08-18) ยังไม่ deploy** — ลิงก์ต้นทางดิสฯ `kanban_cards.source_url` + `source_message_id`
 - migration เพิ่มแล้วท้าย `scripts/migration/migration.sql` · `/scrutinize` เจอ blocker: customId เดิมมีแค่ `msg.id` ไม่พอสร้าง URL (ต้อง `channelId` ด้วย เพราะ modal submit เป็น interaction คนละก้อน หยิบ `msg` เดิมไม่ได้) → แก้เป็น `kanban_card_modal:<channelId>:<messageId>:<ts>`
 - `db/kanbanCards.js` + `handlers/kanbanImportHandler.js` เขียนแล้ว · `web/db/kanban/cards.js` COLS + `CardModal.jsx` แสดงลิงก์ "มาจากข้อความในดิสฯ" แล้ว
