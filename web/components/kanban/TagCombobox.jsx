@@ -20,7 +20,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react'
-import { Check, ChevronDown, GripVertical, Loader2, MoreHorizontal, Trash2, X } from 'lucide-react'
+import { Check, GripVertical, Loader2, MoreHorizontal, Trash2, X } from 'lucide-react'
 import { chipProps, LABEL_PALETTE } from '@/lib/kanbanLabelColors.js'
 
 /** แถวแก้ตัวเลือก — กางอยู่ในแถวเดิม ไม่ลอยออกนอกกล่อง (กับดักข้อ 1) */
@@ -83,7 +83,19 @@ function OptionEditor({ option, t, onSave, onDelete, busy }) {
   )
 }
 
-export default function TagCombobox({ fieldId, type, value = [], readOnly, onCommit, onError, t }) {
+/**
+ * @param {object} p
+ * @param {{mode:'field'}|{mode:'static',options:Array}|{mode:'search',search:(q:string)=>Promise<Array>}} [p.source]
+ *   - `field` (ค่าตั้งต้น) — ตัวเลือกมาจาก kanban_field_options · สร้าง/เปลี่ยนชื่อ/ลบ/ลากได้ **เส้นเดิม ห้ามแตะ**
+ *   - `static` — ตัวเลือกตายตัวจากระบบ (เช่น สถานะ 6 แบบ) · แก้ตัวเลือกไม่ได้
+ *   - `search` — ค้นตามที่พิมพ์ (เช่น คนใน org) · แก้ตัวเลือกไม่ได้
+ *     ⚠️ ต้องเป็น search ไม่ใช่โหลดมาก่อน — org 1 มีสมาชิก 7,376 คน (ดู api/kanban/people)
+ * @param {boolean} [p.numericIds=true] id เป็นตัวเลขไหม — สถานะใช้สตริง ('backlog') ต้องปิด
+ */
+export default function TagCombobox({
+  fieldId, type, value = [], readOnly, onCommit, onError, t,
+  source = { mode: 'field' }, numericIds = true, placeholder,
+}) {
   const [open, setOpen] = useState(false)
   const [options, setOptions] = useState(null)   // null = ยังไม่โหลด
   const [loading, setLoading] = useState(false)
@@ -94,6 +106,8 @@ export default function TagCombobox({ fieldId, type, value = [], readOnly, onCom
   const [dragId, setDragId] = useState(null)
   const boxRef = useRef(null)
   const popRef = useRef(null)
+  // แก้ตัวเลือกได้เฉพาะ custom field จริงๆ — สถานะ/คนใน org เป็นของระบบ ห้ามสร้าง/เปลี่ยนชื่อ/ลบ
+  const canManageOptions = source.mode === 'field'
 
   // ⭐ ชุดที่เลือกอยู่เก็บเป็น state ของตัวเอง ไม่อ่านจาก prop ตรงๆ (กับดักข้อ 2)
   //    ไม่งั้นกดรัวๆ แต่ละครั้งจะ snapshot ค่าเดิมที่ยังไม่ทันอัปเดตจาก server = ทับกันเอง
@@ -126,7 +140,15 @@ export default function TagCombobox({ fieldId, type, value = [], readOnly, onCom
     if (open) popRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
   }, [open])
 
-  async function loadOptions() {
+  async function loadOptions(q = '') {
+    if (source.mode === 'static') { setOptions(source.options || []); return }
+    if (source.mode === 'search') {
+      setLoading(true)
+      try { setOptions(await source.search(q)) }
+      catch { onError?.(t('loadFailed')); setOptions([]) }
+      finally { setLoading(false) }
+      return
+    }
     setLoading(true)
     try {
       const res = await fetch(`/api/kanban/fields/${fieldId}/options`)
@@ -144,8 +166,16 @@ export default function TagCombobox({ fieldId, type, value = [], readOnly, onCom
   function openBox() {
     if (readOnly) return
     setOpen(true)
-    if (options === null) loadOptions()
+    if (options === null || source.mode === 'search') loadOptions(query)
   }
+
+  // โหมด search — พิมพ์แล้วยิงค้นใหม่ (หน่วงไว้ ไม่งั้นยิงทุกตัวอักษร)
+  useEffect(() => {
+    if (!open || source.mode !== 'search') return
+    const timer = setTimeout(() => loadOptions(query), 250)
+    return () => clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, open, source.mode])
 
   /** ส่งชุดใหม่ให้ server · optimistic ไว้ก่อนเพื่อให้กดรัวได้ · คำตอบเก่ากว่าคำขอล่าสุด = ทิ้ง */
   async function commitSet(next) {
@@ -153,7 +183,7 @@ export default function TagCombobox({ fieldId, type, value = [], readOnly, onCom
     const mine = ++seq.current
     inflight.current++
     try {
-      await onCommit([...next].map(Number))
+      await onCommit(numericIds ? [...next].map(Number) : [...next])
     } finally {
       inflight.current--
       // คำขอที่ใหม่กว่าตามมาแล้ว ปล่อยให้ตัวนั้นเป็นคนตัดสินผลสุดท้าย
@@ -302,7 +332,8 @@ export default function TagCombobox({ fieldId, type, value = [], readOnly, onCom
   }
 
   const q = query.trim().toLowerCase()
-  const filtered = (options || []).filter((o) => o.name.toLowerCase().includes(q))
+  // โหมด search — server กรองมาแล้ว กรองซ้ำฝั่งนี้จะตัดผลที่ตรงแบบอื่น (ชื่อเล่น/ชื่อจริง) ทิ้ง
+  const filtered = source.mode === 'search' ? (options || []) : (options || []).filter((o) => o.name.toLowerCase().includes(q))
   const exactMatch = (options || []).some((o) => o.name.trim().toLowerCase() === q)
   // ชิปที่โชว์บนปุ่ม — ยึด selected (ของเราเอง) แล้วหาข้อมูลชื่อ/สีจาก value+options
   const known = new Map([...(value || []), ...(options || [])].map((o) => [String(o.id), o]))
@@ -314,18 +345,17 @@ export default function TagCombobox({ fieldId, type, value = [], readOnly, onCom
         type="button"
         onClick={openBox}
         disabled={readOnly}
-        className="w-full min-h-11 px-3 py-1.5 flex flex-wrap items-center gap-1.5 text-base rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-left disabled:opacity-60"
+        className="w-full min-h-11 px-2 -mx-2 py-1.5 flex flex-wrap items-center gap-1.5 text-base rounded-lg border border-transparent bg-transparent hover:bg-warm-50 dark:hover:bg-disc-hover text-left disabled:opacity-60 transition"
       >
-        {shownChips.length === 0 && <span className="text-warm-400 dark:text-disc-muted">{t('modal.tagPlaceholder')}</span>}
+        {shownChips.length === 0 && <span className="text-warm-400 dark:text-disc-muted">{placeholder || t('modal.tagPlaceholder')}</span>}
         {shownChips.map((v) => {
           const tint = chipProps(v)
           return (
-            <span key={v.id} style={tint.style} className={`px-2.5 py-0.5 text-sm font-medium rounded-full ${tint.className}`}>
+            <span key={v.id} style={tint.style} className={`px-2.5 py-0.5 text-sm font-medium rounded-md ${tint.className}`}>
               {v.name}
             </span>
           )
         })}
-        {!readOnly && <ChevronDown size={16} className="ml-auto text-warm-400 dark:text-disc-muted shrink-0" />}
       </button>
 
       {open && (
@@ -334,11 +364,15 @@ export default function TagCombobox({ fieldId, type, value = [], readOnly, onCom
             autoFocus
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter' && !exactMatch && query.trim()) { e.preventDefault(); createOption() } }}
+            onKeyDown={(e) => { if (canManageOptions && e.key === 'Enter' && !exactMatch && query.trim()) { e.preventDefault(); createOption() } }}
             placeholder={t('modal.tagSearchPlaceholder')}
             className="w-full h-9 px-2 mb-2 text-sm rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text focus:outline-none focus:ring-2 focus:ring-teal"
           />
-          <p className="text-xs text-warm-400 dark:text-disc-muted px-1 mb-1">{t('modal.tagHint')}</p>
+          {canManageOptions && <p className="text-xs text-warm-400 dark:text-disc-muted px-1 mb-1">{t('modal.tagHint')}</p>}
+          {/* โหมดค้นคน — บอกให้พิมพ์ก่อน ไม่งั้นเปิดมาเจอรายการว่างแล้วงง (API ต้อง ≥2 ตัวอักษร) */}
+          {source.mode === 'search' && !loading && !(options || []).length && (
+            <p className="text-sm text-warm-400 dark:text-disc-muted px-1 py-2">{t('modal.searchPeopleHint')}</p>
+          )}
 
           {loading && <p className="text-sm text-warm-400 dark:text-disc-muted px-1 py-2">{t('loading')}</p>}
 
@@ -350,32 +384,34 @@ export default function TagCombobox({ fieldId, type, value = [], readOnly, onCom
                 <div key={o.id}>
                   <div
                     className="flex items-center gap-1.5 px-1 py-1 rounded-lg hover:bg-warm-50 dark:hover:bg-disc-hover"
-                    draggable={!q}
-                    onDragStart={() => setDragId(o.id)}
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={() => onDropReorder(o.id)}
+                    draggable={canManageOptions && !q}
+                    onDragStart={() => canManageOptions && setDragId(o.id)}
+                    onDragOver={(e) => { if (canManageOptions) e.preventDefault() }}
+                    onDrop={() => canManageOptions && onDropReorder(o.id)}
                   >
-                    <GripVertical size={14} className="text-warm-300 dark:text-disc-muted cursor-grab shrink-0" />
+                    {canManageOptions && <GripVertical size={14} className="text-warm-300 dark:text-disc-muted cursor-grab shrink-0" />}
                     <button type="button" onClick={() => toggleOption(o.id)} className="flex-1 min-w-0 flex items-center gap-2 text-left">
-                      <span style={tint.style} className={`px-2.5 py-0.5 text-sm font-medium rounded-full truncate ${tint.className}`}>
+                      <span style={tint.style} className={`px-2.5 py-0.5 text-sm font-medium rounded-md truncate ${tint.className}`}>
                         {o.name}
                       </span>
                     </button>
                     {on && <Check size={16} className="text-teal shrink-0" />}
                     {busyOpt === o.id && <Loader2 size={14} className="animate-spin text-warm-400 dark:text-disc-muted shrink-0" />}
-                    <button
-                      type="button"
-                      onClick={() => setEditFor(editFor === o.id ? null : o.id)}
-                      aria-label={t('modal.optionEdit')}
-                      title={t('modal.optionEdit')}
-                      className="p-1 rounded text-warm-400 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text shrink-0"
-                    >
-                      <MoreHorizontal size={16} />
-                    </button>
+                    {canManageOptions && (
+                      <button
+                        type="button"
+                        onClick={() => setEditFor(editFor === o.id ? null : o.id)}
+                        aria-label={t('modal.optionEdit')}
+                        title={t('modal.optionEdit')}
+                        className="p-1 rounded text-warm-400 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text shrink-0"
+                      >
+                        <MoreHorizontal size={16} />
+                      </button>
+                    )}
                   </div>
 
                   {/* กางในแถวเดิม ไม่ลอยออกนอกกล่อง — เลื่อนถึงได้ทุกจอ (กับดักข้อ 1) */}
-                  {editFor === o.id && (
+                  {canManageOptions && editFor === o.id && (
                     <OptionEditor
                       option={o}
                       t={t}
@@ -388,7 +424,7 @@ export default function TagCombobox({ fieldId, type, value = [], readOnly, onCom
               )
             })}
 
-            {!loading && query.trim() && !exactMatch && (
+            {canManageOptions && !loading && query.trim() && !exactMatch && (
               <button
                 type="button"
                 onClick={createOption}
@@ -404,7 +440,7 @@ export default function TagCombobox({ fieldId, type, value = [], readOnly, onCom
           {shownChips.length > 0 && (
             <div className="flex flex-wrap gap-1 pt-2 mt-1 border-t border-warm-200 dark:border-disc-border">
               {shownChips.map((v) => (
-                <span key={v.id} className="flex items-center gap-1 px-2 py-0.5 text-xs rounded-full border border-warm-200 dark:border-disc-border text-warm-500 dark:text-disc-muted">
+                <span key={v.id} className="flex items-center gap-1 px-2 py-0.5 text-xs rounded-md border border-warm-200 dark:border-disc-border text-warm-500 dark:text-disc-muted">
                   {v.name}
                   <button type="button" onClick={() => toggleOption(v.id)} aria-label={t('modal.optionUnselect')}>
                     <X size={12} />

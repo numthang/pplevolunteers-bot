@@ -181,7 +181,7 @@ export default function ChecklistFieldBox({ cardId, fieldId, items = [], readOnl
               type="button"
               onClick={() => addFromPool(o)}
               disabled={adding}
-              className="flex items-center gap-1 px-2 py-1 text-xs rounded-full border border-warm-200 dark:border-disc-border text-warm-700 dark:text-disc-muted hover:bg-warm-50 dark:hover:bg-disc-hover disabled:opacity-50 transition"
+              className="flex items-center gap-1 px-2 py-1 text-xs rounded-md border border-warm-200 dark:border-disc-border text-warm-700 dark:text-disc-muted hover:bg-warm-50 dark:hover:bg-disc-hover disabled:opacity-50 transition"
             >
               <Plus size={12} />
               {o.name}

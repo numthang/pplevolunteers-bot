@@ -15,10 +15,12 @@
 
 export const ROW_GRID = 'grid grid-cols-1 sm:grid-cols-[11rem_minmax(0,1fr)] gap-x-3 gap-y-0.5'
 
-export default function FieldRow({ icon: Icon, label, children, footer, className = '', ...rest }) {
+export default function FieldRow({ icon: Icon, label, handle, children, footer, className = '', ...rest }) {
   return (
     <div className={`group ${ROW_GRID} ${className}`} {...rest}>
       <div className="flex items-center gap-1 min-w-0 sm:h-11">
+        {/* หมุดลากอยู่หน้าสุด ก่อนไอคอนชนิด (user สั่ง 2026-08-18) */}
+        {handle}
         {Icon && <Icon size={14} className="text-warm-400 dark:text-disc-muted shrink-0" />}
         {typeof label === 'string'
           ? <span className="text-sm text-warm-500 dark:text-disc-muted min-w-0 truncate">{label}</span>

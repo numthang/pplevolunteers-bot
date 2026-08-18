@@ -35,7 +35,7 @@ function LabelRow({ label, groupNames, t, onPatch, busy }) {
   return (
     <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg p-3 flex flex-wrap items-center gap-3">
       {/* ตัวอย่างชิปจริง — เห็นผลของสีที่เลือกทันทีในหน้าเดียวกัน */}
-      <span style={tint.style} className={`px-3 py-1 text-sm font-medium rounded-full ${tint.className}`}>
+      <span style={tint.style} className={`px-3 py-1 text-sm font-medium rounded-md ${tint.className}`}>
         {label.name}
       </span>
 
@@ -88,7 +88,7 @@ function LabelRow({ label, groupNames, t, onPatch, busy }) {
           <button
             onClick={() => { onPatch(label.id, { color: null }); setColorOpen(false) }}
             title={t('labelsPage.colorAutoTitle')}
-            className={`px-3 py-1 text-sm rounded-full border font-medium ${
+            className={`px-3 py-1 text-sm rounded-md border font-medium ${
               label.color ? 'border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover' : 'border-teal ring-1 ring-teal text-warm-900 dark:text-disc-text'
             }`}
           >

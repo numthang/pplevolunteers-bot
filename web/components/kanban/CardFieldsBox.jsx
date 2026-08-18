@@ -382,13 +382,11 @@ export default function CardFieldsBox({ cardId, fields = [], readOnly, canPurge 
 
   if (!fields.length && readOnly) return null
 
+  // ⛔ ไม่มีกรอบและไม่มีหัวข้อ "ข้อมูลของทีม" แล้ว (user สั่ง 2026-08-18) —
+  //    ของระบบกับ custom field ต่อกันเป็นตารางเดียว คั่นด้วยเส้นบางๆ เท่านั้น
   return (
-    <div className="border border-warm-200 dark:border-disc-border rounded-lg p-4 flex flex-col gap-4">
-      <h3 className="text-base font-medium text-warm-900 dark:text-disc-text">{t('modal.teamDataLabel')}</h3>
-
-      {!fields.length && <p className="text-base text-warm-400 dark:text-disc-muted">{t('modal.noTeamFields')}</p>}
-
-      <div className="flex flex-col gap-3">
+    <div className="border-t border-warm-200 dark:border-disc-border pt-2 flex flex-col gap-3">
+      <div className="flex flex-col gap-0.5">
         {fields.map((f) => {
           // ⭐ ไม่มีปุ่ม "..." แล้ว (user สั่ง 2026-08-18) — **คลิกที่ชื่อ field = เข้าโหมดแก้**
           //    ชื่อถูกยกออกมาจาก ScalarInput/ChecklistFieldBox มาไว้ที่นี่จุดเดียว ทุกชนิดจึงคลิกได้เหมือนกันหมด
@@ -408,20 +406,21 @@ export default function CardFieldsBox({ cardId, fields = [], readOnly, canPurge 
               onDragOver={(e) => { if (dragId) e.preventDefault() }}
               onDrop={() => onDropField(f.field_id)}
               className={`border-t-2 ${dragId && dragId !== f.field_id ? 'border-dashed border-teal/50' : 'border-transparent'}`}
+              handle={!readOnly && (
+                /* หมุดลาก — อยู่หน้าสุดก่อนไอคอนชนิด (user สั่ง 2026-08-18)
+                   ลากได้เฉพาะตรงนี้ ไม่ใช่ทั้งแถว ไม่งั้นลากทับการเลือกข้อความในช่องกรอก */
+                <span
+                  draggable
+                  onDragStart={() => setDragId(f.field_id)}
+                  onDragEnd={() => setDragId(null)}
+                  title={t('modal.fieldDragHint')}
+                  className="cursor-grab active:cursor-grabbing text-warm-300 dark:text-disc-muted opacity-0 group-hover:opacity-100 shrink-0"
+                >
+                  <GripVertical size={14} />
+                </span>
+              )}
               label={
                 <span className="flex items-center gap-1 min-w-0">
-                  {/* หมุดลาก — ลากได้เฉพาะตรงนี้ ไม่ใช่ทั้งแถว ไม่งั้นลากทับการเลือกข้อความในช่องกรอก */}
-                  {!readOnly && (
-                    <span
-                      draggable
-                      onDragStart={() => setDragId(f.field_id)}
-                      onDragEnd={() => setDragId(null)}
-                      title={t('modal.fieldDragHint')}
-                      className="cursor-grab active:cursor-grabbing text-warm-300 dark:text-disc-muted opacity-0 group-hover:opacity-100 shrink-0"
-                    >
-                      <GripVertical size={14} />
-                    </span>
-                  )}
                   {readOnly ? (
                     <span className="text-sm text-warm-500 dark:text-disc-muted min-w-0 truncate">{f.label}</span>
                   ) : (

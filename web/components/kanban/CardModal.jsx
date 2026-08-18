@@ -16,13 +16,13 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import {
   AlertTriangle, AlignLeft, Archive, ArchiveRestore, Calendar, Check, CircleDot,
-  Copy, ExternalLink, Loader2, Tag, UserCircle, UserPlus, Users, X,
+  Copy, ExternalLink, Loader2, Tag, UserCircle, Users, X,
 } from 'lucide-react'
 import { formatRef, STATUS_TYPES } from '@/lib/kanbanAccess.js'
 import DeleteChoiceDialog from './DeleteChoiceDialog.jsx'
 import FieldRow from './FieldRow.jsx'
+import TagCombobox from './TagCombobox.jsx'
 import LabelPicker from './LabelPicker.jsx'
-import OwnerPicker from './OwnerPicker.jsx'
 import CardFieldsBox from './CardFieldsBox.jsx'
 
 const AUTOSAVE_MS = 800
@@ -34,6 +34,8 @@ export default function CardModal({ cardId, onClose, onChanged, onOpenCard }) {
   const [can, setCan] = useState({ edit: false, archive: false, restore: false, claim: false, purge: false })
   const [duplicating, setDuplicating] = useState(false)
   const [confirmRemove, setConfirmRemove] = useState(false)
+  // ตัวเลือกสถานะตายตัว 6 แบบ — ป้ายมาจาก t() จึงคำนวณที่นี่ ไม่ใช่ค่าคงที่นอก component
+  const STATUS_OPTIONS = STATUS_TYPES.map((s) => ({ id: s, name: t(`status.${s}`) }))
   const [removing, setRemoving] = useState(false)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
@@ -184,6 +186,53 @@ export default function CardModal({ cardId, onClose, onChanged, onOpenCard }) {
       setActionError(t('actions.duplicateFailed'))
     } finally {
       setDuplicating(false)
+    }
+  }
+
+  /** ค้นคนใน org ให้ combobox ของเจ้าภาพ/คนช่วย — ⚠️ ค้นเท่านั้น ห้าม dump (org มี 7,376 คน) */
+  const searchPeople = useCallback(async (q) => {
+    if (!q || q.trim().length < 2) return []
+    const res = await fetch(`/api/kanban/people?q=${encodeURIComponent(q.trim())}`)
+    if (!res.ok) return []
+    const json = await res.json()
+    return (json.people || []).map((p) => ({
+      id: String(p.userId),
+      name: p.orgName ? `${p.name} (${p.orgName})` : p.name,
+    }))
+  }, [])
+
+  /**
+   * คนช่วย — combobox ส่ง "ชุดใหม่ทั้งชุด" มา แต่ API มีแค่เพิ่ม/ถอดทีละคน
+   * → เทียบกับชุดเดิมแล้วยิงเฉพาะส่วนต่าง (ยิงทั้งชุดทุกครั้ง = ถอดแล้วเพิ่มคนเดิมซ้ำ)
+   */
+  async function commitHelpers(ids) {
+    setActionError('')
+    const before = new Set((card.helpers || []).map((h) => String(h.user_id)))
+    const after = new Set(ids.map(String))
+    const added = [...after].filter((id) => !before.has(id))
+    const removed = [...before].filter((id) => !after.has(id))
+
+    let latest = null
+    try {
+      for (const id of added) {
+        const res = await fetch(`/api/kanban/cards/${cardId}/helpers`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: Number(id) }),
+        })
+        const json = await res.json().catch(() => ({}))
+        if (!res.ok) { setActionError(json.error || t('saveFailed')); return }
+        latest = json.card
+      }
+      for (const id of removed) {
+        const res = await fetch(`/api/kanban/cards/${cardId}/helpers?userId=${id}`, { method: 'DELETE' })
+        const json = await res.json().catch(() => ({}))
+        if (!res.ok) { setActionError(json.error || t('saveFailed')); return }
+        latest = json.card
+      }
+      if (latest) { setCard(latest); onChanged?.() }
+    } catch {
+      setActionError(t('saveFailed'))
     }
   }
 
@@ -339,34 +388,33 @@ export default function CardModal({ cardId, onClose, onChanged, onOpenCard }) {
                   />
                 </FieldRow>
 
+                {/* เจ้าภาพ — select ทรงเดียวกับ custom field แต่ตัวเลือกแก้ไม่ได้ (คนใน org ค้นเอา ไม่ใช่พิมพ์เอง) */}
                 <FieldRow icon={UserCircle} label={t('modal.ownerLabel')}>
-                  <OwnerPicker
-                    card={card}
-                    canEdit={can.edit}
-                    canClaim={can.claim}
+                  <TagCombobox
+                    type="select"
+                    numericIds={false}
+                    readOnly={!can.edit && !can.claim}
+                    placeholder={t('modal.noOwner')}
+                    source={{ mode: 'search', search: searchPeople }}
+                    value={card.owner_user_id ? [{ id: String(card.owner_user_id), name: card.owner_name || '' }] : []}
+                    onCommit={(ids) => patch({ ownerUserId: ids[0] ? Number(ids[0]) : null })}
                     onError={setActionError}
-                    onPatch={patch}
+                    t={t}
                   />
                 </FieldRow>
 
-                {/* สถานะ — ปุ่มเรียงตามลำดับงานจริง ไม่ใช่ dropdown (แตะง่ายบนมือถือ) */}
+                {/* สถานะ — select ทรงเดียวกับ custom field · ตัวเลือกตายตัว 6 แบบ เพิ่ม/ลบไม่ได้ */}
                 <FieldRow icon={CircleDot} label={t('modal.statusLabel')}>
-                  <div className="flex flex-wrap gap-1.5 py-1">
-                    {STATUS_TYPES.map((s) => (
-                      <button
-                        key={s}
-                        disabled={readOnly}
-                        onClick={() => patch({ statusType: s })}
-                        className={`px-3 py-1.5 text-sm rounded-lg border font-medium disabled:opacity-50 transition ${
-                          card.status_type === s
-                            ? 'bg-teal text-white border-transparent'
-                            : 'border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover'
-                        }`}
-                      >
-                        {t(`status.${s}`)}
-                      </button>
-                    ))}
-                  </div>
+                  <TagCombobox
+                    type="select"
+                    numericIds={false}
+                    readOnly={readOnly}
+                    source={{ mode: 'static', options: STATUS_OPTIONS }}
+                    value={card.status_type ? [{ id: card.status_type, name: t(`status.${card.status_type}`) }] : []}
+                    onCommit={(ids) => (ids[0] ? patch({ statusType: ids[0] }) : undefined)}
+                    onError={setActionError}
+                    t={t}
+                  />
                 </FieldRow>
 
                 {/* ป้าย — ติด/ถอดยิงทันที ไม่ผ่าน lockToken (ไม่ใช่ช่องพิมพ์ที่ autosave) */}
@@ -384,31 +432,19 @@ export default function CardModal({ cardId, onClose, onChanged, onOpenCard }) {
                   />
                 </FieldRow>
 
+                {/* คนช่วย — multi_select ทรงเดียวกับ custom field · ตัวเลือกคือคนใน org ค้นเอา */}
                 <FieldRow icon={Users} label={t('modal.helpersLabel')}>
-                  <div className="flex flex-wrap items-center gap-2 py-1">
-                    {(card.helpers || []).length === 0 && (
-                      <span className="text-base text-warm-400 dark:text-disc-muted">{t('modal.noHelpers')}</span>
-                    )}
-                    {(card.helpers || []).map((h) => (
-                      <span key={h.user_id} className="flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text">
-                        {h.name}
-                      </span>
-                    ))}
-                    {can.join && (
-                      <button
-                        onClick={async () => {
-                          setActionError('')
-                          const res = await fetch(`/api/kanban/cards/${cardId}/helpers`, { method: 'POST' })
-                          const json = await res.json().catch(() => ({}))
-                          if (!res.ok) { setActionError(json.error || t('saveFailed')); return }
-                          setCard(json.card); onChanged?.()
-                        }}
-                        className="flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover transition"
-                      >
-                        <UserPlus size={16} /> {t('modal.joinAsHelper')}
-                      </button>
-                    )}
-                  </div>
+                  <TagCombobox
+                    type="multi_select"
+                    numericIds={false}
+                    readOnly={!can.edit}
+                    placeholder={t('modal.noHelpers')}
+                    source={{ mode: 'search', search: searchPeople }}
+                    value={(card.helpers || []).map((h) => ({ id: String(h.user_id), name: h.name }))}
+                    onCommit={commitHelpers}
+                    onError={setActionError}
+                    t={t}
+                  />
                 </FieldRow>
               </div>
 

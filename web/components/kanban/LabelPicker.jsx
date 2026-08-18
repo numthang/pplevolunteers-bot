@@ -168,7 +168,7 @@ export default function LabelPicker({ cardId, labels = [], readOnly, onCardChang
                       key={l.id}
                       onClick={() => toggle(l.id)}
                       style={on ? tint.style : undefined}
-                      className={`flex items-center gap-1 px-3 py-1 text-sm rounded-full font-medium border ${
+                      className={`flex items-center gap-1 px-3 py-1 text-sm rounded-md font-medium border ${
                         on
                           ? `${tint.className} border-transparent ring-1 ring-teal`
                           : 'border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover'
@@ -194,12 +194,12 @@ export default function LabelPicker({ cardId, labels = [], readOnly, onCardChang
                       onKeyDown={(e) => { if (e.key === 'Escape') { setCreatingIn(null); setNewName('') } }}
                       placeholder={t('modal.newLabelPlaceholder')}
                       maxLength={60}
-                      className="h-9 px-3 text-sm rounded-full border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-teal"
+                      className="h-9 px-3 text-sm rounded-md border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-teal"
                     />
                     <button
                       type="submit"
                       disabled={creating || !newName.trim()}
-                      className="px-3 py-1 text-sm rounded-full bg-teal hover:opacity-90 text-white font-medium disabled:opacity-50"
+                      className="px-3 py-1 text-sm rounded-md bg-teal hover:opacity-90 text-white font-medium disabled:opacity-50"
                     >
                       {creating ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
                     </button>
@@ -207,7 +207,7 @@ export default function LabelPicker({ cardId, labels = [], readOnly, onCardChang
                 ) : (
                   <button
                     onClick={() => { setCreatingIn(group || ''); setNewName('') }}
-                    className="flex items-center gap-1 px-3 py-1 text-sm rounded-full font-medium border border-dashed border-warm-200 dark:border-disc-border text-warm-500 dark:text-disc-muted hover:bg-warm-50 dark:hover:bg-disc-hover"
+                    className="flex items-center gap-1 px-3 py-1 text-sm rounded-md font-medium border border-dashed border-warm-200 dark:border-disc-border text-warm-500 dark:text-disc-muted hover:bg-warm-50 dark:hover:bg-disc-hover"
                   >
                     <Plus size={16} /> {t('modal.newLabel')}
                   </button>
