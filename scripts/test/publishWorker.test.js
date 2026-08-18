@@ -51,6 +51,16 @@ const cleanup = () => pool.query(`DELETE FROM post_social_history WHERE channel_
   ok('นับ attempts + ลง posted_at', r.attempts === 1 && !!r.posted_at);
   ok('แจ้งกลับห้องต้นทาง (backlink)', sent.length === 1 && sent[0].includes('https://ok.test/1'), sent[0]?.slice(0, 60));
 
+  // 1b) batch เดิมกลับมา "จบครบ" อีกรอบ → ห้ามแจ้งซ้ำ (bug-418: user เจอใบสรุปเด้ง 2 รอบ)
+  //     จำลองด้วยการดันแถวกลับเป็น pending ตรงๆ — แทนเส้นทางไหนก็ตามที่ทำให้ batch ถูกแตะอีกครั้ง
+  await pool.query(`UPDATE post_social_history SET status = 'pending' WHERE id = $1`, [j1.id]);
+  await runOnce(fakeClient);
+  ok('batch จบซ้ำรอบสอง → ไม่แจ้งซ้ำ', sent.length === 1, `แจ้งไป ${sent.length} ครั้ง`);
+  // กดปุ่ม "ลองใหม่" ต้องได้ใบสรุปของรอบใหม่ (retryJob ล้าง notified_at) — จำลองการล้างธง
+  await pool.query(`UPDATE post_social_history SET status = 'pending', notified_at = NULL WHERE id = $1`, [j1.id]);
+  await runOnce(fakeClient);
+  ok('กดลองใหม่ (ล้างธง) → แจ้งผลรอบใหม่', sent.length === 2, `แจ้งไป ${sent.length} ครั้ง`);
+
   // 2) ตั้งเวลาอนาคต → ยังไม่หยิบ
   const j2 = await addJob({ scheduledAt: new Date(Date.now() + 3600e3) });
   await runOnce(fakeClient);
@@ -66,17 +76,20 @@ const cleanup = () => pool.query(`DELETE FROM post_social_history WHERE channel_
   await runOnce(fakeClient);
   ok('เลยเวลาไม่ถึง 2 ชม. → ยิงเลย', (await getJob(j4.id)).status === 'done');
 
-  // 5) ล้มแต่ยังไม่ครบ 3 ครั้ง → กลับเข้าคิว
+  // 5) ล้ม = จบ ไม่ลองใหม่เอง (MAX_ATTEMPTS = 1 · เปลี่ยน 2026-08-18 กันโพสต์เบิ้ล)
+  //    "ได้ error กลับมา" ≠ "ยังไม่ได้โพสต์" → ยิงซ้ำเองเสี่ยงเบิ้ล ให้คนกดปุ่มลองใหม่แทน
   behavior = () => ({ ok: false, url: null, error: 'พังชั่วคราว' });
   const j5 = await addJob({ attempts: 0 });
   await runOnce(fakeClient);
   r = await getJob(j5.id);
-  ok('ล้มครั้งแรก → กลับเป็น pending + เก็บ last_error', r.status === 'pending' && r.last_error === 'พังชั่วคราว');
+  ok('ล้มครั้งแรก → failed ทันที + เก็บ last_error', r.status === 'failed' && r.last_error === 'พังชั่วคราว', r.status);
 
-  // 6) ล้มครั้งที่ 3 → failed ถาวร
-  const j6 = await addJob({ attempts: 2 });
-  await runOnce(fakeClient);
-  ok('ล้มครบ 3 ครั้ง → failed', (await getJob(j6.id)).status === 'failed');
+  // 6) ไม่มีงานที่ "ยิงไปแล้ว" ถูกคืนเข้าคิว — แถวที่ attempts > 0 ห้ามเหลือสถานะ pending
+  //    (นี่คือเส้นที่ทำให้เกิดโพสต์เบิ้ล: หยิบไปยิง → ล้ม → คืนคิว → หยิบไปยิงอีก)
+  const { rows: stuck } = await pool.query(
+    `SELECT count(*)::int n FROM post_social_history
+      WHERE channel_id = $1 AND status = 'pending' AND attempts > 0`, [CH]);
+  ok('งานที่ยิงไปแล้วไม่ถูกคืนเข้าคิว (ไม่มีทางยิงซ้ำเอง)', stuck[0].n === 0, `เหลือ ${stuck[0].n} แถว`);
 
   // 7) สื่อชี้นอก storage/ → ปฏิเสธ (กัน path traversal ของงานที่ถูกยัดมา)
   behavior = () => ({ ok: true, url: 'x', error: null });

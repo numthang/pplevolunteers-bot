@@ -86,7 +86,16 @@ export async function retryJob(id) {
       RETURNING ${COLS}`,
     [id]
   )
-  return rows[0] || null
+  const job = rows[0] || null
+  // ล้างธง "แจ้งแล้ว" ของทั้ง batch — ผลรอบใหม่ควรได้ใบสรุปของตัวเอง
+  // (ไม่ล้าง = กดลองใหม่แล้วเงียบ · ล้างทุกครั้งที่แตะ = กลับไปเป็นบั๊กแจ้งซ้ำเดิม)
+  if (job) {
+    await pool.query(
+      `UPDATE post_social_history SET notified_at = NULL WHERE batch_id = $1`,
+      [job.batch_id]
+    )
+  }
+  return job
 }
 
 /** ยกเลิก — ได้เฉพาะแถวที่ยังไม่ถูกหยิบไปยิง (pending) · null = สายเกินไปแล้ว */

@@ -16,7 +16,13 @@ const { runRetention } = require('./postsRetention');
 
 const POLL_MS = 30 * 1000;
 const BATCH   = 5;                       // หยิบทีละ 5 แถว กัน API rate limit
-const MAX_ATTEMPTS = 3;                  // ล้มครบ 3 ครั้ง = failed ถาวร (grill ข้อ 8)
+// ล้ม = จบ ไม่ลองใหม่เอง (เดิม 3 · เปลี่ยน 2026-08-18)
+//
+// เหตุผล: "ยิงแล้วได้ error กลับมา" ไม่ได้แปลว่า "ยังไม่ได้โพสต์" — โพสต์ออกไปแล้วแต่คำตอบหาย
+// (timeout / เน็ตสะดุด / 5xx หลังบันทึก) หน้าตาเหมือนกันเป๊ะกับล้มจริง · ลองใหม่เองจึงเสี่ยงโพสต์เบิ้ล
+// ซึ่งเรียกคืนไม่ได้ ส่วนที่ได้กลับมาคือ "ประหยัดคลิกหนึ่งครั้ง" — ไม่คุ้มกัน
+// → ล้มแล้วขึ้น failed ให้คนเห็น แล้วกดปุ่ม "ลองใหม่" ในหน้า /posts เอง (retryJob)
+const MAX_ATTEMPTS = 1;
 const GRACE_MS = 2 * 60 * 60 * 1000;     // เลยเวลาเกิน 2 ชม. = stale ไม่ยิงเอง (grill ข้อ 15)
 const CLEANUP_MS = 24 * 60 * 60 * 1000;  // เก็บกวาด media-temp วันละครั้ง
 const REPO_ROOT = path.join(__dirname, '..');
@@ -114,13 +120,28 @@ async function finishJob(job, result) {
  */
 async function notifyBatchDone(client, batchId) {
   try {
+    // จองสิทธิ์แจ้งก่อน — ผ่านได้ต่อเมื่อ "ทั้ง batch จบแล้ว" **และ** "ยังไม่เคยแจ้ง"
+    // เดิมเช็คแค่เงื่อนไขแรก → batch ที่กลับมาจบครบอีกรอบ (กดลองใหม่ / worker คืนแถวเข้าคิว)
+    // ถูกแจ้งซ้ำทั้งชุด (user เจอใบสรุปเด้ง 2 รอบห่างกัน 12 นาที 2026-08-18)
+    // เขียนก่อนส่งเสมอ: แจ้งหายดีกว่าแจ้งซ้ำ · atomic ด้วย เลยรันหลายอินสแตนซ์ได้เหมือน claimJobs
+    const claim = await pool.query(
+      `UPDATE post_social_history
+          SET notified_at = now()
+        WHERE batch_id = $1 AND notified_at IS NULL
+          AND NOT EXISTS (
+            SELECT 1 FROM post_social_history
+             WHERE batch_id = $1 AND status IN ('pending', 'running'))`,
+      [batchId]
+    );
+    if (!claim.rowCount) return;   // ยังไม่จบทั้ง batch หรือมีคนแจ้งไปแล้ว
+
     const { rows } = await pool.query(
       `SELECT platform, status, result, channel_id, caption
          FROM post_social_history
         WHERE batch_id = $1 ORDER BY id`,
       [batchId]
     );
-    if (!rows.length || rows.some(r => ['pending', 'running'].includes(r.status))) return;   // ยังไม่จบทั้ง batch
+    if (!rows.length) return;
 
     const channelId = rows.find(r => r.channel_id)?.channel_id;
     if (!channelId || !client) return;
@@ -181,12 +202,25 @@ async function runOnce(client) {
       });
 
       if (r.ok) {
-        await finishJob(job, { status: 'done', url: r.url, linkComment: r.linkComment });
+        try {
+          await finishJob(job, { status: 'done', url: r.url, linkComment: r.linkComment });
+        } catch (err) {
+          // โพสต์ออกไปแล้วจริง แค่บันทึกผลไม่ลง — ห้ามให้แถวหลุดกลับไป pending เด็ดขาด
+          // (เคสนี้คือ bug-068: งานที่ยิงสำเร็จค้างเป็น pending แล้ว worker หยิบไปยิงซ้ำ)
+          console.error(`[publishWorker] job ${job.id} โพสต์สำเร็จแต่บันทึกผลไม่ลง:`, err.message);
+          await pool.query(
+            `UPDATE post_social_history
+                SET status = 'done', posted_at = now(), last_error = $2, updated_at = now()
+              WHERE id = $1`,
+            [job.id, `โพสต์ออกแล้ว (${r.url || 'ไม่มีลิงก์'}) แต่บันทึกผลไม่สำเร็จ: ${err.message}`]
+          ).catch(e => console.error(`[publishWorker] job ${job.id} เขียนสถานะสำรองไม่ลงอีก:`, e.message));
+        }
       } else if (job.attempts >= MAX_ATTEMPTS) {
         await finishJob(job, { status: 'failed', error: r.error });
-        console.error(`[publishWorker] job ${job.id} (${job.platform}) ล้มถาวรหลัง ${job.attempts} ครั้ง: ${r.error}`);
+        console.error(`[publishWorker] job ${job.id} (${job.platform}) ล้ม: ${r.error}`);
       } else {
-        // ยังไม่ครบโควตา retry → คืนเข้าคิว รอบหน้าค่อยลองใหม่
+        // MAX_ATTEMPTS = 1 → มาไม่ถึงตรงนี้แล้ว · เหลือไว้เผื่อวันหนึ่งตั้งค่าให้ลองซ้ำอีก
+        // ⚠️ ถ้าจะเปิดใช้จริง ต้องแน่ใจก่อนว่าแพลตฟอร์มนั้น "ยิงซ้ำแล้วไม่เบิ้ล" (idempotent)
         await pool.query(
           `UPDATE post_social_history SET status = 'pending', last_error = $2, updated_at = now() WHERE id = $1`,
           [job.id, r.error]

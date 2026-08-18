@@ -1024,3 +1024,9 @@ CREATE INDEX IF NOT EXISTS idx_kanban_checklist_card_field
     ON kanban_card_checklist (card_id, field_id, sort_order);
 
 
+
+-- 2026-08-18 — กันใบสรุป "📤 โพสต์ออกแล้ว" แจ้งซ้ำ
+-- notifyBatchDone เดิมเช็คแค่ "ตอนนี้ทั้ง batch จบหรือยัง" ไม่มีบันทึกว่าเคยแจ้งแล้ว
+-- → ทุกครั้งที่ batch กลับมาจบครบอีกรอบ (กดลองใหม่ / worker คืนแถวเข้าคิว) จะแจ้งซ้ำทั้งชุด
+-- NULL = ยังไม่เคยแจ้ง · แถวเก่าทั้งหมดเป็น NULL ตั้งต้น (แจ้งไปแล้วแต่ batch จบไปนานแล้ว ไม่ถูกแตะอีก)
+ALTER TABLE post_social_history ADD COLUMN IF NOT EXISTS notified_at TIMESTAMPTZ;

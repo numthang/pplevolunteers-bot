@@ -76,7 +76,15 @@ const client = new Client({
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildVoiceStates,  // ← เพิ่มตรงนี้
-  ]
+  ],
+  // ── กันโพสต์เบิ้ล (2026-08-18) ──────────────────────────────────────────────
+  // ค่า default ของ @discordjs/rest คือ timeout 15 วิ + retries 3 และมันมองว่า
+  // "abort เพราะ timeout" = ควรลองใหม่ (shouldRetry: error.name === 'AbortError')
+  // → อัปรูป 10 ใบเข้าห้องข่าวใช้เวลาเกิน 15 วิได้สบาย · Discord รับข้อความแรกไปแล้ว
+  //   แต่เราไม่ทันได้คำตอบ → ยิงซ้ำ = ข้อความเบิ้ลโดยที่ DB ไม่รู้เรื่องเลย
+  // ยิงซ้ำ POST ที่สร้างข้อความ = ไม่ idempotent → เอาออก ให้คนกดเองแทน
+  // ⚠️ 429 (rate limit) ไม่เกี่ยวกับ retries — @discordjs/rest รอแล้วยิงต่อเองคนละเส้น ยังทำงานปกติ
+  rest: { timeout: 60_000, retries: 0 },
 });
 
 client.commands = new Collection();
