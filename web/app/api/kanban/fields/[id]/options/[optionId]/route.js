@@ -1,12 +1,16 @@
 // /api/kanban/fields/[id]/options/[optionId] — แก้ / ลบตัวเลือกถาวร 1 ตัว
 //
-// PATCH  { name?, color? }  → { option }
+// PATCH  { name?, color? }   → { option }
+// PATCH  { archived: bool }  → { option }   ซ่อน / เอากลับ (ส่งมาเดี่ยวๆ ไม่ปนกับ name/color)
 // GET    ?impact=1          → { impact }   นับว่าใช้อยู่กี่การ์ด (เติมตัวเลขในกล่องยืนยัน)
 // DELETE                    → { ok }       **ลบถาวรจริง** ไม่มี gate ยศ
 //
-// ⚠️ **กลับคำ 2026-08-18:** เดิม "ลบตัวเลือก" = archive ด้วยเหตุผล "กันข้อมูลการ์ดหายเงียบ"
-//    แต่ cards.js มี `AND o.archived_at IS NULL` ใน JOIN อยู่แล้ว → ซ่อนก็ทำให้ชิปหายจากทุกการ์ดทันทีเหมือนกัน
-//    archive จึงไม่ได้ป้องกันอะไรเลย ได้แค่แถวตายที่มองไม่เห็นและเอากลับไม่ได้ (ไม่มี unarchive ด้วยซ้ำ)
+// ⚠️ **ประวัติ 2 รอบ อ่านก่อนแก้:**
+//    2026-08-18 ถอด archive ทิ้ง เพราะ cards.js มี `AND o.archived_at IS NULL` ใน JOIN
+//      → ซ่อนก็ทำให้ชิปหายจากทุกการ์ดทันที = ไม่ต่างจากลบ แถมไม่มีทางเอากลับ
+//    2026-08-19 ค่ำ เอากลับมาใหม่ **หลังแก้ต้นเหตุแล้ว** — เงื่อนไขใน cards.js ถูกถอดออก
+//      ซ่อน = หายจากรายการให้เลือก · การ์ดที่ติดไว้แล้วยังเห็นเหมือนเดิม · กด "เอากลับ" ได้
+//      ⛔ ถ้าใครใส่ `o.archived_at IS NULL` กลับเข้า cards.js เมื่อไหร่ ฟีเจอร์นี้ตายอีกรอบทันที
 // ⛔ ห้ามใส่ canPurge ที่นี่ — ลบตัวเลือกเป็นงานประจำวัน คุมแล้ว flow "พิมพ์ชื่อใหม่ = สร้างตัวเลือก" พังทันที
 import { kanbanContext, err } from '@/lib/kanbanGuard.js'
 import { LABEL_PALETTE } from '@/lib/kanbanLabelColors.js'
@@ -25,6 +29,12 @@ export async function PATCH(req, { params }) {
   if (!field) return err(404, 'ไม่พบช่องข้อมูลนี้')
 
   const body = await req.json().catch(() => ({}))
+
+  // ซ่อน / เอากลับ — คนละเส้นกับแก้ชื่อ/สี ส่งมาเดี่ยวๆ เสมอ
+  if (body.archived !== undefined) {
+    const option = await fieldDB.setFieldOptionArchived(field.id, optId, Boolean(body.archived))
+    return option ? Response.json({ option }) : err(404, 'ไม่พบตัวเลือกนี้')
+  }
 
   const patch = {}
   if (body.name !== undefined) {

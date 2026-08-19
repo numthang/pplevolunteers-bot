@@ -1835,9 +1835,10 @@
       "searchPeoplePlaceholder": "Type a name to assign",
       "searchPeopleHint": "Type at least 2 characters",
       "noPeopleFound": "No one found",
-      "poolDelete": "Delete from library",
-      "poolDeleteConfirm": "Permanently delete \"{name}\" from the library?\n\nThe {count} card(s) that already have this item will keep showing the same text, but it becomes plain text no longer linked to the library.\n\nThis cannot be undone.",
-      "poolDeleteConfirmUnused": "Permanently delete \"{name}\" from the library?\n\nNo card is using it · This cannot be undone."
+      "optionHide": "Hide this option",
+      "optionRestore": "Restore",
+      "optionHidden": "Hidden",
+      "optionHiddenHint": "Not offered in the picker, but cards that already have it still show it"
     },
     "saveFailed": "Save failed",
     "board": {

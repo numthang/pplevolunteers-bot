@@ -20,11 +20,19 @@
  */
 
 import { useEffect, useRef, useState } from 'react'
-import { Check, GripVertical, Loader2, MoreHorizontal, Trash2, X } from 'lucide-react'
+import { Check, Eye, EyeOff, GripVertical, Loader2, MoreHorizontal, Trash2, X } from 'lucide-react'
 import { chipProps, LABEL_PALETTE } from '@/lib/kanbanLabelColors.js'
+// ⛔ ห้ามยิง /api/kanban/fields/../options เองที่นี่ — ทุกอย่างผ่าน lib ตัวนี้
+//    เช็คลิสต์ใช้ตัวเดียวกัน (user เคาะ: พฤติกรรมต้องเหมือน select เป๊ะ)
+import * as optionAPI from '@/lib/kanbanOptionActions.js'
 
-/** แถวแก้ตัวเลือก — กางอยู่ในแถวเดิม ไม่ลอยออกนอกกล่อง (กับดักข้อ 1) */
-function OptionEditor({ option, t, onSave, onDelete, busy }) {
+/**
+ * แถวแก้ตัวเลือก — กางอยู่ในแถวเดิม ไม่ลอยออกนอกกล่อง (กับดักข้อ 1)
+ *
+ * ⭐ export ออกไปให้ ChecklistFieldBox ใช้ตัวเดียวกัน — user เคาะ 2026-08-19 ค่ำว่าเช็คลิสต์ต้อง
+ *    "เอาเหมือน select เลย พฤติกรรม" · ลอก markup ไปวางซ้ำเมื่อไหร่ = 2 ที่ที่ดริฟต์ออกจากกันแน่นอน
+ */
+export function OptionEditor({ option, t, onSave, onDelete, onArchive, busy }) {
   const [name, setName] = useState(option.name)
   const ref = useRef(null)
 
@@ -71,14 +79,28 @@ function OptionEditor({ option, t, onSave, onDelete, busy }) {
           ))}
         </div>
       </div>
-      <button
-        type="button"
-        onClick={onDelete}
-        className="flex items-center gap-1.5 w-fit text-sm text-red-500 hover:text-red-600 font-medium"
-      >
-        {busy ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
-        {t('modal.optionDelete')}
-      </button>
+      {/* 2 ปุ่มคู่กันเสมอ — "ซ่อน" คือทางเลือกที่กู้ได้ ต้องเห็นพร้อมกับ "ลบถาวร" ไม่งั้นคนกดลบเพราะไม่รู้ว่ามีอีกทาง */}
+      <div className="flex flex-col gap-1.5">
+        <button
+          type="button"
+          onClick={() => onArchive(!option.archived_at)}
+          className="flex items-center gap-1.5 w-fit text-sm text-warm-500 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text font-medium"
+        >
+          {busy ? <Loader2 size={14} className="animate-spin" /> : (option.archived_at ? <Eye size={14} /> : <EyeOff size={14} />)}
+          {option.archived_at ? t('modal.optionRestore') : t('modal.optionHide')}
+        </button>
+        {!option.archived_at && (
+          <p className="text-xs text-warm-400 dark:text-disc-muted">{t('modal.optionHiddenHint')}</p>
+        )}
+        <button
+          type="button"
+          onClick={onDelete}
+          className="flex items-center gap-1.5 w-fit text-sm text-red-500 hover:text-red-600 font-medium"
+        >
+          {busy ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+          {t('modal.optionDelete')}
+        </button>
+      </div>
     </div>
   )
 }
@@ -151,10 +173,10 @@ export default function TagCombobox({
     }
     setLoading(true)
     try {
-      const res = await fetch(`/api/kanban/fields/${fieldId}/options`)
-      const json = await res.json().catch(() => ({}))
-      if (!res.ok) { onError?.(json.error || t('loadFailed')); setOptions([]); return }
-      setOptions(json.options || [])
+      // archived=1 — ต้องเห็นตัวที่ซ่อนไว้ถึงจะกด "เอากลับ" ได้ · กรองออกจากรายการให้เลือกที่ฝั่งนี้แทน
+      const list = await optionAPI.fetchOptions(fieldId, { archived: true })
+      if (!list) { onError?.(t('loadFailed')); setOptions([]); return }
+      setOptions(list)
     } catch {
       onError?.(t('loadFailed'))
       setOptions([])
@@ -235,26 +257,25 @@ export default function TagCombobox({
   /** @returns {Promise<boolean>} สำเร็จไหม — ตัวเรียกใช้เด้งค่าเดิมกลับเองถ้า false */
   async function saveOption(optId, patch) {
     setBusyOpt(optId)
-    try {
-      const res = await fetch(`/api/kanban/fields/${fieldId}/options/${optId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(patch),
-      })
-      const json = await res.json().catch(() => ({}))
-      // ⚠️ 409 = ชื่อซ้ำ · ต้องบอก + คืน false ให้ช่องเด้งกลับ ไม่งั้นโชว์ชื่อที่ DB ไม่เคยรับ (UI โกหก)
-      if (!res.ok || !json.option) {
-        onError?.(res.status === 409 ? t('modal.optionDuplicate') : (json.error || t('saveFailed')))
-        return false
-      }
-      setOptions((prev) => (prev || []).map((o) => (String(o.id) === String(optId) ? json.option : o)))
-      return true
-    } catch {
-      onError?.(t('saveFailed'))
+    const res = await optionAPI.patchOption(fieldId, optId, patch)
+    setBusyOpt(null)
+    // ⚠️ 409 = ชื่อซ้ำ · ต้องบอก + คืน false ให้ช่องเด้งกลับ ไม่งั้นโชว์ชื่อที่ DB ไม่เคยรับ (UI โกหก)
+    if (!res.ok) {
+      onError?.(res.status === 409 ? t('modal.optionDuplicate') : (res.error || t('saveFailed')))
       return false
-    } finally {
-      setBusyOpt(null)
     }
+    setOptions((prev) => (prev || []).map((o) => (String(o.id) === String(optId) ? res.option : o)))
+    return true
+  }
+
+  /** ซ่อน / เอากลับ — ไม่ต้องถามยืนยัน เพราะกดคืนได้ทันทีในกล่องเดียวกัน */
+  async function archiveOption(optId, archived) {
+    setBusyOpt(optId)
+    const res = await optionAPI.setOptionArchived(fieldId, optId, archived)
+    if (!res.ok) onError?.(res.error || t('saveFailed'))
+    // ซ่อนตัวที่การ์ดใบนี้ติดอยู่ → ชิปยังอยู่ (ตั้งใจ) แค่ไม่ถูกเสนอให้ใบอื่นเลือกใหม่
+    else setOptions((prev) => (prev || []).map((o) => (String(o.id) === String(optId) ? res.option : o)))
+    setBusyOpt(null)
   }
 
   /**
@@ -269,37 +290,17 @@ export default function TagCombobox({
     const opt = (options || []).find((o) => String(o.id) === String(optId))
     const name = opt?.name || ''
 
-    // นับก่อนถาม — นับไม่ได้ก็ยังถามต่อ (ห้ามเงียบแล้วลบเลย) แค่ไม่มีตัวเลขให้ดู
-    let used = null
-    try {
-      const r = await fetch(`/api/kanban/fields/${fieldId}/options/${optId}?impact=1`)
-      if (r.ok) {
-        const j = await r.json()
-        used = Number(j.impact?.picked || 0) + Number(j.impact?.checklist || 0)
-      }
-    } catch { /* นับไม่ได้ → ถามแบบไม่มีตัวเลข */ }
-
-    const msg = used
-      ? t('modal.optionDeleteConfirm', { name, count: used })
-      : t('modal.optionDeleteConfirmUnused', { name })
-    if (!window.confirm(msg)) return
-
     setBusyOpt(optId)
-    try {
-      const res = await fetch(`/api/kanban/fields/${fieldId}/options/${optId}`, { method: 'DELETE' })
-      const json = await res.json().catch(() => ({}))
-      if (!res.ok) { onError?.(json.error || t('saveFailed')); return }
-      setOptions((prev) => (prev || []).filter((o) => String(o.id) !== String(optId)))
-      setEditFor(null)
-      if (selected.has(String(optId))) {
-        const next = new Set(selected)
-        next.delete(String(optId))
-        commitSet(next)
-      }
-    } catch {
-      onError?.(t('saveFailed'))
-    } finally {
-      setBusyOpt(null)
+    const outcome = await optionAPI.deleteOptionWithConfirm(fieldId, optId, { name, t, onError })
+    setBusyOpt(null)
+    if (outcome !== 'deleted') return
+
+    setOptions((prev) => (prev || []).filter((o) => String(o.id) !== String(optId)))
+    setEditFor(null)
+    if (selected.has(String(optId))) {
+      const next = new Set(selected)
+      next.delete(String(optId))
+      commitSet(next)
     }
   }
 
@@ -333,7 +334,12 @@ export default function TagCombobox({
 
   const q = query.trim().toLowerCase()
   // โหมด search — server กรองมาแล้ว กรองซ้ำฝั่งนี้จะตัดผลที่ตรงแบบอื่น (ชื่อเล่น/ชื่อจริง) ทิ้ง
-  const filtered = source.mode === 'search' ? (options || []) : (options || []).filter((o) => o.name.toLowerCase().includes(q))
+  const matched = source.mode === 'search' ? (options || []) : (options || []).filter((o) => o.name.toLowerCase().includes(q))
+  // ⭐ ตัวที่ซ่อนไว้แยกไปกองล่าง — ไม่เสนอให้เลือกใหม่ แต่ต้องเห็นเพื่อกด "เอากลับ"
+  const filtered = matched.filter((o) => !o.archived_at)
+  const hidden = matched.filter((o) => o.archived_at)
+  // ⚠️ เช็คชื่อซ้ำจาก options ทั้งชุด (รวมที่ซ่อน) — unique index ไม่สนว่าซ่อนอยู่ไหม
+  //    ไม่งั้นกดสร้างแล้วเด้ง 409 โดยไม่มีอะไรให้เห็นบนจอว่าชนกับตัวไหน
   const exactMatch = (options || []).some((o) => o.name.trim().toLowerCase() === q)
   // ชิปที่โชว์บนปุ่ม — ยึด selected (ของเราเอง) แล้วหาข้อมูลชื่อ/สีจาก value+options
   const known = new Map([...(value || []), ...(options || [])].map((o) => [String(o.id), o]))
@@ -443,11 +449,50 @@ export default function TagCombobox({
                       busy={busyOpt === o.id}
                       onSave={(patch) => saveOption(o.id, patch)}
                       onDelete={() => deleteOption(o.id)}
+                      onArchive={(archived) => archiveOption(o.id, archived)}
                     />
                   )}
                 </div>
               )
             })}
+
+            {/* กองที่ซ่อนไว้ — จางกว่า กดเลือกไม่ได้ มีแต่ปุ่มเอากลับ (ผ่านเมนู ...) */}
+            {canManageOptions && !loading && hidden.length > 0 && (
+              <>
+                <p className="px-1 pt-2 pb-1 text-xs text-warm-400 dark:text-disc-muted border-t border-warm-200 dark:border-disc-border mt-1">
+                  {t('modal.optionHidden')} ({hidden.length})
+                </p>
+                {hidden.map((o) => {
+                  const tint = chipProps(o)
+                  return (
+                    <div key={o.id}>
+                      <div className="flex items-center gap-1.5 px-1 py-1 rounded-lg opacity-50">
+                        <span style={tint.style} className={`flex-1 px-2.5 py-0.5 text-sm font-medium rounded-md line-through ${tint.className}`}>
+                          {o.name}
+                        </span>
+                        {busyOpt === o.id && <Loader2 size={14} className="animate-spin text-warm-400 dark:text-disc-muted shrink-0" />}
+                        <button
+                          type="button"
+                          onClick={() => archiveOption(o.id, false)}
+                          className="px-2 py-0.5 text-xs rounded-md border border-warm-200 dark:border-disc-border text-warm-700 dark:text-disc-muted hover:bg-warm-50 dark:hover:bg-disc-hover shrink-0"
+                        >
+                          {t('modal.optionRestore')}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => deleteOption(o.id)}
+                          aria-label={t('modal.optionDelete')}
+                          title={t('modal.optionDelete')}
+                          className="p-1 rounded text-warm-400 dark:text-disc-muted hover:text-red-500 shrink-0"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </>
+            )}
 
             {canManageOptions && !loading && query.trim() && !exactMatch && (
               <button

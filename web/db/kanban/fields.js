@@ -185,11 +185,17 @@ export async function setCardFieldValue(orgId, cardId, fieldId, type, value) {
 // ── ตัวเลือกของ select/multi_select ─────────────────────────────────────
 // ผูกกับ field เดียว (ต่างจาก kanban_labels ที่เป็นคำศัพท์กลางทั้ง org) — จัดการทั้งหมดจากใน combobox ของการ์ด
 
-/** ตัวเลือกทั้งหมดของ field นี้ (ที่ยังไม่ซ่อน) เรียงตามลำดับที่จัดไว้ */
-export async function listFieldOptions(fieldId) {
+/**
+ * ตัวเลือกทั้งหมดของ field นี้ เรียงตามลำดับที่จัดไว้
+ *
+ * ⭐ `includeArchived` = เอาตัวที่ซ่อนไว้มาด้วย — กล่องเลือกต้องเห็นเพื่อกด "เอากลับ" ได้
+ *    (ซ่อนแล้วหายจากทุกที่ = ลบดีๆ นี่เอง ซึ่งเป็นเหตุผลที่ archive เคยถูกทิ้งไปรอบ 2026-08-18)
+ *    ตัวเรียกต้องกรอง `archived_at` ออกเองตอนวาด "รายการให้เลือก" — ที่นี่แค่ส่งข้อมูลครบ
+ */
+export async function listFieldOptions(fieldId, { includeArchived = false } = {}) {
   const { rows } = await pool.query(
     `SELECT id, name, color, sort_order, archived_at FROM kanban_field_options
-      WHERE field_id = $1 AND archived_at IS NULL
+      WHERE field_id = $1 ${includeArchived ? '' : 'AND archived_at IS NULL'}
       ORDER BY sort_order, id`,
     [fieldId]
   )
@@ -256,6 +262,25 @@ export async function updateFieldOption(fieldId, optionId, { name, color } = {})
 }
 
 /**
+ * ซ่อน / เอากลับ ตัวเลือก (user เคาะ 2026-08-19 ค่ำ — กลับมาอีกรอบหลังถูกทิ้งไป 2026-08-18)
+ *
+ * ⛔ **รอบที่แล้วที่ archive ใช้ไม่ได้ เพราะ `cards.js` มี `AND o.archived_at IS NULL` ใน JOIN**
+ *    ซ่อนแล้วชิปหายจากทุกการ์ด = ไม่ต่างจากลบ · เงื่อนไขนั้นถูกถอดออกแล้วรอบนี้
+ *    **ห้ามใส่กลับ** ไม่ว่าด้วยเหตุผลใด ไม่งั้น "ซ่อน" กลายเป็น "ลบแบบกู้ไม่ได้" อีก
+ *
+ * ความหมายที่ถูกต้อง: ซ่อน = ไม่เสนอให้เลือกใหม่ · การ์ดที่ติดไว้แล้วยังเห็นเหมือนเดิม
+ */
+export async function setFieldOptionArchived(fieldId, optionId, archived) {
+  const { rows } = await pool.query(
+    `UPDATE kanban_field_options SET archived_at = ${archived ? 'now()' : 'NULL'}
+      WHERE field_id = $1 AND id = $2
+      RETURNING id, name, color, sort_order, archived_at`,
+    [fieldId, optionId]
+  )
+  return rows[0] || null
+}
+
+/**
  * นับว่าตัวเลือกนี้ถูกใช้อยู่กี่การ์ด — เอาไปเติมตัวเลขในกล่องยืนยันก่อนลบ
  * (select/multi_select นับจาก value_options · checklist นับจากแถวใน kanban_card_checklist)
  */
@@ -278,24 +303,25 @@ export async function countOptionUsage(fieldId, optionId) {
  * → ซ่อนก็ทำให้ชิปหายจากทุกการ์ดทันทีเหมือนกัน ได้แค่ทิ้งแถวตาย + id ค้างในอาร์เรย์
  *
  * ⚠️ value_options เป็น BIGINT[] **ไม่ใช่ FK** → ต้องกวาดเองใน transaction เดียวกัน
- *    ลำดับสำคัญ: คัดชื่อลง checklist.text ก่อน ไม่งั้น ON DELETE SET NULL ทิ้งบรรทัดว่างไว้
+ *
+ * ⭐ **แถวเช็คลิสต์ถูกลบไปด้วย** (เปลี่ยน 2026-08-19 ค่ำ) — user เคาะว่าเช็คลิสต์ต้องพฤติกรรมเดียวกับ select
+ *    select ลบตัวเลือก = ชิปหายจากทุกการ์ด → เช็คลิสต์ก็ต้องหายจากทุกการ์ดเหมือนกัน
+ *    ของเดิมคัดชื่อลง `text` ไว้ให้ = ลบแล้วยังเห็นอยู่ ซึ่งไม่ตรงกับคำว่า "ลบถาวร" ที่กล่องยืนยันบอก
+ *    ⚠️ ไม่อยากให้หาย = ใช้ปุ่ม **ซ่อน** แทน (setFieldOptionArchived) นั่นคือเหตุผลที่มี 2 ปุ่ม
  */
 export async function deleteFieldOption(fieldId, optionId) {
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
 
-    // 1) เก็บชื่อไว้ในแถว checklist ก่อน — รายการที่ติ๊กไว้ต้องไม่กลายเป็นบรรทัดว่าง
+    // 1) ลบแถวเช็คลิสต์ที่อ้างตัวเลือกนี้ทิ้ง — ต้องลบเองก่อน ไม่ใช่ปล่อยให้ FK ON DELETE SET NULL
+    //    จัดการ ไม่งั้นได้บรรทัดว่างเปล่าค้างอยู่ทุกการ์ด
     //
     // ⛔ **ห้ามใส่ `ci.field_id = $1` เป็นเงื่อนไขร่วม** — เคยพลาดมาแล้ว 2026-08-18:
-    //    ถ้าแถวเช็คลิสต์อ้าง option ของ field อื่น เงื่อนไขนี้ไม่แมตช์ → ไม่ได้คัดชื่อ
-    //    แล้ว FK ON DELETE SET NULL เข้ามาล้าง option_id ทีหลัง = ได้บรรทัดว่างเปล่า
+    //    ถ้าแถวเช็คลิสต์อ้าง option ของ field อื่น เงื่อนไขนี้ไม่แมตช์ → แถวนั้นรอด แล้วโดน SET NULL = บรรทัดว่าง
     //    option_id เป็น id ที่ unique ทั้งตารางอยู่แล้ว กรองด้วยตัวมันตัวเดียวถูกต้องและปลอดภัยกว่า
     await client.query(
-      `UPDATE kanban_card_checklist ci
-          SET text = COALESCE(ci.text, o.name), option_id = NULL
-         FROM kanban_field_options o
-        WHERE o.id = $1 AND ci.option_id = $1`,
+      `DELETE FROM kanban_card_checklist WHERE option_id = $1`,
       [optionId]
     )
 
@@ -421,23 +447,37 @@ export async function setChecklistItemDone(orgId, itemId, done) {
   return rows[0] || null
 }
 
-/**
- * แก้ข้อความงานย่อย — **เฉพาะการ์ดใบนี้** (user เคาะ 2026-08-19)
- *
- * ⭐ ไม่ได้ rename ตัวเลือกในคลัง — ชี้ item ไปที่ตัวเลือก "ชื่อใหม่" แทน (route ensureFieldOption ให้ก่อน)
- *    ชื่อเก่ายังอยู่ในคลัง การ์ดใบอื่นที่ใช้อยู่จึงไม่สะเทือน
- *    (ต่างจาก multi_select ที่แก้ชิป = rename ตัวเลือกทั้งระบบ — คนละเจตนากัน จงใจให้ต่าง)
- *
- * ⚠️ ผูก i.field_id = $3 ไว้ด้วย — กันส่ง itemId ของ field อื่นมาให้ชี้ option ข้าม field
- */
-export async function setChecklistItemText(orgId, itemId, fieldId, { optionId = null, text = null }) {
+/** งานย่อย 1 แถว พร้อมชื่อที่โชว์จริง — ใช้คืนค่าหลังแก้ไข ไม่ต้องโหลดทั้งเช็คลิสต์ใหม่ */
+export async function getChecklistItem(orgId, itemId, fieldId) {
   const { rows } = await pool.query(
-    `UPDATE kanban_card_checklist i SET option_id = $4, text = $5
+    `SELECT i.id, i.option_id, i.done, i.sort_order,
+            COALESCE(o.name, i.text) AS text
+       FROM kanban_card_checklist i
+       JOIN kanban_cards c ON c.id = i.card_id
+       LEFT JOIN kanban_field_options o ON o.id = i.option_id
+      WHERE c.org_id = $1 AND i.id = $2 AND i.field_id = $3`,
+    [orgId, itemId, fieldId]
+  )
+  return rows[0] || null
+}
+
+/**
+ * เขียนข้อความลงแถวงานย่อยตรงๆ — ใช้เฉพาะแถวที่**ยังไม่ผูกคลัง** (`option_id IS NULL`)
+ *
+ * ⛔ **ไม่ใช่ทางแก้ชื่อปกติอีกต่อไป** (กลับคำ 2026-08-19 ค่ำ) — user เคาะว่าเช็คลิสต์ต้อง
+ *    "เอาเหมือน select เลย พฤติกรรม" คือ **แก้ชื่อ = rename ตัวเลือกในคลัง ทุกการ์ดตาม**
+ *    ของเดิมสร้างตัวเลือกใหม่ทุกครั้งที่แก้ → คลังงอกตัวกำพร้าทุกครั้ง (user จับได้: "มันควรเป็นการแก้ไขตัวนั้น ไม่ใช่ insert ใหม่")
+ *    route จึงเรียก `updateFieldOption()` แทนเมื่อแถวนั้นผูกคลังอยู่ · ตัวนี้เหลือไว้สำหรับแถวเก่าที่ยังลอยอยู่
+ *
+ * ⚠️ ผูก i.field_id = $3 ไว้ด้วย — กันส่ง itemId ของ field อื่นมาแก้ข้าม field
+ */
+export async function setChecklistItemText(orgId, itemId, fieldId, text) {
+  const { rows } = await pool.query(
+    `UPDATE kanban_card_checklist i SET text = $4, option_id = NULL
        FROM kanban_cards c
       WHERE i.card_id = c.id AND c.org_id = $1 AND i.id = $2 AND i.field_id = $3
-      RETURNING i.id, i.option_id, i.done, i.sort_order,
-                COALESCE((SELECT name FROM kanban_field_options WHERE id = i.option_id), i.text) AS text`,
-    [orgId, itemId, fieldId, optionId, text]
+      RETURNING i.id, i.option_id, i.done, i.sort_order, i.text AS text`,
+    [orgId, itemId, fieldId, text]
   )
   return rows[0] || null
 }

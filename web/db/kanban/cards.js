@@ -49,10 +49,15 @@ const AGG = `
                          WHEN d.type IN ('select', 'multi_select') THEN (
                            -- jsonb_agg ไม่ใช่ json_agg — CASE ต้องคืนชนิดเดียวกันทุกกิ่ง (to_jsonb ข้างบนเป็น jsonb)
                            -- ผสม json/jsonb ใน CASE เดียวกัน = 42846 "could not convert type json to jsonb" (เจอจาก smoke test)
+                           -- ⛔ ห้ามใส่ o.archived_at IS NULL กลับมา (ถอดออก 2026-08-19 ค่ำ)
+                           --    "ซ่อนตัวเลือก" ต้องแปลว่า "ไม่เสนอให้เลือกใหม่" ไม่ใช่ "ลบจากการ์ดที่ติดไว้แล้ว"
+                           --    มีเงื่อนไขนี้เมื่อไหร่ = ซ่อนแล้วชิปหายเกลี้ยงทุกการ์ด = ลบแบบกู้ไม่ได้
+                           --    (นี่คือเหตุผลที่ archive ถูกทิ้งไปรอบ 2026-08-18 — คราวนี้แก้ที่ต้นเหตุแล้ว)
+                           --    รายการให้เลือกกรอง archived ที่ฝั่ง UI แทน
                            SELECT COALESCE(jsonb_agg(jsonb_build_object('id', o.id, 'name', o.name, 'color', o.color)
                                                       ORDER BY o.sort_order, o.id), '[]'::jsonb)
                              FROM kanban_field_options o
-                            WHERE o.id = ANY(v.value_options) AND o.archived_at IS NULL
+                            WHERE o.id = ANY(v.value_options)
                          )
                          WHEN d.type = 'checklist' THEN (
                            -- ชื่อมาจากคลัง (option) ถ้าผูกไว้ — เปลี่ยนชื่อในคลังแล้วทุกการ์ดต้องเปลี่ยนตาม

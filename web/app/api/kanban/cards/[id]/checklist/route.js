@@ -6,7 +6,7 @@
 // POST  { fieldId, text }         → { item }   พิมพ์ชื่อใหม่ = สร้างตัวเลือกในคลังให้เลย (เหมือน multi_select)
 // POST  { fieldId, optionId }     → { item }   หยิบจากคลังที่มีอยู่แล้ว
 // PATCH { itemId, done }          → { item }        ติ๊ก/เลิกติ๊ก
-// PATCH { itemId, fieldId, text }  → { item }        แก้ข้อความงานย่อย (เฉพาะการ์ดใบนี้)
+// PATCH { itemId, fieldId, text }  → { item }        แก้ข้อความงานย่อย = **rename ตัวเลือกในคลัง**
 // PATCH { fieldId, reorder:[id] } → { ok }           ลากจัดลำดับใหม่
 // DELETE ?itemId=X                → { ok }
 import { cardContext, err } from '@/lib/kanbanGuard.js'
@@ -75,8 +75,17 @@ export async function PATCH(req, { params }) {
     return Response.json({ ok: true })
   }
 
-  // แก้ข้อความงานย่อย — **เฉพาะการ์ดใบนี้** ไม่ rename ตัวเลือกในคลัง (user เคาะ 2026-08-19)
-  // ชื่อใหม่เข้าคลังให้เหมือนตอนพิมพ์เพิ่ม แล้วชี้ item ไปตัวใหม่ · ชื่อเก่ายังอยู่ การ์ดใบอื่นไม่สะเทือน
+  /*
+   * แก้ข้อความงานย่อย = **rename ตัวเลือกในคลัง → ทุกการ์ดที่ใช้ตามไปด้วย**
+   * (user เคาะ 2026-08-19 ค่ำ: "เอาเหมือน select เลย พฤติกรรม")
+   *
+   * ⛔ **กลับคำจากเช้าวันเดียวกัน** — ของเดิมคือ ensureFieldOption(ชื่อใหม่) แล้วชี้ item ไปตัวใหม่
+   *    เพื่อให้ "แก้เฉพาะการ์ดใบนี้" · ผลคือคลังงอกตัวใหม่ทุกครั้งที่แก้ และตัวเก่ากลายเป็นขยะกำพร้า
+   *    user จับได้: "เวลาแก้ไขมันควรจะเป็นการแก้ไขตัวนั้น ไม่ใช่การ insert ใหม่"
+   *    → ห้ามเอา ensureFieldOption กลับมาที่สาขานี้ · อยากได้ค่าต่างในใบเดียว = ถอดออกแล้วเพิ่มตัวใหม่
+   *
+   * แถวที่ยังไม่ผูกคลัง (option_id IS NULL — ของเก่าก่อนมีคลัง) เขียนลง text ตรงๆ ไม่ต้องลากเข้าคลัง
+   */
   if (body.itemId && body.text !== undefined) {
     if (!body.fieldId) return err(400, 'ต้องระบุ fieldId')
     const text = String(body.text || '').trim()
@@ -85,11 +94,19 @@ export async function PATCH(req, { params }) {
 
     const field = await fieldDB.getFieldDef(ctx.orgId, body.fieldId)
     if (!field) return err(404, 'ไม่พบช่องข้อมูลนี้')
-    const option = await fieldDB.ensureFieldOption(field.id, text)
 
-    const item = await fieldDB.setChecklistItemText(ctx.orgId, body.itemId, field.id,
-      option ? { optionId: option.id } : { text })
-    return item ? Response.json({ item }) : err(404, 'ไม่พบงานย่อยนี้')
+    const cur = await fieldDB.getChecklistItem(ctx.orgId, body.itemId, field.id)
+    if (!cur) return err(404, 'ไม่พบงานย่อยนี้')
+
+    if (!cur.option_id) {
+      const item = await fieldDB.setChecklistItemText(ctx.orgId, body.itemId, field.id, text)
+      return item ? Response.json({ item }) : err(404, 'ไม่พบงานย่อยนี้')
+    }
+
+    const res = await fieldDB.updateFieldOption(field.id, cur.option_id, { name: text })
+    if (res.notFound)  return err(404, 'ไม่พบตัวเลือกนี้')
+    if (res.duplicate) return err(409, 'มีตัวเลือกชื่อนี้อยู่แล้ว')
+    return Response.json({ item: await fieldDB.getChecklistItem(ctx.orgId, body.itemId, field.id) })
   }
 
   // ติ๊ก/เลิกติ๊ก

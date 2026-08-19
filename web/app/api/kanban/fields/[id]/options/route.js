@@ -1,6 +1,7 @@
 // /api/kanban/fields/[id]/options — ตัวเลือกของ select/multi_select field
 //
-// GET   → { options }  ตัวเลือกทั้งหมดของ field นี้ (การ์ด AGG คืนมาแค่ตัวที่เลือกไว้ กล่องต้องเห็นทั้งชุด)
+// GET   ?archived=1 → { options }  ตัวเลือกทั้งหมดของ field นี้ (การ์ด AGG คืนมาแค่ตัวที่เลือกไว้ กล่องต้องเห็นทั้งชุด)
+//       ใส่ archived=1 = เอาตัวที่ซ่อนไว้มาด้วย (กล่องต้องเห็นเพื่อกด "เอากลับ")
 // POST  { name } → สร้าง/หาตัวเลือกเดิม (พิมพ์ในกล่องแล้ว "สร้างตัวเลือกใหม่") → { option }
 // PATCH { reorder: [id,...] } → ลากจัดลำดับใหม่ (ส่งลำดับเต็มของตัวเลือกที่ยังไม่ซ่อนทั้งหมด) → { ok }
 //
@@ -14,13 +15,14 @@ async function loadField(ctx, id) {
   return await fieldDB.getFieldDef(ctx.orgId, fieldId)
 }
 
-export async function GET(_req, { params }) {
+export async function GET(req, { params }) {
   const ctx = await kanbanContext()
   if (ctx.error) return ctx.error
 
   const field = await loadField(ctx, (await params).id)
   if (!field) return err(404, 'ไม่พบช่องข้อมูลนี้')
-  return Response.json({ options: await fieldDB.listFieldOptions(field.id) })
+  const includeArchived = new URL(req.url).searchParams.get('archived') === '1'
+  return Response.json({ options: await fieldDB.listFieldOptions(field.id, { includeArchived }) })
 }
 
 export async function POST(req, { params }) {
@@ -29,7 +31,8 @@ export async function POST(req, { params }) {
 
   const field = await loadField(ctx, (await params).id)
   if (!field) return err(404, 'ไม่พบช่องข้อมูลนี้')
-  if (!['select', 'multi_select'].includes(field.type)) return err(400, 'ช่องข้อมูลนี้ไม่มีตัวเลือก')
+  // checklist ใช้คลังตัวเลือกร่วมกับ select/multi_select — กติกาเดียวกันทุกอย่าง (user เคาะ 2026-08-19 ค่ำ)
+  if (!['select', 'multi_select', 'checklist'].includes(field.type)) return err(400, 'ช่องข้อมูลนี้ไม่มีตัวเลือก')
 
   const name = String((await req.json().catch(() => ({}))).name || '').trim()
   if (!name) return err(400, 'ต้องมีชื่อตัวเลือก')

@@ -16,8 +16,12 @@
  */
 
 import { useCallback, useEffect, useState } from 'react'
-import { Eye, EyeOff, GripVertical, ListChecks, Loader2, Plus, Trash2, X } from 'lucide-react'
+import { Eye, EyeOff, GripVertical, ListChecks, Loader2, MoreHorizontal, Plus, Trash2 } from 'lucide-react'
 import { DropLine } from './FieldRow.jsx'
+// ⭐ ใช้ตัวแก้ตัวเลือก **ตัวเดียวกับ select** — user เคาะ 2026-08-19 ค่ำ: "เอาเหมือน select เลย พฤติกรรม"
+//    ลอก markup มาวางซ้ำเมื่อไหร่ = 2 ที่ที่ดริฟต์ออกจากกันแน่นอน
+import { OptionEditor } from './TagCombobox.jsx'
+import * as optionAPI from '@/lib/kanbanOptionActions.js'
 
 /**
  * แท่งความคืบหน้าของเช็คลิสต์ — ใช้ทั้งในกล่องนี้ (คู่กับ %) และบนการ์ดในกระดาน
@@ -74,7 +78,8 @@ export default function ChecklistFieldBox({ cardId, fieldId, items = [], readOnl
   const [hideDone, setHideDone] = useState(false)
   const [dragId, setDragId] = useState(null)
   const [dropAt, setDropAt] = useState(null)   // { id, above } — เส้นบอกจุดวาง ขึ้นทีละเส้นเดียว
-  const [purgingId, setPurgingId] = useState(null)  // ตัวเลือกในคลังที่กำลังลบถาวรอยู่
+  const [busyOpt, setBusyOpt] = useState(null)   // ตัวเลือกในคลังที่กำลังยิงคำสั่งอยู่
+  const [editFor, setEditFor] = useState(null)   // ตัวเลือกในคลังที่กางกล่องแก้ไขอยู่
 
   const total = items.length
   const done = items.filter((i) => i.done).length
@@ -84,10 +89,9 @@ export default function ChecklistFieldBox({ cardId, fieldId, items = [], readOnl
   // โหลดคลังไว้ทำรายการแนะนำ — ล้มก็ไม่เป็นไร ช่องยังพิมพ์เองได้ตามปกติ
   const loadPool = useCallback(async () => {
     try {
-      const res = await fetch(`/api/kanban/fields/${fieldId}/options`)
-      if (!res.ok) return
-      const json = await res.json()
-      setPool(json.options || [])
+      // archived=1 — ต้องเห็นตัวที่ซ่อนไว้ถึงจะกด "เอากลับ" ได้ · กรองออกจากรายการแนะนำที่ฝั่งนี้แทน
+      const list = await optionAPI.fetchOptions(fieldId, { archived: true })
+      if (list) setPool(list)
     } catch { /* เงียบได้ — เป็นแค่ตัวช่วย ไม่ใช่ทางเดียวที่เพิ่มรายการได้ */ }
   }, [fieldId])
 
@@ -97,9 +101,11 @@ export default function ChecklistFieldBox({ cardId, fieldId, items = [], readOnl
   const used = new Set(items.map((i) => String(i.option_id)).filter((v) => v !== 'null'))
   const q = newText.trim().toLowerCase()
   const suggestions = pool
+    .filter((o) => !o.archived_at)        // ซ่อนแล้ว = ไม่เสนอให้เพิ่มใหม่ (แต่ยังอยู่ในกอง "ซ่อนไว้" ข้างล่าง)
     .filter((o) => !used.has(String(o.id)))
     .filter((o) => !q || o.name.toLowerCase().includes(q))
     .slice(0, 8)
+  const hiddenPool = pool.filter((o) => o.archived_at)
 
   async function call(method, body, query = '') {
     const res = await fetch(`/api/kanban/cards/${cardId}/checklist${query}`, {
@@ -124,46 +130,45 @@ export default function ChecklistFieldBox({ cardId, fieldId, items = [], readOnl
   }
 
   /**
-   * ลบตัวเลือกออกจาก **คลัง** ถาวร — คนละเรื่องกับถังขยะบนแถวงานย่อย (นั่นถอดออกจากการ์ดใบนี้เท่านั้น)
-   *
-   * ⚠️ ความหมายต่างจาก select/multi_select ตรงนี้สำคัญ — user เคาะไว้ 2026-08-19 ว่าเอาแบบนี้:
-   *    การ์ดใบอื่นที่มีรายการนี้อยู่แล้ว **ไม่หาย** · `deleteFieldOption()` คัดชื่อลงคอลัมน์ `text`
-   *    แล้วตัด `option_id` ทิ้ง → เห็นข้อความเดิมทุกอย่าง แค่ไม่ผูกกับคลังแล้ว
-   *    (ต่างจาก multi_select ที่ชิปหายจากทุกการ์ดจริงๆ) → ต้องใช้ข้อความยืนยันคนละชุด
-   *
-   * ⚠️ ไม่มี gate ยศ — ใครแก้การ์ดได้ก็ลบได้ · **ตัวเลขจำนวนการ์ดคือกลไกกันพลาด** แทนการจำกัดสิทธิ์
-   *    (กติกาเดียวกับ deleteOption ใน TagCombobox — ห้ามให้ 2 ที่นี้ต่างกัน)
+   * แก้ชื่อ / เปลี่ยนสี ตัวเลือกในคลัง — **เหมือน select ทุกอย่าง** (user เคาะ 2026-08-19 ค่ำ)
+   * เปลี่ยนแล้วทุกการ์ดที่ใช้ตัวนี้เปลี่ยนตาม · ชื่อซ้ำ = 409 ต้องเด้งค่าเดิมกลับ
    */
-  async function purgeFromPool(option) {
-    if (purgingId) return
-
-    // นับก่อนถาม — นับไม่ได้ก็ยังถามต่อ (ห้ามเงียบแล้วลบเลย) แค่ไม่มีตัวเลขให้ดู
-    let used = null
-    try {
-      const r = await fetch(`/api/kanban/fields/${fieldId}/options/${option.id}?impact=1`)
-      if (r.ok) {
-        const j = await r.json()
-        used = Number(j.impact?.checklist || 0) + Number(j.impact?.picked || 0)
-      }
-    } catch { /* นับไม่ได้ → ถามแบบไม่มีตัวเลข */ }
-
-    const msg = used
-      ? t('modal.poolDeleteConfirm', { name: option.name, count: used })
-      : t('modal.poolDeleteConfirmUnused', { name: option.name })
-    if (!window.confirm(msg)) return
-
-    setPurgingId(option.id)
-    try {
-      const res = await fetch(`/api/kanban/fields/${fieldId}/options/${option.id}`, { method: 'DELETE' })
-      const json = await res.json().catch(() => ({}))
-      if (!res.ok) { onError?.(json.error || t('saveFailed')); return }
-      setPool((prev) => prev.filter((o) => String(o.id) !== String(option.id)))
-      // การ์ดใบนี้ไม่มีรายการนี้อยู่แล้ว (suggestions โชว์เฉพาะตัวที่ยังไม่มี) → ไม่ต้องโหลด items ใหม่
-    } catch {
-      onError?.(t('saveFailed'))
-    } finally {
-      setPurgingId(null)
+  async function saveOption(optId, patch) {
+    setBusyOpt(optId)
+    const res = await optionAPI.patchOption(fieldId, optId, patch)
+    setBusyOpt(null)
+    if (!res.ok) {
+      onError?.(res.status === 409 ? t('modal.optionDuplicate') : (res.error || t('saveFailed')))
+      return false
     }
+    setPool((prev) => prev.map((o) => (String(o.id) === String(optId) ? res.option : o)))
+    onItemsChanged?.(items.map((i) => (String(i.option_id) === String(optId) ? { ...i, text: res.option.name } : i)))
+    return true
+  }
+
+  /** ซ่อน / เอากลับ — ตัวที่ซ่อนไม่ถูกเสนอให้เพิ่มใหม่ แต่การ์ดที่มีอยู่แล้วยังเห็นเหมือนเดิม */
+  async function archiveOption(optId, archived) {
+    setBusyOpt(optId)
+    const res = await optionAPI.setOptionArchived(fieldId, optId, archived)
+    setBusyOpt(null)
+    if (!res.ok) { onError?.(res.error || t('saveFailed')); return }
+    setPool((prev) => prev.map((o) => (String(o.id) === String(optId) ? res.option : o)))
+  }
+
+  /**
+   * ลบถาวร — **แถวงานย่อยในทุกการ์ดหายไปด้วย** (เปลี่ยน 2026-08-19 ค่ำ ให้ตรงกับ select)
+   * ของเดิมคัดชื่อลง text ไว้ = ลบแล้วยังเห็นอยู่ ซึ่งขัดกับกล่องยืนยันที่บอกว่า "กู้คืนไม่ได้"
+   * ไม่อยากให้หาย = ใช้ปุ่ม "ซ่อน" แทน — นั่นคือเหตุผลที่มี 2 ปุ่ม
+   */
+  async function deleteOption(optId, name) {
+    setBusyOpt(optId)
+    const outcome = await optionAPI.deleteOptionWithConfirm(fieldId, optId, { name, t, onError })
+    setBusyOpt(null)
+    if (outcome !== 'deleted') return
+    setPool((prev) => prev.filter((o) => String(o.id) !== String(optId)))
+    setEditFor(null)
+    // แถวบนการ์ดใบนี้ที่อ้างตัวเลือกนี้ถูกลบไปที่ server แล้ว — ถอดออกจากจอให้ตรงกัน
+    onItemsChanged?.(items.filter((i) => String(i.option_id) !== String(optId)))
   }
 
   /** หยิบจากคลัง — ไม่ต้องพิมพ์ */
@@ -342,8 +347,7 @@ export default function ChecklistFieldBox({ cardId, fieldId, items = [], readOnl
         <>
           {suggestions.length > 0 && (
             <div className="mt-1.5 flex flex-wrap gap-1.5">
-              {/* ⚠️ เป็น div ไม่ใช่ button — ข้างในมีปุ่ม × (button ซ้อน button = HTML ผิด เบราว์เซอร์แก้โครงเอง)
-                  ทรงเดียวกับชิปใน TagCombobox ที่มีปุ่ม × อยู่บนชิป */}
+              {/* ⚠️ เป็น div ไม่ใช่ button — ข้างในมีปุ่ม ... (button ซ้อน button = HTML ผิด เบราว์เซอร์แก้โครงเอง) */}
               {suggestions.map((o) => (
                 <div
                   key={o.id}
@@ -356,29 +360,80 @@ export default function ChecklistFieldBox({ cardId, fieldId, items = [], readOnl
                        (user เจอจริง 2026-08-19: "กดแล้วก็ไม่กลับเข้ามา") */
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => addFromPool(o)}
-                    disabled={adding || purgingId === o.id}
-                    className="flex items-center gap-1 pl-2 pr-1 py-1 text-xs disabled:opacity-50"
+                    disabled={adding || busyOpt === o.id}
+                    className="flex items-center gap-1 pl-2 pr-1 py-1 text-xs whitespace-nowrap disabled:opacity-50"
                   >
                     <Plus size={12} className="shrink-0" />
                     {o.name}
                   </button>
-                  {/* ลบออกจากคลังถาวร — โผล่ตอน hover เท่านั้น ไม่งั้นชิปรกและกดพลาดง่าย
-                      (โฟกัสด้วยคีย์บอร์ดก็ต้องเห็น → focus-visible:opacity-100) */}
+                  {/* จัดการตัวเลือกในคลัง (เปลี่ยนชื่อ/สี/ซ่อน/ลบถาวร) — เมนูเดียวกับ select เป๊ะ
+                      โผล่ตอน hover เท่านั้น ไม่งั้นชิปรก · โฟกัสคีย์บอร์ดก็ต้องเห็น */}
                   <button
                     type="button"
                     onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => purgeFromPool(o)}
-                    disabled={adding || purgingId === o.id}
-                    aria-label={t('modal.poolDelete')}
-                    title={t('modal.poolDelete')}
-                    className="pr-1.5 pl-0.5 py-1 opacity-0 group-hover/pool:opacity-100 focus-visible:opacity-100 hover:text-red-500 disabled:opacity-50 transition"
+                    onClick={() => setEditFor(editFor === o.id ? null : o.id)}
+                    aria-label={t('modal.optionEdit')}
+                    title={t('modal.optionEdit')}
+                    className="pr-1.5 pl-0.5 py-1 opacity-0 group-hover/pool:opacity-100 focus-visible:opacity-100 hover:text-warm-900 dark:hover:text-disc-text transition"
                   >
-                    {purgingId === o.id
+                    {busyOpt === o.id
                       ? <Loader2 size={12} className="animate-spin" />
-                      : <X size={12} />}
+                      : <MoreHorizontal size={14} />}
                   </button>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* กล่องแก้ไขกางใต้แถวชิป — ชิปห่อบรรทัดได้ กางในชิปเลยจะดันแถวเบี้ยว
+              (ยังเป็น inline expand อยู่ในกล่อง ไม่ลอยออกนอกจอ — กับดักข้อ 1 ของ TagCombobox) */}
+          {editFor && pool.some((o) => String(o.id) === String(editFor)) && (
+            <OptionEditor
+              option={pool.find((o) => String(o.id) === String(editFor))}
+              t={t}
+              busy={busyOpt === editFor}
+              onSave={(patch) => saveOption(editFor, patch)}
+              onDelete={() => deleteOption(editFor, pool.find((o) => String(o.id) === String(editFor))?.name || '')}
+              onArchive={(archived) => archiveOption(editFor, archived)}
+            />
+          )}
+
+          {/* กองที่ซ่อนไว้ — ไม่เสนอให้เพิ่ม แต่เอากลับได้ตลอด */}
+          {hiddenPool.length > 0 && (
+            <div className="mt-2 pt-2 border-t border-warm-200 dark:border-disc-border">
+              <p className="text-xs text-warm-400 dark:text-disc-muted mb-1">
+                {t('modal.optionHidden')} ({hiddenPool.length})
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {hiddenPool.map((o) => (
+                  <div
+                    key={o.id}
+                    className="flex items-center gap-1 pl-2 pr-1 py-1 text-xs rounded-md border border-warm-200 dark:border-disc-border text-warm-400 dark:text-disc-muted opacity-70"
+                  >
+                    <span className="line-through whitespace-nowrap">{o.name}</span>
+                    <button
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => archiveOption(o.id, false)}
+                      disabled={busyOpt === o.id}
+                      className="px-1.5 rounded hover:text-warm-900 dark:hover:text-disc-text disabled:opacity-50"
+                    >
+                      {busyOpt === o.id ? <Loader2 size={12} className="animate-spin" /> : t('modal.optionRestore')}
+                    </button>
+                    <button
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => deleteOption(o.id, o.name)}
+                      disabled={busyOpt === o.id}
+                      aria-label={t('modal.optionDelete')}
+                      title={t('modal.optionDelete')}
+                      className="p-0.5 rounded hover:text-red-500 disabled:opacity-50"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
