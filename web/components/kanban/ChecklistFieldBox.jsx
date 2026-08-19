@@ -16,12 +16,13 @@
  */
 
 import { useCallback, useEffect, useState } from 'react'
-import { Eye, EyeOff, GripVertical, ListChecks, Loader2, MoreHorizontal, Plus, Trash2 } from 'lucide-react'
+import { Eye, EyeOff, GripVertical, ListChecks, Loader2, Plus, Trash2 } from 'lucide-react'
 import { DropLine } from './FieldRow.jsx'
-// ⭐ ใช้ตัวแก้ตัวเลือก **ตัวเดียวกับ select** — user เคาะ 2026-08-19 ค่ำ: "เอาเหมือน select เลย พฤติกรรม"
-//    ลอก markup มาวางซ้ำเมื่อไหร่ = 2 ที่ที่ดริฟต์ออกจากกันแน่นอน
-import { OptionEditor } from './TagCombobox.jsx'
+// ⛔ **ไม่มีเมนู ... ในเช็คลิสต์** — user สั่ง 2026-08-19 ค่ำ: "ไม่ต้องมีไข่ปลาให้กดเปลี่ยนสี หรือ delete tag
+//    เอาออกไปเลย ไม่ได้ใช้" · ชิปคลังเหลือหน้าที่เดียวคือกดหยิบเข้าการ์ด
+//    การจัดการตัวเลือกทั้งหมดไปอยู่ที่ **ถังขยะท้ายงานย่อย** ซึ่งเปิดกล่องเดียวกับ "ลบการบ้าน"
 import * as optionAPI from '@/lib/kanbanOptionActions.js'
+import DeleteChoiceDialog from './DeleteChoiceDialog.jsx'
 
 /**
  * แท่งความคืบหน้าของเช็คลิสต์ — ใช้ทั้งในกล่องนี้ (คู่กับ %) และบนการ์ดในกระดาน
@@ -79,7 +80,8 @@ export default function ChecklistFieldBox({ cardId, fieldId, items = [], readOnl
   const [dragId, setDragId] = useState(null)
   const [dropAt, setDropAt] = useState(null)   // { id, above } — เส้นบอกจุดวาง ขึ้นทีละเส้นเดียว
   const [busyOpt, setBusyOpt] = useState(null)   // ตัวเลือกในคลังที่กำลังยิงคำสั่งอยู่
-  const [editFor, setEditFor] = useState(null)   // ตัวเลือกในคลังที่กางกล่องแก้ไขอยู่
+  const [confirmItem, setConfirmItem] = useState(null) // งานย่อยที่กดถังขยะ (รอเลือกซ่อน/ลบถาวร)
+  const [confirmUsed, setConfirmUsed] = useState(null) // จำนวนการ์ดที่ใช้ตัวเลือกนี้อยู่
 
   const total = items.length
   const done = items.filter((i) => i.done).length
@@ -130,45 +132,49 @@ export default function ChecklistFieldBox({ cardId, fieldId, items = [], readOnl
   }
 
   /**
-   * แก้ชื่อ / เปลี่ยนสี ตัวเลือกในคลัง — **เหมือน select ทุกอย่าง** (user เคาะ 2026-08-19 ค่ำ)
-   * เปลี่ยนแล้วทุกการ์ดที่ใช้ตัวนี้เปลี่ยนตาม · ชื่อซ้ำ = 409 ต้องเด้งค่าเดิมกลับ
+   * กด "ซ่อน" ในกล่อง — **ซ่อนจากคลัง + เอาออกจากการ์ดใบนี้ พร้อมกัน** (user เคาะ 2026-08-19 ค่ำ)
+   *
+   * ทำไมต้องทำ 2 อย่าง: archive อย่างเดียวแปลว่า "การ์ดที่ติดไว้แล้วยังเห็น" → กดถังขยะแล้วไม่มีอะไรเกิดขึ้นบนจอ
+   * ส่วนลบแถวอย่างเดียวก็ยังถูกเสนอให้หยิบกลับมาใหม่เรื่อยๆ · user ต้องการทั้งคู่
+   * การ์ด **ใบอื่น** ที่ใช้อยู่ยังเห็นเหมือนเดิม — นั่นคือเส้นแบ่งกับ "ลบถาวร"
    */
-  async function saveOption(optId, patch) {
-    setBusyOpt(optId)
-    const res = await optionAPI.patchOption(fieldId, optId, patch)
-    setBusyOpt(null)
-    if (!res.ok) {
-      onError?.(res.status === 409 ? t('modal.optionDuplicate') : (res.error || t('saveFailed')))
-      return false
+  async function hideItem(item) {
+    setBusyId(item.id)
+    if (item.option_id) {
+      const res = await optionAPI.setOptionArchived(fieldId, item.option_id, true)
+      if (!res.ok) { onError?.(res.error || t('saveFailed')); setBusyId(null); return }
+      setPool((prev) => prev.map((o) => (String(o.id) === String(item.option_id) ? res.option : o)))
     }
-    setPool((prev) => prev.map((o) => (String(o.id) === String(optId) ? res.option : o)))
-    onItemsChanged?.(items.map((i) => (String(i.option_id) === String(optId) ? { ...i, text: res.option.name } : i)))
-    return true
+    const json = await call('DELETE', null, `?itemId=${item.id}`)
+    if (json) onItemsChanged(items.filter((i) => i.id !== item.id))
+    setBusyId(null)
+    setConfirmItem(null)
   }
 
-  /** ซ่อน / เอากลับ — ตัวที่ซ่อนไม่ถูกเสนอให้เพิ่มใหม่ แต่การ์ดที่มีอยู่แล้วยังเห็นเหมือนเดิม */
-  async function archiveOption(optId, archived) {
+  /** กด "ลบถาวร" ในกล่อง — ลบตัวเลือกออกจากคลัง แถวงานย่อยหายจาก**ทุกการ์ด** กู้ไม่ได้ */
+  async function purgeItem(item) {
+    setBusyId(item.id)
+    // แถวที่ไม่ได้ผูกคลัง (ของเก่า) ไม่มีตัวเลือกให้ลบ — ลบแค่แถวก็จบ
+    if (item.option_id) {
+      const res = await optionAPI.deleteOption(fieldId, item.option_id)
+      if (!res.ok) { onError?.(res.error || t('saveFailed')); setBusyId(null); return }
+      setPool((prev) => prev.filter((o) => String(o.id) !== String(item.option_id)))
+      onItemsChanged(items.filter((i) => String(i.option_id) !== String(item.option_id)))
+    } else {
+      const json = await call('DELETE', null, `?itemId=${item.id}`)
+      if (json) onItemsChanged(items.filter((i) => i.id !== item.id))
+    }
+    setBusyId(null)
+    setConfirmItem(null)
+  }
+
+  /** เอากลับจากกอง "ซ่อนไว้" — คืนตัวเลือกเข้ารายการแนะนำ (ยังไม่ผูกกับการ์ดใบนี้ ต้องกดหยิบเอง) */
+  async function restoreOption(optId) {
     setBusyOpt(optId)
-    const res = await optionAPI.setOptionArchived(fieldId, optId, archived)
+    const res = await optionAPI.setOptionArchived(fieldId, optId, false)
     setBusyOpt(null)
     if (!res.ok) { onError?.(res.error || t('saveFailed')); return }
     setPool((prev) => prev.map((o) => (String(o.id) === String(optId) ? res.option : o)))
-  }
-
-  /**
-   * ลบถาวร — **แถวงานย่อยในทุกการ์ดหายไปด้วย** (เปลี่ยน 2026-08-19 ค่ำ ให้ตรงกับ select)
-   * ของเดิมคัดชื่อลง text ไว้ = ลบแล้วยังเห็นอยู่ ซึ่งขัดกับกล่องยืนยันที่บอกว่า "กู้คืนไม่ได้"
-   * ไม่อยากให้หาย = ใช้ปุ่ม "ซ่อน" แทน — นั่นคือเหตุผลที่มี 2 ปุ่ม
-   */
-  async function deleteOption(optId, name) {
-    setBusyOpt(optId)
-    const outcome = await optionAPI.deleteOptionWithConfirm(fieldId, optId, { name, t, onError })
-    setBusyOpt(null)
-    if (outcome !== 'deleted') return
-    setPool((prev) => prev.filter((o) => String(o.id) !== String(optId)))
-    setEditFor(null)
-    // แถวบนการ์ดใบนี้ที่อ้างตัวเลือกนี้ถูกลบไปที่ server แล้ว — ถอดออกจากจอให้ตรงกัน
-    onItemsChanged?.(items.filter((i) => String(i.option_id) !== String(optId)))
   }
 
   /** หยิบจากคลัง — ไม่ต้องพิมพ์ */
@@ -203,12 +209,16 @@ export default function ChecklistFieldBox({ cardId, fieldId, items = [], readOnl
     return Boolean(json?.item)
   }
 
-  async function removeItem(itemId) {
-    setBusyId(itemId)
-    const json = await call('DELETE', null, `?itemId=${itemId}`)
-    if (json) onItemsChanged(items.filter((i) => i.id !== itemId))
-    setBusyId(null)
-  }
+  // ⛔ ถังขยะไม่ลบทันทีอีกต่อไป — เปิด DeleteChoiceDialog ให้เลือก ซ่อน / ลบถาวร (user สั่ง 2026-08-19 ค่ำ)
+  //    ตัวลบจริงอยู่ที่ hideItem() กับ purgeItem()
+
+  // นับว่าตัวเลือกนี้ถูกใช้อยู่กี่การ์ด ตอนเปิดกล่อง — นับไม่ได้ก็ยังถามต่อ แค่ไม่มีตัวเลขให้ดู
+  useEffect(() => {
+    if (!confirmItem?.option_id) { setConfirmUsed(null); return }
+    let alive = true
+    optionAPI.fetchOptionImpact(fieldId, confirmItem.option_id).then((n) => { if (alive) setConfirmUsed(n) })
+    return () => { alive = false }
+  }, [confirmItem, fieldId])
 
   /**
    * วางงานย่อยที่ลากมา — index ต้องตรงกับ **เส้นที่วาดไว้** เป๊ะ ไม่งั้นวางแล้วเด้งไปคนละที่
@@ -312,7 +322,7 @@ export default function ChecklistFieldBox({ cardId, fieldId, items = [], readOnl
             {busyId === item.id && <Loader2 size={14} className="animate-spin text-warm-400 dark:text-disc-muted shrink-0" />}
             {!readOnly && (
               <button
-                onClick={() => removeItem(item.id)}
+                onClick={() => setConfirmItem(item)}
                 aria-label={t('modal.removeItem')}
                 title={t('modal.removeItem')}
                 className="p-1 rounded text-warm-400 dark:text-disc-muted opacity-0 group-hover:opacity-100 hover:text-red-500 shrink-0"
@@ -347,55 +357,23 @@ export default function ChecklistFieldBox({ cardId, fieldId, items = [], readOnl
         <>
           {suggestions.length > 0 && (
             <div className="mt-1.5 flex flex-wrap gap-1.5">
-              {/* ⚠️ เป็น div ไม่ใช่ button — ข้างในมีปุ่ม ... (button ซ้อน button = HTML ผิด เบราว์เซอร์แก้โครงเอง) */}
               {suggestions.map((o) => (
-                <div
+                <button
                   key={o.id}
-                  className="group/pool flex items-center rounded-md border border-warm-200 dark:border-disc-border text-warm-700 dark:text-disc-muted hover:bg-warm-50 dark:hover:bg-disc-hover transition"
+                  type="button"
+                  /* ⚠️ ห้ามตัดออก — ช่องพิมพ์ข้างล่าง onBlur ปิดตัวเองเมื่อยังไม่ได้พิมพ์อะไร
+                     กดชิปตอนช่องว่าง = mousedown → blur → ชิปหายไปก่อน click จะทำงาน = กดไม่ติด
+                     (user เจอจริง 2026-08-19: "กดแล้วก็ไม่กลับเข้ามา") */
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => addFromPool(o)}
+                  disabled={adding || busyOpt === o.id}
+                  className="flex items-center gap-1 px-2 py-1 text-xs whitespace-nowrap rounded-md border border-warm-200 dark:border-disc-border text-warm-700 dark:text-disc-muted hover:bg-warm-50 dark:hover:bg-disc-hover disabled:opacity-50 transition"
                 >
-                  <button
-                    type="button"
-                    /* ⚠️ ห้ามตัดออก — ช่องพิมพ์ข้างล่าง onBlur ปิดตัวเองเมื่อยังไม่ได้พิมพ์อะไร
-                       กดชิปตอนช่องว่าง = mousedown → blur → ชิปหายไปก่อน click จะทำงาน = กดไม่ติด
-                       (user เจอจริง 2026-08-19: "กดแล้วก็ไม่กลับเข้ามา") */
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => addFromPool(o)}
-                    disabled={adding || busyOpt === o.id}
-                    className="flex items-center gap-1 pl-2 pr-1 py-1 text-xs whitespace-nowrap disabled:opacity-50"
-                  >
-                    <Plus size={12} className="shrink-0" />
-                    {o.name}
-                  </button>
-                  {/* จัดการตัวเลือกในคลัง (เปลี่ยนชื่อ/สี/ซ่อน/ลบถาวร) — เมนูเดียวกับ select เป๊ะ
-                      โผล่ตอน hover เท่านั้น ไม่งั้นชิปรก · โฟกัสคีย์บอร์ดก็ต้องเห็น */}
-                  <button
-                    type="button"
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => setEditFor(editFor === o.id ? null : o.id)}
-                    aria-label={t('modal.optionEdit')}
-                    title={t('modal.optionEdit')}
-                    className="pr-1.5 pl-0.5 py-1 opacity-0 group-hover/pool:opacity-100 focus-visible:opacity-100 hover:text-warm-900 dark:hover:text-disc-text transition"
-                  >
-                    {busyOpt === o.id
-                      ? <Loader2 size={12} className="animate-spin" />
-                      : <MoreHorizontal size={14} />}
-                  </button>
-                </div>
+                  <Plus size={12} className="shrink-0" />
+                  {o.name}
+                </button>
               ))}
             </div>
-          )}
-
-          {/* กล่องแก้ไขกางใต้แถวชิป — ชิปห่อบรรทัดได้ กางในชิปเลยจะดันแถวเบี้ยว
-              (ยังเป็น inline expand อยู่ในกล่อง ไม่ลอยออกนอกจอ — กับดักข้อ 1 ของ TagCombobox) */}
-          {editFor && pool.some((o) => String(o.id) === String(editFor)) && (
-            <OptionEditor
-              option={pool.find((o) => String(o.id) === String(editFor))}
-              t={t}
-              busy={busyOpt === editFor}
-              onSave={(patch) => saveOption(editFor, patch)}
-              onDelete={() => deleteOption(editFor, pool.find((o) => String(o.id) === String(editFor))?.name || '')}
-              onArchive={(archived) => archiveOption(editFor, archived)}
-            />
           )}
 
           {/* กองที่ซ่อนไว้ — ไม่เสนอให้เพิ่ม แต่เอากลับได้ตลอด */}
@@ -414,22 +392,11 @@ export default function ChecklistFieldBox({ cardId, fieldId, items = [], readOnl
                     <button
                       type="button"
                       onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => archiveOption(o.id, false)}
+                      onClick={() => restoreOption(o.id)}
                       disabled={busyOpt === o.id}
                       className="px-1.5 rounded hover:text-warm-900 dark:hover:text-disc-text disabled:opacity-50"
                     >
                       {busyOpt === o.id ? <Loader2 size={12} className="animate-spin" /> : t('modal.optionRestore')}
-                    </button>
-                    <button
-                      type="button"
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => deleteOption(o.id, o.name)}
-                      disabled={busyOpt === o.id}
-                      aria-label={t('modal.optionDelete')}
-                      title={t('modal.optionDelete')}
-                      className="p-0.5 rounded hover:text-red-500 disabled:opacity-50"
-                    >
-                      <Trash2 size={12} />
                     </button>
                   </div>
                 ))}
@@ -463,6 +430,22 @@ export default function ChecklistFieldBox({ cardId, fieldId, items = [], readOnl
         </>
       )}
 
+      {/* ถังขยะท้ายงานย่อย → กล่องเดียวกับ "ลบการบ้าน" · ซ่อน = ออกจากการ์ดใบนี้ + ซ่อนจากคลัง */}
+      {confirmItem && (
+        <DeleteChoiceDialog
+          t={t}
+          heading={t('modal.itemDeleteHeading')}
+          title={confirmItem.text}
+          impact={confirmUsed ? t('modal.optionPurgeImpact', { count: confirmUsed }) : null}
+          hideHint={t('modal.optionHideHint')}
+          hideLabel={t('actions.hide')}
+          canPurge
+          busy={busyId === confirmItem.id}
+          onClose={() => setConfirmItem(null)}
+          onHide={() => hideItem(confirmItem)}
+          onPurge={() => purgeItem(confirmItem)}
+        />
+      )}
     </div>
   )
 }

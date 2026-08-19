@@ -46,30 +46,22 @@ export async function fetchOptionImpact(fieldId, optId) {
 }
 
 /**
- * ลบถาวร — ถามยืนยันพร้อมจำนวนการ์ดที่ใช้อยู่ ก่อนยิงจริง
+ * ลบตัวเลือกถาวร — **ไม่ถามเอง** ตัวเรียกต้องผ่าน DeleteChoiceDialog มาก่อนแล้ว
  *
- * ⚠️ **ตัวเลขคือกลไกกันพลาด แทนการจำกัดสิทธิ์** — endpoint นี้ไม่มี gate ยศโดยตั้งใจ
- *    (ลบตัวเลือกเป็นงานประจำวัน คุมด้วยยศแล้ว flow "พิมพ์ชื่อใหม่ = สร้างตัวเลือก" พังทันที)
+ * ⛔ เดิมเป็น `deleteOptionWithConfirm()` ที่เรียก `window.confirm` เอง — ถอดทิ้ง 2026-08-19 ค่ำ
+ *    user สั่งให้ใช้กล่องเดียวกับ "ลบการบ้าน" (DeleteChoiceDialog) ทุกที่ เพราะกล่องนั้นแยก
+ *    **ซ่อน / ลบถาวร / ยกเลิก** ให้เห็นพร้อมกัน ส่วน confirm บังคับให้เลือกได้แค่ ตกลง/ยกเลิก
  *
- * @returns {Promise<'deleted'|'cancelled'|'failed'>}
+ * ⚠️ endpoint นี้ไม่มี gate ยศโดยตั้งใจ — ตัวเลขจำนวนการ์ดในกล่องคือกลไกกันพลาด
+ *    (คุมด้วยยศแล้ว flow "พิมพ์ชื่อใหม่ = สร้างตัวเลือก" พังทันที)
  */
-export async function deleteOptionWithConfirm(fieldId, optId, { name, t, onError }) {
-  const used = await fetchOptionImpact(fieldId, optId)
-  const msg = used
-    ? t('modal.optionDeleteConfirm', { name, count: used })
-    : t('modal.optionDeleteConfirmUnused', { name })
-  if (!window.confirm(msg)) return 'cancelled'
-
+export async function deleteOption(fieldId, optId) {
   try {
     const res = await fetch(`${base(fieldId)}/${optId}`, { method: 'DELETE' })
-    if (!res.ok) {
-      const json = await res.json().catch(() => ({}))
-      onError?.(json.error || t('saveFailed'))
-      return 'failed'
-    }
-    return 'deleted'
+    if (res.ok) return { ok: true }
+    const json = await res.json().catch(() => ({}))
+    return { ok: false, error: json.error }
   } catch {
-    onError?.(t('saveFailed'))
-    return 'failed'
+    return { ok: false }
   }
 }

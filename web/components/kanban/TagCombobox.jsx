@@ -20,11 +20,13 @@
  */
 
 import { useEffect, useRef, useState } from 'react'
-import { Check, Eye, EyeOff, GripVertical, Loader2, MoreHorizontal, Trash2, X } from 'lucide-react'
+import { Check, GripVertical, Loader2, MoreHorizontal, Trash2, X } from 'lucide-react'
 import { chipProps, LABEL_PALETTE } from '@/lib/kanbanLabelColors.js'
 // ⛔ ห้ามยิง /api/kanban/fields/../options เองที่นี่ — ทุกอย่างผ่าน lib ตัวนี้
 //    เช็คลิสต์ใช้ตัวเดียวกัน (user เคาะ: พฤติกรรมต้องเหมือน select เป๊ะ)
 import * as optionAPI from '@/lib/kanbanOptionActions.js'
+// กล่องยืนยันตัวเดียวกับ "ลบการบ้าน"/"ลบช่องข้อมูล" — user สั่งให้ถังขยะทุกที่หน้าตาเหมือนกัน
+import DeleteChoiceDialog from './DeleteChoiceDialog.jsx'
 
 /**
  * แถวแก้ตัวเลือก — กางอยู่ในแถวเดิม ไม่ลอยออกนอกกล่อง (กับดักข้อ 1)
@@ -32,7 +34,7 @@ import * as optionAPI from '@/lib/kanbanOptionActions.js'
  * ⭐ export ออกไปให้ ChecklistFieldBox ใช้ตัวเดียวกัน — user เคาะ 2026-08-19 ค่ำว่าเช็คลิสต์ต้อง
  *    "เอาเหมือน select เลย พฤติกรรม" · ลอก markup ไปวางซ้ำเมื่อไหร่ = 2 ที่ที่ดริฟต์ออกจากกันแน่นอน
  */
-export function OptionEditor({ option, t, onSave, onDelete, onArchive, busy }) {
+export function OptionEditor({ option, t, onSave, onDelete, busy }) {
   const [name, setName] = useState(option.name)
   const ref = useRef(null)
 
@@ -79,28 +81,16 @@ export function OptionEditor({ option, t, onSave, onDelete, onArchive, busy }) {
           ))}
         </div>
       </div>
-      {/* 2 ปุ่มคู่กันเสมอ — "ซ่อน" คือทางเลือกที่กู้ได้ ต้องเห็นพร้อมกับ "ลบถาวร" ไม่งั้นคนกดลบเพราะไม่รู้ว่ามีอีกทาง */}
-      <div className="flex flex-col gap-1.5">
-        <button
-          type="button"
-          onClick={() => onArchive(!option.archived_at)}
-          className="flex items-center gap-1.5 w-fit text-sm text-warm-500 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text font-medium"
-        >
-          {busy ? <Loader2 size={14} className="animate-spin" /> : (option.archived_at ? <Eye size={14} /> : <EyeOff size={14} />)}
-          {option.archived_at ? t('modal.optionRestore') : t('modal.optionHide')}
-        </button>
-        {!option.archived_at && (
-          <p className="text-xs text-warm-400 dark:text-disc-muted">{t('modal.optionHiddenHint')}</p>
-        )}
-        <button
-          type="button"
-          onClick={onDelete}
-          className="flex items-center gap-1.5 w-fit text-sm text-red-500 hover:text-red-600 font-medium"
-        >
-          {busy ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
-          {t('modal.optionDelete')}
-        </button>
-      </div>
+      {/* ⛔ ไม่มีปุ่ม "ซ่อน" ตรงนี้ — ถังขยะเปิด DeleteChoiceDialog ที่มี ซ่อน/ลบถาวร/ยกเลิก ให้เลือกอยู่แล้ว
+          (user สั่ง 2026-08-19 ค่ำ: ถังขยะทุกที่ต้องขึ้นกล่องแบบเดียวกับ "ลบการบ้าน") */}
+      <button
+        type="button"
+        onClick={onDelete}
+        className="flex items-center gap-1.5 w-fit text-sm text-red-500 hover:text-red-600 font-medium"
+      >
+        {busy ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+        {t('modal.optionDelete')}
+      </button>
     </div>
   )
 }
@@ -125,6 +115,8 @@ export default function TagCombobox({
   const [creating, setCreating] = useState(false)
   const [busyOpt, setBusyOpt] = useState(null)
   const [editFor, setEditFor] = useState(null)
+  const [confirmOpt, setConfirmOpt] = useState(null)   // ตัวเลือกที่กดถังขยะ (รอเลือกซ่อน/ลบถาวรในกล่อง)
+  const [confirmUsed, setConfirmUsed] = useState(null) // จำนวนการ์ดที่ใช้อยู่ · null = ยังนับไม่เสร็จ/นับไม่ได้
   const [dragId, setDragId] = useState(null)
   const boxRef = useRef(null)
   const popRef = useRef(null)
@@ -156,6 +148,14 @@ export default function TagCombobox({
       document.removeEventListener('keydown', onKey)
     }
   }, [open])
+
+  // เปิดกล่องยืนยัน = ไปนับว่าใช้อยู่กี่การ์ด · นับไม่ได้ก็ยังถามต่อ แค่ไม่มีตัวเลขให้ดู
+  useEffect(() => {
+    if (!confirmOpt) { setConfirmUsed(null); return }
+    let alive = true
+    optionAPI.fetchOptionImpact(fieldId, confirmOpt.id).then((n) => { if (alive) setConfirmUsed(n) })
+    return () => { alive = false }
+  }, [confirmOpt, fieldId])
 
   // เปิดแล้วเลื่อนให้เห็นทั้งกล่อง — trigger มักอยู่ท้าย modal ทำให้ dropdown ตกขอบล่าง
   useEffect(() => {
@@ -286,22 +286,36 @@ export default function TagCombobox({
    * ⚠️ ถามก่อนเสมอ และ**ต้องบอกจำนวนการ์ดที่ใช้อยู่จริง** — ตัวเลขคือกลไกกันพลาด
    *    แทนการจำกัดสิทธิ์ (ตรงนี้ไม่มี gate ยศ ใครแก้การ์ดได้ก็ลบได้)
    */
-  async function deleteOption(optId) {
-    const opt = (options || []).find((o) => String(o.id) === String(optId))
-    const name = opt?.name || ''
-
-    setBusyOpt(optId)
-    const outcome = await optionAPI.deleteOptionWithConfirm(fieldId, optId, { name, t, onError })
+  /** กดซ่อนในกล่อง — archive ตัวเลือก **และ** ถอดออกจากการ์ดใบนี้พร้อมกัน (user เคาะ 2026-08-19 ค่ำ) */
+  async function hideOption(opt) {
+    setBusyOpt(opt.id)
+    const res = await optionAPI.setOptionArchived(fieldId, opt.id, true)
     setBusyOpt(null)
-    if (outcome !== 'deleted') return
-
-    setOptions((prev) => (prev || []).filter((o) => String(o.id) !== String(optId)))
-    setEditFor(null)
-    if (selected.has(String(optId))) {
+    if (!res.ok) { onError?.(res.error || t('saveFailed')); return }
+    setOptions((prev) => (prev || []).map((o) => (String(o.id) === String(opt.id) ? res.option : o)))
+    if (selected.has(String(opt.id))) {
       const next = new Set(selected)
-      next.delete(String(optId))
+      next.delete(String(opt.id))
       commitSet(next)
     }
+    setConfirmOpt(null)
+    setEditFor(null)
+  }
+
+  /** กดลบถาวรในกล่อง — หายจากทุกการ์ด กู้ไม่ได้ (กล่องบอกจำนวนไปแล้ว) */
+  async function purgeOption(opt) {
+    setBusyOpt(opt.id)
+    const res = await optionAPI.deleteOption(fieldId, opt.id)
+    setBusyOpt(null)
+    if (!res.ok) { onError?.(res.error || t('saveFailed')); return }
+    setOptions((prev) => (prev || []).filter((o) => String(o.id) !== String(opt.id)))
+    if (selected.has(String(opt.id))) {
+      const next = new Set(selected)
+      next.delete(String(opt.id))
+      commitSet(next)
+    }
+    setConfirmOpt(null)
+    setEditFor(null)
   }
 
   async function onDropReorder(targetId) {
@@ -448,8 +462,7 @@ export default function TagCombobox({
                       t={t}
                       busy={busyOpt === o.id}
                       onSave={(patch) => saveOption(o.id, patch)}
-                      onDelete={() => deleteOption(o.id)}
-                      onArchive={(archived) => archiveOption(o.id, archived)}
+                      onDelete={() => setConfirmOpt(o)}
                     />
                   )}
                 </div>
@@ -480,7 +493,7 @@ export default function TagCombobox({
                         </button>
                         <button
                           type="button"
-                          onClick={() => deleteOption(o.id)}
+                          onClick={() => setConfirmOpt(o)}
                           aria-label={t('modal.optionDelete')}
                           title={t('modal.optionDelete')}
                           className="p-1 rounded text-warm-400 dark:text-disc-muted hover:text-red-500 shrink-0"
@@ -508,6 +521,24 @@ export default function TagCombobox({
           </div>
 
         </div>
+      )}
+
+      {/* ถังขยะทุกที่ต้องขึ้นกล่องนี้ — ไม่ใช่ window.confirm (user สั่ง 2026-08-19 ค่ำ)
+          canPurge ปล่อย true เสมอ: ตัวเลือกไม่มี gate ยศโดยตั้งใจ ตัวเลขในกล่องคือด่านกันพลาด */}
+      {confirmOpt && (
+        <DeleteChoiceDialog
+          t={t}
+          heading={t('modal.optionDeleteHeading')}
+          title={confirmOpt.name}
+          impact={confirmUsed ? t('modal.optionPurgeImpact', { count: confirmUsed }) : null}
+          hideHint={t('modal.optionHideHint')}
+          hideLabel={t('actions.hide')}
+          canPurge
+          busy={busyOpt === confirmOpt.id}
+          onClose={() => setConfirmOpt(null)}
+          onHide={() => hideOption(confirmOpt)}
+          onPurge={() => purgeOption(confirmOpt)}
+        />
       )}
     </div>
   )
