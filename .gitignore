@@ -1,6 +1,8 @@
 .env
 node_modules/
-.wolf/
+.wolf/*
+!.wolf/cerebrum.md
+!.wolf/anatomy.md
 pgloader.load
 backups/
 /logs/
@@ -22,3 +24,5 @@ storage/
 
 # people-map.json มี users.id จับคู่ชื่อเล่นจริง — เป็นข้อมูลคน ไม่ควรขึ้น git
 backups/kanban/people-map.json
+# ผูกกับ users.id ของเครื่องนั้นๆ — เอาข้ามเครื่องไม่ได้ ต้องสร้างใหม่ด้วย --map เสมอ
+scripts/import/people-map.json

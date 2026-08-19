@@ -32,11 +32,16 @@ const argv = process.argv.slice(2)
 const has = (f) => argv.includes(f)
 const val = (f, d) => { const i = argv.indexOf(f); return i >= 0 ? argv[i + 1] : d }
 
-const FILE = val('--file', 'backups/kanban/kanban_import.xlsx')
+// ⭐ xlsx ย้ายมาอยู่ข้างสคริปต์ 2026-08-19 (user สั่ง) — เดิมอยู่ backups/ ซึ่ง gitignore ทิ้ง
+//    ทำให้ไฟล์ไม่ขึ้น prod ตอน deploy ต้อง scp เอง · ตอนนี้ติดไปกับ repo แล้ว
+const FILE = val('--file', 'scripts/import/kanban_import.xlsx')
 const ORG = Number(val('--org', 1))
 const COMMIT = has('--commit')
 const ALL = has('--all')
 const GUILD = val('--guild', null)   // เซิร์ฟของทีม — ใช้ตัดตอนชื่อซ้ำ ไม่ hardcode ในโค้ด
+// ⛔ people-map.json **ห้ามเข้า git** (มี .gitignore กันไว้) — มันแปลงชื่อเล่น → `users.id`
+//    ซึ่งผูกกับ DB เครื่องนั้นๆ · เอาของ dev ไปใช้บน prod = เจ้าภาพผิดคนทั้งกระดาน
+//    บนเครื่องใหม่ต้องรัน --map สร้างจาก users ของเครื่องนั้นเองเสมอ
 const MAP_FILE = path.join(path.dirname(FILE), 'people-map.json')
 
 // AppFlowy → ประเภทสถานะ 6 แบบของเรา (md/kanban/KANBAN.md §ประเภทสถานะ)
