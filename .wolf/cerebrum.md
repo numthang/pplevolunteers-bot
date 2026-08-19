@@ -591,6 +591,16 @@ org 1 มีคนชื่อ "Ploy" 6 คน "Oat" 3 คน → กล่อ�
 บทเรียน: **ชื่อที่จับคู่ไม่ได้ต้องทำให้การ์ด "ไม่มีเจ้าภาพ" ไม่ใช่เลื่อนคนถัดไปขึ้นมา** —
 ไม่มีเจ้าภาพเห็นชัดว่าต้องแก้ ส่วนเจ้าภาพผิดคนดูเหมือนถูกต้องทุกประการ
 
+### endpoint "ดูโปรไฟล์คนจาก userId" ต้อง gate ด้วย org_members ก่อนเสมอ (2026-08-20)
+
+`displayNameSql()` fallback ไปที่ `users.firstname/lastname/username` และ `users.avatar` (คอลัมน์ source-of-truth
+ใหม่ 2026-08-18) **ทั้งคู่ไม่ผูก org เลย** เป็นคอลัมน์ global บนตาราง `users` ตรงๆ
+→ endpoint ไหนก็ตามที่รับ `userId` จาก client แล้วคืนชื่อ/avatar โดยไม่เช็คก่อนว่า userId นั้นเคยอยู่ org ของผู้ถามจริง
+จะกลายเป็น **user-enumeration ข้าม org** ทันที (ไล่เลข userId ดูชื่อจริง+รูปคนทั้งระบบได้ ไม่ใช่แค่คนใน org ตัวเอง)
+ต้อง `WHERE EXISTS (SELECT 1 FROM org_members WHERE user_id=$userId AND org_id=$callerOrgId)` ก่อนคืนค่าเสมอ
+(เจอตอนออกแบบ `getPersonProfile()` ใน `web/db/kanban/people.js` — จับได้จากการไล่ trace เอง ไม่ใช่ user ทัก)
+ตรรกะเดียวกับที่ `kanbanGuard.js` ใช้กันการ์ดข้าม org (404 ไม่ใช่ 403) — ใครทำ "ดูของคนอื่นจาก id" ต่อไปให้ลอกแบบนี้
+
 
 ## Do-Not-Repeat
 
@@ -995,6 +1005,45 @@ Notion ก็แยกขาด: to-do ในหน้า = ข้อควา�
 **ทางเขียนเดียว:** ทุกจุดที่แตะ option ต้องผ่าน `web/lib/kanbanOptionActions.js`
 (`fetchOptions` / `patchOption` / `setOptionArchived` / `deleteOptionWithConfirm`)
 และ `OptionEditor` export จาก `TagCombobox.jsx` ใช้ร่วมกัน — ห้ามลอก markup ไปวางซ้ำ
+
+### "เอาเหมือน X เลย" ไม่ได้แปลว่าเหมือนทุกปุ่ม — ต้องเช็คทีละการกระทำ (2026-08-20)
+
+ตารางข้างบน (รอบค่ำ 19 ส.ค.) เขียนว่า "ใช้กับ select · multi_select · checklist เหมือนกันหมด" — **ผิดที่แถว "ซ่อน"**
+user ทัก 20 ส.ค.: *"hide คือการเอาออกจาก checklist ไม่ใช่การซ่อน item ทั้งจากการ์ดและจากคลัง"*
+ผมเอา `setOptionArchived()` ไปใส่ใน `hideItem()` ของ `ChecklistFieldBox.jsx` → กดถังขยะงานย่อย 1 ชิ้น
+ไป archive ตัวเลือกในคลังของทั้ง org ด้วย (กระทบการ์ดใบอื่นที่ยังไม่ได้ใช้ตัวนั้น)
+
+**กติกาที่ถูก (user เคาะรอบ 2 วันเดียวกัน):** แยกเป็น **2 ปุ่มคนละที่ ตามขอบเขตผลกระทบ**
+- 🗑️ ถังขยะท้ายงานย่อย = `removeItem()` **ลบแถวของการ์ดใบนี้ทันที ไม่ถาม ไม่แตะคลัง**
+- ✕ บนชิปในรายการแนะนำ (คลัง) = เปิด `DeleteChoiceDialog` ให้เลือก ซ่อน (`setOptionArchived`) / ลบถาวร (`deleteOption`)
+
+**หลักที่ user ใช้ตัดสิน — เอาไปใช้ที่อื่นได้:** ของที่ **ย้อนได้ใน 1 คลิก → ทำเลย ไม่ต้องถาม** ·
+ของที่ **กระทบคนอื่น / ย้อนยาก → ต้องมีกล่องถาม + บอกตัวเลขผลกระทบ**
+ของเดิมถามผิดที่: ถามตอนเอางานย่อยออก (ย้อนง่ายมาก) แต่ไม่มีทางแตะคลังเลย (ของจริงที่อันตราย)
+→ เวลาวางปุ่มลบ ให้ถามก่อนว่า "กดผิดแล้วกดกลับกี่คลิก" ไม่ใช่ "มันชื่อว่าลบหรือเปล่า"
+
+**บทเรียนที่กว้างกว่าเคสนี้:** เวลา user พูดสั้นๆ ว่า *"เอาเหมือน X เลย พฤติกรรม"* ห้ามลอกยกชุด —
+ให้ไล่**ทีละการกระทำ**ว่าอันไหน semantic ตรงกันจริง เพราะของ 2 ชนิดที่ "คล้ายกัน" มักต่างกันตรง
+ขอบเขตผลกระทบ (ของการ์ดใบเดียว vs ของคลังทั้ง org) ซึ่งเป็นจุดที่คนใช้รู้สึกทันทีว่าผิด
+
+### ESC ในกล่องซ้อนกล่อง — 3 กลไกที่ต้องมีครบ ไม่งั้นกดทีเดียวปิดหมด (2026-08-20)
+
+user สั่ง: *"เวลากดแก้ไข element ไหน กด esc ไม่ต้องให้ปิด modal … ให้ยกเลิกการแก้ไข element นั้นสิ"*
+ตอนไล่ทั้งโมดูลเจอที่ลืม **5 จุด** (ชื่อ field · ค่า scalar · ฟอร์มเพิ่ม field · dropdown ของ TagCombobox · ช่องชื่อการบ้าน)
+
+| ชั้น | กลไกที่ต้องใช้ | เหตุผล |
+|---|---|---|
+| ช่องกรอก inline | `e.stopPropagation()` ใน `onKeyDown` + คืนค่าเดิม + `blur()` | React ผูก listener ที่ root container → stopPropagation หยุด native event ไม่ให้ไหลถึง document/window |
+| dropdown ที่ฟัง `document` | `e.stopPropagation()` ใน listener | document bubble ทำงาน**ก่อน** window เสมอ |
+| กล่องซ้อน (dialog/modal ลูก) | `addEventListener('keydown', fn, true)` (**capture**) + `stopPropagation` | listener ของ modal แม่ถูกผูก**ก่อน** (mount ก่อน) → bubble ธรรมดาแม่ชนะเสมอ · capture ทำงานก่อน bubble ไม่ว่าผูกทีหลังแค่ไหน |
+| ตาข่ายกันลืม (modal แม่) | เช็ค `document.activeElement` เป็น INPUT/TEXTAREA/SELECT/contentEditable → ไม่ปิด | ของ 3 ข้อบนต้องจำทุกครั้งที่เพิ่มช่องใหม่ = ลืมแน่ · ด่านนี้ปลอดภัยโดยอัตโนมัติ |
+
+**⛔ บั๊กเงียบที่เจอระหว่างทาง — ESC กลายเป็น "บันทึก" แทน "ยกเลิก":**
+แพตเทิร์น `onKeyDown: setName(ค่าเดิม); e.currentTarget.blur()` คู่กับ `onBlur={commit}` **พังเสมอ** —
+`setName` เป็น async แต่ `blur()` ยิง `onBlur` แบบ **synchronous** → `commit` ยังอ่าน state ตัวเก่า
+(ค่าที่พิมพ์ทิ้งไป) แล้วบันทึกจริง · มีอยู่ 3 ที่พร้อมกัน (`FieldNameInput` `ItemTextInput` `OptionEditor`)
+**วิธีแก้: ธง `cancelled` เป็น `useRef` ไม่ใช่ `useState`** แล้วให้ `commit()` เช็คแล้ว return ทันที
+(ref เขียนปุ๊บอ่านได้ปั๊บ — state ไม่ทันรอบ render เดียวกัน)
 
 
 ## Decision Log

@@ -24,12 +24,18 @@ export function DropLine() {
 
 export const ROW_GRID = 'grid grid-cols-1 sm:grid-cols-[11rem_minmax(0,1fr)] gap-x-3 gap-y-0.5'
 
-export default function FieldRow({ icon: Icon, label, handle, children, footer, footerBefore, footerAfter, className = '', ...rest }) {
+/**
+ * @param {boolean} [alignTop] แถวที่ค่าเป็น "ก้อนสูง" (เช่น เช็คลิสต์) — ชื่อต้องเกาะบนให้ตรงกับ
+ *   บรรทัดแรกของค่า ไม่ใช่ลอยกลางก้อน · ค่าปกติ (input บรรทัดเดียว) ยังกลางใน 44px เหมือนเดิม
+ *   `mt-0.5` ชดเชยให้ text-sm (สูง 20px) มีจุดกึ่งกลางตรงกับแถวไอคอน+progress bar (สูง 24px)
+ *   ⚠️ `sm:` ล้วน — จอแคบพับเป็นบนล่างอยู่แล้ว ไม่มีอะไรให้จัดตรง
+ */
+export default function FieldRow({ icon: Icon, label, handle, children, footer, footerBefore, footerAfter, alignTop = false, className = '', ...rest }) {
   return (
     <div className={`group ${ROW_GRID} ${className}`} {...rest}>
       {/* เส้นบอกจุดวางตอนลาก — กินเต็มความกว้าง อยู่เหนือ/ใต้แถว */}
       {footerBefore && <div className="sm:col-span-2">{footerBefore}</div>}
-      <div className="flex items-center gap-1 min-w-0 sm:h-11">
+      <div className={`flex items-center gap-1 min-w-0 ${alignTop ? 'sm:self-start sm:mt-0.5' : 'sm:h-11'}`}>
         {/* หมุดลากอยู่หน้าสุด ก่อนไอคอนชนิด (user สั่ง 2026-08-18) */}
         {handle}
         {Icon && <Icon size={14} className="text-warm-400 dark:text-disc-muted shrink-0" />}

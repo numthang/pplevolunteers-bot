@@ -20,7 +20,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react'
-import { Check, GripVertical, Loader2, MoreHorizontal, Trash2, X } from 'lucide-react'
+import { Check, GripVertical, Loader2, MoreHorizontal, Pencil, Trash2, X } from 'lucide-react'
 import { chipProps, LABEL_PALETTE } from '@/lib/kanbanLabelColors.js'
 // ⛔ ห้ามยิง /api/kanban/fields/../options เองที่นี่ — ทุกอย่างผ่าน lib ตัวนี้
 //    เช็คลิสต์ใช้ตัวเดียวกัน (user เคาะ: พฤติกรรมต้องเหมือน select เป๊ะ)
@@ -34,9 +34,10 @@ import DeleteChoiceDialog from './DeleteChoiceDialog.jsx'
  * ⭐ export ออกไปให้ ChecklistFieldBox ใช้ตัวเดียวกัน — user เคาะ 2026-08-19 ค่ำว่าเช็คลิสต์ต้อง
  *    "เอาเหมือน select เลย พฤติกรรม" · ลอก markup ไปวางซ้ำเมื่อไหร่ = 2 ที่ที่ดริฟต์ออกจากกันแน่นอน
  */
-export function OptionEditor({ option, t, onSave, onDelete, busy }) {
+export function OptionEditor({ option, t, onSave, onDelete, onClose, busy }) {
   const [name, setName] = useState(option.name)
   const ref = useRef(null)
+  const cancelled = useRef(false)   // ESC สั่งยกเลิก → onBlur ที่ตามมาต้องไม่บันทึก
 
   useEffect(() => { setName(option.name) }, [option.name])
   // กางแล้วเลื่อนให้เห็นเต็มเสมอ — กล่องอาจอยู่ติดขอบล่างจออยู่แล้ว
@@ -44,7 +45,10 @@ export function OptionEditor({ option, t, onSave, onDelete, busy }) {
 
   // ⚠️ ต้องรอผลจริงแล้วเด้งกลับถ้าไม่ผ่าน — `option.name` ไม่เปลี่ยนตอน server ปฏิเสธ
   //    useEffect ที่เฝ้า option.name เลยไม่ทำงาน = ช่องค้างโชว์ชื่อที่ DB ไม่เคยรับ (UI โกหก)
+  // ⛔ `cancelled` ต้องเป็น ref ไม่ใช่ state — ESC เรียก setName() แล้ว blur() ต่อทันที แต่ setName เป็น
+  //    async ส่วน blur ยิง onBlur แบบ sync → commitName ยังเห็น `name` ตัวเก่า = ESC กลายเป็น "บันทึก"
   const commitName = async () => {
+    if (cancelled.current) { cancelled.current = false; return }
     const clean = name.trim()
     if (!clean) { setName(option.name); return }
     if (clean === option.name) return
@@ -61,7 +65,10 @@ export function OptionEditor({ option, t, onSave, onDelete, busy }) {
         onBlur={commitName}
         onKeyDown={(e) => {
           if (e.key === 'Enter') e.currentTarget.blur()
-          if (e.key === 'Escape') { setName(option.name); e.currentTarget.blur() }
+          // ⛔ ต้อง stopPropagation — ไม่งั้น Escape ไหลต่อขึ้นไปโดน document listener ของกล่องนี้เอง
+          //    (ปิดทั้ง dropdown) แล้วไหลต่อไปโดน window listener ของ CardModal (ปิดทั้ง modal)
+          //    ทั้งที่ตั้งใจแค่ยกเลิกการแก้ตัวเลือกนี้ตัวเดียว
+          if (e.key === 'Escape') { e.stopPropagation(); cancelled.current = true; setName(option.name); e.currentTarget.blur(); onClose?.() }
         }}
         maxLength={60}
         className="w-full h-9 px-2 text-sm rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text focus:outline-none focus:ring-2 focus:ring-teal"
@@ -107,6 +114,8 @@ export function OptionEditor({ option, t, onSave, onDelete, busy }) {
 export default function TagCombobox({
   fieldId, type, value = [], readOnly, onCommit, onError, t,
   source = { mode: 'field' }, numericIds = true, placeholder,
+  onOpenProfile, // (id) => void — optional · ส่งมาเฉพาะ owner/helpers (source.mode==='search')
+  // ชื่อในชิปกลายเป็นลิงก์เปิดโปรไฟล์แทนเปิด picker · picker ยังเปิดได้จากปุ่มปากกาแทน (user เคาะ 2026-08-20)
 }) {
   const [open, setOpen] = useState(false)
   const [options, setOptions] = useState(null)   // null = ยังไม่โหลด
@@ -138,9 +147,21 @@ export default function TagCombobox({
   useEffect(() => {
     if (!open) return
     function onClickOutside(e) {
-      if (boxRef.current && !boxRef.current.contains(e.target)) { setOpen(false); setEditFor(null) }
+      if (boxRef.current && !boxRef.current.contains(e.target)) {
+        // ⛔ กับดักที่ทำให้ "onblur ไม่บันทึก": mousedown ยิงก่อน blur ตามธรรมชาติเสมอ (เหตุผลเดียวกับ
+        //    หมายเหตุใน ChecklistFieldBox) — ถ้า setEditFor(null) ก่อน ช่องแก้ชื่อจะถูกถอดออกจาก DOM
+        //    ก่อน blur จะทันเกิด = commitName() ไม่เคยถูกเรียก ค่าที่พิมพ์หายเงียบๆ
+        //    ต้องบังคับ blur ตัวที่ focus ค้างอยู่ก่อน ให้ onBlur (commit) ทำงานให้เสร็จก่อนค่อยถอด
+        if (document.activeElement instanceof HTMLElement && boxRef.current.contains(document.activeElement)) {
+          document.activeElement.blur()
+        }
+        setOpen(false)
+        setEditFor(null)
+      }
     }
-    function onKey(e) { if (e.key === 'Escape') { setOpen(false); setEditFor(null) } }
+    // ⛔ ต้อง stopPropagation — ไม่งั้น ESC ไหลต่อขึ้นไปโดน window listener ของ CardModal = ปิดทั้งการ์ด
+    //    ทั้งที่ตั้งใจแค่ปิด dropdown (listener นี้อยู่บน document ซึ่งทำงานก่อน window เสมอ)
+    function onKey(e) { if (e.key === 'Escape') { e.stopPropagation(); setOpen(false); setEditFor(null) } }
     document.addEventListener('mousedown', onClickOutside)
     document.addEventListener('keydown', onKey)
     return () => {
@@ -359,44 +380,94 @@ export default function TagCombobox({
   const known = new Map([...(value || []), ...(options || [])].map((o) => [String(o.id), o]))
   const shownChips = [...selected].map((id) => known.get(id)).filter(Boolean)
 
+  // ชิป (หรือ placeholder ถ้ายังไม่มีใคร) — แยกเป็นตัวแปรเพราะโหมดโปรไฟล์ต้องห่อไว้ในกล่องซ้อนอีกชั้น
+  const chipsContent = (
+    <>
+      {shownChips.length === 0 && (
+        onOpenProfile && !readOnly ? (
+          <button type="button" onClick={openBox} className="text-warm-400 dark:text-disc-muted hover:underline">
+            {placeholder || t('modal.tagPlaceholder')}
+          </button>
+        ) : (
+          <span className="text-warm-400 dark:text-disc-muted">{placeholder || t('modal.tagPlaceholder')}</span>
+        )
+      )}
+      {shownChips.map((v) => {
+        const tint = chipProps(v)
+        return (
+          // ⛔ ห้ามใส่ truncate / max-w-full ตรงนี้ — user สั่งชัด 2026-08-19: "ต้องแสดงให้หมด ไม่ใช่แก้ด้วยการ truncate"
+          //    เคยใส่แล้วพัง: truncate มี overflow:hidden → flex item ย่อได้ถึง 0 → ชิปเหลือแต่ปุ่ม × ไม่มีตัวหนังสือเลย
+          // whitespace-nowrap อย่างเดียวพอ: ชื่อที่มีเว้นวรรคจะไม่หักกลางชิป ชิปที่ไม่พอที่ก็ตกไปบรรทัดใหม่ทั้งใบ
+          //    (กล่องข้างนอกเป็น flex-wrap อยู่แล้ว)
+          <span key={v.id} style={tint.style} title={v.name} className={`inline-flex items-center gap-1 pl-2.5 ${readOnly ? 'pr-2.5' : 'pr-1'} py-0.5 text-sm font-medium rounded-md whitespace-nowrap ${tint.className}`}>
+            {onOpenProfile ? (
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onOpenProfile(v.id) }}
+                className="hover:underline"
+              >
+                {v.name}
+              </button>
+            ) : v.name}
+            {!readOnly && (
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); toggleOption(v.id) }}
+                aria-label={t('modal.optionUnselect')}
+                className="p-0.5 rounded hover:bg-black/10 dark:hover:bg-white/10"
+              >
+                <X size={12} />
+              </button>
+            )}
+          </span>
+        )
+      })}
+    </>
+  )
+
+  const showPencil = onOpenProfile && !readOnly && shownChips.length > 0
+
   return (
     <div ref={boxRef} className="relative">
       {/*
         ⚠️ เป็น div ไม่ใช่ button — ข้างในมีปุ่ม × ของแต่ละชิป (button ซ้อน button = HTML ผิด เบราว์เซอร์แก้โครงเอง)
         ปุ่ม × อยู่บนชิปตรงนี้เลย ตาม screenshot ที่ user ส่งมา — **ไม่มีชุดชิปให้ลบซ้ำข้างล่างอีกชุด**
       */}
+      {/*
+        onOpenProfile ตั้งมา (owner/helpers เท่านั้น) → ชื่อในชิปเป็นลิงก์เปิดโปรไฟล์แทน · แถวทั้งแถวเลย
+        ไม่เปิด picker เอง อีกต่อไป (คลิกชื่อ vs คลิกแก้ค่าชนกัน) — เปิด picker ผ่านปุ่มปากกาแยกที่หัวแถวแทน
+
+        ⚠️ โหมดนี้ปากกา**ต้องอยู่นอกกล่องที่ wrap** — ถ้าเอาไปเป็น flex item ในกล่อง flex-wrap เดียวกับชิป
+           มันจะแย่งช่อง wrap กับชิป พอชิปแรกกว้างเกินที่เหลือ ปากกาจะถูกดันไปอยู่บรรทัดของตัวเอง
+           (user เจอเอง 2026-08-20: "ทำไมไม่ให้มันอยู่บรรทัดเดียวกันล่ะ") · ตอนนี้ปากกาอยู่นอก
+           แล้วให้เฉพาะ**ชิป**ห่อกันเองในกล่องชั้นใน = ปากกาอยู่ข้างชื่อเสมอไม่ว่าชิปจะยาวแค่ไหน
+      */}
       <div
-        role={readOnly ? undefined : 'button'}
-        tabIndex={readOnly ? undefined : 0}
-        onClick={openBox}
-        onKeyDown={(e) => { if (!readOnly && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openBox() } }}
-        className={`w-full min-h-11 px-2 -mx-2 py-1.5 flex flex-wrap items-center gap-1.5 text-base rounded-lg border border-transparent bg-transparent text-left transition ${
-          readOnly ? 'opacity-60' : 'hover:bg-warm-50 dark:hover:bg-disc-hover cursor-pointer'
+        role={!readOnly && !onOpenProfile ? 'button' : undefined}
+        tabIndex={!readOnly && !onOpenProfile ? 0 : undefined}
+        onClick={onOpenProfile ? undefined : openBox}
+        onKeyDown={(e) => { if (!readOnly && !onOpenProfile && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openBox() } }}
+        className={`w-full min-h-11 px-2 -mx-2 py-1.5 flex items-center gap-1.5 text-base rounded-lg border border-transparent bg-transparent text-left transition ${
+          onOpenProfile ? '' : 'flex-wrap'
+        } ${
+          readOnly ? 'opacity-60' : onOpenProfile ? '' : 'hover:bg-warm-50 dark:hover:bg-disc-hover cursor-pointer'
         }`}
       >
-        {shownChips.length === 0 && <span className="text-warm-400 dark:text-disc-muted">{placeholder || t('modal.tagPlaceholder')}</span>}
-        {shownChips.map((v) => {
-          const tint = chipProps(v)
-          return (
-            // ⛔ ห้ามใส่ truncate / max-w-full ตรงนี้ — user สั่งชัด 2026-08-19: "ต้องแสดงให้หมด ไม่ใช่แก้ด้วยการ truncate"
-            //    เคยใส่แล้วพัง: truncate มี overflow:hidden → flex item ย่อได้ถึง 0 → ชิปเหลือแต่ปุ่ม × ไม่มีตัวหนังสือเลย
-            // whitespace-nowrap อย่างเดียวพอ: ชื่อที่มีเว้นวรรคจะไม่หักกลางชิป ชิปที่ไม่พอที่ก็ตกไปบรรทัดใหม่ทั้งใบ
-            //    (กล่องข้างนอกเป็น flex-wrap อยู่แล้ว)
-            <span key={v.id} style={tint.style} title={v.name} className={`inline-flex items-center gap-1 pl-2.5 ${readOnly ? 'pr-2.5' : 'pr-1'} py-0.5 text-sm font-medium rounded-md whitespace-nowrap ${tint.className}`}>
-              {v.name}
-              {!readOnly && (
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); toggleOption(v.id) }}
-                  aria-label={t('modal.optionUnselect')}
-                  className="p-0.5 rounded hover:bg-black/10 dark:hover:bg-white/10"
-                >
-                  <X size={12} />
-                </button>
-              )}
-            </span>
-          )
-        })}
+        {/* ปากกา — หัวแถว นอกกล่องที่ wrap (ทรงเดียวกับปากกาแก้ชื่อการ์ดใน KanbanHome) */}
+        {showPencil && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); openBox() }}
+            aria-label={t('modal.editPeople')}
+            title={t('modal.editPeople')}
+            className="p-1 rounded text-warm-400 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover shrink-0"
+          >
+            <Pencil size={14} />
+          </button>
+        )}
+        {onOpenProfile
+          ? <div className="flex-1 min-w-0 flex flex-wrap items-center gap-1.5">{chipsContent}</div>
+          : chipsContent}
       </div>
 
       {open && (
@@ -463,6 +534,7 @@ export default function TagCombobox({
                       busy={busyOpt === o.id}
                       onSave={(patch) => saveOption(o.id, patch)}
                       onDelete={() => setConfirmOpt(o)}
+                      onClose={() => setEditFor(null)}
                     />
                   )}
                 </div>

@@ -30,10 +30,20 @@ export default function DeleteChoiceDialog({
   onClose,
   t,
 }) {
+  /**
+   * ⚠️ **ต้องดัก capture (`true`) + `stopPropagation`** — กล่องนี้ซ้อนอยู่ใน CardModal ซึ่งมี ESC
+   *    listener ของตัวเองบน window เหมือนกัน และ **ของ CardModal ถูกผูกก่อน (mount ก่อน)**
+   *    → ถ้าใช้ bubble ตามปกติ ของ CardModal จะทำงานก่อน = กด ESC ทีเดียวปิดทั้งกล่องนี้และการ์ดข้างหลัง
+   *    capture ทำงานก่อน bubble เสมอไม่ว่าผูกทีหลังแค่ไหน จึงกิน ESC ไว้เองได้ (2026-08-20)
+   */
   useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
+    const onKey = (e) => {
+      if (e.key !== 'Escape') return
+      e.stopPropagation()
+      onClose()
+    }
+    window.addEventListener('keydown', onKey, true)
+    return () => window.removeEventListener('keydown', onKey, true)
   }, [onClose])
 
   return (

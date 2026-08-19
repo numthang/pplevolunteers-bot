@@ -45,12 +45,21 @@ import ChecklistFieldBox from './ChecklistFieldBox.jsx'
 function FieldNameInput({ field, t, onRename, onClose }) {
   const [name, setName] = useState(field.label)
   const ref = useRef(null)
+  const cancelled = useRef(false)   // ESC สั่งยกเลิก → onBlur ที่ตามมาต้องไม่บันทึก (ดูเหตุผลใน commitName)
 
   useEffect(() => { setName(field.label) }, [field.label])
   useEffect(() => { ref.current?.scrollIntoView({ block: 'nearest' }) }, [])
 
-  // ⚠️ ต้องรอผลจริงแล้วเด้งกลับถ้าไม่ผ่าน — ไม่งั้นช่องค้างโชว์ชื่อที่ DB ไม่เคยรับ (UI โกหก)
+  /**
+   * ⚠️ ต้องรอผลจริงแล้วเด้งกลับถ้าไม่ผ่าน — ไม่งั้นช่องค้างโชว์ชื่อที่ DB ไม่เคยรับ (UI โกหก)
+   *
+   * ⛔ `cancelled` ต้องเป็น **ref ไม่ใช่ state** — ESC เรียก `setName()` แล้ว `blur()` ต่อทันที
+   *    แต่ `setName` เป็น async ส่วน blur ยิง onBlur **แบบ synchronous** → commitName ที่ถูกเรียก
+   *    ยังมองเห็น `name` ตัวเก่า (ค่าที่พิมพ์ไว้) = **ESC กลายเป็นบันทึกแทนที่จะยกเลิก**
+   *    (บั๊กเงียบที่มีมาตั้งแต่แรก เจอตอนไล่ ESC ทั้งโมดูล 2026-08-20)
+   */
   const commitName = async () => {
+    if (cancelled.current) { cancelled.current = false; return }
     const clean = name.trim()
     if (!clean) { setName(field.label); return }
     if (clean === field.label) return
@@ -70,7 +79,9 @@ function FieldNameInput({ field, t, onRename, onClose }) {
       onBlur={commitAndClose}
       onKeyDown={(e) => {
         if (e.key === 'Enter') e.currentTarget.blur()
-        if (e.key === 'Escape') { setName(field.label); e.currentTarget.blur() }
+        // ⛔ stopPropagation — ไม่งั้น ESC ไหลขึ้นไปโดน window listener ของ CardModal = ปิดทั้งการ์ด
+        //    ทั้งที่ตั้งใจแค่ยกเลิกแก้ชื่อ field นี้ · cancelled = กัน onBlur ที่ตามมาบันทึกค่าที่ทิ้งไปแล้ว
+        if (e.key === 'Escape') { e.stopPropagation(); cancelled.current = true; setName(field.label); e.currentTarget.blur() }
       }}
       maxLength={100}
       aria-label={t('modal.fieldRename')}
@@ -88,6 +99,7 @@ const TYPE_ICON = {
 
 function ScalarInput({ field, value, readOnly, onCommit, emptyLabel }) {
   const [local, setLocal] = useState(value ?? '')
+  const cancelled = useRef(false)   // ESC สั่งยกเลิก → onBlur ที่ตามมาต้องไม่บันทึก (เหตุผลเดียวกับ FieldNameInput)
   useEffect(() => { setLocal(value ?? '') }, [value])
 
   // ทรง ghost แบบ Notion — ไม่มีกรอบจนกว่าจะ hover/focus ให้แถวอ่านเป็นตาราง label|ค่า
@@ -106,10 +118,15 @@ function ScalarInput({ field, value, readOnly, onCommit, emptyLabel }) {
     )
   }
 
-  const commit = () => { if (local !== (value ?? '')) onCommit(local) }
+  const commit = () => {
+    if (cancelled.current) { cancelled.current = false; return }
+    if (local !== (value ?? '')) onCommit(local)
+  }
   const onKeyDown = (e) => {
     if (e.key === 'Enter') e.currentTarget.blur()
-    if (e.key === 'Escape') setLocal(value ?? '')
+    // ⛔ stopPropagation + blur — ESC คือ "ทิ้งที่พิมพ์ คืนค่าเดิม" ของช่องนี้ ไม่ใช่ปิดทั้งการ์ด
+    //    cancelled ต้องเซ็ตก่อน blur เพราะ onBlur ยิง sync ก่อน setLocal จะมีผล
+    if (e.key === 'Escape') { e.stopPropagation(); cancelled.current = true; setLocal(value ?? ''); e.currentTarget.blur() }
   }
 
   return (
@@ -167,7 +184,8 @@ function NewFieldForm({ onCreate, creating, t }) {
             autoFocus
             value={label}
             onChange={(e) => setLabel(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Escape') setOpen(false) }}
+            // ⛔ stopPropagation — ESC = ยกเลิกการเพิ่ม field นี้ ไม่ใช่ปิดทั้งการ์ด
+            onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); setOpen(false) } }}
             placeholder={t('modal.newFieldPlaceholder')}
             maxLength={100}
             required
@@ -441,6 +459,9 @@ export default function CardFieldsBox({ cardId, fields = [], readOnly, canPurge 
               key={f.field_id}
               /* ตอนแก้ชื่อ ซ่อนไอคอนชนิด — ยกที่ทั้ง 176px ให้ช่องพิมพ์ */
               icon={editing ? null : TypeIcon}
+              /* เช็คลิสต์เป็นก้อนสูง — ชื่อต้องเกาะบนให้ตรงกับแถวไอคอน+progress bar (user สั่ง 2026-08-20)
+                 ชนิดอื่นเป็นค่าบรรทัดเดียว ยังกลางใน 44px เหมือนเดิม */
+              alignTop={f.type === 'checklist'}
               onDragOver={(e) => {
                 if (!dragId || dragId === f.field_id) return
                 e.preventDefault()

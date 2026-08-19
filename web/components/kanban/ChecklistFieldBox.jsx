@@ -15,8 +15,8 @@
  *   ที่ reuse จริงคือ **endpoint ฝั่ง server** ไม่ใช่ตัว component
  */
 
-import { useCallback, useEffect, useState } from 'react'
-import { Eye, EyeOff, GripVertical, ListChecks, Loader2, Plus, Trash2 } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Eye, EyeOff, GripVertical, ListChecks, Loader2, Plus, Trash2, X } from 'lucide-react'
 import { DropLine } from './FieldRow.jsx'
 // ⛔ **ไม่มีเมนู ... ในเช็คลิสต์** — user สั่ง 2026-08-19 ค่ำ: "ไม่ต้องมีไข่ปลาให้กดเปลี่ยนสี หรือ delete tag
 //    เอาออกไปเลย ไม่ได้ใช้" · ชิปคลังเหลือหน้าที่เดียวคือกดหยิบเข้าการ์ด
@@ -43,9 +43,13 @@ export function ChecklistBar({ done, total, className = '' }) {
  */
 function ItemTextInput({ item, t, onRename, onClose }) {
   const [text, setText] = useState(item.text)
+  const cancelled = useRef(false)   // ESC สั่งยกเลิก → onBlur ที่ตามมาต้องไม่บันทึก
   useEffect(() => { setText(item.text) }, [item.text])
 
+  // ⛔ `cancelled` ต้องเป็น ref ไม่ใช่ state — ESC เรียก setText() แล้ว blur() ต่อทันที แต่ setText เป็น
+  //    async ส่วน blur ยิง onBlur แบบ sync → commit ยังเห็น `text` ตัวเก่า = ESC กลายเป็น "บันทึก"
   const commit = async () => {
+    if (cancelled.current) { cancelled.current = false; return }
     const clean = text.trim()
     if (!clean || clean === item.text) { setText(item.text); return }
     const ok = await onRename(clean)
@@ -60,7 +64,10 @@ function ItemTextInput({ item, t, onRename, onClose }) {
       onBlur={async () => { await commit(); onClose() }}
       onKeyDown={(e) => {
         if (e.key === 'Enter') e.currentTarget.blur()
-        if (e.key === 'Escape') { setText(item.text); e.currentTarget.blur() }
+        // ⛔ ต้อง stopPropagation — ไม่งั้น Escape ไหลขึ้นไปโดน window listener ของ CardModal
+        //    ปิดทั้ง modal ทั้งที่ตั้งใจแค่ยกเลิกแก้ข้อความงานย่อยชิ้นนี้ชิ้นเดียว (blur→onClose ข้างบน
+        //    ปิดกล่องแก้เฉพาะชิ้นนี้อยู่แล้ว)
+        if (e.key === 'Escape') { e.stopPropagation(); cancelled.current = true; setText(item.text); e.currentTarget.blur() }
       }}
       maxLength={60}
       aria-label={t('modal.renameItem')}
@@ -80,7 +87,7 @@ export default function ChecklistFieldBox({ cardId, fieldId, items = [], readOnl
   const [dragId, setDragId] = useState(null)
   const [dropAt, setDropAt] = useState(null)   // { id, above } — เส้นบอกจุดวาง ขึ้นทีละเส้นเดียว
   const [busyOpt, setBusyOpt] = useState(null)   // ตัวเลือกในคลังที่กำลังยิงคำสั่งอยู่
-  const [confirmItem, setConfirmItem] = useState(null) // งานย่อยที่กดถังขยะ (รอเลือกซ่อน/ลบถาวร)
+  const [confirmOpt, setConfirmOpt] = useState(null)   // ตัวเลือกในคลังที่กด × (รอเลือกซ่อน/ลบถาวร)
   const [confirmUsed, setConfirmUsed] = useState(null) // จำนวนการ์ดที่ใช้ตัวเลือกนี้อยู่
 
   const total = items.length
@@ -132,40 +139,40 @@ export default function ChecklistFieldBox({ cardId, fieldId, items = [], readOnl
   }
 
   /**
-   * กด "ซ่อน" ในกล่อง — **ซ่อนจากคลัง + เอาออกจากการ์ดใบนี้ พร้อมกัน** (user เคาะ 2026-08-19 ค่ำ)
+   * ถังขยะท้ายงานย่อย — **ลบแถวของการ์ดใบนี้ทันที ไม่ถาม ไม่แตะคลัง** (user เคาะ 2026-08-20)
    *
-   * ทำไมต้องทำ 2 อย่าง: archive อย่างเดียวแปลว่า "การ์ดที่ติดไว้แล้วยังเห็น" → กดถังขยะแล้วไม่มีอะไรเกิดขึ้นบนจอ
-   * ส่วนลบแถวอย่างเดียวก็ยังถูกเสนอให้หยิบกลับมาใหม่เรื่อยๆ · user ต้องการทั้งคู่
-   * การ์ด **ใบอื่น** ที่ใช้อยู่ยังเห็นเหมือนเดิม — นั่นคือเส้นแบ่งกับ "ลบถาวร"
+   * ⛔ **ห้ามเอา `setOptionArchived()` มาใส่ตรงนี้** และ **ห้ามเอากล่องยืนยันกลับมาคร่อม**:
+   *    เช็คลิสต์ = "งานย่อยของการ์ดใบนี้" · เอางานย่อยออก = งานประจำวัน ไม่ใช่ของอันตราย
+   *    ตัวเลือกยังอยู่ในคลัง เด้งกลับไปโผล่ในรายการแนะนำทันที = กดผิดก็กดกลับเข้ามาได้ใน 1 คลิก
+   *    การจัดการ**คลัง** (ซ่อน/ลบถาวร) ย้ายไปอยู่ที่ปุ่ม × บนชิปในรายการแนะนำแทน
    */
-  async function hideItem(item) {
+  async function removeItem(item) {
     setBusyId(item.id)
-    if (item.option_id) {
-      const res = await optionAPI.setOptionArchived(fieldId, item.option_id, true)
-      if (!res.ok) { onError?.(res.error || t('saveFailed')); setBusyId(null); return }
-      setPool((prev) => prev.map((o) => (String(o.id) === String(item.option_id) ? res.option : o)))
-    }
     const json = await call('DELETE', null, `?itemId=${item.id}`)
     if (json) onItemsChanged(items.filter((i) => i.id !== item.id))
     setBusyId(null)
-    setConfirmItem(null)
   }
 
-  /** กด "ลบถาวร" ในกล่อง — ลบตัวเลือกออกจากคลัง แถวงานย่อยหายจาก**ทุกการ์ด** กู้ไม่ได้ */
-  async function purgeItem(item) {
-    setBusyId(item.id)
-    // แถวที่ไม่ได้ผูกคลัง (ของเก่า) ไม่มีตัวเลือกให้ลบ — ลบแค่แถวก็จบ
-    if (item.option_id) {
-      const res = await optionAPI.deleteOption(fieldId, item.option_id)
-      if (!res.ok) { onError?.(res.error || t('saveFailed')); setBusyId(null); return }
-      setPool((prev) => prev.filter((o) => String(o.id) !== String(item.option_id)))
-      onItemsChanged(items.filter((i) => String(i.option_id) !== String(item.option_id)))
-    } else {
-      const json = await call('DELETE', null, `?itemId=${item.id}`)
-      if (json) onItemsChanged(items.filter((i) => i.id !== item.id))
-    }
-    setBusyId(null)
-    setConfirmItem(null)
+  /** กด "ซ่อน" ในกล่องของชิปคลัง — archive ตัวเลือก · ไม่เสนอให้เพิ่มอีก แต่เอากลับได้จากกอง "ซ่อนไว้" */
+  async function hideOption(option) {
+    setBusyOpt(option.id)
+    const res = await optionAPI.setOptionArchived(fieldId, option.id, true)
+    setBusyOpt(null)
+    if (!res.ok) { onError?.(res.error || t('saveFailed')); return }
+    setPool((prev) => prev.map((o) => (String(o.id) === String(option.id) ? res.option : o)))
+    setConfirmOpt(null)
+  }
+
+  /** กด "ลบถาวร" ในกล่องของชิปคลัง — ลบออกจากคลังจริง แถวงานย่อยหายจาก**ทุกการ์ด** กู้ไม่ได้ */
+  async function purgeOption(option) {
+    setBusyOpt(option.id)
+    const res = await optionAPI.deleteOption(fieldId, option.id)
+    setBusyOpt(null)
+    if (!res.ok) { onError?.(res.error || t('saveFailed')); return }
+    setPool((prev) => prev.filter((o) => String(o.id) !== String(option.id)))
+    // ชิปในรายการแนะนำ = ตัวที่การ์ดใบนี้ยังไม่ได้ใช้ ปกติจึงไม่มีแถวให้ลบ — กันไว้เผื่อโหลดค้าง
+    onItemsChanged(items.filter((i) => String(i.option_id) !== String(option.id)))
+    setConfirmOpt(null)
   }
 
   /** เอากลับจากกอง "ซ่อนไว้" — คืนตัวเลือกเข้ารายการแนะนำ (ยังไม่ผูกกับการ์ดใบนี้ ต้องกดหยิบเอง) */
@@ -209,16 +216,13 @@ export default function ChecklistFieldBox({ cardId, fieldId, items = [], readOnl
     return Boolean(json?.item)
   }
 
-  // ⛔ ถังขยะไม่ลบทันทีอีกต่อไป — เปิด DeleteChoiceDialog ให้เลือก ซ่อน / ลบถาวร (user สั่ง 2026-08-19 ค่ำ)
-  //    ตัวลบจริงอยู่ที่ hideItem() กับ purgeItem()
-
   // นับว่าตัวเลือกนี้ถูกใช้อยู่กี่การ์ด ตอนเปิดกล่อง — นับไม่ได้ก็ยังถามต่อ แค่ไม่มีตัวเลขให้ดู
   useEffect(() => {
-    if (!confirmItem?.option_id) { setConfirmUsed(null); return }
+    if (!confirmOpt) { setConfirmUsed(null); return }
     let alive = true
-    optionAPI.fetchOptionImpact(fieldId, confirmItem.option_id).then((n) => { if (alive) setConfirmUsed(n) })
+    optionAPI.fetchOptionImpact(fieldId, confirmOpt.id).then((n) => { if (alive) setConfirmUsed(n) })
     return () => { alive = false }
-  }, [confirmItem, fieldId])
+  }, [confirmOpt, fieldId])
 
   /**
    * วางงานย่อยที่ลากมา — index ต้องตรงกับ **เส้นที่วาดไว้** เป๊ะ ไม่งั้นวางแล้วเด้งไปคนละที่
@@ -244,22 +248,27 @@ export default function ChecklistFieldBox({ cardId, fieldId, items = [], readOnl
 
   return (
     <div>
-      <div className="flex items-center gap-2 mb-1.5">
-        {/* ⚠️ ไม่วาดชื่อ field ที่นี่ — ชื่ออยู่ที่หัวแถวใน CardFieldsBox ซึ่งคลิกเข้าโหมดแก้ได้ */}
+      {/*
+        ⭐ แท่ง + % **โชว์เสมอแม้ยังไม่มีงานย่อย** (user สั่ง 2026-08-20) — ว่างก็ขึ้น 0%
+           เดิมซ่อนทั้งแถวตอน total=0 → เช็คลิสต์เปล่าเหลือแต่ไอคอนลอยๆ ดูไม่ออกว่าเป็นเช็คลิสต์
+        ⚠️ `min-h-6` ต้องมี — ตอนมีงานย่อยแถวนี้สูง 24px จากปุ่มตา (p-1 + ไอคอน 16)
+           ถ้าปล่อยให้ตอนว่างสูงแค่ 16px ชื่อ field ที่ตั้ง `alignTop` ไว้จะเยื้องขึ้นลงตามสถานะ
+        ⚠️ ไม่วาดชื่อ field ที่นี่ — ชื่ออยู่ที่หัวแถวใน CardFieldsBox ซึ่งคลิกเข้าโหมดแก้ได้
+      */}
+      <div className="flex items-center gap-2 mb-1.5 min-h-6">
         <ListChecks size={16} className="text-warm-500 dark:text-disc-muted shrink-0" />
+        <ChecklistBar done={done} total={total} className="flex-1" />
+        <span className="text-xs text-warm-400 dark:text-disc-muted shrink-0">{pct}%</span>
+        {/* ปุ่มซ่อนงานที่เสร็จแล้ว — มีเฉพาะตอนมีของให้ซ่อนจริง ไม่งั้นเป็นปุ่มตายที่กดแล้วไม่มีอะไรเกิดขึ้น */}
         {total > 0 && (
-          <>
-            <ChecklistBar done={done} total={total} className="flex-1" />
-            <span className="text-xs text-warm-400 dark:text-disc-muted shrink-0">{pct}%</span>
-            <button
-              type="button"
-              onClick={() => setHideDone((v) => !v)}
-              title={hideDone ? t('modal.checklistShowDone') : t('modal.checklistHideDone')}
-              className="p-1 text-warm-400 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text shrink-0"
-            >
-              {hideDone ? <EyeOff size={16} /> : <Eye size={16} />}
-            </button>
-          </>
+          <button
+            type="button"
+            onClick={() => setHideDone((v) => !v)}
+            title={hideDone ? t('modal.checklistShowDone') : t('modal.checklistHideDone')}
+            className="p-1 text-warm-400 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text shrink-0"
+          >
+            {hideDone ? <EyeOff size={16} /> : <Eye size={16} />}
+          </button>
         )}
       </div>
 
@@ -320,12 +329,15 @@ export default function ChecklistFieldBox({ cardId, fieldId, items = [], readOnl
               </button>
             )}
             {busyId === item.id && <Loader2 size={14} className="animate-spin text-warm-400 dark:text-disc-muted shrink-0" />}
+            {/* ⚠️ ลบทันที ไม่ถาม (user เคาะ 2026-08-20) — ตัวเลือกยังอยู่ในคลัง กดกลับเข้ามาได้ใน 1 คลิก
+                กล่องยืนยันมีที่ปุ่ม × บนชิปคลังแทน ซึ่งเป็นของที่ย้อนยากจริง */}
             {!readOnly && (
               <button
-                onClick={() => setConfirmItem(item)}
+                onClick={() => removeItem(item)}
+                disabled={busyId === item.id}
                 aria-label={t('modal.removeItem')}
                 title={t('modal.removeItem')}
-                className="p-1 rounded text-warm-400 dark:text-disc-muted opacity-0 group-hover:opacity-100 hover:text-red-500 shrink-0"
+                className="p-1 rounded text-warm-400 dark:text-disc-muted opacity-0 group-hover:opacity-100 hover:text-red-500 disabled:opacity-50 shrink-0"
               >
                 <Trash2 size={14} />
               </button>
@@ -357,21 +369,39 @@ export default function ChecklistFieldBox({ cardId, fieldId, items = [], readOnl
         <>
           {suggestions.length > 0 && (
             <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {/* ⚠️ เป็น div ครอบ 2 ปุ่ม ไม่ใช่ button เดียว — button ซ้อน button = HTML ผิด เบราว์เซอร์แก้โครงเอง
+                  (ทรงเดียวกับชิปในกอง "ซ่อนไว้" ข้างล่าง) */}
               {suggestions.map((o) => (
-                <button
+                <div
                   key={o.id}
-                  type="button"
-                  /* ⚠️ ห้ามตัดออก — ช่องพิมพ์ข้างล่าง onBlur ปิดตัวเองเมื่อยังไม่ได้พิมพ์อะไร
-                     กดชิปตอนช่องว่าง = mousedown → blur → ชิปหายไปก่อน click จะทำงาน = กดไม่ติด
-                     (user เจอจริง 2026-08-19: "กดแล้วก็ไม่กลับเข้ามา") */
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => addFromPool(o)}
-                  disabled={adding || busyOpt === o.id}
-                  className="flex items-center gap-1 px-2 py-1 text-xs whitespace-nowrap rounded-md border border-warm-200 dark:border-disc-border text-warm-700 dark:text-disc-muted hover:bg-warm-50 dark:hover:bg-disc-hover disabled:opacity-50 transition"
+                  className="flex items-center gap-1 pl-2 pr-1 py-1 text-xs rounded-md border border-warm-200 dark:border-disc-border text-warm-700 dark:text-disc-muted hover:bg-warm-50 dark:hover:bg-disc-hover transition"
                 >
-                  <Plus size={12} className="shrink-0" />
-                  {o.name}
-                </button>
+                  <button
+                    type="button"
+                    /* ⚠️ ห้ามตัดออก — ช่องพิมพ์ข้างล่าง onBlur ปิดตัวเองเมื่อยังไม่ได้พิมพ์อะไร
+                       กดชิปตอนช่องว่าง = mousedown → blur → ชิปหายไปก่อน click จะทำงาน = กดไม่ติด
+                       (user เจอจริง 2026-08-19: "กดแล้วก็ไม่กลับเข้ามา") */
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => addFromPool(o)}
+                    disabled={adding || busyOpt === o.id}
+                    className="flex items-center gap-1 whitespace-nowrap disabled:opacity-50"
+                  >
+                    <Plus size={12} className="shrink-0" />
+                    {o.name}
+                  </button>
+                  {/* × = จัดการ **ตัวเลือกในคลัง** (ซ่อน/ลบถาวร) ไม่ใช่เอาออกจากการ์ด — ของที่ย้อนยาก จึงต้องมีกล่องถาม */}
+                  <button
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => setConfirmOpt(o)}
+                    disabled={busyOpt === o.id}
+                    aria-label={t('modal.optionDelete')}
+                    title={t('modal.optionDelete')}
+                    className="p-0.5 rounded hover:text-red-500 disabled:opacity-50 shrink-0"
+                  >
+                    {busyOpt === o.id ? <Loader2 size={12} className="animate-spin" /> : <X size={12} />}
+                  </button>
+                </div>
               ))}
             </div>
           )}
@@ -411,7 +441,7 @@ export default function ChecklistFieldBox({ cardId, fieldId, items = [], readOnl
               value={newText}
               onChange={(e) => setNewText(e.target.value)}
               // ปิดเมื่อกด ESC หรือคลิกออกโดยยังไม่พิมพ์อะไร — ไม่งั้นช่องค้างเปิดตลอด
-              onKeyDown={(e) => { if (e.key === 'Escape') { setNewText(''); setAddOpen(false) } }}
+              onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); setNewText(''); setAddOpen(false) } }}
               onBlur={() => { if (!newText.trim()) setAddOpen(false) }}
               placeholder={t('modal.addItemPlaceholder')}
               maxLength={60}
@@ -430,20 +460,21 @@ export default function ChecklistFieldBox({ cardId, fieldId, items = [], readOnl
         </>
       )}
 
-      {/* ถังขยะท้ายงานย่อย → กล่องเดียวกับ "ลบการบ้าน" · ซ่อน = ออกจากการ์ดใบนี้ + ซ่อนจากคลัง */}
-      {confirmItem && (
+      {/* กล่องยืนยันของปุ่ม × บนชิปคลัง — ซ่อน/ลบถาวร **ตัวเลือกในคลัง** (กระทบทุกการ์ด)
+          ⛔ ไม่ใช่ของถังขยะท้ายงานย่อย — อันนั้นลบทันทีไม่ถาม (ย้อนได้ใน 1 คลิก) */}
+      {confirmOpt && (
         <DeleteChoiceDialog
           t={t}
-          heading={t('modal.itemDeleteHeading')}
-          title={confirmItem.text}
+          heading={t('modal.optionDeleteHeading')}
+          title={confirmOpt.name}
           impact={confirmUsed ? t('modal.optionPurgeImpact', { count: confirmUsed }) : null}
           hideHint={t('modal.optionHideHint')}
           hideLabel={t('actions.hide')}
           canPurge
-          busy={busyId === confirmItem.id}
-          onClose={() => setConfirmItem(null)}
-          onHide={() => hideItem(confirmItem)}
-          onPurge={() => purgeItem(confirmItem)}
+          busy={busyOpt === confirmOpt.id}
+          onClose={() => setConfirmOpt(null)}
+          onHide={() => hideOption(confirmOpt)}
+          onPurge={() => purgeOption(confirmOpt)}
         />
       )}
     </div>

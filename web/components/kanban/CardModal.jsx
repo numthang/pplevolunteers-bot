@@ -23,6 +23,7 @@ import DeleteChoiceDialog from './DeleteChoiceDialog.jsx'
 import FieldRow from './FieldRow.jsx'
 import TagCombobox from './TagCombobox.jsx'
 import CardFieldsBox from './CardFieldsBox.jsx'
+import PersonProfileModal from './PersonProfileModal.jsx'
 
 const AUTOSAVE_MS = 800
 
@@ -32,6 +33,7 @@ export default function CardModal({ cardId, onClose, onChanged }) {
   const [card, setCard] = useState(null)
   const [can, setCan] = useState({ edit: false, archive: false, restore: false, claim: false, purge: false })
   const [confirmRemove, setConfirmRemove] = useState(false)
+  const [profileUserId, setProfileUserId] = useState(null)
   // ตัวเลือกสถานะตายตัว 6 แบบ — ป้ายมาจาก t() จึงคำนวณที่นี่ ไม่ใช่ค่าคงที่นอก component
   const STATUS_OPTIONS = STATUS_TYPES.map((s) => ({ id: s, name: t(`status.${s}`) }))
   const [removing, setRemoving] = useState(false)
@@ -95,9 +97,22 @@ export default function CardModal({ cardId, onClose, onChanged }) {
 
   useEffect(() => { load() }, [load])
 
-  // ปิด 3 ทาง — ทางที่ 1: ESC
+  /**
+   * ปิด 3 ทาง — ทางที่ 1: ESC
+   *
+   * ⚠️ **ESC ตอนกำลังแก้อะไรอยู่ = ยกเลิกการแก้ชิ้นนั้น ไม่ใช่ปิดทั้งกล่อง** (user สั่ง 2026-08-20)
+   *    ตัวแก้แต่ละที่ `stopPropagation()` ของตัวเองอยู่แล้ว แต่**ลืมง่ายมาก** — รอบนี้เจอที่ลืม 5 จุด
+   *    (ชื่อ field · ค่า scalar · ฟอร์มเพิ่ม field · dropdown ของ TagCombobox · ช่องชื่อการบ้าน)
+   *    ด่านนี้จึงกันซ้ำอีกชั้นแบบไม่ต้องพึ่งความจำ: **โฟกัสอยู่ในของที่แก้ได้ = ไม่ปิดกล่อง**
+   *    ใครเพิ่มช่องกรอกใหม่ในอนาคตก็ปลอดภัยโดยอัตโนมัติ
+   */
   useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape') onClose() }
+    const onKey = (e) => {
+      if (e.key !== 'Escape' || e.defaultPrevented) return
+      const el = document.activeElement
+      if (el && (el.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName))) return
+      onClose()
+    }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
@@ -333,6 +348,13 @@ export default function CardModal({ cardId, onClose, onChanged }) {
                 value={title}
                 disabled={readOnly}
                 onChange={(e) => setTitle(e.target.value)}
+                /* ESC = คืนค่าที่เซฟไว้ล่าสุดแล้วออกจากช่อง (ไม่ปิดกล่อง) — autosave จะไม่ยิงเพราะค่าเท่า baseline */
+                onKeyDown={(e) => {
+                  if (e.key !== 'Escape') return
+                  e.stopPropagation()
+                  setTitle(baseline.current?.title ?? '')
+                  e.currentTarget.blur()
+                }}
                 placeholder={t('form.titleLabel')}
                 className="w-full px-0 text-2xl font-semibold rounded-lg bg-transparent text-warm-900 dark:text-disc-text placeholder-warm-300 dark:placeholder-disc-muted border-none focus:outline-none focus:ring-0 disabled:opacity-60"
               />
@@ -348,6 +370,13 @@ export default function CardModal({ cardId, onClose, onChanged }) {
                     value={detail}
                     disabled={readOnly}
                     onChange={(e) => setDetail(e.target.value)}
+                    /* ESC = คืนค่าที่เซฟไว้ล่าสุดแล้วออกจากช่อง (ไม่ปิดกล่อง) */
+                    onKeyDown={(e) => {
+                      if (e.key !== 'Escape') return
+                      e.stopPropagation()
+                      setDetail(baseline.current?.detail ?? '')
+                      e.currentTarget.blur()
+                    }}
                     rows={3}
                     placeholder={t('modal.fieldEmpty')}
                     className="w-full px-2 -mx-2 py-2 text-base rounded-lg border border-transparent bg-transparent text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted hover:bg-warm-50 dark:hover:bg-disc-hover focus:outline-none focus:bg-card-bg focus:border-warm-200 dark:focus:border-disc-border focus:ring-2 focus:ring-teal resize-none disabled:opacity-60 transition"
@@ -360,6 +389,13 @@ export default function CardModal({ cardId, onClose, onChanged }) {
                     value={dueAt}
                     disabled={readOnly}
                     onChange={(e) => setDueAt(e.target.value)}
+                    /* ESC = คืนค่าที่เซฟไว้ล่าสุดแล้วออกจากช่อง (ไม่ปิดกล่อง) */
+                    onKeyDown={(e) => {
+                      if (e.key !== 'Escape') return
+                      e.stopPropagation()
+                      setDueAt(baseline.current?.dueAt ?? '')
+                      e.currentTarget.blur()
+                    }}
                     className="h-11 px-2 -mx-2 text-base rounded-lg border border-transparent bg-transparent text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover focus:outline-none focus:bg-card-bg focus:border-warm-200 dark:focus:border-disc-border focus:ring-2 focus:ring-teal disabled:opacity-60 transition"
                   />
                 </FieldRow>
@@ -375,6 +411,7 @@ export default function CardModal({ cardId, onClose, onChanged }) {
                     value={card.owner_user_id ? [{ id: String(card.owner_user_id), name: card.owner_name || '' }] : []}
                     onCommit={(ids) => patch({ ownerUserId: ids[0] ? Number(ids[0]) : null })}
                     onError={setActionError}
+                    onOpenProfile={(id) => setProfileUserId(id)}
                     t={t}
                   />
                 </FieldRow>
@@ -408,10 +445,15 @@ export default function CardModal({ cardId, onClose, onChanged }) {
                     value={(card.helpers || []).map((h) => ({ id: String(h.user_id), name: h.name }))}
                     onCommit={commitHelpers}
                     onError={setActionError}
+                    onOpenProfile={(id) => setProfileUserId(id)}
                     t={t}
                   />
                 </FieldRow>
               </div>
+
+              {profileUserId && (
+                <PersonProfileModal userId={profileUserId} onClose={() => setProfileUserId(null)} t={t} />
+              )}
 
               {/* ข้อมูลของทีม — custom field (รวมเช็คลิสต์แล้ว 2026-08-18 รอบเย็น) แยกกายภาพจากของระบบข้างบน */}
               <CardFieldsBox

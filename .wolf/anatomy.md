@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-19T04:34:51.023Z
-> Files: 1022 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-19T18:23:11.990Z
+> Files: 1023 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/1b7cbea7-c43c-466d-9a5f-c61fda8e76b5/scratchpad/
 
@@ -257,7 +257,7 @@
 - `DATABASE.md` — Database Schema — pple_volunteers (~3190 tok)
 - `DEPLOYMENT.md` — Production Deployment — VPS Setup (~2522 tok)
 - `ORG_ACCESS_REDESIGN.md` — ORG_ACCESS_REDESIGN — ปลดสิทธิ์ออกจาก Discord (~5545 tok)
-- `PENDING.md` — PENDING.md — Backlog & Ideas (~33847 tok)
+- `PENDING.md` — PENDING.md — Backlog & Ideas (~34561 tok)
 - `WEB.md` — Web App — Next.js Frontend (~5324 tok)
 - `WOLF-INBOX.md` — กองความรู้จากเครื่องรอง (Mac) ที่รอ merge เข้า .wolf/ เพราะ .wolf/ ถูก gitignore ไม่ข้ามเครื่อง · เครื่องหลัก (Linux) merge แล้วลบ section ทิ้ง · ปกติควรว่าง (~1500 tok)
 
@@ -309,7 +309,7 @@
 
 - `CUSTOM-FIELDS.md` — Kanban — ช่องข้อมูลตั้งเอง (custom fields) (~3612 tok)
 - `KANBAN.md` — Kanban — ระบบบริหารงาน ("การบ้าน") (~7393 tok)
-- `NEXT-SESSION.md` — Kanban — จุดรับช่วง session หน้า (เขียนไว้ 2026-08-18 ปลาย session) (~1151 tok)
+- `NEXT-SESSION.md` — Kanban — จุดรับช่วง session หน้า (เขียนใหม่ 2026-08-19 เช้ามืด) (~3532 tok)
 
 ## md/posts/
 
@@ -1082,6 +1082,10 @@
 
 - `route.js` — /api/kanban/people?q=… — ค้นคนใน org ไว้เลือกเป็นเจ้าภาพ/คนช่วย (~357 tok)
 
+## web/app/api/kanban/people/[id]/
+
+- `route.js` — /api/kanban/people/[id] — โปรไฟล์คร่าวๆ ของคน 1 คน (กดชื่อเจ้าภาพ/คนช่วยเปิดกล่องลอย) (~216 tok)
+
 ## web/app/api/link/discord/
 
 - `route.js` — GET /api/link/discord — redirect ไป Discord OAuth (link mode, ต้อง login อยู่) (~255 tok)
@@ -1850,14 +1854,16 @@
 ## web/components/kanban/
 
 - `BoardView.jsx` — BoardView — กระดานแนวตั้ง "ย่อ" (ก่อนถึงก้อน 3) (~3009 tok)
-- `CardFieldsBox.jsx` — CardFieldsBox — กล่อง "ข้อมูลของทีม" ใน CardModal (custom field) (~7513 tok)
-- `CardModal.jsx` — CardModal — รายละเอียดการบ้าน 1 ใบ (~5676 tok)
-- `ChecklistFieldBox.jsx` — ChecklistFieldBox — เช็คลิสต์ 1 field (ตรงสกรีนช็อตที่ user ส่งมา 2026-08-18 รอบเย็น: progress bar + (~4324 tok)
+- `CardFieldsBox.jsx` — CardFieldsBox — กล่อง "ข้อมูลของทีม" ใน CardModal (custom field) (~7870 tok)
+- `CardModal.jsx` — CardModal — รายละเอียดการบ้าน 1 ใบ (~6798 tok)
+- `ChecklistFieldBox.jsx` — ChecklistFieldBox — เช็คลิสต์ 1 field (ตรงสกรีนช็อตที่ user ส่งมา 2026-08-18 รอบเย็น: progress bar + (~6665 tok)
+- `DeleteChoiceDialog.jsx` — DeleteChoiceDialog — กล่อง "ลบ" ที่ให้เลือกเอาเองว่า **ซ่อน/เก็บเข้ากรุ** หรือ **ลบถาวร** (~1182 tok)
 - `FieldManager.jsx` — FieldManager — ช่องข้อมูลตั้งเองของ org (/kanban/fields) · admin เท่านั้น (~3907 tok)
-- `FieldRow.jsx` — FieldRow — แถว `[ไอคอน · ชื่อ] | [ค่า]` บรรทัดเดียว ทรง Notion/AppFlowy (~428 tok)
+- `FieldRow.jsx` — FieldRow — แถว `[ไอคอน · ชื่อ] | [ค่า]` บรรทัดเดียว ทรง Notion/AppFlowy (~749 tok)
 - `KanbanHome.jsx` — KanbanHome — หน้าเดียวของโมดูลการบ้าน (`/kanban`) (~11755 tok)
 - `LabelChips.jsx` — LabelChips — ป้ายของการ์ด 1 ใบ วาดแยกเป็นกอง ไม่ใช่กองรวมพรืดเดียว (~485 tok)
-- `TagCombobox.jsx` — TagCombobox — ตัวเลือกของ select/multi_select field (ตรงสกรีนช็อตที่ user ส่งมา 2026-08-18 รอบเย็น) (~4805 tok)
+- `PersonProfileModal.jsx` — PersonProfileModal — กล่องลอยแบบดิสคอร์ด เปิดตอนกดชื่อเจ้าภาพ/คนช่วยในการ์ด (~1228 tok)
+- `TagCombobox.jsx` — TagCombobox — ตัวเลือกของ select/multi_select field (ตรงสกรีนช็อตที่ user ส่งมา 2026-08-18 รอบเย็น) (~8411 tok)
 
 ## web/components/org/
 
@@ -1924,8 +1930,8 @@
 - `authNonces.js` — nonce/challenge store keyed by user_id (แทน dc_user_config ที่ PK=discord_id) — รองรับ email-only (~308 tok)
 - `botStatus.js` — web/db/botStatus.js — สรุปสถานะการตั้งค่าของ Discord guild หนึ่งตัว (ใช้ที่หน้า /bot) (~559 tok)
 - `caseLetterConfig.js` — Exports getLetterConfig, upsertLetterConfig (~314 tok)
-- `displayName.js` — สูตร "ชื่อคนที่เอาไว้โชว์" ของทั้งระบบ · displayNameSql(userAlias, orgExpr) คืน SQL fragment · org display_name → nickname → ชื่อจริง → username (~450 tok)
 - `cases.js` — Case (เรื่องร้องเรียน) — web-side DB layer (ESM) (~4189 tok)
+- `displayName.js` — สูตร "ชื่อคนที่เอาไว้โชว์" ของทั้งระบบ · displayNameSql(userAlias, orgExpr) คืน SQL fragment · org display_name → nickname → ชื่อจริง → username (~450 tok)
 - `guilds.js` — Guilds ที่ user เป็น member จริง (INNER JOIN dc_guilds = เฉพาะ guild ที่ register ในระบบ) (~1139 tok)
 - `index.js` — Declares g (~121 tok)
 - `orgAiPrompts.js` — prompt ของช่องที่ผูกกับโค้ด — ประกอบเสร็จพร้อมยิง AI (~1029 tok)
@@ -1983,7 +1989,7 @@
 - `cards.js` — helper_ids แบนๆ ให้ kanbanAccess.isCardStakeholder ใช้ได้ตรงๆ (~4506 tok)
 - `fields.js` — defs ที่ยังไม่ถูกซ่อน (หรือรวมที่ซ่อนถ้า includeArchived) เรียงตามลำดับที่ตั้งไว้ (~5282 tok)
 - `labels.js` — ป้ายทั้งหมดของ org (ที่ยังไม่ถูกซ่อน) เรียงตามกลุ่ม (~2314 tok)
-- `people.js` — ค้นสมาชิก active ของ org · เรียกจาก API ที่กันคำค้นสั้นกว่า 2 ตัวไว้แล้ว (~449 tok)
+- `people.js` — ค้นสมาชิก active ของ org · เรียกจาก API ที่กันคำค้นสั้นกว่า 2 ตัวไว้แล้ว (~931 tok)
 - `tags.js` — tags.js — "แท็ก" ของการบ้าน = **ตัวเลือกใน custom field** ไม่ใช่ตารางป้ายอีกต่อไป (~1588 tok)
 
 ## web/db/posts/
@@ -2048,8 +2054,8 @@
 - `kanbanGrouping.js` — จัดกลุ่มการ์ด + ตัดสินว่า "ของฉัน" คือใบไหน — ตรรกะล้วน (เทสที่ lib/__tests__/kanbanGrouping.test.js (~1075 tok)
 - `kanbanGuard.js` — kanbanGuard — ด่านเดียวที่ route ของ kanban ใช้โหลด context + ตัดสินสิทธิ์ (~558 tok)
 - `kanbanLabelColors.js` — สีของชิปป้าย + หัวช่องกระดาน (~1175 tok)
-- `kanbanOptionActions.js` — จัดการตัวเลือกในคลัง (kanban_field_options) จากฝั่ง client · fetchOptions/patchOption/setOptionArchived/deleteOptionWithConfirm · **ทางเขียนเดียว** TagCombobox กับ ChecklistFieldBox ใช้ร่วมกัน (~750 tok)
 - `kanbanLabelFilter.js` — ตัวกรองการ์ดด้วยป้าย — ตรรกะล้วน ไม่แตะ DOM/DB (เทสอยู่ที่ lib/__tests__/kanbanLabelFilter.test.js) (~869 tok)
+- `kanbanOptionActions.js` — จัดการตัวเลือกในคลัง (kanban_field_options) จากฝั่ง client · fetchOptions/patchOption/setOptionArchived/deleteOptionWithConfirm · **ทางเขียนเดียว** TagCombobox กับ ChecklistFieldBox ใช้ร่วมกัน (~750 tok)
 - `linkState.js` — Exports signLinkState, verifyLinkState (~276 tok)
 - `org-auth-options.js` — web/lib/org-auth-options.js — org login (email-native, แยกจาก PPLE Discord auth) (~1072 tok)
 - `org.js` — web/lib/org.js — Org layer: resolve guild ในเครือเดียวกัน (ฝั่ง web · คู่กับ bot db/org.js) (~192 tok)

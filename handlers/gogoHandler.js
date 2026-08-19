@@ -388,9 +388,8 @@ async function handleGogoEventModal(interaction) {
     return interaction.editReply({ content: '❌ วันที่หรือเวลาไม่ถูกต้อง' });
   }
 
-  let event;
   try {
-    event = await interaction.guild.scheduledEvents.create({
+    const event = await interaction.guild.scheduledEvents.create({
       name,
       description: description || undefined,
       scheduledStartTime: startTime,
@@ -398,32 +397,33 @@ async function handleGogoEventModal(interaction) {
       entityType:   GuildScheduledEventEntityType.Voice,
       channel:      voiceChannelId,
     });
+
+    const link    = `https://discord.com/events/${interaction.guildId}/${event.id}`;
+    const endTime = new Date(startTime.getTime() + 60 * 60 * 1000);
+    const toGCal  = d => d.toISOString().replace(/[-:]/g, '').slice(0, 15) + 'Z';
+    const gcal    = new URL('https://calendar.google.com/calendar/render');
+    gcal.searchParams.set('action', 'TEMPLATE');
+    const calendarId = await getSetting(interaction.guildId, 'gogo_calendar_id');
+    if (calendarId) gcal.searchParams.set('src', calendarId);
+    gcal.searchParams.set('text', name);
+    gcal.searchParams.set('dates', `${toGCal(startTime)}/${toGCal(endTime)}`);
+    if (description) gcal.searchParams.set('details', description);
+    const voiceCh = interaction.guild.channels.cache.get(voiceChannelId);
+    if (voiceCh) gcal.searchParams.set('location', voiceCh.name);
+
+    const calRow = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setLabel('Add to Google Calendar')
+        .setEmoji('🗓️')
+        .setURL(gcal.toString())
+        .setStyle(ButtonStyle.Link),
+    );
+    await interaction.channel.send({ content: `📅 นัดประชุม: ${link}`, components: [calRow] });
+    await interaction.editReply({ content: '✅ สร้าง event เรียบร้อยแล้ว' });
   } catch (err) {
-    return interaction.editReply({ content: `❌ สร้าง event ไม่ได้: ${err.message}` });
+    console.error('[gogo event modal]', err);
+    await interaction.editReply({ content: `❌ สร้าง event ไม่สำเร็จ: ${err.message}` }).catch(() => {});
   }
-
-  const link    = `https://discord.com/events/${interaction.guildId}/${event.id}`;
-  const endTime = new Date(startTime.getTime() + 60 * 60 * 1000);
-  const toGCal  = d => d.toISOString().replace(/[-:]/g, '').slice(0, 15) + 'Z';
-  const gcal    = new URL('https://calendar.google.com/calendar/render');
-  gcal.searchParams.set('action', 'TEMPLATE');
-  const calendarId = await getSetting(interaction.guildId, 'gogo_calendar_id');
-  if (calendarId) gcal.searchParams.set('src', calendarId);
-  gcal.searchParams.set('text', name);
-  gcal.searchParams.set('dates', `${toGCal(startTime)}/${toGCal(endTime)}`);
-  if (description) gcal.searchParams.set('details', description);
-  const voiceCh = interaction.guild.channels.cache.get(voiceChannelId);
-  if (voiceCh) gcal.searchParams.set('location', voiceCh.name);
-
-  const calRow = new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setLabel('Add to Google Calendar')
-      .setEmoji('🗓️')
-      .setURL(gcal.toString())
-      .setStyle(ButtonStyle.Link),
-  );
-  await interaction.channel.send({ content: `📅 นัดประชุม: ${link}`, components: [calRow] });
-  await interaction.editReply({ content: '✅ สร้าง event เรียบร้อยแล้ว' });
 }
 
 async function handleGogoListButton(interaction) {

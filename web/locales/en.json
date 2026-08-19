@@ -1840,7 +1840,9 @@
       "optionDeleteHeading": "Delete option",
       "itemDeleteHeading": "Delete subtask",
       "optionPurgeImpact": "Deleting permanently removes it from {count} card(s) currently using it — no undo",
-      "optionHideHint": "Hiding removes it from this card and stops offering it in the picker · Other cards using it keep showing it, and you can restore it later · Deleting permanently wipes it from the database."
+      "optionHideHint": "Hiding removes it from this card and stops offering it in the picker · Other cards using it keep showing it, and you can restore it later · Deleting permanently wipes it from the database.",
+      "editPeople": "Edit owner/helpers",
+      "profileCardCount": "Holding {count} card(s)"
     },
     "saveFailed": "Save failed",
     "board": {
