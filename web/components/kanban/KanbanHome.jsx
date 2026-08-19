@@ -224,7 +224,9 @@ function KanbanCard({ card, t, onOpen, onDragStart, onDragEnd, dragging, draggab
         )}
         {card.owner_name && (
           <span className="flex items-center gap-1 min-w-0">
-            <User size={16} /> <span className="truncate max-w-[9rem]">{card.owner_name}</span>
+            {/* ⛔ ห้าม truncate ชื่อคน (user สั่ง 2026-08-19) — ชื่อยาวขึ้นหลังเปลี่ยนมาใช้ display_name
+                เช่น "Tee (ราชบุรี)" · ตัดหัวท้ายแล้วดูไม่ออกว่าใคร ปล่อยให้ตกบรรทัดในการ์ดแทน */}
+            <User size={16} className="shrink-0" /> <span>{card.owner_name}</span>
           </span>
         )}
       </div>

@@ -358,10 +358,12 @@ export default function TagCombobox({
         {shownChips.map((v) => {
           const tint = chipProps(v)
           return (
-            // ⚠️ whitespace-nowrap + max-w-full: ชื่อที่มีเว้นวรรค ("เมฆ ราชบุรี เขต1") เคยตัดบรรทัดกลางชิป
-            //    ทำให้ชิปสูง 2 บรรทัดแล้วแถวเบี้ยวทั้งแถว — ให้ตัดที่ท้ายชิปด้วย truncate แทน (มี title ให้อ่านเต็ม)
-            <span key={v.id} style={tint.style} title={v.name} className={`inline-flex max-w-full items-center gap-1 pl-2.5 ${readOnly ? 'pr-2.5' : 'pr-1'} py-0.5 text-sm font-medium rounded-md whitespace-nowrap ${tint.className}`}>
-              <span className="truncate">{v.name}</span>
+            // ⛔ ห้ามใส่ truncate / max-w-full ตรงนี้ — user สั่งชัด 2026-08-19: "ต้องแสดงให้หมด ไม่ใช่แก้ด้วยการ truncate"
+            //    เคยใส่แล้วพัง: truncate มี overflow:hidden → flex item ย่อได้ถึง 0 → ชิปเหลือแต่ปุ่ม × ไม่มีตัวหนังสือเลย
+            // whitespace-nowrap อย่างเดียวพอ: ชื่อที่มีเว้นวรรคจะไม่หักกลางชิป ชิปที่ไม่พอที่ก็ตกไปบรรทัดใหม่ทั้งใบ
+            //    (กล่องข้างนอกเป็น flex-wrap อยู่แล้ว)
+            <span key={v.id} style={tint.style} title={v.name} className={`inline-flex items-center gap-1 pl-2.5 ${readOnly ? 'pr-2.5' : 'pr-1'} py-0.5 text-sm font-medium rounded-md whitespace-nowrap ${tint.className}`}>
+              {v.name}
               {!readOnly && (
                 <button
                   type="button"
@@ -409,13 +411,13 @@ export default function TagCombobox({
                     onDrop={() => canManageOptions && onDropReorder(o.id)}
                   >
                     {canManageOptions && <GripVertical size={14} className="text-warm-300 dark:text-disc-muted cursor-grab shrink-0" />}
-                    <button type="button" onClick={() => toggleOption(o.id)} className="flex-1 min-w-0 flex items-center gap-2 text-left">
-                      <span style={tint.style} className={`px-2.5 py-0.5 text-sm font-medium rounded-md truncate whitespace-nowrap ${tint.className}`}>
+                    <button type="button" onClick={() => toggleOption(o.id)} className="flex-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-left">
+                      <span style={tint.style} className={`px-2.5 py-0.5 text-sm font-medium rounded-md ${tint.className}`}>
                         {o.name}
                       </span>
                       {/* บรรทัดรอง — โหมด search ใช้แยกคนชื่อซ้ำ (@username) · ชิปที่ติดการ์ดไม่เอาไปด้วย */}
                       {o.sub && (
-                        <span className="text-xs text-warm-400 dark:text-disc-muted truncate">{o.sub}</span>
+                        <span className="text-xs text-warm-400 dark:text-disc-muted">{o.sub}</span>
                       )}
                     </button>
                     {on && <Check size={16} className="text-teal shrink-0" />}
