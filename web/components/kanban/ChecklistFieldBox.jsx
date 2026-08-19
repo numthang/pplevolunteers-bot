@@ -16,7 +16,7 @@
  */
 
 import { useCallback, useEffect, useState } from 'react'
-import { Eye, EyeOff, GripVertical, ListChecks, Loader2, Plus, Trash2 } from 'lucide-react'
+import { Eye, EyeOff, GripVertical, ListChecks, Loader2, Plus, Trash2, X } from 'lucide-react'
 import { DropLine } from './FieldRow.jsx'
 
 /**
@@ -74,6 +74,7 @@ export default function ChecklistFieldBox({ cardId, fieldId, items = [], readOnl
   const [hideDone, setHideDone] = useState(false)
   const [dragId, setDragId] = useState(null)
   const [dropAt, setDropAt] = useState(null)   // { id, above } — เส้นบอกจุดวาง ขึ้นทีละเส้นเดียว
+  const [purgingId, setPurgingId] = useState(null)  // ตัวเลือกในคลังที่กำลังลบถาวรอยู่
 
   const total = items.length
   const done = items.filter((i) => i.done).length
@@ -120,6 +121,49 @@ export default function ChecklistFieldBox({ cardId, fieldId, items = [], readOnl
     const json = await call('POST', { fieldId, text })
     if (json?.item) { onItemsChanged([...items, json.item]); setNewText(''); loadPool() }
     setAdding(false)
+  }
+
+  /**
+   * ลบตัวเลือกออกจาก **คลัง** ถาวร — คนละเรื่องกับถังขยะบนแถวงานย่อย (นั่นถอดออกจากการ์ดใบนี้เท่านั้น)
+   *
+   * ⚠️ ความหมายต่างจาก select/multi_select ตรงนี้สำคัญ — user เคาะไว้ 2026-08-19 ว่าเอาแบบนี้:
+   *    การ์ดใบอื่นที่มีรายการนี้อยู่แล้ว **ไม่หาย** · `deleteFieldOption()` คัดชื่อลงคอลัมน์ `text`
+   *    แล้วตัด `option_id` ทิ้ง → เห็นข้อความเดิมทุกอย่าง แค่ไม่ผูกกับคลังแล้ว
+   *    (ต่างจาก multi_select ที่ชิปหายจากทุกการ์ดจริงๆ) → ต้องใช้ข้อความยืนยันคนละชุด
+   *
+   * ⚠️ ไม่มี gate ยศ — ใครแก้การ์ดได้ก็ลบได้ · **ตัวเลขจำนวนการ์ดคือกลไกกันพลาด** แทนการจำกัดสิทธิ์
+   *    (กติกาเดียวกับ deleteOption ใน TagCombobox — ห้ามให้ 2 ที่นี้ต่างกัน)
+   */
+  async function purgeFromPool(option) {
+    if (purgingId) return
+
+    // นับก่อนถาม — นับไม่ได้ก็ยังถามต่อ (ห้ามเงียบแล้วลบเลย) แค่ไม่มีตัวเลขให้ดู
+    let used = null
+    try {
+      const r = await fetch(`/api/kanban/fields/${fieldId}/options/${option.id}?impact=1`)
+      if (r.ok) {
+        const j = await r.json()
+        used = Number(j.impact?.checklist || 0) + Number(j.impact?.picked || 0)
+      }
+    } catch { /* นับไม่ได้ → ถามแบบไม่มีตัวเลข */ }
+
+    const msg = used
+      ? t('modal.poolDeleteConfirm', { name: option.name, count: used })
+      : t('modal.poolDeleteConfirmUnused', { name: option.name })
+    if (!window.confirm(msg)) return
+
+    setPurgingId(option.id)
+    try {
+      const res = await fetch(`/api/kanban/fields/${fieldId}/options/${option.id}`, { method: 'DELETE' })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) { onError?.(json.error || t('saveFailed')); return }
+      setPool((prev) => prev.filter((o) => String(o.id) !== String(option.id)))
+      // การ์ดใบนี้ไม่มีรายการนี้อยู่แล้ว (suggestions โชว์เฉพาะตัวที่ยังไม่มี) → ไม่ต้องโหลด items ใหม่
+    } catch {
+      onError?.(t('saveFailed'))
+    } finally {
+      setPurgingId(null)
+    }
   }
 
   /** หยิบจากคลัง — ไม่ต้องพิมพ์ */
@@ -298,21 +342,42 @@ export default function ChecklistFieldBox({ cardId, fieldId, items = [], readOnl
         <>
           {suggestions.length > 0 && (
             <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {/* ⚠️ เป็น div ไม่ใช่ button — ข้างในมีปุ่ม × (button ซ้อน button = HTML ผิด เบราว์เซอร์แก้โครงเอง)
+                  ทรงเดียวกับชิปใน TagCombobox ที่มีปุ่ม × อยู่บนชิป */}
               {suggestions.map((o) => (
-                <button
+                <div
                   key={o.id}
-                  type="button"
-                  /* ⚠️ ห้ามตัดออก — ช่องพิมพ์ข้างล่าง onBlur ปิดตัวเองเมื่อยังไม่ได้พิมพ์อะไร
-                     กดชิปตอนช่องว่าง = mousedown → blur → ชิปหายไปก่อน click จะทำงาน = กดไม่ติด
-                     (user เจอจริง 2026-08-19: "กดแล้วก็ไม่กลับเข้ามา") */
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => addFromPool(o)}
-                  disabled={adding}
-                  className="flex items-center gap-1 px-2 py-1 text-xs rounded-md border border-warm-200 dark:border-disc-border text-warm-700 dark:text-disc-muted hover:bg-warm-50 dark:hover:bg-disc-hover disabled:opacity-50 transition"
+                  className="group/pool flex items-center rounded-md border border-warm-200 dark:border-disc-border text-warm-700 dark:text-disc-muted hover:bg-warm-50 dark:hover:bg-disc-hover transition"
                 >
-                  <Plus size={12} />
-                  {o.name}
-                </button>
+                  <button
+                    type="button"
+                    /* ⚠️ ห้ามตัดออก — ช่องพิมพ์ข้างล่าง onBlur ปิดตัวเองเมื่อยังไม่ได้พิมพ์อะไร
+                       กดชิปตอนช่องว่าง = mousedown → blur → ชิปหายไปก่อน click จะทำงาน = กดไม่ติด
+                       (user เจอจริง 2026-08-19: "กดแล้วก็ไม่กลับเข้ามา") */
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => addFromPool(o)}
+                    disabled={adding || purgingId === o.id}
+                    className="flex items-center gap-1 pl-2 pr-1 py-1 text-xs disabled:opacity-50"
+                  >
+                    <Plus size={12} className="shrink-0" />
+                    {o.name}
+                  </button>
+                  {/* ลบออกจากคลังถาวร — โผล่ตอน hover เท่านั้น ไม่งั้นชิปรกและกดพลาดง่าย
+                      (โฟกัสด้วยคีย์บอร์ดก็ต้องเห็น → focus-visible:opacity-100) */}
+                  <button
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => purgeFromPool(o)}
+                    disabled={adding || purgingId === o.id}
+                    aria-label={t('modal.poolDelete')}
+                    title={t('modal.poolDelete')}
+                    className="pr-1.5 pl-0.5 py-1 opacity-0 group-hover/pool:opacity-100 focus-visible:opacity-100 hover:text-red-500 disabled:opacity-50 transition"
+                  >
+                    {purgingId === o.id
+                      ? <Loader2 size={12} className="animate-spin" />
+                      : <X size={12} />}
+                  </button>
+                </div>
               ))}
             </div>
           )}
