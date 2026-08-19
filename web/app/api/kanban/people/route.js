@@ -19,12 +19,12 @@ export async function GET(req) {
 
   const rows = await searchKanbanPeople(ctx.orgId, q)
   // ส่งเฉพาะที่ UI ใช้ — ไม่ยิง email/discord_id ของคนทั้ง org ออกไปให้ทุกคนที่เปิดการ์ด
-  // org_name = ชื่อที่ตั้งไว้ใน org (ถ้าต่างจากชื่อหลัก) ไว้ให้เห็นว่ากดถูกคน
+  // username = ตัวแยกคนชื่อซ้ำ (org นี้มี "Ploy" 6 คน) · ไม่ส่งถ้าซ้ำกับชื่อที่โชว์อยู่แล้ว
   return Response.json({
     people: rows.map((r) => ({
       userId: r.userId,
       name: r.name,
-      orgName: r.org_name && r.org_name !== r.name ? r.org_name : null,
+      username: r.username && r.username !== r.name ? r.username : null,
     })),
   })
 }

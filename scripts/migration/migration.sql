@@ -1081,4 +1081,9 @@ ALTER TABLE kanban_cards DROP COLUMN IF EXISTS blocked_reason;
 DROP TABLE IF EXISTS kanban_card_labels;
 DROP TABLE IF EXISTS kanban_labels;
 
+-- 2026-08-19 · ชื่อคนที่โชว์ ย้ายมาเอาจาก org_members.display_name เป็นอันดับแรก
+-- (เดิมเริ่มที่ users.firstname ซึ่งมีแค่ 19% ของสมาชิก → 81% ตกไปโชว์ username ดิบ เช่น 'mark30260')
+-- สูตรอยู่ที่ web/db/displayName.js — มันยิง subquery ต่อ 1 คนต่อ 1 แถว ต้องมี index ไม่งั้น seq scan
+CREATE INDEX IF NOT EXISTS idx_org_members_user_org ON org_members (user_id, org_id);
+
 COMMIT;

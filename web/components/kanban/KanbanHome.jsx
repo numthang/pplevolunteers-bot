@@ -664,7 +664,7 @@ export default function KanbanHome() {
                       key={l.id}
                       onClick={() => toggleLabelFilter(l)}
                       style={on ? tint.style : undefined}
-                      className={`flex items-center gap-1 px-3 py-1 text-sm rounded-md font-medium border ${
+                      className={`flex items-center gap-1 px-3 py-1 text-sm rounded-md font-medium border whitespace-nowrap ${
                         on
                           ? `${tint.className} border-transparent ring-1 ring-teal`
                           : 'border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover'

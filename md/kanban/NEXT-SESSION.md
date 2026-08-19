@@ -76,6 +76,22 @@ category→field สายงาน · อำเภอ→field พื้นท�
 ⚠️ **งบประมาณในไฟล์มีแค่ 13/82** — user ยังไม่ได้เติมตอน import · เติมเพิ่มได้ 2 ทาง:
 กรอกในเว็บทีละใบ **หรือ** เติม xlsx แล้ว truncate+import ใหม่ (จะทับของที่กรอกในเว็บไปแล้ว)
 
+### 5. ✅ ชื่อคนที่โชว์ + ป้ายชื่อตกบรรทัด — **เสร็จแล้ว 2026-08-19 (รอบบ่าย)**
+**สูตรชื่อย้ายมาอยู่ที่ `web/db/displayName.js` ที่เดียว** (เดิมก็อปใน `db/kanban/cards.js` + `db/kanban/people.js`
+พร้อมคอมเมนต์เตือนกันเองว่าอย่าให้ต่างกัน = รอวันดริฟต์)
+ลำดับใหม่: **org display_name → nickname → ชื่อจริง → username**
+เดิมเริ่มที่ชื่อจริงซึ่งมีแค่ 1,402/7,490 คน (19%) → 81% ตกไปโชว์ username ดิบ (`mark30260`, `chayanankoj`)
+- ⚠️ คนเดียวมีหลายแถวใน `org_members` (org 1 คร่อม 3 guild · 708 คนซ้ำ) → subquery ต้อง `ORDER BY id LIMIT 1`
+- ต้องมี index `idx_org_members_user_org` (อยู่ใต้ marker ใน migration.sql แล้ว) ไม่งั้น seq scan ต่อแถว
+- กล่องเลือกคนโชว์ `@username` เป็นบรรทัดรอง — org นี้มี "Ploy" 6 คน · **ห้ามต่อเข้าไปในชื่อ** ไม่งั้นชิปติด `(@…)` ไปด้วย
+- ลบ `OwnerPicker.jsx` ทิ้ง (ไม่มีใคร import ตั้งแต่ย้ายไปใช้ TagCombobox)
+- ชิปที่มีเว้นวรรคเคยตัดบรรทัดกลางชิป → `whitespace-nowrap` + `truncate` ทั้ง 3 จุด (TagCombobox / LabelChips / ตัวกรอง)
+
+**🔴 ยังค้าง — 5 ชื่อใน `scripts/import/people-map.json` ยังจับคู่ไม่ได้:** `Ji · Nuu · Oat · Ploy · Whoon`
+ผลคือ **3 ใบไม่มีเจ้าภาพ** (Design Week / One day trip / อบรมการคิดเชิงนโยบาย) + **7 ใบคนช่วยหาย**
+`"Mek": null` ก็เป็นเคสนี้ — แก้แล้ว (= 2353 `@undermek` "เมฆ") + ซ่อมการ์ด 7 ใบใน DB ตรงๆ (16/27/38/40/44/54/61)
+→ ให้ user บอกว่าใครเป็นใคร แล้วเติมลง map (ไฟล์นี้ gitignore — ต้องเติมบนเครื่องที่รัน import)
+
 ### 4. ✅ ติดตั้ง ESLint — **เสร็จแล้ว 2026-08-19**
 `npm run lint:all` ที่ root = ตรวจทั้งบอทและเว็บ · baseline **0 error** (web 97 warn / bot 42 warn)
 เปิดเฉพาะ rule ที่จับบั๊กจริง (`no-undef` = error) rule สไตล์ปิดหมด — **ห้ามเปิดเพิ่มโดยไม่ถาม**

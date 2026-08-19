@@ -1,14 +1,13 @@
 // web/db/kanban/people.js — ค้นคนใน org ไว้เลือกเป็นเจ้าภาพ/คนช่วย
 //
-// ⚠️ **ชื่อที่คืนต้องเป็นสูตรเดียวกับ DISPLAY_NAME ใน db/kanban/cards.js เป๊ะ**
-//    ไม่งั้นเลือก "เศกสรรค์ สุมนตรี(บู๊)" จากกล่องค้นหา แล้วการ์ดขึ้น "นายเศกสรรค์ สุมนตรี เลขสมาชิก6770000564"
-//    = คนละชื่อกับที่เพิ่งกด (org_members.display_name กับ users.firstname/lastname คนละแหล่งกัน)
-//    → แก้สูตรที่ไหน ต้องแก้อีกที่ด้วยเสมอ
+// ⚠️ **ชื่อที่คืนต้องเป็นสูตรเดียวกับที่การ์ดโชว์เป๊ะ** ไม่งั้นเลือกคนจากกล่องค้นหาแล้วการ์ดขึ้นอีกชื่อ
+//    → ทั้งคู่เรียก displayNameSql() ตัวเดียวกันจาก db/displayName.js แล้ว ไม่ต้องไล่แก้ 2 ที่อีก
 //
 // ค้นได้กว้างกว่าที่โชว์ (แมตช์ display_name/username/email) — คนพิมพ์ชื่อเล่นที่ตั้งไว้ใน org ก็ควรเจอ
 import pool from '../index.js'
+import { displayNameSql } from '../displayName.js'
 
-const DISPLAY_NAME = `COALESCE(NULLIF(TRIM(CONCAT_WS(' ', u.firstname, u.lastname)), ''), u.username)`
+const DISPLAY_NAME = displayNameSql('u', '$1')
 
 /** ค้นสมาชิก active ของ org · เรียกจาก API ที่กันคำค้นสั้นกว่า 2 ตัวไว้แล้ว */
 export async function searchKanbanPeople(orgId, q, limit = 20) {
@@ -17,7 +16,9 @@ export async function searchKanbanPeople(orgId, q, limit = 20) {
     `SELECT DISTINCT ON (om.user_id)
             om.user_id AS "userId",
             ${DISPLAY_NAME} AS name,
-            om.display_name AS org_name
+            -- @username ไว้แยกคนชื่อซ้ำ — org 1 มี "Ploy" 6 คน กดผิดคนแล้วรู้ตัวยาก
+            -- (เลือก username ไม่ใช่ email/discord_id — 2 อย่างนั้นคือข้อมูลส่วนตัวของคนทั้ง org)
+            u.username
        FROM org_members om
        JOIN users u ON u.id = om.user_id
       WHERE om.org_id = $1

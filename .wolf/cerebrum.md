@@ -567,6 +567,31 @@ user: "css font ตอนนี้ผมไม่ consistency อีกแล้
 - xlsx ของ AppFlowy: **คอลัมน์ Checklist เป็น % (`0.73`) ไม่มีตัวข้อความ** — กู้ไม่ได้ถาวร อย่าเสียเวลาลองอีก
 - `ref_no` = `MAX()+1` ต่อ org → TRUNCATE แล้วเริ่ม K-1 ใหม่เอง ไม่ต้องรีเซ็ต sequence
 
+### ชื่อคนที่โชว์ทั้งระบบ (2026-08-19)
+
+- **สูตรเดียวอยู่ที่ `web/db/displayName.js`** — `displayNameSql(userAlias, orgExpr)` คืน SQL fragment
+  ลำดับ: `org_members.display_name` → `org_members.nickname` → `users.firstname lastname` → `users.username`
+- **ทำไมไม่เริ่มที่ชื่อจริง:** org 1 มี active 7,490 คน แต่มีชื่อจริงแค่ 1,402 (19%) · display_name มี 7,100 (95%)
+  เริ่มที่ชื่อจริง = 81% ตกไปโชว์ username ดิบ (`mark30260`) ซึ่งไม่มีใครรู้ว่าใคร
+- ⚠️ **`org_members` มีได้หลายแถวต่อ 1 คนใน org เดียว** — แยกแถวต่อ guild และ org 1 คร่อม 3 guild
+  (708 คนมีแถวซ้ำ) → subquery ต้อง `ORDER BY om.id LIMIT 1` เสมอ ไม่งั้น error 21000 ตอน runtime
+  เลือก id น้อยสุด = **ตัดสินใจเหมือนเดิมทุกครั้ง** ไม่ใช่ "ถูกที่สุด" (ชื่อกระพริบสลับหาสาเหตุยากกว่า)
+- ยังมีอีก 3 จุดที่ยังใช้สูตรเก่าอยู่ (`db/posts/episodes.js` ×2, `db/posts/aiSuggestions.js`) — ยังไม่ได้ย้าย
+
+### กล่องเลือกคน — @username เป็นบรรทัดรอง ห้ามต่อเข้าไปในชื่อ (2026-08-19)
+
+org 1 มีคนชื่อ "Ploy" 6 คน "Oat" 3 คน → กล่องค้นหาต้องมีตัวแยก
+แต่ถ้าต่อเป็น `name (@username)` ก้อนเดียว **ชิปที่ติดบนการ์ดจะติด `(@…)` ไปด้วยตอน optimistic render**
+→ ส่งเป็น field แยก (`sub`) ให้ combobox วาดเป็นบรรทัดรองในลิสต์เท่านั้น
+
+### สคริปต์ import ที่ map คนแบบ "ข้ามถ้าจับคู่ไม่ได้" = เลื่อนคนผิดขึ้นเป็นเจ้าภาพเงียบๆ (2026-08-19)
+
+`scripts/import/kanbanFromAppflowy.mjs` เอา "คนแรกในคอลัมน์" เป็นเจ้าภาพ แล้ว `.filter(Boolean)` ก่อน
+→ `"Mek, Mark"` ที่ Mek เป็น null กลายเป็น **Mark เป็นเจ้าภาพ** ทั้งที่ไม่ใช่ · user จับได้เอง ("mark30260 เหมือนจะผิดคน")
+บทเรียน: **ชื่อที่จับคู่ไม่ได้ต้องทำให้การ์ด "ไม่มีเจ้าภาพ" ไม่ใช่เลื่อนคนถัดไปขึ้นมา** —
+ไม่มีเจ้าภาพเห็นชัดว่าต้องแก้ ส่วนเจ้าภาพผิดคนดูเหมือนถูกต้องทุกประการ
+
+
 ## Do-Not-Repeat
 
 <!-- Mistakes made and corrected. Each entry prevents the same mistake recurring. -->

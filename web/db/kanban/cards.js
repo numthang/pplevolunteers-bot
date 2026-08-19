@@ -11,12 +11,15 @@
 //   3. ⚠️ ref_no จองแบบ MAX()+1 → 2 คนกดพร้อมกันชนกันได้ · กันด้วย UNIQUE (org_id, ref_no)
 //      แล้ว retry ที่นี่ ไม่ใช่ปล่อยให้ API ตอบ 500
 import pool from '../index.js'
+import { displayNameSql } from '../displayName.js'
 
 // ป้ายเวลาที่ใช้เป็น optimistic lock token — ต้องเป็น "สตริงเดียวกันเป๊ะ" ทั้งตอนอ่านและตอนเทียบ
 // (ห้ามส่ง Date ของ JS ไป-กลับ: PG เก็บ microsecond แต่ JS มีแค่ millisecond → เทียบไม่มีวันตรง)
 const LOCK = `to_char(c.updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')`
 
-const DISPLAY_NAME = `COALESCE(NULLIF(TRIM(CONCAT_WS(' ', u.firstname, u.lastname)), ''), u.username)`
+// ชื่อคนที่โชว์ — สูตรกลางอยู่ที่ db/displayName.js (เดิมก็อปไว้ที่นี่กับ people.js แล้วเตือนกันเองว่าอย่าให้ต่างกัน)
+// c.org_id ใช้ได้เพราะทุกจุดที่แปะสูตรนี้อยู่ใน subquery ที่มองเห็น c อยู่แล้ว
+const DISPLAY_NAME = displayNameSql('u', 'c.org_id')
 
 const COLS = `
   c.id, c.org_id, c.ref_no, c.title, c.detail, c.status_type,

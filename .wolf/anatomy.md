@@ -1,7 +1,12 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-19T03:39:09.416Z
-> Files: 1167 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-19T04:34:51.023Z
+> Files: 1022 tracked | Anatomy hits: 0 | Misses: 0
+
+## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/1b7cbea7-c43c-466d-9a5f-c61fda8e76b5/scratchpad/
+
+- `restructure_cerebrum.py` — find_line_idx, next_header_idx, delete_header_block, delete_single_line (~990 tok)
+- `restructure_phase2.py` — block_content, strip_blank_edges (~1915 tok)
 
 ## ../calling.ppleth.ai/
 
@@ -1850,12 +1855,8 @@
 - `ChecklistFieldBox.jsx` — ChecklistFieldBox — เช็คลิสต์ 1 field (ตรงสกรีนช็อตที่ user ส่งมา 2026-08-18 รอบเย็น: progress bar + (~4324 tok)
 - `FieldManager.jsx` — FieldManager — ช่องข้อมูลตั้งเองของ org (/kanban/fields) · admin เท่านั้น (~3907 tok)
 - `FieldRow.jsx` — FieldRow — แถว `[ไอคอน · ชื่อ] | [ค่า]` บรรทัดเดียว ทรง Notion/AppFlowy (~428 tok)
-- `HomeworkHome.jsx` — แถบกรองด้วยป้าย — ชิปมาจากป้ายที่มีอยู่จริงบนการ์ดที่โหลดมา (lib/kanbanLabelFilter.js) (~6246 tok)
 - `KanbanHome.jsx` — KanbanHome — หน้าเดียวของโมดูลการบ้าน (`/kanban`) (~11755 tok)
 - `LabelChips.jsx` — LabelChips — ป้ายของการ์ด 1 ใบ วาดแยกเป็นกอง ไม่ใช่กองรวมพรืดเดียว (~485 tok)
-- `LabelManager.jsx` — LabelManager — คลังป้ายของ org (/kanban/labels) · admin เท่านั้น (~3042 tok)
-- `LabelPicker.jsx` — LabelPicker — เลือก/ติด/ถอดป้ายในการ์ด 1 ใบ (~3016 tok)
-- `OwnerPicker.jsx` — OwnerPicker — ดู/เปลี่ยน/ถอด "เจ้าภาพ" ของการ์ด 1 ใบ (~2009 tok)
 - `TagCombobox.jsx` — TagCombobox — ตัวเลือกของ select/multi_select field (ตรงสกรีนช็อตที่ user ส่งมา 2026-08-18 รอบเย็น) (~4805 tok)
 
 ## web/components/org/
@@ -1923,6 +1924,7 @@
 - `authNonces.js` — nonce/challenge store keyed by user_id (แทน dc_user_config ที่ PK=discord_id) — รองรับ email-only (~308 tok)
 - `botStatus.js` — web/db/botStatus.js — สรุปสถานะการตั้งค่าของ Discord guild หนึ่งตัว (ใช้ที่หน้า /bot) (~559 tok)
 - `caseLetterConfig.js` — Exports getLetterConfig, upsertLetterConfig (~314 tok)
+- `displayName.js` — สูตร "ชื่อคนที่เอาไว้โชว์" ของทั้งระบบ · displayNameSql(userAlias, orgExpr) คืน SQL fragment · org display_name → nickname → ชื่อจริง → username (~450 tok)
 - `cases.js` — Case (เรื่องร้องเรียน) — web-side DB layer (ESM) (~4189 tok)
 - `guilds.js` — Guilds ที่ user เป็น member จริง (INNER JOIN dc_guilds = เฉพาะ guild ที่ register ในระบบ) (~1139 tok)
 - `index.js` — Declares g (~121 tok)

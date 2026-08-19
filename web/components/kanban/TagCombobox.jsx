@@ -358,8 +358,10 @@ export default function TagCombobox({
         {shownChips.map((v) => {
           const tint = chipProps(v)
           return (
-            <span key={v.id} style={tint.style} className={`flex items-center gap-1 pl-2.5 ${readOnly ? 'pr-2.5' : 'pr-1'} py-0.5 text-sm font-medium rounded-md ${tint.className}`}>
-              {v.name}
+            // ⚠️ whitespace-nowrap + max-w-full: ชื่อที่มีเว้นวรรค ("เมฆ ราชบุรี เขต1") เคยตัดบรรทัดกลางชิป
+            //    ทำให้ชิปสูง 2 บรรทัดแล้วแถวเบี้ยวทั้งแถว — ให้ตัดที่ท้ายชิปด้วย truncate แทน (มี title ให้อ่านเต็ม)
+            <span key={v.id} style={tint.style} title={v.name} className={`inline-flex max-w-full items-center gap-1 pl-2.5 ${readOnly ? 'pr-2.5' : 'pr-1'} py-0.5 text-sm font-medium rounded-md whitespace-nowrap ${tint.className}`}>
+              <span className="truncate">{v.name}</span>
               {!readOnly && (
                 <button
                   type="button"
@@ -408,9 +410,13 @@ export default function TagCombobox({
                   >
                     {canManageOptions && <GripVertical size={14} className="text-warm-300 dark:text-disc-muted cursor-grab shrink-0" />}
                     <button type="button" onClick={() => toggleOption(o.id)} className="flex-1 min-w-0 flex items-center gap-2 text-left">
-                      <span style={tint.style} className={`px-2.5 py-0.5 text-sm font-medium rounded-md truncate ${tint.className}`}>
+                      <span style={tint.style} className={`px-2.5 py-0.5 text-sm font-medium rounded-md truncate whitespace-nowrap ${tint.className}`}>
                         {o.name}
                       </span>
+                      {/* บรรทัดรอง — โหมด search ใช้แยกคนชื่อซ้ำ (@username) · ชิปที่ติดการ์ดไม่เอาไปด้วย */}
+                      {o.sub && (
+                        <span className="text-xs text-warm-400 dark:text-disc-muted truncate">{o.sub}</span>
+                      )}
                     </button>
                     {on && <Check size={16} className="text-teal shrink-0" />}
                     {busyOpt === o.id && <Loader2 size={14} className="animate-spin text-warm-400 dark:text-disc-muted shrink-0" />}

@@ -35,7 +35,7 @@ export default function LabelChips({ labels = [], showGroupName = true, max = 0 
                   key={l.id}
                   title={group ? `${group} · ${l.name}` : l.name}
                   style={tint.style}
-                  className={`px-3 py-1 text-sm font-medium rounded-md ${tint.className}`}
+                  className={`inline-block max-w-full truncate px-3 py-1 text-sm font-medium rounded-md whitespace-nowrap ${tint.className}`}
                 >
                   {l.name}
                 </span>

@@ -171,7 +171,9 @@ export default function CardModal({ cardId, onClose, onChanged }) {
     const json = await res.json()
     return (json.people || []).map((p) => ({
       id: String(p.userId),
-      name: p.orgName ? `${p.name} (${p.orgName})` : p.name,
+      name: p.name,
+      // @username โชว์เป็นบรรทัดรองในลิสต์เท่านั้น — ห้ามต่อเข้าไปในชื่อ ไม่งั้นชิปบนการ์ดติด "(@…)" ไปด้วย
+      sub: p.username ? `@${p.username}` : null,
     }))
   }, [])
 
