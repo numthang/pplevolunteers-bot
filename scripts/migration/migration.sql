@@ -1016,7 +1016,7 @@ ALTER TABLE kanban_card_field_values ADD COLUMN IF NOT EXISTS value_options BIGI
 
 -- checklist ย้ายจาก "1 การ์ด 1 เช็คลิสต์ตายตัว" → ผูกกับ field แทน (1 การ์ดมีได้หลายเช็คลิสต์ ถ้า org สร้างหลาย field)
 -- 0 แถวตอนนี้ (ยังไม่เคย deploy) → ใส่ NOT NULL ตรงๆ ไม่ต้อง backfill
-ALTER TABLE kanban_card_checklist ADD COLUMN field_id BIGINT REFERENCES kanban_field_defs(id) ON DELETE CASCADE;
+ALTER TABLE kanban_card_checklist ADD COLUMN IF NOT EXISTS field_id BIGINT REFERENCES kanban_field_defs(id) ON DELETE CASCADE;
 ALTER TABLE kanban_card_checklist ALTER COLUMN field_id SET NOT NULL;
 
 DROP INDEX IF EXISTS idx_kanban_checklist_card;

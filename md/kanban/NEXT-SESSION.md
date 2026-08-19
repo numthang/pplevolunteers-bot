@@ -23,6 +23,12 @@
 
 ---
 
+## 🚀 Deploy — มี runbook แยกแล้ว
+
+**[`md/kanban/DEPLOY-2026-08-19.md`](DEPLOY-2026-08-19.md)** — 8 ขั้น ครบตั้งแต่ push ถึงตรวจงาน + วิธีย้อน
+user เคาะแล้วว่าการ์ดบน prod ทิ้งได้ → **ไม่ต้องรัน `kanbanLabelsToFields.mjs` บน prod**
+DDL ที่ค้างตัดมาไว้ที่ `scripts/migration/pending-2026-08-19.sql` (ซ้อมบนฐานจำลองผ่านแล้ว รันซ้ำได้)
+
 ## ⚠️ กับดักตอน deploy
 
 1. **migration ค้าง 21 statement** หลัง marker `-- production ทำถึงตรงนี้`
