@@ -1050,3 +1050,21 @@ ALTER TABLE kanban_card_checklist ALTER COLUMN text DROP NOT NULL;
 
 CREATE INDEX IF NOT EXISTS idx_kanban_checklist_option ON kanban_card_checklist (option_id)
     WHERE option_id IS NOT NULL;
+
+-- 2026-08-19 · kanban: ถอด "ติดปัญหา" ออกจากตารางให้หมด
+-- ฟีเจอร์ถูกถอดจาก UI ไปแล้ว 2026-08-18 · user สั่งลบคอลัมน์ทิ้ง 2026-08-19
+-- ⚠️ ลบข้อมูลถาวร — ตรวจก่อนบน prod: SELECT count(*) FROM kanban_cards WHERE blocked;
+ALTER TABLE kanban_cards DROP COLUMN IF EXISTS blocked;
+ALTER TABLE kanban_cards DROP COLUMN IF EXISTS blocked_reason;
+
+-- 2026-08-19 · kanban: ลบตารางป้ายทิ้ง (ยุบเข้า custom field แล้ว)
+--
+-- ⛔⛔ ลำดับบน production ห้ามสลับ:
+--   1. รัน  node --env-file=.env scripts/migration/kanbanLabelsToFields.mjs           (dry-run ดูก่อน)
+--   2. รัน  node --env-file=.env scripts/migration/kanbanLabelsToFields.mjs --commit  (ย้ายข้อมูลจริง)
+--   3. deploy โค้ดใหม่ (อ่านแท็กจาก custom field อย่างเดียวแล้ว)
+--   4. ตรวจว่าแท็กบนการ์ดขึ้นครบ แล้วค่อยรัน 2 บรรทัดล่างนี้
+--
+-- ทำสลับ = แท็กบนการ์ดหายไปต่อหน้า (ขึ้นโค้ดก่อนย้าย) หรือกู้ไม่ได้ (ลบตารางก่อนย้าย)
+DROP TABLE IF EXISTS kanban_card_labels;
+DROP TABLE IF EXISTS kanban_labels;

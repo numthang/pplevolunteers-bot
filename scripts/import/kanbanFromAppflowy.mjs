@@ -26,6 +26,7 @@ const cardDB = await import('../../web/db/kanban/cards.js')
 // ⭐ ป้ายถูกยุบเข้า custom field แล้ว 2026-08-19 — เขียนผ่าน tags.js ไม่ใช่ labels.js (ที่ลบทิ้งไปแล้ว)
 //    LABEL_GROUPS ข้างล่างยังใช้ชื่อเดิมได้: ชื่อกลุ่ม = ชื่อ field ตรงๆ (ไม่มีก็สร้างให้)
 const tagDB = await import('../../web/db/kanban/tags.js')
+const fieldDB = await import('../../web/db/kanban/fields.js')
 
 const argv = process.argv.slice(2)
 const has = (f) => argv.includes(f)
@@ -47,8 +48,32 @@ const STATUS_MAP = {
 }
 const LIVE = ['สิ่งที่ต้องทำ', 'กำลังทำ', 'รอยืนยัน']
 
-// คอลัมน์ใน xlsx → กลุ่มป้ายของเรา · ชื่อกลุ่มเป็นข้อมูล ไม่ใช่ค่าคงที่ในโค้ดหลัก
+// คอลัมน์ใน xlsx → ชื่อ field ของเรา (คอมมาแยกหลายค่า) · ชื่อเป็นข้อมูล ไม่ใช่ค่าคงที่ในโค้ดหลัก
 const LABEL_GROUPS = { category: 'สายงาน', 'อำเภอ': 'พื้นที่', 'อุปกรณ์': 'อุปกรณ์' }
+
+// คอลัมน์ "ค่าเดี่ยว" → custom field · เพิ่งเอาเข้าได้ 2026-08-19 หลังมี custom field
+//
+// ⛔ **FB Post ไม่เอาเข้า** (user เคาะ 2026-08-19) — โพสต์เฟซบุ๊กมีที่อยู่ของมันแล้วในโมดูล posts
+//    ทำ field ซ้ำที่นี่ = ลิงก์โพสต์เดียวกันอยู่ 2 ที่แล้วไม่ตรงกัน
+// ⛔ **Discord ไม่เอาลง custom field** — การ์ดมี `source_url` เป็นช่องประจำอยู่แล้ว (บอทใช้ช่องนี้)
+//    ลงตรงนั้นแทน ไม่งั้นลิงก์ดิสคอร์ดอยู่ 2 ที่เหมือนกัน
+const SCALAR_FIELDS = [
+  { col: 'งบประมาณ', label: 'งบประมาณ', type: 'number' },
+]
+
+/** คอลัมน์ที่ลงช่องประจำของการ์ด ไม่ใช่ custom field */
+const SOURCE_URL_COL = 'Discord'
+
+/** ค่าเดี่ยวจาก xlsx → ค่าที่ pg รับ · คืน null เมื่อว่างหรือแปลงไม่ได้ (จะได้ไม่เขียนแถวเปล่า) */
+function scalarValue(type, raw) {
+  const v = String(raw ?? '').trim()
+  if (!v) return null
+  if (type === 'number') {
+    const n = Number(v.replace(/[,\s]/g, ''))
+    return Number.isFinite(n) ? n : null
+  }
+  return v
+}
 
 const splitList = (v) => String(v || '').split(',').map(s => s.trim()).filter(Boolean)
 
@@ -215,8 +240,9 @@ async function main() {
   }
   if (!importerId) throw new Error(`org ${ORG} ไม่มีสมาชิกเลย — สร้างการ์ดไม่ได้`)
 
-  const stat = { created: 0, labels: 0, noOwner: 0, helpers: 0, bumped: 0, provenance: 0, skipped: 0, errors: 0 }
+  const stat = { created: 0, labels: 0, scalars: 0, noOwner: 0, helpers: 0, bumped: 0, provenance: 0, skipped: 0, errors: 0 }
   const labelCache = new Map()
+  const scalarCache = new Map()   // ชื่อ field ค่าเดี่ยว → def (สร้างครั้งเดียวพอ)
 
   /** ชื่อกลุ่ม+ชื่อแท็ก → { fieldId, optionId, type } · cache กันยิงซ้ำทุกแถว */
   async function labelId(groupName, name) {
@@ -258,12 +284,22 @@ async function main() {
         for (const name of splitList(r[col])) labelIds.push(await labelId(group, name))
       }
 
+      // ลิงก์ดิสคอร์ด → ช่องประจำ source_url ของการ์ด (ไม่ใช่ custom field)
+      const sourceUrl = String(r[SOURCE_URL_COL] ?? '').trim() || null
+
+      // ค่าเดี่ยว (งบประมาณ) — เก็บไว้เขียนหลังสร้างการ์ด
+      const scalars = []
+      for (const f of SCALAR_FIELDS) {
+        const v = scalarValue(f.type, r[f.col])
+        if (v !== null) scalars.push({ ...f, value: v })
+      }
+
       if (!COMMIT) {
         if (i < 5) {
           console.log(`  [${r.Status}] ${title.slice(0, 46)}`)
-          console.log(`      เจ้าภาพ=${ownerUserId || '—'} คนช่วย=${helperIds.length} ป้าย=${labelIds.length} เริ่ม=${start || '—'} ส่ง=${due || '—'} → ${status}`)
+          console.log(`      เจ้าภาพ=${ownerUserId || '—'} คนช่วย=${helperIds.length} แท็ก=${labelIds.length} งบ=${scalars.length} ดิสฯ=${sourceUrl ? 'มี' : '—'} เริ่ม=${start || '—'} ส่ง=${due || '—'} → ${status}`)
         }
-        stat.created++; stat.labels += labelIds.length; stat.helpers += helperIds.length
+        stat.created++; stat.labels += labelIds.length; stat.helpers += helperIds.length; stat.scalars += scalars.length
         continue
       }
 
@@ -271,6 +307,7 @@ async function main() {
         title,
         detail: ((r.Description ? String(r.Description).trim() : '') + provenance) || null,
         ownerUserId, startAt: start, dueAt: due, statusType: status,
+        sourceUrl: sourceUrl || null,
       }, importerId)
 
       // ⚠️ addCardTags **เพิ่ม** ไม่ทับของเดิม (ต่างจาก setCardLabels ตัวเก่าที่เขียนทับทั้งชุด)
@@ -278,7 +315,14 @@ async function main() {
       if (labelIds.length) await tagDB.addCardTags(ORG, card.id, labelIds.filter(Boolean))
       for (const h of helperIds) await cardDB.addHelper(ORG, card.id, h)
 
-      stat.created++; stat.labels += labelIds.length; stat.helpers += helperIds.length
+      // ค่าเดี่ยว — ensureField สร้าง field ให้เองถ้ายังไม่มี (cache กันยิงซ้ำทุกแถว)
+      for (const f of scalars) {
+        const def = scalarCache.get(f.label) ?? await tagDB.ensureField(ORG, f.label, f.type)
+        scalarCache.set(f.label, def)
+        await fieldDB.setCardFieldValue(ORG, card.id, def.id, def.type, f.value)
+      }
+
+      stat.created++; stat.labels += labelIds.length; stat.helpers += helperIds.length; stat.scalars += scalars.length
       process.stdout.write(`\r  ${stat.created}/${target.length} (${stat.errors} errors)`)
     } catch (err) {
       stat.errors++
@@ -286,7 +330,7 @@ async function main() {
     }
   }
 
-  console.log(`\n\nสรุป: การ์ด ${stat.created} · ป้าย ${stat.labels} · คนช่วย ${stat.helpers} · ไม่มีเจ้าภาพ ${stat.noOwner} · error ${stat.errors}`)
+  console.log(`\n\nสรุป: การ์ด ${stat.created} · แท็ก ${stat.labels} · ค่าเดี่ยว ${stat.scalars} · คนช่วย ${stat.helpers} · ไม่มีเจ้าภาพ ${stat.noOwner} · error ${stat.errors}`)
   if (stat.provenance) console.log(`  📝 ${stat.provenance} ใบจดชื่อผู้รับผิดชอบเดิมไว้ในรายละเอียด (คนที่ยังไม่ได้ผูกบัญชี)`)
   if (stat.bumped) console.log(`  ⚠️ ${stat.bumped} ใบเป็น "สิ่งที่ต้องทำ" แต่มีเจ้าภาพ → เลื่อนเป็น "กำลังทำ" (6 ประเภทไม่มีสภาพ assigned-แต่ยังไม่เริ่ม)`)
   if (!COMMIT) console.log('\n🔵 DRY-RUN — ยังไม่เขียนอะไรลง DB · ใส่ --commit เพื่อเขียนจริง')

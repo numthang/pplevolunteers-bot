@@ -4,7 +4,7 @@
  * ⭐ แทนที่ `db/kanban/labels.js` ที่ถูกยุบทิ้ง 2026-08-19 (user เคาะ: ป้ายกับ custom field
  *   เก็บของความหมายเดียวกัน 2 ที่ → ก่อน import การ์ดเก่าอีก 82 ใบ ต้องเหลือที่เดียว)
  *
- * ⛔ **ห้ามอ้าง field ด้วย id หรือ key** — `key` คือ `field_<id>` = ผูกกับ id ที่เครื่องนั้นสร้าง
+ * ⛔ **ห้ามอ้าง field ด้วย id หรือ key** — key มาจาก `slugifyFieldKey(label, id)` = ผูกกับ id ที่เครื่องนั้นสร้าง
  *    dev กับ prod ได้คนละเลขแน่นอน · resolve ด้วย **ชื่อ (org_id + label)** เสมอ
  *
  * ที่นี่คือ **จุดเขียนแท็กจุดเดียวของระบบ** — สคริปต์ import และสคริปต์ย้ายข้อมูลเรียกตัวเดียวกันนี้
@@ -12,6 +12,7 @@
  */
 
 import pool from '../index.js'
+import { createFieldDef } from './fields.js'
 
 /** ชนิดที่เก็บแท็กเป็น "ค่าใน field" (array ของ option id) */
 const OPTION_TYPES = ['select', 'multi_select']
@@ -21,12 +22,17 @@ const ROW_TYPES = ['checklist']
 export const ACCEPTS_TAGS = [...OPTION_TYPES, ...ROW_TYPES]
 
 /**
- * หา field จากชื่อ — ไม่มีก็สร้าง multi_select ให้ (แท็กเลือกได้หลายอันโดยธรรมชาติ)
+ * หา field จากชื่อ — ไม่มีก็สร้างให้
+ *
+ * ⚠️ สร้างผ่าน `createFieldDef()` เท่านั้น ห้าม INSERT เอง — key มาจาก `slugifyFieldKey(label, id)`
+ *    เขียน key เองที่นี่เมื่อไหร่ = field ที่สคริปต์สร้างกับที่ UI สร้างมี key คนละสูตร
+ *
+ * @param {string} type ชนิดที่จะใช้ถ้าต้องสร้างใหม่ (ของเดิมที่มีอยู่แล้วไม่ถูกเปลี่ยนชนิด)
  * @returns {{id, key, label, type, created: boolean}}
  */
-export async function ensureTagField(orgId, name) {
+export async function ensureField(orgId, name, type = 'multi_select') {
   const label = String(name || '').trim()
-  if (!label) throw new Error('ensureTagField: ต้องมีชื่อ field')
+  if (!label) throw new Error('ensureField: ต้องมีชื่อ field')
 
   const { rows } = await pool.query(
     `SELECT id, key, label, type FROM kanban_field_defs
@@ -35,19 +41,12 @@ export async function ensureTagField(orgId, name) {
   )
   if (rows[0]) return { ...rows[0], created: false }
 
-  // key ต้องเป็น field_<id> เหมือนที่ UI สร้าง → ต้องรู้ id ก่อน เลย INSERT แล้วค่อย UPDATE
-  const { rows: made } = await pool.query(
-    `INSERT INTO kanban_field_defs (org_id, key, label, type, type_options, sort_order)
-     VALUES ($1, 'tmp', $2, 'multi_select', '{}'::jsonb,
-             (SELECT COALESCE(MAX(sort_order), -1) + 1 FROM kanban_field_defs WHERE org_id = $1))
-     RETURNING id`,
-    [orgId, label]
-  )
-  const id = made[0].id
-  const key = `field_${id}`
-  await pool.query(`UPDATE kanban_field_defs SET key = $2 WHERE id = $1`, [id, key])
-  return { id, key, label, type: 'multi_select', created: true }
+  const made = await createFieldDef(orgId, { label, type })
+  return { ...made, created: true }
 }
+
+/** ทางลัดเดิม — แท็กเลือกได้หลายอันโดยธรรมชาติ เลยตั้งต้นเป็น multi_select */
+export const ensureTagField = (orgId, name) => ensureField(orgId, name, 'multi_select')
 
 /**
  * ตัวเลือก 1 อันใน field — จับคู่ด้วยชื่อ (มี unique index บน field_id+name)

@@ -20,7 +20,7 @@ const DISPLAY_NAME = `COALESCE(NULLIF(TRIM(CONCAT_WS(' ', u.firstname, u.lastnam
 
 const COLS = `
   c.id, c.org_id, c.ref_no, c.title, c.detail, c.status_type,
-  c.owner_user_id, c.start_at, c.due_at, c.priority, c.blocked, c.blocked_reason,
+  c.owner_user_id, c.start_at, c.due_at, c.priority,
   c.created_by, c.created_at, c.updated_at, c.completed_at, c.archived_at,
   c.source_url, c.source_message_id,
   ${LOCK} AS lock_token`
@@ -154,7 +154,7 @@ export async function listCards(orgId, { status = null, ownerUserId = null, unas
  *    → ห้ามมีใครเรียกฟังก์ชันนี้ตอนกดปุ่ม "เพิ่มการบ้าน" เพื่อเปิดฟอร์มเปล่า
  *      (เคสจริงที่เคยพลาด: /posts กด "เขียนโพสต์ใหม่" แล้ว POST ทันที = ร่างเปล่าค้าง DB)
  */
-export async function createCard(orgId, { title, detail = null, ownerUserId = null, startAt = null, dueAt = null, priority = 0, statusType = null }, createdBy) {
+export async function createCard(orgId, { title, detail = null, ownerUserId = null, startAt = null, dueAt = null, priority = 0, statusType = null, sourceUrl = null, sourceMessageId = null }, createdBy) {
   // ไม่มีเจ้าภาพ = อยู่ backlog เท่านั้น (DB มี CHECK กันอีกชั้น — ที่นี่กันไม่ให้ยิงไปแล้วพัง)
   let status = statusType || (ownerUserId ? 'doing' : 'backlog')
 
@@ -167,12 +167,13 @@ export async function createCard(orgId, { title, detail = null, ownerUserId = nu
   for (let attempt = 0; attempt < 5; attempt++) {
     try {
       const { rows } = await pool.query(
-        `INSERT INTO kanban_cards (org_id, ref_no, title, detail, status_type, owner_user_id, start_at, due_at, priority, created_by)
+        `INSERT INTO kanban_cards (org_id, ref_no, title, detail, status_type, owner_user_id, start_at, due_at, priority, created_by, source_url, source_message_id)
          VALUES ($1,
                  (SELECT COALESCE(MAX(ref_no), 0) + 1 FROM kanban_cards WHERE org_id = $1),
-                 $2, $3, $4, $5, $6, $7, $8, $9)
+                 $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
          RETURNING id`,
-        [orgId, title, detail, status, ownerUserId, startAt || null, dueAt || null, priority, createdBy]
+        [orgId, title, detail, status, ownerUserId, startAt || null, dueAt || null, priority, createdBy,
+         sourceUrl || null, sourceMessageId || null]
       )
       return await getCard(orgId, rows[0].id)
     } catch (e) {
@@ -192,7 +193,7 @@ export async function createCard(orgId, { title, detail = null, ownerUserId = nu
  *   1. `ref_no`  — ตัวระบุการ์ด ซ้ำไม่ได้ ต้องได้เลขใหม่
  *   2. `done` ในเช็คลิสต์ — ก๊อปงานที่เสร็จแล้วมาแล้วได้ "เตรียมของครบ 8/8" ทั้งที่ยังไม่เตรียม
  *      → **ลอกตัวรายการมาครบ แต่ติ๊กออกให้หมด**
- *   (เดิมข้อ 3 คือ `blocked` + `blocked_reason` — ถอดฟีเจอร์ออกแล้ว 2026-08-18)
+ *   (เดิมข้อ 3 คือ blocked + blocked_reason — ถอดฟีเจอร์ออก 2026-08-18 · ลบคอลัมน์ทิ้ง 2026-08-19)
  *
  * ⚠️ **ห้ามเรียก createCard() ซ้ำ** — มันใช้ pool.query ตรงๆ (คนละ connection กับ transaction นี้)
  *    และ retry loop ของมันใช้ในทรานแซกชันไม่ได้: 23505 ทำให้ทั้ง transaction abort

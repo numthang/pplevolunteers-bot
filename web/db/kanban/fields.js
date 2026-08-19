@@ -2,12 +2,11 @@
 //
 // ดีไซน์: md/kanban/CUSTOM-FIELDS.md §กลับคำ
 //
-// ⚠️ **ป้าย (kanban_labels) จะถูกยุบเข้ามาเป็น field ชนิด multi_select** — เคาะแล้ว ยังไม่ได้ทำ
-//    (กลุ่มป้าย = field · ป้ายในกลุ่ม = options · ของจริงรอ migrate: 3 กลุ่ม / 29 ป้าย / 84 เส้น)
-//    ตอนนี้ 2 กลไกยังอยู่คู่กันชั่วคราว เพราะ field ยังทำ 3 อย่างที่ป้ายทำอยู่ไม่ได้:
-//    กรองบนหน้า /kanban · ชิปบนแถวการ์ดในกระดาน · จำกัดสิทธิ์ rename/ซ่อนเฉพาะ admin
-//    → ทำ 3 อย่างนั้นให้ field ก่อน แล้วค่อย migrate (md/PENDING.md §ค้างต่อ)
-//    ⛔ อย่าเขียนโค้ดใหม่ที่ผูกป้ายให้แน่นขึ้น จะถอนยากตอน migrate
+// ✅ **ป้ายถูกยุบเข้ามาแล้ว 2026-08-19** (3 กลุ่ม / 29 ป้าย / 86 เส้น → ตกหล่น 0)
+//    กลุ่มป้าย = field · ป้ายในกลุ่ม = options · `kanban_labels`/`kanban_card_labels` ไม่มีโค้ดอ่านแล้ว
+//    3 อย่างที่ป้ายเคยทำได้อย่างเดียว ตอนนี้ field ทำได้หมด:
+//    กรองบน /kanban (lib/kanbanTagFilter.js) · ชิปบนการ์ด (cardTags()) · สิทธิ์ (ไม่มี gate โดยตั้งใจ ดูข้างล่าง)
+//    ⛔ ห้ามเขียนโค้ดใหม่ที่อ่าน/เขียนตารางป้ายอีก — รอ DROP อยู่
 //
 // ⛔ ไม่มี admin gate ในไฟล์นี้เลย (เคาะ 2026-08-18 รอบเย็น) — ทุกอย่างสร้าง/แก้/ซ่อนได้จากในการ์ด
 //    ที่กำลังแก้อยู่แล้ว (route เช็คแค่ canEditCard) ไม่มีหน้า "จัดการช่องข้อมูล" แยกต่างหากอีกต่อไป
@@ -64,9 +63,12 @@ export async function createFieldDef(orgId, { label, helpText = null, type }) {
   const id = idRow[0].id
   const key = slugifyFieldKey(label, id)
 
+  // ⚠️ ต้องตั้ง sort_order = MAX+1 เอง — DEFAULT เป็น 0 ทำให้ field ใหม่ทุกอันไปแทรกกลางตาราง
+  //    (ORDER BY sort_order, id → กองที่ sort_order=0 ลอยขึ้นบนหมด) เจอตอนสร้าง "งบประมาณ" 2026-08-19
   const { rows } = await pool.query(
-    `INSERT INTO kanban_field_defs (id, org_id, key, label, help_text, type)
-     VALUES ($1, $2, $3, $4, $5, $6)
+    `INSERT INTO kanban_field_defs (id, org_id, key, label, help_text, type, sort_order)
+     VALUES ($1, $2, $3, $4, $5, $6,
+             (SELECT COALESCE(MAX(sort_order), -1) + 1 FROM kanban_field_defs WHERE org_id = $2))
      RETURNING id, key, label, help_text, type, sort_order, archived_at`,
     [id, orgId, key, label, helpText, type]
   )
