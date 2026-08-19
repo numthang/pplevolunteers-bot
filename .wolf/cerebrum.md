@@ -1086,3 +1086,12 @@ guild `1115613658408566844` มี 117 ยศ แมป permission 0 ยศ → 
 - ⚠️ ข้อแลก: ทำแบบนี้ได้เฉพาะตอนยังไม่มีคนใช้จริง — พอมีคนกรอกงานเองแล้ว **ห้ามใช้วิธีนี้อีก** ต้องทำ dedupe
 - TRUNCATE เฉพาะ `kanban_cards` (CASCADE ลูก) — **ไม่แตะ `kanban_field_defs`/`kanban_field_options`**
   เพราะ field + ตัวเลือกคือของที่ user จัดเองไว้ ไม่ใช่ผลผลิตของ import
+
+## User Preferences (2026-08-19 — migration: ห้ามทำไฟล์ SQL แยก)
+
+- **user รัน "ทุกอย่างหลัง marker" ใน `scripts/migration/migration.sql` เสมอ** เป็น workflow ประจำ
+- ⛔ **ห้ามตัด DDL ที่ค้างออกไปเป็นไฟล์ใหม่** (เคยทำ `pending-2026-08-19.sql` แล้วโดนทัก)
+  เหตุผล user: กลายเป็นต้องซิงก์ 2 ที่ แล้วมันหลุดจากกันแน่นอน
+- ของที่อยากเพิ่ม (transaction / คำเตือนลำดับ) ให้ **ใส่ไว้ใต้ marker ใน migration.sql เลย**
+  ตอนนี้ใต้ marker มี `BEGIN; … COMMIT;` ห่อไว้ + คำเตือนว่าต้อง TRUNCATE ก่อน
+- เสร็จแล้วเลื่อน marker ลงมาท้ายไฟล์ + commit (กติกาเดิม)

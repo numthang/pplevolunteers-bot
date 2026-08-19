@@ -939,6 +939,18 @@ UPDATE users u
 ALTER TABLE dc_orgchart_config ALTER COLUMN excluded SET DEFAULT FALSE;
 
  -- production ทำถึงตรงนี้
+--
+-- ⬇⬇ ทุกอย่างใต้บรรทัดนี้ = ยังไม่ได้รันบน production ⬇⬇
+--    วิธีรัน (user รันทุกอย่างหลัง marker เสมอ — ห้ามทำไฟล์แยก มันหลุดจากกันแน่นอน):
+--      คัดตั้งแต่ BEGIN; ถึง COMMIT; ข้างล่างไปรัน แล้วเลื่อน marker นี้ลงมาท้ายไฟล์ + commit
+--
+-- ⛔ รอบ 2026-08-19: ต้อง TRUNCATE kanban_cards ก่อน ไม่งั้นพัง 1 บรรทัด
+--    ALTER TABLE kanban_card_checklist ALTER COLUMN field_id SET NOT NULL
+--    (field_id เพิ่งถูกเพิ่ม → แถวเช็คลิสต์เดิมเป็น NULL หมด)
+--    user เคาะแล้วว่าการ์ดบน prod ทิ้งได้:
+--      TRUNCATE kanban_cards RESTART IDENTITY CASCADE;
+
+BEGIN;
 
 -- 2026-08-18 · kanban: ลิงก์ต้นทางดิสฯ — บอทเคยทิ้ง msg.id ไปเฉยๆ ตอนสร้างการ์ดจาก "📌 สร้างเป็นการบ้าน"
 -- บอท+importer เขียนเท่านั้น (ไม่ใช่ custom field ที่คนแก้ได้ — ดู md/kanban/CUSTOM-FIELDS.md §เส้นแบ่ง)
@@ -1068,3 +1080,5 @@ ALTER TABLE kanban_cards DROP COLUMN IF EXISTS blocked_reason;
 -- ทำสลับ = แท็กบนการ์ดหายไปต่อหน้า (ขึ้นโค้ดก่อนย้าย) หรือกู้ไม่ได้ (ลบตารางก่อนย้าย)
 DROP TABLE IF EXISTS kanban_card_labels;
 DROP TABLE IF EXISTS kanban_labels;
+
+COMMIT;
