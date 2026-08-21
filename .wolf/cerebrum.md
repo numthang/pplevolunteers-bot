@@ -612,6 +612,22 @@ resolve orgId (guild-first เหมือน `/api/bot/features` ไม่ใ�
 ดู `web/app/api/bot/ai-mention-prompt/route.js` เป็นแบบอ้างอิง — ถ้าจะเปิดแก้ posts.*/case.* ทีหลังก็ลอกทรงนี้ได้
 (orgId=null ใช้กับ setPrompt ไม่ได้ — ON CONFLICT ของฟังก์ชันนี้ผูกกับ index ที่ `WHERE org_id IS NOT NULL` เท่านั้น)
 
+### เทส UI local ด้วย Playwright + คุกกี้จาก curl magic-link login — ใช้งานได้จริง ไม่ต้องขับ browser ทำ OAuth (2026-08-21)
+
+ต่อยอด [[reference_local_browser_test_login]] (mint token ลง `org_login_tokens` ตรงด้วย psql ห้ามยิง endpoint จริง = สแปมเมล):
+1. เปิด dev server แยกพอร์ต (`NEXT_DIST_DIR=.next-test npx next dev -p 3100`) กัน `.next` ชนกับที่ user รันอยู่พอร์ต 3000
+2. login ผ่าน next-auth ด้วย curl ล้วนได้ ไม่ต้องพึ่ง browser เลย: `GET /api/auth/csrf` เอา csrfToken →
+   `POST /api/auth/callback/magic` ด้วย `csrfToken` + `token` (จาก org_login_tokens) + `json=true` → คุกกี้ session ลง cookie jar (`curl -c`)
+3. เอาคุกกี้ไฟล์นั้นไปโหลดใส่ Playwright context (`context.addCookies(...)`) แล้วเปิดหน้าเว็บจริง — ได้ browser ที่ล็อกอินแล้วโดยไม่ต้องเดิน OAuth flow
+4. `npm install playwright@latest` ในโฟลเดอร์ scratchpad เร็วมาก (ไม่โหลด browser binary ใหม่) เพราะเครื่องนี้มี chromium cache ที่ `~/.cache/ms-playwright` ตรงเวอร์ชันอยู่แล้ว
+
+**⛔ กับดัก:** ไฟล์คุกกี้แบบ Netscape (`curl -c`) ที่ curl เก็บมาจะขึ้นต้นบรรทัดด้วย `#HttpOnly_<domain>` สำหรับคุกกี้ที่มี
+flag HttpOnly (next-auth session/csrf ทุกตัวเป็นแบบนี้) — ถ้า parse ไฟล์แล้ว filter บรรทัดที่ขึ้นต้นด้วย `#` ทิ้งแบบไม่คิด
+จะเผลอกรองคุกกี้จริงออกหมด (เจอเอง: `cookies.filter(l => !l.startsWith('#'))` ทำให้ array คุกกี้ว่างเปล่า login ไม่ติดเงียบๆ)
+ต้อง filter ด้วย `l.includes('\t')` แทน (คอมเมนต์จริงของไฟล์ไม่มี tab) แล้วตั้ง `httpOnly: domain.startsWith('#HttpOnly_')` ตรงๆ
+
+การทดสอบวิธีนี้จับบั๊กจริงได้ 1 ตัว (ดู Do-Not-Repeat "3-state cycle") ที่ eslint/build/vitest ผ่านหมดแต่พังตอนคลิกจริง — ยืนยันว่า
+"เทสอัตโนมัติ + build ผ่าน" ไม่พอสำหรับ interaction ที่มี state cycle หลายจังหวะ ต้องคลิกจริงเสมอ (ตรงกับกฎ CLAUDE.md §UI testing)
 
 ## Do-Not-Repeat
 
@@ -1055,6 +1071,17 @@ user สั่ง: *"เวลากดแก้ไข element ไหน กด 
 (ค่าที่พิมพ์ทิ้งไป) แล้วบันทึกจริง · มีอยู่ 3 ที่พร้อมกัน (`FieldNameInput` `ItemTextInput` `OptionEditor`)
 **วิธีแก้: ธง `cancelled` เป็น `useRef` ไม่ใช่ `useState`** แล้วให้ `commit()` เช็คแล้ว return ทันที
 (ref เขียนปุ๊บอ่านได้ปั๊บ — state ไม่ทันรอบ render เดียวกัน)
+
+### 3-state cycle (asc→desc→null) ต้องเทียบกับ "ทิศเริ่มต้นของ field นั้น" ไม่ใช่ 'asc' ตรงๆ (2026-08-21)
+
+เขียนเมนู "เรียงลำดับ" ของ `/kanban` (`KanbanHome.jsx` ปุ่ม sort) — ตั้งใจให้กดฟิลด์เดิมซ้ำวน
+`ยังไม่เลือก → ทิศเริ่มต้น → ทิศตรงข้าม → null` แต่ทิศเริ่มต้นไม่ใช่ asc เสมอ (วันที่/ตัวเลข/เช็คลิสต์ = desc
+ก่อนเพราะ "ล่าสุด/เยอะสุดก่อน" เข้าใจง่ายกว่า) โค้ดแรกเขียน `if (prev.dir === 'asc') return desc; else return null`
+→ ฟิลด์ที่ทิศเริ่มต้นเป็น desc (เช่นวันที่) วนได้แค่ 2 จังหวะ (desc→null) ข้ามจังหวะ asc ไปเลย
+**เจอด้วย Playwright จริง ไม่ใช่อ่านโค้ดเจอ** — เทสอัตโนมัติ/eslint/build ผ่านหมดเพราะไม่มี type error
+ต้องคลิกจริงในเบราว์เซอร์ 3 ครั้งแล้วดู pill ถึงเห็น
+**แก้ถูก:** เก็บ `defaultDir` ของ type นั้นไว้ก่อน แล้วเทียบ `prev.dir === defaultDir` (ไม่ใช่ `=== 'asc'`)
+ดู [[project_kanban_module]]
 
 
 ## Decision Log

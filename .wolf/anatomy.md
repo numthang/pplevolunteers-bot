@@ -1,12 +1,17 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-20T16:52:14.346Z
-> Files: 1027 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-21T06:47:55.167Z
+> Files: 1031 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/1b7cbea7-c43c-466d-9a5f-c61fda8e76b5/scratchpad/
 
 - `restructure_cerebrum.py` — find_line_idx, next_header_idx, delete_header_block, delete_single_line (~990 tok)
 - `restructure_phase2.py` — block_content, strip_blank_edges (~1915 tok)
+
+## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/98431158-6049-42cf-b35f-3c39e5aab829/scratchpad/
+
+- `test-cycle.mjs` — BASE: pillText (~485 tok)
+- `test-kanban.mjs` — Declares BASE (~999 tok)
 
 ## ../../../.claude/plans/
 
@@ -1870,7 +1875,7 @@
 - `DeleteChoiceDialog.jsx` — DeleteChoiceDialog — กล่อง "ลบ" ที่ให้เลือกเอาเองว่า **ซ่อน/เก็บเข้ากรุ** หรือ **ลบถาวร** (~1182 tok)
 - `FieldManager.jsx` — FieldManager — ช่องข้อมูลตั้งเองของ org (/kanban/fields) · admin เท่านั้น (~3907 tok)
 - `FieldRow.jsx` — FieldRow — แถว `[ไอคอน · ชื่อ] | [ค่า]` บรรทัดเดียว ทรง Notion/AppFlowy (~749 tok)
-- `KanbanHome.jsx` — KanbanHome — หน้าเดียวของโมดูลการบ้าน (`/kanban`) (~13658 tok)
+- `KanbanHome.jsx` — KanbanHome — หน้าเดียวของโมดูลการบ้าน (`/kanban`) (~15912 tok)
 - `LabelChips.jsx` — LabelChips — ป้ายของการ์ด 1 ใบ วาดแยกเป็นกอง ไม่ใช่กองรวมพรืดเดียว (~485 tok)
 - `PersonProfileModal.jsx` — PersonProfileModal — กล่องลอยแบบดิสคอร์ด เปิดตอนกดชื่อเจ้าภาพ/คนช่วยในการ์ด (~1228 tok)
 - `TagCombobox.jsx` — TagCombobox — ตัวเลือกของ select/multi_select field (ตรงสกรีนช็อตที่ user ส่งมา 2026-08-18 รอบเย็น) (~8411 tok)
@@ -2066,6 +2071,7 @@
 - `kanbanLabelColors.js` — สีของชิปป้าย + หัวช่องกระดาน (~1175 tok)
 - `kanbanLabelFilter.js` — ตัวกรองการ์ดด้วยป้าย — ตรรกะล้วน ไม่แตะ DOM/DB (เทสอยู่ที่ lib/__tests__/kanbanLabelFilter.test.js) (~869 tok)
 - `kanbanOptionActions.js` — จัดการตัวเลือกในคลัง (kanban_field_options) จากฝั่ง client · fetchOptions/patchOption/setOptionArchived/deleteOptionWithConfirm · **ทางเขียนเดียว** TagCombobox กับ ChecklistFieldBox ใช้ร่วมกัน (~750 tok)
+- `kanbanSort.js` — "เรียงตาม" ที่ผู้ใช้เลือกเอง — เมนู sort บน /kanban (แยกจาก sortCards ใน kanbanGrouping.js (~1005 tok)
 - `linkState.js` — Exports signLinkState, verifyLinkState (~276 tok)
 - `org-auth-options.js` — web/lib/org-auth-options.js — org login (email-native, แยกจาก PPLE Discord auth) (~1072 tok)
 - `org.js` — web/lib/org.js — Org layer: resolve guild ในเครือเดียวกัน (ฝั่ง web · คู่กับ bot db/org.js) (~192 tok)
@@ -2128,6 +2134,7 @@
 - `kanbanFieldValue.test.js` — Declares res (~1567 tok)
 - `kanbanGrouping.test.js` — นาฬิกาตรึงไว้ — ห้ามให้เทสขึ้นกับเวลาที่รัน (~1605 tok)
 - `kanbanLabelFilter.test.js` — ป้ายตัวอย่าง — ชื่อกลุ่มมาจากของจริงบน dev (สายงาน 12 · พื้นที่ 9 · อุปกรณ์ 8) (~1424 tok)
+- `kanbanSort.test.js` — Declares at (~1058 tok)
 - `orgMemberRoles.live.test.js` — Live check (ต่อ DB จริง) — ORG_ACCESS_REDESIGN ขั้น 5: "ทางเขียน" (~1796 tok)
 - `orgScopeNodes.live.test.js` — Live check (ต่อ DB จริง) — ตัวจัดผังพื้นที่ (org_scope_nodes) (~1124 tok)
 - `payersDiff.live.test.js` — diff test ชั่วคราว — เทียบ payers เก่า (dc_guild_roles + geography.js) (~450 tok)
@@ -2147,9 +2154,9 @@
 
 ## web/locales/
 
-- `en.json` (~21531 tok)
+- `en.json` (~22201 tok)
 - `en.json` — web locale strings อังกฤษ (~60 tok)
-- `th.json` (~20605 tok)
+- `th.json` (~21252 tok)
 - `th.json` — web locale strings ไทย (starter: common.*) (~60 tok)
 
 ## web/public/media-temp/
