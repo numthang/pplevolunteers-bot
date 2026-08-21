@@ -601,6 +601,17 @@ org 1 มีคนชื่อ "Ploy" 6 คน "Oat" 3 คน → กล่อ�
 (เจอตอนออกแบบ `getPersonProfile()` ใน `web/db/kanban/people.js` — จับได้จากการไล่ trace เอง ไม่ใช่ user ทัก)
 ตรรกะเดียวกับที่ `kanbanGuard.js` ใช้กันการ์ดข้าม org (404 ไม่ใช่ 403) — ใครทำ "ดูของคนอื่นจาก id" ต่อไปให้ลอกแบบนี้
 
+### `org_ai_prompts` kind='slot' (posts.*, case.*) ไม่มี UI แก้เลยสักช่อง จนถึง 2026-08-20
+
+`web/db/orgAiPrompts.js` มีครบ `getPrompt/listPrompts/setPrompt/resetPrompt` พร้อมใช้ (per-org override, org_id ไม่ NULL)
+แต่ **ไม่มี route/page ไหนเรียก `listPrompts`/`setPrompt` เลย** — prompt ของ posts.compose/case.letter_draft ฯลฯ
+แก้ได้แค่จากโค้ด `config/aiPrompts.js` เท่านั้น ทั้งที่ดีไซน์ไว้ให้ org แก้ทับได้แล้ว (คนละระบบกับ `org_ai_prompts` kind='mode'
+ที่มี UI ที่ `/bot/ai` ModesSection — นั่นแก้ **ชุดกลาง** org_id IS NULL คนละคอลัมน์ unique กันคนละ path)
+→ เพิ่ม slot ใหม่ (`bot.ai_mention`, 2026-08-20) ต้องสร้าง route เองเสมอ ใช้ `getGuildId(session)` → `orgIdOfGuild()`
+resolve orgId (guild-first เหมือน `/api/bot/features` ไม่ใช่ org switcher) แล้วเรียก `setPrompt(orgId, value, head)` ตรงๆ
+ดู `web/app/api/bot/ai-mention-prompt/route.js` เป็นแบบอ้างอิง — ถ้าจะเปิดแก้ posts.*/case.* ทีหลังก็ลอกทรงนี้ได้
+(orgId=null ใช้กับ setPrompt ไม่ได้ — ON CONFLICT ของฟังก์ชันนี้ผูกกับ index ที่ `WHERE org_id IS NOT NULL` เท่านั้น)
+
 
 ## Do-Not-Repeat
 

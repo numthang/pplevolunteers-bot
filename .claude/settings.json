@@ -53,11 +53,6 @@
             "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR/.wolf/hooks/session-start.js\"",
             "timeout": 5
-          },
-          {
-            "type": "command",
-            "command": "python3 -c \"\nimport json, os\np = os.path.join(os.environ.get('CLAUDE_PROJECT_DIR', '.'), 'md/WOLF-INBOX.md')\ntry:\n    c = open(p).read()\nexcept Exception:\n    c = ''\nif '###' in c:\n    print(json.dumps({'hookSpecificOutput': {'hookEventName': 'SessionStart', 'additionalContext': 'WOLF-INBOX has pending items. If this is the primary machine, merge each section into the .wolf/ destination named in its heading, then DELETE the merged section from md/WOLF-INBOX.md and commit.\\n\\n' + c}}))\n\"",
-            "timeout": 10
           }
         ]
       }

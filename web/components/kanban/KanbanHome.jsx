@@ -19,10 +19,10 @@
  * ⚠️ ห้ามทำแถบสีหัวกองด้วย border-t-<สี> — `dark:border-disc-border` ทับสีขอบบนทิ้งในดาร์กโหมด
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import {
-  Plus, X, Clock, User, ListChecks, Tag, MoreHorizontal, Pencil, Copy,
+  Plus, X, Clock, User, ListChecks, MoreHorizontal, Pencil, Copy,
   ChevronDown, ChevronRight, Loader2, ArchiveRestore, Trash2,
 } from 'lucide-react'
 import { STATUS_TYPES } from '@/lib/kanbanAccess.js'
@@ -306,7 +306,28 @@ export default function KanbanHome() {
   const [scope, setScope] = useState('mine')     // 'mine' | 'all' | 'archived' — ตั้งต้นของฉัน
   const [groupBy, setGroupBy] = useState('status') // 'status' | 'due'
   const [labelFilter, setLabelFilter] = useState([])
-  const [filterOpen, setFilterOpen] = useState(false)
+  const [helperFilter, setHelperFilter] = useState([])   // user_id (string) ของผู้ช่วยที่ถูกเลือกกรอง
+  // dropdown ไหนกำลังกางอยู่ — index ใน filterGroups (ป้าย) หรือ 'helper' (pill ผู้ช่วยท้ายแถว) หรือ null = ปิดหมด
+  // (ใช้ index แทนชื่อกลุ่มเพราะกลุ่ม "ไม่มีชื่อ" มีค่าเป็น null อยู่แล้ว ชนกับ sentinel ปิดไม่ได้)
+  const [openGroupIdx, setOpenGroupIdx] = useState(null)
+  const filterRowRef = useRef(null)
+
+  // dropdown ตัวกรองป้าย — ปิดเมื่อคลิกนอกแถวปุ่ม/กด ESC (ตัวกรองอื่นในโปรเจกต์ก็ใช้ mousedown ไม่ใช่ click
+  // เพราะต้องปิดก่อน onClick ของปุ่มอื่นด้านนอกจะยิง) · ครอบทั้งแถวไม่ใช่ต่อปุ่ม เพราะคลิกปุ่มกลุ่มอื่นตอนอันหนึ่ง
+  // เปิดอยู่ยังนับว่า "อยู่ในแถว" — onClick ของปุ่มนั้นสลับ openGroupIdx เอง ไม่ต้องพึ่ง outside-click ปิดก่อน
+  useEffect(() => {
+    if (openGroupIdx === null) return
+    function onClickOutside(e) {
+      if (filterRowRef.current && !filterRowRef.current.contains(e.target)) setOpenGroupIdx(null)
+    }
+    function onKey(e) { if (e.key === 'Escape') setOpenGroupIdx(null) }
+    document.addEventListener('mousedown', onClickOutside)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onClickOutside)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [openGroupIdx])
 
   // ฟอร์ม "เพิ่มการบ้าน" — inline panel · ไม่ POST จนกว่าจะกดบันทึก (กฎ CLAUDE.md §Create vs Update)
   const [formOpen, setFormOpen] = useState(false)
@@ -355,10 +376,29 @@ export default function KanbanHome() {
     [cards, scope, viewerUserId]
   )
   const filterGroups = useMemo(() => collectFilterGroups(scoped), [scoped])
-  const visible = useMemo(() => filterCards(scoped, labelFilter), [scoped, labelFilter])
+  // ผู้ช่วยที่ "มีอยู่จริง" บนการ์ดที่โหลดมา + จำนวนใบที่ติด — เหตุผลเดียวกับ collectFilterGroups
+  // (ไม่เอาทั้ง org มาวาง จะได้ตัวเลือกกดแล้วว่างเปล่าเต็มไปหมด)
+  const helperOptions = useMemo(() => {
+    const map = new Map()
+    for (const c of scoped) {
+      for (const h of c.helpers || []) {
+        const id = String(h.user_id)
+        if (!map.has(id)) map.set(id, { id, name: h.name, count: 0 })
+        map.get(id).count++
+      }
+    }
+    return [...map.values()].sort((a, b) => a.name.localeCompare(b.name, 'th'))
+  }, [scoped])
+  const visible = useMemo(() => {
+    const byLabel = filterCards(scoped, labelFilter)
+    if (!helperFilter.length) return byLabel
+    const wanted = new Set(helperFilter)
+    return byLabel.filter((c) => (c.helpers || []).some((h) => wanted.has(String(h.user_id))))
+  }, [scoped, labelFilter, helperFilter])
   const groups = useMemo(() => groupCards(visible, groupBy), [visible, groupBy])
 
   const selectedIds = new Set(labelFilter.map((l) => String(l.id)))
+  const selectedHelperIds = new Set(helperFilter)
   // ในกรุลากไม่ได้ — ต้องเอาออกจากกรุก่อนถึงจะขยับสถานะได้ (ไม่งั้นได้การ์ดที่ "เสร็จ" ทั้งที่อยู่ในกรุ)
   const canDrag = groupBy === 'status' && !inArchive
 
@@ -367,6 +407,10 @@ export default function KanbanHome() {
       const id = String(label.id)
       return prev.some((l) => String(l.id) === id) ? prev.filter((l) => String(l.id) !== id) : [...prev, label]
     })
+  }
+
+  function toggleHelperFilter(id) {
+    setHelperFilter((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
   }
 
   function onDragStart(e, card) {
@@ -635,64 +679,109 @@ export default function KanbanHome() {
           />
         </div>
 
-        {filterGroups.length > 0 && (
-          <button
-            onClick={() => setFilterOpen((v) => !v)}
-            className={`flex items-center gap-1.5 px-4 py-2 text-base rounded-lg border font-medium transition ${
-              labelFilter.length
-                ? 'border-teal text-teal'
-                : 'border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover'
-            }`}
-          >
-            <Tag size={16} />
-            {t('filter.title')}
-            {labelFilter.length > 0 && <span>({labelFilter.length})</span>}
-          </button>
-        )}
-      </div>
+        {(filterGroups.length > 0 || helperOptions.length > 0) && (
+          <div ref={filterRowRef} className="flex flex-wrap items-center gap-2">
+            {filterGroups.map(({ group, labels }, idx) => {
+              const activeLabels = labelFilter.filter((l) => (l.group ?? null) === group)
+              // ชื่อกลุ่มมาจาก DB — ห้ามแปลผ่าน t()
+              const groupName = group || t('modal.ungrouped')
+              return (
+                <div key={group || '_'} className="relative">
+                  <button
+                    onClick={() => setOpenGroupIdx((v) => (v === idx ? null : idx))}
+                    className={`flex items-center gap-1.5 h-9 pl-3 pr-2.5 text-sm rounded-lg border font-medium transition max-w-[220px] ${
+                      activeLabels.length
+                        ? 'border-teal bg-teal/10 text-teal'
+                        : 'border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover'
+                    }`}
+                  >
+                    <span className="truncate">
+                      {groupName}
+                      {activeLabels.length > 0 && `: ${activeLabels.map((l) => l.name).join(', ')}`}
+                    </span>
+                    <ChevronDown size={14} className="shrink-0" />
+                  </button>
 
-      {filterOpen && filterGroups.length > 0 && (
-        <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg p-4 flex flex-col gap-3">
-          {filterGroups.map(({ group, labels }) => (
-            <div key={group || '_'}>
-              {/* ชื่อกลุ่มมาจาก DB — ห้ามแปลผ่าน t() */}
-              <p className="text-sm text-warm-400 dark:text-disc-muted mb-1">{group || t('modal.ungrouped')}</p>
-              <div className="flex flex-wrap gap-1.5">
-                {labels.map((l) => {
-                  const on = selectedIds.has(String(l.id))
-                  const tint = chipProps(l)
-                  return (
-                    <button
-                      key={l.id}
-                      onClick={() => toggleLabelFilter(l)}
-                      style={on ? tint.style : undefined}
-                      className={`flex items-center gap-1 px-3 py-1 text-sm rounded-md font-medium border whitespace-nowrap ${
-                        on
-                          ? `${tint.className} border-transparent ring-1 ring-teal`
-                          : 'border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover'
-                      }`}
-                    >
-                      {l.name}
-                      <span className="text-warm-400 dark:text-disc-muted">{l.count}</span>
-                    </button>
-                  )
-                })}
+                  {openGroupIdx === idx && (
+                    <div className="absolute left-0 top-full z-20 mt-1 w-64 max-h-64 overflow-y-auto bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg shadow-lg p-2 flex flex-wrap gap-1.5">
+                      {labels.map((l) => {
+                        const on = selectedIds.has(String(l.id))
+                        const tint = chipProps(l)
+                        return (
+                          <button
+                            key={l.id}
+                            onClick={() => toggleLabelFilter(l)}
+                            style={on ? tint.style : undefined}
+                            className={`flex items-center gap-1 px-3 py-1 text-sm rounded-md font-medium border whitespace-nowrap ${
+                              on
+                                ? `${tint.className} border-transparent ring-1 ring-teal`
+                                : 'border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover'
+                            }`}
+                          >
+                            {l.name}
+                            <span className="text-warm-400 dark:text-disc-muted">{l.count}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+
+            {helperOptions.length > 0 && (
+              <div className="relative">
+                <button
+                  onClick={() => setOpenGroupIdx((v) => (v === 'helper' ? null : 'helper'))}
+                  className={`flex items-center gap-1.5 h-9 pl-3 pr-2.5 text-sm rounded-lg border font-medium transition max-w-[220px] ${
+                    helperFilter.length
+                      ? 'border-teal bg-teal/10 text-teal'
+                      : 'border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover'
+                  }`}
+                >
+                  <span className="truncate">
+                    {t('filter.helperGroup')}
+                    {helperFilter.length > 0 &&
+                      `: ${helperOptions.filter((h) => selectedHelperIds.has(h.id)).map((h) => h.name).join(', ')}`}
+                  </span>
+                  <ChevronDown size={14} className="shrink-0" />
+                </button>
+
+                {openGroupIdx === 'helper' && (
+                  <div className="absolute left-0 top-full z-20 mt-1 w-64 max-h-64 overflow-y-auto bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg shadow-lg p-2 flex flex-wrap gap-1.5">
+                    {helperOptions.map((h) => {
+                      const on = selectedHelperIds.has(h.id)
+                      return (
+                        <button
+                          key={h.id}
+                          onClick={() => toggleHelperFilter(h.id)}
+                          className={`flex items-center gap-1 px-3 py-1 text-sm rounded-md font-medium border whitespace-nowrap ${
+                            on
+                              ? 'bg-teal/10 border-transparent ring-1 ring-teal text-teal'
+                              : 'border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover'
+                          }`}
+                        >
+                          {h.name}
+                          <span className="text-warm-400 dark:text-disc-muted">{h.count}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-sm text-warm-400 dark:text-disc-muted">{t('filter.hint')}</p>
-            {labelFilter.length > 0 && (
+            )}
+
+            {(labelFilter.length > 0 || helperFilter.length > 0) && (
               <button
-                onClick={() => setLabelFilter([])}
-                className="flex items-center gap-1 px-4 py-2 text-base rounded-lg border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover font-medium transition"
+                onClick={() => { setLabelFilter([]); setHelperFilter([]) }}
+                className="h-9 px-3 text-sm border border-warm-200 dark:border-disc-border bg-card-bg text-warm-500 dark:text-disc-muted hover:text-red-500 dark:hover:text-red-400 hover:border-red-300 dark:hover:border-red-700 rounded-lg transition-colors whitespace-nowrap"
               >
-                <X size={16} /> {t('filter.clear')}
+                {t('filter.clear')}
               </button>
             )}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {formOpen && (
         <form
@@ -799,7 +888,7 @@ export default function KanbanHome() {
       ) : inArchive && visible.length === 0 ? (
         // กรุว่างต้องบอกตรงๆ ไม่ใช่โชว์ 6 กองเปล่าให้เดาเอง
         <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg p-10 text-center text-base text-warm-400 dark:text-disc-muted">
-          {labelFilter.length ? t('filter.noMatch') : t('empty.archived')}
+          {(labelFilter.length || helperFilter.length) ? t('filter.noMatch') : t('empty.archived')}
         </div>
       ) : (
         // 2 โหมด layout เท่านั้น — **ไม่มีการปัดแนวนอนที่ไหนเลย** (user เกลียดการปัด · เคยทำ snap แบบ Trello แล้วไม่เอา)
@@ -911,7 +1000,7 @@ export default function KanbanHome() {
                   )}
                   {sorted.length === 0 && (
                     <p className="text-sm text-warm-400 dark:text-disc-muted px-1 py-3 text-center">
-                      {labelFilter.length ? t('filter.noMatch') : t('board.emptyColumn')}
+                      {(labelFilter.length || helperFilter.length) ? t('filter.noMatch') : t('board.emptyColumn')}
                     </p>
                   )}
                 </div>

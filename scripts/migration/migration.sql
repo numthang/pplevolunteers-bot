@@ -938,7 +938,6 @@ UPDATE users u
 -- ลายเซ็นของตารางที่เคยถูก DBeaver auto-create ตอนย้าย data (ทิ้ง DEFAULT)
 ALTER TABLE dc_orgchart_config ALTER COLUMN excluded SET DEFAULT FALSE;
 
- -- production ทำถึงตรงนี้
 --
 -- ⬇⬇ ทุกอย่างใต้บรรทัดนี้ = ยังไม่ได้รันบน production ⬇⬇
 --    วิธีรัน (user รันทุกอย่างหลัง marker เสมอ — ห้ามทำไฟล์แยก มันหลุดจากกันแน่นอน):
@@ -1087,3 +1086,5 @@ DROP TABLE IF EXISTS kanban_labels;
 CREATE INDEX IF NOT EXISTS idx_org_members_user_org ON org_members (user_id, org_id);
 
 COMMIT;
+
+-- production ทำถึงตรงนี้

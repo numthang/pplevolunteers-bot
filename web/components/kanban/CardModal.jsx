@@ -27,6 +27,12 @@ import PersonProfileModal from './PersonProfileModal.jsx'
 
 const AUTOSAVE_MS = 800
 
+function autoGrow(el) {
+  if (!el) return
+  el.style.height = 'auto'
+  el.style.height = el.scrollHeight + 'px'
+}
+
 export default function CardModal({ cardId, onClose, onChanged }) {
   const t = useTranslations('kanban')
 
@@ -52,6 +58,7 @@ export default function CardModal({ cardId, onClose, onChanged }) {
 
   const lockToken = useRef(null)
   const saveTimer = useRef(null)
+  const detailRef = useRef(null)
   // ค่าที่ "ตรงกับ DB ตอนนี้" — autosave ยิงต่อเมื่อค่าปัจจุบันต่างจากนี้เท่านั้น
   //
   // ⛔ ห้ามใช้ ref แบบ loadedOnce แทน (เคยเขียนแบบนั้นแล้วพัง 2026-08-15):
@@ -96,6 +103,9 @@ export default function CardModal({ cardId, onClose, onChanged }) {
   }, [cardId, t])
 
   useEffect(() => { load() }, [load])
+
+  // ขยายช่อง detail ตามความยาวข้อความ — ยิงตอนโหลดค่าจริงมาด้วย ไม่ใช่แค่ตอนพิมพ์
+  useEffect(() => { autoGrow(detailRef.current) }, [loading, detail])
 
   /**
    * ปิด 3 ทาง — ทางที่ 1: ESC
@@ -367,9 +377,10 @@ export default function CardModal({ cardId, onClose, onChanged }) {
               <div className="flex flex-col gap-0.5">
                 <FieldRow icon={AlignLeft} label={t('form.detailLabel')}>
                   <textarea
+                    ref={detailRef}
                     value={detail}
                     disabled={readOnly}
-                    onChange={(e) => setDetail(e.target.value)}
+                    onChange={(e) => { setDetail(e.target.value); autoGrow(e.target) }}
                     /* ESC = คืนค่าที่เซฟไว้ล่าสุดแล้วออกจากช่อง (ไม่ปิดกล่อง) */
                     onKeyDown={(e) => {
                       if (e.key !== 'Escape') return
@@ -379,7 +390,7 @@ export default function CardModal({ cardId, onClose, onChanged }) {
                     }}
                     rows={3}
                     placeholder={t('modal.fieldEmpty')}
-                    className="w-full px-2 -mx-2 py-2 text-base rounded-lg border border-transparent bg-transparent text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted hover:bg-warm-50 dark:hover:bg-disc-hover focus:outline-none focus:bg-card-bg focus:border-warm-200 dark:focus:border-disc-border focus:ring-2 focus:ring-teal resize-none disabled:opacity-60 transition"
+                    className="w-full px-2 -mx-2 py-2 text-base rounded-lg border border-transparent bg-transparent text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted hover:bg-warm-50 dark:hover:bg-disc-hover focus:outline-none focus:bg-card-bg focus:border-warm-200 dark:focus:border-disc-border focus:ring-2 focus:ring-teal resize-none overflow-hidden disabled:opacity-60 transition"
                   />
                 </FieldRow>
 

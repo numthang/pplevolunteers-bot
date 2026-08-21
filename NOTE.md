@@ -6,24 +6,10 @@
 - ผมทำ project นีี้ิติดต่อมา 4 เดือนแล้วมั้ง อยากรู้ว่ามันมีขยะความคิดอะไรรกๆ ที่ claude ควรลบไปบ้างไหม ไม่งั้นถ้ามันจดอย่างเดียว บวมไปเรื่อยๆ มันก็ยิ่งใช้ token เยอะป่ะนะ
 
 # Kanban
-- โครงสร้างแบบแยก board จะทำเมื่อไร ผมว่ามันกระทบโครงสร้าง ทำทีหลังไม่เป็นไรเหรอ 
-
 - มันควรมี repeat task ไหมหว่า ประจำเดือน ประจำสัปดาห์ ประมาณนี้
 - ลิงก์ google calendar แสดง deadline 
 - กล่อง comment ของแต่ละ card เห็นมีใน notion เป็น fix field
-
-แต่อย่าเพิ่งกดก่อนอ่าน md/kanban/DEPLOY-2026-08-19.md — ลำดับสำคัญ:
-1. backup prod
-2. TRUNCATE kanban_cards RESTART IDENTITY CASCADE ← ต้องมาก่อน DDL
-3. รัน scripts/migration/pending-2026-08-19.sql (migration.sql อันเดียวพอ)
-4. ./deploy.sh --production
-5. สร้าง people-map บน prod ด้วย --map แล้วเปิดตรวจ << คืออะไรนะ
-6. import (เช็ค --org ก่อน — dev เป็น 1 prod อาจไม่ใช่)
-7. ตรวจ /kanban แล้วเลื่อน marker ใน migration.sql
-ข้อ 2 กับ 3 สลับกันเมื่อไหร่ = ALTER COLUMN field_id SET NOT NULL พัง
-- scripts/import/kanbanFromAppflowy.mjs จะรันตอนไหนนะ ทำไมสกุล .mjs
-8. act ย้ายมา cron แล้วนะ หลังจาก push รอบนี้อย่าลืมย้าย 
-
+- context menu สร้างเป็นการบ้าน มันทำงานยังไง ทำไมมันไปเอาข้อความจาก ที่เราคลิกขวา ไม่ไปเอาจาก subject ของ เธรด และสรุปเนื้อหาในนั้นเหรอ
 
 # Posts
 - ai suggestion ยังไม่มีโหมด บก ตรวจงาน ตาม redflag 
@@ -83,38 +69,6 @@ End of the Day
 - [วันที่] [เดือน] xxxxxxxxxxxxxxxxxxxxxxxxx, xxxx, xxxxx
 - Update PENDING.md สิ่งที่อยากทำ สิ่งที่ทำไปแล้วลบทิ้งไหม, อ่านส่วนที่แก้ไขแล้วเอาขึ้น git พร้อมข้อความแก้ไข พร้อม bump version ใน package.json ให้ถูกต้อง (เช็ค git log ก่อนว่า version ล่าสุดคืออะไร ใช้ semver — patch สำหรับแก้เล็กน้อย, minor สำหรับฟีเจอร์ใหม่) tag เฉพาะ minor ขึ้นไป และ push ด้วย
 
-===
-BEGIN;
-
--- 1) ลบบัตรใหม่ (ระบุด้วย email)
-DELETE FROM org_members
- WHERE user_id = (SELECT id FROM users WHERE email = '<อีเมล>' AND discord_id IS NULL);
-
-DELETE FROM users
- WHERE email = '<อีเมล>' AND discord_id IS NULL;
-
--- 2) ใส่ email ลงบัตรเก่า
-UPDATE users SET email = '<อีเมล>', updated_at = NOW()
- WHERE discord_id = '<discord_id>';
-
-COMMIT;
-
-
-Panel Forum: 
-/panel forum channel:#💬┆กระทู้-ทั่วไป
-
-Greeting:
-/panel register title:ยินดีต้อนรับสู่ อาสาประชาชน! description:กดปุ่มด้านล่างเพื่อแนะนำตัวและ #🎖️┆ติดยศ ได้เลย province_select:True interest_select:True log_channel:#👋┆แนะนำตัว member_role:@อาสาประชาชน
-
-Welcome DM
-ยินดีต้อนรับสู่ อาสาประชาชน!
-- [แนะนำตัว](https://discord.com/channels/1340903354037178410/1340903354871582756) — บอกให้ทีมรู้ว่าคุณคือใคร  \n
-- [ติดยศ](https://discord.com/channels/1340903354037178410/1341436765533372489) — เลือกบทบาทเพื่อเข้าถึงห้องที่เกี่ยวข้อง  \n
-- [สอบถามปัญหาการใช้งาน](https://discord.com/channels/1340903354037178410/1486026453974909010) — ติดปัญหาอะไรถามได้เลย
-
-https://discord.com/invite/CjheHjvPVS
----
-
 ## อาสาประชาชน
 /panel register title:ยินดีต้อนรับสู่ อาสาประชาชน! :tangerine: description:Step  :one: : แนะนำตัว → กดปุ่มแนะนำตัวด้านล่าง\n Step :two: : อ่านตรงนี้ก่อน → #📕┆ข้อตกลง \n Step :three:  : ติดยศ → #📕┆ติดยศ  log_channel:#👋┆แนะนำตัว
 
@@ -142,7 +96,8 @@ https://discord.com/invite/CjheHjvPVS
 
 หากจนท.ตักเตือนและท่านไม่ทำตาม เราจะลงโทษตามความรุนแรง เช่น Time out หรือ  Ban กรณีที่ท่านต้องการอุธรณ์หรือต้องการร้องเรียนสามารถแจ้งที่ https://discord.com/channels/1340903354037178410/1397146590694871100
 
-Tech Stack
+
+### Tech Stack
 Framework	Next.js 15.5 (App Router)
 UI	React 19 + JSX (ไม่มี TypeScript)
 Styling	Tailwind CSS 3.4 + CSS
@@ -152,12 +107,3 @@ Auth	NextAuth v4 — Discord OAuth (ไม่ใช่ Google/email OTP)
 i18n	next-intl
 Testing	Vitest
 Companion process	Discord bot (discord.js v14) รันแยกที่ root repo
-
-Tech stack
-Framework : Next.js 15.5
-UI : React 18.3 + JSX (ไม่มี TypeScript)
-Styling : CSS
-Runtime : Node.js serverless
-Backend / Data : Supabase (Postgres + Auth + Storage + RLS)
-Supabase Auth: Google OAuth + email OTP
-Vercel : Region: sin1 (สิงคโปร์)

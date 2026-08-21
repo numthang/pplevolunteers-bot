@@ -1876,7 +1876,8 @@
       "hint": "Several labels in one group = any of them · across groups = must have all",
       "empty": "The loaded cards have no labels to filter by",
       "noMatch": "No task matches this filter",
-      "showing": "{count} matching"
+      "showing": "{count} matching",
+      "helperGroup": "Helpers"
     },
     "fieldsPage": {
       "type_text": "Text",

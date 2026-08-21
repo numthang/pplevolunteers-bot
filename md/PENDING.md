@@ -2,6 +2,42 @@
 
 > เก็บเฉพาะงานค้าง + design ที่ยังไม่ทำ · ของที่ทำเสร็จ+deploy แล้วย้ายไปอยู่ในโค้ด/`md/*` ตามระบบ
 
+## 🎨 CSS Design Token migration — รองรับสีแบรนด์ต่อ org แบบ runtime (เคาะ 2026-08-20)
+
+**user เคาะแล้วว่าจะทำ** หลังคุยเปรียบเทียบกับ prompt "design token + component class" ที่เจอมา — สรุปเหตุผลที่ทำให้คุ้ม (ไม่ใช่แค่ nice-to-have): โปรเจกต์กำลังจะเป็น multi-tenant org platform (rebrand → platfor.org, มี `config/brand.js` วางรากไว้แล้ว [[project_rebrand]]) ถ้าแต่ละ org อยากมีสีแบรนด์ตัวเอง **ต้องเปลี่ยนได้ตอนรันไทม์โดยไม่ deploy ใหม่** — Tailwind config ทำแบบนี้ไม่ได้ (เป็นค่า build-time) ต้องใช้ CSS variable จริง
+
+**สถานะตอนนี้ (ตรวจ 2026-08-20):** สี `teal`/`warm-*`/`disc-*` อยู่ใน `tailwind.config.js` (เปลี่ยนที่เดียวได้แต่ต้อง rebuild) มีแค่ `--card-bg` ตัวเดียวที่เป็น CSS variable จริงใน `globals.css` — ไม่มี component class (`.btn`, `.card`) เลย ต้องก็อป Tailwind string เต็มทุกไฟล์
+
+**ตรวจ compliance กับกฎเดิมใน WEB.md แล้วพบว่าต่ำกว่าที่คิด** (จาก 196 ไฟล์ component/page ใน `web/`):
+- hardcode hex color: 26 ไฟล์ (~13%)
+- ใช้ `text-xs` ทั้งที่ห้าม: 77 ไฟล์ (~39%)
+- ใช้ `rounded-xl` บนการ์ด/กล่องทั้งที่ห้าม: 72 ไฟล์ (~37%)
+- ปุ่ม primary ตรงสตริงมาตรฐานเป๊ะ: แค่ 6 ไฟล์
+
+**แผนที่คุยกันไว้ — แยก 2 ก้อน ห้ามรื้อรวดเดียว:**
+1. **สร้าง token + component class layer** (`globals.css`/`tailwind.config.js`) — เสี่ยงต่ำ ไม่กระทบของเดิมเพราะยังไม่มีใครเรียกใช้ class ใหม่
+2. **ไล่ migrate 196 ไฟล์ทีละโซน** — โปรเจกต์นี้**ไม่มี visual regression test** ต้องเปิดเบราว์เซอร์เช็คจริงทุกโซนก่อนไปโซนถัดไป (ตรงกับหลัก "ทำไปเทสไป" ที่เคาะไว้กับ kanban [[feedback_test_as_you_go]]) — ห้ามรื้อทั้ง 196 ไฟล์รวดเดียวเพราะไม่มีทางรู้ว่าพังตรงไหนจนกว่าจะเจอเอง
+3. **อัปเดตกฎลง `md/WEB.md`** (ไม่ใช่ CLAUDE.md ตรงๆ — CLAUDE.md แค่ชี้มาที่ WEB.md อยู่แล้วเหมือน section CSS conventions เดิม) — เขียนกฎ "โค้ด CSS ใหม่ห้าม hardcode สี/ขนาด ต้องใช้ token/component class" แบบเดียวกับ section i18n **ทำได้ก็ต่อเมื่อก้อน 1 เสร็จแล้วเท่านั้น** เพราะกฎนี้อ้างถึง class ที่ต้องมีอยู่จริงในโค้ดก่อน — ถ้าเขียนกฎไว้ก่อนมี class จริง Claude session หน้าจะเรียก class ที่ไม่มีอยู่
+
+**ยังไม่เคาะ:** ลำดับโซนไหนก่อน-หลัง, timeline
+
+## 🗄️ Refactor: API route ยิง SQL ตรง ไม่ผ่าน service layer (พบจาก audit 2026-08-20)
+
+ตรวจ codebase เทียบ checklist ที่ [md/AUDIT.md](AUDIT.md) §2 — ผลตรวจ:
+
+| ข้อตรวจ | สถานะ | รายละเอียด |
+|---|---|---|
+| **Connection Pooler** | ⚠️ ไม่มี | ยิงตรง port 5432 ไม่มี PgBouncer/Supavisor คั่น มีแค่ pool ระดับ app (`pg.Pool`) — ยังไม่เป็นปัญหาตอนนี้เพราะ traffic ต่ำ แต่เป็นจุดเสี่ยงถ้า concurrent connection พุ่ง |
+| **Singleton Instance** | ✅ ผ่าน | มี pool แค่ 2 จุดทั้งโปรเจกต์: `db/index.js` (บอท, `max: 10`) กับ `web/db/index.js` (เว็บ, `max: 3`, กัน hot-reload สร้างซ้ำด้วย `globalThis._pgPool`) — ไม่มี `new Pool()` กระจายไฟล์อื่น |
+| **Service Layer แยกจาก UI** | ⚠️ รั่วบางส่วน | มี service layer อยู่แล้ว (`db/` บอท 26 ไฟล์, `web/db/` เว็บ 50 ไฟล์) **แต่พบ 41 ไฟล์ใน `web/app/api/**/route.js` import `pool` ตรงแล้วยิง SQL เองในนั้น** ไม่ผ่าน `web/db/` — ตัวอย่าง: `web/app/api/profile/route.js`, `web/app/api/social/accounts/route.js`, `web/app/api/finance/funds/[id]/route.js` ฯลฯ (ดูรายชื่อเต็มด้วย `grep -rl "pool.query\|db.query" web/app`) นอกจากนี้สคริปต์บอท 3 ไฟล์ (`scripts/cron/sync-act-events.js`, `scripts/calling/import-member-csv.js`, `scripts/calling/import-act-event-cache.js`) import db ตรง — ระดับ one-off script ยอมรับได้ ไม่ใช่ปัญหา |
+| **แยก `DATABASE_URL`/`DIRECT_URL`** | ➖ ไม่ตรง pattern แต่ไม่ใช่ปัญหา | ใช้ตัวแปรแยก `DB_HOST`/`DB_PORT`/`DB_USER`/`DB_PASS`/`DB_NAME` แทน — เทียบเท่ากันแค่คนละ format เพราะไม่ได้ใช้ ORM ที่ต้องการ URL ทั้งก้อน |
+| **Vendor Lock-in** | ✅ ไม่ติด | ทั้งโปรเจกต์ใช้ raw `pg` ล้วน ไม่มี Supabase/Vercel SDK ฝังอยู่เลย → ย้าย VPS ↔ Supabase Cloud แค่เปลี่ยนค่า `DB_*` ใน `.env` |
+
+**ไม่เร่งด่วน** — ไม่กระทบ user ตอนนี้ แค่ debt สะสม ถ้าจะทำ:
+- ไล่ทีละโซน ย้าย query จาก route → ฟังก์ชันใน `web/db/<module>.js` ที่ตรงกัน แล้วให้ route เรียกฟังก์ชันแทน
+- งาน mechanical ซ้ำ pattern เดิม → ส่งเป็นก้อนเล็ก 2-3 ไฟล์ต่อ Sonnet subagent ได้
+- Connection pooler (PgBouncer) ยังไม่จำเป็น — ค่อยพิจารณาตอน traffic สูงขึ้นจริง
+
 ## 🗂️ Kanban ก้อน 3 — board จริง (เลื่อนได้ · ประเมินแล้ว 2026-08-20)
 
 **user ถาม: "กระทบโครงสร้าง ทำทีหลังไม่เป็นไรใช่ไหม" → ไม่เป็นไร ตราบใดที่ยังมีทีมเดียวใช้**

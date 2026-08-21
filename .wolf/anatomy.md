@@ -1,12 +1,21 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-19T18:23:11.990Z
-> Files: 1023 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-20T16:52:14.346Z
+> Files: 1027 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/1b7cbea7-c43c-466d-9a5f-c61fda8e76b5/scratchpad/
 
 - `restructure_cerebrum.py` — find_line_idx, next_header_idx, delete_header_block, delete_single_line (~990 tok)
 - `restructure_phase2.py` — block_content, strip_blank_edges (~1915 tok)
+
+## ../../../.claude/plans/
+
+- `witty-launching-wadler.md` — Kanban label filter → per-group compact dropdowns (~2047 tok)
+
+## ../../../.claude/projects/-home-tee-VSites-node-pple-volunteers/memory/
+
+- `feedback_context_window_size.md` (~238 tok)
+- `MEMORY.md` — Memory Index (~3077 tok)
 
 ## ../calling.ppleth.ai/
 
@@ -15,10 +24,6 @@
 ## ../calling.ppleth.ai/md/
 
 - `PLAN.md` — Calling — แผนพอร์ตระบบโทรหาสมาชิก → Builder App (PPLE Platform) (~1277 tok)
-
-## ../civicflow/md/
-
-- `DEV_SETUP.md` — CivicFlow — Dev Setup & กติกาทำงาน (ร่าง — รอคุยกับทีม CivicFlow) (~1069 tok)
 
 ## ../pple-demo/
 
@@ -33,7 +38,7 @@
 - `deploy-commands.js` — deploy-commands.js (~1310 tok)
 - `deploy.sh` — ./deploy.sh                                        → deploy local (GUILD_ID ใน .env) (~870 tok)
 - `eslint.config.mjs` — ESLint flat config ฝั่งบอท (node, sourceType module) — เปิดเฉพาะ rule ที่จับบั๊กจริง `no-undef`=error (~430 tok)
-- `index.js` — index.js (~9116 tok)
+- `index.js` — index.js (~9292 tok)
 - `NOTE.md` (~1073 tok)
 - `package-lock.json` — npm lock file (~48920 tok)
 - `package.json` — Node.js package manifest (~285 tok)
@@ -41,7 +46,7 @@
 
 ## .claude/
 
-- `settings.json` (~888 tok)
+- `settings.json` (~713 tok)
 - `settings.local.json` — Declares l (~12678 tok)
 
 ## .claude/agents/
@@ -63,7 +68,7 @@
 
 ## .claude/rules/
 
-- `openwolf.md` (~549 tok)
+- `openwolf.md` (~556 tok)
 
 ## .claude/skills/scrutinize/
 
@@ -139,7 +144,7 @@
 
 - `aiConstants.js` — YYYY-MM-DD เวลาไทย — server รันบน UTC (ดู gotcha timezone ใน CLAUDE.md) (~443 tok)
 - `aiModes.js` — config/aiModes.js (~858 tok)
-- `aiPrompts.js` — config/aiPrompts.js — ค่าตั้งต้นของ prompt ทุกช่องที่ผูกกับโค้ด (zero-dep ใช้ทั้ง bot + web) (~3539 tok)
+- `aiPrompts.js` — config/aiPrompts.js — ค่าตั้งต้นของ prompt ทุกช่องที่ผูกกับโค้ด (zero-dep ใช้ทั้ง bot + web) (~3633 tok)
 - `brand.js` — แบรนด์ของ platform — จุดเดียวที่แก้ตอน rebrand (ใช้ร่วมทั้ง bot และ web) (~165 tok)
 - `callingCategories.js` — Exports CATEGORIES, CATEGORY_LABELS, CATEGORY_COLORS (~595 tok)
 - `case-options.json` (~153 tok)
@@ -219,7 +224,7 @@
 - `gogoHandler.js` — handlers/gogoHandler.js (~4915 tok)
 - `handraiseHandler.js` — handlers/handraiseHandler.js (~2336 tok)
 - `interestSelect.js` — สร้างปุ่มจาก DB rows [{ roleId, label, emoji }] (~1177 tok)
-- `kanbanImportHandler.js` — ข้อความดิบ → ชื่อการบ้านตั้งต้น (บรรทัดแรกที่มีเนื้อ ตัดให้พอดีช่อง) (~1682 tok)
+- `kanbanImportHandler.js` — ข้อความดิบ → ชื่อการบ้านตั้งต้น (บรรทัดแรกที่มีเนื้อ ตัดให้พอดีช่อง) (~1708 tok)
 - `newsWatchHandler.js` — handlers/newsWatchHandler.js — ปุ่ม "ดึงเดี๋ยวนี้" บน panel ข่าวท้องถิ่น (~712 tok)
 - `newsWatchHandler.js` — handlers/newsWatchHandler.js — ปุ่ม "ดึงเดี๋ยวนี้" บน panel ข่าวท้องถิ่น (~662 tok)
 - `openInterest.js` — handlers/openInterest.js (~511 tok)
@@ -253,13 +258,14 @@
 
 ## md/
 
+- `AUDIT.md` — AUDIT — Vendor Lock-in & DB Connection Architecture (~2261 tok)
 - `CUTOVER.md` — CUTOVER RUNBOOK — org-core → master (~3332 tok)
 - `DATABASE.md` — Database Schema — pple_volunteers (~3190 tok)
 - `DEPLOYMENT.md` — Production Deployment — VPS Setup (~2522 tok)
+- `DEV_AGREEMENT.md` — CivicFlow — Dev Agreement & กติกาทำงานร่วม (ร่าง — รอคุยกับทีม CivicFlow) (~1367 tok)
 - `ORG_ACCESS_REDESIGN.md` — ORG_ACCESS_REDESIGN — ปลดสิทธิ์ออกจาก Discord (~5545 tok)
-- `PENDING.md` — PENDING.md — Backlog & Ideas (~34561 tok)
+- `PENDING.md` — PENDING.md — Backlog & Ideas (~35561 tok)
 - `WEB.md` — Web App — Next.js Frontend (~5324 tok)
-- `WOLF-INBOX.md` — กองความรู้จากเครื่องรอง (Mac) ที่รอ merge เข้า .wolf/ เพราะ .wolf/ ถูก gitignore ไม่ข้ามเครื่อง · เครื่องหลัก (Linux) merge แล้วลบ section ทิ้ง · ปกติควรว่าง (~1500 tok)
 
 ## md/archive/
 
@@ -293,7 +299,7 @@
 ## md/discord/
 
 - `BOT.md` — Discord Bot — Setup & Architecture (~3987 tok)
-- `RAG.md` — RAG AI — Bot Mention Reply (~1433 tok)
+- `RAG.md` — RAG AI — Bot Mention Reply (~1544 tok)
 - `SERVER_WIZARD.md` — Server Setup Wizard — Requirements (~2666 tok)
 
 ## md/docs/
@@ -617,6 +623,10 @@
 ## web/app/api/bot/ai-config/
 
 - `route.js` — AI agent config = global infrastructure (ค่าย/โมเดลที่ใช้ทั้งระบบ) → superadmin เท่านั้น (~798 tok)
+
+## web/app/api/bot/ai-mention-prompt/
+
+- `route.js` — prompt "บุคลิกบอทตอน mention" (org_ai_prompts, kind='slot', value='bot.ai_mention') (~774 tok)
 
 ## web/app/api/bot/ai-modes/
 
@@ -1438,7 +1448,7 @@
 
 ## web/app/bot/ai/
 
-- `page.js` — Next.js page component (~4024 tok)
+- `page.js` — หน้า /bot/ai: AiMentionToggle + AiMentionPromptSection (prompt ตอน mention, superadmin) + AgentSection (โมเดล/ค่าย) + ModesSection (โหมด caption AI) (~5016 tok)
 
 ## web/app/bot/features/
 
@@ -1855,12 +1865,12 @@
 
 - `BoardView.jsx` — BoardView — กระดานแนวตั้ง "ย่อ" (ก่อนถึงก้อน 3) (~3009 tok)
 - `CardFieldsBox.jsx` — CardFieldsBox — กล่อง "ข้อมูลของทีม" ใน CardModal (custom field) (~7870 tok)
-- `CardModal.jsx` — CardModal — รายละเอียดการบ้าน 1 ใบ (~6798 tok)
+- `CardModal.jsx` — CardModal — รายละเอียดการบ้าน 1 ใบ (~6906 tok)
 - `ChecklistFieldBox.jsx` — ChecklistFieldBox — เช็คลิสต์ 1 field (ตรงสกรีนช็อตที่ user ส่งมา 2026-08-18 รอบเย็น: progress bar + (~6665 tok)
 - `DeleteChoiceDialog.jsx` — DeleteChoiceDialog — กล่อง "ลบ" ที่ให้เลือกเอาเองว่า **ซ่อน/เก็บเข้ากรุ** หรือ **ลบถาวร** (~1182 tok)
 - `FieldManager.jsx` — FieldManager — ช่องข้อมูลตั้งเองของ org (/kanban/fields) · admin เท่านั้น (~3907 tok)
 - `FieldRow.jsx` — FieldRow — แถว `[ไอคอน · ชื่อ] | [ค่า]` บรรทัดเดียว ทรง Notion/AppFlowy (~749 tok)
-- `KanbanHome.jsx` — KanbanHome — หน้าเดียวของโมดูลการบ้าน (`/kanban`) (~11755 tok)
+- `KanbanHome.jsx` — KanbanHome — หน้าเดียวของโมดูลการบ้าน (`/kanban`) (~13658 tok)
 - `LabelChips.jsx` — LabelChips — ป้ายของการ์ด 1 ใบ วาดแยกเป็นกอง ไม่ใช่กองรวมพรืดเดียว (~485 tok)
 - `PersonProfileModal.jsx` — PersonProfileModal — กล่องลอยแบบดิสคอร์ด เปิดตอนกดชื่อเจ้าภาพ/คนช่วยในการ์ด (~1228 tok)
 - `TagCombobox.jsx` — TagCombobox — ตัวเลือกของ select/multi_select field (ตรงสกรีนช็อตที่ user ส่งมา 2026-08-18 รอบเย็น) (~8411 tok)

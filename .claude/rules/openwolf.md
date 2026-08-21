@@ -7,7 +7,7 @@ globs: **/*
   - **ก่อนเริ่ม session** (หรือถ้ารู้ว่าเพื่อนเพิ่งทำงาน): `git pull` ก่อน เพื่อได้ cerebrum/anatomy ล่าสุด
   - **หลังอัพเดท** cerebrum.md หรือ anatomy.md อย่างมีนัย (เรียนรู้ preference ใหม่, แก้ Do-Not-Repeat, ไฟล์เปลี่ยนโครงสร้าง): commit แยกสั้นๆ เช่น `chore(wolf): sync brain` ไม่ต้องรอรวมกับ commit งานจริง
   - ถ้าเจอ merge conflict ใน cerebrum.md/anatomy.md (สอง session แก้พร้อมกัน) ให้อ่านทั้งสองฝั่งแล้ว merge เนื้อหาเอง อย่าเลือกทิ้งฝั่งใดฝั่งหนึ่งมั่ว
-  - `md/WOLF-INBOX.md` ยังเก็บไว้เป็นทางเลือกสำรอง (เผื่อเครื่องที่ push ไม่ได้ชั่วคราว) แต่ไม่ใช่ flow หลักอีกต่อไป
+  - **เลิกใช้ `md/WOLF-INBOX.md` แล้ว** (เคาะ 2026-08-20 — user มีเน็ตเสมอ push ตรงได้ทุกเครื่อง ไม่ต้องมี fallback) ลบไฟล์ทิ้งแล้ว ห้ามสร้างใหม่
 - Check .wolf/anatomy.md before reading any project file
 - Check .wolf/cerebrum.md Do-Not-Repeat list before generating code
 - After writing or editing files, update .wolf/anatomy.md and append to .wolf/memory.md

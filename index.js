@@ -65,6 +65,7 @@ const { handleHandraiseButton, handleHandraiseVoiceUpdate } = require('./handler
 const { buildRagContext } = require('./services/ragSearch');
 const { callAI, callAIWithHistory } = require('./services/aiSummarize');
 const { getEnabledFeatures } = require('./db/settings');
+const { getPrompt } = require('./db/aiPrompts');
 
 const fs = require('fs');
 const path = require('path');
@@ -489,16 +490,29 @@ client.on('messageCreate', async (message) => {
     const features = await getEnabledFeatures(message.guildId);
     if (features.includes('ai_mention')) {
       const question = message.content.replace(/<@!?\d+>/g, '').trim();
-      if (!question) { await message.reply('ถามมาได้เลยครับ 😊'); return; }
+
+      // reply แล้วเมนชัน → ใช้ข้อความที่ถูก reply เป็นโจทย์/context แทนการถามซ้ำ
+      let repliedContext = null;
+      if (message.reference) {
+        const replied = await message.fetchReference().catch(() => null);
+        const repliedText = replied?.content?.replace(/<@!?\d+>/g, '').replace(/<#\d+>/g, '').trim();
+        if (repliedText) repliedContext = repliedText;
+      }
+
+      if (!question && !repliedContext) { await message.reply('ถามมาได้เลยครับ 😊'); return; }
 
       const limit = checkMentionRateLimit(message.author.id, message.guildId);
       if (!limit.ok) { await message.reply(limit.reason); return; }
+
+      const finalQuestion = repliedContext
+        ? (question ? `ข้อความที่ถูก reply: "${repliedContext}"\n\nคำถาม: ${question}` : `ช่วยตอบ/อธิบายเกี่ยวกับข้อความนี้หน่อย: "${repliedContext}"`)
+        : question;
 
       await message.channel.sendTyping().catch(() => {});
       try {
         const [prevMessages, ragContext] = await Promise.all([
           message.channel.messages.fetch({ limit: 25, before: message.id }).catch(() => null),
-          buildRagContext(question, message.guildId),
+          buildRagContext([question, repliedContext].filter(Boolean).join(' '), message.guildId),
         ]);
 
         // แปลง history เป็น proper user/assistant turns
@@ -519,12 +533,11 @@ client.on('messageCreate', async (message) => {
         }
         // Claude messages ต้องเริ่มด้วย user
         while (messagesArr.length > 0 && messagesArr[0].role === 'assistant') messagesArr.shift();
-        messagesArr.push({ role: 'user', content: question });
+        messagesArr.push({ role: 'user', content: finalQuestion });
 
+        const basePrompt = await getPrompt('bot.ai_mention', { guildId: message.guildId });
         const systemPrompt = [
-          'คุณเป็นบอทผู้ช่วยประจำทีม คุยเป็นกันเองเหมือนเพื่อนร่วมทีม ภาษา casual ได้เลย',
-          'ตอบสั้นตรงประเด็น ไม่เกิน 1800 ตัวอักษร',
-          'ห้ามเปิดเผยเบอร์โทร LINE ID ที่อยู่ หรือข้อมูลส่วนตัวของบุคคลใด',
+          basePrompt,
           ragContext ? `ข้อมูลจากกระทู้ Discord ที่เกี่ยวข้อง (ใช้อ้างอิงได้ถ้าตรงกับคำถาม):\n${ragContext}` : '',
         ].filter(Boolean).join('\n\n');
 

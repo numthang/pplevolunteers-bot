@@ -7,17 +7,22 @@ Bot ตอบเมื่อถูก mention ในทุกห้อง โด
 ## Flow (v1 — Simple)
 
 ```
-User พิมพ์ @bot <คำถาม>
+User พิมพ์ @bot <คำถาม> (หรือ reply ข้อความอื่นแล้ว @bot)
   → messageCreate event
-  → เช็ค rate limit (1 นาที/user + 100 queries/guild/day — in-memory)
   → เช็ค feature toggle ai_mention (dc_guild_config)
-  → นำคำถามทั้งประโยคไปค้น Meilisearch ตรงๆ (keyword match)
-  → ได้ top 3 forum posts ที่ match (ไม่ filter วันที่)
-  → ตัด content แต่ละ post ที่ 800 chars
-  → ดึง 10 messages ก่อนหน้าใน channel เป็น conversation context
-  → callAI(systemPrompt, forum context + conversation + คำถาม) → Claude API
+  → ถ้าเป็น reply: fetchReference() ดึงข้อความที่ถูก reply มาเป็นโจทย์/context
+    (คำถามว่าง + reply = ใช้ข้อความที่ reply เป็นโจทย์ตรงๆ ไม่ถามซ้ำ)
+  → เช็ค rate limit (1 นาที/user + 100 queries/guild/day — in-memory)
+  → นำคำถาม (+ ข้อความที่ reply ถ้ามี) ไปค้น Meilisearch ตรงๆ (keyword match)
+  → ได้ top posts ที่ match (ไม่ filter วันที่)
+  → ดึง 25 messages ก่อนหน้าใน channel เป็น conversation context (user/assistant turns)
+  → systemPrompt มาจาก backoffice: `getPrompt('bot.ai_mention', {guildId})` (org override → ค่าโค้ด `config/aiPrompts.js`)
+    ต่อท้ายด้วย forum context ที่ค้นเจอ (ถ้ามี)
+  → callAIWithHistory(systemPrompt, history+คำถาม) → Claude API
   → message.reply(answer)
 ```
+
+แก้ prompt/บุคลิกได้ที่เว็บ `/bot/ai` → การ์ด "บุคลิก / Prompt ตอนตอบ mention" (superadmin) — ไม่ต้องแก้โค้ด
 
 ### จุดที่ retrieval ไม่ intelligent
 

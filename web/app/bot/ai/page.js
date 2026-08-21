@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { Check, Loader2, Plus, Trash2, ChevronUp, ChevronDown, Cpu, Sparkles } from 'lucide-react'
+import { Check, Loader2, Plus, Trash2, ChevronUp, ChevronDown, Cpu, Sparkles, Bot } from 'lucide-react'
 import { useEffectiveRoles } from '@/lib/useEffectiveRoles.js'
 import AiMentionToggle from '@/components/bot/AiMentionToggle.jsx'
 import { isEditor } from '@/lib/roles.js'
@@ -100,6 +100,77 @@ function AgentSection() {
           {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} บันทึก
         </button>
         {saved && <span className="text-sm text-green-600 dark:text-green-400">บันทึกแล้ว</span>}
+        {error && <span className="text-sm text-red-500 dark:text-red-400">{error}</span>}
+      </div>
+    </div>
+  )
+}
+
+// ─── Mention prompt: บุคลิก/กติกาตอนบอทตอบ @mention ──────────────────────────
+function AiMentionPromptSection() {
+  const [data, setData]     = useState(null)
+  const [draft, setDraft]   = useState('')
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved]   = useState(false)
+  const [error, setError]   = useState(null)
+
+  const load = useCallback(() => {
+    fetch('/api/bot/ai-mention-prompt')
+      .then(r => r.json().then(d => ({ ok: r.ok, d })))
+      .then(({ ok, d }) => { if (ok) { setData(d); setDraft(d.prompt) } else setError(d.error || 'โหลดไม่สำเร็จ') })
+      .catch(() => setError('โหลดไม่สำเร็จ'))
+  }, [])
+
+  useEffect(() => {
+    load()
+    window.addEventListener('guild-switched', load)
+    return () => window.removeEventListener('guild-switched', load)
+  }, [load])
+
+  async function save() {
+    setSaving(true); setSaved(false); setError(null)
+    const res = await fetch('/api/bot/ai-mention-prompt', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: draft }),
+    })
+    setSaving(false)
+    if (res.ok) { setSaved(true); setTimeout(() => setSaved(false), 1500); load() }
+    else { const d = await res.json().catch(() => ({})); setError(d.error || 'บันทึกไม่สำเร็จ') }
+  }
+
+  async function reset() {
+    if (!confirm('คืนค่า prompt เดิมของระบบ? (ของที่แก้ไว้จะหาย)')) return
+    await fetch('/api/bot/ai-mention-prompt', { method: 'DELETE' })
+    load()
+  }
+
+  if (error && !data) return <p className="text-sm text-red-500 dark:text-red-400">{error}</p>
+  if (!data) return <p className="text-warm-500 dark:text-disc-muted text-sm">กำลังโหลด...</p>
+
+  const dirty = draft !== data.prompt
+
+  return (
+    <div className="rounded-2xl border border-warm-200 dark:border-disc-border bg-card-bg p-4 sm:p-5">
+      <div className="flex items-center gap-2 mb-1">
+        <Bot size={18} className="text-orange" />
+        <h2 className="text-base font-semibold text-gray-900 dark:text-disc-text">บุคลิก / Prompt ตอนตอบ mention</h2>
+      </div>
+      <p className="text-xs text-gray-400 dark:text-disc-muted mb-3">
+        กำหนดโทน/กติกาตอนบอทตอบข้อความที่ @mention บอท — ข้อมูลจากกระทู้ที่เกี่ยวข้องจะถูกต่อท้ายให้เองตอนยิงจริง แก้แล้วมีผลทันที
+      </p>
+      <textarea value={draft} onChange={e => setDraft(e.target.value)} rows={6}
+        className="w-full px-3 py-2 text-sm font-mono rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-gray-900 dark:text-disc-text focus:outline-none focus:ring-2 focus:ring-teal" />
+      <div className="flex items-center gap-2 mt-3">
+        <button onClick={save} disabled={saving || !dirty}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg bg-orange text-white hover:opacity-90 transition disabled:opacity-30">
+          {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} บันทึก
+        </button>
+        {saved && <span className="text-sm text-green-600 dark:text-green-400">บันทึกแล้ว</span>}
+        {!data.isDefault && (
+          <button onClick={reset}
+            className="ml-auto text-sm text-gray-500 dark:text-disc-muted hover:text-orange transition">คืนค่าเดิม</button>
+        )}
         {error && <span className="text-sm text-red-500 dark:text-red-400">{error}</span>}
       </div>
     </div>
@@ -292,6 +363,7 @@ export default function AiConfigPage() {
       <div className="flex flex-col gap-6">
         {/* ai_mention = สวิตช์ราย guild · API เป็น superadmin-only เหมือน AgentSection */}
         {superAdmin && <AiMentionToggle />}
+        {superAdmin && <AiMentionPromptSection />}
         {superAdmin && <AgentSection />}
         <ModesSection />
       </div>

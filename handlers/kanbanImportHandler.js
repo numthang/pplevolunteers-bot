@@ -12,7 +12,7 @@ const { getT } = require('../services/i18n');
 const { createCardFromDiscord } = require('../db/kanbanCards');
 
 const TITLE_MAX = 200;   // ตรงกับ kanban_cards.title VARCHAR(200)
-const DETAIL_MAX = 1500;
+const DETAIL_MAX = 4000; // เพดานจริงของ Discord modal Paragraph input (detail column เป็น TEXT ไม่จำกัดอยู่แล้ว)
 
 /** ข้อความดิบ → ชื่อการบ้านตั้งต้น (บรรทัดแรกที่มีเนื้อ ตัดให้พอดีช่อง) */
 function toTitle(raw) {
