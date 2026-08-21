@@ -24,11 +24,13 @@ import { useTranslations } from 'next-intl'
 import {
   Plus, X, Clock, User, ListChecks, MoreHorizontal, Pencil, Copy,
   ChevronDown, ChevronRight, Loader2, ArchiveRestore, Trash2,
+  Filter, ArrowUpDown, Settings, Search, Type, Hash, Calendar, ToggleLeft, List, CircleDot, Link2,
 } from 'lucide-react'
 import { STATUS_TYPES } from '@/lib/kanbanAccess.js'
 import { columnHeadProps, chipProps } from '@/lib/kanbanLabelColors.js'
-import { groupCards, sortCards, isMyCard } from '@/lib/kanbanGrouping.js'
+import { groupCards, isMyCard } from '@/lib/kanbanGrouping.js'
 import { collectFilterGroups, filterCards, cardTags } from '@/lib/kanbanTagFilter.js'
+import { sortCardsBy, collectSortableFields, BUILTIN_SORT_FIELDS } from '@/lib/kanbanSort.js'
 import CardModal from './CardModal.jsx'
 import DeleteChoiceDialog from './DeleteChoiceDialog.jsx'
 import LabelChips from './LabelChips.jsx'
@@ -43,6 +45,12 @@ const PRIORITY_OPTIONS = [
   { value: 1, key: 'priorityHigh' },
   { value: 2, key: 'priorityUrgent' },
 ]
+
+// ไอคอนต่อชนิด field ในเมนู "เรียงลำดับ" — status ใช้ไอคอนเดียวกับ text (ไม่มีไอคอนเฉพาะ)
+const SORT_TYPE_ICON = {
+  text: Type, url: Link2, number: Hash, date: Calendar,
+  checkbox: ToggleLeft, select: List, multi_select: List, checklist: ListChecks, status: CircleDot,
+}
 
 function dueState(dueAt) {
   if (!dueAt) return 'none'
@@ -311,6 +319,14 @@ export default function KanbanHome() {
   // (ใช้ index แทนชื่อกลุ่มเพราะกลุ่ม "ไม่มีชื่อ" มีค่าเป็น null อยู่แล้ว ชนกับ sentinel ปิดไม่ได้)
   const [openGroupIdx, setOpenGroupIdx] = useState(null)
   const filterRowRef = useRef(null)
+  // แถวชิปตัวกรอง (ป้าย/คนช่วย) ซ่อนไว้เป็นค่าเริ่มต้น — กดไอคอนกรวยเพื่อเปิด (user เคาะ 2026-08-21)
+  const [filtersOpen, setFiltersOpen] = useState(false)
+
+  // เมนู "เรียงลำดับ" — null = ค่าเริ่มต้น (กำหนดส่ง→ความสำคัญ→ใหม่ก่อน จาก sortCards เดิม)
+  const [sort, setSort] = useState(null)
+  const [sortOpen, setSortOpen] = useState(false)
+  const [sortQuery, setSortQuery] = useState('')
+  const sortBoxRef = useRef(null)
 
   // dropdown ตัวกรองป้าย — ปิดเมื่อคลิกนอกแถวปุ่ม/กด ESC (ตัวกรองอื่นในโปรเจกต์ก็ใช้ mousedown ไม่ใช่ click
   // เพราะต้องปิดก่อน onClick ของปุ่มอื่นด้านนอกจะยิง) · ครอบทั้งแถวไม่ใช่ต่อปุ่ม เพราะคลิกปุ่มกลุ่มอื่นตอนอันหนึ่ง
@@ -328,6 +344,21 @@ export default function KanbanHome() {
       document.removeEventListener('keydown', onKey)
     }
   }, [openGroupIdx])
+
+  // เมนูเรียงลำดับ — กติกาปิดเดียวกับด้านบน
+  useEffect(() => {
+    if (!sortOpen) return
+    function onClickOutside(e) {
+      if (sortBoxRef.current && !sortBoxRef.current.contains(e.target)) setSortOpen(false)
+    }
+    function onKey(e) { if (e.key === 'Escape') setSortOpen(false) }
+    document.addEventListener('mousedown', onClickOutside)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onClickOutside)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [sortOpen])
 
   // ฟอร์ม "เพิ่มการบ้าน" — inline panel · ไม่ POST จนกว่าจะกดบันทึก (กฎ CLAUDE.md §Create vs Update)
   const [formOpen, setFormOpen] = useState(false)
@@ -389,6 +420,21 @@ export default function KanbanHome() {
     }
     return [...map.values()].sort((a, b) => a.name.localeCompare(b.name, 'th'))
   }, [scoped])
+  // เมนู "เรียงลำดับ" — builtin คงที่ (แปลผ่าน t) + custom field ที่มีอยู่จริงบนการ์ดที่โหลดมา (ชื่อมาจาก DB ห้ามแปล)
+  const sortOptions = useMemo(() => {
+    const builtins = BUILTIN_SORT_FIELDS.map((f) => ({
+      key: f.key, fieldId: null, type: f.type, label: t(f.labelKey),
+    }))
+    const customs = collectSortableFields(scoped).map((f) => ({
+      key: `field_${f.field_id}`, fieldId: f.field_id, type: f.type, label: f.label,
+    }))
+    return [...builtins, ...customs]
+  }, [scoped, t])
+  const filteredSortOptions = useMemo(() => {
+    const q = sortQuery.trim().toLowerCase()
+    if (!q) return sortOptions
+    return sortOptions.filter((o) => o.label.toLowerCase().includes(q))
+  }, [sortOptions, sortQuery])
   const visible = useMemo(() => {
     const byLabel = filterCards(scoped, labelFilter)
     if (!helperFilter.length) return byLabel
@@ -411,6 +457,23 @@ export default function KanbanHome() {
 
   function toggleHelperFilter(id) {
     setHelperFilter((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
+  }
+
+  /**
+   * เลือก field ในเมนู "เรียงลำดับ" — วนสามจังหวะ: ยังไม่ได้เลือก → ทิศเริ่มต้น → ทิศตรงข้าม → กลับค่าเริ่มต้น (null)
+   * ทิศเริ่มต้นตามชนิด (เข้าใจง่ายกว่าบังคับ asc เสมอ): วันที่/ตัวเลข/เช็คลิสต์ = มาก(ล่าสุด)ก่อน · ที่เหลือ = ก-ฮ/น้อยไปมากก่อน
+   * ⚠️ ต้องเทียบกับ "ทิศเริ่มต้นของ type นี้" ไม่ใช่เทียบกับ 'asc' ตรงๆ — ไม่งั้น field ที่เริ่มต้น desc (เช่นวันที่)
+   *    จะข้ามจังหวะ "ทิศตรงข้าม" ไปเลย (none→desc→none วนแค่ 2 จังหวะ ไม่ใช่ 3) — เจอจาก Playwright test 2026-08-21
+   */
+  function chooseSort(opt) {
+    setSort((prev) => {
+      const defaultDir = ['date', 'number', 'checklist'].includes(opt.type) ? 'desc' : 'asc'
+      if (prev?.key !== opt.key) return { ...opt, dir: defaultDir }
+      if (prev.dir === defaultDir) return { ...opt, dir: defaultDir === 'asc' ? 'desc' : 'asc' }
+      return null
+    })
+    setSortOpen(false)
+    setSortQuery('')
   }
 
   function onDragStart(e, card) {
@@ -679,8 +742,101 @@ export default function KanbanHome() {
           />
         </div>
 
-        {(filterGroups.length > 0 || helperOptions.length > 0) && (
-          <div ref={filterRowRef} className="flex flex-wrap items-center gap-2">
+        {/* กรวยกรอง / เรียงลำดับ / เฟือง (ตั้งค่า — ยังไม่ทำ ใส่ไว้ก่อน) — ชิดขวาแถวเดียวกัน */}
+        <div className="flex items-center gap-1.5 ml-auto">
+          {(filterGroups.length > 0 || helperOptions.length > 0) && (
+            <button
+              onClick={() => setFiltersOpen((v) => !v)}
+              title={t('filter.toggleLabel')}
+              aria-label={t('filter.toggleLabel')}
+              className={`flex items-center justify-center h-9 w-9 rounded-lg border transition ${
+                filtersOpen || labelFilter.length > 0 || helperFilter.length > 0
+                  ? 'border-teal bg-teal/10 text-teal'
+                  : 'border-warm-200 dark:border-disc-border bg-card-bg text-warm-500 dark:text-disc-muted hover:bg-warm-50 dark:hover:bg-disc-hover'
+              }`}
+            >
+              <Filter size={16} />
+            </button>
+          )}
+
+          <div ref={sortBoxRef} className="relative">
+            <button
+              onClick={() => setSortOpen((v) => !v)}
+              title={t('sort.toggleLabel')}
+              aria-label={t('sort.toggleLabel')}
+              className={`flex items-center gap-1.5 h-9 px-2.5 rounded-lg border text-sm font-medium transition ${
+                sort
+                  ? 'border-teal bg-teal/10 text-teal'
+                  : 'border-warm-200 dark:border-disc-border bg-card-bg text-warm-500 dark:text-disc-muted hover:bg-warm-50 dark:hover:bg-disc-hover'
+              }`}
+            >
+              <ArrowUpDown size={16} />
+              {sort && <span className="max-w-[140px] truncate">{t('sort.active', { label: sort.label })}</span>}
+            </button>
+
+            {sortOpen && (
+              <div className="absolute right-0 top-full z-20 mt-1 w-64 bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg shadow-lg p-2">
+                <div className="flex items-center gap-1.5 h-9 px-2 mb-1.5 rounded-lg border border-warm-200 dark:border-disc-border">
+                  <Search size={14} className="text-warm-400 dark:text-disc-muted shrink-0" />
+                  <input
+                    autoFocus
+                    value={sortQuery}
+                    onChange={(e) => setSortQuery(e.target.value)}
+                    placeholder={t('sort.searchPlaceholder')}
+                    className="flex-1 min-w-0 bg-transparent text-sm text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none"
+                  />
+                </div>
+
+                <div className="max-h-72 overflow-y-auto flex flex-col">
+                  {filteredSortOptions.length === 0 && (
+                    <p className="px-2 py-3 text-sm text-warm-400 dark:text-disc-muted text-center">{t('sort.noOptions')}</p>
+                  )}
+                  {filteredSortOptions.map((opt) => {
+                    const Icon = SORT_TYPE_ICON[opt.type] || Type
+                    const active = sort?.key === opt.key
+                    return (
+                      <button
+                        key={opt.key}
+                        onClick={() => chooseSort(opt)}
+                        className={`flex items-center gap-2 px-2 py-1.5 text-sm rounded-md text-left ${
+                          active
+                            ? 'bg-teal/10 text-teal font-medium'
+                            : 'text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover'
+                        }`}
+                      >
+                        <Icon size={14} className="shrink-0" />
+                        <span className="flex-1 truncate">{opt.label}</span>
+                        {active && <span className="text-xs shrink-0">{sort.dir === 'desc' ? '↓' : '↑'}</span>}
+                      </button>
+                    )
+                  })}
+                </div>
+
+                {sort && (
+                  <button
+                    onClick={() => { setSort(null); setSortOpen(false) }}
+                    className="w-full mt-1.5 h-8 text-sm text-warm-500 dark:text-disc-muted hover:text-red-500 dark:hover:text-red-400 rounded-md hover:bg-warm-50 dark:hover:bg-disc-hover"
+                  >
+                    {t('sort.clear')}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* เฟือง = ที่ตั้งค่าเผื่ออนาคต ยังไม่มีฟังก์ชัน — ใส่ไว้ก่อนตามที่ user ขอ */}
+          <button
+            disabled
+            title={t('settings.toggleLabel')}
+            aria-label={t('settings.toggleLabel')}
+            className="flex items-center justify-center h-9 w-9 rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-300 dark:text-disc-muted/50 cursor-not-allowed"
+          >
+            <Settings size={16} />
+          </button>
+        </div>
+
+        {filtersOpen && (filterGroups.length > 0 || helperOptions.length > 0) && (
+          <div ref={filterRowRef} className="flex flex-wrap items-center gap-2 w-full">
             {filterGroups.map(({ group, labels }, idx) => {
               const activeLabels = labelFilter.filter((l) => (l.group ?? null) === group)
               // ชื่อกลุ่มมาจาก DB — ห้ามแปลผ่าน t()
@@ -896,7 +1052,7 @@ export default function KanbanHome() {
         //   เล็กกว่านั้น: กองเดียวกันซ้อนลงมา กดพับ/กางได้ (แนวเดียวกับ Notion/Linear/Asana บนมือถือ)
         <div className={`flex flex-col gap-3 xl:grid xl:gap-2 ${groupBy === 'due' ? 'xl:grid-cols-5' : 'xl:grid-cols-6'}`}>
           {groups.map(({ key, cards: list }) => {
-            const sorted = sortCards(list)
+            const sorted = sortCardsBy(list, sort)
             const shown = sorted.slice(0, MAX_PER_COLUMN)
             const isOpen = openState[key] ?? sorted.length > 0
             const head = groupBy === 'due' ? t(`due.${key}`) : t(`status.${key}`)

@@ -1877,7 +1877,24 @@
       "empty": "การ์ดที่โหลดมายังไม่มีป้ายให้กรอง",
       "noMatch": "ไม่มีงานที่ตรงกับตัวกรอง",
       "showing": "ตรงกับตัวกรอง {count} ใบ",
-      "helperGroup": "คนช่วย"
+      "helperGroup": "คนช่วย",
+      "toggleLabel": "ตัวกรอง"
+    },
+    "sort": {
+      "toggleLabel": "เรียงลำดับ",
+      "searchPlaceholder": "เรียงตาม",
+      "noOptions": "ไม่พบตัวเลือกที่ค้นหา",
+      "due": "กำหนดส่ง",
+      "title": "ชื่องาน",
+      "description": "รายละเอียด",
+      "status": "สถานะ",
+      "updated": "อัปเดตล่าสุด",
+      "created": "วันที่สร้าง",
+      "active": "เรียงตาม: {label}",
+      "clear": "กลับค่าเริ่มต้น"
+    },
+    "settings": {
+      "toggleLabel": "ตั้งค่า (เร็วๆ นี้)"
     },
     "fieldsPage": {
       "type_text": "ข้อความ",

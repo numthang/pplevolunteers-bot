@@ -1877,7 +1877,24 @@
       "empty": "The loaded cards have no labels to filter by",
       "noMatch": "No task matches this filter",
       "showing": "{count} matching",
-      "helperGroup": "Helpers"
+      "helperGroup": "Helpers",
+      "toggleLabel": "Filter"
+    },
+    "sort": {
+      "toggleLabel": "Sort",
+      "searchPlaceholder": "Sort by",
+      "noOptions": "No matching option",
+      "due": "Due date",
+      "title": "Title",
+      "description": "Description",
+      "status": "Status",
+      "updated": "Last updated",
+      "created": "Created",
+      "active": "Sort: {label}",
+      "clear": "Reset to default"
+    },
+    "settings": {
+      "toggleLabel": "Settings (coming soon)"
     },
     "fieldsPage": {
       "type_text": "Text",
