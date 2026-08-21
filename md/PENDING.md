@@ -38,6 +38,16 @@
 - งาน mechanical ซ้ำ pattern เดิม → ส่งเป็นก้อนเล็ก 2-3 ไฟล์ต่อ Sonnet subagent ได้
 - Connection pooler (PgBouncer) ยังไม่จำเป็น — ค่อยพิจารณาตอน traffic สูงขึ้นจริง
 
+## 🕐 Kanban — sort "อัปเดตล่าสุด" ไม่นับ custom field/checklist (เจอ 2026-08-21)
+
+**user ทัก:** ใช้เมนู "เรียงลำดับ" ใหม่บน `/kanban` เลือก "อัปเดตล่าสุด" แล้วถามว่าทำไมแก้ custom field ไม่ทำให้การ์ดขยับขึ้น
+
+**สาเหตุ:** `kanban_cards.updated_at` ทำ 2 หน้าที่ซ้อนกัน — (1) "อัปเดตล่าสุด" ตามความหมายปกติ (2) **lock token** ของ autosave ช่องชื่อ/รายละเอียดใน modal (ดูคอมเมนต์ `web/db/kanban/fields.js:14-15`) เขียนค่า custom field/checklist/tag **ตั้งใจไม่แตะคอลัมน์นี้** เพราะถ้าแตะ คนที่เปิดการ์ดค้างไว้เฉยๆ (ไม่ได้แก้ชื่อ/รายละเอียดเลย) จะโดน 409 conflict ปลอมทันทีที่ autosave ยิง (บทเรียนเดิมจากป้าย/เช็คลิสต์ก่อนยุบเข้า field)
+
+**ผลคือ:** sort "อัปเดตล่าสุด" (`web/lib/kanbanSort.js`, field key `updated_at`) ตอนนี้นับแค่ title/detail/สถานะ/กำหนดส่ง/เจ้าภาพ (เขียนผ่าน main PATCH route เท่านั้น) ไม่นับ custom field/checklist/tag
+
+**ทางแก้ที่คุยกันไว้ (ยังไม่เคาะ):** เพิ่มคอลัมน์ `last_activity_at` แยกจาก `updated_at` — ทุกจุดเขียน (custom field, checklist, tag, core) มาขยับคอลัมน์นี้แทน โดยไม่แตะ `updated_at`/lock token เลย แล้วให้ sort "อัปเดตล่าสุด" อ่านจากคอลัมน์ใหม่นี้แทน
+
 ## 🗂️ Kanban ก้อน 3 — board จริง (เลื่อนได้ · ประเมินแล้ว 2026-08-20)
 
 **user ถาม: "กระทบโครงสร้าง ทำทีหลังไม่เป็นไรใช่ไหม" → ไม่เป็นไร ตราบใดที่ยังมีทีมเดียวใช้**
