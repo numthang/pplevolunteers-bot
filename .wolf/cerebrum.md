@@ -1343,3 +1343,22 @@ guild `1115613658408566844` มี 117 ยศ แมป permission 0 ยศ → 
 - ⚠️ ข้อแลก: ทำแบบนี้ได้เฉพาะตอนยังไม่มีคนใช้จริง — พอมีคนกรอกงานเองแล้ว **ห้ามใช้วิธีนี้อีก** ต้องทำ dedupe
 - TRUNCATE เฉพาะ `kanban_cards` (CASCADE ลูก) — **ไม่แตะ `kanban_field_defs`/`kanban_field_options`**
   เพราะ field + ตัวเลือกคือของที่ user จัดเองไว้ ไม่ใช่ผลผลิตของ import
+
+### Do-Not-Repeat (2026-08-24 — 6 บั๊กเล็ก kanban รอบเดียว)
+
+- **`TagCombobox.jsx` โหมด `onOpenProfile` (owner/helpers): outer wrapper ต้องเป็น `items-start` ไม่ใช่ `items-center`**
+  เดิมปากกา (pencil, sibling นอกกล่อง flex-wrap ของชิป) ใช้ items-center → พอคนช่วย ≥3 คนทำให้ชิปตกไป 2 บรรทัด
+  ปากกาลอยกลางแนวตั้งระหว่าง 2 บรรทัดพอดี ดูเหมือนหลุดไปอยู่บรรทัดล่างเดี่ยวๆ (ยืนยันด้วย screenshot จริง ไม่ใช่เดา CSS)
+  items-start ยึดปากกาไว้กับขอบบนของบรรทัดแรกเสมอ ไม่ว่าจะ wrap กี่บรรทัด
+- **`helpers/route.js` POST self-add ต้องเช็ค `canEditCard` ควบ `canClaimCard`** — เดิมใช้ canClaimCard อย่างเดียว
+  ซึ่งบล็อกสถานะ done/cancelled (ตั้งใจกันคน "อาสา" งานที่ปิดแล้ว) แต่ดันบล็อกเจ้าภาพ/คนสร้างเองที่ควรแก้การ์ดตัวเองได้เสมอ
+  ผลคือ "เพิ่มตัวเองไม่ได้แต่เพิ่มคนอื่นได้" (เพิ่มคนอื่นใช้ canEditCard อยู่แล้วซึ่งไม่เช็คสถานะ)
+- **`fmtDueShort` ใน KanbanHome.jsx ไม่มี `year`** — ใส่ `year: '2-digit'` ตาม pattern เดียวกับ `components/calling/`
+  (`day: 'numeric', month: 'short', year: '2-digit'`) งานข้ามปีดูวันที่ไม่ออกว่าปีไหนถ้าไม่มีปีกำกับ
+- **แก้ badge/chip css ใน React แบบมี flex-wrap ซ้อนกันหลายชั้น — ต้อง screenshot จริงก่อนสรุป ห้ามเชื่อ CSS spec reasoning ล้วนๆ**
+  วิเคราะห์ CSS ด้วยเหตุผลอย่างเดียวบอกว่า "น่าจะ work" ได้ แต่ browser จริงต่างจากที่คิด (เจอกับปากกา items-center)
+  วิธี verify ไม่มี playwright/chromium-cli ในโปรเจกต์นี้ → ใช้ **google-chrome --headless=new --remote-debugging-port + ws (มีอยู่แล้วใน web/node_modules) คุย CDP ตรงๆ** ได้ ไม่ต้องติดตั้งอะไรเพิ่ม
+  · login ทดสอบ: insert token ตรงลง `org_login_tokens` (อีเมล users.id=1) แล้ว nav ไป `/org/verify?token=...` ได้ session จริง — อย่ายิง POST /api/org/auth/magic (ส่งอีเมลจริง)
+  · สคริปต์ .mjs ต้องวางใน `web/` ไม่ใช่ scratchpad — resolve `ws` ผ่าน web/node_modules (ESM ไม่ใช้ NODE_PATH) แล้วลบทิ้งหลังใช้เสร็จ
+- **สถานะ 6 แบบ กรองได้ (`filter.statusGroup`) เพิ่มเข้าแถวตัวกรองแล้ว** — แยกจาก "จัดกลุ่มตามอะไร" (groupBy)
+  กรองซ่อนใบที่ไม่เข้าเกณฑ์ ใช้ได้ทั้ง 2 โหมด groupBy (status/due) ตัวเลือกตายตัวเสมอ ปุ่มกรวยเลยโผล่ไม่มีเงื่อนไข
