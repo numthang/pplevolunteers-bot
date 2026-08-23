@@ -1,6 +1,6 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-21T07:08:43.832Z
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-23T17:36:27.909Z
 > Files: 1031 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/1b7cbea7-c43c-466d-9a5f-c61fda8e76b5/scratchpad/
@@ -2058,12 +2058,12 @@
 - `featureGate.js` — ด่านหน้า route ของแต่ละ app: ไม่มี session → redirectToLogin() · org ปิดฟีเจอร์ → 404 (~420 tok)
 - `financeAccess.js` — Finance Access Control (~845 tok)
 - `generateComplaintLetter.js` — Exports generateComplaintLetterPdf (~748 tok)
-- `generatePdf.js` — ดึง body content (XML ระหว่าง <w:body>…<w:sectPr) จากไฟล์ .docx (~3705 tok)
+- `generatePdf.js` — ดึง body content (XML ระหว่าง <w:body>…<w:sectPr) จากไฟล์ .docx (~5027 tok)
 - `geography.js` — Geography data — จังหวัด ↔ ภาคย่อย (sub-region) ↔ ภาคใหญ่ (main region) (~1983 tok)
 - `getEffectiveRoles.js` — คืน { roles, discordId, access } — roles/discordId คือ identity (debug-aware) (~1287 tok)
 - `guildContext.js` — คืน guild_id ที่ request นี้ทำงานอยู่ — รากฐานของ multi-guild ทั้งระบบ (~639 tok)
 - `hexColor.js` — รับ hex code ที่พิมพ์/วางเอง — เติม # ให้ถ้าลืม, ขยายแบบย่อ 3 หลัก (#f80 → #ff8800) (~121 tok)
-- `idCard.js` — สำเนาบัตรประชาชน — resize ให้พอดีพิมพ์ A4 + ลายน้ำกันใช้ผิดวัตถุประสงค์ (~2032 tok)
+- `idCard.js` — สำเนาบัตรประชาชน — resize ให้พอดีพิมพ์ A4 + ลายน้ำกันใช้ผิดวัตถุประสงค์ (~2073 tok)
 - `kanbanAccess.js` — Kanban Access Control — ก้อน 1 ("การบ้านของฉัน" · ยังไม่มีกระดาน) (~1350 tok)
 - `kanbanFieldValue.js` — ชนิด → คอลัมน์ปลายทางใน kanban_card_field_values (url ใช้ value_text ร่วมกับ text · checklist ไม่มีค (~967 tok)
 - `kanbanGrouping.js` — จัดกลุ่มการ์ด + ตัดสินว่า "ของฉัน" คือใบไหน — ตรรกะล้วน (เทสที่ lib/__tests__/kanbanGrouping.test.js (~1075 tok)

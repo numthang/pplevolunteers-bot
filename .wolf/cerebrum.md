@@ -629,6 +629,14 @@ flag HttpOnly (next-auth session/csrf ทุกตัวเป็นแบบน
 การทดสอบวิธีนี้จับบั๊กจริงได้ 1 ตัว (ดู Do-Not-Repeat "3-state cycle") ที่ eslint/build/vitest ผ่านหมดแต่พังตอนคลิกจริง — ยืนยันว่า
 "เทสอัตโนมัติ + build ผ่าน" ไม่พอสำหรับ interaction ที่มี state cycle หลายจังหวะ ต้องคลิกจริงเสมอ (ตรงกับกฎ CLAUDE.md §UI testing)
 
+### PDF ใบสำคัญรับเงิน — พื้นที่ท้ายหน้าไม่คงที่ (2026-08-24)
+
+- ทุก surface ของ docs (`/docs/sign/[token]`, `/api/docs/sign/pdf`, `/api/docs/sign/preview(-img)`, `/dl/<t>/receipt`, `/api/docs/projects/[id]/export`) เรียก **`generateEntryPdf()` ตัวเดียวกันหมด** — แก้ layout ที่ `web/lib/generatePdf.js` ที่เดียวเปลี่ยนครบทุกหน้า ไม่ต้องไล่แก้ route
+- **พื้นที่ว่างท้ายใบไม่คงที่** ขึ้นกับ `item_type` (body template คนละไฟล์) + ความยาว `description` + **มีลายเซ็นจริงหรือยัง** (รูปลายเซ็นที่ inject ผ่าน `{%sig}` ทำให้บรรทัดสูงขึ้น ดันเนื้อหาตกหน้าใหม่) → วัดจากใบที่ยังไม่เซ็นแล้วสรุปเป็นค่าคงที่ = พลาด
+- เทส layout PDF ในเครื่อง dev ได้โดยไม่ต้องมี DB: เขียน `.mjs` เรียก `generateEntryPdf()` ตรงๆ ด้วย entry ปลอม แล้ว `pdftoppm` เป็นรูปมาดู — **ต้อง `cd web` ก่อนรัน** เพราะ `idCard.js` หา font จาก `process.cwd()/../assets/fonts`
+- ช่องลงชื่อผู้รับ/ผู้จ่ายอยู่ฝั่งขวา (x≈290pt ขึ้นไป) → มุมล่างซ้ายเป็นที่ว่างประจำของทุก template ใช้วางบล็อกสำเนาบัตรได้
+- `buildCertifyBlock()` cap ความสูงลายเซ็นด้วย `sigMaxH` แบบไม่ลดความกว้าง → ถ้า `sigW/3 > sigMaxH` ลายเซ็นจะ**ถูกบีบสัดส่วน** (ลายเซ็น normalize มาเป็น 3:1 เสมอ) ตั้งค่าให้ `sigW/3 ≤ sigMaxH`
+
 ## Do-Not-Repeat
 
 <!-- Mistakes made and corrected. Each entry prevents the same mistake recurring. -->
