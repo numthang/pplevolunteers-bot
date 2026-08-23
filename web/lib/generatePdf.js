@@ -7,11 +7,13 @@ import fs from 'fs'
 import path from 'path'
 import os from 'os'
 import { fileURLToPath } from 'url'
+import { createCanvas, loadImage } from '@napi-rs/canvas'
 import { buildWatermarkedIdCard, buildCertifyBlock, normalizeSignature, buildBlankSignature } from './idCard.js'
 
 const __dirname   = path.dirname(fileURLToPath(import.meta.url))
 const TEMPLATES   = path.join(__dirname, '../templates')
 const LIBREOFFICE = '/usr/bin/libreoffice'
+const PDFTOPPM    = '/usr/bin/pdftoppm'   // ใช้วัดพื้นที่ว่างท้ายหน้า (มาคู่กับ poppler เหมือน preview-img)
 
 const TEMPLATE_1 = path.join(TEMPLATES, 'receipts', 'template-1.docx')
 const BODY_1_DIR  = path.join(TEMPLATES, 'receipts', 'body-1')
@@ -271,12 +273,12 @@ export async function generateEntryPdf(entry, { signatureBase64 = null, payerSig
   const pdfBuf  = fs.readFileSync(pdfPath)
   fs.unlinkSync(pdfPath)
 
-  // แนบสำเนาบัตรประชาชน (ถ้ามี) ต่อท้ายเป็นหน้า A4 — ลายน้ำแล้ว
+  // แนบสำเนาบัตรประชาชน (ถ้ามี) — วางมุมล่างซ้ายของหน้าสุดท้าย ลายน้ำแล้ว
   if (entry.id_card_image) {
     try {
-      return await appendIdCardPage(pdfBuf, entry.id_card_image, sigBuf)
+      return await stampIdCardBlock(pdfBuf, entry.id_card_image, sigBuf)
     } catch (err) {
-      console.error(`[generateEntryPdf] id-card append failed for entry ${entry.id}:`, err.message)
+      console.error(`[generateEntryPdf] id-card stamp failed for entry ${entry.id}:`, err.message)
       // ล้มเหลวตรงนี้ไม่ควรทำให้ทั้งใบพัง — คืนใบเสร็จเปล่าๆ ไป
     }
   }
@@ -286,35 +288,149 @@ export async function generateEntryPdf(entry, { signatureBase64 = null, payerSig
 
 const A4 = { w: 595.28, h: 841.89 }  // pt (portrait)
 
-/** append หน้า A4 — บัตร (watermark) ครึ่งบน + สำเนาถูกต้อง/ลายเซ็นใต้บัตร */
-async function appendIdCardPage(pdfBuf, idCardBuffer, sigBuffer = null) {
+// บล็อกสำเนาบัตร — วางมุมล่างซ้ายของหน้าสุดท้าย (ช่องลงชื่ออยู่ฝั่งขวา x≈290pt ขึ้นไป)
+const CARD_BLOCK = {
+  x:        40,   // ขอบซ้าย (pt)
+  bottom:   22,   // เว้นจากขอบล่าง — ต้องมากกว่าแถบ footer 14pt ที่หน้า export ปั๊มทับทุกหน้า
+  cardW:    180,  // บัตรจริง ISO ID-1 = 243pt → ย่อ ~74% ให้พอดีมุมล่างซ้าย
+  gap:      4,    // ระยะบัตร→ลายเซ็น
+  minFree:  204,  // ถ้าพื้นที่ว่างล่างซ้ายน้อยกว่านี้ (เอกสารยาวผิดปกติ) → ขึ้นหน้าใหม่แทน กันทับเนื้อหา
+}
+const CARD_RATIO = 54 / 85.6   // สัดส่วนบัตร ISO ID-1
+const CERT_OPTS  = { W: 560, H: 180, sigW: 330, sigMaxH: 120, sigTop: 6, fontSize: 54, textBottom: 10 }  // sigW/3 = 110 < sigMaxH → ลายเซ็นไม่ถูกบีบสัดส่วน
+
+/** ความสูงพื้นที่ว่าง (pt) นับจากขอบล่างของหน้า pageNo ในคอลัมน์ซ้าย — null ถ้าวัดไม่สำเร็จ */
+async function measureBottomLeftFree(pdfBuf, pageNo) {
+  const tmpDir  = os.tmpdir()
+  const tag     = `${Date.now()}-${Math.random().toString(36).slice(2)}`
+  const tmpPdf  = path.join(tmpDir, `pple-measure-${tag}.pdf`)
+  const outPrefix = path.join(tmpDir, `pple-measure-${tag}`)
+  let cleanupFiles = [tmpPdf]
+
+  try {
+    fs.writeFileSync(tmpPdf, pdfBuf)
+
+    const result = spawnSync(PDFTOPPM, [
+      '-png', '-r', '60', '-f', String(pageNo), '-l', String(pageNo), tmpPdf, outPrefix,
+    ], { timeout: 15_000 })
+
+    if (result.status !== 0 || result.error) return null
+
+    const outDir  = path.dirname(outPrefix)
+    const prefix  = path.basename(outPrefix)
+    const pngName = fs.readdirSync(outDir).find(f => f.startsWith(prefix) && f.endsWith('.png'))
+    if (!pngName) return null
+    const pngPath = path.join(outDir, pngName)
+    cleanupFiles.push(pngPath)
+
+    const img    = await loadImage(fs.readFileSync(pngPath))
+    const W = img.width, H = img.height
+    const canvas = createCanvas(W, H)
+    const ctx    = canvas.getContext('2d')
+    ctx.drawImage(img, 0, 0)
+    const { data } = ctx.getImageData(0, 0, W, H)
+
+    const scale = 72 / 60   // px → pt ที่ 60dpi
+    const xFrom = Math.round(30 * 60 / 72)
+    const xTo   = Math.min(W, Math.round(285 * 60 / 72))
+
+    for (let y = H - 1; y >= 0; y--) {
+      let inkCount = 0
+      for (let x = xFrom; x < xTo; x++) {
+        const i = (y * W + x) * 4
+        const r = data[i], g = data[i + 1], b = data[i + 2]
+        if (r < 230 || g < 230 || b < 230) {
+          inkCount++
+          if (inkCount > 2) break
+        }
+      }
+      if (inkCount > 2) return (H - y) * scale
+    }
+
+    return H * scale   // ไม่เจอหมึกเลย — ว่างทั้งหน้า
+  } catch {
+    return null
+  } finally {
+    for (const f of cleanupFiles) {
+      try { fs.unlinkSync(f) } catch { /* ไม่มีไฟล์ก็ข้าม */ }
+    }
+  }
+}
+
+/** วาด บัตร(ลายน้ำ) + ลายเซ็น + "สำเนาถูกต้อง" ลงบน page โดยให้ขอบบนของบล็อกอยู่ที่ topY */
+async function drawIdCardBlock(pdf, page, cardImg, certImg, certRatio, topY) {
+  const cardH = CARD_BLOCK.cardW * CARD_RATIO
+  const cScale = Math.min(CARD_BLOCK.cardW / cardImg.width, cardH / cardImg.height)
+  const cW = cardImg.width  * cScale
+  const cH = cardImg.height * cScale
+  page.drawImage(cardImg, { x: CARD_BLOCK.x, y: topY - cardH, width: cW, height: cH })
+
+  const certW = CARD_BLOCK.cardW
+  const certH = certW * certRatio
+  page.drawImage(certImg, {
+    x: CARD_BLOCK.x,
+    y: topY - cardH - CARD_BLOCK.gap - certH,
+    width: certW, height: certH,
+  })
+}
+
+/** วางสำเนาบัตร + สำเนาถูกต้อง ท้ายใบสำคัญรับเงิน (มุมล่างซ้ายของหน้าสุดท้าย)
+ *  ถ้าหน้าสุดท้ายเนื้อหายาวจนพื้นที่ไม่พอ → เพิ่มหน้าใหม่แล้ววางบล็อกเดียวกันไว้ด้านบน */
+async function stampIdCardBlock(pdfBuf, idCardBuffer, sigBuffer = null) {
   const cardJpeg = await buildWatermarkedIdCard(idCardBuffer)
-  const certify  = await buildCertifyBlock(sigBuffer)
+  const certify  = await buildCertifyBlock(sigBuffer, CERT_OPTS)
 
   const pdf     = await PDFDocument.load(pdfBuf)
   const cardImg = await pdf.embedJpg(cardJpeg)
   const certImg = await pdf.embedPng(certify.png)
-  const page    = pdf.addPage([A4.w, A4.h])
 
-  // ขนาดบัตร ISO ID-1 จริง: 85.6 × 54mm → pt (1mm = 2.835pt)
-  const CARD_W = 85.6 * 2.835   // ≈ 243 pt
-  const CARD_H = 54  * 2.835   // ≈ 153 pt
-  const margin = 48
-  const cScale = Math.min(CARD_W / cardImg.width, CARD_H / cardImg.height)
-  const cW = cardImg.width  * cScale
-  const cH = cardImg.height * cScale
-  const cX = (A4.w - cW) / 2
-  const cY = A4.h - margin - cH
-  page.drawImage(cardImg, { x: cX, y: cY, width: cW, height: cH })
+  const certRatio = certify.height / certify.width
+  const blockH = CARD_BLOCK.cardW * CARD_RATIO + CARD_BLOCK.gap + CARD_BLOCK.cardW * certRatio
 
-  const certW = 240
-  const certH = certW * (certify.height / certify.width)
-  page.drawImage(certImg, {
-    x: (A4.w - certW) / 2,
-    y: cY - 24 - certH,
-    width: certW, height: certH,
-  })
+  const lastNo = pdf.getPageCount()
+  const free   = await measureBottomLeftFree(pdfBuf, lastNo)
 
-  const out = await pdf.save()
-  return Buffer.from(out)
+  if (free != null && free >= CARD_BLOCK.minFree) {
+    const page = pdf.getPage(lastNo - 1)
+    await drawIdCardBlock(pdf, page, cardImg, certImg, certRatio, CARD_BLOCK.bottom + blockH)
+  } else {
+    const page = pdf.addPage([A4.w, A4.h])
+    await drawIdCardBlock(pdf, page, cardImg, certImg, certRatio, A4.h - 48)
+  }
+
+  return Buffer.from(await pdf.save())
 }
+
+// โค้ดเดิม — สำเนาบัตรเป็นหน้า A4 แยกต่อท้าย (เก็บไว้เผื่อกลับมาใช้ 2026-08-24)
+// /** append หน้า A4 — บัตร (watermark) ครึ่งบน + สำเนาถูกต้อง/ลายเซ็นใต้บัตร */
+// async function appendIdCardPage(pdfBuf, idCardBuffer, sigBuffer = null) {
+//   const cardJpeg = await buildWatermarkedIdCard(idCardBuffer)
+//   const certify  = await buildCertifyBlock(sigBuffer)
+//
+//   const pdf     = await PDFDocument.load(pdfBuf)
+//   const cardImg = await pdf.embedJpg(cardJpeg)
+//   const certImg = await pdf.embedPng(certify.png)
+//   const page    = pdf.addPage([A4.w, A4.h])
+//
+//   // ขนาดบัตร ISO ID-1 จริง: 85.6 × 54mm → pt (1mm = 2.835pt)
+//   const CARD_W = 85.6 * 2.835   // ≈ 243 pt
+//   const CARD_H = 54  * 2.835   // ≈ 153 pt
+//   const margin = 48
+//   const cScale = Math.min(CARD_W / cardImg.width, CARD_H / cardImg.height)
+//   const cW = cardImg.width  * cScale
+//   const cH = cardImg.height * cScale
+//   const cX = (A4.w - cW) / 2
+//   const cY = A4.h - margin - cH
+//   page.drawImage(cardImg, { x: cX, y: cY, width: cW, height: cH })
+//
+//   const certW = 240
+//   const certH = certW * (certify.height / certify.width)
+//   page.drawImage(certImg, {
+//     x: (A4.w - certW) / 2,
+//     y: cY - 24 - certH,
+//     width: certW, height: certH,
+//   })
+//
+//   const out = await pdf.save()
+//   return Buffer.from(out)
+// }

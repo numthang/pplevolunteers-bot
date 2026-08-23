@@ -143,7 +143,13 @@ Tab ที่ 3 ใน DocProjectView — เชื่อม ACT event กับ
 
 ## Template System
 
-**Stack:** `docxtemplater` render `{{variable}}` ลงใน `.docx` → LibreOffice headless แปลงเป็น PDF → `pdf-lib` append หน้าสำเนาบัตรประชาชน
+**Stack:** `docxtemplater` render `{{variable}}` ลงใน `.docx` → LibreOffice headless แปลงเป็น PDF → `pdf-lib` ปั๊มสำเนาบัตรประชาชนลงท้ายใบ
+
+**สำเนาบัตรบนใบเดียวกัน (2026-08-24):** บัตร (ลายน้ำ) + ลายเซ็น + "สำเนาถูกต้อง" วางที่ **มุมล่างซ้ายของหน้าสุดท้าย** (ช่องลงชื่ออยู่ฝั่งขวา x≈290pt ขึ้นไป) → เอกสารเหลือใบเดียว
+- `stampIdCardBlock()` วัดพื้นที่ว่างคอลัมน์ซ้ายของหน้าสุดท้ายก่อน (render 60dpi ด้วย `pdftoppm` แล้วสแกนพิกเซลหาแถวแรกที่มีหมึก) — ว่าง ≥ `CARD_BLOCK.minFree` จึงปั๊มลงหน้าเดิม ไม่พอ (เอกสารยาวผิดปกติ) ค่อยเพิ่มหน้าใหม่ กันปั๊มทับเนื้อหา
+- วัดไม่ได้ (ไม่มี `pdftoppm`) → คืน `null` → ขึ้นหน้าใหม่เหมือนพฤติกรรมเดิม ไม่พังทั้งใบ
+- ขอบล่างบล็อกเว้น 22pt เพราะหน้า export ปั๊มแถบ footer สูง 14pt ทับทุกหน้า
+- โค้ดเดิม `appendIdCardPage()` (บัตรเป็นหน้า A4 แยก) comment out ไว้ในไฟล์ เผื่อกลับมาใช้
 
 - Template ไฟล์อยู่ที่ `web/templates/receipts/`
 - Logic อยู่ที่ `web/lib/generatePdf.js` — `buildData()` map entry → variables, `generateEntryPdf()` render + convert

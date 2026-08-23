@@ -1401,3 +1401,11 @@ user เปรยว่า "น่าจะมี social listening เอาไ�
 - ⚠️ **ต้องรัน `node deploy-commands.js` ก่อนใช้** — เพิ่ม option `bind_email` ใน `/panel register`
 - ⬜ **ยังไม่เทสจริงบน Discord** (syntax check ผ่านอย่างเดียว)
 - [ ] **i18n ค้าง — `handlers/verifyHandler.js` + `commands/panel.js`** ยัง hardcode ไทยทั้งไฟล์ (โซน bot ยังไม่ migrate เลย) · รอบนี้เพิ่ม/แก้ข้อความที่ user เห็น ~4 จุด (label modal, embed ผลลัพธ์โหมด soft, ปุ่ม/สรุป panel) ตาม pattern เดิมของไฟล์ — จดตามกติกา CLAUDE.md
+
+## 📄 Docs — สำเนาบัตรย้ายมาอยู่ท้ายใบสำคัญรับเงิน (2026-08-24 · local ยังไม่ deploy)
+
+- [x] `stampIdCardBlock()` ใน `web/lib/generatePdf.js` ปั๊มบัตร+ลายเซ็น+"สำเนาถูกต้อง" มุมล่างซ้ายของหน้าสุดท้าย → เอกสารเหลือใบเดียว · ทุก surface (`/docs/sign/*`, `/api/docs/sign/pdf`, `/dl/<t>/receipt`, `/api/docs/projects/[id]/export`) ใช้ `generateEntryPdf` ตัวเดียวกันจึงเปลี่ยนพร้อมกันหมด
+- [x] `appendIdCardPage()` เดิม comment out ไว้ในไฟล์ (user สั่งเก็บไว้เผื่อกลับมาใช้)
+- ⬜ **ยังไม่เทสบน prod** — เทสในเครื่อง dev ด้วย fixture (บัตรปลอม+ลายเซ็นปลอม) ครบ 8 item_type แล้ว 7/8 ออกใบเดียว
+- [ ] **`supplies` ล้นเป็น 2 หน้าเองตั้งแต่ก่อนแก้** — body template ยาว พอมีรูปลายเซ็นจริงแทรก บรรทัด "ตำแหน่ง" ตกไปหน้า 2 (บล็อกบัตรไปวางท้ายหน้า 2 ตามถูกแล้ว) · ถ้าอยากให้เหลือใบเดียวจริงต้องไปลดความสูง `templates/receipts/body-1/supplies.docx` — ยังไม่ทำ
+- [ ] **prod ต้องมี `pdftoppm`** (poppler) — ใช้วัดพื้นที่ว่างก่อนปั๊ม · ถ้าไม่มีจะ fallback เป็นหน้าแยกเหมือนเดิมเงียบๆ (หน้า preview ของ `/docs/sign` ใช้ `pdftoppm` อยู่แล้ว ถ้า preview ขึ้นรูปได้แปลว่ามี)

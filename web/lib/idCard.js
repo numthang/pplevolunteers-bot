@@ -164,10 +164,13 @@ export async function buildFooterImage(text) {
 }
 
 /** บล็อก "ลายเซ็น + สำเนาถูกต้อง" สำหรับวางใต้ภาพบัตร → PNG โปร่งใส (วางบน A4 ขาวได้พอดี)
- *  คืน { png, width, height } เพื่อให้ผู้เรียก scale ตามสัดส่วน */
-export async function buildCertifyBlock(sigBuffer = null) {
+ *  คืน { png, width, height } เพื่อให้ผู้เรียก scale ตามสัดส่วน
+ *  รับ options ปรับขนาดได้ (ค่า default ให้ผลเหมือนเดิมเป๊ะ) */
+export async function buildCertifyBlock(sigBuffer = null, {
+  W = 700, H = 320, sigW = 320, sigMaxH = 170, sigTop = 20,
+  fontSize = 54, textBottom = 24,
+} = {}) {
   ensureFont()
-  const W = 700, H = 320
   const canvas = createCanvas(W, H)
   const ctx = canvas.getContext('2d')
 
@@ -175,18 +178,17 @@ export async function buildCertifyBlock(sigBuffer = null) {
   if (sigBuffer) {
     try {
       const sig = await loadImage(sigBuffer)
-      const sigW = 320
-      const sigH = Math.min(170, Math.round(sigW * (sig.height / sig.width)))
-      ctx.drawImage(sig, (W - sigW) / 2, 20, sigW, sigH)
+      const sigH = Math.min(sigMaxH, Math.round(sigW * (sig.height / sig.width)))
+      ctx.drawImage(sig, (W - sigW) / 2, sigTop, sigW, sigH)
     } catch { /* ลายเซ็นพังไม่ควรล้มทั้งใบ */ }
   }
 
   // "สำเนาถูกต้อง" สีน้ำเงินหมึกปากกา — กลางล่าง ใต้ลายเซ็น
-  ctx.font = `54px ${FONT}`
+  ctx.font = `${fontSize}px ${FONT}`
   ctx.textAlign = 'center'
   ctx.textBaseline = 'bottom'
   ctx.fillStyle = '#1a47cc'
-  ctx.fillText('สำเนาถูกต้อง', W / 2, H - 24)
+  ctx.fillText('สำเนาถูกต้อง', W / 2, H - textBottom)
 
   return { png: canvas.toBuffer('image/png'), width: W, height: H }
 }
