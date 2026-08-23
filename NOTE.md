@@ -36,7 +36,12 @@
 - http://localhost:3000/profile ไม่แน่ใจว่าตอน switch org มันดึงข้อมูลถูก org 
 
 # Docs
-
+https://pplevolunteers.org/docs/sign/779ef4db-66e3-4424-b4ba-3eff9a15f895 เซ็นจ่าย
+https://pplevolunteers.org/docs/sign/ccee6c92-a5db-4e17-9aea-0840a5d1266a เซ็นรับ
+https://pplevolunteers.org/api/docs/sign/pdf?token=09ea1193-92fe-4181-a155-e0040bb35013 pdf รายเอกสาร
+https://pplevolunteers.org/dl/krKJcjns/receipt ใบสำคัญรับเงินทั้งหมด
+- แสดงบัตรประชาชน+สำเนาถูกต้อง+ลายเซ็น รวมไว้ด้านล่าง ของใบสำคัญรับเงิน เหลือใบเดียว
+- ส่วนที่แสดงบัตรประชาชนเดิม ให้ comment out ไว้ก่อน เผื่อจะนำกลับมาใช้อีก
 
 # Bot 
 - มีวิธีย้ายคนจาก stage ไปห้องประชุมธรรมดาทั้งหมดไหมครับ ผมอยากทำตอนปิดประชุม stage
