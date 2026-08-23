@@ -106,14 +106,17 @@ export async function createDocProject({ orgId, actEventCacheId, isMobile, parti
   return rows[0].id
 }
 
-/** ดึง event_date/end_date จาก cache_pple_event เมื่อยังไม่มี docs_project */
-export async function getActEventById(actEventCacheId, guildId) {
+/** ดึง event_date/end_date จาก cache_pple_event เมื่อยังไม่มี docs_project
+ *  scope ด้วย org ไม่ใช่ guild เดียวที่ select ไว้ — org มีได้หลาย guild (เหมือน getDocEvents)
+ *  เดิมรับ guildId ตรงๆ ทำให้ 404 มั่วเมื่อ user active guild อื่นของ org เดียวกัน (bug 2026-08-24) */
+export async function getActEventById(actEventCacheId, orgId) {
   const { rows } = await pool.query(
     `SELECT name, province, act_event_id,
             TO_CHAR(event_date,     'YYYY-MM-DD"T"HH24:MI') AS event_date,
             TO_CHAR(event_end_date, 'YYYY-MM-DD"T"HH24:MI') AS event_end_date
-     FROM cache_pple_event WHERE id = $1 AND guild_id = $2`,
-    [actEventCacheId, guildId]
+     FROM cache_pple_event
+     WHERE id = $1 AND guild_id IN (SELECT guild_id FROM dc_guilds WHERE org_id = $2)`,
+    [actEventCacheId, orgId]
   )
   return rows[0] || null
 }

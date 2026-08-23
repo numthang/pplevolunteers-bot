@@ -43,6 +43,7 @@ export async function GET(req) {
         token_expires_at: entry.signer_token_expires_at,
         signer_role:      role,
         // recipient-only fields
+        member_user_id:   role === 'recipient' ? entry.member_user_id : null,
         has_ngs_link:     role === 'recipient' ? !!entry.member_id : null,
         // self-fill ครบ (ชื่อใน users + เลขบัตรใน override_data) = ยืนยันตัวตนแบบกรอกเองแล้ว
         has_self_info:    role === 'recipient' ? !!(entry.firstname && entry.lastname && entry.override_data?.id_number) : null,

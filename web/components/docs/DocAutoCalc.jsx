@@ -438,7 +438,8 @@ export default function DocAutoCalc({ eventDate, eventEndDate, participantCount,
       // ไม่บังคับเลือกผู้รับ — สร้างได้เลย กำหนดผู้รับทีหลังใน DocEntryList ได้ (member_user_id nullable)
       const base = { itemType: item.itemType, description: item.description, amount: item.amount, overrideData: item.overrideData ?? undefined }
       if (item.noMember) {
-        entries.push({ memberUserId: null, ...base })
+        // noMember = ไม่บังคับเลือกตอนคำนวณ แต่ถ้าเลือกผู้รับใน proposal ไว้แล้วต้องติดไปด้วย (bug-445: เดิม hardcode null ทิ้ง selection)
+        entries.push({ memberUserId: r?.user_id ?? null, ...base })
       } else if (item.isIndividual) {
         if (r.length) {
           for (const m of r) entries.push({ memberUserId: m.user_id, ...base })

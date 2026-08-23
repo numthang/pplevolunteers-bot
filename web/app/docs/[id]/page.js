@@ -1,25 +1,24 @@
 import { getTranslations } from 'next-intl/server'
 import { getSession, redirectToLogin } from '@/lib/auth.js'
 import { redirect, notFound } from 'next/navigation'
-import { canManageDocs } from '@/lib/docsAccess.js'
+import { canManageDocs, canAccessEvent } from '@/lib/docsAccess.js'
 import { getEffectiveOrgIdentity } from '@/lib/orgAccess.js'
 import { getOrgId } from '@/lib/orgContext.js'
-import { getGuildId } from '@/lib/guildContext.js'
 import { getDocProjectByEventId, getActEventById } from '@/db/docs/projects.js'
 import { getEntriesByProject, autoAssignPayers } from '@/db/docs/entries.js'
 import DocProjectView from '@/components/docs/DocProjectView'
 
 // [id] ใน URL = cache_pple_event.id ไม่ใช่ docs_projects.id
 // docs_projects ถูก lookup ด้วย act_event_cache_id → getDocProjectByEventId
-// getActEventById ยังคงรับ guildId จริง — cache_pple_event ไม่ได้ migrate เป็น org (query WHERE guild_id ตรงๆ ไม่ bridge)
+// getActEventById scope ด้วย orgId (join dc_guilds) ไม่ใช่ guild เดียวที่ select ไว้ — org มีได้หลาย guild
 
 export async function generateMetadata({ params }) {
   const { id: eventCacheId } = await params
   const t = await getTranslations('docs')
   const session = await getSession()
   if (!session) return { title: t('detail.defaultTitle') }
-  const guildId = await getGuildId(session)
-  const meta = await getActEventById(eventCacheId, guildId).catch(() => null)
+  const orgId = await getOrgId(session)
+  const meta = await getActEventById(eventCacheId, orgId).catch(() => null)
   return { title: meta?.name ?? t('detail.defaultTitle') }
 }
 
@@ -33,7 +32,6 @@ export default async function DocProjectPage({ params }) {
   if (!canManage) redirect('/')
 
   const orgId = await getOrgId(session)
-  const guildId = await getGuildId(session)
   const project = await getDocProjectByEventId(eventCacheId, orgId)
 
   // auto-เลือกผู้จ่ายให้ entry ที่ยังไม่มี (idempotent — no-op ถ้าทุก entry มี payer แล้ว)
@@ -46,9 +44,12 @@ export default async function DocProjectPage({ params }) {
   // เมื่อยังไม่มี project — ดึง event times จาก cache_pple_event เพื่อให้ auto-calc ทำงานได้
   const eventMeta = project
     ? { name: project.event_name, province: project.province, event_date: project.event_date, event_end_date: project.event_end_date, participant_count: project.participant_count, act_event_id: project.act_event_id }
-    : await getActEventById(eventCacheId, guildId)
+    : await getActEventById(eventCacheId, orgId)
 
   if (!eventMeta) notFound()  // event ไม่มีอยู่จริงใน cache_pple_event
+
+  // canManageDocs เช็คแค่สิทธิ์ระดับระบบ ไม่เช็คจังหวัด — ต้องเช็ค scope ต่อ event ด้วย (เหมือน /api/docs/entries/[id])
+  if (!canAccessEvent(eventMeta.province, access)) redirect('/docs')
 
   return (
     <DocProjectView

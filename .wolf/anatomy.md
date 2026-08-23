@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-23T17:36:27.909Z
-> Files: 1031 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-23T18:33:58.637Z
+> Files: 1032 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/1b7cbea7-c43c-466d-9a5f-c61fda8e76b5/scratchpad/
 
@@ -20,7 +20,8 @@
 ## ../../../.claude/projects/-home-tee-VSites-node-pple-volunteers/memory/
 
 - `feedback_context_window_size.md` (~238 tok)
-- `MEMORY.md` — Memory Index (~3077 tok)
+- `feedback_thai_language.md` (~197 tok)
+- `MEMORY.md` — Memory Index (~3105 tok)
 
 ## ../calling.ppleth.ai/
 
@@ -903,7 +904,7 @@
 
 ## web/app/api/docs/members/
 
-- `route.js` — GET /api/docs/members?q=&limit=20 (~521 tok)
+- `route.js` — GET /api/docs/members?q=&limit=20, dedupe 1 คนต่อแถว (org_members มีหลายแถวถ้าอยู่หลาย guild) (~698 tok)
 
 ## web/app/api/docs/members/recent/
 
@@ -983,7 +984,7 @@
 
 ## web/app/api/docs/sign/verify/
 
-- `route.js` — GET /api/docs/sign/verify?token= (~615 tok)
+- `route.js` — GET /api/docs/sign/verify?token= (~637 tok)
 
 ## web/app/api/docs/token/[token]/receipt/
 
@@ -1596,7 +1597,7 @@
 
 ## web/app/docs/[id]/
 
-- `page.js` — [id] ใน URL = cache_pple_event.id ไม่ใช่ docs_projects.id (~841 tok)
+- `page.js` — [id] ใน URL = cache_pple_event.id ไม่ใช่ docs_projects.id (~874 tok)
 
 ## web/app/docs/p/[token]/
 
@@ -1853,8 +1854,8 @@
 
 ## web/components/docs/
 
-- `DocAutoCalc.jsx` — TRAVEL_IN_PROVINCE_RATE (~9648 tok)
-- `DocEntryList.jsx` — ALL_ITEMS (~6241 tok)
+- `DocAutoCalc.jsx` — TRAVEL_IN_PROVINCE_RATE (~9692 tok)
+- `DocEntryList.jsx` — ALL_ITEMS (~6600 tok)
 - `DocProjectCard.jsx` — FALLBACK_IMAGE (~1078 tok)
 - `DocProjectView.jsx` — THAI_MONTHS (~11735 tok)
 - `DocsProvinceFilter.jsx` — DocsProvinceFilter (~449 tok)
@@ -1990,7 +1991,7 @@
 - `entries.js` — เติม payer_display_name + payer_position จาก pool ผู้จ่าย (role-based position มาก่อน docs_payers) (~5842 tok)
 - `idCard.js` — สำเนาบัตรประชาชนเก็บใน `users.id_card_image` (BYTEA) — **1 คน 1 ใบ** (~385 tok)
 - `payers.js` — ผู้มีอำนาจลงนาม — อ่านสิทธิ์จาก org_member_roles เหมือนทั้งระบบ (ORG_ACCESS_REDESIGN ขั้น 5) (~2714 tok)
-- `projects.js` — list events จาก cache_pple_event โดยตรง, LEFT JOIN docs_projects เพื่อดู status (~1892 tok)
+- `projects.js` — list events จาก cache_pple_event โดยตรง, LEFT JOIN docs_projects เพื่อดู status (~1963 tok)
 
 ## web/db/finance/
 

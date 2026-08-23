@@ -245,7 +245,25 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
                   <div key={entry.id} className="px-4 py-3">
                     {isEditing ? (
                       <div className="space-y-2">
-                        {/* payee search — บนสุด */}
+                        {/* payer dropdown — บนสุด (สลับลำดับ 2026-08-24 ตาม user เคาะ) */}
+                        {eligiblePayers.length > 0 && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-warm-600 dark:text-disc-text shrink-0">{t('entryList.payerLabel')}</span>
+                            <select
+                              value={editForm.payerUserId || ''}
+                              onChange={e => setEditForm(f => ({ ...f, payerUserId: e.target.value ? Number(e.target.value) : '' }))}
+                              className={`${selectCls} flex-1`}
+                            >
+                              <option value="">{t('entryList.selectPayerPlaceholder')}</option>
+                              {eligiblePayers.filter(p => p.user_id !== editForm.memberUserId).map(p => (
+                                <option key={p.user_id} value={p.user_id}>
+                                  {p.display_name}{p.position ? ` · ${p.position}` : ''}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+                        {/* payee search — ล่างสุด (สลับลำดับ 2026-08-24 ตาม user เคาะ) */}
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-warm-600 dark:text-disc-text shrink-0">{t('entryList.recipientLabel')}</span>
                           <div className="relative flex-1" ref={memberWrapRef}>
