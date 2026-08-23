@@ -428,7 +428,13 @@ export default function TagCombobox({
   const showPencil = onOpenProfile && !readOnly && shownChips.length > 0
 
   return (
-    <div ref={boxRef} className="relative">
+    // ⚠️ `w-full` จำเป็น — กล่องนี้เป็น flex item ตัวเดียวใน value column ของ FieldRow (min-w-0 flex items-center)
+    //    ไม่มี flex-grow เลยไม่ยืดเอง แล้ว shrink-to-fit จะคำนวณความกว้างจาก min-content ของข้อความข้างใน
+    //    ข้อความไทยไม่มีช่องวรรค แต่เบราว์เซอร์ยังตัดบรรทัดตรงพยางค์ได้ (เช่น "ยังไม่มีคน" ตัดจาก "ช่วย")
+    //    → min-content แคบกว่าที่คิดมาก กล่องเลยบีบแคบจนข้อความสั้นๆ ตกบรรทัดทั้งที่มีที่ว่างเหลือเฟือ
+    //    (bug จริงจาก screenshot 2026-08-24 — "ยังไม่มีคนช่วย" ตกบรรทัดแม้จอกว้าง 1280px)
+    //    w-full บังคับให้กล่องกว้างเท่าคอลัมน์ค่าเสมอ ไม่ผูกกับ min-content ของข้อความข้างในอีกต่อไป
+    <div ref={boxRef} className="relative w-full">
       {/*
         ⚠️ เป็น div ไม่ใช่ button — ข้างในมีปุ่ม × ของแต่ละชิป (button ซ้อน button = HTML ผิด เบราว์เซอร์แก้โครงเอง)
         ปุ่ม × อยู่บนชิปตรงนี้เลย ตาม screenshot ที่ user ส่งมา — **ไม่มีชุดชิปให้ลบซ้ำข้างล่างอีกชุด**
@@ -441,13 +447,17 @@ export default function TagCombobox({
            มันจะแย่งช่อง wrap กับชิป พอชิปแรกกว้างเกินที่เหลือ ปากกาจะถูกดันไปอยู่บรรทัดของตัวเอง
            (user เจอเอง 2026-08-20: "ทำไมไม่ให้มันอยู่บรรทัดเดียวกันล่ะ") · ตอนนี้ปากกาอยู่นอก
            แล้วให้เฉพาะ**ชิป**ห่อกันเองในกล่องชั้นใน = ปากกาอยู่ข้างชื่อเสมอไม่ว่าชิปจะยาวแค่ไหน
+
+        ⚠️ ต้อง `items-start` ไม่ใช่ `items-center` ตรงนี้ — คนช่วยหลายคนที่ชิปตกไป 2 บรรทัด
+           (screenshot ให้ดู 2026-08-24) items-center จะดันปากกาลอยกลางระหว่าง 2 บรรทัดพอดี
+           ดูเหมือนหลุดไปอยู่บรรทัดล่างลอยๆ · items-start ยึดปากกาไว้กับขอบบนของบรรทัดแรกเสมอ
       */}
       <div
         role={!readOnly && !onOpenProfile ? 'button' : undefined}
         tabIndex={!readOnly && !onOpenProfile ? 0 : undefined}
         onClick={onOpenProfile ? undefined : openBox}
         onKeyDown={(e) => { if (!readOnly && !onOpenProfile && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openBox() } }}
-        className={`w-full min-h-11 px-2 -mx-2 py-1.5 flex items-center gap-1.5 text-base rounded-lg border border-transparent bg-transparent text-left transition ${
+        className={`w-full min-h-11 px-2 -mx-2 py-1.5 flex ${onOpenProfile ? 'items-start' : 'items-center'} gap-1.5 text-base rounded-lg border border-transparent bg-transparent text-left transition ${
           onOpenProfile ? '' : 'flex-wrap'
         } ${
           readOnly ? 'opacity-60' : onOpenProfile ? '' : 'hover:bg-warm-50 dark:hover:bg-disc-hover cursor-pointer'
