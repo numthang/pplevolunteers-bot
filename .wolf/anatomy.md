@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-23T20:39:47.149Z
-> Files: 1037 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-24T08:50:25.560Z
+> Files: 1039 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/1b7cbea7-c43c-466d-9a5f-c61fda8e76b5/scratchpad/
 
@@ -1054,9 +1054,13 @@
 
 - `route.js` — Next.js API route: GET (~230 tok)
 
+## web/app/api/kanban/boards/
+
+- `route.js` — /api/kanban/boards — กระดาน (ก้อน 3) (~565 tok)
+
 ## web/app/api/kanban/cards/
 
-- `route.js` — /api/kanban/cards — รายการการบ้าน + สร้างใหม่ (~1122 tok)
+- `route.js` — /api/kanban/cards — รายการการบ้าน + สร้างใหม่ (~1241 tok)
 
 ## web/app/api/kanban/cards/[id]/
 
@@ -1884,7 +1888,7 @@
 - `DeleteChoiceDialog.jsx` — DeleteChoiceDialog — กล่อง "ลบ" ที่ให้เลือกเอาเองว่า **ซ่อน/เก็บเข้ากรุ** หรือ **ลบถาวร** (~1182 tok)
 - `FieldManager.jsx` — FieldManager — ช่องข้อมูลตั้งเองของ org (/kanban/fields) · admin เท่านั้น (~3907 tok)
 - `FieldRow.jsx` — FieldRow — แถว `[ไอคอน · ชื่อ] | [ค่า]` บรรทัดเดียว ทรง Notion/AppFlowy (~749 tok)
-- `KanbanHome.jsx` — KanbanHome — หน้าเดียวของโมดูลการบ้าน (`/kanban`) (~16891 tok)
+- `KanbanHome.jsx` — KanbanHome — หน้าเดียวของโมดูลการบ้าน (`/kanban`) (~17055 tok)
 - `LabelChips.jsx` — LabelChips — ป้ายของการ์ด 1 ใบ วาดแยกเป็นกอง ไม่ใช่กองรวมพรืดเดียว (~618 tok)
 - `PersonProfileModal.jsx` — PersonProfileModal — กล่องลอยแบบดิสคอร์ด เปิดตอนกดชื่อเจ้าภาพ/คนช่วยในการ์ด (~1228 tok)
 - `TagCombobox.jsx` — TagCombobox — ตัวเลือกของ select/multi_select field (ตรงสกรีนช็อตที่ user ส่งมา 2026-08-18 รอบเย็น) (~8683 tok)
@@ -2010,8 +2014,9 @@
 
 ## web/db/kanban/
 
-- `cards.js` — helper_ids แบนๆ ให้ kanbanAccess.isCardStakeholder ใช้ได้ตรงๆ (~4506 tok)
-- `fields.js` — defs ที่ยังไม่ถูกซ่อน (หรือรวมที่ซ่อนถ้า includeArchived) เรียงตามลำดับที่ตั้งไว้ (~5282 tok)
+- `boards.js` — กระดานตั้งต้นของ org — ตัวแรกตามลำดับที่แสดง (~1374 tok)
+- `cards.js` — helper_ids แบนๆ ให้ kanbanAccess.isCardStakeholder ใช้ได้ตรงๆ (~6382 tok)
+- `fields.js` — defs ที่ยังไม่ถูกซ่อน (หรือรวมที่ซ่อนถ้า includeArchived) เรียงตามลำดับที่ตั้งไว้ (~6151 tok)
 - `labels.js` — ป้ายทั้งหมดของ org (ที่ยังไม่ถูกซ่อน) เรียงตามกลุ่ม (~2314 tok)
 - `people.js` — ค้นสมาชิก active ของ org · เรียกจาก API ที่กันคำค้นสั้นกว่า 2 ตัวไว้แล้ว (~931 tok)
 - `tags.js` — tags.js — "แท็ก" ของการบ้าน = **ตัวเลือกใน custom field** ไม่ใช่ตารางป้ายอีกต่อไป (~1588 tok)
@@ -2073,9 +2078,9 @@
 - `guildContext.js` — คืน guild_id ที่ request นี้ทำงานอยู่ — รากฐานของ multi-guild ทั้งระบบ (~639 tok)
 - `hexColor.js` — รับ hex code ที่พิมพ์/วางเอง — เติม # ให้ถ้าลืม, ขยายแบบย่อ 3 หลัก (#f80 → #ff8800) (~121 tok)
 - `idCard.js` — สำเนาบัตรประชาชน — resize ให้พอดีพิมพ์ A4 + ลายน้ำกันใช้ผิดวัตถุประสงค์ (~2073 tok)
-- `kanbanAccess.js` — Kanban Access Control — ก้อน 1 ("การบ้านของฉัน" · ยังไม่มีกระดาน) (~1350 tok)
+- `kanbanAccess.js` — Kanban Access Control — ก้อน 1 ("การบ้านของฉัน" · ยังไม่มีกระดาน) (~1998 tok)
 - `kanbanFieldValue.js` — ชนิด → คอลัมน์ปลายทางใน kanban_card_field_values (url ใช้ value_text ร่วมกับ text · checklist ไม่มีค (~967 tok)
-- `kanbanGrouping.js` — จัดกลุ่มการ์ด + ตัดสินว่า "ของฉัน" คือใบไหน — ตรรกะล้วน (เทสที่ lib/__tests__/kanbanGrouping.test.js (~1075 tok)
+- `kanbanGrouping.js` — จัดกลุ่มการ์ด + ตัดสินว่า "ของฉัน" คือใบไหน — ตรรกะล้วน (เทสที่ lib/__tests__/kanbanGrouping.test.js (~1426 tok)
 - `kanbanGuard.js` — kanbanGuard — ด่านเดียวที่ route ของ kanban ใช้โหลด context + ตัดสินสิทธิ์ (~558 tok)
 - `kanbanLabelColors.js` — สีของชิปป้าย + หัวช่องกระดาน (~1175 tok)
 - `kanbanLabelFilter.js` — ตัวกรองการ์ดด้วยป้าย — ตรรกะล้วน ไม่แตะ DOM/DB (เทสอยู่ที่ lib/__tests__/kanbanLabelFilter.test.js) (~869 tok)

@@ -88,6 +88,32 @@
   ตอนนี้ใต้ marker มี `BEGIN; … COMMIT;` ห่อไว้ + คำเตือนว่าต้อง TRUNCATE ก่อน
 - เสร็จแล้วเลื่อน marker ลงมาท้ายไฟล์ + commit (กติกาเดิม)
 
+### Kanban ก้อน 3 — guild เป็น "ป้าย" ไม่ใช่ชั้นข้อมูล (2026-08-24)
+
+- user ทัก: *"แม่ง appflowy นอกจากแยก board ยังมีแยก workspace ได้อีกชั้นแหนะ"* → **ไม่เพิ่มชั้น**
+  `orgs` = workspace อยู่แล้ว (AppFlowy ต้องประดิษฐ์ workspace เพราะไม่มี tenant model · เรามีตั้งแต่ finance)
+- user ตอบกลับ: *"ผมมอง guild เป็น workspace มากกว่าตอนนี้"* — จริงในทางปฏิบัติ (org 1 คร่อม 3 guild: 5563/1478/458 คน)
+  **แต่ห้ามทำ guild เป็นชั้นบังคับ** ขัด [[project_discord_optional_goal]] + user เคยบ่นเรื่องตรงข้าม
+  ([[project_multi_guild_same_org]] — 3 guild องค์กรเดียวกันแต่ระบบ isolate จนไม่เห็นข้อมูลร่วมกัน)
+- ทางที่เคาะ: **`kanban_boards.guild_id` nullable = ป้ายบอกที่มา** ใช้ 2 อย่างเท่านั้น
+  (1) จัดกลุ่มรายชื่อกระดานใน dropdown ให้รู้สึกเหมือน workspace (2) บอทเสนอกระดานของเซิร์ฟนั้นก่อน
+  ⛔ **ห้ามเอา guild ไปเป็นด่านสิทธิ์** — จะกันต้องกันด้วย `open_to_org`/members
+- ตารางยังเป็น **org > board > card 3 ชั้น** · ไม่มี `kanban_columns` (ช่องยังเป็น status_type 6 แบบ)
+- UI: **dropdown "กระดาน:" แถวบน ไม่ใช่ URL แยก** — ยึดกติกาเดิม 2026-08-18 "รูปแบบเดียวจบ"
+  (KANBAN.md เขียน `/kanban/b/[board]` ไว้ **ก่อน** การเคาะยุบหน้า → เอกสารข้อนั้นตกไปแล้ว)
+- user สั่งถอดปุ่ม "+ เพิ่มการบ้าน" มุมขวาบน → เป็น "+ เพิ่มกระดาน" (เหตุผล: เพิ่มการบ้านทำในกองได้อยู่แล้ว)
+  ⚠️ **ก่อนถอดต้องเช็คว่าปุ่มในกองมีครบทุกโหมดไหม** — ของจริงมีเฉพาะโหมด "สถานะ"
+  โหมด "กำหนดส่ง" ไม่มีเลย → ถอดเฉยๆ = สร้างงานไม่ได้ในโหมดนั้น · แก้ด้วย `defaultDueForBucket()`
+  (กองเวลา → ตั้ง due_at แทน status) · **user ถาม "จริงป่ะ" = ให้ไปดูโค้ดจริงก่อนตอบ ไม่ใช่เออออ**
+
+### เจอจากการทำก้อน 3 (2026-08-24)
+
+- **`web/.next-test/` ไม่ได้อยู่ใน eslint ignore** → `npm run lint:all` แดง 60 error ทั้งที่ baseline ควรเป็น 0
+  (`.next` / `.next-build` ถูก ignore อยู่แล้ว ตัวนี้ตกหล่นตอนตั้ง test server port 3100)
+- **แก้ schema kanban แล้วต้องไล่ `db/kanbanCards.js` ฝั่งบอทเสมอ** — มัน INSERT เองคนละที่กับเว็บ
+  `board_id NOT NULL` ทำให้ context menu ในดิสฯ พังทันที และ build+test ของเว็บจับไม่ได้เลย
+- `scripts/smoke/kanbanLabels.mjs` ตายแล้ว (ตารางป้ายถูก DROP ไปตั้งแต่ 2026-08-19) — รันแล้ว MODULE_NOT_FOUND
+
 ## Key Learnings
 
 - **Project:** my-discord-bot
