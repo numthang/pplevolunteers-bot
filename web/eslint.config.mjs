@@ -18,6 +18,7 @@ export default [
       'node_modules/**',
       '.next/**',
       '.next-build/**',
+      '.next-test/**',
       'public/**',
       '.wolf/**',
     ],
