@@ -13,6 +13,7 @@
 // (ต้นฉบับดิบ + ฉบับ AI) ในทรานแซกชันเดียวกัน กันโพสต์กำพร้าไม่มีประวัติถ้า insert รอบสองล้ม
 const pool = require('./index');
 const { orgIdOfGuild, userIdByDiscord } = require('./org');
+const { mirrorEntityCardFromBot } = require('./kanbanCards');
 
 /**
  * สร้างโพสต์เดี่ยวจากกระทู้ + revision แรก (ต้นฉบับดิบ) + revision สอง (ฉบับ AI)
@@ -46,6 +47,16 @@ async function createImportedPost({ guildId, addedByDiscordId, category = null, 
     );
 
     await client.query('COMMIT');
+
+    // ⭐ งานสื่อทุกใบต้องมีการ์ดใน kanban — คู่กับ hook ฝั่งเว็บใน web/db/posts/episodes.js
+    //    ที่นี่สร้าง visibility='org' เสมอ จึงไม่ต้องเช็ค (ฝั่งเว็บมีร่าง personal ด้วยแต่ก็สร้างการ์ดแล้ว
+    //    ตั้งแต่ 2026-08-24 รอบสอง — เจ้าของเห็นคนเดียว)
+    //    fire-and-forget หลัง COMMIT — kanban พังต้องไม่ทำให้ import กระทู้ไม่ได้
+    //    ⛔ ห้ามย้ายเข้าไปในทรานแซกชัน: มันใช้ pool คนละ connection จะรอ commit ที่ยังไม่เกิด = ค้าง
+    mirrorEntityCardFromBot(orgId, 'post', {
+      id: post.id, title: post.title, ownerUserId,
+    }, { createdBy: ownerUserId, guildId }).catch(() => {});
+
     return post;
   } catch (err) {
     await client.query('ROLLBACK');

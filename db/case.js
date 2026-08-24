@@ -14,6 +14,7 @@ const { getSetting } = require('./settings');
 // org-scope migration: cases/case_timeline/case_assignees/case_attachments ใช้ org_id (int) แทน guild_id (varchar)
 // caller ฝั่งบอทยังส่ง guildId เหมือนเดิม — แปลงที่ขอบฟังก์ชันด้วย orgIdOfGuild()/userIdByDiscord() (case_config ไม่เปลี่ยน ยังเป็น guild_id)
 const { orgIdOfGuild, userIdByDiscord } = require('./org');
+const { mirrorEntityCardFromBot } = require('./kanbanCards');
 
 // source of truth เดียวกับ web/lib/provinceCode.js
 const PROVINCE_CODES = require(path.join(__dirname, '..', 'config', 'province-codes.json'));
@@ -114,6 +115,17 @@ async function createCase(data) {
      complainant_name, complainant_phone, complainant_line_id,
      discord_thread_id, createdByUserId, consent_at],
   );
+
+  // ⭐ เคสทุกใบต้องมีการ์ดใน kanban (user เคาะ 2026-08-24) — คู่กับ hook ฝั่งเว็บใน web/db/cases.js
+  //    fire-and-forget: kanban พังต้องไม่ทำให้รับเรื่องร้องเรียนไม่ได้ · ตาข่ายคือ reconcileEntityCards()
+  //    ⚠️ เจ้าภาพยังว่างตอนนี้เสมอ — assignee ถูกเพิ่มทีหลังผ่าน addAssignee() (ดู hook ที่นั่น)
+  //    ⚠️ สูตรชื่อสำรองต้องตรงกับฝั่งเว็บเป๊ะ (web/db/cases.js) ไม่งั้นเคสที่เกิดคนละทางได้ชื่อคนละแบบ
+  mirrorEntityCardFromBot(orgId, 'case', {
+    id: rows[0].id,
+    title: rows[0].title || `เรื่องร้องเรียน ${rows[0].ref}`,
+    ownerUserId: null,
+  }, { createdBy: createdByUserId, guildId: guild_id }).catch(() => {});
+
   return rows[0];
 }
 

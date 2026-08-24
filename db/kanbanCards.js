@@ -73,4 +73,87 @@ async function createCardFromDiscord({ guildId, actorDiscordId, actorProfile = {
   }
 }
 
-module.exports = { createCardFromDiscord };
+/**
+ * สร้างการ์ดให้ "ของจริง" (เคส/งานสื่อ) ที่เพิ่งเกิดฝั่งบอท — คู่แฝด CJS ของ
+ * `mirrorEntityCard()` ใน web/db/kanban/links.js · **แก้ที่นั่นต้องแก้ที่นี่ด้วยเสมอ**
+ *
+ * ⭐ ทำไมไม่ `import()` ตัวฝั่งเว็บมาใช้เลย: ไฟล์นั้นเป็น ESM และลาก `web/db/index.js`
+ *    ซึ่งเปิด **pool ที่สองในโปรเซสบอท** · บอทรันค้างตลอดเวลา คอนเนกชันคูณสองไม่คุ้ม
+ *    กับการประหยัดโค้ด 30 บรรทัด (สคริปต์ .mjs ยอมได้เพราะรันจบแล้วตาย)
+ *
+ * ⚠️ **idempotent** — entity ที่มีการ์ดแล้วคืน id เดิม ไม่สร้างซ้ำ (UNIQUE (entity_type, entity_id)
+ *    กันอีกชั้น) · เรียกซ้ำได้ปลอดภัย และต้องเป็นแบบนั้น เพราะ reconcileEntityCards() ตามเก็บทับได้
+ *
+ * ⚠️ **ห้ามปล่อยการ์ดไม่มีเจ้าภาพ** — isMyCard() นับงานไม่มีเจ้าภาพเป็น "ของทุกคน"
+ *    เคส 200 ใบไม่มีเจ้าภาพ = หน้า "การบ้านของฉัน" พังทั้งทีม → ลากเจ้าภาพจากต้นทางมาเสมอ
+ *
+ * @param {'case'|'post'} entityType
+ * @param {{id: number|string, title: string, ownerUserId: number|null}} src
+ * @returns {Promise<string|null>} id การ์ด · null = ทำไม่ได้ (ไม่มีคนสร้าง)
+ */
+async function mirrorEntityCardFromBot(orgId, entityType, src, { createdBy = null, guildId = null } = {}) {
+  const { rows: existing } = await pool.query(
+    `SELECT card_id FROM kanban_card_links WHERE entity_type = $1 AND entity_id = $2`,
+    [entityType, src.id]
+  );
+  if (existing[0]) return existing[0].card_id;
+
+  // created_by เป็น NOT NULL แต่ต้นทางอาจไม่มีคนสร้าง (เคสจากฟอร์มสาธารณะ ผู้ร้องไม่ได้ล็อกอิน)
+  // → ตกไปใช้คนที่สร้างกระดานแรกของ org (เป็นสมาชิก org จริงเสมอ)
+  let by = createdBy || src.ownerUserId;
+  if (!by) {
+    const { rows } = await pool.query(
+      `SELECT created_by FROM kanban_boards WHERE org_id = $1 ORDER BY sort_order, id LIMIT 1`, [orgId]
+    );
+    by = rows[0]?.created_by || null;
+  }
+  if (!by) return null;
+
+  const boardId = await resolveBoardId(orgId, guildId, by);
+  const ownerUserId = src.ownerUserId || null;
+  // สถานะที่ใส่ตอนสร้างเป็นแค่ค่าตั้งต้นของคอลัมน์ cache — ของที่แสดงจริงคำนวณสดจากต้นทางเสมอ
+  // แต่ต้องไม่ขัด CHECK ของ DB (ไม่มีเจ้าภาพ = อยู่ backlog เท่านั้น)
+  const status = ownerUserId ? 'doing' : 'backlog';
+  const title = src.title || (entityType === 'case' ? 'เรื่องร้องเรียนไม่มีชื่อ' : 'งานสื่อไม่มีชื่อ');
+
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const { rows } = await client.query(
+        `INSERT INTO kanban_cards (org_id, ref_no, title, status_type, owner_user_id, created_by, board_id)
+         VALUES ($1,
+                 (SELECT COALESCE(MAX(ref_no), 0) + 1 FROM kanban_cards WHERE org_id = $1),
+                 $2, $3, $4, $5, $6)
+         RETURNING id`,
+        [orgId, title, status, ownerUserId, by, boardId]
+      );
+      // ⚠️ ผูกลิงก์ในทรานแซกชันเดียวกับตอนสร้างการ์ด — แยกกันเมื่อไหร่ ล้มกลางทางแล้วได้
+      //    การ์ดเปล่าที่ไม่ผูกอะไร ค้างกินเลข K ไปเรื่อยๆ โดยไม่มีใครรู้ว่ามันคืออะไร
+      await client.query(
+        `INSERT INTO kanban_card_links (card_id, entity_type, entity_id, is_auto) VALUES ($1, $2, $3, TRUE)`,
+        [rows[0].id, entityType, src.id]
+      );
+      await client.query('COMMIT');
+      return rows[0].id;
+    } catch (err) {
+      await client.query('ROLLBACK');
+      // 23505 บน ref_no = คนอื่นคว้าเลขไปก่อน → ลองใหม่
+      // 23505 บน uq_kanban_card_links_entity = อีกทางสร้างตัดหน้าไปแล้ว → คืนใบของเขา
+      if (err.code === '23505') {
+        const { rows: won } = await pool.query(
+          `SELECT card_id FROM kanban_card_links WHERE entity_type = $1 AND entity_id = $2`,
+          [entityType, src.id]
+        );
+        if (won[0]) return won[0].card_id;
+        if (attempt < 4) continue;
+      }
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+  return null;
+}
+
+module.exports = { createCardFromDiscord, mirrorEntityCardFromBot };

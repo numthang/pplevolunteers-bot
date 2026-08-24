@@ -15,6 +15,7 @@
 // - ล้างตะกร้า = **archive โพสต์** ไม่ใช่ลบแถว (มันคือคอนเทนต์ · ยังรู้ว่ามาจากห้องไหน)
 const pool = require('./index');
 const storage = require('../utils/postsStorage');
+const { mirrorEntityCardFromBot } = require('./kanbanCards');
 
 /**
  * ชื่อเรื่องจาก **บรรทัดแรก**ของแคปชัน — ตะกร้าดิสฯ ไม่มีช่องกรอกชื่อ (หย่อนข้อความอย่างเดียว)
@@ -73,10 +74,23 @@ async function ensureOpenEpisode(guildId, channelId, addedBy = null, channelName
        FROM (SELECT $1::varchar AS gid) x
        LEFT JOIN dc_guilds g ON g.guild_id = x.gid
      ON CONFLICT DO NOTHING
-     RETURNING id`,
+     RETURNING id, org_id`,
     [guildId, channelId, ownerUserId, channelName || null]
   );
-  if (rows[0]) return rows[0].id;
+  if (rows[0]) {
+    // ⭐ งานสื่อทุกใบต้องมีการ์ดใน kanban — ตะกร้าคือทางที่ใช้บ่อยที่สุดของงานสื่อฝั่งบอท
+    //    fire-and-forget: kanban พังต้องไม่ทำให้เปิดตะกร้าไม่ได้ · ตาข่ายคือ reconcileEntityCards()
+    //    ⚠️ ตะกร้าเพิ่งเปิดยังไม่มีชื่อเรื่อง → การ์ดใช้ชื่อห้องไปก่อน แล้วอ่านสดจากต้นทางทีหลังเอง
+    //       (การ์ดที่ผูกของจริงอ่าน title สดเสมอ ชื่อที่เก็บในการ์ดเป็นแค่ค่าสำรอง)
+    //    org_id มาจาก RETURNING ไม่ยิง query เพิ่ม · เป็น null ได้ถ้า guild ยังไม่ผูก org
+    //    (LEFT JOIN dc_guilds ข้างบน) → ไม่มี org ก็ไม่มีกระดานให้ลง ข้ามไปเลย
+    if (rows[0].org_id) {
+      mirrorEntityCardFromBot(rows[0].org_id, 'post', {
+        id: rows[0].id, title: channelName || null, ownerUserId,
+      }, { createdBy: ownerUserId, guildId }).catch(() => {});
+    }
+    return rows[0].id;
+  }
 
   // ชนกับคนอื่นที่เพิ่งเปิดตะกร้าห้องเดียวกัน (unique index กันไว้) → ใช้ใบของเขา
   const again = await getOpenEpisode(guildId, channelId);
