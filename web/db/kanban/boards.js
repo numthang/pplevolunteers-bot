@@ -12,7 +12,8 @@
 import pool from '../index.js'
 
 const COLS = `b.id, b.org_id, b.guild_id, b.name, b.detail, b.open_to_org,
-              b.sort_order, b.archived_at, b.created_by, b.created_at`
+              b.sort_order, b.archived_at, b.created_by, b.created_at,
+              (SELECT g.name FROM dc_guilds g WHERE g.guild_id = b.guild_id) AS guild_name`
 
 // จำนวนการ์ดที่ยังไม่เข้ากรุ — dropdown เลือกกระดานโชว์ตัวเลขนี้ข้างชื่อ
 const CARD_COUNT = `(SELECT count(*) FROM kanban_cards c

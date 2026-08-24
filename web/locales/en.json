@@ -1858,7 +1858,13 @@
       "emptyColumn": "Nothing in this column",
       "moreCards": "{count} more",
       "moveFailed": "Could not move the card",
-      "dragHint": "Drag cards on desktop; on mobile open a card and use the status buttons"
+      "dragHint": "Drag cards on desktop; on mobile open a card and use the status buttons",
+      "boardLabel": "Board",
+      "allBoards": "All boards",
+      "addBoard": "Add board",
+      "createBoard": "Create",
+      "newBoardPlaceholder": "Board name",
+      "otherServer": "Other server"
     },
     "controls": {
       "showLabel": "Show",

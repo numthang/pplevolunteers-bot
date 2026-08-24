@@ -34,6 +34,30 @@ export function dueBucket(dueAt, now = new Date()) {
 }
 
 /**
+ * กำหนดส่งตั้งต้นของการ์ดที่สร้างจากปุ่ม + ในกองของโหมด "ตามกำหนดส่ง" (2026-08-24)
+ *
+ * ⭐ ทำไมต้องมี: ปุ่ม "เพิ่มการบ้าน" ด้านบนถูกถอดไปเป็น "เพิ่มกระดาน" (user เคาะ — เพิ่มการบ้าน
+ *    ทำในกองได้อยู่แล้ว) แต่ปุ่มในกองเดิมโผล่เฉพาะโหมดสถานะ → โหมดกำหนดส่งจะไม่เหลือทางสร้างเลย
+ *    เลยให้กองของโหมดนี้สร้างได้ด้วย โดยแปลความหมายของกองเป็น "กำหนดส่ง" แทนสถานะ
+ *
+ * คืนสตริง `YYYY-MM-DDTHH:mm` แบบ local (ชนิดเดียวกับ input datetime-local)
+ * ⚠️ ห้ามคืน ISO/UTC — ทั้งสายนี้ส่งเวลาไทยดิบให้ pg (CLAUDE.md §Known Gotchas)
+ * @returns {string|null} null = กองนั้นไม่ตั้งกำหนดส่ง ('none') หรือสร้างไม่ได้ ('overdue')
+ */
+export function defaultDueForBucket(bucket, now = new Date()) {
+  // ⛔ กอง "เลยกำหนด" สร้างไม่ได้ — งานที่เกิดมาก็สายแล้วตั้งแต่วินาทีแรกไม่มีความหมาย
+  if (bucket === 'overdue' || bucket === 'none') return null
+
+  const d = new Date(now)
+  if (bucket === 'week') d.setDate(d.getDate() + 7)
+  if (bucket === 'later') d.setDate(d.getDate() + 30)
+  d.setHours(23, 59, 0, 0)   // สิ้นวัน — คนคิดกำหนดส่งเป็น "ภายในวันนั้น" ไม่ใช่เวลาที่กดสร้าง
+
+  const p = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`
+}
+
+/**
  * "ของฉัน" — เจ้าภาพ หรือคนช่วย **บวกงานที่ยังไม่มีใครรับ**
  *
  * ⭐ ที่ต้องรวมงานไม่มีเจ้าภาพเข้ามาด้วย (user เคาะ 2026-08-18): ตัวกรองตั้งต้นคือ "ของฉัน"

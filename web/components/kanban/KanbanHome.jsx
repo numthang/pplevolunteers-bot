@@ -22,13 +22,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import {
-  Plus, X, Clock, User, ListChecks, MoreHorizontal, Pencil, Copy,
+  Plus, Clock, User, ListChecks, MoreHorizontal, Pencil, Copy,
   ChevronDown, ChevronRight, Loader2, ArchiveRestore, Trash2,
   Filter, ArrowUpDown, Settings, Search, Type, Hash, Calendar, ToggleLeft, List, CircleDot, Link2,
 } from 'lucide-react'
 import { STATUS_TYPES } from '@/lib/kanbanAccess.js'
 import { columnHeadProps, chipProps } from '@/lib/kanbanLabelColors.js'
-import { groupCards, isMyCard } from '@/lib/kanbanGrouping.js'
+import { groupCards, isMyCard, defaultDueForBucket } from '@/lib/kanbanGrouping.js'
 import { collectFilterGroups, filterCards, cardTags } from '@/lib/kanbanTagFilter.js'
 import { sortCardsBy, collectSortableFields, BUILTIN_SORT_FIELDS } from '@/lib/kanbanSort.js'
 import CardModal from './CardModal.jsx'
@@ -38,13 +38,6 @@ import { ChecklistBar } from './ChecklistFieldBox.jsx'
 
 // แสดงต่อกองสูงสุดเท่านี้ — กอง "เสร็จ" โตไม่มีเพดาน ไม่ควรวาดหมดทุกใบ
 const MAX_PER_COLUMN = 40
-
-// ความสำคัญ — เก็บเป็นตัวเลขที่ API รับตรงๆ (ไม่มี enum ฝั่ง DB) ป้ายมาจาก t()
-const PRIORITY_OPTIONS = [
-  { value: 0, key: 'priorityNormal' },
-  { value: 1, key: 'priorityHigh' },
-  { value: 2, key: 'priorityUrgent' },
-]
 
 // ไอคอนต่อชนิด field ในเมนู "เรียงลำดับ" — status ใช้ไอคอนเดียวกับ text (ไม่มีไอคอนเฉพาะ)
 const SORT_TYPE_ICON = {
@@ -363,10 +356,16 @@ export default function KanbanHome() {
   }, [sortOpen])
 
   // ฟอร์ม "เพิ่มการบ้าน" — inline panel · ไม่ POST จนกว่าจะกดบันทึก (กฎ CLAUDE.md §Create vs Update)
-  const [formOpen, setFormOpen] = useState(false)
-  const [form, setForm] = useState({ title: '', detail: '', dueAt: '', priority: 0, assignToMe: true })
-  const [creating, setCreating] = useState(false)
-  const [createError, setCreateError] = useState('')
+  // กระดาน (ก้อน 3 · 2026-08-24) — activeBoardId = null คือ "ทุกกระดาน" (ค่าตั้งต้น)
+  // ⭐ เป็น **ปุ่มควบคุมอีกแถว ไม่ใช่ URL แยก** — ยึดกติกาเดียวกับที่ยุบ 2 หน้าเมื่อ 2026-08-18
+  //    (user: "อยากให้คนคุ้นเคยรูปแบบเดียวจบ") · แลกกับการแชร์ลิงก์เจาะกระดานไม่ได้ ซึ่งยังไม่มีใครขอ
+  const [boards, setBoards] = useState([])
+  const [activeBoardId, setActiveBoardId] = useState(null)
+  const [boardMenuOpen, setBoardMenuOpen] = useState(false)
+  const [newBoardName, setNewBoardName] = useState('')   // '' = ยังไม่ได้กดสร้าง · ต้องกดบันทึกถึงจะ POST
+  const [addingBoard, setAddingBoard] = useState(false)
+  const [creatingBoard, setCreatingBoard] = useState(false)
+  const boardBoxRef = useRef(null)
 
   // กรุใช้ endpoint แยก — ของฉัน/ทั้งหมด กรองจากชุดเดียวกันในเครื่อง ไม่ต้องยิงใหม่
   const inArchive = scope === 'archived'
@@ -374,7 +373,8 @@ export default function KanbanHome() {
   const load = useCallback(async () => {
     setLoadError('')
     try {
-      const res = await fetch(`/api/kanban/cards?view=${inArchive ? 'archived' : 'board'}`)
+      const boardQ = activeBoardId ? `&board=${activeBoardId}` : ''
+      const res = await fetch(`/api/kanban/cards?view=${inArchive ? 'archived' : 'board'}${boardQ}`)
       const json = await res.json().catch(() => ({}))
       if (!res.ok) { setLoadError(json.error || t('loadFailed')); setCards([]); return }
       setCards(json.cards || [])
@@ -387,20 +387,43 @@ export default function KanbanHome() {
     } finally {
       setLoading(false)
     }
-  }, [t, inArchive])
+  }, [t, inArchive, activeBoardId])
 
-  // สลับเข้า/ออกกรุ = คนละชุดข้อมูล ต้องโหลดใหม่ · สลับ ของฉัน↔ทั้งหมด ไม่ต้อง (กรองในเครื่อง)
+  // สลับเข้า/ออกกรุ หรือสลับกระดาน = คนละชุดข้อมูล ต้องโหลดใหม่
+  // (สลับ ของฉัน↔ทั้งหมด ไม่ต้อง — กรองในเครื่องจากชุดเดิม)
   useEffect(() => { setLoading(true); load() }, [load])
 
-  // beforeunload เตือนถ้ามีข้อความค้างในฟอร์ม create ที่ยังไม่กดบันทึก (ห้าม autosave หน้า Create)
+  // รายชื่อกระดาน — โหลดครั้งเดียว แล้วอัปเดตเองตอนสร้างใหม่ (ไม่ต้องยิงซ้ำทุกครั้งที่สลับกอง)
+  const loadBoards = useCallback(async () => {
+    try {
+      const res = await fetch('/api/kanban/boards')
+      const json = await res.json().catch(() => ({}))
+      if (res.ok) setBoards(json.boards || [])
+    } catch { /* โหลดรายชื่อไม่ได้ = ยังใช้หน้าได้ (ตกไปที่ "ทุกกระดาน") ไม่ต้องขึ้น error ทั้งหน้า */ }
+  }, [])
+  useEffect(() => { loadBoards() }, [loadBoards])
+
+  // beforeunload เตือนถ้ามีชื่อกระดานค้างในช่องที่ยังไม่กดสร้าง
+  // (กฎ CLAUDE.md §Create — ห้าม autosave และห้ามปล่อยให้พิมพ์ค้างแล้วปิดแท็บหาย)
   useEffect(() => {
-    if (!formOpen) return
-    const hasPending = form.title.trim() || form.detail.trim()
-    if (!hasPending) return
+    if (!addingBoard || !newBoardName.trim()) return
     const handler = (e) => { e.preventDefault(); e.returnValue = '' }
     window.addEventListener('beforeunload', handler)
     return () => window.removeEventListener('beforeunload', handler)
-  }, [formOpen, form.title, form.detail])
+  }, [addingBoard, newBoardName])
+
+  // คลิกนอกกล่อง / ESC → ปิด dropdown กระดาน (มาตรฐานเดียวกับ dropdown อื่นในหน้านี้)
+  useEffect(() => {
+    if (!boardMenuOpen) return
+    const onDown = (e) => { if (!boardBoxRef.current?.contains(e.target)) closeBoardMenu() }
+    const onKey = (e) => { if (e.key === 'Escape') { e.stopPropagation(); closeBoardMenu() } }
+    document.addEventListener('mousedown', onDown)
+    document.addEventListener('keydown', onKey, true)   // capture — CardModal ผูก ESC ไว้ก่อน
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      document.removeEventListener('keydown', onKey, true)
+    }
+  }, [boardMenuOpen])
 
   // กรอง → จัดกอง · ลำดับนี้สำคัญ: ชิปกรองต้องสร้างจากการ์ดที่ "เห็นได้ตามขอบเขต" ไม่ใช่ทั้ง org
   const scoped = useMemo(
@@ -422,6 +445,26 @@ export default function KanbanHome() {
     }
     return [...map.values()].sort((a, b) => a.name.localeCompare(b.name, 'th'))
   }, [scoped])
+  // จัดกลุ่มกระดานตามเซิร์ฟที่ผูกไว้ — กระดานที่ไม่ผูกเซิร์ฟขึ้นก่อนเสมอ (ไม่มีหัวข้อคั่น)
+  // ⚠️ นี่คือ "การจัดกลุ่มบนจอ" ล้วนๆ — guild ไม่ใช่ขอบเขตสิทธิ์ (ดู lib/kanbanAccess.js §ชั้นกระดาน)
+  const boardGroups = useMemo(() => {
+    const map = new Map()
+    for (const b of boards) {
+      const k = b.guild_id || null
+      if (!map.has(k)) map.set(k, [])
+      map.get(k).push(b)
+    }
+    // null (ไม่ผูกเซิร์ฟ) มาก่อน ที่เหลือเรียงตามชื่อเซิร์ฟ
+    return [...map.entries()]
+      .sort((a, b) => (a[0] === null ? -1 : b[0] === null ? 1 : String(a[0]).localeCompare(String(b[0]))))
+      .map(([guildId, items]) => ({ guildId, items }))
+  }, [boards])
+  const guildNames = useMemo(() => {
+    const out = {}
+    for (const b of boards) if (b.guild_id && b.guild_name) out[b.guild_id] = b.guild_name
+    return out
+  }, [boards])
+
   // ตัวกรองสถานะ — ตัวเลือกตายตัว 6 แบบเสมอ (ไม่ต้องคัดจากการ์ดที่โหลดมาแบบป้าย/คนช่วย เพราะไม่มีทาง "ว่าง")
   const statusOptions = useMemo(() => {
     const counts = {}
@@ -633,18 +676,23 @@ export default function KanbanHome() {
    *    → ใช้ `assignToMe` ที่ API มีอยู่แล้ว = คนกดเป็นเจ้าภาพ
    *    (ตรงกับเจตนา "ฉันกำลังเพิ่มงานที่ขั้นนี้" และเป็นทางลัดเดิมของหน้าการบ้านของฉัน)
    */
-  async function createCardIn(statusType, title) {
+  async function createCardIn(bucketKey, title) {
     setActionError('')
-    setCreatingIn(statusType)
+    setCreatingIn(bucketKey)
     try {
+      // โหมดสถานะ: กองคือ status_type ตรงๆ · โหมดกำหนดส่ง: กองคือช่วงเวลา → แปลงเป็น due_at แทน
+      // (ปุ่ม + ในโหมดกำหนดส่งเพิ่งมีเมื่อ 2026-08-24 ตอนถอดปุ่ม "เพิ่มการบ้าน" ด้านบนออก
+      //  ถ้าไม่มี = สลับมาโหมดนี้แล้วสร้างงานไม่ได้เลย)
+      const byStatus = groupBy === 'status'
+      const payload = byStatus
+        ? { title, statusType: bucketKey, assignToMe: bucketKey !== 'backlog' }
+        : { title, dueAt: defaultDueForBucket(bucketKey) || undefined, assignToMe: true }
+
       const res = await fetch('/api/kanban/cards', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title,
-          statusType,
-          assignToMe: statusType !== 'backlog',
-        }),
+        // กระดานที่กำลังเปิดอยู่ — ดู "ทุกกระดาน" อยู่ = ไม่ส่ง แล้วให้ API ลงกระดานตั้งต้นให้
+        body: JSON.stringify({ ...payload, boardId: activeBoardId || undefined }),
       })
       const json = await res.json().catch(() => ({}))
       if (!res.ok) { setActionError(json.error || t('saveFailed')); return false }
@@ -656,6 +704,41 @@ export default function KanbanHome() {
       return false
     } finally {
       setCreatingIn(null)
+    }
+  }
+
+  function closeBoardMenu() {
+    setBoardMenuOpen(false)
+    setAddingBoard(false)
+    setNewBoardName('')
+  }
+
+  /**
+   * สร้างกระดาน — user เคาะ 2026-08-24: กรอกชื่ออย่างเดียว แล้วสลับไปกระดานใหม่ทันที
+   * ⛔ ห้ามยิง POST ตอนกดปุ่ม "เพิ่มกระดาน" (แค่เปิดช่องพิมพ์) — POST เกิดตอนกดสร้างที่นี่เท่านั้น
+   *    (CLAUDE.md 2026-07-30 · เคสจริง /posts เคยได้ร่างเปล่าค้าง DB 5 แถวเพราะทำแบบนั้น)
+   */
+  async function handleCreateBoard(e) {
+    e.preventDefault()
+    const name = newBoardName.trim()
+    if (!name) return
+    setCreatingBoard(true)
+    setActionError('')
+    try {
+      const res = await fetch('/api/kanban/boards', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) { setActionError(json.error || t('saveFailed')); return }
+      setBoards((prev) => [...prev, json.board])
+      setActiveBoardId(json.board.id)     // เข้าไปในกระดานที่เพิ่งสร้างเลย ไม่ต้องกดซ้ำ
+      closeBoardMenu()
+    } catch {
+      setActionError(t('saveFailed'))
+    } finally {
+      setCreatingBoard(false)
     }
   }
 
@@ -679,42 +762,6 @@ export default function KanbanHome() {
     }
   }
 
-  function closeForm() {
-    setFormOpen(false)
-    setCreateError('')
-    setForm({ title: '', detail: '', dueAt: '', priority: 0, assignToMe: true })
-  }
-
-  // ⛔ ปุ่ม "เพิ่มการบ้าน" ห้ามยิง POST — เปิดฟอร์มเท่านั้น POST เกิดตอนกดบันทึกที่นี่
-  async function handleCreate(e) {
-    e.preventDefault()
-    const title = form.title.trim()
-    if (!title) { setCreateError(t('form.titleRequired')); return }
-    setCreating(true)
-    setCreateError('')
-    try {
-      const res = await fetch('/api/kanban/cards', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title,
-          detail: form.detail.trim() || undefined,
-          dueAt: form.dueAt || undefined,   // ⚠️ ส่งดิบจาก datetime-local ห้ามแปลงผ่าน toISOString()
-          priority: form.priority,
-          assignToMe: form.assignToMe,      // API แปลงเป็น userId ของ session เอง
-        }),
-      })
-      const json = await res.json().catch(() => ({}))
-      if (!res.ok) { setCreateError(json.error || t('form.saveFailed')); return }
-      closeForm()
-      load()
-    } catch {
-      setCreateError(t('form.saveFailed'))
-    } finally {
-      setCreating(false)
-    }
-  }
-
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -722,20 +769,117 @@ export default function KanbanHome() {
           <h1 className="text-2xl font-bold text-warm-900 dark:text-disc-text mb-1">{t('page.title')}</h1>
           <p className="text-base text-warm-500 dark:text-disc-muted">{t('page.subtitle')}</p>
         </div>
-        {/* ในกรุไม่มีปุ่มเพิ่ม — สร้างแล้วการ์ดใหม่จะไม่โผล่ในโหมดนี้ ดูเหมือนกดแล้วไม่เกิดอะไร */}
+        {/* ⭐ 2026-08-24 เปลี่ยนจาก "เพิ่มการบ้าน" เป็น "เพิ่มกระดาน" (user เคาะ)
+            เหตุผล: เพิ่มการบ้านทำได้จากปุ่ม + บนหัวกองอยู่แล้วทุกกอง — ปุ่มบนเลยซ้ำซ้อน
+            ⚠️ ที่ทำคู่กันคือเปิดปุ่ม + ให้โหมด "กำหนดส่ง" ด้วย ไม่งั้นโหมดนั้นจะไม่เหลือทางสร้างเลย
+            ในกรุไม่มีปุ่ม — สร้างของใหม่เข้ากรุไม่มีความหมาย (เหตุผลเดิมของปุ่มก่อนหน้า) */}
         {!inArchive && (
           <button
-            onClick={() => { setCreateError(''); setFormOpen(true) }}
+            onClick={() => { setBoardMenuOpen(true); setAddingBoard(true) }}
             className="flex items-center gap-1.5 bg-teal hover:opacity-90 text-white rounded-lg text-base font-medium px-4 py-2"
           >
             <Plus size={16} />
-            {t('addButton')}
+            {t('board.addBoard')}
           </button>
         )}
       </div>
 
-      {/* แถบควบคุม — 2 ปุ่มนี้แทนที่การมี 2 หน้า */}
+      {/* แถบควบคุม — ปุ่มพวกนี้แทนที่การมีหลายหน้า (กระดาน / เห็นของใคร / กองตามอะไร) */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        {/* กระดาน — dropdown เพราะจำนวนกระดานโตได้เรื่อยๆ (ชิปแนวนอนจะตกบรรทัดบนมือถือ)
+            รายการจัดกลุ่มตามเซิร์ฟที่ผูกไว้ ให้รู้สึกเหมือน workspace ตามที่ user มอง
+            แต่ guild เป็นแค่ป้าย ไม่ใช่ชั้นข้อมูล (ดู db/kanban/boards.js หัวไฟล์) */}
+        <div ref={boardBoxRef} className="relative flex items-center gap-2">
+          <span className="text-sm text-warm-500 dark:text-disc-muted">{t('board.boardLabel')}</span>
+          <button
+            onClick={() => (boardMenuOpen ? closeBoardMenu() : setBoardMenuOpen(true))}
+            className={`flex items-center gap-1.5 h-9 pl-3 pr-2.5 text-sm rounded-lg border font-medium transition max-w-[240px] ${
+              activeBoardId
+                ? 'border-teal bg-teal/10 text-teal'
+                : 'border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover'
+            }`}
+          >
+            <span className="truncate">
+              {activeBoardId
+                ? (boards.find((b) => String(b.id) === String(activeBoardId))?.name || t('board.allBoards'))
+                : t('board.allBoards')}
+            </span>
+            <ChevronDown size={14} className="shrink-0" />
+          </button>
+
+          {boardMenuOpen && (
+            <div className="absolute left-0 top-full z-20 mt-1 w-72 max-h-80 overflow-y-auto bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg shadow-lg p-1.5">
+              <button
+                onClick={() => { setActiveBoardId(null); closeBoardMenu() }}
+                className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-sm rounded-md text-left ${
+                  !activeBoardId ? 'bg-teal/10 text-teal font-medium' : 'text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover'
+                }`}
+              >
+                <span className="truncate">{t('board.allBoards')}</span>
+                <span className="shrink-0 text-warm-400 dark:text-disc-muted">
+                  {boards.reduce((sum, b) => sum + (b.card_count || 0), 0)}
+                </span>
+              </button>
+
+              {boardGroups.map(({ guildId, items }) => (
+                <div key={guildId ?? 'none'}>
+                  {/* หัวข้อกลุ่มโผล่เฉพาะตอนมีกระดานผูกเซิร์ฟจริง — org ที่ไม่ใช้ Discord ต้องไม่เห็นหัวข้อเปล่า */}
+                  {guildId && (
+                    <p className="px-3 pt-2 pb-1 text-sm text-warm-400 dark:text-disc-muted truncate">
+                      {guildNames[guildId] || t('board.otherServer')}
+                    </p>
+                  )}
+                  {items.map((b) => (
+                    <button
+                      key={b.id}
+                      onClick={() => { setActiveBoardId(b.id); closeBoardMenu() }}
+                      className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-sm rounded-md text-left ${
+                        String(activeBoardId) === String(b.id)
+                          ? 'bg-teal/10 text-teal font-medium'
+                          : 'text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover'
+                      }`}
+                    >
+                      <span className="truncate">{b.name}</span>
+                      <span className="shrink-0 text-warm-400 dark:text-disc-muted">{b.card_count}</span>
+                    </button>
+                  ))}
+                </div>
+              ))}
+
+              <div className="border-t border-warm-200 dark:border-disc-border mt-1.5 pt-1.5">
+                {addingBoard ? (
+                  <form onSubmit={handleCreateBoard} className="flex items-center gap-1.5 px-1">
+                    <input
+                      autoFocus
+                      value={newBoardName}
+                      onChange={(e) => setNewBoardName(e.target.value)}
+                      placeholder={t('board.newBoardPlaceholder')}
+                      maxLength={100}
+                      className="flex-1 min-w-0 h-9 px-2.5 text-sm rounded-md border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-teal"
+                    />
+                    <button
+                      type="submit"
+                      disabled={creatingBoard || !newBoardName.trim()}
+                      className="flex items-center gap-1 h-9 px-3 text-sm font-medium rounded-md bg-teal text-white hover:opacity-90 disabled:opacity-50 shrink-0"
+                    >
+                      {creatingBoard && <Loader2 size={14} className="animate-spin" />}
+                      {t('board.createBoard')}
+                    </button>
+                  </form>
+                ) : (
+                  <button
+                    onClick={() => setAddingBoard(true)}
+                    className="w-full flex items-center gap-1.5 px-3 py-2 text-sm rounded-md text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover"
+                  >
+                    <Plus size={14} />
+                    {t('board.addBoard')}
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
         <div className="flex items-center gap-2">
           <span className="text-sm text-warm-500 dark:text-disc-muted">{t('controls.showLabel')}</span>
           <Segmented
@@ -999,101 +1143,6 @@ export default function KanbanHome() {
         )}
       </div>
 
-      {formOpen && (
-        <form
-          onSubmit={handleCreate}
-          className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg p-6 flex flex-col gap-4"
-        >
-          <div className="flex items-start justify-between gap-2">
-            <h2 className="text-lg font-semibold text-warm-900 dark:text-disc-text">{t('form.title')}</h2>
-            <button
-              type="button"
-              onClick={closeForm}
-              className="p-1 rounded-lg text-warm-500 dark:text-disc-muted hover:bg-warm-50 dark:hover:bg-disc-hover"
-            >
-              <X size={18} />
-            </button>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-warm-700 dark:text-disc-muted mb-1">{t('form.titleLabel')}</label>
-            <input
-              type="text"
-              value={form.title}
-              onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-              placeholder={t('form.titlePlaceholder')}
-              className="w-full h-11 px-3 text-base rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-teal"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-warm-700 dark:text-disc-muted mb-1">{t('form.detailLabel')}</label>
-            <textarea
-              value={form.detail}
-              onChange={(e) => setForm((f) => ({ ...f, detail: e.target.value }))}
-              placeholder={t('form.detailPlaceholder')}
-              rows={3}
-              className="w-full px-3 py-2 text-base rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-teal resize-none"
-            />
-          </div>
-
-          <div className="flex flex-wrap gap-3">
-            <div>
-              <label className="block text-sm font-medium text-warm-700 dark:text-disc-muted mb-1">{t('form.dueAtLabel')}</label>
-              <input
-                type="datetime-local"
-                value={form.dueAt}
-                onChange={(e) => setForm((f) => ({ ...f, dueAt: e.target.value }))}
-                className="h-11 px-3 text-base rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text focus:outline-none focus:ring-2 focus:ring-teal"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-warm-700 dark:text-disc-muted mb-1">{t('form.priorityLabel')}</label>
-              <select
-                value={form.priority}
-                onChange={(e) => setForm((f) => ({ ...f, priority: Number(e.target.value) }))}
-                className="h-11 pl-3 pr-8 text-base rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text focus:outline-none focus:ring-2 focus:ring-teal cursor-pointer"
-              >
-                {PRIORITY_OPTIONS.map((p) => (
-                  <option key={p.value} value={p.value}>{t(`form.${p.key}`)}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <label className="flex items-center gap-2 text-base text-warm-700 dark:text-disc-muted cursor-pointer">
-            <input
-              type="checkbox"
-              checked={form.assignToMe}
-              onChange={(e) => setForm((f) => ({ ...f, assignToMe: e.target.checked }))}
-              className="w-4 h-4 rounded border-warm-200 dark:border-disc-border accent-teal cursor-pointer"
-            />
-            {t('form.assignToMe')}
-          </label>
-
-          {createError && <p className="text-base text-red-500 dark:text-red-400">{createError}</p>}
-
-          <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={closeForm}
-              disabled={creating}
-              className="border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover rounded-lg text-base font-medium px-4 py-2 disabled:opacity-50"
-            >
-              {t('form.cancelButton')}
-            </button>
-            <button
-              type="submit"
-              disabled={creating}
-              className="flex items-center gap-1.5 bg-teal hover:opacity-90 text-white rounded-lg text-base font-medium px-4 py-2 disabled:opacity-50"
-            >
-              {creating && <Loader2 size={16} className="animate-spin" />}
-              {creating ? t('form.saving') : t('form.saveButton')}
-            </button>
-          </div>
-        </form>
-      )}
-
       {loadError && <p className="text-base text-red-500 dark:text-red-400">{loadError}</p>}
       {actionError && <p className="text-base text-red-500 dark:text-red-400">{actionError}</p>}
 
@@ -1159,11 +1208,14 @@ export default function KanbanHome() {
                     </span>
                   </button>
                   {/*
-                    เพิ่มการ์ดลงกองนี้เลย — โผล่เฉพาะโหมด "ตามสถานะ"
-                    ⛔ โหมดกำหนดส่งไม่มี เพราะ key เป็นช่วงวัน ไม่ใช่สถานะ (จะสร้างการ์ดสถานะอะไร?)
+                    เพิ่มการ์ดลงกองนี้เลย — ตั้งแต่ 2026-08-24 มีทั้ง 2 โหมด (ปุ่มด้านบนกลายเป็น "เพิ่มกระดาน")
+                      โหมดสถานะ    → กองคือ status_type ตรงๆ
+                      โหมดกำหนดส่ง → กองคือช่วงเวลา แปลงเป็น due_at ให้ (defaultDueForBucket)
+                    ⛔ กอง "เลยกำหนด" กับ "ไม่มีกำหนด" ไม่มีปุ่ม — งานที่เกิดมาก็สายแล้วไม่มีความหมาย
+                       และกองไม่มีกำหนดส่งสร้างจากกองอื่นได้อยู่แล้ว
                     ⛔ ในกรุไม่มี — สร้างการ์ดใหม่เข้ากรุเลยไม่มีความหมาย
                   */}
-                  {groupBy === 'status' && !inArchive && (
+                  {!inArchive && (groupBy === 'status' || defaultDueForBucket(key)) && (
                     <button
                       type="button"
                       onClick={() => { setAddingIn(key); setOpenState((s) => ({ ...s, [key]: true })) }}
