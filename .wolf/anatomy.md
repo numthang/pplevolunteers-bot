@@ -1,12 +1,16 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-23T18:33:58.637Z
-> Files: 1032 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-23T20:39:47.149Z
+> Files: 1037 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/1b7cbea7-c43c-466d-9a5f-c61fda8e76b5/scratchpad/
 
 - `restructure_cerebrum.py` — find_line_idx, next_header_idx, delete_header_block, delete_single_line (~990 tok)
 - `restructure_phase2.py` — block_content, strip_blank_edges (~1915 tok)
+
+## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/704ce0f8-86a6-49fb-81b7-157fd931c7c1/scratchpad/
+
+- `cdp.mjs` — PORT: jsonGet, connect, send + 3 more (~1011 tok)
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/98431158-6049-42cf-b35f-3c39e5aab829/scratchpad/
 
@@ -15,6 +19,7 @@
 
 ## ../../../.claude/plans/
 
+- `kanban-kanban-ticklish-blum.md` — เติมงานสื่อ (posts) กับเรื่องร้องเรียน (cases) เข้า kanban (~1984 tok)
 - `witty-launching-wadler.md` — Kanban label filter → per-group compact dropdowns (~2047 tok)
 
 ## ../../../.claude/projects/-home-tee-VSites-node-pple-volunteers/memory/
@@ -572,8 +577,11 @@
 
 ## web/
 
+- `_tmp_cdp_check2.mjs` — PORT: jsonGet, connect, send, main, evalJs (~672 tok)
+- `_tmp_cdp_check3.mjs` — PORT: jsonGet, connect, send, main, evalJs (~1064 tok)
+- `_tmp_cdp_check4.mjs` — PORT: jsonGet, connect, send + 3 more (~1036 tok)
 - `alias-loader.mjs` — Exports resolve (~100 tok)
-- `eslint.config.mjs` — ESLint flat config ฝั่งเว็บ (React/Next/react-hooks) — `no-undef`=error, rule สไตล์ปิดหมด (~911 tok)
+- `eslint.config.mjs` — ESLint — ตั้งใจให้จับ "บั๊กจริง" อย่างเดียว ไม่ใช่ตำรวจสไตล์ (~917 tok)
 - `jsconfig.json` (~67 tok)
 - `middleware.js` — ส่ง path ปัจจุบันเข้า request header ให้ server component อ่านได้ (~246 tok)
 - `next.config.js` — override: true — .env เป็น source of truth; กัน env var ที่ export ค้างใน shell (เช่น ANTHROPIC_API_ (~587 tok)
@@ -876,7 +884,7 @@
 
 ## web/app/api/docs/entries/[id]/
 
-- `route.js` — PATCH /api/docs/entries/[id] — แก้ไขได้ทุกสถานะ (จำกัดด้วย scope จังหวัด) (~1029 tok)
+- `route.js` — PATCH /api/docs/entries/[id] — แก้ไขได้ทุกสถานะ (จำกัดด้วย scope จังหวัด) (~1050 tok)
 
 ## web/app/api/docs/entries/[id]/pdf/
 
@@ -904,7 +912,7 @@
 
 ## web/app/api/docs/members/
 
-- `route.js` — GET /api/docs/members?q=&limit=20, dedupe 1 คนต่อแถว (org_members มีหลายแถวถ้าอยู่หลาย guild) (~698 tok)
+- `route.js` — GET /api/docs/members?q=&limit=20 (~716 tok)
 
 ## web/app/api/docs/members/recent/
 
@@ -988,7 +996,7 @@
 
 ## web/app/api/docs/token/[token]/receipt/
 
-- `route.js` — GET /api/docs/token/[token]/export — public export download (no login required) (~1078 tok)
+- `route.js` — GET /api/docs/token/[token]/export — public export download (no login required) (~1109 tok)
 
 ## web/app/api/docs/token/[token]/registration/
 
@@ -1064,7 +1072,7 @@
 
 ## web/app/api/kanban/cards/[id]/helpers/
 
-- `route.js` — /api/kanban/cards/[id]/helpers — คนช่วย (~434 tok)
+- `route.js` — /api/kanban/cards/[id]/helpers — คนช่วย (~556 tok)
 
 ## web/app/api/kanban/cards/[id]/labels/
 
@@ -1620,7 +1628,7 @@
 ## web/app/docs/sign/[token]/
 
 - `layout.js` — Next.js layout (~71 tok)
-- `page.js` — Next.js page component (~10238 tok)
+- `page.js` — Next.js page component (~10233 tok)
 
 ## web/app/dojo/
 
@@ -1854,8 +1862,8 @@
 
 ## web/components/docs/
 
-- `DocAutoCalc.jsx` — TRAVEL_IN_PROVINCE_RATE (~9692 tok)
-- `DocEntryList.jsx` — ALL_ITEMS (~6600 tok)
+- `DocAutoCalc.jsx` — TRAVEL_IN_PROVINCE_RATE (~9727 tok)
+- `DocEntryList.jsx` — ALL_ITEMS (~6806 tok)
 - `DocProjectCard.jsx` — FALLBACK_IMAGE (~1078 tok)
 - `DocProjectView.jsx` — THAI_MONTHS (~11735 tok)
 - `DocsProvinceFilter.jsx` — DocsProvinceFilter (~449 tok)
@@ -1876,10 +1884,10 @@
 - `DeleteChoiceDialog.jsx` — DeleteChoiceDialog — กล่อง "ลบ" ที่ให้เลือกเอาเองว่า **ซ่อน/เก็บเข้ากรุ** หรือ **ลบถาวร** (~1182 tok)
 - `FieldManager.jsx` — FieldManager — ช่องข้อมูลตั้งเองของ org (/kanban/fields) · admin เท่านั้น (~3907 tok)
 - `FieldRow.jsx` — FieldRow — แถว `[ไอคอน · ชื่อ] | [ค่า]` บรรทัดเดียว ทรง Notion/AppFlowy (~749 tok)
-- `KanbanHome.jsx` — KanbanHome — หน้าเดียวของโมดูลการบ้าน (`/kanban`) (~15912 tok)
-- `LabelChips.jsx` — LabelChips — ป้ายของการ์ด 1 ใบ วาดแยกเป็นกอง ไม่ใช่กองรวมพรืดเดียว (~485 tok)
+- `KanbanHome.jsx` — KanbanHome — หน้าเดียวของโมดูลการบ้าน (`/kanban`) (~16891 tok)
+- `LabelChips.jsx` — LabelChips — ป้ายของการ์ด 1 ใบ วาดแยกเป็นกอง ไม่ใช่กองรวมพรืดเดียว (~618 tok)
 - `PersonProfileModal.jsx` — PersonProfileModal — กล่องลอยแบบดิสคอร์ด เปิดตอนกดชื่อเจ้าภาพ/คนช่วยในการ์ด (~1228 tok)
-- `TagCombobox.jsx` — TagCombobox — ตัวเลือกของ select/multi_select field (ตรงสกรีนช็อตที่ user ส่งมา 2026-08-18 รอบเย็น) (~8411 tok)
+- `TagCombobox.jsx` — TagCombobox — ตัวเลือกของ select/multi_select field (ตรงสกรีนช็อตที่ user ส่งมา 2026-08-18 รอบเย็น) (~8683 tok)
 
 ## web/components/org/
 
@@ -1988,7 +1996,7 @@
 ## web/db/docs/
 
 - `attachments.js` — Exports getAttachmentsByProject, createAttachment, getAttachmentById, deleteAttachment (~366 tok)
-- `entries.js` — เติม payer_display_name + payer_position จาก pool ผู้จ่าย (role-based position มาก่อน docs_payers) (~5842 tok)
+- `entries.js` — เติม payer_display_name + payer_position จาก pool ผู้จ่าย (role-based position มาก่อน docs_payers) (~5940 tok)
 - `idCard.js` — สำเนาบัตรประชาชนเก็บใน `users.id_card_image` (BYTEA) — **1 คน 1 ใบ** (~385 tok)
 - `payers.js` — ผู้มีอำนาจลงนาม — อ่านสิทธิ์จาก org_member_roles เหมือนทั้งระบบ (ORG_ACCESS_REDESIGN ขั้น 5) (~2714 tok)
 - `projects.js` — list events จาก cache_pple_event โดยตรง, LEFT JOIN docs_projects เพื่อดู status (~1963 tok)
@@ -2155,9 +2163,9 @@
 
 ## web/locales/
 
-- `en.json` (~22201 tok)
+- `en.json` (~22296 tok)
 - `en.json` — web locale strings อังกฤษ (~60 tok)
-- `th.json` (~21252 tok)
+- `th.json` (~21346 tok)
 - `th.json` — web locale strings ไทย (starter: common.*) (~60 tok)
 
 ## web/public/media-temp/
