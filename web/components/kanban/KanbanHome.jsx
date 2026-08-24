@@ -39,6 +39,23 @@ import { ChecklistBar } from './ChecklistFieldBox.jsx'
 // แสดงต่อกองสูงสุดเท่านี้ — กอง "เสร็จ" โตไม่มีเพดาน ไม่ควรวาดหมดทุกใบ
 const MAX_PER_COLUMN = 40
 
+/**
+ * ⛔ UI ของ "กระดานหลายใบ" — ปิดไว้ (user เคาะ 2026-08-24 หลังทำเสร็จแล้วเปลี่ยนใจ)
+ *
+ * schema + API + ฝั่งบอทยังอยู่ครบ และการ์ดทุกใบยังมี board_id ชี้ "กระดานหลัก" เหมือนเดิม
+ * ที่ปิดคือ **ทางเลือกบนจอ** เท่านั้น
+ *
+ * เหตุผล (ข้อมูลจริงจากฐาน 2026-08-24 — อย่ารื้อกลับโดยไม่อ่าน):
+ *   การ์ด **51 จาก 67 ใบ (76%) คร่อมมากกว่า 1 สายงาน** สูงสุด 7 สายงาน
+ *   เช่น K-1 "Primary Vote" = สมาชิกสัมพันธ์ + กองทุนพัฒนาการเมือง + กรรมการจังหวัด
+ *   แต่การ์ด 1 ใบอยู่ได้กระดานเดียว (multi-home ถูกตัดจาก MVP) → แยกกระดานตามสายงาน
+ *   = 76% ของงานจริงถูกยัดเข้ากระดานเดียวทั้งที่เป็นงานของหลายทีมพร้อมกัน
+ *   ของที่ต้องการจริงคือ **ตัวกรอง** ซึ่งมีอยู่แล้วครบ (lib/kanbanTagFilter.js — OR ในกลุ่ม AND ข้ามกลุ่ม)
+ *
+ * เปิดกลับเมื่อไหร่: วันที่มีทีมที่ 2 ลงงานจริงและต้องการคลังตัวเลือกแยกจากกัน → ตั้งเป็น true
+ */
+const BOARDS_UI = false
+
 // ไอคอนต่อชนิด field ในเมนู "เรียงลำดับ" — status ใช้ไอคอนเดียวกับ text (ไม่มีไอคอนเฉพาะ)
 const SORT_TYPE_ICON = {
   text: Type, url: Link2, number: Hash, date: Calendar,
@@ -773,7 +790,7 @@ export default function KanbanHome() {
             เหตุผล: เพิ่มการบ้านทำได้จากปุ่ม + บนหัวกองอยู่แล้วทุกกอง — ปุ่มบนเลยซ้ำซ้อน
             ⚠️ ที่ทำคู่กันคือเปิดปุ่ม + ให้โหมด "กำหนดส่ง" ด้วย ไม่งั้นโหมดนั้นจะไม่เหลือทางสร้างเลย
             ในกรุไม่มีปุ่ม — สร้างของใหม่เข้ากรุไม่มีความหมาย (เหตุผลเดิมของปุ่มก่อนหน้า) */}
-        {!inArchive && (
+        {BOARDS_UI && !inArchive && (
           <button
             onClick={() => { setBoardMenuOpen(true); setAddingBoard(true) }}
             className="flex items-center gap-1.5 bg-teal hover:opacity-90 text-white rounded-lg text-base font-medium px-4 py-2"
@@ -789,6 +806,7 @@ export default function KanbanHome() {
         {/* กระดาน — dropdown เพราะจำนวนกระดานโตได้เรื่อยๆ (ชิปแนวนอนจะตกบรรทัดบนมือถือ)
             รายการจัดกลุ่มตามเซิร์ฟที่ผูกไว้ ให้รู้สึกเหมือน workspace ตามที่ user มอง
             แต่ guild เป็นแค่ป้าย ไม่ใช่ชั้นข้อมูล (ดู db/kanban/boards.js หัวไฟล์) */}
+        {BOARDS_UI && (
         <div ref={boardBoxRef} className="relative flex items-center gap-2">
           <span className="text-sm text-warm-500 dark:text-disc-muted">{t('board.boardLabel')}</span>
           <button
@@ -879,6 +897,7 @@ export default function KanbanHome() {
             </div>
           )}
         </div>
+        )}
 
         <div className="flex items-center gap-2">
           <span className="text-sm text-warm-500 dark:text-disc-muted">{t('controls.showLabel')}</span>
