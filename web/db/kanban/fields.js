@@ -20,13 +20,19 @@ import { autoColor } from '../../lib/kanbanLabelColors.js'
 // ── field defs ───────────────────────────────────────────────────────
 
 /** defs ที่ยังไม่ถูกซ่อน (หรือรวมที่ซ่อนถ้า includeArchived) เรียงตามลำดับที่ตั้งไว้ */
-export async function listFieldDefs(orgId, { includeArchived = false } = {}) {
+export async function listFieldDefs(orgId, { includeArchived = false, boardId = null } = {}) {
+  // boardId = null → ทุก field ใน org (หน้าตั้งค่า/สคริปต์) · ส่ง boardId = เฉพาะของกระดานนั้น
+  // ⚠️ ค่าที่การ์ดเห็นมาจาก AGG ใน cards.js (d.board_id = c.board_id) ไม่ได้มาจากที่นี่ — สองทางนี้ต้องตรงกัน
+  const params = [orgId]
+  let where = `org_id = $1 ${includeArchived ? '' : 'AND archived_at IS NULL'}`
+  if (boardId) { params.push(boardId); where += ` AND board_id = $${params.length}` }
+
   const { rows } = await pool.query(
     `SELECT id, board_id, key, label, help_text, type, sort_order, archived_at
        FROM kanban_field_defs
-      WHERE org_id = $1 ${includeArchived ? '' : 'AND archived_at IS NULL'}
+      WHERE ${where}
       ORDER BY sort_order, id`,
-    [orgId]
+    params
   )
   return rows
 }
@@ -56,7 +62,7 @@ export async function getFieldDef(orgId, fieldId) {
  * สร้าง field def ใหม่ — key สร้างอัตโนมัติจาก label (คนไม่ต้องพิมพ์เอง)
  * pre-fetch nextval ก่อน insert เพื่อเอา id มาต่อท้าย key กันชนกันเองโดยไม่ต้อง retry loop
  */
-export async function createFieldDef(orgId, { label, helpText = null, type }) {
+export async function createFieldDef(orgId, { label, helpText = null, type, boardId = null }) {
   const { rows: idRow } = await pool.query(
     `SELECT nextval(pg_get_serial_sequence('kanban_field_defs', 'id')) AS id`
   )
@@ -66,11 +72,18 @@ export async function createFieldDef(orgId, { label, helpText = null, type }) {
   // ⚠️ ต้องตั้ง sort_order = MAX+1 เอง — DEFAULT เป็น 0 ทำให้ field ใหม่ทุกอันไปแทรกกลางตาราง
   //    (ORDER BY sort_order, id → กองที่ sort_order=0 ลอยขึ้นบนหมด) เจอตอนสร้าง "งบประมาณ" 2026-08-19
   const { rows } = await pool.query(
-    `INSERT INTO kanban_field_defs (id, org_id, key, label, help_text, type, sort_order)
-     VALUES ($1, $2, $3, $4, $5, $6,
+    // board_id: field เป็นของกระดานใบเดียว (ก้อน 3) — ไม่ส่งมา = กระดานตั้งต้นของ org
+    // ⛔ ห้ามปล่อย NULL: field ที่ board_id NULL จะไม่โผล่บนการ์ดใบไหนเลยตั้งแต่ก้อน 3
+    //    เพราะ AGG ใน cards.js เทียบ d.board_id = c.board_id ตรงๆ (สร้างแล้วหายเงียบ)
+    `INSERT INTO kanban_field_defs (id, org_id, board_id, key, label, help_text, type, sort_order)
+     VALUES ($1, $2,
+             COALESCE($7, (SELECT b.id FROM kanban_boards b
+                            WHERE b.org_id = $2 AND b.archived_at IS NULL
+                            ORDER BY b.sort_order, b.id LIMIT 1)),
+             $3, $4, $5, $6,
              (SELECT COALESCE(MAX(sort_order), -1) + 1 FROM kanban_field_defs WHERE org_id = $2))
-     RETURNING id, key, label, help_text, type, sort_order, archived_at`,
-    [id, orgId, key, label, helpText, type]
+     RETURNING id, board_id, key, label, help_text, type, sort_order, archived_at`,
+    [id, orgId, key, label, helpText, type, boardId]
   )
   return rows[0]
 }

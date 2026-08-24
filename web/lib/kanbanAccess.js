@@ -54,6 +54,42 @@ export function canPurge(access = {}) {
   return (normalizeAccess(access).permissions || new Set()).has('admin')
 }
 
+/* ══════════════ ชั้นกระดาน (ก้อน 3 · 2026-08-24) ══════════════
+ * เพิ่ม **คร่อมข้างบน** ฟังก์ชันการ์ดตามที่หัวไฟล์นี้สั่งไว้ตั้งแต่ก้อน 1 — ไม่แก้ข้างในตัวเดิม
+ * ⚠️ guild_id บนกระดานเป็น **ป้ายบอกที่มา ไม่ใช่ด่านสิทธิ์** — คนในเซิร์ฟ ก. เห็นกระดานของเซิร์ฟ ข.
+ *    ได้ถ้า open_to_org (org เดียวกัน) · จะกันต้องกันด้วย open_to_org/members ไม่ใช่ด้วย guild
+ *    (ถ้าเอา guild มาเป็นด่าน = ระบบใช้ไม่ได้ทันทีสำหรับคนที่ไม่มี Discord)
+ */
+
+/** เห็นกระดาน — open_to_org · ถูกเชิญ · ยศตรง · admin (ดีไซน์ §สิทธิ์ 4 ข้อ) */
+export function canViewBoard(board, access = {}, userId = null, { memberIds = [], permissions = [] } = {}) {
+  if (!board) return false
+  if (isKanbanAdmin(access)) return true
+  if (board.open_to_org) return true
+  if (userId && memberIds.includes(userId)) return true
+  if (permissions.length) {
+    const p = normalizeAccess(access).permissions || new Set()
+    return permissions.some((perm) => p.has(perm))
+  }
+  return false
+}
+
+/**
+ * สร้างกระดานใหม่ — ทุกคนใน org ทำได้ (เหมือน "สร้างการบ้าน")
+ * เหตุผลเดียวกับที่ไม่มี capability gate ตอนเข้าหน้า: กระดานเป็นของทุกคนในองค์กร
+ * ไม่ใช่ของทีมใดทีมหนึ่ง · กันขยะด้วย "กระดานสุดท้ายลบไม่ได้" + เก็บเข้ากรุได้ ไม่ใช่ด้วยการห้ามสร้าง
+ */
+export function canCreateBoard(access = {}, userId = null) {
+  return Boolean(userId)
+}
+
+/** แก้ชื่อ/ตั้งค่ากระดาน หรือเก็บเข้ากรุ — คนสร้างกระดาน หรือ admin */
+export function canManageBoard(board, access = {}, userId = null) {
+  if (!board) return false
+  if (isKanbanAdmin(access)) return true
+  return Boolean(userId) && board.created_by === userId
+}
+
 /**
  * คนที่ "เกี่ยวข้อง" กับการ์ดใบนี้ — เจ้าภาพ · คนช่วย · คนสร้าง
  * @param {object} card  { owner_user_id, created_by, helper_ids? }

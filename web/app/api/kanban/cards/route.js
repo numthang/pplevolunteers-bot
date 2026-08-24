@@ -15,7 +15,13 @@ export async function GET(req) {
   const ctx = await kanbanContext()
   if (ctx.error) return ctx.error
 
-  const view = new URL(req.url).searchParams.get('view') || 'mine'
+  const params = new URL(req.url).searchParams
+  const view = params.get('view') || 'mine'
+  // ?board=<id> → เฉพาะกระดานนั้น · ไม่ส่ง = ทุกกระดาน (ตัวเลือก "ทั้งหมด" ใน dropdown)
+  // ⚠️ ไม่ต้องเช็คสิทธิ์กระดานที่นี่ — listCards มี org_id ใน WHERE แล้ว และก้อนนี้ทุกกระดาน
+  //    ที่ open_to_org ทุกคนใน org เห็นได้อยู่แล้ว · ถึงตอนมีกระดานปิด ให้กรองที่ listCards ที่เดียว
+  const rawBoard = params.get('board')
+  const boardId = rawBoard && /^\d+$/.test(rawBoard) ? rawBoard : null
 
   if (view === 'mine') {
     const { mine, helping } = await cardDB.listMyCards(ctx.orgId, ctx.userId)
@@ -31,7 +37,7 @@ export async function GET(req) {
   //    (ไม่ยิง /api/me เพิ่ม และ **ห้ามให้ client เดา userId ตัวเองจาก session** — debug mode คืน null ตั้งใจ)
   if (view === 'board') {
     return Response.json({
-      cards: await cardDB.listCards(ctx.orgId, { includeClosed: true, limit: 500 }),
+      cards: await cardDB.listCards(ctx.orgId, { includeClosed: true, limit: 500, boardId }),
       viewerUserId: ctx.userId ?? null,
       // ⭐ ต้องส่งในโหมดกระดานด้วย (2026-08-19) — ก้อน B เพิ่มเมนู ⋯ → ลบ บนการ์ดในกระดาน
       //    เดิมส่งเฉพาะโหมดกรุ กล่องลบบนกระดานเลยไม่มีปุ่ม "ลบถาวร" ให้ admin เลย
@@ -42,7 +48,7 @@ export async function GET(req) {
   // แยก endpoint ไม่ใช่กรองในเครื่อง: การ์ดที่เก็บเข้ากรุแล้วต้องไม่ถูกดึงมาในโหมดปกติเลย
   if (view === 'archived') {
     return Response.json({
-      cards: await cardDB.listCards(ctx.orgId, { onlyArchived: true, includeClosed: true, limit: 500 }),
+      cards: await cardDB.listCards(ctx.orgId, { onlyArchived: true, includeClosed: true, limit: 500, boardId }),
       viewerUserId: ctx.userId ?? null,
       // ปุ่ม "ลบถาวร" โผล่เฉพาะ admin — ส่งมากับชุดข้อมูลนี้เลย ไม่ต้องยิง /api/me เพิ่ม
       // (แนวเดียวกับ viewerUserId ข้างบน — client ห้ามเดาสิทธิ์ตัวเองจาก session)
@@ -77,6 +83,8 @@ export async function POST(req) {
     dueAt: body.dueAt || null,     // ⚠️ ส่งดิบ — ห้ามแปลง timezone (local Thai time จากฟอร์ม)
     priority: Number(body.priority) || 0,
     statusType: body.statusType || null,
+    // ไม่ส่ง = กระดานตั้งต้นของ org (createCard เติมให้เอง) — หน้าเว็บส่งกระดานที่กำลังเปิดอยู่มาเสมอ
+    boardId: body.boardId && /^\d+$/.test(String(body.boardId)) ? String(body.boardId) : null,
   }, ctx.userId)
 
   return Response.json({ card, ref: formatRef(card.ref_no) }, { status: 201 })

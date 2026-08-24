@@ -12,6 +12,7 @@
 //      แล้ว retry ที่นี่ ไม่ใช่ปล่อยให้ API ตอบ 500
 import pool from '../index.js'
 import { displayNameSql } from '../displayName.js'
+import { ensureDefaultBoard } from './boards.js'
 
 // ป้ายเวลาที่ใช้เป็น optimistic lock token — ต้องเป็น "สตริงเดียวกันเป๊ะ" ทั้งตอนอ่านและตอนเทียบ
 // (ห้ามส่ง Date ของ JS ไป-กลับ: PG เก็บ microsecond แต่ JS มีแค่ millisecond → เทียบไม่มีวันตรง)
@@ -22,7 +23,7 @@ const LOCK = `to_char(c.updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.
 const DISPLAY_NAME = displayNameSql('u', 'c.org_id')
 
 const COLS = `
-  c.id, c.org_id, c.ref_no, c.title, c.detail, c.status_type,
+  c.id, c.org_id, c.board_id, c.ref_no, c.title, c.detail, c.status_type,
   c.owner_user_id, c.start_at, c.due_at, c.priority,
   c.created_by, c.created_at, c.updated_at, c.completed_at, c.archived_at,
   c.source_url, c.source_message_id,
@@ -39,7 +40,10 @@ const AGG = `
   --    ชิปบนการ์ดสร้างจาก fields ข้างล่างผ่าน cardTags() ใน lib/kanbanTagFilter.js แทน
   --    (ห้ามใส่ backtick ในคอมเมนต์นี้ — ทั้งก้อนเป็น template literal ของ JS จะโดนปิดกลางคัน)
   -- ทุก field ที่ยังไม่ถูกซ่อนของ org นี้ (ไม่ใช่แค่ที่กรอกแล้ว) — ให้ UI วาดเป็นฟอร์มครบชุด ค่าที่ยังไม่กรอกเป็น null/[]
-  -- ⚠️ d.board_id IS NULL ฮาร์ดโค้ดไว้เพราะยังไม่มีกระดานจริง — ก้อน 3 ต้องแก้เป็น (d.board_id IS NULL OR d.board_id = c.board_id)
+  -- ⭐ 2026-08-24 (ก้อน 3): field ผูกกระดาน 1:1 แล้ว — d.board_id = c.board_id
+  --    เลิกความหมาย "board_id NULL = ของกลางใช้ได้ทุกกระดาน" ตามที่ user เคาะว่าคลังตัวเลือกห้ามข้าม board
+  --    ⛔ ห้ามเติม OR d.board_id IS NULL กลับมา: field ที่หลุด NULL จะโผล่ทุกกระดานเงียบๆ
+  --       แล้วคลังตัวเลือกของคนละทีมจะปนกัน (เคสเดียวกับ ปริ้นเตอร์/พรินเตอร์ แต่แยกคืนด้วยมือไม่ได้)
   COALESCE((SELECT json_agg(json_build_object(
               'field_id', d.id, 'key', d.key, 'label', d.label, 'type', d.type,
               'value', CASE
@@ -75,7 +79,7 @@ const AGG = `
             ) ORDER BY d.sort_order, d.id)
               FROM kanban_field_defs d
               LEFT JOIN kanban_card_field_values v ON v.card_id = c.id AND v.field_id = d.id
-             WHERE d.org_id = c.org_id AND d.archived_at IS NULL AND d.board_id IS NULL), '[]'::json) AS fields`
+             WHERE d.org_id = c.org_id AND d.archived_at IS NULL AND d.board_id = c.board_id), '[]'::json) AS fields`
 
 const OWNER = `(SELECT ${DISPLAY_NAME} FROM users u WHERE u.id = c.owner_user_id) AS owner_name`
 
@@ -132,9 +136,11 @@ export async function listMyCards(orgId, userId, { includeClosed = false } = {})
 }
 
 /** งานทั้ง org — ก้อน 1 ใช้กับแท็บ "งานที่ยังไม่มีคนรับ" + หน้ารวม */
-export async function listCards(orgId, { status = null, ownerUserId = null, unassigned = false, includeArchived = false, onlyArchived = false, includeClosed = true, limit = 200 } = {}) {
+export async function listCards(orgId, { status = null, ownerUserId = null, unassigned = false, includeArchived = false, onlyArchived = false, includeClosed = true, boardId = null, limit = 200 } = {}) {
   const params = [orgId]
   let where = `c.org_id = $1`
+  // boardId = null → ทุกกระดานใน org (ตัวเลือก "ทั้งหมด" ใน dropdown = ค่าตั้งต้นของหน้าการบ้านของฉัน)
+  if (boardId) { params.push(boardId); where += ` AND c.board_id = $${params.length}` }
   // onlyArchived = หน้าถังขยะ · includeArchived = เอาทั้งคู่ (ยังไม่มีใครใช้ เก็บไว้เผื่อ export)
   if (onlyArchived)          where += ` AND c.archived_at IS NOT NULL`
   else if (!includeArchived) where += ` AND c.archived_at IS NULL`
@@ -162,7 +168,11 @@ export async function listCards(orgId, { status = null, ownerUserId = null, unas
  *    → ห้ามมีใครเรียกฟังก์ชันนี้ตอนกดปุ่ม "เพิ่มการบ้าน" เพื่อเปิดฟอร์มเปล่า
  *      (เคสจริงที่เคยพลาด: /posts กด "เขียนโพสต์ใหม่" แล้ว POST ทันที = ร่างเปล่าค้าง DB)
  */
-export async function createCard(orgId, { title, detail = null, ownerUserId = null, startAt = null, dueAt = null, priority = 0, statusType = null, sourceUrl = null, sourceMessageId = null }, createdBy) {
+export async function createCard(orgId, { title, detail = null, ownerUserId = null, startAt = null, dueAt = null, priority = 0, statusType = null, sourceUrl = null, sourceMessageId = null, boardId = null }, createdBy) {
+  // board_id เป็น NOT NULL แต่คนเรียกไม่ได้ส่งมาเสมอ (บอท · context menu ในดิสฯ · สคริปต์ import)
+  // → เติมกระดานตั้งต้นให้เอง สร้างให้ถ้า org ยังไม่มีสักใบ
+  // ⛔ ห้ามผลักภาระนี้ไปให้คนเรียก — ทางเขียนการ์ดมีหลายทางเกินกว่าจะไล่แก้ให้ครบทุกที่ทุกครั้ง
+  const board = boardId || (await ensureDefaultBoard(orgId, createdBy))
   // ไม่มีเจ้าภาพ = อยู่ backlog เท่านั้น (DB มี CHECK กันอีกชั้น — ที่นี่กันไม่ให้ยิงไปแล้วพัง)
   let status = statusType || (ownerUserId ? 'doing' : 'backlog')
 
@@ -175,13 +185,13 @@ export async function createCard(orgId, { title, detail = null, ownerUserId = nu
   for (let attempt = 0; attempt < 5; attempt++) {
     try {
       const { rows } = await pool.query(
-        `INSERT INTO kanban_cards (org_id, ref_no, title, detail, status_type, owner_user_id, start_at, due_at, priority, created_by, source_url, source_message_id)
+        `INSERT INTO kanban_cards (org_id, ref_no, title, detail, status_type, owner_user_id, start_at, due_at, priority, created_by, source_url, source_message_id, board_id)
          VALUES ($1,
                  (SELECT COALESCE(MAX(ref_no), 0) + 1 FROM kanban_cards WHERE org_id = $1),
-                 $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+                 $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
          RETURNING id`,
         [orgId, title, detail, status, ownerUserId, startAt || null, dueAt || null, priority, createdBy,
-         sourceUrl || null, sourceMessageId || null]
+         sourceUrl || null, sourceMessageId || null, board]
       )
       return await getCard(orgId, rows[0].id)
     } catch (e) {

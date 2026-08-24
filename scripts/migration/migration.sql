@@ -1088,3 +1088,92 @@ CREATE INDEX IF NOT EXISTS idx_org_members_user_org ON org_members (user_id, org
 COMMIT;
 
 -- production ทำถึงตรงนี้
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- 2026-08-24 — kanban ก้อน 3: กระดาน (board) จริง
+--
+-- ดีไซน์: md/kanban/KANBAN.md §Data model · แผนที่ประเมินไว้: md/PENDING.md §🗂️
+-- migration แบบ **เติมล้วน** ไม่มีแปลง type (รางวางไว้ตั้งแต่ก้อน 1: kanban_field_defs.board_id
+-- มีอยู่แล้ว และ unique index ใช้ COALESCE(board_id, 0) มาตั้งแต่แรก)
+--
+-- ⭐ เคาะ 2026-08-24 — guild ไม่ใช่ชั้นข้อมูล แต่บอร์ดผูก guild ได้:
+--   user มอง guild เป็น workspace (org 1 คร่อม 3 guild: 5563/1478/458 คน) แต่ถ้าให้ kanban
+--   อ่านงานผ่าน guild_id เป็นชั้นบังคับ = ผูกตายกับ Discord ขัดเป้าหมาย "ไม่มี Discord ก็ใช้ได้"
+--   → kanban_boards.guild_id **nullable** = ป้ายบอกว่าบอร์ดนี้ของทีมในเซิร์ฟไหน
+--     (ใช้จัดกลุ่มรายชื่อบอร์ดบนเว็บ + ให้ context menu ในดิสฯ เสนอบอร์ดของเซิร์ฟนั้นก่อน)
+--     ตารางยังเป็น org > board > card สามชั้นเท่าเดิม
+--
+-- ⛔ ก้อนนี้ตั้งใจ **ไม่มี** kanban_columns — ช่องยังเป็น status_type 6 แบบตรงๆ เหมือนเดิม
+--    (MVP เขียนไว้เองว่า "ปุ่มแก้ช่องวางโครงไว้เฉยๆ" · เพิ่มตอนนี้เสี่ยงให้ช่องกลายเป็น
+--     แหล่งสถานะที่ 2 ซึ่งเป็นข้อห้ามข้อแรกของทั้งดีไซน์)
+-- ═══════════════════════════════════════════════════════════════════════════
+
+BEGIN;
+
+CREATE TABLE IF NOT EXISTS kanban_boards (
+  id          BIGSERIAL PRIMARY KEY,
+  org_id      INTEGER      NOT NULL REFERENCES orgs(id) ON DELETE CASCADE,
+  guild_id    VARCHAR(20),                          -- NULL = ไม่ผูกเซิร์ฟไหน (ทีมที่ไม่ใช้ Discord)
+  name        VARCHAR(100) NOT NULL,
+  detail      TEXT,
+  open_to_org BOOLEAN      NOT NULL DEFAULT TRUE,   -- เปิดให้ทุกคนใน org เห็น (ดีไซน์ §สิทธิ์ ข้อ 1)
+  sort_order  INTEGER      NOT NULL DEFAULT 0,
+  archived_at TIMESTAMPTZ,
+  created_by  INTEGER      NOT NULL REFERENCES users(id),
+  created_at  TIMESTAMPTZ  NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_kanban_boards_org ON kanban_boards (org_id, sort_order, id);
+
+-- ยศที่เห็นบอร์ดได้ (ดีไซน์ §สิทธิ์ ข้อ 2) — ใช้ยศเดิมใน lib/permissions.js ไม่สร้าง permission ใหม่
+CREATE TABLE IF NOT EXISTS kanban_board_permissions (
+  board_id   BIGINT      NOT NULL REFERENCES kanban_boards(id) ON DELETE CASCADE,
+  permission VARCHAR(40) NOT NULL,
+  PRIMARY KEY (board_id, permission)
+);
+
+-- คนที่เชิญเพิ่มรายคน (ดีไซน์ §สิทธิ์ ข้อ 3)
+CREATE TABLE IF NOT EXISTS kanban_board_members (
+  board_id  BIGINT      NOT NULL REFERENCES kanban_boards(id) ON DELETE CASCADE,
+  user_id   INTEGER     NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  role      VARCHAR(20) NOT NULL DEFAULT 'member',  -- 'member' | 'manager'
+  added_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (board_id, user_id)
+);
+
+ALTER TABLE kanban_cards ADD COLUMN IF NOT EXISTS board_id BIGINT REFERENCES kanban_boards(id);
+
+-- ── backfill: ทุก org ที่มีการ์ดอยู่แล้ว ได้กระดานตั้งต้น 1 ใบ แล้วยกการ์ดเข้าไปทั้งหมด ──
+-- ทำได้ใน 1 statement เพราะตอนนี้ทีมเดียว งานชุดเดียว (81 ใบ · org 1)
+-- ยิ่งเลื่อนยิ่งแพง: มีทีมที่ 2 ลงงานเมื่อไหร่ ต้องมานั่งแยกทีละใบด้วยมือว่าใบไหนของกระดานไหน
+INSERT INTO kanban_boards (org_id, name, open_to_org, created_by, created_at)
+SELECT c.org_id, 'กระดานหลัก', TRUE,
+       (SELECT created_by FROM kanban_cards x WHERE x.org_id = c.org_id ORDER BY x.id LIMIT 1),
+       now()
+  FROM kanban_cards c
+ WHERE NOT EXISTS (SELECT 1 FROM kanban_boards b WHERE b.org_id = c.org_id)
+ GROUP BY c.org_id;
+
+UPDATE kanban_cards c
+   SET board_id = (SELECT b.id FROM kanban_boards b
+                    WHERE b.org_id = c.org_id ORDER BY b.id LIMIT 1)
+ WHERE c.board_id IS NULL;
+
+ALTER TABLE kanban_cards ALTER COLUMN board_id SET NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_kanban_cards_board ON kanban_cards (board_id, status_type);
+
+-- ── custom field: ยกเข้ากระดานเดียวกัน แล้วปิดความหมาย "NULL = ของกลางข้ามบอร์ด" ──
+-- ข้อขัดแย้งที่ PENDING.md เตือนไว้ (schema เขียน NULL = ใช้ทุกกระดาน แต่ user เคาะทีหลังว่า
+-- "คลังตัวเลือกห้ามข้าม board") — เลือกทาง (ก): backfill ทั้งหมดเข้ากระดาน + SET NOT NULL
+-- ตอนนี้ข้อมูลเป็น NULL หมด 5 ตัว = กวาดทีเดียวสะอาด · บอร์ดใหม่ตั้ง field ของตัวเอง
+UPDATE kanban_field_defs d
+   SET board_id = (SELECT b.id FROM kanban_boards b
+                    WHERE b.org_id = d.org_id ORDER BY b.id LIMIT 1)
+ WHERE d.board_id IS NULL
+   AND EXISTS (SELECT 1 FROM kanban_boards b WHERE b.org_id = d.org_id);
+
+COMMIT;
+
+-- ⚠️ ยังไม่ SET NOT NULL ให้ kanban_field_defs.board_id — ทำหลัง deploy โค้ดใหม่แล้วตรวจว่า
+--    field ขึ้นครบทุกการ์ด (โค้ดเก่าอ่าน d.board_id IS NULL อยู่ ถ้าบังคับก่อน field หายทั้งหน้า)
