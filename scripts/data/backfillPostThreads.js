@@ -5,7 +5,7 @@
  * ลอก flow มาจาก handlers/postImportHandler.js (context menu "นำเข้าเป็นโพสต์") ทั้งดุ้น
  * ต่างกันแค่ทำทีละเยอะและไม่มีคนกดเลือกหมวดให้
  *
- * Usage (local — ใช้ไม่ได้จริง ดู ⛔ ข้างล่าง):
+ * Usage (local):
  *   node scripts/data/backfillPostThreads.js --dry-run
  * Usage (prod):
  *   sudo -u www bash -c 'cd /www/wwwroot/pple-volunteers && \
@@ -14,12 +14,15 @@
  * Options:
  *   --dry-run          นับอย่างเดียว ไม่ยิง AI ไม่เขียน DB ไม่โหลดรูป  ← รันอันนี้ก่อนเสมอ
  *   --limit <n>        ทำแค่ n กระทู้แรกที่ยังไม่มีโพสต์ (ลองน้ำก่อนเทหมด)
+ *   --since <YYYY-MM-DD>  เอาเฉพาะกระทู้ที่ตั้งตั้งแต่วันนั้น (เช่น ย้อนหลัง 1 ปี)
+ *   --years <n>        ทางลัดของ --since = วันนี้ลบ n ปี
  *   --forum <id> --guild <id>   เจาะ forum เดียว (ไม่ใส่ = ทั้ง 2 อันใน FORUMS)
  *   --owner <discordId>         เจ้าภาพสำรองเมื่อหาเจ้าของกระทู้ไม่เจอ
  *   --no-images        ไม่แนบ/ไม่โหลดรูป
  *
- * ⛔ **รันบนเครื่อง dev ไม่ได้** — `DISCORD_BOT_TOKEN` ที่นี่ผูกกับบอท "Tester"
- *    ไม่ได้อยู่ในเซิร์ฟเวอร์จริง ยิง Discord API แล้วจะไม่เห็นกระทู้เลย (ไม่ใช่ error ให้เห็นชัดๆ ด้วย)
+ * ⚠️ **บนเครื่อง dev ดึงกระทู้จริงได้** (token ที่นี่อยู่ในเซิร์ฟเวอร์ทั้ง 2 อัน — ตรวจแล้ว 2026-08-24)
+ *    แต่มันเขียนลง **DB ของ dev** ไม่ใช่ prod → ใช้ซ้อมและนับยอดได้ ของจริงต้องรันบน prod
+ *    (ต่างจาก backfillCaseThreads.js ที่บน dev รันไม่ได้เลยเพราะ `case_config` ที่นี่ว่าง)
  *
  * ⭐ กันซ้ำที่ `post_episodes.channel_id = <id ของกระทู้>` — หลักที่ user เคาะคือ
  *    **1 topic = 1 posts = 1 ตะกร้าสื่อ** และ partial unique `uq_open_basket_per_channel`
@@ -60,6 +63,23 @@ const ONE_GUILD = arg('guild', null);
 const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
 const IMAGE_EXT_RE = /\.(png|jpe?g|webp|gif)(?:[?#]|$)/i;
 const MAX_IMAGES = 30;
+
+// ── วันที่ตั้งกระทู้ อ่านจาก snowflake ───────────────────────────────────────
+// ⭐ id ของกระทู้ **มีเวลาสร้างฝังอยู่ในตัวเลขอยู่แล้ว** → กรองย้อนหลังได้โดยไม่ต้องยิง API เพิ่มสักครั้ง
+//    (thread_metadata.create_timestamp ไม่ได้ติดมาทุกกระทู้ — ของเก่าก่อนปี 2022 เป็น null)
+const DISCORD_EPOCH = 1420070400000n;
+const createdAtOf = (id) => new Date(Number((BigInt(id) >> 22n) + DISCORD_EPOCH));
+
+const SINCE = (() => {
+  const years = Number(arg('years', 0)) || 0;
+  if (years) { const d = new Date(); d.setFullYear(d.getFullYear() - years); return d; }
+  const raw = arg('since', null);
+  if (!raw) return null;
+  // ตรึง +07:00 — เซิร์ฟเวอร์รันเป็น UTC ถ้าปล่อยให้ Date เดาเอง "1 ม.ค." จะกลายเป็นคนละวัน
+  const d = new Date(`${raw}T00:00:00+07:00`);
+  if (Number.isNaN(d.getTime())) { console.error(`--since ไม่ใช่วันที่ที่อ่านได้: ${raw}`); process.exit(1); }
+  return d;
+})();
 
 // prompt เดียวกับ handlers/postImportHandler.js เป๊ะ — ถ้าแก้ที่นั่นต้องแก้ที่นี่ด้วย
 // (ตั้งใจก็อปไม่ใช่ import: handler เป็นไฟล์ discord.js เต็มใบ ดึงเข้ามาในสคริปต์แล้วลาก client ตามมาทั้งก้อน)
@@ -181,11 +201,12 @@ async function alreadyImported(threadId) {
     : FORUMS;
 
   console.log(DRY_RUN ? '=== DRY RUN — ไม่เขียนอะไรเลย ===' : '=== backfillPostThreads ===');
+  if (SINCE) console.log(`ช่วงเวลา: เฉพาะกระทู้ที่ตั้งตั้งแต่ ${SINCE.toISOString().slice(0, 10)} เป็นต้นมา`);
   if (!DRY_RUN && !FALLBACK_OWNER) {
     console.log('⚠️  ไม่ได้ส่ง --owner มา — กระทู้ที่หาเจ้าของไม่เจอจะถูกข้าม (การ์ด kanban ห้ามไม่มีเจ้าภาพ)');
   }
 
-  let totalNew = 0, totalSkip = 0, totalErr = 0, totalNoOwner = 0, done = 0;
+  let totalNew = 0, totalSkip = 0, totalErr = 0, totalNoOwner = 0, totalOld = 0, done = 0;
 
   for (const { guildId, forumId } of targets) {
     console.log(`\nGuild ${guildId} · forum ${forumId}`);
@@ -201,13 +222,18 @@ async function alreadyImported(threadId) {
 
     // แยกก่อนว่าอันไหนใหม่จริง — คนรันต้องเห็นยอดก่อนที่มันจะเริ่มยิง AI
     const pending = [];
-    let skipped = 0;
+    let skipped = 0, tooOld = 0;
     for (const t of threads) {
+      if (SINCE && createdAtOf(t.id) < SINCE) { tooOld++; continue; }
       if (await alreadyImported(t.id)) skipped++;
       else pending.push(t);
     }
-    console.log(`  กระทู้ทั้งหมด ${threads.length} · มีโพสต์แล้ว ${skipped} · ยังไม่มี ${pending.length}`);
-    totalSkip += skipped;
+    console.log(
+      `  กระทู้ทั้งหมด ${threads.length}` +
+      (SINCE ? ` · เก่ากว่าที่กำหนด ${tooOld}` : '') +
+      ` · มีโพสต์แล้ว ${skipped} · ยังไม่มี ${pending.length}`
+    );
+    totalSkip += skipped; totalOld += tooOld;
 
     // ⚠️ `done` นับ "กระทู้ที่ลงมือแล้ว" ไม่ใช่ "ที่สร้างสำเร็จ" — --limit มีไว้คุมค่าใช้จ่าย
     //    และค่าใช้จ่ายเกิดตอน**ยิง AI** ไม่ใช่ตอนสร้างสำเร็จ · เคยเขียนให้นับเฉพาะที่สำเร็จ
@@ -280,8 +306,8 @@ async function alreadyImported(threadId) {
 
   console.log(
     DRY_RUN
-      ? `\nDRY RUN — จะสร้าง ${totalNew} โพสต์ · ข้ามที่มีแล้ว ${totalSkip}`
-      : `\nเสร็จ: สร้าง ${totalNew} · ข้าม ${totalSkip} · ไม่มีเจ้าของ/ไม่มีข้อความ ${totalNoOwner} · พลาด ${totalErr}`
+      ? `\nDRY RUN — จะสร้าง ${totalNew} โพสต์ · ข้ามที่มีแล้ว ${totalSkip}${SINCE ? ` · ข้ามเพราะเก่าเกิน ${totalOld}` : ''}`
+      : `\nเสร็จ: สร้าง ${totalNew} · ข้าม ${totalSkip}${SINCE ? ` · เก่าเกิน ${totalOld}` : ''} · ไม่มีเจ้าของ/ไม่มีข้อความ ${totalNoOwner} · พลาด ${totalErr}`
   );
   if (!DRY_RUN && totalNew) {
     console.log('\n👉 ขั้นถัดไป: สร้างการ์ด kanban ให้โพสต์พวกนี้');
