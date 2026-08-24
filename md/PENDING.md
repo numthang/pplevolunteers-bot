@@ -62,6 +62,26 @@
 `kanban_board_permissions`/`kanban_board_members` สร้างตารางแล้วแต่ยังไม่มีคนเขียนลง (ทุกกระดาน open_to_org) ·
 **ไม่มี `kanban_columns`** (ตั้งใจ — ช่องยังเป็น status_type 6 แบบ)
 
+> ⚠️ **UI ของบอร์ดถูกซ่อนในวันเดียวกัน** (`BOARDS_UI = false`) — ดู §🗂️ ก้อน 4-5 ข้างล่าง
+
+## 🗂️ Kanban ก้อน 4-5 — ✅ ทำแล้ว 2026-08-24 (local · ยังไม่ push/deploy)
+
+เคส + งานสื่อ **ทุกใบ** มีการ์ดใน kanban แล้ว · ดีไซน์+เหตุผลที่กลับคำอยู่ [md/kanban/KANBAN.md §กลับคำ](kanban/KANBAN.md)
+
+- `kanban_card_links` (1:1 สองทาง) · สถานะ+ชื่อ **อ่านสด** จากต้นทาง · [statusSql.js](../web/db/kanban/statusSql.js) = จุดแปลงจุดเดียว
+- **ด่านการมองเห็น** — ไม่มีสิทธิ์เห็นต้นทาง = ซ่อนการ์ดทั้งใบ (fail closed) · เคสกรองจังหวัด+ยศ · โพสต์ personal ไม่ขึ้นเลย
+- auto-mirror: hook ที่ `createCase` / `createPost` (org) / `promoteToOrg` + `reconcileEntityCards()` เป็นตาข่าย
+- `node --env-file=.env scripts/kanban/backfillEntityCards.mjs --org 1 [--dry]` — รันซ้ำได้ บอกยอด+เลข K ก่อนเริ่ม
+
+**ต้องทำก่อน/ตอน deploy:**
+1. รัน migration (`kanban_card_links`) แล้ว **รัน backfill บน prod** — ของเก่ายังไม่มีการ์ดจนกว่าจะรัน
+2. ⚠️ **ยังไม่ได้กวาดฝั่งบอท** — `db/case.js:createCase` (CJS) กับ `db/postsImport.js` ยังไม่ได้แขวน hook
+   ตอนนี้พึ่ง `reconcileEntityCards()` ตามเก็บอย่างเดียว → ถ้าจะให้ทันที ต้องเพิ่ม hook ฝั่งบอทด้วย
+3. ⚠️ ยังไม่มี cron เรียก reconcile — ตอนนี้ต้องรันสคริปต์เอง
+
+**ระเบิดเวลาที่ยังไม่ปลด:** `listCards` ตัดที่ 200/500 ใบ และ **ตัวกรองป้าย/ชนิดงานทำงานฝั่ง client**
+migrate ของเก่าเข้ามาเป็นร้อย → "ไม่พบ" จะแปลว่า "ไม่พบในที่โหลดมา" ซึ่งโกหกผู้ใช้ → ต้องย้ายตัวกรองไป SQL ก่อน migrate ก้อนใหญ่
+
 ## 👤 การ์ดโปรไฟล์คนแบบ Discord — ✅ กล่องโปรไฟล์เสร็จ 2026-08-20 (local, ยังไม่ commit) · เหลือ DM
 
 **ทำไปแล้ว:** กดชื่อเจ้าภาพ/คนช่วยในการ์ด → เปิด `PersonProfileModal` (รูป/ชื่อ/@username/ยศ/จำนวนการ์ดที่ถือ)
