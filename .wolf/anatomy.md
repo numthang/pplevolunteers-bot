@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-24T10:16:46.122Z
-> Files: 1043 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-24T13:44:59.803Z
+> Files: 1044 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/1b7cbea7-c43c-466d-9a5f-c61fda8e76b5/scratchpad/
 
@@ -276,7 +276,7 @@
 - `DEPLOYMENT.md` — Production Deployment — VPS Setup (~2522 tok)
 - `DEV_AGREEMENT.md` — CivicFlow — Dev Agreement & กติกาทำงานร่วม (ร่าง — รอคุยกับทีม CivicFlow) (~1367 tok)
 - `ORG_ACCESS_REDESIGN.md` — ORG_ACCESS_REDESIGN — ปลดสิทธิ์ออกจาก Discord (~5545 tok)
-- `PENDING.md` — PENDING.md — Backlog & Ideas (~35833 tok)
+- `PENDING.md` — PENDING.md — Backlog & Ideas (~36754 tok)
 - `WEB.md` — Web App — Next.js Frontend (~5324 tok)
 
 ## md/archive/
@@ -326,7 +326,7 @@
 ## md/kanban/
 
 - `CUSTOM-FIELDS.md` — Kanban — ช่องข้อมูลตั้งเอง (custom fields) (~3612 tok)
-- `KANBAN.md` — Kanban — ระบบบริหารงาน ("การบ้าน") (~7393 tok)
+- `KANBAN.md` — Kanban — ระบบบริหารงาน ("การบ้าน") (~8583 tok)
 - `NEXT-SESSION.md` — Kanban — จุดรับช่วง session หน้า (เขียนใหม่ 2026-08-19 เช้ามืด) (~3532 tok)
 
 ## md/posts/
@@ -436,7 +436,7 @@
 
 ## scripts/kanban/
 
-- `backfillEntityCards.mjs` — กวาดให้ "ของจริงทุกชิ้นมีการ์ดใน kanban" — เคส + งานสื่อ (user เคาะ 2026-08-24: ต้องมี ทุกใบ) (~1089 tok)
+- `backfillEntityCards.mjs` — กวาดให้ "ของจริงทุกชิ้นมีการ์ดใน kanban" — เคส + งานสื่อ (user เคาะ 2026-08-24: ต้องมี ทุกใบ) (~1137 tok)
 
 ## scripts/media/
 
@@ -499,7 +499,7 @@
 ## scripts/smoke/
 
 - `kanbanBot.mjs` — smoke test ฝั่งบอทของ kanban ก้อน 2 — รันกับฐานจริง แล้วลบของที่สร้างทิ้งท้ายสุด (~956 tok)
-- `kanbanCards.mjs` — smoke test ชั้น DB ของ kanban ก้อน 1 — รันกับฐานจริง แล้วลบของที่สร้างทิ้งท้ายสุด (~1794 tok)
+- `kanbanCards.mjs` — smoke test ชั้น DB ของ kanban ก้อน 1 — รันกับฐานจริง แล้วลบของที่สร้างทิ้งท้ายสุด (~1827 tok)
 - `kanbanLabels.mjs` — smoke test ชั้น DB ของ "คลังป้าย" kanban — รันกับฐานจริง แล้วลบของที่สร้างทิ้งท้ายสุด (~1398 tok)
 
 ## scripts/social/
@@ -1065,7 +1065,7 @@
 
 ## web/app/api/kanban/cards/
 
-- `route.js` — /api/kanban/cards — รายการการบ้าน + สร้างใหม่ (~1241 tok)
+- `route.js` — /api/kanban/cards — รายการการบ้าน + สร้างใหม่ (~1429 tok)
 
 ## web/app/api/kanban/cards/[id]/
 
@@ -1893,7 +1893,7 @@
 - `DeleteChoiceDialog.jsx` — DeleteChoiceDialog — กล่อง "ลบ" ที่ให้เลือกเอาเองว่า **ซ่อน/เก็บเข้ากรุ** หรือ **ลบถาวร** (~1182 tok)
 - `FieldManager.jsx` — FieldManager — ช่องข้อมูลตั้งเองของ org (/kanban/fields) · admin เท่านั้น (~3907 tok)
 - `FieldRow.jsx` — FieldRow — แถว `[ไอคอน · ชื่อ] | [ค่า]` บรรทัดเดียว ทรง Notion/AppFlowy (~749 tok)
-- `KanbanHome.jsx` — KanbanHome — หน้าเดียวของโมดูลการบ้าน (`/kanban`) (~17055 tok)
+- `KanbanHome.jsx` — KanbanHome — หน้าเดียวของโมดูลการบ้าน (`/kanban`) (~19784 tok)
 - `LabelChips.jsx` — LabelChips — ป้ายของการ์ด 1 ใบ วาดแยกเป็นกอง ไม่ใช่กองรวมพรืดเดียว (~618 tok)
 - `PersonProfileModal.jsx` — PersonProfileModal — กล่องลอยแบบดิสคอร์ด เปิดตอนกดชื่อเจ้าภาพ/คนช่วยในการ์ด (~1228 tok)
 - `TagCombobox.jsx` — TagCombobox — ตัวเลือกของ select/multi_select field (ตรงสกรีนช็อตที่ user ส่งมา 2026-08-18 รอบเย็น) (~8683 tok)
@@ -2020,12 +2020,12 @@
 ## web/db/kanban/
 
 - `boards.js` — กระดานตั้งต้นของ org — ตัวแรกตามลำดับที่แสดง (~1374 tok)
-- `cards.js` — ⭐ การ์ดที่ผูกของจริง (เคส/โพสต์) — 2 กติกาที่ไหลไปทุก query ในไฟล์นี้ (2026-08-24) (~7170 tok)
+- `cards.js` — ⭐ การ์ดที่ผูกของจริง (เคส/โพสต์) — 2 กติกาที่ไหลไปทุก query ในไฟล์นี้ (2026-08-24) (~7541 tok)
 - `fields.js` — defs ที่ยังไม่ถูกซ่อน (หรือรวมที่ซ่อนถ้า includeArchived) เรียงตามลำดับที่ตั้งไว้ (~6151 tok)
 - `labels.js` — ป้ายทั้งหมดของ org (ที่ยังไม่ถูกซ่อน) เรียงตามกลุ่ม (~2314 tok)
-- `links.js` — ของจริงที่การ์ดใบนี้ผูกอยู่ — null = การ์ดเปล่า (การบ้านธรรมดา) (~3200 tok)
+- `links.js` — ของจริงที่การ์ดใบนี้ผูกอยู่ — null = การ์ดเปล่า (การบ้านธรรมดา) (~3275 tok)
 - `people.js` — ค้นสมาชิก active ของ org · เรียกจาก API ที่กันคำค้นสั้นกว่า 2 ตัวไว้แล้ว (~931 tok)
-- `statusSql.js` — สถานะที่ต้องเอาไปแสดงจริง — สดจากต้นทางถ้าผูกไว้ · ไม่ผูกก็ใช้คอลัมน์เดิม (~1358 tok)
+- `statusSql.js` — สถานะที่ต้องเอาไปแสดงจริง — สดจากต้นทางถ้าผูกไว้ · ไม่ผูกก็ใช้คอลัมน์เดิม (~1435 tok)
 - `tags.js` — tags.js — "แท็ก" ของการบ้าน = **ตัวเลือกใน custom field** ไม่ใช่ตารางป้ายอีกต่อไป (~1588 tok)
 
 ## web/db/posts/
@@ -2033,7 +2033,7 @@
 - `aiSuggestions.js` — เก็บ 1 ชุด (1 ครั้งที่กดขอ) — payload = { quotes, headlines, imageIdeas, hashtags, cta, articleTips (~549 tok)
 - `assets.js` — แท็กต้อง normalize ตอนเขียนเสมอ — ไม่งั้นแตกเป็น "ราชบุรี" กับ "ราชบุรี " แล้วชิปกรองไม่ตรงกัน (~1878 tok)
 - `basket.js` — ตะกร้าที่เปิดอยู่ของห้อง — คืน null ถ้าห้องนี้ไม่มีตะกร้า (~344 tok)
-- `episodes.js` — โพสต์ทั้งหมดที่ user คนนี้ "เห็นได้อย่างน้อยระดับ org" (~5452 tok)
+- `episodes.js` — โพสต์ทั้งหมดที่ user คนนี้ "เห็นได้อย่างน้อยระดับ org" (~5896 tok)
 - `jobs.js` — สร้างงานโพสต์ 1 แถวต่อ 1 แพลตฟอร์ม (batch เดียวกัน) (~1642 tok)
 - `media.js` — หาแถวที่อ้าง path นี้ — ใช้กันไม่ให้ยิง path ของโพสต์อื่นมาเป็นพื้นหลังการ์ด (~1904 tok)
 - `series.js` — ซีรีส์ทั้งหมดที่ user คนนี้มีสิทธิ์ "เห็นได้อย่างน้อยระดับ org" (~1633 tok)
@@ -2093,6 +2093,7 @@
 - `kanbanLabelFilter.js` — ตัวกรองการ์ดด้วยป้าย — ตรรกะล้วน ไม่แตะ DOM/DB (เทสอยู่ที่ lib/__tests__/kanbanLabelFilter.test.js) (~869 tok)
 - `kanbanOptionActions.js` — จัดการตัวเลือกในคลัง (kanban_field_options) จากฝั่ง client · fetchOptions/patchOption/setOptionArchived/deleteOptionWithConfirm · **ทางเขียนเดียว** TagCombobox กับ ChecklistFieldBox ใช้ร่วมกัน (~750 tok)
 - `kanbanSort.js` — "เรียงตาม" ที่ผู้ใช้เลือกเอง — เมนู sort บน /kanban (แยกจาก sortCards ใน kanbanGrouping.js (~1005 tok)
+- `kanbanTagFilter.js` — ตัวกรองการ์ดด้วย **ตัวเลือกใน custom field** — ตรรกะล้วน ไม่แตะ DOM/DB (~1280 tok)
 - `linkState.js` — Exports signLinkState, verifyLinkState (~276 tok)
 - `org-auth-options.js` — web/lib/org-auth-options.js — org login (email-native, แยกจาก PPLE Discord auth) (~1072 tok)
 - `org.js` — web/lib/org.js — Org layer: resolve guild ในเครือเดียวกัน (ฝั่ง web · คู่กับ bot db/org.js) (~192 tok)
