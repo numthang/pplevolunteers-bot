@@ -1,8 +1,14 @@
 // db/postsImport.js — นำเข้ากระทู้ Discord เป็นโพสต์เดี่ยว (ไม่ใช่ตะกร้า)
 //
-// ต่างจาก db/mediaBasket.js ตรงที่ไม่ผ่าน ensureOpenEpisode — ไม่ผูกกับ channel_id เลย
-// (channel_id ต้องเป็น NULL เสมอ ไม่งั้นจะชนกับ partial unique index ของตะกร้า `uq_open_basket_per_channel`
-//  และกลายเป็น "ตะกร้าที่เปิดอยู่" ของห้องนั้นโดยไม่ได้ตั้งใจ)
+// ต่างจาก db/mediaBasket.js ตรงที่ไม่ผ่าน ensureOpenEpisode
+//
+// ⭐ `channelId` ปกติเป็น NULL (context menu "นำเข้าเป็นโพสต์" ในดิสฯ) — คนกดอาจกดซ้ำในกระทู้เดิม
+//    ตั้งใจให้ได้โพสต์ใหม่ทุกครั้ง ไม่ไปยึดสล็อต "ตะกร้าที่เปิดอยู่" ของห้องนั้น
+//
+// ⚠️ **ตัวกวาด backfill ส่ง channelId = id ของกระทู้มาด้วย** (scripts/data/backfillPostThreads.js)
+//    เพราะต้องการสิ่งที่ตรงข้ามกันพอดี: กันซ้ำ 1 กระทู้ = 1 โพสต์ ตามหลักที่ user เคาะ
+//    (1 topic = 1 posts = 1 ตะกร้าสื่อ) · partial unique `uq_open_basket_per_channel` บังคับให้เอง
+//    และตะกร้าที่เปิดทีหลังในกระทู้เดียวกันจะ**เกาะใบเดิม** เพราะ ensureOpenEpisode หาเจอแล้วใช้ซ้ำ
 // mirror ของ web/db/posts/episodes.js: createPost() ฝั่งบอท — ต้องเขียน post_episodes + post_revisions
 // (ต้นฉบับดิบ + ฉบับ AI) ในทรานแซกชันเดียวกัน กันโพสต์กำพร้าไม่มีประวัติถ้า insert รอบสองล้ม
 const pool = require('./index');
@@ -12,7 +18,7 @@ const { orgIdOfGuild, userIdByDiscord } = require('./org');
  * สร้างโพสต์เดี่ยวจากกระทู้ + revision แรก (ต้นฉบับดิบ) + revision สอง (ฉบับ AI)
  * @returns {object} แถวเต็มของ post_episodes ที่สร้าง (id ใช้ต่อกับ attachImages)
  */
-async function createImportedPost({ guildId, addedByDiscordId, category = null, title, body, sourceIdea }) {
+async function createImportedPost({ guildId, addedByDiscordId, category = null, title, body, sourceIdea, channelId = null, channelName = null }) {
   const orgId = await orgIdOfGuild(guildId);
   const ownerUserId = await userIdByDiscord(addedByDiscordId);
 
@@ -21,10 +27,10 @@ async function createImportedPost({ guildId, addedByDiscordId, category = null, 
     await client.query('BEGIN');
     const { rows } = await client.query(
       `INSERT INTO post_episodes
-         (org_id, owner_user_id, visibility, category, title, body, source_idea, created_via, status, guild_id, channel_id, last_edited_by)
-       VALUES ($1, $2, 'org', $3, $4, $5, $6, 'ai', 'draft', $7, NULL, $2)
+         (org_id, owner_user_id, visibility, category, title, body, source_idea, created_via, status, guild_id, channel_id, channel_name, last_edited_by)
+       VALUES ($1, $2, 'org', $3, $4, $5, $6, 'ai', 'draft', $7, $8, $9, $2)
        RETURNING *`,
-      [orgId, ownerUserId, category, title, body, sourceIdea, guildId]
+      [orgId, ownerUserId, category, title, body, sourceIdea, guildId, channelId, channelName]
     );
     const post = rows[0];
 

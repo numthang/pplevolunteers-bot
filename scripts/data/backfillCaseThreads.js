@@ -59,7 +59,11 @@ async function fetchAllThreadsInForum(guildId, forumChannelId) {
   // archived public threads (paginate)
   let before = null;
   while (true) {
-    const qs = before ? `?before=${before}&limit=100` : '?limit=100';
+    // ⚠️ ต้อง encodeURIComponent — archive_timestamp เป็น ISO8601 ที่ลงท้ายด้วย `+00:00`
+    //    ส่งดิบไป `+` จะถูกอ่านเป็น "ช่องว่าง" ใน query string → Discord ตอบ 400 แล้ว break ออกกลางคัน
+    //    อาการหลอก: ไม่ error ให้เห็นชัด แค่ได้กระทู้มาไม่ครบ (เจอ 2026-08-24 ตอนลอกโค้ดนี้ไปทำฝั่ง posts
+    //    แล้วรันจริง — forum เดียวกันได้ 109 กระทู้ก่อนแก้ · 481 หลังแก้)
+    const qs = before ? `?before=${encodeURIComponent(before)}&limit=100` : '?limit=100';
     try {
       const data = await discordFetch(`/channels/${forumChannelId}/threads/archived/public${qs}`);
       for (const t of data.threads || []) threads.push(t);
