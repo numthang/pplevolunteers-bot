@@ -135,7 +135,7 @@ export default function DocAutoCalc({ eventDate, eventEndDate, participantCount,
   const [snackEnabled, setSnackEnabled] = useState(true)   // ค่าอาหารว่าง/เบรก default ติ๊ก
   const [travelEnabled, setTravelEnabled] = useState(true) // รายการเบิก default ติ๊ก
   const [venueType, setVenueType]       = useState('normal')   // ระดับงาน: ทั่วไป/โรงแรม (คุมเรทอาหาร·เบรก·สถานที่)
-  const [travelMode, setTravelMode]     = useState('lump')
+  const [travelMode, setTravelMode]     = useState('individual')
   const [speakerEnabled, setSpeakerEnabled] = useState(false)
   const [speakerCount, setSpeakerCount] = useState(1)
   const [speakerHours, setSpeakerHours] = useState(1)
@@ -319,16 +319,17 @@ export default function DocAutoCalc({ eventDate, eventEndDate, participantCount,
           isIndividual: false,
         })
       } else {
-        // จ่ายตามจริง — สร้างใบเปล่า ยอด 0 → กรอกระยะทาง+ผู้รับทีละคนใน DocEntryList (ระบบคิด rate ให้)
+        // จ่ายตามจริง — สร้างใบเปล่า ระยะทางตั้งต้น 100 กม. (ในจังหวัด) → แก้ระยะทาง+ผู้รับทีละคนใน DocEntryList (ระบบคิด rate+description ให้ใหม่ตามระยะจริง)
         for (let i = 0; i < count; i++) {
           nonFoodItems.push({
             itemType:     'travel',
             label:        t('autoCalc.items.travelIndividual.label'),
-            description:  t('autoCalc.items.travelIndividual.description'),
-            amount:       0,
+            description:  t('travel.descInProvince', { km: 100 }),
+            amount:       TRAVEL_IN_PROVINCE_RATE,
             detail:       t('autoCalc.items.travelIndividual.detail'),
             isIndividual: false,
             noMember:     true,
+            overrideData: { distance_km: 100 },
           })
         }
       }

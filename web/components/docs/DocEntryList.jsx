@@ -4,6 +4,7 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import { Pencil, Trash2, Check, X, Copy } from 'lucide-react'
+import { calcTravelCeiling } from '@/config/fund69-rules.js'
 
 const ALL_ITEMS    = ['food','speaker','travel','venue','accommodation','sound','supplies','equipment','photo']
 const MOBILE_ITEMS = ['food','travel','accommodation','supplies','equipment','photo']
@@ -15,6 +16,8 @@ const BADGE_MUTED_LINK = BADGE_MUTED + ' hover:bg-warm-200 dark:hover:bg-disc-bo
 
 const inputCls = 'h-8 border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-warm-900 dark:text-disc-text text-sm rounded px-2 focus:outline-none focus:ring-1 focus:ring-orange'
 const selectCls = inputCls + ' appearance-none pr-6'
+// label หัวแถวใน edit form — fixed width ให้ input ทุกแถวเริ่มชิดกันเป๊ะ (ผู้จ่าย/ระยะทาง/ผู้รับ ยาวไม่เท่ากัน)
+const rowLabelCls = 'text-xs text-warm-600 dark:text-disc-text w-16 shrink-0'
 
 export default function DocEntryList({ initialEntries, isMobile, canManage, currentUserId, onAddClick, onChange, eligiblePayers = [], recentMembers = [] }) {
   const t = useTranslations('docs')
@@ -69,18 +72,46 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
   function startEdit(entry) {
     setEditingId(entry.id)
     setEditForm({
-      itemType:      entry.item_type,
-      description:   entry.description || '',
-      amount:        entry.amount,
-      memberUserId:  entry.member_user_id,
-      memberName:    entry.display_name || entry.member_user_id,
-      payerUserId:   entry.payer_user_id || '',
+      itemType:          entry.item_type,
+      description:       entry.description || '',
+      amount:            entry.amount,
+      memberUserId:      entry.member_user_id,
+      memberName:        entry.display_name || entry.member_user_id,
+      payerUserId:       entry.payer_user_id || '',
+      distanceKm:        entry.override_data?.distance_km ?? '',
+      recipientTambon:   entry.home_district  || '',
+      recipientAmphoe:   entry.home_amphure   || '',
+      recipientProvince: entry.home_province  || '',
     })
     setMemberResults([])
     setMemberOpen(false)
   }
 
   function cancelEdit() { setEditingId(null); setEditForm({}); setMemberResults([]); setMemberOpen(false) }
+
+  // <=100กม. = ในจังหวัด, >100กม. = เขียนที่อยู่ผู้รับ (ต./อ./จ. ตามทะเบียนบ้าน = ที่อยู่ในบัตร ปชช.)
+  function buildTravelDescription(km, tambon, amphoe, province) {
+    const n = parseFloat(km)
+    if (!(n >= 0)) return ''
+    if (n <= 100) return t('travel.descInProvince', { km: n })
+    const parts = [tambon && `ต.${tambon}`, amphoe && `อ.${amphoe}`, province && `จ.${province}`].filter(Boolean)
+    const address = parts.length ? parts.join(' ') : t('travel.descNoAddress')
+    return t('travel.descOutProvince', { address, km: n })
+  }
+
+  // กรอกระยะทาง (กม.) → auto-fill ยอดจากเพดานตาม tier + เขียน description ให้ แก้เองทับได้หลังจากนั้น
+  function updateDistance(val) {
+    setEditForm(f => {
+      const next = { ...f, distanceKm: val }
+      const km = parseFloat(val)
+      if (km >= 0) {
+        const ceiling = calcTravelCeiling(km)
+        if (ceiling != null) next.amount = ceiling
+        next.description = buildTravelDescription(km, f.recipientTambon, f.recipientAmphoe, f.recipientProvince)
+      }
+      return next
+    })
+  }
 
   function onMemberQueryChange(q) {
     setEditForm(f => ({ ...f, memberName: q, memberUserId: f.memberUserId }))
@@ -102,7 +133,21 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
 
   function selectMember(m) {
     const label = [m.first_name, m.last_name].filter(Boolean).join(' ') || m.display_name
-    setEditForm(f => ({ ...f, memberUserId: m.user_id, memberName: m.display_name + (label !== m.display_name ? ` (${label})` : '') }))
+    setEditForm(f => {
+      const next = {
+        ...f,
+        memberUserId:      m.user_id,
+        memberName:        m.display_name + (label !== m.display_name ? ` (${label})` : ''),
+        recipientTambon:   m.home_district || '',
+        recipientAmphoe:   m.home_amphure  || '',
+        recipientProvince: m.home_province || '',
+      }
+      // เพิ่งได้ที่อยู่ผู้รับใหม่ — เขียน description ใหม่ให้ ถ้าเป็นค่าเดินทางและกรอกระยะทางไว้แล้ว
+      if (f.itemType === 'travel' && f.distanceKm !== '') {
+        next.description = buildTravelDescription(f.distanceKm, next.recipientTambon, next.recipientAmphoe, next.recipientProvince)
+      }
+      return next
+    })
     setMemberOpen(false)
   }
 
@@ -125,6 +170,9 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
           amount:        parseFloat(editForm.amount),
           memberUserId:  editForm.memberUserId,
           ...(payerChanged ? { payerUserId: editForm.payerUserId } : {}),
+          ...(editForm.itemType === 'travel'
+            ? { overrideData: editForm.distanceKm !== '' ? { distance_km: parseFloat(editForm.distanceKm) } : {} }
+            : {}),
         }),
       })
       if (!res.ok) throw new Error((await res.json()).error)
@@ -236,7 +284,9 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
                   </div>
                 </div>
               )}
-              <span className="text-sm text-warm-700 dark:text-disc-text shrink-0">{t('entryList.amount', { amount: memberTotal.toLocaleString() })}</span>
+              {items.length > 1 && (
+                <span className="text-sm text-warm-700 dark:text-disc-text shrink-0">{t('entryList.amount', { amount: memberTotal.toLocaleString() })}</span>
+              )}
             </div>
             <div className="divide-y divide-warm-100 dark:divide-disc-border" id={`entries-${key}`}>
               {items.map(entry => {
@@ -245,27 +295,9 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
                   <div key={entry.id} className="px-4 py-3">
                     {isEditing ? (
                       <div className="space-y-2">
-                        {/* payer dropdown — บนสุด (สลับลำดับ 2026-08-24 ตาม user เคาะ) */}
-                        {eligiblePayers.length > 0 && (
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-warm-600 dark:text-disc-text shrink-0">{t('entryList.payerLabel')}</span>
-                            <select
-                              value={editForm.payerUserId || ''}
-                              onChange={e => setEditForm(f => ({ ...f, payerUserId: e.target.value ? Number(e.target.value) : '' }))}
-                              className={`${selectCls} flex-1`}
-                            >
-                              <option value="">{t('entryList.selectPayerPlaceholder')}</option>
-                              {eligiblePayers.filter(p => p.user_id !== editForm.memberUserId).map(p => (
-                                <option key={p.user_id} value={p.user_id}>
-                                  {p.display_name}{p.position ? ` · ${p.position}` : ''}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        )}
-                        {/* payee search — ล่างสุด (สลับลำดับ 2026-08-24 ตาม user เคาะ) */}
+                        {/* payee search — บนสุด */}
                         <div className="flex items-center gap-2">
-                          <span className="text-xs text-warm-600 dark:text-disc-text shrink-0">{t('entryList.recipientLabel')}</span>
+                          <span className={rowLabelCls}>{t('entryList.recipientLabel')}</span>
                           <div className="relative flex-1" ref={memberWrapRef}>
                             <input
                               type="text"
@@ -322,15 +354,27 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
                             className={`${inputCls} flex-1 min-w-0`}
                           />
                         </div>
-                        {/* amount + actions */}
+                        {/* ระยะทาง (เฉพาะค่าเดินทาง — auto-fill ยอด+description จากเพดานตาม tier แก้เองทับได้) + จำนวนเงิน + actions รวมแถวเดียว */}
                         <div className="flex items-center gap-2">
+                          {editForm.itemType === 'travel' && (
+                            <input
+                              type="number"
+                              min="0"
+                              step="1"
+                              value={editForm.distanceKm}
+                              onChange={e => updateDistance(e.target.value)}
+                              placeholder={t('entryList.distancePlaceholder')}
+                              title={t('entryList.distanceLabel')}
+                              className={`${inputCls} w-20 shrink-0`}
+                            />
+                          )}
                           <input
                             type="number"
                             min="0"
                             step="0.01"
                             value={editForm.amount}
                             onChange={e => setEditForm(f => ({ ...f, amount: e.target.value }))}
-                            className={`${inputCls} flex-1`}
+                            className={`${inputCls} flex-1 min-w-0`}
                           />
                           <button
                             onClick={() => saveEdit(entry.id)}
@@ -349,7 +393,7 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
                         {/* payer dropdown — ล่างสุด */}
                         {eligiblePayers.length > 0 && (
                           <div className="flex items-center gap-2">
-                            <span className="text-xs text-warm-600 dark:text-disc-text shrink-0">{t('entryList.payerLabel')}</span>
+                            <span className={rowLabelCls}>{t('entryList.payerLabel')}</span>
                             <select
                               value={editForm.payerUserId || ''}
                               onChange={e => setEditForm(f => ({ ...f, payerUserId: e.target.value ? Number(e.target.value) : '' }))}
@@ -418,21 +462,6 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
                 )
               })}
             </div>
-            {!isUnassigned && items[0]?.payer_display_name && (
-              <div className="px-4 py-2 border-t border-warm-100 dark:border-disc-border flex items-center gap-1.5">
-                <span className="text-xs text-warm-600 dark:text-disc-text">{t('entryList.payerLabel')}</span>
-                <span className="text-xs text-warm-700 dark:text-disc-text">{items[0].payer_display_name}</span>
-                {items[0].payer_position && (
-                  <span className="text-xs text-warm-500 dark:text-disc-text">· {items[0].payer_position}</span>
-                )}
-                <button
-                  onClick={() => copySignLinks('payer', items, key)}
-                  className="text-warm-400 dark:text-disc-muted hover:text-orange transition" title={t('entryList.copyPayerLinkTitle')}
-                >
-                  {copiedKey === `payer-${key}` ? <Check size={11} className="text-green-500" /> : <Copy size={11} />}
-                </button>
-              </div>
-            )}
           </div>
         )
       })}

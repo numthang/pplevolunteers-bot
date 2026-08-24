@@ -710,6 +710,11 @@
     "detail": {
       "defaultTitle": "โครงการ"
     },
+    "travel": {
+      "descInProvince": "ค่าเดินทางภายในจังหวัด ไป-กลับ {km} กม.",
+      "descOutProvince": "ค่าเดินทางจาก {address} ไป-กลับ {km} กม.",
+      "descNoAddress": "................."
+    },
     "entryList": {
       "itemLabels": {
         "food": "ค่าอาหาร",
@@ -740,6 +745,9 @@
       "recent": "ล่าสุด",
       "notePlaceholder": "หมายเหตุ",
       "selectPayerPlaceholder": "— เลือกผู้จ่าย —",
+      "distanceLabel": "ระยะทาง",
+      "distancePlaceholder": "0",
+      "distanceUnit": "กม.",
       "signReceivedLabel": "เซ็นรับ",
       "signPaidLabel": "เซ็นจ่าย",
       "editTitle": "แก้ไข",
@@ -1878,6 +1886,7 @@
       "noMatch": "ไม่มีงานที่ตรงกับตัวกรอง",
       "showing": "ตรงกับตัวกรอง {count} ใบ",
       "helperGroup": "คนช่วย",
+      "statusGroup": "สถานะ",
       "toggleLabel": "ตัวกรอง"
     },
     "sort": {

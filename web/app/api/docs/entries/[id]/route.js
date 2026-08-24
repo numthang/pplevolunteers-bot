@@ -19,14 +19,14 @@ export async function PATCH(req, { params }) {
     if (!entry) return Response.json({ error: 'Not found' }, { status: 404 })
     if (!canAccessEvent(entry.province, access)) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
-    const { itemType, description, amount, memberUserId: rawMemberUserId, payerUserId: rawPayerUserId } = await req.json()
+    const { itemType, description, amount, memberUserId: rawMemberUserId, payerUserId: rawPayerUserId, overrideData } = await req.json()
     const memberUserId = rawMemberUserId ? Number(rawMemberUserId) : null
     const payerUserId  = rawPayerUserId  ? Number(rawPayerUserId)  : null
     const recipientChanged = memberUserId && memberUserId !== entry.member_user_id
     if (recipientChanged && entry.status === 'signed') {
       await resetRecipientSignature(id)
     }
-    await updateEntry(id, { itemType, description, amount, memberUserId })
+    await updateEntry(id, { itemType, description, amount, memberUserId, ...(overrideData !== undefined ? { overrideData } : {}) })
 
     if (recipientChanged) {
       if (!entry.member_user_id) {

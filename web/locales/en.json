@@ -710,6 +710,11 @@
     "detail": {
       "defaultTitle": "Project"
     },
+    "travel": {
+      "descInProvince": "In-province travel, round trip {km} km.",
+      "descOutProvince": "Travel from {address}, round trip {km} km.",
+      "descNoAddress": "................."
+    },
     "entryList": {
       "itemLabels": {
         "food": "Food",
@@ -740,6 +745,9 @@
       "recent": "Recent",
       "notePlaceholder": "Note",
       "selectPayerPlaceholder": "— Select payer —",
+      "distanceLabel": "Distance",
+      "distancePlaceholder": "0",
+      "distanceUnit": "km",
       "signReceivedLabel": "Signed (received)",
       "signPaidLabel": "Signed (paid)",
       "editTitle": "Edit",
@@ -1878,6 +1886,7 @@
       "noMatch": "No task matches this filter",
       "showing": "{count} matching",
       "helperGroup": "Helpers",
+      "statusGroup": "Status",
       "toggleLabel": "Filter"
     },
     "sort": {

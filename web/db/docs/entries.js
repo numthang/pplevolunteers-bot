@@ -36,6 +36,7 @@ export async function getEntriesByProject(projectId) {
        u_m.discord_id AS member_discord_id,   -- display-only (ลิงก์โปรไฟล์ Discord) · ห้ามใช้เป็น key/identity
 
        n.first_name AS ngs_first_name, n.last_name AS ngs_last_name,
+       n.home_district, n.home_amphure, n.home_province,   -- ที่อยู่ตามทะเบียนบ้าน/บัตร ปชช. — ใช้ generate description ค่าเดินทางนอกจังหวัด
        COALESCE(
          NULLIF(TRIM(CONCAT(np.first_name, ' ', np.last_name)), ''),
          NULLIF(TRIM(CONCAT(u_pm.firstname, ' ', u_pm.lastname)), ''),
@@ -163,10 +164,10 @@ export async function autoAssignPayers(projectId, orgId, eventProvince) {
 
   const { rows: entries } = await pool.query(
     `SELECT id, member_user_id FROM docs_activity_entries
-     WHERE project_id = $1 AND payer_user_id IS NULL AND member_user_id IS NOT NULL`,
+     WHERE project_id = $1 AND payer_user_id IS NULL`,
     [projectId]
   )
-  if (!entries.length) return []            // ทุก entry มี payer แล้ว / ยังไม่มีผู้รับ
+  if (!entries.length) return []            // ทุก entry มี payer แล้ว
 
   const client = await pool.connect()
   try {
@@ -262,8 +263,7 @@ export async function setRecipientGroupPayer(projectId, recipientUserId, payerUs
 /**
  * ตั้ง payer "ทั้งโครงการ" (จาก dropdown บนสุด) — เป็น project default + apply ทุก entry
  * - เขียน docs_projects.payer_user_id = project default (ไว้ให้ entry ใหม่ inherit)
- * - ทุก entry ที่มีผู้รับ: payer = payerUserId · ถ้า == recipient → คนถัดไปใน pool (auto-swap)
- * - ข้าม entry ที่ไม่มีผู้รับ (member_user_id NULL)
+ * - ทุก entry (มีผู้รับหรือยังไม่มีก็ตาม): payer = payerUserId · ถ้า == recipient → คนถัดไปใน pool (auto-swap)
  * - payer เปลี่ยน + เคยเซ็น → reset ลายเซ็น payer เดิม
  * @returns {Promise<Array<{id, payer_sign_token, payer_user_id}>>}
  */
@@ -275,7 +275,7 @@ export async function setProjectPayer(projectId, payerUserId, orgId, eventProvin
 
   const { rows: entries } = await pool.query(
     `SELECT id, member_user_id, payer_user_id, payer_signed_at FROM docs_activity_entries
-     WHERE project_id = $1 AND member_user_id IS NOT NULL`,
+     WHERE project_id = $1`,
     [projectId]
   )
 
@@ -441,15 +441,18 @@ export async function getEntryById(id) {
   return rows[0]
 }
 
-export async function updateEntry(id, { itemType, description, amount, memberUserId }) {
+// overrideData: undefined = ไม่แตะ override_data เดิม (เช่น duration ของ speaker/sound), object = เขียนทับ
+export async function updateEntry(id, { itemType, description, amount, memberUserId, overrideData }) {
+  const touchOverride = overrideData !== undefined
   await pool.query(
     `UPDATE docs_activity_entries SET
        item_type      = COALESCE($2, item_type),
        description    = $3,
        amount         = COALESCE($4, amount),
-       member_user_id = COALESCE($5, member_user_id)
+       member_user_id = COALESCE($5, member_user_id),
+       override_data  = CASE WHEN $6 THEN $7::jsonb ELSE override_data END
      WHERE id = $1`,
-    [id, itemType ?? null, description ?? null, amount ?? null, memberUserId ?? null]
+    [id, itemType ?? null, description ?? null, amount ?? null, memberUserId ?? null, touchOverride, touchOverride ? JSON.stringify(overrideData) : null]
   )
 }
 

@@ -15,7 +15,8 @@ export async function GET(req, { params }) {
   const project = await getProjectByToken(token)
   if (!project) return new Response('ลิงก์หมดอายุหรือไม่ถูกต้อง', { status: 410 })
 
-  const onlySigned = new URL(req.url).searchParams.get('status') !== 'all'
+  // ค่าเริ่มต้น: แสดงทุกรายการแม้ยังไม่เซ็น (user เคาะ 2026-08-24) — ใส่ ?status=signed ถ้าจะกรองเฉพาะที่เซ็นแล้ว
+  const onlySigned = new URL(req.url).searchParams.get('status') === 'signed'
 
   try {
     const entries  = await getEntriesByProject(project.id)

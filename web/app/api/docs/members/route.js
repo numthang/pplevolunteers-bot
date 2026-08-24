@@ -43,7 +43,8 @@ export async function GET(req) {
     SELECT * FROM (
       SELECT DISTINCT ON (u.id)
              u.id AS user_id, u.discord_id, om.display_name, u.username, om.member_id,
-             n.first_name, n.last_name
+             n.first_name, n.last_name,
+             n.home_district, n.home_amphure, n.home_province
       FROM org_members om
       JOIN users u ON u.id = om.user_id
       LEFT JOIN cache_pple_member n ON n.source_id = om.member_id
