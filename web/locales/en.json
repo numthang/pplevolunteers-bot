@@ -1415,7 +1415,8 @@
       "description": "Tune how the AI behaves at each step. Leave a prompt untouched to use the system default. Changes apply to this organisation only.",
       "surface": {
         "posts": "Posts module",
-        "case": "Complaint cases"
+        "case": "Complaint cases",
+        "bot": "Discord bot"
       },
       "isDefault": "Default",
       "isCustom": "Customised",
