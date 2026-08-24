@@ -19,6 +19,8 @@
  *   --forum <id> --guild <id>   เจาะ forum เดียว (ไม่ใส่ = ทั้ง 2 อันใน FORUMS)
  *   --owner <discordId>         เจ้าภาพสำรองเมื่อหาเจ้าของกระทู้ไม่เจอ
  *   --no-images        ไม่แนบ/ไม่โหลดรูป
+ *   --no-ai            ไม่ยิง AI เลย — หัวข้อ = ชื่อกระทู้ · เนื้อหา = ข้อความดิบทั้งกระทู้
+ *                      ใช้เมื่อเครดิต AI หมด · โพสต์เป็น draft อยู่แล้ว ขัดทีหลังในเว็บได้
  *
  * ⚠️ **บนเครื่อง dev ดึงกระทู้จริงได้** (token ที่นี่อยู่ในเซิร์ฟเวอร์ทั้ง 2 อัน — ตรวจแล้ว 2026-08-24)
  *    แต่มันเขียนลง **DB ของ dev** ไม่ใช่ prod → ใช้ซ้อมและนับยอดได้ ของจริงต้องรันบน prod
@@ -55,6 +57,7 @@ const has = (name) => process.argv.includes(`--${name}`);
 
 const DRY_RUN = has('dry-run');
 const NO_IMAGES = has('no-images');
+const NO_AI = has('no-ai');
 const LIMIT = Number(arg('limit', 0)) || 0;
 const FALLBACK_OWNER = arg('owner', null);
 const ONE_FORUM = arg('forum', null);
@@ -263,14 +266,22 @@ async function alreadyImported(threadId) {
         const text = messagesToText(msgs);
         if (!text.trim()) { gNoOwner++; continue; }   // กระทู้ที่มีแต่รูป/บอท — ไม่มีอะไรให้ AI สรุป
 
+        // --no-ai: ยกข้อความดิบมาตรงๆ ไม่กลั่น — ใช้ตอนเครดิต AI หมด
+        // ⭐ เนื้อหาไม่หาย ได้การ์ด kanban ครบ แล้วค่อยกด "ให้ AI เรียบเรียง" ในเว็บทีหลังทีละใบ
+        //    (โพสต์เป็น draft อยู่แล้ว ไม่มีอะไรถูกเผยแพร่โดยไม่มีคนอ่านก่อน)
+        //    source_idea เก็บข้อความดิบเหมือนกันทั้ง 2 โหมด → เปลี่ยนใจย้อนกลับมากลั่นทีหลังได้เสมอ
         let ai = null;
-        try {
-          ai = parseAiJson(await callAI(AI_SYSTEM, `หัวข้อกระทู้: ${t.name || ''}\n\nบทสนทนา:\n\n${text}`, { guildId }));
-        } catch (e) {
-          console.error(`\n  [ai] thread ${t.id}:`, e.message);
+        if (NO_AI) {
+          ai = { title: (t.name || `กระทู้ ${t.id}`).slice(0, 300), body: text, category: null };
+        } else {
+          try {
+            ai = parseAiJson(await callAI(AI_SYSTEM, `หัวข้อกระทู้: ${t.name || ''}\n\nบทสนทนา:\n\n${text}`, { guildId }));
+          } catch (e) {
+            console.error(`\n  [ai] thread ${t.id}:`, e.message);
+          }
+          // AI ตอบไม่ตรงรูปแบบ = ไม่สร้าง (ไม่เดาต่อ) — หลักเดียวกับ postImportHandler
+          if (!ai) { gErr++; continue; }
         }
-        // AI ตอบไม่ตรงรูปแบบ = ไม่สร้าง (ไม่เดาต่อ) — หลักเดียวกับ postImportHandler
-        if (!ai) { gErr++; continue; }
 
         const post = await createImportedPost({
           guildId,

@@ -18,9 +18,14 @@ const DEFAULT_SHARED_QUOTA = 30;
 const SHARED_ENV_KEY = { claude: 'ANTHROPIC_API_KEY', gemini: 'GEMINI_API_KEY' };
 
 // รุ่นที่ระบบทดสอบแล้ว — ใช้เมื่อ org ยังไม่เลือกเอง
+//
+// ⚠️ **ค่าตั้งต้นของ gemini เน่าได้เงียบๆ** — Google ปลดระวางรุ่นเก่าแล้วตอบ 404 พร้อมชื่อรุ่นใหม่
+//    `gemini-2.0-flash` ตายไปแล้ว (เจอ 2026-08-24: "no longer available. Please update to
+//    models/gemini-3.6-flash") · org ที่ไม่ได้เลือกรุ่นเองจะพังทันทีโดยไม่มีใครแตะโค้ด
+//    → เจอ 404 ชื่อรุ่นเมื่อไหร่ ให้มาแก้ที่นี่ที่เดียว ไม่ต้องไล่แก้ call site
 const DEFAULT_MODEL = {
   claude: { light: 'claude-haiku-4-5-20251001', writing: 'claude-sonnet-5' },
-  gemini: { light: 'gemini-2.0-flash',          writing: 'gemini-2.0-flash' },
+  gemini: { light: 'gemini-3.6-flash',          writing: 'gemini-3.6-flash' },
 };
 
 const PROVIDERS = ['claude', 'gemini'];
