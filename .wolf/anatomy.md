@@ -1,12 +1,16 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-24T13:44:59.803Z
-> Files: 1044 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-24T17:16:28.530Z
+> Files: 1047 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/1b7cbea7-c43c-466d-9a5f-c61fda8e76b5/scratchpad/
 
 - `restructure_cerebrum.py` — find_line_idx, next_header_idx, delete_header_block, delete_single_line (~990 tok)
 - `restructure_phase2.py` — block_content, strip_blank_edges (~1915 tok)
+
+## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/285276a7-d25c-49ce-be8a-c69f0926b20e/scratchpad/
+
+- `measureThreads.js` — วัดขนาดข้อความจริงของกระทู้ที่จะ backfill — ไม่ยิง AI ไม่เขียน DB (~927 tok)
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/704ce0f8-86a6-49fb-81b7-157fd931c7c1/scratchpad/
 
@@ -27,7 +31,7 @@
 - `feedback_context_window_size.md` (~238 tok)
 - `feedback_thai_language.md` (~197 tok)
 - `MEMORY.md` — Memory Index (~3105 tok)
-- `project_kanban_module.md` (~560 tok)
+- `project_kanban_module.md` (~465 tok)
 
 ## ../calling.ppleth.ai/
 
@@ -154,7 +158,7 @@
 
 ## config/
 
-- `aiConstants.js` — YYYY-MM-DD เวลาไทย — server รันบน UTC (ดู gotcha timezone ใน CLAUDE.md) (~443 tok)
+- `aiConstants.js` — YYYY-MM-DD เวลาไทย — server รันบน UTC (ดู gotcha timezone ใน CLAUDE.md) (~546 tok)
 - `aiModes.js` — config/aiModes.js (~858 tok)
 - `aiPrompts.js` — config/aiPrompts.js — ค่าตั้งต้นของ prompt ทุกช่องที่ผูกกับโค้ด (zero-dep ใช้ทั้ง bot + web) (~3633 tok)
 - `brand.js` — แบรนด์ของ platform — จุดเดียวที่แก้ตอน rebrand (ใช้ร่วมทั้ง bot และ web) (~165 tok)
@@ -195,7 +199,7 @@
 - `aiConfig.js` — db/aiConfig.js (~937 tok)
 - `aiCreds.js` — นับ 1 ครั้งถ้ายังไม่เต็ม — ไม่ atomic (โควตาไม่ใช่เงิน เกิน 1-2 ครั้งรับได้ เหมือน postsAiQuota) (~1510 tok)
 - `aiPrompts.js` — prompt ของช่องที่ผูกกับโค้ด (kind='slot') — ประกอบเสร็จพร้อมยิง AI (~504 tok)
-- `case.js` — Case (เรื่องร้องเรียน) — bot-side DB layer (CJS) (~2425 tok)
+- `case.js` — Case (เรื่องร้องเรียน) — bot-side DB layer (CJS) (~2624 tok)
 - `configResolver.js` — db/configResolver.js — รวม config 3 ระดับเป็นค่าเดียวตาม priority (~716 tok)
 - `finance.js` — pool: getFinanceConfig, upsertFinanceConfig, getAccountsSummary (~641 tok)
 - `forum.js` — pool: getForumConfig, getAllForumConfigs, upsertForumConfig + 7 more (~1254 tok)
@@ -203,8 +207,8 @@
 - `guildRoles.js` — Sync role catalog → dc_guild_roles (SPEC §4 step 6a) (~1591 tok)
 - `guilds.js` — pool: upsertGuilds (~150 tok)
 - `index.js` — Declares pool (~100 tok)
-- `kanbanCards.js` — สร้างการบ้านจากข้อความในดิสฯ (~662 tok)
-- `mediaBasket.js` — ชื่อเรื่องจาก **บรรทัดแรก**ของแคปชัน — ตะกร้าดิสฯ ไม่มีช่องกรอกชื่อ (หย่อนข้อความอย่างเดียว) (~3700 tok)
+- `kanbanCards.js` — กระดานที่การ์ดจากห้องนี้ควรลง — ของเซิร์ฟนี้ก่อน แล้วค่อยกระดานแรกของ org (~2100 tok)
+- `mediaBasket.js` — ชื่อเรื่องจาก **บรรทัดแรก**ของแคปชัน — ตะกร้าดิสฯ ไม่มีช่องกรอกชื่อ (หย่อนข้อความอย่างเดียว) (~3941 tok)
 - `members.js` — pool: upsertMember, _deriveRoleFields, upsertMemberFromDiscord, getMember, syncMemberRoles (~1617 tok)
 - `newsWatch.js` — คืน Set ของ item_key ที่ห้องนี้เคยเห็นแล้ว (~567 tok)
 - `newsWatch.js` — คืน Set ของ item_key ที่เคยเห็นแล้ว (ของ guild นี้) (~477 tok)
@@ -213,7 +217,7 @@
 - `orgMemberRoles.js` — org_member_roles — แหล่งความจริงของสิทธิ์ (ORG_ACCESS_REDESIGN ขั้น 5) (~730 tok)
 - `otpSession.js` — db/otpSession.js — state ชั่วคราวของการยืนยันตัวตนด้วย OTP (dc_user_config) (~372 tok)
 - `otpSession.js` — db/otpSession.js — state ชั่วคราวของ OTP (dc_user_config, key = discord_id) แยกจาก userConfig 2026-07-29 (~330 tok)
-- `postsImport.js` — สร้างโพสต์เดี่ยวจากกระทู้ + revision แรก (ต้นฉบับดิบ) + revision สอง (ฉบับ AI) (~863 tok)
+- `postsImport.js` — สร้างโพสต์เดี่ยวจากกระทู้ + revision แรก (ต้นฉบับดิบ) + revision สอง (ฉบับ AI) (~1182 tok)
 - `ratings.js` — เพิ่ม rating ใหม่ (~783 tok)
 - `reports.js` — เพิ่ม report ใหม่ (~694 tok)
 - `settings.js` — db/settings.js (~353 tok)
@@ -276,7 +280,7 @@
 - `DEPLOYMENT.md` — Production Deployment — VPS Setup (~2522 tok)
 - `DEV_AGREEMENT.md` — CivicFlow — Dev Agreement & กติกาทำงานร่วม (ร่าง — รอคุยกับทีม CivicFlow) (~1367 tok)
 - `ORG_ACCESS_REDESIGN.md` — ORG_ACCESS_REDESIGN — ปลดสิทธิ์ออกจาก Discord (~5545 tok)
-- `PENDING.md` — PENDING.md — Backlog & Ideas (~36754 tok)
+- `PENDING.md` — PENDING.md — Backlog & Ideas (~37430 tok)
 - `WEB.md` — Web App — Next.js Frontend (~5324 tok)
 
 ## md/archive/
@@ -407,6 +411,8 @@
 - `backfill-intro-peoplesparty.js` — scripts/data/backfill-intro-peoplesparty.js (~3823 tok)
 - `backfill-intro-ratchaburi.js` — scripts/backfill-intro-channel.js (~2655 tok)
 - `backfill-missing-channels.js` — scripts/backfill-missing-channels.js (~2618 tok)
+- `backfillCaseThreads.js` — backfillCaseThreads.js — ดึงกระทู้เก่าทั้งหมดจาก complaint forum มาสร้าง case (~2176 tok)
+- `backfillPostThreads.js` — backfillPostThreads.js — กวาดกระทู้เก่าใน forum งานสื่อ มาสร้างเป็นโพสต์ (post_episodes) (~4126 tok)
 - `backfillThreads.js` — Backfill: index threads ใน text channels ทั้งหมดเข้า Meilisearch + DB (~680 tok)
 - `exportIntro.js` — Declares client (~667 tok)
 - `extract-intro-ratchaburi-csv.js` — scripts/extract-intro-csv.js (~1790 tok)
@@ -2176,9 +2182,9 @@
 
 ## web/locales/
 
-- `en.json` (~22296 tok)
+- `en.json` (~22551 tok)
 - `en.json` — web locale strings อังกฤษ (~60 tok)
-- `th.json` (~21346 tok)
+- `th.json` (~21596 tok)
 - `th.json` — web locale strings ไทย (starter: common.*) (~60 tok)
 
 ## web/public/media-temp/
