@@ -135,9 +135,12 @@ export async function deleteCardForEntity(entityType, entityId) {
 /**
  * ของจริงที่ "ควรมีการ์ด แต่ยังไม่มี" — ต่อชนิด
  *
- * ⛔ โพสต์เอาเฉพาะ `visibility='org'` — ของ personal เป็นร่างส่วนตัวของเจ้าของคนเดียว
- *    ห้ามขึ้นบอร์ดเด็ดขาด · ด่านตอนอ่านซ่อนให้อยู่แล้ว แต่ไม่สร้างตั้งแต่แรกดีกว่า
- *    (ไม่งั้นกินเลข K ทิ้งเปล่าเป็นร้อย · เปลี่ยนเป็น org เมื่อไหร่ promoteToOrg สร้างให้ทันที)
+ * ⭐ โพสต์เอา **ทุกใบที่ยังไม่เข้ากรุ รวม `visibility='personal'`** (user กลับคำ 2026-08-24 รอบสอง)
+ *    เดิมกรองเฉพาะ 'org' ด้วยเหตุผล "กินเลข K ทิ้งเปล่า" — เหตุผลนั้นตกไปแล้ว เพราะการ์ดที่ผูก
+ *    ของจริงโชว์เลขต้นทาง ไม่ได้โชว์ K-n ผลจริงคือแค่เลข K ของการบ้านธรรมดากระโดดถี่ขึ้น
+ *    ⚠️ **ไม่ใช่การเปิดให้คนอื่นเห็น** — ด่านตอนอ่าน (statusSql.js visibleLinkSql) ยอมให้เฉพาะ
+ *       `visibility='org'` หรือ `owner_user_id = คนดู` → ร่างส่วนตัวขึ้นบอร์ดของเจ้าของคนเดียว
+ *    ⛔ `archived_at IS NULL` ยังต้องอยู่ — โพสต์ที่เข้ากรุแล้วไม่ใช่งานค้าง
  *
  * ⭐ เจ้าภาพลากมาจากต้นทางให้เลย ไม่ปล่อยว่าง — การ์ดที่ไม่มีเจ้าภาพจะไปโผล่ใน "การบ้านของฉัน"
  *    ของทุกคน (isMyCard นับงานไม่มีเจ้าภาพเป็นของทุกคน) · เคส 200 ใบไม่มีเจ้าภาพ = หน้าแรกพังทั้งทีม
@@ -161,7 +164,7 @@ const SOURCE_SQL = {
                 p.owner_user_id,
                 p.owner_user_id AS created_by
            FROM post_episodes p
-          WHERE p.org_id = $1 AND p.archived_at IS NULL AND p.visibility = 'org'
+          WHERE p.org_id = $1 AND p.archived_at IS NULL
             AND NOT EXISTS (SELECT 1 FROM kanban_card_links l
                              WHERE l.entity_type = 'post' AND l.entity_id = p.id)
           ORDER BY p.id`,

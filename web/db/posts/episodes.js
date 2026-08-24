@@ -180,15 +180,14 @@ export async function createPost({ orgId, ownerUserId, visibility = 'personal', 
     )
     await client.query('COMMIT')
 
-    // ⭐ งานสื่อขององค์กรต้องมีการ์ดใน kanban ทุกใบ (user เคาะ 2026-08-24)
-    //    ⛔ ของ personal ไม่สร้าง — เป็นร่างส่วนตัว ห้ามขึ้นบอร์ด · กด "ให้เป็นงานองค์กร"
-    //       เมื่อไหร่ promoteToOrg สร้างให้ตอนนั้น
+    // ⭐ งานสื่อต้องมีการ์ดใน kanban **ทุกใบ รวมร่างส่วนตัว** (user กลับคำ 2026-08-24 รอบสอง)
+    //    เดิมข้ามของ personal — เปิดแล้วเพราะเจ้าของอยากเห็นร่างตัวเองบนบอร์ดตัวเอง
+    //    ⚠️ ไม่ใช่การเปิดให้คนอื่นเห็น — ด่านตอนอ่าน (statusSql.js visibleLinkSql) ยอมให้เฉพาะ
+    //       `visibility='org'` หรือ `owner_user_id = คนดู` → ร่างส่วนตัวขึ้นบอร์ดเจ้าของคนเดียว
     //    fire-and-forget — kanban พังต้องไม่ทำให้เขียนโพสต์ไม่ได้ (ตาข่ายคือ reconcileEntityCards)
-    if (visibility === 'org') {
-      mirrorEntityCard(orgId, 'post', {
-        id: rows[0].id, title: title || `งานสื่อ #${rows[0].id}`, ownerUserId,
-      }, ownerUserId).catch(() => {})
-    }
+    mirrorEntityCard(orgId, 'post', {
+      id: rows[0].id, title: title || `งานสื่อ #${rows[0].id}`, ownerUserId,
+    }, ownerUserId).catch(() => {})
 
     return await getPost(rows[0].id)
   } catch (err) {
@@ -380,7 +379,10 @@ export async function promoteToOrg(id, byUserId) {
     [id, byUserId]
   )
   const post = await getPost(id)
-  // เพิ่งกลายเป็นงานขององค์กร → ถึงคิวมีการ์ด (ตอนเป็น personal ตั้งใจไม่สร้าง)
+  // ⭐ ตอนนี้ร่างส่วนตัวมีการ์ดอยู่แล้ว (กลับคำ 2026-08-24 รอบสอง) → ตรงนี้แทบไม่ได้สร้างอะไรใหม่
+  //    เก็บไว้เป็น**ตาข่าย** สำหรับโพสต์เก่าที่เกิดก่อนกลับคำ (สมัยที่ personal ไม่ถูกสร้าง)
+  //    ปลอดภัยที่จะเรียกซ้ำ — mirrorEntityCard คืนใบเดิมถ้ามีแล้ว (links.js:234)
+  //    สิ่งที่เปลี่ยนจริงตอน promote คือ **ใครเห็นการ์ด** ไม่ใช่ว่ามีการ์ดไหม (visibleLinkSql อ่านสด)
   if (post?.visibility === 'org') {
     mirrorEntityCard(post.org_id, 'post', {
       id: post.id, title: post.title || `งานสื่อ #${post.id}`, ownerUserId: post.owner_user_id,

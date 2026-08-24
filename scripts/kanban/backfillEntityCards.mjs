@@ -9,8 +9,10 @@
 // ⭐ รันซ้ำได้ปลอดภัย — ของที่มีการ์ดแล้วถูกข้าม (UNIQUE (entity_type, entity_id) กันอีกชั้น)
 //    จึงใช้เป็น "ตัวตามเก็บ" ประจำได้ ไม่ใช่แค่ครั้งเดียวตอน migrate
 //
-// ⛔ โพสต์ `visibility='personal'` ไม่ถูกกวาด — เป็นร่างส่วนตัว ห้ามขึ้นบอร์ด
-//    (กด "ให้เป็นงานองค์กร" เมื่อไหร่ promoteToOrg สร้างการ์ดให้ตอนนั้น)
+// ⭐ โพสต์กวาด **ทุกใบที่ยังไม่เข้ากรุ รวม `visibility='personal'`** (user กลับคำ 2026-08-24 รอบสอง)
+//    ร่างส่วนตัวขึ้นบอร์ดของเจ้าของคนเดียว — คนอื่นไม่เห็น (visibleLinkSql กันไว้ตอนอ่าน)
+//    ⚠️ ตัวเลขที่นับข้างล่างต้องใช้เงื่อนไขเดียวกับ SOURCE_SQL.post ใน web/db/kanban/links.js เป๊ะ
+//       ไม่งั้นสคริปต์บอก "จะสร้าง N ใบ" แล้วสร้างจริงคนละจำนวน
 import { reconcileEntityCards } from '../../web/db/kanban/links.js'
 import pool from '../../web/db/index.js'
 
@@ -44,7 +46,7 @@ async function main() {
            AND NOT EXISTS (SELECT 1 FROM kanban_card_links l
                             WHERE l.entity_type = 'case' AND l.entity_id = c.id))::int AS cases,
        (SELECT count(*) FROM post_episodes p
-         WHERE p.org_id = $1 AND p.archived_at IS NULL AND p.visibility = 'org'
+         WHERE p.org_id = $1 AND p.archived_at IS NULL
            AND NOT EXISTS (SELECT 1 FROM kanban_card_links l
                             WHERE l.entity_type = 'post' AND l.entity_id = p.id))::int AS posts,
        (SELECT count(*) FROM kanban_cards k WHERE k.org_id = $1)::int AS cards,
