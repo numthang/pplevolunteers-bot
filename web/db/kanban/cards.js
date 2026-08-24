@@ -13,6 +13,21 @@
 import pool from '../index.js'
 import { displayNameSql } from '../displayName.js'
 import { ensureDefaultBoard } from './boards.js'
+import { LIVE_STATUS_SQL, LINK_JSON_SQL, visibleLinkSql } from './statusSql.js'
+
+/**
+ * ⭐ การ์ดที่ผูกของจริง (เคส/โพสต์) — 2 กติกาที่ไหลไปทุก query ในไฟล์นี้ (2026-08-24)
+ *
+ *   1. **สถานะกับชื่ออ่านสดจากต้นทาง** — `c.status_type` / `c.title` ของการ์ดพวกนี้เป็นแค่ cache
+ *      เปลี่ยนสถานะเคสที่หน้า /case แล้วการ์ดต้องขยับกองเองโดยไม่มีใครลาก
+ *   2. **ไม่มีสิทธิ์เห็นต้นทาง = ซ่อนการ์ดทั้งใบ** (user เคาะ) — kanban เปิดทั้ง org แต่เคสกรองจังหวัด
+ *      + ต้องมียศ และโพสต์ personal เป็นของเจ้าของคนเดียว · ชื่อเรื่องร้องเรียนเป็น PII ของผู้ร้อง
+ *
+ * ⛔ **fail closed** — ไม่ส่ง `viewer` มา = ซ่อนการ์ดที่ผูกเคสทุกใบ
+ *    ยอมให้เห็นน้อยไปดีกว่าหลุด · ทางเรียกที่ถูกต้องคือรับ `ctx.viewer` จาก kanbanGuard มาส่งต่อ
+ */
+const NO_VIEWER = { userId: null, canSeeCases: false, caseProvinces: [] }
+const viewerParams = (v) => [v.userId ?? null, v.canSeeCases === true, v.caseProvinces ?? null]
 
 // ป้ายเวลาที่ใช้เป็น optimistic lock token — ต้องเป็น "สตริงเดียวกันเป๊ะ" ทั้งตอนอ่านและตอนเทียบ
 // (ห้ามส่ง Date ของ JS ไป-กลับ: PG เก็บ microsecond แต่ JS มีแค่ millisecond → เทียบไม่มีวันตรง)
@@ -22,8 +37,12 @@ const LOCK = `to_char(c.updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.
 // c.org_id ใช้ได้เพราะทุกจุดที่แปะสูตรนี้อยู่ใน subquery ที่มองเห็น c อยู่แล้ว
 const DISPLAY_NAME = displayNameSql('u', 'c.org_id')
 
+// ⚠️ status_type ที่ SELECT ออกไป **ไม่ใช่คอลัมน์** — เป็นค่าที่คำนวณสดจากต้นทางถ้าการ์ดผูกของจริง
+//    (คอลัมน์จริงยังอยู่ ใช้เป็น cache สำหรับการ์ดที่ไม่ได้ผูกอะไร) · ดู statusSql.js
 const COLS = `
-  c.id, c.org_id, c.board_id, c.ref_no, c.title, c.detail, c.status_type,
+  c.id, c.org_id, c.board_id, c.ref_no, c.title, c.detail,
+  ${LIVE_STATUS_SQL} AS status_type,
+  ${LINK_JSON_SQL} AS link,
   c.owner_user_id, c.start_at, c.due_at, c.priority,
   c.created_by, c.created_at, c.updated_at, c.completed_at, c.archived_at,
   c.source_url, c.source_message_id,
@@ -87,10 +106,21 @@ const OWNER = `(SELECT ${DISPLAY_NAME} FROM users u WHERE u.id = c.owner_user_id
 function shape(row) {
   if (!row) return null
   const helpers = row.helpers || []
-  return { ...row, helpers, helper_ids: helpers.map(h => h.user_id) }
+  const out = { ...row, helpers, helper_ids: helpers.map(h => h.user_id) }
+  // ⭐ การ์ดที่ผูกของจริง: ชื่ออ่านสดจากต้นทาง — แก้ชื่อเคสที่ /case แล้วการ์ดต้องเปลี่ยนตาม
+  //    ต้นทางยังไม่มีชื่อ (โพสต์ร่างที่ยังไม่ตั้งชื่อ) → ตกกลับไปใช้ชื่อที่การ์ดเก็บไว้
+  if (out.link) {
+    if (out.link.title) out.title = out.link.title
+    out.link.entity_id = Number(out.link.entity_id)
+  }
+  return out
 }
 
-/** การ์ดใบเดียว — org_id อยู่ใน WHERE เสมอ กัน cross-org read */
+/**
+ * การ์ดใบเดียว — **ไม่มีด่านการมองเห็นของต้นทาง** ใช้ภายในเท่านั้น
+ * (ค่าที่คืนหลัง mutation · ด่านสิทธิ์ของ route ตัดสินไปแล้วก่อนถึงตรงนี้)
+ * ⛔ ห้ามเรียกตัวนี้ตอบ request ตรงๆ — หน้าเว็บต้องผ่าน getCardForViewer() เท่านั้น
+ */
 export async function getCard(orgId, id) {
   const { rows } = await pool.query(
     `SELECT ${COLS}, ${OWNER}, ${AGG} FROM kanban_cards c WHERE c.org_id = $1 AND c.id = $2`,
@@ -99,11 +129,25 @@ export async function getCard(orgId, id) {
   return shape(rows[0])
 }
 
-/** หาด้วยเลขที่คนพิมพ์ในดิสฯ (K-42) — ref_no ไม่ซ้ำใน org เดียวกัน */
-export async function getCardByRef(orgId, refNo) {
+/**
+ * การ์ดใบเดียวสำหรับ "คนดูคนนี้" — ผูกเคสนอกจังหวัด/โพสต์ส่วนตัวของคนอื่น → คืน null (= 404)
+ * ⭐ นี่คือตัวที่ route/guard ต้องใช้ · ไม่ส่ง viewer = ซ่อนการ์ดที่ผูกเคสทุกใบ (fail closed)
+ */
+export async function getCardForViewer(orgId, id, viewer = NO_VIEWER) {
   const { rows } = await pool.query(
-    `SELECT ${COLS}, ${OWNER}, ${AGG} FROM kanban_cards c WHERE c.org_id = $1 AND c.ref_no = $2`,
-    [orgId, refNo]
+    `SELECT ${COLS}, ${OWNER}, ${AGG} FROM kanban_cards c
+      WHERE c.org_id = $1 AND c.id = $2 AND ${visibleLinkSql(3, 4, 5)}`,
+    [orgId, id, ...viewerParams(viewer)]
+  )
+  return shape(rows[0])
+}
+
+/** หาด้วยเลขที่คนพิมพ์ในดิสฯ (K-42) — ref_no ไม่ซ้ำใน org เดียวกัน */
+export async function getCardByRef(orgId, refNo, viewer = NO_VIEWER) {
+  const { rows } = await pool.query(
+    `SELECT ${COLS}, ${OWNER}, ${AGG} FROM kanban_cards c
+      WHERE c.org_id = $1 AND c.ref_no = $2 AND ${visibleLinkSql(3, 4, 5)}`,
+    [orgId, refNo, ...viewerParams(viewer)]
   )
   return shape(rows[0])
 }
@@ -114,19 +158,22 @@ export async function getCardByRef(orgId, refNo) {
  *   helping = งานที่ฉันช่วย
  * เรียงตามกำหนดส่ง · งานที่ไม่มีกำหนดส่งไปท้ายสุด · งานที่จบแล้วไม่เอา
  */
-export async function listMyCards(orgId, userId, { includeClosed = false } = {}) {
-  const closed = includeClosed ? '' : `AND c.status_type NOT IN ('done','cancelled')`
+export async function listMyCards(orgId, userId, { includeClosed = false, viewer = NO_VIEWER } = {}) {
+  // ⚠️ กรองด้วยสถานะ **สด** ไม่ใช่คอลัมน์ — เคสที่เพิ่งปิดที่หน้า /case ต้องหลุดจากรายการนี้ทันที
+  //    (ถ้ากรองด้วยคอลัมน์ cache การ์ดจะค้างอยู่ในงานของเจ้าภาพทั้งที่งานจบไปแล้ว)
+  const closed = includeClosed ? '' : `AND ${LIVE_STATUS_SQL} NOT IN ('done','cancelled')`
   const { rows } = await pool.query(
     `SELECT ${COLS}, ${OWNER}, ${AGG},
             (c.owner_user_id = $2) AS is_owner
        FROM kanban_cards c
       WHERE c.org_id = $1
         AND c.archived_at IS NULL
+        AND ${visibleLinkSql(3, 4, 5)}
         ${closed}
         AND (c.owner_user_id = $2 OR EXISTS (
               SELECT 1 FROM kanban_card_helpers h WHERE h.card_id = c.id AND h.user_id = $2))
       ORDER BY (c.due_at IS NULL), c.due_at ASC, c.priority DESC, c.created_at ASC`,
-    [orgId, userId]
+    [orgId, userId, ...viewerParams(viewer)]
   )
   const all = rows.map(shape)
   return {
@@ -136,16 +183,18 @@ export async function listMyCards(orgId, userId, { includeClosed = false } = {})
 }
 
 /** งานทั้ง org — ก้อน 1 ใช้กับแท็บ "งานที่ยังไม่มีคนรับ" + หน้ารวม */
-export async function listCards(orgId, { status = null, ownerUserId = null, unassigned = false, includeArchived = false, onlyArchived = false, includeClosed = true, boardId = null, limit = 200 } = {}) {
-  const params = [orgId]
-  let where = `c.org_id = $1`
+export async function listCards(orgId, { status = null, ownerUserId = null, unassigned = false, includeArchived = false, onlyArchived = false, includeClosed = true, boardId = null, viewer = NO_VIEWER, limit = 200 } = {}) {
+  // viewer อยู่ต้นแถวพารามิเตอร์เสมอ ($2–$4) — ที่เหลือ push ต่อท้ายได้ตามเดิมโดยเลขไม่ขยับ
+  const params = [orgId, ...viewerParams(viewer)]
+  let where = `c.org_id = $1 AND ${visibleLinkSql(2, 3, 4)}`
   // boardId = null → ทุกกระดานใน org (ตัวเลือก "ทั้งหมด" ใน dropdown = ค่าตั้งต้นของหน้าการบ้านของฉัน)
   if (boardId) { params.push(boardId); where += ` AND c.board_id = $${params.length}` }
   // onlyArchived = หน้าถังขยะ · includeArchived = เอาทั้งคู่ (ยังไม่มีใครใช้ เก็บไว้เผื่อ export)
   if (onlyArchived)          where += ` AND c.archived_at IS NOT NULL`
   else if (!includeArchived) where += ` AND c.archived_at IS NULL`
-  if (!includeClosed)   where += ` AND c.status_type NOT IN ('done','cancelled')`
-  if (status)           { params.push(status);      where += ` AND c.status_type = $${params.length}` }
+  // ⚠️ ทั้ง 2 บรรทัดนี้ใช้สถานะ **สด** ไม่ใช่คอลัมน์ — ไม่งั้นการ์ดที่ผูกเคสจะถูกคัดผิดกอง
+  if (!includeClosed)   where += ` AND ${LIVE_STATUS_SQL} NOT IN ('done','cancelled')`
+  if (status)           { params.push(status);      where += ` AND ${LIVE_STATUS_SQL} = $${params.length}` }
   if (ownerUserId)      { params.push(ownerUserId); where += ` AND c.owner_user_id = $${params.length}` }
   if (unassigned)       where += ` AND c.owner_user_id IS NULL`
   params.push(limit)

@@ -133,3 +133,35 @@ describe('STATUS_TYPES', () => {
   it('CLOSED_STATUS เป็น subset ของ STATUS_TYPES', () =>
     expect(ka.CLOSED_STATUS.every(s => ka.STATUS_TYPES.includes(s))).toBe(true))
 })
+
+// ---- การ์ดที่ผูกของจริง (เคส/โพสต์) — ก้อน 4 ----
+// ดีไซน์: การ์ดพวกนี้ไม่เก็บสถานะเอง → ลากไม่ได้ ต้องไปเปลี่ยนที่หน้าต้นทาง (user เคาะ 2026-08-24)
+const linked = (kind = 'case', over = {}) =>
+  card({ link: { entity_type: kind, entity_id: 7, is_auto: true, title: 'ไฟทางสาธารณะ' }, ...over })
+
+describe('isLinkedCard', () => {
+  it('การ์ดเปล่า → false',        () => expect(ka.isLinkedCard(card())).toBe(false))
+  it('ผูกเคส → true',            () => expect(ka.isLinkedCard(linked('case'))).toBe(true))
+  it('ผูกโพสต์ → true',           () => expect(ka.isLinkedCard(linked('post'))).toBe(true))
+  it('ไม่มีการ์ด → false',        () => expect(ka.isLinkedCard(null)).toBe(false))
+  it('link เป็น null → false',    () => expect(ka.isLinkedCard(card({ link: null }))).toBe(false))
+})
+
+describe('checkStatusTransition — การ์ดที่ผูกของจริง', () => {
+  it('ผูกเคสแล้วลากข้ามกอง → ไม่ได้',
+    () => expect(ka.checkStatusTransition(linked('case'), 'done')).toEqual({ ok: false, reason: 'linked' }))
+  it('ผูกโพสต์แล้วลากข้ามกอง → ไม่ได้',
+    () => expect(ka.checkStatusTransition(linked('post'), 'review')).toEqual({ ok: false, reason: 'linked' }))
+  it('ผูกของจริง + ไม่มีเจ้าภาพ → บอก linked ไม่ใช่ needOwner (เหตุผลที่ตรงกว่า)',
+    () => expect(ka.checkStatusTransition(linked('case', { owner_user_id: null }), 'doing'))
+            .toEqual({ ok: false, reason: 'linked' }))
+  it('สถานะมั่ว → ยังตอบ unknownStatus ก่อน (กันค่ามั่วหลุดเข้าไปถึง DB)',
+    () => expect(ka.checkStatusTransition(linked('case'), 'ไม่มีจริง')).toEqual({ ok: false, reason: 'unknownStatus' }))
+  it('ถอดลิงก์แล้วลากได้ตามปกติ',
+    () => expect(ka.checkStatusTransition(card(), 'done')).toEqual({ ok: true, reason: null }))
+})
+
+describe('LINK_KIND_LABEL', () => {
+  it('ครบทั้ง 2 ชนิดที่ CHECK ใน DB อนุญาต',
+    () => expect(Object.keys(ka.LINK_KIND_LABEL).sort()).toEqual(['case', 'post']))
+})

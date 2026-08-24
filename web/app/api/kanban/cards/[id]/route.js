@@ -7,13 +7,20 @@
 import { cardContext, err } from '@/lib/kanbanGuard.js'
 import {
   canEditCard, canArchiveCard, canChangeStatus, canAssignOwner, canClaimCard,
-  checkStatusTransition, formatRef, canPurge,
+  checkStatusTransition, formatRef, canPurge, isLinkedCard, LINK_KIND_LABEL,
 } from '@/lib/kanbanAccess.js'
 import * as cardDB from '@/db/kanban/cards.js'
 
 const REASON_TEXT = {
   needOwner:     'ต้องมีเจ้าภาพก่อนถึงจะย้ายออกจากช่องรอทำได้',
   unknownStatus: 'สถานะไม่ถูกต้อง',
+}
+
+/** ข้อความบอกว่าทำไมย้ายไม่ได้ — การ์ดที่ผูกของจริงต้องบอกด้วยว่าไปเปลี่ยนที่ไหนแทน */
+function transitionError(card, reason) {
+  if (reason !== 'linked') return REASON_TEXT[reason] || 'ย้ายไม่ได้'
+  const kind = LINK_KIND_LABEL[card.link?.entity_type] || 'ของจริง'
+  return `การบ้านใบนี้ผูกกับ${kind}อยู่ — สถานะเปลี่ยนที่หน้า${kind}เท่านั้น แล้วการ์ดจะขยับตามเอง`
 }
 
 export async function GET(_req, { params }) {
@@ -51,7 +58,7 @@ export async function PATCH(req, { params }) {
   if (body.statusType !== undefined) {
     if (!canChangeStatus(card, access, userId)) return err(403, 'ไม่มีสิทธิ์เปลี่ยนสถานะการบ้านใบนี้')
     const gate = checkStatusTransition(card, body.statusType)
-    if (!gate.ok) return err(400, REASON_TEXT[gate.reason] || 'ย้ายไม่ได้')
+    if (!gate.ok) return err(400, transitionError(card, gate.reason))
     return Response.json({ card: await cardDB.setCardStatus(orgId, card.id, body.statusType) })
   }
 
@@ -65,12 +72,16 @@ export async function PATCH(req, { params }) {
   }
 
   // ── อาสาทำเอง (หลวมกว่า: ใครใน org ก็ได้) ──
+  // ⭐ การ์ดที่ผูกของจริงก็รับงานได้ตามปกติ — เจ้าภาพ/คนช่วย/กำหนดส่ง เป็นข้อมูลของ kanban เอง
+  //    ที่ล็อกมีแค่ **สถานะกับชื่อ** ซึ่งเป็นของต้นทาง
   if (body.claim === true) {
     if (!canClaimCard(card, access, userId)) return err(403, 'งานนี้ปิดไปแล้ว')
     if (card.owner_user_id) {
       return Response.json({ card: await cardDB.addHelper(orgId, card.id, userId) })
     }
-    await cardDB.setCardOwner(orgId, card.id, userId)
+    const owned = await cardDB.setCardOwner(orgId, card.id, userId)
+    // ⛔ ห้ามยัด 'doing' ทับการ์ดที่ผูกของจริง — สถานะมาจากต้นทาง เขียนไปก็เป็นแค่ cache ที่ผิด
+    if (isLinkedCard(card)) return Response.json({ card: owned })
     return Response.json({ card: await cardDB.setCardStatus(orgId, card.id, 'doing') })
   }
 
@@ -88,6 +99,12 @@ export async function PATCH(req, { params }) {
 
   const fields = {}
   if (body.title !== undefined) {
+    // ⛔ ชื่อการ์ดที่ผูกของจริงอ่านสดจากต้นทาง — เขียนทับได้ก็ไม่มีผล (ตอนแสดงถูกทับอยู่ดี)
+    //    ตอบเหตุผลกลับไปเลย ดีกว่าเงียบแล้วให้ผู้ใช้พิมพ์ทิ้งแล้วเห็นชื่อเดิมเด้งกลับ
+    if (isLinkedCard(card)) {
+      const kind = LINK_KIND_LABEL[card.link?.entity_type] || 'ของจริง'
+      return err(400, `ชื่อการบ้านใบนี้มาจาก${kind} — แก้ชื่อที่หน้า${kind} แล้วการ์ดจะเปลี่ยนตามเอง`)
+    }
     const t = String(body.title).trim()
     if (!t) return err(400, 'ต้องมีชื่อการบ้าน')
     if (t.length > 200) return err(400, 'ชื่อการบ้านยาวเกิน 200 ตัวอักษร')

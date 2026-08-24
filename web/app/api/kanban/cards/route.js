@@ -24,11 +24,11 @@ export async function GET(req) {
   const boardId = rawBoard && /^\d+$/.test(rawBoard) ? rawBoard : null
 
   if (view === 'mine') {
-    const { mine, helping } = await cardDB.listMyCards(ctx.orgId, ctx.userId)
+    const { mine, helping } = await cardDB.listMyCards(ctx.orgId, ctx.userId, { viewer: ctx.viewer })
     return Response.json({ mine, helping })
   }
   if (view === 'unassigned') {
-    return Response.json({ cards: await cardDB.listCards(ctx.orgId, { unassigned: true, includeClosed: false }) })
+    return Response.json({ cards: await cardDB.listCards(ctx.orgId, { unassigned: true, includeClosed: false, viewer: ctx.viewer }) })
   }
   // หน้า /kanban (หน้าเดียวของโมดูลตั้งแต่ 2026-08-18) — ต้องได้กอง "เสร็จ"/"กรุ" มาด้วย
   // ไม่งั้นลากเข้าแล้วการ์ดหายต่อหน้า · limit สูงกว่าปกติเพราะงานที่จบแล้วสะสมเรื่อยๆ (UI ตัดแสดงเองต่อกอง)
@@ -37,7 +37,7 @@ export async function GET(req) {
   //    (ไม่ยิง /api/me เพิ่ม และ **ห้ามให้ client เดา userId ตัวเองจาก session** — debug mode คืน null ตั้งใจ)
   if (view === 'board') {
     return Response.json({
-      cards: await cardDB.listCards(ctx.orgId, { includeClosed: true, limit: 500, boardId }),
+      cards: await cardDB.listCards(ctx.orgId, { includeClosed: true, limit: 500, boardId, viewer: ctx.viewer }),
       viewerUserId: ctx.userId ?? null,
       // ⭐ ต้องส่งในโหมดกระดานด้วย (2026-08-19) — ก้อน B เพิ่มเมนู ⋯ → ลบ บนการ์ดในกระดาน
       //    เดิมส่งเฉพาะโหมดกรุ กล่องลบบนกระดานเลยไม่มีปุ่ม "ลบถาวร" ให้ admin เลย
@@ -48,14 +48,14 @@ export async function GET(req) {
   // แยก endpoint ไม่ใช่กรองในเครื่อง: การ์ดที่เก็บเข้ากรุแล้วต้องไม่ถูกดึงมาในโหมดปกติเลย
   if (view === 'archived') {
     return Response.json({
-      cards: await cardDB.listCards(ctx.orgId, { onlyArchived: true, includeClosed: true, limit: 500, boardId }),
+      cards: await cardDB.listCards(ctx.orgId, { onlyArchived: true, includeClosed: true, limit: 500, boardId, viewer: ctx.viewer }),
       viewerUserId: ctx.userId ?? null,
       // ปุ่ม "ลบถาวร" โผล่เฉพาะ admin — ส่งมากับชุดข้อมูลนี้เลย ไม่ต้องยิง /api/me เพิ่ม
       // (แนวเดียวกับ viewerUserId ข้างบน — client ห้ามเดาสิทธิ์ตัวเองจาก session)
       canPurge: canPurge(ctx.access),
     })
   }
-  return Response.json({ cards: await cardDB.listCards(ctx.orgId, { includeClosed: false }) })
+  return Response.json({ cards: await cardDB.listCards(ctx.orgId, { includeClosed: false, viewer: ctx.viewer }) })
 }
 
 export async function POST(req) {

@@ -158,6 +158,14 @@ export function canArchiveCard(card, access = {}, userId = null) {
   return Boolean(userId) && card.created_by === userId
 }
 
+/** การ์ดใบนี้ผูกกับของจริง (เคส/โพสต์) อยู่ไหม — `link` มาจาก db/kanban/statusSql.js */
+export function isLinkedCard(card) {
+  return Boolean(card?.link)
+}
+
+/** ชื่อระบบต้นทางที่เอาไปประกอบข้อความบอกเหตุผล */
+export const LINK_KIND_LABEL = { case: 'เรื่องร้องเรียน', post: 'งานสื่อ' }
+
 /**
  * ตรวจว่าจะย้ายไปสถานะนี้ได้ไหม — กติกาที่ไม่ขึ้นกับตัวคน
  * คืน { ok, reason } เพื่อให้ UI เด้ง toast บอกเหตุผลได้ (ดีไซน์: ห้ามเด้งกลับเงียบๆ)
@@ -165,6 +173,13 @@ export function canArchiveCard(card, access = {}, userId = null) {
 export function checkStatusTransition(card, nextStatus) {
   if (!STATUS_TYPES.includes(nextStatus)) {
     return { ok: false, reason: 'unknownStatus' }
+  }
+  // ⛔ การ์ดที่ผูกของจริง: สถานะเป็นของต้นทาง **ล็อกไว้ ลากไม่ได้** (user เคาะ 2026-08-24)
+  //    เลือกทางนี้แทน "เขียนกลับไปเปลี่ยนสถานะต้นทาง" เพราะ write-back ต้องต่อด่านสิทธิ์ + optimistic
+  //    lock ของทั้ง 2 ระบบ (เตะคนที่กำลังพิมพ์โพสต์อยู่ให้เซฟไม่ได้ = 409) — งานเพิ่มอีกก้อนโดยไม่จำเป็น
+  //    เปลี่ยนที่หน้าต้นทางแล้วการ์ดขยับกองเอง เพราะสถานะอ่านสดอยู่แล้ว
+  if (isLinkedCard(card)) {
+    return { ok: false, reason: 'linked' }
   }
   // ดีไซน์ §ช่องโหว่ข้อ 5 — ไม่มีเจ้าภาพ ออกจาก backlog ไม่ได้ (DB ก็มี CHECK กันอีกชั้น)
   // ยกเว้น 'cancelled' = ช่อง "พักไว้" (ยังจะทำ แต่หาคนทำไม่ได้ตอนนี้ · 2026-08-18) — งานที่ยังไม่มีใครรับ

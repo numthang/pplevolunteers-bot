@@ -1177,3 +1177,42 @@ COMMIT;
 
 -- ⚠️ ยังไม่ SET NOT NULL ให้ kanban_field_defs.board_id — ทำหลัง deploy โค้ดใหม่แล้วตรวจว่า
 --    field ขึ้นครบทุกการ์ด (โค้ดเก่าอ่าน d.board_id IS NULL อยู่ ถ้าบังคับก่อน field หายทั้งหน้า)
+
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- 2026-08-24: kanban_card_links — ผูกการ์ดกับ "ของจริง" (เคส / โพสต์)
+--
+-- ⭐ กฎเหล็กของดีไซน์ (md/kanban/KANBAN.md §กฎเหล็ก): การ์ดที่ผูกของจริง **ไม่เก็บสถานะเอง**
+--    `kanban_cards.status_type` ของการ์ดพวกนี้เป็นแค่ cache — ตอนแสดงต้องคำนวณสดจากตารางต้นทาง
+--    ถ้าเผลอเก็บสถานะซ้ำ = kanban กลายเป็น "ที่เก็บงานที่ 6" ทันที ทั้งดีไซน์พังทั้งอัน
+--
+-- ⭐ 1:1 สองทาง (ต่างจากร่างเดิมที่เขียน PK (card_id, entity_type)) — เปลี่ยนเพราะ:
+--    ถ้าการ์ดใบเดียวผูกได้ทั้งเคสและโพสต์ = มีสถานะสด 2 แหล่งบนการ์ดใบเดียว ตัดสินไม่ได้ว่าอันไหนชนะ
+--    → PK (card_id) = 1 การ์ด ผูกได้อย่างเดียว · UNIQUE (entity_type, entity_id) = 1 ของจริง มีการ์ดใบเดียว
+--      (ตัวหลังคือตัวกันการ์ดซ้ำตอน auto-mirror ยิงพร้อมกัน 2 ทาง — เว็บ + บอท)
+--
+-- ⚠️ entity_type ต้องใส่ทุก JOIN/WHERE เสมอ — `cases.id` (1..) กับ `post_episodes.id` (1..)
+--    ช่วงเลขทับกันเต็มๆ อยู่แล้ว (เคสเดียวกับ contact_type ใน calling ที่ CLAUDE.md เตือนไว้)
+--
+-- ⚠️ FK มีได้ข้างเดียว (card_id) เพราะ entity ชี้ได้ 2 ตาราง
+--    → ฝั่ง entity ต้องกวาดด้วยโค้ด: deletePost ลบถาวรจริง (DELETE FROM post_episodes)
+--      ถ้าไม่กวาด = การ์ดกำพร้าที่เปิดแล้ว error · เคสไม่มี hard delete จึงไม่มีปัญหานี้
+-- ═══════════════════════════════════════════════════════════════════════════
+
+BEGIN;
+
+CREATE TABLE IF NOT EXISTS kanban_card_links (
+  card_id     BIGINT      NOT NULL REFERENCES kanban_cards(id) ON DELETE CASCADE,
+  entity_type VARCHAR(10) NOT NULL,
+  entity_id   BIGINT      NOT NULL,
+  is_auto     BOOLEAN     NOT NULL DEFAULT TRUE,   -- TRUE = ระบบสร้างให้ (auto-mirror) · FALSE = คนกดผูกเอง
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (card_id),
+  CONSTRAINT kanban_card_links_entity_type_check CHECK (entity_type IN ('case', 'post'))
+);
+
+-- 1 ของจริง = การ์ดใบเดียวตลอดกาล (กันการ์ดซ้ำตอน mirror ยิงพร้อมกัน)
+CREATE UNIQUE INDEX IF NOT EXISTS uq_kanban_card_links_entity
+  ON kanban_card_links (entity_type, entity_id);
+
+COMMIT;
