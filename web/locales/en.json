@@ -1720,6 +1720,7 @@
     },
     "loading": "Loading...",
     "loadFailed": "Failed to load the list",
+    "truncated": "Showing only the first {count} cards — this org has more work than one load can hold, so filtering and sorting do not cover everything. Tell an admin.",
     "status": {
       "backlog": "Unclaimed",
       "doing": "In progress",
@@ -1888,7 +1889,7 @@
       "title": "Filter by label",
       "clear": "Clear filter",
       "hint": "Several labels in one group = any of them · across groups = must have all",
-      "empty": "The loaded cards have no labels to filter by",
+      "empty": "No tags to filter by yet",
       "noMatch": "No task matches this filter",
       "showing": "{count} matching",
       "helperGroup": "Helpers",

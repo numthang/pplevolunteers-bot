@@ -25,6 +25,7 @@ import {
   Plus, Clock, User, ListChecks, MoreHorizontal, Pencil, Copy,
   ChevronDown, ChevronRight, Loader2, ArchiveRestore, Trash2,
   Filter, ArrowUpDown, Settings, Search, Type, Hash, Calendar, ToggleLeft, List, CircleDot, Link2,
+  AlertTriangle,
 } from 'lucide-react'
 import { STATUS_TYPES } from '@/lib/kanbanAccess.js'
 import { columnHeadProps, chipProps } from '@/lib/kanbanLabelColors.js'
@@ -324,6 +325,10 @@ export default function KanbanHome() {
   const [viewerUserId, setViewerUserId] = useState(null)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
+  // ⭐ ชนเพดาน CARD_HARD_CAP = รายการไม่ครบ → **ต้องบอกตรงๆ** ห้ามเงียบ
+  //    ตัวกรองและตัวเรียงของหน้านี้ทำงานบนชุดที่โหลดมาทั้งคู่ (kanbanTagFilter/kanbanSort)
+  //    เงียบไว้เมื่อไหร่ = "ไม่พบ" แปลว่า "ไม่พบในที่โหลดมา" และ "เรียงแล้ว" ก็เรียงไม่ครบ
+  const [truncated, setTruncated] = useState(false)
   const [actionError, setActionError] = useState('')
   const [openCardId, setOpenCardId] = useState(null)
   const [draggingId, setDraggingId] = useState(null)
@@ -413,14 +418,16 @@ export default function KanbanHome() {
       const boardQ = activeBoardId ? `&board=${activeBoardId}` : ''
       const res = await fetch(`/api/kanban/cards?view=${inArchive ? 'archived' : 'board'}${boardQ}`)
       const json = await res.json().catch(() => ({}))
-      if (!res.ok) { setLoadError(json.error || t('loadFailed')); setCards([]); return }
+      if (!res.ok) { setLoadError(json.error || t('loadFailed')); setCards([]); setTruncated(false); return }
       setCards(json.cards || [])
+      setTruncated(Boolean(json.truncated))
       setViewerUserId(json.viewerUserId ?? null)
       // ทั้งกระดานและกรุส่งมา — กระดานก็มีเมนู ⋯ → ลบ แล้ว (ก้อน B)
       setCanPurge(Boolean(json.canPurge))
     } catch {
       setLoadError(t('loadFailed'))
       setCards([])
+      setTruncated(false)
     } finally {
       setLoading(false)
     }
@@ -1241,6 +1248,14 @@ export default function KanbanHome() {
         )}
       </div>
 
+      {truncated && (
+        <div className="rounded-lg border border-amber-400 bg-amber-50 dark:bg-transparent p-3 text-sm flex flex-wrap items-center gap-2">
+          <AlertTriangle size={16} className="text-amber-500" />
+          {/* ⛔ ห้าม import CARD_HARD_CAP มาโชว์ — มันอยู่ในไฟล์ที่ import pg (db/kanban/cards.js)
+              ไฟล์นี้เป็น client component จะลาก pg เข้า bundle · ตอน truncated การ์ดที่ได้มา = เพดานพอดี */}
+          <span className="text-warm-900 dark:text-disc-text">{t('truncated', { count: cards.length })}</span>
+        </div>
+      )}
       {loadError && <p className="text-base text-red-500 dark:text-red-400">{loadError}</p>}
       {actionError && <p className="text-base text-red-500 dark:text-red-400">{actionError}</p>}
 

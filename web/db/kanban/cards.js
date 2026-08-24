@@ -182,8 +182,27 @@ export async function listMyCards(orgId, userId, { includeClosed = false, viewer
   }
 }
 
-/** งานทั้ง org — ก้อน 1 ใช้กับแท็บ "งานที่ยังไม่มีคนรับ" + หน้ารวม */
-export async function listCards(orgId, { status = null, ownerUserId = null, unassigned = false, includeArchived = false, onlyArchived = false, includeClosed = true, boardId = null, viewer = NO_VIEWER, limit = 200 } = {}) {
+/**
+ * เพดานกันระเบิด **ไม่ใช่ขนาดหน้า** — ตั้งใจให้สูงจนไม่มีวันชนในการใช้งานจริง
+ *
+ * ⭐ ทำไมไม่แบ่งหน้า (เคาะ 2026-08-24 หลัง /scrutinize): ตัวกรอง **และตัวเรียง** ของหน้า /kanban
+ *    ทำงานฝั่ง client ทั้งคู่ (lib/kanbanTagFilter.js · lib/kanbanSort.js) และ LIMIT ถูกตัดด้วย
+ *    ORDER BY due_at ตายตัวข้างล่าง ไม่เกี่ยวกับที่ผู้ใช้เลือกเรียง
+ *    → มี LIMIT ที่ชนได้เมื่อไหร่ = เลือก "เรียงตามอัปเดตล่าสุด" แล้วได้ใบที่ใกล้กำหนดส่งที่สุดมาเรียงใหม่
+ *      ("ไม่พบ" แปลว่า "ไม่พบในที่โหลดมา" · "เรียงแล้ว" แปลว่า "เรียงเฉพาะที่โหลดมา")
+ *    ยกทั้งชุด (กรอง+เรียง+facets) ไป SQL แพงกว่ามาก และของจริงเต็มที่ราว 1,500 ใบ (user ยืนยัน)
+ *    → เอา LIMIT ที่ชนได้ออก ถูกกว่าและไม่มีคำโกหกเหลือ · วัดจริง: การ์ดใบละ ~1.5KB
+ *
+ * ⛔ ชนเพดานนี้เมื่อไหร่ = ถึงเวลายกไป SQL จริงๆ ห้ามแก้ด้วยการดันเลขให้สูงขึ้นเฉยๆ
+ *    (คนเรียกได้ `truncated: true` กลับไปเพื่อ**บอกผู้ใช้ตรงๆ** ว่ารายการไม่ครบ)
+ */
+export const CARD_HARD_CAP = 3000
+
+/**
+ * งานทั้ง org — ก้อน 1 ใช้กับแท็บ "งานที่ยังไม่มีคนรับ" + หน้ารวม
+ * @returns {{cards: object[], truncated: boolean}} truncated = ชนเพดาน มีการ์ดที่ไม่ได้คืนมา
+ */
+export async function listCards(orgId, { status = null, ownerUserId = null, unassigned = false, includeArchived = false, onlyArchived = false, includeClosed = true, boardId = null, viewer = NO_VIEWER, limit = CARD_HARD_CAP } = {}) {
   // viewer อยู่ต้นแถวพารามิเตอร์เสมอ ($2–$4) — ที่เหลือ push ต่อท้ายได้ตามเดิมโดยเลขไม่ขยับ
   const params = [orgId, ...viewerParams(viewer)]
   let where = `c.org_id = $1 AND ${visibleLinkSql(2, 3, 4)}`
@@ -197,7 +216,9 @@ export async function listCards(orgId, { status = null, ownerUserId = null, unas
   if (status)           { params.push(status);      where += ` AND ${LIVE_STATUS_SQL} = $${params.length}` }
   if (ownerUserId)      { params.push(ownerUserId); where += ` AND c.owner_user_id = $${params.length}` }
   if (unassigned)       where += ` AND c.owner_user_id IS NULL`
-  params.push(limit)
+  // ดึงเกินมา 1 ใบเพื่อ **รู้ว่าชนเพดานจริงไหม** — เทียบ rows.length === limit เฉยๆ จะเตือนผิด
+  // ตอนมีการ์ดพอดีเป๊ะเท่าเพดาน (เตือนว่า "ไม่ครบ" ทั้งที่ครบ = โกหกอีกทาง)
+  params.push(limit + 1)
 
   const { rows } = await pool.query(
     `SELECT ${COLS}, ${OWNER}, ${AGG}
@@ -207,7 +228,8 @@ export async function listCards(orgId, { status = null, ownerUserId = null, unas
       LIMIT $${params.length}`,
     params
   )
-  return rows.map(shape)
+  const truncated = rows.length > limit
+  return { cards: rows.slice(0, limit).map(shape), truncated }
 }
 
 /**
