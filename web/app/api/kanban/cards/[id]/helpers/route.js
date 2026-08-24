@@ -16,7 +16,13 @@ export async function POST(req, { params }) {
     return Response.json({ card: await cardDB.addHelper(ctx.orgId, ctx.card.id, Number(target)) })
   }
 
-  if (!canClaimCard(ctx.card, ctx.access, ctx.userId)) return err(403, 'งานนี้ปิดไปแล้ว')
+  // เติมตัวเองเป็นคนช่วย: คนเกี่ยวข้องอยู่แล้ว (เจ้าภาพ/คนสร้าง) แก้การ์ดได้เสมอไม่ว่าสถานะไหน — เหมือนเพิ่มคนอื่น
+  // ใครก็ได้ใน org ต้องผ่าน canClaimCard (ห้ามอาสาในงานที่ปิดไปแล้ว)
+  // ⚠️ เดิมใช้ canClaimCard เป็นด่านเดียว → เจ้าภาพเพิ่มตัวเองเข้าการ์ด "เสร็จ/พักไว้" ของตัวเองไม่ได้
+  //    ทั้งที่เพิ่มคนอื่นเข้าการ์ดเดียวกันได้ปกติ (bug จาก user 2026-08-24)
+  if (!canEditCard(ctx.card, ctx.access, ctx.userId) && !canClaimCard(ctx.card, ctx.access, ctx.userId)) {
+    return err(403, 'งานนี้ปิดไปแล้ว')
+  }
   return Response.json({ card: await cardDB.addHelper(ctx.orgId, ctx.card.id, ctx.userId) })
 }
 

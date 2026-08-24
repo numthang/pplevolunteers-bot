@@ -26,7 +26,9 @@ export default function LabelChips({ labels = [], showGroupName = true, max = 0 
             {showGroupName && group && (
               <span className="text-sm text-warm-400 dark:text-disc-muted">{group}</span>
             )}
-            {/* ขนาด badge มาตรฐานของโปรเจกต์ (เทียบ components/docs/DocEntryList.jsx · app/case/[ref]/page.js)
+            {/* ขนาด badge เล็กลง 1 step จากมาตรฐานโปรเจกต์ (px-3 py-1) — user สั่ง 2026-08-24 เฉพาะหน้า /kanban
+                (การ์ดมีชิปติดกันหลายอันในพื้นที่แคบ) · ยังคง text-sm (ห้ามลดต่ำกว่านี้ตาม §Type scale)
+                แค่ลด padding ให้เท่าชิปคนช่วยใน TagCombobox.jsx (px-2.5 py-0.5) เพื่อให้สเกลตรงกันในโซนเดียวกัน
                 สีมาจากคลังสีพาสเทลของ user ผ่าน --kb + .kb-tint ใน globals.css */}
             {shown.map((l) => {
               const tint = chipProps(l)
@@ -35,7 +37,7 @@ export default function LabelChips({ labels = [], showGroupName = true, max = 0 
                   key={l.id}
                   title={group ? `${group} · ${l.name}` : l.name}
                   style={tint.style}
-                  className={`inline-block px-3 py-1 text-sm font-medium rounded-md whitespace-nowrap ${tint.className}`}
+                  className={`inline-block px-2.5 py-0.5 text-sm font-medium rounded-md whitespace-nowrap ${tint.className}`}
                 >
                   {l.name}
                 </span>

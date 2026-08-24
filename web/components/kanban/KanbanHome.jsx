@@ -61,7 +61,8 @@ function dueState(dueAt) {
   return 'upcoming'
 }
 
-const fmtDueShort = (d) => new Date(d).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })
+// ใส่ปีเสมอ (รูปแบบเดียวกับ components/calling/) — งานข้ามปีดูวันที่ไม่ออกว่าปีไหนถ้าไม่มีปีกำกับ
+const fmtDueShort = (d) => new Date(d).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })
 
 /** ปุ่มสลับแบบ segmented — ใช้ทั้งแถว "แสดง" และ "จัดกลุ่ม" ให้หน้าตาเป็นชุดเดียวกัน */
 function Segmented({ options, value, onChange }) {
@@ -315,7 +316,8 @@ export default function KanbanHome() {
   const [groupBy, setGroupBy] = useState('status') // 'status' | 'due'
   const [labelFilter, setLabelFilter] = useState([])
   const [helperFilter, setHelperFilter] = useState([])   // user_id (string) ของผู้ช่วยที่ถูกเลือกกรอง
-  // dropdown ไหนกำลังกางอยู่ — index ใน filterGroups (ป้าย) หรือ 'helper' (pill ผู้ช่วยท้ายแถว) หรือ null = ปิดหมด
+  const [statusFilter, setStatusFilter] = useState([])   // status_type ที่ถูกเลือกกรอง (แยกจาก groupBy — กรองซ่อนใบที่ไม่เข้าเกณฑ์ ไม่ใช่จัดกอง)
+  // dropdown ไหนกำลังกางอยู่ — index ใน filterGroups (ป้าย) หรือ 'helper' (pill ผู้ช่วยท้ายแถว) หรือ 'status' หรือ null = ปิดหมด
   // (ใช้ index แทนชื่อกลุ่มเพราะกลุ่ม "ไม่มีชื่อ" มีค่าเป็น null อยู่แล้ว ชนกับ sentinel ปิดไม่ได้)
   const [openGroupIdx, setOpenGroupIdx] = useState(null)
   const filterRowRef = useRef(null)
@@ -420,6 +422,12 @@ export default function KanbanHome() {
     }
     return [...map.values()].sort((a, b) => a.name.localeCompare(b.name, 'th'))
   }, [scoped])
+  // ตัวกรองสถานะ — ตัวเลือกตายตัว 6 แบบเสมอ (ไม่ต้องคัดจากการ์ดที่โหลดมาแบบป้าย/คนช่วย เพราะไม่มีทาง "ว่าง")
+  const statusOptions = useMemo(() => {
+    const counts = {}
+    for (const c of scoped) counts[c.status_type] = (counts[c.status_type] || 0) + 1
+    return STATUS_TYPES.map((key) => ({ id: key, name: t(`status.${key}`), count: counts[key] || 0 }))
+  }, [scoped, t])
   // เมนู "เรียงลำดับ" — builtin คงที่ (แปลผ่าน t) + custom field ที่มีอยู่จริงบนการ์ดที่โหลดมา (ชื่อมาจาก DB ห้ามแปล)
   const sortOptions = useMemo(() => {
     const builtins = BUILTIN_SORT_FIELDS.map((f) => ({
@@ -436,15 +444,22 @@ export default function KanbanHome() {
     return sortOptions.filter((o) => o.label.toLowerCase().includes(q))
   }, [sortOptions, sortQuery])
   const visible = useMemo(() => {
-    const byLabel = filterCards(scoped, labelFilter)
-    if (!helperFilter.length) return byLabel
-    const wanted = new Set(helperFilter)
-    return byLabel.filter((c) => (c.helpers || []).some((h) => wanted.has(String(h.user_id))))
-  }, [scoped, labelFilter, helperFilter])
+    let out = filterCards(scoped, labelFilter)
+    if (statusFilter.length) {
+      const wanted = new Set(statusFilter)
+      out = out.filter((c) => wanted.has(c.status_type))
+    }
+    if (helperFilter.length) {
+      const wanted = new Set(helperFilter)
+      out = out.filter((c) => (c.helpers || []).some((h) => wanted.has(String(h.user_id))))
+    }
+    return out
+  }, [scoped, labelFilter, helperFilter, statusFilter])
   const groups = useMemo(() => groupCards(visible, groupBy), [visible, groupBy])
 
   const selectedIds = new Set(labelFilter.map((l) => String(l.id)))
   const selectedHelperIds = new Set(helperFilter)
+  const selectedStatusIds = new Set(statusFilter)
   // ในกรุลากไม่ได้ — ต้องเอาออกจากกรุก่อนถึงจะขยับสถานะได้ (ไม่งั้นได้การ์ดที่ "เสร็จ" ทั้งที่อยู่ในกรุ)
   const canDrag = groupBy === 'status' && !inArchive
 
@@ -457,6 +472,10 @@ export default function KanbanHome() {
 
   function toggleHelperFilter(id) {
     setHelperFilter((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
+  }
+
+  function toggleStatusFilter(key) {
+    setStatusFilter((prev) => (prev.includes(key) ? prev.filter((x) => x !== key) : [...prev, key]))
   }
 
   /**
@@ -744,20 +763,19 @@ export default function KanbanHome() {
 
         {/* กรวยกรอง / เรียงลำดับ / เฟือง (ตั้งค่า — ยังไม่ทำ ใส่ไว้ก่อน) — ชิดขวาแถวเดียวกัน */}
         <div className="flex items-center gap-1.5 ml-auto">
-          {(filterGroups.length > 0 || helperOptions.length > 0) && (
-            <button
-              onClick={() => setFiltersOpen((v) => !v)}
-              title={t('filter.toggleLabel')}
-              aria-label={t('filter.toggleLabel')}
-              className={`flex items-center justify-center h-9 w-9 rounded-lg border transition ${
-                filtersOpen || labelFilter.length > 0 || helperFilter.length > 0
-                  ? 'border-teal bg-teal/10 text-teal'
-                  : 'border-warm-200 dark:border-disc-border bg-card-bg text-warm-500 dark:text-disc-muted hover:bg-warm-50 dark:hover:bg-disc-hover'
-              }`}
-            >
-              <Filter size={16} />
-            </button>
-          )}
+          {/* ตัวกรองสถานะมีตัวเลือกตายตัวเสมอ (6 แบบ) — ปุ่มกรวยเลยโผล่เสมอ ไม่ต้องรอมีป้าย/คนช่วย */}
+          <button
+            onClick={() => setFiltersOpen((v) => !v)}
+            title={t('filter.toggleLabel')}
+            aria-label={t('filter.toggleLabel')}
+            className={`flex items-center justify-center h-9 w-9 rounded-lg border transition ${
+              filtersOpen || labelFilter.length > 0 || helperFilter.length > 0 || statusFilter.length > 0
+                ? 'border-teal bg-teal/10 text-teal'
+                : 'border-warm-200 dark:border-disc-border bg-card-bg text-warm-500 dark:text-disc-muted hover:bg-warm-50 dark:hover:bg-disc-hover'
+            }`}
+          >
+            <Filter size={16} />
+          </button>
 
           <div ref={sortBoxRef} className="relative">
             <button
@@ -835,7 +853,7 @@ export default function KanbanHome() {
           </button>
         </div>
 
-        {filtersOpen && (filterGroups.length > 0 || helperOptions.length > 0) && (
+        {filtersOpen && (
           <div ref={filterRowRef} className="flex flex-wrap items-center gap-2 w-full">
             {filterGroups.map(({ group, labels }, idx) => {
               const activeLabels = labelFilter.filter((l) => (l.group ?? null) === group)
@@ -927,9 +945,51 @@ export default function KanbanHome() {
               </div>
             )}
 
-            {(labelFilter.length > 0 || helperFilter.length > 0) && (
+            {/* กรองสถานะ — ตัวเลือกตายตัว 6 แบบ แยกจาก "จัดกลุ่มตามอะไร": กรองซ่อนใบที่ไม่เข้าเกณฑ์ ใช้ได้ทั้ง 2 โหมด groupBy
+                (โหมดกำหนดส่งก็กรองสถานะได้ เช่น เอาแต่ "กำลังทำ" มาดูตามกำหนดส่ง) */}
+            <div className="relative">
               <button
-                onClick={() => { setLabelFilter([]); setHelperFilter([]) }}
+                onClick={() => setOpenGroupIdx((v) => (v === 'status' ? null : 'status'))}
+                className={`flex items-center gap-1.5 h-9 pl-3 pr-2.5 text-sm rounded-lg border font-medium transition max-w-[220px] ${
+                  statusFilter.length
+                    ? 'border-teal bg-teal/10 text-teal'
+                    : 'border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover'
+                }`}
+              >
+                <span className="truncate">
+                  {t('filter.statusGroup')}
+                  {statusFilter.length > 0 &&
+                    `: ${statusOptions.filter((s) => selectedStatusIds.has(s.id)).map((s) => s.name).join(', ')}`}
+                </span>
+                <ChevronDown size={14} className="shrink-0" />
+              </button>
+
+              {openGroupIdx === 'status' && (
+                <div className="absolute left-0 top-full z-20 mt-1 w-64 max-h-64 overflow-y-auto bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg shadow-lg p-2 flex flex-wrap gap-1.5">
+                  {statusOptions.map((s) => {
+                    const on = selectedStatusIds.has(s.id)
+                    return (
+                      <button
+                        key={s.id}
+                        onClick={() => toggleStatusFilter(s.id)}
+                        className={`flex items-center gap-1 px-3 py-1 text-sm rounded-md font-medium border whitespace-nowrap ${
+                          on
+                            ? 'bg-teal/10 border-transparent ring-1 ring-teal text-teal'
+                            : 'border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover'
+                        }`}
+                      >
+                        {s.name}
+                        <span className="text-warm-400 dark:text-disc-muted">{s.count}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+
+            {(labelFilter.length > 0 || helperFilter.length > 0 || statusFilter.length > 0) && (
+              <button
+                onClick={() => { setLabelFilter([]); setHelperFilter([]); setStatusFilter([]) }}
                 className="h-9 px-3 text-sm border border-warm-200 dark:border-disc-border bg-card-bg text-warm-500 dark:text-disc-muted hover:text-red-500 dark:hover:text-red-400 hover:border-red-300 dark:hover:border-red-700 rounded-lg transition-colors whitespace-nowrap"
               >
                 {t('filter.clear')}
@@ -1044,7 +1104,7 @@ export default function KanbanHome() {
       ) : inArchive && visible.length === 0 ? (
         // กรุว่างต้องบอกตรงๆ ไม่ใช่โชว์ 6 กองเปล่าให้เดาเอง
         <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg p-10 text-center text-base text-warm-400 dark:text-disc-muted">
-          {(labelFilter.length || helperFilter.length) ? t('filter.noMatch') : t('empty.archived')}
+          {(labelFilter.length || helperFilter.length || statusFilter.length) ? t('filter.noMatch') : t('empty.archived')}
         </div>
       ) : (
         // 2 โหมด layout เท่านั้น — **ไม่มีการปัดแนวนอนที่ไหนเลย** (user เกลียดการปัด · เคยทำ snap แบบ Trello แล้วไม่เอา)
@@ -1156,7 +1216,7 @@ export default function KanbanHome() {
                   )}
                   {sorted.length === 0 && (
                     <p className="text-sm text-warm-400 dark:text-disc-muted px-1 py-3 text-center">
-                      {(labelFilter.length || helperFilter.length) ? t('filter.noMatch') : t('board.emptyColumn')}
+                      {(labelFilter.length || helperFilter.length || statusFilter.length) ? t('filter.noMatch') : t('board.emptyColumn')}
                     </p>
                   )}
                 </div>
