@@ -12,6 +12,7 @@
 import { randomBytes } from 'crypto'
 import pool from './index.js'
 import { provinceToCode } from '../lib/provinceCode.js'
+import { mirrorEntityCard } from './kanban/links.js'
 
 function beYear2() {
   return String((new Date().getFullYear() + 543) % 100).padStart(2, '0')
@@ -52,6 +53,15 @@ export async function createCase(orgId, data) {
      complainant_name, complainant_phone, complainant_line_id,
      consent_at, intake_ip, created_by, discord_guild_id],
   )
+
+  // ⭐ ทุกเคสต้องมีการ์ดใน kanban (user เคาะ 2026-08-24: *ต้องมี ทุกใบ*)
+  //    fire-and-forget แบบเดียวกับ auditLog — ถ้า kanban พังต้องไม่ทำให้รับเรื่องร้องเรียนไม่ได้
+  //    ตาข่ายอีกชั้นคือ reconcileEntityCards() ที่กวาดของที่ hook พลาดตามทีหลัง
+  mirrorEntityCard(orgId, 'case', {
+    id: rows[0].id,
+    title: rows[0].title || `เรื่องร้องเรียน ${rows[0].ref}`,
+  }, created_by).catch(() => {})
+
   return rows[0]
 }
 

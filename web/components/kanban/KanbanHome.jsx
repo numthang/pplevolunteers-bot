@@ -36,6 +36,18 @@ import DeleteChoiceDialog from './DeleteChoiceDialog.jsx'
 import LabelChips from './LabelChips.jsx'
 import { ChecklistBar } from './ChecklistFieldBox.jsx'
 
+/**
+ * ⭐ ชนิดงาน — **ไม่ใช่ field ที่คนติดเอง** ระบบรู้เองจาก kanban_card_links.entity_type (2026-08-24)
+ *
+ * user เสนอให้ทำเป็น field "สายงาน" แบบ single select (POSTS/CASES/DOCS) — ไม่เอาด้วย 2 เหตุผล:
+ *   1. สายงานจริงคร่อมได้หลายค่า (51 จาก 67 ใบ = 76%) บังคับเลือกอันเดียวคือทิ้งข้อมูลจริง
+ *   2. "งานชนิดอะไร" กับ "งานของทีมไหน" คนละแกน — ปนช่องเดียวกันแล้วกรอก
+ *      "งานสื่อของทีมลงพื้นที่" ไม่ได้
+ * → ชนิดงานอ่านจากลิงก์ตรงๆ ไม่มีใครต้องติดป้ายให้ถูก และติดผิดไม่ได้
+ */
+const CARD_KINDS = ['plain', 'case', 'post']
+const cardKind = (c) => c?.link?.entity_type || 'plain'
+
 // แสดงต่อกองสูงสุดเท่านี้ — กอง "เสร็จ" โตไม่มีเพดาน ไม่ควรวาดหมดทุกใบ
 const MAX_PER_COLUMN = 40
 
@@ -186,7 +198,7 @@ function KanbanCard({ card, t, onOpen, onDragStart, onDragEnd, dragging, draggab
           <h3 className="flex-1 min-w-0 text-base font-semibold text-warm-900 dark:text-disc-text line-clamp-2">{card.title}</h3>
         )}
 
-        {!card.archived_at && !renaming && (
+        {!card.archived_at && !renaming && !card.link && (
           <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 focus-within:opacity-100">
             <button
               onClick={(e) => { e.stopPropagation(); setDraftTitle(card.title); setRenaming(true) }}
@@ -228,6 +240,13 @@ function KanbanCard({ card, t, onOpen, onDragStart, onDragEnd, dragging, draggab
           </div>
         )}
       </div>
+
+      {/* การ์ดนี้มาจากของจริงไหม — ให้รู้ตั้งแต่บนบอร์ดว่าใบไหนแตะสถานะไม่ได้ ไม่ต้องเปิดเข้าไปลอง */}
+      {card.link && (
+        <span className="self-start flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-teal/10 text-teal">
+          <Link2 size={12} /> {t(`linked.kind.${card.link.entity_type}`)}
+        </span>
+      )}
 
       {/* ชิปมาจากค่าใน custom field แล้ว (ยุบป้ายเข้า field 2026-08-19) — cardTags คือจุดแปลงจุดเดียว
           ชื่อกลุ่มไม่ต้องขึ้น การ์ดในคอลัมน์แคบเกิน (ชื่อ field เต็มอยู่ใน tooltip ของชิป) */}
@@ -326,6 +345,7 @@ export default function KanbanHome() {
   const [groupBy, setGroupBy] = useState('status') // 'status' | 'due'
   const [labelFilter, setLabelFilter] = useState([])
   const [helperFilter, setHelperFilter] = useState([])   // user_id (string) ของผู้ช่วยที่ถูกเลือกกรอง
+  const [kindFilter, setKindFilter] = useState([])       // ชนิดงาน: 'plain' | 'case' | 'post' (ว่าง = ทั้งหมด)
   const [statusFilter, setStatusFilter] = useState([])   // status_type ที่ถูกเลือกกรอง (แยกจาก groupBy — กรองซ่อนใบที่ไม่เข้าเกณฑ์ ไม่ใช่จัดกอง)
   // dropdown ไหนกำลังกางอยู่ — index ใน filterGroups (ป้าย) หรือ 'helper' (pill ผู้ช่วยท้ายแถว) หรือ 'status' หรือ null = ปิดหมด
   // (ใช้ index แทนชื่อกลุ่มเพราะกลุ่ม "ไม่มีชื่อ" มีค่าเป็น null อยู่แล้ว ชนกับ sentinel ปิดไม่ได้)
@@ -482,6 +502,13 @@ export default function KanbanHome() {
     return out
   }, [boards])
 
+  // ตัวกรองชนิดงาน — ตายตัว 3 แบบเสมอ (นับจากลิงก์ ไม่ใช่จาก field ที่คนติด)
+  const kindOptions = useMemo(() => {
+    const counts = {}
+    for (const c of scoped) { const k = cardKind(c); counts[k] = (counts[k] || 0) + 1 }
+    return CARD_KINDS.map((key) => ({ id: key, name: t(`filter.kind.${key}`), count: counts[key] || 0 }))
+  }, [scoped, t])
+
   // ตัวกรองสถานะ — ตัวเลือกตายตัว 6 แบบเสมอ (ไม่ต้องคัดจากการ์ดที่โหลดมาแบบป้าย/คนช่วย เพราะไม่มีทาง "ว่าง")
   const statusOptions = useMemo(() => {
     const counts = {}
@@ -513,13 +540,18 @@ export default function KanbanHome() {
       const wanted = new Set(helperFilter)
       out = out.filter((c) => (c.helpers || []).some((h) => wanted.has(String(h.user_id))))
     }
+    if (kindFilter.length) {
+      const wanted = new Set(kindFilter)
+      out = out.filter((c) => wanted.has(cardKind(c)))
+    }
     return out
-  }, [scoped, labelFilter, helperFilter, statusFilter])
+  }, [scoped, labelFilter, helperFilter, statusFilter, kindFilter])
   const groups = useMemo(() => groupCards(visible, groupBy), [visible, groupBy])
 
   const selectedIds = new Set(labelFilter.map((l) => String(l.id)))
   const selectedHelperIds = new Set(helperFilter)
   const selectedStatusIds = new Set(statusFilter)
+  const selectedKindIds = new Set(kindFilter)
   // ในกรุลากไม่ได้ — ต้องเอาออกจากกรุก่อนถึงจะขยับสถานะได้ (ไม่งั้นได้การ์ดที่ "เสร็จ" ทั้งที่อยู่ในกรุ)
   const canDrag = groupBy === 'status' && !inArchive
 
@@ -536,6 +568,10 @@ export default function KanbanHome() {
 
   function toggleStatusFilter(key) {
     setStatusFilter((prev) => (prev.includes(key) ? prev.filter((x) => x !== key) : [...prev, key]))
+  }
+
+  function toggleKindFilter(key) {
+    setKindFilter((prev) => (prev.includes(key) ? prev.filter((x) => x !== key) : [...prev, key]))
   }
 
   /**
@@ -1108,6 +1144,49 @@ export default function KanbanHome() {
               </div>
             )}
 
+            {/* กรองชนิดงาน — การบ้านที่จดเอง / งานสื่อ / เรื่องร้องเรียน
+                ⭐ ไม่ใช่ field ที่คนติดเอง — อ่านจาก kanban_card_links.entity_type ตรงๆ
+                   ติดผิดไม่ได้ และการ์ดที่ migrate เข้ามาขึ้นชนิดถูกเองตั้งแต่วินาทีแรก */}
+            <div className="relative">
+              <button
+                onClick={() => setOpenGroupIdx((v) => (v === 'kind' ? null : 'kind'))}
+                className={`flex items-center gap-1.5 h-9 pl-3 pr-2.5 text-sm rounded-lg border font-medium transition max-w-[220px] ${
+                  kindFilter.length
+                    ? 'border-teal bg-teal/10 text-teal'
+                    : 'border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover'
+                }`}
+              >
+                <span className="truncate">
+                  {t('filter.kindGroup')}
+                  {kindFilter.length > 0 &&
+                    `: ${kindOptions.filter((k) => selectedKindIds.has(k.id)).map((k) => k.name).join(', ')}`}
+                </span>
+                <ChevronDown size={14} className="shrink-0" />
+              </button>
+
+              {openGroupIdx === 'kind' && (
+                <div className="absolute left-0 top-full z-20 mt-1 w-64 max-h-64 overflow-y-auto bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg shadow-lg p-2 flex flex-wrap gap-1.5">
+                  {kindOptions.map((k) => {
+                    const on = selectedKindIds.has(k.id)
+                    return (
+                      <button
+                        key={k.id}
+                        onClick={() => toggleKindFilter(k.id)}
+                        className={`flex items-center gap-1 px-3 py-1 text-sm rounded-md font-medium border whitespace-nowrap ${
+                          on
+                            ? 'bg-teal/10 border-transparent ring-1 ring-teal text-teal'
+                            : 'border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover'
+                        }`}
+                      >
+                        {k.name}
+                        <span className="text-warm-400 dark:text-disc-muted">{k.count}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+
             {/* กรองสถานะ — ตัวเลือกตายตัว 6 แบบ แยกจาก "จัดกลุ่มตามอะไร": กรองซ่อนใบที่ไม่เข้าเกณฑ์ ใช้ได้ทั้ง 2 โหมด groupBy
                 (โหมดกำหนดส่งก็กรองสถานะได้ เช่น เอาแต่ "กำลังทำ" มาดูตามกำหนดส่ง) */}
             <div className="relative">
@@ -1150,9 +1229,9 @@ export default function KanbanHome() {
               )}
             </div>
 
-            {(labelFilter.length > 0 || helperFilter.length > 0 || statusFilter.length > 0) && (
+            {(labelFilter.length > 0 || helperFilter.length > 0 || statusFilter.length > 0 || kindFilter.length > 0) && (
               <button
-                onClick={() => { setLabelFilter([]); setHelperFilter([]); setStatusFilter([]) }}
+                onClick={() => { setLabelFilter([]); setHelperFilter([]); setStatusFilter([]); setKindFilter([]) }}
                 className="h-9 px-3 text-sm border border-warm-200 dark:border-disc-border bg-card-bg text-warm-500 dark:text-disc-muted hover:text-red-500 dark:hover:text-red-400 hover:border-red-300 dark:hover:border-red-700 rounded-lg transition-colors whitespace-nowrap"
               >
                 {t('filter.clear')}
@@ -1258,12 +1337,14 @@ export default function KanbanHome() {
                       onCreate={(title) => createCardIn(key, title)}
                     />
                   )}
+                  {/* ⛔ การ์ดที่ผูกของจริงลากไม่ได้ — สถานะเป็นของต้นทาง (user เคาะ 2026-08-24)
+                      ปิดที่ draggable เลย ไม่ปล่อยให้ลากแล้วค่อยเด้งกลับ: ลากได้แต่ไม่มีผล = หลอกมือ */}
                   {shown.map((card) => (
                     <KanbanCard
                       key={card.id}
                       card={card}
                       t={t}
-                      draggable={canDrag}
+                      draggable={canDrag && !card.link}
                       onOpen={(c) => setOpenCardId(c.id)}
                       onDragStart={onDragStart}
                       onDragEnd={onDragEnd}

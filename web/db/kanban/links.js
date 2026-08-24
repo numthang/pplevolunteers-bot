@@ -133,6 +133,87 @@ export async function deleteCardForEntity(entityType, entityId) {
 }
 
 /**
+ * ของจริงที่ "ควรมีการ์ด แต่ยังไม่มี" — ต่อชนิด
+ *
+ * ⛔ โพสต์เอาเฉพาะ `visibility='org'` — ของ personal เป็นร่างส่วนตัวของเจ้าของคนเดียว
+ *    ห้ามขึ้นบอร์ดเด็ดขาด · ด่านตอนอ่านซ่อนให้อยู่แล้ว แต่ไม่สร้างตั้งแต่แรกดีกว่า
+ *    (ไม่งั้นกินเลข K ทิ้งเปล่าเป็นร้อย · เปลี่ยนเป็น org เมื่อไหร่ promoteToOrg สร้างให้ทันที)
+ *
+ * ⭐ เจ้าภาพลากมาจากต้นทางให้เลย ไม่ปล่อยว่าง — การ์ดที่ไม่มีเจ้าภาพจะไปโผล่ใน "การบ้านของฉัน"
+ *    ของทุกคน (isMyCard นับงานไม่มีเจ้าภาพเป็นของทุกคน) · เคส 200 ใบไม่มีเจ้าภาพ = หน้าแรกพังทั้งทีม
+ *      เคส  → assignee คนแรก (คนที่เหลือกลายเป็นคนช่วย)
+ *      โพสต์ → owner_user_id ตรงๆ
+ */
+const SOURCE_SQL = {
+  case: `SELECT c.id,
+                COALESCE(NULLIF(c.title, ''), 'เรื่องร้องเรียน ' || c.ref) AS title,
+                (SELECT a.user_id FROM case_assignees a
+                  WHERE a.case_id = c.id ORDER BY a.assigned_at, a.user_id LIMIT 1) AS owner_user_id,
+                c.created_by
+           FROM cases c
+          WHERE c.org_id = $1
+            AND NOT EXISTS (SELECT 1 FROM kanban_card_links l
+                             WHERE l.entity_type = 'case' AND l.entity_id = c.id)
+          ORDER BY c.id`,
+
+  post: `SELECT p.id,
+                COALESCE(NULLIF(p.title, ''), 'งานสื่อ #' || p.id) AS title,
+                p.owner_user_id,
+                p.owner_user_id AS created_by
+           FROM post_episodes p
+          WHERE p.org_id = $1 AND p.archived_at IS NULL AND p.visibility = 'org'
+            AND NOT EXISTS (SELECT 1 FROM kanban_card_links l
+                             WHERE l.entity_type = 'post' AND l.entity_id = p.id)
+          ORDER BY p.id`,
+}
+
+/**
+ * ⭐ กวาดให้ครบ — "ของจริงทุกชิ้นต้องมีการ์ด" (user เคาะ: *ต้องมี ทุกใบ*)
+ *
+ * ทำไมต้องมีทั้ง hook และตัวกวาด: ทางสร้างเคส/โพสต์มีหลายทาง (เว็บ · บอท · สคริปต์ import)
+ * แขวน hook ให้ครบทุกทางแล้วยังพลาดได้เสมอ → ตัวกวาดคือตาข่ายที่ทำให้ "ครบทุกใบ" เป็นจริง
+ * เรียกซ้ำได้ปลอดภัย · ใช้ทั้งตอน backfill ของเก่าและตอนตามเก็บที่ hook พลาด
+ *
+ * @param {number} orgId
+ * @param {{entityType?: 'case'|'post', createdBy: number, onProgress?: Function}} opts
+ *        createdBy = คนที่ใช้เป็นผู้สร้างการ์ดเมื่อต้นทางไม่มี (เคสจากฟอร์มสาธารณะ created_by เป็น null)
+ */
+export async function reconcileEntityCards(orgId, { entityType = null, createdBy, onProgress } = {}) {
+  const types = entityType ? [entityType] : ENTITY_TYPES
+  const stats = { created: 0, failed: 0 }
+
+  for (const type of types) {
+    const { rows } = await pool.query(SOURCE_SQL[type], [orgId])
+    onProgress?.({ phase: 'start', type, total: rows.length })
+
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i]
+      const cardId = await mirrorEntityCard(orgId, type, {
+        id: r.id, title: r.title, ownerUserId: r.owner_user_id,
+      }, r.created_by || createdBy)
+
+      if (!cardId) stats.failed++
+      else {
+        stats.created++
+        // เคสมีผู้รับผิดชอบได้หลายคน — คนแรกเป็นเจ้าภาพ ที่เหลือลงเป็นคนช่วย
+        if (type === 'case') {
+          await pool.query(
+            `INSERT INTO kanban_card_helpers (card_id, user_id)
+             SELECT $1, a.user_id FROM case_assignees a
+              WHERE a.case_id = $2 AND a.user_id IS DISTINCT FROM $3
+             ON CONFLICT DO NOTHING`,
+            [cardId, r.id, r.owner_user_id]
+          ).catch(() => {})
+        }
+      }
+      onProgress?.({ phase: 'tick', type, done: i + 1, total: rows.length, stats })
+    }
+    onProgress?.({ phase: 'end', type, stats })
+  }
+  return stats
+}
+
+/**
  * ⭐ auto-mirror — "ของจริงทุกชิ้นต้องมีการ์ด" (user เคาะ 2026-08-24: *ต้องมี ทุกใบ*)
  *
  * เรียกซ้ำได้ปลอดภัย (idempotent): มีการ์ดอยู่แล้ว → คืนใบเดิม ไม่สร้างซ้ำ
@@ -150,13 +231,22 @@ export async function mirrorEntityCard(orgId, entityType, src, createdBy) {
     const existing = await getCardIdForEntity(entityType, src.id)
     if (existing) return existing
 
+    // `kanban_cards.created_by` เป็น NOT NULL แต่ต้นทางอาจไม่มีคนสร้าง —
+    // เคสจากฟอร์มสาธารณะ `cases.created_by` เป็น null (ผู้ร้องไม่ได้ล็อกอิน)
+    // → ใช้คนที่สร้างกระดานแรกของ org แทน (เป็นสมาชิก org จริงเสมอ และมีแน่นอนถ้ามีกระดาน)
+    const by = createdBy || (await pool.query(
+      `SELECT created_by FROM kanban_boards WHERE org_id = $1 ORDER BY sort_order, id LIMIT 1`,
+      [orgId]
+    )).rows[0]?.created_by
+    if (!by) return null
+
     const card = await createCard(orgId, {
       title: src.title || (entityType === 'case' ? 'เรื่องร้องเรียนไม่มีชื่อ' : 'งานสื่อไม่มีชื่อ'),
       ownerUserId: src.ownerUserId || null,
       boardId: src.boardId || null,
       // สถานะที่ใส่ตอนสร้างเป็นแค่ค่าตั้งต้นของคอลัมน์ cache — ของที่แสดงจริงคำนวณสดเสมอ
       // แต่ต้องไม่ขัด CHECK ของ DB (ไม่มีเจ้าภาพ = อยู่ backlog เท่านั้น) → ปล่อยให้ createCard ตัดสิน
-    }, createdBy)
+    }, by)
 
     const res = await linkCard(orgId, card.id, entityType, src.id, { isAuto: true })
     if (!res.ok) {

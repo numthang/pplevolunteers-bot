@@ -16,7 +16,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import {
   AlertTriangle, AlignLeft, Archive, ArchiveRestore, Calendar, Check, CircleDot,
-  ExternalLink, Loader2, UserCircle, Users, X,
+  ExternalLink, Link2, Loader2, UserCircle, Users, X,
 } from 'lucide-react'
 import { formatRef, STATUS_TYPES } from '@/lib/kanbanAccess.js'
 import DeleteChoiceDialog from './DeleteChoiceDialog.jsx'
@@ -294,6 +294,10 @@ export default function CardModal({ cardId, onClose, onChanged }) {
   }
 
   const readOnly = !can.edit
+  // ⭐ การ์ดที่ผูกเคส/โพสต์: **ชื่อกับสถานะเป็นของต้นทาง** แก้ที่นี่ไม่ได้ (user เคาะ 2026-08-24)
+  //    ที่เหลือ (รายละเอียด · เจ้าภาพ · กำหนดส่ง · คนช่วย · ป้าย) ยังแก้ได้ตามปกติ — เป็นข้อมูลของ kanban เอง
+  //    API ก็ปฏิเสธอยู่แล้ว แต่ต้องปิดที่ UI ด้วย ไม่งั้นพิมพ์ไปทั้งย่อหน้าแล้วค่อยเด้ง error = เสียของ
+  const linked = card?.link || null
 
   return (
     // ปิด 3 ทาง — ทางที่ 2: คลิกนอกกล่อง
@@ -341,6 +345,24 @@ export default function CardModal({ cardId, onClose, onChanged }) {
 
           {card && (
             <>
+              {linked && (
+                <div className="flex flex-wrap items-center gap-2 px-3 py-2 rounded-lg bg-teal/10 text-sm text-warm-900 dark:text-disc-text">
+                  <Link2 size={16} className="text-teal shrink-0" />
+                  <span>
+                    {t('linked.banner', { kind: t(`linked.kind.${linked.entity_type}`) })}
+                    {linked.ref ? ` (${linked.ref})` : ''}
+                  </span>
+                  <a
+                    href={linked.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 font-medium text-teal hover:underline"
+                  >
+                    {t('linked.open')} <ExternalLink size={14} />
+                  </a>
+                </div>
+              )}
+
               {card.source_url && (
                 <a
                   href={card.source_url}
@@ -356,7 +378,8 @@ export default function CardModal({ cardId, onClose, onChanged }) {
               <input
                 type="text"
                 value={title}
-                disabled={readOnly}
+                disabled={readOnly || Boolean(linked)}
+                title={linked ? t('linked.titleLocked', { kind: t(`linked.kind.${linked.entity_type}`) }) : undefined}
                 onChange={(e) => setTitle(e.target.value)}
                 /* ESC = คืนค่าที่เซฟไว้ล่าสุดแล้วออกจากช่อง (ไม่ปิดกล่อง) — autosave จะไม่ยิงเพราะค่าเท่า baseline */
                 onKeyDown={(e) => {
@@ -427,12 +450,13 @@ export default function CardModal({ cardId, onClose, onChanged }) {
                   />
                 </FieldRow>
 
-                {/* สถานะ — select ทรงเดียวกับ custom field · ตัวเลือกตายตัว 6 แบบ เพิ่ม/ลบไม่ได้ */}
+                {/* สถานะ — select ทรงเดียวกับ custom field · ตัวเลือกตายตัว 6 แบบ เพิ่ม/ลบไม่ได้
+                    ⛔ การ์ดที่ผูกของจริง: อ่านสดจากต้นทาง แก้ที่นี่ไม่ได้ — ไปเปลี่ยนที่หน้านั้นแล้วมันขยับเอง */}
                 <FieldRow icon={CircleDot} label={t('modal.statusLabel')}>
                   <TagCombobox
                     type="select"
                     numericIds={false}
-                    readOnly={readOnly}
+                    readOnly={readOnly || Boolean(linked)}
                     source={{ mode: 'static', options: STATUS_OPTIONS }}
                     value={card.status_type ? [{ id: card.status_type, name: t(`status.${card.status_type}`) }] : []}
                     onCommit={(ids) => (ids[0] ? patch({ statusType: ids[0] }) : undefined)}
@@ -440,6 +464,11 @@ export default function CardModal({ cardId, onClose, onChanged }) {
                     t={t}
                   />
                 </FieldRow>
+                {linked && (
+                  <p className="pl-7 -mt-0.5 text-xs text-warm-400 dark:text-disc-muted">
+                    {t('linked.statusHint', { kind: t(`linked.kind.${linked.entity_type}`) })}
+                  </p>
+                )}
 
                 {/* ⛔ แถว "ป้าย" ถูกถอดออก 2026-08-19 — ยุบเข้า custom field แล้ว
                     สายงาน/พื้นที่/อุปกรณ์ ขึ้นเป็นแถว field ปกติในกล่อง "ข้อมูลของทีม" ข้างล่างแทน

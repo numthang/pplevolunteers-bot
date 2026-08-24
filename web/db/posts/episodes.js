@@ -9,6 +9,7 @@
 //                  (ใช้ post_episodes.last_edited_by เป็นตัวบอกว่าเนื้อหาที่อยู่ใน DB ตอนนี้เป็นของใคร
 //                   ถ้าเดาจาก revision ล่าสุดจะจดชื่อผิด — snapshot ของ B ถูกจดเป็นของ A)
 import pool from '../index.js'
+import { mirrorEntityCard, deleteCardForEntity } from '../kanban/links.js'
 
 // ป้ายเวลาที่ใช้เป็น optimistic lock token — ต้องเป็น "สตริงเดียวกันเป๊ะ" ทั้งตอนอ่านและตอนเทียบ
 // (ห้ามส่ง Date ของ JS ไป-กลับ: PG เก็บ microsecond แต่ JS มีแค่ millisecond → เทียบไม่มีวันตรง)
@@ -178,6 +179,17 @@ export async function createPost({ orgId, ownerUserId, visibility = 'personal', 
       [rows[0].id, title, body, ownerUserId]
     )
     await client.query('COMMIT')
+
+    // ⭐ งานสื่อขององค์กรต้องมีการ์ดใน kanban ทุกใบ (user เคาะ 2026-08-24)
+    //    ⛔ ของ personal ไม่สร้าง — เป็นร่างส่วนตัว ห้ามขึ้นบอร์ด · กด "ให้เป็นงานองค์กร"
+    //       เมื่อไหร่ promoteToOrg สร้างให้ตอนนั้น
+    //    fire-and-forget — kanban พังต้องไม่ทำให้เขียนโพสต์ไม่ได้ (ตาข่ายคือ reconcileEntityCards)
+    if (visibility === 'org') {
+      mirrorEntityCard(orgId, 'post', {
+        id: rows[0].id, title: title || `งานสื่อ #${rows[0].id}`, ownerUserId,
+      }, ownerUserId).catch(() => {})
+    }
+
     return await getPost(rows[0].id)
   } catch (err) {
     await client.query('ROLLBACK')
@@ -332,6 +344,9 @@ export async function archivePost(id, archived = true) {
 
 /** ลบถาวร — ไฟล์สื่อ **ไม่ unlink ที่นี่** (grill ข้อ 6: ให้ scripts/posts/gc-media.js เก็บทีหลัง) */
 export async function deletePost(id) {
+  // ⚠️ ต้องลบการ์ดก่อน — kanban_card_links ทำ FK ไปหา post_episodes ไม่ได้ (entity ชี้ได้ 2 ตาราง)
+  //    ปล่อยไว้ = การ์ดกำพร้าที่ชื่อ/สถานะอ่านสดไม่เจอต้นทาง เปิดแล้วว่างเปล่าตลอดกาล
+  await deleteCardForEntity('post', id).catch(() => {})
   await pool.query(`DELETE FROM post_episodes WHERE id = $1`, [id])
 }
 
@@ -364,7 +379,14 @@ export async function promoteToOrg(id, byUserId) {
       WHERE id = $1 AND visibility = 'personal'`,
     [id, byUserId]
   )
-  return await getPost(id)
+  const post = await getPost(id)
+  // เพิ่งกลายเป็นงานขององค์กร → ถึงคิวมีการ์ด (ตอนเป็น personal ตั้งใจไม่สร้าง)
+  if (post?.visibility === 'org') {
+    mirrorEntityCard(post.org_id, 'post', {
+      id: post.id, title: post.title || `งานสื่อ #${post.id}`, ownerUserId: post.owner_user_id,
+    }, byUserId).catch(() => {})
+  }
+  return post
 }
 
 export async function listRevisions(episodeId, limit = 30) {
