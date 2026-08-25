@@ -21,7 +21,9 @@ export async function GET(req, { params }) {
   try {
     const entries  = await getEntriesByProject(project.id)
     const filtered = onlySigned ? entries.filter(e => e.status === 'signed') : entries
-    const targets  = filtered.filter(e => e.member_discord_id != null)
+    // "มีผู้รับหรือยัง" ต้องดูคอลัมน์ผู้รับจริง ไม่ใช่ discord_id (สำเนาเดียวกับใน projects/[id]/export)
+    // discord_id เป็น display-only — สมาชิกที่ล็อกอินด้วยอีเมลเป็น NULL และคนนอกไม่มี Discord เลย
+    const targets  = filtered.filter(e => e.member_user_id != null || e.external_payee_id != null)
     if (!targets.length) {
       return new Response(onlySigned ? 'ไม่มีรายการที่เซ็นแล้ว' : 'ไม่มีรายการที่พร้อม export', { status: 422 })
     }
