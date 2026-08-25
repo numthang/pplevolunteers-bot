@@ -64,7 +64,7 @@ export default function ExternalPayeeModal({ initialName = '', onClose, onCreate
     try {
       const fd = new FormData()
       fd.append('file', blob, 'idcard.jpg')
-      const res = await fetch('/api/docs/external-payees/ocr', { method: 'POST', body: fd })
+      const res = await fetch('/api/docs/id-card/ocr', { method: 'POST', body: fd })
       const d = await res.json()
       if (!res.ok) throw new Error(d.error || t('externalPayee.readFailed'))
       // ค่าที่อ่านได้ = ค่าตั้งต้นให้ตรวจ ไม่ใช่ความจริง — ทุกช่องยังแก้ได้

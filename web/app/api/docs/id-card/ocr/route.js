@@ -33,8 +33,11 @@ const SYSTEM = `คุณคือตัวอ่านบัตรประจ�
 ถ้ารูปนี้ไม่ใช่บัตรประจำตัวประชาชนไทย ให้คืน {"error":"not_id_card"}`
 
 /**
- * POST /api/docs/external-payees/ocr  (multipart: file)
+ * POST /api/docs/id-card/ocr  (multipart: file)
  * อ่านบัตร → คืนค่าที่ได้ให้ไปเติมในฟอร์ม — **ไม่แตะ DB** (กฎ Create: สร้างแถวตอนกดบันทึกเท่านั้น)
+ *
+ * ใช้ร่วมกันทั้งฟอร์มคนนอกและฟอร์มกรอกข้อมูลให้สมาชิก — มันแค่อ่านบัตร ไม่รู้ว่าปลายทางคือใคร
+ * (`existing` ที่ตอบกลับมามีประโยชน์เฉพาะฝั่งคนนอก ฝั่งสมาชิกไม่ต้องสนใจ)
  */
 export async function POST(req) {
   const session = await getServerSession(authOptions)
@@ -94,7 +97,7 @@ export async function POST(req) {
     if (err instanceof AiError) {
       return Response.json({ error: err.message }, { status: err.code === 'quota' ? 429 : 502 })
     }
-    console.error('[POST /api/docs/external-payees/ocr]', err)
+    console.error('[POST /api/docs/id-card/ocr]', err)
     return Response.json({ error: 'อ่านบัตรไม่สำเร็จ' }, { status: 500 })
   }
 }

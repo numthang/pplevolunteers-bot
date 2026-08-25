@@ -29,6 +29,14 @@ export async function GET(req) {
     // หน้าเซ็นต้องรู้ policy เพื่อเตือนก่อนเซ็นว่า "กำลังเซ็นแทนคนอื่น" — จับพลาดก่อนเซ็น
     // ดีกว่าไปเจอใน signed_on_behalf ทีหลังซึ่งสายไปแล้ว
     const signPolicy = await getDocsSignPolicy(entry.org_id)
+    // ข้อมูลบนใบครบพอจะพิมพ์ไหม — เช็คแบบเดียวกับที่ buildData() เลือกค่า (override ชนะ ทะเบียน/คนนอก)
+    // ใช้ตัดสินว่าต้องขึ้นการ์ด "กรอกข้อมูลผู้รับ" ให้ผู้ดูแลก่อนเซ็นหรือยัง
+    const ov = entry.override_data || {}
+    const recipientComplete = !!(
+      (ov.full_name     || entry.ngs_first_name        || entry.firstname) &&
+      (ov.id_number     || entry.identification_number) &&
+      (ov.province_addr || entry.home_province)
+    )
 
     return Response.json({
       success: true,
@@ -52,6 +60,7 @@ export async function GET(req) {
         external_payee_id: role === 'recipient' ? entry.external_payee_id : null,
         recipient_kind:    role === 'recipient' ? entry.recipient_kind    : null,
         sign_policy:       signPolicy,
+        recipient_complete: role === 'recipient' ? recipientComplete : null,
         // คนนอกไม่มีทะเบียนสมาชิกให้ผูก และไม่มีบัญชีให้ self-fill — ข้อมูลครบอยู่ในแถวของเขาเองแล้ว
         // ถ้าไม่ตอบ true สองตัวนี้ หน้าเซ็นจะค้างที่ขั้น "ผูกรายชื่อสมาชิก" ซึ่งคนนอกผ่านไม่ได้
         has_ngs_link:     role === 'recipient' ? (isExternal || !!entry.member_id) : null,

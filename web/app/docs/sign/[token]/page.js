@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { CheckCircle, AlertTriangle, Pen, Search, UserCheck, IdCard, FileText, RefreshCw, CreditCard } from 'lucide-react'
 import IdCardCropper from '@/components/docs/IdCardCropper'
+import RecipientInfoModal from '@/components/docs/RecipientInfoModal'
 
 const ITEM_LABEL_KEYS = ['food', 'speaker', 'travel', 'venue', 'accommodation', 'supplies', 'equipment', 'photo']
 
@@ -44,6 +45,8 @@ export default function SignPage({ params }) {
   const [selfMode, setSelfMode]         = useState(false)
   const [selfInfoDone, setSelfInfoDone] = useState(false)
   const [signPolicy, setSignPolicy]     = useState('strict')
+  const [recipientComplete, setRecipientComplete] = useState(true)
+  const [infoModal, setInfoModal]       = useState(false)
   const [selfSaving, setSelfSaving]     = useState(false)
   const [selfErr, setSelfErr]           = useState('')
   const [selfForm, setSelfForm]         = useState({
@@ -83,6 +86,7 @@ export default function SignPage({ params }) {
           const role = d.data.signer_role || 'recipient'
           setSignerRole(role)
           setSignPolicy(d.data.sign_policy || 'strict')
+          setRecipientComplete(d.data.recipient_complete !== false)
 
           if (role === 'recipient') {
             setNgsLinked(!!d.data.has_ngs_link)
@@ -114,6 +118,10 @@ export default function SignPage({ params }) {
   // คนเซ็นแทนกรอกให้ไม่ได้ — link-ngs/self-info เขียนลงบัญชีของคนที่ล็อกอิน ไม่ใช่ของผู้รับ
   // → ข้ามไปช่องวาดเลย ข้อมูลบนใบมาจากที่แอดมินกรอกไว้ใน entry อยู่แล้ว
   const skipIdentitySteps = canSignOnBehalf
+  // ผู้ดูแลเซ็นแทนสมาชิกที่ยังไม่มีข้อมูลบนใบ → ต้องกรอกให้ครบก่อน
+  // (ใบที่เซ็นแล้วแต่ไม่มีชื่อ/ที่อยู่/เลขบัตร แย่กว่าใบที่ยังไม่เซ็น — เบิกไม่ผ่านเหมือนกัน
+  //  แต่มีลายเซ็นคนจริงติดอยู่แล้ว)
+  const needsRecipientInfo = canSignOnBehalf && !entry?.external_payee_id && !recipientComplete
 
   useEffect(() => {
     if (entry?.event_name) document.title = `${entry.event_name} — Docs`
@@ -399,12 +407,42 @@ export default function SignPage({ params }) {
   ))
 
   // Payer มีสิทธิ์เซ็นได้ทันที (ไม่ต้องผ่าน NGS/บัตร)
-  const canSign = signerRole === 'payer' || canSignOnBehalf || ngsLinked || selfInfoDone
+  const canSign = (signerRole === 'payer' || canSignOnBehalf || ngsLinked || selfInfoDone) && !needsRecipientInfo
 
   return (
     <div className="min-h-screen bg-warm-50 dark:bg-disc-bg2 py-4 sm:px-4">
       {cropSrc && (
         <IdCardCropper src={cropSrc} onCancel={() => setCropSrc(null)} onCropped={uploadIdCard} />
+      )}
+      {infoModal && entry && (
+        <RecipientInfoModal
+          entryId={entry.id}
+          token={token}
+          hasIdCard={hasIdCard}
+          initial={{
+            title:      entry.title || '',
+            first_name: entry.ngs_first_name ?? entry.firstname ?? '',
+            last_name:  entry.ngs_last_name  ?? entry.lastname  ?? '',
+          }}
+          onClose={() => setInfoModal(false)}
+          onSaved={() => {
+            setInfoModal(false)
+            setPreviewVer(v => v + 1)   // ข้อมูลบนใบเปลี่ยน → gen preview ใหม่
+            // ดึง entry ใหม่แทนที่จะเดาสถานะเอง — recipient_complete คำนวณฝั่ง server
+            fetch(`/api/docs/sign/verify?token=${encodeURIComponent(token)}`)
+              .then(r => r.json())
+              .then(d => {
+                if (!d.success) return
+                setEntry(d.data)
+                setRecipientComplete(d.data.recipient_complete !== false)
+                setHasIdCard(!!d.data.has_id_card)
+                if (d.data.has_id_card && d.data.member_user_id) {
+                  setIdCardPreviewUrl(`/api/docs/id-card/${d.data.member_user_id}?token=${encodeURIComponent(token)}`)
+                }
+              })
+              .catch(() => {})
+          }}
+        />
       )}
       <div className="max-w-2xl mx-auto space-y-4">
 
@@ -463,6 +501,20 @@ export default function SignPage({ params }) {
             </>
           )}
         </div>
+
+        {needsRecipientInfo && (
+          <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-6">
+            <div className="flex items-center gap-2 mb-1">
+              <AlertTriangle size={18} className="text-amber-500 shrink-0" />
+              <h2 className="text-base font-semibold text-warm-900 dark:text-disc-text">{t('recipientInfo.missingTitle')}</h2>
+            </div>
+            <p className="text-sm text-warm-500 dark:text-disc-muted">{t('recipientInfo.missingHint')}</p>
+            <button type="button" onClick={() => setInfoModal(true)}
+              className="mt-3 px-4 py-2 text-base rounded-lg bg-orange text-white hover:bg-orange-light transition">
+              {t('recipientInfo.fillButton')}
+            </button>
+          </div>
+        )}
 
         {signerRole === 'recipient' && isSigningForSomeoneElse && !canSignOnBehalf && (
           <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-6 text-center">
