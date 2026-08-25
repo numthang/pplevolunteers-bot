@@ -1356,9 +1356,44 @@ LEFT JOIN LATERAL (
   SELECT om.display_name, om.member_id
   FROM org_members om
   WHERE om.user_id = u.id AND om.org_id = p.org_id
+  -- คนเดียวมีหลายแถว (แถวละ guild) · LIMIT 1 เฉยๆ = หยิบมั่ว ได้แถวที่ยังไม่ผูกเลขสมาชิก
+  ORDER BY (om.member_id IS NOT NULL) DESC, om.joined_at DESC NULLS LAST
   LIMIT 1
 ) m ON true
 LEFT JOIN cache_pple_member n ON n.source_id = m.member_id
 LEFT JOIN docs_external_payees x ON x.id = e.external_payee_id;
+
+COMMIT;
+
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- 2026-08-26 — docs: แก้ LATERAL หยิบแถว org_members มั่ว → ชื่อ/ที่อยู่หายทั้งใบ
+--
+-- อาการ: ใบสำคัญรับเงินของสมาชิกบางคนออกมาไม่มีชื่อ/ที่อยู่/เลขบัตร ทั้งที่ข้อมูล
+--        อยู่ครบใน cache_pple_member (เจอกับ user 865 — ผูกเลขสมาชิก 111475 ไว้แล้ว)
+--
+-- ต้นตอ: คนเดียวมีได้หลายแถวใน org_members (แถวละ guild ใน org เดียวกัน — org นี้มี 3 guild)
+--        LATERAL ที่ดึงข้อมูลใช้ `LIMIT 1` โดยไม่มี ORDER BY = หยิบแถวไหนก็ได้
+--        ถ้าไปโดนแถวที่ member_id ยังเป็น NULL → join cache_pple_member ไม่ติด → ว่างทั้งใบ
+--
+-- แก้ 2 ชั้น:
+--   1. view + คิวรีฝั่ง payer ใส่ ORDER BY (member_id IS NOT NULL) DESC ก่อน LIMIT 1
+--   2. backfill ข้างล่างนี้ — เลขสมาชิกเป็นข้อเท็จจริงระดับ org (link-ngs เขียนทุกแถวใน org
+--      อยู่แล้วตั้งแต่ 2026-07-21) แถวที่เหลื่อมกันคือของเก่าก่อนกฎนั้น · มี 3 คน
+-- ═══════════════════════════════════════════════════════════════════════════
+
+BEGIN;
+
+UPDATE org_members om
+   SET member_id = src.member_id
+  FROM (
+    SELECT user_id, org_id, MAX(member_id) AS member_id
+      FROM org_members
+     GROUP BY user_id, org_id
+    HAVING COUNT(member_id) > 0 AND COUNT(member_id) < COUNT(*)
+  ) src
+ WHERE om.user_id = src.user_id
+   AND om.org_id  = src.org_id
+   AND om.member_id IS NULL;
 
 COMMIT;

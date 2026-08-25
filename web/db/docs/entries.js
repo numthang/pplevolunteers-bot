@@ -56,6 +56,9 @@ export async function getEntriesByProject(projectId) {
        SELECT om.display_name, om.member_id
        FROM org_members om
        WHERE om.user_id = u_pm.id AND om.org_id = p.org_id
+       -- คนเดียวมีได้หลายแถว (แถวละ guild ใน org เดียวกัน) และบางแถวยังไม่ผูกเลขสมาชิก
+       -- LIMIT 1 เฉยๆ = หยิบมั่ว ได้แถวที่ member_id เป็น NULL ทั้งที่คนนี้ผูกแล้ว → ชื่อ/ที่อยู่หายทั้งใบ
+       ORDER BY (om.member_id IS NOT NULL) DESC, om.joined_at DESC NULLS LAST
        LIMIT 1
      ) pm ON true
      LEFT JOIN docs_payers dp ON dp.user_id = e.payer_user_id AND dp.org_id = p.org_id
@@ -424,6 +427,9 @@ export async function getEntryById(id) {
        SELECT om.display_name, om.member_id
        FROM org_members om
        WHERE om.user_id = u_pm.id AND om.org_id = p.org_id
+       -- คนเดียวมีได้หลายแถว (แถวละ guild ใน org เดียวกัน) และบางแถวยังไม่ผูกเลขสมาชิก
+       -- LIMIT 1 เฉยๆ = หยิบมั่ว ได้แถวที่ member_id เป็น NULL ทั้งที่คนนี้ผูกแล้ว → ชื่อ/ที่อยู่หายทั้งใบ
+       ORDER BY (om.member_id IS NOT NULL) DESC, om.joined_at DESC NULLS LAST
        LIMIT 1
      ) pm ON true
      LEFT JOIN docs_payers dp ON dp.user_id = e.payer_user_id AND dp.org_id = p.org_id

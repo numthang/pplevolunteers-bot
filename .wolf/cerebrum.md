@@ -1256,6 +1256,19 @@ user เสนอ use case *"บอร์ดอาจแบ่งตามจั
 คู่กัน: **การ์ดที่ไม่มีเจ้าภาพโผล่ในหน้า "การบ้านของฉัน" ของทุกคน** (`isMyCard` — `kanbanGrouping.js:69`)
 → ก่อนจะถอดเจ้าภาพเป็นก้อนใหญ่ ต้องคิดถึงผลข้างเคียงนี้เสมอ (31 ใบรับได้ · 200 ใบหน้าแรกพังทั้งทีม)
 
+### org_members มีหลายแถวต่อคน — LIMIT 1 ไม่มี ORDER BY = บั๊กเงียบ (2026-08-26)
+
+`org_members` เก็บ **1 แถวต่อ (user, guild)** ไม่ใช่ต่อ (user, org) — org ของโปรเจกต์นี้มี 3 guild
+ทำให้คนเดียวมีได้ 3 แถวใน org เดียวกัน (708 คนเป็นแบบนี้) และฟิลด์อย่าง `member_id`
+อาจถูกเซ็ตแค่บางแถว (ของเก่าก่อนกฎ "เขียนทุกแถวใน org" ที่เริ่มใช้ 2026-07-21)
+
+→ **ทุก `LEFT JOIN LATERAL (... FROM org_members ... LIMIT 1)` ต้องมี ORDER BY เสมอ**
+ไม่งั้น Postgres หยิบแถวไหนก็ได้ อาการที่ออกมาคือข้อมูลหายเป็นบางคนแบบสุ่ม ไม่ error
+เกณฑ์ที่ใช้: `ORDER BY (om.<field> IS NOT NULL) DESC, om.joined_at DESC NULLS LAST`
+(`api/docs/members` ทำถูกอยู่แล้วด้วย `DISTINCT ON (u.id)` + ORDER BY — ลอกอันนั้นได้)
+
+ไฟล์ที่ยังมี pattern นี้และควรตรวจเมื่อแตะ: `web/db/kanban/people.js`,
+`web/app/api/docs/sign/link-ngs/route.js`, `web/app/api/org/appoint/route.js`
 
 ## Decision Log
 
