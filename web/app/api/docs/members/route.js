@@ -5,6 +5,7 @@ import { getEffectiveOrgIdentity } from '@/lib/orgAccess.js'
 import { canManageDocs } from '@/lib/docsAccess.js'
 import { getOrgId } from '@/lib/orgContext.js'
 import { getGuildId } from '@/lib/guildContext.js'
+import { searchExternalPayees } from '@/db/docs/externalPayees.js'
 
 /**
  * GET /api/docs/members?q=&limit=20
@@ -31,7 +32,11 @@ export async function GET(req) {
 
   if (q) {
     params.push(`%${q}%`)
-    where += ` AND (om.display_name ILIKE $${params.length} OR u.username ILIKE $${params.length} OR n.first_name ILIKE $${params.length} OR n.last_name ILIKE $${params.length})`
+    // u.firstname/u.lastname ต้องอยู่ด้วย — คนที่ล็อกอินด้วยอีเมลและยังไม่ผูกทะเบียนสมาชิก
+    // มีชื่อจริงอยู่ที่ users เท่านั้น (generatePdf ก็ fallback มาที่นี่) ไม่งั้นค้นไม่เจอทั้งที่ออกใบให้ได้
+    where += ` AND (om.display_name ILIKE $${params.length} OR u.username ILIKE $${params.length}
+                    OR n.first_name ILIKE $${params.length} OR n.last_name ILIKE $${params.length}
+                    OR u.firstname  ILIKE $${params.length} OR u.lastname  ILIKE $${params.length})`
   }
 
   params.push(activeGuildId)
@@ -42,8 +47,10 @@ export async function GET(req) {
   const query = `
     SELECT * FROM (
       SELECT DISTINCT ON (u.id)
-             u.id AS user_id, u.discord_id, om.display_name, u.username, om.member_id,
-             n.first_name, n.last_name,
+             u.id AS user_id, NULL::int AS external_payee_id, 'member' AS kind,
+             u.discord_id, om.display_name, u.username, om.member_id,
+             COALESCE(n.first_name, u.firstname) AS first_name,
+             COALESCE(n.last_name,  u.lastname)  AS last_name,
              n.home_district, n.home_amphure, n.home_province
       FROM org_members om
       JOIN users u ON u.id = om.user_id
@@ -55,8 +62,16 @@ export async function GET(req) {
     LIMIT $${limitParam}`
 
   try {
-    const { rows } = await pool.query(query, params)
-    return Response.json({ success: true, data: rows })
+    // คนนอก (docs_external_payees) ปนมาในลิสต์เดียวกัน — แยกด้วย kind ฝั่ง UI
+    // ไม่ทำ UNION ใน SQL เพราะสองฝั่งคนละ shape (คนนอกไม่มี org_members/discord) merge ที่นี่อ่านง่ายกว่า
+    const [{ rows }, externals] = await Promise.all([
+      pool.query(query, params),
+      searchExternalPayees(orgId, q, limit),
+    ])
+    const data = [...rows, ...externals.map(e => ({ ...e, kind: 'external' }))]
+      .sort((a, b) => String(a.display_name || '').localeCompare(String(b.display_name || ''), 'th'))
+      .slice(0, limit)
+    return Response.json({ success: true, data })
   } catch (err) {
     console.error('[GET /api/docs/members]', err)
     return Response.json({ error: 'Internal Server Error' }, { status: 500 })

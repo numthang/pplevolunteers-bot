@@ -90,3 +90,62 @@ export async function askAiJson(system, user, opts = {}) {
     throw new AiError('AI ตอบกลับมาไม่ใช่ JSON ที่อ่านได้')
   }
 }
+
+// OCR บัตรประชาชน — ปักโมเดลแยกจาก AI_MODEL ด้านบน
+// อ่านผิด 1 ตัวแล้วเนียน = เลขบัตร/ที่อยู่ผิดไปอยู่บนเอกสารการเงินที่ส่งกองทุน
+// บัตร 1 ใบ ≈ 2,000 input token → ส่วนต่างค่าโมเดลต่อใบไม่ถึงบาท ไม่คุ้มที่จะลดรุ่นแลกความแม่น
+export const VISION_MODEL = 'claude-opus-5'
+
+/**
+ * เหมือน askAiJson แต่แนบรูปไปด้วย (vision) — คืน object ที่ parse แล้ว
+ * @param {Buffer} imageBuffer  รูปที่ย่อ/แปลงเป็น JPEG แล้ว (ดู processIdCardImage)
+ *
+ * ⚠️ รูปถูกส่งออกไปที่ผู้ให้บริการ AI — เรียกเฉพาะตอนสร้างผู้รับใหม่จริงๆ
+ *    คนเดิมที่มีในระบบแล้วห้ามยิงซ้ำ (ทั้งเปลืองและส่งข้อมูลบัตรออกโดยไม่จำเป็น)
+ */
+export async function askAiVisionJson(system, user, imageBuffer, opts = {}) {
+  let creds
+  try {
+    creds = await getAiCreds({
+      orgId: opts.orgId ?? null,
+      task: 'writing',
+      legacy: { model: opts.model || VISION_MODEL },
+    })
+  } catch (err) {
+    if (err instanceof AiCredsError) throw Object.assign(new AiError(err.message), { code: err.code })
+    throw err
+  }
+  if (creds.provider !== 'claude') {
+    throw new AiError('การอ่านบัตรรองรับเฉพาะ Claude — เปลี่ยนค่ายที่ ตั้งค่าองค์กร > AI หรือใส่ API key ของ Claude')
+  }
+
+  const { default: Anthropic } = await import('@anthropic-ai/sdk')
+  const client = new Anthropic({ apiKey: creds.apiKey, timeout: TIMEOUT_MS })
+
+  let res
+  try {
+    res = await client.messages.create({
+      model: creds.model,
+      max_tokens: opts.maxTokens || 2000,
+      system: `${system}\n\nตอบเป็น JSON ล้วนเท่านั้น ห้ามมีข้อความอื่นนอก JSON`,
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: imageBuffer.toString('base64') } },
+          { type: 'text', text: user },
+        ],
+      }],
+    })
+  } catch (err) {
+    console.error('[askAiVisionJson]', creds.source, err?.status || '', err?.message)
+    throw new AiError('อ่านรูปบัตรไม่สำเร็จ — ลองใหม่อีกครั้ง หรือกรอกข้อมูลเอง')
+  }
+
+  const raw = (res.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n').trim()
+  const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim()
+  try {
+    return JSON.parse(cleaned)
+  } catch {
+    throw new AiError('อ่านบัตรแล้วแต่ผลลัพธ์ไม่สมบูรณ์ — กรอกข้อมูลเองได้เลย')
+  }
+}

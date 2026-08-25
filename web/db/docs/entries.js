@@ -31,12 +31,14 @@ export async function getEntriesByProject(projectId) {
        e.description, e.amount, e.override_data, e.status,
        e.sign_token, e.token_expires_at, e.signed_at, e.printed_at, e.pdf_url,
        e.payer_user_id, e.payer_sign_token, e.payer_signed_at,
+       e.external_payee_id,
        p.org_id, ev.province,
-       m.display_name, u_m.username, u_m.firstname, u_m.lastname, m.member_id,
+       r.display_name, u_m.username, r.firstname, r.lastname, r.member_id,
+       r.recipient_kind,
        u_m.discord_id AS member_discord_id,   -- display-only (ลิงก์โปรไฟล์ Discord) · ห้ามใช้เป็น key/identity
 
-       n.first_name AS ngs_first_name, n.last_name AS ngs_last_name,
-       n.home_district, n.home_amphure, n.home_province,   -- ที่อยู่ตามทะเบียนบ้าน/บัตร ปชช. — ใช้ generate description ค่าเดินทางนอกจังหวัด
+       r.ngs_first_name, r.ngs_last_name,
+       r.home_district, r.home_amphure, r.home_province,   -- ที่อยู่ตามทะเบียนบ้าน/บัตร ปชช. — ใช้ generate description ค่าเดินทางนอกจังหวัด
        COALESCE(
          NULLIF(TRIM(CONCAT(np.first_name, ' ', np.last_name)), ''),
          NULLIF(TRIM(CONCAT(u_pm.firstname, ' ', u_pm.lastname)), ''),
@@ -48,12 +50,7 @@ export async function getEntriesByProject(projectId) {
      JOIN docs_projects p ON p.id = e.project_id
      JOIN cache_pple_event ev ON ev.id = p.cache_pple_event_id
      LEFT JOIN users u_m ON u_m.id = e.member_user_id
-     LEFT JOIN LATERAL (
-       SELECT om.display_name, om.member_id
-       FROM org_members om
-       WHERE om.user_id = u_m.id AND om.org_id = p.org_id
-       LIMIT 1
-     ) m ON true
+     LEFT JOIN docs_entry_recipient r ON r.entry_id = e.id   -- ตัวตนผู้รับ: สมาชิก หรือ คนนอก (view resolve ให้แล้ว)
      LEFT JOIN users u_pm ON u_pm.id = e.payer_user_id
      LEFT JOIN LATERAL (
        SELECT om.display_name, om.member_id
@@ -62,10 +59,9 @@ export async function getEntriesByProject(projectId) {
        LIMIT 1
      ) pm ON true
      LEFT JOIN docs_payers dp ON dp.user_id = e.payer_user_id AND dp.org_id = p.org_id
-     LEFT JOIN cache_pple_member n  ON n.source_id  = m.member_id
      LEFT JOIN cache_pple_member np ON np.source_id = pm.member_id
      WHERE e.project_id = $1
-     ORDER BY m.display_name, e.item_type`,
+     ORDER BY r.display_name, e.item_type`,
     [projectId]
   )
   if (!rows.length) return rows
@@ -86,25 +82,25 @@ export async function getEntryByToken(token) {
        ev.name AS event_name, ev.province, ev.location,
        TO_CHAR(ev.event_date,     'YYYY-MM-DD"T"HH24:MI') AS event_date,
        TO_CHAR(ev.event_end_date, 'YYYY-MM-DD"T"HH24:MI') AS event_end_date,
-       m.display_name, u_m.firstname, u_m.lastname, m.member_id,
+       r.display_name, r.firstname, r.lastname, r.member_id, r.recipient_kind,
        m.bank_name, m.account_no, m.account_holder,
-       (u_m.id_card_image IS NOT NULL) AS has_id_card,
-       n.identification_number, n.title,
-       n.first_name AS ngs_first_name, n.last_name AS ngs_last_name,
-       n.home_house_number, n.home_alley, n.home_road,
-       n.home_district, n.home_amphure, n.home_province, n.home_zip_code,
-       n.mobile_number, n.road
+       (r.id_card_image IS NOT NULL) AS has_id_card,
+       r.identification_number, r.title,
+       r.ngs_first_name, r.ngs_last_name,
+       r.home_house_number, r.home_alley, r.home_road,
+       r.home_district, r.home_amphure, r.home_province, r.home_zip_code,
+       r.mobile_number, r.road
      FROM docs_activity_entries e
      JOIN docs_projects p ON p.id = e.project_id
      JOIN cache_pple_event ev ON ev.id = p.cache_pple_event_id
      LEFT JOIN users u_m ON u_m.id = e.member_user_id
+     LEFT JOIN docs_entry_recipient r ON r.entry_id = e.id
      LEFT JOIN LATERAL (
-       SELECT om.display_name, om.member_id, om.bank_name, om.account_no, om.account_holder
+       SELECT om.bank_name, om.account_no, om.account_holder
        FROM org_members om
        WHERE om.user_id = u_m.id AND om.org_id = p.org_id
        LIMIT 1
      ) m ON true
-     LEFT JOIN cache_pple_member n ON n.source_id = m.member_id
      WHERE e.sign_token = $1 OR e.payer_sign_token = $1`,
     [token]
   )
@@ -344,7 +340,12 @@ export async function reassignEntryPayer(entryId, payerUserId) {
   return rows[0] || null
 }
 
-export async function signEntry({ token, signatureBase64, userId, ip, role = 'recipient' }) {
+/**
+ * @param {boolean} onBehalf ผู้รับเป็นคนนอกที่ไม่มีบัญชี → เซ็นบนเครื่องของคนในทีม
+ *   userId ที่บันทึกจึงหมายถึง "คนที่ถือเครื่องตอนนั้น" ไม่ใช่ผู้รับเงิน — ต้องแยกด้วยแฟล็กนี้
+ *   ไม่ใช่ปล่อยให้สองความหมายปนกันในคอลัมน์เดียว (บันทึกไว้เฉยๆ ไม่ขึ้นบนใบสำคัญฯ)
+ */
+export async function signEntry({ token, signatureBase64, userId, ip, role = 'recipient', onBehalf = false }) {
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
@@ -375,9 +376,9 @@ export async function signEntry({ token, signatureBase64, userId, ip, role = 're
     }
 
     await client.query(
-      `INSERT INTO docs_signatures (entry_id, signature_base64, signed_by_user_id, signed_ip, role)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [entryId, signatureBase64, userId, ip, role]
+      `INSERT INTO docs_signatures (entry_id, signature_base64, signed_by_user_id, signed_ip, role, signed_on_behalf)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [entryId, signatureBase64, userId, ip, role, onBehalf]
     )
 
     await client.query('COMMIT')
@@ -399,13 +400,13 @@ export async function getEntryById(id) {
        ev.name AS event_name, ev.province, ev.location,
        TO_CHAR(ev.event_date,     'YYYY-MM-DD"T"HH24:MI') AS event_date,
        TO_CHAR(ev.event_end_date, 'YYYY-MM-DD"T"HH24:MI') AS event_end_date,
-       m.display_name, u_m.firstname, u_m.lastname, m.member_id,
-       u_m.id_card_image,
-       n.identification_number, n.title,
-       n.first_name AS ngs_first_name, n.last_name AS ngs_last_name,
-       n.home_house_number, n.home_alley, n.home_road,
-       n.home_district, n.home_amphure, n.home_province, n.home_zip_code,
-       n.mobile_number, n.road,
+       r.display_name, r.firstname, r.lastname, r.member_id, r.recipient_kind,
+       r.id_card_image,
+       r.identification_number, r.title,
+       r.ngs_first_name, r.ngs_last_name,
+       r.home_house_number, r.home_alley, r.home_road,
+       r.home_district, r.home_amphure, r.home_province, r.home_zip_code,
+       r.mobile_number, r.road,
        COALESCE(
          NULLIF(TRIM(CONCAT(np.first_name, ' ', np.last_name)), ''),
          NULLIF(TRIM(CONCAT(u_pm.firstname, ' ', u_pm.lastname)), ''),
@@ -417,12 +418,7 @@ export async function getEntryById(id) {
      JOIN docs_projects p ON p.id = e.project_id
      JOIN cache_pple_event ev ON ev.id = p.cache_pple_event_id
      LEFT JOIN users u_m ON u_m.id = e.member_user_id
-     LEFT JOIN LATERAL (
-       SELECT om.display_name, om.member_id
-       FROM org_members om
-       WHERE om.user_id = u_m.id AND om.org_id = p.org_id
-       LIMIT 1
-     ) m ON true
+     LEFT JOIN docs_entry_recipient r ON r.entry_id = e.id   -- ตัวตนผู้รับ: สมาชิก หรือ คนนอก (view resolve ให้แล้ว)
      LEFT JOIN users u_pm ON u_pm.id = e.payer_user_id
      LEFT JOIN LATERAL (
        SELECT om.display_name, om.member_id
@@ -431,7 +427,6 @@ export async function getEntryById(id) {
        LIMIT 1
      ) pm ON true
      LEFT JOIN docs_payers dp ON dp.user_id = e.payer_user_id AND dp.org_id = p.org_id
-     LEFT JOIN cache_pple_member n  ON n.source_id  = m.member_id
      LEFT JOIN cache_pple_member np ON np.source_id = pm.member_id
      WHERE e.id = $1`,
     [id]
@@ -441,18 +436,31 @@ export async function getEntryById(id) {
   return rows[0]
 }
 
-// overrideData: undefined = ไม่แตะ override_data เดิม (เช่น duration ของ speaker/sound), object = เขียนทับ
-export async function updateEntry(id, { itemType, description, amount, memberUserId, overrideData }) {
-  const touchOverride = overrideData !== undefined
+/**
+ * overrideData: undefined = ไม่แตะ override_data เดิม (เช่น duration ของ speaker/sound), object = เขียนทับ
+ * recipient:    undefined = ไม่แตะผู้รับ · { kind: 'member'|'external', id } = ตั้งผู้รับใหม่
+ *
+ * ⚠️ ผู้รับต้องเขียน **สองคอลัมน์พร้อมกันเสมอ** — member_user_id กับ external_payee_id เป็น XOR
+ *    (CHECK docs_entry_recipient_xor) · เดิมใช้ COALESCE ทำให้ล้างเป็น NULL ไม่ได้ →
+ *    สลับสมาชิก→คนนอกจะเหลือค่าเก่าค้างแล้วชน constraint
+ */
+export async function updateEntry(id, { itemType, description, amount, recipient, overrideData }) {
+  const touchOverride  = overrideData !== undefined
+  const touchRecipient = recipient !== undefined
+  const memberUserId   = touchRecipient && recipient?.kind === 'member'   ? recipient.id : null
+  const externalId     = touchRecipient && recipient?.kind === 'external' ? recipient.id : null
   await pool.query(
     `UPDATE docs_activity_entries SET
-       item_type      = COALESCE($2, item_type),
-       description    = $3,
-       amount         = COALESCE($4, amount),
-       member_user_id = COALESCE($5, member_user_id),
-       override_data  = CASE WHEN $6 THEN $7::jsonb ELSE override_data END
+       item_type         = COALESCE($2, item_type),
+       description       = $3,
+       amount            = COALESCE($4, amount),
+       member_user_id    = CASE WHEN $5 THEN $6::int ELSE member_user_id    END,
+       external_payee_id = CASE WHEN $5 THEN $7::int ELSE external_payee_id END,
+       override_data     = CASE WHEN $8 THEN $9::jsonb ELSE override_data END
      WHERE id = $1`,
-    [id, itemType ?? null, description ?? null, amount ?? null, memberUserId ?? null, touchOverride, touchOverride ? JSON.stringify(overrideData) : null]
+    [id, itemType ?? null, description ?? null, amount ?? null,
+     touchRecipient, memberUserId, externalId,
+     touchOverride, touchOverride ? JSON.stringify(overrideData) : null]
   )
 }
 

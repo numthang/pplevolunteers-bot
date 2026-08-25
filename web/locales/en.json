@@ -752,7 +752,10 @@
       "signPaidLabel": "Signed (paid)",
       "editTitle": "Edit",
       "deleteTitle": "Delete",
-      "amount": "{amount} THB"
+      "amount": "{amount} THB",
+      "externalBadge": "external",
+      "addExternal": "Add external payee",
+      "addExternalNamed": "Add external payee “{name}”"
     },
     "pending": {
       "title": "Pending Signatures",
@@ -1093,6 +1096,40 @@
         "confirmSignature": "Confirm Signature"
       },
       "layoutTitle": "Sign Document"
+    },
+    "externalPayee": {
+      "title": "Add external payee",
+      "uploadCard": "Take or choose an ID card photo",
+      "retake": "Change card photo",
+      "uploadHint": "Name, ID number and address are read from the photo automatically — always check before saving",
+      "reading": "Reading card…",
+      "readFailed": "Could not read the card — please fill the form manually",
+      "saveFailed": "Could not save",
+      "idChecksumWarning": "The ID number failed its checksum — please double-check it",
+      "alreadyExists": "A payee with this ID number already exists",
+      "useExisting": "Use existing record for {name}",
+      "cancel": "Cancel",
+      "save": "Save",
+      "saving": "Saving…",
+      "type": {
+        "person": "Person",
+        "entity": "Business / legal entity"
+      },
+      "fields": {
+        "title": "Title",
+        "firstName": "First name",
+        "lastName": "Last name",
+        "entityName": "Business name",
+        "idNumber": "13-digit ID number",
+        "houseNo": "House no.",
+        "moo": "Moo",
+        "road": "Road / Soi",
+        "subdistrict": "Subdistrict",
+        "district": "District",
+        "province": "Province",
+        "zipCode": "Postal code",
+        "phone": "Phone"
+      }
     }
   },
   "join": {

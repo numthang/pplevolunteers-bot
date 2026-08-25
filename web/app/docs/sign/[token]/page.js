@@ -86,7 +86,9 @@ export default function SignPage({ params }) {
             setNgsLinked(!!d.data.has_ngs_link)
             setSelfInfoDone(!!d.data.has_self_info)
             setHasIdCard(!!d.data.has_id_card)
-            if (d.data.has_id_card && d.data.member_user_id) {
+            if (d.data.has_id_card && d.data.external_payee_id) {
+              setIdCardPreviewUrl(`/api/docs/external-payees/${d.data.external_payee_id}/id-card?token=${encodeURIComponent(token)}`)
+            } else if (d.data.has_id_card && d.data.member_user_id) {
               setIdCardPreviewUrl(`/api/docs/id-card/${d.data.member_user_id}?token=${encodeURIComponent(token)}`)
             }
           }
@@ -178,6 +180,7 @@ export default function SignPage({ params }) {
   // การตรวจจริงอยู่ที่ preview ก่อนเซ็น + มีปุ่ม "แก้ไขข้อมูล" ถ้าข้อมูลเปลี่ยน
   useEffect(() => {
     if (!entry || signerRole !== 'recipient' || ngsLinked || selfInfoDone) return
+    if (entry.external_payee_id) return   // คนนอก: ข้อมูลครบในแถวของเขาแล้ว ไม่มีบัญชีให้ self-fill
     if (status !== 'authenticated' || session?.user?.userId !== entry.member_user_id) return
     let cancelled = false
     ;(async () => {
@@ -256,7 +259,12 @@ export default function SignPage({ params }) {
       const fd = new FormData()
       fd.append('file', blob, 'idcard.jpg')
       fd.append('token', token)
-      const res = await fetch('/api/docs/id-card', { method: 'POST', body: fd })
+      // คนนอกไม่มี users row — บัตรเก็บในแถวของเขาเอง (ยิงเข้า /api/docs/id-card จะไปทับบัตร
+      // ของ "คนที่ล็อกอินอยู่" คือแอดมินที่ถือเครื่อง ไม่ใช่ของผู้รับเงิน)
+      const url = entry?.external_payee_id
+        ? `/api/docs/external-payees/${entry.external_payee_id}/id-card?token=${encodeURIComponent(token)}`
+        : '/api/docs/id-card'
+      const res = await fetch(url, { method: 'POST', body: fd })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || t('sign.idCardUploadFailed'))
       setHasIdCard(true)
@@ -617,7 +625,8 @@ export default function SignPage({ params }) {
         )}
 
         {/* Step: ID-card upload (recipient only, after ngs linked, เฉพาะเจ้าของเอกสาร) */}
-        {signerRole === 'recipient' && (ngsLinked || selfInfoDone) && session?.user?.userId === entry?.member_user_id && (
+        {signerRole === 'recipient' && (ngsLinked || selfInfoDone) &&
+          (entry?.external_payee_id ? true : session?.user?.userId === entry?.member_user_id) && (
           <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-6">
             <div className="flex items-center gap-2 mb-1">
               <IdCard size={18} className="text-orange shrink-0" />

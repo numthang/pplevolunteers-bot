@@ -3,7 +3,8 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
-import { Pencil, Trash2, Check, X, Copy } from 'lucide-react'
+import { Pencil, Trash2, Check, X, Copy, Plus } from 'lucide-react'
+import ExternalPayeeModal from './ExternalPayeeModal'
 import { calcTravelCeiling } from '@/config/fund69-rules.js'
 
 const ALL_ITEMS    = ['food','speaker','travel','venue','accommodation','sound','supplies','equipment','photo']
@@ -26,6 +27,8 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
   const [editForm, setEditForm]   = useState({})
   const [saving, setSaving]       = useState(false)
   const [copiedKey, setCopiedKey]     = useState(null)
+  // { entryId, name } ระหว่างเปิดฟอร์มเพิ่มคนนอก — เก็บ entry ที่กำลังแก้ไว้เพื่อผูกผู้รับให้ทันทีหลังบันทึก
+  const [externalModal, setExternalModal] = useState(null)
 
   function itemLabel(type) {
     return ALL_ITEMS.includes(type) ? t(`entryList.itemLabels.${type}`) : type
@@ -76,6 +79,7 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
       description:       entry.description || '',
       amount:            entry.amount,
       memberUserId:      entry.member_user_id,
+      externalPayeeId:   entry.external_payee_id,
       memberName:        entry.display_name || entry.member_user_id,
       payerUserId:       entry.payer_user_id || '',
       distanceKm:        entry.override_data?.distance_km ?? '',
@@ -114,7 +118,7 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
   }
 
   function onMemberQueryChange(q) {
-    setEditForm(f => ({ ...f, memberName: q, memberUserId: f.memberUserId }))
+    setEditForm(f => ({ ...f, memberName: q, memberUserId: f.memberUserId, externalPayeeId: f.externalPayeeId }))
     clearTimeout(debounceRef.current)
     if (!q.trim()) {
       setMemberResults([])
@@ -133,10 +137,13 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
 
   function selectMember(m) {
     const label = [m.first_name, m.last_name].filter(Boolean).join(' ') || m.display_name
+    const isExternal = m.kind === 'external'
     setEditForm(f => {
       const next = {
         ...f,
-        memberUserId:      m.user_id,
+        // XOR — ตั้งอันหนึ่งต้องล้างอีกอันเสมอ ไม่งั้นสลับชนิดผู้รับแล้วค่าเก่าค้าง
+        memberUserId:      isExternal ? null : m.user_id,
+        externalPayeeId:   isExternal ? m.external_payee_id : null,
         memberName:        m.display_name + (label !== m.display_name ? ` (${label})` : ''),
         recipientTambon:   m.home_district || '',
         recipientAmphoe:   m.home_amphure  || '',
@@ -152,9 +159,10 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
   }
 
   async function saveEdit(entryId) {
-    if (!editForm.memberUserId) { alert(t('entryList.recipientRequired')); return }
+    if (!editForm.memberUserId && !editForm.externalPayeeId) { alert(t('entryList.recipientRequired')); return }
     const entry = entries.find(e => e.id === entryId)
-    const memberChanged = editForm.memberUserId !== entry?.member_user_id
+    const memberChanged = editForm.memberUserId    !== entry?.member_user_id
+                       || editForm.externalPayeeId !== entry?.external_payee_id
     if (memberChanged && entry?.status === 'signed') {
       if (!confirm(t('entryList.confirmResetRecipientSignature'))) return
     }
@@ -168,7 +176,8 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
           itemType:      editForm.itemType,
           description:   editForm.description || null,
           amount:        parseFloat(editForm.amount),
-          memberUserId:  editForm.memberUserId,
+          memberUserId:    editForm.memberUserId    || null,
+          externalPayeeId: editForm.externalPayeeId || null,
           ...(payerChanged ? { payerUserId: editForm.payerUserId } : {}),
           ...(editForm.itemType === 'travel'
             ? { overrideData: editForm.distanceKm !== '' ? { distance_km: parseFloat(editForm.distanceKm) } : {} }
@@ -180,7 +189,8 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
       const next = entries.map(e =>
         e.id === entryId
           ? { ...e, item_type: editForm.itemType, description: editForm.description || null, amount: editForm.amount,
-              member_user_id: editForm.memberUserId, display_name: editForm.memberName.split(' (')[0],
+              member_user_id: editForm.memberUserId, external_payee_id: editForm.externalPayeeId,
+              display_name: editForm.memberName.split(' (')[0],
               ...(d.resetSignature ? { status: 'pending', signed_at: null } : {}) }
           : e
       )
@@ -314,24 +324,34 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
                             {memberOpen && (() => {
                               const q = editForm.memberName || ''
                               const list = q.trim() ? memberResults : recentMembers
-                              if (!list.length) return null
+                              // ห้าม return null ตอนไม่เจอ — ค้นไม่เจอคือจังหวะที่ต้องเสนอ "เพิ่มคนนอก" พอดี
+                              // (เดิม dropdown หายทั้งอัน = ทางตัน ไม่มีทางไปต่อ)
                               return (
                                 <ul className="absolute z-20 mt-1 w-full bg-white dark:bg-disc-hover border border-warm-200 dark:border-disc-border rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                                  {!q.trim() && <li className="px-3 pt-2 pb-1 text-xs text-warm-400 dark:text-disc-muted font-medium">{t('entryList.recent')}</li>}
+                                  {!q.trim() && list.length > 0 && <li className="px-3 pt-2 pb-1 text-xs text-warm-400 dark:text-disc-muted font-medium">{t('entryList.recent')}</li>}
                                   {list.map(m => {
                                     const realName = [m.first_name, m.last_name].filter(Boolean).join(' ')
+                                    const isExternal = m.kind === 'external'
                                     return (
                                       <li
-                                        key={m.user_id}
+                                        key={`${m.kind || 'member'}-${m.user_id ?? m.external_payee_id}`}
                                         onMouseDown={() => selectMember(m)}
                                         className="px-3 py-2 cursor-pointer hover:bg-warm-50 dark:hover:bg-disc-border text-sm"
                                       >
                                         <span className="text-warm-900 dark:text-disc-text">{m.display_name}</span>
+                                        {isExternal && <span className={`${BADGE_BASE} ${BADGE_MUTED} ml-1.5`}>{t('entryList.externalBadge')}</span>}
                                         {m.username && <span className="ml-1 text-warm-500 dark:text-disc-text">@{m.username}</span>}
-                                        {realName && <span className="ml-1.5 text-warm-500 dark:text-disc-text">({realName})</span>}
+                                        {realName && !isExternal && <span className="ml-1.5 text-warm-500 dark:text-disc-text">({realName})</span>}
                                       </li>
                                     )
                                   })}
+                                  <li
+                                    onMouseDown={() => { setMemberOpen(false); setExternalModal({ entryId: entry.id, name: q.trim() }) }}
+                                    className="px-3 py-2 cursor-pointer hover:bg-warm-50 dark:hover:bg-disc-border text-sm text-orange border-t border-warm-200 dark:border-disc-border flex items-center gap-1.5"
+                                  >
+                                    <Plus size={14} className="shrink-0" />
+                                    {q.trim() ? t('entryList.addExternalNamed', { name: q.trim() }) : t('entryList.addExternal')}
+                                  </li>
                                 </ul>
                               )
                             })()}
@@ -430,7 +450,7 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
                           <span className="hidden sm:inline text-base font-medium text-warm-900 dark:text-disc-text">
                             {t('entryList.amount', { amount: Number(entry.amount).toLocaleString() })}
                           </span>
-                          {signBadge(t('entryList.signReceivedLabel'), entry.member_user_id ? entry.sign_token : null, entry.status === 'signed')}
+                          {signBadge(t('entryList.signReceivedLabel'), (entry.member_user_id || entry.external_payee_id) ? entry.sign_token : null, entry.status === 'signed')}
                           {signBadge(t('entryList.signPaidLabel'), entry.payer_sign_token, !!entry.payer_signed_at)}
                           {canManage && entry.status === 'signed' && (
                             <a href={`/api/docs/entries/${entry.id}/pdf`} target="_blank" className="text-xs text-orange hover:underline">
@@ -465,6 +485,27 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
           </div>
         )
       })}
+
+      {externalModal && (
+        <ExternalPayeeModal
+          initialName={externalModal.name}
+          onClose={() => setExternalModal(null)}
+          onCreated={payee => {
+            const label = payee.entity_name || [payee.first_name, payee.last_name].filter(Boolean).join(' ')
+            // ผูกเข้าฟอร์มที่กำลังแก้อยู่ทันที — ยังไม่ยิง PATCH จนกว่าจะกดบันทึก entry ตามปกติ
+            setEditForm(f => ({
+              ...f,
+              memberUserId:      null,
+              externalPayeeId:   payee.id,
+              memberName:        label,
+              recipientTambon:   payee.subdistrict || '',
+              recipientAmphoe:   payee.district    || '',
+              recipientProvince: payee.province    || '',
+            }))
+            setExternalModal(null)
+          }}
+        />
+      )}
     </div>
   )
 }

@@ -1261,3 +1261,109 @@ UPDATE kanban_cards c
                     WHERE h.episode_id = p.id AND h.posted_at IS NOT NULL);
 
 COMMIT;
+
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- 2026-08-25 — docs: ผู้รับเงินคนนอก (external payee)
+--
+-- ปัญหา: ออกใบสำคัญรับเงินให้คนที่ไม่มี user/Discord/ไม่อยู่ทะเบียนสมาชิกไม่ได้เลย
+--   (วิทยากรนอก คนขับรถตู้ เจ้าของสถานที่) — ทางเดียวที่ทำได้วันนี้คือยืมบัญชีคนอื่น
+--   มาผูกแล้ว override ชื่อทับ = ได้ใบที่ "ลายเซ็นเป็นของคนที่ไม่ใช่เจ้าของชื่อ"
+--
+-- ⚠️ member_user_id กับ external_payee_id เป็น XOR — ห้ามมีค่าพร้อมกัน
+--    updateEntry() เดิมใช้ COALESCE เขียนคอลัมน์ผู้รับ = ล้างเป็น NULL ไม่ได้
+--    ต้องแก้ให้เขียนทั้งสองคอลัมน์พร้อมกันเสมอ ไม่งั้นสลับสมาชิก→คนนอกจะชน CHECK นี้
+--
+-- ⚠️ view docs_entry_recipient มีไว้กัน getEntriesByProject กับ getEntryById แตกกัน
+--    (วันนี้ select ฟิลด์ผู้รับคนละชุดอยู่แล้ว — ตัวลิสต์ไม่มี identification_number)
+--    ชื่อคอลัมน์ในวิวตั้งให้ตรงกับที่ buildData() อ่านอยู่แล้ว → generatePdf ไม่ต้องแก้
+--
+-- ⚠️ signed_on_behalf: คนนอกไม่มีบัญชีให้ล็อกอิน → เซ็นบนเครื่องคนในทีม
+--    signed_by_user_id จึงหมายถึง "คนที่ถือเครื่องตอนนั้น" ไม่ใช่ "ผู้รับเงิน"
+--    ต้องแยกด้วยแฟล็กนี้ ห้ามปล่อยให้สองความหมายปนกันในคอลัมน์เดียว
+-- ═══════════════════════════════════════════════════════════════════════════
+
+BEGIN;
+
+CREATE TABLE docs_external_payees (
+  id             SERIAL PRIMARY KEY,
+  org_id         INT NOT NULL REFERENCES orgs(id),
+  payee_type     VARCHAR(10)  NOT NULL DEFAULT 'person',   -- person | entity (ร้านค้า/นิติบุคคล)
+  title          VARCHAR(20),                              -- นาย/นาง/นางสาว
+  first_name     VARCHAR(100),
+  last_name      VARCHAR(100),
+  entity_name    VARCHAR(200),                             -- ใช้เมื่อ payee_type = 'entity'
+  id_number      VARCHAR(20),                              -- บัตร ปชช. 13 หลัก หรือเลขผู้เสียภาษี
+  house_no       VARCHAR(50),
+  moo            VARCHAR(20),
+  road           VARCHAR(100),
+  subdistrict    VARCHAR(100),                             -- ตำบล/แขวง  → home_district
+  district       VARCHAR(100),                             -- อำเภอ/เขต  → home_amphure
+  province       VARCHAR(100),
+  zip_code       VARCHAR(10),
+  phone          VARCHAR(20),                              -- บัตรไม่มี — กรอกเอง
+  id_card_image  BYTEA,                                    -- สำเนาบัตร (ย่อ+strip EXIF แล้ว)
+  linked_user_id INT REFERENCES users(id),                 -- เผื่อวันหนึ่งเขาสมัครเป็นสมาชิก → merge ได้
+  created_by     INT NOT NULL REFERENCES users(id),
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- กันสร้างซ้ำ: คนเดิมกลับมาอีกงานต้องเจอของเดิม ไม่ใช่แถวใหม่
+CREATE UNIQUE INDEX docs_external_payees_idnum_uniq
+  ON docs_external_payees (org_id, id_number) WHERE id_number IS NOT NULL;
+CREATE INDEX docs_external_payees_name_idx
+  ON docs_external_payees (org_id, first_name, last_name);
+
+ALTER TABLE docs_activity_entries
+  ADD COLUMN external_payee_id INT REFERENCES docs_external_payees(id),
+  ADD CONSTRAINT docs_entry_recipient_xor
+    CHECK (NOT (member_user_id IS NOT NULL AND external_payee_id IS NOT NULL));
+
+ALTER TABLE docs_signatures
+  ADD COLUMN signed_on_behalf BOOLEAN NOT NULL DEFAULT false;
+
+-- ตัวตนผู้รับเงินของแต่ละ entry — resolve จากสองแหล่งครั้งเดียว
+-- ชื่อคอลัมน์ตรงกับที่ generatePdf.buildData() อ่านอยู่แล้ว
+CREATE VIEW docs_entry_recipient AS
+SELECT
+  e.id AS entry_id,
+  CASE WHEN e.external_payee_id IS NOT NULL THEN 'external' ELSE 'member' END AS recipient_kind,
+  COALESCE(x.title, n.title)                                  AS title,
+  COALESCE(x.first_name, n.first_name)                        AS ngs_first_name,
+  COALESCE(x.last_name,  n.last_name)                         AS ngs_last_name,
+  -- คนนอกที่เป็นบุคคลไม่มี entity_name และไม่มี org_members → ต้องประกอบชื่อจากชื่อ-สกุลเอง
+  -- ไม่งั้น display_name เป็น NULL = ลิสต์ผู้รับขึ้นช่องว่าง
+  COALESCE(
+    x.entity_name,
+    NULLIF(TRIM(CONCAT(x.first_name, ' ', x.last_name)), ''),
+    m.display_name
+  )                                                           AS display_name,
+  COALESCE(x.first_name, u.firstname)                         AS firstname,
+  COALESCE(x.last_name,  u.lastname)                          AS lastname,
+  COALESCE(x.id_number,  n.identification_number)             AS identification_number,
+  COALESCE(x.house_no,    n.home_house_number)                AS home_house_number,
+  COALESCE(x.moo,         n.home_alley)                       AS home_alley,
+  COALESCE(x.road,        n.home_road)                        AS home_road,
+  COALESCE(x.subdistrict, n.home_district)                    AS home_district,
+  COALESCE(x.district,    n.home_amphure)                     AS home_amphure,
+  COALESCE(x.province,    n.home_province)                    AS home_province,
+  COALESCE(x.zip_code,    n.home_zip_code)                    AS home_zip_code,
+  COALESCE(x.phone,       n.mobile_number)                    AS mobile_number,
+  COALESCE(x.id_card_image, u.id_card_image)                  AS id_card_image,
+  n.road                                                      AS road,
+  m.member_id                                                 AS member_id,
+  u.discord_id                                                AS member_discord_id
+FROM docs_activity_entries e
+JOIN docs_projects p ON p.id = e.project_id
+LEFT JOIN users u ON u.id = e.member_user_id
+LEFT JOIN LATERAL (
+  SELECT om.display_name, om.member_id
+  FROM org_members om
+  WHERE om.user_id = u.id AND om.org_id = p.org_id
+  LIMIT 1
+) m ON true
+LEFT JOIN cache_pple_member n ON n.source_id = m.member_id
+LEFT JOIN docs_external_payees x ON x.id = e.external_payee_id;
+
+COMMIT;

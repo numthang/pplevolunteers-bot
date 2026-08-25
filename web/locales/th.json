@@ -752,7 +752,10 @@
       "signPaidLabel": "เซ็นจ่าย",
       "editTitle": "แก้ไข",
       "deleteTitle": "ลบ",
-      "amount": "{amount} บ."
+      "amount": "{amount} บ.",
+      "externalBadge": "คนนอก",
+      "addExternal": "เพิ่มผู้รับเงินคนนอก",
+      "addExternalNamed": "เพิ่มคนนอก “{name}”"
     },
     "pending": {
       "title": "รอเซ็น",
@@ -1093,6 +1096,40 @@
         "confirmSignature": "ยืนยันลายเซ็น"
       },
       "layoutTitle": "เซ็นเอกสาร"
+    },
+    "externalPayee": {
+      "title": "เพิ่มผู้รับเงินคนนอก",
+      "uploadCard": "ถ่าย/เลือกรูปบัตรประชาชน",
+      "retake": "เปลี่ยนรูปบัตร",
+      "uploadHint": "ระบบจะอ่านชื่อ เลขบัตร และที่อยู่จากรูปให้อัตโนมัติ — ตรวจความถูกต้องก่อนบันทึกเสมอ",
+      "reading": "กำลังอ่านบัตร…",
+      "readFailed": "อ่านบัตรไม่สำเร็จ — กรอกข้อมูลเองได้เลย",
+      "saveFailed": "บันทึกไม่สำเร็จ",
+      "idChecksumWarning": "เลขบัตรที่อ่านได้ไม่ผ่านการตรวจสอบ — กรุณาตรวจเลขอีกครั้ง",
+      "alreadyExists": "มีผู้รับเงินเลขบัตรนี้ในระบบแล้ว",
+      "useExisting": "ใช้ข้อมูลเดิมของ {name}",
+      "cancel": "ยกเลิก",
+      "save": "บันทึก",
+      "saving": "กำลังบันทึก…",
+      "type": {
+        "person": "บุคคล",
+        "entity": "ร้านค้า/นิติบุคคล"
+      },
+      "fields": {
+        "title": "คำนำหน้า",
+        "firstName": "ชื่อ",
+        "lastName": "นามสกุล",
+        "entityName": "ชื่อร้าน/นิติบุคคล",
+        "idNumber": "เลขประจำตัว 13 หลัก",
+        "houseNo": "บ้านเลขที่",
+        "moo": "หมู่ที่",
+        "road": "ถนน/ซอย",
+        "subdistrict": "ตำบล/แขวง",
+        "district": "อำเภอ/เขต",
+        "province": "จังหวัด",
+        "zipCode": "รหัสไปรษณีย์",
+        "phone": "เบอร์โทร"
+      }
     }
   },
   "join": {

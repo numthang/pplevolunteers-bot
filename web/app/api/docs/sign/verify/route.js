@@ -24,6 +24,7 @@ export async function GET(req) {
     }
 
     const role = entry.signer_role  // 'recipient' | 'payer'
+    const isExternal = !!entry.external_payee_id
 
     return Response.json({
       success: true,
@@ -43,10 +44,14 @@ export async function GET(req) {
         token_expires_at: entry.signer_token_expires_at,
         signer_role:      role,
         // recipient-only fields
-        member_user_id:   role === 'recipient' ? entry.member_user_id : null,
-        has_ngs_link:     role === 'recipient' ? !!entry.member_id : null,
+        member_user_id:    role === 'recipient' ? entry.member_user_id    : null,
+        external_payee_id: role === 'recipient' ? entry.external_payee_id : null,
+        recipient_kind:    role === 'recipient' ? entry.recipient_kind    : null,
+        // คนนอกไม่มีทะเบียนสมาชิกให้ผูก และไม่มีบัญชีให้ self-fill — ข้อมูลครบอยู่ในแถวของเขาเองแล้ว
+        // ถ้าไม่ตอบ true สองตัวนี้ หน้าเซ็นจะค้างที่ขั้น "ผูกรายชื่อสมาชิก" ซึ่งคนนอกผ่านไม่ได้
+        has_ngs_link:     role === 'recipient' ? (isExternal || !!entry.member_id) : null,
         // self-fill ครบ (ชื่อใน users + เลขบัตรใน override_data) = ยืนยันตัวตนแบบกรอกเองแล้ว
-        has_self_info:    role === 'recipient' ? !!(entry.firstname && entry.lastname && entry.override_data?.id_number) : null,
+        has_self_info:    role === 'recipient' ? (isExternal || !!(entry.firstname && entry.lastname && entry.override_data?.id_number)) : null,
         has_id_card:      role === 'recipient' ? !!entry.has_id_card : null,
         // payer status
         payer_signed_at:  entry.payer_signed_at ?? null,

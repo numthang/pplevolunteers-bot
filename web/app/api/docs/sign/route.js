@@ -33,8 +33,15 @@ export async function POST(req) {
     }
 
     // ตรวจว่าเป็นเจ้าของลิงก์ถูกต้อง
+    let onBehalf = false
     if (role === 'recipient') {
-      if (entry.member_user_id !== session.user.userId) {
+      if (entry.external_payee_id) {
+        // ผู้รับเป็นคนนอก — ไม่มีบัญชีให้เทียบ จึงเทียบไม่ได้โดยธรรมชาติ
+        // ยังบังคับ login อยู่ (ด้านบน) เพื่อให้รู้ว่าใครถือเครื่องตอนเซ็น → บันทึกเป็น on-behalf
+        // ผลพลอยได้: คนนอกจริงๆ ไม่มีบัญชี = เปิดลิงก์ดูได้แต่กดเซ็นไม่ได้
+        //            บังคับตัวเองว่าต้องเซ็นบนเครื่องของคนในทีม โดยไม่ต้องเขียนกฎเพิ่ม
+        onBehalf = true
+      } else if (entry.member_user_id !== session.user.userId) {
         return Response.json({ error: 'ลิงก์นี้ไม่ใช่ของคุณ' }, { status: 403 })
       }
     } else {
@@ -53,6 +60,7 @@ export async function POST(req) {
       userId: session.user.userId,
       ip,
       role,
+      onBehalf,
     })
 
     return Response.json({ success: true })
