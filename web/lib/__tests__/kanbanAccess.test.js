@@ -136,6 +136,11 @@ describe('STATUS_TYPES', () => {
 
 // ---- การ์ดที่ผูกของจริง (เคส/โพสต์) — ก้อน 4 ----
 // ดีไซน์: การ์ดพวกนี้ไม่เก็บสถานะเอง → ลากไม่ได้ ต้องไปเปลี่ยนที่หน้าต้นทาง (user เคาะ 2026-08-24)
+//
+// ⭐ ผ่อนแล้ว 2026-08-25: **งานสื่อช่วงร่าง** ลากได้ เพราะ post_episodes ไม่มีคำว่า "ยังไม่มีใครลงมือ"
+//    ในคำศัพท์ของมัน (มีแค่ draft/review/approved = สถานะบรรณาธิการ) → POST_STATUS คืน NULL ตอน draft
+//    แล้วปล่อยให้ kanban ถือช่วงนั้นเอง · เงื่อนไขดูจาก `status_type` ที่คำนวณสดมาแล้ว
+//    ไม่ใช่ดู link.source_status ตรงๆ (โพสต์เผยแพร่แล้วแต่ status ยัง draft ต้องถูกกันด้วย)
 const linked = (kind = 'case', over = {}) =>
   card({ link: { entity_type: kind, entity_id: 7, is_auto: true, title: 'ไฟทางสาธารณะ' }, ...over })
 
@@ -159,6 +164,45 @@ describe('checkStatusTransition — การ์ดที่ผูกของ�
     () => expect(ka.checkStatusTransition(linked('case'), 'ไม่มีจริง')).toEqual({ ok: false, reason: 'unknownStatus' }))
   it('ถอดลิงก์แล้วลากได้ตามปกติ',
     () => expect(ka.checkStatusTransition(card(), 'done')).toEqual({ ok: true, reason: null }))
+})
+
+// ---- งานสื่อช่วงร่าง: kanban ถือสถานะเอง (2026-08-25) ----
+describe('checkStatusTransition — งานสื่อช่วงร่าง', () => {
+  it('ผูกโพสต์ อยู่ "กำลังทำ" → ลากไป "รอทำ" ได้ (ปล่อยงานคืนกอง)',
+    () => expect(ka.checkStatusTransition(linked('post'), 'backlog')).toEqual({ ok: true, reason: null }))
+  it('ผูกโพสต์ อยู่ "กำลังทำ" → ลากไป "พักไว้" ได้',
+    () => expect(ka.checkStatusTransition(linked('post'), 'cancelled')).toEqual({ ok: true, reason: null }))
+  it('ผูกโพสต์ อยู่ "รอทำ" + ไม่มีเจ้าภาพ → ไป "กำลังทำ" ไม่ได้ (ต้องรับงานก่อน)',
+    () => expect(ka.checkStatusTransition(
+      linked('post', { status_type: 'backlog', owner_user_id: null }), 'doing'
+    )).toEqual({ ok: false, reason: 'needOwner' }))
+  // ⛔ ต้นทางถือสถานะแล้ว (ส่งตรวจ/อนุมัติ/เผยแพร่) = หมดช่วงที่ kanban มีสิทธิ์
+  it('ผูกโพสต์ ที่ส่งตรวจแล้ว → ลากกลับ "กำลังทำ" ไม่ได้',
+    () => expect(ka.checkStatusTransition(linked('post', { status_type: 'review' }), 'doing'))
+            .toEqual({ ok: false, reason: 'linked' }))
+  it('ผูกโพสต์ ที่เผยแพร่แล้ว → ลากออกไม่ได้',
+    () => expect(ka.checkStatusTransition(linked('post', { status_type: 'done' }), 'doing'))
+            .toEqual({ ok: false, reason: 'linked' }))
+  // เคสยังล็อกทั้งหมด — write-through ของเคสเป็นก้อนถัดไป (ต้องผ่าน action ที่แจ้งผู้ร้อง)
+  it('ผูกเคส → "รอทำ" ยังลากไม่ได้ (ก้อนถัดไป)',
+    () => expect(ka.checkStatusTransition(linked('case'), 'backlog')).toEqual({ ok: false, reason: 'linked' }))
+})
+
+describe('isDraggableCard', () => {
+  it('การบ้านธรรมดา → ลากได้',        () => expect(ka.isDraggableCard(card())).toBe(true))
+  it('งานสื่อช่วงร่าง → ลากได้',       () => expect(ka.isDraggableCard(linked('post'))).toBe(true))
+  it('งานสื่อส่งตรวจแล้ว → ลากไม่ได้', () => expect(ka.isDraggableCard(linked('post', { status_type: 'ready' }))).toBe(false))
+  it('เคส → ลากไม่ได้',               () => expect(ka.isDraggableCard(linked('case'))).toBe(false))
+  it('ไม่มีการ์ด → ลากได้ (ไม่มีลิงก์ให้กัน)', () => expect(ka.isDraggableCard(null)).toBe(true))
+})
+
+describe('statusOptionsFor', () => {
+  it('การบ้านธรรมดา → ครบ 6 แบบ',
+    () => expect(ka.statusOptionsFor(card())).toEqual(ka.STATUS_TYPES))
+  it('การ์ดที่ผูกของจริง → เหลือเฉพาะช่วงที่ kanban ถือ',
+    () => expect(ka.statusOptionsFor(linked('post'))).toEqual(['backlog', 'doing', 'cancelled']))
+  it('ตัวเลือกที่คืนมาต้องเป็น subset ของ STATUS_TYPES เสมอ',
+    () => expect(ka.statusOptionsFor(linked('case')).every((s) => ka.STATUS_TYPES.includes(s))).toBe(true))
 })
 
 describe('LINK_KIND_LABEL', () => {

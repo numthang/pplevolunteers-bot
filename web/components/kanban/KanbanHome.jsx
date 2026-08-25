@@ -27,7 +27,7 @@ import {
   Filter, ArrowUpDown, Settings, Search, Type, Hash, Calendar, ToggleLeft, List, CircleDot, Link2,
   AlertTriangle,
 } from 'lucide-react'
-import { STATUS_TYPES } from '@/lib/kanbanAccess.js'
+import { STATUS_TYPES, isDraggableCard } from '@/lib/kanbanAccess.js'
 import { columnHeadProps, chipProps } from '@/lib/kanbanLabelColors.js'
 import { groupCards, isMyCard, defaultDueForBucket } from '@/lib/kanbanGrouping.js'
 import { collectFilterGroups, filterCards, cardTags } from '@/lib/kanbanTagFilter.js'
@@ -1352,14 +1352,16 @@ export default function KanbanHome() {
                       onCreate={(title) => createCardIn(key, title)}
                     />
                   )}
-                  {/* ⛔ การ์ดที่ผูกของจริงลากไม่ได้ — สถานะเป็นของต้นทาง (user เคาะ 2026-08-24)
-                      ปิดที่ draggable เลย ไม่ปล่อยให้ลากแล้วค่อยเด้งกลับ: ลากได้แต่ไม่มีผล = หลอกมือ */}
+                  {/* ⛔ การ์ดที่ผูกของจริงลากได้เฉพาะช่วงที่ต้นทางไม่ถือสถานะ (งานสื่อช่วงร่าง)
+                      ปิดที่ draggable เลย ไม่ปล่อยให้ลากแล้วค่อยเด้งกลับ: ลากได้แต่ไม่มีผล = หลอกมือ
+                      ⛔ เงื่อนไขอยู่ที่ isDraggableCard() ที่เดียว — ห้ามเขียนซ้ำที่นี่ ต้องตรงกับ
+                         checkStatusTransition() ฝั่ง API ไม่งั้นลากได้แล้วโดนปฏิเสธเงียบๆ */}
                   {shown.map((card) => (
                     <KanbanCard
                       key={card.id}
                       card={card}
                       t={t}
-                      draggable={canDrag && !card.link}
+                      draggable={canDrag && isDraggableCard(card)}
                       onOpen={(c) => setOpenCardId(c.id)}
                       onDragStart={onDragStart}
                       onDragEnd={onDragEnd}

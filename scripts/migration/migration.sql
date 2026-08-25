@@ -1087,7 +1087,6 @@ CREATE INDEX IF NOT EXISTS idx_org_members_user_org ON org_members (user_id, org
 
 COMMIT;
 
--- production ทำถึงตรงนี้
 
 -- ═══════════════════════════════════════════════════════════════════════════
 -- 2026-08-24 — kanban ก้อน 3: กระดาน (board) จริง
@@ -1214,5 +1213,51 @@ CREATE TABLE IF NOT EXISTS kanban_card_links (
 -- 1 ของจริง = การ์ดใบเดียวตลอดกาล (กันการ์ดซ้ำตอน mirror ยิงพร้อมกัน)
 CREATE UNIQUE INDEX IF NOT EXISTS uq_kanban_card_links_entity
   ON kanban_card_links (entity_type, entity_id);
+
+COMMIT;
+
+-- production ทำถึงตรงนี้
+
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- 2026-08-25 — ปลดล็อกกอง "รอทำ" ของงานสื่อ (แก้คู่กับ web/db/kanban/statusSql.js)
+--
+-- ปัญหา: `post_episodes` มีสถานะแค่ draft/review/approved = สถานะ **บรรณาธิการ** ล้วนๆ
+--   ไม่มีคำว่า "ยังไม่มีใครลงมือ" อยู่เลย → POST_STATUS เดิมแม็ป draft → 'doing'
+--   ทำให้งานสื่อทุกใบตกกอง "กำลังทำ" ตั้งแต่วินาทีที่เกิด และกอง "รอทำ" ว่างตลอดกาล
+--   (dev 2026-08-25: 31/31 ใบ · เจ้าภาพเป็นคนเดียวกันหมด = คนที่ import ไม่ใช่คนรับงานจริง)
+--
+-- แก้ที่โค้ดแล้ว: POST_STATUS คืน NULL ตอน draft → COALESCE ตกไปใช้ `c.status_type`
+--   = kanban ถือสถานะ **ช่วงก่อนส่งตรวจ** (backlog/doing/cancelled) ส่วน review ขึ้นไปยังเป็นของต้นทาง
+--
+-- ที่ต้องทำที่นี่: การ์ดที่ mirror มาก่อนหน้านี้ถูกตั้ง 'doing' + เจ้าภาพลอกจากคนสร้างโพสต์ไว้แล้ว
+--   ค่านั้นค้างอยู่ในคอลัมน์ cache ซึ่งตอนนี้กลายเป็นค่าที่ "ใช้จริง" → ต้องล้างครั้งเดียว
+--
+-- ⚠️ แตะเฉพาะใบที่ **ไม่มีใครรับงานจริง** — ดูจาก `c.owner_user_id = p.owner_user_id`
+--    (เจ้าภาพยังเป็นคนสร้างโพสต์ตรงๆ = ไม่เคยมีใครกด "อาสาทำเอง") ใครคว้าไปแล้วไม่แตะ
+-- ⚠️ ย้อนได้เสมอ — `post_episodes.owner_user_id` ไม่ถูกแตะ ดึงกลับมาได้ทุกเมื่อ
+-- ⚠️ ผลข้างเคียงที่ตั้งใจ: การ์ดไม่มีเจ้าภาพจะโผล่ในหน้า "การบ้านของฉัน" ของทุกคน
+--    (isMyCard นับงานไม่มีเจ้าภาพเป็นของทุกคน — kanbanGrouping.js:69) นั่นคือความหมายของกอง
+--    "รอทำ" อยู่แล้ว: ใครก็หยิบได้ · ถ้าวันไหนกองนี้ใหญ่จนหน้าแรกรก ค่อยแยกกองต่างหาก
+-- ═══════════════════════════════════════════════════════════════════════════
+
+BEGIN;
+
+UPDATE kanban_cards c
+   SET owner_user_id = NULL,
+       status_type   = 'backlog',
+       completed_at  = NULL,
+       updated_at    = now()
+  FROM kanban_card_links l
+  JOIN post_episodes p ON p.id = l.entity_id
+ WHERE l.card_id = c.id
+   AND l.entity_type = 'post'
+   AND p.status = 'draft'
+   AND p.archived_at IS NULL
+   AND c.status_type = 'doing'
+   AND c.owner_user_id IS NOT NULL
+   AND c.owner_user_id = p.owner_user_id          -- ยังไม่มีใครคว้าไป
+   AND NOT EXISTS (SELECT 1 FROM post_social_history h
+                    WHERE h.episode_id = p.id AND h.posted_at IS NOT NULL);
 
 COMMIT;

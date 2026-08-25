@@ -18,7 +18,7 @@ import {
   AlertTriangle, AlignLeft, Archive, ArchiveRestore, Calendar, Check, CircleDot,
   ExternalLink, Link2, Loader2, UserCircle, Users, X,
 } from 'lucide-react'
-import { formatRef, STATUS_TYPES } from '@/lib/kanbanAccess.js'
+import { formatRef, isDraggableCard, statusOptionsFor } from '@/lib/kanbanAccess.js'
 import DeleteChoiceDialog from './DeleteChoiceDialog.jsx'
 import FieldRow from './FieldRow.jsx'
 import TagCombobox from './TagCombobox.jsx'
@@ -40,8 +40,9 @@ export default function CardModal({ cardId, onClose, onChanged }) {
   const [can, setCan] = useState({ edit: false, archive: false, restore: false, claim: false, purge: false })
   const [confirmRemove, setConfirmRemove] = useState(false)
   const [profileUserId, setProfileUserId] = useState(null)
-  // ตัวเลือกสถานะตายตัว 6 แบบ — ป้ายมาจาก t() จึงคำนวณที่นี่ ไม่ใช่ค่าคงที่นอก component
-  const STATUS_OPTIONS = STATUS_TYPES.map((s) => ({ id: s, name: t(`status.${s}`) }))
+  // ตัวเลือกสถานะ — ป้ายมาจาก t() จึงคำนวณที่นี่ ไม่ใช่ค่าคงที่นอก component
+  // การบ้านธรรมดาได้ครบ 6 แบบ · การ์ดที่ผูกงานสื่อได้เฉพาะช่วงร่าง (statusOptionsFor)
+  const STATUS_OPTIONS = statusOptionsFor(card).map((s) => ({ id: s, name: t(`status.${s}`) }))
   const [removing, setRemoving] = useState(false)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
@@ -456,7 +457,7 @@ export default function CardModal({ cardId, onClose, onChanged }) {
                   <TagCombobox
                     type="select"
                     numericIds={false}
-                    readOnly={readOnly || Boolean(linked)}
+                    readOnly={readOnly || !isDraggableCard(card)}
                     source={{ mode: 'static', options: STATUS_OPTIONS }}
                     value={card.status_type ? [{ id: card.status_type, name: t(`status.${card.status_type}`) }] : []}
                     onCommit={(ids) => (ids[0] ? patch({ statusType: ids[0] }) : undefined)}
@@ -464,7 +465,9 @@ export default function CardModal({ cardId, onClose, onChanged }) {
                     t={t}
                   />
                 </FieldRow>
-                {linked && (
+                {/* คำเตือน "ไปเปลี่ยนที่ต้นทาง" ขึ้นเฉพาะตอนที่แก้ที่นี่ไม่ได้จริงๆ —
+                    งานสื่อช่วงร่างแก้ได้แล้ว (kanban ถือสถานะช่วงนั้น) ขึ้นไปก็สับสนเปล่า */}
+                {linked && !isDraggableCard(card) && (
                   <p className="pl-7 -mt-0.5 text-xs text-warm-400 dark:text-disc-muted">
                     {t('linked.statusHint', { kind: t(`linked.kind.${linked.entity_type}`) })}
                   </p>

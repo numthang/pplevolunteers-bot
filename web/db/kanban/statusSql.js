@@ -23,13 +23,23 @@ const CASE_STATUS = `CASE cs.status
 
 // โพสต์ไม่มีสถานะ "เผยแพร่แล้ว" ในตารางตัวเอง — ดูจากประวัติการส่งขึ้นโซเชียลว่ามีใบที่ posted_at แล้วไหม
 // (post_episodes.status มีแค่ draft/review/approved ตาม CHECK)
+//
+// ⭐ `draft` คืน NULL โดยตั้งใจ (2026-08-25) — **ไม่ใช่ค่าที่ลืมใส่**
+//    post_episodes ไม่มีคำว่า "ยังไม่มีใครลงมือ" อยู่ในคำศัพท์ของมันเลย มีแค่ 3 คำที่เป็น
+//    สถานะ *บรรณาธิการ* (draft/review/approved) → เดิมแม็ป draft → 'doing' ทำให้โพสต์ทุกใบ
+//    ตกกอง "กำลังทำ" ตั้งแต่วินาทีที่เกิด และกอง "รอทำ" ว่างตลอดกาล (dev: 31/31 ใบ)
+//    → คืน NULL ให้ COALESCE ตกไปใช้ `c.status_type` แทน = **kanban ถือสถานะช่วงก่อนส่งตรวจ**
+//      (backlog / doing / cancelled) ส่วน review เป็นต้นไปยังเป็นของต้นทางเหมือนเดิม
+//
+//    กฎเหล็กไม่แตก: ต้นทางยังเป็นเจ้าของทุกสถานะที่ต้นทาง**มีจริง** — kanban ถือเฉพาะช่วงที่
+//    post_episodes ไม่มีความเห็น ⛔ ห้ามเติม `ELSE 'doing'` กลับมา จะพากอง "รอทำ" ตายอีกรอบ
 const POST_STATUS = `CASE
         WHEN pe.id IS NULL THEN NULL
         WHEN EXISTS (SELECT 1 FROM post_social_history h
                       WHERE h.episode_id = pe.id AND h.posted_at IS NOT NULL) THEN 'done'
         WHEN pe.status = 'approved' THEN 'ready'
         WHEN pe.status = 'review'   THEN 'review'
-        ELSE 'doing' END`
+        ELSE NULL END`
 
 // ⚠️ entity_type ต้องอยู่ในเงื่อนไข JOIN ทุกครั้ง — cases.id กับ post_episodes.id ช่วงเลขทับกันเต็มๆ
 //    (เคสเดียวกับ contact_type ใน calling — CLAUDE.md §Known Gotchas)

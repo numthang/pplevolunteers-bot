@@ -167,6 +167,34 @@ export function isLinkedCard(card) {
 export const LINK_KIND_LABEL = { case: 'เรื่องร้องเรียน', post: 'งานสื่อ' }
 
 /**
+ * ⭐ ช่วงสถานะที่ **kanban เป็นเจ้าของ** สำหรับการ์ดที่ผูกงานสื่อ (2026-08-25)
+ *
+ * `post_episodes.status` มีแค่ draft/review/approved = สถานะ *บรรณาธิการ* ล้วนๆ
+ * ไม่มีคำว่า "ยังไม่มีใครลงมือ" อยู่เลย → `POST_STATUS` คืน NULL ตอน draft แล้วปล่อยให้
+ * `c.status_type` ถือช่วงนี้แทน (ดู db/kanban/statusSql.js) · ที่นี่คืออีกครึ่งของกติกาเดียวกัน
+ */
+const POST_DRAFT_PHASE = ['backlog', 'doing', 'cancelled']
+
+/**
+ * ลากการ์ดใบนี้ได้ไหม (ยังไม่นับสิทธิ์ของคน — นั่นเป็นหน้าที่ `canChangeStatus`)
+ *
+ * ⛔ UI ต้องเรียกตัวนี้ ห้ามเขียนเงื่อนไขซ้ำเอง — ด่านจริงอยู่ที่ `checkStatusTransition`
+ *    ถ้าสองที่ตอบไม่ตรงกัน จะได้การ์ดที่ลากได้แต่ API ปฏิเสธ = เด้งกลับโดยไม่มีเหตุผลให้ผู้ใช้
+ */
+export function isDraggableCard(card) {
+  if (!isLinkedCard(card)) return true
+  return card.link?.entity_type === 'post' && POST_DRAFT_PHASE.includes(card.status_type)
+}
+
+/**
+ * สถานะที่เลือกได้ในกล่องสถานะของการ์ดใบนี้ — ตัวเลือกที่เลือกไม่ได้ต้อง **ไม่โผล่**
+ * ไม่ใช่โผล่แล้วกดไม่ได้ (กติกาเดียวกับ draggable: ห้ามหลอกมือ)
+ */
+export function statusOptionsFor(card) {
+  return isLinkedCard(card) ? POST_DRAFT_PHASE.filter((s) => STATUS_TYPES.includes(s)) : STATUS_TYPES
+}
+
+/**
  * ตรวจว่าจะย้ายไปสถานะนี้ได้ไหม — กติกาที่ไม่ขึ้นกับตัวคน
  * คืน { ok, reason } เพื่อให้ UI เด้ง toast บอกเหตุผลได้ (ดีไซน์: ห้ามเด้งกลับเงียบๆ)
  */
@@ -174,12 +202,20 @@ export function checkStatusTransition(card, nextStatus) {
   if (!STATUS_TYPES.includes(nextStatus)) {
     return { ok: false, reason: 'unknownStatus' }
   }
-  // ⛔ การ์ดที่ผูกของจริง: สถานะเป็นของต้นทาง **ล็อกไว้ ลากไม่ได้** (user เคาะ 2026-08-24)
+  // ⛔ การ์ดที่ผูกของจริง: สถานะที่ **ต้นทางเป็นเจ้าของ** ล็อกไว้ ลากไม่ได้ (user เคาะ 2026-08-24)
   //    เลือกทางนี้แทน "เขียนกลับไปเปลี่ยนสถานะต้นทาง" เพราะ write-back ต้องต่อด่านสิทธิ์ + optimistic
-  //    lock ของทั้ง 2 ระบบ (เตะคนที่กำลังพิมพ์โพสต์อยู่ให้เซฟไม่ได้ = 409) — งานเพิ่มอีกก้อนโดยไม่จำเป็น
+  //    lock ของทั้ง 2 ระบบ (เตะคนที่กำลังพิมพ์โพสต์อยู่ให้เซฟไม่ได้ = 409)
   //    เปลี่ยนที่หน้าต้นทางแล้วการ์ดขยับกองเอง เพราะสถานะอ่านสดอยู่แล้ว
+  //
+  // ⭐ ผ่อนให้งานสื่อ **ช่วงร่าง** เท่านั้น (2026-08-25) — ช่วงนั้นต้นทางไม่มีความเห็น kanban ถือเอง
+  //    เงื่อนไขดูจาก `card.status_type` ซึ่งเป็น **ค่าที่คำนวณสดแล้ว** (statusSql.js alias ทับให้)
+  //    → อยู่ในช่วงร่างจริงก็ต่อเมื่อค่าสดตกมาที่ cache = ต้นทางคืน NULL · ปลอดภัยกว่าดู
+  //      link.source_status ตรงๆ เพราะโพสต์ที่เผยแพร่แล้วแต่ status ยังเป็น draft ก็ถูกกันด้วย
   if (isLinkedCard(card)) {
-    return { ok: false, reason: 'linked' }
+    const draftPhase = card.link?.entity_type === 'post'
+      && POST_DRAFT_PHASE.includes(card.status_type)
+      && POST_DRAFT_PHASE.includes(nextStatus)
+    if (!draftPhase) return { ok: false, reason: 'linked' }
   }
   // ดีไซน์ §ช่องโหว่ข้อ 5 — ไม่มีเจ้าภาพ ออกจาก backlog ไม่ได้ (DB ก็มี CHECK กันอีกชั้น)
   // ยกเว้น 'cancelled' = ช่อง "พักไว้" (ยังจะทำ แต่หาคนทำไม่ได้ตอนนี้ · 2026-08-18) — งานที่ยังไม่มีใครรับ

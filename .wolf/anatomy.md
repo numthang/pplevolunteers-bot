@@ -1,6 +1,6 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-24T17:16:28.530Z
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-25T04:58:06.041Z
 > Files: 1047 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/1b7cbea7-c43c-466d-9a5f-c61fda8e76b5/scratchpad/
@@ -330,7 +330,7 @@
 ## md/kanban/
 
 - `CUSTOM-FIELDS.md` — Kanban — ช่องข้อมูลตั้งเอง (custom fields) (~3612 tok)
-- `KANBAN.md` — Kanban — ระบบบริหารงาน ("การบ้าน") (~8583 tok)
+- `KANBAN.md` — Kanban — ระบบบริหารงาน ("การบ้าน") (~8990 tok)
 - `NEXT-SESSION.md` — Kanban — จุดรับช่วง session หน้า (เขียนใหม่ 2026-08-19 เช้ามืด) (~3532 tok)
 
 ## md/posts/
@@ -1894,12 +1894,12 @@
 
 - `BoardView.jsx` — BoardView — กระดานแนวตั้ง "ย่อ" (ก่อนถึงก้อน 3) (~3009 tok)
 - `CardFieldsBox.jsx` — CardFieldsBox — กล่อง "ข้อมูลของทีม" ใน CardModal (custom field) (~7870 tok)
-- `CardModal.jsx` — CardModal — รายละเอียดการบ้าน 1 ใบ (~7393 tok)
+- `CardModal.jsx` — CardModal — รายละเอียดการบ้าน 1 ใบ (~7485 tok)
 - `ChecklistFieldBox.jsx` — ChecklistFieldBox — เช็คลิสต์ 1 field (ตรงสกรีนช็อตที่ user ส่งมา 2026-08-18 รอบเย็น: progress bar + (~6665 tok)
 - `DeleteChoiceDialog.jsx` — DeleteChoiceDialog — กล่อง "ลบ" ที่ให้เลือกเอาเองว่า **ซ่อน/เก็บเข้ากรุ** หรือ **ลบถาวร** (~1182 tok)
 - `FieldManager.jsx` — FieldManager — ช่องข้อมูลตั้งเองของ org (/kanban/fields) · admin เท่านั้น (~3907 tok)
 - `FieldRow.jsx` — FieldRow — แถว `[ไอคอน · ชื่อ] | [ค่า]` บรรทัดเดียว ทรง Notion/AppFlowy (~749 tok)
-- `KanbanHome.jsx` — KanbanHome — หน้าเดียวของโมดูลการบ้าน (`/kanban`) (~19784 tok)
+- `KanbanHome.jsx` — KanbanHome — หน้าเดียวของโมดูลการบ้าน (`/kanban`) (~19846 tok)
 - `LabelChips.jsx` — LabelChips — ป้ายของการ์ด 1 ใบ วาดแยกเป็นกอง ไม่ใช่กองรวมพรืดเดียว (~618 tok)
 - `PersonProfileModal.jsx` — PersonProfileModal — กล่องลอยแบบดิสคอร์ด เปิดตอนกดชื่อเจ้าภาพ/คนช่วยในการ์ด (~1228 tok)
 - `TagCombobox.jsx` — TagCombobox — ตัวเลือกของ select/multi_select field (ตรงสกรีนช็อตที่ user ส่งมา 2026-08-18 รอบเย็น) (~8683 tok)
@@ -2031,7 +2031,7 @@
 - `labels.js` — ป้ายทั้งหมดของ org (ที่ยังไม่ถูกซ่อน) เรียงตามกลุ่ม (~2314 tok)
 - `links.js` — ของจริงที่การ์ดใบนี้ผูกอยู่ — null = การ์ดเปล่า (การบ้านธรรมดา) (~3275 tok)
 - `people.js` — ค้นสมาชิก active ของ org · เรียกจาก API ที่กันคำค้นสั้นกว่า 2 ตัวไว้แล้ว (~931 tok)
-- `statusSql.js` — สถานะที่ต้องเอาไปแสดงจริง — สดจากต้นทางถ้าผูกไว้ · ไม่ผูกก็ใช้คอลัมน์เดิม (~1435 tok)
+- `statusSql.js` — สถานะที่ต้องเอาไปแสดงจริง — สดจากต้นทางถ้าผูกไว้ · ไม่ผูกก็ใช้คอลัมน์เดิม (~1637 tok)
 - `tags.js` — tags.js — "แท็ก" ของการบ้าน = **ตัวเลือกใน custom field** ไม่ใช่ตารางป้ายอีกต่อไป (~1588 tok)
 
 ## web/db/posts/
@@ -2091,7 +2091,7 @@
 - `guildContext.js` — คืน guild_id ที่ request นี้ทำงานอยู่ — รากฐานของ multi-guild ทั้งระบบ (~639 tok)
 - `hexColor.js` — รับ hex code ที่พิมพ์/วางเอง — เติม # ให้ถ้าลืม, ขยายแบบย่อ 3 หลัก (#f80 → #ff8800) (~121 tok)
 - `idCard.js` — สำเนาบัตรประชาชน — resize ให้พอดีพิมพ์ A4 + ลายน้ำกันใช้ผิดวัตถุประสงค์ (~2073 tok)
-- `kanbanAccess.js` — Kanban Access Control — ก้อน 1 ("การบ้านของฉัน" · ยังไม่มีกระดาน) (~2208 tok)
+- `kanbanAccess.js` — Kanban Access Control — ก้อน 1 ("การบ้านของฉัน" · ยังไม่มีกระดาน) (~2698 tok)
 - `kanbanFieldValue.js` — ชนิด → คอลัมน์ปลายทางใน kanban_card_field_values (url ใช้ value_text ร่วมกับ text · checklist ไม่มีค (~967 tok)
 - `kanbanGrouping.js` — จัดกลุ่มการ์ด + ตัดสินว่า "ของฉัน" คือใบไหน — ตรรกะล้วน (เทสที่ lib/__tests__/kanbanGrouping.test.js (~1426 tok)
 - `kanbanGuard.js` — kanbanGuard — ด่านเดียวที่ route ของ kanban ใช้โหลด context + ตัดสินสิทธิ์ (~760 tok)
@@ -2158,7 +2158,7 @@
 - `caseAccess.test.js` — caseAccess รับ access object { permissions: Set, scopeGrants: [] } ตรงๆ (~582 tok)
 - `financeAccess.test.js` — Declares canViewAccount (~2368 tok)
 - `geography.test.js` — ---- province grant ---- (~817 tok)
-- `kanbanAccess.test.js` — user ทดสอบ — ตัวเลขล้วน (users.id) เพราะ kanban ผูก user_id ไม่ใช่ discord_id (~2105 tok)
+- `kanbanAccess.test.js` — user ทดสอบ — ตัวเลขล้วน (users.id) เพราะ kanban ผูก user_id ไม่ใช่ discord_id (~3596 tok)
 - `kanbanFieldValue.test.js` — Declares res (~1567 tok)
 - `kanbanGrouping.test.js` — นาฬิกาตรึงไว้ — ห้ามให้เทสขึ้นกับเวลาที่รัน (~1605 tok)
 - `kanbanLabelFilter.test.js` — ป้ายตัวอย่าง — ชื่อกลุ่มมาจากของจริงบน dev (สายงาน 12 · พื้นที่ 9 · อุปกรณ์ 8) (~1424 tok)
