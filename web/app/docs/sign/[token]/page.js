@@ -43,6 +43,7 @@ export default function SignPage({ params }) {
   // self-fill state — ผู้รับที่ไม่มีใน ngs roster กรอกข้อมูลเอง (recipient only)
   const [selfMode, setSelfMode]         = useState(false)
   const [selfInfoDone, setSelfInfoDone] = useState(false)
+  const [signPolicy, setSignPolicy]     = useState('strict')
   const [selfSaving, setSelfSaving]     = useState(false)
   const [selfErr, setSelfErr]           = useState('')
   const [selfForm, setSelfForm]         = useState({
@@ -81,6 +82,7 @@ export default function SignPage({ params }) {
           setEntry(d.data)
           const role = d.data.signer_role || 'recipient'
           setSignerRole(role)
+          setSignPolicy(d.data.sign_policy || 'strict')
 
           if (role === 'recipient') {
             setNgsLinked(!!d.data.has_ngs_link)
@@ -98,12 +100,27 @@ export default function SignPage({ params }) {
       .finally(() => setLoading(false))
   }, [token, status])
 
+  // ชื่อบนใบ (ผู้รับเงิน) — ใช้ทั้งป้ายเตือนและข้อความยืนยัน
+  const recipientName = [entry?.title, entry?.ngs_first_name ?? entry?.firstname, entry?.ngs_last_name ?? entry?.lastname]
+    .filter(Boolean).join(' ').trim() || entry?.display_name || ''
+  // คนนอกไม่มีบัญชี → เซ็นแทนเสมอ · สมาชิกจะเข้าเงื่อนไขนี้ได้เฉพาะตอน org เปิดโหมดยืดหยุ่น
+  const isSigningForSomeoneElse = !!entry && (
+    entry.external_payee_id ? true : (!!session?.user?.userId && session.user.userId !== entry.member_user_id)
+  )
+  // เซ็นแทนได้จริงไหม — ต้องตรงกับกฎฝั่ง API ไม่งั้นหน้าโชว์ช่องวาดแล้วไปโดน 403 ตอนกดส่ง
+  const canSignOnBehalf = isSigningForSomeoneElse &&
+    (!!entry?.external_payee_id || signPolicy === 'flexible')
+  // ขั้นยืนยันตัวตน (ผูกทะเบียนสมาชิก / กรอกเอง) เป็นเรื่องของ "เจ้าของใบ" เท่านั้น
+  // คนเซ็นแทนกรอกให้ไม่ได้ — link-ngs/self-info เขียนลงบัญชีของคนที่ล็อกอิน ไม่ใช่ของผู้รับ
+  // → ข้ามไปช่องวาดเลย ข้อมูลบนใบมาจากที่แอดมินกรอกไว้ใน entry อยู่แล้ว
+  const skipIdentitySteps = canSignOnBehalf
+
   useEffect(() => {
     if (entry?.event_name) document.title = `${entry.event_name} — Docs`
   }, [entry])
 
   useEffect(() => {
-    const ready = signerRole === 'payer' || ngsLinked || selfInfoDone
+    const ready = signerRole === 'payer' || canSignOnBehalf || ngsLinked || selfInfoDone
     if (!ready || !entry) return
     setPreviewLoading(true)
     setPreviewErr('')
@@ -112,7 +129,7 @@ export default function SignPage({ params }) {
       .then(d => { if (d.pages) setPreviewPages(d.pages); else setPreviewErr(d.error || t('settings.loadFailed')) })
       .catch(() => setPreviewErr(t('settings.loadFailed')))
       .finally(() => setPreviewLoading(false))
-  }, [signerRole, ngsLinked, selfInfoDone, entry, token, previewVer])
+  }, [signerRole, canSignOnBehalf, ngsLinked, selfInfoDone, entry, token, previewVer])
 
   useEffect(() => {
     if (!entry || !canvasRef.current) return
@@ -276,14 +293,6 @@ export default function SignPage({ params }) {
     }
   }
 
-  // ชื่อบนใบ (ผู้รับเงิน) — ใช้ทั้งป้ายเตือนและข้อความยืนยัน
-  const recipientName = [entry?.title, entry?.ngs_first_name ?? entry?.firstname, entry?.ngs_last_name ?? entry?.lastname]
-    .filter(Boolean).join(' ').trim() || entry?.display_name || ''
-  // คนนอกไม่มีบัญชี → เซ็นแทนเสมอ · สมาชิกจะเข้าเงื่อนไขนี้ได้เฉพาะตอน org เปิดโหมดยืดหยุ่น
-  const isSigningForSomeoneElse = !!entry && (
-    entry.external_payee_id ? true : (!!session?.user?.userId && session.user.userId !== entry.member_user_id)
-  )
-
   function getPos(e, canvas) {
     const rect = canvas.getBoundingClientRect()
     const scaleX = canvas.width / rect.width
@@ -390,7 +399,7 @@ export default function SignPage({ params }) {
   ))
 
   // Payer มีสิทธิ์เซ็นได้ทันที (ไม่ต้องผ่าน NGS/บัตร)
-  const canSign = signerRole === 'payer' || ngsLinked || selfInfoDone
+  const canSign = signerRole === 'payer' || canSignOnBehalf || ngsLinked || selfInfoDone
 
   return (
     <div className="min-h-screen bg-warm-50 dark:bg-disc-bg2 py-4 sm:px-4">
@@ -455,8 +464,16 @@ export default function SignPage({ params }) {
           )}
         </div>
 
+        {signerRole === 'recipient' && isSigningForSomeoneElse && !canSignOnBehalf && (
+          <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-6 text-center">
+            <AlertTriangle size={32} className="mx-auto text-amber-500 mb-3" />
+            <p className="text-base text-warm-900 dark:text-disc-text">{t('sign.notYourLink.title')}</p>
+            <p className="mt-1 text-sm text-warm-500 dark:text-disc-muted">{t('sign.notYourLink.hint')}</p>
+          </div>
+        )}
+
         {/* Step: NGS self-link (recipient only, if not yet linked) */}
-        {signerRole === 'recipient' && !ngsLinked && (!selfInfoDone || selfMode) && (
+        {signerRole === 'recipient' && !skipIdentitySteps && !ngsLinked && (!selfInfoDone || selfMode) && (
           <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-6">
             <div className="flex items-center gap-2 mb-1">
               <UserCheck size={18} className="text-orange shrink-0" />
@@ -614,7 +631,7 @@ export default function SignPage({ params }) {
         )}
 
         {/* Self-fill สำเร็จ (auto หรือกรอกเอง) — แสดงสถานะ + ปุ่มแก้ไข */}
-        {signerRole === 'recipient' && !ngsLinked && selfInfoDone && !selfMode && (
+        {signerRole === 'recipient' && !skipIdentitySteps && !ngsLinked && selfInfoDone && !selfMode && (
           <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl px-6 py-4 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2 min-w-0">
               <UserCheck size={18} className="text-green-600 dark:text-green-400 shrink-0" />

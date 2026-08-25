@@ -1096,7 +1096,11 @@
         "confirmSignature": "Confirm Signature"
       },
       "layoutTitle": "Sign Document",
-      "onBehalfWarning": "You are signing on behalf of {name} — the system records that you signed"
+      "onBehalfWarning": "You are signing on behalf of {name} — the system records that you signed",
+      "notYourLink": {
+        "title": "This link is not yours",
+        "hint": "This receipt names someone else as the payee — ask them to open the link and sign, or have an admin switch on flexible mode in document settings"
+      }
     },
     "externalPayee": {
       "title": "Add external payee",
