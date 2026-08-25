@@ -127,7 +127,8 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
     }
     debounceRef.current = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/docs/members?q=${encodeURIComponent(q)}&limit=10`)
+        // includeExternal=1 — ช่องนี้เลือก "ผู้รับเงิน" ซึ่งเป็นคนนอกได้ (ต่างจากช่องเลือกผู้จ่าย)
+        const res = await fetch(`/api/docs/members?q=${encodeURIComponent(q)}&limit=10&includeExternal=1`)
         const d = await res.json()
         setMemberResults(d.data || [])
         setMemberOpen(true)

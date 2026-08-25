@@ -24,6 +24,7 @@ export async function GET(req) {
   const { searchParams } = new URL(req.url)
   const q     = searchParams.get('q') || ''
   const limit = Math.min(parseInt(searchParams.get('limit') || '30'), 100)
+  const includeExternal = searchParams.get('includeExternal') === '1'
   const orgId = await getOrgId(session)
   const activeGuildId = await getGuildId(session)
 
@@ -62,12 +63,11 @@ export async function GET(req) {
     LIMIT $${limitParam}`
 
   try {
-    // คนนอก (docs_external_payees) ปนมาในลิสต์เดียวกัน — แยกด้วย kind ฝั่ง UI
-    // ไม่ทำ UNION ใน SQL เพราะสองฝั่งคนละ shape (คนนอกไม่มี org_members/discord) merge ที่นี่อ่านง่ายกว่า
-    const [{ rows }, externals] = await Promise.all([
-      pool.query(query, params),
-      searchExternalPayees(orgId, q, limit),
-    ])
+    // คนนอกต้อง **opt-in** เท่านั้น (?includeExternal=1) — call site อื่นใช้ user_id เป็นคีย์
+    // (เลือกผู้จ่ายใน settings, เลือกคนใน DocAutoCalc) คนนอกมี user_id = null จะชนกันเอง
+    // และเป็นผู้จ่ายเงินไม่ได้อยู่แล้ว → ปนไปมีแต่พัง
+    const externals = includeExternal ? await searchExternalPayees(orgId, q, limit) : []
+    const { rows } = await pool.query(query, params)
     const data = [...rows, ...externals.map(e => ({ ...e, kind: 'external' }))]
       .sort((a, b) => String(a.display_name || '').localeCompare(String(b.display_name || ''), 'th'))
       .slice(0, limit)

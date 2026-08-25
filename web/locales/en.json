@@ -1129,6 +1129,15 @@
         "province": "Province",
         "zipCode": "Postal code",
         "phone": "Phone"
+      },
+      "settings": {
+        "count": "{count} external payees",
+        "description": "People without an account — reusable across projects; edits here apply to newly generated documents",
+        "emptyState": "No external payees yet — add one from the recipient picker on a project page",
+        "loadFailed": "Could not load the list",
+        "noIdNumber": "No ID number",
+        "viewCard": "View ID card copy",
+        "confirmDelete": "Remove {name}?"
       }
     }
   },

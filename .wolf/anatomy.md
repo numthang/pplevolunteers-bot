@@ -1884,6 +1884,7 @@
 - `DocsProvinceFilter.jsx` — DocsProvinceFilter (~449 tok)
 - `IdCardCropper.jsx` — crop + rotate ภาพตาม croppedAreaPixels → JPEG blob (สัดส่วนบัตรเป๊ะ) (~1496 tok)
 - `ExternalPayeeModal.jsx` — ฟอร์มเพิ่มผู้รับเงินคนนอก: ถ่ายบัตร → OCR เติมให้ → ตรวจ → กดบันทึก (~1800 tok)
+- `ExternalPayeeSettings.jsx` — จัดการผู้รับเงินคนนอกที่สะสมไว้ (แก้/ลบ/ดูสำเนาบัตร) ใน /docs/settings (~1600 tok)
 
 ## web/components/finance/
 
