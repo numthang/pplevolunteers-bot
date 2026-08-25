@@ -1095,7 +1095,8 @@
         "confirmPayment": "Confirm Payment",
         "confirmSignature": "Confirm Signature"
       },
-      "layoutTitle": "Sign Document"
+      "layoutTitle": "Sign Document",
+      "onBehalfWarning": "You are signing on behalf of {name} — the system records that you signed"
     },
     "externalPayee": {
       "title": "Add external payee",
@@ -1139,6 +1140,21 @@
         "viewCard": "View ID card copy",
         "confirmDelete": "Remove {name}?"
       }
+    },
+    "signPolicy": {
+      "heading": "Signing mode",
+      "saving": "Saving…",
+      "saved": "Saved",
+      "saveFailed": "Could not save",
+      "strict": {
+        "label": "Strict — members sign their own receipts",
+        "description": "Forwarding a link to someone else does not let them sign · external payees can still be signed for by a team member (they have no account)"
+      },
+      "flexible": {
+        "label": "Flexible — anyone can sign for anyone",
+        "description": "Like passing paper around at the event · anyone logged in who opens the link can sign that receipt"
+      },
+      "auditNote": "Both modes always record who pressed sign and when — this never appears on the receipt"
     }
   },
   "join": {

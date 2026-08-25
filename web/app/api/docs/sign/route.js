@@ -1,6 +1,7 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
 import { getEntryByToken, signEntry } from '@/db/docs/entries.js'
+import { getDocsSignPolicy } from '@/db/orgConfig.js'
 
 /**
  * POST /api/docs/sign
@@ -33,16 +34,23 @@ export async function POST(req) {
     }
 
     // ตรวจว่าเป็นเจ้าของลิงก์ถูกต้อง
+    // onBehalf = "คนเซ็น ≠ ชื่อบนใบ" — กฎเดียวครอบทั้งคนนอก (ไม่มีบัญชีให้เป็นเจ้าของ)
+    // และสมาชิกที่ให้คนอื่นเซ็นแทนในโหมด flexible · ทุกโหมดบันทึกเสมอ ไม่ขึ้นบนเอกสาร
     let onBehalf = false
     if (role === 'recipient') {
-      if (entry.external_payee_id) {
-        // ผู้รับเป็นคนนอก — ไม่มีบัญชีให้เทียบ จึงเทียบไม่ได้โดยธรรมชาติ
-        // ยังบังคับ login อยู่ (ด้านบน) เพื่อให้รู้ว่าใครถือเครื่องตอนเซ็น → บันทึกเป็น on-behalf
-        // ผลพลอยได้: คนนอกจริงๆ ไม่มีบัญชี = เปิดลิงก์ดูได้แต่กดเซ็นไม่ได้
-        //            บังคับตัวเองว่าต้องเซ็นบนเครื่องของคนในทีม โดยไม่ต้องเขียนกฎเพิ่ม
-        onBehalf = true
-      } else if (entry.member_user_id !== session.user.userId) {
-        return Response.json({ error: 'ลิงก์นี้ไม่ใช่ของคุณ' }, { status: 403 })
+      // ยังไม่ระบุผู้รับ = ไม่มีใครเซ็นได้ ไม่ว่าโหมดไหน (โหมด flexible ไม่ควรกลายเป็น
+      // "ใครก็เซ็นใบเปล่าได้" — ใบที่ไม่มีชื่อผู้รับพิมพ์ออกมาก็ใช้ไม่ได้อยู่แล้ว)
+      if (!entry.member_user_id && !entry.external_payee_id) {
+        return Response.json({ error: 'ใบนี้ยังไม่ได้ระบุผู้รับเงิน' }, { status: 409 })
+      }
+      onBehalf = entry.member_user_id !== session.user.userId
+      if (onBehalf && !entry.external_payee_id) {
+        // ผู้รับเป็นสมาชิก แต่คนเซ็นไม่ใช่เจ้าตัว → ผ่านได้เฉพาะ org ที่เปิดโหมดยืดหยุ่นไว้
+        // (คนนอกไม่ต้องถาม policy — ไม่มีบัญชีให้เทียบตั้งแต่แรก จะ strict แค่ไหนก็เทียบไม่ได้)
+        const policy = await getDocsSignPolicy(entry.org_id)
+        if (policy !== 'flexible') {
+          return Response.json({ error: 'ลิงก์นี้ไม่ใช่ของคุณ' }, { status: 403 })
+        }
       }
     } else {
       if (entry.payer_user_id !== session.user.userId) {

@@ -276,6 +276,14 @@ export default function SignPage({ params }) {
     }
   }
 
+  // ชื่อบนใบ (ผู้รับเงิน) — ใช้ทั้งป้ายเตือนและข้อความยืนยัน
+  const recipientName = [entry?.title, entry?.ngs_first_name ?? entry?.firstname, entry?.ngs_last_name ?? entry?.lastname]
+    .filter(Boolean).join(' ').trim() || entry?.display_name || ''
+  // คนนอกไม่มีบัญชี → เซ็นแทนเสมอ · สมาชิกจะเข้าเงื่อนไขนี้ได้เฉพาะตอน org เปิดโหมดยืดหยุ่น
+  const isSigningForSomeoneElse = !!entry && (
+    entry.external_payee_id ? true : (!!session?.user?.userId && session.user.userId !== entry.member_user_id)
+  )
+
   function getPos(e, canvas) {
     const rect = canvas.getBoundingClientRect()
     const scaleX = canvas.width / rect.width
@@ -723,6 +731,18 @@ export default function SignPage({ params }) {
             >
               <FileText size={14} /> {t('sign.preview.openInNewTab')}
             </a>
+          </div>
+        )}
+
+        {/* เตือนก่อนเซ็น เมื่อคนที่ล็อกอินไม่ใช่เจ้าของชื่อบนใบ
+            ความเสี่ยงจริงไม่ใช่คนตั้งใจโกง แต่คือหน้างานวุ่นๆ เปิดลิงก์ค้างผิดใบแล้วยื่นให้เซ็น
+            — ป้ายนี้จับได้ก่อนเซ็น ส่วน signed_on_behalf จับได้ตอนสายไปแล้ว */}
+        {canSign && signerRole === 'recipient' && isSigningForSomeoneElse && (
+          <div className="rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 px-4 py-3 flex items-start gap-2">
+            <AlertTriangle size={17} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+            <p className="text-sm text-amber-800 dark:text-amber-300">
+              {t('sign.onBehalfWarning', { name: recipientName })}
+            </p>
           </div>
         )}
 

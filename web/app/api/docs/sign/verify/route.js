@@ -1,4 +1,5 @@
 import { getEntryByToken } from '@/db/docs/entries.js'
+import { getDocsSignPolicy } from '@/db/orgConfig.js'
 
 /**
  * GET /api/docs/sign/verify?token=
@@ -25,6 +26,9 @@ export async function GET(req) {
 
     const role = entry.signer_role  // 'recipient' | 'payer'
     const isExternal = !!entry.external_payee_id
+    // หน้าเซ็นต้องรู้ policy เพื่อเตือนก่อนเซ็นว่า "กำลังเซ็นแทนคนอื่น" — จับพลาดก่อนเซ็น
+    // ดีกว่าไปเจอใน signed_on_behalf ทีหลังซึ่งสายไปแล้ว
+    const signPolicy = await getDocsSignPolicy(entry.org_id)
 
     return Response.json({
       success: true,
@@ -47,6 +51,7 @@ export async function GET(req) {
         member_user_id:    role === 'recipient' ? entry.member_user_id    : null,
         external_payee_id: role === 'recipient' ? entry.external_payee_id : null,
         recipient_kind:    role === 'recipient' ? entry.recipient_kind    : null,
+        sign_policy:       signPolicy,
         // คนนอกไม่มีทะเบียนสมาชิกให้ผูก และไม่มีบัญชีให้ self-fill — ข้อมูลครบอยู่ในแถวของเขาเองแล้ว
         // ถ้าไม่ตอบ true สองตัวนี้ หน้าเซ็นจะค้างที่ขั้น "ผูกรายชื่อสมาชิก" ซึ่งคนนอกผ่านไม่ได้
         has_ngs_link:     role === 'recipient' ? (isExternal || !!entry.member_id) : null,

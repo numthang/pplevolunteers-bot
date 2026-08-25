@@ -39,3 +39,17 @@ export async function getAppointPolicy(orgId) {
     return DEFAULT_APPOINT_POLICY
   }
 }
+
+// docs_sign_policy — ใครเซ็นใบสำคัญรับเงินแทนใครได้บ้าง
+//   'strict'   (ค่าตั้งต้น) สมาชิกเซ็นได้เฉพาะใบของตัวเอง · คนนอกให้คนในทีมเซ็นแทนได้
+//   'flexible' ใครที่ล็อกอินแล้วถือลิงก์ก็เซ็นได้ทุกใบ — เหมือนส่งกระดาษต่อกันหน้างาน
+//
+// ⚠️ flexible ≠ ไม่รู้ว่าใครเซ็น — ทั้งสองโหมดบันทึก signed_by_user_id + signed_on_behalf เสมอ
+//    (ไม่ขึ้นบนใบสำคัญฯ · งัดมาดูได้ตอนมีเรื่อง)
+export const DOCS_SIGN_POLICIES = ['strict', 'flexible']
+export const DEFAULT_DOCS_SIGN_POLICY = 'strict'
+
+export async function getDocsSignPolicy(orgId) {
+  const raw = await getOrgConfig(orgId, 'docs_sign_policy')
+  return DOCS_SIGN_POLICIES.includes(raw) ? raw : DEFAULT_DOCS_SIGN_POLICY
+}

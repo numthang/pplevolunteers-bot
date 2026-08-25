@@ -1885,6 +1885,7 @@
 - `IdCardCropper.jsx` — crop + rotate ภาพตาม croppedAreaPixels → JPEG blob (สัดส่วนบัตรเป๊ะ) (~1496 tok)
 - `ExternalPayeeModal.jsx` — ฟอร์มเพิ่มผู้รับเงินคนนอก: ถ่ายบัตร → OCR เติมให้ → ตรวจ → กดบันทึก (~1800 tok)
 - `ExternalPayeeSettings.jsx` — จัดการผู้รับเงินคนนอกที่สะสมไว้ (แก้/ลบ/ดูสำเนาบัตร) ใน /docs/settings (~1600 tok)
+- `DocsSignPolicySetting.jsx` — เลือกโหมดการเซ็น strict/flexible ของ org (มีผลทันที + ป้ายสถานะ) (~900 tok)
 
 ## web/components/finance/
 
@@ -2236,3 +2237,7 @@
 - `[id]/route.js` — GET/PATCH/DELETE ผู้รับคนนอก (ลบไม่ได้ถ้ามีใบสำคัญฯ ออกไปแล้ว) (~700 tok)
 - `[id]/id-card/route.js` — GET เสิร์ฟ/POST อัปสำเนาบัตรของคนนอก (org gate + ?token= ต้องตรงกับ entry) (~800 tok)
 - `ocr/route.js` — POST อ่านบัตรด้วย Claude vision → คืน JSON ให้เติมฟอร์ม (ไม่แตะ DB) (~900 tok)
+
+## web/app/api/docs/sign-policy/
+
+- `route.js` — GET/PUT โหมดการเซ็นของ org (org_config key docs_sign_policy) (~400 tok)

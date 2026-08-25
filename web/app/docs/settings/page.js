@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Pencil, Trash2, Plus, Check, X, ArrowLeft, ChevronUp, ChevronDown } from 'lucide-react'
 import ExternalPayeeSettings from '@/components/docs/ExternalPayeeSettings'
+import DocsSignPolicySetting from '@/components/docs/DocsSignPolicySetting'
 
 const EMPTY_FORM = { userId: '', displayName: '', position: '', sortOrder: 0 }
 
@@ -416,6 +417,7 @@ export default function DocsSettingsPage() {
       </div>
 
       <ExternalPayeeSettings />
+      <DocsSignPolicySetting />
     </div>
   )
 }
