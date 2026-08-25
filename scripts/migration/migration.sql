@@ -1325,35 +1325,30 @@ ALTER TABLE docs_signatures
 
 -- ตัวตนผู้รับเงินของแต่ละ entry — resolve จากสองแหล่งครั้งเดียว
 -- ชื่อคอลัมน์ตรงกับที่ generatePdf.buildData() อ่านอยู่แล้ว
+-- ⚠️ ต้อง NULLIF(...,'') ทุกช่องของคนนอก — ฟอร์มส่งช่องที่ไม่ได้กรอกมาเป็น '' ซึ่ง COALESCE
+--    ถือว่าเป็นค่าที่มีอยู่ → ชื่อ/ที่อยู่กลายเป็นช่องว่างแทนที่จะ fallback (เจอจริงตอนเทส 2026-08-25)
 CREATE VIEW docs_entry_recipient AS
-SELECT
-  e.id AS entry_id,
+SELECT e.id AS entry_id,
   CASE WHEN e.external_payee_id IS NOT NULL THEN 'external' ELSE 'member' END AS recipient_kind,
-  COALESCE(x.title, n.title)                                  AS title,
-  COALESCE(x.first_name, n.first_name)                        AS ngs_first_name,
-  COALESCE(x.last_name,  n.last_name)                         AS ngs_last_name,
-  -- คนนอกที่เป็นบุคคลไม่มี entity_name และไม่มี org_members → ต้องประกอบชื่อจากชื่อ-สกุลเอง
-  -- ไม่งั้น display_name เป็น NULL = ลิสต์ผู้รับขึ้นช่องว่าง
-  COALESCE(
-    x.entity_name,
-    NULLIF(TRIM(CONCAT(x.first_name, ' ', x.last_name)), ''),
-    m.display_name
-  )                                                           AS display_name,
-  COALESCE(x.first_name, u.firstname)                         AS firstname,
-  COALESCE(x.last_name,  u.lastname)                          AS lastname,
-  COALESCE(x.id_number,  n.identification_number)             AS identification_number,
-  COALESCE(x.house_no,    n.home_house_number)                AS home_house_number,
-  COALESCE(x.moo,         n.home_alley)                       AS home_alley,
-  COALESCE(x.road,        n.home_road)                        AS home_road,
-  COALESCE(x.subdistrict, n.home_district)                    AS home_district,
-  COALESCE(x.district,    n.home_amphure)                     AS home_amphure,
-  COALESCE(x.province,    n.home_province)                    AS home_province,
-  COALESCE(x.zip_code,    n.home_zip_code)                    AS home_zip_code,
-  COALESCE(x.phone,       n.mobile_number)                    AS mobile_number,
-  COALESCE(x.id_card_image, u.id_card_image)                  AS id_card_image,
-  n.road                                                      AS road,
-  m.member_id                                                 AS member_id,
-  u.discord_id                                                AS member_discord_id
+  COALESCE(NULLIF(x.title,''), n.title)            AS title,
+  COALESCE(NULLIF(x.first_name,''), n.first_name)  AS ngs_first_name,
+  COALESCE(NULLIF(x.last_name,''),  n.last_name)   AS ngs_last_name,
+  COALESCE(NULLIF(x.entity_name,''),
+           NULLIF(TRIM(CONCAT(x.first_name,' ',x.last_name)),''),
+           m.display_name)                         AS display_name,
+  COALESCE(NULLIF(x.first_name,''), u.firstname)   AS firstname,
+  COALESCE(NULLIF(x.last_name,''),  u.lastname)    AS lastname,
+  COALESCE(NULLIF(x.id_number,''),  n.identification_number) AS identification_number,
+  COALESCE(NULLIF(x.house_no,''),    n.home_house_number)    AS home_house_number,
+  COALESCE(NULLIF(x.moo,''),         n.home_alley)           AS home_alley,
+  COALESCE(NULLIF(x.road,''),        n.home_road)            AS home_road,
+  COALESCE(NULLIF(x.subdistrict,''), n.home_district)        AS home_district,
+  COALESCE(NULLIF(x.district,''),    n.home_amphure)         AS home_amphure,
+  COALESCE(NULLIF(x.province,''),    n.home_province)        AS home_province,
+  COALESCE(NULLIF(x.zip_code,''),    n.home_zip_code)        AS home_zip_code,
+  COALESCE(NULLIF(x.phone,''),       n.mobile_number)        AS mobile_number,
+  COALESCE(x.id_card_image, u.id_card_image)                 AS id_card_image,
+  n.road AS road, m.member_id AS member_id, u.discord_id AS member_discord_id
 FROM docs_activity_entries e
 JOIN docs_projects p ON p.id = e.project_id
 LEFT JOIN users u ON u.id = e.member_user_id

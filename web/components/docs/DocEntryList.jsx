@@ -227,7 +227,11 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
 
   const byMember = []
   for (const e of entries) {
-    const key = e.member_user_id ?? `__unassigned_${e.id}`
+    // ผู้รับเป็นได้ 2 ชนิด — จัดกลุ่มด้วยชนิดใดชนิดหนึ่ง ไม่ใช่ member_user_id อย่างเดียว
+    // (ไม่งั้น entry ของคนนอกตกไปกอง "ยังไม่ระบุผู้รับ" ทั้งที่ระบุแล้ว)
+    const key = e.member_user_id != null    ? `m${e.member_user_id}`
+              : e.external_payee_id != null ? `x${e.external_payee_id}`
+              : `__unassigned_${e.id}`
     const existing = byMember.find(g => g.key === key)
     if (existing) {
       existing.items.push(e)
@@ -240,7 +244,8 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
         name:         e.display_name || null,
         username:     e.username || null,
         realName,
-        isUnassigned: !e.member_user_id,
+        isUnassigned: !e.member_user_id && !e.external_payee_id,
+        isExternal:   !!e.external_payee_id,
         items:        [e],
       })
     }

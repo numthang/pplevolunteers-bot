@@ -69,7 +69,7 @@ export async function searchExternalPayees(orgId, q, limit = 30) {
   const { rows } = await pool.query(
     `SELECT id AS external_payee_id, NULL::int AS user_id, NULL AS discord_id, NULL AS username,
             payee_type, entity_name, first_name, last_name,
-            COALESCE(entity_name, TRIM(CONCAT(first_name, ' ', last_name))) AS display_name,
+            COALESCE(NULLIF(entity_name, ''), NULLIF(TRIM(CONCAT(first_name, ' ', last_name)), '')) AS display_name,
             province AS home_province, district AS home_amphure, subdistrict AS home_district
        FROM docs_external_payees
       WHERE ${where}
@@ -84,8 +84,17 @@ const FIELDS = ['payee_type', 'title', 'first_name', 'last_name', 'entity_name',
                 'house_no', 'moo', 'road', 'subdistrict', 'district', 'province',
                 'zip_code', 'phone']
 
+/** ช่องที่ผู้ใช้ไม่ได้กรอกมาเป็น '' จากฟอร์ม — ต้องลงเป็น NULL
+ *  ไม่งั้น COALESCE ที่ view/ค้นหาจะเลือก '' มาใช้แล้วชื่อผู้รับกลายเป็นช่องว่าง */
+const clean = (f, v) => {
+  if (f === 'id_number')  return digitsOnly(v) || null
+  if (f === 'payee_type') return v || 'person'
+  const t = typeof v === 'string' ? v.trim() : v
+  return t === '' || t === undefined ? null : t
+}
+
 export async function createExternalPayee(orgId, createdBy, data) {
-  const vals = FIELDS.map(f => (f === 'id_number' ? (digitsOnly(data[f]) || null) : (data[f] ?? null)))
+  const vals = FIELDS.map(f => clean(f, data[f]))
   const { rows } = await pool.query(
     `INSERT INTO docs_external_payees (org_id, created_by, ${FIELDS.join(', ')})
      VALUES ($1, $2, ${FIELDS.map((_, i) => `$${i + 3}`).join(', ')})
@@ -101,7 +110,7 @@ export async function updateExternalPayee(id, orgId, data) {
   const vals = [id, orgId]
   for (const f of FIELDS) {
     if (data[f] === undefined) continue
-    vals.push(f === 'id_number' ? (digitsOnly(data[f]) || null) : data[f])
+    vals.push(clean(f, data[f]))
     sets.push(`${f} = $${vals.length}`)
   }
   if (!sets.length) return getExternalPayeeById(id, orgId)
