@@ -87,6 +87,12 @@ export async function GET(req) {
         // ค่าตั้งต้นของฟอร์มแก้ไขข้อมูล (ผู้ดูแลกรอกแทน) — ต้องส่งที่อยู่จากทะเบียนไปด้วย
         // ไม่งั้นฟอร์มเปิดมาว่าง กดบันทึก = ล้างข้อมูลบนใบ (generatePdf ใช้ `override.x ?? ngs.x`)
         override_data:         role === 'recipient' ? (entry.override_data ?? null) : null,
+        // ⚠️ firstname/lastname/title ต้องส่งด้วย — ไม่ใช่แค่ ngs_* · คนที่ไม่ได้ผูกทะเบียน
+        // ชื่อจริงอยู่ที่ users (recipient-info/self-info เขียนลงที่นั่น) ถ้าไม่ส่งกลับมา
+        // ฟอร์มจะเปิดมาชื่อว่างทุกครั้งที่ reload ทั้งที่บันทึกไปแล้ว (bug-453)
+        title:                 role === 'recipient' ? (entry.title ?? null) : null,
+        firstname:             role === 'recipient' ? (entry.firstname ?? null) : null,
+        lastname:              role === 'recipient' ? (entry.lastname ?? null) : null,
         identification_number: role === 'recipient' ? (entry.identification_number ?? null) : null,
         home_house_number:     role === 'recipient' ? (entry.home_house_number ?? null) : null,
         home_alley:            role === 'recipient' ? (entry.home_alley ?? null) : null,

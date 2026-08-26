@@ -244,10 +244,20 @@ export default function SignPage({ params }) {
       // ⚠️ ต้องเติมที่อยู่จากทะเบียนด้วย ไม่ใช่แค่ชื่อ — generatePdf ใช้ `override.x ?? ngs.x`
       // (`??` ไม่ใช่ `||`) ค่าว่างจึงชนะทะเบียน · เปิดฟอร์มเปล่าแล้วกดบันทึก = ล้างข้อมูลบนใบ
       const ov = entry?.override_data ?? {}
+      // ชื่อ: เอา override ก่อนเสมอ ให้ตรงกับที่ PDF พิมพ์จริง (buildData ใช้ override ?? ngs)
+      // ห้ามใช้ users.firstname/lastname เป็นชั้นแรก — มีขยะจาก Discord sync ปนอยู่จริง
+      // (เจอ 2026-08-26: entry 278 users.lastname = "-" ทั้งที่ชื่อสกุลจริงอยู่ใน override)
+      // full_name ต่อคำนำหน้าติดหน้าชื่อมา → ตัดออกด้วย ov.title (แถวเก่าที่ยังไม่มี title
+      // จะได้ชื่อที่ยังติดคำนำหน้า — แก้ในฟอร์มแล้วเซฟทับได้ ไม่ใช่ค่าหาย)
+      const ovTitle = ov.title || ''
+      const ovFirst = ov.full_name && ovTitle && String(ov.full_name).startsWith(ovTitle)
+        ? String(ov.full_name).slice(ovTitle.length)
+        : (ov.full_name || '')
       setSelfForm(f => ({
         ...f,
-        firstName:    entry?.ngs_first_name ?? entry?.firstname ?? f.firstName,
-        lastName:     entry?.ngs_last_name  ?? entry?.lastname  ?? f.lastName,
+        title:        f.title || ovTitle || entry?.title || '',
+        firstName:    f.firstName || ovFirst      || entry?.ngs_first_name || entry?.firstname || '',
+        lastName:     f.lastName  || ov.last_name || entry?.ngs_last_name  || entry?.lastname  || '',
         idNumber:     f.idNumber     || ov.id_number     || entry?.identification_number || '',
         houseNo:      f.houseNo      || ov.house_no      || entry?.home_house_number     || '',
         moo:          f.moo          || ov.moo           || entry?.home_alley            || '',

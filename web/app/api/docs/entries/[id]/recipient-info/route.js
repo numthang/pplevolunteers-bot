@@ -75,7 +75,9 @@ export async function PUT(req, { params }) {
           SET override_data = COALESCE(override_data, '{}'::jsonb) || $2::jsonb
         WHERE id = $1`,
       // full_name/last_name ต้องลง override ด้วย — ผู้รับไม่ได้ผูกทะเบียน ชื่อบนใบจึงมาจากที่นี่
-      [entry.id, JSON.stringify({ ...addr, full_name: (title ? title + firstName : firstName), last_name: lastName })]
+      // เก็บ `title` แยกไว้ด้วย — full_name ต่อคำนำหน้าติดชื่อไปแล้วแยกกลับไม่ได้
+      // ไม่เก็บ = เปิดฟอร์มแก้รอบหน้าคำนำหน้าหาย แล้วเซฟทับ ชื่อบนใบเหลือแต่ชื่อตัว (bug-453)
+      [entry.id, JSON.stringify({ ...addr, title: title || null, full_name: (title ? title + firstName : firstName), last_name: lastName })]
     )
     await client.query(
       `INSERT INTO user_config (user_id, "key", value) VALUES ($1, 'docs_self_info', $2)

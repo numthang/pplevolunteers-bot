@@ -173,6 +173,31 @@ user ให้เหตุผลว่า "องค์กรพรรคให�
   (แต่วันนี้ยังไม่ได้ล็อกหลังเซ็นจริง แก้ทีหลังยังเปลี่ยนได้ และ PDF สร้างสดทุกครั้ง — ถ้าจะเอา snapshot จริงต้องล็อกด้วย)
 - `docs_self_info` เลิกใช้ได้ก็ต่อเมื่อชั้น 2 มีจริงแล้วเท่านั้น
 
+## ⌨️ ฟอร์มทั้งระบบไม่มี autocomplete (สำรวจ 2026-08-26 · user สั่ง "จดไว้ ไม่รีบ")
+
+user ถามตอนกรอกฟอร์มแก้ไขข้อมูลในหน้าเซ็น docs ว่าทำไมเบราว์เซอร์ไม่เติมให้
+
+**สภาพตอนนี้** (นับจาก `<input>` 211 ตัวใน `web/app` + `web/components`):
+
+| | จำนวน |
+|---|---|
+| มี `autoComplete` | 5 — และ 4 ตัวเป็น `"off"` (honeypot ใน `CaseNewForm`, `ProvinceCombobox`, API key ใน `OrgAi`) |
+| ใช้ autofill จริง | **1 ไฟล์** — `web/components/LoginPanel.jsx` (`email`, `one-time-code`) |
+| มี `name=` | 5 |
+
+ไม่ทำงานเพราะ 3 อย่างซ้อนกัน: ไม่มี token บอกเบราว์เซอร์ · ไม่มี `name=` ให้เดา · label เป็นภาษาไทย (heuristic ของ Chrome เทรนด้วยคำอังกฤษ)
+
+**⚠️ ห้ามเปิด autofill ทั้งดุ้นในหน้าเซ็น docs** — เวลาผู้ดูแลกรอกแทนสมาชิก เบราว์เซอร์จะเติม
+**ที่อยู่ของผู้ดูแลเอง**ลงใบของคนอื่น แย่กว่าไม่มี · และเลขบัตร ปชช. ไม่ควรให้เบราว์เซอร์จำ
+
+**แนวที่คุยไว้ (ยังไม่เคาะว่าจะทำเมื่อไหร่):**
+- หน้าเซ็น docs: เปิด token เฉพาะตอน `isRecipientSelf` — `given-name`, `family-name`,
+  `address-line1`, `address-level3/2/1` (ตำบล/อำเภอ/จังหวัด), `tel` · เลขบัตร `off` เสมอ ·
+  ผู้ดูแลกรอกแทน = `off` ทั้งฟอร์ม
+- ฟอร์มอื่นทั้งระบบ (~200 ช่อง) เป็นงานแยก ไล่เป็นโซนได้ ไม่ต้องรวมรอบเดียว
+- หมายเหตุ: docs มี "autocomplete ของตัวเอง" อยู่แล้วคือ prefill จาก `docs_self_info` /
+  `override_data` ซึ่งแม่นกว่า browser autofill สำหรับเคสนี้ (ดู §🧬 org_members)
+
 ## 🎨 CSS Design Token migration — รองรับสีแบรนด์ต่อ org แบบ runtime (เคาะ 2026-08-20)
 
 **user เคาะแล้วว่าจะทำ** หลังคุยเปรียบเทียบกับ prompt "design token + component class" ที่เจอมา — สรุปเหตุผลที่ทำให้คุ้ม (ไม่ใช่แค่ nice-to-have): โปรเจกต์กำลังจะเป็น multi-tenant org platform (rebrand → platfor.org, มี `config/brand.js` วางรากไว้แล้ว [[project_rebrand]]) ถ้าแต่ละ org อยากมีสีแบรนด์ตัวเอง **ต้องเปลี่ยนได้ตอนรันไทม์โดยไม่ deploy ใหม่** — Tailwind config ทำแบบนี้ไม่ได้ (เป็นค่า build-time) ต้องใช้ CSS variable จริง
