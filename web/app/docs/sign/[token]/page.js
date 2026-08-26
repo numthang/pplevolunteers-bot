@@ -184,12 +184,14 @@ export default function SignPage({ params }) {
     })
   }, [entry, signerRole, isRecipientSelf, ngsLinked, selfInfoDone])
 
-  // ข้อมูลยังไม่ครบ → กางส่วนข้อมูลไว้เลย (ไม่ใช่ซ่อนหลังปุ่มให้ต้องไปหา)
-  // เกณฑ์คือ "ข้อมูลบนใบครบไหม" (recipientComplete จาก server) ไม่ใช่ "เคยกรอกฟอร์มนี้ไหม" —
-  // คนที่ผูกทะเบียนแล้วข้อมูลครบตั้งแต่แรก ไม่ต้องกางฟอร์มใส่หน้า แต่ยังกด "แก้ไขข้อมูล" ได้
+  // กางส่วนข้อมูลอัตโนมัติเมื่อ **มีบัตรแล้ว + ข้อมูลยังไม่ครบ** เท่านั้น
+  // ยังไม่เคยแนบบัตร = ขั้นเดียวจบ "เลือกรูปสำเนาบัตร" ไม่ต้องเอาฟอร์ม 9 ช่องมาขวางหน้า
+  // (เคาะ 2026-08-26 — user: "อัพโหลดบัตรครั้งแรกไม่ต้องแสดง form จะได้ไม่ดูยุ่งยาก")
+  // ถ่ายบัตรเสร็จ readIdCard จะ setInfoOpen(true) ให้เองพร้อมข้อมูลที่ AI อ่านมา = เหลือแค่ตรวจ
+  // ปุ่ม "แก้ไขข้อมูล" ยังอยู่ตลอด สำหรับคนที่อยากพิมพ์เองโดยไม่แนบบัตรก่อน
   useEffect(() => {
-    if (showInfoSection && !recipientComplete) setInfoOpen(true)
-  }, [showInfoSection, recipientComplete])
+    if (showInfoSection && !recipientComplete && (hasIdCard || formCardBlob)) setInfoOpen(true)
+  }, [showInfoSection, recipientComplete, hasIdCard, formCardBlob])
 
   // Auto-apply: คนที่เคย self-fill ครบแล้ว (ชื่อ+เลขบัตร+ที่อยู่) เปิดบิลใหม่ → เติมให้เองข้ามฟอร์ม
   // การตรวจจริงอยู่ที่ preview ก่อนเซ็น + มีปุ่ม "แก้ไขข้อมูล" ถ้าข้อมูลเปลี่ยน
