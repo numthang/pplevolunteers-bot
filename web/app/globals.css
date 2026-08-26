@@ -63,6 +63,10 @@ body:has(main [data-wide]) .nav-shell {
   background: color-mix(in srgb, var(--kb) 26%, var(--card-bg));
   color: color-mix(in srgb, var(--kb) 62%, #ffffff);
 }
+/* ⛔ อยากได้พื้นสีอ่อนจากสีแบรนด์ ห้ามใช้ `bg-orange/10` — สีแบรนด์เป็น var(--brand-orange) ที่เก็บ
+ *    hex เต็มใบ Tailwind v3 ทำ /opacity กับค่าแบบนั้นไม่ได้ → คลาสไม่ถูก generate เลย เงียบๆ ไม่มี error
+ *    (เจอจริง 2026-08-26 เร่ง /10 → /15 → /25 หน้าจอไม่ขยับสักครั้ง) → ผสมด้วย color-mix แบบ .kb-tint แทน */
+
 /* หัวช่องบนกระดาน — เข้มกว่าชิปนิดนึงเพื่อให้อ่านออกว่าเป็นหัวข้อ ไม่ใช่ป้ายอีกใบ */
 .kb-tint-strong {
   background: color-mix(in srgb, var(--kb) 34%, var(--card-bg));

@@ -1072,7 +1072,8 @@
         "alt": "ID card copy",
         "uploadIntro": "Upload once, used for all receipts — the system will automatically add a \"For People's Party use only\" watermark",
         "uploading": "Uploading...",
-        "selectButton": "+ Select ID card image"
+        "selectButton": "+ Select ID card image",
+        "pendingSave": "New photo taken — check the details below, then save"
       },
       "preview": {
         "title": "Document Preview",
@@ -1167,14 +1168,6 @@
         "description": "Like passing paper around at the event · anyone logged in who opens the link can sign that receipt"
       },
       "auditNote": "Both modes always record who pressed sign and when — this never appears on the receipt"
-    },
-    "recipientInfo": {
-      "title": "Fill in payee details",
-      "missingTitle": "This receipt has no payee details yet",
-      "missingHint": "The payee has not linked their member record or entered their details — the printed receipt would have no name or address · photograph their ID card and it will be read automatically",
-      "fillButton": "Fill in payee details",
-      "alreadyHasCard": "The payee already has an ID card copy on file — only re-shoot to replace it",
-      "confirmOverwriteCard": "The payee already has an ID card copy, shared across all their receipts — replace it?"
     }
   },
   "join": {

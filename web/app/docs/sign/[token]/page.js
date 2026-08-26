@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { CheckCircle, AlertTriangle, Pen, UserCheck, IdCard, FileText, RefreshCw, CreditCard } from 'lucide-react'
 import IdCardCropper from '@/components/docs/IdCardCropper'
-import RecipientInfoModal from '@/components/docs/RecipientInfoModal'
 
 const ITEM_LABEL_KEYS = ['food', 'speaker', 'travel', 'venue', 'accommodation', 'supplies', 'equipment', 'photo']
 
@@ -35,12 +34,11 @@ export default function SignPage({ params }) {
   const [ngsLinked, setNgsLinked]     = useState(false)
 
   // self-fill state — ผู้รับที่ไม่มีใน roster กรอกข้อมูลเอง (recipient only)
-  const [selfMode, setSelfMode]         = useState(false)
+  const [infoOpen, setInfoOpen]         = useState(false)
   const [selfInfoDone, setSelfInfoDone] = useState(false)
   const [signPolicy, setSignPolicy]     = useState('strict')
   const [canManage, setCanManage]       = useState(false)
   const [recipientComplete, setRecipientComplete] = useState(true)
-  const [infoModal, setInfoModal]       = useState(false)
   const [selfSaving, setSelfSaving]     = useState(false)
   const [selfErr, setSelfErr]           = useState('')
   const [selfForm, setSelfForm]         = useState({
@@ -50,7 +48,6 @@ export default function SignPage({ params }) {
   // ถ่ายบัตรครั้งเดียวได้ 2 อย่าง: AI อ่านเติมฟอร์ม + เก็บ blob ไว้แนบเป็นสำเนาบัตรตอนกดบันทึก
   const [ocrBusy, setOcrBusy]   = useState(false)
   const [ocrErr, setOcrErr]     = useState('')
-  const [ocrDone, setOcrDone]   = useState(false)
   const [idWarn, setIdWarn]     = useState(false)   // อ่านเลขบัตรได้แต่ checksum ไม่ผ่าน
   const [formCardBlob, setFormCardBlob] = useState(null)
   const [cropTarget, setCropTarget]     = useState('card')  // 'card' = อัปอย่างเดียว | 'form' = อ่านเข้าฟอร์มด้วย
@@ -121,7 +118,6 @@ export default function SignPage({ params }) {
   // ขั้นยืนยันตัวตน (ผูกทะเบียนสมาชิก / กรอกเอง) เป็นเรื่องของ "เจ้าของใบ" เท่านั้น
   // คนเซ็นแทนกรอกให้ไม่ได้ — link-ngs/self-info เขียนลงบัญชีของคนที่ล็อกอิน ไม่ใช่ของผู้รับ
   // → ข้ามไปช่องวาดเลย ข้อมูลบนใบมาจากที่แอดมินกรอกไว้ใน entry อยู่แล้ว
-  const skipIdentitySteps = canSignOnBehalf
   // ผู้ดูแลเซ็นแทนสมาชิกที่ยังไม่มีข้อมูลบนใบ → ต้องกรอกให้ครบก่อน
   // (ใบที่เซ็นแล้วแต่ไม่มีชื่อ/ที่อยู่/เลขบัตร แย่กว่าใบที่ยังไม่เซ็น — เบิกไม่ผ่านเหมือนกัน
   //  แต่มีลายเซ็นคนจริงติดอยู่แล้ว)
@@ -134,6 +130,9 @@ export default function SignPage({ params }) {
   // เพราะโหมดยืดหยุ่นสมาชิกคนไหนเปิดลิงก์ก็เซ็นแทนได้ แต่ห้ามเห็นบัตร ปชช. คนอื่น (PDPA)
   const canManageIdCard = !!entry && !entry.external_payee_id && !isRecipientSelf &&
     canManage && signPolicy === 'flexible'
+  // มีช่องข้อมูลผู้รับให้กรอกไหม — คนนอกไม่มี (ข้อมูลอยู่ทะเบียนคนนอก แก้ที่ /docs/settings)
+  // ผูกทะเบียนสมาชิกแล้วก็ไม่มี (ข้อมูลมาจาก roster) เหลือแค่แนบรูปบัตรอย่างเดียว
+  const showInfoSection = !!entry && !entry.external_payee_id && !ngsLinked
   // ⭐ สวิตช์เดียวที่ตัดสินว่าหน้านี้ "ทำอะไรได้ไหม" — หน้าเดียว การ์ดชุดเดียวทั้ง strict/flexible
   // ต่างกันแค่ตัวนี้ (เคาะ 2026-08-26): strict + ไม่ใช่เจ้าตัว = ซ่อนทุกการ์ดที่ลงมือได้
   // เหลือแค่รายละเอียดใบ + ป้ายบอกว่าใบนี้ออกให้ใคร
@@ -166,6 +165,23 @@ export default function SignPage({ params }) {
     ctx.lineJoin = 'round'
   }, [entry, ngsLinked, selfInfoDone, signerRole])
 
+  // ผู้ดูแลเปิดฟอร์มกรอกแทน — เติมชื่อที่มีอยู่บนใบให้ก่อน จะได้ไม่ต้องพิมพ์ซ้ำ
+  // (เจ้าตัวมี effect auto-apply ข้างล่างดึงของที่เคยกรอกมาให้อยู่แล้ว ผู้ดูแลเรียก self-info ไม่ได้ = 403)
+  useEffect(() => {
+    if (!entry || signerRole !== 'recipient' || isRecipientSelf) return
+    if (entry.external_payee_id || ngsLinked || selfInfoDone) return
+    setSelfForm(f => (f.firstName || f.lastName) ? f : {
+      ...f,
+      firstName: entry.ngs_first_name ?? entry.firstname ?? '',
+      lastName:  entry.ngs_last_name  ?? entry.lastname  ?? '',
+    })
+  }, [entry, signerRole, isRecipientSelf, ngsLinked, selfInfoDone])
+
+  // ข้อมูลยังไม่ครบ → กางส่วนข้อมูลไว้เลย (ไม่ใช่ซ่อนหลังปุ่มให้ต้องไปหา)
+  useEffect(() => {
+    if (showInfoSection && !selfInfoDone) setInfoOpen(true)
+  }, [showInfoSection, selfInfoDone])
+
   // Auto-apply: คนที่เคย self-fill ครบแล้ว (ชื่อ+เลขบัตร+ที่อยู่) เปิดบิลใหม่ → เติมให้เองข้ามฟอร์ม
   // การตรวจจริงอยู่ที่ preview ก่อนเซ็น + มีปุ่ม "แก้ไขข้อมูล" ถ้าข้อมูลเปลี่ยน
   useEffect(() => {
@@ -195,10 +211,28 @@ export default function SignPage({ params }) {
     return () => { cancelled = true }
   }, [entry, signerRole, ngsLinked, selfInfoDone, status, session, token])
 
-  // เปิดโหมดกรอกเอง + โหลด prefill (เคยกรอกครั้งก่อน/ค่าที่มีอยู่)
-  async function openSelfMode() {
-    setSelfMode(true)
+  // กดเลือก/เปลี่ยนรูป — มีช่องข้อมูลอยู่ = ต้องผ่าน AI อ่านก่อนแล้วให้ตรวจ
+  // ไม่มีช่องข้อมูล (คนนอก / ผูกทะเบียนแล้ว) = อัปรูปตรงๆ ไม่ต้องอ่าน
+  function pickIdCard() {
+    setCropTarget(showInfoSection ? 'form' : 'card')
+    setIdCardErr('')
+    setOcrErr('')
+    fileRef.current?.click()
+  }
+
+  // เปิดส่วนข้อมูล + โหลด prefill (เคยกรอกครั้งก่อน/ค่าที่มีอยู่)
+  async function openInfo() {
+    setInfoOpen(true)
     setSelfErr('')
+    // self-info เป็นของเจ้าตัวเท่านั้น (403 ถ้าคนอื่นเรียก) → ผู้ดูแลเอาค่าตั้งต้นจาก entry แทน
+    if (!isRecipientSelf) {
+      setSelfForm(f => ({
+        ...f,
+        firstName: entry?.ngs_first_name ?? entry?.firstname ?? f.firstName,
+        lastName:  entry?.ngs_last_name  ?? entry?.lastname  ?? f.lastName,
+      }))
+      return
+    }
     try {
       const res = await fetch(`/api/docs/sign/self-info?token=${encodeURIComponent(token)}`)
       const d = await res.json()
@@ -213,11 +247,31 @@ export default function SignPage({ params }) {
     setSelfErr('')
     setSelfSaving(true)
     try {
-      const res = await fetch('/api/docs/sign/self-info', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, ...selfForm, idNumber: idDigits }),
-      })
+      // ฟอร์มเดียว 2 ปลายทาง — self-info เขียนลงบัญชี "คนที่ล็อกอิน" (ใช้ได้เฉพาะเจ้าตัว)
+      // recipient-info เขียนลงบัญชี "ผู้รับ" (ผู้ดูแลทำแทน) · ชื่อฟิลด์คนละแบบ ต้องแปลงก่อนส่ง
+      const res = isRecipientSelf
+        ? await fetch('/api/docs/sign/self-info', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token, ...selfForm, idNumber: idDigits }),
+          })
+        : await fetch(`/api/docs/entries/${entry.id}/recipient-info`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              title:       selfForm.title || '',
+              first_name:  selfForm.firstName,
+              last_name:   selfForm.lastName,
+              id_number:   idDigits,
+              house_no:    selfForm.houseNo,
+              moo:         selfForm.moo,
+              road:        selfForm.road,
+              subdistrict: selfForm.subdistrict,
+              district:    selfForm.district,
+              province:    selfForm.provinceAddr,
+              phone:       selfForm.phone,
+            }),
+          })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed')
       // ถ่ายบัตรมาแล้วก็แนบให้เลยในจังหวะเดียว — ผู้ใช้ถ่ายรูปเดียวได้ทั้งกรอกฟอร์มและสำเนาบัตร
@@ -227,7 +281,8 @@ export default function SignPage({ params }) {
         setFormCardBlob(null)
       }
       setSelfInfoDone(true)
-      setSelfMode(false)
+      setInfoOpen(false)
+      setRecipientComplete(true)
       setPreviewVer(v => v + 1) // ข้อมูลบนเอกสารเปลี่ยน → gen preview ใหม่
     } catch (err) {
       setSelfErr(err.message)
@@ -264,7 +319,9 @@ export default function SignPage({ params }) {
     try {
       const fd = new FormData()
       fd.append('file', blob, 'idcard.jpg')
-      fd.append('token', token)
+      // token = ประตูของ "เจ้าของใบ" · ผู้ดูแลไม่ใช่เจ้าของ ส่ง token ไปจะโดน 403
+      // ไม่ส่ง = ตกไปด่าน canManageDocs เดิมซึ่งเขาผ่านอยู่แล้ว
+      if (isRecipientSelf) fd.append('token', token)
       const res = await fetch('/api/docs/id-card/ocr', { method: 'POST', body: fd })
       const d = await res.json()
       if (!res.ok) throw new Error(d.error || t('externalPayee.readFailed'))
@@ -281,9 +338,11 @@ export default function SignPage({ params }) {
         district:     c.district    || f.district,
         provinceAddr: c.province    || f.provinceAddr,
       }))
+      if (c.title) setSelfForm(f => ({ ...f, title: c.title }))
       setIdWarn(!!c.id_number && !d.idValid)
       setFormCardBlob(blob)
-      setOcrDone(true)
+      setIdCardPreviewUrl(URL.createObjectURL(blob))
+      setInfoOpen(true)   // อ่านบัตรใหม่ = ข้อมูลอาจเปลี่ยน ต้องให้ตรวจแล้วกดบันทึกใหม่เสมอ
     } catch (err) {
       setOcrErr(err.message)
     } finally {
@@ -308,17 +367,8 @@ export default function SignPage({ params }) {
         : canManageIdCard
           ? `/api/docs/entries/${entry.id}/id-card`
           : '/api/docs/id-card'
-      let res = await fetch(url, { method: 'POST', body: fd })
-      let data = await res.json()
-      // บัตรใช้ร่วมทุกใบของคนนั้น — มีอยู่แล้วต้องยืนยันก่อนทับ ไม่ทับเงียบๆ
-      if (res.status === 409 && data.code === 'exists') {
-        if (!confirm(t('recipientInfo.confirmOverwriteCard'))) return
-        const fd2 = new FormData()
-        fd2.append('file', blob, 'idcard.jpg')
-        fd2.append('token', token)
-        res  = await fetch(`${url}?overwrite=1`, { method: 'POST', body: fd2 })
-        data = await res.json()
-      }
+      const res  = await fetch(url, { method: 'POST', body: fd })
+      const data = await res.json()
       if (!res.ok) throw new Error(data.error || t('sign.idCardUploadFailed'))
       setHasIdCard(true)
       setIdCardPreviewUrl(URL.createObjectURL(blob))
@@ -444,36 +494,6 @@ export default function SignPage({ params }) {
       {cropSrc && (
         <IdCardCropper src={cropSrc} onCancel={() => setCropSrc(null)} onCropped={onCropped} />
       )}
-      {infoModal && entry && (
-        <RecipientInfoModal
-          entryId={entry.id}
-          token={token}
-          hasIdCard={hasIdCard}
-          initial={{
-            title:      entry.title || '',
-            first_name: entry.ngs_first_name ?? entry.firstname ?? '',
-            last_name:  entry.ngs_last_name  ?? entry.lastname  ?? '',
-          }}
-          onClose={() => setInfoModal(false)}
-          onSaved={() => {
-            setInfoModal(false)
-            setPreviewVer(v => v + 1)   // ข้อมูลบนใบเปลี่ยน → gen preview ใหม่
-            // ดึง entry ใหม่แทนที่จะเดาสถานะเอง — recipient_complete คำนวณฝั่ง server
-            fetch(`/api/docs/sign/verify?token=${encodeURIComponent(token)}`)
-              .then(r => r.json())
-              .then(d => {
-                if (!d.success) return
-                setEntry(d.data)
-                setRecipientComplete(d.data.recipient_complete !== false)
-                setHasIdCard(!!d.data.has_id_card)
-                if (d.data.has_id_card && d.data.member_user_id) {
-                  setIdCardPreviewUrl(`/api/docs/id-card/${d.data.member_user_id}?token=${encodeURIComponent(token)}`)
-                }
-              })
-              .catch(() => {})
-          }}
-        />
-      )}
       <div className="max-w-2xl mx-auto space-y-4">
 
         {/* Banner: เซ็นแล้ว (ยังเซ็นใหม่ทับได้) */}
@@ -532,20 +552,6 @@ export default function SignPage({ params }) {
           )}
         </div>
 
-        {needsRecipientInfo && canInteract && (
-          <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-6">
-            <div className="flex items-center gap-2 mb-1">
-              <AlertTriangle size={18} className="text-amber-500 shrink-0" />
-              <h2 className="text-base font-semibold text-warm-900 dark:text-disc-text">{t('recipientInfo.missingTitle')}</h2>
-            </div>
-            <p className="text-sm text-warm-500 dark:text-disc-muted">{t('recipientInfo.missingHint')}</p>
-            <button type="button" onClick={() => setInfoModal(true)}
-              className="mt-3 px-4 py-2 text-base rounded-lg bg-orange text-white hover:bg-orange-light transition">
-              {t('recipientInfo.fillButton')}
-            </button>
-          </div>
-        )}
-
         {signerRole === 'recipient' && isSigningForSomeoneElse && !canSignOnBehalf && (
           <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-6 text-center">
             <AlertTriangle size={32} className="mx-auto text-amber-500 mb-3" />
@@ -561,144 +567,39 @@ export default function SignPage({ params }) {
           </div>
         )}
 
-        {/* Step: ข้อมูลผู้รับเงิน (recipient เท่านั้น ถ้ายังไม่ผูกทะเบียน/ยังไม่เคยกรอก)
-            ถ่ายบัตรครั้งเดียว → AI อ่านเติมช่องให้ทั้งหมด → ตรวจแล้วกดบันทึก
-            (เดิมต้องค้นชื่อในทะเบียนหรือพิมพ์เลขบัตร 13 หลักเอง — ถอดออก 2026-08-26) */}
-        {signerRole === 'recipient' && canInteract && !skipIdentitySteps && !ngsLinked && (!selfInfoDone || selfMode) && (
-          <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-6">
-            <div className="flex items-center gap-2 mb-1">
-              <UserCheck size={18} className="text-orange shrink-0" />
-              <h2 className="text-base font-semibold text-warm-900 dark:text-disc-text">{t('sign.confirmIdentityTitle')}</h2>
-            </div>
-            <p className="text-sm text-warm-500 dark:text-disc-muted mb-3">
-              {t('sign.selfFillIntro')}
-            </p>
-
-            <button
-              type="button"
-              onClick={() => { setCropTarget('form'); setOcrErr(''); fileRef.current?.click() }}
-              disabled={ocrBusy || selfSaving}
-              className="w-full flex items-center justify-center gap-2 border-2 border-dashed border-warm-300 dark:border-disc-border rounded-lg py-3 text-base text-warm-600 dark:text-disc-muted hover:border-orange hover:text-orange disabled:opacity-50 transition"
-            >
-              <CreditCard size={18} />
-              {ocrBusy ? t('sign.ocr.reading') : ocrDone ? t('sign.ocr.retake') : t('sign.ocr.button')}
-            </button>
-            <p className="text-sm text-warm-400 dark:text-disc-muted mt-2">{t('sign.ocr.hint')}</p>
-            {ocrErr  && <p className="text-sm text-red-500 dark:text-red-400 mt-2">{ocrErr}</p>}
-            {idWarn  && <p className="text-sm text-amber-600 dark:text-amber-400 mt-2">{t('sign.ocr.idWarn')}</p>}
-
-            <div className="grid grid-cols-2 gap-2 mt-4">
-              {['firstName', 'lastName'].map(key => (
-                <div key={key}>
-                  <label className="block text-sm text-warm-700 dark:text-disc-text mb-1">{t(`sign.selfForm.fields.${key}`)}</label>
-                  <input
-                    type="text"
-                    value={selfForm[key]}
-                    onChange={e => setSelfForm(f => ({ ...f, [key]: e.target.value }))}
-                    className="w-full border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-warm-900 dark:text-disc-text px-3 py-2.5 text-base rounded-lg focus:outline-none focus:ring-2 focus:ring-orange"
-                  />
-                </div>
-              ))}
-              <div className="col-span-2">
-                <label className="block text-sm text-warm-700 dark:text-disc-text mb-1">{t('sign.selfForm.fields.idNumber')}</label>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={17}
-                  value={selfForm.idNumber}
-                  onChange={e => setSelfForm(f => ({ ...f, idNumber: e.target.value }))}
-                  className="w-full border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-warm-900 dark:text-disc-text px-3 py-2.5 text-base rounded-lg tracking-widest focus:outline-none focus:ring-2 focus:ring-orange"
-                />
-              </div>
-              {['houseNo', 'moo', 'road', 'subdistrict', 'district', 'provinceAddr'].map(key => (
-                <div key={key}>
-                  <label className="block text-sm text-warm-700 dark:text-disc-text mb-1">{t(`sign.selfForm.fields.${key}`)}</label>
-                  <input
-                    type="text"
-                    value={selfForm[key]}
-                    onChange={e => setSelfForm(f => ({ ...f, [key]: e.target.value }))}
-                    className="w-full border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-warm-900 dark:text-disc-text px-3 py-2.5 text-base rounded-lg focus:outline-none focus:ring-2 focus:ring-orange"
-                  />
-                </div>
-              ))}
-              <div className="col-span-2">
-                <label className="block text-sm text-warm-700 dark:text-disc-text mb-1">{t('sign.selfForm.fields.phone')}</label>
-                <input
-                  type="tel"
-                  inputMode="numeric"
-                  maxLength={15}
-                  value={selfForm.phone}
-                  onChange={e => setSelfForm(f => ({ ...f, phone: e.target.value }))}
-                  className="w-full border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-warm-900 dark:text-disc-text px-3 py-2.5 text-base rounded-lg focus:outline-none focus:ring-2 focus:ring-orange"
-                />
-              </div>
-            </div>
-            {selfErr && <p className="text-sm text-red-500 dark:text-red-400 mt-2">{selfErr}</p>}
-            <div className="flex items-center gap-2 mt-3">
-              <button
-                type="button"
-                onClick={saveSelfInfo}
-                disabled={selfSaving || ocrBusy}
-                className="flex-1 bg-orange text-white py-2.5 rounded-lg text-base font-semibold hover:bg-orange-light disabled:opacity-50 transition"
-              >
-                {selfSaving ? t('sign.selfForm.saving') : t('sign.selfForm.saveButton')}
-              </button>
-              {selfInfoDone && (
-                <button
-                  type="button"
-                  onClick={() => { setSelfMode(false); setSelfErr('') }}
-                  disabled={selfSaving}
-                  className="px-4 py-2.5 text-base text-warm-500 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text transition"
-                >
-                  {t('sign.selfForm.cancel')}
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Self-fill สำเร็จ (auto หรือกรอกเอง) — แสดงสถานะ + ปุ่มแก้ไข */}
-        {signerRole === 'recipient' && canInteract && !skipIdentitySteps && !ngsLinked && selfInfoDone && !selfMode && (
-          <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl px-6 py-4 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2 min-w-0">
-              <UserCheck size={18} className="text-green-600 dark:text-green-400 shrink-0" />
-              <p className="text-sm text-warm-700 dark:text-disc-text truncate">
-                {t('sign.selfInfoSaved')}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={openSelfMode}
-              className="shrink-0 text-sm text-warm-500 dark:text-disc-muted hover:text-orange underline underline-offset-2 transition"
-            >
-              {t('sign.editInfo')}
-            </button>
-          </div>
-        )}
-
-        {/* Step: ID-card upload — เจ้าของเอกสาร, ใบคนนอก, หรือผู้ดูแลในโหมดยืดหยุ่น
-            (ผู้ดูแลไม่ต้องผ่านขั้นผูกทะเบียน/กรอกเอง — เขากรอกให้ในใบอยู่แล้ว) */}
+        {/* การ์ดเดียวจบ: รูปบัตร + ข้อมูลผู้รับ — หน้าตาเดียวกันทั้งตอนแนบครั้งแรกและตอนแก้ไข
+            เดิมแยก 3 การ์ดคนละหน้าตาทั้งที่เป็นงานเดียวกัน (ฟอร์มกรอก · ป้าย "บันทึกแล้ว" · การ์ดรูปบัตร)
+            ถ่ายรูปใหม่ = ข้อมูลบนบัตรอาจเปลี่ยน → เปิดส่วนข้อมูลให้ตรวจ+กดบันทึกใหม่เสมอ ไม่เซฟเงียบ */}
         {signerRole === 'recipient' && canInteract &&
-          (canManageIdCard || ((ngsLinked || selfInfoDone) &&
-            (entry?.external_payee_id ? true : isRecipientSelf))) && (
+          (entry?.external_payee_id || isRecipientSelf || canManageIdCard) && (
           <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-6">
             <div className="flex items-center gap-2 mb-1">
               <IdCard size={18} className="text-orange shrink-0" />
-              <h2 className="text-base font-semibold text-warm-900 dark:text-disc-text">{t('sign.idCard.title')} <span className="text-sm font-normal text-warm-400 dark:text-disc-muted">{t('sign.idCard.hint')}</span></h2>
+              <h2 className="text-base font-semibold text-warm-900 dark:text-disc-text">
+                {t('sign.idCard.title')}{' '}
+                <span className="text-sm font-normal text-warm-400 dark:text-disc-muted">{t('sign.idCard.hint')}</span>
+              </h2>
             </div>
-            {hasIdCard ? (
+
+            {(hasIdCard || formCardBlob) ? (
               <div className="mt-2">
                 <div className="flex items-center justify-between gap-2 mb-3">
-                  <p className="flex items-center gap-1.5 text-base text-green-600 dark:text-green-400">
-                    <CheckCircle size={16} /> {t('sign.idCard.attached')}
-                  </p>
+                  {formCardBlob ? (
+                    <p className="flex items-center gap-1.5 text-base text-amber-600 dark:text-amber-400">
+                      <AlertTriangle size={16} /> {t('sign.idCard.pendingSave')}
+                    </p>
+                  ) : (
+                    <p className="flex items-center gap-1.5 text-base text-green-600 dark:text-green-400">
+                      <CheckCircle size={16} /> {t('sign.idCard.attached')}
+                    </p>
+                  )}
                   <button
                     type="button"
-                    onClick={() => { setCropTarget('card'); fileRef.current?.click() }}
-                    disabled={uploading}
-                    className="text-sm text-warm-400 dark:text-disc-muted hover:text-orange transition"
+                    onClick={pickIdCard}
+                    disabled={uploading || ocrBusy}
+                    className="text-sm text-warm-400 dark:text-disc-muted hover:text-orange disabled:opacity-50 transition"
                   >
-                    {t('sign.idCard.changeImage')}
+                    {ocrBusy ? t('sign.ocr.reading') : t('sign.idCard.changeImage')}
                   </button>
                 </div>
                 {idCardPreviewUrl && (
@@ -712,18 +613,20 @@ export default function SignPage({ params }) {
             ) : (
               <>
                 <p className="text-sm text-warm-500 dark:text-disc-muted mb-3">
-                  {t('sign.idCard.uploadIntro')}
+                  {showInfoSection ? t('sign.ocr.hint') : t('sign.idCard.uploadIntro')}
                 </p>
                 <button
                   type="button"
-                  onClick={() => { setCropTarget('card'); fileRef.current?.click() }}
-                  disabled={uploading}
-                  className="w-full border-2 border-dashed border-warm-300 dark:border-disc-border rounded-lg py-3 text-base text-warm-600 dark:text-disc-muted hover:border-orange hover:text-orange disabled:opacity-50 transition"
+                  onClick={pickIdCard}
+                  disabled={uploading || ocrBusy}
+                  className="w-full flex items-center justify-center gap-2 border-2 border-dashed border-warm-300 dark:border-disc-border rounded-lg py-3 text-base text-warm-600 dark:text-disc-muted hover:border-orange hover:text-orange disabled:opacity-50 transition"
                 >
-                  {uploading ? t('sign.idCard.uploading') : t('sign.idCard.selectButton')}
+                  <CreditCard size={18} />
+                  {ocrBusy ? t('sign.ocr.reading') : uploading ? t('sign.idCard.uploading') : t('sign.idCard.selectButton')}
                 </button>
               </>
             )}
+
             <input
               ref={fileRef}
               type="file"
@@ -732,9 +635,95 @@ export default function SignPage({ params }) {
               onChange={e => onIdCardFile(e.target.files?.[0])}
             />
             {idCardErr && <p className="text-sm text-red-500 dark:text-red-400 mt-2">{idCardErr}</p>}
+            {ocrErr    && <p className="text-sm text-red-500 dark:text-red-400 mt-2">{ocrErr}</p>}
+            {idWarn    && <p className="text-sm text-amber-600 dark:text-amber-400 mt-2">{t('sign.ocr.idWarn')}</p>}
+
+            {showInfoSection && (infoOpen ? (
+              <div className="mt-5 pt-5 border-t border-warm-200 dark:border-disc-border">
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <h3 className="flex items-center gap-2 text-base font-semibold text-warm-900 dark:text-disc-text">
+                    <UserCheck size={18} className="text-orange shrink-0" />
+                    {t('sign.confirmIdentityTitle')}
+                  </h3>
+                  {selfInfoDone && !formCardBlob && (
+                    <button
+                      type="button"
+                      onClick={() => { setInfoOpen(false); setSelfErr('') }}
+                      className="text-sm text-warm-400 dark:text-disc-muted hover:text-orange transition"
+                    >
+                      {t('sign.selfForm.cancel')}
+                    </button>
+                  )}
+                </div>
+                <p className="text-sm text-warm-500 dark:text-disc-muted mb-3">{t('sign.selfFillIntro')}</p>
+
+                <div className="grid grid-cols-2 gap-2">
+                  {['firstName', 'lastName'].map(key => (
+                    <div key={key}>
+                      <label className="block text-sm text-warm-700 dark:text-disc-text mb-1">{t(`sign.selfForm.fields.${key}`)}</label>
+                      <input
+                        type="text"
+                        value={selfForm[key]}
+                        onChange={e => setSelfForm(f => ({ ...f, [key]: e.target.value }))}
+                        className="w-full border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-warm-900 dark:text-disc-text px-3 py-2.5 text-base rounded-lg focus:outline-none focus:ring-2 focus:ring-orange"
+                      />
+                    </div>
+                  ))}
+                  <div className="col-span-2">
+                    <label className="block text-sm text-warm-700 dark:text-disc-text mb-1">{t('sign.selfForm.fields.idNumber')}</label>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={17}
+                      value={selfForm.idNumber}
+                      onChange={e => setSelfForm(f => ({ ...f, idNumber: e.target.value }))}
+                      className="w-full border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-warm-900 dark:text-disc-text px-3 py-2.5 text-base rounded-lg tracking-widest focus:outline-none focus:ring-2 focus:ring-orange"
+                    />
+                  </div>
+                  {['houseNo', 'moo', 'road', 'subdistrict', 'district', 'provinceAddr'].map(key => (
+                    <div key={key}>
+                      <label className="block text-sm text-warm-700 dark:text-disc-text mb-1">{t(`sign.selfForm.fields.${key}`)}</label>
+                      <input
+                        type="text"
+                        value={selfForm[key]}
+                        onChange={e => setSelfForm(f => ({ ...f, [key]: e.target.value }))}
+                        className="w-full border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-warm-900 dark:text-disc-text px-3 py-2.5 text-base rounded-lg focus:outline-none focus:ring-2 focus:ring-orange"
+                      />
+                    </div>
+                  ))}
+                  <div className="col-span-2">
+                    <label className="block text-sm text-warm-700 dark:text-disc-text mb-1">{t('sign.selfForm.fields.phone')}</label>
+                    <input
+                      type="tel"
+                      inputMode="numeric"
+                      maxLength={15}
+                      value={selfForm.phone}
+                      onChange={e => setSelfForm(f => ({ ...f, phone: e.target.value }))}
+                      className="w-full border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-warm-900 dark:text-disc-text px-3 py-2.5 text-base rounded-lg focus:outline-none focus:ring-2 focus:ring-orange"
+                    />
+                  </div>
+                </div>
+                {selfErr && <p className="text-sm text-red-500 dark:text-red-400 mt-2">{selfErr}</p>}
+                <button
+                  type="button"
+                  onClick={saveSelfInfo}
+                  disabled={selfSaving || ocrBusy}
+                  className="w-full mt-3 bg-orange text-white py-2.5 rounded-lg text-base font-semibold hover:bg-orange-light disabled:opacity-50 transition"
+                >
+                  {selfSaving ? t('sign.selfForm.saving') : t('sign.selfForm.saveButton')}
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={openInfo}
+                className="mt-4 text-sm text-warm-500 dark:text-disc-muted hover:text-orange underline underline-offset-2 transition"
+              >
+                {t('sign.editInfo')}
+              </button>
+            ))}
           </div>
         )}
-
         {/* Document preview (after can sign) */}
         {canSign && (
           <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-6">

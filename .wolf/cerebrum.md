@@ -1576,3 +1576,16 @@ guild `1115613658408566844` มี 117 ยศ แมป permission 0 ยศ → 
   `web/db/kanban/links.js` `SOURCE_SQL.post` (ตัวกวาด) · `scripts/kanban/backfillEntityCards.mjs`
   (ทั้งตัวนับที่โชว์ก่อนเริ่ม **และ** ของจริง — เงื่อนไขต่างกันเมื่อไหร่ สคริปต์จะบอกยอดผิด)
 - `mirrorEntityCard()` **idempotent** (คืนใบเดิมถ้า entity มีการ์ดแล้ว) → เรียกซ้ำจาก promoteToOrg ปลอดภัย
+
+### Tailwind /opacity ใช้กับสีแบรนด์ไม่ได้ (2026-08-26)
+
+สีแบรนด์ใน `tailwind.config.js` ชี้ไป `var(--brand-orange)` ซึ่งเก็บ **hex เต็มใบ** (`#ff6a13`)
+Tailwind v3 แปลง `/opacity` กับค่าแบบนี้ไม่ได้ → `bg-orange/10` **ไม่ถูก generate เลย** เงียบๆ ไม่มี error
+ตรวจได้ด้วย `grep -o "\.bg-orange[^{ ,]*" .next/static/css/app/layout.css | sort -u`
+
+**ใช้ `.tint-bar` (globals.css) แทน** — `style={{ '--tint': 'var(--brand-orange)' }}`
+ผสมด้วย `color-mix()` กับ `--card-bg` → พลิกตามธีมเอง (วิธีเดียวกับ `.kb-tint` ของ kanban)
+`border-t-orange` / `text-orange` (ไม่มี `/`) ใช้ได้ปกติ ปัญหาอยู่ที่ opacity modifier อย่างเดียว
+
+**เสียเวลาไป 3 รอบเพราะไม่ได้เช็ค CSS ที่ generate ออกมา** — เร่ง /10 → /15 → /25 แล้ว user บอก
+"ยังไม่เห็น" ทุกรอบ ถ้าสีที่ปรับแล้วไม่ขยับเลยแม้แต่นิด ให้สงสัยว่าคลาสไม่มีอยู่จริง ก่อนจะเร่งค่าต่อ

@@ -1886,7 +1886,6 @@
 - `ExternalPayeeModal.jsx` — ฟอร์มเพิ่มผู้รับเงินคนนอก: ถ่ายบัตร → OCR เติมให้ → ตรวจ → กดบันทึก (~1800 tok)
 - `ExternalPayeeSettings.jsx` — จัดการผู้รับเงินคนนอกที่สะสมไว้ (แก้/ลบ/ดูสำเนาบัตร) ใน /docs/settings (~1600 tok)
 - `DocsSignPolicySetting.jsx` — เลือกโหมดการเซ็น strict/flexible ของ org (มีผลทันที + ป้ายสถานะ) (~900 tok)
-- `RecipientInfoModal.jsx` — ผู้ดูแลกรอกข้อมูลผู้รับที่เป็นสมาชิกแทนเจ้าตัว (ถ่ายบัตร→OCR→override_data) (~1900 tok)
 
 ## web/components/finance/
 

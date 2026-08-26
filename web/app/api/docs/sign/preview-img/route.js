@@ -12,7 +12,7 @@ const execFileAsync = promisify(execFile)
 
 export async function GET(req) {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.discordId) return Response.json({ error: 'Unauthorized' }, { status: 401, headers: { 'Cache-Control': 'no-store' } })
+  if (!session?.user?.userId) return Response.json({ error: 'Unauthorized' }, { status: 401, headers: { 'Cache-Control': 'no-store' } })
 
   const { searchParams } = new URL(req.url)
   const token = searchParams.get('token')

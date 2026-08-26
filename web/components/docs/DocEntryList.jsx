@@ -269,25 +269,28 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
 
   return (
     <div className="space-y-4">
-      {byMember.map(({ key, discordId, name, username, realName, isUnassigned, items }) => {
+      {byMember.map(({ key, discordId, name, username, realName, isUnassigned, items }, cardIndex) => {
         const memberTotal  = items.reduce((s, e) => s + Number(e.amount || 0), 0)
         return (
-          <div key={key} className={`bg-card-bg border ${isUnassigned ? 'border-orange' : 'border-warm-200 dark:border-disc-border'} rounded-lg ${items.some(e => editingId === e.id) ? 'overflow-visible' : 'overflow-hidden'}`}>
+          <div key={key} className={`bg-card-bg border border-t-[3px] ${isUnassigned ? 'border-orange' : 'border-warm-200 dark:border-disc-border border-t-orange dark:border-t-orange'} rounded-lg ${items.some(e => editingId === e.id) ? 'overflow-visible' : 'overflow-hidden'}`}>
             <div className="px-4 py-3 border-b border-warm-200 dark:border-disc-border flex items-center justify-between gap-3 bg-warm-50 dark:bg-disc-hover rounded-t-lg">
               {isUnassigned ? (
                 <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <span className="font-semibold text-orange">{t('entryList.unassigned')}</span>
+                  <span className="text-base font-semibold text-orange tabular-nums shrink-0">{cardIndex + 1}.</span>
+                  <span className="text-base font-semibold text-orange">{t('entryList.unassigned')}</span>
                 </div>
               ) : (
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
+                    {/* เลขลำดับใบสำคัญ — นับตามการ์ด (1 คน = 1 ใบ) ให้อ้างอิงกันได้ว่า "ใบที่ 3" */}
+                    <span className="text-base font-semibold text-orange tabular-nums shrink-0">{cardIndex + 1}.</span>
                     {discordId ? (
                       <a href={`https://discord.com/users/${discordId}`} target="_blank" rel="noopener noreferrer"
-                        className="font-semibold text-warm-900 dark:text-disc-text hover:text-orange transition">
+                        className="text-base font-semibold text-warm-900 dark:text-disc-text hover:text-orange transition">
                         {realName || (username ? `@${username}` : name)}
                       </a>
                     ) : (
-                      <span className="font-semibold text-warm-900 dark:text-disc-text">
+                      <span className="text-base font-semibold text-warm-900 dark:text-disc-text">
                         {realName || (username ? `@${username}` : name)}
                       </span>
                     )}
