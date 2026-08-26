@@ -444,22 +444,12 @@ export default function ImageEditorModal({ media, src, onClose, onSaved, onNavig
       <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-2xl w-full max-w-3xl max-h-[92vh] flex flex-col overflow-hidden">
         <div className="flex items-center justify-between px-5 py-3 border-b border-warm-200 dark:border-disc-border shrink-0">
           <h2 className="text-base font-semibold text-warm-900 dark:text-disc-text">{t('title')}</h2>
-          <div className="flex items-center gap-1">
-            {onDelete && (
-              <button
-                type="button" onClick={handleDelete} disabled={deleting} title={t('deleteTitle')}
-                className="p-1 rounded text-warm-400 dark:text-disc-muted hover:bg-red-100 hover:text-red-500 dark:hover:bg-red-900/30 dark:hover:text-red-400 disabled:opacity-40 transition"
-              >
-                {deleting ? <Loader2 size={18} className="animate-spin" /> : <Trash2 size={18} />}
-              </button>
-            )}
-            <button
-              type="button" onClick={requestClose} title={t('closeTitle')}
-              className="p-1 rounded text-warm-400 dark:text-disc-muted hover:bg-warm-100 dark:hover:bg-disc-hover transition"
-            >
-              <X size={18} />
-            </button>
-          </div>
+          <button
+            type="button" onClick={requestClose} title={t('closeTitle')}
+            className="p-1 rounded text-warm-400 dark:text-disc-muted hover:bg-warm-100 dark:hover:bg-disc-hover transition"
+          >
+            <X size={18} />
+          </button>
         </div>
 
         <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-3">
@@ -558,6 +548,15 @@ export default function ImageEditorModal({ media, src, onClose, onSaved, onNavig
                   />
                 )}
               </div>
+              {/* ลอยอยู่มุมขวาบนของรูปเลย — เดิมซ่อนอยู่บนแถบหัวกล่อง กดยาก/ไม่มีใครเห็น */}
+              {onDelete && (
+                <button
+                  type="button" onClick={handleDelete} disabled={deleting} title={t('deleteTitle')}
+                  className="absolute top-2 right-2 w-8 h-8 flex items-center justify-center rounded-full bg-black/60 text-white hover:bg-red-500 disabled:opacity-40 transition"
+                >
+                  {deleting ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
+                </button>
+              )}
             </div>
             {onNavigate && (
               <button
