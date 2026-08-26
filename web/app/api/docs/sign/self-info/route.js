@@ -43,19 +43,24 @@ export async function GET(req) {
   const saved = rows[0]?.value || {}
   const ov = entry.override_data || {}
 
+  // ลำดับ: ของเดิมบนใบ > ที่เคยกรอกครั้งก่อน > **ทะเบียนสมาชิก** > ว่าง
+  // ชั้นทะเบียนสำคัญ — คนที่ผูกทะเบียนแล้วก็เปิดฟอร์มนี้ได้ (ตั้งแต่ 2026-08-26)
+  // ถ้าไม่เติมให้ ฟอร์มจะเปิดมาว่างแล้วกดบันทึกทับข้อมูลดีๆ ที่มาจากทะเบียนหาย
+  // (generatePdf ใช้ `override.x ?? ngs.x` — ค่าว่างชนะทะเบียน)
+  const pick = (...v) => v.find(x => x != null && x !== '') ?? ''
   return Response.json({
     success: true,
     data: {
-      firstName:    entry.firstname ?? saved.firstName ?? '',
-      lastName:     entry.lastname ?? saved.lastName ?? '',
-      idNumber:     ov.id_number ?? saved.idNumber ?? '',
-      houseNo:      ov.house_no ?? saved.houseNo ?? '',
-      moo:          ov.moo ?? saved.moo ?? '',
-      road:         ov.road ?? saved.road ?? '',
-      subdistrict:  ov.subdistrict ?? saved.subdistrict ?? '',
-      district:     ov.district ?? saved.district ?? '',
-      provinceAddr: ov.province_addr ?? saved.provinceAddr ?? '',
-      phone:        ov.phone ?? saved.phone ?? '',
+      firstName:    pick(entry.firstname, saved.firstName, entry.ngs_first_name),
+      lastName:     pick(entry.lastname, saved.lastName, entry.ngs_last_name),
+      idNumber:     pick(ov.id_number, saved.idNumber, entry.identification_number),
+      houseNo:      pick(ov.house_no, saved.houseNo, entry.home_house_number),
+      moo:          pick(ov.moo, saved.moo, entry.home_alley),
+      road:         pick(ov.road, saved.road, entry.home_road),
+      subdistrict:  pick(ov.subdistrict, saved.subdistrict, entry.home_district),
+      district:     pick(ov.district, saved.district, entry.home_amphure),
+      provinceAddr: pick(ov.province_addr, saved.provinceAddr, entry.home_province),
+      phone:        pick(ov.phone, saved.phone, entry.mobile_number),
     },
   })
 }

@@ -1033,6 +1033,7 @@
       "signingAsPayer": "Signing as payer",
       "recipientLabel": "Recipient:",
       "confirmIdentityTitle": "Verify Identity",
+      "confirmOverwriteCard": "The payee already has an ID card copy, shared across all their receipts — replace it?",
       "selfFillIntro": "Enter details as on your ID card so the document information is correct",
       "selfForm": {
         "fields": {

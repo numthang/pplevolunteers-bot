@@ -59,6 +59,8 @@ export default function SignPage({ params }) {
   const [idCardErr, setIdCardErr]               = useState('')
   const [cropSrc, setCropSrc]                   = useState(null)  // dataURL ที่กำลังครอบ
   const fileRef = useRef(null)
+  // ผ่านด่าน "ทับบัตรเดิมไหม" มาแล้วหรือยัง — ตั้งตอนกดเปลี่ยนรูป ใช้ตอนยิง ?overwrite=1
+  const overwriteOk = useRef(false)
 
   // document preview
   const [previewVer, setPreviewVer]         = useState(0)
@@ -131,8 +133,13 @@ export default function SignPage({ params }) {
   const canManageIdCard = !!entry && !entry.external_payee_id && !isRecipientSelf &&
     canManage && signPolicy === 'flexible'
   // มีช่องข้อมูลผู้รับให้กรอกไหม — คนนอกไม่มี (ข้อมูลอยู่ทะเบียนคนนอก แก้ที่ /docs/settings)
-  // ผูกทะเบียนสมาชิกแล้วก็ไม่มี (ข้อมูลมาจาก roster) เหลือแค่แนบรูปบัตรอย่างเดียว
-  const showInfoSection = !!entry && !entry.external_payee_id && !ngsLinked
+  //
+  // ⚠️ เดิมตัด "คนที่ผูกทะเบียนสมาชิกแล้ว" ออกด้วย (`&& !ngsLinked`) เพราะคิดว่าข้อมูลมาจาก roster
+  // จึงไม่ต้องให้กรอก — ผิด (เคาะ 2026-08-26): กติกาคือ **เปลี่ยนรูปบัตร = ข้อมูลต้องเปลี่ยนตาม**
+  // รูปบัตรคือหลักฐาน ข้อมูลบนใบต้องตรงกับหลักฐานเสมอ ไม่เกี่ยวว่าตั้งต้นมาจากไหน
+  // ของเดิมทำให้อัปบัตรคนละใบทับได้เงียบๆ แล้วใบยังพิมพ์ชื่อ/ที่อยู่คนใน roster = คนละคนกับรูป
+  // `ngsLinked` เหลือหน้าที่เดียว = ด่านยืนยันตัวตนใน canSign (ผูกทะเบียนแล้ว = ยืนยันแล้ว)
+  const showInfoSection = !!entry && !entry.external_payee_id
   // ⭐ สวิตช์เดียวที่ตัดสินว่าหน้านี้ "ทำอะไรได้ไหม" — หน้าเดียว การ์ดชุดเดียวทั้ง strict/flexible
   // ต่างกันแค่ตัวนี้ (เคาะ 2026-08-26): strict + ไม่ใช่เจ้าตัว = ซ่อนทุกการ์ดที่ลงมือได้
   // เหลือแค่รายละเอียดใบ + ป้ายบอกว่าใบนี้ออกให้ใคร
@@ -178,9 +185,11 @@ export default function SignPage({ params }) {
   }, [entry, signerRole, isRecipientSelf, ngsLinked, selfInfoDone])
 
   // ข้อมูลยังไม่ครบ → กางส่วนข้อมูลไว้เลย (ไม่ใช่ซ่อนหลังปุ่มให้ต้องไปหา)
+  // เกณฑ์คือ "ข้อมูลบนใบครบไหม" (recipientComplete จาก server) ไม่ใช่ "เคยกรอกฟอร์มนี้ไหม" —
+  // คนที่ผูกทะเบียนแล้วข้อมูลครบตั้งแต่แรก ไม่ต้องกางฟอร์มใส่หน้า แต่ยังกด "แก้ไขข้อมูล" ได้
   useEffect(() => {
-    if (showInfoSection && !selfInfoDone) setInfoOpen(true)
-  }, [showInfoSection, selfInfoDone])
+    if (showInfoSection && !recipientComplete) setInfoOpen(true)
+  }, [showInfoSection, recipientComplete])
 
   // Auto-apply: คนที่เคย self-fill ครบแล้ว (ชื่อ+เลขบัตร+ที่อยู่) เปิดบิลใหม่ → เติมให้เองข้ามฟอร์ม
   // การตรวจจริงอยู่ที่ preview ก่อนเซ็น + มีปุ่ม "แก้ไขข้อมูล" ถ้าข้อมูลเปลี่ยน
@@ -214,6 +223,12 @@ export default function SignPage({ params }) {
   // กดเลือก/เปลี่ยนรูป — มีช่องข้อมูลอยู่ = ต้องผ่าน AI อ่านก่อนแล้วให้ตรวจ
   // ไม่มีช่องข้อมูล (คนนอก / ผูกทะเบียนแล้ว) = อัปรูปตรงๆ ไม่ต้องอ่าน
   function pickIdCard() {
+    // บัตรใช้ร่วมทุกใบของผู้รับ → ผู้ดูแลทับของคนอื่นต้องยืนยันก่อน ไม่ทับเงียบๆ
+    // ⚠️ ถามที่ "ต้นทาง" ตรงนี้เท่านั้น ห้ามย้ายไปถามตอน uploadIdCard เหมือนของเดิม —
+    // ตอนนั้นข้อมูลจากบัตรใบใหม่ถูกบันทึกไปแล้ว กด Cancel = ข้อมูลกับรูปคนละใบ ขัดกันเอง
+    // ถามตรงนี้ กด Cancel = ยังไม่มีอะไรเกิดขึ้นทั้งข้อมูลและรูป
+    if (canManageIdCard && hasIdCard && !confirm(t('sign.confirmOverwriteCard'))) return
+    overwriteOk.current = canManageIdCard && hasIdCard
     setCropTarget(showInfoSection ? 'form' : 'card')
     setIdCardErr('')
     setOcrErr('')
@@ -226,10 +241,21 @@ export default function SignPage({ params }) {
     setSelfErr('')
     // self-info เป็นของเจ้าตัวเท่านั้น (403 ถ้าคนอื่นเรียก) → ผู้ดูแลเอาค่าตั้งต้นจาก entry แทน
     if (!isRecipientSelf) {
+      // ⚠️ ต้องเติมที่อยู่จากทะเบียนด้วย ไม่ใช่แค่ชื่อ — generatePdf ใช้ `override.x ?? ngs.x`
+      // (`??` ไม่ใช่ `||`) ค่าว่างจึงชนะทะเบียน · เปิดฟอร์มเปล่าแล้วกดบันทึก = ล้างข้อมูลบนใบ
+      const ov = entry?.override_data ?? {}
       setSelfForm(f => ({
         ...f,
-        firstName: entry?.ngs_first_name ?? entry?.firstname ?? f.firstName,
-        lastName:  entry?.ngs_last_name  ?? entry?.lastname  ?? f.lastName,
+        firstName:    entry?.ngs_first_name ?? entry?.firstname ?? f.firstName,
+        lastName:     entry?.ngs_last_name  ?? entry?.lastname  ?? f.lastName,
+        idNumber:     f.idNumber     || ov.id_number     || entry?.identification_number || '',
+        houseNo:      f.houseNo      || ov.house_no      || entry?.home_house_number     || '',
+        moo:          f.moo          || ov.moo           || entry?.home_alley            || '',
+        road:         f.road         || ov.road          || entry?.home_road             || '',
+        subdistrict:  f.subdistrict  || ov.subdistrict   || entry?.home_district         || '',
+        district:     f.district     || ov.district      || entry?.home_amphure          || '',
+        provinceAddr: f.provinceAddr || ov.province_addr || entry?.home_province         || '',
+        phone:        f.phone        || ov.phone         || entry?.mobile_number         || '',
       }))
       return
     }
@@ -365,7 +391,7 @@ export default function SignPage({ params }) {
       const url = entry?.external_payee_id
         ? `/api/docs/external-payees/${entry.external_payee_id}/id-card?token=${encodeURIComponent(token)}`
         : canManageIdCard
-          ? `/api/docs/entries/${entry.id}/id-card`
+          ? `/api/docs/entries/${entry.id}/id-card${overwriteOk.current ? '?overwrite=1' : ''}`
           : '/api/docs/id-card'
       const res  = await fetch(url, { method: 'POST', body: fd })
       const data = await res.json()

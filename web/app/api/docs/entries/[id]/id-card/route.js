@@ -5,7 +5,7 @@ import { canManageDocs, canAccessEvent } from '@/lib/docsAccess.js'
 import { getEntryByIdSimple } from '@/db/docs/entries.js'
 import { getDocsSignPolicy } from '@/db/orgConfig.js'
 import { processIdCardImage } from '@/lib/idCard.js'
-import { saveIdCard } from '@/db/docs/idCard.js'
+import { saveIdCard, getIdCard } from '@/db/docs/idCard.js'
 
 const MAX_SIZE     = 8 * 1024 * 1024
 const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/webp'])
@@ -30,14 +30,23 @@ async function gate(session, id) {
  *
  * ⚠️ ต่างจาก /api/docs/id-card ที่เขียนลงบัญชีคนที่ล็อกอินเสมอ (แอดมินกดที่นั่น = ทับบัตรตัวเอง)
  *
- * บัตรใช้ร่วมทุกใบของคนนั้น แต่ **ไม่ถามยืนยันก่อนทับ** (เอาออก 2026-08-26) — ที่ถามเดิมไร้ผล
- * เพราะหน้าเว็บบันทึกข้อมูลที่ AI อ่านจากบัตรใบใหม่ไปก่อนแล้ว กด Cancel = ได้ใบที่เลขบัตร/ที่อยู่
- * มาจากบัตรใบใหม่ แต่รูปแนบเป็นใบเก่า ขัดกันเอง · แถมเจ้าตัวอัปทับรูปตัวเองก็ไม่เคยถูกถามอยู่แล้ว
+ * บัตรใช้ร่วมกันทุกใบของคนนั้น → ถ้ามีอยู่แล้วต้องส่ง ?overwrite=1 มายืนยัน ไม่ทับเงียบๆ
+ * (ทับผิด = ใบเก่าที่ออกไปแล้วเปลี่ยนตามหมด เพราะ PDF สร้างสดทุกครั้ง)
+ *
+ * ⚠️ เคยถอดด่านนี้ออกไปรอบหนึ่ง 2026-08-26 แล้วคืนกลับวันเดียวกัน — เหตุผลที่ถอด
+ * ("กด Cancel แล้วข้อมูลกับรูปขัดกันเอง") เป็นปัญหาจริง แต่เกิดจากหน้าเว็บ**ถามตอนปลายทาง**
+ * ตอนอัปโหลดซึ่งข้อมูลเซฟไปแล้ว · แก้ที่หน้าเว็บให้ถามตอนกด "เปลี่ยนรูป" แทน
+ * (กด Cancel = ยังไม่มีอะไรเกิดขึ้นเลย) ไม่ใช่ถอดด่านฝั่ง server ทิ้ง
  */
 export async function POST(req, { params }) {
   const { id } = await params
   const g = await gate(await getServerSession(authOptions), id)
   if (g.error) return Response.json({ error: g.error }, { status: g.status })
+
+  const overwrite = new URL(req.url).searchParams.get('overwrite') === '1'
+  if (!overwrite && await getIdCard(g.entry.member_user_id)) {
+    return Response.json({ error: 'ผู้รับมีสำเนาบัตรอยู่แล้ว', code: 'exists' }, { status: 409 })
+  }
 
   const form = await req.formData()
   const file = form.get('file')

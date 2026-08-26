@@ -84,6 +84,17 @@ export async function GET(req) {
         sign_policy:       signPolicy,
         can_manage:        canManage,
         recipient_complete: role === 'recipient' ? recipientComplete : null,
+        // ค่าตั้งต้นของฟอร์มแก้ไขข้อมูล (ผู้ดูแลกรอกแทน) — ต้องส่งที่อยู่จากทะเบียนไปด้วย
+        // ไม่งั้นฟอร์มเปิดมาว่าง กดบันทึก = ล้างข้อมูลบนใบ (generatePdf ใช้ `override.x ?? ngs.x`)
+        override_data:         role === 'recipient' ? (entry.override_data ?? null) : null,
+        identification_number: role === 'recipient' ? (entry.identification_number ?? null) : null,
+        home_house_number:     role === 'recipient' ? (entry.home_house_number ?? null) : null,
+        home_alley:            role === 'recipient' ? (entry.home_alley ?? null) : null,
+        home_road:             role === 'recipient' ? (entry.home_road ?? null) : null,
+        home_district:         role === 'recipient' ? (entry.home_district ?? null) : null,
+        home_amphure:          role === 'recipient' ? (entry.home_amphure ?? null) : null,
+        home_province:         role === 'recipient' ? (entry.home_province ?? null) : null,
+        mobile_number:         role === 'recipient' ? (entry.mobile_number ?? null) : null,
         // คนนอกไม่มีทะเบียนสมาชิกให้ผูก และไม่มีบัญชีให้ self-fill — ข้อมูลครบอยู่ในแถวของเขาเองแล้ว
         // ถ้าไม่ตอบ true สองตัวนี้ หน้าเซ็นจะค้างที่ขั้น "ผูกรายชื่อสมาชิก" ซึ่งคนนอกผ่านไม่ได้
         has_ngs_link:     role === 'recipient' ? (isExternal || !!entry.member_id) : null,
