@@ -426,7 +426,12 @@ export async function getEntryById(id) {
 }
 
 /**
- * overrideData: undefined = ไม่แตะ override_data เดิม (เช่น duration ของ speaker/sound), object = เขียนทับ
+ * overrideData: undefined = ไม่แตะ override_data เดิม · object = **merge เข้าของเดิม** (ไม่ทับทั้งก้อน)
+ *
+ * ⚠️ เดิมเขียนทับทั้งก้อน (`= $9::jsonb`) → แอดมินแก้ระยะทางในหน้ารายการทีเดียว
+ *    เลขบัตร/ที่อยู่/ชื่อที่ผู้รับกรอกไว้ (อยู่ใน override_data เหมือนกัน) หายเกลี้ยง
+ *    ทุก caller ส่งมาแค่ key ของตัวเอง ({distance_km} / {duration}) ไม่เคยตั้งใจล้างของคนอื่น
+ *    จะลบ key ให้ส่งค่า null มา (`{ distance_km: null }`) — buildData ใช้ `??` จึงข้าม null ให้เอง
  * recipient:    undefined = ไม่แตะผู้รับ · { kind: 'member'|'external', id } = ตั้งผู้รับใหม่
  *
  * ⚠️ ผู้รับต้องเขียน **สองคอลัมน์พร้อมกันเสมอ** — member_user_id กับ external_payee_id เป็น XOR
@@ -445,7 +450,7 @@ export async function updateEntry(id, { itemType, description, amount, recipient
        amount            = COALESCE($4, amount),
        member_user_id    = CASE WHEN $5 THEN $6::int ELSE member_user_id    END,
        external_payee_id = CASE WHEN $5 THEN $7::int ELSE external_payee_id END,
-       override_data     = CASE WHEN $8 THEN $9::jsonb ELSE override_data END
+       override_data     = CASE WHEN $8 THEN COALESCE(override_data, '{}'::jsonb) || $9::jsonb ELSE override_data END
      WHERE id = $1`,
     [id, itemType ?? null, description ?? null, amount ?? null,
      touchRecipient, memberUserId, externalId,

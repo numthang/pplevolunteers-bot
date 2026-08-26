@@ -181,7 +181,8 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
           externalPayeeId: editForm.externalPayeeId || null,
           ...(payerChanged ? { payerUserId: editForm.payerUserId } : {}),
           ...(editForm.itemType === 'travel'
-            ? { overrideData: editForm.distanceKm !== '' ? { distance_km: parseFloat(editForm.distanceKm) } : {} }
+            // ล้างระยะทาง = ส่ง null มาลบเฉพาะ key ตัวเอง · ห้ามส่ง {} เพราะ updateEntry merge แล้ว
+            ? { overrideData: { distance_km: editForm.distanceKm !== '' ? parseFloat(editForm.distanceKm) : null } }
             : {}),
         }),
       })
