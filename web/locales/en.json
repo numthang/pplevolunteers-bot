@@ -1766,7 +1766,9 @@
       "loadFailed": "Could not load the image",
       "saveFailed": "Could not save the image",
       "prev": "Previous image",
-      "next": "Next image"
+      "next": "Next image",
+      "deleteTitle": "Delete this image",
+      "confirmDelete": "Delete this image? This cannot be undone."
     },
     "videoQuote": {
       "title": "Add quote to clip",

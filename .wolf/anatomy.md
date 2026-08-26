@@ -1,6 +1,6 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-26T14:35:25.786Z
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-26T14:49:02.611Z
 > Files: 1059 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/1b7cbea7-c43c-466d-9a5f-c61fda8e76b5/scratchpad/
@@ -1954,10 +1954,10 @@
 - `BackToPosts.jsx` — BackToPosts (~270 tok)
 - `CategoryPicker.jsx` — NEW_CATEGORY (~890 tok)
 - `EmojiPicker.jsx` — GROUPS (~976 tok)
-- `ImageEditorModal.jsx` — MAX_SIDE (~7727 tok)
+- `ImageEditorModal.jsx` — MAX_SIDE (~8000 tok)
 - `PostCreate.jsx` — autoGrow (~1936 tok)
 - `PostEditor.jsx` — 'use client' กล่องเขียนโพสต์: autosave + lockToken (409 conflict dialog) + เมนู AI 6 โหมด (draft/polish/shorter/friendly/caption/review) + กล่องข้อเสนอ AI ที่ render แยกตาม `sg.kind` (caption = list string · review = การ์ดความเสี่ยงมี severity/excerpt + ป้าย "ตรวจกับเนื้อหาฉบับก่อนหน้า") (~9507 tok)
-- `PostMediaPanel.jsx` — ACCEPT (~7797 tok)
+- `PostMediaPanel.jsx` — ACCEPT (~7896 tok)
 - `PostMetaPanel.jsx` — STATUS_LABEL (~4306 tok)
 - `PostPublishPanel.jsx` — PLATFORMS (~6072 tok)
 - `PostPublishPanel.jsx` — PLATFORMS (~3229 tok)
@@ -2200,9 +2200,9 @@
 
 ## web/locales/
 
-- `en.json` (~23785 tok)
+- `en.json` (~23816 tok)
 - `en.json` — web locale strings อังกฤษ (~60 tok)
-- `th.json` (~22711 tok)
+- `th.json` (~22736 tok)
 - `th.json` — web locale strings ไทย (starter: common.*) (~60 tok)
 
 ## web/public/media-temp/

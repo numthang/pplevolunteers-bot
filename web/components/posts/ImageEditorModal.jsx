@@ -12,7 +12,7 @@
 //    (ฝั่ง server ก็ล้าง source_url ทิ้งด้วย ไม่งั้นไฟล์หายเมื่อไหร่จะตกไปโชว์ต้นฉบับที่ยังไม่เบลอ)
 import { useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { X, Crop, Droplets, RotateCw, Undo2, Loader2, ChevronLeft, ChevronRight, Wand2 } from 'lucide-react'
+import { X, Crop, Droplets, RotateCw, Undo2, Loader2, ChevronLeft, ChevronRight, Wand2, Trash2 } from 'lucide-react'
 
 // รูปจากมือถือ 12MP เอามาทำ undo stack ในแท็บเดียวไม่ไหว และโซเชียลก็ย่อเหลือ ~2K อยู่ดี
 const MAX_SIDE = 2048
@@ -42,7 +42,7 @@ const TOOL_OFF = 'border-warm-200 dark:border-disc-border text-warm-700 dark:tex
 
 // `onNavigate(dir)` = พลิกไปรูปก่อนหน้า/ถัดไป (ไม่ส่งมา = ไม่มีปุ่มพลิก)
 // ฝั่งเรียกต้องใส่ `key={media.id}` ให้ modal นี้ด้วย — พลิกรูปแล้ว canvas/undo stack ต้องเริ่มใหม่หมด
-export default function ImageEditorModal({ media, src, onClose, onSaved, onNavigate }) {
+export default function ImageEditorModal({ media, src, onClose, onSaved, onNavigate, onDelete }) {
   const t = useTranslations('posts.imageEditor')
   const canvasRef = useRef(null)
   const undoRef = useRef([])          // canvas สำเนา — ย้อนได้ UNDO_LIMIT ขั้น
@@ -61,6 +61,7 @@ export default function ImageEditorModal({ media, src, onClose, onSaved, onNavig
   const [enhancing, setEnhancing] = useState(false)            // พรีวิวไม้กายสิทธิ์ทำงานอยู่ (ยังไม่ apply/cancel)
   const [steps, setSteps] = useState(0)         // จำนวนครั้งที่แก้ — คุมปุ่มย้อนกลับ/เตือนตอนปิด
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState('')
 
   // ── โหลดรูปลง canvas ────────────────────────────────────────────────────────
@@ -418,6 +419,17 @@ export default function ImageEditorModal({ media, src, onClose, onSaved, onNavig
     }
   }
 
+  // ลบรูปนี้ทิ้งทั้งชิ้น — ไม่ใช่ undo ระดับแก้ไข จึงถามยืนยันเสมอไม่ว่าจะแก้ค้างอยู่หรือไม่ (steps > 0 ไม่เกี่ยว)
+  async function handleDelete() {
+    if (deleting || !confirm(t('confirmDelete'))) return
+    setDeleting(true)
+    try {
+      await onDelete()
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   const c = canvasRef.current
   const box = sel && c
     ? { left: `${sel.x / c.width * 100}%`, top: `${sel.y / c.height * 100}%`,
@@ -432,12 +444,22 @@ export default function ImageEditorModal({ media, src, onClose, onSaved, onNavig
       <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-2xl w-full max-w-3xl max-h-[92vh] flex flex-col overflow-hidden">
         <div className="flex items-center justify-between px-5 py-3 border-b border-warm-200 dark:border-disc-border shrink-0">
           <h2 className="text-base font-semibold text-warm-900 dark:text-disc-text">{t('title')}</h2>
-          <button
-            type="button" onClick={requestClose} title={t('closeTitle')}
-            className="p-1 rounded text-warm-400 dark:text-disc-muted hover:bg-warm-100 dark:hover:bg-disc-hover transition"
-          >
-            <X size={18} />
-          </button>
+          <div className="flex items-center gap-1">
+            {onDelete && (
+              <button
+                type="button" onClick={handleDelete} disabled={deleting} title={t('deleteTitle')}
+                className="p-1 rounded text-warm-400 dark:text-disc-muted hover:bg-red-100 hover:text-red-500 dark:hover:bg-red-900/30 dark:hover:text-red-400 disabled:opacity-40 transition"
+              >
+                {deleting ? <Loader2 size={18} className="animate-spin" /> : <Trash2 size={18} />}
+              </button>
+            )}
+            <button
+              type="button" onClick={requestClose} title={t('closeTitle')}
+              className="p-1 rounded text-warm-400 dark:text-disc-muted hover:bg-warm-100 dark:hover:bg-disc-hover transition"
+            >
+              <X size={18} />
+            </button>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-3">

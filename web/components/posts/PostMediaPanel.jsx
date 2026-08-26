@@ -500,6 +500,12 @@ export default function PostMediaPanel({ id, compact = false }) {
             const j = (at + dir + images.length) % images.length
             setEditing(images[j])
           } : null}
+          onDelete={async () => {
+            const at = images.findIndex(m => String(m.id) === String(editing.id))
+            await removeMedia(editing.id)
+            const remaining = images.filter(m => String(m.id) !== String(editing.id))
+            setEditing(remaining.length === 0 ? null : remaining[at % remaining.length])
+          }}
           onSaved={row => {
             setMedia(prev => prev.map(m => (String(m.id) === String(row.id) ? { ...row, v: Date.now() } : m)))
             window.dispatchEvent(new CustomEvent('posts:media-changed', { detail: { id } }))
