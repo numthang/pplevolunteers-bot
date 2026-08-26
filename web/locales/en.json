@@ -1744,6 +1744,7 @@
       "toolMask": "Blur faces",
       "toolCrop": "Crop",
       "toolRotate": "Rotate 90°",
+      "toolHand": "Hand",
       "toolEnhance": "Adjust light/color",
       "enhanceStrength": "Adjustment level",
       "hintEnhance": "Drag to adjust intensity — released it applies right away",
@@ -1760,7 +1761,11 @@
       "applyCrop": "Crop to selection",
       "hintMask": "Drag over the faces you want hidden, then press “Apply to selection” — repeat as needed (this cannot be undone once saved).",
       "hintCrop": "Drag a box around the part you want to keep, then press “Crop to selection”.",
+      "hintHand": "Hand mode — drag to pan · scroll or pinch to zoom · turn off hand mode (👆) to drag-select",
+      "resetZoom": "Reset zoom (100%)",
       "confirmDiscard": "Discard unsaved edits?",
+      "revertOriginal": "Revert to original (before this session's edits)",
+      "confirmRevert": "Revert to how the image was before this session's edits? Unsaved changes will be lost.",
       "cancel": "Cancel",
       "save": "Save image",
       "loadFailed": "Could not load the image",
@@ -1768,7 +1773,8 @@
       "prev": "Previous image",
       "next": "Next image",
       "deleteTitle": "Delete this image",
-      "confirmDelete": "Delete this image? This cannot be undone."
+      "confirmDelete": "Delete this image? This cannot be undone.",
+      "saveSuccess": "Saved"
     },
     "videoQuote": {
       "title": "Add quote to clip",

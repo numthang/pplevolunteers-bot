@@ -12,11 +12,17 @@
 //    (ฝั่ง server ก็ล้าง source_url ทิ้งด้วย ไม่งั้นไฟล์หายเมื่อไหร่จะตกไปโชว์ต้นฉบับที่ยังไม่เบลอ)
 import { useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { X, Crop, Droplets, RotateCw, Undo2, Loader2, ChevronLeft, ChevronRight, Wand2, Trash2 } from 'lucide-react'
+import { X, Crop, Droplets, RotateCw, Undo2, Loader2, ChevronLeft, ChevronRight, Wand2, Trash2, Hand, History } from 'lucide-react'
 
 // รูปจากมือถือ 12MP เอามาทำ undo stack ในแท็บเดียวไม่ไหว และโซเชียลก็ย่อเหลือ ~2K อยู่ดี
 const MAX_SIDE = 2048
 const UNDO_LIMIT = 5
+
+// ── ซูม/เลื่อนรูป (เคาะ 2026-08-26) ─────────────────────────────────────────────
+const ZOOM_MIN = 1
+const ZOOM_MAX = 4
+const WHEEL_ZOOM_SPEED = 0.0015
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v))
 
 // ── ไม้กายสิทธิ์: ค่าคงที่ของ computeAutoEnhance() ──────────────────────────────
 // เกณฑ์เหล่านี้เป็นค่าที่เคาะจากการทดลองเรนเดอร์เทียบ ไม่ใช่สูตรตายตัวจากตำรา —
@@ -36,7 +42,8 @@ const ASPECTS = [
   { key: 'a16x9', value: 16 / 9 },
 ]
 
-const TOOL_BTN = 'inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border transition'
+// ไอคอนล้วน ไม่มีคำบรรยาย (เคาะ 2026-08-26 — เพิ่มปุ่มมือจับแล้วแถวปุ่มรกเกินไป) ใช้ title tooltip แทน
+const TOOL_BTN = 'w-9 h-9 shrink-0 flex items-center justify-center rounded-lg border transition'
 const TOOL_ON = 'border-teal text-teal bg-teal/10'
 const TOOL_OFF = 'border-warm-200 dark:border-disc-border text-warm-700 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover'
 
@@ -45,15 +52,22 @@ const TOOL_OFF = 'border-warm-200 dark:border-disc-border text-warm-700 dark:tex
 export default function ImageEditorModal({ media, src, onClose, onSaved, onNavigate, onDelete }) {
   const t = useTranslations('posts.imageEditor')
   const canvasRef = useRef(null)
+  const stageRef = useRef(null)       // กรอบ viewport ที่ครอบรูป — ต่อ wheel listener + คลิป overflow ตอนซูม
   const undoRef = useRef([])          // canvas สำเนา — ย้อนได้ UNDO_LIMIT ขั้น
   const dragRef = useRef(null)        // จุดเริ่มลาก (พิกัดในหน่วยพิกเซลของ canvas)
+  const pointersRef = useRef(new Map())   // pointerId → {x,y} ที่กดค้างอยู่ตอนนี้ — ไว้แยกลาก 1 นิ้ว (pan) กับบีบ 2 นิ้ว (pinch)
+  const panDragRef = useRef(null)     // { startX, startY, startPan } ตอนลาก 1 นิ้ว/เมาส์ในโหมดมือจับ
+  const pinchRef = useRef(null)       // { startDist, startZoom, startMid, startPan } ตอนบีบ 2 นิ้ว
   const enhanceBaseRef = useRef(null) // ImageData ต้นฉบับก่อนพรีวิวไม้กายสิทธิ์ (ไว้ blend กลับ + คืนตอนยกเลิก)
   const enhanceFullRef = useRef(null) // ผลไม้กายสิทธิ์เต็ม 100% (คำนวณครั้งเดียวตอนเปิด แล้ว blend ตาม slider)
   const enhanceRafRef = useRef(null)  // คุม requestAnimationFrame กันวาดรัวเกินตอนลาก slider เร็วๆ
-  const enhancePrevToolRef = useRef('crop') // เครื่องมือที่อยู่ก่อนกด "ปรับอัตโนมัติ" — commit/cancel แล้วกลับไปที่นี่
+  const enhancePrevToolRef = useRef('hand') // เครื่องมือที่อยู่ก่อนกด "ปรับอัตโนมัติ" — commit/cancel แล้วกลับไปที่นี่
+  const originalRef = useRef(null)    // สำเนารูปตอนเปิดกล่องนี้ครั้งแรก — ไม่โดน UNDO_LIMIT ครอบเหมือน undoRef
 
   const [ready, setReady] = useState(false)
-  const [tool, setTool] = useState('crop')      // 'mask' | 'crop' | 'enhance'
+  // 'hand' = default (เคาะ 2026-08-26) — ลากปกติ = เลื่อนรูป ต้องสลับไป crop/mask ก่อนถึงจะลากเลือกกรอบได้
+  // รวม hand ไว้ใน `tool` เดียวกันแทนที่จะแยก state ต่างหาก — กันปุ่ม 2 อันโชว์ ON พร้อมกัน (เจอ 2026-08-26 ตอนมี handMode คู่ tool)
+  const [tool, setTool] = useState('hand')      // 'hand' | 'mask' | 'crop' | 'enhance'
   const [mask, setMask] = useState('pixel')     // 'pixel' | 'blur'
   const [aspect, setAspect] = useState(null)
   const [sel, setSel] = useState(null)          // กรอบที่เลือกอยู่ (หน่วยพิกเซลของ canvas)
@@ -61,8 +75,11 @@ export default function ImageEditorModal({ media, src, onClose, onSaved, onNavig
   const [enhancing, setEnhancing] = useState(false)            // พรีวิวไม้กายสิทธิ์ทำงานอยู่ (ยังไม่ apply/cancel)
   const [steps, setSteps] = useState(0)         // จำนวนครั้งที่แก้ — คุมปุ่มย้อนกลับ/เตือนตอนปิด
   const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)   // แฟลชสั้นๆ "บันทึกแล้ว" — เพราะกล่องไม่ปิดให้เป็นสัญญาณแทน
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState('')
+  const [zoom, setZoom] = useState(1)
+  const [pan, setPan] = useState({ x: 0, y: 0 })
 
   // ── โหลดรูปลง canvas ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -75,6 +92,11 @@ export default function ImageEditorModal({ media, src, onClose, onSaved, onNavig
       c.width = Math.round(img.width * k)
       c.height = Math.round(img.height * k)
       c.getContext('2d').drawImage(img, 0, 0, c.width, c.height)
+      const orig = document.createElement('canvas')
+      orig.width = c.width
+      orig.height = c.height
+      orig.getContext('2d').drawImage(c, 0, 0)
+      originalRef.current = orig
       setReady(true)
     }
     img.onerror = () => setError(t('loadFailed'))
@@ -101,6 +123,74 @@ export default function ImageEditorModal({ media, src, onClose, onSaved, onNavig
     return () => window.removeEventListener('keydown', onKey)
   })
 
+  // ── ซูม/เลื่อนรูป ────────────────────────────────────────────────────────────
+  function resetView() {
+    setZoom(1)
+    setPan({ x: 0, y: 0 })
+  }
+
+  // React ผูก onWheel แบบ passive มาตั้งแต่ v17 (กัน scroll หน่วง) → preventDefault() ในนั้นไม่มีผล
+  // ต้องผูกเองแบบ passive:false ถึงจะกันหน้าเว็บเลื่อนตอนซูมรูปด้วย scroll
+  useEffect(() => {
+    const el = stageRef.current
+    if (!el) return
+    function onWheel(e) {
+      e.preventDefault()
+      setZoom(z => {
+        const next = clamp(z - e.deltaY * WHEEL_ZOOM_SPEED, ZOOM_MIN, ZOOM_MAX)
+        if (next === ZOOM_MIN) setPan({ x: 0, y: 0 })
+        return next
+      })
+    }
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => el.removeEventListener('wheel', onWheel)
+  }, [])
+
+  // ── ลาก 1 นิ้ว/เมาส์ = เลื่อนรูป (เฉพาะโหมดมือจับ) · บีบ 2 นิ้ว = ซูม+เลื่อนพร้อมกัน (ทุกโหมด — ไม่ชนกับการลากเลือกกรอบเพราะใช้ 2 จุดสัมผัส) ──
+  function onStageDown(e) {
+    pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+    if (pointersRef.current.size === 2) {
+      const pts = [...pointersRef.current.values()]
+      pinchRef.current = {
+        startDist: Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y),
+        startZoom: zoom,
+        startMid: { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 },
+        startPan: pan,
+      }
+      panDragRef.current = null
+      dragRef.current = null   // กันเลือกกรอบค้างจากนิ้วแรกก่อนนิ้วที่สองแตะ
+      setSel(null)
+    } else if (pointersRef.current.size === 1 && tool === 'hand') {
+      e.currentTarget.setPointerCapture?.(e.pointerId)
+      panDragRef.current = { startX: e.clientX, startY: e.clientY, startPan: pan }
+    }
+  }
+  function onStageMove(e) {
+    if (!pointersRef.current.has(e.pointerId)) return
+    pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+    if (pinchRef.current && pointersRef.current.size >= 2) {
+      const pts = [...pointersRef.current.values()].slice(0, 2)
+      const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y)
+      const mid = { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 }
+      const nextZoom = clamp(pinchRef.current.startZoom * (dist / pinchRef.current.startDist), ZOOM_MIN, ZOOM_MAX)
+      setZoom(nextZoom)
+      setPan({
+        x: pinchRef.current.startPan.x + (mid.x - pinchRef.current.startMid.x),
+        y: pinchRef.current.startPan.y + (mid.y - pinchRef.current.startMid.y),
+      })
+    } else if (panDragRef.current) {
+      setPan({
+        x: panDragRef.current.startPan.x + (e.clientX - panDragRef.current.startX),
+        y: panDragRef.current.startPan.y + (e.clientY - panDragRef.current.startY),
+      })
+    }
+  }
+  function onStageUp(e) {
+    pointersRef.current.delete(e.pointerId)
+    if (pointersRef.current.size < 2) pinchRef.current = null
+    if (pointersRef.current.size === 0) panDragRef.current = null
+  }
+
   // ── undo ────────────────────────────────────────────────────────────────────
   function pushUndo() {
     const c = canvasRef.current
@@ -111,6 +201,7 @@ export default function ImageEditorModal({ media, src, onClose, onSaved, onNavig
     undoRef.current.push(copy)
     if (undoRef.current.length > UNDO_LIMIT) undoRef.current.shift()
     setSteps(s => s + 1)
+    setSaved(false)   // แก้ต่อจากที่เพิ่งเซฟ — เอาแฟลชเก่าออก
   }
   function undo() {
     const prev = undoRef.current.pop()
@@ -121,6 +212,26 @@ export default function ImageEditorModal({ media, src, onClose, onSaved, onNavig
     c.getContext('2d').drawImage(prev, 0, 0)
     setSel(null)
     setSteps(s => Math.max(0, s - 1))
+    resetView()   // ครอบตัด/หมุนเปลี่ยนขนาด canvas มา ซูม/แพนเดิมจะเพี้ยน
+  }
+
+  // ย้อนกลับไปรูปตอนเปิดกล่องนี้ครั้งแรก — ต่างจาก undo() ตรงที่ undoRef จำกัดแค่ UNDO_LIMIT ขั้น
+  // (ขั้นเก่ากว่านั้นหลุดหายไปแล้ว) แต่ originalRef เก็บสำเนาต้นฉบับไว้ทั้งเซสชัน กดทีเดียวกลับสุดได้เลย
+  function revertToOriginal() {
+    const orig = originalRef.current
+    if (!orig || !steps || !confirm(t('confirmRevert'))) return
+    const c = canvasRef.current
+    c.width = orig.width
+    c.height = orig.height
+    c.getContext('2d').drawImage(orig, 0, 0)
+    undoRef.current = []
+    enhanceBaseRef.current = null
+    enhanceFullRef.current = null
+    setEnhancing(false)
+    setSel(null)
+    setSteps(0)
+    setSaved(false)
+    resetView()
   }
 
   // ── ลากเลือกกรอบ ────────────────────────────────────────────────────────────
@@ -204,6 +315,7 @@ export default function ImageEditorModal({ media, src, onClose, onSaved, onNavig
     c.height = r.h
     c.getContext('2d').drawImage(tmp, 0, 0)
     setSel(null)
+    resetView()   // ขนาด canvas เปลี่ยน — ซูม/แพนเดิมอ้างอิงกรอบเก่าไม่ได้แล้ว
   }
 
   // ปกติคลิกปุ่มเครื่องมืออื่นจะ blur slider แล้ว commit ให้เองก่อนแล้ว (ดู onBlur ที่ตัว input)
@@ -230,6 +342,7 @@ export default function ImageEditorModal({ media, src, onClose, onSaved, onNavig
     ctx.drawImage(tmp, -tmp.width / 2, -tmp.height / 2)
     ctx.setTransform(1, 0, 0, 1, 0, 0)
     setSel(null)
+    resetView()   // หมุนแล้วขนาด canvas สลับกว้าง/สูง — ซูม/แพนเดิมอ้างอิงกรอบเก่าไม่ได้แล้ว
   }
 
   // ── ไม้กายสิทธิ์: ปรับสว่าง/คอนทราสต์/ความจัดสีอัตโนมัติจาก histogram ของรูปจริง ─────
@@ -396,10 +509,13 @@ export default function ImageEditorModal({ media, src, onClose, onSaved, onNavig
   }
 
   // ── บันทึก ──────────────────────────────────────────────────────────────────
+  // ⚠️ ไม่ปิดกล่องหลังบันทึก (เคาะ 2026-08-26) — แก้ต่อได้เรื่อยๆ ในกล่องเดิม กด X เองเมื่อพอใจ
+  //    steps รีเซ็ตเป็น 0 หลังเซฟสำเร็จ กัน requestClose()/go() ถามยืนยันทิ้งงานทั้งที่เซฟไปแล้ว
   async function save() {
     if (saving || !steps) return
     setSaving(true)
     setError('')
+    setSaved(false)
     try {
       const isPng = /\.png$/i.test(media.path || '')
       const type = isPng ? 'image/png' : 'image/jpeg'
@@ -411,7 +527,8 @@ export default function ImageEditorModal({ media, src, onClose, onSaved, onNavig
       const data = await res.json().catch(() => ({}))
       if (!res.ok) { setError(data.error || t('saveFailed')); return }
       onSaved(data.data)
-      onClose()
+      setSteps(0)
+      setSaved(true)
     } catch {
       setError(t('saveFailed'))
     } finally {
@@ -453,25 +570,37 @@ export default function ImageEditorModal({ media, src, onClose, onSaved, onNavig
         </div>
 
         <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-3">
-          {/* ลำดับ: ครอบตัด → ไม้กายสิทธิ์ → เบลอ → หมุน (เคาะ 2026-08-08) — undo แยกเป็นไอคอนล้วน
-              ไม่มีข้อความ กัน 5 ปุ่มล้นจอมือถือ (ตัวหนังสือไทยกว้างกว่าอังกฤษ wrap ง่ายกว่าที่คิด) */}
+          {/* ลำดับ: มือจับ → ครอบตัด → เบลอ → หมุน → ไม้กายสิทธิ์ (เรียงใหม่ 2026-08-26 ตาม user)
+              ไอคอนล้วนไม่มีข้อความ กัน 6 ปุ่มล้นจอมือถือ · hand รวมอยู่ใน `tool` เดียวกับ crop/mask/enhance
+              แล้ว (ไม่ใช่ state แยก) กันปุ่ม 2 อันโชว์ ON พร้อมกัน */}
           <div className="flex flex-wrap items-center gap-2">
-            <button type="button" onClick={() => selectTool('crop')} disabled={!ready} className={`${TOOL_BTN} ${tool === 'crop' ? TOOL_ON : TOOL_OFF} disabled:opacity-40`}>
-              <Crop size={14} /> {t('toolCrop')}
+            <button type="button" onClick={() => selectTool('hand')} disabled={!ready} title={t('toolHand')} className={`${TOOL_BTN} ${tool === 'hand' ? TOOL_ON : TOOL_OFF} disabled:opacity-40`}>
+              <Hand size={15} />
+            </button>
+            <button type="button" onClick={() => selectTool('crop')} disabled={!ready} title={t('toolCrop')} className={`${TOOL_BTN} ${tool === 'crop' ? TOOL_ON : TOOL_OFF} disabled:opacity-40`}>
+              <Crop size={15} />
+            </button>
+            <button type="button" onClick={() => selectTool('mask')} disabled={!ready} title={t('toolMask')} className={`${TOOL_BTN} ${tool === 'mask' ? TOOL_ON : TOOL_OFF} disabled:opacity-40`}>
+              <Droplets size={15} />
+            </button>
+            <button type="button" onClick={rotate} disabled={!ready} title={t('toolRotate')} className={`${TOOL_BTN} ${TOOL_OFF} disabled:opacity-40`}>
+              <RotateCw size={15} />
             </button>
             {/* enhancing=true = พรีวิวเปิดค้างอยู่ ปุ่มนี้เอง disable ไปด้วยกันกดซ้อนตัวเองระหว่างลาก slider */}
-            <button type="button" onClick={startEnhance} disabled={!ready || enhancing} className={`${TOOL_BTN} ${tool === 'enhance' ? TOOL_ON : TOOL_OFF} disabled:opacity-40`}>
-              <Wand2 size={14} /> {t('toolEnhance')}
+            <button type="button" onClick={startEnhance} disabled={!ready || enhancing} title={t('toolEnhance')} className={`${TOOL_BTN} ${tool === 'enhance' ? TOOL_ON : TOOL_OFF} disabled:opacity-40`}>
+              <Wand2 size={15} />
             </button>
-            <button type="button" onClick={() => selectTool('mask')} disabled={!ready} className={`${TOOL_BTN} ${tool === 'mask' ? TOOL_ON : TOOL_OFF} disabled:opacity-40`}>
-              <Droplets size={14} /> {t('toolMask')}
-            </button>
-            <button type="button" onClick={rotate} disabled={!ready} className={`${TOOL_BTN} ${TOOL_OFF} disabled:opacity-40`}>
-              <RotateCw size={14} /> {t('toolRotate')}
+            {/* ย้อนกลับไปรูปต้นฉบับ (ก่อนแก้ไขรอบนี้) — ไม่ใช่ undo ทีละขั้น ต่างจาก undo ตรงที่ undoRef
+                จำกัดแค่ UNDO_LIMIT ขั้นแล้วขั้นเก่ากว่านั้นหลุดหายไป แต่ originalRef เก็บไว้ทั้งเซสชัน */}
+            <button
+              type="button" onClick={revertToOriginal} disabled={!steps || enhancing} title={t('revertOriginal')}
+              className={`ml-auto ${TOOL_BTN} border-warm-200 dark:border-disc-border text-warm-700 dark:text-disc-text hover:bg-red-100 hover:text-red-500 dark:hover:bg-red-900/30 dark:hover:text-red-400 disabled:opacity-40`}
+            >
+              <History size={15} />
             </button>
             <button
               type="button" onClick={undo} disabled={!steps || enhancing} title={t('undo')}
-              className="ml-auto w-8 h-8 shrink-0 flex items-center justify-center rounded-lg border border-warm-200 dark:border-disc-border text-warm-700 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover disabled:opacity-40 transition"
+              className={`${TOOL_BTN} ${TOOL_OFF} disabled:opacity-40`}
             >
               <Undo2 size={15} />
             </button>
@@ -503,7 +632,7 @@ export default function ImageEditorModal({ media, src, onClose, onSaved, onNavig
                   </button>
                 ))}
               </>
-            ) : (
+            ) : tool === 'enhance' ? (
               // enhance — slider 0-150% blend ระหว่างต้นฉบับ (0%) กับผลไม้กายสิทธิ์เต็ม (100%)
               // เกิน 100% ได้ถึง 150% เผื่อรูปที่จืดมากอยากดันแรงกว่าค่าที่คำนวณให้อัตโนมัติ
               // ยังโฟกัส slider อยู่ = ปรับซ้ำได้เรื่อยๆ ไม่ commit จนกว่าจะ blur (คลิกที่อื่น/ปุ่มอื่น)
@@ -517,7 +646,7 @@ export default function ImageEditorModal({ media, src, onClose, onSaved, onNavig
                 />
                 <span className="text-warm-500 dark:text-disc-muted w-11 text-right shrink-0 tabular-nums">{enhanceStrength}%</span>
               </div>
-            )}
+            ) : null /* tool === 'hand' — ไม่มีตัวเลือกย่อย */}
           </div>
 
           {/* กล่องนี้แทน lightbox ไปแล้ว (จิ้มรูปในกริด = มาที่นี่เลย) → ต้องพลิกดูรูปอื่นได้เหมือนกัน
@@ -531,30 +660,56 @@ export default function ImageEditorModal({ media, src, onClose, onSaved, onNavig
                 <ChevronLeft size={18} />
               </button>
             )}
-            <div className="relative inline-block max-w-full">
-              <canvas ref={canvasRef} className="block max-w-full max-h-[62vh] w-auto h-auto" />
-              {/* ชั้นรับการลาก — touch-none = ลากบนมือถือแล้วหน้าจอไม่เลื่อนตาม */}
+            {/* stage = viewport ที่ครอบรูป กว้าง/สูงเท่ารูปจริงเสมอ (ไม่ขยับตามซูม) — overflow-hidden
+                คลิปสิ่งที่ล้นออกไปตอนซูมเข้า · ต่อ wheel listener ที่นี่ (ดู useEffect ด้านบน) */}
+            <div
+              ref={stageRef}
+              onPointerDown={onStageDown}
+              onPointerMove={onStageMove}
+              onPointerUp={onStageUp}
+              onPointerCancel={onStageUp}
+              style={{ cursor: tool === 'hand' ? 'grab' : tool === 'enhance' ? 'default' : 'crosshair' }}
+              className="relative inline-block max-w-full overflow-hidden rounded-md touch-none"
+            >
+              {/* ชั้นนี้เท่านั้นที่โดน transform — canvas + กรอบเลือกอยู่ในนี้ด้วยกัน จะได้เลื่อน/ซูมพร้อมกันเป๊ะๆ */}
               <div
-                onPointerDown={onDown}
-                onPointerMove={onMove}
-                onPointerUp={onUp}
-                onPointerCancel={onUp}
-                className="absolute inset-0 touch-none cursor-crosshair"
+                className="relative inline-block"
+                style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: 'center center' }}
               >
-                {box && (
+                <canvas ref={canvasRef} className="block max-w-full max-h-[62vh] w-auto h-auto" />
+                {/* เลือกกรอบได้เฉพาะตอน tool เป็น crop/mask — โหมดมือจับ/ปรับแสง ลากทั้งหมด = เลื่อนรูปที่ stage ด้านนอกแทน */}
+                {(tool === 'crop' || tool === 'mask') && (
                   <div
-                    style={box}
-                    className={`absolute border-2 ${tool === 'crop' ? 'border-teal bg-white/10' : 'border-orange bg-orange/20'}`}
-                  />
+                    onPointerDown={onDown}
+                    onPointerMove={onMove}
+                    onPointerUp={onUp}
+                    onPointerCancel={onUp}
+                    className="absolute inset-0 cursor-crosshair"
+                  >
+                    {box && (
+                      <div
+                        style={box}
+                        className={`absolute border-2 ${tool === 'crop' ? 'border-teal bg-white/10' : 'border-orange bg-orange/20'}`}
+                      />
+                    )}
+                  </div>
                 )}
               </div>
-              {/* ลอยอยู่มุมขวาบนของรูปเลย — เดิมซ่อนอยู่บนแถบหัวกล่อง กดยาก/ไม่มีใครเห็น */}
+              {/* ปุ่ม/ป้ายลอย — อยู่นอกชั้น transform ข้างบน จะได้ไม่ขยับ/โตตามซูม */}
               {onDelete && (
                 <button
                   type="button" onClick={handleDelete} disabled={deleting} title={t('deleteTitle')}
                   className="absolute top-2 right-2 w-8 h-8 flex items-center justify-center rounded-full bg-black/60 text-white hover:bg-red-500 disabled:opacity-40 transition"
                 >
                   {deleting ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
+                </button>
+              )}
+              {zoom !== 1 && (
+                <button
+                  type="button" onClick={resetView} title={t('resetZoom')}
+                  className="absolute bottom-2 left-2 px-2 py-1 text-xs rounded-md bg-black/60 text-white hover:bg-black/80 transition tabular-nums"
+                >
+                  {Math.round(zoom * 100)}%
                 </button>
               )}
             </div>
@@ -568,23 +723,23 @@ export default function ImageEditorModal({ media, src, onClose, onSaved, onNavig
             )}
           </div>
 
-          <p className="text-sm text-warm-500 dark:text-disc-muted">
-            {tool === 'mask' ? t('hintMask') : tool === 'crop' ? t('hintCrop') : t('hintEnhance')}
-          </p>
           {error && <p className="text-sm text-red-500">{error}</p>}
         </div>
 
-        <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-warm-200 dark:border-disc-border shrink-0">
+        <div className="flex items-center justify-between gap-2 px-5 py-3 border-t border-warm-200 dark:border-disc-border shrink-0">
           {/* enhance ไม่มีปุ่มในนี้แล้ว — commit เองตอนปล่อย slider (ดู commitEnhance) */}
-          {sel && !enhancing && (
+          {sel && !enhancing ? (
             <button
               type="button"
               onClick={tool === 'crop' ? applyCrop : applyMask}
-              className="px-3 py-2 text-sm rounded-lg bg-teal text-white hover:opacity-90 transition mr-auto"
+              className="px-3 py-2 text-sm rounded-lg bg-teal text-white hover:opacity-90 transition"
             >
               {tool === 'crop' ? t('applyCrop') : t('applyMask')}
             </button>
-          )}
+          ) : saved ? (
+            <span className="text-sm text-teal">{t('saveSuccess')}</span>
+          ) : <span />}
+          <div className="flex items-center gap-2">
           <button
             type="button" onClick={requestClose}
             className="px-3 py-2 text-sm rounded-lg border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover transition"
@@ -598,6 +753,7 @@ export default function ImageEditorModal({ media, src, onClose, onSaved, onNavig
             {saving ? <Loader2 size={14} className="animate-spin" /> : null}
             {t('save')}
           </button>
+          </div>
         </div>
       </div>
     </div>
