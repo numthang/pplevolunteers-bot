@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-25T04:58:06.041Z
-> Files: 1047 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-26T09:29:21.930Z
+> Files: 1059 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/1b7cbea7-c43c-466d-9a5f-c61fda8e76b5/scratchpad/
 
@@ -24,6 +24,7 @@
 ## ../../../.claude/plans/
 
 - `kanban-kanban-ticklish-blum.md` — เติมงานสื่อ (posts) + เรื่องร้องเรียน (cases) เข้า kanban — บอร์ดเดียว ผูกของจริง (~2129 tok)
+- `org-members-iridescent-thompson.md` — แยก Discord ออกจาก org_members → dc_guild_members (~2381 tok)
 - `witty-launching-wadler.md` — Kanban label filter → per-group compact dropdowns (~2047 tok)
 
 ## ../../../.claude/projects/-home-tee-VSites-node-pple-volunteers/memory/
@@ -280,7 +281,7 @@
 - `DEPLOYMENT.md` — Production Deployment — VPS Setup (~2522 tok)
 - `DEV_AGREEMENT.md` — CivicFlow — Dev Agreement & กติกาทำงานร่วม (ร่าง — รอคุยกับทีม CivicFlow) (~1367 tok)
 - `ORG_ACCESS_REDESIGN.md` — ORG_ACCESS_REDESIGN — ปลดสิทธิ์ออกจาก Discord (~5545 tok)
-- `PENDING.md` — PENDING.md — Backlog & Ideas (~37430 tok)
+- `PENDING.md` — PENDING.md — Backlog & Ideas (~40342 tok)
 - `WEB.md` — Web App — Next.js Frontend (~5324 tok)
 
 ## md/archive/
@@ -909,6 +910,13 @@
 
 - `route.js` — POST /api/docs/events/[eventId]/attachments (~908 tok)
 
+## web/app/api/docs/external-payees/
+
+- `[id]/id-card/route.js` — GET เสิร์ฟ/POST อัปสำเนาบัตรของคนนอก (org gate + ?token= ต้องตรงกับ entry) (~800 tok)
+- `[id]/route.js` — GET/PATCH/DELETE ผู้รับคนนอก (ลบไม่ได้ถ้ามีใบสำคัญฯ ออกไปแล้ว) (~700 tok)
+- `ocr/route.js` — POST อ่านบัตรด้วย Claude vision → คืน JSON ให้เติมฟอร์ม (ไม่แตะ DB) (~900 tok)
+- `route.js` — GET รายชื่อคนนอกทั้ง org / POST สร้างใหม่ (ตรวจ checksum + กันเลขซ้ำ) (~700 tok)
+
 ## web/app/api/docs/id-card/
 
 - `route.js` — POST /api/docs/id-card  (multipart: file, token) (~647 tok)
@@ -976,6 +984,10 @@
 ## web/app/api/docs/projects/[id]/tokens/
 
 - `route.js` — POST /api/docs/projects/[id]/tokens (~530 tok)
+
+## web/app/api/docs/sign-policy/
+
+- `route.js` — GET/PUT โหมดการเซ็นของ org (org_config key docs_sign_policy) (~400 tok)
 
 ## web/app/api/docs/sign/
 
@@ -1882,10 +1894,10 @@
 - `DocProjectCard.jsx` — FALLBACK_IMAGE (~1078 tok)
 - `DocProjectView.jsx` — THAI_MONTHS (~11735 tok)
 - `DocsProvinceFilter.jsx` — DocsProvinceFilter (~449 tok)
-- `IdCardCropper.jsx` — crop + rotate ภาพตาม croppedAreaPixels → JPEG blob (สัดส่วนบัตรเป๊ะ) (~1496 tok)
+- `DocsSignPolicySetting.jsx` — เลือกโหมดการเซ็น strict/flexible ของ org (มีผลทันที + ป้ายสถานะ) (~900 tok)
 - `ExternalPayeeModal.jsx` — ฟอร์มเพิ่มผู้รับเงินคนนอก: ถ่ายบัตร → OCR เติมให้ → ตรวจ → กดบันทึก (~1800 tok)
 - `ExternalPayeeSettings.jsx` — จัดการผู้รับเงินคนนอกที่สะสมไว้ (แก้/ลบ/ดูสำเนาบัตร) ใน /docs/settings (~1600 tok)
-- `DocsSignPolicySetting.jsx` — เลือกโหมดการเซ็น strict/flexible ของ org (มีผลทันที + ป้ายสถานะ) (~900 tok)
+- `IdCardCropper.jsx` — crop + rotate ภาพตาม croppedAreaPixels → JPEG blob (สัดส่วนบัตรเป๊ะ) (~1496 tok)
 
 ## web/components/finance/
 
@@ -2015,10 +2027,10 @@
 
 - `attachments.js` — Exports getAttachmentsByProject, createAttachment, getAttachmentById, deleteAttachment (~366 tok)
 - `entries.js` — เติม payer_display_name + payer_position จาก pool ผู้จ่าย (role-based position มาก่อน docs_payers) (~5940 tok)
+- `externalPayees.js` — CRUD ผู้รับเงินคนนอก (ไม่มี users/Discord) + ค้นเลขบัตรกันซ้ำ + สำเนาบัตรในแถวตัวเอง (~1100 tok)
 - `idCard.js` — สำเนาบัตรประชาชนเก็บใน `users.id_card_image` (BYTEA) — **1 คน 1 ใบ** (~385 tok)
 - `payers.js` — ผู้มีอำนาจลงนาม — อ่านสิทธิ์จาก org_member_roles เหมือนทั้งระบบ (ORG_ACCESS_REDESIGN ขั้น 5) (~2714 tok)
 - `projects.js` — list events จาก cache_pple_event โดยตรง, LEFT JOIN docs_projects เพื่อดู status (~1963 tok)
-- `externalPayees.js` — CRUD ผู้รับเงินคนนอก (ไม่มี users/Discord) + ค้นเลขบัตรกันซ้ำ + สำเนาบัตรในแถวตัวเอง (~1100 tok)
 
 ## web/db/finance/
 
@@ -2142,6 +2154,7 @@
 - `sendSms.js` — ThaiBulkSMS — primitive ส่ง SMS (ใช้ร่วม calling bulk + case tracking link) (~464 tok)
 - `socialAppCreds.js` — { app_id, app_secret } ของ Threads — **คนละชุดกับ Facebook เสมอ** (ยืนยันกับ user 2026-08-08) (~969 tok)
 - `socialOAuthScope.js` — web/lib/socialOAuthScope.js — resolve scope ของ OAuth flow ทั้ง 3 แพลตฟอร์ม (Meta / Threads / X) (~427 tok)
+- `thaiId.js` — normalize + ตรวจ checksum mod-11 เลขบัตร ปชช. 13 หลัก (ด่านจับ OCR อ่านเพี้ยน) (~300 tok)
 - `thailand-geography.json` (~68531 tok)
 - `useEffectiveRoles.js` — Returns { roles, discordId, userId, access } adjusted for debug mode. (~581 tok)
 - `videoRender.js` — สะพานไป `utils/videoQuoteOverlay.js` ที่ repo root — เบิร์นคำคมลงคลิปด้วย ffmpeg (~964 tok)
@@ -2154,7 +2167,6 @@
 - `web/components/posts/PostRevisions.jsx` — ประวัติการแก้ของโพสต์ (กางเก็บได้) + ปุ่มกู้คืนฉบับเก่า (~600 tok)
 - `web/lib/publishTargets.js` — กลุ่มบัญชีโซเชียลที่โพสต์ได้ (group_name) + resolve กลุ่ม→บัญชีรายแพลตฟอร์ม + hasNewsChannel · public=org, private=เจ้าของเท่านั้น (~700 tok)
 - `web/lib/watermarks.js` — ลายน้ำของ posts: ลิสต์ไฟล์ตามกลุ่ม (public=<guild>/<group>, private=user_<discord>) + default ราย group + validate ค่าที่ client ส่ง (~650 tok)
-- `thaiId.js` — normalize + ตรวจ checksum mod-11 เลขบัตร ปชช. 13 หลัก (ด่านจับ OCR อ่านเพี้ยน) (~300 tok)
 
 ## web/lib/__tests__/
 
@@ -2231,14 +2243,3 @@
 - `orgMemberRoles.live.test.js` — web/lib/__tests__/orgMemberRoles.live.test.js — live test ทางเขียนขั้น 5: resync idempotent, ถอด/ใส่ยศแล้วสิทธิ์ขยับจริง, syncRoleDefFromGuildRole นิ่ง, source web/discord ไม่ทับกัน (~900 tok)
 - `PersonalWatermarks.jsx` — components/org/PersonalWatermarks.jsx ลายน้ำส่วนตัว ยกมาจาก WatermarkPanel เดิม (~1600 tok)
 - `watermarkPaths.js` — services/watermarkPaths.js ตัวแปลง guild→org / discord→users.id สำหรับโฟลเดอร์ลายน้ำฝั่งบอท (cache 5 นาที) (~900 tok)
-
-## web/app/api/docs/external-payees/
-
-- `route.js` — GET รายชื่อคนนอกทั้ง org / POST สร้างใหม่ (ตรวจ checksum + กันเลขซ้ำ) (~700 tok)
-- `[id]/route.js` — GET/PATCH/DELETE ผู้รับคนนอก (ลบไม่ได้ถ้ามีใบสำคัญฯ ออกไปแล้ว) (~700 tok)
-- `[id]/id-card/route.js` — GET เสิร์ฟ/POST อัปสำเนาบัตรของคนนอก (org gate + ?token= ต้องตรงกับ entry) (~800 tok)
-- `ocr/route.js` — POST อ่านบัตรด้วย Claude vision → คืน JSON ให้เติมฟอร์ม (ไม่แตะ DB) (~900 tok)
-
-## web/app/api/docs/sign-policy/
-
-- `route.js` — GET/PUT โหมดการเซ็นของ org (org_config key docs_sign_policy) (~400 tok)

@@ -1270,6 +1270,27 @@ user เสนอ use case *"บอร์ดอาจแบ่งตามจั
 ไฟล์ที่ยังมี pattern นี้และควรตรวจเมื่อแตะ: `web/db/kanban/people.js`,
 `web/app/api/docs/sign/link-ngs/route.js`, `web/app/api/org/appoint/route.js`
 
+### `org_members.roles` ไม่ใช่สันหลังสิทธิ์แล้ว — อย่ากลัวซ้ำ (2026-08-26)
+
+เคยบอก user ว่า "ย้าย `org_members.roles` = แตะสันหลังสิทธิ์ ทุกคนอาจสิทธิ์หาย" → **ผิด**
+user เลยถอย ไม่กล้าทำ migration ทั้งที่จริงๆ ปลอดภัย เสียเวลาไปรอบหนึ่ง
+
+ORG_ACCESS_REDESIGN ขั้น 4 ย้ายสิทธิ์ไป `org_member_roles` แล้ว — คีย์ `(org_id, user_id, role_def_id, source)`
+**ไม่มี `guild_id` เลย** · ทางอ่านจริงคือ `resolveAccessV2()` ไม่ใช่ `resolveAccess()` ตัวเก่า
+คอมเมนต์ยืนยันที่ `web/lib/getEffectiveRoles.js:20` — "`roles` ยังคืนไว้เพื่อแสดงผล ไม่ใช้ตัดสินสิทธิ์อีกแล้ว"
+
+→ `org_members.roles` วันนี้ = **cache ชื่อยศ Discord ไว้โชว์** + preview ของ view-as-role เท่านั้น
+→ ก่อนบอกว่าอะไรเป็น "สันหลังสิทธิ์" ให้ไล่ดูว่า **ใครอ่านจริง** ก่อนเสมอ อย่าเดาจากชื่อคอลัมน์
+
+### นับ blast radius ต้องนับจาก SQL จริง ไม่ใช่ grep คำลอยๆ (2026-08-26)
+
+ตอบ user ว่า migration กระทบ "27 ไฟล์" โดยนับจาก "ไฟล์ที่มีคำว่า org_members และ guild_id อยู่ในไฟล์เดียวกัน"
+→ user จับได้ทันทีว่า "ไม่ได้เปลี่ยนชื่อตาราง ทำไมต้องแก้ 27 ไฟล์" · นับใหม่จาก template literal
+ที่มี `org_members` จริงแล้วเช็คว่าแตะคอลัมน์ที่จะย้ายไหม → **22 ไฟล์** และแยกได้ว่าคอลัมน์ไหนทำให้เพิ่ม/ลด
+
+→ เวลาประเมินขอบเขต migration: ดึง SQL literal ออกมาวิเคราะห์ต่อคอลัมน์ · **ตัด `.next`/`.next-verify`/`.next-test` ทิ้งเสมอ**
+(รอบแรกได้เลข 165 เพราะนับ build output) · ตัวเลขที่ผิดทำให้ user ตัดสินใจผิด ไม่ใช่แค่ดูไม่โปร
+
 ## Decision Log
 
 <!-- Significant technical decisions with rationale. Why X was chosen over Y. -->
