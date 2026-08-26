@@ -2,6 +2,34 @@
 
 > เก็บเฉพาะงานค้าง + design ที่ยังไม่ทำ · ของที่ทำเสร็จ+deploy แล้วย้ายไปอยู่ในโค้ด/`md/*` ตามระบบ
 
+## 📄 Docs — ผู้รับเงินคนนอก + โหมดการเซ็น (ทำถึงไหน · 2026-08-26)
+
+**สถานะ: code เสร็จ · build ผ่าน · เทสบนเครื่อง dev แล้วบางส่วน · 6 commits ยังไม่ push ยังไม่ deploy**
+
+รายละเอียดออกแบบทั้งหมดอยู่ในข้อความ commit (`git log --oneline -8`) และ `.wolf/buglog.json` (4 bug) — ไม่ต้อง re-derive
+
+### ทำไปแล้ว
+- `docs_external_payees` + `external_payee_id` (XOR กับ `member_user_id` ด้วย CHECK) + view `docs_entry_recipient`
+- OCR บัตร ปชช. ด้วย Claude vision → เติมฟอร์ม (`POST /api/docs/id-card/ocr`, ไม่แตะ DB) + mod-11 checksum (`web/lib/thaiId.js`)
+- หน้าจัดการคนนอกใน `/docs/settings` (แก้/ลบ/ดูสำเนาบัตร · ลบไม่ได้ถ้ามีใบออกไปแล้ว)
+- โหมดการเซ็นต่อ org — `org_config` key `docs_sign_policy` = `strict` (ค่าตั้งต้น) | `flexible`
+  **กฎเดียวจำง่าย: ยืดหยุ่น = ผู้ดูแลทำแทนสมาชิกได้ทั้งกรอกและเซ็น · เข้มงวด = ทุกคนทำของตัวเอง**
+- ผู้ดูแลกรอกข้อมูล + แนบบัตรแทนสมาชิกที่ไม่ได้ผูกทะเบียน (`PUT /api/docs/entries/[id]/recipient-info`)
+- แก้บั๊กเดิม 3 ตัวที่เจอระหว่างทาง: export กรองด้วย `member_discord_id` (2 สำเนา), `updateEntry` COALESCE ล้าง null ไม่ได้, LATERAL `org_members` `LIMIT 1` ไม่มี ORDER BY
+
+### ค้างอยู่ — เริ่มตรงนี้ได้เลย
+1. **การ์ดสำเนาบัตรในหน้าเซ็นไม่โผล่ให้ผู้ดูแล** เมื่อผู้รับเป็นสมาชิก (โหมดยืดหยุ่น) → กรอกข้อมูลแทนได้แล้วแต่เปลี่ยนรูปบัตรทีหลังไม่ได้
+   **ทางแก้ที่เคาะแล้ว:** ให้ `/api/docs/sign/verify` อ่าน session แล้วคืน flag ว่าคนเปิดมีสิทธิ์จัดการเอกสารไหม → เงื่อนไขที่ [`page.js:705`](../web/app/docs/sign/%5Btoken%5D/page.js#L705) เปลี่ยนเป็น *เจ้าตัว **หรือ** ผู้รับเป็นคนนอก **หรือ** (จัดการเอกสารได้ **และ** โหมดยืดหยุ่น)*
+   **ห้ามโชว์ให้ทุกคน** — โหมดยืดหยุ่นแปลว่าสมาชิกคนไหนก็เปิดลิงก์ได้ = เอาบัตรคนอื่นไปแปะให้ดู (PDPA) และ API กันไว้อยู่แล้วจะได้รูปแตก + ปุ่ม 403
+2. **ยังไม่เคยกด Export PDF จริงของใบคนนอก** — ด่านสุดท้ายที่ยังไม่มีใครทดสอบ
+3. `token/[token]/receipt/route.js` ยังวางรูปเอกสารแนบแบบยืดเต็มหน้า A4 (บั๊กที่แก้ไปแล้วใน `projects/[id]/export` เมื่อ 2026-08-09 แต่ไฟล์นี้ยังเป็นของเก่า) — แก้ 3 บรรทัด ลอกจากอีกไฟล์
+4. `sign/preview` + `sign/preview-img` บังคับ `session.user.discordId` → คนที่ล็อกอินด้วยอีเมลไม่เห็นภาพตัวอย่างใบ (401) · บั๊กเดิมคนละเรื่อง แก้เป็นเช็ค `userId` แทน
+
+### migration
+`scripts/migration/migration.sql` มี 2 ก้อนใหม่ (2026-08-25 ตารางคนนอก+view, 2026-08-26 backfill `org_members.member_id`)
+**รันลง DB dev แล้ว · prod ยังไม่รัน**
+
+
 ## 🎨 CSS Design Token migration — รองรับสีแบรนด์ต่อ org แบบ runtime (เคาะ 2026-08-20)
 
 **user เคาะแล้วว่าจะทำ** หลังคุยเปรียบเทียบกับ prompt "design token + component class" ที่เจอมา — สรุปเหตุผลที่ทำให้คุ้ม (ไม่ใช่แค่ nice-to-have): โปรเจกต์กำลังจะเป็น multi-tenant org platform (rebrand → platfor.org, มี `config/brand.js` วางรากไว้แล้ว [[project_rebrand]]) ถ้าแต่ละ org อยากมีสีแบรนด์ตัวเอง **ต้องเปลี่ยนได้ตอนรันไทม์โดยไม่ deploy ใหม่** — Tailwind config ทำแบบนี้ไม่ได้ (เป็นค่า build-time) ต้องใช้ CSS variable จริง
