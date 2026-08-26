@@ -108,6 +108,20 @@ function calcDuration(startStr, endStr) {
   return `${days} วัน`
 }
 
+// จุดไข่ปลาใน description = ที่อยู่ผู้รับที่ยังไม่รู้ตอนแอดมินกรอกระยะทาง
+// (`DocEntryList.buildTravelDescription` เขียน description ครั้งเดียวตอนนั้นแล้วแช่เป็น text
+//  ในคอลัมน์ `description` — ผู้รับถ่ายบัตรกรอกที่อยู่ทีหลัง ไม่มีอะไรกลับไปคำนวณใหม่ให้)
+// → เติมตอนสร้างเอกสารแทน · ไม่แตะค่าใน DB คนที่พิมพ์ทับเองไว้จึงไม่โดนทับ
+function fillAddressPlaceholder(desc, { subdistrict, district, province_addr }) {
+  if (!desc || !/\.{4,}/.test(desc)) return desc
+  const parts = [
+    subdistrict  && `ต.${subdistrict}`,
+    district     && `อ.${district}`,
+    province_addr && `จ.${province_addr}`,
+  ].filter(Boolean)
+  return parts.length ? desc.replace(/\.{4,}/, parts.join(' ')) : desc
+}
+
 function buildData(entry, { payerDisplayName = null, payerPosition = null } = {}) {
   const override = entry.override_data ?? {}
   const ngs = {
@@ -131,6 +145,13 @@ function buildData(entry, { payerDisplayName = null, payerPosition = null } = {}
   const eventDuration = calcDuration(entry.event_date, entry.event_end_date)
   const eventTopic    = entry.event_name ?? ''
 
+  // ที่อยู่ที่ใช้จริง — คำนวณก่อน เพราะ description ต้องใช้เติมจุดไข่ปลาด้วย
+  const subdistrict   = override.subdistrict   ?? ngs.subdistrict
+  const district      = override.district      ?? ngs.district
+  const provinceAddr  = override.province_addr ?? ngs.province_addr
+  const description   = fillAddressPlaceholder(entry.description ?? '',
+    { subdistrict, district, province_addr: provinceAddr })
+
   return {
     // common
     header:            HEADER_MAP[entry.item_type] ?? '',
@@ -153,9 +174,9 @@ function buildData(entry, { payerDisplayName = null, payerPosition = null } = {}
     house_no:        override.house_no      || ngs.house_no   || '-',
     moo:             override.moo           || ngs.moo        || '-',
     road:            override.road          || ngs.road       || entry.road || '-',
-    subdistrict:     override.subdistrict   ?? ngs.subdistrict,
-    district:        override.district      ?? ngs.district,
-    province_addr:   override.province_addr ?? ngs.province_addr,
+    subdistrict:     subdistrict,
+    district:        district,
+    province_addr:   provinceAddr,
     phone:           override.phone         || entry.mobile_number || '-',
     branch_no:       override.branch_no     ?? '',
     branch_province: override.branch_province ?? entry.province ?? '',
@@ -167,8 +188,8 @@ function buildData(entry, { payerDisplayName = null, payerPosition = null } = {}
     meal_count:       override.meal_count     ?? '',
     unit_price:       override.unit_price     ?? '',
     quantity:         override.quantity       ?? '',
-    equipment_desc:   override.equipment_desc ?? entry.description ?? '',
-    items_desc:       override.items_desc     ?? entry.description ?? '',
+    equipment_desc:   override.equipment_desc ?? description,
+    items_desc:       override.items_desc     ?? description,
     daily_rate:       override.daily_rate     ?? '',
     days:             override.days           ?? '',
   }

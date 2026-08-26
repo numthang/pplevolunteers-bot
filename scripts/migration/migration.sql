@@ -1406,3 +1406,52 @@ UPDATE docs_activity_entries
 
 
 -- production ทำถึงตรงนี้
+
+-- ===========================================================================
+-- 2026-08-26 — docs_entry_recipient: ที่อยู่/เลขบัตรใน override_data ต้องชนะทะเบียน
+--
+-- อาการ: description ค่าเดินทางนอกจังหวัดออกมาเป็น "ค่าเดินทางจาก ......... ไป-กลับ N กม."
+-- เหตุ: DocEntryList สร้าง description จาก r.home_district/home_amphure/home_province
+--       ซึ่งวิวนี้ดึงมาจาก cache_pple_member (ทะเบียนพรรค) หรือ docs_external_payees เท่านั้น
+--       — ไม่เคยอ่าน override_data · คนที่ไม่ได้ผูกทะเบียนแล้วกรอกที่อยู่เองผ่านการถ่ายบัตร
+--       ที่อยู่จะลง override_data อย่างเดียว วิวจึงมองไม่เห็น → ได้จุดไข่ปลา
+--       (คนที่ผูกทะเบียนไว้ยังทำงานปกติ = "เคยทำงานได้" ที่ user เจอ)
+-- แก้: ให้วิวคืน "ค่าที่ใช้จริง" — override ชนะก่อน แล้วค่อยคนนอก แล้วค่อยทะเบียน
+--      ลำดับเดียวกับ buildData() ใน web/lib/generatePdf.js เป๊ะ เพื่อไม่ให้เว็บกับ PDF เห็นคนละค่า
+-- ===========================================================================
+CREATE OR REPLACE VIEW docs_entry_recipient AS
+ SELECT e.id AS entry_id,
+        CASE
+            WHEN e.external_payee_id IS NOT NULL THEN 'external'::text
+            ELSE 'member'::text
+        END AS recipient_kind,
+    COALESCE(NULLIF(e.override_data->>'title', ''), NULLIF(x.title::text, ''::text), n.title::text) AS title,
+    COALESCE(NULLIF(x.first_name::text, ''::text), n.first_name::text) AS ngs_first_name,
+    COALESCE(NULLIF(x.last_name::text, ''::text), n.last_name::text) AS ngs_last_name,
+    COALESCE(NULLIF(x.entity_name::text, ''::text), NULLIF(TRIM(BOTH FROM concat(x.first_name, ' ', x.last_name)), ''::text), m.display_name::text) AS display_name,
+    COALESCE(NULLIF(x.first_name::text, ''::text), u.firstname::text) AS firstname,
+    COALESCE(NULLIF(x.last_name::text, ''::text), u.lastname::text) AS lastname,
+    COALESCE(NULLIF(e.override_data->>'id_number', ''), NULLIF(x.id_number::text, ''::text), n.identification_number::text) AS identification_number,
+    COALESCE(NULLIF(e.override_data->>'house_no', ''), NULLIF(x.house_no::text, ''::text), n.home_house_number::text) AS home_house_number,
+    COALESCE(NULLIF(e.override_data->>'moo', ''), NULLIF(x.moo::text, ''::text), n.home_alley::text) AS home_alley,
+    COALESCE(NULLIF(e.override_data->>'road', ''), NULLIF(x.road::text, ''::text), n.home_road::text) AS home_road,
+    COALESCE(NULLIF(e.override_data->>'subdistrict', ''), NULLIF(x.subdistrict::text, ''::text), n.home_district::text) AS home_district,
+    COALESCE(NULLIF(e.override_data->>'district', ''), NULLIF(x.district::text, ''::text), n.home_amphure::text) AS home_amphure,
+    COALESCE(NULLIF(e.override_data->>'province_addr', ''), NULLIF(x.province::text, ''::text), n.home_province::text) AS home_province,
+    COALESCE(NULLIF(x.zip_code::text, ''::text), n.home_zip_code::text) AS home_zip_code,
+    COALESCE(NULLIF(e.override_data->>'phone', ''), NULLIF(x.phone::text, ''::text), n.mobile_number::text) AS mobile_number,
+    COALESCE(x.id_card_image, u.id_card_image) AS id_card_image,
+    n.road,
+    m.member_id,
+    u.discord_id AS member_discord_id
+   FROM docs_activity_entries e
+     JOIN docs_projects p ON p.id = e.project_id
+     LEFT JOIN users u ON u.id = e.member_user_id
+     LEFT JOIN LATERAL ( SELECT om.display_name,
+            om.member_id
+           FROM org_members om
+          WHERE om.user_id = u.id AND om.org_id = p.org_id
+          ORDER BY (om.member_id IS NOT NULL) DESC, om.joined_at DESC NULLS LAST
+         LIMIT 1) m ON true
+     LEFT JOIN cache_pple_member n ON n.source_id = m.member_id
+     LEFT JOIN docs_external_payees x ON x.id = e.external_payee_id;
