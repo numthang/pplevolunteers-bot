@@ -45,6 +45,7 @@ export default function SignPage({ params }) {
   const [selfMode, setSelfMode]         = useState(false)
   const [selfInfoDone, setSelfInfoDone] = useState(false)
   const [signPolicy, setSignPolicy]     = useState('strict')
+  const [canManage, setCanManage]       = useState(false)
   const [recipientComplete, setRecipientComplete] = useState(true)
   const [infoModal, setInfoModal]       = useState(false)
   const [selfSaving, setSelfSaving]     = useState(false)
@@ -86,6 +87,7 @@ export default function SignPage({ params }) {
           const role = d.data.signer_role || 'recipient'
           setSignerRole(role)
           setSignPolicy(d.data.sign_policy || 'strict')
+          setCanManage(!!d.data.can_manage)
           setRecipientComplete(d.data.recipient_complete !== false)
 
           if (role === 'recipient') {
@@ -122,6 +124,14 @@ export default function SignPage({ params }) {
   // (ใบที่เซ็นแล้วแต่ไม่มีชื่อ/ที่อยู่/เลขบัตร แย่กว่าใบที่ยังไม่เซ็น — เบิกไม่ผ่านเหมือนกัน
   //  แต่มีลายเซ็นคนจริงติดอยู่แล้ว)
   const needsRecipientInfo = canSignOnBehalf && !entry?.external_payee_id && !recipientComplete
+  // เจ้าของใบเปิดเอง (สมาชิก) — บัตรลงบัญชีตัวเองผ่าน /api/docs/id-card ตามเดิม
+  const isRecipientSelf = !!entry && !entry.external_payee_id &&
+    !!session?.user?.userId && session.user.userId === entry.member_user_id
+  // ผู้ดูแลจัดการสำเนาบัตรแทนสมาชิกได้ — กฎเดียวกับ gate() ของ POST /api/docs/entries/:id/id-card
+  // (canManageDocs + อยู่ในเขตของงาน + org โหมดยืดหยุ่น) · **ห้ามผูกกับ canSignOnBehalf เฉยๆ**
+  // เพราะโหมดยืดหยุ่นสมาชิกคนไหนเปิดลิงก์ก็เซ็นแทนได้ แต่ห้ามเห็นบัตร ปชช. คนอื่น (PDPA)
+  const canManageIdCard = !!entry && !entry.external_payee_id && !isRecipientSelf &&
+    canManage && signPolicy === 'flexible'
 
   useEffect(() => {
     if (entry?.event_name) document.title = `${entry.event_name} — Docs`
@@ -286,11 +296,24 @@ export default function SignPage({ params }) {
       fd.append('token', token)
       // คนนอกไม่มี users row — บัตรเก็บในแถวของเขาเอง (ยิงเข้า /api/docs/id-card จะไปทับบัตร
       // ของ "คนที่ล็อกอินอยู่" คือแอดมินที่ถือเครื่อง ไม่ใช่ของผู้รับเงิน)
+      // ผู้ดูแลแนบแทนสมาชิก → ต้องยิงเส้น entries/:id/id-card ที่เขียนลงบัญชี "ผู้รับ"
+      // (/api/docs/id-card เขียนลงบัญชีคนที่ล็อกอินเสมอ = ทับบัตรแอดมินเอง)
       const url = entry?.external_payee_id
         ? `/api/docs/external-payees/${entry.external_payee_id}/id-card?token=${encodeURIComponent(token)}`
-        : '/api/docs/id-card'
-      const res = await fetch(url, { method: 'POST', body: fd })
-      const data = await res.json()
+        : canManageIdCard
+          ? `/api/docs/entries/${entry.id}/id-card`
+          : '/api/docs/id-card'
+      let res = await fetch(url, { method: 'POST', body: fd })
+      let data = await res.json()
+      // บัตรใช้ร่วมทุกใบของคนนั้น — มีอยู่แล้วต้องยืนยันก่อนทับ ไม่ทับเงียบๆ
+      if (res.status === 409 && data.code === 'exists') {
+        if (!confirm(t('recipientInfo.confirmOverwriteCard'))) return
+        const fd2 = new FormData()
+        fd2.append('file', blob, 'idcard.jpg')
+        fd2.append('token', token)
+        res  = await fetch(`${url}?overwrite=1`, { method: 'POST', body: fd2 })
+        data = await res.json()
+      }
       if (!res.ok) throw new Error(data.error || t('sign.idCardUploadFailed'))
       setHasIdCard(true)
       setIdCardPreviewUrl(URL.createObjectURL(blob))
@@ -701,9 +724,11 @@ export default function SignPage({ params }) {
           </div>
         )}
 
-        {/* Step: ID-card upload (recipient only, after ngs linked, เฉพาะเจ้าของเอกสาร) */}
-        {signerRole === 'recipient' && (ngsLinked || selfInfoDone) &&
-          (entry?.external_payee_id ? true : session?.user?.userId === entry?.member_user_id) && (
+        {/* Step: ID-card upload — เจ้าของเอกสาร, ใบคนนอก, หรือผู้ดูแลในโหมดยืดหยุ่น
+            (ผู้ดูแลไม่ต้องผ่านขั้นผูกทะเบียน/กรอกเอง — เขากรอกให้ในใบอยู่แล้ว) */}
+        {signerRole === 'recipient' &&
+          (canManageIdCard || ((ngsLinked || selfInfoDone) &&
+            (entry?.external_payee_id ? true : isRecipientSelf))) && (
           <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-6">
             <div className="flex items-center gap-2 mb-1">
               <IdCard size={18} className="text-orange shrink-0" />
