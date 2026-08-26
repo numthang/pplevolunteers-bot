@@ -11,20 +11,16 @@ import { generateEntryPdf } from '@/lib/generatePdf.js'
 export async function GET(req) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.discordId) {
-    return Response.json({ error: 'Unauthorized' }, { status: 401 })
+    return Response.json({ error: 'Unauthorized' }, { status: 401, headers: { 'Cache-Control': 'no-store' } })
   }
 
   const { searchParams } = new URL(req.url)
   const token = searchParams.get('token')
-  if (!token) return Response.json({ error: 'token required' }, { status: 400 })
+  if (!token) return Response.json({ error: 'token required' }, { status: 400, headers: { 'Cache-Control': 'no-store' } })
 
   try {
     const entry = await getEntryByToken(token)
-    if (!entry) return Response.json({ error: 'ลิงก์ไม่ถูกต้อง' }, { status: 404 })
-    if (entry.token_expires_at && new Date(entry.token_expires_at) < new Date()) {
-      return Response.json({ error: 'ลิงก์หมดอายุแล้ว' }, { status: 410 })
-    }
-
+    if (!entry) return Response.json({ error: 'ลิงก์ไม่ถูกต้อง' }, { status: 404, headers: { 'Cache-Control': 'no-store' } })
     // ดึง entry เต็ม (มี project_name + id_card_image) เพื่อ generate ให้ตรงกับใบจริง
     const full = await getEntryById(entry.id)
     // ดึงลายเซ็นล่าสุด (ถ้ามี) → preview สะท้อนสถานะจริง: เซ็นแล้วเห็นลายเซ็น, ยังไม่เซ็นเห็นว่าง
@@ -46,6 +42,6 @@ export async function GET(req) {
     })
   } catch (err) {
     console.error('[GET /api/docs/sign/preview]', err)
-    return Response.json({ error: err.message || 'สร้างตัวอย่างไม่สำเร็จ' }, { status: 500 })
+    return Response.json({ error: err.message || 'สร้างตัวอย่างไม่สำเร็จ' }, { status: 500, headers: { 'Cache-Control': 'no-store' } })
   }
 }

@@ -24,14 +24,10 @@ export async function POST(req) {
 
     const entry = await getEntryByToken(token)
     if (!entry) {
-      return Response.json({ error: 'ลิงก์ไม่ถูกต้องหรือหมดอายุแล้ว' }, { status: 404 })
+      return Response.json({ error: 'ลิงก์ไม่ถูกต้อง' }, { status: 404 })
     }
 
     const role = entry.signer_role  // 'recipient' | 'payer'
-
-    if (entry.signer_token_expires_at && new Date(entry.signer_token_expires_at) < new Date()) {
-      return Response.json({ error: 'ลิงก์หมดอายุแล้ว' }, { status: 410 })
-    }
 
     // ตรวจว่าเป็นเจ้าของลิงก์ถูกต้อง
     // onBehalf = "คนเซ็น ≠ ชื่อบนใบ" — กฎเดียวครอบทั้งคนนอก (ไม่มีบัญชีให้เป็นเจ้าของ)
@@ -73,8 +69,8 @@ export async function POST(req) {
 
     return Response.json({ success: true })
   } catch (err) {
-    if (err.message === 'token invalid or expired') {
-      return Response.json({ error: 'ลิงก์ไม่ถูกต้องหรือหมดอายุแล้ว' }, { status: 404 })
+    if (err.message === 'token invalid') {
+      return Response.json({ error: 'ลิงก์ไม่ถูกต้อง' }, { status: 404 })
     }
     console.error('[POST /api/docs/sign]', err)
     return Response.json({ error: 'Internal Server Error' }, { status: 500 })

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useTranslations } from 'next-intl'
-import { PenLine, CreditCard, ChevronRight, AlertTriangle } from 'lucide-react'
+import { PenLine, CreditCard, ChevronRight } from 'lucide-react'
 
 const KNOWN_ITEM_TYPES = ['food', 'speaker', 'travel', 'venue', 'accommodation', 'supplies', 'equipment', 'sound', 'photo']
 
@@ -12,15 +12,6 @@ function formatDate(dateStr) {
   if (!dateStr) return ''
   const [y, m, d] = dateStr.split('T')[0].split('-').map(Number)
   return `${d} ${THAI_MONTHS[m - 1]} ${y + 543}`
-}
-
-function expiryWarn(expiresAt, t) {
-  if (!expiresAt) return null
-  const exp = new Date(expiresAt).getTime()
-  const now = Date.now()
-  if (exp < now) return { text: t('pending.expired'), danger: true }
-  if (exp - now < 14 * 86400000) return { text: t('pending.expiresOn', { date: formatDate(expiresAt) }), danger: false }
-  return null
 }
 
 function SignList({ items, emptyText }) {
@@ -35,7 +26,6 @@ function SignList({ items, emptyText }) {
   return (
     <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl overflow-hidden divide-y divide-warm-200 dark:divide-disc-border">
       {items.map(it => {
-        const warn = expiryWarn(it.expires_at, t)
         return (
           <Link
             key={it.id}
@@ -52,11 +42,6 @@ function SignList({ items, emptyText }) {
                 <span className="text-warm-300 dark:text-disc-muted/40">·</span>
                 <span className="font-medium text-warm-700 dark:text-disc-text tabular-nums">{t('pending.amount', { amount: Number(it.amount).toLocaleString() })}</span>
                 {it.event_date && <><span className="text-warm-300 dark:text-disc-muted/40">·</span><span>{formatDate(it.event_date)}</span></>}
-                {warn && (
-                  <span className={`inline-flex items-center gap-1 ${warn.danger ? 'text-red-500 dark:text-red-400' : 'text-amber-600 dark:text-amber-400'}`}>
-                    <AlertTriangle size={13} /> {warn.text}
-                  </span>
-                )}
               </div>
             </div>
             <ChevronRight size={18} className="text-warm-300 dark:text-disc-muted group-hover:text-orange transition shrink-0" />

@@ -1099,7 +1099,15 @@
       "onBehalfWarning": "You are signing on behalf of {name} — the system records that you signed",
       "notYourLink": {
         "title": "This link is not yours",
-        "hint": "This receipt names someone else as the payee — ask them to open the link and sign, or have an admin switch on flexible mode in document settings"
+        "hint": "If that's you, you're signed in with a different account — sign out and back in with the account linked to that name. If not, ask them to open this link themselves, or have an admin switch to flexible mode in Document settings.",
+        "issuedTo": "This receipt was issued to {name}"
+      },
+      "ocr": {
+        "button": "Photograph your ID card to fill this in",
+        "reading": "Reading the card…",
+        "retake": "Retake photo",
+        "hint": "One photo does it all — we read the name, ID number and address, and keep it as the ID copy attached to this receipt. Check everything before saving.",
+        "idWarn": "The ID number we read may be off — check it against the card before saving."
       }
     },
     "externalPayee": {

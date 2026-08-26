@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, use } from 'react'
 import { useSession, signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { CheckCircle, AlertTriangle, Pen, Search, UserCheck, IdCard, FileText, RefreshCw, CreditCard } from 'lucide-react'
+import { CheckCircle, AlertTriangle, Pen, UserCheck, IdCard, FileText, RefreshCw, CreditCard } from 'lucide-react'
 import IdCardCropper from '@/components/docs/IdCardCropper'
 import RecipientInfoModal from '@/components/docs/RecipientInfoModal'
 
@@ -30,18 +30,11 @@ export default function SignPage({ params }) {
   const [loadErr, setLoadErr]     = useState('')
   const [loading, setLoading]     = useState(true)
 
-  // ngs self-link state (recipient only)
+  // ผู้รับผูกทะเบียนสมาชิกไว้แล้วไหม — ถ้าผูก ข้อมูลบนใบมาจาก roster ไม่ต้องกรอกอะไรเลย
+  // (จอ "ค้นหาชื่อในทะเบียน" ถูกถอดออก 2026-08-26 — ถ่ายบัตรให้ AI อ่านแทนการค้น+พิมพ์)
   const [ngsLinked, setNgsLinked]     = useState(false)
-  const [ngsQuery, setNgsQuery]       = useState('')
-  const [ngsResults, setNgsResults]   = useState([])
-  const [ngsLinking, setNgsLinking]   = useState(false)
-  const [selectedNgs, setSelectedNgs] = useState(null)
-  const [idInput, setIdInput]         = useState('')
-  const [ngsErr, setNgsErr]           = useState('')
-  const ngsDebounce = useRef(null)
-  const ngsDropRef  = useRef(null)
 
-  // self-fill state — ผู้รับที่ไม่มีใน ngs roster กรอกข้อมูลเอง (recipient only)
+  // self-fill state — ผู้รับที่ไม่มีใน roster กรอกข้อมูลเอง (recipient only)
   const [selfMode, setSelfMode]         = useState(false)
   const [selfInfoDone, setSelfInfoDone] = useState(false)
   const [signPolicy, setSignPolicy]     = useState('strict')
@@ -54,6 +47,13 @@ export default function SignPage({ params }) {
     firstName: '', lastName: '', idNumber: '', phone: '',
     houseNo: '', moo: '', road: '', subdistrict: '', district: '', provinceAddr: '',
   })
+  // ถ่ายบัตรครั้งเดียวได้ 2 อย่าง: AI อ่านเติมฟอร์ม + เก็บ blob ไว้แนบเป็นสำเนาบัตรตอนกดบันทึก
+  const [ocrBusy, setOcrBusy]   = useState(false)
+  const [ocrErr, setOcrErr]     = useState('')
+  const [ocrDone, setOcrDone]   = useState(false)
+  const [idWarn, setIdWarn]     = useState(false)   // อ่านเลขบัตรได้แต่ checksum ไม่ผ่าน
+  const [formCardBlob, setFormCardBlob] = useState(null)
+  const [cropTarget, setCropTarget]     = useState('card')  // 'card' = อัปอย่างเดียว | 'form' = อ่านเข้าฟอร์มด้วย
 
   // id-card upload state (recipient only)
   const [hasIdCard, setHasIdCard]               = useState(false)
@@ -78,7 +78,9 @@ export default function SignPage({ params }) {
 
   useEffect(() => {
     if (status === 'loading') return
-    fetch(`/api/docs/sign/verify?token=${encodeURIComponent(token)}`)
+    // cache: 'no-store' — เบราว์เซอร์ที่เคยโดน 410 ตอนลิงก์ยังมีวันหมดอายุ จะกินของเก่าจากแคช
+    // ต่อให้ server แก้แล้ว (เจอจริง 2026-08-26) · header ฝั่ง server กันของใหม่ อันนี้กันของเก่าที่ค้างอยู่
+    fetch(`/api/docs/sign/verify?token=${encodeURIComponent(token)}`, { cache: 'no-store' })
       .then(r => r.json())
       .then(d => {
         if (!d.success) setLoadErr(d.error || t('sign.invalidLink'))
@@ -132,6 +134,11 @@ export default function SignPage({ params }) {
   // เพราะโหมดยืดหยุ่นสมาชิกคนไหนเปิดลิงก์ก็เซ็นแทนได้ แต่ห้ามเห็นบัตร ปชช. คนอื่น (PDPA)
   const canManageIdCard = !!entry && !entry.external_payee_id && !isRecipientSelf &&
     canManage && signPolicy === 'flexible'
+  // ⭐ สวิตช์เดียวที่ตัดสินว่าหน้านี้ "ทำอะไรได้ไหม" — หน้าเดียว การ์ดชุดเดียวทั้ง strict/flexible
+  // ต่างกันแค่ตัวนี้ (เคาะ 2026-08-26): strict + ไม่ใช่เจ้าตัว = ซ่อนทุกการ์ดที่ลงมือได้
+  // เหลือแค่รายละเอียดใบ + ป้ายบอกว่าใบนี้ออกให้ใคร
+  // เดิมซ่อนแค่บางอัน ช่องวาดลายเซ็นยังโผล่ให้วาดจนเสร็จแล้วค่อยเด้ง 403 ตอนกดส่ง
+  const canInteract = signerRole !== 'recipient' || isRecipientSelf || canSignOnBehalf
 
   useEffect(() => {
     if (entry?.event_name) document.title = `${entry.event_name} — Docs`
@@ -158,58 +165,6 @@ export default function SignPage({ params }) {
     ctx.lineCap = 'round'
     ctx.lineJoin = 'round'
   }, [entry, ngsLinked, selfInfoDone, signerRole])
-
-  // Close ngs dropdown on outside click
-  useEffect(() => {
-    function handler(e) {
-      if (ngsDropRef.current && !ngsDropRef.current.contains(e.target)) setNgsResults([])
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [])
-
-  // Ngs search debounce (recipient only)
-  useEffect(() => {
-    if (signerRole !== 'recipient') return
-    clearTimeout(ngsDebounce.current)
-    if (ngsQuery.trim().length < 2) { setNgsResults([]); return }
-    ngsDebounce.current = setTimeout(async () => {
-      const res = await fetch(`/api/docs/ngs-search?token=${encodeURIComponent(token)}&q=${encodeURIComponent(ngsQuery)}`)
-      const data = await res.json()
-      setNgsResults(data.data || [])
-    }, 300)
-  }, [ngsQuery, token, signerRole])
-
-  function selectNgs(person) {
-    setSelectedNgs(person)
-    setNgsResults([])
-    setNgsQuery('')
-    setIdInput('')
-    setNgsErr('')
-  }
-
-  async function confirmNgsLink() {
-    if (!selectedNgs) return
-    const idDigits = idInput.replace(/\D/g, '')
-    if (idDigits.length !== 13) { setNgsErr(t('sign.idNumberRequired')); return }
-    setNgsErr('')
-    setNgsLinking(true)
-    try {
-      const res = await fetch('/api/docs/sign/link-ngs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, ngsSourceId: selectedNgs.source_id, idNumber: idDigits }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Failed')
-      setNgsLinked(true)
-      setSelectedNgs(null)
-    } catch (err) {
-      setNgsErr(err.message)
-    } finally {
-      setNgsLinking(false)
-    }
-  }
 
   // Auto-apply: คนที่เคย self-fill ครบแล้ว (ชื่อ+เลขบัตร+ที่อยู่) เปิดบิลใหม่ → เติมให้เองข้ามฟอร์ม
   // การตรวจจริงอยู่ที่ preview ก่อนเซ็น + มีปุ่ม "แก้ไขข้อมูล" ถ้าข้อมูลเปลี่ยน
@@ -265,6 +220,12 @@ export default function SignPage({ params }) {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed')
+      // ถ่ายบัตรมาแล้วก็แนบให้เลยในจังหวะเดียว — ผู้ใช้ถ่ายรูปเดียวได้ทั้งกรอกฟอร์มและสำเนาบัตร
+      // (ล้มก็ไม่ rollback ข้อมูล — ข้อมูลบนใบสำคัญกว่า และยังแนบใหม่ได้จากการ์ดสำเนาบัตร)
+      if (formCardBlob) {
+        try { await uploadIdCard(formCardBlob) } catch {}
+        setFormCardBlob(null)
+      }
       setSelfInfoDone(true)
       setSelfMode(false)
       setPreviewVer(v => v + 1) // ข้อมูลบนเอกสารเปลี่ยน → gen preview ใหม่
@@ -275,15 +236,59 @@ export default function SignPage({ params }) {
     }
   }
 
-  // เลือกไฟล์ → เปิด cropper (ยังไม่อัปโหลด)
+  // เลือกไฟล์ → เปิด cropper (ยังไม่อัปโหลด) · cropTarget บอกว่าครอบเสร็จแล้วจะเอาไปทำอะไร
   function onIdCardFile(file) {
     if (!file) return
     setIdCardErr('')
+    setOcrErr('')
     if (file.size > 8 * 1024 * 1024) { setIdCardErr(t('sign.fileTooLarge')); return }
     const reader = new FileReader()
     reader.onload = () => setCropSrc(reader.result)
     reader.readAsDataURL(file)
     if (fileRef.current) fileRef.current.value = ''
+  }
+
+  // ครอบเสร็จ → แยกทางตามที่กดมา: จากฟอร์ม = ให้ AI อ่าน · จากการ์ดสำเนาบัตร = อัปเลย
+  function onCropped(blob) {
+    setCropSrc(null)
+    if (cropTarget === 'form') readIdCard(blob)
+    else uploadIdCard(blob)
+  }
+
+  // ให้ AI อ่านบัตร → เติมฟอร์มให้ครบ (ผู้ใช้ไม่ต้องพิมพ์อะไรเลย แค่ตรวจ)
+  // เก็บ blob ไว้ก่อน ยังไม่อัป — กฎ Create ของโปรเจกต์: เขียนตอนกด "บันทึก" เท่านั้น
+  async function readIdCard(blob) {
+    setOcrBusy(true)
+    setOcrErr('')
+    setIdWarn(false)
+    try {
+      const fd = new FormData()
+      fd.append('file', blob, 'idcard.jpg')
+      fd.append('token', token)
+      const res = await fetch('/api/docs/id-card/ocr', { method: 'POST', body: fd })
+      const d = await res.json()
+      if (!res.ok) throw new Error(d.error || t('externalPayee.readFailed'))
+      const c = d.data || {}
+      setSelfForm(f => ({
+        ...f,
+        firstName:    c.first_name  || f.firstName,
+        lastName:     c.last_name   || f.lastName,
+        idNumber:     c.id_number   || f.idNumber,
+        houseNo:      c.house_no    || f.houseNo,
+        moo:          c.moo         || f.moo,
+        road:         c.road        || f.road,
+        subdistrict:  c.subdistrict || f.subdistrict,
+        district:     c.district    || f.district,
+        provinceAddr: c.province    || f.provinceAddr,
+      }))
+      setIdWarn(!!c.id_number && !d.idValid)
+      setFormCardBlob(blob)
+      setOcrDone(true)
+    } catch (err) {
+      setOcrErr(err.message)
+    } finally {
+      setOcrBusy(false)
+    }
   }
 
   // ได้ภาพที่ครอบแล้ว (สัดส่วนบัตรจริง) → อัปโหลด
@@ -430,12 +435,14 @@ export default function SignPage({ params }) {
   ))
 
   // Payer มีสิทธิ์เซ็นได้ทันที (ไม่ต้องผ่าน NGS/บัตร)
-  const canSign = (signerRole === 'payer' || canSignOnBehalf || ngsLinked || selfInfoDone) && !needsRecipientInfo
+  // canInteract นำหน้าทุกอย่าง — strict + ไม่ใช่เจ้าตัว ห้ามมีแม้แต่ช่องให้วาด
+  const canSign = canInteract &&
+    (signerRole === 'payer' || canSignOnBehalf || ngsLinked || selfInfoDone) && !needsRecipientInfo
 
   return (
     <div className="min-h-screen bg-warm-50 dark:bg-disc-bg2 py-4 sm:px-4">
       {cropSrc && (
-        <IdCardCropper src={cropSrc} onCancel={() => setCropSrc(null)} onCropped={uploadIdCard} />
+        <IdCardCropper src={cropSrc} onCancel={() => setCropSrc(null)} onCropped={onCropped} />
       )}
       {infoModal && entry && (
         <RecipientInfoModal
@@ -525,7 +532,7 @@ export default function SignPage({ params }) {
           )}
         </div>
 
-        {needsRecipientInfo && (
+        {needsRecipientInfo && canInteract && (
           <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-6">
             <div className="flex items-center gap-2 mb-1">
               <AlertTriangle size={18} className="text-amber-500 shrink-0" />
@@ -543,170 +550,115 @@ export default function SignPage({ params }) {
           <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-6 text-center">
             <AlertTriangle size={32} className="mx-auto text-amber-500 mb-3" />
             <p className="text-base text-warm-900 dark:text-disc-text">{t('sign.notYourLink.title')}</p>
-            <p className="mt-1 text-sm text-warm-500 dark:text-disc-muted">{t('sign.notYourLink.hint')}</p>
+            {recipientName && (
+              <p className="mt-1 text-base font-semibold text-warm-900 dark:text-disc-text">
+                {t('sign.notYourLink.issuedTo', { name: recipientName })}
+              </p>
+            )}
+            {/* บอกชื่อบนใบเสมอ — คนที่มี 2 บัญชี (Discord/อีเมล) แล้วล็อกอินผิดร่างจะเจอจอนี้
+                ทั้งที่ใบเป็นของเขาจริง ถ้าไม่บอกชื่อเขาจะไม่มีทางรู้ว่าต้องสลับบัญชี */}
+            <p className="mt-2 text-sm text-warm-500 dark:text-disc-muted">{t('sign.notYourLink.hint')}</p>
           </div>
         )}
 
-        {/* Step: NGS self-link (recipient only, if not yet linked) */}
-        {signerRole === 'recipient' && !skipIdentitySteps && !ngsLinked && (!selfInfoDone || selfMode) && (
+        {/* Step: ข้อมูลผู้รับเงิน (recipient เท่านั้น ถ้ายังไม่ผูกทะเบียน/ยังไม่เคยกรอก)
+            ถ่ายบัตรครั้งเดียว → AI อ่านเติมช่องให้ทั้งหมด → ตรวจแล้วกดบันทึก
+            (เดิมต้องค้นชื่อในทะเบียนหรือพิมพ์เลขบัตร 13 หลักเอง — ถอดออก 2026-08-26) */}
+        {signerRole === 'recipient' && canInteract && !skipIdentitySteps && !ngsLinked && (!selfInfoDone || selfMode) && (
           <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-6">
             <div className="flex items-center gap-2 mb-1">
               <UserCheck size={18} className="text-orange shrink-0" />
               <h2 className="text-base font-semibold text-warm-900 dark:text-disc-text">{t('sign.confirmIdentityTitle')}</h2>
             </div>
-            {selfMode ? (
-              <>
-                <p className="text-sm text-warm-500 dark:text-disc-muted mb-3">
-                  {t('sign.selfFillIntro')}
-                </p>
-                <div className="grid grid-cols-2 gap-2">
-                  {['firstName', 'lastName'].map(key => (
-                    <div key={key}>
-                      <label className="block text-sm text-warm-700 dark:text-disc-text mb-1">{t(`sign.selfForm.fields.${key}`)}</label>
-                      <input
-                        type="text"
-                        value={selfForm[key]}
-                        onChange={e => setSelfForm(f => ({ ...f, [key]: e.target.value }))}
-                        className="w-full border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-warm-900 dark:text-disc-text px-3 py-2.5 text-base rounded-lg focus:outline-none focus:ring-2 focus:ring-orange"
-                      />
-                    </div>
-                  ))}
-                  <div className="col-span-2">
-                    <label className="block text-sm text-warm-700 dark:text-disc-text mb-1">{t('sign.selfForm.fields.idNumber')}</label>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      maxLength={17}
-                      value={selfForm.idNumber}
-                      onChange={e => setSelfForm(f => ({ ...f, idNumber: e.target.value }))}
-                      className="w-full border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-warm-900 dark:text-disc-text px-3 py-2.5 text-base rounded-lg tracking-widest focus:outline-none focus:ring-2 focus:ring-orange"
-                    />
-                  </div>
-                  {['houseNo', 'moo', 'road', 'subdistrict', 'district', 'provinceAddr'].map(key => (
-                    <div key={key}>
-                      <label className="block text-sm text-warm-700 dark:text-disc-text mb-1">{t(`sign.selfForm.fields.${key}`)}</label>
-                      <input
-                        type="text"
-                        value={selfForm[key]}
-                        onChange={e => setSelfForm(f => ({ ...f, [key]: e.target.value }))}
-                        className="w-full border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-warm-900 dark:text-disc-text px-3 py-2.5 text-base rounded-lg focus:outline-none focus:ring-2 focus:ring-orange"
-                      />
-                    </div>
-                  ))}
-                  <div className="col-span-2">
-                    <label className="block text-sm text-warm-700 dark:text-disc-text mb-1">{t('sign.selfForm.fields.phone')}</label>
-                    <input
-                      type="tel"
-                      inputMode="numeric"
-                      maxLength={15}
-                      value={selfForm.phone}
-                      onChange={e => setSelfForm(f => ({ ...f, phone: e.target.value }))}
-                      className="w-full border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-warm-900 dark:text-disc-text px-3 py-2.5 text-base rounded-lg focus:outline-none focus:ring-2 focus:ring-orange"
-                    />
-                  </div>
+            <p className="text-sm text-warm-500 dark:text-disc-muted mb-3">
+              {t('sign.selfFillIntro')}
+            </p>
+
+            <button
+              type="button"
+              onClick={() => { setCropTarget('form'); setOcrErr(''); fileRef.current?.click() }}
+              disabled={ocrBusy || selfSaving}
+              className="w-full flex items-center justify-center gap-2 border-2 border-dashed border-warm-300 dark:border-disc-border rounded-lg py-3 text-base text-warm-600 dark:text-disc-muted hover:border-orange hover:text-orange disabled:opacity-50 transition"
+            >
+              <CreditCard size={18} />
+              {ocrBusy ? t('sign.ocr.reading') : ocrDone ? t('sign.ocr.retake') : t('sign.ocr.button')}
+            </button>
+            <p className="text-sm text-warm-400 dark:text-disc-muted mt-2">{t('sign.ocr.hint')}</p>
+            {ocrErr  && <p className="text-sm text-red-500 dark:text-red-400 mt-2">{ocrErr}</p>}
+            {idWarn  && <p className="text-sm text-amber-600 dark:text-amber-400 mt-2">{t('sign.ocr.idWarn')}</p>}
+
+            <div className="grid grid-cols-2 gap-2 mt-4">
+              {['firstName', 'lastName'].map(key => (
+                <div key={key}>
+                  <label className="block text-sm text-warm-700 dark:text-disc-text mb-1">{t(`sign.selfForm.fields.${key}`)}</label>
+                  <input
+                    type="text"
+                    value={selfForm[key]}
+                    onChange={e => setSelfForm(f => ({ ...f, [key]: e.target.value }))}
+                    className="w-full border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-warm-900 dark:text-disc-text px-3 py-2.5 text-base rounded-lg focus:outline-none focus:ring-2 focus:ring-orange"
+                  />
                 </div>
-                {selfErr && <p className="text-sm text-red-500 dark:text-red-400 mt-2">{selfErr}</p>}
-                <div className="flex items-center gap-2 mt-3">
-                  <button
-                    type="button"
-                    onClick={saveSelfInfo}
-                    disabled={selfSaving}
-                    className="flex-1 bg-orange text-white py-2.5 rounded-lg text-base font-semibold hover:bg-orange-light disabled:opacity-50 transition"
-                  >
-                    {selfSaving ? t('sign.selfForm.saving') : t('sign.selfForm.saveButton')}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setSelfMode(false); setSelfErr('') }}
-                    disabled={selfSaving}
-                    className="px-4 py-2.5 text-base text-warm-500 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text transition"
-                  >
-                    {selfInfoDone ? t('sign.selfForm.cancel') : t('sign.selfForm.backToSearch')}
-                  </button>
-                </div>
-              </>
-            ) : !selectedNgs ? (
-              <>
-                <p className="text-sm text-warm-500 dark:text-disc-muted mb-3">
-                  {t('sign.ngsSearch.intro')}
-                </p>
-                <div className="relative" ref={ngsDropRef}>
-                  <div className="relative">
-                    <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-warm-400 dark:text-disc-muted pointer-events-none" />
-                    <input
-                      type="text"
-                      value={ngsQuery}
-                      onChange={e => setNgsQuery(e.target.value)}
-                      placeholder={t('sign.ngsSearch.placeholder')}
-                      className="w-full border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-warm-900 dark:text-disc-text pl-9 pr-3 py-2.5 text-base rounded-lg placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-orange"
-                    />
-                  </div>
-                  {ngsResults.length > 0 && (
-                    <ul className="absolute z-10 w-full mt-1 bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                      {ngsResults.map(n => (
-                        <li key={n.source_id}>
-                          <button
-                            type="button"
-                            onClick={() => selectNgs(n)}
-                            className="w-full text-left px-4 py-2.5 hover:bg-warm-50 dark:hover:bg-disc-hover transition"
-                          >
-                            <span className="text-base font-medium text-warm-900 dark:text-disc-text">
-                              {n.first_name} {n.last_name}
-                            </span>
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-                <button
-                  type="button"
-                  onClick={openSelfMode}
-                  className="mt-3 text-sm text-warm-500 dark:text-disc-muted hover:text-orange underline underline-offset-2 transition"
-                >
-                  {t('sign.ngsSearch.notFound')}
-                </button>
-              </>
-            ) : (
-              <>
-                <p className="text-sm text-warm-500 dark:text-disc-muted mb-1">
-                  {t('sign.ngsSearch.confirmIdentity', { name: `${selectedNgs.first_name} ${selectedNgs.last_name}` })}
-                </p>
+              ))}
+              <div className="col-span-2">
+                <label className="block text-sm text-warm-700 dark:text-disc-text mb-1">{t('sign.selfForm.fields.idNumber')}</label>
                 <input
                   type="text"
                   inputMode="numeric"
-                  value={idInput}
-                  onChange={e => setIdInput(e.target.value)}
-                  placeholder={t('sign.ngsSearch.idPlaceholder')}
                   maxLength={17}
-                  className="w-full border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-warm-900 dark:text-disc-text px-3 py-2.5 text-base rounded-lg tracking-widest placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-orange mt-2"
+                  value={selfForm.idNumber}
+                  onChange={e => setSelfForm(f => ({ ...f, idNumber: e.target.value }))}
+                  className="w-full border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-warm-900 dark:text-disc-text px-3 py-2.5 text-base rounded-lg tracking-widest focus:outline-none focus:ring-2 focus:ring-orange"
                 />
-                {ngsErr && <p className="text-sm text-red-500 dark:text-red-400 mt-2">{ngsErr}</p>}
-                <div className="flex items-center gap-2 mt-3">
-                  <button
-                    type="button"
-                    onClick={confirmNgsLink}
-                    disabled={ngsLinking}
-                    className="flex-1 bg-orange text-white py-2.5 rounded-lg text-base font-semibold hover:bg-orange-light disabled:opacity-50 transition"
-                  >
-                    {ngsLinking ? t('sign.ngsSearch.confirming') : t('sign.ngsSearch.confirmButton')}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setSelectedNgs(null); setNgsErr('') }}
-                    disabled={ngsLinking}
-                    className="px-4 py-2.5 text-base text-warm-500 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text transition"
-                  >
-                    {t('sign.ngsSearch.reselect')}
-                  </button>
+              </div>
+              {['houseNo', 'moo', 'road', 'subdistrict', 'district', 'provinceAddr'].map(key => (
+                <div key={key}>
+                  <label className="block text-sm text-warm-700 dark:text-disc-text mb-1">{t(`sign.selfForm.fields.${key}`)}</label>
+                  <input
+                    type="text"
+                    value={selfForm[key]}
+                    onChange={e => setSelfForm(f => ({ ...f, [key]: e.target.value }))}
+                    className="w-full border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-warm-900 dark:text-disc-text px-3 py-2.5 text-base rounded-lg focus:outline-none focus:ring-2 focus:ring-orange"
+                  />
                 </div>
-              </>
-            )}
+              ))}
+              <div className="col-span-2">
+                <label className="block text-sm text-warm-700 dark:text-disc-text mb-1">{t('sign.selfForm.fields.phone')}</label>
+                <input
+                  type="tel"
+                  inputMode="numeric"
+                  maxLength={15}
+                  value={selfForm.phone}
+                  onChange={e => setSelfForm(f => ({ ...f, phone: e.target.value }))}
+                  className="w-full border border-warm-200 dark:border-disc-border bg-white dark:bg-disc-hover text-warm-900 dark:text-disc-text px-3 py-2.5 text-base rounded-lg focus:outline-none focus:ring-2 focus:ring-orange"
+                />
+              </div>
+            </div>
+            {selfErr && <p className="text-sm text-red-500 dark:text-red-400 mt-2">{selfErr}</p>}
+            <div className="flex items-center gap-2 mt-3">
+              <button
+                type="button"
+                onClick={saveSelfInfo}
+                disabled={selfSaving || ocrBusy}
+                className="flex-1 bg-orange text-white py-2.5 rounded-lg text-base font-semibold hover:bg-orange-light disabled:opacity-50 transition"
+              >
+                {selfSaving ? t('sign.selfForm.saving') : t('sign.selfForm.saveButton')}
+              </button>
+              {selfInfoDone && (
+                <button
+                  type="button"
+                  onClick={() => { setSelfMode(false); setSelfErr('') }}
+                  disabled={selfSaving}
+                  className="px-4 py-2.5 text-base text-warm-500 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text transition"
+                >
+                  {t('sign.selfForm.cancel')}
+                </button>
+              )}
+            </div>
           </div>
         )}
 
         {/* Self-fill สำเร็จ (auto หรือกรอกเอง) — แสดงสถานะ + ปุ่มแก้ไข */}
-        {signerRole === 'recipient' && !skipIdentitySteps && !ngsLinked && selfInfoDone && !selfMode && (
+        {signerRole === 'recipient' && canInteract && !skipIdentitySteps && !ngsLinked && selfInfoDone && !selfMode && (
           <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl px-6 py-4 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2 min-w-0">
               <UserCheck size={18} className="text-green-600 dark:text-green-400 shrink-0" />
@@ -726,7 +678,7 @@ export default function SignPage({ params }) {
 
         {/* Step: ID-card upload — เจ้าของเอกสาร, ใบคนนอก, หรือผู้ดูแลในโหมดยืดหยุ่น
             (ผู้ดูแลไม่ต้องผ่านขั้นผูกทะเบียน/กรอกเอง — เขากรอกให้ในใบอยู่แล้ว) */}
-        {signerRole === 'recipient' &&
+        {signerRole === 'recipient' && canInteract &&
           (canManageIdCard || ((ngsLinked || selfInfoDone) &&
             (entry?.external_payee_id ? true : isRecipientSelf))) && (
           <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-6">
@@ -742,7 +694,7 @@ export default function SignPage({ params }) {
                   </p>
                   <button
                     type="button"
-                    onClick={() => fileRef.current?.click()}
+                    onClick={() => { setCropTarget('card'); fileRef.current?.click() }}
                     disabled={uploading}
                     className="text-sm text-warm-400 dark:text-disc-muted hover:text-orange transition"
                   >
@@ -764,7 +716,7 @@ export default function SignPage({ params }) {
                 </p>
                 <button
                   type="button"
-                  onClick={() => fileRef.current?.click()}
+                  onClick={() => { setCropTarget('card'); fileRef.current?.click() }}
                   disabled={uploading}
                   className="w-full border-2 border-dashed border-warm-300 dark:border-disc-border rounded-lg py-3 text-base text-warm-600 dark:text-disc-muted hover:border-orange hover:text-orange disabled:opacity-50 transition"
                 >

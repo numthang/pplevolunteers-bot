@@ -3,7 +3,7 @@ import { authOptions } from '@/lib/auth-options.js'
 import { getEffectiveOrgIdentity } from '@/lib/orgAccess.js'
 import { canManageDocs } from '@/lib/docsAccess.js'
 import { getOrgId } from '@/lib/orgContext.js'
-import { createEntries, setTokenExpiry, getEntriesByProject, autoAssignPayers, setProjectPayer, deleteAllEntriesByProject } from '@/db/docs/entries.js'
+import { createEntries, getEntriesByProject, autoAssignPayers, setProjectPayer, deleteAllEntriesByProject } from '@/db/docs/entries.js'
 import { getDocProjectByEventId, upsertDocProject } from '@/db/docs/projects.js'
 import { getAllowedItems } from '@/config/fund69-rules.js'
 
@@ -24,7 +24,7 @@ export async function GET(req) {
 
 /**
  * POST /api/docs/entries
- * Body: { actEventCacheId, isMobile?, projectName?, entries: [{memberDiscordId, itemType, description, amount}], tokenExpiresAt? }
+ * Body: { actEventCacheId, isMobile?, projectName?, entries: [{memberDiscordId, itemType, description, amount}] }
  * Auto-upserts the docs_project if not yet created.
  */
 export async function POST(req) {
@@ -36,7 +36,7 @@ export async function POST(req) {
 
   try {
     const body = await req.json()
-    const { actEventCacheId, isMobile, projectName, participantCount, entries, tokenExpiresAt, payerUserId } = body
+    const { actEventCacheId, isMobile, projectName, participantCount, entries, payerUserId } = body
 
     if (!actEventCacheId || !Array.isArray(entries) || entries.length === 0) {
       return Response.json({ error: 'actEventCacheId and entries[] required' }, { status: 400 })
@@ -74,7 +74,6 @@ export async function POST(req) {
       projectId,
       memberUserId: e.memberUserId ? Number(e.memberUserId) : null,
     })))
-    if (tokenExpiresAt) await setTokenExpiry(projectId, tokenExpiresAt)
 
     // payer: ถ้าผู้ใช้เลือกจาก dropdown บนสุด → set ทั้งโครงการ (project default + apply ทุก entry + auto-swap)
     //         ถ้าไม่ได้เลือก → auto-assign default (project default หรือ pool[0])

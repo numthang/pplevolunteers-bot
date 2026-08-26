@@ -7,6 +7,8 @@ import { askAiVisionJson, AiError } from '@/lib/ai.js'
 import { processIdCardImage } from '@/lib/idCard.js'
 import { isValidThaiId, digitsOnly } from '@/lib/thaiId.js'
 import { findByIdNumber } from '@/db/docs/externalPayees.js'
+import { getEntryByToken } from '@/db/docs/entries.js'
+import { consumeDocsOcrQuota, DOCS_OCR_DAILY_LIMIT } from '@/lib/docsOcrQuota.js'
 
 const MAX_SIZE     = 8 * 1024 * 1024
 const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/webp'])
@@ -43,11 +45,26 @@ export async function POST(req) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.userId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { access } = await getEffectiveOrgIdentity(session)
-  if (!canManageDocs(access)) return Response.json({ error: 'Forbidden' }, { status: 403 })
-
   const form = await req.formData()
   const file = form.get('file')
+  const token = form.get('token')
+
+  // 2 ประตู: ผู้ดูแลเอกสาร (ฟอร์มฝั่งแอดมิน) หรือ เจ้าของใบเปิดลิงก์เซ็นของตัวเอง
+  // ประตูที่ 2 ทำให้ผู้เรียกกลายเป็นสมาชิกทั่วไป → org ต้องมาจากใบ ไม่ใช่ cookie
+  // (คนเปิดลิงก์เซ็นอาจไม่มี active org) และต้องมีโควตากันยิงรัว
+  let orgId = null
+  if (token) {
+    const entry = await getEntryByToken(String(token))
+    if (!entry) return Response.json({ error: 'ลิงก์ไม่ถูกต้อง' }, { status: 404 })
+    if (entry.signer_role !== 'recipient' || entry.member_user_id !== session.user.userId) {
+      return Response.json({ error: 'Forbidden' }, { status: 403 })
+    }
+    orgId = entry.org_id
+  } else {
+    const { access } = await getEffectiveOrgIdentity(session)
+    if (!canManageDocs(access)) return Response.json({ error: 'Forbidden' }, { status: 403 })
+    orgId = await getOrgId(session)
+  }
   if (!file || typeof file.arrayBuffer !== 'function') {
     return Response.json({ error: 'file required' }, { status: 400 })
   }
@@ -58,8 +75,15 @@ export async function POST(req) {
     return Response.json({ error: 'ไฟล์ใหญ่เกิน 8 MB' }, { status: 413 })
   }
 
+  const quota = await consumeDocsOcrQuota(session.user.userId)
+  if (!quota.ok) {
+    return Response.json(
+      { error: `อ่านบัตรด้วย AI ได้วันละ ${DOCS_OCR_DAILY_LIMIT} ครั้ง — วันนี้ครบแล้ว ลองพรุ่งนี้ หรือกรอกข้อมูลเอง` },
+      { status: 429 }
+    )
+  }
+
   try {
-    const orgId = await getOrgId(session)
     // ย่อ + re-encode JPEG + strip EXIF ก่อนส่งออก — ส่งไฟล์กล้องเต็มๆ ทั้งเปลืองและมี GPS ติดไปด้วย
     const processed = await processIdCardImage(Buffer.from(await file.arrayBuffer()))
     const data = await askAiVisionJson(SYSTEM, 'อ่านบัตรใบนี้', processed, { orgId })

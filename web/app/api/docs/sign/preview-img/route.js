@@ -12,22 +12,18 @@ const execFileAsync = promisify(execFile)
 
 export async function GET(req) {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.discordId) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!session?.user?.discordId) return Response.json({ error: 'Unauthorized' }, { status: 401, headers: { 'Cache-Control': 'no-store' } })
 
   const { searchParams } = new URL(req.url)
   const token = searchParams.get('token')
-  if (!token) return Response.json({ error: 'token required' }, { status: 400 })
+  if (!token) return Response.json({ error: 'token required' }, { status: 400, headers: { 'Cache-Control': 'no-store' } })
 
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'docs-prev-'))
   const tmpPdf = path.join(tmpDir, 'p.pdf')
 
   try {
     const entry = await getEntryByToken(token)
-    if (!entry) return Response.json({ error: 'ลิงก์ไม่ถูกต้อง' }, { status: 404 })
-    if (entry.token_expires_at && new Date(entry.token_expires_at) < new Date()) {
-      return Response.json({ error: 'ลิงก์หมดอายุแล้ว' }, { status: 410 })
-    }
-
+    if (!entry) return Response.json({ error: 'ลิงก์ไม่ถูกต้อง' }, { status: 404, headers: { 'Cache-Control': 'no-store' } })
     const full   = await getEntryById(entry.id)
     const recSig = await getSignatureByEntryId(entry.id, 'recipient')
     const paySig = await getSignatureByEntryId(entry.id, 'payer')
@@ -49,7 +45,7 @@ export async function GET(req) {
     return Response.json({ pages }, { headers: { 'Cache-Control': 'private, no-store' } })
   } catch (err) {
     console.error('[preview-img]', err)
-    return Response.json({ error: err.message || 'สร้างรูปไม่สำเร็จ' }, { status: 500 })
+    return Response.json({ error: err.message || 'สร้างรูปไม่สำเร็จ' }, { status: 500, headers: { 'Cache-Control': 'no-store' } })
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true })
   }

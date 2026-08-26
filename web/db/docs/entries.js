@@ -29,7 +29,7 @@ export async function getEntriesByProject(projectId) {
     `SELECT
        e.id, e.project_id, e.member_user_id, e.item_type,
        e.description, e.amount, e.override_data, e.status,
-       e.sign_token, e.token_expires_at, e.signed_at, e.printed_at, e.pdf_url,
+       e.sign_token, e.signed_at, e.printed_at, e.pdf_url,
        e.payer_user_id, e.payer_sign_token, e.payer_signed_at,
        e.external_payee_id,
        p.org_id, ev.province,
@@ -76,10 +76,6 @@ export async function getEntryByToken(token) {
     `SELECT
        e.*,
        CASE WHEN e.sign_token = $1 THEN 'recipient' ELSE 'payer' END AS signer_role,
-       CASE WHEN e.sign_token = $1
-            THEN e.token_expires_at
-            ELSE e.payer_token_expires_at
-       END AS signer_token_expires_at,
        p.org_id, p.is_mobile, p.participant_count, p.budget,
        p.cache_pple_event_id,
        ev.name AS event_name, ev.province, ev.location,
@@ -126,13 +122,6 @@ export async function createEntries(entries) {
     `INSERT INTO docs_activity_entries (project_id, member_user_id, item_type, description, amount, override_data)
      VALUES ${values}`,
     params
-  )
-}
-
-export async function setTokenExpiry(projectId, expiresAt) {
-  await pool.query(
-    `UPDATE docs_activity_entries SET token_expires_at = $2 WHERE project_id = $1`,
-    [projectId, expiresAt]
   )
 }
 
@@ -183,8 +172,7 @@ export async function autoAssignPayers(projectId, orgId, eventProvince) {
       const { rows } = await client.query(
         `UPDATE docs_activity_entries
          SET payer_user_id          = $2,
-             payer_sign_token       = gen_random_uuid(),
-             payer_token_expires_at = token_expires_at
+             payer_sign_token       = gen_random_uuid()
          WHERE id = $1
          RETURNING id, payer_sign_token, payer_user_id`,
         [entry.id, resolved]
@@ -240,7 +228,6 @@ export async function setRecipientGroupPayer(projectId, recipientUserId, payerUs
         `UPDATE docs_activity_entries
          SET payer_user_id          = $2,
              payer_sign_token       = gen_random_uuid(),
-             payer_token_expires_at = token_expires_at,
              payer_signed_at        = NULL
          WHERE id = $1
          RETURNING id, payer_sign_token, payer_user_id`,
@@ -305,7 +292,6 @@ export async function setProjectPayer(projectId, payerUserId, orgId, eventProvin
         `UPDATE docs_activity_entries
          SET payer_user_id          = $2,
              payer_sign_token       = gen_random_uuid(),
-             payer_token_expires_at = token_expires_at,
              payer_signed_at        = NULL
          WHERE id = $1
          RETURNING id, payer_sign_token, payer_user_id`,
@@ -334,7 +320,6 @@ export async function reassignEntryPayer(entryId, payerUserId) {
     `UPDATE docs_activity_entries
      SET payer_user_id          = $2,
          payer_sign_token       = gen_random_uuid(),
-         payer_token_expires_at = token_expires_at,
          payer_signed_at        = NULL
      WHERE id = $1
      RETURNING id, payer_sign_token, payer_user_id`,
@@ -359,22 +344,20 @@ export async function signEntry({ token, signatureBase64, userId, ip, role = 're
         `UPDATE docs_activity_entries
          SET status = 'signed', signed_at = NOW()
          WHERE sign_token = $1
-           AND (token_expires_at IS NULL OR token_expires_at > NOW())
          RETURNING id`,
         [token]
       )
-      if (!rows[0]) throw new Error('token invalid or expired')
+      if (!rows[0]) throw new Error('token invalid')
       entryId = rows[0].id
     } else {
       const { rows } = await client.query(
         `UPDATE docs_activity_entries
          SET payer_signed_at = NOW()
          WHERE payer_sign_token = $1
-           AND (payer_token_expires_at IS NULL OR payer_token_expires_at > NOW())
          RETURNING id`,
         [token]
       )
-      if (!rows[0]) throw new Error('token invalid or expired')
+      if (!rows[0]) throw new Error('token invalid')
       entryId = rows[0].id
     }
 
@@ -508,7 +491,7 @@ export async function deleteAllEntriesByProject(projectId) {
 export async function getPendingSignaturesForUser(userId, orgId) {
   const { rows: recipient } = await pool.query(
     `SELECT e.id, e.item_type, e.amount, e.description,
-            e.sign_token AS token, e.token_expires_at AS expires_at,
+            e.sign_token AS token,
             ev.name AS event_name, ev.province,
             TO_CHAR(ev.event_date, 'YYYY-MM-DD"T"HH24:MI') AS event_date
      FROM docs_activity_entries e
@@ -520,7 +503,7 @@ export async function getPendingSignaturesForUser(userId, orgId) {
   )
   const { rows: payer } = await pool.query(
     `SELECT e.id, e.item_type, e.amount, e.description,
-            e.payer_sign_token AS token, e.payer_token_expires_at AS expires_at,
+            e.payer_sign_token AS token,
             ev.name AS event_name, ev.province,
             TO_CHAR(ev.event_date, 'YYYY-MM-DD"T"HH24:MI') AS event_date
      FROM docs_activity_entries e

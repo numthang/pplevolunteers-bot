@@ -337,8 +337,7 @@ export default function DocProjectView({ project: initialProject, initialEntries
   }
 
   async function postEntries(payload, pCount) {
-    const expiresAt = new Date()
-    expiresAt.setMonth(expiresAt.getMonth() + 2)
+    // ลิงก์เซ็นไม่มีวันหมดอายุแล้ว (เคาะ 2026-08-26) — เดิมตั้ง +2 เดือนตรงนี้
     const res = await fetch('/api/docs/entries', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -347,7 +346,6 @@ export default function DocProjectView({ project: initialProject, initialEntries
         isMobile:         project?.is_mobile ?? false,
         participantCount: pCount ?? null,
         entries:          payload,
-        tokenExpiresAt:   expiresAt.toISOString(),
         payerUserId:      selectedPayer,   // payer ที่เลือกจาก dropdown บนสุด
       }),
     })

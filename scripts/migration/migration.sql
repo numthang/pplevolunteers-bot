@@ -1216,9 +1216,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_kanban_card_links_entity
 
 COMMIT;
 
--- production ทำถึงตรงนี้
-
-
 -- ═══════════════════════════════════════════════════════════════════════════
 -- 2026-08-25 — ปลดล็อกกอง "รอทำ" ของงานสื่อ (แก้คู่กับ web/db/kanban/statusSql.js)
 --
@@ -1397,3 +1394,15 @@ UPDATE org_members om
    AND om.member_id IS NULL;
 
 COMMIT;
+
+-- 2026-08-26 — ลิงก์เซ็นเอกสารไม่มีวันหมดอายุอีกต่อไป
+-- เดิมหน้าสร้างใบตั้ง token_expires_at = +2 เดือนอัตโนมัติ พอเลยกำหนดผู้รับเปิดใบไม่ได้เลย
+-- (410 ลิงก์หมดอายุ) และไม่มีปุ่มขอลิงก์ใหม่ให้เขาด้วย — ตัวกันการเข้าถึงจริงคือ login + ownership
+-- โค้ดเลิกอ่าน/เลิกเขียน 2 คอลัมน์นี้แล้ว · ล้างค่าเก่าให้ไม่มีอะไรค้างเป็นระเบิดเวลา
+-- คอลัมน์ยังไม่ DROP — เผื่อกลับคำ ค่อยลบทีหลังตอนแน่ใจ
+UPDATE docs_activity_entries
+   SET token_expires_at = NULL, payer_token_expires_at = NULL
+ WHERE token_expires_at IS NOT NULL OR payer_token_expires_at IS NOT NULL;
+
+
+-- production ทำถึงตรงนี้

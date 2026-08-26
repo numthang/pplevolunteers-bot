@@ -7,25 +7,30 @@ import { getDocsSignPolicy } from '@/db/orgConfig.js'
 
 /**
  * GET /api/docs/sign/verify?token=
- * Load entry info for the signing page (no ownership check — just checks expiry)
+ * Load entry info for the signing page (no ownership check — ด่านจริงอยู่ที่ปลายทางแต่ละเส้น)
+ *
+ * ลิงก์เซ็น **ไม่มีวันหมดอายุ** (เคาะ 2026-08-26) — เดิม 410 หลัง 2 เดือน แล้วใบเปิดไม่ได้อีกเลย
+ * ทั้งที่เอกสารยังต้องใช้ ไม่มีปุ่มขอลิงก์ใหม่ให้ผู้รับด้วย · กันการเข้าถึงด้วย login + ownership แทน
  */
+// ⚠️ ห้ามให้เบราว์เซอร์แคชคำตอบนี้ — เดิมไม่มี Cache-Control เลย พอเคยตอบ 410 (ลิงก์หมดอายุ)
+// เบราว์เซอร์เก็บไว้ตาม heuristic (410 เป็นสถานะที่แคชได้เองตาม RFC 7231) แล้ว fetch() รอบหลัง
+// กินของเก่าจากแคช → ต่อให้ฝั่ง server แก้แล้ว user ก็ยังเห็นจอ "ลิงก์หมดอายุแล้ว" ค้าง (เจอจริง 2026-08-26)
+const NO_STORE = { 'Cache-Control': 'no-store' }
+const json = (body, status = 200) => Response.json(body, { status, headers: NO_STORE })
+
 export async function GET(req) {
   const { searchParams } = new URL(req.url)
   const token = searchParams.get('token')
 
   if (!token) {
-    return Response.json({ error: 'token required' }, { status: 400 })
+    return json({ error: 'token required' }, 400)
   }
 
   try {
     const entry = await getEntryByToken(token)
 
     if (!entry) {
-      return Response.json({ error: 'ลิงก์ไม่ถูกต้อง' }, { status: 404 })
-    }
-
-    if (entry.signer_token_expires_at && new Date(entry.signer_token_expires_at) < new Date()) {
-      return Response.json({ error: 'ลิงก์หมดอายุแล้ว' }, { status: 410 })
+      return json({ error: 'ลิงก์ไม่ถูกต้อง' }, 404)
     }
 
     const role = entry.signer_role  // 'recipient' | 'payer'
@@ -56,7 +61,7 @@ export async function GET(req) {
       (ov.province_addr || entry.home_province)
     )
 
-    return Response.json({
+    return json({
       success: true,
       data: {
         id:               entry.id,
@@ -71,7 +76,6 @@ export async function GET(req) {
         ngs_first_name:   entry.ngs_first_name ?? null,
         ngs_last_name:    entry.ngs_last_name ?? null,
         member_discord_id: entry.member_discord_id,
-        token_expires_at: entry.signer_token_expires_at,
         signer_role:      role,
         // recipient-only fields
         member_user_id:    role === 'recipient' ? entry.member_user_id    : null,
@@ -92,6 +96,6 @@ export async function GET(req) {
     })
   } catch (err) {
     console.error('[GET /api/docs/sign/verify]', err)
-    return Response.json({ error: 'Internal Server Error' }, { status: 500 })
+    return json({ error: 'Internal Server Error' }, 500)
   }
 }

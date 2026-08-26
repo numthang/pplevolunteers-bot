@@ -2087,6 +2087,7 @@
 - `discordChannels.js` — ลิสต์ห้องของ guild ผ่าน Discord REST (Bot token) — ให้หน้า settings เลือกห้องจาก "ชื่อ" ไม่ใช่ ID 19 (~642 tok)
 - `discordRoles.js` — Web → Discord REST (Bot token) — เพิ่ม/ถอด role ให้ member ในเซิร์ฟเวอร์ (~495 tok)
 - `docsAccess.js` — Docs System Access Control (~500 tok)
+- `docsOcrQuota.js` — โควตาอ่านบัตรด้วย AI ต่อคนต่อวัน (user_config key docs_ocr_quota, 15/วัน) กันสมาชิกที่ถือลิงก์เซ็นยิง vision รัว (~250 tok)
 - `featureGate.js` — ด่านหน้า route ของแต่ละ app: ไม่มี session → redirectToLogin() · org ปิดฟีเจอร์ → 404 (~420 tok)
 - `financeAccess.js` — Finance Access Control (~845 tok)
 - `generateComplaintLetter.js` — Exports generateComplaintLetterPdf (~748 tok)

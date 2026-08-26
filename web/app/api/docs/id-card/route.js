@@ -36,6 +36,13 @@ export async function POST(req) {
 
   const entry = await getEntryByToken(token)
   if (!entry) return Response.json({ error: 'ลิงก์ไม่ถูกต้อง' }, { status: 404 })
+  // เส้นนี้เขียนลง users ของ "คนที่ล็อกอิน" เสมอ → ต้องเป็นเจ้าของใบเท่านั้น ไม่งั้นมันคือ
+  // คนอื่นเอาลิงก์ใครก็ได้มาอัปบัตรทับของตัวเอง · ผู้ดูแลที่แนบแทนสมาชิกใช้
+  // POST /api/docs/entries/:id/id-card (เขียนลงบัญชีผู้รับ) ไม่ใช่ที่นี่
+  // เดิมกฎนี้อยู่แค่ในเงื่อนไข render ของหน้าเซ็น — ซ่อนปุ่มไม่ใช่การกัน
+  if (entry.signer_role !== 'recipient' || entry.member_user_id !== session.user.userId) {
+    return Response.json({ error: 'เฉพาะผู้รับเงินของเอกสารนี้เท่านั้น' }, { status: 403 })
+  }
 
   try {
     const raw       = Buffer.from(await file.arrayBuffer())
