@@ -669,6 +669,7 @@ export default function DocProjectView({ project: initialProject, initialEntries
               canCreate={canCreate}
               blockReason={blockReason}
               province={province}
+              existingEntryCount={entries.length}
             />
           </div>
 

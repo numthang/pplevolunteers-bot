@@ -731,6 +731,7 @@
       "viewAllPending": "View all pending items: {url}",
       "recipientRequired": "Please specify a recipient before saving",
       "confirmResetRecipientSignature": "This item has already been signed. Changing the recipient will reset the signature — confirm?",
+      "confirmResetSignatureOnEdit": "This item has already been signed. Editing its details/amount will reset the signature (the receipt content will differ from what was signed) — confirm?",
       "confirmResetPayerSignature": "The current payer has already signed. Changing the payer will reset the payer's signature — confirm?",
       "confirmDelete": "Delete this item?",
       "errorPrefix": "Error: {message}",
@@ -837,6 +838,7 @@
       "alerts": {
         "participantsRequired": "Please enter the number of participants"
       },
+      "confirmCreateWhenExisting": "This project already has {count} item(s) — creating more won't remove the existing ones and may create duplicates. Create anyway?",
       "mealLabels": {
         "lunch": "Lunch",
         "dinner": "Dinner"
@@ -1103,6 +1105,10 @@
         "title": "This link is not yours",
         "hint": "If that's you, you're signed in with a different account — sign out and back in with the account linked to that name. If not, ask them to open this link themselves, or have an admin switch to flexible mode in Document settings.",
         "issuedTo": "This receipt was issued to {name}"
+      },
+      "recipientInfoMissing": {
+        "title": "Can't sign on their behalf yet",
+        "hint": "This receipt is missing recipient info (name/ID number/address) — an admin needs to fill it in first, or have the recipient open this link and sign it themselves."
       },
       "ocr": {
         "button": "Photograph your ID card to fill this in",

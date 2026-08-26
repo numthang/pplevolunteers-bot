@@ -127,7 +127,7 @@ function Check({ label, checked, disabled, onChange }) {
   )
 }
 
-export default function DocAutoCalc({ eventDate, eventEndDate, participantCount, isMobile: isMobileProp = false, projectBudget = null, onBudgetChange, onSubmit, saving, canCreate = true, blockReason = null, province = null }) {
+export default function DocAutoCalc({ eventDate, eventEndDate, participantCount, isMobile: isMobileProp = false, projectBudget = null, onBudgetChange, onSubmit, saving, canCreate = true, blockReason = null, province = null, existingEntryCount = 0 }) {
   const t = useTranslations('docs')
   const [n, setN]                       = useState(participantCount ? String(participantCount) : '')
   const [isMobile, setIsMobile]         = useState(isMobileProp)
@@ -432,6 +432,8 @@ export default function DocAutoCalc({ eventDate, eventEndDate, participantCount,
   }
 
   async function handleCreate() {
+    // โปรเจกต์นี้มีรายการอยู่แล้ว — คำนวณ+สร้างซ้ำจะได้ชุดรายการซ้อนทับ ไม่ใช่แทนที่ของเดิม (bug-456 audit)
+    if (existingEntryCount > 0 && !confirm(t('autoCalc.confirmCreateWhenExisting', { count: existingEntryCount }))) return
     const entries = []
     for (let i = 0; i < proposal.length; i++) {
       const item = proposal[i]

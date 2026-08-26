@@ -605,6 +605,17 @@ export default function SignPage({ params }) {
           </div>
         )}
 
+        {/* bug-452: flexible + คนเซ็นแทนที่ไม่ใช่ผู้ดูแล + ข้อมูลผู้รับไม่ครบ → canManageIdCard=false
+            เจตนา (PDPA) คือห้ามคนนี้เห็น/แก้บัตร ปชช. คนอื่น ไม่ใช่ห้ามรู้ว่าติดอะไรอยู่ — บอกเหตุผลแทนหน้าว่าง */}
+        {signerRole === 'recipient' && canInteract && needsRecipientInfo &&
+          !entry?.external_payee_id && !isRecipientSelf && !canManageIdCard && (
+          <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-6 text-center">
+            <AlertTriangle size={32} className="mx-auto text-amber-500 mb-3" />
+            <p className="text-base font-semibold text-warm-900 dark:text-disc-text">{t('sign.recipientInfoMissing.title')}</p>
+            <p className="mt-2 text-sm text-warm-500 dark:text-disc-muted">{t('sign.recipientInfoMissing.hint')}</p>
+          </div>
+        )}
+
         {/* การ์ดเดียวจบ: รูปบัตร + ข้อมูลผู้รับ — หน้าตาเดียวกันทั้งตอนแนบครั้งแรกและตอนแก้ไข
             เดิมแยก 3 การ์ดคนละหน้าตาทั้งที่เป็นงานเดียวกัน (ฟอร์มกรอก · ป้าย "บันทึกแล้ว" · การ์ดรูปบัตร)
             ถ่ายรูปใหม่ = ข้อมูลบนบัตรอาจเปลี่ยน → เปิดส่วนข้อมูลให้ตรวจ+กดบันทึกใหม่เสมอ ไม่เซฟเงียบ */}

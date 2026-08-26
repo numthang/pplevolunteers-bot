@@ -36,7 +36,15 @@ export async function PATCH(req, { params }) {
         ? memberUserId    !== entry.member_user_id
         : externalPayeeId !== entry.external_payee_id
     )
-    if (recipientChanged && entry.status === 'signed') {
+    // เนื้อหาที่ขึ้นบน PDF เปลี่ยน (item_type/description/amount/ระยะทาง) หลังเซ็นแล้ว
+    // = ลายเซ็นที่มีอยู่ไม่ตรงกับใบที่จะพิมพ์ออกไปอีกต่อไป ต้อง reset ให้เซ็นใหม่เหมือนตอนเปลี่ยนผู้รับ
+    const contentChanged =
+      (itemType !== undefined && itemType !== entry.item_type) ||
+      (description !== undefined && (description || null) !== (entry.description || null)) ||
+      (amount !== undefined && Number(amount) !== Number(entry.amount)) ||
+      (overrideData?.distance_km !== undefined && overrideData.distance_km !== (entry.override_data?.distance_km ?? null))
+    const needsResign = (recipientChanged || contentChanged) && entry.status === 'signed'
+    if (needsResign) {
       await resetRecipientSignature(id)
     }
     await updateEntry(id, { itemType, description, amount,
@@ -57,7 +65,7 @@ export async function PATCH(req, { params }) {
       // เปลี่ยนผู้จ่ายตรงๆ จาก edit form dropdown
       await reassignEntryPayer(id, payerUserId)
     }
-    return Response.json({ success: true, resetSignature: recipientChanged && entry.status === 'signed' })
+    return Response.json({ success: true, resetSignature: needsResign })
   } catch (err) {
     console.error('[PATCH /api/docs/entries/:id]', err)
     return Response.json({ error: 'Internal Server Error' }, { status: 500 })

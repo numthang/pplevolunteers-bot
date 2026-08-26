@@ -1,6 +1,6 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-26T09:29:21.930Z
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-26T14:35:25.786Z
 > Files: 1059 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/1b7cbea7-c43c-466d-9a5f-c61fda8e76b5/scratchpad/
@@ -281,7 +281,7 @@
 - `DEPLOYMENT.md` — Production Deployment — VPS Setup (~2522 tok)
 - `DEV_AGREEMENT.md` — CivicFlow — Dev Agreement & กติกาทำงานร่วม (ร่าง — รอคุยกับทีม CivicFlow) (~1367 tok)
 - `ORG_ACCESS_REDESIGN.md` — ORG_ACCESS_REDESIGN — ปลดสิทธิ์ออกจาก Discord (~5545 tok)
-- `PENDING.md` — PENDING.md — Backlog & Ideas (~40342 tok)
+- `PENDING.md` — PENDING.md — Backlog & Ideas (~41657 tok)
 - `WEB.md` — Web App — Next.js Frontend (~5324 tok)
 
 ## md/archive/
@@ -896,7 +896,7 @@
 
 ## web/app/api/docs/entries/[id]/
 
-- `route.js` — PATCH /api/docs/entries/[id] — แก้ไขได้ทุกสถานะ (จำกัดด้วย scope จังหวัด) (~1050 tok)
+- `route.js` — PATCH /api/docs/entries/[id] — แก้ไขได้ทุกสถานะ (จำกัดด้วย scope จังหวัด) (~1443 tok)
 
 ## web/app/api/docs/entries/[id]/pdf/
 
@@ -1655,7 +1655,7 @@
 ## web/app/docs/sign/[token]/
 
 - `layout.js` — Next.js layout (~71 tok)
-- `page.js` — Next.js page component (~10233 tok)
+- `page.js` — Next.js page component (~12806 tok)
 
 ## web/app/dojo/
 
@@ -1889,10 +1889,10 @@
 
 ## web/components/docs/
 
-- `DocAutoCalc.jsx` — TRAVEL_IN_PROVINCE_RATE (~9727 tok)
-- `DocEntryList.jsx` — ALL_ITEMS (~6806 tok)
+- `DocAutoCalc.jsx` — TRAVEL_IN_PROVINCE_RATE (~9800 tok)
+- `DocEntryList.jsx` — ALL_ITEMS (~8125 tok)
 - `DocProjectCard.jsx` — FALLBACK_IMAGE (~1078 tok)
-- `DocProjectView.jsx` — THAI_MONTHS (~11735 tok)
+- `DocProjectView.jsx` — THAI_MONTHS (~11734 tok)
 - `DocsProvinceFilter.jsx` — DocsProvinceFilter (~449 tok)
 - `DocsSignPolicySetting.jsx` — เลือกโหมดการเซ็น strict/flexible ของ org (มีผลทันที + ป้ายสถานะ) (~900 tok)
 - `ExternalPayeeModal.jsx` — ฟอร์มเพิ่มผู้รับเงินคนนอก: ถ่ายบัตร → OCR เติมให้ → ตรวจ → กดบันทึก (~1800 tok)
@@ -1957,7 +1957,7 @@
 - `ImageEditorModal.jsx` — MAX_SIDE (~7727 tok)
 - `PostCreate.jsx` — autoGrow (~1936 tok)
 - `PostEditor.jsx` — 'use client' กล่องเขียนโพสต์: autosave + lockToken (409 conflict dialog) + เมนู AI 6 โหมด (draft/polish/shorter/friendly/caption/review) + กล่องข้อเสนอ AI ที่ render แยกตาม `sg.kind` (caption = list string · review = การ์ดความเสี่ยงมี severity/excerpt + ป้าย "ตรวจกับเนื้อหาฉบับก่อนหน้า") (~9507 tok)
-- `PostMediaPanel.jsx` — ACCEPT (~7554 tok)
+- `PostMediaPanel.jsx` — ACCEPT (~7797 tok)
 - `PostMetaPanel.jsx` — STATUS_LABEL (~4306 tok)
 - `PostPublishPanel.jsx` — PLATFORMS (~6072 tok)
 - `PostPublishPanel.jsx` — PLATFORMS (~3229 tok)
@@ -1974,7 +1974,7 @@
 
 ## web/config/
 
-- `fund69-rules.js` — กฎกองทุนเพื่อการพัฒนาการเมือง ปี 2569 (~1759 tok)
+- `fund69-rules.js` — กฎกองทุนเพื่อการพัฒนาการเมือง ปี 2569 (~1761 tok)
 
 ## web/db/
 
@@ -2200,9 +2200,9 @@
 
 ## web/locales/
 
-- `en.json` (~22551 tok)
+- `en.json` (~23785 tok)
 - `en.json` — web locale strings อังกฤษ (~60 tok)
-- `th.json` (~21596 tok)
+- `th.json` (~22711 tok)
 - `th.json` — web locale strings ไทย (starter: common.*) (~60 tok)
 
 ## web/public/media-temp/

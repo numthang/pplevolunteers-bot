@@ -7,7 +7,7 @@
 // (หมวด/สถานะ/เจ้าของ ย้ายไป PostMetaPanel.jsx คอลัมน์ขวา)
 import { useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { X, Upload, Loader2, ImageOff, ChevronLeft, ChevronRight, Film, Quote, Images, GripVertical, Pencil } from 'lucide-react'
+import { X, Upload, Loader2, ImageOff, ChevronLeft, ChevronRight, Film, Quote, Images, GripVertical, Pencil, Trash2 } from 'lucide-react'
 import QuoteGeneratorModal from './QuoteGeneratorModal.jsx'
 import VideoQuoteModal from './VideoQuoteModal.jsx'
 import AssetPickerModal from './AssetPickerModal.jsx'
@@ -148,6 +148,17 @@ export default function PostMediaPanel({ id, compact = false }) {
     setMedia(prev => prev.filter(m => m.id !== mediaId))
     await fetch(`/api/posts/media/${mediaId}`, { method: 'DELETE' }).catch(() => {})
     window.dispatchEvent(new CustomEvent('posts:media-changed', { detail: { id } }))
+  }
+
+  // ลบรูปจากใน lightbox แล้วขยับไปรูปถัดไปเลย (index เดิมหลังลบ = รูปที่เคยอยู่ถัดไป)
+  async function deleteFromLightbox() {
+    const current = images[lightbox.index]
+    if (!current) return
+    await removeMedia(current.id)
+    const remaining = images.filter(m => m.id !== current.id)
+    if (remaining.length === 0) { setLightbox(null); return }
+    const nextIndex = lightbox.index % remaining.length
+    setLightbox({ src: srcOf(remaining[nextIndex]), index: nextIndex })
   }
 
   // ⚠️ ส่ง "ทุกชิ้น" ไม่ใช่เฉพาะรูป — reorderMedia() เขียน sort_order = ลำดับใน array ที่ส่งไป
@@ -534,6 +545,15 @@ export default function PostMediaPanel({ id, compact = false }) {
           >
             <X size={18} />
           </button>
+          {canEdit && (
+            <button
+              onClick={deleteFromLightbox}
+              title="ลบรูปนี้"
+              className="absolute top-4 right-16 w-9 h-9 flex items-center justify-center rounded-full bg-black/60 text-white hover:bg-red-500 transition"
+            >
+              <Trash2 size={16} />
+            </button>
+          )}
           {images.length > 1 && (
             <>
               <button

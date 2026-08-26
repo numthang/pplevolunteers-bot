@@ -164,8 +164,15 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
     const entry = entries.find(e => e.id === entryId)
     const memberChanged = editForm.memberUserId    !== entry?.member_user_id
                        || editForm.externalPayeeId !== entry?.external_payee_id
-    if (memberChanged && entry?.status === 'signed') {
-      if (!confirm(t('entryList.confirmResetRecipientSignature'))) return
+    // เนื้อหาบนใบเปลี่ยน (ไม่ใช่แค่ผู้รับ) หลังเซ็นแล้ว = ลายเซ็นเดิมไม่ตรงกับใบที่จะพิมพ์ใหม่อีกต่อไป
+    const contentChanged = editForm.itemType    !== entry?.item_type
+                        || (editForm.description || null) !== (entry?.description || null)
+                        || parseFloat(editForm.amount) !== Number(entry?.amount)
+                        || (editForm.itemType === 'travel' &&
+                            (editForm.distanceKm !== '' ? parseFloat(editForm.distanceKm) : null) !== (entry?.override_data?.distance_km ?? null))
+    if ((memberChanged || contentChanged) && entry?.status === 'signed') {
+      const msg = memberChanged ? t('entryList.confirmResetRecipientSignature') : t('entryList.confirmResetSignatureOnEdit')
+      if (!confirm(msg)) return
     }
     setSaving(true)
     try {
@@ -193,6 +200,9 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
           ? { ...e, item_type: editForm.itemType, description: editForm.description || null, amount: editForm.amount,
               member_user_id: editForm.memberUserId, external_payee_id: editForm.externalPayeeId,
               display_name: editForm.memberName.split(' (')[0],
+              ...(editForm.itemType === 'travel'
+                ? { override_data: { ...e.override_data, distance_km: editForm.distanceKm !== '' ? parseFloat(editForm.distanceKm) : null } }
+                : {}),
               ...(d.resetSignature ? { status: 'pending', signed_at: null } : {}) }
           : e
       )

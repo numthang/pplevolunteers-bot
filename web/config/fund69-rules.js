@@ -111,8 +111,7 @@ export const TRAVEL_INDIVIDUAL_TIERS = [
   { min: 0,   max: 100, ceiling: 300 },
   { min: 101, max: 200, ceiling: 500 },
   { min: 201, max: 500, ceiling: 800 },
-  { min: 501, max: 700, ceiling: 1500 },
-  { min: 701, max: Infinity, ceiling: null },  // ตามจริง
+  { min: 501, max: Infinity, ceiling: 1500 },  // เพดานสูงสุด ไม่มีเพดานลอยแบบ "ตามจริง" (เคาะ 2026-08-26)
 ]
 
 export const TRAVEL_GROUP = {
