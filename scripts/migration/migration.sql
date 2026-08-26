@@ -1405,7 +1405,6 @@ UPDATE docs_activity_entries
  WHERE token_expires_at IS NOT NULL OR payer_token_expires_at IS NOT NULL;
 
 
--- production ทำถึงตรงนี้
 
 -- ===========================================================================
 -- 2026-08-26 — docs_entry_recipient: ที่อยู่/เลขบัตรใน override_data ต้องชนะทะเบียน
@@ -1455,3 +1454,6 @@ CREATE OR REPLACE VIEW docs_entry_recipient AS
          LIMIT 1) m ON true
      LEFT JOIN cache_pple_member n ON n.source_id = m.member_id
      LEFT JOIN docs_external_payees x ON x.id = e.external_payee_id;
+
+
+-- production ทำถึงตรงนี้
