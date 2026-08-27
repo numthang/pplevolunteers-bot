@@ -311,14 +311,17 @@ export async function duplicateCard(orgId, sourceId, createdBy) {
       // ⚠️ SAVEPOINT ต่อรอบ — ไม่มีตัวนี้ 23505 จะพา transaction ทั้งก้อนตายตั้งแต่รอบแรก
       await client.query('SAVEPOINT ref_try')
       try {
+        // ⚠️ board_id ต้องมาด้วยเสมอ — คอลัมน์เป็น NOT NULL (migration.sql:1161)
+        //    เคยตกไป = ปุ่ม "ทำสำเนา" พังทั้งหมดด้วย 23502 (bug-… 2026-08-27)
+        //    สำเนาอยู่กระดานเดียวกับต้นฉบับ ไม่ใช่กระดานตั้งต้นของ org
         const { rows } = await client.query(
           `INSERT INTO kanban_cards
-             (org_id, ref_no, title, detail, status_type, owner_user_id, start_at, due_at, priority, created_by)
+             (org_id, ref_no, title, detail, status_type, owner_user_id, start_at, due_at, priority, created_by, board_id)
            VALUES ($1,
                    (SELECT COALESCE(MAX(ref_no), 0) + 1 FROM kanban_cards WHERE org_id = $1),
-                   $2, $3, $4, $5, $6, $7, $8, $9)
+                   $2, $3, $4, $5, $6, $7, $8, $9, $10)
            RETURNING id`,
-          [orgId, s.title, s.detail, status, s.owner_user_id, s.start_at, s.due_at, s.priority, createdBy]
+          [orgId, s.title, s.detail, status, s.owner_user_id, s.start_at, s.due_at, s.priority, createdBy, s.board_id]
         )
         newId = rows[0].id
         await client.query('RELEASE SAVEPOINT ref_try')
