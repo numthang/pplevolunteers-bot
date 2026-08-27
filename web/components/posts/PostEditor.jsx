@@ -203,13 +203,22 @@ function ConfirmDialog({ ask, onClose }) {
         </div>
         <div className="p-5 flex flex-col gap-4">
           <p className="text-base text-warm-500 dark:text-disc-muted">{ask.message}</p>
-          <div className="flex justify-end gap-2">
+          <div className="flex flex-wrap justify-end gap-2">
             <button
               onClick={onClose}
               className="px-4 py-2 text-base rounded-lg border border-warm-200 dark:border-disc-border text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover transition"
             >
               ยกเลิก
             </button>
+            {/* ลบถาวร — โผล่เฉพาะ ask.onPurge มีค่า (เรียกมาจากที่ที่เช็คสิทธิ์ can.delete แล้ว) */}
+            {ask.onPurge && (
+              <button
+                onClick={() => { onClose(); ask.onPurge() }}
+                className="px-4 py-2 text-base font-medium rounded-lg border border-red-500 text-red-500 hover:bg-red-50 dark:hover:bg-disc-hover transition"
+              >
+                {ask.purgeLabel}
+              </button>
+            )}
             <button
               onClick={() => { onClose(); ask.onConfirm() }}
               className={`px-4 py-2 text-base font-medium rounded-lg text-white hover:opacity-90 transition ${ask.danger ? 'bg-red-500' : 'bg-teal'}`}
@@ -671,17 +680,28 @@ export default function PostEditor({ id }) {
   }
 
   function handleDeletePost() {
+    // back() แทน push('/posts') ตรงๆ — กลับไปที่ query string เดิม (filter/สถานะที่เลือกไว้)
+    // ไม่มีประวัติในแท็บ (เช่น เปิดลิงก์ตรงมา) → fallback ไป /posts เฉยๆ
+    const goBack = () => window.history.length > 1 ? router.back() : router.push('/posts')
     setConfirmAsk({
-      title: 'เก็บโพสต์เข้ากรุ?',
-      message: 'ยังไม่หายไปไหน — กู้คืนได้ที่ "ในกรุ" ท้ายหัวรายการในหน้า /posts',
+      title: 'ลบโพสต์',
+      message: can.delete
+        ? 'เก็บเข้ากรุแล้วกู้คืนได้ที่ "ในกรุ" ท้ายหัวรายการในหน้า /posts · ลบถาวรคือหายจากฐานข้อมูลจริง เอากลับไม่ได้'
+        : 'ยังไม่หายไปไหน — กู้คืนได้ที่ "ในกรุ" ท้ายหัวรายการในหน้า /posts',
       confirmLabel: 'เก็บเข้ากรุ',
       danger: true,
+      // ปุ่ม "ลบถาวร" โผล่เฉพาะ can.delete (server เช็คซ้ำอีกชั้นที่ canDeletePost)
+      purgeLabel: can.delete ? 'ลบถาวร' : undefined,
+      onPurge: can.delete ? async () => {
+        try {
+          const res = await fetch(`/api/posts/${id}?permanent=1`, { method: 'DELETE' })
+          if (res.ok) goBack()
+        } catch { /* ลบไม่สำเร็จ = อยู่หน้าเดิม ผู้ใช้กดใหม่ได้ */ }
+      } : undefined,
       onConfirm: async () => {
         try {
           const res = await fetch(`/api/posts/${id}`, { method: 'DELETE' })
-          // back() แทน push('/posts') ตรงๆ — กลับไปที่ query string เดิม (filter/สถานะที่เลือกไว้)
-          // ไม่มีประวัติในแท็บ (เช่น เปิดลิงก์ตรงมา) → fallback ไป /posts เฉยๆ
-          if (res.ok) window.history.length > 1 ? router.back() : router.push('/posts')
+          if (res.ok) goBack()
         } catch { /* ลบไม่สำเร็จ = อยู่หน้าเดิม ผู้ใช้กดใหม่ได้ */ }
       },
     })
