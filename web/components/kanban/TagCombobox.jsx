@@ -448,6 +448,11 @@ export default function TagCombobox({
            (user เจอเอง 2026-08-20: "ทำไมไม่ให้มันอยู่บรรทัดเดียวกันล่ะ") · ตอนนี้ปากกาอยู่นอก
            แล้วให้เฉพาะ**ชิป**ห่อกันเองในกล่องชั้นใน = ปากกาอยู่ข้างชื่อเสมอไม่ว่าชิปจะยาวแค่ไหน
 
+        ⭐ ปากกาอยู่ **ท้ายแถว** (user เคาะ 2026-08-27: "เอาดินสอไว้ข้างหลังจะได้เป็นระเบียบ")
+           เดิมอยู่หัวแถว → ดันชิปเยื้องขวาไป ~22px ทำให้ค่าของ field นี้ไม่ตรงกับ field อื่นที่ไม่มีปากกา
+           ย้ายมาท้ายแล้ว: ชิปเริ่มที่ขอบซ้ายเดียวกับทุก field · ปากกาไปเรียงเป็นคอลัมน์ตรงกันที่ขอบขวา
+           (`flex-1 min-w-0` บนกล่องชิปเป็นตัวดันปากกาไปชิดขวา — ห้ามถอด ไม่งั้นปากกามาเกาะติดชิปสุดท้าย)
+
         ⚠️ ต้อง `items-start` ไม่ใช่ `items-center` ตรงนี้ — คนช่วยหลายคนที่ชิปตกไป 2 บรรทัด
            (screenshot ให้ดู 2026-08-24) items-center จะดันปากกาลอยกลางระหว่าง 2 บรรทัดพอดี
            ดูเหมือนหลุดไปอยู่บรรทัดล่างลอยๆ · items-start ยึดปากกาไว้กับขอบบนของบรรทัดแรกเสมอ
@@ -463,7 +468,10 @@ export default function TagCombobox({
           readOnly ? 'opacity-60' : onOpenProfile ? '' : 'hover:bg-warm-50 dark:hover:bg-disc-hover cursor-pointer'
         }`}
       >
-        {/* ปากกา — หัวแถว นอกกล่องที่ wrap (ทรงเดียวกับปากกาแก้ชื่อการ์ดใน KanbanHome) */}
+        {onOpenProfile
+          ? <div className="flex-1 min-w-0 flex flex-wrap items-center gap-1.5">{chipsContent}</div>
+          : chipsContent}
+        {/* ปากกา — ท้ายแถว นอกกล่องที่ wrap (ทรงเดียวกับปากกาแก้ชื่อการ์ดใน KanbanHome) */}
         {showPencil && (
           <button
             type="button"
@@ -475,9 +483,6 @@ export default function TagCombobox({
             <Pencil size={14} />
           </button>
         )}
-        {onOpenProfile
-          ? <div className="flex-1 min-w-0 flex flex-wrap items-center gap-1.5">{chipsContent}</div>
-          : chipsContent}
       </div>
 
       {open && (
