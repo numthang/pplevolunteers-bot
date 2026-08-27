@@ -125,12 +125,14 @@ async function handleKanbanImportModal(interaction) {
     //    require() ตัวจริงไม่ได้: ไฟล์นั้นเป็น ESM และลาก roleAccess.js ตามมา (บอทเป็น CJS)
     const ref = `KB-${card.ref_no}`;
     const url = await cardWebUrl(interaction.guildId, card.ref_no);
-    const linkLine = url ? `\n${url}` : '';
+    // ⭐ ทำ "รหัส" ให้เป็นลิงก์ในตัว ไม่แปะ URL เปล่าอีกบรรทัด — ทรงเดียวกับ caseImportHandler
+    //    (ยังไม่ตั้ง web_base_url → ตกไปเป็นตัวหนา ข้อความไม่พังและยังอ่านรู้เรื่อง)
+    const refLabel = url ? `[${ref}](${url})` : `**${ref}**`;
 
     await interaction.editReply({
       content: t(assignToSelf ? 'kanban.import.createdMine' : 'kanban.import.createdPool', {
-        ref, title: card.title,
-      }) + linkLine,
+        ref: refLabel, title: card.title,
+      }),
     });
 
     /**
@@ -152,8 +154,8 @@ async function handleKanbanImportModal(interaction) {
         const ch = await interaction.client.channels.fetch(channelId);
         await ch?.send({
           content: t(assignToSelf ? 'kanban.import.publicMine' : 'kanban.import.publicPool', {
-            by: `<@${interaction.user.id}>`, ref, title: card.title,
-          }) + linkLine,
+            by: `<@${interaction.user.id}>`, ref: refLabel, title: card.title,
+          }),
           reply: { messageReference: sourceMessageId, failIfNotExists: false },
           allowedMentions: { parse: [] },
         });

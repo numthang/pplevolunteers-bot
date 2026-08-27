@@ -66,8 +66,8 @@
       "createdMine": "✅ Created {ref} — **{title}**\nIt is now in your \"To submit\" list",
       "createdPool": "✅ Created {ref} — **{title}**\nIt is in the \"Unclaimed\" pool",
       "failed": "❌ Could not create the homework",
-      "publicMine": "📋 {by} turned this into task **{ref}** and took it on — {title}",
-      "publicPool": "📋 {by} turned this into task **{ref}** — no owner yet, anyone can claim it — {title}"
+      "publicMine": "📋 {by} turned this into a task · ref {ref} · taken on — {title}",
+      "publicPool": "📋 {by} turned this into a task · ref {ref} · no owner yet, anyone can claim it — {title}"
     }
   }
 }
