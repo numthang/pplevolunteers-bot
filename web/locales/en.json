@@ -1867,7 +1867,6 @@
       "assignToMe": "Assign to me"
     },
     "modal": {
-      "title": "Task detail",
       "sourceLink": "From a Discord message",
       "closeTitle": "Close (ESC)",
       "saving": "Saving…",
@@ -1940,7 +1939,9 @@
       "optionPurgeImpact": "Deleting permanently removes it from {count} card(s) currently using it — no undo",
       "optionHideHint": "Hiding removes it from this card and stops offering it in the picker · Other cards using it keep showing it, and you can restore it later · Deleting permanently wipes it from the database.",
       "editPeople": "Edit owner/helpers",
-      "profileCardCount": "Holding {count} card(s)"
+      "profileCardCount": "Holding {count} card(s)",
+      "copyLink": "Copy link",
+      "copyLinkFailed": "Could not copy the link — the browser blocked it (needs https)"
     },
     "saveFailed": "Save failed",
     "board": {

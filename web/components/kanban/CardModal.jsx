@@ -16,7 +16,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import {
   AlertTriangle, AlignLeft, Archive, ArchiveRestore, Calendar, Check, CircleDot,
-  ExternalLink, Link2, Loader2, UserCircle, UserPlus, Users, X,
+  ExternalLink, Link as LinkIcon, Link2, Loader2, UserCircle, UserPlus, Users, X,
 } from 'lucide-react'
 import { formatRef, isDraggableCard, statusOptionsFor } from '@/lib/kanbanAccess.js'
 import DeleteChoiceDialog from './DeleteChoiceDialog.jsx'
@@ -45,6 +45,7 @@ export default function CardModal({ cardId, onClose, onChanged }) {
   const STATUS_OPTIONS = statusOptionsFor(card).map((s) => ({ id: s, name: t(`status.${s}`) }))
   const [removing, setRemoving] = useState(false)
   const [joining, setJoining] = useState(false)
+  const [copied, setCopied] = useState(false)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
 
@@ -280,6 +281,25 @@ export default function CardModal({ cardId, onClose, onChanged }) {
   }
 
   /**
+   * คัดลอกลิงก์ตรงเข้าการ์ดใบนี้ (user เคาะ 2026-08-28 — เลือกลิงก์ แทน "open as full page" ของ AppFlowy)
+   *
+   * URL = หน้าที่เปิดอยู่ตอนนี้ + `?card=<id>` · คนที่กดลิงก์จะได้กระดาน/ตัวกรองชุดเดียวกับคนแชร์
+   * ⚠️ `navigator.clipboard` ใช้ได้เฉพาะ secure context (https / localhost) — บนอย่างอื่นจะ throw
+   *    จึงต้องมีทางลง: บอกไปตรงๆ ว่าคัดลอกไม่ได้ ดีกว่าเงียบแล้วผู้ใช้ไปแปะแล้วได้ของเก่าในคลิปบอร์ด
+   */
+  async function copyLink() {
+    const url = new URL(window.location.href)
+    url.searchParams.set('card', String(cardId))
+    try {
+      await navigator.clipboard.writeText(url.toString())
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    } catch {
+      setActionError(t('modal.copyLinkFailed'))
+    }
+  }
+
+  /**
    * "ลงมือด้วย" / "รับงานนี้" — ทางเดียวที่คนนอกเข้ามาร่วมงานเองได้ (user เคาะ 2026-08-27)
    *
    * ⭐ ปุ่มเดียวทำได้ 2 อย่าง เพราะ **server เป็นคนตัดสิน** จาก `{claim:true}`:
@@ -340,9 +360,11 @@ export default function CardModal({ cardId, onClose, onChanged }) {
     >
       <div className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-lg shadow-lg w-full max-w-2xl my-auto">
         <div className="flex items-start justify-between gap-2 p-6 border-b border-warm-200 dark:border-disc-border">
+          {/* ⛔ เดิมมี h2 "รายละเอียดการบ้าน" ใต้เลข — ถอดออก 2026-08-28 (user: ไม่บอกอะไรที่คนยังไม่รู้)
+              เลข K-xx ขึ้นมาเป็นหัวเรื่องแทน เพราะเป็นสิ่งเดียวในหัวกล่องที่ระบุว่า "ใบไหน"
+              (ชื่อการบ้านแก้ได้ในตัวกล่องอยู่แล้ว จึงไม่เอามาซ้ำที่หัว) */}
           <div className="min-w-0">
-            <span className="text-sm text-warm-400 dark:text-disc-muted">{card ? formatRef(card.ref_no) : ''}</span>
-            <h2 className="text-lg font-medium text-warm-900 dark:text-disc-text">{t('modal.title')}</h2>
+            <h2 className="text-lg font-medium text-warm-900 dark:text-disc-text">{card ? formatRef(card.ref_no) : ''}</h2>
           </div>
           <div className="flex items-center gap-3 shrink-0">
             {/* ป้ายสถานะการเซฟ — แทนปุ่มบันทึกที่ถูกยกเลิกไปตามกฎ 2026-07-30 */}
@@ -350,6 +372,17 @@ export default function CardModal({ cardId, onClose, onChanged }) {
               {saveState === 'saving' && <><Loader2 size={16} className="animate-spin" /> {t('modal.saving')}</>}
               {saveState === 'saved' && <><Check size={16} className="text-green-600" /> {t('modal.saved')}</>}
             </span>
+            {/* คัดลอกลิงก์ตรงเข้าการ์ดใบนี้ — user เคาะ 2026-08-28: เอาลิงก์ ไม่เอา "open as full page"
+                ⚠️ ต้องอ่านจาก window.location ตอนกด ไม่ใช่ประกอบตอน render — ผู้ใช้อาจอยู่คนละกระดาน/
+                   คนละตัวกรอง และ URL ที่แชร์ควรพาไปที่ "หน้าเดียวกับที่คนแชร์เห็น" พร้อมการ์ดใบนี้เปิดอยู่ */}
+            <button
+              onClick={copyLink}
+              aria-label={t('modal.copyLink')}
+              title={t('modal.copyLink')}
+              className="p-1 rounded-lg text-warm-500 dark:text-disc-muted hover:bg-warm-50 dark:hover:bg-disc-hover"
+            >
+              {copied ? <Check size={20} className="text-green-600" /> : <LinkIcon size={20} />}
+            </button>
             {/* ปิด 3 ทาง — ทางที่ 3: ปุ่ม X */}
             <button
               onClick={requestClose}

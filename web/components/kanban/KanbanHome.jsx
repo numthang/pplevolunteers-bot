@@ -331,6 +331,9 @@ export default function KanbanHome() {
   const [truncated, setTruncated] = useState(false)
   const [actionError, setActionError] = useState('')
   const [openCardId, setOpenCardId] = useState(null)
+  // เราเป็นคนดัน ?card= เข้า history เองหรือเปล่า — ตัดสินว่าตอนปิดจะ back() ได้ไหม
+  // (เปิดหน้ามาด้วยลิงก์ตรงเลย = ไม่มีหน้าก่อนหน้าให้ถอยกลับ back() จะพาออกนอกเว็บ)
+  const pushedCardUrl = useRef(false)
   const [draggingId, setDraggingId] = useState(null)
   const [overColumn, setOverColumn] = useState(null)
   // พับ/กางรายกอง — มีผลเฉพาะจอต่ำกว่า xl (จอใหญ่เป็นคอลัมน์ กางเสมอ)
@@ -411,6 +414,47 @@ export default function KanbanHome() {
 
   // กรุใช้ endpoint แยก — ของฉัน/ทั้งหมด กรองจากชุดเดียวกันในเครื่อง ไม่ต้องยิงใหม่
   const inArchive = scope === 'archived'
+
+  /**
+   * ลิงก์ตรงเข้าการ์ด — `?card=<id>` (user เคาะ 2026-08-28 · แทน "open as full page" ของ AppFlowy)
+   *
+   * ⭐ **URL เป็นเจ้าของสถานะ "การ์ดไหนเปิดอยู่"** ไม่ใช่ state — เปิด/ปิดจึงไปยุ่งกับ history
+   *    แล้วให้ popstate เป็นคนเซ็ต state กลับมาที่เดียว ไม่มีทางที่ URL กับหน้าจอจะไม่ตรงกัน
+   *
+   * ⚠️ ใช้ history API ดิบ ไม่ใช่ router.push ของ Next — ?card= เป็นเรื่องของ client ล้วนๆ
+   *    router.push จะวิ่งไป server แล้ว re-render ทั้งหน้า = กระดานกะพริบ + ยิง query ใหม่ฟรีๆ
+   */
+  useEffect(() => {
+    const syncFromUrl = () => {
+      const id = new URLSearchParams(window.location.search).get('card')
+      setOpenCardId(id && /^\d+$/.test(id) ? id : null)
+    }
+    syncFromUrl()                                   // เปิดหน้าด้วยลิงก์ตรง → กางการ์ดให้เลย
+    window.addEventListener('popstate', syncFromUrl) // กด Back = ปิดการ์ด (ไม่ใช่ออกจากกระดาน)
+    return () => window.removeEventListener('popstate', syncFromUrl)
+  }, [])
+
+  function openCard(id) {
+    const url = new URL(window.location.href)
+    url.searchParams.set('card', String(id))
+    window.history.pushState(null, '', url)
+    pushedCardUrl.current = true
+    setOpenCardId(String(id))
+  }
+
+  function closeCard() {
+    // เราดันเข้า history เอง → ถอยกลับ ให้ popstate เป็นคนปิด (ปุ่ม Back ของเบราว์เซอร์จึงไม่ค้าง)
+    if (pushedCardUrl.current) {
+      pushedCardUrl.current = false
+      window.history.back()
+      return
+    }
+    // เปิดมาด้วยลิงก์ตรง → ไม่มีที่ให้ถอย แค่ลบพารามิเตอร์ทิ้ง
+    const url = new URL(window.location.href)
+    url.searchParams.delete('card')
+    window.history.replaceState(null, '', url)
+    setOpenCardId(null)
+  }
 
   const load = useCallback(async () => {
     setLoadError('')
@@ -1362,7 +1406,7 @@ export default function KanbanHome() {
                       card={card}
                       t={t}
                       draggable={canDrag && isDraggableCard(card)}
-                      onOpen={(c) => setOpenCardId(c.id)}
+                      onOpen={(c) => openCard(c.id)}
                       onDragStart={onDragStart}
                       onDragEnd={onDragEnd}
                       dragging={draggingId === card.id}
@@ -1419,7 +1463,7 @@ export default function KanbanHome() {
       {openCardId && (
         <CardModal
           cardId={openCardId}
-          onClose={() => setOpenCardId(null)}
+          onClose={closeCard}
           onChanged={load}
         />
       )}
