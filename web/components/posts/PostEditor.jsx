@@ -207,6 +207,9 @@ export default function PostEditor({ id }) {
   const [saveState, setSaveState] = useState('idle') // idle | saving | saved
   const [pendingSave, setPendingSave] = useState(false)  // พิมพ์แล้วแต่ debounce ยังไม่ยิง = ยังไม่ปลอดภัยที่จะปิดแท็บ
   const [conflict, setConflict] = useState(false)
+  const [saveError, setSaveError] = useState('')      // เซฟไม่ผ่าน (เน็ตหลุด/500/403) — เดิม return เงียบ
+  const [liveEditor, setLiveEditor] = useState(null)  // { name } — คนที่เพิ่งแก้โพสต์นี้ ≈ "กำลังแก้อยู่"
+  const [remoteEdit, setRemoteEdit] = useState(null)  // { name } — คนอื่นแก้ไปแล้วขณะที่เรามีของค้าง
   const [keepingRevision, setKeepingRevision] = useState(false)
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError] = useState('')
@@ -227,7 +230,30 @@ export default function PostEditor({ id }) {
   const isFirstLoad = useRef(true)
   const blockedRef = useRef(false)
   const saveTimer = useRef(null)
+  const retryTimer = useRef(null)
+  const retryCount = useRef(0)
   const bodyRef = useRef(null)
+
+  // ⭐ "มีของค้างที่ยังไม่ถึง DB ไหม" — ต้องเทียบกับค่าที่เซิร์ฟเวอร์ **รับไปแล้วจริงๆ** เท่านั้น
+  //    ห้ามใช้ pendingSave/saveState แทนเด็ดขาด: save() เคลียร์ pendingSave ตั้งแต่ก่อนยิง PATCH
+  //    แล้วเส้นทางล้มเหลว (เน็ตหลุด / 500 / 403) เคย return เงียบ → ของค้างอยู่ในกล่องแต่ทั้ง 2 ตัวบอกว่า "ว่าง"
+  //    ถ้าเอา 2 ตัวนั้นไปตัดสินการรีเฟรช = ทับงานที่ยังไม่ได้เซฟทิ้ง (ทางเดียวกับ bug-071 คนละสาเหตุ)
+  const savedRef = useRef({ title: '', body: '', category: '' })
+  const valuesRef = useRef({ title: '', body: '', category: '' })
+  const busyRef = useRef(false)
+  valuesRef.current = { title, body, category: category.trim() }
+  busyRef.current = !!confirmAsk || conflict || keepingRevision
+
+  function markSaved(t, b, c) { savedRef.current = { title: t, body: b, category: c } }
+  // ทุกจังหวะที่ savedRef ถูกเขียนจะมี setState คู่กันเสมอ → ค่านี้สดทุก render
+  const dirty = title !== savedRef.current.title
+    || body !== savedRef.current.body
+    || category.trim() !== savedRef.current.category
+  // เวอร์ชัน ref — ปลอดภัยเมื่อเรียกจาก setInterval / event listener ที่ปิดทับค่าเก่าไว้
+  function dirtyNow() {
+    const s = savedRef.current, v = valuesRef.current
+    return v.title !== s.title || v.body !== s.body || v.category !== s.category
+  }
 
   async function load() {
     setLoading(true)
@@ -244,6 +270,9 @@ export default function PostEditor({ id }) {
       setTitle(data.data.post.title || '')
       setBody(data.data.post.body || '')
       setCategory(data.data.post.category || '')
+      markSaved(data.data.post.title || '', data.data.post.body || '', data.data.post.category || '')
+      setSaveError('')
+      setRemoteEdit(null)
       lockTokenRef.current = data.data.post.lock_token
     } catch {
       setLoadError('โหลดโพสต์ไม่สำเร็จ')
@@ -254,6 +283,77 @@ export default function PostEditor({ id }) {
 
   useEffect(() => { load() }, [id])
   useEffect(() => { autoGrow(bodyRef.current) }, [loading, body])
+  useEffect(() => () => clearTimeout(retryTimer.current), [])
+
+  /**
+   * ดึงฉบับล่าสุดมาแบบเงียบๆ — เงื่อนไขเดียวคือ **ต้องไม่มีของค้าง**
+   * ⛔ ห้ามเรียก load() แทน: load() ตั้ง loading = true แล้วทั้ง editor ถูกแทนด้วย "กำลังโหลด..."
+   *    (ดูบรรทัด `if (loading) return`) = จอกระพริบ + caret/scroll หาย ทุกครั้งที่สลับแท็บกลับมา
+   */
+  async function refreshQuiet() {
+    if (blockedRef.current || busyRef.current) return
+    if (!loadedRef.current || dirtyNow()) return
+    try {
+      const res = await fetch(`/api/posts/${id}`)
+      if (!res.ok) return
+      const data = await res.json()
+      const p = data.data.post
+      if (!p || p.lock_token === lockTokenRef.current) return
+      if (dirtyNow() || blockedRef.current) return   // พิมพ์แทรก/ชนไปแล้วระหว่างรอ response
+      const v = valuesRef.current
+      const same = (p.title || '') === v.title && (p.body || '') === v.body && (p.category || '') === v.category
+      // isFirstLoad กิน effect autosave ได้ **รอบเดียว** — ถ้าค่าไม่เปลี่ยน effect จะไม่ทำงาน
+      // แล้วธงจะค้างไปกินคีย์ถัดไปของ user แทน (= พิมพ์แล้วไม่เซฟ) จึงตั้งเฉพาะตอนค่าเปลี่ยนจริง
+      if (!same) isFirstLoad.current = true
+      setPost(p)
+      setCan(data.data.can || {})
+      setTitle(p.title || '')
+      setBody(p.body || '')
+      setCategory(p.category || '')
+      markSaved(p.title || '', p.body || '', p.category || '')
+      lockTokenRef.current = p.lock_token
+      setRemoteEdit(null)
+    } catch {}
+  }
+
+  // แท็บที่เปิดค้างไว้ = ถือ token เก่า พอพิมพ์ตัวแรกก็เด้ง 409 ทั้งที่ยังไม่ได้ทำอะไรผิด
+  // → กลับมาโฟกัสเมื่อไหร่ ถ้ามือยังว่าง ก็เปลี่ยนเป็นฉบับล่าสุดเสียตั้งแต่ก่อนพิมพ์
+  useEffect(() => {
+    function onFocus() { refreshQuiet() }
+    function onVis() { if (document.visibilityState === 'visible') refreshQuiet() }
+    window.addEventListener('focus', onFocus)
+    document.addEventListener('visibilitychange', onVis)
+    return () => {
+      window.removeEventListener('focus', onFocus)
+      document.removeEventListener('visibilitychange', onVis)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id])
+
+  // ชีพจร — รู้ว่ามีคนแก้ "ก่อน" จะไปชน แทนที่จะรู้ตอนชนแล้ว
+  // ⛔ lockToken จากที่นี่ใช้ **เทียบ** อย่างเดียว ห้ามใส่ lockTokenRef (จะกลายเป็น last-write-wins — bug-071)
+  useEffect(() => {
+    let stopped = false
+    async function tick() {
+      if (stopped || document.visibilityState !== 'visible') return
+      if (blockedRef.current || busyRef.current) return
+      try {
+        const res = await fetch(`/api/posts/${id}/pulse`)
+        if (!res.ok || stopped) return
+        const { data } = await res.json()
+        if (!data || stopped) return
+        // "เพิ่งแก้ภายใน 90 วิ" = ยังนั่งอยู่หน้าจอ (autosave เด้งทุก 800ms ระหว่างพิมพ์)
+        const fresh = data.updatedAt && Date.now() - new Date(data.updatedAt).getTime() < 90000
+        setLiveEditor(fresh && !data.byMe && data.editorName ? { name: data.editorName } : null)
+        if (data.lockToken === lockTokenRef.current) { setRemoteEdit(null); return }
+        if (dirtyNow()) setRemoteEdit({ name: data.editorName || null })
+        else refreshQuiet()
+      } catch {}
+    }
+    const iv = setInterval(tick, 20000)
+    return () => { stopped = true; clearInterval(iv) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id])
 
   // ข้อเสนอ AI ที่เคยขอไว้ — โหลดตอนเปิดหน้า จะได้ไม่ต้องกดใหม่ (กดใหม่ = เสียโควตารายวัน)
   useEffect(() => {
@@ -291,6 +391,8 @@ export default function PostEditor({ id }) {
     if (blockedRef.current) return
     if (!loadedRef.current) return          // ยังโหลดไม่เสร็จ = ค่าที่เห็นยังเป็นค่าว่าง ห้ามเซฟทับ
     clearTimeout(saveTimer.current)
+    clearTimeout(retryTimer.current)   // คีย์ล่าสุดชนะ retry ที่ถือค่าเก่าไว้เสมอ
+    retryCount.current = 0
     setPendingSave(true)
     saveTimer.current = setTimeout(save, 800)
     return () => clearTimeout(saveTimer.current)
@@ -300,16 +402,30 @@ export default function PostEditor({ id }) {
   // ไม่มีปุ่มบันทึกแล้ว → ด่านเดียวที่กันงานหายคือตรงนี้ (กฎ CLAUDE.md §กฎการบันทึก ฉบับแก้ 2026-07-30)
   // ปิดแท็บ/กดถอยตอน debounce 800ms ยังไม่ครบ หรือ PATCH ยังไม่กลับ = เตือนก่อน
   useEffect(() => {
-    if (!pendingSave && saveState !== 'saving') return
+    // dirty ต้องอยู่ในเงื่อนไขด้วย — เซฟล้มเหลวจะไม่มีทั้ง pendingSave และ saving แต่ของยังค้างอยู่ในกล่อง
+    if (!dirty && !pendingSave && saveState !== 'saving') return
     const onBeforeUnload = e => { e.preventDefault(); e.returnValue = '' }
     window.addEventListener('beforeunload', onBeforeUnload)
     return () => window.removeEventListener('beforeunload', onBeforeUnload)
-  }, [pendingSave, saveState])
+  }, [dirty, pendingSave, saveState])
+
+  // ลองใหม่แบบมีเพดาน — เซิร์ฟเวอร์พังแล้วให้ทุกแท็บยิงทุก 5 วิไม่รู้จบไม่ไหว
+  // ครบเพดานแล้วหยุด แต่ข้อความค้างไว้ + beforeunload ยังกันปิดแท็บอยู่ (ของยังไม่หาย)
+  function scheduleRetry() {
+    if (retryCount.current >= 5) {
+      setSaveError('บันทึกไม่สำเร็จหลายครั้ง — ก๊อปข้อความที่พิมพ์ไว้เก็บก่อน แล้วลองรีโหลดหน้า')
+      return
+    }
+    retryCount.current += 1
+    retryTimer.current = setTimeout(save, 5000)
+  }
 
   async function save() {
     if (blockedRef.current) return
     if (!loadedRef.current || !lockTokenRef.current) return   // ด่านสุดท้ายก่อนยิง PATCH (ดู bug-071)
-    setPendingSave(false)   // ยิงแล้ว — ต่อจากนี้ saveState คุมการเตือน beforeunload แทน
+    clearTimeout(retryTimer.current)
+    const sent = { title, body, category: category.trim() }   // ค่าที่ยิงไปจริงในรอบนี้ (อาจพิมพ์ต่อระหว่างรอ)
+    setPendingSave(false)   // ยิงแล้ว — ต่อจากนี้ dirty/saveState คุมการเตือน beforeunload แทน
     setSaveState('saving')
     try {
       const res = await fetch(`/api/posts/${id}`, {
@@ -324,8 +440,19 @@ export default function PostEditor({ id }) {
         setSaveState('idle')
         return
       }
-      if (!res.ok) { setSaveState('idle'); return }
+      if (!res.ok) {
+        // เดิมบรรทัดนี้คือ `return` เงียบๆ — user พิมพ์ต่อไปเรื่อยๆ โดยไม่รู้ว่าไม่มีอะไรลง DB เลย
+        setSaveState('idle')
+        setSaveError(data.error || 'บันทึกไม่สำเร็จ')
+        // 403 = อนุมัติแล้ว/ไม่มีสิทธิ์ → ลองใหม่กี่ครั้งก็ไม่ผ่าน อย่ายิงซ้ำให้เปลือง
+        if (res.status !== 403) scheduleRetry()
+        return
+      }
       lockTokenRef.current = data.data.post.lock_token
+      retryCount.current = 0
+      markSaved(sent.title, sent.body, sent.category)
+      setSaveError('')
+      setRemoteEdit(null)
       setPost(data.data.post)
       setSavedCount(c => c + 1)
       setSaveState('saved')
@@ -334,6 +461,8 @@ export default function PostEditor({ id }) {
       window.dispatchEvent(new CustomEvent('posts:changed', { detail: { id, category: data.data.post.category ?? null } }))
     } catch {
       setSaveState('idle')
+      setSaveError('บันทึกไม่สำเร็จ (เน็ตมีปัญหา?) — กำลังลองใหม่')
+      scheduleRetry()
     }
   }
 
@@ -585,6 +714,22 @@ export default function PostEditor({ id }) {
 
   return (
     <div className="flex flex-col gap-3">
+      {/* ใครเพิ่งแตะโพสต์นี้ — ให้เห็นก่อนพิมพ์ ไม่ใช่ไปรู้ตอนชน 409 (ที่มาของค่า: /api/posts/[id]/pulse) */}
+      {liveEditor && !remoteEdit && (
+        <p className="text-sm text-warm-700 dark:text-disc-text flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
+          {liveEditor.name} เพิ่งแก้โพสต์นี้เมื่อครู่ — ระวังแก้ชนกัน
+        </p>
+      )}
+
+      {/* ของเราค้างอยู่ + ฝั่งโน้นขยับไปแล้ว = จะชนแน่ตอน autosave รอบหน้า บอกไว้ก่อนจะได้ไม่ตกใจ */}
+      {remoteEdit && (
+        <p className="text-sm rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-200 px-3 py-2">
+          {remoteEdit.name ? `${remoteEdit.name} แก้โพสต์นี้ไปแล้ว` : 'มีคนแก้โพสต์นี้ไปแล้ว'}
+          ระหว่างที่คุณยังพิมพ์ค้างอยู่ — ตอนบันทึก ระบบจะถามก่อนว่าจะเก็บฉบับของคุณไว้ยังไง ไม่มีใครถูกทับเงียบๆ
+        </p>
+      )}
+
       <input
         type="text"
         value={title}
@@ -624,6 +769,8 @@ export default function PostEditor({ id }) {
             {saveState === 'saved' && <><Check size={14} className="text-green-600" /> บันทึกแล้ว</>}
           </span>
         )}
+
+        {saveError && <span className="text-sm text-red-500">{saveError}</span>}
 
         {can.edit && <EmojiPicker onPick={insertEmoji} />}
 

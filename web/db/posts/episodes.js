@@ -10,6 +10,7 @@
 //                   ถ้าเดาจาก revision ล่าสุดจะจดชื่อผิด — snapshot ของ B ถูกจดเป็นของ A)
 import pool from '../index.js'
 import { mirrorEntityCard, deleteCardForEntity } from '../kanban/links.js'
+import { displayNameSql } from '../displayName.js'
 
 // ป้ายเวลาที่ใช้เป็น optimistic lock token — ต้องเป็น "สตริงเดียวกันเป๊ะ" ทั้งตอนอ่านและตอนเทียบ
 // (ห้ามส่ง Date ของ JS ไป-กลับ: PG เก็บ microsecond แต่ JS มีแค่ millisecond → เทียบไม่มีวันตรง)
@@ -117,6 +118,26 @@ export async function getPost(id) {
        FROM post_episodes e
        LEFT JOIN users u ON u.id = e.owner_user_id
        LEFT JOIN orgs o ON o.id = e.org_id
+      WHERE e.id = $1`,
+    [id]
+  )
+  return rows[0] || null
+}
+
+/**
+ * ข้อมูลผอมสำหรับ polling ของ editor (ชั้น 2 กันเซฟทับ 2026-08-27) — **ไม่มีเนื้อหา ห้ามใช้แทน getPost**
+ *
+ * ไม่มีตาราง presence โดยตั้งใจ: autosave ของ editor debounce แค่ 800ms
+ * → คนที่ "กำลังแก้อยู่" ทิ้งร่องรอยบน last_edited_by/updated_at ของแถวตัวเองภายในไม่กี่วินาทีอยู่แล้ว
+ *   (คนที่เปิดค้างไว้เฉยๆ ไม่โผล่ — ซึ่งก็คือคนที่ไม่ได้ชนกับใคร)
+ * โดนยิงทุก 20 วิต่อแท็บที่เปิดอยู่ จึงต้องผอมจริง ห้ามใส่ join เพิ่มโดยไม่คิด
+ */
+export async function getPostPulse(id) {
+  const { rows } = await pool.query(
+    `SELECT ${LOCK} AS lock_token, e.updated_at, e.last_edited_by,
+            ${displayNameSql('u', 'e.org_id')} AS last_editor_name
+       FROM post_episodes e
+       LEFT JOIN users u ON u.id = e.last_edited_by
       WHERE e.id = $1`,
     [id]
   )
