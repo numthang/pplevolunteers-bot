@@ -11,6 +11,21 @@
 //      ไม่งั้น INSERT พังทันทีที่มีคนกด context menu (เว็บกับบอทต้อง deploy พร้อมกัน)
 const pool = require('./index');
 const { orgIdOfGuild, userIdByDiscord, upsertUserByDiscord } = require('./org');
+const { getSetting } = require('./settings');
+
+/**
+ * ลิงก์เปิดการ์ดบนเว็บ — ลอกแนวจาก getCaseManageUrl() ใน db/case.js เป๊ะๆ
+ * base มาจาก guild_config (key 'web_base_url') ก่อน แล้วค่อยตกไป .env WEB_BASE_URL
+ * (รองรับ multi-tenant: แต่ละ guild อาจมี domain ต่างกันในอนาคต)
+ *
+ * ⚠️ ใช้ **ref (KB-42) ไม่ใช่ id ภายใน** — cardContext() ฝั่งเว็บรับได้ทั้งคู่ แต่ ref อ่านออก
+ *    คนก๊อปลิงก์ไปพูดต่อได้ · คู่แฝดของ formatRef() ใน web/lib/kanbanAccess.js (แก้ต้องแก้คู่กัน)
+ */
+async function cardWebUrl(guildId, refNo) {
+  const base = (await getSetting(guildId, 'web_base_url')) || process.env.WEB_BASE_URL;
+  if (!base || !refNo) return null;
+  return `${String(base).replace(/\/$/, '')}/kanban?card=KB-${refNo}`;
+}
 
 /**
  * กระดานที่การ์ดจากห้องนี้ควรลง — ของเซิร์ฟนี้ก่อน แล้วค่อยกระดานแรกของ org
@@ -156,4 +171,4 @@ async function mirrorEntityCardFromBot(orgId, entityType, src, { createdBy = nul
   return null;
 }
 
-module.exports = { createCardFromDiscord, mirrorEntityCardFromBot };
+module.exports = { createCardFromDiscord, mirrorEntityCardFromBot, cardWebUrl };

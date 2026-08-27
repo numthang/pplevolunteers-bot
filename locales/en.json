@@ -65,7 +65,9 @@
       "badDue": "❌ Due must look like 2026-08-20 or 2026-08-20 17:00",
       "createdMine": "✅ Created {ref} — **{title}**\nIt is now in your \"To submit\" list",
       "createdPool": "✅ Created {ref} — **{title}**\nIt is in the \"Unclaimed\" pool",
-      "failed": "❌ Could not create the homework"
+      "failed": "❌ Could not create the homework",
+      "publicMine": "📋 {by} turned this into task **{ref}** and took it on — {title}",
+      "publicPool": "📋 {by} turned this into task **{ref}** — no owner yet, anyone can claim it — {title}"
     }
   }
 }

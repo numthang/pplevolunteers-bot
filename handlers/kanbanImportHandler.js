@@ -9,7 +9,7 @@ const {
   ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, MessageFlags,
 } = require('discord.js');
 const { getT } = require('../services/i18n');
-const { createCardFromDiscord } = require('../db/kanbanCards');
+const { createCardFromDiscord, cardWebUrl } = require('../db/kanbanCards');
 
 const TITLE_MAX = 200;   // ตรงกับ kanban_cards.title VARCHAR(200)
 const DETAIL_MAX = 4000; // เพดานจริงของ Discord modal Paragraph input (detail column เป็น TEXT ไม่จำกัดอยู่แล้ว)
@@ -121,14 +121,46 @@ async function handleKanbanImportModal(interaction) {
       sourceUrl, sourceMessageId,
     });
 
+    // ⚠️ คู่แฝดของ formatRef() ใน web/lib/kanbanAccess.js — **แก้ที่นั่นต้องแก้ที่นี่ด้วยเสมอ**
+    //    require() ตัวจริงไม่ได้: ไฟล์นั้นเป็น ESM และลาก roleAccess.js ตามมา (บอทเป็น CJS)
+    const ref = `KB-${card.ref_no}`;
+    const url = await cardWebUrl(interaction.guildId, card.ref_no);
+    const linkLine = url ? `\n${url}` : '';
+
     await interaction.editReply({
       content: t(assignToSelf ? 'kanban.import.createdMine' : 'kanban.import.createdPool', {
-        // ⚠️ คู่แฝดของ formatRef() ใน web/lib/kanbanAccess.js — **แก้ที่นั่นต้องแก้ที่นี่ด้วยเสมอ**
-        //    require() ตัวจริงไม่ได้: ไฟล์นั้นเป็น ESM และลาก roleAccess.js ตามมา (บอทเป็น CJS)
-        ref: `KB-${card.ref_no}`,
-        title: card.title,
-      }),
+        ref, title: card.title,
+      }) + linkLine,
     });
+
+    /**
+     * ประกาศให้ทั้งห้องเห็น — **ตอบกลับข้อความต้นทาง** ไม่ใช่เปลี่ยน interaction เป็น public
+     * (user สั่ง 2026-08-28 · แนวเดียวกับ postImportHandler ที่ยิง thread.send() หลัง ack)
+     *
+     * ⭐ ทำไมเป็น reply ของข้อความเดิม ไม่ใช่ thread.send() แบบ posts/cases:
+     *    โมดูลนี้ตั้งใจให้ใช้กับ **ข้อความไหนก็ได้ ไม่ต้องอยู่ในกระทู้** (ดูหัวไฟล์) → ไม่มี thread ให้ส่ง
+     *    reply ผูกกับข้อความต้นทางเลยดีกว่า: คนที่สั่งงานเห็นทันทีว่างานถูกรับไปแล้ว ไม่ไหลหาย
+     *
+     * ⚠️ `failIfNotExists: false` — ข้อความต้นทางอาจถูกลบระหว่างที่กรอก modal อยู่
+     *    ไม่มีตัวนี้ = ทั้งก้อน throw แล้วประกาศไม่ออกเลย (มีตัวนี้จะกลายเป็นข้อความธรรมดาในห้องแทน)
+     * ⚠️ `allowedMentions: { parse: [] }` — โชว์ชื่อคนกดได้ แต่ **ไม่ ping ใครทั้งนั้น**
+     *    ทั้งเจ้าของข้อความเดิมและคนที่ถูกพาดพิงในข้อความ (ไม่งั้นกดทีเดียวเด้งเตือนทั้งห้อง)
+     * best-effort ล้วน — ประกาศไม่ออกก็ไม่ควรทำให้ "สร้างการบ้านสำเร็จ" กลายเป็นล้มเหลว
+     */
+    if (channelId && sourceMessageId) {
+      try {
+        const ch = await interaction.client.channels.fetch(channelId);
+        await ch?.send({
+          content: t(assignToSelf ? 'kanban.import.publicMine' : 'kanban.import.publicPool', {
+            by: `<@${interaction.user.id}>`, ref, title: card.title,
+          }) + linkLine,
+          reply: { messageReference: sourceMessageId, failIfNotExists: false },
+          allowedMentions: { parse: [] },
+        });
+      } catch (e) {
+        console.error('kanbanImport: ประกาศในห้องไม่สำเร็จ:', e.message);
+      }
+    }
   } catch (err) {
     console.error('kanbanImport:', err.message);
     await interaction.editReply({ content: t('kanban.import.failed') });
