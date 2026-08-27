@@ -128,12 +128,37 @@ const AI_SYSTEM = `คุณเป็นผู้ช่วยบรรณาธ�
 ตอบเป็น JSON รูปแบบนี้เท่านั้น ห้ามมีข้อความอื่นนอก JSON:
 {"category": "ชื่อหมวดหรือ null", "title": "ชื่อโพสต์", "body": "เนื้อหาโพสต์เต็ม"}`;
 
-async function discordFetch(path) {
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+/**
+ * ⭐ รอแล้วลองใหม่เมื่อโดน 429 (rate limit) — **จำเป็นบน prod เท่านั้นแต่ต้องมี**
+ *
+ * โควตา rate limit ผูกกับ token ของบอท · บน prod บอทตัวจริงรันตลอด 24 ชม. รับ event อยู่แล้ว
+ * สคริปต์นี้ไปแย่งโควตาเดียวกัน → เจอ 429 ประปราย (บน dev ไม่เจอเลยเพราะบอท Tester นั่งเฉยๆ
+ * — ห้ามสรุปว่า "เทสบน dev ผ่านแล้วแปลว่าไม่มีปัญหา" เจอจริงตอนรัน prod 2026-08-28)
+ *
+ * เดิมโยน error ทิ้งทันที = กระทู้นั้นถูกนับ "พลาด" แล้วข้ามไป ต้องมารันซ้ำเก็บทีหลังหลายรอบ
+ * Discord บอกเวลาที่ต้องรอมาให้ใน `retry_after` (วินาที) — เชื่อค่านั้น ไม่ต้องเดาเอง
+ *
+ * 5xx ก็ลองใหม่ด้วย (Discord ล่มชั่วคราว) · 4xx อื่นไม่ลอง เพราะขอผิดเองลองกี่ครั้งก็ผิด
+ */
+async function discordFetch(path, attempt = 0) {
   const res = await fetch(`https://discord.com/api/v10${path}`, {
     headers: { Authorization: `Bot ${BOT_TOKEN}` },
   });
-  if (!res.ok) throw new Error(`Discord ${res.status}: ${path}`);
-  return res.json();
+  if (res.ok) return res.json();
+
+  const retryable = res.status === 429 || res.status >= 500;
+  if (retryable && attempt < 5) {
+    // header เป็นวินาที (ทศนิยมได้) · เผื่อไม่มีมาก็ถอยแบบเพิ่มขึ้นเรื่อยๆ 1s→2s→4s…
+    const headerWait = Number(res.headers.get('retry-after'));
+    const waitMs = Number.isFinite(headerWait) && headerWait > 0
+      ? headerWait * 1000 + 250          // บวกอีกนิดกันพลาดเส้นเป๊ะๆ
+      : 1000 * 2 ** attempt;
+    await sleep(waitMs);
+    return discordFetch(path, attempt + 1);
+  }
+  throw new Error(`Discord ${res.status}: ${path}`);
 }
 
 /** กระทู้ทั้งหมดใน forum — active + archived (แบ่งหน้า) · ลอกจาก backfillCaseThreads.js */
