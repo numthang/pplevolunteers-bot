@@ -1369,6 +1369,18 @@ prod ล่ม 504 ทั้งเว็บ 15 นาทีหลัง deploy �
 - retry ต้องถอยห่างขึ้น (5/15/45) ไม่ใช่ถี่คงที่ — ตอนเซิร์ฟเวอร์กำลังจะไม่ไหว retry ถี่คือสิ่งที่ผลักให้ล่มจริง
 - เทสบน dev แท็บเดียวไม่มีวันเจอบั๊กแบบนี้ ต้องคิดเลขโหลดเอาเอง (bug-459)
 
+### migration drift — `SET NOT NULL` ทีหลัง ต้องกวาด INSERT ทุกตัวในไฟล์ ไม่ใช่ตัวที่นึกออก (2026-08-27)
+
+`duplicateCard()` ใน `web/db/kanban/cards.js` พังเงียบมาตั้งแต่ก้อน 3: INSERT ไม่มี `board_id`
+แต่ `migration.sql:1161` ทำ `ALTER COLUMN board_id SET NOT NULL` → ทำสำเนาการ์ดชน 23502 ทุกใบ
+**`createCard()` ในไฟล์เดียวกันถูกแก้ให้เติม `board_id` แล้ว แต่ `duplicateCard()` ตกสำรวจ**
+เพราะเป็นคนละฟังก์ชัน คนละ INSERT — คนแก้เห็นตัวที่ตัวเองกำลังทำอยู่ตัวเดียว
+
+→ เติมคอลัมน์ NOT NULL ใหม่เมื่อไหร่ ให้ `grep -n "INSERT INTO <ตาราง>"` **ทั้ง repo** (เว็บ + บอท +
+scripts) แล้วไล่ทีละตัว · บั๊กชนิดนี้ build ไม่จับ เทสไม่จับ (เป็น db layer ไม่มีเทส) เจอตอนผู้ใช้กดเท่านั้น
+→ วิธียืนยันที่ถูกและถูกที่สุด: ยิง INSERT รูปเดียวกับโค้ดจริงใส่ฐาน dev ใน transaction แล้ว `ROLLBACK`
+   (เห็น error code จริง ไม่ต้องเดา ไม่ทิ้งขยะ) — ทำแบบนี้ยืนยันทั้งก่อนแก้และหลังแก้
+
 ## Decision Log
 
 <!-- Significant technical decisions with rationale. Why X was chosen over Y. -->
@@ -1723,3 +1735,34 @@ subtree เดียวกับ canvas ที่โดน transform ด้ว�
 บน overlay) ภาพและกรอบเลือกจะเลื่อน/ซูมพร้อมกันเป๊ะๆ โดยอัตโนมัติ
 CSS transform ไม่กระทบขนาด layout box ของ ancestor (`overflow-hidden` stage ยังคง shrink-to-fit
 ตามขนาด canvas จริงเหมือนก่อนมี zoom) — รูปเล็กจึงไม่มีแถบดำเกินตามมาตอน zoom=1
+
+### kanban — สิทธิ์กระดานคำนวณสดดีกว่า materialize + สภาพจริงของด่านวันนี้ (2026-08-27)
+
+**สภาพจริงที่ต้องรู้ก่อนแตะเรื่องสิทธิ์กระดาน** (ตรวจฐาน dev 2026-08-27): `kanban_board_members`
+กับ `kanban_board_permissions` **มีตารางแต่ไม่มีโค้ดอ่านเลยสักที่** · `boards/route.js:23` เรียก
+`canViewBoard(b, access, userId)` ไม่ส่ง arg ที่ 4 → `memberIds=[]` เสมอ · ฐาน dev: 1 กระดาน
+`open_to_org=true` · members 0 แถว · perms 0 แถว · การ์ด 116 ใบอยู่กระดานเดียว
+→ **สิทธิ์จริงวันนี้ = `admin || open_to_org` เท่านั้น**
+
+**⛔ ด่านกระดานห้ามลงครึ่งเดียว** — ใส่ `memberIds` เข้า `canViewBoard` อย่างเดียวได้แค่ซ่อน
+*ชื่อกระดานใน dropdown* ตัวการ์ดยังหลุดทั้งหมด เพราะ:
+- `GET /api/kanban/cards?view=board&board=<id>` → `listCards()` WHERE มีแค่ `org_id` + `visibleLinkSql`
+  แล้วต่อ `AND c.board_id = $n` **ตามที่ client ขอมา** ไม่เคยถามว่าคนดูเห็นกระดานนั้นได้ไหม
+- `GET /api/kanban/cards/[id]` → `getCardForViewer()` กรอง org + เคสนอกจังหวัด **ไม่มี board เลย**
+
+ถ้าจะทำด่านจริงต้องลง `listCards` + `getCardForViewer` + `canViewBoard` **พร้อมกัน** (ตรงกับที่
+`cards/route.js:22` เขียนเตือนไว้เอง: "ถึงตอนมีกระดานปิด ให้กรองที่ listCards ที่เดียว")
+ลงไม่ครบ = ความเป็นส่วนตัวปลอม ซึ่งอันตรายกว่าไม่กันเลย
+
+**สมาชิกกระดานให้คำนวณสด ห้ามทำตารางที่ต้องเขียนตาม** — `owner_user_id ∪ created_by ∪ helpers`
+ต่อ `board_id` เป็น `SELECT DISTINCT` ก้อนเดียว ไม่ต้อง hook อะไร เพราะ:
+- โมดูลนี้ **ไม่มี hard delete** (archive เป็น soft) + `created_by` อยู่ใน `isCardStakeholder` อยู่แล้ว
+  → การ์ดเข้ากรุ/ปิดงาน สิทธิ์ไม่หาย · เคสที่หายจริงเหลือแค่ "เคยเป็นเจ้าภาพแล้วถูกเปลี่ยนตัว"
+  ซึ่งควรหายอยู่แล้ว
+- ถ้า materialize ต้อง hook **6 ทางเขียน** ไม่ใช่ 2: `setCardOwner` · `addHelper` · `createCard` ·
+  `duplicateCard` · `mirrorEntityCard` (web/db/kanban/links.js) · `createCardFromDiscord` +
+  `mirrorEntityCardFromBot` (db/kanbanCards.js ฝั่งบอท) + `scripts/kanban/backfillEntityCards.mjs`
+  → hook ไม่ครบ = สมาชิกขาดเงียบๆ · ถ้าจำเป็นต้อง materialize จริงให้ใช้ **trigger ที่ DB** ไม่ใช่ไล่ hook โค้ด
+- แถวถาวร + ไม่มีหน้าจัดการสมาชิก = ประตูทางเดียว (ตั้งคนช่วยผิด ถอดจากการ์ดได้ แต่สิทธิ์บอร์ดติดตลอด)
+
+**เคาะ 2026-08-27: ยังไม่ทำด่านเลย** เพราะยังไม่มีกระดานปิดสักใบ — ค่อยทำทีเดียวครบตอนต้องการจริง
