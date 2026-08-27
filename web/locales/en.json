@@ -1764,8 +1764,6 @@
       "hintHand": "Hand mode — drag to pan · scroll or pinch to zoom · turn off hand mode (👆) to drag-select",
       "resetZoom": "Reset zoom (100%)",
       "confirmDiscard": "Discard unsaved edits?",
-      "revertOriginal": "Revert to original (before this session's edits)",
-      "confirmRevert": "Revert to how the image was before this session's edits? Unsaved changes will be lost.",
       "cancel": "Cancel",
       "save": "Save image",
       "loadFailed": "Could not load the image",

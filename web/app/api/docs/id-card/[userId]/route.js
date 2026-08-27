@@ -5,10 +5,11 @@ import { getOrgId } from '@/lib/orgContext.js'
 import { canManageDocs } from '@/lib/docsAccess.js'
 import { getIdCard, isMemberOfOrg } from '@/db/docs/idCard.js'
 import { getEntryByToken } from '@/db/docs/entries.js'
+import { buildWatermarkedIdCard } from '@/lib/idCard.js'
 
 /**
  * GET /api/docs/id-card/[userId]
- * เสิร์ฟสำเนาบัตร (ภาพดิบ ยังไม่ลายน้ำ) สำหรับ preview
+ * เสิร์ฟสำเนาบัตร ลายน้ำแล้ว (ตรงกับที่จะปั๊มลง PDF จริง) สำหรับ preview
  *
  * auth 2 ชั้น (ชั้นที่ 2 เพิ่ม 2026-07-21 ตอนบัตรย้ายมาเก็บที่ users):
  *   1. เจ้าของ หรือ canManageDocs
@@ -31,6 +32,13 @@ export async function GET(req, { params }) {
     return Response.json({ error: 'invalid id' }, { status: 400 })
   }
 
+  const token = new URL(req.url).searchParams.get('token')
+  let entryFromToken // lazy, cached — ใช้ทั้ง org resolution และวันทำกิจกรรมของลายน้ำ
+  const getEntryFromToken = async () => {
+    if (entryFromToken === undefined) entryFromToken = token ? await getEntryByToken(token) : null
+    return entryFromToken
+  }
+
   const { access, userId: selfId } = await getEffectiveOrgIdentity(session)
   const isOwner = targetUserId === selfId
   if (!isOwner && !canManageDocs(access)) {
@@ -40,10 +48,7 @@ export async function GET(req, { params }) {
   if (!isOwner) {
     // ชั้นที่ 2 — ต้องอยู่ org เดียวกัน (org จาก session ก่อน, ไม่มีค่อยเอาจาก sign token)
     let orgId = await getOrgId(session)
-    if (!orgId) {
-      const token = new URL(req.url).searchParams.get('token')
-      if (token) orgId = (await getEntryByToken(token))?.org_id ?? null
-    }
+    if (!orgId) orgId = (await getEntryFromToken())?.org_id ?? null
     if (!orgId) return Response.json({ error: 'org not found' }, { status: 400 })
     if (!(await isMemberOfOrg(targetUserId, orgId))) {
       return Response.json({ error: 'Forbidden' }, { status: 403 })
@@ -54,7 +59,9 @@ export async function GET(req, { params }) {
   if (!image) return Response.json({ error: 'Not found' }, { status: 404 })
 
   const buf = Buffer.isBuffer(image) ? image : Buffer.from(image)
-  return new Response(buf, {
+  const eventDate = (await getEntryFromToken())?.event_date ?? null
+  const watermarked = await buildWatermarkedIdCard(buf, eventDate)
+  return new Response(watermarked, {
     headers: {
       'Content-Type':  'image/jpeg',
       'Cache-Control': 'private, no-store',

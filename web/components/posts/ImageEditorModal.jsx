@@ -12,7 +12,7 @@
 //    (ฝั่ง server ก็ล้าง source_url ทิ้งด้วย ไม่งั้นไฟล์หายเมื่อไหร่จะตกไปโชว์ต้นฉบับที่ยังไม่เบลอ)
 import { useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { X, Crop, Droplets, RotateCw, Undo2, Loader2, ChevronLeft, ChevronRight, Wand2, Trash2, Hand, History } from 'lucide-react'
+import { X, Crop, Droplets, RotateCw, Undo2, Loader2, ChevronLeft, ChevronRight, Wand2, Trash2, Hand } from 'lucide-react'
 
 // รูปจากมือถือ 12MP เอามาทำ undo stack ในแท็บเดียวไม่ไหว และโซเชียลก็ย่อเหลือ ~2K อยู่ดี
 const MAX_SIDE = 2048
@@ -62,7 +62,6 @@ export default function ImageEditorModal({ media, src, onClose, onSaved, onNavig
   const enhanceFullRef = useRef(null) // ผลไม้กายสิทธิ์เต็ม 100% (คำนวณครั้งเดียวตอนเปิด แล้ว blend ตาม slider)
   const enhanceRafRef = useRef(null)  // คุม requestAnimationFrame กันวาดรัวเกินตอนลาก slider เร็วๆ
   const enhancePrevToolRef = useRef('hand') // เครื่องมือที่อยู่ก่อนกด "ปรับอัตโนมัติ" — commit/cancel แล้วกลับไปที่นี่
-  const originalRef = useRef(null)    // สำเนารูปตอนเปิดกล่องนี้ครั้งแรก — ไม่โดน UNDO_LIMIT ครอบเหมือน undoRef
 
   const [ready, setReady] = useState(false)
   // 'hand' = default (เคาะ 2026-08-26) — ลากปกติ = เลื่อนรูป ต้องสลับไป crop/mask ก่อนถึงจะลากเลือกกรอบได้
@@ -92,11 +91,6 @@ export default function ImageEditorModal({ media, src, onClose, onSaved, onNavig
       c.width = Math.round(img.width * k)
       c.height = Math.round(img.height * k)
       c.getContext('2d').drawImage(img, 0, 0, c.width, c.height)
-      const orig = document.createElement('canvas')
-      orig.width = c.width
-      orig.height = c.height
-      orig.getContext('2d').drawImage(c, 0, 0)
-      originalRef.current = orig
       setReady(true)
     }
     img.onerror = () => setError(t('loadFailed'))
@@ -213,25 +207,6 @@ export default function ImageEditorModal({ media, src, onClose, onSaved, onNavig
     setSel(null)
     setSteps(s => Math.max(0, s - 1))
     resetView()   // ครอบตัด/หมุนเปลี่ยนขนาด canvas มา ซูม/แพนเดิมจะเพี้ยน
-  }
-
-  // ย้อนกลับไปรูปตอนเปิดกล่องนี้ครั้งแรก — ต่างจาก undo() ตรงที่ undoRef จำกัดแค่ UNDO_LIMIT ขั้น
-  // (ขั้นเก่ากว่านั้นหลุดหายไปแล้ว) แต่ originalRef เก็บสำเนาต้นฉบับไว้ทั้งเซสชัน กดทีเดียวกลับสุดได้เลย
-  function revertToOriginal() {
-    const orig = originalRef.current
-    if (!orig || !steps || !confirm(t('confirmRevert'))) return
-    const c = canvasRef.current
-    c.width = orig.width
-    c.height = orig.height
-    c.getContext('2d').drawImage(orig, 0, 0)
-    undoRef.current = []
-    enhanceBaseRef.current = null
-    enhanceFullRef.current = null
-    setEnhancing(false)
-    setSel(null)
-    setSteps(0)
-    setSaved(false)
-    resetView()
   }
 
   // ── ลากเลือกกรอบ ────────────────────────────────────────────────────────────
@@ -590,17 +565,9 @@ export default function ImageEditorModal({ media, src, onClose, onSaved, onNavig
             <button type="button" onClick={startEnhance} disabled={!ready || enhancing} title={t('toolEnhance')} className={`${TOOL_BTN} ${tool === 'enhance' ? TOOL_ON : TOOL_OFF} disabled:opacity-40`}>
               <Wand2 size={15} />
             </button>
-            {/* ย้อนกลับไปรูปต้นฉบับ (ก่อนแก้ไขรอบนี้) — ไม่ใช่ undo ทีละขั้น ต่างจาก undo ตรงที่ undoRef
-                จำกัดแค่ UNDO_LIMIT ขั้นแล้วขั้นเก่ากว่านั้นหลุดหายไป แต่ originalRef เก็บไว้ทั้งเซสชัน */}
-            <button
-              type="button" onClick={revertToOriginal} disabled={!steps || enhancing} title={t('revertOriginal')}
-              className={`ml-auto ${TOOL_BTN} border-warm-200 dark:border-disc-border text-warm-700 dark:text-disc-text hover:bg-red-100 hover:text-red-500 dark:hover:bg-red-900/30 dark:hover:text-red-400 disabled:opacity-40`}
-            >
-              <History size={15} />
-            </button>
             <button
               type="button" onClick={undo} disabled={!steps || enhancing} title={t('undo')}
-              className={`${TOOL_BTN} ${TOOL_OFF} disabled:opacity-40`}
+              className={`ml-auto ${TOOL_BTN} ${TOOL_OFF} disabled:opacity-40`}
             >
               <Undo2 size={15} />
             </button>

@@ -3,7 +3,7 @@ import { authOptions } from '@/lib/auth-options.js'
 import { getEffectiveOrgIdentity } from '@/lib/orgAccess.js'
 import { canManageDocs } from '@/lib/docsAccess.js'
 import { getOrgId } from '@/lib/orgContext.js'
-import { processIdCardImage } from '@/lib/idCard.js'
+import { processIdCardImage, buildWatermarkedIdCard } from '@/lib/idCard.js'
 import { getExternalIdCard, saveExternalIdCard } from '@/db/docs/externalPayees.js'
 import { getEntryByToken } from '@/db/docs/entries.js'
 
@@ -40,7 +40,12 @@ export async function GET(req, { params }) {
   const image = await getExternalIdCard(payeeId, orgId)
   if (!image) return Response.json({ error: 'Not found' }, { status: 404 })
 
-  return new Response(Buffer.isBuffer(image) ? image : Buffer.from(image), {
+  const token = new URL(req.url).searchParams.get('token')
+  const entry = token ? await getEntryByToken(token) : null
+  const buf = Buffer.isBuffer(image) ? image : Buffer.from(image)
+  const watermarked = await buildWatermarkedIdCard(buf, entry?.event_date ?? null)
+
+  return new Response(watermarked, {
     headers: { 'Content-Type': 'image/jpeg', 'Cache-Control': 'private, no-store' },
   })
 }

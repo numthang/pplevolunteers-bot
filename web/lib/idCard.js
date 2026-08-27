@@ -75,8 +75,9 @@ export async function processIdCardImage(inputBuffer) {
 }
 
 /** ขีดคร่อมบัตร — 2 เส้นขนาน ล่างซ้าย→บนขวา + ข้อความระหว่างเส้น
- *  auto-size font ให้ text พอดีแนวทแยง ไม่ถูก clip */
-export async function buildWatermarkedIdCard(storedBuffer) {
+ *  auto-size font ให้ text พอดีแนวทแยง ไม่ถูก clip
+ *  @param {string|null} activityDateStr วันทำกิจกรรม (entry.event_date, "YYYY-MM-DDTHH:MI") — ไม่มี/parse ไม่ได้ → fallback วันนี้ */
+export async function buildWatermarkedIdCard(storedBuffer, activityDateStr = null) {
   ensureFont()
   const img = await loadImage(storedBuffer)
   const W = img.width, H = img.height
@@ -85,10 +86,17 @@ export async function buildWatermarkedIdCard(storedBuffer) {
 
   ctx.drawImage(img, 0, 0, W, H)
 
-  const today    = new Date()
-  const dd       = String(today.getDate()).padStart(2, '0')
-  const mo       = String(today.getMonth() + 1).padStart(2, '0')
-  const yyyy     = String(today.getFullYear() + 543)
+  const datePart = activityDateStr?.split('T')?.[0]
+  const m = datePart?.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  let dd, mo, yyyy
+  if (m) {
+    dd = m[3]; mo = m[2]; yyyy = String(Number(m[1]) + 543)
+  } else {
+    const today = new Date()
+    dd   = String(today.getDate()).padStart(2, '0')
+    mo   = String(today.getMonth() + 1).padStart(2, '0')
+    yyyy = String(today.getFullYear() + 543)
+  }
   const lineText = `#ใช้สำหรับใบสำคัญรับเงินพรรคประชาชนเท่านั้น# ${dd}/${mo}/${yyyy}`
 
   // auto-size: text ต้องพอดีแนวทแยง (88% ของ diagonal)

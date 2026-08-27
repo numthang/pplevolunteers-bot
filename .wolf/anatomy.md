@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-27T06:38:23.373Z
-> Files: 1060 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-27T12:28:16.032Z
+> Files: 1061 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/1b7cbea7-c43c-466d-9a5f-c61fda8e76b5/scratchpad/
 
@@ -1289,10 +1289,6 @@
 
 - `route.js` — GET /api/posts/[id] (~1150 tok)
 
-## web/app/api/posts/[id]/pulse/
-
-- `route.js` — GET ชีพจรผอมของโพสต์ (lockToken/updatedAt/ชื่อคนแก้ล่าสุด) ให้ editor poll ทุก 20 วิ · lockToken ใช้เทียบอย่างเดียว ห้ามเอาไปใส่ lockTokenRef (~380 tok)
-
 ## web/app/api/posts/[id]/ai-suggestions/
 
 - `route.js` — GET /api/posts/[id]/ai-suggestions — ข้อเสนอ AI ที่เคยขอไว้กับโพสต์นี้ (ใหม่สุดขึ้นก่อน) (~522 tok)
@@ -1328,6 +1324,10 @@
 ## web/app/api/posts/[id]/publish/
 
 - `route.js` — เวลาที่ผู้ใช้กรอกมาเป็นเวลาไทย (`"2026-07-30T21:00"` จาก input datetime-local ไม่มี timezone) (~2531 tok)
+
+## web/app/api/posts/[id]/pulse/
+
+- `route.js` — GET ชีพจรผอมของโพสต์ (lockToken/updatedAt/ชื่อคนแก้ล่าสุด) ให้ editor poll ทุก 20 วิ · lockToken ใช้เทียบอย่างเดียว ห้ามเอาไปใส่ lockTokenRef (~380 tok)
 
 ## web/app/api/posts/[id]/restore/
 
@@ -1964,7 +1964,7 @@
 - `EmojiPicker.jsx` — GROUPS (~976 tok)
 - `ImageEditorModal.jsx` — MAX_SIDE (~9822 tok)
 - `PostCreate.jsx` — autoGrow (~1936 tok)
-- `PostEditor.jsx` — 'use client' กล่องเขียนโพสต์: autosave + lockToken (409 conflict dialog) + เมนู AI 6 โหมด (draft/polish/shorter/friendly/caption/review) + กล่องข้อเสนอ AI ที่ render แยกตาม `sg.kind` (caption = list string · review = การ์ดความเสี่ยงมี severity/excerpt + ป้าย "ตรวจกับเนื้อหาฉบับก่อนหน้า") (~9507 tok)
+- `PostEditor.jsx` — ผลตรวจจาก AI บรรณาธิการ (kind='review') — โครงคนละแบบกับ caption สิ้นเชิง (~12016 tok)
 - `PostMediaPanel.jsx` — ACCEPT (~7896 tok)
 - `PostMetaPanel.jsx` — STATUS_LABEL (~4306 tok)
 - `PostPublishPanel.jsx` — PLATFORMS (~6072 tok)

@@ -46,55 +46,72 @@ const SEVERITY_STYLE = {
  *    ปุ่มอนุมัติจริงอยู่การ์ดขวา (PostMetaPanel) และต้องเป็นคนกดเสมอ
  */
 function ReviewResult({ payload, stale }) {
+  // toggle ปิดไว้ก่อนเหมือนหมวดอื่น (โควต/หัวข้อ/ไอเดียภาพ) — กันโชว์รวดเดียวรกจอ
+  const [open, setOpen] = useState(false)
   const risks = Array.isArray(payload?.risks) ? payload.risks : []
   const counts = payload?.counts || {}
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-sm text-warm-700 dark:text-disc-text">🔍 ผลตรวจก่อนเผยแพร่</span>
-        {risks.length > 0 && (
-          <span className="text-xs text-warm-500 dark:text-disc-muted">
-            พบ {risks.length} จุด
-            {counts.high ? ` · ควรแก้ก่อน ${counts.high}` : ''}
-          </span>
-        )}
-      </div>
+      <button
+        onClick={() => setOpen(v => !v)}
+        className="flex items-center justify-between gap-2 text-sm text-warm-700 dark:text-disc-text hover:opacity-80"
+      >
+        <span className="flex items-center gap-2 flex-wrap">
+          🔍 ผลตรวจก่อนเผยแพร่
+          {risks.length > 0 && (
+            <span className="text-xs text-warm-500 dark:text-disc-muted">
+              พบ {risks.length} จุด
+              {counts.high ? ` · ควรแก้ก่อน ${counts.high}` : ''}
+            </span>
+          )}
+        </span>
+        {open ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+      </button>
 
-      {stale && (
-        <p className="text-sm rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-200 px-3 py-2">
-          ตรวจกับเนื้อหาฉบับก่อนหน้า — เนื้อหาถูกแก้หลังจากนี้แล้ว ถ้าจะใช้ตัดสินใจ ควรกดตรวจใหม่
-        </p>
-      )}
+      {open && (
+        <>
+          {stale && (
+            <p className="text-sm rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-200 px-3 py-2">
+              ตรวจกับเนื้อหาฉบับก่อนหน้า — เนื้อหาถูกแก้หลังจากนี้แล้ว ถ้าจะใช้ตัดสินใจ ควรกดตรวจใหม่
+            </p>
+          )}
 
-      {risks.length === 0 ? (
-        // ⛔ ถ้อยคำตรงนี้สำคัญ — ห้ามเขียนว่า "ผ่าน" หรือ "ปลอดภัย" เพราะจะกลายเป็นไฟเขียวจาก AI
-        <p className="text-sm text-warm-500 dark:text-disc-muted">
-          AI ไม่พบจุดที่ต้องทัก — ไม่ได้แปลว่าโพสต์นี้ปลอดภัย ยังต้องใช้วิจารณญาณของบรรณาธิการเหมือนเดิม
-        </p>
-      ) : risks.map((r, i) => {
-        const sev = SEVERITY_STYLE[r.severity] || SEVERITY_STYLE.medium
-        return (
-          <div key={i} className="flex flex-col gap-1 rounded-lg bg-warm-50 dark:bg-disc-hover px-2 py-2">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className={`text-xs px-1.5 py-0.5 rounded ${sev.className}`}>{sev.label}</span>
-              <span className="text-sm font-medium text-warm-900 dark:text-disc-text">
-                {RISK_LABEL[r.category] || r.category}
-              </span>
+          {risks.length === 0 ? (
+            // ⛔ ถ้อยคำตรงนี้สำคัญ — ห้ามเขียนว่า "ผ่าน" หรือ "ปลอดภัย" เพราะจะกลายเป็นไฟเขียวจาก AI
+            <p className="text-sm text-warm-500 dark:text-disc-muted">
+              AI ไม่พบจุดที่ต้องทัก — ไม่ได้แปลว่าโพสต์นี้ปลอดภัย ยังต้องใช้วิจารณญาณของบรรณาธิการเหมือนเดิม
+            </p>
+          ) : (
+            // การ์ดเดียวรวมทุกจุดที่พบ คั่นแถวด้วย divide-y — เดิมแยกกล่อง rounded ต่อจุดทำให้ดูเป็นหลายการ์ด
+            <div className="rounded-lg border border-warm-200 dark:border-disc-border divide-y divide-warm-200 dark:divide-disc-border">
+              {risks.map((r, i) => {
+                const sev = SEVERITY_STYLE[r.severity] || SEVERITY_STYLE.medium
+                return (
+                  <div key={i} className="flex flex-col gap-1 px-2.5 py-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={`text-xs px-1.5 py-0.5 rounded ${sev.className}`}>{sev.label}</span>
+                      <span className="text-sm font-medium text-warm-900 dark:text-disc-text">
+                        {RISK_LABEL[r.category] || r.category}
+                      </span>
+                    </div>
+                    {/* excerpt ที่หาไม่เจอในต้นฉบับถูกตัดเป็นสตริงว่างมาจาก server แล้ว (กัน AI กุคำพูด) */}
+                    {r.excerpt && (
+                      <p className="text-sm text-warm-700 dark:text-disc-text border-l-2 border-warm-300 dark:border-disc-border pl-2 italic break-words">
+                        “{r.excerpt}”
+                      </p>
+                    )}
+                    <p className="text-sm text-warm-700 dark:text-disc-text break-words">{r.reason}</p>
+                    {r.suggestion && (
+                      <p className="text-sm text-warm-500 dark:text-disc-muted break-words">แนะนำ: {r.suggestion}</p>
+                    )}
+                  </div>
+                )
+              })}
             </div>
-            {/* excerpt ที่หาไม่เจอในต้นฉบับถูกตัดเป็นสตริงว่างมาจาก server แล้ว (กัน AI กุคำพูด) */}
-            {r.excerpt && (
-              <p className="text-sm text-warm-700 dark:text-disc-text border-l-2 border-warm-300 dark:border-disc-border pl-2 italic break-words">
-                “{r.excerpt}”
-              </p>
-            )}
-            <p className="text-sm text-warm-700 dark:text-disc-text break-words">{r.reason}</p>
-            {r.suggestion && (
-              <p className="text-sm text-warm-500 dark:text-disc-muted break-words">แนะนำ: {r.suggestion}</p>
-            )}
-          </div>
-        )
-      })}
+          )}
+        </>
+      )}
     </div>
   )
 }
@@ -221,7 +238,9 @@ export default function PostEditor({ id }) {
   const [reviewing, setReviewing] = useState(false)
   // ข้อเสนอ AI ที่เก็บไว้ทั้งหมด (ใหม่สุดบน) — แต่ละชุด = { id, payload:{captions[],imageIdeas[]}, created_at, author_name }
   const [suggestions, setSuggestions] = useState([])
-  const [suggestCollapsed, setSuggestCollapsed] = useState(false)
+  const [suggestCollapsed, setSuggestCollapsed] = useState(true)
+  // toggle แยกรายหมวด (โควต/หัวข้อ/ไอเดียภาพ/hashtag) ต่อชุดข้อเสนอ — ปิดไว้ก่อนกันโชว์รกทีเดียวหมด, key = `${sg.id}:${label}`
+  const [openCat, setOpenCat] = useState({})
   const [statusLoading, setStatusLoading] = useState(false)
   const [statusError, setStatusError] = useState('')
 
@@ -869,33 +888,36 @@ export default function PostEditor({ id }) {
                 { label: '📸 ไอเดียภาพประกอบ', items: sg.payload?.imageIdeas },
                 // hashtags มาเป็น array ของคำแยกๆ — รวมเป็นบรรทัดเดียวคั่นด้วยช่องว่างก่อนโชว์ (แปะใช้ทีเดียวได้เลย ไม่ต้องคัดลอกทีละคำ)
                 { label: '📌 Hashtag แนะนำ', items: sg.payload?.hashtags?.length ? [sg.payload.hashtags.join(' ')] : [] },
-                { label: '📣 ชวนแชร์/CTA', items: sg.payload?.cta },
                 { label: '📝 คำแนะนำสำหรับบทความ', items: sg.payload?.articleTips },
-              ].map(({ label, items }) => (items || []).length > 0 && (
-                <div key={label} className="flex flex-col gap-1.5">
-                  <span className="text-sm text-warm-700 dark:text-disc-text">{label}</span>
-                  {items.map((s, i) => (
-                    <div key={i} className="flex items-start justify-between gap-2 rounded-lg bg-warm-50 dark:bg-disc-hover px-2 py-1.5">
-                      <span className="text-sm text-warm-900 dark:text-disc-text break-words">{s}</span>
-                      <button
-                        onClick={() => navigator.clipboard?.writeText(s)}
-                        title="คัดลอก"
-                        className="shrink-0 p-1 rounded text-warm-500 dark:text-disc-muted hover:text-teal"
-                      >
-                        <Copy size={13} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ))}
+              ].map(({ label, items }) => (items || []).length > 0 && (() => {
+                const catKey = `${sg.id}:${label}`
+                const catOpen = !!openCat[catKey]
+                return (
+                  <div key={label} className="flex flex-col gap-1.5">
+                    <button
+                      onClick={() => setOpenCat(prev => ({ ...prev, [catKey]: !prev[catKey] }))}
+                      className="flex items-center justify-between gap-2 text-sm text-warm-700 dark:text-disc-text hover:opacity-80"
+                    >
+                      <span>{label} ({items.length})</span>
+                      {catOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                    </button>
+                    {catOpen && items.map((s, i) => (
+                      <div key={i} className="flex items-start justify-between gap-2 rounded-lg bg-warm-50 dark:bg-disc-hover px-2 py-1.5">
+                        <span className="text-sm text-warm-900 dark:text-disc-text break-words">{s}</span>
+                        <button
+                          onClick={() => navigator.clipboard?.writeText(s)}
+                          title="คัดลอก"
+                          className="shrink-0 p-1 rounded text-warm-500 dark:text-disc-muted hover:text-teal"
+                        >
+                          <Copy size={13} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )
+              })())}
             </div>
           ))}
-
-          {!suggestCollapsed && (
-            <p className="text-sm text-warm-500 dark:text-disc-muted">
-              เก็บไว้ให้แล้ว เปิดมาดูได้ตลอด — แต่ไม่ได้ใส่ลงเนื้อหาโพสต์ให้ ต้องคัดลอกไปใช้เอง
-            </p>
-          )}
         </div>
       )}
 

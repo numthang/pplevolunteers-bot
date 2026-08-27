@@ -297,7 +297,7 @@ export async function generateEntryPdf(entry, { signatureBase64 = null, payerSig
   // แนบสำเนาบัตรประชาชน (ถ้ามี) — วางมุมล่างซ้ายของหน้าสุดท้าย ลายน้ำแล้ว
   if (entry.id_card_image) {
     try {
-      return await stampIdCardBlock(pdfBuf, entry.id_card_image, sigBuf)
+      return await stampIdCardBlock(pdfBuf, entry.id_card_image, sigBuf, entry.event_date)
     } catch (err) {
       console.error(`[generateEntryPdf] id-card stamp failed for entry ${entry.id}:`, err.message)
       // ล้มเหลวตรงนี้ไม่ควรทำให้ทั้งใบพัง — คืนใบเสร็จเปล่าๆ ไป
@@ -397,8 +397,8 @@ async function drawIdCardBlock(pdf, page, cardImg, certImg, certRatio, topY) {
 
 /** วางสำเนาบัตร + สำเนาถูกต้อง ท้ายใบสำคัญรับเงิน (มุมล่างซ้ายของหน้าสุดท้าย)
  *  ถ้าหน้าสุดท้ายเนื้อหายาวจนพื้นที่ไม่พอ → เพิ่มหน้าใหม่แล้ววางบล็อกเดียวกันไว้ด้านบน */
-async function stampIdCardBlock(pdfBuf, idCardBuffer, sigBuffer = null) {
-  const cardJpeg = await buildWatermarkedIdCard(idCardBuffer)
+async function stampIdCardBlock(pdfBuf, idCardBuffer, sigBuffer = null, activityDateStr = null) {
+  const cardJpeg = await buildWatermarkedIdCard(idCardBuffer, activityDateStr)
   const certify  = await buildCertifyBlock(sigBuffer, CERT_OPTS)
 
   const pdf     = await PDFDocument.load(pdfBuf)
