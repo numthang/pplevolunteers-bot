@@ -6,10 +6,20 @@
  * ต่างกันแค่ทำทีละเยอะและไม่มีคนกดเลือกหมวดให้
  *
  * Usage (local):
- *   node scripts/data/backfillPostThreads.js --dry-run
- * Usage (prod):
+ *   node scripts/data/backfillPostThreads.js --dry-run     ← ดูยอดก่อน (~10 วินาที)
+ *   node scripts/data/backfillPostThreads.js               ← รันจริง
+ *
+ * Usage (prod) — ⚠️ **ต้อง `sudo -u www` เสมอ** ไม่งั้น .env ไม่โหลด + ไฟล์รูปเป็นของ user ผิดคน:
  *   sudo -u www bash -c 'cd /www/wwwroot/pple-volunteers && \
  *     node scripts/data/backfillPostThreads.js --dry-run'
+ *
+ * ⚠️ **ลำดับบน prod ห้ามสลับ** — migration (CHECK created_via) → deploy เว็บ → รันสคริปต์
+ *    รันสคริปต์ก่อน migration = พังตอน INSERT · ก่อน deploy เว็บ = โพสต์เก่าหลายร้อยใบ
+ *    ท่วมหน้า /posts ให้ทีมเห็น เพราะตัวกรอง `created_via <> 'backfill'` ยังไม่ขึ้น
+ *
+ * ⭐ **rollback ไม่ใช่ restore** — สคริปต์นี้ INSERT อย่างเดียว ไม่แตะของเดิมสักแถว
+ *    ถ้าจะถอย ให้ลบตามป้าย `created_via = 'backfill'` (+ ไฟล์ตาม path ใน post_episode_media)
+ *    การ restore ตารางกลับจะลบงานที่ทีมทำระหว่างนั้นไปด้วย = แย่กว่าเดิม
  *
  * ⭐ **สั่งเปล่าๆ ปลอดภัยแล้ว** (เปลี่ยนค่าตั้งต้น 2026-08-28 — user ขอ "ไม่อยากจำ flag")
  *    `node scripts/data/backfillPostThreads.js` = ทุกปี · ไม่ยิง AI · 4 รูป/กระทู้
