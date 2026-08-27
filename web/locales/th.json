@@ -1990,7 +1990,9 @@
         "plain": "การบ้าน",
         "case": "เรื่องร้องเรียน",
         "post": "งานสื่อ"
-      }
+      },
+      "searchPlaceholder": "ค้นหา…",
+      "searchClear": "ล้างคำค้น"
     },
     "sort": {
       "toggleLabel": "เรียงลำดับ",

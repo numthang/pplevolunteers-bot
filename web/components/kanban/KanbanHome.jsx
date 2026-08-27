@@ -25,12 +25,13 @@ import {
   Plus, Clock, User, ListChecks, MoreHorizontal, Pencil, Copy,
   ChevronDown, ChevronRight, Loader2, ArchiveRestore, Trash2,
   Filter, ArrowUpDown, Settings, Search, Type, Hash, Calendar, ToggleLeft, List, CircleDot, Link2,
-  AlertTriangle,
+  AlertTriangle, X,
 } from 'lucide-react'
 import { STATUS_TYPES, isDraggableCard, formatRef, looksLikeRef } from '@/lib/kanbanAccess.js'
 import { columnHeadProps, chipProps } from '@/lib/kanbanLabelColors.js'
 import { groupCards, isMyCard, defaultDueForBucket } from '@/lib/kanbanGrouping.js'
 import { collectFilterGroups, filterCards, cardTags } from '@/lib/kanbanTagFilter.js'
+import { filterCardsByText } from '@/lib/kanbanTextFilter.js'
 import { sortCardsBy, collectSortableFields, BUILTIN_SORT_FIELDS } from '@/lib/kanbanSort.js'
 import CardModal from './CardModal.jsx'
 import DeleteChoiceDialog from './DeleteChoiceDialog.jsx'
@@ -352,6 +353,8 @@ export default function KanbanHome() {
   const [scope, setScope] = useState('mine')     // 'mine' | 'all' | 'archived' — ตั้งต้นของฉัน
   const [groupBy, setGroupBy] = useState('status') // 'status' | 'due'
   const [labelFilter, setLabelFilter] = useState([])
+  // คำค้นข้อความ — อยู่นอกกรวยกรอง (ช่องค้นหาต้องพิมพ์ได้เลย ไม่ต้องกดเปิดอะไรก่อน)
+  const [textQuery, setTextQuery] = useState('')
   const [helperFilter, setHelperFilter] = useState([])   // user_id (string) ของผู้ช่วยที่ถูกเลือกกรอง
   const [kindFilter, setKindFilter] = useState([])       // ชนิดงาน: 'plain' | 'case' | 'post' (ว่าง = ทั้งหมด)
   const [statusFilter, setStatusFilter] = useState([])   // status_type ที่ถูกเลือกกรอง (แยกจาก groupBy — กรองซ่อนใบที่ไม่เข้าเกณฑ์ ไม่ใช่จัดกอง)
@@ -596,8 +599,10 @@ export default function KanbanHome() {
       const wanted = new Set(kindFilter)
       out = out.filter((c) => wanted.has(cardKind(c)))
     }
-    return out
-  }, [scoped, labelFilter, helperFilter, statusFilter, kindFilter])
+    // ⚠️ ค้นข้อความเป็น **ตัวสุดท้าย** ของสาย — ตัวเลือกในกรวย (ป้าย/คนช่วย/สถานะ/ชนิด) นับจำนวน
+    //    จาก `scoped` ไม่ใช่จากตรงนี้ ถ้าเอาไปไว้ต้นสายตัวเลขในกรวยจะไม่ขยับตามคำค้น = อ่านแล้วงง
+    return filterCardsByText(out, textQuery)
+  }, [scoped, labelFilter, helperFilter, statusFilter, kindFilter, textQuery])
   const groups = useMemo(() => groupCards(visible, groupBy), [visible, groupBy])
 
   const selectedIds = new Set(labelFilter.map((l) => String(l.id)))
@@ -1012,8 +1017,32 @@ export default function KanbanHome() {
           />
         </div>
 
-        {/* กรวยกรอง / เรียงลำดับ / เฟือง (ตั้งค่า — ยังไม่ทำ ใส่ไว้ก่อน) — ชิดขวาแถวเดียวกัน */}
+        {/* ค้นหา / กรวยกรอง / เรียงลำดับ / เฟือง (ตั้งค่า — ยังไม่ทำ ใส่ไว้ก่อน) — ชิดขวาแถวเดียวกัน */}
         <div className="flex items-center gap-1.5 ml-auto">
+          {/* ⭐ ช่องค้นหาอยู่ **นอก** กรวยกรอง — เป็นสิ่งที่คนหยิบใช้บ่อยสุด ต้องพิมพ์ได้เลย
+              ไม่ต้องกดเปิดอะไรก่อน (ตัวเลือกในกรวยเป็นของที่เลือกนานๆ ครั้ง คนละจังหวะการใช้)
+              ⚠️ กรองในเครื่องจากการ์ดที่โหลดมาแล้ว — ไม่ยิง API ใหม่ พิมพ์แล้วผลขยับทันที
+                 (ชนเพดาน CARD_HARD_CAP เมื่อไหร่ แถบเตือน truncated ข้างล่างบอกอยู่แล้ว) */}
+          <div className="flex items-center gap-1.5 h-9 px-2 rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg w-36 sm:w-52">
+            <Search size={14} className="text-warm-400 dark:text-disc-muted shrink-0" />
+            <input
+              value={textQuery}
+              onChange={(e) => setTextQuery(e.target.value)}
+              placeholder={t('filter.searchPlaceholder')}
+              aria-label={t('filter.searchPlaceholder')}
+              className="flex-1 min-w-0 bg-transparent text-sm text-warm-900 dark:text-disc-text placeholder-warm-400 dark:placeholder-disc-muted focus:outline-none"
+            />
+            {textQuery && (
+              <button
+                onClick={() => setTextQuery('')}
+                aria-label={t('filter.searchClear')}
+                title={t('filter.searchClear')}
+                className="shrink-0 p-0.5 rounded text-warm-400 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text"
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
           {/* ตัวกรองสถานะมีตัวเลือกตายตัวเสมอ (6 แบบ) — ปุ่มกรวยเลยโผล่เสมอ ไม่ต้องรอมีป้าย/คนช่วย */}
           <button
             onClick={() => setFiltersOpen((v) => !v)}
@@ -1281,9 +1310,9 @@ export default function KanbanHome() {
               )}
             </div>
 
-            {(labelFilter.length > 0 || helperFilter.length > 0 || statusFilter.length > 0 || kindFilter.length > 0) && (
+            {(labelFilter.length > 0 || helperFilter.length > 0 || statusFilter.length > 0 || kindFilter.length > 0 || textQuery) && (
               <button
-                onClick={() => { setLabelFilter([]); setHelperFilter([]); setStatusFilter([]); setKindFilter([]) }}
+                onClick={() => { setLabelFilter([]); setHelperFilter([]); setStatusFilter([]); setKindFilter([]); setTextQuery('') }}
                 className="h-9 px-3 text-sm border border-warm-200 dark:border-disc-border bg-card-bg text-warm-500 dark:text-disc-muted hover:text-red-500 dark:hover:text-red-400 hover:border-red-300 dark:hover:border-red-700 rounded-lg transition-colors whitespace-nowrap"
               >
                 {t('filter.clear')}

@@ -1990,7 +1990,9 @@
         "plain": "Task",
         "case": "Complaint",
         "post": "Media"
-      }
+      },
+      "searchPlaceholder": "Search…",
+      "searchClear": "Clear search"
     },
     "sort": {
       "toggleLabel": "Sort",
