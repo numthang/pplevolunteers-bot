@@ -16,7 +16,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import {
   AlertTriangle, AlignLeft, Archive, ArchiveRestore, Calendar, Check, CircleDot,
-  ExternalLink, Link2, Loader2, UserCircle, Users, X,
+  ExternalLink, Link2, Loader2, UserCircle, UserPlus, Users, X,
 } from 'lucide-react'
 import { formatRef, isDraggableCard, statusOptionsFor } from '@/lib/kanbanAccess.js'
 import DeleteChoiceDialog from './DeleteChoiceDialog.jsx'
@@ -37,13 +37,14 @@ export default function CardModal({ cardId, onClose, onChanged }) {
   const t = useTranslations('kanban')
 
   const [card, setCard] = useState(null)
-  const [can, setCan] = useState({ edit: false, archive: false, restore: false, claim: false, purge: false })
+  const [can, setCan] = useState({ edit: false, archive: false, restore: false, claim: false, join: false, purge: false })
   const [confirmRemove, setConfirmRemove] = useState(false)
   const [profileUserId, setProfileUserId] = useState(null)
   // ตัวเลือกสถานะ — ป้ายมาจาก t() จึงคำนวณที่นี่ ไม่ใช่ค่าคงที่นอก component
   // การบ้านธรรมดาได้ครบ 6 แบบ · การ์ดที่ผูกงานสื่อได้เฉพาะช่วงร่าง (statusOptionsFor)
   const STATUS_OPTIONS = statusOptionsFor(card).map((s) => ({ id: s, name: t(`status.${s}`) }))
   const [removing, setRemoving] = useState(false)
+  const [joining, setJoining] = useState(false)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
 
@@ -278,6 +279,37 @@ export default function CardModal({ cardId, onClose, onChanged }) {
     }
   }
 
+  /**
+   * "ลงมือด้วย" / "รับงานนี้" — ทางเดียวที่คนนอกเข้ามาร่วมงานเองได้ (user เคาะ 2026-08-27)
+   *
+   * ⭐ ปุ่มเดียวทำได้ 2 อย่าง เพราะ **server เป็นคนตัดสิน** จาก `{claim:true}`:
+   *    ยังไม่มีเจ้าภาพ → กลายเป็นเจ้าภาพ · มีเจ้าภาพแล้ว → ต่อท้ายเป็นคนช่วย
+   *    (ดู PATCH ที่ api/kanban/cards/[id]/route.js §claim) — client ห้ามเดาเองว่าจะได้บทไหน
+   *
+   * ⚠️ ต้อง `load()` ไม่ใช่ `setCard()` เฉยๆ — `can` มาจาก GET ครั้งแรกที่เดียว
+   *    กดแล้วกลายเป็นคนช่วย = `can.edit` ต้องพลิกเป็น true ทันที ไม่งั้นเข้ามาแล้วยังแก้อะไรไม่ได้
+   *    ปลอดภัยที่จะทับช่องกรอก เพราะคนที่เห็นปุ่มนี้ยังอยู่โหมดอ่านอย่างเดียว ไม่มีอะไรพิมพ์ค้าง
+   */
+  async function join() {
+    setActionError('')
+    setJoining(true)
+    try {
+      const res = await fetch(`/api/kanban/cards/${cardId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ claim: true }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) { setActionError(json.error || t('actions.claimFailed')); return }
+      await load()
+      onChanged?.()
+    } catch {
+      setActionError(t('actions.claimFailed'))
+    } finally {
+      setJoining(false)
+    }
+  }
+
   /** เอาออกจากกรุ — ไม่ต้องถามยืนยัน เป็นการกระทำที่ย้อนได้อยู่แล้ว */
   async function restore() {
     const res = await fetch(`/api/kanban/cards/${cardId}`, {
@@ -435,12 +467,16 @@ export default function CardModal({ cardId, onClose, onChanged }) {
                   />
                 </FieldRow>
 
-                {/* เจ้าภาพ — select ทรงเดียวกับ custom field แต่ตัวเลือกแก้ไม่ได้ (คนใน org ค้นเอา ไม่ใช่พิมพ์เอง) */}
+                {/* เจ้าภาพ — select ทรงเดียวกับ custom field แต่ตัวเลือกแก้ไม่ได้ (คนใน org ค้นเอา ไม่ใช่พิมพ์เอง)
+                    ⛔ readOnly ผูกกับ can.edit อย่างเดียว — **ห้ามเติม `|| can.claim` กลับมา**
+                       onCommit ยิง { ownerUserId } ซึ่งด่านคือ canAssignOwner = คนเกี่ยวข้องเท่านั้น
+                       เติมเมื่อไหร่ = คนนอกเปิดช่องเลือกได้ เลือกเสร็จเด้ง 403 (บั๊กจริงถึง 2026-08-27)
+                       ทางของคนนอกคือปุ่ม "ลงมือด้วย" ท้ายกล่อง ซึ่งยิง { claim:true } คนละ path กัน */}
                 <FieldRow icon={UserCircle} label={t('modal.ownerLabel')}>
                   <TagCombobox
                     type="select"
                     numericIds={false}
-                    readOnly={!can.edit && !can.claim}
+                    readOnly={!can.edit}
                     placeholder={t('modal.noOwner')}
                     source={{ mode: 'search', search: searchPeople }}
                     value={card.owner_user_id ? [{ id: String(card.owner_user_id), name: card.owner_name || '' }] : []}
@@ -535,15 +571,35 @@ export default function CardModal({ cardId, onClose, onChanged }) {
                   ⛔ ปุ่ม "ทำสำเนา" ย้ายไปเมนู "..." บนการ์ดในกระดานแล้ว (user สั่ง 2026-08-19) */}
               {/* ปุ่มนี้โผล่เสมอเมื่อโหลดการ์ดได้ — API ใช้ด่าน canViewCard (เห็นได้ = ก๊อปได้)
                   ไม่ผูกกับ can.edit เพราะสำเนาเป็นการ์ดใบใหม่ของคนกด ไม่ได้แตะต้นฉบับ */}
-              {(
+              {/* ⭐ ทุกปุ่มในแถวนี้ผูกกับ can.* ที่ API คำนวณมา — ห้ามโผล่ปุ่มที่กดแล้วได้ 403
+                  (กติกาเดียวกับ statusOptionsFor: "ตัวเลือกที่เลือกไม่ได้ต้องไม่โผล่ ไม่ใช่โผล่แล้วกดไม่ได้")
+                  เดิมปุ่ม "เก็บเข้ากรุ" โผล่ให้ทุกคนทั้งที่ด่านคือคนสร้าง/admin เท่านั้น */}
+              {(can.restore || can.archive || can.join) && (
                 <div className="pt-2 border-t border-warm-200 dark:border-disc-border flex flex-wrap items-center justify-between gap-2">
                   {can.restore ? (
                     <button onClick={restore} className="flex items-center gap-1 px-4 py-2 text-base rounded-lg text-warm-900 dark:text-disc-text hover:bg-warm-50 dark:hover:bg-disc-hover font-medium transition">
                       <ArchiveRestore size={16} /> {t('actions.restore')}
                     </button>
-                  ) : (
+                  ) : can.archive ? (
                     <button onClick={() => setConfirmRemove(true)} className="flex items-center gap-1 px-4 py-2 text-base rounded-lg text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-disc-hover font-medium transition">
                       <Archive size={16} /> {t('modal.archive')}
+                    </button>
+                  ) : <span />}
+
+                  {/* ป้ายเปลี่ยนตามบทที่จะได้: ยังไม่มีเจ้าภาพ = "รับงานนี้" · มีแล้ว = "ลงมือด้วย"
+                      ⚠️ เป็นแค่ป้าย — คนตัดสินจริงคือ server (ดู join()) ห้ามเอาเงื่อนไขนี้ไปตัดสินอะไรอย่างอื่น */}
+                  {can.join && (
+                    <button
+                      onClick={join}
+                      disabled={joining}
+                      className="flex items-center gap-1.5 px-4 py-2 text-base rounded-lg bg-teal text-white font-medium hover:opacity-90 disabled:opacity-50 transition"
+                    >
+                      {joining
+                        ? <Loader2 size={16} className="animate-spin" />
+                        : <UserPlus size={16} />}
+                      {joining
+                        ? t('actions.claiming')
+                        : card.owner_user_id ? t('modal.joinAsHelper') : t('actions.claim')}
                     </button>
                   )}
                 </div>
