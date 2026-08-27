@@ -1456,9 +1456,6 @@ CREATE OR REPLACE VIEW docs_entry_recipient AS
      LEFT JOIN docs_external_payees x ON x.id = e.external_payee_id;
 
 
--- production ทำถึงตรงนี้
-
-
 -- ═══ 2026-08-28 — created_via รับค่า 'backfill' (กระทู้เก่านำเข้าย้อนหลัง) ═══
 -- ⭐ ทำไมต้องมีค่าที่ 3: `channel_id` บอกได้แค่ "มาจากดิสคอร์ดไหม" แต่แยกไม่ออกว่าเป็น
 --    **งานปัจจุบัน** (ตะกร้าสื่อที่ทีมหย่อนวันนี้ · context menu "นำเข้าเป็นโพสต์") หรือ
@@ -1473,3 +1470,6 @@ CREATE OR REPLACE VIEW docs_entry_recipient AS
 ALTER TABLE post_episodes DROP CONSTRAINT IF EXISTS post_episodes_created_via_check;
 ALTER TABLE post_episodes ADD CONSTRAINT post_episodes_created_via_check
   CHECK (created_via IN ('ai', 'manual', 'backfill'));
+
+-- production ทำถึงตรงนี้
+

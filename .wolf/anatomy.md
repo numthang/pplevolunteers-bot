@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-27T12:28:16.032Z
-> Files: 1061 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-27T19:23:31.112Z
+> Files: 1066 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/1b7cbea7-c43c-466d-9a5f-c61fda8e76b5/scratchpad/
 
@@ -21,6 +21,10 @@
 - `test-cycle.mjs` — BASE: pillText (~485 tok)
 - `test-kanban.mjs` — Declares BASE (~999 tok)
 
+## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/fad2e24e-656a-4bb4-ab14-828b6b2fb211/scratchpad/
+
+- `check.js` — Declares pool (~258 tok)
+
 ## ../../../.claude/plans/
 
 - `kanban-kanban-ticklish-blum.md` — เติมงานสื่อ (posts) + เรื่องร้องเรียน (cases) เข้า kanban — บอร์ดเดียว ผูกของจริง (~2129 tok)
@@ -30,9 +34,11 @@
 ## ../../../.claude/projects/-home-tee-VSites-node-pple-volunteers/memory/
 
 - `feedback_context_window_size.md` (~238 tok)
+- `feedback_dry_run_scope_and_approval.md` (~354 tok)
 - `feedback_thai_language.md` (~197 tok)
 - `MEMORY.md` — Memory Index (~3105 tok)
 - `project_kanban_module.md` (~465 tok)
+- `project_multi_guild_same_org.md` (~512 tok)
 
 ## ../calling.ppleth.ai/
 
@@ -208,7 +214,7 @@
 - `guildRoles.js` — Sync role catalog → dc_guild_roles (SPEC §4 step 6a) (~1591 tok)
 - `guilds.js` — pool: upsertGuilds (~150 tok)
 - `index.js` — Declares pool (~100 tok)
-- `kanbanCards.js` — กระดานที่การ์ดจากห้องนี้ควรลง — ของเซิร์ฟนี้ก่อน แล้วค่อยกระดานแรกของ org (~2100 tok)
+- `kanbanCards.js` — ลิงก์เปิดการ์ดบนเว็บ — ลอกแนวจาก getCaseManageUrl() ใน db/case.js เป๊ะๆ (~2458 tok)
 - `mediaBasket.js` — ชื่อเรื่องจาก **บรรทัดแรก**ของแคปชัน — ตะกร้าดิสฯ ไม่มีช่องกรอกชื่อ (หย่อนข้อความอย่างเดียว) (~3941 tok)
 - `members.js` — pool: upsertMember, _deriveRoleFields, upsertMemberFromDiscord, getMember, syncMemberRoles (~1617 tok)
 - `newsWatch.js` — คืน Set ของ item_key ที่ห้องนี้เคยเห็นแล้ว (~567 tok)
@@ -218,7 +224,7 @@
 - `orgMemberRoles.js` — org_member_roles — แหล่งความจริงของสิทธิ์ (ORG_ACCESS_REDESIGN ขั้น 5) (~730 tok)
 - `otpSession.js` — db/otpSession.js — state ชั่วคราวของการยืนยันตัวตนด้วย OTP (dc_user_config) (~372 tok)
 - `otpSession.js` — db/otpSession.js — state ชั่วคราวของ OTP (dc_user_config, key = discord_id) แยกจาก userConfig 2026-07-29 (~330 tok)
-- `postsImport.js` — สร้างโพสต์เดี่ยวจากกระทู้ + revision แรก (ต้นฉบับดิบ) + revision สอง (ฉบับ AI) (~1182 tok)
+- `postsImport.js` — สร้างโพสต์เดี่ยวจากกระทู้ + revision แรก (ต้นฉบับดิบ) + revision สอง (ฉบับ AI) (~1350 tok)
 - `ratings.js` — เพิ่ม rating ใหม่ (~783 tok)
 - `reports.js` — เพิ่ม report ใหม่ (~694 tok)
 - `settings.js` — db/settings.js (~353 tok)
@@ -281,7 +287,7 @@
 - `DEPLOYMENT.md` — Production Deployment — VPS Setup (~2522 tok)
 - `DEV_AGREEMENT.md` — CivicFlow — Dev Agreement & กติกาทำงานร่วม (ร่าง — รอคุยกับทีม CivicFlow) (~1367 tok)
 - `ORG_ACCESS_REDESIGN.md` — ORG_ACCESS_REDESIGN — ปลดสิทธิ์ออกจาก Discord (~5545 tok)
-- `PENDING.md` — PENDING.md — Backlog & Ideas (~41657 tok)
+- `PENDING.md` — PENDING.md — Backlog & Ideas (~42460 tok)
 - `WEB.md` — Web App — Next.js Frontend (~5324 tok)
 
 ## md/archive/
@@ -413,7 +419,7 @@
 - `backfill-intro-ratchaburi.js` — scripts/backfill-intro-channel.js (~2655 tok)
 - `backfill-missing-channels.js` — scripts/backfill-missing-channels.js (~2618 tok)
 - `backfillCaseThreads.js` — backfillCaseThreads.js — ดึงกระทู้เก่าทั้งหมดจาก complaint forum มาสร้าง case (~2176 tok)
-- `backfillPostThreads.js` — backfillPostThreads.js — กวาดกระทู้เก่าใน forum งานสื่อ มาสร้างเป็นโพสต์ (post_episodes) (~4126 tok)
+- `backfillPostThreads.js` — backfillPostThreads.js — กวาดกระทู้เก่าใน forum งานสื่อ มาสร้างเป็นโพสต์ (post_episodes) (~4743 tok)
 - `backfillThreads.js` — Backfill: index threads ใน text channels ทั้งหมดเข้า Meilisearch + DB (~680 tok)
 - `exportIntro.js` — Declares client (~667 tok)
 - `extract-intro-ratchaburi-csv.js` — scripts/extract-intro-csv.js (~1790 tok)
@@ -443,7 +449,7 @@
 
 ## scripts/kanban/
 
-- `backfillEntityCards.mjs` — กวาดให้ "ของจริงทุกชิ้นมีการ์ดใน kanban" — เคส + งานสื่อ (user เคาะ 2026-08-24: ต้องมี ทุกใบ) (~1137 tok)
+- `backfillEntityCards.mjs` — กวาดให้ "ของจริงทุกชิ้นมีการ์ดใน kanban" — เคส + งานสื่อ (user เคาะ 2026-08-24: ต้องมี ทุกใบ) (~1315 tok)
 
 ## scripts/media/
 
@@ -475,7 +481,7 @@
 - `identity-split-user-identities.sql` — ═══════════════════════════════════════════════════════════════════════════ (~1080 tok)
 - `identity-users-seq.sql` — ═══════════════════════════════════════════════════════════════════════════ (~257 tok)
 - `kanbanLabelsToFields.mjs` — ชนิด field ที่รับป้ายได้ — อย่างอื่น (text/number/date/checkbox/url) ยัดป้ายลงไปไม่ได้ (~2627 tok)
-- `migration.sql` — migration.sql — PostgreSQL migration log (append ต่อท้ายพร้อมวันที่) (~15945 tok)
+- `migration.sql` — migration.sql — PostgreSQL migration log (append ต่อท้ายพร้อมวันที่) (~22365 tok)
 - `moveWatermarksToOrg.js` — scripts/migration/moveWatermarksToOrg.js (~2002 tok)
 - `org-access-redesign.sql` — ═══════════════════════════════════════════════════════════════════════════ (~1417 tok)
 - `phone-identity.sql` — phone-identity.sql — Phone เป็น login identity ที่ verify ได้ (Phase 4 slice 1) (~279 tok)
@@ -1283,7 +1289,7 @@
 
 ## web/app/api/posts/
 
-- `route.js` — GET /api/posts?visibility=personal|org&category=<ชื่อ|__none__>&status=&archived=1&posted=1&source=d (~818 tok)
+- `route.js` — GET /api/posts?visibility=personal|org&category=<ชื่อ|__none__>&status=&archived=1&posted=1&source=d (~873 tok)
 
 ## web/app/api/posts/[id]/
 
@@ -1379,7 +1385,7 @@
 
 ## web/app/api/posts/categories/
 
-- `route.js` — GET /api/posts/categories?visibility=personal|org (~554 tok)
+- `route.js` — GET /api/posts/categories?visibility=personal|org&source=backfill (~614 tok)
 
 ## web/app/api/posts/jobs/[jobId]/
 
@@ -1917,15 +1923,15 @@
 
 - `BoardView.jsx` — BoardView — กระดานแนวตั้ง "ย่อ" (ก่อนถึงก้อน 3) (~3009 tok)
 - `CardFieldsBox.jsx` — CardFieldsBox — กล่อง "ข้อมูลของทีม" ใน CardModal (custom field) (~7870 tok)
-- `CardModal.jsx` — CardModal — รายละเอียดการบ้าน 1 ใบ (~7485 tok)
+- `CardModal.jsx` — CardModal — รายละเอียดการบ้าน 1 ใบ (~8824 tok)
 - `ChecklistFieldBox.jsx` — ChecklistFieldBox — เช็คลิสต์ 1 field (ตรงสกรีนช็อตที่ user ส่งมา 2026-08-18 รอบเย็น: progress bar + (~6665 tok)
 - `DeleteChoiceDialog.jsx` — DeleteChoiceDialog — กล่อง "ลบ" ที่ให้เลือกเอาเองว่า **ซ่อน/เก็บเข้ากรุ** หรือ **ลบถาวร** (~1182 tok)
 - `FieldManager.jsx` — FieldManager — ช่องข้อมูลตั้งเองของ org (/kanban/fields) · admin เท่านั้น (~3907 tok)
 - `FieldRow.jsx` — FieldRow — แถว `[ไอคอน · ชื่อ] | [ค่า]` บรรทัดเดียว ทรง Notion/AppFlowy (~749 tok)
-- `KanbanHome.jsx` — KanbanHome — หน้าเดียวของโมดูลการบ้าน (`/kanban`) (~19846 tok)
+- `KanbanHome.jsx` — KanbanHome — หน้าเดียวของโมดูลการบ้าน (`/kanban`) (~20975 tok)
 - `LabelChips.jsx` — LabelChips — ป้ายของการ์ด 1 ใบ วาดแยกเป็นกอง ไม่ใช่กองรวมพรืดเดียว (~618 tok)
 - `PersonProfileModal.jsx` — PersonProfileModal — กล่องลอยแบบดิสคอร์ด เปิดตอนกดชื่อเจ้าภาพ/คนช่วยในการ์ด (~1228 tok)
-- `TagCombobox.jsx` — TagCombobox — ตัวเลือกของ select/multi_select field (ตรงสกรีนช็อตที่ user ส่งมา 2026-08-18 รอบเย็น) (~8683 tok)
+- `TagCombobox.jsx` — TagCombobox — ตัวเลือกของ select/multi_select field (ตรงสกรีนช็อตที่ user ส่งมา 2026-08-18 รอบเย็น) (~8801 tok)
 
 ## web/components/org/
 
@@ -1964,13 +1970,13 @@
 - `EmojiPicker.jsx` — GROUPS (~976 tok)
 - `ImageEditorModal.jsx` — MAX_SIDE (~9822 tok)
 - `PostCreate.jsx` — autoGrow (~1936 tok)
-- `PostEditor.jsx` — ผลตรวจจาก AI บรรณาธิการ (kind='review') — โครงคนละแบบกับ caption สิ้นเชิง (~12016 tok)
+- `PostEditor.jsx` — ผลตรวจจาก AI บรรณาธิการ (kind='review') — โครงคนละแบบกับ caption สิ้นเชิง (~12806 tok)
 - `PostMediaPanel.jsx` — ACCEPT (~7896 tok)
 - `PostMetaPanel.jsx` — STATUS_LABEL (~4306 tok)
 - `PostPublishPanel.jsx` — PLATFORMS (~6072 tok)
 - `PostPublishPanel.jsx` — PLATFORMS (~3229 tok)
 - `PostRevisions.jsx` — fmt (~1260 tok)
-- `PostsHome.jsx` — STATUS_LABELS (~8946 tok)
+- `PostsHome.jsx` — STATUS_LABELS (~9127 tok)
 - `PostsHome.jsx` — 'use client' หน้าแรกโมดูล posts: กล่องไอเดีย AI + dropdown filter 3 ตัว + รายการโพสต์เป็นแถวยาว พร้อมแถบ % ความสมบูรณ์ (CHECKS 4 ข้อ) + ตัวเรียง ใกล้เสร็จก่อน/แก้ล่าสุด (~1400 tok)
 - `QuoteGeneratorModal.jsx` — ครอปฝั่ง client → Blob (ทำก่อนส่งไป render เสมอ) (~13225 tok)
 - `VideoQuoteModal.jsx` — POSITIONS (~3295 tok)
@@ -2050,10 +2056,10 @@
 ## web/db/kanban/
 
 - `boards.js` — กระดานตั้งต้นของ org — ตัวแรกตามลำดับที่แสดง (~1374 tok)
-- `cards.js` — ⭐ การ์ดที่ผูกของจริง (เคส/โพสต์) — 2 กติกาที่ไหลไปทุก query ในไฟล์นี้ (2026-08-24) (~7541 tok)
+- `cards.js` — ⭐ การ์ดที่ผูกของจริง (เคส/โพสต์) — 2 กติกาที่ไหลไปทุก query ในไฟล์นี้ (2026-08-24) (~7616 tok)
 - `fields.js` — defs ที่ยังไม่ถูกซ่อน (หรือรวมที่ซ่อนถ้า includeArchived) เรียงตามลำดับที่ตั้งไว้ (~6151 tok)
 - `labels.js` — ป้ายทั้งหมดของ org (ที่ยังไม่ถูกซ่อน) เรียงตามกลุ่ม (~2314 tok)
-- `links.js` — ของจริงที่การ์ดใบนี้ผูกอยู่ — null = การ์ดเปล่า (การบ้านธรรมดา) (~3275 tok)
+- `links.js` — ของจริงที่การ์ดใบนี้ผูกอยู่ — null = การ์ดเปล่า (การบ้านธรรมดา) (~3435 tok)
 - `people.js` — ค้นสมาชิก active ของ org · เรียกจาก API ที่กันคำค้นสั้นกว่า 2 ตัวไว้แล้ว (~931 tok)
 - `statusSql.js` — สถานะที่ต้องเอาไปแสดงจริง — สดจากต้นทางถ้าผูกไว้ · ไม่ผูกก็ใช้คอลัมน์เดิม (~1637 tok)
 - `tags.js` — tags.js — "แท็ก" ของการบ้าน = **ตัวเลือกใน custom field** ไม่ใช่ตารางป้ายอีกต่อไป (~1588 tok)
@@ -2063,7 +2069,7 @@
 - `aiSuggestions.js` — เก็บ 1 ชุด (1 ครั้งที่กดขอ) — payload = { quotes, headlines, imageIdeas, hashtags, cta, articleTips (~549 tok)
 - `assets.js` — แท็กต้อง normalize ตอนเขียนเสมอ — ไม่งั้นแตกเป็น "ราชบุรี" กับ "ราชบุรี " แล้วชิปกรองไม่ตรงกัน (~1878 tok)
 - `basket.js` — ตะกร้าที่เปิดอยู่ของห้อง — คืน null ถ้าห้องนี้ไม่มีตะกร้า (~344 tok)
-- `episodes.js` — โพสต์ทั้งหมดที่ user คนนี้ "เห็นได้อย่างน้อยระดับ org" (~5896 tok)
+- `episodes.js` — โพสต์ทั้งหมดที่ user คนนี้ "เห็นได้อย่างน้อยระดับ org" (~6388 tok)
 - `jobs.js` — สร้างงานโพสต์ 1 แถวต่อ 1 แพลตฟอร์ม (batch เดียวกัน) (~1642 tok)
 - `media.js` — หาแถวที่อ้าง path นี้ — ใช้กันไม่ให้ยิง path ของโพสต์อื่นมาเป็นพื้นหลังการ์ด (~1904 tok)
 - `series.js` — ซีรีส์ทั้งหมดที่ user คนนี้มีสิทธิ์ "เห็นได้อย่างน้อยระดับ org" (~1633 tok)
@@ -2116,15 +2122,16 @@
 - `guildContext.js` — คืน guild_id ที่ request นี้ทำงานอยู่ — รากฐานของ multi-guild ทั้งระบบ (~639 tok)
 - `hexColor.js` — รับ hex code ที่พิมพ์/วางเอง — เติม # ให้ถ้าลืม, ขยายแบบย่อ 3 หลัก (#f80 → #ff8800) (~121 tok)
 - `idCard.js` — สำเนาบัตรประชาชน — resize ให้พอดีพิมพ์ A4 + ลายน้ำกันใช้ผิดวัตถุประสงค์ (~2172 tok)
-- `kanbanAccess.js` — Kanban Access Control — ก้อน 1 ("การบ้านของฉัน" · ยังไม่มีกระดาน) (~2698 tok)
+- `kanbanAccess.js` — Kanban Access Control — ก้อน 1 ("การบ้านของฉัน" · ยังไม่มีกระดาน) (~3013 tok)
 - `kanbanFieldValue.js` — ชนิด → คอลัมน์ปลายทางใน kanban_card_field_values (url ใช้ value_text ร่วมกับ text · checklist ไม่มีค (~967 tok)
 - `kanbanGrouping.js` — จัดกลุ่มการ์ด + ตัดสินว่า "ของฉัน" คือใบไหน — ตรรกะล้วน (เทสที่ lib/__tests__/kanbanGrouping.test.js (~1426 tok)
-- `kanbanGuard.js` — kanbanGuard — ด่านเดียวที่ route ของ kanban ใช้โหลด context + ตัดสินสิทธิ์ (~760 tok)
+- `kanbanGuard.js` — kanbanGuard — ด่านเดียวที่ route ของ kanban ใช้โหลด context + ตัดสินสิทธิ์ (~945 tok)
 - `kanbanLabelColors.js` — สีของชิปป้าย + หัวช่องกระดาน (~1175 tok)
 - `kanbanLabelFilter.js` — ตัวกรองการ์ดด้วยป้าย — ตรรกะล้วน ไม่แตะ DOM/DB (เทสอยู่ที่ lib/__tests__/kanbanLabelFilter.test.js) (~869 tok)
 - `kanbanOptionActions.js` — จัดการตัวเลือกในคลัง (kanban_field_options) จากฝั่ง client · fetchOptions/patchOption/setOptionArchived/deleteOptionWithConfirm · **ทางเขียนเดียว** TagCombobox กับ ChecklistFieldBox ใช้ร่วมกัน (~750 tok)
 - `kanbanSort.js` — "เรียงตาม" ที่ผู้ใช้เลือกเอง — เมนู sort บน /kanban (แยกจาก sortCards ใน kanbanGrouping.js (~1005 tok)
 - `kanbanTagFilter.js` — ตัวกรองการ์ดด้วย **ตัวเลือกใน custom field** — ตรรกะล้วน ไม่แตะ DOM/DB (~1280 tok)
+- `kanbanTextFilter.js` — ค้นการ์ดด้วยข้อความ — ตรรกะล้วน ไม่แตะ DOM/DB (เทสอยู่ที่ lib/__tests__/kanbanTextFilter.test.js) (~642 tok)
 - `linkState.js` — Exports signLinkState, verifyLinkState (~276 tok)
 - `org-auth-options.js` — web/lib/org-auth-options.js — org login (email-native, แยกจาก PPLE Discord auth) (~1072 tok)
 - `org.js` — web/lib/org.js — Org layer: resolve guild ในเครือเดียวกัน (ฝั่ง web · คู่กับ bot db/org.js) (~192 tok)
@@ -2184,11 +2191,12 @@
 - `caseAccess.test.js` — caseAccess รับ access object { permissions: Set, scopeGrants: [] } ตรงๆ (~582 tok)
 - `financeAccess.test.js` — Declares canViewAccount (~2368 tok)
 - `geography.test.js` — ---- province grant ---- (~817 tok)
-- `kanbanAccess.test.js` — user ทดสอบ — ตัวเลขล้วน (users.id) เพราะ kanban ผูก user_id ไม่ใช่ discord_id (~3596 tok)
+- `kanbanAccess.test.js` — user ทดสอบ — ตัวเลขล้วน (users.id) เพราะ kanban ผูก user_id ไม่ใช่ discord_id (~3668 tok)
 - `kanbanFieldValue.test.js` — Declares res (~1567 tok)
 - `kanbanGrouping.test.js` — นาฬิกาตรึงไว้ — ห้ามให้เทสขึ้นกับเวลาที่รัน (~1605 tok)
 - `kanbanLabelFilter.test.js` — ป้ายตัวอย่าง — ชื่อกลุ่มมาจากของจริงบน dev (สายงาน 12 · พื้นที่ 9 · อุปกรณ์ 8) (~1424 tok)
 - `kanbanSort.test.js` — Declares at (~1058 tok)
+- `kanbanTextFilter.test.js` — Declares card (~942 tok)
 - `orgMemberRoles.live.test.js` — Live check (ต่อ DB จริง) — ORG_ACCESS_REDESIGN ขั้น 5: "ทางเขียน" (~1796 tok)
 - `orgScopeNodes.live.test.js` — Live check (ต่อ DB จริง) — ตัวจัดผังพื้นที่ (org_scope_nodes) (~1124 tok)
 - `payersDiff.live.test.js` — diff test ชั่วคราว — เทียบ payers เก่า (dc_guild_roles + geography.js) (~450 tok)
