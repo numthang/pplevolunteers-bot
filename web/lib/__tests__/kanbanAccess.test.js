@@ -25,15 +25,27 @@ const acc = (roles = []) => rolesToAccess(roles)
 
 // ---- ref ----
 describe('formatRef / parseRef', () => {
-  it('42 → K-42',            () => expect(ka.formatRef(42)).toBe('K-42'))
-  it('K-42 → 42',            () => expect(ka.parseRef('K-42')).toBe(42))
-  it('k42 → 42',             () => expect(ka.parseRef('k42')).toBe(42))
+  it('42 → KB-42',           () => expect(ka.formatRef(42)).toBe('KB-42'))
+  it('KB-42 → 42',           () => expect(ka.parseRef('KB-42')).toBe(42))
+  it('kb42 → 42',            () => expect(ka.parseRef('kb42')).toBe(42))
+  // ⚠️ ของเก่าที่บอทพิมพ์ลงดิสฯ ก่อนเปลี่ยนคำนำหน้า (2026-08-28) — ข้อความเก่าลบไม่ได้ ต้องรับตลอดไป
+  it('K-42 ของเก่า → 42',    () => expect(ka.parseRef('K-42')).toBe(42))
+  it('k42 ของเก่า → 42',     () => expect(ka.parseRef('k42')).toBe(42))
   it('เลขล้วน 42 → 42',      () => expect(ka.parseRef('42')).toBe(42))
-  it('มีช่องว่าง K 42 → 42',  () => expect(ka.parseRef('K 42')).toBe(42))
-  it('ตัวพิมพ์เล็ก k-42',     () => expect(ka.parseRef('k-42')).toBe(42))
+  it('มีช่องว่าง KB 42 → 42', () => expect(ka.parseRef('KB 42')).toBe(42))
+  it('ตัวพิมพ์เล็ก kb-42',    () => expect(ka.parseRef('kb-42')).toBe(42))
   it('ขยะ → null',           () => expect(ka.parseRef('abc')).toBe(null))
   it('MEDIA-42 → null (ไม่รับ ref แบบผูกกระดาน)', () => expect(ka.parseRef('MEDIA-42')).toBe(null))
   it('null → null',          () => expect(ka.parseRef(null)).toBe(null))
+
+  // looksLikeRef — ด่านที่แยก 'KB-100' (ref) ออกจาก '100' (id ภายใน) ในพาธ API/URL
+  // ⛔ ถ้าตัวเลขล้วนหลุดเป็น ref เมื่อไหร่ ลิงก์เก่าที่ใช้ id จะเปิดการ์ดผิดใบเงียบๆ
+  //    (ของจริงบนฐาน dev: id=100 มี ref_no=83 → คนละใบกับ KB-100 ที่ id=117)
+  it('looksLikeRef KB-100 → true',  () => expect(ka.looksLikeRef('KB-100')).toBe(true))
+  it('looksLikeRef K-100 → true',   () => expect(ka.looksLikeRef('K-100')).toBe(true))
+  it('looksLikeRef 100 → false',    () => expect(ka.looksLikeRef('100')).toBe(false))
+  it('looksLikeRef abc → false',    () => expect(ka.looksLikeRef('abc')).toBe(false))
+  it('looksLikeRef null → false',   () => expect(ka.looksLikeRef(null)).toBe(false))
   it('ว่าง → null',          () => expect(ka.parseRef('')).toBe(null))
   it('ไป-กลับได้ค่าเดิม',     () => expect(ka.parseRef(ka.formatRef(7))).toBe(7))
 })

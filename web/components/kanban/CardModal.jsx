@@ -289,7 +289,9 @@ export default function CardModal({ cardId, onClose, onChanged }) {
    */
   async function copyLink() {
     const url = new URL(window.location.href)
-    url.searchParams.set('card', String(cardId))
+    // ใช้ KB-xx ไม่ใช่ id ดิบ — ลิงก์ที่แชร์จึงอ่านออก/พูดต่อได้ ("เปิด KB-42 ดูหน่อย")
+    // ยังไม่ทันโหลดเสร็จ (ไม่มี ref_no) → ตกไปใช้ cardId ที่ได้มา ดีกว่าคัดลอกลิงก์เสีย
+    url.searchParams.set('card', card?.ref_no ? formatRef(card.ref_no) : String(cardId))
     try {
       await navigator.clipboard.writeText(url.toString())
       setCopied(true)

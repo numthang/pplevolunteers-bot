@@ -27,7 +27,7 @@ import {
   Filter, ArrowUpDown, Settings, Search, Type, Hash, Calendar, ToggleLeft, List, CircleDot, Link2,
   AlertTriangle,
 } from 'lucide-react'
-import { STATUS_TYPES, isDraggableCard } from '@/lib/kanbanAccess.js'
+import { STATUS_TYPES, isDraggableCard, formatRef, looksLikeRef } from '@/lib/kanbanAccess.js'
 import { columnHeadProps, chipProps } from '@/lib/kanbanLabelColors.js'
 import { groupCards, isMyCard, defaultDueForBucket } from '@/lib/kanbanGrouping.js'
 import { collectFilterGroups, filterCards, cardTags } from '@/lib/kanbanTagFilter.js'
@@ -427,7 +427,8 @@ export default function KanbanHome() {
   useEffect(() => {
     const syncFromUrl = () => {
       const id = new URLSearchParams(window.location.search).get('card')
-      setOpenCardId(id && /^\d+$/.test(id) ? id : null)
+      // รับได้ทั้ง 'KB-42' (ที่แชร์กัน) และ '154' (id ภายใน ของลิงก์เก่า) — ฝั่ง API แยกให้เองที่ cardContext
+      setOpenCardId(id && (looksLikeRef(id) || /^\d+$/.test(id)) ? id : null)
     }
     syncFromUrl()                                   // เปิดหน้าด้วยลิงก์ตรง → กางการ์ดให้เลย
     window.addEventListener('popstate', syncFromUrl) // กด Back = ปิดการ์ด (ไม่ใช่ออกจากกระดาน)
@@ -1406,7 +1407,7 @@ export default function KanbanHome() {
                       card={card}
                       t={t}
                       draggable={canDrag && isDraggableCard(card)}
-                      onOpen={(c) => openCard(c.id)}
+                      onOpen={(c) => openCard(c.ref_no ? formatRef(c.ref_no) : c.id)}
                       onDragStart={onDragStart}
                       onDragEnd={onDragEnd}
                       dragging={draggingId === card.id}

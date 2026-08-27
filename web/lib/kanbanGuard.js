@@ -15,6 +15,7 @@ import { authOptions } from './auth-options.js'
 import { getEffectiveOrgIdentity } from './orgAccess.js'
 import { getOrgId } from './orgContext.js'
 import { canManageCases, getUserScope } from './caseAccess.js'
+import { looksLikeRef, parseRef } from './kanbanAccess.js'
 import * as cardDB from '@/db/kanban/cards.js'
 
 export const err = (status, message) => Response.json({ error: message }, { status })
@@ -54,8 +55,19 @@ export async function cardContext(cardId) {
 
   // ⚠️ id เป็น BIGINT → pg คืนมาเป็น "สตริง" ห้ามเทียบด้วย === กับ Number
   //    (บทเรียนเดียวกับ bigint id ของ posts 2026-08-07)
+  //
+  // ⭐ รับได้ 2 รูปแบบ (2026-08-28) — ทุก route ใต้ cards/[id] ผ่านตรงนี้ที่เดียว
+  //    จึงพอแค่ตรงนี้ที่เดียวเพื่อให้ `?card=KB-42` ใช้ได้ทั้งกล่อง (fields/helpers/checklist ตามมาเอง)
+  //      '154'    → id ภายใน (ลิงก์เก่า + ทุกที่ที่ส่ง card.id มา)
+  //      'KB-42'  → ref ที่คนอ่าน/พิมพ์กันในดิสฯ
+  //    ⛔ ตัวเลขล้วนต้องเป็น id เสมอ (looksLikeRef บังคับให้มีคำนำหน้า) — ปล่อยให้กำกวมเมื่อไหร่
+  //       ลิงก์เก่าจะเปิดการ์ดผิดใบเงียบๆ เพราะ id 42 กับ ref 42 เป็นคนละใบ
   const id = String(cardId || '').trim()
-  const card = /^\d+$/.test(id) ? await cardDB.getCardForViewer(ctx.orgId, id, ctx.viewer) : null
+  const card = /^\d+$/.test(id)
+    ? await cardDB.getCardForViewer(ctx.orgId, id, ctx.viewer)
+    : looksLikeRef(id)
+      ? await cardDB.getCardByRef(ctx.orgId, parseRef(id), ctx.viewer)
+      : null
   if (!card) return { ...ctx, error: err(404, 'ไม่พบการบ้านใบนี้') }
 
   return { ...ctx, card }

@@ -123,7 +123,9 @@ async function handleKanbanImportModal(interaction) {
 
     await interaction.editReply({
       content: t(assignToSelf ? 'kanban.import.createdMine' : 'kanban.import.createdPool', {
-        ref: `K-${card.ref_no}`,
+        // ⚠️ คู่แฝดของ formatRef() ใน web/lib/kanbanAccess.js — **แก้ที่นั่นต้องแก้ที่นี่ด้วยเสมอ**
+        //    require() ตัวจริงไม่ได้: ไฟล์นั้นเป็น ESM และลาก roleAccess.js ตามมา (บอทเป็น CJS)
+        ref: `KB-${card.ref_no}`,
         title: card.title,
       }),
     });
