@@ -1356,6 +1356,19 @@ component ที่มี `if (loading) return <p>กำลังโหลด...
 ถ้าตั้งธงแล้วค่าไม่เปลี่ยนจริง effect จะไม่ทำงาน ธงค้างไปกินคีย์ถัดไปของ user แทน (= พิมพ์แล้วไม่เซฟ)
 → ตั้งเฉพาะตอนค่าเปลี่ยนจริงเท่านั้น
 
+### เพิ่ม polling/background request = ต้องดู pool ก่อนเสมอ (2026-08-27)
+
+prod ล่ม 504 ทั้งเว็บ 15 นาทีหลัง deploy เพราะใส่ pulse ทุก 20 วิลง `/posts/[id]` โดยไม่ได้ดูว่า
+`web/db/index.js` ตั้ง `max: 3` และ **ไม่มี `connectionTimeoutMillis`** (default ของ pg = รอตลอดกาล)
+→ คิวพอกจนเว็บไม่ตอบ · **ไม่มี error log สักบรรทัด ไม่มี crash ไม่มี restart** — อาการคือ process ยังอยู่แต่เงียบ
+   (วิธีแยก: ดู out.log ว่ามี `next start` ระหว่างช่วงล่มไหม ถ้าไม่มี = แฮงก์ ไม่ใช่ OOM/crash)
+
+กติกาที่ได้มา:
+- ก่อนใส่อะไรที่ยิงเป็นจังหวะเอง (poll/heartbeat/prefetch) ให้เปิดดู pool config + คิดเป็น "req ต่อนาที × จำนวนแท็บที่เปิดค้าง"
+- background request ต้องมีเงื่อนไขครบ: `visibilityState === 'visible'` **และ** `document.hasFocus()` **และ** เฉพาะคนที่ทำอะไรได้จริง
+- retry ต้องถอยห่างขึ้น (5/15/45) ไม่ใช่ถี่คงที่ — ตอนเซิร์ฟเวอร์กำลังจะไม่ไหว retry ถี่คือสิ่งที่ผลักให้ล่มจริง
+- เทสบน dev แท็บเดียวไม่มีวันเจอบั๊กแบบนี้ ต้องคิดเลขโหลดเอาเอง (bug-459)
+
 ## Decision Log
 
 <!-- Significant technical decisions with rationale. Why X was chosen over Y. -->

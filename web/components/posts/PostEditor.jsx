@@ -262,6 +262,8 @@ export default function PostEditor({ id }) {
   const busyRef = useRef(false)
   valuesRef.current = { title, body, category: category.trim() }
   busyRef.current = !!confirmAsk || conflict || keepingRevision
+  const canEditRef = useRef(false)
+  canEditRef.current = !!can.edit
 
   function markSaved(t, b, c) { savedRef.current = { title: t, body: b, category: c } }
   // ทุกจังหวะที่ savedRef ถูกเขียนจะมี setState คู่กันเสมอ → ค่านี้สดทุก render
@@ -354,7 +356,11 @@ export default function PostEditor({ id }) {
   useEffect(() => {
     let stopped = false
     async function tick() {
+      // ⚠️ ทุกเงื่อนไขข้างล่างนี้คือบทเรียนจาก prod ล่ม 504 (bug-459) — แท็บที่เปิดค้างไว้เฉยๆ
+      //    ต้องไม่ยิงอะไรเลย · pulse มีประโยชน์เฉพาะตอน "คนนั่งมองจออยู่และแก้ได้" เท่านั้น
       if (stopped || document.visibilityState !== 'visible') return
+      if (!document.hasFocus()) return          // เปิดค้างไว้หลังหน้าต่างอื่น = ไม่ต้องรู้อะไรทั้งนั้น
+      if (!canEditRef.current) return           // อ่านอย่างเดียว ไม่มีทางชนกับใคร
       if (blockedRef.current || busyRef.current) return
       try {
         const res = await fetch(`/api/posts/${id}/pulse`)
@@ -369,7 +375,9 @@ export default function PostEditor({ id }) {
         else refreshQuiet()
       } catch {}
     }
-    const iv = setInterval(tick, 20000)
+    // 60 วิ ไม่ใช่ 20 — คนกลับมาที่แท็บเมื่อไหร่มี refreshQuiet() ของชั้น 1 ดักให้อยู่แล้ว
+    // pulse มีไว้จับเคสเดียวคือ "นั่งจ้องจออยู่ทั้งคู่พร้อมกัน" ซึ่งรอ 1 นาทีได้
+    const iv = setInterval(tick, 60000)
     return () => { stopped = true; clearInterval(iv) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
@@ -428,15 +436,19 @@ export default function PostEditor({ id }) {
     return () => window.removeEventListener('beforeunload', onBeforeUnload)
   }, [dirty, pendingSave, saveState])
 
-  // ลองใหม่แบบมีเพดาน — เซิร์ฟเวอร์พังแล้วให้ทุกแท็บยิงทุก 5 วิไม่รู้จบไม่ไหว
+  // ลองใหม่แบบถอยห่างขึ้นเรื่อยๆ — 5 → 15 → 45 วิ แล้วหยุด
+  // ⛔ ห้ามกลับไปยิงถี่คงที่: ตอนเซิร์ฟเวอร์กำลังจะไม่ไหว การ retry ถี่ๆ จากทุกแท็บคือสิ่งที่ผลักให้ล่มจริง
+  //    (retry storm — ส่วนหนึ่งของ prod 504 2026-08-27 bug-459)
   // ครบเพดานแล้วหยุด แต่ข้อความค้างไว้ + beforeunload ยังกันปิดแท็บอยู่ (ของยังไม่หาย)
+  const RETRY_DELAYS = [5000, 15000, 45000]
   function scheduleRetry() {
-    if (retryCount.current >= 5) {
+    const delay = RETRY_DELAYS[retryCount.current]
+    if (!delay) {
       setSaveError('บันทึกไม่สำเร็จหลายครั้ง — ก๊อปข้อความที่พิมพ์ไว้เก็บก่อน แล้วลองรีโหลดหน้า')
       return
     }
     retryCount.current += 1
-    retryTimer.current = setTimeout(save, 5000)
+    retryTimer.current = setTimeout(save, delay)
   }
 
   async function save() {
