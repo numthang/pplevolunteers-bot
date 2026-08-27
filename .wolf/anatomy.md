@@ -1,6 +1,6 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-27T19:23:31.112Z
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-27T19:58:58.388Z
 > Files: 1066 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/1b7cbea7-c43c-466d-9a5f-c61fda8e76b5/scratchpad/
@@ -287,7 +287,7 @@
 - `DEPLOYMENT.md` — Production Deployment — VPS Setup (~2522 tok)
 - `DEV_AGREEMENT.md` — CivicFlow — Dev Agreement & กติกาทำงานร่วม (ร่าง — รอคุยกับทีม CivicFlow) (~1367 tok)
 - `ORG_ACCESS_REDESIGN.md` — ORG_ACCESS_REDESIGN — ปลดสิทธิ์ออกจาก Discord (~5545 tok)
-- `PENDING.md` — PENDING.md — Backlog & Ideas (~42460 tok)
+- `PENDING.md` — PENDING.md — Backlog & Ideas (~43212 tok)
 - `WEB.md` — Web App — Next.js Frontend (~5324 tok)
 
 ## md/archive/
@@ -419,7 +419,7 @@
 - `backfill-intro-ratchaburi.js` — scripts/backfill-intro-channel.js (~2655 tok)
 - `backfill-missing-channels.js` — scripts/backfill-missing-channels.js (~2618 tok)
 - `backfillCaseThreads.js` — backfillCaseThreads.js — ดึงกระทู้เก่าทั้งหมดจาก complaint forum มาสร้าง case (~2176 tok)
-- `backfillPostThreads.js` — backfillPostThreads.js — กวาดกระทู้เก่าใน forum งานสื่อ มาสร้างเป็นโพสต์ (post_episodes) (~4743 tok)
+- `backfillPostThreads.js` — backfillPostThreads.js — กวาดกระทู้เก่าใน forum งานสื่อ มาสร้างเป็นโพสต์ (post_episodes) (~5400 tok)
 - `backfillThreads.js` — Backfill: index threads ใน text channels ทั้งหมดเข้า Meilisearch + DB (~680 tok)
 - `exportIntro.js` — Declares client (~667 tok)
 - `extract-intro-ratchaburi-csv.js` — scripts/extract-intro-csv.js (~1790 tok)
