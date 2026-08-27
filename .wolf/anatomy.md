@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-26T16:14:58.864Z
-> Files: 1059 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-27T06:38:23.373Z
+> Files: 1060 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/1b7cbea7-c43c-466d-9a5f-c61fda8e76b5/scratchpad/
 
@@ -917,6 +917,10 @@
 - `ocr/route.js` — POST อ่านบัตรด้วย Claude vision → คืน JSON ให้เติมฟอร์ม (ไม่แตะ DB) (~900 tok)
 - `route.js` — GET รายชื่อคนนอกทั้ง org / POST สร้างใหม่ (ตรวจ checksum + กันเลขซ้ำ) (~700 tok)
 
+## web/app/api/docs/external-payees/[id]/id-card/
+
+- `route.js` — org ของผู้ขอ — จาก active org ก่อน · ถ้าไม่มี (หน้า sign ไม่มี cookie guild) ใช้ org ของ entry · GET เสิร์ฟรูปลายน้ำแล้ว (วันที่ = entry.event_date) (~1090 tok)
+
 ## web/app/api/docs/id-card/
 
 - `route.js` — POST /api/docs/id-card  (multipart: file, token) (~647 tok)
@@ -927,7 +931,7 @@
 
 ## web/app/api/docs/id-card/[userId]/
 
-- `route.js` — GET /api/docs/id-card/[userId] (~712 tok)
+- `route.js` — GET /api/docs/id-card/[userId] — เสิร์ฟรูปลายน้ำแล้ว (ตรงกับที่ปั๊มลง PDF) วันที่ = entry.event_date จาก ?token= (~880 tok)
 
 ## web/app/api/docs/members/
 
@@ -1284,6 +1288,10 @@
 ## web/app/api/posts/[id]/
 
 - `route.js` — GET /api/posts/[id] (~1150 tok)
+
+## web/app/api/posts/[id]/pulse/
+
+- `route.js` — GET ชีพจรผอมของโพสต์ (lockToken/updatedAt/ชื่อคนแก้ล่าสุด) ให้ editor poll ทุก 20 วิ · lockToken ใช้เทียบอย่างเดียว ห้ามเอาไปใส่ lockTokenRef (~380 tok)
 
 ## web/app/api/posts/[id]/ai-suggestions/
 
@@ -1954,7 +1962,7 @@
 - `BackToPosts.jsx` — BackToPosts (~270 tok)
 - `CategoryPicker.jsx` — NEW_CATEGORY (~890 tok)
 - `EmojiPicker.jsx` — GROUPS (~976 tok)
-- `ImageEditorModal.jsx` — MAX_SIDE (~10280 tok)
+- `ImageEditorModal.jsx` — MAX_SIDE (~9822 tok)
 - `PostCreate.jsx` — autoGrow (~1936 tok)
 - `PostEditor.jsx` — 'use client' กล่องเขียนโพสต์: autosave + lockToken (409 conflict dialog) + เมนู AI 6 โหมด (draft/polish/shorter/friendly/caption/review) + กล่องข้อเสนอ AI ที่ render แยกตาม `sg.kind` (caption = list string · review = การ์ดความเสี่ยงมี severity/excerpt + ป้าย "ตรวจกับเนื้อหาฉบับก่อนหน้า") (~9507 tok)
 - `PostMediaPanel.jsx` — ACCEPT (~7896 tok)
@@ -2102,12 +2110,12 @@
 - `featureGate.js` — ด่านหน้า route ของแต่ละ app: ไม่มี session → redirectToLogin() · org ปิดฟีเจอร์ → 404 (~420 tok)
 - `financeAccess.js` — Finance Access Control (~845 tok)
 - `generateComplaintLetter.js` — Exports generateComplaintLetterPdf (~748 tok)
-- `generatePdf.js` — ดึง body content (XML ระหว่าง <w:body>…<w:sectPr) จากไฟล์ .docx (~5027 tok)
+- `generatePdf.js` — ดึง body content (XML ระหว่าง <w:body>…<w:sectPr) จากไฟล์ .docx (~5370 tok)
 - `geography.js` — Geography data — จังหวัด ↔ ภาคย่อย (sub-region) ↔ ภาคใหญ่ (main region) (~1983 tok)
 - `getEffectiveRoles.js` — คืน { roles, discordId, access } — roles/discordId คือ identity (debug-aware) (~1287 tok)
 - `guildContext.js` — คืน guild_id ที่ request นี้ทำงานอยู่ — รากฐานของ multi-guild ทั้งระบบ (~639 tok)
 - `hexColor.js` — รับ hex code ที่พิมพ์/วางเอง — เติม # ให้ถ้าลืม, ขยายแบบย่อ 3 หลัก (#f80 → #ff8800) (~121 tok)
-- `idCard.js` — สำเนาบัตรประชาชน — resize ให้พอดีพิมพ์ A4 + ลายน้ำกันใช้ผิดวัตถุประสงค์ (~2073 tok)
+- `idCard.js` — สำเนาบัตรประชาชน — resize ให้พอดีพิมพ์ A4 + ลายน้ำกันใช้ผิดวัตถุประสงค์ (~2172 tok)
 - `kanbanAccess.js` — Kanban Access Control — ก้อน 1 ("การบ้านของฉัน" · ยังไม่มีกระดาน) (~2698 tok)
 - `kanbanFieldValue.js` — ชนิด → คอลัมน์ปลายทางใน kanban_card_field_values (url ใช้ value_text ร่วมกับ text · checklist ไม่มีค (~967 tok)
 - `kanbanGrouping.js` — จัดกลุ่มการ์ด + ตัดสินว่า "ของฉัน" คือใบไหน — ตรรกะล้วน (เทสที่ lib/__tests__/kanbanGrouping.test.js (~1426 tok)
@@ -2200,9 +2208,9 @@
 
 ## web/locales/
 
-- `en.json` (~23930 tok)
+- `en.json` (~23876 tok)
 - `en.json` — web locale strings อังกฤษ (~60 tok)
-- `th.json` (~22846 tok)
+- `th.json` (~22798 tok)
 - `th.json` — web locale strings ไทย (starter: common.*) (~60 tok)
 
 ## web/public/media-temp/

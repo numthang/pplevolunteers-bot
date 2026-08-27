@@ -732,6 +732,30 @@ flag HttpOnly (next-auth session/csrf ทุกตัวเป็นแบบน
 - Gemini key ก็หมดเหมือนกัน (`prepayment credits are depleted`) · และ `gemini-2.0-flash` **ถูกปลดระวางแล้ว**
   → ค่าตั้งต้นใน `config/aiConstants.js` เน่าได้เงียบๆ ตามที่ Google ปลดรุ่น ต้องตามแก้
 
+### สำเนาบัตร ปชช. — preview เดิมเสิร์ฟรูปดิบไม่ลายน้ำ, วันที่ลายน้ำเดิมใช้ "วันนี้" ไม่ใช่วันกิจกรรม (2026-08-27)
+
+- `web/lib/idCard.js` → `buildWatermarkedIdCard()` เดิมถูกเรียกจาก `generatePdf.js` (ตอนปั๊ม PDF) เท่านั้น
+  ส่วน route ที่เสิร์ฟรูป preview ให้หน้า `/docs/sign/[token]` (`api/docs/id-card/[userId]` และ
+  `api/docs/external-payees/[id]/id-card`) เสิร์ฟ **ภาพดิบตรงๆ** (comment เดิมบอกตรงๆ ว่า "ยังไม่ลายน้ำ")
+  → คนละภาพกับที่ลง PDF จริง แก้แล้วให้ทั้ง 2 route เรียก `buildWatermarkedIdCard()` ก่อนส่งด้วย
+- `buildWatermarkedIdCard()` เดิม hardcode `new Date()` เป็นวันที่คาดทับ (= วันที่ generate/preview จริง
+  ไม่ใช่วันที่สร้างเอกสารหรือวันทำกิจกรรม) → เพิ่ม param ที่ 2 `activityDateStr` (string `entry.event_date`
+  รูปแบบ `YYYY-MM-DDTHH:MI`) parse เอาแค่ส่วนวันที่ ไม่ผ่าน `new Date().toISOString()` (กัน timezone bug
+  แบบเดียวกับ [[feedback_timezone_txn_at]]) · ไม่มี/parse ไม่ได้ → fallback วันนี้เหมือนเดิม
+- ทั้ง 2 preview route ต้องดึง `entry.event_date` ผ่าน `getEntryByToken(?token=)` เพิ่ม (เดิมดึง entry
+  แค่ตอน resolve org เท่านั้น) — ระวังจุดนี้ถ้ามี preview route อื่นของบัตรโผล่มาอีกในอนาคต
+
+### presence "ใครกำลังแก้อยู่" ไม่ต้องมีตาราง ถ้ามี autosave อยู่แล้ว (2026-08-27)
+
+`/posts/[id]` autosave debounce 800ms → คนที่กำลังพิมพ์ทิ้งร่องรอยบน `last_edited_by` + `updated_at`
+ของแถวตัวเองภายในไม่กี่วินาทีเสมอ = proxy ของ presence ที่แม่นพอ **โดยไม่ต้องมีตาราง heartbeat**
+(คนที่เปิดค้างไว้เฉยๆ ไม่โผล่ — ซึ่งก็คือคนที่ไม่ได้ชนกับใครอยู่แล้ว)
+ได้ของแถม: ไม่มี migration, ไม่มี write ทุก 20 วิ/แท็บ, ไม่ต้องแก้ปัญหา user_id เป็น null ตอน debug_role
+→ ทำเป็น endpoint อ่านอย่างเดียวผอมๆ (`GET /api/posts/[id]/pulse`) ห้าม poll ทับ GET ตัวหลัก
+   (ตัวหลักทำ listMedia + getPostUsage + คำนวณสิทธิ์ 6 ตัวต่อครั้ง)
+⛔ token ที่ poll มาได้ใช้ **เทียบ** อย่างเดียว ห้ามเอาไปใส่ `lockTokenRef` — ใส่เมื่อไหร่ optimistic lock ตายทันที
+   (autosave จะผ่านด่านทุกครั้งโดยไม่เคยเห็นเนื้อหาใหม่ = last-write-wins กลับมา)
+
 ## Do-Not-Repeat
 
 <!-- Mistakes made and corrected. Each entry prevents the same mistake recurring. -->
@@ -1314,6 +1338,24 @@ ORG_ACCESS_REDESIGN ขั้น 4 ย้ายสิทธิ์ไป `org_mem
 ค่ามันหาย/ไม่ตรงกับที่โค้ดบอกว่าควรเป็น — อ่านโค้ดอย่างเดียวมองไม่เห็น เพราะโค้ดแต่ละไฟล์ถูกหมด
 ที่ผิดคือ**ตะเข็บระหว่างไฟล์** (ใครเขียนทับใคร, วิวไม่ได้อ่าน column ไหน, API ไม่ได้ส่ง field ไหนกลับ)
 
+### "ยังไม่ได้เซฟ" ห้ามเดาจาก pendingSave/saveState — ต้องเทียบกับค่าที่ DB รับไปแล้ว (2026-08-27)
+
+ทุกฟอร์ม autosave ในโปรเจกต์นี้: ก่อนจะ **รีเฟรช/ดึงของใหม่มาทับกล่อง** ต้องรู้ว่ามีของค้างไหม
+`pendingSave` / `saveState` ตอบคำถามนี้ไม่ได้ เพราะ `save()` เคลียร์ `pendingSave` ตั้งแต่ก่อนยิง request
+แล้วเส้นทางล้มเหลว (เน็ตหลุด / 500 / 403) มักเขียนเป็น `return` เงียบๆ → 2 ตัวนั้นบอกว่า "ว่าง" ทั้งที่ของยังค้าง
+→ ต้องมี `savedRef` เก็บค่าที่เซิร์ฟเวอร์ **ตอบ 200 รับไปแล้วจริง** แล้ว dirty = ค่าปัจจุบัน ≠ savedRef
+   (เวอร์ชัน ref ด้วย ถ้าจะเรียกจาก setInterval / event listener — closure จับค่าเก่าไว้)
+คู่กัน: เส้นทางเซฟล้มเหลว **ห้าม return เงียบ** ต้องขึ้นข้อความ + retry มีเพดาน และ `beforeunload` ต้องนับ dirty ด้วย
+(bug-458 · ญาติกับ bug-071 ที่เนื้อหาหายจริง 3 ตอน)
+
+### อย่าใช้ `load()` ที่ตั้ง loading=true มาทำ "รีเฟรชเงียบ" (2026-08-27)
+
+component ที่มี `if (loading) return <p>กำลังโหลด...</p>` การเรียก `load()` ซ้ำ = ทั้งหน้าถูกถอดทิ้งชั่วขณะ
+→ จอกระพริบ + caret/scroll ในกล่องข้อความหาย + การ์ดลูก remount · ต้องแยก `refreshQuiet()` ที่ไม่แตะ `loading`
+ระวังธง `isFirstLoad` ที่ใช้กัน autosave ยิงหลัง setState ด้วย — มันกิน effect ได้ **รอบเดียว**
+ถ้าตั้งธงแล้วค่าไม่เปลี่ยนจริง effect จะไม่ทำงาน ธงค้างไปกินคีย์ถัดไปของ user แทน (= พิมพ์แล้วไม่เซฟ)
+→ ตั้งเฉพาะตอนค่าเปลี่ยนจริงเท่านั้น
+
 ## Decision Log
 
 <!-- Significant technical decisions with rationale. Why X was chosen over Y. -->
@@ -1649,6 +1691,12 @@ mutually exclusive แบบ radio โดยธรรมชาติ ไม่�
 `UNDO_LIMIT=5` ขั้น ย้อนไกลกว่านั้นไม่ได้ ต้องเก็บสำเนาแยกไว้ตอนโหลดรูปครั้งแรก (`originalRef`, ไม่มี limit)
 ถึงจะกดทีเดียวกลับสุดได้จริง — "ต้นฉบับ" ในที่นี้คือรูป ณ ตอนเปิดกล่องนี้ ไม่ใช่ก่อนแก้ไขทุกครั้งในอดีต
 (ถ้าเคยเซฟรอบก่อนหน้าไปแล้ว src ที่โหลดมาคือเวอร์ชันที่เซฟนั้น ไม่ใช่ไฟล์ต้นทางดิบ)
+
+**ถอดออกแล้ว (2026-08-26 เย็นวันเดียวกัน)** — user เข้าใจว่า "ต้นฉบับ" คือย้อนได้แม้เซฟไปแล้ว
+(กลับไปไฟล์ก่อนแก้ไขทุกรอบ ไม่ใช่แค่ก่อนรอบนี้) ซึ่งไม่ใช่สิ่งที่ทำได้จริงในดีไซน์นี้ (ไฟล์บนดิสก์โดนทับ
+ไปแล้วตอน save ไม่มีที่เก็บเวอร์ชันเก่ากว่านั้น) — ของที่ทำได้จริงไม่ตรงกับที่คาดหวัง + เกะกะ UI
+เปล่าประโยชน์ → เอาปุ่ม/ฟังก์ชัน/`originalRef` ออกทั้งหมด **อย่าเสนอฟีเจอร์นี้ซ้ำ** เว้นแต่จะทำแบบเก็บ
+ประวัติเวอร์ชันจริงๆ (versioning ต่อไฟล์) ซึ่งเป็นงานคนละขนาดเลย
 
 **Zoom:** wheel (ต้องผูก listener เองแบบ `{ passive:false }` ผ่าน `useEffect` — React ผูก `onWheel`
 แบบ passive มาตั้งแต่ v17, `preventDefault()` ใน JSX handler ตรงๆ ไม่มีผล) + pinch 2 นิ้ว (ใช้งานได้
