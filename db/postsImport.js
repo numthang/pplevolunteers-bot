@@ -58,9 +58,14 @@ async function createImportedPost({ guildId, addedByDiscordId, category = null, 
     //    ตั้งแต่ 2026-08-24 รอบสอง — เจ้าของเห็นคนเดียว)
     //    fire-and-forget หลัง COMMIT — kanban พังต้องไม่ทำให้ import กระทู้ไม่ได้
     //    ⛔ ห้ามย้ายเข้าไปในทรานแซกชัน: มันใช้ pool คนละ connection จะรอ commit ที่ยังไม่เกิด = ค้าง
+    //    ⭐ ของ backfill = งานเก่าที่จบไปแล้ว → การ์ดลงกอง "เสร็จแล้ว" ตั้งแต่สร้าง
+    //       (ได้ผลจริงเพราะโพสต์เป็น draft → POST_STATUS คืน NULL → ใช้ค่านี้)
     mirrorEntityCardFromBot(orgId, 'post', {
       id: post.id, title: post.title, ownerUserId,
-    }, { createdBy: ownerUserId, guildId }).catch(() => {});
+    }, {
+      createdBy: ownerUserId, guildId,
+      statusType: createdVia === 'backfill' ? 'done' : null,
+    }).catch(() => {});
 
     return post;
   } catch (err) {

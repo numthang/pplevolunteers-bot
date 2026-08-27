@@ -104,9 +104,13 @@ async function createCardFromDiscord({ guildId, actorDiscordId, actorProfile = {
  *
  * @param {'case'|'post'} entityType
  * @param {{id: number|string, title: string, ownerUserId: number|null}} src
+ * @param {string|null} statusType ค่าตั้งต้นของคอลัมน์ cache — ใส่ตอนกวาดของเก่าที่จบงานแล้ว
+ *        (backfillPostThreads.js ส่ง 'done') มีผลจริงเฉพาะตอนต้นทางเป็นสถานะที่คืน NULL
+ *        เท่านั้น คือโพสต์ที่ยัง draft (ดู POST_STATUS ใน web/db/kanban/statusSql.js)
+ *        ⭐ ต้องตั้งตรงนี้ ไม่ใช่ UPDATE ตามทีหลัง — ลืมเมื่อไหร่ = การ์ด 500+ ใบท่วมกอง "กำลังทำ"
  * @returns {Promise<string|null>} id การ์ด · null = ทำไม่ได้ (ไม่มีคนสร้าง)
  */
-async function mirrorEntityCardFromBot(orgId, entityType, src, { createdBy = null, guildId = null } = {}) {
+async function mirrorEntityCardFromBot(orgId, entityType, src, { createdBy = null, guildId = null, statusType = null } = {}) {
   const { rows: existing } = await pool.query(
     `SELECT card_id FROM kanban_card_links WHERE entity_type = $1 AND entity_id = $2`,
     [entityType, src.id]
@@ -127,8 +131,9 @@ async function mirrorEntityCardFromBot(orgId, entityType, src, { createdBy = nul
   const boardId = await resolveBoardId(orgId, guildId, by);
   const ownerUserId = src.ownerUserId || null;
   // สถานะที่ใส่ตอนสร้างเป็นแค่ค่าตั้งต้นของคอลัมน์ cache — ของที่แสดงจริงคำนวณสดจากต้นทางเสมอ
-  // แต่ต้องไม่ขัด CHECK ของ DB (ไม่มีเจ้าภาพ = อยู่ backlog เท่านั้น)
-  const status = ownerUserId ? 'doing' : 'backlog';
+  // แต่ต้องไม่ขัด CHECK ของ DB (ไม่มีเจ้าภาพ = อยู่ backlog เท่านั้น) → ไม่มีเจ้าภาพก็บังคับ backlog
+  // ต่อให้คนเรียกส่ง statusType มา (CHECK kanban_cards_owner_required จะปัดตกทั้งแถว)
+  const status = ownerUserId ? (statusType || 'doing') : 'backlog';
   const title = src.title || (entityType === 'case' ? 'เรื่องร้องเรียนไม่มีชื่อ' : 'งานสื่อไม่มีชื่อ');
 
   for (let attempt = 0; attempt < 5; attempt++) {
