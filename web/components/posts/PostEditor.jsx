@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2, Check, Sparkles, X, Trash2, Copy, ChevronDown, ChevronUp } from 'lucide-react'
 import PostRevisions from './PostRevisions.jsx'
@@ -116,13 +116,25 @@ function ReviewResult({ payload, stale }) {
   )
 }
 
+/**
+ * ยืดกล่องข้อความตามเนื้อหา
+ *
+ * ⚠️ ราคาแพงกว่าที่ตาเห็น — เขียน height:auto แล้วอ่าน scrollHeight ทันที = บังคับ browser
+ *    คำนวณ layout ใหม่ทั้งหน้าแบบ synchronous (forced reflow) ยิ่งโพสต์ยาวยิ่งแพง
+ * → **เรียกได้ครั้งเดียวต่อการ render เท่านั้น** ห้ามเรียกซ้ำใน onChange อีก
+ *   (เคยเรียกทั้ง onChange และ effect = 2 reflow ต่อ 1 ตัวอักษร → user รู้สึกพิมพ์สะดุด 2026-08-27)
+ */
 function autoGrow(el) {
   if (!el) return
   const scrollY = window.scrollY
   el.style.height = 'auto'
   el.style.height = el.scrollHeight + 'px'
-  window.scrollTo({ top: scrollY, behavior: 'instant' })
+  // ปกติหน้าไม่ได้เลื่อนไปไหน — เรียก scrollTo ทิ้งๆ ทุกคีย์ก็เป็นงานเปล่าอีกก้อน
+  if (window.scrollY !== scrollY) window.scrollTo({ top: scrollY, behavior: 'instant' })
 }
+
+// useLayoutEffect ทำงานก่อน paint (ไม่กระพริบ) แต่ฝั่ง server ไม่มี layout → กัน warning ตอน SSR
+const useAutoGrowEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect
 
 // ─── กล่องถามตอนชน 409 — ปิดได้ 3 ทาง (X/ESC/คลิกนอกกล่อง) = เท่ากับ "โหลดใหม่" ───
 function ConflictDialog({ onReload, onKeepAsRevision, keeping }) {
@@ -303,7 +315,7 @@ export default function PostEditor({ id }) {
   }
 
   useEffect(() => { load() }, [id])
-  useEffect(() => { autoGrow(bodyRef.current) }, [loading, body])
+  useAutoGrowEffect(() => { autoGrow(bodyRef.current) }, [loading, body])
   useEffect(() => () => clearTimeout(retryTimer.current), [])
 
   /**
@@ -770,10 +782,12 @@ export default function PostEditor({ id }) {
         className="w-full h-11 px-3 text-lg font-semibold rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg text-warm-900 dark:text-disc-text placeholder-warm-400 focus:outline-none focus:ring-2 focus:ring-teal read-only:opacity-70"
       />
 
+      {/* ⛔ ห้ามใส่ autoGrow(e.target) กลับเข้าไปใน onChange — useAutoGrowEffect ทำให้แล้ว 1 ครั้งต่อ render
+          ใส่ซ้ำ = 2 forced reflow ต่อ 1 ตัวอักษร = พิมพ์สะดุดบนโพสต์ยาว */}
       <textarea
         ref={bodyRef}
         value={body}
-        onChange={e => { setBody(e.target.value); autoGrow(e.target) }}
+        onChange={e => setBody(e.target.value)}
         readOnly={readOnly}
         rows={10}
         placeholder="เนื้อหาโพสต์..."
@@ -819,7 +833,7 @@ export default function PostEditor({ id }) {
                 ม่วงเลยเป็นสี AI ประจำหน้านี้ (กันอ่านสลับกับ 2 ปุ่มนั้น) */}
             <button
               onClick={runAi}
-              disabled={aiBusy || (aiMode !== 'draft' && !body.trim())}
+              disabled={aiBusy || (aiMode !== 'draft' && !/\S/.test(body))}
               title={aiMode === 'draft' ? 'เขียนใหม่ทั้งก้อน (ทับของเดิม)' : aiMode === 'caption' ? 'เสนอโควต/หัวข้อ/ไอเดียภาพ ไม่แตะเนื้อหา' : 'ขัดภาษาของที่มีอยู่ ไม่เพิ่มประเด็นใหม่'}
               className="flex items-center gap-1.5 h-9 px-3 text-sm font-medium rounded-r-lg bg-violet-600 text-white hover:opacity-90 disabled:opacity-40 transition"
             >
