@@ -247,6 +247,9 @@ export default function PostEditor({ id }) {
   const [conflict, setConflict] = useState(false)
   const [saveError, setSaveError] = useState('')      // เซฟไม่ผ่าน (เน็ตหลุด/500/403) — เดิม return เงียบ
   const [liveEditor, setLiveEditor] = useState(null)  // { name } — คนที่เพิ่งแก้โพสต์นี้ ≈ "กำลังแก้อยู่"
+  // เตือนเรื่องแก้ชนกัน **เฉพาะตอนเราลงมือแก้อยู่จริง** — เปิดแท็บดูเฉยๆ ไม่มีอะไรจะชน
+  // (ระบบ reload ให้เองอยู่แล้วเมื่อมือเราว่าง) · ค้างไว้ 2 นาทีหลังคีย์สุดท้าย ไม่ให้ป้ายกระพริบตามจังหวะ autosave
+  const [editingRecently, setEditingRecently] = useState(false)
   const [remoteEdit, setRemoteEdit] = useState(null)  // { name } — คนอื่นแก้ไปแล้วขณะที่เรามีของค้าง
   const [keepingRevision, setKeepingRevision] = useState(false)
   const [aiLoading, setAiLoading] = useState(false)
@@ -272,6 +275,8 @@ export default function PostEditor({ id }) {
   const saveTimer = useRef(null)
   const retryTimer = useRef(null)
   const retryCount = useRef(0)
+  const activeTimer = useRef(null)
+  const lastFocusFetch = useRef(0)
   const bodyRef = useRef(null)
 
   // ⭐ "มีของค้างที่ยังไม่ถึง DB ไหม" — ต้องเทียบกับค่าที่เซิร์ฟเวอร์ **รับไปแล้วจริงๆ** เท่านั้น
@@ -325,7 +330,7 @@ export default function PostEditor({ id }) {
 
   useEffect(() => { load() }, [id])
   useAutoGrowEffect(() => { autoGrow(bodyRef.current) }, [loading, body])
-  useEffect(() => () => clearTimeout(retryTimer.current), [])
+  useEffect(() => () => { clearTimeout(retryTimer.current); clearTimeout(activeTimer.current) }, [])
 
   /**
    * ดึงฉบับล่าสุดมาแบบเงียบๆ — เงื่อนไขเดียวคือ **ต้องไม่มีของค้าง**
@@ -361,12 +366,27 @@ export default function PostEditor({ id }) {
   // แท็บที่เปิดค้างไว้ = ถือ token เก่า พอพิมพ์ตัวแรกก็เด้ง 409 ทั้งที่ยังไม่ได้ทำอะไรผิด
   // → กลับมาโฟกัสเมื่อไหร่ ถ้ามือยังว่าง ก็เปลี่ยนเป็นฉบับล่าสุดเสียตั้งแต่ก่อนพิมพ์
   useEffect(() => {
-    function onFocus() { refreshQuiet() }
-    function onVis() { if (document.visibilityState === 'visible') refreshQuiet() }
+    // กลับมาที่แท็บ = ดึงของใหม่ + เช็คชีพจรทันที ไม่ต้องรอ interval รอบถัดไป
+    // throttle 10 วิ เพราะ focus เด้งบ่อยมาก (สลับหน้าต่าง/ปิด dialog ของเบราว์เซอร์ก็นับ) — บทเรียนจาก bug-459
+    function onFocus() {
+      if (Date.now() - lastFocusFetch.current < 10000) return
+      lastFocusFetch.current = Date.now()
+      refreshQuiet()
+      pulseTick()
+    }
+    // ออกจากหน้าต่างเมื่อไหร่ pulse หยุดยิงทันที → ป้ายที่ค้างอยู่จะกลายเป็นข้อมูลเก่าที่ไม่มีวันอัปเดต
+    // ต้องล้างทิ้งตรงนี้ ไม่งั้นกลับมาแล้วเจอ "เพิ่งแก้เมื่อครู่" ของเมื่อชั่วโมงที่แล้ว
+    function onBlur() { setLiveEditor(null) }
+    function onVis() {
+      if (document.visibilityState === 'visible') onFocus()
+      else setLiveEditor(null)
+    }
     window.addEventListener('focus', onFocus)
+    window.addEventListener('blur', onBlur)
     document.addEventListener('visibilitychange', onVis)
     return () => {
       window.removeEventListener('focus', onFocus)
+      window.removeEventListener('blur', onBlur)
       document.removeEventListener('visibilitychange', onVis)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -374,32 +394,32 @@ export default function PostEditor({ id }) {
 
   // ชีพจร — รู้ว่ามีคนแก้ "ก่อน" จะไปชน แทนที่จะรู้ตอนชนแล้ว
   // ⛔ lockToken จากที่นี่ใช้ **เทียบ** อย่างเดียว ห้ามใส่ lockTokenRef (จะกลายเป็น last-write-wins — bug-071)
+  async function pulseTick() {
+    // ⚠️ ทุกเงื่อนไขข้างล่างนี้คือบทเรียนจาก prod ล่ม 504 (bug-459) — แท็บที่เปิดค้างไว้เฉยๆ
+    //    ต้องไม่ยิงอะไรเลย · pulse มีประโยชน์เฉพาะตอน "คนนั่งมองจออยู่และแก้ได้" เท่านั้น
+    if (document.visibilityState !== 'visible') return
+    if (!document.hasFocus()) return          // เปิดค้างไว้หลังหน้าต่างอื่น = ไม่ต้องรู้อะไรทั้งนั้น
+    if (!canEditRef.current) return           // อ่านอย่างเดียว ไม่มีทางชนกับใคร
+    if (blockedRef.current || busyRef.current) return
+    try {
+      const res = await fetch(`/api/posts/${id}/pulse`)
+      if (!res.ok) return
+      const { data } = await res.json()
+      if (!data) return
+      // "เพิ่งแก้ภายใน 90 วิ" = ยังนั่งอยู่หน้าจอ (autosave เด้งทุก 800ms ระหว่างพิมพ์)
+      const fresh = data.updatedAt && Date.now() - new Date(data.updatedAt).getTime() < 90000
+      setLiveEditor(fresh && !data.byMe && data.editorName ? { name: data.editorName } : null)
+      if (data.lockToken === lockTokenRef.current) { setRemoteEdit(null); return }
+      if (dirtyNow()) setRemoteEdit({ name: data.editorName || null })
+      else refreshQuiet()
+    } catch {}
+  }
+
   useEffect(() => {
-    let stopped = false
-    async function tick() {
-      // ⚠️ ทุกเงื่อนไขข้างล่างนี้คือบทเรียนจาก prod ล่ม 504 (bug-459) — แท็บที่เปิดค้างไว้เฉยๆ
-      //    ต้องไม่ยิงอะไรเลย · pulse มีประโยชน์เฉพาะตอน "คนนั่งมองจออยู่และแก้ได้" เท่านั้น
-      if (stopped || document.visibilityState !== 'visible') return
-      if (!document.hasFocus()) return          // เปิดค้างไว้หลังหน้าต่างอื่น = ไม่ต้องรู้อะไรทั้งนั้น
-      if (!canEditRef.current) return           // อ่านอย่างเดียว ไม่มีทางชนกับใคร
-      if (blockedRef.current || busyRef.current) return
-      try {
-        const res = await fetch(`/api/posts/${id}/pulse`)
-        if (!res.ok || stopped) return
-        const { data } = await res.json()
-        if (!data || stopped) return
-        // "เพิ่งแก้ภายใน 90 วิ" = ยังนั่งอยู่หน้าจอ (autosave เด้งทุก 800ms ระหว่างพิมพ์)
-        const fresh = data.updatedAt && Date.now() - new Date(data.updatedAt).getTime() < 90000
-        setLiveEditor(fresh && !data.byMe && data.editorName ? { name: data.editorName } : null)
-        if (data.lockToken === lockTokenRef.current) { setRemoteEdit(null); return }
-        if (dirtyNow()) setRemoteEdit({ name: data.editorName || null })
-        else refreshQuiet()
-      } catch {}
-    }
     // 60 วิ ไม่ใช่ 20 — คนกลับมาที่แท็บเมื่อไหร่มี refreshQuiet() ของชั้น 1 ดักให้อยู่แล้ว
     // pulse มีไว้จับเคสเดียวคือ "นั่งจ้องจออยู่ทั้งคู่พร้อมกัน" ซึ่งรอ 1 นาทีได้
-    const iv = setInterval(tick, 60000)
-    return () => { stopped = true; clearInterval(iv) }
+    const iv = setInterval(pulseTick, 60000)
+    return () => clearInterval(iv)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
@@ -441,6 +461,9 @@ export default function PostEditor({ id }) {
     clearTimeout(saveTimer.current)
     clearTimeout(retryTimer.current)   // คีย์ล่าสุดชนะ retry ที่ถือค่าเก่าไว้เสมอ
     retryCount.current = 0
+    setEditingRecently(true)
+    clearTimeout(activeTimer.current)
+    activeTimer.current = setTimeout(() => setEditingRecently(false), 120000)
     setPendingSave(true)
     saveTimer.current = setTimeout(save, 800)
     return () => clearTimeout(saveTimer.current)
@@ -777,10 +800,10 @@ export default function PostEditor({ id }) {
 
   return (
     <div className="flex flex-col gap-3">
-      {/* ใครเพิ่งแตะโพสต์นี้ — ให้เห็นก่อนพิมพ์ ไม่ใช่ไปรู้ตอนชน 409 (ที่มาของค่า: /api/posts/[id]/pulse) */}
-      {liveEditor && !remoteEdit && (
-        <p className="text-sm text-warm-700 dark:text-disc-text flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
+      {/* ใครเพิ่งแตะโพสต์นี้ — ขึ้น **เฉพาะตอนเราลงมือแก้อยู่จริง** (editingRecently)
+          เปิดแท็บดูเฉยๆ ไม่ต้องเตือนอะไรทั้งนั้น เพราะ refreshQuiet ดึงของใหม่ให้เองอยู่แล้ว = ไม่มีอะไรจะชน */}
+      {liveEditor && editingRecently && !remoteEdit && (
+        <p className="text-sm rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-200 px-3 py-2">
           {liveEditor.name} เพิ่งแก้โพสต์นี้เมื่อครู่ — ระวังแก้ชนกัน
         </p>
       )}
