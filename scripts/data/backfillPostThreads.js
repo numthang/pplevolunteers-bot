@@ -18,7 +18,10 @@
  *   --years <n>        ทางลัดของ --since = วันนี้ลบ n ปี
  *   --forum <id> --guild <id>   เจาะ forum เดียว (ไม่ใส่ = ทั้ง 2 อันใน FORUMS)
  *   --owner <discordId>         เจ้าภาพสำรองเมื่อหาเจ้าของกระทู้ไม่เจอ
- *   --no-images        ไม่แนบ/ไม่โหลดรูป
+ *   --no-images        ไม่แนบ/ไม่โหลดรูปเลย
+ *   --max-images <n>   จำกัดจำนวนรูปที่ดึงต่อกระทู้ (ค่าเริ่มต้น 30) — ของ backfill ควรตั้งต่ำ
+ *                      เพราะเป็น draft เก่าที่แทบไม่ถูก publish → รูปไม่โดน retention เก็บกวาดอัตโนมัติ
+ *                      (ดูเหตุผลใน services/postsRetention.js บรรทัด 10) เก็บพอเป็นตัวอย่างพอ
  *   --no-ai            ไม่ยิง AI เลย — หัวข้อ = ชื่อกระทู้ · เนื้อหา = ข้อความดิบทั้งกระทู้
  *                      ใช้เมื่อเครดิต AI หมด · โพสต์เป็น draft อยู่แล้ว ขัดทีหลังในเว็บได้
  *
@@ -65,7 +68,7 @@ const ONE_GUILD = arg('guild', null);
 
 const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
 const IMAGE_EXT_RE = /\.(png|jpe?g|webp|gif)(?:[?#]|$)/i;
-const MAX_IMAGES = 30;
+const MAX_IMAGES = Number(arg('max-images', 30)) || 30;
 
 // ── วันที่ตั้งกระทู้ อ่านจาก snowflake ───────────────────────────────────────
 // ⭐ id ของกระทู้ **มีเวลาสร้างฝังอยู่ในตัวเลขอยู่แล้ว** → กรองย้อนหลังได้โดยไม่ต้องยิง API เพิ่มสักครั้ง
@@ -292,6 +295,9 @@ async function alreadyImported(threadId) {
           sourceIdea: text,
           channelId: t.id,          // ⭐ กุญแจกันซ้ำ
           channelName: t.name || null,
+          // ⭐ ป้ายว่า "ของเก่านำเข้าย้อนหลัง" — ทำให้ listPosts ตัดออกจากฟีดหลักและแท็บจากดิสฯ
+          //    ไม่งั้น 500+ ใบจะทับงานจริงที่ทีมกำลังทำอยู่ (limit 200 เรียงตามแก้ล่าสุด)
+          createdVia: 'backfill',
         });
 
         if (!NO_IMAGES) {

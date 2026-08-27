@@ -178,10 +178,12 @@ const SOURCE_SQL = {
  * เรียกซ้ำได้ปลอดภัย · ใช้ทั้งตอน backfill ของเก่าและตอนตามเก็บที่ hook พลาด
  *
  * @param {number} orgId
- * @param {{entityType?: 'case'|'post', createdBy: number, onProgress?: Function}} opts
+ * @param {{entityType?: 'case'|'post', createdBy: number, statusType?: string, onProgress?: Function}} opts
  *        createdBy = คนที่ใช้เป็นผู้สร้างการ์ดเมื่อต้นทางไม่มี (เคสจากฟอร์มสาธารณะ created_by เป็น null)
+ *        statusType = ใส่ตอนกวาด backfill ของเก่าที่จบงานแล้ว (เช่น 'done') กันไม่ให้ไปกอง
+ *        "กำลังทำ" default — ดูเงื่อนไขจริงที่ mirrorEntityCard
  */
-export async function reconcileEntityCards(orgId, { entityType = null, createdBy, onProgress } = {}) {
+export async function reconcileEntityCards(orgId, { entityType = null, createdBy, statusType = null, onProgress } = {}) {
   const types = entityType ? [entityType] : ENTITY_TYPES
   const stats = { created: 0, failed: 0 }
 
@@ -192,7 +194,7 @@ export async function reconcileEntityCards(orgId, { entityType = null, createdBy
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i]
       const cardId = await mirrorEntityCard(orgId, type, {
-        id: r.id, title: r.title, ownerUserId: r.owner_user_id,
+        id: r.id, title: r.title, ownerUserId: r.owner_user_id, statusType,
       }, r.created_by || createdBy)
 
       if (!cardId) stats.failed++
@@ -226,7 +228,10 @@ export async function reconcileEntityCards(orgId, { entityType = null, createdBy
  *    (แบบเดียวกับ auditLog ที่เป็น fire-and-forget) → คืน null แล้วให้ reconcile ตามเก็บทีหลัง
  *
  * @param {'case'|'post'} entityType
- * @param {object} src ข้อมูลของจริงที่ mirror มา { id, title, ownerUserId, boardId }
+ * @param {object} src ข้อมูลของจริงที่ mirror มา { id, title, ownerUserId, boardId, statusType }
+ *        statusType = ค่าตั้งต้นของ cache ตอนสร้าง (เช่น 'done' สำหรับ backfill ของเก่าที่จบแล้ว)
+ *        มีผลจริงเฉพาะตอนต้นทางยังเป็นสถานะที่ POST_STATUS/CASE_STATUS คืน NULL (ดู statusSql.js)
+ *        ไม่งั้นสถานะสดจากต้นทางจะทับอยู่ดี — ไม่ผิดกฎเหล็ก แค่ตั้งค่าเริ่มต้นให้ตรงความจริงกว่า
  * @returns {Promise<number|null>} card_id · null = ทำไม่สำเร็จ (กลืน error ไว้)
  */
 export async function mirrorEntityCard(orgId, entityType, src, createdBy) {
@@ -247,6 +252,7 @@ export async function mirrorEntityCard(orgId, entityType, src, createdBy) {
       title: src.title || (entityType === 'case' ? 'เรื่องร้องเรียนไม่มีชื่อ' : 'งานสื่อไม่มีชื่อ'),
       ownerUserId: src.ownerUserId || null,
       boardId: src.boardId || null,
+      statusType: src.statusType || null,
       // สถานะที่ใส่ตอนสร้างเป็นแค่ค่าตั้งต้นของคอลัมน์ cache — ของที่แสดงจริงคำนวณสดเสมอ
       // แต่ต้องไม่ขัด CHECK ของ DB (ไม่มีเจ้าภาพ = อยู่ backlog เท่านั้น) → ปล่อยให้ createCard ตัดสิน
     }, by)

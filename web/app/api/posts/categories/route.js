@@ -3,18 +3,21 @@ import { canApprove, isAdmin } from '@/lib/postsAccess.js'
 import * as postDB from '@/db/posts/episodes.js'
 
 /**
- * GET /api/posts/categories?visibility=personal|org
+ * GET /api/posts/categories?visibility=personal|org&source=backfill
  * ไม่ส่ง visibility = หมวดของทุกอันที่มีสิทธิ์เห็น
+ * `source` ต้องส่งให้ตรงกับที่ส่งให้ /api/posts — ไม่งั้นตัวเลขบนชิปไม่ตรงกับรายการที่แสดง
  */
 export async function GET(req) {
   const ctx = await postsContext()
   if (ctx.error) return ctx.error
 
-  const v = new URL(req.url).searchParams.get('visibility')
+  const params = new URL(req.url).searchParams
+  const v = params.get('visibility')
   const visibility = ['personal', 'org'].includes(v) ? v : null
+  const source = params.get('source') === 'backfill' ? 'backfill' : null
 
   try {
-    const data = await postDB.listCategories(ctx.orgId, ctx.userId, { includeAllPersonal: isAdmin(ctx.access), visibility })
+    const data = await postDB.listCategories(ctx.orgId, ctx.userId, { includeAllPersonal: isAdmin(ctx.access), visibility, source })
     // canManage: หน้า list ไม่มี per-post `can` ให้เช็ค (ไม่ผูกกับโพสต์ใดโพสต์หนึ่ง) — ส่งสิทธิ์เปลี่ยนชื่อหมวดมาด้วยเลย
     // ให้ UI ซ่อนปุ่มได้ตรงกับ pattern เดิม (can.approve/can.promote) แทนที่จะโชว์ปุ่มให้ทุกคนแล้วรอ 403 (/scrutinize 2026-08-01)
     return Response.json({ success: true, data, canManage: canApprove(ctx.access) })

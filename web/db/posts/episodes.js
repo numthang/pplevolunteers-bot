@@ -48,10 +48,16 @@ export async function listPosts(orgId, userId, { visibility = null, category = n
       AND NOT EXISTS (SELECT 1 FROM post_social_history h WHERE h.episode_id = e.id AND h.status IN ('pending','running'))
     )`
   }
+  // ⭐ กระทู้เก่าที่กวาดเข้ามาย้อนหลัง (created_via='backfill') **ซ่อนจากทุกมุมมองโดย default**
+  //    — รวมทั้งแท็บ "จากดิสฯ" ด้วย · ต้องขอ source='backfill' ตรงๆ ถึงจะเห็น
+  //    ทำไมไม่ใช้ channel_id แยก: ตะกร้าสื่อ + context menu ก็มี channel_id เหมือนกัน แต่เป็น
+  //    **งานปัจจุบัน** · ของ backfill มีทีละ 500+ ใบ ถ้าปนเข้าไปจะกิน limit 200 จนงานจริงตกขอบ
+  if (source === 'backfill')  where += ` AND e.created_via = 'backfill'`
+  else                        where += ` AND e.created_via <> 'backfill'`
   // ตะกร้าสื่อของ Discord เป็นโพสต์เหมือนกัน (ก้อน 4c) แต่ทีมสื่อหย่อนวันละหลายใบ
   // → **ซ่อนจากฟีดหลัก** ให้ไปดูที่แท็บ "จากดิสฯ" แทน (source='discord')
   if (source === 'discord')   where += ` AND e.channel_id IS NOT NULL`
-  else if (source !== 'all')  where += ` AND e.channel_id IS NULL`
+  else if (source !== 'all' && source !== 'backfill') where += ` AND e.channel_id IS NULL`
   if (visibility) { params.push(visibility); where += ` AND e.visibility = $${params.length}` }
   if (status)     { params.push(status);     where += ` AND e.status = $${params.length}` }
   // category = '' (สตริงว่าง) หมายถึง "ยังไม่จัดหมวด" — ต่างจาก null ที่แปลว่าไม่กรอง
@@ -90,7 +96,7 @@ export async function listPosts(orgId, userId, { visibility = null, category = n
 }
 
 /** หมวดที่มีอยู่จริงของ org (นับจำนวนโพสต์ในหมวด) — ไม่มีตาราง lookup หมวดคือค่าที่เคยพิมพ์ไว้ */
-export async function listCategories(orgId, userId, { includeAllPersonal = false, visibility = null } = {}) {
+export async function listCategories(orgId, userId, { includeAllPersonal = false, visibility = null, source = null } = {}) {
   const params = [orgId, userId]
   // ต้องกรอง visibility ให้ตรงกับแท็บที่เปิดอยู่ ไม่งั้นแท็บส่วนตัวจะเห็นหมวดขององค์กร
   // กดแล้วได้ 0 โพสต์ และตัวเลขบนชิปไม่ตรงกับจำนวนการ์ดที่แสดง
@@ -101,7 +107,11 @@ export async function listCategories(orgId, userId, { includeAllPersonal = false
        FROM post_episodes e
       -- ไม่ต้อง exclude channel_id แล้ว — ชื่อห้องย้ายไป channel_name (2026-07-30)
       -- โพสต์จากดิสฯ ที่คน "จัดหมวดเอง" จึงโผล่ในตัวกรองได้ตามที่ควรเป็น
+      -- ⚠️ ต้องกรอง backfill ให้ตรงกับมุมมองที่เปิดอยู่ ด้วยเหตุผลเดียวกับคอมเมนต์ข้างบน:
+      --    listPosts ซ่อน backfill ทุกมุมมองยกเว้น source='backfill' → ถ้านับไม่ตรงกัน
+      --    ชิปจะบอก "ข่าว (200)" แล้วกดเข้าไปเจอ 3 ใบ (หรือกลับกัน)
       WHERE e.org_id = $1 AND e.archived_at IS NULL AND e.category IS NOT NULL
+        AND e.created_via ${source === 'backfill' ? '=' : '<>'} 'backfill'
         AND (e.visibility = 'org' OR e.owner_user_id = $2${includeAllPersonal ? ' OR TRUE' : ''})${extra}
       GROUP BY e.category
       ORDER BY MAX(e.updated_at) DESC`,

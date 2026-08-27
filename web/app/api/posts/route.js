@@ -3,10 +3,12 @@ import { canReadPost, canWritePost, isAdmin } from '@/lib/postsAccess.js'
 import * as postDB from '@/db/posts/episodes.js'
 
 /**
- * GET /api/posts?visibility=personal|org&category=<ชื่อ|__none__>&status=&archived=1&posted=1&source=discord|all
+ * GET /api/posts?visibility=personal|org&category=<ชื่อ|__none__>&status=&archived=1&posted=1&source=discord|all|backfill
  *
  * `source` — ตะกร้าสื่อของ Discord เป็นโพสต์เหมือนกัน (ก้อน 4c) แต่หย่อนกันวันละหลายใบ
  *   ไม่ส่ง = ฟีดหลัก (ซ่อนของจากดิสฯ) · `discord` = แท็บ "จากดิสฯ" · `all` = รวมทุกอย่าง
+ *   `backfill` = คลังกระทู้เก่าที่กวาดเข้ามาย้อนหลัง — **ซ่อนจากทุกค่าข้างบนรวมทั้ง `all`**
+ *   เพราะมีทีละ 500+ ใบ ปนเมื่อไหร่ก็กิน limit จนงานจริงตกขอบ (ดู listPosts)
  * `posted=1` — รวมโพสต์ที่เผยแพร่ครบทุกช่องทางแล้วด้วย (default ฟีดหลักซ่อนไว้)
  */
 export async function GET(req) {
@@ -20,7 +22,7 @@ export async function GET(req) {
   const status = searchParams.get('status') || null
   const includeArchived = searchParams.get('archived') === '1'
   const includePosted = searchParams.get('posted') === '1'
-  const source = ['discord', 'all'].includes(searchParams.get('source')) ? searchParams.get('source') : null
+  const source = ['discord', 'all', 'backfill'].includes(searchParams.get('source')) ? searchParams.get('source') : null
 
   try {
     const rows = await postDB.listPosts(ctx.orgId, ctx.userId, {

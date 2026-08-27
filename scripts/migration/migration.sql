@@ -1457,3 +1457,19 @@ CREATE OR REPLACE VIEW docs_entry_recipient AS
 
 
 -- production ทำถึงตรงนี้
+
+
+-- ═══ 2026-08-28 — created_via รับค่า 'backfill' (กระทู้เก่านำเข้าย้อนหลัง) ═══
+-- ⭐ ทำไมต้องมีค่าที่ 3: `channel_id` บอกได้แค่ "มาจากดิสคอร์ดไหม" แต่แยกไม่ออกว่าเป็น
+--    **งานปัจจุบัน** (ตะกร้าสื่อที่ทีมหย่อนวันนี้ · context menu "นำเข้าเป็นโพสต์") หรือ
+--    **ของเก่าที่จบไปแล้ว** (scripts/data/backfillPostThreads.js กวาดกระทู้ย้อนหลังทีละ 500+ ใบ)
+--    ถ้าไม่แยก ของเก่าจะท่วมทั้งฟีดหลักและแท็บ "จากดิสคอร์ด" (limit 200 → งานจริงตกขอบ)
+--
+-- ⛔ ห้ามแก้ปัญหานี้ด้วยการทำให้ของเก่าเป็น "โพสต์แล้ว" (แทรก post_social_history)
+--    = ปั้นใบเสร็จปลอม (ไม่รู้ platform/posted_at/ลิงก์จริง) + ทำให้ postsRetention.js
+--      ลบไฟล์รูปที่เพิ่งโหลดมาทิ้งทันที (เข้าเงื่อนไข "เผยแพร่เกิน 180 วัน")
+-- ⛔ ห้ามแก้ด้วย archived_at เช่นกัน — kanban ซ่อนการ์ดที่ต้นทาง archived ทั้งตอนสร้าง
+--    (web/db/kanban/links.js SOURCE_SQL.post) และตอนแสดง (statusSql.js visibleLinkSql)
+ALTER TABLE post_episodes DROP CONSTRAINT IF EXISTS post_episodes_created_via_check;
+ALTER TABLE post_episodes ADD CONSTRAINT post_episodes_created_via_check
+  CHECK (created_via IN ('ai', 'manual', 'backfill'));

@@ -1,6 +1,10 @@
 // กวาดให้ "ของจริงทุกชิ้นมีการ์ดใน kanban" — เคส + งานสื่อ (user เคาะ 2026-08-24: ต้องมี ทุกใบ)
 //
-//   node --env-file=.env scripts/kanban/backfillEntityCards.mjs --org 1 [--type case|post] [--dry]
+//   node --env-file=.env scripts/kanban/backfillEntityCards.mjs --org 1 [--type case|post] [--status <status_type>] [--dry]
+//
+// --status <status_type>  ค่าตั้งต้นของการ์ดที่สร้างรอบนี้ (backlog|doing|review|ready|done|cancelled)
+//   ใช้ตอน backfill ของเก่าที่จบงานแล้วจริง (เช่นกระทู้สื่อปีก่อน) กัน default 'doing' ทำให้
+//   กอง "กำลังทำ" เต็มไปด้วยงานที่ไม่มีใครต้องทำอะไรแล้ว — ไม่ใส่ = พฤติกรรมเดิม (doing ถ้ามีเจ้าภาพ)
 //
 // PRODUCTION:
 //   sudo -u www bash -c 'cd /www/wwwroot/pple-volunteers && \
@@ -24,10 +28,17 @@ const has = (name) => process.argv.includes(`--${name}`)
 
 const orgId = Number(arg('org', 1))
 const type = arg('type', null)
+const statusType = arg('status', null)
 const dry = has('dry')
 
 if (type && !['case', 'post'].includes(type)) {
   console.error('--type รับได้แค่ case หรือ post')
+  process.exit(1)
+}
+
+const VALID_STATUS = ['backlog', 'doing', 'review', 'ready', 'done', 'cancelled']
+if (statusType && !VALID_STATUS.includes(statusType)) {
+  console.error(`--status รับได้แค่: ${VALID_STATUS.join(', ')}`)
   process.exit(1)
 }
 
@@ -37,6 +48,7 @@ async function main() {
   const { rows: org } = await pool.query('SELECT name FROM orgs WHERE id = $1', [orgId])
   if (!org[0]) { console.error(`ไม่พบ org ${orgId}`); process.exit(1) }
   console.log(`องค์กร: ${org[0].name} (id ${orgId})${dry ? '  [DRY RUN — ไม่เขียนอะไรเลย]' : ''}`)
+  if (statusType) console.log(`สถานะตั้งต้น: ${statusType}`)
 
   // นับก่อนเสมอ — คนรันต้องรู้ว่ากำลังจะสร้างการ์ดกี่ใบ ก่อนที่มันจะเริ่มสร้าง
   const { rows: pre } = await pool.query(
@@ -72,6 +84,7 @@ async function main() {
   const stats = await reconcileEntityCards(orgId, {
     entityType: type,
     createdBy: owner[0].created_by,
+    statusType,
     onProgress: (e) => {
       if (e.phase === 'start' && e.total) console.log(`\n${LABEL[e.type]}: ${e.total} ใบ`)
       // \r ทับบรรทัดเดิม — ไม่พ่นบรรทัดใหม่ทุกแถว (CLAUDE.md §Import / Sync Scripts)

@@ -231,7 +231,9 @@ export default function PostsHome({ orgName = 'องค์กร' }) {
     try {
       const params = new URLSearchParams()
       // source=all = รวมของจากตะกร้าดิสฯ เข้าฟีดด้วย (default ของ API คือซ่อน)
+      // ⭐ backfill = คลังกระทู้เก่า — API ซ่อนจากทุกค่าอื่นรวมทั้ง all ต้องขอตรงๆ เท่านั้น
       if (filter === 'discord') { params.set('visibility', 'org'); params.set('source', 'discord') }
+      else if (filter === 'backfill') { params.set('visibility', 'org'); params.set('source', 'backfill') }
       else if (filter === 'all') params.set('source', 'all')
       else params.set('visibility', filter)
 
@@ -260,7 +262,9 @@ export default function PostsHome({ orgName = 'องค์กร' }) {
   const loadCategories = useCallback(async () => {
     try {
       // กรอง personal/org อยู่ = เอาเฉพาะหมวดของฝั่งนั้น ไม่งั้นชิปที่กดแล้วได้ 0 โพสต์จะโผล่มาปน
-      const q = ['personal', 'org'].includes(filter) ? `?visibility=${filter}` : ''
+      // ⭐ backfill ก็เหมือนกัน — ต้องส่งให้ตรงกับที่ loadPosts ส่ง ไม่งั้นเลขบนชิปคนละชุดกับรายการ
+      const q = ['personal', 'org'].includes(filter) ? `?visibility=${filter}`
+              : filter === 'backfill' ? '?source=backfill' : ''
       const res = await fetch(`/api/posts/categories${q}`)
       const json = await res.json().catch(() => ({}))
       setCategories(res.ok && json.success ? json.data : [])
@@ -498,10 +502,13 @@ export default function PostsHome({ orgName = 'องค์กร' }) {
           dropdown ตัวที่ 4 แทน — user เคาะ 2026-08-08 จะได้ผสมกับตัวกรองอื่นได้ เช่น โพสต์แล้ว+หมวด X) */}
       <div className="flex flex-wrap items-center gap-2">
         <select value={filter} onChange={(e) => selectFilter(e.target.value)} className={selectCls}>
-          <option value="all">ทุกแหล่ง</option>
+          {/* ⚠️ ห้ามตั้งชื่อว่า "ทุกแหล่ง" — มันไม่รวม 📚 กระทู้เก่านำเข้า (user ทักถูก 2026-08-28)
+              4 ตัวแรก = มุมมองของ "งานปัจจุบัน" · ตัวสุดท้าย = คลังของเก่า คนละแกนกัน ไม่ใช่ subset */}
+          <option value="all">งานปัจจุบัน</option>
           <option value="personal">ส่วนตัว</option>
           <option value="org">{orgName}</option>
           <option value="discord">💬 จากดิสคอร์ด</option>
+          <option value="backfill">📚 กระทู้เก่านำเข้า</option>
         </select>
 
         <select value={status} onChange={(e) => setStatus(e.target.value)} className={selectCls}>
