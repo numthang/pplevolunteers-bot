@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-28T02:51:44.275Z
-> Files: 1067 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-28T16:42:42.683Z
+> Files: 1042 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
 
@@ -37,10 +37,13 @@
 
 ## ../../../.claude/projects/-home-tee-VSites-node-pple-volunteers/memory/
 
+- `decision_team_docs_folder_naming.md` — Declares doc (~699 tok)
 - `feedback_context_window_size.md` (~238 tok)
 - `feedback_dry_run_scope_and_approval.md` (~354 tok)
+- `feedback_note_md_is_scratch.md` (~310 tok)
 - `feedback_thai_language.md` (~197 tok)
-- `MEMORY.md` — Memory Index (~3105 tok)
+- `MEMORY.md` — Memory Index (~3203 tok)
+- `project_civicflow_engagement.md` (~1858 tok)
 - `project_kanban_module.md` (~465 tok)
 - `project_multi_guild_same_org.md` (~512 tok)
 
@@ -51,6 +54,14 @@
 ## ../calling.ppleth.ai/md/
 
 - `PLAN.md` — Calling — แผนพอร์ตระบบโทรหาสมาชิก → Builder App (PPLE Platform) (~1277 tok)
+
+## ../civicflow/
+
+- `CLAUDE.md` — CLAUDE.md (~2000 tok)
+
+## ../civicflow/md/TEAM/
+
+- `DEV_AGREEMENT.md` — CivicFlow — Dev Agreement & กติกาทำงานร่วม (ร่าง — รอคุยกับทีม CivicFlow) (~2084 tok)
 
 ## ../pple-demo/
 
@@ -67,6 +78,7 @@
 - `eslint.config.mjs` — ESLint flat config ฝั่งบอท (node, sourceType module) — เปิดเฉพาะ rule ที่จับบั๊กจริง `no-undef`=error (~430 tok)
 - `index.js` — index.js (~9292 tok)
 - `NOTE.md` (~1073 tok)
+- `org shell + switcher + settings (2026-07-15, step 2)OrgShell.jsx` — web/components/org/OrgShell.jsx — top switcher [ส่วนตัว ↔ องค์กร] + nav (หน้าหลัก/ตั้งค่า) + ออกจากระบบ (~200 tok)
 - `package-lock.json` — npm lock file (~48920 tok)
 - `package.json` — Node.js package manifest (~285 tok)
 - `POST.md` (~4039 tok)
@@ -78,7 +90,6 @@
 
 ## .claude/agents/
 
-- `i18n-migrator.md` — Read first (every run) (~968 tok)
 - `i18n-migrator.md` — Sonnet subagent: migrate hardcoded Thai → i18n keys ทีละ chunk เล็ก (web next-intl / bot services/i18n.js) (~700 tok)
 
 ## .claude/commands/
@@ -100,9 +111,6 @@
 ## .claude/skills/scrutinize/
 
 - `SKILL.md` — Scrutinize (~1164 tok)
-
-## Page-title layouts (2026-07-05)
-
 
 ## assets/watermark/
 
@@ -178,7 +186,6 @@
 - `constants.js` — config/constants.js (~494 tok)
 - `hints.js` — config/hints.js (~150 tok)
 - `linkLabels.js` — config/linkLabels.js — ป้ายกำกับลิงก์ที่ถูกย้ายไปคอมเมนต์แรกของโพสต์ Facebook (~397 tok)
-- `newsWatch.js` — config/newsWatch.js — คำค้น default + คำที่ไม่เอา สำหรับ digest ข่าวท้องถิ่น (~1065 tok)
 - `newsWatch.js` — config/newsWatch.js — คำค้น default + คำที่ไม่เอา สำหรับ digest ข่าวท้องถิ่น (~549 tok)
 - `province-codes.json` (~433 tok)
 
@@ -221,12 +228,10 @@
 - `kanbanCards.js` — ลิงก์เปิดการ์ดบนเว็บ — ลอกแนวจาก getCaseManageUrl() ใน db/case.js เป๊ะๆ (~2458 tok)
 - `mediaBasket.js` — ชื่อเรื่องจาก **บรรทัดแรก**ของแคปชัน — ตะกร้าดิสฯ ไม่มีช่องกรอกชื่อ (หย่อนข้อความอย่างเดียว) (~3941 tok)
 - `members.js` — pool: upsertMember, _deriveRoleFields, upsertMemberFromDiscord, getMember, syncMemberRoles (~1617 tok)
-- `newsWatch.js` — คืน Set ของ item_key ที่ห้องนี้เคยเห็นแล้ว (~567 tok)
 - `newsWatch.js` — คืน Set ของ item_key ที่เคยเห็นแล้ว (ของ guild นี้) (~477 tok)
 - `org.js` — db/org.js — Org layer: resolve guild ในเครือเดียวกัน (ใช้ให้ roster match/dedup มองข้าม guild) (~914 tok)
 - `orgchartConfig.js` — Upsert channel mapping ของ role (~1736 tok)
 - `orgMemberRoles.js` — org_member_roles — แหล่งความจริงของสิทธิ์ (ORG_ACCESS_REDESIGN ขั้น 5) (~730 tok)
-- `otpSession.js` — db/otpSession.js — state ชั่วคราวของการยืนยันตัวตนด้วย OTP (dc_user_config) (~372 tok)
 - `otpSession.js` — db/otpSession.js — state ชั่วคราวของ OTP (dc_user_config, key = discord_id) แยกจาก userConfig 2026-07-29 (~330 tok)
 - `postsImport.js` — สร้างโพสต์เดี่ยวจากกระทู้ + revision แรก (ต้นฉบับดิบ) + revision สอง (ฉบับ AI) (~1350 tok)
 - `ratings.js` — เพิ่ม rating ใหม่ (~783 tok)
@@ -243,7 +248,6 @@
 - `basketAiHandler.js` — handlers/basketAiHandler.js (~2606 tok)
 - `basketHandler.js` — ยังไม่ได้เลือกกลุ่ม → รวมลายน้ำของทั้ง org (root + ทุกกลุ่ม) · เดิมคือไฟล์ที่ root ของ guild (~13094 tok)
 - `caseImportHandler.js` — เปิด modal ให้กรอกจังหวัด/ประเภท ก่อนสร้างเคส (~2309 tok)
-- `emailBindHandler.js` — ผูกอีเมลเข้าบัญชี Discord ด้วย OTP ทางเมล (panel `/panel email`) · เจออีเมลที่มีเจ้าของไร้ discord = ยุบรวมบัญชีที่แตกร่างผ่าน mergeUsers (~1400 tok)
 - `emailBindHandler.js` — เขียนอีเมลลงแถว users ของ discord คนนี้ (~2505 tok)
 - `financeDashboard.js` — buildAccountEmbed: sendDashboard, refreshDashboard, handleFinanceRefresh (~784 tok)
 - `forumDashboard.js` — handlers/forumDashboard.js (~764 tok)
@@ -252,7 +256,6 @@
 - `handraiseHandler.js` — handlers/handraiseHandler.js (~2336 tok)
 - `interestSelect.js` — สร้างปุ่มจาก DB rows [{ roleId, label, emoji }] (~1177 tok)
 - `kanbanImportHandler.js` — ข้อความดิบ → ชื่อการบ้านตั้งต้น (บรรทัดแรกที่มีเนื้อ ตัดให้พอดีช่อง) (~1708 tok)
-- `newsWatchHandler.js` — handlers/newsWatchHandler.js — ปุ่ม "ดึงเดี๋ยวนี้" บน panel ข่าวท้องถิ่น (~712 tok)
 - `newsWatchHandler.js` — handlers/newsWatchHandler.js — ปุ่ม "ดึงเดี๋ยวนี้" บน panel ข่าวท้องถิ่น (~662 tok)
 - `openInterest.js` — handlers/openInterest.js (~511 tok)
 - `openProvince.js` — handlers/openProvince.js (~216 tok)
@@ -268,15 +271,12 @@
 - `roleBulkHandler.js` — handlers/roleBulkHandler.js (~4402 tok)
 - `statHandler.js` — handlers/statHandler.js (~2612 tok)
 - `stickyHandler.js` — handlers/stickyHandler.js (~1138 tok)
-- `userInviteHandler.js` — handlers/userInviteHandler.js (~4169 tok)
 - `userInviteHandler.js` — handlers/userInviteHandler.js (~2422 tok)
 - `verifyHandler.js` — handlers/verifyHandler.js — ยืนยันตัวตนสมาชิกด้วย SMS OTP (Member Onboarding จังหวะ 1) (~4354 tok)
 
 ## locales/
 
-- `en.json` (~999 tok)
 - `en.json` — bot locale strings อังกฤษ (~60 tok)
-- `th.json` (~925 tok)
 - `th.json` — bot locale strings ไทย (starter: common.*) (~60 tok)
 
 ## logs/
@@ -289,7 +289,7 @@
 - `CUTOVER.md` — CUTOVER RUNBOOK — org-core → master (~3332 tok)
 - `DATABASE.md` — Database Schema — pple_volunteers (~3190 tok)
 - `DEPLOYMENT.md` — Production Deployment — VPS Setup (~2522 tok)
-- `DEV_AGREEMENT.md` — CivicFlow — Dev Agreement & กติกาทำงานร่วม (ร่าง — รอคุยกับทีม CivicFlow) (~1367 tok)
+- `DEV_AGREEMENT.md` — CivicFlow — Dev Agreement & กติกาทำงานร่วม (ร่าง — รอคุยกับทีม CivicFlow) (~1760 tok)
 - `ORG_ACCESS_REDESIGN.md` — ORG_ACCESS_REDESIGN — ปลดสิทธิ์ออกจาก Discord (~5545 tok)
 - `PENDING.md` — PENDING.md — Backlog & Ideas (~43293 tok)
 - `WEB.md` — Web App — Next.js Frontend (~5324 tok)
@@ -317,11 +317,14 @@
 
 ## md/cooking/
 
-- `COOKING.md` — Cooking — ผู้ช่วยครัวส่วนตัว (personal app #1) (~4769 tok)
 - `COOKING.md` — Cooking — Meal Decider (personal app #1) (~876 tok)
 - `MENUS.md` — Cooking — Menu Data (seed สำหรับ /cooking) (~3086 tok)
 - `menus.sample.json` (~1896 tok)
 - `menus.seed.json` (~19843 tok)
+
+## md/dev-agreement/
+
+- `DEV_AGREEMENT.md` — CivicFlow — Dev Agreement & กติกาทำงานร่วม (ร่าง — รอคุยกับทีม CivicFlow) (~2073 tok)
 
 ## md/discord/
 
@@ -350,25 +353,24 @@
 - `PLAN-4.md` — ก้อน 4 — ท่อโพสต์ร่วม (publishPipeline) + คิว/worker + รวมประวัติ (~2638 tok)
 - `POSTS.md` — Posts — เครื่องมืองานสื่อ (เขียนคอนเทนต์ → เผยแพร่) (~14460 tok)
 
-## org core (platformfor.org identity/tenant — email-first, 2026-07-15)
+## org core (platformfor.org identity/
 
-- `activeOrg.js` — web/lib/activeOrg.js — resolveActiveOrg(userId): active org จาก cookie `active_org` + membership (~55 tok)
-- `appoint/route.js` — web/app/api/org/appoint/route.js — ② แต่งตั้งยศ org-native: GATE owner|policy + FLOOR canAppoint(capability-subset) · GET search+catalog · POST/DELETE grant/revoke (Discord role จริง/email web_roles) (~180 tok)
-- `org-auth-options.js` — web/lib/org-auth-options.js — NextAuth instance #2: Google + magic Credentials, cookie ns `org-auth.*`, jwt/session ถือ userId+email (~120 tok)
-- `orgAuth.js` — web/lib/orgAuth.js — getOrgSession / requireOrgUser (getServerSession ฝั่ง org) (~40 tok)
-- `orgConfig.js` — web/db/orgConfig.js — org-level KV (org_config table) get/set + getAppointPolicy (default [admin,secretary_general]); ≠ dc_guild_config (Discord artifact คง guild) (~60 tok)
-- `OrgGeneral.jsx` — web/components/org/OrgGeneral.jsx — /org/settings ทั่วไป: ชื่อ org (owner แก้) (~40 tok)
-- `OrgHome.jsx` — web/components/org/OrgHome.jsx — client dashboard: active org, create org, invite, switcher, signout (~200 tok)
-- `orgMembers.js` — web/db/orgMembers.js — DB layer: findOrCreateUserByEmail/resolveOrgUser (identity by email), listUserOrgs, createOrg (creator=owner tx), inviteMember (shell user + invited), claimInvites (~230 tok)
-- `OrgMembers.jsx` — web/components/org/OrgMembers.jsx — /org/settings/members: Section A ทีมงาน+invite+search (membership) · Section B AppointSection (permission chips, gated probe /api/org/appoint, ชิปจาง=เกิน floor) (~200 tok)
-- `orgScopeNodes.js` — web/db/orgScopeNodes.js — CRUD ผังพื้นที่ org (org_scope_nodes tree); key immutable หลังสร้าง, กันวนลูปตอนย้าย parent, บล็อกลบถ้ามีลูก/มียศผูก (DDL เป็น CASCADE+SET NULL จึงกันเองที่ชั้นนี้) (~90 tok)
-- `OrgSettingsNav.jsx` — web/components/org/OrgSettingsNav.jsx — sub-nav tab (ทั่วไป/สมาชิก&บทบาท) usePathname active (~30 tok)
-- `orgSignIn.js` — web/lib/orgSignIn.js — client: orgSignIn/orgSignOut แบบ manual CSRF (เลี่ยง __NEXTAUTH global ชน) (~55 tok)
-- `sendEmail.js` — web/lib/sendEmail.js — SMTP transport (nodemailer) + dev-stub fallback; ใช้ใน magic-link + org invite; env SMTP_HOST/PORT/USER/PASS/EMAIL_FROM ไม่ตั้ง=stub log (~60 tok)
+- `tenant — email-first, 2026-07-15)activeOrg.js` — web/lib/activeOrg.js — resolveActiveOrg(userId): active org จาก cookie `active_org` + membership (~55 tok)
+- `tenant — email-first, 2026-07-15)org-auth-options.js` — web/lib/org-auth-options.js — NextAuth instance #2: Google + magic Credentials, cookie ns `org-auth.*`, jwt/session ถือ userId+email (~120 tok)
+- `tenant — email-first, 2026-07-15)orgAuth.js` — web/lib/orgAuth.js — getOrgSession / requireOrgUser (getServerSession ฝั่ง org) (~40 tok)
+- `tenant — email-first, 2026-07-15)orgConfig.js` — web/db/orgConfig.js — org-level KV (org_config table) get/set + getAppointPolicy (default [admin,secretary_general]); ≠ dc_guild_config (Discord artifact คง guild) (~60 tok)
+- `tenant — email-first, 2026-07-15)OrgGeneral.jsx` — web/components/org/OrgGeneral.jsx — /org/settings ทั่วไป: ชื่อ org (owner แก้) (~40 tok)
+- `tenant — email-first, 2026-07-15)OrgHome.jsx` — web/components/org/OrgHome.jsx — client dashboard: active org, create org, invite, switcher, signout (~200 tok)
+- `tenant — email-first, 2026-07-15)orgMembers.js` — web/db/orgMembers.js — DB layer: findOrCreateUserByEmail/resolveOrgUser (identity by email), listUserOrgs, createOrg (creator=owner tx), inviteMember (shell user + invited), claimInvites (~230 tok)
+- `tenant — email-first, 2026-07-15)OrgMembers.jsx` — web/components/org/OrgMembers.jsx — /org/settings/members: Section A ทีมงาน+invite+search (membership) · Section B AppointSection (permission chips, gated probe /api/org/appoint, ชิปจาง=เกิน floor) (~200 tok)
+- `tenant — email-first, 2026-07-15)orgScopeNodes.js` — web/db/orgScopeNodes.js — CRUD ผังพื้นที่ org (org_scope_nodes tree); key immutable หลังสร้าง, กันวนลูปตอนย้าย parent, บล็อกลบถ้ามีลูก/มียศผูก (DDL เป็น CASCADE+SET NULL จึงกันเองที่ชั้นนี้) (~90 tok)
+- `tenant — email-first, 2026-07-15)OrgSettingsNav.jsx` — web/components/org/OrgSettingsNav.jsx — sub-nav tab (ทั่วไป/สมาชิก&บทบาท) usePathname active (~30 tok)
+- `tenant — email-first, 2026-07-15)orgSignIn.js` — web/lib/orgSignIn.js — client: orgSignIn/orgSignOut แบบ manual CSRF (เลี่ยง __NEXTAUTH global ชน) (~55 tok)
+- `tenant — email-first, 2026-07-15)sendEmail.js` — web/lib/sendEmail.js — SMTP transport (nodemailer) + dev-stub fallback; ใช้ใน magic-link + org invite; env SMTP_HOST/PORT/USER/PASS/EMAIL_FROM ไม่ตั้ง=stub log (~60 tok)
 
-## org shell + switcher + settings (2026-07-15, step 2)
+## org core (platformfor.org identity/tenant — email-first, 2026-07-15)appoint/
 
-- `OrgShell.jsx` — web/components/org/OrgShell.jsx — top switcher [ส่วนตัว ↔ องค์กร] + nav (หน้าหลัก/ตั้งค่า) + ออกจากระบบ (~200 tok)
+- `route.js` — web/app/api/org/appoint/route.js — ② แต่งตั้งยศ org-native: GATE owner|policy + FLOOR canAppoint(capability-subset) · GET search+catalog · POST/DELETE grant/revoke (Discord role จริง/email web_roles) (~180 tok)
 
 ## posts/
 
@@ -543,20 +545,17 @@
 - `antiSpamCache.js` — shared cache สำหรับ anti-spam feature (honeypot + quarantine) (~224 tok)
 - `caseTimeline.js` — Generate timeline events from Discord messages (~772 tok)
 - `discordAttachments.js` — ลิงก์ของ Discord ที่มีลายเซ็นหมดอายุ (`?ex=`) เท่านั้นที่ต้องรีเฟรช (~716 tok)
-- `email.js` — ส่งอีเมลฝั่งบอท (nodemailer, env SMTP_* ชุดเดียวกับเว็บ) · ไม่ตั้ง env = stub log · คู่แฝดของ web/lib/sendEmail.js (~450 tok)
 - `email.js` — services/email.js — ส่งอีเมลจากฝั่งบอท (CommonJS) (~496 tok)
 - `emailPoller.js` — emailPoller.js (~2861 tok)
 - `fetchMessages.js` — services/fetchMessages.js (~1292 tok)
 - `financeOCR.js` — financeOCR.js (~3129 tok)
 - `forumCache.js` — shared cache สำหรับ forum feature (~286 tok)
 - `forumIndexer.js` — meili: indexThread, indexMessage, hybridSearch (~740 tok)
-- `i18n.js` — bot i18n: getT(guildId) คืน t() bind locale (dc_guild_config key locale, cache 5 นาที), strings ใน locales/*.json (~700 tok)
 - `i18n.js` — services/i18n.js — ระบบแปลภาษาของ bot (~582 tok)
 - `linkToComment.js` — แยกลิงก์ออกจาก caption (~987 tok)
 - `meilisearch.js` — INDEX_NAME: getClient, initMeilisearch, isReady + 5 more (~1182 tok)
 - `metaApi.js` — ต่ออายุ Threads token — **คนละ endpoint กับ FB สิ้นเชิง** (นี่คือเหตุผลที่ Threads ตายเงียบ 3 สัปดาห (~10542 tok)
 - `newsShare.js` — ห้องข่าวสารของกลุ่มนี้ — ต้องตรงกับ attachNewsReady ฝั่งเว็บ (web/lib/publishTargets.js) (~1803 tok)
-- `newsWatch.js` — slot ล่าสุดที่ "ผ่านมาแล้ว" ของวันนี้ เช่น "2026-08-12-08" · null = ยังไม่ถึงรอบแรกของวัน (~5428 tok)
 - `newsWatch.js` — slot ล่าสุดที่ "ผ่านมาแล้ว" ของวันนี้ เช่น "2026-08-12-08" · null = ยังไม่ถึงรอบแรกของวัน (~3582 tok)
 - `postsRetention.js` — services/postsRetention.js — เก็บกวาดไฟล์สื่อของ posts/ตะกร้าที่ "หมดหน้าที่แล้ว" (~831 tok)
 - `publishPipeline.js` — สื่อในรูปแบบที่เก็บไว้ (path บนดิสก์ / URL ของ Discord) → input ที่ publishOne กินได้ (~4055 tok)
@@ -585,6 +584,7 @@
 - `logger.js` — logger.js — simple file logger that mirrors console.log to logs/app.log (~456 tok)
 - `orgchartEmbed.js` — ดึง activity stats ของทุก member ใน role แล้ว sort ตาม score (~976 tok)
 - `parseSetting.js` — แปลงค่า setting ให้เป็น object/array เสมอ — parse ถ้าเป็น string, คืน fallback ถ้าพัง/ว่าง (~246 tok)
+- `parseSetting.js (2026-07-05)parseSetting.js` — normalize ค่า json setting จาก getSetting/getUserSetting (parse ถ้า string, fallback ถ้าพัง/null) · แทน pattern `typeof === 'string' ? JSON.parse` ~34 จุด (~180 tok)
 - `postsStorage.js` — absolute path จาก path ที่เก็บใน DB — กัน path traversal ก่อนแตะดิสก์เสมอ (~900 tok)
 - `quoteStyleKeys.js` — คีย์ที่อ่านจาก DB/config อาจเป็นของเก่า — ผ่านตัวนี้ก่อนเทียบกับ QUOTE_STYLE_KEYS เสมอ (~2038 tok)
 - `quoteStyles.js` — สีจริงของ scrim + luminance ที่ readableOnDark ต้องใช้ (บวกแสงรูปที่ลอดผ่าน ~5%) (~18421 tok)
@@ -592,10 +592,6 @@
 - `videoUtils.js` — fs: probeVideoCodec, convertToMp4, convertVideoIfNeeded (~449 tok)
 - `voiceRecorder.js` — prism: startRecording, silenceTimer, stopRecording + 3 more (~1777 tok)
 - `watermarkImage.js` — utils/watermarkImage.js (~2592 tok)
-
-## utils/parseSetting.js (2026-07-05)
-
-- `parseSetting.js` — normalize ค่า json setting จาก getSetting/getUserSetting (parse ถ้า string, fallback ถ้าพัง/null) · แทน pattern `typeof === 'string' ? JSON.parse` ~34 จุด (~180 tok)
 
 ## web/
 
@@ -922,14 +918,19 @@
 
 ## web/app/api/docs/external-payees/
 
-- `[id]/id-card/route.js` — GET เสิร์ฟ/POST อัปสำเนาบัตรของคนนอก (org gate + ?token= ต้องตรงกับ entry) (~800 tok)
-- `[id]/route.js` — GET/PATCH/DELETE ผู้รับคนนอก (ลบไม่ได้ถ้ามีใบสำคัญฯ ออกไปแล้ว) (~700 tok)
-- `ocr/route.js` — POST อ่านบัตรด้วย Claude vision → คืน JSON ให้เติมฟอร์ม (ไม่แตะ DB) (~900 tok)
 - `route.js` — GET รายชื่อคนนอกทั้ง org / POST สร้างใหม่ (ตรวจ checksum + กันเลขซ้ำ) (~700 tok)
+
+## web/app/api/docs/external-payees/[id]/
+
+- `route.js` — GET/PATCH/DELETE ผู้รับคนนอก (ลบไม่ได้ถ้ามีใบสำคัญฯ ออกไปแล้ว) (~700 tok)
 
 ## web/app/api/docs/external-payees/[id]/id-card/
 
 - `route.js` — org ของผู้ขอ — จาก active org ก่อน · ถ้าไม่มี (หน้า sign ไม่มี cookie guild) ใช้ org ของ entry · GET เสิร์ฟรูปลายน้ำแล้ว (วันที่ = entry.event_date) (~1090 tok)
+
+## web/app/api/docs/external-payees/ocr/
+
+- `route.js` — POST อ่านบัตรด้วย Claude vision → คืน JSON ให้เติมฟอร์ม (ไม่แตะ DB) (~900 tok)
 
 ## web/app/api/docs/id-card/
 
@@ -1441,7 +1442,6 @@
 
 ## web/app/api/social/accounts/[id]/
 
-- `route.js` — ย้ายบัญชีเข้ากลุ่มแล้วรับ "ค่าระดับกลุ่ม" ที่ว่างอยู่ไปด้วย — เซิร์ฟเวอร์ + ห้องข่าวสาร (~1225 tok)
 - `route.js` — POST /api/social/accounts/[id]/token — แปะ Threads token ใหม่จากหน้าเว็บ (~1480 tok)
 
 ## web/app/api/social/groups/
@@ -1810,7 +1810,6 @@
 ## web/app/posts/
 
 - `layout.js` — Next.js layout (~149 tok)
-- `page.js` — Next.js page component (~253 tok)
 - `page.js` — /posts server component, ตรวจ session แล้ว render PostsHome (~80 tok)
 
 ## web/app/posts/[id]/
@@ -1865,11 +1864,8 @@
 
 ## web/components/bot/
 
-- `AiMentionToggle.jsx` — AiMentionToggle (~787 tok)
 - `AiMentionToggle.jsx` — สวิตช์ ai_mention ราย guild · ย้ายมาจากหน้า /bot/features ที่ถูกลบ · superadmin-only (~550 tok)
-- `BotChannelSettings.jsx` — FIELDS (~1112 tok)
 - `BotChannelSettings.jsx` — ช่องตั้ง news_channel_id + social_alert_channel_id · autosave + beforeunload (~700 tok)
-- `BotSettingsNav.jsx` — TABS (~1047 tok)
 - `BotSettingsNav.jsx` — sidebar ของ /bot (ภาพรวม/ยศ/AI/Quote/Watermark) · pattern เดียวกับ OrgSettingsNav โดยตั้งใจ (~450 tok)
 - `OrgChartClient.jsx` — GROUP_LUCIDE (~17054 tok)
 
@@ -1932,7 +1928,7 @@
 - `DeleteChoiceDialog.jsx` — DeleteChoiceDialog — กล่อง "ลบ" ที่ให้เลือกเอาเองว่า **ซ่อน/เก็บเข้ากรุ** หรือ **ลบถาวร** (~1182 tok)
 - `FieldManager.jsx` — FieldManager — ช่องข้อมูลตั้งเองของ org (/kanban/fields) · admin เท่านั้น (~3907 tok)
 - `FieldRow.jsx` — FieldRow — แถว `[ไอคอน · ชื่อ] | [ค่า]` บรรทัดเดียว ทรง Notion/AppFlowy (~749 tok)
-- `KanbanHome.jsx` — KanbanHome — หน้าเดียวของโมดูลการบ้าน (`/kanban`) (~20975 tok)
+- `KanbanHome.jsx` — KanbanHome — หน้าเดียวของโมดูลการบ้าน (`/kanban`) (~21085 tok)
 - `LabelChips.jsx` — LabelChips — ป้ายของการ์ด 1 ใบ วาดแยกเป็นกอง ไม่ใช่กองรวมพรืดเดียว (~618 tok)
 - `PersonProfileModal.jsx` — PersonProfileModal — กล่องลอยแบบดิสคอร์ด เปิดตอนกดชื่อเจ้าภาพ/คนช่วยในการ์ด (~1228 tok)
 - `TagCombobox.jsx` — TagCombobox — ตัวเลือกของ select/multi_select field (ตรงสกรีนช็อตที่ user ส่งมา 2026-08-18 รอบเย็น) (~8801 tok)
@@ -1952,7 +1948,6 @@
 - `OrgHome.jsx` — dashboard body ของ /org (render ใน OrgShell — switcher/ออกจากระบบ อยู่ที่ shell แล้ว) (~1386 tok)
 - `OrgMembers.jsx` — OrgMembers — renders form (~4001 tok)
 - `OrgPrompts.jsx` — OrgPrompts (~1758 tok)
-- `OrgScopeTree.jsx` — OrgScopeTree — UI ต้นไม้ผังพื้นที่ (/org/settings/roles) เพิ่ม/ย้าย/เปลี่ยนชื่อ/ลบ node (~1200 tok)
 - `OrgScopeTree.jsx` — ผังพื้นที่ของ org — สร้าง/ย้าย/เปลี่ยนชื่อ/ลบ node (~2593 tok)
 - `OrgSettings.jsx` — OrgSettings — renders form (~2200 tok)
 - `OrgSettingsNav.jsx` — TAB_HREFS (~785 tok)
@@ -1977,10 +1972,8 @@
 - `PostEditor.jsx` — ผลตรวจจาก AI บรรณาธิการ (kind='review') — โครงคนละแบบกับ caption สิ้นเชิง (~12806 tok)
 - `PostMediaPanel.jsx` — ACCEPT (~7896 tok)
 - `PostMetaPanel.jsx` — STATUS_LABEL (~4306 tok)
-- `PostPublishPanel.jsx` — PLATFORMS (~6072 tok)
 - `PostPublishPanel.jsx` — PLATFORMS (~3229 tok)
 - `PostRevisions.jsx` — fmt (~1260 tok)
-- `PostsHome.jsx` — STATUS_LABELS (~9127 tok)
 - `PostsHome.jsx` — 'use client' หน้าแรกโมดูล posts: กล่องไอเดีย AI + dropdown filter 3 ตัว + รายการโพสต์เป็นแถวยาว พร้อมแถบ % ความสมบูรณ์ (CHECKS 4 ข้อ) + ตัวเรียง ใกล้เสร็จก่อน/แก้ล่าสุด (~1400 tok)
 - `QuoteGeneratorModal.jsx` — ครอปฝั่ง client → Blob (ทำก่อนส่งไป render เสมอ) (~13225 tok)
 - `VideoQuoteModal.jsx` — POSITIONS (~3295 tok)
@@ -1997,10 +1990,10 @@
 ## web/db/
 
 - `auditLog.js` — logAction({ orgId, app, action, actorId?, targetId?, meta? }) (~359 tok)
-- `authLog.js` — logLogin() บันทึกทุกความพยายาม login ลง auth_login_events ทั้งสำเร็จและไม่สำเร็จ (fire-and-forget) (~700 tok)
 - `authLog.js` — logLogin({ provider, outcome, userId?, identity?, meta?, req? }) (~670 tok)
 - `authNonces.js` — nonce/challenge store keyed by user_id (แทน dc_user_config ที่ PK=discord_id) — รองรับ email-only (~308 tok)
 - `botStatus.js` — web/db/botStatus.js — สรุปสถานะการตั้งค่าของ Discord guild หนึ่งตัว (ใช้ที่หน้า /bot) (~559 tok)
+- `botStatus.jsbotStatus.js` — getBotGuildStatus(guildId) คืน guild/roles(total,with_permission,with_scope)/channels/aiMention/socialAccounts สำหรับหน้า /bot (~430 tok)
 - `caseLetterConfig.js` — Exports getLetterConfig, upsertLetterConfig (~314 tok)
 - `cases.js` — Case (เรื่องร้องเรียน) — web-side DB layer (ESM) (~4320 tok)
 - `displayName.js` — สูตร "ชื่อคนที่เอาไว้โชว์" ของทั้งระบบ · displayNameSql(userAlias, orgExpr) คืน SQL fragment · org display_name → nickname → ชื่อจริง → username (~450 tok)
@@ -2015,12 +2008,7 @@
 - `orgScopeNodes.js` — org_scope_nodes — ผังพื้นที่ของ org (ต้นไม้ ซ้อนกี่ชั้นก็ได้) (~1717 tok)
 - `platform.js` — web/db/platform.js — platformfor.org core: identity (dc_members by email) + org membership (org_memb (~1326 tok)
 - `userIdentities.js` — email → lowercase/trim (inline เลี่ยง circular import กับ orgMembers.js) (~2601 tok)
-- `userMerge.js` — mergeUsers/followMerge ยุบ users 2 แถวที่เป็นคนเดียวกัน ย้าย FK 40 คอลัมน์จาก pg_constraint + เคารพ partial unique index (~1500 tok)
 - `userMerge.js` — mergeUsers(keepId, dropId) — ยุบ users 2 แถวที่เป็นคนเดียวกันให้เหลือแถวเดียว (~2654 tok)
-
-## web/db/botStatus.js
-
-- `botStatus.js` — getBotGuildStatus(guildId) คืน guild/roles(total,with_permission,with_scope)/channels/aiMention/socialAccounts สำหรับหน้า /bot (~430 tok)
 
 ## web/db/calling/
 
@@ -2080,7 +2068,6 @@
 
 ## web/i18n/
 
-- `request.js` — i18n/request.js — next-intl config (ไม่ใช้ locale routing) (~199 tok)
 - `request.js` — next-intl request config: locale จาก cookie `locale` default th (~180 tok)
 
 ## web/lib/
@@ -2145,14 +2132,12 @@
 - `orgFeatures.js` — org-native features — feature ที่ scope ด้วย org_id (ใช้ได้แม้ org ไม่มี guild) (~458 tok)
 - `orgSignIn.js` — web/lib/orgSignIn.js — client helper: trigger NextAuth (org instance) แบบ manual (~431 tok)
 - `permissions.js` — Permission → capabilities (feature matrix) — universal, ไม่ขึ้นกับ guild (SPEC §5, §9) (~1525 tok)
-- `phoneBindOtp.js` — Phone bind OTP — ผูก+ยืนยันเบอร์จากหน้า profile (user login อยู่แล้วทุกวิธี) (~768 tok)
 - `phoneBindOtp.js` — Phone bind OTP — ผูก+ยืนยันเบอร์จาก profile (session keyed user_id ผ่าน auth_nonces) · setVerifiedPhone catch 23505→already_taken (~430 tok)
 - `phoneLoginOtp.js` — Phone OTP login — shared helpers สำหรับ /api/auth/phone/request + verify (~890 tok)
 - `platform-auth-options.js` — web/lib/platform-auth-options.js — platformfor.org login (email-native, แยกจาก PPLE Discord auth) (~982 tok)
 - `platformActiveOrg.js` — web/lib/platformActiveOrg.js — active org ต่อ session (เก็บใน cookie 'platform_org') (~234 tok)
 - `platformAuth.js` — web/lib/platformAuth.js — server helper สำหรับ platform session (คู่กับ lib/auth.js ของ PPLE) (~166 tok)
 - `platformSignIn.js` — web/lib/platformSignIn.js — client helper: trigger NextAuth (platform instance) แบบ manual (~441 tok)
-- `postsAccess.js` — Posts Access Control — เครื่องมืองานสื่อ (spec: md/posts/POSTS.md §ผ่าน /grill) (~2209 tok)
 - `postsAccess.js` — Posts Access Control — เครื่องมืองานสื่อ (spec: md/posts/POSTS.md §ผ่าน /grill) (~1705 tok)
 - `postsAiQuota.js` — โควตา AI ต่อคนต่อวัน (grill ข้อ 13) — key เดียวของโปรเจกต์ ต้องกันบิลพุ่งจากสมาชิกหลักพัน (~594 tok)
 - `postsGuard.js` — postsGuard — ด่านเดียวที่ route ของ posts ใช้โหลด context + ตัดสินสิทธิ์ (~841 tok)
@@ -2168,24 +2153,16 @@
 - `resolveAccessV2.js` — resolveAccessV2 — สิทธิ์ + พื้นที่ จาก org (ไม่ผูก Discord) (~1787 tok)
 - `roleAccess.js` — roleAccess — normalize access object ให้รูปแบบเดียว (~297 tok)
 - `roles.js` — Permission-based role helpers — รับ access object (จาก resolveAccess / /api/me/access) (~454 tok)
-- `scripts/migration/migration.sql` — PG migration log (append ต่อท้ายพร้อมวันที่ · idempotent · รันทั้งไฟล์ซ้ำได้) · reset 2026-07-25 มี auth_nonces + uq_users_phone · เก่าอยู่ _archive/ (~250 tok)
 - `sendEmail.js` — Email transport — SMTP (nodemailer) + dev stub fallback (~420 tok)
 - `sendSms.js` — ThaiBulkSMS — primitive ส่ง SMS (ใช้ร่วม calling bulk + case tracking link) (~464 tok)
 - `socialAppCreds.js` — { app_id, app_secret } ของ Threads — **คนละชุดกับ Facebook เสมอ** (ยืนยันกับ user 2026-08-08) (~969 tok)
 - `socialOAuthScope.js` — web/lib/socialOAuthScope.js — resolve scope ของ OAuth flow ทั้ง 3 แพลตฟอร์ม (Meta / Threads / X) (~427 tok)
+- `socialOAuthScope.jssocialOAuthScope.js` — resolveOAuthScope(session, guildId) → {orgId, guildId} ใช้ร่วมกันทั้ง meta/threads/x oauth start · orgIdFromState() fallback ให้ flow ค้างกลางทาง (~330 tok)
 - `thaiId.js` — normalize + ตรวจ checksum mod-11 เลขบัตร ปชช. 13 หลัก (ด่านจับ OCR อ่านเพี้ยน) (~300 tok)
 - `thailand-geography.json` (~68531 tok)
 - `useEffectiveRoles.js` — Returns { roles, discordId, userId, access } adjusted for debug mode. (~581 tok)
 - `videoRender.js` — สะพานไป `utils/videoQuoteOverlay.js` ที่ repo root — เบิร์นคำคมลงคลิปด้วย ffmpeg (~964 tok)
 - `watermarks.js` — watermarks — ลายน้ำของกล่องเผยแพร่ (posts) · ใช้ไฟล์ชุดเดียวกับตะกร้าดิสฯ (~1451 tok)
-- `web/app/api/posts/[id]/restore/route.js` — POST เอาโพสต์ออกจากกรุ (คู่กับ DELETE ที่ default=archive) (~200 tok)
-- `web/app/api/posts/publish-targets/route.js` — GET ตัวเลือกกล่องเผยแพร่ (กลุ่ม+แพลตฟอร์ม+news พร้อมไหม) gate ด้วยสิทธิ์ posts (~300 tok)
-- `web/app/api/posts/watermarks/route.js` — GET ?group= คืน options+default (~250 tok)
-- `web/app/api/profile/phone/request/route.js` — ขอ OTP ผูกเบอร์ (ต้อง login) · cooldown 60s + 5/วัน (~360 tok)
-- `web/app/api/profile/phone/verify/route.js` — เช็ค OTP → setVerifiedPhone · 409 ถ้าเบอร์ชนบัญชีอื่น (~300 tok)
-- `web/components/posts/PostRevisions.jsx` — ประวัติการแก้ของโพสต์ (กางเก็บได้) + ปุ่มกู้คืนฉบับเก่า (~600 tok)
-- `web/lib/publishTargets.js` — กลุ่มบัญชีโซเชียลที่โพสต์ได้ (group_name) + resolve กลุ่ม→บัญชีรายแพลตฟอร์ม + hasNewsChannel · public=org, private=เจ้าของเท่านั้น (~700 tok)
-- `web/lib/watermarks.js` — ลายน้ำของ posts: ลิสต์ไฟล์ตามกลุ่ม (public=<guild>/<group>, private=user_<discord>) + default ราย group + validate ค่าที่ client ส่ง (~650 tok)
 
 ## web/lib/__tests__/
 
@@ -2214,15 +2191,42 @@
 
 - `parseXlsxImport.js` — web/lib/calling/parseXlsxImport.js (~1742 tok)
 
-## web/lib/socialOAuthScope.js
+## web/lib/scripts/migration/
 
-- `socialOAuthScope.js` — resolveOAuthScope(session, guildId) → {orgId, guildId} ใช้ร่วมกันทั้ง meta/threads/x oauth start · orgIdFromState() fallback ให้ flow ค้างกลางทาง (~330 tok)
+- `migration.sql` — PG migration log (append ต่อท้ายพร้อมวันที่ · idempotent · รันทั้งไฟล์ซ้ำได้) · reset 2026-07-25 มี auth_nonces + uq_users_phone · เก่าอยู่ _archive/ (~250 tok)
+
+## web/lib/web/app/api/posts/[id]/restore/
+
+- `route.js` — POST เอาโพสต์ออกจากกรุ (คู่กับ DELETE ที่ default=archive) (~200 tok)
+
+## web/lib/web/app/api/posts/publish-targets/
+
+- `route.js` — GET ตัวเลือกกล่องเผยแพร่ (กลุ่ม+แพลตฟอร์ม+news พร้อมไหม) gate ด้วยสิทธิ์ posts (~300 tok)
+
+## web/lib/web/app/api/posts/watermarks/
+
+- `route.js` — GET ?group= คืน options+default (~250 tok)
+
+## web/lib/web/app/api/profile/phone/request/
+
+- `route.js` — ขอ OTP ผูกเบอร์ (ต้อง login) · cooldown 60s + 5/วัน (~360 tok)
+
+## web/lib/web/app/api/profile/phone/verify/
+
+- `route.js` — เช็ค OTP → setVerifiedPhone · 409 ถ้าเบอร์ชนบัญชีอื่น (~300 tok)
+
+## web/lib/web/components/posts/
+
+- `PostRevisions.jsx` — ประวัติการแก้ของโพสต์ (กางเก็บได้) + ปุ่มกู้คืนฉบับเก่า (~600 tok)
+
+## web/lib/web/lib/
+
+- `publishTargets.js` — กลุ่มบัญชีโซเชียลที่โพสต์ได้ (group_name) + resolve กลุ่ม→บัญชีรายแพลตฟอร์ม + hasNewsChannel · public=org, private=เจ้าของเท่านั้น (~700 tok)
+- `watermarks.js` — ลายน้ำของ posts: ลิสต์ไฟล์ตามกลุ่ม (public=<guild>/<group>, private=user_<discord>) + default ราย group + validate ค่าที่ client ส่ง (~650 tok)
 
 ## web/locales/
 
-- `en.json` (~23876 tok)
 - `en.json` — web locale strings อังกฤษ (~60 tok)
-- `th.json` (~22798 tok)
 - `th.json` — web locale strings ไทย (starter: common.*) (~60 tok)
 
 ## web/public/media-temp/
@@ -2248,18 +2252,22 @@
 - `aiCrypto.js` — utils/aiCrypto.js เข้ารหัส/ถอด API key ของ org ด้วย AES-256-GCM (master key = env AI_KEY_SECRET) (~600 tok)
 - `AUTH.md` — md/AUTH.md — ประวัติ+สถานะระบบ login/identity (Phase 4 บัญชีเดียวหลายช่องทาง, Auth & Platform) ย้ายออกจาก PENDING 2026-07-29 (~1600 tok)
 - `baseUrl.js` — web/lib/baseUrl.js — BASE_URL = NEXTAUTH_URL (.env) fallback https://BRAND_DOMAIN — ใช้ทุก OAuth redirect_uri + passkey RP_ID (~100 tok)
-- `brand.js` — config/brand.js — จุดเดียวที่เก็บ BRAND_NAME ('PLATFOR{m}.ORG') + BRAND_DOMAIN — ใช้ร่วม bot (require) และ web (ผ่าน web/lib/brand.js) (~100 tok)
 - `brand.js` — web/lib/brand.js — สะพาน re-export config/brand.js ให้ฝั่ง web import ผ่าน '@/lib/brand.js' (ไฟล์เดียวที่ข้ามขอบ web/ → root) (~80 tok)
 - `discordChannels.js` — web/lib/discordChannels.js — ลิสต์ห้อง text/announcement/forum ของ guild ผ่าน bot token (cache 60s) · null = ดึงไม่ได้ ไม่ใช่ไม่มีห้อง (~700 tok)
-- `groups/route.js` — web/app/api/social/groups/route.js — GET กลุ่ม+ค่าที่ตั้งไว้ · PATCH fan-out guild_id/news_channel_id ทุกแถวของกลุ่ม (id = ANY จาก listPublishGroups ห้าม WHERE group_name) (~1400 tok)
 - `LocaleSwitcher.jsx` — web ปุ่มสลับภาษา ไทย/EN (useLocale + set cookie locale + router.refresh) วางในเมนู Nav (~350 tok)
 - `moveWatermarksToOrg.js` — scripts/migration/moveWatermarksToOrg.js ย้ายไฟล์ลายน้ำ guild→org + user_discord→user_id (มี --dry-run, หยุดเมื่อชน) (~1500 tok)
-- `news-channels/route.js` — web/app/api/social/news-channels/route.js — ห้องข่าวที่ลงทะเบียนไว้ที่ /bot ของทุกเซิร์ฟใน org (+ชื่อห้องสดจาก Discord) ให้ modal ผูกห้องเลือก (~600 tok)
 - `NewsChannelModal.jsx` — components/org/NewsChannelModal.jsx — modal ผูกห้องข่าวสารให้กลุ่ม (เลือกกลุ่ม + ค้นหาห้อง · ห้องชื่อ ข่าว/news ขึ้นก่อน · ตกไปกรอก ID ดิบถ้าดึงชื่อไม่ได้) เปิดจากปุ่ม + Discord News (~1500 tok)
 - `OrgAi.jsx` — components/org/OrgAi.jsx ฟอร์มตั้งค่า AI ราย org (ค่าย/API key/โมเดล 2 ช่อง/โควตา) owner only ไม่ autosave (~1200 tok)
 - `OrgBrand.jsx` — components/org/OrgBrand.jsx หน้าอัตลักษณ์ของ org: ลายน้ำรายกลุ่ม + สี CI + สไตล์การ์ด (owner only) (~1800 tok)
-- `orgMemberRoles.js` — db/orgMemberRoles.js — บอท: recompute แถว source='discord' ใน org_member_roles จาก org_members.roles (ทั้ง org ไม่ใช่ทีละ guild) · resyncDiscordRolesForUser/ForGuild (~450 tok)
 - `orgMemberRoles.js` — web/db/orgMemberRoles.js — เว็บ: ทางเขียนสิทธิ์ทั้งหมด — resync Discord, grant/revokeWebRole (source='web'), findOrCreatePermissionDef, syncRoleDefFromGuildRole (แมปเปลี่ยน), listDiscordRoleTargets, setRolesCopy (~1300 tok)
 - `orgMemberRoles.live.test.js` — web/lib/__tests__/orgMemberRoles.live.test.js — live test ทางเขียนขั้น 5: resync idempotent, ถอด/ใส่ยศแล้วสิทธิ์ขยับจริง, syncRoleDefFromGuildRole นิ่ง, source web/discord ไม่ทับกัน (~900 tok)
 - `PersonalWatermarks.jsx` — components/org/PersonalWatermarks.jsx ลายน้ำส่วนตัว ยกมาจาก WatermarkPanel เดิม (~1600 tok)
 - `watermarkPaths.js` — services/watermarkPaths.js ตัวแปลง guild→org / discord→users.id สำหรับโฟลเดอร์ลายน้ำฝั่งบอท (cache 5 นาที) (~900 tok)
+
+## web/public/uploads/evidence/groups/
+
+- `route.js` — web/app/api/social/groups/route.js — GET กลุ่ม+ค่าที่ตั้งไว้ · PATCH fan-out guild_id/news_channel_id ทุกแถวของกลุ่ม (id = ANY จาก listPublishGroups ห้าม WHERE group_name) (~1400 tok)
+
+## web/public/uploads/evidence/news-channels/
+
+- `route.js` — web/app/api/social/news-channels/route.js — ห้องข่าวที่ลงทะเบียนไว้ที่ /bot ของทุกเซิร์ฟใน org (+ชื่อห้องสดจาก Discord) ให้ modal ผูกห้องเลือก (~600 tok)

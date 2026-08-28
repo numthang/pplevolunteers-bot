@@ -217,3 +217,4 @@ cd web && npm run test:watch  # watch mode
 ## ⛔ Off-limits
 
 - `.env` — ห้ามอ่านหรือแสดงค่า ยกเว้น key ที่ขึ้นต้นด้วย `DB_` (เช่น `DB_HOST`, `DB_USER`, `DB_PASS`, `DB_NAME`) อนุญาตให้อ่านเพื่อ debug local ได้
+  - Technically enforced, not just a written rule — see `.claude/settings.json` (`permissions.deny` on `Read`) และ `.claude/hooks/block-env-dump.js` (บล็อกคำสั่ง `Bash` ที่จะ dump เนื้อไฟล์). Ported 2026-08-28 จาก civicflow repo หลังเกิดเหตุ `tail -3 .env.local` หลุด service-role key จริงเข้า transcript ที่นั่น — กฎเขียนไว้เฉยๆ ไม่กันเคสที่คำสั่งมีเป้าหมายอื่นแต่ดันกวาดโดนบรรทัด secret ไปด้วย

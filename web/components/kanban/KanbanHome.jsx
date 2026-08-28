@@ -340,6 +340,8 @@ export default function KanbanHome() {
   // พับ/กางรายกอง — มีผลเฉพาะจอต่ำกว่า xl (จอใหญ่เป็นคอลัมน์ กางเสมอ)
   // ค่าที่ไม่ได้กดเอง = auto: กองที่มีการ์ดกางไว้ กองว่างพับเก็บ
   const [openState, setOpenState] = useState({})
+  // กด "โหลดเพิ่ม" แล้วโชว์อีก MAX_PER_COLUMN ใบต่อกอง — ไม่ยิง API ใหม่ การ์ดทั้งหมดอยู่ใน cards แล้ว
+  const [extraShown, setExtraShown] = useState({})
   const [claimingId, setClaimingId] = useState(null)
   const [restoringId, setRestoringId] = useState(null)
   const [purgingId, setPurgingId] = useState(null)
@@ -1349,7 +1351,7 @@ export default function KanbanHome() {
         <div className={`flex flex-col gap-3 xl:grid xl:gap-2 ${groupBy === 'due' ? 'xl:grid-cols-5' : 'xl:grid-cols-6'}`}>
           {groups.map(({ key, cards: list }) => {
             const sorted = sortCardsBy(list, sort)
-            const shown = sorted.slice(0, MAX_PER_COLUMN)
+            const shown = sorted.slice(0, MAX_PER_COLUMN + (extraShown[key] || 0))
             const isOpen = openState[key] ?? sorted.length > 0
             const head = groupBy === 'due' ? t(`due.${key}`) : t(`status.${key}`)
             return (
@@ -1453,9 +1455,13 @@ export default function KanbanHome() {
                     />
                   ))}
                   {sorted.length > shown.length && (
-                    <p className="text-sm text-warm-400 dark:text-disc-muted px-1">
+                    <button
+                      type="button"
+                      onClick={() => setExtraShown((s) => ({ ...s, [key]: (s[key] || 0) + MAX_PER_COLUMN }))}
+                      className="text-sm text-teal hover:underline px-1 py-1 text-left"
+                    >
                       {t('board.moreCards', { count: sorted.length - shown.length })}
-                    </p>
+                    </button>
                   )}
                   {sorted.length === 0 && (
                     <p className="text-sm text-warm-400 dark:text-disc-muted px-1 py-3 text-center">
