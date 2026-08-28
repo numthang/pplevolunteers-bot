@@ -23,11 +23,10 @@
  *   --limit <n>        ทำแค่ n กระทู้แรกที่ยังไม่มีเคส (ลองน้ำก่อนเทหมด)
  *   --since <YYYY-MM-DD>  เอาเฉพาะกระทู้ที่ตั้งตั้งแต่วันนั้น
  *   --years <n>        ทางลัดของ --since = วันนี้ลบ n ปี   (ไม่ใส่ = ทุกปี)
- *   --province <ชื่อ>  บังคับจังหวัดของเคสที่สร้าง (ไม่ใส่ = อ่านจาก dc_guild_config `case_default_province`)
- *                      ⚠️ **เช็คก่อนรันจริงทุกครั้ง** — ไม่มีค่าตั้งไว้ = ได้ 'ไม่ระบุ' ทั้งชุด
- *                      จังหวัดคุมทั้ง ref (`70-69-XXXX` vs `00-69-XXXX`) และ **ใครเห็นการ์ด/เคสบ้าง**
- *                      (สิทธิ์มองเห็นกรองด้วยจังหวัด) → ตั้งผิด = ทีมพื้นที่ไม่เห็นเคสของตัวเอง
+ *   --province <ชื่อ>  **บังคับใส่** — จังหวัดของเคสทุกใบที่รอบนี้จะสร้าง
+ *                      ไม่ใส่ = ไม่ยอมรัน (ไม่มีค่าตั้งต้น ไม่ไปอ่านค่าจากที่ไหนทั้งนั้น)
  *   --guild <id>       จำกัด guild เดียว (ไม่ใส่ = ทุก guild ที่มีแถวใน case_config)
+ *                      ⚠️ ถ้ามีหลาย guild ใน scope ต้องระบุ --guild — กันจังหวัดเดียวไปปั๊มทับข้าม guild
  *   --forum <id>       เจาะ forum อื่นที่ไม่ใช่ค่าใน case_config (ต้องใส่ --guild คู่กัน)
  *   --ai               **ยิง AI ให้** (ค่าเริ่มต้นคือไม่ยิง) — 3 ครั้ง/กระทู้
  *                      ไม่ยิง = หัวข้อ = ชื่อกระทู้ · เนื้อหา = ข้อความแรกของกระทู้ · ไม่มี timeline
@@ -71,7 +70,34 @@ const USE_AI = has('ai');
 const LIMIT = Number(arg('limit', 0)) || 0;
 const GUILD_FILTER = arg('guild', null);
 const FORUM_OVERRIDE = arg('forum', null);
-const PROVINCE_OVERRIDE = arg('province', null);
+
+/**
+ * ⭐ จังหวัด = **input ของคำสั่ง ไม่ใช่ค่าที่ไปดูดมาจาก DB** (user เคาะ 2026-08-29)
+ *
+ * เดิมสคริปต์อ่าน `dc_guild_config` key `case_default_province` เป็นค่าตั้งต้นเงียบๆ
+ * → คำสั่งเดียวกันให้ผลไม่เหมือนกันขึ้นกับค่าที่ **มองไม่เห็นและไม่มีหน้าจอให้ดู**
+ *   (key นั้นไม่มี UI ตั้งค่าเลยตั้งแต่เกิดเมื่อ 27 มิ.ย. — user ไม่เคยรู้ว่ามีอยู่)
+ * นี่เป็น backfill ที่คนสั่งเองทีละครั้ง ค่าที่กำหนดผลลัพธ์ต้องอยู่ในคำสั่งให้เห็นกับตา
+ *
+ * ⛔ ห้ามใส่ค่าตั้งต้นกลับมา และห้ามให้มัน fallback ไป 'ไม่ระบุ' เงียบๆ —
+ *    'ไม่ระบุ' ทำให้ ref ขึ้นต้น 00 และคนที่ scope เป็นรายจังหวัด **มองไม่เห็นเคสเลยสักใบ**
+ */
+const PROVINCE = (() => {
+  const raw = arg('province', null);
+  if (!raw) {
+    console.error('❌ ต้องระบุ --province <ชื่อจังหวัด> เสมอ — สคริปต์นี้ไม่มีค่าตั้งต้นและไม่อ่านค่าจาก DB');
+    console.error('   เช่น: node scripts/data/backfillCaseThreads.js --dry-run --province ราชบุรี --guild 1111998833652678757');
+    process.exit(1);
+  }
+  // ผ่าน normalizeProvinceName เพื่อรับ alias (กทม/กรุงเทพฯ → กรุงเทพมหานคร) และตัดชื่อมั่วทิ้งตั้งแต่ต้น
+  // พิมพ์ผิดแล้วปล่อยผ่าน = ref ขึ้นต้น 00 ทั้งชุดโดยไม่มีใครรู้ (เจอตอนซ้อม dev 2026-08-29)
+  const canonical = require('../../db/case').normalizeProvinceName(raw);
+  if (!canonical) {
+    console.error(`❌ ไม่รู้จักจังหวัด "${raw}" — ต้องเป็นชื่อทางการใน config/province-codes.json`);
+    process.exit(1);
+  }
+  return canonical;
+})();
 
 const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
 
@@ -251,18 +277,20 @@ async function complainantNameOf(guildId, ownerId) {
   }
   if (!configs.length) { console.log('ไม่มี guild ที่ตั้งค่า case_config'); await pool.end(); return; }
 
+  // ⛔ จังหวัดเดียวปั๊มข้ามหลาย guild = ปั้นข้อมูลผิดเงียบๆ (ราชบุรีกับอาสาประชาชนคนละพื้นที่)
+  //    บังคับให้เลือก guild เองเมื่อมีมากกว่า 1 — ยอมให้พิมพ์เพิ่ม ดีกว่าได้เคสติดจังหวัดผิดทั้งชุด
+  if (configs.length > 1) {
+    console.error(`❌ มี ${configs.length} guild ใน case_config แต่ --province ใช้ได้ทีละจังหวัด`);
+    console.error('   ระบุ --guild <id> ให้ชัด แล้วรันทีละ guild:');
+    for (const c of configs) console.error(`     --guild ${c.guild_id}   (forum ${c.forum_channel_id})`);
+    await pool.end();
+    return;
+  }
+
   let totalNew = 0, totalSkip = 0, totalErr = 0;
 
   for (const { guild_id, forum_channel_id } of configs) {
-    const province = PROVINCE_OVERRIDE || (await pool.query(
-      `SELECT value FROM dc_guild_config WHERE guild_id = $1 AND key = 'case_default_province'`,
-      [guild_id],
-    )).rows[0]?.value || 'ไม่ระบุ';
-    if (province === 'ไม่ระบุ') {
-      // console.log ไม่ใช่ console.warn — warn ลง stderr แล้วสลับลำดับกับบรรทัด progress ตอน pipe
-      console.log('  ⚠️ ไม่มี case_default_province ของ guild นี้ → เคสทั้งชุดจะเป็น "ไม่ระบุ"'
-        + ' (ref ขึ้นต้น 00 + คนที่กรองด้วยจังหวัดจะไม่เห็น) · ใส่ --province <ชื่อจังหวัด> ถ้าไม่ต้องการแบบนี้');
-    }
+    const province = PROVINCE;   // มาจาก --province เท่านั้น (ดูเหตุผลตรงที่ประกาศ PROVINCE)
 
     console.log(`\nGuild ${guild_id} · forum ${forum_channel_id} · province=${province}`);
 
