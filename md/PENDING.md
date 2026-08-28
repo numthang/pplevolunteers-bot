@@ -405,58 +405,60 @@ node scripts/data/backfillPostThreads.js --dry-run --years 1         # ดูย
 
 ---
 
-## 📥 ต่อไป: `backfillCaseThreads.js` (session หน้า — user นัดไว้ 2026-08-28)
+## 📥 `backfillCaseThreads.js` — ✅ ซ้อม dev ผ่าน 2026-08-28 · **prod ยังไม่รัน**
 
-กวาดกระทู้เก่าใน complaint forum → `cases` แบบเดียวกับที่เพิ่งทำกับ posts
+กวาดกระทู้เก่าใน complaint forum → `cases` แบบเดียวกับที่ทำกับ posts
+สคริปต์ถูกยกเครื่องแล้ว (commit `31726ca`) — เหตุผลของทุกการตัดสินใจอยู่ในหัวไฟล์ ไม่ต้อง re-derive
 
-### ⛔ ข้อแตกต่างสำคัญที่ต้องคิดก่อนลงมือ — **อย่าลอกแผนของ posts มาทั้งดุ้น**
+**ผลซ้อมบน dev (ของจริงจาก Discord แต่เขียนลง DB dev):** 183 กระทู้ → `new=182 skip=1 err=0`
+รันซ้ำอีกรอบได้ `skip=183` (idempotent ที่ `discord_thread_id`) · การ์ด kanban เกิดครบ 185 ใบ
+ยอดต่อห้อง: **ราชบุรี 179** (2023:71 · 2024:48 · 2025:30 · 2026:30) · **อาสาประชาชน 4**
 
-1. **`case_config` บน dev ว่าง (0 แถว) — แต่ "เทส dev ไม่ได้" อาจไม่จริง ยังไม่ได้ลอง**
+### user เคาะแล้ว 2026-08-28
 
-   ตารางนี้เล็กมาก 3 คอลัมน์ (`guild_id` · `forum_channel_id` · `updated_at`) = **`FORUMS` เวอร์ชัน
-   เก็บใน DB** · `backfillCaseThreads.js` อ่านจากที่นี่แทน hardcode
-   ([บรรทัด 118](../scripts/data/backfillCaseThreads.js#L118)) เจอ 0 แถวก็ **จบทันทีโดยไม่ทำอะไร
-   ไม่ใช่ error** แค่ไม่มีงานให้ทำ · ที่ว่างเพราะไม่เคยมีใครตั้งค่าผ่านคำสั่งบอทบน dev
+| เรื่อง | ที่เคาะ |
+|---|---|
+| สถานะเคสเก่า | **`open` ทุกใบ** (ไม่มีท่าซ่อน — `cases` ไม่มี `created_via`) → กอง **"รอทำ"** ใน kanban ทั้ง 183 ใบ |
+| AI | **ไม่ยิง** (ค่าตั้งต้นของสคริปต์แล้ว) — หัวข้อ=ชื่อกระทู้ · เนื้อหา=ข้อความแรก · ค่อยกดสรุปทีละใบในเว็บ |
+| ช่วงปี | **ทั้งหมด** ตั้งแต่ 2023 |
 
-   → **ทางที่น่าจะรอด: INSERT 1 แถวลง `case_config` บน dev ชี้ complaint forum จริง** แล้วซ้อมได้
-   เหมือนที่เพิ่งทำกับ posts (บอท Tester อยู่ในราชบุรี+อาสาประชาชนอยู่แล้ว ดึงกระทู้จริงได้)
+### ⚠️ ก่อนรันบน prod — 2 อย่างที่ dev ตอบให้ไม่ได้
 
-   **✅ เช็คแล้ว 2026-08-28 — ซ้อม dev ได้ ทั้ง 2 ห้องบอท Tester อ่านเห็น:**
+1. **จังหวัด** — dev ไม่มี `case_default_province` เลยได้ `'ไม่ระบุ'` ทั้งชุด (ref ขึ้นต้น `00-`)
+   จังหวัดคุมทั้ง ref และ **สิทธิ์การมองเห็น** (`visibleLinkSql` กรองด้วยจังหวัด) → ตั้งผิด = ทีมพื้นที่ไม่เห็นเคสตัวเอง
+   เช็คบน prod ก่อน: `SELECT * FROM dc_guild_config WHERE key='case_default_province';`
+   ไม่มีค่า → ใส่ `--province ราชบุรี` เอง (สคริปต์เตือนให้ตอนรันด้วย)
+2. **429** — prod แย่งโควตากับบอทตัวจริงที่รันตลอด (dev ไม่เจอเพราะบอท Tester นั่งเฉยๆ)
+   ใส่ retry ไว้แล้ว แต่แปลว่า **เวลารันจริงจะนานกว่า dev**
 
-   | guild | complaint forum |
-   |---|---|
-   | `1111998833652678757` ราชบุรี | `1126216465406767104` #💬┆กระทู้-เรื่องร้องเรียน |
-   | `1340903354037178410` อาสาประชาชน | `1341945560072192121` #💬┆กระทู้-เรื่องร้องเรียน |
+### ลำดับรันบน prod (ทุกคำสั่ง `sudo -u www`)
 
-   ```sql
-   -- รันบน dev เพื่อปลดล็อกการซ้อม (prod มีค่าอยู่แล้ว ห้ามรันทับ)
-   INSERT INTO case_config (guild_id, forum_channel_id, updated_at) VALUES
-     ('1111998833652678757', '1126216465406767104', now()),
-     ('1340903354037178410', '1341945560072192121', now())
-   ON CONFLICT (guild_id) DO NOTHING;
-   ```
+```bash
+# 0) ไม่ต้องมี migration และไม่ต้อง deploy เว็บก่อน — สคริปต์นี้ไม่พึ่งคอลัมน์ใหม่สักตัว
+sudo -u www bash -c 'cd /www/wwwroot/pple-volunteers && git pull'
+sudo -u www bash -c 'cd /www/wwwroot/pple-volunteers && node scripts/data/backfillCaseThreads.js --dry-run'
+# 1) ลองน้ำ 3 ใบก่อน แล้วเปิดดูใน /case + kanban
+sudo -u www bash -c 'cd /www/wwwroot/pple-volunteers && node scripts/data/backfillCaseThreads.js --limit 3'
+# 2) เทหมด
+sudo -u www bash -c 'cd /www/wwwroot/pple-volunteers && node scripts/data/backfillCaseThreads.js'
+```
 
-### 📌 forum งานสื่อที่ยัง**ไม่ได้**กวาด (เจอตอนไล่ห้อง 2026-08-28 — ยังไม่ได้ถาม user)
+**rollback** = ลบตามช่วงเวลา + `source='discord'` (ไม่มีป้าย `created_via` ให้เกาะเหมือน posts)
+แล้ว**ต้องลบการ์ด kanban เองด้วย** — `kanban_card_links` ไม่มี FK ไป `cases` (ดู SQL เต็มในหัวไฟล์สคริปต์)
 
-ราชบุรีมีห้องสื่ออีก 3 ห้องที่ไม่ได้อยู่ใน `FORUMS` — ไว้ตัดสินใจว่าจะเอาด้วยไหม:
-`1235950234173968414` #สื่อ-บ้านโป่ง · `1325468743563743334` #กระทู้สื่อ-เลือกตั้ง-สจ ·
-`1442540005292511364` #🔥┆สื่อ-เลือกตั้ง69
-(เช็คยอดก่อนด้วย `--dry-run --guild <id> --forum <id>` ใช้เวลาไม่กี่วินาที)
-2. **`cases` ไม่มีคอลัมน์ `created_via`** — ท่า "ซ่อนของเก่าจากฟีด" ที่ใช้กับ posts **ใช้ไม่ได้ตรงๆ**
-   ต้องคิดใหม่ว่าเคสเก่าจะไปกองไหนของ `/case` และจะแยกจากเรื่องร้องเรียนที่ยัง active ยังไง
-3. **สถานะการ์ด kanban มาจาก `cases.status`** ไม่ใช่ค่า cache — `CASE_STATUS` แม็ป
-   open→backlog · in_progress→doing · resolved/closed→done · rejected→cancelled
-   ([web/db/kanban/statusSql.js](../web/db/kanban/statusSql.js)) → **ต้นทางทับเสมอ ตั้ง `--status` ไม่มีผล**
-   (ต่างจาก posts ที่ draft คืน NULL แล้วปล่อยให้การ์ดถือสถานะเอง)
-   → เคสเก่าจะไปกองไหนขึ้นกับว่า `status` ของมันเป็นอะไร ต้องดูข้อมูลจริงก่อน
-4. เคสมี **PII ของผู้ร้อง** + `visibleLinkSql` กรองด้วยจังหวัด — กระทบว่าใครเห็นการ์ดบ้าง
+### 📌 forum งานสื่อที่ยัง**ไม่ได้**กวาด (เจอตอนไล่ห้อง 2026-08-28)
 
-### ที่ยกมาใช้ซ้ำได้เลย
+ราชบุรีเหลือ `1325468743563743334` #กระทู้สื่อ-เลือกตั้ง-สจ — **user ไม่เอา** (อีก 2 ห้องเอาแล้ว อยู่ใน `FORUMS`)
 
-- `--dry-run` ถูกมาก (561 กระทู้ = 9 วินาที) → รันก่อนทุกครั้ง ทุกครั้งที่เปลี่ยน flag
-- retry 429 ใน `discordFetch` — **ตัวของ cases ยังไม่มี ต้องยกไปใส่** (bug-184)
-- rollback = ลบตามป้าย ไม่ใช่ restore (สคริปต์ INSERT อย่างเดียว)
-- ลำดับ prod: migration → deploy เว็บ → dry-run → รันจริง · ทุกคำสั่ง `sudo -u www`
+### เกร็ดที่ยังจริงอยู่
+
+- `case_config` = `FORUMS` เวอร์ชันเก็บใน DB (3 คอลัมน์) · dev ว่างเปล่าเพราะไม่เคยตั้งผ่านคำสั่งบอท
+  → session นี้ INSERT 2 แถวลง dev ไปแล้ว (ราชบุรี `1126216465406767104` · อาสาฯ `1341945560072192121`)
+  ⛔ **prod มีค่าอยู่แล้ว ห้ามรันทับ**
+- **สถานะการ์ด kanban มาจาก `cases.status` เสมอ** ([statusSql.js](../web/db/kanban/statusSql.js)) —
+  open→backlog · in_progress→doing · resolved/closed→done · rejected→cancelled
+  ต้นทางทับ cache เสมอ → จะย้ายกองต้องเปลี่ยนสถานะที่เคส ไม่ใช่ลากการ์ด
+- `--dry-run` ถูกมาก (183 กระทู้ = ไม่กี่วินาที) → รันก่อนทุกครั้งที่เปลี่ยน flag
 
 ### ✅ แทนที่ด้วย: hook ฝั่งบอท — ของ**ปัจจุบัน**มีการ์ดทันที (2026-08-25)
 
@@ -482,12 +484,14 @@ node scripts/data/backfillPostThreads.js --dry-run --years 1         # ดูย
 ⛔ **ตัวขวางตอนนี้: เครดิต Anthropic API หมด** — `Your credit balance is too low` ทั้ง 4 ครั้งที่ลอง
 ทางเลือก: เติมเครดิต · หรือเพิ่มโหมด `--no-ai` (title = ชื่อกระทู้ · body = ข้อความดิบ แล้วให้คนขัดทีหลัง)
 
-⚠️ **ทั้ง 2 สคริปต์ไม่มี hook เข้า kanban** → ต้องรัน `scripts/kanban/backfillEntityCards.mjs` ตามหลังเสมอ
+⛔ **บรรทัดล่างนี้ล้าสมัยแล้ว** (แก้ 2026-08-28) — ทั้ง 2 สคริปต์ **มี hook เข้า kanban ในตัวแล้ว**
+ผ่าน `mirrorEntityCardFromBot()` · `backfillEntityCards.mjs` เป็นแค่ตาข่ายตามเก็บ ไม่ใช่ขั้นบังคับ
+~~ทั้ง 2 สคริปต์ไม่มี hook เข้า kanban → ต้องรัน `scripts/kanban/backfillEntityCards.mjs` ตามหลังเสมอ~~
 · 556 โพสต์ + เคส ยังไม่ชน `CARD_HARD_CAP = 3000`
 
 🐛 **bug-446 (แก้แล้ว)** — `before=<ISO8601>` ไม่ได้ `encodeURIComponent` → `+00:00` ถูกอ่านเป็นช่องว่าง
 Discord ตอบ 400 แล้ว loop `break` ออกกลางคัน **ไม่ crash แค่ได้ข้อมูลไม่ครบ**
-forum เดียวกัน: 109 กระทู้ก่อนแก้ / 481 หลังแก้ (หาย 77%) · `backfillCaseThreads.js` มีบั๊กนี้มาตลอดแต่ยังไม่เคยรันเลยไม่มีใครเจอ
+forum เดียวกัน: 109 กระทู้ก่อนแก้ / 481 หลังแก้ (หาย 77%) · `backfillCaseThreads.js` แก้ตามแล้วและ **รันซ้อมบน dev สำเร็จ 2026-08-28** (183 กระทู้)
 
 </details>
 
