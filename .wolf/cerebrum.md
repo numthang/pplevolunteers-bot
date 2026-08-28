@@ -116,6 +116,9 @@
 
 ## Key Learnings
 
+- **sharp: `.resize()` ทำก่อน `.composite()` เสมอในไปป์ไลน์เดียวกัน** — ต่อ `.resize()` ท้าย composite จะย่อ "ผืน" ก่อน แล้วรูปที่จะวางทับกลายเป็นใหญ่กว่า → `Image to composite must have same dimensions or smaller` · ต้องย่อผืนกับตัวรูปให้พอดีก่อนแล้วค่อย composite (bug-462)
+- **sharp `metadata()` ไม่สน `autoOrient: true`** (0.34) — คืนขนาดก่อนหมุนเสมอ · EXIF orientation 5-8 = รูปตะแคง ต้องสลับ w/h เองก่อนคำนวณสัดส่วน (แต่ `toBuffer()` หมุนให้จริง) (bug-462)
+- **Instagram feed/carousel รับสัดส่วน 4:5 (0.8) – 1.91:1 เท่านั้น** หลุดกรอบ = `IG API: The aspect ratio is not supported` · carousel บังคับทุกใบสัดส่วนเดียวกันโดยยึดใบแรก แล้ว IG ครอบใบที่เหลือทิ้งเอง → `fitImagesForIg()` ใน `services/metaApi.js` เติมขอบเบลอให้เข้ากรอบ + ดันทุกใบให้เท่าใบแรกก่อนยิง (user เคาะ "เติมขอบเบลอ ไม่ครอบ" 2026-08-28)
 - **Project:** my-discord-bot
 - **PG `array_agg(...) FILTER (WHERE ...)` คืน `null` ไม่ใช่ `[]`** เมื่อไม่มีแถวตรง condition → ต้อง `(x || [])` ก่อน `.filter/.map` เสมอ (bug-017)
 - **dc_guild_roles แยก permission กับ scope_node คนละ row:** role "ผู้ประสานงานจังหวัด" ถือ permission `province_coordinator` (scope=null), role "ทีมนครปฐม" ถือ `scope:province:นครปฐม` (permission=null) — query หา "member ที่มี permission X + scope ครอบจังหวัด" ต้องแยก 2 ขั้น (has_permission CTE ก่อน แล้ว agg scope ทุก role ทีหลัง) ห้าม filter permission+scope ใน row เดียว

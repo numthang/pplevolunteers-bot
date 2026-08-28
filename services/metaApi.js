@@ -2,6 +2,7 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const sharp = require('sharp');
 const { fetchBuffer } = require('../utils/watermarkImage');
 const { convertVideoIfNeeded } = require('../utils/videoUtils');
 const { splitLinks } = require('./linkToComment');
@@ -489,13 +490,81 @@ function saveProcessedToTemp(images) {
   });
 }
 
+// ─── IG aspect ratio ──────────────────────────────────────────────────────────
+// IG feed/carousel รับสัดส่วน 4:5 ถึง 1.91:1 เท่านั้น หลุดกรอบ = "IG API: The aspect ratio is not supported"
+// ตัวแก้รูปในเว็บครอบอิสระได้ → หลุดกรอบบ่อย · เลือกวิธี "เติมขอบด้วยพื้นหลังเบลอจากรูปเดิม"
+// (user เคาะ 2026-08-28) แทนการครอบกลาง เพราะไม่เสียเนื้อภาพ
+// ⚠️ carousel: IG บังคับทุกใบสัดส่วนเดียวกันโดยยึดใบแรก แล้วครอบใบที่เหลือทิ้งเอง
+//    → ปรับทุกใบให้เท่าใบแรกตั้งแต่ที่นี่ จะได้เห็นเต็มใบทุกใบ
+const IG_MIN_RATIO = 4 / 5;
+const IG_MAX_RATIO = 1.91;
+const IG_MAX_WIDTH = 1440;  // IG ย่อลงเท่านี้อยู่แล้ว — ย่อเองก่อนให้ไฟล์ temp เล็กลง
+const IG_RATIO_EPS = 0.005; // ต่างกันไม่ถึง 0.5% ถือว่าตรงแล้ว กันเติมขอบ 1px จากการปัดเศษ
+
+const clampIgRatio = r => Math.min(IG_MAX_RATIO, Math.max(IG_MIN_RATIO, r));
+
+// คืนรูปใหม่ที่สัดส่วน = target · ไม่ต้องแก้ก็คืนตัวเดิม (ไม่ re-encode ทิ้งคุณภาพฟรีๆ)
+async function fitImageForIg(img, target) {
+  const src = sharp(img.buffer, { autoOrient: true });
+  const meta = await src.metadata();
+  // metadata() คืนขนาด "ก่อนหมุน" เสมอ (autoOrient ไม่มีผลกับมัน · sharp 0.34) — EXIF 5-8 = รูปตะแคง
+  // ต้องสลับ w/h เอง ไม่งั้นรูปแนวนอนที่ถ่ายมาตะแคงจะถูกมองว่าสูงเกินแล้วเติมขอบทิ้งฟรีๆ
+  const width = meta.orientation >= 5 ? meta.height : meta.width;
+  const height = meta.orientation >= 5 ? meta.width : meta.height;
+  if (!width || !height) return img;
+
+  const ratio = width / height;
+  if (Math.abs(ratio - target) / target <= IG_RATIO_EPS) return img;
+
+  const cw = ratio < target ? Math.round(height * target) : width;
+  const ch = ratio < target ? height : Math.round(width / target);
+
+  // ⚠️ ห้ามต่อ .resize() ท้าย composite — sharp ทำ resize ก่อน composite เสมอ
+  //    ตัวรูปจะใหญ่กว่าผืนที่ย่อแล้ว → "Image to composite must have same dimensions or smaller"
+  //    จึงย่อผืนกับตัวรูปให้พอดีก่อน แล้วค่อยวางทับ (เข้ารหัส jpeg รอบเดียว)
+  const scale = Math.min(1, IG_MAX_WIDTH / cw);
+  const fw = Math.round(cw * scale), fh = Math.round(ch * scale);
+
+  const base = await src.toBuffer(); // auto-orient แล้ว ใช้ซ้ำทั้งพื้นหลังและตัวรูป
+  const inner = scale < 1 ? await sharp(base).resize(fw, fh, { fit: 'inside' }).toBuffer() : base;
+  const bg = await sharp(base)
+    .resize(fw, fh, { fit: 'cover' })
+    .blur(Math.max(12, Math.round(Math.min(fw, fh) / 25)))
+    .modulate({ brightness: 0.85 }) // หรี่ลงหน่อยให้ตัวรูปเด่นกว่าพื้นหลัง
+    .toBuffer();
+
+  const buffer = await sharp(bg).composite([{ input: inner, gravity: 'center' }]).jpeg({ quality: 92 }).toBuffer();
+  console.log(`[IG fit] ${width}x${height} (${ratio.toFixed(2)}) → ${fw}x${fh} (${target.toFixed(2)}) เติมขอบเบลอ`);
+  return { buffer, ext: 'jpg' };
+}
+
+async function fitImagesForIg(images) {
+  if (!images.length) return images;
+  let target = 1;
+  try {
+    const f = await sharp(images[0].buffer, { autoOrient: true }).metadata();
+    const fw = f.orientation >= 5 ? f.height : f.width;   // ตะแคงตาม EXIF — ดูหมายเหตุใน fitImageForIg
+    const fh = f.orientation >= 5 ? f.width : f.height;
+    if (fw && fh) target = clampIgRatio(fw / fh);
+  } catch (e) {
+    console.error('[IG fit] อ่านขนาดรูปใบแรกไม่ได้ ใช้ 1:1:', e.message);
+  }
+  const out = [];
+  for (const img of images) {
+    // ปรับไม่ได้ก็ส่งของเดิมไป ให้ IG เป็นคนบอกว่าไม่รับ ดีกว่าโพสต์ล้มทั้งงานตรงนี้
+    try { out.push(await fitImageForIg(img, target)); }
+    catch (e) { console.error('[IG fit] ข้ามรูปที่ปรับไม่ได้:', e.message); out.push(img); }
+  }
+  return out;
+}
+
 async function postToInstagram(guildId, userId, images, caption, scheduleTime = null, onProgress = null, groupName = null, accountId = null) {
   const cfg = await getConfig(guildId, 'ig', userId, groupName, accountId);
   if (!cfg) throw new Error('ไม่พบ Instagram config สำหรับ guild นี้');
   if (!TEMP_URL.startsWith('http')) {
     throw new Error(`META_TEMP_URL หรือ WEB_BASE_URL ไม่ได้ set — ตอนนี้ TEMP_URL="${TEMP_URL}" ซึ่ง Instagram เข้าไม่ได้`);
   }
-  const urls = saveProcessedToTemp(images);
+  const urls = saveProcessedToTemp(await fitImagesForIg(images));
   return _igPostFromUrls(cfg, urls, caption, scheduleTime, onProgress);
 }
 
@@ -868,4 +937,4 @@ async function refreshExpiringTokens() {
   return { ok, failed, dead };
 }
 
-module.exports = { getConfig, getConfigById, getAvailablePlatforms, getAvailableGroups, getGuildMetaApp, refreshExpiringTokens, saveMediaToTemp, cleanTempMedia, postToFacebook, postToInstagram, postToThreads, postReelsToInstagram, postReelsToFacebook, postReelsToThreads };
+module.exports = { fitImagesForIg, getConfig, getConfigById, getAvailablePlatforms, getAvailableGroups, getGuildMetaApp, refreshExpiringTokens, saveMediaToTemp, cleanTempMedia, postToFacebook, postToInstagram, postToThreads, postReelsToInstagram, postReelsToFacebook, postReelsToThreads };
