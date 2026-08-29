@@ -5,6 +5,7 @@ node_modules/
 !.wolf/anatomy.md
 !.wolf/STATUS.md
 !.wolf/buglog.json
+!.wolf/OPENWOLF.md
 pgloader.load
 backups/
 /logs/
