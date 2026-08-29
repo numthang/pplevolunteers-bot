@@ -1,0 +1,82 @@
+---
+description: session handoff, regenerate with /handoff when a quest finishes
+budget_tokens: 1000
+---
+# STATUS — pple-volunteers
+
+> อ่านไฟล์นี้ก่อนเสมอเมื่อเริ่ม session ใหม่ · อัปเดตทุกครั้งที่จบก้อนงาน
+> Last updated: 2026-08-29
+
+---
+
+## ✅ Done
+
+### รอบล่าสุด (2026-08-29 · commit `c6a8433` → `a2f5b7f`)
+- **owner แก้ข้อมูลเข้าสู่ระบบให้สมาชิกที่ล็อกตัวเองออกจาก Discord ได้** — email/phone/verified
+  แก้จาก `/org` settings **และ** จาก person-profile modal ใน kanban (component กลาง
+  `web/components/org/IdentityEditor.jsx` · ย้าย `PersonProfileModal.jsx` จาก `kanban/` → `org/`)
+  ทั้งสองฟิลด์ต้องมีหลักฐานก่อนเขียน (phone = SMS OTP · email = verify-link) — ไม่ใช่ทางปลอม credential
+- `/api/kanban/people/[id]` **ตัด 3 ฟิลด์ PII ทิ้งถ้าผู้เรียกไม่ใช่ owner** (endpoint นี้สมาชิกทุกคนเรียกได้)
+- ยุบ "ค้นหาสมาชิก" + "แต่งตั้งบทบาท" (เดิม 2 ช่องค้น 2 API) เป็นลิสต์เดียว + เพิ่ม audit log ให้ role change/remove (เดิมไม่มีเลย)
+- `scripts/migration/migration.sql` **รันทั้งไฟล์ซ้ำได้แล้ว** (ห่อ IF EXISTS / DO $$) · `org-scope/09-*.sql` เลิก SELECT `org_id` ที่ยังไม่ถูกสร้างในไฟล์นั้น
+- vitest 486/486 ผ่าน · compile ผ่านบน dev :3100
+
+### ก่อนหน้า (ยังต้องจำ)
+- Backfill กระทู้สื่อ → posts+kanban **ขึ้น prod แล้ว** 708 ใบ (พลาด 1 ใบจาก Discord 429)
+- Docs — ผู้รับเงินคนนอก + โหมดการเซ็น: code เสร็จ **ยังไม่ push ยังไม่ deploy** · migration ลง dev แล้ว **prod ยังไม่รันสักก้อน**
+
+---
+
+## 🚀 Next quest
+
+**Goal:** timeline เคสที่ AI สกัดออกมา "ไม่ละเอียดพอ" — ทำให้ได้เนื้อครบใจความ
+
+### Files
+| File | ทำอะไร |
+|---|---|
+| `config/aiPrompts.js:165` | prompt `case.timeline` — ปรับกฎ `body` ให้ยาว/ละเอียดขึ้น |
+| `web/app/api/case/[ref]/timeline/refresh/route.js:100` | `maxTokens: 1024` → เพิ่ม (ตัวจำกัดจริงที่ทำให้ event ขาด) |
+| `web/components/case/CaseTimeline.jsx:12` | `LONG_BODY_LENGTH = 180` → เพิ่ม ไม่งั้น body ยาวขึ้นแล้วโดนตัด `…` หมด |
+
+### Acceptance criteria
+1. กด refresh timeline บนเคสที่มีเธรด Discord จริง แล้ว event มีบริบท เหตุ→ดำเนินการ→ผลลัพธ์ ครบ ไม่ใช่ประโยคห้วน
+2. body ยาวขึ้นแล้วยังอ่านได้ในหน้าเคส (ไม่โดน truncate ทันทีทุกใบ)
+3. ของเดิมใน DB ไม่หาย และกดซ้ำไม่ได้ timeline ซ้อน
+
+### ⚠️ Open decision — ต้องเคาะก่อนลงมือ
+**จะ reset timeline เก่ายังไง** — prompt ใหม่ไม่มีผลกับ event ที่สกัดไปแล้ว เพราะ:
+- route ใช้ **watermark** `cases.last_synced_message_id` → ข้อความที่ sync ไปแล้วไม่ถูกอ่านซ้ำ
+- ต้องถอย watermark **และ** ลบ event เก่า แต่ `case_timeline` ปนกัน 2 source: `'ai'` กับที่คนพิมพ์เอง
+- → ตัวเลือก: ลบเฉพาะ `source='ai'` + reset watermark ต่อเคส (ปุ่มใน UI? script?) — **ยังไม่เคาะ ถาม user ก่อน**
+
+---
+
+## 📁 Context
+
+- **Branch `master`, working tree สะอาด** · commit ล่าสุด `a2f5b7f` · **ยังไม่ push**
+- **`.wolf/STATUS.md` อยู่ใน .gitignore** — handoff รอบก่อนหายตอนย้ายเครื่อง เนื้อหาถูกกู้จาก commit message `a2f5b7f`
+- **ห้ามรายงานสถานะ prod จากเอกสาร** — prod ไม่ได้อยู่เครื่อง dev, PENDING.md เป็นบันทึกไม่ใช่สถานะสด → ถาม user
+- `.env` เครื่องนี้ผูกกับบอท **"Tester"** ไม่ใช่ MunMuang จริง — ห้าม verify state ของ prod ผ่าน token นี้
+
+---
+
+## ⚠️ ยังไม่มีใครกดทดสอบในเบราว์เซอร์ (build ผ่านอย่างเดียว)
+- identity edit จาก kanban modal (รอบล่าสุด)
+- Kanban module ทั้งก้อน · Posts กันเซฟทับกัน · Docs คนนอก (Export PDF ใบคนนอกยังไม่เคยกดจริง)
+
+---
+
+## 🔧 Useful commands
+
+```bash
+cd web && npm test                     # vitest (486 tests)
+cd web && PORT=3100 NEXT_DIST_DIR=.next-test npm run dev   # user เปิด :3000 ค้างไว้ ห้ามชน
+openwolf find <symbol>                 # หาไฟล์/symbol ก่อนอ่าน
+openwolf bug search "<error>"          # ก่อนแก้บั๊กทุกครั้ง
+```
+
+---
+
+## 📚 References
+- `md/PENDING.md` — backlog ตัวจริง (entry point ทุก session) · `NOTE.md` ห้ามแตะ
+- `.wolf/cerebrum.md` — Do-Not-Repeat + User Preferences · `.wolf/buglog.json` — 191 bugs
