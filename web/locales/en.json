@@ -1253,7 +1253,27 @@
       "appointError": "Action failed",
       "appointTitle": "Appoint Roles",
       "appointDesc": "Search for a member and tap a chip to grant/revoke a role · faded chips can't be appointed (exceeds your authority)",
-      "appointSearchPlaceholder": "Search members to appoint"
+      "appointSearchPlaceholder": "Search members to appoint",
+      "identity": {
+        "toggleButton": "Edit login details",
+        "phoneLabel": "Phone (for SMS OTP login)",
+        "phoneCurrentVerified": "Current: {phone} (verified)",
+        "phoneCurrentUnverified": "Current: no verified phone",
+        "phoneHint": "Have the member read you the SMS code, then enter it here to confirm — nothing is saved until the code is verified",
+        "sendOtpButton": "Send SMS code",
+        "cancelButton": "Cancel",
+        "otpPlaceholder": "6-digit code (Ref: {ref})",
+        "confirmButton": "Confirm",
+        "otpSendError": "Failed to send code",
+        "otpVerifyError": "Failed to verify code",
+        "phoneBoundMsg": "Phone bound and verified",
+        "emailLabel": "Email (for magic-link/Google login)",
+        "emailHint": "A verification link will be sent to this email — it's only saved once the member clicks the link themselves",
+        "sendLinkButton": "Send verification link",
+        "linkSentButton": "Link sent",
+        "emailSendError": "Failed to send link",
+        "emailLinkSentMsg": "Verification link sent to {email} — waiting for the member to click it"
+      }
     },
     "settingsNav": {
       "tabs": {
@@ -1510,6 +1530,12 @@
       "resetSuccess": "Reset to default",
       "unsaved": "Unsaved changes",
       "lockedNote": "The system always appends this and it cannot be edited — it is the format used to read the AI reply."
+    },
+    "linkEmail": {
+      "metaTitle": "Verify email",
+      "workingMsg": "Verifying email…",
+      "successMsg": "Email verified — you can now sign in with this email",
+      "invalidLinkMsg": "Invalid or expired link"
     }
   },
   "profile": {

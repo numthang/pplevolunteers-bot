@@ -1253,7 +1253,27 @@
       "appointError": "ทำรายการไม่สำเร็จ",
       "appointTitle": "แต่งตั้งบทบาท",
       "appointDesc": "ค้นหาสมาชิกแล้วกดชิปเพื่อให้/ถอนสิทธิ์ · ชิปที่จางแต่งตั้งไม่ได้ (เกินอำนาจของคุณ)",
-      "appointSearchPlaceholder": "ค้นหาสมาชิกเพื่อแต่งตั้ง"
+      "appointSearchPlaceholder": "ค้นหาสมาชิกเพื่อแต่งตั้ง",
+      "identity": {
+        "toggleButton": "แก้ไขข้อมูลเข้าสู่ระบบ",
+        "phoneLabel": "เบอร์โทร (สำหรับ login ด้วย SMS OTP)",
+        "phoneCurrentVerified": "ตอนนี้: {phone} (ยืนยันแล้ว)",
+        "phoneCurrentUnverified": "ตอนนี้: ยังไม่มีเบอร์ยืนยัน",
+        "phoneHint": "ให้สมาชิกอ่านรหัสที่ได้รับทาง SMS ให้ฟัง แล้วกรอกยืนยันที่นี่ — ระบบจะไม่บันทึกเบอร์จนกว่าจะยืนยันรหัสถูกต้อง",
+        "sendOtpButton": "ส่งรหัส SMS",
+        "cancelButton": "ยกเลิก",
+        "otpPlaceholder": "รหัส 6 หลัก (Ref: {ref})",
+        "confirmButton": "ยืนยัน",
+        "otpSendError": "ส่งรหัสไม่สำเร็จ",
+        "otpVerifyError": "ยืนยันรหัสไม่สำเร็จ",
+        "phoneBoundMsg": "ผูก+ยืนยันเบอร์สำเร็จ",
+        "emailLabel": "อีเมล (สำหรับ login ด้วยลิงก์/Google)",
+        "emailHint": "ระบบจะส่งลิงก์ยืนยันไปที่อีเมลนี้ — บันทึกจริงก็ต่อเมื่อสมาชิกกดลิงก์ยืนยันเอง",
+        "sendLinkButton": "ส่งลิงก์ยืนยัน",
+        "linkSentButton": "ส่งลิงก์แล้ว",
+        "emailSendError": "ส่งลิงก์ไม่สำเร็จ",
+        "emailLinkSentMsg": "ส่งลิงก์ยืนยันไปที่ {email} แล้ว — รอสมาชิกกดลิงก์ในอีเมล"
+      }
     },
     "settingsNav": {
       "tabs": {
@@ -1510,6 +1530,12 @@
       "resetSuccess": "คืนค่าตั้งต้นแล้ว",
       "unsaved": "ยังไม่ได้บันทึก",
       "lockedNote": "ส่วนนี้ระบบต่อท้ายให้เองเสมอ แก้ไม่ได้ — เป็นรูปแบบที่ระบบใช้อ่านคำตอบของ AI"
+    },
+    "linkEmail": {
+      "metaTitle": "ยืนยันอีเมล",
+      "workingMsg": "กำลังยืนยันอีเมล…",
+      "successMsg": "ยืนยันอีเมลสำเร็จ — ใช้อีเมลนี้เข้าสู่ระบบได้แล้ว",
+      "invalidLinkMsg": "ลิงก์ไม่ถูกต้องหรือหมดอายุ"
     }
   },
   "profile": {

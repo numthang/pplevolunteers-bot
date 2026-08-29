@@ -198,7 +198,8 @@ export async function searchOrgMembers(orgId, q, limit = 20) {
     `SELECT * FROM (
        SELECT DISTINCT ON (om.user_id)
               om.user_id, om.role, om.status, om.joined_at,
-              u.email, COALESCE(om.display_name, u.username) AS display_name, u.discord_id
+              u.email, COALESCE(om.display_name, u.username) AS display_name, u.discord_id,
+              u.phone, u.phone_verified_at
          FROM org_members om
          JOIN users u ON u.id = om.user_id
         WHERE om.org_id = $1

@@ -1,5 +1,6 @@
 import { getOrgSession } from '@/lib/orgAuth.js'
 import { getOrgMembership, setMemberRole, removeMember } from '@/db/orgMembers.js'
+import { logAction } from '@/db/auditLog.js'
 
 const ROLES = ['owner', 'member']
 const errMsg = { last_owner: 'ต้องมี owner อย่างน้อย 1 คน', not_found: 'ไม่พบสมาชิก' }
@@ -22,6 +23,7 @@ export async function PATCH(req, { params }) {
 
   const res = await setMemberRole(orgId, target, body.role)
   if (res.error) return Response.json({ error: errMsg[res.error] || res.error }, { status: 400 })
+  logAction({ orgId, app: 'org', action: 'member_role_change', actorId: me, targetId: `u${target}`, meta: { role: body.role } })
   return Response.json({ member: res.member })
 }
 
@@ -43,5 +45,6 @@ export async function DELETE(req, { params }) {
 
   const res = await removeMember(orgId, target)
   if (res.error) return Response.json({ error: errMsg[res.error] || res.error }, { status: 400 })
+  logAction({ orgId, app: 'org', action: 'member_remove', actorId: me, targetId: `u${target}`, meta: { isSelf: target === me } })
   return Response.json({ ok: true })
 }
