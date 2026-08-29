@@ -785,14 +785,20 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_org_ai_prompts_global
 -- ย้าย mode เดิมของบอทมาทั้งดุ้น (ทุกแถวเป็น guild_id='global' อยู่แล้ว → org_id NULL)
 -- ⚠️ ต้องย้ายค่าจาก DB ไม่ใช่ re-seed จาก config/aiModes.js — สองที่นี้ **diverge กันแล้ว**
 --    (getModes เดิมคืนแถว DB ถ้ามี → prompt ที่บอทใช้จริงวันนี้คือของใน DB ไม่ใช่ของในโค้ด)
-INSERT INTO org_ai_prompts (org_id, kind, value, label, prompt, sort_order, enabled)
-SELECT NULL, 'mode', value, label, prompt, sort_order, enabled
-  FROM dc_ai_modes WHERE guild_id = 'global'
-ON CONFLICT DO NOTHING;
-
 -- ⚠️ DROP ทีหลังสุด และ **บอท + เว็บต้อง deploy พร้อมกัน** — db/aiConfig.js (โปรเซสบอท)
 --    กับ web/app/api/bot/ai-modes/route.js ยิงตารางนี้ทั้งคู่ ปล่อยฝั่งเดียวไป = บอทพังเงียบ
-DROP TABLE IF EXISTS dc_ai_modes;
+-- หมายเหตุ (2026-08-29): ห่อ IF EXISTS กันรันซ้ำพัง — ครั้งแรก DROP ตารางทิ้งไปแล้ว
+--    รันไฟล์นี้ "ทั้งไฟล์" ซ้ำรอบสองก่อนหน้านี้จะ error ที่ INSERT (ตารางไม่มีแล้ว)
+DO $$ BEGIN
+  IF to_regclass('public.dc_ai_modes') IS NOT NULL THEN
+    INSERT INTO org_ai_prompts (org_id, kind, value, label, prompt, sort_order, enabled)
+    SELECT NULL, 'mode', value, label, prompt, sort_order, enabled
+      FROM dc_ai_modes WHERE guild_id = 'global'
+    ON CONFLICT DO NOTHING;
+
+    DROP TABLE dc_ai_modes;
+  END IF;
+END $$;
 
 -- ═══════════════════════════════════════════════════════════════════════════
 -- 2026-08-14 — kanban ก้อน 1: "การบ้านของฉัน" (3 ตาราง · ยังไม่มีกระดาน)
@@ -1282,7 +1288,7 @@ COMMIT;
 
 BEGIN;
 
-CREATE TABLE docs_external_payees (
+CREATE TABLE IF NOT EXISTS docs_external_payees (
   id             SERIAL PRIMARY KEY,
   org_id         INT NOT NULL REFERENCES orgs(id),
   payee_type     VARCHAR(10)  NOT NULL DEFAULT 'person',   -- person | entity (ร้านค้า/นิติบุคคล)
@@ -1307,24 +1313,33 @@ CREATE TABLE docs_external_payees (
 );
 
 -- กันสร้างซ้ำ: คนเดิมกลับมาอีกงานต้องเจอของเดิม ไม่ใช่แถวใหม่
-CREATE UNIQUE INDEX docs_external_payees_idnum_uniq
+CREATE UNIQUE INDEX IF NOT EXISTS docs_external_payees_idnum_uniq
   ON docs_external_payees (org_id, id_number) WHERE id_number IS NOT NULL;
-CREATE INDEX docs_external_payees_name_idx
+CREATE INDEX IF NOT EXISTS docs_external_payees_name_idx
   ON docs_external_payees (org_id, first_name, last_name);
 
 ALTER TABLE docs_activity_entries
-  ADD COLUMN external_payee_id INT REFERENCES docs_external_payees(id),
-  ADD CONSTRAINT docs_entry_recipient_xor
-    CHECK (NOT (member_user_id IS NOT NULL AND external_payee_id IS NOT NULL));
+  ADD COLUMN IF NOT EXISTS external_payee_id INT REFERENCES docs_external_payees(id);
+
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+     WHERE conname = 'docs_entry_recipient_xor' AND conrelid = 'docs_activity_entries'::regclass
+  ) THEN
+    ALTER TABLE docs_activity_entries
+      ADD CONSTRAINT docs_entry_recipient_xor
+      CHECK (NOT (member_user_id IS NOT NULL AND external_payee_id IS NOT NULL));
+  END IF;
+END $$;
 
 ALTER TABLE docs_signatures
-  ADD COLUMN signed_on_behalf BOOLEAN NOT NULL DEFAULT false;
+  ADD COLUMN IF NOT EXISTS signed_on_behalf BOOLEAN NOT NULL DEFAULT false;
 
 -- ตัวตนผู้รับเงินของแต่ละ entry — resolve จากสองแหล่งครั้งเดียว
 -- ชื่อคอลัมน์ตรงกับที่ generatePdf.buildData() อ่านอยู่แล้ว
 -- ⚠️ ต้อง NULLIF(...,'') ทุกช่องของคนนอก — ฟอร์มส่งช่องที่ไม่ได้กรอกมาเป็น '' ซึ่ง COALESCE
 --    ถือว่าเป็นค่าที่มีอยู่ → ชื่อ/ที่อยู่กลายเป็นช่องว่างแทนที่จะ fallback (เจอจริงตอนเทส 2026-08-25)
-CREATE VIEW docs_entry_recipient AS
+CREATE OR REPLACE VIEW docs_entry_recipient AS
 SELECT e.id AS entry_id,
   CASE WHEN e.external_payee_id IS NOT NULL THEN 'external' ELSE 'member' END AS recipient_kind,
   COALESCE(NULLIF(x.title,''), n.title)            AS title,

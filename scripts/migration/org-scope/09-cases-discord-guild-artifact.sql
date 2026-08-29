@@ -42,7 +42,9 @@ CREATE INDEX IF NOT EXISTS idx_cases_discord_guild ON cases (discord_guild_id) W
 SELECT count(*) AS threads_missing_guild
   FROM cases WHERE discord_thread_id IS NOT NULL AND discord_guild_id IS NULL;
 
-SELECT id, ref, org_id, discord_guild_id, discord_thread_id FROM cases ORDER BY id;
+-- หมายเหตุ (2026-08-29): แก้บั๊ก — เดิม SELECT คอลัมน์ org_id ที่ยังไม่ถูกสร้าง
+-- (org_id มาจาก 10-cases-org-scope.sql ที่รันหลังไฟล์นี้) → error ทุกครั้งที่รันสด
+SELECT id, ref, guild_id, discord_guild_id, discord_thread_id FROM cases ORDER BY id;
 
 COMMIT;
 
