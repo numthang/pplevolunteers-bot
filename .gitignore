@@ -4,6 +4,7 @@ node_modules/
 !.wolf/cerebrum.md
 !.wolf/anatomy.md
 !.wolf/STATUS.md
+!.wolf/buglog.json
 pgloader.load
 backups/
 /logs/
