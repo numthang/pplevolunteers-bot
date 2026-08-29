@@ -42,12 +42,17 @@ const PROFILE_NAME = displayNameSql('u', '$1')
  *    (ไม่ผูก org) และ users.avatar เป็นคอลัมน์ global เหมือนกัน ถ้าไม่เช็คว่า userId นี้เคยอยู่ org นี้จริง
  *    endpoint จะกลายเป็น user-enumeration ข้าม org (ใครก็ไล่เลข userId ดูชื่อ+รูปคนทั้งระบบได้)
  *    ไม่บังคับ status='active' — คนที่ออกจาก org แล้วแต่ยังถืองานเก่าอยู่ก็ควรเปิดโปรไฟล์ได้
+ *
+ * ⚠️ email/phone/phone_verified_at คืนมาจากที่นี่เสมอ — ตัด PII 3 ฟิลด์นี้ออกที่ route
+ *    (`/api/kanban/people/[id]`) ถ้าคนเปิดไม่ใช่ org owner เอง อย่าลบ query ตรงนี้ทิ้งแทน
+ *    เพราะ route ต้องรู้ค่าจริงก่อนถึงจะตัดสินใจซ่อนได้
  */
 export async function getPersonProfile(orgId, userId) {
   const { rows } = await pool.query(
     `SELECT u.id AS "userId",
             ${PROFILE_NAME} AS name,
             u.username,
+            u.email, u.phone, u.phone_verified_at,
             COALESCE(u.avatar, (
               SELECT om2.avatar FROM org_members om2
                WHERE om2.user_id = u.id AND om2.org_id = $1

@@ -1272,6 +1272,7 @@
         "sendLinkButton": "Send verification link",
         "linkSentButton": "Link sent",
         "emailSendError": "Failed to send link",
+        "emailDevLinkLabel": "dev: click the link to verify",
         "emailLinkSentMsg": "Verification link sent to {email} — waiting for the member to click it"
       }
     },
@@ -1966,6 +1967,8 @@
       "optionHideHint": "Hiding removes it from this card and stops offering it in the picker · Other cards using it keep showing it, and you can restore it later · Deleting permanently wipes it from the database.",
       "editPeople": "Edit owner/helpers",
       "profileCardCount": "Holding {count} card(s)",
+      "rolesToggle": "{count} role(s)",
+      "identityEditToggle": "Edit login info",
       "copyLink": "Copy link",
       "copyLinkFailed": "Could not copy the link — the browser blocked it (needs https)"
     },

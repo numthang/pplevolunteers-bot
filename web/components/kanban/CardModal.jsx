@@ -23,7 +23,7 @@ import DeleteChoiceDialog from './DeleteChoiceDialog.jsx'
 import FieldRow from './FieldRow.jsx'
 import TagCombobox from './TagCombobox.jsx'
 import CardFieldsBox from './CardFieldsBox.jsx'
-import PersonProfileModal from './PersonProfileModal.jsx'
+import PersonProfileModal from '../org/PersonProfileModal.jsx'
 
 const AUTOSAVE_MS = 800
 

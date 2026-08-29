@@ -10,10 +10,18 @@
  */
 
 import { useEffect, useState } from 'react'
-import { Loader2, X } from 'lucide-react'
+import { ChevronDown, Loader2, X } from 'lucide-react'
+import { useTranslations } from 'next-intl'
+import IdentityEditor from './IdentityEditor.jsx'
 
 export default function PersonProfileModal({ userId, onClose, t }) {
+  const tOrg = useTranslations('org')
   const [profile, setProfile] = useState(null)
+  const [isOrgOwner, setIsOrgOwner] = useState(false)
+  const [orgId, setOrgId] = useState(null)
+  const [editOpen, setEditOpen] = useState(false)
+  const [rolesOpen, setRolesOpen] = useState(false)
+  const [note, setNote] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -27,6 +35,8 @@ export default function PersonProfileModal({ userId, onClose, t }) {
         if (!alive) return
         if (!res.ok) { setError(json.error || t('loadFailed')); return }
         setProfile(json.profile)
+        setIsOrgOwner(!!json.isOrgOwner)
+        setOrgId(json.orgId)
       })
       .catch(() => { if (alive) setError(t('loadFailed')) })
       .finally(() => { if (alive) setLoading(false) })
@@ -46,10 +56,10 @@ export default function PersonProfileModal({ userId, onClose, t }) {
   }, [onClose])
 
   return (
-    <div onClick={onClose} className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+    <div onClick={onClose} className="fixed inset-0 z-50 bg-black/40 flex items-start sm:items-center justify-center p-4 overflow-y-auto">
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-5 w-full max-w-sm flex flex-col gap-3"
+        className="bg-card-bg border border-warm-200 dark:border-disc-border rounded-xl p-5 w-full max-w-sm flex flex-col gap-3 my-auto"
       >
         <div className="flex items-start justify-end">
           <button
@@ -88,21 +98,54 @@ export default function PersonProfileModal({ userId, onClose, t }) {
             </div>
 
             {profile.roles?.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 justify-center">
-                {profile.roles.map((r) => (
-                  <span
-                    key={r}
-                    className="px-2.5 py-0.5 text-xs font-medium rounded-md border border-warm-200 dark:border-disc-border text-warm-700 dark:text-disc-text"
-                  >
-                    {r}
-                  </span>
-                ))}
+              <div className="w-full flex flex-col items-center">
+                <button
+                  onClick={() => setRolesOpen(o => !o)}
+                  className="flex items-center gap-1 text-xs text-warm-500 dark:text-disc-muted hover:text-warm-900 dark:hover:text-disc-text"
+                >
+                  <ChevronDown size={13} className={rolesOpen ? '' : '-rotate-90'} />
+                  {t('modal.rolesToggle', { count: profile.roles.length })}
+                </button>
+                {rolesOpen && (
+                  <div className="flex flex-wrap gap-1.5 justify-center mt-1.5">
+                    {profile.roles.map((r) => (
+                      <span
+                        key={r}
+                        className="px-2.5 py-0.5 text-xs font-medium rounded-md border border-warm-200 dark:border-disc-border text-warm-700 dark:text-disc-text"
+                      >
+                        {r}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
             <p className="text-sm text-warm-500 dark:text-disc-muted mt-1">
               {t('modal.profileCardCount', { count: Number(profile.cardCount) })}
             </p>
+
+            {isOrgOwner && (
+              <div className="w-full mt-1">
+                <button
+                  onClick={() => setEditOpen(o => !o)}
+                  className="flex items-center gap-1 text-xs text-orange hover:underline"
+                >
+                  <ChevronDown size={13} className={editOpen ? '' : '-rotate-90'} />
+                  {t('modal.identityEditToggle')}
+                </button>
+                {editOpen && (
+                  <IdentityEditor
+                    orgId={orgId}
+                    member={{ user_id: profile.userId, phone: profile.phone, phone_verified_at: profile.phone_verified_at, email: profile.email }}
+                    onNote={setNote}
+                    onPhoneBound={phone => setProfile(p => ({ ...p, phone, phone_verified_at: new Date().toISOString() }))}
+                    onEmailLinkSent={() => setNote(tOrg('members.identity.emailLinkSentMsg', { email: profile.email }))}
+                  />
+                )}
+                {note && <p className="mt-2 text-xs text-warm-500 dark:text-disc-muted">{note}</p>}
+              </div>
+            )}
           </div>
         )}
       </div>
