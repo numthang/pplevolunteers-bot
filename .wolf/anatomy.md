@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-30T04:59:34.247Z
-> Files: 1051 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-30T07:00:51.452Z
+> Files: 1053 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
 
@@ -1870,7 +1870,7 @@
 - `LoginPanel.jsx` — ERROR_MESSAGES (~4776 tok)
 - `Nav.jsx` — Ic (~11723 tok)
 - `NoGuildNotice.jsx` — NoGuildNotice (~268 tok)
-- `OrgSwitcherMenu.jsx` — TONES (~2677 tok)
+- `OrgSwitcherMenu.jsx` — TONES (~2732 tok)
 - `Providers.jsx` — ThemeContext — uses useContext, useState, useEffect (~265 tok)
 
 ## web/components/bot/
@@ -2135,6 +2135,7 @@
 - `kanbanSort.js` — "เรียงตาม" ที่ผู้ใช้เลือกเอง — เมนู sort บน /kanban (แยกจาก sortCards ใน kanbanGrouping.js (~1005 tok)
 - `kanbanTagFilter.js` — ตัวกรองการ์ดด้วย **ตัวเลือกใน custom field** — ตรรกะล้วน ไม่แตะ DOM/DB (~1280 tok)
 - `kanbanTextFilter.js` — ค้นการ์ดด้วยข้อความ — ตรรกะล้วน ไม่แตะ DOM/DB (เทสอยู่ที่ lib/__tests__/kanbanTextFilter.test.js) (~642 tok)
+- `kanbanUrlState.js` — แปลง "หน้าตาที่เห็นบนกระดาน" ↔ query string — ตรรกะล้วน ไม่แตะ DOM/React (~1520 tok)
 - `linkState.js` — Exports signLinkState, verifyLinkState (~276 tok)
 - `org-auth-options.js` — web/lib/org-auth-options.js — org login (email-native, แยกจาก PPLE Discord auth) (~1072 tok)
 - `org.js` — web/lib/org.js — Org layer: resolve guild ในเครือเดียวกัน (ฝั่ง web · คู่กับ bot db/org.js) (~192 tok)
@@ -2190,6 +2191,7 @@
 - `kanbanLabelFilter.test.js` — ป้ายตัวอย่าง — ชื่อกลุ่มมาจากของจริงบน dev (สายงาน 12 · พื้นที่ 9 · อุปกรณ์ 8) (~1424 tok)
 - `kanbanSort.test.js` — Declares at (~1058 tok)
 - `kanbanTextFilter.test.js` — Declares card (~942 tok)
+- `kanbanUrlState.test.js` — API routes: GET (2 endpoints) (~1196 tok)
 - `orgMemberRoles.live.test.js` — Live check (ต่อ DB จริง) — ORG_ACCESS_REDESIGN ขั้น 5: "ทางเขียน" (~1796 tok)
 - `orgScopeNodes.live.test.js` — Live check (ต่อ DB จริง) — ตัวจัดผังพื้นที่ (org_scope_nodes) (~1124 tok)
 - `payersDiff.live.test.js` — diff test ชั่วคราว — เทียบ payers เก่า (dc_guild_roles + geography.js) (~450 tok)

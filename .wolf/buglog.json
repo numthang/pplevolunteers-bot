@@ -3723,6 +3723,22 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-08-30T12:20:00.000Z"
+    },
+    {
+      "id": "bug-195",
+      "timestamp": "2026-08-30T06:37:09.424Z",
+      "error_message": "Significant refactor of OrgSwitcherMenu.jsx",
+      "file": "web/components/OrgSwitcherMenu.jsx",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 11→19 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-08-30T06:37:09.424Z"
     }
   ]
 }

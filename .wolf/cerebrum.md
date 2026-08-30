@@ -1444,6 +1444,11 @@ Enter เอง · จะลงมือได้ต่อเมื่อเข�
 - **`user_identities` มีแถว `provider='discord'` ด้วย** — เช็ค "ผูกบัญชีสำรองแล้วหรือยัง" ด้วย `linkedProviders.length > 0` ไม่ได้ ต้องไล่ชื่อ provider ที่ต้องการจริงๆ
 - **หน้าแรกห้ามดึงรายการมา `.length`** — `listMyCards`/`listPosts` ลาก json_agg + thumbnail subquery ต่อแถว · อยากได้จำนวนให้เขียน count query ที่ใช้ `visibleLinkSql`/`LIVE_STATUS_SQL` ชุดเดียวกัน แล้ว**ตรวจ parity กับ list เสมอ** ไม่งั้นหน้าแรกโกหก
 
+- **`/kanban` ตัวกรองอยู่ใน URL แล้ว (2026-08-30)** — `board/scope/group/status/kind/helper/label/q/sort` · ตรรกะอยู่ที่ `lib/kanbanUrlState.js` (เทสได้ ไม่ต้องเปิดเบราว์เซอร์) · ค่าตั้งต้นไม่เขียนลง URL
+- **ตัวกรอง = `replaceState` · การ์ด = `pushState`** — ห้ามสลับ: `closeCard()` พึ่ง `history.back()` ถ้าตัวกรอง push ด้วย กดปิดการ์ดจะย้อนตัวกรองแทน · และห้ามใช้ `router.replace` แบบ `/posts` เพราะ `/kanban/page.js` เป็น server component (พิมพ์ค้นหาทีละตัว = ยิง `getSession()` ทุกตัว)
+- **URL ของตัวกรองต้องเก็บ id ไม่ใช่ชื่อ** — เปลี่ยนชื่อแล้วลิงก์เก่าต้องยังถูก · และ `label` ต้องเป็น `<field_id>.<option_id>` เพราะกติกา "OR ในกลุ่ม · AND ข้ามกลุ่ม" ต้องรู้ field ของ option ที่ปลายทางไม่มีการ์ดติด (ไม่งั้นผลต่างจากคนส่ง)
+- **สองคนเปิดลิงก์เดียวกันเห็นการ์ดคนละชุดได้** — `visibleLinkSql` กรองตามจังหวัดของ viewer → อย่าสมมติว่า id ที่คนส่งเห็นจะมีในชุดของคนรับ · ตัวกรองที่ไม่รู้จักต้อง**โชว์ให้เห็น** (ชิปเทานอกกรวยกรอง เพราะกรวยปิดเป็นค่าเริ่มต้น) ไม่ใช่ทิ้งเงียบ
+
 ## Decision Log
 
 <!-- Significant technical decisions with rationale. Why X was chosen over Y. -->

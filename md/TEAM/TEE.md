@@ -4,12 +4,15 @@
 - JotForm ลอกมาเลยครับ มีแบบให้ login และ public ลองดู spec ก่อน แต่ feature ยากไม่จำเป็น ตัดทิ้ง แต่ให้ถามก่อน
 - Poll anonymous, semi-anon, public ลอก pollbotplus มาเลย แต่อาจจะอัพเกรดนิดหน่อย ลองดูว่าควรอัพเกรดอะไร อย่างน้อยผมว่า max 7 วันควรเพิ่มได้อีก
 
+เอา งานกองทุนเข้า kanban ของปีนี้
+
 # Kanban
 - มันควรมี repeat task ไหมหว่า ประจำเดือน ประจำสัปดาห์ ประมาณนี้
 - ลิงก์ google calendar แสดง deadline 
 - แต่ละ card มีกล่องให้แสดง comment ด้วยอ่ะ เห็นมีใน notion เป็น fix field
 
 # Posts
+
 
 # Team
 - ตรงที่มีให้เลือก view เครือข่าย ตาราง จะเพิ่ม bubble แสดง ranking แบบรวมคะแนนแต่ละคนทั้งหมด แสดงทุกคนทั้ง server อาจจมี limit ไว้แค่ 100 คนแรก ไม่ต้องแยกหมวด ให้ขยับๆ ได้ด้วย แบบนี้ https://cryptobubbles.net/en ถ้ามีอัตราการใช้งาน + หรือลบ - เหมือนตลาดหุ้นได้ยิ่งแจ๋ว 5555
@@ -25,10 +28,6 @@
 - จัดระเบียบ setting ดูว่าตอนนี้เรามีอะไรบ้าง จะรวมหรือจะแยก ยังไงดี /org/settings ตอนนี้ consistancy ดีแล้วใช่ไหม 
 - ตอนนี้จะ config web_roles ให้สมาชิกยังไง แต่สำหรับ discord ตอนนี้ migrate มาก่อนได้
 - ผมอาจจะเปลี่ยน /bot เป็น /dc แล้วก็ /dc/settings => มีพวก ai, watermark, platforms, quote, roles รวมอยู่ในนั้นอ่ะ ดีไหม
-- icon องค์กรขอบมันแตกๆ ไม่ smooth
-- menu ใน org switcher ทำ font ให้ใหญ่หน่อย เท่าใน hamburger ก็ได้ 
-- http://localhost:3000/profile เปลี่ยน tab เป็น dropdown และน่าจะเปลี่ยนเป็น /user/profile /user/settings ไหม แต่เอาไว้ก่อน ยังไม่แน่ใจว่าจะ setting อะไร ตอนนี้ มีแต่พวก quote
-- http://localhost:3000/profile ไม่แน่ใจว่าตอน switch org มันดึงข้อมูลถูก org 
 
 # Docs
 

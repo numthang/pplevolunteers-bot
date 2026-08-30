@@ -24,13 +24,21 @@ function isImgSrc(s) { return typeof s === 'string' && (s.startsWith('/') || s.s
 function OrgAvatar({ org, iconUrl, size = 'w-7 h-7' }) {
   const icon = org?.icon
   if (isImgSrc(icon)) {
-    return <Image src={icon} alt="" width={32} height={32} className={`${size} rounded-md object-cover shrink-0`} />
+    return (
+      <span className={`${size} rounded-md overflow-hidden shrink-0 block`}>
+        <Image src={icon} alt="" width={64} height={64} className="w-full h-full object-cover" />
+      </span>
+    )
   }
   if (icon) {
     return <span className={`${size} rounded-md grid place-items-center text-lg shrink-0 select-none bg-warm-100 dark:bg-white/5`}>{icon}</span>
   }
   if (iconUrl) {
-    return <Image src={iconUrl} alt="" width={32} height={32} className={`${size} rounded-md object-cover shrink-0`} />
+    return (
+      <span className={`${size} rounded-md overflow-hidden shrink-0 block`}>
+        <Image src={iconUrl} alt="" width={64} height={64} className="w-full h-full object-cover" />
+      </span>
+    )
   }
   const letter = (org?.name || '?').trim().slice(0, 1).toUpperCase()
   return (
