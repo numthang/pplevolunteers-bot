@@ -283,28 +283,6 @@ export async function countByStatus(orgId, provinces = null) {
   return Object.fromEntries(rows.map(r => [r.status, r.n]))
 }
 
-/**
- * เคสที่ยังเปิดอยู่และ **ยังไม่มีใครรับ** — งานค้างที่หัวหน้างานต้องเห็นบนหน้าแรก
- *
- * ⚠️ ไม่ใช่ countByStatus — ตัวนั้นนับตามสถานะ ไม่รู้เรื่อง case_assignees เลย
- * ⚠️ provinces ต้องเป็นชุดเดียวกับที่ /case/manage ใช้ (getUserScope) ไม่งั้นหน้าแรกโชว์เลข
- *    ที่กดเข้าไปแล้วไม่เจอ · null = ทุกจังหวัด (admin) · [] = ไม่มีจังหวัดในอำนาจ = 0
- */
-export async function countUnassignedOpen(orgId, provinces = null) {
-  if (Array.isArray(provinces) && provinces.length === 0) return 0
-  const params = [orgId]
-  let q = `SELECT COUNT(*)::int AS n FROM cases c
-            WHERE c.org_id = $1
-              AND c.status IN ('open','in_progress')
-              AND NOT EXISTS (SELECT 1 FROM case_assignees a WHERE a.case_id = c.id)`
-  if (Array.isArray(provinces)) {
-    params.push(provinces)
-    q += ` AND c.province = ANY($${params.length})`
-  }
-  const { rows } = await pool.query(q, params)
-  return rows[0]?.n || 0
-}
-
 export async function addAssignee(caseId, orgId, userId) {
   await pool.query(
     `INSERT INTO case_assignees (case_id, org_id, user_id)

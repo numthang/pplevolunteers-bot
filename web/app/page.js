@@ -8,8 +8,8 @@ import LinkAccountsBanner from '@/components/LinkAccountsBanner.jsx'
 import { getPendingCallCount } from '@/db/calling/members.js'
 import { getContactPendingCount } from '@/db/calling/contacts.js'
 import { getPendingSignaturesForUser } from '@/db/docs/entries.js'
-import { countMyOpenCards, countUnassignedOpenCards } from '@/db/kanban/cards.js'
-import { countUnassignedOpen } from '@/db/cases.js'
+import { countMyOpenCards } from '@/db/kanban/cards.js'
+import { countByStatus } from '@/db/cases.js'
 import { countPendingReview } from '@/db/posts/episodes.js'
 import { getFavoriteAccounts } from '@/db/finance/accounts.js'
 import { listMemberRoleNames } from '@/db/orgMemberRoles.js'
@@ -35,7 +35,6 @@ const ICON = {
   phone:   'M20.25 3.75v4.5m0-4.5h-4.5m4.5 0l-6 6m3 12c-8.284 0-15-6.716-15-15V4.5A2.25 2.25 0 014.5 2.25h1.372c.516 0 .966.351 1.091.852l1.106 4.423c.11.44-.054.902-.417 1.173l-1.293.97a1.062 1.062 0 00-.38 1.21 12.035 12.035 0 007.143 7.143c.441.162.928-.004 1.21-.38l.97-1.293a1.125 1.125 0 011.173-.417l4.423 1.106c.5.125.852.575.852 1.091V19.5a2.25 2.25 0 01-2.25 2.25h-2.25z',
   case:    'M8.625 9.75a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z',
   pen:     'M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125',
-  inbox:   'M2.25 13.5h3.86a2.25 2.25 0 012.012 1.244l.256.512a2.25 2.25 0 002.013 1.244h3.218a2.25 2.25 0 002.013-1.244l.256-.512a2.25 2.25 0 012.013-1.244h3.859m-19.5.338V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 00-2.15-1.588H6.911a2.25 2.25 0 00-2.15 1.588L2.35 13.177a2.25 2.25 0 00-.1.661z',
   wallet:  'M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 9m18 0V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v3',
   arrow:   'M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3',
 }
@@ -49,37 +48,45 @@ function Ic({ d, className = 'w-5 h-5' }) {
 }
 
 /**
- * แถวงานค้าง 1 บรรทัด — ตัวเลข + ลิงก์ไปหน้าที่ "ทำ" ได้จริง
- * ⛔ หน้าแรกเป็น aggregator อ่านอย่างเดียว ห้ามมี action ในตัวมันเอง
+ * ตัวเลข 1 บรรทัดในการ์ดโมดูล — **กดได้ทุกบรรทัด** ลิงก์ไปหน้าที่กรองไว้แล้ว
+ *
+ * ⛔ หน้าแรกเป็น aggregator อ่านอย่างเดียว ห้ามมีปุ่มที่แก้ข้อมูลได้
  *    (kanban ผูกเคส/โพสต์อยู่แล้ว — ถ้าหน้านี้เริ่มแก้สถานะได้ มันจะกลายเป็นที่เก็บงานที่ 7)
+ * ⚠️ ศูนย์ก็ยังโชว์ **ไม่ซ่อน** — การ์ดต้องหน้าตาเหมือนเดิมทุกวันถึงจะกวาดตาอ่านเร็ว
+ *    (ต่างจากรอบก่อนที่ซ่อนแถวศูนย์ แล้วตำแหน่งตัวเลขขยับทุกวันจนต้องอ่านใหม่ทุกครั้ง)
  */
-function TodoRow({ href, icon, label, count, hint, tone = 'normal' }) {
-  const badge = tone === 'alert'
-    ? 'bg-red-500/10 text-red-600 dark:text-red-400'
-    : 'bg-brand-orange/10 text-brand-orange'
+function StatRow({ href, label, count, value, tone = 'normal' }) {
+  const zero = value == null && !count
+  const badge = zero
+    ? 'text-warm-400 dark:text-disc-muted'
+    : tone === 'alert'
+      ? 'text-red-600 dark:text-red-400 font-semibold'
+      : 'text-warm-900 dark:text-disc-text font-semibold'
   return (
     <Link
       href={href}
-      className="flex items-center gap-3 px-4 py-3 -mx-1 rounded-lg hover:bg-warm-50 dark:hover:bg-disc-hover transition-colors"
+      className="flex items-center justify-between gap-2 -mx-2 px-2 py-1 rounded-md hover:bg-warm-50 dark:hover:bg-disc-hover transition-colors"
     >
-      <span className="w-9 h-9 rounded-lg bg-warm-100 dark:bg-disc-hover flex items-center justify-center shrink-0 text-brand-orange">
-        <Ic d={icon} />
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="block text-base text-warm-900 dark:text-disc-text truncate">{label}</span>
-        {hint && <span className="block text-sm text-warm-500 dark:text-disc-muted truncate">{hint}</span>}
-      </span>
-      <span className={`shrink-0 px-3 py-1 text-sm font-medium rounded-full ${badge}`}>{fmt(count)}</span>
-      <Ic d={ICON.arrow} className="w-4 h-4 text-warm-400 dark:text-disc-muted shrink-0" />
+      <span className="text-base text-warm-500 dark:text-disc-muted truncate min-w-0">{label}</span>
+      <span className={`text-base shrink-0 ${badge}`}>{value != null ? value : fmt(count)}</span>
     </Link>
   )
 }
 
-function Section({ title, children }) {
+/** การ์ด 1 โมดูล — หัวการ์ดกดเข้าโมดูล · ข้างในมีสถานะกดได้ 2-3 บรรทัด */
+function ModuleCard({ href, icon, title, children }) {
   return (
-    <div className="bg-card-bg border border-brand-blue-light dark:border-disc-border rounded-lg p-5">
-      <h2 className="text-lg font-semibold text-warm-900 dark:text-disc-text mb-3">{title}</h2>
-      {children}
+    <div className="flex flex-col bg-card-bg border border-brand-blue-light dark:border-disc-border rounded-lg px-4 py-3">
+      <Link href={href} className="flex items-center gap-2 mb-1.5 group">
+        <span className="w-8 h-8 rounded-lg bg-warm-100 dark:bg-disc-hover flex items-center justify-center shrink-0 text-brand-orange">
+          <Ic d={icon} className="w-[18px] h-[18px]" />
+        </span>
+        <span className="font-semibold text-base text-warm-900 dark:text-disc-text flex-1 group-hover:text-brand-orange transition-colors">
+          {title}
+        </span>
+        <Ic d={ICON.arrow} className="w-4 h-4 text-warm-400 dark:text-disc-muted shrink-0" />
+      </Link>
+      <div>{children}</div>
     </div>
   )
 }
@@ -201,16 +208,15 @@ export default async function HomePage() {
 
   const [
     docsPending, myCards, callPending, contactPending,
-    caseUnassigned, postsReview, cardsUnassigned,
+    caseCounts, postsReview,
     favAccounts, roleNames, identities,
   ] = await Promise.all([
     on('docs') && userId ? getPendingSignaturesForUser(userId, orgId) : Promise.resolve({ recipient: [], payer: [] }),
     on('kanban') && userId ? countMyOpenCards(orgId, userId, viewer) : Promise.resolve({ total: 0, overdue: 0, dueSoon: 0 }),
     on('calling') && userId ? getPendingCallCount(userId) : Promise.resolve(0),
     on('calling') && userId ? getContactPendingCount(userId) : Promise.resolve(0),
-    casesOn ? countUnassignedOpen(orgId, caseScope) : Promise.resolve(0),
+    casesOn ? countByStatus(orgId, caseScope) : Promise.resolve({}),
     on('posts') ? countPendingReview(orgId) : Promise.resolve(0),
-    on('kanban') ? countUnassignedOpenCards(orgId, viewer) : Promise.resolve(0),
     on('finance') && userId
       ? getFavoriteAccounts(orgId, userId, { canView: (a) => canViewAccount(a, userId, access) })
       : Promise.resolve([]),
@@ -219,23 +225,8 @@ export default async function HomePage() {
   ])
 
   // นับให้ตรงกับ badge บน Nav เป๊ะ — /api/docs/pending?count=true คืน recipient.length + payer.length
+  // นับให้ตรงกับ badge บน Nav เป๊ะ — /api/docs/pending?count=true คืน recipient.length + payer.length
   const signCount = docsPending.recipient.length + docsPending.payer.length
-  const callTotal = callPending + contactPending
-
-  const todo = [
-    signCount > 0 && { key: 'sign', href: '/docs/pending', icon: ICON.sign, label: t('todo.sign'), count: signCount },
-    // ?group=due = จัดกองตามกำหนดส่ง — ลงมาเจอคอลัมน์ "เลยกำหนด/วันนี้/สัปดาห์นี้" เลย
-    // (ตั้งใจใช้ "จัดกอง" ไม่ใช่ "กรอง" — เคลียร์ใบที่เลยกำหนดครบแล้วยังเห็นใบถัดไปต่อ ไม่เจอหน้าว่าง)
-    myCards.overdue > 0 && { key: 'overdue', href: '/kanban?group=due', icon: ICON.card, label: t('todo.overdue'), count: myCards.overdue, tone: 'alert' },
-    myCards.dueSoon > 0 && { key: 'dueSoon', href: '/kanban?group=due', icon: ICON.card, label: t('todo.dueSoon'), count: myCards.dueSoon },
-    callTotal > 0 && { key: 'calls', href: '/calling/assignee', icon: ICON.phone, label: t('todo.calls'), count: callTotal },
-  ].filter(Boolean)
-
-  const orgTodo = [
-    caseUnassigned > 0 && { key: 'case', href: '/case/manage', icon: ICON.case, label: t('org.caseUnassigned'), count: caseUnassigned },
-    postsReview > 0 && { key: 'posts', href: '/posts', icon: ICON.pen, label: t('org.postsReview'), count: postsReview },
-    cardsUnassigned > 0 && { key: 'cards', href: '/kanban?scope=unassigned', icon: ICON.inbox, label: t('org.cardsUnassigned'), count: cardsUnassigned },
-  ].filter(Boolean)
 
   return (
     <div className="space-y-3">
@@ -243,80 +234,105 @@ export default async function HomePage() {
       {/* ผูกบัญชีสำรอง — เฉพาะ login ด้วย Discord และยังไม่ผูกอะไรเลยสักอัน */}
       {discordId && <LinkAccountsBanner linkedProviders={identities.map(i => i.provider)} />}
 
-      {/* 1 · โปรไฟล์ฉัน — user มาก่อน org (org สลับได้ที่ Nav) */}
-      <div className="flex items-center gap-3 p-4 bg-card-bg rounded-lg border border-brand-blue-light dark:border-disc-border">
-        <OrgIcon icon={activeOrg.icon} name={activeOrg.name} />
-        <div className="min-w-0 flex-1">
-          <p className="font-semibold text-base text-warm-900 dark:text-disc-text truncate">
-            {session.user.name || session.user.email}
-          </p>
-          <p className="text-sm text-warm-500 dark:text-disc-muted truncate">
-            {t('profile.orgLine', { org: activeOrg.name, members: fmt(activeOrg.member_count) })}
-          </p>
-          {(activeOrg.role === 'owner' || roleNames.length > 0) && (
-            <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
-              {activeOrg.role === 'owner' && (
-                <span className="px-3 py-1 text-sm font-medium rounded-full bg-brand-orange/10 text-brand-orange">
-                  {t('profile.owner')}
-                </span>
-              )}
-              {roleNames.slice(0, 3).map(r => (
-                <span key={r} className="px-3 py-1 text-sm font-medium rounded-full bg-warm-100 dark:bg-disc-hover text-warm-700 dark:text-disc-text">
-                  {r}
-                </span>
-              ))}
-              {roleNames.length > 3 && (
-                <span className="text-sm text-warm-500 dark:text-disc-muted">
-                  {t('profile.moreRoles', { count: roleNames.length - 3 })}
-                </span>
-              )}
-            </div>
-          )}
+      {/* 1 · โปรไฟล์ฉัน — user มาก่อน org (org สลับได้ที่ Nav)
+          ⚠️ ชิปยศอยู่ **แถวของตัวเอง** ไม่ใช่ในคอลัมน์กลาง — บนมือถือมันเบียดจนชื่อองค์กรโดนตัด
+             และดันปุ่มไปทับ (เจอตอนถ่ายจอที่ 430px) */}
+      <div className="bg-card-bg rounded-lg border border-brand-blue-light dark:border-disc-border px-4 py-3">
+        <div className="flex items-center gap-3">
+          <OrgIcon icon={activeOrg.icon} name={activeOrg.name} />
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold text-base text-warm-900 dark:text-disc-text truncate">
+              {session.user.name || session.user.email}
+            </p>
+            <p className="text-sm text-warm-500 dark:text-disc-muted truncate">
+              {t('profile.orgLine', { org: activeOrg.name, members: fmt(activeOrg.member_count) })}
+            </p>
+          </div>
+          <Link
+            href={isOrgAdmin ? '/org/settings' : '/profile'}
+            className="shrink-0 text-base text-brand-orange hover:text-brand-orange-light border border-brand-orange/30 hover:border-brand-orange px-4 py-2 rounded-lg transition-colors"
+          >
+            {isOrgAdmin ? t('profile.orgSettings') : t('profile.myProfile')}
+          </Link>
         </div>
-        <Link
-          href={isOrgAdmin ? '/org/settings' : '/profile'}
-          className="shrink-0 text-base text-brand-orange hover:text-brand-orange-light border border-brand-orange/30 hover:border-brand-orange px-4 py-2 rounded-lg transition-colors"
-        >
-          {isOrgAdmin ? t('profile.orgSettings') : t('profile.myProfile')}
-        </Link>
-      </div>
 
-      {/* 2 · ต้องทำ — ของฉัน · ไม่มีของค้าง = แถวหายไปเลย ไม่โชว์ 0 */}
-      <Section title={t('todo.title')}>
-        {todo.length === 0 ? (
-          <p className="text-base text-warm-500 dark:text-disc-muted py-2">{t('todo.empty')}</p>
-        ) : (
-          <div className="divide-y divide-brand-blue-light dark:divide-disc-border">
-            {todo.map(r => <TodoRow key={r.key} {...r} />)}
+        {(activeOrg.role === 'owner' || roleNames.length > 0) && (
+          <div className="flex flex-wrap items-center gap-1.5 mt-2">
+            {activeOrg.role === 'owner' && (
+              <span className="px-3 py-1 text-sm font-medium rounded-full bg-brand-orange/10 text-brand-orange">
+                {t('profile.owner')}
+              </span>
+            )}
+            {roleNames.slice(0, 3).map((r) => (
+              <span key={r} className="px-3 py-1 text-sm font-medium rounded-full bg-warm-100 dark:bg-disc-hover text-warm-700 dark:text-disc-text">
+                {r}
+              </span>
+            ))}
+            {roleNames.length > 3 && (
+              <span className="text-sm text-warm-500 dark:text-disc-muted">
+                {t('profile.moreRoles', { count: roleNames.length - 3 })}
+              </span>
+            )}
           </div>
         )}
-      </Section>
+      </div>
 
-      {/* 3 · ค้างที่องค์กร + ทางลัดการเงิน — โชว์เมื่อมีของจริงเท่านั้น */}
-      {(orgTodo.length > 0 || favAccounts.length > 0) && (
-        <Section title={t('org.title')}>
-          <div className="divide-y divide-brand-blue-light dark:divide-disc-border">
-            {orgTodo.map(r => <TodoRow key={r.key} {...r} />)}
-            {favAccounts.length > 0 && (
-              <p className="text-sm text-warm-500 dark:text-disc-muted pt-3 pb-1 px-4">{t('finance.hint')}</p>
-            )}
-            {favAccounts.map(a => (
-              <Link
+      {/* 2 · การ์ดโมดูล — ใบละฟีเจอร์ · ทุกบรรทัดกดได้ ลิงก์ไปหน้าที่กรองไว้แล้ว
+          ⚠️ items-start สำคัญ: ค่าตั้งต้นของ grid คือ stretch → การ์ดที่มี 1-2 บรรทัด
+             จะถูกยืดให้สูงเท่าใบที่สูงสุดในแถว แล้วเหลือที่ว่างโล่งใต้ตัวเลข */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 items-start">
+
+        {on('kanban') && (
+          <ModuleCard href="/kanban" icon={ICON.card} title={t('card.kanban')}>
+            <StatRow href="/kanban?status=backlog" label={t('kanban.backlog')} count={myCards.backlog} />
+            <StatRow href="/kanban?status=doing" label={t('kanban.doing')} count={myCards.doing} />
+            <StatRow href="/kanban?group=due" label={t('kanban.overdue')} count={myCards.overdue} tone="alert" />
+          </ModuleCard>
+        )}
+
+        {on('docs') && (
+          <ModuleCard href="/docs" icon={ICON.sign} title={t('card.docs')}>
+            <StatRow href="/docs/pending" label={t('docs.recipient')} count={docsPending.recipient.length} />
+            <StatRow href="/docs/pending" label={t('docs.payer')} count={docsPending.payer.length} />
+          </ModuleCard>
+        )}
+
+        {on('calling') && (
+          <ModuleCard href="/calling" icon={ICON.phone} title={t('card.calling')}>
+            <StatRow href="/calling/assignee" label={t('calling.members')} count={callPending} />
+            <StatRow href="/calling/assignee" label={t('calling.contacts')} count={contactPending} />
+          </ModuleCard>
+        )}
+
+        {casesOn && (
+          <ModuleCard href="/case/manage" icon={ICON.case} title={t('card.cases')}>
+            <StatRow href="/case/manage?status=open" label={t('cases.open')} count={caseCounts.open || 0} />
+            <StatRow href="/case/manage?status=in_progress" label={t('cases.inProgress')} count={caseCounts.in_progress || 0} />
+          </ModuleCard>
+        )}
+
+        {on('posts') && (
+          <ModuleCard href="/posts" icon={ICON.pen} title={t('card.posts')}>
+            <StatRow href="/posts?status=review" label={t('posts.review')} count={postsReview} />
+          </ModuleCard>
+        )}
+
+        {on('finance') && (
+          <ModuleCard href="/finance" icon={ICON.wallet} title={t('card.finance')}>
+            {favAccounts.length === 0 ? (
+              <p className="text-base text-warm-400 dark:text-disc-muted py-1.5">{t('finance.empty')}</p>
+            ) : favAccounts.map((a) => (
+              <StatRow
                 key={a.id}
                 href={`/finance/transactions?accountId=${a.id}`}
-                className="flex items-center gap-3 px-4 py-3 -mx-1 rounded-lg hover:bg-warm-50 dark:hover:bg-disc-hover transition-colors"
-              >
-                <span className="w-9 h-9 rounded-lg bg-warm-100 dark:bg-disc-hover flex items-center justify-center shrink-0 text-brand-orange">
-                  <Ic d={ICON.wallet} />
-                </span>
-                <span className="min-w-0 flex-1 text-base text-warm-900 dark:text-disc-text truncate">{a.name}</span>
-                <span className="shrink-0 text-base font-medium text-warm-900 dark:text-disc-text">{fmtBaht(a.balance)}</span>
-                <Ic d={ICON.arrow} className="w-4 h-4 text-warm-400 dark:text-disc-muted shrink-0" />
-              </Link>
+                label={a.name}
+                value={fmtBaht(a.balance)}
+              />
             ))}
-          </div>
-        </Section>
-      )}
+          </ModuleCard>
+        )}
+
+      </div>
 
     </div>
   )

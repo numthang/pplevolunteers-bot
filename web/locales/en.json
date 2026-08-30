@@ -2102,22 +2102,37 @@
       "orgSettings": "Org settings",
       "myProfile": "My profile"
     },
-    "todo": {
-      "title": "To do",
-      "empty": "Nothing pending — all clear ✅",
-      "sign": "Receipts awaiting your signature",
-      "overdue": "Overdue tasks",
-      "dueSoon": "Tasks due within 7 days",
-      "calls": "Calls assigned to you"
-    },
-    "org": {
-      "title": "Pending across the org",
-      "caseUnassigned": "Complaints with no owner",
-      "postsReview": "Content awaiting approval",
-      "cardsUnassigned": "Tasks with no owner"
-    },
     "finance": {
-      "hint": "Accounts you use often"
+      "hint": "Accounts you use often",
+      "empty": "No accounts you've used yet"
+    },
+    "card": {
+      "kanban": "Tasks",
+      "docs": "Documents",
+      "calling": "Calling",
+      "cases": "Complaints",
+      "posts": "Content",
+      "finance": "Finance"
+    },
+    "kanban": {
+      "backlog": "To do",
+      "doing": "In progress",
+      "overdue": "Overdue"
+    },
+    "docs": {
+      "recipient": "Awaiting your signature (recipient)",
+      "payer": "Awaiting your signature (payer)"
+    },
+    "calling": {
+      "members": "Calls assigned to you",
+      "contacts": "Contacts to call"
+    },
+    "cases": {
+      "open": "Open",
+      "inProgress": "In progress"
+    },
+    "posts": {
+      "review": "Awaiting approval"
     }
   }
 }
