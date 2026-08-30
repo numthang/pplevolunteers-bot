@@ -39,6 +39,21 @@ export async function getTransactions(orgId, { accountId, type, categoryId, noCa
   return rows
 }
 
+/**
+ * หา transaction จาก URL หลักฐาน — ใช้ตอน gate ไฟล์สลิป (web/app/uploads/evidence/[filename])
+ * join account เพราะ org scope ที่เชื่อถือได้อยู่ที่ account ไม่ใช่ที่ transaction
+ */
+export async function getTransactionByEvidenceUrl(orgId, evidenceUrl) {
+  const { rows } = await pool.query(
+    `SELECT t.* FROM finance_transactions t
+       JOIN finance_accounts a ON a.id = t.account_id
+      WHERE t.evidence_url = $1 AND a.org_id = $2
+      LIMIT 1`,
+    [evidenceUrl, orgId]
+  )
+  return rows[0] || null
+}
+
 export async function getTransactionById(orgId, id) {
   const { rows } = await pool.query(
     `SELECT * FROM finance_transactions WHERE id = $1 AND org_id = $2`,

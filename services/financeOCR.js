@@ -23,7 +23,8 @@ async function downloadEvidence(url) {
     const buf = await fetchBuffer(url)
     const ext = url.match(/\.(png|jpg|jpeg|webp)/i)?.[1]?.toLowerCase() || 'jpg'
     const filename = `${randomUUID()}.${ext}`
-    const uploadDir = join(process.cwd(), 'web', 'public', 'uploads', 'evidence')
+    // นอก public/ — สลิปต้องผ่าน gate เสมอ (คู่กับ web/lib/financeUploads.js · บอทรันที่รากอยู่แล้ว)
+    const uploadDir = process.env.FINANCE_UPLOAD_DIR || join(process.cwd(), 'uploads', 'finance')
     await mkdir(uploadDir, { recursive: true })
     await writeFile(join(uploadDir, filename), buf)
     return `/uploads/evidence/${filename}`

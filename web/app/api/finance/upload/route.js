@@ -1,8 +1,9 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth-options.js'
-import { writeFile } from 'fs/promises'
+import { writeFile, mkdir } from 'fs/promises'
 import { join } from 'path'
 import { randomUUID } from 'crypto'
+import { getFinanceUploadDir, financeEvidenceUrl } from '@/lib/financeUploads.js'
 
 export async function POST(req) {
   const session = await getServerSession(authOptions)
@@ -17,8 +18,10 @@ export async function POST(req) {
 
   const ext = file.name?.endsWith('.png') ? 'png' : 'jpg'
   const filename = `${randomUUID()}.${ext}`
-  const uploadDir = join(process.cwd(), 'public', 'uploads', 'evidence')
+  // นอก public/ — สลิปการเงินต้องผ่าน gate เสมอ (ดู web/lib/financeUploads.js)
+  const uploadDir = getFinanceUploadDir()
+  await mkdir(uploadDir, { recursive: true })
   await writeFile(join(uploadDir, filename), buffer)
 
-  return Response.json({ url: `/uploads/evidence/${filename}` })
+  return Response.json({ url: financeEvidenceUrl(filename) })
 }

@@ -13,8 +13,16 @@ tmp/
 meilisearch
 data.ms/
 web/.next/
-#web/public/uploads/
+# ไฟล์ที่ผู้ใช้อัปโหลด = ข้อมูลของแต่ละเครื่อง ไม่ใช่ซอร์ส (เหมือน storage/ ด้านล่าง)
+# เคย comment ไว้ตั้งแต่ fbaa877 "Finance web 1.0" — ผลคือสลิปการเงินจริงถูก commit เข้า repo
+# เปิดกลับ 2026-08-30 · ไฟล์บนดิสก์ของแต่ละเครื่องไม่ถูกลบ แค่ไม่ตามไปกับ git
+web/public/uploads/
 !web/public/uploads/**/.gitkeep
+# ของฝั่ง gated (cases, docs, finance) — ไม่เคยมี rule มาก่อน
+# ⚠️ ต้องมี / นำหน้า = ผูกกับรากเท่านั้น · เขียน `uploads/` เฉยๆ จะไปบัง web/app/uploads/
+#    ซึ่งเป็นซอร์ส (route เสิร์ฟไฟล์) แล้วไฟล์ใหม่ในนั้นจะหายเงียบ
+/uploads/
+!/uploads/**/.gitkeep
 .DS_Store
 scripts/.quote_cache.json
 web/public/media-temp/*.png
