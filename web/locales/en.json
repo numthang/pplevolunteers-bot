@@ -615,7 +615,10 @@
       "listSummary": "{total} total · {open} new · {inProgress} in progress",
       "emptyState": "No complaints yet",
       "layoutMetaTitleDefault": "Manage complaints",
-      "layoutMetaTitleTemplate": "%s — Complaints"
+      "layoutMetaTitleTemplate": "%s — Complaints",
+      "filterAll": "All",
+      "filterActive": "Not closed",
+      "filterMine": "Assigned to me"
     },
     "actions": {
       "takeCaseButton": "Take this case",
@@ -2116,12 +2119,17 @@
     },
     "status": {
       "todo": "To do",
-      "doing": "In progress",
-      "overdue": "Overdue"
+      "doing": "In progress"
     },
-    "scope": {
-      "mine": "Mine",
-      "org": "Whole org"
+    "posts": {
+      "todo": "To do",
+      "review": "In review",
+      "personal": "My personal drafts",
+      "org": "Org drafts"
+    },
+    "cases": {
+      "todo": "To do",
+      "mine": "In progress"
     }
   }
 }

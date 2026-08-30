@@ -615,7 +615,10 @@
       "listSummary": "ทั้งหมด {total} เรื่อง · รับเรื่องใหม่ {open} · กำลังดำเนินการ {inProgress}",
       "emptyState": "ยังไม่มีเรื่องร้องเรียน",
       "layoutMetaTitleDefault": "จัดการเรื่องร้องเรียน",
-      "layoutMetaTitleTemplate": "%s — เรื่องร้องเรียน"
+      "layoutMetaTitleTemplate": "%s — เรื่องร้องเรียน",
+      "filterAll": "ทั้งหมด",
+      "filterActive": "ยังไม่ปิด",
+      "filterMine": "ที่ฉันรับผิดชอบ"
     },
     "actions": {
       "takeCaseButton": "รับเรื่องนี้",
@@ -2116,12 +2119,17 @@
     },
     "status": {
       "todo": "รอทำ",
-      "doing": "กำลังทำ",
-      "overdue": "เลยกำหนด"
+      "doing": "กำลังทำ"
     },
-    "scope": {
-      "mine": "ของฉัน",
-      "org": "ทั้งองค์กร"
+    "posts": {
+      "todo": "รอทำ",
+      "review": "รอตรวจ",
+      "personal": "ร่างส่วนตัวของฉัน",
+      "org": "ร่างขององค์กร"
+    },
+    "cases": {
+      "todo": "รอทำ",
+      "mine": "กำลังทำ"
     }
   }
 }

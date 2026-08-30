@@ -449,27 +449,36 @@ export async function saveRevisionOnly(episodeId, { title, body, editedByUserId 
 }
 
 /**
- * งานสื่อของทั้ง org แยกตามสถานะ — นับอย่างเดียว สำหรับหน้าแรก
+ * ตัวเลขบนการ์ด "งานสื่อ" หน้าแรก — **นับทุกอย่างที่คนนี้เห็นได้ ไม่แบ่ง personal/org**
+ * (user เคาะ 2026-08-30: "รอทำ ทั้งส่วนตัว/องค์กร")
  *
- * ทำไมไม่เรียก listPosts({status}).length (2026-08-30):
- *   listPosts ดึงได้ถึง 200 แถวพร้อม thumbnail subquery 2 ตัว/แถว เพื่อเอาแค่จำนวน
- *
- * ขอบเขตที่ **ตั้งใจ** ให้ต่างจาก listPosts — ไม่ใช่บั๊ก:
- *   · นับเฉพาะ visibility='org' — ร่างส่วนตัวของคนอื่นไม่ใช่งานของ org
- *     → ลิงก์ปลายทางต้องมี `&filter=org` ด้วย ไม่งั้นเลขไม่ตรงกับที่กดเข้าไปเห็น
- *   · ตัด created_via='backfill' และตะกร้าดิสฯ (channel_id IS NOT NULL) เหมือนฟีดหลัก
+ * ⭐ เงื่อนไขการมองเห็นต้องเหมือน listPosts เป๊ะ — `visibility = 'org' OR owner_user_id = ฉัน`
+ *    เพราะสองเลขนี้ลิงก์ไป /posts?status=draft และ ?status=review ซึ่ง `filter` ค่าตั้งต้นเป็น 'all'
+ *    = ไม่ส่ง visibility ไปเลย → API คืน org + personal ของฉัน · เงื่อนไขต่างเมื่อไหร่ = เลขไม่ตรงหน้า
+ * ⛔ **ห้ามใส่ `visibility = 'org'` กลับมา** — เคยกรองไว้แล้วร่างส่วนตัวหายจากหน้าแรกทั้งหมด
+ *    (user ทักเอง 2026-08-30 ว่า "งานที่เป็น personal อยู่ไหน")
+ * ⚠️ ตัด backfill + ตะกร้าดิสฯ (channel_id IS NOT NULL) เหมือนฟีดหลัก ไม่งั้นเลขพองกว่าที่หน้าแสดง
+ * ⭐ draft แยกเป็น personal/org เพราะหน้าแรกโชว์เป็น {ส่วนตัว}/{องค์กร} สองเลขกดแยกกัน (user เคาะ)
+ *    **สองกองนี้ไม่ทับกัน** ไม่ใช่เศษส่วน subset — ห้ามเอาไปหารกันหรือตีความว่า "x จาก y"
+ *    personal ที่นับได้มีแต่ของฉันอยู่แล้ว เพราะ WHERE ข้างล่างตัด personal ของคนอื่นทิ้ง
  */
-export async function countByStatus(orgId) {
+export async function countByStatus(orgId, userId = null) {
   const { rows } = await pool.query(
-    `SELECT COUNT(*) FILTER (WHERE e.status = 'review')::int AS review,
-            COUNT(*) FILTER (WHERE e.status = 'draft')::int  AS draft
+    `SELECT COUNT(*) FILTER (WHERE e.status = 'draft'  AND e.visibility = 'personal')::int AS draft_personal,
+            COUNT(*) FILTER (WHERE e.status = 'draft'  AND e.visibility = 'org')::int      AS draft_org,
+            COUNT(*) FILTER (WHERE e.status = 'review')::int                               AS review
        FROM post_episodes e
       WHERE e.org_id = $1
-        AND e.visibility = 'org'
+        AND (e.visibility = 'org' OR e.owner_user_id = $2)
         AND e.archived_at IS NULL
         AND e.created_via <> 'backfill'
         AND e.channel_id IS NULL`,
-    [orgId]
+    [orgId, userId]
   )
-  return { review: rows[0]?.review || 0, draft: rows[0]?.draft || 0 }
+  const r = rows[0] || {}
+  return {
+    draftPersonal: r.draft_personal || 0,   // → /posts?status=draft&filter=personal
+    draftOrg: r.draft_org || 0,             // → /posts?status=draft&filter=org
+    review: r.review || 0,
+  }
 }

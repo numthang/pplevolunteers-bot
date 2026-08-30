@@ -247,21 +247,34 @@ export async function advanceAttachmentWatermark(caseId, expectedId, newId, clie
 }
 
 /**
+ * "ยังไม่ปิด" — ชุดสถานะที่ยังต้องมีคนทำอะไรกับเคส
+ * ⛔ resolved/closed/rejected ไม่อยู่ในนี้ · แก้ตรงนี้ที่เดียวแล้วทั้งหน้าแรกและ /case/manage ตามกันเอง
+ */
+export const ACTIVE_STATUSES = ['open', 'in_progress']
+export const ACTIVE = 'active'   // ค่าพิเศษของพารามิเตอร์ status ใน URL (/case/manage?status=active)
+
+/**
  * รายการเคส (scope-filtered) — provinces=null = admin (ทุกจังหวัด)
  * @param {number} orgId  org-scope
  */
-export async function listCases(orgId, { provinces = null, status = null, limit = 100, offset = 0 } = {}) {
+export async function listCases(orgId, { provinces = null, status = null, mineUserId = null, limit = 100, offset = 0 } = {}) {
   const params = [orgId]
   let q = `SELECT id, ref, province, category, title, status, source, created_at, updated_at
-           FROM cases WHERE org_id = $1`
+           FROM cases c WHERE org_id = $1`
   if (Array.isArray(provinces)) {
     if (provinces.length === 0) return []
     params.push(provinces)
     q += ` AND province = ANY($${params.length})`
   }
-  if (status) {
+  if (status === ACTIVE) {
+    q += ` AND status = ANY('{${ACTIVE_STATUSES.join(',')}}')`
+  } else if (status) {
     params.push(status)
     q += ` AND status = $${params.length}`
+  }
+  if (mineUserId) {
+    params.push(mineUserId)
+    q += ` AND EXISTS (SELECT 1 FROM case_assignees a WHERE a.case_id = c.id AND a.user_id = $${params.length})`
   }
   params.push(limit, offset)
   q += ` ORDER BY created_at DESC LIMIT $${params.length - 1} OFFSET $${params.length}`
@@ -281,6 +294,33 @@ export async function countByStatus(orgId, provinces = null) {
   q += ` GROUP BY status`
   const { rows } = await pool.query(q, params)
   return Object.fromEntries(rows.map(r => [r.status, r.n]))
+}
+
+/**
+ * ตัวเลขบนการ์ด "เรื่องร้องเรียน" หน้าแรก (user เคาะ 2026-08-30)
+ *   รอทำ    = เคสที่ยังไม่ปิดทั้งหมด (เท่าที่ scope จังหวัดของคนนี้เห็น)
+ *   กำลังทำ = เคสที่ยังไม่ปิดและ "ฉัน" เป็นผู้รับผิดชอบ (case_assignees)
+ *
+ * ⚠️ ทั้งสองเลขใช้ provinces ชุดเดียวกันเสมอ — กรองคนละแบบเมื่อไหร่จะได้ "รอทำ 3 · กำลังทำ 8"
+ *    ซึ่งอ่านแล้วขัดกันเอง (กำลังทำเป็น subset ของรอทำ ต้องไม่มีทางมากกว่า)
+ * ⚠️ "ยังไม่ปิด" = open + in_progress · **ไม่รวม resolved** เพราะงานทำเสร็จแล้ว เหลือแค่ปิดเอกสาร
+ *    (ตรงกับที่ kanban แม็ป resolved → done ที่ db/kanban/statusSql.js)
+ */
+export async function countCaseStats(orgId, userId, provinces = null) {
+  const params = [orgId, userId || null]
+  let q = `SELECT COUNT(*)::int AS active,
+                  COUNT(*) FILTER (WHERE EXISTS (
+                    SELECT 1 FROM case_assignees a WHERE a.case_id = c.id AND a.user_id = $2
+                  ))::int AS mine
+             FROM cases c
+            WHERE c.org_id = $1 AND c.status = ANY('{${ACTIVE_STATUSES.join(',')}}')`
+  if (Array.isArray(provinces)) {
+    if (provinces.length === 0) return { active: 0, mine: 0 }
+    params.push(provinces)
+    q += ` AND c.province = ANY($${params.length})`
+  }
+  const { rows } = await pool.query(q, params)
+  return { active: rows[0]?.active || 0, mine: rows[0]?.mine || 0 }
 }
 
 export async function addAssignee(caseId, orgId, userId) {

@@ -548,6 +548,27 @@ export async function removeHelper(orgId, cardId, userId) {
  *    ไม่งั้นตัวเลขบนหน้าแรกจะไม่ตรงกับที่กดเข้าไปเห็นจริงที่ /kanban
  * ⚠️ viewer มาจาก kanbanViewer() ใน lib/kanbanGuard.js เท่านั้น — ไม่ส่ง = fail-closed
  */
+/**
+ * กอง "รอทำ" ของทั้งองค์กร — คู่กับ countMyOpenCards ที่เป็นมุมของฉัน (หน้าแรก 2026-08-30)
+ *
+ * ⭐ ไวยากรณ์หน้าแรก: **รอทำ = กองกลางที่ยังไม่มีใครหยิบ · กำลังทำ = อยู่ในมือฉัน**
+ *    รอทำจึงต้องนับทั้ง org ไม่ใช่ของฉัน — ไม่งั้นงานที่ไม่มีใครรับจะไม่มีใครเห็นเลย
+ * ⚠️ ยังกรองด้วย `viewer` เหมือนเดิม — "ทั้งองค์กร" = เท่าที่คนนี้มีสิทธิ์เห็น ไม่ใช่ทุกแถวในตาราง
+ *    (นับดิบๆ เมื่อไหร่ = เลขบนหน้าแรกไม่ตรงกับ /kanban?scope=all ที่กดเข้าไป)
+ */
+export async function countBacklogCards(orgId, viewer = NO_VIEWER) {
+  const { rows } = await pool.query(
+    `SELECT COUNT(*)::int AS backlog
+       FROM kanban_cards c
+      WHERE c.org_id = $1
+        AND c.archived_at IS NULL
+        AND ${visibleLinkSql(2, 3, 4)}
+        AND ${LIVE_STATUS_SQL} = 'backlog'`,
+    [orgId, ...viewerParams(viewer)]
+  )
+  return rows[0]?.backlog || 0
+}
+
 export async function countMyOpenCards(orgId, userId, viewer = NO_VIEWER) {
   if (!userId) return { total: 0, overdue: 0, dueSoon: 0, backlog: 0, doing: 0 }
   const { rows } = await pool.query(

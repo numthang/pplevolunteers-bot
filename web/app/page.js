@@ -8,8 +8,8 @@ import LinkAccountsBanner from '@/components/LinkAccountsBanner.jsx'
 import { getPendingCallCount } from '@/db/calling/members.js'
 import { getContactPendingCount } from '@/db/calling/contacts.js'
 import { getPendingSignaturesForUser } from '@/db/docs/entries.js'
-import { countMyOpenCards } from '@/db/kanban/cards.js'
-import { countByStatus } from '@/db/cases.js'
+import { countMyOpenCards, countBacklogCards } from '@/db/kanban/cards.js'
+import { countCaseStats } from '@/db/cases.js'
 import { countByStatus as countPostsByStatus } from '@/db/posts/episodes.js'
 import { getFavoriteAccounts } from '@/db/finance/accounts.js'
 import { listMemberRoleNames } from '@/db/orgMemberRoles.js'
@@ -56,7 +56,9 @@ function Ic({ d, className = 'w-5 h-5' }) {
  *    (ต่างจากรอบก่อนที่ซ่อนแถวศูนย์ แล้วตำแหน่งตัวเลขขยับทุกวันจนต้องอ่านใหม่ทุกครั้ง)
  * ⚠️ ไม่ส่ง count/value มาเลย = โมดูลนี้ **ไม่มีสถานะนั้นอยู่จริง** → โชว์ `–` และ **ห้ามเป็นลิงก์**
  *    "0" กับ "ไม่มีสถานะนี้" คนละเรื่อง · ทำเป็นลิงก์เมื่อไหร่ = กดแล้วไปหน้าที่กรองแบบนั้นไม่ได้
- *    (ตรวจแล้ว 2026-08-30: `due_at` มีที่ kanban ที่เดียวทั้ง repo — เคส/งานสื่อ/โทร ไม่มีกำหนดส่ง)
+ * ⚠️ มีเลขแต่ไม่ส่ง href = **ปลายทางยังกรองแบบนั้นไม่ได้** → โชว์เลขปกติแต่กดไม่ได้
+ *    (เคส/งานสื่อ ยังไม่มีตัวกรอง "ของฉัน" — ต่อ href ให้ตอนสเต็ป 2 · ห้ามลิงก์ไปหน้าที่ไม่ได้กรอง
+ *     เพราะจะได้อาการ "โชว์ 3 กดเข้าไปเห็น 12" ซึ่งแย่กว่ากดไม่ได้)
  */
 function StatRow({ href, label, count, value, tone = 'normal' }) {
   const row = 'flex items-center justify-between gap-2 -mx-2 px-2 py-1 rounded-md'
@@ -76,26 +78,51 @@ function StatRow({ href, label, count, value, tone = 'normal' }) {
     : tone === 'alert'
       ? 'text-red-600 dark:text-red-400 font-semibold'
       : 'text-warm-900 dark:text-disc-text font-semibold'
-  return (
-    <Link href={href} className={`${row} hover:bg-warm-50 dark:hover:bg-disc-hover transition-colors`}>
+  const inner = (
+    <>
       <span className="text-base text-warm-500 dark:text-disc-muted truncate min-w-0">{label}</span>
       <span className={`text-base shrink-0 ${badge}`}>{value != null ? value : fmt(count)}</span>
+    </>
+  )
+  if (!href) return <div className={row}>{inner}</div>
+  return (
+    <Link href={href} className={`${row} hover:bg-warm-50 dark:hover:bg-disc-hover transition-colors`}>
+      {inner}
     </Link>
+  )
+}
+
+/**
+ * บรรทัดที่มี **สองเลขกดแยกกัน** — `{ซ้าย}/{ขวา}` เช่น ร่างส่วนตัว/ร่างองค์กร (user เคาะ 2026-08-30)
+ *
+ * ⛔ **ไม่ใช่เศษส่วน** — สองกองนี้ไม่ทับกัน ไม่ใช่ "x จาก y" · ห้ามเอาไปใช้กับ subset/total
+ *    (เศษส่วนแบบ ฉัน/ทั้งหมด เคยลองแล้วทิ้ง — user ว่า "ต้องตีความอีก")
+ * ⚠️ ทั้งสองข้างต้องมีหน้าปลายทางที่กรองได้จริง ไม่งั้นใช้ StatRow ธรรมดา
+ */
+function StatSplitRow({ label, left, right }) {
+  const num = 'px-1 rounded hover:bg-warm-100 dark:hover:bg-disc-hover transition-colors'
+  const tone = (n) => n ? 'text-warm-900 dark:text-disc-text font-semibold' : 'text-warm-400 dark:text-disc-muted'
+  return (
+    <div className="flex items-center justify-between gap-2 -mx-2 px-2 py-1 rounded-md">
+      <span className="text-base text-warm-500 dark:text-disc-muted truncate min-w-0">{label}</span>
+      <span className="text-base shrink-0 flex items-center">
+        <Link href={left.href} title={left.title} className={`${num} ${tone(left.count)}`}>{fmt(left.count)}</Link>
+        <span className="text-warm-300 dark:text-disc-muted px-0.5">/</span>
+        <Link href={right.href} title={right.title} className={`${num} ${tone(right.count)}`}>{fmt(right.count)}</Link>
+      </span>
+    </div>
   )
 }
 
 /**
  * การ์ด 1 โมดูล — หัวการ์ดกดเข้าโมดูล · ข้างในเป็น **3 ช่องตายตัว: รอทำ / กำลังทำ / เลยกำหนด**
  *
- * ⭐ `scope` = ชิปบอกว่าตัวเลขในใบนี้เป็น "ของฉัน" หรือ "ทั้งองค์กร" (user เคาะ 2026-08-30)
- *    ก่อนหน้านี้การ์ดหน้าตาเหมือนกันเป๊ะแต่มุมมองไม่เหมือนกัน (kanban/docs/calling = ของฉัน,
- *    cases/posts = ทั้ง org ตาม scope จังหวัด) แล้วไม่มีอะไรบอก → อ่านผิดทุกวัน
- *    **การ์ดใหม่ต้องมี scope เสมอ** ถ้าตอบไม่ได้ว่าเลขเป็นมุมไหน แปลว่า query ยังไม่นิ่งพอจะขึ้นหน้าแรก
- * ⛔ อย่าเปลี่ยนเป็นเศษส่วน "ฉัน/ทั้งหมด" จนกว่าปลายทางจะกรองได้ครบ — ตรวจแล้ว 2026-08-30:
- *    /case/manage + /posts ไม่มีตัวกรอง owner · /docs/pending + /calling/assignee ไม่มีหน้ามุม org
- *    ใส่ตอนนี้ = ได้เลขที่กดไม่ได้ 4 ตัวบนหน้าแรก
+ * ⛔ **เคยมีชิป "ของฉัน/ทั้งองค์กร" ตรงนี้ — ถอดออก 2026-08-30 อย่าเอากลับมา**
+ *    ชิปเกิดขึ้นเพราะบางใบนับของฉันบางใบนับทั้ง org แล้วต้องมีป้ายมาอธิบาย · พอเปลี่ยนเป็น
+ *    "รอทำ = กองกลาง / กำลังทำ = ในมือฉัน" ความหมายอยู่ในคำแล้ว ป้ายกลายเป็นของซ้ำที่ทำให้งง
+ * ⛔ เศษส่วน "ฉัน/ทั้งหมด" ก็เคยคิดแล้วทิ้ง — user ว่า "ต้องตีความอีก" · อย่าเสนอใหม่
  */
-function ModuleCard({ href, icon, title, scope, children }) {
+function ModuleCard({ href, icon, title, children }) {
   return (
     <div className="h-full flex flex-col bg-card-bg border border-brand-blue-light dark:border-disc-border rounded-lg px-4 py-3">
       <Link href={href} className="flex items-center gap-2 mb-1.5 group">
@@ -104,9 +131,6 @@ function ModuleCard({ href, icon, title, scope, children }) {
         </span>
         <span className="font-semibold text-base text-warm-900 dark:text-disc-text flex-1 min-w-0 truncate group-hover:text-brand-orange transition-colors">
           {title}
-        </span>
-        <span className="shrink-0 text-sm px-2 py-0.5 rounded-full bg-warm-100 dark:bg-disc-hover text-warm-500 dark:text-disc-muted">
-          {scope}
         </span>
         <Ic d={ICON.arrow} className="w-4 h-4 text-warm-400 dark:text-disc-muted shrink-0" />
       </Link>
@@ -231,16 +255,17 @@ export default async function HomePage() {
   const isOrgAdmin = (normalizeAccess(access).permissions || new Set()).has('admin')
 
   const [
-    docsPending, myCards, callPending, contactPending,
-    caseCounts, postCounts,
+    docsPending, myCards, backlogAll, callPending, contactPending,
+    caseStats, postCounts,
     favAccounts, roleNames, identities,
   ] = await Promise.all([
     on('docs') && userId ? getPendingSignaturesForUser(userId, orgId) : Promise.resolve({ recipient: [], payer: [] }),
     on('kanban') && userId ? countMyOpenCards(orgId, userId, viewer) : Promise.resolve({ total: 0, overdue: 0, dueSoon: 0 }),
+    on('kanban') ? countBacklogCards(orgId, viewer) : Promise.resolve(0),
     on('calling') && userId ? getPendingCallCount(userId) : Promise.resolve(0),
     on('calling') && userId ? getContactPendingCount(userId) : Promise.resolve(0),
-    casesOn ? countByStatus(orgId, caseScope) : Promise.resolve({}),
-    on('posts') ? countPostsByStatus(orgId) : Promise.resolve({ review: 0, draft: 0 }),
+    casesOn ? countCaseStats(orgId, userId, caseScope) : Promise.resolve({ active: 0, mine: 0 }),
+    on('posts') ? countPostsByStatus(orgId, userId) : Promise.resolve({ review: 0, draftPersonal: 0, draftOrg: 0 }),
     on('finance') && userId
       ? getFavoriteAccounts(orgId, userId, { canView: (a) => canViewAccount(a, userId, access) })
       : Promise.resolve([]),
@@ -301,39 +326,52 @@ export default async function HomePage() {
         )}
       </div>
 
-      {/* 2 · การ์ดโมดูล — ใบละฟีเจอร์ · ทุกบรรทัดกดได้ ลิงก์ไปหน้าที่กรองไว้แล้ว
-          ⭐ **ไวยากรณ์เดียวกันทุกใบ** (user เคาะ 2026-08-30): 3 บรรทัด เรียง รอทำ → กำลังทำ → เลยกำหนด
-             ตำแหน่งบรรทัดคือความหมาย — บรรทัดที่ 1 ของทุกใบต้องแปลว่า "ยังไม่มีใครลงมือ" เหมือนกันหมด
-             โมดูลไหนไม่มีสถานะนั้นให้ปล่อยว่าง (StatRow จะขึ้น `–` ให้เอง) **ห้ามข้ามบรรทัด**
-             เพราะพอตำแหน่งขยับ ตาจะต้องอ่านป้ายใหม่ทุกใบ = เสียเหตุผลทั้งหมดของการทำให้เหมือนกัน
-          ⭐ ความสูงเท่ากันทั้งแถวได้ฟรีเพราะทุกใบมี 3 บรรทัดเป๊ะ — อย่าเพิ่มใบที่มี 2 หรือ 4
-          ⚠️ เกณฑ์แปลสถานะ = "งานหยุดรอคนกดหรือเปล่า" ไม่ใช่ชื่อ status ในตาราง
-             posts: `review` = รอทำ (นิ่งรอคนตรวจ) · `draft` = กำลังทำ (มีคนพิมพ์อยู่) — อย่าสลับ
-          ⚠️ เลขบนใบการบ้าน **ทับ** กับใบเคส/งานสื่อโดยตั้งใจ — kanban_cards ผูกเคส/โพสต์และใช้สถานะ
-             ของต้นทาง (LIVE_STATUS_SQL) การ์ดการบ้านจึงเป็นมุมรวมของฉัน ไม่ใช่กองที่ 6 แยกต่างหาก */}
+      {/* 2 · การ์ดโมดูล — ใบละฟีเจอร์ · เลขกดได้ลิงก์ไปหน้าที่กรองไว้แล้ว
+          ⭐ **ไวยากรณ์เดียวทั้งหน้า** (user เคาะ 2026-08-30 หลังลองมา 3 แบบ):
+                บรรทัด 1 · รอทำ    = กองกลาง ทั้งองค์กรเท่าที่คนนี้เห็นได้ "ยังไม่มีใครหยิบ"
+                บรรทัด 2 · กำลังทำ = อยู่ในมือฉัน
+             ความหมายอยู่ใน**คำ** ไม่ใช่ในป้ายกำกับ → ไม่ต้องมีชิป ไม่ต้องมีเศษส่วน ไม่ต้องตีความ
+          ⛔ ที่ลองแล้วทิ้ง อย่าวนกลับ: ชิป "ของฉัน/ทั้งองค์กร" (ป้ายซ้ำ) · เศษส่วน 36/79 (ต้องตีความ)
+             · ช่อง "เลยกำหนด" (มี due_at ที่ kanban ที่เดียวทั้ง repo อีก 4 ใบเป็น `–` ตลอดกาล)
+          ⚠️ เอกสาร/โทร ไม่มีกองกลาง — งานถูกมอบหมายมาแล้วตั้งแต่ต้น คนอื่นเซ็นแทน/โทรแทนไม่ได้
+             "รอทำ" ของสองใบนี้จึงเป็นของฉันโดยปริยาย และ "กำลังทำ" เป็น `–` (ไม่มีสถานะนั้นจริง)
+          ⚠️ เลขใบการบ้าน **ทับ** กับใบเคส/งานสื่อโดยตั้งใจ — เคส/โพสต์ทุกใบถูก mirror เป็นการ์ด
+             อัตโนมัติ (db/kanban/links.js) การบ้านจึงเป็นมุมรวม ไม่ใช่กองที่ 6 แยกต่างหาก */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
 
         {on('kanban') && (
-          <ModuleCard href="/kanban" icon={ICON.card} title={t('card.kanban')} scope={t('scope.mine')}>
-            <StatRow href="/kanban?status=backlog" label={t('status.todo')} count={myCards.backlog} />
+          <ModuleCard href="/kanban" icon={ICON.card} title={t('card.kanban')}>
+            <StatRow href="/kanban?scope=all&status=backlog" label={t('status.todo')} count={backlogAll} />
             <StatRow href="/kanban?status=doing" label={t('status.doing')} count={myCards.doing} />
-            <StatRow href="/kanban?group=due" label={t('status.overdue')} count={myCards.overdue} tone="alert" />
           </ModuleCard>
         )}
 
+        {/* เรื่องร้องเรียน (user เคาะ 2026-08-30)
+              รอทำ    = เคสที่ยังไม่ปิดทั้งหมดในจังหวัดที่คนนี้เห็นได้ (open + in_progress)
+              กำลังทำ = ชุดเดียวกันแต่กรองว่าฉันเป็นผู้รับผิดชอบ → เป็น subset ของบรรทัดบนเสมอ
+            ⭐ ตัวกรอง ?status=active และ ?mine=1 ที่ /case/manage สร้างขึ้นมาเพื่อสองเลขนี้โดยเฉพาะ
+               ⛔ แก้เงื่อนไขที่ไหน ต้องแก้ให้ตรงกันทั้ง countCaseStats และหน้า /case/manage */}
         {casesOn && (
-          <ModuleCard href="/case/manage" icon={ICON.case} title={t('card.cases')} scope={t('scope.org')}>
-            <StatRow href="/case/manage?status=open" label={t('status.todo')} count={caseCounts.open || 0} />
-            <StatRow href="/case/manage?status=in_progress" label={t('status.doing')} count={caseCounts.in_progress || 0} />
-            <StatRow label={t('status.overdue')} />
+          <ModuleCard href="/case/manage" icon={ICON.case} title={t('card.cases')}>
+            <StatRow href="/case/manage?status=active" label={t('cases.todo')} count={caseStats.active} />
+            <StatRow href="/case/manage?mine=1" label={t('cases.mine')} count={caseStats.mine} />
           </ModuleCard>
         )}
 
+        {/* งานสื่อ — ป้ายเป็นคำของโมดูลนี้เอง ไม่ใช่คำกลาง (user เคาะ 2026-08-30: เลิกบังคับให้ทุกใบ
+            พูดคำเดียวกัน เพราะแต่ละโมดูลมีสถานะไม่เหมือนกันจริงๆ · แก้ทีละใบตามความจริงของมัน)
+              รอทำ   = {ร่างส่วนตัวของฉัน}/{ร่างขององค์กร} — สองเลขกดแยกกัน ไม่ใช่เศษส่วน
+              รอตรวจ = ส่งตรวจแล้ว รอคนอนุมัติ
+            ⚠️ ทั้งสองบรรทัดไม่ส่ง `filter` ใน URL โดยตั้งใจ — /posts ตั้งต้นที่ filter='all'
+               ซึ่งตรงกับเงื่อนไขที่ countByStatus ใช้นับพอดี · ใส่ filter เมื่อไหร่เลขจะเพี้ยน */}
         {on('posts') && (
-          <ModuleCard href="/posts" icon={ICON.pen} title={t('card.posts')} scope={t('scope.org')}>
-            <StatRow href="/posts?status=review&filter=org" label={t('status.todo')} count={postCounts.review} />
-            <StatRow href="/posts?status=draft&filter=org" label={t('status.doing')} count={postCounts.draft} />
-            <StatRow label={t('status.overdue')} />
+          <ModuleCard href="/posts" icon={ICON.pen} title={t('card.posts')}>
+            <StatSplitRow
+              label={t('posts.todo')}
+              left={{ href: '/posts?status=draft&filter=personal', count: postCounts.draftPersonal, title: t('posts.personal') }}
+              right={{ href: '/posts?status=draft&filter=org', count: postCounts.draftOrg, title: t('posts.org') }}
+            />
+            <StatRow href="/posts?status=review" label={t('posts.review')} count={postCounts.review} />
           </ModuleCard>
         )}
 
@@ -342,59 +380,37 @@ export default async function HomePage() {
             ⚠️ ไม่มี "กำลังทำ" จริง — calling_logs มีแค่ answered/no_answer/not_called/met และ 1 log = จบ
                อย่าเดานิยามใหม่มาเติมช่องให้เต็ม */}
         {on('calling') && (
-          <ModuleCard href="/calling" icon={ICON.phone} title={t('card.calling')} scope={t('scope.mine')}>
+          <ModuleCard href="/calling" icon={ICON.phone} title={t('card.calling')}>
             <StatRow href="/calling/assignee" label={t('status.todo')} count={callPending + contactPending} />
             <StatRow label={t('status.doing')} />
-            <StatRow label={t('status.overdue')} />
           </ModuleCard>
         )}
 
         {/* เอกสาร: ผู้รับ/ผู้จ่าย เป็น "รอคุณเซ็น" ทั้งคู่ และลิงก์ไป /docs/pending อันเดียวกัน → ยุบรวม */}
         {on('docs') && (
-          <ModuleCard href="/docs" icon={ICON.sign} title={t('card.docs')} scope={t('scope.mine')}>
+          <ModuleCard href="/docs" icon={ICON.sign} title={t('card.docs')}>
             <StatRow href="/docs/pending" label={t('status.todo')} count={signCount} />
             <StatRow label={t('status.doing')} />
-            <StatRow label={t('status.overdue')} />
+          </ModuleCard>
+        )}
+
+        {/* การเงิน: การ์ดเท่าใบอื่น แต่ **ไม่มีช่องสถานะ** เพราะยอดคงเหลือไม่ใช่คิวงาน */}
+        {on('finance') && (
+          <ModuleCard href="/finance" icon={ICON.wallet} title={t('card.finance')}>
+            {favAccounts.length === 0 ? (
+              <p className="text-base text-warm-400 dark:text-disc-muted py-1">{t('finance.empty')}</p>
+            ) : favAccounts.map((a) => (
+              <StatRow
+                key={a.id}
+                href={`/finance/transactions?accountId=${a.id}`}
+                label={a.name}
+                value={fmtBaht(a.balance)}
+              />
+            ))}
           </ModuleCard>
         )}
 
       </div>
-
-      {/* 3 · การเงิน — **คนละครอบครัวกับข้างบน** จึงเต็มความกว้าง ไม่มีชิป scope ไม่มี 3 ช่อง
-          ⛔ ห้ามยัดกลับเข้า grid ด้านบน — ยอดคงเหลือไม่ใช่คิวงาน พอไปนั่งข้างใบที่มี "รอทำ/กำลังทำ"
-             ตาจะอ่าน ฿12,400 เป็นจำนวนงานที่ค้าง (นี่คือใบที่ทำให้ทั้งแถวดูไม่เข้าพวกมาตลอด) */}
-      {on('finance') && (
-        <div className="bg-card-bg border border-brand-blue-light dark:border-disc-border rounded-lg px-4 py-3">
-          <Link href="/finance" className="flex items-center gap-2 mb-1.5 group">
-            <span className="w-8 h-8 rounded-lg bg-warm-100 dark:bg-disc-hover flex items-center justify-center shrink-0 text-brand-orange">
-              <Ic d={ICON.wallet} className="w-[18px] h-[18px]" />
-            </span>
-            <span className="flex-1 min-w-0 flex items-baseline gap-2">
-              <span className="font-semibold text-base text-warm-900 dark:text-disc-text shrink-0 group-hover:text-brand-orange transition-colors">
-                {t('card.finance')}
-              </span>
-              <span className="hidden sm:inline text-sm text-warm-500 dark:text-disc-muted truncate">
-                {t('finance.hint')}
-              </span>
-            </span>
-            <Ic d={ICON.arrow} className="w-4 h-4 text-warm-400 dark:text-disc-muted shrink-0" />
-          </Link>
-          {favAccounts.length === 0 ? (
-            <p className="text-base text-warm-400 dark:text-disc-muted py-1">{t('finance.empty')}</p>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6">
-              {favAccounts.map((a) => (
-                <StatRow
-                  key={a.id}
-                  href={`/finance/transactions?accountId=${a.id}`}
-                  label={a.name}
-                  value={fmtBaht(a.balance)}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      )}
 
     </div>
   )
