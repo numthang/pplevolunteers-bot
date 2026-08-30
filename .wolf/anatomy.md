@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-28T17:56:03.287Z
-> Files: 1042 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-30T04:59:34.247Z
+> Files: 1051 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
 
@@ -80,7 +80,7 @@
 - `NOTE.md` (~1073 tok)
 - `org shell + switcher + settings (2026-07-15, step 2)OrgShell.jsx` — web/components/org/OrgShell.jsx — top switcher [ส่วนตัว ↔ องค์กร] + nav (หน้าหลัก/ตั้งค่า) + ออกจากระบบ (~200 tok)
 - `package-lock.json` — npm lock file (~48920 tok)
-- `package.json` — Node.js package manifest (~285 tok)
+- `package.json` — Node.js package manifest (~378 tok)
 - `POST.md` (~4039 tok)
 
 ## .claude/
@@ -288,10 +288,10 @@
 - `AUDIT.md` — AUDIT — Vendor Lock-in & DB Connection Architecture (~2261 tok)
 - `CUTOVER.md` — CUTOVER RUNBOOK — org-core → master (~3332 tok)
 - `DATABASE.md` — Database Schema — pple_volunteers (~3190 tok)
-- `DEPLOYMENT.md` — Production Deployment — VPS Setup (~2522 tok)
+- `DEPLOYMENT.md` — Production Deployment — VPS Setup (~2975 tok)
 - `DEV_AGREEMENT.md` — CivicFlow — Dev Agreement & กติกาทำงานร่วม (ร่าง — รอคุยกับทีม CivicFlow) (~1760 tok)
 - `ORG_ACCESS_REDESIGN.md` — ORG_ACCESS_REDESIGN — ปลดสิทธิ์ออกจาก Discord (~5545 tok)
-- `PENDING.md` — PENDING.md — Backlog & Ideas (~43293 tok)
+- `PENDING.md` — PENDING.md — Backlog & Ideas (~43397 tok)
 - `WEB.md` — Web App — Next.js Frontend (~5324 tok)
 
 ## md/archive/
@@ -353,6 +353,11 @@
 - `PLAN-4.md` — ก้อน 4 — ท่อโพสต์ร่วม (publishPipeline) + คิว/worker + รวมประวัติ (~2638 tok)
 - `POSTS.md` — Posts — เครื่องมืองานสื่อ (เขียนคอนเทนต์ → เผยแพร่) (~14460 tok)
 
+## migrations/
+
+- `1788065156821_baseline.sql` — Up Migration (~88 tok)
+- `1788065178686_test-smoke.sql` — Up Migration (~34 tok)
+
 ## org core (platformfor.org identity/
 
 - `tenant — email-first, 2026-07-15)activeOrg.js` — web/lib/activeOrg.js — resolveActiveOrg(userId): active org จาก cookie `active_org` + membership (~55 tok)
@@ -395,6 +400,7 @@
 - `inspect-pdf-fields.js` — Inspect PDF templates — แสดง page size + form fields (ถ้ามี) (~456 tok)
 - `make-doc-template.js` — แปลง 1.1-ใบสำคัญรับเงินค่าสถานที่.docx → template พร้อม {{placeholder}} (~2064 tok)
 - `make-doc-templates.js` — แปลง docx ต้นฉบับ → template พร้อม {{placeholder}} สำหรับ docxtemplater (~2460 tok)
+- `migrate.js` — Wrapper around node-pg-migrate that reuses this project's DB_* env vars (~790 tok)
 - `seedPostsFromFiles.js` — แยกไฟล์ series เป็นตอนๆ → [{ title, sourceIdea, body }] (~1358 tok)
 - `sync-act-events.js` — pool: sleep, parseThaiDatetime, fetchHtml + 7 more (~2212 tok)
 
@@ -431,6 +437,7 @@
 - `extract-intro-ratchaburi-csv.js` — scripts/extract-intro-csv.js (~1790 tok)
 - `importMembers.js` — scripts/importMembers.js import from intro_normalized only (~612 tok)
 - `peek-intro-peoplesparty.js` — peek-intro-peoplesparty.js (~417 tok)
+- `resetCaseTimelines.js` — resetCaseTimelines.js — ถอย "คั่นหน้า" การ sync timeline ของเคส แล้วล้างสรุปที่ AI เคยทำไว้ (~1200 tok)
 - `resync-roles.js` — scripts/data/resync-roles.js (~1386 tok)
 
 ## scripts/dev/
@@ -598,15 +605,19 @@
 - `_tmp_cdp_check2.mjs` — PORT: jsonGet, connect, send, main, evalJs (~672 tok)
 - `_tmp_cdp_check3.mjs` — PORT: jsonGet, connect, send, main, evalJs (~1064 tok)
 - `_tmp_cdp_check4.mjs` — PORT: jsonGet, connect, send + 3 more (~1036 tok)
+- `alias-hook.tmp.mjs` — TEMP — ให้ node ธรรมดารู้จัก alias '@/' เหมือน Next.js (ใช้เฉพาะสคริปต์ smoke ลบทิ้งหลังรัน) (~130 tok)
 - `alias-loader.mjs` — Exports resolve (~100 tok)
 - `eslint.config.mjs` — ESLint — ตั้งใจให้จับ "บั๊กจริง" อย่างเดียว ไม่ใช่ตำรวจสไตล์ (~917 tok)
 - `jsconfig.json` (~67 tok)
 - `middleware.js` — ส่ง path ปัจจุบันเข้า request header ให้ server component อ่านได้ (~246 tok)
+- `mint-token.tmp.mjs` — TEMP — mint magic token ลง DB ตรงๆ (ห้ามยิง /api/org/auth/magic = ส่งเมลจริง · bug-033) (~233 tok)
 - `next.config.js` — override: true — .env เป็น source of truth; กัน env var ที่ export ค้างใน shell (เช่น ANTHROPIC_API_ (~587 tok)
 - `package-lock.json` — npm lock file (~45282 tok)
 - `package.json` — Node.js package manifest (~337 tok)
 - `postcss.config.js` — PostCSS configuration (~21 tok)
 - `scripts-tmp-test-entries.mjs` — Declares guildId (~428 tok)
+- `smoke-dash.tmp.mjs` — TEMP smoke test — ลบทิ้งหลังรัน · เรียก db function ใหม่ของหน้าแรกกับ DB จริงบนเครื่อง dev (~685 tok)
+- `smoke-parity.tmp.mjs` — TEMP — พิสูจน์ว่าเลขบนหน้าแรก "ตรงกับ" ที่กดเข้าไปเห็นจริง (list vs count) (~502 tok)
 - `tailwind.config.js` (~664 tok)
 - `test-receipt.mjs` — __dirname: makeSigPng, injectBodyIntoTemplate, colorVariableRuns (~1142 tok)
 - `vitest.config.js` (~61 tok)
@@ -898,7 +909,7 @@
 
 ## web/app/api/docs/entries/
 
-- `route.js` — GET /api/docs/entries?projectId=X (docs_projects.id) (~1364 tok)
+- `route.js` — GET /api/docs/entries?projectId=X (docs_projects.id) (~1362 tok)
 
 ## web/app/api/docs/entries/[id]/
 
@@ -1843,7 +1854,7 @@
 
 ## web/app/uploads/evidence/[filename]/
 
-- `route.js` — Next.js API route: GET (~212 tok)
+- `route.js` — เสิร์ฟสลิป/หลักฐานการเงิน — **ต้องผ่านสิทธิ์เสมอ** (~729 tok)
 
 ## web/components/
 
@@ -1904,9 +1915,9 @@
 ## web/components/docs/
 
 - `DocAutoCalc.jsx` — TRAVEL_IN_PROVINCE_RATE (~9800 tok)
-- `DocEntryList.jsx` — ALL_ITEMS (~8125 tok)
+- `DocEntryList.jsx` — ALL_ITEMS (~8025 tok)
 - `DocProjectCard.jsx` — FALLBACK_IMAGE (~1078 tok)
-- `DocProjectView.jsx` — THAI_MONTHS (~11734 tok)
+- `DocProjectView.jsx` — THAI_MONTHS (~11828 tok)
 - `DocsProvinceFilter.jsx` — DocsProvinceFilter (~449 tok)
 - `DocsSignPolicySetting.jsx` — เลือกโหมดการเซ็น strict/flexible ของ org (มีผลทันที + ป้ายสถานะ) (~900 tok)
 - `ExternalPayeeModal.jsx` — ฟอร์มเพิ่มผู้รับเงินคนนอก: ถ่ายบัตร → OCR เติมให้ → ตรวจ → กดบันทึก (~1800 tok)
@@ -2032,7 +2043,7 @@
 ## web/db/docs/
 
 - `attachments.js` — Exports getAttachmentsByProject, createAttachment, getAttachmentById, deleteAttachment (~366 tok)
-- `entries.js` — เติม payer_display_name + payer_position จาก pool ผู้จ่าย (role-based position มาก่อน docs_payers) (~5940 tok)
+- `entries.js` — เติม payer_display_name + payer_position จาก pool ผู้จ่าย (role-based position มาก่อน docs_payers) (~6316 tok)
 - `externalPayees.js` — CRUD ผู้รับเงินคนนอก (ไม่มี users/Discord) + ค้นเลขบัตรกันซ้ำ + สำเนาบัตรในแถวตัวเอง (~1100 tok)
 - `idCard.js` — สำเนาบัตรประชาชนเก็บใน `users.id_card_image` (BYTEA) — **1 คน 1 ใบ** (~385 tok)
 - `payers.js` — ผู้มีอำนาจลงนาม — อ่านสิทธิ์จาก org_member_roles เหมือนทั้งระบบ (ORG_ACCESS_REDESIGN ขั้น 5) (~2714 tok)
@@ -2106,6 +2117,7 @@
 - `docsOcrQuota.js` — โควตาอ่านบัตรด้วย AI ต่อคนต่อวัน (user_config key docs_ocr_quota, 15/วัน) กันสมาชิกที่ถือลิงก์เซ็นยิง vision รัว (~250 tok)
 - `featureGate.js` — ด่านหน้า route ของแต่ละ app: ไม่มี session → redirectToLogin() · org ปิดฟีเจอร์ → 404 (~420 tok)
 - `financeAccess.js` — Finance Access Control (~845 tok)
+- `financeUploads.js` — หลักฐานการเงิน (สลิป/ใบเสร็จ) — เก็บ "นอก /public" เสิร์ฟผ่าน gated route เท่านั้น (~296 tok)
 - `generateComplaintLetter.js` — Exports generateComplaintLetterPdf (~748 tok)
 - `generatePdf.js` — ดึง body content (XML ระหว่าง <w:body>…<w:sectPr) จากไฟล์ .docx (~5370 tok)
 - `geography.js` — Geography data — จังหวัด ↔ ภาคย่อย (sub-region) ↔ ภาคใหญ่ (main region) (~1983 tok)
@@ -2226,8 +2238,8 @@
 
 ## web/locales/
 
-- `en.json` — web locale strings อังกฤษ (~60 tok)
-- `th.json` — web locale strings ไทย (starter: common.*) (~60 tok)
+- `en.json` (~24364 tok)
+- `th.json` (~23276 tok)
 
 ## web/public/media-temp/
 

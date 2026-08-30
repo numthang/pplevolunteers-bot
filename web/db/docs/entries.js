@@ -477,12 +477,20 @@ export async function deleteEntry(id) {
   return rowCount > 0
 }
 
+/** ล้างบิลทั้งหมดของโครงการ — บล็อกถ้ามี entry ไหนเซ็นแล้ว (ผู้รับหรือผู้จ่าย) กันลบหลักฐานที่เซ็นไปแล้วโดยไม่ตั้งใจ */
 export async function deleteAllEntriesByProject(projectId) {
+  const { rows: [{ signed_count }] } = await pool.query(
+    `SELECT COUNT(*) FILTER (WHERE signed_at IS NOT NULL OR payer_signed_at IS NOT NULL) AS signed_count
+     FROM docs_activity_entries WHERE project_id = $1`,
+    [projectId]
+  )
+  if (Number(signed_count) > 0) return { blocked: true, deleted: 0 }
+
   const { rowCount } = await pool.query(
     `DELETE FROM docs_activity_entries WHERE project_id = $1`,
     [projectId]
   )
-  return rowCount
+  return { blocked: false, deleted: rowCount }
 }
 
 /**

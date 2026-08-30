@@ -795,9 +795,15 @@ export default function DocProjectView({ project: initialProject, initialEntries
           <button
             type="button"
             onClick={async () => {
-              if (!confirm(t('projectView.clearAll.confirm', { count: entries.length }))) return
+              if (entries.some(e => e.signed_at || e.payer_signed_at)) {
+                alert(t('projectView.clearAll.blockedSigned'))
+                return
+              }
+              const typed = prompt(t('projectView.clearAll.confirmPrompt', { count: entries.length }))
+              if (typed !== String(entries.length)) return
               const res = await fetch(`/api/docs/entries?projectId=${project.id}`, { method: 'DELETE' })
               if (res.ok) { setEntries([]); setRefreshKey(k => k + 1) }
+              else if (res.status === 409) alert(t('projectView.clearAll.blockedSigned'))
               else alert(t('projectView.clearAll.genericError'))
             }}
             className="px-4 py-2 text-sm font-medium text-red-500 dark:text-red-400 border border-red-200 dark:border-red-900 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition"

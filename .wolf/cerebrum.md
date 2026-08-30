@@ -1438,6 +1438,12 @@ Enter เอง · จะลงมือได้ต่อเมื่อเข�
 แก่นของทั้ง 2 ครั้งคือเรื่องเดียวกัน: **ชิงลงมือก่อน user ได้ตัดสินใจ** · คำที่ห้ามนับเป็นอนุมัติ
 = "อาจจะ · น่าจะ · คงจะ · ก็ได้ · เดี๋ยวค่อย"
 
+- **`can('admin', ...)` = crash** — `admin` เป็น *permission* ไม่ใช่ *capability* · `can()` lookup ใน `CAPABILITIES` ไม่เจอแล้ว throw ทันที · build/lint จับไม่ได้ (runtime string lookup) เจอตอนเปิดหน้าจริงเท่านั้น → เช็ค `admin`/`secretary_general` ต้องอ่าน `normalizeAccess(access).permissions.has(...)` ตรงๆ (bug-194)
+- **ห้ามประกอบ `viewer` ของ kanban เอง** — ใช้ `kanbanViewer(access, userId)` จาก `lib/kanbanGuard.js` เท่านั้น · ไม่ส่ง = fail-closed แบบเงียบ (การ์ดที่ผูกเคสหายทุกใบ ไม่มี error) · วัดจริงบน dev: การ์ดไร้เจ้าภาพ 221 → 41 ใบ
+- **`finance_accounts.usage_count` เป็นของทั้ง org ไม่ใช่ของ user** — `incrementUsageCount` บวกกองเดียวไม่มี user_id · อยากได้ "ที่ฉันใช้บ่อย" ต้อง group จาก `finance_transactions.updated_by`
+- **`user_identities` มีแถว `provider='discord'` ด้วย** — เช็ค "ผูกบัญชีสำรองแล้วหรือยัง" ด้วย `linkedProviders.length > 0` ไม่ได้ ต้องไล่ชื่อ provider ที่ต้องการจริงๆ
+- **หน้าแรกห้ามดึงรายการมา `.length`** — `listMyCards`/`listPosts` ลาก json_agg + thumbnail subquery ต่อแถว · อยากได้จำนวนให้เขียน count query ที่ใช้ `visibleLinkSql`/`LIVE_STATUS_SQL` ชุดเดียวกัน แล้ว**ตรวจ parity กับ list เสมอ** ไม่งั้นหน้าแรกโกหก
+
 ## Decision Log
 
 <!-- Significant technical decisions with rationale. Why X was chosen over Y. -->

@@ -102,6 +102,7 @@ export async function DELETE(req) {
   const projectId = parseInt(searchParams.get('projectId'))
   if (!projectId) return Response.json({ error: 'projectId required' }, { status: 400 })
 
-  const deleted = await deleteAllEntriesByProject(projectId)
+  const { blocked, deleted } = await deleteAllEntriesByProject(projectId)
+  if (blocked) return Response.json({ error: 'Has signed entries', blocked: true }, { status: 409 })
   return Response.json({ success: true, deleted })
 }

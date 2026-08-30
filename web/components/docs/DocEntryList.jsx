@@ -34,19 +34,17 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
     return ALL_ITEMS.includes(type) ? t(`entryList.itemLabels.${type}`) : type
   }
 
-  function copySignLinks(type, groupItems, groupKey) {
+  function copySignLinks(type, groupItems, groupKey, recipientName) {
     const origin = window.location.origin
     const lines = groupItems
       .map(e => {
         const token = type === 'recipient' ? e.sign_token : e.payer_sign_token
         if (!token) return null
-        const label = e.description || itemLabel(e.item_type)
-        return `${label}: ${origin}/docs/sign/${token}`
+        return `${recipientName} ${itemLabel(e.item_type)} ${origin}/docs/sign/${token}`
       })
       .filter(Boolean)
     if (!lines.length) return
     const pendingTab = type === 'recipient' ? 'recipient' : 'payer'
-    if (type === 'recipient') lines.push(`\n* ${t('entryList.idCardNotice')}`)
     lines.push(`\n${t('entryList.viewAllPending', { url: `${origin}/docs/pending?tab=${pendingTab}` })}`)
     navigator.clipboard.writeText(lines.join('\n'))
     setCopiedKey(`${type}-${groupKey}`)
@@ -306,7 +304,7 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
                       </span>
                     )}
                     <button
-                      onClick={() => copySignLinks('recipient', items, key)}
+                      onClick={() => copySignLinks('recipient', items, key, realName || (username ? `@${username}` : name))}
                       className="text-warm-400 dark:text-disc-muted hover:text-orange transition" title={t('entryList.copyRecipientLinkTitle')}
                     >
                       {copiedKey === `recipient-${key}` ? <Check size={13} className="text-green-500" /> : <Copy size={13} />}
@@ -472,11 +470,6 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
                           </span>
                           {signBadge(t('entryList.signReceivedLabel'), (entry.member_user_id || entry.external_payee_id) ? entry.sign_token : null, entry.status === 'signed')}
                           {signBadge(t('entryList.signPaidLabel'), entry.payer_sign_token, !!entry.payer_signed_at)}
-                          {canManage && entry.status === 'signed' && (
-                            <a href={`/api/docs/entries/${entry.id}/pdf`} target="_blank" className="text-xs text-orange hover:underline">
-                              PDF
-                            </a>
-                          )}
                           {canManage && (
                             <>
                               <button
