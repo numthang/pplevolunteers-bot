@@ -41,14 +41,31 @@ export function cardTags(card) {
   for (const f of card?.fields || []) {
     if (!TAG_TYPES.includes(f.type)) continue
     for (const o of f.value || []) {
-      out.push({ id: o.id, name: o.name, group: f.label, color: o.color })
+      // field_id ติดมาด้วยตั้งแต่ 2026-08-30 — ใช้เป็น "กุญแจกลุ่ม" ตอนเทียบ (ดู matchGroupOf)
+      // ชื่อ field (`group`) ยังอยู่เพราะ UI ใช้ตั้งหัวกลุ่มชิป และเปลี่ยนชื่อได้
+      out.push({ id: o.id, name: o.name, group: f.label, field_id: f.field_id, color: o.color })
     }
   }
   return out
 }
 
-/** ชื่อกลุ่มของแท็ก (รองรับทั้ง shape ใหม่ `group` และของเดิมที่ส่ง `group_name` มา) */
+/** ชื่อกลุ่มของแท็ก (รองรับทั้ง shape ใหม่ `group` และของเดิมที่ส่ง `group_name` มา) — ใช้ **แสดงผล** */
 const groupOf = (label) => label?.group ?? label?.group_name ?? null
+
+/**
+ * กุญแจที่ใช้ **จัดกอง OR/AND ตอนเทียบ** — ต่างจาก groupOf ที่ใช้แสดงผล
+ *
+ * ⭐ ทำไมต้องแยก (2026-08-30 ตอนทำ URL filter ที่แชร์ลิงก์ได้):
+ *    ชิปที่ถูกเลือกอาจมาจาก URL ของคนอื่น ซึ่งอ้าง option ที่ **การ์ดในมือเราไม่มีสักใบ**
+ *    → ไม่มีทางรู้ชื่อ field จากการ์ด แต่ URL พก `field_id` มาให้ได้
+ *    ถ้าใช้ชื่อเป็นกุญแจ ตัวที่ไม่รู้จักจะตกไปกอง null รวมกันหมด แล้วกติกา
+ *    "OR ในกลุ่มเดียวกัน" พังทันที (เช่น ราชบุรี OR โพธาราม ที่ปลายทางมีแค่ราชบุรี
+ *     จะกลายเป็นกองที่ไม่มีวันตรง = กระดานว่างทั้งที่คนส่งเห็นการ์ด)
+ *
+ * ⚠️ fallback เป็นชื่อ ไม่ใช่ตัดทิ้ง — ของเก่า/เทสที่ประกอบแท็กเองไม่มี field_id
+ */
+const matchGroupOf = (label) =>
+  label?.field_id != null ? `f${key(label.field_id)}` : groupOf(label)
 
 /**
  * ป้ายที่ "มีอยู่จริง" บนการ์ดที่โหลดมา + จำนวนการ์ดที่ติดแต่ละป้าย
@@ -98,7 +115,7 @@ export function cardMatchesTags(card, selected = []) {
   // จัดแท็กที่เลือกเป็นกอง แล้วบังคับว่าทุกกองต้องโดนอย่างน้อย 1 อัน
   const wanted = new Map()
   for (const l of selected) {
-    const g = groupOf(l) || ''
+    const g = matchGroupOf(l) || ''
     if (!wanted.has(g)) wanted.set(g, [])
     wanted.get(g).push(key(l.id))
   }

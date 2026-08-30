@@ -33,6 +33,7 @@ import { groupCards, isMyCard, defaultDueForBucket } from '@/lib/kanbanGrouping.
 import { collectFilterGroups, filterCards, cardTags } from '@/lib/kanbanTagFilter.js'
 import { filterCardsByText } from '@/lib/kanbanTextFilter.js'
 import { sortCardsBy, collectSortableFields, BUILTIN_SORT_FIELDS } from '@/lib/kanbanSort.js'
+import { parseViewFromParams, mergeViewIntoSearch, unknownSelections } from '@/lib/kanbanUrlState.js'
 import CardModal from './CardModal.jsx'
 import DeleteChoiceDialog from './DeleteChoiceDialog.jsx'
 import LabelChips from './LabelChips.jsx'
@@ -352,7 +353,7 @@ export default function KanbanHome() {
   const [canPurge, setCanPurge] = useState(false)   // มาจาก API โหมดกรุ — client ห้ามเดาสิทธิ์ตัวเอง
 
   // 2 ปุ่มควบคุมที่แทนที่การมี 2 หน้า
-  const [scope, setScope] = useState('mine')     // 'mine' | 'all' | 'archived' — ตั้งต้นของฉัน
+  const [scope, setScope] = useState('mine')     // 'mine' | 'unassigned' | 'all' | 'archived' — ตั้งต้นของฉัน
   const [groupBy, setGroupBy] = useState('status') // 'status' | 'due'
   const [labelFilter, setLabelFilter] = useState([])
   // คำค้นข้อความ — อยู่นอกกรวยกรอง (ช่องค้นหาต้องพิมพ์ได้เลย ไม่ต้องกดเปิดอะไรก่อน)
@@ -408,7 +409,9 @@ export default function KanbanHome() {
   // ฟอร์ม "เพิ่มการบ้าน" — inline panel · ไม่ POST จนกว่าจะกดบันทึก (กฎ CLAUDE.md §Create vs Update)
   // กระดาน (ก้อน 3 · 2026-08-24) — activeBoardId = null คือ "ทุกกระดาน" (ค่าตั้งต้น)
   // ⭐ เป็น **ปุ่มควบคุมอีกแถว ไม่ใช่ URL แยก** — ยึดกติกาเดียวกับที่ยุบ 2 หน้าเมื่อ 2026-08-18
-  //    (user: "อยากให้คนคุ้นเคยรูปแบบเดียวจบ") · แลกกับการแชร์ลิงก์เจาะกระดานไม่ได้ ซึ่งยังไม่มีใครขอ
+  //    (user: "อยากให้คนคุ้นเคยรูปแบบเดียวจบ")
+  // ⚠️ 2026-08-30: เดิมเขียนต่อว่า "แลกกับการแชร์ลิงก์เจาะกระดานไม่ได้ ซึ่งยังไม่มีใครขอ" — **ขอแล้ว**
+  //    ตอนนี้กระดานอยู่ใน URL (`?board=`) เหมือนตัวกรองตัวอื่น แต่ยังเป็นปุ่มแถวเดิม ไม่ใช่ route แยก
   const [boards, setBoards] = useState([])
   const [activeBoardId, setActiveBoardId] = useState(null)
   const [boardMenuOpen, setBoardMenuOpen] = useState(false)
@@ -416,6 +419,8 @@ export default function KanbanHome() {
   const [addingBoard, setAddingBoard] = useState(false)
   const [creatingBoard, setCreatingBoard] = useState(false)
   const boardBoxRef = useRef(null)
+  // hydrate จาก URL เสร็จหรือยัง — กันไม่ให้ effect เขียน URL ทับก่อนอ่าน
+  const urlHydrated = useRef(false)
 
   // กรุใช้ endpoint แยก — ของฉัน/ทั้งหมด กรองจากชุดเดียวกันในเครื่อง ไม่ต้องยิงใหม่
   const inArchive = scope === 'archived'
@@ -431,14 +436,54 @@ export default function KanbanHome() {
    */
   useEffect(() => {
     const syncFromUrl = () => {
-      const id = new URLSearchParams(window.location.search).get('card')
+      const search = window.location.search
+      const id = new URLSearchParams(search).get('card')
       // รับได้ทั้ง 'KB-42' (ที่แชร์กัน) และ '154' (id ภายใน ของลิงก์เก่า) — ฝั่ง API แยกให้เองที่ cardContext
       setOpenCardId(id && (looksLikeRef(id) || /^\d+$/.test(id)) ? id : null)
+
+      // ตัวกรองทั้งชุดก็อ่านจาก URL ที่เดียวกัน (2026-08-30) — คนละชั้นกับการ์ด แต่กติกาเดียวกัน
+      const v = parseViewFromParams(search)
+      setActiveBoardId(v.board)
+      setScope(v.scope)
+      setGroupBy(v.group)
+      setStatusFilter(v.status)
+      setKindFilter(v.kind)
+      setHelperFilter(v.helper)
+      setLabelFilter(v.label)
+      setTextQuery(v.q)
+      setSort(v.sort)
+      urlHydrated.current = true
     }
-    syncFromUrl()                                   // เปิดหน้าด้วยลิงก์ตรง → กางการ์ดให้เลย
-    window.addEventListener('popstate', syncFromUrl) // กด Back = ปิดการ์ด (ไม่ใช่ออกจากกระดาน)
+    syncFromUrl()                                   // เปิดหน้าด้วยลิงก์ตรง → กางการ์ด + ตั้งตัวกรองให้เลย
+    window.addEventListener('popstate', syncFromUrl) // กด Back = ปิดการ์ด / ย้อนตัวกรอง
     return () => window.removeEventListener('popstate', syncFromUrl)
   }, [])
+
+  /**
+   * เขียนตัวกรองกลับลง URL — **replaceState ไม่ใช่ pushState**
+   *
+   * ⛔ ห้ามเปลี่ยนเป็น push: `closeCard()` พึ่ง `history.back()` เพื่อปิดการ์ด
+   *    ถ้าตัวกรอง push ด้วย กดปิดการ์ดจะเด้งกลับไปตัวกรองชุดก่อนแทนที่จะปิด — สัญญาของ ?card= พังทันที
+   *    (และพิมพ์ค้นหา 1 ตัวอักษร = 1 history entry คนกด Back ออกจากหน้าไม่ได้)
+   *
+   * ⛔ ห้ามใช้ router.replace ของ Next แม้ /posts กับ /finance/transactions จะใช้แบบนั้น —
+   *    /kanban/page.js เป็น server component → วิ่งกลับ server ทุกครั้ง = พิมพ์ค้นหาทีละตัวยิง getSession()
+   *    (เหตุผลเดียวกับที่ ?card= ใช้ history API ดิบ — ดูคอมเมนต์ข้างบน)
+   *
+   * ⚠️ ต้องรอ hydrate จาก URL ก่อน ไม่งั้น render แรกจะเขียนค่าตั้งต้นทับลิงก์ที่คนเพิ่งเปิดมา
+   */
+  useEffect(() => {
+    if (!urlHydrated.current) return
+    const next = mergeViewIntoSearch(window.location.search, {
+      board: activeBoardId, scope, group: groupBy,
+      status: statusFilter, kind: kindFilter, helper: helperFilter,
+      label: labelFilter, q: textQuery, sort,
+    })
+    const target = next ? `${window.location.pathname}?${next}` : window.location.pathname
+    if (window.location.pathname + window.location.search !== target) {
+      window.history.replaceState(null, '', target)
+    }
+  }, [activeBoardId, scope, groupBy, statusFilter, kindFilter, helperFilter, labelFilter, textQuery, sort])
 
   function openCard(id) {
     const url = new URL(window.location.href)
@@ -522,7 +567,13 @@ export default function KanbanHome() {
   // กรอง → จัดกอง · ลำดับนี้สำคัญ: ชิปกรองต้องสร้างจากการ์ดที่ "เห็นได้ตามขอบเขต" ไม่ใช่ทั้ง org
   const scoped = useMemo(
     // ในกรุโชว์ทุกใบ ไม่แยกของใคร — ของที่เก็บเข้ากรุแล้วมีไม่เยอะ และคนตามหามักจำไม่ได้ว่าใครเก็บ
-    () => (scope === 'mine' ? cards.filter((c) => isMyCard(c, viewerUserId)) : cards),
+    () => {
+      if (scope === 'mine') return cards.filter((c) => isMyCard(c, viewerUserId))
+      // ⚠️ "ไม่มีเจ้าภาพ" ดูที่ owner_user_id เท่านั้น ไม่นับผู้ช่วย — DB CHECK บังคับว่า
+      //    การ์ดไม่มีเจ้าภาพต้องอยู่กอง backlog อยู่แล้ว (ดู onDrop) กองอื่นจึงไม่มีทางติดมา
+      if (scope === 'unassigned') return cards.filter((c) => !c.owner_user_id)
+      return cards
+    },
     [cards, scope, viewerUserId]
   )
   const filterGroups = useMemo(() => collectFilterGroups(scoped), [scoped])
@@ -582,6 +633,21 @@ export default function KanbanHome() {
     }))
     return [...builtins, ...customs]
   }, [scoped, t])
+  /**
+   * sort ที่มาจาก URL มีแค่ `{key, dir}` — เติม fieldId/type จาก sortOptions ให้ครบ
+   * (sortCardsBy ตัดสินด้วย spec.fieldId/spec.type ถ้าไม่เติมจะเรียงผิดชนิดเงียบๆ)
+   *
+   * ⭐ ตรงนี้ **แยก "ไม่มีอยู่แล้ว" ออกจาก "ยังไม่โหลด" ได้** — ต่างจากป้าย/ผู้ช่วย
+   *    เพราะ SQL ส่ง field def ที่ยัง active ของกระดานนั้นมาครบทุกใบ ไม่ใช่แค่ที่กรอกแล้ว
+   *    (db/kanban/cards.js §AGG) → โหลดเสร็จแล้วยังหาไม่เจอ = ถูกซ่อน/ลบ/คนละกระดาน จริงๆ
+   * ⚠️ ต้องรอ !loading ไม่งั้น render แรกที่ยังไม่มีการ์ดจะล้าง sort ของลิงก์ทิ้ง
+   */
+  useEffect(() => {
+    if (loading || !sort || sort.type) return
+    const opt = sortOptions.find((o) => o.key === sort.key)
+    setSort(opt ? { ...opt, dir: sort.dir } : null)
+  }, [loading, sort, sortOptions])
+
   const filteredSortOptions = useMemo(() => {
     const q = sortQuery.trim().toLowerCase()
     if (!q) return sortOptions
@@ -606,6 +672,30 @@ export default function KanbanHome() {
     return filterCardsByText(out, textQuery)
   }, [scoped, labelFilter, helperFilter, statusFilter, kindFilter, textQuery])
   const groups = useMemo(() => groupCards(visible, groupBy), [visible, groupBy])
+
+  /**
+   * ตัวกรองที่ยังกรองอยู่ แต่ **หาไม่เจอในการ์ดที่โหลดมา** — เกิดตอนเปิดลิงก์ของคนอื่น
+   * ⭐ ไม่ทิ้ง ไม่เงียบ — โชว์เป็นชิปเทาเหนือกระดานให้กดถอดได้ (เหตุผลเต็มที่ lib/kanbanUrlState.js)
+   */
+  const knownLabelIds = useMemo(
+    () => new Set(filterGroups.flatMap((g) => g.labels).map((l) => String(l.id))),
+    [filterGroups]
+  )
+  const unknownLabels = useMemo(
+    () => unknownSelections(labelFilter, knownLabelIds),
+    [labelFilter, knownLabelIds]
+  )
+  const unknownHelpers = useMemo(
+    () => unknownSelections(helperFilter.map((id) => ({ id })), new Set(helperOptions.map((h) => h.id))),
+    [helperFilter, helperOptions]
+  )
+  // ?board= ที่ไม่มีอยู่จริง — ปุ่มกระดานจะตกไปแสดง "ทุกกระดาน" (บรรทัด boards.find(...) || allBoards)
+  // ทั้งที่ยังกรองด้วย id นั้นอยู่ = กระดานว่างโดยไม่มีคำอธิบาย · รอ boards โหลดก่อนค่อยตัดสิน
+  const unknownBoard = useMemo(
+    () => (activeBoardId && boards.length > 0 && !boards.some((b) => String(b.id) === String(activeBoardId))
+      ? String(activeBoardId) : null),
+    [activeBoardId, boards]
+  )
 
   const selectedIds = new Set(labelFilter.map((l) => String(l.id)))
   const selectedHelperIds = new Set(helperFilter)
@@ -1001,6 +1091,7 @@ export default function KanbanHome() {
             onChange={setScope}
             options={[
               { value: 'mine', label: t('controls.scopeMine') },
+              { value: 'unassigned', label: t('controls.scopeUnassigned') },
               { value: 'all', label: t('controls.scopeAll') },
               { value: 'archived', label: t('controls.scopeArchived') },
             ]}
@@ -1323,6 +1414,42 @@ export default function KanbanHome() {
           </div>
         )}
       </div>
+
+      {(unknownLabels.length > 0 || unknownHelpers.length > 0 || unknownBoard) && (
+        <div className="rounded-lg border border-warm-200 dark:border-disc-border bg-card-bg p-3 text-sm flex flex-wrap items-center gap-2">
+          <AlertTriangle size={16} className="text-warm-400 dark:text-disc-muted shrink-0" />
+          <span className="text-warm-500 dark:text-disc-muted">{t('filter.unknownNote')}</span>
+          {unknownLabels.map((l) => (
+            <button
+              key={`l${l.id}`}
+              onClick={() => setLabelFilter((prev) => prev.filter((x) => String(x.id) !== String(l.id)))}
+              className="flex items-center gap-1 px-3 py-1 text-sm font-medium rounded-full border border-warm-200 dark:border-disc-border text-warm-500 dark:text-disc-muted hover:text-red-500 hover:border-red-300 dark:hover:border-red-700 transition-colors"
+            >
+              {t('filter.unknownLabel', { id: String(l.id) })}
+              <X size={14} />
+            </button>
+          ))}
+          {unknownBoard && (
+            <button
+              onClick={() => setActiveBoardId(null)}
+              className="flex items-center gap-1 px-3 py-1 text-sm font-medium rounded-full border border-warm-200 dark:border-disc-border text-warm-500 dark:text-disc-muted hover:text-red-500 hover:border-red-300 dark:hover:border-red-700 transition-colors"
+            >
+              {t('filter.unknownBoard', { id: unknownBoard })}
+              <X size={14} />
+            </button>
+          )}
+          {unknownHelpers.map((h) => (
+            <button
+              key={`h${h.id}`}
+              onClick={() => setHelperFilter((prev) => prev.filter((x) => String(x) !== String(h.id)))}
+              className="flex items-center gap-1 px-3 py-1 text-sm font-medium rounded-full border border-warm-200 dark:border-disc-border text-warm-500 dark:text-disc-muted hover:text-red-500 hover:border-red-300 dark:hover:border-red-700 transition-colors"
+            >
+              {t('filter.unknownHelper', { id: String(h.id) })}
+              <X size={14} />
+            </button>
+          ))}
+        </div>
+      )}
 
       {truncated && (
         <div className="rounded-lg border border-amber-400 bg-amber-50 dark:bg-transparent p-3 text-sm flex flex-wrap items-center gap-2">

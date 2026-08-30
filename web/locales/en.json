@@ -1998,7 +1998,8 @@
       "groupDue": "Due date",
       "dueModeNote": "Due-date mode hides finished and shelved tasks · move between statuses in \"Status\" mode",
       "scopeArchived": "Archive",
-      "archiveNote": "The archive holds tasks nobody wants anymore — nothing is ever deleted for good, unarchive and it returns to its group"
+      "archiveNote": "The archive holds tasks nobody wants anymore — nothing is ever deleted for good, unarchive and it returns to its group",
+      "scopeUnassigned": "No owner"
     },
     "due": {
       "overdue": "Overdue",
@@ -2024,7 +2025,11 @@
         "post": "Media"
       },
       "searchPlaceholder": "Search…",
-      "searchClear": "Clear search"
+      "searchClear": "Clear search",
+      "unknownNote": "This link has filters that match nothing you can see — that may be why the board is empty",
+      "unknownLabel": "Label #{id}",
+      "unknownHelper": "Helper #{id}",
+      "unknownBoard": "Board #{id}"
     },
     "sort": {
       "toggleLabel": "Sort",

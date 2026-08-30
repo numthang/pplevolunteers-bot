@@ -224,15 +224,17 @@ export default async function HomePage() {
 
   const todo = [
     signCount > 0 && { key: 'sign', href: '/docs/pending', icon: ICON.sign, label: t('todo.sign'), count: signCount },
-    myCards.overdue > 0 && { key: 'overdue', href: '/kanban', icon: ICON.card, label: t('todo.overdue'), count: myCards.overdue, tone: 'alert' },
-    myCards.dueSoon > 0 && { key: 'dueSoon', href: '/kanban', icon: ICON.card, label: t('todo.dueSoon'), count: myCards.dueSoon },
+    // ?group=due = จัดกองตามกำหนดส่ง — ลงมาเจอคอลัมน์ "เลยกำหนด/วันนี้/สัปดาห์นี้" เลย
+    // (ตั้งใจใช้ "จัดกอง" ไม่ใช่ "กรอง" — เคลียร์ใบที่เลยกำหนดครบแล้วยังเห็นใบถัดไปต่อ ไม่เจอหน้าว่าง)
+    myCards.overdue > 0 && { key: 'overdue', href: '/kanban?group=due', icon: ICON.card, label: t('todo.overdue'), count: myCards.overdue, tone: 'alert' },
+    myCards.dueSoon > 0 && { key: 'dueSoon', href: '/kanban?group=due', icon: ICON.card, label: t('todo.dueSoon'), count: myCards.dueSoon },
     callTotal > 0 && { key: 'calls', href: '/calling/assignee', icon: ICON.phone, label: t('todo.calls'), count: callTotal },
   ].filter(Boolean)
 
   const orgTodo = [
     caseUnassigned > 0 && { key: 'case', href: '/case/manage', icon: ICON.case, label: t('org.caseUnassigned'), count: caseUnassigned },
     postsReview > 0 && { key: 'posts', href: '/posts', icon: ICON.pen, label: t('org.postsReview'), count: postsReview },
-    cardsUnassigned > 0 && { key: 'cards', href: '/kanban', icon: ICON.inbox, label: t('org.cardsUnassigned'), count: cardsUnassigned },
+    cardsUnassigned > 0 && { key: 'cards', href: '/kanban?scope=unassigned', icon: ICON.inbox, label: t('org.cardsUnassigned'), count: cardsUnassigned },
   ].filter(Boolean)
 
   return (
