@@ -644,7 +644,10 @@
       "addButton": "เพิ่ม",
       "filesImported": "นำเข้าไฟล์แนบจาก Discord {count} ไฟล์",
       "showMoreButton": "แสดงเพิ่มเติม",
-      "showLessButton": "ย่อ"
+      "showLessButton": "ย่อ",
+      "syncAdded": "เพิ่ม timeline {count} รายการจาก Discord",
+      "syncNoNew": "ไม่มีข้อความใหม่ใน Discord",
+      "syncPartial": "ดึงมาได้บางส่วน — กด \"ดึง Discord ใหม่\" อีกครั้งเพื่อสกัดส่วนที่เหลือ"
     },
     "track": {
       "metaTitle": "ติดตามเรื่องร้องเรียน",
@@ -727,7 +730,6 @@
         "equipment": "ค่าอุปกรณ์",
         "photo": "ค่าถ่ายภาพ"
       },
-      "idCardNotice": "ครั้งแรกระบบจะขอถ่ายบัตรประชาชน 1 ครั้ง และจะมีลายน้ำคร่อมให้อัตโนมัติ",
       "viewAllPending": "ดูรายการรอเซ็นทั้งหมด: {url}",
       "recipientRequired": "กรุณาระบุผู้รับก่อนบันทึก",
       "confirmResetRecipientSignature": "รายการนี้เซ็นรับแล้ว การเปลี่ยนผู้รับเงินจะ reset ลายเซ็น — ยืนยัน?",
@@ -1014,7 +1016,8 @@
         "speakerGovernmentOption": "ข้าราชการ ({rate})"
       },
       "clearAll": {
-        "confirm": "ล้างบิลทั้งหมด {count} รายการ? ไม่สามารถยกเลิกได้",
+        "confirmPrompt": "ล้างบิลทั้งหมด {count} รายการ ไม่สามารถยกเลิกได้\nพิมพ์ {count} เพื่อยืนยัน:",
+        "blockedSigned": "ล้างไม่ได้ — มีรายการที่เซ็นแล้ว (ผู้รับหรือผู้จ่าย) ต้องลบทีละรายการแทน",
         "genericError": "เกิดข้อผิดพลาด",
         "button": "ล้างบิลทั้งหมด"
       }

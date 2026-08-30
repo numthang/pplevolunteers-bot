@@ -644,7 +644,10 @@
       "addButton": "Add",
       "filesImported": "Imported {count} attachment(s) from Discord",
       "showMoreButton": "Show more",
-      "showLessButton": "Show less"
+      "showLessButton": "Show less",
+      "syncAdded": "Added {count} timeline entries from Discord",
+      "syncNoNew": "No new messages in Discord",
+      "syncPartial": "Partially synced — press \"Refresh from Discord\" again to continue"
     },
     "track": {
       "metaTitle": "Track your complaint",
@@ -727,7 +730,6 @@
         "equipment": "Equipment",
         "photo": "Photography"
       },
-      "idCardNotice": "The first time, the system will ask for a photo of your ID card, and a watermark will be applied automatically.",
       "viewAllPending": "View all pending items: {url}",
       "recipientRequired": "Please specify a recipient before saving",
       "confirmResetRecipientSignature": "This item has already been signed. Changing the recipient will reset the signature — confirm?",
@@ -1014,7 +1016,8 @@
         "speakerGovernmentOption": "Government officer ({rate})"
       },
       "clearAll": {
-        "confirm": "Clear all {count} bill items? This cannot be undone",
+        "confirmPrompt": "Clear all {count} bill items? This cannot be undone.\nType {count} to confirm:",
+        "blockedSigned": "Can't clear — some items are already signed (recipient or payer). Delete them individually instead.",
         "genericError": "An error occurred",
         "button": "Clear all"
       }

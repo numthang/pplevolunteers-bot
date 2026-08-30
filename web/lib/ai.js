@@ -69,7 +69,10 @@ export async function askAi(system, user, opts = {}) {
   // โดนตัดกลางคันเพราะ max_tokens ไม่พอ — ต้องเช็คก่อน parse ไม่งั้น error ที่ user เห็นคือ
   // "AI ตอบกลับมาไม่ใช่ JSON ที่อ่านได้" ซึ่งงงว่าเกิดจากอะไร ทั้งที่จริงคือเนื้อหายาวเกิน max_tokens
   if (res.stop_reason === 'max_tokens') {
-    throw new AiError('เนื้อหาที่ AI สร้างยาวเกินไป ลองย่อไอเดียหรือลดจำนวนตอนก่อน')
+    // พก code ไปด้วย — ข้อความนี้เขียนไว้สำหรับ posts (ตอน/episodes) ถ้าโมดูลอื่นเรียกแล้ว
+    // โชว์ดิบๆ จะอ่านไม่รู้เรื่อง (เคสจริง: หน้า timeline เคสขึ้นว่า "ลดจำนวนตอน")
+    // → ผู้เรียกที่อยากได้ถ้อยคำของตัวเองให้เช็ค err.code === 'max_tokens'
+    throw Object.assign(new AiError('เนื้อหาที่ AI สร้างยาวเกินไป ลองย่อไอเดียหรือลดจำนวนตอนก่อน'), { code: 'max_tokens' })
   }
 
   const text = (res.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n').trim()

@@ -9,7 +9,8 @@ function fmtDate(d) {
 }
 
 // เกินความยาวนี้ → ย่อไว้ก่อน กดขยายดูทีหลัง (กันสรุป AI ยาวๆ ดันรายการอื่นตกจอ)
-const LONG_BODY_LENGTH = 180
+// 400 = ให้สรุปที่มี "เหตุ → ดำเนินการ → ผลลัพธ์" ครบจบในบรรทัดเดียวโดยไม่ต้องกดขยาย
+const LONG_BODY_LENGTH = 400
 
 export default function CaseTimeline({ refId, initialEntries, hasThread }) {
   const t = useTranslations('case')
@@ -21,6 +22,7 @@ export default function CaseTimeline({ refId, initialEntries, hasThread }) {
   const [deletingId, setDeletingId] = useState(null)
   const [error, setError] = useState(null)
   const [filesMsg, setFilesMsg] = useState('')
+  const [syncMsg, setSyncMsg] = useState('')
   const [expandedIds, setExpandedIds] = useState(() => new Set())
   const router = useRouter()
 
@@ -68,12 +70,17 @@ export default function CaseTimeline({ refId, initialEntries, hasThread }) {
   }
 
   async function refresh() {
-    setRefreshing(true); setError(null); setFilesMsg('')
+    setRefreshing(true); setError(null); setFilesMsg(''); setSyncMsg('')
     const res = await fetch(`/api/case/${refId}/timeline/refresh`, { method: 'POST' })
     const d = await res.json().catch(() => ({}))
     setRefreshing(false)
     if (!res.ok) { setError(d.error || t('timeline.refreshFailedMsg')); return }
     setEntries(d.entries)
+    // ต้องบอกผลเสมอ — เดิมกดแล้วเงียบสนิทเมื่อไม่มีข้อความใหม่ ผู้ใช้แยกไม่ออกว่า
+    // "ไม่มีอะไรใหม่" กับ "ปุ่มพัง" ต่างกันยังไง
+    if (d.partial) setSyncMsg(d.partialReason || t('timeline.syncPartial'))
+    else if (d.added > 0) setSyncMsg(t('timeline.syncAdded', { count: d.added }))
+    else setSyncMsg(t('timeline.syncNoNew'))
     // ไฟล์แนบ render ฝั่ง server (การ์ดผู้ร้องเรียน) → ต้อง refresh route ถึงจะโผล่
     if (d.files?.imported > 0) {
       setFilesMsg(t('timeline.filesImported', { count: d.files.imported }))
@@ -93,6 +100,7 @@ export default function CaseTimeline({ refId, initialEntries, hasThread }) {
         )}
       </div>
 
+      {syncMsg && <p className="text-sm text-gray-500 dark:text-disc-muted mb-3">{syncMsg}</p>}
       {filesMsg && <p className="text-sm text-orange mb-3">{filesMsg}</p>}
 
       {entries.length === 0 ? (
