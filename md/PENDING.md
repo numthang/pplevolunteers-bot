@@ -68,11 +68,10 @@
 - ผู้ดูแลกรอกแทน ยังต้องถ่ายบัตรใหม่ทุกใบ (`docs_self_info` ของผู้รับถูกเขียนแต่ไม่มีใครอ่านกลับ) → ดู §🧬 org_members
 
 ### migration
-`scripts/migration/migration.sql` มี 3 ก้อนใหม่ — 2026-08-25 ตารางคนนอก+view · 2026-08-26 backfill `org_members.member_id` · 2026-08-26 ล้าง `token_expires_at` (ลิงก์ไม่หมดอายุแล้ว)
-**รันลง DB dev แล้วทั้งหมด · prod ยังไม่รันสักก้อน**
+`scripts/migration/migration.sql` มี 3 ก้อนเก่า — 2026-08-25 ตารางคนนอก+view · 2026-08-26 backfill `org_members.member_id` · 2026-08-26 ล้าง `token_expires_at` — **user ยืนยัน 2026-08-30 ว่ารันครบทั้ง dev และ prod แล้ว**
 
 **เปลี่ยนมาใช้ node-pg-migrate แล้ว (2026-08-30)** — `migrations/` + `npm run migrate up/down/create`, track state ในตาราง `pgmigrations` อัตโนมัติ (setup+ทดสอบ up/down บน dev ผ่านแล้ว) ดู `md/DEPLOYMENT.md` §Run DB Migration
-**⚠️ ก่อน baseline prod (`npm run migrate up -- --fake`) ต้องรัน 3 ก้อนค้างข้างบนบน prod ให้ครบก่อน** ไม่งั้น schema prod จะไม่ตรงกับที่ baseline บอกว่า "รันแล้ว" — ห้าม fake-baseline prod จนกว่า migration.sql ก้อนค้างจะ apply ครบ
+**เหลือ: deploy commit นี้ขึ้น prod แล้ว fake-baseline บน prod** (`sudo -u www bash -c 'cd /www/wwwroot/pple-volunteers && npm run migrate up -- --fake'`) — schema prod ตรงกับ baseline แล้วตาม user เคาะ
 
 
 ## 🔍 Docs — ต้นตอร่วมของบั๊กชุด 2026-08-26 + สิ่งที่ยังไม่ได้ตรวจ
