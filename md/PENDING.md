@@ -226,6 +226,21 @@ user ให้เหตุผลว่า "องค์กรพรรคให�
   (แต่วันนี้ยังไม่ได้ล็อกหลังเซ็นจริง แก้ทีหลังยังเปลี่ยนได้ และ PDF สร้างสดทุกครั้ง — ถ้าจะเอา snapshot จริงต้องล็อกด้วย)
 - `docs_self_info` เลิกใช้ได้ก็ต่อเมื่อชั้น 2 มีจริงแล้วเท่านั้น
 
+## 🏠 หน้าแรก — ตะเข็บสิทธิ์เคสที่ยังเหลือ (จาก dashboard redesign 2026-08-30)
+
+`web/app/page.js` ต้องเรียก identity **2 ตัว** เพื่อให้ตัวเลขตรงกับหน้าที่มันลิงก์ไป:
+
+| ใช้กับ | ฟังก์ชัน | เพราะ |
+|---|---|---|
+| kanban / finance / โปรไฟล์ | `getEffectiveOrgIdentity` | ตรงกับ `kanbanGuard.kanbanContext()` |
+| **เคส** | `getEffectiveIdentity` + `getUserScope` | ตรงกับ `/case/manage` ที่ยัง guild-based |
+
+ถ้าใช้ตัวเดียวแล้วสองระบบให้ผลไม่เท่ากัน = หน้าแรกโชว์ "เคสค้าง 12" กดเข้าไปเห็น 3
+→ **หายเองตอน ORG_ACCESS_REDESIGN ขั้น 6** (ย้าย `/case/manage` มาอ่าน org identity) แล้วยุบเหลือ call เดียวได้
+→ แตะ `app/case/manage/page.js` เมื่อไหร่ อย่าลืมมาลบตะเข็บนี้ที่ `app/page.js` ด้วย
+
+---
+
 ## 📄 /posts แสดงได้สูงสุด 200 ใบ ไม่มี pagination/ค้นหา (user ทัก 2026-08-28 · สั่ง "ไว้ก่อน")
 
 `listPosts` hardcode `limit = 200` ([web/db/posts/episodes.js](../web/db/posts/episodes.js)) และ

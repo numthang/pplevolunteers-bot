@@ -536,3 +536,48 @@ export async function removeHelper(orgId, cardId, userId) {
 
 // งานย่อย (checklist) ย้ายไป db/kanban/fields.js แล้ว — ผูกกับ field_id ไม่ใช่ card_id เฉยๆ อีกต่อไป
 // (checklist กลายเป็น custom field ชนิดหนึ่ง 2026-08-18 รอบเย็น ดู md/kanban/CUSTOM-FIELDS.md §กลับคำ)
+
+/**
+ * นับการ์ดสำหรับหน้าแรก — **นับอย่างเดียว ห้ามดึงการ์ดมา .length**
+ *
+ * ทำไมต้องมีตัวนี้ทั้งที่ listMyCards/listCards มีอยู่แล้ว (2026-08-30):
+ *   สองตัวนั้น SELECT COLS + AGG = json_agg 4 subquery ต่อแถว การ์ดใบละ ~1.5KB
+ *   หน้าแรกโดนทุก request ของทุกคน → เอามาแค่จำนวนไม่คุ้มเลย
+ *
+ * ⚠️ ต้องใช้ visibleLinkSql + LIVE_STATUS_SQL ชุดเดียวกับ list* เสมอ
+ *    ไม่งั้นตัวเลขบนหน้าแรกจะไม่ตรงกับที่กดเข้าไปเห็นจริงที่ /kanban
+ * ⚠️ viewer มาจาก kanbanViewer() ใน lib/kanbanGuard.js เท่านั้น — ไม่ส่ง = fail-closed
+ */
+export async function countMyOpenCards(orgId, userId, viewer = NO_VIEWER) {
+  if (!userId) return { total: 0, overdue: 0, dueSoon: 0 }
+  const { rows } = await pool.query(
+    `SELECT COUNT(*)::int AS total,
+            COUNT(*) FILTER (WHERE c.due_at IS NOT NULL AND c.due_at < now())::int AS overdue,
+            COUNT(*) FILTER (WHERE c.due_at >= now() AND c.due_at < now() + interval '7 days')::int AS due_soon
+       FROM kanban_cards c
+      WHERE c.org_id = $1
+        AND c.archived_at IS NULL
+        AND ${visibleLinkSql(3, 4, 5)}
+        AND ${LIVE_STATUS_SQL} NOT IN ('done','cancelled')
+        AND (c.owner_user_id = $2 OR EXISTS (
+              SELECT 1 FROM kanban_card_helpers h WHERE h.card_id = c.id AND h.user_id = $2))`,
+    [orgId, userId, ...viewerParams(viewer)]
+  )
+  const r = rows[0] || {}
+  return { total: r.total || 0, overdue: r.overdue || 0, dueSoon: r.due_soon || 0 }
+}
+
+/** การ์ดที่ยังไม่มีเจ้าภาพ (งานค้างระดับ org) — นับอย่างเดียว เงื่อนไขตรงกับ listCards({unassigned:true}) */
+export async function countUnassignedOpenCards(orgId, viewer = NO_VIEWER) {
+  const { rows } = await pool.query(
+    `SELECT COUNT(*)::int AS n
+       FROM kanban_cards c
+      WHERE c.org_id = $1
+        AND c.archived_at IS NULL
+        AND c.owner_user_id IS NULL
+        AND ${visibleLinkSql(2, 3, 4)}
+        AND ${LIVE_STATUS_SQL} NOT IN ('done','cancelled')`,
+    [orgId, ...viewerParams(viewer)]
+  )
+  return rows[0]?.n || 0
+}

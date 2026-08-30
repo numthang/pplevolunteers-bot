@@ -98,3 +98,51 @@ export async function deleteAccount(id) {
 export async function incrementUsageCount(id) {
   await pool.query(`UPDATE finance_accounts SET usage_count = usage_count + 1 WHERE id = $1`, [id])
 }
+
+/**
+ * "บัญชีที่ฉันใช้บ่อย" — ทางลัดบนหน้าแรก (2026-08-30)
+ *
+ * ⛔ **ห้ามเรียงด้วย usage_count อย่างเดียว** — คอลัมน์นั้นเป็นของทั้งองค์กร ไม่ใช่ของ user
+ *    (incrementUsageCount ข้างบนบวกรวมกองเดียว ใครสร้างรายการก็บวก) → ทุกคนจะเห็นชุดเดียวกันหมด
+ *    ของ "ฉัน" จริงต้องมาจาก finance_transactions.updated_by
+ *
+ * ⚠️ updated_by ถูกทับตอนมีคนแก้รายการ → นิยามที่ตรงความจริงคือ "บัญชีที่ฉันแตะล่าสุดบ่อยสุด"
+ *    ไม่ใช่ "ที่ฉันสร้าง" · ตรงเจตนา "เข้าไปง่ายๆ" อยู่แล้ว จึงไม่ไล่แก้
+ * ⚠️ คนใหม่ที่ยังไม่เคยบันทึกอะไร → ตกไปใช้ usage_count ขององค์กรแทน (ไม่ปล่อยว่าง)
+ *
+ * @param {function} canView  ตัวกรองสิทธิ์ — ส่ง (account) => canViewAccount(account, userId, access)
+ *                            **ต้องกรองใน JS** เพราะกฎ internal ผูกกับ scopeGrants รายจังหวัด
+ *                            ถ้าเขียนซ้ำเป็น SQL จะ drift จาก lib/financeAccess.js ทันทีที่กฎเปลี่ยน
+ */
+export async function getFavoriteAccounts(orgId, userId, { canView = () => true, limit = 3 } = {}) {
+  const { rows: candidates } = await pool.query(
+    `WITH mine AS (
+       SELECT account_id, COUNT(*)::int AS n
+         FROM finance_transactions
+        WHERE org_id = $1 AND updated_by = $2
+        GROUP BY account_id
+     )
+     SELECT a.*, COALESCE(m.n, 0) AS my_txn_count
+       FROM finance_accounts a
+       LEFT JOIN mine m ON m.account_id = a.id
+      WHERE a.org_id = $1 AND a.archived = 0
+      ORDER BY COALESCE(m.n, 0) DESC, a.usage_count DESC, a.name ASC
+      LIMIT 12`,
+    [orgId, userId]
+  )
+
+  // กรองสิทธิ์ก่อนคิดยอด — ไม่ต้องเสียแรง SUM บัญชีที่คนดูไม่มีสิทธิ์เห็น
+  const visible = candidates.filter(canView).slice(0, limit)
+  if (visible.length === 0) return []
+
+  const { rows: balances } = await pool.query(
+    `SELECT account_id,
+            SUM(CASE WHEN type = 'income' THEN amount ELSE -amount END) AS balance
+       FROM finance_transactions
+      WHERE account_id = ANY($1)
+      GROUP BY account_id`,
+    [visible.map(a => a.id)]
+  )
+  const byId = new Map(balances.map(b => [Number(b.account_id), b.balance]))
+  return visible.map(a => ({ ...a, balance: Number(byId.get(a.id) || 0) }))
+}

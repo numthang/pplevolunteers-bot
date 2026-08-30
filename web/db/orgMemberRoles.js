@@ -288,3 +288,17 @@ export async function setSelfDeclaredScope(orgId, userId, provinceName) {
     [orgId, userId, dr[0].id]
   )
 }
+
+/** ชื่อตำแหน่งของ user ใน org (ไว้โชว์บนการ์ดโปรไฟล์) — ชื่อล้วน ไม่ใช่ permission key */
+export async function listMemberRoleNames(orgId, userId) {
+  if (!orgId || !userId) return []
+  const { rows } = await pool.query(
+    `SELECT DISTINCT d.name
+       FROM org_member_roles mr
+       JOIN org_role_defs d ON d.id = mr.role_def_id AND d.is_active
+      WHERE mr.org_id = $1 AND mr.user_id = $2 AND d.name IS NOT NULL
+      ORDER BY d.name`,
+    [orgId, userId]
+  )
+  return rows.map(r => r.name)
+}

@@ -31,17 +31,29 @@ export async function kanbanContext() {
 
   const { access } = await getEffectiveOrgIdentity(session)
 
-  // ⭐ viewer = สิทธิ์ของ "ระบบต้นทาง" ที่ kanban ต้องเคารพ (2026-08-24)
-  //    การ์ดที่ผูกเคส/โพสต์ถูกซ่อนทั้งใบถ้าคนดูเปิดต้นทางไม่ได้ — kanban เปิดทั้ง org
-  //    แต่เคสกรองจังหวัด + ต้องมียศ และชื่อเรื่องร้องเรียนเป็น PII ของผู้ร้อง
-  //    ⛔ ห้ามให้ route ประกอบ viewer เอง — หลุดที่เดียวคือรั่วข้ามจังหวัดทั้งบอร์ด
-  const viewer = {
-    userId,
+  return { session, userId, orgId, access, viewer: kanbanViewer(access, userId) }
+}
+
+/**
+ * ⭐ viewer = สิทธิ์ของ "ระบบต้นทาง" ที่ kanban ต้องเคารพ (2026-08-24)
+ *    การ์ดที่ผูกเคส/โพสต์ถูกซ่อนทั้งใบถ้าคนดูเปิดต้นทางไม่ได้ — kanban เปิดทั้ง org
+ *    แต่เคสกรองจังหวัด + ต้องมียศ และชื่อเรื่องร้องเรียนเป็น PII ของผู้ร้อง
+ *
+ * ⛔ **ห้ามประกอบ object นี้เองที่อื่น** — หลุดที่เดียวคือรั่วข้ามจังหวัดทั้งบอร์ด
+ *    เดิมกฎนี้เขียนว่า "ห้าม route ประกอบเอง" แล้วสูตรฝังอยู่ใน kanbanContext()
+ *    → หน้า server component (เช่น dashboard) ที่เรียก db ตรงๆ ไม่มีทางทำถูกโดยไม่ลอกโค้ด
+ *    ยกออกมาเป็นฟังก์ชันเดียว 2026-08-30 เพื่อให้ "ทางเดียว" เป็นจริง ไม่ใช่แค่คำเตือน
+ *
+ * ⚠️ ไม่ส่ง viewer เข้า db/kanban/cards.js = fail-closed (การ์ดที่ผูกเคสหายเงียบทุกใบ)
+ * @param {object} access  จาก getEffectiveOrgIdentity()
+ * @param {number|null} userId
+ */
+export function kanbanViewer(access, userId) {
+  return {
+    userId: userId ?? null,
     canSeeCases: canManageCases(access),
     caseProvinces: getUserScope(access),   // null = admin (ทุกจังหวัด) · [] = ไม่มีจังหวัดในอำนาจ
   }
-
-  return { session, userId, orgId, access, viewer }
 }
 
 /**

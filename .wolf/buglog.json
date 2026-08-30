@@ -3674,6 +3674,55 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-08-28T17:55:45.636Z"
+    },
+    {
+      "id": "bug-192",
+      "timestamp": "2026-08-29T17:19:23.074Z",
+      "error_message": "Missing guard clause",
+      "file": "web/app/api/docs/entries/route.js",
+      "root_cause": "No early return/throw for edge case: blocked",
+      "fix": "Added guard clause: if (blocked)",
+      "tags": [
+        "auto-detected",
+        "guard-clause",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-08-29T17:19:23.074Z"
+    },
+    {
+      "id": "bug-193",
+      "timestamp": "2026-08-29T17:25:31.757Z",
+      "error_message": "Incorrect value in code",
+      "file": "web/components/docs/DocEntryList.jsx",
+      "root_cause": "Had 'recipient'",
+      "fix": "Changed to `\\n${t('",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-08-29T17:25:31.757Z"
+    },
+    {
+      "id": "bug-194",
+      "timestamp": "2026-08-30T12:20:00.000Z",
+      "error_message": "Error: can: unknown capability 'admin'  (lib/permissions.js:68 → app/page.js HomePage)",
+      "file": "web/app/page.js",
+      "root_cause": "เขียน can('admin', access.permissions) — แต่ 'admin' เป็น **permission** ไม่ใช่ capability · CAPABILITIES ไม่มีคีย์ 'admin' → can() throw ทันที · build + type check จับไม่ได้เลย เพราะเป็น runtime string lookup · เจอตอนเปิดหน้าจริงด้วย session จริงเท่านั้น",
+      "fix": "ใช้ (normalizeAccess(access).permissions || new Set()).has('admin') แบบเดียวกับ canPurge() ใน lib/kanbanAccess.js:78 · กฎ: can() รับเฉพาะชื่อ capability ที่มีใน CAPABILITIES · เช็ค 'admin'/'secretary_general' ต้องอ่าน permissions ตรงๆ",
+      "tags": [
+        "permissions",
+        "runtime-only",
+        "dashboard",
+        "capability-vs-permission"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-08-30T12:20:00.000Z"
     }
   ]
 }

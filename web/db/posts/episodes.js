@@ -447,3 +447,27 @@ export async function saveRevisionOnly(episodeId, { title, body, editedByUserId 
   )
   return rows[0]
 }
+
+/**
+ * งานสื่อ "รออนุมัติ" ของทั้ง org — นับอย่างเดียว สำหรับหน้าแรก
+ *
+ * ทำไมไม่เรียก listPosts({status:'review'}).length (2026-08-30):
+ *   listPosts ดึงได้ถึง 200 แถวพร้อม thumbnail subquery 2 ตัว/แถว เพื่อเอาแค่จำนวน
+ *
+ * ขอบเขตที่ **ตั้งใจ** ให้ต่างจาก listPosts — ไม่ใช่บั๊ก:
+ *   · นับเฉพาะ visibility='org' — ร่างส่วนตัวของคนอื่นไม่ใช่งานที่ org ต้องอนุมัติ
+ *   · ตัด created_via='backfill' และตะกร้าดิสฯ (channel_id IS NOT NULL) เหมือนฟีดหลัก
+ */
+export async function countPendingReview(orgId) {
+  const { rows } = await pool.query(
+    `SELECT COUNT(*)::int AS n FROM post_episodes e
+      WHERE e.org_id = $1
+        AND e.status = 'review'
+        AND e.visibility = 'org'
+        AND e.archived_at IS NULL
+        AND e.created_via <> 'backfill'
+        AND e.channel_id IS NULL`,
+    [orgId]
+  )
+  return rows[0]?.n || 0
+}

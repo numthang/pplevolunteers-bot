@@ -2074,5 +2074,45 @@
       "title": "This organization is not linked to Discord yet",
       "body": "The team map is built from Discord roles and activity — invite the bot to a server and link it to this organization first."
     }
+  },
+  "home": {
+    "hero": {
+      "tagline": "the open project sandbox with ease",
+      "taglineTh": "An open project space that makes volunteering and IT work easy",
+      "botServers": "Discord Bot · {count} servers",
+      "addToServer": "Add to Server"
+    },
+    "noOrg": {
+      "discordHeading": "Have you used Discord with us before?",
+      "discordBody": "If so, link your Discord account — your roles, org and permissions come back instantly.",
+      "discordCta": "Link Discord account",
+      "heading": "No organization yet",
+      "body": "Create your organization to get started, or wait for an email invite.",
+      "createCta": "+ Create organization"
+    },
+    "profile": {
+      "orgLine": "{org} · {members} members",
+      "owner": "Owner",
+      "moreRoles": "+{count}",
+      "orgSettings": "Org settings",
+      "myProfile": "My profile"
+    },
+    "todo": {
+      "title": "To do",
+      "empty": "Nothing pending — all clear ✅",
+      "sign": "Receipts awaiting your signature",
+      "overdue": "Overdue tasks",
+      "dueSoon": "Tasks due within 7 days",
+      "calls": "Calls assigned to you"
+    },
+    "org": {
+      "title": "Pending across the org",
+      "caseUnassigned": "Complaints with no owner",
+      "postsReview": "Content awaiting approval",
+      "cardsUnassigned": "Tasks with no owner"
+    },
+    "finance": {
+      "hint": "Accounts you use often"
+    }
   }
 }

@@ -11,7 +11,13 @@ export default function LinkAccountsBanner({ linkedProviders = [] }) {
   const [pkMsg, setPkMsg]     = useState(null)
   const [dismissed, setDismissed] = useState(false)
 
-  if (dismissed || (hasLine && hasGoogle && hasPasskey)) return null
+  // ผูกอะไรสักอันใน 3 ตัวนี้ = หยุดเตือน (user เคาะ 2026-08-30)
+  // เดิมต้องครบทั้ง 3 ถึงจะหาย — แต่แบนเนอร์สัญญาว่า "login ได้โดยไม่ต้องใช้ Discord"
+  // ซึ่งมีทางสำรองทางเดียวก็จบเงื่อนไขแล้ว เตือนต่อ = เตือนเรื่องที่แก้ไปแล้ว
+  //
+  // ⛔ ห้ามเปลี่ยนเป็น linkedProviders.length > 0 — user_identities มีแถว provider='discord' ด้วย
+  //    คนที่ login ด้วย Discord จะมี length >= 1 เสมอ → แบนเนอร์ไม่โผล่เลยสักคน
+  if (dismissed || hasLine || hasGoogle || hasPasskey) return null
 
   async function registerPasskey() {
     setPkBusy(true); setPkMsg(null)
@@ -72,9 +78,6 @@ export default function LinkAccountsBanner({ linkedProviders = [] }) {
       busy: pkBusy,
     },
   ]
-
-  const allLinked = providers.every(p => p.linked)
-  if (allLinked) return null
 
   return (
     <div className="bg-card-bg border border-brand-orange/30 rounded-xl px-5 py-4 relative">
