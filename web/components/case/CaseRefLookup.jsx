@@ -14,7 +14,7 @@ export default function CaseRefLookup() {
   function go(e) {
     e.preventDefault()
     const v = ref.trim().toUpperCase()
-    if (v) router.push(`/case/${encodeURIComponent(v)}`)
+    if (v) router.push(`/complaint/${encodeURIComponent(v)}`)
   }
 
   return (

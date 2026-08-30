@@ -1,65 +1,123 @@
 import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'
-import { countByStatus } from '@/db/cases.js'
-import { orgIdOfGuild } from '@/db/guilds.js'
+import { getSession } from '@/lib/auth.js'
+import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
+import { getOrgId } from '@/lib/orgContext.js'
+import { getUserScope } from '@/lib/caseAccess.js'
+import { listCases, countByStatus, ACTIVE } from '@/db/cases.js'
 import { statusLabel } from '@/lib/caseOptions.js'
-import CaseRefLookup from '@/components/case/CaseRefLookup.jsx'
-import LocationButton from '@/components/case/LocationButton.jsx'
+import DocsProvinceFilter from '@/components/docs/DocsProvinceFilter.jsx'
 
 export async function generateMetadata() {
   const t = await getTranslations('case')
-  return { title: t('landing.metaTitle') }
+  return { title: t('manage.listMetaTitle') }
 }
 
-export default async function CasePublicHome() {
-  const t = await getTranslations('case')
-  let counts = {}
-  try {
-    const orgId = await orgIdOfGuild(process.env.GUILD_ID) // public — นับทั้ง org ของ guild หลัก, ทุกจังหวัด
-    counts = await countByStatus(orgId)
-  } catch { counts = {} }
+const STATUS_DOT = {
+  open: 'bg-blue-500', in_progress: 'bg-amber-500',
+  resolved: 'bg-green-500', closed: 'bg-gray-400', rejected: 'bg-red-500',
+}
 
-  const total = Object.values(counts).reduce((a, b) => a + b, 0)
-  const cards = [
-    { key: 'total', label: t('landing.totalLabel'), value: total },
-    { key: 'in_progress', label: statusLabel('in_progress'), value: counts.in_progress || 0 },
-    { key: 'resolved', label: statusLabel('resolved'), value: (counts.resolved || 0) + (counts.closed || 0) },
-  ]
+function fmtDate(d) {
+  return new Date(d).toLocaleDateString('th-TH', { dateStyle: 'medium' })
+}
+
+export default async function CaseManageList({ searchParams }) {
+  const t = await getTranslations('case')
+  const session = await getSession()
+  const { access } = await getEffectiveIdentity(session)
+  const orgId = await getOrgId(session)
+  const scope = getUserScope(access) // null = admin (ทุกจังหวัด)
+
+  const sp = await searchParams
+  const selectedProvince = sp?.province || ''
+  const selectedStatus = sp?.status || ''
+  // ⭐ ตัวกรอง 2 ตัวนี้เกิดขึ้นเพื่อรองรับตัวเลขบนหน้าแรก (2026-08-30)
+  //    เลขบนการ์ดต้องกดแล้วเจอ "ชุดเดียวกันเป๊ะ" ไม่งั้นได้อาการโชว์ 3 กดเข้าไปเห็น 12
+  //    ⛔ แก้เงื่อนไขที่นี่เมื่อไหร่ ต้องแก้ countCaseStats ใน db/cases.js ให้ตรงกันเสมอ
+  const mine = sp?.mine === '1'
+  const userId = mine ? (session?.user?.userId || null) : null
+
+  const all = await listCases(orgId, {
+    provinces: scope,
+    status: selectedStatus || null,
+    mineUserId: userId,
+    limit: 300,
+  })
+  const counts = await countByStatus(orgId, scope)
+
+  const provinces = [...new Set(all.map(c => c.province).filter(Boolean))].sort()
+  const cases = selectedProvince ? all.filter(c => c.province === selectedProvince) : all
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-disc-text mb-2">{t('landing.heading')}</h1>
-        <p className="text-base text-gray-500 dark:text-disc-muted">
-          {t('landing.description')}
-        </p>
-      </div>
-
-      {/* stat headline */}
-      <div className="grid grid-cols-3 gap-3 mb-8">
-        {cards.map(c => (
-          <div key={c.key} className="bg-card-bg border border-gray-200 dark:border-disc-border rounded-xl p-4 text-center">
-            <p className="text-2xl font-bold text-orange">{c.value}</p>
-            <p className="text-sm text-gray-500 dark:text-disc-muted mt-0.5">{c.label}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* แจ้งเรื่องใหม่ */}
-      <div className="space-y-2 mb-8">
-        <Link href="/case/new"
-          className="block w-full bg-brand-orange text-white py-4 rounded-xl text-lg font-semibold hover:bg-brand-orange-light transition text-center">
-          {t('landing.newCaseButton')}
+    <div>
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-disc-text mb-1">{t('manage.listHeading')}</h1>
+          <p className="text-base text-gray-500 dark:text-disc-muted">
+            {t('manage.listSummary', { total: all.length, open: counts.open || 0, inProgress: counts.in_progress || 0 })}
+          </p>
+        </div>
+        <Link
+          href="/complaint/new"
+          className="shrink-0 inline-flex items-center gap-2 px-4 py-2.5 bg-orange text-white text-base font-medium rounded-lg hover:bg-orange-light transition"
+        >
+          <span>+</span> {t('manage.addButton')}
         </Link>
-        <LocationButton />
       </div>
 
-      {/* ติดตาม ref */}
-      <div className="bg-card-bg border border-gray-200 dark:border-disc-border rounded-xl p-6">
-        <h2 className="text-base font-semibold text-gray-700 dark:text-disc-text mb-3">{t('landing.trackHeading')}</h2>
-        <CaseRefLookup />
-        <p className="mt-2 text-sm text-gray-400 dark:text-disc-muted">{t('landing.trackHint')}</p>
+      {/* ชิปตัวกรอง — ต้อง**มองเห็นได้** ว่ากรองอะไรอยู่ เพราะคนส่วนใหญ่มาจากการกดเลขบนหน้าแรก
+          ถ้าไม่โชว์ จะเข้าใจว่าองค์กรมีเคสอยู่แค่นี้จริงๆ */}
+      <div className="mb-5 flex flex-wrap gap-2">
+        {[
+          { key: '', href: '/case', label: t('manage.filterAll') },
+          { key: ACTIVE, href: `/case?status=${ACTIVE}`, label: t('manage.filterActive') },
+          { key: 'mine', href: '/case?mine=1', label: t('manage.filterMine') },
+        ].map(({ key, href, label }) => {
+          const active = key === 'mine' ? mine : (!mine && selectedStatus === key)
+          return (
+            <Link
+              key={key || 'all'}
+              href={href}
+              className={`px-3 py-1.5 text-base rounded-lg border transition ${
+                active
+                  ? 'bg-orange text-white border-orange'
+                  : 'bg-card-bg text-gray-600 dark:text-disc-text border-gray-200 dark:border-disc-border hover:border-orange'
+              }`}
+            >
+              {label}
+            </Link>
+          )
+        })}
       </div>
+
+      {provinces.length > 1 && (
+        <div className="mb-5">
+          <DocsProvinceFilter provinces={provinces} selected={selectedProvince} />
+        </div>
+      )}
+
+      {cases.length === 0 ? (
+        <div className="bg-card-bg border border-gray-200 dark:border-disc-border rounded-xl p-10 text-center text-gray-400 dark:text-disc-muted">
+          {t('manage.emptyState')}
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {cases.map(c => (
+            <Link key={c.id} href={`/case/${c.ref}`}
+              className="flex items-center gap-3 bg-card-bg border border-gray-200 dark:border-disc-border rounded-xl p-4 hover:border-orange transition">
+              <span className={`shrink-0 w-2.5 h-2.5 rounded-full ${STATUS_DOT[c.status] || 'bg-gray-300'}`} />
+              <div className="min-w-0 flex-1">
+                <p className="text-base font-semibold text-gray-900 dark:text-disc-text truncate">{c.title || t('manage.noTitle')}</p>
+                <p className="text-sm text-gray-400 dark:text-disc-muted">
+                  <span className="font-mono">{c.ref}</span> · {c.province}{c.category ? ` · ${c.category}` : ''} · {fmtDate(c.created_at)}
+                </p>
+              </div>
+              <span className="shrink-0 text-sm text-gray-500 dark:text-disc-muted">{statusLabel(c.status)}</span>
+            </Link>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

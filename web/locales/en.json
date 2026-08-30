@@ -618,7 +618,8 @@
       "layoutMetaTitleTemplate": "%s — Complaints",
       "filterAll": "All",
       "filterActive": "Not closed",
-      "filterMine": "Assigned to me"
+      "filterMine": "Assigned to me",
+      "addButton": "New Complaint"
     },
     "actions": {
       "takeCaseButton": "Take this case",

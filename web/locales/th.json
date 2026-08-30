@@ -618,7 +618,8 @@
       "layoutMetaTitleTemplate": "%s — เรื่องร้องเรียน",
       "filterAll": "ทั้งหมด",
       "filterActive": "ยังไม่ปิด",
-      "filterMine": "ที่ฉันรับผิดชอบ"
+      "filterMine": "ที่ฉันรับผิดชอบ",
+      "addButton": "เพิ่มเรื่องร้องเรียน"
     },
     "actions": {
       "takeCaseButton": "รับเรื่องนี้",

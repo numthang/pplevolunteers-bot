@@ -240,7 +240,7 @@ export default async function HomePage() {
   const on = (k) => enabledFeatures.includes(k)
 
   // ⚠️ เคสใช้ identity **คนละตัว** กับที่เหลือโดยตั้งใจ (2026-08-30)
-  //    /case/manage ยังอ่านสิทธิ์ผ่าน getEffectiveIdentity (guild-based) + getUserScope
+  //    /case ยังอ่านสิทธิ์ผ่าน getEffectiveIdentity (guild-based) + getUserScope
   //    ถ้าหน้าแรกใช้ org identity แล้วสองตัวให้ผลไม่เท่ากัน = โชว์ "เคสค้าง 12" กดเข้าไปเห็น 3
   //    → ยอมจ่าย query เพิ่ม 1 ครั้งเพื่อให้ตัวเลขตรงกับหน้าที่มันลิงก์ไป
   //    (ตะเข็บนี้ควรหายตอน ORG_ACCESS_REDESIGN ขั้น 6 — จดไว้ที่ md/PENDING.md แล้ว)
@@ -349,12 +349,12 @@ export default async function HomePage() {
         {/* เรื่องร้องเรียน (user เคาะ 2026-08-30)
               รอทำ    = เคสที่ยังไม่ปิดทั้งหมดในจังหวัดที่คนนี้เห็นได้ (open + in_progress)
               กำลังทำ = ชุดเดียวกันแต่กรองว่าฉันเป็นผู้รับผิดชอบ → เป็น subset ของบรรทัดบนเสมอ
-            ⭐ ตัวกรอง ?status=active และ ?mine=1 ที่ /case/manage สร้างขึ้นมาเพื่อสองเลขนี้โดยเฉพาะ
-               ⛔ แก้เงื่อนไขที่ไหน ต้องแก้ให้ตรงกันทั้ง countCaseStats และหน้า /case/manage */}
+            ⭐ ตัวกรอง ?status=active และ ?mine=1 ที่ /case สร้างขึ้นมาเพื่อสองเลขนี้โดยเฉพาะ
+               ⛔ แก้เงื่อนไขที่ไหน ต้องแก้ให้ตรงกันทั้ง countCaseStats และหน้า /case */}
         {casesOn && (
-          <ModuleCard href="/case/manage" icon={ICON.case} title={t('card.cases')}>
-            <StatRow href="/case/manage?status=active" label={t('cases.todo')} count={caseStats.active} />
-            <StatRow href="/case/manage?mine=1" label={t('cases.mine')} count={caseStats.mine} />
+          <ModuleCard href="/case" icon={ICON.case} title={t('card.cases')}>
+            <StatRow href="/case?status=active" label={t('cases.todo')} count={caseStats.active} />
+            <StatRow href="/case?mine=1" label={t('cases.mine')} count={caseStats.mine} />
           </ModuleCard>
         )}
 

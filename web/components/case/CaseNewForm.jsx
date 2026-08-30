@@ -97,7 +97,7 @@ export default function CaseNewForm({ fixedProvince, provinces, categories }) {
 
   // ── success state ──
   if (result) {
-    const trackUrl = `/case/${result.ref}`
+    const trackUrl = `/complaint/${result.ref}`
     return (
       <div className="bg-card-bg border border-gray-200 dark:border-disc-border rounded-xl p-6 text-center">
         <div className="text-5xl mb-3">✅</div>

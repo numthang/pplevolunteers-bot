@@ -248,10 +248,10 @@ export async function advanceAttachmentWatermark(caseId, expectedId, newId, clie
 
 /**
  * "ยังไม่ปิด" — ชุดสถานะที่ยังต้องมีคนทำอะไรกับเคส
- * ⛔ resolved/closed/rejected ไม่อยู่ในนี้ · แก้ตรงนี้ที่เดียวแล้วทั้งหน้าแรกและ /case/manage ตามกันเอง
+ * ⛔ resolved/closed/rejected ไม่อยู่ในนี้ · แก้ตรงนี้ที่เดียวแล้วทั้งหน้าแรกและ /case ตามกันเอง
  */
 export const ACTIVE_STATUSES = ['open', 'in_progress']
-export const ACTIVE = 'active'   // ค่าพิเศษของพารามิเตอร์ status ใน URL (/case/manage?status=active)
+export const ACTIVE = 'active'   // ค่าพิเศษของพารามิเตอร์ status ใน URL (/case?status=active)
 
 /**
  * รายการเคส (scope-filtered) — provinces=null = admin (ทุกจังหวัด)

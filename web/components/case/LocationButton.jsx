@@ -33,7 +33,7 @@ export default function LocationButton() {
           const data = await res.json()
           const province = extractProvince(data.address)
           if (province) {
-            router.push(`/case/new/${encodeURIComponent(province)}`)
+            router.push(`/complaint/new/${encodeURIComponent(province)}`)
           } else {
             setStatus('error')
           }
@@ -52,7 +52,7 @@ export default function LocationButton() {
         {t('location.errorMessage')}{' '}
         <button onClick={() => setStatus('idle')} className="underline">{t('location.retry')}</button>
         {' '}{t('location.or')}{' '}
-        <a href="/case/new" className="underline">{t('location.chooseManually')}</a>
+        <a href="/complaint/new" className="underline">{t('location.chooseManually')}</a>
       </p>
     )
   }

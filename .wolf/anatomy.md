@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-30T08:27:25.292Z
-> Files: 1059 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-30T15:11:47.135Z
+> Files: 1060 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
 
@@ -217,7 +217,7 @@
 - `aiConfig.js` — db/aiConfig.js (~937 tok)
 - `aiCreds.js` — นับ 1 ครั้งถ้ายังไม่เต็ม — ไม่ atomic (โควตาไม่ใช่เงิน เกิน 1-2 ครั้งรับได้ เหมือน postsAiQuota) (~1510 tok)
 - `aiPrompts.js` — prompt ของช่องที่ผูกกับโค้ด (kind='slot') — ประกอบเสร็จพร้อมยิง AI (~504 tok)
-- `case.js` — Case (เรื่องร้องเรียน) — bot-side DB layer (CJS) (~2624 tok)
+- `case.js` — Case (เรื่องร้องเรียน) — bot-side DB layer (CJS) (~2622 tok)
 - `configResolver.js` — db/configResolver.js — รวม config 3 ระดับเป็นค่าเดียวตาม priority (~716 tok)
 - `finance.js` — pool: getFinanceConfig, upsertFinanceConfig, getAccountsSummary (~641 tok)
 - `forum.js` — pool: getForumConfig, getAllForumConfigs, upsertForumConfig + 7 more (~1254 tok)
@@ -634,7 +634,7 @@
 
 - `globals.css` — Styles: 5 rules, 7 vars (~237 tok)
 - `layout.js` — Next.js layout (~912 tok)
-- `page.js` — Next.js page component (~7982 tok)
+- `page.js` — ตัวเลข 1 บรรทัดในการ์ดโมดูล — **กดได้ทุกบรรทัด** ลิงก์ไปหน้าที่กรองไว้แล้ว (~7054 tok)
 
 ## web/app/admin/logs/
 
@@ -1604,7 +1604,8 @@
 
 ## web/app/case/
 
-- `page.js` — Next.js page component (~765 tok)
+- `layout.js` — Next.js layout (~313 tok)
+- `page.js` — Next.js page component (~1498 tok)
 
 ## web/app/case/[ref]/
 
@@ -1874,7 +1875,7 @@
 - `LocaleSwitcher.jsx` — LOCALES (~510 tok)
 - `LoginButton.jsx` — LoginButton — uses useState (~1774 tok)
 - `LoginPanel.jsx` — ERROR_MESSAGES (~4776 tok)
-- `Nav.jsx` — Ic (~11723 tok)
+- `Nav.jsx` — Ic (~11966 tok)
 - `NoGuildNotice.jsx` — NoGuildNotice (~268 tok)
 - `OrgSwitcherMenu.jsx` — TONES (~2732 tok)
 - `Providers.jsx` — ThemeContext — uses useContext, useState, useEffect (~265 tok)
@@ -1907,10 +1908,10 @@
 - `CaseLetterList.jsx` — fmtDate (~600 tok)
 - `CaseLetterModal.jsx` — inputCls (~3298 tok)
 - `CaseManageActions.jsx` — inputCls (~1314 tok)
-- `CaseNewForm.jsx` — inputCls — renders form (~2705 tok)
-- `CaseRefLookup.jsx` — inputCls — renders form (~318 tok)
+- `CaseNewForm.jsx` — inputCls — renders form (~2706 tok)
+- `CaseRefLookup.jsx` — inputCls — renders form (~320 tok)
 - `CaseTimeline.jsx` — fmtDate — renders form (~2170 tok)
-- `LocationButton.jsx` — extractProvince (~719 tok)
+- `LocationButton.jsx` — extractProvince (~722 tok)
 - `ProvinceCombobox.jsx` — ProvinceCombobox (~801 tok)
 
 ## web/components/config/
@@ -2070,7 +2071,7 @@
 - `labels.js` — ป้ายทั้งหมดของ org (ที่ยังไม่ถูกซ่อน) เรียงตามกลุ่ม (~2314 tok)
 - `links.js` — ของจริงที่การ์ดใบนี้ผูกอยู่ — null = การ์ดเปล่า (การบ้านธรรมดา) (~3435 tok)
 - `people.js` — ค้นสมาชิก active ของ org · เรียกจาก API ที่กันคำค้นสั้นกว่า 2 ตัวไว้แล้ว (~931 tok)
-- `statusSql.js` — สถานะที่ต้องเอาไปแสดงจริง — สดจากต้นทางถ้าผูกไว้ · ไม่ผูกก็ใช้คอลัมน์เดิม (~1637 tok)
+- `statusSql.js` — สถานะที่ต้องเอาไปแสดงจริง — สดจากต้นทางถ้าผูกไว้ · ไม่ผูกก็ใช้คอลัมน์เดิม (~1641 tok)
 - `tags.js` — tags.js — "แท็ก" ของการบ้าน = **ตัวเลือกใน custom field** ไม่ใช่ตารางป้ายอีกต่อไป (~1588 tok)
 
 ## web/db/posts/

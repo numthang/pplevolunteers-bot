@@ -15,7 +15,7 @@ export default async function CaseNewProvincePage({ params }) {
   const fixedProvince = resolveProvince(raw)
 
   // ไม่รู้จักรหัส/ชื่อนี้ → ไป picker
-  if (!fixedProvince) redirect('/case/new')
+  if (!fixedProvince) redirect('/complaint/new')
 
   return (
     <div className="max-w-2xl mx-auto">

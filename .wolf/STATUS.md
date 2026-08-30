@@ -5,25 +5,24 @@ budget_tokens: 1000
 # STATUS — pple-volunteers
 
 > อ่านไฟล์นี้ก่อนเสมอเมื่อเริ่ม session ใหม่ · อัปเดตทุกครั้งที่จบก้อนงาน
-> Last updated: 2026-08-29
+> Last updated: 2026-08-30
 
 ---
 
 ## ✅ Done
 
-### รอบล่าสุด (2026-08-29 · commit `c6a8433` → `a2f5b7f`)
-- **owner แก้ข้อมูลเข้าสู่ระบบให้สมาชิกที่ล็อกตัวเองออกจาก Discord ได้** — email/phone/verified
-  แก้จาก `/org` settings **และ** จาก person-profile modal ใน kanban (component กลาง
-  `web/components/org/IdentityEditor.jsx` · ย้าย `PersonProfileModal.jsx` จาก `kanban/` → `org/`)
-  ทั้งสองฟิลด์ต้องมีหลักฐานก่อนเขียน (phone = SMS OTP · email = verify-link) — ไม่ใช่ทางปลอม credential
-- `/api/kanban/people/[id]` **ตัด 3 ฟิลด์ PII ทิ้งถ้าผู้เรียกไม่ใช่ owner** (endpoint นี้สมาชิกทุกคนเรียกได้)
-- ยุบ "ค้นหาสมาชิก" + "แต่งตั้งบทบาท" (เดิม 2 ช่องค้น 2 API) เป็นลิสต์เดียว + เพิ่ม audit log ให้ role change/remove (เดิมไม่มีเลย)
-- `scripts/migration/migration.sql` **รันทั้งไฟล์ซ้ำได้แล้ว** (ห่อ IF EXISTS / DO $$) · `org-scope/09-*.sql` เลิก SELECT `org_id` ที่ยังไม่ถูกสร้างในไฟล์นั้น
-- vitest 486/486 ผ่าน · compile ผ่านบน dev :3100
+### รอบล่าสุด (2026-08-30 · ยังไม่ commit)
+- **แยก route CASES**: public (แจ้ง/ติดตามเรื่อง) ย้าย `/case*` → **`/complaint*`**
+  จัดการเคส (เดิม `/case/manage`) ย้ายขึ้นเป็น **`/case`** ตรงๆ (list) + `/case/[ref]` (detail) — ตาม pattern docs/calling/posts
+  ปุ่ม "+เพิ่มเรื่องร้องเรียน" บน `/case` → ลิงก์ `/complaint/new` (ของสาธารณะเดิม)
+- แก้ลิงก์ตามทั่ว repo: `page.js`/`Nav.jsx`/`db/case.js`(บอท)/`kanban/statusSql.js`
+- ⚠️ `case/layout.js` redirect เมื่อไม่ผ่านสิทธิ์ต้องชี้ `/complaint` ห้ามชี้ `/case` (วนลูป — layout ครอบตัวเอง)
+- เพิ่ม i18n `case.manage.addButton` · build ผ่าน (`NEXT_DIST_DIR=.next-verify`) เห็นทั้ง `/case`,`/case/[ref]`,`/complaint*`
 
 ### ก่อนหน้า (ยังต้องจำ)
-- Backfill กระทู้สื่อ → posts+kanban **ขึ้น prod แล้ว** 708 ใบ (พลาด 1 ใบจาก Discord 429)
-- Docs — ผู้รับเงินคนนอก + โหมดการเซ็น: code เสร็จ **ยังไม่ push ยังไม่ deploy** · migration ลง dev แล้ว **prod ยังไม่รันสักก้อน**
+- 2026-08-29 (`a2f5b7f`): owner แก้ login info ให้สมาชิกที่ล็อกตัวเองออกจาก Discord ได้ (ต้องมีหลักฐาน OTP/verify-link) · audit log role change · vitest 486/486 ผ่าน
+- Backfill กระทู้สื่อ → posts+kanban **ขึ้น prod แล้ว** 708 ใบ (พลาด 1 จาก Discord 429)
+- Docs ผู้รับเงินคนนอก: code เสร็จ **ยังไม่ push/deploy** · migration ลง dev แล้ว prod ยังไม่รัน
 
 ---
 
@@ -61,7 +60,8 @@ budget_tokens: 1000
 ---
 
 ## ⚠️ ยังไม่มีใครกดทดสอบในเบราว์เซอร์ (build ผ่านอย่างเดียว)
-- identity edit จาก kanban modal (รอบล่าสุด)
+- แยก route CASES (`/case` จัดการเคส + `/complaint` สาธารณะ) — รอบล่าสุด
+- identity edit จาก kanban modal
 - Kanban module ทั้งก้อน · Posts กันเซฟทับกัน · Docs คนนอก (Export PDF ใบคนนอกยังไม่เคยกดจริง)
 
 ---

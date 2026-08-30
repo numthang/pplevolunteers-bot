@@ -86,9 +86,9 @@ const DOCS_LINKS = [
 // เมนูซ้ำใน Nav ถูกถอดออก · ทางเข้าอยู่ที่เมนู org ข้าง "ตั้งค่าองค์กร"
 // (ตะกร้าสื่อยุบเข้า /posts ตั้งแต่ 2026-07-30 · Platforms ย้ายไป /org/settings/social)
 
+// /case = จัดการเคส (เหมือน docs/calling/posts) · หน้าแจ้งเรื่องร้องเรียนสาธารณะแยกออกไปอยู่ /complaint แล้ว (2026-08-30)
 const CASE_LINKS = [
-  { href: '/case',        label: 'Complaints', icon: 'overview', exact: true },
-  { href: '/case/manage', label: 'Cases',      icon: 'logs',     exact: true },
+  { href: '/case', label: 'Cases', icon: 'logs', exact: true },
 ]
 
 const POSTS_LINKS = [
@@ -103,7 +103,7 @@ const DASHBOARD_LINKS = [
   { href: '/finance',      label: 'FINANCE',  icon: 'transactions', feature: 'finance' },
   { href: '/calling',      label: 'CALLING',  icon: 'campaigns', feature: 'calling' },
   { href: '/docs',         label: 'DOCS',     icon: 'docs',      feature: 'docs', docsAccess: true },
-  { href: '/case/manage',  label: 'CASES',    icon: 'logs',      feature: 'cases', casesAccess: true },
+  { href: '/case',         label: 'CASES',    icon: 'logs',      feature: 'cases', casesAccess: true },
   { href: '/posts',        label: 'POSTS',    icon: 'pen',       feature: 'posts' },
   { href: '/kanban',       label: 'KANBAN',   icon: 'pending',   feature: 'kanban' },
 ]
@@ -113,7 +113,7 @@ const APPS = [
   { key: 'finance',  label: 'FINANCE',   href: '/finance',        icon: 'transactions', feature: 'finance' },
   { key: 'calling',  label: 'CALLING',   href: '/calling',        icon: 'campaigns', feature: 'calling' },
   { key: 'docs',     label: 'DOCS',      href: '/docs',           icon: 'docs',      feature: 'docs' },
-  { key: 'cases',    label: 'CASES',     href: '/case/manage',    icon: 'logs',      feature: 'cases', casesAccess: true },
+  { key: 'cases',    label: 'CASES',     href: '/case',           icon: 'logs',      feature: 'cases', casesAccess: true },
   { key: 'posts',    label: 'POSTS',     href: '/posts',          icon: 'pen',       feature: 'posts' },
   { key: 'kanban',   label: 'KANBAN',    href: '/kanban',         icon: 'pending',   feature: 'kanban' },
   // TEAM = ผังทีม (ย้ายมาจาก /bot/orgchart 2026-08-17) · อ่านอย่างเดียว เปิดให้ทุกคน
