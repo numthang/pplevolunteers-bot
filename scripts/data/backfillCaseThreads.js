@@ -56,6 +56,7 @@
 require('dotenv').config();
 const pool = require('../../db/index');
 const caseDb = require('../../db/case');
+const { userIdByDiscord } = require('../../db/org');
 const { callAI } = require('../../services/aiSummarize');
 const { generateTimeline } = require('../../services/caseTimeline');
 
@@ -287,7 +288,8 @@ async function complainantNameOf(guildId, ownerId) {
     return;
   }
 
-  let totalNew = 0, totalSkip = 0, totalErr = 0;
+  let totalNew = 0, totalSkip = 0, totalErr = 0, totalAssigned = 0, totalNoOwner = 0;
+  const createdCaseIds = [];
 
   for (const { guild_id, forum_channel_id } of configs) {
     const province = PROVINCE;   // มาจาก --province เท่านั้น (ดูเหตุผลตรงที่ประกาศ PROVINCE)
@@ -300,7 +302,7 @@ async function complainantNameOf(guildId, ownerId) {
     threads.sort((a, b) => (a.id < b.id ? -1 : 1));   // เก่า → ใหม่ ให้ --limit หยิบของเก่าสุดก่อน
     console.log(`Fetched ${fetched} threads${SINCE ? ` → เข้าเกณฑ์วันที่ ${threads.length}` : ''}, checking...`);
 
-    let gNew = 0, gSkip = 0, gErr = 0;
+    let gNew = 0, gSkip = 0, gErr = 0, gAssigned = 0, gNoOwner = 0;
     for (let i = 0; i < threads.length; i++) {
       if (LIMIT && gNew >= LIMIT) { console.log(`\n  ครบ --limit ${LIMIT} แล้ว หยุด`); break; }
       const t = threads[i];
@@ -350,6 +352,23 @@ async function complainantNameOf(guildId, ownerId) {
         if (aiSummary) await caseDb.setAiSummary(row.id, aiSummary, lastMsgId);
         else if (lastMsgId) await caseDb.setLastSyncedMessageId(row.id, lastMsgId);
 
+        // ── เจ้าภาพ = เจ้าของกระทู้ (user เคาะ 2026-08-29) ────────────────────────
+        // ⚠️ ความหมายต่างจากฝั่งโพสต์: กระทู้ร้องเรียนคนตั้ง = **ผู้ร้อง** ไม่ใช่คนที่รับผิดชอบแก้
+        //    (ชื่อเดียวกันนี้ถูกใส่เป็น complainant_name ด้วย) · แต่ของจริงในห้องนี้ทีมงานเป็นคนตั้ง
+        //    กระทู้แทนชาวบ้านเกือบทั้งหมด → user เลือกให้เป็นเจ้าภาพไปเลย
+        // ⭐ ที่ต้องมีเจ้าภาพ ไม่ใช่แค่ความสวยงาม: การ์ดที่ไม่มีเจ้าภาพจะไปโผล่ใน
+        //    "การบ้านของฉัน" ของ **ทุกคน** (isMyCard นับงานไม่มีเจ้าภาพเป็นของทุกคน)
+        //    เคส 179 ใบไม่มีเจ้าภาพ = หน้าแรกพังทั้งทีม (เหตุผลเดียวกับ web/db/kanban/links.js)
+        // ⚠️ `case_assignees.user_id` เป็น NOT NULL → ต้องแปลง discord id เป็น users.id ให้ได้ก่อน
+        //    คนที่ไม่เคยเข้าระบบ/ออกจากเซิร์ฟเวอร์ไปแล้ว จะไม่มีแถวใน users → ข้าม ไม่ใช่ error
+        if (t.owner_id) {
+          const ownerUserId = await userIdByDiscord(t.owner_id);
+          if (ownerUserId) { await caseDb.addAssignee(row.id, guild_id, t.owner_id); gAssigned++; }
+          else gNoOwner++;
+        } else gNoOwner++;
+
+        createdCaseIds.push(row.id);
+
         // AI timeline (เฉพาะโหมด --ai · best-effort)
         if (USE_AI && msgs.length) {
           try {
@@ -365,15 +384,48 @@ async function complainantNameOf(guildId, ownerId) {
       }
     }
 
-    console.log(`\n  Done guild ${guild_id}: new=${gNew} skip=${gSkip} err=${gErr}`);
+    console.log(`\n  Done guild ${guild_id}: new=${gNew} skip=${gSkip} err=${gErr}`
+      + ` · เจ้าภาพ=${gAssigned} หาเจ้าของไม่ได้=${gNoOwner}`);
     totalNew += gNew; totalSkip += gSkip; totalErr += gErr;
+    totalAssigned += gAssigned; totalNoOwner += gNoOwner;
   }
 
-  console.log(`\n=== สรุป: new=${totalNew} skip=${totalSkip} err=${totalErr} ===`);
+  console.log(`\n=== สรุป: new=${totalNew} skip=${totalSkip} err=${totalErr}`
+    + ` · เจ้าภาพ=${totalAssigned} หาเจ้าของไม่ได้=${totalNoOwner} ===`);
 
   // ⚠️ การ์ด kanban ถูกยิงแบบ fire-and-forget ใน createCase() (`.catch(() => {})`)
   //    ปิด pool ทันทีหลังใบสุดท้าย = ใบท้ายๆ อาจยังเขียนการ์ดไม่เสร็จแล้วโดนตัดเงียบๆ
   //    (dev รอบแรกครบ 185/185 ก็จริง แต่เป็นเรื่องจังหวะ ไม่ใช่การรับประกัน)
   if (!DRY_RUN && totalNew) { await sleep(2000); }
+
+  /**
+   * ⭐ sync เจ้าภาพลงการ์ด — **ต้องทำเป็นก้อนท้ายสุด ไม่ใช่ทีละใบระหว่างลูป**
+   *
+   * `kanban_cards.owner_user_id` เป็น **สำเนา** ของ assignee คนแรก ไม่ได้อ่านสดจาก
+   * `case_assignees` (ต่างจากสถานะที่อ่านสดผ่าน LIVE_STATUS_SQL) → ต้องเขียนให้เองสองที่
+   *
+   * ทำท้ายสุดเพราะการ์ดเกิดแบบ fire-and-forget — ระหว่างลูปมันอาจยังไม่มีแถวให้ UPDATE
+   *
+   * ⚠️ นี่คืออาการเดียวกับบั๊กที่ `addAssignee` ทั้ง 2 ฝั่งมีอยู่ตอนนี้ (เขียน case_assignees
+   *    แล้วไม่แตะการ์ด) — ที่นี่แก้เฉพาะของที่รอบนี้สร้าง ไม่ไปยุ่งของเดิม · ตัวบั๊กจดไว้ที่ PENDING
+   */
+  if (!DRY_RUN && createdCaseIds.length) {
+    const { rowCount } = await pool.query(
+      `UPDATE kanban_cards k
+          SET owner_user_id = a.user_id
+         FROM kanban_card_links l
+         JOIN LATERAL (
+           SELECT user_id FROM case_assignees
+            WHERE case_id = l.entity_id ORDER BY assigned_at, user_id LIMIT 1
+         ) a ON TRUE
+        WHERE l.card_id = k.id
+          AND l.entity_type = 'case'
+          AND l.entity_id = ANY($1)
+          AND k.owner_user_id IS NULL`,
+      [createdCaseIds],
+    );
+    console.log(`sync เจ้าภาพลงการ์ด kanban: ${rowCount} ใบ`);
+  }
+
   await pool.end();
 })();

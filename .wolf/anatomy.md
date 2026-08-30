@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-30T07:00:51.452Z
-> Files: 1053 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-30T08:27:25.292Z
+> Files: 1059 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
 
@@ -291,7 +291,7 @@
 - `DEPLOYMENT.md` — Production Deployment — VPS Setup (~2975 tok)
 - `DEV_AGREEMENT.md` — CivicFlow — Dev Agreement & กติกาทำงานร่วม (ร่าง — รอคุยกับทีม CivicFlow) (~1760 tok)
 - `ORG_ACCESS_REDESIGN.md` — ORG_ACCESS_REDESIGN — ปลดสิทธิ์ออกจาก Discord (~5545 tok)
-- `PENDING.md` — PENDING.md — Backlog & Ideas (~43397 tok)
+- `PENDING.md` — PENDING.md — Backlog & Ideas (~43915 tok)
 - `WEB.md` — Web App — Next.js Frontend (~5324 tok)
 
 ## md/archive/
@@ -430,7 +430,7 @@
 - `backfill-intro-peoplesparty.js` — scripts/data/backfill-intro-peoplesparty.js (~3823 tok)
 - `backfill-intro-ratchaburi.js` — scripts/backfill-intro-channel.js (~2655 tok)
 - `backfill-missing-channels.js` — scripts/backfill-missing-channels.js (~2618 tok)
-- `backfillCaseThreads.js` — backfillCaseThreads.js — กวาดกระทู้เก่าใน complaint forum มาสร้างเป็นเคสร้องเรียน (cases) (~4961 tok)
+- `backfillCaseThreads.js` — backfillCaseThreads.js — กวาดกระทู้เก่าใน complaint forum มาสร้างเป็นเคสร้องเรียน (cases) (~5707 tok)
 - `backfillPostThreads.js` — backfillPostThreads.js — กวาดกระทู้เก่าใน forum งานสื่อ มาสร้างเป็นโพสต์ (post_episodes) (~5400 tok)
 - `backfillThreads.js` — Backfill: index threads ใน text channels ทั้งหมดเข้า Meilisearch + DB (~680 tok)
 - `exportIntro.js` — Declares client (~667 tok)
@@ -605,17 +605,23 @@
 - `_tmp_cdp_check2.mjs` — PORT: jsonGet, connect, send, main, evalJs (~672 tok)
 - `_tmp_cdp_check3.mjs` — PORT: jsonGet, connect, send, main, evalJs (~1064 tok)
 - `_tmp_cdp_check4.mjs` — PORT: jsonGet, connect, send + 3 more (~1036 tok)
-- `alias-hook.tmp.mjs` — TEMP — ให้ node ธรรมดารู้จัก alias '@/' เหมือน Next.js (ใช้เฉพาะสคริปต์ smoke ลบทิ้งหลังรัน) (~130 tok)
+- `alias-hook.tmp.mjs` — TEMP — alias '@/' สำหรับ node ธรรมดา (ลบทิ้งหลังรัน) (~115 tok)
 - `alias-loader.mjs` — Exports resolve (~100 tok)
+- `casecheck.tmp.mjs` — TEMP — "ยังไม่มีผู้รับผิดชอบ 2" vs "เปิดอยู่ 180" ตัวไหนถูก (~212 tok)
+- `cdp-kanban.tmp.mjs` — TEMP — ขับ Chrome headless ผ่าน CDP (ไม่ใช้ dependency ใดๆ · Node 24 มี WebSocket ในตัว) (~1419 tok)
 - `eslint.config.mjs` — ESLint — ตั้งใจให้จับ "บั๊กจริง" อย่างเดียว ไม่ใช่ตำรวจสไตล์ (~917 tok)
+- `gap.tmp.mjs` — TEMP — งานของ user 1 ที่ "มองไม่เห็นบนหน้าแรก" มีเท่าไหร่ แยกตามสถานะ/กำหนดส่ง (~332 tok)
 - `jsconfig.json` (~67 tok)
 - `middleware.js` — ส่ง path ปัจจุบันเข้า request header ให้ server component อ่านได้ (~246 tok)
 - `mint-token.tmp.mjs` — TEMP — mint magic token ลง DB ตรงๆ (ห้ามยิง /api/org/auth/magic = ส่งเมลจริง · bug-033) (~233 tok)
 - `next.config.js` — override: true — .env เป็น source of truth; กัน env var ที่ export ค้างใน shell (เช่น ANTHROPIC_API_ (~587 tok)
 - `package-lock.json` — npm lock file (~45282 tok)
 - `package.json` — Node.js package manifest (~337 tok)
+- `parity.tmp.mjs` — TEMP — เทียบ count ที่หน้าแรกใช้ กับ list ที่หน้า /kanban ใช้ ณ ตอนนี้ (~253 tok)
+- `parity2.tmp.mjs` — TEMP — เลขบนการ์ดงานสื่อ ต้องตรงกับที่ /posts?status=..&filter=org แสดงจริง (~254 tok)
 - `postcss.config.js` — PostCSS configuration (~21 tok)
 - `scripts-tmp-test-entries.mjs` — Declares guildId (~428 tok)
+- `shot.tmp.mjs` — TEMP — ถ่ายจอ + วัดความสูงการ์ด (ลบทิ้งหลังรัน) (~572 tok)
 - `smoke-dash.tmp.mjs` — TEMP smoke test — ลบทิ้งหลังรัน · เรียก db function ใหม่ของหน้าแรกกับ DB จริงบนเครื่อง dev (~685 tok)
 - `smoke-parity.tmp.mjs` — TEMP — พิสูจน์ว่าเลขบนหน้าแรก "ตรงกับ" ที่กดเข้าไปเห็นจริง (list vs count) (~502 tok)
 - `tailwind.config.js` (~664 tok)

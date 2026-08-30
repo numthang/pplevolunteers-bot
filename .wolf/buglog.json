@@ -3757,6 +3757,22 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-08-30T14:15:00.000Z"
+    },
+    {
+      "id": "bug-197",
+      "timestamp": "2026-08-30T07:21:34.213Z",
+      "error_message": "Missing import: ../../db/org",
+      "file": "scripts/data/backfillCaseThreads.js",
+      "root_cause": "Module(s) not imported: ../../db/org",
+      "fix": "Added import(s) for ../../db/org",
+      "tags": [
+        "auto-detected",
+        "missing-import",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-08-30T07:21:34.213Z"
     }
   ]
 }

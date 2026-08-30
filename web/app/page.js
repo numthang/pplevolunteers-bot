@@ -10,7 +10,7 @@ import { getContactPendingCount } from '@/db/calling/contacts.js'
 import { getPendingSignaturesForUser } from '@/db/docs/entries.js'
 import { countMyOpenCards } from '@/db/kanban/cards.js'
 import { countByStatus } from '@/db/cases.js'
-import { countPendingReview } from '@/db/posts/episodes.js'
+import { countByStatus as countPostsByStatus } from '@/db/posts/episodes.js'
 import { getFavoriteAccounts } from '@/db/finance/accounts.js'
 import { listMemberRoleNames } from '@/db/orgMemberRoles.js'
 import { getUserIdentities } from '@/db/userIdentities.js'
@@ -76,7 +76,7 @@ function StatRow({ href, label, count, value, tone = 'normal' }) {
 /** การ์ด 1 โมดูล — หัวการ์ดกดเข้าโมดูล · ข้างในมีสถานะกดได้ 2-3 บรรทัด */
 function ModuleCard({ href, icon, title, children }) {
   return (
-    <div className="flex flex-col bg-card-bg border border-brand-blue-light dark:border-disc-border rounded-lg px-4 py-3">
+    <div className="h-full flex flex-col bg-card-bg border border-brand-blue-light dark:border-disc-border rounded-lg px-4 py-3">
       <Link href={href} className="flex items-center gap-2 mb-1.5 group">
         <span className="w-8 h-8 rounded-lg bg-warm-100 dark:bg-disc-hover flex items-center justify-center shrink-0 text-brand-orange">
           <Ic d={icon} className="w-[18px] h-[18px]" />
@@ -208,7 +208,7 @@ export default async function HomePage() {
 
   const [
     docsPending, myCards, callPending, contactPending,
-    caseCounts, postsReview,
+    caseCounts, postCounts,
     favAccounts, roleNames, identities,
   ] = await Promise.all([
     on('docs') && userId ? getPendingSignaturesForUser(userId, orgId) : Promise.resolve({ recipient: [], payer: [] }),
@@ -216,7 +216,7 @@ export default async function HomePage() {
     on('calling') && userId ? getPendingCallCount(userId) : Promise.resolve(0),
     on('calling') && userId ? getContactPendingCount(userId) : Promise.resolve(0),
     casesOn ? countByStatus(orgId, caseScope) : Promise.resolve({}),
-    on('posts') ? countPendingReview(orgId) : Promise.resolve(0),
+    on('posts') ? countPostsByStatus(orgId) : Promise.resolve({ review: 0, draft: 0 }),
     on('finance') && userId
       ? getFavoriteAccounts(orgId, userId, { canView: (a) => canViewAccount(a, userId, access) })
       : Promise.resolve([]),
@@ -278,9 +278,12 @@ export default async function HomePage() {
       </div>
 
       {/* 2 · การ์ดโมดูล — ใบละฟีเจอร์ · ทุกบรรทัดกดได้ ลิงก์ไปหน้าที่กรองไว้แล้ว
-          ⚠️ items-start สำคัญ: ค่าตั้งต้นของ grid คือ stretch → การ์ดที่มี 1-2 บรรทัด
-             จะถูกยืดให้สูงเท่าใบที่สูงสุดในแถว แล้วเหลือที่ว่างโล่งใต้ตัวเลข */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 items-start">
+          ⭐ ความสูงเท่ากันทั้งแถว (user ขอ 2026-08-30) = ปล่อยให้ grid stretch ตามค่าตั้งต้น
+             ⚠️ แต่ stretch จะดู "โล่ง" ทันทีถ้ามีใบไหนบรรทัดน้อยกว่าเพื่อนมาก
+                → กติกาคู่กัน: **ทุกการ์ดต้องมีอย่างน้อย 2 บรรทัด** (งานสื่อเคยมีบรรทัดเดียว
+                  แล้วโดนยืดจาก 108 เป็น 180px เหลือที่ว่าง 72px กลางการ์ด)
+                เพิ่มการ์ดใหม่เมื่อไหร่ ให้หาสถานะที่สองที่ "กดแล้วเลขตรง" มาใส่ ไม่ใช่ใส่แถวหลอก */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
 
         {on('kanban') && (
           <ModuleCard href="/kanban" icon={ICON.card} title={t('card.kanban')}>
@@ -313,7 +316,8 @@ export default async function HomePage() {
 
         {on('posts') && (
           <ModuleCard href="/posts" icon={ICON.pen} title={t('card.posts')}>
-            <StatRow href="/posts?status=review" label={t('posts.review')} count={postsReview} />
+            <StatRow href="/posts?status=review&filter=org" label={t('posts.review')} count={postCounts.review} />
+            <StatRow href="/posts?status=draft&filter=org" label={t('posts.draft')} count={postCounts.draft} />
           </ModuleCard>
         )}
 
