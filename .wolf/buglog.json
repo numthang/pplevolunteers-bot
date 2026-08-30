@@ -3739,6 +3739,24 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-08-30T06:37:09.424Z"
+    },
+    {
+      "id": "bug-196",
+      "timestamp": "2026-08-30T14:15:00.000Z",
+      "error_message": "เปิด /kanban?group=due แล้วพารามิเตอร์หายทันที (เด้งกลับ /kanban เปล่า)",
+      "file": "web/components/kanban/KanbanHome.jsx",
+      "root_cause": "ใช้ useRef เป็นธงว่า 'hydrate จาก URL เสร็จแล้ว' · effect ตัวอ่านกับตัวเขียนอยู่ commit เดียวกัน — ตัวอ่านตั้ง ref=true แล้วเรียก setState แต่ setState ยังไม่มีผลจนกว่าจะ render รอบถัดไป → ตัวเขียนวิ่งต่อทันทีโดยเห็น state เป็นค่าตั้งต้น แล้ว replaceState ล้าง query ทิ้ง · ธงผ่านแล้วแต่ข้อมูลยังไม่มา",
+      "fix": "เปลี่ยน useRef → useState (setUrlHydrated) แล้วใส่ใน dependency array · setState ทั้งชุดถูก batch เป็น render เดียว ตัวเขียนจึงทำงานครั้งแรกใน render ที่ค่าจาก URL ลงครบแล้ว · กฎ: ธงที่ต้อง 'กั้น effect อื่นจนกว่า state จะพร้อม' ต้องเป็น state ไม่ใช่ ref",
+      "tags": [
+        "react",
+        "useEffect-ordering",
+        "useRef-vs-useState",
+        "url-state",
+        "kanban"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-08-30T14:15:00.000Z"
     }
   ]
 }

@@ -419,8 +419,16 @@ export default function KanbanHome() {
   const [addingBoard, setAddingBoard] = useState(false)
   const [creatingBoard, setCreatingBoard] = useState(false)
   const boardBoxRef = useRef(null)
-  // hydrate จาก URL เสร็จหรือยัง — กันไม่ให้ effect เขียน URL ทับก่อนอ่าน
-  const urlHydrated = useRef(false)
+  /**
+   * hydrate จาก URL เสร็จหรือยัง — **ต้องเป็น state ไม่ใช่ ref**
+   *
+   * ⛔ เคยเป็น useRef แล้วพัง (2026-08-30): เปิด /kanban?group=due แล้วพารามิเตอร์หายทันที
+   *    เพราะ effect ทั้งสองตัวทำงานใน commit เดียวกัน — ตัวอ่านตั้ง ref = true แล้ว
+   *    แต่ setState ที่มันเรียกยังไม่มีผลจนกว่าจะ render รอบถัดไป
+   *    → ตัวเขียนวิ่งต่อทันทีโดยเห็น state เป็น "ค่าตั้งต้น" แล้ว replaceState ล้าง URL ทิ้ง
+   *    เป็น state แล้ว ตัวเขียนจะได้ทำงานครั้งแรกใน render ที่ค่าจาก URL ลงครบแล้วเท่านั้น
+   */
+  const [urlHydrated, setUrlHydrated] = useState(false)
 
   // กรุใช้ endpoint แยก — ของฉัน/ทั้งหมด กรองจากชุดเดียวกันในเครื่อง ไม่ต้องยิงใหม่
   const inArchive = scope === 'archived'
@@ -452,7 +460,7 @@ export default function KanbanHome() {
       setLabelFilter(v.label)
       setTextQuery(v.q)
       setSort(v.sort)
-      urlHydrated.current = true
+      setUrlHydrated(true)
     }
     syncFromUrl()                                   // เปิดหน้าด้วยลิงก์ตรง → กางการ์ด + ตั้งตัวกรองให้เลย
     window.addEventListener('popstate', syncFromUrl) // กด Back = ปิดการ์ด / ย้อนตัวกรอง
@@ -473,7 +481,7 @@ export default function KanbanHome() {
    * ⚠️ ต้องรอ hydrate จาก URL ก่อน ไม่งั้น render แรกจะเขียนค่าตั้งต้นทับลิงก์ที่คนเพิ่งเปิดมา
    */
   useEffect(() => {
-    if (!urlHydrated.current) return
+    if (!urlHydrated) return
     const next = mergeViewIntoSearch(window.location.search, {
       board: activeBoardId, scope, group: groupBy,
       status: statusFilter, kind: kindFilter, helper: helperFilter,
@@ -483,7 +491,7 @@ export default function KanbanHome() {
     if (window.location.pathname + window.location.search !== target) {
       window.history.replaceState(null, '', target)
     }
-  }, [activeBoardId, scope, groupBy, statusFilter, kindFilter, helperFilter, labelFilter, textQuery, sort])
+  }, [urlHydrated, activeBoardId, scope, groupBy, statusFilter, kindFilter, helperFilter, labelFilter, textQuery, sort])
 
   function openCard(id) {
     const url = new URL(window.location.href)
