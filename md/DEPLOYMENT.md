@@ -313,11 +313,17 @@ MEILISEARCH_HOST=http://localhost:7700
 MEILISEARCH_KEY=YOUR_KEY
 ```
 
-### Run SQL Migration
+### Run DB Migration
+
+Migrations live in `migrations/` (node-pg-migrate, SQL files, `up`/`down` sections). Tracked in the `pgmigrations` table — no manual bookkeeping needed.
 
 ```bash
-sudo -u www psql -U pple_dcbot -d pple_volunteers -f scripts/migration-forum.sql
+sudo -u www bash -c 'cd /www/wwwroot/pple-volunteers && npm run migrate up'
 ```
+
+Create a new one locally: `npm run migrate create <name>`, edit the generated `.sql` file's `-- Up Migration` / `-- Down Migration` sections, test with `npm run migrate up` / `npm run migrate down` against dev, then commit and deploy.
+
+`scripts/migration/migration.sql` is the pre-node-pg-migrate archive — kept for history, no longer appended to.
 
 ### Status
 
