@@ -630,7 +630,13 @@
       "draftLetterButton": "📄 Draft complaint letter",
       "publicNoteRequiredAlert": "Please write a message for the complainant",
       "genericFailMsg": "Failed",
-      "errorAlert": "An error occurred: {message}"
+      "errorAlert": "An error occurred: {message}",
+      "cancel": "Cancel",
+      "purge": "Delete permanently",
+      "archive": "Archive",
+      "deleteCaseButton": "Delete this case",
+      "restoreCaseButton": "Restore from archive",
+      "restoring": "Restoring…"
     },
     "timeline": {
       "saveFailedMsg": "Failed to save",
@@ -702,6 +708,12 @@
       "savingButton": "Saving...",
       "cancelButton": "Cancel",
       "smsSentAlert": "Tracking link SMS sent to the new number."
+    },
+    "archive": {
+      "banner": "This case is archived — hidden from the case list and the kanban board, but the complainant can still track it.",
+      "heading": "Delete case",
+      "impact": "Permanent deletion also removes {timeline} timeline entries and {attachments} attachments — this cannot be undone.",
+      "hint": "Archiving removes it from the case list and kanban board; you can restore it anytime. The public tracking page keeps working, and the Discord thread is not deleted — the bot posts a note saying it can be closed."
     }
   },
   "docs": {

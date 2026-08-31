@@ -1,5 +1,7 @@
 import { gateCase } from '@/lib/caseGate.js'
-import { updateCaseFields, EDITABLE_CASE_FIELDS } from '@/db/cases.js'
+import { updateCaseFields, EDITABLE_CASE_FIELDS, archiveCase, deleteCase } from '@/db/cases.js'
+import { deleteCaseFiles } from '@/lib/caseUploads.js'
+import { isAdmin } from '@/lib/caseAccess.js'
 import { postToThread } from '@/lib/caseDiscord.js'
 import { CASE_CATEGORIES } from '@/lib/caseOptions.js'
 import { sendSms, normalizePhone, smsConfigured } from '@/lib/sendSms.js'
@@ -24,6 +26,15 @@ export async function PATCH(req, { params }) {
   const { session, orgId, caseRow } = gate
 
   const body = await req.json().catch(() => ({}))
+
+  // ── เอาออกจากกรุ ──
+  // แยก branch ชัดเจน ไม่ปนกับการแก้ field (archived_at ไม่อยู่ใน EDITABLE_CASE_FIELDS โดยตั้งใจ)
+  if (body.restore === true) {
+    if (!caseRow.archived_at) return Response.json({ error: 'เคสนี้ไม่ได้อยู่ในกรุ' }, { status: 400 })
+    await archiveCase(orgId, caseRow.id, false)
+    logAction({ orgId, app: 'cases', action: 'case.restored', actorId: session.user.userId, targetId: caseRow.ref })
+    return Response.json({ ok: true, restored: true })
+  }
 
   // ย้ายจังหวัดต้องเป็น action แยก — ตอบให้ชัดดีกว่าเงียบๆ ไม่ทำตาม (ดู EDITABLE_CASE_FIELDS)
   if (body.province !== undefined && body.province !== caseRow.province) {
@@ -89,4 +100,52 @@ export async function PATCH(req, { params }) {
   }
 
   return Response.json({ ok: true, changed, smsSent })
+}
+
+
+/**
+ * DELETE /api/case/[ref]           → เก็บเข้ากรุ (ย้อนได้ด้วย PATCH { restore: true })
+ * DELETE /api/case/[ref]?purge=1   → **ลบถาวร** — แอดมินเท่านั้น · ย้อนไม่ได้
+ *
+ * ⚠️ ค่าตั้งต้นคือ "เก็บเข้ากรุ" เสมอ ห้ามสลับ (บทเรียนจาก kanban commit 37dd5e6:
+ *    ปุ่มเขียนว่าเก็บเข้ากรุ แต่ทำงานเป็นลบถาวร = โกหกผู้ใช้)
+ *
+ * ⭐ ลบถาวรแล้ว **ไม่แตะเธรด Discord** (user เคาะ 2026-08-31) — แค่โพสต์บอกในเธรดว่าปิดได้แล้ว
+ *    บอทไม่ต้องมีสิทธิ์ Manage Threads · แต่แปลว่าข้อความในเธรดยังอยู่ = ลบไม่สะอาด 100%
+ */
+export async function DELETE(req, { params }) {
+  const { ref } = await params
+  const gate = await gateCase(ref)
+  if (gate.error) return gate.error
+  const { session, access, orgId, caseRow } = gate
+
+  const purge = new URL(req.url).searchParams.get('purge') === '1'
+
+  if (!purge) {
+    if (caseRow.archived_at) return Response.json({ error: 'เคสนี้อยู่ในกรุอยู่แล้ว' }, { status: 400 })
+    await archiveCase(orgId, caseRow.id, true)
+    logAction({ orgId, app: 'cases', action: 'case.archived', actorId: session.user.userId, targetId: caseRow.ref })
+    return Response.json({ ok: true, archived: true })
+  }
+
+  if (!isAdmin(access)) return Response.json({ error: 'ลบถาวรได้เฉพาะแอดมิน' }, { status: 403 })
+
+  // audit **ก่อน**ลบ — ลบแล้วไม่เหลือข้อมูลให้บันทึกว่าลบอะไรไป
+  logAction({
+    orgId, app: 'cases', action: 'case.purged', actorId: session.user.userId, targetId: caseRow.ref,
+    meta: { province: caseRow.province, status: caseRow.status, title: caseRow.title },
+  })
+
+  const { ok, files } = await deleteCase(orgId, caseRow.id)
+  if (!ok) return Response.json({ error: 'ไม่พบเคสนี้' }, { status: 404 })
+  await deleteCaseFiles(files)
+
+  if (caseRow.discord_thread_id) {
+    await postToThread(
+      caseRow.discord_thread_id,
+      `🗑️ เคส **${caseRow.ref}** ถูกลบออกจากระบบแล้ว — ปิดเธรดนี้ได้เลย`,
+    ).catch(() => {})
+  }
+
+  return Response.json({ ok: true, purged: true, filesDeleted: files.length })
 }

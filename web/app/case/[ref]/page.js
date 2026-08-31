@@ -4,7 +4,7 @@ import { getTranslations } from 'next-intl/server'
 import { getSession } from '@/lib/auth.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import { getOrgId } from '@/lib/orgContext.js'
-import { canAccessCaseProvince } from '@/lib/caseAccess.js'
+import { canAccessCaseProvince, isAdmin } from '@/lib/caseAccess.js'
 import { getCaseByRefFull, getAssigneesWithNames, getAttachments, getTimeline } from '@/db/cases.js'
 import { getThreadName } from '@/lib/caseDiscord.js'
 import { statusLabel, CASE_CLOSE_REASONS, CASE_CATEGORIES } from '@/lib/caseOptions.js'
@@ -44,6 +44,13 @@ export default async function CaseManageDetail({ params }) {
   return (
     <div>
       <Link href="/case" className="text-orange hover:underline mb-5 block text-base">{t('manage.backToListLink')}</Link>
+
+      {/* เคสในกรุเปิดได้ทาง URL ตรงๆ เท่านั้น (ไม่อยู่ในรายการแล้ว) → ต้องบอกให้รู้ว่าทำไมหาไม่เจอ */}
+      {c.archived_at && (
+        <div className="mb-5 rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 px-5 py-3 text-base text-amber-800 dark:text-amber-200">
+          {t('archive.banner')}
+        </div>
+      )}
 
       {/* header */}
       <div className="bg-card-bg border border-gray-200 dark:border-disc-border rounded-xl p-6 mb-5">
@@ -144,6 +151,10 @@ export default async function CaseManageDetail({ params }) {
         status={c.status}
         isAssigned={isAssigned}
         closeReasons={CASE_CLOSE_REASONS}
+        title={c.title || c.ref}
+        archived={Boolean(c.archived_at)}
+        canPurge={isAdmin(access)}
+        counts={{ timeline: timeline.length, attachments: attachments.length }}
       />
 
       <CaseTimeline

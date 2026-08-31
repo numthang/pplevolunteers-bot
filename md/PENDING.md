@@ -492,7 +492,20 @@ sudo -u www bash -c 'cd /www/wwwroot/pple-volunteers && node scripts/data/backfi
 **rollback** = ลบตามช่วงเวลา + `source='discord'` (ไม่มีป้าย `created_via` ให้เกาะเหมือน posts)
 แล้ว**ต้องลบการ์ด kanban เองด้วย** — `kanban_card_links` ไม่มี FK ไป `cases` (ดู SQL เต็มในหัวไฟล์สคริปต์)
 
-### 🐛 บั๊กที่เจอระหว่างทาง — **มอบหมายเคสแล้วการ์ด kanban ไม่รู้เรื่องด้วย** (2026-08-29 · ยังไม่แก้)
+### ✅ แก้แล้ว 2026-08-31 — **มอบหมายเคสแล้วการ์ด kanban ไม่รู้เรื่องด้วย** (เจอ 2026-08-29)
+
+ทางแก้ที่ลงจริง (ต่างจาก "ทางแก้ที่ควรทำ" ข้างล่างตรงที่ยกขึ้นไปชั้น service ไม่ได้แปะที่ db layer):
+- `web/lib/caseAssign.js` — ทางเดียวที่เปลี่ยนผู้รับผิดชอบได้ · เขียน `case_assignees` → `syncCaseCardPeople()`
+  → ping เธรด + audit · ทั้ง `/api/case/[ref]/assign` และทุกปุ่มบนบอร์ด kanban เรียกตัวนี้
+  (ก่อนหน้านี้ถ้าให้ kanban เรียก db layer ตรงๆ = รับงานจากบอร์ดแล้วไม่มีใครใน Discord รู้เรื่อง)
+- `syncCaseCardPeople()` ใน `web/db/kanban/links.js` + ฝาแฝด CJS `syncCaseCardPeopleFromBot()` ใน `db/kanbanCards.js`
+- **ต้องรันตอน deploy:** `node --env-file=.env scripts/kanban/syncCaseAssignees.mjs --org 1 --dry` แล้วค่อยรันจริง
+  (dev = 0/0 · **prod ยังไม่ได้นับ**) · สคริปต์ดันคนที่อยู่แค่ในการ์ดขึ้นต้นทางก่อน แล้วค่อย mirror ลง
+  ⛔ ห้ามสลับลำดับ ไม่งั้นคนที่กด "ลงมือด้วย" บนบอร์ดก่อนหน้านี้โดนกวาดทิ้งเงียบๆ
+
+<details><summary>บันทึกเดิมตอนเจอบั๊ก</summary>
+
+### 🐛 บั๊กที่เจอระหว่างทาง — **มอบหมายเคสแล้วการ์ด kanban ไม่รู้เรื่องด้วย** (2026-08-29)
 
 `addAssignee` **ทั้ง 2 ฝั่ง** ([db/case.js](../db/case.js) บอท · [web/db/cases.js:308](../web/db/cases.js#L308) เว็บ)
 เขียนลง `case_assignees` อย่างเดียว **ไม่แตะ `kanban_cards.owner_user_id` เลย**
@@ -514,6 +527,16 @@ sudo -u www bash -c 'cd /www/wwwroot/pple-volunteers && node scripts/data/backfi
 
 **ตอนนี้ `backfillCaseThreads.js` กันตัวเองไว้แล้ว** — ยิง bulk UPDATE sync เจ้าภาพลงการ์ดตอนจบ
 เฉพาะเคสที่รอบนั้นสร้าง (ไม่ไปยุ่งของเดิม) จึงไม่สืบทอดบั๊กนี้
+
+</details>
+
+### 🗄️ เคส: เก็บเข้ากรุ + ลบถาวร (2026-08-31 · เสร็จ local ยังไม่ deploy)
+
+- migration ใหม่ท้าย `scripts/migration/migration.sql`: `cases.archived_at` + partial index — **รันบน prod ก่อน deploy โค้ด**
+- `/case/[ref]` มีปุ่มลบแล้ว (กล่องเดียวกับ kanban/posts: เก็บเข้ากรุ / ลบถาวร-admin เท่านั้น)
+- บนบอร์ด kanban การ์ดที่ผูกของจริง **เก็บเข้ากรุ/ลบถาวรไม่ได้แล้ว** — ต้องไปทำที่ต้นทาง
+- ⬜ ยังไม่มีหน้า "กรุเคส" ให้ไล่ดู — เคสในกรุเปิดได้ทาง URL ตรงๆ เท่านั้น (แถบเหลืองบอกสถานะ + ปุ่มเอาออกจากกรุ)
+- ⬜ ลบถาวรไม่แตะเธรด Discord (user เคาะ) — โพสต์บอกว่า "ปิดเธรดนี้ได้เลย" เท่านั้น ข้อความเก่ายังอยู่ในดิสฯ
 
 ### 📌 forum งานสื่อที่ยัง**ไม่ได้**กวาด (เจอตอนไล่ห้อง 2026-08-28)
 

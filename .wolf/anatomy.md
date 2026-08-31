@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-31T02:40:54.144Z
-> Files: 1062 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-31T05:33:41.850Z
+> Files: 1063 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
 
@@ -464,6 +464,7 @@
 ## scripts/kanban/
 
 - `backfillEntityCards.mjs` — กวาดให้ "ของจริงทุกชิ้นมีการ์ดใน kanban" — เคส + งานสื่อ (user เคาะ 2026-08-24: ต้องมี ทุกใบ) (~1315 tok)
+- `syncCaseAssignees.mjs` — กวาดเจ้าภาพ/คนช่วยของการ์ดที่ผูกเคสให้ตรงกับ `case_assignees` — **รันครั้งเดียวตอน deploy** (~1089 tok)
 
 ## scripts/media/
 

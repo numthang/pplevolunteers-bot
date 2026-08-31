@@ -1592,3 +1592,9 @@ CREATE OR REPLACE VIEW docs_entry_recipient AS
 
 -- production ทำถึงตรงนี้
 
+
+-- 2026-08-31 · cases: เก็บเข้ากรุ (archive) — เดิมเคสไม่มีทางเอาออกจากสายตาเลย มีแต่เปลี่ยนสถานะ
+--   NULL = ยังอยู่ในรายการปกติ · มีค่า = ซ่อนจาก /case, ตัวนับหน้าแรก และบอร์ด kanban
+--   ⚠️ ไม่กระทบหน้าติดตามสาธารณะ /complaint/[ref] (user เคาะ: เข้ากรุ = จัดบ้านภายใน ไม่ใช่คำตอบต่อผู้ร้อง)
+ALTER TABLE cases ADD COLUMN IF NOT EXISTS archived_at timestamptz;
+CREATE INDEX IF NOT EXISTS cases_active_idx ON cases (org_id, archived_at) WHERE archived_at IS NULL;

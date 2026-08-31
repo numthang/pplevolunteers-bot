@@ -94,7 +94,7 @@ export function visibleLinkSql(pUser, pCases, pProvinces) {
          AND NOT (
            (l.entity_type = 'case' AND $${pCases}::boolean AND EXISTS (
               SELECT 1 FROM cases s
-               WHERE s.id = l.entity_id AND s.org_id = c.org_id
+               WHERE s.id = l.entity_id AND s.org_id = c.org_id AND s.archived_at IS NULL
                  AND ($${pProvinces}::text[] IS NULL OR s.province = ANY($${pProvinces}::text[]))))
            OR
            (l.entity_type = 'post' AND EXISTS (

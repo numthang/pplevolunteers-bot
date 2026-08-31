@@ -228,7 +228,7 @@ const SOURCE_SQL = {
                   WHERE a.case_id = c.id ORDER BY a.assigned_at, a.user_id LIMIT 1) AS owner_user_id,
                 c.created_by
            FROM cases c
-          WHERE c.org_id = $1
+          WHERE c.org_id = $1 AND c.archived_at IS NULL
             AND NOT EXISTS (SELECT 1 FROM kanban_card_links l
                              WHERE l.entity_type = 'case' AND l.entity_id = c.id)
           ORDER BY c.id`,

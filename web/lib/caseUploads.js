@@ -4,7 +4,7 @@
  */
 
 import path from 'path'
-import { writeFile, readFile, mkdir } from 'fs/promises'
+import { writeFile, readFile, mkdir, unlink } from 'fs/promises'
 import { randomUUID } from 'crypto'
 
 export const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
@@ -85,4 +85,27 @@ export async function saveCaseBuffer(caseId, buf, { mime, originalName = null })
 export async function readCaseFile(relativePath) {
   const abs = path.join(getCaseUploadDir(), relativePath)
   return readFile(abs)
+}
+
+/**
+ * ลบไฟล์แนบออกจากดิสก์ — ใช้ตอน **ลบเคสถาวร** เท่านั้น
+ *
+ * ⚠️ ต่างจาก posts ที่ปล่อยให้ `scripts/posts/gc-media.js` เก็บทีหลัง: โฟลเดอร์ `uploads/cases/`
+ *    ไม่มี gc เลย และไฟล์เคสเป็น 1:1 ต่อแถว (ไม่มี snapshot/history อ้างซ้ำ) → ลบตรงนี้ได้เลย
+ *    ปล่อยไว้ = ไฟล์ PII ค้างดิสก์ถาวรทั้งที่คนกดลบเพราะอยากให้มันหาย
+ * ⚠️ ห้าม throw — เคสถูกลบจาก DB ไปแล้ว ล้มตรงนี้ต้องไม่ทำให้ทั้ง request พัง
+ * @returns {Promise<number>} จำนวนไฟล์ที่ลบสำเร็จ
+ */
+export async function deleteCaseFiles(relativePaths = []) {
+  let n = 0
+  for (const rel of relativePaths) {
+    if (!rel) continue
+    try {
+      await unlink(path.join(getCaseUploadDir(), rel))
+      n++
+    } catch (e) {
+      if (e.code !== 'ENOENT') console.error('[caseUploads] ลบไฟล์ไม่สำเร็จ', rel, e.message)
+    }
+  }
+  return n
 }

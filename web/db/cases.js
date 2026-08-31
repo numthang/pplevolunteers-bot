@@ -12,7 +12,7 @@
 import { randomBytes } from 'crypto'
 import pool from './index.js'
 import { provinceToCode } from '../lib/provinceCode.js'
-import { mirrorEntityCard } from './kanban/links.js'
+import { mirrorEntityCard, deleteCardForEntity } from './kanban/links.js'
 
 function beYear2() {
   return String((new Date().getFullYear() + 543) % 100).padStart(2, '0')
@@ -271,8 +271,9 @@ export const ACTIVE = 'active'   // ค่าพิเศษของพาร�
  */
 export async function listCases(orgId, { provinces = null, status = null, mineUserId = null, limit = 100, offset = 0 } = {}) {
   const params = [orgId]
+  // ⛔ เคสในกรุไม่อยู่ในรายการทำงาน — ดูได้ทางเดียวคือเปิด URL ตรงๆ (getCaseByRefFull ไม่กรอง)
   let q = `SELECT id, ref, province, category, title, status, source, created_at, updated_at
-           FROM cases c WHERE org_id = $1`
+           FROM cases c WHERE org_id = $1 AND archived_at IS NULL`
   if (Array.isArray(provinces)) {
     if (provinces.length === 0) return []
     params.push(provinces)
@@ -297,7 +298,7 @@ export async function listCases(orgId, { provinces = null, status = null, mineUs
 /** นับเคสแยกสถานะ (dashboard) — provinces=null = ทุกจังหวัด · orgId = org-scope */
 export async function countByStatus(orgId, provinces = null) {
   const params = [orgId]
-  let q = `SELECT status, COUNT(*)::int AS n FROM cases WHERE org_id = $1`
+  let q = `SELECT status, COUNT(*)::int AS n FROM cases WHERE org_id = $1 AND archived_at IS NULL`
   if (Array.isArray(provinces)) {
     if (provinces.length === 0) return {}
     params.push(provinces)
@@ -325,7 +326,8 @@ export async function countCaseStats(orgId, userId, provinces = null) {
                     SELECT 1 FROM case_assignees a WHERE a.case_id = c.id AND a.user_id = $2
                   ))::int AS mine
              FROM cases c
-            WHERE c.org_id = $1 AND c.status = ANY('{${ACTIVE_STATUSES.join(',')}}')`
+            WHERE c.org_id = $1 AND c.archived_at IS NULL
+              AND c.status = ANY('{${ACTIVE_STATUSES.join(',')}}')`
   if (Array.isArray(provinces)) {
     if (provinces.length === 0) return { active: 0, mine: 0 }
     params.push(provinces)
@@ -355,6 +357,50 @@ export async function removeAssignee(caseId, userId) {
     `DELETE FROM case_assignees WHERE case_id = $1 AND user_id = $2`,
     [caseId, userId],
   )
+}
+
+/**
+ * เก็บเข้ากรุ / เอาออกจากกรุ — **ย้อนได้เสมอ** ข้อมูลอยู่ครบ
+ *
+ * "กรุ" = เอาออกจากสายตาคนทำงาน (รายการ /case · ตัวนับหน้าแรก · บอร์ด kanban)
+ * ⛔ ไม่ใช่การปิดเคส และ **ไม่กระทบหน้าติดตามสาธารณะ** `/complaint/[ref]` (user เคาะ 2026-08-31)
+ *    ผู้ร้องยังเห็นสถานะ+โน้ตสาธารณะเหมือนเดิม — เข้ากรุคือการจัดบ้านภายใน ไม่ใช่คำตอบต่อผู้ร้อง
+ * การ์ด kanban หายจากบอร์ดเองผ่าน visibleLinkSql (statusSql.js) ไม่ต้องแตะการ์ด
+ */
+export async function archiveCase(orgId, caseId, archived = true) {
+  const { rows } = await pool.query(
+    `UPDATE cases SET archived_at = $3, updated_at = NOW()
+      WHERE org_id = $1 AND id = $2 RETURNING id`,
+    [orgId, caseId, archived ? new Date() : null],
+  )
+  return Boolean(rows[0])
+}
+
+/**
+ * ลบถาวร — ⛔ ย้อนไม่ได้ · ด่านคือ isAdmin() ที่ route
+ *
+ * ⚠️ ต้องลบการ์ด kanban ก่อน — `kanban_card_links` ทำ FK มาหา `cases` ไม่ได้ (entity ชี้ได้ 2 ตาราง)
+ *    ปล่อยไว้ = การ์ดกำพร้าที่อ่านชื่อ/สถานะสดไม่เจอต้นทาง (เหมือน deletePost)
+ * ⚠️ ไฟล์แนบต้อง unlink เอง — `uploads/cases/` **ไม่มี gc** (scripts/posts/gc-media.js กวาดแค่ storage/posts)
+ *    ไฟล์เคสเป็น 1:1 ต่อแถว ไม่มี snapshot อ้างซ้ำแบบโพสต์ → ลบตรงนี้ได้เลย
+ *    คนกดลบถาวรเพราะอยากให้ PII หายจริง ไม่ใช่หายจากตาราง
+ * ตารางลูกหายตาม CASCADE ครบ 3: case_timeline · case_assignees · case_attachments
+ *
+ * @returns {Promise<{ok:boolean, files:string[]}>} files = file_path ที่ต้องลบออกจากดิสก์ (route เป็นคนลบ)
+ */
+export async function deleteCase(orgId, caseId) {
+  const { rows: files } = await pool.query(
+    `SELECT a.file_path FROM case_attachments a
+      JOIN cases c ON c.id = a.case_id
+     WHERE a.case_id = $1 AND c.org_id = $2`,
+    [caseId, orgId],
+  )
+  await deleteCardForEntity('case', caseId).catch(() => {})
+  const { rows } = await pool.query(
+    `DELETE FROM cases WHERE org_id = $1 AND id = $2 RETURNING id`,
+    [orgId, caseId],
+  )
+  return { ok: Boolean(rows[0]), files: files.map(f => f.file_path).filter(Boolean) }
 }
 
 export async function updateStatus(caseId, status, closeReason = null) {
