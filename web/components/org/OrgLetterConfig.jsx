@@ -42,10 +42,10 @@ export default function OrgLetterConfig() {
     <div className="space-y-4">
       <p className="text-sm text-gray-500 dark:text-disc-muted">{t('letterConfig.description')}</p>
 
-      <LogoCard logo={logo} onChanged={setLogo} />
+      <LogoCard logo={logo} onChanged={setLogo} />   {/* โลโก้กลาง — จังหวัดที่ไม่ตั้งเองจะใช้ตัวนี้ */}
 
       {configs.map(c => (
-        <ConfigForm key={c.province} initial={c} province={c.province} onSaved={load} />
+        <ConfigForm key={c.province} initial={c} province={c.province} centralLogo={logo} onSaved={load} />
       ))}
 
       {configs.length === 0 && !adding && (
@@ -76,12 +76,15 @@ export default function OrgLetterConfig() {
 }
 
 /**
- * โลโก้หัวจดหมาย — **ของ org ทั้งก้อน ไม่แยกจังหวัด** (ต่างจากการ์ดข้างล่างที่เป็นรายจังหวัด)
+ * โลโก้หัวจดหมาย — ใช้ได้ 2 ระดับด้วยคอมโพเนนต์เดียว
+ *   province = null  → **โลโก้กลางของ org** (การ์ดบนสุด)
+ *   province = ชื่อจังหวัด → โลโก้ของสาขานั้น ทับโลโก้กลางเฉพาะหนังสือของจังหวัดนี้
+ * ล้างของจังหวัด = ตกกลับไปใช้โลโก้กลาง · ล้างโลโก้กลาง = ตกไปใช้ตราที่ฝังใน template.docx
  *
  * ไม่มีปุ่มบันทึก: เลือกไฟล์ = อัปโหลดเลย เพราะเป็น action เดียวจบ ไม่ใช่ฟอร์มหลายช่อง
- * ยังไม่เคยอัปโหลด = ใช้ตราที่ฝังมากับ template.docx (ปุ่ม "ใช้ค่าเริ่มต้น" พากลับไปสถานะนั้น)
+ * (ต่างจากฟอร์มข้อความในการ์ดเดียวกันที่ยังต้องกดบันทึก — ดูหมายเหตุหัวไฟล์)
  */
-function LogoCard({ logo, onChanged }) {
+function LogoCard({ logo, province = null, fallback = null, onChanged, compact = false }) {
   const t = useTranslations('org')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -92,6 +95,7 @@ function LogoCard({ logo, onChanged }) {
     try {
       const fd = new FormData()
       fd.append('file', file)
+      if (province) fd.append('province', province)
       const res = await fetch('/api/case/letter-config/logo', { method: 'POST', body: fd })
       const d = await res.json().catch(() => ({}))
       if (!res.ok || d.error) { setError(d.error || t('letterConfig.logoFailed')); return }
@@ -106,7 +110,9 @@ function LogoCard({ logo, onChanged }) {
   async function reset() {
     setBusy(true); setError('')
     try {
-      const res = await fetch('/api/case/letter-config/logo', { method: 'DELETE' })
+      const res = await fetch(
+        `/api/case/letter-config/logo${province ? `?province=${encodeURIComponent(province)}` : ''}`,
+        { method: 'DELETE' })
       const d = await res.json().catch(() => ({}))
       if (!res.ok || d.error) { setError(d.error || t('letterConfig.logoFailed')); return }
       onChanged(null)
@@ -117,19 +123,29 @@ function LogoCard({ logo, onChanged }) {
     }
   }
 
-  return (
-    <div className={cardCls}>
+  // ไม่มีของตัวเอง → พรีวิวสิ่งที่จะถูกใช้จริง (โลโก้กลาง หรือตราค่าเริ่มต้น) พร้อมบอกว่ายืมมา
+  const shown = logo || fallback || '/letterhead-default.png'
+  const inherited = !logo
+
+  const inner = (
+    <>
       <div>
-        <p className="text-base font-semibold text-gray-900 dark:text-disc-text">{t('letterConfig.logoHeading')}</p>
-        <p className="text-sm text-gray-500 dark:text-disc-muted">{t('letterConfig.logoHint')}</p>
+        <p className={`${compact ? 'text-sm font-semibold text-gray-700 dark:text-disc-text' : 'text-base font-semibold text-gray-900 dark:text-disc-text'}`}>
+          {compact ? t('letterConfig.logoProvinceHeading') : t('letterConfig.logoHeading')}
+        </p>
+        <p className="text-sm text-gray-500 dark:text-disc-muted">
+          {compact
+            ? (inherited ? t('letterConfig.logoInherited') : t('letterConfig.logoProvinceHint'))
+            : t('letterConfig.logoHint')}
+        </p>
       </div>
 
       <div className="flex flex-wrap items-center gap-4">
-        <div className="w-24 h-24 shrink-0 rounded-lg border border-gray-200 dark:border-disc-border flex items-center justify-center overflow-hidden bg-white">
+        <div className={`w-24 h-24 shrink-0 rounded-lg border border-gray-200 dark:border-disc-border flex items-center justify-center overflow-hidden bg-white ${inherited ? 'opacity-50' : ''}`}>
           {/* ไม่ใช้ next/image — ไฟล์อัปโหลดเปลี่ยนได้ตลอด ไม่ต้องผ่าน optimizer */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={logo || '/letterhead-default.png'}
+            src={shown}
             alt=""
             className="max-w-full max-h-full object-contain"
             onError={e => { e.currentTarget.style.visibility = 'hidden' }}
@@ -153,20 +169,26 @@ function LogoCard({ logo, onChanged }) {
               disabled={busy}
               className="px-4 py-2 rounded-lg border border-gray-300 dark:border-disc-border text-gray-700 dark:text-disc-text text-base disabled:opacity-50"
             >
-              {t('letterConfig.logoResetButton')}
+              {compact ? t('letterConfig.logoUseCentral') : t('letterConfig.logoResetButton')}
             </button>
           )}
         </div>
       </div>
 
       {error && <p className="text-sm text-red-500">{error}</p>}
-    </div>
+    </>
   )
+
+  if (compact) {
+    return <div className="space-y-3 pt-4 border-t border-gray-200 dark:border-disc-border">{inner}</div>
+  }
+  return <div className={cardCls}>{inner}</div>
 }
 
-function ConfigForm({ initial, province, isNew, provinceOptions, onProvinceChange, onCancel, onSaved }) {
+function ConfigForm({ initial, province, isNew, provinceOptions, onProvinceChange, onCancel, onSaved, centralLogo }) {
   const t = useTranslations('org')
   const [form, setForm] = useState(() => ({ ...BLANK, ...initial }))
+  const [logo, setLogo] = useState(initial.logo_path || null)
   const [saving, setSaving] = useState(false)
   const [note, setNote] = useState('')
   const [error, setError] = useState('')
@@ -238,6 +260,18 @@ function ConfigForm({ initial, province, isNew, provinceOptions, onProvinceChang
         </div>
       </div>
       <p className="text-sm text-gray-500 dark:text-disc-muted">{t('letterConfig.coordinatorHint')}</p>
+
+      {/* โลโก้ของสาขานี้ — เฉพาะจังหวัดที่มีแถวใน DB แล้ว (ตอนเพิ่มใหม่ยังไม่มีที่ให้ผูกรูป)
+          ไม่ตั้ง = ใช้โลโก้กลางที่การ์ดบนสุด */}
+      {!isNew && (
+        <LogoCard
+          logo={logo}
+          province={province}
+          fallback={centralLogo}
+          onChanged={setLogo}
+          compact
+        />
+      )}
 
       {error && <p className="text-sm text-red-500">{error}</p>}
 

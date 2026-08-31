@@ -18,7 +18,7 @@ export async function getLetterConfig(orgId, province) {
 export async function listLetterConfigs(orgId) {
   const { rows } = await pool.query(
     `SELECT province, org_name, address, signer_name, signer_position,
-            coordinator_name, coordinator_phone, updated_at
+            coordinator_name, coordinator_phone, logo_path, updated_at
        FROM case_letter_config WHERE org_id = $1 ORDER BY province`,
     [orgId],
   )
@@ -37,4 +37,20 @@ export async function upsertLetterConfig(orgId, province, data) {
        updated_at = NOW()`,
     [orgId, province, org_name, address, signer_name, signer_position, coordinator_name || null, coordinator_phone || null],
   )
+}
+
+/**
+ * โลโก้หัวจดหมายของจังหวัดนี้ — `null` = ให้ตกไปใช้โลโก้กลางของ org
+ *
+ * แยกจาก upsertLetterConfig() เพราะเป็นคนละจังหวะกัน: ฟอร์มข้อความกดบันทึกทีเดียวทั้งใบ
+ * ส่วนโลโก้อัปโหลดแล้วมีผลทันที · ถ้ารวมกัน การอัปโหลดจะพาค่าที่ยังพิมพ์ไม่เสร็จลง DB ไปด้วย
+ */
+export async function setLetterConfigLogo(orgId, province, logoPath) {
+  const { rows } = await pool.query(
+    `UPDATE case_letter_config SET logo_path = $3, updated_at = NOW()
+      WHERE org_id = $1 AND province = $2
+      RETURNING logo_path`,
+    [orgId, province, logoPath],
+  )
+  return rows[0] || null
 }

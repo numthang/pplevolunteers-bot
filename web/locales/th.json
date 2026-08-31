@@ -1606,12 +1606,16 @@
       "cancelButton": "ยกเลิก",
       "saveSuccess": "บันทึกแล้ว",
       "saveError": "บันทึกไม่สำเร็จ",
-      "logoHeading": "โลโก้หัวจดหมาย",
-      "logoHint": "ใช้กับหนังสือทุกจังหวัดขององค์กร · PNG/JPEG/WEBP ไม่เกิน 5MB · พื้นหลังโปร่งใสจะสวยที่สุด",
+      "logoHeading": "โลโก้กลาง (หัวจดหมาย)",
+      "logoHint": "ใช้กับจังหวัดที่ไม่ได้ตั้งโลโก้ของตัวเอง · PNG/JPEG/WEBP ไม่เกิน 5MB · พื้นหลังโปร่งใสจะสวยที่สุด",
       "logoUploadButton": "อัปโหลดโลโก้",
       "logoUploading": "กำลังอัปโหลด…",
       "logoResetButton": "ใช้ค่าเริ่มต้น",
-      "logoFailed": "อัปโหลดโลโก้ไม่สำเร็จ"
+      "logoFailed": "อัปโหลดโลโก้ไม่สำเร็จ",
+      "logoProvinceHeading": "โลโก้ของสาขานี้",
+      "logoProvinceHint": "ใช้เฉพาะหนังสือของจังหวัดนี้ — ทับโลโก้กลาง",
+      "logoInherited": "ยังไม่ได้ตั้ง — ใช้โลโก้กลาง",
+      "logoUseCentral": "กลับไปใช้โลโก้กลาง"
     }
   },
   "profile": {

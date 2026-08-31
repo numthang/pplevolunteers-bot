@@ -1620,3 +1620,10 @@ ALTER TABLE case_config ADD COLUMN IF NOT EXISTS default_province VARCHAR(50);
 
 -- production ทำถึงตรงนี้
 
+
+
+-- 2026-09-01 · case_letter_config: โลโก้หัวจดหมาย **รายจังหวัด**
+--   ลำดับที่ใช้จริงตอนสร้างหนังสือ: โลโก้ของจังหวัดนี้ → โลโก้กลางของ org
+--   (org_config key 'case_letter_logo') → ตราที่ฝังมากับ template.docx
+--   สาขาจังหวัดมีตราของตัวเอง แต่จังหวัดที่ยังไม่ตั้งต้องไม่ค้างไม่มีหัวจดหมาย
+ALTER TABLE case_letter_config ADD COLUMN IF NOT EXISTS logo_path VARCHAR(255);

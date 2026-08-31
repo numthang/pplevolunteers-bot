@@ -1606,12 +1606,16 @@
       "cancelButton": "Cancel",
       "saveSuccess": "Saved",
       "saveError": "Failed to save",
-      "logoHeading": "Letterhead logo",
-      "logoHint": "Used on letters for every province in this org · PNG/JPEG/WEBP up to 5MB · transparent background works best",
+      "logoHeading": "Central letterhead logo",
+      "logoHint": "Used by provinces that have not set their own · PNG/JPEG/WEBP up to 5MB · transparent background works best",
       "logoUploadButton": "Upload logo",
       "logoUploading": "Uploading…",
       "logoResetButton": "Use default",
-      "logoFailed": "Could not upload the logo"
+      "logoFailed": "Could not upload the logo",
+      "logoProvinceHeading": "Logo for this branch",
+      "logoProvinceHint": "Used only on letters from this province — overrides the central logo",
+      "logoInherited": "Not set — using the central logo",
+      "logoUseCentral": "Use central logo"
     }
   },
   "profile": {

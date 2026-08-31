@@ -36,8 +36,8 @@ export async function POST(req, { params }) {
     ...letterFields,
     // ⚠️ **ต้องอยู่หลัง spread** — letterFields มาจาก body ของ client ตรงๆ
     //    ถ้าอยู่ก่อน ผู้เรียกส่ง logo_path เองมาทับได้ = สั่งให้ server อ่านไฟล์ที่ไหนก็ได้
-    // โลโก้เป็นของ org ทั้งก้อน (ไม่แยกจังหวัดเหมือนหัวจดหมายที่เหลือ) — ไม่มีค่า = ใช้ที่ฝังในเทมเพลต
-    logo_path:         await getOrgConfig(orgId, 'case_letter_logo'),
+    // โลโก้ 2 ชั้น: ของสาขาจังหวัดนี้ → โลโก้กลางของ org → ตราที่ฝังมากับ template.docx
+    logo_path:         config.logo_path || await getOrgConfig(orgId, 'case_letter_logo'),
   }
 
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cletter-'))

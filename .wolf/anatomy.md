@@ -1,6 +1,6 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-31T20:14:49.899Z
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-31T20:24:24.226Z
 > Files: 1081 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
@@ -839,7 +839,7 @@
 
 ## web/app/api/case/letter-config/logo/
 
-- `route.js` — POST/DELETE /api/case/letter-config/logo — โลโก้หัวจดหมาย **ระดับ org** (ทุกจังหวัดใช้ตัวเดียวกัน) (~1056 tok)
+- `route.js` — POST/DELETE /api/case/letter-config/logo — โลโก้หัวจดหมาย (~1517 tok)
 
 ## web/app/api/cooking/chat/
 
