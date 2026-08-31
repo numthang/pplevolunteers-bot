@@ -66,7 +66,29 @@ export async function PATCH(req, { params }) {
 
   // เก็บเฉพาะ field ที่เปลี่ยนจริง — กัน audit log บวมด้วย no-op edit
   const changed = Object.keys(next).filter(k => (next[k] ?? null) !== (caseRow[k] ?? null))
-  if (!changed.length) return Response.json({ ok: true, changed: [] })
+
+  /**
+   * ส่ง SMS ลิงก์ติดตามซ้ำ **แบบคำสั่งเดี่ยว** (ปุ่มในการ์ดผู้ร้องเรียน)
+   * ⚠️ ต้องมี branch นี้เพราะหน้าเคสเป็น autosave แล้ว: เบอร์ใหม่ลง DB ไปตั้งแต่ตอนพิมพ์เสร็จ
+   *    พอถึงจังหวะที่คนกดส่ง SMS จึงไม่มี `complainant_phone` ใน changed ให้ผูกด้วยอีกแล้ว
+   *    (ของเดิมเป็น checkbox ที่ส่งมาพร้อมเบอร์ในคำขอเดียว — ทำแบบนั้นกับ autosave ไม่ได้)
+   */
+  if (body.resend_sms === true && !changed.length) {
+    if (!smsConfigured()) return Response.json({ error: 'ยังไม่ได้ตั้งค่าระบบ SMS' }, { status: 400 })
+    try {
+      await sendSms({
+        msisdn: caseRow.complainant_phone,
+        message: `รับเรื่องร้องเรียนของคุณแล้ว รหัส ${caseRow.ref}\nติดตามสถานะ: ${baseUrl(req)}/case/${caseRow.ref}`,
+      })
+    } catch (e) {
+      console.error('[PATCH /api/case] sms resend', e.message)
+      return Response.json({ error: 'ส่ง SMS ไม่สำเร็จ' }, { status: 502 })
+    }
+    logAction({ orgId, app: 'cases', action: 'case.sms_resent', actorId: session.user.userId, targetId: caseRow.ref })
+    return Response.json({ ok: true, changed: [], smsSent: true })
+  }
+
+  if (!changed.length) return Response.json({ ok: true, changed: [], fields: {} })
 
   const updated = await updateCaseFields(orgId, caseRow.id, Object.fromEntries(changed.map(k => [k, next[k]])))
   if (!updated) return Response.json({ error: 'บันทึกไม่สำเร็จ' }, { status: 500 })
@@ -99,7 +121,12 @@ export async function PATCH(req, { params }) {
     }
   }
 
-  return Response.json({ ok: true, changed, smsSent })
+  // คืนค่าหลังบันทึกของ field ที่เปลี่ยน — ฝั่งหน้าเคสเป็น autosave ต้องเอาไป sync กลับเข้ากล่อง
+  // (เบอร์โทรผ่าน normalizePhone แล้ว ค่าที่คนพิมพ์กับค่าที่อยู่ใน DB ไม่เหมือนกัน)
+  // ⚠️ เฉพาะ field ที่เพิ่งส่งมาเท่านั้น ห้ามคืนทั้งแถว — กัน PII ที่ผู้เรียกไม่ได้ขอไหลออกเพิ่ม
+  const fields = Object.fromEntries(changed.map(k => [k, updated[k]]))
+
+  return Response.json({ ok: true, changed, fields, smsSent })
 }
 
 

@@ -89,7 +89,7 @@ export default function CaseTimeline({ refId, initialEntries, hasThread }) {
   }
 
   return (
-    <div className="bg-card-bg border border-gray-200 dark:border-disc-border rounded-xl p-5 mt-5">
+    <div className="bg-card-bg border border-gray-200 dark:border-disc-border rounded-xl p-5">
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-sm font-semibold text-gray-500 dark:text-disc-muted">Timeline</h2>
         {hasThread && (

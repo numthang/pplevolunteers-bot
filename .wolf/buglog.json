@@ -4025,6 +4025,262 @@
       ],
       "occurrences": 1,
       "last_seen": "2026-08-31T05:40:46.290Z"
+    },
+    {
+      "id": "bug-213",
+      "timestamp": "2026-08-31T08:18:33.655Z",
+      "error_message": "Incorrect value in code",
+      "file": "web/components/case/CaseTimeline.jsx",
+      "root_cause": "Had \"bg-card-bg border border-gray-200 dark:border-dis",
+      "fix": "Changed to \"bg-card-bg border border-gray-200 dark:border-dis",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-08-31T08:18:33.655Z"
+    },
+    {
+      "id": "bug-214",
+      "timestamp": "2026-08-31T08:18:56.413Z",
+      "error_message": "Missing error handling in route.js",
+      "file": "web/app/api/case/[ref]/route.js",
+      "root_cause": "Code path had no error handling — exceptions would propagate uncaught",
+      "fix": "Added try/catch block",
+      "tags": [
+        "auto-detected",
+        "error-handling",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-08-31T08:18:56.413Z"
+    },
+    {
+      "id": "bug-215",
+      "timestamp": "2026-08-31T08:19:10.317Z",
+      "error_message": "Wrong return value",
+      "file": "web/app/api/case/[ref]/route.js",
+      "root_cause": "Was returning: Response.json({ ok: true, changed, smsSent })",
+      "fix": "Now returns: Response.json({ ok: true, changed, fields, smsSent",
+      "tags": [
+        "auto-detected",
+        "return-value",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-08-31T08:19:10.317Z"
+    },
+    {
+      "id": "bug-216",
+      "timestamp": "2026-08-31T08:31:39.428Z",
+      "error_message": "Significant refactor of CaseManageActions.jsx",
+      "file": "web/components/case/CaseManageActions.jsx",
+      "root_cause": "16 lines replaced/restructured",
+      "fix": "Rewrote 19→3 lines (16 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-08-31T08:31:39.428Z"
+    },
+    {
+      "id": "bug-217",
+      "timestamp": "2026-08-31T08:32:31.454Z",
+      "error_message": "Significant refactor of page.js",
+      "file": "web/app/case/[ref]/page.js",
+      "root_cause": "6 lines replaced/restructured",
+      "fix": "Rewrote 18→21 lines (6 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-08-31T08:32:31.454Z"
+    },
+    {
+      "id": "bug-218",
+      "timestamp": "2026-08-31T08:32:48.252Z",
+      "error_message": "Wrong operator: === should be &&",
+      "file": "web/app/case/[ref]/page.js",
+      "root_cause": "Used \"===\" instead of \"&&\"",
+      "fix": "Changed operator === → &&",
+      "tags": [
+        "auto-detected",
+        "operator-fix",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-08-31T08:32:48.252Z"
+    },
+    {
+      "id": "bug-219",
+      "timestamp": "2026-08-31T08:42:09.911Z",
+      "error_message": "Missing guard clause",
+      "file": "web/components/case/CaseContentEditor.jsx",
+      "root_cause": "No early return/throw for edge case: !el",
+      "fix": "Added guard clause: if (!el)",
+      "tags": [
+        "auto-detected",
+        "guard-clause",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-08-31T08:42:09.911Z"
+    },
+    {
+      "id": "bug-220",
+      "timestamp": "2026-08-31T08:42:31.124Z",
+      "error_message": "Significant refactor of CaseContentEditor.jsx",
+      "file": "web/components/case/CaseContentEditor.jsx",
+      "root_cause": "3 lines replaced/restructured",
+      "fix": "Rewrote 8→9 lines (3 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-08-31T08:42:31.124Z"
+    },
+    {
+      "id": "bug-221",
+      "timestamp": "2026-08-31T08:44:33.406Z",
+      "error_message": "CSS fix: url",
+      "file": "web/components/docs/DocEntryList.jsx",
+      "root_cause": "url: `${origin → externalBrowserUrl(`${origin",
+      "fix": "Changed url: `${origin → externalBrowserUrl(`${origin",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-08-31T08:44:33.406Z"
+    },
+    {
+      "id": "bug-222",
+      "timestamp": "2026-08-31T09:03:30.015Z",
+      "error_message": "Significant refactor of LoginPanel.jsx",
+      "file": "web/components/LoginPanel.jsx",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 3→6 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-08-31T09:03:30.015Z"
+    },
+    {
+      "id": "bug-223",
+      "timestamp": "2026-08-31T09:03:58.211Z",
+      "error_message": "Significant refactor of page.js",
+      "file": "web/app/docs/sign/[token]/page.js",
+      "root_cause": "9 lines replaced/restructured",
+      "fix": "Rewrote 21→25 lines (9 removed) | Also: import { useState, useEffect, useRef, use } from '; import { useSession, signIn } from 'next-auth/reac",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-08-31T09:04:10.264Z"
+    },
+    {
+      "id": "bug-224",
+      "timestamp": "2026-08-31T09:06:24.925Z",
+      "error_message": "Significant refactor of CaseContentEditor.jsx",
+      "file": "web/components/case/CaseContentEditor.jsx",
+      "root_cause": "17 lines replaced/restructured",
+      "fix": "Rewrote 22→5 lines (17 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-08-31T09:06:24.925Z"
+    },
+    {
+      "id": "bug-225",
+      "timestamp": "2026-08-31T09:07:20.168Z",
+      "error_message": "Missing error handling in function()",
+      "file": "web/components/case/CaseManageActions.jsx",
+      "root_cause": "Code path had no error handling — exceptions would propagate uncaught",
+      "fix": "Added try/catch block",
+      "tags": [
+        "auto-detected",
+        "error-handling",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-08-31T09:07:20.168Z"
+    },
+    {
+      "id": "bug-226",
+      "timestamp": "2026-08-31T09:07:40.330Z",
+      "error_message": "Significant refactor of CaseManageActions.jsx",
+      "file": "web/components/case/CaseManageActions.jsx",
+      "root_cause": "8 lines replaced/restructured",
+      "fix": "Rewrote 22→32 lines (8 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-08-31T09:07:40.330Z"
+    },
+    {
+      "id": "bug-227",
+      "timestamp": "2026-08-31T09:20:07.333Z",
+      "error_message": "Significant refactor of page.js",
+      "file": "web/app/docs/sign/[token]/page.js",
+      "root_cause": "3 lines replaced/restructured",
+      "fix": "Rewrote 4→6 lines (3 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-08-31T09:20:07.333Z"
+    },
+    {
+      "id": "bug-228",
+      "timestamp": "2026-08-31T09:21:38.595Z",
+      "error_message": "Significant refactor of OpenInBrowserNotice.jsx",
+      "file": "web/components/OpenInBrowserNotice.jsx",
+      "root_cause": "3 lines replaced/restructured",
+      "fix": "Rewrote 10→12 lines (3 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-08-31T09:21:38.595Z"
     }
   ]
 }

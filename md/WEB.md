@@ -285,6 +285,21 @@ focus:outline-none focus:ring-2 focus:ring-teal
 text-sm font-medium text-warm-700 dark:text-disc-muted mb-1
 ```
 
+#### Textarea — **ต้องยืดตามข้อความเสมอ (fluid) ไม่มีข้อยกเว้น**
+user ทักซ้ำหลายรอบ: กล่องข้อความความสูงตายตัวที่ต้องเลื่อน scroll ข้างในหรือลากมุมเอง = ผิดทั้งโปรเจกต์
+
+```jsx
+import useAutoGrow from '@/lib/useAutoGrow.js'
+
+const ref = useAutoGrow(value)          // ← hook กลาง อย่าเขียนใหม่เอง
+<textarea ref={ref} value={value} onChange={...}
+  className="... resize-none overflow-hidden min-h-[140px]" />
+```
+
+- ❌ `rows={8}` + `style={{ resize: 'vertical' }}` เฉยๆ · ❌ `overflow-y-auto` ในกล่องพิมพ์
+- ⚠️ ห้ามเรียก `autoGrow()` ซ้ำใน `onChange` — hook ทำให้แล้ว 1 ครั้งต่อ render · ใส่ซ้ำ = forced reflow 2 รอบต่อ 1 ตัวอักษร = พิมพ์สะดุดบนข้อความยาว
+- ใช้แล้วที่: `components/case/CaseContentEditor.jsx`, `components/case/CaseManageActions.jsx` (`components/posts/PostEditor.jsx` มีสำเนาของตัวเองมาก่อน hook — ของใหม่ใช้ hook)
+
 #### Card / Row item
 ```
 border border-warm-200 dark:border-disc-border bg-card-bg

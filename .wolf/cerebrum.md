@@ -1857,3 +1857,20 @@ CSS transform ไม่กระทบขนาด layout box ของ ancestor
   ตั้งผ่านคำสั่งบอท ไม่ใช่เพราะซ้อมไม่ได้ — INSERT เองแล้วซ้อมได้เต็มรูปแบบ (ทำไปแล้ว 2026-08-28)
 - **`caseDb.createCase()` ยิงการ์ด kanban แบบ fire-and-forget** (`.catch(()=>{})`) → สคริปต์ที่ปิด
   pool ทันทีหลังใบสุดท้ายอาจตัดการเขียนการ์ดใบท้ายๆ ทิ้งเงียบๆ · หน่วงสัก 2 วิก่อน `pool.end()`
+- **autosave ช่องที่มี side-effect ออกนอกระบบ ต้องเซฟตอน blur ไม่ใช่ debounce** — `PATCH /api/case/[ref]`
+  โพสต์ "✏️ แก้หัวข้อเคส" ลงเธรด Discord ทุกครั้งที่ `title` เปลี่ยน · autosave 800ms = สแปมเธรดตอนพิมพ์
+  → หน้าเคส (2026-08-31) แยก `manualKeys: ['title']` ใน `useCaseAutosave` เซฟตอน blur/Enter เท่านั้น
+  ช่องอื่น debounce ปกติ · เช็คเสมอว่า field ที่จะ autosave มี notify/webhook/SMS ห้อยอยู่ไหม
+- **API ที่ normalize ค่าฝั่ง server ต้องคืนค่าหลังแปลงกลับมาให้ autosave** — `normalizePhone()` เปลี่ยน
+  "081-234-5678" → "0812345678" แต่เดิม PATCH คืนแค่ `{ok, changed}` → กล่องบนจอโชว์คนละค่ากับ DB
+  จนกว่าจะรีโหลด · แก้โดยคืน `fields` เฉพาะ key ที่เปลี่ยน (ห้ามคืนทั้งแถว — PII)
+- **ช่องบังคับ + autosave = ต้องกัน validation ที่ client ก่อนยิง** — ล้างช่องเพื่อพิมพ์ใหม่แล้วหยุดมือ
+  800ms = โดน 400 "กรุณาใส่หัวข้อ" รัวๆ · `validate(payload)` ใน `useCaseAutosave` บล็อกไม่ให้ยิง
+  แล้วโชว์ hint แทน (server ยังเช็คซ้ำเหมือนเดิม)
+- **หน้า detail ที่มี `router.refresh()` อยู่ในการ์ดจัดการ ห้ามห่อทั้งหน้าเป็น client component ก้อนเดียว**
+  — `CaseManageActions` refresh ทุก action · ถ้า state ของ read-only (สถานะ/ผู้รับผิดชอบ) ย้ายไปอยู่ใน
+  client state ค่าที่ refresh มาจะไม่เข้าจอ → แยกเป็น island เล็กๆ เฉพาะช่องที่แก้ได้ layout อยู่ฝั่ง server
+- **`<textarea>` ทุกช่องในโปรเจกต์นี้ต้องยืดตามข้อความ (auto-grow) ไม่ใช่ความสูงตายตัว** — user ทักซ้ำ
+  หลายรอบจนหงุดหงิด (ล่าสุด 2026-08-31 หน้า /case/[ref]) · ลอก `autoGrow()` + `useAutoGrowEffect`
+  จาก `components/posts/PostEditor.jsx` · คลาสคู่กัน `resize-none overflow-hidden min-h-[Npx]`
+  · ห้ามเรียก autoGrow ใน onChange (reflow ซ้อน = พิมพ์สะดุด) · กฎเต็มอยู่ md/WEB.md §Component Patterns

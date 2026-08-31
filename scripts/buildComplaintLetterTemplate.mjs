@@ -1,0 +1,122 @@
+#!/usr/bin/env node
+/**
+ * สร้าง web/templates/complaint/template.docx ใหม่จากของเดิม + แก้ layout
+ *
+ * ทำไมต้องมีสคริปต์: template.docx เป็นไฟล์ไบนารีที่ diff ไม่ได้ ถ้าแก้ด้วยมือใน Word/LibreOffice
+ * รอบหน้าจะไม่มีใครรู้ว่าอะไรเปลี่ยนไปบ้าง · ที่นี่เขียนเป็นโค้ดไว้ = อ่าน git diff รู้เรื่อง แล้วรันซ้ำได้
+ *
+ * แก้อะไร (2026-08-31 — user: "footer ไม่ align right และไม่มี logo"):
+ *   1. หัวจดหมาย = ตาราง 2 ช่องไม่มีเส้น · ซ้าย = โลโก้พรรค (web/public/logo.png) ขวา = ชื่อ/ที่อยู่/วันที่
+ *   2. บรรทัดผู้ประสานงาน ย้ายจากกลางหน้ากระดาษไปเป็น **footer จริงของหน้า** (word/footer1.xml) ชิดขวา
+ *
+ * รัน: node scripts/buildComplaintLetterTemplate.mjs
+ */
+import fs from 'fs'
+import path from 'path'
+import { fileURLToPath } from 'url'
+import PizZip from '../web/node_modules/pizzip/js/index.js'
+import sharp from '../web/node_modules/sharp/lib/index.js'
+
+const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
+const TEMPLATE = path.join(ROOT, 'web/templates/complaint/template.docx')
+const LOGO_SRC = path.join(ROOT, 'web/public/logo.png')
+
+const FONT = '<w:rFonts w:ascii="TH Sarabun New" w:hAnsi="TH Sarabun New" w:eastAsia="TH Sarabun New" w:cs="TH Sarabun New"/>'
+const SZ = '<w:sz w:val="32"/><w:szCs w:val="32"/>'
+
+/** ย่อหน้าหนึ่งบรรทัด — align/ระยะห่างท้ายย่อหน้า (twips) กำหนดได้ */
+function para(text, { jc = 'left', after = 0, bold = false } = {}) {
+  return `<w:p><w:pPr><w:pStyle w:val="Normal"/><w:spacing w:before="0" w:after="${after}"/><w:jc w:val="${jc}"/></w:pPr>`
+    + `<w:r><w:rPr>${FONT}${bold ? '<w:b/><w:bCs/>' : '<w:b w:val="false"/>'}${SZ}</w:rPr>`
+    + `<w:t xml:space="preserve">${text}</w:t></w:r></w:p>`
+}
+
+// 800100 EMU ≈ 2.22 ซม. — ใหญ่พอให้เห็นตราพรรค แต่ไม่เบียดบล็อกชื่อ/ที่อยู่ฝั่งขวา
+const LOGO_EMU = 800100
+const logoParagraph = `<w:p><w:pPr><w:pStyle w:val="Normal"/><w:spacing w:before="0" w:after="0"/><w:jc w:val="left"/></w:pPr>`
+  + `<w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0">`
+  + `<wp:extent cx="${LOGO_EMU}" cy="${LOGO_EMU}"/><wp:docPr id="1" name="logo"/>`
+  + `<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">`
+  + `<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">`
+  + `<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">`
+  + `<pic:nvPicPr><pic:cNvPr id="1" name="logo"/><pic:cNvPicPr/></pic:nvPicPr>`
+  + `<pic:blipFill><a:blip r:embed="rIdLogo"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill>`
+  + `<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${LOGO_EMU}" cy="${LOGO_EMU}"/></a:xfrm>`
+  + `<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr>`
+  + `</pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>`
+
+// พื้นที่พิมพ์ = 12240 - (1134 × 2) = 9972 twips · ช่องโลโก้ 1560 ที่เหลือเป็นบล็อกชื่อ/ที่อยู่
+const CELL_LOGO = 1560
+const CELL_TEXT = 9972 - CELL_LOGO
+const noBorders = '<w:tblBorders>' + ['top', 'left', 'bottom', 'right', 'insideH', 'insideV']
+  .map(s => `<w:${s} w:val="none" w:sz="0" w:space="0"/>`).join('') + '</w:tblBorders>'
+
+const letterhead = `<w:tbl><w:tblPr><w:tblW w:w="9972" w:type="dxa"/><w:tblLayout w:type="fixed"/>${noBorders}`
+  + `<w:tblCellMar><w:top w:w="0" w:type="dxa"/><w:left w:w="0" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="0" w:type="dxa"/></w:tblCellMar>`
+  + `</w:tblPr><w:tblGrid><w:gridCol w:w="${CELL_LOGO}"/><w:gridCol w:w="${CELL_TEXT}"/></w:tblGrid>`
+  + `<w:tr><w:tc><w:tcPr><w:tcW w:w="${CELL_LOGO}" w:type="dxa"/><w:vAlign w:val="top"/></w:tcPr>${logoParagraph}</w:tc>`
+  + `<w:tc><w:tcPr><w:tcW w:w="${CELL_TEXT}" w:type="dxa"/><w:vAlign w:val="top"/></w:tcPr>`
+  + para('{org_name}', { jc: 'right', bold: true })
+  + para('{address}', { jc: 'right' })
+  + para('{date}', { jc: 'right' })
+  + `</w:tc></w:tr></w:tbl>`
+  // ย่อหน้าว่างคั่นหัวจดหมายกับ "เรื่อง" — ตารางชนย่อหน้าถัดไปตรงๆ จะดูอัดกัน
+  + `<w:p><w:pPr><w:pStyle w:val="Normal"/><w:spacing w:before="0" w:after="120"/></w:pPr></w:p>`
+
+const FOOTER_XML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">`
+  + para('ผู้ประสานงานจังหวัด  {coordinator_name}  โทร {coordinator_phone}', { jc: 'right' })
+  + `</w:ftr>`
+
+const zip = new PizZip(fs.readFileSync(TEMPLATE, 'binary'))
+const read = (f) => zip.file(f).asText()
+
+// ── 1. โลโก้ ──────────────────────────────────────────────────────────────────
+// ย่อเหลือ 320px ก่อนฝัง — ต้นฉบับ 1301×1301 (130KB) ใหญ่เกินจำเป็นสำหรับภาพ 2.2 ซม.
+const logoPng = await sharp(LOGO_SRC).resize(320, 320, { fit: 'contain', background: { r: 255, g: 255, b: 255, alpha: 0 } }).png().toBuffer()
+zip.file('word/media/logo.png', logoPng)
+
+// ── 2. rels: โลโก้ + footer ───────────────────────────────────────────────────
+let rels = read('word/_rels/document.xml.rels')
+const nextId = 'rId' + (Math.max(...[...rels.matchAll(/Id="rId(\d+)"/g)].map(m => +m[1])) + 1)
+const footerId = 'rId' + (+nextId.slice(3) + 1)
+rels = rels.replace('</Relationships>',
+  `<Relationship Id="${nextId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/logo.png"/>`
+  + `<Relationship Id="${footerId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/>`
+  + '</Relationships>')
+zip.file('word/_rels/document.xml.rels', rels)
+zip.file('word/footer1.xml', FOOTER_XML)
+
+// ── 3. content types: .png + footer part ─────────────────────────────────────
+let ct = read('[Content_Types].xml')
+if (!ct.includes('Extension="png"')) {
+  ct = ct.replace('<Default Extension="xml"', '<Default Extension="png" ContentType="image/png"/><Default Extension="xml"')
+}
+if (!ct.includes('footer1.xml')) {
+  ct = ct.replace('</Types>', '<Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/></Types>')
+}
+zip.file('[Content_Types].xml', ct)
+
+// ── 4. document.xml ──────────────────────────────────────────────────────────
+let doc = read('word/document.xml')
+
+// 4.1 หัวจดหมาย — แทน 3 ย่อหน้าแรก (ชื่อ/ที่อยู่/วันที่) ด้วยตารางโลโก้+บล็อกขวา
+const headStart = doc.indexOf('<w:body>') + '<w:body>'.length
+const headEnd = doc.indexOf('<w:p>', doc.indexOf('{date}'))   // ย่อหน้าถัดจาก {date}
+if (headEnd < 0) throw new Error('หาจุดจบของหัวจดหมายไม่เจอ — template เปลี่ยนโครงไปแล้ว')
+doc = doc.slice(0, headStart) + letterhead.replace('rIdLogo', nextId) + doc.slice(headEnd)
+
+// 4.2 บรรทัดผู้ประสานงาน — ย้ายออกจาก body ไปเป็น footer จริง
+const coordStart = doc.lastIndexOf('<w:p>', doc.indexOf('ผู้ประสานงาน'))
+const coordEnd = doc.indexOf('</w:p>', coordStart) + '</w:p>'.length
+if (coordStart < 0) throw new Error('หาย่อหน้าผู้ประสานงานไม่เจอ')
+doc = doc.slice(0, coordStart) + doc.slice(coordEnd)
+
+// 4.3 sectPr — ผูก footer + เว้นระยะขอบล่างให้ footer มีที่ยืน (เดิม footer="0")
+doc = doc.replace('<w:sectPr>', `<w:sectPr><w:footerReference w:type="default" r:id="${footerId}"/>`)
+doc = doc.replace('w:header="0" w:top="1417" w:footer="0" w:bottom="1417"', 'w:header="720" w:top="1417" w:footer="567" w:bottom="1417"')
+
+zip.file('word/document.xml', doc)
+
+fs.writeFileSync(TEMPLATE, zip.generate({ type: 'nodebuffer', compression: 'DEFLATE' }))
+console.log(`✓ เขียน ${path.relative(ROOT, TEMPLATE)} แล้ว (logo ${logoPng.length} bytes, footer=${footerId})`)

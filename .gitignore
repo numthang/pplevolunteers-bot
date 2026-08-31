@@ -37,3 +37,6 @@ storage/
 backups/kanban/people-map.json
 # ผูกกับ users.id ของเครื่องนั้นๆ — เอาข้ามเครื่องไม่ได้ ต้องสร้างใหม่ด้วย --map เสมอ
 scripts/import/people-map.json
+
+# LibreOffice lock files (เกิดตอน convert docx→pdf)
+.~lock.*#

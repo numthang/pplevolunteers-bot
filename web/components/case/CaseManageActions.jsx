@@ -4,9 +4,9 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { STATUS_LABELS } from '@/lib/caseOptionsClient.js'
+import useAutoGrow from '@/lib/useAutoGrow.js'
 import CaseLetterModal from '@/components/case/CaseLetterModal.jsx'
-// ใช้กล่องเดียวกับ kanban/posts — ปุ่ม "ลบ" ปุ่มเดียว แล้วเลือกในกล่องว่าเก็บเข้ากรุหรือลบถาวร
-import DeleteChoiceDialog from '@/components/kanban/DeleteChoiceDialog.jsx'
+import CaseSaveBadge from '@/components/case/CaseSaveBadge.jsx'
 
 const inputCls = 'w-full border border-gray-300 dark:border-disc-border bg-white dark:bg-disc-hover text-gray-900 dark:text-disc-text p-3 text-base rounded-lg placeholder-gray-400 dark:placeholder-disc-muted focus:outline-none focus:ring-2 focus:ring-brand-orange'
 const btnCls = 'px-4 py-2 rounded-lg text-base font-semibold transition disabled:opacity-50'
@@ -14,22 +14,24 @@ const btnCls = 'px-4 py-2 rounded-lg text-base font-semibold transition disabled
 const NEEDS_REASON = ['closed', 'rejected']
 const STATUS_ORDER = ['open', 'in_progress', 'resolved', 'closed', 'rejected']
 
-export default function CaseManageActions({
-  refId, status, isAssigned, closeReasons,
-  title = '', archived = false, canPurge = false, counts = { timeline: 0, attachments: 0 },
-}) {
+/**
+ * การ์ดจัดการเคส — รับเรื่อง · เปลี่ยนสถานะ · ร่างหนังสือ
+ * ⛔ ปุ่มลบ/เอาออกจากกรุ **ย้ายไปอยู่ท้ายการ์ดเนื้อหา** แล้ว (CaseDeleteButton — วางแบบเดียวกับ /posts/[id])
+ *    อย่าเอากลับมาปนกับปุ่มทำงานประจำวันตรงนี้
+ */
+export default function CaseManageActions({ refId, status, isAssigned, closeReasons }) {
   const t = useTranslations('case')
   const router = useRouter()
   const [busy, setBusy] = useState(false)
   const [showLetter, setShowLetter] = useState(false)
-  const [showDelete, setShowDelete] = useState(false)
-  const [delBusy, setDelBusy] = useState(false)
-  const [delError, setDelError] = useState('')
 
   // status
   const [newStatus, setNewStatus] = useState(status)
   const [closeReason, setCloseReason] = useState(closeReasons[0])
   const [publicNote, setPublicNote] = useState('')
+  const [statusSaveState, setStatusSaveState] = useState('idle')   // idle | saving | saved
+  const [statusError, setStatusError] = useState('')
+  const noteRef = useAutoGrow(publicNote)
 
   async function call(url, body, method = 'POST') {
     setBusy(true)
@@ -46,38 +48,52 @@ export default function CaseManageActions({
   async function leaveCase() { await call(`/api/case/${refId}/assign`, {}, 'DELETE') }
 
   /**
-   * เก็บเข้ากรุ / ลบถาวร — ค่าตั้งต้นของปุ่มคือ "เก็บเข้ากรุ" เสมอ
-   * ⛔ ห้ามผูกปุ่มเดียวกับลบถาวร (บทเรียนจาก kanban commit 37dd5e6)
-   * ลบถาวรแล้วเคสไม่มีอยู่อีก → ต้องเด้งกลับ /case ไม่ใช่ refresh หน้าที่ 404 ไปแล้ว
+   * เปลี่ยนสถานะแล้วบันทึกทันที — ไม่มีปุ่ม "อัปเดตสถานะ" อีกแล้ว (user 2026-08-31)
+   *
+   * ⚠️ ยกเว้น closed/rejected: server บังคับ close_reason + public_note (status/route.js:21)
+   *    และ public_note กลายเป็น **timeline สาธารณะ** ที่ผู้ร้องเรียนเห็น → autosave ตอนพิมพ์
+   *    = โพสต์สาธารณะงอกทีละท่อนทุก 800ms · เคสนี้จึงยังต้องกดยืนยัน 1 ครั้ง
    */
-  async function removeCase(permanent) {
-    setDelError('')
-    setDelBusy(true)
+  async function saveStatus(next) {
+    const needsReason = NEEDS_REASON.includes(next)
+    setStatusError('')
+    setStatusSaveState('saving')
+    setBusy(true)
     try {
-      const res = await fetch(`/api/case/${refId}${permanent ? '?purge=1' : ''}`, { method: 'DELETE' })
+      const res = await fetch(`/api/case/${refId}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: next,
+          close_reason: needsReason ? closeReason : undefined,
+          public_note: needsReason ? publicNote : undefined,
+        }),
+      })
       const d = await res.json().catch(() => ({}))
-      if (!res.ok) { setDelError(d.error || t('actions.genericFailMsg')); return }
-      setShowDelete(false)
-      if (permanent) router.push('/case')
-      else router.refresh()
+      if (!res.ok) {
+        setStatusSaveState('idle')
+        setStatusError(d.error || t('actions.genericFailMsg'))
+        setNewStatus(status)   // เซฟไม่ผ่าน = ช่องต้องกลับไปตรงกับของจริงใน DB
+        return
+      }
+      if (needsReason) setPublicNote('')
+      setStatusSaveState('saved')
+      setTimeout(() => setStatusSaveState(s => (s === 'saved' ? 'idle' : s)), 1500)
+      router.refresh()
     } catch (e) {
-      setDelError(e.message || t('actions.genericFailMsg'))
+      setStatusSaveState('idle')
+      setStatusError(e.message || t('actions.genericFailMsg'))
+      setNewStatus(status)
     } finally {
-      setDelBusy(false)
+      setBusy(false)
     }
   }
 
-  async function restoreCase() { await call(`/api/case/${refId}`, { restore: true }, 'PATCH') }
-
-  async function changeStatus() {
-    const needsReason = NEEDS_REASON.includes(newStatus)
-    if (needsReason && !publicNote.trim()) { alert(t('actions.publicNoteRequiredAlert')); return }
-    const ok = await call(`/api/case/${refId}/status`, {
-      status: newStatus,
-      close_reason: needsReason ? closeReason : undefined,
-      public_note: needsReason ? publicNote : undefined,
-    })
-    if (ok) setPublicNote('')
+  function pickStatus(next) {
+    setNewStatus(next)
+    setStatusError('')
+    // ปิด/ไม่รับเรื่อง → รอเหตุผล + ข้อความถึงผู้ร้องเรียนก่อน · ที่เหลือบันทึกเลย
+    if (!NEEDS_REASON.includes(next) && next !== status) saveStatus(next)
   }
 
   const needsReason = NEEDS_REASON.includes(newStatus)
@@ -85,22 +101,6 @@ export default function CaseManageActions({
   return (
     <>
     {showLetter && <CaseLetterModal refId={refId} onClose={() => setShowLetter(false)} />}
-    {showDelete && (
-      <DeleteChoiceDialog
-        title={title || refId}
-        heading={t('archive.heading')}
-        impact={t('archive.impact', { timeline: counts.timeline, attachments: counts.attachments })}
-        hideLabel={t('actions.archive')}
-        hideHint={t('archive.hint')}
-        canPurge={canPurge}
-        busy={delBusy}
-        error={delError}
-        onHide={() => removeCase(false)}
-        onPurge={() => removeCase(true)}
-        onClose={() => setShowDelete(false)}
-        t={t}
-      />
-    )}
     <div className="bg-card-bg border border-gray-200 dark:border-disc-border rounded-xl p-5 space-y-5">
       {/* รับเรื่อง / ถอนตัว */}
       {!isAssigned ? (
@@ -113,41 +113,36 @@ export default function CaseManageActions({
         </button>
       )}
 
-      {/* เปลี่ยนสถานะ */}
+      {/* เปลี่ยนสถานะ — เลือกแล้วบันทึกทันที ไม่มีปุ่มอัปเดต */}
       <div>
-        <label className="block text-base font-semibold mb-1.5 text-gray-700 dark:text-disc-text">{t('actions.changeStatusLabel')}</label>
-        <select value={newStatus} onChange={e => setNewStatus(e.target.value)} className={inputCls}>
+        <div className="flex items-center justify-between gap-2 mb-1.5">
+          <label className="text-base font-semibold text-gray-700 dark:text-disc-text">{t('actions.changeStatusLabel')}</label>
+          <CaseSaveBadge saveState={statusSaveState} error={statusError} />
+        </div>
+        <select value={newStatus} onChange={e => pickStatus(e.target.value)} disabled={busy} className={inputCls}>
           {STATUS_ORDER.map(s => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
         </select>
 
+        {/* ปิด/ไม่รับเรื่องเท่านั้นที่ยังมีปุ่ม — เพราะข้อความนี้ถูกส่งออกให้ผู้ร้องเรียนเห็น
+            ต้องเขียนจบก่อนแล้วค่อยกด ไม่ใช่ autosave ทีละท่อนระหว่างพิมพ์ */}
         {needsReason && (
           <div className="mt-3 space-y-3">
             <select value={closeReason} onChange={e => setCloseReason(e.target.value)} className={inputCls}>
               {closeReasons.map(r => <option key={r} value={r}>{r}</option>)}
             </select>
-            <textarea value={publicNote} onChange={e => setPublicNote(e.target.value)} rows="2" className={inputCls}
-              placeholder={t('actions.publicNotePlaceholder')} style={{ resize: 'none' }} />
+            <textarea
+              ref={noteRef}
+              value={publicNote}
+              onChange={e => setPublicNote(e.target.value)}
+              rows={2}
+              className={`${inputCls} resize-none overflow-hidden min-h-[72px]`}
+              placeholder={t('actions.publicNotePlaceholder')}
+            />
+            <button onClick={() => saveStatus(newStatus)} disabled={busy || !publicNote.trim()}
+              className={`${btnCls} w-full bg-brand-orange text-white hover:bg-brand-orange-light`}>
+              {STATUS_LABELS[newStatus]}
+            </button>
           </div>
-        )}
-
-        <button onClick={changeStatus} disabled={busy || newStatus === status && !needsReason}
-          className={`${btnCls} w-full mt-3 bg-brand-orange text-white hover:bg-brand-orange-light`}>
-          {t('actions.updateStatusButton')}
-        </button>
-      </div>
-
-      {/* เก็บเข้ากรุ / เอาออกจากกรุ / ลบถาวร */}
-      <div>
-        {archived ? (
-          <button onClick={restoreCase} disabled={busy}
-            className={`${btnCls} w-full border border-gray-300 dark:border-disc-border text-gray-700 dark:text-disc-text hover:border-orange hover:text-orange`}>
-            {busy ? t('actions.restoring') : t('actions.restoreCaseButton')}
-          </button>
-        ) : (
-          <button onClick={() => setShowDelete(true)} disabled={busy}
-            className={`${btnCls} w-full border border-gray-300 dark:border-disc-border text-gray-700 dark:text-disc-text hover:border-red-400 hover:text-red-500`}>
-            {t('actions.deleteCaseButton')}
-          </button>
         )}
       </div>
 

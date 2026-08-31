@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-31T05:33:41.850Z
-> Files: 1063 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-31T09:26:10.114Z
+> Files: 1075 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
 
@@ -72,7 +72,7 @@
 - `_bottest2.js` — Declares caseDb (~357 tok)
 - `.claudeignore` (~4 tok)
 - `.gitignore` — Git ignore rules (~150 tok)
-- `CLAUDE.md` — OpenWolf (~2706 tok)
+- `CLAUDE.md` — OpenWolf (~3307 tok)
 - `deploy-commands.js` — deploy-commands.js (~1310 tok)
 - `deploy.sh` — ./deploy.sh                                        → deploy local (GUILD_ID ใน .env) (~870 tok)
 - `eslint.config.mjs` — ESLint flat config ฝั่งบอท (node, sourceType module) — เปิดเฉพาะ rule ที่จับบั๊กจริง `no-undef`=error (~430 tok)
@@ -106,7 +106,7 @@
 
 ## .claude/rules/
 
-- `openwolf.md` (~556 tok)
+- `openwolf.md` (~377 tok)
 
 ## .claude/skills/scrutinize/
 
@@ -291,8 +291,8 @@
 - `DEPLOYMENT.md` — Production Deployment — VPS Setup (~2975 tok)
 - `DEV_AGREEMENT.md` — CivicFlow — Dev Agreement & กติกาทำงานร่วม (ร่าง — รอคุยกับทีม CivicFlow) (~1760 tok)
 - `ORG_ACCESS_REDESIGN.md` — ORG_ACCESS_REDESIGN — ปลดสิทธิ์ออกจาก Discord (~5545 tok)
-- `PENDING.md` — PENDING.md — Backlog & Ideas (~43915 tok)
-- `WEB.md` — Web App — Next.js Frontend (~5324 tok)
+- `PENDING.md` — PENDING.md — Backlog & Ideas (~45394 tok)
+- `WEB.md` — Web App — Next.js Frontend (~5796 tok)
 
 ## md/archive/
 
@@ -394,6 +394,7 @@
 - `backfillThreads.js` — Backfill: index threads ใน text channels ทั้งหมดเข้า Meilisearch + DB (~679 tok)
 - `backup-pgsql.sh` — pg_dump ของ pple_volunteers -> /www/backup/database/pgsql/crontab_backup (~233 tok)
 - `build_pdf.py` — main (~299 tok)
+- `buildComplaintLetterTemplate.mjs` — สร้าง web/templates/complaint/template.docx ใหม่จากของเดิม + แก้ layout (~1984 tok)
 - `checkMetaScopes.js` — scripts/checkMetaScopes.js — เช็คว่า token โซเชียลที่เก็บไว้ยังใช้ได้ และมี scope อะไรบ้าง (~1292 tok)
 - `crop_document.py` — order_points, four_point_transform, is_roughly_rectangular, find_document_contour + 1 more (~1414 tok)
 - `export-devpack.sh` — export-devpack.sh — สร้างชุดไฟล์สำหรับ dev (dump ที่ anonymize แล้ว + .env.example) (~1172 tok)
@@ -611,6 +612,7 @@
 - `alias-loader.mjs` — Exports resolve (~100 tok)
 - `casecheck.tmp.mjs` — TEMP — "ยังไม่มีผู้รับผิดชอบ 2" vs "เปิดอยู่ 180" ตัวไหนถูก (~212 tok)
 - `cdp-kanban.tmp.mjs` — TEMP — ขับ Chrome headless ผ่าน CDP (ไม่ใช้ dependency ใดๆ · Node 24 มี WebSocket ในตัว) (~1419 tok)
+- `chk-tmp.mjs` — Declares q (~256 tok)
 - `eslint.config.mjs` — ESLint — ตั้งใจให้จับ "บั๊กจริง" อย่างเดียว ไม่ใช่ตำรวจสไตล์ (~917 tok)
 - `gap.tmp.mjs` — TEMP — งานของ user 1 ที่ "มองไม่เห็นบนหน้าแรก" มีเท่าไหร่ แยกตามสถานะ/กำหนดส่ง (~332 tok)
 - `jsconfig.json` (~67 tok)
@@ -636,7 +638,7 @@
 
 - `globals.css` — Styles: 5 rules, 7 vars (~237 tok)
 - `layout.js` — Next.js layout (~912 tok)
-- `page.js` — ตัวเลข 1 บรรทัดในการ์ดโมดูล — **กดได้ทุกบรรทัด** ลิงก์ไปหน้าที่กรองไว้แล้ว (~7054 tok)
+- `page.js` — ตัวเลข 1 บรรทัดในการ์ดโมดูล — **กดได้ทุกบรรทัด** ลิงก์ไปหน้าที่กรองไว้แล้ว (~7517 tok)
 
 ## web/app/admin/logs/
 
@@ -785,7 +787,7 @@
 
 ## web/app/api/case/[ref]/
 
-- `route.js` — PATCH /api/case/[ref] — แก้ข้อมูลเคส (~1207 tok)
+- `route.js` — PATCH /api/case/[ref] — แก้ข้อมูลเคส (~2351 tok)
 
 ## web/app/api/case/[ref]/assign/
 
@@ -1615,7 +1617,7 @@
 
 ## web/app/case/[ref]/
 
-- `page.js` — Next.js page component (~1206 tok)
+- `page.js` — หน้าจัดการเคส — โครงเดียวกับ /posts/[id]: เนื้อหาซ้าย · การ์ดจัดการ/ข้อมูลขวา (~2030 tok)
 
 ## web/app/case/manage/
 
@@ -1697,7 +1699,7 @@
 ## web/app/docs/sign/[token]/
 
 - `layout.js` — Next.js layout (~71 tok)
-- `page.js` — Next.js page component (~12806 tok)
+- `page.js` — Next.js page component (~13010 tok)
 
 ## web/app/dojo/
 
@@ -1880,9 +1882,10 @@
 - `LinkAccountsBanner.jsx` — LinkAccountsBanner — uses useState (~2041 tok)
 - `LocaleSwitcher.jsx` — LOCALES (~510 tok)
 - `LoginButton.jsx` — LoginButton — uses useState (~1774 tok)
-- `LoginPanel.jsx` — ERROR_MESSAGES (~4776 tok)
+- `LoginPanel.jsx` — ERROR_MESSAGES (~4860 tok)
 - `Nav.jsx` — Ic (~11966 tok)
 - `NoGuildNotice.jsx` — NoGuildNotice (~268 tok)
+- `OpenInBrowserNotice.jsx` — ทางออกจากมินิเบราว์เซอร์ของแอปแชต — ใช้กับหน้าที่ "คนนอกกดลิงก์เข้ามา" แล้วต้องล็อกอิน (~1000 tok)
 - `OrgSwitcherMenu.jsx` — TONES (~2732 tok)
 - `Providers.jsx` — ThemeContext — uses useContext, useState, useEffect (~265 tok)
 
@@ -1910,15 +1913,21 @@
 ## web/components/case/
 
 - `CaseAttachmentGallery.jsx` — CaseAttachmentGallery (~900 tok)
+- `CaseComplainantEditor.jsx` — การ์ดผู้ร้องเรียน (PII) — autosave ทุกช่อง (~1516 tok)
+- `CaseContentEditor.jsx` — หัวข้อ + รายละเอียดเคส — แก้ในหน้าได้เลย (ไม่มีโมดัลแล้ว) · autosave (~991 tok)
+- `CaseDeleteButton.jsx` — ปุ่มลบเคส — วางไว้ท้ายการ์ดเนื้อหา มุมขวาล่าง เหมือนปุ่ม "เก็บเข้ากรุ" ของ /posts/[id] (~972 tok)
 - `CaseEditButton.jsx` — inputCls (~1966 tok)
 - `CaseLetterList.jsx` — fmtDate (~600 tok)
 - `CaseLetterModal.jsx` — inputCls (~3298 tok)
-- `CaseManageActions.jsx` — inputCls (~1314 tok)
+- `CaseManageActions.jsx` — การ์ดจัดการเคส — รับเรื่อง · เปลี่ยนสถานะ · ร่างหนังสือ (~1986 tok)
+- `CaseMetaEditor.jsx` — การ์ด "ข้อมูลเคส" คอลัมน์ขวา — แก้ได้ช่องเดียวคือ **ประเภท** (~1079 tok)
 - `CaseNewForm.jsx` — inputCls — renders form (~2706 tok)
 - `CaseRefLookup.jsx` — inputCls — renders form (~320 tok)
-- `CaseTimeline.jsx` — fmtDate — renders form (~2170 tok)
+- `CaseSaveBadge.jsx` — ป้ายสถานะการบันทึกของหน้าเคส — บังคับมีทุกการ์ดที่ autosave (กฎ CLAUDE.md §กฎการบันทึก) (~244 tok)
+- `CaseTimeline.jsx` — fmtDate — renders form (~2334 tok)
 - `LocationButton.jsx` — extractProvince (~722 tok)
 - `ProvinceCombobox.jsx` — ProvinceCombobox (~801 tok)
+- `useCaseAutosave.js` — autosave ของหน้าเคส — ใช้ร่วมกัน 3 การ์ด (เนื้อหา · ข้อมูลเคส · ผู้ร้องเรียน) (~1398 tok)
 
 ## web/components/config/
 
@@ -1928,7 +1937,7 @@
 ## web/components/docs/
 
 - `DocAutoCalc.jsx` — TRAVEL_IN_PROVINCE_RATE (~9800 tok)
-- `DocEntryList.jsx` — ALL_ITEMS (~8025 tok)
+- `DocEntryList.jsx` — ALL_ITEMS (~8054 tok)
 - `DocProjectCard.jsx` — FALLBACK_IMAGE (~1078 tok)
 - `DocProjectView.jsx` — THAI_MONTHS (~11828 tok)
 - `DocsProvinceFilter.jsx` — DocsProvinceFilter (~449 tok)
@@ -2138,6 +2147,7 @@
 - `guildContext.js` — คืน guild_id ที่ request นี้ทำงานอยู่ — รากฐานของ multi-guild ทั้งระบบ (~639 tok)
 - `hexColor.js` — รับ hex code ที่พิมพ์/วางเอง — เติม # ให้ถ้าลืม, ขยายแบบย่อ 3 หลัก (#f80 → #ff8800) (~121 tok)
 - `idCard.js` — สำเนาบัตรประชาชน — resize ให้พอดีพิมพ์ A4 + ลายน้ำกันใช้ผิดวัตถุประสงค์ (~2172 tok)
+- `inAppBrowser.js` — ตรวจว่าหน้านี้ถูกเปิดอยู่ใน "มินิเบราว์เซอร์" ของแอปแชต (Discord/LINE/FB/IG) หรือเปล่า (~764 tok)
 - `kanbanAccess.js` — Kanban Access Control — ก้อน 1 ("การบ้านของฉัน" · ยังไม่มีกระดาน) (~3013 tok)
 - `kanbanFieldValue.js` — ชนิด → คอลัมน์ปลายทางใน kanban_card_field_values (url ใช้ value_text ร่วมกับ text · checklist ไม่มีค (~967 tok)
 - `kanbanGrouping.js` — จัดกลุ่มการ์ด + ตัดสินว่า "ของฉัน" คือใบไหน — ตรรกะล้วน (เทสที่ lib/__tests__/kanbanGrouping.test.js (~1426 tok)
@@ -2181,11 +2191,13 @@
 - `roles.js` — Permission-based role helpers — รับ access object (จาก resolveAccess / /api/me/access) (~454 tok)
 - `sendEmail.js` — Email transport — SMTP (nodemailer) + dev stub fallback (~420 tok)
 - `sendSms.js` — ThaiBulkSMS — primitive ส่ง SMS (ใช้ร่วม calling bulk + case tracking link) (~464 tok)
+- `shareLink.js` — ลิงก์ที่ "ส่งออกไปให้คนนอกกด" (แปะใน LINE / Discord / แชตอะไรก็ตาม) ต้องผ่านตัวนี้เสมอ (~263 tok)
 - `socialAppCreds.js` — { app_id, app_secret } ของ Threads — **คนละชุดกับ Facebook เสมอ** (ยืนยันกับ user 2026-08-08) (~969 tok)
 - `socialOAuthScope.js` — web/lib/socialOAuthScope.js — resolve scope ของ OAuth flow ทั้ง 3 แพลตฟอร์ม (Meta / Threads / X) (~427 tok)
 - `socialOAuthScope.jssocialOAuthScope.js` — resolveOAuthScope(session, guildId) → {orgId, guildId} ใช้ร่วมกันทั้ง meta/threads/x oauth start · orgIdFromState() fallback ให้ flow ค้างกลางทาง (~330 tok)
 - `thaiId.js` — normalize + ตรวจ checksum mod-11 เลขบัตร ปชช. 13 หลัก (ด่านจับ OCR อ่านเพี้ยน) (~300 tok)
 - `thailand-geography.json` (~68531 tok)
+- `useAutoGrow.js` — กล่องข้อความยืดตามเนื้อหา — **บังคับใช้กับทุก <textarea> ที่ผู้ใช้พิมพ์ลงไป** (กฎ md/WEB.md) (~409 tok)
 - `useEffectiveRoles.js` — Returns { roles, discordId, userId, access } adjusted for debug mode. (~581 tok)
 - `videoRender.js` — สะพานไป `utils/videoQuoteOverlay.js` ที่ repo root — เบิร์นคำคมลงคลิปด้วย ffmpeg (~964 tok)
 - `watermarks.js` — watermarks — ลายน้ำของกล่องเผยแพร่ (posts) · ใช้ไฟล์ชุดเดียวกับตะกร้าดิสฯ (~1451 tok)
