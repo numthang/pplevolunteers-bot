@@ -1,6 +1,7 @@
 My Tasks
 - เอา งานกองทุนเข้า kanban ของปีนี้
-- 
+- calling ลงพื้นที่แม่นยำ ให้พิยะโดม
+
 
 # PLATFOR{m}.ORG
 - platfor.org
@@ -56,8 +57,8 @@ My Tasks
 - https://pplevolunteers.org/case/manage ทำ filter สถานะเรื่องร้องเรียนให้เลือกเป็น dropdown
 - ดูเหมือน bot นำเข้าเคส จะยังไม่ได้ดึง attachment และหน้าเว็บยังไม่มีให้แนบไฟล์เพิ่ม
 - เหมือนปี ร้องเรียนจะผิด https://pplevolunteers.org/case/manage/70-69-6D9F
-- อยากให้แก้ไข cases ผมอ่านแล้วสรุปไทมไลนไม่ค่อยละเอียดนะ ถ้ายาวควรทำเป็น toggle ไม่ใช่ตัดหายไปเฉยๆ สั้นๆ
-- ถ้าแก้ไขแล้ว เดี๋ยวอาจจะต้อง reset timeline ทุกตัวแล้วเดี๋ยวผมใช้ reload ใหม่ทีละตัวที่ต้องการ
+- Cases ที่ backfill บน production เหมือนตอนนี้ลองกดดึงข้อมูลทาง discord แล้วไม่มี timeline เข้ามา มันแจ้งว่า ไม่มีข้อความใหม่ใน Discord
+- ตอนนี้ถ้าสร้างกระทู้ร้องเรียนใหม่ จะนำเข้าะระบบ cases กับ kanban ให้เลยไหมหรือต้อง นำเข้าเรื่องร้องเรียน เอง
 
 # Rag-AI
 - Tester bot ยัง respond กับการเมนชัน @everyone อยู่เลย แต่เหมือน bot PPLE จะไม่มีปัญหา
