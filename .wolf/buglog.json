@@ -3971,6 +3971,43 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-08-31T02:41:58.269Z"
+    },
+    {
+      "id": "bug-210",
+      "timestamp": "2026-08-31T04:30:11.857035Z",
+      "error_message": "https://pplevolunteers.org/dl/<token>/receipt ขึ้น Cloudflare 504 Gateway time-out บนโครงการที่มีใบสำคัญรับเงิน ~20 ใบ",
+      "file": "web/lib/generatePdf.js",
+      "root_cause": "generateEntryPdf สตาร์ท LibreOffice process ใหม่ทุกใบ (วัดบนเครื่อง dev: cold ~8.9s, warm ~1.1s/ใบ) แล้วยังเรียกด้วย spawnSync ซึ่งบล็อก event loop ของ Next ทั้ง process (prod เป็น pm2 fork mode 1 instance ตาม deploy.sh:67) → 20 ใบใช้เวลาเกิน 100s ที่เป็นเพดาน Cloudflare และระหว่างนั้นทั้งเว็บค้าง. ตัว pdftoppm ใน measureBottomLeftFree ก็ spawnSync เหมือนกัน ซ้ำทุกใบที่มีสำเนาบัตร",
+      "fix": "เพิ่ม generateEntryPdfs(items) แปลง .docx ทั้งชุดด้วย soffice ครั้งเดียว (generateEntryPdf กลายเป็น wrapper ของ batch ขนาด 1), เปลี่ยน spawnSync→spawn async ทั้ง LibreOffice และ pdftoppm, ใส่ -env:UserInstallation profile แยกต่อการเรียก, ตรวจผลด้วยการเช็คไฟล์ .pdf ไม่ใช่ exit code, retry ทีละใบภายใต้ budget 60s, temp ย้ายไป /tmp/pple-pdf/<job> แล้วลบใน finally. วัดจริงโครงการ 9 ใบ: 11.5s → 5.2s, ยิงพร้อมกัน 3 request ผ่านหมด",
+      "tags": [
+        "docs",
+        "pdf",
+        "libreoffice",
+        "performance",
+        "timeout",
+        "cloudflare",
+        "spawnSync",
+        "event-loop"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-08-31"
+    },
+    {
+      "id": "bug-211",
+      "timestamp": "2026-08-31T04:30:11.864421Z",
+      "error_message": "LibreOffice failed: status=1 (stderr ว่างเปล่า ไม่มีไฟล์ .pdf ออกมา) — เกิดเมื่อมีการแปลงเอกสารสองงานพร้อมกัน",
+      "file": "web/lib/generatePdf.js",
+      "root_cause": "soffice --headless สอง process ที่ใช้ user profile เดียวกัน (ค่า default) จะชนกัน ตัวที่สองออกด้วย exit 1 แบบเงียบสนิท — ยืนยันด้วยการยิงขนานบนเครื่อง dev 2026-08-31 (A status=0 / B status=1, ไม่มี outdir ของ B). เดิมไม่เคยเจอเพราะ spawnSync บล็อก event loop = บังเอิญ serialize ทุกงานอยู่แล้ว บั๊กจะโผล่ทันทีที่เปลี่ยนไปใช้ spawn แบบ async",
+      "fix": "ส่ง -env:UserInstallation=file://<workdir>/profile-<uuid> ทุกครั้งที่เรียก soffice แล้วลบ profile ทิ้งใน finally (ขนาด ~600K ต่อครั้ง) — เทสยิงขนาน 3 request ผ่านทั้งหมด",
+      "tags": [
+        "libreoffice",
+        "concurrency",
+        "docs",
+        "pdf",
+        "gotcha"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-08-31"
     }
   ]
 }

@@ -1904,3 +1904,13 @@ user เปรยว่า "น่าจะมี social listening เอาไ�
 - ⬜ **ยังไม่เทสบน prod** — เทสในเครื่อง dev ด้วย fixture (บัตรปลอม+ลายเซ็นปลอม) ครบ 8 item_type แล้ว 7/8 ออกใบเดียว
 - [ ] **`supplies` ล้นเป็น 2 หน้าเองตั้งแต่ก่อนแก้** — body template ยาว พอมีรูปลายเซ็นจริงแทรก บรรทัด "ตำแหน่ง" ตกไปหน้า 2 (บล็อกบัตรไปวางท้ายหน้า 2 ตามถูกแล้ว) · ถ้าอยากให้เหลือใบเดียวจริงต้องไปลดความสูง `templates/receipts/body-1/supplies.docx` — ยังไม่ทำ
 - [ ] **prod ต้องมี `pdftoppm`** (poppler) — ใช้วัดพื้นที่ว่างก่อนปั๊ม · ถ้าไม่มีจะ fallback เป็นหน้าแยกเหมือนเดิมเงียบๆ (หน้า preview ของ `/docs/sign` ใช้ `pdftoppm` อยู่แล้ว ถ้า preview ขึ้นรูปได้แปลว่ามี)
+
+## ⚡ Docs — export ใบสำคัญรับเงิน batch LibreOffice (2026-08-31 · commit c960b2c · local ยังไม่ deploy)
+
+- [x] `generateEntryPdfs(items)` แปลง `.docx` ทั้งชุดด้วย soffice **ครั้งเดียวต่อ request** (เดิมสตาร์ทใหม่ทุกใบ → prod 20 ใบชน 504 ของ Cloudflare ที่ 100s) · `generateEntryPdf` เดิมเป็น wrapper ของ batch ขนาด 1 ทุก surface อื่นจึงไม่ต้องแก้
+- [x] `spawnSync` → `spawn` async ทั้ง LibreOffice และ `pdftoppm` — เดิมบล็อก event loop = ทั้งเว็บค้างตลอดที่มีคน export
+- [x] profile แยกต่อการเรียก soffice + เช็คไฟล์ `.pdf` แทน exit code + retry ทีละใบใต้ budget 60s + temp ใต้ `/tmp/pple-pdf/<job>` ลบใน `finally`
+- [x] วัดจริง dev โครงการ 9 ใบ (8 ใบมีสำเนาบัตร): **11.5s → 5.2s** · ยิงพร้อมกัน 3 request ผ่านหมด · `pdftotext` ของเดิม/ของใหม่เหมือนกันทุกตัวอักษร · `next build` ผ่าน
+- ⬜ **ยังไม่ deploy / ยังไม่ยืนยันบน prod** — ตัวเลขจริงของโครงการ 20 ใบต้องวัดหลัง deploy
+- [ ] **cache ไฟล์ export (งานถัดไป ถ้ายังช้า)** — `/dl/<token>/receipt` เป็นลิงก์สาธารณะไว้แชร์ แต่ **render ใหม่ทั้งชุดทุกครั้งที่มีคนกดเปิด** · แชร์ในกลุ่ม 20 คน = เผา CPU 20 รอบ · ทางแก้: เก็บไฟล์รวมระดับ project แล้ว invalidate เมื่อมีใบ/ลายเซ็น/attachment เปลี่ยน · คอลัมน์ `pdf_url` มีใน `docs_activity_entries` อยู่แล้วแต่ dead (`web/db/docs/entries.js:32` select มาเฉยๆ ไม่มีใครใช้)
+- [ ] **ถ้าโครงการโตเกิน ~80 ใบ** ต้องเปลี่ยนเป็น job + หน้า "กำลังสร้าง…" polling — batch อย่างเดียวไม่พอ
