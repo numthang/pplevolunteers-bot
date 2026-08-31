@@ -263,13 +263,16 @@ export async function advanceAttachmentWatermark(caseId, expectedId, newId, clie
  * ⛔ resolved/closed/rejected ไม่อยู่ในนี้ · แก้ตรงนี้ที่เดียวแล้วทั้งหน้าแรกและ /case ตามกันเอง
  */
 export const ACTIVE_STATUSES = ['open', 'in_progress']
-export const ACTIVE = 'active'   // ค่าพิเศษของพารามิเตอร์ status ใน URL (/case?status=active)
+export const DONE_STATUSES = ['resolved', 'closed']   // ⛔ rejected (ตีกลับ) ไม่นับเป็น "เสร็จ"
+export const ACTIVE = 'active'   // ค่าพิเศษของ ?status= ใน URL → open + in_progress
+export const DONE = 'done'       // ค่าพิเศษของ ?status= ใน URL → resolved + closed
+const setSql = (arr) => `'{${arr.join(',')}}'`
 
 /**
  * รายการเคส (scope-filtered) — provinces=null = admin (ทุกจังหวัด)
  * @param {number} orgId  org-scope
  */
-export async function listCases(orgId, { provinces = null, status = null, mineUserId = null, limit = 100, offset = 0 } = {}) {
+export async function listCases(orgId, { provinces = null, status = null, assigned = null, mineUserId = null, limit = 100, offset = 0 } = {}) {
   const params = [orgId]
   // ⛔ เคสในกรุไม่อยู่ในรายการทำงาน — ดูได้ทางเดียวคือเปิด URL ตรงๆ (getCaseByRefFull ไม่กรอง)
   let q = `SELECT id, ref, province, category, title, status, source, created_at, updated_at
@@ -279,15 +282,21 @@ export async function listCases(orgId, { provinces = null, status = null, mineUs
     params.push(provinces)
     q += ` AND province = ANY($${params.length})`
   }
-  if (status === ACTIVE) {
-    q += ` AND status = ANY('{${ACTIVE_STATUSES.join(',')}}')`
-  } else if (status) {
+  if (status === ACTIVE)     q += ` AND status = ANY(${setSql(ACTIVE_STATUSES)})`
+  else if (status === DONE)  q += ` AND status = ANY(${setSql(DONE_STATUSES)})`
+  else if (status) {
     params.push(status)
     q += ` AND status = $${params.length}`
   }
-  if (mineUserId) {
+  // ⭐ assigned: 'none' = ยังไม่มีเจ้าภาพ · 'me' = ฉันรับผิดชอบ · 'any' = มีคนรับแล้ว
+  //    ตรงกับ 3 บรรทัดบนการ์ดหน้าแรก (countCaseStats ข้างล่าง) — แก้ที่ไหนต้องแก้คู่กันเสมอ
+  if (assigned === 'me' && mineUserId) {
     params.push(mineUserId)
     q += ` AND EXISTS (SELECT 1 FROM case_assignees a WHERE a.case_id = c.id AND a.user_id = $${params.length})`
+  } else if (assigned === 'any') {
+    q += ` AND EXISTS (SELECT 1 FROM case_assignees a WHERE a.case_id = c.id)`
+  } else if (assigned === 'none') {
+    q += ` AND NOT EXISTS (SELECT 1 FROM case_assignees a WHERE a.case_id = c.id)`
   }
   params.push(limit, offset)
   q += ` ORDER BY created_at DESC LIMIT $${params.length - 1} OFFSET $${params.length}`
@@ -310,31 +319,39 @@ export async function countByStatus(orgId, provinces = null) {
 }
 
 /**
- * ตัวเลขบนการ์ด "เรื่องร้องเรียน" หน้าแรก (user เคาะ 2026-08-30)
- *   รอทำ    = เคสที่ยังไม่ปิดทั้งหมด (เท่าที่ scope จังหวัดของคนนี้เห็น)
- *   กำลังทำ = เคสที่ยังไม่ปิดและ "ฉัน" เป็นผู้รับผิดชอบ (case_assignees)
+ * ตัวเลข 3 บรรทัดบนการ์ด "เรื่องร้องเรียน" หน้าแรก (user เคาะ 2026-08-31)
+ *   รอทำ     = เคสที่ยังไม่มีใครรับ
+ *   กำลังทำ  = {ฉันรับผิดชอบ}/{มีคนรับแล้วทั้งหมด}
+ *   เสร็จสิ้น = resolved + closed ใน 30 วันล่าสุด
  *
- * ⚠️ ทั้งสองเลขใช้ provinces ชุดเดียวกันเสมอ — กรองคนละแบบเมื่อไหร่จะได้ "รอทำ 3 · กำลังทำ 8"
- *    ซึ่งอ่านแล้วขัดกันเอง (กำลังทำเป็น subset ของรอทำ ต้องไม่มีทางมากกว่า)
- * ⚠️ "ยังไม่ปิด" = open + in_progress · **ไม่รวม resolved** เพราะงานทำเสร็จแล้ว เหลือแค่ปิดเอกสาร
- *    (ตรงกับที่ kanban แม็ป resolved → done ที่ db/kanban/statusSql.js)
+ * ⭐ แบ่งกองด้วย "มีคนรับหรือยัง" เหมือนการ์ดการบ้าน — ไม่ผูกกับชื่อสถานะ
+ *    ⚠️ เคสไม่มีเจ้าภาพ/ผู้ช่วยแยกกันแบบ kanban · case_assignees เป็นรายชื่อแบนๆ
+ *       "มีชื่อในรายการ = รับผิดชอบ" จบ
+ * ⚠️ ทุกเลขใช้ provinces ชุดเดียวกันเสมอ — "กำลังทำ" เป็น subset ของ "มีคนรับแล้ว" ต้องไม่มีทางมากกว่า
+ * ⛔ rejected (ตีกลับ) ไม่นับทั้ง active และ done — หายจากทั้ง 3 บรรทัดโดยตั้งใจ
+ *    ดูของทั้งหมดได้ที่ /case/manage ชิป "ทั้งหมด"
  */
 export async function countCaseStats(orgId, userId, provinces = null) {
+  const ASSIGNED = `EXISTS (SELECT 1 FROM case_assignees a WHERE a.case_id = c.id)`
+  const MINE = `EXISTS (SELECT 1 FROM case_assignees a WHERE a.case_id = c.id AND a.user_id = $2)`
+  const ACTIVE_SQL = `c.status = ANY(${setSql(ACTIVE_STATUSES)})`
+
   const params = [orgId, userId || null]
-  let q = `SELECT COUNT(*)::int AS active,
-                  COUNT(*) FILTER (WHERE EXISTS (
-                    SELECT 1 FROM case_assignees a WHERE a.case_id = c.id AND a.user_id = $2
-                  ))::int AS mine
+  let q = `SELECT COUNT(*) FILTER (WHERE ${ACTIVE_SQL} AND NOT ${ASSIGNED})::int          AS unassigned,
+                  COUNT(*) FILTER (WHERE ${ACTIVE_SQL} AND ${MINE})::int                  AS mine,
+                  COUNT(*) FILTER (WHERE ${ACTIVE_SQL} AND ${ASSIGNED})::int              AS assigned,
+                  COUNT(*) FILTER (WHERE c.status = ANY(${setSql(DONE_STATUSES)})
+                                     AND c.updated_at >= now() - interval '30 days')::int AS done
              FROM cases c
-            WHERE c.org_id = $1 AND c.archived_at IS NULL
-              AND c.status = ANY('{${ACTIVE_STATUSES.join(',')}}')`
+            WHERE c.org_id = $1`
   if (Array.isArray(provinces)) {
-    if (provinces.length === 0) return { active: 0, mine: 0 }
+    if (provinces.length === 0) return { unassigned: 0, mine: 0, assigned: 0, done: 0 }
     params.push(provinces)
     q += ` AND c.province = ANY($${params.length})`
   }
   const { rows } = await pool.query(q, params)
-  return { active: rows[0]?.active || 0, mine: rows[0]?.mine || 0 }
+  const r = rows[0] || {}
+  return { unassigned: r.unassigned || 0, mine: r.mine || 0, assigned: r.assigned || 0, done: r.done || 0 }
 }
 
 /**

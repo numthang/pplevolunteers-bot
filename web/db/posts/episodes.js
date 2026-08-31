@@ -458,15 +458,27 @@ export async function saveRevisionOnly(episodeId, { title, body, editedByUserId 
  * ⛔ **ห้ามใส่ `visibility = 'org'` กลับมา** — เคยกรองไว้แล้วร่างส่วนตัวหายจากหน้าแรกทั้งหมด
  *    (user ทักเอง 2026-08-30 ว่า "งานที่เป็น personal อยู่ไหน")
  * ⚠️ ตัด backfill + ตะกร้าดิสฯ (channel_id IS NOT NULL) เหมือนฟีดหลัก ไม่งั้นเลขพองกว่าที่หน้าแสดง
+ * ⚠️ `archived_at IS NULL` ตัดของที่เก็บเข้ากรุแล้วออกจากทุกเลข **รวม posted ด้วย** — ตรงกับหน้า
+ *    /posts?state=posted ซึ่งกรอง archived ออกเหมือนกัน (มันแยกเป็น state 'archived' ต่างหาก)
  * ⭐ draft แยกเป็น personal/org เพราะหน้าแรกโชว์เป็น {ส่วนตัว}/{องค์กร} สองเลขกดแยกกัน (user เคาะ)
  *    **สองกองนี้ไม่ทับกัน** ไม่ใช่เศษส่วน subset — ห้ามเอาไปหารกันหรือตีความว่า "x จาก y"
  *    personal ที่นับได้มีแต่ของฉันอยู่แล้ว เพราะ WHERE ข้างล่างตัด personal ของคนอื่นทิ้ง
  */
 export async function countByStatus(orgId, userId = null) {
+  // "เผยแพร่แล้ว" ต้องนิยามเหมือน isFullyPosted ใน components/posts/PostsHome.jsx เป๊ะ
+  // (ขึ้นครบทุกช่องแล้ว = มีใบ done อย่างน้อย 1 และไม่มีใบไหนค้าง pending/running)
+  const H = (st) => `(SELECT COUNT(*) FROM post_social_history h WHERE h.episode_id = e.id AND h.status ${st})`
+  const POSTED = `${H("= 'done'")} > 0 AND ${H("IN ('pending','running')")} = 0`
+  // ⚠️ วัดความ "เพิ่งเสร็จ" จาก posted_at ของประวัติการโพสต์ ไม่ใช่ e.updated_at
+  //    (แก้ caption ทีหลังก็ดัน updated_at ให้ดูเหมือนเพิ่งโพสต์)
+  const RECENT = `EXISTS (SELECT 1 FROM post_social_history h
+                           WHERE h.episode_id = e.id AND h.posted_at >= now() - interval '30 days')`
+
   const { rows } = await pool.query(
     `SELECT COUNT(*) FILTER (WHERE e.status = 'draft'  AND e.visibility = 'personal')::int AS draft_personal,
             COUNT(*) FILTER (WHERE e.status = 'draft'  AND e.visibility = 'org')::int      AS draft_org,
-            COUNT(*) FILTER (WHERE e.status = 'review')::int                               AS review
+            COUNT(*) FILTER (WHERE e.status = 'review')::int                               AS review,
+            COUNT(*) FILTER (WHERE ${POSTED} AND ${RECENT})::int                            AS posted
        FROM post_episodes e
       WHERE e.org_id = $1
         AND (e.visibility = 'org' OR e.owner_user_id = $2)
@@ -479,6 +491,7 @@ export async function countByStatus(orgId, userId = null) {
   return {
     draftPersonal: r.draft_personal || 0,   // → /posts?status=draft&filter=personal
     draftOrg: r.draft_org || 0,             // → /posts?status=draft&filter=org
-    review: r.review || 0,
+    review: r.review || 0,                  // → /posts?status=review
+    posted: r.posted || 0,                  // → /posts?state=posted
   }
 }

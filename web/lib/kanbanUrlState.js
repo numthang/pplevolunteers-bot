@@ -19,7 +19,7 @@
 
 import { STATUS_TYPES } from './kanbanAccess.js'
 
-export const SCOPES = ['mine', 'unassigned', 'all', 'archived']
+export const SCOPES = ['mine', 'unassigned', 'assigned', 'all', 'archived']
 export const GROUP_MODES = ['status', 'due']
 export const KINDS = ['plain', 'case', 'post']
 

@@ -580,6 +580,9 @@ export default function KanbanHome() {
       // ⚠️ "ไม่มีเจ้าภาพ" ดูที่ owner_user_id เท่านั้น ไม่นับผู้ช่วย — DB CHECK บังคับว่า
       //    การ์ดไม่มีเจ้าภาพต้องอยู่กอง backlog อยู่แล้ว (ดู onDrop) กองอื่นจึงไม่มีทางติดมา
       if (scope === 'unassigned') return cards.filter((c) => !c.owner_user_id)
+      // 'assigned' = ด้านตรงข้ามของ unassigned — มีไว้ให้เลขฝั่งขวาของ "กำลังทำ" บนหน้าแรก
+      // กดแล้วเจอชุดเดียวกันเป๊ะ (db/kanban/cards.js countCardStats)
+      if (scope === 'assigned') return cards.filter((c) => !!c.owner_user_id)
       return cards
     },
     [cards, scope, viewerUserId]
@@ -1100,6 +1103,7 @@ export default function KanbanHome() {
             options={[
               { value: 'mine', label: t('controls.scopeMine') },
               { value: 'unassigned', label: t('controls.scopeUnassigned') },
+              { value: 'assigned', label: t('controls.scopeAssigned') },
               { value: 'all', label: t('controls.scopeAll') },
               { value: 'archived', label: t('controls.scopeArchived') },
             ]}

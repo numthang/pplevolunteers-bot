@@ -549,48 +549,46 @@ export async function removeHelper(orgId, cardId, userId) {
  * ⚠️ viewer มาจาก kanbanViewer() ใน lib/kanbanGuard.js เท่านั้น — ไม่ส่ง = fail-closed
  */
 /**
- * กอง "รอทำ" ของทั้งองค์กร — คู่กับ countMyOpenCards ที่เป็นมุมของฉัน (หน้าแรก 2026-08-30)
+ * ตัวเลข 3 บรรทัดบนการ์ด "การบ้าน" หน้าแรก (user เคาะ 2026-08-31)
  *
- * ⭐ ไวยากรณ์หน้าแรก: **รอทำ = กองกลางที่ยังไม่มีใครหยิบ · กำลังทำ = อยู่ในมือฉัน**
- *    รอทำจึงต้องนับทั้ง org ไม่ใช่ของฉัน — ไม่งั้นงานที่ไม่มีใครรับจะไม่มีใครเห็นเลย
- * ⚠️ ยังกรองด้วย `viewer` เหมือนเดิม — "ทั้งองค์กร" = เท่าที่คนนี้มีสิทธิ์เห็น ไม่ใช่ทุกแถวในตาราง
- *    (นับดิบๆ เมื่อไหร่ = เลขบนหน้าแรกไม่ตรงกับ /kanban?scope=all ที่กดเข้าไป)
+ * ⭐ **แบ่งกองด้วยความเป็นเจ้าของ ไม่ใช่ชื่อสถานะ** — นี่คือหัวใจของดีไซน์รอบนี้
+ *      รอทำ    = ยังไม่มีใครรับ  · กำลังทำ = {ของฉัน}/{ที่มีคนรับแล้วทั้งหมด} · เสร็จสิ้น = done
+ *    สามกองนี้ **แบ่งไม่ทับกัน**: เสร็จ/ยกเลิกตัดออกก่อน แล้วที่เหลือแยกด้วย "มีคนรับหรือยัง"
+ *    ⛔ อย่าเปลี่ยน "รอทำ" ไปผูกกับ status = 'backlog' — การ์ดที่มีเจ้าภาพแล้วแต่ยังอยู่ backlog
+ *       ต้องอยู่กอง "กำลังทำ" ไม่ใช่ "รอทำ" (มีคนถือแล้ว = ไม่ต้องหาคนมารับ)
+ * ⭐ "รับผิดชอบ" = **เจ้าภาพหรือผู้ช่วย** ทั้งคู่ (user ย้ำ) — ต้องตรงกับตัวกรอง scope บนกระดาน
+ *    ที่ components/kanban/KanbanHome.jsx ไม่งั้นกดเลขแล้วเจอการ์ดคนละชุด
+ * ⚠️ done จำกัด 30 วันล่าสุด — ยอดสะสมตลอดกาลโตอย่างเดียว อีกไม่นานจะเป็นเลข 4 หลัก
+ *    ที่นั่งกลบสองบรรทัดบนซึ่งเป็นงานจริง
+ * ⚠️ วัดจาก **`completed_at` เท่านั้น** — ห้าม COALESCE ไปหา `updated_at`
+ *    การ์ดที่นำเข้ามาก่อนมีโมดูลนี้ไม่มี completed_at แต่ updated_at ถูกดันใหม่ตอน migration
+ *    → เคยลอง COALESCE แล้วได้ "เสร็จ 1,016 ใบใน 30 วัน" จากกระดานที่มี 1,265 ใบ (dev 2026-08-31)
+ *    ไม่มี completed_at = ไม่รู้ว่าเสร็จเมื่อไหร่ = ไม่นับ · ของใหม่เขียนค่านี้ให้อยู่แล้ว (ดู moveCard)
  */
-export async function countBacklogCards(orgId, viewer = NO_VIEWER) {
-  const { rows } = await pool.query(
-    `SELECT COUNT(*)::int AS backlog
-       FROM kanban_cards c
-      WHERE c.org_id = $1
-        AND c.archived_at IS NULL
-        AND ${visibleLinkSql(2, 3, 4)}
-        AND ${LIVE_STATUS_SQL} = 'backlog'`,
-    [orgId, ...viewerParams(viewer)]
-  )
-  return rows[0]?.backlog || 0
-}
+export async function countCardStats(orgId, userId, viewer = NO_VIEWER) {
+  const HELPER = (extra = '') => `EXISTS (SELECT 1 FROM kanban_card_helpers h WHERE h.card_id = c.id${extra})`
+  // ⚠️ "มีคนรับแล้ว" ดูที่ **เจ้าภาพเท่านั้น** ให้ตรงกับตัวกรอง scope บนกระดาน
+  //    (components/kanban/KanbanHome.jsx: unassigned = !c.owner_user_id) — นิยามต่างเมื่อไหร่
+  //    กดเลขแล้วเจอการ์ดคนละชุดทันที
+  // ⭐ ส่วน "ของฉัน" นับผู้ช่วยด้วย (user ย้ำ) แต่คาดด้วย ASSIGNED เพื่อให้ mine ⊆ assigned เสมอ
+  //    ไม่งั้นการ์ดไร้เจ้าภาพที่ฉันเป็นผู้ช่วยจะโผล่ทั้งกอง "รอทำ" และ "กำลังทำ"
+  const ASSIGNED = `c.owner_user_id IS NOT NULL`
+  const MINE = `${ASSIGNED} AND (c.owner_user_id = $2 OR ${HELPER(' AND h.user_id = $2')})`
+  const OPEN = `${LIVE_STATUS_SQL} NOT IN ('done','cancelled')`
 
-export async function countMyOpenCards(orgId, userId, viewer = NO_VIEWER) {
-  if (!userId) return { total: 0, overdue: 0, dueSoon: 0, backlog: 0, doing: 0 }
   const { rows } = await pool.query(
-    `SELECT COUNT(*)::int AS total,
-            COUNT(*) FILTER (WHERE c.due_at IS NOT NULL AND c.due_at < now())::int AS overdue,
-            COUNT(*) FILTER (WHERE c.due_at >= now() AND c.due_at < now() + interval '7 days')::int AS due_soon,
-            -- แยกตามสถานะสดด้วย (การ์ดที่ผูกเคส/โพสต์ใช้สถานะของต้นทาง ไม่ใช่คอลัมน์ cache)
-            COUNT(*) FILTER (WHERE ${LIVE_STATUS_SQL} = 'backlog')::int AS backlog,
-            COUNT(*) FILTER (WHERE ${LIVE_STATUS_SQL} = 'doing')::int   AS doing
+    `SELECT COUNT(*) FILTER (WHERE ${OPEN} AND NOT ${ASSIGNED})::int             AS unassigned,
+            COUNT(*) FILTER (WHERE ${OPEN} AND ${ASSIGNED} AND ${MINE})::int     AS mine,
+            COUNT(*) FILTER (WHERE ${OPEN} AND ${ASSIGNED})::int                 AS assigned,
+            COUNT(*) FILTER (WHERE ${LIVE_STATUS_SQL} = 'done'
+                               AND c.completed_at >= now() - interval '30 days')::int AS done
        FROM kanban_cards c
       WHERE c.org_id = $1
         AND c.archived_at IS NULL
-        AND ${visibleLinkSql(3, 4, 5)}
-        AND ${LIVE_STATUS_SQL} NOT IN ('done','cancelled')
-        AND (c.owner_user_id = $2 OR EXISTS (
-              SELECT 1 FROM kanban_card_helpers h WHERE h.card_id = c.id AND h.user_id = $2))`,
-    [orgId, userId, ...viewerParams(viewer)]
+        AND ${visibleLinkSql(3, 4, 5)}`,
+    [orgId, userId || null, ...viewerParams(viewer)]
   )
   const r = rows[0] || {}
-  return {
-    total: r.total || 0, overdue: r.overdue || 0, dueSoon: r.due_soon || 0,
-    backlog: r.backlog || 0, doing: r.doing || 0,
-  }
+  return { unassigned: r.unassigned || 0, mine: r.mine || 0, assigned: r.assigned || 0, done: r.done || 0 }
 }
 

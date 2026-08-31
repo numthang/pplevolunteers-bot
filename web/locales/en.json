@@ -617,9 +617,11 @@
       "layoutMetaTitleDefault": "Manage complaints",
       "layoutMetaTitleTemplate": "%s — Complaints",
       "filterAll": "All",
-      "filterActive": "Not closed",
       "filterMine": "Assigned to me",
-      "addButton": "New Complaint"
+      "addButton": "New Complaint",
+      "filterUnassigned": "Unassigned",
+      "filterAssigned": "Assigned",
+      "filterDone": "Done"
     },
     "actions": {
       "takeCaseButton": "Take this case",
@@ -2015,7 +2017,8 @@
       "dueModeNote": "Due-date mode hides finished and shelved tasks · move between statuses in \"Status\" mode",
       "scopeArchived": "Archive",
       "archiveNote": "The archive holds tasks nobody wants anymore — nothing is ever deleted for good, unarchive and it returns to its group",
-      "scopeUnassigned": "No owner"
+      "scopeUnassigned": "No owner",
+      "scopeAssigned": "Assigned"
     },
     "due": {
       "overdue": "Overdue",
@@ -2132,7 +2135,8 @@
     },
     "status": {
       "todo": "To do",
-      "doing": "In progress"
+      "doing": "In progress",
+      "done": "Done (30d)"
     },
     "posts": {
       "todo": "To do",
@@ -2140,9 +2144,9 @@
       "personal": "My personal drafts",
       "org": "Org drafts"
     },
-    "cases": {
-      "todo": "To do",
-      "mine": "In progress"
+    "split": {
+      "mine": "Assigned to me",
+      "assigned": "All assigned"
     }
   }
 }

@@ -8,7 +8,7 @@ import LinkAccountsBanner from '@/components/LinkAccountsBanner.jsx'
 import { getPendingCallCount } from '@/db/calling/members.js'
 import { getContactPendingCount } from '@/db/calling/contacts.js'
 import { getPendingSignaturesForUser } from '@/db/docs/entries.js'
-import { countMyOpenCards, countBacklogCards } from '@/db/kanban/cards.js'
+import { countCardStats } from '@/db/kanban/cards.js'
 import { countCaseStats } from '@/db/cases.js'
 import { countByStatus as countPostsByStatus } from '@/db/posts/episodes.js'
 import { getFavoriteAccounts } from '@/db/finance/accounts.js'
@@ -25,6 +25,10 @@ import { getEffectiveOrgIdentity } from '@/lib/orgAccess.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 
 const BOT_INVITE_URL = process.env.DISCORD_BOT_INVITE_URL
+
+// สถานะ kanban ที่ยัง "ไม่จบ" — ใช้ประกอบลิงก์ให้ตรงกับที่ countCardStats นับ (ตัด done/cancelled)
+// ⛔ เพิ่มสถานะใหม่ใน lib/kanbanAccess.js STATUS_TYPES เมื่อไหร่ ต้องมาเติมที่นี่ด้วย
+const OPEN_KANBAN = 'backlog,doing,review,ready'
 
 const fmt = (n) => Number(n || 0).toLocaleString('th-TH')
 const fmtBaht = (n) => `฿${Number(n || 0).toLocaleString('th-TH', { maximumFractionDigits: 0 })}`
@@ -255,17 +259,16 @@ export default async function HomePage() {
   const isOrgAdmin = (normalizeAccess(access).permissions || new Set()).has('admin')
 
   const [
-    docsPending, myCards, backlogAll, callPending, contactPending,
+    docsPending, cardStats, callPending, contactPending,
     caseStats, postCounts,
     favAccounts, roleNames, identities,
   ] = await Promise.all([
     on('docs') && userId ? getPendingSignaturesForUser(userId, orgId) : Promise.resolve({ recipient: [], payer: [] }),
-    on('kanban') && userId ? countMyOpenCards(orgId, userId, viewer) : Promise.resolve({ total: 0, overdue: 0, dueSoon: 0 }),
-    on('kanban') ? countBacklogCards(orgId, viewer) : Promise.resolve(0),
+    on('kanban') ? countCardStats(orgId, userId, viewer) : Promise.resolve({ unassigned: 0, mine: 0, assigned: 0, done: 0 }),
     on('calling') && userId ? getPendingCallCount(userId) : Promise.resolve(0),
     on('calling') && userId ? getContactPendingCount(userId) : Promise.resolve(0),
     casesOn ? countCaseStats(orgId, userId, caseScope) : Promise.resolve({ active: 0, mine: 0 }),
-    on('posts') ? countPostsByStatus(orgId, userId) : Promise.resolve({ review: 0, draftPersonal: 0, draftOrg: 0 }),
+    on('posts') ? countPostsByStatus(orgId, userId) : Promise.resolve({ review: 0, draftPersonal: 0, draftOrg: 0, posted: 0 }),
     on('finance') && userId
       ? getFavoriteAccounts(orgId, userId, { canView: (a) => canViewAccount(a, userId, access) })
       : Promise.resolve([]),
@@ -339,22 +342,36 @@ export default async function HomePage() {
              อัตโนมัติ (db/kanban/links.js) การบ้านจึงเป็นมุมรวม ไม่ใช่กองที่ 6 แยกต่างหาก */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
 
+        {/* การบ้าน — แบ่งกองด้วย "มีคนรับหรือยัง" ไม่ใช่ชื่อสถานะ (db/kanban/cards.js countCardStats)
+            ⚠️ ลิงก์ "กำลังทำ" ฝั่งซ้ายไม่ใส่ `scope=mine` เพราะเป็นค่าตั้งต้นของ /kanban อยู่แล้ว
+               (กฎ "ค่าตั้งต้นห้ามลง URL" ที่ lib/kanbanUrlState.js) */}
         {on('kanban') && (
           <ModuleCard href="/kanban" icon={ICON.card} title={t('card.kanban')}>
-            <StatRow href="/kanban?scope=all&status=backlog" label={t('status.todo')} count={backlogAll} />
-            <StatRow href="/kanban?status=doing" label={t('status.doing')} count={myCards.doing} />
+            <StatRow href="/kanban?scope=unassigned" label={t('status.todo')} count={cardStats.unassigned} />
+            <StatSplitRow
+              label={t('status.doing')}
+              left={{ href: `/kanban?status=${OPEN_KANBAN}`, count: cardStats.mine, title: t('split.mine') }}
+              right={{ href: `/kanban?scope=assigned&status=${OPEN_KANBAN}`, count: cardStats.assigned, title: t('split.assigned') }}
+            />
+            <StatRow href="/kanban?scope=all&status=done" label={t('status.done')} count={cardStats.done} />
           </ModuleCard>
         )}
 
         {/* เรื่องร้องเรียน (user เคาะ 2026-08-30)
-              รอทำ    = เคสที่ยังไม่ปิดทั้งหมดในจังหวัดที่คนนี้เห็นได้ (open + in_progress)
-              กำลังทำ = ชุดเดียวกันแต่กรองว่าฉันเป็นผู้รับผิดชอบ → เป็น subset ของบรรทัดบนเสมอ
-            ⭐ ตัวกรอง ?status=active และ ?mine=1 ที่ /case สร้างขึ้นมาเพื่อสองเลขนี้โดยเฉพาะ
+              รอทำ     = เคสที่ยังไม่มีใครรับ
+              กำลังทำ  = {ฉันรับผิดชอบ}/{มีคนรับแล้วทั้งหมด}
+              เสร็จสิ้น = ปิดแล้วใน 30 วัน
+            ⭐ ตัวกรอง ?status= และ ?assigned= ที่ /case สร้างขึ้นมาเพื่อ 4 เลขนี้โดยเฉพาะ
                ⛔ แก้เงื่อนไขที่ไหน ต้องแก้ให้ตรงกันทั้ง countCaseStats และหน้า /case */}
         {casesOn && (
           <ModuleCard href="/case" icon={ICON.case} title={t('card.cases')}>
-            <StatRow href="/case?status=active" label={t('cases.todo')} count={caseStats.active} />
-            <StatRow href="/case?mine=1" label={t('cases.mine')} count={caseStats.mine} />
+            <StatRow href="/case?status=active&assigned=none" label={t('status.todo')} count={caseStats.unassigned} />
+            <StatSplitRow
+              label={t('status.doing')}
+              left={{ href: '/case?status=active&assigned=me', count: caseStats.mine, title: t('split.mine') }}
+              right={{ href: '/case?status=active&assigned=any', count: caseStats.assigned, title: t('split.assigned') }}
+            />
+            <StatRow href="/case?status=done" label={t('status.done')} count={caseStats.done} />
           </ModuleCard>
         )}
 
@@ -372,6 +389,7 @@ export default async function HomePage() {
               right={{ href: '/posts?status=draft&filter=org', count: postCounts.draftOrg, title: t('posts.org') }}
             />
             <StatRow href="/posts?status=review" label={t('posts.review')} count={postCounts.review} />
+            <StatRow href="/posts?state=posted" label={t('status.done')} count={postCounts.posted} />
           </ModuleCard>
         )}
 

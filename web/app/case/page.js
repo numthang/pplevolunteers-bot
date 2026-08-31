@@ -4,7 +4,7 @@ import { getSession } from '@/lib/auth.js'
 import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import { getOrgId } from '@/lib/orgContext.js'
 import { getUserScope } from '@/lib/caseAccess.js'
-import { listCases, countByStatus, ACTIVE } from '@/db/cases.js'
+import { listCases, countByStatus, ACTIVE, DONE } from '@/db/cases.js'
 import { statusLabel } from '@/lib/caseOptions.js'
 import DocsProvinceFilter from '@/components/docs/DocsProvinceFilter.jsx'
 
@@ -35,13 +35,15 @@ export default async function CaseManageList({ searchParams }) {
   // ⭐ ตัวกรอง 2 ตัวนี้เกิดขึ้นเพื่อรองรับตัวเลขบนหน้าแรก (2026-08-30)
   //    เลขบนการ์ดต้องกดแล้วเจอ "ชุดเดียวกันเป๊ะ" ไม่งั้นได้อาการโชว์ 3 กดเข้าไปเห็น 12
   //    ⛔ แก้เงื่อนไขที่นี่เมื่อไหร่ ต้องแก้ countCaseStats ใน db/cases.js ให้ตรงกันเสมอ
-  const mine = sp?.mine === '1'
-  const userId = mine ? (session?.user?.userId || null) : null
+  // ⭐ assigned = none|me|any — ตัวกรองที่ทำให้ 4 เลขบนการ์ดหน้าแรกกดแล้วเจอชุดเดียวกันเป๊ะ
+  //    (นิยามอยู่ที่ db/cases.js · แก้ที่ไหนต้องแก้ countCaseStats ให้ตรงกันเสมอ)
+  const assigned = ['none', 'me', 'any'].includes(sp?.assigned) ? sp.assigned : null
 
   const all = await listCases(orgId, {
     provinces: scope,
     status: selectedStatus || null,
-    mineUserId: userId,
+    assigned,
+    mineUserId: session?.user?.userId || null,
     limit: 300,
   })
   const counts = await countByStatus(orgId, scope)
@@ -66,29 +68,29 @@ export default async function CaseManageList({ searchParams }) {
         </Link>
       </div>
 
-      {/* ชิปตัวกรอง — ต้อง**มองเห็นได้** ว่ากรองอะไรอยู่ เพราะคนส่วนใหญ่มาจากการกดเลขบนหน้าแรก
-          ถ้าไม่โชว์ จะเข้าใจว่าองค์กรมีเคสอยู่แค่นี้จริงๆ */}
+      {/* ชิปตัวกรอง — ต้อง**มองเห็นได้**ว่ากรองอะไรอยู่ เพราะคนส่วนใหญ่มาจากการกดเลขบนหน้าแรก
+          ถ้าไม่โชว์ จะเข้าใจว่าองค์กรมีเคสอยู่แค่นี้จริงๆ
+          ⚠️ href ทุกอันต้องตรงกับลิงก์บนการ์ดหน้าแรก (app/page.js) เป๊ะ */}
       <div className="mb-5 flex flex-wrap gap-2">
         {[
-          { key: '', href: '/case', label: t('manage.filterAll') },
-          { key: ACTIVE, href: `/case?status=${ACTIVE}`, label: t('manage.filterActive') },
-          { key: 'mine', href: '/case?mine=1', label: t('manage.filterMine') },
-        ].map(({ key, href, label }) => {
-          const active = key === 'mine' ? mine : (!mine && selectedStatus === key)
-          return (
-            <Link
-              key={key || 'all'}
-              href={href}
-              className={`px-3 py-1.5 text-base rounded-lg border transition ${
-                active
-                  ? 'bg-orange text-white border-orange'
-                  : 'bg-card-bg text-gray-600 dark:text-disc-text border-gray-200 dark:border-disc-border hover:border-orange'
-              }`}
-            >
-              {label}
-            </Link>
-          )
-        })}
+          { href: '/case', label: t('manage.filterAll'), on: !assigned && !selectedStatus },
+          { href: `/case?status=${ACTIVE}&assigned=none`, label: t('manage.filterUnassigned'), on: assigned === 'none' },
+          { href: `/case?status=${ACTIVE}&assigned=me`, label: t('manage.filterMine'), on: assigned === 'me' },
+          { href: `/case?status=${ACTIVE}&assigned=any`, label: t('manage.filterAssigned'), on: assigned === 'any' },
+          { href: `/case?status=${DONE}`, label: t('manage.filterDone'), on: selectedStatus === DONE },
+        ].map(({ href, label, on }) => (
+          <Link
+            key={href}
+            href={href}
+            className={`px-3 py-1.5 text-base rounded-lg border transition ${
+              on
+                ? 'bg-orange text-white border-orange'
+                : 'bg-card-bg text-gray-600 dark:text-disc-text border-gray-200 dark:border-disc-border hover:border-orange'
+            }`}
+          >
+            {label}
+          </Link>
+        ))}
       </div>
 
       {provinces.length > 1 && (
