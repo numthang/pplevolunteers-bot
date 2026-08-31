@@ -51,6 +51,7 @@ export async function GET(req) {
   return Response.json({
     success: true,
     data: {
+      title:        pick(ov.title, saved.title, entry.title),
       firstName:    pick(entry.firstname, saved.firstName, entry.ngs_first_name),
       lastName:     pick(entry.lastname, saved.lastName, entry.ngs_last_name),
       idNumber:     pick(ov.id_number, saved.idNumber, entry.identification_number),
@@ -84,6 +85,9 @@ export async function POST(req) {
   const clean = {}
   for (const f of FIELDS) clean[f] = String(body[f] ?? '').trim().slice(0, 120)
   clean.idNumber = idNumber
+  // คำนำหน้ามาจาก AI ที่อ่านบัตร (page.js setSelfForm({ title })) — เดิมโดนทิ้งทั้งที่อ่านมาได้
+  // ไม่เก็บ = ใบพิมพ์ "ข้าพเจ้า ฉัตรปวีณ์" ไม่มี น.ส. และใบถัดไปก็ไม่มีอะไรให้สืบทอด
+  clean.title = String(body.title ?? '').trim().slice(0, 20)
 
   try {
     // ชื่อจริง → users (identity, ใช้ซ้ำทุกเอกสาร ไม่ผูก guild)
@@ -100,6 +104,7 @@ export async function POST(req) {
           SET override_data = COALESCE(override_data, '{}'::jsonb) || $2::jsonb
         WHERE id = $1`,
       [entry.id, JSON.stringify({
+        title:         clean.title || null,
         id_number:     clean.idNumber,
         house_no:      clean.houseNo,
         moo:           clean.moo,
@@ -111,7 +116,9 @@ export async function POST(req) {
       })]
     )
 
-    // จำไว้ prefill ครั้งหน้า
+    // ⭐ ตั้งแต่ 2026-08-30 นี่ไม่ใช่แค่ "จำไว้ prefill" แล้ว — view docs_entry_recipient อ่านก้อนนี้
+    // เป็นชั้นตัวตนระดับคน (เหนือ cache_pple_member) ใบใหม่ทุกใบของคนนี้จะได้ข้อมูลจากตรงนี้
+    // ⚠️ เขียนทับทั้งก้อน: ช่องที่เว้นว่างจะลบค่าเดิมทิ้ง แล้วตกไปใช้ทะเบียนพรรคแทน
     await pool.query(
       `INSERT INTO user_config (user_id, "key", value) VALUES ($1, 'docs_self_info', $2)
        ON CONFLICT (user_id, "key") DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,

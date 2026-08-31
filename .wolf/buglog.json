@@ -3885,6 +3885,41 @@
       "related_bugs": [],
       "occurrences": 2,
       "last_seen": "2026-08-30T15:11:30.527Z"
+    },
+    {
+      "id": "bug-205",
+      "timestamp": "2026-08-30T22:19:16",
+      "error_message": "ชื่อเคสบนหน้า /case/[ref] ตกบรรทัดคำละบรรทัดบนมือถือ",
+      "file": "web/app/case/[ref]/page.js",
+      "root_cause": "หัวการ์ดเป็น flex แถวเดียว ฝั่งปุ่ม (CaseEditButton + ชิปสถานะ) เป็น shrink-0 จึงกินความกว้างเกือบหมดจอ เหลือให้คอลัมน์ชื่อเรื่องไม่ถึง 100px ที่ viewport ~360px",
+      "fix": "flex-col บนมือถือ แล้ว sm:flex-row ขึ้นไป + ฝั่งปุ่มเปลี่ยนเป็น flex-wrap sm:shrink-0 + ชื่อเรื่องได้ min-w-0 sm:flex-1 และ break-words",
+      "tags": [
+        "mobile",
+        "layout",
+        "flexbox",
+        "case"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-08-30T22:19:16"
+    },
+    {
+      "id": "bug-463",
+      "timestamp": "2026-08-31T00:00:00.000Z",
+      "error_message": "หน้าเซ็นเอกสารเด้งฟอร์ม 'ยืนยันตัวตน' ซ้ำในใบสำคัญรับเงินใบที่ 2 ของคนเดิม (recipient_complete=false) ทั้งที่กรอกไปแล้วในใบแรก",
+      "file": "scripts/migration/migration.sql (view docs_entry_recipient), web/app/api/docs/sign/verify/route.js",
+      "root_cause": "ฟอร์มยืนยันตัวตนเขียนข้อมูล 3 ที่: users (ชื่อ/เบอร์/รูปบัตร = ต่อคน), user_config docs_self_info (ชุดเต็ม = ต่อคน), override_data (เลขบัตร+ที่อยู่ = ต่อใบ) · view docs_entry_recipient resolve เลขบัตร/ที่อยู่จาก override_data -> docs_external_payees -> cache_pple_member เท่านั้น ไม่เคยอ่าน user_config เลย · คนที่ไม่มีในทะเบียนพรรค (เหตุผลที่ต้องกรอกฟอร์มตั้งแต่แรก) จึงไม่เหลือชั้นที่ใช้ซ้ำข้ามใบได้ → ใบใหม่เริ่มจากศูนย์ทุกใบ · ตัว auto-apply ฝั่ง client ที่อ่าน user_config มีอยู่ แต่ทำงานเฉพาะตอนเจ้าตัวล็อกอินเปิดเอง (GET /api/docs/sign/self-info คืน 403 ให้คนอื่น) ผู้ดูแลที่เปิดแทนจึงไม่ได้ประโยชน์",
+      "fix": "CREATE OR REPLACE VIEW docs_entry_recipient — LEFT JOIN user_config uc ON uc.user_id=u.id AND uc.key='docs_self_info' แล้วแทรกเป็นชั้นที่ 3 เหนือ cache_pple_member ทุกช่อง (ชื่อ/สกุล/คำนำหน้า/เลขบัตร/ที่อยู่/เบอร์) · verify: has_self_info เลิกอ่าน override_data.id_number ตรงๆ ใช้ entry.identification_number ที่ view resolve แล้ว · self-info + recipient-info เก็บ title ลง docs_self_info ด้วย (เดิม title จาก OCR โดนทิ้ง)",
+      "tags": [
+        "docs",
+        "e-signature",
+        "postgres-view",
+        "identity",
+        "cache_pple_member",
+        "user_config",
+        "per-entry-vs-per-person"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-08-31T00:00:00.000Z"
     }
   ]
 }

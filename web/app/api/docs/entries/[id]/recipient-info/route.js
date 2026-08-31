@@ -82,8 +82,11 @@ export async function PUT(req, { params }) {
     await client.query(
       `INSERT INTO user_config (user_id, "key", value) VALUES ($1, 'docs_self_info', $2)
        ON CONFLICT (user_id, "key") DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
+      // ⭐ ตั้งแต่ 2026-08-30 ก้อนนี้คือ "ตัวตนระดับคน" ที่ view docs_entry_recipient อ่านจริง
+      // (ชั้นเหนือ cache_pple_member) ใบใหม่ของคนนี้จึงไม่ต้องกรอกซ้ำอีก — title ต้องมีด้วย
+      // ไม่งั้นใบถัดไปได้ที่อยู่ครบแต่คำนำหน้าหาย เพราะ title เดิมลงแค่ override_data ต่อใบ
       [entry.member_user_id, JSON.stringify({
-        firstName, lastName, idNumber: addr.id_number ?? '', houseNo: addr.house_no, moo: addr.moo,
+        title, firstName, lastName, idNumber: addr.id_number ?? '', houseNo: addr.house_no, moo: addr.moo,
         road: addr.road, subdistrict: addr.subdistrict, district: addr.district,
         provinceAddr: addr.province_addr, phone: addr.phone ?? '',
       })]

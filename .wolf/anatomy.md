@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-30T15:11:47.135Z
-> Files: 1060 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-30T15:26:23.399Z
+> Files: 1061 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
 
@@ -925,6 +925,10 @@
 
 - `route.js` — GET /api/docs/entries/[id]/pdf (~544 tok)
 
+## web/app/api/docs/entries/[id]/recipient-info/
+
+- `route.js` — PUT /api/docs/entries/[id]/recipient-info (~1399 tok)
+
 ## web/app/api/docs/events/
 
 - `route.js` — GET /api/docs/events?q=&province=&limit=20 (~649 tok)
@@ -1043,11 +1047,11 @@
 
 ## web/app/api/docs/sign/self-info/
 
-- `route.js` — Self-fill ข้อมูลผู้รับเงินที่ไม่มีใน cache_pple_member (จังหวัดอื่นนอก roster) (~1463 tok)
+- `route.js` — Self-fill ข้อมูลผู้รับเงินที่ไม่มีใน cache_pple_member (จังหวัดอื่นนอก roster) (~1905 tok)
 
 ## web/app/api/docs/sign/verify/
 
-- `route.js` — GET /api/docs/sign/verify?token= (~637 tok)
+- `route.js` — GET /api/docs/sign/verify?token= (~1920 tok)
 
 ## web/app/api/docs/token/[token]/receipt/
 

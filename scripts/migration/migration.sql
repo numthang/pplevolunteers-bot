@@ -1488,3 +1488,70 @@ ALTER TABLE post_episodes ADD CONSTRAINT post_episodes_created_via_check
 
 -- production ทำถึงตรงนี้
 
+
+
+-- ═══ 2026-08-30 — ข้อมูลตัวตนผู้รับต้อง "ต่อคน" ไม่ใช่ "ต่อใบ" (bug: ใบที่ 2 ของคนเดิมขึ้นฟอร์มใหม่) ═══
+-- อาการจริง: Ammily มีใบสำคัญ 2 ใบในงานเดียวกัน · ใบแรกเปิดมาเป็นใบให้เซ็นปกติ
+-- ใบที่สองเด้งฟอร์ม "ยืนยันตัวตน" ขึ้นมาใหม่ทั้งที่กรอกไปแล้ว (ชื่อขึ้นให้ แต่เลขบัตรว่าง)
+--
+-- ⭐ ต้นเหตุ: ฟอร์มยืนยันตัวตนกดบันทึกครั้งเดียว เขียนลง 3 ที่ แต่มีที่เดียวที่ผูกกับ "ใบ"
+--      users                     ← ชื่อ/สกุล/เบอร์/รูปบัตร   (ต่อคน — ใบไหนก็เห็น)
+--      user_config docs_self_info ← ชุดเต็ม                  (ต่อคน — **แต่ไม่มีใครอ่าน**)
+--      docs_activity_entries.override_data ← เลขบัตร+ที่อยู่  (ต่อใบ — ใบอื่นไม่เห็น)
+--    view นี้เดิม resolve เลขบัตร/ที่อยู่จาก override_data → คนนอก → cache_pple_member เท่านั้น
+--    คนที่ไม่มีในทะเบียนพรรค (= เหตุผลที่ต้องกรอกฟอร์มตั้งแต่แรก) จึงไม่เหลือชั้นไหนใช้ซ้ำข้ามใบได้เลย
+--    → ทุกใบใหม่ = เริ่มจากศูนย์ → หน้าเซ็นคำนวณ recipient_complete = false → ขึ้นฟอร์มแทนใบ
+--
+-- ⭐ สิ่งที่แก้: เสียบ user_config.docs_self_info เป็นชั้นที่ 3 **เหนือ cache_pple_member**
+--    ลำดับใหม่ทุกช่อง: override_data (ต่อใบ) → คนนอก → ที่กรอกจากบัตร ปชช. → ทะเบียนพรรค
+--
+-- ⚠️ ทำไมทะเบียนพรรคต้องตกไปเป็นชั้นสุดท้าย (เคาะ 2026-08-30):
+--    cache_pple_member เป็น cache จากระบบพรรคที่ "ไม่รู้จะได้ sync อีกเมื่อไหร่" ห้ามพึ่งเป็นหลัก
+--    ส่วน docs_self_info คือข้อมูลที่คนกรอกจากบัตร ปชช. จริงพร้อมอัปสำเนาบัตรเป็นหลักฐาน
+--    ผลพลอยได้: ชื่อที่แก้ให้ถูกบนใบแรก จะไม่ถูกทะเบียนเก่าดึงกลับบนใบถัดไปอีก (บั๊กเดียวกัน คนละช่อง)
+--
+-- ⚠️ ทำไมไม่เพิ่มคอลัมน์ลง users / ไม่สร้างตาราง user_identity ใหม่:
+--    docs_self_info คือ user_identity อยู่แล้ว แค่เก็บเป็น json · และ users.firstname/lastname
+--    ถูกบอทเขียนทับได้จาก flow ลงทะเบียน Discord (db/org.js upsertUserByDiscord — ที่มาของขยะ
+--    lastname = '-') ถ้าย้ายไปกองรวมที่นั่นจะได้คอลัมน์สะอาด/สกปรกนอนข้างกันในตารางเดียว
+--
+-- ⚠️ user_config เป็น 1 แถวต่อ (user_id, key) — LEFT JOIN นี้ไม่ทำให้แถวบาน
+-- ⚠️ ข้อมูลนี้ข้าม org ได้ตามธรรมชาติ (เหมือน users.id_card_image ที่ย้ายไป users แล้ว)
+--    วันที่มีหลาย org จริงต้องมีชั้นคุมการอ่านข้ามผู้เช่า — แก้ทีเดียวคุมทั้งรูปบัตรและเลขบัตร
+CREATE OR REPLACE VIEW docs_entry_recipient AS
+ SELECT e.id AS entry_id,
+        CASE
+            WHEN e.external_payee_id IS NOT NULL THEN 'external'::text
+            ELSE 'member'::text
+        END AS recipient_kind,
+    COALESCE(NULLIF(e.override_data ->> 'title'::text, ''::text), NULLIF(x.title::text, ''::text), NULLIF(uc.value ->> 'title'::text, ''::text), n.title::text) AS title,
+    COALESCE(NULLIF(x.first_name::text, ''::text), NULLIF(uc.value ->> 'firstName'::text, ''::text), n.first_name::text) AS ngs_first_name,
+    COALESCE(NULLIF(x.last_name::text, ''::text), NULLIF(uc.value ->> 'lastName'::text, ''::text), n.last_name::text) AS ngs_last_name,
+    COALESCE(NULLIF(x.entity_name::text, ''::text), NULLIF(TRIM(BOTH FROM concat(x.first_name, ' ', x.last_name)), ''::text), m.display_name::text) AS display_name,
+    COALESCE(NULLIF(x.first_name::text, ''::text), NULLIF(uc.value ->> 'firstName'::text, ''::text), u.firstname::text) AS firstname,
+    COALESCE(NULLIF(x.last_name::text, ''::text), NULLIF(uc.value ->> 'lastName'::text, ''::text), u.lastname::text) AS lastname,
+    COALESCE(NULLIF(e.override_data ->> 'id_number'::text, ''::text), NULLIF(x.id_number::text, ''::text), NULLIF(uc.value ->> 'idNumber'::text, ''::text), n.identification_number::text) AS identification_number,
+    COALESCE(NULLIF(e.override_data ->> 'house_no'::text, ''::text), NULLIF(x.house_no::text, ''::text), NULLIF(uc.value ->> 'houseNo'::text, ''::text), n.home_house_number::text) AS home_house_number,
+    COALESCE(NULLIF(e.override_data ->> 'moo'::text, ''::text), NULLIF(x.moo::text, ''::text), NULLIF(uc.value ->> 'moo'::text, ''::text), n.home_alley::text) AS home_alley,
+    COALESCE(NULLIF(e.override_data ->> 'road'::text, ''::text), NULLIF(x.road::text, ''::text), NULLIF(uc.value ->> 'road'::text, ''::text), n.home_road::text) AS home_road,
+    COALESCE(NULLIF(e.override_data ->> 'subdistrict'::text, ''::text), NULLIF(x.subdistrict::text, ''::text), NULLIF(uc.value ->> 'subdistrict'::text, ''::text), n.home_district::text) AS home_district,
+    COALESCE(NULLIF(e.override_data ->> 'district'::text, ''::text), NULLIF(x.district::text, ''::text), NULLIF(uc.value ->> 'district'::text, ''::text), n.home_amphure::text) AS home_amphure,
+    COALESCE(NULLIF(e.override_data ->> 'province_addr'::text, ''::text), NULLIF(x.province::text, ''::text), NULLIF(uc.value ->> 'provinceAddr'::text, ''::text), n.home_province::text) AS home_province,
+    COALESCE(NULLIF(x.zip_code::text, ''::text), n.home_zip_code::text) AS home_zip_code,
+    COALESCE(NULLIF(e.override_data ->> 'phone'::text, ''::text), NULLIF(x.phone::text, ''::text), NULLIF(uc.value ->> 'phone'::text, ''::text), n.mobile_number::text) AS mobile_number,
+    COALESCE(x.id_card_image, u.id_card_image) AS id_card_image,
+    n.road,
+    m.member_id,
+    u.discord_id AS member_discord_id
+   FROM docs_activity_entries e
+     JOIN docs_projects p ON p.id = e.project_id
+     LEFT JOIN users u ON u.id = e.member_user_id
+     LEFT JOIN LATERAL ( SELECT om.display_name,
+            om.member_id
+           FROM org_members om
+          WHERE om.user_id = u.id AND om.org_id = p.org_id
+          ORDER BY (om.member_id IS NOT NULL) DESC, om.joined_at DESC NULLS LAST
+         LIMIT 1) m ON true
+     LEFT JOIN cache_pple_member n ON n.source_id = m.member_id
+     LEFT JOIN docs_external_payees x ON x.id = e.external_payee_id
+     LEFT JOIN user_config uc ON uc.user_id = u.id AND uc.key = 'docs_self_info';

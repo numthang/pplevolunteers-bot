@@ -105,7 +105,10 @@ export async function GET(req) {
         // ถ้าไม่ตอบ true สองตัวนี้ หน้าเซ็นจะค้างที่ขั้น "ผูกรายชื่อสมาชิก" ซึ่งคนนอกผ่านไม่ได้
         has_ngs_link:     role === 'recipient' ? (isExternal || !!entry.member_id) : null,
         // self-fill ครบ (ชื่อใน users + เลขบัตรใน override_data) = ยืนยันตัวตนแบบกรอกเองแล้ว
-        has_self_info:    role === 'recipient' ? (isExternal || !!(entry.firstname && entry.lastname && entry.override_data?.id_number)) : null,
+        // ⚠️ ต้องใช้ entry.identification_number (ค่าที่ view resolve แล้ว) ไม่ใช่ override_data ตรงๆ
+        // override_data ผูกกับ "ใบ" ใบเดียว → ใบที่ 2 ของคนเดิมจะตอบ false ทั้งที่กรอกไปแล้ว
+        // (บั๊ก 2026-08-30) · view มีชั้น user_config docs_self_info = ตัวตนระดับคน ให้แล้ว
+        has_self_info:    role === 'recipient' ? (isExternal || !!(entry.firstname && entry.lastname && entry.identification_number)) : null,
         has_id_card:      role === 'recipient' ? !!entry.has_id_card : null,
         // payer status
         payer_signed_at:  entry.payer_signed_at ?? null,
