@@ -8,7 +8,20 @@
     "loading": "Loading...",
     "error": "Something went wrong, please try again",
     "language": "Language",
-    "saving": "Saving..."
+    "saving": "Saving...",
+    "openInBrowser": {
+      "title": "Opened inside {app} — you may be asked to log in every time",
+      "bodyAndroid": "This window cannot keep you logged in. Tap below to open it in your device browser and log in just once.",
+      "bodyIos": "This window cannot keep you logged in. Copy the link and open it in Safari or Chrome (or tap ⋯ at the top right of {app} and choose to open in a browser).",
+      "openButton": "Open in browser",
+      "copyButton": "Copy link",
+      "copiedButton": "Copied — paste it into your browser",
+      "quietLink": "Cannot get in? Copy the link and open it in another browser",
+      "copied": "Link copied",
+      "copyFallback": "Copy this link and open it in a browser",
+      "titleUnknown": "This window may ask you to log in every time",
+      "bodyIosUnknown": "If you came from a chat app, this window cannot keep you logged in — copy the link and open it in Safari or Chrome (or look for ⋯ at the top right and choose to open in a browser)."
+    }
   },
   "finance": {
     "common": {
@@ -1137,18 +1150,6 @@
         "retake": "Retake photo",
         "hint": "One photo does it all — we read the name, ID number and address, and keep it as the ID copy attached to this receipt. Check everything before saving.",
         "idWarn": "The ID number we read may be off — check it against the card before saving."
-      },
-      "openInBrowser": {
-        "title": "Opened inside {app} — you may be asked to log in every time",
-        "bodyAndroid": "This window cannot keep you logged in. Tap below to open it in your device browser and log in just once.",
-        "bodyIos": "This window cannot keep you logged in. Copy the link and open it in Safari or Chrome (or tap ⋯ at the top right of {app} and choose to open in a browser).",
-        "openButton": "Open in browser",
-        "copyButton": "Copy link",
-        "copiedButton": "Copied — paste it into your browser",
-        "quietLink": "Cannot get in? Copy the link and open it in another browser",
-        "copied": "Link copied",
-        "copyFallback": "Copy this link and open it in a browser",
-        "thisApp": "this app"
       }
     },
     "externalPayee": {

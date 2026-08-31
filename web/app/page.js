@@ -5,6 +5,7 @@ import { getTranslations } from 'next-intl/server'
 import { getSession } from '@/lib/auth.js'
 import LoginPanel from '@/components/LoginPanel.jsx'
 import LinkAccountsBanner from '@/components/LinkAccountsBanner.jsx'
+import OpenInBrowserNotice from '@/components/OpenInBrowserNotice.jsx'
 import { getPendingCallCount } from '@/db/calling/members.js'
 import { getContactPendingCount } from '@/db/calling/contacts.js'
 import { getPendingSignaturesForUser } from '@/db/docs/entries.js'
@@ -179,6 +180,11 @@ export default async function HomePage() {
               <p className="text-base text-warm-500 dark:text-disc-muted">{t('hero.taglineTh')}</p>
             </div>
             <div className="w-full max-w-[360px]">
+              {/* หน้านี้ไม่ได้มีแต่คนที่ตั้งใจเข้ามาเอง — `redirectToLogin()` ส่งทุกคนที่กดลิงก์
+                  ของระบบ (ลิงก์เซ็นเอกสาร ฯลฯ) มาลงที่นี่พร้อม ?callbackUrl
+                  คนกลุ่มนั้นมักกดมาจากแชต = ติดอยู่ในมินิเบราว์เซอร์ที่ล็อกอินไม่ผ่าน
+                  → ต้องมีทางออกก่อนถึงปุ่มล็อกอิน ไม่งั้นกดปุ่มไหนก็ตัน */}
+              <OpenInBrowserNotice className="mb-4" />
               <Suspense>
                 <LoginPanel />
               </Suspense>

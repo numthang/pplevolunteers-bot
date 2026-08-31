@@ -18,7 +18,7 @@ import { detectInAppBrowser, androidIntentUrl } from '@/lib/inAppBrowser.js'
  * ได้แค่คัดลอกลิงก์ให้แล้วบอกวิธี ฉะนั้นข้อความ 2 ฝั่งต้องคนละแบบ ห้ามเขียนรวม
  */
 export default function OpenInBrowserNotice({ className = '' }) {
-  const t = useTranslations('docs')
+  const t = useTranslations('common.openInBrowser')
   // ต้องรอ mount — UA กับ location ไม่มีตอน SSR (และ prerender ไว้ก็ผิดอยู่ดี)
   const [env, setEnv]       = useState(null)
   const [copied, setCopied] = useState(false)
@@ -37,7 +37,7 @@ export default function OpenInBrowserNotice({ className = '' }) {
     } catch {
       // มินิเบราว์เซอร์บางตัวไม่ให้สิทธิ์ clipboard — ให้ผู้ใช้ลากเลือก URL เอาเองแทน
       setCopied(false)
-      window.prompt(t('sign.openInBrowser.copyFallback'), env.url)
+      window.prompt(t('copyFallback'), env.url)
     }
   }
 
@@ -50,20 +50,22 @@ export default function OpenInBrowserNotice({ className = '' }) {
         className={`mx-auto flex items-center gap-1.5 text-sm text-warm-400 dark:text-disc-muted hover:text-orange transition ${className}`}
       >
         {copied ? <Check size={14} /> : <Copy size={14} />}
-        {copied ? t('sign.openInBrowser.copied') : t('sign.openInBrowser.quietLink')}
+        {copied ? t('copied') : t('quietLink')}
       </button>
     )
   }
 
-  const appName = env.app || t('sign.openInBrowser.thisApp')
+  // เดาชื่อแอปไม่ได้ = มีข้อความของตัวเองต่างหาก ห้ามยัดคำกลางๆ ลงช่อง {app}
+  // ("เปิดใน แอปแชต อยู่" อ่านแล้วสะดุด และฟังดูเหมือนระบบพัง มากกว่าเหมือนคำแนะนำ)
+  const app = env.app
 
   return (
     <div className={`rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 p-4 ${className}`}>
       <p className="text-base font-semibold text-amber-900 dark:text-amber-200">
-        {t('sign.openInBrowser.title', { app: appName })}
+        {app ? t('title', { app }) : t('titleUnknown')}
       </p>
       <p className="mt-1 text-sm text-amber-800 dark:text-amber-300">
-        {env.android ? t('sign.openInBrowser.bodyAndroid') : t('sign.openInBrowser.bodyIos', { app: appName })}
+        {env.android ? t('bodyAndroid') : app ? t('bodyIos', { app }) : t('bodyIosUnknown')}
       </p>
 
       {env.android ? (
@@ -71,7 +73,7 @@ export default function OpenInBrowserNotice({ className = '' }) {
           href={androidIntentUrl(env.url)}
           className="mt-3 w-full flex items-center justify-center gap-2 bg-orange text-white py-2.5 rounded-lg text-base font-semibold hover:bg-orange-light transition"
         >
-          <ExternalLink size={17} /> {t('sign.openInBrowser.openButton')}
+          <ExternalLink size={17} /> {t('openButton')}
         </a>
       ) : (
         <button
@@ -80,7 +82,7 @@ export default function OpenInBrowserNotice({ className = '' }) {
           className="mt-3 w-full flex items-center justify-center gap-2 bg-orange text-white py-2.5 rounded-lg text-base font-semibold hover:bg-orange-light transition"
         >
           {copied ? <Check size={17} /> : <Copy size={17} />}
-          {copied ? t('sign.openInBrowser.copiedButton') : t('sign.openInBrowser.copyButton')}
+          {copied ? t('copiedButton') : t('copyButton')}
         </button>
       )}
     </div>
