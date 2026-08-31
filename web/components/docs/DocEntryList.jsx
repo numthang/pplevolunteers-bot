@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl'
 import { Pencil, Trash2, Check, X, Copy, Plus } from 'lucide-react'
 import ExternalPayeeModal from './ExternalPayeeModal'
 import { calcTravelCeiling } from '@/config/fund69-rules.js'
+import { externalBrowserUrl } from '@/lib/shareLink.js'
 
 const ALL_ITEMS    = ['food','speaker','travel','venue','accommodation','sound','supplies','equipment','photo']
 const MOBILE_ITEMS = ['food','travel','accommodation','supplies','equipment','photo']
@@ -40,12 +41,12 @@ export default function DocEntryList({ initialEntries, isMobile, canManage, curr
       .map(e => {
         const token = type === 'recipient' ? e.sign_token : e.payer_sign_token
         if (!token) return null
-        return `${recipientName} ${itemLabel(e.item_type)} ${origin}/docs/sign/${token}`
+        return `${recipientName} ${itemLabel(e.item_type)} ${externalBrowserUrl(`${origin}/docs/sign/${token}`)}`
       })
       .filter(Boolean)
     if (!lines.length) return
     const pendingTab = type === 'recipient' ? 'recipient' : 'payer'
-    lines.push(`\n${t('entryList.viewAllPending', { url: `${origin}/docs/pending?tab=${pendingTab}` })}`)
+    lines.push(`\n${t('entryList.viewAllPending', { url: externalBrowserUrl(`${origin}/docs/pending?tab=${pendingTab}`) })}`)
     navigator.clipboard.writeText(lines.join('\n'))
     setCopiedKey(`${type}-${groupKey}`)
     setTimeout(() => setCopiedKey(null), 2000)
