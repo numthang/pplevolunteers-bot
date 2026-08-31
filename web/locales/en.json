@@ -538,7 +538,6 @@
       "noSubject": "(No subject)",
       "savedAt": "Saved on {date}",
       "newDraftButton": "+ Create new draft with AI",
-      "editIntro": "Review and edit before generating the PDF",
       "subjectLabel": "Subject",
       "recipientTitleLabel": "Recipient title (Attn.)",
       "recipientTitlePlaceholder": "e.g. Director",

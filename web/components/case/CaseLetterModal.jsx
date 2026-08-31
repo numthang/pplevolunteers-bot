@@ -201,8 +201,6 @@ export default function CaseLetterModal({ refId, onClose }) {
 
           {step === 'edit' && fields && (
             <div className="space-y-4">
-              <p className="text-sm text-gray-500 dark:text-disc-muted">{t('letter.editIntro')}</p>
-
               <div>
                 <label className={labelCls}>{t('letter.subjectLabel')}</label>
                 <input className={inputCls} value={fields.subject} onChange={set('subject')} />

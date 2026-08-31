@@ -538,7 +538,6 @@
       "noSubject": "(ไม่มีหัวเรื่อง)",
       "savedAt": "บันทึกเมื่อ {date}",
       "newDraftButton": "+ สร้างร่างใหม่ด้วย AI",
-      "editIntro": "ตรวจสอบและแก้ไขก่อนสร้าง PDF",
       "subjectLabel": "เรื่อง",
       "recipientTitleLabel": "ตำแหน่งผู้รับ (เรียน)",
       "recipientTitlePlaceholder": "เช่น ผู้อำนวยการ",
