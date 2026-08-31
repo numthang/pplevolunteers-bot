@@ -1518,6 +1518,43 @@ ALTER TABLE post_episodes ADD CONSTRAINT post_episodes_created_via_check
 -- ⚠️ user_config เป็น 1 แถวต่อ (user_id, key) — LEFT JOIN นี้ไม่ทำให้แถวบาน
 -- ⚠️ ข้อมูลนี้ข้าม org ได้ตามธรรมชาติ (เหมือน users.id_card_image ที่ย้ายไป users แล้ว)
 --    วันที่มีหลาย org จริงต้องมีชั้นคุมการอ่านข้ามผู้เช่า — แก้ทีเดียวคุมทั้งรูปบัตรและเลขบัตร
+-- ⛔ ขั้นที่ 1 — ต้องรัน "ก่อน" CREATE OR REPLACE VIEW ข้างล่างเสมอ ห้ามสลับลำดับ
+-- ใบที่เซ็นไปแล้วคือหลักฐาน ห้ามเปลี่ยนเนื้อหาเองหลังเซ็น · แต่ PDF ถูก gen สดจาก DB ทุกครั้ง
+-- (ไม่มีไฟล์เก็บ — web/app/api/docs/entries/[id]/pdf/route.js) เปลี่ยนลำดับชั้นข้อมูลเมื่อไหร่
+-- ใบเก่าก็เปลี่ยนตามทันที · เคสจริงบน prod: 2 ใบที่เซ็นแล้ว ทะเบียนพรรคสะกด "พรรณปพร"
+-- แต่เจ้าตัวกรอกเอง "พรรณพร" (เลขบัตรตรงกัน = คนเดียวกัน) พอสลับลำดับชื่อบนใบจะเปลี่ยน
+--
+-- → ปักค่าที่ใบ "พิมพ์อยู่ตอนนี้" ลง override_data (ชั้นบนสุด ชนะทุกอย่าง) ก่อนสลับลำดับ
+--   ทำเฉพาะใบที่เซ็นแล้ว + ผู้รับเป็นสมาชิก + เจ้าตัวมี docs_self_info (= กลุ่มเดียวที่ค่าจะขยับได้)
+--
+-- ⚠️ กฎการเติมค่าลอกจาก buildData() ใน web/lib/generatePdf.js เป๊ะ ห้ามเดา:
+--     override ?? ngs        → COALESCE(ov->>'k', ...)              ('' คือค่าจริง ปักช่องว่างได้)
+--     override || ngs || '-' → COALESCE(NULLIF(ov->>'k',''), ..., '-')
+--   เคยพลาด: ใช้ jsonb_strip_nulls แล้วช่องที่เคยว่าง (หมู่ที่) ไม่ถูกปัก โดนเติมทีหลังเป็น "3"
+-- ⚠️ รันซ้ำได้ — ทุกช่องอ่าน override_data ของตัวเองก่อน รอบสองจึงไม่ทับค่าที่ปักไว้แล้ว
+UPDATE docs_activity_entries e
+SET override_data = COALESCE(e.override_data, '{}'::jsonb) || jsonb_build_object(
+  'title',         COALESCE(e.override_data->>'title', r.title, ''),
+  'full_name',     COALESCE(NULLIF(e.override_data->>'full_name',''),
+                            NULLIF(concat(COALESCE(r.title,''), COALESCE(r.ngs_first_name, r.firstname, '')),''),
+                            NULLIF(r.display_name,''), 'ยังไม่ระบุผู้รับ'),
+  'last_name',     COALESCE(NULLIF(e.override_data->>'last_name',''), r.ngs_last_name, r.lastname, ''),
+  'id_number',     COALESCE(e.override_data->>'id_number', r.identification_number, ''),
+  'house_no',      COALESCE(NULLIF(e.override_data->>'house_no',''), NULLIF(r.home_house_number,''), '-'),
+  'moo',           COALESCE(NULLIF(e.override_data->>'moo',''),  NULLIF(r.home_alley,''), '-'),
+  'road',          COALESCE(NULLIF(e.override_data->>'road',''), NULLIF(r.home_road,''), NULLIF(r.road,''), '-'),
+  'subdistrict',   COALESCE(e.override_data->>'subdistrict',   r.home_district, ''),
+  'district',      COALESCE(e.override_data->>'district',      r.home_amphure, ''),
+  'province_addr', COALESCE(e.override_data->>'province_addr', r.home_province, ''),
+  'phone',         COALESCE(NULLIF(e.override_data->>'phone',''), NULLIF(r.mobile_number,''), '-')
+)
+FROM docs_entry_recipient r, user_config uc
+WHERE r.entry_id = e.id
+  AND uc.user_id = e.member_user_id AND uc.key = 'docs_self_info'
+  AND e.signed_at IS NOT NULL
+  AND e.external_payee_id IS NULL;
+
+-- ⛔ ขั้นที่ 2 — สลับลำดับชั้นข้อมูล (รันหลังขั้นที่ 1 เท่านั้น)
 CREATE OR REPLACE VIEW docs_entry_recipient AS
  SELECT e.id AS entry_id,
         CASE
