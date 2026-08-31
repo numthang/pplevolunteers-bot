@@ -5,13 +5,23 @@ budget_tokens: 1000
 # STATUS — pple-volunteers
 
 > อ่านไฟล์นี้ก่อนเสมอเมื่อเริ่ม session ใหม่ · อัปเดตทุกครั้งที่จบก้อนงาน
-> Last updated: 2026-08-30
+> Last updated: 2026-08-31
 
 ---
 
 ## ✅ Done
 
-### รอบล่าสุด (2026-08-30 · ยังไม่ commit)
+### รอบล่าสุด (2026-08-31 · commit `f819e0d` ยังไม่ push · **prod ยังไม่รัน SQL**)
+- **Docs — ตัวตนผู้รับเป็น "ต่อคน" ไม่ใช่ "ต่อใบ"** (bug จาก prod: คนเดียวมี 2 ใบ ใบที่ 2 เด้งฟอร์มยืนยันตัวตนซ้ำ)
+  view `docs_entry_recipient` อ่าน `user_config docs_self_info` เป็นชั้นที่ 3 **เหนือ `cache_pple_member`**
+  ลำดับใหม่: `override_data` (ต่อใบ) → คนนอก → ที่กรอกจากบัตร ปชช. → ทะเบียนพรรค (user เคาะ: cache พรรคไม่รู้จะ sync ไหม ห้ามพึ่งเป็นหลัก)
+  + `verify` has_self_info ใช้ค่าที่ view resolve แล้ว + `self-info`/`recipient-info` เก็บ `title` ลง docs_self_info
+  รายละเอียดเต็มอยู่ใน commit message + `bug-463` — **ห้าม re-derive**
+- ⚠️ **ค้างอยู่ที่ user:** ยังไม่ได้รัน `CREATE OR REPLACE VIEW` บน prod (อยู่ท้าย `scripts/migration/migration.sql`)
+  ต้องรัน **diff query ก่อน** — PDF gen สดจาก DB ทุกครั้ง view เปลี่ยน = ใบที่เซ็นแล้วเปลี่ยนตามได้
+  บน DB dev มี 3 ใบที่ค่าจะเปลี่ยน (ชื่อจากทะเบียน ≠ ชื่อที่กรอกเอง) — prod ต้องดูเองว่ามีกี่ใบ
+
+### ก่อนหน้า (2026-08-30 · ยังไม่ commit)
 - **แยก route CASES**: public (แจ้ง/ติดตามเรื่อง) ย้าย `/case*` → **`/complaint*`**
   จัดการเคส (เดิม `/case/manage`) ย้ายขึ้นเป็น **`/case`** ตรงๆ (list) + `/case/[ref]` (detail) — ตาม pattern docs/calling/posts
   ปุ่ม "+เพิ่มเรื่องร้องเรียน" บน `/case` → ลิงก์ `/complaint/new` (ของสาธารณะเดิม)

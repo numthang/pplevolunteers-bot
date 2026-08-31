@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-30T15:26:23.399Z
-> Files: 1061 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-31T02:40:54.144Z
+> Files: 1062 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
 
@@ -430,7 +430,7 @@
 - `backfill-intro-peoplesparty.js` — scripts/data/backfill-intro-peoplesparty.js (~3823 tok)
 - `backfill-intro-ratchaburi.js` — scripts/backfill-intro-channel.js (~2655 tok)
 - `backfill-missing-channels.js` — scripts/backfill-missing-channels.js (~2618 tok)
-- `backfillCaseThreads.js` — backfillCaseThreads.js — กวาดกระทู้เก่าใน complaint forum มาสร้างเป็นเคสร้องเรียน (cases) (~5707 tok)
+- `backfillCaseThreads.js` — backfillCaseThreads.js — กวาดกระทู้เก่าใน complaint forum มาสร้างเป็นเคสร้องเรียน (cases) (~5990 tok)
 - `backfillPostThreads.js` — backfillPostThreads.js — กวาดกระทู้เก่าใน forum งานสื่อ มาสร้างเป็นโพสต์ (post_episodes) (~5400 tok)
 - `backfillThreads.js` — Backfill: index threads ใน text channels ทั้งหมดเข้า Meilisearch + DB (~680 tok)
 - `exportIntro.js` — Declares client (~667 tok)
@@ -438,6 +438,7 @@
 - `importMembers.js` — scripts/importMembers.js import from intro_normalized only (~612 tok)
 - `peek-intro-peoplesparty.js` — peek-intro-peoplesparty.js (~417 tok)
 - `resetCaseTimelines.js` — resetCaseTimelines.js — ถอย "คั่นหน้า" การ sync timeline ของเคส แล้วล้างสรุปที่ AI เคยทำไว้ (~1200 tok)
+- `resetStuckCaseTimeline.js` — กู้เคสที่ timeline "ตันถาวร" — รีเซ็ต watermark ให้ปุ่มดึง Discord บนเว็บทำงานได้อีกครั้ง (~1383 tok)
 - `resync-roles.js` — scripts/data/resync-roles.js (~1386 tok)
 
 ## scripts/dev/

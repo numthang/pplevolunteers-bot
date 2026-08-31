@@ -31,6 +31,8 @@
  *   --ai               **ยิง AI ให้** (ค่าเริ่มต้นคือไม่ยิง) — 3 ครั้ง/กระทู้
  *                      ไม่ยิง = หัวข้อ = ชื่อกระทู้ · เนื้อหา = ข้อความแรกของกระทู้ · ไม่มี timeline
  *                      กดปุ่มให้ AI สรุปทีละใบในเว็บทีหลังได้
+ *                      (watermark `last_synced_message_id` จะถูกปล่อยว่างไว้เสมอถ้าไม่ได้สกัด timeline
+ *                       → ปุ่ม "ดึง Discord ใหม่" บนเว็บไล่เก็บทั้งเธรดเองได้ · ดู bug-209)
  *
  * ⭐ **สถานะ = `open` ทุกใบ** (user เคาะ 2026-08-28) — `createCase()` ฝัง 'open' ตายตัวอยู่แล้ว
  *    แปลว่าเคสเก่าทั้งหมดจะไปกอง **"รอทำ"** ของ kanban (CASE_STATUS: open→backlog)
@@ -349,8 +351,13 @@ async function complainantNameOf(guildId, ownerId) {
           complainant_name: await complainantNameOf(guild_id, t.owner_id),
           complainant_phone: null, discord_thread_id: t.id, created_by: t.owner_id || null,
         });
-        if (aiSummary) await caseDb.setAiSummary(row.id, aiSummary, lastMsgId);
-        else if (lastMsgId) await caseDb.setLastSyncedMessageId(row.id, lastMsgId);
+        // ⛔ **ห้ามเลื่อน watermark ตรงนี้** (บั๊ก bug-209 · prod ค้าง 172 ใบ)
+        //    `last_synced_message_id` แปลว่า "ข้อความถึง id นี้ถูกสกัดเป็น timeline แล้ว"
+        //    ไม่ใช่ "เห็นข้อความถึง id นี้แล้ว" — เดิมเซ็ตจาก `t.last_message_id` ตั้งแต่ตอนสร้างเคส
+        //    ทั้งที่โหมดปกติ (ไม่ใส่ --ai) ไม่เคยสกัด timeline เลยสักครั้ง
+        //    ผลคือปุ่ม "ดึง Discord ใหม่" บนเว็บตอบ "ไม่มีข้อความใหม่" ตลอดกาล = เคสกู้ตัวเองไม่ได้
+        //    → เลื่อน **หลังสกัด timeline สำเร็จ** เท่านั้น (ดูท้ายลูป)
+        if (aiSummary) await caseDb.setAiSummary(row.id, aiSummary);
 
         // ── เจ้าภาพ = เจ้าของกระทู้ (user เคาะ 2026-08-29) ────────────────────────
         // ⚠️ ความหมายต่างจากฝั่งโพสต์: กระทู้ร้องเรียนคนตั้ง = **ผู้ร้อง** ไม่ใช่คนที่รับผิดชอบแก้
@@ -370,10 +377,16 @@ async function complainantNameOf(guildId, ownerId) {
         createdCaseIds.push(row.id);
 
         // AI timeline (เฉพาะโหมด --ai · best-effort)
+        // ⭐ watermark เลื่อน **ที่นี่ที่เดียว** และเฉพาะเมื่อเขียน event สำเร็จจริง
+        //    สกัดล้ม / ไม่ได้ใส่ --ai → ปล่อย watermark เป็น NULL ไว้ ให้ปุ่มดึงบนเว็บ
+        //    ไล่เก็บทั้งเธรดเองได้ทีหลัง (เสียแค่ยิง AI ซ้ำ ดีกว่าเคสตันถาวร)
         if (USE_AI && msgs.length) {
           try {
             const events = await generateTimeline(title, msgs, { guildId: guild_id });
-            if (events.length) await caseDb.addTimelineEvents(row.id, guild_id, events, 'ai');
+            if (events.length) {
+              await caseDb.addTimelineEvents(row.id, guild_id, events, 'ai');
+              if (lastMsgId) await caseDb.setLastSyncedMessageId(row.id, lastMsgId);
+            }
           } catch (e) { console.error(`\n  [timeline] thread ${t.id}:`, e.message); }
         }
 

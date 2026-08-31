@@ -3920,6 +3920,57 @@
       ],
       "occurrences": 1,
       "last_seen": "2026-08-31T00:00:00.000Z"
+    },
+    {
+      "id": "bug-207",
+      "timestamp": "2026-08-31T02:40:47.768Z",
+      "error_message": "Significant refactor of resetStuckCaseTimeline.js",
+      "file": "scripts/data/resetStuckCaseTimeline.js",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 12→14 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-08-31T02:40:47.768Z"
+    },
+    {
+      "id": "bug-208",
+      "timestamp": "2026-08-31T02:40:54.181Z",
+      "error_message": "Wrong reference: guild should be cases",
+      "file": "scripts/data/resetStuckCaseTimeline.js",
+      "root_cause": "Used \"guild\" instead of \"cases\"",
+      "fix": "Changed guild → cases",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-08-31T02:40:54.181Z"
+    },
+    {
+      "id": "bug-209",
+      "timestamp": "2026-08-31T02:41:58.269Z",
+      "error_message": "กดปุ่ม \"ดึง Discord ใหม่\" ในหน้าเคส แล้วขึ้น \"ไม่มีข้อความใหม่ใน Discord\" ทั้งที่เคสไม่เคยมี timeline เลย (prod 172 ใบ)",
+      "file": "scripts/data/backfillCaseThreads.js",
+      "root_cause": "backfill เซ็ต cases.last_synced_message_id ตั้งแต่ตอน createCase โดยอ่านจาก t.last_message_id (thread metadata) — ทำทุกโหมด แต่การสกัด timeline ทำเฉพาะโหมด --ai (if USE_AI && msgs.length) เคสที่ backfill โหมดปกติจึงเกิดมาพร้อม watermark ที่บอกว่า sync ตามทันแล้ว ทั้งที่ไม่เคยสกัดสักครั้ง → route timeline/refresh ใช้ fetchMessagesAfter(threadId, watermark) ได้ [] ทุกครั้ง = เคสกู้ตัวเองไม่ได้ถาวร. watermark ความหมายคือ \"สกัดถึง id นี้แล้ว\" ไม่ใช่ \"เห็นถึง id นี้แล้ว\"",
+      "fix": "ย้ายการเลื่อน watermark ไปไว้หลัง addTimelineEvents สำเร็จเท่านั้น (setAiSummary ไม่ส่ง lastMsgId อีกต่อไป) + สร้าง scripts/data/resetStuckCaseTimeline.js กู้ของเก่า (เซ็ต watermark=NULL เฉพาะใบที่ไม่มี case_timeline สักแถว, dry-run เป็นค่าตั้งต้น, ต้องใส่ --commit ถึงเขียน)",
+      "tags": [
+        "case",
+        "timeline",
+        "watermark",
+        "backfill",
+        "discord",
+        "data-integrity"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-08-31T02:41:58.269Z"
     }
   ]
 }
