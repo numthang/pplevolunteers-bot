@@ -2,7 +2,8 @@ import PizZip from 'pizzip'
 import Docxtemplater from 'docxtemplater'
 import ImageModule from 'docxtemplater-image-module-free'
 import { PDFDocument } from 'pdf-lib'
-import { spawnSync } from 'child_process'
+import { spawn } from 'child_process'
+import { randomUUID } from 'crypto'
 import fs from 'fs'
 import path from 'path'
 import os from 'os'
@@ -14,6 +15,52 @@ const __dirname   = path.dirname(fileURLToPath(import.meta.url))
 const TEMPLATES   = path.join(__dirname, '../templates')
 const LIBREOFFICE = '/usr/bin/libreoffice'
 const PDFTOPPM    = '/usr/bin/pdftoppm'   // ใช้วัดพื้นที่ว่างท้ายหน้า (มาคู่กับ poppler เหมือน preview-img)
+
+// temp ทั้งหมดของโมดูลนี้อยู่ใต้ root เดียว — กวาดทิ้งง่าย และ readdir ตอนวัดหน้าไม่ต้องไล่ /tmp ทั้งก้อน
+const TMP_ROOT = path.join(os.tmpdir(), 'pple-pdf')
+
+/** สร้าง working dir ชั่วคราวใต้ TMP_ROOT */
+function makeWorkDir(prefix) {
+  fs.mkdirSync(TMP_ROOT, { recursive: true })
+  return fs.mkdtempSync(path.join(TMP_ROOT, prefix))
+}
+
+/** spawn แบบ async — ไม่บล็อก event loop (spawnSync ทำให้ทั้งเว็บค้างระหว่าง convert)
+ *  ไม่ throw — คืน { code, stderr, timedOut } ให้ผู้เรียกตัดสินใจเอง */
+function run(cmd, args, timeoutMs) {
+  return new Promise(resolve => {
+    let out = '', err = '', timedOut = false
+    const child = spawn(cmd, args, { stdio: ['ignore', 'pipe', 'pipe'] })
+    const timer = setTimeout(() => { timedOut = true; child.kill('SIGKILL') }, timeoutMs)
+    child.stdout.on('data', d => { out += d })
+    child.stderr.on('data', d => { err += d })
+    child.on('error', e => { clearTimeout(timer); resolve({ code: -1, stderr: e.message, timedOut }) })
+    child.on('close', code => { clearTimeout(timer); resolve({ code, stderr: err.trim() || out.trim(), timedOut }) })
+  })
+}
+
+/** แปลง .docx → .pdf ด้วย LibreOffice (ยิงกี่ไฟล์ก็ได้ในครั้งเดียว)
+ *  - **profile ต้องแยกทุกครั้งที่เรียก**: soffice สองตัวที่ใช้ profile เดียวกันจะชนกัน
+ *    ตัวหลังตายเงียบๆ (exit 1, stderr ว่าง, ไม่มีไฟล์ออกมา) — เทสยืนยันแล้ว 2026-08-31
+ *  - **exit code เชื่อไม่ได้**: ไฟล์เสียก็ยังคืน 0 → ผู้เรียกต้องเช็คว่าไฟล์ .pdf มีจริง */
+async function convertToPdf(docxPaths, outDir, workDir) {
+  if (!fs.existsSync(LIBREOFFICE)) throw new Error(`LibreOffice not found at ${LIBREOFFICE}`)
+  const profile = path.join(workDir, `profile-${randomUUID()}`)
+  try {
+    return await run(LIBREOFFICE, [
+      `-env:UserInstallation=file://${profile}`,
+      '--headless', '--convert-to', 'pdf', '--outdir', outDir, ...docxPaths,
+    ], 20_000 + 6_000 * docxPaths.length)
+  } finally {
+    try { fs.rmSync(profile, { recursive: true, force: true }) } catch { /* ไม่มีก็ข้าม */ }
+  }
+}
+
+// template + ลายเซ็นเปล่า เหมือนกันทุกใบ — อ่าน/สร้างครั้งเดียวพอ
+let templateBuf   = null
+let blankSigPromise = null
+const readTemplate   = () => (templateBuf ??= fs.readFileSync(TEMPLATE_1))
+const blankSignature = () => (blankSigPromise ??= buildBlankSignature())
 
 const TEMPLATE_1 = path.join(TEMPLATES, 'receipts', 'template-1.docx')
 const BODY_1_DIR  = path.join(TEMPLATES, 'receipts', 'body-1')
@@ -227,7 +274,9 @@ function colorVariableRuns(zip) {
   zip.file('word/document.xml', out)
 }
 
-export async function generateEntryPdf(entry, { signatureBase64 = null, payerSignatureBase64 = null, payerDisplayName = null, payerPosition = null } = {}) {
+/** เตรียม .docx ของใบเดียว (ยังไม่แปลงเป็น PDF) — คืนไฟล์ + ลายเซ็นผู้รับที่ normalize แล้ว
+ *  (ลายเซ็นตัวเดียวกันถูกใช้ซ้ำตอนปั๊มบล็อก "สำเนาถูกต้อง" ท้ายใบ) */
+async function buildEntryDocx({ entry, signatureBase64 = null, payerSignatureBase64 = null, payerDisplayName = null, payerPosition = null }) {
   // type ที่มีโครงสร้างเฉพาะ → ใช้ .docx, นอกนั้น → generic plaintext (เติม description)
   let bodyContent
   if (SPECIAL_BODIES.has(entry.item_type)) {
@@ -238,13 +287,12 @@ export async function generateEntryPdf(entry, { signatureBase64 = null, payerSig
     bodyContent = GENERIC_BODY_XML
   }
 
-  const buf  = fs.readFileSync(TEMPLATE_1)
-  const zip  = new PizZip(buf)
+  const zip = new PizZip(readTemplate())
   injectBodyIntoTemplate(zip, bodyContent)
   colorVariableRuns(zip)
 
   // normalize ลายเซ็น → trim หมึก + fit กล่องมาตรฐาน; fallback blank PNG ขนาดเดียวกันเมื่อยังไม่เซ็น
-  const blank    = await buildBlankSignature()
+  const blank    = await blankSignature()
   const sigBuf   = signatureBase64      ? (await normalizeSignature(signatureBase64)      ?? blank) : blank
   const payerBuf = payerSignatureBase64 ? (await normalizeSignature(payerSignatureBase64) ?? blank) : blank
 
@@ -268,43 +316,98 @@ export async function generateEntryPdf(entry, { signatureBase64 = null, payerSig
     paysig: 'paysig',
   })
 
-  const filled  = doc.getZip().generate({ type: 'nodebuffer', compression: 'DEFLATE' })
-  const tmpDir  = os.tmpdir()
-  const tmpDocx = path.join(tmpDir, `pple-doc-${entry.id}-${Date.now()}.docx`)
-
-  fs.writeFileSync(tmpDocx, filled)
-
-  if (!fs.existsSync(LIBREOFFICE)) {
-    fs.unlinkSync(tmpDocx)
-    throw new Error(`LibreOffice not found at ${LIBREOFFICE}`)
+  return {
+    docx:   doc.getZip().generate({ type: 'nodebuffer', compression: 'DEFLATE' }),
+    sigBuf,
   }
+}
 
-  const result = spawnSync(LIBREOFFICE, [
-    '--headless', '--convert-to', 'pdf', '--outdir', tmpDir, tmpDocx,
-  ], { timeout: 30_000 })
+// ถ้า batch พลาดแล้วต้องถอยไปยิงทีละใบ — จำกัดเวลารวมไว้ ไม่งั้น 20 ใบ × retry = request บานจนโดน 504 อยู่ดี
+const RETRY_BUDGET_MS = 60_000
 
-  fs.unlinkSync(tmpDocx)
+/** สร้าง PDF ใบสำคัญรับเงินหลายใบในครั้งเดียว
+ *  หัวใจคือ **เรียก LibreOffice ครั้งเดียวต่อ request** แทนที่จะสตาร์ทใหม่ทุกใบ (เดิม 20 ใบ = สตาร์ท 20 รอบ → 504)
+ *
+ *  @param items [{ entry, signatureBase64, payerSignatureBase64, payerDisplayName, payerPosition }]
+ *  @returns [{ entry, pdf, error }] เรียงตาม items — ใบไหนพังจะได้ error ไม่ทำให้ทั้งชุดล้ม
+ */
+export async function generateEntryPdfs(items) {
+  if (!items.length) return []
 
-  if (result.status !== 0 || result.error) {
-    const errMsg = result.error?.message || result.stderr?.toString()?.trim() || result.stdout?.toString()?.trim() || `status=${result.status}`
-    throw new Error(`LibreOffice failed: ${errMsg}`)
-  }
+  const workDir = makeWorkDir('job-')
+  const outDir  = path.join(workDir, 'out')
+  fs.mkdirSync(outDir)
 
-  const pdfPath = tmpDocx.replace('.docx', '.pdf')
-  const pdfBuf  = fs.readFileSync(pdfPath)
-  fs.unlinkSync(pdfPath)
+  const results = items.map(it => ({ entry: it.entry, pdf: null, error: null }))
+  const jobs    = []
 
-  // แนบสำเนาบัตรประชาชน (ถ้ามี) — วางมุมล่างซ้ายของหน้าสุดท้าย ลายน้ำแล้ว
-  if (entry.id_card_image) {
-    try {
-      return await stampIdCardBlock(pdfBuf, entry.id_card_image, sigBuf, entry.event_date)
-    } catch (err) {
-      console.error(`[generateEntryPdf] id-card stamp failed for entry ${entry.id}:`, err.message)
-      // ล้มเหลวตรงนี้ไม่ควรทำให้ทั้งใบพัง — คืนใบเสร็จเปล่าๆ ไป
+  try {
+    // 1) เตรียม .docx ให้ครบก่อน — ใบไหนพังตรงนี้ข้ามไปเลย ไม่ลากทั้งชุด
+    for (let i = 0; i < items.length; i++) {
+      try {
+        const { docx, sigBuf } = await buildEntryDocx(items[i])
+        const base = `doc-${items[i].entry.id}-${i}`   // ใส่ index กันชื่อชนกันเองในชุดเดียว
+        const docxPath = path.join(workDir, `${base}.docx`)
+        fs.writeFileSync(docxPath, docx)
+        jobs.push({ i, docxPath, pdfPath: path.join(outDir, `${base}.pdf`), sigBuf })
+      } catch (err) {
+        results[i].error = err.message
+      }
     }
-  }
+    if (!jobs.length) return results
 
-  return pdfBuf
+    // 2) แปลงรวดเดียว
+    await convertToPdf(jobs.map(j => j.docxPath), outDir, workDir)
+
+    // 3) ใบที่ไม่มีไฟล์ออกมา = batch พลาด → ถอยไปยิงทีละใบให้อัตโนมัติ (exit code เชื่อไม่ได้ ต้องดูไฟล์)
+    let spent = 0
+    for (const job of jobs) {
+      if (fs.existsSync(job.pdfPath)) continue
+      if (spent > RETRY_BUDGET_MS) {
+        results[job.i].error = 'LibreOffice failed: batch พลาดและหมดเวลา retry'
+        continue
+      }
+      const t0  = Date.now()
+      const res = await convertToPdf([job.docxPath], outDir, workDir)
+      spent += Date.now() - t0
+      if (!fs.existsSync(job.pdfPath)) {
+        results[job.i].error = `LibreOffice failed: ${res.timedOut ? 'timeout' : res.stderr || `code=${res.code}`}`
+      }
+    }
+
+    // 4) แนบสำเนาบัตรประชาชน (ถ้ามี) — วางมุมล่างซ้ายของหน้าสุดท้าย ลายน้ำแล้ว
+    for (const job of jobs) {
+      if (results[job.i].error) continue
+      const entry = items[job.i].entry
+      let pdfBuf
+      try {
+        pdfBuf = fs.readFileSync(job.pdfPath)
+      } catch (err) {
+        results[job.i].error = `read pdf failed: ${err.message}`
+        continue
+      }
+      if (entry.id_card_image) {
+        try {
+          pdfBuf = await stampIdCardBlock(pdfBuf, entry.id_card_image, job.sigBuf, entry.event_date)
+        } catch (err) {
+          console.error(`[generateEntryPdf] id-card stamp failed for entry ${entry.id}:`, err.message)
+          // ล้มเหลวตรงนี้ไม่ควรทำให้ทั้งใบพัง — คืนใบเสร็จเปล่าๆ ไป
+        }
+      }
+      results[job.i].pdf = pdfBuf
+    }
+
+    return results
+  } finally {
+    try { fs.rmSync(workDir, { recursive: true, force: true }) } catch { /* ไม่มีก็ข้าม */ }
+  }
+}
+
+/** ใบเดียว — wrapper บาง ๆ ของ generateEntryPdfs (พฤติกรรมเดิม: พังแล้ว throw) */
+export async function generateEntryPdf(entry, opts = {}) {
+  const [res] = await generateEntryPdfs([{ entry, ...opts }])
+  if (res.error) throw new Error(res.error)
+  return res.pdf
 }
 
 const A4 = { w: 595.28, h: 841.89 }  // pt (portrait)
@@ -322,27 +425,22 @@ const CERT_OPTS  = { W: 560, H: 180, sigW: 330, sigMaxH: 120, sigTop: 6, fontSiz
 
 /** ความสูงพื้นที่ว่าง (pt) นับจากขอบล่างของหน้า pageNo ในคอลัมน์ซ้าย — null ถ้าวัดไม่สำเร็จ */
 async function measureBottomLeftFree(pdfBuf, pageNo) {
-  const tmpDir  = os.tmpdir()
-  const tag     = `${Date.now()}-${Math.random().toString(36).slice(2)}`
-  const tmpPdf  = path.join(tmpDir, `pple-measure-${tag}.pdf`)
-  const outPrefix = path.join(tmpDir, `pple-measure-${tag}`)
-  let cleanupFiles = [tmpPdf]
+  const workDir   = makeWorkDir('measure-')
+  const tmpPdf    = path.join(workDir, 'in.pdf')
+  const outPrefix = path.join(workDir, 'page')
 
   try {
     fs.writeFileSync(tmpPdf, pdfBuf)
 
-    const result = spawnSync(PDFTOPPM, [
+    const result = await run(PDFTOPPM, [
       '-png', '-r', '60', '-f', String(pageNo), '-l', String(pageNo), tmpPdf, outPrefix,
-    ], { timeout: 15_000 })
+    ], 15_000)
 
-    if (result.status !== 0 || result.error) return null
+    if (result.code !== 0) return null
 
-    const outDir  = path.dirname(outPrefix)
-    const prefix  = path.basename(outPrefix)
-    const pngName = fs.readdirSync(outDir).find(f => f.startsWith(prefix) && f.endsWith('.png'))
+    const pngName = fs.readdirSync(workDir).find(f => f.startsWith('page') && f.endsWith('.png'))
     if (!pngName) return null
-    const pngPath = path.join(outDir, pngName)
-    cleanupFiles.push(pngPath)
+    const pngPath = path.join(workDir, pngName)
 
     const img    = await loadImage(fs.readFileSync(pngPath))
     const W = img.width, H = img.height
@@ -372,9 +470,7 @@ async function measureBottomLeftFree(pdfBuf, pageNo) {
   } catch {
     return null
   } finally {
-    for (const f of cleanupFiles) {
-      try { fs.unlinkSync(f) } catch { /* ไม่มีไฟล์ก็ข้าม */ }
-    }
+    try { fs.rmSync(workDir, { recursive: true, force: true }) } catch { /* ไม่มีก็ข้าม */ }
   }
 }
 

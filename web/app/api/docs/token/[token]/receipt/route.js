@@ -1,7 +1,7 @@
 import { getProjectByToken } from '@/db/docs/projects.js'
 import { getEntriesByProject, getEntryById, getSignatureByEntryId } from '@/db/docs/entries.js'
 import { getAttachmentsByProject } from '@/db/docs/attachments.js'
-import { generateEntryPdf } from '@/lib/generatePdf.js'
+import { generateEntryPdfs } from '@/lib/generatePdf.js'
 import { buildFooterImage } from '@/lib/idCard.js'
 import { readFile, getUploadPath } from '@/lib/cropDocument.js'
 import { PDFDocument } from 'pdf-lib'
@@ -36,18 +36,32 @@ export async function GET(req, { params }) {
       footerImg = await merged.embedPng(footerPng)
     }
 
+    // ดึงข้อมูลให้ครบทุกใบก่อน แล้วค่อย render ทีเดียว — LibreOffice จะได้สตาร์ทรอบเดียวต่อ request
+    const items = []
     for (const row of targets) {
       try {
         const entry  = await getEntryById(row.id)
         const recSig = await getSignatureByEntryId(row.id, 'recipient')
         const paySig = await getSignatureByEntryId(row.id, 'payer')
-        const pdf    = await generateEntryPdf(entry, {
+        items.push({
+          entry,
           signatureBase64:      recSig?.signature_base64 ?? null,
           payerSignatureBase64: paySig?.signature_base64 ?? null,
           payerDisplayName:     entry.payer_display_name ?? null,
           payerPosition:        entry.payer_position     ?? null,
         })
-        const src   = await PDFDocument.load(pdf)
+      } catch (err) {
+        console.error(`[token/export] entry ${row.id}:`, err.message)
+      }
+    }
+
+    for (const res of await generateEntryPdfs(items)) {
+      if (!res.pdf) {
+        console.error(`[token/export] entry ${res.entry.id}:`, res.error)
+        continue
+      }
+      try {
+        const src   = await PDFDocument.load(res.pdf)
         const pages = await merged.copyPages(src, src.getPageIndices())
         for (const p of pages) {
           merged.addPage(p)
@@ -57,7 +71,7 @@ export async function GET(req, { params }) {
           }
         }
       } catch (err) {
-        console.error(`[token/export] entry ${row.id}:`, err.message)
+        console.error(`[token/export] entry ${res.entry.id}:`, err.message)
       }
     }
 
