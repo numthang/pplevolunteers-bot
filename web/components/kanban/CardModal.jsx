@@ -58,6 +58,10 @@ export default function CardModal({ cardId, onClose, onChanged }) {
   const [pendingSave, setPendingSave] = useState(false)
   const [conflict, setConflict] = useState(false)
   const [actionError, setActionError] = useState('')
+  // ⭐ ไม่ใช่ error — server ทำงานสำเร็จแต่ผลไม่ตรงกับที่ผู้ใช้เดา
+  //    (เช่น มอบหมายบนการ์ดที่ผูกเคสที่มีคนรับแล้ว → กลายเป็นผู้รับผิดชอบร่วม)
+  //    ถ้าเงียบ = UI โกหก คนกดคิดว่าเปลี่ยนเจ้าภาพสำเร็จ
+  const [actionNotice, setActionNotice] = useState('')
 
   const lockToken = useRef(null)
   const saveTimer = useRef(null)
@@ -242,6 +246,7 @@ export default function CardModal({ cardId, onClose, onChanged }) {
 
   async function patch(body) {
     setActionError('')
+    setActionNotice('')
     try {
       const res = await fetch(`/api/kanban/cards/${cardId}`, {
         method: 'PATCH',
@@ -250,6 +255,7 @@ export default function CardModal({ cardId, onClose, onChanged }) {
       })
       const json = await res.json().catch(() => ({}))
       if (!res.ok) { setActionError(json.error || t('saveFailed')); return }
+      if (json.notice) setActionNotice(json.notice)
       setCard(json.card)
       lockToken.current = json.card.lock_token
       onChanged?.()
@@ -323,6 +329,7 @@ export default function CardModal({ cardId, onClose, onChanged }) {
       })
       const json = await res.json().catch(() => ({}))
       if (!res.ok) { setActionError(json.error || t('actions.claimFailed')); return }
+      if (json.notice) setActionNotice(json.notice)
       await load()
       onChanged?.()
     } catch {
@@ -600,6 +607,7 @@ export default function CardModal({ cardId, onClose, onChanged }) {
               />
 
               {actionError && <p className="text-base text-red-500 dark:text-red-400">{actionError}</p>}
+              {actionNotice && <p className="text-base text-amber-600 dark:text-amber-400">{actionNotice}</p>}
 
               {/* เก็บเข้ากรุ = archive (กู้คืนได้จาก "แสดง: กรุ") · ลบถาวรอยู่ในโหมดกรุเท่านั้น ไม่ใช่ที่นี่
                   การ์ดที่อยู่ในกรุอยู่แล้ว can.archive เป็น false และได้ can.restore แทน

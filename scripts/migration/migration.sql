@@ -1486,10 +1486,6 @@ ALTER TABLE post_episodes DROP CONSTRAINT IF EXISTS post_episodes_created_via_ch
 ALTER TABLE post_episodes ADD CONSTRAINT post_episodes_created_via_check
   CHECK (created_via IN ('ai', 'manual', 'backfill'));
 
--- production ทำถึงตรงนี้
-
-
-
 -- ═══ 2026-08-30 — ข้อมูลตัวตนผู้รับต้อง "ต่อคน" ไม่ใช่ "ต่อใบ" (bug: ใบที่ 2 ของคนเดิมขึ้นฟอร์มใหม่) ═══
 -- อาการจริง: Ammily มีใบสำคัญ 2 ใบในงานเดียวกัน · ใบแรกเปิดมาเป็นใบให้เซ็นปกติ
 -- ใบที่สองเด้งฟอร์ม "ยืนยันตัวตน" ขึ้นมาใหม่ทั้งที่กรอกไปแล้ว (ชื่อขึ้นให้ แต่เลขบัตรว่าง)
@@ -1592,3 +1588,7 @@ CREATE OR REPLACE VIEW docs_entry_recipient AS
      LEFT JOIN cache_pple_member n ON n.source_id = m.member_id
      LEFT JOIN docs_external_payees x ON x.id = e.external_payee_id
      LEFT JOIN user_config uc ON uc.user_id = u.id AND uc.key = 'docs_self_info';
+
+
+-- production ทำถึงตรงนี้
+

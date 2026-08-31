@@ -158,6 +158,18 @@ export async function getCaseByRefFull(orgId, ref) {
 }
 
 
+/**
+ * เคสจาก id ตรงๆ — ใช้ตอนเข้ามาจากฝั่ง kanban (`kanban_card_links.entity_id` เก็บ id ไม่ใช่ ref)
+ * ⚠️ คืนทุก field (PII) เหมือน getCaseByRefFull → เรียกได้หลังผ่านด่านสิทธิ์แล้วเท่านั้น
+ */
+export async function getCaseById(orgId, id) {
+  const { rows } = await pool.query(
+    `SELECT * FROM cases WHERE org_id = $1 AND id = $2`,
+    [orgId, id],
+  )
+  return rows[0] || null
+}
+
 export async function getAssignees(caseId) {
   const { rows } = await pool.query(
     `SELECT a.user_id, u.discord_id, a.assigned_at
@@ -323,6 +335,12 @@ export async function countCaseStats(orgId, userId, provinces = null) {
   return { active: rows[0]?.active || 0, mine: rows[0]?.mine || 0 }
 }
 
+/**
+ * ⛔ **ห้ามเรียกตรงๆ จาก route** — ใช้ `lib/caseAssign.js` แทน
+ *    เจ้าภาพเคยดริฟต์เพราะเขียนตารางนี้อย่างเดียวแล้วไม่แตะการ์ด kanban
+ *    (`kanban_cards.owner_user_id` เป็น **สำเนา** ไม่ได้อ่านสดเหมือนสถานะ)
+ *    service ตัวนั้นเรียก `syncCaseCardPeople()` + ping Discord + audit ให้ครบในจังหวะเดียว
+ */
 export async function addAssignee(caseId, orgId, userId) {
   await pool.query(
     `INSERT INTO case_assignees (case_id, org_id, user_id)
@@ -331,6 +349,7 @@ export async function addAssignee(caseId, orgId, userId) {
   )
 }
 
+/** ⛔ ห้ามเรียกตรงๆ จาก route — ใช้ `lib/caseAssign.js` (เหตุผลเดียวกับ addAssignee) */
 export async function removeAssignee(caseId, userId) {
   await pool.query(
     `DELETE FROM case_assignees WHERE case_id = $1 AND user_id = $2`,

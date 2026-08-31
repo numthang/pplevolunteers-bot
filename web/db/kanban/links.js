@@ -133,6 +133,80 @@ export async function deleteCardForEntity(entityType, entityId) {
 }
 
 /**
+ * ⭐ เจ้าภาพ/คนช่วยของการ์ดที่ผูกเคส = **สำเนาของ `case_assignees`** — ตัวนี้คือที่เดียวที่เขียนสำเนานั้น
+ *
+ * ทำไมไม่อ่านสดเหมือนสถานะ (กฎเหล็กหัวไฟล์): `owner_user_id` เป็นคอลัมน์จริงที่ถูกใช้ใน
+ * CHECK `kanban_cards_owner_required`, ตัวกรองของ listCards/listMyCards และ isMyCard
+ * → เปลี่ยนเป็น subquery = รื้อทั้งโมดูล · ใช้ท่า **single writer + mirror ทันทีจังหวะเดียวกัน** แทน:
+ *   `case_assignees` เป็นความจริงเสมอ · ใครจะเปลี่ยนคนต้องเขียนที่นั่นก่อน แล้วเรียกตัวนี้ทันที
+ *
+ * ⛔ ห้ามเขียน `kanban_cards.owner_user_id` / `kanban_card_helpers` ของการ์ดที่ผูกเคสจากที่อื่นอีก
+ *    (ทางเข้าทั้งหมดต้องผ่าน `web/lib/caseAssign.js` ซึ่งเรียกตัวนี้ให้แล้ว)
+ *
+ * กติกา: เจ้าภาพ = assignee คนแรก (`assigned_at, user_id`) · ที่เหลือ = คนช่วย
+ * ⚠️ CHECK `kanban_cards_owner_required` — ไม่มีเจ้าภาพ = อยู่ได้แค่ backlog/cancelled
+ *    → ถอด assignee คนสุดท้ายต้อง clamp status_type ด้วย (คอลัมน์นี้เป็นแค่ cache
+ *      การ์ดผูกเคสแสดงสถานะสดจาก `cases.status` อยู่แล้ว — clamp จึงไม่ทำให้จอเปลี่ยน)
+ * ⚠️ ห้าม throw — แขวนท้าย action ของผู้ใช้ แบบเดียวกับ mirrorEntityCard
+ *
+ * @returns {Promise<boolean>} false = เคสนี้ไม่มีการ์ด (ยังไม่ถูก mirror) หรือทำไม่สำเร็จ
+ */
+export async function syncCaseCardPeople(caseId) {
+  const client = await pool.connect()
+  try {
+    await client.query('BEGIN')
+    const { rows } = await client.query(
+      `SELECT card_id FROM kanban_card_links WHERE entity_type = 'case' AND entity_id = $1 FOR UPDATE`,
+      [caseId]
+    )
+    if (!rows[0]) { await client.query('ROLLBACK'); return false }
+    const cardId = Number(rows[0].card_id)
+
+    // เจ้าภาพ = assignee คนแรก · null เมื่อไม่เหลือใคร → clamp สถานะให้ไม่ชน CHECK
+    await client.query(
+      `UPDATE kanban_cards c
+          SET owner_user_id = a.user_id,
+              status_type  = CASE WHEN a.user_id IS NOT NULL THEN c.status_type
+                                  WHEN c.status_type = 'cancelled' THEN 'cancelled'
+                                  ELSE 'backlog' END,
+              completed_at = CASE WHEN a.user_id IS NULL THEN NULL ELSE c.completed_at END,
+              updated_at   = now()
+         FROM (SELECT (SELECT user_id FROM case_assignees
+                        WHERE case_id = $2 ORDER BY assigned_at, user_id LIMIT 1) AS user_id) a
+        WHERE c.id = $1`,
+      [cardId, caseId]
+    )
+
+    // คนช่วย = assignee ที่เหลือทั้งหมด — ลบส่วนเกินก่อน แล้วเติมที่ขาด
+    await client.query(
+      `DELETE FROM kanban_card_helpers h
+        USING kanban_cards c
+        WHERE c.id = h.card_id AND h.card_id = $1
+          AND (h.user_id = c.owner_user_id
+               OR NOT EXISTS (SELECT 1 FROM case_assignees a
+                               WHERE a.case_id = $2 AND a.user_id = h.user_id))`,
+      [cardId, caseId]
+    )
+    await client.query(
+      `INSERT INTO kanban_card_helpers (card_id, user_id)
+       SELECT $1, a.user_id FROM case_assignees a
+         JOIN kanban_cards c ON c.id = $1
+        WHERE a.case_id = $2 AND a.user_id IS DISTINCT FROM c.owner_user_id
+       ON CONFLICT DO NOTHING`,
+      [cardId, caseId]
+    )
+    await client.query('COMMIT')
+    return true
+  } catch (e) {
+    await client.query('ROLLBACK').catch(() => {})
+    console.error('[kanban] syncCaseCardPeople ล้มเหลว case', caseId, e.message)
+    return false
+  } finally {
+    client.release()
+  }
+}
+
+/**
  * ของจริงที่ "ควรมีการ์ด แต่ยังไม่มี" — ต่อชนิด
  *
  * ⭐ โพสต์เอา **ทุกใบที่ยังไม่เข้ากรุ รวม `visibility='personal'`** (user กลับคำ 2026-08-24 รอบสอง)

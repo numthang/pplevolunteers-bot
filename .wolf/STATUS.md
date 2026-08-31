@@ -11,15 +11,20 @@ budget_tokens: 1000
 
 ## ✅ Done
 
-### รอบล่าสุด (2026-08-31 · commit `f819e0d` ยังไม่ push · **prod ยังไม่รัน SQL**)
+### รอบล่าสุด (2026-08-31 · commit `f819e0d` + `98a081a` ยังไม่ push · **SQL ลง prod แล้ว 10:05**)
 - **Docs — ตัวตนผู้รับเป็น "ต่อคน" ไม่ใช่ "ต่อใบ"** (bug จาก prod: คนเดียวมี 2 ใบ ใบที่ 2 เด้งฟอร์มยืนยันตัวตนซ้ำ)
   view `docs_entry_recipient` อ่าน `user_config docs_self_info` เป็นชั้นที่ 3 **เหนือ `cache_pple_member`**
   ลำดับใหม่: `override_data` (ต่อใบ) → คนนอก → ที่กรอกจากบัตร ปชช. → ทะเบียนพรรค (user เคาะ: cache พรรคไม่รู้จะ sync ไหม ห้ามพึ่งเป็นหลัก)
   + `verify` has_self_info ใช้ค่าที่ view resolve แล้ว + `self-info`/`recipient-info` เก็บ `title` ลง docs_self_info
   รายละเอียดเต็มอยู่ใน commit message + `bug-463` — **ห้าม re-derive**
-- ⚠️ **ค้างอยู่ที่ user:** ยังไม่ได้รัน `CREATE OR REPLACE VIEW` บน prod (อยู่ท้าย `scripts/migration/migration.sql`)
-  ต้องรัน **diff query ก่อน** — PDF gen สดจาก DB ทุกครั้ง view เปลี่ยน = ใบที่เซ็นแล้วเปลี่ยนตามได้
-  บน DB dev มี 3 ใบที่ค่าจะเปลี่ยน (ชื่อจากทะเบียน ≠ ชื่อที่กรอกเอง) — prod ต้องดูเองว่ามีกี่ใบ
+- **prod รันครบ 2 ขั้นแล้ว (2026-08-31 10:05)**: ขั้น 1 freeze ใบที่เซ็นแล้ว = 6 แถว · ขั้น 2 สลับ view สำเร็จ
+  ⚠️ ลำดับสำคัญ: freeze **ต้อง** มาก่อนสลับ view ไม่งั้นจะปักค่าใหม่ทับใบที่เซ็นแล้ว
+  prod diff เจอ 2 ใบที่ค่าจะขยับ (57, 59 — ทะเบียน "พรรณปพร" vs เจ้าตัวกรอก "พรรณพร" เลขบัตรตรงกัน)
+  **ยังไม่ได้ยืนยันด้วยตาว่าลิงก์ใบที่ 2 ของ Ammily เปิดเป็นใบให้เซ็นแล้วจริง** — ถาม user
+- ⚠️ **โค้ด 3 จุดยังไม่ deploy** (เก็บ `title` ลง docs_self_info × 2 route + `verify` has_self_info) — ไม่กระทบการแก้บั๊ก
+- 🔧 DBeaver ปุ่ม **Execute script (Alt+X) พัง** (`NoClassDefFoundError: IDataTransferConsumer` ปลั๊กอิน data-transfer)
+  ใช้ **Ctrl+Enter ทีละคำสั่ง** แทนได้ · `pgsql:prod` ต่อผ่าน SSH tunnel `202.183.141.78` คีย์ `~/.ssh/id_ed25519`
+  → ถ้า DBeaver พังอีก ยิง psql ผ่าน ssh ได้ (ยังไม่เคยทำ ต้องขออนุญาต user ก่อนแตะ prod)
 
 ### ก่อนหน้า (2026-08-30 · ยังไม่ commit)
 - **แยก route CASES**: public (แจ้ง/ติดตามเรื่อง) ย้าย `/case*` → **`/complaint*`**

@@ -14,7 +14,7 @@ const { getSetting } = require('./settings');
 // org-scope migration: cases/case_timeline/case_assignees/case_attachments ใช้ org_id (int) แทน guild_id (varchar)
 // caller ฝั่งบอทยังส่ง guildId เหมือนเดิม — แปลงที่ขอบฟังก์ชันด้วย orgIdOfGuild()/userIdByDiscord() (case_config ไม่เปลี่ยน ยังเป็น guild_id)
 const { orgIdOfGuild, userIdByDiscord } = require('./org');
-const { mirrorEntityCardFromBot } = require('./kanbanCards');
+const { mirrorEntityCardFromBot, syncCaseCardPeopleFromBot } = require('./kanbanCards');
 
 // source of truth เดียวกับ web/lib/provinceCode.js
 const PROVINCE_CODES = require(path.join(__dirname, '..', 'config', 'province-codes.json'));
@@ -152,6 +152,8 @@ async function addAssignee(caseId, guildId, discordId) {
      VALUES ($1,$2,$3) ON CONFLICT (case_id, user_id) DO NOTHING`,
     [caseId, orgId, userId],
   );
+  // เจ้าภาพ/คนช่วยในการ์ด kanban เป็นสำเนาของตารางนี้ — ไม่ sync = การ์ดไม่รู้ว่ามีคนรับแล้ว
+  await syncCaseCardPeopleFromBot(caseId);
 }
 
 async function getAssignees(caseId) {

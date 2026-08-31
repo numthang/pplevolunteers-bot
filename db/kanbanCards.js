@@ -176,4 +176,64 @@ async function mirrorEntityCardFromBot(orgId, entityType, src, { createdBy = nul
   return null;
 }
 
-module.exports = { createCardFromDiscord, mirrorEntityCardFromBot, cardWebUrl };
+/**
+ * ⭐ ฝาแฝด CJS ของ `syncCaseCardPeople()` ใน web/db/kanban/links.js — **แก้ที่นั่นต้องแก้ที่นี่ด้วย**
+ *    (เหตุผลที่ไม่ import ฝั่งเว็บมาใช้: pool ที่สองในโปรเซสบอท — ดู mirrorEntityCardFromBot)
+ *
+ * เจ้าภาพ/คนช่วยของการ์ดที่ผูกเคสเป็น **สำเนา** ของ `case_assignees` ไม่ได้อ่านสดเหมือนสถานะ
+ * → ทุกทางที่แตะ `case_assignees` ต้องเรียกตัวนี้ต่อทันที ไม่งั้นเจ้าภาพดริฟต์
+ * ⚠️ ห้าม throw · ⚠️ ระวัง CHECK `kanban_cards_owner_required` (ไม่มีเจ้าภาพ = backlog/cancelled เท่านั้น)
+ */
+async function syncCaseCardPeopleFromBot(caseId) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows } = await client.query(
+      `SELECT card_id FROM kanban_card_links WHERE entity_type = 'case' AND entity_id = $1 FOR UPDATE`,
+      [caseId]
+    );
+    if (!rows[0]) { await client.query('ROLLBACK'); return false; }
+    const cardId = rows[0].card_id;
+
+    await client.query(
+      `UPDATE kanban_cards c
+          SET owner_user_id = a.user_id,
+              status_type  = CASE WHEN a.user_id IS NOT NULL THEN c.status_type
+                                  WHEN c.status_type = 'cancelled' THEN 'cancelled'
+                                  ELSE 'backlog' END,
+              completed_at = CASE WHEN a.user_id IS NULL THEN NULL ELSE c.completed_at END,
+              updated_at   = now()
+         FROM (SELECT (SELECT user_id FROM case_assignees
+                        WHERE case_id = $2 ORDER BY assigned_at, user_id LIMIT 1) AS user_id) a
+        WHERE c.id = $1`,
+      [cardId, caseId]
+    );
+    await client.query(
+      `DELETE FROM kanban_card_helpers h
+        USING kanban_cards c
+        WHERE c.id = h.card_id AND h.card_id = $1
+          AND (h.user_id = c.owner_user_id
+               OR NOT EXISTS (SELECT 1 FROM case_assignees a
+                               WHERE a.case_id = $2 AND a.user_id = h.user_id))`,
+      [cardId, caseId]
+    );
+    await client.query(
+      `INSERT INTO kanban_card_helpers (card_id, user_id)
+       SELECT $1, a.user_id FROM case_assignees a
+         JOIN kanban_cards c ON c.id = $1
+        WHERE a.case_id = $2 AND a.user_id IS DISTINCT FROM c.owner_user_id
+       ON CONFLICT DO NOTHING`,
+      [cardId, caseId]
+    );
+    await client.query('COMMIT');
+    return true;
+  } catch (e) {
+    await client.query('ROLLBACK').catch(() => {});
+    console.error('[kanban] syncCaseCardPeopleFromBot ล้มเหลว case', caseId, e.message);
+    return false;
+  } finally {
+    client.release();
+  }
+}
+
+module.exports = { createCardFromDiscord, mirrorEntityCardFromBot, syncCaseCardPeopleFromBot, cardWebUrl };
