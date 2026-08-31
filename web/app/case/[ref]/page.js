@@ -8,7 +8,7 @@ import { canAccessCaseProvince, canManageCases, isAdmin } from '@/lib/caseAccess
 import { getCaseByRefFull, getAssigneesWithNames, getAttachments, getTimeline } from '@/db/cases.js'
 import { getThreadName } from '@/lib/caseDiscord.js'
 import { smsConfigured } from '@/lib/sendSms.js'
-import { statusLabel, CASE_CLOSE_REASONS, CASE_CATEGORIES } from '@/lib/caseOptions.js'
+import { statusLabel, CASE_CLOSE_REASONS, CASE_CATEGORIES, ALL_PROVINCES } from '@/lib/caseOptions.js'
 import CaseManageActions from '@/components/case/CaseManageActions.jsx'
 import CaseTimeline from '@/components/case/CaseTimeline.jsx'
 import CaseContentEditor from '@/components/case/CaseContentEditor.jsx'
@@ -56,6 +56,9 @@ export default async function CaseManageDetail({ params }) {
   // เข้าหน้านี้ได้ = เห็นจังหวัดนี้ · แต่ PATCH ต้องมี manageCases ด้วย (gateCase)
   // → คนที่แก้ไม่ได้ต้องเห็นเป็นข้อความ ไม่ใช่ช่องกรอกที่พิมพ์แล้วเด้ง 403
   const canEdit = canManageCases(access)
+  // จังหวัดปลายทางที่ย้ายไปได้ = เฉพาะที่คนนี้ดูแล (API เช็คซ้ำอีกชั้น) — ย้ายออกนอก scope
+  // ตัวเองแล้วเคสหลุดมือทันที จึงไม่ควรมีให้เลือกตั้งแต่ในจอ
+  const movableProvinces = canEdit ? ALL_PROVINCES.filter(p => canAccessCaseProvince(p, access)) : []
   // ลิงก์ thread ต้องใช้ guild ที่เคสนี้อยู่จริง (artifact) ไม่ใช่ guild ที่กำลัง browse
   const threadUrl = c.discord_thread_id && c.discord_guild_id ? `https://discord.com/channels/${c.discord_guild_id}/${c.discord_thread_id}` : null
 
@@ -132,6 +135,7 @@ export default async function CaseManageDetail({ params }) {
               initial={{ category: c.category }}
               categories={CASE_CATEGORIES}
               province={c.province}
+              provinces={movableProvinces}
               sourceLabel={c.source === 'discord' ? t('manage.sourceDiscord') : t('manage.sourceForm')}
               receivedAt={fmtDate(c.created_at)}
               threadUrl={threadUrl}

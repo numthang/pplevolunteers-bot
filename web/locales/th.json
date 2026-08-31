@@ -728,7 +728,13 @@
       "resendSmsButton": "ส่งลิงก์ติดตามไปเบอร์นี้",
       "smsSending": "กำลังส่ง…",
       "smsSent": "ส่ง SMS แล้ว",
-      "smsFailed": "ส่ง SMS ไม่สำเร็จ"
+      "smsFailed": "ส่ง SMS ไม่สำเร็จ",
+      "provinceMoveButton": "ย้ายจังหวัด",
+      "provinceMoveConfirm": "ยืนยันย้ายจังหวัด",
+      "provinceMoveCancel": "ยกเลิก",
+      "provinceMoving": "กำลังย้าย…",
+      "provinceMoveWarning": "เลขอ้างอิงเดิมไม่เปลี่ยนตาม (แจ้งผู้ร้องเรียนไปแล้ว) · จังหวัดคุมสิทธิ์การมองเห็นเคสนี้",
+      "provinceMoveFailed": "ย้ายจังหวัดไม่สำเร็จ"
     },
     "archive": {
       "banner": "เคสนี้อยู่ในกรุ — ไม่แสดงในรายการเคสและบอร์ดการบ้านแล้ว แต่ผู้ร้องยังติดตามเรื่องได้ตามปกติ",

@@ -728,7 +728,13 @@
       "resendSmsButton": "Send tracking link to this number",
       "smsSending": "Sending…",
       "smsSent": "SMS sent",
-      "smsFailed": "Could not send SMS"
+      "smsFailed": "Could not send SMS",
+      "provinceMoveButton": "Move province",
+      "provinceMoveConfirm": "Confirm move",
+      "provinceMoveCancel": "Cancel",
+      "provinceMoving": "Moving…",
+      "provinceMoveFailed": "Could not move province",
+      "provinceMoveWarning": "The reference number stays the same (already sent to the complainant) · province controls who can see this case"
     },
     "archive": {
       "banner": "This case is archived — hidden from the case list and the kanban board, but the complainant can still track it.",

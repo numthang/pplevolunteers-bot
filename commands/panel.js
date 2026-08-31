@@ -132,6 +132,9 @@ module.exports = {
           opt.setName('channel').setDescription('forum channel สำหรับสร้างกระทู้เคส').setRequired(true)
             .addChannelTypes(ChannelType.GuildForum)
         )
+        .addStringOption(opt =>
+          opt.setName('default_province').setDescription('จังหวัดตั้งต้นเมื่อสร้างเคสจากกระทู้อัตโนมัติ (เช่น ราชบุรี)').setRequired(false)
+        )
     )
 
     // --- handraise ---
@@ -447,9 +450,18 @@ await refreshDashboard(thread, interaction.guildId, ids, existing.dashboard_msg_
       if (channelOpt.type !== ChannelType.GuildForum) {
         return interaction.editReply({ content: '❌ กรุณาเลือก **forum channel** เท่านั้น (เคสจะถูกสร้างเป็นกระทู้)' })
       }
-      const { upsertCaseConfig } = require('../db/case')
-      await upsertCaseConfig(interaction.guildId, { forum_channel_id: channelOpt.id })
-      return interaction.editReply({ content: `✅ ตั้งค่าห้องเรื่องร้องเรียนเป็น <#${channelOpt.id}> แล้ว — เคสใหม่จะสร้างเป็นกระทู้ในห้องนี้` })
+      const { upsertCaseConfig, normalizeProvinceName } = require('../db/case')
+      const provinceInput = interaction.options.getString('default_province')
+      let defaultProvince = null
+      if (provinceInput) {
+        defaultProvince = normalizeProvinceName(provinceInput)
+        if (!defaultProvince) {
+          return interaction.editReply({ content: `❌ จังหวัด "${provinceInput}" ไม่ถูกต้อง กรุณาลองใหม่` })
+        }
+      }
+      await upsertCaseConfig(interaction.guildId, { forum_channel_id: channelOpt.id, default_province: defaultProvince })
+      const provinceLine = defaultProvince ? ` · จังหวัดตั้งต้น: ${defaultProvince}` : ''
+      return interaction.editReply({ content: `✅ ตั้งค่าห้องเรื่องร้องเรียนเป็น <#${channelOpt.id}> แล้ว — เคสใหม่จะสร้างเป็นกระทู้ในห้องนี้${provinceLine}` })
     }
 
     // ================================================================

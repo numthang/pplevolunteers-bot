@@ -1,11 +1,14 @@
 import { gateCase } from '@/lib/caseGate.js'
-import { updateCaseFields, EDITABLE_CASE_FIELDS, archiveCase, deleteCase } from '@/db/cases.js'
+import { updateCaseFields, EDITABLE_CASE_FIELDS, archiveCase, deleteCase, transferCaseProvince } from '@/db/cases.js'
 import { deleteCaseFiles } from '@/lib/caseUploads.js'
-import { isAdmin } from '@/lib/caseAccess.js'
+import { isAdmin, canAccessCaseProvince } from '@/lib/caseAccess.js'
+import geographyData from '@/lib/thailand-geography.json'
 import { postToThread } from '@/lib/caseDiscord.js'
 import { CASE_CATEGORIES } from '@/lib/caseOptions.js'
 import { sendSms, normalizePhone, smsConfigured } from '@/lib/sendSms.js'
 import { logAction } from '@/db/auditLog.js'
+
+const PROVINCES = geographyData.map(p => p.province)
 
 function baseUrl(req) {
   return process.env.NEXTAUTH_URL || new URL(req.url).origin
@@ -23,7 +26,7 @@ export async function PATCH(req, { params }) {
   const { ref } = await params
   const gate = await gateCase(ref)
   if (gate.error) return gate.error
-  const { session, orgId, caseRow } = gate
+  const { session, access, orgId, caseRow } = gate
 
   const body = await req.json().catch(() => ({}))
 
@@ -36,9 +39,40 @@ export async function PATCH(req, { params }) {
     return Response.json({ ok: true, restored: true })
   }
 
-  // ย้ายจังหวัดต้องเป็น action แยก — ตอบให้ชัดดีกว่าเงียบๆ ไม่ทำตาม (ดู EDITABLE_CASE_FIELDS)
+  /**
+   * ── ย้ายจังหวัด ── action แยก ไม่ปนกับ EDITABLE_CASE_FIELDS (autosave)
+   *
+   * ต้องมีเพราะ province คุมทั้งสิทธิ์การมองเห็นและ config หัวหนังสือ: ตั้งผิดแล้วแก้ไม่ได้
+   * = เคสตัน ออกหนังสือไม่ได้ (เจอจริงกับเคสที่บอทสร้างเป็น 'ไม่ระบุ' — 2026-09-01)
+   * ⚠️ ref ไม่เปลี่ยนตาม (ส่ง SMS + เป็น URL สาธารณะไปแล้ว) → รหัสนำหน้า ref ค้างของเดิม
+   */
   if (body.province !== undefined && body.province !== caseRow.province) {
-    return Response.json({ error: 'ย้ายจังหวัดของเคสไม่ได้ (รหัสจังหวัดฝังอยู่ในเลขอ้างอิงที่แจ้งผู้ร้องเรียนไปแล้ว)' }, { status: 400 })
+    if (!PROVINCES.includes(body.province)) {
+      return Response.json({ error: 'ไม่รู้จักจังหวัดนี้' }, { status: 400 })
+    }
+    // ปลายทางต้องอยู่ใน scope ของคนย้ายด้วย — ไม่งั้นผลักเคสไปที่ที่ตัวเองไม่มีสิทธิ์ดูแล
+    // แล้วเคสหลุดมือทันที (ต้นทางผ่านแล้วจาก gateCase)
+    if (!canAccessCaseProvince(body.province, access)) {
+      return Response.json({ error: 'ย้ายไปจังหวัดที่คุณไม่ได้ดูแลไม่ได้' }, { status: 403 })
+    }
+
+    const moved = await transferCaseProvince(orgId, caseRow.id, body.province)
+    if (!moved) return Response.json({ error: 'ย้ายจังหวัดไม่สำเร็จ' }, { status: 500 })
+
+    logAction({
+      orgId, app: 'cases', action: 'case.province_changed',
+      actorId: session.user.userId, targetId: caseRow.ref,
+      meta: { from: caseRow.province, to: body.province },
+    })
+
+    if (caseRow.discord_thread_id) {
+      await postToThread(
+        caseRow.discord_thread_id,
+        `📍 ย้ายจังหวัดของเคส **${caseRow.ref}** จาก **${caseRow.province}** → **${body.province}** (เลขอ้างอิงเดิมไม่เปลี่ยน)`,
+      ).catch(e => console.error('[PATCH /api/case] postToThread province', e.message))
+    }
+
+    return Response.json({ ok: true, changed: ['province'], fields: { province: moved.province } })
   }
 
   const next = {}

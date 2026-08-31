@@ -1,6 +1,6 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-31T19:35:55.934Z
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-31T19:52:15.056Z
 > Files: 1079 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
@@ -787,7 +787,7 @@
 
 ## web/app/api/case/[ref]/
 
-- `route.js` — PATCH /api/case/[ref] — แก้ข้อมูลเคส (~2351 tok)
+- `route.js` — PATCH /api/case/[ref] — แก้ข้อมูลเคส (~2785 tok)
 
 ## web/app/api/case/[ref]/assign/
 
@@ -1621,7 +1621,7 @@
 
 ## web/app/case/[ref]/
 
-- `page.js` — หน้าจัดการเคส — โครงเดียวกับ /posts/[id]: เนื้อหาซ้าย · การ์ดจัดการ/ข้อมูลขวา (~2030 tok)
+- `page.js` — หน้าจัดการเคส — โครงเดียวกับ /posts/[id]: เนื้อหาซ้าย · การ์ดจัดการ/ข้อมูลขวา (~2120 tok)
 
 ## web/app/case/manage/
 
@@ -1929,7 +1929,7 @@
 - `CaseLetterList.jsx` — fmtDate (~600 tok)
 - `CaseLetterModal.jsx` — หัวจดหมาย/ท้ายจดหมาย **ไม่เก็บลงร่าง** — ดึงสดจาก case_letter_config ตอนสร้าง PDF ทุกครั้ง (~4159 tok)
 - `CaseManageActions.jsx` — การ์ดจัดการเคส — รับเรื่อง · เปลี่ยนสถานะ · ร่างหนังสือ (~1986 tok)
-- `CaseMetaEditor.jsx` — การ์ด "ข้อมูลเคส" คอลัมน์ขวา — แก้ได้ช่องเดียวคือ **ประเภท** (~1072 tok)
+- `CaseMetaEditor.jsx` — การ์ด "ข้อมูลเคส" คอลัมน์ขวา — **ประเภท** แก้ได้ด้วย autosave (~1950 tok)
 - `CaseNewForm.jsx` — inputCls — renders form (~2706 tok)
 - `CaseRefLookup.jsx` — inputCls — renders form (~320 tok)
 - `CaseSaveBadge.jsx` — ป้ายสถานะการบันทึกของหน้าเคส — บังคับมีทุกการ์ดที่ autosave (กฎ CLAUDE.md §กฎการบันทึก) (~244 tok)
@@ -2038,7 +2038,7 @@
 - `botStatus.js` — web/db/botStatus.js — สรุปสถานะการตั้งค่าของ Discord guild หนึ่งตัว (ใช้ที่หน้า /bot) (~559 tok)
 - `botStatus.jsbotStatus.js` — getBotGuildStatus(guildId) คืน guild/roles(total,with_permission,with_scope)/channels/aiMention/socialAccounts สำหรับหน้า /bot (~430 tok)
 - `caseLetterConfig.js` — หัวจดหมายทุกจังหวัดของ org — หน้า /org/settings/letter (~507 tok)
-- `cases.js` — Case (เรื่องร้องเรียน) — web-side DB layer (ESM) (~6560 tok)
+- `cases.js` — Case (เรื่องร้องเรียน) — web-side DB layer (ESM) (~6776 tok)
 - `displayName.js` — สูตร "ชื่อคนที่เอาไว้โชว์" ของทั้งระบบ · displayNameSql(userAlias, orgExpr) คืน SQL fragment · org display_name → nickname → ชื่อจริง → username (~450 tok)
 - `guilds.js` — Guilds ที่ user เป็น member จริง (INNER JOIN dc_guilds = เฉพาะ guild ที่ register ในระบบ) (~1139 tok)
 - `index.js` — Declares g (~121 tok)

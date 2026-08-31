@@ -4687,6 +4687,118 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-08-31T19:35:40.470Z"
+    },
+    {
+      "id": "bug-254",
+      "timestamp": "2026-08-31T19:37:07.734Z",
+      "error_message": "จังหวัด ไม่ระบุ ในข้อความยืนยันสร้างเคสจากกระทู้อัตโนมัติ (ref ขึ้นต้น 00)",
+      "file": "handlers/caseImportHandler.js",
+      "root_cause": "province ตอน auto-import (handleThreadCreate) อ่านจาก dc_guild_config key case_default_province ซึ่งไม่มี UI ตั้งค่าเลยในโค้ดทั้งหมด (ไม่มี setSetting เรียกที่ไหนเลย) — fallback เงียบๆ เป็น 'ไม่ระบุ' เมื่อไม่มีค่า ทำให้ ref ขึ้นต้น 00 และคน scope รายจังหวัดมองไม่เห็นเคส (ปัญหาเดียวกับที่เจอใน backfillCaseThreads.js เมื่อ 2026-08-29)",
+      "fix": "ย้าย default_province เป็นคอลัมน์จริงใน case_config (migration 2026-09-01) ตั้งผ่าน /panel case option default_province ได้แล้ว — handleCaseImportStart และ handleThreadCreate อ่านจาก caseDb.getCaseConfig() แทน getSetting()",
+      "tags": [
+        "case",
+        "discord-bot",
+        "hidden-config",
+        "silent-fallback"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-08-31"
+    },
+    {
+      "id": "bug-255",
+      "timestamp": "2026-08-31T19:48:13.040Z",
+      "error_message": "Missing await",
+      "file": "web/db/cases.js",
+      "root_cause": "Async call without await — returned Promise instead of value",
+      "fix": "Added await to async call",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-08-31T19:48:13.040Z"
+    },
+    {
+      "id": "bug-256",
+      "timestamp": "2026-08-31T19:48:36.029Z",
+      "error_message": "Missing error handling in route.js",
+      "file": "web/app/api/case/[ref]/route.js",
+      "root_cause": "Code path had no error handling — exceptions would propagate uncaught",
+      "fix": "Added try/catch block",
+      "tags": [
+        "auto-detected",
+        "error-handling",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-08-31T19:48:36.029Z"
+    },
+    {
+      "id": "bug-257",
+      "timestamp": "2026-08-31T19:48:48.725Z",
+      "error_message": "Significant refactor of route.js",
+      "file": "web/app/api/case/[ref]/route.js",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 3→4 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-08-31T19:48:48.725Z"
+    },
+    {
+      "id": "bug-258",
+      "timestamp": "2026-08-31T19:49:49.525Z",
+      "error_message": "Missing error handling in CaseMetaEditor()",
+      "file": "web/components/case/CaseMetaEditor.jsx",
+      "root_cause": "Code path had no error handling — exceptions would propagate uncaught",
+      "fix": "Added try/catch block",
+      "tags": [
+        "auto-detected",
+        "error-handling",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-08-31T19:49:49.525Z"
+    },
+    {
+      "id": "bug-259",
+      "timestamp": "2026-08-31T19:50:01.404Z",
+      "error_message": "CSS fix: dark",
+      "file": "web/components/case/CaseMetaEditor.jsx",
+      "root_cause": "dark: text-disc-text\">{province → text-disc-text\">",
+      "fix": "Changed dark: text-disc-text\">{province → text-disc-text\">",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-08-31T19:50:16.644Z"
+    },
+    {
+      "id": "bug-260",
+      "timestamp": "2026-08-31T19:51:00.927Z",
+      "error_message": "Incorrect value in code",
+      "file": "web/components/case/CaseMetaEditor.jsx",
+      "root_cause": "Had \"text-sm text-red-accent\"",
+      "fix": "Changed to \"text-sm text-red-500\"",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "jsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-08-31T19:51:09.565Z"
     }
   ]
 }

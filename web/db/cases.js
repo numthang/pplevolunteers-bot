@@ -73,12 +73,32 @@ export async function createCase(orgId, data) {
  *    → เปลี่ยนจังหวัด = ref โกหกถาวร (regenerate ไม่ได้ ลิงก์สาธารณะจะพัง)
  *    นอกจากนี้ gateCase() เช็ค scope จาก province **เดิม** เท่านั้น → ปล่อยให้แก้
  *    = คนจังหวัด A ผลักเคสเข้าจังหวัด B ได้แล้วตัวเองหลุด scope ทันที
- *    ถ้าจะย้ายจังหวัดจริง ต้องทำเป็น action "โอนเคส" แยก (เช็ค scope ทั้งต้นทาง+ปลายทาง)
+ *    → ย้ายจังหวัดจึงเป็น action แยก `transferCaseProvince()` ที่เช็ค scope ทั้งสองฝั่ง
  */
 export const EDITABLE_CASE_FIELDS = [
   'title', 'detail', 'category',
   'complainant_name', 'complainant_phone', 'complainant_line_id',
 ]
+
+/**
+ * ย้ายจังหวัดของเคส — **ref ไม่เปลี่ยนตาม** (ตั้งใจ)
+ *
+ * ref เดิมถูกส่ง SMS ไปหาผู้ร้องแล้ว + เป็น URL หน้าติดตามสาธารณะ → regenerate ไม่ได้
+ * ผลคือรหัสจังหวัดที่นำหน้า ref จะค้างเป็นของจังหวัดเดิมตลอดไป ยอมแลกเพราะ
+ * `province` เป็นตัวคุมทั้งสิทธิ์การมองเห็น (canAccessCaseProvince) และ config หัวหนังสือ
+ * ปล่อยให้ผิดคือเคสหายจากสายตาทีมพื้นที่ + ออกหนังสือไม่ได้เลย (เจอจริง 2026-09-01)
+ *
+ * ⚠️ scope ทั้งต้นทางและปลายทางต้องเช็คที่ชั้น API ก่อนเรียกฟังก์ชันนี้
+ */
+export async function transferCaseProvince(orgId, caseId, province) {
+  const { rows } = await pool.query(
+    `UPDATE cases SET province = $3, updated_at = NOW()
+     WHERE id = $1 AND org_id = $2
+     RETURNING *`,
+    [caseId, orgId, province],
+  )
+  return rows[0] || null
+}
 
 /**
  * แก้ข้อมูลเคส — อัปเดตเฉพาะ field ที่อยู่ใน whitelist และถูกส่งมาจริง

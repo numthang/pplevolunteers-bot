@@ -1590,7 +1590,6 @@ CREATE OR REPLACE VIEW docs_entry_recipient AS
      LEFT JOIN user_config uc ON uc.user_id = u.id AND uc.key = 'docs_self_info';
 
 
--- production ทำถึงตรงนี้
 
 
 -- 2026-08-31 · cases: เก็บเข้ากรุ (archive) — เดิมเคสไม่มีทางเอาออกจากสายตาเลย มีแต่เปลี่ยนสถานะ
@@ -1611,3 +1610,13 @@ UPDATE cases SET letters = (
   FROM jsonb_array_elements(letters) WITH ORDINALITY AS t(d, ord)
 )
 WHERE jsonb_array_length(letters) > 0;
+
+
+-- 2026-09-01 · case_config: ย้าย default_province ออกจาก dc_guild_config key 'case_default_province'
+--   key เดิมไม่มี UI ตั้งค่าเลยตั้งแต่เกิด (27 มิ.ย.) — ต้องยัด DB ตรงๆ ไม่มีคำสั่ง/หน้าจอให้แก้
+--   auto-import (handleThreadCreate) fallback 'ไม่ระบุ' เงียบๆ เมื่อไม่มีค่า → ref ขึ้นต้น 00
+--   ย้ายมาเป็นคอลัมน์จริงคู่กับ forum_channel_id ตั้งผ่าน /panel case ได้แล้ว
+ALTER TABLE case_config ADD COLUMN IF NOT EXISTS default_province VARCHAR(50);
+
+-- production ทำถึงตรงนี้
+

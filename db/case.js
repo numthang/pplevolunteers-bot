@@ -64,14 +64,15 @@ async function getCaseConfig(guildId) {
   return rows[0] || null;
 }
 
-async function upsertCaseConfig(guildId, { forum_channel_id }) {
+async function upsertCaseConfig(guildId, { forum_channel_id, default_province }) {
   await pool.query(
-    `INSERT INTO case_config (guild_id, forum_channel_id, updated_at)
-     VALUES ($1, $2, NOW())
+    `INSERT INTO case_config (guild_id, forum_channel_id, default_province, updated_at)
+     VALUES ($1, $2, $3, NOW())
      ON CONFLICT (guild_id) DO UPDATE SET
        forum_channel_id = COALESCE(EXCLUDED.forum_channel_id, case_config.forum_channel_id),
+       default_province = COALESCE(EXCLUDED.default_province, case_config.default_province),
        updated_at       = NOW()`,
-    [guildId, forum_channel_id || null],
+    [guildId, forum_channel_id || null, default_province || null],
   );
 }
 

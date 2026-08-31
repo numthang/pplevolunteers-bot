@@ -2,7 +2,6 @@
 const {
   ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, MessageFlags,
 } = require('discord.js');
-const { getSetting } = require('../db/settings');
 const caseDb = require('../db/case');
 const { fetchAllMessages, messagesToPlainText } = require('../services/fetchMessages');
 const { callAI } = require('../services/aiSummarize');
@@ -18,7 +17,8 @@ const AI_SYSTEM = `คุณเป็นผู้ช่วยสรุปเร�
 async function handleCaseImportStart(interaction) {
   const thread = interaction.channel;
   const threadName = thread?.name || 'เรื่องร้องเรียน';
-  const defaultProvince = (await getSetting(interaction.guildId, 'case_default_province')) || '';
+  const caseConfig = await caseDb.getCaseConfig(interaction.guildId);
+  const defaultProvince = caseConfig?.default_province || '';
 
   // timestamp ใน customId กัน Discord cache modal เก่า
   const modal = new ModalBuilder()
@@ -128,7 +128,7 @@ async function handleThreadCreate(thread) {
     const existing = await caseDb.getCaseByThreadId(thread.id);
     if (existing) return;
 
-    const province = (await getSetting(thread.guildId, 'case_default_province')) || 'ไม่ระบุ';
+    const province = config.default_province || 'ไม่ระบุ';
     const title = thread.name || 'เรื่องร้องเรียน';
 
     // เจ้าของกระทู้
