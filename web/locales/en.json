@@ -1605,7 +1605,13 @@
       "savingButton": "Saving...",
       "cancelButton": "Cancel",
       "saveSuccess": "Saved",
-      "saveError": "Failed to save"
+      "saveError": "Failed to save",
+      "logoHeading": "Letterhead logo",
+      "logoHint": "Used on letters for every province in this org · PNG/JPEG/WEBP up to 5MB · transparent background works best",
+      "logoUploadButton": "Upload logo",
+      "logoUploading": "Uploading…",
+      "logoResetButton": "Use default",
+      "logoFailed": "Could not upload the logo"
     }
   },
   "profile": {

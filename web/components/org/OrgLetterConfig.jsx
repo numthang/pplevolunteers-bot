@@ -20,6 +20,7 @@ export default function OrgLetterConfig() {
   const t = useTranslations('org')
   const [configs, setConfigs] = useState(null)   // null=loading · false=ไม่มีสิทธิ์
   const [provinces, setProvinces] = useState([])
+  const [logo, setLogo] = useState(null)         // path รูปที่อัปโหลดไว้ · null = ใช้ตราค่าเริ่มต้น
   const [adding, setAdding] = useState(null)     // { province, ...BLANK } | null
 
   useEffect(() => { load() }, [])
@@ -27,7 +28,7 @@ export default function OrgLetterConfig() {
   function load() {
     return fetch('/api/case/letter-config')
       .then(r => r.ok ? r.json() : Promise.reject(r.status))
-      .then(d => { setConfigs(d.configs); setProvinces(d.provinces) })
+      .then(d => { setConfigs(d.configs); setProvinces(d.provinces); setLogo(d.logo || null) })
       .catch(() => setConfigs(false))
   }
 
@@ -40,6 +41,8 @@ export default function OrgLetterConfig() {
   return (
     <div className="space-y-4">
       <p className="text-sm text-gray-500 dark:text-disc-muted">{t('letterConfig.description')}</p>
+
+      <LogoCard logo={logo} onChanged={setLogo} />
 
       {configs.map(c => (
         <ConfigForm key={c.province} initial={c} province={c.province} onSaved={load} />
@@ -68,6 +71,95 @@ export default function OrgLetterConfig() {
           {t('letterConfig.addButton')}
         </button>
       )}
+    </div>
+  )
+}
+
+/**
+ * โลโก้หัวจดหมาย — **ของ org ทั้งก้อน ไม่แยกจังหวัด** (ต่างจากการ์ดข้างล่างที่เป็นรายจังหวัด)
+ *
+ * ไม่มีปุ่มบันทึก: เลือกไฟล์ = อัปโหลดเลย เพราะเป็น action เดียวจบ ไม่ใช่ฟอร์มหลายช่อง
+ * ยังไม่เคยอัปโหลด = ใช้ตราที่ฝังมากับ template.docx (ปุ่ม "ใช้ค่าเริ่มต้น" พากลับไปสถานะนั้น)
+ */
+function LogoCard({ logo, onChanged }) {
+  const t = useTranslations('org')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+
+  async function upload(file) {
+    if (!file) return
+    setBusy(true); setError('')
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const res = await fetch('/api/case/letter-config/logo', { method: 'POST', body: fd })
+      const d = await res.json().catch(() => ({}))
+      if (!res.ok || d.error) { setError(d.error || t('letterConfig.logoFailed')); return }
+      onChanged(d.url)
+    } catch {
+      setError(t('letterConfig.logoFailed'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function reset() {
+    setBusy(true); setError('')
+    try {
+      const res = await fetch('/api/case/letter-config/logo', { method: 'DELETE' })
+      const d = await res.json().catch(() => ({}))
+      if (!res.ok || d.error) { setError(d.error || t('letterConfig.logoFailed')); return }
+      onChanged(null)
+    } catch {
+      setError(t('letterConfig.logoFailed'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className={cardCls}>
+      <div>
+        <p className="text-base font-semibold text-gray-900 dark:text-disc-text">{t('letterConfig.logoHeading')}</p>
+        <p className="text-sm text-gray-500 dark:text-disc-muted">{t('letterConfig.logoHint')}</p>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-4">
+        <div className="w-24 h-24 shrink-0 rounded-lg border border-gray-200 dark:border-disc-border flex items-center justify-center overflow-hidden bg-white">
+          {/* ไม่ใช้ next/image — ไฟล์อัปโหลดเปลี่ยนได้ตลอด ไม่ต้องผ่าน optimizer */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={logo || '/letterhead-default.png'}
+            alt=""
+            className="max-w-full max-h-full object-contain"
+            onError={e => { e.currentTarget.style.visibility = 'hidden' }}
+          />
+        </div>
+
+        <div className="flex flex-col gap-2 min-w-0">
+          <label className={`px-4 py-2 rounded-lg bg-brand-orange text-white text-base font-semibold text-center cursor-pointer hover:bg-brand-orange-light transition ${busy ? 'opacity-50 pointer-events-none' : ''}`}>
+            {busy ? t('letterConfig.logoUploading') : t('letterConfig.logoUploadButton')}
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              className="hidden"
+              onChange={e => { upload(e.target.files?.[0]); e.target.value = '' }}
+            />
+          </label>
+          {logo && (
+            <button
+              type="button"
+              onClick={reset}
+              disabled={busy}
+              className="px-4 py-2 rounded-lg border border-gray-300 dark:border-disc-border text-gray-700 dark:text-disc-text text-base disabled:opacity-50"
+            >
+              {t('letterConfig.logoResetButton')}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {error && <p className="text-sm text-red-500">{error}</p>}
     </div>
   )
 }

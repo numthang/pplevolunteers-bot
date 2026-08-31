@@ -4,6 +4,7 @@ import { getEffectiveIdentity } from '@/lib/getEffectiveRoles.js'
 import { getOrgId } from '@/lib/orgContext.js'
 import { canManageCases, canAccessCaseProvince } from '@/lib/caseAccess.js'
 import { listLetterConfigs, upsertLetterConfig } from '@/db/caseLetterConfig.js'
+import { getOrgConfig } from '@/db/orgConfig.js'
 import geographyData from '@/lib/thailand-geography.json'
 
 const PROVINCES = geographyData.map(p => p.province)
@@ -36,8 +37,10 @@ export async function GET() {
   // เห็นเฉพาะจังหวัดใน scope ตัวเอง — ผู้ประสานงานจังหวัดไม่ควรอ่าน/แก้หัวจดหมายจังหวัดอื่น
   const configs = (await listLetterConfigs(g.orgId)).filter(c => canAccessCaseProvince(c.province, g.access))
   const provinces = PROVINCES.filter(p => canAccessCaseProvince(p, g.access))
+  // โลโก้เป็นของ org ทั้งก้อน ไม่แยกจังหวัด — null = ยังใช้ตราที่ฝังมากับเทมเพลต
+  const logo = await getOrgConfig(g.orgId, 'case_letter_logo')
 
-  return Response.json({ configs, provinces })
+  return Response.json({ configs, provinces, logo })
 }
 
 export async function PUT(req) {

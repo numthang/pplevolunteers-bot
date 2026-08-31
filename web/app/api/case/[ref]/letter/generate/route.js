@@ -1,5 +1,6 @@
 import { gateCase } from '@/lib/caseGate.js'
 import { getLetterConfig } from '@/db/caseLetterConfig.js'
+import { getOrgConfig } from '@/db/orgConfig.js'
 import { generateComplaintLetterPdf } from '@/lib/generateComplaintLetter.js'
 import { execFile } from 'child_process'
 import { promisify } from 'util'
@@ -33,6 +34,10 @@ export async function POST(req, { params }) {
     coordinator_name:  config.coordinator_name,
     coordinator_phone: config.coordinator_phone,
     ...letterFields,
+    // ⚠️ **ต้องอยู่หลัง spread** — letterFields มาจาก body ของ client ตรงๆ
+    //    ถ้าอยู่ก่อน ผู้เรียกส่ง logo_path เองมาทับได้ = สั่งให้ server อ่านไฟล์ที่ไหนก็ได้
+    // โลโก้เป็นของ org ทั้งก้อน (ไม่แยกจังหวัดเหมือนหัวจดหมายที่เหลือ) — ไม่มีค่า = ใช้ที่ฝังในเทมเพลต
+    logo_path:         await getOrgConfig(orgId, 'case_letter_logo'),
   }
 
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cletter-'))

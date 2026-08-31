@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-08-31T19:52:15.056Z
-> Files: 1079 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-08-31T20:14:49.899Z
+> Files: 1081 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ../../../../../tmp/claude-1000/-home-tee-VSites-node-pple-volunteers/005d4cd5-6be1-43a4-8ae7-5ca6bbed7823/scratchpad/
 
@@ -394,7 +394,7 @@
 - `backfillThreads.js` — Backfill: index threads ใน text channels ทั้งหมดเข้า Meilisearch + DB (~679 tok)
 - `backup-pgsql.sh` — pg_dump ของ pple_volunteers -> /www/backup/database/pgsql/crontab_backup (~233 tok)
 - `build_pdf.py` — main (~299 tok)
-- `buildComplaintLetterTemplate.mjs` — สร้าง web/templates/complaint/template.docx จาก template.base.docx (~2378 tok)
+- `buildComplaintLetterTemplate.mjs` — สร้าง web/templates/complaint/template.docx จาก template.base.docx (~2515 tok)
 - `checkMetaScopes.js` — scripts/checkMetaScopes.js — เช็คว่า token โซเชียลที่เก็บไว้ยังใช้ได้ และมี scope อะไรบ้าง (~1292 tok)
 - `crop_document.py` — order_points, four_point_transform, is_roughly_rectangular, find_document_contour + 1 more (~1414 tok)
 - `export-devpack.sh` — export-devpack.sh — สร้างชุดไฟล์สำหรับ dev (dump ที่ anonymize แล้ว + .env.example) (~1172 tok)
@@ -807,7 +807,7 @@
 
 ## web/app/api/case/[ref]/letter/generate/
 
-- `route.js` — POST /api/case/[ref]/letter/generate — รับ letter fields จาก modal, ดึง config จาก DB, คืน preview + (~664 tok)
+- `route.js` — POST /api/case/[ref]/letter/generate — รับ letter fields จาก modal, ดึง config จาก DB, คืน preview + (~776 tok)
 
 ## web/app/api/case/[ref]/letter/save/
 
@@ -836,6 +836,10 @@
 ## web/app/api/case/letter-config/
 
 - `route.js` — GET/PUT /api/case/letter-config — หัวจดหมายร้องเรียนต่อจังหวัด (~825 tok)
+
+## web/app/api/case/letter-config/logo/
+
+- `route.js` — POST/DELETE /api/case/letter-config/logo — โลโก้หัวจดหมาย **ระดับ org** (ทุกจังหวัดใช้ตัวเดียวกัน) (~1056 tok)
 
 ## web/app/api/cooking/chat/
 
@@ -1988,7 +1992,7 @@
 - `OrgFeatures.jsx` — OrgFeatures (~766 tok)
 - `OrgGeneral.jsx` — isImgSrc — renders form (~1584 tok)
 - `OrgHome.jsx` — dashboard body ของ /org (render ใน OrgShell — switcher/ออกจากระบบ อยู่ที่ shell แล้ว) (~1386 tok)
-- `OrgLetterConfig.jsx` — หัวจดหมายร้องเรียนต่อจังหวัด (case_letter_config) (~2048 tok)
+- `OrgLetterConfig.jsx` — หัวจดหมายร้องเรียนต่อจังหวัด (case_letter_config) (~3079 tok)
 - `OrgMembers.jsx` — OrgMembers — renders form (~4001 tok)
 - `OrgPrompts.jsx` — OrgPrompts (~1758 tok)
 - `OrgScopeTree.jsx` — ผังพื้นที่ของ org — สร้าง/ย้าย/เปลี่ยนชื่อ/ลบ node (~2593 tok)
@@ -2150,7 +2154,7 @@
 - `featureGate.js` — ด่านหน้า route ของแต่ละ app: ไม่มี session → redirectToLogin() · org ปิดฟีเจอร์ → 404 (~420 tok)
 - `financeAccess.js` — Finance Access Control (~845 tok)
 - `financeUploads.js` — หลักฐานการเงิน (สลิป/ใบเสร็จ) — เก็บ "นอก /public" เสิร์ฟผ่าน gated route เท่านั้น (~296 tok)
-- `generateComplaintLetter.js` — Exports generateComplaintLetterPdf (~802 tok)
+- `generateComplaintLetter.js` — โลโก้ที่ org อัปโหลดเอง (/org/settings/letter) — ทับรูปในเทมเพลตก่อน render (~1087 tok)
 - `generatePdf.js` — ดึง body content (XML ระหว่าง <w:body>…<w:sectPr) จากไฟล์ .docx (~5370 tok)
 - `geography.js` — Geography data — จังหวัด ↔ ภาคย่อย (sub-region) ↔ ภาคใหญ่ (main region) (~1983 tok)
 - `getEffectiveRoles.js` — คืน { roles, discordId, access } — roles/discordId คือ identity (debug-aware) (~1287 tok)
@@ -2169,6 +2173,7 @@
 - `kanbanTagFilter.js` — ตัวกรองการ์ดด้วย **ตัวเลือกใน custom field** — ตรรกะล้วน ไม่แตะ DOM/DB (~1280 tok)
 - `kanbanTextFilter.js` — ค้นการ์ดด้วยข้อความ — ตรรกะล้วน ไม่แตะ DOM/DB (เทสอยู่ที่ lib/__tests__/kanbanTextFilter.test.js) (~642 tok)
 - `kanbanUrlState.js` — แปลง "หน้าตาที่เห็นบนกระดาน" ↔ query string — ตรรกะล้วน ไม่แตะ DOM/React (~1520 tok)
+- `letterLogo.js` — โลโก้หัวจดหมายร้องเรียน — เรขาคณิตกลางที่ **สคริปต์สร้างเทมเพลตกับหน้าอัปโหลดต้องตรงกัน** (~354 tok)
 - `linkState.js` — Exports signLinkState, verifyLinkState (~276 tok)
 - `org-auth-options.js` — web/lib/org-auth-options.js — org login (email-native, แยกจาก PPLE Discord auth) (~1072 tok)
 - `org.js` — web/lib/org.js — Org layer: resolve guild ในเครือเดียวกัน (ฝั่ง web · คู่กับ bot db/org.js) (~192 tok)

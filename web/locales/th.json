@@ -1605,7 +1605,13 @@
       "savingButton": "กำลังบันทึก...",
       "cancelButton": "ยกเลิก",
       "saveSuccess": "บันทึกแล้ว",
-      "saveError": "บันทึกไม่สำเร็จ"
+      "saveError": "บันทึกไม่สำเร็จ",
+      "logoHeading": "โลโก้หัวจดหมาย",
+      "logoHint": "ใช้กับหนังสือทุกจังหวัดขององค์กร · PNG/JPEG/WEBP ไม่เกิน 5MB · พื้นหลังโปร่งใสจะสวยที่สุด",
+      "logoUploadButton": "อัปโหลดโลโก้",
+      "logoUploading": "กำลังอัปโหลด…",
+      "logoResetButton": "ใช้ค่าเริ่มต้น",
+      "logoFailed": "อัปโหลดโลโก้ไม่สำเร็จ"
     }
   },
   "profile": {

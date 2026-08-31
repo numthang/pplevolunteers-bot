@@ -22,9 +22,31 @@ function thaiDate(d = new Date()) {
   return `${toThaiNumerals(d.getDate())} ${THAI_MONTHS[d.getMonth()]} ${toThaiNumerals(d.getFullYear() + 543)}`
 }
 
-export function generateComplaintLetterPdf({ org_name, address, subject, recipient_title, recipient_name, attachments, body, signer_name, signer_position, signer_phone, coordinator_name, coordinator_phone }) {
+export function generateComplaintLetterPdf({ org_name, address, subject, recipient_title, recipient_name, attachments, body, signer_name, signer_position, signer_phone, coordinator_name, coordinator_phone, logo_path }) {
   const template = fs.readFileSync(TEMPLATE, 'binary')
   const zip = new PizZip(template)
+
+  /**
+   * โลโก้ที่ org อัปโหลดเอง (/org/settings/letter) — ทับรูปในเทมเพลตก่อน render
+   * ไฟล์ถูกย่อลงกรอบมาตรฐานตั้งแต่ตอนอัปโหลดแล้ว (web/lib/letterLogo.js) ที่นี่จึงแค่สลับไบต์
+   * อ่านไฟล์ไม่ได้ (ถูกลบทิ้ง/ย้ายเครื่อง) = ใช้โลโก้ค่าเริ่มต้นต่อ ไม่ใช่พังทั้งใบ
+   */
+  if (logo_path) {
+    // ⛔ กันอ่านไฟล์นอกโฟลเดอร์: เทียบ path ที่ resolve แล้วจริงๆ ไม่ใช่เชื่อ prefix ของ string
+    //    ('/uploads/../../.env' ผ่าน startsWith('/uploads/') ได้สบาย)
+    const dir = path.join(__dirname, '../public/uploads/org-letterhead')
+    const abs = path.resolve(__dirname, '../public', logo_path.replace(/^\//, ''))
+    if (abs.startsWith(dir + path.sep)) {
+      try {
+        zip.file('word/media/logo.png', fs.readFileSync(abs))
+      } catch (e) {
+        console.error('[generateComplaintLetter] โลโก้ที่ตั้งไว้อ่านไม่ได้ ใช้ค่าเริ่มต้นแทน:', e.message)
+      }
+    } else {
+      console.error('[generateComplaintLetter] logo_path นอกโฟลเดอร์ที่อนุญาต ข้าม:', logo_path)
+    }
+  }
+
   const doc = new Docxtemplater(zip, { paragraphLoop: true, linebreaks: true })
 
   const t = (v) => toThaiNumerals(v || '')

@@ -13,7 +13,7 @@
  * เพราะรอบแรกย้ายไป footer แล้ว) ทำให้ "เปลี่ยนโลโก้แล้วรันใหม่" ทำไม่ได้ถ้าไม่ git checkout ก่อน
  *
  * แก้อะไรจาก base:
- *   1. หัวจดหมาย = ตาราง 2 ช่องไม่มีเส้น · ซ้าย = โลโก้ (web/public/logo.png) ขวา = ชื่อ/ที่อยู่/วันที่
+ *   1. หัวจดหมาย = ตาราง 2 ช่องไม่มีเส้น · ซ้าย = โลโก้ (templates/complaint/logo.png) ขวา = ชื่อ/ที่อยู่/วันที่
  *   2. บล็อกผู้ลงนาม = ครอบวงเล็บ ({signer_name}) + เพิ่มบรรทัด "โทร {signer_phone}"
  *   3. บรรทัดผู้ประสานงาน ย้ายจาก body ไปเป็น footer จริงของหน้า (word/footer1.xml) 3 บรรทัดชิดซ้าย
  *
@@ -23,12 +23,17 @@ import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import PizZip from '../web/node_modules/pizzip/js/index.js'
-import sharp from '../web/node_modules/sharp/lib/index.js'
+import { LOGO_BOX_W_EMU, LOGO_BOX_H_EMU, normalizeLetterLogo } from '../web/lib/letterLogo.js'
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
 const BASE = path.join(ROOT, 'web/templates/complaint/template.base.docx')
 const OUT = path.join(ROOT, 'web/templates/complaint/template.docx')
-const LOGO_SRC = path.join(ROOT, 'web/public/logo.png')
+/**
+ * โลโก้หัวจดหมาย = **ตราพรรค** เก็บคู่กับเทมเพลตที่นี่ ห้ามชี้ไป `web/public/logo.png`
+ * ตัวนั้นเป็นโลโก้แมวของหน้าเว็บ — เคยชี้ผิดจนหนังสือราชการออกมาเป็นรูปแมว
+ * user ต้องมานั่งยัดตราพรรคใส่ template.docx เองใน Word (2026-09-01) ซึ่งงานหายทุกครั้งที่รันสคริปต์นี้
+ */
+const LOGO_SRC = path.join(ROOT, 'web/templates/complaint/logo.png')
 
 const FONT = '<w:rFonts w:ascii="TH Sarabun New" w:hAnsi="TH Sarabun New" w:eastAsia="TH Sarabun New" w:cs="TH Sarabun New"/>'
 const SZ = '<w:sz w:val="32"/><w:szCs w:val="32"/>'
@@ -40,17 +45,20 @@ function para(text, { jc = 'left', after = 0, bold = false } = {}) {
     + `<w:t xml:space="preserve">${text}</w:t></w:r></w:p>`
 }
 
-// 800100 EMU ≈ 2.22 ซม. — ใหญ่พอให้เห็นตราองค์กร แต่ไม่เบียดบล็อกชื่อ/ที่อยู่ฝั่งขวา
-const LOGO_EMU = 800100
+/**
+ * กรอบโลโก้ = ค่ากลางจาก web/lib/letterLogo.js — **ห้ามคำนวณจากสัดส่วนรูปที่นี่**
+ * กรอบถูกฝังตายตัวใน document.xml แต่โลโก้เปลี่ยนได้ตอนใช้งาน (อัปโหลดที่ /org/settings/letter)
+ * ถ้ากรอบขึ้นกับรูปค่าเริ่มต้น โลโก้ที่ผู้ใช้อัปโหลดสัดส่วนอื่นจะโดนยืดจนเบี้ยว
+ */
 const logoParagraph = `<w:p><w:pPr><w:pStyle w:val="Normal"/><w:spacing w:before="0" w:after="0"/><w:jc w:val="left"/></w:pPr>`
   + `<w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0">`
-  + `<wp:extent cx="${LOGO_EMU}" cy="${LOGO_EMU}"/><wp:docPr id="1" name="logo"/>`
+  + `<wp:extent cx="${LOGO_BOX_W_EMU}" cy="${LOGO_BOX_H_EMU}"/><wp:docPr id="1" name="logo"/>`
   + `<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">`
   + `<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">`
   + `<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">`
   + `<pic:nvPicPr><pic:cNvPr id="1" name="logo"/><pic:cNvPicPr/></pic:nvPicPr>`
   + `<pic:blipFill><a:blip r:embed="rIdLogo"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill>`
-  + `<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${LOGO_EMU}" cy="${LOGO_EMU}"/></a:xfrm>`
+  + `<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${LOGO_BOX_W_EMU}" cy="${LOGO_BOX_H_EMU}"/></a:xfrm>`
   + `<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr>`
   + `</pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>`
 
@@ -85,9 +93,13 @@ const zip = new PizZip(fs.readFileSync(BASE, 'binary'))
 const read = (f) => zip.file(f).asText()
 
 // ── 1. โลโก้ ──────────────────────────────────────────────────────────────────
-// ย่อเหลือ 320px ก่อนฝัง — ต้นฉบับ 1301×1301 (130KB) ใหญ่เกินจำเป็นสำหรับภาพ 2.2 ซม.
-const logoPng = await sharp(LOGO_SRC).resize(320, 320, { fit: 'contain', background: { r: 255, g: 255, b: 255, alpha: 0 } }).png().toBuffer()
+// ย่อลงกรอบมาตรฐานด้วยฟังก์ชันเดียวกับที่หน้าอัปโหลดใช้ — ค่าเริ่มต้นกับของที่ผู้ใช้อัปโหลด
+// ต้องผ่านท่าเดียวกัน ไม่งั้นขนาด/ตำแหน่งบนหัวจดหมายไม่ตรงกัน
+const logoPng = await normalizeLetterLogo(fs.readFileSync(LOGO_SRC))
 zip.file('word/media/logo.png', logoPng)
+// สำเนาไว้ใน public/ ด้วย — หน้า /org/settings/letter ต้องพรีวิว "ตราค่าเริ่มต้น" ให้เห็นว่าตอนนี้ใช้อะไรอยู่
+// (ไฟล์ในเทมเพลตอยู่นอก public/ เสิร์ฟตรงๆ ไม่ได้)
+fs.writeFileSync(path.join(ROOT, 'web/public/letterhead-default.png'), logoPng)
 
 // ── 2. rels: โลโก้ + footer ───────────────────────────────────────────────────
 let rels = read('word/_rels/document.xml.rels')
